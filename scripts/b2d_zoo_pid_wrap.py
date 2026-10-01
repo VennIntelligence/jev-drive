@@ -16,7 +16,7 @@ Geometry of the target: the Zoo agents map GNSS to CARLA world with a Mercator r
 GNSS is mapped with the exact GPS/world fit of the dense route (b2d_controller_adapter.GPSProjector, < 1 mm residual)
 and the planner runs on world coordinates. Same point, without the fsolve approximation.
 
-Two adapter switches (todos/2026-09-24-zeroshot-exam/alpamayo-closed-loop-diagnosis.md, section 6); their defaults keep
+Two adapter switches (fc65452:todos/2026-09-24-zeroshot-exam/alpamayo-closed-loop-diagnosis.md, section 6); their defaults keep
 the behaviour of the first Alpamayo full run and of the openpilot runs:
   forward_only  False | True: segments of the plan whose forward component is negative are dropped before sampling
                 (the plan's speed clamped at >= 0: a car braking to a stop stays, it does not reverse). control_pid

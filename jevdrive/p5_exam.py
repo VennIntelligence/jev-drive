@@ -1,4 +1,4 @@
-"""P5 v0 exam on the CARLA counterfactual pairs (todos/2026-09-24-p5-carla-pairs-v0.md).
+"""P5 v0 exam on the CARLA counterfactual pairs (fc65452:todos/2026-09-24-p5-carla-pairs-v0.md).
 
   heads   `ridge ego` and `ridge_late` (L18_last / L18_mean) trained on CARLA expert frames outside every pair's
           observation window, 5 folds grouped by base route; per-frame predicted speed at 2 s on every
@@ -310,7 +310,7 @@ def probe_auc_paired_scopes(obs, t, scores, comparisons, b: int = 500) -> pd.Dat
     """Hazard-probe AUC of tap minus ref for each (tap, ref) in `comparisons`, per scope: every hazard family, the
     pooled pedestrian families (PED_FAMILIES) and all hazard families pooled. Frames where every compared tap has an
     out-of-fold score; one route bootstrap per scope shared by all comparisons (probe_auc_paired's resampling).
-    Reactivity program D0 (todos/2026-09-25-reactivity-program.md)."""
+    Reactivity program D0 (fc65452:todos/2026-09-25-reactivity-program.md)."""
     from .p4_carla import auc
     pos = pd.Series(np.arange(len(t)), index=t.frame_name)
     taps = sorted({k for c in comparisons for k in c})
@@ -345,7 +345,7 @@ def probe_auc_paired_scopes(obs, t, scores, comparisons, b: int = 500) -> pd.Dat
 def run(rl, op_models=(), op_arrays=("temporal",), op_sub="op_streams", heads_skip=()):
     t, past, fut, obs, null, pairs = load()
     X = P.load_features(t)
-    if op_models:                     # openpilot `temporal` as extra examinees (todos/2026-09-25-openpilot-temporal-p5-and-route.md)
+    if op_models:                     # openpilot `temporal` as extra examinees (fc65452:todos/2026-09-25-openpilot-temporal-p5-and-route.md)
         from . import p5_openpilot
         X |= p5_openpilot.load(t, op_models, op_arrays, op_sub)
     fold = folds(t, pairs)

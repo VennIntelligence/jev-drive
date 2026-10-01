@@ -10,7 +10,7 @@ DS（Driving Score，路线完成度乘以违规惩罚得到的总分）与 RC�
 
 录像检查均通过：7 条都有视频，编码错误为 0，丢帧为 0；像素检查排除了全黑或均匀画面。驾驶结果为 5 条 Completed、2 条 Failed - TickRuntime。Completed 只说明走完路线，仍可能有碰撞和闯红灯。
 
-相关背景见 [闭环集成诊断](openpilot-closedloop-integration.md) 与 [op-drive 实验登记及旧结果](../todos/2026-09-29-op-drive.md)。
+相关背景见 [闭环集成诊断](openpilot-closedloop-integration.md) 与 [op-drive 实验登记及旧结果](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-op-drive.md)。
 
 ## 2. 旧记录主要扣在哪里
 
@@ -25,7 +25,7 @@ DS（Driving Score，路线完成度乘以违规惩罚得到的总分）与 RC�
 | 驶出车道 | 0 | 1 | 1 |
 | 严重偏离路线 | 0 | 0 | 0 |
 
-来源：[旧逐路线原始汇总](results/op_drive/dv/per_route.csv)，只统计 `arm=drive`。各类违规次数不能相加后直接解释成固定的分数损失，因为 DS 的惩罚是乘法，未走完路线还会降低 RC。`min_speed`（评测器低速相关记录）在旧表中也存在，本文没有把它当成上述碰撞或交通灯违规。
+来源：[旧逐路线原始汇总](../experiments/op_closed_loop/results/op_drive/dv/per_route.csv)，只统计 `arm=drive`。各类违规次数不能相加后直接解释成固定的分数损失，因为 DS 的惩罚是乘法，未走完路线还会降低 RC。`min_speed`（评测器低速相关记录）在旧表中也存在，本文没有把它当成上述碰撞或交通灯违规。
 
 因此，在**最新这套已有路线接管的接法**中，主要剩余问题是红灯、车辆冲突和施工绕障；更早的纯 OpenPilot 接法确实存在路口不按导航转弯的问题。两者不能混为一谈。
 
@@ -69,7 +69,7 @@ DS（Driving Score，路线完成度乘以违规惩罚得到的总分）与 RC�
 
 先看红灯停止线与车进入路口的时机，再看画面顶端的 Steering 字段。旧记录里本路线大部分横向由路线接管；仅增加导航信息并不能直接解决这次闯灯。
 
-[录像和截取检查](results/op_drive/record_seed0/recording_qa.json)
+[录像和截取检查](../experiments/op_closed_loop/results/op_drive/record_seed0/recording_qa.json)
 
 ### 6.2 路线 27043：车辆碰撞
 
@@ -79,7 +79,7 @@ DS（Driving Score，路线完成度乘以违规惩罚得到的总分）与 RC�
 
 观察自车与横穿或转弯车辆的相对位置，并对照碰撞前的 Steering 与 speed limit 字段。这次记录到 Ford Mustang 车辆碰撞；应区分横向接管、纵向让行和碰撞时机。
 
-[录像和截取检查](results/op_drive/record_seed0/recording_qa.json)
+[录像和截取检查](../experiments/op_closed_loop/results/op_drive/record_seed0/recording_qa.json)
 
 ### 6.3 路线 27297：多次车辆碰撞与闯红灯
 
@@ -89,7 +89,7 @@ DS（Driving Score，路线完成度乘以违规惩罚得到的总分）与 RC�
 
 重点看路口的冲突车辆与自车进路口的时机。场景包含行人不等于扣分来自撞人：这次计分记录是车辆碰撞 4 次、闯红灯 1 次，没有行人碰撞。这个片段围绕其中一次车辆碰撞，其他事件需看完整 MP4。
 
-[录像和截取检查](results/op_drive/record_seed0/recording_qa.json)
+[录像和截取检查](../experiments/op_closed_loop/results/op_drive/record_seed0/recording_qa.json)
 
 ### 6.4 路线 9196：车辆碰撞、闯红灯与未完成
 
@@ -99,7 +99,7 @@ DS（Driving Score，路线完成度乘以违规惩罚得到的总分）与 RC�
 
 先看与消防车发生冲突的过程，再看完整视频里之后为什么无法完成路线。这次只完成 56.69%，提供了观察碰撞后恢复行为的材料；应把碰撞和后续卡住分别分析。
 
-[录像和截取检查](results/op_drive/record_seed0/recording_qa.json)
+[录像和截取检查](../experiments/op_closed_loop/results/op_drive/record_seed0/recording_qa.json)
 
 ### 6.5 路线 24944：停车后仍闯红灯
 
@@ -109,7 +109,7 @@ DS（Driving Score，路线完成度乘以违规惩罚得到的总分）与 RC�
 
 观察红灯前是否停车、何时重新起步，以及 release 字段是否出现 resume。旧日志显示本路线有多次红灯前停车和一次人工 resume；仅凭 GIF 不能断言这次闯灯也由同一机制引起。
 
-[录像和截取检查](results/op_drive/record_seed0/recording_qa.json)
+[录像和截取检查](../experiments/op_closed_loop/results/op_drive/record_seed0/recording_qa.json)
 
 ### 6.6 路线 37969：车辆碰撞与驶出车道
 
@@ -119,7 +119,7 @@ DS（Driving Score，路线完成度乘以违规惩罚得到的总分）与 RC�
 
 观察与 Ford Mustang 的冲突，以及自车是否被挤出车道或主动偏移。越线扣分和车辆碰撞同时存在，但因果顺序需要通过视频与逐帧日志确认。
 
-[录像和截取检查](results/op_drive/record_seed0/recording_qa.json)
+[录像和截取检查](../experiments/op_closed_loop/results/op_drive/record_seed0/recording_qa.json)
 
 ### 6.7 路线 24497：施工障碍碰撞与未完成
 
@@ -129,7 +129,7 @@ DS（Driving Score，路线完成度乘以违规惩罚得到的总分）与 RC�
 
 观察施工警示障碍物、可通行空间和自车停车的位置。这次与 static.prop.trafficwarning 碰撞，路线仅完成 33.40%；片段用于看接近障碍的过程，完整视频用于看后续长时间停车。
 
-[录像和截取检查](results/op_drive/record_seed0/recording_qa.json)
+[录像和截取检查](../experiments/op_closed_loop/results/op_drive/record_seed0/recording_qa.json)
 
 ## 7. 现有证据与待确认机制
 
@@ -153,6 +153,6 @@ DS（Driving Score，路线完成度乘以违规惩罚得到的总分）与 RC�
 
 远端原始目录：`~/data/runs/op_drive_record_seed0/`。每条有效尝试包含 `chase_raw.mp4`（无叠字的视频）、`chase.mp4`（诊断文字视频）、`video_frames.jsonl`（帧与仿真时间对应）、`scene.jsonl`（附近 actor，即车辆、行人和静物的位姿及状态）、`ticks.jsonl` / `plans.jsonl`（自车状态与模型/控制日志）、`results.json` 与 CARLA recorder（仿真器的记录文件）。本次新增了 recorder，之后可以研究回放；这不改变旧运行缺少 recorder 的事实。
 
-小结果：[本次逐路线汇总](results/op_drive/record_seed0/summary.json)、[录像检查与片段窗口](results/op_drive/record_seed0/recording_qa.json)。正文动画保存在本机 `tmp/op-drive-record-seed0/<路线>/event.webp`；原始 GIF 与完整 MP4 已在远端产出，写本文时，审阅包 `review.zip` 的本机副本正在下载，正文所嵌的 7 段动画均已取回并验证可读。媒体体积较大，不提交到 Git。分享文档时必须同时带上媒体目录；单独复制 Markdown 不会复制动画。
+小结果：[本次逐路线汇总](../experiments/op_closed_loop/results/op_drive/record_seed0/summary.json)、[录像检查与片段窗口](../experiments/op_closed_loop/results/op_drive/record_seed0/recording_qa.json)。正文动画保存在本机 `tmp/op-drive-record-seed0/<路线>/event.webp`；原始 GIF 与完整 MP4 已在远端产出，写本文时，审阅包 `review.zip` 的本机副本正在下载，正文所嵌的 7 段动画均已取回并验证可读。媒体体积较大，不提交到 Git。分享文档时必须同时带上媒体目录；单独复制 Markdown 不会复制动画。
 
-录制代码提交 `f07e45e`，违规片段导出提交 `cb12fce`。实现见 [录制 agent](../scripts/op_drive_record_agent.py)、[串行运行器](../scripts/op_drive_record_run.py)、[视频与动画导出](../scripts/op_drive_record_video.py)。
+录制代码提交 `f07e45e`，违规片段导出提交 `cb12fce`。实现见 [录制 agent](../experiments/op_closed_loop/archive/op_drive_record_agent.py)、[串行运行器](../experiments/op_closed_loop/archive/op_drive_record_run.py)、[视频与动画导出](../experiments/op_closed_loop/archive/op_drive_record_video.py)。

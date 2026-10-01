@@ -1,5 +1,5 @@
 """Night queue 2, N2: does openpilot carry what a bypass needs, and does it change lanes on a desire pulse
-(todos/2026-09-26-night-queue-2.md, N2 and the [A-N2] entries, written before any number).
+(fc65452:todos/2026-09-26-night-queue-2.md, N2 and the [A-N2] entries, written before any number).
 
   labels   per indexed frame of a P5-style set: CARLA ground-truth labels from the run's route.json / pose.jsonl /
            actors.npz (no simulator): a = static vehicle / walker in the ego lane 0 < ds <= 30 m, b = vehicle in an
@@ -7,10 +7,10 @@
            0 < ds <= 50 m; plus v_ego and the route heading change 60 m ahead (desire target selection)
            -> processed/<set>/night2_labels.parquet
   probe    linear probes (standardised L2 logistic regression, GroupKFold(5) by base route, AUC) on openpilot
-           temporal / vision taps and the YOLO image-plane token set -> research/results/night2/N2/probe_<set>.csv
+           temporal / vision taps and the YOLO image-plane token set -> experiments/night_queue_2/results/N2/probe_<set>.csv
   targets  desire-check target frames and their 8 s warm-up streams -> processed/<set>/night2_desire_targets.json
-           (the runner is scripts/night2_desire.py in the openpilot venv)
-  desire   the runner's output -> research/results/night2/N2/desire_<set>.csv and the per-bin verdict table
+           (the runner is experiments/night_queue_2/archive/night2_desire.py in the openpilot venv)
+  desire   the runner's output -> experiments/night_queue_2/results/N2/desire_<set>.csv and the per-bin verdict table
 
 Every function takes a set name (P5_SET-style directory under processed/), so N1's frames reuse the same code.
 Run on the box: python -m jevdrive.night2_n2 <step> --set carla_p5v1_ba
@@ -27,7 +27,7 @@ from .common import data_dir, get_logger
 
 log = get_logger(__name__)
 REPO = Path(__file__).resolve().parents[1]
-RESULTS = REPO / "research" / "results" / "night2" / "N2"
+RESULTS = REPO / "experiments/night_queue_2/results/N2"
 HALF_LANE, ADJ = 1.75, 5.25
 A_REACH, B_REACH, C_REACH, V_STATIC = 30.0, 20.0, 50.0, 0.5
 HIDDEN_DZ = 5.0

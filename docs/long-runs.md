@@ -63,6 +63,30 @@ change, or the job finishing. A silent job that is making progress needs no mess
 - AutoDL's default TensorBoard (port 6007, `/root/tf-logs`) runs as root under supervisord.
   Our user has no root, so it cannot be killed or pointed elsewhere. Ignore it.
 
+## Before a long run (moved from CLAUDE.md)
+
+Applies to OUR code only. Third-party libraries and other people's reproduction or baseline code are run
+as they ship: measure them, do not rewrite them.
+- Estimate wall time first. Anything above ~3 h gets a profiling pass before it starts: measure on a
+  subset, find the actual bottleneck (disk, RAM, CPU, GPU compute, GPU memory, network), then rewrite the
+  hot path as an expert would - parallel, vectorised, overlapping I/O with compute - until it is gone.
+- Tune the defaults for our box, not for a generic machine: batch size, DataLoader workers, prefetch,
+  dtype, chunk sizes. Derive limits at runtime (`jevdrive.common.n_cpus()`, free VRAM, free disk) so the
+  code still runs elsewhere, but leave OUR best values as the defaults.
+- Verify the optimized code gives the same results (numerical equivalence on a subset), then record the
+  before/after numbers and the bottleneck in the experiment's README or plan.
+- Staged launch for every job of more than ~1 h (closed-loop B2D, CARLA generation, long training, big feature runs):
+  run 1 unit, inspect it; then ~10 units (routes, worlds, folds, shards), inspect them against a written sanity
+  checklist (completion / blocked / crash rates, value ranges against a known reference, outputs non-degenerate);
+  only then the full batch. A pilot that fails the checklist stops the batch; never find out after the full run.
+- While a long job runs cleanly, report every 3-5 hours, not per file or step. Report at once only for an error,
+  a stall, a decision, or completion.
+- The box is elastic: cards, cgroup CPU quota, RAM and pids.max change between instances (7 cards / 175 cores /
+  644 GiB on 2026-09-28, 3 cards / 75 cores / 276 GiB on 2026-10-01; RTX 6000D, 83.6 GiB each; the host always shows
+  208 CPUs). Never hardcode them: read `python -m jevdrive.cl probe`, size pools with `jevdrive.common.n_cpus()`.
+  Run independent work in parallel across cores (one job per file/archive/shard), keep hot data in RAM, batch on
+  the GPU and overlap I/O with compute.
+
 Last verified: 2026-09-20
 
 ## Sharing the box between several agents
@@ -74,7 +98,7 @@ When more than one agent (or person) runs jobs on the box at the same time:
   revoked `sch_table.py finish <lane>` moves the row to `runs/sched/archive.tsv` (append-only history). Never append a row
   per state change.
   A grant writes the lane's shell-sourceable GO file, which the lane re-reads at its step boundaries; the G lane
-  (`scripts/nq4_g_lane.py`) re-reads its row every round and yields cards to lanes that write
+  (`experiments/night_queue_4/lib/nq4_g_lane.py`) re-reads its row every round and yields cards to lanes that write
   `runs/sched/demand/<lane>.json`. (Was: `$DATA_DIR/runs/schedule.md`, a hand-edited timetable for the old
   five-GPU box; it went out of use on 2026-09-26/27 when the table and GO grants replaced it.)
   CARLA sizing and closed-loop lanes: [closed-loop-runbook.md](closed-loop-runbook.md) (`jevdrive.cl`). Before it: about 6 servers per card is still the GPU knee on the RTX 6000D box (docs/remote-box.md). The old
@@ -89,7 +113,7 @@ When more than one agent (or person) runs jobs on the box at the same time:
 - A job that dies by a signal (rc > 128) gets `$DATA_DIR/runs/sched/<slot>.death-<HHMMSS>.txt` from `slot_run.sh`:
   container memory, the largest processes and the last 2 min of `scripts/boxwatch.sh`, the box-wide 5 s
   memory/process sampler that `slot_run.sh` starts (one per box, `$DATA_DIR/runs/boxwatch/`). Unexplained SIGKILLs:
-  todos/2026-09-25-closed-loop-infra-acceptance/sigkill.md.
+  experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md.
 - Agents arm their slots and then stop; they watch only their own final sentinel. No polling loops in the agent
   and no interim status messages: waiting costs nothing when bash does it, and tokens when an agent does it.
 - Waiters that look for a process with `pgrep -f <name>` must not carry `<name>` on their own command line

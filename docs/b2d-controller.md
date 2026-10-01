@@ -1,8 +1,8 @@
 Read this when you need to run, inspect, or reproduce the fixed trajectory controllers in Bench2Drive.
 
-The current CLI default is **`carla`**, with `longitudinal_mode="vendor"`. `tcp` is a reference and `pursuit` is a geometric candidate; the completed v4 comparison qualifies no replacement default. The initial four no-background routes passed for CARLA and pursuit, but adding a real S curve exposed speed-gate failures. The complete initial Dev10 two-seed and six-route holdout comparisons did not justify a new default. See the [shared working folder](../todos/2026-09-22-b2d-controller/README.md), [acceptance plan](../todos/2026-09-22-b2d-controller/plan.md), [initial evidence](../todos/2026-09-22-b2d-controller/article-notes.md), and [feedback iteration](../todos/2026-09-22-b2d-controller/iteration-v2.md). These route diagnostics do not establish a leaderboard score improvement.
+The current CLI default is **`carla`**, with `longitudinal_mode="vendor"`. `tcp` is a reference and `pursuit` is a geometric candidate; the completed v4 comparison qualifies no replacement default. The initial four no-background routes passed for CARLA and pursuit, but adding a real S curve exposed speed-gate failures. The complete initial Dev10 two-seed and six-route holdout comparisons did not justify a new default. See the [shared working folder](../experiments/b2d_controller/results/b2d-controller/README.md), [acceptance plan](../experiments/b2d_controller/results/b2d-controller/plan.md), [initial evidence](../experiments/b2d_controller/results/b2d-controller/article-notes.md), and [feedback iteration](../experiments/b2d_controller/results/b2d-controller/iteration-v2.md). These route diagnostics do not establish a leaderboard score improvement.
 
-The final feedback iteration passed all six development conditions for pursuit max + PI(.5,.25) and CARLA lateral + the same PI. Across 18 matched v3/v4 development cases, longitudinal acceleration RMS fell 21.5% and longitudinal jerk RMS fell 25.9%; lateral acceleration RMS rose 2.0%. These are physical diagnostics, not official Smoothness scores. The frozen 60-route comparison then failed the replacement conditions: pursuit completed 16/20 versus CARLA + PI 17/20, with 10.84% higher equally weighted full-route lateral RMS. The campaign took 37.46 minutes with no neural model. Common route-timing and bounded compass-dropout fixes are integrated; retaining the preset default does not mean retaining every old agent byte. See the [final report](../todos/2026-09-22-b2d-controller/final-report.md) and [original-condition audit](../todos/2026-09-22-b2d-controller/results/formal-v4-g4/FINAL-AUDIT.md). The separate [actual TCP longitudinal comparison](b2d-tcp-controller.md) has since completed; it retains native TCP lateral control.
+The final feedback iteration passed all six development conditions for pursuit max + PI(.5,.25) and CARLA lateral + the same PI. Across 18 matched v3/v4 development cases, longitudinal acceleration RMS fell 21.5% and longitudinal jerk RMS fell 25.9%; lateral acceleration RMS rose 2.0%. These are physical diagnostics, not official Smoothness scores. The frozen 60-route comparison then failed the replacement conditions: pursuit completed 16/20 versus CARLA + PI 17/20, with 10.84% higher equally weighted full-route lateral RMS. The campaign took 37.46 minutes with no neural model. Common route-timing and bounded compass-dropout fixes are integrated; retaining the preset default does not mean retaining every old agent byte. See the [final report](../experiments/b2d_controller/results/b2d-controller/final-report.md) and [original-condition audit](../experiments/b2d_controller/results/b2d-controller/results/formal-v4-g4/FINAL-AUDIT.md). The separate [actual TCP longitudinal comparison](b2d-tcp-controller.md) has since completed; it retains native TCP lateral control.
 
 **API and timing.** [b2d_controller.py](../scripts/b2d_controller.py) uses only NumPy and the standard library, and supports Python 3.8:
 
@@ -44,7 +44,7 @@ Camera observations are optional in this path. No neural planner supplies the tr
 
 The origin is prepended as an auxiliary timed trajectory point. Callers must make the first future point consistent with motion from this origin; its distance divided by 0.25 s affects the speed command. The initial route adapter violated this boundary when the vehicle was offset from the route. The revised adapter builds a path from estimated rear-axle position and heading back to the unchanged dense reference, then samples it by traveled arc length. A finite 6–18 m join search limits added curvature where possible and logs unresolved concerns; it does not prove dynamic feasibility. This changes commanded path geometry and can weaken short-lookahead feedback, so it requires its own closed-loop comparison. Command-speed error remains distinct from independent route-speed error. Near speed reads `[age, age+0.25]`; the reference-window option reads `[age+0.25, age+1.0]`.
 
-The optional `max_lookahead_time_s` parameter controls only the max lookahead rule: `max(3 m, parameter × speed)`. Its default remains .5 s; additive and fixed-four-meter rules retain their original behavior. The isolated turn experiment compares .5 s with .375 s, at identical cruise speeds, PI gains and steering limits. This is an explicit experimental configuration, not a new default. Evaluate the fixed left, sharp-right and two S-turn windows separately, then check the complete routes and five-second endpoint holds; long straight portions must not dilute corner failures. See the [turn protocol](../todos/2026-09-23-tcp-controller/turns/protocol.md).
+The optional `max_lookahead_time_s` parameter controls only the max lookahead rule: `max(3 m, parameter × speed)`. Its default remains .5 s; additive and fixed-four-meter rules retain their original behavior. The isolated turn experiment compares .5 s with .375 s, at identical cruise speeds, PI gains and steering limits. This is an explicit experimental configuration, not a new default. Evaluate the fixed left, sharp-right and two S-turn windows separately, then check the complete routes and five-second endpoint holds; long straight portions must not dilute corner failures. See the [turn protocol](../experiments/b2d_tcp/results/tcp-controller/turns/protocol.md).
 
 The first isolated six-case CARLA comparison completed all routes and endpoint holds, but the candidate failed four of 126 preregistered conditions. Sharp-right window CTE RMS fell from .558694 to .516447 m (7.56%, below the required 15%). Emitted steering-rate p95 increased by 34.95% in that window and 73.07% in the left-turn window, exceeding the 20% limit; the first S-turn lateral-acceleration p95 rose 13.49%, exceeding 10%. Full-route G2 passes do not supersede these corner conditions. No reverse-order confirmation or default promotion followed. This remains a no-background, route-oracle experiment, separate from actual TCP.
 
@@ -52,7 +52,7 @@ The optional `longitudinal_mode="pi"` uses a separate SI-unit PI controller with
 
 **Score and comfort are separate.** In the pinned Bench2Drive version, Driving Score multiplies route completion by infraction penalties, including collisions and traffic-rule violations. Acceleration and jerk do not directly enter this score. Driving Smoothness is a separately computed metric; the controller's speed RMS is neither that metric nor official Success Rate. A route reaching 100% with infractions is counted as driving completed in our diagnostics, but may fail official Success Rate. See the pinned [score implementation](https://github.com/Thinklab-SJTU/Bench2Drive/blob/0.0.4/leaderboard/leaderboard/utils/statistics_manager.py), [success-rate implementation](https://github.com/Thinklab-SJTU/Bench2Drive/blob/0.0.4/tools/merge_route_json.py), and [smoothness implementation](https://github.com/Thinklab-SJTU/Bench2Drive/blob/0.0.4/tools/efficiency_smoothness_benchmark.py). Later G2 traces preserve full kinematics with explicit units for separate analysis; earlier traces must not be assigned reconstructed official comfort scores without the required inputs.
 
-**Vehicle and input boundary.** The frozen [configuration](../todos/2026-09-22-b2d-controller/results/controller_config.json) comes from stock CARLA 0.9.15 `vehicle.lincoln.mkz_2020`: wheelbase 2.860471491 m, actor-relative rear axle x=-1.388633220 m, front maximum steer approximately 70°. `steering_curve` uses km/h: `(0,1), (20,.9), (60,.8), (120,.7)`. These measurements do not establish an exact bicycle model of the plant. The locked evaluator is `/data/third_party/Bench2Drive`, version 0.0.4, commit `7ec25d1c9f7522d923ce5f3420986cef1cb2d956`.
+**Vehicle and input boundary.** The frozen [configuration](../experiments/b2d_controller/results/b2d-controller/results/controller_config.json) comes from stock CARLA 0.9.15 `vehicle.lincoln.mkz_2020`: wheelbase 2.860471491 m, actor-relative rear axle x=-1.388633220 m, front maximum steer approximately 70°. `steering_curve` uses km/h: `(0,1), (20,.9), (60,.8), (120,.7)`. These measurements do not establish an exact bicycle model of the plant. The locked evaluator is `/data/third_party/Bench2Drive`, version 0.0.4, commit `7ec25d1c9f7522d923ce5f3420986cef1cb2d956`.
 
 `--drive controller` currently requires `--policy none`. The adapter obtains its dense path and Mercator transform from paired route GPS/world coordinates: this is a **route-oracle control diagnostic**, without obstacle avoidance, traffic-light policy, or a real planner. Pose uses GNSS/compass plus speed/gyro prediction; the GNSS mount is x=-1.4 m, with gains .05 for position and .1 for heading. Tiny signed standstill speed below .01 m/s is zeroed, while `raw_speed_mps` remains logged. Meaningful reverse remains a controller fault.
 
@@ -68,29 +68,29 @@ DATA_DIR=/data /data/envs/carla/bin/python scripts/b2d_run.py \
   --route-ids 2390 --workers 1 --server-index 90 --gpu-rank 0 --windowed \
   --rig front3 --width 800 --height 450 --decimate 4 --zero-copy --no-spectator \
   --policy none --drive controller --controller-preset carla --cruise-mps 8 --tm-seed 0 \
-  --controller-config todos/2026-09-22-b2d-controller/results/controller_config.json \
+  --controller-config experiments/b2d_controller/results/b2d-controller/results/controller_config.json \
   --out /data/runs/b2d/controller/smoke-v2
 ```
 
 A paired campaign can append the frozen holdout XML and a separate slope brake-hold check:
 
 ```bash
-DATA_DIR=/data /data/envs/carla/bin/python scripts/b2d_controller_campaign.py \
+DATA_DIR=/data /data/envs/carla/bin/python experiments/b2d_controller/lib/b2d_controller_campaign.py \
   --routes /data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml \
   --presets carla,tcp,pursuit --seeds 0,1 --server-index 92 \
-  --controller-config todos/2026-09-22-b2d-controller/results/controller_config.json \
-  --holdout-routes todos/2026-09-22-b2d-controller/results/holdout.xml --holdout-seed 0 \
+  --controller-config experiments/b2d_controller/results/b2d-controller/results/controller_config.json \
+  --holdout-routes experiments/b2d_controller/results/b2d-controller/results/holdout.xml --holdout-seed 0 \
   --slope-check --out /data/runs/b2d/controller/campaign-v2
 ```
 
 The frozen v4 comparison uses distinct per-preset configurations:
 
 ```bash
-DATA_DIR=/data /data/envs/carla/bin/python scripts/b2d_controller_campaign.py \
+DATA_DIR=/data /data/envs/carla/bin/python experiments/b2d_controller/lib/b2d_controller_campaign.py \
   --routes /data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml \
   --presets carla,tcp,pursuit --seeds 0,1 --server-index 96 \
-  --controller-config todos/2026-09-22-b2d-controller/results/v4-freeze/candidate-pursuit.json \
-  --preset-configs todos/2026-09-22-b2d-controller/results/v4-freeze/preset-configs.json \
+  --controller-config experiments/b2d_controller/results/b2d-controller/results/v4-freeze/candidate-pursuit.json \
+  --preset-configs experiments/b2d_controller/results/b2d-controller/results/v4-freeze/preset-configs.json \
   --slope-check --out /data/runs/b2d/controller/formal-v4-reproduction
 ```
 
@@ -101,14 +101,14 @@ The campaign owns one server across groups, resets worlds through the evaluator,
 **Preserve and plot.** Raw attempts contain `motion.jsonl` (including explicitly encoded nonfinite inputs), `control.jsonl`, `trajectories.jsonl`, `route_reference.json`, official results, events, and timing logs. Keep `/data/runs/b2d/controller/development*`, campaign groups, failed attempts, and all figure editions. Capture source bytes before a standalone run; inventory only after the run is stopped:
 
 ```bash
-/data/envs/carla/bin/python scripts/b2d_controller_archive.py snapshot \
+/data/envs/carla/bin/python experiments/b2d_controller/lib/b2d_controller_archive.py snapshot \
   --out /data/runs/b2d/controller/source-v2 \
-  --input todos/2026-09-22-b2d-controller/results/controller_config.json \
-  --input todos/2026-09-22-b2d-controller/results/holdout.xml
-/data/envs/carla/bin/python scripts/b2d_controller_archive.py inventory \
+  --input experiments/b2d_controller/results/b2d-controller/results/controller_config.json \
+  --input experiments/b2d_controller/results/b2d-controller/results/holdout.xml
+/data/envs/carla/bin/python experiments/b2d_controller/lib/b2d_controller_archive.py inventory \
   --root /data/runs/b2d/controller/campaign-v2 \
   --out /data/runs/b2d/controller/campaign-v2-inventory.json
-/data/envs/carla/bin/python scripts/b2d_controller_plot.py \
+/data/envs/carla/bin/python experiments/b2d_controller/archive/b2d_controller_plot.py \
   --development /data/runs/b2d/controller/development3 \
   --campaign /data/runs/b2d/controller/campaign-v2 --label Dev10 \
   --out /data/runs/b2d/controller/figures-v3
@@ -136,6 +136,6 @@ off-screen unless `DISPLAY` is set (`CARLA_WINDOWED=0/1` overrides). Tokyo launc
   2 mm (Town10HD/Town05 identical to 1e-5 m, Town12 within 2 mm) and the same 155/156 verdict.
   A case takes about 2.5x longer than on Tokyo (single-threaded server tick), so run cases in parallel:
   8 servers on distinct `--server-index` values (150 ports apart) gave 20 cases/min with no failures.
-  Details: [gpubox-port.md](../todos/2026-09-23-controller-next/gpubox-port.md).
+  Details: [gpubox-port.md](../experiments/b2d_controller/results/controller-next/gpubox-port.md).
 
 Last verified: 2026-09-23

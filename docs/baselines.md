@@ -29,7 +29,7 @@ Stage breakdowns are tags of the same run (`stage-vision`, `stage-vision-prefill
 | openjev, same, identical request repeated | same | same | yes | same | 347 / 358 / 385 | same | same, but the vLLM prefix cache holds the images | not representative of driving (every frame is new) |
 | openjev, front camera only, fresh frames | same | same | yes | same | 345 / 345 / 371 | same | same, 502 input tokens | |
 | openjev, README text benchmark (3 text questions) | same | same | yes | same | 147 / 151 / 215 | same | same, 171 input tokens, no image | the 24/200 requests that need one read only take 47 ms; the README quotes 94 ms p50 on the same card |
-| Qwen/Qwen3-VL-8B-Instruct (bf16) | HF rev `0c351dd` | Apache-2.0, not gated | yes (load check only) | `envs/jevdrive` (ours) | not benchmarked | 16.7 GB alloc | one 40-token caption of one camera frame | our own feature backbone: `uv run python scripts/bench_baselines/load_backbones.py <repo>` (needs `HF_HUB_OFFLINE=1`) |
+| Qwen/Qwen3-VL-8B-Instruct (bf16) | HF rev `0c351dd` | Apache-2.0, not gated | yes (load check only) | `envs/jevdrive` (ours) | not benchmarked | 16.7 GB alloc | one 40-token caption of one camera frame | our own feature backbone: `uv run python experiments/baselines_latency/archive/load_backbones.py <repo>` (needs `HF_HUB_OFFLINE=1`) |
 | Qwen/Qwen3-VL-32B-Instruct (bf16) | HF rev `0cfaf48` | Apache-2.0, not gated | yes (load check only) | `envs/jevdrive` (ours) | not benchmarked | 62.7 GB alloc | load plus one 40-token caption of one frame | fits the 96 GB card at bf16 with ~33 GB to spare; 37 s from cold cache to caption |
 | facebook/vjepa2-vitl-fpc64-256 (bf16) | HF rev `b3c1679` | Apache-2.0, not gated | yes (load check only) | same | not benchmarked | 0.7 GB alloc | one forward of a 4-frame clip | video control, see "Backbone controls" below: 48 ms per 4-frame clip (12 ms/frame), 512 tokens x 1024 |
 | google/siglip2-so400m-patch14-384 (bf16) | HF rev `e8e4872` | Apache-2.0, not gated | yes (load check only) | same | not benchmarked | 2.2 GB alloc | one forward of one frame | image-text control: 12.4 ms/frame, 729 tokens x 1152 |
@@ -67,7 +67,7 @@ AutoVLA's selling point is adaptive reasoning: the RFT stage is supposed to teac
 needs it, which would make its latency input-dependent. Measured on WOD-E2E val, it does not think at all.
 
 Frames come from **our own subset definitions** (`jevdrive.waymo.subsets`), not from the authors' evaluation
-setup: `scripts/bench_baselines/autovla_waymo_sample.py` takes val frames whose 4-frame image window at
+setup: `experiments/baselines_latency/archive/autovla_waymo_sample.py` takes val frames whose 4-frame image window at
 0.5 s spacing is strictly complete for all three cameras, and samples 50 per stratum uniformly without
 replacement, at most one frame per sequence, seed 0. Strata: `straight_yaw` (not turning now or within 3 s),
 `turn_yaw` (already turning, |yaw rate| >= 5 deg/s), `pre_onset` (not turning yet, |yaw rate| < 1 deg/s, but
@@ -107,7 +107,7 @@ Raw output: `$DATA_DIR/runs/bench_baselines/autovla/waymo-val-strata/<time>/{sum
 ## Backbone controls: how to feed them
 
 These three are not competitors, they are the controls for our own feature pipeline (they replace DINOv3, see
-decision 12 in `research/decisions.md`). Measured with `scripts/bench_baselines/load_backbones.py` on the same demo
+decision 12 in `research/decisions.md`). Measured with `experiments/baselines_latency/archive/load_backbones.py` on the same demo
 frames, bf16, batch 1, after 3 warmups.
 
 | Backbone | Input tensor | Preprocessing | Exposed features | Cost |
@@ -147,14 +147,14 @@ What the feature-extraction path has to respect:
 ## Reproduce
 
 - Code in `$DATA_DIR/third_party/<name>` at the commit above, venv in `$DATA_DIR/envs/<name>`,
-  built by `scripts/bench_baselines/setup_<name>.sh`. Weights: `scripts/download_models.sh`.
+  built by `experiments/baselines_latency/archive/setup_<name>.sh`. Weights: `scripts/download_models.sh`.
 - Run inside tmux (see [long-runs.md](long-runs.md)):
-  - `scripts/tmux_run.sh bl-qd env OMP_NUM_THREADS=4 $DATA_DIR/envs/qwen-drive/bin/python scripts/bench_baselines/qwen-drive.py`
-  - `scripts/tmux_run.sh bl-openjev scripts/bench_baselines/openjev.sh`
-  - `scripts/tmux_run.sh bl-autovla env OMP_NUM_THREADS=4 $DATA_DIR/envs/autovla/bin/python scripts/bench_baselines/autovla.py`
+  - `scripts/tmux_run.sh bl-qd env OMP_NUM_THREADS=4 $DATA_DIR/envs/qwen-drive/bin/python experiments/baselines_latency/archive/qwen-drive.py`
+  - `scripts/tmux_run.sh bl-openjev experiments/baselines_latency/archive/openjev.sh`
+  - `scripts/tmux_run.sh bl-autovla env OMP_NUM_THREADS=4 $DATA_DIR/envs/autovla/bin/python experiments/baselines_latency/archive/autovla.py`
   - the Waymo reasoning-rate run: sample first (`UV_PROJECT_ENVIRONMENT=$DATA_DIR/envs/jevdrive PYTHONPATH=. uv run
-    --no-sync python scripts/bench_baselines/autovla_waymo_sample.py`, ~570 MB of JPEGs), then
-    `scripts/tmux_run.sh bl-av-waymo env OMP_NUM_THREADS=4 $DATA_DIR/envs/autovla/bin/python scripts/bench_baselines/autovla_waymo.py`
-- `scripts/bench_baselines/_bench.py` is the shared timer (stdlib + torch, so it runs in every venv).
+    --no-sync python experiments/baselines_latency/archive/autovla_waymo_sample.py`, ~570 MB of JPEGs), then
+    `scripts/tmux_run.sh bl-av-waymo env OMP_NUM_THREADS=4 $DATA_DIR/envs/autovla/bin/python experiments/baselines_latency/archive/autovla_waymo.py`
+- `experiments/baselines_latency/archive/_bench.py` is the shared timer (stdlib + torch, so it runs in every venv).
 
 Last verified: 2026-09-20

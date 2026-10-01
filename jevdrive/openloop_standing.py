@@ -1,10 +1,10 @@
 """openpilot's open-loop standing on WOD-E2E and NAVSIM, side by side with our heads, Alpamayo, constant velocity and the
-published leaderboards. Pre-registration: todos/2026-09-25-openpilot-openloop-comparison.md (G0-G3).
+published leaderboards. Pre-registration: fc65452:todos/2026-09-25-openpilot-openloop-comparison.md (G0-G3).
 
   wod     G0 + G1: every row on the 479 val rater frames -- RFS (leaderboard cluster mean, CI by within-cluster
           resampling), paired frame-mean deltas against cv / `cls ego K1024` / Cinque's native plan, the standstill and
           junction subsets, ADE@5s vs rater_best; and the NAVSIM-timeline variants of the openpilot native plan
-  navsim  G2 / G3 readouts from the official devkit's per-token scores (written by `scripts/navsim_zs_score.sh`)
+  navsim  G2 / G3 readouts from the official devkit's per-token scores (written by `experiments/zeroshot_openloop/archive/navsim_zs_score.sh`)
 
     python -m jevdrive.openloop_standing wod [--desire-run <heads_train run of p5route 2b>]
 """
@@ -47,7 +47,7 @@ def wod_preds(desire_run: str = "") -> tuple[dict, dict]:
     from . import wod_zeroshot as Z
     ctx = R.rater_context()
     names = ctx["name"]
-    z = np.load(REPO / "research/results/wod-zeroshot/per_frame.npz", allow_pickle=False)
+    z = np.load(REPO / "experiments/zeroshot_openloop/results/wod-zeroshot/per_frame.npz", allow_pickle=False)
     at = pd.Series(np.arange(len(z["names"])), index=z["names"]).reindex(names).to_numpy()
     assert not np.isnan(at).any()
     at = at.astype(int)
@@ -127,7 +127,7 @@ def wod(desire_run: str = "") -> dict:
                 d, lo, hi = _paired(rfs[ka] - rfs[kb], np.random.default_rng(4))
                 g1.append({"model": m, "variant": f"{a} - {b}", "d_vs_base": d, "lo": lo, "hi": hi})
     board = pd.DataFrame([{"row": f"{k} (test split)", "rfs_cluster": v[0], "ade5_rater_best": v[1]} for k, v in WOD_BOARD.items()])
-    np.savez_compressed(REPO / "research/results/openpilot-openloop/wod_rfs_per_frame.npz", names=ctx["name"],
+    np.savez_compressed(REPO / "experiments/op_openloop/results/openpilot-openloop/wod_rfs_per_frame.npz", names=ctx["name"],
                         cluster=cl, speed=sp, **{f"rfs/{k}": v for k, v in rfs.items()})
     return {"wod_main": main, "wod_timeline": pd.DataFrame(g1), "wod_board": board}
 
@@ -241,7 +241,7 @@ def continuation_share(wod_main: pd.DataFrame, nav: pd.DataFrame | None) -> pd.D
         "arXiv 2406.03877 Tab. 3", hib=False)
     add("Bench2Drive closed loop (220 routes)", "DS", "ego MLP: AD-MLP (literature)", 18.05, 90.6, "BLUE (decision 38)", None, "",
         "arXiv 2406.03877 Tab. 3; decision 38")
-    hp = REPO / "research/results/openpilot-openloop/hugsim_base.csv"
+    hp = REPO / "experiments/op_openloop/results/openpilot-openloop/hugsim_base.csv"
     if hp.exists():
         h = pd.read_csv(hp).set_index("tag")["hd"]
         for tag in ("cv-official", "cv-fixed"):
@@ -257,19 +257,19 @@ def main():
     ap.add_argument("step", choices=("wod", "navsim", "share"))
     ap.add_argument("--desire-run", default="")
     a = ap.parse_args()
-    (REPO / "research/results/openpilot-openloop").mkdir(parents=True, exist_ok=True)
+    (REPO / "experiments/op_openloop/results/openpilot-openloop").mkdir(parents=True, exist_ok=True)
     rl = RunLog("openloop_standing", a.step)
     if a.step == "wod":
         out = wod(a.desire_run)
     elif a.step == "navsim":
         out = navsim()
     else:
-        res = REPO / "research/results/openpilot-openloop"
+        res = REPO / "experiments/op_openloop/results/openpilot-openloop"
         nav = pd.read_csv(res / "navsim_navtest.csv") if (res / "navsim_navtest.csv").exists() else None
         out = {"continuation_share": continuation_share(pd.read_csv(res / "wod_main.csv"), nav)}
     for name, t in out.items():
         t.to_csv(rl.dir / f"{name}.csv", index=False)
-        t.to_csv(REPO / "research/results/openpilot-openloop" / f"{name}.csv", index=False, float_format="%.4f")
+        t.to_csv(REPO / "experiments/op_openloop/results/openpilot-openloop" / f"{name}.csv", index=False, float_format="%.4f")
         rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".3f"))
     rl.close()
 

@@ -1,5 +1,5 @@
 """Fusion diagnostics Q4: how much SAM 3.1 sees, and how well its ground-contact points land in BEV.
-Pre-registration and the clarifications this module implements: todos/2026-09-25-fusion-diagnostics.md (Q4, and the
+Pre-registration and the clarifications this module implements: fc65452:todos/2026-09-25-fusion-diagnostics.md (Q4, and the
 [Q4] lines of the deviation log). Detection itself is `jevdrive.sam_detect` (envs/sam3); everything here is CPU.
 
   lists     image lists for sam_detect: P5 observation frames x 3 cameras, nuScenes val keyframes x 3 front

@@ -1,4 +1,4 @@
-"""op-adapt data (todos/2026-09-28-op-adapt.md): nuScenes pedestrian-corridor labels and per-scene trunk caches.
+"""op-adapt data (fc65452:todos/2026-09-28-op-adapt.md): nuScenes pedestrian-corridor labels and per-scene trunk caches.
 
   labels   every trainval keyframe (processed/nusc_zs/trainval_index.pkl): GT pedestrians / cyclists with at least one
            lidar point, the corridor of decisions 44 / 53 (logged future path from the origin, extended along its last

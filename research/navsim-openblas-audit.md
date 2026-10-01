@@ -2,7 +2,7 @@
 
 **结论先行**：没有任何一个我们产出的 NAVSIM 数字受这个 bug 影响，不需要改任何分数，也不需要重建任何 metric cache。
 这个 bug 不是 09-28 换机后才有的：同型号 CPU（Xeon Platinum 8470Q）上 09-24 就撞到过，当时已经修掉（decisions 第 37 条附带发现、[docs/navsim.md](../docs/navsim.md)），
-之后所有打分都经 `scripts/navsim_zs_score.sh`（强制 `OPENBLAS_CORETYPE=Haswell`，启动时做 40×40 求逆自检）或自带该变量的脚本。
+之后所有打分都经 `experiments/zeroshot_openloop/archive/navsim_zs_score.sh`（强制 `OPENBLAS_CORETYPE=Haswell`，启动时做 40×40 求逆自检）或自带该变量的脚本。
 另一个 agent 在 09-30 13:5x 看到的发散，是它在未设变量的 shell 里做诊断探测（navtest 前 40 个 token）时撞到的，不是某个已交付的 run。
 现在 navsim1 / navsim2 两个 env 已经自带该变量（第 4 节），以后没人需要记得。
 
@@ -31,7 +31,7 @@ bug 与修复都成立，并且不止 pinv：inv、SVD 一样坏。所以 `navsi
 ## 2. 哪些 run 设了 flag（09-28 之后的全部 NAVSIM 打分与建 cache）
 
 判据有三层：(a) 启动脚本里有没有；(b) 还活着的进程的 `/proc/<pid>/environ`；(c) 结果本身有没有第 1 节的签名（这一层不依赖记忆，覆盖所有 run，包括从 tmux 手敲的）。
-09-28 之后 box 上 `runs/navsim/eval/` 里新出现 85 个 run（`research/results/navsim-openblas-audit/runs_since_0928.csv`，不含审计自己的 4 个复打）：**无一个 DAC 或 PDMS 接近 0**，最低的 46.3 是 hold 输入变体（op-lb 的 hold 插帧对照，DAC 78% 是输入本身差，不是环境）。
+09-28 之后 box 上 `runs/navsim/eval/` 里新出现 85 个 run（`experiments/op_openloop/results/navsim-openblas-audit/runs_since_0928.csv`，不含审计自己的 4 个复打）：**无一个 DAC 或 PDMS 接近 0**，最低的 46.3 是 hold 输入变体（op-lb 的 hold 插帧对照，DAC 78% 是输入本身差，不是环境）。
 
 | run 组 | 计算了什么 | flag | 证据 |
 |:--|:--|:--:|:--|
@@ -109,4 +109,4 @@ navtest、navhard、e6sub 三个 cache 都在 09-24 与 09-25 建成，早于换
 
 - op-adapt r2、N4 的所有 NAVSIM 数字不需要改；r2 prereg 里「09-28 之后的 NAVSIM 分数需要核对」一句可以标为已核对，指向本文。
 - 「自 09-28 起」这个说法本身不对，应为「自 09-24 起在这个 CPU 型号上一直存在，09-24 已修」，新 env 补丁之后不需要再靠脚本记忆。
-- 本次审计的产物：`research/results/navsim-openblas-audit/`（逐 run 汇总、逐 token 前后对比汇总 `before_after.json`、cache 对比）；box 上的中间物在 `$DATA_DIR/runs/navsim_audit/`（含重建的 300 个 token 的 cache，`caches/`），没有删任何东西。
+- 本次审计的产物：`experiments/op_openloop/results/navsim-openblas-audit/`（逐 run 汇总、逐 token 前后对比汇总 `before_after.json`、cache 对比）；box 上的中间物在 `$DATA_DIR/runs/navsim_audit/`（含重建的 300 个 token 的 cache，`caches/`），没有删任何东西。

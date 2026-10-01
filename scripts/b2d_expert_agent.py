@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """PDM-Lite expert (SimLingo's Bench2Drive copy, leaderboard/team_code/autopilot.py, run as shipped) with a trajectory log,
-for the controller acceptance test (todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers.md).
+for the controller acceptance test (experiments/cl_infra/results/closed-loop-infra-acceptance/b2d-controllers.md).
 
 The expert drives exactly as it does in SimLingo's data collection and in its published Bench2Drive result
 (pdm_lite_b2d_traj, DS 97.0); this subclass only writes, every tick, the hero's simulator pose and speed and the control

@@ -205,9 +205,9 @@ Bench2Drive 是城区、限速 30–60 km/h。这不是控制器的事，是 hea
 经过离线、无交互 CARLA、完整路线三层验证后再选默认。** 原稿的 pure pursuit + aim-bearing PID
 不作为默认：两项都根据前方目标点角度转向，不能把后者解释为只修跟踪残差。
 
-实现与协作材料集中在 [controller 工作目录](../todos/2026-09-22-b2d-controller/README.md)，
-完整任务、验证、验收门槛见 [plan.md](../todos/2026-09-22-b2d-controller/plan.md)，
-接口见 [contract.md](../todos/2026-09-22-b2d-controller/contract.md)。
+实现与协作材料集中在 [controller 工作目录](../experiments/b2d_controller/results/b2d-controller/README.md)，
+完整任务、验证、验收门槛见 [plan.md](../experiments/b2d_controller/results/b2d-controller/plan.md)，
+接口见 [contract.md](../experiments/b2d_controller/results/b2d-controller/contract.md)。
 
 | 部件 | 本轮定义 |
 |---|---|
@@ -290,7 +290,7 @@ tick × 124.6 ms + 68.5 s，8 个 worker：
 
 ### 实施顺序与验收
 
-本轮按 [plan.md](../todos/2026-09-22-b2d-controller/plan.md) 的 T0–T8 实施：基线归档、车辆与定位标定、
+本轮按 [plan.md](../experiments/b2d_controller/results/b2d-controller/plan.md) 的 T0–T8 实施：基线归档、车辆与定位标定、
 NumPy controller、独立控制验证、双频率 agent、CLI/报告、完整 smoke、Dev10/保留路线、冻结配置与结论。
 route 是控制诊断输入，不含避障/让行；中心线可能穿过 ConstructionObstacleTwoWays 等场景障碍物，
 不能预先承诺能跑完，或把任何 blocked 都归咎 lookahead。
@@ -314,7 +314,7 @@ Dev10 carla/tcp各10条；pursuit通过前置门槛后加入，默认与最强�
 
 Dev10两个TM seed三组均9/10驾驶完成，两轮误差几乎一致；这里只改变TrafficManager种子，并未控制全部随机源。路线均值横向RMS为CARLA .2711m、TCP .4947m、pursuit .2951m；
 平均completion为94.726%、94.914%、94.726%。因此pursuit没有满足预定门槛的默认替代证据。六条保留集三组均5/6完成，路线均值横向RMS为.4488/.7373/.5679m（CARLA/TCP/pursuit），仍不支持替换。
-完整表、图、源文件哈希与失败尝试在[文章素材](../todos/2026-09-22-b2d-controller/article-notes.md)，
+完整表、图、源文件哈希与失败尝试在[文章素材](../experiments/b2d_controller/results/b2d-controller/article-notes.md)，
 成本分解在[Tokyo实测段](../docs/bench2drive-cost.md#tokyo-controller-diagnostic-complete-dev10-seed0-2026-09-22)。
 
 上述v1阶段实际模型为policy=none。TCP只是控制器适配preset，未运行TCP神经网络；后续真实模型对照另见下节。
@@ -332,14 +332,14 @@ v2随后修复了该空间路线至定时轨迹的边界：从估计后轴位置
 
 空间路线定时已修复：从估计ego后轴与航向重接原dense route，再按弧长采样。此后六项G2开发条件包含实际S弯与6m/s直线。
 v3 PI Kp=1、Ki=.25未消除全部波动；唯一追加的Kp=.5复验中，CARLA横向配PI与pursuit max均6/6通过，pursuit additive仍5/6。
-候选pursuit max已在正式Dev10前冻结；不依据正式结果继续调增益。[完整迭代和图](../todos/2026-09-22-b2d-controller/iteration-v2.md)。
+候选pursuit max已在正式Dev10前冻结；不依据正式结果继续调增益。[完整迭代和图](../experiments/b2d_controller/results/b2d-controller/iteration-v2.md)。
 
 新smoke在罗盘NaN处暴露未处理异常。最长.2s的陀螺仪预测及超时制动/复位修复后，126项测试通过，原2390闭环完成100%，
 一帧降级后恢复，控制p99=.265ms。此处既保留失败输入，也保留重放与新的闭环结果，不能只写最后成功。
 
 用户明确目标是驾驶表现，不要求Driving Score必然提高。DS不直接惩罚加速度/jerk；官方Smoothness另算。
 18对完整v3/v4闭环案例的纵向jerk RMS等权均值下降25.9%，横向加速度RMS上升2.0%，说明收益必须分项报告。
-[物理诊断完整数据](../todos/2026-09-22-b2d-controller/results/comfort-v3-v4-v1/README.md)不是官方舒适性分数，也不是模型收益证明。
+[物理诊断完整数据](../experiments/b2d_controller/results/b2d-controller/results/comfort-v3-v4-v1/README.md)不是官方舒适性分数，也不是模型收益证明。
 旧tcp-smoke/tcp-fast确实加载过真实TCP checkpoint，但本轮route oracle尚未做真实TCP的新旧控制器对照。
 后续应冻结模型checkpoint、相机输入与推理节拍，比较轨迹跟踪、速度稳定、转弯、停车和舒适性，驾驶得分作为另一个观察量。
 TCP原生waypoint时域和学习的control branch须先明确，不得凭空补出5s轨迹后声称只换了控制器。
@@ -347,7 +347,7 @@ TCP原生waypoint时域和学习的control branch须先明确，不得凭空补�
 正式结果已完成：候选16/20驶完全程，对CARLA横向＋同一PI的17/20；全程横向RMS为.402600m对.363227m，高10.84%。
 候选DS均值59.147虽高于参考53.811，仍不满足默认替代条件。保留CLI carla/vendor，PI/max作为显式可选配置；
 不再追加未触发的保留集，也不把未执行的G2 seed1补充复跑记为通过。
-[最终报告与全部验收偏离](../todos/2026-09-22-b2d-controller/final-report.md)已封存；随后已完成真实TCP纵向六例和独立转弯六例，见下节。
+[最终报告与全部验收偏离](../experiments/b2d_controller/results/b2d-controller/final-report.md)已封存；随后已完成真实TCP纵向六例和独立转弯六例，见下节。
 
 ## 真实模型与逐弯开发的后续结果（2026-09-23）
 
@@ -355,7 +355,7 @@ TCP原生waypoint时域和学习的control branch须先明确，不得凭空补�
 
 按用户要求另将24240左弯、26966急右弯和17563的两个S窗口由几何预定义，固定同一纵向、巡航速度、3m前视下限与转向限制，只将max前视系数.5→.375。六例CARLA无交互全程验证全部通过，但126项必要条件有4项失败：急右弯CTE RMS仅下降7.56%（要求15%），左/右弯转向变化率p95上升73.07%/34.95%（上限20%），第一S窗横向加速度p95增加13.49%（上限10%）。因此不追加反序确认、不升级默认；“多数直路表现可以”不能覆盖少数转弯的退步。
 
-[后续总报告](../todos/2026-09-23-tcp-controller/final-report.md)保存协议、正负结果、静止负速度接入修复、原始索引与每版图表。后续已完成更新跳变分解与Hermite插值六例闭环：无噪声几何纹波下降没有转化为实际转弯收益，147项必要条件中4项失败，候选拒绝。[逐弯后续目录](../todos/2026-09-23-lateral-followup/README.md)保存全部反例。固定后轴侧向传播项随后也完成六例真实闭环：急右/左弯及两个S的CTE RMS分别降低23.21%/27.25%/6.87%/4.17%，但156项必要条件仍有1项右弯航向失败（P95增加1.178°，余量1°）。左弯定位误差虽退化，真实路径跟踪却改善，说明必须闭环判断。默认保持不变；[最终报告](../todos/2026-09-23-lateral-followup/final-report.md)保留全部代价与下一步。
+[后续总报告](../experiments/b2d_tcp/results/tcp-controller/final-report.md)保存协议、正负结果、静止负速度接入修复、原始索引与每版图表。后续已完成更新跳变分解与Hermite插值六例闭环：无噪声几何纹波下降没有转化为实际转弯收益，147项必要条件中4项失败，候选拒绝。[逐弯后续目录](../experiments/b2d_controller/results/lateral-followup/README.md)保存全部反例。固定后轴侧向传播项随后也完成六例真实闭环：急右/左弯及两个S的CTE RMS分别降低23.21%/27.25%/6.87%/4.17%，但156项必要条件仍有1项右弯航向失败（P95增加1.178°，余量1°）。左弯定位误差虽退化，真实路径跟踪却改善，说明必须闭环判断。默认保持不变；[最终报告](../experiments/b2d_controller/results/lateral-followup/final-report.md)保留全部代价与下一步。
 
 ## 会推翻候选选择的证据
 

@@ -1,7 +1,7 @@
 # navhard 上 openpilot Cinque 的 EPDMS 亏在哪：分项拆解与不训练 base model 的补救估计
 
-2026-09-29。纯 CPU 分析，读的全是已有的逐 token 打分 CSV，没有新跑任何打分。数据与脚本：[scripts/navhard_deficit.py](../scripts/navhard_deficit.py)，输出表在 [results/navhard-deficit/](results/navhard-deficit/)。
-Cinque `none` 的 navhard 结果来自 [decisions 第 66 条](decisions.md) 与 [op-leaderboard todo](../todos/2026-09-29-op-leaderboard.md)，逐 token CSV 在 box 的 `runs/navsim/eval/v2_navhard_two_stage_opi_lb_navhard_gimm-cinque{,.lc_m1.0}__base/`。
+2026-09-29。纯 CPU 分析，读的全是已有的逐 token 打分 CSV，没有新跑任何打分。数据与脚本：[experiments/op_openloop/archive/navhard_deficit.py](../experiments/op_openloop/archive/navhard_deficit.py)，输出表在 [results/navhard-deficit/](../experiments/op_openloop/results/navhard-deficit/)。
+Cinque `none` 的 navhard 结果来自 [decisions 第 66 条](decisions.md) 与 [op-leaderboard todo](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-op-leaderboard.md)，逐 token CSV 在 box 的 `runs/navsim/eval/v2_navhard_two_stage_opi_lb_navhard_gimm-cinque{,.lc_m1.0}__base/`。
 
 ## 结论先行
 
@@ -29,7 +29,7 @@ stage 2 的组内权重是以 stage 1 终点为中心的高斯核（σ² = 0.1�
 
 ### 1.1 stage 1 / stage 2 原始子分（devkit 汇总行，与 HF 榜同一口径）
 
-表内为 stage 内的加权平均子分（%），combined 为官方 EPDMS。ZTRS 复现（我们的 devkit）与 HF 榜几乎逐项一致（48.15 对 48.12，CV 11.48 对 11.48），所以榜上其他行可以直接对比。HF 数据来自 [榜单快照](../todos/2026-09-26-top10-intersection/raw_snapshots/agc2025-e2e-driving-navhard.public.md)（2026-09-26 抓取，修 bug 后口径），全表 [sub_scores.csv](results/navhard-deficit/sub_scores.csv)。
+表内为 stage 内的加权平均子分（%），combined 为官方 EPDMS。ZTRS 复现（我们的 devkit）与 HF 榜几乎逐项一致（48.15 对 48.12，CV 11.48 对 11.48），所以榜上其他行可以直接对比。HF 数据来自 [榜单快照](../experiments/top10/results/top10-intersection/raw_snapshots/agc2025-e2e-driving-navhard.public.md)（2026-09-26 抓取，修 bug 后口径），全表 [sub_scores.csv](../experiments/op_openloop/results/navhard-deficit/sub_scores.csv)。
 
 | 行 | EPDMS | NC 1 | DAC 1 | DDC 1 | EP 1 | TTC 1 | LK 1 | HC 1 | EC 1 | NC 2 | DAC 2 | DDC 2 | EP 2 | TTC 2 | LK 2 | HC 2 | EC 2 |
 |:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
@@ -49,7 +49,7 @@ TLC 各行都在 96 以上（Cinque 100 / 99.2），不列。读法：
 - NC、TTC 在 stage 1 与 ZTRS 相当（98.0 对 98.9，98.2 对 98.9）；stage 2 差 0.2 与 2.8 分，绝对值不大。**reactive 场景里的碰撞并不是 Cinque 的缺口**：stage 2 的 NC 90.9 与 ZTRS 91.1 一样，DriveZero 也只有 94.4。
 - EP：Cinque（75.0 / 66.1）比 ZTRS（66.7 / 63.6）高；与 DrivoR、DriveZero 相比，stage 1 同档（75–77），stage 2 低约 10（66 对 76）。ZTRS 是靠保守拿到 48 的。速度不是它与 ZTRS 的差距，对更高的 DrivoR 以上才有 1.5 到 2 分。
 - EC 各家分散很大（37.8 到 79.1），不构成榜上排名的规律：DriveZero 只有 44 却拿 56.8。Cinque 的 EC 低是我们输入管线的特性，见 4.2。
-- 两个 lc 臂在 stage 1 略涨、stage 2 略跌，combined −0.28：对 225 组做 bootstrap 的 lc − none 配对差 **−0.15 [−1.17, +0.91]**（[group_bootstrap_ci.csv](results/navhard-deficit/group_bootstrap_ci.csv)），是噪声。
+- 两个 lc 臂在 stage 1 略涨、stage 2 略跌，combined −0.28：对 225 组做 bootstrap 的 lc − none 配对差 **−0.15 [−1.17, +0.91]**（[group_bootstrap_ci.csv](../experiments/op_openloop/results/navhard-deficit/group_bootstrap_ci.csv)），是噪声。
 
 ### 1.2 与 navtest（PDMS 84.2）同口径比较
 
@@ -69,7 +69,7 @@ navtest 上我们只有 v1 打分（GIMM 输入的 Cinque 没有跑 v2 navtest�
 | 全部加权项一起完美 | | +9.9 | | +20.1 | +25.7 |
 | 零分 token 占比 | 5.9% | | 12.9%（s1）/ 34.3%（s2） | | 3.3% / 23.5% |
 
-表：navtest 数来自 [navtest_v1_terms.csv](results/navhard-deficit/navtest_v1_terms.csv)（12 146 token，逐 token 复算），navhard 数来自 [marginal_if_perfect.csv](results/navhard-deficit/marginal_if_perfect.csv)（均匀权重）与 [slices.csv](results/navhard-deficit/slices.csv)。
+表：navtest 数来自 [navtest_v1_terms.csv](../experiments/op_openloop/results/navhard-deficit/navtest_v1_terms.csv)（12 146 token，逐 token 复算），navhard 数来自 [marginal_if_perfect.csv](../experiments/op_openloop/results/navhard-deficit/marginal_if_perfect.csv)（均匀权重）与 [slices.csv](../experiments/op_openloop/results/navhard-deficit/slices.csv)。
 
 读法：**navtest 上 Cinque 的损失是速度**（EP 一项 8.7 分，乘性项合计只有 2.7），这与已有结论一致（N0 的纵向拉长有效）。**navhard 上损失换成了乘性失败**（乘性项合计 26.5，其中 DAC 单项 14.3）。navtest 与 navhard 的 DAC 差异：navhard stage 1（也是真实场景，只是被选成 hard）的 DAC 就已经从 95.6 掉到 89.3，stage 2 再掉到 73.6。同一个模型换到偏离后的起点，先天不足的是路面约束。
 
@@ -93,13 +93,13 @@ navtest 上我们只有 v1 打分（GIMM 输入的 Cinque 没有跑 v2 navtest�
 | 加权五项一起 | +0.80 | −0.44 | +1.23 |
 | 全部九项 | +11.46 | +4.14 | +6.99 |
 
-来源 [substitution_vs_ztrs.csv](results/navhard-deficit/substitution_vs_ztrs.csv)。DAC 占差额的 68%，DAC + DDC + EC 占 88%，其余六项之和是 −0.5，在噪声内。单项和（+9.6）小于九项同换（+11.46），差 1.8 分，是项间的交互（同一 token 上 DAC、DDC 同时失败，换掉一项后另一项才显出来）。stage 1 只占 4.1、stage 2 占 7.0，与 stage 2 更差一致；两个 stage 之和 11.1，对整体 11.46 余下 0.3 是组内乘积的交互项。
+来源 [substitution_vs_ztrs.csv](../experiments/op_openloop/results/navhard-deficit/substitution_vs_ztrs.csv)。DAC 占差额的 68%，DAC + DDC + EC 占 88%，其余六项之和是 −0.5，在噪声内。单项和（+9.6）小于九项同换（+11.46），差 1.8 分，是项间的交互（同一 token 上 DAC、DDC 同时失败，换掉一项后另一项才显出来）。stage 1 只占 4.1、stage 2 占 7.0，与 stage 2 更差一致；两个 stage 之和 11.1，对整体 11.46 余下 0.3 是组内乘积的交互项。
 
 95% CI（225 组 bootstrap）：ZTRS − Cinque = +11.46 [+9.8, +13.2]，所以这个差额和它的构成不是抽样噪声。
 
 ### 2.2 更高的参照：按 log 份额分摊（近似）
 
-其他 HF 参照没有逐 token 文件，只能用聚合子分：把每项的 log 比按各 stage 分摊官方差额（[logshare_vs_references.csv](results/navhard-deficit/logshare_vs_references.csv)）。这个近似在 ZTRS 上给出 DAC 10.4、DDC 2.7、EC 1.6，与逐 token 精确值（7.8 / 1.2 / 1.1）同序但偏大，因为它把 ZTRS 的 +3.3 权重差额也摊进了各项。**下表是估计，只看排序与量级。**
+其他 HF 参照没有逐 token 文件，只能用聚合子分：把每项的 log 比按各 stage 分摊官方差额（[logshare_vs_references.csv](../experiments/op_openloop/results/navhard-deficit/logshare_vs_references.csv)）。这个近似在 ZTRS 上给出 DAC 10.4、DDC 2.7、EC 1.6，与逐 token 精确值（7.8 / 1.2 / 1.1）同序但偏大，因为它把 ZTRS 的 +3.3 权重差额也摊进了各项。**下表是估计，只看排序与量级。**
 
 | 参照（官方差额） | DAC | DDC | EC | EP | NC | TTC | LK | 其余 |
 |:--|--:|--:|--:|--:|--:|--:|--:|--:|
@@ -112,11 +112,11 @@ navtest 上我们只有 v1 打分（GIMM 输入的 Cinque 没有跑 v2 navtest�
 
 ### 2.3 stage 1 与 stage 2 的分工
 
-combined 的乘积结构下，stage 1 的失败代价被放大：stage 1 分数为 0 的组占 12.9%（450 组里的 58 个），这些组的 stage 2 平均分本来是 0.53，被一起清掉，**合计损失 6.9 分 combined**（[stage_coupling.csv](results/navhard-deficit/stage_coupling.csv)）。同期 ZTRS 的 stage 1 零分只有 3.3%。stage 1 的零几乎全是 DAC（Cinque 10.7%，ZTRS 2.4%），NC 只占 2.0%。
+combined 的乘积结构下，stage 1 的失败代价被放大：stage 1 分数为 0 的组占 12.9%（450 组里的 58 个），这些组的 stage 2 平均分本来是 0.53，被一起清掉，**合计损失 6.9 分 combined**（[stage_coupling.csv](../experiments/op_openloop/results/navhard-deficit/stage_coupling.csv)）。同期 ZTRS 的 stage 1 零分只有 3.3%。stage 1 的零几乎全是 DAC（Cinque 10.7%，ZTRS 2.4%），NC 只占 2.0%。
 
 ## 3. 失败在哪里
 
-数据是 Cinque `none` 的 5 912 个 token（stage 1 450，stage 2 5 462），每个 token 有逐项 0/1 或分数、命令（左 / 直 / 右）、起始速度、地图。navhard 的 scenario type 标签不在我们的 slim pkl 里，所以只切了命令、速度、地图与 plan 几何。全部切片在 [slices.csv](results/navhard-deficit/slices.csv)。
+数据是 Cinque `none` 的 5 912 个 token（stage 1 450，stage 2 5 462），每个 token 有逐项 0/1 或分数、命令（左 / 直 / 右）、起始速度、地图。navhard 的 scenario type 标签不在我们的 slim pkl 里，所以只切了命令、速度、地图与 plan 几何。全部切片在 [slices.csv](../experiments/op_openloop/results/navhard-deficit/slices.csv)。
 
 ### 3.1 零分（乘性失败）集中在 stage 2 的运动帧，以 DAC 为主
 
@@ -161,15 +161,15 @@ DAC 失败随横移与 yaw 单调上升，但**基线本身就高**：stage 2 �
 
 ### 3.3 速度与纵向短缺
 
-stage 1（有人类未来的 450 个 token）上，plan 4 s 前进距离比人类短 3.9 m（均值），随速度增大：≤ 1 m/s −1.1 m，3–6 −3.9，6–9 −5.0，> 9 −5.6（[stage1_lon_shortfall.csv](results/navhard-deficit/stage1_lon_shortfall.csv)）。plan 的前进距离约为 v₀ · 4 s 的 0.78。但这个短缺换算成分数只是 EP（marginal +9.9 全部置 1、拉到 ×1.1 只有 +1.0），并且 EP 不是与 mid-tier 的差距（2.1 节 EP 项换过来 0.00）。
+stage 1（有人类未来的 450 个 token）上，plan 4 s 前进距离比人类短 3.9 m（均值），随速度增大：≤ 1 m/s −1.1 m，3–6 −3.9，6–9 −5.0，> 9 −5.6（[stage1_lon_shortfall.csv](../experiments/op_openloop/results/navhard-deficit/stage1_lon_shortfall.csv)）。plan 的前进距离约为 v₀ · 4 s 的 0.78。但这个短缺换算成分数只是 EP（marginal +9.9 全部置 1、拉到 ×1.1 只有 +1.0），并且 EP 不是与 mid-tier 的差距（2.1 节 EP 项换过来 0.00）。
 
 ### 3.4 为什么 ZTRS 有 +3.3 的权重加成而 Cinque 没有
 
-stage 2 组内权重是 stage 1 终点的高斯核。Cinque 的 stage 1 终点与人类终点的距离中位数是 4.4 m，只有 20% 的 token 在 1.9 m 以内（[stage1_endpoint_vs_human.csv](results/navhard-deficit/stage1_endpoint_vs_human.csv)），所以绝大多数组的权重是均匀的，官方 33.33 与均匀 33.43 只差 −0.1。ZTRS 的官方值比均匀高 3.3，说明它的终点大概率落在 stage 2 起点附近，被加权到「它自己走到的那个起点」那一格，这是 navhard 「pseudo closed-loop」设计对终点精度的额外奖励。（这一段是从代码与数据推断，没有重算 ZTRS 的权重，因为 slim pkl 里没有绝对位姿。）
+stage 2 组内权重是 stage 1 终点的高斯核。Cinque 的 stage 1 终点与人类终点的距离中位数是 4.4 m，只有 20% 的 token 在 1.9 m 以内（[stage1_endpoint_vs_human.csv](../experiments/op_openloop/results/navhard-deficit/stage1_endpoint_vs_human.csv)），所以绝大多数组的权重是均匀的，官方 33.33 与均匀 33.43 只差 −0.1。ZTRS 的官方值比均匀高 3.3，说明它的终点大概率落在 stage 2 起点附近，被加权到「它自己走到的那个起点」那一格，这是 navhard 「pseudo closed-loop」设计对终点精度的额外奖励。（这一段是从代码与数据推断，没有重算 ZTRS 的权重，因为 slim pkl 里没有绝对位姿。）
 
 ## 4. 不训练 base model 的补救：估计
 
-**以下全是估计，不是测量。** 做法：在现有逐 token 分数上做替换或封顶，都是同一批 token 上的**样本内**估计，没有新跑打分、没有验证集，也没有代价项（例如提速会增加碰撞，没有建模）。数值来自 [fix_estimates.csv](results/navhard-deficit/fix_estimates.csv)。
+**以下全是估计，不是测量。** 做法：在现有逐 token 分数上做替换或封顶，都是同一批 token 上的**样本内**估计，没有新跑打分、没有验证集，也没有代价项（例如提速会增加碰撞，没有建模）。数值来自 [fix_estimates.csv](../experiments/op_openloop/results/navhard-deficit/fix_estimates.csv)。
 
 ### 4.1 DAC：几何规则无效，需要学习式或地图式信号
 
@@ -181,7 +181,7 @@ stage 2 组内权重是 stage 1 终点的高斯核。Cinque 的 stage 1 终点�
 | 同上，回退到 `cls_late` 头轨迹 | 15.9% | −1.5 |
 | \|横移\| > 2 m 或 \|yaw\| > 0.4 rad 回退到 Hydra | 32.1% | −3.4 |
 
-所有阈值与回退目标都变差（−0.2 到 −12.1，[表全部](results/navhard-deficit/fix_estimates.csv)）。大横移的 plan 在 navhard 里多数是对的（转弯、绕行、stage 2 的偏离恢复），一刀切回退损失比 DAC 收益大。
+所有阈值与回退目标都变差（−0.2 到 −12.1，[表全部](../experiments/op_openloop/results/navhard-deficit/fix_estimates.csv)）。大横移的 plan 在 navhard 里多数是对的（转弯、绕行、stage 2 的偏离恢复），一刀切回退损失比 DAC 收益大。
 
 真正能针对 DAC 的是**打分头 / 切换器**（第 64 条的 N0，进行中的 N1）。navhard 上现有的候选（Cinque GIMM、`lc`、E6 Hydra 头、`cls_late` 头、CV）逐 token 取最好的（oracle，上界）：
 
@@ -222,7 +222,7 @@ navhard 有 18% 的 token 起始速度 < 1 m/s，Cinque 在这批上的 EP 只�
 
 ## 5. 对 op-adapt r2 的含义
 
-读的是 [op-adapt r2 预登记](../todos/2026-09-29-op-adapt-r2-prereg.md) 第 2.1 节的损失（L_score 的 winner-take-all，L_dir 的配对方向约束，规则打分器 S_jev = NC · DAC · (5P + 5TTC + 2C) / 12）。
+读的是 [op-adapt r2 预登记](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-op-adapt-r2-prereg.md) 第 2.1 节的损失（L_score 的 winner-take-all，L_dir 的配对方向约束，规则打分器 S_jev = NC · DAC · (5P + 5TTC + 2C) / 12）。
 
 **对得上的部分**：S_jev 有 DAC 项（可行驶区判据与 NAVSIM 的 DAC 是同一类：所有行车道与路口，含对向车道），所以 DAC 信号在打分器里存在。
 

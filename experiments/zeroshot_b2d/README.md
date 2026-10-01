@@ -1,0 +1,26 @@
+# zeroshot_b2d: Zero-shot Bench2Drive, Alpamayo 1.5 and openpilot
+
+status: concluded
+decisions: 33
+index: n=5 smoke: Alpamayo DS 60.8, SR 2/5; openpilot DS 2.7 voided
+
+**Question.** Can Alpamayo 1.5 and openpilot drive Bench2Drive zero-shot?
+
+**Conclusion.** n=5: Alpamayo DS 60.8, RC 70.1, SR 2/5; openpilot DS 2.7 voided as adapter bug (decisions 33). Alpamayo stalls = Zoo PID reverse-plan bug; F1 fix run paused at 17/220.
+
+**Read more.** research/openpilot-and-open-driving-models.md, `git show bcbdde4:todos/2026-09-24-zeroshot-exam/bench2drive.md`
+
+<!-- files:begin -->
+## Files
+
+- `zeroshot_b2d_alp.sh` (archive): Alpamayo 1.5 zero-shot Bench2Drive exam …
+- `zeroshot_b2d_op.sh` (archive): openpilot zero-shot Bench2Drive exam …
+- `b2d_zoo_planner.py` (archive): Vendored verbatim from Bench2DriveZoo …
+- `zeroshot_b2d_alp_speed.py` (lib): Where the Alpamayo zero-shot …
+- `zeroshot_b2d_alp_stall.py` (archive): Stall diagnosis of the Alpamayo …
+- `zeroshot_b2d_report.py` (archive): Per-route table of a zero-shot …
+- `zeroshot_b2d_summary.py` (archive): Headline numbers of a zero-shot …
+- `test_b2d_zoo_pid_wrap.py` (archive): Tests of the Zoo PID wrapper's adapter …
+
+[archive/](archive/) 24 one-off code · [results/](results/) 16 result files · [figs/](figs/) 10 figures · [lib/](lib/) 1 library
+<!-- files:end -->

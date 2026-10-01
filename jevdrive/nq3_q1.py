@@ -1,5 +1,5 @@
 """Night queue 3, lane C, Q1: every examinee that needs no re-recording, read on the P6 v0 exam
-(todos/2026-09-26-night-queue-3.md, Q1, rule 7, the [C] entries).
+(fc65452:todos/2026-09-26-night-queue-3.md, Q1, rule 7, the [C] entries).
 
   heads    our readouts trained on P5 v1 BA exactly as stored, the P6 exam frames riding along as rows that never enter a
            fit or a standardisation (elicitation I3's protocol, elicit_i3.exam): per route fold `ridge_late` and M-C pair
@@ -10,7 +10,7 @@
   collect  every examinee's (n, 20, 2) futures aligned to the P6 index (NaN where not read): openpilot native plan
            (op_streams_plan), TFv6 waypoints (the recorder's shadow, 2 s) and TFv6 target speed (longitudinal only), the
            P5-trained heads, the NAVSIM family (processed/top10_exam/p6/<model>.npz), Alpamayo 1.5 (nq3_alpamayo.npz)
-  judge    jevdrive.nq3_p6.judge_one for each examinee -> research/results/nq3/q1/*.csv|md, world-mode agreement,
+  judge    jevdrive.nq3_p6.judge_one for each examinee -> experiments/night_queue_3/results/q1/*.csv|md, world-mode agreement,
            Alpamayo's language-vs-trajectory inconsistency
 """
 import json
@@ -27,7 +27,7 @@ log = get_logger(__name__)
 SET = "carla_p6"
 MODELS = ("cinque", "lebowski")
 REPO = Path(__file__).resolve().parents[1]
-RESULTS = REPO / "research" / "results" / "nq3" / "q1"
+RESULTS = REPO / "experiments/night_queue_3/results/q1"
 N4_FIT = "runs/night2/n4-fit/20260926-125031"
 P5CLS = "processed/night2/n3/p5cls_s0.npz"
 NAV = {"sparsedrivev2": "SparseDriveV2", "ztrs": "ZTRS", "drivor": "DrivoR", "wajepa": "WA-JEPA"}

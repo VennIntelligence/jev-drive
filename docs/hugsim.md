@@ -21,7 +21,7 @@ can address files by plain relative path):
 | `scenarios.zip` | 400+ scenario configs (yaml) | `XDimLab/HUGSIM` |
 | `sample_data/data.zip` | raw *reconstruction input* of nuScenes scene-0383 (images, depth, colmap), not a simulation scene; used as ground truth for the render check | `hyzhou404/HUGSIM/sample_data` |
 | `scenarios/<dataset>/*.yaml` | `scenarios.zip` unpacked (436 scenarios: kitti360 113, nuscenes 88, pandaset 127, waymo 108) | ours |
-| `scenes/<dataset>/<scene>/` | a scene zip unpacked on first use by `scripts/hugsim/run_closed_loop.sh` (`scene.pth`, `dynamic_*.pth`, `cfg.yaml`, `ground_param.pkl`, `meta_data.json`) | ours |
+| `scenes/<dataset>/<scene>/` | a scene zip unpacked on first use by `experiments/hugsim/archive/run_closed_loop.sh` (`scene.pth`, `dynamic_*.pth`, `cfg.yaml`, `ground_param.pkl`, `meta_data.json`) | ours |
 
 This is the already-reconstructed, exported benchmark (`export_scene.py` output), not raw
 KITTI-360/nuScenes/PandaSet/Waymo sensor data — running `closed_loop.py` needs nothing else. Raw sensor
@@ -33,15 +33,15 @@ Total ≈ 61 GB benchmark + 2.4 GB sample data ≈ 63.4 GB.
 
 ## How to (re)fetch
 
-`scripts/hugsim_fetch.py`, built on `jevdrive/hfdl.py` (the same parallel range-request downloader used
-by `scripts/alpamayo_fetch.py`):
+`experiments/hugsim/archive/hugsim_fetch.py`, built on `jevdrive/hfdl.py` (the same parallel range-request downloader used
+by `experiments/model_smoke/archive/alpamayo_fetch.py`):
 
 ```bash
-python scripts/hugsim_fetch.py sample_data   # ~2.4 GB, fetch first (needed for the install/port smoke test)
-python scripts/hugsim_fetch.py benchmark     # ~61 GB, everything else
+python experiments/hugsim/archive/hugsim_fetch.py sample_data   # ~2.4 GB, fetch first (needed for the install/port smoke test)
+python experiments/hugsim/archive/hugsim_fetch.py benchmark     # ~61 GB, everything else
 ```
 
-Run in tmux `jev` window `hugsim-dl`: `scripts/tmux_run.sh hugsim-dl python scripts/hugsim_fetch.py sample_data benchmark`.
+Run in tmux `jev` window `hugsim-dl`: `scripts/tmux_run.sh hugsim-dl python experiments/hugsim/archive/hugsim_fetch.py sample_data benchmark`.
 
 Resumable at file granularity: a file already at the right size is skipped. Every LFS file is
 sha256-checked against the HF API's reported oid, every non-LFS file against the git blob sha1 (see
@@ -102,7 +102,7 @@ Upstream pins torch 2.4.1+cu118 through pixi, which has no sm_120 kernels. We bu
 | pytorch3d, unidepth, apex, kitti360Scripts, waymo reader, flow-vis | from source | **not installed**: reconstruction/training only, never imported by `closed_loop.py` |
 
 ```bash
-scripts/tmux_run.sh hugsim-build scripts/hugsim/install.sh      # ~10 min if the wheels are cached; CPU only
+scripts/tmux_run.sh hugsim-build experiments/hugsim/archive/install.sh      # ~10 min if the wheels are cached; CPU only
 ```
 
 `install.sh` clones HUGSIM @ 62c690d and the dependency repos at pinned commits (`$DATA_DIR/third_party/HUGSIM`,
@@ -114,7 +114,7 @@ are sm_120) (checked with a 100k-Gaussian rasterization, a tcnn MLP and
 release-vs-code mismatches that abort scenarios are fixed (actor asset path suffix `postprocess/shadow.pth`,
 `ConstantPlanner(max_t=...)`, `IDM` with one waypoint left). None of them changes behaviour where upstream runs.
 
-The official LTF client (hyzhou404/NAVSIM fork) gets its own env, `scripts/hugsim/install_ltf.sh`
+The official LTF client (hyzhou404/NAVSIM fork) gets its own env, `experiments/hugsim/archive/install_ltf.sh`
 (`$DATA_DIR/envs/hugsim-ltf`: our navsim1 package set, Python 3.10, torch swapped to 2.8.0+cu128; weights
 `autonomousvision/navsim_baselines/ltf/ltf_seed_0.ckpt`). UniAD_SIM / VAD_SIM need the mmcv-1.x / torch-1.x stack
 and are not ported.
@@ -124,19 +124,19 @@ and are not ported.
 ```bash
 # on the box; one process per scenario (upstream plan.py leaks agent keys across gymnasium.make calls)
 scripts/tmux_run.sh hugsim-run env GPU=0 AD=jev POLICY=route \
-  scripts/hugsim/run_closed_loop.sh $DATA_DIR/runs/hugsim/<tag> $DATA_DIR/datasets/hugsim/scenarios/nuscenes/scene-0383-easy-00.yaml
+  experiments/hugsim/archive/run_closed_loop.sh $DATA_DIR/runs/hugsim/<tag> $DATA_DIR/datasets/hugsim/scenarios/nuscenes/scene-0383-easy-00.yaml
 ```
 
 `run_closed_loop.sh` writes a base config (our paths), unpacks the scene zip on first use, runs the official
-`closed_loop.py` with `--ad jev` (our pipe agent, `scripts/hugsim/agent_client.py`, policies `route` = privileged
+`closed_loop.py` with `--ad jev` (our pipe agent, `experiments/hugsim/archive/agent_client.py`, policies `route` = privileged
 recorded-route follower, `cv` = constant velocity straight ahead) or `--ad ltf`, and appends wall time, steps,
 peak simulator VRAM, HD-Score and RC to `<tag>/runs.csv`. Per scenario it keeps `eval.json`, `video.mp4`
 (2x3 camera grid), `data.pkl`, `infos.pkl`, `sim.log`, `output.txt` (agent log).
 Scenarios with `load_HD_map: true` (16 of 88 nuScenes) also need trajdata's nuScenes map cache
 (`nusc_map_cache.zip`, hard-coded cache location `~/.unified_data_cache`) and raw nuScenes tables; not set up yet.
 
-Other checks: `scripts/hugsim/render_check.py` (render vs recorded images, FPS, VRAM; figures by
-`scripts/hugsim/render_figs.py`) and `scripts/hugsim/lqr_heading_check.py` (controller, no rendering).
+Other checks: `experiments/hugsim/archive/render_check.py` (render vs recorded images, FPS, VRAM; figures by
+`experiments/hugsim/archive/render_figs.py`) and `experiments/hugsim/archive/lqr_heading_check.py` (controller, no rendering).
 
 ## Smoke test (2026-09-24)
 
@@ -145,14 +145,14 @@ GPU 0 was shared with other jobs at 97 % utilization, so the speed numbers are a
 **Rendering is correct.** The exported scene-0383 rendered at all 1080 recorded camera poses (with the recorded
 pose of its one dynamic object) against the recorded images from `sample_data`: PSNR 25.8 dB on training views,
 24.4 dB on HUGSIM's own held-out views (idx % 30 >= 24), 2.58 M Gaussians
-([render_psnr.csv](../research/results/hugsim/render_psnr.csv), [render_summary.json](../research/results/hugsim/render_summary.json)).
+([render_psnr.csv](../experiments/hugsim/results/hugsim/render_psnr.csv), [render_summary.json](../experiments/hugsim/results/hugsim/render_summary.json)).
 
-![HUGSIM render check](../research/figs/hugsim-render-check.png)
+![HUGSIM render check](../experiments/hugsim/figs/hugsim-render-check.png)
 
 Held-out views of scene-0383, recorded (top) vs rendered on our GPU (bottom). Geometry, signs and lane paint line up
 pixel for pixel; the residual is 3DGS blur in thin structures and low-texture sky, not a camera or pose error.
 
-![PSNR per view](../research/figs/hugsim-render-psnr.png)
+![PSNR per view](../experiments/hugsim/figs/hugsim-render-psnr.png)
 
 PSNR per view over the recorded log. Held-out views sit about 1.4 dB under training views, the normal gap for a
 per-scene 3DGS fit; the dip after 8 s is the turn, where views see less-covered geometry.
@@ -167,8 +167,8 @@ per-scene 3DGS fit; the dip after 8 s is the turn, where views see less-covered 
 | simulator VRAM (process, nvidia-smi) | 2.4 GB (scene-0071, no actors) to 5.9 GB (scene-0383 with 2 actors) |
 | render-only torch peak | 2.6 GB |
 
-**Closed loop** ([smoke_eval.csv](../research/results/hugsim/smoke_eval.csv),
-[smoke_runs.csv](../research/results/hugsim/smoke_runs.csv)); the 4 nuScenes scenarios whose actor assets were
+**Closed loop** ([smoke_eval.csv](../experiments/hugsim/results/hugsim/smoke_eval.csv),
+[smoke_runs.csv](../experiments/hugsim/results/hugsim/smoke_runs.csv)); the 4 nuScenes scenarios whose actor assets were
 already downloaded; HD-Score / RC; "fixed" = with the optional PR #57 controller patch (next sections):
 
 | scenario | LTF (official client) | LTF, fixed | route (privileged) | route, fixed | cv (straight, 1 m/s) | cv, fixed |
@@ -273,9 +273,9 @@ open, unmerged) fixes it. DrivoR's reproduction measures +8.47 HD-Score (258 non
 UniAD/VAD/LTF numbers were produced with the defect.
 
 Our evidence, same equations as the env, plans in the shipped-client convention
-([lqr_heading_traj.csv](../research/results/hugsim/lqr_heading_traj.csv)):
+([lqr_heading_traj.csv](../experiments/hugsim/results/hugsim/lqr_heading_traj.csv)):
 
-![LQR heading check](../research/figs/hugsim-lqr-heading.png)
+![LQR heading check](../experiments/hugsim/figs/hugsim-lqr-heading.png)
 
 Left: a dead-straight 5 m/s plan re-issued every step; the official controller ends 18 m to the right with 45 deg
 of yaw after 10 s, the PR #57 version stays on the line. Right: our privileged route follower on scene-0383's
@@ -295,9 +295,9 @@ HD-Scores; fixed2 is the controller that passed [acceptance](#controller-accepta
 
 ## Controller acceptance (2026-09-25)
 
-Each controller was fed a known-good plan: the scene's own logged ego trajectory (`jevdrive/hugsim_preset.py`, re-anchored
+Each controller was fed a known-good plan: the scene's own logged ego trajectory (`experiments/hugsim/archive/hugsim_preset.py`, re-anchored
 at the ego every step, speed ramped from the ego's speed to the logged speed at +2 / -4 m/s^2), through the same agent
-path as the models (`scripts/hugsim/preset_agent.py` = `zs_agent.Agent` with the model call replaced, forward_only and
+path as the models (`experiments/hugsim/archive/preset_agent.py` = `zs_agent.Agent` with the model call replaced, forward_only and
 straight_stop on). The reference is an ideal tracker that moves the ego exactly along the plan
 (`patches/hugsim/optional/ideal-tracker.patch`, tree `HUGSIM-zs/ideal`); collision, route and scoring code are unchanged.
 Pre-registered thresholds on the static scenes: lateral error at 0.5 s median <= 0.10 m and p95 <= 0.30 m, heading p95 <= 5 deg,
@@ -312,19 +312,19 @@ Held-out validation, 12 scenes (8 static, 4 with actors), all four datasets:
 
 - The official controller leaves normal curved plans by 1-2 m, grazes roadside background or hits an actor the reference
   avoids; its HD-Scores carry a controller component of -0.07 on average and up to -0.5 on a scene.
-- PR #57 scores like the reference but still cuts corners by 0.3-1.5 m. Offline (`scripts/hugsim/ctrl_offline.py`, the
+- PR #57 scores like the reference but still cuts corners by 0.3-1.5 m. Offline (`experiments/hugsim/archive/ctrl_offline.py`, the
   env's equations without rendering; it reproduces the simulator's tracking errors) the cause is the iLQR's 0.5 s
   discretization against the simulator's 0.25 s step (upstream issue #75), then the steering-rate input cost of 10.
   The 50 ms solve cap and the 0.4 rad/s steering-rate limit never bind.
 - `lqr-tracker-v2.patch` (on top of PR #57): `traj2control` resamples the plan to 0.25 s, iLQR discretization 0.25 s,
-  steering-rate input cost 1, no wall-clock cap. Run it with `scripts/hugsim/zs_run.py --controller fixed2`
+  steering-rate input cost 1, no wall-clock cap. Run it with `experiments/hugsim/archive/zs_run.py --controller fixed2`
   (tree created by `zs_run.py setup-trees fixed2`).
 - HD-Score is insensitive to tracking error by construction (every step is scored on the plan, which starts at the ego);
   tracking error is the more sensitive acceptance measure.
 - The env class (`hugsim_env`) is an editable install and always comes from `$DATA_DIR/third_party/HUGSIM`, whichever tree
   runs; `traj2control` and `sim.ilqr` come from the running tree, so controller patches must live there.
 
-Details, per-scene tables and figures: [hugsim-controllers.md](../todos/2026-09-25-closed-loop-infra-acceptance/hugsim-controllers.md).
+Details, per-scene tables and figures: [hugsim-controllers.md](../experiments/cl_infra/results/closed-loop-infra-acceptance/hugsim-controllers.md).
 
 ## Episode termination and HD-Score
 
@@ -358,10 +358,10 @@ input; and send x-right/y-forward waypoints at 0.5 s spacing relative to the fro
 
 ## Zero-shot agents (Alpamayo 1.5, openpilot)
 
-Code: `jevdrive/hugsim_zs.py` (geometry), `scripts/hugsim/zs_agent.py` (per-scenario agent process),
-`scripts/hugsim_zs_server.py` (resident model server), `scripts/hugsim/zs_run.py` (batch runner over two private HUGSIM
-trees, `official` and `fixed` = + PR #57), `scripts/hugsim/zs_exam.sh` (phases). Pre-registration, checklist and results:
-[todos/2026-09-25-hugsim-exam/README.md](../todos/2026-09-25-hugsim-exam/README.md).
+Code: `jevdrive/hugsim_zs.py` (geometry), `experiments/hugsim/archive/zs_agent.py` (per-scenario agent process),
+`experiments/hugsim/archive/hugsim_zs_server.py` (resident model server), `experiments/hugsim/archive/zs_run.py` (batch runner over two private HUGSIM
+trees, `official` and `fixed` = + PR #57), `experiments/hugsim/archive/zs_exam.sh` (phases). Pre-registration, checklist and results:
+[experiments/hugsim/results/hugsim-exam-plan/README.md](../experiments/hugsim/results/hugsim-exam-plan/README.md).
 
 - **Frames at 4 Hz.** openpilot gets one rendered frame per 0.2 s context step, so its clock runs 1.25x fast and plan
   time tau is read as real time 1.25 tau (offline on comma1M: +25-38 % lateral error at 2 s vs native 20 Hz; holding each

@@ -1,6 +1,6 @@
-"""SAM 3.1 open-vocabulary detection over image lists (fusion diagnostics Q4, todos/2026-09-25-fusion-diagnostics.md).
+"""SAM 3.1 open-vocabulary detection over image lists (fusion diagnostics Q4, fc65452:todos/2026-09-25-fusion-diagnostics.md).
 
-Runs in envs/sam3 (Python 3.12, facebookresearch/sam3 at $DATA_DIR/third_party/sam3, scripts/sam3_setup.sh).
+Runs in envs/sam3 (Python 3.12, facebookresearch/sam3 at $DATA_DIR/third_party/sam3, experiments/fusion_diag/archive/sam3_setup.sh).
 The model is SAM 3.1's detector: the image-grounding half of the multiplex checkpoint (`detector.*` keys), built
 exactly as `sam3.model_builder.build_sam3_multiplex_video_predictor` builds it and run through the same
 preprocessing and postprocessing as the repo's `Sam3Processor` (1008 x 1008 resize, mean/std 0.5, score =

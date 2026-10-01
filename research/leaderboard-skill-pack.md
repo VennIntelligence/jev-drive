@@ -1,9 +1,9 @@
 # 榜单「调料包」（skill pack）：同一个 openpilot 基座，按榜单换前后端薄插件（2026-09-29）
 
-状态：分析 + 方案，**待定**。没有跑新的 GPU 实验；本文的新数字全是已有输出上的 CPU 分析（小表在 [results/skill-pack/](results/skill-pack/)，
-脚本 `scripts/skill_pack_nav_decomp.py`、`scripts/skill_pack_wod_posthoc.py`）。文献数字由子 agent 读 arXiv HTML 摘录，标「摘要读」的是模型转述，引用前要对 PDF 核一遍。
+状态：分析 + 方案，**待定**。没有跑新的 GPU 实验；本文的新数字全是已有输出上的 CPU 分析（小表在 [results/skill-pack/](../experiments/skill_pack/results/)，
+脚本 `experiments/skill_pack/archive/skill_pack_nav_decomp.py`、`experiments/skill_pack/archive/skill_pack_wod_posthoc.py`）。文献数字由子 agent 读 arXiv HTML 摘录，标「摘要读」的是模型转述，引用前要对 PDF 核一遍。
 相关：[decisions.md](decisions.md) 第 35、37、40（第 6 点 E6）、46、53 条；[tmp/2026-09-29-leaderboard-wod.md](../tmp/2026-09-29-leaderboard-wod.md)（三张榜的对照表）；
-正在跑的 NAVSIM 导航 lane [todos/2026-09-29-op-leaderboard.md](../todos/2026-09-29-op-leaderboard.md)；缺口分析 [midterm-gaps.md](midterm-gaps.md)。
+正在跑的 NAVSIM 导航 lane [fc65452:todos/2026-09-29-op-leaderboard.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-op-leaderboard.md)；缺口分析 [midterm-gaps.md](midterm-gaps.md)。
 
 ## 0. 结论先行
 
@@ -124,7 +124,7 @@ rater 标签**只有 val 479 帧有**，train 只有 log 轨迹，test 隐藏。
 | RAP | test 8.04 | – | 两个 checkpoint 的 NMS 集成（2510.04333 附录 A.1） |
 | **openpilot Cinque（我们，val）** | 8.005 | – | zero-shot |
 
-我们在 val 479 帧上的 CPU 后处理试算（box 上已有的预测，官方 RFS 移植，95% CI 为 token bootstrap；[wod_val_posthoc.txt](results/skill-pack/wod_val_posthoc.txt)）：
+我们在 val 479 帧上的 CPU 后处理试算（box 上已有的预测，官方 RFS 移植，95% CI 为 token bootstrap；[wod_val_posthoc.txt](../experiments/skill_pack/results/wod_val_posthoc.txt)）：
 
 | 行 | RFS（cluster 均） | 压到下限的帧 | 对 Cinque 的配对差 |
 |:--|--:|--:|:--|
@@ -185,7 +185,7 @@ WOD 的 pack（B2 全局 s）在 P3 上能原样跑；NAVSIM 的 pack 在 P3 上
 
 ### 5.1 与导航 lane 的分工
 
-导航 lane（[todos/2026-09-29-op-leaderboard.md](../todos/2026-09-29-op-leaderboard.md)）负责 desire 时刻的臂、GIMM 缓存（navtest / navhard / navtrain 子集）与 WOD 提交包。pack **不碰 desire**，不重跑 GIMM：
+导航 lane（[fc65452:todos/2026-09-29-op-leaderboard.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-op-leaderboard.md)）负责 desire 时刻的臂、GIMM 缓存（navtest / navhard / navtrain 子集）与 WOD 提交包。pack **不碰 desire**，不重跑 GIMM：
 直接读 lane 的 `lb_navtest/gimm.npy`、`lb_navtrain/{gimm,plans}` 与 navtrain 上 `none` 臂的 devkit 分；若 lane 的 A* 过线，A* 的 plan 作为 B1 的额外候选。
 GPU 步骤（N1）排在 lane 的 navtest / navhard 跑完之后，避免抢卡。
 
@@ -218,7 +218,7 @@ pack 带来的分数主要落在 EP / 进度和信任域上，而真实外观配
 
 ## 6. N0 结果（2026-09-29）
 
-预登记 [todos/2026-09-29-skill-pack-n0.md](../todos/2026-09-29-skill-pack-n0.md)，小表 [results/skill-pack/n0/](results/skill-pack/n0/)，决策第 64 条。CPU only（13 核，1.5 h，最慢的是在 CPU 上重拟合模仿项）。
+预登记 [fc65452:todos/2026-09-29-skill-pack-n0.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-skill-pack-n0.md)，小表 [results/skill-pack/n0/](../experiments/skill_pack/results/n0/)，决策第 64 条。CPU only（13 核，1.5 h，最慢的是在 CPU 上重拟合模仿项）。
 
 | 读数 | 值 |
 |:--|:--|
@@ -235,7 +235,7 @@ B2 单独在 NAVSIM 上是零（PDMS 的 DAC / TTC 会罚快），只有经打�
 
 ## 6.1 N1 结果（2026-09-29）
 
-预登记 [todos/2026-09-29-n1-scorer.md](../todos/2026-09-29-n1-scorer.md)，小表 [results/skill-pack/n1/](results/skill-pack/n1/)，决策第 68 条。GPU 6 共卡，约 5 GPU·h。
+预登记 [fc65452:todos/2026-09-29-n1-scorer.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-n1-scorer.md)，小表 [results/skill-pack/n1/](../experiments/skill_pack/results/n1/)，决策第 68 条。GPU 6 共卡，约 5 GPU·h。
 
 | 读数 | 值 |
 |:--|:--|
@@ -252,7 +252,7 @@ B2 单独在 NAVSIM 上是零（PDMS 的 DAC / TTC 会罚快），只有经打�
 
 ## 6.2 N1 之后的提分：N1b、N2 与候选改动的排序（2026-09-30）
 
-预登记与全部表 [todos/2026-09-30-navsim-raise.md](../todos/2026-09-30-navsim-raise.md)，决策第 69–72、75 条。所有选择只在 N1 的 navtrain held-out logs（fold 0，4 037 token）上做，fold 1 作重复；navtest 每个配置一次，本 pack 共看 7 次（N0、N1、N1b、N2、S、N3、N4），最好者（N3）报 Bonferroni（m = 7）区间：对 N2 [+0.61, +1.39]，对 N1 [+3.76, +4.80]。
+预登记与全部表 [fc65452:todos/2026-09-30-navsim-raise.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-30-navsim-raise.md)，决策第 69–72、75 条。所有选择只在 N1 的 navtrain held-out logs（fold 0，4 037 token）上做，fold 1 作重复；navtest 每个配置一次，本 pack 共看 7 次（N0、N1、N1b、N2、S、N3、N4），最好者（N3）报 Bonferroni（m = 7）区间：对 N2 [+0.61, +1.39]，对 N1 [+3.76, +4.80]。
 
 | 读数 | navtest PDMS | 对 N1（配对，95% CI） | navhard EPDMS | EP 超 human |
 |:--|--:|:--|--:|--:|

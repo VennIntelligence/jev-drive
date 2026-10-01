@@ -1,5 +1,5 @@
 """Overnight queue item 5 / elicitation [I3-exam]: existing examinees zero-shot on the HUGSIM 3DGS pairs
-(todos/2026-09-25-reactivity-program/i3-hugsim-pairs.md; registration: todos/2026-09-26-elicitation-program.md,
+(fc65452:todos/2026-09-25-reactivity-program/i3-hugsim-pairs.md; registration: fc65452:todos/2026-09-26-elicitation-program.md,
 deviation-log entry [I3-exam] 01:13, written before any number).
 
   op-prepare  processed/hugsim_pairs/op_plan.json: one 5 Hz stream per rendered world, each scene with its own

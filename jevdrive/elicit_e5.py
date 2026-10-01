@@ -1,4 +1,4 @@
-"""Elicitation E5: a 20 Hz student of the M-C reaction head on the fast channel (todos/2026-09-26-elicitation-program.md,
+"""Elicitation E5: a 20 Hz student of the M-C reaction head on the fast channel (fc65452:todos/2026-09-26-elicitation-program.md,
 E5 and deviation-log entry [E5] 01:40, written before any E5 number).
 
   imglist   every P5 v1 BA index row x 3 cameras (current frame) -> processed/elicit_e5/images.parquet; the detector
@@ -304,7 +304,7 @@ def latency(rl, n: int = 200, warm: int = 20) -> dict:
     return out
 
 
-def figs(res_dir="research/results/elicitation/e5", out_dir="research/figs"):
+def figs(res_dir="experiments/elicitation/results/e5", out_dir="research/figs"):
     """Pedestrian flips and cut-in delta per arm (seed 0 with CI, seeds 1-2 as dots), both models."""
     import matplotlib.pyplot as plt
     from . import plots

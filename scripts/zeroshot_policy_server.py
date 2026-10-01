@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """One resident zero-shot driving model serving any number of CARLA workers over a unix socket.
-Pre-registration: todos/2026-09-24-zeroshot-exam/bench2drive.md. Agent side: scripts/b2d_zeroshot_agent.py.
+Pre-registration: fc65452:todos/2026-09-24-zeroshot-exam/bench2drive.md. Agent side: scripts/b2d_zeroshot_agent.py.
 
   alpamayo   NVIDIA Alpamayo 1.5 (runs in third_party/alpamayo1.5/.venv): 4 cameras x 4 frames at 10 Hz, rendered
              as pinhole in CARLA and resampled here on the GPU into the native f-theta images at 576x320, 16-step
@@ -248,7 +248,7 @@ def parse_args():
     p.add_argument("--attn", default="sdpa", help="alpamayo: sdpa decodes 29%% faster than FA2 on this card")
     p.add_argument("--compile", default="visual,expert", help="alpamayo: submodules to torch.compile")
     p.add_argument("--flow-steps", type=int, default=5, help="alpamayo: 5 moves the path 0.17 m, far below the "
-                   "1.28 m seed noise floor (todos/2026-09-24-alpamayo-smoke)")
+                   "1.28 m seed noise floor (fc65452:todos/2026-09-24-alpamayo-smoke)")
     p.add_argument("--pool", type=int, default=1, help="openpilot small / Cinque: sessions built at start-up")
     p.add_argument("--backend", default="trt", help="openpilot: onnxruntime backend (jevdrive/openpilot/model.py)")
     p.add_argument("--onnx", default="", help="openpilot: serve this (adapted) ONNX file instead of the model's stock one")

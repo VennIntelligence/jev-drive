@@ -1,5 +1,5 @@
 """Night queue 4, K-prep: the recipe ladder K0-K3 as two-fold cross-fitted readouts for the closed loop
-(todos/2026-09-26-night-queue-4.md, section K, and the [K] entries under it, written before any K number).
+(fc65452:todos/2026-09-26-night-queue-4.md, section K, and the [K] entries under it, written before any K number).
 
   split    runs/nq4/k/route_split.json: every Bench2Drive-220 route and every recorded P5 v1 BA route gets R1 / R2,
            stratified by scenario class (alternating along the class's route ids, recorded routes first)
@@ -734,7 +734,7 @@ def check_eigh():
 
 
 def cl_verdict(d: Path) -> dict:
-    """K5: the offline recomputation (scripts/nq3_cl_check.py op) identical on every request of every K arm, the fold
+    """K5: the offline recomputation (experiments/night_queue_3/archive/nq3_cl_check.py op) identical on every request of every K arm, the fold
     the agent used = the split's unseen readout, and the TFv6 rules replayed from ticks.jsonl identical on every tick."""
     d = Path(d)
     sp = load_split()
@@ -781,7 +781,7 @@ def ready() -> str:
     assert ver["pass"] and all(x["different"] == 0 for x in leads)
     assert fitj["k0_full_vs_laneB"]["max_abs_pred"] <= 1e-3
     gpu = kdir("steps", "cl", "gpu").read_text().strip()
-    lines = [f"# K-prep READY {pd.Timestamp.now(tz='Asia/Shanghai'):%Y-%m-%d %H:%M} CST (todos/2026-09-26-night-queue-4.md, K)", "",
+    lines = [f"# K-prep READY {pd.Timestamp.now(tz='Asia/Shanghai'):%Y-%m-%d %H:%M} CST (fc65452:todos/2026-09-26-night-queue-4.md, K)", "",
              "## Weights (numpy apply: jevdrive.nq4_k.KHead; one set per level and fold, the fits are deterministic)"]
     for lv in LEVELS:
         lines.append(f"- {lv}: " + ", ".join(str(kdir(lv, f, "head.npz")) for f in (*FOLDS, "full"))
@@ -789,11 +789,11 @@ def ready() -> str:
     lines += ["", "## Agent modes (scripts/b2d_zeroshot_agent.py, model head) and server",
               '- config: {"model": "head", "arm": "k0"|"k1"|"k2"|"k3", "k_view": "unseen"|"seen", "k_split": "' + str(kdir("route_split.json"))
               + '", "socket": <head server socket>, "warmup_s": 5.0, "desire": true, "head_cam_tick": 0.0, "controller": "fixed", '
-              '"controller_preset": "pursuit", "controller_config": todos/2026-09-23-tfv6-controller/controller-eval/P7.json, "seed": <TM seed>, "dump_every": 0}',
+              '"controller_preset": "pursuit", "controller_config": experiments/b2d_tfv6/results/tfv6-controller/controller-eval/P7.json, "seed": <TM seed>, "dump_every": 0}',
               "- route python: envs/scout-tfv6 (as lane B's head arms); the fold is chosen per route from BENCHMARK_ROUTE_ID:"
               " unseen = the readout that never saw the route's recordings (never-recorded routes: R1), seen = its own (recorded routes only; the agent refuses otherwise)",
               "- k2 / k3: TFv6 rules (LEAD 730bc1a creeping + stop sign) on P7's throttle / brake, logged per tick in ticks.jsonl (key rules)",
-              "- head server: CUDA_VISIBLE_DEVICES=<g> envs/openpilot/bin/python scripts/nq3_cl_server.py --pool <workers> --socket <S> "
+              "- head server: CUDA_VISIBLE_DEVICES=<g> envs/openpilot/bin/python experiments/night_queue_3/lib/nq3_cl_server.py --pool <workers> --socket <S> "
               "(no Qwen / YOLO server needed; one server serves all four K arms and both folds)",
               "- plans.jsonl gets v_target (K1-K3) and g3 (K3) per plan from the server's info", "",
               "## Output convention",

@@ -1,4 +1,4 @@
-"""Night queue 2, N4: the fast channel without the lift -- image-plane detection tokens (todos/2026-09-26-night-queue-2.md,
+"""Night queue 2, N4: the fast channel without the lift -- image-plane detection tokens (fc65452:todos/2026-09-26-night-queue-2.md,
 N4 and the [B] 10:12 entry, written before any N4 number).
 
   detect   (envs/ultralytics) YOLO26x-seg 640 fp16 on E5's image list with a forward pre-hook on the Segment head:
@@ -333,7 +333,7 @@ def latency(rl, n: int = 200, warm: int = 20):
 
 # ---------------------------------------------------------------- figure
 
-def figs(res_dir="research/results/night2/N4", out_dir="research/figs"):
+def figs(res_dir="experiments/night_queue_2/results/N4", out_dir="research/figs"):
     """Pedestrian flip rate, cut-in delta vs the prior and DynamicObjectCrossing non-reactive flips for A (E5, lifted),
     B (image plane) and C (both): seed 0 with the route-bootstrap CI, seeds 1-2 as crosses; both models."""
     import matplotlib.pyplot as plt

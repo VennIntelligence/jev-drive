@@ -7,7 +7,7 @@
  "sha256": "b23caf72d11b7552548fa3346fa070dfd91d02b94a1eaeaa1d56e57822de6569",
  "origin": "DriveTransformer's drivetransformer_bench2drive_dev10.xml (tfv6-repro runtime); frozen from $DATA_DIR/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml (sha256 6dc398c3835578f0)",
  "status": "frozen",
- "used_by": "tfv6 controller dev (scripts/b2d_tfv6_campaign.py level 1), op_l_b2d dev",
+ "used_by": "tfv6 controller dev (experiments/b2d_tfv6/lib/b2d_tfv6_campaign.py level 1), op_l_b2d dev",
  "members": [
   "17569",
   "2091",

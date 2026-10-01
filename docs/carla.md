@@ -1,5 +1,24 @@
 # CARLA
 
+**Summary.** CARLA 0.9.15 runs headless on our Blackwell cards and renders on the GPU; real Bench2Drive routes run
+end to end on Town12. Hard blocker was Vulkan in the container: install `libegl1` (not a loader rebuild) and pin
+`VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json`; check with `vulkaninfo --summary`. Start/stop with
+`scripts/carla_server.sh start 0` (rpc port 2000 + 50i); GPU via `-graphicsadapter=<rank>`, never
+`CUDA_VISIBLE_DEVICES`. Key traps: TM-port reuse, RenderThread 60 s timeout then Signal 11, pids.max 20480 thread cap
+(`-RPCThreads=4 -StreamingThreads=4 -SecondaryThreads=4` takes a server from 301 to 109 threads), no `pkill -f`.
+Python client: PyPI wheel in a 3.8 venv `$DATA_DIR/envs/carla`. Sizing and capacity numbers are superseded by
+docs/closed-loop-runbook.md and docs/bench2drive-cost.md; the "Numbers" section is the older server-side evidence.
+
+**Sections.**
+- Vulkan in the container: the one hard blocker, and its fix - libegl1 fix, packages, ICD pin
+- Traps - ports, crashes, flags, sensors, shutdown, determinism
+- Threads per server - thread pools, reduced-pool flags, equivalence tests
+- Town12 and Large Maps - sensor-dormancy crash, 11 failed routes, leaderboard guidance
+- Python client - cp38 wheel venv install
+- Starting and stopping a server - carla_server.sh, render check via carla_bench.py
+- Numbers, and where each came from - bench vs leaderboard FPS, saturation corrections
+- Prerequisites for a real evaluation - downloads, AdditionalMaps import, 220 routes by town
+
 Read this when you need a CARLA simulator on the box.
 [bench2drive-cost.md](bench2drive-cost.md) is the doc for what a closed-loop run costs;
 this one is about getting a server up and the traps in doing so.
@@ -9,7 +28,7 @@ carries the current default and every capacity number with its conditions; the m
 **Status: CARLA 0.9.15 runs headless on our Blackwell card and renders real frames on the GPU.
 A real Bench2Drive route runs end to end on Town12, the heaviest map.** All 220 routes are
 available and full-220 runs have been made (the 3.11 h harness run in [bench2drive-cost.md](bench2drive-cost.md),
-the Alpamayo zero-shot full run in `todos/2026-09-24-zeroshot-exam/`). (Was: "We have not decided to run them";
+the Alpamayo zero-shot full run in `fc65452:todos/2026-09-24-zeroshot-exam`). (Was: "We have not decided to run them";
 changed once closed-loop exams were decided in research/decisions.md #21.)
 
 ## Vulkan in the container: the one hard blocker, and its fix
@@ -64,7 +83,7 @@ CARLA will pick it and render on the CPU, so pin `VK_ICD_FILENAMES=/etc/vulkan/i
   failed to create because of bind error`. It reads exactly like a server crash, and it masquerades
   as whatever you were testing - it wasted two cells of a spawn experiment here by failing before
   the spawn was reached. Our scripts space RPC ports 50 apart (`2000 + 50i`, TM `8000 + 50i`); they
-  used 4, which is the same hazard. `scripts/carla_bench.py --tm-port` overrides it for consecutive
+  used 4, which is the same hazard. `experiments/cl_infra/archive/carla_bench.py --tm-port` overrides it for consecutive
   runs on one RPC port.
   Bench2Drive spaces its task ports **150** apart and its README says to avoid ports below 10000
   ("<10000 could be unsafe"). Our TM ports at `8000 + 50i` are inside that range, so moving both
@@ -72,7 +91,7 @@ CARLA will pick it and render on the CPU, so pin `VK_ICD_FILENAMES=/etc/vulkan/i
 - **Our server ports sit in the kernel's ephemeral range.** `ip_local_port_range` is 32768-60999 on the box, so
   RPC ports of index >= 616 and TM ports of index >= 496 may be held by an outgoing connection, and the server
   dies at startup with `bind: Address already in use` / Signal 11. Prefer indices below 490, or bind-test the
-  ports first (`scripts/b2d_scale.py`, `bindable`); `b2d_run.port_free` only checks for a listener.
+  ports first (`experiments/cl_infra/archive/b2d_scale.py`, `bindable`); `b2d_run.port_free` only checks for a listener.
 - **`GameThread timed out waiting for RenderThread after 60.00 secs`, then Signal 11,** during route setup: 16
   servers on 2026-09-25 (14 of 91 starts in the profiling runs) and 19 on 2026-09-23. Not a port conflict and not
   the container's thread cap (`pids.events` did not move); seen while 20-29 CARLA servers ran on the box, and
@@ -131,7 +150,7 @@ CARLA will pick it and render on the CPU, so pin `VK_ICD_FILENAMES=/etc/vulkan/i
   ParkedObstacleTwoWays base 3457 (x10, source run 345710) split into two clusters: an actor is 1 cm off at tick 2, a
   static prop 5.5 m off at tick 4, the ego 0.25 / 0.55 m off by tick 145. Root cause open (CARLA side: spawn order or
   physics of that scenario). Any "rerun to tick k" design must check every rerun against its source and drop the
-  mismatches (`python -m jevdrive.wl drops`), not assume determinism from a passing sample.
+  mismatches (`python -m experiments.world_model.lib.wl drops`), not assume determinism from a passing sample.
 
 Debugging aids that do **not** work here, so nobody spends the time: the container surfaces no host
 kernel messages, so `dmesg` never shows the segfault; and UE4 writes no crash report
@@ -140,8 +159,8 @@ re-raises. A real backtrace needs `gdb` with `-nocrashhandler`.
 
 ## Threads per server
 
-Measured 2026-09-27 with `scripts/carla_threads.py` (raw rows and tables in
-`research/results/infra/carla-threads/`). Two thread populations make up a server, and they are sized differently:
+Measured 2026-09-27 with `experiments/cl_infra/archive/carla_threads.py` (raw rows and tables in
+`experiments/cl_infra/results/infra/carla-threads/`). Two thread populations make up a server, and they are sized differently:
 
 | Pool | Sized by | Threads at a 16-CPU affinity | Override |
 |---|---|---:|---|
@@ -185,7 +204,7 @@ use ~62 GB of one card and keep its 24 cores ~57% busy.
 **Budget with the reduced pools** (sizing now lives in [closed-loop-runbook.md](closed-loop-runbook.md) and `jevdrive.cl.capacity`, derived from the live
 `pids.max`): a worker (server + route client at `--client-threads 8`) is ~140 threads instead
 of ~330, so the thread cap stops binding well above what the GPUs and CPUs can serve (see bench2drive-cost.md,
-"Recommended layout", for the 6-servers-per-card GPU knee that `CARD_CAP` in `scripts/nq4_gk.sh` encodes).
+"Recommended layout", for the 6-servers-per-card GPU knee that `CARD_CAP` in `experiments/night_queue_4/archive/nq4_gk.sh` encodes).
 
 **`SIGTERM` does not stop a server promptly.** The wrapper `CarlaUE4.sh` dies at once, but the binary's graceful
 shutdown can hold its VRAM and ports for more than a minute. Kill the process group, wait for the group to be empty,
@@ -279,7 +298,7 @@ leaderboard (`scripts/b2d_run.py`), which works. Do not write direct client code
 and expect it to survive attaching a sensor.
 
 One paragraph on how this was found, because the shape of the mistake is the lesson. Our own
-`scripts/carla_bench.py` crashed on Town12 and we spent hours treating it as a property of CARLA:
+`experiments/cl_infra/archive/carla_bench.py` crashed on Town12 and we spent hours treating it as a property of CARLA:
 four hypotheses - the map cannot load, spawn clearance, background traffic dormancy, server
 readiness - each fitting the observed pattern, each tested with paired designs, each dead. Running
 one official route settled the question in five minutes, and the working reference had been on disk
@@ -317,7 +336,7 @@ readiness sleep or their load retries; add those before trusting it for unattend
 Check a server really renders, rather than trusting a successful connect:
 
 ```bash
-$DATA_DIR/envs/carla/bin/python scripts/carla_bench.py --port 2000 --town Town10HD_Opt
+$DATA_DIR/envs/carla/bin/python experiments/cl_infra/archive/carla_bench.py --port 2000 --town Town10HD_Opt
 ```
 
 It reports per-camera pixel mean/std/unique counts and exits non-zero if every camera's std is below
@@ -329,7 +348,7 @@ buffers; pixel statistics are the only check that catches it.
 Two different things have been measured, and they are not comparable. Read the source column before
 quoting any of it.
 
-**From `scripts/carla_bench.py`** - a server-side ceiling on **Town10HD_Opt only**, with a
+**From `experiments/cl_infra/archive/carla_bench.py`** - a server-side ceiling on **Town10HD_Opt only**, with a
 non-blocking consumer (the camera callback keeps whatever arrived; it never waits), on an otherwise
 idle card. Not a closed-loop rate, and never validated on a Large Map.
 

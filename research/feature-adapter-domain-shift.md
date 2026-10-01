@@ -1,7 +1,7 @@
 # 特征适配器（「特征配方」）能不能解决画风漂移：文献与我们自己的证据
 
 2026-09-29。文献调研加上 decisions 已有读数的重新解读，没有跑 GPU。接 [midterm-gaps.md](midterm-gaps.md) 缺口二（验收原则没有正例）的 G-a 假设与候选修复 F5 / F6，
-读过 decisions 第 36、40、42、44、48、53、55、56、60 条和 [op-adapt todo](../todos/2026-09-28-op-adapt.md)，排期约束见 [中期排期](../tmp/2026-09-29-midterm-plan.md)。
+读过 decisions 第 36、40、42、44、48、53、55、56、60 条和 [op-adapt todo](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-28-op-adapt.md)，排期约束见 [中期排期](../tmp/2026-09-29-midterm-plan.md)。
 
 ## 0. 结论先行
 
@@ -15,7 +15,7 @@
 | 放在更浅的层能不能修 | **可能**，取决于 CARLA 行人信息在哪一层消失。真实 nuScenes 上 stage 3 输出线性 AUC 0.83，CARLA 上 stage 3 从没测过；这是整件事唯一的开关，而且测它几乎不要 GPU（P5 的 trunk 缓存已在盘上） | 第 55 条 trunk 诊断；本文 E0 |
 | 开环 / 闭环输入契约不同（2 Hz 对 20 Hz） | **不是 adapter 能修的**：缺的是时间轴上的输入，recurrent policy 看不到就没有；修法在输入端（补帧）或按契约重拟合读出头 | 第 36、37、53 条；[openpilot-openloop-integration.md](openpilot-openloop-integration.md) |
 | V-JEPA 2 特征 | 情况不同：CARLA 上 V-JEPA 2 冻结特征里有行人信息（配对差分 47%），但 CARLA 训的 Δ 上真实数据仍有害（Q6）。这里是 head 学了 CARLA 特有方向，训练时先把 CARLA 特征映射成「真实感」特征再训 head，文献上有先例（CyCADA、Bewley 2019），但直接用 Cosmos 帧的特征训 head 是它的上界、更简单 | 第 48 条、第 44 条 Q6 |
-| Cosmos G4 配对的价值 | 很高：它给了「同一世界、CARLA 画面 ↔ 真实感画面、行人区外逐像素对齐」的四元组（CARLA x⁺ / x⁻，Cosmos x⁺ / x⁻），既能**监督**一个 CARLA→真实感的特征 adapter，也能**分解**域差里多少是画风 | 第 56 条、`jevdrive.cosmos_full.load_pair` |
+| Cosmos G4 配对的价值 | 很高：它给了「同一世界、CARLA 画面 ↔ 真实感画面、行人区外逐像素对齐」的四元组（CARLA x⁺ / x⁻，Cosmos x⁺ / x⁻），既能**监督**一个 CARLA→真实感的特征 adapter，也能**分解**域差里多少是画风 | 第 56 条、`experiments.cosmos.lib.cosmos_full.load_pair` |
 | 最有价值的用法 | **不是**让真实部署变好，而是**闭环时替代 Cosmos**：Cosmos 每 clip 约 90–220 s，进不了闭环；一个在 G4 配对上训的 CARLA→Cosmos 特征 adapter 可以实时插在 CARLA 闭环里的 openpilot 前段，让适配后的模型「看到」的 CARLA 接近真实感画面。这直接对应缺口一的 H2（渲染域差） | 本文第 5 节 |
 
 **总判断**：想法不是不能做，但要把期望放对。「一个 adapter 修好所有域差」在我们这里不成立：输入契约差不归它管，内容差（CARLA 的行人外观、步态、场景布局本身）它也不管，
@@ -153,7 +153,7 @@ G4 全量每一对存了四段视频（`load_pair(pair, "carla")` 与 `load_pair
 - **判据（写死）**：CARLA stage 3 行人 AUC ≥ 0.65 且对 `vision` 的配对 Δ CI 下界 > 0 → 「信息在 stage 3、stage 4 起丢」，E2 放 P2；< 0.60 → 看 stage 2 / 1，最浅的一个 ≥ 0.65 的层就是 E2 的位置；都 < 0.60 → 「CARLA 行人在 openpilot 的前三个 stage 里就没被表示」，特征 adapter 在这一类上**判不可行**，只剩像素级（Cosmos）或重训更深。
 - **各结局的意思**：第一种结局说明 CARLA 与真实的差主要在 stage 4 这一段对外观的敏感性上，恰好是 op-adapt B 在调的参数，第二轮 B 加原始 CARLA 帧大概率能把原始 CARLA 带上来；第三种结局说明域差在很浅的层，画风以外的内容差可能很大，应当把验收原则里的「sim」定义成 Cosmos 画面（midterm-gaps Q2.2），并在文中如实写这个限制。
 
-### E0 结果（2026-09-29，[todo](../todos/2026-09-29-e0-layer-probe.md)，登记先于数字；决定见 [第 62 条](decisions.md)）
+### E0 结果（2026-09-29，[todo](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-e0-layer-probe.md)，登记先于数字；决定见 [第 62 条](decisions.md)）
 
 同一套 probe（CARLA：第 42 条 D0，P5 v1 BA 行人 4 414 对；真实：第 55 条 (a)，nuScenes val 走廊行人）逐层读，mean + max 池化，线性；stage 3 用 P5 / nuScenes 的 trunk 缓存，stage 1、2、4 由 port 从像素抽（约 0.2 GPU·h）。
 
@@ -172,7 +172,7 @@ G4 全量每一对存了四段视频（`load_pair(pair, "carla")` 与 `load_pair
 限定，读的时候要带着：(1) CARLA 侧是配对可分性（场景相同、只差行人），真实侧是走廊内有无行人，probe 可借上下文，所以真实侧 stage 1 的 0.715 不是「浅层有行人」，并排比的是形状；
 (2) 池化 probe 对小而局部的目标不敏感，G-none 是「池化特征上读不出」，不是「特征图里没有」，空间分辨的读法没测；
 (3) 阳性对照：同批帧上 HighwayCutIn（车辆）的配对 AUC 随深度升高（stage 1 0.504、stage 3 0.647、`temporal` 0.762），管线对车有响应；行人 family 里 VehicleTurningRoutePedestrian（2 659 对）每层 0.50，PedestrianCrossing 只在 stage 1 / 2 有 0.63 / 0.61。
-表见 [research/results/e0-layer/summary.md](results/e0-layer/summary.md)。
+表见 [experiments/feature_adapter/results/e0-layer/summary.md](../experiments/feature_adapter/results/e0-layer/summary.md)。
 
 **更正（2026-09-29，E1 之后，[第 63 条](decisions.md)）**：上面的 G-none 与「特征 adapter 判不可行」原来说的是「CARLA 行人在 openpilot 前三个 stage 里没被表示」；E1 在 Cosmos 全量的 75 对（较大行人）上测到 CARLA 格池化 stage 3 = 0.815，行人大小是主导变量（< 500 px 0.57，≥ 1 500 px 0.92），所以 G-none 只适用于 P5 评测那一批（行人像素数未量，推测多为小 / 远行人），不是 CARLA 行人的一般性质；E2 的动机也随之变弱（见 E1 结果）。
 
@@ -186,7 +186,7 @@ G4 全量每一对存了四段视频（`load_pair(pair, "carla")` 与 `load_pair
 - **各结局的意思**：G-a 成立且画风份额 ≥ 0.7 → 域差大部分是画风，特征 adapter 值得训（E2），而且适配后的模型在闭环里需要它；G-a 成立但份额低 → 有画风，但真实一侧更好读，差在内容或 Cosmos 没画到；G-a 不成立 → 画风不是问题，任何 adapter 都不会有用，这个想法到此为止。
 - 注意 E1 只用**原模型**，不依赖第二轮 B，可以在 D2 与第二轮并行。
 
-### E1 结果（2026-09-29，[todo](../todos/2026-09-29-e1-cosmos-probe.md)，登记先于数字；决定见 [第 63 条](decisions.md)）
+### E1 结果（2026-09-29，[todo](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-e1-cosmos-probe.md)，登记先于数字；决定见 [第 63 条](decisions.md)）
 
 Cosmos G4 全量起跑时刻已完成的 75 对（75 个 Town12 instance，943 个读数 slot、1 886 行 x⁺ / x⁻），四格 {CARLA, Cosmos} × {x⁺, x⁻} 走同一条单相机管线，池化线性 probe 在各格内训练与测试（5 折按 instance），AUC 为 x⁺ 对 x⁻：
 
@@ -203,7 +203,7 @@ Cosmos G4 全量起跑时刻已完成的 75 对（75 个 Town12 instance，943 �
 
 **按登记判格**：K-restore 不成立（Cosmos stage 3 ≥ 0.65，但对 CARLA 格 Δ 为负、CI 在 0 以下），K-none 不成立，G-a 不成立（Cosmos `temporal` 0.680 < 0.70，Δ CI 含 0）也不 < 0.60，落灰区；画风份额的分母（0.831 − 0.815）近 0，无意义；S-local / S-absent 的前提在这批数据上都不成立，S-local-big（P5 上 conv 头 ≥ 0.65）不成立（0.521）。
 **核心发现**：这批 CARLA 行人本来就读得出来，Cosmos 没有「恢复」什么，反而略低；读得出与否由行人大小决定：x⁺ mask < 500 px 的读数 slot 两格都是 stage 3 0.57（Cosmos 0.577，没有比 CARLA 0.569 好），≥ 1 500 px 到 0.92 / 0.83。P5 的 x⁺ / x⁻ 行上按同样方式直接训练只有 0.54–0.60，所以 E0 与 E1 的差不是 probe 训练方式造成的，更可能是行人大小 / 距离分布（P5 的像素数未量，推测）。
-限定：75 对且 65% 是 DynamicObjectCrossing，probe 训练行只有 1 886；行人大小分档与 P5 配对训练桥是看到第一批数字之后才加的描述性读数；Cosmos 格低于 CARLA 格的原因（混合区重画损失 vs Cosmos 行人更难读）没有拆。表见 [research/results/e1-cosmos/](results/e1-cosmos/)。
+限定：75 对且 65% 是 DynamicObjectCrossing，probe 训练行只有 1 886；行人大小分档与 P5 配对训练桥是看到第一批数字之后才加的描述性读数；Cosmos 格低于 CARLA 格的原因（混合区重画损失 vs Cosmos 行人更难读）没有拆。表见 [experiments/feature_adapter/results/e1-cosmos/](../experiments/feature_adapter/results/e1-cosmos/)。
 
 ### E2：G4 配对监督的 CARLA→真实感特征 adapter（只在 E0 找到位置、E1 判 G-a 成立时开）
 

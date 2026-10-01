@@ -5,7 +5,7 @@
  "unit": "route",
  "n": 4,
  "sha256": "c8e60b3fd02326236c7963b558fd99c94c54bcb47a6f69bab691bce885e21be9",
- "origin": "todos/2026-09-22-b2d-controller/results/development.xml (git sha256 4c756c14b7161832)",
+ "origin": "experiments/b2d_controller/results/b2d-controller/results/development.xml (git sha256 4c756c14b7161832)",
  "status": "frozen",
  "used_by": "controller W2, D2/D3",
  "members": [

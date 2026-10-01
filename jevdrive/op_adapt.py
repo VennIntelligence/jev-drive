@@ -1,4 +1,4 @@
-"""op-adapt: adapting openpilot's vision layer (todos/2026-09-28-op-adapt.md).
+"""op-adapt: adapting openpilot's vision layer (fc65452:todos/2026-09-28-op-adapt.md).
 
 Model plumbing on top of the graph port `jevdrive.op_torch`:
   load            cinque / lebowski ONNX -> OnnxTorch

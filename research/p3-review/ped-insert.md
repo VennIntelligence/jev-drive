@@ -6,7 +6,7 @@
 
 ### PI-001
 
-![PI-001](../figs/p3/review/PI-001.webp)
+![PI-001](../../experiments/p3_ped_exam/figs/review/PI-001.webp)
 
 | | |
 |:--|:--|
@@ -23,7 +23,7 @@
 
 ### PI-002
 
-![PI-002](../figs/p3/review/PI-002.webp)
+![PI-002](../../experiments/p3_ped_exam/figs/review/PI-002.webp)
 
 | | |
 |:--|:--|
@@ -40,7 +40,7 @@
 
 ### PI-007
 
-![PI-007](../figs/p3/review/PI-007.webp)
+![PI-007](../../experiments/p3_ped_exam/figs/review/PI-007.webp)
 
 | | |
 |:--|:--|
@@ -57,7 +57,7 @@
 
 ### PI-008
 
-![PI-008](../figs/p3/review/PI-008.webp)
+![PI-008](../../experiments/p3_ped_exam/figs/review/PI-008.webp)
 
 | | |
 |:--|:--|
@@ -74,7 +74,7 @@
 
 ### PI-009
 
-![PI-009](../figs/p3/review/PI-009.webp)
+![PI-009](../../experiments/p3_ped_exam/figs/review/PI-009.webp)
 
 | | |
 |:--|:--|
@@ -91,7 +91,7 @@
 
 ### PI-012
 
-![PI-012](../figs/p3/review/PI-012.webp)
+![PI-012](../../experiments/p3_ped_exam/figs/review/PI-012.webp)
 
 | | |
 |:--|:--|
@@ -108,7 +108,7 @@
 
 ### PI-013
 
-![PI-013](../figs/p3/review/PI-013.webp)
+![PI-013](../../experiments/p3_ped_exam/figs/review/PI-013.webp)
 
 | | |
 |:--|:--|
@@ -125,7 +125,7 @@
 
 ### PI-015
 
-![PI-015](../figs/p3/review/PI-015.webp)
+![PI-015](../../experiments/p3_ped_exam/figs/review/PI-015.webp)
 
 | | |
 |:--|:--|
@@ -142,7 +142,7 @@
 
 ### PI-016
 
-![PI-016](../figs/p3/review/PI-016.webp)
+![PI-016](../../experiments/p3_ped_exam/figs/review/PI-016.webp)
 
 | | |
 |:--|:--|

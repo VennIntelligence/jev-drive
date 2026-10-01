@@ -1,0 +1,56 @@
+import: baseline 298/359 ok, after 302/363 ok; regressions 0, fixed 0, unchanged non-ok 61, new entries 4
+help: baseline 191/340 ok, after 245/342 ok; regressions 0, fixed 54, unchanged non-ok 95, new entries 2
+tests: baseline 30/47 ok, after 30/47 ok; regressions 0, fixed 0, unchanged non-ok 17, new entries 0
+compile_fail: baseline 0, after 0, new []
+bash_n_fail: baseline 0, after 0, new []
+static_import_missing: baseline 3 files, after 1, new 0
+md_broken: baseline 278, after 188, new 20
+   NEW BROKEN research/articles/README.md [token] scripts/make_article_closed_loop_figs.py
+   NEW BROKEN research/articles/README.md [token] scripts/make_article_critical_moment_figs.py
+   NEW BROKEN research/articles/closed-loop-and-control/README.md [link] ../../../scripts/make_article_closed_loop_figs.py
+   NEW BROKEN research/articles/closed-loop-and-control/README.md [link] ../../../todos/2026-09-23-controller-next/lateral-physics.md
+   NEW BROKEN research/articles/closed-loop-and-control/README.md [token] todos/2026-09-23-tfv6-controller/
+   NEW BROKEN research/articles/vision-at-the-critical-moment/README.md [link] ../../../scripts/make_article_critical_moment_figs.py
+   NEW BROKEN research/articles/vision-at-the-critical-moment/README.md [token] research/results/p0-train-split/
+   NEW BROKEN research/articles/vision-at-the-critical-moment/README.md [token] scripts/make_top_decile_sheet.py
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-19-probe-v0.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-22-p0-train-split-recheck.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-22-p3-backbone-ladder.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-25-reactivity-program.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-25-reactivity-program.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-30-navsim-raise.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-28-wm-loop.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-28-op-adapt.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-28-cosmos-pilot.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-29-e1-cosmos-probe.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-28-wm-loop.md
+   NEW BROKEN research/roadmap/README.md [link] ../../todos/2026-09-29-carla-rewind.md
+fig_unreferenced: baseline 0, after 0 (new: [])
+md_unreachable from README.md: baseline 81, after 6, new 6
+   NEW UNREACHABLE research/articles/README.md
+   NEW UNREACHABLE research/articles/closed-loop-and-control/README.md
+   NEW UNREACHABLE research/articles/trajectory-to-control/README.md
+   NEW UNREACHABLE research/articles/vision-at-the-critical-moment/README.md
+   NEW UNREACHABLE research/benchmarks-and-evaluation.md
+   NEW UNREACHABLE research/roadmap/README.md
+files: baseline 3983, after 4137, deleted on purpose 96 (todos/ 73, tmp/ 23), lost 67, binary changed 0
+   LOST docs/restructure-design.md
+   LOST restructure/acknowledged.tsv
+   LOST restructure/append/docs/long-runs.md
+   LOST restructure/decisions_index.tsv
+   LOST restructure/manifest.tsv
+   LOST restructure/manual_edits.tsv
+   LOST restructure/overlay.tsv
+   LOST restructure/overlay/CLAUDE.md
+   LOST restructure/overlay/README.md
+   LOST restructure/overlay/docs/README.md
+   LOST restructure/overlay/docs/web-reader.md
+   LOST restructure/overlay/experiments/TEMPLATE.md
+   LOST restructure/overlay/research/README.md
+   LOST restructure/readmes/b2d_controller.md
+   LOST restructure/readmes/b2d_controller_eval.md
+   LOST restructure/readmes/b2d_privileged.md
+   LOST restructure/readmes/b2d_tcp.md
+   LOST restructure/readmes/b2d_tfv6.md
+   LOST restructure/readmes/baselines_latency.md
+   LOST restructure/readmes/carla_rewind.md

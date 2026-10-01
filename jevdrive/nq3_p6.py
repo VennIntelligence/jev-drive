@@ -1,5 +1,5 @@
 """Night queue 3, lane C: the P6 v0 judge shared by Q1 (examinee readouts) and Q2 (bypass elicitation)
-(todos/2026-09-26-night-queue-3.md, general rule 7 and the [C] entries under Q1 / Q2, written before any number).
+(fc65452:todos/2026-09-26-night-queue-3.md, general rule 7 and the [C] entries under Q1 / Q2, written before any number).
 
   frames   the exam's window frames per case -> processed/<set>/nq3_exam_frames.parquet (frame_name, world, reading,
            priority) and nq3_cases.parquet (one row per case with its windows); every examinee is read on these
@@ -25,11 +25,11 @@ from .common import data_dir, get_logger
 
 log = get_logger(__name__)
 REPO = Path(__file__).resolve().parents[1]
-N1 = REPO / "research" / "results" / "night2" / "N1"
+N1 = REPO / "experiments/night_queue_2/results/N1"
 # per frame set: expert statistics dir (worlds.csv, pairs_bypass.csv), case table, generation dir (lane A writes v1's)
 SETS = {"carla_p6": {"stats": N1, "cases": N1 / "cases.csv", "gen": ("runs", "p6", "gen")},
-        "carla_p6_v1": {"stats": REPO / "research" / "results" / "nq3" / "q3",
-                        "cases": REPO / "research" / "results" / "nq3" / "q3" / "cases.csv", "gen": ("runs", "nq3", "a", "v1", "gen")}}
+        "carla_p6_v1": {"stats": REPO / "experiments/night_queue_3/results/q3",
+                        "cases": REPO / "experiments/night_queue_3/results/q3/cases.csv", "gen": ("runs", "nq3", "a", "v1", "gen")}}
 MAIN = ("Accident", "ConstructionObstacle", "ParkedObstacle", "HazardAtSideLane", "AccidentTwoWays",
         "ConstructionObstacleTwoWays", "ParkedObstacleTwoWays", "HazardAtSideLaneTwoWays")
 SEPARATE = ("VehicleOpensDoorTwoWays", "InvadingTurn", "YieldToEmergencyVehicle")

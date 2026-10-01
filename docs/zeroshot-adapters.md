@@ -4,7 +4,7 @@ Read this when you are about to score a model we did not train (openpilot, Alpam
 loop, smoke or full; run the checks before the scored run. Every item is an adapter check, not a model check: it must pass, or its failure must be explained by the
 model's own output, before a Driving Score is reported. The openpilot exam lost a whole smoke round to two adapter
 bugs and a standstill-start gap that this list would have caught
-([openpilot-migration.md](../todos/2026-09-24-zeroshot-exam/openpilot-migration.md), sections A and D1).
+([openpilot-migration.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-zeroshot-exam/openpilot-migration.md), sections A and D1).
 
 Run the checks on one or two short routes with frame dumps on (`dump_every`), in shadow mode where it says so
 (`"drive": "oracle"` in `scripts/b2d_zeroshot_agent.py`: the route oracle drives, the model only plans), and write
@@ -12,7 +12,7 @@ the outcome into the run's todo.
 
 | # | Check | How | Pass |
 |---|---|---|---|
-| 1 | Coordinates and heading | Log the model's trajectory next to the truth track in shadow mode (`scripts/zeroshot_b2d_openpilot_diag.py`); project the plan into the model's input image | 1 s / 2 s errors of the order of the model's open-loop error on real data; left/right, forward sign and yaw sign agree; the plan lies on the road in the image |
+| 1 | Coordinates and heading | Log the model's trajectory next to the truth track in shadow mode (`experiments/zeroshot_b2d/archive/zeroshot_b2d_openpilot_diag.py`); project the plan into the model's input image | 1 s / 2 s errors of the order of the model's open-loop error on real data; left/right, forward sign and yaw sign agree; the plan lies on the road in the image |
 | 2 | Reference point | Feed a zero-motion ("stay") output through the controller at standstill | The controller holds the brake. A trajectory whose t = 0 point is not the controller's reference point (camera vs rear axle) shows up as throttle while the model says stop |
 | 3 | Sensor timing | Log per-camera frame numbers per planning step | Every camera of a step comes from the same simulator frame; context spacing is exactly what the model was trained with (no sensor_tick jitter) |
 | 4 | Warm-up | Plot the first second of outputs | Recurrent / temporal models have filled their history before their output reaches the controller |
@@ -30,7 +30,7 @@ A route set that covers the list in five Bench2Drive routes, none of them in the
 2416 (VanillaNonSignalizedTurnEncounterStopsign), 3540 (HardBreakRoute: the lead brakes hard, then the ego resumes).
 Lane keeping, plan frame and heading are checked on the stretches between the events.
 
-For openpilot, `scripts/zeroshot_b2d_op.sh accept <gpu>` runs the set and `scripts/zeroshot_b2d_op_accept.py` scores
+For openpilot, `experiments/zeroshot_b2d/archive/zeroshot_b2d_op.sh accept <gpu>` runs the set and `experiments/zeroshot_b2d/archive/zeroshot_b2d_op_accept.py` scores
 items 1-10 automatically from `plans.jsonl`, `ticks.jsonl` and the official `results.json` (thresholds in its
 docstring, e.g. items 2, 5, 9: throttle share <= 5 % while a stay plan is in force, move within 20 s, no stop >= 45 s).
 The same logs exist for every model run through `scripts/b2d_zeroshot_agent.py`, so the script is the template for

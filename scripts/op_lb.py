@@ -12,14 +12,14 @@ Run root $DATA_DIR/runs/op_lb/<data>/, data = lb_navtest (12 146) | lb_navhard (
           worker per GPU, 32-token chunks claimed from a shared queue (<method>.chunks/), batch 8 as the op_interp full
           run; pauses while the card is above --cap-gb. warp (any env with scipy + cv2): CPU pool, same queue.
   run     (envs/openpilot) one model x frames x desire schedules (SCHEDULES), zero state, plan at t0 ->
-          plans/<frames>@<model>[.<schedule>].npz: the plan exactly as scripts/op_interp.py run (plan_pos / plan_vel /
+          plans/<frames>@<model>[.<schedule>].npz: the plan exactly as experiments/op_openloop/lib/op_interp.py run (plan_pos / plan_vel /
           plan_yaw / lead_prob) plus plan_mu / plan_std (33, 15), all non-hidden output heads (heads + info.heads_slices)
           and the desire per step. The plan heads of small / Cinque / Lebowski are one Gaussian (no hypotheses).
           Lebowski gets the 3.3 s ego-motion warp pre-roll by default (section 7), computed on the fly.
   compare two plan files: max / mean plan difference (the equivalence check against op_interp's stored plans).
 
-Export, scoring and report are op_interp's, pointed at this root: OPI_ROOT=op_lb scripts/op_interp.py nav-export /
-nav-report and OPI_ROOT=op_lb scripts/op_interp_score.sh (scripts/op_lb_lane.sh chains them).
+Export, scoring and report are op_interp's, pointed at this root: OPI_ROOT=op_lb experiments/op_openloop/lib/op_interp.py nav-export /
+nav-report and OPI_ROOT=op_lb experiments/op_openloop/archive/op_interp_score.sh (experiments/op_openloop/archive/op_lb_lane.sh chains them).
 Non-`none` desire schedules are refused on lb_navtest / lb_navhard without --prereg <id>: those arms wait for the
 pre-registration.
 """
@@ -241,7 +241,7 @@ def cmd_synth(a):
 # modeld's rising-edge pulse, so a desire held from T on pulses once, at the first step >= T. Register new ones here.
 
 DESIRES = ("none", "turnLeft", "turnRight", "laneChangeLeft", "laneChangeRight", "keepLeft", "keepRight")
-T_ON = {"-1.5": -1.5, "-1.0": -1.0, "-0.5": -0.5, "0": 0.0}      # names as the pre-registration (todos/2026-09-29-op-leaderboard.md)
+T_ON = {"-1.5": -1.5, "-1.0": -1.0, "-0.5": -0.5, "0": 0.0}      # names as the pre-registration (fc65452:todos/2026-09-29-op-leaderboard.md)
 T20 = np.round(np.arange(-30, 1) * 0.05, 3)                  # the 20 Hz steps from -1.5 s to t0
 
 

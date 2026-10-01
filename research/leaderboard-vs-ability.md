@@ -1,10 +1,10 @@
 # 榜单分数与驾驶能力：两轮只读审计的综合判读
 
-状态: 综合稿（2026-09-24）。这是对 [hack 审计](results/hack-audit/report.md)（第一轮）和
-[榜单文本分析](results/leaderboard-text-analysis/HANDOFF.md)（第二轮）的综合判读，回答
+状态: 综合稿（2026-09-24）。这是对 [hack 审计](../experiments/leaderboard_audit/results/hack-audit/report.md)（第一轮）和
+[榜单文本分析](../experiments/leaderboard_audit/results/leaderboard-text-analysis/HANDOFF.md)（第二轮）的综合判读，回答
 [capability-vs-leaderboard.md](capability-vs-leaderboard.md) 里"高分从哪里来、分数能多大程度代表驾驶能力"这两个问题。
 两轮都没有运行任何模型或评测，所以这里的每一个结论都是"文本能支持到哪一步"；实验只作为建议列出。
-对第二轮留下的 45 个问题的逐条回应在 [synthesis_answers.md](results/leaderboard-text-analysis/synthesis_answers.md)。
+对第二轮留下的 45 个问题的逐条回应在 [synthesis_answers.md](../experiments/leaderboard_audit/results/leaderboard-text-analysis/synthesis_answers.md)。
 
 读法约定：**结论**是材料直接支持的；**推测**是我们从材料外推的，每条都标明，并说明用什么实验可以验证。
 "hack"在本文里指**只对榜单计分公式有意义、换一个协议或上真车就没有意义的增益机制**，不含道德判断；
@@ -32,7 +32,7 @@
 
 **最值得先跑的两个实验**（7.4 节，都没有跑）：TFv6 规则开/关 × 接口 A/B 上 P5 配对（回答"拿分通道不反应"是接口性质还是规则掩盖）；SimLingo 同 ckpt 原版 vs 定制 Bench2Drive 目录（simlingo#43 里 DS +11 而 SR 一条未变，若复现则 SimLingo 系四个方法的 B2D 分数要重标）。
 
-![TFv6 two channels](figs/lb-ability-tfv6-two-channels.png)
+![TFv6 two channels](../experiments/leaderboard_audit/figs/lb-ability-tfv6-two-channels.png)
 
 看什么：同一个 TFv6 checkpoint 的两条通道。(a) 用 route + target speed 走比用自己的 waypoint 走高 14.3 DS，CI 不跨零；启发式和换控制器都只有约 1 且 CI 跨零。(b) P5 配对考卷上，拿分的 target speed 通道逐帧翻转 2.0%（低于 7–8% 的 null 地板），会反应的 waypoint 通道 39.4%、按对 73.3%；我们的 `ridge_late` head 是 0。拿分的那一路几乎不对突发事件反应，会反应的那一路开起来低 14 DS。
 
@@ -100,7 +100,7 @@ E 层（突发反应）在公式里出现的方式只有两种：闭环里的碰
 **读法。** 三类榜单的机制完全不同：**闭环 CARLA 系**的机制全是控制层（接口、规则、早停），网络本身没被动；**NAVSIM 系**的机制全在"候选 → 评分 → 选择"这一段，且 v2 榜前三名（TOAD、DrivoR、GTRS）每个都有 3 个 `yes`；
 **nuScenes** 的机制是输入侧（ego 状态、未来标签）；**WOD** 是把评分函数直接放进训练。这个分布不是偶然：每类机制都恰好长在该榜计分公式最敏感的那一段上（第 2 节表的"盲区"列）。
 
-![Mechanism map](figs/lb-ability-mechanism-map.png)
+![Mechanism map](../experiments/leaderboard_audit/figs/lb-ability-mechanism-map.png)
 
 看什么：横轴是从传感器到分数的六段流水线，每行一个榜单，圆点是第一轮在该榜样本方法里实际观察到的机制（矩阵的 33 个 `yes`），虚线框标出该榜机制最集中的那一段。CARLA 系全落在 Control & rules，NAVSIM 系落在 Selection / scoring，nuScenes 落在 Inputs，WOD 是 metric-reward 微调；最右列是该 metric 到底闭环了什么。
 
@@ -151,7 +151,7 @@ W1 账本 1,121 行里主榜 872 行；有 seed 的只有 69 行（TFv6、BLUE�
 - **WOD-E2E**：数据（领域预训练）决定 95%，RFS 直接优化的段落只加 0.08–0.09，而且在难例上反降。
 
 
-![Gain ledger by board](figs/lb-ability-gain-ledger.png)
+![Gain ledger by board](../experiments/leaderboard_audit/figs/lb-ability-gain-ledger.png)
 
 看什么：(a) 四个榜单各自增益最大的成分，颜色是我们的归类。Bench2Drive 的条几乎全是能力（绿、橙），NAVSIM v2 的三根最长的条全是 metric-specific（黄），nuScenes 的三根最长的条全是 ego prior（蓝），WOD 由数据（绿）决定、RFS 直接优化只有 +0.08–0.09。(b) 同一个 ego prior 在四个协议上的符号：短时开环上解释 30–64% 的分数，NAVSIM 4 s 上只值 2%，Bench2Drive 闭环上是负的。
 
@@ -215,7 +215,7 @@ W2 的 10 组 Spearman 全部复算一致。但机械 ρ 会被同论文变体�
 | NAVSIM v1 PDMS ↔ v2 navhard EPDMS | n=20，ρ=+0.63 | PDMS ≥ 90 的顶部：**n=11，ρ=+0.21**；PDMS < 90 的底部：n=9，ρ=+0.67；TOAD 作者用同一公开 checkpoint 两榜各测一遍的 7 个方法：ρ=+0.25 | +0.63 是"代际分层"：TransFuser 一代两榜都垫底。顶部 11 个方法 v1 挤在 4.3 分里、v2 散在 21.6 分里，v1 对 v2 排序无信息 |
 | B2D 开环 L2 ↔ 闭环 DS / SR / Efficiency / Comfortness | n=9 | L2↔DS −0.16、↔SR −0.05、**↔Efficiency −0.69**；DS↔SR **+0.99**（n=30）；**DS↔Comfortness −0.75** | L2 和 Efficiency 都奖励 continuation；DS ≈ SR ≈ "触发场景过没过"；Comfortness 惩罚急刹。L2 最低的 UniAD/VAD 三个 Efficiency 124–158（比周围车快），DS 只有 40–46 |
 
-![Cross-board consistency](figs/lb-ability-cross-board.png)
+![Cross-board consistency](../experiments/leaderboard_audit/figs/lb-ability-cross-board.png)
 
 看什么：同一方法在两个协议上的已发表分数。(a) NAVSIM v1 PDMS 对 v2 EPDMS，n=20，ρ=+0.63，但顶部 11 个方法 v1 挤在 4 分里、v2 散在 22 分里；空心点是 +TOAD 变体，连线朝上更陡，test-time search 在 v2 上抬得比 v1 多。(b) Bench2Drive DS 对 Longest6 DS，ρ=+0.93 主要靠右上角 TFv6 六个同论文变体撑起，灰方块是 privileged expert；HiP-AD 在左下角。(c) Bench2Drive 开环 L2 对闭环 DS，ρ=−0.16。
 
@@ -377,7 +377,7 @@ R 层 = routine（保持车道、转弯、跟车、按灯停、起步），E 层
 
 ## 8. 多榜前 10 族在我们考卷上（T1：SparseDriveV2 + ZTRS，2026-09-26，**待定**）
 
-预登记与全部表在 [top10-intersection todo](../todos/2026-09-26-top10-intersection.md) 的第 5 节与「结果 / T1」，小表 [results/top10-exams/](results/top10-exams/)（`t1_*`）。
+预登记与全部表在 [top10-intersection todo](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-26-top10-intersection.md) 的第 5 节与「结果 / T1」，小表 [results/top10-exams/](../experiments/top10/results/top10-exams/)（`t1_*`）。
 两个模型都是 scorer 式规划器（从固定轨迹词表里用学到的 PDM 子分数选一条）：SparseDriveV2（SparseDrive 族，navtest-v2 #7、B2D #10）与 ZTRS（NVlabs Hydra 族，只用 PDM 奖励训练、没有模仿，作「对准 metric 的配方」对照）。
 
 | 卷 | SparseDriveV2 | ZTRS | 同卷参照 |
@@ -400,7 +400,7 @@ CARLA 配对上两者都没有（外观 + rig 双重分布外，按预登记标�
 
 ### 8.2 T2：DrivoR + WA-JEPA（2026-09-26，**待定**）
 
-预登记与全部表在 [top10-intersection todo](../todos/2026-09-26-top10-intersection.md) 的第 5 节、[T2] 条目与「结果 / T2」，小表 [results/top10-exams/](results/top10-exams/)（`t2_*`、`wod_*`、`nuscenes_*`、`navsim_*`）。
+预登记与全部表在 [top10-intersection todo](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-26-top10-intersection.md) 的第 5 节、[T2] 条目与「结果 / T2」，小表 [results/top10-exams/](../experiments/top10/results/top10-exams/)（`t2_*`、`wod_*`、`nuscenes_*`、`navsim_*`）。
 DrivoR（DrivoR 系，NAVSIM / HUGSIM / WOD 多榜覆盖最广）是 scorer 式规划器：64 条学出来的候选轨迹 + learned PDM 子分数选一条；WA-JEPA（AFARI，navtest-v2 #1、HUGSIM 436 协议 #1）是 V-JEPA 2.1 视频世界模型 + flow matching 轨迹头，
 读 4 路相机 × 4 帧 0.5 s 历史。I3 为它们按 HUGSIM rig 补渲了 CAM_BACK 和 10 Hz（前三路与原帧逐字节相同）。
 
@@ -421,7 +421,7 @@ CARLA 配对对两者都是双重分布外（外观 + 缺后视），WA-JEPA 在
 
 ## 9. CARLA 榜首两族在配对考卷上（T3：BridgeDrive + BLUE，2026-09-26，**待定**）
 
-预登记与全部表在 [top10-intersection todo](../todos/2026-09-26-top10-intersection.md) 的第 5 节与「结果 / T3」，小表 [results/top10-exams/](results/top10-exams/)（`p5_t3_*`）。
+预登记与全部表在 [top10-intersection todo](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-26-top10-intersection.md) 的第 5 节与「结果 / T3」，小表 [results/top10-exams/](../experiments/top10/results/top10-exams/)（`p5_t3_*`）。
 BridgeDrive（B2D 96.34，第一）是 TransFuser-LEAD 族在 TFv6 上加 diffusion bridge 的 route 头；BLUE（B2D 90.58）是 SimLingo 加一个 0.11M 的语言 gate（判断这一帧要不要先生成语言再出动作）。
 两者都只吃 CARLA 自己的 rig，所以 P5 v1 BA 的 570 个世界按原 expert 重录，挂它们各自的传感器（shadow：模型只读，BehaviorAgent 开车；568 / 570 个世界的 expert 轨迹与原记录逐 tick 相同）。
 
@@ -435,7 +435,7 @@ BridgeDrive（B2D 96.34，第一）是 TransFuser-LEAD 族在 TFv6 上加 diffus
 
 **BLUE − SimLingo**（同一批 reactive 帧，各自 τ，路线 bootstrap）：合并 −8.1 pp [−12.4, −4.5]、行人 −3.2 [−6.5, −0.6]、cut-in −11.2 [−17.7, −5.4]；用同一个 τ（5.00）重判是 −0.6 [−4.0, +2.5] / −1.5 [−3.4, +0.3] / −0.1 [−5.4, +4.5]。
 
-![top10-t3-flip-rates](figs/top10-t3-flip-rates.png)
+![top10-t3-flip-rates](../experiments/top10/figs/top10-t3-flip-rates.png)
 
 图：P5 v1 BA 配对上各考生的定向翻转率，(a) 逐帧按 family，(b) 按对（窗口内任一 reactive 帧翻对即算过；按对的 null case 误翻很高，waypoint 通道约 50%、BLUE 33%，读 (b) 要对着它看）；误差棒是路线整组 bootstrap 的 95% CI。
 该看的是 BridgeDrive 两根柱子与 TFv6 两根几乎重合，BLUE 与 SimLingo 形态相同（行人接近 0、cut-in 最高），SimLingo 每格都不低于 BLUE。

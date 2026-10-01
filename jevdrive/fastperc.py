@@ -1,5 +1,5 @@
 """Fast perception: SAM 3.1 speed-ups and faster detectors, latency x recall on the fusion Q4 frames
-(pre-registration: todos/2026-09-26-fast-perception.md).
+(pre-registration: fc65452:todos/2026-09-26-fast-perception.md).
 
 GPU part (run inside each model's own env; only numpy / pandas / torch + that model's package are imported):
   latency  batch 1, 1 camera and 3 cameras, p50 / p95 ms and peak VRAM (the Q4d protocol, same image list)
@@ -7,7 +7,7 @@ GPU part (run inside each model's own env; only numpy / pandas / torch + that mo
 CPU part (envs/jevdrive):
   subset   the fixed frame subset S (P5 hazard frames x 3 cameras, every 3rd nuScenes scene x 3 front cameras)
   eval     fusion_q4's own evaluate / hazard_reading on S for one detection dir; summary row + tables
-  summary  latency + recall + paired deltas against SAM 3.1 -> small csv files (research/results/fast-perception)
+  summary  latency + recall + paired deltas against SAM 3.1 -> small csv files (experiments/fastperc/results)
   depth    optional side reading: metric depth (YOLO26-depth) at each detection's contact pixel (envs/ultralytics)
 
 Backend specs (`--backend`), all returning per image, per prompt: scores (n,), boxes xyxy px (n, 4), masks (n, H, W)

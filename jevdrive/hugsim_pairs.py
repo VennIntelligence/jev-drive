@@ -1,5 +1,5 @@
 """I3: real-appearance counterfactual pairs rendered from HUGSIM 3DGS scenes along the LOGGED ego trajectory
-(todos/2026-09-25-reactivity-program/i3-hugsim-pairs.md).
+(fc65452:todos/2026-09-25-reactivity-program/i3-hugsim-pairs.md).
 
 Every world of a scene is the same open-loop camera stream (the recorded ego poses, no controller); the worlds
 differ only in one inserted 3DRealCar actor:
@@ -9,7 +9,7 @@ differ only in one inserted 3DRealCar actor:
   oncoming  a car in the ego lane facing the ego, 3 m/s, AttackPlanner from t_e on (HUGSIM's "extreme" type)
   null      the cut-in car and start, but it keeps its lane at the ego's logged speed: visible, never in the way
 
-This module is imported by the HUGSIM venv (scripts/hugsim/pairs_render.py: actor trajectories, rendering) and by
+This module is imported by the HUGSIM venv (experiments/hugsim/archive/pairs_render.py: actor trajectories, rendering) and by
 the jevdrive venv (labels, the P5-shaped index, figures): numpy only at import time.
 
   select    scene table: every scene on disk with a valid t_c (see `pick_tc`)
@@ -72,7 +72,7 @@ def scene_key(ds: str, scene: str) -> str:
 
 
 def unpack(ds: str, scene: str) -> Path:
-    """The scene dir, unpacked from its zip on first use (both release layouts, like scripts/hugsim/zs_run.py)."""
+    """The scene dir, unpacked from its zip on first use (both release layouts, like experiments/hugsim/archive/zs_run.py)."""
     import shutil
     import zipfile
     d = scenes_dir() / ds / scene

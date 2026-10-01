@@ -8,7 +8,7 @@
 ## probe v1 结论（nuScenes trainval，2026-09-20）
 
 这一节是这份文档现在的主要用途：为主线论文回答"为什么取中间层"。
-完整表格和工程数字在 [../todos/2026-09-19-probe-v0.md](../todos/2026-09-19-probe-v0.md)，
+完整表格和工程数字在 [../todos/2026-09-19-probe-v0.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-19-probe-v0.md)，
 run 在 box 上 `$DATA_DIR/runs/probe_v0/v1.0-trainval/20260920-000618/`。
 
 **设置**：nuScenes trainval 的 CAM_FRONT keyframe，单帧，冻结 backbone。
@@ -42,7 +42,7 @@ n = 17000（转弯只有 695，占 4%）。主指标是 NLL（negative log-likel
    hard subset 上完全相同（0.213）。但 800 px 抽 feature 快 4.6 倍（30.8 vs 142.4 ms/frame）。
    **后续实验默认用 800 px。**
 
-![probe layer curve](figs/probe-layer-curve.png)
+![probe layer curve](../experiments/probe_planner_v0/figs/probe-layer-curve.png)
 
 图：转向 probe 的 NLL 随 Qwen 解码层变化，左为全部样本，右为 hard subset；实线是 1600 px，虚线是 800 px。
 两种分辨率的曲线几乎重合，说明这个任务不吃分辨率。曲线呈倒 U 形：从第 1 层到第 20 层左右一路下降，

@@ -1,5 +1,5 @@
 """Elicitation E1: zero-shot transfer of the P5 v1 M-C dual-stream reaction head to real data
-(todos/2026-09-26-elicitation-program.md, E1 and deviation-log entry [E1] 00:25, written before any number).
+(fc65452:todos/2026-09-26-elicitation-program.md, E1 and deviation-log entry [E1] 00:25, written before any number).
 
   head    the five route-fold heads of the `M-C pair` arm on the P5 v1 BehaviorAgent set, recomputed with
           reactivity_mc.fit_fold unchanged and checked against the stored predictions and lambdas of that run;
@@ -342,7 +342,7 @@ def navsim_table(rl, run_dir):
 
 
 def figs(res_dir, out_dir):
-    """RFS delta per cluster and activation rate per scope (research/results/elicitation/e1 -> research/figs)."""
+    """RFS delta per cluster and activation rate per scope (experiments/elicitation/results/e1 -> research/figs)."""
     from pathlib import Path
     import matplotlib.pyplot as plt
     from . import plots
@@ -382,7 +382,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("what", choices=("wod", "navsim", "navsim-table", "figs"))
     ap.add_argument("--run", default="", help="navsim-table: the e1-navsim run dir")
-    ap.add_argument("--res", default="research/results/elicitation/e1")
+    ap.add_argument("--res", default="experiments/elicitation/results/e1")
     ap.add_argument("--out", default="research/figs")
     a = ap.parse_args()
     if a.what == "figs":

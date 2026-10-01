@@ -1,7 +1,7 @@
 # nq3 三条机器判格的人工复核单（Q5 速度置零 / Q1 bypass / Q6 单帧对照）
 
 2026-09-29 编制。对象是 [decisions.md](decisions.md) 里三处标着「GPT 按登记判格，待人复核」的新读数（第 35 条后、第 46 条后、第 48 条后各一处），
-登记文本在 [夜间队列 3](../todos/2026-09-26-night-queue-3.md)。本单不改 decisions.md，每条末尾的「建议改写」只是提案，由你定。
+登记文本在 [夜间队列 3](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-26-night-queue-3.md)。本单不改 decisions.md，每条末尾的「建议改写」只是提案，由你定。
 预登记（Q1 / Q5 / Q6 的目标与判据原文）首次提交在 159151b（2026-09-26 17:11:55 +0900），8e66075（17:24:14 +0900）重组后的文字是下面各节引用的版本，三条的阈值与两次提交一致（我逐条比对过），都早于任何 nq3 数字；
 下面引用的执行员条目自带 box 时钟（CST）时间戳。
 
@@ -51,7 +51,7 @@ Q5 的目标与判据（队列 3 登记，159151b 首提交，8e66075 重组后�
 术语：PDMS（NAVSIM v1 的 PDM Score，把碰撞、可行驶区域、进度、TTC、舒适度等按规则合成 0–100 的分）；cv（constant velocity，匀速外推基线）；S0 / A0 / C0 分别把 ego 速度 (vx, vy)、加速度、驾驶指令置零；
 CI 是逐 token 配对差的 bootstrap 95% 区间。
 
-**NAVSIM navtest（判格用）**，出处 [ego_navtest.csv](results/nq3/q5/ego_navtest.csv)。我在 box 上直接读 devkit 逐 token 分数（`runs/navsim/eval/v1_navtest_nq3q5_*`）重算：
+**NAVSIM navtest（判格用）**，出处 [ego_navtest.csv](../experiments/night_queue_3/results/q5/ego_navtest.csv)。我在 box 上直接读 devkit 逐 token 分数（`runs/navsim/eval/v1_navtest_nq3q5_*`）重算：
 点估计逐位相同，CI 端点差 ≤ 0.07（我的 bootstrap 是 4 000 次、种子不同，原脚本 10 000 次）。
 
 | 模型 | n（token） | 臂 | PDMS | 配对差 [95% CI]（CSV） | 我的复算 CI | ≥ 5 |
@@ -77,9 +77,9 @@ CI 是逐 token 配对差的 bootstrap 95% 区间。
 | DrivoR | comfort / ego_progress / TTC / no-collision / drivable | 1.000 / 0.899 / 0.967 / 0.990 / 0.989 | 0.710 / 0.687 / 0.823 / 0.962 / 0.945 |
 | WA-JEPA | 同上 | 1.000 / 0.859 / 0.987 / 0.997 / 0.981 | 0.933 / 0.737 / 0.959 / 0.991 / 0.967 |
 
-**nuScenes（附带的另一半判格）**，出处 [ego_nusc.csv](results/nq3/q5/ego_nusc.csv)：DrivoR 对 cv 的 L2 优势 +0.011 [−0.059, +0.078]，CI 含 0，登记规则规定「不适用」。
+**nuScenes（附带的另一半判格）**，出处 [ego_nusc.csv](../experiments/night_queue_3/results/q5/ego_nusc.csv)：DrivoR 对 cv 的 L2 优势 +0.011 [−0.059, +0.078]，CI 含 0，登记规则规定「不适用」。
 WA-JEPA（n = 1 159，nuScenes main 每 4 个取 1）base L2 0.421（cv 0.712），优势 +0.291 [+0.237, +0.345]；S0 后 L2 4.533，优势 −3.82，缩减 1 412%（≥ 50% 线）；A0 缩 33%、C0 缩 34%（未过线）。
-路径噪声地板：WA-JEPA 的 bf16 批量 base 对 T2 单独调用，平均位移 2.7 cm（[verify.json](results/nq3/q5/verify.json)）；DrivoR base 与 T2 逐位相同。
+路径噪声地板：WA-JEPA 的 bf16 批量 base 对 T2 单独调用，平均位移 2.7 cm（[verify.json](../experiments/night_queue_3/results/q5/verify.json)）；DrivoR base 与 T2 逐位相同。
 
 ### (c) 机器判格
 
@@ -145,7 +145,7 @@ Q1 的判据与读法（同一文件，写在数字之前）：
 ### (b) 原始数字与复算
 
 术语：bypass 翻转（考生在障碍出现窗内 3 s 处的横向位移 Δ_lat 超过 τ_lat 且方向与 expert 绕行方向一致的帧比例）；τ_lat（该考生在「只换天气」的 null 对上 |Δ_lat| 的 95 分位，即它自己的噪声地板）；
-CI 是按路线整组（40 条路线）的 bootstrap；null 是样本外误翻率。出处 [summary.csv](results/nq3/q1/summary.csv) 与 [carla_rig_summary.csv](results/nq3/q1/carla_rig_summary.csv)（BridgeDrive / BLUE / SimLingo 在各自 rig 上重录，读 2 s 处而不是 3 s）。
+CI 是按路线整组（40 条路线）的 bootstrap；null 是样本外误翻率。出处 [summary.csv](../experiments/night_queue_3/results/q1/summary.csv) 与 [carla_rig_summary.csv](../experiments/night_queue_3/results/q1/carla_rig_summary.csv)（BridgeDrive / BLUE / SimLingo 在各自 rig 上重录，读 2 s 处而不是 3 s）。
 我逐行按规则复算了门槛（CI 下界 > null + 0.10 且选择性过线），22 行的判格与 CSV 全部一致；原始逐帧数据在 box 上，未重跑 bootstrap。
 
 | 考生 | n 帧 | τ_lat（m） | bypass 翻转 [95% CI] | 天气 null | 门槛 null + 0.10 | 判格 |
@@ -170,13 +170,13 @@ CI 是按路线整组（40 条路线）的 bootstrap；null 是样本外误翻�
 | **PDM-Lite expert（future）** | 3 920 | 0.015 | **40.3% [34.4, 46.0]** | 6.4% | 16.4% | **has bypass** |
 
 选择性一栏（放置 null 的 40 个 keep 世界上的翻转率 ≤ 参照 + 10 pp）20 个有横向读数的行全部为 True，没有一行被选择性门拦下。
-另有一份看过 smoke 之后加的**描述性**读数 [tau_alt.csv](results/nq3/q1/tau_alt.csv)：换成「同天气、expert 保持车道的 x₀₁ − x₀₀ 对」上的 95 分位当 τ，
+另有一份看过 smoke 之后加的**描述性**读数 [tau_alt.csv](../experiments/night_queue_3/results/q1/tau_alt.csv)：换成「同天气、expert 保持车道的 x₀₁ − x₀₀ 对」上的 95 分位当 τ，
 openpilot 原生 plan 12.3 / 10.8%（τ_alt 1.6 / 1.7 m），TFv6 waypoint 12.1%（0.53 m），ridge_late 9.2 / 11.4%，cls_late 10.4 / 11.9%，E5 student B 9.4 / 11.9%，Alpamayo 9.3%（3.28 m），expert 24.8%（0.90 m）；
 所有考生的 CI 下界都在 6.8–9.9% 之间（expert 20.7%），仍低于 15% 门槛。SparseDriveV2 / ZTRS / DrivoR / WA-JEPA / M-C 没有匹配的 x₀₁ / x₀₀ keep 预测，未读。
 
-分 scenario（[per_scenario.csv](results/nq3/q1/per_scenario.csv)）：公开考生在 8 个主类里最高的单类点估计是 AccidentTwoWays 13.0%（M-C Lebowski，n = 531）、ConstructionObstacleTwoWays 13.1%（Alpamayo）、ParkedObstacleTwoWays 11.5%（DrivoR），都不过 15% 线；expert 在同 8 类里 26–53%。
+分 scenario（[per_scenario.csv](../experiments/night_queue_3/results/q1/per_scenario.csv)）：公开考生在 8 个主类里最高的单类点估计是 AccidentTwoWays 13.0%（M-C Lebowski，n = 531）、ConstructionObstacleTwoWays 13.1%（Alpamayo）、ParkedObstacleTwoWays 11.5%（DrivoR），都不过 15% 线；expert 在同 8 类里 26–53%。
 
-**Alpamayo 的 CoT 与轨迹不一致**（登记的单列项，[alpamayo_cot.csv](results/nq3/q1/alpamayo_cot.csv)）：3 623 个 x₁₀ 帧里 676 帧（18.7%）的 CoT 说要 nudge / 绕，其中 93.5% 的轨迹没有 bypass 翻转；没有 CoT nudge 的帧里 bypass 翻转为 4.9%。
+**Alpamayo 的 CoT 与轨迹不一致**（登记的单列项，[alpamayo_cot.csv](../experiments/night_queue_3/results/q1/alpamayo_cot.csv)）：3 623 个 x₁₀ 帧里 676 帧（18.7%）的 CoT 说要 nudge / 绕，其中 93.5% 的轨迹没有 bypass 翻转；没有 CoT nudge 的帧里 bypass 翻转为 4.9%。
 
 ### (c) 机器判格
 
@@ -237,7 +237,7 @@ openpilot 原生 plan 12.3 / 10.8%（τ_alt 1.6 / 1.7 m），TFv6 waypoint 12.1%
 ### (b) 原始数字与复算
 
 术语：pair-Δ（用同一场景加 / 不加行人的一对帧的特征差去拟合轨迹差，`reactivity_mc.fit_fold`）；行人翻转（反应帧上轨迹变化超过考生自己的 τ 且方向与 expert 一致的比例，n = 406 个「必须反应」的行人帧，21 条路线）；
-seed 只是 route-fold 的划分与内部随机，帧与特征在三个 seed 里是同一批。出处 [vjepa_single_frame.csv](results/nq3/q6/vjepa_single_frame.csv)、[vjepa_single_frame_verdict.json](results/nq3/q6/vjepa_single_frame_verdict.json)。
+seed 只是 route-fold 的划分与内部随机，帧与特征在三个 seed 里是同一批。出处 [vjepa_single_frame.csv](../experiments/night_queue_3/results/q6/vjepa_single_frame.csv)、[vjepa_single_frame_verdict.json](../experiments/night_queue_3/results/q6/vjepa_single_frame_verdict.json)。
 主臂 = Cinque prior 的 pair-Δ 单流 mean tap（第 48 条表里 V-JEPA 2 那一行）。
 
 | seed | 单帧 [CI] | 4 帧 [CI] | 两个 CI 重叠 | **配对差（单帧 − 4 帧）[95% CI]，我的复算** | 单帧 < 10% |

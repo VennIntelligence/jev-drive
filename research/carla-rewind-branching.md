@@ -1,6 +1,6 @@
 # CARLA 世界回退与分叉就地复用：原理、GPU 5 POC 实测与 85% 算力节约
 
-状态: 独立技术报告（2026-09-29 立项与实测）。由用户提议探索 CARLA 世界回退机制，经后台智能体在 GPU 5 上完成原理剖析与最小可行性验证（POC）。测试脚本归档于 [scripts/poc_carla_rewind.py](../scripts/poc_carla_rewind.py)。
+状态: 独立技术报告（2026-09-29 立项与实测）。由用户提议探索 CARLA 世界回退机制，经后台智能体在 GPU 5 上完成原理剖析与最小可行性验证（POC）。测试脚本归档于 [experiments/carla_rewind/archive/poc_carla_rewind.py](../experiments/carla_rewind/archive/poc_carla_rewind.py)。
 
 ---
 
@@ -30,7 +30,7 @@
 
 在端到端驾驶模型中，训练世界模型推演动作后果必须依赖干预数据（Intervention Data，打破专家日志中「看见危险才刹车」导致的动作—场景因果倒错）。
 
-根据 `todos/2026-09-28-wm-loop.md` 及实际生成记录：
+根据 `fc65452:todos/2026-09-28-wm-loop.md` 及实际生成记录：
 - **历史总规模**：402 个分叉点，3 194 次 run（含重试），累计开销 170.5 worker·h；
 - **单 run 平均耗时**：$\frac{170.5 \times 3600}{3194} \approx 192.2\text{ s}$；
 - **单 run 耗时拆解**：
@@ -106,7 +106,7 @@ $$\mathcal{S}_i = \left( \mathbf{x}_i, \mathbf{R}_i, \mathbf{v}_i, \boldsymbol{\
 
 ## 3. GPU 5 最小可行性实验（POC）量化结果
 
-我们在 GPU 5（RTX 6000D 84 GiB，独立 RPC 端口 20250，TM 端口 28250，`-graphicsadapter=5`，地图 `Town10HD_Opt`，20 Hz 同步模式）上部署并运行了端到端实测脚本 [`scripts/poc_carla_rewind.py`](../scripts/poc_carla_rewind.py)。
+我们在 GPU 5（RTX 6000D 84 GiB，独立 RPC 端口 20250，TM 端口 28250，`-graphicsadapter=5`，地图 `Town10HD_Opt`，20 Hz 同步模式）上部署并运行了端到端实测脚本 [`experiments/carla_rewind/archive/poc_carla_rewind.py`](../experiments/carla_rewind/archive/poc_carla_rewind.py)。
 
 ### 3.1 实验场景配置
 - **前置阶段**：100 ticks（5.0 s 仿真时间），Ego 车辆从起点全力加速直行至 63.6 km/h，伴随 3 辆背景 NPC 车与 1 路前视 RGB 相机（640×360 20 Hz）、1 路碰撞检测传感器。
@@ -168,7 +168,7 @@ $$\mathcal{S}_i = \left( \mathbf{x}_i, \mathbf{R}_i, \mathbf{v}_i, \boldsymbol{\
 
 ## 5. 工程落地踩坑指南与规避方案
 
-在将该机制并入生产环境（如 `scripts/wl_fork_agent.py` 或闭环 Hazard 配对）时，需注意以下四个技术细节：
+在将该机制并入生产环境（如 `experiments/world_model/archive/wl_fork_agent.py` 或闭环 Hazard 配对）时，需注意以下四个技术细节：
 
 ### 5.1 陷阱 1：CARLA 内部时钟单调递增（Timestamp Drift）
 - **现象**：回退后，CARLA 的全局世界时间（`elapsed_seconds`）和帧编号不会倒流。分支 1 运行了 $t \in [50, 53]$ 秒，回退后分支 2 的时钟将从 53 秒起算。
@@ -206,7 +206,7 @@ $$\mathcal{S}_i = \left( \mathbf{x}_i, \mathbf{R}_i, \mathbf{v}_i, \boldsymbol{\
 
 ## 更正（2026-09-29，jev-drive 实测；上文是外部提案原文，未改动）
 
-登记与全部数字在 [todos/2026-09-29-carla-rewind.md](../todos/2026-09-29-carla-rewind.md)，小表 [results/carla-rewind/](results/carla-rewind/)，决策见 [decisions.md](decisions.md) 第 65 条。
+登记与全部数字在 [fc65452:todos/2026-09-29-carla-rewind.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-carla-rewind.md)，小表 [results/carla-rewind/](../experiments/carla_rewind/results/)，决策见 [decisions.md](decisions.md) 第 65 条。
 检验是在 Bench2Drive scenario 里做的：11 个 WL 分叉点（行人 7、cut-in 2、P6 障碍 2），每个方法一个 route 跑完 7 个动作，每个分支与 WL 里同一动作的从头 run 比。floor 指同配置从头重跑与原 run 的差，p95 是 0。
 
 1. **第 2 节的恢复算法不够**。只恢复 transform 和速度（提案原样 `poc`）时，交接那一刻 ego 速度就差约 0.5 m/s：轮子、发动机和变速箱的状态没有恢复，3 s 时 ego 位置差 p95 3.8 m。hazard 行人开始走的时刻只有 21% 对得上，unsafe 标签一致率 79%。

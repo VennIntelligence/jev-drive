@@ -55,7 +55,7 @@ Trajectory vocabulary 这个做法本身不是我们发明的，Hydra-MDP（arXi
 
 ## 已知结论（来自 probe v1，nuScenes trainval，n=26491）
 
-这些是我们自己跑出来的，直接决定上面的层选择，细节见 [todos/2026-09-19-probe-v0.md](../todos/2026-09-19-probe-v0.md)。
+这些是我们自己跑出来的，直接决定上面的层选择，细节见 [fc65452:todos/2026-09-19-probe-v0.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-19-probe-v0.md)。
 
 | feature | macro-F1 | turn recall | hard turn recall |
 |---|---:|---:|---:|

@@ -19,7 +19,7 @@ with a monitor, for looking at CARLA with your own eyes.
   Measured dense matmul: **144 TFLOPS bf16/fp16** per card, 60 fp32 (no TF32), about 55% of the 253-268 bf16 the old card
   reached on real models, so GPU-bound jobs take roughly 1.8x longer; memory copy 1.28 TB/s, H2D 26 GB/s.
   Pin jobs with `CUDA_VISIBLE_DEVICES`. CARLA's `-graphicsadapter=k` lands on CUDA card k (identity; checked with 7 cards and with 3).
-  CARLA on one 6000D (2026-09-28, idle box, `scripts/carla_threads.py probe`, 16 CPUs, reduced pools): one server 15.0 FPS,
+  CARLA on one 6000D (2026-09-28, idle box, `experiments/cl_infra/archive/carla_threads.py probe`, 16 CPUs, reduced pools): one server 15.0 FPS,
   six servers 45.8 FPS aggregate at 8.0 GB each, 0 of 12 starts crashed; the six-per-card layout still fits.
 - Region: West-E since 2026-09-28 (`$AutoDLRegion` = `west-E` in a login shell; West-D before). See [storage.md](storage.md) for why it matters.
 - CPU and RAM: the host (2 x Xeon Platinum 8470Q, Sapphire Rapids) shows 208 CPUs (NUMA 0 = 0-51,104-155,

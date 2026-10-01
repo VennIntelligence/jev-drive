@@ -1,4 +1,4 @@
-"""Night queue 2, N3: leaderboard head x reaction (todos/2026-09-26-night-queue-2.md, N3 and the [B] entries, each
+"""Night queue 2, N3: leaderboard head x reaction (fc65452:todos/2026-09-26-night-queue-2.md, N3 and the [B] entries, each
 written before the numbers it affects).
 
   prep     Hydra seed s > 0: the CPU k-means vocabulary with seed s over E6's navtrain rows; the scored subset (E6's
@@ -649,7 +649,7 @@ def e4c_students(rl):
 
 # ---------------------------------------------------------------- figure
 
-def figs(res_dir="research/results/night2/N3", out_dir="research/figs"):
+def figs(res_dir="experiments/night_queue_2/results/N3", out_dir="research/figs"):
     """(a) navtest PDMS per head (95% token-bootstrap CI), Hydra and Hydra + g2 Delta per seed; (b) P5 v1 BA pedestrian
     and (c) cut-in flip rates of the heads readable on P5 (Hydra rows are 'not comparable' and left out)."""
     import matplotlib.pyplot as plt

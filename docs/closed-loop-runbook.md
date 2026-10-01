@@ -41,7 +41,7 @@ A worker is one CARLA server plus one route client. Its thread settings live onl
 | `stock` | CARLA default: (host CPUs - 2) / 3 = 68 each on the 208-CPU host | default: one per host CPU (208) | unset |
 | **`reduced` (default)** | 4 each | 8 | 2 |
 
-**Decision (2026-10-01, pre-registered rule, [todos/2026-10-01-cl-lib.md](../todos/2026-10-01-cl-lib.md)): `reduced`
+**Decision (2026-10-01, pre-registered rule, [fc65452:todos/2026-10-01-cl-lib.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-10-01-cl-lib.md)): `reduced`
 with numeric threads 2 stays the default.** PDM-Lite on 40 fixed Bench2Drive routes (25 Town12, 5 Town13), one exclusive
 run per arm on a 25-core NUMA-local slice of an RTX 6000D, 3-card / 75-core box. Saturated throughput = 8 x mean over
 routes of (ticks / route wall); two repeats on two cards (card-to-card spread ~5%).
@@ -99,7 +99,7 @@ three pools from the host CPU count regardless.
 | threads per worker (admission) | 650 / 450 / 250 / 700 | 2026-09-25 / 25 / 28 / 27 | - | stock / client 8 / reduced SimLingo / stock (G lane) | superseded by `capacity.worker_threads()` |
 | cores per worker | 2.5 | 5-card box 2026-09-25 | 45-CPU NUMA slice | Town12, Alpamayo camera rig, 6 per card | bench2drive-cost.md "Recommended layout" |
 | cores per worker | ~3 | same | same | heaviest rig (5 cameras) | bench2drive-cost.md |
-| cores per worker | 2.0 / 1.2 | 7-card box 2026-09-28 | 24-core slice | SimLingo, TFv6, BLUE / PDM-Lite (G lane `CPU_A`) | scripts/nq4_g_lane.py |
+| cores per worker | 2.0 / 1.2 | 7-card box 2026-09-28 | 24-core slice | SimLingo, TFv6, BLUE / PDM-Lite (G lane `CPU_A`) | experiments/night_queue_4/lib/nq4_g_lane.py |
 | cores per worker | ~1.0-1.4 used (11-12 of 25 cores busy at 8-12 workers) | 3-card box 2026-10-01 | 25-core slice | PDM-Lite, reduced, client 8 | this experiment |
 | servers per card (GPU knee) | 6 | 5-card RTX PRO 6000 2026-09-25 | - | Town12, Alpamayo camera rig: 34.8 aggregate ticks/s at 6, 38.2 at 12 | bench2drive-cost.md |
 | servers per card | 6 (45.8 FPS aggregate, 8.0 GB each) | 7-card RTX 6000D 2026-09-28 | 16 CPUs | six 1600x900 cameras, reduced | remote-box.md |
@@ -113,7 +113,7 @@ three pools from the host CPU count regardless.
 2. `python -m jevdrive.cl lease my-lane --gpus 2 [--cores-per-card 25] [--workers-per-card 6]`: picks free cards,
    NUMA-local physical cores no other row holds, and server-index blocks clear of every live row (index i's TM ports are
    the RPC block of i + 120), and writes the row. Say what the lane is in `--status`; record it in the lane's todo.
-3. Write the lane file (one Python file, ~50 lines; example `scripts/lanes/cl_worker_profile.py`):
+3. Write the lane file (one Python file, ~50 lines; example `experiments/cl_infra/archive/cl_worker_profile.py`):
 
    ```python
    from jevdrive.cl import b2d
@@ -165,7 +165,7 @@ and adoption of live jobs when the lane process restarts. Nothing is ever found 
 - [ ] **NUMA.** Cards 1 and 2 are on NUMA node 1 (CPUs 52-103, 156-207), card 0 on node 0. Leases take NUMA-local
   physical cores first (`nvidia-smi topo -m`).
 - [ ] **Never `pkill -f` / `pgrep -f`**, and never `os.getpgid()` of a recorded pid that may be reused: stop recorded
-  identities (`jevdrive.cl.procs`, `scripts/cx_owned_process.py`) or the process group b2d_run created.
+  identities (`jevdrive.cl.procs`, `experiments/night_queue_4/archive/cx_owned_process.py`) or the process group b2d_run created.
 - [ ] **`SIGTERM` does not stop a server promptly**; kill the group, wait for it to empty, then `SIGKILL`.
 - [ ] **`-quality-level=Low` with `-RenderOffScreen` segfaults; `SDL_VIDEODRIVER=offscreen` breaks CARLA.**
 - [ ] **Closed loop is not bitwise deterministic.** Two identical runs differ; 3 of 20 PDM-Lite routes flip DS between
@@ -182,7 +182,7 @@ Audited 2026-10-01. None of the six lane scripts was migrated (they ran or are f
 
 | Script | Covered / expressible on jevdrive.cl | Still missing in the library | Hazards in the old script |
 |---|---|---|---|
-| `carla_threads_routes.sh` | **superseded**: `scripts/lanes/cl_worker_profile.py --arg stage=old` reproduces it (verified, 2026-10-01) | - | no lease check, no retries |
+| `carla_threads_routes.sh` | **superseded**: `experiments/cl_infra/archive/cl_worker_profile.py --arg stage=old` reproduces it (verified, 2026-10-01) | - | no lease check, no retries |
 | `nq4_g_lane.py` | lease re-read per round, per-card slices / index blocks, staged pilots (`deps` + `ok`), retries, drain, adoption, `min_done=0.9` cell tolerance | demand-file yielding to other lanes; per-agent render-share and cores-per-worker budget (`CAP_A`, `CPU_A`); heavy/light mixing | PID constants 16000 / 700, `B2D_PIDS_WAIT` 16000; fallback layout hardcodes 7 cards |
 | `sch_cl_parallel.py` | slot validation (`lease.conflicts`), stage 1 -> 10 via `deps` / `ok`, file gates via `ready` | ESCALATE / auto-SKIP side effects, port bind pre-check, per-arm claim lock | hardcoded GPU 1, index bound 495 |
 | `b2d_privileged_chain.py` | phases via `deps`, shard checklists via `ok` (+ `--fail-fast`), retries, util / STATUS / ERROR | provenance lock (sha256 of controls, git commit) with mid-run abort; hard PID-ceiling kill | `B2D_PIDS_WAIT` 17000, hard stop 17500; cards 0-2 / 25 cores hardcoded |
@@ -201,7 +201,7 @@ yielding and per-agent CPU / render budgets, provenance locks, a port bind pre-c
   the 220-route round, reliability and recycling.
 - [closed-loop-acceptance.md](closed-loop-acceptance.md): which controllers and harness parts are accepted.
 - [long-runs.md](long-runs.md): tmux, run directories, the schedule table rules.
-- [todos/2026-10-01-cl-lib.md](../todos/2026-10-01-cl-lib.md): the profile experiment's pre-registration, log and raw
+- [fc65452:todos/2026-10-01-cl-lib.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-10-01-cl-lib.md): the profile experiment's pre-registration, log and raw
   tables.
 
 Last verified: 2026-10-01

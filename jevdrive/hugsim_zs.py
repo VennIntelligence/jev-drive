@@ -1,4 +1,4 @@
-"""HUGSIM zero-shot adapters for Alpamayo 1.5 and openpilot (todos/2026-09-25-hugsim-exam/README.md).
+"""HUGSIM zero-shot adapters for Alpamayo 1.5 and openpilot (experiments/hugsim/results/hugsim-exam-plan/README.md).
 NumPy / SciPy / OpenCV only: imported by the per-scenario agent process in envs/hugsim.
 
 Frames (HUGSIM interface: docs/hugsim.md)

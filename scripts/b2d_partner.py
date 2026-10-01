@@ -1,5 +1,5 @@
 """Shared control for zero-shot models in Bench2Drive: a learned partner (TCP) drives the phases the model structurally
-cannot handle, the model drives everything else. Pre-registration: todos/2026-09-24-zeroshot-exam/openpilot-migration.md,
+cannot handle, the model drives everything else. Pre-registration: fc65452:todos/2026-09-24-zeroshot-exam/openpilot-migration.md,
 section D3. Python 3.8, runs inside the route subprocess (envs/b2d-tcp: torch + carla).
 
 Partner: the official Bench2DriveZoo TCP agent (team_code/tcp_b2d_agent.py, branch tcp/admlp 8a08b07,

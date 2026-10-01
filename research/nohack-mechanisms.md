@@ -38,7 +38,7 @@ arXiv：FIVE-VLA 2609.18623、RoG-DAgger 2608.24525、LinkVLA 2603.01441、Steer
 
 ### 1.2 必须同时读的限定
 
-- **FIVE-VLA 的 Give_Way +26.67 有口径疑点。** B2D 的 Give_Way 只包含 InvadingTurn 与 YieldToEmergencyVehicle 两个 scenario，共 10 条路线（`jevdrive/tfv6_rules.py` 第 43 行）。按第 38 条，公开逐路线结果里所有学习式方法在 YTEV 上 SR 都是 0，所以 Give_Way 的上限是 50%；TF++ 0.4、SparseDriveV2 0.5、R2SE 0.5（`results/b2d-family/public/*/…ability.json`），BLUE 50.00±0.00（BLUE Table 2）。76.67 在 3 个 seed 下等于 23/30，意味着 YTEV 过了一半以上。BLUE Table 2 里 BevAD 也报了 76.67，所以这不是不可能，但 FIVE-VLA 没有逐路线结果可核。在核实之前，RAM 的 E 层证据应降级成「同权重推理 +2.7 DS / EB +6.1 / Overtake +7.4」，不能再以 Give_Way 为主。
+- **FIVE-VLA 的 Give_Way +26.67 有口径疑点。** B2D 的 Give_Way 只包含 InvadingTurn 与 YieldToEmergencyVehicle 两个 scenario，共 10 条路线（`experiments/tfv6_rules/lib/tfv6_rules.py` 第 43 行）。按第 38 条，公开逐路线结果里所有学习式方法在 YTEV 上 SR 都是 0，所以 Give_Way 的上限是 50%；TF++ 0.4、SparseDriveV2 0.5、R2SE 0.5（`results/b2d-family/public/*/…ability.json`），BLUE 50.00±0.00（BLUE Table 2）。76.67 在 3 个 seed 下等于 23/30，意味着 YTEV 过了一半以上。BLUE Table 2 里 BevAD 也报了 76.67，所以这不是不可能，但 FIVE-VLA 没有逐路线结果可核。在核实之前，RAM 的 E 层证据应降级成「同权重推理 +2.7 DS / EB +6.1 / Overtake +7.4」，不能再以 Give_Way 为主。
 - **BLUE 的增益有一半来自「关掉语言」。** 同权重下全开语言 SR 66.91、全关 69.55、gate（θ = 0.66）76.18（W1 F6）。gate 比两种固定模式里更好的那个还高 +6.6 SR，和噪声带边缘齐平。在**相同语言激活率**下，速度、加速度、转向、复杂度、随机五种启发式 gate 比学出来的 gate 低 0.7–3.9 DS、4.4–8.8 SR（W1 T7，同权重、3 seed）。所以「在哪一帧开」这个判断本身有价值，不只是开得少。跨 backbone 迁移：gate 挪到 SimLingo 上 +4.16 DS，挪到 CriticVLA 上 SR −0.22（T6）。
 - **SimLingo 系共用的协议风险。** 第 35 条推测 SimLingo 系的 B2D 分数偏高，上限约 11 DS（simlingo#43）。但上表的方法内部 Δ 都是在同一个 agent、同一个目录下比出来的，协议偏差会大部分相消；受影响的是「跨方法的绝对名次」，不是 Δ（推测）。
 - **RAM 与 ego 历史方向相反。** FIVE-VLA 显式喂 3 / 10 个自车历史 waypoint 时 DS −3.95 / −2.54（`leaderboard-vs-ability.md` 4.5）；RAM 记的是自己上一步的 action latent，DS +2.46。同一篇论文里，「记状态」和「记意图」符号相反。

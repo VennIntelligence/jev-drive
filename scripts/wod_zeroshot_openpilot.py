@@ -1,5 +1,5 @@
 """WOD-E2E zero-shot exam: openpilot runner (openpilot venv). Pre-registration:
-todos/2026-09-24-zeroshot-exam/wod-e2e.md.
+fc65452:todos/2026-09-24-zeroshot-exam/wod-e2e.md.
 
 Per target frame f: WOD frames max(f-100, first)..f are read from the slim shards (FRONT, FRONT_LEFT,
 FRONT_RIGHT), decoded straight to YCbCr, and rendered into openpilot's road / wide calib-frame model frames

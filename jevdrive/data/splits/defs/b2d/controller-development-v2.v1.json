@@ -5,7 +5,7 @@
  "unit": "route",
  "n": 27,
  "sha256": "dec1b41574372de7cf5524bfe17d19fbcd5ec9e04b7aec492768c16ec8eafba0",
- "origin": "scripts/b2d_controller_eval_prepare_v2.py DEVELOPMENT (every route driven in controller development before the v2 draw)",
+ "origin": "experiments/b2d_controller_eval/archive/b2d_controller_eval_prepare_v2.py DEVELOPMENT (every route driven in controller development before the v2 draw)",
  "status": "frozen",
  "used_by": "excluded from L1/L2 v2 held-out",
  "members": [

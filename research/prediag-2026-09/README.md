@@ -39,7 +39,7 @@ train 415 663 帧 / 2037 个 sequence 训，val 106 360 帧 / 479 个 sequence �
 | D MLP 的 pre-onset Δ | +0.248 / +0.030 | −0.000 [−0.063, +0.057] |
 | RFS ego → A | 7.258 → 7.265 / 7.112 → 7.096 | 7.056 → 6.968（paired Δ −0.087 [−0.183, +0.004]，n=479） |
 
-![P0 decile](../figs/p0-decile-relative-gain.png)
+![P0 decile](../../experiments/prediag/figs/p0-decile-relative-gain.png)
 
 看什么：train 训出来的 arm A 相对 ego 的相对增益按 s_ego 十分位仍是倒 U，第 4–9 档变好、第 8 档附近见顶、
 第 10 档回落，和第 20 条半 val 上的形状一致；数据多十倍没有把它变成单调上升。
@@ -86,12 +86,12 @@ RFS 并排必报。理由是只有它在 pre-onset 上有 power（n=1510，半�
 | e gated attn grid | +0.011 / −0.027 | +0.068 / −0.029 | 7.110 / 6.932 | 否 |
 | e gated pooled-mlp | +0.098 / +0.037 | +0.103 / −0.078 | 6.912 / 6.539 | 否 |
 
-![P2b decile](../figs/p2b-decile-relative-gain.png)
+![P2b decile](../../experiments/prediag/figs/p2b-decile-relative-gain.png)
 
 看什么：把 0.2–0.9 s 的 pooled 历史拼进 ridge，三条曲线几乎重合，第 8 档见顶、第 10 档回落一点没动；
 时序只多买 0.010–0.017 m，两种 stride 只差 0.001 m，所以不是窗长问题。
 
-![P2c decile](../figs/p2c-decile-relative-gain.png)
+![P2c decile](../../experiments/prediag/figs/p2c-decile-relative-gain.png)
 
 看什么：token head 在第 7–9 档比 pooled 好 1–2 个百分点，在第 1–3 档差 2–4 倍（那里 ego ADE 只有 0.3–0.9 m，
 车基本不动，有容量的 head 纯加噪声），净效果是 pre-onset、整体 ADE、RFS 全差。算力匹配的 MLP 和 attention head
@@ -117,7 +117,7 @@ P2(e) 对第 25 条的意义：gated residual head 的 gate 在真实数据上**
 | 1 | A pooled | −0.044 [−0.098, +0.013] | −0.074 | +0.029 | 7.024 | 否 |
 | 1 | d V-JEPA 2 | **−0.115 [−0.190, −0.027]** | −0.058 | **−0.057** [−0.142, +0.035] | 6.992 | 是 |
 
-![P3 V-JEPA decile](../figs/p3-vjepa-decile-relative-gain.png)
+![P3 V-JEPA decile](../../experiments/prediag/figs/p3-vjepa-decile-relative-gain.png)
 
 看什么：第 10 档的回落被压平（arm A 从第 8 档的 −6.5% 掉回 −2.2%，V-JEPA 从第 9 档的 −8.4% 只掉到 −6.7%），
 见顶从第 8 档右移到第 9 档；第 7–9 档这一段 logged future 可信，V-JEPA 每档比 A 好 1–3 个百分点。
@@ -202,7 +202,7 @@ ViT-g −0.027 [−0.096, +0.045]；late fusion −0.036 [−0.101, +0.032]。�
 限定：这分不开「表征里没有」和「global mean-pool 读出太弱」，Wan 没跑非 mean-pool 的对照，所以能说的是 DriveLaW 那份配方在这里为零，
 不是生成式表征整体为零。加上 (a) 已把 H3 的理解侧量成零，H3 两个可能的来源都指向无，(b) deferred 的赌注兑现。
 
-![P3 all arms decile](../figs/p3-all-decile-relative-gain.png)
+![P3 all arms decile](../../experiments/prediag/figs/p3-all-decile-relative-gain.png)
 
 看什么：同一张图上叠了 P3 的全部 arm（(a) 32B、(c) Wan 四个 tap、(d) V-JEPA 2、(d″) Qwen 原生视频）和对照 A，纵轴是对 ego 的相对增益（向上为更好）。
 Wan 的四条线在十个 s_ego 档上都贴着 0，既不像别的 arm 那样在第 4–9 档拿到 5–12% 的增益，也不像它们那样在第 1–2 档比 ego 差——它对 ego 几乎没有改动，这就是「不只是 pre-onset 上的零」。
@@ -220,7 +220,7 @@ Wan 的四条线在十个 s_ego 档上都贴着 0，既不像别的 arm 那样�
 | 32B L50_mean | −0.010 / −0.032 |
 | 32B L50_last | −0.029 / −0.028 |
 
-![P3 32B decile](../figs/p3-32b-decile-relative-gain.png)
+![P3 32B decile](../../experiments/prediag/figs/p3-32b-decile-relative-gain.png)
 
 看什么：四条 32B 曲线压在 arm A 上，只有 V-JEPA 在第 7–10 档分开。八个格子全在 −0.036 到 +0.006 之间，和 4B 同一个噪声带，
 RFS 八个里七个更差（最低 −0.151）。实际执行的非 embedding 参数 8 倍（2.8B → 22.6B）、每帧算力 7 倍，pre-onset 一动不动，
@@ -237,9 +237,9 @@ RFS 八个里七个更差（最低 −0.151）。实际执行的非 embedding �
 同一子集、同一 ridge head、同一 judge，把 openpilot（small / Cinque / Lebowski）的 `temporal` token 和 Alpamayo 1.5 的 prefill 特征接进阶梯。
 cross-fit 读数上 Cinque 的全部帧 ΔADE −0.32 m、RFS +0.29（通用 backbone −0.02 到 −0.04 m、RFS ≈ 0），train 训后 pre-onset −0.29 [−0.42, −0.17]；
 Alpamayo 中层特征只在全部帧上略好、RFS 上更差，深层 `L27_last` 是第一个两方向过门槛的 arm（次要 tap）。
-全部表、成本和等价性见 [todos/2026-09-24-driving-backbones/README.md](../../todos/2026-09-24-driving-backbones/README.md)。
+全部表、成本和等价性见 [fc65452:todos/2026-09-24-driving-backbones/README.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-driving-backbones/README.md)。
 
-![driving backbones](../figs/driving-backbones-crossfit.png)
+![driving backbones](../../experiments/driving_backbones/figs/driving-backbones-crossfit.png)
 
 看什么：(b)(c) 里 openpilot 的点离开灰色的通用 backbone 一个量级；(c) 的最下两行是 openpilot 原生 plan，冻结特征 + ridge 只拿到它一半的 RFS 增益。
 
@@ -247,8 +247,8 @@ Alpamayo 中层特征只在全部帧上略好、RFS 上更差，深层 `L27_last
 
 第 20 / 22 条的那句「顶档的 logged future 自己就不被 rater 认可」被用户质疑，做了一次不复用原函数的独立复核：
 RFS 从官方规范重写一遍，s_ego 用自己的 ridge 重新拟合，再和仓库里的移植、以及 Waymo 上游的
-`rater_feedback_utils.py` 三方对齐。代码 `scripts/verify_top_decile.py`，小表在
-`research/results/top-decile-audit/`，run 在 box 上 `$DATA_DIR/runs/waymo_l0/top_decile_audit/`。
+`rater_feedback_utils.py` 三方对齐。代码 `experiments/prediag/archive/verify_top_decile.py`，小表在
+`experiments/prediag/results/top-decile-audit/`，run 在 box 上 `$DATA_DIR/runs/waymo_l0/top_decile_audit/`。
 
 **scorer 本身先过关。** 本项目的 RFS 移植和 Waymo 官方文件在全部 479 帧 × 4 类候选（logged future、
 rater 轨迹本身、加 σ=3 m 噪声的扰动、挪开 1 km 的远点）上**逐位相同**（max |Δ| = 0），
@@ -333,17 +333,17 @@ issue #985 指出部分被打分轨迹不足 20 个 waypoint，官方实现用�
 
 ### 二十帧看过去：没有一帧是「明显开错」
 
-![top decile](../figs/top-decile-rater-frames.png)
+![top decile](../../experiments/prediag/figs/top-decile-rater-frames.png)
 
 顶档里跨 sequence 均匀取的 20 帧都人工看过，图中是其中 9 帧（每种场景类别一帧，外加一帧 log 在 trust region 内的对照）。每格上方是三路前向相机的全景，
 下方是 BEV（向前为 x、向左为 y，两轴比例不同；黑=logged future，绿/蓝/橙=按分数排序的三条被打分 proposal，点线框是 3 s / 5 s 的 trust region）。
-图由 `scripts/make_top_decile_sheet.py` 生成。对照组是第 1–9 档随机 10 帧，
-见 [mid-decile-rater-frames.png](../figs/mid-decile-rater-frames.png)。
+图由 `experiments/prediag/archive/make_top_decile_sheet.py` 生成。对照组是第 1–9 档随机 10 帧，
+见 [mid-decile-rater-frames.png](../../experiments/prediag/figs/mid-decile-rater-frames.png)。
 
 看什么：几乎每个 floored 的格子里，黑线都在彩色线**中途就停了**，横向方向一致。场景清一色是
 Waymo 自己标的长尾类别——Cyclist 6、Cut_ins 4、Interections 3、Foreign Object Debris 2、Multi-Lane Maneuvers 2、其余 3——
 司机在给骑车人、行人、并入的车、黄灯、前方排队让速，而三条 proposal 继续走。
-逐帧判断（人工，判据写在 `research/results/top-decile-audit/sheet_top.csv` 的数值旁）：
+逐帧判断（人工，判据写在 `experiments/prediag/results/top-decile-audit/sheet_top.csv` 的数值旁）：
 **0 帧是「明显开错」**；**14 帧是「合理但不唯一」**（为可见的弱势道路使用者或前车减速/停住，
 proposal 不含这一模态）；**4 帧是「log 本来就被认可」**（[2] 路面障碍物、[4] 坡道排队、[5] 停止线起步、
 [16] 金门公园里一只小动物窜上路面——这一帧 log 直接命中 10 分的那条）；**2 帧是标注/尺度伪影**
@@ -381,7 +381,7 @@ proposal 不含这一模态）；**4 帧是「log 本来就被认可」**（[2] 
 
 ## P4：CARLA 帧上 Waymo 的 head 读不出东西（按预登记判据「不可用」）
 
-计划、判据和全部表在 [todos/2026-09-23-p4-carla-feature-gap.md](../../todos/2026-09-23-p4-carla-feature-gap.md)。
+计划、判据和全部表在 [fc65452:todos/2026-09-23-p4-carla-feature-gap.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-23-p4-carla-feature-gap.md)。
 CARLA 0.9.15 里用特权的 `BehaviorAgent` 开 151 条 Bench2Drive 路线（按 scenario family 取，12 个 town，带背景车流），
 三台相机按 WOD-E2E 的标定复刻（972 × 1079、f = 1113.5 px、Waymo 的主点和径向畸变、同样的安装位置和 JPEG q95），
 按动作分层抽 3000 帧（pre-onset 35%、转弯中 25%、直行 25%、停车 10%），用 P3(d″) 完全相同的抽取器（16 行 Waymo 逐位一致）抽 `L18_last / L18_mean`。
@@ -393,11 +393,11 @@ CARLA 0.9.15 里用特权的 `BehaviorAgent` 开 151 条 Bench2Drive 路线（�
 | head 迁移 | Waymo 训的 `ridge ego` 在 CARLA 上外推（即便裁剪输入也比 CTRV 差），所有 head 的匹配 ADE 比值 2.5–10；视觉增量按域标准化后 ≈ 0 | 不可用 |
 | probe 迁移 | 「在不在动」0.87–0.89，「3 s 后往哪转」0.58–0.66 | 加自适应可用 |
 
-![P4 domain gap](../figs/p4-domain-gap.png)
+![P4 domain gap](../../experiments/prediag/figs/p4-domain-gap.png)
 
 看什么：左图 CARLA 帧在 Waymo 自己的前两个主成分上挤在一个角里；右图所有 Waymo 对 CARLA 的估计量都顶在 1.0，而同样组数的 null 在 0.5 附近。
 
-![P4 transfer](../figs/p4-transfer.png)
+![P4 transfer](../../experiments/prediag/figs/p4-transfer.png)
 
 看什么：(a) 同速度下词表对 CARLA 轨迹的下限更高；(b) 视觉增量在 CARLA 上与 Waymo 同量级、按域标准化后归零——视觉特征在 CARLA 上「读不出东西」而不是「读错」；
 (c) 三个帧集合的层组成。
@@ -408,7 +408,7 @@ CARLA 0.9.15 里用特权的 `BehaviorAgent` 开 151 条 Bench2Drive 路线（�
 
 ## P5：CARLA 配对考卷（v0）
 
-计划、判据、全部表和中途修订在 [todos/2026-09-24-p5-carla-pairs-v0.md](../../todos/2026-09-24-p5-carla-pairs-v0.md)，结论在 [decisions.md](../decisions.md) 第 32 条。
+计划、判据、全部表和中途修订在 [fc65452:todos/2026-09-24-p5-carla-pairs-v0.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-p5-carla-pairs-v0.md)，结论在 [decisions.md](../decisions.md) 第 32 条。
 P4 说跨域不行，所以 P5 在 CARLA 里训、在 CARLA 里考。pair（配对：两个世界只差一处可见因素，x⁺ 有、x⁻ 没有）由 Bench2Drive 的 10 个 scenario family 造出，
 5 条路线 × 3 个 TM seed，x⁻ 让 scenario 照常运行、只把 hazard actor 藏到地下（Light 是红灯换绿灯）；null pair 只换天气。
 特权 expert（BehaviorAgent）在两个世界各开一遍，Δ_expert 是 2 s 处速度之差；定向翻转率（directional flip rate）是 expert 真反应的帧里，考生的 Δ 与 expert 同号
@@ -428,12 +428,12 @@ P4 说跨域不行，所以 P5 在 CARLA 里训、在 CARLA 里考。pair（配�
 | `ridge_late` L18_last / L18_mean | 0.0% / 0.0% | 5.3% / 5.6% |
 | hazard probe（x⁺ 对 x⁻ 的 AUC） | 0.635 [0.58, 0.69] | — |
 
-![P5 flip rates](../figs/p5-flip-rates.png)
+![P5 flip rates](../../experiments/reactivity/figs/p5-flip-rates.png)
 
 看什么：只有 TFv6 的 waypoint 读数在每个合并 family 上都明显离开 0（35–46%）且从不反向；它的目标速度读数和我们的两个 ridge head 处处是 0。
 TFv6 目标速度的 0 来自它自己的噪声地板：只换天气就让这个近二值的输出在 10% 以上的帧上整档跳变。
 
-![P5 expert delta](../figs/p5-expert-delta.png)
+![P5 expert delta](../../experiments/reactivity/figs/p5-expert-delta.png)
 
 看什么：(a) pair 帧上 13% 的 |Δ_expert| 超过 0.5 m/s，null 帧几乎全是 0；(b) 反应集中在 cut-in 和停车场行人，两个开放道路的行人 family 和闯红灯 family 几乎没有题，
 因为 BehaviorAgent 在那些时刻已经因为别的原因停着。
@@ -456,6 +456,6 @@ TFv6 waypoint 确实有「看久了才反应」的成分，按对计分翻倍；
 
 ## 结果文件
 
-`research/results/p0-train-split/`、`p1-judge/`、`p2-readout-ladder/`、`p2p3-subset/`、`p3-backbone-ladder/`、
+`experiments/prediag/results/p0-train-split/`、`p1-judge/`、`p2-readout-ladder/`、`p2p3-subset/`、`p3-backbone-ladder/`、
 `top-decile-audit/`、`p4-carla-gap/`、`p5-carla-pairs/`；run dir 在 box 上 `$DATA_DIR/runs/waymo_p0/`、`waymo_p1/`、`waymo_ladder/`、
 `waymo_l0/top_decile_audit/`、`p5_pairs/`。

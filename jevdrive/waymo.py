@@ -222,7 +222,7 @@ def build_index(workers: int | None = None, force: bool = False) -> pd.DataFrame
     # between two of them. What it buys is the size of that window -- microseconds instead of the seconds to
     # minutes a rebuild takes -- and it removes the torn-file case entirely, since no reader ever sees a
     # half-written file. A job that needs a guaranteed-consistent set of all four still pins one with
-    # scripts/snapshot_processed.sh, which copies and then checks that they agree.
+    # experiments/probe_planner_v0/archive/snapshot_processed.sh, which copies and then checks that they agree.
     for n, path in tmp.items():
         os.replace(path, root / n)
     log.info("index: %d frames, %d sequences, splits %s, %d rater-scored frames -> %s", len(df),
@@ -573,7 +573,7 @@ def load_rater(df: pd.DataFrame | None = None) -> tuple[np.ndarray, np.ndarray, 
                 f"rater file predates the frame_name column, so it can only be keyed by row position, and "
                 f"its {len(got)} positions no longer match the index's {len(want)} rated frames "
                 f"(build_index renumbers every row each time a shard lands). Pin a snapshot with "
-                f"scripts/snapshot_processed.sh, or re-run reindex so that both files are written together.")
+                f"experiments/probe_planner_v0/archive/snapshot_processed.sh, or re-run reindex so that both files are written together.")
     rows, traj, scores, raw_len = [], [], [], []
     for row, g in t.groupby("row", sort=True):
         xy = [np.stack([x, y], -1) for x, y in zip(g.pos_x, g.pos_y)]
@@ -749,7 +749,7 @@ class Shards:
 
 def loader_workers(workers: int | None = None) -> int:
     """DataLoader workers for feature extraction. Decoding and preprocessing one three-camera item costs
-    ~63 ms of one core and the GPU consumes one every ~125 ms (todos/2026-09-21-waymo-train-features.md),
+    ~63 ms of one core and the GPU consumes one every ~125 ms (fc65452:todos/2026-09-21-waymo-train-features.md),
     so two workers already keep the GPU fed; six is a 3x margin and leaves the rest of the box to whatever
     else is running -- on this box, usually the download that is producing the shards."""
     return workers if workers is not None else max(2, min(6, n_cpus() // 4))

@@ -1,0 +1,27 @@
+# hugsim: HUGSIM install, controller, zero-shot exam, I3
+
+status: concluded
+decisions: 19, 44
+index: fixed2 controller passes acceptance; 4 Hz clock +25-38% lateral
+
+**Question.** Can HUGSIM be the real-appearance closed-loop column, and how do Alpamayo and openpilot score on it?
+
+**Conclusion.** Upstream trackers fail acceptance, `fixed2` passes; openpilot 4 Hz clock +25-38% lateral error; 64 scenarios scored, no HD-Score entry (decisions 19). I3 pairs: no head beats the prior (decisions 44).
+
+**Read more.** docs/hugsim.md, `git show bcbdde4:todos/2026-09-25-hugsim-exam/README.md`
+
+<!-- files:begin -->
+## Files
+
+- `install.sh` (archive): Build the HUGSIM simulation env on a …
+- `zs_exam.sh` (archive): HUGSIM zero-shot exam driver
+- `zs_run.py` (archive): Batch runner of HUGSIM's official …
+- `zs_agent.py` (archive): HUGSIM agent process for the zero-shot …
+- `preset_eval.py` (archive): Score the HUGSIM controller acceptance …
+- `pairs_run.sh` (archive): N shard workers of pairs_render.py share
+- `hugsim_zs.py` (jevdrive): HUGSIM zero-shot adapters for Alpamayo …
+- `hugsim_pairs.py` (jevdrive): real-appearance counterfactual pairs …
+- `hugsim_preset.py` (archive): The scene's logged ego trajectory as a …
+
+[archive/](archive/) 31 one-off code · [results/](results/) 19 result files · [figs/](figs/) 13 figures
+<!-- files:end -->

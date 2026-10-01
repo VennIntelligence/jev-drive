@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Night queue 4, G and K: world variants and the per-tick trace of every closed-loop run
-(todos/2026-09-26-night-queue-4.md, section G and the [F] entries under it, written before any G number).
+(fc65452:todos/2026-09-26-night-queue-4.md, section G and the [F] entries under it, written before any G number).
 
 scripts/b2d_route.py calls install() when the route carries an `nq4_world` attribute or $B2D_NQ4_TRACE is 1; with
-neither, nothing here is imported. Route attributes (written by jevdrive/nq4_g.py):
+neither, nothing here is imported. Route attributes (written by experiments/night_queue_4/archive/nq4_g.py):
 
   nq4_world  "orig"   the route as shipped
              "ghost"  the scenario deleted with the P5 x- / P6 x00 mechanism (rule 11): scripts/b2d_hooks.py

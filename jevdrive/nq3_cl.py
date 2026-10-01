@@ -1,4 +1,4 @@
-"""Night queue 3, lane B: our heads in closed loop (todos/2026-09-26-night-queue-3.md, section CL, and the [B] entries
+"""Night queue 3, lane B: our heads in closed loop (fc65452:todos/2026-09-26-night-queue-3.md, section CL, and the [B] entries
 under it, written before any closed-loop number).
 
   export   (repo .venv, GPU) refit the P5 v1 BA heads on all of the set's training rows and pair rows, with the fold
@@ -6,7 +6,7 @@ under it, written before any closed-loop number).
            seed 0), and store them as plain arrays: runs/nq3/b/heads/heads.npz (+ student_b.pt for the check)
   check    offline path of the equivalence check (rule 8): the dumped inputs of a closed-loop route (JPEG bytes, desire,
            the agent's pose track) -> features and head outputs with the offline code, compared bit for bit with what
-           the closed-loop servers returned (scripts/nq3_cl_server.py dumps both)
+           the closed-loop servers returned (experiments/night_queue_3/lib/nq3_cl_server.py dumps both)
 
 The apply side (`Heads`, `ego_past`, `intent`) is numpy only: it runs inside the head server (envs/openpilot) and in the
 offline check alike, so the two paths share it by construction; what the check tests is everything upstream of it

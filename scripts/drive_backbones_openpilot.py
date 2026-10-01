@@ -1,5 +1,5 @@
 """Driving backbones in the P3 ladder: openpilot feature runner (openpilot venv).
-Pre-registration: todos/2026-09-24-driving-backbones/README.md. Plan from `python -m jevdrive.drive_backbones
+Pre-registration: fc65452:todos/2026-09-24-driving-backbones/README.md. Plan from `python -m jevdrive.drive_backbones
 --steps prepare` (op_plan.json).
 
 Inputs are exactly the WOD exam's (scripts/wod_zeroshot_openpilot.py: front three cameras -> road / wide calib

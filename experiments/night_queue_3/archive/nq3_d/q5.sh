@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# Night queue 3, Q5 (lane D): hack audit of DrivoR / WA-JEPA and the selectivity table, one unattended pass
+# (fc65452:todos/2026-09-26-night-queue-3.md, [D] 16:50 Q5 entry). Resumable: every finished artefact is skipped on a rerun.
+#   requests + arms -> rig-perturbation images -> DrivoR (nusc, navtest, rig) -> WA-JEPA (fp32 navtest check, nusc,
+#   navtest, rig) in the background while the DrivoR navtest arms are scored -> WA-JEPA arms scored -> equivalence
+#   checks -> tables in experiments/night_queue_3/results/q5/ (box repo copy).
+# Resources: GPU $GPU (default 6; DrivoR ~1 GB, WA-JEPA <= ~12 GB at WJ_BS), every process pinned to $CPUS (180-199),
+# BLAS threads 1 per devkit ray worker. Usage (in tmux): experiments/night_queue_3/archive/nq3_d/q5.sh
+set -euo pipefail
+: "${DATA_DIR:?DATA_DIR is not set}"
+repo=$(cd "$(dirname "$0")/../../../.." && pwd)
+GPU=${GPU:-6}; CPUS=${CPUS:-180-199}; WJ_BS=${WJ_BS:-8}; SCORE_THREADS=${SCORE_THREADS:-14}
+R=$DATA_DIR/runs/nq3/q5; L=$R/logs; mkdir -p "$R/preds" "$R/frag" "$L"
+pin=(taskset -c "$CPUS")
+py=("${pin[@]}" env OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 "$repo/.venv/bin/python" -m experiments.night_queue_3.archive.nq3_q5)
+say() { echo "[$(date +%T)] q5: $*"; }
+kill_tree() { local c; for c in $(ps -o pid= --ppid "$1" 2>/dev/null); do kill_tree "$c"; done; kill "$1" 2>/dev/null || true; }
+say "estimate (GPU 6 shared with lane C, measured 17:20): DrivoR 11 arms x 16 782 requests ~1.5 h; WA-JEPA 6 arms x 2 374" \
+    "requests (subsets) + rig arms ~2.5 h, in parallel; devkit v1.1 17 navtest jobs ~1 h (overlaps); rig images ~5 min; total ~3 h"
+
+[[ -f $R/req/arms.json ]] || { "${py[@]}" req; "${py[@]}" arms; }
+[[ -f $R/frag/arms_wajepa.npz ]] || "${py[@]}" frag-prep --workers 16
+
+vram_wait() {   # GB: wait (<= 60 min) until GPU $GPU has that much free memory; GPU 6 is shared with lane C
+  local i free
+  for i in $(seq 60); do
+    free=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits -i "$GPU" | tr -d ' ')
+    (( free >= $1 * 1024 )) && return 0
+    (( i == 1 )) && say "waiting for $1 GB free on GPU $GPU (now $((free / 1024)) GB)"
+    sleep 60
+  done
+  say "still < $1 GB free on GPU $GPU after 60 min; trying anyway"
+}
+drivor() {   # set request arms out [workers]; up to 3 attempts (chunks resume)
+  [[ -f $4 ]] && return 0
+  local k
+  for k in 1 2 3; do
+    vram_wait 4
+    say "DrivoR $1 -> $4 (attempt $k)"
+    (cd "$DATA_DIR/third_party/drivor" && CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=2 "${pin[@]}" "$DATA_DIR/envs/drivor/bin/python" \
+      "$repo/experiments/night_queue_3/archive/nq3_d/drivor_arms.py" "$2" "$3" --out "$4" --workers "${5:-10}" >> "$L/drivor_$1.log" 2>&1) && return 0
+    sleep 120
+  done
+  say "DrivoR $1 FAILED 3 times (see $L/drivor_$1.log)"; return 1
+}
+wajepa() {   # set request arms out [extra args]; up to 3 attempts, the batch halved after an out-of-memory
+  [[ -f $4 ]] && return 0
+  local k bs=$WJ_BS extra=("${@:5}")
+  for k in 1 2 3; do
+    vram_wait 12
+    say "WA-JEPA $1 -> $4 (attempt $k, bs $bs)"
+    local args=("${extra[@]}")
+    [[ " ${extra[*]} " == *" --bs "* ]] && args=("${extra[@]/#$WJ_BS/$bs}")
+    (cd "$DATA_DIR/third_party/wajepa" && CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=1 "${pin[@]}" "$DATA_DIR/envs/wajepa/bin/python" \
+      "$repo/experiments/night_queue_3/archive/nq3_d/wajepa_arms.py" "$2" "$3" --out "$4" "${args[@]}" >> "$L/wajepa_$1.log" 2>&1) && return 0
+    grep -qi "out of memory" "$L/wajepa_$1.log" && (( bs > 1 )) && bs=$((bs / 2))
+    sleep 120
+  done
+  say "WA-JEPA $1 FAILED 3 times (see $L/wajepa_$1.log)"; return 1
+}
+score() {    # jobs file
+  local ver split name npz tok
+  while read -r ver split name npz tok; do
+    [[ -z $ver ]] && continue
+    if compgen -G "$DATA_DIR/runs/navsim/eval/${ver}_${split}_${name}/*/*.csv" > /dev/null; then continue; fi
+    say "devkit $name"
+    TOKENS_FILE=${tok:-} NAVSIM_THREADS=$SCORE_THREADS "${pin[@]}" "$repo/experiments/zeroshot_openloop/archive/navsim_zs_score.sh" score "$ver" "$split" "$name" "$npz" \
+      > "$L/score_$name.log" 2>&1 || { say "devkit FAILED $name (see $L/score_$name.log)"; return 1; }
+  done < "$1"
+}
+frag() {     # model runner
+  local a
+  for a in orig ident yaw+0.5 yaw-0.5 z+5cm z-5cm; do
+    "$2" "frag_$a" "$R/frag/req_$a.npz" "$R/frag/arms_$1.npz" "$R/frag/pred_$1_$a.npz" "${@:3}"
+  done
+}
+
+(
+  wajepa navcheck "$R/req/navcheck.npz" "$R/req/navcheck_arms.npz" "$R/preds/navcheck_wajepa_fp32.npz" --no-amp --workers 2
+  wajepa nusc "$R/req/nusc_wajepa.npz" "$R/req/nusc_wajepa_arms.npz" "$R/preds/nusc_wajepa.npz" --bs "$WJ_BS" --workers 6
+  wajepa navtest "$R/req/navtest_wajepa.npz" "$R/req/navtest_wajepa_arms.npz" "$R/preds/navtest_wajepa.npz" --bs "$WJ_BS" --workers 6
+  frag wajepa wajepa --bs "$WJ_BS" --workers 4
+) > "$L/wajepa_chain.log" 2>&1 &
+wj=$!
+say "WA-JEPA chain in the background (pid $wj, log $L/wajepa_chain.log)"
+drivor nusc "$R/req/nusc.npz" "$R/req/nusc_drivor_arms.npz" "$R/preds/nusc_drivor.npz" 6 || { kill_tree "$wj"; exit 1; }
+drivor navtest "$R/req/navtest.npz" "$R/req/navtest_drivor_arms.npz" "$R/preds/navtest_drivor.npz" 6 || { kill_tree "$wj"; exit 1; }
+frag drivor drivor || { kill_tree "$wj"; exit 1; }
+"${py[@]}" nav-jobs --model drivor
+score "$R/nav/jobs_drivor.txt" || { kill_tree "$wj"; exit 1; }
+say "DrivoR scored; waiting for WA-JEPA (pid $wj)"
+wait "$wj" || { say "WA-JEPA chain FAILED (see $L/wajepa_chain.log)"; exit 1; }
+"${py[@]}" nav-jobs --model wajepa
+score "$R/nav/jobs_wajepa.txt"
+"${py[@]}" verify
+"${py[@]}" tables
+touch "$R/DONE"
+say "done -> $repo/experiments/night_queue_3/results/q5"

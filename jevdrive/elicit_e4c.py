@@ -1,4 +1,4 @@
-"""E4c of the elicitation program (todos/2026-09-26-elicitation-program.md, deviation-log entry [E4c] 01:11):
+"""E4c of the elicitation program (fc65452:todos/2026-09-26-elicitation-program.md, deviation-log entry [E4c] 01:11):
 reaction-latency curves on both P5 v1 sets and the human onset anchor on WOD-E2E rater frames.
 
   curve   per pair (>= 1 reactive frame), cumulative share of pairs with a directional flip (|Delta_model| >=

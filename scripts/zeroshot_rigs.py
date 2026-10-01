@@ -1,7 +1,7 @@
 """Camera rigs that reproduce each zero-shot model's native cameras in CARLA, and the maps from a CARLA
 pinhole render to the model's own image. NumPy only, Python 3.8 compatible: the CARLA agent (envs/carla)
 imports it for the sensor specs, the policy servers (model venvs) for the image maps.
-Pre-registration and the reasoning behind every number: todos/2026-09-24-zeroshot-exam/bench2drive.md.
+Pre-registration and the reasoning behind every number: fc65452:todos/2026-09-24-zeroshot-exam/bench2drive.md.
 
 Frames. Rig: the model's vehicle frame, origin at the rear axle on the ground, x forward, y left, z up.
 CARLA sensor specs are relative to the Lincoln MKZ actor origin (x forward, y right, z up, yaw clockwise), whose

@@ -7,7 +7,7 @@
  "sha256": "d71fcc381a8e8a67391a2112742452e4be9f0a7a66b8d02d5410fd5bf74cdc07",
  "origin": "scripts/op_adapt_train.split_scenes: dev = default_rng(0).permutation(sorted train scenes)[:50]; frozen from $DATA_DIR/runs/op_adapt_r2/splits/nus_scenes.json (sha256 f004202f6bf7e5be)",
  "status": "frozen",
- "used_by": "op_adapt rounds 1-2 (scripts/op_adapt_train.py, jevdrive/op_adapt_r2*.py)",
+ "used_by": "op_adapt rounds 1-2 (experiments/op_adapt_r1/archive/op_adapt_train.py, jevdrive/op_adapt_r2*.py)",
  "members": [
   "scene-0004",
   "scene-0022",

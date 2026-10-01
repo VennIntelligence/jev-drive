@@ -1,5 +1,5 @@
 """Fusion diagnostics, stage 0 (CPU only): Q3, Q7, Q2a and the GT half of Q6.
-Pre-registration: todos/2026-09-25-fusion-diagnostics.md (the item sections and the deviation log).
+Pre-registration: fc65452:todos/2026-09-25-fusion-diagnostics.md (the item sections and the deviation log).
 
   q3     real-data mirror: the decision-40 (iii) per-frame predictions sliced by WOD cluster, zero fit.
          cls_late - cls ego (ADE, s_ego deciles 1-9, all val; RFS on the rater frames) and openpilot's native plan
@@ -43,7 +43,7 @@ CLS_EGO = "cls ego K1024"
 Q3_CLUSTERS = ("Cut_ins", "Pedestrian", "Cyclist", "Foreign Object Debris", "Interections", "all")
 Q2_CLUSTERS = ("Interections", "Special Vehicles", "Multi-Lane Maneuvers", "Pedestrian", "Cut_ins",
                "Foreign Object Debris")
-RESULTS = Path(__file__).resolve().parents[1] / "research" / "results" / "fusion-diagnostics"
+RESULTS = Path(__file__).resolve().parents[1] / "experiments/fusion_diag/results"
 
 
 # ================================================================ WOD context

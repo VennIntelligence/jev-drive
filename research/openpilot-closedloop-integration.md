@@ -1,7 +1,7 @@
 # openpilot 进 Bench2Drive 闭环：为什么起不了步、不转弯，以及「base + openpilot modifier」怎么接
 
-2026-09-28。计划、登记与执行日志在 [todos/2026-09-28-op-closedloop.md](../todos/2026-09-28-op-closedloop.md)，小表在 [results/op_arb/](results/op_arb/)，
-代码 `scripts/op_arb_agent.py`（agent 与各仲裁模式）、`scripts/op_arb_server.py`（openpilot server）、`scripts/op_arb.sh`（启动）、`jevdrive/op_arb_report.py`（读数）、`jevdrive/op_arb_figs.py`（图）。
+2026-09-28。计划、登记与执行日志在 [fc65452:todos/2026-09-28-op-closedloop.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-28-op-closedloop.md)，小表在 [results/op_arb/](../experiments/op_closed_loop/results/op_arb/)，
+代码 `experiments/op_closed_loop/lib/op_arb_agent.py`（agent 与各仲裁模式）、`experiments/op_closed_loop/archive/op_arb_server.py`（openpilot server）、`experiments/op_closed_loop/archive/op_arb.sh`（启动）、`experiments/op_closed_loop/lib/op_arb_report.py`（读数）、`experiments/op_closed_loop/archive/op_arb_figs.py`（图）。
 本文供用户与 main 讨论；所有数字都是 GPU 6 测试卡上的小规模 pilot（phase 1 诊断 6 条路线、phase 2 评测 10 条路线，TM seed 0 单次），只能给方向。
 
 ## 结论先行
@@ -54,7 +54,7 @@ lead 头（前车距离、速度、存在概率 lead_prob）、meta 头（openpi
 以及只用于评估的真值上下文（路径内前车 / 行人距离、路线上下一个停止线距离与灯色）。路线（Bench2Drive 0.0.4 val，不是 220 考卷）：
 334 SignalizedJunctionLeftTurn、27787 VanillaSignalizedTurnEncounterRedLight、24721 HardBreakRoute、26872 NonSignalizedJunctionLeftTurn、26537 ParkingExit、17749 DynamicObjectCrossing。
 
-![op-arb phase 1](figs/op_arb_p1_diag.png)
+![op-arb phase 1](../experiments/op_closed_loop/figs/op_arb_p1_diag.png)
 
 (a) 静止 tick 上 openpilot plan 5 s 处的位移，按真值情境分组（箱 = 四分位，须 = 5–95%）；(b) oshadow 带着车在无障碍路段行驶时，plan 5 s 处速度与当前速度之差；(c) 路口转弯前 0–20 m 和转弯中，
 plan 在前方 15 m 处的横向偏移占路线横向偏移的比例（1 = 跟着路线转，0 = 直行），有 route desire 与无 desire 的 twin 并排。
@@ -69,7 +69,7 @@ native 6 / 6 条路线车速始终为 0，60 s 后被判 blocked（DS 0）。原
 | 红 / 黄灯 ≤ 30 m | 1 819 / 3 | 0.02 | 0.18 | 0.01 | 0.19 | 35 | 0.01 | 0.92 | −0.02 |
 | 路径内前车 ≤ 15 m | 5 597 / 3 | 0.01 | 0.08 | −0.04 | 1.00 | 3.9 | 0.02 | 0.86 | −0.03 |
 
-（中位数；native 与 oshadow 合并，分臂的表见 [standstill.csv](results/op_arb/p1/standstill.csv)。）
+（中位数；native 与 oshadow 合并，分臂的表见 [standstill.csv](../experiments/op_closed_loop/results/op_arb/p1/standstill.csv)。）
 
 四点读法：
 
@@ -77,17 +77,17 @@ native 6 / 6 条路线车速始终为 0，60 s 后被判 blocked（DS 0）。原
 2. **不是把静止前车读错。** 真有前车时 lead_prob 1.00、lead x 3.9 m，读得很准；没有前车时 lead_prob 0.13。起步失败在无障碍路段照样发生。
 3. **是「停着就继续停着」的先验。** 无障碍时 plan 5 s 只走 0.97 m，action accel 甚至是负的；meta 头给出的「驾驶员此刻踩刹车」概率 0.80，「踩油门」0.03。
    这和 openpilot 的真车用法一致：它的训练数据里，车停稳以后何时走由驾驶员决定（按 resume 或踩油门），模型学到的是「人类在这种画面里通常还停着」的条件期望。
-   plan 对情境**有排序**（x@5 s 区分「该走」与「该等」的 AUC 0.86，lead x 0.91，见 [standstill_auc.csv](results/op_arb/p1/standstill_auc.csv)），但绝对量只有 1 m 级，任何照 plan 走的执行层都不会起步。
+   plan 对情境**有排序**（x@5 s 区分「该走」与「该等」的 AUC 0.86，lead x 0.91，见 [standstill_auc.csv](../experiments/op_closed_loop/results/op_arb/p1/standstill_auc.csv)），但绝对量只有 1 m 级，任何照 plan 走的执行层都不会起步。
 4. **它不看红绿灯，至少静止时不看。** 27787 的起点就在停止线后 3 m：绿灯的 10 s 和红灯的 20 s 里 plan x@5 s 都在 0.1 m 左右；变化的只是有横穿车流时 gas@2 s 从 0.13 掉到 0.01。
    所以「红灯还是绿灯」这件事，openpilot 在停止线前的输出里几乎没有。
 
-**一旦在走，它就会加速。** oshadow 把车带起来以后，无障碍路段上 plan 5 s 处的速度比当前快：1–2 m/s 时 +6.0 m/s，2–4 m/s 时 +3.5 m/s，4–8 m/s 时 ±0.5 以内（图 (b)，[cruise.csv](results/op_arb/p1/cruise.csv)），
+**一旦在走，它就会加速。** oshadow 把车带起来以后，无障碍路段上 plan 5 s 处的速度比当前快：1–2 m/s 时 +6.0 m/s，2–4 m/s 时 +3.5 m/s，4–8 m/s 时 ±0.5 以内（图 (b)，[cruise.csv](../experiments/op_closed_loop/results/op_arb/p1/cruise.csv)），
 8 m/s 以上是 −2.5（它在城区想开 6 m/s 左右）。也就是说起步失败**只发生在静止这一个点上**，不是 D4 当时推测的「低速时 plan 一直偏慢」：只要有人把车带过 1 m/s，openpilot 自己就会开起来。
 这正是真车上「engage while rolling」和「驾驶员按 resume」补上的那一格。
 
 ### 2.2 不转弯：openpilot 不发起路口转弯，turn desire 几乎不起作用
 
-oshadow 路线上的 3 个左转路口（334、27787、26872），比较前方 15 m 处 plan 的横向偏移与路线本身的横向偏移（图 (c)，[turn.csv](results/op_arb/p1/turn.csv)）：
+oshadow 路线上的 3 个左转路口（334、27787、26872），比较前方 15 m 处 plan 的横向偏移与路线本身的横向偏移（图 (c)，[turn.csv](../experiments/op_closed_loop/results/op_arb/p1/turn.csv)）：
 
 | 位置 | 步数 | 路线在 15 m 处的横移 | plan（route desire）跟了多少 | twin（无 desire）跟了多少 | desire_pred 里「要转弯」的概率 |
 |:--|--:|--:|--:|--:|--:|
@@ -101,7 +101,7 @@ openpilot 在真车上本来就不在路口转弯（驾驶员接管方向盘）�
 
 ### 2.3 它在闭环里能提供什么：前车强、红灯弱、行人样本太少
 
-oshadow 行驶中（> 2 m/s）的 tick，按真值「必须减速」事件对「无障碍」行驶 tick 算 AUC（[hazard_auc.csv](results/op_arb/p1/hazard_auc.csv)）：
+oshadow 行驶中（> 2 m/s）的 tick，按真值「必须减速」事件对「无障碍」行驶 tick 算 AUC（[hazard_auc.csv](../experiments/op_closed_loop/results/op_arb/p1/hazard_auc.csv)）：
 
 | 事件（真值） | 步数 / 路线 | plan 3 s 内减速量 | −action accel | lead_prob | brake@0 s | hard brake |
 |:--|--:|--:|--:|--:|--:|--:|
@@ -134,7 +134,7 @@ oshadow 行驶中（> 2 m/s）的 tick，按真值「必须减速」事件对「
 
 路线（Bench2Drive 0.0.4 val，与 phase 1 不重）：27043 SignalizedJunctionRightTurn、15102 VanillaSignalizedTurnEncounterGreenLight、24944 T_Junction、27870 VanillaNonSignalizedTurn、22535 StaticCutIn、
 37969 MergerIntoSlowTrafficV2、24497 ConstructionObstacle、27297 VehicleTurningRoutePedestrian、9196 OppositeVehicleTakingPriority、28147 SignalizedJunctionLeftTurnEnterFlow。
-表来自 [arms.csv](results/op_arb/p2/arms.csv)、[paired.csv](results/op_arb/p2/paired.csv)、[per_route.csv](results/op_arb/p2/per_route.csv)；「openpilot binding」= 非预热 tick 里 openpilot 的约束（lead / plan / 锁存 / 原生 plan）是最紧那一个的比例。
+表来自 [arms.csv](../experiments/op_closed_loop/results/op_arb/p2/arms.csv)、[paired.csv](../experiments/op_closed_loop/results/op_arb/p2/paired.csv)、[per_route.csv](../experiments/op_closed_loop/results/op_arb/p2/per_route.csv)；「openpilot binding」= 非预热 tick 里 openpilot 的约束（lead / plan / 锁存 / 原生 plan）是最紧那一个的比例。
 
 | 方案 | DS | RC | SR | 车辆 / 行人 / 静物碰撞 | 闯红灯 | blocked | 出车道 | openpilot binding（tick / 距离） | 对 base 的 DS 差 [95% CI]，好 / 差 / 同 |
 |:--|--:|--:|--:|:--|--:|--:|--:|:--|:--|
@@ -146,7 +146,7 @@ oshadow 行驶中（> 2 m/s）的 tick，按真值「必须减速」事件对「
 | oplat | 8.5 | 16.8 | 0.0 | 7 / 0 / 6 | 1 | 2 | 4 | 0.48 / 0.89 | −48.1 [−63.7, −33.2]，0 / 10 / 0 |
 | 参照：native（phase 1 的 6 条） | 0.0 | 0.0 | 0 | — | — | 6 | — | 1 | — |
 
-![op-arb phase 2](figs/op_arb_p2_ds.png)
+![op-arb phase 2](../experiments/op_closed_loop/figs/op_arb_p2_ds.png)
 
 逐路线 DS，每个点是一个方案在一条路线上的单次运行。看三件事：base / acc / acc2 在 7 条路线上重合（openpilot 的 lead 头只在 22535 上决定了结果）；e2e 在 9196、27043、27297 上高出一截、在 24944、37969 上掉下来；switch / oplat 几乎全在底部。
 
@@ -222,7 +222,7 @@ CARLA 只在 GPU 6（与 G 的 pilot 共卡，本 lane 2 个 server），phase 1
 
 ## 7. 两个诊断（用户搁置设计后，2026-09-28 19:00–20:30）
 
-登记写在 [todo](../todos/2026-09-28-op-closedloop.md) 的「后续」一节，早于任何诊断数字；小表 [results/op_arb/diag/](results/op_arb/diag/)。同样 10 条 dev 路线、单 seed，两个新臂各 10 条，约 4.5 worker·h（全 lane 合计约 14）。
+登记写在 [todo](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-28-op-closedloop.md) 的「后续」一节，早于任何诊断数字；小表 [results/op_arb/diag/](../experiments/op_closed_loop/results/op_arb/diag/)。同样 10 条 dev 路线、单 seed，两个新臂各 10 条，约 4.5 worker·h（全 lane 合计约 14）。
 
 ### 7.1 同均速对照：e2e 的 +9.7 可以完全用「开得慢」解释
 
@@ -241,7 +241,7 @@ CARLA 只在 GPU 6（与 G 的 pilot 共卡，本 lane 2 个 server），phase 1
 
 ### 7.2 幽灵停车：一半是 openpilot 看见了什么，一半是闭环把它放大，再被 CARLA 的低速刹停和锁存固定下来
 
-事件：e2e 里真值无障碍处的 30 次锁存（[phantom_events.csv](results/op_arb/diag/phantom_events.csv)、[phantom_summary.csv](results/op_arb/diag/phantom_summary.csv)）。
+事件：e2e 里真值无障碍处的 30 次锁存（[phantom_events.csv](../experiments/op_closed_loop/results/op_arb/diag/phantom_events.csv)、[phantom_summary.csv](../experiments/op_closed_loop/results/op_arb/diag/phantom_summary.csv)）。
 
 | 读数 | 闭环 e2e | shadow：base（8 m/s 经过同一位置） | shadow：baseslow（约 1–2.5 m/s 经过） |
 |:--|--:|--:|--:|
@@ -271,7 +271,7 @@ binding 只是因为 plan 加速得比 base 慢。所以另加了事后读数（
 HUGSIM（[docs/hugsim.md](../docs/hugsim.md)）是真实外观的 3DGS 闭环：nuScenes 式 6 相机 800×450、4 Hz 一步、agent 回一条 0.5 s 间隔的航点（x 右 y 前，原点是前相机），由 iLQR 跟踪，HD-Score 按「计划轨迹本身」逐步打分（NC、DAC、TTC、舒适度）再乘 RC。
 op-drive 的每个部件在那边的对应：
 
-| 部件 | CARLA / B2D（op-drive，[todo](../todos/2026-09-29-op-drive.md)） | HUGSIM | 要做的事 |
+| 部件 | CARLA / B2D（op-drive，[todo](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-op-drive.md)） | HUGSIM | 要做的事 |
 |:--|:--|:--|:--|
 | 输入 | 每 tick 渲染真 20 Hz 的 road + wide（openpilot 原生 rig，高 1.433 m） | 4 Hz 的 CAM_FRONT，65° 水平视场，相机高约 1.5 m，没有 wide | CAM_FRONT warp 到 road 与 wide 两个相机模型（`jevdrive/hugsim_zs.py` 已有 road 的 warp）；**4 Hz → 20 Hz 用插帧**：这正是 op-adapt 训练用的输入管线（[开环文档](openpilot-openloop-integration.md) 第 1、7 节），原版 Cinque 用 1.25 倍时钟会让 2 s 横向误差 +25–38%。CARLA 的真 20 Hz 是这条管线的上界，HUGSIM 是它的实际工况 |
 | 路线与命令 | B2D 发的 dense route + RoadOption | 录制路线（`ground_param.pkl`，shadow 模式的特权跟随器已在用）+ 每步的 `command`（0 右 1 左 2 直） | 录制路线进 `RouteAdapter`；command 1 / 0 的段当 LEFT / RIGHT 区、2 在路口处当 STRAIGHT 区，其余是 lane-follow |
@@ -283,7 +283,7 @@ op-drive 的每个部件在那边的对应：
 | 模型接口 | `op_arb_server.py`（ORT，Cinque） | 同一个 server 与 wire 协议 | 适配后的模型换权重即可，两边同时生效 |
 
 实现上唯一需要的重构：把 `OpArbAgent._plan` 里与 CARLA 无关的部分（`governor`、`idm`、`plan_arc`、`place`、横向归属与锁存状态机）抽成一个纯函数模块（例如 `jevdrive/op_drive.py`），
-CARLA agent 与 HUGSIM agent（`scripts/hugsim/zs_agent.py` 的一个新 model 分支）都调它。估计 0.5–1 天，外加 HUGSIM 上的分级 smoke；本轮没做。
+CARLA agent 与 HUGSIM agent（`experiments/hugsim/archive/zs_agent.py` 的一个新 model 分支）都调它。估计 0.5–1 天，外加 HUGSIM 上的分级 smoke；本轮没做。
 
 ## 10. 标定链审计：CARLA rig 是不是已经等价于「收敛后的 liveCalibration」（2026-09-29，只读源码 + CPU 数值，没有 CARLA）
 
@@ -315,12 +315,12 @@ CARLA agent 与 HUGSIM agent（`scripts/hugsim/zs_agent.py` 的一个新 model �
 
 ### 10.3 数值验证
 
-脚本 `scripts/check_op_calibration.py`（只读，纯 CPU，退出码 = 是否全通过）：上表「warp 矩阵、内参、地平线、相对外参、gather 下标」各项全过；另外量了「如果 rpy 错了模型帧会移多少」：俯仰错 0.5° 使 road 模型帧内容移 7.9 px（1° 是 15.9 px），偏航 0.5° 横移 7.9 px（与 910 px 焦距的 tan 一致）。
+脚本 `experiments/op_closed_loop/archive/check_op_calibration.py`（只读，纯 CPU，退出码 = 是否全通过）：上表「warp 矩阵、内参、地平线、相对外参、gather 下标」各项全过；另外量了「如果 rpy 错了模型帧会移多少」：俯仰错 0.5° 使 road 模型帧内容移 7.9 px（1° 是 15.9 px），偏航 0.5° 横移 7.9 px（与 910 px 焦距的 tan 一致）。
 box 上没有存下来的 CARLA 相机模型帧（`p5_openpilot/check/…/model_frame_example.npy` 是缓存管线的产物，不是 CARLA rig 的渲染），所以「在存下的帧上看地平线行」这一步用解析反算代替：地平线与地面点落点的误差在 1e-13 px 量级。
 
 ### 10.4 结论与没做的事
 
 - **(a)** 已经是精确先验：rpy = 0、内参与 road / wide 相对外参都与 CARLA 构造一致，且从第 0 帧起就在喂（没有 uncalibrated 阶段，也没有 modeld 那个「收到 calibration 之前 warp 全零」的窗口）。calibrationd 的 warm-up 在这里没有对应物，不需要延长 warm-up 来「等标定」。此前 wl2 prereg 里的「20 s 慢瞬态」只可能来自模型时序状态或场景，不是标定。
-- **(b)** 没发现输入错配。两个非标定的差别值得记着：相机高度 1.433 vs 名义 1.22（模型得自己适应；此前 ego-gap 里 plan 横移回归增益 0.98，没有尺度偏的迹象，见 todos/2026-09-29-wl2-prereg.md），以及 wide 的针孔 vs 鱼眼。两者都是「与训练分布的差别」，不是标定没喂。
+- **(b)** 没发现输入错配。两个非标定的差别值得记着：相机高度 1.433 vs 名义 1.22（模型得自己适应；此前 ego-gap 里 plan 横移回归增益 0.98，没有尺度偏的迹象，见 fc65452:todos/2026-09-29-wl2-prereg.md），以及 wide 的针孔 vs 鱼眼。两者都是「与训练分布的差别」，不是标定没喂。
 - **(c)** 不需要修。没有加 opt-in 开关：改任何值都会让输出偏离精确标定。要做 wl2 prereg 建议 2 的标定对照时，只要把 `zeroshot_policy_server.py` 里 `np.zeros(3)` 换成参数即可，现成的偏移量表在 10.3。
 - 一项 CPU 之外才能补的读数：模型自己对外参的估计（`wide_from_device_euler`、`road_transform` 的 z，即它认为的相机高度）在 `decode()` 里被丢掉了。存下来能直接看「模型觉得 CARLA 相机装在多高、wide 相对 road 偏了多少」，是对本节 (b) 的第一手证据；随下一次有 CARLA 的 run 顺带写进 `plans.jsonl` 即可（prereg 建议 2 已有同一条）。

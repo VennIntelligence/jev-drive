@@ -293,7 +293,7 @@ Bench2DriveZoo 的 UniAD / VAD 要 BEV ground truth、6 相机加 lidar，成本
 
 **原结论（已被推翻，保留作过程记录）：Town12 没问题，220 条路线全部可用。** 用**未经修改的 Bench2Drive leaderboard**
 跑 Town12 的 route 1711，288.2 s / 1283 tick 正常跑完，零重启。
-崩溃在我们自己写的 `scripts/carla_bench.py` 里，**但具体是哪一行还没查出来**。
+崩溃在我们自己写的 `experiments/cl_infra/archive/carla_bench.py` 里，**但具体是哪一行还没查出来**。
 gdb（`-nocrashhandler`）拿到的 backtrace 给出了机制：**spawn-actor 的 RPC 内部触发 dormancy pass
 → `PutActorToSleep` 销毁 sensor → `ASensor::EndPlay` 解引用一个失效的 stream token**。
 就是 Bench2Drive #235 / carla #7772。

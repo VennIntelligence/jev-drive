@@ -539,6 +539,7 @@ scripts/nq4_g_lane.py	experiments/night_queue_4/lib/nq4_g_lane.py
 research/figs/op-adapt-L-capture.png	experiments/op_adapt_l/figs/op-adapt-L-capture.png
 research/figs/op-adapt-L-curve-events.png	experiments/op_adapt_l/figs/op-adapt-L-curve-events.png
 research/figs/op-adapt-L-curve-segments.png	experiments/op_adapt_l/figs/op-adapt-L-curve-segments.png
+research/figs/op-adapt-L-followup.png	experiments/op_adapt_l/figs/op-adapt-L-followup.png
 research/figs/op-adapt-L-gate-frontier.png	experiments/op_adapt_l/figs/op-adapt-L-gate-frontier.png
 research/figs/op-adapt-L-rfs-diagnosis.png	experiments/op_adapt_l/figs/op-adapt-L-rfs-diagnosis.png
 research/figs/op-adapt-L-rfs.png	experiments/op_adapt_l/figs/op-adapt-L-rfs.png
@@ -570,6 +571,8 @@ scripts/op_adapt_l_report.py	experiments/op_adapt_l/scripts/op_adapt_l_report.py
 scripts/op_adapt_l_rfs_diagnosis.py	experiments/op_adapt_l/scripts/op_adapt_l_rfs_diagnosis.py
 scripts/op_adapt_l_train.py	experiments/op_adapt_l/scripts/op_adapt_l_train.py
 scripts/op_l_b2d_chain.py	experiments/op_adapt_l/scripts/op_l_b2d_chain.py
+scripts/op_l_b2d_daemon.py	experiments/op_adapt_l/scripts/op_l_b2d_daemon.py
+scripts/op_l_b2d_wait.sh	experiments/op_adapt_l/scripts/op_l_b2d_wait.sh
 scripts/op_l_onnx.py	experiments/op_adapt_l/scripts/op_l_onnx.py
 scripts/op_adapt_bench.py	experiments/op_adapt_r1/archive/op_adapt_bench.py
 scripts/op_adapt_equiv.py	experiments/op_adapt_r1/archive/op_adapt_equiv.py
@@ -720,6 +723,8 @@ research/figs/p3/review/PD-017.webp	experiments/p3_ped_exam/figs/review/PD-017.w
 research/figs/p3/review/PD-018.webp	experiments/p3_ped_exam/figs/review/PD-018.webp
 research/figs/p3/review/PI-001.webp	experiments/p3_ped_exam/figs/review/PI-001.webp
 research/figs/p3/review/PI-002.webp	experiments/p3_ped_exam/figs/review/PI-002.webp
+research/figs/p3/review/PI-003.webp	experiments/p3_ped_exam/figs/review/PI-003.webp
+research/figs/p3/review/PI-006.webp	experiments/p3_ped_exam/figs/review/PI-006.webp
 research/figs/p3/review/PI-007.webp	experiments/p3_ped_exam/figs/review/PI-007.webp
 research/figs/p3/review/PI-008.webp	experiments/p3_ped_exam/figs/review/PI-008.webp
 research/figs/p3/review/PI-009.webp	experiments/p3_ped_exam/figs/review/PI-009.webp

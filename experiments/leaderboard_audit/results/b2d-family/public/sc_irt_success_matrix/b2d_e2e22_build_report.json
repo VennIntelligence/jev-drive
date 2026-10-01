@@ -1,0 +1,265 @@
+{
+  "HiP-AD_patch": {
+    "flipped_routes": [],
+    "old_pass": 146,
+    "new_pass": 146
+  },
+  "R2SE": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 153,
+    "status_counts": {
+      "Completed": 216,
+      "Failed - TickRuntime": 4
+    },
+    "derived_SR": 69.55,
+    "paper_SR": 69.54,
+    "derived_DS": 86.28,
+    "paper_DS": 86.28,
+    "SR_matches_paper": true
+  },
+  "Orion-Lite": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 122,
+    "status_counts": {
+      "Completed": 190,
+      "Failed - Agent deviated from the route": 11,
+      "Failed - Agent got blocked": 8,
+      "Failed - TickRuntime": 11
+    },
+    "derived_SR": 55.45,
+    "paper_SR": 55.45,
+    "derived_DS": 80.57,
+    "paper_DS": 80.57,
+    "SR_matches_paper": true
+  },
+  "Hydra-NeXt": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 110,
+    "status_counts": {
+      "Completed": 182,
+      "Failed - TickRuntime": 24,
+      "Failed - Agent got blocked": 14
+    },
+    "derived_SR": 50.0,
+    "paper_SR": 50.0,
+    "derived_DS": 73.86,
+    "paper_DS": 73.86,
+    "SR_matches_paper": true
+  },
+  "PGS": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 107,
+    "status_counts": {
+      "Completed": 202,
+      "Failed - TickRuntime": 15,
+      "Failed - Agent got blocked": 3
+    },
+    "derived_SR": 48.64,
+    "paper_SR": 48.64,
+    "derived_DS": 78.08,
+    "paper_DS": 78.08,
+    "SR_matches_paper": true
+  },
+  "DriveMoE-Base": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 107,
+    "status_counts": {
+      "Completed": 191,
+      "Failed - TickRuntime": 22,
+      "Failed - Agent got blocked": 7
+    },
+    "derived_SR": 48.64,
+    "paper_SR": 48.64,
+    "derived_DS": 74.22,
+    "paper_DS": 74.22,
+    "SR_matches_paper": true
+  },
+  "Drive-pi0-Base": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 66,
+    "status_counts": {
+      "Failed - TickRuntime": 56,
+      "Completed": 141,
+      "Failed - Agent got blocked": 23
+    },
+    "derived_SR": 30.0,
+    "paper_SR": 30.0,
+    "derived_DS": 55.85,
+    "paper_DS": 55.85,
+    "SR_matches_paper": true
+  },
+  "LEAD-tfv6": {
+    "n_records": 211,
+    "n_missing": 9,
+    "pass": 164,
+    "derived_SR": 74.55,
+    "paper_SR": null,
+    "derived_DS": 85.72,
+    "paper_DS": null
+  },
+  "BLUE": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 167,
+    "derived_SR": 75.91,
+    "paper_SR": 76.18,
+    "derived_DS": 90.44,
+    "paper_DS": 90.58
+  },
+  "SimLingo-IVL2-1B": {
+    "n_records": 219,
+    "n_missing": 1,
+    "pass": 162,
+    "derived_SR": 73.64,
+    "paper_SR": null,
+    "derived_DS": 89.01,
+    "paper_DS": null
+  },
+  "SparseDriveV2": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 154,
+    "derived_SR": 70.0,
+    "paper_SR": 70.0,
+    "derived_DS": 89.15,
+    "paper_DS": 89.15
+  },
+  "HiP-AD": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 146,
+    "derived_SR": 66.36,
+    "paper_SR": 69.09,
+    "derived_DS": 84.95,
+    "paper_DS": 86.77
+  },
+  "TFpp-traj": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 148,
+    "derived_SR": 67.27,
+    "paper_SR": 67.27,
+    "derived_DS": 84.21,
+    "paper_DS": 84.21
+  },
+  "MindDrive-3B": {
+    "n_records": 218,
+    "n_missing": 2,
+    "pass": 127,
+    "derived_SR": 57.73,
+    "paper_SR": 58.26,
+    "derived_DS": 79.86,
+    "paper_DS": 80.6
+  },
+  "SimLingo-IVL35-1B": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 124,
+    "derived_SR": 56.36,
+    "paper_SR": null,
+    "derived_DS": 80.68,
+    "paper_DS": null
+  },
+  "MindDrive": {
+    "n_records": 216,
+    "n_missing": 4,
+    "pass": 119,
+    "derived_SR": 54.09,
+    "paper_SR": 55.09,
+    "derived_DS": 76.62,
+    "paper_DS": 78.04
+  },
+  "ORION": {
+    "n_records": 216,
+    "n_missing": 4,
+    "pass": 118,
+    "derived_SR": 53.64,
+    "paper_SR": 54.62,
+    "derived_DS": 76.32,
+    "paper_DS": 77.74
+  },
+  "UniDriveVLA": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 114,
+    "derived_SR": 51.82,
+    "paper_SR": 51.82,
+    "derived_DS": 78.37,
+    "paper_DS": 78.73
+  },
+  "DriveTransformer-L": {
+    "n_records": 220,
+    "n_missing": 0,
+    "pass": 75,
+    "derived_SR": 34.09,
+    "paper_SR": 35.01,
+    "derived_DS": 61.16,
+    "paper_DS": 63.46
+  },
+  "TCP-traj": {
+    "n_records": 210,
+    "n_missing": 10,
+    "pass": 66,
+    "derived_SR": 30.0,
+    "paper_SR": 30.0,
+    "derived_DS": 59.9,
+    "paper_DS": 59.9
+  },
+  "UniAD-Base": {
+    "n_records": 218,
+    "n_missing": 2,
+    "pass": 36,
+    "derived_SR": 16.36,
+    "paper_SR": 16.36,
+    "derived_DS": 45.81,
+    "paper_DS": 45.81
+  },
+  "VAD": {
+    "n_records": 213,
+    "n_missing": 7,
+    "pass": 33,
+    "derived_SR": 15.0,
+    "paper_SR": 15.0,
+    "derived_DS": 42.35,
+    "paper_DS": 42.35
+  },
+  "UniAD-Tiny": {
+    "n_records": 215,
+    "n_missing": 5,
+    "pass": 29,
+    "derived_SR": 13.18,
+    "paper_SR": 13.18,
+    "derived_DS": 40.73,
+    "paper_DS": 40.73
+  },
+  "replicate:Orion-Lite_a6000": {
+    "n_records": 220,
+    "pass": 120,
+    "derived_SR": 54.55,
+    "derived_DS": 80.59
+  },
+  "replicate:DriveMoE-Base_seed2": {
+    "n_records": 220,
+    "pass": 103,
+    "derived_SR": 46.82,
+    "derived_DS": 73.08
+  },
+  "replicate:Drive-pi0-Base_fp32": {
+    "n_records": 220,
+    "pass": 93,
+    "derived_SR": 42.27,
+    "derived_DS": 65.85
+  },
+  "replicate:Drive-pi0-Full_fp32": {
+    "n_records": 220,
+    "pass": 97,
+    "derived_SR": 44.09,
+    "derived_DS": 67.41
+  }
+}

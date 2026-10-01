@@ -5,7 +5,7 @@
  "unit": "route",
  "n": 107,
  "sha256": "7351530e77a094bb690f377aa5054e48b02a49bcd83bca6ff770efb1f10f7266",
- "origin": "research/results/nq4/k/route_split.json (git sha256 8e1560b0ece01aa4) (copy of $DATA_DIR/runs/nq4/k/route_split.json); class-alternating 2-fold by scenario type, no rng",
+ "origin": "experiments/night_queue_4/results/k/route_split.json (git sha256 8e1560b0ece01aa4) (copy of $DATA_DIR/runs/nq4/k/route_split.json); class-alternating 2-fold by scenario type, no rng",
  "status": "frozen",
  "used_by": "nq4 K, nq4 X, nq4_gk",
  "members": [

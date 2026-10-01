@@ -3,7 +3,7 @@
 这篇回答一件事：把 openpilot（comma.ai 的量产 L2 驾驶模型，用它的三个 open-weight 版本 small 30M、Cinque v3 382M、Lebowski 877M）放上开环榜时，
 怎么接才能让分数反映模型本身，而不是输入契约（input contract：榜单给 agent 的输入是什么、多少帧、什么时间轴、输出要什么坐标系）没对上。
 NAVSIM 优先，WOD-E2E 和 nuScenes 其次。全部是小规模诊断，没有跑大实验：补帧约 2 GPU·h，openpilot 推理约 40 次 × 2 000 场景（ORT 会话受 CPU 发射开销限制，GPU 负载很轻），NAVSIM 打分纯 CPU。
-代码 [jevdrive/op_interp.py](../jevdrive/op_interp.py)、[scripts/op_interp.py](../scripts/op_interp.py)，小表 [results/op-interp/](results/op-interp/)，
+代码 [jevdrive/op_interp.py](../jevdrive/op_interp.py)、[experiments/op_openloop/lib/op_interp.py](../experiments/op_openloop/lib/op_interp.py)，小表 [results/op-interp/](../experiments/op_openloop/results/op-interp/)，
 box 上的 run dir `$DATA_DIR/runs/op_interp/`。前置结论见 [decisions.md](decisions.md) 第 34、36、37、39、40 条和 [openpilot-openloop-standing.md](openpilot-openloop-standing.md)。
 
 ## 0. 结果先行
@@ -66,7 +66,7 @@ drift 是 5 s plan 与 `real` 输入下 plan 的平均 L2 距离（m），衡量
 | Cinque | 5.13 | 7.57（GIMM） | 7.88 | 7.47 | 7.83（GIMM） | 7.92 | 8.00 |
 | Lebowski | 4.94 | 5.81（RIFE） | 5.78 | 7.13 | **7.58**（warp + 3.3 s pre-roll） | 5.94 | 7.89 |
 
-![WOD](figs/op-interp-wod.png)
+![WOD](../experiments/op_openloop/figs/op-interp-wod.png)
 
 图 1：(a) 三个 openpilot 在 WOD 479 个 rater 帧上、七种 1.5 s 历史喂法下的 RFS（实心 = 原生 plan，空心 = retime 后；误差线为 cluster 分层 bootstrap 95% CI）。
 看每组从灰到黑的上升：保持输入在 cv（虚线）之下，补帧把 small / Cinque 拉回 cv 之上，retime 再把剩下的大半补上；Lebowski 只有 pre-roll（紫）才回来。
@@ -125,7 +125,7 @@ drift 是 5 s plan 与 `real` 输入下 plan 的平均 L2 距离（m），衡量
 
 navtest 按 seed 0 随机 2 000 个 token（按 command 与起步分组：直行 1 187、左转 343、右转 230、起步 v0 < 1 m/s 240；新加坡左行 339 个），官方 v1.1 devkit 打 PDMS，另报对 log 未来的 ADE / FDE 和 4 s 纵向偏差（与评分器无关的读数）。
 hold 行与全量考试在同一批 token 上的分数对上（51.90 对 51.88，配对 −0.02 [−0.08, +0.02]）。Δ 是逐 token 配对差，token bootstrap 95% CI。
-GIMM 在这里只补 5 Hz 相位的 6 帧（第 2 节第 5 点）。全部行在 [nav_results.csv](results/op-interp/nav_results.csv)，配对差在 [nav_paired.txt](results/op-interp/nav_paired.txt)。
+GIMM 在这里只补 5 Hz 相位的 6 帧（第 2 节第 5 点）。全部行在 [nav_results.csv](../experiments/op_openloop/results/op-interp/nav_results.csv)，配对差在 [nav_paired.txt](../experiments/op_openloop/results/op-interp/nav_paired.txt)。
 
 **Cinque，各输入 × 输出适配**：
 
@@ -155,7 +155,7 @@ GIMM 在这里只补 5 Hz 相位的 6 帧（第 2 节第 5 点）。全部行在
 | 轨迹重采样 | 线性 → 三次样条（RIFE / warp） | +0.0 [−0.0, +0.1] | T_IDXS 在 0–4 s 已经很密 |
 | 交通方向 | 新加坡左行（339 / 2 000 个 token）按地图给 traffic convention | 未单独测 | 之前考试已经这么做 |
 
-![NAVSIM](figs/op-interp-navsim.png)
+![NAVSIM](../experiments/op_openloop/figs/op-interp-navsim.png)
 
 图 2：navtest 2 000 个 token 上各接法的 PDMS（误差线为 token bootstrap 95% CI；空心方块是参照行，竖虚线是文献全量 navtest 的 TransFuser / DiffusionDrive，只作量级）。
 看颜色：灰色（保持输入）三个模型都在 46–52，补帧（蓝、绿）把它们一起推到 79–85，超过同一批 token 上的冻结特征 + head（77.5）。
@@ -186,7 +186,7 @@ GIMM 在这里只补 5 Hz 相位的 6 帧（第 2 节第 5 点）。全部行在
 
 ## 6. 剩下的差距在哪，B / C 适配要补什么
 
-按 driving command 与起步帧拆（2 000 个 token，PDMS / DAC / EP，[nav_by_command.txt](results/op-interp/nav_by_command.txt)）：
+按 driving command 与起步帧拆（2 000 个 token，PDMS / DAC / EP，[nav_by_command.txt](../experiments/op_openloop/results/op-interp/nav_by_command.txt)）：
 
 | 行 | 直行（1 187） | 左转（343） | 右转（230） | 起步 v0 < 1（240） |
 |:--|:--|:--|:--|:--|
@@ -199,7 +199,7 @@ GIMM 在这里只补 5 Hz 相位的 6 帧（第 2 节第 5 点）。全部行在
 2. **转弯差 16–18 分，主要是 DAC**（出可行驶区域 9–11%）：openpilot 没有 route 输入，路口转向靠它自己猜（第 40 条：desire 当 route 用反而拖分）。
    这是模型接口缺的东西，不是输入契约，补帧修不了。
 3. **起步帧**：GIMM 86 与 head 89 同量级，warp 只有 78（静态世界的 warp 在静止时给不出任何运动，模型起步慢，EP 52）。
-4. 对 [op-adapt](../todos/2026-09-28-op-adapt.md) 的含义：B / C 适配若以 NAVSIM 为验收之一，改动的收益应主要落在「转弯 DAC」和「进度」上；
+4. 对 [op-adapt](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-28-op-adapt.md) 的含义：B / C 适配若以 NAVSIM 为验收之一，改动的收益应主要落在「转弯 DAC」和「进度」上；
    原生 plan 的直行已经 88，那里再涨多半是 R 层配方（第 35、40 条），不是能力。route 怎么进（desire 已判不行）是比补帧更大的一项。
 
 
@@ -217,7 +217,7 @@ GIMM 在这里只补 5 Hz 相位的 6 帧（第 2 节第 5 点）。全部行在
 
 1. **head 路线要不要换到补帧输入？** 原生 plan 经适配后 84.7（GIMM），已经比 hold 输入下的 `temporal` + `cls_late`（同一子集 77.5）高 7.2；第 40 条的 Hydra 式打分头在全量 navtest 上是 84.2。补帧会让 `temporal` 更像训练分布，
    但 head 已经在 hold 特征上把失真吸收了（第 37 条修正）。便宜的检验：navtest 子集上补帧输入抽 `temporal`、直接用现有 head（分布移位的方向），再决定是否重抽 navtrain。
-2. **B / C 适配（[op-adapt](../todos/2026-09-28-op-adapt.md)）在什么输入上训？** 如果最终要上 NAVSIM，训练帧应该走同一条补帧管线（否则训练是 20 Hz 真实帧、考试是补出来的帧，又是一个契约差）；
+2. **B / C 适配（[op-adapt](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-28-op-adapt.md)）在什么输入上训？** 如果最终要上 NAVSIM，训练帧应该走同一条补帧管线（否则训练是 20 Hz 真实帧、考试是补出来的帧，又是一个契约差）；
    nuScenes sweep 可以做成「2 Hz + 补帧」和「12 Hz 真实」的配对，顺带教模型对补帧伪影不敏感。这本身是否算 trick，需要一起定。
 3. **retime 要不要进默认？** 这里的判断是「在两个榜上符号相反的旋钮不进默认」。另一种一样说得通的规则是「按对 log 的 ADE 在训练 split 上选适配」（与评分器无关），
    按它 NAVSIM 上会选 GIMM + retime（ADE 1.42，PDMS 82.4 而不是 84.7）。两条规则差 2.3 PDMS，要在看全量分数之前定下来。
@@ -230,7 +230,7 @@ GIMM 在这里只补 5 Hz 相位的 6 帧（第 2 节第 5 点）。全部行在
 
 - **plan retiming 不进默认 pipeline，只作消融报告。** 第 7 节「推荐的接法」已经这么写（第 4 节读法第 3 点的理由：两个榜上符号相反），
   这里是确认：下面第 9 节的全量跑只跑 base 适配器（杠杆臂 + 线性重采样，不 retime），retime 的全量数字如果跑，只放进消融表。
-- **B / C 适配（[op-adapt](../todos/2026-09-28-op-adapt.md)）训练用同一条补帧输入管线。** 若最终要上 NAVSIM，训练帧不能是「20 Hz
+- **B / C 适配（[op-adapt](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-28-op-adapt.md)）训练用同一条补帧输入管线。** 若最终要上 NAVSIM，训练帧不能是「20 Hz
   真实帧训练、补帧考试」这种契约差，上面开放问题 2 已经提过，这里定下来：用。
 - 第 9 节的全量 navtest / navhard 跑优先级低，"反正空着也是空着"：占的是 GPU 6（或 op-adapt navtrain cache 跑完后的
   GPU 2）和一段空闲 CPU 核，不抢占跑着的 lane；转弯 / 进度的差距（第 6 节）留给以后改进 route 输入再重考。
@@ -282,7 +282,7 @@ GIMM-VFI 的 context-rate 网格（GPU，第 2 节第 5 点：与全 10 Hz 补�
 3. **这条修正了第 0 节第 6 点悬而未决的「全量验证」**：全量结果和 2 000-token 子集一致，「openpilot 原生 plan 的低分几乎全是输入
    契约」这条结论在全量 navtest 与全量 navhard 上都站得住；navhard 上补帧后的绝对分数仍然低，是该榜本身难、不是契约问题。
 
-跑全量过程中顺手修了 `scripts/op_interp.py` 的 `cmd_nav_report`：v2 + navhard_two_stage 分支之前把 devkit 的汇总行当成普通 token
+跑全量过程中顺手修了 `experiments/op_openloop/lib/op_interp.py` 的 `cmd_nav_report`：v2 + navhard_two_stage 分支之前把 devkit 的汇总行当成普通 token
 过滤掉了，退化成对逐 token「score」列取平均，hold 参照算出 28.7 EPDMS，和 decisions.md #37 已经定下的 9.3 对不上（第一个全量分数
 就没通过上面「legality check」的合法性判断标准，逼着去查）；改成读官方 `extended_pdm_score_combined` 汇总行后，hold 参照精确复现
 9.30，见 commit history。

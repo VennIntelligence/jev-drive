@@ -41,7 +41,7 @@ _preload_libs()
 
 def prepare_onnx(name: str) -> Path:
     """Path of an onnxruntime-loadable copy: tinygrad's custom Contiguous op (a no-op layout hint) -> Identity.
-    A `name` with a path separator is an already loadable ONNX file (an adapted model, scripts/op_l_onnx.py)."""
+    A `name` with a path separator is an already loadable ONNX file (an adapted model, experiments/op_adapt_l/scripts/op_l_onnx.py)."""
     if os.sep in str(name):
         return Path(name)
     src = MODELS_DIR / f"{name}.onnx"
@@ -235,7 +235,7 @@ class LegacyOPModel:
     P3 frames x / 128 - 1 gives a constant plan speed, raw values one that follows the log). These models read ego
     speed from the motion between the two frames, so they need true 20 Hz frames: 5 Hz frames held for 4 steps give
     a plan speed near 0, and 5 Hz pairs stepped once per frame about 3x the logged speed (check 2026-09-28,
-    todos/2026-09-28-ped-dose-response.md). sc0816: the 512-d output hidden_state fed back as initial_state.
+    fc65452:todos/2026-09-28-ped-dose-response.md). sc0816: the 512-d output hidden_state fed back as initial_state.
     sc094: a 100 x 8 desire-pulse history (shifted before the step) and a 99 x 128 feature buffer of past hidden
     states (shifted after it), nav features zero. step() returns the output in the current layout so decode(),
     plan_grid() and nq4_k.lead_decode() read it unchanged: plan = best of the 5 hypotheses (mu, log-std), lead =

@@ -6,7 +6,7 @@
 
 ### VD-000
 
-![VD-000](../figs/p3/review/VD-000.webp)
+![VD-000](../../experiments/p3_ped_exam/figs/review/VD-000.webp)
 
 | | |
 |:--|:--|
@@ -21,7 +21,7 @@
 
 ### VD-001
 
-![VD-001](../figs/p3/review/VD-001.webp)
+![VD-001](../../experiments/p3_ped_exam/figs/review/VD-001.webp)
 
 | | |
 |:--|:--|
@@ -36,7 +36,7 @@
 
 ### VD-002
 
-![VD-002](../figs/p3/review/VD-002.webp)
+![VD-002](../../experiments/p3_ped_exam/figs/review/VD-002.webp)
 
 | | |
 |:--|:--|
@@ -51,7 +51,7 @@
 
 ### VD-003
 
-![VD-003](../figs/p3/review/VD-003.webp)
+![VD-003](../../experiments/p3_ped_exam/figs/review/VD-003.webp)
 
 | | |
 |:--|:--|
@@ -66,7 +66,7 @@
 
 ### VD-004
 
-![VD-004](../figs/p3/review/VD-004.webp)
+![VD-004](../../experiments/p3_ped_exam/figs/review/VD-004.webp)
 
 | | |
 |:--|:--|
@@ -81,7 +81,7 @@
 
 ### VD-005
 
-![VD-005](../figs/p3/review/VD-005.webp)
+![VD-005](../../experiments/p3_ped_exam/figs/review/VD-005.webp)
 
 | | |
 |:--|:--|
@@ -96,7 +96,7 @@
 
 ### VD-006
 
-![VD-006](../figs/p3/review/VD-006.webp)
+![VD-006](../../experiments/p3_ped_exam/figs/review/VD-006.webp)
 
 | | |
 |:--|:--|
@@ -111,7 +111,7 @@
 
 ### VD-007
 
-![VD-007](../figs/p3/review/VD-007.webp)
+![VD-007](../../experiments/p3_ped_exam/figs/review/VD-007.webp)
 
 | | |
 |:--|:--|
@@ -126,7 +126,7 @@
 
 ### VD-008
 
-![VD-008](../figs/p3/review/VD-008.webp)
+![VD-008](../../experiments/p3_ped_exam/figs/review/VD-008.webp)
 
 | | |
 |:--|:--|
@@ -141,7 +141,7 @@
 
 ### VD-009
 
-![VD-009](../figs/p3/review/VD-009.webp)
+![VD-009](../../experiments/p3_ped_exam/figs/review/VD-009.webp)
 
 | | |
 |:--|:--|

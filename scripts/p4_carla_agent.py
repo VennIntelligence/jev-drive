@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """P4 data generator: a privileged CARLA BehaviorAgent drives a Bench2Drive route while three cameras that
-mimic Waymo's FRONT / FRONT_LEFT / FRONT_RIGHT record at 5 Hz (todos/2026-09-23-p4-carla-feature-gap.md).
+mimic Waymo's FRONT / FRONT_LEFT / FRONT_RIGHT record at 5 Hz (fc65452:todos/2026-09-23-p4-carla-feature-gap.md).
 
 Loaded by the leaderboard through `scripts/b2d_run.py --agent scripts/p4_carla_agent.py --agent-config <json>`
 (pass `--decimate 4` so b2d_hooks lets a camera spec carry `sensor_tick`). Everything goes to the attempt

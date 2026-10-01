@@ -1,5 +1,27 @@
 # Waymo Open Dataset E2E (WOD-E2E v1.0.0)
 
+**Summary.** WOD-E2E v1.0.0 lives in `$DATA_DIR/datasets/waymo_e2e/` as front3-only slim shards (FRONT, FRONT_LEFT,
+FRONT_RIGHT; raw 1.65 TB bucket `gs://waymo_open_dataset_end_to_end_camera_v_1_0_0/`, slim ~0.73 TB). Splits: val 93
+shards, training 263, test 266 (test futures hidden); frame index step is 0.1000 s (measured, timing fields are zeroed).
+Download: `scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh`; idempotent, resumable, default
+`--route proxy --streams 32` at ~15 MB/s (box link ~18 MB/s; full run ~30 h, train alone ~17.5 h); the `status` ETA is a
+cumulative average and lags. Prepared data (index, targets, features, RFS, submission) is
+`scripts/waymo_prepare.sh` / `jevdrive/waymo.py`, outputs under `$DATA_DIR/processed/waymo_e2e/`. RFS is computable
+locally on one frame per val sequence (12 s mark).
+
+**Sections.**
+- Where it lives - dataset directory layout and why only front3
+- Bucket and sizes - splits, shard counts, raw/slim sizes
+- Data facts (checked on val, training and test shards) - E2EDFrame fields, cameras, states, intent, rater data
+- Download - script, resume, disk guard, logs, tooling
+- Network route - direct vs Clash throughput measurements and defaults
+- gcloud login - gcloud CLI path, credentials, Clash-only login
+- Prepared data path - waymo_prepare.sh commands and output files
+### Index / How long is one frame index? / Image history / Targets and inputs - per-frame index, 0.1 s, history, targets
+### Ego-only baselines / The pre-maneuver-onset subset - ADE/FDE baselines on val, pre-onset subset
+### Rater Feedback Score ... / Frozen features / Extracting as shards land - RFS, features, incremental
+### Where the extraction time goes / Submission / Checks - profile, challenge tar.gz writer, sanity checks
+
 Read this when you need the Waymo end-to-end driving data on the box, or need to download or re-fetch it.
 
 ## Where it lives
@@ -458,7 +480,7 @@ Measured on val, 256 frames, 8 DataLoader workers, with three downloads running:
 | `qwen_front` | FRONT only | native | 1020 | 69 - 82 | 8.8 GB | 47 KB |
 | `qwen_front_l800` | FRONT only | long side 800 | 575 | 31 - 44 | 8.6 GB | 47 KB |
 
-**Read the ranges, not the numbers.** The card is shared -- another agent's `jevdrive.planner_v0` held ~7 GB of
+**Read the ranges, not the numbers.** The card is shared -- another agent's `experiments.probe_planner_v0.archive.planner_v0` held ~7 GB of
 it for part of this -- and the same six configurations, run three times, moved by up to 1.7x. Token counts,
 VRAM and bytes are exact; ms/frame is "about this, on a busy box". Benchmark again on a quiet card before
 quoting a latency anywhere.
@@ -503,7 +525,7 @@ history, and subsample train (every 5th index is 2 Hz and cuts it to 3 - 5 h).
 
 ### Extracting as shards land
 
-`scripts/tmux_run.sh wfeat-train env INTERVAL=300 scripts/waymo_features_watch.sh train` extracts a split
+`scripts/tmux_run.sh wfeat-train env INTERVAL=300 experiments/probe_planner_v0/archive/waymo_features_watch.sh train` extracts a split
 while it is still downloading. The script only sets the environment; the loop is
 `jevdrive.waymo features_inc --watch`, and each pass **re-runs the index before deciding what to extract**.
 That order is the whole point: a loop that is incremental in extraction but not in arrival asks the index what
@@ -558,7 +580,7 @@ consequences for anything else reading the processed tree at the same time:
   produced with no error at all.
 
 So **pin a snapshot before reading the processed tree alongside the watcher**:
-`DATA_DIR=$(scripts/snapshot_processed.sh <name>) python -m jevdrive.waymo_l0 ...` copies the four files,
+`DATA_DIR=$(experiments/probe_planner_v0/archive/snapshot_processed.sh <name>) python -m jevdrive.waymo_l0 ...` copies the four files,
 checks they agree with each other, and symlinks everything else (the per-shard feature directories are
 append-only and immutable once written, so they need no copy). Reading the feature shards alone is always
 safe; it is the four index files that move.
@@ -566,7 +588,7 @@ safe; it is the four index files that move.
 ### Where the extraction time goes
 
 Profiled on a quiet card while the train download was running (2026-09-21,
-[todos/2026-09-21-waymo-train-features.md](../todos/2026-09-21-waymo-train-features.md)). Per frame, meaning
+[fc65452:todos/2026-09-21-waymo-train-features.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-21-waymo-train-features.md)). Per frame, meaning
 three cameras in one forward:
 
 | Stage | ms | Where it runs |

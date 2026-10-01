@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Bench2Drive leaderboard agent for the zero-shot exam of open driving models (Alpamayo 1.5, openpilot).
-Pre-registration: todos/2026-09-24-zeroshot-exam/bench2drive.md. Python 3.8, envs/carla.
+Pre-registration: fc65452:todos/2026-09-24-zeroshot-exam/bench2drive.md. Python 3.8, envs/carla.
 
 The agent owns the sensors and the actuation; the model lives in scripts/zeroshot_policy_server.py and is
 reached over a unix socket. Per tick (20 Hz):
@@ -19,7 +19,7 @@ Route information reaches the model only as the model would get it in a car: Alp
 
 Config JSON (--agent-config): {"model": "alpamayo"|"lebowski"|"cinque"|"small", "socket": path, "plan_every": 5|1,
 "controller_config": path, "controller_preset": "carla", "seed": 0, "dump_every": 0}, plus the openpilot adapter
-switches added after the smoke (todos/2026-09-24-zeroshot-exam/openpilot-migration.md); their defaults reproduce
+switches added after the smoke (fc65452:todos/2026-09-24-zeroshot-exam/openpilot-migration.md); their defaults reproduce
 the pre-registered smoke:
   "op_camera_tick"  0.2 (smoke) | 0.05: render both cameras every step, road and wide from the same frame
   "plan_origin"     "camera" (smoke: plan x + 1.78 m) | "rear": rear-axle track, rear = d + p - R(psi) d
@@ -39,7 +39,7 @@ the pre-registered smoke:
                     route oracle while throttle / brake stay the model's controller (a driver steering through the
                     turn with ACC on)
   "plan_forward_only"  false | true: controller zoo_pid reads the plan with its backward segments removed (speed >= 0);
-                    see b2d_zoo_pid_wrap.py and todos/2026-09-24-zeroshot-exam/alpamayo-closed-loop-diagnosis.md
+                    see b2d_zoo_pid_wrap.py and fc65452:todos/2026-09-24-zeroshot-exam/alpamayo-closed-loop-diagnosis.md
   "zoo_cadence"     "plan" (control_pid once per plan, held: AD-MLP) | "tick": every tick on the age-shifted held plan
                     (UniAD / VAD)
   "zoo_lateral"     "zoo" (control_pid's steer) | "fixed" (P1: steer from the fixed controller's 20 Hz tracking of the raw
@@ -53,16 +53,16 @@ the pre-registered smoke:
                     with junctions off and tcp_only off, i.e. the TCP partner only launches the car from standstill (and
                     drives through the model's warm-up) and hands back once the car rolls and the model's own control
                     stops braking (b2d_partner.Arbiter, unchanged); exclusive with "partner"
-                    (todos/2026-09-26-night-queue-3.md, CL section, [OPL] entries)
+                    (fc65452:todos/2026-09-26-night-queue-3.md, CL section, [OPL] entries)
   "raw_dump"        0 | n: openpilot models - save the first n requests' raw inputs (road / wide BGRA, desire, speed) and
-                    the server's outputs to frames/raw_<k>.npz, for the rule-8 offline recomputation (scripts/nq4_opl_check.py)
+                    the server's outputs to frames/raw_<k>.npz, for the rule-8 offline recomputation (experiments/night_queue_4/archive/nq4_opl_check.py)
   "replay"          absent | path of an expert log (scripts/b2d_expert_agent.py; "{route}" is replaced by the route id)
                     | "route": no model and no socket; each
                     planning step returns the expert's own track from where the hero is, at the expert's pace (waits
                     as long as the expert waited; see _replay_path), in the hero's simulator rear-axle frame, i.e. the
                     plan a perfect planner would give, at the model's cadence and through the configured controller -
                     the controller acceptance test
-                    (todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers.md). "route": the route oracle's plan
+                    (experiments/cl_infra/results/closed-loop-infra-acceptance/b2d-controllers.md). "route": the route oracle's plan
                     from the sensor pose (a no-model load for profiling)
   "replay_plan"     "window" (default; the first acceptance run: wait window of REPLAY_WAIT_TOL_M) | "time": the
                     expert's schedule at the elapsed time, with the car's lag closed smoothly (REPLAY_CATCHUP_S); see
@@ -75,7 +75,7 @@ the pre-registered smoke:
   "ctl_every"       1 | k: hand only every k-th accepted plan to the controller (night queue 3: Cinque steps at 20 Hz,
                     "plan_every": 1, and P7 gets its plan at 5 Hz, "ctl_every": 4)
   "cameras"         true | false: no camera at all ("replay" only); a plan every "plan_ticks" ticks (default 4 = 5 Hz)
-  "model": "head"   night queue 3 lane B (jevdrive/nq3_cl.py, scripts/nq3_cl_server.py): our heads on openpilot Cinque
+  "model": "head"   night queue 3 lane B (jevdrive/nq3_cl.py, experiments/night_queue_3/lib/nq3_cl_server.py): our heads on openpilot Cinque
                     `temporal` from the P4 / P5 Waymo rig. The three cameras are the P5 recorder's (scripts/p5_pair_agent.py:
                     1088 x 1560 renders, "head_cam_tick" sensor_tick, default 0.0 = every tick as the recorder), remapped
                     and JPEG'd as the recorder does on every 4th tick (5 Hz); frame k is sent one tick later, when the

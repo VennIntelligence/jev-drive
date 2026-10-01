@@ -1,8 +1,8 @@
 """Elicitation E6 (b): a Hydra-MDP-style scoring head on frozen openpilot `temporal` for NAVSIM
-(todos/2026-09-26-elicitation-program.md, E6 and deviation [E6] 00:34, written before any fit or score).
+(fc65452:todos/2026-09-26-elicitation-program.md, E6 and deviation [E6] 00:34, written before any fit or score).
 
   prep   the G2 / G3 K = 1024 vocabulary (recomputed, checked against G3's cls_late outputs), the 20 000-token navtrain
-         subset, the anchors file for scripts/elicit_e6_score.py and a hydra train_test_split for the v1.1 metric cache
+         subset, the anchors file for experiments/elicitation/archive/elicit_e6_score.py and a hydra train_test_split for the v1.1 metric cache
   fit    per-sub-score linear heads (NC, DAC, EP, TTC, C) over the anchors, weights of the log-score aggregation on
          held-out logs, and the selected anchors on navtest / navhard_two_stage as replay-agent predictions
 

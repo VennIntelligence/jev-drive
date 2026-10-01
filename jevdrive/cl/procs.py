@@ -3,7 +3,7 @@
 A record (JSON) holds the root process and every descendant seen so far. `refresh` adds the descendants of members that
 are still alive, so a server re-parented to init after its runner died is still ours; `stop` signals only members whose
 pid still carries the recorded start time, through a pidfd, which closes the race between checking and signalling.
-Extracted from scripts/cx_owned_process.py and cx_controller.py.
+Extracted from experiments/night_queue_4/archive/cx_owned_process.py and cx_controller.py.
 """
 from __future__ import annotations
 

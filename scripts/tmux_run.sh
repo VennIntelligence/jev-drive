@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start a long job in its own window of the box's tmux session `jev` (see docs/long-runs.md).
 # Usage (on the box): scripts/tmux_run.sh <window-name> <command> [args ...]
-#   e.g. scripts/tmux_run.sh probe scripts/probe_v0.sh --force
+#   e.g. scripts/tmux_run.sh probe experiments/probe_planner_v0/archive/probe_v0.sh --force
 # The job runs in a bash login shell (so $DATA_DIR etc. are set) from the repo root.
 # The window stays open after the job ends, so its output and exit code can be read.
 set -euo pipefail

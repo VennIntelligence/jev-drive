@@ -9,7 +9,7 @@ dashboard remain enabled. This is short-run profiling, not a driving-score evalu
 
 ## Implementation
 
-Enable `B2D_TCP_OPTIMIZE=1` with `scripts/b2d_tcp_visual_agent.py`. The following individual
+Enable `B2D_TCP_OPTIMIZE=1` with `experiments/b2d_tcp/archive/b2d_tcp_visual_agent.py`. The following individual
 environment flags override the umbrella switch; set all to 0 for the previous baseline:
 
 | Flag | Change |
@@ -73,9 +73,9 @@ DATA_DIR=/data OMP_NUM_THREADS=4 /data/envs/b2d-tcp/bin/python \
   -m unittest discover -s scripts -p 'test_b2d_*.py'
 
 B2D_TCP_FAST_COLOR=1 B2D_TCP_DEBUG_VIEWS=1 OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 \
-  /data/envs/b2d-tcp/bin/python scripts/benchmark_b2d_preprocess.py
+  /data/envs/b2d-tcp/bin/python experiments/cl_infra/archive/benchmark_b2d_preprocess.py
 
-/data/envs/carla/bin/python scripts/b2d_optimization_report.py \
+/data/envs/carla/bin/python experiments/cl_infra/archive/b2d_optimization_report.py \
   /data/runs/b2d/python-opt \
   --json /data/runs/b2d/python-opt/measurements.json \
   --markdown /data/runs/b2d/python-opt/report.md

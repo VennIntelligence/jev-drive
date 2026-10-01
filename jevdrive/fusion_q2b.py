@@ -1,5 +1,5 @@
 """Fusion diagnostics Q2b: on WOD's longitudinal loss frames, is the cause object seen by openpilot?
-Pre-registration: todos/2026-09-25-fusion-diagnostics.md (Q2, and the [Q2b] lines of the deviation log).
+Pre-registration: fc65452:todos/2026-09-25-fusion-diagnostics.md (Q2, and the [Q2b] lines of the deviation log).
 
   corridor   SAM 3.1 detections on the front image (score > 0.5), ground-contact point lifted onto the flat ground
              with the sequence's own WOD calibration; an object is "in the corridor" when its BEV point is within
@@ -27,7 +27,7 @@ GROUPS = {"pedestrian": ("pedestrian",), "cyclist": ("cyclist",), "vehicle": ("v
           "emergency vehicle": ("emergency vehicle",), "road user": ("vehicle", "pedestrian", "cyclist")}
 CLUSTER_GROUP = {"Pedestrian": "pedestrian", "Cyclist": "cyclist", "Cut_ins": "vehicle", "Multi-Lane Maneuvers": "vehicle",
                  "Foreign Object Debris": "cone|debris", "Special Vehicles": "emergency vehicle", "Interections": "road user"}
-RESULTS = Path(__file__).resolve().parents[1] / "research" / "results" / "fusion-diagnostics" / "q2b"
+RESULTS = Path(__file__).resolve().parents[1] / "experiments/fusion_diag/results/q2b"
 
 
 def calibs() -> dict:
@@ -132,8 +132,7 @@ def probes(lab: pd.DataFrame, seed: int = 0) -> pd.DataFrame:
 
 
 def anatomy(lab: pd.DataFrame, pr: pd.DataFrame, b: int = 1000, seed: int = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
-    q2a = pd.read_csv(Path(__file__).resolve().parents[1] / "research" / "results" / "fusion-diagnostics" / "q2a" /
-                      "q2a_frames.csv")
+    q2a = pd.read_csv(Path(__file__).resolve().parents[1] / "experiments/fusion_diag/results/q2a/q2a_frames.csv")
     f = q2a[q2a.loss & q2a.category.str.startswith("longitudinal") & q2a.cluster.isin(list(CLUSTER_GROUP))].copy()
     f = f.merge(lab, on="frame_name", how="left").merge(pr, on="frame_name", how="left")
     grp = f.cluster.map(CLUSTER_GROUP)

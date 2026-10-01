@@ -1,5 +1,5 @@
 """Route into the head / into the backbone: does it buy back standstill and junction frames?
-Pre-registration: todos/2026-09-25-openpilot-temporal-p5-and-route.md (experiments 2a and 2b).
+Pre-registration: fc65452:todos/2026-09-25-openpilot-temporal-p5-and-route.md (experiments 2a and 2b).
 
   2a   zero GPU: the decision-40 (iii) heads_train predictions re-sliced onto the rater frames that start below
        0.5 m/s and the Interections / Multi-Lane Maneuvers clusters; paired RFS deltas of `cls_late` against cv,

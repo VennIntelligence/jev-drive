@@ -1,5 +1,5 @@
 """openpilot `temporal` on the P5 CARLA pairs: feature runner (openpilot venv).
-Pre-registration: todos/2026-09-25-openpilot-temporal-p5-and-route.md (experiment 1). Plan from
+Pre-registration: fc65452:todos/2026-09-25-openpilot-temporal-p5-and-route.md (experiment 1). Plan from
 `python -m jevdrive.p5_openpilot prepare` (processed/carla_p5/op_plan.json).
 
 Every recorded run is one stream from a zero state, like a car engaged at the start of the route. The three P4-rig
@@ -42,7 +42,7 @@ def render(files: list, seq: str = SEQ) -> np.ndarray:
 
 
 def render_blobs(trips: list, seq: str = SEQ) -> np.ndarray:
-    """`render` on JPEG bytes instead of paths (the closed-loop head server, scripts/nq3_cl_server.py, shares it)."""
+    """`render` on JPEG bytes instead of paths (the closed-loop head server, experiments/night_queue_3/lib/nq3_cl_server.py, shares it)."""
     from PIL import Image
     idx = _maps(seq)
     out = np.empty((len(trips), 2, 6, 128, 256), np.uint8)

@@ -1,4 +1,4 @@
-"""M-C: dual-stream reaction head on the P5 counterfactual pairs (todos/2026-09-25-reactivity-program.md, M-C and
+"""M-C: dual-stream reaction head on the P5 counterfactual pairs (fc65452:todos/2026-09-25-reactivity-program.md, M-C and
 deviation-log item 4, written before any fit).
 
   pred(x) = prior(x) + Delta(x)

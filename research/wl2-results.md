@@ -1,7 +1,7 @@
 # WL-2 结果：新留出分叉上的 C1-C4 判格（世界模型第二轮前置检查）
 
-2026-09-30。预登记 [todos/2026-09-29-wl2-prereg.md](../todos/2026-09-29-wl2-prereg.md)，判据与读法写在任何数字之前，读数代码在 WL-1 干跑数据上复现过（最大差 5e-5）。
-结果表在 [results/wl2/results/](results/wl2/results/)（`results.json` 是全部数字，`c1_main.csv`、`c2_c3.csv`、`c4_flips.csv` 等是分表）；出图 `scripts/make_wl2_figs.py`。
+2026-09-30。预登记 [fc65452:todos/2026-09-29-wl2-prereg.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-wl2-prereg.md)，判据与读法写在任何数字之前，读数代码在 WL-1 干跑数据上复现过（最大差 5e-5）。
+结果表在 [results/wl2/results/](../experiments/world_model/results/wl2/results/)（`results.json` 是全部数字，`c1_main.csv`、`c2_c3.csv`、`c4_flips.csv` 等是分表）；出图 `experiments/world_model/archive/make_wl2_figs.py`。
 决定记在 [decisions.md](decisions.md) 第 76 条。**结论：按登记读法是 no-go**（C2 过、C3a 不过；C1c 与 C1b 也不过），世界模型想象训练的设计讨论没有依据。
 
 ## 读数设定
@@ -28,11 +28,11 @@
 
 最小样本均满足：可解分叉点（cg，`op` unsafe 且 oracle 有安全候选）79 个、来自 28 条 base 路线（线 40 / 15）；C1c 的「仍被占」76 对、「已离开」289 对、35 条路线（线 20 / 8）。
 
-![C1c](figs/wl2-c1c.png)
+![C1c](../experiments/world_model/figs/wl2-c1c.png)
 
 图 wl2-c1c：左，各臂在被占子集上对「仍被占 / 已离开」的 AUC，虚线 0.75；右，刹车 vs 保持方向，虚线 85%。看点：所有带 ego 通道或不带的预测器都在 0.67–0.69，`worig` 与 `T` 更低；差别落在误差棒里，ego 通道没有把横移读对。
 
-![C2 C3](figs/wl2-c2-c3.png)
+![C2 C3](../experiments/world_model/figs/wl2-c2-c3.png)
 
 图 wl2-c2-c3：左，各臂 C-learn 的 cg AUC，虚线 0.85；右，各臂 H，虚线 0.5、点线 0.25（CI 下界线）。看点：AUC 在线附近且四个臂彼此不可分；H 的点估计 0.23–0.42 全部在 0.5 之下，CI 下界都在 0.25 以下。
 
@@ -50,11 +50,11 @@
 - 纵向：C1a 在新分叉上复现（`worig` 12.5% 仍是反向），说明 WL-1 的纵向因果不是路线或 seed 特有的。`A` 比 `B` 低 6 pp（`B` − `A` 的 C1a 差 +6.2 pp [+2.1, +10.6]），是 ego 通道唯一可见的收益。
 - 横向：ego 通道本身读得对——`B` 预测的 2 s 横向偏移 ê_y 对真实 e_y 的中位误差，`shift_L` / `shift_R` 0.25 / 0.36 m（持续不变基线 3.0 / 2.9 m，符号 100% 对），`nudge_L` 0.16 m。**但 `occ` probe 读推演 latent 时仍分不开「仍被占」与「已离开」**：AUC 0.674，`B` − `A` = −0.021 [−0.044, +0.001]，`B` − `worig` 的差 CI 跨 0。也就是说 s 通道告诉了模型「ego 去了哪」，模型没有把「障碍在画面哪一侧」读出来，这与登记时的分支（「加了它 shift 还读不对，问题就在障碍在画面哪一侧那一层」）一致。
 - 空间 token（`T`）没有救回横向：C1c AUC 0.473，比 `B` 低 0.20 [−0.32, −0.07]，比 `B-same` 低 0.21。登记读法「`T` 也不过 → 横向问题不在 latent 的空间分辨率（查标签与执行）」成立。
-![slow shift](figs/wl2-slowshift.png)
+![slow shift](../experiments/world_model/figs/wl2-slowshift.png)
 
 图 wl2-slowshift：横移类候选的实际执行偏移，以及 `B` 预测的 2 s e_y 对执行值。看点：`shift_*_slow` 的执行偏移远小于指令的 3 m，而预测 e_y 紧跟执行值，通道读对了 ego 去了哪。
 
-![curves](figs/wl2-curves.png)
+![curves](../experiments/world_model/figs/wl2-curves.png)
 
 图 wl2-curves：各臂 inner-val loss 曲线。看点：所有臂收敛平稳，臂间差异不是欠训练造成的。
 
@@ -88,7 +88,7 @@
 | worig risk | 54.7% [44.4, 66.7] | 5.5% | 过 | 50.0% [27.7, 72.1] | 5.2% | 过 |
 | B 的 Q risk（model-free） | 50.7% [40.7, 66.7] | 16.1% | 过 | 24.1% [6.0, 46.2] | 4.3% | 不过 |
 
-![C4](figs/wl2-c4.png)
+![C4](../experiments/world_model/figs/wl2-c4.png)
 
 图 wl2-c4：各考生的翻转率与样本外 null 误翻的对比。看点：行人上 `B` risk 高于 null 线，但 `worig` 的风险读数一样高，考卷分不开新预测器与旧预测器。
 

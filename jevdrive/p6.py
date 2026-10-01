@@ -1,4 +1,4 @@
-"""P6 v0: the behaviour-mode exam (todos/2026-09-26-night-queue-2.md N1). Counterfactual worlds on the Bench2Drive
+"""P6 v0: the behaviour-mode exam (fc65452:todos/2026-09-26-night-queue-2.md N1). Counterfactual worlds on the Bench2Drive
 obstacle-bypass scenarios, driven by PDM-Lite, recorded by scripts/p5_pair_agent.py (P5 v1's recorder) and paired
 with P5's machinery (jevdrive/p5_pairs.py: load_world, ego_divergence, world_rows).
 
@@ -8,9 +8,9 @@ with P5's machinery (jevdrive/p5_pairs.py: load_world, ego_divergence, world_row
               and on seed 0: wnull (weather null: x10 under swapped weather), shoulder (placement null: obstacle moved onto the
               shoulder, registration deleted; 1W and 2W) and mirror (x10 with an unbroken oncoming flow; 2W).
               Variant id = base_id * 100 + world code * 10 + seed. The hooks are scripts/b2d_hooks.py p6_world.
-  ids       the variant ids still to drive (comma list, for scripts/p6_gen.sh)
+  ids       the variant ids still to drive (comma list, for experiments/night_queue_2/archive/p6_gen.sh)
   stats     per-world lateral offset from the route, world-level behaviour mode, the two smoke checks, t_div vs t_vis,
-            negotiation (x11 - x10) and the gates -> research/results/night2/N1/*.csv (runs on whatever is done)
+            negotiation (x11 - x10) and the gates -> experiments/night_queue_2/results/N1/*.csv (runs on whatever is done)
 """
 import copy
 import json
@@ -25,7 +25,7 @@ from .common import data_dir, get_logger
 
 log = get_logger(__name__)
 REPO = Path(__file__).resolve().parents[1]
-RESULTS = REPO / "research" / "results" / "night2" / "N1"
+RESULTS = REPO / "experiments/night_queue_2/results/N1"
 SOURCE = "third_party/Bench2Drive/leaderboard/data/bench2drive220.xml"
 CLASS = {**{s: "1W" for s in ("Accident", "ConstructionObstacle", "ParkedObstacle", "HazardAtSideLane")},
          **{s: "2W" for s in ("AccidentTwoWays", "ConstructionObstacleTwoWays", "ParkedObstacleTwoWays",
@@ -582,7 +582,7 @@ def main():
     ap.add_argument("cmd", choices=["build", "ids", "stats", "vocab", "report", "index", "n2probe", "vocab_p6", "fig"])
     ap.add_argument("--only", default="")
     ap.add_argument("--out", default="", help="generation dir (default runs/p6/gen)")
-    ap.add_argument("--results", default="", help="stats output dir (default research/results/night2/N1)")
+    ap.add_argument("--results", default="", help="stats output dir (default experiments/night_queue_2/results/N1)")
     a = ap.parse_args()
     if a.cmd == "build":
         build()

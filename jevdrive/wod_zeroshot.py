@@ -1,4 +1,4 @@
-"""WOD-E2E zero-shot exam of open driving models (todos/2026-09-24-zeroshot-exam/wod-e2e.md).
+"""WOD-E2E zero-shot exam of open driving models (fc65452:todos/2026-09-24-zeroshot-exam/wod-e2e.md).
 
   sets        the pre-registered frame sets (479 rater frames, <= 958 ADE-extra frames, 8 adapter-check frames),
               frozen with everything scoring needs (past, future, rater trajectories, cluster, intent) and the

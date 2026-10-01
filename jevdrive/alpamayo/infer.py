@@ -51,7 +51,7 @@ def hub_offline(on: bool = True):
     """Flip HF hub + transformers to offline at runtime (both cache the env flag at import). Needed because the
     model builds its tokenizer/config from nvidia/Cosmos-Reason2-8B, whose gate is not accepted for our account:
     online, transformers' probe for the absent processor_config.json gets a 403 and raises. Offline, it reads the
-    files we fetched from ModelScope (scripts/alpamayo_fetch.py backbone-config) and the .no_exist markers."""
+    files we fetched from ModelScope (experiments/model_smoke/archive/alpamayo_fetch.py backbone-config) and the .no_exist markers."""
     import huggingface_hub.constants
     import transformers.utils.hub
     huggingface_hub.constants.HF_HUB_OFFLINE = on

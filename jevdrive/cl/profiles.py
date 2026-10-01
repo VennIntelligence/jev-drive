@@ -12,7 +12,7 @@ threads it has and how hard it oversubscribes its core slice:
 OPENBLAS_CORETYPE is not a profile knob: it is a correctness setting of particular envs (Haswell for the NAVSIM devkit
 on the GPU box, Barcelona to replay Tokyo-recorded controller goldens bit for bit). Put it in a job's env.
 
-The default was chosen by the 2026-10-01 experiment (todos/2026-10-01-cl-lib.md, docs/closed-loop-runbook.md).
+The default was chosen by the 2026-10-01 experiment (fc65452:todos/2026-10-01-cl-lib.md, docs/closed-loop-runbook.md).
 """
 from __future__ import annotations
 

@@ -1,0 +1,558 @@
+{
+  "version": 1,
+  "poll_s": 30,
+  "deadline": "2026-09-27T23:59:00+09:00",
+  "jobs": [
+    {
+      "id": "A",
+      "process_match": [
+        [
+          "nq3_a.sh"
+        ],
+        [
+          "experiments.night_queue_3.archive.nq3_a",
+          "v1-post"
+        ],
+        [
+          "experiments.night_queue_3.archive.nq3_a",
+          "judge-rig"
+        ]
+      ],
+      "done": [
+        "$DATA_DIR/runs/nq3/a/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/processed/carla_p6_v1/index.parquet",
+        "$DATA_DIR/processed/carla_p6_v1/past.npy",
+        "$DATA_DIR/processed/carla_p6_v1/future.npy",
+        "$REPO/experiments/night_queue_3/results/q1/carla_rig_summary.csv",
+        "$REPO/experiments/night_queue_3/results/q1/carla_rig_summary.md",
+        "$REPO/experiments/night_queue_3/results/q1/carla_rig_per_scenario.csv"
+      ],
+      "errors": [
+        "$DATA_DIR/runs/nq3/a/ERROR"
+      ],
+      "schedule_lane": "nq3-a",
+      "heartbeats": [
+        "$DATA_DIR/runs/nq3/a/log.txt"
+      ]
+    },
+    {
+      "id": "A-v1",
+      "process_match": [
+        [
+          "experiments.night_queue_3.archive.nq3_a",
+          "v1-post"
+        ]
+      ],
+      "done": [
+        "$DATA_DIR/runs/nq3/a/v1/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/processed/carla_p6_v1/index.parquet",
+        "$DATA_DIR/processed/carla_p6_v1/past.npy",
+        "$DATA_DIR/processed/carla_p6_v1/future.npy"
+      ]
+    },
+    {
+      "id": "B",
+      "process_match": [
+        [
+          "nq3_b.sh",
+          "chain"
+        ],
+        [
+          "nq3_b_cl10.sh"
+        ]
+      ],
+      "done": [
+        "$DATA_DIR/runs/nq3/b/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/b/results/arms.csv",
+        "$DATA_DIR/runs/nq3/b/results/per_route.csv",
+        "$DATA_DIR/runs/nq3/b/results/summary.md"
+      ],
+      "errors": [
+        "$DATA_DIR/runs/nq3/b/ERROR"
+      ],
+      "schedule_lane": "nq3-b",
+      "heartbeats": [
+        "$DATA_DIR/runs/nq3/b/events.jsonl"
+      ],
+      "stall_s": 10800,
+      "output_root": "$DATA_DIR/runs/nq3/b/arms"
+    },
+    {
+      "id": "C",
+      "process_match": [
+        [
+          "nq3_c.sh"
+        ]
+      ],
+      "done": [
+        "$DATA_DIR/runs/nq3/c/DONE",
+        "$DATA_DIR/runs/nq3/c/q1_judge_final/DONE"
+      ],
+      "artifacts": [
+        "$REPO/experiments/night_queue_3/results/q1/summary.csv"
+      ],
+      "errors": [
+        "$DATA_DIR/runs/nq3/c/ERROR"
+      ],
+      "after": [
+        "A-v1"
+      ],
+      "heartbeats": [
+        "$DATA_DIR/runs/nq3/c/events.jsonl"
+      ],
+      "stall_s": 10800
+    },
+    {
+      "id": "D-scientific",
+      "process_match": [
+        [
+          "nq3_d.sh"
+        ]
+      ],
+      "done": [
+        "$DATA_DIR/runs/nq3/d/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q4a/PASS"
+      ],
+      "errors": [
+        "$DATA_DIR/runs/nq3/d/ERROR"
+      ],
+      "disabled": "Original scientific assertion failure; no retry or synthetic PASS"
+    },
+    {
+      "id": "GK",
+      "process_match": [
+        [
+          "nq4_gk.sh"
+        ],
+        [
+          "experiments/night_queue_4/archive/cx_gk_batch.py"
+        ],
+        [
+          "cx_gk_batch_worker.sh"
+        ]
+      ],
+      "done": [
+        "$DATA_DIR/runs/nq4/gk/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq4/gk/results/g/summary.csv"
+      ],
+      "disabled": "Passed K pilots may run registered K seeds; remaining G full batch still requires original prep/scientific gates",
+      "output_roots": [
+        "$DATA_DIR/runs/nq4/gk/arms_k",
+        "$DATA_DIR/runs/nq4/gk/cx_pilot_20260927_k",
+        "$DATA_DIR/runs/nq4/cx/gk-batch/leases"
+      ],
+      "authorization": "USER_AUTHORIZED_STAGED_PILOTS_AND_PASSED_K_BATCH"
+    },
+    {
+      "id": "P3",
+      "process_match": [
+        [
+          "nq4_p3.sh"
+        ],
+        [
+          "experiments/p3_ped_exam/archive/gpu_enable.py"
+        ],
+        [
+          "experiments/p3_ped_exam/archive/ds.py",
+          "prep"
+        ],
+        [
+          "experiments/p3_ped_exam/archive/ds.py",
+          "sky"
+        ],
+        [
+          "experiments/p3_ped_exam/archive/ds.py",
+          "train"
+        ],
+        [
+          "experiments/p3_ped_exam/archive/ds.py",
+          "render"
+        ],
+        [
+          "tools/train.py",
+          "--project",
+          "p3"
+        ],
+        [
+          "$DATA_DIR/runs/nq4/p3/prep.resume.py"
+        ],
+        [
+          "experiments/p3_ped_exam/archive/pool.py"
+        ]
+      ],
+      "done": [
+        "$DATA_DIR/runs/nq4/p3/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq4/p3/prep.done"
+      ],
+      "authorization": "USER_AUTHORIZED_SCENES_1_9_POOLED_GATE",
+      "output_roots": [
+        "$DATA_DIR/processed/waymo_ds",
+        "$DATA_DIR/ckpt/nq4_p3_short3000",
+        "$DATA_DIR/ckpt/nq4_p3",
+        "$DATA_DIR/processed/nq4_p3_short3000",
+        "$DATA_DIR/processed/nq4_p3"
+      ],
+      "heartbeats": [
+        "$DATA_DIR/runs/nq4/p3/gpu_enable.events.jsonl",
+        "$DATA_DIR/runs/nq4/p3/prep.resume.out",
+        "$DATA_DIR/runs/nq4/p3/pool/log.txt"
+      ],
+      "stall_s": 10800,
+      "errors": [
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_sky.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene0.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_001.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_002.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_003.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_004.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_005.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_006.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_007.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_008.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_009.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_readout_formal10.ERROR"
+      ],
+      "previous_resource_claims": {
+        "gpus": [
+          1,
+          6
+        ],
+        "cpus": "180-189",
+        "prep_cpus": "182-189",
+        "sky_cpus": "180",
+        "scene0_cpus": "181",
+        "scope": "build_scene0_smoke",
+        "full_batch_gate": "pilot_plus_human_ghosting_review"
+      },
+      "disabled": "Scene-0 human ghosting review accepted 2026-09-27; user authorized scenes 1-9 and the registered pooled 10-scene gate. External owners: experiments/p3_ped_exam/archive/gpu_enable.py scene/readout and experiments/p3_ped_exam/archive/pool.py; no scene beyond 9 and no >= 60-scene reconstruction without a separate OK.",
+      "retired": true,
+      "schedule_lane": "nq4-p3",
+      "readout_result": "$REPO/experiments/night_queue_4/results/p3/formal30000/verdict.json",
+      "previous_resource_claims_scene0": {
+        "gpus": [],
+        "cpus": "-",
+        "scope": "none",
+        "release_reason": "Formal scene0 readout completed rc0; primary Cinque null gate failed (3/23 > 7%); no legal automatic GPU continuation."
+      },
+      "resource_claims": {
+        "gpus": [
+          5,
+          6
+        ],
+        "cpus": "182-199,202,203,206,207",
+        "scene_cpus": "182-197 (2 per scene)",
+        "pool_prep_cpus": "198,199,202,203,206,207",
+        "scope": "scenes_1_9_formal_and_pooled_10_scene_readout",
+        "granted": "2026-09-27 user authorization relayed by main; expansion beyond scene 9 not authorized"
+      }
+    },
+    {
+      "id": "OPL",
+      "process_match": [
+        [
+          "nq4_opl.sh"
+        ]
+      ],
+      "done": [],
+      "artifacts": [],
+      "disabled": "PROHIBITED by T10"
+    },
+    {
+      "id": "maintenance",
+      "process_match": [
+        [
+          "experiments/night_queue_4/archive/cx_maintenance.py",
+          "watch"
+        ]
+      ],
+      "done": [],
+      "artifacts": [],
+      "heartbeats": [
+        "$DATA_DIR/runs/nq4/cx/maintenance/state.json"
+      ],
+      "stall_s": 1200
+    },
+    {
+      "id": "combination:q6-inputs",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-inputs/DONE"
+      ],
+      "artifacts": [],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-inputs/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q4b-inputs",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q4b-inputs/DONE"
+      ],
+      "artifacts": [],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q4b-inputs/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q6-rt-wod",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-rt-wod/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/wod_deltas.csv",
+        "$DATA_DIR/runs/nq3/q6/wod_activation.csv"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-rt-wod/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q4b-hydra",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q4b-hydra/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q4b/navridge.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_cinque_s0.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_cinque_s1.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_cinque_s2.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_lebowski_s0.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_lebowski_s1.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_lebowski_s2.npz"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q4b-hydra/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q4b-compat",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q4b-compat/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q4b/q4b_compat.csv",
+        "$DATA_DIR/runs/nq3/q4b/q4b_verdict.json"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q4b-compat/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q4b-exam",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q4b-exam/DONE"
+      ],
+      "artifacts": [],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q4b-exam/result.json",
+      "artifact_any": [
+        [
+          "$DATA_DIR/runs/nq3/q4b/exam.skipped",
+          "$DATA_DIR/runs/nq3/q4b/q4b_p5_criteria.csv"
+        ]
+      ]
+    },
+    {
+      "id": "combination:q6-rt-nav",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-rt-nav/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/nav/jobs.txt",
+        "$DATA_DIR/runs/nq3/q6/navsim_activation.csv",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_cinque_s0.npz",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_cinque_s1.npz",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_cinque_s2.npz",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_lebowski_s0.npz",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_lebowski_s1.npz",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_lebowski_s2.npz"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-rt-nav/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q6-rt-score",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-rt-score/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_cinque_s0/*/*.csv",
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_cinque_s1/*/*.csv",
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_cinque_s2/*/*.csv",
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_lebowski_s0/*/*.csv",
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_lebowski_s1/*/*.csv",
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_lebowski_s2/*/*.csv"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-rt-score/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q6-refit",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-refit/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/fits/refit-vjepa2-seed0/*/criteria.csv",
+        "$DATA_DIR/runs/nq3/q6/fits/refit-vjepa2-seed0/*/preds_obs.npz"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-refit/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q6-refit-check",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-refit-check/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/sf_refit_check.csv"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-refit-check/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q6-sf-fit-s0",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-sf-fit-s0/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed0/*/criteria.csv",
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed0/*/preds_obs.npz"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-sf-fit-s0/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q6-sf-fit-s1",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-sf-fit-s1/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed1/*/criteria.csv",
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed1/*/preds_obs.npz"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-sf-fit-s1/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q6-sf-fit-s2",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-sf-fit-s2/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed2/*/criteria.csv",
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed2/*/preds_obs.npz"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-sf-fit-s2/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q6-sf-report",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-sf-report/DONE"
+      ],
+      "artifacts": [
+        "$REPO/experiments/night_queue_3/results/q6/vjepa_single_frame.csv",
+        "$REPO/experiments/night_queue_3/results/q6/vjepa_single_frame_verdict.json"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-sf-report/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q6-rt-verdict",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-rt-verdict/DONE"
+      ],
+      "artifacts": [
+        "$REPO/experiments/night_queue_3/results/q6/vjepa_real_verdict.csv",
+        "$REPO/experiments/night_queue_3/results/q6/vjepa_real_summary.json"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-rt-verdict/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q5-child",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q5-child/DONE"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q5/verify.json",
+        "$REPO/experiments/night_queue_3/results/q5/ego_nusc.csv",
+        "$REPO/experiments/night_queue_3/results/q5/ego_navtest.csv",
+        "$REPO/experiments/night_queue_3/results/q5/ego_verdict.csv",
+        "$REPO/experiments/night_queue_3/results/q5/selectivity.csv",
+        "$REPO/experiments/night_queue_3/results/q5/rig_perturbation.csv"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q5-child/result.json",
+      "artifact_any": []
+    },
+    {
+      "id": "combination:q6-table",
+      "process_match": [],
+      "done": [
+        "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-table/DONE"
+      ],
+      "artifacts": [
+        "$REPO/experiments/night_queue_3/results/q6/main_table.csv",
+        "$REPO/experiments/night_queue_3/results/q6/main_table.md"
+      ],
+      "disabled": "Completed registered combination; never automatically restart",
+      "result": "$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-table/result.json",
+      "artifact_any": []
+    }
+  ],
+  "b_handoff": {
+    "gpus": [
+      0,
+      2,
+      3,
+      4,
+      5
+    ],
+    "workers": 6,
+    "ack_timeout_s": 300,
+    "idx0": "0:300,2:360,3:60,4:90,5:330",
+    "cpus": "0-47,60-109",
+    "allowed_from_cpus": [
+      "60-109",
+      "0-47,60-109"
+    ]
+  },
+  "policy": "Existing B alone dispatches its registered PASS/APPROVED fixed queue at arm boundaries; other missing gates stay blocked. No LLM wake-up mechanism."
+}

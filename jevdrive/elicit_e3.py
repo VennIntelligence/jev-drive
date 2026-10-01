@@ -1,4 +1,4 @@
-"""E3 feasibility: twin frames mined from logs (todos/2026-09-26-elicitation-program.md, E3, and the [E3] entry of the
+"""E3 feasibility: twin frames mined from logs (fc65452:todos/2026-09-26-elicitation-program.md, E3, and the [E3] entry of the
 deviation log, written before any mining). No training.
 
   twin pair   two frames of different logs / sequences (and, on navtrain, not the same road section: same map and
@@ -36,7 +36,7 @@ NULL_V, NULL_Y = 0.5, 0.3
 SECTION_M = 30.0
 NB = 2000
 CLASSES = ("vehicle", "pedestrian", "bicycle", "other")
-RESULTS = Path(__file__).resolve().parents[1] / "research" / "results" / "elicitation" / "e3"
+RESULTS = Path(__file__).resolve().parents[1] / "experiments/elicitation/results/e3"
 CACHE = data_dir() / "runs" / "elicitation" / "e3-cache"
 WORKERS = min(20, n_cpus())
 

@@ -1,5 +1,29 @@
 # Bench2Drive closed-loop cost
 
+**Summary.** Measurements of what a Bench2Drive closed-loop run costs; sizing and launching now live in
+docs/closed-loop-runbook.md (current default), this doc is the evidence. GPU-box numbers are from earlier instances
+(RTX PRO 6000 96 GB); whole-box totals were not rechecked on the 7x RTX 6000D box (per-server costs and the
+6-servers-per-card knee were). Full 220 routes, 8 workers, Qwen3-VL features + stand-in driver: 11,196 s = 3.11 h,
+209 finished, 11 never did; Town12+Town13 are 69% of routes and 83% of wall (ms/tick 106.2 / 156.8 vs ~64 small towns).
+Layout (2026-09-25): six servers per GPU, 2.5 cores per worker, `--client-threads 8`; pids.max is 20480. The 3.1 h
+reflects a driver that never arrives (0 successes, mean RC 10.9%), not the simulator floor. Tokyo sections: single
+RTX 3090, policy=none Dev10 ~17.9 min / 37.46 min for 3 configs x 2 seeds; real TCP six-case run 21.34 min.
+
+**Sections.**
+- Harness cost and layout on the five-GPU box (2026-09-25, previous instance) - per-server cost, knee, layout
+- Tokyo controller diagnostic: complete Dev10 seed0, 2026-09-22 - policy=none three-preset cost table
+- How these numbers were made - measurement method
+- The profile: where a tick goes - one-route phase breakdown
+- Cameras cost per sensor, not per pixel - sensor count matters, resolution barely
+- What paid, what did not - decimation, render size, compiled helper rejected
+- With a real policy in the loop - cost with model inference
+- Parallelism: the ceiling is a property of the configuration, not of the box - Town12 ladder, ports
+- What a 220-route round costs, measured - 3.11 h breakdown per town, what moves it
+- Reliability, which is the part that decides whether any of this matters - watchdog, resume, failures
+- What these numbers do not cover - caveats: stand-in driver, one map, shared load
+- Tokyo frozen v4 controller comparison (2026-09-23) - six Dev10 configs, 60 official records
+- Tokyo actual TCP paired comparison (2026-09-23) - real TCP checkpoint, six cases, 1280.562 s
+
 Read this when you need to know what a Bench2Drive closed-loop evaluation costs in wall-clock time,
 where that time goes, or how to run one without losing the run to a crash.
 [carla.md](carla.md) covers getting a CARLA server up at all; this doc is about the loop.
@@ -24,12 +48,12 @@ there (remote-box.md, carla.md "In production"); the whole-box totals, the threa
 Measured on the box of that day (5 RTX PRO 6000 96 GB, cgroup 125 cores, 600 GB RAM) with our launch path
 (`b2d_run.Server`: `-RenderOffScreen -quality-level=Epic -graphicsadapter=<gpu>`, then `b2d_route.py` with
 leaderboard + scenario_runner + traffic manager in the route process), 20 Hz synchronous mode.
-[Working notes, method and every table](../todos/2026-09-25-closed-loop-infra-acceptance/profiling.md);
-per-rung numbers in `research/results/infra-acceptance/profiling/rungs.csv`.
+[Working notes, method and every table](../experiments/cl_infra/results/closed-loop-infra-acceptance/profiling.md);
+per-rung numbers in `experiments/cl_infra/results/infra-acceptance/profiling/rungs.csv`.
 
 **Rig.** Unless stated, the Alpamayo exam rig through the real exam agent (`b2d_zeroshot_agent.py` with
 `"replay": "route"`, i.e. no model: 4 cameras of 1368-1392 x 784-792 plus one 608 x 352 at 10 Hz, `--decimate 2`,
-`--no-spectator`). **Work.** `scripts/b2d_scale.py` runs the *same* route on every worker for 1200 ticks and
+`--no-spectator`). **Work.** `experiments/cl_infra/archive/b2d_scale.py` runs the *same* route on every worker for 1200 ticks and
 measures only the steady window in which every worker is ticking (no load, no teardown); servers are added
 rung by rung on one GPU. **CPU budget.** Our processes pinned to 45 CPUs of the GPU's NUMA node.
 
@@ -50,7 +74,7 @@ GPU gets crowded (each worker ticks slower), and the number to budget is cores p
 
 ### Servers per GPU
 
-![Aggregate tick rate and per-worker cost against servers on one GPU](../research/figs/infra-scale-throughput.png)
+![Aggregate tick rate and per-worker cost against servers on one GPU](../experiments/cl_infra/figs/infra-scale-throughput.png)
 
 Left: aggregate ticks/s (dotted: linear from one server); right: per-worker ms/tick. Town12 flattens at six
 servers; Town03 is still climbing at eight.
@@ -82,7 +106,7 @@ Five cameras every tick cost about three times the Alpamayo rig per tick on both
 the card was at 95-98% utilisation from four of our servers on. For this rig budget ~3 cores per worker and
 expect the GPU knee at or below six.
 
-![CPU per tick, cores used and GPU utilisation against servers on one GPU](../research/figs/infra-scale-resources.png)
+![CPU per tick, cores used and GPU utilisation against servers on one GPU](../experiments/cl_infra/figs/infra-scale-resources.png)
 
 Left: core-seconds per simulated tick, flat in N; middle: cores our processes used; right: GPU utilisation.
 
@@ -114,7 +138,7 @@ holds for camera rigs.)
   (450 with --client-threads 8) max_servers_box=30`.
 - **Not measured: splitting across cards.** No second card was idle; the expectation that cards add linearly
   (they share only CPU, memory bandwidth and the thread cap, and five cards at the knee need ~60 cores) is an
-  inference. `scripts/infra_scale.sh x2` is the test.
+  inference. `experiments/cl_infra/archive/infra_scale.sh x2` is the test.
 
 ### The container's thread cap is a hard ceiling on workers
 
@@ -148,8 +172,8 @@ on (md5), and the ego ends 1.4-3.4 m apart after 400 ticks. So an option is judg
 fall inside the spread of two identical baselines, and a semantic change is checked directly.
 
 After 17:00 CST the box was saturated by other CARLA jobs, so options were compared by concurrent A/B
-(`scripts/infra_ab.sh`: two drivers on one GPU at the same time, 3 servers each, arm B with the option), which
-gives both arms the same background. `research/results/infra-acceptance/profiling/ab.csv` has the rows.
+(`experiments/cl_infra/archive/infra_ab.sh`: two drivers on one GPU at the same time, 3 servers each, arm B with the option), which
+gives both arms the same background. `experiments/cl_infra/results/infra-acceptance/profiling/ab.csv` has the rows.
 
 | Option | Equivalence | Cost (concurrent A/B, per-worker ms/tick) | Verdict |
 |---|---|---|---|
@@ -160,7 +184,7 @@ gives both arms the same background. `research/results/infra-acceptance/profilin
 The scenario tree on these routes is ~20 ms of a 150-250 ms tick with a driver that completes its route; the
 55.9 ms Town13 tree of the full220 round came from a stand-in that sat in 4000-tick routes. The Python side of
 the route client costs 0.07-0.09 core-seconds per tick and is not on the critical path; no profiler run was
-needed to rule it out (`scripts/pyspy_python.sh` is ready if that changes).
+needed to rule it out (`experiments/cl_infra/archive/pyspy_python.sh` is ready if that changes).
 
 Last verified: 2026-09-25
 
@@ -169,7 +193,7 @@ Last verified: 2026-09-25
 
 Source: `/data/runs/b2d/controller/dev10/`, including every `attempt.json`, `route_result.json`,
 `results.json`, group `events.jsonl` and campaign `events.jsonl`/`manifest.json`.
-[Article notes and complete result tables](../todos/2026-09-22-b2d-controller/article-notes.md)
+[Article notes and complete result tables](../experiments/b2d_controller/results/b2d-controller/article-notes.md)
 explain controller validation and attribution; failure evidence (GPU box: `$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/failure-analysis.json`)
 retains frame-level collision, motion and trajectory evidence.
 
@@ -254,7 +278,7 @@ and any measurement can be re-run against it.
 | `scripts/b2d_agent.py` | the stand-in policy: camera rig, inference cost, control rate, overlap |
 | `scripts/b2d_hooks.py` | the instrumented tick loop and the optimisation flags |
 | `scripts/b2d_run.py` | many routes: server pool, watchdog, retries, resume, summary |
-| `scripts/b2d_sweep.py` | one route under each configuration, printing the comparison table |
+| `experiments/cl_infra/archive/b2d_sweep.py` | one route under each configuration, printing the comparison table |
 | `scripts/b2d_policy_server.py` | real frozen features (DINOv2 / Qwen3-VL) in the project's 3.11 env |
 | `scripts/b2d_report.py` | read-only: a run's cost, reliability and server-age curve **per town** |
 
@@ -509,7 +533,7 @@ saturation. Read the server log before concluding anything from a startup `Signa
 2026-09-22, one command, unattended, exit 0. 209 routes finished, 11 never did, 245 attempts,
 633,881 ticks, 56.6 aggregate ticks/s. Worker occupancy 0.97.
 
-One row per attempt is in `research/results/b2d/full220-results.csv` (route, town, status, wall,
+One row per attempt is in `experiments/cl_infra/results/b2d/full220-results.csv` (route, town, status, wall,
 ticks, the tick profile, and which server of what age ran it); `full220-summary.json` beside it is
 the runner's own summary. Everything in this section is `scripts/b2d_report.py` over that run.
 
@@ -822,7 +846,7 @@ Manifest start to end event took **2247.413 s (37.46 min)**; final server shutdo
 
 All failed selected routes consumed 4000 profiled ticks. Completed routes range from 252 to 3882 ticks, so a fixed short-route estimate misses collision-associated delays. There are 68142 logged control ticks, including 1200 warmup ticks excluded from the profile denominator. No neural inference cost was measured, and these numbers do not establish real TCP or full220 wall time. The candidate failed its driving acceptance conditions despite a higher mean DS.
 
-[Reproduction helper, exact CSV and input hashes](../todos/2026-09-22-b2d-controller/results/formal-v4-cost/README.md) and [final driving report](../todos/2026-09-22-b2d-controller/final-report.md) preserve the measurement boundary. This section supplements the earlier frozen v1 measurement without relabeling its costs.
+[Reproduction helper, exact CSV and input hashes](../experiments/b2d_controller/results/b2d-controller/results/formal-v4-cost/README.md) and [final driving report](../experiments/b2d_controller/results/b2d-controller/final-report.md) preserve the measurement boundary. This section supplements the earlier frozen v1 measurement without relabeling its costs.
 
 Last verified: 2026-09-23
 
@@ -841,6 +865,6 @@ Supervised attempt intervals sum to 1272.738 s, group intervals to 1273.145 s. T
 
 The GPU-forward measurements use existing model phase instrumentation. GPU work, preprocessing, policy and sensor waiting have overlapping accounting boundaries and cannot all be added as independent costs. A single archived live GPU sample confirms both TCP and CARLA on the intended GPU; it is not full-run utilization monitoring. Both experimental arms remove the official final low-speed throttle cap, so historical official TCP route durations are not a matched PI or harness speedup baseline. These results also cannot be compared as a speedup against the no-model oracle campaigns above.
 
-[Recompute script, exact six-row CSV and source hashes](../todos/2026-09-23-tcp-controller/results/paired-v2-cost/README.md), [driving contract and interpretation](b2d-tcp-controller.md).
+[Recompute script, exact six-row CSV and source hashes](../experiments/b2d_tcp/results/tcp-controller/results/paired-v2-cost/README.md), [driving contract and interpretation](b2d-tcp-controller.md).
 
 Last verified: 2026-09-23

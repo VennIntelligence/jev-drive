@@ -6,7 +6,7 @@
 
 ### PD-000
 
-![PD-000](../figs/p3/review/PD-000.webp)
+![PD-000](../../experiments/p3_ped_exam/figs/review/PD-000.webp)
 
 | | |
 |:--|:--|
@@ -21,7 +21,7 @@
 
 ### PD-001
 
-![PD-001](../figs/p3/review/PD-001.webp)
+![PD-001](../../experiments/p3_ped_exam/figs/review/PD-001.webp)
 
 | | |
 |:--|:--|
@@ -36,7 +36,7 @@
 
 ### PD-002
 
-![PD-002](../figs/p3/review/PD-002.webp)
+![PD-002](../../experiments/p3_ped_exam/figs/review/PD-002.webp)
 
 | | |
 |:--|:--|
@@ -51,7 +51,7 @@
 
 ### PD-003
 
-![PD-003](../figs/p3/review/PD-003.webp)
+![PD-003](../../experiments/p3_ped_exam/figs/review/PD-003.webp)
 
 | | |
 |:--|:--|
@@ -66,7 +66,7 @@
 
 ### PD-004
 
-![PD-004](../figs/p3/review/PD-004.webp)
+![PD-004](../../experiments/p3_ped_exam/figs/review/PD-004.webp)
 
 | | |
 |:--|:--|
@@ -81,7 +81,7 @@
 
 ### PD-005
 
-![PD-005](../figs/p3/review/PD-005.webp)
+![PD-005](../../experiments/p3_ped_exam/figs/review/PD-005.webp)
 
 | | |
 |:--|:--|
@@ -96,7 +96,7 @@
 
 ### PD-006
 
-![PD-006](../figs/p3/review/PD-006.webp)
+![PD-006](../../experiments/p3_ped_exam/figs/review/PD-006.webp)
 
 | | |
 |:--|:--|
@@ -111,7 +111,7 @@
 
 ### PD-007
 
-![PD-007](../figs/p3/review/PD-007.webp)
+![PD-007](../../experiments/p3_ped_exam/figs/review/PD-007.webp)
 
 | | |
 |:--|:--|
@@ -126,7 +126,7 @@
 
 ### PD-008
 
-![PD-008](../figs/p3/review/PD-008.webp)
+![PD-008](../../experiments/p3_ped_exam/figs/review/PD-008.webp)
 
 | | |
 |:--|:--|
@@ -141,7 +141,7 @@
 
 ### PD-009
 
-![PD-009](../figs/p3/review/PD-009.webp)
+![PD-009](../../experiments/p3_ped_exam/figs/review/PD-009.webp)
 
 | | |
 |:--|:--|
@@ -156,7 +156,7 @@
 
 ### PD-010
 
-![PD-010](../figs/p3/review/PD-010.webp)
+![PD-010](../../experiments/p3_ped_exam/figs/review/PD-010.webp)
 
 | | |
 |:--|:--|
@@ -171,7 +171,7 @@
 
 ### PD-011
 
-![PD-011](../figs/p3/review/PD-011.webp)
+![PD-011](../../experiments/p3_ped_exam/figs/review/PD-011.webp)
 
 | | |
 |:--|:--|
@@ -186,7 +186,7 @@
 
 ### PD-012
 
-![PD-012](../figs/p3/review/PD-012.webp)
+![PD-012](../../experiments/p3_ped_exam/figs/review/PD-012.webp)
 
 | | |
 |:--|:--|
@@ -201,7 +201,7 @@
 
 ### PD-013
 
-![PD-013](../figs/p3/review/PD-013.webp)
+![PD-013](../../experiments/p3_ped_exam/figs/review/PD-013.webp)
 
 | | |
 |:--|:--|
@@ -216,7 +216,7 @@
 
 ### PD-014
 
-![PD-014](../figs/p3/review/PD-014.webp)
+![PD-014](../../experiments/p3_ped_exam/figs/review/PD-014.webp)
 
 | | |
 |:--|:--|
@@ -231,7 +231,7 @@
 
 ### PD-015
 
-![PD-015](../figs/p3/review/PD-015.webp)
+![PD-015](../../experiments/p3_ped_exam/figs/review/PD-015.webp)
 
 | | |
 |:--|:--|
@@ -246,7 +246,7 @@
 
 ### PD-016
 
-![PD-016](../figs/p3/review/PD-016.webp)
+![PD-016](../../experiments/p3_ped_exam/figs/review/PD-016.webp)
 
 | | |
 |:--|:--|
@@ -261,7 +261,7 @@
 
 ### PD-017
 
-![PD-017](../figs/p3/review/PD-017.webp)
+![PD-017](../../experiments/p3_ped_exam/figs/review/PD-017.webp)
 
 | | |
 |:--|:--|
@@ -276,7 +276,7 @@
 
 ### PD-018
 
-![PD-018](../figs/p3/review/PD-018.webp)
+![PD-018](../../experiments/p3_ped_exam/figs/review/PD-018.webp)
 
 | | |
 |:--|:--|

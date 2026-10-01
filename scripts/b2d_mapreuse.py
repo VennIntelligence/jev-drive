@@ -1,4 +1,4 @@
-"""Route setup phases and same-map world reuse for scripts/b2d_route.py (todos/2026-09-29-carla-rewind.md).
+"""Route setup phases and same-map world reuse for scripts/b2d_route.py (fc65452:todos/2026-09-29-carla-rewind.md).
 
 Both off by default; b2d_route installs this when either env var is set.
   B2D_PHASES=1     write <attempt>/phases.json: seconds from process start to the evaluator's world load, the world

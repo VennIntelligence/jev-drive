@@ -1,5 +1,5 @@
 """Qwen `L18_*` features on NAVSIM tokens: P3(d'')'s extractor unchanged, fed the clip a NAVSIM agent may see
-(elicitation program E1 NAVSIM column, deviation [E1] (5): todos/2026-09-26-elicitation-program.md).
+(elicitation program E1 NAVSIM column, deviation [E1] (5): fc65452:todos/2026-09-26-elicitation-program.md).
 
 Clip = the 4 history frames of the token (-1.5, -1.0, -0.5, 0 s at 2 Hz; P5 / WOD clips are 0.2 s apart -- a
 recorded input difference, not a change of recipe), cameras CAM_F0 / CAM_L0 / CAM_R0 as front / front_left /

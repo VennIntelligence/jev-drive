@@ -1,4 +1,4 @@
-"""Stage A on Waymo E2E: the half-val dress rehearsal (todos/2026-09-20-waymo-stage-a-dryrun.md).
+"""Stage A on Waymo E2E: the half-val dress rehearsal (fc65452:todos/2026-09-20-waymo-stage-a-dryrun.md).
 
 Waymo's train split is not downloaded, so the rehearsal splits val itself: one half of the sequences trains
 the head, the other is evaluated. That is a rehearsal and not the paper's number -- the paper trains on the

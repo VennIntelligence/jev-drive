@@ -2,14 +2,14 @@
 
 2026-09-26。「state-space policy」指不吃图像、只吃结构化状态（ego 状态 + 周围 agent 的相对位姿 / 速度 + 道路 polyline）的驾驶 policy。
 目的：判断之后的行为层（bypass 绕行、negotiation 让行 / 谁先走、recovery 恢复）能不能借一个现成的 state-space policy，再经 openpilot 的 desire 离散决策执行。
-所以先回答三件事：谁放了权重、在我们的数据上能不能跑、它到底会不会绕和让。评测的预登记、执行日志与完整结果在 [todos/2026-09-26-state-space-policies.md](../todos/2026-09-26-state-space-policies.md)；第三层的量具综述见 [behavior-layer-instruments.md](behavior-layer-instruments.md)。
+所以先回答三件事：谁放了权重、在我们的数据上能不能跑、它到底会不会绕和让。评测的预登记、执行日志与完整结果在 [fc65452:todos/2026-09-26-state-space-policies.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-26-state-space-policies.md)；第三层的量具综述见 [behavior-layer-instruments.md](behavior-layer-instruments.md)。
 
 ## 0. 结论先行
 
 1. **公开且能下载权重的 state-space 多智能体 RL policy 很少**：能装能跑的只有 BehaviorBench（Bosch / Freiburg，PufferDrive fork）随仓库发布的 `simple_ppo.pt` 与 `conditioned_ppo.pt`（Gigaflow 式 reward conditioning）；
    GPUDrive 的 HF policy（MIT）有权重但要 Madrona 构建，HR-PPO 在已被取代的 Nocturne 上，CaRL 有 nuPlan / CARLA checkpoint 但吃特权 BEV raster、要 nuPlan 原始 `.db` 或 CARLA 闭环。
    Gigaflow 本身闭源，两个公开复现（2608.30819、CounterPlay）都没放权重；PufferDrive、V-Max、Waymax 只给框架不给权重。
-2. **本轮在 WOMD interactive val 上给 BehaviorBench 两个权重做了预登记考试**（考卷见 [todos/2026-09-26-state-space-policies.md](../todos/2026-09-26-state-space-policies.md)）：
+2. **本轮在 WOMD interactive val 上给 BehaviorBench 两个权重做了预登记考试**（考卷见 [fc65452:todos/2026-09-26-state-space-policies.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-26-state-space-policies.md)）：
    negotiation 上 PPO 对交互对手有明确的让行（43%，null 2%）和横向避让（37%，null 1.4%），是 IDM 的 3 倍；
    bypass 上只有 conditioned policy 在激进系数下干净地绕（79.5%，null 20%，碰撞 16%），保守系数下 40–57% 撞上；PPO 过障碍 81%，但它平时就在车道里晃出 1 m 以上（null 82.5%），按判据记不成「绕」；
    recovery 上没有一个会回到原轨迹。
@@ -54,7 +54,7 @@
 | 转换 env | `~/data/envs/statepol-conv`（py3.10，ScenarioMax[womd]，TF 2.11.1）；lane connectivity 的 helper 要 `waymo_open_dataset.protos.scenario_pb2`，用 ScenarioMax 自带 proto 做 shim | 5 min | — |
 | 数据 | 授权 gcloud 账号拉 WOMD v1.3 `validation_interactive` shard 0–9（2.5 GB）→ ScenarioMax 转 GPUDrive JSON（2706 个）→ 过滤「两个交互对象都是车」2080 个场景 → 4160 个 ego episode | 下载 3 min，转换 25 min（按文件并行，只能 10 路） | — |
 | 仿真接口 | 仓库 `pufferlib/ocean/benchmark/eval.py` 的 Evaluator；ego = 被考 planner，traffic = expert（log replay）或 PPO | — | split 名只接受白名单（每个变体单独一个 data root，split 统一叫 `validation_interactive`）；一个 split 至少 100 张图；`map_file[100]` 定长 buffer；eval 从 **log 第 0 帧**起步（`init_steps=0`），仿真坐标减过 world mean；neural planner 每张图都新建一个探测几百张图的临时 env（7–8 s / 图，缓存后 ~0.3 s） |
-| smoke | 8 张图 PPO × expert traffic 跑通，goal 7/8 | — | ego 当 `expert` planner 不支持（只有 traffic 能 replay）；eval 里终点即起点的车第 1 步变成「不可见但可碰撞」的幽灵，造场景时把 goal 推远（`scripts/statepol_build.py` 的 `deghost`） |
+| smoke | 8 张图 PPO × expert traffic 跑通，goal 7/8 | — | ego 当 `expert` planner 不支持（只有 traffic 能 replay）；eval 里终点即起点的车第 1 步变成「不可见但可碰撞」的幽灵，造场景时把 goal 推远（`experiments/statepol/archive/statepol_build.py` 的 `deghost`） |
 
 
 ## 3. 第一版行为读数（BehaviorBench 两个权重）

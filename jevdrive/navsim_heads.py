@@ -1,5 +1,5 @@
-"""Thin heads on NAVSIM (todos/2026-09-25-openpilot-openloop-comparison.md, G2 / G3): fit on navtrain, predict navtest and
-navhard_two_stage, score with the official devkits through the replay agent (scripts/navsim_zs_score.sh).
+"""Thin heads on NAVSIM (fc65452:todos/2026-09-25-openpilot-openloop-comparison.md, G2 / G3): fit on navtrain, predict navtest and
+navhard_two_stage, score with the official devkits through the replay agent (experiments/zeroshot_openloop/archive/navsim_zs_score.sh).
 
 The recipe is the project's (decisions 9 / 10, P0), carried to NAVSIM's 8 poses @2 Hz:
 

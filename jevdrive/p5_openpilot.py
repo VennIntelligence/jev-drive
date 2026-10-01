@@ -1,4 +1,4 @@
-"""openpilot `temporal` on the P5 counterfactual pairs (todos/2026-09-25-openpilot-temporal-p5-and-route.md,
+"""openpilot `temporal` on the P5 counterfactual pairs (fc65452:todos/2026-09-25-openpilot-temporal-p5-and-route.md,
 experiment 1). The exam itself is `p5_exam` unchanged; this module only adds openpilot as a feature source.
 
   prepare   one stream per recorded run in the P5 index (P4 training routes and P5 worlds): every 5 Hz camera

@@ -4,16 +4,16 @@
 
 - **插入标准保持 (b)**：手工贴地修正（LiDAR 地面贴脚、接触阴影、曝光增益上限 1.33、视角差 ≤ 20°），不接任何开源后处理。理由是配对的两张图必须只差在这个行人上：R3D2 只在 x⁺ 的插入区域周围加了 2–3.5 个灰度级的闪烁，细节上不确定，每个场景要 0.4 GPU·h，而且权重不能商用。
 - **车辆题只做删除**，不需要车辆插入。
-- **批准一个小的 R3D2 敏感性检查**：行人剂量-反应考卷出数之后，挑约 10 道行人插入题，覆盖从有反应到没反应的格子；每道渲染 (b) 和 (b)+R3D2 两版，R3D2 输出只贴回插入区域（与 `scripts/p3/ins_tools.py` 完全相同）。两版配对比较 openpilot 原生反应（最小规划速度、是否停车、lead_prob）和 `temporal` probe。读法在跑之前登记（见 [todos/2026-09-28-ped-dose-response.md](../todos/2026-09-28-ped-dose-response.md)）；预算 ≤ 5 GPU·h。
+- **批准一个小的 R3D2 敏感性检查**：行人剂量-反应考卷出数之后，挑约 10 道行人插入题，覆盖从有反应到没反应的格子；每道渲染 (b) 和 (b)+R3D2 两版，R3D2 输出只贴回插入区域（与 `experiments/p3_ped_exam/archive/ins_tools.py` 完全相同）。两版配对比较 openpilot 原生反应（最小规划速度、是否停车、lead_prob）和 `temporal` probe。读法在跑之前登记（见 [fc65452:todos/2026-09-28-ped-dose-response.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-28-ped-dose-response.md)）；预算 ≤ 5 GPU·h。
 
-2026-09-28。P3 的插入考题（把一个行人或一辆车放进 Waymo 录像重建出来的场景、本车车道里，重新渲染前相机）第一版被用户评为「像飘着的鬼影」：没有影子、脚不贴地、亮度和周围不一致。这篇把能用的几条路放在**同一个场景、同一组帧、同一个裁剪、同一套读数**下并排给出，供用户挑。背景和考卷设计在 [p3-exam-filter.md](p3-exam-filter.md)，过程和原始数字在 [tmp/2026-09-28-insertion-tools.md](../tmp/2026-09-28-insertion-tools.md)，代码 `scripts/p3/ins_tools.py`，表在 [results/nq4/p3/ins_tools/](results/nq4/p3/ins_tools/)。
+2026-09-28。P3 的插入考题（把一个行人或一辆车放进 Waymo 录像重建出来的场景、本车车道里，重新渲染前相机）第一版被用户评为「像飘着的鬼影」：没有影子、脚不贴地、亮度和周围不一致。这篇把能用的几条路放在**同一个场景、同一组帧、同一个裁剪、同一套读数**下并排给出，供用户挑。背景和考卷设计在 [p3-exam-filter.md](p3-exam-filter.md)，过程和原始数字在 [tmp/2026-09-28-insertion-tools.md](../tmp/2026-09-28-insertion-tools.md)，代码 `experiments/p3_ped_exam/archive/ins_tools.py`，表在 [results/nq4/p3/ins_tools/](../experiments/night_queue_4/results/p3/ins_tools/)。
 
 ## 比的是哪几条路
 
 | 代号 | 做法 | 从哪来 |
 |:--|:--|:--|
 | (a) | OmniRe（drivestudio 的动态 3DGS 重建，每个行人、车辆是可单独移动的高斯节点）原样：行人是同一段里重建出来的真实行人节点刚体平移过去；车辆是 HUGSIM 发布的 3DRealCar 车辆高斯资产（真实车辆扫描重建出的 3DGS），按深度合成进 x⁺ | 第一版插入；车辆这一格是本次新做的 |
-| (b) | 用户已批准的现行标准：P3 执行员的手工修正——脚贴 LiDAR 地面、局部曝光匹配（增益上限 1.33）、脚下一个接触阴影斑、视角差上限 20° | `scripts/p3/insert.py --fix`；只有行人 |
+| (b) | 用户已批准的现行标准：P3 执行员的手工修正——脚贴 LiDAR 地面、局部曝光匹配（增益上限 1.33）、脚下一个接触阴影斑、视角差上限 20° | `experiments/p3_ped_exam/archive/insert.py --fix`；只有行人 |
 | (c) | **R3D2**（zenseact，CVPR 2026 Workshop）：一步扩散（SD-Turbo 底座）的「插入后处理」模型，专门在 Waymo 前相机的 3DGS 渲染图上训练，输入「贴进去但没影子、光照不对」的图，输出补上影子、改好光照的图；本次接在 (a) 后面 | 开源工具 1 |
 | (c′) | R3D2 接在 (b) 后面 | 同上 |
 | (d) | Wan2.1-VACE-14B（阿里的视频编辑扩散模型，支持给定 mask 只重画局部、49 帧一起生成）：把插入区域当 mask、把 (a) 的合成图当待改视频交给它重画；本次只跑了车辆 | 开源工具 2 |
@@ -26,15 +26,15 @@
 
 场景 p3_001（本车 5.8 m/s，晴天，路面上有很硬的影子）和 p3_000（城区路口），前相机 960×640，到达时间 3 s 的那一版，锚点前 2.9 s 到后 1.9 s 共 49 帧（10 Hz）。每段视频每行一个选项：左边整幅，右边是黄框处放大 2.5 倍，黄框每帧跟着插入物走、所有行用同一个框；底栏写相对锚点的时间。这里压成 5 帧每秒循环播放，全尺寸 10 帧每秒的 MP4 在 box 的 `runs/nq4/p3/ins_tools/<场景>/`。
 
-![行人插入，四条路](figs/p3/ins_opts_ped_p3_001.webp)
+![行人插入，四条路](../experiments/p3_ped_exam/figs/ins_opts_ped_p3_001.webp)
 
 p3_001 的行人，从上到下 (a)(b)(c)(c′)。看右栏脚下：(a) 腿下半截发虚、没影子；(b) 腿脚贴地、颜色和路面更接近，但接触阴影斑很淡；(c)(c′) 长出了鞋，脚下有一道朝左后方的投影，方向和场景里电线杆、车的影子一致，人也更清楚。
 
-![车辆插入，p3_001](figs/p3/ins_opts_veh_p3_001.webp)
+![车辆插入，p3_001](../experiments/p3_ped_exam/figs/ins_opts_veh_p3_001.webp)
 
 p3_001 的车辆，从上到下 (a)(c)(d)。(a) 是典型的「贴上去」：车身过亮、车底和路面之间没有暗部、轮子下缘发虚；(c) 车底有一整块阴影，车身亮度降到和场景里的真车一个水平，轮胎和车尾细节被重画干净。(d) 保住了车的形状和位置、跨帧也稳，但把白车整体染成了米黄色，车底仍然没有影子。
 
-![车辆插入，p3_000](figs/p3/ins_opts_veh_p3_000.webp)
+![车辆插入，p3_000](../experiments/p3_ped_exam/figs/ins_opts_veh_p3_000.webp)
 
 p3_000 的车辆，上 (a) 下 (c)。这一段 (a) 的资产自带了一块烘焙在高斯里的黑色地影（3DRealCar 资产底部那层暗高斯），看起来像一块黑毯子；(c) 把它变成一个柔和、贴合路面的影子，车身的脏污和破洞也被修掉了。
 

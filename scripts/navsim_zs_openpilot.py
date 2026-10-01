@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""openpilot zero-shot on NAVSIM (todos/2026-09-24-zeroshot-exam/navsim.md). Runs in envs/openpilot.
+"""openpilot zero-shot on NAVSIM (fc65452:todos/2026-09-24-zeroshot-exam/navsim.md). Runs in envs/openpilot.
 
   frames  CAM_F0 of the 4 history frames -> packed road/wide model frames, cached once per split as a uint8
           memmap (N, 4, 2, 6, 128, 256) that every model and variant reads
@@ -12,7 +12,7 @@
     $PY scripts/navsim_zs_openpilot.py run --split navtest --model cinque --desire none
 
   feat    the same rollout (desire none) for several models at once, also reading the `temporal` tap at t0: the
-          frozen feature of the NAVSIM thin heads (todos/2026-09-25-openpilot-openloop-comparison.md, G3). Splits with
+          frozen feature of the NAVSIM thin heads (fc65452:todos/2026-09-25-openpilot-openloop-comparison.md, G3). Splits with
           a `frames` cache read it; others (navtrain, ~100k tokens, a 160 GB cache) render CAM_F0 on the fly in a
           process pool. Chunks of 1000 tokens, claimed by --shard i/n, resumable:
           openpilot/<split>/feat/<model>/chunk_NNNN.npz (tokens, temporal, poses); `feat --merge` joins them.

@@ -1,9 +1,9 @@
 """Real-data transfer G0 and the shared YOLO26x-seg detections / 64-d embeddings of this round
-(todos/2026-09-26-real-data-transfer.md, G0 and deviation-log entries [G0], written before any G0 number).
+(fc65452:todos/2026-09-26-real-data-transfer.md, G0 and deviation-log entries [G0], written before any G0 number).
 
   lists     image lists of every frame set (current frame x front / front_left / front_right), interleaved by set
             priority into disjoint slices, one per detector process
-  (detect)  scripts/real_g0_detect.sh: jevdrive.fastperc detect on each slice, E5's detector config unchanged
+  (detect)  experiments/real_transfer/archive/real_g0_detect.sh: jevdrive.fastperc detect on each slice, E5's detector config unchanged
   embed     detections -> flat-ground BEV with each frame's own calibration -> agent-legal corridor -> E5's k = 8
             embedding (64 dims) per frame set, plus READY markers; see HANDOFF.md in the output root
   students  E5's students refitted with the E5 code (checked against the stored run), weights and CARLA statistics
@@ -696,7 +696,7 @@ def run_i3(rl):
     rl.info("I3 student deltas written")
 
 
-def figs(res_dir="research/results/real-data-transfer/g0", out_dir="research/figs"):
+def figs(res_dir="experiments/real_transfer/results/g0", out_dir="research/figs"):
     """WOD RFS delta per cluster, NAVSIM PDMS delta per group, straight / pedestrian activation; students A / B x models,
     seed 0 with CI and seeds 1-2 as crosses."""
     import matplotlib.pyplot as plt

@@ -3,7 +3,7 @@
     r = paired(score_a, score_b, groups=log_ids)       # dict: n, units, mean, lo, hi, n_boot, seed, alpha
     write_table([dict(arm="A-B", **r)], run.path("results"))   # results.csv + results.md
 
-Default = the repo's dominant convention (jevdrive/nq3_cl_report.py boot_mean, tfv6_rules.boot_paired): percentile
+Default = the repo's dominant convention (experiments/night_queue_3/lib/nq3_cl_report.py boot_mean, tfv6_rules.boot_paired): percentile
 CI of the mean over B = 10000 resamples of units, `default_rng(0).integers(0, n, (B, n))`, linear interpolation. With
 `groups` it is the cluster bootstrap of jevdrive/traj.py boot_ci (resample clusters, ratio of sums), bit-compatible
 with it for the same B / seed. Resample independent units: scenes / logs / routes, not frames of one sequence.

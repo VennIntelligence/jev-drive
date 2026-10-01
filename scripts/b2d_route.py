@@ -185,7 +185,7 @@ def main():
                       sensor_tick=a.decimate > 1 or os.environ.get("B2D_SENSOR_TICK") == "1",
                       cache_lights=a.cache_lights)
     if os.environ.get("B2D_PHASES") == "1" or os.environ.get("B2D_REUSE_MAP") == "1":
-        import b2d_mapreuse   # setup phase timings / same-map world reuse (todos/2026-09-29-carla-rewind.md)
+        import b2d_mapreuse   # setup phase timings / same-map world reuse (fc65452:todos/2026-09-29-carla-rewind.md)
         b2d_mapreuse.install(a.out, reuse=os.environ.get("B2D_REUSE_MAP") == "1")
     if os.environ.get("B2D_RESEED_AFTER_BUILD") == "1":
         b2d_hooks.reseed_after_build(a.tm_seed)

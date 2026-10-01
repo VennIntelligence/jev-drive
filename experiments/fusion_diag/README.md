@@ -1,0 +1,29 @@
+# fusion_diag: Qwen x openpilot complementarity, SAM 3.1
+
+status: concluded
+decisions: 43
+index: Qwen+openpilot complementary under paired-diff; SAM gate flips 29.2%
+
+**Question.** Are Qwen and openpilot complementary, and can SAM 3.1 give a hazard state?
+
+**Conclusion.** Redundant under imitation, complementary under paired-difference training (decisions 43). SAM pedestrian recall 0.49 (0.88 within 20 m); rule gate flips 29.2% vs learned 43%.
+
+**Read more.** experiments/fusion_diag/results/, research/behavior-layer-instruments.md, `git show bcbdde4:todos/2026-09-25-fusion-diagnostics.md`
+
+<!-- files:begin -->
+## Files
+
+- `fusion_q4.py` (jevdrive): how much SAM 3.1 sees, and how well its …
+- `sam_detect.py` (jevdrive): SAM 3.1 open-vocabulary detection over …
+- `fusion_diag.py` (jevdrive): Fusion diagnostics, stage 0
+- `fusion_q1.py` (archive): Q1 of the fusion diagnostics
+- `fusion_q2b.py` (jevdrive): on WOD's longitudinal loss frames, is …
+- `fusion_q4c.py` (archive): openpilot's own lead output on the P5 …
+- `fusion_q6sam.py` (archive): the three rule gates of Q6 on SAM 3.1's …
+- `fusion_q8.py` (archive): the reaction window per P5 family …
+- `fusion_q9b.py` (archive): can a spatial-token readout rescue …
+- `fusion_figs.py` (archive): Figures for the fusion diagnostics …
+- `fd_sam_chain.sh` (archive): the SAM 3.1 batch over the three image …
+
+[archive/](archive/) 11 one-off code · [results/](results/) 110 result files · [figs/](figs/) 4 figures
+<!-- files:end -->

@@ -1,5 +1,5 @@
 """P5 v0: counterfactual scenario pairs in CARLA and an open-loop exam on them
-(todos/2026-09-24-p5-carla-pairs-v0.md).
+(fc65452:todos/2026-09-24-p5-carla-pairs-v0.md).
 
   build     write the variant route XML (x+ as is, x- with the hazard actors suppressed (HardBreakRoute: its
             brake command; Light: red swapped for green), a weather-only null) and the case table; each variant is
@@ -20,7 +20,7 @@ from .common import data_dir, get_logger
 
 log = get_logger(__name__)
 REPO = Path(__file__).resolve().parents[1]
-RESULTS = REPO / "research" / "results" / "p5-carla-pairs"
+RESULTS = REPO / "experiments/reactivity/results/p5-carla-pairs"
 B2D_XML = "third_party/Bench2Drive/leaderboard/data/bench2drive220.xml"
 RED, GREEN = "VanillaSignalizedTurnEncounterRedLight", "VanillaSignalizedTurnEncounterGreenLight"
 FAMILIES = ("PedestrianCrossing", "DynamicObjectCrossing", "VehicleTurningRoutePedestrian",
@@ -243,7 +243,7 @@ def factor_visibility(A: dict, B: dict, family: str) -> dict:
 
 # ---------------------------------------------------------------- pairs, observation frames, labels
 
-INTENT_LOOKAHEAD_M = 15.0                   # P4's calibration (research/results/p4-carla-gap/intent_lookahead.csv)
+INTENT_LOOKAHEAD_M = 15.0                   # P4's calibration (experiments/prediag/results/p4-carla-gap/intent_lookahead.csv)
 NULL_WINDOW_S = 6.0                         # null frames when the seed-0 pair has no observation frame (fallback)
 TFV6_SPEEDS = np.array([0.0, 4.0, 8.0, 10.0, 13.88888888, 16.0, 17.77777777, 20.0])
 

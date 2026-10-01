@@ -1,6 +1,6 @@
-"""P4: can a head trained on Waymo features read CARLA frames? (todos/2026-09-23-p4-carla-feature-gap.md)
+"""P4: can a head trained on Waymo features read CARLA frames? (fc65452:todos/2026-09-23-p4-carla-feature-gap.md)
 
-  routes    freeze the Bench2Drive route list the generator drives (research/results/p4-carla-gap/routes.csv)
+  routes    freeze the Bench2Drive route list the generator drives (experiments/prediag/results/p4-carla-gap/routes.csv)
   index     turn the generator's per-route logs into WOD-E2E-shaped rows: 3 cameras x 4-frame clip at 0.2 s,
             16-step past (pos / vel / acc) and 20-step future in the current rear-axle frame, intent, weather
   extract   Qwen3-VL-4B native-video features over those clips with P3(d'')'s exact extractor, after a
@@ -28,7 +28,7 @@ from .common import data_dir, get_logger
 
 log = get_logger(__name__)
 REPO = Path(__file__).resolve().parents[1]
-RESULTS = REPO / "research" / "results" / "p4-carla-gap"
+RESULTS = REPO / "experiments/prediag/results/p4-carla-gap"
 B2D_XML = "third_party/Bench2Drive/leaderboard/data/bench2drive220.xml"
 REAR_AXLE_X = -1.388633220
 TICK = 0.05

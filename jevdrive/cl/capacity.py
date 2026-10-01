@@ -12,7 +12,7 @@ from .profiles import Profile
 
 # Threads of one CARLA 0.9.15 server with reduced pools (4 each) at an affinity of C cores. UE4 sizes its TaskGraph and
 # PoolThread pools from the affinity mask, so the count follows the slice. Measured: 8 / 16 / 32 cores 2026-09-27
-# (scripts/carla_threads.py), 24 / 128 cores in the G lane 2026-09-28 (docs/carla.md), 25 cores 2026-10-01 (this lane).
+# (experiments/cl_infra/archive/carla_threads.py), 24 / 128 cores in the G lane 2026-09-28 (docs/carla.md), 25 cores 2026-10-01 (this lane).
 REDUCED_SERVER_THREADS = ((8, 69), (16, 109), (24, 149), (25, 154), (32, 169), (128, 263))
 # Route client: ~21 threads of its own plus carla.Client's worker threads (29 at --client-threads 8, ~215 at the default
 # on the 208-thread host, 2026-09-27). An agent adds its own (SimLingo ~40 more; PDM-Lite measured 2026-10-01).

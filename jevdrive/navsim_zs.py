@@ -1,7 +1,7 @@
-"""NAVSIM zero-shot exam of open driving models (todos/2026-09-24-zeroshot-exam/navsim.md).
+"""NAVSIM zero-shot exam of open driving models (fc65452:todos/2026-09-24-zeroshot-exam/navsim.md).
 
   index       per-token model inputs (4 history frames @2 Hz: 8-camera paths + calibration, ego poses, velocity,
-              acceleration, driving command), written by scripts/navsim_zs_index.py in the devkit venv
+              acceleration, driving command), written by experiments/zeroshot_openloop/archive/navsim_zs_index.py in the devkit venv
   cameras     nuPlan pinhole + Brown distortion; rotation-only reprojection into Alpamayo's f-theta cameras
               (576x320 model images, rig from scripts/zeroshot_rigs.py, shared with the other exams) and into
               openpilot's narrow / wide model frames (nearest sampling of CAM_F0, as openpilot's own warp)

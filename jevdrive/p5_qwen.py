@@ -1,5 +1,5 @@
 """Qwen `L18_*` features for a P5 frame index, sharded across processes and cards (reactivity program, P5 v1:
-todos/2026-09-25-reactivity-program.md, extraction-profiling subsection).
+fc65452:todos/2026-09-25-reactivity-program.md, extraction-profiling subsection).
 
 The recipe is `p5_pairs.extract` unchanged: P3(d'')'s extractor (`waymo_qwenvid.make_fx`, eager), the same clip
 items (`p4_carla.ClipFiles`), the same chunk layout under processed/<P5_SET>/features/c<NNN>/, and the same batch

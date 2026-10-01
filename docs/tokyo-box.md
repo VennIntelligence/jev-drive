@@ -1,5 +1,28 @@
 # Tokyo box: the box with eyes
 
+**Summary.** Tokyo box = the machine with a monitor, for looking at CARLA (window, manual drive, screenshot,
+recording): `ssh ujs@100.108.238.8` (only user `ujs`; physically in Shanghai, clock JST). Ryzen 9 9950X, 60 GB,
+one RTX 3090 24 GB at CUDA index 0 / PCI 02:00.0; use CUDA index 0 directly and CARLA `-graphicsadapter=0`.
+Stock CARLA at `/data/third_party/carla/CARLA_0.9.15`, Bench2Drive branch 0.0.4 at `/data/third_party/Bench2Drive`,
+Python 3.8 env `/data/envs/carla`; DISPLAY=:0 needs XAUTHORITY from the Xwayland `-auth` arg. Network is Clash global
+mode (port 7890): git over SSH works only with the selector on DIRECT, pip via official PyPI through the proxy.
+Long runs go in tmux `jev`. Later sections are single-3090 windowed controller diagnostics, not GPU-box numbers;
+windowed timings must not be mixed with off-screen ones.
+
+**Sections.**
+- What it is - login, hardware table, paths
+- GPU selection (measured 2026-09-23) - one 3090, graphicsadapter mapping, UUID recheck
+- Looking at CARLA - windowed launch, screenshots, recording
+- Everything long runs in tmux - tmux sessions jev and dl
+- Network: Clash in global mode, and nodes that decay - selector, node benchmarks, git/pip routing
+- CARLA and Bench2Drive on this box - installs, runner command, map import, setup history
+- Official agents and single-window preview (2026-09-22 update) - TCP agent, viewer, preview, timings
+### Preview layout / preprocessing follow-up - viewer layout, parallel preprocessing check
+- Controller diagnostic campaign and server reuse (2026-09-22) - Dev10 controller runs, reuse
+### Reuse the process, keep recovery explicit - server reuse rules
+### Interpretation and validation traps found in this iteration - validation pitfalls
+### Controller feedback iteration: compass dropout and completed reuse audit - compass dropout, reuse audit
+
 Read this when you need to **see** CARLA rather than measure it: a window on a real monitor, a
 manual drive, a screenshot or a screen recording of a route. It also hosts the explicitly
 scoped controller diagnostics below. Keep their single-3090, windowed measurements separate
@@ -47,7 +70,7 @@ recheck the process UUID after driver or Vulkan changes with
 The former two-card notes described the removed 580.159.03 setup. They no longer describe this host.
 The running kernel module and userspace both report 580.173.02; ordinary `nvidia-smi` and PyTorch
 work. The old private userspace directory is retained for its historical evidence only and must not
-be sourced by current launch scripts. See [the recovery record](../todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/README.md).
+be sourced by current launch scripts. See [the recovery record](../experiments/b2d_controller/results/lateral-followup/diagnostics/driver-recovery/README.md).
 
 ## Looking at CARLA
 
@@ -254,7 +277,7 @@ The learned policy is official Bench2DriveZoo `tcp/admlp` commit
 Set `IS_BENCH2DRIVE=1`, `PLANNER_TYPE=only_traj`,
 `TORCH_HOME=/data/models/torch`, and
 `PYTHONPATH=/data/third_party/Bench2DriveZoo:/data/third_party/Bench2DriveZoo/TCP`.
-Pass `--agent scripts/b2d_tcp_visual_agent.py --agent-config <checkpoint>` and
+Pass `--agent experiments/b2d_tcp/archive/b2d_tcp_visual_agent.py --agent-config <checkpoint>` and
 `--python /data/envs/b2d-tcp/bin/python` to the windowed runner. Set `SAVE_PATH` to a
 run-local directory (the official validator uses this to allow debug-camera extrinsics),
 and `B2D_PREVIEW_DIR=<run>/live`. The wrapper suppresses official per-frame PNG dumps.
@@ -320,7 +343,7 @@ The first frozen Dev10 controller comparison is complete under
 `/data/runs/b2d/controller/dev10/`: CARLA/TCP/pursuit, seed0, ten official routes each,
 31 attempts including one infrastructure retry. Each preset completed 9/10 driving routes;
 all evaluator-returned runs remain distinct from official driving outcomes. Source and
-validation details are in the [article notes](../todos/2026-09-22-b2d-controller/article-notes.md),
+validation details are in the [article notes](../experiments/b2d_controller/results/b2d-controller/article-notes.md),
 with [cost decomposition](bench2drive-cost.md#tokyo-controller-diagnostic-complete-dev10-seed0-2026-09-22)
 and failure evidence (GPU box: `$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/failure-analysis.json`).
 
@@ -399,4 +422,4 @@ provenance limits are indexed by the article notes.
 
 The later v4 smoke reproduced a single nonfinite IMU compass value at simulation time 9.10 s while GNSS, gyro and speed remained finite. Log raw motion before pose validation. The initialized filter now predicts heading from the gyro for at most 0.2 s, records degraded observations, and skips compass correction; an uninitialized or longer dropout brakes and resets history. A fresh valid pose forces a new trajectory. The recovery smoke completed 100%, and 126 regression tests passed. This is bounded sensor recovery, not simulator-truth substitution.
 
-The completed v4 campaign reused its server across all six groups and restarted only after three recorded rc139 failures. All failed attempts remain archived. This observation still does not establish a fixed safe process lifetime. Its 11 official TickRuntime failures all had contact before prolonged low speed; zero official blocked/deviation events must not be reported as zero real stalls, and ego-only logs do not establish collision responsibility. See the [final report](../todos/2026-09-22-b2d-controller/final-report.md) for the 60 selected records, 63 attempts and all intermediate evidence.
+The completed v4 campaign reused its server across all six groups and restarted only after three recorded rc139 failures. All failed attempts remain archived. This observation still does not establish a fixed safe process lifetime. Its 11 official TickRuntime failures all had contact before prolonged low speed; zero official blocked/deviation events must not be reported as zero real stalls, and ego-only logs do not establish collision responsibility. See the [final report](../experiments/b2d_controller/results/b2d-controller/final-report.md) for the 60 selected records, 63 attempts and all intermediate evidence.

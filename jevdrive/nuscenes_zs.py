@@ -1,4 +1,4 @@
-"""nuScenes open-loop planning zero-shot exam (todos/2026-09-24-zeroshot-exam/nuscenes-physicalai.md).
+"""nuScenes open-loop planning zero-shot exam (fc65452:todos/2026-09-24-zeroshot-exam/nuscenes-physicalai.md).
 
   index     val keyframes with 6 future keyframes in the same scene (the UniAD/VAD "valid" samples), with the GT
             future of the LIDAR_TOP point in the t0 ego frame, future agent boxes, the VAD driving command, and per
@@ -35,7 +35,7 @@ def root(*parts) -> Path:
 
 def index_path(name: str = "val") -> Path:
     """"val": the exam's index (val scenes, every camera, GT boxes). "trainval": train + val scenes, CAM_FRONT and
-    poses only, for the frozen-feature replication of decisions 40 (jevdrive/nusc_ladder.py)."""
+    poses only, for the frozen-feature replication of decisions 40 (experiments/driving_backbones/archive/nusc_ladder.py)."""
     return data_dir() / "processed" / "nusc_zs" / f"{name}_index.pkl"
 
 

@@ -2,7 +2,7 @@
 
 这份文档是为约 10-09 的中期汇报（向领导汇报，争取下一阶段经费）做的成果盘点：现在手上有什么、哪些拿得出手、故事还缺什么、哪些条目经不起追问。
 来源是 [decisions.md](decisions.md) 全部条目（第 1–59 条，含 3b / 3c / 3d，另有第 8–10 条编号重复，见第 6 节）、[README.md](../README.md) 索引里的文档，
-以及它们引用的 `todos/`、`research/results/`。排期依据 [tmp/2026-09-29-midterm-plan.md](../tmp/2026-09-29-midterm-plan.md)（D0–D10）。
+以及它们引用的计划（已删，`git show bcbdde4:todos/<文件>`）和结果表（`experiments/<主题>/results/`）。排期依据 [tmp/2026-09-29-midterm-plan.md](../tmp/2026-09-29-midterm-plan.md)（D0–D10）。
 没有跑任何实验，没有动 box；所有数字抄自 decisions 和它引用的结果表，个别「推算」处已标明。
 
 论文主线是「trick or trade」：在工业数据上训练的模型（openpilot、V-JEPA）轻度适配，比为榜单调过的模型更能开；要把「分数」和「能力」分开量。

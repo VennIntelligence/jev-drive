@@ -77,7 +77,7 @@ CARLA（开源驾驶模拟器）只做两件事：提供让世界模型学到正
 | e2e 去掉 20 s 兜底放行 | DS 36.4，5 / 10 blocked | 10 条 | e2e 的 41 次放行里 24 次靠兜底，即靠「驾驶员」 | 第 57 条诊断 (b) |
 | acc（只接 lead 头的 IDM） | 两次运行 58.2 / 62.9，对 base +1.6 / +6.3 | 10 条 | 同配置两次运行在**一条路线上差 47 DS** | 第 57 条 |
 | switch / oplat（openpilot 横向驾驶） | 26.1 / 8.5，对 base −30.5 [−42.6, −19.1] / −48.1 | 10 条 | 7 / 10 出车道；复盘见 1.2 | 第 57 条、[integration 文档](openpilot-closedloop-integration.md) |
-| HUGSIM 零样本 | **没有计分运行**；只有 4 Hz 帧率代价与适配清单 | — | 预登记在 [todos/2026-09-25-hugsim-exam/README.md](../todos/2026-09-25-hugsim-exam/README.md)，64 场景计分未跑 | — |
+| HUGSIM 零样本 | **没有计分运行**；只有 4 Hz 帧率代价与适配清单 | — | 预登记在 [experiments/hugsim/results/hugsim-exam-plan/README.md](../experiments/hugsim/results/hugsim-exam-plan/README.md)，64 场景计分未跑 | — |
 | Alpamayo 1.5（对照模型）B2D | DS 60.8，SR 2 / 5 | n = 5，1 seed | 全量停在 17 / 220 | 第 33 条 |
 
 一句话：**闭环里至今没有一个 openpilot 的数字同时满足「CI 不跨零」和「不能用开得慢解释」**，HUGSIM 一列是空的。
@@ -119,7 +119,7 @@ CARLA（开源驾驶模拟器）只做两件事：提供让世界模型学到正
 
 ### 1.3 D2–D10 的计划与可能结局
 
-计划（已登记，[todos/2026-09-29-op-drive.md](../todos/2026-09-29-op-drive.md)，09-29 登记于任何新数字之前，smoke 已起，dev 结果未出）：
+计划（已登记，[fc65452:todos/2026-09-29-op-drive.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-op-drive.md)，09-29 登记于任何新数字之前，smoke 已起，dev 结果未出）：
 openpilot 在路线的 lane-follow 段开横向（两种执行：P7 跟 plan 路径 / openpilot action 头的 desired curvature 直接转 steer），路口、变道区与分歧兜底（15 m 处偏离路线 > 1.0 m）交给路线几何；
 纵向 = min(设定速度 8 m/s 与曲率限速, lead 头 IDM, plan)；停车锁存只在 openpilot 自己要求停时触发，放行靠 plan、前车离开或驾驶员 resume（静止 5 s）；低速滑行修掉 CARLA 轻刹即刹停。
 对照：dbase、同均速 dbaseslow、只换纵向的 dlon。成功线 S1–S4（dev 10 条 × 2 seed，路线内对 seed 平均后配对）：S1 均值赢 dbase 且好路线数 ≥ 差路线数；S2 均值赢 dbaseslow 且违规总数更少；
@@ -233,7 +233,7 @@ B 的算力很小（0.07 GPU·h / 10 万样本），瓶颈是监督信号。inve
 | F4 | 把配对差分从「加 head」换成「对 plan 输出做配对差分」（监督 openpilot 自己的 plan 在 x⁺ / x⁻ 之间的差，目标是 expert 的减速差），蒸馏照旧压正常帧 | 同 F3 的量级；需要写一个 plan 层面的 loss | 目标来自 BehaviorAgent，可能让 plan 在真实数据上过度保守 | P5 行为翻转 ≥ null + 10 pp（两种画面），真实正常帧漂移 ≤ 0.10 m，NAVSIM / WOD 不降（CI 上界 ≤ +2% ADE） |
 | F5 | 特征对齐（domain-adversarial，Ganin & Lempitsky 2015；或 MMD）：在 stage 4 上加 CARLA / real 判别器的反向梯度 | 小；1–2 天实现 | 对齐可能抹掉行人信号；第 44 条 E1 显示「标准化到目标统计量」只减半损害 | 域分类 AUC 从 1.0 降到 < 0.7 且 real 行人 AUC 不降 |
 | F6 | 中间表示抽象（Müller et al., CoRL 2018 "Driving Policy Transfer via Modularity and Abstraction" 的思路）：行人反应走检测 token（YOLO image-plane token 已在 P5 上 48–57%），openpilot 只管 R 层 | 已有 student；缺真实数据上的正例 | 第 44 条 G0：student 零样本到真实仍有害（小）；G3：读得出编辑但修正无用 | 真实数据上 student + gate 的 NAVSIM 行人组 PDMS Δ CI 下界 > 0 |
-| F7 | CARLA 行人剂量-反应考卷（dose-response：距离 = 车速 × TTC 2 / 3 / 4.5 s，横向位置 × 行人状态 × 本车状态；必须反应格与无威胁格分开计分），原始 CARLA 与 Cosmos 两种画面各考一遍 | 用户已同意方向（[todo](../todos/2026-09-28-ped-dose-response.md)），GPU 6 空出后才搭；约 1–2 天 + CARLA 渲染 | 与 Cosmos 训练对必须严格分场景 | 作为行为层面的 sim 量具；不是修复本身 |
+| F7 | CARLA 行人剂量-反应考卷（dose-response：距离 = 车速 × TTC 2 / 3 / 4.5 s，横向位置 × 行人状态 × 本车状态；必须反应格与无威胁格分开计分），原始 CARLA 与 Cosmos 两种画面各考一遍 | 用户已同意方向（[todo](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-28-ped-dose-response.md)），GPU 6 空出后才搭；约 1–2 天 + CARLA 渲染 | 与 Cosmos 训练对必须严格分场景 | 作为行为层面的 sim 量具；不是修复本身 |
 
 **倾向**：F1 → F2 → F3，F4 视 F3 的行为读数决定；F5、F6 放到中期之后。F1 最便宜、信息量最大：它决定验收原则里「sim」的定义，也直接影响缺口一（H2）和缺口三（世界模型只见过原始 CARLA latent）。
 

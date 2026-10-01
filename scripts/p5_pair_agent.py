@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """P5 pair recorder: a privileged BehaviorAgent drives one world of a counterfactual pair while we record
-everything the exam needs (todos/2026-09-24-p5-carla-pairs-v0.md).
+everything the exam needs (fc65452:todos/2026-09-24-p5-carla-pairs-v0.md).
 
 Loaded by the leaderboard through `scripts/b2d_run.py --agent scripts/p5_pair_agent.py --agent-config <json>
 --python $DATA_DIR/envs/scout-tfv6/bin/python`. It IS TFv6's `SensorAgent` (LEAD cvpr2026), so the leaderboard
@@ -9,7 +9,7 @@ accumulation, JPEG round trip, ensemble forward - and its control is thrown away
 driven by a privileged expert, config key "driver":
 
   behavior   CARLA's BehaviorAgent(normal), exactly as in P4 and P5 v0 (the default)
-  pdm_lite   PDM-Lite (P5 v1, todos/2026-09-25-reactivity-program/i1-p5v1.md): SimLingo's Bench2Drive copy,
+  pdm_lite   PDM-Lite (P5 v1, fc65452:todos/2026-09-25-reactivity-program/i1-p5v1.md): SimLingo's Bench2Drive copy,
              leaderboard/team_code/autopilot.py, run as shipped. It needs that tree (BENCH2DRIVE_ROOT, for its
              CarlaDataProvider.active_scenarios bookkeeping) and IS_BENCH2DRIVE=1; its steering noise draws from its
              own numpy stream seeded by the TM seed, so both worlds of a pair draw the same noise.
@@ -27,12 +27,12 @@ Outputs, in the attempt directory B2D_ATTEMPT_OUT:
                   view of the Waymo front image, i.e. what the camera actually sees of it
   tfv6.jsonl      per tick: TFv6 target-speed distribution and scalar, 8 waypoints, 10 route points
 
-P6 (todos/2026-09-26-night-queue-2.md N1) adds three switches, all off by default so P5 outputs are unchanged:
+P6 (fc65452:todos/2026-09-26-night-queue-2.md N1) adds three switches, all off by default so P5 outputs are unchanged:
 record_props (static props, e.g. cones and warning signs, go into actors.npz and the visibility count like vehicles),
 frames.jsonl "reg" with driver pdm_lite (PDM-Lite's CarlaDataProvider.active_scenarios entries, actors as ids), and
 pass_stop_s (stop that long after the ego has passed every scenario actor listed in hidden.json that was ever ahead of
 it by pass_margin_m, so a finished bypass does not record 40 s of empty road).
-Cosmos full run (todos/2026-09-28-cosmos-pilot.md, "full"): rig=false drops the three Waymo cameras (a speedometer
+Cosmos full run (fc65452:todos/2026-09-28-cosmos-pilot.md, "full"): rig=false drops the three Waymo cameras (a speedometer
 stands in; frames.jsonl keeps the visibility counts of the segmentation view, with no JPEGs).
   cams/<cam>/<frame>.jpg   the three Waymo-calibrated cameras of P4, unchanged
 

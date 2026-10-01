@@ -7,7 +7,7 @@ Output: throttle, CARLA steer (right positive), brake. Yaw rate is left positive
 Opt-in pursuit plant corrections (defaults off; off is bit-identical to the frozen controller):
   pursuit_frame='rear_slip'  pursue along the rear-axle velocity, estimated from sensors only as
                              beta = atan((v + 1 m/s) * yaw_rate / (c g)), the PhysX linear-tyre
-                             rear sideslip (todos/2026-09-23-controller-next/lateral-physics.md);
+                             rear sideslip (experiments/b2d_controller/results/controller-next/lateral-physics.md);
   steer_inverse='ackermann'  PhysX (Ackermann accuracy 1) applies the nominal angle to the inner
                              wheel; command cot(inner) = cot(centre) - w/(2L), centre = atan(L * kappa).
 Default geometry: stock Lincoln measured 2026-09-22, Town10HD, CARLA 0.9.15.

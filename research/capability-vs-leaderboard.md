@@ -34,10 +34,10 @@ TFv6（Bench2Drive DS 约 95）有两个输出通道：
 
 | 测量 | 回答 | todo |
 |---|---|---|
-| 榜单 hack 审计 | 高分里有多少来自针对榜单的配方，这些配方都是什么 | [2026-09-24-hack-audit](../todos/2026-09-24-hack-audit/README.md) |
-| zero-shot 考试（2026-09-24 时进行中，同事负责；结果见文末） | 真实世界模型不训练、原样进 B2D / NAVSIM / WOD-E2E 能拿多少分；它的 rig 和接法是其他测量的前提 | [2026-09-24-zeroshot-exam](../todos/2026-09-24-zeroshot-exam/bench2drive.md) |
-| R 层测量 | routine 能力的排序是否等于榜单排序；TFv6 的分数里接口、规则、网络各占多少 | [2026-09-24-r-layer-routine](../todos/2026-09-24-r-layer-routine.md) |
-| E 层测量（P5 v1） | 谁在突发事件时反应的方向和方式都对 | [2026-09-24-p5-v1-e-layer](../todos/2026-09-24-p5-v1-e-layer.md) |
+| 榜单 hack 审计 | 高分里有多少来自针对榜单的配方，这些配方都是什么 | [2026-09-24-hack-audit](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-hack-audit/README.md) |
+| zero-shot 考试（2026-09-24 时进行中，同事负责；结果见文末） | 真实世界模型不训练、原样进 B2D / NAVSIM / WOD-E2E 能拿多少分；它的 rig 和接法是其他测量的前提 | [2026-09-24-zeroshot-exam](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-zeroshot-exam/bench2drive.md) |
+| R 层测量 | routine 能力的排序是否等于榜单排序；TFv6 的分数里接口、规则、网络各占多少 | [2026-09-24-r-layer-routine](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-r-layer-routine.md) |
+| E 层测量（P5 v1） | 谁在突发事件时反应的方向和方式都对 | [2026-09-24-p5-v1-e-layer](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-p5-v1-e-layer.md) |
 
 四项合起来给出一张三轴图：榜单分 × R 层 × E 层。
 
@@ -57,9 +57,9 @@ TFv6（Bench2Drive DS 约 95）有两个输出通道：
 ## 结果
 
 - **榜单 hack 审计**（两轮只读材料的综合判读，2026-09-24）：见 [leaderboard-vs-ability.md](leaderboard-vs-ability.md)，45 个遗留问题的逐条回应在
-  [synthesis_answers.md](results/leaderboard-text-analysis/synthesis_answers.md)。一句话：三类榜单三种增益构成（nuScenes = ego prior，NAVSIM v2 = EPDMS 代理评分器，
+  [synthesis_answers.md](../experiments/leaderboard_audit/results/leaderboard-text-analysis/synthesis_answers.md)。一句话：三类榜单三种增益构成（nuScenes = ego prior，NAVSIM v2 = EPDMS 代理评分器，
   Bench2Drive = 真能力 + 接口 + 规则）；能归到 E 层的增益全表只有四条，全在闭环或反应式协议上；上面"R 层配方不稀缺、E 层稀缺"的判断成立（decisions 第 35 条，待定）。
 - zero-shot 考试：闭环见 decisions 第 33 条（Alpamayo 1.5 能开，openpilot 的 smoke 分数作废），开环见第 34（WOD-E2E）、37（NAVSIM）、39（nuScenes / PhysicalAI-AV）条。
-- R 层测量：[r-layer-routine](../todos/2026-09-24-r-layer-routine.md) 停在 draft，没有单独跑；相关读数在第 38 条（B2D 榜首的总分差在评测噪声以内）与第 41 条（控制器）。
-- E 层测量：P5 v1 的结果在第 42 条（执行计划是 [i1-p5v1](../todos/2026-09-25-reactivity-program/i1-p5v1.md)，不是上表的 draft），第 48 条补了 V-JEPA 2 等其他冻结特征。
+- R 层测量：[r-layer-routine](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-r-layer-routine.md) 停在 draft，没有单独跑；相关读数在第 38 条（B2D 榜首的总分差在评测噪声以内）与第 41 条（控制器）。
+- E 层测量：P5 v1 的结果在第 42 条（执行计划是 [i1-p5v1](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-25-reactivity-program/i1-p5v1.md)，不是上表的 draft），第 48 条补了 V-JEPA 2 等其他冻结特征。
 （2026-09-28 更正：这一行原写「待填」。）

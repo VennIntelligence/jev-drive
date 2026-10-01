@@ -2,7 +2,7 @@
 
 Read this before you score any model in closed loop (Bench2Drive / CARLA or HUGSIM): it says which parts of the
 stack are accepted, which are not, and what a closed-loop score can and cannot be attributed to.
-Working notes, pre-registrations and every table: [todos/2026-09-25-closed-loop-infra-acceptance.md](../todos/2026-09-25-closed-loop-infra-acceptance.md).
+Working notes, pre-registrations and every table: [fc65452:todos/2026-09-25-closed-loop-infra-acceptance.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-25-closed-loop-infra-acceptance.md).
 
 ## Verdict (2026-09-25)
 
@@ -20,7 +20,7 @@ Working notes, pre-registrations and every table: [todos/2026-09-25-closed-loop-
 (`b2d_zeroshot_agent.py` `"replay"`) at the exam's camera rig, plan cadence and controller settings, with the pose from the
 agent's own sensor filter. The replayed plan is the expert's track from the car's projected position at the expert's pace,
 waiting as long as the expert waited (`_replay_path`). 20 pre-registered routes, TM seed 0, all arms in the same tree
-(`scripts/infra_ctl_accept.sh`, scored by `scripts/infra_ctl_score.py`). Pass (pre-registered): cross-track to the expert
+(`experiments/cl_infra/archive/infra_ctl_accept.sh`, scored by `experiments/cl_infra/archive/infra_ctl_score.py`). Pass (pre-registered): cross-track to the expert
 path median <= 0.3 m and p95 <= 1 m; |along-track lag| median <= 2 m and p95 <= 8 m; lateral execution ratio (driven /
 planned lateral offset 2 s after a plan, the Alpamayo diagnosis metric) >= 0.7; mean DS >= expert - 5; no route stuck that
 the expert completed. The expert run twice differs by 0.26 DS per route on average.
@@ -56,10 +56,10 @@ the expert completed. The expert run twice differs by 0.26 DS per route on avera
 `"replay_plan": "time"`): s(t) = s_e(τ + t) − (s_e(τ) − s0)·e^(−t/2 s), clipped to s >= s0 and non-decreasing, so it never
 freezes and never jumps ahead of the car. (2) P5, the final longitudinal redesign of the tfv6-controller work (on the D
 lateral; decision 41), runs in the exam agent as is (`controller_preset: "pursuit"`, `P5.json`; its pose-adapter key goes
-to the PoseFilter exactly as in the L1 harness; `scripts/test_infra_ctl_p5.py` shows bit-identical controls to
+to the PoseFilter exactly as in the L1 harness; `experiments/cl_infra/archive/test_infra_ctl_p5.py` shows bit-identical controls to
 `pursuit_from_config`). The fixed tracker was re-run under the new replay as the paired reference (f2t). Expert runs
 reused, criteria unchanged (A4 threshold 90.5), pre-registered before any run
-([todo](../todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md), commit 06f18d1).
+([todo](../experiments/cl_infra/results/closed-loop-infra-acceptance/b2d-controllers-p5.md), commit 06f18d1).
 
 | Controller (plan cadence) | DS (expert 95.5) | ΔDS vs expert [95% CI] | ΔDS vs f2t | completed / 20 | stuck | collisions (routes the expert did not) | cross-track p95 | lag (signed e_lon median) | lateral ratio | verdict |
 |---|---:|---|---|---:|---:|---|---:|---:|---:|---|
@@ -71,7 +71,7 @@ reused, criteria unchanged (A4 threshold 90.5), pre-registered before any run
 - **Lateral is solved** at all three cadences (cross-track p95 0.11-0.17 m vs 0.55 m for the fixed tracker; the fixed
   tracker's 5 Hz collapse of the first run does not happen with P5).
 - **Longitudinal is what fails** (A2 median 2.6-3.3 m vs 2 m; DS 2.0-4.8 below 90.5). Measured in time
-  (`scripts/infra_ctl_lag.py`), every arm leaves every start ~0.5 s after the expert and then trails it by 0.3-0.4 s
+  (`experiments/cl_infra/archive/infra_ctl_lag.py`), every arm leaves every start ~0.5 s after the expert and then trails it by 0.3-0.4 s
   (median). The expert throttles at its first tick and moves ~0.5 s later; a controller that sees only the plan's
   positions starts accelerating only once the plan moves, and repeats the delay at every restart. P5 lags only 0.4-0.5 m
   less than the fixed tracker. This is the controller's launch feed-forward and the replay interface (positions only, no
@@ -89,7 +89,7 @@ reused, criteria unchanged (A4 threshold 90.5), pre-registered before any run
 Only these acceptance arms ran on the GPU box; P7's registered L1 and TFv6 / TCP closed loop run on the Tokyo box.
 P6 = P5 + terminal approach only for plan periods >= 0.2 s (so identical to P5 at 1 / 2 / 5 Hz); P7 = P6 + positive
 acceleration request capped at 2.0 m/s². Pre-registered before the runs (commit d9c7640,
-[todo](../todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p7.md)); 120/120 routes on the first attempt.
+[todo](../experiments/cl_infra/results/closed-loop-infra-acceptance/b2d-controllers-p7.md)); 120/120 routes on the first attempt.
 
 | Controller (plan cadence) | DS (expert 95.5) | ΔDS vs expert [95% CI] | collisions (routes the expert did not) | cross-track p95 | lag (signed e_lon median) | time lag (median) | lateral ratio | verdict |
 |---|---:|---|---|---:|---:|---:|---:|---|
@@ -160,7 +160,7 @@ low-rate VLA planners.)
 
 1. B2D: drop Zoo PID (and P1 / P2). P5 is the best candidate (lateral accepted at 1 / 2 / 5 Hz), but no controller has
    passed: its launch / restart lag (~0.5 s) must be fixed or explained before a B2D score can be attributed to a model
-   (`scripts/infra_ctl_accept.sh v2 <gpu> <arm>:<index> ...`, ~1.5 h for four arms on one card). Use a controller only at
+   (`experiments/cl_infra/archive/infra_ctl_accept.sh v2 <gpu> <arm>:<index> ...`, ~1.5 h for four arms on one card). Use a controller only at
    the plan cadence it was accepted at.
 2. Done: the replay is time-indexed with smooth catch-up (`"replay_plan": "time"`); use it for every further run.
 3. HUGSIM: run every model under **both** the official controller and fixed2 (`zs_run.py --controller fixed2`) and

@@ -42,10 +42,10 @@ Run on the configured Tokyo host, from the repository root:
 ```bash
 scripts/tmux_run.sh tcp-comparison-new env \
   DATA_DIR=/data DISPLAY=:0 \
-  /data/envs/carla/bin/python scripts/b2d_tcp_campaign.py \
+  /data/envs/carla/bin/python experiments/b2d_tcp/archive/b2d_tcp_campaign.py \
   --out /data/runs/b2d/tcp-controller/a-new-exclusive-directory \
   --server-index 110 \
-  --protocol todos/2026-09-23-tcp-controller/protocol-v2.md
+  --protocol experiments/b2d_tcp/results/tcp-controller/protocol-v2.md
 ```
 
 Choose an unused server index and a new output directory. The campaign owns a single CARLA process across paired routes and uses evaluator world resets; confirmed crashes use the existing runner recovery. It selects 24211, 1711 and 1773, each followed immediately by the other arm, with TM seed 0. These three centerlines are nearly straight and do not validate road-corner performance. Each attempt has a 600 s wall limit; infrastructure retries remain separate attempts and add wall cost. The official simulator-tick limit is still active. Frozen source/config hashes are checked before each group, so do not edit those files during the run.
@@ -54,7 +54,7 @@ The controller process uses `/data/envs/b2d-tcp`, while the campaign uses the CA
 
 Each attempt preserves `tcp-control.jsonl`, `tcp-setup.json`, `tcp-route-reference.json`, official results, criterion event frames and runner logs. Telemetry includes raw sensors and frame IDs, model-input image hashes, raw predictions, metadata, both control alternatives, official-tail and selected commands, integral state, independent world motion, previously applied control and nearby actors. VehicleControl stores values as float32; small differences from Python PID values must be assessed with that storage precision, not classified as lateral changes. Numeric traces support plots; RGB streams/video are not automatically recorded.
 
-Use the [shared experiment directory](../todos/2026-09-23-tcp-controller/README.md), [revised protocol](../todos/2026-09-23-tcp-controller/protocol-v2.md) and preserved analysis editions for results. Full-route completion/safety, speed error, physical acceleration/jerk and turning behavior are separate observations. Long stalls can lower full-route averages, so retain per-phase, moving and contact-prefix diagnostics without replacing failed whole-route results. A low Driving Score is not required for uncomfortable motion, and a high score does not prove comfort.
+Use the [shared experiment directory](../experiments/b2d_tcp/results/tcp-controller/README.md), [revised protocol](../experiments/b2d_tcp/results/tcp-controller/protocol-v2.md) and preserved analysis editions for results. Full-route completion/safety, speed error, physical acceleration/jerk and turning behavior are separate observations. Long stalls can lower full-route averages, so retain per-phase, moving and contact-prefix diagnostics without replacing failed whole-route results. A low Driving Score is not required for uncomfortable motion, and a high score does not prove comfort.
 
 The revised six-case experiment is complete. Both arms completed 24211 and 1711 without collisions; both failed 1773 at 34.88% with one vehicle collision and the 4000-tick limit. PI reached its first contact earlier (21.05 versus 36.20 seconds from the first controlled tick) and remained at low speed longer. Route-equal full-run speed RMS was 2.692664 → 2.458681 m/s, longitudinal absolute-acceleration p95 6.055712 → 3.650913 m/s², and absolute-jerk p95 84.469272 → 45.054934 m/s³. Those averages satisfy the preregistered numerical signal for further investigation, but stalled time and differing model/world trajectories prevent a claim of overall driving or safety improvement. The first two completed pairs give the cleaner local behavior signal; neither arm cleared the obstacle case. The experiment does not qualify a default controller or a leaderboard score.
 

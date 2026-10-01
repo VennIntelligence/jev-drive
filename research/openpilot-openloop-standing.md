@@ -3,9 +3,9 @@
 2026-09-25。openpilot（comma.ai 的量产 L2 驾驶模型，这里用它的三个 open-weight 版本：small 30M、Cinque v3 382M、Lebowski 877M）
 已定为主线 backbone（[decisions.md](decisions.md) 第 40 条）。这篇把它在两个开环 benchmark 上的读数收拢到一张尺子上：
 同一批帧、同一个指标定义、能配对的地方都给配对 CI，并把公开榜单放在旁边作量级参照。
-预登记、代码和全部中间表在 [todos/2026-09-25-openpilot-openloop-comparison.md](../todos/2026-09-25-openpilot-openloop-comparison.md)；
-零样本考试本身在 [wod-e2e.md](../todos/2026-09-24-zeroshot-exam/wod-e2e.md)、[navsim.md](../todos/2026-09-24-zeroshot-exam/navsim.md)。
-小表在 [results/openpilot-openloop/](results/openpilot-openloop/)。
+预登记、代码和全部中间表在 [fc65452:todos/2026-09-25-openpilot-openloop-comparison.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-25-openpilot-openloop-comparison.md)；
+零样本考试本身在 [wod-e2e.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-zeroshot-exam/wod-e2e.md)、[navsim.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-zeroshot-exam/navsim.md)。
+小表在 [results/openpilot-openloop/](../experiments/op_openloop/results/openpilot-openloop/)。
 
 几个词先说清楚：
 「原生 plan」指 openpilot 自己输出的轨迹，不训练、不拟合（zero-shot）；
@@ -38,7 +38,7 @@ WOD-E2E（Waymo Open Dataset 的纯视觉端到端驾驶集）的 val split，47
 | 我们 `ridge ego` | 7.06 [6.81, 7.31] | +0.01 | −0.29 | −0.89 | 3.16 |
 | *公开榜（**test** split，不可配对）*：RAP / Poutine / UniPlan / DiffusionLTF / AutoVLA | 8.04 / 7.99 / 7.78 / 7.72 / 7.56 | | | | 2.65 / 2.74 / 2.99 / 2.98 / 2.96 |
 
-![WOD RFS](figs/openloop-wod-rfs.png)
+![WOD RFS](../experiments/op_openloop/figs/openloop-wod-rfs.png)
 
 图 1：WOD-E2E val 479 个 rater 帧上每一行的 RFS 与 95% CI（cluster 内分层重抽）；竖虚线是公开榜 test split 的分数，只作量级参照。
 看颜色的分层：openpilot 原生 plan（深蓝）和 Alpamayo（橙）在最上面，冻结 `temporal` + 我们的 head（浅蓝）居中，不用 openpilot 的我们的 head（绿）贴着 cv。
@@ -68,7 +68,7 @@ Lebowski 看 4.8 s 的 hidden state 队列），这种输入只能 sample-and-ho
 | Lebowski | 7.89 | 5.78 | **−2.00 [−2.26, −1.74]** | 4.94 | **−2.89 [−3.13, −2.65]** | +0.3 → **+19.4** |
 | 参照：cv / 原地不动 | 7.10 / 5.38 | | | | | |
 
-![timeline](figs/openloop-wod-timeline.png)
+![timeline](../experiments/op_openloop/figs/openloop-wod-timeline.png)
 
 图 2：同一批 479 个 WOD rater 帧上，openpilot 原生 plan 在考试输入、只给 1.5 s 的 10 Hz 帧、NAVSIM 式 2 Hz sample-and-hold 三种输入下的 RFS；
 误差线是对考试输入的配对 Δ 的 95% CI。看橙色柱：三个模型都从 cv（虚线）之上掉到「原地不动」（5.38）的水平。
@@ -111,7 +111,7 @@ head 在 navtrain（103 288 个 token）上拟合，输入只用 NAVSIM agent �
 | ctrv（匀速匀角速度圆弧） | 41.1 | 43.9 | 11.4 | | |
 | constant velocity | 20.7 | 25.9 | 11.5 | | |
 
-![NAVSIM](figs/openloop-navsim.png)
+![NAVSIM](../experiments/op_openloop/figs/openloop-navsim.png)
 
 图 3：navtest 上每一行的 PDMS（左）与 EPDMS（右），95% token bootstrap CI（比点还小）；竖虚线是文献值（在 navtrain 上训的方法；EPDMS 取修 bug 后的口径，与我们的 devkit 一致，navhard 列仍是修前数只作量级）。
 看三层：原生 plan 与 Alpamayo 挤在 42–52，不看图像的 ego head 在 62–68，冻结 openpilot 特征 + head 在 72–78，离 TransFuser 的 PDMS 还差 6 分。
@@ -126,7 +126,7 @@ head 在 navtrain（103 288 个 token）上拟合，输入只用 NAVSIM agent �
 
 ## 4. 不看路能拿多少分（continuation share）
 
-同一组不看图像的基线在各 benchmark 上占已发表顶分的比例（share = 基线 ÷ 顶分；L2 取倒数）。全表 [continuation_share.csv](results/openpilot-openloop/continuation_share.csv)。
+同一组不看图像的基线在各 benchmark 上占已发表顶分的比例（share = 基线 ÷ 顶分；L2 取倒数）。全表 [continuation_share.csv](../experiments/op_openloop/results/openpilot-openloop/continuation_share.csv)。
 
 | benchmark | 指标 | cv | ctrv | 最好的 ego-only 学习 head | 顶分 | share：cv / ego head |
 |:--|:--|--:|--:|--:|:--|:--|
@@ -158,4 +158,4 @@ head 在 navtrain（103 288 个 token）上拟合，输入只用 NAVSIM agent �
 | WOD test split 的提交 | 数据在下（共享网络 2–5 MB/s，剩约 65 个 shard，ETA 约 15 h），链式脚本自动生成 Cinque / Lebowski 原生 plan 的提交包，**不上传**。要不要用一次配额（每 30 天 6 次）、交哪一行（原生 Cinque，或 `temporal` + `cls_late`，后者还要在 test 帧上抽特征）由用户决定 |
 | NAVSIM 的 10 Hz 原始相机（nuPlan sensor blobs） | 不做：TB 级下载。第 2 节给出同一问题在 WOD 上的量级；第 3 节说明特征 + head 已绕开它 |
 | NAVSIM 上的多模态读出、多相机 | 多模态读出做了（Hydra 式打分头 84.2 PDMS，3 seed，第 40 条第 6 点；原写「没做」）；多相机没做 |
-| seed | 已补到 3 seed（原写「单 seed，所有 head 都是一次拟合」）：WOD `cls_late` 见 [夜间队列](../todos/2026-09-26-overnight-queue.md) 第 2 项与第 40 条 R40 修正（「Lebowski 够到原生」只在 seed 0 上成立），NAVSIM 打分头见夜间队列 2 的 N3 |
+| seed | 已补到 3 seed（原写「单 seed，所有 head 都是一次拟合」）：WOD `cls_late` 见 [夜间队列](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-26-overnight-queue.md) 第 2 项与第 40 条 R40 修正（「Lebowski 够到原生」只在 seed 0 上成立），NAVSIM 打分头见夜间队列 2 的 N3 |

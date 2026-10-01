@@ -1,0 +1,64 @@
+# Experiments index
+
+One line per topic: name (aliases): status; key finding [d decision entries]. Open `<topic>/README.md`.
+
+**live**
+
+- [b2d_privileged](b2d_privileged/README.md): live; Red light + green release DS 75.0 to 95.0 [d82]
+- [op_adapt_l](op_adapt_l/README.md) (op-adapt L): live; Stop capture 0.252 to 0.559 open loop; B2D no gain [d77-81]
+
+**openpilot adaptation**
+
+- [op_adapt_r2](op_adapt_r2/README.md) (op-adapt r2, S_jev): superseded-by op_adapt_l; Stage 1 failed: drift 0.397 m (line 0.10) [d67]
+- [op_adapt_r1](op_adapt_r1/README.md) (op-adapt r1, op_torch): Exact fp32 port; pedestrian AUC gain +0.076 nuScenes, +0.009 CARLA [d55]
+- [op_closed_loop](op_closed_loop/README.md) (op-arb, op-drive): Native never starts (6/6); arbitration +9.7 DS is slowness [d57,74]
+- [op_openloop](op_openloop/README.md) (op-interp, op-lb, navhard): NAVSIM score is input protocol: interpolation 52.1 to 84.2 [d34,36-37,39,66,73]
+- [skill_pack](skill_pack/README.md) (N0-N4, navsim raise): Navtest PDMS 84.2 to 91.59 (N3), flat at N4 [d64,68-73,75]
+- [log_expert_audit](log_expert_audit/README.md): Native stop capture 0.29 on WOD; motivated op_adapt_l [d77]
+- [feature_adapter](feature_adapter/README.md) (E0, E1): CARLA P5 pedestrian AUC 0.51-0.53 vs 0.83 nuScenes [d62-63]
+
+**closed-loop harness and controllers**
+
+- [cl_infra](cl_infra/README.md) (cl-lib, infra): 220 routes take a measured 3.11 h; reduced profile [d16-17,83]
+- [b2d_controller](b2d_controller/README.md): No controller qualified; PI DS 59.1 vs 53.8, lateral +10.8% [d26-27,29-30]
+- [b2d_controller_eval](b2d_controller_eval/README.md) (Task 10): Ours win L1 (ramp 0.92 vs 2.38), not closed loop (DS 86 vs 95) [d41]
+- [b2d_tcp](b2d_tcp/README.md): PI cuts jerk p95 84.5 to 45.1 m/s^3 on 3 routes [d28,30]
+- [b2d_tfv6](b2d_tfv6/README.md) (TFv6 W2, D1-D3): representation +14.3 DS [+5.1, +25.9]; controller +1.0, not detected [d31]
+- [tfv6_rules](tfv6_rules/README.md) (TFv6 rules): public B2D noise: single-eval DS SD 0.80; rules x interface not run [d38,31]
+- [simlingo_catalogue](simlingo_catalogue/README.md): no result: 220-route x 2-arm batch never recorded [dnone]
+- [carla_rewind](carla_rewind/README.md): rewind not equivalent (ego speed p95 0.305 vs 0.3); only 3.0x faster [d65]
+
+**zero-shot exams and leaderboards**
+
+- [zeroshot_openloop](zeroshot_openloop/README.md) (zero-shot): WOD RFS Cinque 8.005, Alpamayo 8.034, above cv 7.103 [d34,37,39]
+- [zeroshot_b2d](zeroshot_b2d/README.md) (zero-shot B2D): n=5 smoke: Alpamayo DS 60.8, SR 2/5; openpilot DS 2.7 voided [d33]
+- [model_smoke](model_smoke/README.md) (openpilot smoke, rigs): smoke: openpilot 1-3 ms/step; 2 deg yaw gives 4.6x lateral error [d33,36]
+- [hugsim](hugsim/README.md) (HUGSIM, I3): fixed2 controller passes acceptance; 4 Hz clock +25-38% lateral [d19,44]
+- [leaderboard_audit](leaderboard_audit/README.md) (hack audit): NAVSIM v2 +10.9 is the scorer; B2D DS SD 0.80 [d35,38]
+- [top10](top10/README.md) (T1-T3): no top-10 family on all boards except SparseDrive [d46,58]
+- [baselines_latency](baselines_latency/README.md): batch 1: Qwen-Drive-4B 702 ms, AutoVLA 1362 ms; our head <0.1 ms [d11,15,18]
+
+**frozen features and the reaction line**
+
+- [probe_planner_v0](probe_planner_v0/README.md) (probe v0, stage A): pre-onset vision delta null (CI [-0.062, +0.030]); K >= 1024 [d1-3,3b,3c,4-5,8-10,12-14]
+- [prediag](prediag/README.md) (P0-P4, L0): pre-onset vision delta null (CI [-0.062, +0.030]) [d3d,20-24]
+- [driving_backbones](driving_backbones/README.md): openpilot temporal -0.294 vs V-JEPA 2 -0.030, WOD pre-onset [d40]
+- [reactivity](reactivity/README.md) (P5, M-C, I4): Dual-stream paired-diff head flips pedestrians 43.3%; ridge_late 0% [d32,42]
+- [fusion_diag](fusion_diag/README.md) (fusion Q1-Q9): Qwen+openpilot complementary under paired-diff; SAM gate flips 29.2% [d43]
+- [fastperc](fastperc/README.md): YOLO26x-seg 20 ms p95 for 3 cameras, 1/25 of SAM 3.1, equal recall [d45]
+- [elicitation](elicitation/README.md) (E1-E6): Zero-shot elicitation harmful: WOD RFS -1.02, NAVSIM PDMS -8.2 [d42,44]
+- [real_transfer](real_transfer/README.md) (G0-G3): No transfer: all 12 student zero-shot cells harmful (PDMS -1.1..-2.7) [d44]
+- [statepol](statepol/README.md) (state-space): Only 2 BehaviorBench PPO ran: yield 43.0% vs null 2.0% [d51]
+
+**night queues**
+
+- [night_queue_2](night_queue_2/README.md) (nq2, N1-N6, P6): P6 v0 holds, placement null misses gate; V-JEPA 2 flips 47% [d47-50,52-53]
+- [night_queue_3](night_queue_3/README.md) (nq3, Q1-Q6): No public lateral-readout examinee bypasses; zero speed -22.1 PDMS [d35,44,47-48,52-53]
+- [night_queue_4](night_queue_4/README.md) (nq4, G K X OPL): No position memory in TFv6/BridgeDrive/BLUE/SimLingo (ghost 5-13%) [d35,44,58]
+
+**real-appearance pairs and world models**
+
+- [p3_ped_exam](p3_ped_exam/README.md) (P3, ped dose): 3DGS ped insertion/deletion stopped: donors slide, deletions smear [d44]
+- [cosmos](cosmos/README.md): Cosmos v1 no-go (80% diff outside ped); G4 made 2004 pairs [d56,63]
+- [controlnet_pair](controlnet_pair/README.md) (cn_pair): Paused, not no-go: deletion unclean, insertion fake-ish on 19 scenes [d59]
+- [world_model](world_model/README.md) (W, WL, WL-2): W failed from action-scene confounding; WL-2 held-out no-go (H 0.38) [d54,60-61,65,76]

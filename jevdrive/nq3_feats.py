@@ -1,4 +1,4 @@
-"""Night queue 3, lane C: frozen features on the P6 exam frames (todos/2026-09-26-night-queue-3.md, [C] entries).
+"""Night queue 3, lane C: frozen features on the P6 exam frames (fc65452:todos/2026-09-26-night-queue-3.md, [C] entries).
 The extractors are the P5 v1 ones unchanged; only the frame source differs.
 
   rows     the unique exam frames (jevdrive.nq3_p6.exam_frames) in P6 index order

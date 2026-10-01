@@ -24,7 +24,7 @@
 
 | 量具 | 量什么 | 规模 / 噪声 | 停 vs 绕 | 博弈（谁先走） | 出处 |
 |:--|:--|:--|:--|:--|:--|
-| Bench2Drive multi-ability：Overtaking | 9 个障碍类 scenario 的 SR（Accident、Construction、ParkedObstacle、HazardAtSideLane 及各自 TwoWays、VehicleOpensDoorTwoWays） | 220 条路线里 45 条；单次 SR 的 95% 带约 ±5（BLUE 6 次重复） | **间接**：停着会被 blocked 终止，所以 SR 高就意味着过去了；但「等一会儿再绕」和「立刻绕」分不开 | TwoWays 要让对向车，SR 把「等对了」和「冲过去没撞」混在一起 | `jevdrive/tfv6_rules.py:31`；`results/tfv6-rules-interface/noise.csv` |
+| Bench2Drive multi-ability：Overtaking | 9 个障碍类 scenario 的 SR（Accident、Construction、ParkedObstacle、HazardAtSideLane 及各自 TwoWays、VehicleOpensDoorTwoWays） | 220 条路线里 45 条；单次 SR 的 95% 带约 ±5（BLUE 6 次重复） | **间接**：停着会被 blocked 终止，所以 SR 高就意味着过去了；但「等一会儿再绕」和「立刻绕」分不开 | TwoWays 要让对向车，SR 把「等对了」和「冲过去没撞」混在一起 | `experiments/tfv6_rules/lib/tfv6_rules.py:31`；`results/tfv6-rules-interface/noise.csv` |
 | B2D Give_Way | InvadingTurn + YieldToEmergencyVehicle | 各 5 条 | InvadingTurn 是横向让出（压线）；学习方法大多 100% | YieldToEmergency 所有学习方法 SR 0、DS 恰好 70，量的是计分规则，不是能力 | `family.csv`；决策第 38 条 |
 | B2D unprotected turn family | 6 个路口左 / 右转 scenario | 30 条 | 不适用 | **最接近 negotiation 的公开量**：TFv6 82%，其余 43–57%，PDM-Lite 90% | `results/tfv6-rules-interface/family.csv` |
 | NAVSIM v2 navhard，EPDMS | `NC×DAC×DDC×TLC×(5EP+5TTC+2LK+2HC+2EC)/16`，两阶段 | 450 个 Stage 1 观测、5462 个 Stage 2 观测 | 不能：只对一段固定的未来打分 | 背景车不反应 | arXiv 2506.04218；`leaderboard-vs-ability.md` §2 |
@@ -69,7 +69,7 @@
 - **curve_or_other**：peak ≥ 1 m、航向单调（弯道，或 5 s 内还没回正的偏移）。**没有 map 就分不开**。
 - **stop**：末速 < 0.5 m/s，或 v0 > 3 m/s 且末速 < 0.3·v0；其余记为 **keep**。
 
-仓库里已有一个更宽的判定（`jevdrive/waymo_p5vlm.py:49`，5 s 处 |y| ≥ 0.75 m 记 nudge，代码注释自己写了弯道和变道在那里看起来一样）。它在 rater 帧上给出 log nudge 76 帧（`results/p5-vlm-metaaction/final/label_distribution.csv`）。
+仓库里已有一个更宽的判定（`experiments/reactivity/archive/waymo_p5vlm.py:49`，5 s 处 |y| ≥ 0.75 m 记 nudge，代码注释自己写了弯道和变道在那里看起来一样）。它在 rater 帧上给出 log nudge 76 帧（`results/p5-vlm-metaaction/final/label_distribution.csv`）。
 
 ### 2.2 结果（479 帧）
 
@@ -205,7 +205,7 @@ NAVSIM navtrain / navtest 有 map 和 GT box，可以挖「本车道有静止障
 ## 来源
 
 - 仓库：`results/tfv6-rules-interface/{family,routes,noise}.csv`、`results/b2d-family/public_routes.csv`、`results/wod-zeroshot/{per_frame.npz,cot.json,clusters.csv}`、
-  `results/openpilot-openloop/wod_rfs_per_frame.npz`、`results/p5-vlm-metaaction/final/*.csv`、`jevdrive/{tfv6_rules,waymo,waymo_p5vlm}.py`、`todos/2026-09-25-reactivity-program/i1-p5v1.md`、决策第 32/35/38/42/44 条。
+  `results/openpilot-openloop/wod_rfs_per_frame.npz`、`results/p5-vlm-metaaction/final/*.csv`、`jevdrive/{tfv6_rules,waymo,waymo_p5vlm}.py`、`fc65452:todos/2026-09-25-reactivity-program/i1-p5v1.md`、决策第 32/35/38/42/44 条。
 - 代码（raw GitHub，2026-09-26 取）：[SimLingo `Bench2Drive/leaderboard/team_code/autopilot.py`](https://github.com/RenzKa/simlingo)（`_manage_route_obstacle_scenarios`）、同目录 `config.py`、`privileged_route_planner.py`、
   `scenario_runner/srunner/scenarios/construction_crash_vehicle.py:98–105`（`active_scenarios.append`）；carla_garage `leaderboard_2` 和 DriveLM `pdm_lite` 中的同名函数逻辑相同；
   [CARLA 0.9.15 `behavior_agent.py`](https://github.com/carla-simulator/carla/blob/0.9.15/PythonAPI/carla/agents/navigation/behavior_agent.py)（`_tailgating`、`collision_and_car_avoid_manager`）。

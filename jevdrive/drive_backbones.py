@@ -1,6 +1,6 @@
 """Driving-specialised backbones (openpilot, Alpamayo 1.5) as frozen feature extractors in the P3 ladder.
 
-Pre-registration: todos/2026-09-24-driving-backbones/README.md. The ladder itself (subset, split, head, judge) is
+Pre-registration: fc65452:todos/2026-09-24-driving-backbones/README.md. The ladder itself (subset, split, head, judge) is
 `waymo_ladder` unchanged; this module only produces feature sets in the ladder's flat format and the extra
 readouts the pre-registration adds on top.
 
@@ -11,7 +11,7 @@ readouts the pre-registration adds on top.
   crossfit      the pooled cross-fit readout: both directions' out-of-sample predictions concatenated (the two
                 eval halves are disjoint and cover the subset), paired against the references by sequence bootstrap
 
-The runners live in scripts/drive_backbones_openpilot.py and scripts/drive_backbones_alpamayo.py.
+The runners live in scripts/drive_backbones_openpilot.py and experiments/driving_backbones/lib/drive_backbones_alpamayo.py.
 """
 import json
 from pathlib import Path
@@ -461,7 +461,7 @@ def main():
     ap.add_argument("--run", default=None, help="crossfit: the ladder run directory (default: this run)")
     ap.add_argument("--split", default="subset", choices=("subset", "trainval", "trainval_desire"))
     ap.add_argument("--feat-suffix", default="_trainval", help="heads_*: feature set op_<model>_p3<suffix> "
-                    "(_trainval_desire: the route-into-backbone extraction, todos/2026-09-25-openpilot-temporal-p5-and-route.md)")
+                    "(_trainval_desire: the route-into-backbone extraction, fc65452:todos/2026-09-25-openpilot-temporal-p5-and-route.md)")
     ap.add_argument("--vram-gb", type=float, default=25.0, help="heads_*: this process's share of the card")
     ap.add_argument("--seed", type=int, default=None, help="heads_*: vocabulary k-means + inner-split seed ([SEEDS]); given -> own run dir")
     a = ap.parse_args()

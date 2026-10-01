@@ -168,13 +168,13 @@ class TestPar(unittest.TestCase):
 
 
 # --- verbatim reference implementations (provenance in the comments) --------------------------------------------
-def ref_boot_mean(x, n=10_000, seed=0):            # jevdrive/nq3_cl_report.py boot_mean (convention A)
+def ref_boot_mean(x, n=10_000, seed=0):            # experiments/night_queue_3/lib/nq3_cl_report.py boot_mean (convention A)
     x = np.asarray(x, float)
     b = x[np.random.default_rng(seed).integers(0, len(x), (n, len(x)))].mean(1)
     return float(x.mean()), float(np.percentile(b, 2.5)), float(np.percentile(b, 97.5))
 
 
-def ref_boot_paired(a, b, n=10000, seed=0):        # jevdrive/tfv6_rules.py boot_paired
+def ref_boot_paired(a, b, n=10000, seed=0):        # experiments/tfv6_rules/lib/tfv6_rules.py boot_paired
     a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
     ok = ~(np.isnan(a) | np.isnan(b))
     return ref_boot_mean(a[ok] - b[ok], n, seed)

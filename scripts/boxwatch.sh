@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Box-wide memory / process sampler for SIGKILL forensics (todos/2026-09-25-closed-loop-infra-acceptance/sigkill.md).
+# Box-wide memory / process sampler for SIGKILL forensics (experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md).
 # Jobs on the box are SIGKILLed from outside with the kernel oom_kill counter at 0. Without root nobody in the
 # container can learn a SIGKILL's sender (no dmesg, audit, eBPF or tracefs; the parent's wait status carries only
 # the signal number), so the next kill is identified by correlation: what the container's memory looked like in

@@ -36,14 +36,14 @@ export NAVSIM_EXP_ROOT=$DATA_DIR/runs/navsim   # metric caches and eval outputs
 The official devkits live in `$DATA_DIR/third_party/navsim` (main @ `0a380a9`, v2.2 + fixes, EPDMS) and
 `$DATA_DIR/third_party/navsim-v1.1` (PDMS), with venvs `envs/navsim2` / `envs/navsim1` (Python 3.10, CPU torch,
 shared nuplan-devkit v1.2). Install: `scripts/setup_navsim_devkit.sh`. Metric caching and scoring:
-`scripts/navsim_zs_score.sh` (caches in `$DATA_DIR/runs/navsim/metric_cache/<v1|v2>_<split>`).
+`experiments/zeroshot_openloop/archive/navsim_zs_score.sh` (caches in `$DATA_DIR/runs/navsim/metric_cache/<v1|v2>_<split>`).
 
 **Broken BLAS on this CPU.** navsim pins numpy 1.23.4, whose bundled OpenBLAS picks a wrong kernel on the box's
 Xeon 8470Q (Sapphire Rapids): `np.linalg.inv` / `pinv` return garbage (max error ~1e3) without any warning. The
 PDM LQR simulator then blows up (speeds of 10^4 m/s), the PDM-Closed reference in the metric cache is wrong, and
 every score comes out plausible-looking but meaningless (constant velocity got EPDMS 64 with DAC 1.00). Always
 run the devkit with `OPENBLAS_CORETYPE=Haswell` (and `OPENBLAS_NUM_THREADS=1` inside ray workers);
-`scripts/navsim_zs_score.sh` sets both and refuses to run if a 40x40 inverse is off by more than 1e-8.
+`experiments/zeroshot_openloop/archive/navsim_zs_score.sh` sets both and refuses to run if a 40x40 inverse is off by more than 1e-8.
 Newer numpy (1.24+, e.g. `envs/jevdrive`, `envs/carla`, the model venvs) is not affected.
 Since 2026-09-30 `envs/navsim1` and `envs/navsim2` set the variable themselves: a `sitecustomize.py` in each env's
 site-packages does `os.environ.setdefault("OPENBLAS_CORETYPE", "Haswell")` before numpy loads (an explicit value from

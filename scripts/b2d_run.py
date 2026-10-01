@@ -161,7 +161,7 @@ def parse_args(argv=None):
     p.add_argument("--zygote", action="store_true",
                    help="start each worker's next route process while the current route runs (b2d_route.py "
                         "B2D_ZYGOTE: heavy imports done ahead, then the route is handed over on stdin); still one "
-                        "process per route (todos/2026-09-29-carla-rewind.md)")
+                        "process per route (fc65452:todos/2026-09-29-carla-rewind.md)")
     p.add_argument("--no-reap", action="store_true",
                    help="do not kill servers/routes recorded in --out at start. Required for every runner that joins an "
                         "--out another live runner is using: reaping cannot tell its servers from a dead runner's.")
@@ -290,7 +290,7 @@ def port_free(port):
 
 
 def bindable(port):
-    """A port CARLA can listen on (scripts/b2d_scale.py): high indices put its ports inside the kernel's ephemeral
+    """A port CARLA can listen on (experiments/cl_infra/archive/b2d_scale.py): high indices put its ports inside the kernel's ephemeral
     range, where an outgoing connection may hold one, and CARLA then dies at startup on `bind: Address already in use`."""
     with socket.socket() as s:
         try:

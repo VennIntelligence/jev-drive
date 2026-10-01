@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""openpilot zero-shot on nuScenes open-loop planning (todos/2026-09-24-zeroshot-exam/nuscenes-physicalai.md).
+"""openpilot zero-shot on nuScenes open-loop planning (fc65452:todos/2026-09-24-zeroshot-exam/nuscenes-physicalai.md).
 Runs in envs/openpilot.
 
 Each val scene is driven continuously from its first keyframe, as modeld would: a 20 Hz clock (10 steps per

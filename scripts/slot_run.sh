@@ -34,7 +34,7 @@ note() { echo "$(date '+%Y-%m-%d %H:%M') [slot $slot] $*" | tee -a "$PLAN"; }
 setsid nohup scripts/boxwatch.sh > /dev/null 2>&1 < /dev/null &
 
 post_mortem() {  # rc -> $S/<slot>.death-<HHMMSS>.txt: container memory right after a signal death, largest processes,
-    # and the last 2 min of the boxwatch samples (todos/2026-09-25-closed-loop-infra-acceptance/sigkill.md)
+    # and the last 2 min of the boxwatch samples (experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md)
     local rc=$1 f=$S/$slot.death-$(date +%H%M%S).txt g; shift
     {
         echo "$(date '+%F %T.%3N') slot $slot: job exited rc=$rc (signal $(( rc - 128 ))); command: $*"

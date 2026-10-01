@@ -1,5 +1,5 @@
 """Real-data transfer G1: a gate trained on real data times the reaction correction elicited on CARLA pairs
-(todos/2026-09-26-real-data-transfer.md, G1; deviation-log entries [G1], each written before the numbers it affects).
+(fc65452:todos/2026-09-26-real-data-transfer.md, G1; deviation-log entries [G1], each written before the numbers it affects).
 
   gates   g1  decision 23 (e)'s gated residual head (waymo_ladder.GatedResidual, mlp trunk) on [ego, op `temporal`],
               trained on WOD train (NAVSIM: navtrain) to correct `ridge ego`; only the gate branch is kept
@@ -608,7 +608,7 @@ def nav_lead(model: str) -> dict:
 
 def nav_write(rl, gates: dict, deltas: dict, tag: str, taus: dict):
     """prior (`ridge_late`) + g * Delta on navtest's 0.5 ... 4.0 s poses (heading kept, as E1), the activation table, and
-    the devkit job list (scripts/navsim_zs_score.sh; names g1_<tag>_<gate>_ridge_late_<model>)."""
+    the devkit job list (experiments/zeroshot_openloop/archive/navsim_zs_score.sh; names g1_<tag>_<gate>_ridge_late_<model>)."""
     from . import elicit_e1 as E1, p5_pairs as P
     sc = pd.read_csv(data_dir() / E1_NAV / "navtest_scopes.csv")
     scopes = {"all": np.ones(len(sc), bool), "straight": sc.straight.to_numpy(), "ped_cyc_corridor": sc.ped_cyc_corridor.to_numpy(),
@@ -728,7 +728,7 @@ def nav_gates(g1_run: str, g2_run: str = "") -> dict:
     return out
 
 
-# ---------------------------------------------------------------- summary tables (research/results/real-data-transfer/g1)
+# ---------------------------------------------------------------- summary tables (experiments/real_transfer/results/g1)
 
 def _ci(r, k=2, scale=1.0):
     return f"{scale * r.delta:+.{k}f} [{scale * r.lo:+.{k}f}, {scale * r.hi:+.{k}f}]"
@@ -870,7 +870,7 @@ def main():
     ap.add_argument("--g1-oof-run", default="")
     ap.add_argument("--g2-run", default="", help="the g2 run dir; given -> g2 joins the arms")
     ap.add_argument("--runs", default="", help="summary: wod,i3,nav-write,nav-table,select run dirs (empty = skip)")
-    ap.add_argument("--out", default="research/results/real-data-transfer/g1")
+    ap.add_argument("--out", default="experiments/real_transfer/results/g1")
     ap.add_argument("--fig-out", default="research/figs")
     a = ap.parse_args()
     torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 16)))

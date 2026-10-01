@@ -171,7 +171,7 @@ class _NoSwitchLights:
 def _keep_street_lights():
     """Render fix, off by default ($B2D_KEEP_STREET_LIGHTS=1): RouteLightsBehavior no longer switches street / building
     lights; they keep the state the server's day-night cycle gave them when the route's weather was set (at night: on).
-    Vehicle lights (ego and scenario vehicles) are still switched as before. Reason (todos/2026-09-28-wm-loop.md,
+    Vehicle lights (ego and scenario vehicles) are still switched as before. Reason (fc65452:todos/2026-09-28-wm-loop.md,
     "渲染故障的根因"): on a freshly started server, the behaviour's first update (switching off every light beyond its
     radius) darkens the whole frame of a dusk / night route within 2-3 ticks (Town03 sun 0: front luma 57 -> 6), while
     the same update on a server that already ran a route leaves the frame as it was; with the street-light half
@@ -259,7 +259,7 @@ def patch_camera_attrs(attrs, out_dir=None):
     """Blueprint attributes for every `sensor.camera.rgb` this process spawns ($B2D_CAM_ATTRS, a JSON object; off by
     default). The leaderboard's sensor whitelist passes only size and fov, so every other camera attribute (exposure,
     bloom, lens flare, ...) is otherwise CARLA's default. Wraps `carla.World.spawn_actor` / `try_spawn_actor`, so
-    it also covers cameras an agent spawns itself (scripts/cosmos_pair_agent.py). The first camera's resolved
+    it also covers cameras an agent spawns itself (experiments/cosmos/archive/cosmos_pair_agent.py). The first camera's resolved
     attributes are written to <attempt>/cam_attrs.json."""
     out_dir = out_dir or os.environ.get("B2D_ATTEMPT_OUT")
     attrs = {str(k): str(v) for k, v in attrs.items()}
@@ -386,7 +386,7 @@ P6_DENSE_GAP_M = (10.0, 14.0)   # mirror world: ~1-1.5 s headway, no gap PDM-Lit
 
 
 def p6_shift(out_dir, shift_m):
-    """P6 v1 recovery worlds (todos/2026-09-26-night-queue-3.md Q3): the ego is born shift_m to the side of the route's
+    """P6 v1 recovery worlds (fc65452:todos/2026-09-26-night-queue-3.md Q3): the ego is born shift_m to the side of the route's
     first point (left positive, along the route's own right vector), everything else as the route has it. The route
     itself is untouched, so the expert (PDM-Lite, which follows the route) has to steer back. RouteScenario spawns the
     hero at route[0] lifted by 0.5 m and leaves that lift in route[0]; both are kept."""
@@ -411,7 +411,7 @@ def p6_shift(out_dir, shift_m):
 
 
 def p6_world(out_dir, obstacle, oncoming, tm_seed):
-    """P6 behaviour-mode pairs (todos/2026-09-26-night-queue-2.md N1): one world of the 2 x 2 obstacle x oncoming
+    """P6 behaviour-mode pairs (fc65452:todos/2026-09-26-night-queue-2.md N1): one world of the 2 x 2 obstacle x oncoming
     design on the Bench2Drive obstacle-bypass scenarios, InvadingTurn and YieldToEmergencyVehicle, run under PDM-Lite.
 
     obstacle  "on"        the scenario as shipped
@@ -808,7 +808,7 @@ def _patch_callback(profile, fast_copy, zero_copy):
 
 
 def _rc_tracer(every=20):
-    """Read-only observer for the catalogue experiment (todos/2026-09-25-simlingo-catalogue), on when
+    """Read-only observer for the catalogue experiment (fc65452:todos/2026-09-25-simlingo-catalogue), on when
     $B2D_RC_TRACE=1, into $B2D_ATTEMPT_OUT/rc_trace.jsonl: every `every` ticks append [tick, frame, route completion %,
     infraction events so far] from the route's own criteria, so a score under a different tick cap can be recomputed
     from the same trajectory. The tick on which RC first reads 100 is always written, with a
