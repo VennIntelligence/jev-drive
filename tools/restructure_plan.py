@@ -224,6 +224,9 @@ SHARED = [
     "jevdrive/__init__.py", "jevdrive/common.py", "jevdrive/runlog.py", "jevdrive/plots.py", "jevdrive/camgeom.py",
     "jevdrive/hfdl.py", "jevdrive/traj.py", "jevdrive/nuscenes_index.py", "jevdrive/waymo.py",
     "jevdrive/cl/*", "jevdrive/openpilot/*", "jevdrive/alpamayo/*", "tests/test_cl.py",
+    # lib-core round (landed on main after bcbdde4): shared by construction
+    "jevdrive/run/*", "jevdrive/data/*", "jevdrive/cache.py", "jevdrive/par.py", "jevdrive/stats.py",
+    "scripts/lib_demo.py", "tests/test_lib.py",
     # box ops and data
     "scripts/tmux_run.sh", "scripts/tensorboard.sh", "scripts/slot_run.sh", "scripts/sch_table.py", "scripts/boxwatch.sh",
     "scripts/download_*", "scripts/extract_nuscenes.sh", "scripts/setup_navsim_devkit.sh", "scripts/fetch_openpilot_models.py",
