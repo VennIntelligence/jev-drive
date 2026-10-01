@@ -47,12 +47,19 @@ DATA = Path(os.environ.get("DATA_DIR", Path.home() / "data"))
 TABLE = DATA / "runs" / "sched" / "table.tsv"
 ARCHIVE = TABLE.with_name("archive.tsv")
 COLS = ["lane", "gpus", "workers", "idx0", "idx_span", "cpus", "status", "go"]
-# capacity model (SCH 2026-09-26 18:25 measurement; see the handoff section)
-PIDS_PER_WORKER, PIDS_CAP = 400, 16000          # one CARLA server ~330-430 threads + route client ~15; b2d waits at 17000
-# CARLA server 3-9 GB; leave >= 8 GB per card. RTX 6000D since 2026-09-28: 83.6 GiB per card (was 96 GB, cap 88);
-# show() also caps each card at its own total - 8, so a smaller card never passes the check.
-VRAM_PER_WORKER_GB, VRAM_CAP_GB = 7.5, 75
-CPU_CAP = 165                                    # of the cgroup's 175
+# Capacity model: one set of constants, derived from the live box by jevdrive.cl (docs/closed-loop-runbook.md). The old
+# hand-set values (PIDS_CAP 16000 / 400 per worker, CPU_CAP 165 of 175, VRAM_CAP_GB 75) assumed the 7-card box.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from jevdrive.cl import capacity as _cap, profiles as _prof  # noqa: E402
+from jevdrive.cl.box import probe as _probe  # noqa: E402
+
+_BOX = _probe()
+PIDS_CAP = _cap.Admission.from_box(_BOX).plan_cap          # 0.80 x pids.max; b2d_run waits at 0.85 x (B2D_PIDS_WAIT)
+PIDS_WAIT = _cap.Admission.from_box(_BOX).wait_cap
+_SLICE = _BOX.cores / max(len(_BOX.cards), 1)
+PIDS_PER_WORKER = _cap.worker_threads(_prof.get(), _SLICE, _BOX.host_cpus)   # default profile, one card's core slice
+VRAM_PER_WORKER_GB, VRAM_CAP_GB = _cap.VRAM_PER_WORKER_GB, 75                 # show() caps each card at total - 8
+CPU_CAP = round(0.94 * _BOX.cores)                                            # of the cgroup quota
 
 
 def load() -> list[dict]:
@@ -141,8 +148,8 @@ def show(check_only=False) -> int:
         print("\t".join(COLS))
         for r in rows:
             print("\t".join(r[c] for c in COLS))
-        print(f"\npids {p['pids']} / {p['pids_max']} (plan cap {PIDS_CAP}, b2d waits at 17000), load {' '.join(p['load'])}, "
-              f"cgroup cores in use {p['cores_used']:.0f} / 175 (cap {CPU_CAP})")
+        print(f"\npids {p['pids']} / {p['pids_max']} (plan cap {PIDS_CAP}, b2d waits at {PIDS_WAIT}), load {' '.join(p['load'])}, "
+              f"cgroup cores in use {p['cores_used']:.0f} / {_BOX.cores:.0f} (cap {CPU_CAP})")
         for x in p["gpus"]:
             print(f"GPU {x['gpu']}: {x['used_gb']:5.1f} / {x['total_gb']:.0f} GB, util {x['util']:3d} %, CARLA servers {x['carla']}")
         free = max(0, (PIDS_CAP - p["pids"]) // PIDS_PER_WORKER)
