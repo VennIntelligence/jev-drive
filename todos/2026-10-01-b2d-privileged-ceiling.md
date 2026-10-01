@@ -205,3 +205,5 @@ profile的固定负载明确为已登记debug8条×3份（24次drive运行，see
 | 24955 | 22.5225 / 34.65 | — | 36 / 100 | 36 / 100 | — |
 
 26872的pjunc/pall没有官方撞车，但仍没通过路线；25169的两个单绕障臂各有4次官方撞车，pall有1次；24955的两个绕障臂各有2次撞车。与先前版本的同seed调试记录有波动，不能把debug差值当可靠技能收益；这里未运行任何正式路线。14:30开始固定24次before装填，三卡各1slot×2worker；之后同链自动测after的2slot×4worker，再进入正式评测。
+
+15:02补做packing（并发装填）本身的模型数值检查，见[pool_checks.json](../research/results/b2d-privileged-ceiling/pool_checks.json)：固定seed0的native road/wide BGRA（原始像素通道）输入，6个带历史状态的步骤与desire变化；先串行运行，再在4个彼此隔离、重新reset（清空历史状态）的会话中并发运行相同序列。pos/vel/yaw/acc/lead/meta等12项输出最大绝对差全部为0，登记的几何投影/SAT检查也全部一致；没有把随机闭环轨迹宣称为逐帧相同。使用after阶段已经完成的GPU0 slot0服务，仅0.13s串行和0.45s四序列并发，不新建CARLA/server、不更改模型输入或任何正式路线；这不足1s的诊断也在after阶段的原始资源采样窗口内，保留记录，不能用此小测试的耗时冒充整批吞吐。

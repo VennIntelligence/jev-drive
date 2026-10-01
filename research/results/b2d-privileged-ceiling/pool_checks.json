@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "input": "Fixed seeded native road and wide BGRA arrays; six recurrent steps and desire changes",
+  "sessions": 4,
+  "steps_per_session": 6,
+  "maxabs_by_head": {
+    "pos": 0.0,
+    "vel": 0.0,
+    "yaw": 0.0,
+    "t": 0.0,
+    "acc": 0.0,
+    "lead": 0.0,
+    "lead_prob": 0.0,
+    "meta": 0.0,
+    "desire_state": 0.0,
+    "desire_pred": 0.0,
+    "pose": 0.0,
+    "lane_prob": 0.0
+  },
+  "tolerance": 1e-05,
+  "serial_s": 0.12728553998749703,
+  "parallel_four_sequences_s": 0.450822948012501,
+  "server": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/card0s0/srv/op.sock",
+  "server_pool": 4,
+  "formal_data_used": false,
+  "formal_started_during_check": false
+}
