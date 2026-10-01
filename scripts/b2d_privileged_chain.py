@@ -206,6 +206,7 @@ class Chain:
     def debug(self):
         if (ROOT/"DONE-debug").exists():return
         self.pilot()
+        numeric(self.log,self.log.dir)
         spec=[("27787",a) for a in ("drive","pred")]+[("26872",a) for a in ("drive","pjunc","pall")]+[("25169",a) for a in ("drive","pbyp","pbypgap","pall")]+[("24955",a) for a in ("drive","pbyp","pbypgap")]
         spec.append(("334","pred"))
         results={}
@@ -250,6 +251,16 @@ class Chain:
             except (ProcessLookupError,FileNotFoundError):pass
 
     def run(self):
+        if self.args.after_slot:
+            predecessor=ROOT.parent/"sched"/self.args.after_slot
+            self.log.info("Waiting for owned predecessor slot to exit: "+self.args.after_slot)
+            self.log.event("wait_predecessor",slot=self.args.after_slot)
+            while not predecessor.with_suffix(".done").exists() and not predecessor.with_suffix(".failed").exists():
+                time.sleep(5)
+            self.log.event("predecessor_exited",slot=self.args.after_slot)
+        if (ROOT/"ERROR").exists():
+            # Archive our previous stage error; every source run and attempt remains intact.
+            (ROOT/"ERROR").rename(self.log.dir/"predecessor_ERROR.txt")
         monitor=threading.Thread(target=self.monitor,daemon=True);monitor.start()
         self.log.event("start",phase=self.args.phase,resources=grant())
         try:
@@ -270,6 +281,7 @@ class Chain:
 if __name__=="__main__":
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--phase",choices=("pilot","diagnose","debug","all"),default="pilot")
+    p.add_argument("--after-slot",default="",help="Wait for an owned earlier slot to finish, including failed debug stages")
     p.add_argument("--slots",type=int,choices=(1,2),default=1)
     p.add_argument("--workers",type=int,default=2)
     args=p.parse_args();assert 1<=args.workers<=4
