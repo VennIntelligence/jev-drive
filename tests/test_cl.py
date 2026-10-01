@@ -209,7 +209,7 @@ class LaneRun(unittest.TestCase):
 
     def test_capacity_never_exceeded(self):
         log = self.tmp / "conc"
-        script = 'echo "+ $1 $(date +%%s.%%N)" >> {0}; sleep 0.6; echo "- $1 $(date +%%s.%%N)" >> {0}'.format(log)
+        script = 'echo "+ $1 $(date +%s.%N)" >> {0}; sleep 0.6; echo "- $1 $(date +%s.%N)" >> {0}'.format(log)
         jobs = [self.sh("j%d" % i, script, workers=4) for i in range(6)]       # 4 + 4 > 6: one per card at a time
         self.assertEqual(self.lane(jobs).run(), 0)
         events = sorted((float(t), s, g) for s, g, t in (l.split() for l in log.read_text().splitlines()))

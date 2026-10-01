@@ -38,10 +38,17 @@ def same(rec: dict, rows: dict) -> bool:
 
 
 def capture(path: Path, pid: int, rows: dict = None) -> dict:
+    """Record `pid` (normally a child we just started, so its /proc entry exists until we reap it, zombie or not)."""
     rows = processes() if rows is None else rows
-    if pid not in rows:
-        raise RuntimeError("cannot capture absent pid %d" % pid)
-    rec = {"root": identity(rows[pid]), "members": [identity(rows[pid])]}
+    if pid in rows:
+        me = identity(rows[pid])
+    else:
+        try:
+            s = Path("/proc/%d/stat" % pid).read_text().rsplit(")", 1)[1].split()
+        except OSError:
+            raise RuntimeError("cannot capture absent pid %d" % pid)
+        me = dict(pid=pid, start_ticks=s[19], pgid=int(s[2]), sid=int(s[3]))
+    rec = {"root": me, "members": [me]}
     atomic_json(path, rec)
     return rec
 
