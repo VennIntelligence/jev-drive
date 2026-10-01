@@ -75,7 +75,7 @@ def ensure_openjev_server(gpu_card: int = 0, port: int = 8080, vllm_port: int = 
         "CUDA_VISIBLE_DEVICES": str(gpu_card),
         "HF_HUB_OFFLINE": "1",
         "VLLM_CACHE_ROOT": str(DATA_DIR / "cache/vllm"),
-        "OPENJEV_GPU_UTIL": "0.25", # 0.25 of 83.6 GiB is ~21 GB, perfectly fits 18 GB weights
+        "OPENJEV_GPU_UTIL": "0.35", # 0.35 of 83.6 GiB is ~29.2 GB, plenty of room for weights and KV cache
         "PATH": f"{DATA_DIR}/envs/openjev/bin:{env.get('PATH', '')}"
     })
     

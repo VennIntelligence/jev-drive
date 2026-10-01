@@ -15,14 +15,14 @@ log_dir=$DATA_DIR/runs/vlm_arb/logs
 mkdir -p "$log_dir"
 log=$log_dir/openjev-$(date +%Y%m%d-%H%M%S).log
 
-echo "Starting vLLM ($MODEL) on GPU utilization ${OPENJEV_GPU_UTIL:-0.25}..."
+echo "Starting vLLM ($MODEL) on GPU utilization ${OPENJEV_GPU_UTIL:-0.35}..."
 vllm serve "$MODEL" --served-model-name dgemma --host 127.0.0.1 --port 8000 \
   --diffusion-config "{\"canvas_length\": ${OPENJEV_CANVAS}}" --max-logprobs 32 \
   --limit-mm-per-prompt '{"image": 8, "video": 0}' \
   --enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4 \
   --override-generation-config '{"max_new_tokens": null}' --enable-prefix-caching --async-scheduling \
   --attention-backend TRITON_ATTN --max-num-seqs 64 --max-model-len 65536 \
-  --gpu-memory-utilization "${OPENJEV_GPU_UTIL:-0.25}" >"$log" 2>&1 &
+  --gpu-memory-utilization "${OPENJEV_GPU_UTIL:-0.35}" >"$log" 2>&1 &
 vllm_pid=$!
 
 trap 'kill -TERM $(jobs -p) 2>/dev/null; wait' EXIT
