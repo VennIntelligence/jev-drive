@@ -126,6 +126,12 @@ class Chain:
                 self.family(arm, seeds, 4, chain=False)
         if plan == "heldout":
             self.plan_heldout()
+        if self.a.only:                                           # resume: only these arms, and only units that are not complete yet
+            keep = set(self.a.only.split(","))
+            for uid, u in list(self.units.items()):
+                full = len(glob.glob(str(u.dir / "done" / "*.json"))) == self.n_routes(u)
+                if u.arm not in keep or (full and (u.dir / "DONE").exists()):
+                    del self.units[uid]
 
     def plan_heldout(self):
         for arm in ("drive", "lmain"):
@@ -195,6 +201,9 @@ class Chain:
             arm = u.arm
             if arm == "dbaseslow":
                 arm = u.slow_arm
+            stale = AD / f"{u.tag}-{arm}-s{u.seed}" / "DONE"
+            if stale.exists() and len(glob.glob(str(stale.parent / "done" / "*.json"))) != self.n_routes(u):
+                stale.unlink()      # op_arb.sh writes DONE even when routes never finished; without this the retry is a no-op and the unit "fails twice (rc 0)"
             env = self.env_for(u, card)
             env["ARMS"] = arm
             with open(ROOT / f"unit-{u.id}.log", "a") as lf:
@@ -345,7 +354,7 @@ class Chain:
         if self.fatal:
             self.status("ERROR " + self.fatal)
             return 1
-        (ROOT / f"DONE-{self.a.plan}").write_text(time.strftime("%F %T") + "\n")
+        (ROOT / (f"DONE-{self.a.plan}" if not self.a.only else f"DONE-resume-{self.a.only.replace(',', '+')}")).write_text(time.strftime("%F %T") + "\n")
         self.status(f"plan {self.a.plan} done")
         self.event("end", plan=self.a.plan)
         self.log.info("done")
@@ -357,6 +366,7 @@ if __name__ == "__main__":
     ap.add_argument("--plan", required=True, choices=["stage1", "stage2", "full", "heldout"])
     ap.add_argument("--workers", type=int, default=6, help="CARLA workers per slot")
     ap.add_argument("--slots", type=int, default=1, help="slots (an openpilot server + its workers) per card; each takes an even share of the card's cores and index block")
+    ap.add_argument("--only", default="", help="comma list of arms: keep only their units that are not complete (resume after a failed unit)")
     ap.add_argument("--cards", default="0,1,2")
     ap.add_argument("--cpus", default="8-29;30-51;52-73", help="core list per card, ';' separated")
     ap.add_argument("--idx0", type=int, default=200)
