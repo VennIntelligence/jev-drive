@@ -216,7 +216,7 @@ class Chain:
         spec.append(("334","pred"))
         results={}
         with ThreadPoolExecutor(max_workers=3*self.args.slots) as pool:
-            fs={pool.submit(self.unit,"debug-v2-"+rid,arm,0,[rid],record=True):(rid,arm) for rid,arm in spec}
+            fs={pool.submit(self.unit,"debug-v3-"+rid,arm,0,[rid],record=True):(rid,arm) for rid,arm in spec}
             for f in tqdm(as_completed(fs),total=len(fs),desc="Debug units"):
                 rid,arm=fs[f];results[(rid,arm)]=f.result()
         checks={}

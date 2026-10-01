@@ -100,7 +100,7 @@ class Privileged:
         self.gap_check=arm in ("pbypgap","pall")
         self.red=arm in ("pred","pall")
         self.last=-1e9;self.actors=[];self.static_since={};self.actor_cache={}
-        self.hold=False;self.clear_since=None;self.release_until=-1e9;self.light_hold=False
+        self.hold=False;self.clear_since=None;self.release_until=-1e9;self.light_hold=False;self.junction_stop_s=None
         self.bypass_state=None;self.meta={};self.sensor=None;self.prepared=False
         root=Path(agent.out)
         self.scene=(root/"privileged.jsonl").open("w",buffering=1)
@@ -289,13 +289,20 @@ class Privileged:
             A=agent.arb
             return idm(speed,distance+A["idm_s0"],0.,0.,A["cruise"],A["amax"],A["idm_b"],A["idm_s0"],A["idm_T"])
         if self.junction and conflict_s and not warm:
-            gap=min(conflict_s)-self.ego_s-REAR_TO_BUMPER-2
-            out["pjunc"]=stop(gap);self.meta.update(junction_stop_gap=gap,late=gap<0)
+            stop_s=min(conflict_s)-REAR_TO_BUMPER-2
+            # Retain the earliest stop target during this conflict episode instead of chasing it forward.
+            self.junction_stop_s=stop_s if self.junction_stop_s is None else min(self.junction_stop_s,stop_s)
+            gap=self.junction_stop_s-self.ego_s
+            out["pjunc"]=stop(gap);self.meta.update(junction_stop_gap=gap,junction_stop_s=self.junction_stop_s,late=gap<0)
             active=True;self.clear_since=None
         elif self.junction and self.hold and not warm:
             if self.clear_since is None:self.clear_since=t
-            if t-self.clear_since<.8:out["pjunc"]=np.zeros(len(TIMES));active=True
-            else:self.release_until=t+2;self.clear_since=None
+            if t-self.clear_since<.8:
+                # Keep the same IDM stop location while checking clearance; zeroing a moving profile is a hard brake.
+                gap=self.junction_stop_s-self.ego_s
+                out["pjunc"]=stop(gap);active=True
+                self.meta.update(junction_stop_gap=gap,junction_stop_s=self.junction_stop_s,late=gap<0)
+            else:self.release_until=t+2;self.clear_since=None;self.junction_stop_s=None
         self.hold=active
         c=agent._ctx();self.meta["light"]={k:c[k] for k in ("tl","tl_dist","tl_id") if k in c}
         d=c.get("tl_dist",1e9);red=c.get("tl") in (1,2)
