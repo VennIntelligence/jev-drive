@@ -1,7 +1,7 @@
 {
   "base_commit": "c1ab219",
   "old_control_sha256": "8e6b2612e6c9a0faab1fa2caa77d7ca9df8034155442bb92fedaa0fd887be069",
-  "new_control_sha256": "4c14ce8e6213adf1f14a41133a2a1c653d2f17c7afd1b8a839f4fb531645be40",
+  "new_control_sha256": "823cd2d13daf50703ddcbee226c54b5c2437ef6d710541234f4685ccf13cc73e",
   "geometry_identical": true,
   "only_plan_log_rel_normalized": true,
   "actual_log_expression_checked": true,
@@ -402,5 +402,12 @@
     "unfinished_combinations": 23
   },
   "raw_attempts_deleted": 0,
-  "driving_failures_retried": 0
+  "driving_failures_retried": 0,
+  "only_plan_log_serializer_changed": true,
+  "nested_numpy_scalars_checked": true,
+  "native_log_bytes_unchanged": true,
+  "unknown_objects_rejected": true,
+  "actual_log_serializer_checked": true,
+  "previous_single_field_repair_failed": true,
+  "failed_repair_attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/repair-v5-2667-drive-s0/attempts/2667/1"
 }

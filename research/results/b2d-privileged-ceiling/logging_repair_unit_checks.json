@@ -1,0 +1,14 @@
+{
+  "checks": {
+    "files": true,
+    "no_crash": true,
+    "finite": true,
+    "median_latency": true,
+    "p99_latency": true
+  },
+  "status": "Failed - TickRuntime",
+  "ms_med": 63.9,
+  "ms_p99": 99.80199999999995,
+  "passed": true,
+  "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/repair-v6-2667-drive-s0/attempts/2667/1"
+}
