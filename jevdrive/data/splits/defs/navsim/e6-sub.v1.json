@@ -1,0 +1,13 @@
+{
+ "dataset": "navsim",
+ "name": "e6-sub",
+ "version": 1,
+ "unit": "token",
+ "n": 20000,
+ "sha256": "a0ebc332745f4598489f5c9af2c7cde391a7eb35d18937baa56357999fdff924",
+ "origin": "jevdrive/elicit_e6.prep: sort(default_rng(0).choice(stage-one navtrain tokens with a future, 20000, replace=False)); frozen from $DATA_DIR/runs/elicitation/e6-prep/20260926-003758/tokens.txt (sha256 ec9f41f0b6583b0a)",
+ "status": "frozen",
+ "used_by": "E6, N0-N4, S, nq3 Q4a",
+ "notes": "token-level pick: its logs overlap the rest of navtrain",
+ "members_file": "e6-sub.v1.txt.gz"
+}

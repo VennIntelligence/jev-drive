@@ -10,6 +10,7 @@ venv/
 
 # Data, checkpoints and experiment outputs (live on the remote data disk)
 data/
+!jevdrive/data/
 datasets/
 checkpoints/
 runs/

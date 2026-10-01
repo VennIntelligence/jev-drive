@@ -1,0 +1,11 @@
+{
+ "dataset": "navsim",
+ "name": "navtest",
+ "version": 1,
+ "unit": "token",
+ "n": 12146,
+ "sha256": "19cf783cbae935fce54cc459f05be508cfb546b0d92e7a5a122d0fc0d8bd4419",
+ "origin": "official devkit scene_filter navtest; tokens of $DATA_DIR/runs/navsim_zs/index/navtest.pkl (scripts/navsim_zs_index.py)",
+ "status": "official",
+ "members_file": "navtest.v1.txt.gz"
+}

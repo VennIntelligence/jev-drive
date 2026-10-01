@@ -1,0 +1,11 @@
+{
+ "dataset": "navsim",
+ "name": "navhard_two_stage",
+ "version": 1,
+ "unit": "token",
+ "n": 5912,
+ "sha256": "ed85560673bf977179bab29aacf7ea9784f80d214a30fbcdfb0a91698bbf5ff9",
+ "origin": "official devkit scene_filter navhard_two_stage; tokens of $DATA_DIR/runs/navsim_zs/index/navhard_two_stage.pkl (scripts/navsim_zs_index.py)",
+ "status": "official",
+ "members_file": "navhard_two_stage.v1.txt.gz"
+}
