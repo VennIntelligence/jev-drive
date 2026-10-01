@@ -41,7 +41,6 @@ with a monitor, for looking at CARLA with your own eyes.
 - Code: `~/data/jev-drive`. Update with `git pull`. It uses a read-only deploy key (ssh alias `github-jev-drive`),
   so do not commit or push from the box. Delete `~/.ssh/id_ed25519_jev_drive` before saving an image.
 - Python: use `uv`, and create venvs under `~/data`.
-- Tools: tmux, ranger, btop, nvtop, fish, uv, opencode (opencode has no API key yet).
 - A re-created instance loses users, keys and packages, and the host and port change. Re-check this page then.
 
-Last verified: 2026-09-28 (migration check: tmp/2026-09-28-box-migration.md)
+Last verified: 2026-10-01 (remote box configuration)

@@ -24,6 +24,11 @@ Once a conclusion is settled, write the final English version in `docs/` or in c
 - No Artifact web pages (claude.ai artifacts, published HTML). Every report, briefing, summary and write-up is a
   Markdown file in the repo (`tmp/`, `research/`, `todos/` or `docs/` by its nature). Existing artifact pages are
   not updated or republished; when one goes stale, the Markdown doc carries the correction.
+- **Web presentation & interaction without GitHub push**: When presenting documents, research roadmaps, or
+  interactive reports to the user without pushing to GitHub, run `./scripts/start_public_roadmap.sh` on the Mac mini.
+  It launches the lightweight dynamic reader (`scripts/serve_research.py`) and Cloudflare Quick Tunnel (`trycloudflare.com`),
+  instantly copying an open, read-only HTTPS link to the clipboard. All Markdown files in `research/`, `todos/`, `docs/`,
+  and `tmp/` are scanned dynamically on every page load with zero build steps.
 - Anything longer than ~1 min runs in the box's tmux session `jev` (`scripts/tmux_run.sh`), with tqdm progress,
   and writes `log.txt` (human), `events.jsonl` (machine) and `tb/` (TensorBoard curves) to its run dir.
   See [docs/long-runs.md](docs/long-runs.md).
