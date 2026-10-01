@@ -1,0 +1,49 @@
+{
+ "wall_s_cuda": 46.85321116447449,
+ "sections_cuda": {
+  "K0": {
+   "wall_s": 1.023848533630371
+  },
+  "K1": {
+   "wall_s_route": 0.24281525611877441,
+   "wall_s_speed": 13.56775188446045
+  },
+  "K3": {
+   "wall_s": 2.702026605606079
+  }
+ },
+ "wall_s_cpu": 17.221478939056396,
+ "sections_cpu": {
+  "K0": {
+   "wall_s": 0.31753110885620117
+  },
+  "K1": {
+   "wall_s_route": 0.19906830787658691,
+   "wall_s_speed": 9.652798414230347
+  },
+  "K3": {
+   "wall_s": 6.187226057052612
+  }
+ },
+ "wall_s_cuda+ridge": 12.790594339370728,
+ "sections_cuda+ridge": {
+  "K0": {
+   "wall_s": 0.29453587532043457
+  },
+  "K1": {
+   "wall_s_route": 0.2088634967803955,
+   "wall_s_speed": 9.800315141677856
+  },
+  "K3": {
+   "wall_s": 1.6170539855957031
+  }
+ },
+ "cuda_vs_cpu_K0_max_abs_m": 0.0,
+ "cuda_vs_cpu_K1_max_abs_m": 0.0,
+ "cuda_vs_cpu_K3_max_abs_m": 4.978468588490159e-07,
+ "cuda_vs_cpu_c_max_abs_m": 4.978468588490159e-07,
+ "cuda+ridge_vs_cpu_K0_max_abs_m": 0.03784465789794922,
+ "cuda+ridge_vs_cpu_K1_max_abs_m": 4.631695333046082e-05,
+ "cuda+ridge_vs_cpu_K3_max_abs_m": 2.3241164939236114e-05,
+ "cuda+ridge_vs_cpu_c_max_abs_m": 2.3241164939236114e-05
+}

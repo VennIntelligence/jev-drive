@@ -1,0 +1,9 @@
+{
+ "set": "carla_p6",
+ "streams": 605,
+ "stored_streams": 605,
+ "rows": 37317,
+ "different": 0,
+ "max_abs": 0.0,
+ "examples": []
+}

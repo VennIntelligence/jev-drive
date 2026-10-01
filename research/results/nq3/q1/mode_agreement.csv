@@ -1,0 +1,63 @@
+examinee,world,mean,size
+Alpamayo 1.5,mirror,0.667,24
+Alpamayo 1.5,shoulder,0.462,39
+Alpamayo 1.5,x00,0.661,124
+Alpamayo 1.5,x10,0.194,124
+Alpamayo 1.5,x11,0.253,75
+E5 student B [cinque],mirror,0.25,24
+E5 student B [cinque],shoulder,0.846,39
+E5 student B [cinque],x00,0.72,132
+E5 student B [cinque],x10,0.076,132
+E5 student B [cinque],x11,0.173,75
+E5 student B [lebowski],mirror,0.333,24
+E5 student B [lebowski],shoulder,0.744,39
+E5 student B [lebowski],x00,0.621,132
+E5 student B [lebowski],x10,0.371,132
+E5 student B [lebowski],x11,0.213,75
+M-C pair [cinque],shoulder,0.744,39
+M-C pair [cinque],x00,0.788,132
+M-C pair [cinque],x10,0.106,132
+M-C pair [lebowski],shoulder,0.744,39
+M-C pair [lebowski],x00,0.727,132
+M-C pair [lebowski],x10,0.318,132
+PDM-Lite expert (future),mirror,0.833,24
+PDM-Lite expert (future),shoulder,0.744,39
+PDM-Lite expert (future),x00,0.962,132
+PDM-Lite expert (future),x10,0.606,132
+PDM-Lite expert (future),x11,0.48,75
+SparseDriveV2,shoulder,0.256,39
+SparseDriveV2,x00,0.364,132
+SparseDriveV2,x10,0.045,132
+ZTRS,shoulder,0.256,39
+ZTRS,x00,0.303,132
+ZTRS,x10,0.008,132
+cls_late [cinque],mirror,0.583,24
+cls_late [cinque],shoulder,0.821,39
+cls_late [cinque],x00,0.788,132
+cls_late [cinque],x10,0.061,132
+cls_late [cinque],x11,0.253,75
+cls_late [lebowski],mirror,0.542,24
+cls_late [lebowski],shoulder,0.769,39
+cls_late [lebowski],x00,0.682,132
+cls_late [lebowski],x10,0.152,132
+cls_late [lebowski],x11,0.347,75
+openpilot cinque native plan,mirror,0.833,24
+openpilot cinque native plan,shoulder,0.615,39
+openpilot cinque native plan,x00,0.576,132
+openpilot cinque native plan,x10,0.083,132
+openpilot cinque native plan,x11,0.4,75
+openpilot lebowski native plan,mirror,0.708,24
+openpilot lebowski native plan,shoulder,0.103,39
+openpilot lebowski native plan,x00,0.189,132
+openpilot lebowski native plan,x10,0.03,132
+openpilot lebowski native plan,x11,0.373,75
+ridge_late [cinque],mirror,0.208,24
+ridge_late [cinque],shoulder,0.769,39
+ridge_late [cinque],x00,0.75,132
+ridge_late [cinque],x10,0.076,132
+ridge_late [cinque],x11,0.173,75
+ridge_late [lebowski],mirror,0.333,24
+ridge_late [lebowski],shoulder,0.744,39
+ridge_late [lebowski],x00,0.591,132
+ridge_late [lebowski],x10,0.341,132
+ridge_late [lebowski],x11,0.213,75

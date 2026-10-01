@@ -1,0 +1,40 @@
+# K-prep READY 2026-09-26 20:40 CST (todos/2026-09-26-night-queue-4.md, K)
+
+## Weights (numpy apply: jevdrive.nq4_k.KHead; one set per level and fold, the fits are deterministic)
+- K0: /root/autodl-tmp/ujs/runs/nq4/k/K0/R1/head.npz, /root/autodl-tmp/ujs/runs/nq4/k/K0/R2/head.npz, /root/autodl-tmp/ujs/runs/nq4/k/K0/full/head.npz
+- K1: /root/autodl-tmp/ujs/runs/nq4/k/K1/R1/head.npz, /root/autodl-tmp/ujs/runs/nq4/k/K1/R2/head.npz, /root/autodl-tmp/ujs/runs/nq4/k/K1/full/head.npz
+- K2: /root/autodl-tmp/ujs/runs/nq4/k/K2/R1/head.npz, /root/autodl-tmp/ujs/runs/nq4/k/K2/R2/head.npz, /root/autodl-tmp/ujs/runs/nq4/k/K2/full/head.npz   (K2 = K1's weights; the rules live in the agent)
+- K3: /root/autodl-tmp/ujs/runs/nq4/k/K3/R1/head.npz, /root/autodl-tmp/ujs/runs/nq4/k/K3/R2/head.npz, /root/autodl-tmp/ujs/runs/nq4/k/K3/full/head.npz
+
+## Agent modes (scripts/b2d_zeroshot_agent.py, model head) and server
+- config: {"model": "head", "arm": "k0"|"k1"|"k2"|"k3", "k_view": "unseen"|"seen", "k_split": "/root/autodl-tmp/ujs/runs/nq4/k/route_split.json", "socket": <head server socket>, "warmup_s": 5.0, "desire": true, "head_cam_tick": 0.0, "controller": "fixed", "controller_preset": "pursuit", "controller_config": todos/2026-09-23-tfv6-controller/controller-eval/P7.json, "seed": <TM seed>, "dump_every": 0}
+- route python: envs/scout-tfv6 (as lane B's head arms); the fold is chosen per route from BENCHMARK_ROUTE_ID: unseen = the readout that never saw the route's recordings (never-recorded routes: R1), seen = its own (recorded routes only; the agent refuses otherwise)
+- k2 / k3: TFv6 rules (LEAD 730bc1a creeping + stop sign) on P7's throttle / brake, logged per tick in ticks.jsonl (key rules)
+- head server: CUDA_VISIBLE_DEVICES=<g> envs/openpilot/bin/python scripts/nq3_cl_server.py --pool <workers> --socket <S> (no Qwen / YOLO server needed; one server serves all four K arms and both folds)
+- plans.jsonl gets v_target (K1-K3) and g3 (K3) per plan from the server's info
+
+## Output convention
+- path (20, 2) float64, rear-axle frame, x forward, y left, t = 0.25 ... 5.0 s, handed to P7 as lane B's head arms
+- K0 = ridge ego + ridge_late (CL3's recipe); K1 = TFv6 route (10 checkpoints, 2.5 m + 1 m steps) + target speed (8 classes, two-hot expectation), path at s = v t; K2 = K1 + rules; K3 = K2 + g3 x c along the path
+
+## Checks
+- lead re-run temporal vs stored op_streams_vis: [{'set': 'carla_p5v1_ba', 'streams': 858, 'rows': 46703, 'different': 0}, {'set': 'carla_p6', 'streams': 605, 'rows': 37317, 'different': 0}]
+- full-data K0 vs lane B heads.npz: {'max_abs_pred': 0.00089263916015625, 'We_max_abs': 0.018915176391601562, 'Wp_max_abs': 5.081295967102051e-06, 'lam': [3.1622776601683795e-05, 0.09999999999999999, 3.1622776601683795e-05, 0.09999999999999999], 'xfit_unseen_vs_laneB_per_row_max_abs_m': {'p50': 1.524406909942627, 'p95': 4.719898462295533, 'max': 28.507144942879677}}
+- numpy apply vs fit, max |diff| m: {'R1': {'K0': 3.0517578125e-05, 'K1': 0.0, 'K3': 0.0}, 'R2': {'K0': 3.814697265625e-05, 'K1': 0.0, 'K3': 0.0}, 'full': {'K0': 3.814697265625e-05, 'K1': 0.0, 'K3': 0.0}}
+- GPU vs CPU eigh (fold R1): {'wall_s_cuda': 46.85321116447449, 'wall_s_cpu': 17.221478939056396, 'wall_s_cuda+ridge': 12.790594339370728, 'cuda_vs_cpu_K0_max_abs_m': 0.0, 'cuda_vs_cpu_K1_max_abs_m': 0.0, 'cuda_vs_cpu_K3_max_abs_m': 4.978468588490159e-07, 'cuda_vs_cpu_c_max_abs_m': 4.978468588490159e-07, 'cuda+ridge_vs_cpu_K0_max_abs_m': 0.03784465789794922, 'cuda+ridge_vs_cpu_K1_max_abs_m': 4.631695333046082e-05, 'cuda+ridge_vs_cpu_K3_max_abs_m': 2.3241164939236114e-05, 'cuda+ridge_vs_cpu_c_max_abs_m': 2.3241164939236114e-05}
+- closed-loop rule 8 (GPU 2, routes ['17752', '2416', '3540']): pass = True; k0/attempts/17752/1: 733 requests identical True; k0/attempts/2416/1: 712 requests identical True; k0/attempts/3540/1: 475 requests identical True; k1/attempts/17752/1: 661 requests identical True; k1/attempts/2416/1: 502 requests identical True; k1/attempts/3540/1: 1000 requests identical True; k2/attempts/17752/1: 1000 requests identical True; k2/attempts/2416/1: 499 requests identical True; k2/attempts/3540/1: 405 requests identical True; k3/attempts/17752/1: 455 requests identical True; k3/attempts/2416/2: 594 requests identical True; k3/attempts/3540/1: 404 requests identical True
+- rules replay: [{'ticks': 4000, 'different': 0, 'arm': 'k2', 'route': '17752', 'stop_ticks': 0, 'rule_changed': 517}, {'ticks': 1995, 'different': 0, 'arm': 'k2', 'route': '2416', 'stop_ticks': 0, 'rule_changed': 0}, {'ticks': 1621, 'different': 0, 'arm': 'k2', 'route': '3540', 'stop_ticks': 0, 'rule_changed': 8}, {'ticks': 1820, 'different': 0, 'arm': 'k3', 'route': '17752', 'stop_ticks': 0, 'rule_changed': 392}, {'ticks': 2379, 'different': 0, 'arm': 'k3', 'route': '2416', 'stop_ticks': 0, 'rule_changed': 0}, {'ticks': 1618, 'different': 0, 'arm': 'k3', 'route': '3540', 'stop_ticks': 0, 'rule_changed': 8}]
+- folds used: [{'arm': 'k0', 'route': '17752', 'kfold': 'R1', 'expected': 'R1'}, {'arm': 'k0', 'route': '2416', 'kfold': 'R2', 'expected': 'R2'}, {'arm': 'k0', 'route': '3540', 'kfold': 'R1', 'expected': 'R1'}, {'arm': 'k1', 'route': '17752', 'kfold': 'R1', 'expected': 'R1'}, {'arm': 'k1', 'route': '2416', 'kfold': 'R2', 'expected': 'R2'}, {'arm': 'k1', 'route': '3540', 'kfold': 'R1', 'expected': 'R1'}, {'arm': 'k2', 'route': '17752', 'kfold': 'R1', 'expected': 'R1'}, {'arm': 'k2', 'route': '2416', 'kfold': 'R2', 'expected': 'R2'}, {'arm': 'k2', 'route': '3540', 'kfold': 'R1', 'expected': 'R1'}, {'arm': 'k3', 'route': '17752', 'kfold': 'R1', 'expected': 'R1'}, {'arm': 'k3', 'route': '2416', 'kfold': 'R2', 'expected': 'R2'}, {'arm': 'k3', 'route': '3540', 'kfold': 'R1', 'expected': 'R1'}]
+
+## Pilot sanity checklist per level (user rule: 1 route, then a 10-route pilot, then the batch; F's chain applies it)
+Pilot = the same 10 routes for every level, run unseen with TM seed 0, next to CL3 (lane B, seed 0) on those routes. Stop the level and write ERROR on any failed item:
+1. completion: all 10 routes end with a route result (CARLA crashes retried by b2d_run, max 2 attempts); agent_summary.json shows arm, k_view and n_plans > 0; no Python traceback in any route log
+2. blocked: routes ending in 'Agent got blocked' <= CL3's count on the same 10 routes + 2
+3. DS: the level's mean DS over the 10 routes >= CL3's mean on the same routes - 25 (a far lower mean means a wrong fold, head file or path convention, not a recipe effect)
+4. plans.jsonl: every path finite; K1-K3: v_target within [0, 20] m/s and its median over plans with speed > 2 m/s above 2 m/s
+5. K3: g3 within [0, 1]; the share of plans with g3 > 0.5 over the 10 routes between 0.5% and 20% (open-loop on P5 v1 BA: 3.7-5.0% per fold); 0% or > 30% = gate miswired
+6. K2 / K3: every tick of ticks.jsonl has a 'rules' record; ticks where the rules changed throttle / brake < 5% of ticks outside the stop-sign routes
+7. seen runs (K0, K3): the agent refuses a never-recorded route, so a seen batch lists only recorded routes (route_split.json, recorded = true)
+
+## Open-loop exports (capability readouts, not judged here)
+- /root/autodl-tmp/ujs/runs/nq4/k/openloop/ba_<level>.npz (unseen / seen / full, readout_unseen, v / g3), i3_<level>.npz (R1, R2; main = R1), p6_<level>.npz (unseen by the route's readout, R1, R2)

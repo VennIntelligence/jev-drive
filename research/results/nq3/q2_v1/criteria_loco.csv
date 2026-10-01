@@ -1,0 +1,3 @@
+split,model,stream,A0 passes gate (all seeds),A1 passes gate (all seeds),A2 passes gate (all seeds),A3 passes gate (all seeds),bypass elicited (A1 or A3),via,"vocabulary only (A4 passes, A0 / A2 not)","mirror > 50% (any arm, mean over seeds)"
+loco,cinque,op,False,False,False,False,False,,False,
+loco,lebowski,op,False,False,False,False,False,,False,
