@@ -77,7 +77,11 @@ class Chain:
         assert self.log.tb is not None,"TensorBoard writer missing"
         self.lock=threading.Lock();self.active={};self.stop=threading.Event();self.error=None
         self.metadata=manifest();self.slots=queue.Queue()
+        self.control_hash=self.physics_hash()
         self.pack(args.slots)
+
+    def physics_hash(self):
+        return hashlib.sha256(b"".join((REPO/p).read_bytes() for p in ("scripts/op_arb_agent.py","scripts/b2d_privileged_geometry.py"))).hexdigest()
 
     def pack(self,count):
         assert not self.active
@@ -102,6 +106,7 @@ class Chain:
         count=len(ids);workers=min(count,workers or self.args.workers)
         try:
             grant()
+            assert self.physics_hash()==self.control_hash,"Control source changed during stage; stop and start a new version"
             if self.stop.is_set():raise RuntimeError("Queue stopped after another unit failed")
             if (ROOT/"units"/(name+".json")).exists():return adir
             with self.lock:self.active[(g,k)]=name
@@ -139,7 +144,7 @@ class Chain:
                     with (ROOT/("video-"+name+".log")).open("a") as out:
                         subprocess.run([str(python),"scripts/op_drive_record_video.py","annotate",str(path)],cwd=REPO,stdout=out,stderr=subprocess.STDOUT,check=True)
             elapsed=time.perf_counter()-start
-            write(ROOT/"units"/(name+".json"),dict(unit=name,ids=ids,arm=arm,seed=seed,gpu=g,slot=k,cpus=cpus,wall_s=elapsed,workers=workers,record=record))
+            write(ROOT/"units"/(name+".json"),dict(unit=name,ids=ids,arm=arm,seed=seed,gpu=g,slot=k,cpus=cpus,wall_s=elapsed,workers=workers,record=record,control_sha256=self.control_hash))
             self.log.info(f"Completed {name}: {count} routes in {elapsed/60:.2f} min")
             self.log.event("unit_end",unit=name,wall_s=elapsed)
             self.log.scalar("performance/routes_per_hour",count*3600/elapsed,len(list((ROOT/"units").glob("*.json"))))
@@ -209,7 +214,7 @@ class Chain:
             raise RuntimeError("Pilot diagnostics failed; full batch remains stopped")
 
     def debug(self):
-        if (ROOT/"DONE-debug").exists():return
+        if (ROOT/"DONE-debug-v3").exists():return
         self.pilot()
         numeric(self.log,self.log.dir)
         spec=[("27787",a) for a in ("drive","pred")]+[("26872",a) for a in ("drive","pjunc","pall")]+[("25169",a) for a in ("drive","pbyp","pbypgap","pall")]+[("24955",a) for a in ("drive","pbyp","pbypgap")]
@@ -224,9 +229,10 @@ class Chain:
             checks[rid+"-"+arm]=route_checks(self.attempt(results[(rid,arm)],rid),kind)
         write(ROOT/"debug_checks.json",checks)
         assert all(v["passed"] for v in checks.values()),"Substantive debug checklist failed; inspect debug_checks.json"
-        write(ROOT/"lock.json",dict(params=PARAMS,arms=ARMS,git_commit=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),
+        write(ROOT/"lock.json",dict(params=PARAMS,arms=ARMS,debug_version="v3",control_sha256=self.control_hash,git_commit=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),
                                    manifest_sha256=hashlib.sha256((ROOT/"manifest.json").read_bytes()).hexdigest()))
         (ROOT/"DONE-debug").write_text(time.strftime("%F %T\n"))
+        (ROOT/"DONE-debug-v3").write_text(time.strftime("%F %T\n"))
 
     def profile(self):
         if (ROOT/"DONE-profile").exists():return
