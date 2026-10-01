@@ -297,8 +297,10 @@ def frontier(out,log,args):
         h=hull([(0,0)]+[(draws[p["model"]]["stay"][j],draws[p["model"]]["start"][j]) for p in baseline])
         x,y=draws["gate"]["stay"][j],draws["gate"]["start"][j]
         dd.append(y-np.interp(x,h[:,0],h[:,1]) if h[0,0]<=x<=h[-1,0] else np.nan)
-    lo,hi=np.nanpercentile(dd,[2.5,97.5])
-    verdict={"delta":float(delta),"lo":float(lo),"hi":float(hi),"undefined_bootstraps":int((~np.isfinite(dd)).sum()),
+    finite = np.asarray(dd)[np.isfinite(dd)]
+    lo, hi = np.percentile(finite, [2.5, 97.5]) if len(finite) else (np.nan, np.nan)
+    optional = lambda x: float(x) if np.isfinite(x) else None
+    verdict={"delta":optional(delta),"lo":optional(lo),"hi":optional(hi),"undefined_bootstraps":int((~np.isfinite(dd)).sum()),
              "G6_pass":bool(np.isfinite(delta) and delta>0 and lo>0),"hull":upper.tolist()}
     dump(out/"frontier.json",verdict)
     pd.DataFrame(points).to_csv(out/"frontier.csv",index=False)
