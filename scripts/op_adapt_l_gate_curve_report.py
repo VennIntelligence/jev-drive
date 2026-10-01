@@ -60,6 +60,32 @@ def main():
                     raise RuntimeError("Curve chain failed; report is blocked")
                 time.sleep(5)
             bar.update(1)
+        baseline_config = json.loads((L.lroot("runs", "main-s0") / "config.json").read_text())
+        original_cfg = {k: v for k, v in baseline_config["cfg"].items() if k not in ("name", "seed")}
+        counts_table = pd.read_csv(PREP / "counts.csv").astype({"size": str})
+        timings = []
+        for size in ("25", "110", "300", "all"):
+            for seed in (0, 1):
+                directory = ROOT / f"curve-{size}-s{seed}"
+                assert (directory / "DONE").exists() and (ROOT / f"eval-{size}-s{seed}/DONE").exists()
+                config = json.loads((directory / "config.json").read_text())
+                actual_cfg = {k: v for k, v in config["cfg"].items() if k not in ("name", "seed")}
+                assert actual_cfg == original_cfg, f"Configuration differs from main: {size}/{seed}"
+                assert config["cfg"]["seed"] == seed
+                for key in ("wod:stay", "wod:control", "wod:straight_int", "wod:other", "nus"):
+                    assert config["pools"][key] == baseline_config["pools"][key], f"Contrast pool changed: {key}"
+                for sl in L.SLICE3:
+                    row = counts_table[(counts_table["slice"] == sl) & (counts_table["size"] == size)].iloc[0]
+                    assert config["pools"][f"wod:{sl}"] == int(row.frames)
+                dev = json.loads((directory / "dev.json").read_text())
+                assert dev["nonfinite"] == 0 and dev["steps"] == 4000
+                timings.append({"size": size, "seed": seed, "steps": dev["steps"], "train_seconds_including_dev": dev["train_s"],
+                                "seq_per_s_including_dev": dev["seq_per_s"], "data_wait_fraction": dev["data_wait_frac"],
+                                "peak_reserved_gib": dev["peak_reserved_gb"], "nonfinite": dev["nonfinite"]})
+        pd.DataFrame(timings).to_csv(out / "timings.csv", index=False)
+        dump(out / "run_audit.json", {"runs": 8, "configuration_matches_main": True,
+             "contrast_and_other_pools_match_main": True, "imitation_pools_match_manifest": True,
+             "all_steps_4000": True, "nonfinite_losses": 0})
         events = [json.loads(line) for line in (ROOT / "curve-unit/events.jsonl").read_text().splitlines()]
         loss_bins = [e["value"] for e in events if e.get("tag") == "loss/imit"]
         assert len(loss_bins) == 16 and min(loss_bins) >= 0
@@ -124,8 +150,8 @@ def main():
                 ratio=gain/full_gain if full_gain>0 else None
                 seed_ratio=[]
                 for seed in (0,1):
-                    denominator=float((per["all"][seed][key][mask]-baseline).mean())
-                    numerator=float((per[size][seed][key][mask]-baseline).mean())
+                    denominator=float((per["all"][seed][key][mask].astype(float)-baseline).mean())
+                    numerator=float((per[size][seed][key][mask].astype(float)-baseline).mean())
                     seed_ratio.append(numerator/denominator if denominator>0 else None)
                 rs=counts[(counts["slice"]==s)&(counts["size"]==size)].iloc[0]
                 passed=bool(verdicts[(verdicts.model==f"curve-{size}")&(verdicts.line==f"C1-{s}")].passed.all())
