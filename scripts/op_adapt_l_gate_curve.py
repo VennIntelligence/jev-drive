@@ -34,8 +34,8 @@ from op_adapt_l_gate_curve_prep import core_set, dump  # noqa: E402
 import op_adapt_l_train as T  # noqa: E402
 
 ROOT = data_dir() / "runs/op_adapt_L/gate_curve"
-PREP = ROOT / "prep-v2"
-MAIN_TAGS = ("sel_s4ia_dw3-s0", "main-s1", "main-s2")
+PREP = ROOT / "prep-v3"
+MAIN_TAGS = ("main-s0", "main-s1", "main-s2")
 
 
 def grant_check(gpu=True):
@@ -444,13 +444,14 @@ def main():
         raise SystemExit(f"Existing sentinel in {out}; inspect before creating a new attempt")
     log = T.Log(out)
     assert log.tb is not None
-    grant_check(gpu=bool(os.environ.get("CUDA_VISIBLE_DEVICES")))
     torch.set_num_threads(max(1, min(2, len(os.sched_getaffinity(0)))))
     commands = {"gate-cache": gate_cache, "gate-pilot": gate_pilot, "gate-fit": gate_fit,
                 "gate-lock": gate_lock, "curve-profile": curve_profile, "curve-unit": curve_train,
                 "curve-train": curve_train, "curve-eval": curve_eval}
-    log.event("start", command=args.command, size=args.size, seed=args.seed, resources=grant_check(gpu=bool(os.environ.get("CUDA_VISIBLE_DEVICES"))))
     try:
+        resources = grant_check(gpu=bool(os.environ.get("CUDA_VISIBLE_DEVICES")))
+        assert (PREP / "DONE").exists(), "CPU preparation must pass before experiment work"
+        log.event("start", command=args.command, size=args.size, seed=args.seed, resources=resources)
         commands[args.command](out, log, args)
         (out / "DONE").write_text(time.strftime("%Y-%m-%d %H:%M:%S\n"))
     except BaseException as error:

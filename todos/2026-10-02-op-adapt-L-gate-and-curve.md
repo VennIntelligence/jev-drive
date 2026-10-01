@@ -81,3 +81,5 @@ D1（2026-10-01，任何训练、profile、AUC之前）：预登记错误地把�
 待执行。所有数字未计算，不能以既有main读数充当本任务结果。
 
 - 2026-10-01，用户告知三张卡应已空闲；复查GPU0/1/2均0MiB、0%，无compute进程，B2D STATUS为`plan full done`。按用户最新资源信息登记自己的GPU0/1/2，但仍不使用核8–73，CPU范围保持0–7、74。B2D陈旧调度行不代替其负责人修改。
+
+- D2（基础设施修复，任何训练/profile之前）：更新GPU grant时遗漏`--prefix GC`，sch_table默认生成了`CURVE_CPUS`，资源验证找不到`GC_CPUS`并拒绝启动。没有计算模型或实验指标。保留`prep-v2/ERROR`，补全prefix后重试到`prep-v3/`；gate/curve首次启动同样在资源检查处拒绝，未进入实验。资源检查移到统一异常记录内，确保以后拒绝启动也有ERROR证据。

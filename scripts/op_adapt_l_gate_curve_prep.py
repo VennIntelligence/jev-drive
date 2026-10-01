@@ -131,7 +131,7 @@ def run(root: Path, out: Path, log: Log):
 
 def main():
     root = data_dir() / "runs/op_adapt_L/gate_curve"
-    out = root / "prep-v2"
+    out = root / "prep-v3"
     out.mkdir(parents=True, exist_ok=True)
     if (out / "DONE").exists() or (out / "ERROR").exists():
         raise SystemExit("Preparation already has a sentinel; inspect it before creating a new attempt")
