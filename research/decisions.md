@@ -4244,5 +4244,5 @@ slice 只按自车运动学切（4 s 未来），独立事件 = 同一 log 内�
 3. **无相机 agent 每卡 12 个 worker**（W 4→12：31.5→71.2 tick/s），切片只有 8–12 核在忙，瓶颈不在 CPU 也不在 GPU。推测是每 tick 的同步等待，没有验证。相机 agent 仍按每卡 6 个的 GPU knee。
 4. **基础设施**：调度、租约、线程 profile、PID 准入、进程清理统一到 `jevdrive/cl/`，库重跑旧的 `carla_threads_routes.sh` 得到同样的 DS；`sch_table.py` 的上限改为从实测 `pids.max` 推出（0.80 / 0.85 倍）。
 
-**状态**：**已确认**（D1/D2）；D3 与下面的矛盾是**待定**。限定：只测了 PDM-Lite 这一个 CPU 轻、无相机的 agent；B 段每个 W 只跑一次；相机场景（Stage C）stock 那次收尾中。
+**状态**：**已确认**（D1/D2）；D3 与下面的矛盾是**待定**。限定：只测了 PDM-Lite 这一个 CPU 轻、无相机的 agent；B 段每个 W 只跑一次；相机场景（Stage C，6 worker）reduced 36.4、stock 35.9 tick/s，等价。
 **会推翻或推进本条的证据**：同一张卡上重复 W = 12 的 stock / reduced 配对，若 stock 仍快 ≥ 10%（那密集批次要换 stock 或降 W）；带 torch 模型的 agent 上 T 的最优值不同（那按 agent 覆盖）；相机 rig 下 reduced 的吞吐低于 stock 0.95 倍。

@@ -67,7 +67,8 @@ routes of (ticks / route wall); two repeats on two cards (card-to-card spread ~5
   cards; reduced also had 2 early start failures there). Stage A at 8 workers showed no difference. Until a repeated
   12-worker A/B says otherwise, prefer <= 10 workers per card with the reduced profile, or rerun the pair before a
   dense CPU-light campaign.
-- Stage C (camera stub, front3 1600x900, 6 workers): see the todo; reported there when the stock run finished.
+- Stage C, camera-bound (b2d_run stub, front3 1600x900, 6 workers, card 0): reduced 36.4 vs stock 35.9 ticks/s, GPU util
+  70 / 68%, 40/40 routes, no start failures: the profile does not cost throughput when the GPU binds either.
 - The library reproduces the old `carla_threads_routes.sh` lane: 20/20 routes, mean DS 93.3 (old runs 90.6-95.3), DS
   differences only on the known flaky routes 1956 / 3564 / 17563.
 
