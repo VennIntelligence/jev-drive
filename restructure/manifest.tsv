@@ -718,6 +718,7 @@ scripts/nq4_g_lane.py	experiments/night_queue_4/lib/nq4_g_lane.py	night_queue_4	
 research/figs/op-adapt-L-capture.png	experiments/op_adapt_l/figs/op-adapt-L-capture.png	op_adapt_l	data	one-off	figure
 research/figs/op-adapt-L-curve-events.png	experiments/op_adapt_l/figs/op-adapt-L-curve-events.png	op_adapt_l	data	one-off	figure
 research/figs/op-adapt-L-curve-segments.png	experiments/op_adapt_l/figs/op-adapt-L-curve-segments.png	op_adapt_l	data	one-off	figure
+research/figs/op-adapt-L-followup.png	experiments/op_adapt_l/figs/op-adapt-L-followup.png	op_adapt_l	data	one-off	figure
 research/figs/op-adapt-L-gate-frontier.png	experiments/op_adapt_l/figs/op-adapt-L-gate-frontier.png	op_adapt_l	data	one-off	figure
 research/figs/op-adapt-L-rfs-diagnosis.png	experiments/op_adapt_l/figs/op-adapt-L-rfs-diagnosis.png	op_adapt_l	data	one-off	figure
 research/figs/op-adapt-L-rfs.png	experiments/op_adapt_l/figs/op-adapt-L-rfs.png	op_adapt_l	data	one-off	figure
@@ -749,6 +750,8 @@ scripts/op_adapt_l_report.py	experiments/op_adapt_l/scripts/op_adapt_l_report.py
 scripts/op_adapt_l_rfs_diagnosis.py	experiments/op_adapt_l/scripts/op_adapt_l_rfs_diagnosis.py	op_adapt_l	topic	live	
 scripts/op_adapt_l_train.py	experiments/op_adapt_l/scripts/op_adapt_l_train.py	op_adapt_l	topic	live	
 scripts/op_l_b2d_chain.py	experiments/op_adapt_l/scripts/op_l_b2d_chain.py	op_adapt_l	topic	live	
+scripts/op_l_b2d_daemon.py	experiments/op_adapt_l/scripts/op_l_b2d_daemon.py	op_adapt_l	topic	live	pgrep -f use (unsafe-proc); not fixed by the restructure
+scripts/op_l_b2d_wait.sh	experiments/op_adapt_l/scripts/op_l_b2d_wait.sh	op_adapt_l	topic	live	
 scripts/op_l_onnx.py	experiments/op_adapt_l/scripts/op_l_onnx.py	op_adapt_l	topic	live	
 scripts/op_adapt_bench.py	experiments/op_adapt_r1/archive/op_adapt_bench.py	op_adapt_r1	archive	one-off	
 scripts/op_adapt_equiv.py	experiments/op_adapt_r1/archive/op_adapt_equiv.py	op_adapt_r1	archive	one-off	
@@ -899,6 +902,8 @@ research/figs/p3/review/PD-017.webp	experiments/p3_ped_exam/figs/review/PD-017.w
 research/figs/p3/review/PD-018.webp	experiments/p3_ped_exam/figs/review/PD-018.webp	p3_ped_exam	data	one-off	figure
 research/figs/p3/review/PI-001.webp	experiments/p3_ped_exam/figs/review/PI-001.webp	p3_ped_exam	data	one-off	figure
 research/figs/p3/review/PI-002.webp	experiments/p3_ped_exam/figs/review/PI-002.webp	p3_ped_exam	data	one-off	figure
+research/figs/p3/review/PI-003.webp	experiments/p3_ped_exam/figs/review/PI-003.webp	p3_ped_exam	data	one-off	figure
+research/figs/p3/review/PI-006.webp	experiments/p3_ped_exam/figs/review/PI-006.webp	p3_ped_exam	data	one-off	figure
 research/figs/p3/review/PI-007.webp	experiments/p3_ped_exam/figs/review/PI-007.webp	p3_ped_exam	data	one-off	figure
 research/figs/p3/review/PI-008.webp	experiments/p3_ped_exam/figs/review/PI-008.webp	p3_ped_exam	data	one-off	figure
 research/figs/p3/review/PI-009.webp	experiments/p3_ped_exam/figs/review/PI-009.webp	p3_ped_exam	data	one-off	figure
