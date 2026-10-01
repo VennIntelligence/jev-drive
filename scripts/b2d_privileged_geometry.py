@@ -35,6 +35,15 @@ def project(points, path, offset=0.):
     return offset + arc[index] + fraction[j, index] * length[index], signed, unit
 
 
+def ego_boxes(rear,observed_yaw):
+    """Future body center follows the future tangent of the rear-axle trajectory."""
+    rear=np.asarray(rear,float)
+    delta=np.gradient(rear,axis=0)
+    headings=np.where(np.linalg.norm(delta,axis=1)>1e-3,np.arctan2(delta[:,1],delta[:,0]),observed_yaw)
+    forward=np.stack([np.cos(headings),np.sin(headings)],-1)
+    return rear+1.3886*forward,headings
+
+
 def overlap(a, ah, ae, b, bh, be, margin=.5):
     """Broadcasted oriented-rectangle SAT, including a separating-axis margin."""
     a, b, ah, bh, ae, be = [np.asarray(v, float) for v in (a, b, ah, bh, ae, be)]
@@ -272,9 +281,7 @@ class Privileged:
         heading=np.array([math.cos(yaw),math.sin(yaw)]);normal=np.array([-heading[1],heading[0]])
         local=place(path,s_base)
         future=np.asarray(xy)+local[:,0,None]*heading-local[:,1,None]*normal
-        future_center=future+1.3886*heading
-        delta=np.gradient(future,axis=0)
-        headings=np.where(np.linalg.norm(delta,axis=1)>1e-3,np.arctan2(delta[:,1],delta[:,0]),yaw)
+        future_center,headings=ego_boxes(future,yaw)
         conflict_s=[];self.meta["conflict_ids"]=[]
         ids=set(i for j in self.meta["junctions"] for i in j["ids"])
         for a in self.actors:

@@ -1,6 +1,6 @@
 # B2D 特权上限：路口冲突、绕障与红灯（预登记）
 
-状态：调试检查已通过，正在做三卡装填profile；正式评测尚未开始。本文在本任务任何闭环运行或新结果之前提交并push；仅查了XML（路线与场景类型配置格式）场景类型与资源元数据，没有查看这些新路线的旧成绩。任务来自[main提示词](../tmp/2026-10-01-b2d-privileged-ceiling-prompt.md)。背景已读decisions第47/49/52/57/61/74/76/81条、[op-drive](2026-09-29-op-drive.md)、[适配闭环登记](2026-10-01-op-adapt-L-b2d-prereg.md)、[量具](../research/behavior-layer-instruments.md)及[录像诊断](../research/openpilot-seed0-video-diagnosis.md)；decisions只读，由main维护。
+状态：正式尚未开始；在profile阶段的最终代码复核发现未来车身中心坐标错误，已暂停并补做debug-v4。本文在本任务任何闭环运行或新结果之前提交并push；仅查了XML（路线与场景类型配置格式）场景类型与资源元数据，没有查看这些新路线的旧成绩。任务来自[main提示词](../tmp/2026-10-01-b2d-privileged-ceiling-prompt.md)。背景已读decisions第47/49/52/57/61/74/76/81条、[op-drive](2026-09-29-op-drive.md)、[适配闭环登记](2026-10-01-op-adapt-L-b2d-prereg.md)、[量具](../research/behavior-layer-instruments.md)及[录像诊断](../research/openpilot-seed0-video-diagnosis.md)；decisions只读，由main维护。
 
 ## 问题、共用管线与臂
 
@@ -178,3 +178,10 @@ profile的固定负载明确为已登记debug8条×3份（24次drive运行，see
 真实代码的保持状态测试已核验：清空确认期仍保持有正位移的IDM剖面；观测到自有停车之后才放行；未观测自有停车时绿灯不能授权清除原锁存。最初测试跳过了停车观测帧，因此正确地没有放行；补齐该帧后上述四项通过，结果见[junction_hold_smoke.json](../research/results/b2d-privileged-ceiling/junction_hold_smoke.json)，并未改实现来迎合测试。
 
 13:36开始三卡before装填：每卡1slot×2worker；完成后自动切after每卡2slot×4worker，再由同链进入696次正式评测。profile只用固定debug8条×3份，不读取正式效果；当前没有正式数字。实际整批估计待profile后更新，暂沿用预登记4–8h加调试/profile预算。
+
+
+### 2026-10-01 13:48 UTC+8：正式之前纠正未来车身中心
+
+最终几何审查发现，ego的未来包围盒朝向用了未来路线切向，但从rear axle（后轴轨迹参考点）平移到车身中心时仍用当前朝向；90°转弯时中心位置可错约1.964m，会影响SAT冲突判定。因此在FULL_STARTED仍不存在、无任何正式运行时，按确切自有PID停止了profile链及其子进程，保留其部分原始结果。已跑的profile单位不作完整before装填读数，使用v4独立标签重新做完整profile，避免缓存跳过造成错误吞吐。
+
+修复为未来车身中心沿未来朝向从后轴平移1.3886m；静止点继续用当前观测朝向。加入90°路径与静止路径的解析坐标检查，随后重做debug-v4全部13单位；v3仍保留为历史证据，不用旧的通过标记跳过。该修复纠正车辆几何定义，不改变5s匀速预测、任何控制参数、正式路线/seed或所有登记线；模型与相机不变，没有任何正式成绩可供选择。

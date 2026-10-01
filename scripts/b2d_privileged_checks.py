@@ -9,7 +9,7 @@ import numpy as np
 from tqdm import tqdm
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from b2d_privileged_geometry import overlap, project, corners, rectangle_gap, visibility
+from b2d_privileged_geometry import overlap, project, corners, rectangle_gap, visibility, ego_boxes
 
 
 def scalar_project(point,path):
@@ -43,6 +43,11 @@ def numeric(log,out):
     start=time.perf_counter();actual=project(points,path);vector_s=time.perf_counter()-start
     errors=[float(np.max(np.abs(actual[k]-np.array([p[k] for p in reference])))) for k in range(3)]
     maxerr=max(errors);assert maxerr<=1e-6
+    rear=np.array([[0.,0.],[1.,0.],[2.,0.],[2.,1.],[2.,2.]])
+    body,angles=ego_boxes(rear,0.)
+    assert np.allclose(body[-1],[2.,3.3886],rtol=0,atol=1e-12)
+    stationary,angles=ego_boxes(np.tile([2.,3.],(3,1)),np.pi/2)
+    assert np.allclose(stationary,np.tile([2.,4.3886],(3,1)),rtol=0,atol=1e-12)
     n=200;a=rng.normal(size=(n,2));b=rng.normal(size=(n,2))*5
     ah=rng.uniform(-np.pi,np.pi,n);bh=rng.uniform(-np.pi,np.pi,n)
     ae=rng.uniform(.1,3,(n,2));be=rng.uniform(.1,3,(n,2))
@@ -81,7 +86,7 @@ def numeric(log,out):
     original=np.array([[0.,0.],[10.,0.],[30.,0.]])
     assert engine.geometry(5,0,np.zeros(2),0,original,False) is original
     result=dict(projection_maxabs_m=maxerr,sat_cases=n,sat_disagreements=0,disabled_geometry_identity=True,
-                exact_gap_checks=True,native_camera_direction_checks=True,adjacent_state_json=True,
+                exact_gap_checks=True,native_camera_direction_checks=True,adjacent_state_json=True,future_body_center_checks=True,
                 scalar_projection_points_per_s=len(points)/reference_s,vector_projection_points_per_s=len(points)/vector_s)
     (out/"numeric_checks.json").write_text(json.dumps(result,indent=2)+"\n")
     log.info("Numeric checks passed: "+json.dumps(result))

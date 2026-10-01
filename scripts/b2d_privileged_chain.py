@@ -247,14 +247,14 @@ class Chain:
             raise RuntimeError("Pilot diagnostics failed; full batch remains stopped")
 
     def debug(self):
-        if (ROOT/"DONE-debug-v3").exists():return
+        if (ROOT/"DONE-debug-v4").exists():return
         self.pilot()
         numeric(self.log,self.log.dir)
         spec=[("27787",a) for a in ("drive","pred")]+[("26872",a) for a in ("drive","pjunc","pall")]+[("25169",a) for a in ("drive","pbyp","pbypgap","pall")]+[("24955",a) for a in ("drive","pbyp","pbypgap")]
         spec.append(("334","pred"))
         results={}
         with ThreadPoolExecutor(max_workers=3*self.args.slots) as pool:
-            fs={pool.submit(self.unit,"debug-v3-"+rid,arm,0,[rid],record=True):(rid,arm) for rid,arm in spec}
+            fs={pool.submit(self.unit,"debug-v4-"+rid,arm,0,[rid],record=True):(rid,arm) for rid,arm in spec}
             for f in tqdm(as_completed(fs),total=len(fs),desc="Debug units"):
                 rid,arm=fs[f];results[(rid,arm)]=f.result()
         checks={}
@@ -262,13 +262,13 @@ class Chain:
             checks[rid+"-"+arm]=route_checks(self.attempt(results[(rid,arm)],rid),kind)
         write(ROOT/"debug_checks.json",checks)
         assert all(v["passed"] for v in checks.values()),"Substantive debug checklist failed; inspect debug_checks.json"
-        write(ROOT/"lock.json",dict(params=PARAMS,arms=ARMS,debug_version="v3",control_sha256=self.control_hash,git_commit=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),
+        write(ROOT/"lock.json",dict(params=PARAMS,arms=ARMS,debug_version="v4",control_sha256=self.control_hash,git_commit=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),
                                    manifest_sha256=hashlib.sha256((ROOT/"manifest.json").read_bytes()).hexdigest()))
         (ROOT/"DONE-debug").write_text(time.strftime("%F %T\n"))
-        (ROOT/"DONE-debug-v3").write_text(time.strftime("%F %T\n"))
+        (ROOT/"DONE-debug-v4").write_text(time.strftime("%F %T\n"))
 
     def profile(self):
-        if (ROOT/"DONE-profile").exists():return
+        if (ROOT/"DONE-profile-v4").exists():return
         rows=[]
         for label,slots,workers in (("before",1,2),("after",2,4)):
             self.cleanup();self.pack(slots)
@@ -277,7 +277,7 @@ class Chain:
                 ids=DEBUG if slots==1 else None
                 for k in range(slots):
                     cohort=DEBUG if slots==1 else DEBUG[4*k:4*(k+1)]
-                    tasks.append((f"profile-{label}-g{card}-k{k}","drive",0,cohort))
+                    tasks.append((f"profile-v4-{label}-g{card}-k{k}","drive",0,cohort))
             with ThreadPoolExecutor(max_workers=3*slots) as pool:
                 futures=[pool.submit(self.unit,*task,workers=workers,record=False) for task in tasks]
                 for f in tqdm(as_completed(futures),total=len(futures),desc="Packing profile "+label):f.result()
@@ -304,7 +304,7 @@ class Chain:
         write(ROOT/"profile.json",dict(stages=rows,throughput_ratio=rows[1]["routes_per_hour"]/rows[0]["routes_per_hour"],
                     cohort=DEBUG,bottleneck="Measured agent/world/tree/copy timings in per-route profile tables; startup and blocked tails included"))
         self.pack(self.args.slots)
-        (ROOT/"DONE-profile").write_text(time.strftime("%F %T\n"))
+        (ROOT/"DONE-profile-v4").write_text(time.strftime("%F %T\n"))
 
     def full(self):
         self.debug()
