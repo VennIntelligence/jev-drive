@@ -277,6 +277,17 @@ class Lane:
                 why = None
                 prof = j.profile or self.profile
                 per = worker_threads(prof, ncores, box.host_cpus, j.agent_threads)
+                if j.workers * j.vram_gb > card.mem_total_mib / 1024 - capacity.VRAM_HEADROOM_GB or j.workers > cap:
+                    st = self.jst(j.name)                    # can never fit this card: say so instead of waiting forever
+                    if not (set(j.gpus) - {g}) and len(lease.cards) and all(
+                            j.workers * j.vram_gb > c.mem_total_mib / 1024 - capacity.VRAM_HEADROOM_GB or j.workers > cap
+                            for c in box.cards if c.index in lease.cards and (not j.gpus or c.index in j.gpus)):
+                        st["state"] = "failed"
+                        self._error(j.name, st["tries"], None, "never fits: %d workers x %.1f GB, %d per card" % (
+                            j.workers, j.vram_gb, cap))
+                        ready.remove(j)
+                        break
+                    continue
                 if j.exclusive and (ours or foreign):
                     why = "%s: wants the card alone" % j.name
                 elif used[g] + foreign + j.workers > cap:

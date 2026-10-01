@@ -28,6 +28,7 @@ def pdm(name, p, w, card, prio, ids=ROUTES, **kw):
     return b2d(name, data_dir() / "runs" / ROOT / "arms" / name, ids, routes=sim / "leaderboard/data/bench2drive220.xml",
                agent=REPO / "scripts/b2d_expert_agent.py", agent_config="expert+" + name,
                python=data_dir() / "envs/simlingo/bin/python", workers=w, max_attempts=2, min_done=0.95, tries=1,
+               vram_gb=6.0,                # PDM-Lite renders no camera: ~5.6 GB per server measured (Stage A)
                profile=p, env=dict(BENCH2DRIVE_ROOT=sim / "Bench2Drive", WORK_DIR=sim), exclusive=True, gpus=(card,),
                priority=prio, meta=dict(kind=p.name, t=p.num_threads, w=w, card=card), **kw)
 

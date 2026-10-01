@@ -266,6 +266,11 @@ class LaneRun(unittest.TestCase):
         lane.schedule(self.lease, {})
         self.assertIn("VRAM", " ".join(lane.blocked.values()))
 
+    def test_job_that_never_fits_fails_fast(self):
+        rc = self.lane([self.sh("huge", "true", workers=3, vram_gb=40)]).run()      # 120 GB > 83.6 - 8
+        self.assertEqual(rc, 1)
+        self.assertIn("never fits", (self.tmp / "root/ERROR.huge").read_text())
+
     def test_ready_gate_env_template_subslice_and_generate(self):
         gate, rec = self.tmp / "GO", self.tmp / "rec"
         lease = L.Lease("t", {1: {"cpus": "0-3", "idx0": 160}}, 24, 6, "running")
