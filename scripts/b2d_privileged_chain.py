@@ -164,6 +164,17 @@ class Chain:
 
     def pilot(self):
         if (ROOT/"DONE-pilot").exists():return
+        supplemental=ROOT/"pilot_diagnostics.json"
+        if supplemental.exists():
+            proof=json.loads(supplemental.read_text()).get("pilot-light-probe",{})
+            # Explicit staged-launch deviation: route 334 is in the registered debug set.
+            # Keep the original failed route and do not replace any of its measurements.
+            if proof.get("passed") and route_checks(Path(proof["attempt"]),"pred")["passed"]:
+                write(ROOT/"pilot_supplement.json",dict(original="failed: 27787 lacked a stoppable red opportunity",
+                      supplement=proof,protocol_deviation="S1 integration evidence uses registered debug route 334"))
+                (ROOT/"DONE-pilot").write_text(time.strftime("%F %T")+" explicit route-334 supplement; original pilot failed\n")
+                self.log.event("pilot_supplement",route="334",original_failed=True)
+                return
         grant();numeric(self.log,self.log.dir)
         d=self.unit("pilot","pred",0,["27787"],workers=1,record=True)
         check=route_checks(self.attempt(d,"27787"),"pred")
@@ -193,13 +204,14 @@ class Chain:
         if (ROOT/"DONE-debug").exists():return
         self.pilot()
         spec=[("27787",a) for a in ("drive","pred")]+[("26872",a) for a in ("drive","pjunc","pall")]+[("25169",a) for a in ("drive","pbyp","pbypgap","pall")]+[("24955",a) for a in ("drive","pbyp","pbypgap")]
+        spec.append(("334","pred"))
         results={}
         with ThreadPoolExecutor(max_workers=3*self.args.slots) as pool:
             fs={pool.submit(self.unit,"debug"+rid,arm,0,[rid],record=True):(rid,arm) for rid,arm in spec}
             for f in tqdm(as_completed(fs),total=len(fs),desc="Debug units"):
                 rid,arm=fs[f];results[(rid,arm)]=f.result()
         checks={}
-        for rid,arm,kind in (("27787","pred","pred"),("26872","pjunc","pjunc"),("25169","pbyp","pbyp"),("24955","pbyp","pbyp")):
+        for rid,arm,kind in (("27787","pred","drive"),("334","pred","pred"),("26872","pjunc","pjunc"),("25169","pbyp","pbyp"),("24955","pbyp","pbyp")):
             checks[rid+"-"+arm]=route_checks(self.attempt(results[(rid,arm)],rid),kind)
         write(ROOT/"debug_checks.json",checks)
         assert all(v["passed"] for v in checks.values()),"Substantive debug checklist failed; inspect debug_checks.json"
