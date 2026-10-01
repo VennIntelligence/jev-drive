@@ -55,11 +55,11 @@ def jobs(args):
                     meta=dict(kind=k, t=t, w=6, card=c, camera="front3"))
                 for k, c in (("reduced", 1), ("stock", 2))]
     if stage == "old":                     # scripts/carla_threads_routes.sh, 2026-09-27 settings: 5 workers, client 8,
-        jobs = [pdm("old-%s" % k, Profile(k, pools=k, client_threads=8, num_threads=None), 5,
+        olds = [pdm("old-%s" % k, Profile(k, pools=k, client_threads=8, num_threads=None), 5,
                     card if card is not None else c, 0, ids=OLD20.split(",")) for k, c in (("reduced", 1), ("stock", 2))]
-        for j in jobs:
+        for j in olds:
             j.exclusive = False            # DS reproduction only: two 5-worker runs may share a card
-        return jobs
+        return olds
     if stage == "extra":                   # old + C together on one card (stage C runs alone once old is done)
         return jobs(dict(args, stage="old")) + jobs(dict(args, stage="C"))
     raise SystemExit("unknown stage %s" % stage)
