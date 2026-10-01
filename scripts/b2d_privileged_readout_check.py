@@ -48,6 +48,8 @@ def main():
         assert all(delta[k]==5 for k in ('dDS','DS_lo','DS_hi'))
         assert all(delta[k]==-1 for k in ('fail_delta','fail_lo','fail_hi'))
         assert delta['routes']==4 and delta['drive_opps']==8 and delta['arm_opps']==8
+        all_kinds=bootstrap_delta(rr,ev,'pjunc','junction','all')
+        assert all_kinds['fail_delta']==-1 and all_kinds['dDS']==5 and all_kinds['arm_opps']==8
         checked=[]
         for name in tqdm(('debug-v3-27787-drive-s0','debug-v3-26872-pjunc-s0','debug-v3-25169-pbyp-s0'),desc='Official debug readouts'):
             adir=root/'arms'/name;arm=name.split('-')[-2]

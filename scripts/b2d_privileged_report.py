@@ -223,7 +223,9 @@ def bootstrap_delta(routes,events,arm,group,kind):
     pairs=r[r.arm.isin([arm,'drive'])].groupby(['route','arm']).DS.mean().unstack().reindex(ids)
     assert pairs[[arm,'drive']].notna().all().all(),'Incomplete paired routes'
     dd=(pairs[arm]-pairs.drive).to_numpy();boot=dd[draw].mean(1)
-    e=events[(events['group']==group) & (events.kind==kind)] if group!='all' else events[events.kind==kind] if kind!='all' else events
+    e=events
+    if group!='all':e=e[e['group']==group]
+    if kind!='all':e=e[e.kind==kind]
     counts=[]
     for a in ('drive',arm):
         c=e[e.arm==a].groupby('route')[['failed','opportunity']].sum().reindex(ids,fill_value=0).to_numpy()
@@ -273,6 +275,7 @@ def summarize(root,log):
        wait_s=('wait_s','sum'),enabled=('enabled','sum'),execution_failed=('execution_failed','sum')).to_csv(out/'event_counts.csv')
     spec=[('pjunc','junction','junction'),('pbyp','obstacle','obstacle'),('pbypgap','obstacle','obstacle'),('pred','all','red'),('pall','all','all')]
     pairs=pd.DataFrame([bootstrap_delta(r,e,*s) for s in tqdm(spec,desc='Paired route bootstrap')]);pairs.to_csv(out/'paired.csv',index=False)
+    pd.DataFrame([bootstrap_delta(r,e,arm,group,'all') for group in ('all','dev') for arm in ARMS if arm!='drive']).to_csv(out/'secondary_paired.csv',index=False)
     gates={};complete=len(r)==696 and not r.status.isin(['Failed','Simulation crashed','Agent crashed',"Agent couldn't be set up"]).any()
     power=all(len(e[(e.arm==a)&(e['group']==g)&(e.kind==g)])>=30 for a in ARMS for g in ('junction','obstacle'))
     gates['I0']=bool(complete and power)
