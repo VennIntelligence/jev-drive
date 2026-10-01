@@ -1,0 +1,13 @@
+slice,size,segments,frames,events
+start,25,25,253,27
+start,110,110,1030,114
+start,300,300,2766,310
+start,all,889,8400,936
+stop,25,25,144,25
+stop,110,110,706,112
+stop,300,300,1929,309
+stop,all,579,3867,600
+turn_onset,25,25,489,25
+turn_onset,110,110,2244,120
+turn_onset,300,300,6115,326
+turn_onset,all,705,14448,776

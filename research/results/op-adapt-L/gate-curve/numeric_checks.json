@@ -1,0 +1,23 @@
+{
+  "bootstrap_paired_maxabs": 6.938893903907228e-18,
+  "quantile_ci_maxabs": {
+    "0.5": 0.0,
+    "0.95": 0.0
+  },
+  "frontier_hull_checks": true,
+  "gate_feature_maxabs": 0.0,
+  "gate_loss_reference": 0.2647942900657654,
+  "gate_loss_resident": 0.2647942900657654,
+  "gate_gradient_relative_error": 0.0,
+  "gate_path_profile": {
+    "reference_gather": {
+      "seconds_per_batch": 0.0834979044739157,
+      "frames_per_s": 3065.9452068042383
+    },
+    "resident": {
+      "seconds_per_batch": 0.0008539024856872857,
+      "frames_per_s": 299800.0407434717
+    }
+  },
+  "training_rows_only": true
+}

@@ -1,0 +1,68 @@
+{
+  "batch_reference_s": 0.29654937400482595,
+  "batch_resident_s": 0.21962163096759468,
+  "loss_reference": 1.8838597536087036,
+  "loss_resident": 1.8838597536087036,
+  "gradient_relative_error": 0.0,
+  "compute_seq_per_s": 384.8233060305339,
+  "peak_reserved_gib": 18.55078125,
+  "plain_readout_rows_per_s": 370.70933133975933,
+  "dedup_readout_rows_per_s": 952.4754841778871,
+  "readout_equivalence": {
+    "maxabs_4s_m": 0.0,
+    "p99_4s_m": 0.0
+  },
+  "step0_maxabs_m": 0.0,
+  "mixer": {
+    "start": {
+      "rows": 253,
+      "segments": 25
+    },
+    "stop": {
+      "rows": 144,
+      "segments": 25
+    },
+    "turn_onset": {
+      "rows": 489,
+      "segments": 25
+    }
+  },
+  "configuration": {
+    "name": "main",
+    "seed": 0,
+    "s4": true,
+    "pol": false,
+    "intent": "ia",
+    "slices": [
+      "start",
+      "stop",
+      "turn_onset"
+    ],
+    "contrast": true,
+    "contrast_mix": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "dw": 3.0,
+    "steps": 4000,
+    "batch": 64,
+    "n_imit": 30,
+    "n_contrast": 18,
+    "n_other": 8,
+    "n_nus": 8,
+    "lam_i": 1.0,
+    "lam_d": 10.0,
+    "lam_c": 1.0,
+    "contrast_dw": 2.0,
+    "lr": 3e-05,
+    "lr_new": 0.0003,
+    "wd": 0.01,
+    "warmup": 100,
+    "eval_every": 2000,
+    "ckpt_every": 500,
+    "prefetch": 4,
+    "loaders": 3
+  },
+  "training_path": "unchanged original; resident table and shared memmap reuse"
+}
