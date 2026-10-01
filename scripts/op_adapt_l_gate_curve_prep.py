@@ -74,16 +74,20 @@ def run(root: Path, out: Path, log: Log):
     full = (samples.to_numpy() >= 0).all(1)
     assert len(full) == len(tab["seq"]), "Sample and kinematic table lengths differ"
     split, seq = tab["split"].astype(str), tab["seq"].astype(str)
-    identities = {s: set(seq[split == s]) for s in ("train", "dev", "r2val")}
-    overlaps = {f"r2val_vs_{s}": sorted(identities["r2val"] & identities[s]) for s in ("train", "dev")}
-    overlaps["r2val_vs_wodval"] = sorted(identities["r2val"] & set(val_seq))
-    overlaps["train_vs_dev"] = sorted(identities["train"] & identities["dev"])
+    original_train = np.unique(seq[split == "train"])
+    dev_seq = np.random.default_rng(20261002).permutation(original_train)[:round(0.1 * len(original_train))]
+    is_gate_dev = (split == "train") & np.isin(seq, dev_seq)
+    is_gate_train = (split == "train") & ~np.isin(seq, dev_seq)
+    identities = {"train": set(seq[is_gate_train]), "dev": set(seq[is_gate_dev]), "val": set(val_seq)}
+    overlaps = {f"gate_{a}_vs_{b}": sorted(identities[a] & identities[b])
+                for a, b in (("train", "dev"), ("train", "val"), ("dev", "val"))}
     check = {"overlap_counts": {k: len(v) for k, v in overlaps.items()},
-             "overlap_examples": {k: v[:5] for k, v in overlaps.items()}}
+             "overlap_examples": {k: v[:5] for k, v in overlaps.items()},
+             "split_revision": "v2: fresh gate holdout carved from original L train; main previously trained on these segments"}
     stationary = np.maximum.reduce([tab[k] for k in ("v0", "vm05", "vm1")]) <= 0.5
     gate_rows = {}
-    for label, sp in (("train", "train"), ("dev", "r2val")):
-        rows = np.flatnonzero((split == sp) & full & tab["has"] & stationary)
+    for label, mask in (("train", is_gate_train), ("dev", is_gate_dev)):
+        rows = np.flatnonzero(mask & full & tab["has"] & stationary)
         y = tab["s_start"][rows].astype(np.int8)
         gate_rows[label] = rows
         check[label] = {"rows": len(rows), "segments": len(set(seq[rows])),
@@ -127,7 +131,7 @@ def run(root: Path, out: Path, log: Log):
 
 def main():
     root = data_dir() / "runs/op_adapt_L/gate_curve"
-    out = root / "prep"
+    out = root / "prep-v2"
     out.mkdir(parents=True, exist_ok=True)
     if (out / "DONE").exists() or (out / "ERROR").exists():
         raise SystemExit("Preparation already has a sentinel; inspect it before creating a new attempt")
