@@ -75,7 +75,7 @@ class Chain:
         ROOT.mkdir(parents=True,exist_ok=True)
         self.args=args;self.log=RunLog("b2d_privileged_ceiling","chain-"+args.phase)
         assert self.log.tb is not None,"TensorBoard writer missing"
-        self.lock=threading.Lock();self.active={};self.stop=threading.Event();self.error=None
+        self.lock=threading.Lock();self.active={};self.processes={};self.stop=threading.Event();self.error=None
         self.metadata=manifest();self.slots=queue.Queue()
         self.control_hash=self.physics_hash()
         self.pack(args.slots)
@@ -123,7 +123,10 @@ class Chain:
             start=time.perf_counter()
             for attempt in range(2):
                 with (ROOT/("unit-"+name+".log")).open("a") as out:
-                    rc=subprocess.run(["bash","scripts/op_arb.sh","set","2",tag],cwd=REPO,env=env,stdout=out,stderr=subprocess.STDOUT).returncode
+                    proc=subprocess.Popen(["bash","scripts/op_arb.sh","set","2",tag],cwd=REPO,env=env,stdout=out,stderr=subprocess.STDOUT)
+                    with self.lock:self.processes[name]=proc.pid
+                    rc=proc.wait()
+                    with self.lock:self.processes.pop(name,None)
                 finished=all((adir/"done"/(rid+".json")).exists() for rid in ids)
                 if rc==0 and finished:break
                 # Only our own sentinel can be removed. Preserve every attempt and all its logs.
@@ -161,11 +164,39 @@ class Chain:
             with self.lock:self.active.pop((g,k),None)
             self.status();self.slots.put(slot)
 
+    def stop_owned_tree(self,parent):
+        """Terminate exact descendants of one owned wrapper, checking PID start times against reuse."""
+        table={}
+        for entry in Path("/proc").iterdir():
+            if not entry.name.isdigit():continue
+            try:
+                fields=(entry/"stat").read_text().split(") ",1)[1].split()
+                table[int(entry.name)]=(int(fields[1]),fields[19])
+            except (FileNotFoundError,ProcessLookupError,PermissionError):continue
+        owned={parent};changed=True
+        while changed:
+            new={pid for pid,(ppid,_) in table.items() if ppid in owned};changed=bool(new-owned);owned|=new
+        for pid in sorted(owned,reverse=True):
+            if pid not in table:continue
+            try:
+                fields=Path(f"/proc/{pid}/stat").read_text().split(") ",1)[1].split()
+                if fields[19]!=table[pid][1]:continue
+                os.kill(pid,signal.SIGTERM);self.log.event("resource_stop",pid=pid,owned_wrapper=parent)
+            except (FileNotFoundError,ProcessLookupError):pass
+
     def monitor(self):
-        with (ROOT/"util.csv").open("a",buffering=1) as f:
+        usage=lambda:dict(line.split() for line in Path("/sys/fs/cgroup/cpu.stat").read_text().splitlines())
+        previous=time.monotonic();previous_cpu=int(usage()["usage_usec"])
+        with (ROOT/"util.csv").open("a",buffering=1) as f, (ROOT/"cpu.csv").open("a",buffering=1) as cpu:
+            if cpu.tell()==0:cpu.write("time,cpu_busy_equivalent,memory_used_bytes,pids\n")
             if f.tell()==0:f.write("time,gpu,utilization_pct,memory_used_mib,pids\n")
             while not self.stop.wait(5):
                 pids=int(Path("/sys/fs/cgroup/pids.current").read_text())
+                now=time.monotonic();used=int(usage()["usage_usec"])
+                busy=(used-previous_cpu)/1e6/(now-previous)
+                cpu.write(f"{time.time():.3f},{busy:.3f},{Path('/sys/fs/cgroup/memory.current').read_text().strip()},{pids}\n")
+                previous,previous_cpu=now,used
+                self.log.scalar("cpu/busy_equivalent",busy,int(time.time()))
                 output=subprocess.check_output(["nvidia-smi","--query-gpu=index,utilization.gpu,memory.used","--format=csv,noheader,nounits"],text=True)
                 for line in output.splitlines():
                     g,util,mem=[int(v.strip()) for v in line.split(",")]
@@ -174,6 +205,8 @@ class Chain:
                 if pids>=17500:
                     self.error=RuntimeError(f"PID hard checklist failed: {pids}")
                     (ROOT/"ERROR").write_text(str(self.error)+"\n");self.stop.set()
+                    with self.lock:owned=list(self.processes.values())
+                    for parent in owned:self.stop_owned_tree(parent)
 
     def pilot(self):
         if (ROOT/"DONE-pilot").exists():return
