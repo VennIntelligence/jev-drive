@@ -12,6 +12,7 @@ One line per doc. Add a line here whenever you add a doc.
 | [baselines.md](baselines.md) | you need a competitor model's latency on our card, or want to re-run one |
 | [long-runs.md](long-runs.md) | you start a job that takes more than a minute, or need its logs or curves |
 | [waymo-e2e.md](waymo-e2e.md) | you need the Waymo E2E driving data, or need to download or re-fetch it |
+| [closed-loop-runbook.md](closed-loop-runbook.md) | **start here** for any closed-loop (CARLA / Bench2Drive) run: entry points, the `jevdrive.cl` lane library, worker profile default, capacity table with conditions, traps |
 | [carla.md](carla.md) | you need a CARLA simulator on the box, or want the cost of a Bench2Drive evaluation |
 | [bench2drive-cost.md](bench2drive-cost.md) | you need to run a Bench2Drive closed-loop evaluation, or what one costs and why |
 | [b2d-controller.md](b2d-controller.md) | you need the fixed controller API, diagnostic campaigns, acceptance boundaries, or preserved plots |

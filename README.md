@@ -7,12 +7,13 @@ This file is the top-level index: every doc in the repo is reachable from here.
 | Where | What |
 |---|---|
 | [docs/README.md](docs/README.md) | how-to docs: the GPU box, storage, Python env, data, long runs, baselines |
+| [docs/closed-loop-runbook.md](docs/closed-loop-runbook.md) | start here for any CARLA / Bench2Drive run: the `jevdrive.cl` library, worker profile default, capacity numbers with their conditions, traps |
 | [research/README.md](research/README.md) | research topics and the writing conventions for them |
 | [research/decisions.md](research/decisions.md) | the shared decision log: what we decided, why, and whether it is still provisional |
 | [research/frozen-vlm-planner.md](research/frozen-vlm-planner.md) | the original main topic (2026-09-20): frozen VLM + thin head trajectory planning. No longer the main line: decisions §40 made openpilot `temporal` the backbone, and §54 keeps the openpilot + V-JEPA 2 world-model loop as the main line |
 | [research/qwen-latent-driving.md](research/qwen-latent-driving.md) | layer probe study, the analysis part of the original frozen-VLM topic |
 | [research/survey-thin-head.md](research/survey-thin-head.md) | literature survey for group meetings: world models, VLAs, thin heads, the Waymo E2E leaderboard and how crowded the line is |
-| [research/carla-efficiency.md](research/carla-efficiency.md) | CARLA closed-loop cost (2026-09-21/22, measured on the previous RTX PRO 6000 box): server vs closed-loop throughput, instances per card, Large Map memory, what it costs to run Bench2Drive |
+| [research/carla-efficiency.md](research/carla-efficiency.md) | (stale; superseded by docs/closed-loop-runbook.md) CARLA closed-loop cost (2026-09-21/22, measured on the previous RTX PRO 6000 box): server vs closed-loop throughput, instances per card, Large Map memory, what it costs to run Bench2Drive |
 | [research/trajectory-to-control.md](research/trajectory-to-control.md) | how a planner's trajectory becomes CARLA's 20 Hz `VehicleControl`: what CARLA ships, what the Bench2Drive baselines and openpilot do, who learns what, and the recommendation |
 | [research/survey-counterfactual-video-gen.md](research/survey-counterfactual-video-gen.md) | literature status as of 2026-09-22: counterfactual pair evaluation and training, generative editing of real frames, video-generation models as planner representations, MiniMax H3 facts; what is done and what is still open |
 | [research/openpilot-and-open-driving-models.md](research/openpilot-and-open-driving-models.md) | landscape as of 2026-09-24: openpilot model generations and its absence from every public leaderboard, specialist vs VLM-based planners on Bench2Drive / NAVSIM / WOD-E2E, and which open driving stacks have real commercial deployment |

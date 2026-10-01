@@ -120,6 +120,10 @@ the one whose controller passed acceptance; readers get both and the paired diff
 
 ## Box limits that decide how many closed-loop workers fit
 
+(2026-09-25 snapshot. Current limits are measured live by `python -m jevdrive.cl probe` and applied by the library;
+see [closed-loop-runbook.md](closed-loop-runbook.md).)
+
+
 - **GPU render** binds a card at about six CARLA servers (Town12, Alpamayo-like rig: 34.8 aggregate ticks/s at 6,
   38.2 at 12). Spread workers over cards before stacking one past six.
 - **The container thread cap** (`/sys/fs/cgroup/pids.max` = 20480, counts threads) bound the box on 2026-09-25 (it no

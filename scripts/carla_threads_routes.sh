@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Superseded by jevdrive.cl (2026-10-01): scripts/lanes/cl_worker_profile.py --arg stage=old reproduces this lane on the
+# library (20/20 routes, DS differences only on the known flaky routes 1956 / 3564 / 17563; todos/2026-10-01-cl-lib.md).
+# Kept for the record; new runs go through `python -m jevdrive.cl run`.
 # Route-level equivalence of reduced CARLA thread pools (docs/carla.md, "Threads per server"): PDM-Lite (SimLingo's
 # expert, as the 2026-09-25 controller acceptance ran it: runs/infra-accept/b2d-ctl/expert-a, expert-b) on the same 20
 # routes, once per arm, one arm after another on the same card and cores. Arms: "base" (stock pools) or "reduced"

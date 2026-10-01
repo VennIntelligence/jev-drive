@@ -3,6 +3,8 @@
 Read this when you need a CARLA simulator on the box.
 [bench2drive-cost.md](bench2drive-cost.md) is the doc for what a closed-loop run costs;
 this one is about getting a server up and the traps in doing so.
+**For sizing a run (workers per card, thread flags, cores per worker) and launching it, start at [closed-loop-runbook.md](closed-loop-runbook.md)**, which
+carries the current default and every capacity number with its conditions; the measurements below stay as its evidence.
 
 **Status: CARLA 0.9.15 runs headless on our Blackwell card and renders real frames on the GPU.
 A real Bench2Drive route runs end to end on Town12, the heaviest map.** All 220 routes are
@@ -180,7 +182,8 @@ The other 17 routes gave the same DS in all ten pairs.
 so a worker is ~220 threads and the lane admits at 250 per new worker (`G_PIDS_PER_WORKER`); six SimLingo workers
 use ~62 GB of one card and keep its 24 cores ~57% busy.
 
-**Budget with the reduced pools:** a worker (server + route client at `--client-threads 8`) is ~140 threads instead
+**Budget with the reduced pools** (sizing now lives in [closed-loop-runbook.md](closed-loop-runbook.md) and `jevdrive.cl.capacity`, derived from the live
+`pids.max`): a worker (server + route client at `--client-threads 8`) is ~140 threads instead
 of ~330, so the thread cap stops binding well above what the GPUs and CPUs can serve (see bench2drive-cost.md,
 "Recommended layout", for the 6-servers-per-card GPU knee that `CARD_CAP` in `scripts/nq4_gk.sh` encodes).
 

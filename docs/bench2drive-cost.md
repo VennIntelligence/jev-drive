@@ -10,6 +10,9 @@ processes finished, which did not mean 209 driving successes. The later Tokyo co
 Dev10 seed0 diagnostic logged **17.91 minutes through the completion marker for three sets
 of ten routes**, with no model inference. Hardware, driver, camera schedule and route mix differ, so these are not a speedup pair.
 
+**Sizing and launching: [closed-loop-runbook.md](closed-loop-runbook.md)** (current default, every capacity number with its box and conditions, the
+`jevdrive.cl` library). This doc keeps the cost measurements behind it.
+
 **Hardware note (2026-09-28).** Every GPU-box number in this doc was measured on earlier instances (RTX PRO 6000,
 96 GB, ~253 bf16 TFLOPS on real models; 5 cards / 125 cores / 600 GB on 2026-09-25, later more cards). Since 2026-09-28 the box has seven RTX 6000D (83.6 GiB, ~144 bf16 TFLOPS dense), 175 cores and 644 GiB
 ([remote-box.md](remote-box.md)). The per-server CARLA costs and the six-servers-per-card knee were rechecked
@@ -90,6 +93,10 @@ contradicts the earlier "CPU is usually the binding constraint for CARLA" (docs/
 the old 25-core container and from rigs rendered every fourth tick; on this box the card saturates first.
 
 ### Recommended layout
+
+(2026-09-25 layout for that box. The current per-card defaults are in [closed-loop-runbook.md](closed-loop-runbook.md); the GPU knee of six below still
+holds for camera rigs.)
+
 
 - **Six servers per GPU** for exams that are mostly Town12/Town13 (69% of routes, 83% of wall), with a
   camera rig like Alpamayo's. Small towns would take eight or more, but they are 17% of the wall.

@@ -32,10 +32,18 @@ Once a conclusion is settled, write the final English version in `docs/` or in c
 
 ## Code
 - Write expert-level code: efficient, compact, readable, with clear logic.
-- The box container gets 175 cores, 644 GiB RAM and seven RTX PRO 6000D Blackwell, 83.6 GiB each (since 2026-09-28; the host shows 208 cores;
-  size pools with `jevdrive.common.n_cpus()`, see docs/remote-box.md). Use all of it:
+- The box is elastic: its cards, cgroup CPU quota, RAM and pids.max change between instances (7 cards / 175 cores /
+  644 GiB on 2026-09-28, 3 cards / 75 cores / 276 GiB on 2026-10-01; RTX 6000D, 83.6 GiB each; the host always shows
+  208 CPUs). Never hardcode them: read `python -m jevdrive.cl probe`, size pools with `jevdrive.common.n_cpus()`
+  (see docs/remote-box.md). Use all of what you hold:
   run independent work in parallel across cores (one job per file/archive/shard),
   keep hot data in RAM, batch on the GPU and overlap I/O with compute.
+
+## Closed loop (CARLA / Bench2Drive)
+- Read [docs/closed-loop-runbook.md](docs/closed-loop-runbook.md) first: entry points, the worker profile default,
+  capacity numbers with their conditions, traps.
+- New lanes are a job list run by `python -m jevdrive.cl run <lanefile>` on a lease from `python -m jevdrive.cl lease`;
+  do not write another scheduler. Thread flags / env live only in `jevdrive/cl/profiles.py`.
 
 ## Research notes (`research/`, `todos/`)
 Written for people to read and discuss. Full rules: [research/README.md](research/README.md).

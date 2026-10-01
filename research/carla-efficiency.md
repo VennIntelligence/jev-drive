@@ -1,5 +1,7 @@
 # CARLA 闭环评测的效率优化
 
+> **已过时（2026-10-01）。** 本文的数字都在旧 box 上测得，部署结论（每卡 server 数、线程、cores per worker、默认 profile）以 [docs/closed-loop-runbook.md](../docs/closed-loop-runbook.md) 为准；那里每个数字都带测量条件。本文保留作历史推理记录。
+
 状态: 独立主题，2026-09-21 立项。不阻塞当时的主线（[frozen-vlm-planner.md](frozen-vlm-planner.md)；主线后来换成 openpilot ⊕ V-JEPA 2，见 decisions 第 40、54 条），
 本文的实测全部在旧 box 的 RTX PRO 6000 96 GB 上；2026-09-28 起 box 换成 7 张 RTX 6000D（83.6 GiB，bf16 约旧卡的 55%），单卡 CARLA 布局的新数见 [docs/remote-box.md](../docs/remote-box.md)。
 但决定闭环实验**值不值得做**——见 [decisions.md](decisions.md) 第 16 条。

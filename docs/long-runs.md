@@ -77,7 +77,7 @@ When more than one agent (or person) runs jobs on the box at the same time:
   (`scripts/nq4_g_lane.py`) re-reads its row every round and yields cards to lanes that write
   `runs/sched/demand/<lane>.json`. (Was: `$DATA_DIR/runs/schedule.md`, a hand-edited timetable for the old
   five-GPU box; it went out of use on 2026-09-26/27 when the table and GO grants replaced it.)
-  CARLA sizing: about 6 servers per card is still the GPU knee on the RTX 6000D box (docs/remote-box.md). The old
+  CARLA sizing and closed-loop lanes: [closed-loop-runbook.md](closed-loop-runbook.md) (`jevdrive.cl`). Before it: about 6 servers per card is still the GPU knee on the RTX 6000D box (docs/remote-box.md). The old
   thread-cap limit (pids.max 20480, ~650 threads per worker) no longer binds with reduced thread pools
   (docs/carla.md, "Budget with the reduced pools"); docs/bench2drive-cost.md has the 2026-09-25 measurements from the previous
   instance.
