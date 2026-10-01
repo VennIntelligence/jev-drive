@@ -308,7 +308,8 @@ class Lane:
         env.update(prof.environ())
         env.update({k_: str(v) for k_, v in j.env.items()})
         env.update(B2D_DRAIN_FILE=str(jd / "DRAIN"), B2D_PIDS_WAIT=str(adm.wait_cap), PYTHONUNBUFFERED="1",
-                   CL_LANE=self.name, CL_JOB=j.name, CL_RC=str(jd / ("rc.%d" % k)))
+                   CL_LANE=self.name, CL_JOB=j.name, CL_RC=str(jd / ("rc.%d" % k)),
+                   CL_TOKEN="%s/%s/%d/%d" % (self.name, j.name, k, time.time_ns()))
         if j.cuda:
             env["CUDA_VISIBLE_DEVICES"] = str(g)
         _unlink(jd / "DRAIN")
@@ -316,7 +317,7 @@ class Lane:
         with (jd / ("log.%d.txt" % k)).open("ab") as log:
             p = subprocess.Popen(["sh", "-c", '"$@"; echo $? > "$CL_RC"', "sh"] + full, cwd=str(REPO), env=env,
                                  stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
-        procs.capture(jd / "owned.json", p.pid)
+        procs.capture(jd / "owned.json", p.pid, token="CL_TOKEN=" + env["CL_TOKEN"])
         self.children[j.name] = p
         st.update(state="running", gpu=g, idx=idx, span=span, cpus=cpus, t0=time.time(), pid=p.pid, rc=None)
         procs.atomic_json(jd / ("job.%d.json" % k), dict(
@@ -357,11 +358,14 @@ class Lane:
 
     def run(self, log=None) -> int:
         self.root.mkdir(parents=True, exist_ok=True)
-        lockf = (self.root / "lane.lock").open("a")
-        try:
-            fcntl.flock(lockf, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
-            raise RuntimeError("another lane process owns %s" % self.root)
+        with (self.root / "lane.lock").open("a") as lockf:
+            try:
+                fcntl.flock(lockf, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                raise RuntimeError("another lane process owns %s" % self.root)
+            return self._run(log)
+
+    def _run(self, log) -> int:
         procs.capture(self.root / "lane.owned.json", os.getpid())
         for f in ("DONE", "ERROR"):
             if (self.root / f).exists():

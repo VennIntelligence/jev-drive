@@ -37,8 +37,10 @@ def same(rec: dict, rows: dict) -> bool:
     return bool(rec) and rec["pid"] in rows and rows[rec["pid"]]["start_ticks"] == rec["start_ticks"]
 
 
-def capture(path: Path, pid: int, rows: dict = None) -> dict:
-    """Record `pid` (normally a child we just started, so its /proc entry exists until we reap it, zombie or not)."""
+def capture(path: Path, pid: int, rows: dict = None, token: str = "") -> dict:
+    """Record `pid` (normally a child we just started, so its /proc entry exists until we reap it, zombie or not).
+    `token`: an env assignment (CL_TOKEN=...) the job's processes inherit; refresh also adopts any later process that
+    carries it, so a descendant re-parented to init before a refresh saw it (setsid + parent exit) is still ours."""
     rows = processes() if rows is None else rows
     if pid in rows:
         me = identity(rows[pid])
@@ -48,7 +50,7 @@ def capture(path: Path, pid: int, rows: dict = None) -> dict:
         except OSError:
             raise RuntimeError("cannot capture absent pid %d" % pid)
         me = dict(pid=pid, start_ticks=s[19], pgid=int(s[2]), sid=int(s[3]))
-    rec = {"root": me, "members": [me]}
+    rec = {"root": me, "members": [me], "token": token}
     atomic_json(path, rec)
     return rec
 
@@ -58,6 +60,16 @@ def refresh(path: Path, rows: dict = None) -> tuple:
     rows = processes() if rows is None else rows
     rec = json.loads(Path(path).read_text())
     owned = {m["pid"] for m in rec["members"] if same(m, rows)}
+    tok = rec.get("token", "").encode()
+    if tok:
+        t0 = int(rec["root"]["start_ticks"])
+        for p, r in rows.items():
+            if p not in owned and int(r["start_ticks"]) >= t0:
+                try:
+                    if tok in Path("/proc/%d/environ" % p).read_bytes().split(b"\0"):
+                        owned.add(p)
+                except OSError:
+                    pass
     while True:
         new = {p for p, r in rows.items() if r["ppid"] in owned}
         if new <= owned:
