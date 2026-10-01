@@ -254,25 +254,30 @@ class Chain:
             raise RuntimeError("Pilot diagnostics failed; full batch remains stopped")
 
     def debug(self):
-        if (ROOT/"DONE-debug-v4").exists():return
+        version=self.args.verification_version
+        if (ROOT/("DONE-debug-"+version)).exists():return
+        if version=='v5':assert (ROOT/'DONE-repair').exists(), 'Logging repair requires one verified unit before the debug batch'
         self.pilot()
         numeric(self.log,self.log.dir)
         spec=[("27787",a) for a in ("drive","pred")]+[("26872",a) for a in ("drive","pjunc","pall")]+[("25169",a) for a in ("drive","pbyp","pbypgap","pall")]+[("24955",a) for a in ("drive","pbyp","pbypgap")]
         spec.append(("334","pred"))
         results={}
         with ThreadPoolExecutor(max_workers=3*self.args.slots) as pool:
-            fs={pool.submit(self.unit,"debug-v4-"+rid,arm,0,[rid],record=True):(rid,arm) for rid,arm in spec}
+            fs={pool.submit(self.unit,"debug-"+version+"-"+rid,arm,0,[rid],record=True):(rid,arm) for rid,arm in spec}
             for f in tqdm(as_completed(fs),total=len(fs),desc="Debug units"):
                 rid,arm=fs[f];results[(rid,arm)]=f.result()
         checks={}
         for rid,arm,kind in (("27787","pred","drive"),("334","pred","pred"),("26872","pjunc","pjunc"),("25169","pbyp","pbyp"),("24955","pbyp","pbyp")):
             checks[rid+"-"+arm]=route_checks(self.attempt(results[(rid,arm)],rid),kind)
+        write(ROOT/("debug_checks-"+version+".json"),checks)
         write(ROOT/"debug_checks.json",checks)
         assert all(v["passed"] for v in checks.values()),"Substantive debug checklist failed; inspect debug_checks.json"
-        write(ROOT/"lock.json",dict(params=PARAMS,arms=ARMS,debug_version="v4",control_sha256=self.control_hash,git_commit=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),
-                                   manifest_sha256=hashlib.sha256((ROOT/"manifest.json").read_bytes()).hexdigest()))
+        lock=dict(params=PARAMS,arms=ARMS,debug_version=version,control_sha256=self.control_hash,git_commit=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),
+                                   manifest_sha256=hashlib.sha256((ROOT/"manifest.json").read_bytes()).hexdigest())
+        write(ROOT/("lock-"+version+".json"),lock)
+        write(ROOT/"lock.json",lock)
         (ROOT/"DONE-debug").write_text(time.strftime("%F %T\n"))
-        (ROOT/"DONE-debug-v4").write_text(time.strftime("%F %T\n"))
+        (ROOT/("DONE-debug-"+version)).write_text(time.strftime("%F %T\n"))
 
     def profile(self):
         if (ROOT/"DONE-profile-v4").exists():return
@@ -319,6 +324,11 @@ class Chain:
         import pandas as pd
         frozen=json.loads((ROOT/'lock.json').read_text())
         assert frozen['control_sha256']==self.control_hash,'Formal control source differs from the debug lock'
+        if self.args.verification_version=='v5':
+            from b2d_privileged_crash_repair import source_check
+            proof=source_check()
+            assert proof['new_control_sha256']==self.control_hash and (ROOT/'DONE-crash-prepare').exists()
+            assert json.loads((ROOT/'pre-logging-v5-lock.json').read_text())['control_sha256']==proof['old_control_sha256']
         seen=set()
         for adir in sorted((ROOT/'arms').glob('eval-*')):
             tag,arm,seed_text=adir.name.rsplit('-',2);seed=int(seed_text[1:])
@@ -340,7 +350,9 @@ class Chain:
         return seen
 
     def formal_tasks(self,seen):
-        size=self.args.chunk_size;path=ROOT/f'formal-queue-q{size}.json'
+        size=self.args.chunk_size
+        suffix='' if self.args.verification_version=='v4' else '-'+self.args.verification_version
+        path=ROOT/f'formal-queue-q{size}{suffix}.json'
         if path.exists():plan=json.loads(path.read_text())
         else:
             tasks=[]
@@ -349,7 +361,7 @@ class Chain:
                     for group in ('junction','obstacle','dev'):
                         ids=[r['id'] for r in self.metadata[group] if (r['id'],arm,seed) not in seen]
                         for i in range(0,len(ids),size):
-                            tasks.append([f'eval-{group}-q{size}-{i//size:02d}',arm,seed,ids[i:i+size]])
+                            tasks.append([f'eval-{group}-q{size}{suffix}-{i//size:02d}',arm,seed,ids[i:i+size]])
             plan=dict(chunk_size=size,control_sha256=self.control_hash,prior=[list(k) for k in sorted(seen)],tasks=tasks)
             write(path,plan)
         assert plan['chunk_size']==size and plan['control_sha256']==self.control_hash
@@ -454,6 +466,15 @@ class Chain:
             if self.args.phase=="pilot":self.pilot()
             elif self.args.phase=="diagnose":self.diagnose()
             elif self.args.phase=="debug":self.debug()
+            elif self.args.phase=="repair":
+                from b2d_privileged_crash_repair import source_check
+                assert (ROOT/'DONE-crash-prepare').exists()
+                self.log.event('logging_source_check',**source_check())
+                numeric(self.log,self.log.dir)
+                adir=self.unit('repair-v5-2667','drive',0,['2667'],workers=1,record=False)
+                checks=route_checks(self.attempt(adir,'2667'),'drive')
+                write(ROOT/'logging_repair_unit_checks.json',checks)
+                assert checks['passed'], 'Logging-repair single-unit checklist failed'
             else:self.full()
             if self.error:raise self.error
             (ROOT/("DONE-"+self.args.phase)).write_text(time.strftime("%F %T\n"))
@@ -469,10 +490,11 @@ class Chain:
 
 if __name__=="__main__":
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--phase",choices=("pilot","diagnose","debug","all"),default="pilot")
+    p.add_argument("--phase",choices=("pilot","diagnose","debug","repair","all"),default="pilot")
     p.add_argument("--after-slot",default="",help="Wait for an owned earlier slot to finish, including failed debug stages")
     p.add_argument("--slots",type=int,choices=(1,2),default=1)
     p.add_argument("--workers",type=int,default=2)
     p.add_argument("--chunk-size",type=int,choices=(4,8,12,24),default=4,help="Routes queued per shard; worker and control limits are unchanged")
+    p.add_argument("--verification-version",choices=("v4","v5"),default="v4",help="Separate verification and queue namespaces after the logging-only repair")
     args=p.parse_args();assert 1<=args.workers<=4
     Chain(args).run()

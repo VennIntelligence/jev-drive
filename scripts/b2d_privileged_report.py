@@ -17,6 +17,7 @@ REPO=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(REPO))
 from jevdrive.op_arb_report import attempts, drive_row
 from b2d_privileged_geometry import ARMS, project
+from b2d_privileged_checks import is_crash
 
 
 def jsonlines(path):
@@ -276,9 +277,12 @@ def summarize(root,log):
     spec=[('pjunc','junction','junction'),('pbyp','obstacle','obstacle'),('pbypgap','obstacle','obstacle'),('pred','all','red'),('pall','all','all')]
     pairs=pd.DataFrame([bootstrap_delta(r,e,*s) for s in tqdm(spec,desc='Paired route bootstrap')]);pairs.to_csv(out/'paired.csv',index=False)
     pd.DataFrame([bootstrap_delta(r,e,arm,group,'all') for group in ('all','dev') for arm in ARMS if arm!='drive']).to_csv(out/'secondary_paired.csv',index=False)
-    gates={};complete=len(r)==696 and not r.status.isin(['Failed','Simulation crashed','Agent crashed',"Agent couldn't be set up"]).any()
+    gates={};complete=len(r)==696 and not r.status.map(is_crash).any()
     power=all(len(e[(e.arm==a)&(e['group']==g)&(e.kind==g)])>=30 for a in ARMS for g in ('junction','obstacle'))
-    gates['I0']=bool(complete and power)
+    repair_path=root/'crash_repair_source_checks.json'
+    original_crashes=len(json.loads(repair_path.read_text())['invalidated_attempts']) if repair_path.exists() else 0
+    # Repair readouts do not retroactively make the original zero-crash registration pass.
+    gates['I0']=bool(complete and power and original_crashes==0)
     for label,row in zip(('J1','B1','B2','R1','A1'),pairs.to_dict('records')):
         gates[label]=bool(gates['I0'] and row['arm_opps']>=30 and row['drive_opps']>=30 and row['dDS']>0 and row['fail_hi']<0)
     xrows=[]
@@ -306,7 +310,9 @@ def summarize(root,log):
     interaction=(wide.pall-wide.drive)-(wide.pjunc+wide.pbypgap+wide.pred-3*wide.drive)
     draws=np.random.default_rng(0).integers(0,len(wide),(2000,len(wide)))
     ci=np.quantile(interaction.to_numpy()[draws].mean(1),[.025,.975])
-    (out/'gates.json').write_text(json.dumps(dict(gates=gates,interaction_delta=float(interaction.mean()),interaction_lo=float(ci[0]),interaction_hi=float(ci[1])),indent=2)+'\n')
+    (out/'gates.json').write_text(json.dumps(dict(gates=gates,original_formal_crashes=original_crashes,
+        repaired_valid_readouts=bool(complete),event_power_sufficient=bool(power),
+        interaction_delta=float(interaction.mean()),interaction_lo=float(ci[0]),interaction_hi=float(ci[1])),indent=2)+'\n')
     log.event('summary',gates=gates)
     return out
 

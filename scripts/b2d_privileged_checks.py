@@ -12,6 +12,12 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from b2d_privileged_geometry import overlap, project, corners, rectangle_gap, visibility, ego_boxes
 
 
+def is_crash(status):
+    """Official statuses append the failure message to 'Failed - '."""
+    return status == "Failed" or any(message in status for message in
+        ("Simulation crashed", "Agent crashed", "Agent couldn't be set up", "Agent's sensors were invalid"))
+
+
 def scalar_project(point,path):
     best=None;s=0.
     for left,right in zip(path[:-1],path[1:]):
@@ -98,7 +104,7 @@ def route_checks(attempt,kind):
     rows=[json.loads(l) for l in (attempt/"plans.jsonl").open()]
     live=[r for r in rows if not r["warm"]]
     record=json.loads((attempt/"results.json").read_text())["_checkpoint"]["records"][0]
-    crash=record["status"] in ("Failed","Simulation crashed","Agent crashed","Agent couldn't be set up")
+    crash=is_crash(record["status"])
     ms=np.array([r["ms"] for r in live]);v=np.array([r["v"] for r in live])
     assert len(live)>0,f"No post-warmup plans: status={record['status']}, attempt={attempt}; inspect route.log"
     checks=dict(files=(attempt/"privileged.jsonl").exists() and (attempt/"contacts.jsonl").exists(),
