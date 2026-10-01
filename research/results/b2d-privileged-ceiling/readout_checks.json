@@ -1,0 +1,29 @@
+{
+  "connected_groups_one_opportunity": true,
+  "related_contact_failure": true,
+  "contact_free_return_success": true,
+  "same_actor_contacts_merged": true,
+  "bootstrap_clusters_seeds_counts": true,
+  "bootstrap_2000_seed0": true,
+  "official_debug_records": [
+    {
+      "unit": "debug-v3-27787-drive-s0",
+      "parse_s": 0.071955919964239,
+      "DS": 100.0,
+      "RC": 100.0
+    },
+    {
+      "unit": "debug-v3-26872-pjunc-s0",
+      "parse_s": 0.9263664520112798,
+      "DS": 38.8,
+      "RC": 38.8
+    },
+    {
+      "unit": "debug-v3-25169-pbyp-s0",
+      "parse_s": 0.2082371589494869,
+      "DS": 12.96,
+      "RC": 100.0
+    }
+  ],
+  "formal_data_used": false
+}
