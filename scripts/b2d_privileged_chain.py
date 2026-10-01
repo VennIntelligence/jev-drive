@@ -93,8 +93,11 @@ class Chain:
                 self.slots.put((g,k,f"{part[0]}-{part[-1]}"))
 
     def status(self):
-        with self.lock:message="; ".join(f"GPU{g}.{k}: {name}" for (g,k),name in sorted(self.active.items()))
-        (ROOT/"STATUS").write_text(time.strftime("%F %T")+" "+(message or "between stages")+"\n")
+        with self.lock:
+            message="; ".join(f"GPU{g}.{k}: {name}" for (g,k),name in sorted(self.active.items()))
+            temporary=ROOT/"STATUS.tmp"
+            temporary.write_text(time.strftime("%F %T")+" "+(message or "between stages")+"\n")
+            temporary.replace(ROOT/"STATUS")
 
     def attempt(self,d,rid):
         done=json.loads((d/"done"/(rid+".json")).read_text())
@@ -108,7 +111,11 @@ class Chain:
             grant()
             assert self.physics_hash()==self.control_hash,"Control source changed during stage; stop and start a new version"
             if self.stop.is_set():raise RuntimeError("Queue stopped after another unit failed")
-            if (ROOT/"units"/(name+".json")).exists():return adir
+            cached=ROOT/"units"/(name+".json")
+            if cached.exists():
+                prior=json.loads(cached.read_text())
+                assert prior['ids']==ids and prior['control_sha256']==self.control_hash,"Cached unit protocol changed"
+                return adir
             with self.lock:self.active[(g,k)]=name
             self.status();self.log.info(f"Starting {name} GPU{g}.{k}, cores {cpus}, workers {workers}")
             self.log.event("unit_start",unit=name,gpu=g,slot=k,cpus=cpus,workers=workers,ids=ids,record=record)
@@ -306,17 +313,63 @@ class Chain:
         self.pack(self.args.slots)
         (ROOT/"DONE-profile-v4").write_text(time.strftime("%F %T\n"))
 
+    def recover_formal(self):
+        """Keep all completed frozen-control trajectories, including naturally drained shards."""
+        from b2d_privileged_report import read_unit
+        import pandas as pd
+        frozen=json.loads((ROOT/'lock.json').read_text())
+        assert frozen['control_sha256']==self.control_hash,'Formal control source differs from the debug lock'
+        seen=set()
+        for adir in sorted((ROOT/'arms').glob('eval-*')):
+            tag,arm,seed_text=adir.name.rsplit('-',2);seed=int(seed_text[1:])
+            assert arm in ARMS and seed in (0,1)
+            group=tag.split('-')[1];allowed={r['id'] for r in self.metadata[group]}
+            ids={p.stem for p in (adir/'done').glob('*.json')};assert ids<=allowed
+            if not ids:continue
+            for rid in ids:
+                key=(rid,arm,seed);assert key not in seen,'Duplicate completed formal route'
+                seen.add(key)
+                check=route_checks(self.attempt(adir,rid),'drive')
+                assert check['checks']['no_crash'] and check['checks']['finite'],check
+            cached=ROOT/'readouts'/adir.name/'routes.csv'
+            current=pd.read_csv(cached,dtype={'route':str}) if cached.exists() else None
+            same=current is not None and set(current.route)==ids and all(
+                row.attempt==str(self.attempt(adir,row.route)) for row in current.itertuples())
+            if not same:read_unit(adir,tag,arm,seed,self.log)
+        self.log.event('formal_recovery',completed_routes=len(seen),control_sha256=self.control_hash)
+        return seen
+
+    def formal_tasks(self,seen):
+        size=self.args.chunk_size;path=ROOT/f'formal-queue-q{size}.json'
+        if path.exists():plan=json.loads(path.read_text())
+        else:
+            tasks=[]
+            for arm in ARMS:
+                for seed in (0,1):
+                    for group in ('junction','obstacle','dev'):
+                        ids=[r['id'] for r in self.metadata[group] if (r['id'],arm,seed) not in seen]
+                        for i in range(0,len(ids),size):
+                            tasks.append([f'eval-{group}-q{size}-{i//size:02d}',arm,seed,ids[i:i+size]])
+            plan=dict(chunk_size=size,control_sha256=self.control_hash,prior=[list(k) for k in sorted(seen)],tasks=tasks)
+            write(path,plan)
+        assert plan['chunk_size']==size and plan['control_sha256']==self.control_hash
+        keys=[tuple(k) for k in plan['prior']]
+        for tag,arm,seed,ids in plan['tasks']:
+            group=tag.split('-')[1];assert set(ids)<={r['id'] for r in self.metadata[group]}
+            keys.extend((rid,arm,seed) for rid in ids)
+        expected={(r['id'],arm,seed) for group in ('junction','obstacle','dev')
+                  for r in self.metadata[group] for arm in ARMS for seed in (0,1)}
+        assert len(keys)==696 and set(keys)==expected,'Queue coverage changed or contains duplicates'
+        assert seen<=expected
+        self.log.event('formal_queue',chunk_size=size,shards=len(plan['tasks']),completed_routes=len(seen))
+        return plan['tasks']
+
     def full(self):
         self.debug()
         self.profile()
         assert self.args.slots==2 and self.args.workers==4,"Full packing requires two slots and four workers"
-        (ROOT/"FULL_STARTED").write_text(time.strftime("%F %T\n"))
-        tasks=[]
-        for arm in ARMS:
-            for seed in (0,1):
-                for group in ("junction","obstacle","dev"):
-                    ids=[r["id"] for r in self.metadata[group]]
-                    for i in range(0,len(ids),4):tasks.append((f"eval-{group}-{i//4:02d}",arm,seed,ids[i:i+4]))
+        if not (ROOT/"FULL_STARTED").exists():(ROOT/"FULL_STARTED").write_text(time.strftime("%F %T\n"))
+        tasks=self.formal_tasks(self.recover_formal())
         with ThreadPoolExecutor(max_workers=3*self.args.slots) as pool:
             fs=[pool.submit(self.unit,*task) for task in tasks]
             for f in tqdm(as_completed(fs),total=len(fs),desc="Registered route shards"):f.result()
@@ -420,5 +473,6 @@ if __name__=="__main__":
     p.add_argument("--after-slot",default="",help="Wait for an owned earlier slot to finish, including failed debug stages")
     p.add_argument("--slots",type=int,choices=(1,2),default=1)
     p.add_argument("--workers",type=int,default=2)
+    p.add_argument("--chunk-size",type=int,choices=(4,8,12,24),default=4,help="Routes queued per shard; worker and control limits are unchanged")
     args=p.parse_args();assert 1<=args.workers<=4
     Chain(args).run()
