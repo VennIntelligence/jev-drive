@@ -1,0 +1,406 @@
+{
+  "base_commit": "c1ab219",
+  "old_control_sha256": "8e6b2612e6c9a0faab1fa2caa77d7ca9df8034155442bb92fedaa0fd887be069",
+  "new_control_sha256": "4c14ce8e6213adf1f14a41133a2a1c653d2f17c7afd1b8a839f4fb531645be40",
+  "geometry_identical": true,
+  "only_plan_log_rel_normalized": true,
+  "actual_log_expression_checked": true,
+  "prefixed_crash_classifier_checked": true,
+  "model_and_control_computation_unchanged": true,
+  "invalidated_attempts": [
+    {
+      "unit": "eval-obstacle-03-drive-s0",
+      "route": "2667",
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-03-drive-s0/attempts/2667/1",
+      "status": "Failed - Agent crashed",
+      "reason": "NumPy bool_ in existing latch-release plan log",
+      "DS": 34.73,
+      "RC": 34.73
+    },
+    {
+      "unit": "eval-obstacle-03-drive-s1",
+      "route": "2667",
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-03-drive-s1/attempts/2667/1",
+      "status": "Failed - Agent crashed",
+      "reason": "NumPy bool_ in existing latch-release plan log",
+      "DS": 36.77,
+      "RC": 36.77
+    },
+    {
+      "unit": "eval-obstacle-04-drive-s0",
+      "route": "28387",
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-04-drive-s0/attempts/28387/1",
+      "status": "Failed - Agent crashed",
+      "reason": "NumPy bool_ in existing latch-release plan log",
+      "DS": 29.46,
+      "RC": 29.46
+    },
+    {
+      "unit": "eval-obstacle-04-drive-s1",
+      "route": "28387",
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-04-drive-s1/attempts/28387/1",
+      "status": "Failed - Agent crashed",
+      "reason": "NumPy bool_ in existing latch-release plan log",
+      "DS": 47.09,
+      "RC": 47.09
+    },
+    {
+      "unit": "eval-obstacle-q12-01-pjunc-s0",
+      "route": "2667",
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-01-pjunc-s0/attempts/2667/1",
+      "status": "Failed - Agent crashed",
+      "reason": "NumPy bool_ in existing latch-release plan log",
+      "DS": 34.73,
+      "RC": 34.73
+    },
+    {
+      "unit": "eval-obstacle-q12-01-pjunc-s0",
+      "route": "28387",
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-01-pjunc-s0/attempts/28387/1",
+      "status": "Failed - Agent crashed",
+      "reason": "NumPy bool_ in existing latch-release plan log",
+      "DS": 47.09,
+      "RC": 47.09
+    },
+    {
+      "unit": "eval-obstacle-q12-01-pjunc-s1",
+      "route": "2667",
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-01-pjunc-s1/attempts/2667/1",
+      "status": "Failed - Agent crashed",
+      "reason": "NumPy bool_ in existing latch-release plan log",
+      "DS": 36.77,
+      "RC": 36.77
+    }
+  ],
+  "retained_valid_attempts": 192,
+  "retained_official_statuses": {
+    "Completed": 104,
+    "Failed - Agent got blocked": 4,
+    "Failed - TickRuntime": 84
+  },
+  "drain": {
+    "request": {
+      "time": 1790843714.269909,
+      "chain_pid": 541722,
+      "chain_start": "70936948",
+      "wrappers": [
+        {
+          "pid": 541922,
+          "start": "70940256",
+          "unit": "eval-junction-q12-00-pjunc-s0",
+          "ids": [
+            "7616",
+            "6999",
+            "7157",
+            "34183",
+            "7841",
+            "8859",
+            "9102",
+            "9218",
+            "4721",
+            "4104",
+            "4183",
+            "34391"
+          ]
+        },
+        {
+          "pid": 541924,
+          "start": "70940256",
+          "unit": "eval-obstacle-q12-00-pjunc-s0",
+          "ids": [
+            "19324",
+            "19186",
+            "19359",
+            "31045",
+            "31100",
+            "30939",
+            "2520",
+            "18868",
+            "18512",
+            "29893",
+            "29770",
+            "2608"
+          ]
+        },
+        {
+          "pid": 568242,
+          "start": "71028800",
+          "unit": "eval-junction-q12-00-pjunc-s1",
+          "ids": [
+            "7616",
+            "6999",
+            "7157",
+            "34183",
+            "7841",
+            "8859",
+            "9102",
+            "9218",
+            "4721",
+            "4104",
+            "4183",
+            "34391"
+          ]
+        },
+        {
+          "pid": 571265,
+          "start": "71038969",
+          "unit": "eval-junction-q12-01-pjunc-s1",
+          "ids": [
+            "35243",
+            "35330",
+            "25051",
+            "28180",
+            "27823",
+            "36792",
+            "24162",
+            "37223",
+            "5423",
+            "10364",
+            "10255",
+            "9646"
+          ]
+        },
+        {
+          "pid": 580562,
+          "start": "71073475",
+          "unit": "eval-obstacle-q12-00-pjunc-s1",
+          "ids": [
+            "19324",
+            "19186",
+            "19359",
+            "31045",
+            "31100",
+            "30939",
+            "2520",
+            "18868",
+            "18512",
+            "29893",
+            "29770",
+            "2608"
+          ]
+        },
+        {
+          "pid": 592454,
+          "start": "71117497",
+          "unit": "eval-obstacle-q12-01-pjunc-s1",
+          "ids": [
+            "19832",
+            "19753",
+            "19681",
+            "2667",
+            "21546",
+            "21496",
+            "28387",
+            "29183",
+            "29073",
+            "21037",
+            "21188",
+            "21009"
+          ]
+        }
+      ],
+      "reason": "Stop new starts after independent official crash audit; naturally finish already active shards",
+      "control_unchanged": true
+    },
+    "terminated_coordinator": 541722,
+    "terminated_wrapper_tree_pids": [
+      607536,
+      607390,
+      607385,
+      607280,
+      603182,
+      602909,
+      601691,
+      600837,
+      600099,
+      599772,
+      596277,
+      595900,
+      595893,
+      595103,
+      595096,
+      594609,
+      594267,
+      594260,
+      594134,
+      593766,
+      593454,
+      593447,
+      592995,
+      592497,
+      592490,
+      592482,
+      592454,
+      590653,
+      583486,
+      583479,
+      582536,
+      582529,
+      581662,
+      581655,
+      580600,
+      580593,
+      580585,
+      580562,
+      570963,
+      570956,
+      569332,
+      569324,
+      568279,
+      568272,
+      568264,
+      568242,
+      542036,
+      541922
+    ],
+    "trajectories_interrupted": 12,
+    "unfinished_routes": [
+      {
+        "unit": "eval-junction-q12-00-pjunc-s0",
+        "route": "4183",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-junction-q12-00-pjunc-s0/attempts/4183/1",
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-junction-q12-00-pjunc-s0/attempts/4183/2"
+        ]
+      },
+      {
+        "unit": "eval-junction-q12-00-pjunc-s1",
+        "route": "4721",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-junction-q12-00-pjunc-s1/attempts/4721/1"
+        ]
+      },
+      {
+        "unit": "eval-junction-q12-00-pjunc-s1",
+        "route": "4183",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-junction-q12-00-pjunc-s1/attempts/4183/1"
+        ]
+      },
+      {
+        "unit": "eval-junction-q12-00-pjunc-s1",
+        "route": "34391",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-junction-q12-00-pjunc-s1/attempts/34391/1"
+        ]
+      },
+      {
+        "unit": "eval-obstacle-q12-00-pjunc-s1",
+        "route": "31100",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-00-pjunc-s1/attempts/31100/1"
+        ]
+      },
+      {
+        "unit": "eval-obstacle-q12-00-pjunc-s1",
+        "route": "30939",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-00-pjunc-s1/attempts/30939/1"
+        ]
+      },
+      {
+        "unit": "eval-obstacle-q12-00-pjunc-s1",
+        "route": "2520",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-00-pjunc-s1/attempts/2520/1"
+        ]
+      },
+      {
+        "unit": "eval-obstacle-q12-00-pjunc-s1",
+        "route": "18868",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-00-pjunc-s1/attempts/18868/1"
+        ]
+      },
+      {
+        "unit": "eval-obstacle-q12-00-pjunc-s1",
+        "route": "18512",
+        "attempts": []
+      },
+      {
+        "unit": "eval-obstacle-q12-00-pjunc-s1",
+        "route": "29893",
+        "attempts": []
+      },
+      {
+        "unit": "eval-obstacle-q12-00-pjunc-s1",
+        "route": "29770",
+        "attempts": []
+      },
+      {
+        "unit": "eval-obstacle-q12-00-pjunc-s1",
+        "route": "2608",
+        "attempts": []
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "19832",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-01-pjunc-s1/attempts/19832/1"
+        ]
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "19753",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-01-pjunc-s1/attempts/19753/1"
+        ]
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "19681",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-01-pjunc-s1/attempts/19681/1"
+        ]
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "21546",
+        "attempts": [
+          "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/eval-obstacle-q12-01-pjunc-s1/attempts/21546/1"
+        ]
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "21496",
+        "attempts": []
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "28387",
+        "attempts": []
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "29183",
+        "attempts": []
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "29073",
+        "attempts": []
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "21037",
+        "attempts": []
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "21188",
+        "attempts": []
+      },
+      {
+        "unit": "eval-obstacle-q12-01-pjunc-s1",
+        "route": "21009",
+        "attempts": []
+      }
+    ],
+    "control_unchanged": true,
+    "time": 1790844121.2476163,
+    "reason": "Stopped after substantive official crash-status audit; incomplete raw attempts retained",
+    "unfinished_combinations": 23
+  },
+  "raw_attempts_deleted": 0,
+  "driving_failures_retried": 0
+}
