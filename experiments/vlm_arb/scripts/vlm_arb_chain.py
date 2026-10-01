@@ -180,7 +180,11 @@ def main():
             
             # Verify checklist
             from vlm_arb_checks import verify_attempt
-            chk = verify_attempt(pilot_dir / "attempts/334/1", arm="vred")
+            done_file = pilot_dir / "done/334.json"
+            assert done_file.exists(), f"Route 334 failed to finish. Check logs in {pilot_dir}"
+            attempt_idx = str(json.loads(done_file.read_text()).get("attempt", 1))
+            attempt_dir = pilot_dir / "attempts/334" / attempt_idx
+            chk = verify_attempt(attempt_dir, arm="vred")
             assert chk["passed"], f"Pilot checklist failed: {chk}"
             pilot_done.write_text(time.strftime("%F %T\n"))
             update_status("Stage 1 Pilot passed successfully.")

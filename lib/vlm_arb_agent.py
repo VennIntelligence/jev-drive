@@ -53,8 +53,8 @@ ARB_PARAMS = {
 class VlmArbAgent(OpArbAgent):
     """OpArbAgent extended with VLM-based slow-channel arbitration table."""
 
-    def __init__(self, path_to_conf_file):
-        super().__init__(path_to_conf_file)
+    def setup(self, path_to_conf_file):
+        super().setup(path_to_conf_file)
         
         # Arm mode: 'drive', 'dslow', 'jslow', 'vred', 'vbyp', 'vall', 'shadow'
         self.vlm_arm = os.environ.get("VLM_ARM", "drive")
