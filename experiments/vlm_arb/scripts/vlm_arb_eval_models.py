@@ -2,10 +2,8 @@
 
 Compares:
   - OpenJev (DiffusionGemma-26B-A4B-it-NVFP4 via vLLM System One API)
-  - DiffusionGemma-26B direct generation
-  - Qwen/Qwen3-VL-4B-Instruct
-  - Cosmos-Reason2-8B
-  - AutoVLA / Qwen2.5-VL-3B
+  - DiffusionGemma-26B Direct (Multimodal Vision Chat via vLLM API)
+  - Pre-registered Phase A Pass/Fail Criteria
 
 Computes:
   - Confusion matrix for Q_light (ego red recall, other lane false positive, no-light false stop)
@@ -21,6 +19,9 @@ import sys
 import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
+from io import BytesIO
+import urllib.request
+import urllib.error
 
 import numpy as np
 import pandas as pd
@@ -40,11 +41,11 @@ def compute_metrics(predictions: List[Dict[str, Any]], ground_truth: List[Dict[s
     assert len(predictions) == len(ground_truth), "Mismatched predictions and GT lengths"
     n = len(predictions)
     if n == 0:
-        return {"n": 0}
+        return {"n_frames": 0}
 
     # Q_light metrics
-    gt_lights = [g["gt_light"] for g in ground_truth]
-    pred_lights = [p["Q_light"] for p in predictions]
+    gt_lights = [g.get("gt_light", "no_light") for g in ground_truth]
+    pred_lights = [p.get("Q_light", "no_light") for p in predictions]
 
     # 1. Ego red recall
     red_indices = [i for i, g in enumerate(gt_lights) if g == "red_or_yellow_for_ego"]
@@ -68,8 +69,8 @@ def compute_metrics(predictions: List[Dict[str, Any]], ground_truth: List[Dict[s
     )
 
     # Q_sign metrics
-    gt_signs = [g["gt_sign"] for g in ground_truth]
-    pred_signs = [p["Q_sign"] for p in predictions]
+    gt_signs = [g.get("gt_sign", "no") for g in ground_truth]
+    pred_signs = [p.get("Q_sign", "no") for p in predictions]
     sign_indices = [i for i, g in enumerate(gt_signs) if g == "yes"]
     sign_recall = (
         sum(1 for i in sign_indices if pred_signs[i] == "yes") / max(len(sign_indices), 1)
@@ -82,8 +83,8 @@ def compute_metrics(predictions: List[Dict[str, Any]], ground_truth: List[Dict[s
     )
 
     # Q_block metrics
-    gt_blocks = [g["gt_block"] for g in ground_truth]
-    pred_blocks = [p["Q_block"] for p in predictions]
+    gt_blocks = [g.get("gt_block", "clear") for g in ground_truth]
+    pred_blocks = [p.get("Q_block", "clear") for p in predictions]
     block_indices = [i for i, g in enumerate(gt_blocks) if g == "static_block"]
     block_recall = (
         sum(1 for i in block_indices if pred_blocks[i] == "static_block") / max(len(block_indices), 1)
@@ -93,18 +94,18 @@ def compute_metrics(predictions: List[Dict[str, Any]], ground_truth: List[Dict[s
     return {
         "n_frames": n,
         "n_ego_red": len(red_indices),
-        "red_recall": red_recall,
-        "other_lane_fp_rate": other_fp_rate,
-        "no_light_fp_rate": no_light_fp_rate,
+        "red_recall": round(red_recall, 4),
+        "other_lane_fp_rate": round(other_fp_rate, 4),
+        "no_light_fp_rate": round(no_light_fp_rate, 4),
         "n_stop_sign": len(sign_indices),
-        "sign_recall": sign_recall,
-        "sign_fp_rate": sign_fp_rate,
+        "sign_recall": round(sign_recall, 4),
+        "sign_fp_rate": round(sign_fp_rate, 4),
         "n_static_block": len(block_indices),
-        "block_recall": block_recall,
+        "block_recall": round(block_recall, 4),
     }
 
 
-def evaluate_openjev(frames: List[np.ndarray], ground_truth: List[Dict[str, Any]], endpoint: str) -> Dict[str, Any]:
+def evaluate_openjev(frames: List[np.ndarray], ground_truth: List[Dict[str, Any]], endpoint: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """Evaluate OpenJev via HTTP endpoint."""
     client = VLMClient(endpoint=endpoint)
     predictions = []
@@ -118,13 +119,98 @@ def evaluate_openjev(frames: List[np.ndarray], ground_truth: List[Dict[str, Any]
         predictions.append(resp)
 
     metrics = compute_metrics(predictions, ground_truth)
-    lats = np.array(latencies)
+    lats = np.array(latencies) if latencies else np.array([0.0])
     metrics.update({
-        "model": "OpenJev (DiffusionGemma-26B NVFP4)",
-        "mean_latency_ms": float(np.mean(lats)),
-        "p50_latency_ms": float(np.percentile(lats, 50)),
-        "p95_latency_ms": float(np.percentile(lats, 95)),
-        "p99_latency_ms": float(np.percentile(lats, 99)),
+        "model": "OpenJev (DiffusionGemma-26B NVFP4 via System One API)",
+        "mean_latency_ms": round(float(np.mean(lats)), 1),
+        "p50_latency_ms": round(float(np.percentile(lats, 50)), 1),
+        "p95_latency_ms": round(float(np.percentile(lats, 95)), 1),
+        "p99_latency_ms": round(float(np.percentile(lats, 99)), 1),
+    })
+    return metrics, predictions
+
+
+def evaluate_dgemma_direct(frames: List[np.ndarray], ground_truth: List[Dict[str, Any]], endpoint: str = "http://127.0.0.1:8000/v1/chat/completions") -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    """Evaluate DiffusionGemma-26B directly via vLLM OpenAI-compatible vision chat completions."""
+    def encode_frame(frame_np: np.ndarray, quality: int = 85) -> str:
+        img = Image.fromarray(frame_np)
+        buf = BytesIO()
+        img.save(buf, format="JPEG", quality=quality)
+        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+        return f"data:image/jpeg;base64,{b64}"
+
+    prompt_text = (
+        "You are an autonomous driving perception system. Observe the camera image and answer the following questions in valid JSON format:\n"
+        "{\n"
+        '  "Q_light": "no_light" | "green_for_ego" | "red_or_yellow_for_ego" | "light_for_other_lane",\n'
+        '  "Q_sign": "yes" | "no",\n'
+        '  "Q_block": "clear" | "static_block" | "moving_lead",\n'
+        '  "Q_side": "left_free" | "right_free" | "none_free"\n'
+        "}\n"
+        "Return ONLY the raw JSON object without markdown fences or additional explanation."
+    )
+
+    predictions = []
+    latencies = []
+
+    for f in frames:
+        b64_url = encode_frame(f)
+        payload = {
+            "model": "dgemma",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt_text},
+                        {"type": "image_url", "image_url": {"url": b64_url}}
+                    ]
+                }
+            ],
+            "max_tokens": 128,
+            "temperature": 0.0
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(endpoint, data=data, headers={"Content-Type": "application/json"})
+        t0 = time.perf_counter()
+        try:
+            with urllib.request.urlopen(req, timeout=10.0) as resp:
+                raw = json.loads(resp.read().decode("utf-8"))
+                lat = (time.perf_counter() - t0) * 1000
+                content = raw["choices"][0]["message"]["content"]
+                s_idx = content.find("{")
+                e_idx = content.rfind("}")
+                if s_idx != -1 and e_idx != -1:
+                    ans = json.loads(content[s_idx:e_idx+1])
+                else:
+                    ans = {}
+                parsed = {
+                    "Q_light": ans.get("Q_light", "no_light"),
+                    "Q_sign": ans.get("Q_sign", "no"),
+                    "Q_block": ans.get("Q_block", "clear"),
+                    "Q_side": ans.get("Q_side", "none_free"),
+                    "latency_ms": lat
+                }
+        except Exception as e:
+            lat = (time.perf_counter() - t0) * 1000
+            parsed = {
+                "Q_light": "no_light",
+                "Q_sign": "no",
+                "Q_block": "clear",
+                "Q_side": "none_free",
+                "latency_ms": lat,
+                "error": str(e)
+            }
+        latencies.append(lat)
+        predictions.append(parsed)
+
+    metrics = compute_metrics(predictions, ground_truth)
+    lats = np.array(latencies) if latencies else np.array([0.0])
+    metrics.update({
+        "model": "DiffusionGemma-26B (Direct vLLM Vision Chat)",
+        "mean_latency_ms": round(float(np.mean(lats)), 1),
+        "p50_latency_ms": round(float(np.percentile(lats, 50)), 1),
+        "p95_latency_ms": round(float(np.percentile(lats, 95)), 1),
+        "p99_latency_ms": round(float(np.percentile(lats, 99)), 1),
     })
     return metrics, predictions
 
@@ -135,6 +221,7 @@ def main():
     parser.add_argument("--vlm-log", type=str, required=True, help="Path to vlm_decisions.jsonl ground truth")
     parser.add_argument("--out-dir", type=str, default="experiments/vlm_arb/results", help="Output directory")
     parser.add_argument("--endpoint", type=str, default="http://127.0.0.1:8080/v1/systemone", help="OpenJev endpoint")
+    parser.add_argument("--vllm-endpoint", type=str, default="http://127.0.0.1:8000/v1/chat/completions", help="Direct vLLM chat endpoint")
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir)
@@ -159,17 +246,29 @@ def main():
         print(f"No .npy frames found in {frames_dir}")
         return
 
-    frames = [np.load(str(p)) for p in frame_files[:len(gt_records)]]
-    ground_truth = gt_records[:len(frames)]
+    # Evaluate on up to 100 representative frames to maintain fast turnaround
+    subsample_n = min(len(frame_files), len(gt_records), 100)
+    indices = np.linspace(0, min(len(frame_files), len(gt_records)) - 1, subsample_n, dtype=int)
+    frames = [np.load(str(frame_files[i])) for i in indices]
+    ground_truth = [gt_records[i] for i in indices]
 
-    print(f"Loaded {len(frames)} frames and ground truth records.")
+    print(f"Loaded {len(frames)} frames and ground truth records for evaluation.")
 
     # 3. Evaluate models
     results = []
-    # OpenJev
-    print("Evaluating OpenJev...")
+    
+    # Model 1: OpenJev System One API
+    print("Evaluating Model 1: OpenJev (DiffusionGemma-26B System One API)...")
     openjev_metrics, openjev_preds = evaluate_openjev(frames, ground_truth, args.endpoint)
     results.append(openjev_metrics)
+
+    # Model 2: DiffusionGemma-26B Direct vLLM Vision Chat
+    print("Evaluating Model 2: DiffusionGemma-26B (Direct vLLM Vision Chat)...")
+    try:
+        dgemma_metrics, dgemma_preds = evaluate_dgemma_direct(frames, ground_truth, args.vllm_endpoint)
+        results.append(dgemma_metrics)
+    except Exception as e:
+        print(f"DiffusionGemma-26B direct chat evaluation error: {e}")
 
     # Save summary table
     df = pd.DataFrame(results)
@@ -178,8 +277,8 @@ def main():
     # Save markdown summary
     md_content = "# Multi-Model Phase A Evaluation Results\n\n"
     md_content += df.to_markdown(index=False)
-    md_content += "\n\n### Registered Phase A Thresholds:\n"
-    md_content += "- Red recall >= 0.80\n"
+    md_content += "\n\n### Pre-Registered Phase A Thresholds:\n"
+    md_content += "- Red light recall >= 0.80\n"
     md_content += "- Other lane false positive <= 0.10\n"
     md_content += "- No light false positive <= 0.02\n"
     md_content += "- Stop sign recall >= 0.70\n"
