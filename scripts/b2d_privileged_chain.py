@@ -140,8 +140,11 @@ class Chain:
             self.log.scalar("performance/routes_per_hour",count*3600/elapsed,len(list((ROOT/"units").glob("*.json"))))
             return adir
         except BaseException as exc:
-            self.stop.set();self.error=exc
-            (ROOT/"ERROR").write_text(traceback.format_exc())
+            with self.lock:
+                if self.error is None:
+                    self.error=exc
+                    (ROOT/"ERROR").write_text(traceback.format_exc())
+            self.stop.set()
             self.log.info(f"ERROR in {name}: {exc}")
             raise
         finally:
@@ -207,7 +210,7 @@ class Chain:
         spec.append(("334","pred"))
         results={}
         with ThreadPoolExecutor(max_workers=3*self.args.slots) as pool:
-            fs={pool.submit(self.unit,"debug"+rid,arm,0,[rid],record=True):(rid,arm) for rid,arm in spec}
+            fs={pool.submit(self.unit,"debug-v2-"+rid,arm,0,[rid],record=True):(rid,arm) for rid,arm in spec}
             for f in tqdm(as_completed(fs),total=len(fs),desc="Debug units"):
                 rid,arm=fs[f];results[(rid,arm)]=f.result()
         checks={}

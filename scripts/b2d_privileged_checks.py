@@ -62,10 +62,26 @@ def numeric(log,out):
     engine.agent=SimpleNamespace(route=SimpleNamespace(xy=np.array([[0.,0.],[20.,0.],[40.,0.]]),s=np.array([0.,20.,40.])))
     engine.snapshot=lambda t:None;engine.snapshot_ms=0;engine.actors=[]
     engine.flags=np.zeros(3,bool);engine.jids=np.full(3,-1);engine.bypass=False
+    # Exercise adjacent-lane state with NumPy inputs; JSON must remain valid in every arm.
+    import sys as _sys
+    prior=_sys.modules.get("carla")
+    _sys.modules["carla"]=SimpleNamespace(Location=lambda **kw:SimpleNamespace(**kw),LaneType=SimpleNamespace(Driving="Driving"))
+    try:
+        other=SimpleNamespace(lane_type="Driving",transform=SimpleNamespace(location=SimpleNamespace(x=0.,y=3.5,z=0.),
+                           get_forward_vector=lambda:SimpleNamespace(x=-1.,y=0.)))
+        waypoint=SimpleNamespace(transform=SimpleNamespace(location=SimpleNamespace(z=0.),
+                    get_forward_vector=lambda:SimpleNamespace(x=1.,y=0.)),get_left_lane=lambda:other,get_right_lane=lambda:None)
+        engine.map=SimpleNamespace(get_waypoint=lambda location:waypoint);engine.meta={}
+        state=engine.adjacent(dict(start_s=0.,end_s=20.,ids=[7]))
+        assert type(state["borrow"]) is bool and state["borrow"]
+        json.dumps(state,allow_nan=False)
+    finally:
+        if prior is None:_sys.modules.pop("carla",None)
+        else:_sys.modules["carla"]=prior
     original=np.array([[0.,0.],[10.,0.],[30.,0.]])
     assert engine.geometry(5,0,np.zeros(2),0,original,False) is original
     result=dict(projection_maxabs_m=maxerr,sat_cases=n,sat_disagreements=0,disabled_geometry_identity=True,
-                exact_gap_checks=True,native_camera_direction_checks=True,
+                exact_gap_checks=True,native_camera_direction_checks=True,adjacent_state_json=True,
                 scalar_projection_points_per_s=len(points)/reference_s,vector_projection_points_per_s=len(points)/vector_s)
     (out/"numeric_checks.json").write_text(json.dumps(result,indent=2)+"\n")
     log.info("Numeric checks passed: "+json.dumps(result))
@@ -79,7 +95,7 @@ def route_checks(attempt,kind):
     record=json.loads((attempt/"results.json").read_text())["_checkpoint"]["records"][0]
     crash=record["status"] in ("Failed","Simulation crashed","Agent crashed","Agent couldn't be set up")
     ms=np.array([r["ms"] for r in live]);v=np.array([r["v"] for r in live])
-    assert len(live)>0
+    assert len(live)>0,f"No post-warmup plans: status={record["status"]}, attempt={attempt}; inspect route.log"
     checks=dict(files=(attempt/"privileged.jsonl").exists() and (attempt/"contacts.jsonl").exists(),
                 no_crash=not crash,finite=bool(np.isfinite(ms).all() and np.isfinite(v).all()),
                 median_latency=float(np.median(ms))<=75,p99_latency=float(np.quantile(ms,.99))<=200)

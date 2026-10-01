@@ -246,7 +246,7 @@ class Privileged:
             if other is None or other.lane_type!=carla.LaneType.Driving:continue
             loc=other.transform.location;d=np.array([loc.x-p[0],loc.y-p[1]])
             offset=float(d@normal);unit=other.transform.get_forward_vector()
-            borrow=unit.x*f[0]+unit.y*f[1]<0
+            borrow=bool(unit.x*f[0]+unit.y*f[1]<0)
             if 2.5<=abs(offset)<=4.5 and abs(loc.z-wp.transform.location.z)<=.75:
                 options.append((borrow,order,offset))
         if not options:self.meta["no_adjacent_lane"]=True;return None
@@ -273,7 +273,8 @@ class Privileged:
         local=place(path,s_base)
         future=np.asarray(xy)+local[:,0,None]*heading-local[:,1,None]*normal
         future_center=future+1.3886*heading
-        headings=np.arctan2(np.gradient(future[:,1]),np.gradient(future[:,0]))
+        delta=np.gradient(future,axis=0)
+        headings=np.where(np.linalg.norm(delta,axis=1)>1e-3,np.arctan2(delta[:,1],delta[:,0]),yaw)
         conflict_s=[];self.meta["conflict_ids"]=[]
         ids=set(i for j in self.meta["junctions"] for i in j["ids"])
         for a in self.actors:
@@ -296,7 +297,7 @@ class Privileged:
             if t-self.clear_since<.8:out["pjunc"]=np.zeros(len(TIMES));active=True
             else:self.release_until=t+2;self.clear_since=None
         self.hold=active
-        c=agent._ctx();self.meta["light"]={k:c[k] for k in ("tl","tl_dist") if k in c}
+        c=agent._ctx();self.meta["light"]={k:c[k] for k in ("tl","tl_dist","tl_id") if k in c}
         d=c.get("tl_dist",1e9);red=c.get("tl") in (1,2)
         if self.red and red and d<50 and (d>max(.5,speed*speed/8-1) or speed<1 and d>-1) and not warm:
             out["pred"]=stop(d-.5);self.light_hold=True;self.held_light_id=c.get("tl_id")

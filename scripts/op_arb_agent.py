@@ -331,13 +331,17 @@ class OpArbAgent(Z.ZeroShotAgent):
         except ValueError:
             bpath = np.array([[0.0, 0.0], [1.0, 0.0]])
             world = np.asarray(now_xy) + np.array([[0., 0.], [math.cos(now_yaw), math.sin(now_yaw)]])
+        original_bpath = bpath
         if self.pc is not None:
             world = self.pc.geometry(speed, t_frame, now_xy, now_yaw, world, warm)
             bpath = world_to_local(world, now_xy, now_yaw)
         ba = arc(bpath)
         bpath = bpath[: max(int(np.searchsorted(ba, 80.0)) + 1, 2)]
         end_stop = ba[-1] < 80.0
-        s_base = governor(bpath, speed, A["cruise"], A["alat"], A["amax"], A["bmax"], end_stop)
+        speed_path = original_bpath if self.pc is not None and self.pc.meta.get("bypass") else bpath
+        speed_arc = arc(speed_path)
+        speed_path = speed_path[:max(int(np.searchsorted(speed_arc, 80.0)) + 1, 2)]
+        s_base = governor(speed_path, speed, A["cruise"], A["alat"], A["amax"], A["bmax"], speed_arc[-1] < 80.0)
         pc_cons, pc_release = self.pc.constraints(s_base, speed, bpath, t_frame, warm) if self.pc else ({}, False)
         # ---- openpilot longitudinal signals
         lead = np.asarray(out["lead"])[0]                    # lead now: (6 times, x y v a)
