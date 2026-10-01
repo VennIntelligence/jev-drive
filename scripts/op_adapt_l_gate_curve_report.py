@@ -54,6 +54,16 @@ def main():
     assert log.tb is not None
     try:
         grant_check(gpu=False)
+        events = [json.loads(line) for line in (ROOT / "curve-unit/events.jsonl").read_text().splitlines()]
+        loss_bins = [e["value"] for e in events if e.get("tag") == "loss/imit"]
+        assert len(loss_bins) == 16 and min(loss_bins) >= 0
+        # Exact 20% = 160 steps. Nonnegative loss bounds the two unknown ten-step fragments.
+        first160_lower = 50 * sum(loss_bins[:3]) / 160
+        last160_upper = 50 * sum(loss_bins[-4:]) / 160
+        assert last160_upper < first160_lower, "Exact 20% unit-loss decrease is not certified by the stored bins"
+        dump(out / "unit_trend_bounds.json", {"first160_mean_lower_bound": first160_lower,
+             "last160_mean_upper_bound": last160_upper, "registered_exact_20_percent_certified": True,
+             "basis": "nonnegative imitation loss; stored disjoint 50-step means"})
         gate=pd.read_csv(ROOT/"gate-val/metrics.csv")
         auc=pd.read_csv(ROOT/"gate-val/auc.csv")
         front=json.loads((ROOT/"frontier/frontier.json").read_text())

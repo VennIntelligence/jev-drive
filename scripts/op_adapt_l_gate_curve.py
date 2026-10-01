@@ -393,7 +393,7 @@ def curve_train(out, log, args):
         imitation = [e["value"] for e in ev if e.get("tag") == "loss/imit"]
         gains = [dev[f"{s}/cap_{s}"] for s in L.SLICE3]
         checks = {"finite_loss": dev["nonfinite"] == 0,
-                  "imitation_loss_decreased": np.mean(imitation[-3:]) < np.mean(imitation[:3]),
+                  "imitation_loss_decreased": len(imitation) == 16 and min(imitation) >= 0 and sum(imitation[-4:]) < sum(imitation[:3]),
                   "step0_identity": before["drift_median"] <= .001 and all(before[f"{s}/cap_{s}"] == 0 for s in L.SLICE3),
                   "capture_direction": np.mean(gains) > 0 and sum(g > 0 for g in gains) >= 2,
                   "dev_drift": dev["drift_median"] <= .15,
