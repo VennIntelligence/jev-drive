@@ -20,8 +20,9 @@ except (ImportError, ValueError):
 
 
 class VLMClient:
-    def __init__(self, endpoint: str = "http://127.0.0.1:8080/v1/systemone", timeout_s: float = 2.0):
+    def __init__(self, endpoint: str = "http://127.0.0.1:8080/v1/systemone", model: str = "openjev-latest", timeout_s: float = 2.0):
         self.endpoint = endpoint
+        self.model = model
         self.timeout_s = timeout_s
 
     def encode_frame(self, frame_np: np.ndarray, quality: int = 85) -> str:
@@ -36,6 +37,7 @@ class VLMClient:
         """Query the System One decision endpoint with the given camera frames."""
         images = [self.encode_frame(f) for f in frames]
         payload = {
+            "model": self.model,
             "state": state_desc,
             "images": images,
             "questions": QUESTIONS_SCHEMA,
