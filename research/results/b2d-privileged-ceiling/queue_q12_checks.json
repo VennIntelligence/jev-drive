@@ -1,0 +1,94 @@
+{
+  "total_combinations": 696,
+  "unique_combinations": 696,
+  "retained_routes": 106,
+  "recovered_readout_routes": 106,
+  "remaining_routes": 590,
+  "remaining_shards": 51,
+  "chunk_size": 12,
+  "control_sha256": "8e6b2612e6c9a0faab1fa2caa77d7ca9df8034155442bb92fedaa0fd887be069",
+  "control_matches_debug_lock": true,
+  "original_full_started": "2026-10-01 15:05:28",
+  "drain": {
+    "request": {
+      "time": 1790840848.7072124,
+      "chain_pid": 222243,
+      "chain_start": "70250805",
+      "wrappers": [
+        {
+          "pid": 513744,
+          "start": "70790369",
+          "unit": "eval-obstacle-00-drive-s1",
+          "ids": [
+            "19324",
+            "19186",
+            "19359",
+            "31045"
+          ]
+        },
+        {
+          "pid": 519469,
+          "start": "70818646",
+          "unit": "eval-obstacle-01-drive-s1",
+          "ids": [
+            "31100",
+            "30939",
+            "2520",
+            "18868"
+          ]
+        },
+        {
+          "pid": 520774,
+          "start": "70824458",
+          "unit": "eval-obstacle-02-drive-s1",
+          "ids": [
+            "18512",
+            "29893",
+            "29770",
+            "2608"
+          ]
+        },
+        {
+          "pid": 522776,
+          "start": "70832433",
+          "unit": "eval-obstacle-03-drive-s1",
+          "ids": [
+            "19832",
+            "19753",
+            "19681",
+            "2667"
+          ]
+        },
+        {
+          "pid": 526065,
+          "start": "70845058",
+          "unit": "eval-obstacle-04-drive-s1",
+          "ids": [
+            "21546",
+            "21496",
+            "28387",
+            "29183"
+          ]
+        },
+        {
+          "pid": 526155,
+          "start": "70845106",
+          "unit": "eval-obstacle-05-drive-s1",
+          "ids": [
+            "29073",
+            "21037",
+            "21188",
+            "21009"
+          ]
+        }
+      ],
+      "reason": "Drain current route shards naturally before queue-granularity optimization",
+      "control_unchanged": true
+    },
+    "naturally_completed_wrappers": 6,
+    "terminated_coordinator": 222243,
+    "trajectories_interrupted": 0,
+    "control_unchanged": true,
+    "time": 1790841642.6899455
+  }
+}
