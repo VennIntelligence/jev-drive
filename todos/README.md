@@ -53,3 +53,5 @@
 - [2026-10-01-op-adapt-L-b2d-prereg.md](2026-10-01-op-adapt-L-b2d-prereg.md) — op-adapt L 模型（`main` / `noint` 等，经 intent adapter 读路线意图）换进 op-drive 的 B2D 闭环：dev 10 路线 × 2 TM seed，对配速对照的配对差（S2 风格）与对 drive 的差为判定，起步由 plan 放行 / 幽灵停车 / 路口 plan 跟转三组行为读数；阶段化启动与 wall 估计、执行日志和结果表都在文内
 - [2026-09-28-op-closedloop.md](2026-09-28-op-closedloop.md) — openpilot 进 B2D 闭环（op-arb）：起步 / 转弯失败的逐 tick 诊断、无感知路线 base + openpilot 纵向 modifier 的五种仲裁 pilot 与 base-only 消融（decisions 第 57 条，结果在 research/openpilot-closedloop-integration.md）
 - [2026-09-28-cosmos-pilot.md](2026-09-28-cosmos-pilot.md) — Cosmos-Transfer2.5 把 CARLA 行人配对重画成真实感：v1 两段独立翻译在行人外也不同（no-go）；v2 用「x⁻ 翻一次 + 行人像素区锚定重画」，区外逐像素相同、召回 0.98、行人不再发白、118 GPU·h / 2 000 对；剩车内痕迹 1 / 10 明显，一条环判据待用户决定作废（decisions 第 56 条）
+
+- [2026-10-02 op-adapt L gate 与 curve](2026-10-02-op-adapt-L-gate-and-curve.md)：起步开关与整段采样数据量曲线的预登记、执行日志和结果。
