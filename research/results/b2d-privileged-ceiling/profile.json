@@ -1,0 +1,78 @@
+{
+  "stages": [
+    {
+      "label": "before",
+      "slots_per_gpu": 1,
+      "workers_per_slot": 2,
+      "routes": 24,
+      "start": 1790836204.703063,
+      "end": 1790837596.6783423,
+      "wall_s": 1391.9752793312073,
+      "routes_per_hour": 62.070067825853926,
+      "estimated_formal_wall_h": 11.213134194612502,
+      "gpu": {
+        "0": {
+          "util_mean_pct": 17.46323529411765,
+          "util_p95_pct": 31.0,
+          "peak_memory_mib": 16710,
+          "idle_share": 0.0661764705882353
+        },
+        "1": {
+          "util_mean_pct": 17.143382352941178,
+          "util_p95_pct": 32.0,
+          "peak_memory_mib": 16445,
+          "idle_share": 0.125
+        },
+        "2": {
+          "util_mean_pct": 17.419117647058822,
+          "util_p95_pct": 29.0,
+          "peak_memory_mib": 16741,
+          "idle_share": 0.07352941176470588
+        }
+      }
+    },
+    {
+      "label": "after",
+      "slots_per_gpu": 2,
+      "workers_per_slot": 4,
+      "routes": 24,
+      "start": 1790837597.5743213,
+      "end": 1790838328.4603348,
+      "wall_s": 730.886013507843,
+      "routes_per_hour": 118.21268761913838,
+      "estimated_formal_wall_h": 5.8876928865909575,
+      "gpu": {
+        "0": {
+          "util_mean_pct": 31.543478260869566,
+          "util_p95_pct": 78.0,
+          "peak_memory_mib": 52400,
+          "idle_share": 0.14492753623188406
+        },
+        "1": {
+          "util_mean_pct": 33.05072463768116,
+          "util_p95_pct": 68.75000000000003,
+          "peak_memory_mib": 52352,
+          "idle_share": 0.10144927536231885
+        },
+        "2": {
+          "util_mean_pct": 29.855072463768117,
+          "util_p95_pct": 56.150000000000006,
+          "peak_memory_mib": 49641,
+          "idle_share": 0.14492753623188406
+        }
+      }
+    }
+  ],
+  "throughput_ratio": 1.9045039220965612,
+  "cohort": [
+    "334",
+    "27787",
+    "24721",
+    "26872",
+    "26537",
+    "17749",
+    "25169",
+    "24955"
+  ],
+  "bottleneck": "Measured agent/world/tree/copy timings in per-route profile tables; startup and blocked tails included"
+}

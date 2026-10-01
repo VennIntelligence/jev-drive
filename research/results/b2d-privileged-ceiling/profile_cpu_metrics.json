@@ -1,0 +1,16 @@
+{
+  "before": {
+    "samples": 272,
+    "mean_busy_cores": 14.37586029411764,
+    "peak_busy_cores": 19.641,
+    "peak_memory_gib": 223.76908493041992,
+    "peak_pids": 1797
+  },
+  "after": {
+    "samples": 138,
+    "mean_busy_cores": 19.88978260869566,
+    "peak_busy_cores": 38.48,
+    "peak_memory_gib": 270.79957580566406,
+    "peak_pids": 2752
+  }
+}

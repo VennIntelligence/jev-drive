@@ -1,6 +1,6 @@
 # B2D 特权上限：路口冲突、绕障与红灯（预登记）
 
-状态：debug-v4全部实现检查通过，正在重做三卡装填profile，正式尚未开始。本文在本任务任何闭环运行或新结果之前提交并push；仅查了XML（路线与场景类型配置格式）场景类型与资源元数据，没有查看这些新路线的旧成绩。任务来自[main提示词](../tmp/2026-10-01-b2d-privileged-ceiling-prompt.md)。背景已读decisions第47/49/52/57/61/74/76/81条、[op-drive](2026-09-29-op-drive.md)、[适配闭环登记](2026-10-01-op-adapt-L-b2d-prereg.md)、[量具](../research/behavior-layer-instruments.md)及[录像诊断](../research/openpilot-seed0-video-diagnosis.md)；decisions只读，由main维护。
+状态：debug-v4与profile完成，696次正式评测于2026-10-01 15:05 UTC+8启动，正在自动运行与逐shard读数。本文在本任务任何闭环运行或新结果之前提交并push；仅查了XML（路线与场景类型配置格式）场景类型与资源元数据，没有查看这些新路线的旧成绩。任务来自[main提示词](../tmp/2026-10-01-b2d-privileged-ceiling-prompt.md)。背景已读decisions第47/49/52/57/61/74/76/81条、[op-drive](2026-09-29-op-drive.md)、[适配闭环登记](2026-10-01-op-adapt-L-b2d-prereg.md)、[量具](../research/behavior-layer-instruments.md)及[录像诊断](../research/openpilot-seed0-video-diagnosis.md)；decisions只读，由main维护。
 
 ## 问题、共用管线与臂
 
@@ -207,3 +207,26 @@ profile的固定负载明确为已登记debug8条×3份（24次drive运行，see
 26872的pjunc/pall没有官方撞车，但仍没通过路线；25169的两个单绕障臂各有4次官方撞车，pall有1次；24955的两个绕障臂各有2次撞车。与先前版本的同seed调试记录有波动，不能把debug差值当可靠技能收益；这里未运行任何正式路线。14:30开始固定24次before装填，三卡各1slot×2worker；之后同链自动测after的2slot×4worker，再进入正式评测。
 
 15:02补做packing（并发装填）本身的模型数值检查，见[pool_checks.json](../research/results/b2d-privileged-ceiling/pool_checks.json)：固定seed0的native road/wide BGRA（原始像素通道）输入，6个带历史状态的步骤与desire变化；先串行运行，再在4个彼此隔离、重新reset（清空历史状态）的会话中并发运行相同序列。pos/vel/yaw/acc/lead/meta等12项输出最大绝对差全部为0，登记的几何投影/SAT检查也全部一致；没有把随机闭环轨迹宣称为逐帧相同。使用after阶段已经完成的GPU0 slot0服务，仅0.13s串行和0.45s四序列并发，不新建CARLA/server、不更改模型输入或任何正式路线；这不足1s的诊断也在after阶段的原始资源采样窗口内，保留记录，不能用此小测试的耗时冒充整批吞吐。
+
+### 2026-10-01 15:05 UTC+8：profile完成，正式全批启动
+
+同一debug8条×3份、24次drive的完整装填结果见[profile.json](../research/results/b2d-privileged-ceiling/profile.json)、[逐路线before](../research/results/b2d-privileged-ceiling/profile_before_routes.csv)、[逐路线after](../research/results/b2d-privileged-ceiling/profile_after_routes.csv)。三卡各用登记CPU分区，正式采用每卡2slot×4worker、共24worker的动态队列；首先六个junction/drive/seed0分片，之后自动推进所有臂、seed、类型组，单个完成即解析。没有改控制或登记判据。
+
+| 已测量指标 | before：每卡1×2 | after：每卡2×4 |
+|:--|--:|--:|
+| 24次路线墙钟 | 23.20min | 12.18min |
+| 完整路线吞吐 | 62.07/h | 118.21/h |
+| 去掉起始20tick后的总tick / 吞吐 | 45433 / 32.64tick/s | 44355 / 60.69tick/s |
+| GPU0平均 / p95利用率 | 17.46% / 31.0% | 31.54% / 78.0% |
+| GPU1平均 / p95利用率 | 17.14% / 32.0% | 33.05% / 68.75% |
+| GPU2平均 / p95利用率 | 17.42% / 29.0% | 29.86% / 56.15% |
+| 三卡各自显存峰值 | 16.32 / 16.06 / 16.35GiB | 51.17 / 51.13 / 48.48GiB |
+| CPU平均 / 峰值忙核 | 14.38 / 19.64 | 19.89 / 38.48 |
+| cgroup内存峰值（包含可回收file cache） | 223.77GiB | 270.80GiB |
+| PID峰值 | 1797 | 2752 |
+
+路线吞吐提升1.9045倍，tick吞吐提升约1.859倍；两个试跑的总tick差约2.4%，因此同时报tick工作量，不把相同路线/seed假定成同一条随机轨迹。profile平均GPU利用率包含启动与长尾：容易的四条完成后，同卡另一slot仍被卡死路线占用；正式用动态分片继续填空位，后续实测利用率另报，不能拿p95冒充平均。
+
+瓶颈有实际计时：[profile_derived.json](../research/results/b2d-privileged-ceiling/profile_derived.json)中逐路线非加权平均agent阶段102.27→99.36ms，world tick14.38→11.56ms、tree6.50→4.87ms、copy9.72→7.36ms；这些计时可能嵌套，不相加。agent阶段仍是主耗时，装填提高并行覆盖；本实验额外真值snapshot按每20条计划抽样，中位数24.20→13.87ms、p9543.68→34.53ms，计划总时延中位数68.9→48.8ms，见[profile_pc_metrics.json](../research/results/b2d-privileged-ceiling/profile_pc_metrics.json)。额外真值查询仍有成本，不能宣称热路径已零开销；几何向量化与并发模型已经分别完成数值对齐，冻结批次保留当前实现。CPU、内存、PID按真实采样读数见[profile_cpu_metrics.json](../research/results/b2d-privileged-ceiling/profile_cpu_metrics.json)。
+
+按after完整路线吞吐外推696次为5.8877h；这是debug负载的推算，不是实际完成时间。正式Town12/13比例更高，保留6–8h正式运行预期，统计与诊断录像另加约0.5–1h；不按预算截断失败路线。正式从15:05 UTC+8（日本时间16:05）启动，已发登记要求的一次启动通知。15:11首个正式4路线shard完整读数成功，尚不做任何技能CI或价值判定。

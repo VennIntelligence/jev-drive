@@ -1,0 +1,18 @@
+{
+  "before": {
+    "sample_rule": "Every twentieth post-warmup plan in each completed profile route",
+    "samples": 2183,
+    "snapshot_ms_median": 24.2,
+    "snapshot_ms_p95": 43.68,
+    "plan_ms_median": 68.9,
+    "plan_ms_p95": 96.5
+  },
+  "after": {
+    "sample_rule": "Every twentieth post-warmup plan in each completed profile route",
+    "samples": 2129,
+    "snapshot_ms_median": 13.87,
+    "snapshot_ms_p95": 34.53,
+    "plan_ms_median": 48.8,
+    "plan_ms_p95": 79.8
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "before": {
+    "ticks_used": 45433,
+    "ticks_per_wall_s": 32.639229068657656,
+    "per_route_unweighted_mean_ms": {
+      "world_tick_ms_mean": 14.375875,
+      "agent_ms_mean": 102.26991666666667,
+      "tree_ms_mean": 6.4971250000000005,
+      "copy_ms_mean": 9.721416666666666,
+      "total_ms_mean": 123.87741666666666
+    }
+  },
+  "after": {
+    "ticks_used": 44355,
+    "ticks_per_wall_s": 60.68661758503337,
+    "per_route_unweighted_mean_ms": {
+      "world_tick_ms_mean": 11.55775,
+      "agent_ms_mean": 99.356375,
+      "tree_ms_mean": 4.869041666666667,
+      "copy_ms_mean": 7.3577916666666665,
+      "total_ms_mean": 116.46866666666666
+    }
+  }
+}
