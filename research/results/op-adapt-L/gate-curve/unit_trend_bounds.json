@@ -1,0 +1,6 @@
+{
+  "first160_mean_lower_bound": 1.9339114882051944,
+  "last160_mean_upper_bound": 1.391389461606741,
+  "registered_exact_20_percent_certified": true,
+  "basis": "nonnegative imitation loss; stored disjoint 50-step means"
+}

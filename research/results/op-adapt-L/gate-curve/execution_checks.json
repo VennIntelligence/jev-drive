@@ -1,0 +1,143 @@
+{
+  "split_check": {
+    "overlap_counts": {
+      "gate_train_vs_dev": 0,
+      "gate_train_vs_val": 0,
+      "gate_dev_vs_val": 0
+    },
+    "overlap_examples": {
+      "gate_train_vs_dev": [],
+      "gate_train_vs_val": [],
+      "gate_dev_vs_val": []
+    },
+    "split_revision": "v2: fresh gate holdout carved from original L train; main previously trained on these segments",
+    "train": {
+      "rows": 24976,
+      "segments": 937,
+      "positive": 7650,
+      "negative": 17326,
+      "creeping": 5371
+    },
+    "dev": {
+      "rows": 2740,
+      "segments": 98,
+      "positive": 750,
+      "negative": 1990,
+      "creeping": 542
+    }
+  },
+  "manifest_sha256": {
+    "sha256": "ced6cb05b9ba19bcd1c647e60ef5073cfce80b45127f3f6deeb93d2da6a8657b",
+    "path": "manifest.json"
+  },
+  "curve_unit_checks": {
+    "finite_loss": true,
+    "imitation_loss_decreased": true,
+    "step0_identity": true,
+    "capture_direction": true,
+    "dev_drift": true,
+    "dev_false_triggers": true,
+    "throughput": true,
+    "vram": true,
+    "data_wait": true
+  },
+  "gate_lock": {
+    "head": "/root/autodl-tmp/ujs/runs/op_adapt_L/gate_curve/gate-fit/h32-wd0.0001/head.pt",
+    "tau": 0.9943373692035675,
+    "sha256": {
+      "head.pt": "5a1290c6bb5aeb071fb08dc1139588b9267efae02dd0421ac757f364ff9561c2",
+      "gate_norm.npz": "93bc374335f0e2028e4af02dea54f6f0a477f6442abd223f97f15219cf80b3c0"
+    },
+    "chosen": {
+      "tau": 0.9943373692035675,
+      "seeds": [
+        {
+          "start": {
+            "n": 750,
+            "clusters": 79,
+            "adapt": 0.5666666666666667,
+            "orig": 0.5266666666666666,
+            "delta": 0.04,
+            "lo": 0.023344041263234097,
+            "hi": 0.05943259673839621
+          },
+          "stay": {
+            "n": 1448,
+            "clusters": 52,
+            "adapt": 0.06837016574585636,
+            "orig": 0.06284530386740332,
+            "delta": 0.0055248618784530384,
+            "lo": 0.0,
+            "hi": 0.01437919315618316
+          }
+        },
+        {
+          "start": {
+            "n": 750,
+            "clusters": 79,
+            "adapt": 0.5653333333333334,
+            "orig": 0.5266666666666666,
+            "delta": 0.03866666666666667,
+            "lo": 0.021976958525345622,
+            "hi": 0.05803243574051406
+          },
+          "stay": {
+            "n": 1448,
+            "clusters": 52,
+            "adapt": 0.06837016574585636,
+            "orig": 0.06284530386740332,
+            "delta": 0.0055248618784530384,
+            "lo": 0.0,
+            "hi": 0.01437919315618316
+          }
+        },
+        {
+          "start": {
+            "n": 750,
+            "clusters": 79,
+            "adapt": 0.564,
+            "orig": 0.5266666666666666,
+            "delta": 0.037333333333333336,
+            "lo": 0.021036167854431555,
+            "hi": 0.05609059127526978
+          },
+          "stay": {
+            "n": 1448,
+            "clusters": 52,
+            "adapt": 0.06837016574585636,
+            "orig": 0.06284530386740332,
+            "delta": 0.0055248618784530384,
+            "lo": 0.0006647947399136561,
+            "hi": 0.012963061195500664
+          }
+        }
+      ],
+      "qualifies": true,
+      "min_start_gain": 0.037333333333333336
+    },
+    "val_read": false
+  },
+  "joint_training_counts": {
+    "25": {
+      "segments": 74,
+      "frames": 886
+    },
+    "110": {
+      "segments": 300,
+      "frames": 3946
+    },
+    "300": {
+      "segments": 706,
+      "frames": 10632
+    },
+    "all": {
+      "segments": 1244,
+      "frames": 25601
+    }
+  },
+  "report_unchanged_after_bug_fixes": {
+    "metrics.csv": true,
+    "lines_by_seed.csv": true,
+    "lines_all_seeds.csv": true
+  }
+}

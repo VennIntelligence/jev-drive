@@ -1,0 +1,14 @@
+{
+  "runs": 8,
+  "configuration_matches_main": true,
+  "historical_main_missing_contrast_mix": true,
+  "historical_uniform_contrast_counts": [
+    6,
+    6,
+    6
+  ],
+  "contrast_and_other_pools_match_main": true,
+  "imitation_pools_match_manifest": true,
+  "all_steps_4000": true,
+  "nonfinite_losses": 0
+}

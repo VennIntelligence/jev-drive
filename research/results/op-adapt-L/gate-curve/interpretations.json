@@ -1,0 +1,23 @@
+{
+  "curve": [
+    {
+      "slice": "start",
+      "at_110_segments": "training_value_at_100_segment_scale",
+      "saturation_size": "300"
+    },
+    {
+      "slice": "stop",
+      "at_110_segments": "training_value_at_100_segment_scale",
+      "saturation_size": "300"
+    },
+    {
+      "slice": "turn_onset",
+      "at_110_segments": "training_value_at_100_segment_scale",
+      "saturation_size": "300"
+    }
+  ],
+  "gate_all_lines_pass": false,
+  "bootstrap_replicates": 2000,
+  "bootstrap_seed": 0,
+  "training_seed_uncertainty_in_CI": false
+}
