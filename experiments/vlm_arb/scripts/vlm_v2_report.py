@@ -172,7 +172,7 @@ def few_vred2(_):
     lat = an.lat[an.ok].to_numpy()
     lat_ok = bool(len(lat) and pct(lat, 95) <= 1e3 * L_REG and np.mean(lat > 2500) <= 0.01 and an.ok.mean() >= 0.98)
     df = pd.DataFrame(rows)
-    bad_short = int(sum(1 for x in rows if x.get("n_r2_stops", 0) and not x.get("stopped_short_of_line", True)))
+    bad_short = int(sum(1 for x in rows if x.get("n_r2_stops", 0) and x.get("d_stop") is not None and x["d_stop"] < 0))   # a stop beyond the stop line
     gate = dict(passed=bool(df.finished.all() and crashes == 0 and short >= 1 and rolls >= 1 and lat_ok and bad_short == 0), latency_ok=lat_ok,
                 p50_ms=pct(lat, 50), p95_ms=pct(lat, 95), over_L=float(np.mean(lat > 1e3 * L_REG)) if len(lat) else None,
                 routes_with_stop=int(stops), routes_stopped_short=int(short), routes_stop_not_short=bad_short, routes_with_release=int(rolls),

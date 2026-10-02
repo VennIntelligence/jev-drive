@@ -88,7 +88,9 @@ def vred2_jobs():
     cal = [base.unit("cal3", 1, k, sh[k], vc.qwen_env(L_REGISTERED, True), "shadow", 2, base="drive") for k in SHARDS]
     calib = tool("calibrate3", "calibrate3", deps=[j.name for j in cal], prio=2, ok=passed("v2_cal3"))
     v0 = [base.unit("vred2", 0, k, sh[k], qe, "", 4, deps=[calib.name], base="vred") for k in SHARDS]
-    few_v = tool("few-vred2", "few-vred2", deps=[j.name for j in v0], prio=4, ok=passed("v2_few_vred2"))
+    # `few-vred2` (first definition: every stop 0-3.5 m short of the line) failed on stops that were farther short, e.g. a car held 16 m before a red light at its spawn; the gate is
+    # rerun as `few-vred2b` with "no stop beyond the stop line" (plan section 9, D31)
+    few_v = tool("few-vred2b", "few-vred2", deps=[j.name for j in v0], prio=4, ok=passed("v2_few_vred2"))
     v1 = [base.unit("vred2", 1, k, sh[k], qe, "", 5, deps=[few_v.name], base="vred") for k in SHARDS]
     rep = tool("report", "report", deps=[j.name for j in v1], prio=9)
     return cal + [calib] + v0 + [few_v] + v1 + [rep]
