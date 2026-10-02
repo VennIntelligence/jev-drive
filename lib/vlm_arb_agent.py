@@ -13,6 +13,12 @@ Environment (set per unit by experiments/vlm_arb/scripts/vlm_arb_chain.py):
   VLM_ORACLE        truth: answers are the ground-truth labels (integration test of the table, debug routes only);
                     stuckred: as truth but Q_light is always red (exercises R5).
   VLM_ENDPOINT      System One URL.
+  VLM_BACKEND       openjev (default) | qwen: zero-shot Qwen3-VL-4B light reading, one forward pass with option scoring
+                    (experiments/vlm_arb/scripts/vlm_qwen_server.py, one server per card on port VLM_BASE_PORT + VLM_GPU,
+                    default 8200). It answers Q_light only; Q_sign / Q_block / Q_side are logged as "na" and no row may
+                    read them (VLM_ROWS must be R2,R5). `latency_ms` of a qwen answer runs from the moment the request
+                    was handed over (frame conversion, JPEG encoding and the wait for a pool thread included) to the answer;
+                    `rtt_ms` is the HTTP round trip alone.
 
 Logs in the attempt dir: vlm_decisions.jsonl, one line per request {"k": "a", t_q, t_eff, gt, ans} and one line per
 0.5 s {"k": "s", t, v, rules, ...}; plans.jsonl gets the table state under pc.vlm.
@@ -21,6 +27,7 @@ import json
 import math
 import os
 import sys
+import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -36,6 +43,7 @@ for _d in (str(REPO / "lib"), str(REPO / "scripts")):
 from op_arb_agent import OpArbAgent, REAR_TO_BUMPER, idm  # noqa: E402
 from b2d_privileged_geometry import Privileged, project  # noqa: E402
 from vlm_client import VLMClient, jpeg  # noqa: E402
+from vlm_qwen_client import QwenClient  # noqa: E402
 
 
 def _js(value):
@@ -96,8 +104,14 @@ class VlmArbAgent(OpArbAgent):
         self.save_frames = env("VLM_SAVE_FRAMES", "0") == "1"
         self.L = float(env("VLM_L", ARB_PARAMS["sim_delay_L_s"]))
         self.light_variant = env("VLM_LIGHT_VARIANT", "base")
-        self.client = VLMClient(endpoint=env("VLM_ENDPOINT", "http://127.0.0.1:8080/v1/systemone"))
-        self.pool = ThreadPoolExecutor(max_workers=2)
+        self.backend = env("VLM_BACKEND", "openjev")
+        if self.backend == "qwen":
+            if rows & {"R3", "R4"}:
+                raise ValueError("the qwen backend answers Q_light only: VLM_ROWS must not contain R3 / R4")
+            self.client = QwenClient(int(env("VLM_BASE_PORT", "8200")) + int(env("VLM_GPU", "0")))
+        else:
+            self.client = VLMClient(endpoint=env("VLM_ENDPOINT", "http://127.0.0.1:8080/v1/systemone"))
+        self.pool = ThreadPoolExecutor(max_workers=4 if self.backend == "qwen" else 2)
         self.priv = Privileged(self, "drive")           # truth geometry and labels; arm "drive" = it controls nothing
         self.pc = VlmArbitrationPC(self, self.priv)
         self.pending_cons, self.pending_release, self.table_state = {}, False, {}
@@ -118,7 +132,7 @@ class VlmArbAgent(OpArbAgent):
         if self.save_frames:
             self.frame_dir.mkdir(parents=True, exist_ok=True)
         self.vlm_log.write(json.dumps(dict(k="h", arm=self.vlm_arm, rows=sorted(rows), L=self.L, shadow=self.shadow,
-                                           oracle=self.vlm_oracle, light_variant=self.light_variant, params=ARB_PARAMS)) + "\n")
+                                           oracle=self.vlm_oracle, light_variant=self.light_variant, backend=self.backend, params=ARB_PARAMS)) + "\n")
 
     # ------------------------------------------------------------------ truth (labels and oracle; never a model input)
     def _prepare(self):
@@ -200,11 +214,18 @@ class VlmArbAgent(OpArbAgent):
                 "Q_sign": "yes" if sd is not None and sd <= SIGN_M else "no", "Q_block": gt["block"], "Q_side": gt["side"]}
 
     # ------------------------------------------------------------------ the request (worker thread)
-    def _request(self, t_q, frames):
+    def _request(self, t_q, frames, t_sub):
         jpgs = {k: jpeg(v) for k, v in frames.items()}
         if self.save_frames:
             for k, b in jpgs.items():
                 (self.frame_dir / ("%08.2f_%s.jpg" % (t_q, k))).write_bytes(b)
+        if self.backend == "qwen":
+            ans = self.client.ask(jpgs)
+            ans["rtt_ms"] = ans["latency_ms"]
+            ans["latency_ms"] = round((time.perf_counter() - t_sub) * 1e3, 1)
+            if ans["ok"]:
+                ans.update(Q_sign="na", Q_block="na", Q_side="na")
+            return ans
         ans = self.client.ask(jpgs, "base")
         if ans["ok"] and self.light_variant != "base":         # Q_light from the diagnosed variant, latencies add up
             alt = self.client.ask(jpgs, self.light_variant, only_light=True)
@@ -217,6 +238,7 @@ class VlmArbAgent(OpArbAgent):
         return ans
 
     def _ask(self, t, cams, gt):
+        t_sub = time.perf_counter()
         if self.vlm_oracle:
             self.queue.append((t, gt, self._oracle_answer(gt)))
             return
@@ -225,7 +247,7 @@ class VlmArbAgent(OpArbAgent):
             if tag in cams and cams[tag] is not None:
                 frames[name] = np.ascontiguousarray(cams[tag][:, :, [2, 1, 0]])
         if frames:
-            self.queue.append((t, gt, self.pool.submit(self._request, t, frames)))
+            self.queue.append((t, gt, self.pool.submit(self._request, t, frames, t_sub)))
 
     def _arrivals(self, t):
         """Answers become usable at t_q + max(L, measured latency): the simulator waits for the VLM, the car would not."""

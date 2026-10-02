@@ -90,12 +90,15 @@ def report(a):
     rate("nolight_fp", m["nolight"], df.ans == RED)
     rate("nolight_green", m["nolight"], df.ans == "green_for_ego")
     rate("other_lane_answer_used", pd.Series(True, df.index), df.ans == "light_for_other_lane")
-    sw = df[df["sweep"]].reset_index(drop=True)
-    sm = light_masks(sw)
-    sweep = dict(red_red=int(((sw.ans == RED) & sm["red"]).sum()), red_n=int(sm["red"].sum()),
-                 red_green=int(((sw.ans == "green_for_ego") & sm["red"]).sum()),
-                 green_green=int(((sw.ans == "green_for_ego") & sm["green"]).sum()), green_n=int(sm["green"].sum()),
-                 none_red=int(((sw.ans == RED) & sm["nolight"]).sum()), none_n=int(sm["nolight"].sum()))
+    # agreement with the offline one-pass reading of decision 85 (same frames, `fwd_r1153` of the vlm_thin baseline stage)
+    old = {}
+    for f in sorted((DATA / "runs/vlm_thin").glob("*/baseline/shard-*.jsonl")):
+        for l in open(f):
+            d = json.loads(l)
+            if d["cfg"] == "fwd_r1153":
+                old[d["id"]] = d["ans"]
+    both = df[df.id.isin(old)]
+    sweep = dict(n=int(len(both)), agree=int(sum(old[i] == a for i, a in zip(both.id, both.ans))))
     lat, svc = percentiles(df.lat), percentiles(df.svc)
     e = lambda k: R[k]["est"]   # noqa: E731
     gate = dict(q_light=bool(e("red_recall_0-50") >= LINES["red_recall"] and e("other_fp") <= LINES["other_fp"]
@@ -127,10 +130,8 @@ def report(a):
           "Gate: Q-light %s, latency %s. Proceed to the closed loop: **%s**." % ("pass" if gate["q_light"] else "FAIL",
                                                                                  "pass" if gate["latency"] else "FAIL",
                                                                                  "yes" if gate["proceed"] else "NO"), "",
-          "Reproduction on the 233-frame sweep subset of decision 85 (fwd at 1153 tokens: ego red answered red 76/85, answered green 5/85, "
-          "green answered green 59/68, no light answered red 0/80): here %d/%d, %d/%d, %d/%d, %d/%d." % (
-              sweep["red_red"], sweep["red_n"], sweep["red_green"], sweep["red_n"], sweep["green_green"], sweep["green_n"],
-              sweep["none_red"], sweep["none_n"]), "",
+          "Agreement with the offline one-pass reading of decision 85 (`fwd_r1153`, in-process, same JPEGs) on its %d sweep frames: %d identical answers." % (
+              sweep["n"], sweep["agree"]), "",
           "Q-light confusion (rows: truth, columns: answer):", "",
           pd.crosstab(np.where(m["red"], "ego red/yellow 0-50 m", np.where(m["green"], "ego green 0-50 m", np.where(m["nolight"], "no light", "other"))),
                       df.ans).reindex(columns=LIGHTS).fillna(0).astype(int).to_markdown(), ""]

@@ -1,4 +1,4 @@
-"""Qwen3-VL-4B traffic-light server: zero-shot, one forward pass, option scoring, both cameras (plan 2026-10-03-vlm-vred.md).
+"""Qwen3-VL-4B traffic-light server: zero-shot, one forward pass, option scoring, both cameras (plan 2026-10-02-vlm-vred.md).
 
   python vlm_qwen_server.py serve --port 8200 [--max-batch 1] [--res r1153] [--log FILE]
   python vlm_qwen_server.py supervise --cards 0,1,2 --run DIR     one `serve` per card, restarted if it dies; STOP file ends it
