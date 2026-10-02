@@ -101,11 +101,12 @@ def routes_table() -> pd.DataFrame:
 
 
 def attempt_weights(frames: pd.DataFrame, mask: np.ndarray) -> np.ndarray:
-    """1 / (frames of the attempt inside the mask): every attempt has the same total weight (the evaluation's weighting)."""
+    """Training weights of the frames in the mask: every route sums to 1 and every attempt of a route gets an equal share (the
+    evaluation's weighting, `group_weights`); 0 outside the mask."""
     w = np.zeros(len(frames))
-    g = frames.key[mask]
-    n = g.map(g.value_counts())
-    w[mask] = 1.0 / n.to_numpy()
+    sel = np.flatnonzero(mask)
+    if len(sel):
+        w[sel] = group_weights(frames.iloc[sel][["id", "key"]])
     return w
 
 
