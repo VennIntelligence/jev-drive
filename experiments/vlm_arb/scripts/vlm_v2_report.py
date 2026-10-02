@@ -297,6 +297,18 @@ def figure_pbyp2(P, df, path, path2):
     plt.close(fig)
 
 
+def dedup(coll):
+    """One row per (route, seed, actor, time): the official record repeats a collision for every contact event with the same actor; `n` counts them."""
+    out = {}
+    for x in coll:
+        k = (x["route"], x["seed"], x["actor"], round(x["t"], 0))
+        if k in out:
+            out[k]["n"] += 1
+        else:
+            out[k] = dict(x, n=1)
+    return list(out.values())
+
+
 def ablation_md(df, off, bm):
     """The diagnostic ablation pbyp2ng (pbyp2 without any gap check) on the four obstacle routes; empty while it has not run."""
     ng = df[df.arm == "pbyp2ng"]
@@ -318,9 +330,9 @@ def ablation_md(df, off, bm):
     acts = [[f["route"], f["seed"], "%.1f" % f["t0"], f["cls"], f.get("lead_type", "-"), bm.fmt(f["ego_s"]), bm.fmt(f["ego_v"]), bm.outcome(f),
              ";".join("%s@%.1f" % (e["kind"], e["t"]) for e in f["events"])] for f in sorted(off["pbyp2ng"]["rows"], key=lambda f: (f["route"], f["seed"], f["t0"]))]
     D += ["Activations:", "", bm.mdtable(["route", "seed", "t0 [s]", "class", "blocker", "ego s", "ego v", "outcome within 15 s", "events in episode"], acts, left=(0, 3, 4, 7, 8)) if acts else "none", ""]
-    coll = off["pbyp2ng"]["coll"]
+    coll = dedup(off["pbyp2ng"]["coll"])
     if coll:
-        cr = [[x["route"], x["seed"], "%.1f" % x["t"], "%s %s" % (x["type"], x["actor"]), x.get("actor_dir", "-"), bm.fmt(x.get("actor_v")), bm.fmt(x["ego_v"]), x["phase"],
+        cr = [[x["route"], x["seed"], "%.1f (x%d)" % (x["t"], x["n"]), "%s %s" % (x["type"], x["actor"]), x.get("actor_dir", "-"), bm.fmt(x.get("actor_v")), bm.fmt(x["ego_v"]), x["phase"],
                "yes" if x["bypass"] else "no", bm.fmt(x["ego_lat"]), bm.fmt(x.get("actor_lat")), x["act_cls"]] for x in coll]
         D += ["Collisions:", "", bm.mdtable(["route", "seed", "t [s]", "against", "actor direction", "actor v", "ego v", "phase vs the obstacle", "path shifted", "ego lat [m]",
                                               "actor lat [m]", "activation class"], cr, left=(0, 3, 4, 7, 11)), ""]
@@ -400,10 +412,10 @@ def report_pbyp2():
           "Activations with a blocker outside the route: %d. Activations before the ego first moved on a route without a scenario obstacle: %d %s." % (
               sum(1 for d in diag if d["max_outside_m"] > 0), len(early), early or ""), ""]
     # collisions
-    coll = off["pbyp2"]["coll"]
-    D += ["## Collisions of pbyp2 on the obstacle routes", ""]
+    coll = dedup(off["pbyp2"]["coll"])
+    D += ["## Collisions of pbyp2 on the obstacle routes", "", "One row per (route, seed, actor, time); `xN` = the number of official collision records of that contact (the leaderboard records each contact event)."]
     if coll:
-        cr = [[x["route"], x["seed"], "%.1f" % x["t"], "%s %s" % (x["type"], x["actor"]), x.get("actor_dir", "-"), bm.fmt(x.get("actor_v")), bm.fmt(x["ego_v"]), x["phase"],
+        cr = [[x["route"], x["seed"], "%.1f (x%d)" % (x["t"], x["n"]), "%s %s" % (x["type"], x["actor"]), x.get("actor_dir", "-"), bm.fmt(x.get("actor_v")), bm.fmt(x["ego_v"]), x["phase"],
                "yes" if x["bypass"] else "no", bm.fmt(x["ego_lat"]), bm.fmt(x.get("actor_lat")), bm.fmt(x.get("closing")), x["act_cls"]] for x in coll]
         D += [bm.mdtable(["route", "seed", "t [s]", "against", "actor direction", "actor v", "ego v", "phase vs the obstacle", "path shifted", "ego lat [m]", "actor lat [m]",
                           "closing speed (+ = ego approaching)", "activation class"], cr, left=(0, 3, 4, 7, 12)), ""]
