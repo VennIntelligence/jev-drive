@@ -132,6 +132,18 @@ def native_logs(out_dir: Path) -> dict:
                          routes_near=d[d.y == 1].id.nunique(), routes_far=d[d.y == 0].id.nunique()))
     disc = pd.DataFrame(disc)
     disc.to_csv(out_dir / "native_discrimination.csv", index=False)
+    # red / yellow vs green at the same distance (v >= 3 m/s): does any native scalar tell the light state? controls: speed and distance alone
+    rg = []
+    for lo, hi in ((0, 5), (5, 10), (10, 20), (20, 40)):
+        g = rolling[rolling.group.isin(["red/yellow", "green"]) & rolling.d_stop.between(lo, hi)]
+        d = g.assign(y=(g.group == "red/yellow").astype(int))
+        if d.y.nunique() < 2:
+            continue
+        w = D.group_weights(d)
+        for m in metrics + ["v", "d_stop"]:
+            rg.append(dict(bin=f"{lo}-{hi} m", metric=m, red_frames=int(d.y.sum()), green_frames=int((1 - d.y).sum()), routes_red=d[d.y == 1].id.nunique(),
+                           routes_green=d[d.y == 0].id.nunique(), auc_high_red=D.auc(d.y, d[m], w)))
+    pd.DataFrame(rg).to_csv(out_dir / "native_red_vs_green.csv", index=False)
     summ = dict(attempts=int(df.key.nunique()), ticks=len(df), rolling_ticks=len(rolling),
                 red_frames_0_40=int(((rolling.group == "red/yellow") & rolling.d_stop.between(0, 40)).sum()),
                 green_frames_0_40=int(((rolling.group == "green") & rolling.d_stop.between(0, 40)).sum()),
