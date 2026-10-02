@@ -1,12 +1,14 @@
 # skill_pack: NAVSIM skill pack N0-N4
 
 status: concluded
-decisions: 64, 68, 69, 70, 71, 72, 73, 75
+decisions: 64, 68, 69, 70, 71, 72, 73, 75, 88
 index: Navtest PDMS 84.2 to 91.59 (N3), flat at N4
 
 **Question.** Can a scorer head over native plan plus extra slots raise NAVSIM PDMS, weights unchanged?
 
 **Conclusion.** PDMS 84.2 -> N0 84.94 -> N1 87.32 -> N2 90.60 -> N3 91.59 -> N4 91.43 (-0.17 [-0.42, +0.09]); metric alignment, navhard only N4 above native (decisions 64, 68-72, 75).
+
+**navhard off-road diagnosis (2026-10-03).** [results/navhard-offroad/report.md](results/navhard-offroad/report.md), decision 88.
 
 **Read more.** research/leaderboard-skill-pack.md, research/navhard-deficit-breakdown.md
 
