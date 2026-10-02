@@ -175,6 +175,9 @@ def emit(a):
     """Retrain the chosen head (train routes only, same seed / lambda as in the fit) and save its weights."""
     import torch
     sel = json.loads((Path(a.run) / "selection.json").read_text())["chosen"]
+    if sel["feat"] == "zs":                                      # the zero-shot one-pass variant has no head
+        log("chosen variant is zero-shot: no head to emit")
+        return
     df = pd.read_csv(Path(a.run) / "frames.csv", dtype={"route": str})
     F = load_feats(df, sel["res"])
     y, part = df.y.to_numpy(), df.part.to_numpy()

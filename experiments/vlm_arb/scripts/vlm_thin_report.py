@@ -220,7 +220,7 @@ def phase_a_df(run, df):
     a = base.assign(a_light=[G[i]["light"] for i in t.id], lat=[G[i]["light_ms"] for i in t.id])
     b = None
     if all(i in S for i in t.id):
-        b = base.assign(a_light=[ANS3[LIGHT3[int(np.argmax(S[i]["p"]))]] for i in t.id], lat=[S[i]["ms"] for i in t.id])
+        b = base.assign(a_light=[S[i]["ans"] for i in t.id], lat=[S[i]["ms"] for i in t.id])
     jl = percentiles([G[i]["joint_ms"] for i in t.id])
     return a, b, jl, G, S
 

@@ -353,20 +353,26 @@ def load_head(path):
 
 def serve(a):
     import torch
+    from vlm_thin_common import ANS3, LIGHT3
     sel = json.loads((Path(a.run) / "selection.json").read_text())["chosen"]
     th = Thin()
-    head, fwd = load_head(Path(a.run) / sel["head_file"])
+    N, res, feat = sel["N"], sel["res"], sel["feat"]
+    fwd = None if feat == "zs" else load_head(Path(a.run) / sel["head_file"])[1]
     i, n = shard_arg(a.shard)
     df = frames_for(a.run, "test")
     mine = par.shards(list(df.index), n, i)
     out = Path(a.run) / "phase_a" / ("serve-%d-of-%d.jsonl" % (i, n))
+    out.parent.mkdir(exist_ok=True)
     have = {json.loads(l)["id"] for l in open(out)} if out.exists() else set()
     f = open(out, "a")
-    N, res, feat = sel["N"], sel["res"], sel["feat"]
     th.restore()
 
     def request(jp):
+        """The whole request from JPEG bytes to (answer string, probabilities) on the host."""
         x = th.prep(jp, RES[res])
+        if feat == "zs":
+            lg = score_answer(th, x)
+            return LIGHTS[int(lg.argmax())], torch.softmax(lg, -1).cpu().numpy()
         if feat == "vis":
             vo = th.vision_only(x)
             ft = torch.cat([torch.cat([v.float().mean(0) for v in vo]), torch.cat([v.float().amax(0) for v in vo])])
@@ -374,7 +380,8 @@ def serve(a):
             ft = th.run(x, N, pool=True)[1].flatten()
         else:
             ft = th.run(x, N)
-        return fwd(ft).cpu().numpy()
+        p = fwd(ft).cpu().numpy()
+        return ANS3[LIGHT3[int(p.argmax())]], p
     with torch.no_grad():
         for k in range(N_WARM):
             request(read_jpgs(df.iloc[mine[k % len(mine)]]))
@@ -385,9 +392,9 @@ def serve(a):
             jp = read_jpgs(r)
             sync(torch)
             t = time.perf_counter()
-            p = request(jp)
+            ans, p = request(jp)
             ms = (time.perf_counter() - t) * 1000
-            f.write(json.dumps(dict(id=r.id, p=[round(float(v), 5) for v in p], ms=round(ms, 1))) + "\n")
+            f.write(json.dumps(dict(id=r.id, ans=ans, p=[round(float(v), 5) for v in p], ms=round(ms, 1))) + "\n")
             f.flush()
     log("serve shard %d/%d done" % (i, n))
 
