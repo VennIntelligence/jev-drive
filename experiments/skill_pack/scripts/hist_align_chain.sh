@@ -2,10 +2,10 @@
 # History-alignment rule, full navhard + navtest (experiments/skill_pack/plans/2026-10-04-history-align-plan.md).
 # Resumable; STATUS / DONE / ERROR in $DATA_DIR/runs/skill_pack/hist_align.
 #   scripts/tmux_run.sh halign experiments/skill_pack/scripts/hist_align_chain.sh [gpu=1] [rules="rot0 straight"]
-# GPU: Cinque runs (6 shards, ~2 GB) on one card; CPU: official scorers (16 threads) then the paired harness (24 procs).
+# GPU: Cinque runs ($PROCS shards, ~1.5 GB each) on one card; CPU: official scorers (16 threads) then the paired harness (24 procs).
 set -uo pipefail
 repo=$(cd "$(dirname "$0")/../../.." && pwd); cd "$repo"
-GPU=${1:-1}; RULES=${2:-rot0 straight}
+GPU=${1:-1}; RULES=${2:-rot0 straight}; PROCS=${PROCS:-3}
 R=$DATA_DIR/runs/skill_pack/hist_align; mkdir -p "$R"; rm -f "$R/ERROR" "$R/DONE"
 E=$DATA_DIR/envs
 st() { echo "$(date '+%F %T') $*" | tee -a "$R/STATUS"; }
@@ -19,7 +19,7 @@ run_split() {   # model runs + pose export for one split
     local stem=gimm@cinque_al-$r
     if [[ ! -f $P/$data/plans/$stem.npz ]]; then
       st "run $data $r (GPU $GPU)"
-      CUDA_VISIBLE_DEVICES=$GPU $E/openpilot/bin/python scripts/op_lb.py run --data "$data" --frames gimm --model cinque --align "$r" --procs 6 \
+      CUDA_VISIBLE_DEVICES=$GPU $E/openpilot/bin/python scripts/op_lb.py run --data "$data" --frames gimm --model cinque --align "$r" --procs "$PROCS" \
         >> "$R/run_$data.log" 2>&1 || die "run $data $r"
     fi
     OPI_ROOT=op_lb $E/jevdrive/bin/python experiments/op_openloop/lib/op_interp.py nav-export --data "$data" --plans "$stem" >> "$R/export.log" 2>&1 \
