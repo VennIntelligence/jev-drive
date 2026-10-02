@@ -54,7 +54,9 @@ def route_checks(a, kind=""):
         first = min((r["t"] for r in held), default=None)       # no rule before K answers have arrived
         c["no_rule_before_answers"] = first is not None and len([r for r in ans if r["t_eff"] <= first + 1e-6]) >= 2
     if kind == "r5":
-        fired = [r for r in st if "R5" in r.get("rules", [])]
+        fired = [r for r in st if r.get("r5") or "R5" in r.get("rules", [])]
+        held25 = [r for r in st if "R2" in r.get("rules", []) and r["v"] < 0.2]
+        c["held_before_r5"] = bool(fired) and bool(held25) and fired[0]["t"] - held25[0]["t"] >= 25.0 - 0.6
         c["r5_fired"] = bool(fired)
         c["rolls_after_r5"] = bool(fired) and any(r["t"] > fired[0]["t"] and r["v"] > 1.0 for r in st)
     if kind in ("bypass", "pbyp"):
@@ -83,7 +85,7 @@ def route_checks(a, kind=""):
     if kind == "shadow":
         n_w = len(list((Path(a) / "vlm_frames").glob("*_wide.jpg")))
         n_r = len(list((Path(a) / "vlm_frames").glob("*_road.jpg")))
-        c["frames_saved"] = n_w == n_r == len(ans) > 0
+        c["frames_saved"] = n_w == n_r and len(ans) > 0 and 0 <= n_w - len(ans) <= 2   # requests still pending at the route end have frames, no answer
         c["labels_present"] = bool(ans) and all("lights" in r["gt"] and "stop_dist" in r["gt"] and "block" in r["gt"] for r in ans)
     if kind == "pred":
         live = [r for r in jsonl(Path(a) / "plans.jsonl") if not r["warm"]]

@@ -79,7 +79,7 @@ def stage_jobs(stage):
     if stage == "1":
         return one
     return one + [
-        unit("dbg-vred-stuck", 0, "334", ["334"], dict(VLM_ORACLE="stuckred"), "r5", 0, base="vred"),
+        unit("dbg-vred-stuck", 0, "334b", ["334"], dict(VLM_ORACLE="stuckred"), "r5", 0, base="vred"),
         unit("dbg-vbyp-oracle", 0, "25169", ["25169"], orc, "bypass", 0, base="vbyp"),
         unit("dbg-vbyp-oracle", 0, "24955", ["24955"], orc, "bypass", 0, base="vbyp"),
         unit("dbg-vall-vlm", 0, "334", ["334"], None, "", 0, base="vall"),

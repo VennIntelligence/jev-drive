@@ -268,6 +268,8 @@ class VlmArbAgent(OpArbAgent):
             active.append("R5")
         if self.r5 and speed > 1.0:
             self.r5 = False
+        if self.r5 and "R5" not in active:                             # logged for as long as the fallback is in force
+            active.append("R5")
         # R1: junction speed cap from the map
         cap = A["cruise"]
         if "R1" in rows and -10.0 <= junc_dist <= P["N_jslow_m"]:
