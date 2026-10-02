@@ -110,7 +110,7 @@ def build(pool, net, dev, workers, batch=32):
             imgs = np.concatenate(buf)
             for k in range(0, len(imgs), batch):
                 x = torch.from_numpy(imgs[k:k + batch]).to(dev)
-                T[at + k:at + k + len(x)] = (H.trunks(net, x) * svt).cpu().numpy()
+                T[at + k:at + k + len(x)] = (H.trunks(net, x, chunk=64) * svt).cpu().numpy()
             at += len(imgs)
             buf = []
         for i, (vs, imgs) in enumerate(bounded_map(ex, render, [(s, pool) for s in G[s_done:]], 2 * workers), start=s_done):
