@@ -44,9 +44,9 @@ def score(p, X):
 def main():
     from sklearn.metrics import roc_auc_score
     f = load_frames()
-    f = f[f.has_label & have_features(f)].reset_index(drop=True)
-    X = load_feats(f, "native").astype(np.float64)
-    ok = np.isfinite(X).all(1)
+    X = load_feats(f, "native")                    # aligned to the full frame table (streams are indexed whole)
+    ok = (f.has_label & have_features(f)).to_numpy() & np.isfinite(X).all(1)
+    X = X.astype(np.float64)
     f, X = f[ok].reset_index(drop=True), X[ok]
     Y = targets(f)
     p4, cl = (f.src == "p4").to_numpy(), (f.src == "cl").to_numpy()
