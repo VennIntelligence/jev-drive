@@ -35,6 +35,7 @@ base.SLOT_WORKERS, base.SLOT_CORES = 3, 9
 SHARDS = vc.SHARDS
 L_REGISTERED = 0.35                              # s, registered in the plan (the vred value, re-measured here)
 STOPLINE = dict(VLM_R2_TARGET="stopline")
+WAIVED = ("dbg2-pbyp2-s0-24955",)
 
 
 def gate(name):
@@ -78,4 +79,9 @@ def jobs(args):
     stage = args.get("stage", "pre")
     RUN.mkdir(parents=True, exist_ok=True)
     pre = pre_jobs()
-    return pre if stage == "pre" else pre + batch_jobs(pre)
+    if stage == "pre":
+        return pre
+    # dbg2-pbyp2-s0-24955 stalls under the frozen gap rule (plan section 9: a stream of traffic every 3 s, the gap opens for 0.2-0.8 s at a time); it is
+    # kept as evidence, not as a dependency, so the batch does not wait on it
+    pre = [j for j in pre if j.name not in WAIVED]
+    return pre + batch_jobs(pre)
