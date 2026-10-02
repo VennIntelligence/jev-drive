@@ -11,7 +11,7 @@ Stages, in order (a stage with `stages/<name>.done` is skipped on a rerun; GPU w
   fit       linear heads per (model, resolution), grouped CV
   bench     batch-1 latency and peak memory per variant, one process at a time on the first card (nothing else running)
   report    tables -> experiments/vlm_arb/results/vlm_4b_vs_8b.md
---cards 0,1: both models run at the same time (one card each) in extract / twoframe; with one card they run one after the other.
+--cards: the two models run at the same time in selftest / extract / twoframe (one card each, or sharing the only card); bench runs alone on the first card.
 --limit K keeps about K core frames (end-to-end smoke test).
 """
 import argparse
@@ -66,14 +66,10 @@ class Chain:
             raise RuntimeError("worker(s) %s failed%s" % (bad, tails))
 
     def per_model(self, script, cmd, extra=()):
-        """cmd for each model: concurrently on separate cards when there are two, else one after the other."""
-        models = ["4b", "8b"]
-        if len(self.cards) >= 2:
-            self.wait([self.popen(script, [cmd, "--run", str(self.d), "--model", m, *extra], self.cards[i], "%s-%s" % (cmd, m))
-                       for i, m in enumerate(models)])
-        else:
-            for m in models:
-                self.wait([self.popen(script, [cmd, "--run", str(self.d), "--model", m, *extra], self.cards[0], "%s-%s" % (cmd, m))])
+        """cmd for both models at the same time (card i % n_cards: with one card they share it; the GPU stages here are partly
+        launch bound, so the two overlap; latency is measured later, alone)."""
+        self.wait([self.popen(script, [cmd, "--run", str(self.d), "--model", m, *extra], self.cards[i % len(self.cards)], "%s-%s" % (cmd, m))
+                   for i, m in enumerate(["4b", "8b"])])
 
     # ------------------------------------------------------------------------------ stages
     def frames(self):
