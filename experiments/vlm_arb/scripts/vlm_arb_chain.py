@@ -113,9 +113,10 @@ def jobs(args):
             tool("report", "vlm_arb_report.py", prio=9, ready=lambda j: STATE["final"])]
     # Multi-model Phase A comparison (user request 2026-10-02): the VLMs on the box's disk on the same frames. Runs
     # once its script is in the repo and a card has ~24 GB free; it does not hold up the report.
-    models = Job("models", [PY, str(HERE / "vlm_arb_models.py")], workers=1, vram_gb=24.0, cores=4, tries=1, priority=8,
+    script = str(HERE / "vlm_arb_models.py")       # not delivered by the time the report is done: a no-op, not a hang
+    models = Job("models", ["sh", "-c", 'test -f "$1" || { echo "vlm_arb_models.py not delivered"; exit 0; }; exec "$0" "$1"', PY, script], workers=1, vram_gb=24.0, cores=4, tries=1, priority=8,
                  deps=tuple(j.name for j in drive) + (unit_name("dbg-shadow", 0, "light"),),
-                 ready=lambda j: (HERE / "vlm_arb_models.py").exists())
+                 ready=lambda j: (HERE / "vlm_arb_models.py").exists() or STATE.get("closed", False))
     out.append(models)
     return out
 
@@ -176,4 +177,5 @@ def more(lane, args):
             new += batch("vall", dict(env, VLM_ROWS=",".join(rows + ["R1"] + (["R4"] if g["q_block"] else []))))
     others = [n for n in list(lane.jobs) + [j.name for j in new] if n not in ("report", "models")]
     STATE["final"] = settled and end(others)
+    STATE["closed"] = st("report") in ("done", "failed")
     return new
