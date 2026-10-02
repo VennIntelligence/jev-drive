@@ -245,10 +245,13 @@ def replay(frames, oof, tap, hp):
     frows = []
     for key, g in neg.groupby("key", sort=False):
         g = g.sort_values("t")
+        b = (g.v.fillna(0.0) ** 2 / (2 * A_BRAKE)).to_numpy()
         for rule, sig in (("U", g.hi), ("L", g.lo)):
-            for m in MARGINS:
-                frows.append(dict(key=key, id=g.id.iloc[0], src=g.src.iloc[0], kind=g.kind.iloc[0], rule=rule, margin=m, fired=bool(((sig <= m) & (g.gate > 0)).any()),
-                                  has_junction=bool(g.d_junc.between(0, 40).any())))
+            for speed_aware in (False, True):
+                for m in MARGINS:
+                    thr = m + (b if speed_aware else 0.0)
+                    frows.append(dict(key=key, id=g.id.iloc[0], src=g.src.iloc[0], kind=g.kind.iloc[0], rule=rule + ("'" if speed_aware else ""), margin=m,
+                                      fired=bool(((sig.to_numpy() <= thr) & (g.gate > 0).to_numpy()).any()), has_junction=bool(g.d_junc.between(0, 40).any())))
     return res, pd.DataFrame(frows)
 
 
