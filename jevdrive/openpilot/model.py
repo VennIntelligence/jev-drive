@@ -39,6 +39,17 @@ def _preload_libs():
 _preload_libs()
 
 
+def trim_heap():
+    """Give freed glibc heap back to the OS. Creating a TensorRT-EP session parses the ~0.77 GB ONNX and builds / loads
+    the engine, which leaves ~22-24 GB of freed but unreturned heap in the arena of the creating thread (RSS 25.8 GB
+    right after a Cinque `trt` session, 1.8 GB after trimming). Arenas of live threads are never reused by other
+    threads, so a server that builds one session per connection thread grew 22.5 GB per session (192 GB at 8)."""
+    try:
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except OSError:
+        pass
+
+
 def prepare_onnx(name: str) -> Path:
     """Path of an onnxruntime-loadable copy: tinygrad's custom Contiguous op (a no-op layout hint) -> Identity.
     A `name` with a path separator is an already loadable ONNX file (an adapted model, experiments/op_adapt_l/scripts/op_l_onnx.py)."""
@@ -123,6 +134,7 @@ class OPModel:
         path = tap_onnx(name, self.taps) if self.taps else prepare_onnx(name)
         cache = cache or MODELS_DIR / "trt_cache" / (f"{Path(name).stem}-{backend}" + (f"-{path.stem.rsplit('.', 1)[-1]}" if self.taps else ""))
         self.sess = ort.InferenceSession(str(path), so, providers=providers(backend, cache))
+        trim_heap()
         self.tap_values = {}
         meta = self.sess.get_modelmeta().custom_metadata_map
         self.slices = pickle.loads(base64.b64decode(meta["output_slices"]))
@@ -247,6 +259,7 @@ class LegacyOPModel:
         so = ort.SessionOptions()
         so.log_severity_level, so.intra_op_num_threads = 3, 1
         self.sess = ort.InferenceSession(str(MODELS_DIR / LEGACY[name]), so, providers=providers(backend, MODELS_DIR / "trt_cache"))
+        trim_heap()
         raw = pickle.loads(base64.b64decode(self.sess.get_modelmeta().custom_metadata_map["output_slices"]))
         n = self.sess.get_outputs()[0].shape[-1]
         self.raw = {k: slice(*s.indices(n)[:2]) for k, s in raw.items()}
