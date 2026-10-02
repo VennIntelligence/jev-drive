@@ -20,7 +20,8 @@ The batch (plan deviation D7: 19 routes x 2 traffic seeds; a unit = arm x seed x
   dslow       after jslow and drive of the same seed: per-route set speed = 8 x v_jslow / v_drive (cruise_by_route)
   qlight      if Q-light failed: the diagnosis and one variant read; vred and vall only if that read passes (R3 only
               if Q-sign passed, R4 only if Q-block passed)
-  report      when nothing else is left
+  models      the on-disk VLMs on the same frames (results/models.md), when its script exists and a card has room
+  report      when nothing else of the closed loop is left
 Packing: every unit takes 4 CARLA workers, 12 cores and its own openpilot server; the lane places as many as the
 card's VRAM and the per-card worker cap allow (card 0 also holds the VLM server), and pulls the next job whenever a
 slot frees.
@@ -110,6 +111,12 @@ def jobs(args):
     out += [tool("phaseA-old", "vlm_arb_phase_a.py", "--stage", "old"),
             tool("phaseA", "vlm_arb_phase_a.py", "--stage", "final", deps=[j.name for j in drive]),
             tool("report", "vlm_arb_report.py", prio=9, ready=lambda j: STATE["final"])]
+    # Multi-model Phase A comparison (user request 2026-10-02): the VLMs on the box's disk on the same frames. Runs
+    # once its script is in the repo and a card has ~24 GB free; it does not hold up the report.
+    models = Job("models", [PY, str(HERE / "vlm_arb_models.py")], workers=1, vram_gb=24.0, cores=4, tries=1, priority=8,
+                 deps=tuple(j.name for j in drive) + (unit_name("dbg-shadow", 0, "light"),),
+                 ready=lambda j: (HERE / "vlm_arb_models.py").exists())
+    out.append(models)
     return out
 
 
@@ -167,6 +174,6 @@ def more(lane, args):
             env = dict(vlm, VLM_LIGHT_VARIANT=variant)
             new += batch("vred", dict(env, VLM_ROWS=",".join(rows)))
             new += batch("vall", dict(env, VLM_ROWS=",".join(rows + ["R1"] + (["R4"] if g["q_block"] else []))))
-    others = [n for n in list(lane.jobs) + [j.name for j in new] if n != "report"]
+    others = [n for n in list(lane.jobs) + [j.name for j in new] if n not in ("report", "models")]
     STATE["final"] = settled and end(others)
     return new
