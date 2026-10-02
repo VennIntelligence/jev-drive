@@ -28,6 +28,7 @@ from jevdrive.common import data_dir  # noqa: E402
 from jevdrive.run import Run  # noqa: E402
 from experiments.op_adapt_l.lib import op_adapt_l as L  # noqa: E402
 from experiments.op_adapt_h.lib import op_adapt_h as H  # noqa: E402
+from drive_backbones_openpilot import bounded_map  # noqa: E402  (ex.map would queue every job and buffer every result)
 
 ARMS = {
     "smoke": dict(steps=60, ckpt_every=10 ** 9, dom_w={"nav": 0.0, "wod": 0.5, "carla": 0.5}),
@@ -117,7 +118,7 @@ def cmd_bank(a):
             for j in range(start):                                  # slot validity of variants done before a restart
                 sv_all[j] = S.t["slot_valid"][jobs[j][1]] if jobs[j][2] != "single" else np.eye(9, dtype=bool)[8]
             t0 = time.time()
-            it = ex.map(_bank_job, jobs[start:], chunksize=4)
+            it = bounded_map(ex, _bank_job, jobs[start:], 4 * a.batch)
             for j0 in range(start, n, a.batch):
                 m = min(a.batch, n - j0)
                 ch = [next(it) for _ in range(m)]
@@ -145,7 +146,7 @@ def plans_of(models: dict, jobs: list, dev, ex, bs=48) -> dict:
     base = next(iter(models.values()))
     pi = A.plan_index(base.net.slices)
     tcs = {d: H.Samples(d).t["tc"] for d in {j[0] for j in jobs}}
-    it = ex.map(_variant, jobs, chunksize=4)
+    it = bounded_map(ex, _variant, jobs, 4 * bs)
     for i0 in range(0, len(jobs), bs):
         chunk = [next(it) for _ in range(min(bs, len(jobs) - i0))]
         imgs = torch.from_numpy(np.stack([c[0] for c in chunk])).to(dev)
