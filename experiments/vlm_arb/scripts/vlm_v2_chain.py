@@ -14,6 +14,8 @@ Stages (docs/long-runs.md: 1 unit -> a few -> all):
   pre   three single-route units at once, one per card: `dbg2-pbyp2-25169`, `dbg2-pbyp2-24955` (second round after the one adjustment of plans section 9; the first round is `dbg-pbyp2-*`) (debug obstacle routes, `pbyp2dbg`
         checks: obstacle detected, shifted path, valid shift, returned) and `dbg-vred2-334` (the real VLM drives R2 + R5 with the
         stop-line target on the debug red-light route 334, `red_stop2`).
+  v     (after `all` stopped at the failed calibration, plan section 9) `cal3-s1-q0..q2` alone at 3 workers per card -> `calibrate3` (gates/v2_cal3.json),
+        `vred2-s0-q0..q2`, `few-vred2`, `vred2-s1-q0..q2`, `report`; run with --workers-per-card 3 after the pbyp2 units are done
   all   4  `cal2-s1-q0..q2` (shadow `drive`, Qwen servers) and `pbyp2-s0-q0..q2` at the same time (6 workers per card): `calibrate`
            reads the in-loop latency and passes only with p95 <= L = 0.35 s; `few-pbyp2` checks the pbyp2 seed-0 units
         5  `vred2-s0-q0..q2` and `pbyp2-s1-q0..q2` at the same time (the load of the calibration), then `few-vred2`
@@ -75,8 +77,24 @@ def batch_jobs(pre):
     return p0 + cal + [calib, few_p] + v0 + p1 + [few_v] + v1 + [rep]
 
 
+def vred2_jobs():
+    """Stage `v`: the registered rule after the calibration at the load of stage `all` failed (p95 446 ms > 350 ms, gates/v2_cal.json): concurrency reduced to the
+    `vred` batch's own (3 workers per card, one unit per card, nothing else on the box), latency re-measured at that load, then the vred2 batch."""
+    sh = vc.shards()
+    qe = dict(vc.qwen_env(L_REGISTERED), **STOPLINE)
+    cal = [base.unit("cal3", 1, k, sh[k], vc.qwen_env(L_REGISTERED, True), "shadow", 2, base="drive") for k in SHARDS]
+    calib = tool("calibrate3", "calibrate3", deps=[j.name for j in cal], prio=2, ok=passed("v2_cal3"))
+    v0 = [base.unit("vred2", 0, k, sh[k], qe, "", 4, deps=[calib.name], base="vred") for k in SHARDS]
+    few_v = tool("few-vred2", "few-vred2", deps=[j.name for j in v0], prio=4, ok=passed("v2_few_vred2"))
+    v1 = [base.unit("vred2", 1, k, sh[k], qe, "", 5, deps=[few_v.name], base="vred") for k in SHARDS]
+    rep = tool("report", "report", deps=[j.name for j in v1], prio=9)
+    return cal + [calib] + v0 + [few_v] + v1 + [rep]
+
+
 def jobs(args):
     stage = args.get("stage", "pre")
+    if stage == "v":
+        return vred2_jobs()
     RUN.mkdir(parents=True, exist_ok=True)
     pre = pre_jobs()
     if stage == "pre":

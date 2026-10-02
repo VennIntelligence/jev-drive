@@ -1,6 +1,7 @@
 """Gates and reports of the v2 lane: arms `pbyp2` and `vred2` (plan 2026-10-02-pbyp2-vred2.md).
 
   python vlm_v2_report.py calibrate   in-loop latency of the shadow units `cal2-s1-q*` -> gates/v2_cal.json (passes only with p95 <= L)
+  python vlm_v2_report.py calibrate3  the same at 3 workers per card, alone on the box -> gates/v2_cal3.json
   python vlm_v2_report.py few-pbyp2   checklist over the pbyp2 seed-0 units -> gates/v2_few_pbyp2.json
   python vlm_v2_report.py few-vred2   checklist over the vred2 seed-0 units -> gates/v2_few_vred2.json
   python vlm_v2_report.py report      pbyp2.md, vred2.md, tables and figures -> $DATA_DIR/runs/vlm_arb/v2/results/
@@ -102,25 +103,29 @@ def ci_flag(r):
 
 
 # ------------------------------------------------------------------------------------------------------------ gates
-def calibrate(_):
-    df = vr.answers("cal2", 1)
+def calibrate(a, arm="cal2", gate_name="v2_cal", load="3 shadow + 3 pbyp2 workers per card on 3 cards"):
+    df = vr.answers(arm, 1)
     if df.empty:
         raise SystemExit("no calibration answers")
     lat = df.lat[df.ok].to_numpy()
     p95 = pct(lat, 95)
     gate = dict(done=True, n=int(len(df)), ok_rate=float(df.ok.mean()), p50_ms=pct(lat, 50), p95_ms=p95, p99_ms=pct(lat, 99), max_ms=float(lat.max()),
                 over_L=float(np.mean(lat > 1e3 * L_REG)), over_ttl=float(np.mean(lat > 2500)), queue_p95_ms=pct(df.q_ms[df.ok], 95),
-                svc_p50_ms=pct(df.svc[df.ok], 50), L_s=L_REG, load="3 shadow + 3 pbyp2 workers per card on 3 cards",
+                svc_p50_ms=pct(df.svc[df.ok], 50), L_s=L_REG, load=load, arm=arm,
                 passed=bool(p95 <= 1e3 * L_REG and df.ok.mean() >= 0.98 and np.mean(lat > 2500) <= 0.01))
-    write_json(RUN / "gates/v2_cal.json", gate)
+    write_json(RUN / "gates" / (gate_name + ".json"), gate)
     txt = ("Calibration (shadow `drive`, Qwen3-VL-4B servers, %s, seed 1, 19 routes): %d requests, %.1f%% answered. In-loop latency p50 %.0f ms, "
            "p95 %.0f ms, p99 %.0f ms, max %.0f ms; server queue wait p95 %.0f ms, service p50 %.0f ms; share > L (%.2f s) %.1f%%, share > TTL 2.5 s %.2f%%. "
            "Registered L = %.2f s holds only if p95 <= %.0f ms: %s.\n" % (gate["load"], len(df), 100 * gate["ok_rate"], gate["p50_ms"], p95, gate["p99_ms"],
                                                                         gate["max_ms"], gate["queue_p95_ms"], gate["svc_p50_ms"], L_REG, 100 * gate["over_L"],
                                                                         100 * gate["over_ttl"], L_REG, 1e3 * L_REG, "yes" if gate["passed"] else "NO"))
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "calibration.md").write_text(txt)
+    (OUT / ("calibration.md" if arm == "cal2" else "calibration_%s.md" % arm)).write_text(txt)
     print(txt)
+
+
+def calibrate3(a):
+    calibrate(a, "cal3", "v2_cal3", "3 shadow workers per card on 3 cards, nothing else on the box (the `vred` batch's load)")
 
 
 def few_pbyp2(_):
@@ -472,7 +477,8 @@ def report_vred2():
         "Repeat noise: " + NOISE + ". A difference whose CI includes 0 is within that noise at this size.", ""]
     # latency
     lat = ans.lat[ans.ok].to_numpy()
-    cal = json.loads((RUN / "gates/v2_cal.json").read_text()) if (RUN / "gates/v2_cal.json").exists() else None
+    cal = json.loads((RUN / "gates/v2_cal3.json").read_text()) if (RUN / "gates/v2_cal3.json").exists() else None
+    cal2 = json.loads((RUN / "gates/v2_cal.json").read_text()) if (RUN / "gates/v2_cal.json").exists() else None
     D += ["## In-batch latency of the light answers", "", "L = %.2f s: an answer is used at t_q + max(L, latency); TTL = 2.5 s." % L_REG, "",
           "| requests | answered ok | p50 ms | p95 ms | p99 ms | max ms | share > L | share > TTL | server queue p95 ms | server service p50 ms |", "|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|",
           "| %d | %.2f%% | %.0f | %.0f | %.0f | %.0f | %.1f%% | %.2f%% | %.0f | %.0f |" % (len(ans), 100 * ans.ok.mean(), pct(lat, 50), pct(lat, 95), pct(lat, 99), lat.max(),
@@ -480,6 +486,9 @@ def report_vred2():
     if cal:
         D += ["Calibration before the batch (shadow run, %s): p50 %.0f ms, p95 %.0f ms, p99 %.0f ms (%d requests); registered L = 0.35 s %s (`calibration.md`)." % (
             cal["load"], cal["p50_ms"], cal["p95_ms"], cal["p99_ms"], cal["n"], "held" if cal["passed"] else "did NOT hold"), ""]
+    if cal2:
+        D += ["A first calibration at 6 workers per card (3 shadow + 3 pbyp2 workers, `calibration.md`) gave p50 %.0f ms, p95 %.0f ms, p99 %.0f ms (%d requests) and failed the registered line "
+              "(p95 <= 350 ms); concurrency was reduced to the load above before any vred2 unit ran." % (cal2["p50_ms"], cal2["p95_ms"], cal2["p99_ms"], cal2["n"]), ""]
     # in-loop reading quality, with and without the hold
     D += ["## In-loop reading quality (answers logged during the runs against the simulator's light state)", "",
           "Ego-green recall is shown for all requests and split by whether R2 was holding the car when the request was made (`while holding`): vred holds the car at the junction "
@@ -589,8 +598,8 @@ def report(_):
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["calibrate", "few-pbyp2", "few-vred2", "report", "pbyp2", "vred2"])
+    ap.add_argument("cmd", choices=["calibrate", "calibrate3", "few-pbyp2", "few-vred2", "report", "pbyp2", "vred2"])
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
-    {"calibrate": calibrate, "few-pbyp2": few_pbyp2, "few-vred2": few_vred2, "report": report,
+    {"calibrate": calibrate, "calibrate3": calibrate3, "few-pbyp2": few_pbyp2, "few-vred2": few_vred2, "report": report,
      "pbyp2": lambda _: report_pbyp2(), "vred2": lambda _: report_vred2()}[a.cmd](a)
