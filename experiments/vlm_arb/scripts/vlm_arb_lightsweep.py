@@ -12,10 +12,11 @@ Frames, fixed before any answer on the subset was read: the answered requests wi
 UNITS, nothing new is collected.
   signalized  a segment = consecutive requests (gap <= 2 s) of one route with the same ego light and the same class
               (red or yellow / green), ego light within 40 m of its stop line
-  no light    a segment = consecutive requests with no ego light, no light actor within 60 m and a junction entry
-              within 40 m ahead
-  per segment at most 5 requests, evenly spaced in time (first and last included). If the no-light requests outnumber
-  the signalized ones, whole no-light segments are drawn at random (seed 0) until their count reaches it.
+              per segment at most 5 requests, evenly spaced in time (first and last included)
+  no light    per unit and route, the requests with no ego light and no light actor within 60 m; those with a junction
+              entry within 40 m ahead where the route has any (in the collected data only route 37969 does: the
+              first form of this rule, junction approaches only, gave 5 frames on one route and was widened before
+              any answer on the subset was read), else all of them; 10 requests evenly spaced in time
 
 Prompts (PROMPTS): the four-choice Q_light question as run; a plain colour question; describe every light head, then
 pick the facing one; the far-side mounting convention spelled out; lamp position instead of hue; and the plain
@@ -54,7 +55,7 @@ from vlm_client import VLMClient, crop_wide  # noqa: E402
 
 OUT = RUN / "results/lightsweep"
 UNITS = ["v2-dbg-shadow-s0-light", "v2-drive-s1-dev", "v2-drive-s1-tgt", "v2-drive-s0-tgt"]
-PER_SEGMENT, NEAR_M, GAP_S, SEED = 5, 40.0, 2.0, 0
+PER_SEGMENT, PER_ROUTE_NONE, NEAR_M, GAP_S = 5, 10, 40.0, 2.0
 
 CAMS = {("wide", "road"): "The two images were taken at the same instant by the front cameras of a car (the ego vehicle): "
                           "image 1 is the wide-angle camera, image 2 is the narrow road camera.",
@@ -143,15 +144,13 @@ def load_requests():
 
 
 def segments(df):
-    """Label every request with its segment (see the module docstring) or ''."""
+    """Label every request near an ego light with its segment (see the module docstring), the others with ''."""
     seg, n = [], 0
     for _, g in df.sort_values("t").groupby(["unit", "route"], sort=True):
         prev = None
         for r in g.itertuples():
             if r.tl >= 0 and r.tl_dist <= NEAR_M:
                 key = ("light", r.tl_id, "red" if r.tl in (1, 2) else "green")
-            elif r.tl < 0 and r.n_lights == 0 and r.junc_dist <= NEAR_M:
-                key = ("none",)
             else:
                 key = None
             if key is not None and (prev is None or prev[0] != key or r.t - prev[1] > GAP_S):
@@ -161,23 +160,21 @@ def segments(df):
     return pd.Series(dict(seg)).reindex(df.index)
 
 
+def spaced(g, n):
+    return list(g.index[np.unique(np.round(np.linspace(0, len(g) - 1, min(n, len(g)))).astype(int))])
+
+
 def select(df):
     df = df.assign(seg=segments(df))
     keep = []
     for _, g in df[df.seg != ""].sort_values("t").groupby("seg", sort=True):
-        i = np.unique(np.round(np.linspace(0, len(g) - 1, min(PER_SEGMENT, len(g)))).astype(int))
-        keep += list(g.index[i])
-    s = df.loc[keep]
-    lit, neg = s[s.seg.str.startswith("light")], s[s.seg.str.startswith("none")]
-    if len(neg) > len(lit):
-        order, take, n = np.random.default_rng(SEED).permutation(sorted(neg.seg.unique())), [], 0
-        for name in order:
-            if n >= len(lit):
-                break
-            take.append(name)
-            n += int((neg.seg == name).sum())
-        neg = neg[neg.seg.isin(take)]
-    s = pd.concat([lit, neg]).sort_values("id").reset_index(drop=True)
+        keep += spaced(g, PER_SEGMENT)
+    for (u, r), g in df[(df.tl < 0) & (df.n_lights == 0)].sort_values("t").groupby(["unit", "route"], sort=True):
+        near = g[g.junc_dist <= NEAR_M]
+        pick = spaced(near if len(near) else g, PER_ROUTE_NONE)
+        df.loc[pick, "seg"] = "none-%s-%s" % (u, r)
+        keep += pick
+    s = df.loc[keep].sort_values("id").reset_index(drop=True)
     s["truth"] = np.where(s.tl.isin([1, 2]), "red", np.where(s.tl == 0, "green", "none"))
     routes = sorted(s.route.unique(), key=lambda x: int(x))
     s["half"] = s.route.map({r: "AB"[i % 2] for i, r in enumerate(routes)})
