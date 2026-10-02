@@ -70,6 +70,8 @@ def load(dom, check=False):
     sg = -np.sign(d.cmd)          # cmd -1 = left; y is left-positive, so "toward the command" = -cmd * dy
     m = pd.DataFrame(dict(id=d.id, cluster=d.cluster, v=d.v, bin=d.bin, cmd=d.cmd, turn=d.cmd != 0))
     m["E0_lat3"] = lat("normal|off")
+    m["E0_bias_y3"] = col("y3:normal|off") - d.ystar3            # signed (left +); read on straight-command frames
+    m["E0_bias_y3_repeat"] = col("y3:repeat|off") - d.ystar3
     m["E1_G_deg"] = (col("psi3:rotL|off") - col("psi3:rotR|off")) / 2
     m["E1_Gy_m"] = (col("y3:rotL|off") - col("y3:rotR|off")) / 2
     m["E2_dlat_repeat"] = lat("repeat|off") - lat("normal|off")
@@ -108,16 +110,17 @@ def contrast(x, g, a_mask, b_mask, B=stats.N_BOOT, seed=stats.SEED, alpha=stats.
     return dict(n=int(a_mask.sum() + b_mask.sum()), mean=float(x[a_mask].mean() - x[b_mask].mean()), lo=float(lo), hi=float(hi))
 
 
-EFFECTS = [c for c in ("E0_lat3", "E1_G_deg", "E1_Gy_m", "E2_dlat_repeat", "E2_dx_repeat", "E3_dlat_single", "E3_dx_single",
+EFFECTS = [c for c in ("E0_lat3", "E0_bias_y3", "E0_bias_y3_repeat", "E1_G_deg", "E1_Gy_m", "E2_dlat_repeat", "E2_dx_repeat", "E3_dlat_single", "E3_dx_single",
                        "E4_dlat_short", "E4_dx_short", "E5_dlat_pulse", "E5_dlat_sustained", "E5_dlat_lc", "E5_S_steer_m",
                        "E5_toward_cmd_pulse_m", "E5_toward_cmd_sust_m", "E6_dG_sust_minus_off", "E6_dlat_sust_under_repeat")]
 TURN_ONLY = {c for c in EFFECTS if c.startswith(("E5", "E6"))}
+STRAIGHT_ONLY = {"E0_bias_y3", "E0_bias_y3_repeat"}
 
 
 def effects(dom, m):
     rows = []
     for e in EFFECTS:
-        base = m[m.turn] if e in TURN_ONLY else m
+        base = m[m.turn] if e in TURN_ONLY else m[~m.turn] if e in STRAIGHT_ONLY else m
         groups = [("moving", base.bin.isin(MOVING))] + [(b, base.bin == b) for b in ("stop", "low", "mid", "high")]
         if e in TURN_ONLY:
             groups += [("moving-left", base.bin.isin(MOVING) & (base.cmd < 0)), ("moving-right", base.bin.isin(MOVING) & (base.cmd > 0))]
