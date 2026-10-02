@@ -562,7 +562,8 @@ def infraction_causes(rid, seed, r):
         stop_arcs = [x["pc"]["ego_s"] + 3.8394 + x["ctx"]["tl_dist"] for x in plans if x.get("ctx", {}).get("tl_id") == L and x["ctx"].get("tl_dist") is not None and "ego_s" in x.get("pc", {})]
         ent = next((e for e in ents if stop_arcs and e >= float(np.median(stop_arcs)) - 1.0), None)     # the light's junction: the first entrance beyond its stop line
         t_ent = next((x["t"] for x in st if ent is not None and x["ego_s"] + 3.8394 >= ent), None)
-        t_tail = next((x["t"] for x in st if ent is not None and x["ego_s"] + 3.8394 >= ent + 4.41 and (state(x["t"]) == 2)), None)
+        # the tail segment reaches the line when the front bumper is 4.41 m past it; the logged states are 0.5 s apart, so allow half a sample of slack on both
+        t_tail = next((x["t"] for x in st if ent is not None and x["ego_s"] + 3.8394 >= ent + 3.9 and (state(x["t"]) == 2 or state(x["t"] - 0.5) == 2)), None)
         red_on = [float(ts[i]) for i in range(1, len(ts)) if ss[i] == 2 and ss[i - 1] != 2]
         t_red = max([t for t in red_on if t_tail is None or t <= t_tail + 0.5], default=None)
         row = dict(route=rid, seed=seed, light=L, t_front_stop_line=None if t_sl is None else round(t_sl, 1), state_stop_line={0: "green", 1: "yellow", 2: "red", None: "?"}[state(t_sl) if t_sl is not None else None],
@@ -575,23 +576,24 @@ def infraction_causes(rid, seed, r):
             sr = at(t_red)
             v_red, front_red = sr["v"], sr["ego_s"] + 3.8394 - ent
             row.update(v_at_red=round(v_red, 1), front_vs_entrance_at_red=round(front_red, 1))
+            past_line = t_sl is not None and t_sl < t_red
+            until = t_tail if t_tail is not None else st[-1]["t"]
+            stood = [x for x in st if t_red - 0.25 <= x["t"] <= until and x["v"] < 0.3]
+            dep = next((x for x in st if stood and x["t"] > stood[0]["t"] and x["v"] > 0.5), None)
+            t_dep = dep["t"] if dep else None
+            held = [x for x in st if t_dep is not None and t_dep - 2.0 <= x["t"] <= t_dep and "R2" in x.get("rules", [])]
             if t_sl is not None and state(t_sl) == 2:
                 row["cause"] = vr.classify(r, t_sl)                                    # the front bumper crossed the stop line while red: the R2 rules of vred.md
-            elif v_red >= 1.0:
+            elif stood and held:
+                row["cause"] = "released early: R2 was holding until t = %.1f s and dropped on answers %s while the light was red" % (held[-1]["t"], at(held[-1]["t"] + 0.5).get("light"))
+            elif stood and past_line:
+                row["cause"] = ("the light turned red %.1f s after the front bumper had passed the stop line; the car stopped at t = %.1f s past the line (R2 never starts there) and moved on at t = %.1f s "
+                                "while the light was red" % (t_red - t_sl, stood[0]["t"], t_dep if t_dep is not None else float("nan")))
+            elif stood:
+                row["cause"] = "the car stood short of the line without an R2 hold when the light turned red: " + (vr.classify(r, t_dep) if t_dep is not None else "never moved on")
+            else:
                 row["cause"] = "the light turned red while the car was crossing (front %.1f m %s the entrance, %.1f m/s, %.1f s after its front passed the stop line); the car kept going" % (
                     abs(front_red), "past" if front_red >= 0 else "before", v_red, (t_red - t_sl) if t_sl is not None else float("nan"))
-            else:
-                dep = next((x for x in st if x["t"] > t_red and x["v"] > 0.5), None)
-                t_dep = dep["t"] if dep else None
-                held = [x for x in st if t_dep is not None and t_dep - 2.0 <= x["t"] <= t_dep and "R2" in x.get("rules", [])]
-                past_line = t_sl is not None and t_sl < t_red
-                if held:
-                    row["cause"] = "released early: R2 was holding until t = %.1f s and dropped on answers %s while the light was red" % (held[-1]["t"], at(held[-1]["t"] + 0.5).get("light"))
-                elif past_line:
-                    row["cause"] = ("the car stood past the stop line (v %.1f m/s when the light turned red, %.1f s after its front passed the line; R2 never starts there) and moved on at t = %.1f s while "
-                                    "the light was red" % (v_red, t_red - t_sl, t_dep if t_dep is not None else float("nan")))
-                else:
-                    row["cause"] = "the car stood short of the line without an R2 hold when the light turned red: " + (vr.classify(r, t_dep) if t_dep is not None else "never moved on")
         out.append(row)
     return out
 
