@@ -278,6 +278,12 @@ def report(a):
     for res, t in sweep_tables(g, B, list(RES)).items():
         L += ["## 2. Truncation sweep at %s visual tokens (two cameras)" % res[1:], "", md_table(t), ""]
     figure(g, B, res_out / "thin_sweep.png", ch)
+    L += ["![S against latency per cut](thin_sweep.png)", "",
+          "Figure: S = red recall - red answered green + green recall - no-light false alarm of the linear head on the answer-position "
+          "hidden state at layer N (labelled), one line per image resolution, against p50 latency (log axis); left = the 8 held-out test "
+          "routes, right = the 7-fold route-grouped CV over all 21 routes (zero-shot squares: all frames); dashed = the registered "
+          "p95 <= 600 ms line (p50 plotted, p95 is within a few ms of it here). Look at where each line leaves the zero-shot square and how "
+          "far left of the dashed line the early cuts sit.", ""]
     pa, pb, jl, G, S = phase_a_df(run, df)
     out = {}
     for name, d in (("a", pa), ("b", pb)):
