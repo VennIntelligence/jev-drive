@@ -53,7 +53,7 @@ todo=(); for t in "${HT[@]}"; do [[ -f $LR/readout/$t/navtest.json ]] || todo+=(
 
 st "5 WOD val capture"
 for t in "${HT[@]}"; do
-  [[ -f $LR/readout/$t/summary.json ]] && continue
+  [[ -f $LR/readout/$t/metrics.csv ]] && continue
   g $PY $RO eval --model "$t" || fail "eval $t"
   g $PY $RO read --model "$t" || fail "read $t"
 done
