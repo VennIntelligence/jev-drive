@@ -41,7 +41,8 @@ def load(dom, check=False):
     parts = [p for p in parts if not (p.name.endswith(".part.npz") and p.name.split(".")[0] in full)]   # partial only if unfinished
     rows = []
     for p in parts:
-        z = np.load(p)
+        with np.load(p) as f:
+            z = {k: f[k] for k in f.files}          # NpzFile re-reads an array on every key access
         V = z["variants"].tolist()
         for i, sid in enumerate(z["ids"].tolist()):
             s = S[sid]
