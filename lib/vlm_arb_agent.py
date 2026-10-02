@@ -617,7 +617,10 @@ class VlmArbAgent(OpArbAgent):
                     and line2 < 25.0 and can_stop2 and self._no_ego_light()):
                 self.r3_hold, self.r3_since = True, None
             if self.r3_hold:
-                if speed < 0.1 and self.r3_since is None:
+                # the dwell counts only at the target and after the warm-up (V2: on 17280 the hold was served standing at the spawn,
+                # 2.2 m short of the line, where the scorer's 4 m proximity test does not see the car; the hold now creeps it up first)
+                at_line = line2 <= 1.0 and not getattr(self, "warm_now", True)
+                if speed < 0.1 and at_line and self.r3_since is None:
                     self.r3_since = t
                 if (self.r3_since is not None and t - self.r3_since >= VM["sign_dwell_s"]) or line2 <= -2.0:
                     self.r3_hold, self.r3_since = False, None
