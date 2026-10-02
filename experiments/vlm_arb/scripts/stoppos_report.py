@@ -99,6 +99,28 @@ def auc_ci(frames, oof, name, mcol, ycol, n_boot=300, seed=0):
     return float(np.nanpercentile(out, 2.5)), float(np.nanpercentile(out, 97.5))
 
 
+def auc_diff_ci(frames, oof, a, b, mcol, ycol, n_boot=200, seed=0):
+    """AUC(a) - AUC(b) on the same frames with a route-cluster bootstrap: (diff, lo, hi)."""
+    d = frames[frames[mcol]]
+    d = d.assign(sa=oof[a][d.index], sb=oof[b][d.index])
+    d = d[d.sa.notna() & d.sb.notna()]
+    ids = d.id.unique()
+    rng = np.random.default_rng(seed)
+    by = {i: g for i, g in d.groupby("id")}
+
+    def one(g):
+        w = (1.0 / g.groupby("cl").key.transform("nunique") / g.groupby(["cl", "key"]).key.transform("size")).to_numpy()
+        y = g[ycol].to_numpy().astype(bool)
+        return D.auc(y, g.sa.to_numpy(), w) - D.auc(y, g.sb.to_numpy(), w)
+    full = one(d.assign(cl=d.id))
+    out = []
+    for _ in range(n_boot):
+        pick = rng.choice(ids, len(ids))
+        out.append(one(pd.concat([by[i].assign(cl=j) for j, i in enumerate(pick)])))
+    out = np.array(out)
+    return float(full), float(np.nanpercentile(out, 2.5)), float(np.nanpercentile(out, 97.5))
+
+
 def paired_vs(frames, oof, a, b, task="stop", bins=((0, 10),)):
     """Route-clustered paired difference of the macro MAE (a - b) of two regression outputs on the same frames."""
     mcol, truth = ("m_stop", "d_stop") if task == "stop" else ("m_junc", "d_junc")
@@ -411,7 +433,8 @@ def main(a):
             nm = f"{tap}/logit/{task}"
             if nm in oof:
                 lo, hi = auc_ci(frames, oof, nm, mcol, ycol, n_boot=200)
-                auc_rows.append(dict(task=task, tap=tap, auc_lo=lo, auc_hi=hi))
+                dd, dlo, dhi = auc_diff_ci(frames, oof, nm, f"base/clockgbm/{task}", mcol, ycol)
+                auc_rows.append(dict(task=task, tap=tap, auc_lo=lo, auc_hi=hi, auc_minus_clockgbm=dd, diff_lo=dlo, diff_hi=dhi))
     pd.DataFrame(auc_rows).to_csv(out / "clf_auc_ci.csv", index=False)
     figures(out, reg, rel, iv, res, taps, primary)
     print("primary tap", primary)
