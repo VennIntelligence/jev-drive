@@ -22,5 +22,5 @@ index: n=5 smoke: Alpamayo DS 60.8, SR 2/5; openpilot DS 2.7 voided
 - `zeroshot_b2d_summary.py` (archive): Headline numbers of a zero-shot …
 - `test_b2d_zoo_pid_wrap.py` (archive): Tests of the Zoo PID wrapper's adapter …
 
-[archive/](archive/) 24 one-off code · [results/](results/) 16 result files · [figs/](figs/) 10 figures · [lib/](lib/) 1 library
+[archive/](archive/) 24 one-off code · [results/](results/) 16 result files · [figs/](figs/) 10 figures · [lib/](lib/) 1 library · [scripts/](scripts/) 1 entry points
 <!-- files:end -->

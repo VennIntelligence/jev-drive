@@ -26,5 +26,5 @@ index: Stop capture 0.252 to 0.559 open loop; B2D no gain
 - `op_adapt_l_gate_curve_chain.py` (scripts): Staged tmux supervisor for gate and …
 - `make_op_adapt_l_figs.py` (scripts): Figures
 
-[results/](results/) 53 result files · [figs/](figs/) 11 figures · [plans/](plans/) 5 live plans · [lib/](lib/) 3 library · [scripts/](scripts/) 20 entry points
+[results/](results/) 53 result files · [figs/](figs/) 11 figures · [plans/](plans/) 5 live plans · [lib/](lib/) 3 library · [scripts/](scripts/) 21 entry points
 <!-- files:end -->

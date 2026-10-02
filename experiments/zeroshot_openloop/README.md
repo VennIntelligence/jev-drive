@@ -24,5 +24,5 @@ index: WOD RFS Cinque 8.005, Alpamayo 8.034, above cv 7.103
 - `navsim_rig.py` (lib): Virtual NAVSIM cameras rendered from …
 - `navsim_agent.py` (archive): A NAVSIM agent that replays …
 
-[archive/](archive/) 15 one-off code · [results/](results/) 21 result files · [figs/](figs/) 15 figures · [lib/](lib/) 4 library
+[archive/](archive/) 15 one-off code · [results/](results/) 21 result files · [figs/](figs/) 15 figures · [lib/](lib/) 4 library · [scripts/](scripts/) 1 entry points
 <!-- files:end -->
