@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from vlm_thin_common import (ANS3, CUTS, FOUR_PROMPT, LIGHT3, LIGHTS, RES, light_metrics, log, percentiles, cellp, jwrite)  # noqa: E402
+from vlm_thin_common import (ANS3, RED, CUTS, FOUR_PROMPT, LIGHT3, LIGHTS, RES, light_metrics, log, percentiles, cellp, jwrite)  # noqa: E402
 from vlm_arb_phase_a import LINES, evaluate, table  # noqa: E402
 
 LAT_LINE_MS = LINES["latency_p95_ms"]               # 600, registered
@@ -110,26 +110,35 @@ def md_table(df):
 
 
 def part1_table(run, df, B):
-    """Training-free variants on the 233 sweep frames + the bench latency."""
-    sw = df[df["sweep"]].reset_index(drop=True)
+    """Training-free variants on the 233 sweep frames, read with the sweep's own labels (so the generate row reproduces the
+    earlier sweep row exactly) + the bench latency."""
+    from vlm_arb_common import boot_ratio
+    from vlm_thin_common import SWEEP_FRAMES
+    sw = pd.read_csv(SWEEP_FRAMES, dtype={"route": str})
     A = {}
     for p in sorted((Path(run) / "baseline").glob("shard-*.jsonl")):
         for l in open(p):
             d = json.loads(l)
             A.setdefault(d["cfg"], {})[d["id"]] = d["ans"]
-    rows = []
     names = {"gen_ref": "generate, HF reference path (PIL + CPU processor), full resolution",
              "gen_gpu": "generate, GPU preprocessing, full resolution"}
+
+    def cell(hit, den):
+        r = boot_ratio((hit & den).astype(float), den.astype(float), sw.route)
+        return "%.0f%% [%.0f, %.0f] %d/%d" % (100 * r["est"], 100 * r["lo"], 100 * r["hi"], int((hit & den).sum()), int(den.sum()))
+    rows = []
     for cfg in ["gen_ref", "gen_gpu"] + ["fwd_" + r for r in RES] + ["fwd_r4573_compile"]:
-        ans = A.get(cfg) or A.get("gen_ref" if cfg == "gen_gpu" else "fwd_r4573" if cfg.endswith("_compile") else cfg)
-        R = light_metrics(sw, [ans.get(i, "") for i in sw.id]) if ans else None
+        src = A.get("gen_ref" if cfg == "gen_gpu" else "fwd_r4573" if cfg.endswith("_compile") else cfg)
         b = B.get(cfg, {})
-        tok = RES.get(cfg.split("_")[1]) if cfg.startswith("fwd") else None
-        rows.append({"variant": names.get(cfg, ("one forward pass, option scoring, %s tokens" % cfg.split("_")[1][1:]) + (", torch.compile" if cfg.endswith("compile") else "")),
-                     "ego red: red": cellp(R["red_recall"]) if R else "", "ego red: green": cellp(R["red_as_green"]) if R else "",
-                     "ego green: green": cellp(R["green_recall"]) if R else "", "no light: red": cellp(R["nolight_fp"]) if R else "",
-                     "latency p50 / p95 ms": ("%.0f / %.0f" % (b["p50"], b["p95"])) if "p50" in b else ("failed" if b.get("error") else "n/a"),
-                     "note": ("accuracy as the fwd variant above (same math)" if cfg.endswith("_compile") or cfg == "gen_gpu" else "")})
+        row = {"variant": names.get(cfg, ("one forward pass, option scoring, %s tokens" % cfg.split("_")[1][1:]) + (", torch.compile" if cfg.endswith("_compile") else ""))}
+        if src:
+            a = pd.Series([src.get(i, "") for i in sw.id])
+            t = sw.truth
+            row.update({"ego red: red": cell(a == RED, t == "red"), "ego red: green": cell(a == "green_for_ego", t == "red"),
+                        "ego green: green": cell(a == "green_for_ego", t == "green"), "no light: red": cell(a == RED, t == "none")})
+        row["latency p50 / p95 ms"] = ("%.0f / %.0f" % (b["p50"], b["p95"])) if "p50" in b else ("failed" if b.get("error") else "n/a")
+        row["note"] = "accuracy of the variant it shares math with (not re-run)" if cfg.endswith("_compile") or cfg == "gen_gpu" else ""
+        rows.append(row)
     return pd.DataFrame(rows)
 
 
@@ -199,6 +208,34 @@ def figure(g, B, path, chosen):
     fig.savefig(path)
 
 
+def side_by_side(df, pa, pb, g, ch):
+    """The light readouts on the test frames, zero-shot and head-fitted rows next to each other (not the same kind of evidence:
+    the head rows are trained on CARLA frames of other routes)."""
+    t = df[df.part == "test"].reset_index(drop=True)
+    rows = []
+
+    def add(name, kind, R, lat):
+        rows.append({"variant": name, "evidence": kind, "ego red: red": cellp(R["red_recall"]), "ego red: green": cellp(R["red_as_green"]),
+                     "ego green: green": cellp(R["green_recall"]), "no light: red": cellp(R["nolight_fp"]), "other dir red: red": cellp(R["other_fp"]),
+                     "latency p50 / p95 ms": lat})
+    add("openjev, as logged in the closed loop (System One endpoint)", "zero-shot, other model", light_metrics(t, t.oj_light.fillna("")),
+        "%.0f / %.0f (logged, under load)" % (np.nanpercentile(t.oj_lat, 50), np.nanpercentile(t.oj_lat, 95)))
+    if pa is not None:
+        add("(a) Qwen3-VL-4B zero-shot, generate", "zero-shot", light_metrics(pa, pa.a_light), "%.0f / %.0f" % (np.percentile(pa.lat, 50), np.percentile(pa.lat, 95)))
+    for res in RES:
+        r = g[(g.part == "test") & (g.feat == "zs") & (g.res == res)]
+        if len(r):
+            r = r.iloc[0]
+            f = lambda k: "%.0f%% [%.0f, %.0f] n=%d" % (100 * r[k], 100 * r[k + "_lo"], 100 * r[k + "_hi"], r[k + "_n"])   # noqa: E731
+            rows.append({"variant": "Qwen3-VL-4B zero-shot, one pass, %s tokens" % res[1:], "evidence": "zero-shot", "ego red: red": f("red_recall"),
+                         "ego red: green": f("red_as_green"), "ego green: green": f("green_recall"), "no light: red": f("nolight_fp"),
+                         "other dir red: red": f("other_fp"), "latency p50 / p95 ms": "%.0f / %.0f" % (r.lat_p50, r.lat_p95)})
+    if pb is not None:
+        add("(b) chosen: %s" % (json.dumps({k: ch[k] for k in ("res", "feat", "N", "head")})), "head fitted on CARLA train routes" if ch["feat"] != "zs" else "zero-shot",
+            light_metrics(pb, pb.a_light), "%.0f / %.0f" % (np.percentile(pb.lat, 50), np.percentile(pb.lat, 95)))
+    return pd.DataFrame(rows)
+
+
 def phase_a_df(run, df):
     """Test frames with the answers of (a) zero-shot generate and (b) the chosen variant; both keep the zero-shot joint
     prompt's sign / block / side answers."""
@@ -235,7 +272,9 @@ def report(a):
     res_out.mkdir(exist_ok=True)
     L = ["# vlm_thin: Qwen3-VL-4B light reading with a cut language model and a thin head", ""]
     p1 = part1_table(run, df, B)
-    L += ["## 1. Training-free speed levers (full model, no training)", "", md_table(p1), ""]
+    L += ["## 1. Training-free speed levers (full model, no training)", "",
+          "Accuracy on the 233 sweep frames with the sweep's own labels (85 ego red, 68 ego green, 80 no light; cell = estimate "
+          "[95% route-cluster CI] hits/frames); latency from the bench (100 test frames, batch 1, quiet card).", "", md_table(p1), ""]
     for res, t in sweep_tables(g, B, list(RES)).items():
         L += ["## 2. Truncation sweep at %s visual tokens (two cameras)" % res[1:], "", md_table(t), ""]
     figure(g, B, res_out / "thin_sweep.png", ch)
@@ -249,6 +288,10 @@ def report(a):
         out[name] = dict(readouts=R, gate=gate)
         L += ["## 3%s. Phase A on the test routes: %s" % (name, "(a) full zero-shot Qwen3-VL-4B, generate" if name == "a" else
                                                           "(b) chosen fast variant: %s" % json.dumps(ch)), "", txt, ""]
+    L += ["## 4. Light readouts on the test routes side by side", "",
+          "Cells: estimate [95% route-cluster CI] n = frames in the denominator. Zero-shot rows have seen no CARLA frame; the head row was "
+          "fitted on CARLA frames of other routes (in-domain supervised), so it is a different kind of evidence.", "",
+          md_table(side_by_side(df, pa, pb, g, ch)), ""]
     L += ["Joint-prompt latency (the sign / block / side answers of both tables): p50 %.0f ms, p95 %.0f ms." % (jl["p50"], jl["p95"]), ""]
     (res_out / "vlm_thin.md").write_text("\n".join(L) + "\n")
     jwrite(res_out / "vlm_thin_phase_a.json", out)
