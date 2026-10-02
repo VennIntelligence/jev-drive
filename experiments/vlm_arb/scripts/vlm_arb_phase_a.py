@@ -33,6 +33,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from vlm_arb_common import OLD_DRIVE, REPO, RUN, boot_ratio, fmt, write_json  # noqa: E402
+from vlm_arb_checks import route_checks  # noqa: E402
 
 sys.path.insert(0, str(REPO))
 from jevdrive.common import n_cpus  # noqa: E402
@@ -89,18 +90,70 @@ def read_new(path):
     return out
 
 
-def load(extra_dirs=()):
-    jobs = []
-    for u in OLD_DRIVE:
-        jobs += [(read_old, p) for p in sorted((RUN / "arms" / u).glob("attempts/*/*/vlm_decisions.jsonl"))]
+def new_logs(extra_dirs=()):
+    out = []
     for d in sorted((RUN / "arms").glob("v2-drive-*")) + [Path(x) for x in extra_dirs]:
         for done in sorted(d.glob("done/*.json")):
             p = d / "attempts" / done.stem / str(json.loads(done.read_text()).get("attempt", 1)) / "vlm_decisions.jsonl"
             if p.exists():
-                jobs.append((read_new, p))
+                out.append(p)
+    return out
+
+
+def load(extra_dirs=()):
+    jobs = []
+    for u in OLD_DRIVE:
+        jobs += [(read_old, p) for p in sorted((RUN / "arms" / u).glob("attempts/*/*/vlm_decisions.jsonl"))]
+    jobs += [(read_new, p) for p in new_logs(extra_dirs)]
     with Pool(min(n_cpus(), 32)) as pool:
         parts = pool.starmap(_call, jobs, chunksize=2)
     return pd.DataFrame([r for p in parts for r in p])
+
+
+def accounting(df, extra_dirs=()):
+    """Requests issued / answered / pending at the route end / dropped, and latency, per new unit (deviation D14).
+    Reported next to the gates, not part of them."""
+    rows = []
+    for p in new_logs(extra_dirs):
+        o, _ = route_checks(p.parent)
+        if "vlm_req" in o:
+            rows.append(dict(unit=p.parts[-5], route=p.parts[-3], req=o["vlm_req"], ans=o["vlm_n"],
+                             pending=o["vlm_pending_end"], dropped=o["vlm_dropped"], failed=round(o["vlm_n"] * (1 - o["vlm_ok"]))))
+    acc = pd.DataFrame(rows, columns=["unit", "route", "req", "ans", "pending", "dropped", "failed"])
+    out = []
+    for u, g in list(acc.groupby("unit")) + [("all new units", acc)]:
+        lat = df.lat[(df.src == "new") & df.ok & ((df.unit == u) | (u == "all new units"))].to_numpy()
+        q = (lambda x: float(np.percentile(lat, x))) if len(lat) else (lambda x: None)
+        n = max(int(g.req.sum()), 1)
+        out.append(dict(unit=u, routes=int(len(g)), req=int(g.req.sum()), ans=int(g.ans.sum()), pending=int(g.pending.sum()),
+                        dropped=int(g.dropped.sum()), failed=int(g.failed.sum()), unanswered=float(1 - g.ans.sum() / n),
+                        unanswered_max_route=float((1 - g.ans / g.req.clip(lower=1)).max()) if len(g) else None,
+                        lost=float((g.dropped.sum() + g.failed.sum()) / n), lat_p50=q(50), lat_p95=q(95),
+                        lat_over_ttl=float(np.mean(lat > 2500.0)) if len(lat) else None))
+    old = df.lat[(df.src == "old") & df.ok].to_numpy()
+    if len(old):
+        out.append(dict(unit="old frames", lat_p50=float(np.percentile(old, 50)), lat_p95=float(np.percentile(old, 95)),
+                        lat_over_ttl=float(np.mean(old > 2500.0)), ans=int(len(old))))
+    return out
+
+
+def accounting_table(acc):
+    if not acc:
+        return ""
+    f = lambda v, s="%d": "" if v is None else s % v   # noqa: E731
+    L = ["", "Request accounting on the new frames (deviation D14; not a gate). `pending` = still in flight when the route "
+         "ended (frames saved, no answer line); `dropped` = no answer although a later request was answered; "
+         "`unanswered` = 1 - answered / issued; `lost` = (dropped + failed) / issued, the rate the unit check holds <= 2%.", "",
+         "| unit | routes | issued | answered | pending at route end | dropped | failed | unanswered (worst route) | lost | latency p50 / p95 ms | latency > 2.5 s (TTL) |",
+         "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for r in acc:
+        g = r.get
+        L.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s / %s | %s |" % (
+            r["unit"], f(g("routes")), f(g("req")), f(g("ans")), f(g("pending")), f(g("dropped")), f(g("failed")),
+            "" if g("unanswered") is None else "%.1f%% (%.1f%%)" % (100 * r["unanswered"], 100 * (g("unanswered_max_route") or 0)),
+            f(None if g("lost") is None else 100 * r["lost"], "%.1f%%"), f(g("lat_p50"), "%.0f"), f(g("lat_p95"), "%.0f"),
+            f(None if g("lat_over_ttl") is None else 100 * r["lat_over_ttl"], "%.1f%%")))
+    return "\n".join(L) + "\n"
 
 
 def _call(fn, p):
@@ -263,12 +316,14 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     tag = "phase_a" if a.stage == "final" else "phase_a_old"
     head = "# Phase A (%s): VLM answers against ground truth, %d requests, %d routes\n\n" % (a.stage, len(df), df.route.nunique())
-    (out / (tag + ".md")).write_text(head + table(R, gate, df))
-    write_json(out / (tag + ".json"), dict(readouts=R, gate=gate, lines=LINES, n=len(df)))
+    acc = accounting(df) if a.stage == "final" else []
+    text = head + table(R, gate, df) + accounting_table(acc)
+    (out / (tag + ".md")).write_text(text)
+    write_json(out / (tag + ".json"), dict(readouts=R, gate=gate, lines=LINES, n=len(df), requests=acc))
     figure(R, out / (tag + ".png"))
     if a.stage == "final":
         write_json(RUN / "gates/phase_a.json", dict(gate, readouts={k: v.get("est") for k, v in R.items() if "est" in v}))
-    print(head + table(R, gate, df))
+    print(text)
 
 
 if __name__ == "__main__":

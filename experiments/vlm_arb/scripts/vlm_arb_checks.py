@@ -4,6 +4,11 @@
 
 Every unit: all routes finished, no program crash (official status, prefixed forms included), finite speeds, and
 for a unit that asks the VLM: >= 98% of requests answered and every answer used no earlier than t_q + L.
+Request accounting (plan deviation D14): a request is `answered` (an "a" line), `pending` (still in flight when the
+route ended: the queue is FIFO and an answer is logged at t_q + max(L, latency), so the last ceil(latency / query_s)
+requests of a route never get a line) or `dropped` (no line although a later request has one). Dropped requests are
+a defect and count against the 98% line; pending ones are bounded by the in-flight window of the route's own
+latency. Counts and the unanswered rate go to routes.csv and from there to the Phase A table.
 Kinds (staged launch on debug routes, plan "staged launch checklist"):
   red_stop   a stop held by R2 before the line and a roll-off after its release
   r5         the R5 fallback fired and the car rolled again
@@ -32,10 +37,33 @@ def vlm_rows(a):
         next((r for r in rows if r.get("k") == "h"), {})
 
 
+def request_account(a, ans, st, head):
+    """Requests of one route: issued, answered, pending at the route end, dropped mid-route; and the saved frames."""
+    q = head.get("params", {}).get("query_s", 0.5)
+    L = head.get("L", 0.5)
+    fdir = Path(a) / "vlm_frames"
+    wide = {f.name.split("_")[0] for f in fdir.glob("*_wide.jpg")}
+    road = {f.name.split("_")[0] for f in fdir.glob("*_road.jpg")}
+    tq = sorted(r["t_q"] for r in ans)
+    n_req = len(wide) if wide else len(st)                     # status lines share the request cadence (query_s)
+    dropped = int(sum(max(round((b - x) / q) - 1, 0) for x, b in zip(tq, tq[1:])))    # holes between answered requests
+    pending = max(n_req - len(ans) - dropped, 0)
+    lat = max((r["ans"].get("latency_ms", 0.0) for r in ans), default=0.0) / 1e3
+    window = int(np.ceil(max(L, lat) / q - 1e-9)) + 1          # requests that can be in flight at the route end
+    failed = sum(not r["ans"]["ok"] for r in ans)
+    return dict(n_req=n_req, pending=pending, dropped=dropped, window=window, failed=failed,
+                frames=wide == road and bool(wide) and {"%08.2f" % t for t in tq} <= wide)
+
+
 def route_checks(a, kind=""):
     ans, st, head = vlm_rows(a)
     out, c = {}, {}
+    acc = request_account(a, ans, st, head) if ans else None
     if ans:
+        n = max(acc["n_req"], 1)
+        out.update(vlm_req=acc["n_req"], vlm_pending_end=acc["pending"], vlm_dropped=acc["dropped"],
+                   vlm_unanswered=(acc["n_req"] - len(ans)) / n, vlm_lost=(acc["dropped"] + acc["failed"]) / n)
+        c["requests_accounted"] = out["vlm_lost"] <= 0.02 and acc["pending"] <= acc["window"]
         ok = [r["ans"]["ok"] for r in ans]
         lat = [r["ans"]["latency_ms"] for r in ans if r["ans"]["ok"]]
         out.update(vlm_n=len(ans), vlm_ok=float(np.mean(ok)), lat_p50=float(np.median(lat)) if lat else np.nan,
@@ -83,9 +111,7 @@ def route_checks(a, kind=""):
         out["v_max"] = max(v) if v else np.nan
         out["cfg"] = bool(cfg)
     if kind == "shadow":
-        n_w = len(list((Path(a) / "vlm_frames").glob("*_wide.jpg")))
-        n_r = len(list((Path(a) / "vlm_frames").glob("*_road.jpg")))
-        c["frames_saved"] = n_w == n_r and len(ans) > 0 and 0 <= n_w - len(ans) <= 2   # requests still pending at the route end have frames, no answer
+        c["frames_saved"] = bool(acc) and acc["frames"]         # a wide and a road frame per request; completeness: requests_accounted
         c["labels_present"] = bool(ans) and all("lights" in r["gt"] and "stop_dist" in r["gt"] and "block" in r["gt"] for r in ans)
     if kind == "pred":
         live = [r for r in jsonl(Path(a) / "plans.jsonl") if not r["warm"]]
