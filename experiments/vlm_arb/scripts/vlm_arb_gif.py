@@ -161,7 +161,10 @@ def cut(a, out, label, segs, width, fps, colors):
     font = ImageFont.truetype(FONT, 12)
     frames = [None] * len(targets)
     src = av.open(str(a.d / "chase_raw.mp4"))
+    last = max(idx)
     for i, fr in enumerate(src.decode(video=0)):
+        if i > last:
+            break
         if i not in idx:
             continue
         img = Image.fromarray(fr.to_ndarray(format="rgb24")).resize((width, h), Image.LANCZOS)
@@ -187,9 +190,9 @@ if __name__ == "__main__":
     ap.add_argument("out", nargs="?")
     ap.add_argument("--label", default="")
     ap.add_argument("--seg", action="append", default=[])
-    ap.add_argument("--width", type=int, default=560)
+    ap.add_argument("--width", type=int, default=480)
     ap.add_argument("--fps", type=int, default=8)
-    ap.add_argument("--colors", type=int, default=96)
+    ap.add_argument("--colors", type=int, default=48)
     n = ap.parse_args()
     att = Attempt(n.attempt)
     events(att) if n.cmd == "events" else cut(att, n.out, n.label, n.seg, n.width, n.fps, n.colors)
