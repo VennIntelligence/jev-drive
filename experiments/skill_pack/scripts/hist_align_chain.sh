@@ -27,16 +27,27 @@ run_split() {   # model runs + pose export for one split
   done
 }
 
+combined() {   # official two-stage EPDMS of one navhard pose file (empty when not scored)
+  local f; f=$(ls "$DATA_DIR"/runs/navsim/eval/v2_navhard_two_stage_opi_lb_navhard_gimm-cinque$1__base/*/*.csv 2>/dev/null | tail -1)
+  [[ -n $f ]] && grep -a "extended_pdm_score_combined" "$f" | awk -F, '{print $NF}'
+}
+
+RULES_ALL=$RULES
 run_split lb_navhard
-st "official navhard scoring (background)"
-experiments/op_openloop/archive/op_interp_score.sh "" lb_navhard v2 navhard_two_stage > "$R/score_navhard.log" 2>&1 &
-sp=$!
-run_split lb_navtest
-wait $sp || die "navhard scoring"
+st "official navhard scoring"
+experiments/op_openloop/archive/op_interp_score.sh "0-$(($(nproc) - 1))" lb_navhard v2 navhard_two_stage > "$R/score_navhard.log" 2>&1 || die "navhard scoring"
+b=$(combined "")
+RULES=""
+for r in $RULES_ALL; do      # pre-registration: navtest only for rules not rejected on navhard (delta <= 0)
+  c=$(combined "_al-$r"); st "navhard official combined: base $b, $r $c"
+  [[ -n $c ]] && awk -v c="$c" -v b="$b" 'BEGIN{exit !(c > b)}' && RULES="$RULES $r"
+done
+st "navtest rules:${RULES:- none}"
+[[ -n $RULES ]] && run_split lb_navtest
 st "official navtest scoring"
-experiments/op_openloop/archive/op_interp_score.sh "" lb_navtest v1 navtest > "$R/score_navtest.log" 2>&1 || die "navtest scoring"
+experiments/op_openloop/archive/op_interp_score.sh "0-$(($(nproc) - 1))" lb_navtest v1 navtest > "$R/score_navtest.log" 2>&1 || die "navtest scoring"
 st "navtest report"
-$E/navsim2/bin/python experiments/skill_pack/scripts/hist_align_report.py navtest --arms $RULES > "$R/report_navtest.log" 2>&1 || die "navtest report"
+$E/navsim2/bin/python experiments/skill_pack/scripts/hist_align_report.py navtest --arms $RULES_ALL > "$R/report_navtest.log" 2>&1 || die "navtest report"
 st "navhard paired harness"
-$E/navsim2/bin/python experiments/skill_pack/scripts/hist_align_report.py navhard --arms $RULES --procs 24 > "$R/report_navhard.log" 2>&1 || die "navhard report"
+$E/navsim2/bin/python experiments/skill_pack/scripts/hist_align_report.py navhard --arms $RULES_ALL --procs 24 > "$R/report_navhard.log" 2>&1 || die "navhard report"
 st "done"; touch "$R/DONE"
