@@ -43,6 +43,9 @@ def main(a):
     if not (res / f"scaling_{tap}.csv").exists():
         status("data size curve")
         subprocess.run([PY, str(SCR / "stoppos_scaling.py"), "--run", str(run), "--tap", tap, "--out", str(res)], check=True)
+    if not (res / "transfer_reg.csv").exists():
+        status("domain transfer")
+        subprocess.run([PY, str(SCR / "stoppos_transfer.py"), "--run", str(run), "--out", str(res)], check=True)
     status("done")
 
 

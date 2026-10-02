@@ -337,10 +337,32 @@ def md(df, f=".2f"):
     return df.to_markdown(index=False, floatfmt=f)
 
 
+def counts(frames):
+    """Approaches, routes and frames per set and kind, and light-approach frames per true-distance bin."""
+    rows = []
+    for src in ("cl", "p4"):
+        f = frames[frames.src == src]
+        j = f[f.m_junc & (f.d_junc >= 0)]
+        s = f[f.m_stop & (f.d_stop >= 0)]
+        row = dict(set=src, routes=f.id.nunique(), attempts=f.key.nunique(), frames=len(f), routes_with_junction=j.id.nunique(), junction_approaches=j.key.nunique(),
+                   routes_light_stopline=s.id.nunique(), light_approaches=s.key.nunique(),
+                   routes_light_unknown_line=f[(f.has_light == 1) & ~f.stop_ok].id.nunique(), routes_stop_sign=f[f.kind == "sign"].id.nunique(),
+                   routes_junction_none=f[(f.kind == "none") & f.has_light.notna()].id.nunique(), towns=f[f.town != ""].town.nunique())
+        for (lo, hi), n in zip(D.BINS, D.BIN_NAMES):
+            row[f"stop {n} frames"] = int(((s.d_stop >= lo) & (s.d_stop < hi if hi < 40 else s.d_stop <= hi)).sum())
+            row[f"stop {n} routes"] = s[(s.d_stop >= lo) & (s.d_stop < hi if hi < 40 else s.d_stop <= hi)].id.nunique()
+        for (lo, hi), n in zip(D.BINS, D.BIN_NAMES):
+            row[f"junc {n} frames"] = int(((j.d_junc >= lo) & (j.d_junc < hi if hi < 40 else j.d_junc <= hi)).sum())
+            row[f"junc {n} routes"] = j[(j.d_junc >= lo) & (j.d_junc < hi if hi < 40 else j.d_junc <= hi)].id.nunique()
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def main(a):
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     frames = D.load_frames()
+    counts(frames).T.to_csv(out / "data_counts.csv", header=False)
     oof = load_oof(a.run)
     hp = json.load(open(Path(a.run) / "hparams.json"))
     taps = [t for t in D.TAPS if f"{t}/ridge/stop" in oof]
