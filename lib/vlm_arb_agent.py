@@ -153,7 +153,7 @@ class VlmArbAgent(OpArbAgent):
             self.still_since = None
             self.ask_why = ""
             self.rjunc = None
-            self.vm_junc, self.det_now = 999.0, [0.0, 0.0]
+            self.vm_junc, self.det_now, self.last_sq = 999.0, [0.0, 0.0], -1e9
         if self.backend == "qwen" and not self.vm:
             if rows & {"R3", "R4"}:
                 raise ValueError("the qwen backend answers Q_light only: VLM_ROWS must not contain R3 / R4")
@@ -664,8 +664,14 @@ class VlmArbAgent(OpArbAgent):
             gt = self._truth_labels(xy, ego_s, junc_dist)
             gt.update(det=self.det_now, why=self.ask_why, jid_vm=jid)
             self._ask(t, cams, gt)
-            if "R3" in self.rows and in_win and jid not in self.r3_done and -1.0 <= junc_dist <= 30.0 and self._no_ego_light():
-                self._ask(t, cams, gt, "sign")
+        # the stop-sign question on its own 1 Hz clock, 0.25 s after a light slot (seed-0 round 1: asked together with the light
+        # question it doubled the queue, p95 468 ms on the shard with the unsignalised junctions), only before the entrance
+        if ("R3" in self.rows and in_win and jid not in self.r3_done and 0.0 <= junc_dist <= 30.0 and self._no_ego_light()
+                and t - self.last_q >= 0.25 - 1e-4 and t - self.last_sq >= 1.0 - 1e-4):
+            self.last_sq = t
+            gt = self._truth_labels(xy, ego_s, junc_dist)
+            gt.update(det=self.det_now, why="sign", jid_vm=jid)
+            self._ask(t, cams, gt, "sign")
         self._arrivals(t)
         cons, cap, release, active = self._table_vm(speed, t, junc_dist, jid, stop_dist)
         self.pending_cons, self.pending_release = cons, release
