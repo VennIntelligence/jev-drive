@@ -144,6 +144,7 @@ def verdict(a, b):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--domains", nargs="+", default=["nav", "wod", "carla"])
+    ap.add_argument("--interim", action="store_true", help="tables to the run dir (partial shards), not results/")
     ap.add_argument("--check", action="store_true", help="the smoke-test shards only; tables to the run dir, not results/")
     a = ap.parse_args()
     with Run("op_common_cause", "report", config=vars(a)) as run:
@@ -163,8 +164,8 @@ def main():
                 if len(x):
                     chks.append(dict(domain=dom, check=c, n=len(x), mean=float(x.mean()), min=float(x.min()), max=float(x.max())))
         global RES
-        if a.check:
-            RES = run.path("check_tables")
+        if a.check or a.interim:
+            RES = run.path("tables")
         E = pd.DataFrame(eff)
         stats.write_table(E, RES / "effects")
         stats.write_table(pd.DataFrame(chks), RES / "checks")
