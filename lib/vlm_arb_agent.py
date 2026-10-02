@@ -399,6 +399,9 @@ class VlmArbAgent(OpArbAgent):
         if self.r2_hold:
             out["R2"] = stop(line2)
             active.append("R2")
+        if self.v3 and self.go_commit and "R1" in active:               # a go decided in this very call: no cap from this step on
+            active.remove("R1")
+            cap = A["cruise"]
         # R3: stop sign, dwell T_s once per junction; suppressed while R2 holds
         if "R3" in rows and not self.r5 and not self.r2_hold:
             if (not self.r3_hold and fresh and jid not in self.r3_done and full(self.h_sign, lambda x: x == "yes")
