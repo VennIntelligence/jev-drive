@@ -99,6 +99,32 @@ def stream_steps(frames, window):
     return [frames[j] for j in k], tau[k]
 
 
+_MAPS = {}
+
+
+def warp_rot(f, cam, d):
+    """op_interp.warp_frame(f, cam, (0, 0, d), 0) with the remap tables cached per (camera, yaw): same arithmetic."""
+    import cv2
+    key = (tuple(np.round(cam, 2)), round(d, 6))
+    if key not in _MAPS:
+        if len(_MAPS) > 120:          # ~2.6 MB per entry; WOD has one calibration per sequence
+            _MAPS.clear()
+        c = np.round(cam, 2)
+        mp = []
+        for view in ("road", "wide"):
+            mx, my = I.warp_map(view, c, np.array([0.0, 0.0, d]), np.zeros(3))
+            mp.append((mx, my, (mx[0::2, 0::2] + mx[1::2, 1::2]) / 4 - 0.25, (my[0::2, 0::2] + my[1::2, 1::2]) / 4 - 0.25))
+        _MAPS[key] = mp
+    out = np.empty_like(f)
+    for k, (mx, my, hx, hy) in enumerate(_MAPS[key]):
+        Y, U, V = I.unpack(f[k])
+        Yw = cv2.remap(Y, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        Uw = cv2.remap(np.ascontiguousarray(U), hx, hy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        Vw = cv2.remap(np.ascontiguousarray(V), hx, hy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        out[k] = I.pack(Yw, Uw, Vw)
+    return out
+
+
 def rotate(fr, src_t, cam, sign):
     """Each step frame re-rendered as if the ego had yawed at sign * RATE up to t0 (source time t -> extra yaw sign*RATE*t)."""
     cache, out = {}, []
@@ -106,7 +132,7 @@ def rotate(fr, src_t, cam, sign):
         key = (id(f), float(t))
         if key not in cache:
             d = sign * RATE * float(t)
-            cache[key] = f if abs(d) < 1e-9 else I.warp_frame(f, cam, np.array([0.0, 0.0, d]), np.zeros(3))
+            cache[key] = f if abs(d) < 1e-9 else warp_rot(f, cam, d)
         out.append(cache[key])
     return out
 
@@ -164,7 +190,8 @@ def main():
     from jevdrive.openpilot.model import OPModel, decode
     from jevdrive.run import Run
     import op_lb as B
-    S = json.loads((ROOT / "samples" / f"{a.domain}.json").read_text())[si::sn][: a.limit or None]
+    S = json.loads((ROOT / "samples" / f"{a.domain}.json").read_text())
+    S = [S[k] for k in np.random.default_rng(0).permutation(len(S))][si::sn][: a.limit or None]   # any prefix is a random subset
     out = ROOT / "raw" / a.domain
     out.mkdir(parents=True, exist_ok=True)
     tag = f"{a.domain}-{si}of{sn}" + ("-check" if a.check or a.limit else "")
@@ -182,7 +209,7 @@ def main():
             src = ex.map(render_sample, S, chunksize=1)
         else:
             src = iter([None] * n)
-        t0, steps = time.time(), 0
+        t0, steps, tm = time.time(), 0, {"hist": 0.0, "model": 0.0}
         for i, (s, frames) in enumerate(zip(S, run.tqdm(src, total=n, desc=tag))):
             cam = np.asarray(s["cam"], float)
             if nav is not None:
@@ -198,29 +225,38 @@ def main():
             for vn in wanted(s, a.domain):
                 h, d = vn.split("|")
                 if h not in hist:
+                    tq = time.perf_counter()
                     hist[h] = history(h, base, base_t, cam, long_fr)
+                    tm["hist"] += time.perf_counter() - tq
                 fr, _ = hist[h]
                 des, _ = desire_steps(d, s["cmd"], len(fr))
+                tq = time.perf_counter()
                 pp, py, hid, pul = run_one(m, fr, des, d == "sustained", tc, decode, s["v"])
+                tm["model"] += time.perf_counter() - tq
                 j = VARIANTS.index(vn)
                 R["plan_pos"][i, j], R["plan_yaw"][i, j], R["hidden"][i, j], R["pulses"][i, j] = pp, py, hid, pul
                 k = min(len(fr), len(base))
                 R["in_diff"][i, j] = float(np.mean([np.abs(fr[-q].astype(np.int16) - base[-q].astype(np.int16)).mean()
                                                     for q in range(1, k + 1, 4)]))
                 steps += len(fr)
-            if i == 0 or (i + 1) % 100 == 0:
-                run.info(f"[{i + 1}/{n}] {(time.time() - t0) / (i + 1):.2f} s/sample, {steps / (time.time() - t0):.0f} steps/s")
+            if (i + 1) % 100 == 0:          # checkpoint: a stopped shard still leaves a random subset
+                np.savez(out / f"{tag}.part.tmp.npz", ids=np.array([s["id"] for s in S[: i + 1]]), variants=np.array(VARIANTS),
+                         **{k: v[: i + 1] for k, v in R.items()})
+                os.replace(out / f"{tag}.part.tmp.npz", out / f"{tag}.part.npz")
+            if i == 0 or (i + 1) % 25 == 0:
+                run.info(f"[{i + 1}/{n}] {(time.time() - t0) / (i + 1):.2f} s/sample, {steps / (time.time() - t0):.0f} steps/s, " + ", ".join(f"{k} {v / (i + 1):.2f} s" for k, v in tm.items()))
         if nav is None:
             ex.shutdown()
         np.savez(out / f"{tag}.tmp.npz", ids=np.array([s["id"] for s in S]), variants=np.array(VARIANTS), **R)
         os.replace(out / f"{tag}.tmp.npz", out / f"{tag}.npz")
+        (out / f"{tag}.part.npz").unlink(missing_ok=True)
         if a.domain == "nav" and (a.check or a.limit):
             c = np.load(B.root("lb_navtrain") / "plans" / "gimm@cinque.npz")
             cp = dict(zip(c["names"].tolist(), c["plan_pos"]))
             err = max(float(np.abs(R["plan_pos"][i, VARIANTS.index("normal|off")] - cp[s["id"]]).max()) for i, s in enumerate(S))
             run.info(f"nav normal|off vs cached op_lb plan: max |d plan_pos| = {err:.2e} m")
             run.summary["nav_repro_max_m"] = err
-        run.summary.update(n=n, steps=steps, wall_s=time.time() - t0)
+        run.summary.update(n=n, steps=steps, loop_s=time.time() - t0)
     sys.stdout.flush()
     os._exit(0)          # TensorRT teardown can hang
 
