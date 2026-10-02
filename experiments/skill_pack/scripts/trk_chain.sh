@@ -15,7 +15,8 @@ die() { st "ERROR: $*"; echo "$*" > "$R/ERROR"; exit 1; }
 scored() { ls "$DATA_DIR"/runs/navsim/eval/$1/*/*.csv > /dev/null 2>&1; }
 score() {   # score <ver> <split> <name> <npz> [subset]
   scored "${1}_${2}_$3" && return 0
-  ( [[ -n ${5:-} ]] && export CACHE_NAME=v1_navtrain_oplb TOKENS_FILE=$P/lb_navtrain/tokens.txt
+  ( unset PYTHONPATH   # navsim_zs_score.sh picks the devkit (v1.1 or v2) itself
+    [[ -n ${5:-} ]] && export CACHE_NAME=v1_navtrain_oplb TOKENS_FILE=$P/lb_navtrain/tokens.txt
     NAVSIM_THREADS=${T:-16} experiments/zeroshot_openloop/archive/navsim_zs_score.sh score "$1" "$2" "$3" "$4" > "$R/score_${1}_${2}_$3.log" 2>&1 )
   scored "${1}_${2}_$3" || { st "scoring failed: $1 $2 $3"; return 1; }
   st "scored $1 $2 $3"
