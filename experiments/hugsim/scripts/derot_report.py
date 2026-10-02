@@ -62,8 +62,8 @@ def main(dero, exam, routes, out):
     for r in rows:
         by.setdefault(r["arm"], {})[r["scenario"]] = r
     base = by["base"]
-    lines = ["| arm | n | spins (all) | spins on the 10 | new spins | HD mean | HD on the 10 | HD on non-spin (paired delta, 95% CI) | n non-spin |",
-             "|---|---|---|---|---|---|---|---|---|"]
+    lines = ["| arm | n | spins (all) | spins on the 10 | new spins | stood to max_steps | HD mean | HD on the 10 | HD on non-spin (paired delta, 95% CI) | n non-spin |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
     rng = np.random.default_rng(0)
     summ = {}
     for arm, d in by.items():
@@ -81,11 +81,19 @@ def main(dero, exam, routes, out):
                          hd10_base=float(np.mean([base[s]["hdscore"] for s in s10])) if s10 else None,
                          dl_nonspin=float(dl.mean()) if len(dl) else None)
         lines.append(f"| {arm} | {len(sc)} | {summ[arm]['spins']} | {summ[arm]['spins10']} / {len(s10)} | {len(new)} {new if new else ''} | "
-                     f"{summ[arm]['hd']:.3f} | {summ[arm]['hd10'] if s10 else float('nan'):.3f} | {ci} | {len(ns)} |")
+                     f"{sum(d[x]['end'] == 'max_steps' for x in sc)} | {summ[arm]['hd']:.3f} | {summ[arm]['hd10'] if s10 else float('nan'):.3f} | {ci} | {len(ns)} |")
     per = ["| scenario | " + " | ".join(by) + " |", "|---|" + "---|" * len(by)]
     for s in SPIN10:
         per.append(f"| {s} | " + " | ".join(f"{'SPIN ' if by[a][s]['spin'] else ''}{by[a][s]['max_abs_e']:.0f} deg, HD {by[a][s]['hdscore']:.3f}, "
                                             f"{by[a][s]['end']} {by[a][s]['steps']} st" if s in by[a] else "-" for a in by) + " |")
+    lean = ["| scenario | base: plan direction at 1 s, steps 1-8 (deg) | derot3 | base heading at step 8 | derot3 |", "|---|---|---|---|---|"]
+    for s in SPIN10:
+        if ("cinque-fixed-derot3", s) not in R:
+            continue
+        cb, cd = chain(R[("cinque-fixed", s)][1]), chain(R[("cinque-fixed-derot3", s)][1])
+        lean.append(f"| {s} | {' '.join(f'{x:.0f}' for x in cb['phi'][1:9])} | {' '.join(f'{x:.0f}' for x in cd['phi'][1:9])} | "
+                    f"{cb['heading'][min(8, len(cb['heading']) - 1)]:.1f} | {cd['heading'][min(8, len(cd['heading']) - 1)]:.1f} |")
+    per += ["", "Early lean (first 2 s; + right):", ""] + lean
     (out / "summary.md").write_text("\n".join(lines) + "\n\nPer spin scenario (max heading error vs route, HD, end, steps):\n\n" + "\n".join(per) + "\n")
     (out / "summary.json").write_text(json.dumps(summ, indent=1))
     print("\n".join(lines))
