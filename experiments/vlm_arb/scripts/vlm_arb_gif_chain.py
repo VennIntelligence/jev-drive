@@ -45,6 +45,8 @@ def sets(rep):
         "drive_b": lambda: [u("drive", "drive", 0, "b", ["9196", "37969"])],
         "pbyp2": lambda: [u("pbyp2", "pbyp2", 0, "a", ["24497", "19324"])],
         "pbyp2ng": lambda: [u("pbyp2ng", "pbyp2ng", 0, "a", ["19832", "2520"])],
+        "drive_9196": lambda: [u("drive", "drive", 0, "d", ["9196"])],
+        "pbyp2_24497": lambda: [u("pbyp2", "pbyp2", 0, "b", ["24497"])],
         "pbyp": lambda: [u("pbyp", "pbyp", 0, "a", ["27297", "17280"])],
     }
 
