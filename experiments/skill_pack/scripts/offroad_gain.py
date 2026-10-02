@@ -126,7 +126,7 @@ def cmd_navhard(a):
 def cmd_navtest(a):
     import glob
     base = pd.read_csv(sorted(glob.glob(str(L.D / "runs/navsim/eval/v1_navtest_opi_lb_navtest_gimm-cinque__base/*/*.csv")))[-1]).set_index("token")
-    base = base[base.valid.astype(bool)]
+    base = base[base.valid.astype(bool) & (base.index != "average")]       # the v1 CSV ends with an "average" summary row
     out = {}
     rng = np.random.default_rng(0)
     out["base"] = dict(pdms=100 * float(base.score.mean()), dac=100 * float(base.drivable_area_compliance.mean()), n=len(base))
@@ -135,7 +135,7 @@ def cmd_navtest(a):
         if not fs:
             continue
         d = pd.read_csv(fs[-1]).set_index("token")
-        d = d[d.valid.astype(bool)]
+        d = d[d.valid.astype(bool) & (d.index != "average")]
         idx = base.index.intersection(d.index)
         ds = (d.loc[idx, "score"] - base.loc[idx, "score"]).to_numpy()
         dd = (d.loc[idx, "drivable_area_compliance"] - base.loc[idx, "drivable_area_compliance"]).to_numpy()
