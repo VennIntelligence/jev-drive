@@ -551,12 +551,16 @@ def infraction_causes(rid, seed, r):
         d_stop = [(x["t"], x["ctx"]["tl_dist"], x["v"]) for x in plans if x.get("ctx", {}).get("tl_id") == L and x["ctx"].get("tl_dist") is not None]
         t_sl = next((t for t, d, v in d_stop if d <= 0.0), None)
         v_sl = next((v for t, d, v in d_stop if d <= 0.0), None)
-        ent = None
-        for x in st:                                          # junction entrance arc: ego_s + junc_dist while approaching
-            if x["junc_dist"] is not None and 0.5 < x["junc_dist"] < 60:
-                ent = x["ego_s"] + x["junc_dist"]
-            if ent is not None and x["junc_dist"] <= 0.5:
-                break
+        arcs = sorted(x["ego_s"] + x["junc_dist"] for x in st if x["junc_dist"] is not None and 0.5 < x["junc_dist"] < 100)
+        ents = []                                             # junction entrance arcs on the route, clustered (the ego sees each one from up to 100 m)
+        for v_ in arcs:
+            if ents and v_ - ents[-1][-1] < 3.0:
+                ents[-1].append(v_)
+            else:
+                ents.append([v_])
+        ents = [float(np.median(g)) for g in ents]
+        stop_arcs = [x["pc"]["ego_s"] + 3.8394 + x["ctx"]["tl_dist"] for x in plans if x.get("ctx", {}).get("tl_id") == L and x["ctx"].get("tl_dist") is not None and "ego_s" in x.get("pc", {})]
+        ent = next((e for e in ents if stop_arcs and e >= float(np.median(stop_arcs)) - 1.0), None)     # the light's junction: the first entrance beyond its stop line
         t_ent = next((x["t"] for x in st if ent is not None and x["ego_s"] + 3.8394 >= ent), None)
         t_tail = next((x["t"] for x in st if ent is not None and x["ego_s"] + 3.8394 >= ent + 4.41 and (state(x["t"]) == 2)), None)
         red_on = [float(ts[i]) for i in range(1, len(ts)) if ss[i] == 2 and ss[i - 1] != 2]
