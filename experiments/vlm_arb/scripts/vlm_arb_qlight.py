@@ -11,6 +11,12 @@
    frames only (unit v2-dbg-shadow-s0); the selected one is the best red recall (0-50 m) among those that keep both
    false-alarm lines on the debug frames, else the best recall minus false alarms.
 3. The selected variant is read once on the dev-route frames (v2-drive-s1-dev) against the registered Q-light lines.
+4. Listed, no line (plan deviation D15): ego red within 50 m split by whether a light of another approach is green at
+   that moment, with route 27043 on its own (logged answers on every new shadow unit; the selected variant on the dev
+   frames); on 27043, the lit lamps found in the frame by the answer given; the junctions' structure (lights per
+   junction, how many are green at once, the ego light's distance rank).
+An offline read: it runs once the shadow frames exist, whatever gates/phase_a.json says. vred / vall are queued by the
+chain only if this read passes and the registered Phase A latency line holds.
 Writes results/qlight.{json,md} and gates/qlight.json {"variant", "pass"}.
 """
 import colorsys
@@ -25,6 +31,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from vlm_arb_common import REPO, RUN, boot_ratio, fmt, unit_dir, write_json  # noqa: E402
+from vlm_arb_phase_a import STRATA, SUBSETS  # noqa: E402
 
 sys.path.insert(0, str(REPO / "lib"))
 from vlm_client import VLMClient  # noqa: E402
@@ -53,6 +60,7 @@ def frames_of(udir):
             rows.append(dict(route=done.stem, t=d["t_q"], tl=-1 if g.get("tl") is None else g["tl"],
                              tl_dist=np.nan if g.get("tl") is None else g["tl_dist"],
                              other_red=any(x[1] == 2 for x in others), any_light=bool(g.get("lights")),
+                             other_green=any(x[1] == 0 for x in others), tl_id=g.get("tl_id"), lights=g.get("lights", []),
                              base=base["Q_light"], wide=str(f["wide"]), road=str(f["road"])))
     return pd.DataFrame(rows)
 
@@ -78,6 +86,80 @@ def lamp_table(df, load):
         rows.append(dict(truth={0: "green", 1: "yellow", 2: "red"}[r.tl], lamp=hue_name(lamp_hue(load(r)))))
     t = pd.DataFrame(rows)
     return pd.crosstab(t.truth, t.lamp) if len(t) else pd.DataFrame()
+
+
+def lamps(img):
+    """Lit lamps in the upper 55% of a frame: {hue name: count} over connected blobs of >= 4 lit pixels."""
+    from scipy import ndimage
+    a = np.asarray(img.convert("RGB"), np.float32)[: int(img.height * .55)] / 255.0
+    mx, mn = a.max(-1), a.min(-1)
+    lab, n = ndimage.label((mx > 0.9) & ((mx - mn) / np.maximum(mx, 1e-6) > 0.35))
+    out = {"red": 0, "amber": 0, "green": 0, "other": 0}
+    for i in range(1, n + 1):
+        px = a[lab == i]
+        if len(px) >= 4:
+            r, g, b = px.mean(0)
+            out[hue_name(360.0 * colorsys.rgb_to_hsv(float(r), float(g), float(b))[0])] += 1
+    return out
+
+
+def strata(df, col):
+    """Ego red / yellow within 50 m by "another approach green", all routes / 27043 / the rest: (recall, as green)."""
+    ok, red, r27 = df[col] != "", df.tl.isin([1, 2]) & (df.tl_dist < 50), df.route == "27043"
+    R = {}
+    for tag, m in (("og", df.other_green), ("allred", ~df.other_green)):
+        for sub, mm in (("", True), ("_27043", r27), ("_ex27043", ~r27)):
+            d = red & m & mm & ok
+            R[tag + sub] = (boot_ratio((df[col] == RED) & d, d, df.route), boot_ratio((df[col] == "green_for_ego") & d, d, df.route))
+    return R
+
+
+def strata_md(name, R):
+    c = lambda r: "n/a" if r["n"] == 0 else "%s n=%d" % (fmt(r, True), r["n"])   # noqa: E731
+    return "| %s | " % name + " | ".join("%s / %s" % (c(R[t + u][0]), c(R[t + u][1])) for t, _ in STRATA for u, _ in SUBSETS) + " |"
+
+
+STRATA_HEAD = ["| answers | " + " | ".join("%s, %s" % (a, b) for _, a in STRATA for _, b in SUBSETS) + " |",
+               "|:--|" + ":--|" * (len(STRATA) * len(SUBSETS))]
+
+
+def in_view_27043(df):
+    """Route 27043, ego red within 50 m: the lit lamps found in the wide and the road frame, by the answer given."""
+    d = df[(df.route == "27043") & df.tl.isin([1, 2]) & (df.tl_dist < 50)]
+    rows = []
+    for r in d.itertuples():
+        w, n = lamps(Image.open(r.wide)), lamps(Image.open(r.road))
+        rows.append(dict(answer=r.base, truth_other_green=r.other_green, wide_red=w["red"], wide_amber=w["amber"],
+                         wide_green=w["green"], road_red=n["red"], road_amber=n["amber"], road_green=n["green"]))
+    t = pd.DataFrame(rows)
+    if not len(t):
+        return t
+    g = t.groupby("answer")
+    return pd.DataFrame({
+        "frames": g.size(), "truth: another light green": g.truth_other_green.mean().round(2),
+        "wide: frames with a green lamp": (g.wide_green.apply(lambda x: (x > 0).mean())).round(2),
+        "wide: frames with a red / amber lamp": g.apply(lambda x: ((x.wide_red + x.wide_amber) > 0).mean()).round(2),
+        "wide: mean lamps red / amber / green": g.apply(lambda x: "%.1f / %.1f / %.1f" % (x.wide_red.mean(), x.wide_amber.mean(), x.wide_green.mean())),
+        "road: frames with a green lamp": (g.road_green.apply(lambda x: (x > 0).mean())).round(2),
+        "road: frames with a red / amber lamp": g.apply(lambda x: ((x.road_red + x.road_amber) > 0).mean()).round(2)})
+
+
+def junctions(df):
+    """Per route and ego light (one junction approach): lights within 60 m, green at once, the ego light's distance rank."""
+    rows = []
+    for r in df[df.tl >= 0].itertuples():
+        ls = sorted(r.lights, key=lambda x: x[2])
+        ids = [x[0] for x in ls]
+        rows.append(dict(route=r.route, ego_light=r.tl_id, n=len(ls), green=sum(x[1] == 0 for x in ls),
+                         rank=ids.index(r.tl_id) + 1 if r.tl_id in ids else np.nan))
+    t = pd.DataFrame(rows)
+    if not len(t):
+        return t
+    g = t.groupby(["route", "ego_light"])
+    return pd.DataFrame({"frames": g.size(), "lights within 60 m (median)": g.n.median(), "green at once (median)": g.green.median(),
+                         "green at once (max)": g.green.max(), "ego light distance rank (median)": g["rank"].median(),
+                         "ego light nearest (share of frames)": g["rank"].apply(lambda x: (x == 1).mean()).round(2),
+                         "ego light not in the 60 m list (share)": g["rank"].apply(lambda x: x.isna().mean()).round(2)}).reset_index()
 
 
 def replay(df, variant):
@@ -168,11 +250,40 @@ def main():
         doc += ["| variant | red recall 0-50 m | red answered green | other direction red -> red | no light -> red | red frames | lines kept |",
                 "|:--|:--|:--|:--|:--|--:|:--|", md_lines("base (as run)", ref), md_lines(chosen + " (selected)", final), "",
                 "Registered Q-light lines (recall >= 80%, other-direction false alarm <= 10%, no-light false alarm <= 2%): "
-                + ("**pass**: `vred` and the R2 row of `vall` are queued with this variant." if passed else
-                   "**fail**: `vred` and `vall` are not run.")]
+                + ("**pass**: `vred` and the R2 row of `vall` are queued with this variant if the registered Phase A "
+                   "latency line holds (gates/phase_a.json)." if passed else "**fail**: `vred` and `vall` are not run.")]
         res.update(dev=final, dev_base=ref)
     else:
         doc.append("Not read: no variant selected or no dev frames.")
+    # 4. listed reads (deviation D15)
+    units = [unit_dir("dbg-shadow", 0, "light"), unit_dir("drive", 1, "dev"), unit_dir("drive", 1, "tgt"), unit_dir("drive", 0, "tgt")]
+    parts = [frames_of(u).assign(unit=u.name) for u in units]
+    allf = pd.concat([x for x in parts if len(x)], ignore_index=True) if any(len(x) for x in parts) else pd.DataFrame()
+    doc += ["", "## Ego red within 50 m: another approach green or not (listed, no line)", "",
+            "Cells: answered red / answered green, estimate [95% route-cluster CI] n. `no other light green` includes "
+            "frames where the ego light is the only one within 60 m.", ""] + STRATA_HEAD
+    if len(allf):
+        res["strata_all_base"] = strata(allf, "base")
+        doc.append(strata_md("as run, all new shadow units (%d routes)" % allf.route.nunique(), res["strata_all_base"]))
+    if len(dev):
+        res["strata_dev_base"] = strata(dev, "base")
+        doc.append(strata_md("as run, dev routes seed 1", res["strata_dev_base"]))
+        if chosen:
+            res["strata_dev_chosen"] = strata(dev, chosen)
+            doc.append(strata_md("variant `%s`, dev routes seed 1" % chosen, res["strata_dev_chosen"]))
+    doc += ["", "## Route 27043, ego red within 50 m: lit lamps found in the frame, by the answer given", "",
+            "Lamps are blobs of very bright saturated pixels in the upper 55% of the frame, named by hue (red < 20 or "
+            ">= 330 deg, amber < 70, green < 190). A heuristic: it also picks up tail lights and signs, and it does not "
+            "know which head belongs to which approach. Frames: v2-drive-s1-dev (seed 1).", ""]
+    v = in_view_27043(dev) if len(dev) else pd.DataFrame()
+    doc.append(v.to_markdown() if len(v) else "no frames")
+    res["in_view_27043"] = v.reset_index().to_dict("records") if len(v) else []
+    doc += ["", "## Junction structure on these routes (truth labels)", "",
+            "One row per route and ego light, over the frames where an ego light is set. Rank 1 = the ego light is the "
+            "nearest light actor; a high rank means it is mounted on the far side of the junction.", ""]
+    j = junctions(allf) if len(allf) else pd.DataFrame()
+    doc.append(j.to_markdown(index=False) if len(j) else "no frames")
+    res["junctions"] = j.to_dict("records") if len(j) else []
     (out / "qlight.md").write_text("\n".join(doc) + "\n")
     write_json(out / "qlight.json", res)
     write_json(RUN / "gates/qlight.json", {"variant": chosen, "pass": bool(passed)})

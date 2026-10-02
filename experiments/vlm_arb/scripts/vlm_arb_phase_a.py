@@ -32,7 +32,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from vlm_arb_common import OLD_DRIVE, REPO, RUN, boot_ratio, fmt, write_json  # noqa: E402
+from vlm_arb_common import OLD_DRIVE, REPO, RUN, XML, boot_ratio, fmt, obstacle_kinds, write_json  # noqa: E402
 from vlm_arb_checks import route_checks  # noqa: E402
 
 sys.path.insert(0, str(REPO))
@@ -81,6 +81,7 @@ def read_new(path):
             row = dict(src="new", unit=path.parts[-5], route=route, t=d["t_q"], tl=-1 if tl is None else tl,
                        tl_dist=g["tl_dist"] if tl is not None else np.nan,
                        other_red=float(any(x[1] == 2 for x in others)), any_light=float(bool(g.get("lights"))),
+                       other_green=float(any(x[1] == 0 for x in others)),
                        other_differs=float(any(x[1] != tl for x in others)) if tl is not None and others else np.nan,
                        stop_dist=np.nan if g.get("stop_dist") is None else g["stop_dist"], has_sign_label=True,
                        block=g["block"], side=g["side"], lat=a.get("latency_ms", np.nan), ok=bool(a.get("ok")))
@@ -185,6 +186,27 @@ def green_delay(df, K=2):
     return out
 
 
+STRATA = (("og", "another approach green"), ("allred", "no other light green"))
+SUBSETS = (("", "all routes"), ("_27043", "route 27043"), ("_ex27043", "without 27043"))
+
+
+def extra_readouts(df):
+    """Listed readouts, no line and no gate (plan deviation D15): ego red within 50 m split by whether a light of
+    another approach is green at that moment (new frames: every light within 60 m is logged), with route 27043 on
+    its own; static-block recall split by the obstacle the route's scenario places (cones / stopped vehicle)."""
+    R, col = {}, lambda k: df[k] if k in df else pd.Series(np.nan, df.index)   # noqa: E731
+    red = df.tl.isin([1, 2]) & (df.tl_dist >= -5) & (df.tl_dist < 50)
+    og, r27 = col("other_green"), df.route == "27043"
+    for tag, m in (("og", og == 1), ("allred", og == 0)):
+        for sub, mm in (("", True), ("_27043", r27), ("_ex27043", ~r27)):
+            R["red_recall_%s%s" % (tag, sub)] = rate(df, red & m & mm, df.a_light == RED)
+            R["red_as_green_%s%s" % (tag, sub)] = rate(df, red & m & mm, df.a_light == "green_for_ego")
+    kind = df.route.map(obstacle_kinds()) if XML.exists() else pd.Series("other", df.index)
+    for k in ("cones", "vehicle"):
+        R["block_recall_" + k] = rate(df, (df.block == "static_block") & (kind == k), df.a_block == "static_block")
+    return R
+
+
 def evaluate(df):
     red, green, none = df.tl.isin([1, 2]), df.tl == 0, df.tl == -1
     R = {}
@@ -212,6 +234,7 @@ def evaluate(df):
     R["block_fp_clear"] = rate(df, df.block == "clear", df.a_block == "static_block")
     R["side_acc"] = rate(df, new & (df.block == "static_block") & (df.side != "none_free") & (df.a_block == "static_block"),
                          df.a_side == df.side)
+    R.update(extra_readouts(df))
     lat = df.lat[df.ok].to_numpy()
     R["latency_ms"] = dict(n=int(len(lat)), p50=float(np.percentile(lat, 50)), p95=float(np.percentile(lat, 95)),
                            p99=float(np.percentile(lat, 99)), ok_rate=float(df.ok.mean()))
@@ -253,7 +276,13 @@ def table(R, gate, df):
     row("sign_fp", "no stop sign within 80 m answered yes", "<= 5%", R["sign_fp"]["n"] > 0 and e("sign_fp") <= .05)
     row("sign_far_yes", "stop sign 25-80 m answered yes (listed)")
     row("block_recall", "static block answered static_block", ">= 80%", gate["q_block"])
+    row("block_recall_cones", "... routes with cones (ConstructionObstacle*)")
+    row("block_recall_vehicle", "... routes with a stopped vehicle (Accident*, ParkedObstacle*, HazardAtSideLane*, VehicleOpensDoor*)")
     row("block_fp_clear", "clear answered static_block")
+    for tag, name in STRATA:
+        for sub, sname in SUBSETS:
+            row("red_recall_%s%s" % (tag, sub), "ego red 0-50 m, %s, %s: answered red (new frames, listed)" % (name, sname))
+            row("red_as_green_%s%s" % (tag, sub), "... answered green")
     row("side_acc", "bypass side correct given block seen (new frames)")
     la, gd = R["latency_ms"], R["green_delay_s"]
     L += ["", "Latency over %d requests: p50 %.0f ms, p95 %.0f ms, p99 %.0f ms (line: p95 <= 600 ms: %s); answered %.1f%%. "

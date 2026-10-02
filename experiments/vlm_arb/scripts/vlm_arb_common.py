@@ -39,6 +39,20 @@ INFRACTIONS = ["collisions_layout", "collisions_pedestrian", "collisions_vehicle
 N_BOOT, BOOT_SEED = 2000, 0            # registered (plan 4.3); jevdrive.stats defaults to 10000
 
 
+CONES, VEHICLE = ("ConstructionObstacle",), ("Accident", "ParkedObstacle", "HazardAtSideLane", "VehicleOpensDoor")
+
+
+def obstacle_kinds():
+    """Route id -> "cones" | "vehicle" | "other": the static obstacle its scenario places (type prefix in the route XML)."""
+    import xml.etree.ElementTree as ET
+    out = {}
+    for r in ET.parse(str(XML)).getroot().iter("route"):
+        types = [x.get("type", "") for x in r.iter("scenario")]
+        out[r.get("id")] = ("cones" if any(t.startswith(CONES) for t in types) else
+                            "vehicle" if any(t.startswith(VEHICLE) for t in types) else "other")
+    return out
+
+
 def unit_name(arm, seed, shard):
     return "%s-s%d-%s" % (arm, seed, shard)
 

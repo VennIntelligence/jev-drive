@@ -163,6 +163,7 @@ def main():
     ap.add_argument("--path", required=True)
     ap.add_argument("--sample", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--load", type=int, default=1, help="stamped on every row: 0 = no CARLA server on the box at start")
     a = ap.parse_args()
     out, meta_path = Path(a.out), Path(a.out).with_suffix(".meta.json")
     sample = [json.loads(line) for line in open(a.sample)]
@@ -191,7 +192,7 @@ def main():
     with open(out, "a") as f:
         for i, s in enumerate(todo):
             t1 = time.perf_counter()
-            row = {"id": s["id"]}
+            row = {"id": s["id"], "load": a.load}
             try:
                 row["raw"] = ask(s["wide"], s["road"])
             except Exception as e:  # noqa: BLE001

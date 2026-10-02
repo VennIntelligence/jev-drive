@@ -1,6 +1,10 @@
 """Model comparison: the vision-language models on the box's disk on the four Phase A questions, same frames.
 
-  $DATA_DIR/envs/jevdrive/bin/python experiments/vlm_arb/scripts/vlm_arb_models.py [--cap 1500] [--units ...]
+  $DATA_DIR/envs/jevdrive/bin/python experiments/vlm_arb/scripts/vlm_arb_models.py [--cap 0] [--units ...]
+      [--only NAME ... --no-report | --score-only]
+
+The lane (plan deviation D15) runs one job per model (--only NAME --no-report, each alone on a card) and then one
+--score-only job that writes the table from the cached replies; --cap 0 = every answered request with frames.
 
 Frames and truth: the saved requests of the new-format shadow units (vlm_decisions.jsonl + vlm_frames/, finished
 routes only). Sample (seed 0, the same for every model): every request with an ego light within 50 m, every one with
@@ -13,6 +17,8 @@ Models (MODELS; verified on the box on 2026-10-02, nothing is discovered at run 
                  frames, reply parsed as strict JSON or option letters. One subprocess per model, sequential, in the
                  env that loads it, on one GPU (the first of CUDA_VISIBLE_DEVICES, else the card with most free memory).
                  DiffusionGemma direct chat uses the running vLLM server on port 8000.
+Latency: a worker stamps its rows load = 0 when no CARLA server ran on the box at its start; the latency column
+uses those rows when there are at least 50 and says so, else all rows, labelled as measured under load.
 Scoring = vlm_arb_phase_a.evaluate (same labels, route-cluster bootstrap). A reply with no parseable option for a
 question is no answer for that question: it stays in the denominator (a miss for a recall, not a false alarm) and is
 counted under "parse failures". Requests that raised are left out and counted.
@@ -34,7 +40,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from vlm_arb_common import DATA, RUN, fmt, write_json  # noqa: E402
 from vlm_arb_models_worker import OPTIONS, PROMPT, parse_reply  # noqa: E402
-from vlm_arb_phase_a import evaluate  # noqa: E402
+from vlm_arb_phase_a import STRATA, SUBSETS, evaluate  # noqa: E402
 
 WORKER = Path(__file__).resolve().parent / "vlm_arb_models_worker.py"
 HUB = DATA / "cache/huggingface/hub"
@@ -80,10 +86,12 @@ NOT_RUNNABLE = [
          why="a driving-policy checkpoint that is fed through its own CARLA agent pipeline, no plain two-image chat "
              "entry point; its base VLM InternVL2-1B is run instead"),
 ]
-COLS = [("red_recall_0-50", "ego red recall 0-50 m"), ("red_as_green_0-50", "ego red answered green"),
+COLS = [("red_recall_0-50", "ego red recall 0-50 m"), ("red_recall_0-20", "... 0-20 m"), ("red_recall_20-50", "... 20-50 m"),
+        ("red_as_green_0-50", "ego red answered green"),
         ("other_fp_new", "other direction red: answered red"), ("nolight_fp", "no light: answered red"),
         ("sign_recall", "stop sign <= 25 m: yes"), ("sign_fp", "no stop sign: yes"),
-        ("block_recall", "static block recall"), ("block_fp_clear", "clear answered block")]
+        ("block_recall", "static block recall"), ("block_recall_cones", "... cones"),
+        ("block_recall_vehicle", "... stopped vehicle"), ("block_fp_clear", "clear answered block")]
 
 
 def load_frames(units, partial):
@@ -117,6 +125,7 @@ def load_frames(units, partial):
                     id="%s/%s/%.2f" % (u, rid, d["t_q"]), src="new", unit=u, route=rid, t=d["t_q"],
                     tl=-1 if tl is None else tl, tl_dist=g["tl_dist"] if tl is not None else np.nan,
                     other_red=float(any(x[1] == 2 for x in others)), any_light=float(bool(g.get("lights"))),
+                    other_green=float(any(x[1] == 0 for x in others)),
                     stop_dist=np.nan if g.get("stop_dist") is None else g["stop_dist"], has_sign_label=True,
                     block=g["block"], side=g["side"], wide=str(f["wide"]), road=str(f["road"]),
                     oj_light=ans.get("Q_light", ""), oj_sign=ans.get("Q_sign", ""), oj_block=ans.get("Q_block", ""),
@@ -127,6 +136,7 @@ def load_frames(units, partial):
 def take_sample(df, cap, seed=0):
     """Stratified sample; returns (rows, composition)."""
     rng = np.random.default_rng(seed)
+    cap = cap if cap > 0 else len(df)                 # 0: every request
     block, sign = (df.block == "static_block").to_numpy(), (df.stop_dist <= 25).to_numpy()
     light = ((df.tl >= 0) & (df.tl_dist < 50)).to_numpy() & ~block & ~sign          # light-only stratum
     rest = ~(block | sign | light)
@@ -144,6 +154,12 @@ def take_sample(df, cap, seed=0):
                 ego_red_or_yellow_50m=int((s.tl.isin([1, 2]) & (s.tl_dist < 50)).sum()),
                 ego_green_50m=int(((s.tl == 0) & (s.tl_dist < 50)).sum()))
     return s, comp
+
+
+def box_quiet():
+    """No CARLA server holds a card: latencies measured now are not under the closed-loop batch."""
+    out = subprocess.run(["nvidia-smi", "--query-compute-apps=name", "--format=csv,noheader"], capture_output=True, text=True).stdout
+    return "CarlaUE4" not in out
 
 
 def pick_gpu():
@@ -168,7 +184,8 @@ def run_worker(m, sample_path, mdir, gpu, n):
         return "model path missing: " + m["path"]
     e = dict(os.environ, CUDA_VISIBLE_DEVICES=gpu, HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", OMP_NUM_THREADS="8",
              TOKENIZERS_PARALLELISM="false")
-    cmd = [m["py"], str(WORKER), "--kind", m["kind"], "--path", m["path"], "--sample", str(sample_path), "--out", str(out)]
+    cmd = [m["py"], str(WORKER), "--kind", m["kind"], "--path", m["path"], "--sample", str(sample_path), "--out", str(out),
+           "--load", str(int(not box_quiet()))]
     t0 = time.time()
     with open(mdir / (m["name"] + ".log"), "a") as log:
         log.write("\n==> %s  GPU %s  %s\n" % (time.strftime("%F %T"), gpu, " ".join(cmd)))
@@ -209,7 +226,13 @@ def score_model(s, m, mdir):
         cnt["unparsed_examples"] = bad
     meta = mdir / (m["name"] + ".meta.json")
     cnt.update({k: v for k, v in (json.loads(meta.read_text()) if meta.exists() else {}).items() if k != "error"})
-    return score(s, col("Q_light"), col("Q_sign"), col("Q_block"), col("Q_side"), lat, ok), cnt
+    R = score(s, col("Q_light"), col("Q_sign"), col("Q_block"), col("Q_side"), lat, ok)
+    quiet = np.array([o and r.get("load") == 0 for r, o in zip(got, ok)], bool)
+    if R is not None:
+        use = quiet if quiet.sum() >= 50 else ok
+        R["latency_ms"].update(n=int(use.sum()), p50=float(np.percentile(lat[use], 50)), p95=float(np.percentile(lat[use], 95)),
+                               p99=float(np.percentile(lat[use], 99)), basis="quiet box" if use is quiet else "under load")
+    return R, cnt
 
 
 def cell(r):
@@ -233,7 +256,7 @@ def report(rows, comp, units):
          "Registered lines (Phase A): red recall >= 80%, other-direction red answered red <= 10%, no light answered "
          "red <= 2%, stop-sign recall >= 70%, stop-sign false alarm <= 5%, static-block recall >= 80%, latency p95 "
          "<= 600 ms. Cells: estimate [95% CI] n = requests in the denominator.", "",
-         "| model | " + " | ".join(t for _, t in COLS) + " | parse failures | latency p50 / p95 ms | peak VRAM | note |",
+         "| model | " + " | ".join(t for _, t in COLS) + " | parse failures | latency p50 / p95 ms (basis, n) | peak VRAM | note |",
          "|:--|" + ":--|" * len(COLS) + ":--|:--|:--|:--|"]
     for r in rows:
         R, cnt = r.get("readouts"), r.get("counts", {})
@@ -243,8 +266,20 @@ def report(rows, comp, units):
         pf = "logged answers" if r["name"] == "openjev" else "%d of %d (%s)" % (
             cnt["parse_fail_any"], cnt["requests"], ", ".join("%s %d" % (q[2:], n) for q, n in cnt["parse_fail"].items()))
         vram = "%.1f GB" % (cnt["peak_vram_mb"] / 1024) if cnt.get("peak_vram_mb") else "shared server"
-        L.append("| %s | " % r["name"] + " | ".join(cell(R[k]) for k, _ in COLS) + " | %s | %.0f / %.0f | %s | %s |" % (
-            pf, R["latency_ms"]["p50"], R["latency_ms"]["p95"], vram, r["note"]))
+        la = R["latency_ms"]
+        L.append("| %s | " % r["name"] + " | ".join(cell(R[k]) for k, _ in COLS) + " | %s | %.0f / %.0f (%s, n=%d) | %s | %s |" % (
+            pf, la["p50"], la["p95"], la.get("basis", "in the drive, under load"), la["n"], vram, r["note"]))
+    L += ["", "Ego red or yellow within 50 m, split by whether a light of another approach is green at that moment "
+          "(every light within 60 m is logged), with route 27043 on its own. Cells: answered red / answered green, "
+          "estimate [95% route-cluster CI] n. Listed, no line.", "",
+          "| model | " + " | ".join("%s, %s" % (a, b) for _, a in STRATA for _, b in SUBSETS) + " |",
+          "|:--|" + ":--|" * (len(STRATA) * len(SUBSETS))]
+    for r in rows:
+        R = r.get("readouts")
+        if R is not None:
+            L.append("| %s | " % r["name"] + " | ".join(
+                "%s / %s" % (cell(R["red_recall_%s%s" % (t, u)]), cell(R["red_as_green_%s%s" % (t, u)]))
+                for t, _ in STRATA for u, _ in SUBSETS) + " |")
     L += ["", "Models:", ""] + ["- `%s`: %s%s" % (r["name"], r["id"], "" if r.get("readouts") else ". " + r["note"])
                                for r in rows]
     L += ["", "How to read it:", "",
@@ -252,9 +287,13 @@ def report(rows, comp, units):
           "its answers and latency are the ones logged during the drive, restricted to this sample. Every other row is "
           "the plain chat prompt below, one request at a time, greedy decoding (Qwen-Drive: its released VQA decode "
           "parameters; DiffusionGemma chat: server defaults, the server rejects a temperature).",
-          "- Latency is wall-clock per request including JPEG decode and image preprocessing, measured while the "
-          "closed-loop lane used the same box; `dgemma-chat` shares the server with the live lane. Peak VRAM is "
+          "- Latency is wall-clock per request including JPEG decode and image preprocessing. Basis `quiet box`: only "
+          "the requests of a worker that started with no CARLA server on the box, the model alone on its card "
+          "(`dgemma-chat` alone on the vLLM server); `under load`: all requests, some or all measured while the "
+          "closed-loop batch ran. `openjev` is the latency logged in the drive, under the batch's load. Peak VRAM is "
           "torch's reserved peak of the worker process.",
+          "- Cones / stopped vehicle: static-block recall on the routes whose scenario places cones "
+          "(ConstructionObstacle*) or a stopped vehicle (Accident*, ParkedObstacle*, HazardAtSideLane*, VehicleOpensDoor*).",
           "- A question with no parseable option is no answer: it lowers recalls and cannot be a false alarm, so read "
           "the false-alarm columns together with the parse-failure column.",
           "- Requests that raised or are missing are left out of every denominator (see models.json: counts).",
@@ -266,7 +305,9 @@ def report(rows, comp, units):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--units", nargs="+", default=UNITS, help="shadow units under runs/vlm_arb/arms (missing ones are skipped)")
-    ap.add_argument("--cap", type=int, default=1500)
+    ap.add_argument("--cap", type=int, default=1500, help="sample size; 0 = every answered request with frames")
+    ap.add_argument("--no-report", action="store_true", help="run the workers only (one lane job per model)")
+    ap.add_argument("--score-only", action="store_true", help="no worker: the table from the cached replies")
     ap.add_argument("--tag", default="", help="suffix of the output names (models<tag>.md, models<tag>/), for smoke tests")
     ap.add_argument("--partial", action="store_true", help="also read unfinished routes (smoke tests)")
     ap.add_argument("--only", nargs="+", help="run only these models; the others are scored from their cache")
@@ -281,7 +322,9 @@ def main():
     mdir = out / ("models" + a.tag)
     mdir.mkdir(parents=True, exist_ok=True)
     sample_path = mdir / "sample.jsonl"
-    sample_path.write_text("".join(json.dumps(dict(id=r.id, wide=r.wide, road=r.road)) + "\n" for r in s.itertuples()))
+    tmp = mdir / ("sample.%d.tmp" % os.getpid())       # atomic: model jobs run side by side on the same sample
+    tmp.write_text("".join(json.dumps(dict(id=r.id, wide=r.wide, road=r.road)) + "\n" for r in s.itertuples()))
+    tmp.replace(sample_path)
     gpu = pick_gpu()
     print("sample: %s\nGPU %s" % (json.dumps(comp), gpu), flush=True)
 
@@ -289,7 +332,12 @@ def main():
                  note="", counts=dict(requests=len(s)),
                  readouts=score(s, s.oj_light, s.oj_sign, s.oj_block, s.oj_side, s.oj_lat, np.ones(len(s), bool)))]
     for m in MODELS:
-        fail = "" if a.only and m["name"] not in a.only else run_worker(m, sample_path, mdir, gpu, len(s))
+        skip = a.score_only or (a.only and m["name"] not in a.only)
+        fail = "" if skip else run_worker(m, sample_path, mdir, gpu, len(s))
+        if a.no_report:
+            continue
+        meta = mdir / (m["name"] + ".meta.json")
+        fail = fail or (json.loads(meta.read_text()).get("error", "") if meta.exists() else "")
         R, cnt = score_model(s, m, mdir)
         note = ("failed: " + fail) if fail else ""
         if R is None and not fail:
@@ -298,6 +346,8 @@ def main():
             note = (note + "; " if note else "") + "partial: %d of %d requests" % (cnt["requests"], len(s))
         rows.append(dict(name=m["name"], id=m["id"], path=m["path"], env=m["py"], kind=m["kind"], note=note, counts=cnt,
                          readouts=R))
+    if a.no_report:
+        return 0
     rows += [dict(name=m["name"], id=m["id"], path=m["path"], note="not runnable: " + m["why"], readouts=None)
              for m in NOT_RUNNABLE]
     md = report(rows, comp, units)
