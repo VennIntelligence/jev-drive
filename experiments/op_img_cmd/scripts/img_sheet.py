@@ -27,8 +27,10 @@ def main():
     ap.add_argument("--n", type=int, default=4)
     ap.add_argument("--tokens", nargs="*")
     ap.add_argument("--view", default="road", choices=("road", "wide"))
-    ap.add_argument("--fams", nargs="*", default=["none", "band", "lines", "arrow_road", "sign", "cones", "barrier", "wall", "fill_grass"])
+    ap.add_argument("--fams", nargs="*", default=["none", "band", "lines", "arrow_road", "sign", "cones", "barrier", "wall", "fill_grass", "combo"])
     ap.add_argument("--out", required=True)
+    ap.add_argument("--alt-only", action="store_true", help="one column per family: command = a branch the driver did not take")
+    ap.add_argument("--width", type=int, default=4096)
     a = ap.parse_args()
     import cv2
     G = [s for s in pickle.load(open(data_dir() / "runs" / "op_img_cmd" / "geom" / "nav.pkl", "rb")) if s["kind"] == "junction" and O.valid(s)]
@@ -44,7 +46,9 @@ def main():
     rows = []
     for s in G:
         f = np.asarray(keys[s["row"], 3])
-        cls = sorted({b["cls"] for b in s["branches"]})[:2]
+        cls = sorted({b["cls"] for b in s["branches"]} - {"uturn"})[:2]
+        if a.alt_only:
+            cls = [c for c in cls if c != s["taken"]][:1] or cls[:1]
         tiles = []
         for fam in a.fams:
             for c in (cls if fam != "none" else cls[:1]):
@@ -59,7 +63,7 @@ def main():
     grid = np.concatenate([np.concatenate(r + [blank] * (ncol - len(r)), 1) for r in rows], 0)
     from PIL import Image
     im = Image.fromarray(grid)
-    im.thumbnail((4096, 4096))
+    im.thumbnail((a.width, a.width))
     im.save(a.out)
     print(a.out, grid.shape)
 
