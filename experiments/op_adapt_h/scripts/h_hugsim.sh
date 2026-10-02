@@ -20,6 +20,14 @@ ONNX=()
 if [[ $TAG != O ]]; then
   [[ -f $H/onnx/$TAG.onnx ]] || CUDA_VISIBLE_DEVICES=$GPU "$DATA_DIR/envs/op-train/bin/python" experiments/op_adapt_l/scripts/op_l_onnx.py build \
       --ckpt "$H/runs/$TAG/ckpt-final.pt" --out "$H/onnx/$TAG.onnx" --no-adapter || fail "onnx build"
+  if [[ ! -f $OUT/onnx_check.txt ]]; then                 # served ONNX vs the training port on op_adapt's stored WOD streams
+    CUDA_VISIBLE_DEVICES=$GPU "$DATA_DIR/envs/op-train/bin/python" experiments/op_adapt_l/scripts/op_l_onnx.py ref \
+        --ckpt "$H/runs/$TAG/ckpt-final.pt" --out "$OUT/onnx_ref.npz" || fail "onnx ref"
+    CUDA_VISIBLE_DEVICES=$GPU "$DATA_DIR/envs/openpilot/bin/python" experiments/op_adapt_l/scripts/op_l_onnx.py check \
+        --onnx "$H/onnx/$TAG.onnx" --ref "$OUT/onnx_ref.npz" > "$OUT/onnx_check.tmp" 2>&1 || fail "onnx check"
+    grep "^stream" "$OUT/onnx_check.tmp" | awk '{ if ($16 + 0 > 0.5) bad = 1 } END { exit bad }' || fail "onnx differs from the port (plan xy max > 0.5 m)"
+    mv "$OUT/onnx_check.tmp" "$OUT/onnx_check.txt"
+  fi
   ONNX=(--onnx "$H/onnx/$TAG.onnx")
 fi
 CUDA_VISIBLE_DEVICES=$GPU setsid "$DATA_DIR/envs/openpilot/bin/python" -u experiments/hugsim/archive/hugsim_zs_server.py cinque "${ONNX[@]}" \
