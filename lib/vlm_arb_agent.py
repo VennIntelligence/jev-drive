@@ -3,7 +3,7 @@
 Protocol and registered parameters: experiments/vlm_arb/plans/2026-10-02-vlm-arb.md. Python 3.8 (route process env).
 
 Environment (set per unit by experiments/vlm_arb/scripts/vlm_arb_chain.py):
-  VLM_ARM           drive | dslow | jslow | vred | vbyp | vall. drive / dslow open no row (dslow gets its per-route
+  VLM_ARM           drive | dslow | jslow | vred | vred3 | vbyp | vall. drive / dslow open no row (dslow gets its per-route
                     set speed through the config's cruise_by_route).
   VLM_ROWS          comma list that restricts the arm's rows (Phase A gating), e.g. "R1,R4,R5".
   VLM_SHADOW        1: ask the VLM and log its answers even when no VLM row is open (Phase A).
@@ -16,6 +16,11 @@ Environment (set per unit by experiments/vlm_arb/scripts/vlm_arb_chain.py):
                     stopline: R2 stops it short of the stop line of the traffic light that governs the ego lane at that
                     junction, taken from the map (arm vred2, plans/2026-10-02-pbyp2-vred2.md); same margin as the privileged
                     `pred` (target = bumper-to-line distance - 0.5 m). The light's state is never read for the target.
+                    vred3 (plans/2026-10-02-pbyp2-vred2.md section 11): R1 (junction slow-down, approach only: ends at the stop line) + R2 with
+                    the stop-line target + R5 + the yellow / commit rule: on the first non-green answer after green the go / stop decision of
+                    lib/yellow_rule.py is taken (stop: tentative R2 hold confirmed by the second answer; go: R2 suppressed and the junction cap lifted
+                    until the tail has cleared the line); once the front bumper has passed the stop line R2 is never started and R1 is off.
+                    Needs VLM_R2_TARGET=stopline and VLM_ROWS=R1,R2,R5.
   VLM_ENDPOINT      System One URL.
   VLM_BACKEND       openjev (default) | qwen: zero-shot Qwen3-VL-4B light reading, one forward pass with option scoring
                     (experiments/vlm_arb/scripts/vlm_qwen_server.py, one server per card on port VLM_BASE_PORT + VLM_GPU,
@@ -48,6 +53,7 @@ from op_arb_agent import OpArbAgent, REAR_TO_BUMPER, idm  # noqa: E402
 from b2d_privileged_geometry import Privileged, project  # noqa: E402
 from vlm_client import VLMClient, jpeg  # noqa: E402
 from vlm_qwen_client import QwenClient  # noqa: E402
+import yellow_rule  # noqa: E402
 
 
 def _js(value):
@@ -64,7 +70,7 @@ def get_entry_point():
 # Registered arbitration parameters (plan section 2.4). L is replaced by VLM_L once Phase A measured it.
 ARB_PARAMS = {"N_jslow_m": 25.0, "v_jslow": 4.5, "K_debounce": 2, "T_stop_sign_s": 2.5, "T_max_stop_s": 25.0,
               "TTL_answer_s": 2.5, "sim_delay_L_s": 0.5, "query_s": 0.5}
-ARM_ROWS = {"drive": (), "dslow": (), "jslow": ("R1",), "vred": ("R2", "R3", "R5"), "vbyp": ("R4", "R5"),
+ARM_ROWS = {"drive": (), "dslow": (), "jslow": ("R1",), "vred": ("R2", "R3", "R5"), "vred3": ("R1", "R2", "R5"), "vbyp": ("R4", "R5"),
             "vall": ("R1", "R2", "R3", "R4", "R5")}
 LIGHT_M, SIGN_M = 50.0, 25.0          # truth windows of the oracle answers; the label bins are applied offline
 
@@ -111,6 +117,8 @@ class VlmArbAgent(OpArbAgent):
         self.backend = env("VLM_BACKEND", "openjev")
         self.r2_target = env("VLM_R2_TARGET", "junction")
         assert self.r2_target in ("junction", "stopline"), self.r2_target
+        self.v3 = self.vlm_arm == "vred3"
+        assert not self.v3 or self.r2_target == "stopline", "vred3 needs the stop-line target"
         if self.backend == "qwen":
             if rows & {"R3", "R4"}:
                 raise ValueError("the qwen backend answers Q_light only: VLM_ROWS must not contain R3 / R4")
@@ -128,6 +136,10 @@ class VlmArbAgent(OpArbAgent):
         self.h_light, self.h_sign, self.h_block = deque(maxlen=K), deque(maxlen=K), deque(maxlen=K)
         self.r2_hold = self.r3_hold = self.r4_on = self.r5 = self.owned_stop = False
         self.r3_done, self.r3_since = set(), None
+        self.n_ans = self._seen_ans = 0                 # vred3: answers that arrived / answers the table has looked at
+        self.last_green_tq = None                       # frame time of the latest green answer
+        self.go_commit, self.go_t, self.go_line_s = False, None, None
+        self.r2_tentative, self.tent_n = False, 0
         self.r4_seen = False
         self.stop_since = None
         self.release_until = -1e9
@@ -292,12 +304,18 @@ class VlmArbAgent(OpArbAgent):
             if ans["ok"]:                                      # a failed request is no answer: the last one ages out
                 self.answer = ans
                 self.h_light.append(ans["Q_light"])
+                self.n_ans += 1
+                if ans["Q_light"] == "green_for_ego":
+                    self.last_green_tq = t_q
                 self.h_sign.append(ans["Q_sign"])
                 self.h_block.append((ans["Q_block"], ans["Q_side"]))
             self.vlm_log.write(json.dumps(dict(k="a", t=t, t_q=t_q, t_eff=t_eff, gt=gt, ans=ans), default=_js) + "\n")
 
     # ------------------------------------------------------------------ the table
-    def _table(self, speed, t, junc_dist, jid, stop_dist=None):
+    def _ylog(self, **kw):
+        self.vlm_log.write(json.dumps(dict(k="y", **kw), default=_js) + "\n")
+
+    def _table(self, speed, t, junc_dist, jid, stop_dist=None, ego_s=0.0):
         P, K, A = ARB_PARAMS, ARB_PARAMS["K_debounce"], self.arb
         rows, out, active = self.rows, {}, []
         fresh = bool(self.answer is not None and t - self.answer["t_eff"] <= P["TTL_answer_s"])
@@ -311,6 +329,21 @@ class VlmArbAgent(OpArbAgent):
         if self.r2_target == "stopline" and stop_dist is not None:
             line2, src2 = stop_dist - 0.5, "stopline"
         can_stop2 = line2 > max(0.5, speed * speed / 8.0 - 1.0) or (speed < 1.0 and line2 > -1.0)
+        GREEN, RED_ = "green_for_ego", "red_or_yellow_for_ego"
+        d_line = junc_dist - REAR_TO_BUMPER                           # front bumper to the scorer's line (junction entrance)
+        ydec = None
+        if self.v3:
+            # commit: nothing below starts an R2 stop once the front bumper is past the stop line
+            before_line = stop_dist is None or stop_dist > 0.0
+            beyond = None if self.go_line_s is None else ego_s + REAR_TO_BUMPER - self.go_line_s
+            if self.go_commit and (beyond is None or beyond >= yellow_rule.TAIL_M or t - self.go_t > 10.0):
+                self._ylog(t=t, ev="go_end", beyond=None if beyond is None else round(beyond, 2), v=round(float(speed), 2))
+                self.go_commit = False
+        else:
+            before_line = True
+        new_ans = self.n_ans != self._seen_ans
+        self._seen_ans = self.n_ans
+        hl = list(self.h_light)
         if speed < 0.2:
             self.stop_since = t if self.stop_since is None else self.stop_since
         else:
@@ -326,14 +359,38 @@ class VlmArbAgent(OpArbAgent):
             self.r5 = False
         if self.r5 and "R5" not in active:                             # logged for as long as the fallback is in force
             active.append("R5")
-        # R1: junction speed cap from the map
+        # R1: junction speed cap from the map; vred3: approach only (off once the front bumper is past the stop line, and during a go)
         cap = A["cruise"]
-        if "R1" in rows and -10.0 <= junc_dist <= P["N_jslow_m"]:
+        past_line = self.v3 and (self.go_commit or (stop_dist is not None and stop_dist <= 0.0))
+        if "R1" in rows and -10.0 <= junc_dist <= P["N_jslow_m"] and not past_line:
             cap = min(cap, P["v_jslow"])
             active.append("R1")
         # R2: red / yellow light for the ego, stop at the junction entrance; only green releases
+        if self.v3 and self.r2_tentative and self.n_ans > self.tent_n:    # the second answer after a tentative start
+            self.r2_tentative = False
+            if not hl or hl[-1] != RED_:
+                self.r2_hold, self.release_until = False, t + 2.0
+                self._ylog(t=t, ev="tentative_cancel", answer=hl[-1] if hl else None, v=round(float(speed), 2))
+            else:
+                self._ylog(t=t, ev="tentative_confirm", v=round(float(speed), 2))
         if "R2" in rows and not self.r5 and fresh:
-            if not self.r2_hold and full(self.h_light, lambda x: x == "red_or_yellow_for_ego") and line2 < 50.0 and can_stop2:
+            if (self.v3 and new_ans and not self.r2_hold and not self.go_commit and before_line and len(hl) == 2 and hl[-1] == RED_ and hl[-2] == GREEN
+                    and line2 < 50.0 and self.last_green_tq is not None):
+                # first non-green answer after green: the yellow decision, without waiting for the K = 2 debounce
+                age = t - self.last_green_tq
+                rem = yellow_rule.remaining_yellow(age)
+                ydec = yellow_rule.decide(line2, d_line, float(speed), rem, A["cruise"])
+                c = self._ctx()
+                if ydec == "go" or not can_stop2:
+                    self.go_commit, self.go_t, self.go_line_s = True, t, ego_s + junc_dist
+                    ydec = ydec if ydec == "go" else "stop_infeasible_go"
+                else:
+                    self.r2_hold, self.r2_tentative, self.tent_n = True, True, self.n_ans
+                self._ylog(t=t, ev="yellow", decision=ydec, v=round(float(speed), 2), age=round(age, 2), remaining=round(rem, 2), d_stop=round(line2 + 0.5, 2),
+                           d_line=round(d_line, 2), can_stop=bool(can_stop2), stop_need=round(yellow_rule.stop_distance(float(speed)), 2),
+                           truth=dict(tl=c.get("tl"), tl_dist=c.get("tl_dist"), tl_id=c.get("tl_id")))
+            elif (not self.r2_hold and not self.go_commit and before_line and full(self.h_light, lambda x: x == "red_or_yellow_for_ego") and line2 < 50.0
+                  and can_stop2):
                 self.r2_hold = True
             elif self.r2_hold and full(self.h_light, lambda x: x == "green_for_ego"):
                 self.r2_hold, self.release_until = False, t + 2.0
@@ -379,7 +436,8 @@ class VlmArbAgent(OpArbAgent):
         if speed >= 1.0:
             self.release_until, self.owned_stop = -1e9, False
         self.table_state = dict(rules=active, release=release_now, r5=bool(self.r5), fresh=fresh,
-                                line=round(float(line), 2), line_r2=round(float(line2), 2), r2_src=src2, jid=int(jid), light=list(self.h_light), sign=list(self.h_sign), block=list(self.h_block))
+                                line=round(float(line), 2), line_r2=round(float(line2), 2), r2_src=src2, go=bool(self.go_commit), tent=bool(self.r2_tentative),
+                                d_stop=None if stop_dist is None else round(float(stop_dist), 2), jid=int(jid), light=list(self.h_light), sign=list(self.h_sign), block=list(self.h_block))
         return out, cap, release_now, active
 
     # ------------------------------------------------------------------ per plan
@@ -393,7 +451,7 @@ class VlmArbAgent(OpArbAgent):
             self.last_q = t
             self._ask(t, cams, self._truth_labels(xy, ego_s, junc_dist))
         self._arrivals(t)
-        cons, cap, release, active = self._table(speed, t, junc_dist, jid, self._stop_line(ego_s, junc_dist) if self.r2_target == "stopline" else None)
+        cons, cap, release, active = self._table(speed, t, junc_dist, jid, self._stop_line(ego_s, junc_dist) if self.r2_target == "stopline" else None, ego_s)
         self.pending_cons, self.pending_release = cons, release
         if t - self.last_s >= ARB_PARAMS["query_s"] - 1e-4:
             self.last_s = t

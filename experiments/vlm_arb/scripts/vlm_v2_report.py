@@ -10,6 +10,7 @@ Conventions of results/report.md: official infractions; paired differences per (
 (2000 draws, seed 0), 95% percentile intervals. Every number is a diagnostic read (19 routes); registered confirmation lines are
 marked "not evaluated" and never "passed". V2_TEST=1 maps pbyp2 -> pbyp and vred2 -> vred (code-path test on existing runs).
 """
+import collections
 import io
 import json
 import os
@@ -24,7 +25,7 @@ sys.path.insert(0, str(HERE))
 import vlm_vred_report as vr  # noqa: E402
 from vlm_arb_checks import r2_episodes, route_checks, vlm_rows  # noqa: E402
 from vlm_arb_common import (LIGHT_ROUTES, OBS_ROUTES, ROUTES, RUN, SEEDS, boot_mean, boot_ratio, drive_dir,  # noqa: E402
-                            fmt, route_row, unit_dir, write_json)
+                            fmt, jsonl, route_row, unit_dir, write_json)
 from vlm_arb_report import paired  # noqa: E402
 from vlm_thin_common import RED, light_masks  # noqa: E402
 
@@ -32,7 +33,7 @@ TEST = os.environ.get("V2_TEST") == "1"
 OUT = RUN / ("v2/results_test" if TEST else "v2/results")
 SHARDS = ("q0", "q1", "q2")
 L_REG = 0.35
-ALIAS = {"pbyp2": "pbyp", "vred2": "vred", "cal2": "cal"} if TEST else {}
+ALIAS = {"pbyp2": "pbyp", "vred2": "vred", "vred3": "vred", "cal2": "cal"} if TEST else {}
 OTHER = [r for r in ROUTES if r not in OBS_ROUTES]
 NOISE = ("13 routes with 2-4 identical `drive` runs: per-route DS standard deviation mean 4.7, median 0.0, max 30.5; 5 of 13 routes changed DS "
          "between repeats (results/report.md)")
@@ -177,6 +178,41 @@ def few_vred2(_):
                 routes_with_stop=int(stops), routes_stopped_short=int(short), routes_stop_not_short=bad_short, routes_with_release=int(rolls),
                 crashes=crashes, routes=rows)
     write_json(RUN / "gates/v2_few_vred2.json", gate)
+    print(df.to_string())
+    print({k: v for k, v in gate.items() if k != "routes"})
+
+
+def few_vred3(_):
+    """Checklist over the seed-0 vred3 units: no crash, R2 stops short of the line, a release after green, R1 on the approach and off past the stop
+    line, no R2 start with the front bumper past the line, latency lines, a decision line logged for every yellow encounter."""
+    rows, stops, short, rolls, crashes, bad_line, r1_on, bad_r1 = [], 0, 0, 0, 0, 0, 0, 0
+    for rid in ROUTES:
+        r = route_row(run_dir("vred3", 0, rid), rid)
+        if not r:
+            rows.append(dict(route=rid, finished=False))
+            continue
+        o, c = route_checks(r["attempt"], "red_stop3")
+        ans, st, _ = vlm_rows(r["attempt"])
+        starts = [x for prev, x in zip(st, st[1:]) if "R2" in x.get("rules", []) and "R2" not in prev.get("rules", [])]
+        late = [x for x in starts if x.get("d_stop") is not None and x["d_stop"] <= 0.0]
+        crashes += bool(r["crash"])
+        stops += o["n_r2_stops"] > 0
+        short += bool(c["stopped_short_of_line"])
+        rolls += bool(c["rolls_after_release"])
+        bad_line += len(late)
+        r1_on += bool(c["r1_on_approach"])
+        bad_r1 += not c["r1_off_past_stop_line"]
+        rows.append(dict(route=rid, finished=True, crash=bool(r["crash"]), n_r2_stops=o["n_r2_stops"], d_stop=o["d_stop"], n_yellow=o["n_yellow_events"], n_go=o["n_go"], r2_start_past_line=len(late),
+                         r1_on_approach=bool(c["r1_on_approach"]), r1_off_past_line=bool(c["r1_off_past_stop_line"]), DS=r["DS"]))
+    an = vr.answers("vred3", 0)
+    lat = an.lat[an.ok].to_numpy()
+    lat_ok = bool(len(lat) and pct(lat, 95) <= 1e3 * L_REG and np.mean(lat > 2500) <= 0.01 and an.ok.mean() >= 0.98)
+    df = pd.DataFrame(rows)
+    bad_short = int(sum(1 for x in rows if x.get("n_r2_stops", 0) and x.get("d_stop") is not None and x["d_stop"] < 0))
+    gate = dict(passed=bool(df.finished.all() and crashes == 0 and short >= 1 and rolls >= 1 and lat_ok and bad_line == 0 and bad_r1 == 0 and r1_on >= 1), latency_ok=lat_ok,
+                p50_ms=pct(lat, 50), p95_ms=pct(lat, 95), over_L=float(np.mean(lat > 1e3 * L_REG)) if len(lat) else None, routes_with_stop=int(stops), routes_stopped_short=int(short),
+                routes_stop_beyond_line=bad_short, routes_with_release=int(rolls), r2_starts_past_line=int(bad_line), routes_r1_on=int(r1_on), routes_r1_after_line=int(bad_r1), crashes=crashes, routes=rows)
+    write_json(RUN / "gates/v2_few_vred3.json", gate)
     print(df.to_string())
     print({k: v for k, v in gate.items() if k != "routes"})
 
@@ -424,11 +460,12 @@ def stop_rows(df, arm):
     return pd.DataFrame(rows)
 
 
-def figure_vred2(P, stops, ans, path, path_stop, path_lat):
+def figure_vred2(P, stops, ans, path, path_stop, path_lat, A="vred2", others=("vred", "pred")):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    col = {"vred2 - drive": "#3b6ea5", "vred2 - vred": "#2a9d8f", "vred2 - pred": "#b5651d"}
+    palette = ["#3b6ea5", "#2a9d8f", "#b5651d", "#8e5ea2", "#777777"]
+    col = {"%s - %s" % (A, b): palette[i] for i, b in enumerate(("drive",) + tuple(others))}
     sets = ["all routes", "logged-light routes", "no logged light"]
     fig, axs = plt.subplots(1, 2, figsize=(9.5, 3.6), dpi=150)
     for ax, metric, title in ((axs[0], "DS", "DS"), (axs[1], "red_light", "red-light infractions per run")):
@@ -454,15 +491,16 @@ def figure_vred2(P, stops, ans, path, path_stop, path_lat):
     fig.savefig(path)
     plt.close(fig)
     fig, ax = plt.subplots(figsize=(6.5, 3.4), dpi=150)
-    cm = {"pred": "#b5651d", "vred": "#777", "vred2": "#3b6ea5"}
-    for i, arm in enumerate(("pred", "vred", "vred2")):
+    cm = {"pred": "#b5651d", "vred": "#777", "vred2": "#2a9d8f", "vred3": "#3b6ea5"}
+    stop_arms = [a for a in ("pred", "vred", "vred2", "vred3") if a in set(stops.arm)]
+    for i, arm in enumerate(stop_arms):
         x = stops[stops.arm == arm]
         y = i + (np.random.default_rng(i).random(len(x)) - .5) * .35
         ax.plot(x.d_stop, y, "o", color=cm[arm], ms=5, alpha=.8)
         ax.plot(x.d_min, np.full(len(x), i - .42), "|", color=cm[arm], ms=5, alpha=.5)
     ax.axvline(0, color="#222", lw=1)
-    ax.set_yticks(range(3))
-    ax.set_yticklabels(["pred", "vred", "vred2"])
+    ax.set_yticks(range(len(stop_arms)))
+    ax.set_yticklabels(stop_arms)
     ax.set_xlabel("distance of the front bumper to the stop line at standstill, m (> 0 = short of the line)", fontsize=8)
     ax.grid(axis="x", color="#eee", lw=.6)
     for s in ("top", "right"):
@@ -488,29 +526,140 @@ def figure_vred2(P, stops, ans, path, path_stop, path_lat):
     plt.close(fig)
 
 
+def collisions_of(r):
+    """Official collisions of a run with the actor's position in the ego frame at first contact (along < 0: behind the ego) and the ego speed."""
+    a = Path(r["attempt"])
+    first = {}
+    for c in jsonl(a / "contacts.jsonl"):
+        first.setdefault(c["id"], c)
+    scene = jsonl(a / "privileged.jsonl")
+    out = []
+    for cid, c in first.items():
+        if not c["type"].startswith("vehicle."):
+            continue
+        t = c["t"] - 1.05                                    # the contact clock runs about 1.05 s ahead of the plan clock (results/bypass_misfire.md)
+        row = min(scene, key=lambda x: abs(x["t"] - t))
+        e = row["ego"]
+        hd = np.array([np.cos(e["yaw"]), np.sin(e["yaw"])])
+        act = next((x for x in row["actors"] if x["id"] == cid), None)
+        along = float((np.array(act["xyz"][:2]) - np.array(e["xyz"][:2])) @ hd) if act else np.nan
+        out.append(dict(t=round(t, 1), actor=c["type"], along=round(along, 1), ego_v=round(e["v"], 1)))
+    return out
+
+
+def yellow_md(df, A, logged):
+    """vred3: every yellow encounter (the decision lines `k = y` of the runs) with its outcome, false stops and the collisions after stops."""
+    enc, tent, false_stops, colls = [], collections.Counter(), [], []
+    for rid in ROUTES:
+        for sd in SEEDS:
+            r = route_row(run_dir(A, sd, rid), rid)
+            if not r:
+                continue
+            a = Path(r["attempt"])
+            ys = [x for x in jsonl(a / "vlm_decisions.jsonl") if x.get("k") == "y"]
+            ans, st, _ = vlm_rows(a)
+            infr = [e["cross"][0] for e in vr.infraction_events(rid, sd, r) if e["cross"]]
+            eps = r2_episodes(a)
+            for y in ys:
+                if y["ev"] in ("tentative_cancel", "tentative_confirm"):
+                    tent[y["ev"]] += 1
+            for i, y in enumerate(ys):
+                if y["ev"] != "yellow":
+                    continue
+                t = y["t"]
+                nxt = next((z for z in ys[i + 1:] if z["ev"] in ("tentative_cancel", "tentative_confirm", "go_end") and z["t"] - t < 12), None)
+                inf = [x for x in infr if t <= x <= t + 15]
+                ep = next((e for e in eps if e["t0"] - 0.6 <= t <= e["t1"] + 0.1), None)
+                if inf:
+                    outcome = "infraction (red light at t = %.1f)" % inf[0]
+                elif y["decision"] in ("go", "stop_infeasible_go"):
+                    s_ = [x for x in st if x["t"] >= t]
+                    # the front bumper 5.9 m past the junction entrance: from the 's' lines (ego_s, junc_dist at the decision)
+                    ent = None
+                    for x in st:
+                        if x["t"] >= t - 0.3:
+                            ent = x["ego_s"] + x["junc_dist"]
+                            break
+                    tc = next((x["t"] for x in s_ if ent is not None and x["ego_s"] + 3.8394 - ent >= 5.9), None)
+                    g = min(ans, key=lambda d: abs(d["t_q"] - tc))["gt"] if tc is not None and ans else {}
+                    outcome = "cleared before red (tail clear at t = %.1f, light %s)" % (tc, {0: "green", 1: "yellow", 2: "RED"}.get(g.get("tl"), "?")) if tc is not None else "go, never cleared in the log"
+                elif ep is not None and ep["d_stop"] is not None:
+                    outcome = "stopped %s the stop line (%.1f m)" % ("before" if ep["d_stop"] >= 0 else "past", ep["d_stop"])
+                elif nxt is not None and nxt["ev"] == "tentative_cancel":
+                    outcome = "tentative stop cancelled by the second answer"
+                else:
+                    outcome = "no stop episode found"
+                enc.append(dict(route=rid, seed=sd, t=round(t, 1), v=y["v"], d_stop_front=y["d_stop"], d_line=y["d_line"], age=y["age"], remaining=y["remaining"],
+                                stop_need=y["stop_need"], truth="tl %s @ %s m" % (y["truth"].get("tl"), y["truth"].get("tl_dist")), decision=y["decision"],
+                                second_answer=(nxt["ev"].replace("tentative_", "") if nxt and nxt["ev"].startswith("tent") else "-"), outcome=outcome))
+            for e in eps:                                   # R2 stops with no red / yellow truth during the hold: false stops
+                rows = [x for x in jsonl(a / "plans.jsonl") if not x["warm"] and e["t0"] <= x["t"] <= e["t1"]]
+                states = {x.get("ctx", {}).get("tl") for x in rows}
+                if rows and not (states & {1, 2}):
+                    false_stops.append(dict(route=rid, seed=sd, t0=round(e["t0"], 1), hold_s=round(e["t1"] - e["t0"], 1), truth_states=sorted(str(x) for x in states)))
+            for c in collisions_of(r):
+                colls.append(dict(route=rid, seed=sd, **c))
+    D = ["## Yellow encounters (every decision of the rule, `k = y` lines)", "",
+         "`d_stop_front` = front bumper to the stop line, `d_line` = front bumper to the scorer's line (junction entrance), `age` = time since the frame of the last green answer, `remaining` = yellow time "
+         "left after the age and the lag margin, `stop_need` = reaction + comfortable braking distance at the speed; `truth` = the simulator's ego light at the decision (evaluation only). Outcome: "
+         "infraction = an official red-light event within 15 s; cleared = the front bumper 5.9 m past the junction entrance (tail clear) and the light then; stopped = the last standstill of the R2 hold "
+         "against the stop line (+ = short of it).", "",
+         pd.DataFrame(enc).to_markdown(index=False) if enc else "No yellow decision was taken in the batch.", ""]
+    if enc:
+        e_ = pd.DataFrame(enc)
+        D += ["Decisions: %s. Outcomes: %s." % (dict(e_.decision.value_counts()), dict(e_.outcome.str.replace(r" \(.*", "", regex=True).value_counts())), ""]
+    D += ["## Tentative starts, false stops and collisions", "",
+          "Tentative R2 starts at a first non-green answer: confirmed by the second answer %d, cancelled %d. R2 stops whose hold saw no red or yellow truth state (false stops): %d%s." % (
+              tent["tentative_confirm"], tent["tentative_cancel"], len(false_stops), (":\n\n" + pd.DataFrame(false_stops).to_markdown(index=False)) if false_stops else ""), ""]
+    w = {a_: df[(df.arm == a_)] for a_ in (A, "vred2", "jslow", "drive")}
+    D += ["Blocked events / collisions summed over the 38 runs: " + "; ".join("%s %d / %d" % (a_, int(w[a_].vehicle_blocked.sum()), int(w[a_].collisions.sum())) for a_ in w) + ".", "",
+          "Collisions of %s with a vehicle (`along` < 0: the other vehicle was behind the ego at first contact = a rear-end hit on the ego; ego speed in m/s):" % A, "",
+          pd.DataFrame(colls).to_markdown(index=False) if colls else "none", ""]
+    return D
+
+
 def report_vred2():
-    arms = ["drive", "pred", "vred", "vred2"]
+    report_light("vred2")
+
+
+def report_vred3():
+    report_light("vred3")
+
+
+def report_light(A):
+    V3 = A == "vred3"
+    arms = ["drive", "pred", "vred", "vred2"] + (["vred3", "jslow"] if V3 else [])
+    others = ("vred2", "jslow", "vred", "pred") if V3 else ("vred", "pred")
     df = collect(arms)
-    df.to_csv(OUT / "vred2_runs.csv", index=False)
-    ans = pd.concat([vr.answers("vred2", s) for s in SEEDS], ignore_index=True)
-    ans.to_csv(OUT / "vred2_answers.csv", index=False)
+    df.to_csv(OUT / ("%s_runs.csv" % A), index=False)
+    ans = pd.concat([vr.answers(A, s) for s in SEEDS], ignore_index=True)
+    ans.to_csv(OUT / ("%s_answers.csv" % A), index=False)
     ans_v = pd.concat([vr.answers("vred", s) for s in SEEDS], ignore_index=True)
+    ans_2 = pd.concat([vr.answers("vred2", s) for s in SEEDS], ignore_index=True) if V3 else None
     logged = sorted(set(ans.route[(ans.tl != -1) & (ans.tl_dist < 50)]))
     sets = [("all routes", ROUTES), ("logged-light routes", logged), ("no logged light", [r for r in ROUTES if r not in logged])]
     cols = ["DS", "red_light", "vehicle_blocked", "collisions", "v_mean"]
-    P = pair_rows(df, [("vred2", "drive"), ("vred2", "vred"), ("vred2", "pred"), ("vred", "drive")], sets, cols)
-    P.to_csv(OUT / "vred2_paired.csv", index=False)
-    D = ["# vred2: R2 stops short of the traffic light's stop line (zero-shot Qwen3-VL-4B reads the light), closed loop", "",
-         "Diagnostic batch, 19 routes x 2 traffic seeds. Every number is a read, not a confirmation; registered confirmation lines are listed with their value and marked not "
-         "evaluated. `drive`, `pred` and `vred` are the existing runs (not rerun); `vred2` = `vred` with one change: R2's stop target is the stop line of the light that governs "
-         "the ego lane at the next junction on the route (map; the light's state is not read for it), target = bumper-to-line distance - 0.5 m as in `pred`, instead of the "
-         "junction entrance. K, release rule, L = 0.35 s, model, resolution and serving are as in `vred`. Plan: [plans/2026-10-02-pbyp2-vred2.md](../plans/2026-10-02-pbyp2-vred2.md).", ""]
+    P = pair_rows(df, [(A, "drive")] + [(A, b) for b in others] + ([] if V3 else [("vred", "drive")]), sets, cols)
+    P.to_csv(OUT / ("%s_paired.csv" % A), index=False)
+    if V3:
+        D = ["# vred3: vred2 + junction slow-down on the approach + a yellow / commit rule (zero-shot Qwen3-VL-4B reads the light), closed loop", "",
+             "Diagnostic batch, 19 routes x 2 traffic seeds. Every number is a read, not a confirmation; no registered line applies to this arm and the confirmation lines are listed as not evaluated. "
+             "`drive`, `pred`, `jslow`, `vred`, `vred2` are existing runs (not rerun in this arm's batch). `vred3` = `vred2` (R2 stops short of the stop line) + R1 on the approach only "
+             "(cap 4.5 m/s from 25 m before the junction until the front bumper passes the stop line; lifted entirely afterwards and during a committed go) + the yellow decision at the first non-green answer "
+             "after green (comfortable stop, else go if the whole car clears the scorer's line before the red, else hard stop) + the commit rule (no R2 start once the front bumper is past the stop line). "
+             "Parameters, rule and offline basis: [plans/2026-10-02-pbyp2-vred2.md](../plans/2026-10-02-pbyp2-vred2.md) section 11, [vred3_yellow_offline.md](vred3_yellow_offline.md); inputs by source: section 12 of the plan.", ""]
+    else:
+        D = ["# vred2: R2 stops short of the traffic light's stop line (zero-shot Qwen3-VL-4B reads the light), closed loop", "",
+             "Diagnostic batch, 19 routes x 2 traffic seeds. Every number is a read, not a confirmation; registered confirmation lines are listed with their value and marked not "
+             "evaluated. `drive`, `pred` and `vred` are the existing runs (not rerun); `vred2` = `vred` with one change: R2's stop target is the stop line of the light that governs "
+             "the ego lane at the next junction on the route (map; the light's state is not read for it), target = bumper-to-line distance - 0.5 m as in `pred`, instead of the "
+             "junction entrance. K, release rule, L = 0.35 s, model, resolution and serving are as in `vred`. Plan: [plans/2026-10-02-pbyp2-vred2.md](../plans/2026-10-02-pbyp2-vred2.md).", ""]
     D += ["## Arms", "", arm_table(df, arms).to_markdown(), "", "Official infraction counts summed over the runs; DS, RC and mean speed averaged over runs; 38 runs expected per arm.", ""]
     D += ["## Paired differences (mean over routes of the per-route mean over the two seeds; [95% route-cluster CI])", "",
-          "`logged-light routes` = routes on which an ego light was seen within 50 m in the vred2 logs (%s); `no logged light` = the other %d. Counts are per run." % (
-              ", ".join(logged), len(ROUTES) - len(logged)), ""]
+          "`logged-light routes` = routes on which an ego light was seen within 50 m in the %s logs (%s); `no logged light` = the other %d. Counts are per run." % (
+              A, ", ".join(logged), len(ROUTES) - len(logged)), ""]
     D += pair_md(P, cols, ["DS", "red light", "blocked", "collisions", "mean speed m/s"]) + [""]
-    V, B = df[df.arm == "vred2"].set_index(["route", "seed"]), df[df.arm == "drive"].set_index(["route", "seed"])
+    V, B = df[df.arm == A].set_index(["route", "seed"]), df[df.arm == "drive"].set_index(["route", "seed"])
     idx = [i for i in V.index.intersection(B.index) if i[0] not in logged]
     D += ["Harm on routes without a logged light (%d runs): runs with more blocked events than their `drive` pair %d; with more collisions %d." % (
         len(idx), int(sum(V.loc[i, "vehicle_blocked"] > B.loc[i, "vehicle_blocked"] for i in idx)), int(sum(V.loc[i, "collisions"] > B.loc[i, "collisions"] for i in idx))), "",
@@ -528,13 +677,13 @@ def report_vred2():
             cal["load"], cal["p50_ms"], cal["p95_ms"], cal["p99_ms"], cal["n"], "held" if cal["passed"] else "did NOT hold"), ""]
     if cal2:
         D += ["A first calibration at 6 workers per card (3 shadow + 3 pbyp2 workers, `calibration.md`) gave p50 %.0f ms, p95 %.0f ms, p99 %.0f ms (%d requests) and failed the registered line "
-              "(p95 <= 350 ms); concurrency was reduced to the load above before any vred2 unit ran." % (cal2["p50_ms"], cal2["p95_ms"], cal2["p99_ms"], cal2["n"]), ""]
+              "(p95 <= 350 ms); concurrency was reduced to the load above before any vred2 unit ran (vred3 ran at that reduced load as well)." % (cal2["p50_ms"], cal2["p95_ms"], cal2["p99_ms"], cal2["n"]), ""]
     # in-loop reading quality, with and without the hold
     D += ["## In-loop reading quality (answers logged during the runs against the simulator's light state)", "",
           "Ego-green recall is shown for all requests and split by whether R2 was holding the car when the request was made (`while holding`): vred holds the car at the junction "
           "entrance, beyond the stop line; vred2 holds it short of the line, with the light in view. Estimate [95% route-cluster CI]; requests and routes behind each.", "",
           "| readout | arm | all requests | while R2 holds | not holding |", "|:--|:--|:--|:--|:--|"]
-    for arm, an in (("vred", ans_v), ("vred2", ans)):
+    for arm, an in [("vred", ans_v)] + ([("vred2", ans_2)] if V3 else []) + [(A, ans)]:
         a2 = hold_flags(an[an.ok], arm).reset_index(drop=True)
         m = light_masks(a2)
         for lab, key, hit in (("ego red / yellow answered red, 0-50 m", "red", a2.ans == RED), ("ego green answered green, 0-50 m", "green", a2.ans == "green_for_ego")):
@@ -546,23 +695,24 @@ def report_vred2():
             D.append("| %s | %s | %s |" % (lab, arm, " | ".join(cells)))
     D += [""]
     # stops
-    stops = pd.concat([stop_rows(df, a) for a in ("pred", "vred", "vred2")], ignore_index=True)
-    stops.to_csv(OUT / "vred2_stops.csv", index=False)
+    stop_arms = ["pred", "vred", "vred2"] + (["vred3"] if V3 else [])
+    stops = pd.concat([stop_rows(df, a) for a in stop_arms], ignore_index=True)
+    stops.to_csv(OUT / ("%s_stops.csv" % A), index=False)
     D += ["## Stop position at every red-light stop", "",
           "Front bumper to the stop line of the governing light (ctx `tl_dist`, simulator truth, evaluation only) at the last plan step of standstill under the arm's hold (where the car finally stood; a car that starts the route standing under a hold is counted where it stood at the end) "
           "(pred: privileged red stop; vred / vred2: R2). Positive = short of the line. `min` = the smallest distance during the hold (negative = the car crept across the line while holding).", "",
           "| arm | stops | median d_stop | min | max | stopped beyond the line | crept across while holding (min < 0) |", "|:--|--:|--:|--:|--:|--:|--:|"]
-    for a in ("pred", "vred", "vred2"):
+    for a in stop_arms:
         x = stops[stops.arm == a]
         D.append("| %s | %d | %.2f | %.2f | %.2f | %d | %d |" % (a, len(x), x.d_stop.median() if len(x) else np.nan, x.d_stop.min() if len(x) else np.nan,
                                                                x.d_stop.max() if len(x) else np.nan, int((x.d_stop < 0).sum()), int((x.d_min < 0).sum())))
-    D += ["", stops[stops.arm == "vred2"].round(2).to_markdown(index=False), ""]
+    D += ["", stops[stops.arm == A].round(2).to_markdown(index=False), ""]
     # green release, R5
     rel, r5_rows, per_route, infr = [], [], [], []
     for rid in ROUTES:
         row = dict(route=rid, light=("yes" if rid in LIGHT_ROUTES else "") + ("*" if rid in logged else ""))
         for s in SEEDS:
-            r = route_row(run_dir("vred2", s, rid), rid)
+            r = route_row(run_dir(A, s, rid), rid)
             if not r:
                 continue
             a, st, head = vlm_rows(r["attempt"])
@@ -582,13 +732,13 @@ def report_vred2():
         for arm in arms:
             x = df[(df.arm == arm) & (df.route == rid)]
             row.update({"DS_" + arm: round(x.DS.mean(), 1), "red_" + arm: int(x.red_light.sum())})
-        row["blocked_vred2"] = int(df[(df.arm == "vred2") & (df.route == rid)].vehicle_blocked.sum())
+        row["blocked_A"] = int(df[(df.arm == A) & (df.route == rid)].vehicle_blocked.sum())
         row["coll_drive"] = int(df[(df.arm == "drive") & (df.route == rid)].collisions.sum())
-        row["coll_vred2"] = int(df[(df.arm == "vred2") & (df.route == rid)].collisions.sum())
-        row["v_vred2"] = round(df[(df.arm == "vred2") & (df.route == rid)].v_mean.mean(), 2)
+        row["coll_A"] = int(df[(df.arm == A) & (df.route == rid)].collisions.sum())
+        row["v_A"] = round(df[(df.arm == A) & (df.route == rid)].v_mean.mean(), 2)
         per_route.append(row)
     pr = pd.DataFrame(per_route)
-    pr["dDS_vs_drive"] = (pr.DS_vred2 - pr.DS_drive).round(1)
+    pr["dDS_vs_drive"] = (pr["DS_" + A] - pr.DS_drive).round(1)
     rl = pd.DataFrame(rel)
     D += ["## Green after red", ""]
     if len(rl):
@@ -599,8 +749,8 @@ def report_vred2():
               rl.round(1).to_markdown(index=False), ""]
     else:
         D += ["No red-to-green change of the ego light occurred while R2 held the car.", ""]
-    D += ["## R5 fallback", "", "%d episodes in the %d vred2 runs." % (len(r5_rows), len(df[df.arm == "vred2"])) + (("\n\n" + pd.DataFrame(r5_rows).to_markdown(index=False)) if r5_rows else ""), ""]
-    D += ["## Remaining red-light infractions in vred2 (%d)" % len(infr), "",
+    D += ["## R5 fallback", "", "%d episodes in the %d %s runs." % (len(r5_rows), len(df[df.arm == A]), A) + (("\n\n" + pd.DataFrame(r5_rows).to_markdown(index=False)) if r5_rows else ""), ""]
+    D += ["## Remaining red-light infractions in %s (%d)" % (A, len(infr)), "",
           "Crossing time = the tick where the logged ego light, red, passed from distance > 0 to <= 0 from the stop line (ticks.jsonl); the cause label is the machine reading of the logs "
           "(same rules as `vred.md`) and the timelines below are the evidence.", "",
           pd.DataFrame([{k: v for k, v in x.items() if k != "timeline"} for x in infr]).to_markdown(index=False) if infr else "none", ""]
@@ -608,25 +758,26 @@ def report_vred2():
         if x["timeline"]:
             D += ["", "Route %s seed %s, stop line at t = %s s (%s), rolling on red at t = %s s: %s" % (x["route"], x["seed"], x["t_line"], x["state_at_line"], x["t_red_rolling"], x["cause"]), "",
                   pd.DataFrame(x["timeline"]).to_markdown(index=False)]
-    D += ["", "## Per route (DS and red-light counts: means / sums over the two seeds; light: yes = scenario set, * = ego light seen in the vred2 logs)", "",
-          pr[["route", "light", "DS_drive", "DS_vred", "DS_vred2", "dDS_vs_drive", "DS_pred", "red_drive", "red_vred", "red_vred2", "red_pred", "R2_stops_s0", "R2_stops_s1",
-              "blocked_vred2", "coll_drive", "coll_vred2", "v_vred2"]].to_markdown(index=False), ""]
+    D += ["", "## Per route (DS and red-light counts: means / sums over the two seeds; light: yes = scenario set, * = ego light seen in the %s logs; `_A` columns are %s)" % (A, A), "",
+          pr[["route", "light"] + ["DS_" + a for a in arms] + ["dDS_vs_drive"] + ["red_" + a for a in arms] + ["R2_stops_s0", "R2_stops_s1", "blocked_A", "coll_drive", "coll_A", "v_A"]].to_markdown(index=False), ""]
     pv = lambda a, b, rs, c: paired(df, a, b, rs, c)  # noqa: E731
     non = [r for r in ROUTES if r not in logged]
-    r_ds, r_nl = pv("vred2", "drive", non, "DS"), pv("vred2", "drive", logged, "DS")
-    D += ["## Registered lines (plan 4.3), vred2", "", "| line | read | status |", "|:--|:--|:--|",
+    r_ds, r_nl = pv(A, "drive", non, "DS"), pv(A, "drive", logged, "DS")
+    if V3:
+        D += yellow_md(df, A, logged)
+    D += ["## Registered lines (plan 4.3), %s" % A, "", "| line | read | status |", "|:--|:--|:--|",
           "| harmless on routes without a light: DS CI lower bound >= -5, no new blocked, no new collision | DS %s; blocked %+d, collisions %+d | not evaluated at this size (%d routes < 30) |" % (
               fmt(r_ds), r_ds["d_vehicle_blocked"], r_ds["d_collisions"], r_ds["groups"]),
           "| useful on routes with a light: red-light infractions fall, DS CI lower bound > 0 | DS %s; red light %+d runs | not evaluated at this size (%d routes < 30) |" % (
               fmt(r_nl), r_nl["d_red_light"], r_nl["groups"]), ""]
-    figure_vred2(P, stops, ans, OUT / "vred2_paired.png", OUT / "vred2_stop_position.png", OUT / "vred2_latency.png")
-    D += ["![paired differences](vred2_paired.png)", "", "Figure: paired differences for vred2 - drive, vred2 - vred and vred2 - pred per route set (dot: mean over routes, bar: 95% route-cluster CI), DS on the "
-          "left and red-light infractions per run on the right. Look at whether vred2 moved against vred and whether any bar clears zero.", "",
-          "![stop position](vred2_stop_position.png)", "", "Figure: distance of the front bumper to the stop line at standstill for every red-light stop of pred, vred and vred2 (dots; ticks below the "
-          "dots: the smallest distance during the hold). Look at which side of the zero line the dots sit: vred sat beyond it, vred2 should sit just short of it, like pred.", "",
-          "![in-batch latency](vred2_latency.png)", "", "Figure: cumulative distribution of the in-batch answer latency with L = 0.35 s and the TTL. Look at how much of the curve lies right of L."]
-    (OUT / "vred2.md").write_text("\n".join(D) + "\n")
-    write_json(OUT / "vred2_summary.json", dict(arms=arm_table(df, arms).reset_index().to_dict("records"), logged=logged))
+    figure_vred2(P, stops, ans, OUT / ("%s_paired.png" % A), OUT / ("%s_stop_position.png" % A), OUT / ("%s_latency.png" % A), A, others)
+    D += ["![paired differences](%s_paired.png)" % A, "", "Figure: paired differences for %s against %s per route set (dot: mean over routes, bar: 95%% route-cluster CI), DS on the "
+          "left and red-light infractions per run on the right. Look at whether %s moved against the previous arms and whether any bar clears zero." % (A, ", ".join(("drive",) + others), A), "",
+          "![stop position](%s_stop_position.png)" % A, "", "Figure: distance of the front bumper to the stop line at standstill for every red-light stop (dots; ticks below the "
+          "dots: the smallest distance during the hold). Look at which side of the zero line the dots sit: vred sat beyond it, the stop-line arms should sit just short of it, like pred.", "",
+          "![in-batch latency](%s_latency.png)" % A, "", "Figure: cumulative distribution of the in-batch answer latency with L = 0.35 s and the TTL. Look at how much of the curve lies right of L."]
+    (OUT / ("%s.md" % A)).write_text("\n".join(D) + "\n")
+    write_json(OUT / ("%s_summary.json" % A), dict(arms=arm_table(df, arms).reset_index().to_dict("records"), logged=logged))
 
 
 def report(_):
@@ -635,11 +786,16 @@ def report(_):
     report_vred2()
 
 
+def report3(_):
+    OUT.mkdir(parents=True, exist_ok=True)
+    report_vred3()
+
+
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["calibrate", "calibrate3", "few-pbyp2", "few-vred2", "report", "pbyp2", "vred2"])
+    ap.add_argument("cmd", choices=["calibrate", "calibrate3", "few-pbyp2", "few-vred2", "few-vred3", "report", "report3", "pbyp2", "vred2", "vred3"])
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
-    {"calibrate": calibrate, "calibrate3": calibrate3, "few-pbyp2": few_pbyp2, "few-vred2": few_vred2, "report": report,
-     "pbyp2": lambda _: report_pbyp2(), "vred2": lambda _: report_vred2()}[a.cmd](a)
+    {"calibrate": calibrate, "calibrate3": calibrate3, "few-pbyp2": few_pbyp2, "few-vred2": few_vred2, "few-vred3": few_vred3, "report": report, "report3": report3,
+     "pbyp2": lambda _: report_pbyp2(), "vred2": lambda _: report_vred2(), "vred3": lambda _: report_vred3()}[a.cmd](a)

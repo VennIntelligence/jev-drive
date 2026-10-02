@@ -20,6 +20,7 @@ Kinds (staged launch on debug routes, plan "staged launch checklist"):
   pbyp2      pbyp2 batch units: no activation on a blocker outside the route; no activation before the ego first moves on a
              route without a scenario obstacle
   pbyp2dbg   `bypass` checks of pbyp2 on a debug obstacle route plus the two of `pbyp2`
+  red_stop3  vred3: the red_stop2 checks, R1 active on the approach and off once the front bumper is past the stop line
   red_stop2  vred2: R2 stops with the car still short of the light's stop line (0 <= distance <= 3.5 m at standstill), the stop
              target of the log is the stop line, and a roll-off after the release
 """
@@ -153,12 +154,17 @@ def route_checks(a, kind=""):
         scene = jsonl(Path(a) / "privileged.jsonl")
         out.update(n_gap_hold=sum(bool(r["pc"].get("gap_hold")) for r in scene),
                    n_red_memory=sum(r["pc"].get("suppressed") == "red_memory" for r in scene))
-    if kind == "red_stop2":
+    if kind in ("red_stop2", "red_stop3"):
         eps = [e for e in r2_episodes(a) if e["d_stop"] is not None]
         c["stopped_short_of_line"] = bool(eps) and all(0.0 <= e["d_stop"] <= 3.5 for e in eps)
         c["target_is_stopline"] = bool(eps) and all(e["src"] == "stopline" for e in eps)
         c["rolls_after_release"] = bool(eps) and any(r["t"] > eps[0]["t1"] and "R2" not in r.get("rules", []) and r["v"] > 1.0 for r in st)
         out.update(n_r2_stops=len(eps), d_stop=eps[0]["d_stop"] if eps else np.nan)
+        if kind == "red_stop3":
+            c["r1_on_approach"] = any("R1" in r.get("rules", []) for r in st)
+            c["r1_off_past_stop_line"] = not any("R1" in r.get("rules", []) and r.get("d_stop") is not None and r["d_stop"] <= 0.0 for r in st)
+            ev = [r for r in jsonl(Path(a) / "vlm_decisions.jsonl") if r.get("k") == "y"]
+            out.update(n_yellow_events=sum(r.get("ev") == "yellow" for r in ev), n_go=sum(r.get("decision", "").endswith("go") or r.get("decision") == "go" for r in ev))
     if kind in ("bypass", "pbyp", "pbyp2dbg"):
         scene = jsonl(Path(a) / "privileged.jsonl")
         on = [r for r in scene if r["pc"].get("bypass")]

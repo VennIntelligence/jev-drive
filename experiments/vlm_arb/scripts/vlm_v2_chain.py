@@ -16,6 +16,8 @@ Stages (docs/long-runs.md: 1 unit -> a few -> all):
         stop-line target on the debug red-light route 334, `red_stop2`).
   v     (after `all` stopped at the failed calibration, plan section 9) `cal3-s1-q0..q2` alone at 3 workers per card -> `calibrate3` (gates/v2_cal3.json),
         `vred2-s0-q0..q2`, `few-vred2`, `vred2-s1-q0..q2`, `report`; run with --workers-per-card 3 after the pbyp2 units are done
+  v3dbg (plan section 11) `dbg-vred3-s0-334`, `dbg-vred3-s0-27787`: vred3 on two debug light routes; stages can be combined: `--arg stage=ng,v3dbg`
+  v3    `vred3-s0-q0..q2` (3 workers per card, alone on the box), `few-vred3`, `vred3-s1-q0..q2`, `report3`
   ng    (plan section 10, after stage `v`) `pbyp2ng-s<seed>-{a,b,c}`: pbyp2 without any gap check on the four obstacle routes x 2 seeds, then `report2`
   all   4  `cal2-s1-q0..q2` (shadow `drive`, Qwen servers) and `pbyp2-s0-q0..q2` at the same time (6 workers per card): `calibrate`
            reads the in-loop latency and passes only with p95 <= L = 0.35 s; `few-pbyp2` checks the pbyp2 seed-0 units
@@ -99,12 +101,33 @@ def ng_jobs():
     return units + [tool("report2", "report", deps=[j.name for j in units], prio=9)]
 
 
+def v3_env():
+    return dict(vc.qwen_env(L_REGISTERED), **STOPLINE, VLM_ROWS="R1,R2,R5")
+
+
+def v3dbg_jobs():
+    """Stage `v3dbg` (plan section 11): vred3 on two debug light routes (outside the 19), real VLM."""
+    return [base.unit("dbg-vred3", 0, "334", ["334"], v3_env(), "red_stop3", 0, base="vred3"),
+            base.unit("dbg-vred3", 0, "27787", ["27787"], v3_env(), "", 0, base="vred3")]
+
+
+def v3_jobs():
+    """Stage `v3`: the vred3 batch at the vred batch's own load (3 workers per card, alone on the box), gate, second seed, report."""
+    sh = vc.shards()
+    dbg = v3dbg_jobs()
+    v0 = [base.unit("vred3", 0, k, sh[k], v3_env(), "", 4, deps=[j.name for j in dbg], base="vred3") for k in SHARDS]
+    few = tool("few-vred3", "few-vred3", deps=[j.name for j in v0], prio=4, ok=passed("v2_few_vred3"))
+    v1 = [base.unit("vred3", 1, k, sh[k], v3_env(), "", 5, deps=[few.name], base="vred3") for k in SHARDS]
+    return dbg + v0 + [few] + v1 + [tool("report3", "report3", deps=[j.name for j in v1], prio=9)]
+
+
+STAGES = {"pre": lambda: pre_jobs(), "v": vred2_jobs, "ng": ng_jobs, "v3dbg": v3dbg_jobs, "v3": v3_jobs}
+
+
 def jobs(args):
     stage = args.get("stage", "pre")
-    if stage == "v":
-        return vred2_jobs()
-    if stage == "ng":
-        return ng_jobs()
+    if stage in ("v", "ng") or "," in stage or stage.startswith("v3"):
+        return [j for st in stage.split(",") for j in STAGES[st]()]
     RUN.mkdir(parents=True, exist_ok=True)
     pre = pre_jobs()
     if stage == "pre":

@@ -104,7 +104,7 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
         dbaseslow|dbaseslow[0-9]|dslow) arb="{\"mode\": \"drive\", \"lat\": \"op\", \"lat_exec\": \"${LAT_EXEC:-curv}\", \"lon\": \"op\", \"hold\": \"intent\", \"release\": \"planx\", \"release_th\": 2.0, \"release_s\": 1.0, \"latch_max_s\": ${RESUME_S:-5}, \"coast_v\": 2.5, \"cruise_by_route\": ${CRUISE_BY_ROUTE:-{}}${DRIVE_ARGS:+, $DRIVE_ARGS}}" ;;
         latp7|latk) arb="{\"mode\": \"drive\", \"lat\": \"op\", \"lat_exec\": \"$([[ $arm == latk ]] && echo curv || echo p7)\", \"lon\": \"base\", \"coast_v\": 2.5}" ;;
         # op-adapt L and vlm_arb arms: drive, jslow, vred, vbyp, vall
-        drive|pjunc|pbyp|pbypgap|pbyp2|pbyp2ng|pred|pall|jslow|vred|vbyp|vall|dlon|dnod|dtz|lmain*|lnoint*|ldw10*|lkd*|ltz*) arb="{\"mode\": \"drive\", \"lat\": \"$([[ $arm == dlon ]] && echo route || echo op)\", \"lat_exec\": \"${LAT_EXEC:-curv}\",
+        drive|pjunc|pbyp|pbypgap|pbyp2|pbyp2ng|pred|pall|jslow|vred|vred3|vbyp|vall|dlon|dnod|dtz|lmain*|lnoint*|ldw10*|lkd*|ltz*) arb="{\"mode\": \"drive\", \"lat\": \"$([[ $arm == dlon ]] && echo route || echo op)\", \"lat_exec\": \"${LAT_EXEC:-curv}\",
  \"lon\": \"op\", \"hold\": \"intent\", \"release\": \"planx\", \"release_th\": 2.0, \"release_s\": 1.0,
  \"latch_max_s\": ${RESUME_S:-5}, \"coast_v\": 2.5${DRIVE_ARGS:+, $DRIVE_ARGS}}" ;;
         # R3a (fc65452:todos/2026-09-29-op-drive.md): drive + privileged traffic-light stop; a stop latch is released only by plan / lead away from a red light, or at green
