@@ -222,19 +222,23 @@ def replay(frames, oof, tap, hp):
         g = g[g.m_cls & g.gate.notna()].sort_values("t")
         if g.empty:
             continue
+        b = (g.v.fillna(0.0) ** 2 / (2 * A_BRAKE)).to_numpy()
+        d0 = g.d_stop.dropna()
         for rule, sig in (("U", g.hi), ("L", g.lo), ("R", g.route_est)):
-            for m in MARGINS:
-                hit = (sig <= m) & ((g.gate > 0) if rule != "R" else True)
-                d0 = g.d_stop.dropna()
-                r = dict(key=key, id=g.id.iloc[0], src=g.src.iloc[0], rule=rule, margin=m, d0=float(d0.iloc[0]) if len(d0) else np.nan)
-                if hit.any():
-                    h = g[hit].iloc[0]
-                    v = 0.0 if np.isnan(h.v) else h.v
-                    brk = v * v / (2 * A_BRAKE)
-                    r.update(fired=True, d_stop=h.d_stop, d_junc=h.d_junc, v=v, x_line=h.d_stop - brk, x_entr=h.d_junc - brk, t_fire=h.t)
-                else:
-                    r.update(fired=False)
-                rows.append(r)
+            for speed_aware in (False, True):
+                for m in MARGINS:
+                    thr = m + (b if speed_aware else 0.0)
+                    hit = (sig.to_numpy() <= thr) & ((g.gate > 0).to_numpy() if rule != "R" else True)
+                    r = dict(key=key, id=g.id.iloc[0], src=g.src.iloc[0], rule=rule + ("'" if speed_aware else ""), margin=m,
+                             d0=float(d0.iloc[0]) if len(d0) else np.nan)
+                    if hit.any():
+                        h = g[hit].iloc[0]
+                        v = 0.0 if np.isnan(h.v) else h.v
+                        brk = v * v / (2 * A_BRAKE)
+                        r.update(fired=True, d_stop=h.d_stop, d_junc=h.d_junc, v=v, x_line=h.d_stop - brk, x_entr=h.d_junc - brk, t_fire=h.t)
+                    else:
+                        r.update(fired=False)
+                    rows.append(r)
     res = pd.DataFrame(rows)
     # false fires: approaches without a light line within 40 m (junctions without a light, far frames of light routes)
     neg = f[f.m_cls & ~f.m_stop & f.gate.notna()]
@@ -261,7 +265,7 @@ def replay_summary(res):
         n, fired = len(g), g[g.fired.astype(bool)]
         q = lambda c: [float(x) for x in np.quantile(fired[c], [0, 0.1, 0.5, 0.9, 1])] if len(fired) else [np.nan] * 5  # noqa: E731
         qx, qe = q("x_line"), q("x_entr")
-        rows.append(dict(set=src, rule=f"{g.rule.iloc[0]}({m:g})", attempts=n, routes=g.id.nunique(), fired=len(fired) / n,
+        rows.append(dict(set=src, rule=f"{rule}({m:g})", attempts=n, routes=g.id.nunique(), fired=len(fired) / n,
                          x_line_min=qx[0], x_line_p10=qx[1], x_line_med=qx[2], x_line_p90=qx[3], x_line_max=qx[4],
                          past_line=float((fired.x_line < 0).mean()) if len(fired) else np.nan,
                          short_gt3=float((fired.x_line > 3).mean()) if len(fired) else np.nan,
@@ -321,10 +325,11 @@ def figures(out_dir, reg, rel, iv, res, taps, primary):
     ax[1].set_title("Interval coverage by true distance")
     ax[1].legend()
     sub = res[(res.fired.astype(bool)) & (res.margin == 4.0)]
-    for rule, c in (("U", "#1f77b4"), ("L", "#2ca02c"), ("R", "#d62728")):
+    for rule, c in (("U'", "#1f77b4"), ("L'", "#2ca02c"), ("R'", "#d62728")):
         x = sub[sub.rule == rule].x_line
+        n_all = int((res[(res.margin == 4.0) & (res.rule == rule)].shape[0]))
         if len(x):
-            ax[2].hist(x.clip(-8, 20), bins=np.arange(-8, 21, 1.0), alpha=0.45, color=c, label=f"{rule}(4 m), n={len(x)}")
+            ax[2].hist(x.clip(-8, 20), bins=np.arange(-8, 21, 1.0), alpha=0.45, color=c, label=f"{rule}(4 m): fired {len(x)} of {n_all}")
     ax[2].axvline(0, color="k")
     ax[2].set_xlabel("implied stop point relative to the stop line (m; < 0 is past the line)")
     ax[2].set_title("Stopping rules replayed, held-out approaches")
