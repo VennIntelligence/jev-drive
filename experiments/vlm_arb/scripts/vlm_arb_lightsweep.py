@@ -335,6 +335,14 @@ def in_view_27043(df):
         for k, g in t.groupby("answer")])
 
 
+def lamp_check(df, n=60):
+    """Does the lamp heuristic see green lamps at all? Ego green within 50 m on the other routes, n frames evenly spaced."""
+    g = df[(df.route != "27043") & (df.tl == 0) & (df.tl_dist < 50)].sort_values("id")
+    g = g.loc[spaced(g, n)] if len(g) else g
+    w, r = [lamps(x)["green"] > 0 for x in g.wide], [lamps(x)["green"] > 0 for x in g.road]
+    return "Detector check on %d ego-green frames within 50 m of the other routes: a green lamp is found in the wide frame of %d, in the road frame of %d." % (len(g), sum(w), sum(r))
+
+
 def junctions(df):
     """Per route and ego light: light actors within 60 m, how many are green at once, the ego light's distance rank."""
     rows = []
@@ -397,7 +405,7 @@ def cmd_report():
     L += ["", "## Route 27043, ego red within 50 m: what is lit in the frame, by the logged answer", "",
           "Lamps = blobs of very bright saturated pixels in the upper 55% of the frame, named by hue (red < 20 or >= 330 "
           "deg, amber < 70, green < 190). A heuristic: it also picks up tail lights and signs and does not know which head "
-          "serves which approach.", "", v.to_markdown(index=False) if len(v) else "no frames",
+          "serves which approach.", "", v.to_markdown(index=False) if len(v) else "no frames", "", lamp_check(df),
           "", "## Junction structure on these routes (truth labels, every answered request with an ego light)", "",
           "Rank 1 = the ego light is the nearest light actor; a higher rank = it is mounted beyond other approaches' lights, "
           "on the far side.", "", j.to_markdown(index=False) if len(j) else "no frames",
