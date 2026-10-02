@@ -363,6 +363,40 @@ def figures(out_dir, reg, rel, iv, res, taps, primary):
     plt.close(fig)
 
 
+def fig_native(out_dir):
+    """Native plan speed ratio and brake-press probability against the distance, by approach group (medians over routes, logged 20 Hz heads)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    out_dir = Path(out_dir)
+    t = pd.read_csv(out_dir / "native_by_distance.csv")
+    r = pd.read_csv(out_dir / "native_red_vs_green.csv")
+    mid = {"[-2, 0)": -1, "[0, 5)": 2.5, "[5, 10)": 7.5, "[10, 15)": 12.5, "[15, 20)": 17.5, "[20, 30)": 25, "[30, 40)": 35}
+    fig, ax = plt.subplots(1, 3, figsize=(15, 4.2), constrained_layout=True)
+    col = {"red/yellow": "#d62728", "green": "#2ca02c", "no light": "#7f7f7f"}
+    for a, m, lab in ((ax[0], "ratio3", "plan speed at 3 s / current speed"), (ax[1], "brk0", "brake-press probability now (meta head)")):
+        for g, c in col.items():
+            d = t[t.group == g]
+            a.plot([mid[b] for b in d.bin], d[m], marker="o", color=c, label=f"{g} ({'junction' if g == 'no light' else 'stop line'} distance)")
+        a.set_xlabel("true distance of the bumper (m)")
+        a.set_ylabel(lab)
+        a.grid(alpha=0.3)
+    ax[0].legend(fontsize=8)
+    ax[0].set_title("Plan speed: slows towards every junction")
+    ax[1].set_title("Brake-press head: higher before red lights")
+    d = r[(r.subset == "no lead detected (lead prob < 0.2)") & r.metric.isin(["brk0", "ratio3", "v", "lead_p"])]
+    for m, mk in (("brk0", "o"), ("ratio3", "s"), ("v", "^")):
+        dd = d[d.metric == m].assign(x=lambda z: z.bin.map({"0-5 m": 0, "5-10 m": 1, "10-20 m": 2, "20-40 m": 3})).sort_values("x")
+        ax[2].plot(dd.x, dd.auc_high_red, marker=mk, label={"brk0": "brake-press", "ratio3": "plan speed ratio", "v": "ego speed (control)"}[m])
+    ax[2].axhline(0.5, color="k", ls=":")
+    ax[2].set_xticks(range(4), ["0-5 m", "5-10 m", "10-20 m", "20-40 m"])
+    ax[2].set_ylabel("AUC, red/yellow vs green at the same distance")
+    ax[2].set_title("Light state, frames without a detected lead")
+    ax[2].legend(fontsize=8)
+    fig.savefig(out_dir / "stoppos_native.png", dpi=130)
+    plt.close(fig)
+
+
 def md(df, f=".2f"):
     return df.to_markdown(index=False, floatfmt=f)
 
@@ -437,6 +471,8 @@ def main(a):
                 auc_rows.append(dict(task=task, tap=tap, auc_lo=lo, auc_hi=hi, auc_minus_clockgbm=dd, diff_lo=dlo, diff_hi=dhi))
     pd.DataFrame(auc_rows).to_csv(out / "clf_auc_ci.csv", index=False)
     figures(out, reg, rel, iv, res, taps, primary)
+    if (out / "native_by_distance.csv").exists():
+        fig_native(out)
     print("primary tap", primary)
 
 
