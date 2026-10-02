@@ -212,14 +212,25 @@ def main():
         R = dict(plan_pos=np.full((n, V, 33, 3), np.nan, np.float32), plan_yaw=np.full((n, V, 33), np.nan, np.float32),
                  hidden=np.zeros((n, V, nH), np.float16), in_diff=np.full((n, V), np.nan, np.float32),
                  pulses=np.full((n, V), -1, np.int16))
+        start = 0
+        part = out / f"{tag}.part.npz"
+        if part.exists():                 # resume: the part file holds a prefix of this shard's (fixed) order
+            with np.load(part) as f:
+                ids = f["ids"].tolist()
+                assert ids == [s["id"] for s in S[: len(ids)]], "part file does not match the shard order"
+                for k in R:
+                    R[k][: len(ids)] = f[k]
+            start = len(ids)
+            run.info(f"resuming after {start} samples from {part.name}")
+        S_todo = S[start:]
         nav = NavFrames() if a.domain == "nav" else None
         if nav is None:
             from drive_backbones_openpilot import bounded_map
-            src = bounded_map(ex, render_sample, S, 2 * a.workers)
+            src = bounded_map(ex, render_sample, S_todo, 2 * a.workers)
         else:
-            src = iter([None] * n)
+            src = iter([None] * len(S_todo))
         t0, steps, tm = time.time(), 0, {"hist": 0.0, "model": 0.0}
-        for i, (s, frames) in enumerate(zip(S, run.tqdm(src, total=n, desc=tag))):
+        for i, (s, frames) in enumerate(zip(S_todo, run.tqdm(src, total=len(S_todo), desc=tag)), start):
             cam = np.asarray(s["cam"], float)
             if nav is not None:
                 base, base_t = nav.steps(s["row"])
@@ -253,7 +264,7 @@ def main():
                          **{k: v[: i + 1] for k, v in R.items()})
                 os.replace(out / f"{tag}.part.tmp.npz", out / f"{tag}.part.npz")
             if i == 0 or (i + 1) % 25 == 0:
-                run.info(f"[{i + 1}/{n}] {(time.time() - t0) / (i + 1):.2f} s/sample, {steps / (time.time() - t0):.0f} steps/s, " + ", ".join(f"{k} {v / (i + 1):.2f} s" for k, v in tm.items()))
+                run.info(f"[{i + 1}/{n}] {(time.time() - t0) / (i + 1 - start):.2f} s/sample, {steps / (time.time() - t0):.0f} steps/s, " + ", ".join(f"{k} {v / (i + 1 - start):.2f} s" for k, v in tm.items()))
         if nav is None:
             ex.shutdown()
         np.savez(out / f"{tag}.tmp.npz", ids=np.array([s["id"] for s in S]), variants=np.array(VARIANTS), **R)
