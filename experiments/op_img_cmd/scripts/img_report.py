@@ -159,7 +159,8 @@ def main():
     ap.add_argument("--out", default="", help="default $DATA_DIR/runs/op_img_cmd/report (copied into results/ on the Mac)")
     a = ap.parse_args()
     root = data_dir() / "runs" / "op_img_cmd"
-    G = {s["token"]: s for s in pickle.load(open(root / "geom" / f"{a.domain}.pkl", "rb"))}
+    gp = root / "geom" / "nav.pkl" if a.domain == "nav" else root / "carla" / "carla.pkl"
+    G = {s["token"]: s for s in pickle.load(open(gp, "rb"))}
     raw = {}
     for f in sorted(x for g in a.glob for x in glob.glob(str(root / "raw" / a.domain / g))):
         R = np.load(f)

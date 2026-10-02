@@ -9,7 +9,8 @@ EgoTrack), so the overlay stays fixed on the road across the history.
 Output $DATA_DIR/runs/op_img_cmd/raw/nav/<tag>.npz: one row per run: token, fam, cmd, plan_pos (33, 3) / plan_yaw (33)
 converted to the t0 rear-axle frame (x fwd, y left, yaw ccw), plan_v (33) forward speed, hidden (512) fp16.
 
-  CUDA_VISIBLE_DEVICES=1 $DATA_DIR/envs/openpilot/bin/python experiments/op_img_cmd/scripts/img_run.py --shard 0/1 [--limit 10]
+  CUDA_VISIBLE_DEVICES=1 $DATA_DIR/envs/openpilot/bin/python experiments/op_img_cmd/scripts/img_run.py [--domain carla] --shard 0/1 [--limit 10]
+carla: samples from $DATA_DIR/runs/op_img_cmd/carla/carla.pkl (img_carla_*.py), 5 Hz recorded stream held on the 20 Hz clock.
 """
 import argparse, json, os, pickle, sys, time
 from concurrent.futures import ProcessPoolExecutor
@@ -42,33 +43,52 @@ def variants(s, fams=None):
 _W = {}
 
 
-def _init():
-    from cc_run import NavFrames
-    _W["nav"] = NavFrames()
-    _W["meta"] = json.loads((data_dir() / "runs" / "op_lb" / "lb_navtrain" / "meta.json").read_text())
+def _init(domain="nav"):
+    _W["domain"] = domain
+    if domain == "nav":
+        from cc_run import NavFrames
+        _W["nav"] = NavFrames()
+        _W["meta"] = json.loads((data_dir() / "runs" / "op_lb" / "lb_navtrain" / "meta.json").read_text())
+
+
+def source_frames(s):
+    """(distinct source frames with their t0-frame ego poses, step -> frame index, camera) of one sample.
+    nav: op_lb's 31-step schedule over keys + GIMM frames (poses: logged keys, EgoTrack between them);
+    carla: the recorded 5 Hz stream (s["frames"] npz, s["pose"] per frame), each frame held on the 20 Hz clock over 1.5 s
+    (op_common_cause stream_steps)."""
+    if _W["domain"] == "nav":
+        nav, mt = _W["nav"], _W["meta"]
+        r = s["row"]
+        fr, src_t = nav.steps(r)
+        cam = np.asarray(mt["cam"][r], float)
+        tr = I.track_navsim(mt["pose"][r], mt["vel"][r])
+        uniq, idx = {}, []
+        for f, t in zip(fr, src_t):
+            idx.append(uniq.setdefault(float(t), (len(uniq), f, t))[0])      # one source frame per source time
+        base = sorted(uniq.values(), key=lambda z: z[0])
+        poses = []
+        for _, _, t in base:
+            kk = np.flatnonzero(np.isclose(I.T_KEY, t))
+            poses.append(np.asarray(mt["pose"][r][kk[0]], float) if len(kk) else tr(t))
+        return [f for _, f, _ in base], poses, np.array(idx), cam
+    from cc_run import step_times
+    with np.load(s["frames"]) as z:
+        frames = z[z.files[0]] if len(z.files) == 1 else z["frames"]
+    ts = step_times(1.5)
+    tau = -0.2 * np.arange(len(frames) - 1, -1, -1)
+    idx = np.searchsorted(tau, ts + 1e-6, side="right") - 1
+    assert (idx >= 0).all(), "stream shorter than 1.5 s"
+    return list(frames), [np.asarray(p, float) for p in s["pose"]], idx, np.asarray(s["cam"], float)
 
 
 def render(s, fams=None):
-    """All variants of one sample: {(fam, cmd): (frames (k, 2, 6, 128, 256), step -> frame index (31,))}."""
-    nav, mt = _W["nav"], _W["meta"]
-    r = s["row"]
-    fr, src_t = nav.steps(r)
-    cam = np.asarray(mt["cam"][r], float)
-    tr = I.track_navsim(mt["pose"][r], mt["vel"][r])
-    uniq, idx = {}, []
-    for f, t in zip(fr, src_t):
-        k = uniq.setdefault(float(t), (len(uniq), f, t))[0]      # one source frame per source time
-        idx.append(k)
-    base = sorted(uniq.values(), key=lambda z: z[0])
-    poses = []
-    for _, _, t in base:
-        kk = np.flatnonzero(np.isclose(I.T_KEY, t))
-        poses.append(np.asarray(mt["pose"][r][kk[0]], float) if len(kk) else tr(t))
+    """All variants of one sample: {(fam, cmd): frames (k, 2, 6, 128, 256)}, step -> frame index (31,)."""
+    base, poses, idx, cam = source_frames(s)
     out = {}
     for fam, c in variants(s, fams):
         lay = O.primitives(s, fam, c or None)
-        out[(fam, c)] = np.stack([O.draw(f, lay, p, cam) for (_, f, _), p in zip(base, poses)])
-    return s["token"], out, np.array(idx)
+        out[(fam, c)] = np.stack([O.draw(f, lay, p, cam) for f, p in zip(base, poses)])
+    return s["token"], out, idx
 
 
 def to_rear(pp, py, cam):
@@ -82,6 +102,7 @@ def to_rear(pp, py, cam):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--domain", default="nav", choices=("nav", "carla"))
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=12)
@@ -94,16 +115,18 @@ def main():
     from jevdrive.openpilot.model import OPModel, decode
     from jevdrive.run import Run
     import op_lb as B
-    G = [s for s in pickle.load(open(ROOT / "geom" / "nav.pkl", "rb")) if O.valid(s) and a.kind in ("all", s["kind"])]
+    gp = ROOT / "geom" / "nav.pkl" if a.domain == "nav" else ROOT / "carla" / "carla.pkl"
+    G = [s for s in pickle.load(open(gp, "rb")) if O.valid(s) and a.kind in ("all", s["kind"])]
     G = [G[k] for k in np.random.default_rng(0).permutation(len(G))][si::sn][: a.limit or None]
     mt = json.loads((data_dir() / "runs" / "op_lb" / "lb_navtrain" / "meta.json").read_text())
-    out = ROOT / "raw" / "nav"
+    out = ROOT / "raw" / a.domain
     out.mkdir(parents=True, exist_ok=True)
-    tag = f"nav-{a.kind}-{si}of{sn}" + (f"-lim{a.limit}" if a.limit else "") + (f"-{'+'.join(a.fams)}" if a.fams else "")
+    tag = f"{a.domain}-{a.kind}-{si}of{sn}" + (f"-lim{a.limit}" if a.limit else "") + (f"-{'+'.join(a.fams)}" if a.fams else "")
     fams = None if not a.fams else set(a.fams) | {"none"}
     with Run("op_img_cmd", tag, config=vars(a)) as run:
-        run.use_split(splits.load("navsim/navtrain"))
-        ex = ProcessPoolExecutor(a.workers, initializer=_init)        # fork before the TensorRT session exists
+        if a.domain == "nav":
+            run.use_split(splits.load("navsim/navtrain"))
+        ex = ProcessPoolExecutor(a.workers, initializer=_init, initargs=(a.domain,))        # fork before the TensorRT session exists
         list(ex.map(int, range(a.workers)))
         m = OPModel("cinque", B.BACKENDS["cinque"], cache=data_dir() / "runs" / "op_interp" / "trt_cache" / f"cinque-{B.BACKENDS['cinque']}",
                     context_rate=False)
@@ -113,8 +136,8 @@ def main():
         for i, (tok, var, idx) in enumerate(run.tqdm(bounded_map(ex, partial(render, fams=fams), G, 2 * a.workers), total=len(G), desc=tag)):
             s = G[i]
             assert s["token"] == tok
-            tc = (0, 1) if mt["lht"][s["row"]] else (1, 0)
-            cam = mt["cam"][s["row"]]
+            tc = ((0, 1) if mt["lht"][s["row"]] else (1, 0)) if a.domain == "nav" else (1, 0)
+            cam = mt["cam"][s["row"]] if a.domain == "nav" else s["cam"]
             for (fam, c), frames in var.items():
                 m.reset()
                 for k in idx:
