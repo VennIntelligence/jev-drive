@@ -1,7 +1,7 @@
 # op_common_cause: is openpilot's low-speed failure one cause?
 
 status: live
-decisions: -
+decisions: 92, 93
 index: Plan follows fake history yaw, 3-7x more at low speed, real and CARLA alike
 
 **Question.** Is Cinque's plan unreliable at (low speed) x (short / abnormal history) x (no command), with the same sign
