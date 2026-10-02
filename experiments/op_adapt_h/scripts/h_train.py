@@ -31,7 +31,7 @@ from experiments.op_adapt_h.lib import op_adapt_h as H  # noqa: E402
 from drive_backbones_openpilot import bounded_map  # noqa: E402  (ex.map would queue every job and buffer every result)
 
 ARMS = {
-    "smoke": dict(steps=60, ckpt_every=10 ** 9, dom_w={"nav": 0.0, "wod": 0.5, "carla": 0.5}),
+    "smoke": dict(steps=60, ckpt_every=10 ** 9, dom_w={"nav": 0.0, "wod": 0.5, "carla": 0.5}, roles={"U": 6, "D": 4, "H": 8, "O": 6}),
     "pilot": dict(),                                         # H + O pairs, U and D rows
     "pilot_ctl": dict(control=True),                         # U-only control: same rows unperturbed
 }
