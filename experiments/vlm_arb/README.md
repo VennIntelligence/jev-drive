@@ -22,6 +22,8 @@ index: Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privi
 
 **4B vs 8B slow channel, offline (2026-10-03).** Same 1 263 frames (21 routes), same code path: the 8B reads ego red worse than the 4B (78% vs 90% at 1153 tokens, red answered green 17% vs 5%), is better on moving leads (+26 points), costs 1.4-1.7x latency and 1.9x memory; a one-prompt directive scores 25% / 32% strict against 66% / 64% for the separate questions combined; a second frame plus the previous directive lifts the directive to about 48% but not yellow onset or stopped-lead reading; ego light is linearly readable from layer ~20 in both models, sign / block / lead not at all: [results/vlm_4b_vs_8b.md](results/vlm_4b_vs_8b.md), plan [plans/2026-10-03-vlm-4b-vs-8b.md](plans/2026-10-03-vlm-4b-vs-8b.md).
 
+**vmerge (2026-10-03, diagnostic, 19 routes x 2 seeds).** One arm merging the vred light rows (R2 at the estimated stop line, R5, cusum release), the stop-sign hold (R3) and the time-based bypass: DS 79.1 vs `drive` 65.9 and `vred` 70.9; paired `vmerge - drive` +13.2 [+1.0, +27.0], obstacle routes +57.2 [+36.8, +77.6], light routes -3.7 [-17.5, +8.8] (`vmerge - vred` light -10.0 [-20.0, -2.5], red-light infractions 8 vs 6); no stop-sign infraction (`drive` 2). Ablations: no bypass (`vmerge - vmnobyp`) +14.6 [+4.3, +27.3], no cusum (`vmerge - vmnocusum`) +2.6 [-2.3, +8.4] (within noise), no R1 (`vmerge - vmnor1`) -3.9 [-10.0, +2.1] (within noise). Follow-up `vmj` (R2 target back at the junction entrance, R5 T_max 50 s; 6 light routes + 17280, 14 runs): light-route red-light infractions 7 -> 3, DS +10.0 [+2.5, +20.0] vs `vmerge`, equal to `vred` on those routes: [results/vmerge.md](results/vmerge.md), plan [plans/2026-10-03-vmerge.md](plans/2026-10-03-vmerge.md).
+
 **Next.** Replace the CARLA-map inputs (junction entrance, stop line) by the official route commands; shorten the green-release delay; a gap policy for the bypass.
 
 **Read more.** [plans/2026-10-02-vlm-arb.md](plans/2026-10-02-vlm-arb.md), [results/report.md](results/report.md), [results/phase_a.md](results/phase_a.md), [results/lightsweep.md](results/lightsweep.md), [plans/2026-10-02-vlm-thin.md](plans/2026-10-02-vlm-thin.md) + [results/vlm_thin.md](results/vlm_thin.md) (offline: one-pass scoring, resolution and a cut language model with a thin head for Qwen3-VL-4B's light reading; speed and accuracy), [research/decisions/082.md](../../research/decisions/082.md).
@@ -30,7 +32,7 @@ index: Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privi
 ## Files
 
 
-[archive/](archive/) 3 one-off code · [results/](results/) 59 result files · [plans/](plans/) 5 live plans · [scripts/](scripts/) 25 entry points
+[archive/](archive/) 3 one-off code · [results/](results/) 141 result files · [plans/](plans/) 9 live plans · [scripts/](scripts/) 63 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

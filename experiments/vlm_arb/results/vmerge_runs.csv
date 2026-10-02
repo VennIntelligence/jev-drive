@@ -113,3 +113,131 @@ vmerge,1,v2-vmerge-s1-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmerge-
 vmerge,1,v2-vmerge-s1-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmerge-s1-q0/attempts/19324/1,Completed,False,60.0,100.0,44.85,0,0,1,0,0,0,18,0,0,0,0,0,1,3.3525534994149364,True
 vmerge,1,v2-vmerge-s1-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmerge-s1-q0/attempts/2520/1,Completed,False,100.0,100.0,45.2,0,0,0,0,0,0,19,0,0,0,0,0,0,3.324885165634125,True
 vmerge,1,v2-vmerge-s1-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmerge-s1-q1/attempts/19832/1,Completed,False,60.0,100.0,54.3,0,0,1,0,0,0,19,0,0,0,0,0,1,2.721455241672835,True
+vmnobyp,0,v2-vmnobyp-s0-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q0/attempts/27043/1,Completed,False,60.0,100.0,34.15,0,0,1,0,0,0,20,0,0,0,0,0,1,2.5314857039412035,True
+vmnobyp,0,v2-vmnobyp-s0-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q1/attempts/15102/1,Completed,False,100.0,100.0,62.25,0,0,0,0,0,0,18,0,0,0,0,0,0,1.1089130662214175,True
+vmnobyp,0,v2-vmnobyp-s0-q1,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q1/attempts/24944/1,Completed,False,100.0,100.0,98.2,0,0,0,0,0,0,20,0,0,0,0,0,0,1.4120961941787642,True
+vmnobyp,0,v2-vmnobyp-s0-q0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q0/attempts/27870/1,Completed,False,100.0,100.0,29.55,0,0,0,0,0,0,18,0,0,0,0,0,0,2.460503629638062,True
+vmnobyp,0,v2-vmnobyp-s0-q1,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q1/attempts/22535/1,Completed,False,100.0,100.0,43.9,0,0,0,0,0,0,20,0,0,0,0,0,0,3.401778817386711,True
+vmnobyp,0,v2-vmnobyp-s0-q2,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q2/attempts/37969/1,Completed,False,57.312196,100.0,84.7,0,0,1,0,0,1,20,0,0,0,0,0,1,2.536115661955286,True
+vmnobyp,0,v2-vmnobyp-s0-q2,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q2/attempts/24497/1,Failed - TickRuntime,False,21.71,33.4,200.05,1,0,0,0,0,0,5,0,0,0,0,0,1,0.22696993501871954,True
+vmnobyp,0,v2-vmnobyp-s0-q1,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q1/attempts/27297/1,Completed,False,12.96,100.0,41.4,0,0,4,0,0,0,18,0,0,0,0,0,4,1.800962617504118,True
+vmnobyp,0,v2-vmnobyp-s0-q2,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q2/attempts/9196/1,Failed - Agent got blocked,False,21.248645,58.04,96.7,1,0,1,0,0,1,10,0,0,0,1,0,2,0.4560041088526648,True
+vmnobyp,0,v2-vmnobyp-s0-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q2/attempts/28147/1,Completed,False,100.0,100.0,64.45,0,0,0,0,0,0,19,0,0,0,0,0,0,1.6241540932509104,True
+vmnobyp,0,v2-vmnobyp-s0-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q1/attempts/16390/1,Completed,False,70.0,100.0,18.1,0,0,0,1,0,0,18,0,0,0,0,0,0,3.888117987862908,True
+vmnobyp,0,v2-vmnobyp-s0-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q1/attempts/15612/1,Completed,False,70.0,100.0,40.75,0,0,0,1,0,0,18,0,0,0,0,0,0,1.440738761039549,True
+vmnobyp,0,v2-vmnobyp-s0-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q2/attempts/15483/1,Completed,False,70.0,100.0,53.5,0,0,0,1,0,0,18,0,0,0,0,0,0,1.0714425910204264,True
+vmnobyp,0,v2-vmnobyp-s0-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q0/attempts/17280/1,Completed,False,100.0,100.0,25.5,0,0,0,0,0,0,20,0,0,0,0,0,0,2.82442520898762,True
+vmnobyp,0,v2-vmnobyp-s0-q2,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q2/attempts/16529/1,Completed,False,100.0,100.0,60.85,0,0,0,0,0,0,16,0,0,0,0,0,0,0.9633714762670835,True
+vmnobyp,0,v2-vmnobyp-s0-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q2/attempts/16508/1,Completed,False,100.0,100.0,20.8,0,0,0,0,0,0,16,0,0,0,0,0,0,3.079738419459551,True
+vmnobyp,0,v2-vmnobyp-s0-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q0/attempts/19324/1,Failed - TickRuntime,False,33.36,33.36,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22660650587971373,True
+vmnobyp,0,v2-vmnobyp-s0-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q0/attempts/2520/3,Failed - TickRuntime,False,23.4975,36.15,200.05,1,0,0,0,0,0,6,0,0,0,0,0,1,0.24807520782217152,True
+vmnobyp,0,v2-vmnobyp-s0-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s0-q1/attempts/19832/1,Failed - TickRuntime,False,33.14,33.14,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22801107052191577,True
+vmnobyp,1,v2-vmnobyp-s1-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q0/attempts/27043/1,Completed,False,60.0,100.0,33.8,0,0,1,0,0,0,20,0,0,0,0,0,1,2.546366091905373,True
+vmnobyp,1,v2-vmnobyp-s1-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q1/attempts/15102/1,Completed,False,100.0,100.0,60.85,0,0,0,0,0,0,18,0,0,0,0,0,0,1.1360400916679887,True
+vmnobyp,1,v2-vmnobyp-s1-q1,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q1/attempts/24944/1,Completed,False,100.0,100.0,98.25,0,0,0,0,0,0,20,0,0,0,0,0,0,1.4092525159227236,True
+vmnobyp,1,v2-vmnobyp-s1-q0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q0/attempts/27870/1,Completed,False,100.0,100.0,29.75,0,0,0,0,0,0,18,0,0,0,0,0,0,2.4378416811634733,True
+vmnobyp,1,v2-vmnobyp-s1-q1,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q1/attempts/22535/1,Completed,False,100.0,100.0,41.5,0,0,0,0,0,0,20,0,0,0,0,0,0,3.626292298955188,True
+vmnobyp,1,v2-vmnobyp-s1-q2,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q2/attempts/37969/1,Failed - TickRuntime,False,11.295838,19.35,200.05,1,0,0,0,0,1,3,0,0,0,0,0,1,0.19501620357458524,True
+vmnobyp,1,v2-vmnobyp-s1-q2,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q2/attempts/24497/1,Failed - TickRuntime,False,20.7285,31.89,200.05,1,0,0,0,0,0,5,0,0,0,0,0,1,0.2267275351194899,True
+vmnobyp,1,v2-vmnobyp-s1-q1,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q1/attempts/27297/1,Completed,False,9.0,100.0,45.35,0,2,2,0,0,0,18,0,0,0,0,0,4,1.6379617623269165,True
+vmnobyp,1,v2-vmnobyp-s1-q2,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q2/attempts/9196/1,Failed - Agent got blocked,False,21.249715,60.75,158.45,1,0,1,0,0,1,10,0,0,0,1,0,2,0.2922141062019684,True
+vmnobyp,1,v2-vmnobyp-s1-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q2/attempts/28147/1,Completed,False,100.0,100.0,62.8,0,0,0,0,0,0,19,0,0,0,0,0,0,1.6726302269010325,True
+vmnobyp,1,v2-vmnobyp-s1-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q1/attempts/16390/1,Completed,False,70.0,100.0,17.7,0,0,0,1,0,0,18,0,0,0,0,0,0,4.019701237523256,True
+vmnobyp,1,v2-vmnobyp-s1-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q1/attempts/15612/1,Completed,False,70.0,100.0,41.05,0,0,0,1,0,0,18,0,0,0,0,0,0,1.4299057134239963,True
+vmnobyp,1,v2-vmnobyp-s1-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q2/attempts/15483/1,Completed,False,70.0,100.0,56.5,0,0,0,1,0,0,18,0,0,0,0,0,0,1.0140196375732182,True
+vmnobyp,1,v2-vmnobyp-s1-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q0/attempts/17280/1,Completed,False,60.0,100.0,63.35,0,0,1,0,0,0,20,0,0,0,0,0,1,0.9947559349682772,True
+vmnobyp,1,v2-vmnobyp-s1-q2,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q2/attempts/16529/1,Completed,False,100.0,100.0,51.75,0,0,0,0,0,0,16,0,0,0,0,0,0,1.151892653619147,True
+vmnobyp,1,v2-vmnobyp-s1-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q2/attempts/16508/1,Completed,False,100.0,100.0,20.45,0,0,0,0,0,0,16,0,0,0,0,0,0,3.149273612386656,True
+vmnobyp,1,v2-vmnobyp-s1-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q0/attempts/19324/1,Failed - TickRuntime,False,31.85,31.85,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22585159476069952,True
+vmnobyp,1,v2-vmnobyp-s1-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q0/attempts/2520/1,Failed - TickRuntime,False,23.4975,36.15,200.05,1,0,0,0,0,0,6,0,0,0,0,0,1,0.24789105544542495,True
+vmnobyp,1,v2-vmnobyp-s1-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnobyp-s1-q1/attempts/19832/1,Failed - TickRuntime,False,33.14,33.14,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.2277577635678681,True
+vmnocusum,0,v2-vmnocusum-s0-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q0/attempts/27043/1,Completed,False,60.0,100.0,28.45,0,0,1,0,0,0,20,0,0,0,0,0,1,3.1149652965329375,True
+vmnocusum,0,v2-vmnocusum-s0-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q1/attempts/15102/1,Completed,False,100.0,100.0,56.9,0,0,0,0,0,0,18,0,0,0,0,0,0,1.2247089500494412,True
+vmnocusum,0,v2-vmnocusum-s0-q1,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q1/attempts/24944/1,Completed,False,100.0,100.0,102.6,0,0,0,0,0,0,20,0,0,0,0,0,0,1.347245714412555,True
+vmnocusum,0,v2-vmnocusum-s0-q0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q0/attempts/27870/1,Completed,False,100.0,100.0,30.3,0,0,0,0,0,0,18,0,0,0,0,0,0,2.3771959793911415,True
+vmnocusum,0,v2-vmnocusum-s0-q1,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q1/attempts/22535/1,Completed,False,100.0,100.0,51.8,0,0,0,0,0,0,20,0,0,0,0,0,0,2.8287311397540282,True
+vmnocusum,0,v2-vmnocusum-s0-q2,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q2/attempts/37969/1,Failed - TickRuntime,False,11.295838,19.35,200.05,1,0,0,0,0,1,3,0,0,0,0,0,1,0.19514754000978637,True
+vmnocusum,0,v2-vmnocusum-s0-q2,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q2/attempts/24497/1,Completed,False,100.0,100.0,40.75,0,0,0,0,0,0,18,0,0,0,0,0,0,3.7341834970014878,True
+vmnocusum,0,v2-vmnocusum-s0-q1,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q1/attempts/27297/1,Completed,False,100.0,100.0,41.5,0,0,0,0,0,0,18,0,0,0,0,0,0,1.8191993602768135,True
+vmnocusum,0,v2-vmnocusum-s0-q2,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q2/attempts/9196/1,Failed - Agent got blocked,False,32.690223,58.04,102.8,0,0,1,0,0,1,10,0,0,0,1,0,1,0.4271911797860722,True
+vmnocusum,0,v2-vmnocusum-s0-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q2/attempts/28147/1,Completed,False,100.0,100.0,57.05,0,0,0,0,0,0,19,0,0,0,0,0,0,1.8528390295695376,True
+vmnocusum,0,v2-vmnocusum-s0-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q1/attempts/16390/1,Completed,False,70.0,100.0,17.65,0,0,0,1,0,0,18,0,0,0,0,0,0,4.03489688694326,True
+vmnocusum,0,v2-vmnocusum-s0-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q1/attempts/15612/1,Completed,False,70.0,100.0,40.6,0,0,0,1,0,0,18,0,0,0,0,0,0,1.4450763449133086,True
+vmnocusum,0,v2-vmnocusum-s0-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q2/attempts/15483/1,Completed,False,70.0,100.0,55.05,0,0,0,1,0,0,18,0,0,0,0,0,0,1.0423609110596084,True
+vmnocusum,0,v2-vmnocusum-s0-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q0/attempts/17280/1,Completed,False,100.0,100.0,24.1,0,0,0,0,0,0,20,0,0,0,0,0,0,3.0276364296217655,True
+vmnocusum,0,v2-vmnocusum-s0-q2,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q2/attempts/16529/1,Completed,False,100.0,100.0,55.75,0,0,0,0,0,0,16,0,0,0,0,0,0,1.0595144623609756,True
+vmnocusum,0,v2-vmnocusum-s0-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q2/attempts/16508/1,Completed,False,100.0,100.0,27.4,0,0,0,0,0,0,16,0,0,0,0,0,0,2.1772576430591504,True
+vmnocusum,0,v2-vmnocusum-s0-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q0/attempts/19324/1,Completed,False,100.0,100.0,46.15,0,0,0,0,0,0,18,0,0,0,0,0,0,3.2562017382258626,True
+vmnocusum,0,v2-vmnocusum-s0-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q0/attempts/2520/1,Completed,False,65.0,100.0,114.3,1,0,0,0,0,0,19,0,0,0,0,0,1,1.2184942949577793,True
+vmnocusum,0,v2-vmnocusum-s0-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s0-q1/attempts/19832/1,Completed,False,100.0,100.0,49.55,0,0,0,0,0,0,19,0,0,0,0,0,0,2.99532680197416,True
+vmnocusum,1,v2-vmnocusum-s1-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q0/attempts/27043/2,Completed,False,60.0,100.0,27.75,0,0,1,0,0,0,20,0,0,0,0,0,1,3.2377249354863276,True
+vmnocusum,1,v2-vmnocusum-s1-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q1/attempts/15102/1,Completed,False,100.0,100.0,64.0,0,0,0,0,0,0,18,0,0,0,0,0,0,1.074256887984464,True
+vmnocusum,1,v2-vmnocusum-s1-q1,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q1/attempts/24944/1,Completed,False,100.0,100.0,103.25,0,0,0,0,0,0,20,0,0,0,0,0,0,1.3387674805212257,True
+vmnocusum,1,v2-vmnocusum-s1-q0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q0/attempts/27870/1,Completed,False,100.0,100.0,30.45,0,0,0,0,0,0,18,0,0,0,0,0,0,2.367824573723117,True
+vmnocusum,1,v2-vmnocusum-s1-q1,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q1/attempts/22535/1,Completed,False,100.0,100.0,45.1,0,0,0,0,0,0,20,0,0,0,0,0,0,3.302015548978589,True
+vmnocusum,1,v2-vmnocusum-s1-q2,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q2/attempts/37969/1,Failed - TickRuntime,False,11.295838,19.35,200.05,1,0,0,0,0,1,3,0,0,0,0,0,1,0.19619977695951646,True
+vmnocusum,1,v2-vmnocusum-s1-q2,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q2/attempts/24497/1,Completed,False,100.0,100.0,41.0,0,0,0,0,0,0,18,0,0,0,0,0,0,3.7047913997023114,True
+vmnocusum,1,v2-vmnocusum-s1-q1,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q1/attempts/27297/1,Completed,False,9.0,100.0,44.05,0,2,2,0,0,0,18,0,0,0,0,0,4,1.6923726020071537,True
+vmnocusum,1,v2-vmnocusum-s1-q2,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q2/attempts/9196/1,Failed - Agent got blocked,False,22.107746,58.04,163.65,1,0,1,0,0,1,10,0,0,0,1,0,2,0.26434625588028204,True
+vmnocusum,1,v2-vmnocusum-s1-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q2/attempts/28147/1,Completed,False,100.0,100.0,57.0,0,0,0,0,0,0,19,0,0,0,0,0,0,1.8538192351428353,True
+vmnocusum,1,v2-vmnocusum-s1-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q1/attempts/16390/1,Completed,False,70.0,100.0,17.75,0,0,0,1,0,0,18,0,0,0,0,0,0,3.996721236586435,True
+vmnocusum,1,v2-vmnocusum-s1-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q1/attempts/15612/1,Completed,False,70.0,100.0,39.25,0,0,0,1,0,0,18,0,0,0,0,0,0,1.4990811656448266,True
+vmnocusum,1,v2-vmnocusum-s1-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q2/attempts/15483/1,Completed,False,70.0,100.0,57.15,0,0,0,1,0,0,18,0,0,0,0,0,0,1.001802097592533,True
+vmnocusum,1,v2-vmnocusum-s1-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q0/attempts/17280/1,Completed,False,60.0,100.0,67.1,0,0,1,0,0,0,20,0,0,0,0,0,1,0.9382703473457973,True
+vmnocusum,1,v2-vmnocusum-s1-q2,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q2/attempts/16529/1,Completed,False,100.0,100.0,55.65,0,0,0,0,0,0,16,0,0,0,0,0,0,1.0628008446554318,True
+vmnocusum,1,v2-vmnocusum-s1-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q2/attempts/16508/1,Completed,False,100.0,100.0,27.6,0,0,0,0,0,0,16,0,0,0,0,0,0,2.1639278167356277,True
+vmnocusum,1,v2-vmnocusum-s1-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q0/attempts/19324/1,Completed,False,60.0,100.0,56.3,0,0,1,0,0,0,18,0,0,0,0,0,1,2.6024306073242287,True
+vmnocusum,1,v2-vmnocusum-s1-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q0/attempts/2520/1,Completed,False,60.0,100.0,50.9,0,0,1,0,0,0,19,0,0,0,0,0,1,2.920203587534338,True
+vmnocusum,1,v2-vmnocusum-s1-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnocusum-s1-q1/attempts/19832/1,Completed,False,35.455067,100.0,51.85,0,0,2,0,0,1,19,0,0,0,0,0,2,2.8738112570373633,True
+vmnor1,0,v2-vmnor1-s0-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q0/attempts/27043/1,Completed,False,60.0,100.0,26.4,0,0,1,0,0,0,20,0,0,0,0,0,1,3.4241549189096396,True
+vmnor1,0,v2-vmnor1-s0-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q1/attempts/15102/1,Completed,False,100.0,100.0,55.5,0,0,0,0,0,0,18,0,0,0,0,0,0,1.258747581846881,True
+vmnor1,0,v2-vmnor1-s0-q1,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q1/attempts/24944/1,Completed,False,100.0,100.0,108.6,0,0,0,0,0,0,20,0,0,0,0,0,0,1.2662361838867782,True
+vmnor1,0,v2-vmnor1-s0-q0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q0/attempts/27870/1,Completed,False,100.0,100.0,27.7,0,0,0,0,0,0,18,0,0,0,0,0,0,2.6603235605355406,True
+vmnor1,0,v2-vmnor1-s0-q1,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q1/attempts/22535/1,Completed,False,100.0,100.0,41.5,0,0,0,0,0,0,20,0,0,0,0,0,0,3.6254419273037146,True
+vmnor1,0,v2-vmnor1-s0-q2,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q2/attempts/37969/1,Completed,False,60.0,100.0,70.1,0,0,1,0,0,0,20,0,0,0,0,0,1,3.0763064761456453,True
+vmnor1,0,v2-vmnor1-s0-q2,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q2/attempts/24497/1,Completed,False,65.0,100.0,59.2,1,0,0,0,0,0,18,0,0,0,0,0,1,2.629488584067121,True
+vmnor1,0,v2-vmnor1-s0-q1,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q1/attempts/27297/1,Completed,False,70.0,100.0,28.65,0,0,0,1,0,0,18,0,0,0,0,0,0,2.8156073453439987,True
+vmnor1,0,v2-vmnor1-s0-q2,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q2/attempts/9196/1,Completed,False,31.308843,100.0,44.4,0,0,2,0,0,1,20,0,0,0,0,0,2,1.8173832643419932,True
+vmnor1,0,v2-vmnor1-s0-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q2/attempts/28147/1,Completed,False,100.0,100.0,50.45,0,0,0,0,0,0,19,0,0,0,0,0,0,2.1244923676893537,True
+vmnor1,0,v2-vmnor1-s0-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q1/attempts/16390/1,Completed,False,70.0,100.0,17.35,0,0,0,1,0,0,18,0,0,0,0,0,0,4.141376230606921,True
+vmnor1,0,v2-vmnor1-s0-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q1/attempts/15612/1,Completed,False,70.0,100.0,40.75,0,0,0,1,0,0,18,0,0,0,0,0,0,1.4460386703440093,True
+vmnor1,0,v2-vmnor1-s0-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q2/attempts/15483/1,Completed,False,70.0,100.0,56.75,0,0,0,1,0,0,18,0,0,0,0,0,0,1.0060091636154724,True
+vmnor1,0,v2-vmnor1-s0-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q0/attempts/17280/1,Completed,False,100.0,100.0,22.95,0,0,0,0,0,0,20,0,0,0,0,0,0,3.217781733024458,True
+vmnor1,0,v2-vmnor1-s0-q2,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q2/attempts/16529/1,Completed,False,100.0,100.0,48.45,0,0,0,0,0,0,16,0,0,0,0,0,0,1.239526806537973,True
+vmnor1,0,v2-vmnor1-s0-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q2/attempts/16508/1,Completed,False,100.0,100.0,20.3,0,0,0,0,0,0,16,0,0,0,0,0,0,3.1813903562181807,True
+vmnor1,0,v2-vmnor1-s0-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q0/attempts/19324/1,Completed,False,100.0,100.0,48.55,0,0,0,0,0,0,18,0,0,0,0,0,0,3.066673279442034,True
+vmnor1,0,v2-vmnor1-s0-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q0/attempts/2520/1,Completed,False,65.0,100.0,113.2,1,0,0,0,0,0,19,0,0,0,0,0,1,1.229280242993144,True
+vmnor1,0,v2-vmnor1-s0-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s0-q1/attempts/19832/1,Completed,False,100.0,100.0,48.8,0,0,0,0,0,0,19,0,0,0,0,0,0,3.0632238143558395,True
+vmnor1,1,v2-vmnor1-s1-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q0/attempts/27043/1,Completed,False,60.0,100.0,28.2,0,0,1,0,0,0,20,0,0,0,0,0,1,3.154045556276301,True
+vmnor1,1,v2-vmnor1-s1-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q1/attempts/15102/1,Completed,False,100.0,100.0,61.65,0,0,0,0,0,0,18,0,0,0,0,0,0,1.1204239796710451,True
+vmnor1,1,v2-vmnor1-s1-q1,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q1/attempts/24944/1,Completed,False,100.0,100.0,103.1,0,0,0,0,0,0,20,0,0,0,0,0,0,1.3409709832021224,True
+vmnor1,1,v2-vmnor1-s1-q0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q0/attempts/27870/1,Completed,False,100.0,100.0,28.7,0,0,0,0,0,0,18,0,0,0,0,0,0,2.545206075648017,True
+vmnor1,1,v2-vmnor1-s1-q1,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q1/attempts/22535/1,Completed,False,100.0,100.0,54.1,0,0,0,0,0,0,20,0,0,0,0,0,0,2.696553815000511,True
+vmnor1,1,v2-vmnor1-s1-q2,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q2/attempts/37969/2,Completed,False,58.805503,100.0,70.15,0,0,1,0,0,1,20,0,0,0,0,0,1,3.087690522026869,True
+vmnor1,1,v2-vmnor1-s1-q2,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q2/attempts/24497/1,Completed,False,100.0,100.0,41.7,0,0,0,0,0,0,18,0,0,0,0,0,0,3.635394521793528,True
+vmnor1,1,v2-vmnor1-s1-q1,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q1/attempts/27297/1,Completed,False,70.0,100.0,30.1,0,0,0,1,0,0,18,0,0,0,0,0,0,2.6492798067926984,True
+vmnor1,1,v2-vmnor1-s1-q2,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q2/attempts/9196/1,Completed,False,32.770637,100.0,46.1,0,0,2,0,0,1,20,0,0,0,0,0,2,1.7599468240013554,True
+vmnor1,1,v2-vmnor1-s1-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q2/attempts/28147/1,Completed,False,100.0,100.0,50.25,0,0,0,0,0,0,19,0,0,0,0,0,0,2.1366743434033486,True
+vmnor1,1,v2-vmnor1-s1-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q1/attempts/16390/1,Completed,False,70.0,100.0,17.25,0,0,0,1,0,0,18,0,0,0,0,0,0,4.165037843854828,True
+vmnor1,1,v2-vmnor1-s1-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q1/attempts/15612/1,Completed,False,70.0,100.0,43.6,0,0,0,1,0,0,18,0,0,0,0,0,0,1.3344550139882092,True
+vmnor1,1,v2-vmnor1-s1-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q2/attempts/15483/1,Completed,False,70.0,100.0,53.1,0,0,0,1,0,0,18,0,0,0,0,0,0,1.0837999202896973,True
+vmnor1,1,v2-vmnor1-s1-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q0/attempts/17280/1,Completed,False,60.0,100.0,62.95,0,0,1,0,0,0,20,0,0,0,0,0,1,1.0054197268846805,True
+vmnor1,1,v2-vmnor1-s1-q2,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q2/attempts/16529/1,Completed,False,100.0,100.0,52.4,0,0,0,0,0,0,16,0,0,0,0,0,0,1.138331488864337,True
+vmnor1,1,v2-vmnor1-s1-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q2/attempts/16508/1,Completed,False,100.0,100.0,23.15,0,0,0,0,0,0,16,0,0,0,0,0,0,2.6811416408013553,True
+vmnor1,1,v2-vmnor1-s1-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q0/attempts/19324/1,Completed,False,100.0,100.0,43.05,0,0,0,0,0,0,18,0,0,0,0,0,0,3.5125512703541615,True
+vmnor1,1,v2-vmnor1-s1-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q0/attempts/2520/1,Completed,False,100.0,100.0,51.65,0,0,0,0,0,0,19,0,0,0,0,0,0,2.8672621635574713,True
+vmnor1,1,v2-vmnor1-s1-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmnor1-s1-q1/attempts/19832/1,Completed,False,100.0,100.0,61.95,0,0,0,0,0,0,19,0,0,0,0,0,0,2.371714709434444,True
+vmj,0,v2-vmj-s0-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s0-q0/attempts/27043/1,Completed,False,60.0,100.0,28.05,0,0,1,0,0,0,20,0,0,0,0,0,1,3.1959305739711206,True
+vmj,0,v2-vmj-s0-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s0-q1/attempts/15102/1,Completed,False,100.0,100.0,48.9,0,0,0,0,0,0,18,0,0,0,0,0,0,1.4456571920439756,True
+vmj,0,v2-vmj-s0-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s0-q2/attempts/28147/1,Completed,False,100.0,100.0,65.95,0,0,0,0,0,0,19,0,0,0,0,0,0,1.5838277394112543,True
+vmj,0,v2-vmj-s0-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s0-q1/attempts/16390/1,Completed,False,70.0,100.0,17.65,0,0,0,1,0,0,18,0,0,0,0,0,0,4.032139880628765,True
+vmj,0,v2-vmj-s0-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s0-q1/attempts/15612/1,Completed,False,100.0,100.0,48.65,0,0,0,0,0,0,18,0,0,0,0,0,0,1.1790892024332453,True
+vmj,0,v2-vmj-s0-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s0-q2/attempts/15483/1,Completed,False,100.0,100.0,49.8,0,0,0,0,0,0,18,0,0,0,0,0,0,1.1679614292787588,True
+vmj,0,v2-vmj-s0-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s0-q0/attempts/17280/1,Completed,False,100.0,100.0,25.45,0,0,0,0,0,0,20,0,0,0,0,0,0,2.8244916822812276,True
+vmj,1,v2-vmj-s1-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s1-q0/attempts/27043/1,Completed,False,60.0,100.0,26.1,0,0,1,0,0,0,20,0,0,0,0,0,1,3.4611981344823963,True
+vmj,1,v2-vmj-s1-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s1-q1/attempts/15102/1,Completed,False,100.0,100.0,44.55,0,0,0,0,0,0,18,0,0,0,0,0,0,1.6071039067195776,True
+vmj,1,v2-vmj-s1-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s1-q2/attempts/28147/1,Completed,False,100.0,100.0,58.0,0,0,0,0,0,0,19,0,0,0,0,0,0,1.8175004656361224,True
+vmj,1,v2-vmj-s1-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s1-q1/attempts/16390/1,Completed,False,70.0,100.0,17.7,0,0,0,1,0,0,18,0,0,0,0,0,0,4.018709603349003,True
+vmj,1,v2-vmj-s1-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s1-q1/attempts/15612/1,Completed,False,70.0,100.0,42.25,0,0,0,1,0,0,18,0,0,0,0,0,0,1.3858220798670033,True
+vmj,1,v2-vmj-s1-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s1-q2/attempts/15483/1,Completed,False,100.0,100.0,52.4,0,0,0,0,0,0,18,0,0,0,0,0,0,1.10179107858398,True
+vmj,1,v2-vmj-s1-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vmj-s1-q0/attempts/17280/1,Completed,False,60.0,100.0,61.95,0,0,1,0,0,0,20,0,0,0,0,0,1,1.022994161388072,True
