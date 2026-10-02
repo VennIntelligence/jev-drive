@@ -37,7 +37,8 @@ BASE_CSV = {("native", "navtest"): "v1_navtest_opi_lb_navtest_gimm-cinque__base"
 V1 = ["no_at_fault_collisions", "drivable_area_compliance", "driving_direction_compliance", "ego_progress", "time_to_collision_within_bound", "comfort"]
 V2 = ["no_at_fault_collisions", "drivable_area_compliance", "driving_direction_compliance", "traffic_light_compliance", "ego_progress",
       "time_to_collision_within_bound", "lane_keeping", "history_comfort", "two_frame_extended_comfort"]
-comp_csv = lambda ver, split, m, al: f"{ver}_{split}_trk_{m}_full_a{al:g}"  # noqa: E731
+comp_csv = lambda ver, split, m, al, mode="full": f"{ver}_{split}_trk_{m}_{mode}_a{al:g}"  # noqa: E731
+sfx = lambda mode: "" if mode == "full" else f"_{mode}"  # noqa: E731
 _W = {}
 
 
@@ -66,7 +67,7 @@ def cmd_navtrain(a):
     out = {"base": dict(pdms=100 * float(base.score.mean()), n=len(base))}
     rng = np.random.default_rng(0)
     for al in a.alphas:
-        d = v1_rows(comp_csv("v1", "navtrain", "native", al))
+        d = v1_rows(comp_csv("v1", "navtrain", "native", al, a.mode))
         idx = base.index.intersection(d.index)
         ds = 100 * (d.loc[idx, "score"] - base.loc[idx, "score"]).to_numpy()
         out[f"a{al:g}"] = dict(alpha=al, pdms=100 * float(d.loc[idx, "score"].mean()), n=len(idx), delta=float(ds.mean()),
@@ -75,7 +76,7 @@ def cmd_navtrain(a):
     best = max(a.alphas, key=lambda x: (out[f"a{x:g}"]["delta"], -x))
     out["alpha_star"] = best if out[f"a{best:g}"]["delta"] > 0 else None
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "navtrain.json").write_text(json.dumps(out, indent=1))
+    (OUT / f"navtrain{sfx(a.mode)}.json").write_text(json.dumps(out, indent=1))
     print(json.dumps(out, indent=1))
     print("ALPHA_STAR", out["alpha_star"] if out["alpha_star"] is not None else "none")
 
@@ -85,7 +86,7 @@ def cmd_navtrain(a):
 def cmd_tracking(a):
     rows = []
     for data in ("lb_navtrain", "lb_navtest", "lb_navhard"):
-        f = RUN / f"diag_{data}.pkl"
+        f = RUN / f"diag_{data}{sfx(a.mode)}.pkl"
         if not f.exists():
             continue
         res = pickle.load(open(f, "rb"))
@@ -97,14 +98,15 @@ def cmd_tracking(a):
                 for arm in ("base", "comp"):
                     s = v[arm]
                     rows.append(dict(data=data, stage=stage.get(t, ""), model=k[0], arm=arm, token=t, v0=r["v0"], pos_mean=s["pos_mean"],
-                                     lat_mean=s["lat_mean"], **{f"pos{h}": s["pos"][i] for i, h in enumerate((1, 2, 4))},
+                                     lat_mean=s["lat_mean"], path_d_mean=s.get("path_d_mean", np.nan),
+                                     **{f"path_d{h}": (s["path_d"][i] if "path_d" in s else np.nan) for i, h in enumerate((1, 2, 4))}, **{f"pos{h}": s["pos"][i] for i, h in enumerate((1, 2, 4))},
                                      **{f"lat{h}": s["lat"][i] for i, h in enumerate((1, 2, 4))}, **{f"lon{h}": s["lon"][i] for i, h in enumerate((1, 2, 4))},
                                      **{f"sim_y{h}": s["sim_y"][i] for i, h in enumerate((1, 2, 3, 4))},
                                      **{f"plan_y{h}": s["plan_y"][i] for i, h in enumerate((1, 2, 3, 4))},
                                      dev=v["dev"], dev_y1=v["dev_y"][0], dev_y4=v["dev_y"][3], iters=len(v["cost"]) - 1,
                                      cost0=v["cost"][0], cost1=v["cost"][-1]))
     df = pd.DataFrame(rows)
-    df.to_parquet(RUN / "tracking.parquet")
+    df.to_parquet(RUN / f"tracking{sfx(a.mode)}.parquet")
     summ = []
     for (data, model, arm), g in df.groupby(["data", "model", "arm"]):
         r = dict(data=data, model=model, arm=arm, n=len(g))
@@ -118,13 +120,16 @@ def cmd_tracking(a):
             r[f"lat{h}_abs_mean"] = float(g[f"lat{h}"].abs().mean())
             r[f"lon{h}_mean"] = float(g[f"lon{h}"].mean())
         r["pos_mean"] = float(g.pos_mean.mean())
+        r["path_d_abs_mean"] = float(g.path_d_mean.mean())
+        for h in (1, 2, 4):
+            r[f"path_d{h}_abs_mean"] = float(g[f"path_d{h}"].abs().mean())
         r["submitted_dev_max_median"] = float(g.dev.median())
         r["submitted_dev_max_p90"] = float(g.dev.quantile(0.9))
         r["dev_y4_abs_median"] = float(g.dev_y4.abs().median())
         summ.append(r)
     s = pd.DataFrame(summ)
     OUT.mkdir(parents=True, exist_ok=True)
-    s.to_csv(OUT / "tracking.csv", index=False)
+    s.to_csv(OUT / f"tracking{sfx(a.mode)}.csv", index=False)
     with pd.option_context("display.width", 250, "display.max_columns", 60):
         print(s.round(3).to_string(index=False))
 
@@ -182,7 +187,7 @@ def cmd_navhard(a):
         arms[f"{m}/base"] = (BASE_POSES[m]["lb_navhard"], "real")
         arms[f"{m}/ideal"] = (BASE_POSES[m]["lb_navhard"], "ideal")
         for al in a.alphas:
-            arms[f"{m}/a{al:g}"] = (RUN / f"lb_navhard/{m}_full_a{al:g}.npz", "real")
+            arms[f"{m}/a{al:g}"] = (RUN / f"lb_navhard/{m}_{a.mode}_a{al:g}.npz", "real")
     tokens = [e["token"] for e in L.index()]
     stage = {e["token"]: e["stage"] for e in L.index()}
     t0, rows = time.time(), {}
@@ -201,7 +206,7 @@ def cmd_navhard(a):
         if arm == "base":
             off = load_csv(BASE_CSV[m, "navhard"])
         elif arm != "ideal":
-            off = load_csv(comp_csv("v2", "navhard_two_stage", m, float(arm[1:])))
+            off = load_csv(comp_csv("v2", "navhard_two_stage", m, float(arm[1:]), a.mode))
         summ[v] = dict(combined=100 * float(comb["score"]), stage1=100 * float(s1["score"]), stage2=100 * float(s2["score"]),
                        official_combined=None if off is None else 100 * float(off.loc["extended_pdm_score_combined", "score"]),
                        **{f"{c}_s1": 100 * float(s1[c]) for c in V2}, **{f"{c}_s2": 100 * float(s2[c]) for c in V2})
@@ -224,8 +229,9 @@ def cmd_navhard(a):
                 summ[v][f"{c}_{st}_tok_delta"] = float(x.mean())
                 summ[v][f"{c}_{st}_tok_delta_ci95"] = ci(x, Bt)
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "navhard.json").write_text(json.dumps(summ, indent=1))
-    pd.concat({v: d.drop(columns=["ego_simulated_states"], errors="ignore") for v, d in dfs.items()}).to_parquet(RUN / "navhard_tokens.parquet")
+    (OUT / f"navhard{sfx(a.mode)}.json").write_text(json.dumps(summ, indent=1))
+    keep = ["score", "weight"] + V2
+    pd.concat({v: d[[c for c in keep if c in d.columns]] for v, d in dfs.items()}).to_parquet(RUN / f"navhard_tokens{sfx(a.mode)}.parquet")
     print(json.dumps(summ, indent=1))
 
 
@@ -237,7 +243,7 @@ def cmd_navtest(a):
     for m in ("native", "n4"):
         base = v1_rows(BASE_CSV[m, "navtest"])
         out[f"{m}/base"] = dict(pdms=100 * float(base.score.mean()), n=len(base), **{c: 100 * float(base[c].mean()) for c in V1})
-        names = {f"{m}/a{al:g}": comp_csv("v1", "navtest", m, al) for al in a.alphas}
+        names = {f"{m}/a{al:g}": comp_csv("v1", "navtest", m, al, a.mode) for al in a.alphas}
         if m == "native":
             names["native/gain_single"] = BASE_CSV["native", "gain"]
         for v, nm in names.items():
@@ -253,7 +259,7 @@ def cmd_navtest(a):
             r["changed_tokens"] = int((d.loc[idx, "score"] != base.loc[idx, "score"]).sum())
             out[v] = r
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "navtest.json").write_text(json.dumps(out, indent=1))
+    (OUT / f"navtest{sfx(a.mode)}.json").write_text(json.dumps(out, indent=1))
     print(json.dumps(out, indent=1))
 
 
@@ -262,5 +268,6 @@ if __name__ == "__main__":
     ap.add_argument("cmd", choices=["navtrain", "tracking", "navhard", "navtest"])
     ap.add_argument("--alphas", nargs="+", type=float, default=[1.0])
     ap.add_argument("--procs", type=int, default=48)
+    ap.add_argument("--mode", default="full", choices=["full", "path"])
     a = ap.parse_args()
     {"navtrain": cmd_navtrain, "tracking": cmd_tracking, "navhard": cmd_navhard, "navtest": cmd_navtest}[a.cmd](a)

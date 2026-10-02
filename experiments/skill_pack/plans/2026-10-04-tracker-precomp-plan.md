@@ -62,3 +62,18 @@ navhard two-stage EPDMS (v2) and navtest PDMS (v1.1), via navsim_zs_score.sh.
 ## Other boards
 The transform targets the NAVSIM LQR + bicycle only; it applies to every board scored with that simulator (navtest v1
 PDMS, navtest v2 EPDMS, navhard two-stage, navtrain). HUGSIM, Bench2Drive and WOD are discussed, not scored (see result).
+
+## Addendum 1 (07:30 box time; post hoc, after the navtrain alpha grid of the full variant was read, before any test-board score)
+Read: navtrain PDMS 82.12 -> 79.76 / 77.29 / 77.09 / 75.35 for alpha 0.25 / 0.5 / 0.75 / 1 (all CIs below 0): alpha* = none.
+The losses are mostly EP (-2.3 to -4.8) and comfort (-1 to -24), with DAC -1.8 to -4.0. Tracking readout (no scores): the
+native plan's own speed is below what the tracker does from the t0 speed (simulated position ahead of the plan by +0.8 /
++1.1 / +1.1 m at 1 / 2 / 4 s on navhard), so matching the plan in time means braking; N4's anchors have no such offset (-0.07 m).
+As pre-registered, alpha = 1 of the full variant is still scored on navhard / navtest for both models.
+
+Second variant, chosen after these numbers (labelled post hoc): `path`.
+- Same optimiser and inputs. Residual per simulated state: signed offset to the plan polyline (extended 20 m at both ends),
+  heading error to the path heading at the foot point (weight 2), and arc-length progress minus that of the uncompensated
+  simulation (weight 1): realise the plan's path, keep the tracker's own speed profile. Submitted poses all free.
+- alpha grid {0.25, 0.5, 0.75, 1} on the same navtrain subset, same alpha* rule; test boards: alpha = 1 and alpha* if it
+  exists and differs, native and N4; same readouts (ideal-tracker arm included) and same decision rule.
+- Multiplicity: two variants x up to two alphas x two models on navhard; reported, not corrected.

@@ -36,6 +36,9 @@ OUT = L.D / "runs/skill_pack/trk"
 W_H, LAM, ITERS = 2.0, 1e-2, 12
 EPS = np.array([1e-3, 1e-3, 1e-4])
 MODES = ("full",)   # a y-and-heading-only variant was dropped before scoring: it does not isolate lateral (see plan)
+# "path" (post hoc, plan addendum 1): realise the plan's path (offset to the plan polyline and heading at the matching arc
+# position), keep the arc-length progress of the uncompensated simulation (the tracker's own speed profile).
+W_S = 1.0
 _W = {}
 
 
@@ -77,7 +80,35 @@ def plan_err(S, target):
     return np.stack([c * e[..., 0] + s * e[..., 1], -s * e[..., 0] + c * e[..., 1]], -1)
 
 
-def residual(S, target, u, p, mode):
+def path_proj(S, target):
+    """Project (.., 41, 3) poses onto the plan polyline (extended 20 m beyond both ends): arc length s, signed offset d
+    (left +), path heading at the foot point."""
+    P = target[:, :2]
+    ext0 = P[0] - 20 * np.array([np.cos(target[0, 2]), np.sin(target[0, 2])])
+    ext1 = P[-1] + 20 * np.array([np.cos(target[-1, 2]), np.sin(target[-1, 2])])
+    V = np.vstack([ext0, P, ext1])
+    A, B = V[:-1], V[1:]
+    seg = B - A
+    ln = np.maximum(np.hypot(seg[:, 0], seg[:, 1]), 1e-9)
+    cum = np.r_[0, np.cumsum(ln)][:-1] - 20.0
+    q = S[..., :2][..., None, :] - A                                   # (.., 41, nseg, 2)
+    tt = np.clip((q * seg).sum(-1) / ln ** 2, 0, 1)
+    foot = A + tt[..., None] * seg
+    dd = np.hypot(*np.moveaxis(S[..., :2][..., None, :] - foot, -1, 0))
+    k = dd.argmin(-1)
+    kk = k[..., None]
+    t_k = np.take_along_axis(tt, kk, -1)[..., 0]
+    hd = np.arctan2(seg[k, 1], seg[k, 0])
+    q_k = np.take_along_axis(q, kk[..., None], -2)[..., 0, :]
+    side = np.sign(np.cos(hd) * q_k[..., 1] - np.sin(hd) * q_k[..., 0])
+    return cum[k] + t_k * ln[k], side * np.take_along_axis(dd, kk, -1)[..., 0], hd
+
+
+def residual(S, target, u, p, mode, aux=None):
+    if mode == "path":
+        s_, d_, hd = path_proj(S, target)
+        r = [d_[..., 1:], W_H * wrap(S[..., 1:, 2] - hd[..., 1:]), W_S * (s_[..., 1:] - aux[1:]), np.sqrt(LAM) * (u - p).reshape(len(S), -1)]
+        return np.concatenate(r, 1)
     pe = plan_err(S, target)[..., 1:, :]
     r = [pe.reshape(len(S), -1),
          W_H * wrap(S[..., 1:, 2] - target[1:, 2]),
@@ -94,7 +125,8 @@ def compensate(sim, mc, p8, mode):
     n = len(free)
     mu = 1e-2
     S = sim_ego(sim, mc, u[None])
-    r = residual(S, target, u[None], p8[None], mode)[0]
+    aux = path_proj(S[0], target)[0] if mode == "path" else None
+    r = residual(S, target, u[None], p8[None], mode, aux)[0]
     cost = [float(r @ r)]
     base_sim = S[0]
     for _ in range(ITERS):
@@ -102,14 +134,14 @@ def compensate(sim, mc, p8, mode):
         e = np.tile(EPS, 8)[free]
         steps.reshape(n, -1)[np.arange(n), free] += e
         Sp = sim_ego(sim, mc, steps)
-        J = ((residual(Sp, target, steps, np.broadcast_to(p8, steps.shape), mode) - r) / e[:, None]).T   # (m, n)
+        J = ((residual(Sp, target, steps, np.broadcast_to(p8, steps.shape), mode, aux) - r) / e[:, None]).T   # (m, n)
         g, H = J.T @ r, J.T @ J
         while True:
             du = -np.linalg.solve(H + mu * np.diag(np.diag(H) + 1e-9), g)
             u2 = u.copy()
             u2.reshape(-1)[free] += du
             S2 = sim_ego(sim, mc, u2[None])
-            r2 = residual(S2, target, u2[None], p8[None], mode)[0]
+            r2 = residual(S2, target, u2[None], p8[None], mode, aux)[0]
             if r2 @ r2 < r @ r:
                 u, r, S, mu = u2, r2, S2, max(mu / 3, 1e-6)
                 break
@@ -126,24 +158,26 @@ def track_stats(sim_e, target):
     """Tracking error of a simulated ego trajectory against the plan: position error at 0.5..4 s, lateral (plan-normal)."""
     e = plan_err(sim_e, target)
     pos = np.hypot(e[:, 0], e[:, 1])
+    s_, d_, hd = path_proj(sim_e, target)
     return dict(pos_mean=float(pos[1:].mean()), pos=[float(pos[i]) for i in (10, 20, 40)], lat_mean=float(np.abs(e[1:, 1]).mean()),
-                lat=[float(e[i, 1]) for i in (10, 20, 40)], lon=[float(e[i, 0]) for i in (10, 20, 40)], sim_y=[float(sim_e[i, 1]) for i in (10, 20, 30, 40)],
+                lat=[float(e[i, 1]) for i in (10, 20, 40)],
+                path_d_mean=float(np.abs(d_[1:]).mean()), path_d=[float(d_[i]) for i in (10, 20, 40)], arc=[float(s_[i]) for i in (10, 20, 40)], lon=[float(e[i, 0]) for i in (10, 20, 40)], sim_y=[float(sim_e[i, 1]) for i in (10, 20, 30, 40)],
                 plan_y=[float(target[i, 1]) for i in (10, 20, 30, 40)], head_err4=float(wrap(sim_e[40, 2] - target[40, 2])))
 
 
 # ---------------------------------------------------------------- workers
 
-def _init(data, srcs):
+def _init(data, srcs, modes=MODES):
     from navsim.planning.simulation.planner.pdm_planner.simulation.pdm_simulator import PDMSimulator
     from nuplan.planning.simulation.trajectory.trajectory_sampling import TrajectorySampling
     _W.update(sim=PDMSimulator(TrajectorySampling(num_poses=40, interval_length=0.1)), cp=cache_paths(data),
-              P={k: L.poses_by_token(v) for k, v in srcs.items()})
+              P={k: L.poses_by_token(v) for k, v in srcs.items()}, modes=tuple(modes))
 
 
 def work(token):
     mc = L.load_cache(_W["cp"][token])
     out = {"token": token, "v0": float(mc.ego_state.dynamic_car_state.rear_axle_velocity_2d.x)}
-    for (k, P), mode in ((kp, m) for kp in _W["P"].items() for m in MODES):
+    for (k, P), mode in ((kp, m) for kp in _W["P"].items() for m in _W["modes"]):
         if token not in P:
             continue
         p8 = P[token]
@@ -159,7 +193,7 @@ def cmd_check(a):
     from navsim.common.dataclasses import Trajectory
     from navsim.evaluate.pdm_score import get_trajectory_as_array, transform_trajectory
     srcs = {"native": str(L.D / f"runs/op_lb/{a.data}/preds/gimm-cinque__base.npz")}
-    _init(a.data, srcs)
+    _init(a.data, srcs, a.modes)
     sim = _W["sim"]
     toks = sorted(_W["cp"])[:: max(1, len(_W["cp"]) // a.n)][: a.n]
     mx_arr = mx_sim = 0.0
@@ -177,12 +211,12 @@ def cmd_check(a):
     t0 = time.time()
     for t in toks[:5]:
         mc = L.load_cache(_W["cp"][t])
-        for m in MODES:
+        for m in _W["modes"]:
             u, cost, sb, sc = compensate(sim, mc, _W["P"]["native"][t], m)
             tg = L.dense_from_poses(_W["P"]["native"][t])
             b, c = track_stats(sb, tg), track_stats(sc, tg)
-            print(t, m, "cost", round(cost[0], 2), "->", round(cost[-1], 2), len(cost), "lat 1/2/4 s base", np.round(b["lat"], 2), "comp",
-                  np.round(c["lat"], 2), "lon base", np.round(b["lon"], 2), "comp", np.round(c["lon"], 2))
+            print(t, m, "cost", round(cost[0], 2), "->", round(cost[-1], 2), len(cost), "path d 1/2/4 s base", np.round(b["path_d"], 2), "comp",
+                  np.round(c["path_d"], 2), "arc base", np.round(b["arc"], 2), "comp", np.round(c["arc"], 2), "lon base", np.round(b["lon"], 2), "comp", np.round(c["lon"], 2))
     print(f"compensate: {(time.time() - t0) / 5:.2f}s per token")
 
 
@@ -192,16 +226,17 @@ def cmd_make(a):
     tokens = sorted(set().union(*(np.load(f)["tokens"].tolist() for f in srcs.values())))
     t0 = time.time()
     res = {}
-    with mp.get_context("fork").Pool(a.procs, initializer=_init, initargs=(a.data, srcs)) as pool:
+    with mp.get_context("fork").Pool(a.procs, initializer=_init, initargs=(a.data, srcs, a.modes)) as pool:
         for i, r in enumerate(pool.imap_unordered(work, tokens, chunksize=8)):
             res[r["token"]] = r
             if i % 1000 == 0:
                 print(f"{a.data} {i}/{len(tokens)} {time.time() - t0:.0f}s", flush=True)
-    pickle.dump(res, open(OUT / f"diag_{a.data}.pkl", "wb"), protocol=4)
+    sfx = "" if tuple(a.modes) == ("full",) else "_" + "-".join(a.modes)
+    pickle.dump(res, open(OUT / f"diag_{a.data}{sfx}.pkl", "wb"), protocol=4)
     for k, f in srcs.items():
         z = np.load(f)
         p = z["poses"].astype(np.float64)
-        for m in MODES:
+        for m in a.modes:
             U = np.stack([res[t][k, m]["u"] for t in z["tokens"]]).astype(np.float64)
             for al in a.alphas:
                 g = OUT / a.data / f"{k}_{m}_a{al:g}.npz"
@@ -219,5 +254,6 @@ if __name__ == "__main__":
     ap.add_argument("--alphas", nargs="+", type=float, default=[1.0])
     ap.add_argument("--procs", type=int, default=48)
     ap.add_argument("--n", type=int, default=40)
+    ap.add_argument("--modes", nargs="+", default=list(MODES), choices=["full", "path"])
     a = ap.parse_args()
     {"check": cmd_check, "make": cmd_make}[a.cmd](a)
