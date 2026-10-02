@@ -88,14 +88,14 @@ Q_POSITION = ("Find the traffic light that faces the ego vehicle at the junction
 FOUR_OPTS = "no_light, red_or_yellow_for_ego, green_for_ego, light_for_other_lane"
 # name -> (cameras, question, options, max new tokens, the openjev System One variant with the same input, if any)
 PROMPTS = {
-    "four": (("wide", "road"), Q_FOUR, FOUR_OPTS, 32, "base"),
-    "plain": (("wide", "road"), Q_PLAIN, COLOURS, 32, None),
-    "describe": (("wide", "road"), Q_DESCRIBE, COLOURS, 320, None),
-    "convention": (("wide", "road"), Q_CONVENTION, COLOURS, 32, None),
-    "position": (("wide", "road"), Q_POSITION, COLOURS, 32, "pos"),
-    "plain_road": (("road",), Q_PLAIN, COLOURS, 32, None),
-    "plain_wide": (("wide",), Q_PLAIN, COLOURS, 32, None),
-    "plain_crop": (("wide", "road", "crop"), Q_PLAIN, COLOURS, 32, None),
+    "four": (("wide", "road"), Q_FOUR, FOUR_OPTS, 160, "base"),
+    "plain": (("wide", "road"), Q_PLAIN, COLOURS, 160, None),
+    "describe": (("wide", "road"), Q_DESCRIBE, COLOURS, 384, None),
+    "convention": (("wide", "road"), Q_CONVENTION, COLOURS, 160, None),
+    "position": (("wide", "road"), Q_POSITION, COLOURS, 160, "pos"),
+    "plain_road": (("road",), Q_PLAIN, COLOURS, 160, None),
+    "plain_wide": (("wide",), Q_PLAIN, COLOURS, 160, None),
+    "plain_crop": (("wide", "road", "crop"), Q_PLAIN, COLOURS, 160, None),
 }
 OPENJEV = {"four": "base", "four_road": "road", "four_crop": "crop", "position": "pos"}    # System One variants
 CLASS = {"red": "red", "yellow": "red", "amber": "red", "orange": "red", "red_or_yellow_for_ego": "red", "green": "green",
