@@ -176,9 +176,17 @@ def cut(a, out, label, segs, width, fps, colors):
             d.rectangle((0, 0, width, 34), fill=(12, 16, 24))
             d.text((6, 3), label + "  " + l1, font=font, fill="white")
             d.text((6, 18), l2, font=font, fill=(110, 220, 255))
-            frames[j] = im.quantize(colors=colors, method=Image.MEDIANCUT, dither=Image.NONE)
+            frames[j] = im if out.endswith('.png') else im.quantize(colors=colors, method=Image.MEDIANCUT, dither=Image.NONE)
     src.close()
     frames = [f for f in frames if f is not None]
+    if out.endswith('.png'):                       # contact sheet of the sampled frames, 3 columns (one --seg t:t per frame)
+        rows_n = (len(frames) + 2) // 3
+        sheet = Image.new('RGB', (3 * width, rows_n * h))
+        for k, f in enumerate(frames):
+            sheet.paste(f, ((k % 3) * width, (k // 3) * h))
+        sheet.save(out)
+        print(out)
+        return
     frames[0].save(out, save_all=True, append_images=frames[1:], duration=int(1000 / fps), loop=0, optimize=True, disposal=1)
     print("%s: %d frames, %.2f MB" % (out, len(frames), Path(out).stat().st_size / 1e6))
 
