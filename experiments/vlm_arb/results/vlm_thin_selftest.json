@@ -1,0 +1,139 @@
+{
+ "checks": [
+  {
+   "id": "v2-drive-s0-tgt/15483/0.05",
+   "ids_equal": true,
+   "mm_equal": true,
+   "pix_abs_mean_diff": 0.0014964613365009427,
+   "grid_equal": true,
+   "opt_logits_model_forward": [
+    25.0,
+    48.75,
+    36.25,
+    33.5
+   ],
+   "opt_logits_lmhead_of_hidden": [
+    25.0,
+    48.75,
+    36.25,
+    33.5
+   ],
+   "opt_logits_W": [
+    25.042232513427734,
+    48.64653778076172,
+    36.290443420410156,
+    33.5228157043457
+   ],
+   "hs_last_is_normed": 0.0,
+   "trunc_vs_full_maxabs_rel": {
+    "2": 0.0,
+    "12": 0.0,
+    "20": 0.0,
+    "36": 0.0
+   },
+   "vision_only": [
+    [
+     2280,
+     2560
+    ],
+    [
+     2280,
+     2560
+    ]
+   ],
+   "vision_vs_layer0": 0.0,
+   "gen_ref": "ANSWER: red_or_yellow_for_ego",
+   "gen_gpuprep": "ANSWER: red_or_yellow_for_ego"
+  },
+  {
+   "id": "v2-drive-s1-tgt/19324/13.55",
+   "ids_equal": true,
+   "mm_equal": true,
+   "pix_abs_mean_diff": 0.0019481797935441136,
+   "grid_equal": true,
+   "opt_logits_model_forward": [
+    57.5,
+    30.375,
+    29.0,
+    25.5
+   ],
+   "opt_logits_lmhead_of_hidden": [
+    57.5,
+    30.375,
+    29.0,
+    25.5
+   ],
+   "opt_logits_W": [
+    57.56848907470703,
+    30.318912506103516,
+    28.938838958740234,
+    25.52044677734375
+   ],
+   "hs_last_is_normed": 0.0,
+   "trunc_vs_full_maxabs_rel": {
+    "2": 0.0,
+    "12": 0.0,
+    "20": 0.0,
+    "36": 0.0
+   },
+   "vision_only": [
+    [
+     2280,
+     2560
+    ],
+    [
+     2280,
+     2560
+    ]
+   ],
+   "vision_vs_layer0": 0.0,
+   "gen_ref": "ANSWER: no_light",
+   "gen_gpuprep": "ANSWER: no_light"
+  },
+  {
+   "id": "v2-drive-s1-tgt/2520/99.55",
+   "ids_equal": true,
+   "mm_equal": true,
+   "pix_abs_mean_diff": 0.0027391924522817135,
+   "grid_equal": true,
+   "opt_logits_model_forward": [
+    52.75,
+    33.0,
+    31.875,
+    35.25
+   ],
+   "opt_logits_lmhead_of_hidden": [
+    52.75,
+    33.0,
+    31.875,
+    35.25
+   ],
+   "opt_logits_W": [
+    52.83740234375,
+    32.96691131591797,
+    31.825288772583008,
+    35.16926574707031
+   ],
+   "hs_last_is_normed": 0.0,
+   "trunc_vs_full_maxabs_rel": {
+    "2": 0.0,
+    "12": 0.0,
+    "20": 0.0,
+    "36": 0.0
+   },
+   "vision_only": [
+    [
+     2280,
+     2560
+    ],
+    [
+     2280,
+     2560
+    ]
+   ],
+   "vision_vs_layer0": 0.0,
+   "gen_ref": "ANSWER: no_light",
+   "gen_gpuprep": "ANSWER: no_light"
+  }
+ ]
+}

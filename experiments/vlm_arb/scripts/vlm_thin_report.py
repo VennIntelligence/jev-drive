@@ -223,10 +223,10 @@ def figure(g, B, path, chosen):
         ax[k].set_xticklabels(["20", "40", "70", "100", "200", "400", "600"], fontsize=7)
         ax[k].minorticks_off()
         ax[k].grid(color="#eee", lw=.6)
-    ax[0].set_ylabel("S = red recall - red answered green + green recall - no-light false alarm", fontsize=7)
+    ax[0].set_ylabel("S (see caption), higher is better", fontsize=8)
     h, lab = ax[0].get_legend_handles_labels()
-    fig.legend(h, lab, fontsize=7, loc="lower center", ncol=5, frameon=False)
-    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    fig.legend(h, lab, fontsize=7, loc="lower center", ncol=3, frameon=False)
+    fig.tight_layout(rect=(0, 0.1, 1, 1))
     fig.savefig(path)
 
 
