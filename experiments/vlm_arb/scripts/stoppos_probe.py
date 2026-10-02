@@ -228,17 +228,22 @@ def main(a):
             if X is None:
                 X = D.load_feats(frames, tap)
             t0 = time.time()
-            te, out = run_fold(frames, X, tap, k, fold, have, routes, log, hp, mlp=not a.no_mlp)
+            hp_k = []
+            te, out = run_fold(frames, X, tap, k, fold, have, routes, log, hp_k, mlp=not a.no_mlp)
+            json.dump(hp_k, open(run_dir / "oof" / f"{tap}-f{k}.json", "w"))
             np.savez(f.with_suffix(".tmp.npz"), te=te, **{n.replace("/", "|"): v for n, v in out.items()})
             f.with_suffix(".tmp.npz").replace(f)
             (run_dir / "STATUS").write_text(time.strftime("%Y-%m-%d %H:%M:%S") + f" stoppos_probe: {tap} fold {k} done ({time.time() - t0:.0f} s)\n")
             log(f"{tap} fold {k}: {time.time() - t0:.0f} s, {len(out)} outputs")
         del X
-    json.dump(hp, open(run_dir / "hparams.json", "w"), indent=1)
     bf = run_dir / "oof" / "base.npz"
     if not bf.exists():
-        out = baselines(frames, have, fold, routes, log, hp)
+        hp_b = []
+        out = baselines(frames, have, fold, routes, log, hp_b)
+        json.dump(hp_b, open(run_dir / "oof" / "base.json", "w"))
         np.savez(bf, **{n.replace("/", "|"): v for n, v in out.items()})
+    hp = [h for f in sorted((run_dir / "oof").glob("*.json")) for h in json.load(open(f))]
+    json.dump(hp, open(run_dir / "hparams.json", "w"), indent=1)
     # assemble
     arrs = {}
     for f in sorted((run_dir / "oof").glob("*-f*.npz")):
