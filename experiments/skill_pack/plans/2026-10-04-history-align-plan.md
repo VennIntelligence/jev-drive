@@ -39,3 +39,12 @@ Read so far: opposite-side rates only (stage 1 / stage 2): base 1.3% / 5.7%, rot
 which seems to read as sideways drift. Third variant, chosen after these rates (labelled so):
 - `straight_keys`: each history frame (keys and context frames) re-projected from its own pose to (-s(t), 0, 0), i.e. the
   real frames moved onto the straight track (keeps the other agents' motion that `straight` drops). Same decision rule.
+
+## Addendum 2 (03:45 box time; post hoc, after the navhard scores of rot0 / straight were read)
+Read: official navhard combined base 33.33, rot0 32.67 (-0.66 [-3.80, +2.37]), straight 31.99 (-1.34 [-5.22, +2.40]): both
+rejected. Stage 2 rises (46.90 -> 52.69 / 50.75), stage 1 (450 real scenes) falls (71.70 -> 61.69 / 61.70). Stage-2 history
+images agree with their pose yaw (phase-correlation slope 0.95, as stage 1 0.97 and navtest 0.99): no image-vs-odometry gate.
+On the opposite-side flips, the lower lateral plan std of the two rollouts picks the right one (AUC 0.86 rot0, 0.78 straight).
+- `sel-<rule>`: run both rollouts (as shipped and with the rule); per token keep the rule's plan iff the sum of the plan's
+  lateral position std over the knots t <= 4 s is lower than the shipped plan's. No threshold, no tuning. Reference-free (the
+  model's own output). Scored on full navhard and navtest with the same decision rule; labelled post hoc.
