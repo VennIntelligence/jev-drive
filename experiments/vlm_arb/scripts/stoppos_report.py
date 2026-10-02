@@ -225,7 +225,8 @@ def replay(frames, oof, tap, hp):
         for rule, sig in (("U", g.hi), ("L", g.lo), ("R", g.route_est)):
             for m in MARGINS:
                 hit = (sig <= m) & ((g.gate > 0) if rule != "R" else True)
-                r = dict(key=key, id=g.id.iloc[0], src=g.src.iloc[0], rule=rule, margin=m)
+                d0 = g.d_stop.dropna()
+                r = dict(key=key, id=g.id.iloc[0], src=g.src.iloc[0], rule=rule, margin=m, d0=float(d0.iloc[0]) if len(d0) else np.nan)
                 if hit.any():
                     h = g[hit].iloc[0]
                     v = 0.0 if np.isnan(h.v) else h.v
@@ -249,7 +250,14 @@ def replay(frames, oof, tap, hp):
 
 def replay_summary(res):
     rows = []
-    for (src, rule, m), g in res.groupby([res.src, "rule", "margin"]):
+    parts = []
+    for sname, ssel in (("cl", res.src == "cl"), ("p4", res.src == "p4"), ("all", res.src != "")):
+        for aname, asel in (("all approaches", res.d0 > -99), ("start >= 12 m", res.d0 >= 12.0)):
+            sub = res[ssel & asel]
+            if len(sub):
+                parts.append(sub.assign(src=f"{sname} / {aname}"))
+    allr = pd.concat(parts)
+    for (src, rule, m), g in allr.groupby([allr.src, "rule", "margin"]):
         n, fired = len(g), g[g.fired.astype(bool)]
         q = lambda c: [float(x) for x in np.quantile(fired[c], [0, 0.1, 0.5, 0.9, 1])] if len(fired) else [np.nan] * 5  # noqa: E731
         qx, qe = q("x_line"), q("x_entr")
@@ -319,7 +327,7 @@ def figures(out_dir, reg, rel, iv, res, taps, primary):
             ax[2].hist(x.clip(-8, 20), bins=np.arange(-8, 21, 1.0), alpha=0.45, color=c, label=f"{rule}(4 m), n={len(x)}")
     ax[2].axvline(0, color="k")
     ax[2].set_xlabel("implied stop point relative to the stop line (m; < 0 is past the line)")
-    ax[2].set_title("Replay of the stopping rules (held-out light approaches)")
+    ax[2].set_title("Stopping rules replayed, held-out approaches")
     ax[2].legend()
     fig.savefig(out_dir / "stoppos_calibration_replay.png", dpi=130)
     plt.close(fig)
