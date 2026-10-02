@@ -13,6 +13,7 @@ marked "not evaluated" and never "passed". V2_TEST=1 maps pbyp2 -> pbyp and vred
 import collections
 import io
 import json
+import re
 import os
 import sys
 from pathlib import Path
@@ -526,6 +527,53 @@ def figure_vred2(P, stops, ans, path, path_stop, path_lat, A="vred2", others=("v
     plt.close(fig)
 
 
+def infraction_causes(rid, seed, r):
+    """Red-light infractions of one run, located with the scorer's geometry (RunningRedLightTest: the light must be red while the segment 1.96-3.45 m behind
+    the vehicle centre crosses the junction entrance line, i.e. while the front bumper is 4.41 to 5.9 m beyond it). Per infraction: the light id from the official message, the
+    time the front bumper passed the light's stop line and the junction entrance, the light's state there (the logged state of that light id), the red onset before it,
+    speed, and a cause label."""
+    a = Path(r["attempt"])
+    rec = json.loads((a / "results.json").read_text())["_checkpoint"]["records"][0]
+    msgs = rec["infractions"].get("red_light", [])
+    if not msgs:
+        return []
+    ans, st, _ = vlm_rows(a)
+    plans = [x for x in jsonl(a / "plans.jsonl") if not x["warm"]]
+    out = []
+    for m in msgs:
+        L = int(re.findall(r"light (\d+)", m)[0])
+        samples = sorted((d["t_q"], g[1]) for d in ans for g in d["gt"].get("lights", []) if g[0] == L)
+        if not samples:
+            out.append(dict(route=rid, seed=seed, light=L, cause="light never within 60 m in the answer log"))
+            continue
+        ts, ss = np.array([x[0] for x in samples]), np.array([x[1] for x in samples])
+        state = lambda t: int(ss[int(np.abs(ts - t).argmin())]) if abs(ts[int(np.abs(ts - t).argmin())] - t) <= 0.75 else None   # noqa: E731
+        d_stop = [(x["t"], x["ctx"]["tl_dist"], x["v"]) for x in plans if x.get("ctx", {}).get("tl_id") == L and x["ctx"].get("tl_dist") is not None]
+        t_sl = next((t for t, d, v in d_stop if d <= 0.0), None)
+        v_sl = next((v for t, d, v in d_stop if d <= 0.0), None)
+        ent = None
+        for x in st:                                          # junction entrance arc: ego_s + junc_dist while approaching
+            if x["junc_dist"] is not None and 0.5 < x["junc_dist"] < 60:
+                ent = x["ego_s"] + x["junc_dist"]
+            if ent is not None and x["junc_dist"] <= 0.5:
+                break
+        t_ent = next((x["t"] for x in st if ent is not None and x["ego_s"] + 3.8394 >= ent), None)
+        t_tail = next((x["t"] for x in st if ent is not None and x["ego_s"] + 3.8394 >= ent + 4.41 and (state(x["t"]) == 2)), None)
+        red_on = [float(ts[i]) for i in range(1, len(ts)) if ss[i] == 2 and ss[i - 1] != 2]
+        t_red = max([t for t in red_on if t_tail is None or t <= t_tail + 0.5], default=None)
+        row = dict(route=rid, seed=seed, light=L, t_front_stop_line=None if t_sl is None else round(t_sl, 1), state_stop_line={0: "green", 1: "yellow", 2: "red", None: "?"}[state(t_sl) if t_sl is not None else None],
+                   v_stop_line=None if v_sl is None else round(v_sl, 1), t_front_entrance=None if t_ent is None else round(t_ent, 1), t_red_onset=None if t_red is None else round(t_red, 1),
+                   t_tail_crossing=None if t_tail is None else round(t_tail, 1))
+        if t_sl is not None and t_red is not None and t_red > t_sl:
+            row["cause"] = "red began %.1f s after the front bumper had passed the stop line (the car was crossing)" % (t_red - t_sl)
+        elif t_sl is not None:
+            row["cause"] = vr.classify(r, t_sl)
+        else:
+            row["cause"] = "stop line not passed on the ego light in the log (other light or no ctx)"
+        out.append(row)
+    return out
+
+
 def collisions_of(r):
     """Official collisions of a run with the actor's position in the ego frame at first contact (along < 0: behind the ego) and the ego speed."""
     a = Path(r["attempt"])
@@ -723,12 +771,10 @@ def report_light(A):
                                     cause="answer not fresh" if any(not x.get("fresh", True) for x in pre) else "held > T_max"))
             for x in vr.green_release(a, st):
                 rel.append(dict(route=rid, seed=s, **x))
-            for e in vr.infraction_events(rid, s, r):
-                T = e["cross"][0] if e["cross"] else None
-                lab = vr.classify(r, T) if T is not None else "crossing not found in the log (n_cross=%d)" % e["n_cross"]
-                tl, _ = vr.timeline(r, T) if T is not None else ([], None)
-                infr.append(dict(route=rid, seed=s, t_line=None if T is None else round(e["cross"][4], 1), state_at_line={1: "yellow", 2: "red"}.get(e["cross"][3]) if T is not None else None,
-                                 t_red_rolling=None if T is None else round(T, 1), v_line=None if T is None else round(e["cross"][2], 1), cause=lab, timeline=tl))
+            for e in infraction_causes(rid, s, r):
+                T = e.get("t_front_stop_line")
+                tl = vr.timeline(r, T)[0] if T is not None else []
+                infr.append(dict(e, timeline=tl))
         for arm in arms:
             x = df[(df.arm == arm) & (df.route == rid)]
             row.update({"DS_" + arm: round(x.DS.mean(), 1), "red_" + arm: int(x.red_light.sum())})
@@ -751,12 +797,13 @@ def report_light(A):
         D += ["No red-to-green change of the ego light occurred while R2 held the car.", ""]
     D += ["## R5 fallback", "", "%d episodes in the %d %s runs." % (len(r5_rows), len(df[df.arm == A]), A) + (("\n\n" + pd.DataFrame(r5_rows).to_markdown(index=False)) if r5_rows else ""), ""]
     D += ["## Remaining red-light infractions in %s (%d)" % (A, len(infr)), "",
-          "Crossing time = the tick where the logged ego light, red, passed from distance > 0 to <= 0 from the stop line (ticks.jsonl); the cause label is the machine reading of the logs "
-          "(same rules as `vred.md`) and the timelines below are the evidence.", "",
+          "Located with the scorer's rule (`RunningRedLightTest`: the light of the official message is red while the car's tail segment crosses the junction entrance line, i.e. the front bumper is "
+          "4.4-5.9 m beyond it): the time the front bumper passed that light's stop line (ctx `tl_dist` <= 0), the light's logged state there, its red onset, and a cause label from the logs "
+          "(red began after the front bumper had passed the stop line, otherwise the `vred.md` rules: released early / not answered red / answered late / stale / R5). The timelines are the evidence.", "",
           pd.DataFrame([{k: v for k, v in x.items() if k != "timeline"} for x in infr]).to_markdown(index=False) if infr else "none", ""]
     for x in infr:
-        if x["timeline"]:
-            D += ["", "Route %s seed %s, stop line at t = %s s (%s), rolling on red at t = %s s: %s" % (x["route"], x["seed"], x["t_line"], x["state_at_line"], x["t_red_rolling"], x["cause"]), "",
+        if x.get("timeline"):
+            D += ["", "Route %s seed %s, light %s, front bumper at the stop line at t = %s s (light %s): %s" % (x["route"], x["seed"], x["light"], x["t_front_stop_line"], x["state_stop_line"], x["cause"]), "",
                   pd.DataFrame(x["timeline"]).to_markdown(index=False)]
     D += ["", "## Per route (DS and red-light counts: means / sums over the two seeds; light: yes = scenario set, * = ego light seen in the %s logs; `_A` columns are %s)" % (A, A), "",
           pr[["route", "light"] + ["DS_" + a for a in arms] + ["dDS_vs_drive"] + ["red_" + a for a in arms] + ["R2_stops_s0", "R2_stops_s1", "blocked_A", "coll_drive", "coll_A", "v_A"]].to_markdown(index=False), ""]
