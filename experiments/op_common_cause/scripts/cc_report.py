@@ -67,7 +67,7 @@ def load(dom, check=False):
     nan = pd.Series(np.nan, index=d.index)
     col = lambda c: d[c] if c in d else nan  # noqa: E731
     lat = lambda vn: (col(f"y3:{vn}") - d.ystar3).abs()  # noqa: E731
-    sg = np.sign(d.cmd)
+    sg = -np.sign(d.cmd)          # cmd -1 = left; y is left-positive, so "toward the command" = -cmd * dy
     m = pd.DataFrame(dict(id=d.id, cluster=d.cluster, v=d.v, bin=d.bin, cmd=d.cmd, turn=d.cmd != 0))
     m["E0_lat3"] = lat("normal|off")
     m["E1_G_deg"] = (col("psi3:rotL|off") - col("psi3:rotR|off")) / 2
@@ -118,7 +118,10 @@ def effects(dom, m):
     rows = []
     for e in EFFECTS:
         base = m[m.turn] if e in TURN_ONLY else m
-        for grp, mask in [("moving", base.bin.isin(MOVING))] + [(b, base.bin == b) for b in ("stop", "low", "mid", "high")]:
+        groups = [("moving", base.bin.isin(MOVING))] + [(b, base.bin == b) for b in ("stop", "low", "mid", "high")]
+        if e in TURN_ONLY:
+            groups += [("moving-left", base.bin.isin(MOVING) & (base.cmd < 0)), ("moving-right", base.bin.isin(MOVING) & (base.cmd > 0))]
+        for grp, mask in groups:
             x = base[e][mask]
             r = stats.bootstrap(x, groups=base.cluster[mask]) if np.isfinite(x).sum() >= 5 else dict(n=int(np.isfinite(x).sum()), mean=np.nan, lo=np.nan, hi=np.nan)
             rows.append(dict(domain=dom, effect=e, group=grp, **{k: r[k] for k in ("n", "mean", "lo", "hi")}))
@@ -144,7 +147,7 @@ def verdict(a, b):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--domains", nargs="+", default=["nav", "wod", "carla"])
+    ap.add_argument("--domains", nargs="+", default=["nav", "wod", "wodt", "carla"])
     ap.add_argument("--interim", action="store_true", help="tables to the run dir (partial shards), not results/")
     ap.add_argument("--check", action="store_true", help="the smoke-test shards only; tables to the run dir, not results/")
     a = ap.parse_args()
@@ -173,8 +176,8 @@ def main():
         V = []
         key = E.set_index(["domain", "effect", "group"])
         for e in EFFECTS:
-            for grp in ("moving", "stop", "low", "mid", "high", "low-mid"):
-                for p, q in (("nav", "carla"), ("wod", "carla"), ("nav", "wod")):
+            for grp in ("moving", "stop", "low", "mid", "high", "low-mid", "moving-left", "moving-right"):
+                for p, q in (("nav", "carla"), ("wod", "carla"), ("wodt", "carla"), ("nav", "wod")):
                     if (p, e, grp) in key.index and (q, e, grp) in key.index:
                         ra, rb = key.loc[(p, e, grp)], key.loc[(q, e, grp)]
                         V.append(dict(effect=e, group=grp, pair=f"{p}-{q}", a=stats.fmt(ra), b=stats.fmt(rb), verdict=verdict(ra, rb)))
