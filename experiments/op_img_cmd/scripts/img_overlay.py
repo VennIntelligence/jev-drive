@@ -17,6 +17,7 @@ Families (`FAMILIES`): what the image says about the commanded branch `cmd`.
   fill_grey   every other branch's road surface (from where it is >= 4 m from the commanded path, 45 m) painted flat grey
   fill_grass  same, grass texture
   band_all    control: the band on every branch (paint without route information)
+  combo       added after the first readout (not pre-registered): band + fill_grass + barrier together (the bluntest)
 """
 import numpy as np
 
@@ -26,7 +27,7 @@ OP_K = {"road": np.array([[910.0, 0, 256.0], [0, 910.0, 47.6], [0, 0, 1]]),
 NEAR = 0.5
 DIVERGE_M = 4.0     # blocks / fills start where the other branch centreline is this far from the commanded path
 MAX_EGO_LANE_M = 1.5  # samples whose t0 ego is farther from the approach centreline are dropped (bad lane match)
-FAMILIES = ("band", "lines", "arrow_road", "sign", "cones", "barrier", "wall", "fill_grey", "fill_grass", "band_all")
+FAMILIES = ("band", "lines", "arrow_road", "sign", "cones", "barrier", "wall", "fill_grey", "fill_grass", "band_all", "combo")
 ROUTE_FREE = ("band_all",)          # carry no route information (one run per frame, not per command)
 
 GREEN, WHITE, BLUE, ORANGE, RED, CONCRETE, GREY, GRASS = (
@@ -175,6 +176,8 @@ def primitives(sample, fam, cmd):
     """Layers [(polys, rgb, alpha, noise)] in the t0 frame, painter's order (ground first)."""
     if fam == "none":
         return []
+    if fam == "combo":
+        return primitives(sample, "band", cmd) + primitives(sample, "fill_grass", cmd) + primitives(sample, "barrier", cmd)
     L = []
     if fam in ("band", "band_all"):
         brs = sample["branches"] if fam == "band_all" else [cmd_path(sample, cmd)]

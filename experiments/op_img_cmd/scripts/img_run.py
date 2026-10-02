@@ -13,6 +13,7 @@ converted to the t0 rear-axle frame (x fwd, y left, yaw ccw), plan_v (33) forwar
 """
 import argparse, json, os, pickle, sys, time
 from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -29,11 +30,13 @@ CMDS = ("left", "straight", "right")
 STRAIGHT_FAMS = ("band", "lines", "arrow_road", "sign")
 
 
-def variants(s):
+def variants(s, fams=None):
     if s["kind"] == "straight":
-        return [("none", "")] + [(f, "straight") for f in STRAIGHT_FAMS]
-    cls = [c for c in CMDS if any(b["cls"] == c for b in s["branches"])]
-    return [("none", "")] + [(f, c) for f in O.FAMILIES if f not in O.ROUTE_FREE for c in cls] + [(f, "") for f in O.ROUTE_FREE]
+        v = [("none", "")] + [(f, "straight") for f in STRAIGHT_FAMS]
+    else:
+        cls = [c for c in CMDS if any(b["cls"] == c for b in s["branches"])]
+        v = [("none", "")] + [(f, c) for f in O.FAMILIES if f not in O.ROUTE_FREE for c in cls] + [(f, "") for f in O.ROUTE_FREE]
+    return [x for x in v if fams is None or x[0] in fams]
 
 
 _W = {}
@@ -45,7 +48,7 @@ def _init():
     _W["meta"] = json.loads((data_dir() / "runs" / "op_lb" / "lb_navtrain" / "meta.json").read_text())
 
 
-def render(s):
+def render(s, fams=None):
     """All variants of one sample: {(fam, cmd): (frames (k, 2, 6, 128, 256), step -> frame index (31,))}."""
     nav, mt = _W["nav"], _W["meta"]
     r = s["row"]
@@ -62,7 +65,7 @@ def render(s):
         kk = np.flatnonzero(np.isclose(I.T_KEY, t))
         poses.append(np.asarray(mt["pose"][r][kk[0]], float) if len(kk) else tr(t))
     out = {}
-    for fam, c in variants(s):
+    for fam, c in variants(s, fams):
         lay = O.primitives(s, fam, c or None)
         out[(fam, c)] = np.stack([O.draw(f, lay, p, cam) for (_, f, _), p in zip(base, poses)])
     return s["token"], out, np.array(idx)
@@ -83,6 +86,7 @@ def main():
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=12)
     ap.add_argument("--kind", default="all", choices=("all", "junction", "straight"))
+    ap.add_argument("--fams", nargs="*", help="only these families (+ none); default all")
     a = ap.parse_args()
     si, sn = map(int, a.shard.split("/"))
     from drive_backbones_openpilot import bounded_map
@@ -95,7 +99,8 @@ def main():
     mt = json.loads((data_dir() / "runs" / "op_lb" / "lb_navtrain" / "meta.json").read_text())
     out = ROOT / "raw" / "nav"
     out.mkdir(parents=True, exist_ok=True)
-    tag = f"nav-{a.kind}-{si}of{sn}" + (f"-lim{a.limit}" if a.limit else "")
+    tag = f"nav-{a.kind}-{si}of{sn}" + (f"-lim{a.limit}" if a.limit else "") + (f"-{'+'.join(a.fams)}" if a.fams else "")
+    fams = None if not a.fams else set(a.fams) | {"none"}
     with Run("op_img_cmd", tag, config=vars(a)) as run:
         run.use_split(splits.load("navsim/navtrain"))
         ex = ProcessPoolExecutor(a.workers, initializer=_init)        # fork before the TensorRT session exists
@@ -105,7 +110,7 @@ def main():
         zero = np.zeros(8, np.float32)
         R = {k: [] for k in ("token", "fam", "cmd", "plan_pos", "plan_yaw", "plan_v", "hidden")}
         t0, nrun = time.time(), 0
-        for i, (tok, var, idx) in enumerate(run.tqdm(bounded_map(ex, render, G, 2 * a.workers), total=len(G), desc=tag)):
+        for i, (tok, var, idx) in enumerate(run.tqdm(bounded_map(ex, partial(render, fams=fams), G, 2 * a.workers), total=len(G), desc=tag)):
             s = G[i]
             assert s["token"] == tok
             tc = (0, 1) if mt["lht"][s["row"]] else (1, 0)
