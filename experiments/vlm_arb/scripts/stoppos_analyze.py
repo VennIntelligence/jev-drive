@@ -46,6 +46,9 @@ def main(a):
     if not (res / "transfer_reg.csv").exists():
         status("domain transfer")
         subprocess.run([PY, str(SCR / "stoppos_transfer.py"), "--run", str(run), "--out", str(res)], check=True)
+    if not (res / "refine_cl.csv").exists():
+        status("refinement of the route estimate (exploratory)")
+        subprocess.run([PY, str(SCR / "stoppos_refine.py"), "--out", str(res)], check=True)
     status("done")
 
 
