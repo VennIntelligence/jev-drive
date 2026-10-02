@@ -1,0 +1,153 @@
+arm,seed,unit,route,attempt,status,crash,DS,RC,game_s,collisions_layout,collisions_pedestrian,collisions_vehicle,red_light,stop_infraction,outside_route_lanes,min_speed_infractions,yield_emergency_vehicle_infractions,scenario_timeouts,route_dev,vehicle_blocked,route_timeout,collisions,v_mean,finite
+drive,0,eval-drive-s0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/27043/1,Completed,False,60.0,100.0,29.0,0,0,1,0,0,0,20,0,0,0,0,0,1,3.0637661818652524,True
+drive,0,eval-drive-s0,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/15102/1,Completed,False,100.0,100.0,31.25,0,0,0,0,0,0,18,0,0,0,0,0,0,2.418029125922765,True
+drive,0,eval-drive-s0,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/24944/1,Completed,False,70.0,100.0,88.2,0,0,0,1,0,0,20,0,0,0,0,0,0,1.5781650144610095,True
+drive,0,eval-drive-s0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/27870/1,Completed,False,70.0,100.0,18.85,0,0,0,1,0,0,18,0,0,0,0,0,0,4.360291844311775,True
+drive,0,eval-drive-s0,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/22535/1,Completed,False,100.0,100.0,40.3,0,0,0,0,0,0,20,0,0,0,0,0,0,3.749610981318766,True
+drive,0,eval-drive-s0,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/37969/1,Completed,False,60.0,100.0,65.15,0,0,1,0,0,0,20,0,0,0,0,0,1,3.321010078081175,True
+drive,0,eval-drive-s0,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/24497/1,Failed - TickRuntime,False,20.7285,31.89,200.05,1,0,0,0,0,0,5,0,0,0,0,0,1,0.22676418169004423,True
+drive,0,eval-drive-s0,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/27297/1,Completed,False,70.0,100.0,28.95,0,0,0,1,0,0,18,0,0,0,0,0,0,2.777885151156218,True
+drive,0,eval-drive-s0,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/9196/1,Completed,False,42.0,100.0,38.4,0,0,1,1,0,0,20,0,0,0,0,0,1,2.2011944462331443,True
+drive,0,eval-drive-s0,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/28147/1,Completed,False,100.0,100.0,45.55,0,0,0,0,0,0,19,0,0,0,0,0,0,2.380936791572234,True
+drive,0,v2-drive-s0-tgt,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s0-tgt/attempts/16390/1,Completed,False,70.0,100.0,17.3,0,0,0,1,0,0,18,0,0,0,0,0,0,4.15254663639795,True
+drive,0,v2-drive-s0-tgt,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s0-tgt/attempts/15612/1,Completed,False,70.0,100.0,36.0,0,0,0,1,0,0,18,0,0,0,0,0,0,1.6652722934110047,True
+drive,0,v2-drive-s0-tgt,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s0-tgt/attempts/15483/1,Completed,False,100.0,100.0,37.15,0,0,0,0,0,0,18,0,0,0,0,0,0,1.6196826959583113,True
+drive,0,v2-drive-s0-tgt,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s0-tgt/attempts/17280/1,Completed,False,80.0,100.0,16.65,0,0,0,0,1,0,20,0,0,0,0,0,0,4.945005353475635,True
+drive,0,v2-drive-s0-tgt,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s0-tgt/attempts/16529/1,Completed,False,70.0,100.0,30.3,0,0,0,1,0,0,16,0,0,0,0,0,0,2.1265348807898183,True
+drive,0,v2-drive-s0-tgt,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s0-tgt/attempts/16508/1,Completed,False,100.0,100.0,19.45,0,0,0,0,0,0,16,0,0,0,0,0,0,3.3712006928847082,True
+drive,0,eval-drive-s0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/19324/1,Failed - TickRuntime,False,33.36,33.36,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22620891039628205,True
+drive,0,eval-drive-s0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/2520/1,Failed - TickRuntime,False,23.4975,36.15,200.05,1,0,0,0,0,0,6,0,0,0,0,0,1,0.24817290475931894,True
+drive,0,eval-drive-s0,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/eval-drive-s0/attempts/19832/1,Failed - TickRuntime,False,33.14,33.14,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22721829779324057,True
+drive,1,v2-drive-s1-dev,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-dev/attempts/27043/1,Completed,False,60.0,100.0,31.8,0,0,1,0,0,0,20,0,0,0,0,0,1,2.7293653841342906,True
+drive,1,v2-drive-s1-dev,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-dev/attempts/15102/1,Completed,False,100.0,100.0,31.3,0,0,0,0,0,0,18,0,0,0,0,0,0,2.415399397092949,True
+drive,1,v2-drive-s1-dev,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-dev/attempts/24944/1,Completed,False,70.0,100.0,89.95,0,0,0,1,0,0,20,0,0,0,0,0,0,1.5443134372142278,True
+drive,1,v2-drive-s1-dev,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-dev/attempts/27870/1,Completed,False,100.0,100.0,25.5,0,0,0,0,0,0,18,0,0,0,0,0,0,2.948412221840436,True
+drive,1,v2-drive-s1-dev,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-dev/attempts/22535/1,Completed,False,100.0,100.0,50.5,0,0,0,0,0,0,20,0,0,0,0,0,0,2.9082637008190075,True
+drive,1,v2-drive-s1-dev,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-dev/attempts/37969/1,Completed,False,60.0,100.0,69.05,0,0,1,0,0,0,20,0,0,0,0,0,1,3.1223442362483023,True
+drive,1,v2-drive-s1-dev,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-dev/attempts/24497/1,Failed - TickRuntime,False,21.71,33.4,200.05,1,0,0,0,0,0,5,0,0,0,0,0,1,0.22698250935943762,True
+drive,1,v2-drive-s1-dev,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-dev/attempts/27297/1,Completed,False,70.0,100.0,23.7,0,0,0,1,0,0,18,0,0,0,0,0,0,3.5601059129587425,True
+drive,1,v2-drive-s1-dev,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-dev/attempts/9196/1,Failed - Agent got blocked,False,14.874051,58.04,90.7,1,0,1,1,0,1,10,0,0,0,1,0,2,0.4947929049336946,True
+drive,1,v2-drive-s1-dev,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-dev/attempts/28147/1,Completed,False,100.0,100.0,51.85,0,0,0,0,0,0,19,0,0,0,0,0,0,2.0580814150435325,True
+drive,1,v2-drive-s1-tgt,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-tgt/attempts/16390/1,Completed,False,70.0,100.0,17.25,0,0,0,1,0,0,18,0,0,0,0,0,0,4.165117837795738,True
+drive,1,v2-drive-s1-tgt,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-tgt/attempts/15612/1,Failed - Agent got blocked,False,24.822,35.46,76.35,0,0,0,1,0,0,5,0,0,0,1,0,0,0.2668287890534446,True
+drive,1,v2-drive-s1-tgt,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-tgt/attempts/15483/1,Completed,False,100.0,100.0,35.75,0,0,0,0,0,0,18,0,0,0,0,0,0,1.7003731993779982,True
+drive,1,v2-drive-s1-tgt,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-tgt/attempts/17280/2,Completed,False,80.0,100.0,16.85,0,0,0,0,1,0,20,0,0,0,0,0,0,4.860674625037892,True
+drive,1,v2-drive-s1-tgt,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-tgt/attempts/16529/1,Completed,False,70.0,100.0,29.3,0,0,0,1,0,0,16,0,0,0,0,0,0,2.2122738874426062,True
+drive,1,v2-drive-s1-tgt,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-tgt/attempts/16508/1,Completed,False,100.0,100.0,20.85,0,0,0,0,0,0,16,0,0,0,0,0,0,3.070830996804996,True
+drive,1,v2-drive-s1-tgt,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-tgt/attempts/19324/1,Failed - TickRuntime,False,33.36,33.36,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22641215921830055,True
+drive,1,v2-drive-s1-tgt,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-tgt/attempts/2520/1,Failed - TickRuntime,False,23.4975,36.15,200.05,1,0,0,0,0,0,6,0,0,0,0,0,1,0.2480249208885476,True
+drive,1,v2-drive-s1-tgt,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-drive-s1-tgt/attempts/19832/1,Failed - TickRuntime,False,33.14,33.14,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.227824236951508,True
+pred,0,v2-pred-s0-dev,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-dev/attempts/27043/1,Completed,False,60.0,100.0,24.25,0,0,1,0,0,0,20,0,0,0,0,0,1,3.7971591138494896,True
+pred,0,v2-pred-s0-dev,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-dev/attempts/15102/1,Completed,False,100.0,100.0,64.95,0,0,0,0,0,0,18,0,0,0,0,0,0,1.0601220071847481,True
+pred,0,v2-pred-s0-dev,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-dev/attempts/24944/1,Completed,False,100.0,100.0,138.7,0,0,0,0,0,0,20,0,0,0,0,0,0,0.9836158413316808,True
+pred,0,v2-pred-s0-dev,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-dev/attempts/27870/1,Completed,False,100.0,100.0,27.1,0,0,0,0,0,0,18,0,0,0,0,0,0,2.7384019779717774,True
+pred,0,v2-pred-s0-dev,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-dev/attempts/22535/1,Completed,False,100.0,100.0,43.65,0,0,0,0,0,0,20,0,0,0,0,0,0,3.4240879342734893,True
+pred,0,v2-pred-s0-dev,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-dev/attempts/37969/1,Completed,False,36.0,100.0,58.7,0,0,2,0,0,0,20,0,0,0,0,0,2,3.727808662127805,True
+pred,0,v2-pred-s0-dev,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-dev/attempts/24497/1,Failed - TickRuntime,False,21.71,33.4,200.05,1,0,0,0,0,0,5,0,0,0,0,0,1,0.22683612323941887,True
+pred,0,v2-pred-s0-dev,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-dev/attempts/27297/1,Completed,False,100.0,100.0,44.8,0,0,0,0,0,0,18,0,0,0,0,0,0,1.669394308015691,True
+pred,0,v2-pred-s0-dev,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-dev/attempts/9196/1,Completed,False,33.745166,100.0,52.2,0,0,2,0,0,1,20,0,0,0,0,0,2,1.5277986859231163,True
+pred,0,v2-pred-s0-dev,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-dev/attempts/28147/1,Completed,False,100.0,100.0,49.8,0,0,0,0,0,0,19,0,0,0,0,0,0,2.154302259168997,True
+pred,0,v2-pred-s0-tgt,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-tgt/attempts/16390/1,Completed,False,70.0,100.0,17.45,0,0,0,1,0,0,18,0,0,0,0,0,0,4.099549030425472,True
+pred,0,v2-pred-s0-tgt,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-tgt/attempts/15612/1,Completed,False,70.0,100.0,39.55,0,0,0,1,0,0,18,0,0,0,0,0,0,1.4890168302652302,True
+pred,0,v2-pred-s0-tgt,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-tgt/attempts/15483/2,Completed,False,100.0,100.0,54.9,0,0,0,0,0,0,18,0,0,0,0,0,0,1.042340804208357,True
+pred,0,v2-pred-s0-tgt,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-tgt/attempts/17280/1,Completed,False,80.0,100.0,16.55,0,0,0,0,1,0,20,0,0,0,0,0,0,5.010875076208357,True
+pred,0,v2-pred-s0-tgt,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-tgt/attempts/16529/1,Completed,False,100.0,100.0,50.2,0,0,0,0,0,0,16,0,0,0,0,0,0,1.1910923786460013,True
+pred,0,v2-pred-s0-tgt,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-tgt/attempts/16508/1,Completed,False,100.0,100.0,20.95,0,0,0,0,0,0,16,0,0,0,0,0,0,3.0506404147637167,True
+pred,0,v2-pred-s0-tgt,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-tgt/attempts/19324/1,Failed - TickRuntime,False,33.36,33.36,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22741546322682357,True
+pred,0,v2-pred-s0-tgt,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-tgt/attempts/2520/1,Failed - TickRuntime,False,23.4975,36.15,200.05,1,0,0,0,0,0,6,0,0,0,0,0,1,0.24867590196825115,True
+pred,0,v2-pred-s0-tgt,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s0-tgt/attempts/19832/1,Failed - TickRuntime,False,33.14,33.14,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22693978644378085,True
+pred,1,v2-pred-s1-dev,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-dev/attempts/27043/1,Completed,False,60.0,100.0,26.65,0,0,1,0,0,0,20,0,0,0,0,0,1,3.3882574712896987,True
+pred,1,v2-pred-s1-dev,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-dev/attempts/15102/1,Completed,False,100.0,100.0,61.25,0,0,0,0,0,0,18,0,0,0,0,0,0,1.1267491191558037,True
+pred,1,v2-pred-s1-dev,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-dev/attempts/24944/1,Completed,False,100.0,100.0,138.7,0,0,0,0,0,0,20,0,0,0,0,0,0,0.9828581161502722,True
+pred,1,v2-pred-s1-dev,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-dev/attempts/27870/1,Completed,False,100.0,100.0,27.2,0,0,0,0,0,0,18,0,0,0,0,0,0,2.7184433344118077,True
+pred,1,v2-pred-s1-dev,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-dev/attempts/22535/1,Completed,False,100.0,100.0,52.7,0,0,0,0,0,0,20,0,0,0,0,0,0,2.7726918098255164,True
+pred,1,v2-pred-s1-dev,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-dev/attempts/37969/1,Failed - TickRuntime,False,11.295838,19.35,200.05,1,0,0,0,0,1,3,0,0,0,0,0,1,0.19559556969793335,True
+pred,1,v2-pred-s1-dev,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-dev/attempts/24497/1,Failed - TickRuntime,False,21.71,33.4,200.05,1,0,0,0,0,0,5,0,0,0,0,0,1,0.2270880612496443,True
+pred,1,v2-pred-s1-dev,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-dev/attempts/27297/1,Completed,False,100.0,100.0,40.65,0,0,0,0,0,0,18,0,0,0,0,0,0,1.8659035382439033,True
+pred,1,v2-pred-s1-dev,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-dev/attempts/9196/1,Completed,False,34.23243,100.0,64.65,0,0,2,0,0,1,20,0,0,0,0,0,2,1.215075234517286,True
+pred,1,v2-pred-s1-dev,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-dev/attempts/28147/1,Completed,False,100.0,100.0,57.55,0,0,0,0,0,0,19,0,0,0,0,0,0,1.8372801816547686,True
+pred,1,v2-pred-s1-tgt,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-tgt/attempts/16390/1,Completed,False,70.0,100.0,17.25,0,0,0,1,0,0,18,0,0,0,0,0,0,4.162447562603859,True
+pred,1,v2-pred-s1-tgt,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-tgt/attempts/15612/1,Completed,False,70.0,100.0,38.65,0,0,0,1,0,0,18,0,0,0,0,0,0,1.527093079435974,True
+pred,1,v2-pred-s1-tgt,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-tgt/attempts/15483/1,Completed,False,70.0,100.0,54.85,0,0,0,1,0,0,18,0,0,0,0,0,0,1.0458356948410301,True
+pred,1,v2-pred-s1-tgt,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-tgt/attempts/17280/1,Completed,False,80.0,100.0,16.7,0,0,0,0,1,0,20,0,0,0,0,0,0,4.9293033922545355,True
+pred,1,v2-pred-s1-tgt,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-tgt/attempts/16529/1,Completed,False,100.0,100.0,50.6,0,0,0,0,0,0,16,0,0,0,0,0,0,1.1811206404386094,True
+pred,1,v2-pred-s1-tgt,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-tgt/attempts/16508/1,Completed,False,100.0,100.0,19.45,0,0,0,0,0,0,16,0,0,0,0,0,0,3.3701176836159554,True
+pred,1,v2-pred-s1-tgt,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-tgt/attempts/19324/1,Failed - TickRuntime,False,33.36,33.36,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22639196855918672,True
+pred,1,v2-pred-s1-tgt,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-tgt/attempts/2520/1,Failed - TickRuntime,False,23.4975,36.15,200.05,1,0,0,0,0,0,6,0,0,0,0,0,1,0.24817784613617733,True
+pred,1,v2-pred-s1-tgt,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-pred-s1-tgt/attempts/19832/1,Failed - TickRuntime,False,33.14,33.14,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22799605930814473,True
+vred,0,v2-vred-s0-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q0/attempts/27043/1,Completed,False,60.0,100.0,26.6,0,0,1,0,0,0,20,0,0,0,0,0,1,3.4096755402989576,True
+vred,0,v2-vred-s0-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q1/attempts/15102/1,Completed,False,100.0,100.0,60.05,0,0,0,0,0,0,18,0,0,0,0,0,0,1.1523607799057158,True
+vred,0,v2-vred-s0-q1,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q1/attempts/24944/1,Completed,False,100.0,100.0,97.8,0,0,0,0,0,0,20,0,0,0,0,0,0,1.417398659069702,True
+vred,0,v2-vred-s0-q0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q0/attempts/27870/1,Completed,False,100.0,100.0,27.05,0,0,0,0,0,0,18,0,0,0,0,0,0,2.7357575293318552,True
+vred,0,v2-vred-s0-q1,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q1/attempts/22535/1,Completed,False,100.0,100.0,42.1,0,0,0,0,0,0,20,0,0,0,0,0,0,3.5680676653672507,True
+vred,0,v2-vred-s0-q2,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q2/attempts/37969/1,Completed,False,57.909454,100.0,64.7,0,0,1,0,0,1,20,0,0,0,0,0,1,3.3766040730348608,True
+vred,0,v2-vred-s0-q2,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q2/attempts/24497/1,Failed - TickRuntime,False,20.7285,31.89,200.05,1,0,0,0,0,0,5,0,0,0,0,0,1,0.22693201978676075,True
+vred,0,v2-vred-s0-q1,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q1/attempts/27297/1,Completed,False,70.0,100.0,27.15,0,0,0,1,0,0,18,0,0,0,0,0,0,3.003786593659647,True
+vred,0,v2-vred-s0-q2,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q2/attempts/9196/1,Failed - Agent got blocked,False,22.107746,58.04,156.65,1,0,1,0,0,1,10,0,0,0,1,0,2,0.27765611167341503,True
+vred,0,v2-vred-s0-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q2/attempts/28147/1,Completed,False,100.0,100.0,49.8,0,0,0,0,0,0,19,0,0,0,0,0,0,2.154211869777719,True
+vred,0,v2-vred-s0-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q1/attempts/16390/1,Completed,False,70.0,100.0,17.25,0,0,0,1,0,0,18,0,0,0,0,0,0,4.161072106134278,True
+vred,0,v2-vred-s0-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q1/attempts/15612/1,Completed,False,100.0,100.0,75.2,0,0,0,0,0,0,18,0,0,0,0,0,0,0.7326950844711224,True
+vred,0,v2-vred-s0-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q2/attempts/15483/1,Completed,False,100.0,100.0,49.45,0,0,0,0,0,0,18,0,0,0,0,0,0,1.1736839407057582,True
+vred,0,v2-vred-s0-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q0/attempts/17280/1,Completed,False,80.0,100.0,16.8,0,0,0,0,1,0,20,0,0,0,0,0,0,4.882863061408216,True
+vred,0,v2-vred-s0-q2,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q2/attempts/16529/1,Completed,False,70.0,100.0,64.8,0,0,0,1,0,0,16,0,0,0,0,0,0,0.9004444131087276,True
+vred,0,v2-vred-s0-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q2/attempts/16508/1,Completed,False,100.0,100.0,20.45,0,0,0,0,0,0,16,0,0,0,0,0,0,3.1497486626193916,True
+vred,0,v2-vred-s0-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q0/attempts/19324/1,Failed - TickRuntime,False,33.36,33.36,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22638979938586382,True
+vred,0,v2-vred-s0-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q0/attempts/2520/1,Failed - TickRuntime,False,23.4975,36.15,200.05,1,0,0,0,0,0,6,0,0,0,0,0,1,0.24850667570319215,True
+vred,0,v2-vred-s0-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s0-q1/attempts/19832/1,Failed - TickRuntime,False,33.14,33.14,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.2283327073638545,True
+vred,1,v2-vred-s1-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q0/attempts/27043/1,Completed,False,60.0,100.0,24.45,0,0,1,0,0,0,20,0,0,0,0,0,1,3.793442370331479,True
+vred,1,v2-vred-s1-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q1/attempts/15102/1,Completed,False,100.0,100.0,65.85,0,0,0,0,0,0,18,0,0,0,0,0,0,1.0431122177707077,True
+vred,1,v2-vred-s1-q1,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q1/attempts/24944/1,Completed,False,100.0,100.0,97.75,0,0,0,0,0,0,20,0,0,0,0,0,0,1.417604707757413,True
+vred,1,v2-vred-s1-q0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q0/attempts/27870/1,Completed,False,100.0,100.0,26.95,0,0,0,0,0,0,18,0,0,0,0,0,0,2.746099496323458,True
+vred,1,v2-vred-s1-q1,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q1/attempts/22535/1,Completed,False,100.0,100.0,41.1,0,0,0,0,0,0,20,0,0,0,0,0,0,3.6642131826595126,True
+vred,1,v2-vred-s1-q2,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q2/attempts/37969/1,Completed,False,60.0,100.0,65.5,0,0,1,0,0,0,20,0,0,0,0,0,1,3.3025114557778723,True
+vred,1,v2-vred-s1-q2,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q2/attempts/24497/1,Failed - TickRuntime,False,21.71,33.4,200.05,1,0,0,0,0,0,5,0,0,0,0,0,1,0.22706458197734686,True
+vred,1,v2-vred-s1-q1,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q1/attempts/27297/1,Completed,False,70.0,100.0,24.5,0,0,0,1,0,0,18,0,0,0,0,0,0,3.4106592473458726,True
+vred,1,v2-vred-s1-q2,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q2/attempts/9196/1,Failed - Agent got blocked,False,32.690223,58.04,96.45,0,0,1,0,0,1,10,0,0,0,1,0,1,0.45597917518172143,True
+vred,1,v2-vred-s1-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q2/attempts/28147/1,Completed,False,100.0,100.0,50.85,0,0,0,0,0,0,19,0,0,0,0,0,0,2.1067466577230567,True
+vred,1,v2-vred-s1-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q1/attempts/16390/1,Completed,False,70.0,100.0,17.25,0,0,0,1,0,0,18,0,0,0,0,0,0,4.166609735994056,True
+vred,1,v2-vred-s1-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q1/attempts/15612/1,Completed,False,70.0,100.0,34.45,0,0,0,1,0,0,18,0,0,0,0,0,0,1.746317871080553,True
+vred,1,v2-vred-s1-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q2/attempts/15483/1,Completed,False,100.0,100.0,48.15,0,0,0,0,0,0,18,0,0,0,0,0,0,1.2113761105645242,True
+vred,1,v2-vred-s1-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q0/attempts/17280/1,Completed,False,80.0,100.0,16.5,0,0,0,0,1,0,20,0,0,0,0,0,0,5.030879881618011,True
+vred,1,v2-vred-s1-q2,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q2/attempts/16529/1,Completed,False,100.0,100.0,47.8,0,0,0,0,0,0,16,0,0,0,0,0,0,1.2562309985570232,True
+vred,1,v2-vred-s1-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q2/attempts/16508/1,Completed,False,100.0,100.0,20.25,0,0,0,0,0,0,16,0,0,0,0,0,0,3.1910644212828854,True
+vred,1,v2-vred-s1-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q0/attempts/19324/1,Failed - TickRuntime,False,33.36,33.36,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22584231042659067,True
+vred,1,v2-vred-s1-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q0/attempts/2520/1,Failed - TickRuntime,False,23.4975,36.15,200.05,1,0,0,0,0,0,6,0,0,0,0,0,1,0.2486489676059818,True
+vred,1,v2-vred-s1-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred-s1-q1/attempts/19832/1,Failed - TickRuntime,False,33.14,33.14,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22726929252638622,True
+vred2,0,v2-vred2-s0-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q0/attempts/27043/1,Completed,False,60.0,100.0,24.6,0,0,1,0,0,0,20,0,0,0,0,0,1,3.763499456648497,True
+vred2,0,v2-vred2-s0-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q1/attempts/15102/1,Completed,False,100.0,100.0,63.2,0,0,0,0,0,0,18,0,0,0,0,0,0,1.0896659355047706,True
+vred2,0,v2-vred2-s0-q1,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q1/attempts/24944/1,Completed,False,100.0,100.0,103.9,0,0,0,0,0,0,20,0,0,0,0,0,0,1.3289535973408535,True
+vred2,0,v2-vred2-s0-q0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q0/attempts/27870/1,Completed,False,100.0,100.0,28.15,0,0,0,0,0,0,18,0,0,0,0,0,0,2.6051982394252873,True
+vred2,0,v2-vred2-s0-q1,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q1/attempts/22535/1,Completed,False,100.0,100.0,60.85,0,0,0,0,0,0,20,0,0,0,0,0,0,2.3675716964641946,True
+vred2,0,v2-vred2-s0-q2,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q2/attempts/37969/1,Failed - TickRuntime,False,10.97548,19.35,200.05,1,0,0,0,0,1,3,0,0,0,0,0,1,0.19589807022111064,True
+vred2,0,v2-vred2-s0-q2,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q2/attempts/24497/1,Failed - TickRuntime,False,21.71,33.4,200.05,1,0,0,0,0,0,5,0,0,0,0,0,1,0.2271835929521951,True
+vred2,0,v2-vred2-s0-q1,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q1/attempts/27297/1,Failed - Agent got blocked,False,17.4456,48.46,82.45,0,0,2,0,0,0,8,0,0,0,1,0,2,0.4170400261013444,True
+vred2,0,v2-vred2-s0-q2,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q2/attempts/9196/1,Failed - Agent got blocked,False,19.614134,58.04,97.75,0,0,2,0,0,1,10,0,0,0,1,0,2,0.44993001224071916,True
+vred2,0,v2-vred2-s0-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q2/attempts/28147/1,Completed,False,100.0,100.0,51.1,0,0,0,0,0,0,19,0,0,0,0,0,0,2.096548792883957,True
+vred2,0,v2-vred2-s0-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q1/attempts/16390/1,Completed,False,70.0,100.0,17.3,0,0,0,1,0,0,18,0,0,0,0,0,0,4.149309779389178,True
+vred2,0,v2-vred2-s0-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q1/attempts/15612/1,Completed,False,70.0,100.0,41.9,0,0,0,1,0,0,18,0,0,0,0,0,0,1.3941537572516407,True
+vred2,0,v2-vred2-s0-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q2/attempts/15483/1,Completed,False,70.0,100.0,55.2,0,0,0,1,0,0,18,0,0,0,0,0,0,1.037056870912716,True
+vred2,0,v2-vred2-s0-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q0/attempts/17280/1,Completed,False,80.0,100.0,16.65,0,0,0,0,1,0,20,0,0,0,0,0,0,4.941159250709867,True
+vred2,0,v2-vred2-s0-q2,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q2/attempts/16529/1,Completed,False,100.0,100.0,53.7,0,0,0,0,0,0,16,0,0,0,0,0,0,1.1056012856735915,True
+vred2,0,v2-vred2-s0-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q2/attempts/16508/1,Completed,False,100.0,100.0,20.45,0,0,0,0,0,0,16,0,0,0,0,0,0,3.1474774199801967,True
+vred2,0,v2-vred2-s0-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q0/attempts/19324/1,Failed - TickRuntime,False,27.3,27.3,200.05,0,0,0,0,0,0,4,0,0,0,0,0,0,0.14980209423039548,True
+vred2,0,v2-vred2-s0-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q0/attempts/2520/1,Failed - TickRuntime,False,23.4975,36.15,200.05,1,0,0,0,0,0,6,0,0,0,0,0,1,0.24781180521370608,True
+vred2,0,v2-vred2-s0-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s0-q1/attempts/19832/2,Failed - TickRuntime,False,33.14,33.14,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22768094918970072,True
+vred2,1,v2-vred2-s1-q0,27043,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q0/attempts/27043/1,Completed,False,60.0,100.0,28.6,0,0,1,0,0,0,20,0,0,0,0,0,1,3.0930019844775702,True
+vred2,1,v2-vred2-s1-q1,15102,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q1/attempts/15102/1,Completed,False,100.0,100.0,66.15,0,0,0,0,0,0,18,0,0,0,0,0,0,1.0379377166405739,True
+vred2,1,v2-vred2-s1-q1,24944,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q1/attempts/24944/2,Completed,False,100.0,100.0,104.65,0,0,0,0,0,0,20,0,0,0,0,0,0,1.320061232160909,True
+vred2,1,v2-vred2-s1-q0,27870,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q0/attempts/27870/1,Completed,False,100.0,100.0,29.1,0,0,0,0,0,0,18,0,0,0,0,0,0,2.504273871574078,True
+vred2,1,v2-vred2-s1-q1,22535,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q1/attempts/22535/1,Completed,False,100.0,100.0,53.5,0,0,0,0,0,0,20,0,0,0,0,0,0,2.7317778927278655,True
+vred2,1,v2-vred2-s1-q2,37969,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q2/attempts/37969/1,Completed,False,58.20809,100.0,61.6,0,0,1,0,0,1,20,0,0,0,0,0,1,3.5489831168451276,True
+vred2,1,v2-vred2-s1-q2,24497,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q2/attempts/24497/1,Failed - TickRuntime,False,21.71,33.4,200.05,1,0,0,0,0,0,5,0,0,0,0,0,1,0.22725598558789487,True
+vred2,1,v2-vred2-s1-q1,27297,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q1/attempts/27297/1,Completed,False,70.0,100.0,31.1,0,0,0,1,0,0,18,0,0,0,0,0,0,2.5492843503983833,True
+vred2,1,v2-vred2-s1-q2,9196,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q2/attempts/9196/1,Completed,False,34.23243,100.0,66.35,0,0,2,0,0,1,20,0,0,0,0,0,2,1.1781649568716708,True
+vred2,1,v2-vred2-s1-q2,28147,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q2/attempts/28147/1,Completed,False,100.0,100.0,49.65,0,0,0,0,0,0,19,0,0,0,0,0,0,2.16507051507841,True
+vred2,1,v2-vred2-s1-q1,16390,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q1/attempts/16390/1,Completed,False,70.0,100.0,17.55,0,0,0,1,0,0,18,0,0,0,0,0,0,4.060136894590434,True
+vred2,1,v2-vred2-s1-q1,15612,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q1/attempts/15612/1,Completed,False,70.0,100.0,39.3,0,0,0,1,0,0,18,0,0,0,0,0,0,1.4989239480431054,True
+vred2,1,v2-vred2-s1-q2,15483,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q2/attempts/15483/1,Completed,False,70.0,100.0,55.7,0,0,0,1,0,0,18,0,0,0,0,0,0,1.0292850324487655,True
+vred2,1,v2-vred2-s1-q0,17280,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q0/attempts/17280/1,Completed,False,80.0,100.0,16.5,0,0,0,0,1,0,20,0,0,0,0,0,0,5.01769423767156,True
+vred2,1,v2-vred2-s1-q2,16529,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q2/attempts/16529/1,Completed,False,100.0,100.0,59.45,0,0,0,0,0,0,16,0,0,0,0,0,0,0.9861649049032697,True
+vred2,1,v2-vred2-s1-q2,16508,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q2/attempts/16508/1,Completed,False,100.0,100.0,27.6,0,0,0,0,0,0,16,0,0,0,0,0,0,2.155841363441282,True
+vred2,1,v2-vred2-s1-q0,19324,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q0/attempts/19324/1,Failed - TickRuntime,False,33.36,33.36,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22715247588096024,True
+vred2,1,v2-vred2-s1-q0,2520,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q0/attempts/2520/1,Failed - TickRuntime,False,23.4975,36.15,200.05,1,0,0,0,0,0,6,0,0,0,0,0,1,0.24828355522745824,True
+vred2,1,v2-vred2-s1-q1,19832,/root/autodl-tmp/ujs/runs/vlm_arb/arms/v2-vred2-s1-q1/attempts/19832/1,Failed - TickRuntime,False,33.14,33.14,200.05,0,0,0,0,0,0,5,0,0,0,0,0,0,0.22777666092186233,True

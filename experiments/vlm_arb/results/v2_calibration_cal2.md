@@ -1,0 +1,1 @@
+Calibration (shadow `drive`, Qwen3-VL-4B servers, 3 shadow + 3 pbyp2 workers per card on 3 cards, seed 1, 19 routes): 2731 requests, 100.0% answered. In-loop latency p50 264 ms, p95 446 ms, p99 566 ms, max 745 ms; server queue wait p95 171 ms, service p50 201 ms; share > L (0.35 s) 13.1%, share > TTL 2.5 s 0.00%. Registered L = 0.35 s holds only if p95 <= 350 ms: NO.

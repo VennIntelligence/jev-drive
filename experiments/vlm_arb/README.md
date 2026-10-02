@@ -2,7 +2,7 @@
 
 status: live
 decisions: 84, 85, 86
-index: Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privileged 5), DS +5.0
+index: Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privileged 5), DS +5.0; fixed bypass pbyp2, stop-line R2 vred2, yellow rule vred3
 
 **Question.** Can a frozen vision-language model answering four discrete categorical decision questions about camera frames replace privileged simulator state in the op-drive arbitration layer without catastrophic latency or rule-interaction penalties?
 
@@ -12,7 +12,9 @@ index: Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privi
 
 **Bypass, offline (2026-10-02).** 22 of 26 privileged-bypass misfires on non-target routes are a route-projection clamp bug (blocker behind the route start or beyond its end), not queues; a time-based static detector fires on 8/8 obstacle runs with 1 false trigger: [results/bypass_misfire.md](results/bypass_misfire.md), [results/bypass_timedet.md](results/bypass_timedet.md), definitions in [plans/2026-10-02-bypass-offline.md](plans/2026-10-02-bypass-offline.md).
 
-**Next.** Move R2's stop target to the light's stop line; fix the bypass projection clamp, add a same-direction gap check, rerun `pbyp`.
+**pbyp2 / vred2 / vred3 (2026-10-02, diagnostic).** `pbyp2` (bypass with the projection fix, static >= 5 s, light memory, same-direction gap check): 0 misfire activations on the 15 other routes (`pbyp`: 26), DS -3.4 [-13.0, +6.4] against `drive` there (`pbyp`: -28.8); obstacle routes DS 42.1 [26.0, 69.2] (`drive` 27.8) because the frozen gap rule stalls the car on 3 of 4 under continuous traffic; with no gap check (`pbyp2ng`, 8 runs) 74.1 [48.2, 100.0] ([results/pbyp2.md](results/pbyp2.md)). `vred2` (R2 at the light's stop line): median stop 0.16 m short of it (`vred`: 13 of 23 stops beyond), ego-green recall while holding 28.6% -> 94.9%, but red-light infractions 7 (`vred` 6) and DS 66.5 ([results/vred2.md](results/vred2.md)). `vred3` (+ approach-only slow-down, yellow rule, commit): 7 infractions, DS 67.6 ([results/vred3.md](results/vred3.md)). Plan, parameters, deviations D25-D32, inputs by source: [plans/2026-10-02-pbyp2-vred2.md](plans/2026-10-02-pbyp2-vred2.md).
+
+**Next.** A gap rule for the obstacle routes that does not deadlock under a stream of traffic; handling of the 3 s green windows that end while the car is crossing; the base planner's stops inside the junction after the line.
 
 **Read more.** [plans/2026-10-02-vlm-arb.md](plans/2026-10-02-vlm-arb.md), [results/report.md](results/report.md), [results/phase_a.md](results/phase_a.md), [results/lightsweep.md](results/lightsweep.md), [plans/2026-10-02-vlm-thin.md](plans/2026-10-02-vlm-thin.md) + [results/vlm_thin.md](results/vlm_thin.md) (offline: one-pass scoring, resolution and a cut language model with a thin head for Qwen3-VL-4B's light reading; speed and accuracy), [research/decisions/082.md](../../research/decisions/082.md).
 
@@ -20,7 +22,7 @@ index: Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privi
 ## Files
 
 
-[archive/](archive/) 3 one-off code · [results/](results/) 21 result files · [plans/](plans/) 2 live plans · [scripts/](scripts/) 14 entry points
+[archive/](archive/) 3 one-off code · [results/](results/) 59 result files · [plans/](plans/) 5 live plans · [scripts/](scripts/) 25 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded
