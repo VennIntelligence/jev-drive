@@ -269,7 +269,7 @@ def bench(a):
         except Exception:  # noqa: BLE001
             import traceback
             err = traceback.format_exc()[-1500:]
-        row = dict(cfg=cfg, model=a.model, frames=len(jp), error=err, weights_gb=weights_gb,
+        row = dict(cfg=cfg, model=a.model, frames=len(jp), error=err, weights_gb=weights_gb, wf_gb=vl.Wf.numel() * 4 / 2 ** 30,
                    peak_gb=torch.cuda.max_memory_allocated() / 2 ** 30)
         if ms:
             row.update(percentiles(ms), ms=[round(v, 1) for v in ms])

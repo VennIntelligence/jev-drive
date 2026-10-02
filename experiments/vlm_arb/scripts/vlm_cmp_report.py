@@ -545,8 +545,11 @@ def main():
         wgb = {m: next((b["weights_gb"] for (mm, c), b in bench.items() if mm == m), float("nan")) for m in MODELS}
         P("n = %d core instants evenly spaced over the sorted ids, 5 warm-up requests discarded, one process alone on the card. `q1` = one question in one forward "
           "pass (the closed-loop path), `dir` = the directive prompt, `four` = the four separate questions on one prefill, `two` = the two-moment directive (4 images). "
-          "`peak` = peak allocated GPU memory during the variant, weights included (resident weights: 4B %.1f GiB, 8B %.1f GiB).\n" % (
-              next((b["frames"] for b in bench.values()), 0), wgb["4b"], wgb["8b"]))
+          "`peak` = peak allocated GPU memory during the variant, weights included (resident weights: 4B %.1f GiB, 8B %.1f GiB; both include a float32 copy of "
+          "the output head used for exact option scoring, 4B %.1f GiB and 8B %.1f GiB, that a deployment would not need).\n" % (
+              next((b["frames"] for b in bench.values()), 0), wgb["4b"], wgb["8b"],
+              next((b.get("wf_gb", float("nan")) for (mm, c), b in bench.items() if mm == "4b"), float("nan")),
+              next((b.get("wf_gb", float("nan")) for (mm, c), b in bench.items() if mm == "8b"), float("nan"))))
         L = ["| variant | 4B p50 / p95 / p99 ms | 8B p50 / p95 / p99 ms | 8B / 4B (p50) | 4B peak GiB | 8B peak GiB |", "|:--|:--|:--|--:|--:|--:|"]
         cfgs = [c for c in ["q1_" + r for r in RESN] + ["dir_" + r for r in RESN] + ["four_r559", "four_r1153", "two_r559", "two_r1153"]
                 if ("4b", c) in bench or ("8b", c) in bench]
