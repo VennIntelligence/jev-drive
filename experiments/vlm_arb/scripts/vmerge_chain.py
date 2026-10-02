@@ -13,7 +13,7 @@ run dirs $DATA_DIR/runs/vlm_arb_vmerge/qwen<card>) and are not stopped by the la
 Stages (docs/long-runs.md):
   pre  `dbg-vmerge-334` (debug red-light route) and `dbg-vmerge-25169` (debug obstacle route), outside the 19
   all  `vmerge-s0-q0..q2`, then `few-vmerge` (vmerge_report.py few: no crash, latency lines), `vmerge-s1-q0..q2`, `report`
-  full all + abl (the ablations start after `report`)
+  full all + abl (the ablations start after the seed-0 gate, behind seed 1 in priority)
   abl  (--arg abl=nobyp,nocusum,...) one ablation arm `vm<abl>` per name (VM_ABL, one component off), both seeds, after `report`;
        then `report-abl` (vmerge_report.py report <abl names>)
 Units: 3 CARLA workers + their own openpilot server, one unit per card (3 routes per card's Qwen server, as in vred).
@@ -78,5 +78,5 @@ def jobs(args):
     rep = tool("report", "report", deps=[j.name for j in v1], prio=9)
     out = pre + v0 + [few] + v1 + [rep]
     if stage == "full":                              # all, then the ablation arms (--arg abl=...) once the main report exists
-        out += abl_jobs(args["abl"].split(","), deps=[rep.name])
+        out += abl_jobs(args["abl"].split(","), deps=[few.name])     # after the seed-0 gate; seed 1 of vmerge has priority
     return out
