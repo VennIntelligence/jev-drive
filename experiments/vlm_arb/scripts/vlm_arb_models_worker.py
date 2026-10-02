@@ -2,7 +2,8 @@
 
   <env python> vlm_arb_models_worker.py --kind KIND --path PATH --sample sample.jsonl --out models/<name>.jsonl
 
-Every request is the two saved frames (wide, road) plus the one fixed multiple-choice prompt PROMPT; the raw reply and
+Every request is the two saved frames (wide, road) plus the one fixed multiple-choice prompt PROMPT, or what its
+sample line carries ("images", "prompt", "max_new": the Q-light sweep, vlm_arb_lightsweep.py); the raw reply and
 its wall-clock latency are appended to --out (one line per request, flushed), so a rerun skips what is there. Requests
 that raised are retried on the next run. <out stem>.meta.json holds load time, peak VRAM and the load error, if any.
 Parsing (parse_reply) is applied by the caller, not here.
@@ -70,20 +71,20 @@ def parse_reply(text):
     return out
 
 
-# ---- loaders: each returns ask(wide_path, road_path) -> reply text ----
+# ---- loaders: each returns ask(image_paths, prompt, max_new_tokens) -> reply text ----
 
 def load_openai(path):
     """A running OpenAI-compatible server (the lane's vLLM); `path` = "<url>|<served model name>"."""
     import urllib.request
     url, model = path.split("|")
 
-    def ask(wide, road):
+    def ask(paths, prompt, max_new):
         imgs = [{"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," +
                                                     base64.b64encode(Path(p).read_bytes()).decode("ascii")}}
-                for p in (wide, road)]
+                for p in paths]
         # no temperature: the diffusion model's server rejects sampling parameters
-        body = {"model": model, "max_tokens": MAX_NEW_TOKENS,
-                "messages": [{"role": "user", "content": imgs + [{"type": "text", "text": PROMPT}]}]}
+        body = {"model": model, "max_tokens": max_new,
+                "messages": [{"role": "user", "content": imgs + [{"type": "text", "text": prompt}]}]}
         req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"),
                                      headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=60.0) as r:
@@ -101,13 +102,12 @@ def load_hf_chat(path):
     model = AutoModelForImageTextToText.from_pretrained(path, dtype=torch.bfloat16).to("cuda").eval()
 
     @torch.no_grad()
-    def ask(wide, road):
-        msgs = [{"role": "user", "content": [{"type": "image", "image": Image.open(wide).convert("RGB")},
-                                             {"type": "image", "image": Image.open(road).convert("RGB")},
-                                             {"type": "text", "text": PROMPT}]}]
+    def ask(paths, prompt, max_new):
+        msgs = [{"role": "user", "content": [{"type": "image", "image": Image.open(p).convert("RGB")} for p in paths]
+                 + [{"type": "text", "text": prompt}]}]
         x = proc.apply_chat_template(msgs, add_generation_prompt=True, tokenize=True, return_dict=True,
                                      return_tensors="pt").to("cuda")
-        y = model.generate(**x, max_new_tokens=MAX_NEW_TOKENS, do_sample=False)
+        y = model.generate(**x, max_new_tokens=max_new, do_sample=False)
         return proc.batch_decode(y[:, x["input_ids"].shape[1]:], skip_special_tokens=True)[0]
     return ask
 
@@ -119,8 +119,8 @@ def load_qwen_drive(path):
     model = QwenDriveForPlanning.from_pretrained(path, dtype=torch.bfloat16, attn_implementation="sdpa").to("cuda").eval()
 
     @torch.no_grad()
-    def ask(wide, road):
-        return model.generate_text([wide, road], PROMPT, max_new_tokens=MAX_NEW_TOKENS).text
+    def ask(paths, prompt, max_new):
+        return model.generate_text(list(paths), prompt, max_new_tokens=max_new).text
     return ask
 
 
@@ -147,10 +147,11 @@ def load_internvl(path):
                             for t in parts])
 
     @torch.no_grad()
-    def ask(wide, road):
-        px = [tiles(wide), tiles(road)]
-        return model.chat(tok, torch.cat(px).to("cuda", torch.bfloat16), "Image-1: <image>\nImage-2: <image>\n" + PROMPT,
-                          dict(max_new_tokens=MAX_NEW_TOKENS, do_sample=False), num_patches_list=[len(t) for t in px])
+    def ask(paths, prompt, max_new):
+        px = [tiles(p) for p in paths]
+        head = "".join("Image-%d: <image>\n" % (i + 1) for i in range(len(px)))
+        return model.chat(tok, torch.cat(px).to("cuda", torch.bfloat16), head + prompt,
+                          dict(max_new_tokens=max_new, do_sample=False), num_patches_list=[len(t) for t in px])
     return ask
 
 
@@ -194,7 +195,8 @@ def main():
             t1 = time.perf_counter()
             row = {"id": s["id"], "load": a.load}
             try:
-                row["raw"] = ask(s["wide"], s["road"])
+                row["raw"] = ask(s.get("images") or [s["wide"], s["road"]], s.get("prompt") or PROMPT,
+                                 s.get("max_new") or MAX_NEW_TOKENS)
             except Exception as e:  # noqa: BLE001
                 row["err"], last_err = ("%s: %s" % (type(e).__name__, e))[:300], traceback.format_exc()
                 n_err += 1

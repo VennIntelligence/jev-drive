@@ -5,7 +5,7 @@
 Rerunning the same command resumes: finished jobs are skipped (state.json), live ones are adopted, and b2d_run skips
 finished routes inside a unit. Hand-offs in $DATA_DIR/runs/vlm_arb: STATUS, status.json, DONE / ERROR / ERROR.<job>,
 util.csv, lane/<ts>/log.txt, jobs/<job>/log.<k>.txt, readouts/<unit>/{routes.csv, checks.json}, gates/*.json,
-results/{phase_a.md, qlight.md, report.md, *.png}.
+results/{phase_a.md, lightsweep.md, report.md, *.png}.
 
 Stages (docs/long-runs.md): 1 = one unit (the table driven by truth answers on debug route 334); 2 = the ten
 single-route checklist units on debug routes; all = the batch. A stage's jobs stay in state.json, so "all" does not
@@ -18,11 +18,11 @@ The batch (plan deviation D7: 19 routes x 2 traffic seeds; a unit = arm x seed x
               the registered ones in vlm_arb_phase_a.LINES
   vbyp        if Q-block and the latency line pass
   dslow       after jslow and drive of the same seed: per-route set speed = 8 x v_jslow / v_drive (cruise_by_route)
-  qlight      offline (deviation D15): the diagnosis and one variant read, as soon as the shadow units are done,
-              whatever the gates say. vred and vall only if Q-light passed or that read passes, and the latency
-              line holds (R3 only if Q-sign passed, R4 only if Q-block passed)
-  models      offline (deviation D15): the on-disk VLMs on every shadow frame, one job per model alone on a card
-              (models-<name>) once the shadow units are done, then the table (results/models.md)
+  vred, vall  if Q-light and the latency line pass (R3 only if Q-sign passed, R4 only if Q-block passed)
+  sweep       offline (deviations D15, D16), as soon as the shadow units are done, whatever the gates say: the
+              Q-light prompt sweep on junction-approach frames (vlm_arb_lightsweep.py). sweep-select picks the
+              frames, sweep-<model> runs one model alone on a card, sweep writes results/lightsweep.md. It unlocks
+              no closed-loop arm.
   report      when nothing else of the closed loop is left
 Packing: every unit takes 4 CARLA workers, 12 cores and its own openpilot server; the lane places as many as the
 card's VRAM and the per-card worker cap allow (card 0 also holds the VLM server), and pulls the next job whenever a
@@ -46,7 +46,8 @@ PY = str(DATA / "envs/jevdrive/bin/python")
 OP_ARB = "experiments/op_closed_loop/archive/op_arb.sh"
 PRIO = {"drive": 0, "dbg-shadow": 0, "jslow": 1, "pred": 2, "pbyp": 2, "vbyp": 3, "dslow": 4, "vred": 5, "vall": 5}
 STATE = {"final": False}
-MODEL_NAMES = ("dgemma-chat", "qwen3-vl-4b", "cosmos-reason1-7b", "qwen-drive-1.0-4b", "internvl2-1b")   # vlm_arb_models.MODELS
+SERVER_MODELS = ("openjev", "dgemma-chat")           # served by the VLM server on card 0
+SWEEP_MODELS = SERVER_MODELS + ("qwen3-vl-4b", "cosmos-reason1-7b", "qwen-drive-1.0-4b", "internvl2-1b")   # vlm_arb_models.MODELS
 
 
 def unit(arm, seed, shard, ids, env=None, kind="", prio=None, deps=(), base=None):
@@ -114,19 +115,19 @@ def jobs(args):
     out += [tool("phaseA-old", "vlm_arb_phase_a.py", "--stage", "old"),
             tool("phaseA", "vlm_arb_phase_a.py", "--stage", "final", deps=[j.name for j in drive]),
             tool("report", "vlm_arb_report.py", prio=9, ready=lambda j: STATE["final"])]
-    # Offline reads of the shadow frames (deviation D15): no gate decides whether they run. They wait for the shadow
-    # units because those need the VLM server at its closed-loop latency. qlight and dgemma-chat use that server, so
-    # the model jobs start after qlight; each is alone on its card (latency), dgemma-chat on card 0 where the server is.
+    # The offline Q-light sweep (deviations D15, D16): no gate decides whether it runs. It waits for the shadow units
+    # because those need the VLM server at its closed-loop latency. Each model is alone on its card (latency); the two
+    # served by the VLM server take card 0 in turn. `ready` instead of deps: a failed step fails the next, no deadlock.
     shadow = tuple(j.name for j in drive) + (unit_name("dbg-shadow", 0, "light"),)
-    mpy = [PY, str(HERE / "vlm_arb_models.py"), "--cap", "0"]
-    out.append(tool("qlight", "vlm_arb_qlight.py", deps=shadow, prio=3))
-    for m in MODEL_NAMES:
-        srv = m == "dgemma-chat"
-        out.append(Job("models-" + m, mpy + ["--only", m, "--no-report"], workers=1, vram_gb=0.0 if srv else 24.0, cores=8,
-                       tries=1, priority=8, deps=shadow, exclusive=True, cuda=not srv, gpus=(0,) if srv else (),
-                       ready=lambda j: STATE.get("qlight_end", False)))
-    out.append(Job("models", mpy + ["--score-only"], workers=0, vram_gb=0.0, tries=2, priority=8, cuda=False,
-                   ready=lambda j: STATE.get("models_end", False)))
+    sweep = [PY, str(HERE / "vlm_arb_lightsweep.py")]
+    out.append(tool("sweep-select", "vlm_arb_lightsweep.py", "select", deps=shadow, prio=3))
+    for m in SWEEP_MODELS:
+        srv = m in SERVER_MODELS
+        out.append(Job("sweep-" + m, sweep + ["run", "--model", m], workers=1, vram_gb=0.0 if srv else 24.0, cores=8,
+                       tries=1, priority=8, exclusive=True, cuda=not srv, gpus=(0,) if srv else (),
+                       ready=lambda j: STATE.get("select_end", False)))
+    out.append(Job("sweep", sweep + ["report"], workers=0, vram_gb=0.0, tries=2, priority=8, cuda=False,
+                   ready=lambda j: STATE.get("sweep_end", False)))
     return out
 
 
@@ -157,8 +158,8 @@ def more(lane, args):
     end = lambda names: all(st(n) in ("done", "failed") for n in names)   # noqa: E731
     done = lambda names: all(st(n) == "done" for n in names)    # noqa: E731
     new, settled = [], True
-    STATE["qlight_end"] = st("qlight") in ("done", "failed")
-    STATE["models_end"] = all(st("models-" + m) in ("done", "failed") for m in MODEL_NAMES)
+    STATE["select_end"] = st("sweep-select") in ("done", "failed")
+    STATE["sweep_end"] = all(st("sweep-" + m) in ("done", "failed") for m in SWEEP_MODELS)
     for s in SEEDS:                                             # dslow, matched to jslow of the same seed
         need = [unit_name("jslow", s, sh) for sh in SHARDS] + [unit_name("drive", s, "tgt")] + ([unit_name("drive", s, "dev")] if s else [])
         if done(need):
@@ -173,18 +174,12 @@ def more(lane, args):
         vlm = dict(VLM_L="%.2f" % g["L_s"])
         if g["q_block"] and g["latency"]:
             new += batch("vbyp", vlm)
-        variant = "base" if g["q_light"] else None
-        if not g["q_light"]:                                    # qlight itself is a static job, never gated
-            q = gate("qlight")
-            if q is None:
-                settled = settled and st("qlight") == "failed"
-            elif q["pass"]:
-                variant = q["variant"]
+        variant = "base" if g["q_light"] else None            # D16: the sweep's prompts unlock nothing
         if variant and g["latency"]:
             rows = ["R2", "R5"] + (["R3"] if g["q_sign"] else [])
             env = dict(vlm, VLM_LIGHT_VARIANT=variant)
             new += batch("vred", dict(env, VLM_ROWS=",".join(rows)))
             new += batch("vall", dict(env, VLM_ROWS=",".join(rows + ["R1"] + (["R4"] if g["q_block"] else []))))
-    others = [n for n in list(lane.jobs) + [j.name for j in new] if n != "report" and not n.startswith("models")]
+    others = [n for n in list(lane.jobs) + [j.name for j in new] if n != "report"]       # the report is last
     STATE["final"] = settled and end(others)
     return new

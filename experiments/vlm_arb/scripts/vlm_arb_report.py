@@ -159,7 +159,7 @@ def main():
     doc += ["", "![paired DS differences](paired_ds.png)", "",
             "Figure: paired DS difference to drive per arm on all, target and non-target routes (dot: mean over routes, bar: 95% "
             "route-cluster CI). Look at whether a bar clears zero and how wide it is against the repeat noise above."]
-    for extra in ("phase_a.md", "qlight.md"):
+    for extra in ("phase_a.md", "lightsweep.md"):
         if (out / extra).exists():
             doc += ["", "See also [%s](%s)." % (extra, extra)]
     (out / "report.md").write_text("\n".join(doc) + "\n")
