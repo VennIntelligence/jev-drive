@@ -97,28 +97,32 @@ def fig(R, out):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    cases = [s for s in ("scene-0013-medium-00", "scene-152217047339-medium-00") if ("cinque-fixed", s) in R]
-    arms = [("cinque-fixed", "base (PR #57)", "#c0392b"), ("cinque-fixed-derot3", "derot < 3 m/s", "#2471a3"),
-            ("cinque-fixed-replay3", "replay, no rotation", "#7f8c8d")]
-    f, ax = plt.subplots(2, len(cases), figsize=(6 * len(cases), 7), squeeze=False)
+    cases = [s for s in ("scene-0013-medium-00", "scene-0528-medium-00", "scene-152217047339-medium-00") if ("cinque-fixed", s) in R]
+    arms = [("cinque-fixed", "base (PR #57)", "#c0392b", 2.5), ("cinque-fixed-replay3", "replay, no rotation", "#7f8c8d", 1.0),
+            ("cinque-fixed-derot3", "de-rotated < 3 m/s", "#2471a3", 1.5)]
+    f, ax = plt.subplots(3, len(cases), figsize=(5.5 * len(cases), 9), squeeze=False, sharex=True)
     for j, s in enumerate(cases):
-        for tag, lab, col in arms:
+        for tag, lab, col, lw in arms:
             if (tag, s) not in R:
                 continue
             c = chain(R[(tag, s)][1])
-            n = min(len(c["t"]), 40)
-            ax[0, j].plot(c["t"][:n], c["hyaw"][:n], color=col, label=f"{lab}: yaw over last 1.5 s")
-            ax[0, j].plot(c["t"][:n], c["phi"][:n], color=col, ls="--", label=f"{lab}: plan direction at 1 s")
-            ax[1, j].plot(c["t"][:n], c["heading"][:n], color=col, label=lab)
-            if tag != "cinque-fixed":
+            n = int((c["t"] <= 10).sum())
+            t = c["t"][:n]
+            ax[0, j].plot(t, c["hyaw"][:n], color=col, lw=lw, label=f"{lab}: yaw over the last 1.5 s")
+            ax[0, j].plot(t, c["phi"][:n], color=col, lw=lw, ls="--", label=f"{lab}: plan direction at 1 s")
+            ax[1, j].plot(t, c["heading"][:n], color=col, lw=lw, label=lab)
+            ax[2, j].plot(t, c["v"][:n], color=col, lw=lw, label=lab)
+            if tag == "cinque-fixed-derot3":
                 on = c["derot"][:n]
-                ax[1, j].scatter(c["t"][:n][on], c["heading"][:n][on], color=col, s=8)
+                ax[1, j].scatter(t[on], c["heading"][:n][on], color=col, s=6)
         ax[0, j].set(title=s, ylabel="deg (+ right)")
-        ax[1, j].set(xlabel="t (s)", ylabel="heading since start (deg); dots = de-rotated step")
-        ax[0, j].axhline(0, color="k", lw=.5)
-        ax[1, j].axhline(0, color="k", lw=.5)
-    ax[0, 0].legend(fontsize=7)
-    ax[1, 0].legend(fontsize=7)
+        ax[1, j].set(ylabel="heading since start (deg)\ndots: de-rotated input")
+        ax[2, j].set(xlabel="t (s)", ylabel="speed (m/s)")
+        for a in ax[:2, j]:
+            a.axhline(0, color="k", lw=.5)
+        ax[2, j].axhline(3, color="k", lw=.5, ls=":")
+    ax[0, 0].legend(fontsize=6.5)
+    ax[2, 0].legend(fontsize=7)
     f.tight_layout()
     f.savefig(out / "derot-chain.png", dpi=110)
     print("figure", out / "derot-chain.png")
