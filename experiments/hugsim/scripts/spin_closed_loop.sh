@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Closed-loop rerun of six Cinque spin-out scenarios under three controllers (fixed = PR #57 as scored, fixed2 = PR #57 + tracker v2,
 # ideal = no controller: the ego moves exactly along the plan). One resident Cinque server on one idle card.
-# Usage (on the box, in tmux):  GPU=<idle card> experiments/hugsim/scripts/spin_closed_loop.sh [out_dir]
+# Usage (on the box, in tmux):  GPU=<idle card> [CTRLS="fixed fixed2 ideal"] [OPTS='{}'] [TAG=<suffix>] experiments/hugsim/scripts/spin_closed_loop.sh [out_dir]
+# OPTS is the agent option JSON of zs_agent.py, e.g. '{"engage_s": 5, "oracle_vmax": 5}' (diagnostic: the privileged route follower
+# drives the first 5 s up to 5 m/s, then the model takes over) with TAG=engage5.
 # Output: <out_dir>/cinque-<controller>/..., <out_dir>/results.csv (same layout as the zero-shot exam).
 set -uo pipefail
 : "${DATA_DIR:?}" "${GPU:?}"
@@ -18,8 +20,8 @@ trap 'kill -- -$srv 2>/dev/null' EXIT
 until [[ -f $OUT/servers/cinque.ready ]]; do sleep 5; kill -0 $srv 2>/dev/null || { echo "server died"; exit 3; }; done
 echo "$(date +%T) server ready"
 $HPY experiments/hugsim/archive/zs_run.py setup-trees official fixed fixed2 ideal
-for c in fixed fixed2 ideal; do
+for c in ${CTRLS:-fixed fixed2 ideal}; do
     $HPY experiments/hugsim/archive/zs_run.py run --out "$OUT" --agent cinque --controller $c --gpu "$GPU" --workers 2 \
-        --scenarios "$L" --socket "$OUT/servers/cinque.sock" --opts '{}'
+        --scenarios "$L" --socket "$OUT/servers/cinque.sock" --opts "${OPTS:-{\}}" ${TAG:+--tag cinque-$c-$TAG}
 done
 echo "$(date +%T) done"

@@ -99,6 +99,30 @@ def analyse(pos, th, v, steer, plans, route):
         out["plan_first"] = bool(len(tp) and tp[0] <= ty[0])
         pre = slice(0, ty[0] + 1)
         out["plan_err_pre_deg"] = float(np.degrees(np.mean(np.abs(wrap(phi - des))[pre][moving[pre]]))) if moving[pre].any() else float("nan")
+    # first steering input (|steer| >= 0.05 rad) and the plan that produced it (the plan at the step before): a plan within 5 deg of
+    # the route direction, or a stop plan, followed by a steering input is the controller's; a plan >= 10 deg off the route
+    # direction on the same side is the model's.
+    ts = np.where(np.abs(steer) >= 0.05)[0]
+    out["t_steer"] = int(ts[0]) if len(ts) else -1
+    if len(ts) and ts[0] > 0:
+        kp = ts[0] - 1
+        perr = wrap(phi[kp] - des[kp]) if moving[kp] else 0.0
+        sg = np.sign(steer[ts[0]])
+        out["steer_dir"] = "right" if sg > 0 else "left"
+        out["plan_err_at_steer_deg"] = float(np.degrees(perr))
+        out["origin"] = "model" if sg * perr >= np.radians(10) else ("controller" if abs(perr) < np.radians(5) else "mixed")
+    # attribution of the yaw: sum of the executed yaw change (in the spin direction) up to the step the heading error reaches 60 deg,
+    # split by what the plan said at that step: plan >= 10 deg off the route direction on the turn side (plan-led), plan within
+    # 10 deg of the route direction or on the other side (plan did not ask for it)
+    if out["spin"]:
+        k60 = int(np.where(np.abs(e) >= np.radians(SPIN_DEG))[0][0])
+        sg = np.sign(e[k60])
+        d = sg * dth[:k60]
+        led = sg * wrap(phi - des)[:k60] >= np.radians(10)
+        led &= moving[:k60]
+        tot = d[d > 0].sum()
+        out["yaw_share_plan_led"] = float(d[led & (d > 0)].sum() / tot) if tot > 0 else float("nan")
+        out["k60"] = k60
     m = moving & (np.abs(phi) > np.radians(3))
     m[-1] = False
     out["track_sign"] = float(np.mean(np.sign(dth[m]) == np.sign(phi[m]))) if m.any() else float("nan")
