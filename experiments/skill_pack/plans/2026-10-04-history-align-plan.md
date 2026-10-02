@@ -48,3 +48,14 @@ On the opposite-side flips, the lower lateral plan std of the two rollouts picks
 - `sel-<rule>`: run both rollouts (as shipped and with the rule); per token keep the rule's plan iff the sum of the plan's
   lateral position std over the knots t <= 4 s is lower than the shipped plan's. No threshold, no tuning. Reference-free (the
   model's own output). Scored on full navhard and navtest with the same decision rule; labelled post hoc.
+
+## Addendum 3 (04:40 box time; post hoc; written after sel-rot0 navtest, before sel-straight navtest is known)
+Read: official navhard sel-rot0 35.59, sel-straight 37.08 (base 33.33); official navtest sel-rot0 83.53 vs 84.18 (-0.65:
+rejected by the rule above). straight_keys navhard 33.00 (rejected).
+The selector picks the rule on 26% of navtest tokens; a stricter pick trades navhard gain against navtest cost. The strictness
+is set on navtrain (lb_navtrain, 3 000 real tokens, seed-0 per-command subset, official v1 PDMS), never on navtest / navhard:
+- `sel-<rule>-r<x>`: keep the rule's plan iff its lateral std sum (t <= 4 s) < x times the shipped plan's.
+- x = the largest value in {1.0, 0.9, 0.8, 0.7, 0.6, 0.5} whose navtrain PDMS delta (per-token decomposition of the two
+  official navtrain CSVs, exact for v1) is >= -0.15. One x per rule (rot0, straight).
+- Then: navhard official two-stage EPDMS for that selector; navtest PDMS by the same exact per-token decomposition of the
+  official navtest CSVs of both arms (plus an official run of the selected pose file when time allows). Same decision rule.
