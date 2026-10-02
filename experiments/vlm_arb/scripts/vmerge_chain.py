@@ -13,6 +13,7 @@ run dirs $DATA_DIR/runs/vlm_arb_vmerge/qwen<card>) and are not stopped by the la
 Stages (docs/long-runs.md):
   pre  `dbg-vmerge-334` (debug red-light route) and `dbg-vmerge-25169` (debug obstacle route), outside the 19
   all  `vmerge-s0-q0..q2`, then `few-vmerge` (vmerge_report.py few: no crash, latency lines), `vmerge-s1-q0..q2`, `report`
+  full all + abl (the ablations start after `report`)
   abl  (--arg abl=nobyp,nocusum,...) one ablation arm `vm<abl>` per name (VM_ABL, one component off), both seeds, after `report`;
        then `report-abl` (vmerge_report.py report <abl names>)
 Units: 3 CARLA workers + their own openpilot server, one unit per card (3 routes per card's Qwen server, as in vred).
@@ -56,9 +57,10 @@ def pre_jobs():
             base.unit("dbg-vmerge", 0, "25169", ["25169"], env(), "", 0, base="vmerge")]
 
 
-def abl_jobs(names):
+def abl_jobs(names, deps=()):
     sh = vc.shards()
-    units = [base.unit("vm" + a, s, k, sh[k], dict(env(), VM_ABL=a), "", 6 + i, base="vmerge") for i, a in enumerate(names) for s in (0, 1) for k in SHARDS]
+    units = [base.unit("vm" + a, s, k, sh[k], dict(env(), VM_ABL=a), "", 6 + i, deps=deps, base="vmerge")
+             for i, a in enumerate(names) for s in (0, 1) for k in SHARDS]
     return units + [tool("report-abl", "report", *names, deps=[j.name for j in units], prio=9)]
 
 
@@ -73,4 +75,8 @@ def jobs(args):
     v0 = [base.unit("vmerge", 0, k, sh[k], env(), "", 4, deps=[j.name for j in pre]) for k in SHARDS]
     few = tool("few-vmerge", "few", deps=[j.name for j in v0], prio=4, ok=lambda j: bool((gate("vmerge_few") or {}).get("passed")))
     v1 = [base.unit("vmerge", 1, k, sh[k], env(), "", 5, deps=[few.name]) for k in SHARDS]
-    return pre + v0 + [few] + v1 + [tool("report", "report", deps=[j.name for j in v1], prio=9)]
+    rep = tool("report", "report", deps=[j.name for j in v1], prio=9)
+    out = pre + v0 + [few] + v1 + [rep]
+    if stage == "full":                              # all, then the ablation arms (--arg abl=...) once the main report exists
+        out += abl_jobs(args["abl"].split(","), deps=[rep.name])
+    return out
