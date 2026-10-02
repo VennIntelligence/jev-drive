@@ -131,8 +131,8 @@ def run_job(a, scen, tag_dir, traffic):
     ad = AD[a.agent]
     base = tag_dir / f"base_{ds}.yaml"
     base.write_text(f"realcar_path: {DATA}/3DRealCar\nmodel_base: {DATA}/scenes/{ds}\n"
-                    f"zs_path: {REPO}/scripts/hugsim/zs_agent_e2e.sh\njev_path: {REPO}/scripts/hugsim/agent_e2e.sh\n"
-                    f"ltf_path: {REPO}/scripts/hugsim/ltf_e2e.sh\npre_path: {REPO}/scripts/hugsim/preset_agent_e2e.sh\n"
+                    f"zs_path: {REPO}/experiments/hugsim/archive/zs_agent_e2e.sh\njev_path: {REPO}/experiments/hugsim/archive/agent_e2e.sh\n"
+                    f"ltf_path: {REPO}/experiments/hugsim/archive/ltf_e2e.sh\npre_path: {REPO}/experiments/hugsim/archive/preset_agent_e2e.sh\n"
                     f"output_dir: {tag_dir}/\n"
                     f"HD_map:\n  path: {DATA}/nusc_map_cache\n  version: nusc_trainval\n")
     run_dir = tag_dir / ad / f"{scene}_{mode}"
