@@ -154,7 +154,7 @@ def main():
     with Run("op_common_cause", "report", config=vars(a)) as run:
         eff, chks = [], []
         for dom in a.domains:
-            if not (ROOT / "raw" / dom).exists():
+            if not (ROOT / "raw" / dom).exists() or not any(p for p in (ROOT / "raw" / dom).glob("*.npz") if ("check" in p.name) == a.check):
                 continue
             m, ck = load(dom, a.check)
             m.to_parquet(run.path(f"metrics_{dom}.parquet"))
