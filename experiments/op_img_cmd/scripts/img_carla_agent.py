@@ -4,7 +4,7 @@ the ego has crossed the junction of its traversal: stop once the ego has been wi
 AFTER_EXIT_S and AFTER_ENTRY_S has passed since it was at the entry (the 4 s future of the last t0 is then logged).
 Entry / exit points per route: plan/stops.json (img_carla_prep.py), path in the agent config key "stops".
 
-  b2d_run.py ... --agent experiments/op_img_cmd/scripts/img_carla_agent.py --agent-config <cfg.json>  (B2D_SENSOR_TICK=1)
+  b2d_run.py ... --agent experiments/op_img_cmd/scripts/img_carla_agent.py --agent-config <cfg.json>  
 """
 import json, math, os, sys
 from pathlib import Path

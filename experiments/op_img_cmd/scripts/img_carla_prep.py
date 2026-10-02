@@ -5,7 +5,7 @@ traversal each), re-trace the route as pair_inv_carla does (GlobalRoutePlanner a
 (last waypoint before the junction), the exit (first after it) and the connecting road / lane the route takes.
 Writes $DATA_DIR/runs/op_img_cmd/carla/plan/{routes.xml, stops.json, agent_config.json}: the routes (both B2D route files merged, ordered
 round-robin over the taken class so any prefix is mixed) and per route the CARLA-world entry / exit points the
-recording agent stops on (img_carla_agent.py); the agent config is P4's with cameras at 5 Hz (sensor_tick 0.2).
+recording agent stops on (img_carla_agent.py); the agent config is P4's (cameras render every tick, every 4th set is saved: sensor_tick 0.2 gave 3- and 4-tick spacings).
 
   $DATA_DIR/envs/carla/bin/python experiments/op_img_cmd/scripts/img_carla_prep.py --workers 16
 """
@@ -68,7 +68,7 @@ def main():
     ET.ElementTree(root).write(OUT / "routes.xml")
     (OUT / "stops.json").write_text(json.dumps({r: stops[r] for r in order}, indent=0))
     cfg = json.load(open(REPO / "experiments" / "prediag" / "results" / "p4-carla-gap" / "agent_config.json"))
-    cfg.update(sensor_tick=0.2, max_sim_s=150.0, stuck_s=60.0, stops=str(OUT / "stops.json"))
+    cfg.update(sensor_tick=0.0, max_sim_s=150.0, stuck_s=60.0, stops=str(OUT / "stops.json"))
     (OUT / "agent_config.json").write_text(json.dumps(cfg, indent=0))
     print(len(order), "routes;", order[:12])
 
