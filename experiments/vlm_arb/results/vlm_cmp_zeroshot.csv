@@ -1,0 +1,205 @@
+res,group,readout,n,est4,est8,diff,read
+r559,light,"ego red answered red, all",411,0.9051094890510949,0.829683698296837,"-7.5 [-16.3, -0.9]",lower
+r559,light,... 0-20 m,364,0.9560439560439561,0.8763736263736264,"-8.0 [-17.6, -0.7]",lower
+r559,light,... 20-50 m,47,0.5106382978723404,0.46808510638297873,"-4.3 [-7.7, -2.9]",too few routes
+r559,light,... position A before the stop line,274,0.8941605839416058,0.8065693430656934,"-8.8 [-20.4, +0.9]",within noise
+r559,light,... position B between line and junction entrance,128,0.96875,0.90625,"-6.2 [-13.8, -1.3]",lower
+r559,light,... position C inside the junction,9,0.3333333333333333,0.4444444444444444,"+11.1 [+11.1, +11.1]",too few routes
+r559,light,"ego red answered green, all",411,0.046228710462287104,0.12165450121654502,"+7.5 [+1.5, +16.3]",higher
+r559,light,... position A,274,0.05474452554744526,0.145985401459854,"+9.1 [+0.5, +20.8]",higher
+r559,light,... position B,128,0.03125,0.078125,"+4.7 [+1.3, +9.0]",higher
+r559,light,... position C,9,0.0,0.0,"+0.0 [+0.0, +0.0]",too few routes
+r559,light,"ego green answered green, all",350,0.8285714285714286,0.7885714285714286,"-4.0 [-14.7, +6.1]",within noise
+r559,light,... position A,240,0.8916666666666667,0.8583333333333333,"-3.3 [-15.6, +9.2]",within noise
+r559,light,... position B,97,0.6701030927835051,0.5979381443298969,"-7.2 [-26.2, +7.3]",within noise
+r559,light,... position C,13,0.8461538461538461,0.9230769230769231,"+7.7 [+0.0, +14.3]",too few routes
+r559,light,ego green answered red,350,0.13428571428571429,0.17142857142857143,"+3.7 [-6.3, +14.5]",within noise
+r559,light,other-direction red (ego not red) answered red,542,0.15313653136531366,0.17343173431734318,"+2.0 [-4.5, +8.6]",within noise
+r559,light,no light at all answered red,292,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r559,sign,stop sign within 25 m answered yes,86,0.4883720930232558,0.5,"+1.2 [+0.0, +3.4]",too few routes
+r559,sign,no sign within 80 m answered yes,1094,0.012797074954296161,0.015539305301645339,"+0.3 [+0.0, +0.6]",within noise
+r559,sign,sign at 25-80 m answered yes (listed),83,0.0963855421686747,0.0963855421686747,"+0.0 [-5.9, +1.5]",too few routes
+r559,block,"static block answered static_block, all",357,0.16806722689075632,0.13725490196078433,"-3.1 [-8.1, +0.0]",within noise
+r559,block,... cones routes,62,0.967741935483871,0.7903225806451613,"-17.7 [-25.0, -10.0]",too few routes
+r559,block,... stopped-vehicle routes,85,0.0,0.0,"+0.0 [+0.0, +0.0]",too few routes
+r559,block,... other routes (queues),210,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r559,block,stopped lead (< 0.5 m/s) answered static_block,242,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r559,block,clear answered static_block,760,0.002631578947368421,0.0,"-0.3 [-0.6, +0.0]",within noise
+r559,block,moving_lead truth answered moving_lead,146,0.3219178082191781,0.6301369863013698,"+30.8 [+16.6, +50.8]",higher
+r559,block,lead moving (>= 0.5 m/s) answered moving_lead,243,0.34156378600823045,0.6049382716049383,"+26.3 [+14.7, +40.4]",higher
+r559,side,"bypass side correct, static-block rows with a side truth",357,0.5182072829131653,0.3165266106442577,"-20.2 [-30.7, -8.2]",lower
+r559,directive,directive: strict accuracy (rows without an ambiguity note),833,0.2545018007202881,0.31932773109243695,"+6.5 [+1.4, +12.5]",higher
+r559,directive,"directive: accepted accuracy, all rows",1263,0.4386381631037213,0.4885193982581156,"+5.0 [+1.4, +9.2]",higher
+r559,directive,"directive: accepted accuracy, ambiguous rows only",430,0.7953488372093023,0.8162790697674419,"+2.1 [-4.5, +9.2]",within noise
+r559,directive,directive: strict recall of proceed,119,0.025210084033613446,0.20168067226890757,"+17.6 [+4.1, +33.3]",higher
+r559,directive,directive: strict recall of slow,57,0.8070175438596491,0.2631578947368421,"-54.4 [-68.9, -34.9]",lower
+r559,directive,directive: strict recall of stop_at_line,276,0.5905797101449275,0.7101449275362319,"+12.0 [+2.7, +25.7]",higher
+r559,directive,directive: strict recall of go_now,234,0.0,0.13247863247863248,"+13.2 [+4.0, +24.9]",higher
+r559,directive,directive: strict recall of pass_left,147,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r559,directive,directive: strict recall of pass_right,0,0.0,0.0,n/a,n/a
+r559,directive,directive: strict recall of wait,0,0.0,0.0,n/a,n/a
+r559,composed,composed from the questions: strict accuracy,833,0.65906362545018,0.6386554621848739,"-2.0 [-7.0, +1.9]",within noise
+r559,composed,"composed: accepted accuracy, all rows",1263,0.7403008709422011,0.7181314330958036,"-2.2 [-6.1, +1.0]",within noise
+r559,composed,"composed: accepted accuracy, ambiguous rows only",430,0.8976744186046511,0.872093023255814,"-2.6 [-7.3, +1.2]",within noise
+r559,composed,composed: strict recall of proceed,119,0.9159663865546218,0.9243697478991597,"+0.8 [-2.4, +3.7]",within noise
+r559,composed,composed: strict recall of slow,57,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r559,composed,composed: strict recall of stop_at_line,276,0.7608695652173914,0.7608695652173914,"+0.0 [-6.7, +4.8]",within noise
+r559,composed,composed: strict recall of go_now,234,0.8376068376068376,0.8290598290598291,"-0.9 [-14.3, +10.7]",within noise
+r559,composed,composed: strict recall of pass_left,147,0.23129251700680273,0.12244897959183673,"-10.9 [-28.3, +0.0]",within noise
+r559,composed,composed: strict recall of pass_right,0,0.0,0.0,n/a,n/a
+r559,composed,composed: strict recall of wait,0,0.0,0.0,n/a,n/a
+r559,composed,"composed: strict accuracy, rows whose truth is not slow",776,0.7074742268041238,0.6855670103092784,"-2.2 [-7.5, +2.0]",within noise
+r559,directive,"directive: strict accuracy, rows whose truth is not slow",776,0.21391752577319587,0.3234536082474227,"+11.0 [+5.8, +17.5]",higher
+r1153,light,"ego red answered red, all",411,0.8978102189781022,0.7785888077858881,"-11.9 [-23.4, -1.2]",lower
+r1153,light,... 0-20 m,364,0.9395604395604396,0.8241758241758241,"-11.5 [-23.7, -0.3]",lower
+r1153,light,... 20-50 m,47,0.574468085106383,0.425531914893617,"-14.9 [-53.8, +0.0]",too few routes
+r1153,light,... position A before the stop line,274,0.9014598540145985,0.7627737226277372,"-13.9 [-28.1, +0.5]",within noise
+r1153,light,... position B between line and junction entrance,128,0.9140625,0.8359375,"-7.8 [-15.7, -1.7]",lower
+r1153,light,... position C inside the junction,9,0.5555555555555556,0.4444444444444444,"-11.1 [-11.1, -11.1]",too few routes
+r1153,light,"ego red answered green, all",411,0.051094890510948905,0.170316301703163,"+11.9 [+3.4, +24.3]",higher
+r1153,light,... position A,274,0.0364963503649635,0.17883211678832117,"+14.2 [+3.3, +29.0]",higher
+r1153,light,... position B,128,0.0859375,0.1640625,"+7.8 [+1.7, +15.7]",higher
+r1153,light,... position C,9,0.0,0.0,"+0.0 [+0.0, +0.0]",too few routes
+r1153,light,"ego green answered green, all",350,0.8114285714285714,0.8428571428571429,"+3.1 [-2.2, +10.0]",within noise
+r1153,light,... position A,240,0.9,0.9041666666666667,"+0.4 [-6.0, +10.2]",within noise
+r1153,light,... position B,97,0.5876288659793815,0.6804123711340206,"+9.3 [+1.2, +17.5]",higher
+r1153,light,... position C,13,0.8461538461538461,0.9230769230769231,"+7.7 [-16.7, +28.6]",too few routes
+r1153,light,ego green answered red,350,0.15428571428571428,0.10857142857142857,"-4.6 [-10.5, +0.0]",within noise
+r1153,light,other-direction red (ego not red) answered red,542,0.15313653136531366,0.14206642066420663,"-1.1 [-6.3, +3.2]",within noise
+r1153,light,no light at all answered red,292,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r1153,sign,stop sign within 25 m answered yes,86,0.4883720930232558,0.4883720930232558,"+0.0 [+0.0, +0.0]",too few routes
+r1153,sign,no sign within 80 m answered yes,1094,0.021937842778793418,0.027422303473491772,"+0.5 [+0.0, +1.8]",within noise
+r1153,sign,sign at 25-80 m answered yes (listed),83,0.0963855421686747,0.0963855421686747,"+0.0 [+0.0, +0.0]",too few routes
+r1153,block,"static block answered static_block, all",357,0.16806722689075632,0.12044817927170869,"-4.8 [-11.3, +0.0]",within noise
+r1153,block,... cones routes,62,0.967741935483871,0.6935483870967742,"-27.4 [-30.0, -25.0]",too few routes
+r1153,block,... stopped-vehicle routes,85,0.0,0.0,"+0.0 [+0.0, +0.0]",too few routes
+r1153,block,... other routes (queues),210,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r1153,block,stopped lead (< 0.5 m/s) answered static_block,242,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r1153,block,clear answered static_block,760,0.010526315789473684,0.0,"-1.1 [-3.5, +0.0]",within noise
+r1153,block,moving_lead truth answered moving_lead,146,0.3767123287671233,0.636986301369863,"+26.0 [+7.1, +53.8]",higher
+r1153,block,lead moving (>= 0.5 m/s) answered moving_lead,243,0.40329218106995884,0.588477366255144,"+18.5 [+4.0, +37.7]",higher
+r1153,side,"bypass side correct, static-block rows with a side truth",357,0.5938375350140056,0.3697478991596639,"-22.4 [-34.6, -12.5]",lower
+r1153,directive,directive: strict accuracy (rows without an ambiguity note),833,0.2533013205282113,0.3157262905162065,"+6.2 [+1.8, +11.6]",higher
+r1153,directive,"directive: accepted accuracy, all rows",1263,0.43626286619160726,0.4916864608076009,"+5.5 [+2.2, +9.4]",higher
+r1153,directive,"directive: accepted accuracy, ambiguous rows only",430,0.7906976744186046,0.8325581395348837,"+4.2 [-2.7, +11.6]",within noise
+r1153,directive,directive: strict recall of proceed,119,0.03361344537815126,0.20168067226890757,"+16.8 [+4.0, +32.9]",higher
+r1153,directive,directive: strict recall of slow,57,0.7192982456140351,0.22807017543859648,"-49.1 [-64.3, -33.3]",lower
+r1153,directive,directive: strict recall of stop_at_line,276,0.5942028985507246,0.7246376811594203,"+13.0 [+3.8, +26.6]",higher
+r1153,directive,directive: strict recall of go_now,234,0.008547008547008548,0.1111111111111111,"+10.3 [+2.8, +19.4]",higher
+r1153,directive,directive: strict recall of pass_left,147,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r1153,directive,directive: strict recall of pass_right,0,0.0,0.0,n/a,n/a
+r1153,directive,directive: strict recall of wait,0,0.0,0.0,n/a,n/a
+r1153,composed,composed from the questions: strict accuracy,833,0.6578631452581032,0.6422569027611045,"-1.6 [-7.3, +4.2]",within noise
+r1153,composed,"composed: accepted accuracy, all rows",1263,0.7387173396674585,0.7260490894695171,"-1.3 [-5.1, +2.7]",within noise
+r1153,composed,"composed: accepted accuracy, ambiguous rows only",430,0.8953488372093024,0.8883720930232558,"-0.7 [-3.6, +2.6]",within noise
+r1153,composed,composed: strict recall of proceed,119,0.865546218487395,0.9159663865546218,"+5.0 [-3.1, +15.9]",within noise
+r1153,composed,composed: strict recall of slow,57,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r1153,composed,composed: strict recall of stop_at_line,276,0.7572463768115942,0.7318840579710145,"-2.5 [-12.3, +5.9]",within noise
+r1153,composed,composed: strict recall of go_now,234,0.811965811965812,0.8589743589743589,"+4.7 [-2.4, +14.8]",within noise
+r1153,composed,composed: strict recall of pass_left,147,0.3129251700680272,0.1564625850340136,"-15.6 [-37.1, +0.0]",within noise
+r1153,composed,composed: strict recall of pass_right,0,0.0,0.0,n/a,n/a
+r1153,composed,composed: strict recall of wait,0,0.0,0.0,n/a,n/a
+r1153,composed,"composed: strict accuracy, rows whose truth is not slow",776,0.7061855670103093,0.6894329896907216,"-1.7 [-7.7, +4.7]",within noise
+r1153,directive,"directive: strict accuracy, rows whose truth is not slow",776,0.2190721649484536,0.32216494845360827,"+10.3 [+5.4, +16.4]",higher
+r2335,light,"ego red answered red, all",411,0.878345498783455,0.8175182481751825,"-6.1 [-9.3, -3.2]",lower
+r2335,light,... 0-20 m,364,0.9148351648351648,0.8516483516483516,"-6.3 [-10.1, -3.0]",lower
+r2335,light,... 20-50 m,47,0.5957446808510638,0.5531914893617021,"-4.3 [-7.7, -2.9]",too few routes
+r2335,light,... position A before the stop line,274,0.8832116788321168,0.8102189781021898,"-7.3 [-11.3, -3.5]",lower
+r2335,light,... position B between line and junction entrance,128,0.890625,0.8515625,"-3.9 [-8.0, +0.0]",within noise
+r2335,light,... position C inside the junction,9,0.5555555555555556,0.5555555555555556,"+0.0 [+0.0, +0.0]",too few routes
+r2335,light,"ego red answered green, all",411,0.09002433090024331,0.1411192214111922,"+5.1 [+1.9, +10.0]",higher
+r2335,light,... position A,274,0.08394160583941605,0.14233576642335766,"+5.8 [+1.7, +12.9]",higher
+r2335,light,... position B,128,0.109375,0.1484375,"+3.9 [+0.0, +8.0]",within noise
+r2335,light,... position C,9,0.0,0.0,"+0.0 [+0.0, +0.0]",too few routes
+r2335,light,"ego green answered green, all",350,0.8828571428571429,0.8828571428571429,"+0.0 [-3.8, +4.4]",within noise
+r2335,light,... position A,240,0.9625,0.95,"-1.2 [-2.6, +0.0]",within noise
+r2335,light,... position B,97,0.6804123711340206,0.7010309278350515,"+2.1 [-10.6, +17.0]",within noise
+r2335,light,... position C,13,0.9230769230769231,1.0,"+7.7 [+0.0, +14.3]",too few routes
+r2335,light,ego green answered red,350,0.1,0.09142857142857143,"-0.9 [-5.0, +3.2]",within noise
+r2335,light,other-direction red (ego not red) answered red,542,0.13099630996309963,0.13284132841328414,"+0.2 [-3.3, +3.5]",within noise
+r2335,light,no light at all answered red,292,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r2335,sign,stop sign within 25 m answered yes,86,0.4883720930232558,0.4883720930232558,"+0.0 [+0.0, +0.0]",too few routes
+r2335,sign,no sign within 80 m answered yes,1094,0.025594149908592323,0.03290676416819013,"+0.7 [+0.0, +2.5]",within noise
+r2335,sign,sign at 25-80 m answered yes (listed),83,0.0963855421686747,0.12048192771084337,"+2.4 [+0.0, +11.8]",too few routes
+r2335,block,"static block answered static_block, all",357,0.16806722689075632,0.12324929971988796,"-4.5 [-10.7, +0.0]",within noise
+r2335,block,... cones routes,62,0.967741935483871,0.7096774193548387,"-25.8 [-28.1, -23.3]",too few routes
+r2335,block,... stopped-vehicle routes,85,0.0,0.0,"+0.0 [+0.0, +0.0]",too few routes
+r2335,block,... other routes (queues),210,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r2335,block,stopped lead (< 0.5 m/s) answered static_block,242,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r2335,block,clear answered static_block,760,0.015789473684210527,0.0013157894736842105,"-1.4 [-5.1, +0.3]",within noise
+r2335,block,moving_lead truth answered moving_lead,146,0.4726027397260274,0.6232876712328768,"+15.1 [-1.6, +38.2]",within noise
+r2335,block,lead moving (>= 0.5 m/s) answered moving_lead,243,0.4567901234567901,0.6172839506172839,"+16.0 [+2.2, +34.2]",higher
+r2335,side,"bypass side correct, static-block rows with a side truth",357,0.6078431372549019,0.3697478991596639,"-23.8 [-33.6, -14.2]",lower
+r2335,directive,directive: strict accuracy (rows without an ambiguity note),833,0.2581032412965186,0.3025210084033613,"+4.4 [+0.4, +9.7]",higher
+r2335,directive,"directive: accepted accuracy, all rows",1263,0.444972288202692,0.4972288202692003,"+5.2 [+1.9, +8.9]",higher
+r2335,directive,"directive: accepted accuracy, ambiguous rows only",430,0.8069767441860465,0.8744186046511628,"+6.7 [-0.4, +15.1]",within noise
+r2335,directive,directive: strict recall of proceed,119,0.04201680672268908,0.2184873949579832,"+17.6 [+5.4, +32.9]",higher
+r2335,directive,directive: strict recall of slow,57,0.7017543859649122,0.2631578947368421,"-43.9 [-55.9, -28.4]",lower
+r2335,directive,directive: strict recall of stop_at_line,276,0.5978260869565217,0.717391304347826,"+12.0 [+3.6, +24.3]",higher
+r2335,directive,directive: strict recall of go_now,234,0.021367521367521368,0.05555555555555555,"+3.4 [-1.4, +10.3]",within noise
+r2335,directive,directive: strict recall of pass_left,147,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r2335,directive,directive: strict recall of pass_right,0,0.0,0.0,n/a,n/a
+r2335,directive,directive: strict recall of wait,0,0.0,0.0,n/a,n/a
+r2335,composed,composed from the questions: strict accuracy,833,0.6770708283313326,0.6470588235294118,"-3.0 [-7.8, +0.9]",within noise
+r2335,composed,"composed: accepted accuracy, all rows",1263,0.7529691211401425,0.7339667458432304,"-1.9 [-5.3, +0.7]",within noise
+r2335,composed,"composed: accepted accuracy, ambiguous rows only",430,0.9,0.9023255813953488,"+0.2 [-2.0, +3.3]",within noise
+r2335,composed,composed: strict recall of proceed,119,0.8067226890756303,0.907563025210084,"+10.1 [-1.4, +24.5]",within noise
+r2335,composed,composed: strict recall of slow,57,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r2335,composed,composed: strict recall of stop_at_line,276,0.7391304347826086,0.7246376811594203,"-1.4 [-8.1, +4.1]",within noise
+r2335,composed,composed: strict recall of go_now,234,0.905982905982906,0.8931623931623932,"-1.3 [-5.7, +3.8]",within noise
+r2335,composed,composed: strict recall of pass_left,147,0.35374149659863946,0.14965986394557823,"-20.4 [-48.4, +0.0]",within noise
+r2335,composed,composed: strict recall of pass_right,0,0.0,0.0,n/a,n/a
+r2335,composed,composed: strict recall of wait,0,0.0,0.0,n/a,n/a
+r2335,composed,"composed: strict accuracy, rows whose truth is not slow",776,0.7268041237113402,0.6945876288659794,"-3.2 [-8.3, +1.0]",within noise
+r2335,directive,"directive: strict accuracy, rows whose truth is not slow",776,0.22551546391752578,0.30541237113402064,"+8.0 [+3.7, +13.8]",higher
+r4573,light,"ego red answered red, all",411,0.9075425790754258,0.8077858880778589,"-10.0 [-18.2, -4.5]",lower
+r4573,light,... 0-20 m,364,0.945054945054945,0.8351648351648352,"-11.0 [-19.5, -4.9]",lower
+r4573,light,... 20-50 m,47,0.6170212765957447,0.5957446808510638,"-2.1 [-2.9, +0.0]",too few routes
+r4573,light,... position A before the stop line,274,0.9233576642335767,0.8029197080291971,"-12.0 [-24.3, -4.6]",lower
+r4573,light,... position B between line and junction entrance,128,0.8984375,0.8359375,"-6.2 [-15.0, +0.0]",within noise
+r4573,light,... position C inside the junction,9,0.5555555555555556,0.5555555555555556,"+0.0 [+0.0, +0.0]",too few routes
+r4573,light,"ego red answered green, all",411,0.06569343065693431,0.1654501216545012,"+10.0 [+4.0, +19.0]",higher
+r4573,light,... position A,274,0.051094890510948905,0.17153284671532848,"+12.0 [+4.0, +25.5]",higher
+r4573,light,... position B,128,0.1015625,0.1640625,"+6.2 [+0.0, +15.0]",within noise
+r4573,light,... position C,9,0.0,0.0,"+0.0 [+0.0, +0.0]",too few routes
+r4573,light,"ego green answered green, all",350,0.9314285714285714,0.9485714285714286,"+1.7 [-1.9, +5.3]",within noise
+r4573,light,... position A,240,0.9625,0.9583333333333334,"-0.4 [-1.6, +0.0]",within noise
+r4573,light,... position B,97,0.865979381443299,0.9175257731958762,"+5.2 [-7.4, +17.8]",within noise
+r4573,light,... position C,13,0.8461538461538461,1.0,"+15.4 [+0.0, +33.3]",too few routes
+r4573,light,ego green answered red,350,0.05142857142857143,0.03428571428571429,"-1.7 [-5.3, +1.9]",within noise
+r4573,light,other-direction red (ego not red) answered red,542,0.11623616236162361,0.09778597785977859,"-1.8 [-5.3, +1.4]",within noise
+r4573,light,no light at all answered red,292,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r4573,sign,stop sign within 25 m answered yes,86,0.4883720930232558,0.4883720930232558,"+0.0 [+0.0, +0.0]",too few routes
+r4573,sign,no sign within 80 m answered yes,1094,0.02102376599634369,0.031078610603290677,"+1.0 [+0.0, +3.2]",within noise
+r4573,sign,sign at 25-80 m answered yes (listed),83,0.0963855421686747,0.12048192771084337,"+2.4 [+0.0, +11.8]",too few routes
+r4573,block,"static block answered static_block, all",357,0.16806722689075632,0.11484593837535013,"-5.3 [-12.8, +0.0]",within noise
+r4573,block,... cones routes,62,0.967741935483871,0.6612903225806451,"-30.6 [-34.4, -26.7]",too few routes
+r4573,block,... stopped-vehicle routes,85,0.0,0.0,"+0.0 [+0.0, +0.0]",too few routes
+r4573,block,... other routes (queues),210,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r4573,block,stopped lead (< 0.5 m/s) answered static_block,242,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r4573,block,clear answered static_block,760,0.013157894736842105,0.0,"-1.3 [-3.9, +0.0]",within noise
+r4573,block,moving_lead truth answered moving_lead,146,0.4520547945205479,0.5684931506849316,"+11.6 [+0.6, +24.8]",higher
+r4573,block,lead moving (>= 0.5 m/s) answered moving_lead,243,0.4609053497942387,0.5761316872427984,"+11.5 [+1.5, +23.6]",higher
+r4573,side,"bypass side correct, static-block rows with a side truth",357,0.6246498599439776,0.3949579831932773,"-23.0 [-32.7, -14.5]",lower
+r4573,directive,directive: strict accuracy (rows without an ambiguity note),833,0.25090036014405764,0.29531812725090034,"+4.4 [+1.2, +8.4]",higher
+r4573,directive,"directive: accepted accuracy, all rows",1263,0.4576405384006334,0.4916864608076009,"+3.4 [+0.3, +6.7]",higher
+r4573,directive,"directive: accepted accuracy, ambiguous rows only",430,0.858139534883721,0.872093023255814,"+1.4 [-5.6, +9.1]",within noise
+r4573,directive,directive: strict recall of proceed,119,0.06722689075630252,0.23529411764705882,"+16.8 [+6.0, +29.1]",higher
+r4573,directive,directive: strict recall of slow,57,0.631578947368421,0.2807017543859649,"-35.1 [-48.2, -21.1]",lower
+r4573,directive,directive: strict recall of stop_at_line,276,0.5797101449275363,0.7246376811594203,"+14.5 [+6.3, +25.8]",higher
+r4573,directive,directive: strict recall of go_now,234,0.021367521367521368,0.008547008547008548,"-1.3 [-5.6, +2.8]",within noise
+r4573,directive,directive: strict recall of pass_left,147,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r4573,directive,directive: strict recall of pass_right,0,0.0,0.0,n/a,n/a
+r4573,directive,directive: strict recall of wait,0,0.0,0.0,n/a,n/a
+r4573,composed,composed from the questions: strict accuracy,833,0.7214885954381752,0.6686674669867947,"-5.3 [-11.9, -0.1]",lower
+r4573,composed,"composed: accepted accuracy, all rows",1263,0.7838479809976246,0.7545526524148852,"-2.9 [-7.6, +0.8]",within noise
+r4573,composed,"composed: accepted accuracy, ambiguous rows only",430,0.9046511627906977,0.9209302325581395,"+1.6 [-0.9, +5.3]",within noise
+r4573,composed,composed: strict recall of proceed,119,0.8151260504201681,0.907563025210084,"+9.2 [-1.1, +19.9]",within noise
+r4573,composed,composed: strict recall of slow,57,0.0,0.0,"+0.0 [+0.0, +0.0]",within noise
+r4573,composed,composed: strict recall of stop_at_line,276,0.7971014492753623,0.7137681159420289,"-8.3 [-21.7, +0.9]",within noise
+r4573,composed,composed: strict recall of go_now,234,0.9658119658119658,0.9658119658119658,"+0.0 [-4.4, +4.2]",within noise
+r4573,composed,composed: strict recall of pass_left,147,0.3945578231292517,0.17687074829931973,"-21.8 [-51.6, +0.0]",within noise
+r4573,composed,composed: strict recall of pass_right,0,0.0,0.0,n/a,n/a
+r4573,composed,composed: strict recall of wait,0,0.0,0.0,n/a,n/a
+r4573,composed,"composed: strict accuracy, rows whose truth is not slow",776,0.7744845360824743,0.7177835051546392,"-5.7 [-12.8, -0.1]",lower
+r4573,directive,"directive: strict accuracy, rows whose truth is not slow",776,0.22293814432989692,0.2963917525773196,"+7.3 [+3.3, +12.5]",higher
