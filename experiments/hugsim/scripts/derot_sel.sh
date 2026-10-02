@@ -10,14 +10,17 @@ S=experiments/hugsim/scripts
 HPY=$DATA_DIR/envs/hugsim/bin/python
 SOCK=$OUT/servers/cinque-sel.sock
 rm -f "$OUT/servers/cinque-sel.ready" "$OUT/SEL_DONE" "$OUT/SEL_ERROR"
-CUDA_VISIBLE_DEVICES=$GPU setsid "$DATA_DIR/envs/openpilot/bin/python" -u experiments/hugsim/archive/hugsim_zs_server.py cinque \
-    --socket "$SOCK" --ready-file "$OUT/servers/cinque-sel.ready" > "$OUT/servers/cinque-sel.log" 2>&1 &
+# the server was killed from outside twice tonight (no traceback, no cgroup OOM): restart it in a loop; a job whose agent
+# loses the server crashes, is retried once by zs_run, and is bounded by --timeout
+CUDA_VISIBLE_DEVICES=$GPU setsid bash -c 'while true; do "$0" -u experiments/hugsim/archive/hugsim_zs_server.py cinque \
+    --socket "$1" --ready-file "$2"; echo "$(date +%T) server exited rc=$?"; sleep 3; done' \
+    "$DATA_DIR/envs/openpilot/bin/python" "$SOCK" "$OUT/servers/cinque-sel.ready" >> "$OUT/servers/cinque-sel.log" 2>&1 &
 srv=$!
 trap 'kill -- -$srv 2>/dev/null' EXIT
 until [[ -f $OUT/servers/cinque-sel.ready ]]; do sleep 5; kill -0 $srv 2>/dev/null || { echo server died > "$OUT/SEL_ERROR"; exit 3; }; done
 OPTS='{"derot_below": 3.0, "derot_sel": 0.6}'
 run() { timeout $(( $(date -d "${STOP_AT:-07:25}" +%s) - $(date +%s) )) $HPY experiments/hugsim/archive/zs_run.py run --out "$OUT" \
-        --agent cinque --controller fixed --gpu "$GPU" --workers "${WORKERS:-2}" --scenarios "$1" --socket "$SOCK" --opts "$OPTS" --tag cinque-fixed-sel3; }
+        --agent cinque --controller fixed --gpu "$GPU" --workers "${WORKERS:-2}" --scenarios "$1" --socket "$SOCK" --opts "$OPTS" --tag cinque-fixed-sel3 --timeout 900; }
 echo "$(date +%T) sel3 stage 1" > "$OUT/SEL_STATUS"
 run $S/derot_spin10.txt
 echo "$(date +%T) sel3 stage 2" > "$OUT/SEL_STATUS"
