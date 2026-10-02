@@ -21,6 +21,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from vlm_thin_common import (CACHE, CUTS, FOUR_PROMPT, LIGHTS, NL, RES, Thin, jwrite, load_frames, log, parse_option,  # noqa: E402
                              percentiles, read_jpgs, sync)
+from vlm_thin_fit import frames_tag  # noqa: E402
 from vlm_arb_models_worker import PROMPT as JOINT_PROMPT, parse_reply  # noqa: E402
 from vlm_arb_common import REPO  # noqa: E402
 
@@ -47,7 +48,8 @@ def selftest(a):
     import torch
     th = Thin()
     df = frames_for(a.run)
-    rows = df[df.part == "test"].iloc[[3, 200, 600]]
+    t = df[df.part == "test"]
+    rows = t.iloc[np.unique(np.linspace(0, len(t) - 1, 3).astype(int))]
     res = dict(checks=[])
     for r in rows.itertuples():
         ref = th.prep_ref([r.wide, r.road])
@@ -167,7 +169,7 @@ def extract(a):
     df = frames_for(a.run)
     ids = par.shards(sorted(df.id), n, i)
     for res in a.res.split(","):
-        path = CACHE / "features" / res / ("shard-%d-of-%d.npz" % (i, n))
+        path = CACHE / "features" / frames_tag(df) / res / ("shard-%d-of-%d.npz" % (i, n))
         k = cache.key(dict(res=res, max_px=RES[res], pool_layers=POOL_LAYERS, ids=len(ids), shard=[i, n], prompt=FOUR_PROMPT),
                       code=[extract_fn, Thin], version="v1")
         cache.cached(path, k, lambda: extract_fn(th, ids, df, res))
@@ -344,13 +346,9 @@ def gen(a):
 # ---------------------------------------------------------------------------------------------------- Phase A (b)
 def load_head(path):
     import torch
+    from vlm_thin_fit import probs
     d = torch.load(path, map_location="cuda")
-    mu, sd = d["mu"].float(), d["sd"].float()
-    if d["kind"] == "lin":
-        W, b = d["W"].float(), d["b"].float()
-        return d, lambda f: ((f - mu) / sd) @ W + b
-    W1, b1, W2, b2 = (d[k].float() for k in ("W1", "b1", "W2", "b2"))
-    return d, lambda f: torch.nn.functional.gelu(((f - mu) / sd) @ W1 + b1) @ W2 + b2
+    return d, lambda f: probs(torch, d, ((f.float() - d["mu"]) / d["sd"])[None])[0]
 
 
 def serve(a):
@@ -376,8 +374,7 @@ def serve(a):
             ft = th.run(x, N, pool=True)[1].flatten()
         else:
             ft = th.run(x, N)
-        p = torch.softmax(fwd(ft), -1)
-        return p.cpu().numpy()
+        return fwd(ft).cpu().numpy()
     with torch.no_grad():
         for k in range(N_WARM):
             request(read_jpgs(df.iloc[mine[k % len(mine)]]))
