@@ -126,7 +126,7 @@ def calibrate(a, arm="cal2", gate_name="v2_cal", load="3 shadow + 3 pbyp2 worker
                                                                         gate["max_ms"], gate["queue_p95_ms"], gate["svc_p50_ms"], L_REG, 100 * gate["over_L"],
                                                                         100 * gate["over_ttl"], L_REG, 1e3 * L_REG, "yes" if gate["passed"] else "NO"))
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / ("calibration.md" if arm == "cal2" else "calibration_%s.md" % arm)).write_text(txt)
+    (OUT / ("v2_calibration_%s.md" % arm)).write_text(txt)
     print(txt)
 
 
@@ -762,10 +762,10 @@ def report_light(A):
           "| %d | %.2f%% | %.0f | %.0f | %.0f | %.0f | %.1f%% | %.2f%% | %.0f | %.0f |" % (len(ans), 100 * ans.ok.mean(), pct(lat, 50), pct(lat, 95), pct(lat, 99), lat.max(),
                                                                                         100 * np.mean(lat > 1e3 * L_REG), 100 * np.mean(lat > 2500), pct(ans.q_ms[ans.ok], 95), pct(ans.svc[ans.ok], 50)), ""]
     if cal:
-        D += ["Calibration before the batch (shadow run, %s): p50 %.0f ms, p95 %.0f ms, p99 %.0f ms (%d requests); registered L = 0.35 s %s (`calibration.md`)." % (
+        D += ["Calibration before the batch (shadow run, %s): p50 %.0f ms, p95 %.0f ms, p99 %.0f ms (%d requests); registered L = 0.35 s %s (`v2_calibration_cal3.md`)." % (
             cal["load"], cal["p50_ms"], cal["p95_ms"], cal["p99_ms"], cal["n"], "held" if cal["passed"] else "did NOT hold"), ""]
     if cal2:
-        D += ["A first calibration at 6 workers per card (3 shadow + 3 pbyp2 workers, `calibration.md`) gave p50 %.0f ms, p95 %.0f ms, p99 %.0f ms (%d requests) and failed the registered line "
+        D += ["A first calibration at 6 workers per card (3 shadow + 3 pbyp2 workers, `v2_calibration_cal2.md`) gave p50 %.0f ms, p95 %.0f ms, p99 %.0f ms (%d requests) and failed the registered line "
               "(p95 <= 350 ms); concurrency was reduced to the load above before any vred2 unit ran (vred3 ran at that reduced load as well)." % (cal2["p50_ms"], cal2["p95_ms"], cal2["p99_ms"], cal2["n"]), ""]
     # in-loop reading quality, with and without the hold
     D += ["## In-loop reading quality (answers logged during the runs against the simulator's light state)", "",
