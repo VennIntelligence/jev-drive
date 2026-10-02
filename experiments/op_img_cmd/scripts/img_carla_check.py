@@ -37,6 +37,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pkl", default="carla")
     ap.add_argument("--n", type=int, default=6)
+    ap.add_argument("--tokens", default="", help="comma list instead of the automatic pick")
+    ap.add_argument("--scale", type=float, default=0.75, help="tile size / 512 x 256")
     ap.add_argument("--cam-dz", type=float, default=0.0, help="debug: shift the camera origin up (m)")
     ap.add_argument("--out", default=str(REPO / "experiments" / "op_img_cmd" / "figs" / "carla_geom_check.png"))
     a = ap.parse_args()
@@ -44,10 +46,12 @@ def main():
     rng = np.random.default_rng(0)
     pick = []
     for tag in ("d10", "d5", "d20", "d1", "stop", "d10"):        # spread over distances and taken classes
-        c = [s for s in G if s["tag"] == tag and s not in pick and s["taken"] not in {p["taken"] for p in pick[-2:]}]
+        c = [s for s in G if s["tag"] == tag and s not in pick and s["taken"] not in {p["taken"] for p in pick[-2:]}] or \
+            [s for s in G if s["tag"] == tag and s not in pick]
         if c:
             pick.append(c[rng.integers(len(c))])
-    pick = pick[: a.n]
+    pick = pick + [s for s in G if s not in pick][: a.n - len(pick)]
+    pick = [s for s in G if s["token"] in a.tokens.split(",")] if a.tokens else pick[: a.n]
     rows = []
     for s in pick:
         fr = np.load(s["frames"])["frames"]
@@ -56,11 +60,11 @@ def main():
         lay = O.primitives(s, "band", s["taken"]) + O.primitives(s, "lines", s["taken"]) + [(edges[0] + edges[1], O.RED, 1.0, 0)]
         d, d0 = (O.draw(fr[k], lay, s["pose"][k], cam) for k in (-1, 0))
         tiles = [rgb(fr[-1])[0], rgb(d)[0], rgb(d)[1], rgb(d0)[0]]
-        row = np.concatenate([cv2.resize(t, (384, 192), interpolation=cv2.INTER_AREA) for t in tiles], 1)
+        row = np.concatenate([cv2.resize(t, (int(512 * a.scale), int(256 * a.scale)), interpolation=cv2.INTER_AREA) for t in tiles], 1)
         txt = f"{s['token']} {s['town']} taken {s['taken']} cmd {s['cmd']} v {s['v']:.1f} m/s dist {s['dist']:.1f} m"
         cv2.putText(row, txt, (6, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 0), 1, cv2.LINE_AA)
         rows.append(row)
-    img = Image.fromarray(np.concatenate(rows, 0)).quantize(128)
+    img = Image.fromarray(np.concatenate(rows, 0)).quantize(64)
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
     img.save(a.out, optimize=True)
     print(a.out, os.path.getsize(a.out) // 1024, "KB;", [s["token"] for s in pick])
