@@ -500,7 +500,7 @@ def report_vred2():
     stops = pd.concat([stop_rows(df, a) for a in ("pred", "vred", "vred2")], ignore_index=True)
     stops.to_csv(OUT / "vred2_stops.csv", index=False)
     D += ["## Stop position at every red-light stop", "",
-          "Front bumper to the stop line of the governing light (ctx `tl_dist`, simulator truth, evaluation only) at the first plan step of standstill under the arm's hold "
+          "Front bumper to the stop line of the governing light (ctx `tl_dist`, simulator truth, evaluation only) at the last plan step of standstill under the arm's hold (where the car finally stood; a car that starts the route standing under a hold is counted where it stood at the end) "
           "(pred: privileged red stop; vred / vred2: R2). Positive = short of the line. `min` = the smallest distance during the hold (negative = the car crept across the line while holding).", "",
           "| arm | stops | median d_stop | min | max | stopped beyond the line | crept across while holding (min < 0) |", "|:--|--:|--:|--:|--:|--:|--:|"]
     for a in ("pred", "vred", "vred2"):

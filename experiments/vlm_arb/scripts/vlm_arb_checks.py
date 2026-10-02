@@ -85,7 +85,7 @@ def bypass_activations(a):
 
 def r2_episodes(a, hold="R2"):
     """Hold episodes from plans.jsonl (`hold` R2: the table's red-light row; `pred`: the privileged red stop): dicts with start /
-    end time, the light's distance to the front bumper at the first plan step of standstill (positive = short of the stop line),
+    end time, the light's distance to the front bumper at the last plan step of standstill (positive = short of the stop line),
     the smallest distance during the episode (negative = crept across) and the stop target the table used (`r2_src`: stopline |
     junction; None for pred)."""
     rows = [r for r in jsonl(Path(a) / "plans.jsonl") if not r["warm"]]
@@ -99,7 +99,7 @@ def r2_episodes(a, hold="R2"):
             cur["t1"] = r["t"]
             if d is not None and (cur["d_min"] is None or d < cur["d_min"]):
                 cur["d_min"] = d
-            if r["v"] < 0.2 and cur["d_stop"] is None:
+            if r["v"] < 0.2 and d is not None:               # the last standstill of the hold = where the car finally stood
                 cur["d_stop"], cur["t_stop"] = d, r["t"]
             cur["src"] = r["pc"].get("vlm", {}).get("r2_src", cur["src"])
         elif cur is not None:

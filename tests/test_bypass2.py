@@ -57,14 +57,14 @@ class SameDirectionGap(unittest.TestCase):
 
     def test_alongside_and_just_ahead(self):
         self.assertEqual(self.check([car(1, 30., OFFSET)]), (False, 1))
-        self.assertEqual(self.check([car(2, 30. + 7., OFFSET)]), (False, 2))       # rear edge 4.6 m ahead of the front bumper... inside 6 m
-        self.assertTrue(self.check([car(3, 30. + 14., OFFSET)])[0])                # rear edge 11.6 m beyond the rear axle + 3.8: clear
+        self.assertEqual(self.check([car(2, 30. + 7., OFFSET)]), (False, 2))       # rear edge 4.6 m ahead of the rear axle: inside front bumper + 5 m
+        self.assertTrue(self.check([car(3, 30. + 14., OFFSET)])[0])                # rear edge 11.6 m ahead of the rear axle, front bumper + 5 m = 8.8: clear
 
     def test_behind_static_and_moving(self):
-        self.assertTrue(self.check([car(1, 30. - 20., OFFSET)])[0])                # static, 17.6 m clear of the rear bumper
-        self.assertFalse(self.check([car(2, 30. - 8., OFFSET)])[0])                # static but 5.6 m from the rear bumper
-        self.assertFalse(self.check([car(3, 30. - 40., OFFSET, v=8.)])[0])         # 8 m/s, 4 s headway = 28 m + 10 m
-        self.assertTrue(self.check([car(4, 30. - 60., OFFSET, v=8.)])[0])          # still far
+        self.assertTrue(self.check([car(1, 30. - 20., OFFSET)])[0])                # static, 11.6 m clear of the rear bumper
+        self.assertFalse(self.check([car(2, 30. - 6., OFFSET)])[0])                # static but 2.6 m from the rear bumper
+        self.assertFalse(self.check([car(3, 30. - 15., OFFSET, v=8.)])[0])         # 8 m/s, closing 7: 5 m + 1 s x 7 m/s = 12 m needed, 9.6 m clear
+        self.assertTrue(self.check([car(4, 30. - 40., OFFSET, v=8.)])[0])          # far enough
         self.assertTrue(self.check([car(5, 30. - 40., OFFSET, v=1.)], speed=1.)[0])  # not closing: static rule only
 
     def test_oncoming_and_excluded(self):
@@ -143,7 +143,7 @@ class Activation(unittest.TestCase):
         self.assertTrue(m["bypass"])
 
     def test_gap_hold_then_open_then_commit(self):
-        passer = car(9, 0., OFFSET, v=8.)                                          # approaching from behind in the target lane
+        passer = car(9, 16., OFFSET, v=8.)                                         # approaching from behind in the target lane
         priv, path, m = scene("pbyp2", [self.OBST(), passer], ego_s=30., speed=0.)
         self.assertFalse(m["bypass"])
         self.assertTrue(m["gap_hold"])

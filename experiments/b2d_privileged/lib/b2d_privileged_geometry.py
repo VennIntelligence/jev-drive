@@ -19,8 +19,8 @@ PARAMS = dict(snapshot_s=.20, radius=100., horizon=5., margin=.5, clear_s=.8,
               gap_margin_s=2., gap_min_m=15., tl_m=50., tl_margin=.5,
               # pbyp2 (experiments/vlm_arb/plans/2026-10-02-pbyp2-vred2.md): blocker static time, memory of a red / yellow
               # ego light, same-direction gap check (sd_*) and the lateral share of the shift after which it no longer applies
-              v2_static_s=5., v2_red_memory_s=5., sd_back_m=10., sd_ahead_m=6., sd_headway_s=4., sd_lane_tol_m=2.,
-              sd_commit_frac=.5)
+              v2_static_s=5., v2_red_memory_s=5., sd_back_m=5., sd_ahead_m=5., sd_headway_s=1., sd_lane_tol_m=2.,
+              sd_commit_frac=.3)
 EGO_BACK, EGO_FRONT = 2.4508 - 1.3886, 1.3886 + 2.4508     # rear axle to rear / front bumper (MKZ 2020)
 
 
