@@ -397,7 +397,7 @@ def report(_):
     D += ["", "## Registered lines (plan 4.3), vred", "", "| line | read | status |", "|:--|:--|:--|",
           "| harmless on non-target routes: DS CI lower bound >= -5, no new blocked, no new collision | DS %s; blocked %+d, collisions %+d | not evaluated at this size (%d routes < 30) |" % (
               fmt(r_ds), r_ds["d_vehicle_blocked"], r_ds["d_collisions"], r_ds["groups"]),
-          "| useful on target routes: red-light infractions fall, DS CI lower bound > 0, retention >= 50% | DS %s; red light %+d runs; retention (DS, light routes) %s | not evaluated at this size (%d routes < 30) |" % (
+          "| useful on target routes: red-light infractions fall, DS CI lower bound > 0, retention >= 50%% | DS %s; red light %+d runs; retention (DS, light routes) %s | not evaluated at this size (%d routes < 30) |" % (
               fmt(r_nl), r_nl["d_red_light"], fmt_ret(boot_ret(df, "vred", "pred", LIGHT_ROUTES, "DS")), r_nl["groups"])]
     figures(P, ans, L)
     D += ["", "![paired differences](vred_paired.png)", "", "Figure: paired difference to `drive` per route set for `vred` and the privileged `pred` (dot: mean over routes, bar: 95% route-cluster CI), "
