@@ -61,9 +61,10 @@ def collect(arms):
     for arm in arms:
         for s in SEEDS:
             for rid in ROUTES:
-                r = route_row(run_dir(arm, s, rid), rid)
+                d = run_dir(arm, s, rid)
+                r = route_row(d, rid)
                 if r:
-                    rows.append(dict(arm=arm, seed=s, **r))
+                    rows.append(dict(arm=arm, seed=s, unit=d.name, **r))
     return pd.DataFrame(rows)
 
 
