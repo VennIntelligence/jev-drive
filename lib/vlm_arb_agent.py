@@ -27,7 +27,8 @@ Environment (set per unit by experiments/vlm_arb/scripts/vlm_arb_chain.py):
                     sign, inside a route junction window, or while a stop is held; R2 starts on K = 2 red answers and releases on the
                     cumulative green evidence (results/release_replay.md, cusum >= 5); R3 asks the stop-sign question inside the window
                     and stops once per junction; R1 junction slow-down; the bypass is Privileged arm pbyp3 behind bypass_gate().
-                    Needs VLM_BACKEND=qwen.
+                    Needs VLM_BACKEND=qwen. VM_ABL (ablations, one component off): nocusum (release on K = 2 greens), nobyp (no bypass),
+                    nor1 (no junction slow-down), nosign (no stop-sign question / R3).
   VLM_ENDPOINT      System One URL.
   VLM_BACKEND       openjev (default) | qwen: zero-shot Qwen3-VL-4B light reading, one forward pass with option scoring
                     (experiments/vlm_arb/scripts/vlm_qwen_server.py, one server per card on port VLM_BASE_PORT + VLM_GPU,
@@ -103,7 +104,7 @@ class VlmArbitrationPC:
         return dict(self.priv.meta, vlm=self.agent.table_state) if self.priv else {}
 
     def geometry(self, speed, t, xy, yaw, world, warm):
-        self.priv.bypass = bool(self.agent.r4_on) or self.agent.vm
+        self.priv.bypass = bool(self.agent.r4_on) or (self.agent.vm and self.agent.abl != "nobyp")
         return self.priv.geometry(speed, t, xy, yaw, world, warm)
 
     def constraints(self, s_base, speed, path, t, warm):
@@ -137,13 +138,17 @@ class VlmArbAgent(OpArbAgent):
         self.v3 = self.vlm_arm == "vred3"
         assert not self.v3 or self.r2_target == "stopline", "vred3 needs the stop-line target"
         self.vm = self.vlm_arm == "vmerge"
+        self.abl = env("VM_ABL", "") if self.vm else ""
+        assert self.abl in ("", "nocusum", "nobyp", "nor1", "nosign"), self.abl
+        if self.abl in ("nor1", "nosign"):
+            self.rows = rows = rows - {"nor1": {"R1"}, "nosign": {"R3"}}[self.abl]
         if self.vm:
             assert self.backend == "qwen", "vmerge needs the qwen backend"
             self.r2_target = "stopline"
             d = np.load(env("OP_DET_HEAD"))
             self.det_thr = [float(x) for x in d["thr"]]
             self.t_det_l = self.t_det_s = self.t_red = -1e9
-            self.cusum = 0.0
+            self.cusum, self.n_rel, self.rel_t = 0.0, 0, None
             self.h_sign2, self.sign_answer = deque(maxlen=ARB_PARAMS["K_debounce"]), None
             self.still_since = None
             self.ask_why = ""
@@ -545,6 +550,11 @@ class VlmArbAgent(OpArbAgent):
             return "junction"
         return None
 
+    def _no_ego_light(self):
+        """The last two light answers see no light for the ego (the stop-sign question is asked, and R3 may start, only then:
+        the dbg-vmerge-334 smoke run answered stop_sign_for_ego in front of a green light)."""
+        return len(self.h_light) == 2 and all(x in ("no_light", "light_for_other_lane") for x in self.h_light)
+
     def _table_vm(self, speed, t, junc_dist, jid, stop_dist):
         P, K, A = ARB_PARAMS, ARB_PARAMS["K_debounce"], self.arb
         rows, out, active = self.rows, {}, []
@@ -581,6 +591,9 @@ class VlmArbAgent(OpArbAgent):
         if "R2" in rows and not self.r5 and fresh:
             if (not self.r2_hold and full(self.h_light, lambda x: x == "red_or_yellow_for_ego") and line2 < 50.0 and can_stop2):
                 self.r2_hold, self.cusum = True, 0.0
+            elif self.r2_hold and self.abl == "nocusum":
+                if full(self.h_light, lambda x: x == "green_for_ego"):
+                    self.r2_hold, self.release_until, rel = False, t + 2.0, 2.0
             elif self.r2_hold and new_ans:
                 pp = self.answer.get("Q_light_p") or {}
                 pg, pr = float(pp.get("green_for_ego", 0.0)), float(pp.get("red_or_yellow_for_ego", 0.0))
@@ -591,6 +604,8 @@ class VlmArbAgent(OpArbAgent):
                     self.cusum = max(0.0, self.cusum + min(c, max(-c, math.log((pg + 1e-3) / (pr + 1e-3)))))
                 if self.cusum >= VM["cusum_release"]:
                     self.r2_hold, self.release_until, rel = False, t + 2.0, round(self.cusum, 2)
+        if rel is not None:
+            self.n_rel, self.rel_t = self.n_rel + 1, t
         if self.r2_hold and line2 <= -2.0:
             self.r2_hold = False
         if self.r2_hold:
@@ -599,7 +614,7 @@ class VlmArbAgent(OpArbAgent):
         # R3: stop sign answered twice inside the junction window: stop at the estimated line, dwell, once per junction
         if "R3" in rows and not self.r5 and not self.r2_hold:
             if (not self.r3_hold and sfresh and jid not in self.r3_done and full(self.h_sign2, lambda x: x == "stop_sign_for_ego")
-                    and line2 < 25.0 and can_stop2):
+                    and line2 < 25.0 and can_stop2 and self._no_ego_light()):
                 self.r3_hold, self.r3_since = True, None
             if self.r3_hold:
                 if speed < 0.1 and self.r3_since is None:
@@ -616,7 +631,7 @@ class VlmArbAgent(OpArbAgent):
         release_now = bool(t < self.release_until and speed < 1.0 and self.owned_stop and not out)
         if speed >= 1.0:
             self.release_until, self.owned_stop = -1e9, False
-        self.table_state = dict(rules=active, release=release_now, r5=bool(self.r5), fresh=fresh, sfresh=sfresh, cusum=round(self.cusum, 2), rel=rel,
+        self.table_state = dict(rules=active, release=release_now, r5=bool(self.r5), fresh=fresh, sfresh=sfresh, cusum=round(self.cusum, 2), n_rel=self.n_rel, rel_t=self.rel_t,
                                 line_r2=round(float(line2), 2), d_stop=None if stop_dist is None else round(float(stop_dist), 2), jid=int(jid),
                                 light=list(self.h_light), sign=list(self.h_sign2), ask=self.ask_why, det=self.det_now,
                                 byp=self.priv.meta.get("suppressed"))
@@ -649,8 +664,7 @@ class VlmArbAgent(OpArbAgent):
             gt = self._truth_labels(xy, ego_s, junc_dist)
             gt.update(det=self.det_now, why=self.ask_why, jid_vm=jid)
             self._ask(t, cams, gt)
-            no_ego_light = len(self.h_light) == 2 and all(x in ("no_light", "light_for_other_lane") for x in self.h_light)
-            if in_win and jid not in self.r3_done and junc_dist >= -1.0 and (t - self.t_det_s <= VM["det_latch_s"] or no_ego_light):
+            if "R3" in self.rows and in_win and jid not in self.r3_done and -1.0 <= junc_dist <= 30.0 and self._no_ego_light():
                 self._ask(t, cams, gt, "sign")
         self._arrivals(t)
         cons, cap, release, active = self._table_vm(speed, t, junc_dist, jid, stop_dist)

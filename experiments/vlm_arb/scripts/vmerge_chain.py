@@ -6,13 +6,15 @@
 Rerunning the same command resumes (state.json; finished units are skipped, b2d_run skips finished routes inside a unit).
 Hand-offs in $DATA_DIR/runs/vlm_arb_vmerge: STATUS, status.json, DONE / ERROR / ERROR.<job>, util.csv, lane/<ts>/log.txt;
 unit outputs under $DATA_DIR/runs/vlm_arb/arms/v2-<unit>; readouts/<unit>/{routes.csv, checks.json}; gates/vmerge_*.json.
-The per-card Qwen servers (with the /sign question) are a separate process (vlm_qwen_server.py supervise, window vm-srv,
-run dir $DATA_DIR/runs/vlm_arb_vmerge/qwen) and are not stopped by the lane. The trigger heads: OP_DET_HEAD
+The per-card Qwen servers (with the /sign question) are a separate process (vlm_qwen_server.py supervise, window vm-srv2b / vm-srv0,
+run dirs $DATA_DIR/runs/vlm_arb_vmerge/qwen<card>) and are not stopped by the lane. The trigger heads: OP_DET_HEAD
 ($DATA_DIR/runs/vlm_arb_vmerge/det_head.npz, vmerge_det_fit.py), loaded by each unit's openpilot server.
 
 Stages (docs/long-runs.md):
   pre  `dbg-vmerge-334` (debug red-light route) and `dbg-vmerge-25169` (debug obstacle route), outside the 19
   all  `vmerge-s0-q0..q2`, then `few-vmerge` (vmerge_report.py few: no crash, latency lines), `vmerge-s1-q0..q2`, `report`
+  abl  (--arg abl=nobyp,nocusum,...) one ablation arm `vm<abl>` per name (VM_ABL, one component off), both seeds, after `report`;
+       then `report-abl` (vmerge_report.py report <abl names>)
 Units: 3 CARLA workers + their own openpilot server, one unit per card (3 routes per card's Qwen server, as in vred).
 """
 import json
@@ -49,8 +51,15 @@ def tool(name, *args, deps=(), prio=0, ok=None):
 
 
 def pre_jobs():
-    return [base.unit("dbg-vmerge", 0, "334", ["334"], env(), "", 0, base="vmerge"),
+    # dbg-vmerge-334 (first round) answered stop_sign_for_ego in front of a green light; the sign question now needs "no light for the ego"
+    return [base.unit("dbg2-vmerge", 0, "334", ["334"], env(), "", 0, base="vmerge"),
             base.unit("dbg-vmerge", 0, "25169", ["25169"], env(), "", 0, base="vmerge")]
+
+
+def abl_jobs(names):
+    sh = vc.shards()
+    units = [base.unit("vm" + a, s, k, sh[k], dict(env(), VM_ABL=a), "", 6 + i, base="vmerge") for i, a in enumerate(names) for s in (0, 1) for k in SHARDS]
+    return units + [tool("report-abl", "report", *names, deps=[j.name for j in units], prio=9)]
 
 
 def jobs(args):
@@ -58,6 +67,8 @@ def jobs(args):
     pre = pre_jobs()
     if stage == "pre":
         return pre
+    if stage == "abl":
+        return abl_jobs(args["abl"].split(","))
     sh = vc.shards()
     v0 = [base.unit("vmerge", 0, k, sh[k], env(), "", 4, deps=[j.name for j in pre]) for k in SHARDS]
     few = tool("few-vmerge", "few", deps=[j.name for j in v0], prio=4, ok=lambda j: bool((gate("vmerge_few") or {}).get("passed")))
