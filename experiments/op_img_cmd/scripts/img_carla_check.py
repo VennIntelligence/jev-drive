@@ -1,7 +1,9 @@
 """CARLA geometry check sheet: the approach + taken-branch band and the taken branch's boundary lines (img_overlay
 families band / lines) drawn into the t0 road and wide model frames of a few carla.pkl samples, next to the raw road
 frame. If the geometry, the frame conventions and the model-frame camera are right, the band lies on the ego lane and
-the lines on the lane edges through the junction.
+the lines on the lane edges through the junction. Red: the approach lane's boundaries (should sit on the painted
+lane markings before the junction). Columns: t0 road raw, t0 road drawn, t0 wide drawn, oldest history frame (t0 - 1.6 s)
+road drawn with its own pose (the paint must stay on the same road spot).
 
   $DATA_DIR/envs/openpilot/bin/python experiments/op_img_cmd/scripts/img_carla_check.py [--pkl carla] [--n 6]
       -> experiments/op_img_cmd/figs/carla_geom_check.png
@@ -48,11 +50,12 @@ def main():
     pick = pick[: a.n]
     rows = []
     for s in pick:
-        f = np.load(s["frames"])["frames"][-1]
+        fr = np.load(s["frames"])["frames"]
         cam = np.asarray(s["cam"], float) + (0, 0, a.cam_dz)
-        lay = O.primitives(s, "band", s["taken"]) + O.primitives(s, "lines", s["taken"])
-        d = O.draw(f, lay, (0.0, 0.0, 0.0), cam)
-        tiles = [rgb(f)[0], rgb(d)[0], rgb(d)[1]]
+        edges = [O.ribbon(O.chain(s["approach"], k), 0.06) for k in ("l", "r")]
+        lay = O.primitives(s, "band", s["taken"]) + O.primitives(s, "lines", s["taken"]) + [(edges[0] + edges[1], O.RED, 1.0, 0)]
+        d, d0 = (O.draw(fr[k], lay, s["pose"][k], cam) for k in (-1, 0))
+        tiles = [rgb(fr[-1])[0], rgb(d)[0], rgb(d)[1], rgb(d0)[0]]
         row = np.concatenate([cv2.resize(t, (384, 192), interpolation=cv2.INTER_AREA) for t in tiles], 1)
         txt = f"{s['token']} {s['town']} taken {s['taken']} cmd {s['cmd']} v {s['v']:.1f} m/s dist {s['dist']:.1f} m"
         cv2.putText(row, txt, (6, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 0), 1, cv2.LINE_AA)
