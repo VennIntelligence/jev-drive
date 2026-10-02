@@ -1,0 +1,4 @@
+arm,t_exists,t_trigger,ego_x_at_trigger,ego_y_at_trigger,ego_v_at_trigger,t_closest,d_closest,ego_v_closest,t_first_contact
+v2-gif-drive-s0-b,6.85,27.85,474.4,4511.0,4.05,30.05,4.72,2.04,
+v2-gifr1-drive-s0-d,6.85,28.05,474.4,4511.1,3.45,30.25,6.2,1.32,
+v2-gifr2-drive-s0-d,6.85,27.65,474.6,4511.1,4.69,30.25,3.35,3.51,30.7

@@ -1,0 +1,37 @@
+arm,route,attempt,scenario,status,ds,rc,penalty,coll_vehicle,red_light,stop,blocked,timeout,outside_lanes
+eval-drive-s0-rep1,8859,1,OppositeVehicleTakingPriority_1,Completed,80.0,100,0.8,0,0,1,0,0,0
+eval-drive-s0-rep1,9102,1,OppositeVehicleTakingPriority_1,Completed,80.0,100,0.8,0,0,1,0,0,0
+eval-drive-s0-rep1,9196,1,OppositeVehicleTakingPriority_1,Completed,42.0,100,0.42,1,1,0,0,0,0
+eval-drive-s0-rep1,9218,1,OppositeVehicleTakingPriority_1,Completed,80.0,100,0.8,0,0,1,0,0,0
+eval-drive-s0-rep2,8859,1,OppositeVehicleTakingPriority_1,Completed,80.0,100,0.8,0,0,1,0,0,0
+eval-drive-s0-rep2,9102,1,OppositeVehicleTakingPriority_1,Completed,80.0,100,0.8,0,0,1,0,0,0
+eval-drive-s0-rep2,9196,1,OppositeVehicleTakingPriority_1,Completed,42.0,100,0.42,1,1,0,0,0,0
+eval-drive-s0-rep2,9218,1,OppositeVehicleTakingPriority_1,Completed,80.0,100,0.8,0,0,1,0,0,0
+eval-drive-s0,8859,1,OppositeVehicleTakingPriority_1,Completed,80.0,100,0.8,0,0,1,0,0,0
+eval-drive-s0,9102,1,OppositeVehicleTakingPriority_1,Completed,80.0,100,0.8,0,0,1,0,0,0
+eval-drive-s0,9196,1,OppositeVehicleTakingPriority_1,Completed,42.0,100,0.42,1,1,0,0,0,0
+eval-drive-s0,9218,1,OppositeVehicleTakingPriority_1,Completed,80.0,100,0.8,0,0,1,0,0,0
+shadow-drive-s0,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,13.729894,58.04,0.236559,2,1,0,1,0,1
+v2-cal-s1-q2,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,22.8858,54.49,0.42,1,1,0,1,0,0
+v2-cal2-s1-q2,9196,1,OppositeVehicleTakingPriority_1,Completed,70.0,100,0.7,0,1,0,0,0,0
+v2-cal3-s1-q2,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,15.475422,58.04,0.266634,1,1,0,1,0,1
+v2-drive-s1-dev,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,14.874051,58.04,0.256272,1,1,0,1,0,1
+v2-dslow-s0-dev,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,23.8098,56.69,0.42,1,1,0,1,0,0
+v2-dslow-s1-dev,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,23.808342,58.04,0.410206,1,1,0,1,0,1
+v2-gif-drive-s0-b,9196,1,OppositeVehicleTakingPriority_1,Completed,70.0,100,0.7,0,1,0,0,0,0
+v2-gifr1-drive-s0-d,9196,1,OppositeVehicleTakingPriority_1,Completed,70.0,100,0.7,0,1,0,0,0,0
+v2-gifr2-drive-s0-d,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,14.874051,58.04,0.256272,1,1,0,1,0,1
+v2-jslow-s0-dev,9196,1,OppositeVehicleTakingPriority_1,Completed,42.0,100,0.42,1,1,0,0,0,0
+v2-jslow-s1-dev,9196,1,OppositeVehicleTakingPriority_1,Completed,42.0,100,0.42,1,1,0,0,0,0
+v2-pbyp-s0-dev,9196,1,OppositeVehicleTakingPriority_1,Completed,42.0,100,0.42,1,1,0,0,0,0
+v2-pbyp-s1-dev,9196,1,OppositeVehicleTakingPriority_1,Completed,42.0,100,0.42,1,1,0,0,0,0
+v2-pbyp2-s0-q2,9196,1,OppositeVehicleTakingPriority_1,Completed,70.0,100,0.7,0,1,0,0,0,0
+v2-pbyp2-s1-q2,9196,1,OppositeVehicleTakingPriority_1,Completed,40.50631,100,0.405063,1,1,0,0,0,1
+v2-pred-s0-dev,9196,1,OppositeVehicleTakingPriority_1,Completed,33.745166,100,0.337452,2,0,0,0,0,1
+v2-pred-s1-dev,9196,1,OppositeVehicleTakingPriority_1,Completed,34.23243,100,0.342324,2,0,0,0,0,1
+v2-vred-s0-q2,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,22.107746,58.04,0.380905,1,0,0,1,0,1
+v2-vred-s1-q2,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,32.690223,58.04,0.563236,1,0,0,1,0,1
+v2-vred2-s0-q2,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,19.614134,58.04,0.337942,2,0,0,1,0,1
+v2-vred2-s1-q2,9196,1,OppositeVehicleTakingPriority_1,Completed,34.23243,100,0.342324,2,0,0,0,0,1
+v2-vred3-s0-q2,9196,1,OppositeVehicleTakingPriority_1,Failed - Agent got blocked,19.614134,58.04,0.337942,2,0,0,1,0,1
+v2-vred3-s1-q2,9196,1,OppositeVehicleTakingPriority_1,Completed,33.257901,100,0.332579,2,0,0,0,0,1

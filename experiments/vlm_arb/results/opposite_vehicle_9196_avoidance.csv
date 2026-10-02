@@ -1,0 +1,7 @@
+t,ego_v,path_to_contact_minus_front,dist_to_other,stop3_m,ok3,stop5_m,ok5,stop7_m,ok7
+27.25,4.39,8.58,38.95,3.21,True,1.92,True,1.37,True
+27.75,4.74,6.29,35.85,3.74,True,2.25,True,1.6,True
+28.25,4.7,3.91,27.49,3.69,True,2.21,True,1.58,True
+28.75,4.45,1.64,19.52,3.3,False,1.98,False,1.42,True
+29.25,4.03,-0.49,11.87,2.7,False,1.62,False,1.16,False
+29.75,10.12,-2.45,4.84,17.06,False,10.24,False,7.31,False
