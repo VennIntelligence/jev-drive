@@ -1,0 +1,21 @@
+{
+ "dataset": "b2d",
+ "name": "vlm-thin-test",
+ "version": 1,
+ "unit": "route",
+ "n": 8,
+ "sha256": "f17121d8d46e3c73f1fbf8d7467124264efd3a97cda6535245152c4eb2fbb234",
+ "origin": "hand-assigned before any model answer on these frames was read, to cover every Phase A readout in test (plan 2026-10-02-vlm-thin.md section 2); routes of the vlm_arb shadow units with saved frames",
+ "status": "frozen",
+ "used_by": "experiments/vlm_arb vlm_thin",
+ "members": [
+  "15483",
+  "16529",
+  "17280",
+  "19324",
+  "2520",
+  "27043",
+  "28147",
+  "9196"
+ ]
+}
