@@ -5,7 +5,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import vlm_v2_report as v2  # noqa: E402
+import vmerge2_report as v2  # noqa: E402
 from vlm_arb_common import jsonl, route_row  # noqa: E402
 from vmerge_collisions import events  # noqa: E402
 

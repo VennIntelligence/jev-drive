@@ -9,7 +9,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import vlm_v2_report as v2  # noqa: E402
+import vmerge2_report as m2  # noqa: E402
 from vlm_arb_common import ROUTES, jsonl, route_row  # noqa: E402
 
 
@@ -70,9 +70,9 @@ def main():
     import pandas as pd
     rows = []
     for arm in (sys.argv[1:] or ["drive", "vmerge"]):
-        for s in (0, 1):
+        for s in (0, 1, 2, 3):
             for rid in ROUTES:
-                r = route_row(v2.run_dir(arm, s, rid), rid)
+                r = route_row(m2.run_dir(arm, s, rid), rid)
                 if r and r["collisions_vehicle"]:
                     rows += describe(arm, s, rid, r)
     df = pd.DataFrame(rows)
