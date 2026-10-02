@@ -74,8 +74,26 @@ def grid(run):
     return pd.DataFrame(rows)
 
 
+def select_trunc(a):
+    """Post-hoc (plan deviation D-b): the same rule restricted to truncated variants (N < 36, a head on `ans` / `pool`),
+    to see what the cut itself buys when the whole-model variant at the lowest resolution wins the registered rule."""
+    run = Path(a.run)
+    g = pd.read_csv(run / "grid.csv")
+    v = g[(g.part == "val") & g.lat_p95.notna() & (g.lat_p95 <= LAT_LINE_MS) & g["head"].isin(["lin", "mlp"]) & (g.N < 36)
+          & g.feat.isin(["ans", "pool"])]
+    top = v[v.S >= v.S.max() - TOL].sort_values(["lat_p95", "S"], ascending=[True, False])
+    c = top.iloc[0]
+    jwrite(run / "selection_trunc.json", dict(
+        rule="the registered rule restricted to N < 36, feature ans / pool, head lin / mlp (post hoc, after the grid was read)",
+        chosen=dict(res=c.res, feat=c.feat, N=int(c.N), head=c["head"], lam=None if pd.isna(c.lam) else float(c.lam), val_S=float(c.S),
+                    p50_ms=float(c.lat_p50), p95_ms=float(c.lat_p95)),
+        within_tolerance=top[["res", "feat", "N", "head", "S", "lat_p50", "lat_p95"]].head(15).to_dict("records")))
+
+
 def select(a):
     run = Path(a.run)
+    if a.cmd == "select-trunc":
+        return select_trunc(a)
     g = grid(run)
     g.to_csv(run / "grid.csv", index=False)
     v = g[(g.part == "val") & g.lat_p95.notna() & (g.lat_p95 <= LAT_LINE_MS) & g.S.notna()]
@@ -208,7 +226,7 @@ def figure(g, B, path, chosen):
     fig.savefig(path)
 
 
-def side_by_side(df, pa, pb, g, ch):
+def side_by_side(df, pa, pb, pb2, g, ch, ch2):
     """The light readouts on the test frames, zero-shot and head-fitted rows next to each other (not the same kind of evidence:
     the head rows are trained on CARLA frames of other routes)."""
     t = df[df.part == "test"].reset_index(drop=True)
@@ -233,6 +251,9 @@ def side_by_side(df, pa, pb, g, ch):
     if pb is not None:
         add("(b) chosen: %s" % (json.dumps({k: ch[k] for k in ("res", "feat", "N", "head")})), "head fitted on CARLA train routes" if ch["feat"] != "zs" else "zero-shot",
             light_metrics(pb, pb.a_light), "%.0f / %.0f" % (np.percentile(pb.lat, 50), np.percentile(pb.lat, 95)))
+    if pb2 is not None:
+        add("(b2, post hoc) best truncated: %s" % json.dumps({k: ch2[k] for k in ("res", "feat", "N", "head")}), "head fitted on CARLA train routes",
+            light_metrics(pb2, pb2.a_light), "%.0f / %.0f" % (np.percentile(pb2.lat, 50), np.percentile(pb2.lat, 95)))
     return pd.DataFrame(rows)
 
 
@@ -244,11 +265,11 @@ def phase_a_df(run, df):
         for l in open(p):
             d = json.loads(l)
             G[d["id"]] = d
-    S = {}
+    S, S2 = {}, {}
     for p in sorted((Path(run) / "phase_a").glob("serve-*.jsonl")):
         for l in open(p):
             d = json.loads(l)
-            S[d["id"]] = d
+            (S2 if p.name.startswith("serve-trunc") else S)[d["id"]] = d
     t = df[df.part == "test"].reset_index(drop=True)
     t = t[t.id.isin(G)].reset_index(drop=True)
     j = lambda i, q: (G[i]["joint"].get(q) or "")   # noqa: E731
@@ -258,8 +279,9 @@ def phase_a_df(run, df):
     b = None
     if all(i in S for i in t.id):
         b = base.assign(a_light=[S[i]["ans"] for i in t.id], lat=[S[i]["ms"] for i in t.id])
+    b2 = base.assign(a_light=[S2[i]["ans"] for i in t.id], lat=[S2[i]["ms"] for i in t.id]) if all(i in S2 for i in t.id) else None
     jl = percentiles([G[i]["joint_ms"] for i in t.id])
-    return a, b, jl, G, S
+    return a, b, b2, jl, G, S
 
 
 def report(a):
@@ -284,20 +306,22 @@ def report(a):
           "routes, right = the 7-fold route-grouped CV over all 21 routes (zero-shot squares: all frames); dashed = the registered "
           "p95 <= 600 ms line (p50 plotted, p95 is within a few ms of it here). Look at where each line leaves the zero-shot square and how "
           "far left of the dashed line the early cuts sit.", ""]
-    pa, pb, jl, G, S = phase_a_df(run, df)
+    pa, pb, pb2, jl, G, S = phase_a_df(run, df)
+    ch2 = json.loads((run / "selection_trunc.json").read_text())["chosen"] if (run / "selection_trunc.json").exists() else None
     out = {}
-    for name, d in (("a", pa), ("b", pb)):
+    for name, d in (("a", pa), ("b", pb), ("b2", pb2)):
         if d is None:
             continue
         R, gate = evaluate(d.reset_index(drop=True))
         txt = table(R, gate, d)
         out[name] = dict(readouts=R, gate=gate)
         L += ["## 3%s. Phase A on the test routes: %s" % (name, "(a) full zero-shot Qwen3-VL-4B, generate" if name == "a" else
-                                                          "(b) chosen fast variant: %s" % json.dumps(ch)), "", txt, ""]
+                                                          "(b) variant chosen by the registered rule: %s" % json.dumps({k: ch[k] for k in ("res", "feat", "N", "head")}) if name == "b" else
+                                                          "(b2, post hoc) best truncated variant (N < 36): %s" % json.dumps({k: ch2[k] for k in ("res", "feat", "N", "head")})), "", txt, ""]
     L += ["## 4. Light readouts on the test routes side by side", "",
           "Cells: estimate [95% route-cluster CI] n = frames in the denominator. Zero-shot rows have seen no CARLA frame; the head row was "
           "fitted on CARLA frames of other routes (in-domain supervised), so it is a different kind of evidence.", "",
-          md_table(side_by_side(df, pa, pb, g, ch)), ""]
+          md_table(side_by_side(df, pa, pb, pb2, g, ch, ch2)), ""]
     L += ["Joint-prompt latency (the sign / block / side answers of both tables): p50 %.0f ms, p95 %.0f ms." % (jl["p50"], jl["p95"]), ""]
     (res_out / "vlm_thin.md").write_text("\n".join(L) + "\n")
     jwrite(res_out / "vlm_thin_phase_a.json", out)
@@ -307,7 +331,7 @@ def report(a):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["select", "report"])
+    ap.add_argument("cmd", choices=["select", "select-trunc", "report"])
     ap.add_argument("--run", required=True)
     a = ap.parse_args()
-    {"select": select, "report": report}[a.cmd](a)
+    {"select": select, "select-trunc": select, "report": report}[a.cmd](a)

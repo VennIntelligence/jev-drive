@@ -354,14 +354,14 @@ def load_head(path):
 def serve(a):
     import torch
     from vlm_thin_common import ANS3, LIGHT3
-    sel = json.loads((Path(a.run) / "selection.json").read_text())["chosen"]
+    sel = json.loads((Path(a.run) / a.sel).read_text())["chosen"]
     th = Thin()
     N, res, feat = sel["N"], sel["res"], sel["feat"]
     fwd = None if feat == "zs" else load_head(Path(a.run) / sel["head_file"])[1]
     i, n = shard_arg(a.shard)
     df = frames_for(a.run, "test")
     mine = par.shards(list(df.index), n, i)
-    out = Path(a.run) / "phase_a" / ("serve-%d-of-%d.jsonl" % (i, n))
+    out = Path(a.run) / "phase_a" / ("%s-%d-of-%d.jsonl" % ("serve" if a.sel == "selection.json" else "serve-trunc", i, n))
     out.parent.mkdir(exist_ok=True)
     have = {json.loads(l)["id"] for l in open(out)} if out.exists() else set()
     f = open(out, "a")
@@ -406,5 +406,6 @@ if __name__ == "__main__":
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--res", default=",".join(RES))
     ap.add_argument("--group", default="")
+    ap.add_argument("--sel", default="selection.json")
     a = ap.parse_args()
     globals()[a.cmd](a)

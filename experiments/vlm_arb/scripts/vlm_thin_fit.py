@@ -174,7 +174,7 @@ def fit(a):
 def emit(a):
     """Retrain the chosen head (train routes only, same seed / lambda as in the fit) and save its weights."""
     import torch
-    sel = json.loads((Path(a.run) / "selection.json").read_text())["chosen"]
+    sel = json.loads((Path(a.run) / a.sel).read_text())["chosen"]
     if sel["feat"] == "zs":                                      # the zero-shot one-pass variant has no head
         log("chosen variant is zero-shot: no head to emit")
         return
@@ -190,10 +190,10 @@ def emit(a):
     p = probs(torch, m, Xs)
     name = "head_%s_%s_%d_%s.pt" % (sel["res"], sel["feat"], sel["N"], sel["head"])
     torch.save(dict(**m, mu=mu, sd=sd, res=sel["res"], feat=sel["feat"], N=sel["N"]), Path(a.run) / name)
-    np.save(Path(a.run) / "head_cached_probs.npy", p.cpu().numpy())
-    s = json.loads((Path(a.run) / "selection.json").read_text())
+    np.save(Path(a.run) / ("head_cached_probs_%s.npy" % name[5:-3]), p.cpu().numpy())
+    s = json.loads((Path(a.run) / a.sel).read_text())
     s["chosen"]["head_file"] = name
-    (Path(a.run) / "selection.json").write_text(json.dumps(s, indent=1))
+    (Path(a.run) / a.sel).write_text(json.dumps(s, indent=1))
     log("emitted " + name)
 
 
@@ -202,5 +202,6 @@ if __name__ == "__main__":
     ap.add_argument("cmd", choices=["fit", "emit"])
     ap.add_argument("--run", required=True)
     ap.add_argument("--res", default="r4573")
+    ap.add_argument("--sel", default="selection.json")
     a = ap.parse_args()
     {"fit": fit, "emit": emit}[a.cmd](a)
