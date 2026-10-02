@@ -53,10 +53,15 @@ _W = {}
 
 def _init_stream(domain):
     import wod_zeroshot_openpilot as WZ
-    if domain == "wod":
+    if domain in ("wod", "wodt"):
         from jevdrive import wod_zeroshot as Z
         spans, _ = Z.load_spans()
-        WZ._init(spans, json.loads((Z.root() / "op_calib.json").read_text()), str(data_dir() / "datasets" / "waymo_e2e" / "front3"))
+        calib = json.loads((Z.root() / "op_calib.json").read_text())
+        if domain == "wodt":
+            from jevdrive import drive_backbones as DBK
+            spans = json.loads((DBK.root() / "op_plan_trainval.json").read_text())["spans"]
+            calib |= json.loads((DBK.root() / "op_calib_trainval.json").read_text())
+        WZ._init(spans, calib, str(data_dir() / "datasets" / "waymo_e2e" / "front3"))
     else:
         from jevdrive import p5_openpilot as P
         WZ._init({}, {"carla": P.carla_calib()}, ".")
@@ -65,7 +70,7 @@ def _init_stream(domain):
 
 def render_sample(s):
     """5 Hz model frames (k, 2, 6, 128, 256), oldest first, the last at t0."""
-    if _W["domain"] == "wod":
+    if _W["domain"] in ("wod", "wodt"):
         import drive_backbones_openpilot as DB
         return DB.render(s["hist"])
     import p5_openpilot as PO
@@ -180,7 +185,7 @@ def run_one(m, fr, des, sustained, tc, decode, v):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--domain", required=True, choices=("nav", "wod", "carla"))
+    ap.add_argument("--domain", required=True, choices=("nav", "wod", "wodt", "carla"))
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=6)
@@ -196,6 +201,10 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     tag = f"{a.domain}-{si}of{sn}" + ("-check" if a.check or a.limit else "")
     with Run("op_common_cause", tag, config=vars(a)) as run:
+        ex = None
+        if a.domain != "nav":     # fork the render workers before the TensorRT session exists (drive_backbones_openpilot)
+            ex = ProcessPoolExecutor(a.workers, initializer=_init_stream, initargs=(a.domain,))
+            list(ex.map(int, range(a.workers)))
         m = OPModel("cinque", B.BACKENDS["cinque"], cache=data_dir() / "runs" / "op_interp" / "trt_cache" / f"cinque-{B.BACKENDS['cinque']}",
                     context_rate=False)
         nH = m.slices["hidden_state"].stop - m.slices["hidden_state"].start
@@ -205,8 +214,8 @@ def main():
                  pulses=np.full((n, V), -1, np.int16))
         nav = NavFrames() if a.domain == "nav" else None
         if nav is None:
-            ex = ProcessPoolExecutor(a.workers, initializer=_init_stream, initargs=(a.domain,))
-            src = ex.map(render_sample, S, chunksize=1)
+            from drive_backbones_openpilot import bounded_map
+            src = bounded_map(ex, render_sample, S, 2 * a.workers)
         else:
             src = iter([None] * n)
         t0, steps, tm = time.time(), 0, {"hist": 0.0, "model": 0.0}

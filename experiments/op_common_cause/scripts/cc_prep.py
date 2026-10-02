@@ -4,7 +4,7 @@ Main venv. Writes $DATA_DIR/runs/op_common_cause/samples/<domain>.json: one row 
 speed bin, command (-1 left, 0 straight, 1 right), the expert future on the 0.25 s grid (20, 2) rear-axle x fwd / y left
 (NaN where the source has none), the camera position on the vehicle and what the runner needs to build the frames.
 
-  .venv/bin/python experiments/op_common_cause/scripts/cc_prep.py
+  .venv/bin/python experiments/op_common_cause/scripts/cc_prep.py [domains ...]     # default nav wod carla; wodt added later
 """
 import json
 import sys
@@ -90,6 +90,51 @@ def prep_wod(run, rng):
     return rows
 
 
+def prep_wodt(run, rng):
+    """Added after the first interim table (deviation from the prereg, stated in the README): the rater + extra frames hold
+    only ~110 turn-command frames, too few for E5. WOD val frames with a left / right intent from the trainval stream plan
+    (JPEG spans + calibrations of jevdrive.drive_backbones), stratified stop 150 / low 225 / mid 225 / high all,
+    at most 3 per sequence. Reported as its own domain `wodt`."""
+    from jevdrive import drive_backbones as DB
+    from jevdrive import waymo as W
+    run.use_split(splits.load("wod/val"))
+    spans = json.loads((DB.root() / "op_plan_trainval.json").read_text())["spans"]
+    calib = json.loads((DB.root() / "op_calib_trainval.json").read_text())
+    df = W.load_index()
+    past, fut = W.load_ego()
+    names = W.frame_names(df)
+    seq = df.sequence.astype(str).to_numpy()
+    ok = (df.split.astype(str) == "val").to_numpy() & df.intent.isin([2, 3]).to_numpy() & df.has_future.astype(bool).to_numpy()
+    cand = []
+    for k in np.flatnonzero(ok):
+        n = str(names[k])
+        if n not in spans or seq[k] not in calib:
+            continue
+        fr = int(n.rsplit("-", 1)[1])
+        hist = [f"{seq[k]}-{fr - 2 * j:03d}" for j in range(HIST_LONG, -1, -1)]
+        avail = np.array([h in spans for h in hist])
+        if not avail[-(HIST_NORMAL + 1):].all():
+            continue
+        cand.append((k, hist, avail))
+    v = np.linalg.norm(past[[c[0] for c in cand], -1, 2:4], axis=1)
+    b = np.array([speed_bin(x) for x in v])
+    cap = {"stop": 150, "low": 225, "mid": 225, "high": 10 ** 9}
+    rows, per_seq = [], {}
+    for n_ in BIN_NAMES:
+        got = 0
+        for c in rng.permutation(np.flatnonzero(b == n_)):
+            k, hist, avail = cand[c]
+            if got >= cap[n_] or per_seq.get(seq[k], 0) >= 3:
+                continue
+            per_seq[seq[k]] = per_seq.get(seq[k], 0) + 1
+            got += 1
+            first = 0 if avail.all() else int(np.flatnonzero(~avail)[-1] + 1)
+            dev = np.array(calib[seq[k]]["1"]["extrinsic"]).reshape(4, 4)[:3, 3]
+            rows.append(dict(id=str(names[k]), cluster=seq[k], v=float(v[c]), bin=b[c], cmd={2: -1, 3: 1}[int(df.intent.iloc[k])],
+                             fut=fut[k, :, :2].tolist(), cam=dev.tolist(), hist=hist[first:], long=first == 0))
+    return rows
+
+
 def prep_carla(run, rng):
     from jevdrive import p5_openpilot as P
     D = data_dir() / "processed/carla_p5"
@@ -136,7 +181,8 @@ def prep_carla(run, rng):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     with Run("op_common_cause", "prep", seed=0) as run:
-        for dom, fn in (("nav", prep_nav), ("wod", prep_wod), ("carla", prep_carla)):
+        doms = sys.argv[1:] or ["nav", "wod", "carla"]
+        for dom, fn in [(d, globals()[f"prep_{d}"]) for d in doms]:
             rows = fn(run, np.random.default_rng(0))
             (OUT / f"{dom}.json").write_text(json.dumps(rows))
             c = pd.DataFrame(rows)
