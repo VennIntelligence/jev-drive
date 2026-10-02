@@ -33,6 +33,7 @@ from vlm_thin_common import RED, light_masks  # noqa: E402
 TEST = os.environ.get("V2_TEST") == "1"
 OUT = RUN / ("v2/results_test" if TEST else "v2/results")
 SHARDS = ("q0", "q1", "q2")
+NG_UNITS = {"a": ["19324", "24497"], "b": ["2520"], "c": ["19832"]}      # as vlm_v2_chain.ng_jobs
 L_REG = 0.35
 ALIAS = {"pbyp2": "pbyp", "vred2": "vred", "vred3": "vred", "cal2": "cal"} if TEST else {}
 OTHER = [r for r in ROUTES if r not in OBS_ROUTES]
@@ -57,6 +58,8 @@ def run_dir(arm, seed, rid):
         return drive_dir(rid, seed)
     if arm in ("pred", "pbyp", "jslow"):
         return unit_dir(arm, seed, "tgt" if rid not in ROUTES[:10] else "dev")
+    if arm == "pbyp2ng":                                  # the ablation ran on the obstacle routes in three units per seed (chain stage ng)
+        return unit_dir(arm, seed, next((k for k, v in NG_UNITS.items() if rid in v), "a"))
     return unit_dir(arm, seed, next(k for k in SHARDS if rid in shards()[k]))
 
 
