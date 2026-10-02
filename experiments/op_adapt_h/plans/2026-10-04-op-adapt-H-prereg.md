@@ -59,3 +59,4 @@
 - 2026-10-04 早（训练前）实现偏离 D1：stage 1–3 在线跑太慢（约 300 trunk/s，每步 48 × 9 对要 1.4 s），改为先建 **trunk bank**：每个样本固定 7 个变体（normal、2 个假偏航、repeat、single、2 个偏移），强度在宽范围内随机（偏航率 3–20°/s，朝向偏差 1–10°，横向 0–1.2 m），臂按自己的强度窗口挑。代价：每个样本的扰动只有 2 + 2 个固定实例，不是每步重新抽。探针与 dev 也走固定 bank（同一套变体，只建一次）。
 - D2：训练结束时不在训练进程里算 dev，改为 chain 里对 O 和全部臂一次算完（避免两个进程同时建同一个 dev bank）。
 - 2026-10-04 07:28（box 时间）启动 chain `pilot1`：`pilot`、`pilot_ctl` 各 2 500 步，seed 0，EXAMS=1（含 navhard 与 HUGSIM）。
+- 迭代 1（07:55 box，看了 pilot / pilot_ctl 的 dev，没看任何考题读数）：dev 上 G_low 降约 80%（nav 14.3 → 2.3，wod 13.7 → 2.8，carla 4.2 → 1.5），control 不动；recover_psi_1s 从 ≈0 到 0.63–1.08；但 drift 中位 0.16–0.25 m 超 0.15 护栏（control 0.19–0.58）。加两臂：`it_dw3`（D 行蒸馏权重 3）、`it_half`（配对份额减半：U 18 / D 16 / H 8 / O 6）。期望：drift 降到 ≤ 0.15，G_low 降幅仍 ≥ 50%，recover 仍 ≥ 0.4。只读 dev 与 (a)(b)(e)，navhard / HUGSIM 只考被选中的那一个。

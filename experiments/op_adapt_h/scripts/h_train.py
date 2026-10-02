@@ -34,6 +34,9 @@ ARMS = {
     "smoke": dict(steps=60, ckpt_every=10 ** 9, dom_w={"nav": 0.0, "wod": 1.0, "carla": 0.0}, roles={"U": 6, "D": 4, "H": 8, "O": 6}),
     "pilot": dict(),                                         # H + O pairs, U and D rows
     "pilot_ctl": dict(control=True),                         # U-only control: same rows unperturbed
+    # iteration 1 (prereg addendum, before readout b): dev drift 0.16-0.25 m over the 0.15 guard, G_low cut ~80%
+    "it_dw3": dict(dw=3.0),                                  # stronger distillation on D rows (op_adapt_l main used dw 3)
+    "it_half": dict(roles={"U": 18, "D": 16, "H": 8, "O": 6}),   # half the pair share
 }
 
 
