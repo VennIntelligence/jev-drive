@@ -90,3 +90,4 @@
 | 93 | 配对素材：换指令只 navtrain 约 2.5 千段；WOD 无地图；CARLA 要带传感器重跑 | 中 | 待定 |
 | 94 | navhard 历史对齐：全量去转动被否（navtest −8）；按计划不确定度挑 rollout navhard +0.98、navtest −0.09（事后） | 弱 | 待定 |
 | 95 | B2D 合并臂 vmerge：对 drive +13.2，几乎全来自 bypass；灯在 vred 之上不再加分；碰撞多出来自 bypass 起步与 stop sign 前被撞 | 弱 | 待定 |
+| 96 | HUGSIM 低速打转是历史偏航外推的闭环放大：低速去旋转 9/10 不再打转，64 场景 10→3，非打转 HD 不掉；部分成立 | 中 | 待定 |
