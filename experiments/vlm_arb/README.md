@@ -24,6 +24,8 @@ index: Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privi
 
 **vmerge (2026-10-03, diagnostic, 19 routes x 2 seeds).** One arm merging the vred light rows (R2 at the estimated stop line, R5, cusum release), the stop-sign hold (R3) and the time-based bypass: DS 79.1 vs `drive` 65.9 and `vred` 70.9; paired `vmerge - drive` +13.2 [+1.0, +27.0], obstacle routes +57.2 [+36.8, +77.6], light routes -3.7 [-17.5, +8.8] (`vmerge - vred` light -10.0 [-20.0, -2.5], red-light infractions 8 vs 6); no stop-sign infraction (`drive` 2). Ablations: no bypass (`vmerge - vmnobyp`) +14.6 [+4.3, +27.3], no cusum (`vmerge - vmnocusum`) +2.6 [-2.3, +8.4] (within noise), no R1 (`vmerge - vmnor1`) -3.9 [-10.0, +2.1] (within noise). Follow-up `vmj` (R2 target back at the junction entrance, R5 T_max 50 s; 6 light routes + 17280, 14 runs): light-route red-light infractions 7 -> 3, DS +10.0 [+2.5, +20.0] vs `vmerge`, equal to `vred` on those routes: [results/vmerge.md](results/vmerge.md), plan [plans/2026-10-03-vmerge.md](plans/2026-10-03-vmerge.md).
 
+**vmerge2 (2026-10-03, diagnostic, 19 routes, seeds 0-3).** vmerge + the two vmj switches on every route (registered as the plan's section vmerge2). Seeds 0 and 1: DS 76.7, paired `vmerge2 - drive` +10.8 [+0.3, +22.2], `vmerge2 - vred` +5.7 [-4.6, +17.8], `vmerge2 - vmerge` -2.5 [-9.0, +4.1]; obstacle routes +44.8 [+25.3, +58.9] vs drive, light routes +2.4 [+0.0, +7.2] vs drive and -3.9 [-11.6, +0.0] vs vred; red-light infractions 5 (vmerge 8, drive 13). With seeds 2, 3 (vmerge2 and a rerun of the unchanged drive arm): `vmerge2 - drive` +9.2 [-0.2, +19.8], obstacle +41.4 [+31.0, +51.9], light -3.6 [-9.0, +0.0], i.e. the vmj light-route gain did not hold on the new seeds (15612 seeds 1 / 2 DS ~22, 15483 seed 3 DS 34, all with vehicle_blocked), and vmerge2's per-route DS sd over seeds is 13.8 against 3.4 for drive. Vehicle collisions 21 in 76 runs (drive 12): [results/vmerge2.md](results/vmerge2.md); why they rose in vmerge (R1 junction conflicts shared with drive, a stop-sign hold hit by a turning car on 17280, bypass pull-outs beside traffic): [results/vmerge_collisions.md](results/vmerge_collisions.md).
+
 **Next.** Replace the CARLA-map inputs (junction entrance, stop line) by the official route commands; shorten the green-release delay; a gap policy for the bypass.
 
 **Read more.** [plans/2026-10-02-vlm-arb.md](plans/2026-10-02-vlm-arb.md), [results/report.md](results/report.md), [results/phase_a.md](results/phase_a.md), [results/lightsweep.md](results/lightsweep.md), [plans/2026-10-02-vlm-thin.md](plans/2026-10-02-vlm-thin.md) + [results/vlm_thin.md](results/vlm_thin.md) (offline: one-pass scoring, resolution and a cut language model with a thin head for Qwen3-VL-4B's light reading; speed and accuracy), [research/decisions/082.md](../../research/decisions/082.md).
@@ -32,7 +34,7 @@ index: Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privi
 ## Files
 
 
-[archive/](archive/) 3 one-off code · [results/](results/) 141 result files · [plans/](plans/) 9 live plans · [scripts/](scripts/) 63 entry points
+[archive/](archive/) 3 one-off code · [results/](results/) 146 result files · [plans/](plans/) 9 live plans · [scripts/](scripts/) 67 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded
