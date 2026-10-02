@@ -24,7 +24,8 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      step with ego speed below it the model is reset and the last derot_ctx simulator steps (default
                      25: Cinque's 24-step feature buffer + now) are replayed, each frame re-projected rotation-only to
                      the current heading (ego odometry only; position kept, yaw removed), first frame warmed up as at
-                     step 0; derot_rotate false replays the same frames unrotated (control)
+                     step 0, skipped when the history holds < 0.05 deg of yaw; derot_rotate false replays the same
+                     frames unrotated (control)
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
@@ -135,7 +136,10 @@ class Agent:
         if below > 0:
             self.buf.append((self.step, {c: obs["rgb"][c] for c in self.op.cams}, img2, desire))
             self.buf = self.buf[-(ctx + 1):]
-        if below > 0 and self.step and float(info["ego_velo"]) < below:
+        hist_yaw = max(abs(np.degrees(self.hist.th[j] - self.hist.th[-1])) for j, *_ in self.buf) if self.buf else 0.0
+        # no rotation in the history (< 0.05 deg, rounds to the unrotated frames): the replay would feed the same frames,
+        # so step normally (replay vs normal stepping agree to the digit on 5 / 7 spin scenarios, replay3 control)
+        if below > 0 and self.step and float(info["ego_velo"]) < below and hist_yaw >= 0.05:
             wire.send(self.sock, {"cmd": "reset"}, {})
             wire.recv(self.sock)
             th_now, rot = self.hist.th[-1], self.opts.get("derot_rotate", True)
