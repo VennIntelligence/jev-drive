@@ -144,7 +144,10 @@ class VlmArbAgent(OpArbAgent):
             self.rows = rows = rows - {"nor1": {"R1"}, "nosign": {"R3"}}[self.abl]
         if self.vm:
             assert self.backend == "qwen", "vmerge needs the qwen backend"
-            self.r2_target = "stopline"
+            # vmerge-j (plan 2026-10-03-vmerge.md, follow-up): VLM_R2_TARGET=junction stops R2 at the route-command entrance instead of
+            # the estimated stop line (R3 keeps the stop line); VM_R5_TMAX replaces R5's T_max. Unset: the vmerge behaviour.
+            self.r2_target = env("VLM_R2_TARGET", "stopline")
+            self.r5_tmax = float(env("VM_R5_TMAX", ARB_PARAMS["T_max_stop_s"]))
             d = np.load(env("OP_DET_HEAD"))
             self.det_thr = [float(x) for x in d["thr"]]
             self.t_det_l = self.t_det_s = self.t_red = -1e9
@@ -563,8 +566,10 @@ class VlmArbAgent(OpArbAgent):
         full = lambda h, ok: len(h) == K and all(ok(x) for x in h)     # noqa: E731
         stop = lambda ln: idm(speed, max(0.1, ln + A["idm_s0"]), 0.0, 0.0, A["cruise"], A["amax"], A["idm_b"],  # noqa: E731
                               A["idm_s0"], A["idm_T"])
-        line2 = (stop_dist - 0.5) if stop_dist is not None else junc_dist - REAR_TO_BUMPER - 0.5
+        line3 = (stop_dist - 0.5) if stop_dist is not None else junc_dist - REAR_TO_BUMPER - 0.5    # estimated stop line (R3)
+        line2 = junc_dist - REAR_TO_BUMPER - 0.5 if self.r2_target == "junction" else line3            # R2 target
         can_stop2 = line2 > max(0.5, speed * speed / 8.0 - 1.0) or (speed < 1.0 and line2 > -1.0)
+        can_stop3 = line3 > max(0.5, speed * speed / 8.0 - 1.0) or (speed < 1.0 and line3 > -1.0)
         new_ans = self.n_ans != self._seen_ans
         self._seen_ans = self.n_ans
         if speed < 0.2:
@@ -573,7 +578,7 @@ class VlmArbAgent(OpArbAgent):
             self.stop_since = None
         stood = t - self.stop_since if self.stop_since is not None else 0.0
         # R5 as registered: a held stop older than T_max, or held on an expired answer, is dropped until the car rolls again
-        if "R5" in rows and ((self.r2_hold and (stood > P["T_max_stop_s"] or not fresh))
+        if "R5" in rows and ((self.r2_hold and (stood > self.r5_tmax or not fresh))
                              or (self.r3_hold and not sfresh and self.r3_since is None)):
             self.r5, self.r2_hold, self.r3_hold, self.r3_since = True, False, False, None
             self.release_until = t + 2.0
@@ -614,20 +619,20 @@ class VlmArbAgent(OpArbAgent):
         # R3: stop sign answered twice inside the junction window: stop at the estimated line, dwell, once per junction
         if "R3" in rows and not self.r5 and not self.r2_hold:
             if (not self.r3_hold and sfresh and jid not in self.r3_done and full(self.h_sign2, lambda x: x == "stop_sign_for_ego")
-                    and line2 < 25.0 and can_stop2 and self._no_ego_light()):
+                    and line3 < 25.0 and can_stop3 and self._no_ego_light()):
                 self.r3_hold, self.r3_since = True, None
             if self.r3_hold:
                 # the dwell counts only at the target and after the warm-up (V2: on 17280 the hold was served standing at the spawn,
                 # 2.2 m short of the line, where the scorer's 4 m proximity test does not see the car; the hold now creeps it up first)
-                at_line = line2 <= 1.0 and not getattr(self, "warm_now", True)
+                at_line = line3 <= 1.0 and not getattr(self, "warm_now", True)
                 if speed < 0.1 and at_line and self.r3_since is None:
                     self.r3_since = t
-                if (self.r3_since is not None and t - self.r3_since >= VM["sign_dwell_s"]) or line2 <= -2.0:
+                if (self.r3_since is not None and t - self.r3_since >= VM["sign_dwell_s"]) or line3 <= -2.0:
                     self.r3_hold, self.r3_since = False, None
                     self.r3_done.add(jid)
                     self.release_until = t + 2.0
                 else:
-                    out["R3"] = stop(line2)
+                    out["R3"] = stop(line3)
                     active.append("R3")
         if out and speed < 0.2:
             self.owned_stop = True

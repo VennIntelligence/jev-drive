@@ -98,7 +98,10 @@ def report(abl):
     other = [r for r in ROUTES if r not in LIGHT_ROUTES + SIGN_ROUTES + OBS_ROUTES]
     sets = [("all", ROUTES), ("light", LIGHT_ROUTES), ("stop sign", SIGN_ROUTES), ("obstacle", OBS_ROUTES), ("other", other)]
     cols = ["DS", "RC", "red_light", "stop_infraction", "collisions", "vehicle_blocked"]
-    P = v2.pair_rows(df, [(ARM, "drive"), (ARM, "vred"), ("vred", "drive")] + [(ARM, a) for a in abl], sets, cols)
+    con = [(ARM, "drive"), (ARM, "vred"), ("vred", "drive")] + [(ARM, a) for a in abl if a != "vmj"]
+    if "vmj" in abl:                                   # the follow-up arm runs on the light routes + 17280 only
+        con += [("vmj", ARM), ("vmj", "vred"), ("vmj", "drive")]
+    P = v2.pair_rows(df, con, sets, cols)
     P.to_csv(OUT / "vmerge_paired.csv", index=False)
     inf = df.groupby("arm")[["red_light", "stop_infraction", "collisions_vehicle", "collisions_layout", "collisions_pedestrian",
                              "outside_route_lanes", "vehicle_blocked", "route_timeout", "scenario_timeouts", "min_speed_infractions"]].sum().reindex(arms)

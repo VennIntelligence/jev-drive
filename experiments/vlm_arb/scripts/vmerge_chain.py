@@ -16,6 +16,9 @@ Stages (docs/long-runs.md):
   full all + abl (the ablations start after the seed-0 gate, behind seed 1 in priority)
   abl  (--arg abl=nobyp,nocusum,...) one ablation arm `vm<abl>` per name (VM_ABL, one component off), both seeds, after `report`;
        then `report-abl` (vmerge_report.py report <abl names>)
+  j=1  (added to any stage) the follow-up arm `vmj` (plan, section "vmerge-j"): VLM_R2_TARGET=junction + VM_R5_TMAX=50 on the 6 light routes
+       + 17280 x 2 seeds; smoke `dbg-vmj-s0-15102` first (priority 0, next free slot), the units after it at priority 10 (behind the
+       ablations), then `report-j` (vmerge_report.py report nobyp nocusum nor1 j, after every ablation and vmj unit)
 Units: 3 CARLA workers + their own openpilot server, one unit per card (3 routes per card's Qwen server, as in vred).
 """
 import json
@@ -26,7 +29,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import vlm_arb_chain as base  # noqa: E402
 import vlm_vred_chain as vc  # noqa: E402
-from vlm_arb_common import DATA, RUN  # noqa: E402
+from vlm_arb_common import DATA, LIGHT_ROUTES, RUN  # noqa: E402
 
 NAME, ROOT = "vlm-vmerge", "vlm_arb_vmerge"
 base.SLOT_WORKERS, base.SLOT_CORES = 3, 9
@@ -64,7 +67,27 @@ def abl_jobs(names, deps=()):
     return units + [tool("report-abl", "report", *names, deps=[j.name for j in units], prio=9)]
 
 
+J_ROUTES = LIGHT_ROUTES + ["17280"]
+J_ENV = dict(VLM_R2_TARGET="junction", VM_R5_TMAX="50")
+
+
+def j_jobs(abl_names):
+    sh = vc.shards()
+    smoke = base.unit("dbg-vmj", 0, "15102", ["15102"], dict(env(), **J_ENV), "", 0, base="vmerge")
+    units = [base.unit("vmj", s, k, [r for r in sh[k] if r in J_ROUTES], dict(env(), **J_ENV), "", 10, deps=[smoke.name], base="vmerge")
+             for s in (0, 1) for k in SHARDS if any(r in J_ROUTES for r in sh[k])]
+    abl = ["vm%s-s%d-%s" % (a, s, k) for a in abl_names for s in (0, 1) for k in SHARDS]
+    return [smoke] + units + [tool("report-j", "report", *(abl_names + ["j"]), deps=[j.name for j in units] + abl, prio=11)]
+
+
 def jobs(args):
+    out = _jobs(args)
+    if args.get("j") == "1":
+        out += j_jobs(args.get("abl", "").split(",") if args.get("abl") else [])
+    return out
+
+
+def _jobs(args):
     stage = args.get("stage", "pre")
     pre = pre_jobs()
     if stage == "pre":
