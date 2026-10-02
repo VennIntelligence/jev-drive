@@ -127,6 +127,7 @@ class Thin:
         import torch
         from transformers import AutoImageProcessor, AutoModelForImageTextToText, AutoProcessor
         self.torch, self.dev = torch, dev
+        torch.set_grad_enabled(False)                                           # inference only, everywhere
         p = qwen_path()
         self.proc = AutoProcessor.from_pretrained(p)
         self.ip = AutoImageProcessor.from_pretrained(p, backend="torchvision")
