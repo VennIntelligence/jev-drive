@@ -44,16 +44,17 @@ def main(dero, exam, routes, out):
     out.mkdir(parents=True, exist_ok=True)
     routes = json.load(open(routes))
     R = runs(exam / "results.csv", exam, {"cinque-fixed"}) | runs(dero / "results.csv", dero,
-                                                                  {"cinque-fixed-derot3", "cinque-fixed-replay3", "cinque-fixed-base"})
+                                                                  {"cinque-fixed-derot3", "cinque-fixed-replay3", "cinque-fixed-base", "cinque-fixed-sel3"})
     rows = []
     for (tag, scen), (r, d) in sorted(R.items()):
         pos, th, v, steer, plans = load_run(d, "cinque")
         res, _ = analyse(pos, th, v, steer, plans, routes[r["scene"]])
         recs = [json.loads(x) for x in open(d / "zs_steps.jsonl")][1:]
         rows.append(dict(arm={"cinque-fixed": "base", "cinque-fixed-derot3": "derot3", "cinque-fixed-replay3": "replay3",
-                              "cinque-fixed-base": "base_rerun"}[tag], scenario=scen, dataset=r["dataset"], spin10=scen in SPIN10,
+                              "cinque-fixed-base": "base_rerun", "cinque-fixed-sel3": "sel3"}[tag], scenario=scen, dataset=r["dataset"], spin10=scen in SPIN10,
                          spin=bool(res["spin"]), max_abs_e=round(res["max_abs_e"], 1), hdscore=float(r["hdscore"]), rc=float(r["rc"]),
-                         end=r["end"], steps=int(r["steps"]), derot_steps=sum(bool(x.get("derot")) for x in recs)))
+                         end=r["end"], steps=int(r["steps"]), derot_steps=sum(bool(x.get("derot")) for x in recs),
+                         rule_used=sum(bool((x.get("derot") or {}).get("used", bool(x.get("derot")))) for x in recs)))
     with open(out / "derot_runs.csv", "w", newline="") as f:
         w = csv.DictWriter(f, list(rows[0]))
         w.writeheader()
