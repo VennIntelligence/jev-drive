@@ -191,21 +191,38 @@ class OpenpilotFrames:
     packed 6x128x256 per frame."""
 
     def __init__(self, cal: dict, cams=("CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT")):
-        sub = {c: cal[c] for c in cams}
-        self.cams = list(sub)
-        sizes = [(sub[c]["width"], sub[c]["height"]) for c in self.cams]
-        self.idx, self.coverage, self.src_frac = {}, {}, {}
+        self.sub = {c: cal[c] for c in cams}
+        self.cams = list(self.sub)
+        self.sizes = [(self.sub[c]["width"], self.sub[c]["height"]) for c in self.cams]
+        self.rays = {k: G.pinhole_rays(np, G.OP_K[k], G.OP_W, G.OP_H) for k in ("road", "wide")}
+        self.idx, self.coverage, self.src_frac, self.rot_cache = {}, {}, {}, {}
         for k in ("road", "wide"):
-            src, U, V = G.choose_sources(np, G.pinhole_rays(np, G.OP_K[k], G.OP_W, G.OP_H), sub)
+            src, U, V = G.choose_sources(np, self.rays[k], self.sub)
             self.coverage[k] = float((src >= 0).mean())
             self.src_frac[k] = {c: float((src == j).mean()) for j, c in enumerate(self.cams)}
-            self.idx[k] = G.nn_gather_index(src, U, V, sizes).ravel()
+            self.idx[k] = G.nn_gather_index(src, U, V, self.sizes).ravel()
 
-    def pack(self, rgb: dict) -> np.ndarray:
+    def rot_index(self, yaw_deg: float) -> dict:
+        """Gather indices of the model frames for a virtual camera yawed by yaw_deg (left-positive, about the
+        vertical axis) against the frame's own camera, rounded to 0.1 deg and cached: a past frame rendered with
+        yaw_deg = current heading minus its heading, left-positive (= degrees(theta_past - theta_now) in the
+        right-positive theta of ego_pose2d), shows the scene from the current heading at the past position."""
+        key = round(float(yaw_deg), 1)
+        if key == 0.0:
+            return self.idx
+        if key not in self.rot_cache:
+            a = np.radians(key)
+            Rz = np.array([[np.cos(a), -np.sin(a), 0], [np.sin(a), np.cos(a), 0], [0, 0, 1]])
+            self.rot_cache[key] = {k: G.nn_gather_index(*G.choose_sources(np, r @ Rz.T, self.sub), self.sizes).ravel()
+                                   for k, r in self.rays.items()}
+        return self.rot_cache[key]
+
+    def pack(self, rgb: dict, idx: dict | None = None) -> np.ndarray:
+        idx = idx or self.idx
         cat = np.concatenate([rgb[c].reshape(-1, 3) for c in self.cams] + [np.zeros((1, 3), np.uint8)])
         out = np.empty((2, 6, 128, 256), np.uint8)
         for m, k in enumerate(("road", "wide")):
-            px = cat[self.idx[k]].astype(np.float32)           # index -1 -> the appended black pixel
+            px = cat[idx[k]].astype(np.float32)                # index -1 -> the appended black pixel
             r, g, b = px[:, 0], px[:, 1], px[:, 2]
             Y = (16 + 0.257 * r + 0.504 * g + 0.098 * b).reshape(G.OP_H, G.OP_W)
             U = (128 - 0.148 * r - 0.291 * g + 0.439 * b).reshape(G.OP_H, G.OP_W)

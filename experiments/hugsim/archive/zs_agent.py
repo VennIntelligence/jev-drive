@@ -19,7 +19,12 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      default 0; a value past the episode length is shadow mode: the route follower drives the whole
                      episode and the model's plans are only logged), oracle_vmax (route follower speed cap, default 3),
                      forward_only (jevdrive.hugsim_zs.forward_only on every model plan, default true),
-                     straight_stop (jevdrive.hugsim_zs.straight_stop after it, default true)
+                     straight_stop (jevdrive.hugsim_zs.straight_stop after it, default true),
+                     derot_below (openpilot, m/s, default 0 = off; plans/2026-10-03-history-derotate-plan.md): on a
+                     step with ego speed below it the model is reset and the last derot_ctx simulator steps (default
+                     25: Cinque's 24-step feature buffer + now) are replayed, each frame re-projected rotation-only to
+                     the current heading (ego odometry only; position kept, yaw removed), first frame warmed up as at
+                     step 0; derot_rotate false replays the same frames unrotated (control)
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
@@ -60,6 +65,7 @@ class Agent:
         self.frames = []                           # Alpamayo: (t, views) at the simulator's 4 Hz
         self.last = None                           # (t, world points, abs times) of the last model plan
         self.step = 0
+        self.buf = []                              # openpilot history for derot: (step, rgb, img2, desire)
         self.seed0 = zlib.crc32(str(self.out.name).encode()) & 0x7FFFFFF
         self.log = open(self.out / "zs_steps.jsonl", "w", buffering=1)
         self.dump_every = int(opts.get("dump_every", 0))
@@ -124,8 +130,28 @@ class Agent:
             dil = float(self.opts.get("dilation", 1.25))
             reps = per_ctx if self.step else per_ctx * int(round(self.opts.get("warmup_s", 5.0) / OP_CTX_S))
         desire = Z.DESIRE[int(info["command"])] if self.opts.get("desire", True) else 0
-        r, out = self.call({"desire": desire, "reps": reps, "traffic": self.opts.get("traffic", [1, 0]),
-                            "speed": float(info["ego_velo"]) * dil}, {"img2": img2})
+        meta = {"traffic": self.opts.get("traffic", [1, 0]), "speed": float(info["ego_velo"]) * dil}
+        below, ctx = float(self.opts.get("derot_below", 0)), int(self.opts.get("derot_ctx", 25))
+        if below > 0:
+            self.buf.append((self.step, {c: obs["rgb"][c] for c in self.op.cams}, img2, desire))
+            self.buf = self.buf[-(ctx + 1):]
+        if below > 0 and self.step and float(info["ego_velo"]) < below:
+            wire.send(self.sock, {"cmd": "reset"}, {})
+            wire.recv(self.sock)
+            th_now, rot = self.hist.th[-1], self.opts.get("derot_rotate", True)
+            warm = per_ctx * int(round(self.opts.get("warmup_s", 5.0) / OP_CTX_S))
+            yaws, ms = [], 0.0
+            for i, (j, rgb, im, des) in enumerate(self.buf):
+                yaw = np.degrees(self.hist.th[j] - th_now)
+                yaws.append(yaw)
+                if rot and round(yaw, 1) != 0.0:
+                    im = self.op.pack(rgb, self.op.rot_index(yaw))
+                r, out = self.call(dict(meta, desire=des, reps=warm if i == 0 else per_ctx), {"img2": im})
+                ms += r.get("infer_ms") or 0.0
+            r["infer_ms"] = ms
+            rec["derot"] = {"n": len(self.buf), "rotate": bool(rot), "max_abs_yaw": round(float(np.max(np.abs(yaws))), 2)}
+        else:
+            r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2})
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)
         rec.update(desire=desire, reps=reps, infer_ms=r.get("infer_ms"), rtt_ms=r["rtt_ms"],
                    lead_prob=r.get("lead_prob"), engaged=r.get("engaged"),
@@ -142,7 +168,9 @@ class Agent:
             self.setup(info)
         self.hist.add(info)
         pos, th = Z.ego_pose2d(info)
+        k6 = max(0, len(self.hist.th) - 7)                 # heading 1.5 s (6 steps) ago; + = turned right since
         rec = {"step": self.step, "t": info["timestamp"], "pos": np.round(pos, 3).tolist(), "theta": round(th, 5),
+               "hyaw15": round(float(np.degrees(self.hist.th[-1] - self.hist.th[k6])), 3),
                "v": round(float(info["ego_velo"]), 3), "steer": round(float(info["ego_steer"]), 4),
                "cmd": int(info["command"]), "n_obj": len(info.get("obj_boxes", []))}
         k = int(self.opts.get("replan", 1))
