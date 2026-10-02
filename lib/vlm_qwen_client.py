@@ -1,0 +1,42 @@
+"""Client of experiments/vlm_arb/scripts/vlm_qwen_server.py (Python 3.8, route process env or analysis env).
+
+One call = one HTTP request with the JPEG bytes of the wide and the road frame. A failed request returns
+{"ok": False, ...} with no answer: the caller must not treat it as one (the arbitration layer lets the previous
+answer age out). The server of card g listens on PORT0 + g.
+"""
+import json
+import time
+import urllib.request
+from typing import Any, Dict
+
+PORT0 = 8200
+LIGHTS = ["no_light", "red_or_yellow_for_ego", "green_for_ego", "light_for_other_lane"]
+
+
+class QwenClient:
+    def __init__(self, port: int, timeout_s: float = 5.0):
+        self.url, self.timeout_s = "http://127.0.0.1:%d" % port, timeout_s
+
+    def ask(self, jpgs: Dict[str, bytes]) -> Dict[str, Any]:
+        """`jpgs`: {"wide": bytes, "road": bytes}. Returns Q_light, Q_light_p, the round trip in `latency_ms` and the
+        server's own `srv_queue_ms` / `srv_svc_ms` / `srv_depth`."""
+        w, r = jpgs["wide"], jpgs["road"]
+        req = urllib.request.Request(self.url + "/light", data=w + r, headers={"X-Sizes": "%d,%d" % (len(w), len(r)),
+                                                                               "Content-Type": "application/octet-stream"})
+        t0 = time.perf_counter()
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
+                d = json.loads(resp.read().decode("utf-8"))
+            out = dict(ok=True, Q_light=d["ans"], Q_light_p=dict(zip(LIGHTS, d["p"])), srv_queue_ms=d["queue_ms"],
+                       srv_svc_ms=d["svc_ms"], srv_depth=d["depth"], srv_batch=d["batch"])
+        except Exception as e:  # noqa: BLE001 - a failed request is data, not a crash of the route
+            out = {"ok": False, "error": str(e)[:200]}
+        out["latency_ms"] = round((time.perf_counter() - t0) * 1000, 1)
+        return out
+
+    def healthy(self) -> bool:
+        try:
+            with urllib.request.urlopen(self.url + "/health", timeout=2.0) as r:
+                return r.status == 200
+        except Exception:  # noqa: BLE001
+            return False

@@ -1,6 +1,6 @@
 """Qwen3-VL-4B traffic-light server: zero-shot, one forward pass, option scoring, both cameras (plan 2026-10-03-vlm-vred.md).
 
-  python vlm_qwen_server.py serve --port 8200 [--max-batch 4] [--res r1153] [--log FILE]
+  python vlm_qwen_server.py serve --port 8200 [--max-batch 1] [--res r1153] [--log FILE]
   python vlm_qwen_server.py supervise --cards 0,1,2 --run DIR     one `serve` per card, restarted if it dies; STOP file ends it
   python vlm_qwen_server.py bench [--res r1153]                    batch 1 / 2 / 4 service time on this card, JPEG in, answer out
 
@@ -11,7 +11,8 @@ Wire format: POST /light with the JPEG bytes of the wide and the road frame conc
 Reply JSON {ans, p[4], queue_ms, svc_ms, batch, depth}. GET /health -> 200 once warm.
 
 One process = one card = the routes of that card. A single GPU worker thread takes whatever is queued (up to --max-batch
-requests of the same frame size) and runs them as one batch; HTTP handler threads only enqueue bytes and wait.
+requests of the same frame size) and runs them as one batch (default 1: the forward is compute bound, batching
+bought 3-6% throughput and delays the first request of a batch); HTTP handler threads only enqueue bytes and wait.
 """
 import argparse
 import json
@@ -229,7 +230,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["serve", "supervise", "bench"])
     ap.add_argument("--port", type=int, default=PORT0)
-    ap.add_argument("--max-batch", type=int, default=4)
+    ap.add_argument("--max-batch", type=int, default=1)       # measured: 126 / 122 / 119 / 121 ms per request at batch 1 / 2 / 3 / 4
     ap.add_argument("--res", default="r1153")
     ap.add_argument("--log", default="")
     ap.add_argument("--cards", type=lambda s: [int(x) for x in s.split(",")], default=[0, 1, 2])
