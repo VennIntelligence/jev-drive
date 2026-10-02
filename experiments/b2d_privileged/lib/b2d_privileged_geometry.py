@@ -12,7 +12,7 @@ import time
 
 import numpy as np
 
-ARMS = ("drive", "pjunc", "pbyp", "pbypgap", "pbyp2", "pred", "pall")
+ARMS = ("drive", "pjunc", "pbyp", "pbypgap", "pbyp2", "pbyp2ng", "pred", "pall")
 PARAMS = dict(snapshot_s=.20, radius=100., horizon=5., margin=.5, clear_s=.8,
               release_s=2., static_speed=.2, static_s=2., obstacle_m=50.,
               merge_m=20., enter_before_m=20., transition_m=15., return_after_m=8.,
@@ -158,9 +158,10 @@ class Privileged:
         assert arm in ARMS, arm
         self.agent,self.arm=agent,arm
         self.junction=arm in ("pjunc","pall")
-        self.bypass=arm in ("pbyp","pbypgap","pbyp2","pall")
+        self.bypass=arm in ("pbyp","pbypgap","pbyp2","pbyp2ng","pall")
         self.gap_check=arm in ("pbypgap","pbyp2","pall")
-        self.v2=arm=="pbyp2"          # projection fix, static >= 5 s, light memory, same-direction gap check (see geometry())
+        self.v2=arm in ("pbyp2","pbyp2ng")      # projection fix, static >= 5 s, light memory (see geometry())
+        self.sd_gap=arm=="pbyp2"                # + same-direction gap check; pbyp2ng (diagnostic ablation) has none of the gap checks
         self.last_red=-1e9
         self.red=arm in ("pred","pall")
         self.last=-1e9;self.actors=[];self.static_since={};self.actor_cache={}
@@ -288,7 +289,7 @@ class Privileged:
         if state is None:return world
         gap=self.gap_open(state,speed)
         self.meta.update(gap_open=gap,borrow=state["borrow"],bypass_state=state)
-        if self.v2:
+        if self.sd_gap:
             # Same-direction traffic in the target lane is checked before and while pulling out, until the ego is
             # sd_commit_frac of the way across; the oncoming-lane check (borrow) keeps its before-start semantics.
             lateral=float(project_ext([xy],r.xy)[1][0]);frac=lateral/state["offset"] if state["offset"] else 0.
@@ -332,7 +333,7 @@ class Privileged:
 
     def gap_open(self,state,speed):
         if not state["borrow"]:
-            if not self.v2:return True
+            if not self.sd_gap:return True
             ok,who=same_direction_gap([a for a in self.actors if a["type"].startswith("vehicle.")],self.agent.route.xy,self.ego_s,speed,state["offset"],state.get("ids",()))
             self.meta["gap_blocker"]=who;return ok
         r=self.agent.route;need=max(0.,state["end_s"]+23-self.ego_s)/max(speed,2.)+2

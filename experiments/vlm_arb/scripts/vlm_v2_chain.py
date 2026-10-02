@@ -16,6 +16,7 @@ Stages (docs/long-runs.md: 1 unit -> a few -> all):
         stop-line target on the debug red-light route 334, `red_stop2`).
   v     (after `all` stopped at the failed calibration, plan section 9) `cal3-s1-q0..q2` alone at 3 workers per card -> `calibrate3` (gates/v2_cal3.json),
         `vred2-s0-q0..q2`, `few-vred2`, `vred2-s1-q0..q2`, `report`; run with --workers-per-card 3 after the pbyp2 units are done
+  ng    (plan section 10, after stage `v`) `pbyp2ng-s<seed>-{a,b,c}`: pbyp2 without any gap check on the four obstacle routes x 2 seeds, then `report2`
   all   4  `cal2-s1-q0..q2` (shadow `drive`, Qwen servers) and `pbyp2-s0-q0..q2` at the same time (6 workers per card): `calibrate`
            reads the in-loop latency and passes only with p95 <= L = 0.35 s; `few-pbyp2` checks the pbyp2 seed-0 units
         5  `vred2-s0-q0..q2` and `pbyp2-s1-q0..q2` at the same time (the load of the calibration), then `few-vred2`
@@ -30,7 +31,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import vlm_arb_chain as base  # noqa: E402
 import vlm_vred_chain as vc  # noqa: E402
-from vlm_arb_common import RUN  # noqa: E402
+from vlm_arb_common import RUN, SEEDS  # noqa: E402
 
 NAME, ROOT = "vlm-v2", "vlm_arb_v2"
 base.SLOT_WORKERS, base.SLOT_CORES = 3, 9
@@ -91,10 +92,19 @@ def vred2_jobs():
     return cal + [calib] + v0 + [few_v] + v1 + [rep]
 
 
+def ng_jobs():
+    """Stage `ng` (plan section 10): the diagnostic ablation pbyp2ng (no gap check) on the four obstacle routes x 2 seeds, after the vred2 batch has finished."""
+    ids = {"a": ["19324", "24497"], "b": ["2520"], "c": ["19832"]}
+    units = [base.unit("pbyp2ng", s, k, v, None, "pbyp2", 3) for s in SEEDS for k, v in ids.items()]
+    return units + [tool("report2", "report", deps=[j.name for j in units], prio=9)]
+
+
 def jobs(args):
     stage = args.get("stage", "pre")
     if stage == "v":
         return vred2_jobs()
+    if stage == "ng":
+        return ng_jobs()
     RUN.mkdir(parents=True, exist_ok=True)
     pre = pre_jobs()
     if stage == "pre":

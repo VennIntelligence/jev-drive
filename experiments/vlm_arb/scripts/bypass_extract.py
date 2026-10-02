@@ -102,7 +102,7 @@ def vlm(path):
 def main(out_dir):
     os.makedirs(out_dir, exist_ok=True)
     for r in csv.DictReader(sys.stdin):
-        if r["arm"] not in ("drive", "pbyp", "pbyp2"):
+        if r["arm"] not in ("drive", "pbyp", "pbyp2", "pbyp2ng"):
             continue
         a = r["attempt"]
         name = "%s_s%s_%s.json.gz" % (r["arm"], r["seed"], r["route"])

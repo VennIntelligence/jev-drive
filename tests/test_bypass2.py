@@ -94,7 +94,7 @@ def scene(arm, actors, ego_s=10., speed=1., ego_y=0., t=20., ctx=None, priv=None
         priv = G.Privileged.__new__(G.Privileged)
         priv.agent, priv.arm = agent, arm
         priv.junction, priv.bypass, priv.gap_check = False, True, arm in ("pbypgap", "pbyp2")
-        priv.v2, priv.red, priv.last_red = arm == "pbyp2", False, -1e9
+        priv.v2, priv.sd_gap, priv.red, priv.last_red = arm in ("pbyp2", "pbyp2ng"), arm == "pbyp2", False, -1e9
         priv.last, priv.static_since, priv.bypass_state, priv.prepared, priv.snapshot_ms = 1e9, {}, None, True, 0.
         priv.flags, priv.jids = np.zeros(len(ROUTE), bool), -np.ones(len(ROUTE), int)
         priv.hero_row = dict(extent=[2.4508, .9])
@@ -156,6 +156,13 @@ class Activation(unittest.TestCase):
         priv, path, m = scene("pbyp2", [self.OBST(), passer], ego_s=30., speed=2., ego_y=OFFSET * .55, t=20.4, priv=priv)
         self.assertTrue(m["committed"])
         self.assertTrue(m["bypass"])
+
+    def test_ablation_has_no_gap_check(self):
+        passer = car(9, 16., OFFSET, v=8.)
+        _, _, m = scene("pbyp2ng", [self.OBST(), passer], ego_s=30., speed=0.)
+        self.assertTrue(m["bypass"])                                               # no hold although a vehicle is arriving
+        _, _, m = scene("pbyp2ng", [car(3, -10., 0., stationary=6.)], ego_s=0.)
+        self.assertFalse(m["bypass"])                                              # the projection fix is still on
 
     def test_legacy_ignores_same_direction_traffic(self):
         passer = car(9, 0., OFFSET, v=8.)

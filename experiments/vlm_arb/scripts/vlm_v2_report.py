@@ -188,7 +188,7 @@ def offline(df):
     import bypass_extract as bx
     import bypass_misfire as bm
     d = OUT.parent / ("extract_test" if TEST else "extract")
-    sel = df[df.arm.isin(["drive", "pbyp", "pbyp2"])][["arm", "seed", "route", "attempt", "unit"]]
+    sel = df[df.arm.isin(["drive", "pbyp", "pbyp2", "pbyp2ng"])][["arm", "seed", "route", "attempt", "unit"]]
     old = sys.stdin
     sys.stdin = io.StringIO(sel.to_csv(index=False))
     try:
@@ -197,9 +197,12 @@ def offline(df):
         sys.stdin = old
     runs = bc.load_all(str(d))
     out = {}
-    for arm in ("pbyp", "pbyp2"):
+    for arm in ("pbyp", "pbyp2", "pbyp2ng"):
         bm.ARM = arm
         rows = bm.build(runs, {})
+        for f in rows:           # a scenario's cones pushed by the ego's own contact exceed the 0.5 m/s of the `never moves` rule: still the scenario obstacle
+            if f["target"] and f.get("lead_type", "").startswith("static.prop") and f["cls"] != "scenario_obstacle":
+                f["cls"], f["relabelled"] = "scenario_obstacle", True
         out[arm] = dict(rows=rows, coll=bm.target_collisions(runs, rows), runs={k: v for k, v in runs.items() if k[0] == arm})
     return out, bm, bc
 
@@ -234,12 +237,14 @@ def figure_pbyp2(P, df, path, path2):
     fig.savefig(path)
     plt.close(fig)
     fig, ax = plt.subplots(figsize=(7, 3.4), dpi=150)
-    cm = {"drive": "#777", "pbyp": "#b5651d", "pbyp2": "#3b6ea5"}
+    cm = {"drive": "#777", "pbyp": "#b5651d", "pbyp2": "#3b6ea5", "pbyp2ng": "#2a9d8f"}
+    arms = [a for a in cm if (df.arm == a).any()]
     for i, rid in enumerate(OBS_ROUTES):
-        for j, arm in enumerate(("drive", "pbyp", "pbyp2")):
+        for j, arm in enumerate(arms):
             x = df[(df.arm == arm) & (df.route == rid)]
-            ax.plot([i + (j - 1) * .22] * len(x), x.DS, "o", color=cm[arm], ms=6, label=arm if i == 0 else None)
-            ax.plot([i + (j - 1) * .22 - .08, i + (j - 1) * .22 + .08], [x.DS.mean()] * 2, color=cm[arm], lw=2)
+            xc = i + (j - (len(arms) - 1) / 2) * .2
+            ax.plot([xc] * len(x), x.DS, "o", color=cm[arm], ms=6, label=arm if i == 0 else None)
+            ax.plot([xc - .07, xc + .07], [x.DS.mean()] * 2, color=cm[arm], lw=2)
     ax.set_xticks(range(len(OBS_ROUTES)))
     ax.set_xticklabels(OBS_ROUTES)
     ax.set_ylabel("DS (one dot per traffic seed, bar = mean)", fontsize=8)
@@ -252,8 +257,40 @@ def figure_pbyp2(P, df, path, path2):
     plt.close(fig)
 
 
+def ablation_md(df, off, bm):
+    """The diagnostic ablation pbyp2ng (pbyp2 without any gap check) on the four obstacle routes; empty while it has not run."""
+    ng = df[df.arm == "pbyp2ng"]
+    if ng.empty:
+        return []
+    D = ["## Diagnostic ablation: pbyp2ng = pbyp2 without any gap check (obstacle routes only)", "",
+         "Added after the pbyp2 batch showed the frozen same-direction gap rule stalling the car on three of the four obstacle routes (plans section 10). Same projection fix, static >= 5 s and "
+         "light memory as pbyp2; no same-direction check and no oncoming-lane check. 4 obstacle routes x 2 seeds = 8 runs; a diagnostic read of what the corrected activation alone is worth.", ""]
+    cols = ["DS", "RC", "collisions", "vehicle_blocked"]
+    P = pair_rows(df, [("pbyp2ng", "drive"), ("pbyp2ng", "pbyp2"), ("pbyp2ng", "pbyp")], [("obstacle routes", OBS_ROUTES)], cols)
+    P.to_csv(OUT / "pbyp2ng_paired.csv", index=False)
+    D += pair_md(P, cols, ["DS", "RC", "collisions", "blocked"]) + [""]
+    obs = {a: df[(df.arm == a) & df.route.isin(OBS_ROUTES) & ~df.crash].groupby("route").DS.mean() for a in ("drive", "pbyp", "pbyp2", "pbyp2ng")}
+    D += ["| arm | mean DS over the 4 routes [95% route CI] | per route (mean of 2 seeds) |", "|:--|:--|:--|"]
+    for a, x in obs.items():
+        b = boot_mean(x.to_numpy())
+        D.append("| %s | %.1f [%.1f, %.1f] | %s |" % (a, b["est"], b["lo"], b["hi"], ", ".join("%s %.1f" % (r, v) for r, v in x.items())))
+    D += [""]
+    acts = [[f["route"], f["seed"], "%.1f" % f["t0"], f["cls"], f.get("lead_type", "-"), bm.fmt(f["ego_s"]), bm.fmt(f["ego_v"]), bm.outcome(f),
+             ";".join("%s@%.1f" % (e["kind"], e["t"]) for e in f["events"])] for f in sorted(off["pbyp2ng"]["rows"], key=lambda f: (f["route"], f["seed"], f["t0"]))]
+    D += ["Activations:", "", bm.mdtable(["route", "seed", "t0 [s]", "class", "blocker", "ego s", "ego v", "outcome within 15 s", "events in episode"], acts, left=(0, 3, 4, 7, 8)) if acts else "none", ""]
+    coll = off["pbyp2ng"]["coll"]
+    if coll:
+        cr = [[x["route"], x["seed"], "%.1f" % x["t"], "%s %s" % (x["type"], x["actor"]), x.get("actor_dir", "-"), bm.fmt(x.get("actor_v")), bm.fmt(x["ego_v"]), x["phase"],
+               "yes" if x["bypass"] else "no", bm.fmt(x["ego_lat"]), bm.fmt(x.get("actor_lat")), x["act_cls"]] for x in coll]
+        D += ["Collisions:", "", bm.mdtable(["route", "seed", "t [s]", "against", "actor direction", "actor v", "ego v", "phase vs the obstacle", "path shifted", "ego lat [m]",
+                                              "actor lat [m]", "activation class"], cr, left=(0, 3, 4, 7, 11)), ""]
+    else:
+        D += ["No collision.", ""]
+    return D
+
+
 def report_pbyp2():
-    df = collect(["drive", "pbyp", "pbyp2"])
+    df = collect(["drive", "pbyp", "pbyp2", "pbyp2ng"])
     df.to_csv(OUT / "pbyp2_runs.csv", index=False)
     off, bm, bc = offline(df)
     sets = [("obstacle routes", OBS_ROUTES), ("other routes", OTHER), ("all routes", ROUTES)]
@@ -265,9 +302,9 @@ def report_pbyp2():
          "listed with their value and marked not evaluated. `drive` and `pbyp` are the existing runs of the earlier batch (not rerun); `pbyp2` ran with "
          "the same base configuration. Definitions: [plans/2026-10-02-pbyp2-vred2.md](../plans/2026-10-02-pbyp2-vred2.md); classes of activations: "
          "[bypass_misfire.md](bypass_misfire.md).", ""]
-    D += ["## Arms", "", arm_table(df, ["drive", "pbyp", "pbyp2"]).to_markdown(), "",
-          "Official infraction counts summed over the runs; DS, RC and mean speed averaged over runs; 38 runs expected per arm. `crashes` are program crashes, excluded "
-          "from the paired reads.", ""]
+    D += ["## Arms", "", arm_table(df, ["drive", "pbyp", "pbyp2"] + (["pbyp2ng"] if (df.arm == "pbyp2ng").any() else [])).to_markdown(), "",
+          "Official infraction counts summed over the runs; DS, RC and mean speed averaged over runs; 38 runs expected per arm (pbyp2ng, the diagnostic ablation of the section "
+          "below, ran on the 4 obstacle routes only: 8 runs). `crashes` are program crashes, excluded from the paired reads.", ""]
     D += ["## Paired differences (mean over routes of the per-route mean over the two seeds; [95% route-cluster CI])", "",
           "Obstacle routes: 24497, 2520, 19324, 19832 (the scenario places a static obstacle); other routes: the remaining 15. Counts are per run, so +0.50 is one "
           "extra event in one of the two runs of a route.", ""]
@@ -295,7 +332,9 @@ def report_pbyp2():
     rows = [[r[0], r[1], r[2], r[3], r[4]] for r in rows if any(r[1:])]
     rows.append(["all", *[sum(1 for f in off[a]["rows"] if f["target"] == t) for t in (False, True) for a in ("pbyp", "pbyp2")]])
     D += [bm.mdtable(head, rows), "", "Non-target = 15 routes x 2 seeds, obstacle = 4 routes x 2 seeds. `scenario_obstacle` = the scenario's own static obstacle "
-          "(correct); every other class is a misfire.", ""]
+          "(correct); every other class is a misfire. Cones that the ego's own contact pushed above the 0.5 m/s of the `never moves` rule would be labelled `moving_traffic_pause` by the "
+          "old classifier; they are counted as `scenario_obstacle` (blocker is a `static.prop` on an obstacle route): %d activations of pbyp2, %d of pbyp relabelled." % (
+              sum(bool(f.get("relabelled")) for f in off["pbyp2"]["rows"]), sum(bool(f.get("relabelled")) for f in off["pbyp"]["rows"])), ""]
     acts = []
     for f in sorted(off["pbyp2"]["rows"], key=lambda f: (f["route"], f["seed"], f["t0"])):
         acts.append([f["route"], f["seed"], "%.1f" % f["t0"], f["cls"], f.get("lead_type", "-"), bm.fmt(f.get("lead_s")), bm.fmt(f.get("ext_m")), bm.fmt(f["ego_s"]), bm.fmt(f["ego_v"]),
@@ -342,6 +381,7 @@ def report_pbyp2():
                 dr = [x for x in df[(df.arm == "drive") & (df.route == rid) & (df.seed == seed)].collisions]
                 ev.append([rid, seed, e["kind"], "%.1f" % e["t"] if e["t"] is not None else "-", ct, e.get("att") or "outside any activation", dr[0] if dr else "-"])
     D += [bm.mdtable(["route", "seed", "kind", "t [s]", "against", "in activation episode of class", "drive collisions in the paired run"], ev, left=(0, 2, 4, 5)) if ev else "none", ""]
+    D += ablation_md(df, off, bm)
     D += ["## Registered lines (plan 4.3), pbyp2", "", "| line | read | status |", "|:--|:--|:--|"]
     non = pv("pbyp2", "drive", OTHER, "DS")
     tg = pv("pbyp2", "drive", OBS_ROUTES, "DS")
@@ -356,7 +396,7 @@ def report_pbyp2():
           "![DS on the obstacle routes](pbyp2_obstacle_ds.png)", "", "Figure: DS of the four obstacle routes, one dot per traffic seed for drive, pbyp and pbyp2 (bar: mean of "
           "the two seeds). Look at how far pbyp2 sits above drive on each route and whether the two seeds agree.", ""]
     (OUT / "pbyp2.md").write_text("\n".join(D) + "\n")
-    write_json(OUT / "pbyp2_summary.json", dict(arms=arm_table(df, ["drive", "pbyp", "pbyp2"]).reset_index().to_dict("records")))
+    write_json(OUT / "pbyp2_summary.json", dict(arms=arm_table(df, ["drive", "pbyp", "pbyp2", "pbyp2ng"]).reset_index().to_dict("records")))
     return df
 
 
