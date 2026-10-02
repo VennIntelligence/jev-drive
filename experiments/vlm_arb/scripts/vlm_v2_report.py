@@ -27,10 +27,10 @@ from vlm_arb_common import (LIGHT_ROUTES, OBS_ROUTES, ROUTES, RUN, SEEDS, boot_m
 from vlm_arb_report import paired  # noqa: E402
 from vlm_thin_common import RED, light_masks  # noqa: E402
 
-OUT = RUN / "v2/results"
+TEST = os.environ.get("V2_TEST") == "1"
+OUT = RUN / ("v2/results_test" if TEST else "v2/results")
 SHARDS = ("q0", "q1", "q2")
 L_REG = 0.35
-TEST = os.environ.get("V2_TEST") == "1"
 ALIAS = {"pbyp2": "pbyp", "vred2": "vred", "cal2": "cal"} if TEST else {}
 OTHER = [r for r in ROUTES if r not in OBS_ROUTES]
 NOISE = ("13 routes with 2-4 identical `drive` runs: per-route DS standard deviation mean 4.7, median 0.0, max 30.5; 5 of 13 routes changed DS "
@@ -180,7 +180,7 @@ def offline(df):
     import bypass_common as bc
     import bypass_extract as bx
     import bypass_misfire as bm
-    d = RUN / "v2/extract"
+    d = OUT.parent / ("extract_test" if TEST else "extract")
     sel = df[df.arm.isin(["drive", "pbyp", "pbyp2"])][["arm", "seed", "route", "attempt", "unit"]]
     old = sys.stdin
     sys.stdin = io.StringIO(sel.to_csv(index=False))
