@@ -158,7 +158,7 @@ def fidelity(out_dir: Path, frames: pd.DataFrame) -> pd.DataFrame:
     cl = frames[(frames.src == "cl")]
     rows = []
     for key, g in cl.groupby("key", sort=False):
-        p = D.FEATS / (key.replace("/", "__") + ".npz")
+        p = D.fpath(key)
         if not p.exists():
             continue
         _, unit, route, att = key.split("/")

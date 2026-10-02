@@ -49,6 +49,14 @@ def load_frames() -> pd.DataFrame:
     return f
 
 
+def fpath(key: str) -> Path:
+    """Feature file of a stream. STOPPOS_CL_HOLD4=1 reads the closed-loop streams of the sensitivity extraction (2 Hz frames held 4 steps,
+    i.e. read as if 5 Hz) instead of the registered hold-10 replay."""
+    if os.environ.get("STOPPOS_CL_HOLD4") and key.startswith("cl/"):
+        key = "cl5/" + key[3:]
+    return FEATS / (key.replace("/", "__") + ".npz")
+
+
 def load_feats(frames: pd.DataFrame, tap: str, keys=None) -> np.ndarray:
     """(N, D) array aligned to `frames` (rows of a stream in k order); frames of streams without features are NaN."""
     dims = dict(temporal=512, vision=512, hidden=16384, native=2066)
@@ -57,7 +65,7 @@ def load_feats(frames: pd.DataFrame, tap: str, keys=None) -> np.ndarray:
     start = 0
     for key, g in frames.groupby("key", sort=False):
         n = len(g)
-        p = FEATS / (key.replace("/", "__") + ".npz")
+        p = fpath(key)
         if p.exists() and (keys is None or key in keys):
             with np.load(p) as z:
                 a = z[tap]
@@ -68,7 +76,7 @@ def load_feats(frames: pd.DataFrame, tap: str, keys=None) -> np.ndarray:
 
 
 def have_features(frames: pd.DataFrame) -> np.ndarray:
-    ok = {k for k in frames.key.unique() if (FEATS / (k.replace("/", "__") + ".npz")).exists()}
+    ok = {k for k in frames.key.unique() if fpath(k).exists()}
     return frames.key.isin(ok).to_numpy()
 
 
