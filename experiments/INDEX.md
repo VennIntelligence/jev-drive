@@ -5,9 +5,10 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 **live**
 
 - [b2d_privileged](b2d_privileged/README.md): live; Red light + green release DS 75.0 to 95.0 [d82]
+- [op_adapt_h](op_adapt_h/README.md): live; Layer-3 pilot: history-perturbation and offset-recover pairs (running) [d92,94,96,(inputs)]
 - [op_adapt_l](op_adapt_l/README.md) (op-adapt L): live; Stop capture 0.252 to 0.559 open loop; B2D no gain [d77-81]
 - [op_common_cause](op_common_cause/README.md): live; Plan follows fake history yaw, 3-7x more at low speed, real and CARLA alike [d92-93]
-- [op_img_cmd](op_img_cmd/README.md): live; Route drawn on openpilot input frames: zero-shot test (running)
+- [op_img_cmd](op_img_cmd/README.md): live; Route drawn on openpilot input frames: zero-shot test (running) [d(pending)]
 - [vlm_arb](vlm_arb/README.md) (vlm-arb, vlm_arb): live; Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privileged 5), DS +5.0; fixed bypass pbyp2, stop-line R2 vred2, yellow rule vred3 [d84-87,89,91,95]
 
 **openpilot adaptation**
@@ -36,7 +37,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [zeroshot_openloop](zeroshot_openloop/README.md) (zero-shot): WOD RFS Cinque 8.005, Alpamayo 8.034, above cv 7.103 [d34,37,39]
 - [zeroshot_b2d](zeroshot_b2d/README.md) (zero-shot B2D): n=5 smoke: Alpamayo DS 60.8, SR 2/5; openpilot DS 2.7 voided [d33]
 - [model_smoke](model_smoke/README.md) (openpilot smoke, rigs): smoke: openpilot 1-3 ms/step; 2 deg yaw gives 4.6x lateral error [d33,36]
-- [hugsim](hugsim/README.md) (HUGSIM, I3): fixed2 controller passes acceptance; 4 Hz clock +25-38% lateral [d19,44]
+- [hugsim](hugsim/README.md) (HUGSIM, I3): fixed2 controller passes acceptance; 4 Hz clock +25-38% lateral [d19,44,90,96]
 - [leaderboard_audit](leaderboard_audit/README.md) (hack audit): NAVSIM v2 +10.9 is the scorer; B2D DS SD 0.80 [d35,38]
 - [top10](top10/README.md) (T1-T3): no top-10 family on all boards except SparseDrive [d46,58]
 - [baselines_latency](baselines_latency/README.md): batch 1: Qwen-Drive-4B 702 ms, AutoVLA 1362 ms; our head <0.1 ms [d11,15,18]

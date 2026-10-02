@@ -268,7 +268,7 @@ def collate(rows: list[dict]) -> dict:
 
 
 # ---------------------------------------------------------------- forward from images
-def trunks(net, imgs: torch.Tensor, chunk: int = 256) -> torch.Tensor:
+def trunks(net, imgs: torch.Tensor, chunk: int = 128) -> torch.Tensor:
     """(B, 10, 2, 6, 128, 256) uint8 on the GPU -> (B, 9, 1024, 8, 16) stage-3 outputs of the pairs (k, k+1), no autograd."""
     B = imgs.shape[0]
     prev, cur = imgs[:, :-1].reshape(-1, *imgs.shape[2:]), imgs[:, 1:].reshape(-1, *imgs.shape[2:])
