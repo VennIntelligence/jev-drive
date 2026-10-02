@@ -1,0 +1,218 @@
+{
+ "n_frames": 103288,
+ "n_logs": 1192,
+ "n_scenes": 10550,
+ "status": {
+  "in_junction": 41372,
+  "no_junction_30m": 38673,
+  "branch": 22932,
+  "heading_mismatch": 158,
+  "off_map": 153
+ },
+ "hist_s_min": 1.5,
+ "frames_hist_ge_2s": 103083,
+ "frames_hist_ge_4s": 102282,
+ "branch_any": {
+  "frames": 22932,
+  "logs": 947,
+  "scenes": 4699,
+  "segments": 4452,
+  "junctions_unique": 574
+ },
+ "alt_available": {
+  "frames": 13649,
+  "logs": 779,
+  "scenes": 2885,
+  "segments": 2619,
+  "junctions_unique": 442
+ },
+ "alt_class_sets": {
+  "left,right": {
+   "frames": 2514,
+   "logs": 279,
+   "scenes": 439,
+   "segments": 350,
+   "junctions_unique": 59
+  },
+  "left,right,straight": {
+   "frames": 2456,
+   "logs": 217,
+   "scenes": 513,
+   "segments": 424,
+   "junctions_unique": 83
+  },
+  "left,right,straight,uturn": {
+   "frames": 31,
+   "logs": 4,
+   "scenes": 7,
+   "segments": 4,
+   "junctions_unique": 1
+  },
+  "left,straight": {
+   "frames": 3408,
+   "logs": 416,
+   "scenes": 867,
+   "segments": 749,
+   "junctions_unique": 145
+  },
+  "left,uturn": {
+   "frames": 42,
+   "logs": 7,
+   "scenes": 7,
+   "segments": 7,
+   "junctions_unique": 1
+  },
+  "right,straight": {
+   "frames": 5196,
+   "logs": 595,
+   "scenes": 1319,
+   "segments": 1084,
+   "junctions_unique": 152
+  },
+  "straight,uturn": {
+   "frames": 2,
+   "logs": 1,
+   "scenes": 2,
+   "segments": 1,
+   "junctions_unique": 1
+  }
+ },
+ "alt_taken_known": {
+  "frames": 11310,
+  "logs": 744,
+  "scenes": 2554,
+  "segments": 2482,
+  "junctions_unique": 434
+ },
+ "taken_unknown": {
+  "frames": 2339,
+  "logs": 331,
+  "scenes": 532,
+  "segments": 466,
+  "junctions_unique": 145
+ },
+ "pair_eligible": {
+  "frames": 11310,
+  "logs": 744,
+  "scenes": 2554,
+  "segments": 2482,
+  "junctions_unique": 434
+ },
+ "taken_class_counts": {
+  "straight": 5390,
+  "right": 3623,
+  "left": 2296,
+  "uturn": 1
+ },
+ "pair_eligible_strict_dist_2_30m": {
+  "frames": 8090,
+  "logs": 698,
+  "scenes": 2099,
+  "segments": 2036,
+  "junctions_unique": 383
+ },
+ "segments_by_taken_class": {
+  "straight": 1235,
+  "right": 763,
+  "left": 483,
+  "uturn": 1
+ },
+ "segments_by_median_speed": {
+  "<1": 581,
+  "1-3": 637,
+  "3-6": 595,
+  "6-10": 565,
+  "10-15": 103,
+  ">=15": 1
+ },
+ "segment_frames_median": 4.0,
+ "frames_per_log_pair_eligible_max_share": 0.008664898320070735,
+ "alt_pairs_total": 13529,
+ "alt_pairs_by_taken_alt": {
+  "left->right": 1476,
+  "left->straight": 1497,
+  "left->uturn": 52,
+  "right->left": 1934,
+  "right->straight": 2183,
+  "right->uturn": 15,
+  "straight->left": 3081,
+  "straight->right": 3286,
+  "straight->uturn": 2,
+  "uturn->left": 1,
+  "uturn->right": 1,
+  "uturn->straight": 1
+ },
+ "alt_pairs_by_alt": {
+  "left": 5016,
+  "right": 4763,
+  "straight": 3681,
+  "uturn": 69
+ },
+ "pair_eligible_frames_by_speed": {
+  "<1": 2899,
+  "1-3": 3207,
+  "3-6": 2815,
+  "6-10": 2081,
+  "10-15": 306,
+  ">=15": 2
+ },
+ "pair_eligible_by_speed_and_alt": {},
+ "alt_pairs_by_speed": {
+  "<1": 3914,
+  "1-3": 4054,
+  "3-6": 2985,
+  "6-10": 2251,
+  "10-15": 323,
+  ">=15": 2
+ },
+ "alt_pairs_by_speed_alt": {
+  "<1|left": 1183,
+  "<1|right": 1549,
+  "<1|straight": 1175,
+  "<1|uturn": 7,
+  "1-3|left": 1169,
+  "1-3|right": 1649,
+  "1-3|straight": 1220,
+  "1-3|uturn": 16,
+  "3-6|left": 1664,
+  "3-6|right": 419,
+  "3-6|straight": 900,
+  "3-6|uturn": 2,
+  "6-10|left": 903,
+  "6-10|right": 931,
+  "6-10|straight": 373,
+  "6-10|uturn": 44,
+  "10-15|left": 97,
+  "10-15|right": 213,
+  "10-15|straight": 13,
+  ">=15|right": 2
+ },
+ "dist_to_branch_quantiles_alt": {
+  "0.05": 0.0,
+  "0.25": 2.2,
+  "0.5": 6.5,
+  "0.75": 17.4,
+  "0.95": 27.1
+ },
+ "taken_vs_logged_command_agree": 0.7833775419982316,
+ "logged_cmd_counts_pair_eligible": {
+  "straight": 5628,
+  "left": 2913,
+  "right": 2769
+ },
+ "tierB_roadblock_multi_class_frames_own_lane_single_exit": {
+  "frames": 11320,
+  "logs": 705,
+  "scenes": 2437,
+  "segments": 705,
+  "junctions_unique": 705
+ },
+ "all_frames_by_speed": {
+  "<1": 13852,
+  "1-3": 19864,
+  "3-6": 35792,
+  "6-10": 26561,
+  "10-15": 7181,
+  ">=15": 38
+ }
+}

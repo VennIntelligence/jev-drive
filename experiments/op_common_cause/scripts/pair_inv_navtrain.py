@@ -213,6 +213,13 @@ def summarize(df):
     S["taken_unknown"] = block(A[A.taken == ""])
     S["pair_eligible"] = block(T)  # taken known and >=1 alternative class
     S["taken_class_counts"] = T.taken.value_counts().to_dict()
+    Ts = T[T.dist >= 2.0]
+    S["pair_eligible_strict_dist_2_30m"] = block(Ts)       # drops frames already at the lane end (< 2 m)
+    seg = T.groupby(["log", "node"]).agg(taken=("taken", lambda x: x.mode().iat[0]), v=("v", "median"), n=("v", "size"))
+    S["segments_by_taken_class"] = seg.taken.value_counts().to_dict()
+    S["segments_by_median_speed"] = pd.cut(seg.v, SPEED_BINS, labels=SPEED_LAB, right=False).value_counts().reindex(SPEED_LAB).astype(int).to_dict()
+    S["segment_frames_median"] = float(seg.n.median())
+    S["frames_per_log_pair_eligible_max_share"] = float(T.groupby("log").size().max() / len(T))
     alt_rows = []
     for _, r in T.iterrows():
         for c in r.classes.split(","):

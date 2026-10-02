@@ -1,0 +1,102 @@
+{
+ "phase1_routes": {
+  "routes": 438,
+  "routes_by_town": {
+   "Town01": 6,
+   "Town02": 5,
+   "Town03": 16,
+   "Town04": 18,
+   "Town05": 15,
+   "Town06": 9,
+   "Town07": 8,
+   "Town10HD": 6,
+   "Town11": 17,
+   "Town12": 233,
+   "Town13": 88,
+   "Town15": 17
+  },
+  "route_len_km": 47.4,
+  "dense_pts_per_route_median": 78.0,
+  "traversals": 226,
+  "routes_with_traversal": 226,
+  "traversals_by_taken": {
+   "right": 61,
+   "left": 109,
+   "straight": 56
+  },
+  "traversals_with_map_alternative_class": 179,
+  "traversals_with_map_alternative_by_taken_alt": {
+   "right->straight": 57,
+   "right->left": 43,
+   "left->straight": 108,
+   "left->right": 88,
+   "straight->left": 8,
+   "straight->right": 11
+  },
+  "unique_junctions_visited": 172,
+  "unique_junction_entry_lanes_visited": 198,
+  "junctions_visited_by_ge2_routes": 38,
+  "entry_lanes_with_ge2_routes_different_exit_road_lane": 4,
+  "entry_lanes_with_ge2_routes_different_exit_class": 4,
+  "traversals_in_such_class_groups": 9,
+  "routes_in_such_class_groups": 9,
+  "class_group_pairs_by_taken": {
+   "right/straight": 1,
+   "left/straight": 1,
+   "left/right": 2
+  }
+ },
+ "phase2_recordings": {
+  "tick_files": 5489,
+  "tick_files_without_truth_skipped": 20,
+  "routes_with_recording": 292,
+  "recordings_per_route_median": 12.0,
+  "ticks_total_20hz": 11206247,
+  "approach_ticks_2hz_sampled": 243624,
+  "approach_unique_routes": 165,
+  "approach_unique_traversals": 165,
+  "approach_by_taken": {
+   "left": 133799,
+   "right": 73185,
+   "straight": 36640
+  },
+  "approach_with_map_alt_ticks": 216955,
+  "approach_with_map_alt_unique_traversals": 131,
+  "approach_with_map_alt_by_taken": {
+   "left": 133799,
+   "right": 71029,
+   "straight": 12127
+  },
+  "approach_by_speed": {
+   "<1": 205597,
+   "1-3": 20206,
+   "3-6": 15684,
+   "6-10": 1988,
+   "10-15": 148,
+   ">=15": 1
+  },
+  "approach_with_map_alt_by_speed": {
+   "<1": 185430,
+   "1-3": 17545,
+   "3-6": 12510,
+   "6-10": 1441,
+   "10-15": 29,
+   ">=15": 0
+  },
+  "approach_hist_ge_2s": 232871,
+  "approach_with_alt_hist_ge_2s": 207567,
+  "approach_with_alt_hist_ge_4s": 198195,
+  "approach_with_alt_by_route_recordings": {
+   "4183": 7608,
+   "9196": 7208,
+   "2084": 6361,
+   "2115": 4887,
+   "2086": 4712,
+   "2373": 4627,
+   "24944": 4374,
+   "27043": 4332,
+   "28147": 4109,
+   "11381": 3809
+  }
+ }
+}
