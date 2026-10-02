@@ -8,7 +8,7 @@ index: fixed2 controller passes acceptance; 4 Hz clock +25-38% lateral
 
 **Conclusion.** Upstream trackers fail acceptance, `fixed2` passes; openpilot 4 Hz clock +25-38% lateral error; 64 scenarios scored, no HD-Score entry (decisions 19). I3 pairs: no head beats the prior (decisions 44).
 
-**Read more.** docs/hugsim.md, `git show bcbdde4:todos/2026-09-25-hugsim-exam/README.md`
+**Read more.** [results/controller_spin.md](results/controller_spin.md) (why the car spins after the controller fix: official-controller spins are the transposed heading, PR #57 spins are the openpilot plan itself, fixed2 does not help; what leading entries do at the interface), [results/attack_passability.md](results/attack_passability.md) (oncoming attacker scenarios, passability), docs/hugsim.md, `git show bcbdde4:todos/2026-09-25-hugsim-exam/README.md`
 
 <!-- files:begin -->
 ## Files
