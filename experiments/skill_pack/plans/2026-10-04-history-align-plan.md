@@ -32,3 +32,10 @@ Both are run on navhard; navtest for every rule that is not rejected on navhard.
 - Reject if navhard delta <= 0 or navtest delta < -0.60.
 - If both rules pass, the one with the larger navhard delta is named; both are reported (two variants tested).
 - Any further variant chosen after reading these numbers is labelled post hoc.
+
+## Addendum (2026-10-03 02:35 box time, before any score of this run was read)
+Read so far: opposite-side rates only (stage 1 / stage 2): base 1.3% / 5.7%, rot0 15.3% / 6.1%, straight 6.2% / 2.75%
+(straight reproduces decision 88: 15.4% of the 312 still opposite). rot0 keeps the lateral path while fixing the heading,
+which seems to read as sideways drift. Third variant, chosen after these rates (labelled so):
+- `straight_keys`: each history frame (keys and context frames) re-projected from its own pose to (-s(t), 0, 0), i.e. the
+  real frames moved onto the straight track (keeps the other agents' motion that `straight` drops). Same decision rule.

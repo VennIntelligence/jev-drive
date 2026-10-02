@@ -215,7 +215,7 @@ def synth_cpu(keys: np.ndarray, method: str, times: np.ndarray, track: EgoTrack 
     return out
 
 
-ALIGN = ("none", "rot0", "straight")
+ALIGN = ("none", "rot0", "straight", "straight_keys")
 
 
 def align_history(keys, syn, syn_t, track: EgoTrack, cam, rule: str):
@@ -224,7 +224,9 @@ def align_history(keys, syn, syn_t, track: EgoTrack, cam, rule: str):
       rot0      every history frame re-projected from its pose (x, y, yaw) to (x, y, 0): same position, current heading
                 (rotation removed, translation kept)
       straight  every history frame replaced by the t0 key warped back along a straight track, (-s(t), 0, 0) with s the
-                history's arc length to t0 (rotation and lateral path removed, speed profile kept)"""
+                history's arc length to t0 (rotation and lateral path removed, speed profile kept)
+      straight_keys  every history frame re-projected from its own pose to (-s(t), 0, 0): the real frames on the straight
+                track (keeps the other agents' motion that `straight` drops)"""
     if rule == "none":
         return keys, syn
     T = np.linspace(-1.5, 0.0, 151)
@@ -236,6 +238,8 @@ def align_history(keys, syn, syn_t, track: EgoTrack, cam, rule: str):
             p = track(t)
             return warp_frame(f, cam, np.r_[p[:2], 0.0], p)
         s = arc[-1] - np.interp(t, T, arc)
+        if rule == "straight_keys":
+            return warp_frame(f, cam, np.array([-s, 0.0, 0.0]), track(t))
         return warp_frame(keys[3], cam, np.array([-s, 0.0, 0.0]), np.zeros(3))
 
     k2 = np.array(keys)
