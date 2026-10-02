@@ -17,6 +17,7 @@ import av
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+MAX_MB = 5.8
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 LIGHT = {0: "GREEN", 1: "YELLOW", 2: "RED"}
 ANS = {"red_or_yellow_for_ego": "RED/YEL", "green_for_ego": "GREEN", "no_light": "no light", "light_for_other_lane": "other lane", "na": "-"}
@@ -176,7 +177,7 @@ def cut(a, out, label, segs, width, fps, colors):
             d.rectangle((0, 0, width, 34), fill=(12, 16, 24))
             d.text((6, 3), label + "  " + l1, font=font, fill="white")
             d.text((6, 18), l2, font=font, fill=(110, 220, 255))
-            frames[j] = im if out.endswith('.png') else im.quantize(colors=colors, method=Image.MEDIANCUT, dither=Image.NONE)
+            frames[j] = im
     src.close()
     frames = [f for f in frames if f is not None]
     if out.endswith('.png'):                       # contact sheet of the sampled frames, 3 columns (one --seg t:t per frame)
@@ -187,8 +188,14 @@ def cut(a, out, label, segs, width, fps, colors):
         sheet.save(out)
         print(out)
         return
-    frames[0].save(out, save_all=True, append_images=frames[1:], duration=int(1000 / fps), loop=0, optimize=True, disposal=1)
-    print("%s: %d frames, %.2f MB" % (out, len(frames), Path(out).stat().st_size / 1e6))
+    # size cap: fewer colors, then a smaller frame, until the GIF is under MAX_MB
+    for c, scale in ((colors, 1.0), (32, 1.0), (24, 1.0), (32, 0.9), (24, 0.85)):
+        fr = [f.resize((int(width * scale) // 2 * 2, int(h * scale) // 2 * 2), Image.LANCZOS) if scale < 1 else f for f in frames]
+        q = [f.quantize(colors=c, method=Image.MEDIANCUT, dither=Image.NONE) for f in fr]
+        q[0].save(out, save_all=True, append_images=q[1:], duration=int(1000 / fps), loop=0, optimize=True, disposal=1)
+        if Path(out).stat().st_size <= MAX_MB * 1e6:
+            break
+    print("%s: %d frames, %d colors, %dx%d, %.2f MB" % (out, len(q), c, q[0].width, q[0].height, Path(out).stat().st_size / 1e6))
 
 
 if __name__ == "__main__":
