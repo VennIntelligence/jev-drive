@@ -310,9 +310,9 @@ def _steps(pre, cr):
     return ts, src
 
 
-def plan_stem(frames, model, schedule, pre):
+def plan_stem(frames, model, schedule, pre, align="none"):
     return f"{frames}@{model}" + ("" if schedule == "none" else f".{sched_tag(schedule)}") + \
-        ("" if pre == PREROLL[model] else f"_pre{pre:g}")
+        ("" if pre == PREROLL[model] else f"_pre{pre:g}") + ("" if align == "none" else f"_al-{align}")
 
 
 def cmd_run(a):
@@ -320,7 +320,7 @@ def cmd_run(a):
     if a.data in TEST and bad and not a.prereg:
         sys.exit(f"desire schedules {bad} on {a.data} wait for the pre-registration (pass --prereg <id>)")
     pre = PREROLL[a.model] if a.preroll is None else a.preroll
-    stems = [plan_stem(a.frames, a.model, s, pre) for s in a.schedule]
+    stems = [plan_stem(a.frames, a.model, s, pre, a.align) for s in a.schedule]
     pdir = root(a.data, "plans_pilot" if a.limit else "plans")
     sfx = f".first{a.limit}" if a.limit else ""
     if a.procs > 1 and not a.shard:
@@ -369,6 +369,8 @@ def cmd_run(a):
     for r, i in enumerate(rows):
         kf = keys[int(i)]
         sf = np.asarray(syn[i])
+        if a.align != "none":           # reference-free history alignment (jevdrive.op_interp.align_history)
+            kf, sf = I.align_history(kf, sf, SYN_T, I.track_navsim(mt["pose"][i], mt["vel"][i]), mt["cam"][i], a.align)
         pw = {}
         if pre_t:
             fr = I.synth_cpu(kf, "warp", np.array(pre_t), I.track_navsim(mt["pose"][i], mt["vel"][i]), mt["cam"][i])
@@ -393,7 +395,7 @@ def cmd_run(a):
             p["desire_steps"][r] = des.argmax(1)
     ms = 1e3 * tg / max(1, R * len(a.schedule))
     for s, stem in zip(a.schedule, stems):
-        info = json.dumps({"model": a.model, "backend": backend, "frames": a.frames, "schedule": s, "preroll": pre,
+        info = json.dumps({"model": a.model, "backend": backend, "frames": a.frames, "schedule": s, "preroll": pre, "align": a.align,
                            "prereg": a.prereg, "step_times": ts.tolist(), "heads_slices": hs, "desires": DESIRES,
                            "plan_std": "exp of the MDN log-std, as openpilot's parse_mdn"})
         out = pdir / (f"{stem}{sfx}" + (f".part{k}of{K}" if a.shard else "") + ".npz")
@@ -449,6 +451,7 @@ if __name__ == "__main__":
                    help="one plan file per schedule; frames are loaded once per token")
     p.add_argument("--preroll", type=float, default=None, help="s of warp pre-roll (default: 3.3 Lebowski, 0 others)")
     p.add_argument("--backend", default="")
+    p.add_argument("--align", choices=I.ALIGN, default="none", help="history-frame rule (jevdrive.op_interp.align_history)")
     p.add_argument("--procs", type=int, default=8)
     p.add_argument("--shard", default="")
     p.add_argument("--limit", type=int, default=0, help="staging: first N tokens -> plans_pilot/")

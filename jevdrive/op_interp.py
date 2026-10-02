@@ -215,6 +215,36 @@ def synth_cpu(keys: np.ndarray, method: str, times: np.ndarray, track: EgoTrack 
     return out
 
 
+ALIGN = ("none", "rot0", "straight")
+
+
+def align_history(keys, syn, syn_t, track: EgoTrack, cam, rule: str):
+    """Reference-free input rule on the history frames (experiments/skill_pack, history alignment): uses only the ego
+    history the benchmark gives. keys (4, ...) at T_KEY, syn (len(syn_t), ...) context frames; the t0 key is never changed.
+      rot0      every history frame re-projected from its pose (x, y, yaw) to (x, y, 0): same position, current heading
+                (rotation removed, translation kept)
+      straight  every history frame replaced by the t0 key warped back along a straight track, (-s(t), 0, 0) with s the
+                history's arc length to t0 (rotation and lateral path removed, speed profile kept)"""
+    if rule == "none":
+        return keys, syn
+    T = np.linspace(-1.5, 0.0, 151)
+    xy = np.array([track(t)[:2] for t in T])
+    arc = np.r_[0, np.cumsum(np.linalg.norm(np.diff(xy, axis=0), axis=1))]
+
+    def one(f, t):
+        if rule == "rot0":
+            p = track(t)
+            return warp_frame(f, cam, np.r_[p[:2], 0.0], p)
+        s = arc[-1] - np.interp(t, T, arc)
+        return warp_frame(keys[3], cam, np.array([-s, 0.0, 0.0]), np.zeros(3))
+
+    k2 = np.array(keys)
+    for j in range(3):
+        k2[j] = one(keys[j], T_KEY[j])
+    s2 = np.stack([one(syn[j], t) for j, t in enumerate(syn_t)])
+    return k2, s2
+
+
 class RIFE:
     """Practical-RIFE 4.26 (hzwer, MIT), weights from HF hzwer/RIFE; batched, arbitrary t."""
 
