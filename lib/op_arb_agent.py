@@ -328,6 +328,7 @@ class OpArbAgent(Z.ZeroShotAgent):
                 "twin": bool(A["twin"]), "intent": intent}
         wire.send(self.sock, meta, dict(cams))
         info, out = wire.recv(self.sock)
+        self.op_out = out                                    # the latest openpilot heads (vmerge reads its trigger / lead heads)
         op_path = Z.resample(out["t"], rigs.openpilot_plan_to_rig(out["pos"], out["yaw"], self.op_mount), TIMES)
         if self.first_set_t is None:
             self.first_set_t = t_frame
@@ -420,6 +421,18 @@ class OpArbAgent(Z.ZeroShotAgent):
             else:
                 cons["latch"] = np.zeros(len(TIMES))
         cons.update(pc_cons)
+        if self.pc is not None and getattr(self.pc, "byp_free", False) and self.pc.meta.get("bypass"):
+            # vmerge (experiments/vlm_arb/plans/2026-10-03-vmerge.md): while the bypass path is driven, the parked obstacle
+            # being passed must not stop the car half in the next lane: the plan / latch stops and a slow lead whose gap
+            # lands on the obstacle's extent are dropped (pullout_collisions.md: the 19832 contacts after such a stall)
+            st = self.pc.meta.get("bypass_state") or {}
+            cons.pop("plan", None)
+            cons.pop("latch", None)
+            self.latch = False
+            if "lead" in cons and lp > A["lead_p"] and float(lead[0, 2]) < 1.0 and st:
+                s_lead = self.pc.meta.get("ego_s", 0.0) + REAR_TO_BUMPER + float(lead[0, 0]) - CAM_TO_BUMPER
+                if st["start_s"] - 3.0 <= s_lead <= st["end_s"] + 3.0:
+                    cons.pop("lead")
         if pc_release:
             cons.pop("plan", None)
             cons.pop("latch", None)

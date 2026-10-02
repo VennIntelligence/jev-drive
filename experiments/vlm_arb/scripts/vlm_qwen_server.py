@@ -4,11 +4,11 @@
   python vlm_qwen_server.py supervise --cards 0,1,2 --run DIR     one `serve` per card, restarted if it dies; STOP file ends it
   python vlm_qwen_server.py bench [--res r1153]                    batch 1 / 2 / 4 service time on this card, JPEG in, answer out
 
-Answers the Q-light question only, with the same prompt, preprocessing and scoring as `vlm_thin_stage.py` (`fwd_<res>`):
+Answers the Q-light question (and, for the vmerge arm, the stop-sign question on POST /sign: SIGN_PROMPT, two options) with the same prompt, preprocessing and scoring as `vlm_thin_stage.py` (`fwd_<res>`):
 the first token after a forced `ANSWER:` is scored over the four options (argmax). No head, no truncation.
 
 Wire format: POST /light with the JPEG bytes of the wide and the road frame concatenated, header `X-Sizes: n_wide,n_road`.
-Reply JSON {ans, p[4], queue_ms, svc_ms, batch, depth}. GET /health -> 200 once warm.
+Reply JSON {q, ans, p[4] (sign: p[2]), queue_ms, svc_ms, batch, depth}. GET /health -> 200 once warm.
 
 One process = one card = the routes of that card. A single GPU worker thread takes whatever is queued (up to --max-batch
 requests of the same frame size) and runs them as one batch (default 1: the forward is compute bound, batching
@@ -27,16 +27,23 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from vlm_thin_common import LIGHTS, RES, Thin, log, sync  # noqa: E402
+from vlm_thin_common import CAMS2, FOUR_PROMPT, LIGHTS, RES, SCORE_PREFIX, Thin, log, sync  # noqa: E402
 
 PORT0 = 8200                                           # port of card g = PORT0 + g
+# vmerge (plan 2026-10-03-vmerge.md): the stop-sign question, same one-pass option scoring, asked only inside a junction window
+SIGNS = ["stop_sign_for_ego", "no_stop_sign_for_ego"]
+SIGN_PROMPT = (CAMS2 + "\nStop sign controlling the ego vehicle lane at the junction ahead. Options:\n"
+               "  stop_sign_for_ego: a stop sign (or a painted STOP on the road) controls the ego vehicle lane ahead\n"
+               "  no_stop_sign_for_ego: no stop sign controls the ego vehicle lane ahead\n"
+               "End your reply with one line of the form `ANSWER: <option>`, <option> being one of: %s. Reply with that line only."
+               % ", ".join(SIGNS))
 
 
 class Job:
-    __slots__ = ("jpgs", "t_in", "done", "out")
+    __slots__ = ("jpgs", "t_in", "done", "out", "q")
 
-    def __init__(self, jpgs):
-        self.jpgs, self.t_in, self.done, self.out = jpgs, time.perf_counter(), threading.Event(), None
+    def __init__(self, jpgs, q="light"):
+        self.jpgs, self.t_in, self.done, self.out, self.q = jpgs, time.perf_counter(), threading.Event(), None, q
 
 
 class Engine:
@@ -45,33 +52,46 @@ class Engine:
         self.torch, self.res, self.max_batch = torch, RES[res], max_batch
         self.th = Thin()
         self.th.restore()                              # the whole model: no cut, final norm on
+        th, tok = self.th, self.th.tok
+        th.set_prompt(SIGN_PROMPT)
+        pre = tok(SCORE_PREFIX, add_special_tokens=False).input_ids
+        first = [tok(SCORE_PREFIX + " " + o, add_special_tokens=False).input_ids[len(pre)] for o in SIGNS]
+        assert len(set(first)) == 2, first
+        self.qs = {"sign": (th.pieces, th.m.lm_head.weight[first].float(), SIGNS)}
+        th.set_prompt(FOUR_PROMPT)
+        self.qs["light"] = (th.pieces, th.W, LIGHTS)
         self.q = queue.Queue()
         self.log = open(log_path, "a", buffering=1) if log_path else None
         self.ready = False
         self.n = 0
 
-    def scores(self, xs):
-        """Option logits [B, 4] of requests with identical frame sizes, as one batch."""
+    def scores(self, xs, W):
+        """Option logits [B, n options] of requests with identical frame sizes and question, as one batch."""
         t, th = self.torch, self.th
         cat = lambda k: t.cat([x[k] for x in xs])      # noqa: E731
         out = th.m.model(input_ids=cat("input_ids"), attention_mask=cat("attention_mask"), pixel_values=cat("pixel_values"),
                          image_grid_thw=cat("image_grid_thw"), mm_token_type_ids=cat("mm_token_type_ids"), use_cache=False)
-        return out.last_hidden_state[:, -1].float() @ th.W.T
+        return out.last_hidden_state[:, -1].float() @ W.T
 
     def run_batch(self, jobs):
         t, th = self.torch, self.th
         t0 = time.perf_counter()
-        xs = [th.prep(j.jpgs, self.res) for j in jobs]
+        xs = []
+        for j in jobs:
+            th.pieces = self.qs[j.q][0]                # one GPU thread: the prompt pieces are swapped per request
+            xs.append(th.prep(j.jpgs, self.res))
+        th.pieces = self.qs["light"][0]
         groups = {}
         for j, x in zip(jobs, xs):
-            groups.setdefault(tuple(x["n_img"]), []).append((j, x))
-        for grp in groups.values():
-            lg = self.scores([x for _, x in grp])
+            groups.setdefault((j.q,) + tuple(x["n_img"]), []).append((j, x))
+        for key, grp in groups.items():
+            _, W, opts = self.qs[key[0]]
+            lg = self.scores([x for _, x in grp], W)
             p = t.softmax(lg, -1).cpu().numpy()
             lg = lg.cpu().numpy()
             now = time.perf_counter()
             for (j, _), pi, li in zip(grp, p, lg):
-                j.out = dict(ans=LIGHTS[int(li.argmax())], p=[round(float(v), 5) for v in pi], logits=[round(float(v), 3) for v in li],
+                j.out = dict(q=j.q, ans=opts[int(li.argmax())], p=[round(float(v), 5) for v in pi], logits=[round(float(v), 3) for v in li],
                              queue_ms=round((t0 - j.t_in) * 1e3, 1), svc_ms=round((now - t0) * 1e3, 1), batch=len(grp),
                              depth=self.q.qsize())
         return t0
@@ -97,7 +117,7 @@ class Engine:
                     j.done.set()
                     self.n += 1
                     if self.log and "error" not in j.out:
-                        self.log.write(json.dumps(dict(t=round(time.time(), 3), **{k: j.out[k] for k in ("ans", "queue_ms", "svc_ms", "batch", "depth")})) + "\n")
+                        self.log.write(json.dumps(dict(t=round(time.time(), 3), **{k: j.out[k] for k in ("q", "ans", "queue_ms", "svc_ms", "batch", "depth")})) + "\n")
 
     def warm(self):
         import io
@@ -136,7 +156,7 @@ def handler(eng):
             try:
                 sizes = [int(s) for s in self.headers["X-Sizes"].split(",")]
                 body = self.rfile.read(int(self.headers["Content-Length"]))
-                job = Job([body[:sizes[0]], body[sizes[0]:sizes[0] + sizes[1]]])
+                job = Job([body[:sizes[0]], body[sizes[0]:sizes[0] + sizes[1]]], "sign" if self.path.startswith("/sign") else "light")
                 eng.q.put(job)
                 job.done.wait()
                 self._send(200 if "error" not in job.out else 500, job.out)

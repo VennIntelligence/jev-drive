@@ -1,0 +1,34 @@
+{
+ "C": 0.1,
+ "recall_target": 0.9,
+ "tap": "native",
+ "train": "p4",
+ "heads": {
+  "light": {
+   "p4_oof_auc": 0.9048,
+   "thr": 0.11691,
+   "p4_oof_recall": 0.9003,
+   "p4_oof_fpr": 0.2026,
+   "cl_auc": 0.9325,
+   "cl_recall": 0.8435,
+   "cl_fpr": 0.104,
+   "n_p4": 18896,
+   "n_p4_pos": 3850,
+   "n_cl": 33806,
+   "n_cl_pos": 6486
+  },
+  "sign": {
+   "p4_oof_auc": 0.9829,
+   "thr": 0.05519,
+   "p4_oof_recall": 0.9004,
+   "p4_oof_fpr": 0.0532,
+   "cl_auc": null,
+   "cl_recall": null,
+   "cl_fpr": 0.0027,
+   "n_p4": 18896,
+   "n_p4_pos": 914,
+   "n_cl": 33806,
+   "n_cl_pos": 0
+  }
+ }
+}

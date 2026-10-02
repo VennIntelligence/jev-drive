@@ -17,6 +17,7 @@ rising-edge pulse; the class is imported, not copied), plus two things the arbit
 """
 import sys as _sys, pathlib as _pl  # restructure: dirs of the script modules this file imports by bare name
 _sys.path[:0] = [str(_pl.Path(__file__).resolve().parents[3] / _d) for _d in ("scripts",)]
+import os
 import sys
 from pathlib import Path
 
@@ -47,6 +48,10 @@ class ArbModel(ZP.OpenpilotModel):
         if getattr(a, "onnx", ""):
             e = Path(a.onnx).with_suffix(".E.npy")
             self.E = np.load(e).astype(np.float16) if e.exists() else None
+        # vmerge trigger heads (experiments/vlm_arb/scripts/vmerge_det_fit.py): logistic regression on the native output vector,
+        # enabled by env OP_DET_HEAD=<det_head.npz>; adds out["det"] = P(light, stop sign within 40 m). No effect when unset.
+        dp = os.environ.get("OP_DET_HEAD", "")
+        self.det = dict(np.load(dp)) if dp else None
         super().__init__(a)                       # its warm-up takes a state from new_state(None) and drops it
         self.free += self._warm
 
@@ -85,6 +90,10 @@ class ArbModel(ZP.OpenpilotModel):
                    desire_pred=softmax(s("desire_pred").reshape(4, 8)).astype(f32),
                    pose=s("pose")[:6].astype(f32), lane_prob=sig(s("lane_lines_prob"))[1::2].astype(f32))
         info.update({k: float(mt[v].max()) if k != "engaged" else float(mt[v][0]) for k, v in META.items()})
+        if self.det is not None:
+            d = self.det
+            z = (raw[:d["mu"].shape[0]].astype(np.float32) - d["mu"]) / d["sd"]
+            out["det"] = sig(d["W"] @ z + d["b"]).astype(f32)
         if meta.get("twin"):
             t = state["twin"]
             traw = t.step(prep["img2"], desire=np.zeros(8, np.float32), traffic=(1, 0))

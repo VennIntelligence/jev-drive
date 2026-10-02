@@ -21,6 +21,13 @@ Environment (set per unit by experiments/vlm_arb/scripts/vlm_arb_chain.py):
                     lib/yellow_rule.py is taken (stop: tentative R2 hold confirmed by the second answer; go: R2 suppressed and the junction cap lifted
                     until the tail has cleared the line); once the front bumper has passed the stop line R2 is never started and R1 is off.
                     Needs VLM_R2_TARGET=stopline and VLM_ROWS=R1,R2,R5.
+  vmerge            (plans/2026-10-03-vmerge.md) the merged arm, no CARLA map input to any control decision: junction windows from
+                    the official route's command runs (entrance = command start, stop line = entrance - VM["stop_offset_m"]); the
+                    light question is asked when openpilot's trigger heads (OP_DET_HEAD, served by op_arb_server) report a light / stop
+                    sign, inside a route junction window, or while a stop is held; R2 starts on K = 2 red answers and releases on the
+                    cumulative green evidence (results/release_replay.md, cusum >= 5); R3 asks the stop-sign question inside the window
+                    and stops once per junction; R1 junction slow-down; the bypass is Privileged arm pbyp3 behind bypass_gate().
+                    Needs VLM_BACKEND=qwen.
   VLM_ENDPOINT      System One URL.
   VLM_BACKEND       openjev (default) | qwen: zero-shot Qwen3-VL-4B light reading, one forward pass with option scoring
                     (experiments/vlm_arb/scripts/vlm_qwen_server.py, one server per card on port VLM_BASE_PORT + VLM_GPU,
@@ -54,6 +61,7 @@ from b2d_privileged_geometry import Privileged, project  # noqa: E402
 from vlm_client import VLMClient, jpeg  # noqa: E402
 from vlm_qwen_client import QwenClient  # noqa: E402
 import yellow_rule  # noqa: E402
+import b2d_zeroshot_agent as Z  # noqa: E402
 
 
 def _js(value):
@@ -71,7 +79,16 @@ def get_entry_point():
 ARB_PARAMS = {"N_jslow_m": 25.0, "v_jslow": 4.5, "K_debounce": 2, "T_stop_sign_s": 2.5, "T_max_stop_s": 25.0,
               "TTL_answer_s": 2.5, "sim_delay_L_s": 0.5, "query_s": 0.5}
 ARM_ROWS = {"drive": (), "dslow": (), "jslow": ("R1",), "vred": ("R2", "R3", "R5"), "vred3": ("R1", "R2", "R5"), "vbyp": ("R4", "R5"),
-            "vall": ("R1", "R2", "R3", "R4", "R5")}
+            "vall": ("R1", "R2", "R3", "R4", "R5"), "vmerge": ("R1", "R2", "R3", "R5")}
+# vmerge parameters (plans/2026-10-03-vmerge.md, written before its first run)
+VM = {"stop_offset_m": 3.3,       # route command start - stop line (route_junction_error.md: dense-plan median +3.26 m, 9 of 12 within 1 m of 3.3)
+      "window_before_m": 40.0,    # the junction window opens this far (rear axle) before the command start ...
+      "window_after_m": 6.0,      # ... and closes this far past it (inside the junction the distance is clamped to -1)
+      "det_latch_s": 3.0,         # a trigger-head firing keeps the light question on for this long
+      "cusum_release": 5.0, "cusum_reset_p": 0.9, "cusum_clip": 7.0,   # release_replay.md "cusum >= 5"
+      "sign_dwell_s": 2.5,        # R3 dwell (T_stop_sign_s)
+      "byp_stand_s": 5.0, "byp_stand_v": 0.3, "byp_lead_x": 40.0, "byp_lead_v": 1.0, "byp_junction_m": 15.0, "byp_red_s": 5.0}   # bypass_timedet.md
+
 LIGHT_M, SIGN_M = 50.0, 25.0          # truth windows of the oracle answers; the label bins are applied offline
 
 
@@ -86,7 +103,7 @@ class VlmArbitrationPC:
         return dict(self.priv.meta, vlm=self.agent.table_state) if self.priv else {}
 
     def geometry(self, speed, t, xy, yaw, world, warm):
-        self.priv.bypass = bool(self.agent.r4_on)
+        self.priv.bypass = bool(self.agent.r4_on) or self.agent.vm
         return self.priv.geometry(speed, t, xy, yaw, world, warm)
 
     def constraints(self, s_base, speed, path, t, warm):
@@ -119,15 +136,31 @@ class VlmArbAgent(OpArbAgent):
         assert self.r2_target in ("junction", "stopline"), self.r2_target
         self.v3 = self.vlm_arm == "vred3"
         assert not self.v3 or self.r2_target == "stopline", "vred3 needs the stop-line target"
-        if self.backend == "qwen":
+        self.vm = self.vlm_arm == "vmerge"
+        if self.vm:
+            assert self.backend == "qwen", "vmerge needs the qwen backend"
+            self.r2_target = "stopline"
+            d = np.load(env("OP_DET_HEAD"))
+            self.det_thr = [float(x) for x in d["thr"]]
+            self.t_det_l = self.t_det_s = self.t_red = -1e9
+            self.cusum = 0.0
+            self.h_sign2, self.sign_answer = deque(maxlen=ARB_PARAMS["K_debounce"]), None
+            self.still_since = None
+            self.ask_why = ""
+            self.rjunc = None
+            self.vm_junc, self.det_now = 999.0, [0.0, 0.0]
+        if self.backend == "qwen" and not self.vm:
             if rows & {"R3", "R4"}:
                 raise ValueError("the qwen backend answers Q_light only: VLM_ROWS must not contain R3 / R4")
+            self.client = QwenClient(int(env("VLM_BASE_PORT", "8200")) + int(env("VLM_GPU", "0")))
+        elif self.backend == "qwen":
             self.client = QwenClient(int(env("VLM_BASE_PORT", "8200")) + int(env("VLM_GPU", "0")))
         else:
             self.client = VLMClient(endpoint=env("VLM_ENDPOINT", "http://127.0.0.1:8080/v1/systemone"))
         self.pool = ThreadPoolExecutor(max_workers=4 if self.backend == "qwen" else 2)
-        self.priv = Privileged(self, "drive")           # truth geometry and labels; arm "drive" = it controls nothing
+        self.priv = Privileged(self, "pbyp3" if self.vm else "drive")    # truth geometry and labels; arm "drive" = it controls nothing
         self.pc = VlmArbitrationPC(self, self.priv)
+        self.pc.byp_free = self.vm
         self.pending_cons, self.pending_release, self.table_state = {}, False, {}
         self.queue = deque()                            # (t_q, gt, future or answer dict)
         self.answer = None
@@ -255,11 +288,17 @@ class VlmArbAgent(OpArbAgent):
                 "Q_sign": "yes" if sd is not None and sd <= SIGN_M else "no", "Q_block": gt["block"], "Q_side": gt["side"]}
 
     # ------------------------------------------------------------------ the request (worker thread)
-    def _request(self, t_q, frames, t_sub):
+    def _request(self, t_q, frames, t_sub, q="light"):
         jpgs = {k: jpeg(v) for k, v in frames.items()}
-        if self.save_frames:
+        if self.save_frames and q == "light":
             for k, b in jpgs.items():
                 (self.frame_dir / ("%08.2f_%s.jpg" % (t_q, k))).write_bytes(b)
+        if self.backend == "qwen" and q == "sign":
+            ans = self.client.ask(jpgs, "sign")
+            ans["rtt_ms"] = ans["latency_ms"]
+            ans["latency_ms"] = round((time.perf_counter() - t_sub) * 1e3, 1)
+            ans["kind"] = "sign"
+            return ans
         if self.backend == "qwen":
             ans = self.client.ask(jpgs)
             ans["rtt_ms"] = ans["latency_ms"]
@@ -278,8 +317,10 @@ class VlmArbAgent(OpArbAgent):
                 ans.update(ok=False, error=alt.get("error"))
         return ans
 
-    def _ask(self, t, cams, gt):
+    def _ask(self, t, cams, gt, q="light"):
         t_sub = time.perf_counter()
+        if self.vlm_oracle and q == "sign":
+            return
         if self.vlm_oracle:
             self.queue.append((t, gt, self._oracle_answer(gt)))
             return
@@ -288,7 +329,9 @@ class VlmArbAgent(OpArbAgent):
             if tag in cams and cams[tag] is not None:
                 frames[name] = np.ascontiguousarray(cams[tag][:, :, [2, 1, 0]])
         if frames:
-            self.queue.append((t, gt, self.pool.submit(self._request, t, frames, t_sub)))
+            self.queue.append((t, gt, self.pool.submit(self._request, t, frames, t_sub, q)))
+            if self.vm:
+                self.vlm_log.write(json.dumps(dict(k="q", t_q=t, q=q)) + "\n")
 
     def _arrivals(self, t):
         """Answers become usable at t_q + max(L, measured latency): the simulator waits for the VLM, the car would not."""
@@ -301,12 +344,17 @@ class VlmArbAgent(OpArbAgent):
                 break
             self.queue.popleft()
             ans.update(t_q=t_q, t_eff=t_eff)
-            if ans["ok"]:                                      # a failed request is no answer: the last one ages out
+            if ans["ok"] and ans.get("kind") == "sign":        # vmerge stop-sign answers have their own history and age
+                self.sign_answer = ans
+                self.h_sign2.append(ans["Q_sign"])
+            elif ans["ok"]:                                    # a failed request is no answer: the last one ages out
                 self.answer = ans
                 self.h_light.append(ans["Q_light"])
                 self.n_ans += 1
                 if ans["Q_light"] == "green_for_ego":
                     self.last_green_tq = t_q
+                if ans["Q_light"] == "red_or_yellow_for_ego":
+                    self.t_red = t
                 self.h_sign.append(ans["Q_sign"])
                 self.h_block.append((ans["Q_block"], ans["Q_side"]))
             self.vlm_log.write(json.dumps(dict(k="a", t=t, t_q=t_q, t_eff=t_eff, gt=gt, ans=ans), default=_js) + "\n")
@@ -443,8 +491,185 @@ class VlmArbAgent(OpArbAgent):
                                 d_stop=None if stop_dist is None else round(float(stop_dist), 2), jid=int(jid), light=list(self.h_light), sign=list(self.h_sign), block=list(self.h_block))
         return out, cap, release_now, active
 
+    # ------------------------------------------------------------------ vmerge: route-command junctions, trigger, bypass gate
+    def _route_junctions(self):
+        """[(entrance s, end s)] of every LEFT / RIGHT / STRAIGHT command run of the official dense route (no map)."""
+        if self.rjunc is None:
+            r, out, i = self.route, [], 0
+            cmd = r.cmd
+            while i < len(cmd):
+                if cmd[i] in (Z.LEFT, Z.RIGHT, Z.STRAIGHT):
+                    j = i
+                    while j + 1 < len(cmd) and cmd[j + 1] == cmd[i]:
+                        j += 1
+                    out.append((float(r.s[i]), float(r.s[j])))
+                    i = j + 1
+                else:
+                    i += 1
+            self.rjunc = out
+        return self.rjunc
+
+    def _junction_vm(self, ego_s):
+        """As _junction (rear axle to the next entrance, clamped to [-1, 0] inside), plus the bumper distance to the estimated
+        stop line (entrance - stop_offset_m), from the route commands."""
+        for k, (a, b) in enumerate(self._route_junctions()):
+            if b >= ego_s - 1.0:
+                if a - ego_s > 100.0:
+                    break
+                d = a - ego_s
+                return (d if d >= 0.0 else max(d, -1.0)), k, a - VM["stop_offset_m"] - ego_s - REAR_TO_BUMPER
+        return 999.0, -1, None
+
+    def route_junction_at(self, s):
+        """An arc position inside (or within 5 m of) a route-command junction (pbyp3: no blocker there)."""
+        return any(a - 5.0 <= s <= b + 5.0 for a, b in self._route_junctions())
+
+    def vlm_red_recent(self, t):
+        return t - self.t_red < VM["byp_red_s"]
+
+    def bypass_gate(self, t):
+        """None when a bypass may start, else the reason it may not (bypass_timedet.md: ego standing >= 5 s with the
+        openpilot lead head reporting a slow lead within 40 m; no VLM red answer within 5 s; not near a route junction)."""
+        if self.still_since is None or t - self.still_since < VM["byp_stand_s"]:
+            return "not_standing"
+        o = getattr(self, "op_out", None)
+        if o is None:
+            return "no_lead_head"
+        lead = np.asarray(o["lead"])[0]
+        if not (float(np.asarray(o["lead_prob"])[0]) > self.arb["lead_p"] and 0.0 < float(lead[0, 0]) < VM["byp_lead_x"]
+                and float(lead[0, 2]) < VM["byp_lead_v"]):
+            return "no_static_lead"
+        if self.vlm_red_recent(t):
+            return "vlm_red"
+        if self.vm_junc <= VM["byp_junction_m"]:
+            return "junction"
+        return None
+
+    def _table_vm(self, speed, t, junc_dist, jid, stop_dist):
+        P, K, A = ARB_PARAMS, ARB_PARAMS["K_debounce"], self.arb
+        rows, out, active = self.rows, {}, []
+        fresh = bool(self.answer is not None and t - self.answer["t_eff"] <= P["TTL_answer_s"])
+        sfresh = bool(self.sign_answer is not None and t - self.sign_answer["t_eff"] <= P["TTL_answer_s"])
+        full = lambda h, ok: len(h) == K and all(ok(x) for x in h)     # noqa: E731
+        stop = lambda ln: idm(speed, max(0.1, ln + A["idm_s0"]), 0.0, 0.0, A["cruise"], A["amax"], A["idm_b"],  # noqa: E731
+                              A["idm_s0"], A["idm_T"])
+        line2 = (stop_dist - 0.5) if stop_dist is not None else junc_dist - REAR_TO_BUMPER - 0.5
+        can_stop2 = line2 > max(0.5, speed * speed / 8.0 - 1.0) or (speed < 1.0 and line2 > -1.0)
+        new_ans = self.n_ans != self._seen_ans
+        self._seen_ans = self.n_ans
+        if speed < 0.2:
+            self.stop_since = t if self.stop_since is None else self.stop_since
+        else:
+            self.stop_since = None
+        stood = t - self.stop_since if self.stop_since is not None else 0.0
+        # R5 as registered: a held stop older than T_max, or held on an expired answer, is dropped until the car rolls again
+        if "R5" in rows and ((self.r2_hold and (stood > P["T_max_stop_s"] or not fresh))
+                             or (self.r3_hold and not sfresh and self.r3_since is None)):
+            self.r5, self.r2_hold, self.r3_hold, self.r3_since = True, False, False, None
+            self.release_until = t + 2.0
+            active.append("R5")
+        if self.r5 and speed > 1.0:
+            self.r5 = False
+        if self.r5 and "R5" not in active:
+            active.append("R5")
+        cap = A["cruise"]
+        if "R1" in rows and -10.0 <= junc_dist <= P["N_jslow_m"]:
+            cap = min(cap, P["v_jslow"])
+            active.append("R1")
+        # R2: start on K = 2 red / yellow answers before the estimated stop line, release on cumulative green evidence
+        rel = None
+        if "R2" in rows and not self.r5 and fresh:
+            if (not self.r2_hold and full(self.h_light, lambda x: x == "red_or_yellow_for_ego") and line2 < 50.0 and can_stop2):
+                self.r2_hold, self.cusum = True, 0.0
+            elif self.r2_hold and new_ans:
+                pp = self.answer.get("Q_light_p") or {}
+                pg, pr = float(pp.get("green_for_ego", 0.0)), float(pp.get("red_or_yellow_for_ego", 0.0))
+                if pr >= VM["cusum_reset_p"]:
+                    self.cusum = 0.0
+                else:
+                    c = VM["cusum_clip"]
+                    self.cusum = max(0.0, self.cusum + min(c, max(-c, math.log((pg + 1e-3) / (pr + 1e-3)))))
+                if self.cusum >= VM["cusum_release"]:
+                    self.r2_hold, self.release_until, rel = False, t + 2.0, round(self.cusum, 2)
+        if self.r2_hold and line2 <= -2.0:
+            self.r2_hold = False
+        if self.r2_hold:
+            out["R2"] = stop(line2)
+            active.append("R2")
+        # R3: stop sign answered twice inside the junction window: stop at the estimated line, dwell, once per junction
+        if "R3" in rows and not self.r5 and not self.r2_hold:
+            if (not self.r3_hold and sfresh and jid not in self.r3_done and full(self.h_sign2, lambda x: x == "stop_sign_for_ego")
+                    and line2 < 25.0 and can_stop2):
+                self.r3_hold, self.r3_since = True, None
+            if self.r3_hold:
+                if speed < 0.1 and self.r3_since is None:
+                    self.r3_since = t
+                if (self.r3_since is not None and t - self.r3_since >= VM["sign_dwell_s"]) or line2 <= -2.0:
+                    self.r3_hold, self.r3_since = False, None
+                    self.r3_done.add(jid)
+                    self.release_until = t + 2.0
+                else:
+                    out["R3"] = stop(line2)
+                    active.append("R3")
+        if out and speed < 0.2:
+            self.owned_stop = True
+        release_now = bool(t < self.release_until and speed < 1.0 and self.owned_stop and not out)
+        if speed >= 1.0:
+            self.release_until, self.owned_stop = -1e9, False
+        self.table_state = dict(rules=active, release=release_now, r5=bool(self.r5), fresh=fresh, sfresh=sfresh, cusum=round(self.cusum, 2), rel=rel,
+                                line_r2=round(float(line2), 2), d_stop=None if stop_dist is None else round(float(stop_dist), 2), jid=int(jid),
+                                light=list(self.h_light), sign=list(self.h_sign2), ask=self.ask_why, det=self.det_now,
+                                byp=self.priv.meta.get("suppressed"))
+        return out, cap, release_now, active
+
+    def _plan_vm(self, speed):
+        f, t, cams, _ = self.cam_sets[-1]
+        xy = np.asarray(self.poses[-1][1], float)
+        self._prepare()
+        ego_s = float(project([xy], self.route.xy)[0][0])
+        junc_dist, jid, stop_dist = self._junction_vm(ego_s)
+        self.vm_junc = junc_dist
+        if speed < VM["byp_stand_v"]:
+            self.still_since = t if self.still_since is None else self.still_since
+        else:
+            self.still_since = None
+        o = getattr(self, "op_out", None)
+        det = [float(x) for x in np.asarray(o["det"])] if o is not None and "det" in o else [0.0, 0.0]
+        self.det_now = [round(x, 3) for x in det]
+        if det[0] >= self.det_thr[0]:
+            self.t_det_l = t
+        if det[1] >= self.det_thr[1]:
+            self.t_det_s = t
+        in_win = -VM["window_after_m"] <= junc_dist <= VM["window_before_m"]
+        trig = t - max(self.t_det_l, self.t_det_s) <= VM["det_latch_s"]
+        why = [w for w, on in (("det", trig), ("window", in_win), ("hold", self.r2_hold or self.r3_hold)) if on]
+        self.ask_why = "+".join(why)
+        if why and t - self.last_q >= ARB_PARAMS["query_s"] - 1e-4:
+            self.last_q = t
+            gt = self._truth_labels(xy, ego_s, junc_dist)
+            gt.update(det=self.det_now, why=self.ask_why, jid_vm=jid)
+            self._ask(t, cams, gt)
+            no_ego_light = len(self.h_light) == 2 and all(x in ("no_light", "light_for_other_lane") for x in self.h_light)
+            if in_win and jid not in self.r3_done and junc_dist >= -1.0 and (t - self.t_det_s <= VM["det_latch_s"] or no_ego_light):
+                self._ask(t, cams, gt, "sign")
+        self._arrivals(t)
+        cons, cap, release, active = self._table_vm(speed, t, junc_dist, jid, stop_dist)
+        self.pending_cons, self.pending_release = cons, release
+        if t - self.last_s >= ARB_PARAMS["query_s"] - 1e-4:
+            self.last_s = t
+            self.vlm_log.write(json.dumps(dict(k="s", t=t, v=round(float(speed), 3), ego_s=round(ego_s, 2),
+                                               junc_dist=round(junc_dist, 2), cap=cap, **self.table_state), default=_js) + "\n")
+        cruise = self.arb["cruise"]
+        self.arb["cruise"] = min(cruise, cap)
+        try:
+            return OpArbAgent._plan(self, speed)
+        finally:
+            self.arb["cruise"] = cruise
+
     # ------------------------------------------------------------------ per plan
     def _plan(self, speed):
+        if self.vm:
+            return self._plan_vm(speed)
         f, t, cams, _ = self.cam_sets[-1]
         xy = np.asarray(self.poses[-1][1], float)
         self._prepare()

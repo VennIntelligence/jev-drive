@@ -13,7 +13,7 @@ import time
 
 import numpy as np
 
-ARMS = ("drive", "pjunc", "pbyp", "pbypgap", "pbyp2", "pbyp2ng", "pred", "pall")
+ARMS = ("drive", "pjunc", "pbyp", "pbypgap", "pbyp2", "pbyp2ng", "pbyp3", "pred", "pall")
 PARAMS = dict(snapshot_s=.20, radius=100., horizon=5., margin=.5, clear_s=.8,
               release_s=2., static_speed=.2, static_s=2., obstacle_m=50.,
               merge_m=20., enter_before_m=20., transition_m=15., return_after_m=8.,
@@ -22,6 +22,9 @@ PARAMS = dict(snapshot_s=.20, radius=100., horizon=5., margin=.5, clear_s=.8,
               # ego light, same-direction gap check (sd_*) and the lateral share of the shift after which it no longer applies
               v2_static_s=5., v2_red_memory_s=5., sd_back_m=5., sd_ahead_m=5., sd_headway_s=1., sd_lane_tol_m=2.,
               sd_commit_frac=.3)
+# pbyp3 (vmerge arm, experiments/vlm_arb/plans/2026-10-03-vmerge.md): the gap check only refuses a start next to a vehicle
+# (alongside or about to be), it no longer waits for a gap that covers the manoeuvre (pullout_collisions.md section 4)
+PARAMS3 = dict(PARAMS, sd_back_m=2., sd_ahead_m=2., sd_headway_s=.5)
 EGO_BACK, EGO_FRONT = 2.4508 - 1.3886, 1.3886 + 2.4508     # rear axle to rear / front bumper (MKZ 2020)
 
 
@@ -159,10 +162,14 @@ class Privileged:
         assert arm in ARMS, arm
         self.agent,self.arm=agent,arm
         self.junction=arm in ("pjunc","pall")
-        self.bypass=arm in ("pbyp","pbypgap","pbyp2","pbyp2ng","pall")
-        self.gap_check=arm in ("pbypgap","pbyp2","pall")
-        self.v2=arm in ("pbyp2","pbyp2ng")      # projection fix, static >= 5 s, light memory (see geometry())
-        self.sd_gap=arm=="pbyp2"                # + same-direction gap check; pbyp2ng (diagnostic ablation) has none of the gap checks
+        self.bypass=arm in ("pbyp","pbypgap","pbyp2","pbyp2ng","pbyp3","pall")
+        self.gap_check=arm in ("pbypgap","pbyp2","pbyp3","pall")
+        self.v2=arm in ("pbyp2","pbyp2ng","pbyp3")      # projection fix, static >= 5 s, light memory (see geometry())
+        self.sd_gap=arm in ("pbyp2","pbyp3")    # + same-direction gap check; pbyp2ng (diagnostic ablation) has none of the gap checks
+        # pbyp3: no simulator light or map-junction input; the agent's gate (ego standing >= 5 s + openpilot lead head, no VLM red
+        # answer within 5 s, outside the route-command junction windows) decides when a bypass may start
+        self.v3=arm=="pbyp3"
+        self.P=PARAMS3 if self.v3 else PARAMS
         self.last_red=-1e9
         self.red=arm in ("pred","pall")
         self.last=-1e9;self.actors=[];self.static_since={};self.actor_cache={}
@@ -232,7 +239,7 @@ class Privileged:
         self.meta=dict(junctions=[],obstacles=[],bypass=False,gap_open=False,borrow=False,
                        snapshot_ms=round(self.snapshot_ms,2),ego_s=round(ego_s,3),warm=warm)
         c=self.agent._ctx()
-        if c.get("tl") in (1,2) and c.get("tl_dist",99)<50:self.last_red=t       # ego light red / yellow within 50 m (pbyp2 memory)
+        if not self.v3 and c.get("tl") in (1,2) and c.get("tl_dist",99)<50:self.last_red=t       # ego light red / yellow within 50 m (pbyp2 memory)
         if warm:return world
         ahead=np.flatnonzero(self.flags & (r.s>=ego_s-5)&(r.s<=ego_s+60))
         jids=set(int(self.jids[i]) for i in ahead)
@@ -266,8 +273,13 @@ class Privileged:
                 h=np.array([math.cos(a["yaw"]),math.sin(a["yaw"])])
                 normal=np.array([-tangent[i,1],tangent[i,0]])
                 extent=abs(float(h@normal))*a["extent"][0]+abs(float(np.array([-h[1],h[0]])@normal))*a["extent"][1]
-                red_queue=a["type"].startswith("vehicle.") and self.agent._ctx().get("tl") in (1,2) and self.agent._ctx().get("tl_dist",99)<50
-                if a["stationary_s"]>=(PARAMS["v2_static_s"] if self.v2 else 2) and -5<=s-ego_s-3.8394<=50 and not self.flags[j] and not red_queue and abs(lateral[i])<=extent+self.hero_row["extent"][1]+.15:
+                if self.v3:
+                    red_queue=a["type"].startswith("vehicle.") and self.agent.vlm_red_recent(t)
+                    in_junction=self.agent.route_junction_at(s)
+                else:
+                    red_queue=a["type"].startswith("vehicle.") and self.agent._ctx().get("tl") in (1,2) and self.agent._ctx().get("tl_dist",99)<50
+                    in_junction=self.flags[j]
+                if a["stationary_s"]>=(PARAMS["v2_static_s"] if self.v2 else 2) and -5<=s-ego_s-3.8394<=50 and not in_junction and not red_queue and abs(lateral[i])<=extent+self.hero_row["extent"][1]+.15:
                     blockers.append(dict(id=a["id"],s=s,extent=a["extent"][0]))
         blockers.sort(key=lambda b:b["s"])
         groups=[]
@@ -280,7 +292,10 @@ class Privileged:
         if not self.bypass:return world
         if self.bypass_state is not None and ego_s>self.bypass_state["end_s"]+23:
             self.bypass_state=None
-        if self.v2 and self.bypass_state is None and self.meta["obstacles"] and t-self.last_red<PARAMS["v2_red_memory_s"]:
+        gate=self.agent.bypass_gate(t) if self.v3 and self.bypass_state is None and self.meta["obstacles"] else None
+        if gate:
+            self.meta["suppressed"]=gate
+        elif self.v2 and not self.v3 and self.bypass_state is None and self.meta["obstacles"] and t-self.last_red<PARAMS["v2_red_memory_s"]:
             self.meta["suppressed"]="red_memory"
         elif self.bypass_state is None and self.meta["obstacles"]:
             candidate=self.meta["obstacles"][0]
@@ -294,7 +309,7 @@ class Privileged:
             # Same-direction traffic in the target lane is checked before and while pulling out, until the ego is
             # sd_commit_frac of the way across; the oncoming-lane check (borrow) keeps its before-start semantics.
             lateral=float(project_ext([xy],r.xy)[1][0]);frac=lateral/state["offset"] if state["offset"] else 0.
-            if frac>=PARAMS["sd_commit_frac"]:state["committed"]=True
+            if frac>=self.P["sd_commit_frac"]:state["committed"]=True
             self.meta.update(shift_frac=round(frac,3),committed=bool(state.get("committed")))
             if not state.get("committed") and not gap and not (state["borrow"] and state.get("started")):
                 self.meta["gap_hold"]=True;return world
@@ -335,7 +350,7 @@ class Privileged:
     def gap_open(self,state,speed):
         if not state["borrow"]:
             if not self.sd_gap:return True
-            ok,who=same_direction_gap([a for a in self.actors if a["type"].startswith("vehicle.")],self.agent.route.xy,self.ego_s,speed,state["offset"],state.get("ids",()))
+            ok,who=same_direction_gap([a for a in self.actors if a["type"].startswith("vehicle.")],self.agent.route.xy,self.ego_s,speed,state["offset"],state.get("ids",()),self.P)
             self.meta["gap_blocker"]=who;return ok
         r=self.agent.route;need=max(0.,state["end_s"]+23-self.ego_s)/max(speed,2.)+2
         for a in self.actors:

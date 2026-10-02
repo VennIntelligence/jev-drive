@@ -47,6 +47,15 @@ def request_account(a, ans, st, head):
     """Requests of one route: issued, answered, pending at the route end, dropped mid-route; and the saved frames."""
     q = head.get("params", {}).get("query_s", 0.5)
     L = head.get("L", 0.5)
+    if head.get("arm") == "vmerge":                            # asks only when triggered: every request has a "q" line
+        req = [(r["t_q"], r["q"]) for r in jsonl(Path(a) / "vlm_decisions.jsonl") if r.get("k") == "q"]
+        got = {(r["t_q"], r["ans"].get("kind", "light")) for r in ans}
+        lat = max((r["ans"].get("latency_ms", 0.0) for r in ans), default=0.0) / 1e3
+        t_end = max((r["t"] for r in st), default=0.0)
+        miss = [x for x in req if x not in got]
+        pending = sum(x[0] > t_end - max(L, lat) - q for x in miss)
+        return dict(n_req=len(req), pending=pending, dropped=len(miss) - pending, window=len(req), failed=sum(not r["ans"]["ok"] for r in ans),
+                    frames=True)
     fdir = Path(a) / "vlm_frames"
     wide = {f.name.split("_")[0] for f in fdir.glob("*_wide.jpg")}
     road = {f.name.split("_")[0] for f in fdir.glob("*_road.jpg")}
