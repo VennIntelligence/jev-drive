@@ -75,7 +75,15 @@ def jobs(args):
     v0 = [base.unit("vmerge", 0, k, sh[k], env(), "", 4, deps=[j.name for j in pre]) for k in SHARDS]
     few = tool("few-vmerge", "few", deps=[j.name for j in v0], prio=4, ok=lambda j: bool((gate("vmerge_few") or {}).get("passed")))
     v1 = [base.unit("vmerge", 1, k, sh[k], env(), "", 5, deps=[few.name]) for k in SHARDS]
-    rep = tool("report", "report", deps=[j.name for j in v1], prio=9)
+    # V2 (plan): R3's dwell changed after seed 0; 17280 (the only route where R3 ever held) of seed 0 is rerun in place with V2,
+    # the V1 attempt moved to <unit>/v1/ (once; a marker keeps a retry from moving the V2 attempt)
+    fix = base.unit("vmerge", 0, "q0", ["17280"], env(), "", 4, deps=[few.name])
+    d = fix.out
+    fix.name = "fix-vmerge-s0-17280"
+    fix.cmd = ["bash", "-c", "set -e; if [ ! -e %s/v1/MOVED ]; then mkdir -p %s/v1; mv %s/attempts/17280 %s/v1/; mv %s/done/17280.json %s/v1/ || true; "
+               "touch %s/v1/MOVED; fi; exec %s" % ((d,) * 7 + (" ".join(fix.cmd),))]
+    rep = tool("report", "report", deps=[j.name for j in v1] + [fix.name], prio=9)
+    v1 = v1 + [fix]
     out = pre + v0 + [few] + v1 + [rep]
     if stage == "full":                              # all, then the ablation arms (--arg abl=...) once the main report exists
         out += abl_jobs(args["abl"].split(","), deps=[few.name])     # after the seed-0 gate; seed 1 of vmerge has priority
