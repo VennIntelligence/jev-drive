@@ -150,11 +150,42 @@ def cmd_navtest(a):
     print(json.dumps(out, indent=1))
 
 
+def cmd_select_v1(a):
+    """Exact v1 PDMS of the confidence selector for every ratio (v1 PDMS is a per-token mean): from the official CSVs of the
+    shipped and the rule arm on one split (lb_navtrain: the subset run, lb_navtest), the per-token pick from the plan std."""
+    data = a.data
+    split = {"lb_navtrain": "navtrain", "lb_navtest": "navtest"}[data]
+    R = L.D / "runs/op_lb" / data
+    T = np.array([10.0 * (i / 32) ** 2 for i in range(33)]) <= 4.0 + 1e-6
+    out = {}
+    for rule in a.arms:
+        def load(arm):
+            f = sorted(glob.glob(str(L.D / "runs/navsim/eval" / CSV("v1", split, data, arm) / "*/*.csv")))[-1]
+            d = pd.read_csv(f).set_index("token")
+            return d[d.valid.astype(bool) & (d.index != "average")]
+        zb, zr = np.load(R / "plans/gimm@cinque.npz"), np.load(R / f"plans/gimm@cinque_al-{rule}.npz")
+        rb = pd.Series(zb["plan_std"][:, T, 1].sum(1), index=zb["names"])
+        rr = pd.Series(zr["plan_std"][:, T, 1].sum(1), index=zr["names"])
+        b, r = load("base"), load(rule)
+        idx = b.index.intersection(r.index)
+        sb, sr = b.loc[idx, "score"].to_numpy(), r.loc[idx, "score"].to_numpy()
+        B = np.random.default_rng(0).integers(0, len(idx), (5000, len(idx)))
+        res = {"n": len(idx), "base": 100 * float(sb.mean()), "rule_all": 100 * float(sr.mean())}
+        for x in (1.0, 0.9, 0.8, 0.7, 0.6, 0.5):
+            pick = (rr.loc[idx] < x * rb.loc[idx]).to_numpy()
+            d = 100 * (np.where(pick, sr, sb) - sb)
+            res[f"r{x:g}"] = dict(pick_rate=float(pick.mean()), pdms=float(100 * sb.mean() + d.mean()), delta=float(d.mean()), delta_ci95=ci(d, B))
+        out[rule] = res
+    (OUT / f"select_{split}.json").write_text(json.dumps(out, indent=1))
+    print(json.dumps(out, indent=1))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["navhard", "navtest"])
+    ap.add_argument("cmd", choices=["navhard", "navtest", "select-v1"])
+    ap.add_argument("--data", default="lb_navtrain", help="select-v1: lb_navtrain | lb_navtest")
     ap.add_argument("--arms", nargs="+", default=["rot0", "straight", "straight_keys"])
     ap.add_argument("--procs", type=int, default=28)
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
-    {"navhard": cmd_navhard, "navtest": cmd_navtest}[a.cmd](a)
+    {"navhard": cmd_navhard, "navtest": cmd_navtest, "select-v1": cmd_select_v1}[a.cmd](a)
