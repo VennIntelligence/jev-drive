@@ -123,7 +123,7 @@ def fit_temperature(lg, y, w):
         loss.backward()
         return loss
     opt.step(closure)
-    return float(lt.exp())
+    return float(lt.detach().exp())
 
 
 # ------------------------------------------------------------------------------------------------ quantile

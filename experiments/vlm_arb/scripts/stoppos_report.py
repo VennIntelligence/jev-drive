@@ -220,6 +220,8 @@ def replay(frames, oof, tap, hp):
     rows = []
     for key, g in light_att.groupby("key", sort=False):
         g = g[g.m_cls & g.gate.notna()].sort_values("t")
+        if g.empty:
+            continue
         for rule, sig in (("U", g.hi), ("L", g.lo), ("R", g.route_est)):
             for m in MARGINS:
                 hit = (sig <= m) & ((g.gate > 0) if rule != "R" else True)
