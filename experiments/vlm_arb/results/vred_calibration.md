@@ -1,0 +1,3 @@
+Calibration (shadow `drive`, Qwen3-VL-4B servers, 3 workers per card on 3 cards, seed 1, 19 routes): 3306 requests, 100.0% answered. In-loop latency (submit to answer, JPEG encoding included): p50 217 ms, p95 349 ms, p99 400 ms, max 536 ms; server queue wait p95 128 ms, service p50 159 ms. Share > 0.5 s 0.2%, share > TTL 2.5 s 0.0%. L = ceil(p95 / 50 ms) x 0.05 s = 0.35 s; registered line (p95 <= 600 ms): yes.
+
+per unit: {"q0": {"n": 945, "p50": 215.9, "p95": 328.28, "q95": 112.39999999999993, "depth_max": 2.0}, "q1": {"n": 965, "p50": 215.8, "p95": 338.67999999999995, "q95": 122.75999999999986, "depth_max": 2.0}, "q2": {"n": 1396, "p50": 219.14999999999998, "p95": 357.275, "q95": 137.7, "depth_max": 2.0}}

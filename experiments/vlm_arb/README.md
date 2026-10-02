@@ -8,7 +8,9 @@ index: Junction slow-down +5.4 DS vs speed-matched; Qwen3-VL-4B reads ego red 93
 
 **Conclusion.** Diagnostic batch (19 routes x 2 seeds): junction slow-down +5.4 DS [+1.6, +10.1] vs the speed-matched control; privileged red light +4.3 [-3.0, +11.2]; privileged bypass -28.8 on non-target routes. openjev fails the light and block lines (ego red recall 57.8%), so no VLM arm ran. Offline, Qwen3-VL-4B reads ego red 93-94% zero-shot and reaches 68-125 ms with one forward pass at reduced resolution (decisions 84, 85).
 
-**Next.** Run `vred` with zero-shot Qwen3-VL-4B (one pass, 559-1153 tokens); attribute the bypass misfires event by event before any perception-driven bypass.
+**vred (2026-10-02).** Zero-shot Qwen3-VL-4B (one pass, 1153 tokens, per-card servers, L = 0.35 s measured under load) driving R2 + R5: red-light infractions 13 -> 6 (`pred` 5), DS +5.0 [+0.7, +10.6] vs `drive`, no harm on routes without a light; diagnostic read on 19 routes, confirmation lines not evaluated ([results/vred.md](results/vred.md), [plans/2026-10-02-vlm-vred.md](plans/2026-10-02-vlm-vred.md)). Remaining infractions: yellow-onset late stop, stop target beyond the light's stop line, light turning red after the crossing.
+
+**Next.** Move R2's stop target to the light's stop line and keep the light in view while holding; attribute the bypass misfires event by event before any perception-driven bypass.
 
 **Read more.** [plans/2026-10-02-vlm-arb.md](plans/2026-10-02-vlm-arb.md), [results/report.md](results/report.md), [results/phase_a.md](results/phase_a.md), [results/lightsweep.md](results/lightsweep.md), [plans/2026-10-02-vlm-thin.md](plans/2026-10-02-vlm-thin.md) + [results/vlm_thin.md](results/vlm_thin.md) (offline: one-pass scoring, resolution and a cut language model with a thin head for Qwen3-VL-4B's light reading; speed and accuracy), [research/decisions/082.md](../../research/decisions/082.md).
 
