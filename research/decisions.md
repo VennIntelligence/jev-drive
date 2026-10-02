@@ -89,3 +89,4 @@
 | 92 | 共性假设：openpilot 外推历史偏航，低速最强，三域同号；desire 进得了模型但不帮忙 | 中 | 待定 |
 | 93 | 配对素材：换指令只 navtrain 约 2.5 千段；WOD 无地图；CARLA 要带传感器重跑 | 中 | 待定 |
 | 94 | navhard 历史对齐：全量去转动被否（navtest −8）；按计划不确定度挑 rollout navhard +0.98、navtest −0.09（事后） | 弱 | 待定 |
+| 95 | B2D 合并臂 vmerge：对 drive +13.2，几乎全来自 bypass；灯在 vred 之上不再加分；碰撞多出来自 bypass 起步与 stop sign 前被撞 | 弱 | 待定 |

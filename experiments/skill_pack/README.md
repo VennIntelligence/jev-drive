@@ -1,7 +1,7 @@
 # skill_pack: NAVSIM skill pack N0-N4
 
 status: concluded
-decisions: 64, 68, 69, 70, 71, 72, 73, 75, 88
+decisions: 64, 68, 69, 70, 71, 72, 73, 75, 88, 94
 index: Navtest PDMS 84.2 to 91.59 (N3), flat at N4
 
 **Question.** Can a scorer head over native plan plus extra slots raise NAVSIM PDMS, weights unchanged?
@@ -28,5 +28,5 @@ index: Navtest PDMS 84.2 to 91.59 (N3), flat at N4
 - `navsim_raise_n4.sh` (archive): N3's configuration on every navtrain row
 - `skill_pack_nav_decomp.py` (archive): NAVSIM navtest per-token PDMS loss …
 
-[archive/](archive/) 19 one-off code · [results/](results/) 69 result files · [plans/](plans/) 2 live plans · [scripts/](scripts/) 22 entry points
+[archive/](archive/) 19 one-off code · [results/](results/) 80 result files · [plans/](plans/) 2 live plans · [scripts/](scripts/) 23 entry points
 <!-- files:end -->

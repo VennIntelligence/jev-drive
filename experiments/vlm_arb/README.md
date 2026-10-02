@@ -1,7 +1,7 @@
 # vlm_arb: VLM slow channel and arbitration table
 
 status: live
-decisions: 84, 85, 86, 87, 89
+decisions: 84, 85, 86, 87, 89, 91, 95
 index: Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privileged 5), DS +5.0; fixed bypass pbyp2, stop-line R2 vred2, yellow rule vred3
 
 **Question.** Can a frozen vision-language model answering four discrete categorical decision questions about camera frames replace privileged simulator state in the op-drive arbitration layer without catastrophic latency or rule-interaction penalties?
