@@ -101,12 +101,11 @@ class Chain:
         self.per_model("vlm_cmp_stage.py", "twoframe", ["--res", "r1153"])
 
     def fit(self):
-        procs = []
+        """Heads on the CPU, one process per (model, resolution), each with a pool of every core; one after the other."""
         for m in ("4b", "8b"):
             for r in RESN:
-                procs.append(self.popen("vlm_cmp_fit.py", ["fit", "--run", str(self.d), "--model", m, "--res", r] + (["--dir-too"] if r == "r1153" else []),
-                                        self.cards[0], "fit-%s-%s" % (m, r)))
-        self.wait(procs)
+                self.wait([self.popen("vlm_cmp_fit.py", ["fit", "--run", str(self.d), "--model", m, "--res", r] + (["--dir-too"] if r == "r1153" else []),
+                                      self.cards[0], "fit-%s-%s" % (m, r))])
 
     def bench(self):
         full = ["q1_" + r for r in RESN] + ["dir_" + r for r in RESN] + ["four_r559", "four_r1153", "two_r559", "two_r1153"]

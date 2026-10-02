@@ -68,81 +68,99 @@ def feature(F, src, N, layers):
     return F["h_" + q][:, layers.index(N)].astype(np.float32)
 
 
-def fit(a):
+_G = {}                                                    # filled before the pool forks (read-only in the workers)
+
+
+def task(spec):
+    """One (source, layer, label) cell: lambda by validation, test of the registered split, grouped CV. CPU, one thread."""
     import torch
-    dev = "cuda"
-    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.set_num_threads(1)
+    src, N, lab = spec
+    F, df, Y, part, fold, layers = (_G[k] for k in ("F", "df", "Y", "part", "fold", "layers"))
+    X = feature(F, src, N, layers)
+    y, ncls = Y[lab], NCLS[lab]
+    dev = "cpu"
+    tr, va, te = (part == "train") & (y >= 0), (part == "val") & (y >= 0), (part == "test") & (y >= 0)
+    key = "%s|%d|%s" % (src, N, lab)
+    row = dict(model=_G["model"], res=_G["res"], src=src, layer=N, label=lab, n_train=int(tr.sum()), n_val=int(va.sum()), n_test=int(te.sum()),
+               train_classes=[int((y[tr] == c).sum()) for c in range(ncls)], test_classes=[int((y[te] == c).sum()) for c in range(ncls)])
+    preds = {"tr|" + key: np.full(len(df), -1, np.int8)}
+    lam = 1.0
+    if len(set(y[tr])) != ncls:                              # a class missing from the train routes: no head on the registered split
+        row.update(lam=None, val_bacc=None, test_bacc=None, test_rec=None)
+    else:
+        Xs, mu, sd = standardise(torch, X[tr], X, dev)
+        ytt = torch.tensor(y)
+        trt = torch.tensor(tr)
+        best = None
+        for lm in LAMS:
+            m = fit_lin(torch, Xs[trt], ytt[trt], lm)
+            p = probs(torch, m, Xs).argmax(-1).numpy()
+            vb = bacc(p[va], y[va], ncls)[0] if va.any() and len(set(y[va])) > 1 else np.nan
+            sc = -1 if not np.isfinite(vb) else vb
+            if best is None or sc > best[0] + 1e-9 or (abs(sc - best[0]) <= 1e-9 and lm > best[1]):
+                best = (sc, lm, p, vb)
+        lam = best[1]
+        preds["tr|" + key] = best[2].astype(np.int8)
+        tb, trec = bacc(best[2][te], y[te], ncls) if te.any() else (np.nan, [np.nan] * ncls)
+        row.update(lam=lam, val_bacc=best[3], test_bacc=tb, test_rec=trec)
+        if lab == "light":
+            p = best[2]
+            r_ = lambda m_, c_: float((p[m_] == c_).mean()) if m_.any() else np.nan   # noqa: E731
+            mr, mg, mn = te & (y == 0), te & (y == 1), te & (y == 2) & (df.any_light.to_numpy() == 0)
+            row["test_S"] = r_(mr, 0) - r_(mr, 1) + r_(mg, 1) - r_(mn, 0)
+    cv = np.full(len(df), -1)
+    for k in range(N_FOLDS):
+        trk, tek = (fold != k) & (y >= 0), fold == k
+        if len(set(y[trk])) < ncls:
+            continue
+        Xk, _, _ = standardise(torch, X[trk], X, dev)
+        tt = torch.tensor(trk)
+        mk = fit_lin(torch, Xk[tt], torch.tensor(y)[tt], lam)
+        cv[tek] = probs(torch, mk, Xk).argmax(-1).numpy()[tek]
+    preds["cv|" + key] = cv.astype(np.int8)
+    scored = (y >= 0) & (cv >= 0)
+    cb, crec = bacc(cv[scored], y[scored], ncls) if scored.any() else (np.nan, [np.nan] * ncls)
+    row.update(cv_bacc=cb, cv_rec=crec, cv_n=int(scored.sum()))
+    if lab == "light" and scored.any():
+        mr, mg, mn = scored & (y == 0), scored & (y == 1), scored & (y == 2) & (df.any_light.to_numpy() == 0)
+        r_ = lambda m_, c_: float((cv[m_] == c_).mean()) if m_.any() else np.nan   # noqa: E731
+        row["cv_S"] = r_(mr, 0) - r_(mr, 1) + r_(mg, 1) - r_(mn, 0)
+    return row, preds
+
+
+def fit(a):
+    import multiprocessing as mp
+    import torch
+    from vlm_arb_common import REPO
+    sys.path.insert(0, str(REPO))
+    from jevdrive.common import n_cpus
+    torch.set_num_threads(1)
     df = pd.read_csv(Path(a.run) / "frames.csv", dtype={"route": str, "attempt": str}, keep_default_na=False, na_values=[""])
+    for c in ("ego_red", "ego_green", "sign_near"):
+        df[c] = df[c].astype(bool)
+    df["pos"] = df.pos.fillna("")
     F = load_feats(a.run, a.model, a.res, df)
     nl = F["h_light"].shape[1]
     layers = list(range(2, 2 * nl + 1, 2))
-    Y = labels(df)
-    part = df.part.to_numpy()
     routes = sorted(df.route.unique(), key=int)
-    fold = df.route.map({r: FOLD_OVERRIDE.get(r, i % N_FOLDS) for i, r in enumerate(routes)}).to_numpy()
-    rows, preds = [], {}
-    srcs = [s for s in LABEL_FEATS if s != "ans_dir" or a.dir_too]
-    for src in srcs:
-        Ns = ([0] + layers) if src == "pool" else layers
-        for N in Ns:
-            X = feature(F, src, N, layers)
-            for lab in LABEL_FEATS[src]:
-                y, ncls = Y[lab], NCLS[lab]
-                tr, va, te = (part == "train") & (y >= 0), (part == "val") & (y >= 0), (part == "test") & (y >= 0)
-                row = dict(model=a.model, res=a.res, src=src, layer=N, label=lab, n_train=int(tr.sum()), n_val=int(va.sum()),
-                           n_test=int(te.sum()), train_classes=[int((y[tr] == c).sum()) for c in range(ncls)],
-                           test_classes=[int((y[te] == c).sum()) for c in range(ncls)])
-                ok_tr = len(set(y[tr])) == ncls
-                key = "%s|%d|%s" % (src, N, lab)
-                preds["tr|" + key] = np.full(len(df), -1, np.int8)
-                if not ok_tr:                                       # a class missing from the train routes: no head on the registered split
-                    row.update(lam=None, val_bacc=None, test_bacc=None, test_rec=None)
-                    lam = 1.0
-                else:
-                    Xs, mu, sd = standardise(torch, X[tr], X, dev)
-                    ytt = torch.tensor(y, device=dev)
-                    trt = torch.tensor(tr, device=dev)
-                    best = None
-                    for lam in LAMS:
-                        m = fit_lin(torch, Xs[trt], ytt[trt], lam)
-                        p = probs(torch, m, Xs).argmax(-1).cpu().numpy()
-                        vb = bacc(p[va], y[va], ncls)[0] if va.any() and len(set(y[va])) > 1 else np.nan
-                        sc = -1 if not np.isfinite(vb) else vb
-                        if best is None or sc > best[0] + 1e-9 or (abs(sc - best[0]) <= 1e-9 and lam > best[1]):
-                            best = (sc, lam, p, vb)
-                    lam = best[1]
-                    preds["tr|" + key] = best[2].astype(np.int8)
-                    tb, trec = bacc(best[2][te], y[te], ncls) if te.any() else (np.nan, [np.nan] * ncls)
-                    row.update(lam=lam, val_bacc=best[3], test_bacc=tb, test_rec=trec)
-                    if lab == "light":
-                        p = best[2]
-                        r_ = lambda m_, c_: float((p[m_] == c_).mean()) if m_.any() else np.nan   # noqa: E731
-                        mr, mg, mn = te & (y == 0), te & (y == 1), te & (y == 2) & (df.any_light.to_numpy() == 0)
-                        row["test_S"] = r_(mr, 0) - r_(mr, 1) + r_(mg, 1) - r_(mn, 0)
-                # grouped CV over all routes
-                cv = np.full(len(df), -1)
-                for k in range(N_FOLDS):
-                    trk, tek = (fold != k) & (y >= 0), fold == k
-                    if len(set(y[trk])) < ncls:
-                        continue
-                    Xk, _, _ = standardise(torch, X[trk], X, dev)
-                    tt = torch.tensor(trk, device=dev)
-                    mk = fit_lin(torch, Xk[tt], torch.tensor(y, device=dev)[tt], lam)
-                    cv[tek] = probs(torch, mk, Xk).argmax(-1).cpu().numpy()[tek]
-                preds["cv|" + key] = cv.astype(np.int8)
-                scored = (y >= 0) & (cv >= 0)
-                cb, crec = bacc(cv[scored], y[scored], ncls) if scored.any() else (np.nan, [np.nan] * ncls)
-                row.update(cv_bacc=cb, cv_rec=crec, cv_n=int(scored.sum()))
-                if lab == "light" and scored.any():
-                    mr, mg, mn = scored & (y == 0), scored & (y == 1), scored & (y == 2) & (df.any_light.to_numpy() == 0)
-                    r_ = lambda m_, c_: float((cv[m_] == c_).mean()) if m_.any() else np.nan   # noqa: E731
-                    row["cv_S"] = r_(mr, 0) - r_(mr, 1) + r_(mg, 1) - r_(mn, 0)
-                rows.append(row)
-        print("%s %s %s done" % (a.model, a.res, src), flush=True)
+    _G.update(F=F, df=df, Y=labels(df), part=df.part.to_numpy(), layers=layers, model=a.model, res=a.res,
+              fold=df.route.map({r: FOLD_OVERRIDE.get(r, i % N_FOLDS) for i, r in enumerate(routes)}).to_numpy())
+    specs = []
+    for src in [s for s in LABEL_FEATS if s != "ans_dir" or a.dir_too]:
+        for N in ([0] + layers) if src == "pool" else layers:
+            specs += [(src, N, lab) for lab in LABEL_FEATS[src]]
+    workers = min(len(specs), a.workers or n_cpus())
+    print("%s %s: %d cells on %d workers" % (a.model, a.res, len(specs), workers), flush=True)
+    with mp.get_context("fork").Pool(workers) as pool:
+        res = pool.map(task, specs, chunksize=1)
+    rows = [r for r, _ in res]
+    preds = {k: v for _, p in res for k, v in p.items()}
     out = Path(a.run) / "fit"
     out.mkdir(exist_ok=True)
     np.savez_compressed(out / ("%s_%s_preds.npz" % (a.model, a.res)), ids=df.id.to_numpy(), **preds)
     (out / ("%s_%s.json" % (a.model, a.res))).write_text(json.dumps(rows, indent=0, default=lambda o: None if o is None else float(o)))
+    print("done", flush=True)
 
 
 if __name__ == "__main__":
@@ -152,5 +170,6 @@ if __name__ == "__main__":
     ap.add_argument("--model", required=True)
     ap.add_argument("--res", required=True)
     ap.add_argument("--dir-too", action="store_true")
+    ap.add_argument("--workers", type=int, default=0)
     a = ap.parse_args()
     fit(a)
