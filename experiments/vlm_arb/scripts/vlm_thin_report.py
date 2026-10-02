@@ -219,10 +219,14 @@ def figure(g, B, path, chosen):
         ax[k].set_title(title, fontsize=9, loc="left")
         ax[k].set_xlabel("latency p50, ms (batch 1, quiet card; dashed: registered p95 line)", fontsize=8)
         ax[k].set_xscale("log")
+        ax[k].set_xticks([20, 40, 70, 100, 200, 400, 600])
+        ax[k].set_xticklabels(["20", "40", "70", "100", "200", "400", "600"], fontsize=7)
+        ax[k].minorticks_off()
         ax[k].grid(color="#eee", lw=.6)
     ax[0].set_ylabel("S = red recall - red answered green + green recall - no-light false alarm", fontsize=7)
-    ax[0].legend(fontsize=6, loc="lower right")
-    fig.tight_layout()
+    h, lab = ax[0].get_legend_handles_labels()
+    fig.legend(h, lab, fontsize=7, loc="lower center", ncol=5, frameon=False)
+    fig.tight_layout(rect=(0, 0.07, 1, 1))
     fig.savefig(path)
 
 
