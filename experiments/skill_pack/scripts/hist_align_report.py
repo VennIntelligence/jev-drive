@@ -153,7 +153,7 @@ def cmd_navtest(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["navhard", "navtest"])
-    ap.add_argument("--arms", nargs="+", default=["rot0", "straight"])
+    ap.add_argument("--arms", nargs="+", default=["rot0", "straight", "straight_keys"])
     ap.add_argument("--procs", type=int, default=28)
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)

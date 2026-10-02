@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # History-alignment rule, full navhard + navtest (experiments/skill_pack/plans/2026-10-04-history-align-plan.md).
 # Resumable; STATUS / DONE / ERROR in $DATA_DIR/runs/skill_pack/hist_align.
-#   scripts/tmux_run.sh halign experiments/skill_pack/scripts/hist_align_chain.sh [gpu=1] [rules="rot0 straight"]
+#   scripts/tmux_run.sh halign experiments/skill_pack/scripts/hist_align_chain.sh [gpu=1] [rules="rot0 straight straight_keys"]
 # GPU: Cinque runs ($PROCS shards, ~1.5 GB each) on one card; CPU: official scorers (16 threads) then the paired harness (24 procs).
 set -uo pipefail
 repo=$(cd "$(dirname "$0")/../../.." && pwd); cd "$repo"
-GPU=${1:-1}; RULES=${2:-rot0 straight}; PROCS=${PROCS:-3}
+GPU=${1:-1}; RULES=${2:-rot0 straight straight_keys}; PROCS=${PROCS:-3}
 R=$DATA_DIR/runs/skill_pack/hist_align; mkdir -p "$R"; rm -f "$R/ERROR" "$R/DONE"
 E=$DATA_DIR/envs
 st() { echo "$(date '+%F %T') $*" | tee -a "$R/STATUS"; }
 die() { st "ERROR: $*"; echo "$*" > "$R/ERROR"; exit 1; }
-export CUDA_DEVICE_ORDER=PCI_BUS_ID OMP_NUM_THREADS=2 NAVSIM_THREADS=16
+export CUDA_DEVICE_ORDER=PCI_BUS_ID OMP_NUM_THREADS=2 NAVSIM_THREADS=16 OPI_ROOT=op_lb   # op_lb run dirs for export and scoring
 P=$DATA_DIR/runs/op_lb
 
 run_split() {   # model runs + pose export for one split
