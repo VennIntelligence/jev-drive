@@ -35,7 +35,7 @@ combined() {   # official two-stage EPDMS of one navhard pose file (empty when n
 RULES_ALL=$RULES
 run_split lb_navhard
 st "official navhard scoring"
-experiments/op_openloop/archive/op_interp_score.sh "0-$(($(nproc) - 1))" lb_navhard v2 navhard_two_stage > "$R/score_navhard.log" 2>&1 || die "navhard scoring"
+experiments/op_openloop/archive/op_interp_score.sh "0-$(($(nproc --all) - 1))" lb_navhard v2 navhard_two_stage > "$R/score_navhard.log" 2>&1 || die "navhard scoring"
 b=$(combined "")
 RULES=""
 for r in $RULES_ALL; do      # pre-registration: navtest only for rules not rejected on navhard (delta <= 0)
@@ -45,7 +45,7 @@ done
 st "navtest rules:${RULES:- none}"
 [[ -n $RULES ]] && run_split lb_navtest
 st "official navtest scoring"
-experiments/op_openloop/archive/op_interp_score.sh "0-$(($(nproc) - 1))" lb_navtest v1 navtest > "$R/score_navtest.log" 2>&1 || die "navtest scoring"
+experiments/op_openloop/archive/op_interp_score.sh "0-$(($(nproc --all) - 1))" lb_navtest v1 navtest > "$R/score_navtest.log" 2>&1 || die "navtest scoring"
 st "navtest report"
 $E/navsim2/bin/python experiments/skill_pack/scripts/hist_align_report.py navtest --arms $RULES_ALL > "$R/report_navtest.log" 2>&1 || die "navtest report"
 st "navhard paired harness"
