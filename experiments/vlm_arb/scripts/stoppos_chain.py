@@ -56,7 +56,7 @@ def main(a):
                          "--workers", str(a.workers), *per], env={"CUDA_VISIBLE_DEVICES": str(a.gpu), "OMP_NUM_THREADS": "2"}, log=st)
                 (DATA / "runs/vlm_arb_stoppos/extract/DONE").unlink(missing_ok=True)
             elif st == "analyze":
-                sh(run, [PY, str(SCR / "stoppos_analyze.py"), "--run", str(run.dir)], env={"OMP_NUM_THREADS": str(a.threads)}, log="analyze")
+                sh(run, [PY, str(SCR / "stoppos_analyze.py"), "--run", str(run.dir)], env={"OMP_NUM_THREADS": str(a.threads), "CUDA_VISIBLE_DEVICES": str(a.gpu)}, log="analyze")
             (done / f"{st}.done").write_text(time.strftime("%Y-%m-%d %H:%M:%S") + "\n")
         run.summary["stages"] = sorted(p.stem for p in done.glob("*.done"))
 
