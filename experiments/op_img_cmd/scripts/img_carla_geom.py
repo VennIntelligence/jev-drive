@@ -15,7 +15,8 @@ Frames: CARLA world is left-handed (x fwd-east, y right, yaw clockwise in degree
 
 Output $DATA_DIR/runs/op_img_cmd/carla/geom.pkl: nav.pkl keys (token, log, kind, v, cmd, dist, classes, taken, map,
 approach, node, branches, future) plus town, tag, files (JPEG triplets of the HIST_N + 1 frames, oldest first),
-frame_t (s, relative to t0), pose ((k, 3) rear-axle x, y, yaw in the t0 frame), pitch ((k,) CARLA pitch, deg), cam.
+frame_t (s, relative to t0), pose ((k, 3) rear-axle x, y, yaw in the t0 frame), pitch ((k,) CARLA pitch, deg), cam, dz15 / dz30 (m: height of the
+taken path 15 / 30 m ahead along it, in the t0 vehicle frame; the overlay assumes 0).
 img_carla_frames.py renders the packed model frames and writes carla.pkl.
 
   $DATA_DIR/envs/carla/bin/python experiments/op_img_cmd/scripts/img_carla_geom.py [--run rec] [--workers 16]
@@ -123,10 +124,12 @@ def process(job):
     if (app_w[-1].road_id, app_w[-1].lane_id) != tuple(trav["entry"]):
         return rid, [], "entry lane mismatch"
     app = [s for s in segs_of(app_w + [w0]) if len(s["c"]) >= 2]     # ends at the connector start
-    branches = []
+    branches, taken_w = [], None
     for cls, road, lane in brs:
-        ws = conn_start(m, trav["town"], road, lane)
-        branches.append(dict(cls=cls, segs=segs_of(walk(ws, PI.TAB[trav["town"]][2][road] + EXT_M))))
+        ws = walk(conn_start(m, trav["town"], road, lane), PI.TAB[trav["town"]][2][road] + EXT_M)
+        taken_w = ws if taken_w is None else taken_w
+        branches.append(dict(cls=cls, segs=segs_of(ws)))
+    P3 = np.array([[*wp_rh(w)[0], w.transform.location.z] for w in app_w + taken_w])     # taken path with height
     ac = np.concatenate([s["c"] for s in app])
     acum = np.r_[0, np.cumsum(np.linalg.norm(np.diff(ac, axis=0), axis=1))]
     entry_xy = ac[-1]
@@ -171,6 +174,13 @@ def process(job):
             why["short future"] += 1
             continue
         t0, y0 = rear(bf[f0])
+        # road height of the taken path ahead in the t0 vehicle frame (img_overlay draws on the plane z = 0)
+        q = to_local(P3[:, :2], t0, y0)
+        a3 = np.r_[0, np.cumsum(np.linalg.norm(np.diff(q, axis=0), axis=1))]
+        p0 = math.radians(bf[f0]["pitch"])
+        zv = (P3[:, 2] - bf[f0]["z"]) * math.cos(p0) - q[:, 0] * math.sin(p0)
+        s0 = a3[np.argmin(np.linalg.norm(q, axis=1))]
+        dz = {f"dz{d}": float(np.interp(s0 + d, a3, zv)) for d in (15, 30)}
         hp = []
         for j in range(k - HIST_N, k + 1):
             t, y = rear(bf[fnum[j]])
@@ -187,7 +197,7 @@ def process(job):
                         files=[[str(adir / r["files"][c]) for c in ("front", "front_left", "front_right")] for r in fr[k - HIST_N: k + 1]],
                         frame_t=np.round((np.array(fnum[k - HIST_N: k + 1]) - f0) * TICK, 3),
                         pose=np.array(hp, np.float32), pitch=np.array([bf[fnum[j]]["pitch"] for j in range(k - HIST_N, k + 1)], np.float32),
-                        cam=np.array(CAM, np.float32), frame=f0))
+                        cam=np.array(CAM, np.float32), frame=f0, **dz))
     return rid, out, dict(why)
 
 
