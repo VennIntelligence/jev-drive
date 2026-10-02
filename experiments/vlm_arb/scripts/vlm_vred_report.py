@@ -224,7 +224,7 @@ def timeline(r, T, back=9.0, fwd=0.5):
         if T - back <= s["t"] <= T + fwd:
             q = [d for d in ans if d["t_eff"] <= s["t"] + 1e-6]
             last = q[-1] if q else None
-            rows.append(dict(t=round(s["t"], 1), v=round(s["v"], 1), line_m=s.get("line"), rules="+".join(s.get("rules", [])) or "-", fresh=s.get("fresh"),
+            rows.append(dict(t=round(s["t"], 1), v=round(s["v"], 1), line_m=s.get("line_r2", s.get("line")), rules="+".join(s.get("rules", [])) or "-", fresh=s.get("fresh"),
                              last_K=",".join(x[:3] for x in s.get("light", [])),
                              answer_in_force=(last["ans"].get("Q_light", "")[:3] + " (q %.1f, lat %.2f s)" % (last["t_q"], last["ans"].get("latency_ms", 0) / 1e3)) if last else "-",
                              truth=(None if not last else "tl %s @ %s m" % (last["gt"].get("tl"), last["gt"].get("tl_dist")))))
@@ -257,7 +257,7 @@ def classify(r, T):
     if sp is not None and not sp.get("fresh", True):
         return "stale answer"
     if sp is not None:
-        return "answered late (first red answer in force at t=%.1f, v=%.1f, line %.1f m)" % (sp["t"], sp["v"], sp.get("line", np.nan))
+        return "answered late (first red answer in force at t=%.1f, v=%.1f, line %.1f m)" % (sp["t"], sp["v"], sp.get("line_r2", sp.get("line", np.nan)))
     return "unclassified"
 
 

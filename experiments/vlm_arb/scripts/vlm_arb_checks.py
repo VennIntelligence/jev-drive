@@ -17,6 +17,11 @@ Kinds (staged launch on debug routes, plan "staged launch checklist"):
   cruise     the per-route set speed is respected (dslow)
   shadow     a wide and a road JPEG per request, truth labels present
   pred       privileged red stop and green go (the privileged arm's own check)
+  pbyp2      pbyp2 batch units: no activation on a blocker outside the route; no activation before the ego first moves on a
+             route without a scenario obstacle
+  pbyp2dbg   `bypass` checks of pbyp2 on a debug obstacle route plus the two of `pbyp2`
+  red_stop2  vred2: R2 stops with the car still short of the light's stop line (0 <= distance <= 3.5 m at standstill), the stop
+             target of the log is the stop line, and a roll-off after the release
 """
 import argparse
 import json
@@ -27,7 +32,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from vlm_arb_common import RUN, attempt_dir, jsonl, route_row, write_json  # noqa: E402
+from vlm_arb_common import OBS_ROUTES, REPO, RUN, attempt_dir, jsonl, route_row, write_json  # noqa: E402
 
 
 def vlm_rows(a):
@@ -53,6 +58,56 @@ def request_account(a, ans, st, head):
     failed = sum(not r["ans"]["ok"] for r in ans)
     return dict(n_req=n_req, pending=pending, dropped=dropped, window=window, failed=failed,
                 frames=wide == road and bool(wide) and {"%08.2f" % t for t in tq} <= wide)
+
+
+def bypass_activations(a):
+    """Activations of the privileged bypass in one run: first snapshot of each new bypass state (start_s / 5, ids), with the
+    states' blockers projected on the route with the extended end segments (positive `outside_m` = beyond the last route
+    point or before the first)."""
+    sys.path.insert(0, str(REPO / "lib"))
+    from b2d_privileged_geometry import project_ext
+    a = Path(a)
+    xy = np.asarray(json.loads((a / "route.json").read_text())["xy"], float)
+    total = float(np.linalg.norm(np.diff(xy, axis=0), axis=1).sum())
+    out, prev = [], None
+    for r in jsonl(a / "privileged.jsonl"):
+        st = r["pc"].get("bypass_state")
+        key = None if st is None else (round(st["start_s"] / 5), tuple(st["ids"]))
+        if st is not None and key != prev:
+            pos = [x["xyz"][:2] for x in r["actors"] if x["id"] in st["ids"]]
+            s_ext = project_ext(pos, xy)[0] if pos else np.array([])
+            out.append(dict(t0=r["t"], ids=list(st["ids"]), s=[float(v) for v in s_ext], route_len=total,
+                            outside_m=float(max([-v for v in s_ext] + [v - total for v in s_ext] + [0.0])) if len(s_ext) else None,
+                            ego_s=r["pc"]["ego_s"], borrow=bool(st.get("borrow"))))
+        prev = key
+    return out
+
+
+def r2_episodes(a, hold="R2"):
+    """Hold episodes from plans.jsonl (`hold` R2: the table's red-light row; `pred`: the privileged red stop): dicts with start /
+    end time, the light's distance to the front bumper at the first plan step of standstill (positive = short of the stop line),
+    the smallest distance during the episode (negative = crept across) and the stop target the table used (`r2_src`: stopline |
+    junction; None for pred)."""
+    rows = [r for r in jsonl(Path(a) / "plans.jsonl") if not r["warm"]]
+    eps, cur = [], None
+    for r in rows:
+        on = ("R2" in r.get("pc", {}).get("vlm", {}).get("rules", [])) if hold == "R2" else ("pred" in r.get("pc", {}).get("controls", {}))
+        d = r.get("ctx", {}).get("tl_dist")
+        if on and cur is None:
+            cur = dict(t0=r["t"], t1=r["t"], d_stop=None, d_min=d, src=None, v_min=r["v"])
+        if on:
+            cur["t1"] = r["t"]
+            if d is not None and (cur["d_min"] is None or d < cur["d_min"]):
+                cur["d_min"] = d
+            if r["v"] < 0.2 and cur["d_stop"] is None:
+                cur["d_stop"], cur["t_stop"] = d, r["t"]
+            cur["src"] = r["pc"].get("vlm", {}).get("r2_src", cur["src"])
+        elif cur is not None:
+            eps.append(cur)
+            cur = None
+    if cur is not None:
+        eps.append(cur)
+    return eps
 
 
 def route_checks(a, kind=""):
@@ -87,7 +142,24 @@ def route_checks(a, kind=""):
         c["held_before_r5"] = bool(fired) and bool(held25) and fired[0]["t"] - held25[0]["t"] >= 25.0 - 0.6
         c["r5_fired"] = bool(fired)
         c["rolls_after_r5"] = bool(fired) and any(r["t"] > fired[0]["t"] and r["v"] > 1.0 for r in st)
-    if kind in ("bypass", "pbyp"):
+    if kind in ("pbyp2", "pbyp2dbg"):
+        acts = bypass_activations(a)
+        rid = Path(a).parent.name
+        moved = next((r["t"] for r in jsonl(Path(a) / "plans.jsonl") if r["v"] > 0.3), np.inf)
+        out.update(n_activations=len(acts), outside_m=max([x["outside_m"] or 0.0 for x in acts], default=0.0))
+        c["no_activation_outside_route"] = all((x["outside_m"] or 0.0) <= 0.0 for x in acts)
+        if rid not in OBS_ROUTES and kind == "pbyp2":
+            c["no_activation_before_move"] = all(x["t0"] >= moved for x in acts)
+        scene = jsonl(Path(a) / "privileged.jsonl")
+        out.update(n_gap_hold=sum(bool(r["pc"].get("gap_hold")) for r in scene),
+                   n_red_memory=sum(r["pc"].get("suppressed") == "red_memory" for r in scene))
+    if kind == "red_stop2":
+        eps = [e for e in r2_episodes(a) if e["d_stop"] is not None]
+        c["stopped_short_of_line"] = bool(eps) and all(0.0 <= e["d_stop"] <= 3.5 for e in eps)
+        c["target_is_stopline"] = bool(eps) and all(e["src"] == "stopline" for e in eps)
+        c["rolls_after_release"] = bool(eps) and any(r["t"] > eps[0]["t1"] and "R2" not in r.get("rules", []) and r["v"] > 1.0 for r in st)
+        out.update(n_r2_stops=len(eps), d_stop=eps[0]["d_stop"] if eps else np.nan)
+    if kind in ("bypass", "pbyp", "pbyp2dbg"):
         scene = jsonl(Path(a) / "privileged.jsonl")
         on = [r for r in scene if r["pc"].get("bypass")]
         c["obstacle_detected"] = any(r["pc"].get("obstacles") for r in scene)

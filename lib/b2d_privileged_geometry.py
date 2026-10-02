@@ -13,11 +13,16 @@ import time
 
 import numpy as np
 
-ARMS = ("drive", "pjunc", "pbyp", "pbypgap", "pred", "pall")
+ARMS = ("drive", "pjunc", "pbyp", "pbypgap", "pbyp2", "pred", "pall")
 PARAMS = dict(snapshot_s=.20, radius=100., horizon=5., margin=.5, clear_s=.8,
               release_s=2., static_speed=.2, static_s=2., obstacle_m=50.,
               merge_m=20., enter_before_m=20., transition_m=15., return_after_m=8.,
-              gap_margin_s=2., gap_min_m=15., tl_m=50., tl_margin=.5)
+              gap_margin_s=2., gap_min_m=15., tl_m=50., tl_margin=.5,
+              # pbyp2 (experiments/vlm_arb/plans/2026-10-02-pbyp2-vred2.md): blocker static time, memory of a red / yellow
+              # ego light, same-direction gap check (sd_*) and the lateral share of the shift after which it no longer applies
+              v2_static_s=5., v2_red_memory_s=5., sd_back_m=10., sd_ahead_m=6., sd_headway_s=4., sd_lane_tol_m=2.,
+              sd_commit_frac=.5)
+EGO_BACK, EGO_FRONT = 2.4508 - 1.3886, 1.3886 + 2.4508     # rear axle to rear / front bumper (MKZ 2020)
 
 
 def project(points, path, offset=0.):
@@ -36,6 +41,52 @@ def project(points, path, offset=0.):
     signed = ((points - closest[j, index]) * normal).sum(-1)
     arc = np.r_[0., np.cumsum(length)]
     return offset + arc[index] + fraction[j, index] * length[index], signed, unit
+
+
+def project_ext(points, path):
+    """`project` with the end segments extended to infinity: s < 0 before the first route point, s > length beyond the
+    last one (`project` clamps both to the end points, so an actor behind the start or past the end looked like it sat
+    on the route). Returns (s, signed lateral offset, unit tangent) like `project`."""
+    points, path = np.asarray(points, float).reshape(-1, 2), np.asarray(path, float)
+    s, signed, unit = project(points, path)
+    s, signed = s.copy(), signed.copy()
+    total = float(np.linalg.norm(np.diff(path, axis=0), axis=1).sum())
+    d0, d1 = path[1] - path[0], path[-1] - path[-2]
+    u0, u1 = d0 / max(np.linalg.norm(d0), 1e-12), d1 / max(np.linalg.norm(d1), 1e-12)
+    for i, p in enumerate(points):
+        if s[i] <= 1e-9 and (p - path[0]) @ u0 < 0:
+            s[i], signed[i], unit[i] = float((p - path[0]) @ u0), float((p - path[0]) @ np.array([-u0[1], u0[0]])), u0
+        elif s[i] >= total - 1e-9 and (p - path[-1]) @ u1 > 0:
+            s[i] = total + float((p - path[-1]) @ u1)
+            signed[i], unit[i] = float((p - path[-1]) @ np.array([-u1[1], u1[0]])), u1
+    return s, signed, unit
+
+
+def same_direction_gap(vehicles, route, ego_s, speed, offset, exclude=(), p=PARAMS):
+    """Gap check for the lane the bypass pulls into (same driving direction). Current state only: no scripted future.
+
+    `vehicles`: dicts with xyz, velocity, extent (half length, half width), yaw. `offset`: signed lateral offset of the
+    target lane from the route. A vehicle in the target lane (|lateral - offset| <= sd_lane_tol_m) that is not
+    oncoming (route-parallel speed >= -0.5 m/s) closes the gap when its longitudinal extent overlaps the ego's
+    [rear bumper - sd_back_m - closing * sd_headway_s, front bumper + sd_ahead_m], closing = max(0, v_vehicle - v_ego):
+    alongside, just ahead, or behind and arriving within the headway. Returns (open, id of the first vehicle that closes it)."""
+    for a in vehicles:
+        if a.get("id") in exclude:       # the obstacle being passed is not traffic
+            continue
+        s, d, tangent = project_ext([a["xyz"][:2]], route)
+        t = tangent[0]
+        v = float(np.asarray(a["velocity"], float) @ t)
+        if v < -.5 or abs(float(d[0]) - offset) > p["sd_lane_tol_m"]:
+            continue
+        h = np.array([math.cos(a["yaw"]), math.sin(a["yaw"])])
+        half = abs(float(h @ t)) * a["extent"][0] + abs(float(np.array([-h[1], h[0]]) @ t)) * a["extent"][1]
+        rel = float(s[0]) - ego_s
+        closing = max(0., v - speed)
+        lo = -EGO_BACK - p["sd_back_m"] - closing * p["sd_headway_s"]
+        hi = EGO_FRONT + p["sd_ahead_m"]
+        if rel + half > lo and rel - half < hi:
+            return False, a.get("id")
+    return True, None
 
 
 def ego_boxes(rear,observed_yaw):
@@ -108,8 +159,10 @@ class Privileged:
         assert arm in ARMS, arm
         self.agent,self.arm=agent,arm
         self.junction=arm in ("pjunc","pall")
-        self.bypass=arm in ("pbyp","pbypgap","pall")
-        self.gap_check=arm in ("pbypgap","pall")
+        self.bypass=arm in ("pbyp","pbypgap","pbyp2","pall")
+        self.gap_check=arm in ("pbypgap","pbyp2","pall")
+        self.v2=arm=="pbyp2"          # projection fix, static >= 5 s, light memory, same-direction gap check (see geometry())
+        self.last_red=-1e9
         self.red=arm in ("pred","pall")
         self.last=-1e9;self.actors=[];self.static_since={};self.actor_cache={}
         self.hold=False;self.clear_since=None;self.release_until=-1e9;self.light_hold=False;self.junction_stop_s=None
@@ -177,6 +230,8 @@ class Privileged:
         ego_s=float(project([xy],r.xy)[0][0]);self.ego_s=ego_s
         self.meta=dict(junctions=[],obstacles=[],bypass=False,gap_open=False,borrow=False,
                        snapshot_ms=round(self.snapshot_ms,2),ego_s=round(ego_s,3),warm=warm)
+        c=self.agent._ctx()
+        if c.get("tl") in (1,2) and c.get("tl_dist",99)<50:self.last_red=t       # ego light red / yellow within 50 m (pbyp2 memory)
         if warm:return world
         ahead=np.flatnonzero(self.flags & (r.s>=ego_s-5)&(r.s<=ego_s+60))
         jids=set(int(self.jids[i]) for i in ahead)
@@ -203,14 +258,15 @@ class Privileged:
         blockers=[]
         if self.actors:
             positions=np.array([a["xyz"][:2] for a in self.actors])
-            longitudinal,lateral,tangent=project(positions,r.xy)
+            longitudinal,lateral,tangent=(project_ext if self.v2 else project)(positions,r.xy)
             for i,a in enumerate(self.actors):
                 s=float(longitudinal[i]);j=int(np.searchsorted(r.s,s).clip(0,len(r.s)-1))
+                if self.v2 and not 0<=s<=float(r.s[-1]):continue   # not ahead on the route: the clamped projection used to pass the lateral test
                 h=np.array([math.cos(a["yaw"]),math.sin(a["yaw"])])
                 normal=np.array([-tangent[i,1],tangent[i,0]])
                 extent=abs(float(h@normal))*a["extent"][0]+abs(float(np.array([-h[1],h[0]])@normal))*a["extent"][1]
                 red_queue=a["type"].startswith("vehicle.") and self.agent._ctx().get("tl") in (1,2) and self.agent._ctx().get("tl_dist",99)<50
-                if a["stationary_s"]>=2 and -5<=s-ego_s-3.8394<=50 and not self.flags[j] and not red_queue and abs(lateral[i])<=extent+self.hero_row["extent"][1]+.15:
+                if a["stationary_s"]>=(PARAMS["v2_static_s"] if self.v2 else 2) and -5<=s-ego_s-3.8394<=50 and not self.flags[j] and not red_queue and abs(lateral[i])<=extent+self.hero_row["extent"][1]+.15:
                     blockers.append(dict(id=a["id"],s=s,extent=a["extent"][0]))
         blockers.sort(key=lambda b:b["s"])
         groups=[]
@@ -223,7 +279,9 @@ class Privileged:
         if not self.bypass:return world
         if self.bypass_state is not None and ego_s>self.bypass_state["end_s"]+23:
             self.bypass_state=None
-        if self.bypass_state is None and self.meta["obstacles"]:
+        if self.v2 and self.bypass_state is None and self.meta["obstacles"] and t-self.last_red<PARAMS["v2_red_memory_s"]:
+            self.meta["suppressed"]="red_memory"
+        elif self.bypass_state is None and self.meta["obstacles"]:
             candidate=self.meta["obstacles"][0]
             candidate=self.adjacent(candidate)
             if candidate is not None:self.bypass_state=candidate
@@ -231,7 +289,15 @@ class Privileged:
         if state is None:return world
         gap=self.gap_open(state,speed)
         self.meta.update(gap_open=gap,borrow=state["borrow"],bypass_state=state)
-        if self.gap_check and state["borrow"] and not state.get("started") and not gap:return world
+        if self.v2:
+            # Same-direction traffic in the target lane is checked before and while pulling out, until the ego is
+            # sd_commit_frac of the way across; the oncoming-lane check (borrow) keeps its before-start semantics.
+            lateral=float(project_ext([xy],r.xy)[1][0]);frac=lateral/state["offset"] if state["offset"] else 0.
+            if frac>=PARAMS["sd_commit_frac"]:state["committed"]=True
+            self.meta.update(shift_frac=round(frac,3),committed=bool(state.get("committed")))
+            if not state.get("committed") and not gap and not (state["borrow"] and state.get("started")):
+                self.meta["gap_hold"]=True;return world
+        elif self.gap_check and state["borrow"] and not state.get("started") and not gap:return world
         state["started"]=True
         s=r.s;enter=np.clip((s-(state["start_s"]-20))/15,0,1);leave=np.clip((s-(state["end_s"]+8))/15,0,1)
         smooth=lambda v:v*v*(3-2*v)
@@ -266,7 +332,10 @@ class Privileged:
         return dict(state,offset=offset,borrow=borrow)
 
     def gap_open(self,state,speed):
-        if not state["borrow"]:return True
+        if not state["borrow"]:
+            if not self.v2:return True
+            ok,who=same_direction_gap([a for a in self.actors if a["type"].startswith("vehicle.")],self.agent.route.xy,self.ego_s,speed,state["offset"],state.get("ids",()))
+            self.meta["gap_blocker"]=who;return ok
         r=self.agent.route;need=max(0.,state["end_s"]+23-self.ego_s)/max(speed,2.)+2
         for a in self.actors:
             if not a["type"].startswith("vehicle."):continue

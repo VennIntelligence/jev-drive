@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bypass_common import (OBST_TYPE, TARGET, actor_tracks, ego_s_series, in_junction, junction_table, light_state_at, load_all,  # noqa: E402
                            next_entry, plan_arr, project, route_lights, route_s)
 
+ARM = "pbyp"             # the arm `build` / `target_collisions` read (vlm_v2_report.py sets "pbyp2")
 HORIZON = 15.0           # s after an activation in which outcomes are attributed to it
 RESUME_V = 0.5           # m/s: an actor "moves again" once it exceeds this for 3 consecutive snapshots (0.6 s)
 EVENT_KEYS = ("collisions_vehicle", "collisions_layout", "collisions_pedestrian", "vehicle_blocked", "outside_route_lanes",
@@ -259,7 +260,7 @@ def build(runs, ds):
     rows = []
     ctx = {}
     for (arm, seed, route), d in sorted(runs.items()):
-        if arm != "pbyp":
+        if arm != ARM:
             continue
         if route not in ctx:
             ctx[route] = (junction_table(runs, route), route_lights(runs, route))
@@ -283,7 +284,7 @@ def build(runs, ds):
             for f in rows:
                 if f["route"] == route and f["seed"] == seed and e in f["events"]:
                     e["att"] = f["cls"]
-        runs[("pbyp", seed, route)]["_events"] = events
+        runs[(ARM, seed, route)]["_events"] = events
     return rows
 
 
@@ -325,7 +326,7 @@ def target_collisions(runs, rows):
     """Every official collision in the pbyp runs on the 4 obstacle routes with the geometry at the collision."""
     out = []
     for (arm, seed, route), d in sorted(runs.items()):
-        if arm != "pbyp" or route not in TARGET:
+        if arm != ARM or route not in TARGET:
             continue
         xy = np.array(d["route_xy"])
         mine = [f for f in rows if f["route"] == route and f["seed"] == seed]

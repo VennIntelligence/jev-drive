@@ -12,6 +12,10 @@ Environment (set per unit by experiments/vlm_arb/scripts/vlm_arb_chain.py):
   VLM_LIGHT_VARIANT Q_light input variant (lib/vlm_protocol.VARIANTS); a second, Q_light-only request.
   VLM_ORACLE        truth: answers are the ground-truth labels (integration test of the table, debug routes only);
                     stuckred: as truth but Q_light is always red (exercises R5).
+  VLM_R2_TARGET     junction (default): R2 stops the car at the next junction entrance on the route (arm vred).
+                    stopline: R2 stops it short of the stop line of the traffic light that governs the ego lane at that
+                    junction, taken from the map (arm vred2, plans/2026-10-02-pbyp2-vred2.md); same margin as the privileged
+                    `pred` (target = bumper-to-line distance - 0.5 m). The light's state is never read for the target.
   VLM_ENDPOINT      System One URL.
   VLM_BACKEND       openjev (default) | qwen: zero-shot Qwen3-VL-4B light reading, one forward pass with option scoring
                     (experiments/vlm_arb/scripts/vlm_qwen_server.py, one server per card on port VLM_BASE_PORT + VLM_GPU,
@@ -105,6 +109,8 @@ class VlmArbAgent(OpArbAgent):
         self.L = float(env("VLM_L", ARB_PARAMS["sim_delay_L_s"]))
         self.light_variant = env("VLM_LIGHT_VARIANT", "base")
         self.backend = env("VLM_BACKEND", "openjev")
+        self.r2_target = env("VLM_R2_TARGET", "junction")
+        assert self.r2_target in ("junction", "stopline"), self.r2_target
         if self.backend == "qwen":
             if rows & {"R3", "R4"}:
                 raise ValueError("the qwen backend answers Q_light only: VLM_ROWS must not contain R3 / R4")
@@ -125,7 +131,7 @@ class VlmArbAgent(OpArbAgent):
         self.r4_seen = False
         self.stop_since = None
         self.release_until = -1e9
-        self.signs = self.lights = None
+        self.signs = self.lights = self.stop_arcs = None
         out = Path(self.out)
         self.vlm_log = (out / "vlm_decisions.jsonl").open("w", buffering=1)
         self.frame_dir = out / "vlm_frames"
@@ -152,6 +158,29 @@ class VlmArbAgent(OpArbAgent):
             for a in actors.filter("*traffic_light*"):
                 loc = a.get_location()
                 self.lights.append((a, np.array([loc.x, loc.y])))
+        if self.stop_arcs is None:
+            self.stop_arcs = self._stop_arcs()
+
+    def _stop_arcs(self):
+        """Route arc positions of the stop lines of the traffic lights that govern a lane of the route (map only: the
+        stop waypoints of each light actor lying within 2 m of the route centre line)."""
+        r, out = self.route, []
+        for a in self.priv.world.get_actors().filter("*traffic_light*"):
+            for w in a.get_stop_waypoints():
+                q = [[w.transform.location.x, w.transform.location.y]]
+                s, lat, _ = project(q, r.xy)
+                if abs(float(lat[0])) <= 2.0 and 0.0 < float(s[0]) < float(r.s[-1]):
+                    out.append(float(s[0]))
+        return sorted(out)
+
+    def _stop_line(self, ego_s, junc_dist):
+        """Distance from the front bumper to the stop line of the light at the next junction on the route, or None.
+        The line is the last stop line from 15 m before that junction's entrance up to 1 m inside it."""
+        if junc_dist >= 999.0:
+            return None
+        entrance = ego_s + junc_dist
+        cand = [s for s in self.stop_arcs if entrance - 15.0 <= s <= entrance + 1.0]
+        return None if not cand else max(cand) - ego_s - REAR_TO_BUMPER
 
     def _junction(self, ego_s):
         """(distance of the rear axle to the next junction entrance on the route, junction id); inside a junction
@@ -268,15 +297,20 @@ class VlmArbAgent(OpArbAgent):
             self.vlm_log.write(json.dumps(dict(k="a", t=t, t_q=t_q, t_eff=t_eff, gt=gt, ans=ans), default=_js) + "\n")
 
     # ------------------------------------------------------------------ the table
-    def _table(self, speed, t, junc_dist, jid):
+    def _table(self, speed, t, junc_dist, jid, stop_dist=None):
         P, K, A = ARB_PARAMS, ARB_PARAMS["K_debounce"], self.arb
         rows, out, active = self.rows, {}, []
         fresh = bool(self.answer is not None and t - self.answer["t_eff"] <= P["TTL_answer_s"])
         full = lambda h, ok: len(h) == K and all(ok(x) for x in h)     # noqa: E731
         line = junc_dist - REAR_TO_BUMPER - 0.5                        # bumper to the stop position (junction entrance)
         can_stop = line > max(0.5, speed * speed / 8.0 - 1.0) or (speed < 1.0 and line > -1.0)   # as the privileged arm
-        stop = lambda: idm(speed, max(0.1, line + A["idm_s0"]), 0.0, 0.0, A["cruise"], A["amax"], A["idm_b"],  # noqa: E731
-                           A["idm_s0"], A["idm_T"])
+        stop = lambda ln=line: idm(speed, max(0.1, ln + A["idm_s0"]), 0.0, 0.0, A["cruise"], A["amax"], A["idm_b"],  # noqa: E731
+                                   A["idm_s0"], A["idm_T"])
+        # R2's own target: the light's stop line (vred2) when the map gives one, else the junction entrance (as vred)
+        line2, src2 = line, "junction"
+        if self.r2_target == "stopline" and stop_dist is not None:
+            line2, src2 = stop_dist - 0.5, "stopline"
+        can_stop2 = line2 > max(0.5, speed * speed / 8.0 - 1.0) or (speed < 1.0 and line2 > -1.0)
         if speed < 0.2:
             self.stop_since = t if self.stop_since is None else self.stop_since
         else:
@@ -299,14 +333,14 @@ class VlmArbAgent(OpArbAgent):
             active.append("R1")
         # R2: red / yellow light for the ego, stop at the junction entrance; only green releases
         if "R2" in rows and not self.r5 and fresh:
-            if not self.r2_hold and full(self.h_light, lambda x: x == "red_or_yellow_for_ego") and line < 50.0 and can_stop:
+            if not self.r2_hold and full(self.h_light, lambda x: x == "red_or_yellow_for_ego") and line2 < 50.0 and can_stop2:
                 self.r2_hold = True
             elif self.r2_hold and full(self.h_light, lambda x: x == "green_for_ego"):
                 self.r2_hold, self.release_until = False, t + 2.0
-        if self.r2_hold and line <= -2.0:                              # past the line: nothing left to hold
+        if self.r2_hold and line2 <= -2.0:                             # past the line: nothing left to hold
             self.r2_hold = False
         if self.r2_hold:
-            out["R2"] = stop()
+            out["R2"] = stop(line2)
             active.append("R2")
         # R3: stop sign, dwell T_s once per junction; suppressed while R2 holds
         if "R3" in rows and not self.r5 and not self.r2_hold:
@@ -345,7 +379,7 @@ class VlmArbAgent(OpArbAgent):
         if speed >= 1.0:
             self.release_until, self.owned_stop = -1e9, False
         self.table_state = dict(rules=active, release=release_now, r5=bool(self.r5), fresh=fresh,
-                                line=round(float(line), 2), jid=int(jid), light=list(self.h_light), sign=list(self.h_sign), block=list(self.h_block))
+                                line=round(float(line), 2), line_r2=round(float(line2), 2), r2_src=src2, jid=int(jid), light=list(self.h_light), sign=list(self.h_sign), block=list(self.h_block))
         return out, cap, release_now, active
 
     # ------------------------------------------------------------------ per plan
@@ -359,7 +393,7 @@ class VlmArbAgent(OpArbAgent):
             self.last_q = t
             self._ask(t, cams, self._truth_labels(xy, ego_s, junc_dist))
         self._arrivals(t)
-        cons, cap, release, active = self._table(speed, t, junc_dist, jid)
+        cons, cap, release, active = self._table(speed, t, junc_dist, jid, self._stop_line(ego_s, junc_dist) if self.r2_target == "stopline" else None)
         self.pending_cons, self.pending_release = cons, release
         if t - self.last_s >= ARB_PARAMS["query_s"] - 1e-4:
             self.last_s = t

@@ -53,7 +53,7 @@ SWEEP_MODELS = SERVER_MODELS + ("qwen3-vl-4b", "cosmos-reason1-7b", "qwen-drive-
 def unit(arm, seed, shard, ids, env=None, kind="", prio=None, deps=(), base=None):
     """One closed-loop unit through op_arb.sh. `base`: the arm name op_arb.sh and the agent see (debug units)."""
     name, out, real = unit_name(arm, seed, shard), unit_dir(arm, seed, shard), base or arm
-    priv = real in ("pred", "pbyp")
+    priv = real in ("pred", "pbyp", "pbyp2")
     e = dict(GPU="{gpu}", IDX0="{idx}", WORKERS="{workers}", CPUS="{cpus}", SEED=str(seed), OP_ARB_DIR="{job_dir}/op",
              OP_ARB_ARMS=str(RUN / "arms"), SRV_NO_TWIN="1", OPENBLAS_CORETYPE="Haswell", VLM_ARM=real,
              OP_ARB_AGENT="lib/op_arb_agent.py" if priv else "lib/vlm_arb_agent.py")
