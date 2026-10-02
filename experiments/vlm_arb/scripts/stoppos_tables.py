@@ -92,8 +92,11 @@ def main(d):
             out += [f"## {title}", md(P(name), ".3f"), ""]
     if exists("native_red_vs_green.csv"):
         t = P("native_red_vs_green.csv")
-        out += ["## Native outputs: AUC of red/yellow vs green at the same distance (v >= 3 m/s; controls: v, d_stop)",
-                md(t.pivot(index="metric", columns="bin", values="auc_high_red")[BINS].reset_index(), ".2f"), ""]
+        for sub, g in t.groupby("subset"):
+            piv = g.pivot(index="metric", columns="bin", values="auc_high_red")[[b for b in BINS if b in set(g.bin)]].reset_index()
+            cnt = g.groupby("bin")[["red_frames", "green_frames", "routes_red", "routes_green"]].first().T
+            out += [f"## Native outputs: AUC of red/yellow vs green at the same distance (v >= 3 m/s; controls v and d_stop), {sub}",
+                    md(piv, ".2f"), "", "Frames and routes per bin:", md(cnt.reset_index(), ".0f"), ""]
     (d / "tables.md").write_text("\n".join(out))
 
 
