@@ -72,5 +72,5 @@ metrics and verdict rules, fixed before the full run).
 - `img_geom_nav.py` (scripts): Route geometry for the image-command …
 - `img_sheet.py` (scripts): what the model sees
 
-[results/](results/) 0 result files · [figs/](figs/) 0 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 7 entry points
+[results/](results/) 2 result files · [figs/](figs/) 3 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 14 entry points
 <!-- files:end -->
