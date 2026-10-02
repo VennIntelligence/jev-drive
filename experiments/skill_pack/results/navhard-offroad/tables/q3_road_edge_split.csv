@@ -1,0 +1,31 @@
+model,category,n,share
+native,right_plan_crosses,93,0.07345971563981042
+native,right_plan_inside,278,0.21958925750394945
+native,too_far_plan_crosses,85,0.06714060031595577
+native,too_far_plan_inside,740,0.584518167456556
+native,too_near_plan_crosses,68,0.053712480252764615
+native,too_near_plan_inside,2,0.001579778830963665
+native,undefined,0,0.0
+native,TOTAL edge right (|err| <= 1 m),371,0.2930489731437599
+native,TOTAL edge wrong (|err| > 1 m),895,0.7069510268562401
+native,all failures with a departure,1266,1.0
+native,median signed edge error at departure (m),1266,1.5134670459501456
+native,median |edge error| at departure (m),1266,1.6502465418778636
+native,"plan crosses own edge, footprint test, any side: failures (share)",1266,0.3167456556082148
+native,"plan crosses own edge, footprint test, any side: passes (share)",4196,0.0786463298379409
+native,"plan crosses own edge, centre test, departure side: failures (share)",1266,0.11532385466034756
+n4,right_plan_crosses,50,0.0382262996941896
+n4,right_plan_inside,200,0.1529051987767584
+n4,too_far_plan_crosses,57,0.04357798165137615
+n4,too_far_plan_inside,972,0.7431192660550459
+n4,too_near_plan_crosses,29,0.02217125382262997
+n4,too_near_plan_inside,0,0.0
+n4,undefined,0,0.0
+n4,TOTAL edge right (|err| <= 1 m),250,0.191131498470948
+n4,TOTAL edge wrong (|err| > 1 m),1058,0.808868501529052
+n4,all failures with a departure,1308,1.0
+n4,median signed edge error at departure (m),1308,2.045586596606921
+n4,median |edge error| at departure (m),1308,2.105841922640976
+n4,"plan crosses own edge, footprint test, any side: failures (share)",1308,0.2607033639143731
+n4,"plan crosses own edge, footprint test, any side: passes (share)",4154,0.1006259027443428
+n4,"plan crosses own edge, centre test, departure side: failures (share)",1308,0.06269113149847094

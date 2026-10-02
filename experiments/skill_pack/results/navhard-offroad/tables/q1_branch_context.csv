@@ -1,0 +1,25 @@
+model,stage,subset,n,opp_rate,dac_fail
+native,one,intersection in forward fan,365,0.0164,0.1342
+native,one,no intersection ahead,85,0.0,0.1294
+native,one,lane connectors in fan >= 1,364,0.0165,0.1346
+native,one,none,86,0.0,0.1279
+native,one,drivable width at 20 m > 20 m,232,0.0129,0.1293
+native,one,width <= 20 m,218,0.0138,0.1376
+native,two,intersection in forward fan,4083,0.0615,0.216
+native,two,no intersection ahead,1379,0.0442,0.2785
+native,two,lane connectors in fan >= 1,4078,0.0615,0.2158
+native,two,none,1384,0.0441,0.2789
+native,two,drivable width at 20 m > 20 m,2286,0.0682,0.2025
+native,two,width <= 20 m,3176,0.0491,0.2528
+n4,one,intersection in forward fan,365,0.0247,0.0795
+n4,one,no intersection ahead,85,0.0118,0.0824
+n4,one,lane connectors in fan >= 1,364,0.0247,0.0797
+n4,one,none,86,0.0116,0.0814
+n4,one,drivable width at 20 m > 20 m,232,0.0388,0.0474
+n4,one,width <= 20 m,218,0.0046,0.1147
+n4,two,intersection in forward fan,4083,0.0742,0.2415
+n4,two,no intersection ahead,1379,0.0435,0.2335
+n4,two,lane connectors in fan >= 1,4078,0.0741,0.2413
+n4,two,none,1384,0.0441,0.2341
+n4,two,drivable width at 20 m > 20 m,2286,0.1006,0.2257
+n4,two,width <= 20 m,3176,0.0419,0.2494

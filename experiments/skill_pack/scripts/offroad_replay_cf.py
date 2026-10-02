@@ -164,7 +164,7 @@ def _init(args):
               stage={e["token"]: e["stage"] for e in L.index()}, variants=args.variants)
 
 
-def _score(mc, p8):
+def _score(mc, p8, token):
     from navsim.common.dataclasses import Trajectory
     from navsim.evaluate.pdm_score import pdm_score
     from nuplan.common.actor_state.state_representation import StateSE2
@@ -180,6 +180,7 @@ def _score(mc, p8):
     row["endpoint_x"], row["endpoint_y"] = e.x, e.y
     row["start_point_x"], row["start_point_y"] = mc.ego_state.rear_axle.x, mc.ego_state.rear_axle.y
     row["ego_simulated_states"] = [st]
+    row["token"] = token
     return row, st
 
 
@@ -191,12 +192,12 @@ def work(token):
     out = {"token": token, "stage": W["stage"][token], "start": start_features(mc), "ref": ref, "rows": {}, "feat": {}}
     for m in MODELS:
         p8 = W["P"][m][token]
-        row, st = _score(mc, p8)
+        row, st = _score(mc, p8, token)
         out["rows"][(m, "base")] = row
         out["feat"][m] = features(mc, g, st, p8, ref)
         if out["stage"] == "two":
             for v in W["variants"]:
-                row, _ = _score(mc, make_variant(v, p8, ref))
+                row, _ = _score(mc, make_variant(v, p8, ref), token)
                 out["rows"][(m, v)] = row
     # the PDM reference itself as a plan (features only, no scoring)
     p_ref = L.poses_from_dense(ref)
@@ -239,6 +240,9 @@ def main():
     res = {}
     if a.reuse:
         res = pickle.load(open(out / "raw.pkl", "rb"))
+        for t, r in res.items():                       # raw.pkl of the first run has no token column in the score rows
+            for row in r["rows"].values():
+                row["token"] = t
     else:
         ctx = mp.get_context("fork")
         with ctx.Pool(a.procs, initializer=_init, initargs=(a,)) as pool:

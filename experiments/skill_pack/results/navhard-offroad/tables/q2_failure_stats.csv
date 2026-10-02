@@ -1,0 +1,45 @@
+model,stat,bin,count,share,q
+native,first_departure_s,"(0,0.5]",165,0.13033175355450238,
+native,first_departure_s,"(0.5,1]",245,0.19352290679304898,
+native,first_departure_s,"(1,1.5]",227,0.179304897314376,
+native,first_departure_s,"(1.5,2]",167,0.13191153238546605,
+native,first_departure_s,"(2,3]",251,0.19826224328593997,
+native,first_departure_s,"(3,4]",211,0.16666666666666666,
+native,outside_cm_first,q25/50/75/90,1266,,"[1.8, 4.7, 9.9, 17.5]"
+native,outside_cm_worst,q25/50/75/90,1266,,"[26.6, 71.0, 157.9, 273.9]"
+native,lat_vs_pdm_ref_0s_fail,"median [q25,q75] m",1266,,"0.19 [-0.52,0.95]"
+native,lat_vs_pdm_ref_0s_pass,"median [q25,q75] m",4196,,"0.14 [-0.44,0.81]"
+native,lat_vs_pdm_ref_0.5s_fail,"median [q25,q75] m",1266,,"0.20 [-0.74,1.14]"
+native,lat_vs_pdm_ref_0.5s_pass,"median [q25,q75] m",4196,,"0.15 [-0.45,0.87]"
+native,lat_vs_pdm_ref_1s_fail,"median [q25,q75] m",1266,,"0.19 [-0.95,1.42]"
+native,lat_vs_pdm_ref_1s_pass,"median [q25,q75] m",4196,,"0.18 [-0.49,0.96]"
+native,lat_vs_pdm_ref_2s_fail,"median [q25,q75] m",1266,,"0.22 [-1.33,2.06]"
+native,lat_vs_pdm_ref_2s_pass,"median [q25,q75] m",4196,,"0.21 [-0.55,1.07]"
+native,lat_vs_pdm_ref_4s_fail,"median [q25,q75] m",1266,,"0.16 [-1.92,2.78]"
+native,lat_vs_pdm_ref_4s_pass,"median [q25,q75] m",4196,,"0.25 [-0.74,1.32]"
+native,start_offset_fail,"|off| m, |head err| rad (median)",1266,,0.68 / 0.139
+native,start_offset_ge0.5m_or_0.1rad_fail,share,1266,0.825434439178515,
+native,start_offset_pass,"|off| m, |head err| rad (median)",4196,,0.67 / 0.088
+native,start_offset_ge0.5m_or_0.1rad_pass,share,4196,0.7533365109628217,
+n4,first_departure_s,"(0,0.5]",168,0.12844036697247707,
+n4,first_departure_s,"(0.5,1]",245,0.18730886850152906,
+n4,first_departure_s,"(1,1.5]",206,0.15749235474006115,
+n4,first_departure_s,"(1.5,2]",160,0.12232415902140673,
+n4,first_departure_s,"(2,3]",279,0.21330275229357798,
+n4,first_departure_s,"(3,4]",250,0.191131498470948,
+n4,outside_cm_first,q25/50/75/90,1308,,"[1.9, 4.9, 10.9, 18.3]"
+n4,outside_cm_worst,q25/50/75/90,1308,,"[22.8, 61.1, 129.6, 228.7]"
+n4,lat_vs_pdm_ref_0s_fail,"median [q25,q75] m",1308,,"0.13 [-0.58,0.95]"
+n4,lat_vs_pdm_ref_0s_pass,"median [q25,q75] m",4154,,"0.16 [-0.42,0.82]"
+n4,lat_vs_pdm_ref_0.5s_fail,"median [q25,q75] m",1308,,"0.12 [-0.71,1.13]"
+n4,lat_vs_pdm_ref_0.5s_pass,"median [q25,q75] m",4154,,"0.17 [-0.44,0.87]"
+n4,lat_vs_pdm_ref_1s_fail,"median [q25,q75] m",1308,,"0.09 [-0.89,1.37]"
+n4,lat_vs_pdm_ref_1s_pass,"median [q25,q75] m",4154,,"0.20 [-0.48,0.95]"
+n4,lat_vs_pdm_ref_2s_fail,"median [q25,q75] m",1308,,"0.17 [-1.19,1.87]"
+n4,lat_vs_pdm_ref_2s_pass,"median [q25,q75] m",4154,,"0.27 [-0.51,1.14]"
+n4,lat_vs_pdm_ref_4s_fail,"median [q25,q75] m",1308,,"0.29 [-1.63,2.54]"
+n4,lat_vs_pdm_ref_4s_pass,"median [q25,q75] m",4154,,"0.36 [-0.60,1.50]"
+n4,start_offset_fail,"|off| m, |head err| rad (median)",1308,,0.66 / 0.137
+n4,start_offset_ge0.5m_or_0.1rad_fail,share,1308,0.8226299694189603,
+n4,start_offset_pass,"|off| m, |head err| rad (median)",4154,,0.68 / 0.088
+n4,start_offset_ge0.5m_or_0.1rad_pass,share,4154,0.7534906114588349,

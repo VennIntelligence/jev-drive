@@ -1,0 +1,3 @@
+stage,n,n_turning_ref,n_hist_turning,hist_yaw_sign_equals_ref_turn,corr_plan_end_y_vs_hist_yawrate_native,corr_ref_end_y_vs_hist_yawrate,corr_plan_end_y_vs_ref_end_y_native,corr_plan_end_y_vs_ref_end_y_n4
+one,450,190,108,0.8796296296296297,0.8296088335392305,0.5610904607868902,0.7680045092068895,0.7303359221359031
+two,5462,1295,912,0.7960526315789473,0.6952028842348303,0.25214716943200655,0.5681008362091313,0.6026638185872363

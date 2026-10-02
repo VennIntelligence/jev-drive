@@ -1,0 +1,39 @@
+{
+ "image_sizes_sample150": {
+  "one": {
+   "(1920, 1080)": 150
+  },
+  "two": {
+   "(1920, 1080)": 150
+  }
+ },
+ "coverage_by_stage": {
+  "cov_road_mean": {
+   "one": 1.0,
+   "two": 1.0
+  },
+  "cov_road_min": {
+   "one": 1.0,
+   "two": 1.0
+  },
+  "cov_wide_mean": {
+   "one": 0.9999,
+   "two": 0.9999
+  },
+  "cov_wide_min": {
+   "one": 0.9994,
+   "two": 0.9994
+  }
+ },
+ "fov_deg": {
+  "cam_f0_horizontal": 63.71026476489851,
+  "road_input": 31.424568908977996,
+  "wide_input": 58.72746363385156,
+  "road_vertical": 16.013316535941545,
+  "wide_vertical": 31.424568908977996
+ },
+ "n_distinct_calibrations": {
+  "one": 13,
+  "two": 13
+ }
+}

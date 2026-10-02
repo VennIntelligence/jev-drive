@@ -1,0 +1,13 @@
+model,cls,n,share
+native,start_outside,0,0.0
+native,wrong_direction,166,0.13112164296998421
+native,early_clip,480,0.3791469194312796
+native,junction,276,0.21800947867298578
+native,late_undershoot,66,0.052132701421800945
+native,other,278,0.21958925750394945
+n4,start_outside,0,0.0
+n4,wrong_direction,178,0.13608562691131498
+n4,early_clip,481,0.367737003058104
+n4,junction,373,0.2851681957186544
+n4,late_undershoot,57,0.04357798165137615
+n4,other,219,0.16743119266055045

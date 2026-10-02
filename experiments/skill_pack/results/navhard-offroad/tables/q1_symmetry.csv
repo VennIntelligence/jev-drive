@@ -1,0 +1,5 @@
+model,stage,n_opp,ref_left_plan_right,ref_right_plan_left,plan_follows_history_yaw,ref_follows_history_yaw
+native,one,6,5,1,0.6666666666666666,0.3333333333333333
+native,two,312,138,174,0.9615384615384616,0.038461538461538464
+n4,one,10,5,5,0.9,0.1
+n4,two,363,129,234,0.8705234159779615,0.12947658402203857

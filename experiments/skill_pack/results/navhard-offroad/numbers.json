@@ -1,0 +1,12 @@
+{
+ "native_stage2_dac_fail": 1266,
+ "native_stage2_n": 5462,
+ "n4_stage2_dac_fail": 1308,
+ "n4_stage2_n": 5462,
+ "both_fail": 968,
+ "native_only_fail": 298,
+ "n4_only_fail": 340,
+ "pdm_ref_dac_fail_stage2": 613,
+ "start_outside_stage2": 0,
+ "conversion_max_lateral_gap_8pose_vs_33knot_m_first500": 0.10410583322698486
+}

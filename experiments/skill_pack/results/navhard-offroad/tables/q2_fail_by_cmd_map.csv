@@ -1,0 +1,17 @@
+model,by,group,n,dac_fail_rate,start_outside_rate
+native,cmd,left,935,0.25668449197860965,0.0
+native,cmd,right,1155,0.32727272727272727,0.0
+native,cmd,straight,3358,0.1923764145324598,0.0
+native,cmd,unknown,14,0.14285714285714285,0.0
+native,map,sg-one-north,1226,0.266721044045677,0.0
+native,map,us-ma-boston,1332,0.21096096096096095,0.0
+native,map,us-nv-las-vegas-strip,720,0.1361111111111111,0.0
+native,map,us-pa-pittsburgh-hazelwood,2184,0.2564102564102564,0.0
+n4,cmd,left,935,0.29518716577540105,0.0
+n4,cmd,right,1155,0.3619047619047619,0.0
+n4,cmd,straight,3358,0.18225134008338298,0.0
+n4,cmd,unknown,14,0.14285714285714285,0.0
+n4,map,sg-one-north,1226,0.30424143556280586,0.0
+n4,map,us-ma-boston,1332,0.21246246246246248,0.0
+n4,map,us-nv-las-vegas-strip,720,0.14583333333333334,0.0
+n4,map,us-pa-pittsburgh-hazelwood,2184,0.25045787545787546,0.0

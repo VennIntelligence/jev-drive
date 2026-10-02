@@ -1,0 +1,19 @@
+model,term,kind,s1,s2,gain_all,gain_stage1,gain_stage2
+n4,NC,multiplicative,97.778,88.894,3.543,0.564,2.777
+n4,DAC,multiplicative,94.222,77.234,12.537,2.233,9.676
+n4,DDC,multiplicative,98.222,87.851,4.646,0.616,3.799
+n4,TLC,multiplicative,99.778,98.728,0.685,0.14,0.545
+n4,EP,weighted x5/16,80.794,81.748,5.926,2.482,3.151
+n4,TTC,weighted x5/16,97.111,85.979,0.688,0.084,0.602
+n4,LK,weighted x2/16,94.667,47.44,2.892,0.16,2.715
+n4,HC,weighted x2/16,96.222,94.056,0.438,0.191,0.246
+n4,EC,weighted x2/16,36.889,32.213,7.612,3.392,3.853
+native,NC,multiplicative,98.0,90.863,2.517,0.542,1.907
+native,DAC,multiplicative,89.333,73.613,15.882,4.633,9.874
+native,DDC,multiplicative,98.333,90.22,2.669,0.289,2.214
+native,TLC,multiplicative,100.0,99.181,0.07,0.0,0.07
+native,EP,weighted x5/16,74.984,66.058,10.085,3.369,5.929
+native,TTC,weighted x5/16,98.222,86.984,0.57,0.012,0.558
+native,LK,weighted x2/16,94.667,48.114,2.525,0.175,2.344
+native,HC,weighted x2/16,97.778,97.429,0.107,0.034,0.073
+native,EC,weighted x2/16,37.778,45.683,5.698,3.077,2.38

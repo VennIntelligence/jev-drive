@@ -84,3 +84,21 @@ if that term is set to its best value, 1 for multiplicative, 1 for weighted, sam
 analysis, uniform stage-2 weighting and the official combined), with traffic-light compliance and the progress loss at
 slow / not-started tokens (v0 < 1 m/s, EP shortfall) split out; existing numbers quoted from the deficit note where they exist and
 marked "recomputed" otherwise.
+
+## Addendum (written after the full-set stage-2 numbers, before the gain was scored)
+
+Added on request, definitions fixed before the corresponding scores were read:
+
+- Q3 refinement: the edge error is measured at the departing corner (signed model edge minus the corner's lateral position on the departure side;
+  right = within 1 m), because the first design (5 m cross-sections, `q3_edge_error_grid.csv`) did not separate failures from passes.
+- Camera audit: calibration (yaw / pitch / roll, intrinsics, distortion, image size, coverage) of CAM_F0 for stage 1 vs stage 2; model inputs
+  shown next to the raw frame; case-01 input variants (wide blanked, road blanked, wide copied from road, road copied from wide, both inputs cropped
+  to the central 50 % / 25 % columns, virtual-camera yaw -2 ... +2 deg and pitch +-1 deg with the warp history); branch context flags (an INTERSECTION
+  polygon in the forward fan x in [3, 40] m, +-35 deg; drivable width at x = 20 m) vs the opposite-side rate.
+- Amplitude: on navtrain (3 000-token subset with plans) and navtest (12 146) against the human future, per horizon 1-4 s, signed ratio plan / human
+  (|y_h| > 0.5 m or |heading_h| > 0.05 rad) and slope through the origin, by human curvature bin (|heading change at 4 s| < 0.1 / 0.1-0.4 / > 0.4 rad),
+  speed and command, and the near-term arc extrapolation (curvature = heading at 1 s over arc length, circular arc over the plan's own arc length).
+- Gain: lateral gain g fitted on navtrain only (least squares of human y on plan y through the origin; `gain_single` one value over 1-4 s, `gain_horizon`
+  one value per horizon 1 / 2 / 3 / 4 s, linear in between), applied to every token (no reference or label), heading corrected by the change of the path
+  tangent; scored with the official v1 scorer on navtest (paired token bootstrap) and the devkit two-stage scorer on navhard (group bootstrap over the
+  225 mapping groups). Not a privileged counterfactual.
