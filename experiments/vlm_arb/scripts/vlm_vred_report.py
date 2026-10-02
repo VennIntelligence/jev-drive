@@ -265,10 +265,10 @@ def report(_):
          "same base configuration (decision-82 resume setting, deviation D5), rows R2 + R5, light question answered by zero-shot Qwen3-VL-4B "
          "(one forward pass, option scoring, both cameras, 1153 visual tokens); R3 off (deviation D18).", ""]
     g = df.groupby("arm")
-    T = g.agg(runs=("route", "count"), crashes=("crash", "sum"), DS=("DS", "mean"), RC=("RC", "mean"), red_light=("red_light", "sum"),
+    ARMT = g.agg(runs=("route", "count"), crashes=("crash", "sum"), DS=("DS", "mean"), RC=("RC", "mean"), red_light=("red_light", "sum"),
               stop_sign=("stop_infraction", "sum"), collisions=("collisions", "sum"), blocked=("vehicle_blocked", "sum"),
               timeouts=("route_timeout", "sum"), v_mean=("v_mean", "mean")).reindex(["drive", "pred", "vred"]).round(2)
-    D += ["## Arms", "", T.to_markdown(), "", "Official infraction counts summed over the runs; DS, RC, mean speed averaged over runs; expected runs per arm: %d. "
+    D += ["## Arms", "", ARMT.to_markdown(), "", "Official infraction counts summed over the runs; DS, RC, mean speed averaged over runs; expected runs per arm: %d. "
           "`crashes` are program crashes (excluded from the paired reads)." % (len(ROUTES) * len(SEEDS)), ""]
     ans = pd.concat([answers("vred", 0), answers("vred", 1)], ignore_index=True)
     ans.to_csv(OUT / "answers.csv", index=False)
@@ -405,7 +405,7 @@ def report(_):
           "![in-batch latency](vred_latency.png)", "", "Figure: cumulative distribution of the in-batch answer latency, with L and the TTL. Look at how far the curve stays left of L "
           "and the size of the tail beyond it."]
     (OUT / "vred.md").write_text("\n".join(D) + "\n")
-    write_json(OUT / "summary.json", dict(arms=T.reset_index().to_dict("records"), L=L))
+    write_json(OUT / "summary.json", dict(arms=ARMT.reset_index().to_dict("records"), L=L))
     print("\n".join(D))
 
 
