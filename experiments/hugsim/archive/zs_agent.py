@@ -25,7 +25,9 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      25: Cinque's 24-step feature buffer + now) are replayed, each frame re-projected rotation-only to
                      the current heading (ego odometry only; position kept, yaw removed), first frame warmed up as at
                      step 0, skipped when the history holds < 0.05 deg of yaw; derot_rotate false replays the same
-                     frames unrotated (control)
+                     frames unrotated (control); derot_sel r (> 0): selector (skill_pack sel-rot0-r0.6) - the main
+                     session steps normally every step and the replay runs on a second session; the replayed plan is
+                     used only if its summed 0-4 s lateral plan std < r x the normal plan's (server reply lat_std4)
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
@@ -91,10 +93,11 @@ class Agent:
         self.log.write(json.dumps({"setup": True, "model": self.model, "server": self.server, "opts": self.opts,
                                    "rear_offset": self.d, "coverage": cov}) + "\n")
 
-    def call(self, meta, arrays):
+    def call(self, meta, arrays, sock=None):
+        sock = sock or self.sock
         t = time.perf_counter()
-        wire.send(self.sock, dict(meta, cmd="plan"), arrays)
-        info, out = wire.recv(self.sock)
+        wire.send(sock, dict(meta, cmd="plan"), arrays)
+        info, out = wire.recv(sock)
         info["rtt_ms"] = 1e3 * (time.perf_counter() - t)
         return info, out
 
@@ -139,9 +142,16 @@ class Agent:
         hist_yaw = max(abs(np.degrees(self.hist.th[j] - self.hist.th[-1])) for j, *_ in self.buf) if self.buf else 0.0
         # no rotation in the history (< 0.05 deg, rounds to the unrotated frames): the replay would feed the same frames,
         # so step normally (replay vs normal stepping agree to the digit on 5 / 7 spin scenarios, replay3 control)
+        sel = float(self.opts.get("derot_sel", 0))
+        if sel > 0:                                    # selector: the normal rollout always advances on the main session
+            r0, out0 = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2})
+            if not hasattr(self, "sock2"):
+                self.sock2 = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self.sock2.connect(os.environ["HUGSIM_ZS_SOCKET"])
         if below > 0 and self.step and float(info["ego_velo"]) < below and hist_yaw >= 0.05:
-            wire.send(self.sock, {"cmd": "reset"}, {})
-            wire.recv(self.sock)
+            sk = self.sock2 if sel > 0 else self.sock
+            wire.send(sk, {"cmd": "reset"}, {})
+            wire.recv(sk)
             th_now, rot = self.hist.th[-1], self.opts.get("derot_rotate", True)
             warm = per_ctx * int(round(self.opts.get("warmup_s", 5.0) / OP_CTX_S))
             yaws, ms = [], 0.0
@@ -150,10 +160,17 @@ class Agent:
                 yaws.append(yaw)
                 if rot and round(yaw, 1) != 0.0:
                     im = self.op.pack(rgb, self.op.rot_index(yaw))
-                r, out = self.call(dict(meta, desire=des, reps=warm if i == 0 else per_ctx), {"img2": im})
+                r, out = self.call(dict(meta, desire=des, reps=warm if i == 0 else per_ctx), {"img2": im}, sk)
                 ms += r.get("infer_ms") or 0.0
             r["infer_ms"] = ms
             rec["derot"] = {"n": len(self.buf), "rotate": bool(rot), "max_abs_yaw": round(float(np.max(np.abs(yaws))), 2)}
+            if sel > 0:
+                use = r["lat_std4"] < sel * r0["lat_std4"]
+                rec["derot"].update(std_rule=round(r["lat_std4"], 3), std_base=round(r0["lat_std4"], 3), used=bool(use))
+                if not use:
+                    r, out = r0, out0
+        elif sel > 0:
+            r, out = r0, out0
         else:
             r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2})
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)

@@ -111,7 +111,10 @@ class Openpilot(S.OpenpilotModel):
             for k in self.STATE:
                 state[k] = getattr(m, k)
         d = self.decode(raw, m.slices, float(meta.get("speed", 0.0)))
+        pl = raw[m.slices["plan"]]                         # MDN mu | log-std, (33, 15) each; column 1 = lateral position
+        lat_std = np.exp(np.minimum(pl[pl.size // 2:], 11)).reshape(33, 15)[:, 1]
         info = {"infer_ms": 1e3 * (time.perf_counter() - t1), "curvature": d["curvature"], "accel": d["accel"],
+                "lat_std4": float(lat_std[self.t_idxs <= 4.0 + 1e-6].sum()),
                 "engaged": d["engaged"], "lead_prob": float(np.ravel(d["lead_prob"])[0])}
         return info, {"pos": d["plan_pos"].astype(np.float32), "vel": d["plan_vel"][:, 0].astype(np.float32),
                       "yaw": d["plan_yaw"].astype(np.float32), "t": self.t_idxs}
