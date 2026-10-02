@@ -1,0 +1,76 @@
+{
+ "base": {
+  "pdms": 84.1803742291001,
+  "n": 12146
+ },
+ "rot0": {
+  "pdms": 76.14180900570663,
+  "n": 12146,
+  "pdms_delta": -8.03856522339346,
+  "pdms_delta_ci95": [
+   -8.587268401189183,
+   -7.484321209240206
+  ],
+  "no_at_fault_collisions_delta": -0.9920961633459575,
+  "drivable_area_compliance_delta": -5.713815247818212,
+  "ego_progress_delta": -8.827541361574308,
+  "time_to_collision_within_bound_delta": -2.7169438498271035,
+  "comfort_delta": -0.024699489543882756
+ },
+ "straight": {
+  "pdms": 74.09820091374473,
+  "n": 12146,
+  "pdms_delta": -10.082173315355375,
+  "pdms_delta_ci95": [
+   -10.708297886753453,
+   -9.454659446021195
+  ],
+  "no_at_fault_collisions_delta": -1.889510950107031,
+  "drivable_area_compliance_delta": -6.281903507327516,
+  "ego_progress_delta": -10.674142432835069,
+  "time_to_collision_within_bound_delta": -3.4908611888687635,
+  "comfort_delta": 0.04116581590647127
+ },
+ "sel-rot0": {
+  "pdms": 83.52827396686301,
+  "n": 12146,
+  "pdms_delta": -0.6521002622370929,
+  "pdms_delta_ci95": [
+   -0.8485676728202952,
+   -0.46073849053271704
+  ],
+  "no_at_fault_collisions_delta": -0.05763214226905978,
+  "drivable_area_compliance_delta": -0.3622591799769471,
+  "ego_progress_delta": -0.9263724898240929,
+  "time_to_collision_within_bound_delta": -0.1070311213568253,
+  "comfort_delta": -0.008233163181294254
+ },
+ "sel-straight": {
+  "pdms": 80.79998607600155,
+  "n": 12146,
+  "pdms_delta": -3.3803881530985445,
+  "pdms_delta_ci95": [
+   -3.7096089569170245,
+   -3.0465207586566216
+  ],
+  "no_at_fault_collisions_delta": -1.3378890169603161,
+  "drivable_area_compliance_delta": -0.8727152972171909,
+  "ego_progress_delta": -4.811284478576008,
+  "time_to_collision_within_bound_delta": -0.617487238597069,
+  "comfort_delta": 0.032932652725177015
+ },
+ "sel-rot0-r0.6": {
+  "pdms": 84.08591084011442,
+  "n": 12146,
+  "pdms_delta": -0.09446338898567964,
+  "pdms_delta_ci95": [
+   -0.18003717985036763,
+   -0.010520443440533161
+  ],
+  "no_at_fault_collisions_delta": 0.008233163181294254,
+  "drivable_area_compliance_delta": -0.05763214226905978,
+  "ego_progress_delta": -0.1707106013639267,
+  "time_to_collision_within_bound_delta": 0.032932652725177015,
+  "comfort_delta": 0.0
+ }
+}

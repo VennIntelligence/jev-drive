@@ -1,0 +1,8 @@
+arm,provenance,navhard_combined,navhard_stage1,navhard_stage2,navhard_delta,navhard_ci_lo,navhard_ci_hi,navtest_pdms,navtest_delta,navtest_ci_lo,navtest_ci_hi,stage2_opposite_rate,base312_still_opposite,base312_dac_pass,stage2_dac_uniform
+base,shipped native arm,33.33,71.7,46.9,,,,84.18,,,,0.0571,1.0,0.468,0.768
+rot0,pre-registered,32.67,61.69,52.69,-0.66,-3.8,2.37,76.14,-8.04,-8.59,-7.48,0.0613,0.228,0.76,0.789
+straight,pre-registered,31.99,61.7,50.75,-1.34,-5.22,2.4,74.1,-10.08,-10.71,-9.45,0.0275,0.154,0.705,0.774
+straight_keys,addendum 1,33.0,63.34,51.9,-0.33,-3.27,2.53,,,,,0.0643,0.196,0.728,0.792
+sel-rot0,addendum 2 (post hoc),35.59,71.59,50.08,2.26,0.33,4.13,83.53,-0.65,-0.85,-0.46,0.0309,0.462,0.686,0.805
+sel-straight,addendum 2 (post hoc),37.08,71.13,52.37,3.75,1.48,6.02,80.8,-3.38,-3.71,-3.05,0.0265,0.356,0.721,0.81
+sel-rot0-r0.6,"addendum 3 (post hoc, ratio set on navtrain)",34.31,71.76,48.24,0.98,0.03,1.97,84.09,-0.09,-0.18,-0.01,0.0419,0.715,0.596,0.791

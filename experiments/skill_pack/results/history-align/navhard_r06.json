@@ -1,0 +1,82 @@
+{
+ "arms": {
+  "base": {
+   "combined": 33.33074231183845,
+   "stage1": 71.70437136063055,
+   "stage2": 46.89721982971663,
+   "official_combined": 33.33074231183845,
+   "no_at_fault_collisions_s1": 98.0,
+   "drivable_area_compliance_s1": 89.33333333333333,
+   "driving_direction_compliance_s1": 98.33333333333333,
+   "traffic_light_compliance_s1": 100.0,
+   "ego_progress_s1": 74.9842616028545,
+   "time_to_collision_within_bound_s1": 98.22222222222223,
+   "lane_keeping_s1": 94.66666666666667,
+   "history_comfort_s1": 97.77777777777777,
+   "two_frame_extended_comfort_s1": 37.77777777777778,
+   "no_at_fault_collisions_s2": 90.86330278881375,
+   "drivable_area_compliance_s2": 73.61281290141882,
+   "driving_direction_compliance_s2": 90.22021462443345,
+   "traffic_light_compliance_s2": 99.18122813255515,
+   "ego_progress_s2": 66.05758535219655,
+   "time_to_collision_within_bound_s2": 86.98373639699632,
+   "lane_keeping_s2": 48.11437757915651,
+   "history_comfort_s2": 97.42926965751883,
+   "two_frame_extended_comfort_s2": 45.68307326995459
+  },
+  "sel-rot0-r0.6": {
+   "combined": 34.31331227274191,
+   "stage1": 71.76195839230849,
+   "stage2": 48.244694248682116,
+   "official_combined": 34.31331227274191,
+   "no_at_fault_collisions_s1": 97.77777777777777,
+   "drivable_area_compliance_s1": 90.0,
+   "driving_direction_compliance_s1": 98.33333333333333,
+   "traffic_light_compliance_s1": 100.0,
+   "ego_progress_s1": 74.5372790893171,
+   "time_to_collision_within_bound_s1": 98.22222222222223,
+   "lane_keeping_s1": 95.11111111111111,
+   "history_comfort_s1": 97.77777777777777,
+   "two_frame_extended_comfort_s1": 36.44444444444444,
+   "no_at_fault_collisions_s2": 91.8596838189397,
+   "drivable_area_compliance_s2": 74.259746353955,
+   "driving_direction_compliance_s2": 90.70661105060135,
+   "traffic_light_compliance_s2": 98.9656003507604,
+   "ego_progress_s2": 66.36335740408855,
+   "time_to_collision_within_bound_s2": 88.46724130635906,
+   "lane_keeping_s2": 49.78032752800981,
+   "history_comfort_s2": 97.34038065023584,
+   "two_frame_extended_comfort_s2": 46.89490304578051,
+   "combined_delta": 0.9825699609034557,
+   "combined_delta_ci95": [
+    0.028125789587365883,
+    1.9728127214554734
+   ],
+   "n_groups": 225
+  }
+ },
+ "wrong_direction": {
+  "n_stage2": 5462,
+  "n_base_opposite": 312,
+  "base": {
+   "opposite_rate_stage2": 0.05712193335774442,
+   "opposite_n": 312,
+   "still_opposite_on_base_set": 1.0,
+   "dac_on_base_set": 0.46794871794871795,
+   "score_on_base_set": 0.25684012813946866,
+   "dac_stage2": 0.7682167704137679,
+   "dac_off_base_set": 0.7864077669902912,
+   "score_off_base_set": 0.47738487100661675
+  },
+  "sel-rot0-r0.6": {
+   "opposite_rate_stage2": 0.04192603441962651,
+   "opposite_n": 229,
+   "still_opposite_on_base_set": 0.7147435897435898,
+   "dac_on_base_set": 0.5961538461538461,
+   "score_on_base_set": 0.3345060981035694,
+   "dac_stage2": 0.7912852435005493,
+   "dac_off_base_set": 0.8031067961165048,
+   "score_off_base_set": 0.49074697776388243
+  }
+ }
+}

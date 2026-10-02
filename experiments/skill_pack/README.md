@@ -10,6 +10,8 @@ index: Navtest PDMS 84.2 to 91.59 (N3), flat at N4
 
 **navhard off-road diagnosis (2026-10-03).** [results/navhard-offroad/report.md](results/navhard-offroad/report.md), decision 88.
 
+**History alignment as an input rule (2026-10-03 night).** Removing the history rotation everywhere is rejected (navhard 32.67 / 31.99 vs 33.33, navtest -8 / -10 PDMS: stage 2 up, real scenes down); a navtrain-calibrated confidence selector between the shipped and the aligned rollout (post hoc) gives navhard 34.31 (+0.98 [+0.03, +1.97]) at navtest -0.09 [-0.18, -0.01]. [results/history-align/summary.csv](results/history-align/summary.csv), plan [plans/2026-10-04-history-align-plan.md](plans/2026-10-04-history-align-plan.md).
+
 **Read more.** research/leaderboard-skill-pack.md, research/navhard-deficit-breakdown.md
 
 <!-- files:begin -->
@@ -26,5 +28,5 @@ index: Navtest PDMS 84.2 to 91.59 (N3), flat at N4
 - `navsim_raise_n4.sh` (archive): N3's configuration on every navtrain row
 - `skill_pack_nav_decomp.py` (archive): NAVSIM navtest per-token PDMS loss …
 
-[archive/](archive/) 19 one-off code · [results/](results/) 27 result files
+[archive/](archive/) 19 one-off code · [results/](results/) 69 result files · [plans/](plans/) 2 live plans · [scripts/](scripts/) 22 entry points
 <!-- files:end -->
