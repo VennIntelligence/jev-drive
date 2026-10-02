@@ -81,7 +81,8 @@ def report(_):
          "Plan: [../plans/2026-10-03-vmerge.md](../plans/2026-10-03-vmerge.md), section vmerge2. `drive`, `vred`, `vmerge` seeds 0, 1 are the logged runs "
          "of the earlier batches; `drive` seeds 2, 3 are reruns of the unchanged drive arm.", "",
          "## Missing runs", "", ("\n".join("- " + m for m in missing) if missing else "none: every registered run finished"), "",
-         "## Arms (all finished runs)", "", v2.arm_table(df, arms).to_markdown(), "",
+         "## Arms, seeds 0 and 1 (the registered primary set)", "", v2.arm_table(d01, arms).to_markdown(), "",
+         "## Arms, all finished runs (seeds 2, 3 only for vmerge2 and drive)", "", v2.arm_table(df, arms).to_markdown(), "",
          "## Infractions by type (official, summed over runs)", "", inf.to_markdown(), "",
          "## Paired differences, seeds 0 and 1 (registered primary; mean over routes [95% route-cluster CI])", ""]
     D += v2.pair_md(P1, cols, cols)
