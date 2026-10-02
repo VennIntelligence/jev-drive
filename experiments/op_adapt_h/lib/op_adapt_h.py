@@ -148,6 +148,87 @@ def fut_yaw_deg(fut20: np.ndarray) -> float:
     return 0.0 if np.linalg.norm(d) < 0.3 else float(np.degrees(np.arctan2(d[1], d[0])))
 
 
+# ---------------------------------------------------------------- trunk bank
+# Stage 1-3 is frozen, so every (sample, perturbation) pair has fixed stage-3 outputs. The bank holds them once per domain:
+# per sample the normal input, K fake-yaw histories, the repeated and the dropped history and K offsets, each as the 9 context
+# trunks (zeros on invalid slots), with strengths drawn over a wide range; an arm picks its strength window from the table.
+BANK_K = 2
+BANK_ROT_DPS = (3.0, 20.0)
+BANK_OFF_PSI = (1.0, 10.0)
+BANK_OFF_Y = (0.0, 1.2)
+KINDS = ("normal", "rot", "repeat", "single", "offset")
+
+
+def bank_plan(S: Samples, seed=0) -> dict:
+    """Variant table of a domain: sample, kind, fake yaw rate (deg/s, signed), offset dy (m), dpsi (deg). The fake-yaw sign is
+    set against the logged heading at 3 s when that exceeds 3 deg (the future does not follow), else random."""
+    rng = np.random.default_rng([seed, DOMS.index(S.dom)])
+    rows = []
+    for i in range(S.n):
+        fy = fut_yaw_deg(S.t["fut20"][i])
+        rows.append((i, "normal", 0.0, 0.0, 0.0))
+        for _ in range(BANK_K):
+            sg = -np.sign(fy) if abs(fy) > 3.0 else rng.choice([-1.0, 1.0])
+            rows.append((i, "rot", float(sg * rng.uniform(*BANK_ROT_DPS)), 0.0, 0.0))
+        rows += [(i, "repeat", 0.0, 0.0, 0.0), (i, "single", 0.0, 0.0, 0.0)]
+        for _ in range(BANK_K):
+            rows.append((i, "offset", 0.0, float(rng.uniform(*BANK_OFF_Y) * rng.choice([-1, 1])),
+                         float(rng.uniform(*BANK_OFF_PSI) * rng.choice([-1, 1]))))
+    c = list(zip(*rows))
+    return {"sample": np.array(c[0]), "kind": np.array(c[1]), "rate": np.array(c[2]), "dy": np.array(c[3]), "dpsi": np.array(c[4])}
+
+
+def variant_imgs(S: Samples, i: int, kind: str, rate=0.0, dy=0.0, dpsi_deg=0.0):
+    """(imgs (10, ...), slot_valid (9,)) of one variant."""
+    t = S.t
+    imgs, sv = np.asarray(S.imgs[i]), t["slot_valid"][i].copy()
+    if kind == "normal":
+        return imgs, sv
+    if kind == "rot":
+        return hist_rot(imgs, t["img_t"][i], t["img_valid"][i], t["cam"][i], np.radians(rate)), sv
+    if kind == "repeat":
+        return hist_repeat(imgs, t["img_valid"][i]), sv
+    if kind == "single":
+        return hist_single(imgs, sv)
+    if kind == "offset":
+        return offset_imgs(imgs, t["img_t"][i], t["img_valid"][i], t["cam"][i], dy, np.radians(dpsi_deg), float(t["v0"][i])), sv
+    raise KeyError(kind)
+
+
+class Bank:
+    def __init__(self, dom: str):
+        d = hroot("bank", dom)
+        self.T = np.load(d / "trunk.npy", mmap_mode="r")
+        with np.load(d / "var.npz", allow_pickle=True) as z:
+            self.v = {k: z[k] for k in z.files}
+
+
+def pick_variant(B: Bank, S: Samples, i: int, role: str, rng, cfg: "HCfg"):
+    """Variant index for one row of sample i (None when the sample has no admissible variant for the role)."""
+    v = B.v
+    lo, hi = B.first[i], B.first[i + 1]
+    kinds = v["kind"][lo:hi]
+    if role in ("U", "D"):
+        return lo + int(np.flatnonzero(kinds == "normal")[0])
+    if role == "H":
+        opts, w = [], []
+        r = np.abs(v["rate"][lo:hi])
+        rot = np.flatnonzero((kinds == "rot") & (r >= cfg.rot_dps[0]) & (r <= cfg.rot_dps[1]))
+        if len(rot):
+            opts.append(rot), w.append(cfg.hist_p.get("rot", 0))
+        if S.t["v0"][i] >= cfg.repeat_vmin:
+            opts.append(np.flatnonzero(kinds == "repeat")), w.append(cfg.hist_p.get("repeat", 0))
+        opts.append(np.flatnonzero(kinds == "single")), w.append(cfg.hist_p.get("single", 0))
+        w = np.array(w, float)
+        if w.sum() <= 0:
+            return None
+        o = opts[rng.choice(len(opts), p=w / w.sum())]
+        return lo + int(o[rng.integers(len(o))])
+    ap, ay = np.abs(v["dpsi"][lo:hi]), np.abs(v["dy"][lo:hi])
+    off = np.flatnonzero((kinds == "offset") & (ap >= cfg.off_psi_deg[0]) & (ap <= cfg.off_psi_deg[1]) & (ay >= cfg.off_y[0]) & (ay <= cfg.off_y[1]))
+    return lo + int(off[rng.integers(len(off))]) if len(off) else None
+
+
 # ---------------------------------------------------------------- batches
 @dataclass
 class HCfg:
@@ -158,10 +239,9 @@ class HCfg:
     roles: dict = field(default_factory=lambda: {"U": 12, "D": 8, "H": 16, "O": 12})
     dom_w: dict = field(default_factory=lambda: {"nav": 0.4, "wod": 0.3, "carla": 0.3})
     hist_p: dict = field(default_factory=lambda: {"rot": 0.6, "repeat": 0.2, "single": 0.2})
-    rot_dps: tuple = (5.0, 15.0)          # fake yaw rate range (deg/s), random sign subject to the no-follow rule
-    follow_deg: float = 3.0               # |logged heading at 3 s| above this fixes the fake yaw's sign against it
-    off_psi_deg: tuple = (1.0, 8.0)
-    off_y: tuple = (0.0, 1.0)
+    rot_dps: tuple = (5.0, 15.0)          # admissible |fake yaw rate| (deg/s) of the bank's rot variants
+    off_psi_deg: tuple = (1.0, 8.0)       # admissible |heading offset|
+    off_y: tuple = (0.0, 1.0)             # admissible |lateral offset|
     off_vmin: float = 1.0
     repeat_vmin: float = 2.0
     s4: bool = True
@@ -174,9 +254,8 @@ class HCfg:
     lam_c: float = 1.0
     dw: float = 1.0
     w_role: dict = field(default_factory=lambda: {"U": 1.0, "H": 1.0, "O": 1.0})
-    eval_every: int = 1000
     ckpt_every: int = 500
-    workers: int = 24
+    workers: int = 10
 
     def dump(self):
         return asdict(self)
@@ -185,46 +264,9 @@ class HCfg:
         return L.LCfg(name=self.name, seed=self.seed, s4=self.s4, pol=self.pol, intent="none", steps=self.steps)
 
 
-def perturb_hist(S: Samples, i: int, rng, cfg: HCfg):
-    """(imgs, slot_valid, kind) of one H row."""
-    t = S.t
-    imgs, tt, iv, sv, cam, v0 = np.asarray(S.imgs[i]), t["img_t"][i], t["img_valid"][i], t["slot_valid"][i].copy(), t["cam"][i], t["v0"][i]
-    kinds = [k for k in cfg.hist_p if not (k == "repeat" and v0 < cfg.repeat_vmin)]
-    p = np.array([cfg.hist_p[k] for k in kinds])
-    k = kinds[rng.choice(len(kinds), p=p / p.sum())]
-    if k == "rot":
-        fy = fut_yaw_deg(t["fut20"][i])
-        sign = -np.sign(fy) if abs(fy) > cfg.follow_deg else rng.choice([-1.0, 1.0])
-        return hist_rot(imgs, tt, iv, cam, sign * np.radians(rng.uniform(*cfg.rot_dps))), sv, k
-    if k == "repeat":
-        return hist_repeat(imgs, iv), sv, k
-    im, sv = hist_single(imgs, sv)
-    return im, sv, k
-
-
-def row(S: Samples, i: int, role: str, rng, cfg: HCfg) -> dict:
-    t = S.t
-    sv = t["slot_valid"][i].copy()
-    tgt = L.human_targets(t["fut20"][i][None])[0]
-    kind = "none"
-    if role == "H":
-        imgs, sv, kind = perturb_hist(S, i, rng, cfg)
-    elif role == "O":
-        dpsi = np.radians(rng.uniform(*cfg.off_psi_deg)) * rng.choice([-1.0, 1.0])
-        dy = rng.uniform(*cfg.off_y) * rng.choice([-1.0, 1.0])
-        v0 = float(t["v0"][i])
-        imgs = offset_imgs(np.asarray(S.imgs[i]), t["img_t"][i], t["img_valid"][i], t["cam"][i], dy, dpsi, v0)
-        tgt = L.human_targets(recover_target(t["fut20"][i], dy, dpsi, v0)[None])[0]
-        kind = "offset"
-    else:
-        imgs = np.asarray(S.imgs[i])
-    tea = S.tea
-    return {"imgs": imgs, "valid": sv, "tc": t["tc"][i], "role": ROLES[role], "hum": tgt, "cam": np.float32(t["cam"][i][0]),
-            "tgt": tea["out"][i], "tmu": tea["mu"][i], "dom": DOMS.index(S.dom), "kind": kind}
-
-
 class Batcher(torch.utils.data.Dataset):
-    """Item k = one whole batch drawn with rng (seed, k): roles per HCfg, domain per dom_w, rows uniform within the train split."""
+    """Item k = one whole batch drawn with rng (seed, k): roles per HCfg, domain per dom_w, samples uniform within the train
+    split (O rows: v0 >= off_vmin), the variant per role from the bank."""
 
     def __init__(self, cfg: HCfg, split="train", n=10 ** 9):
         self.cfg, self.split, self.n = cfg, split, n
@@ -236,8 +278,11 @@ class Batcher(torch.utils.data.Dataset):
     def _open(self):
         c = self.cfg
         self.S = {d: Samples(d) for d in DOMS if c.dom_w.get(d, 0) > 0}
+        self.B = {d: Bank(d) for d in self.S}
         self.pool = {}
         for d, S in self.S.items():
+            B = self.B[d]
+            B.first = np.searchsorted(B.v["sample"], np.arange(S.n + 1))
             self.pool[(d, "U")] = self.pool[(d, "D")] = self.pool[(d, "H")] = S.rows(self.split)
             self.pool[(d, "O")] = S.rows(self.split, vmin=c.off_vmin)
 
@@ -252,9 +297,26 @@ class Batcher(torch.utils.data.Dataset):
         for role, cnt in c.roles.items():
             r = "U" if (c.control and role in ("H", "O")) else role
             for d in rng.choice(doms, cnt, p=w / w.sum()):
-                p = self.pool[(d, r)]
-                rows.append(row(self.S[d], int(p[rng.integers(len(p))]), r, rng, c))
+                S, B, p = self.S[d], self.B[d], self.pool[(d, r)]
+                for _ in range(20):
+                    i = int(p[rng.integers(len(p))])
+                    j = pick_variant(B, S, i, r, rng, c)
+                    if j is not None:
+                        break
+                rows.append(bank_row(S, B, i, j, r))
         return collate(rows)
+
+
+def bank_row(S: Samples, B: Bank, i: int, j: int, role: str) -> dict:
+    t, v = S.t, B.v
+    kind = str(v["kind"][j])
+    sv = v["slot_valid"][j]
+    if kind == "offset":
+        tgt = L.human_targets(recover_target(t["fut20"][i], float(v["dy"][j]), np.radians(float(v["dpsi"][j])), float(t["v0"][i]))[None])[0]
+    else:
+        tgt = L.human_targets(t["fut20"][i][None])[0]
+    return {"trunk": np.asarray(B.T[j]), "valid": sv, "tc": t["tc"][i], "role": ROLES[role], "hum": tgt,
+            "cam": np.float32(t["cam"][i][0]), "tgt": S.tea["out"][i], "tmu": S.tea["mu"][i], "dom": DOMS.index(S.dom), "kind": kind}
 
 
 def collate(rows: list[dict]) -> dict:

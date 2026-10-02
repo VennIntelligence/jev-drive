@@ -80,23 +80,63 @@ _S = {}
 
 
 def _variant(job):
-    """(dom, row, kind, args) -> (imgs, slot_valid) of one probe / dev variant."""
+    """(dom, row, kind, arg) -> (imgs, slot_valid) of one probe / dev variant (arg: yaw rate deg/s, or (dy, dpsi deg))."""
     dom, i, kind, arg = job
     S = _S.get(dom) or _S.setdefault(dom, H.Samples(dom))
-    t = S.t
-    imgs, sv = np.asarray(S.imgs[i]), t["slot_valid"][i].copy()
-    if kind == "normal":
-        return imgs, sv
     if kind == "rot":
-        return H.hist_rot(imgs, t["img_t"][i], t["img_valid"][i], t["cam"][i], np.radians(arg)), sv
-    if kind == "repeat":
-        return H.hist_repeat(imgs, t["img_valid"][i]), sv
-    if kind == "single":
-        return H.hist_single(imgs, sv)
+        return H.variant_imgs(S, i, kind, rate=arg)
     if kind == "offset":
-        dy, dpsi = arg
-        return H.offset_imgs(imgs, t["img_t"][i], t["img_valid"][i], t["cam"][i], dy, np.radians(dpsi), float(t["v0"][i])), sv
-    raise KeyError(kind)
+        return H.variant_imgs(S, i, kind, dy=arg[0], dpsi_deg=arg[1])
+    return H.variant_imgs(S, i, kind)
+
+
+def _bank_job(job):
+    dom, i, kind, rate, dy, dpsi = job
+    S = _S.get(dom) or _S.setdefault(dom, H.Samples(dom))
+    return H.variant_imgs(S, i, kind, rate, dy, dpsi)
+
+
+def cmd_bank(a):
+    """Stage-3 trunks of every bank variant (lib: bank_plan) -> $H/bank/<dom>/{trunk.npy, var.npz}; resumable per chunk."""
+    dev = torch.device("cuda")
+    net = L.load_model(None, dev).net
+    with ProcessPoolExecutor(a.workers) as ex:
+        for d in a.domains:
+            out = H.hroot("bank", d)
+            if (out / "var.npz").exists():
+                print(d, "bank exists")
+                continue
+            S = H.Samples(d)
+            v = H.bank_plan(S)
+            n = len(v["sample"])
+            tmp, prog = out / "trunk.tmp.npy", out / "progress.json"
+            T = np.lib.format.open_memmap(tmp, "r+" if tmp.exists() else "w+", np.float16, (n, 9, 1024, 8, 16))
+            start = json.loads(prog.read_text())["done"] if prog.exists() and tmp.exists() else 0
+            sv_all = np.zeros((n, 9), bool)
+            jobs = [(d, int(v["sample"][j]), str(v["kind"][j]), float(v["rate"][j]), float(v["dy"][j]), float(v["dpsi"][j])) for j in range(n)]
+            for j in range(start):                                  # slot validity of variants done before a restart
+                sv_all[j] = S.t["slot_valid"][jobs[j][1]] if jobs[j][2] != "single" else np.eye(9, dtype=bool)[8]
+            t0 = time.time()
+            it = ex.map(_bank_job, jobs[start:], chunksize=4)
+            for j0 in range(start, n, a.batch):
+                m = min(a.batch, n - j0)
+                ch = [next(it) for _ in range(m)]
+                imgs = torch.from_numpy(np.stack([c[0] for c in ch])).to(dev)
+                sv = np.stack([c[1] for c in ch])
+                tr = H.trunks(net, imgs) * torch.from_numpy(sv).to(dev)[:, :, None, None, None]
+                T[j0:j0 + m] = tr.cpu().numpy()
+                sv_all[j0:j0 + m] = sv
+                if (j0 // a.batch) % 50 == 0:
+                    T.flush()
+                    prog.write_text(json.dumps({"done": j0 + m}))
+                    el = time.time() - t0
+                    print(f"bank {d}: {j0 + m}/{n} variants, {(j0 + m - start) / el:.1f} var/s", flush=True)
+            T.flush()
+            del T
+            tmp.replace(out / "trunk.npy")
+            np.savez(out / "var.npz", slot_valid=sv_all, **v)
+            prog.unlink(missing_ok=True)
+            print(f"bank {d}: {n} variants in {time.time() - t0:.0f} s", flush=True)
 
 
 def plans_of(models: dict, jobs: list, dev, ex, bs=48) -> dict:
@@ -318,7 +358,7 @@ def train(cfg: H.HCfg, run, d: Path, a):
         run.info(f"resumed at step {step}")
     run.info(f"{cfg.name}: {cfg.steps} steps, roles {cfg.roles}, control {cfg.control}; trainable {sum(p.numel() for p in base) / 1e6:.1f} M")
     dl = torch.utils.data.DataLoader(H.Batcher(cfg), batch_size=None, sampler=range(step, 10 ** 9), num_workers=cfg.workers,
-                                     prefetch_factor=3, pin_memory=True, persistent_workers=False)
+                                     prefetch_factor=4, pin_memory=True, persistent_workers=False)
     it = iter(dl)
     model.train()
     hist, wait, t_start, s0 = [], 0.0, time.time(), step
@@ -332,7 +372,7 @@ def train(cfg: H.HCfg, run, d: Path, a):
         for k in b.get("kind", []):
             kinds[k] = kinds.get(k, 0) + 1
         bd = {k: v.to(dev, non_blocking=True) for k, v in b.items() if k != "kind"}
-        o = H.forward(model, bd["imgs"], bd["valid"], bd["tc"])
+        o = model(bd["trunk"], bd["valid"], bd["tc"])
         total, Ls = lossf(o, bd)
         frac = step / cfg.steps
         for g in opt.param_groups:
@@ -380,6 +420,10 @@ if __name__ == "__main__":
     p = sp.add_parser("teacher")
     p.add_argument("--domains", nargs="+", default=list(H.DOMS))
     p.add_argument("--batch", type=int, default=32)
+    p = sp.add_parser("bank")
+    p.add_argument("--domains", nargs="+", default=list(H.DOMS))
+    p.add_argument("--batch", type=int, default=32)
+    p.add_argument("--workers", type=int, default=40)
     p = sp.add_parser("train")
     p.add_argument("--arm", required=True)
     p.add_argument("--seed", type=int, default=0)
@@ -400,5 +444,5 @@ if __name__ == "__main__":
     p.add_argument("--batch", type=int, default=32)
     p.add_argument("--cpus", default="100-149")
     a = ap.parse_args()
-    {"teacher": cmd_teacher, "train": cmd_train, "dev": cmd_dev, "probe": cmd_probe, "probe-table": cmd_probe_table, "link": cmd_link,
+    {"teacher": cmd_teacher, "bank": cmd_bank, "train": cmd_train, "dev": cmd_dev, "probe": cmd_probe, "probe-table": cmd_probe_table, "link": cmd_link,
      "navhard": cmd_navhard}[a.cmd](a)
