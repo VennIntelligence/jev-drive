@@ -140,23 +140,60 @@ def cmd_bank(a):
             print(f"bank {d}: {n} variants in {time.time() - t0:.0f} s", flush=True)
 
 
-def plans_of(models: dict, jobs: list, dev, ex, bs=48) -> dict:
-    """Port plans (n, 33, 15) of every model on every job (variant images built once in the pool)."""
+def fixed_trunks(name: str, jobs: list, dev, ex, bs=32):
+    """Stage-3 trunks + slot validity of a fixed job list, cached at $H/fixbank/<name>/ (stage 1-3 is the original's in every
+    model, so every later model only runs stage 4 and the policy). The stored job list must equal `jobs`."""
+    d = H.hroot("fixbank", name)
+    key = json.dumps(jobs)
+    if (d / "jobs.json").exists() and (d / "trunk.npy").exists():
+        assert (d / "jobs.json").read_text() == key, f"fixbank {name}: job list changed"
+        z = np.load(d / "sv.npy")
+        return np.load(d / "trunk.npy", mmap_mode="r"), z
+    net = L.load_model(None, dev).net
+    n = len(jobs)
+    T = np.lib.format.open_memmap(d / "trunk.tmp.npy", "w+", np.float16, (n, 9, 1024, 8, 16))
+    sv_all = np.zeros((n, 9), bool)
+    it = bounded_map(ex, _variant, jobs, 4 * bs)
+    t0 = time.time()
+    for i0 in range(0, n, bs):
+        ch = [next(it) for _ in range(min(bs, n - i0))]
+        sv = np.stack([c[1] for c in ch])
+        tr = H.trunks(net, torch.from_numpy(np.stack([c[0] for c in ch])).to(dev)) * torch.from_numpy(sv).to(dev)[:, :, None, None, None]
+        T[i0:i0 + len(ch)] = tr.cpu().numpy()
+        sv_all[i0:i0 + len(ch)] = sv
+        if (i0 // bs) % 100 == 0:
+            print(f"fixbank {name}: {i0 + len(ch)}/{n}, {(i0 + len(ch)) / (time.time() - t0):.1f} var/s", flush=True)
+    T.flush()
+    del T
+    np.save(d / "sv.npy", sv_all)
+    (d / "trunk.tmp.npy").replace(d / "trunk.npy")
+    (d / "jobs.json").write_text(key)
+    return np.load(d / "trunk.npy", mmap_mode="r"), sv_all
+
+
+def plans_of(models: dict, jobs: list, dev, ex, bank: str, bs=64) -> dict:
+    """Port plans (n, 33, 15) of every model on every job, from the fixed trunk bank `bank` (built on first use)."""
+    T, SV = fixed_trunks(bank, jobs, dev, ex)
     out = {k: np.zeros((len(jobs), 33, 15), np.float32) for k in models}
     base = next(iter(models.values()))
     pi = A.plan_index(base.net.slices)
     tcs = {d: H.Samples(d).t["tc"] for d in {j[0] for j in jobs}}
-    it = bounded_map(ex, _variant, jobs, 4 * bs)
-    for i0 in range(0, len(jobs), bs):
-        chunk = [next(it) for _ in range(min(bs, len(jobs) - i0))]
-        imgs = torch.from_numpy(np.stack([c[0] for c in chunk])).to(dev)
-        sv = torch.from_numpy(np.stack([c[1] for c in chunk])).to(dev)
-        tc = torch.from_numpy(np.stack([tcs[j[0]][j[1]] for j in jobs[i0:i0 + len(chunk)]])).to(dev)
-        tr = H.trunks(base.net, imgs)
-        with torch.no_grad():
-            for k, m in models.items():
-                o = m(tr, sv, tc)["outputs"].float()
-                out[k][i0:i0 + len(chunk)] = o[:, pi].reshape(-1, 33, 15).cpu().numpy()
+    tc_all = np.stack([tcs[j[0]][j[1]] for j in jobs])
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(4) as tp:
+        load = lambda i0: torch.from_numpy(np.asarray(T[i0:i0 + bs])).pin_memory()  # noqa: E731
+        futs = [tp.submit(load, i0) for i0 in range(0, min(len(jobs), 4 * bs), bs)]
+        for k0, i0 in enumerate(range(0, len(jobs), bs)):
+            tr = futs[k0].result().to(dev, non_blocking=True)
+            nxt = i0 + 4 * bs
+            if nxt < len(jobs):
+                futs.append(tp.submit(load, nxt))
+            sv = torch.from_numpy(SV[i0:i0 + bs]).to(dev)
+            tc = torch.from_numpy(tc_all[i0:i0 + bs]).to(dev)
+            with torch.no_grad():
+                for k, m in models.items():
+                    o = m(tr, sv, tc)["outputs"].float()
+                    out[k][i0:i0 + len(tr)] = o[:, pi].reshape(-1, 33, 15).cpu().numpy()
     return out
 
 
@@ -168,24 +205,32 @@ def load_models(names, dev):
 DEV_OFF = [(0.0, 5.0), (0.0, -5.0), (0.5, 0.0), (-0.5, 0.0)]
 
 
+DEV_KINDS = [("normal", None), ("rot", 10.0), ("rot", -10.0), ("repeat", None), ("single", None)] + [("offset", o) for o in DEV_OFF]
+
+
+def dev_jobs(d, cap=400):
+    S = H.Samples(d)
+    rows = S.rows("dev")
+    rows = np.sort(rows[np.random.default_rng(0).permutation(len(rows))[:cap]])
+    return [(d, int(i), k, a) for k, a in DEV_KINDS for i in rows]
+
+
 def dev_metrics(models: dict, dev, ex, cap=400) -> dict:
     """Per model and domain on the dev splits: ADE / drift of the unperturbed plan, G at +-10 deg/s by speed bin, the repeat /
     single plan-length shifts, the offset recovery ratio (antisymmetric lateral response at 1 / 2 s over the target's)."""
     res = {k: {} for k in models}
     for d in H.DOMS:
         S = H.Samples(d)
-        rows = S.rows("dev")
-        rows = rows[np.random.default_rng(0).permutation(len(rows))[:cap]]
-        kinds = [("normal", None), ("rot", 10.0), ("rot", -10.0), ("repeat", None), ("single", None)] + [("offset", o) for o in DEV_OFF]
-        jobs = [(d, int(i), k, a) for k, a in kinds for i in rows]
-        P = plans_of(models, jobs, dev, ex)
+        jobs = dev_jobs(d, cap)
+        rows = np.array([j[1] for j in jobs[:len(jobs) // len(DEV_KINDS)]])
+        P = plans_of(models, jobs, dev, ex, bank=f"dev_{d}")
         n = len(rows)
         t = S.t
         cam = t["cam"][rows, 0]
         fut = t["fut20"][rows]
         b = t["bin"][rows]
         for k in models:
-            pk = {j: P[k][j * n:(j + 1) * n] for j in range(len(kinds))}
+            pk = {j: P[k][j * n:(j + 1) * n] for j in range(len(DEV_KINDS))}
             r = {}
             rear = H.plan_rear(pk[0], cam)
             r["ade4"] = float(np.linalg.norm(rear[:, :16] - fut[:, :16], axis=-1).mean())
@@ -240,11 +285,22 @@ def cmd_probe(a):
                 continue
             jobs = [(d, i, k, v) for k, v in PVARS for i in range(S.n)]
             t0 = time.time()
-            P = plans_of(todo, jobs, dev, ex)
+            P = plans_of(todo, jobs, dev, ex, bank=d)
             for k in todo:
                 np.savez(H.hroot("probe", k) / f"{d}.npz", plan=P[k].reshape(len(PVARS), S.n, 33, 15), ids=S.t["id"],
                          variants=np.array([f"{v}|{x}" for v, x in PVARS]))
             print(f"probe {d}: {S.n} x {len(PVARS)} x {len(todo)} models in {time.time() - t0:.0f} s", flush=True)
+
+
+def cmd_fixbank(a):
+    """Build every fixed trunk bank (probe sets, dev sets) once, without any model pass."""
+    dev = torch.device("cuda")
+    with ProcessPoolExecutor(a.workers) as ex:
+        for d in PROBE:
+            S = H.Samples(d)
+            fixed_trunks(d, [(d, i, k, v) for k, v in PVARS for i in range(S.n)], dev, ex)
+        for d in H.DOMS:
+            fixed_trunks(f"dev_{d}", dev_jobs(d), dev, ex)
 
 
 def probe_table(model, ref="O") -> pd.DataFrame:
@@ -435,6 +491,8 @@ if __name__ == "__main__":
         p = sp.add_parser(name)
         p.add_argument("--models", nargs="+", required=True)
         p.add_argument("--workers", type=int, default=24)
+    p = sp.add_parser("fixbank")
+    p.add_argument("--workers", type=int, default=40)
     p = sp.add_parser("probe-table")
     p.add_argument("--model", required=True)
     p.add_argument("--ref", default="O")
@@ -445,5 +503,5 @@ if __name__ == "__main__":
     p.add_argument("--batch", type=int, default=32)
     p.add_argument("--cpus", default="100-149")
     a = ap.parse_args()
-    {"teacher": cmd_teacher, "bank": cmd_bank, "train": cmd_train, "dev": cmd_dev, "probe": cmd_probe, "probe-table": cmd_probe_table, "link": cmd_link,
+    {"teacher": cmd_teacher, "bank": cmd_bank, "train": cmd_train, "dev": cmd_dev, "probe": cmd_probe, "fixbank": cmd_fixbank, "probe-table": cmd_probe_table, "link": cmd_link,
      "navhard": cmd_navhard}[a.cmd](a)
