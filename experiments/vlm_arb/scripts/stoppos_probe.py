@@ -50,7 +50,7 @@ def torch_cat(Z):
 
 def pick_ridge(Z, y, w, tr_idx, cal_idx, wcal):
     fits = H.ridge_fit(Z[tr_idx], y[tr_idx], w[tr_idx])
-    errs = [H.mae_w(H.ridge_predict(Z[cal_idx], c), y[cal_idx], wcal) for c in fits]
+    errs = [H.mae_w(H.ridge_predict(Z[cal_idx], c), y[cal_idx], wcal[cal_idx]) for c in fits]
     return int(np.argmin(errs)), errs
 
 
@@ -58,7 +58,7 @@ def pick_logit(Z, y, w, tr_idx, cal_idx, wcal, ncls):
     nll = []
     for C in H.LOGIT_C:
         Wb = H.logistic_fit(Z[tr_idx], y[tr_idx], w[tr_idx], ncls, C)
-        nll.append(H.nll_w(H.logits(Z[cal_idx], Wb), y[cal_idx], wcal))
+        nll.append(H.nll_w(H.logits(Z[cal_idx], Wb), y[cal_idx], wcal[cal_idx]))
     return int(np.argmin(nll)), nll
 
 
