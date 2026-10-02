@@ -1,0 +1,89 @@
+subset,bin,metric,red_frames,green_frames,routes_red,routes_green,auc_high_red
+all frames,0-5 m,ratio3,586,641,14,14,0.34219282682067476
+all frames,0-5 m,dv3,586,641,14,14,0.3345505228947898
+all frames,0-5 m,dv5,586,641,14,14,0.29433195347485847
+all frames,0-5 m,brk0,586,641,14,14,0.7114353518836597
+all frames,0-5 m,brk2,586,641,14,14,0.6950113073215541
+all frames,0-5 m,hb3,586,641,14,14,0.6792860752828028
+all frames,0-5 m,lead_p,586,641,14,14,0.42356794225930544
+all frames,0-5 m,lane1,586,641,14,14,0.6277615177384177
+all frames,0-5 m,lane2,586,641,14,14,0.3326747992524598
+all frames,0-5 m,v,586,641,14,14,0.4532169869196212
+all frames,0-5 m,d_stop,586,641,14,14,0.4862639963594756
+all frames,5-10 m,ratio3,741,494,12,11,0.2694697952491703
+all frames,5-10 m,dv3,741,494,12,11,0.28612383068203073
+all frames,5-10 m,dv5,741,494,12,11,0.20405301100837217
+all frames,5-10 m,brk0,741,494,12,11,0.7814216711931368
+all frames,5-10 m,brk2,741,494,12,11,0.7872809780831935
+all frames,5-10 m,hb3,741,494,12,11,0.6685479171553379
+all frames,5-10 m,lead_p,741,494,12,11,0.37621824886063865
+all frames,5-10 m,lane1,741,494,12,11,0.4970850272356517
+all frames,5-10 m,lane2,741,494,12,11,0.31594052263763395
+all frames,5-10 m,v,741,494,12,11,0.43861408874079016
+all frames,5-10 m,d_stop,741,494,12,11,0.48461924479174284
+all frames,10-20 m,ratio3,908,875,12,10,0.22411128600526806
+all frames,10-20 m,dv3,908,875,12,10,0.22407299077920154
+all frames,10-20 m,dv5,908,875,12,10,0.1290299902157121
+all frames,10-20 m,brk0,908,875,12,10,0.8266514339459156
+all frames,10-20 m,brk2,908,875,12,10,0.8468170742157102
+all frames,10-20 m,hb3,908,875,12,10,0.671597087126877
+all frames,10-20 m,lead_p,908,875,12,10,0.4110492770687026
+all frames,10-20 m,lane1,908,875,12,10,0.46086208542695345
+all frames,10-20 m,lane2,908,875,12,10,0.6598953343035737
+all frames,10-20 m,v,908,875,12,10,0.37410038434269804
+all frames,10-20 m,d_stop,908,875,12,10,0.4775118348576914
+all frames,20-40 m,ratio3,969,315,7,3,0.04482155371911923
+all frames,20-40 m,dv3,969,315,7,3,0.04238934256087049
+all frames,20-40 m,dv5,969,315,7,3,0.024406355993730817
+all frames,20-40 m,brk0,969,315,7,3,0.9462486570836252
+all frames,20-40 m,brk2,969,315,7,3,0.9365930358698571
+all frames,20-40 m,hb3,969,315,7,3,0.7510069889030248
+all frames,20-40 m,lead_p,969,315,7,3,0.9163529080474261
+all frames,20-40 m,lane1,969,315,7,3,0.5862516380539752
+all frames,20-40 m,lane2,969,315,7,3,0.79458671749893
+all frames,20-40 m,v,969,315,7,3,0.4585393727932242
+all frames,20-40 m,d_stop,969,315,7,3,0.794531814284304
+no lead detected (lead prob < 0.2),0-5 m,ratio3,247,228,7,7,0.2597511622060993
+no lead detected (lead prob < 0.2),0-5 m,dv3,247,228,7,7,0.21296299682248301
+no lead detected (lead prob < 0.2),0-5 m,dv5,247,228,7,7,0.20891681206380322
+no lead detected (lead prob < 0.2),0-5 m,brk0,247,228,7,7,0.8150088923430993
+no lead detected (lead prob < 0.2),0-5 m,brk2,247,228,7,7,0.8227390787805351
+no lead detected (lead prob < 0.2),0-5 m,hb3,247,228,7,7,0.7533200986076513
+no lead detected (lead prob < 0.2),0-5 m,lead_p,247,228,7,7,0.7176925617204142
+no lead detected (lead prob < 0.2),0-5 m,lane1,247,228,7,7,0.4963432027455028
+no lead detected (lead prob < 0.2),0-5 m,lane2,247,228,7,7,0.2182154164853541
+no lead detected (lead prob < 0.2),0-5 m,v,247,228,7,7,0.37151769098200865
+no lead detected (lead prob < 0.2),0-5 m,d_stop,247,228,7,7,0.381400429628713
+no lead detected (lead prob < 0.2),5-10 m,ratio3,238,164,5,5,0.25175402859689866
+no lead detected (lead prob < 0.2),5-10 m,dv3,238,164,5,5,0.25257881849266606
+no lead detected (lead prob < 0.2),5-10 m,dv5,238,164,5,5,0.2227797755285101
+no lead detected (lead prob < 0.2),5-10 m,brk0,238,164,5,5,0.7710012338314371
+no lead detected (lead prob < 0.2),5-10 m,brk2,238,164,5,5,0.7958936006339458
+no lead detected (lead prob < 0.2),5-10 m,hb3,238,164,5,5,0.5703113765773581
+no lead detected (lead prob < 0.2),5-10 m,lead_p,238,164,5,5,0.5922834365160257
+no lead detected (lead prob < 0.2),5-10 m,lane1,238,164,5,5,0.5326335554030411
+no lead detected (lead prob < 0.2),5-10 m,lane2,238,164,5,5,0.26039076221553625
+no lead detected (lead prob < 0.2),5-10 m,v,238,164,5,5,0.5862191647805004
+no lead detected (lead prob < 0.2),5-10 m,d_stop,238,164,5,5,0.37016182793092656
+no lead detected (lead prob < 0.2),10-20 m,ratio3,458,448,9,7,0.36820658725167743
+no lead detected (lead prob < 0.2),10-20 m,dv3,458,448,9,7,0.3191850564847754
+no lead detected (lead prob < 0.2),10-20 m,dv5,458,448,9,7,0.22346426824830476
+no lead detected (lead prob < 0.2),10-20 m,brk0,458,448,9,7,0.8376082805581192
+no lead detected (lead prob < 0.2),10-20 m,brk2,458,448,9,7,0.8563404171438179
+no lead detected (lead prob < 0.2),10-20 m,hb3,458,448,9,7,0.6254586959990269
+no lead detected (lead prob < 0.2),10-20 m,lead_p,458,448,9,7,0.706382915015258
+no lead detected (lead prob < 0.2),10-20 m,lane1,458,448,9,7,0.43380400431092186
+no lead detected (lead prob < 0.2),10-20 m,lane2,458,448,9,7,0.7362239315650078
+no lead detected (lead prob < 0.2),10-20 m,v,458,448,9,7,0.2328049047591131
+no lead detected (lead prob < 0.2),10-20 m,d_stop,458,448,9,7,0.4954821185507957
+no lead detected (lead prob < 0.2),20-40 m,ratio3,374,315,1,3,0.08107624238115245
+no lead detected (lead prob < 0.2),20-40 m,dv3,374,315,1,3,0.07753113089983131
+no lead detected (lead prob < 0.2),20-40 m,dv5,374,315,1,3,0.07856722304810067
+no lead detected (lead prob < 0.2),20-40 m,brk0,374,315,1,3,0.873555452126423
+no lead detected (lead prob < 0.2),20-40 m,brk2,374,315,1,3,0.8788833572427424
+no lead detected (lead prob < 0.2),20-40 m,hb3,374,315,1,3,0.8150145833614526
+no lead detected (lead prob < 0.2),20-40 m,lead_p,374,315,1,3,0.08577862470637994
+no lead detected (lead prob < 0.2),20-40 m,lane1,374,315,1,3,0.02751948022139762
+no lead detected (lead prob < 0.2),20-40 m,lane2,374,315,1,3,0.054486739885176855
+no lead detected (lead prob < 0.2),20-40 m,v,374,315,1,3,0.496989187694397
+no lead detected (lead prob < 0.2),20-40 m,d_stop,374,315,1,3,0.9110979633644217

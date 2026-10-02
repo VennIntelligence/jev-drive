@@ -1,0 +1,28 @@
+set,cl,p4
+routes,21,151
+attempts,214,152
+frames,33806,19331
+routes_with_junction,15,111
+junction_approaches,151,111
+routes_light_stopline,14,38
+light_approaches,141,38
+routes_light_unknown_line,0,15
+routes_stop_sign,0,32
+routes_junction_none,1,26
+towns,8,12
+stop 0-5 m frames,3322,709
+stop 0-5 m routes,14,35
+stop 5-10 m frames,307,545
+stop 5-10 m routes,6,31
+stop 10-20 m frames,1006,242
+stop 10-20 m routes,6,30
+stop 20-40 m frames,736,268
+stop 20-40 m routes,3,28
+junc 0-5 m frames,2346,1932
+junc 0-5 m routes,15,104
+junc 5-10 m frames,2033,1100
+junc 5-10 m routes,14,108
+junc 10-20 m frames,796,1272
+junc 10-20 m routes,7,94
+junc 20-40 m frames,1148,1214
+junc 20-40 m routes,7,91

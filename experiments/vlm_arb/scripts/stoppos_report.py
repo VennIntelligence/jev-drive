@@ -305,49 +305,53 @@ def figures(out_dir, reg, rel, iv, res, taps, primary):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     out_dir = Path(out_dir)
-    fig, ax = plt.subplots(1, 2, figsize=(12, 4.2), constrained_layout=True)
     names = D.BIN_NAMES
-    series = [(t, "ridge", t) for t in taps] + [("base", "route", "route command"), ("base", "clockgbm", "speed / time / odometer")]
-    cols = {"temporal": "#1f77b4", "vision": "#ff7f0e", "hidden": "#2ca02c", "native": "#9467bd", "route command": "#d62728", "speed / time / odometer": "#7f7f7f"}
-    for a, task in zip(ax, ("stop", "junc")):
+    series = [(t, "ridge", t) for t in taps] + [("base", "route", "route command + offset"), ("base", "clockgbm", "speed / time / odometer")]
+    cols = {"temporal": "#1f77b4", "vision": "#ff7f0e", "hidden": "#2ca02c", "native": "#9467bd", "route command + offset": "#d62728", "speed / time / odometer": "#7f7f7f"}
+    panels = (("stop", "cl", "Stop line, closed-loop truth (14 routes)"), ("stop", "p4", "Stop line, P4 (map labels: route line is circular, omitted)"),
+              ("junc", "all", "Junction entrance, all routes"))
+    fig, ax = plt.subplots(1, 3, figsize=(16, 4.4), constrained_layout=True)
+    for a, (task, sset, title) in zip(ax, panels):
         for tap, model, label in series:
-            d = reg[(reg.task == task) & (reg.tap == tap) & (reg.model == model) & (reg.set == "all")].set_index("bin")
+            if tap == "base" and model == "route" and task == "stop" and sset == "p4":
+                continue
+            d = reg[(reg.task == task) & (reg.tap == tap) & (reg.model == model) & (reg.set == sset)].set_index("bin")
             if d.empty:
                 continue
             x = np.arange(len(names))
-            y = [d.mae.get(n, np.nan) for n in names]
-            lo = [d.lo.get(n, np.nan) for n in names]
-            hi = [d.hi.get(n, np.nan) for n in names]
-            ls = "--" if tap == "base" else "-"
-            a.errorbar(x + (list(cols).index(label) - 2.5) * 0.04, y, yerr=[np.array(y) - np.array(lo), np.array(hi) - np.array(y)], marker="o", ms=4, capsize=2, ls=ls,
-                       label=label, color=cols[label])
+            y = np.array([d.mae.get(n, np.nan) for n in names])
+            lo = np.array([d.lo.get(n, np.nan) for n in names])
+            hi = np.array([d.hi.get(n, np.nan) for n in names])
+            a.errorbar(x + (list(cols).index(label) - 2.5) * 0.05, y, yerr=[y - lo, hi - y], marker="o", ms=4, capsize=2, ls="--" if tap == "base" else "-", label=label, color=cols[label])
         a.set_xticks(range(len(names)), names)
-        a.set_xlabel("true distance of the bumper to the " + ("stop line" if task == "stop" else "junction entrance"))
-        a.set_ylabel("mean absolute error (m), route-macro, 95% CI over routes")
-        a.set_title(("Stop line" if task == "stop" else "Junction entrance") + ": linear probe by true distance")
+        a.set_xlabel("true distance of the bumper")
+        a.set_ylabel("mean absolute error (m), route-macro, 95% CI")
+        a.set_title(title, fontsize=10)
         a.set_yscale("log")
-        a.grid(alpha=0.3)
-    ax[0].legend(fontsize=8)
+        a.set_ylim(0.15, 40)
+        a.grid(alpha=0.3, which="both")
+    ax[0].legend(fontsize=8, loc="upper left")
     fig.savefig(out_dir / "stoppos_mae_by_bin.png", dpi=130)
     plt.close(fig)
-    fig, ax = plt.subplots(1, 3, figsize=(15, 4.2), constrained_layout=True)
+    fig, ax = plt.subplots(1, 3, figsize=(15, 4.4), constrained_layout=True)
     r = rel[(rel.cls == "top-label")]
     for nm, mk in (("uncalibrated", "o"), ("temperature-scaled", "s")):
         d = r[r.probs == nm]
         ax[0].plot(d.conf, d.acc, marker=mk, label=nm)
     ax[0].plot([0, 1], [0, 1], "k:")
-    ax[0].set_xlabel("top-label confidence")
+    ax[0].set_xlabel("top-label confidence (equal-mass bins)")
     ax[0].set_ylabel("accuracy")
-    ax[0].set_title(f"Reliability of the 4-class head ({primary})")
+    ax[0].set_title(f"Reliability of the 4-class head ({primary} tap)", fontsize=10)
     ax[0].legend()
-    d = iv[(iv.set == "all") & (iv.bin != "0-40 m")]
+    d = iv[(iv.set == "all") & (iv.tap == primary) & (iv.bin != "0-40 m")]
     for nm, mk in (("raw 10-90%", "o"), ("conformalised 80%", "s")):
-        dd = d[d.interval == nm]
+        dd = d[d.interval == nm].set_index("bin").reindex(D.BIN_NAMES)
         ax[1].errorbar(range(len(dd)), dd.coverage, yerr=[dd.coverage - dd.lo, dd.hi - dd.coverage], marker=mk, capsize=3, label=nm)
     ax[1].axhline(0.8, color="k", ls=":")
     ax[1].set_xticks(range(len(D.BIN_NAMES)), D.BIN_NAMES)
-    ax[1].set_ylabel("coverage of the true distance")
-    ax[1].set_title("Interval coverage by true distance")
+    ax[1].set_ylim(0, 1.05)
+    ax[1].set_ylabel("coverage of the true distance (route-macro, 95% CI)")
+    ax[1].set_title("Interval coverage by true distance (nominal 80%)", fontsize=10)
     ax[1].legend()
     sub = res[(res.fired.astype(bool)) & (res.margin == 4.0)]
     for rule, c in (("U'", "#1f77b4"), ("L'", "#2ca02c"), ("R'", "#d62728")):
@@ -356,8 +360,9 @@ def figures(out_dir, reg, rel, iv, res, taps, primary):
         if len(x):
             ax[2].hist(x.clip(-8, 20), bins=np.arange(-8, 21, 1.0), alpha=0.45, color=c, label=f"{rule}(4 m): fired {len(x)} of {n_all}")
     ax[2].axvline(0, color="k")
-    ax[2].set_xlabel("implied stop point relative to the stop line (m; < 0 is past the line)")
-    ax[2].set_title("Stopping rules replayed, held-out approaches")
+    ax[2].set_xlabel("implied stop point relative to the stop line (m, < 0 past the line)")
+    ax[2].set_ylabel("approaches")
+    ax[2].set_title("Stopping rules replayed, held-out approaches", fontsize=10)
     ax[2].legend()
     fig.savefig(out_dir / "stoppos_calibration_replay.png", dpi=130)
     plt.close(fig)

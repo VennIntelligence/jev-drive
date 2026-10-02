@@ -1,0 +1,4 @@
+model,acc,frames
+route command (d_cmd - delta),0.6624684882842886,40425
+speed / time / odometer (GBM),0.8146353065812431,40425
+majority class,0.7510898368618835,40425
