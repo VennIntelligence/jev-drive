@@ -1,249 +1,172 @@
-"""Self-advancing master chain script for VLM Arbitration Experiment.
+"""The vlm_arb chain: one jevdrive.cl lane file that runs the whole experiment and advances itself.
 
-Protocol: experiments/vlm_arb/plans/2026-10-02-vlm-arb.md.
-Orchestrates:
-  1. OpenJev server lifecycle (vLLM with DiffusionGemma-26B NVFP4 on GPU)
-  2. Single-unit verification checklist (Stage 1)
-  3. Phase A shadow collection and multi-model evaluation
-  4. Stage 2 small-batch rule checklist
-  5. Phase B closed-loop evaluation (drive, dslow, jslow, vred, vbyp, vall)
-  6. Bootstrap statistics, reports, and plots
+  scripts/tmux_run.sh vlm-chain .venv/bin/python -m jevdrive.cl run experiments/vlm_arb/scripts/vlm_arb_chain.py [--arg stage=1|2|all]
+
+Rerunning the same command resumes: finished jobs are skipped (state.json), live ones are adopted, and b2d_run skips
+finished routes inside a unit. Hand-offs in $DATA_DIR/runs/vlm_arb: STATUS, status.json, DONE / ERROR / ERROR.<job>,
+util.csv, lane/<ts>/log.txt, jobs/<job>/log.<k>.txt, readouts/<unit>/{routes.csv, checks.json}, gates/*.json,
+results/{phase_a.md, qlight.md, report.md, *.png}.
+
+Stages (docs/long-runs.md): 1 = one unit (the table driven by truth answers on debug route 334); 2 = the ten
+single-route checklist units on debug routes; all = the batch. A stage's jobs stay in state.json, so "all" does not
+repeat them.
+
+The batch (plan deviation D7: 19 routes x 2 traffic seeds; a unit = arm x seed x shard, 4 workers):
+  at once     drive (seed 1 everywhere, seed 0 on the six added red-light / stop-sign routes; shadow VLM + frames),
+              the debug-route shadow unit, phase A on the old frames, jslow, pred, pbyp
+  phase A     after the drive units: gates/phase_a.json decides the VLM arms; nothing is relaxed here, the lines are
+              the registered ones in vlm_arb_phase_a.LINES
+  vbyp        if Q-block and the latency line pass
+  dslow       after jslow and drive of the same seed: per-route set speed = 8 x v_jslow / v_drive (cruise_by_route)
+  qlight      if Q-light failed: the diagnosis and one variant read; vred and vall only if that read passes (R3 only
+              if Q-sign passed, R4 only if Q-block passed)
+  report      when nothing else is left
+Packing: every unit takes 4 CARLA workers, 12 cores and its own openpilot server; the lane places as many as the
+card's VRAM and the per-card worker cap allow (card 0 also holds the VLM server), and pulls the next job whenever a
+slot frees.
 """
-import argparse
-import hashlib
 import json
-import os
-import signal
-import subprocess
 import sys
-import time
-import traceback
-import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, Any, List, Optional
 
-REPO = Path(__file__).resolve().parents[3]
-for _d in (str(REPO / "lib"), str(REPO)):
-    if _d not in sys.path:
-        sys.path.insert(0, _d)
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from jevdrive.cl import Job  # noqa: E402
+from vlm_arb_checks import unit_ok  # noqa: E402
+from vlm_arb_common import DATA, DEV, OBS, RED, REPO, RUN, SEEDS, SHARDS, STOP, drive_dir, route_row, unit_dir, unit_name, write_json  # noqa: E402
 
-DATA_DIR = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
-RUN_ROOT = DATA_DIR / "runs/vlm_arb"
-XML_PATH = DATA_DIR / "third_party/Bench2Drive/leaderboard/data/bench2drive_0.0.4_val.xml"
-
-# Route cohorts
-DEV_ROUTES = ["27043", "15102", "24944", "27870", "22535", "37969", "24497", "27297", "9196", "28147"]
-HELD_ROUTES = ["26828", "25783", "24416", "469", "25215", "27392", "27005", "25613", "27907", "26023",
-               "24207", "26723", "24519", "25753", "24948", "26365", "27916", "24622", "26370"]
-DEBUG_ROUTES = ["334", "27787", "24721", "26872", "26537", "17749", "25169", "24955"]
-
-JTYPES = ["NonSignalizedJunctionLeftTurn", "NonSignalizedJunctionLeftTurnEnterFlow", "NonSignalizedJunctionRightTurn",
-          "OppositeVehicleTakingPriority", "SignalizedJunctionLeftTurn", "SignalizedJunctionLeftTurnEnterFlow",
-          "T_Junction", "MergerIntoSlowTrafficV2", "SignalizedJunctionRightTurn", "VehicleTurningRoute"]
-
-BTYPES = ["Accident", "AccidentTwoWays", "ConstructionObstacle", "ConstructionObstacleTwoWays",
-          "ParkedObstacle", "ParkedObstacleTwoWays", "HazardAtSideLane", "HazardAtSideLaneTwoWays"]
+NAME, ROOT = "vlm-arb", "vlm_arb"
+SLOT_WORKERS, SLOT_CORES = 4, 12
+WORKERS_PER_CARD = 8                  # two slots; the VRAM check leaves card 0 (VLM server) with one
+VRAM_GB = 7.5                         # per worker: CARLA server ~5.5 GB + its share of the openpilot server
+PY = str(DATA / "envs/jevdrive/bin/python")
+OP_ARB = "experiments/op_closed_loop/archive/op_arb.sh"
+PRIO = {"drive": 0, "dbg-shadow": 0, "jslow": 1, "pred": 2, "pbyp": 2, "vbyp": 3, "dslow": 4, "vred": 5, "vall": 5}
+STATE = {"final": False}
 
 
-def update_status(msg: str):
-    RUN_ROOT.mkdir(parents=True, exist_ok=True)
-    tmp = RUN_ROOT / "STATUS.tmp"
-    ts = time.strftime("%F %T")
-    tmp.write_text(f"{ts} {msg}\n")
-    tmp.replace(RUN_ROOT / "STATUS")
-    print(f"[{ts}] STATUS: {msg}", flush=True)
+def unit(arm, seed, shard, ids, env=None, kind="", prio=None, deps=(), base=None):
+    """One closed-loop unit through op_arb.sh. `base`: the arm name op_arb.sh and the agent see (debug units)."""
+    name, out, real = unit_name(arm, seed, shard), unit_dir(arm, seed, shard), base or arm
+    priv = real in ("pred", "pbyp")
+    e = dict(GPU="{gpu}", IDX0="{idx}", WORKERS="{workers}", CPUS="{cpus}", SEED=str(seed), OP_ARB_DIR="{job_dir}/op",
+             OP_ARB_ARMS=str(RUN / "arms"), SRV_NO_TWIN="1", OPENBLAS_CORETYPE="Haswell", VLM_ARM=real,
+             OP_ARB_AGENT="lib/op_arb_agent.py" if priv else "lib/vlm_arb_agent.py")
+    if priv:
+        e["PC_ENABLE"] = "1"
+    e.update(env or {})
+    ids = list(ids)
+    cfg_arm = real
+    if "CRUISE_BY_ROUTE" in e:        # op_arb.sh's own dslow case mis-nests a set CRUISE_BY_ROUTE; DRIVE_ARGS is clean
+        cfg_arm, e["DRIVE_ARGS"] = "drive", '"cruise_by_route": ' + e.pop("CRUISE_BY_ROUTE")
+    return Job(name, ["bash", OP_ARB, "arm", cfg_arm, ",".join(ids), str(out)], workers=min(SLOT_WORKERS, len(ids)),
+               vram_gb=VRAM_GB, cores=SLOT_CORES if len(ids) > 1 else 4, tries=2, retry_check=True, env=e,
+               priority=PRIO.get(arm, 1) if prio is None else prio, deps=tuple(deps), out=str(out),
+               ok=lambda j: unit_ok(out, real, seed, ids, kind, "v2-" + name), meta=dict(arm=real, seed=seed, routes=len(ids)))
 
 
-def ensure_openjev_server(gpu_card: int = 0, port: int = 8080, vllm_port: int = 8000) -> Optional[subprocess.Popen]:
-    """Ensure vLLM and OpenJev decision servers are running."""
-    import urllib.request
-    try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=1.0) as resp:
-            if resp.status == 200:
-                print(f"OpenJev server is already healthy on port {port}.")
-                return None
-    except Exception:
-        pass
-
-    print(f"Starting OpenJev server on GPU {gpu_card} (vLLM:{vllm_port}, API:{port})...")
-    log_dir = RUN_ROOT / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    server_log = log_dir / "openjev_server.log"
-    
-    env = dict(os.environ)
-    env.update({
-        "CUDA_VISIBLE_DEVICES": str(gpu_card),
-        "HF_HUB_OFFLINE": "1",
-        "VLLM_CACHE_ROOT": str(DATA_DIR / "cache/vllm"),
-        "OPENJEV_GPU_UTIL": "0.35", # 0.35 of 83.6 GiB is ~29.2 GB, plenty of room for weights and KV cache
-        "PATH": f"{DATA_DIR}/envs/openjev/bin:{env.get('PATH', '')}"
-    })
-    
-    # Launch OpenJev launcher script or entrypoint
-    launcher = REPO / "experiments/vlm_arb/scripts/launch_openjev.sh"
-    with server_log.open("a") as out:
-        proc = subprocess.Popen(["bash", str(launcher)], cwd=str(REPO), env=env, stdout=out, stderr=subprocess.STDOUT)
-    
-    # Wait for server to become healthy
-    t0 = time.time()
-    while time.time() - t0 < 180:
-        try:
-            with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=1.0) as resp:
-                if resp.status == 200:
-                    print(f"OpenJev server ready after {time.time() - t0:.1f}s.")
-                    return proc
-        except Exception:
-            time.sleep(3.0)
-
-    raise RuntimeError("OpenJev server failed to become ready within 180s. See logs in " + str(server_log))
+def tool(name, script, *args, deps=(), prio=0, ready=None):
+    """An analysis step: no CARLA worker, no VRAM claim."""
+    return Job(name, [PY, str(HERE / script)] + list(args), workers=0, vram_gb=0.0, deps=tuple(deps), tries=2,
+               priority=prio, cuda=False, ready=ready)
 
 
-def load_route_manifest() -> Dict[str, List[str]]:
-    """Build the 58 evaluation routes following registered manifest."""
-    root = ET.parse(XML_PATH).getroot()
-    rows = [dict(id=r.get("id"), town=r.get("town"), type=next(r.iter("scenario")).get("type")) for r in root.iter("route")]
-    banned = set(DEV_ROUTES + HELD_ROUTES + DEBUG_ROUTES)
-    
-    manifest = {"dev": DEV_ROUTES, "junction": [], "obstacle": []}
-    for t in JTYPES:
-        matching = [r["id"] for r in rows if r["type"] == t and r["id"] not in banned][:3]
-        manifest["junction"].extend(matching)
-    for t in BTYPES:
-        matching = [r["id"] for r in rows if r["type"] == t and r["id"] not in banned][:3]
-        manifest["obstacle"].extend(matching)
-
-    assert len(manifest["junction"]) == 24
-    assert len(manifest["obstacle"]) == 24
-    return manifest
-
-
-def run_unit(arm: str, seed: int, routes: List[str], tag: str, gpu: int = 0, cpus: str = "0-24", workers: int = 2,
-             shadow: bool = False, save_frames: bool = False) -> Path:
-    """Execute a single unit of routes under specified arm and parameters."""
-    unit_name = f"{tag}-{arm}-s{seed}"
-    out_dir = RUN_ROOT / "arms" / unit_name
-    out_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Environment for b2d execution
-    env = dict(os.environ)
-    env.update({
-        "GPU": str(gpu),
-        "CPUS": cpus,
-        "WORKERS": str(workers),
-        "ARMS": arm,
-        "SEEDS": str(seed),
-        "VLM_ARM": arm,
-        "VLM_SHADOW": "1" if shadow else "0",
-        "VLM_SAVE_FRAMES": "1" if save_frames else "0",
-        "OP_ARB_DIR": str(RUN_ROOT / f"card{gpu}"),
-        "OP_ARB_ARMS": str(RUN_ROOT / "arms"),
-        "OP_ARB_AGENT": "lib/vlm_arb_agent.py",
-        "B2D_PIDS_WAIT": "17000",
-        "OPENBLAS_CORETYPE": "Haswell",
-        "OMP_NUM_THREADS": "1",
-        "MKL_NUM_THREADS": "1"
-    })
-
-    unit_log = RUN_ROOT / f"unit-{unit_name}.log"
-    with unit_log.open("a") as log_f:
-        cmd = [
-            "bash", "experiments/op_closed_loop/archive/op_arb.sh", "arm", arm,
-            ",".join(routes), str(out_dir)
-        ]
-        proc = subprocess.Popen(cmd, cwd=str(REPO), env=env, stdout=log_f, stderr=subprocess.STDOUT)
-        rc = proc.wait()
-
-    assert rc == 0, f"Unit {unit_name} failed with return code {rc}. Check {unit_log}"
-    return out_dir
+def stage_jobs(stage):
+    """Staged-launch units on debug routes; truth answers (VLM_ORACLE) drive the table so its execution is tested
+    independently of what the VLM sees."""
+    orc = dict(VLM_ORACLE="truth")
+    one = [unit("dbg-vred-oracle", 0, "334", ["334"], orc, "red_stop", 0, base="vred")]
+    if stage == "1":
+        return one
+    return one + [
+        unit("dbg-vred-stuck", 0, "334", ["334"], dict(VLM_ORACLE="stuckred"), "r5", 0, base="vred"),
+        unit("dbg-vbyp-oracle", 0, "25169", ["25169"], orc, "bypass", 0, base="vbyp"),
+        unit("dbg-vbyp-oracle", 0, "24955", ["24955"], orc, "bypass", 0, base="vbyp"),
+        unit("dbg-vall-vlm", 0, "334", ["334"], None, "", 0, base="vall"),
+        unit("dbg-vbyp-vlm", 0, "25169", ["25169"], None, "", 0, base="vbyp"),
+        unit("dbg-jslow", 0, "26872", ["26872"], None, "r1", 0, base="jslow"),
+        unit("dbg-dslow", 0, "26872", ["26872"], dict(CRUISE_BY_ROUTE='{"26872": 5.0}'), "cruise", 0, base="dslow"),
+        unit("dbg-pred", 0, "334", ["334"], None, "pred", 0, base="pred"),
+        unit("dbg-pbyp", 0, "25169", ["25169"], None, "pbyp", 0, base="pbyp"),
+        unit("dbg-shadow", 0, "light", ["334", "27787"], dict(VLM_SHADOW="1", VLM_SAVE_FRAMES="1"), "shadow", 0, base="drive"),
+    ]
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Master chain for VLM arbitration")
-    parser.add_argument("--skip-server", action="store_true", help="Do not manage OpenJev server")
-    parser.add_argument("--gpus", type=str, default="0,1,2", help="Comma-separated GPU IDs")
-    args = parser.parse_args()
-
-    RUN_ROOT.mkdir(parents=True, exist_ok=True)
-    manifest = load_route_manifest()
-
-    try:
-        # Step 0: Ensure OpenJev server
-        if not args.skip_server:
-            update_status("Starting OpenJev System One server...")
-            ensure_openjev_server(gpu_card=0)
-
-        # Step 1: Stage 1 Checklist (Pilot)
-        pilot_done = RUN_ROOT / "DONE-pilot"
-        if not pilot_done.exists():
-            update_status("Stage 1: Running single-unit pilot checklist on route 334...")
-            pilot_dir = run_unit(arm="vred", seed=0, routes=["334"], tag="pilot", workers=1)
-            
-            # Verify checklist
-            from vlm_arb_checks import verify_attempt
-            done_file = pilot_dir / "done/334.json"
-            assert done_file.exists(), f"Route 334 failed to finish. Check logs in {pilot_dir}"
-            attempt_idx = str(json.loads(done_file.read_text()).get("attempt", 1))
-            attempt_dir = pilot_dir / "attempts/334" / attempt_idx
-            chk = verify_attempt(attempt_dir, arm="vred")
-            assert chk["passed"], f"Pilot checklist failed: {chk}"
-            pilot_done.write_text(time.strftime("%F %T\n"))
-            update_status("Stage 1 Pilot passed successfully.")
-
-        # Step 2: Phase A (Shadow Frame Collection & Multi-Model Evaluation)
-        phase_a_done = RUN_ROOT / "DONE-phase-a"
-        if not phase_a_done.exists():
-            update_status("Phase A: Collecting shadow frames on dev routes...")
-            shadow_dir = run_unit(arm="drive", seed=0, routes=DEV_ROUTES, tag="shadow",
-                                  workers=2, shadow=True, save_frames=True)
-            
-            # Multi-model evaluation
-            update_status("Phase A: Running multi-model evaluation on collected frames...")
-            frames_dir = shadow_dir / "attempts" / DEV_ROUTES[0] / "1/vlm_frames"
-            vlm_log = shadow_dir / "attempts" / DEV_ROUTES[0] / "1/vlm_decisions.jsonl"
-            
-            subprocess.run([
-                f"{DATA_DIR}/envs/jevdrive/bin/python",
-                "experiments/vlm_arb/scripts/vlm_arb_eval_models.py",
-                "--frames-dir", str(frames_dir),
-                "--vlm-log", str(vlm_log),
-                "--out-dir", str(RUN_ROOT / "results")
-            ], cwd=str(REPO), check=True)
-            
-            phase_a_done.write_text(time.strftime("%F %T\n"))
-            update_status("Phase A completed. Multi-model metrics recorded.")
-
-        # Step 3: Phase B Closed-Loop Evaluation
-        phase_b_done = RUN_ROOT / "DONE-phase-b"
-        if not phase_b_done.exists():
-            all_eval_routes = sorted(list(set(manifest["dev"] + manifest["junction"] + manifest["obstacle"])))
-            arms = ["drive", "dslow", "jslow", "vred", "vbyp", "vall"]
-            
-            for arm in arms:
-                for seed in (0, 1):
-                    update_status(f"Phase B: Running arm {arm} seed {seed} ({len(all_eval_routes)} routes)...")
-                    run_unit(arm=arm, seed=seed, routes=all_eval_routes, tag="eval", workers=4)
-
-            phase_b_done.write_text(time.strftime("%F %T\n"))
-            update_status("Phase B completed.")
-
-        # Step 4: Final Reporting and Plots
-        update_status("Generating final reports and statistical tables...")
-        subprocess.run([
-            f"{DATA_DIR}/envs/jevdrive/bin/python",
-            "experiments/vlm_arb/scripts/vlm_arb_report.py",
-            "--run-dir", str(RUN_ROOT),
-            "--out-dir", str(RUN_ROOT / "results")
-        ], cwd=str(REPO), check=True)
-
-        (RUN_ROOT / "DONE").write_text(time.strftime("%F %T\n"))
-        update_status("All stages finished successfully.")
-
-    except Exception as e:
-        err_msg = traceback.format_exc()
-        (RUN_ROOT / "ERROR").write_text(err_msg)
-        update_status(f"ERROR: {e}")
-        raise
+def batch(arm, env=None, kind=""):
+    return [unit(arm, s, sh, ids, env, kind) for s in SEEDS for sh, ids in SHARDS.items()]
 
 
-if __name__ == "__main__":
-    main()
+def jobs(args):
+    stage = args.get("stage", "all")
+    STATE["stage"] = stage
+    RUN.mkdir(parents=True, exist_ok=True)
+    out = stage_jobs("2" if stage != "1" else "1")
+    if stage != "all":
+        return out
+    shadow = dict(VLM_SHADOW="1", VLM_SAVE_FRAMES="1")
+    drive = [unit("drive", 0, "tgt", RED + STOP, shadow, "shadow"),                       # seed 0: dev + obstacle routes are reused
+             unit("drive", 1, "dev", DEV, shadow, "shadow"), unit("drive", 1, "tgt", RED + STOP + OBS, shadow, "shadow")]
+    out += drive + batch("jslow") + batch("pred") + batch("pbyp")
+    out += [tool("phaseA-old", "vlm_arb_phase_a.py", "--stage", "old"),
+            tool("phaseA", "vlm_arb_phase_a.py", "--stage", "final", deps=[j.name for j in drive]),
+            tool("report", "vlm_arb_report.py", prio=9, ready=lambda j: STATE["final"])]
+    return out
+
+
+def gate(name):
+    p = RUN / "gates" / (name + ".json")
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def cruise_by_route(seed):
+    """Speed match of dslow to jslow, per route: set speed = 8 x v_jslow / v_drive, clipped to [0.5, 8]. Computed once."""
+    p = RUN / "gates" / ("cruise-s%d.json" % seed)
+    if not p.exists():
+        m = {}
+        for sh, ids in SHARDS.items():
+            for rid in ids:
+                a, b = route_row(unit_dir("jslow", seed, sh), rid), route_row(drive_dir(rid, seed), rid)
+                if a and b and a["v_mean"] == a["v_mean"] and b["v_mean"] > 1e-3:
+                    m[rid] = round(min(max(8.0 * a["v_mean"] / b["v_mean"], 0.5), 8.0), 2)
+        write_json(p, m)
+    return json.loads(p.read_text())
+
+
+def more(lane, args):
+    """Called every round: the jobs that results unlock. Idempotent; the lane keeps one job per name."""
+    if STATE.get("stage") != "all":
+        return []
+    st = lambda n: lane.st["jobs"].get(n, {}).get("state")      # noqa: E731
+    end = lambda names: all(st(n) in ("done", "failed") for n in names)   # noqa: E731
+    done = lambda names: all(st(n) == "done" for n in names)    # noqa: E731
+    new, settled = [], True
+    for s in SEEDS:                                             # dslow, matched to jslow of the same seed
+        need = [unit_name("jslow", s, sh) for sh in SHARDS] + [unit_name("drive", s, "tgt")] + ([unit_name("drive", s, "dev")] if s else [])
+        if done(need):
+            cb = json.dumps(cruise_by_route(s))
+            new += [unit("dslow", s, sh, ids, dict(CRUISE_BY_ROUTE=cb)) for sh, ids in SHARDS.items()]
+        elif not end(need):
+            settled = False
+    g = gate("phase_a")
+    if g is None:
+        settled = settled and st("phaseA") == "failed"
+    else:
+        vlm = dict(VLM_L="%.2f" % g["L_s"])
+        if g["q_block"] and g["latency"]:
+            new += batch("vbyp", vlm)
+        variant = "base" if g["q_light"] else None
+        if not g["q_light"] and g["latency"]:
+            new.append(tool("qlight", "vlm_arb_qlight.py", deps=["phaseA", unit_name("dbg-shadow", 0, "light")], prio=3))
+            q = gate("qlight")
+            if q is None:
+                settled = settled and st("qlight") == "failed"
+            elif q["pass"]:
+                variant = q["variant"]
+        if variant and g["latency"]:
+            rows = ["R2", "R5"] + (["R3"] if g["q_sign"] else [])
+            env = dict(vlm, VLM_LIGHT_VARIANT=variant)
+            new += batch("vred", dict(env, VLM_ROWS=",".join(rows)))
+            new += batch("vall", dict(env, VLM_ROWS=",".join(rows + ["R1"] + (["R4"] if g["q_block"] else []))))
+    others = [n for n in list(lane.jobs) + [j.name for j in new] if n != "report"]
+    STATE["final"] = settled and end(others)
+    return new

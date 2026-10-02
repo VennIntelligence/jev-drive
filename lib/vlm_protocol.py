@@ -1,16 +1,15 @@
-"""VLM Arbitration Protocol: Question schemas, labels, and answer parsing.
+"""VLM arbitration protocol: the four questions, their options, input variants and answer parsing (Python 3.8).
 
-Four discrete decision questions:
-  1. Q_light: traffic light state for ego lane
-     options: ['no_light', 'red_or_yellow_for_ego', 'green_for_ego', 'light_for_other_lane']
-  2. Q_sign: stop sign controlling ego vehicle
-     options: yes / no (noul)
-  3. Q_block: obstacle state in ego lane ahead
-     options: ['clear', 'moving_lead', 'static_block']
-  4. Q_side: which adjacent lane is free to bypass (only when Q_block == 'static_block')
-     options: ['left_free', 'right_free', 'none_free']
+  Q_light  no_light / red_or_yellow_for_ego / green_for_ego / light_for_other_lane
+  Q_sign   stop sign controlling the ego ahead: yes / no (the server returns P(yes) as "noul")
+  Q_block  clear / moving_lead / static_block
+  Q_side   left_free / right_free / none_free (read only when Q_block == static_block)
+
+A variant changes what the Q_light request sees (which cameras, an extra crop, the wording); it never changes the
+answer options. Variants exist for the Q-light diagnosis (experiments/vlm_arb/scripts/vlm_arb_qlight.py); "base" is
+what Phase A measured.
 """
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 QUESTIONS_SCHEMA = {
     "Q_light": {
@@ -33,7 +32,7 @@ QUESTIONS_SCHEMA = {
         "criteria": {
             "clear": "clear path ahead in ego lane",
             "moving_lead": "moving vehicle or dynamic object moving ahead in ego lane",
-            "static_block": "static blockage, stopped vehicle, construction cone, or obstacle blocking ego lane"
+            "static_block": "stationary obstacle, construction cones, or stopped broken vehicle blocking ego lane"
         }
     },
     "Q_side": {
@@ -47,51 +46,49 @@ QUESTIONS_SCHEMA = {
     }
 }
 
+# Q_light wording that reads the lit lamp by its position in the housing instead of its hue (the red lamp of a
+# CARLA light saturates to amber in the openpilot camera rig, see the Q-light diagnosis in the plan).
+LIGHT_POS = {
+    "type": "choice",
+    "instructions": ("Look only at the traffic light that faces the camera straight ahead, above or beside the ego "
+                     "lane at the next stop line. Ignore lights seen from the side that serve cross traffic. Decide "
+                     "by which lamp of the vertical housing is lit, not by its colour: top lamp lit means stop, "
+                     "middle lamp lit means stop, bottom lamp lit means go."),
+    "criteria": {
+        "no_light": "no traffic light faces the ego lane ahead",
+        "red_or_yellow_for_ego": "the facing light has its top or middle lamp lit (stop)",
+        "green_for_ego": "the facing light has its bottom lamp lit (go)",
+        "light_for_other_lane": "only lights for other directions are visible"
+    }
+}
+
+# name -> {"cams": camera order, "crop": add an upper-centre crop of the wide camera, "light": Q_light schema}
+VARIANTS = {
+    "base": {"cams": ["wide", "road"], "crop": False, "light": QUESTIONS_SCHEMA["Q_light"]},
+    "road": {"cams": ["road"], "crop": False, "light": QUESTIONS_SCHEMA["Q_light"]},
+    "pos": {"cams": ["wide", "road"], "crop": False, "light": LIGHT_POS},
+    "crop": {"cams": ["wide", "road"], "crop": True, "light": QUESTIONS_SCHEMA["Q_light"]},
+}
+CROP_BOX = (0.25, 0.10, 0.75, 0.55)   # x0, y0, x1, y1 as fractions of the wide frame: where a facing light sits
+
 LIGHT_CHOICES = ["no_light", "red_or_yellow_for_ego", "green_for_ego", "light_for_other_lane"]
 BLOCK_CHOICES = ["clear", "moving_lead", "static_block"]
 SIDE_CHOICES = ["left_free", "right_free", "none_free"]
 
 
 def parse_vlm_response(resp: Dict[str, Any]) -> Dict[str, Any]:
-    """Parse raw System One / VLM response into normalized answers."""
+    """Normalized answers of the questions present in a raw System One response (absent questions are left out)."""
     answers = resp.get("answers", {})
-    
-    # Q_light
-    ql = answers.get("Q_light", {})
-    q_light = ql.get("choice", "no_light")
-    if q_light not in LIGHT_CHOICES:
-        q_light = "no_light"
-    q_light_conf = float(ql.get("confidence", 0.0))
-
-    # Q_sign
-    qs = answers.get("Q_sign", {})
-    # noul is probability of yes (1.0 = yes, 0.0 = no)
-    q_sign_val = float(qs.get("noul", 0.0))
-    q_sign = "yes" if q_sign_val >= 0.5 else "no"
-    q_sign_conf = float(qs.get("confidence", 0.0))
-
-    # Q_block
-    qb = answers.get("Q_block", {})
-    q_block = qb.get("choice", "clear")
-    if q_block not in BLOCK_CHOICES:
-        q_block = "clear"
-    q_block_conf = float(qb.get("confidence", 0.0))
-
-    # Q_side
-    qside = answers.get("Q_side", {})
-    q_side = qside.get("choice", "none_free")
-    if q_side not in SIDE_CHOICES:
-        q_side = "none_free"
-    q_side_conf = float(qside.get("confidence", 0.0))
-
-    return {
-        "Q_light": q_light,
-        "Q_light_conf": q_light_conf,
-        "Q_sign": q_sign,
-        "Q_sign_val": q_sign_val,
-        "Q_sign_conf": q_sign_conf,
-        "Q_block": q_block,
-        "Q_block_conf": q_block_conf,
-        "Q_side": q_side,
-        "Q_side_conf": q_side_conf,
-    }
+    out = {}
+    for key, choices, default in (("Q_light", LIGHT_CHOICES, "no_light"), ("Q_block", BLOCK_CHOICES, "clear"),
+                                  ("Q_side", SIDE_CHOICES, "none_free")):
+        if key in answers:
+            a = answers[key]
+            c = a.get("choice", default)
+            out[key] = c if c in choices else default
+            out[key + "_conf"] = float(a.get("confidence", 0.0))
+            out[key + "_p"] = {k: round(float(v), 4) for k, v in (a.get("probabilities") or {}).items()}
+    if "Q_sign" in answers:
+        v = float(answers["Q_sign"].get("noul", 0.0))                # P(yes)
+        out.update(Q_sign="yes" if v >= 0.5 else "no", Q_sign_val=v)
+    return out

@@ -1,74 +1,79 @@
-"""Bench2Drive agent with VLM Arbitration Table (R1-R5) and openpilot Cinque.
+"""Bench2Drive agent: op-drive (frozen openpilot Cinque) plus a VLM slow channel behind an arbitration table R1-R5.
 
-Integrates VLM slow-channel categorical decisions into op-drive arbitration layer.
-Protocol: experiments/vlm_arb/plans/2026-10-02-vlm-arb.md.
+Protocol and registered parameters: experiments/vlm_arb/plans/2026-10-02-vlm-arb.md. Python 3.8 (route process env).
+
+Environment (set per unit by experiments/vlm_arb/scripts/vlm_arb_chain.py):
+  VLM_ARM           drive | dslow | jslow | vred | vbyp | vall. drive / dslow open no row (dslow gets its per-route
+                    set speed through the config's cruise_by_route).
+  VLM_ROWS          comma list that restricts the arm's rows (Phase A gating), e.g. "R1,R4,R5".
+  VLM_SHADOW        1: ask the VLM and log its answers even when no VLM row is open (Phase A).
+  VLM_SAVE_FRAMES   1: save the wide and road frame of every request as JPEG under <attempt>/vlm_frames.
+  VLM_L             seconds of simulation time before an answer may be used (registered: Phase A p95).
+  VLM_LIGHT_VARIANT Q_light input variant (lib/vlm_protocol.VARIANTS); a second, Q_light-only request.
+  VLM_ORACLE        truth: answers are the ground-truth labels (integration test of the table, debug routes only);
+                    stuckred: as truth but Q_light is always red (exercises R5).
+  VLM_ENDPOINT      System One URL.
+
+Logs in the attempt dir: vlm_decisions.jsonl, one line per request {"k": "a", t_q, t_eff, gt, ans} and one line per
+0.5 s {"k": "s", t, v, rules, ...}; plans.jsonl gets the table state under pc.vlm.
 """
-import sys
-import os
 import json
 import math
-import time
+import os
+import sys
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Dict, Any, List, Optional
 
 import numpy as np
 
-# Ensure bare imports from lib and scripts work
 _p = Path(__file__).resolve()
-REPO = _p.parent if (_p.parent / "jevdrive").exists() else (_p.parents[1] if (_p.parents[1] / "jevdrive").exists() else _p.parents[3])
-for _d in (str(REPO / "lib"), str(REPO / "experiments/b2d_privileged/lib"), str(REPO / "experiments/op_closed_loop/lib"), str(REPO / "scripts")):
+REPO = _p.parents[1]
+for _d in (str(REPO / "lib"), str(REPO / "scripts")):
     if _d not in sys.path:
         sys.path.insert(0, _d)
 
-import b2d_zeroshot_agent as Z
-import zeroshot_rigs as rigs
-from op_arb_agent import OpArbAgent, TIMES, place, idm, REAR_TO_BUMPER, arc
-from b2d_privileged_geometry import Privileged, project, ego_boxes, overlap, rectangle_gap, visibility
-from vlm_protocol import parse_vlm_response
-from vlm_client import VLMClient, DummyVLMClient
+from op_arb_agent import OpArbAgent, REAR_TO_BUMPER, idm  # noqa: E402
+from b2d_privileged_geometry import Privileged, project  # noqa: E402
+from vlm_client import VLMClient, jpeg  # noqa: E402
+
+
+def _js(value):
+    """NumPy scalars at the log boundary (a numpy bool in a log line crashed the agent in decision 82)."""
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError("not JSON serializable: %s" % type(value).__name__)
 
 
 def get_entry_point():
     return "VlmArbAgent"
 
 
-# Fixed pre-registered arbitration parameters
-ARB_PARAMS = {
-    "N_jslow_m": 25.0,        # R1: Distance before junction entrance to apply speed cap
-    "v_jslow": 4.5,           # R1: Junction target speed limit (m/s)
-    "K_debounce": 2,          # R2/R3/R4: Consecutive identical answers required to trigger / release
-    "T_stop_sign_s": 2.5,     # R3: Stop duration at stop sign (s)
-    "T_max_stop_s": 25.0,     # R5: Maximum standstill holding duration before fallback (s)
-    "TTL_answer_s": 2.5,      # R5: VLM answer freshness timeout (s)
-    "sim_delay_L_s": 0.5,     # Latency simulation: answers take effect after t + L (s)
-    "idm_s0": 2.5,
-    "idm_T": 1.2,
-    "idm_b": 2.0,
-    "idm_amax": 1.5,
-    "cruise_base": 8.0,
-}
+# Registered arbitration parameters (plan section 2.4). L is replaced by VLM_L once Phase A measured it.
+ARB_PARAMS = {"N_jslow_m": 25.0, "v_jslow": 4.5, "K_debounce": 2, "T_stop_sign_s": 2.5, "T_max_stop_s": 25.0,
+              "TTL_answer_s": 2.5, "sim_delay_L_s": 0.5, "query_s": 0.5}
+ARM_ROWS = {"drive": (), "dslow": (), "jslow": ("R1",), "vred": ("R2", "R3", "R5"), "vbyp": ("R4", "R5"),
+            "vall": ("R1", "R2", "R3", "R4", "R5")}
+LIGHT_M, SIGN_M = 50.0, 25.0          # truth windows of the oracle answers; the label bins are applied offline
 
 
 class VlmArbitrationPC:
-    """Adapter wrapping Privileged geometry for VLM arbitration."""
+    """The `pc` hook of OpArbAgent: privileged geometry (bypass path) + the table's stop constraints."""
 
     def __init__(self, agent, priv):
-        self.agent = agent
-        self.priv = priv
+        self.agent, self.priv = agent, priv
 
     @property
     def meta(self):
-        return self.priv.meta if self.priv else {}
+        return dict(self.priv.meta, vlm=self.agent.table_state) if self.priv else {}
 
     def geometry(self, speed, t, xy, yaw, world, warm):
-        if not self.priv:
-            return world
-        self.priv.bypass = bool(self.agent.r4_bypassing)
+        self.priv.bypass = bool(self.agent.r4_on)
         return self.priv.geometry(speed, t, xy, yaw, world, warm)
 
     def constraints(self, s_base, speed, path, t, warm):
-        return self.agent.pending_vlm_cons, self.agent.pending_vlm_release
+        self.priv.constraints(s_base, speed, path, t, warm)      # arm "drive": no control, writes privileged.jsonl
+        return self.agent.pending_cons, self.agent.pending_release
 
     def close(self):
         if self.priv:
@@ -77,328 +82,276 @@ class VlmArbitrationPC:
 
 
 class VlmArbAgent(OpArbAgent):
-    """OpArbAgent extended with VLM-based slow-channel arbitration table."""
-
     def setup(self, path_to_conf_file):
         super().setup(path_to_conf_file)
-        
-        # Arm mode: 'drive', 'dslow', 'jslow', 'vred', 'vbyp', 'vall', 'shadow'
-        self.vlm_arm = os.environ.get("VLM_ARM", "drive")
-        self.vlm_shadow = os.environ.get("VLM_SHADOW", "0") == "1" or self.vlm_arm == "shadow"
-        self.save_frames = os.environ.get("VLM_SAVE_FRAMES", "0") == "1"
-        self.frame_save_interval = float(os.environ.get("VLM_FRAME_INTERVAL", "0.5")) # simulation seconds
-        
-        # Privileged geometry helper for obstacle bypass geometry and ground-truth logging
-        # Privileged object initialized with 'drive' arm so privileged truth does not auto-arbitrate
-        self.priv = Privileged(self, "drive")
+        env = os.environ.get
+        self.vlm_arm = env("VLM_ARM", "drive")
+        rows = set(ARM_ROWS[self.vlm_arm])
+        if env("VLM_ROWS"):
+            rows &= set(env("VLM_ROWS").split(","))
+        self.rows = rows
+        self.vlm_oracle = env("VLM_ORACLE", "")
+        self.shadow = env("VLM_SHADOW", "0") == "1"
+        self.use_vlm = self.shadow or bool(rows & {"R2", "R3", "R4"})
+        self.save_frames = env("VLM_SAVE_FRAMES", "0") == "1"
+        self.L = float(env("VLM_L", ARB_PARAMS["sim_delay_L_s"]))
+        self.light_variant = env("VLM_LIGHT_VARIANT", "base")
+        self.client = VLMClient(endpoint=env("VLM_ENDPOINT", "http://127.0.0.1:8080/v1/systemone"))
+        self.pool = ThreadPoolExecutor(max_workers=2)
+        self.priv = Privileged(self, "drive")           # truth geometry and labels; arm "drive" = it controls nothing
         self.pc = VlmArbitrationPC(self, self.priv)
-        self.pending_vlm_cons = {}
-        self.pending_vlm_release = False
-        
-        # VLM client setup
-        endpoint = os.environ.get("VLM_ENDPOINT", "http://127.0.0.1:8080/v1/systemone")
-        self.vlm_client = VLMClient(endpoint=endpoint) if os.environ.get("VLM_DUMMY", "0") != "1" else DummyVLMClient()
-        
-        # Delay queue: stores (t_available, vlm_answer_dict)
-        self.answer_queue = deque()
-        self.current_vlm_answer = None
-        self.last_vlm_query_sim_t = -1e9
-        self.last_frame_save_sim_t = -1e9
-        
-        # Debounce counters for decisions
-        self.light_history = deque(maxlen=ARB_PARAMS["K_debounce"])
-        self.sign_history = deque(maxlen=ARB_PARAMS["K_debounce"])
-        self.block_history = deque(maxlen=ARB_PARAMS["K_debounce"])
-        
-        # State tracking for rules
-        self.r2_holding_red = False
-        self.r3_stop_sign_completed_junctions = set()
-        self.r3_stopped_since = None
-        self.r3_holding_stop = False
-        self.r4_bypassing = False
-        self.r5_fallback_active = False
-        self.stop_started_sim_t = None
-        
-        # Log file for VLM decisions and ground truth labels
-        out_root = Path(self.out) if hasattr(self, "out") and self.out else Path("/tmp/vlm_arb_run")
-        out_root.mkdir(parents=True, exist_ok=True)
-        self.vlm_log_path = out_root / "vlm_decisions.jsonl"
-        self.vlm_log = self.vlm_log_path.open("w", buffering=1)
-        self.frame_dir = out_root / "vlm_frames"
+        self.pending_cons, self.pending_release, self.table_state = {}, False, {}
+        self.queue = deque()                            # (t_q, gt, future or answer dict)
+        self.answer = None
+        self.last_q = self.last_s = -1e9
+        K = ARB_PARAMS["K_debounce"]
+        self.h_light, self.h_sign, self.h_block = deque(maxlen=K), deque(maxlen=K), deque(maxlen=K)
+        self.r2_hold = self.r3_hold = self.r4_on = self.r5 = self.owned_stop = False
+        self.r3_done, self.r3_since = set(), None
+        self.r4_seen = False
+        self.stop_since = None
+        self.release_until = -1e9
+        self.signs = self.lights = None
+        out = Path(self.out)
+        self.vlm_log = (out / "vlm_decisions.jsonl").open("w", buffering=1)
+        self.frame_dir = out / "vlm_frames"
         if self.save_frames:
             self.frame_dir.mkdir(parents=True, exist_ok=True)
+        self.vlm_log.write(json.dumps(dict(k="h", arm=self.vlm_arm, rows=sorted(rows), L=self.L, shadow=self.shadow,
+                                           oracle=self.vlm_oracle, light_variant=self.light_variant, params=ARB_PARAMS)) + "\n")
 
-    def _query_vlm(self, sim_t, rgb_frames):
-        """Send camera frames to VLM and enqueue result with simulated delay L."""
-        res = self.vlm_client.query(rgb_frames, state_desc=f"CARLA ego at t={sim_t:.2f}s")
-        t_effective = sim_t + ARB_PARAMS["sim_delay_L_s"]
-        res["sim_t_queried"] = sim_t
-        res["sim_t_effective"] = t_effective
-        self.answer_queue.append((t_effective, res))
+    # ------------------------------------------------------------------ truth (labels and oracle; never a model input)
+    def _prepare(self):
+        if not self.priv.prepared:
+            self.priv.prepare()
+        if self.signs is None:
+            import carla
+            r, self.signs, self.lights = self.route, [], []
+            actors = self.priv.world.get_actors()
+            for a in actors.filter("traffic.stop"):           # stop signs whose trigger volume lies on the route
+                v = a.get_transform().transform(a.trigger_volume.location)
+                loc = carla.Location(x=v.x, y=v.y, z=v.z)
+                s, lat, tan = project([[loc.x, loc.y]], r.xy)
+                f = self.priv.map.get_waypoint(loc).transform.get_forward_vector()
+                if abs(float(lat[0])) <= 2.5 and f.x * tan[0][0] + f.y * tan[0][1] > 0.5:
+                    self.signs.append((float(s[0]), int(a.id)))
+            for a in actors.filter("*traffic_light*"):
+                loc = a.get_location()
+                self.lights.append((a, np.array([loc.x, loc.y])))
 
-    def _update_vlm_answer(self, sim_t):
-        """Pop all answers whose effective simulation time has arrived."""
-        while self.answer_queue and self.answer_queue[0][0] <= sim_t:
-            _, ans = self.answer_queue.popleft()
-            self.current_vlm_answer = ans
-            # Update debounce buffers
-            self.light_history.append(ans.get("Q_light", "no_light"))
-            self.sign_history.append(ans.get("Q_sign", "no"))
-            self.block_history.append((ans.get("Q_block", "clear"), ans.get("Q_side", "none_free")))
+    def _junction(self, ego_s):
+        """(distance of the rear axle to the next junction entrance on the route, junction id); inside a junction
+        the distance stays within [-1, 0]."""
+        r, flags = self.route, self.priv.flags
+        ahead = np.flatnonzero(flags & (r.s >= ego_s - 1.0) & (r.s <= ego_s + 100.0))
+        if len(ahead) == 0:
+            return 999.0, -1
+        return float(r.s[ahead[0]]) - ego_s, int(self.priv.jids[ahead[0]])
 
-    def _extract_ground_truth(self, sim_t, ego_s, next_junc_dist):
-        """Extract ground-truth state for shadow evaluation."""
-        ctx = self._ctx() if hasattr(self, "_ctx") else {}
-        tl_state = ctx.get("tl") # 0: green, 1: yellow, 2: red
-        tl_dist = ctx.get("tl_dist", 999.0)
-        
-        # Ground truth Q_light label
-        if tl_dist < 50.0 and tl_state in (1, 2):
-            gt_light = "red_or_yellow_for_ego"
-        elif tl_dist < 50.0 and tl_state == 0:
-            gt_light = "green_for_ego"
-        else:
-            gt_light = "no_light"
-            
-        # Ground truth Q_sign label
-        # In CARLA B2D, stop sign is present if non-signalized junction is within 25m
-        gt_sign = "yes" if next_junc_dist < 25.0 and tl_dist > 900.0 else "no"
-        
-        # Ground truth obstacles
-        obstacles = self.priv.meta.get("obstacles", []) if hasattr(self.priv, "meta") else []
-        if obstacles:
-            gt_block = "static_block"
-            gt_side = "left_free" if self.priv.meta.get("borrow") else "right_free"
-        else:
-            gt_block = "clear"
-            gt_side = "none_free"
-            
-        return {
-            "gt_light": gt_light,
-            "tl_state": tl_state,
-            "tl_dist": tl_dist,
-            "gt_sign": gt_sign,
-            "gt_block": gt_block,
-            "gt_side": gt_side,
-            "next_junc_dist": next_junc_dist
-        }
-
-    def _next_junction_info(self, ego_s):
-        """Find next junction entrance along the route using map waypoints."""
-        if not getattr(self.priv, "prepared", False):
-            try:
-                self.priv.prepare()
-            except Exception:
-                pass
-
+    def _side(self, start_s):
+        """Which adjacent lane the privileged bypass would take for an obstacle starting at start_s."""
+        import carla
         r = self.route
-        if not hasattr(self.priv, "flags") or len(self.priv.flags) == 0:
-            return 999.0, None, -1
-        
-        ahead_indices = np.flatnonzero(self.priv.flags & (r.s >= ego_s - 1.0) & (r.s <= ego_s + 100.0))
-        if len(ahead_indices) == 0:
-            return 999.0, None, -1
-        
-        junc_entry_idx = ahead_indices[0]
-        junc_entry_s = float(r.s[junc_entry_idx])
-        junc_dist = junc_entry_s - ego_s
-        jid = int(self.priv.jids[junc_entry_idx]) if hasattr(self.priv, "jids") else 0
-        return junc_dist, junc_entry_s, jid
+        p = r.xy[int(np.searchsorted(r.s, start_s).clip(0, len(r.s) - 1))]
+        wp = self.priv.map.get_waypoint(carla.Location(x=float(p[0]), y=float(p[1])))
+        fwd = wp.transform.get_forward_vector()
+        opts = []
+        for order, other in enumerate((wp.get_left_lane(), wp.get_right_lane())):
+            if other is None or other.lane_type != carla.LaneType.Driving:
+                continue
+            loc, u = other.transform.location, other.transform.get_forward_vector()
+            off = abs((loc.x - p[0]) * -fwd.y + (loc.y - p[1]) * fwd.x)
+            if 2.5 <= off <= 4.5 and abs(loc.z - wp.transform.location.z) <= .75:
+                opts.append((bool(u.x * fwd.x + u.y * fwd.y < 0), order))
+        return ("left_free", "right_free")[sorted(opts)[0][1]] if opts else "none_free"
 
-    def _apply_arbitration_table(self, speed, sim_t, ego_s, next_junc_dist, next_junc_s, next_jid):
-        """Evaluate Arbitration Table rules R1 - R5."""
-        out = {}
-        release = False
-        active_rules = []
-        K = ARB_PARAMS["K_debounce"]
+    def _truth_labels(self, xy, ego_s, junc_dist):
+        import carla
+        code = {carla.TrafficLightState.Green: 0, carla.TrafficLightState.Yellow: 1, carla.TrafficLightState.Red: 2}
+        c = self._ctx()
+        gt = {"tl": c.get("tl"), "tl_dist": c.get("tl_dist"), "tl_id": c.get("tl_id"), "junc_dist": round(junc_dist, 2),
+              "lead_gap": c.get("lead_gap"), "lead_v": c.get("lead_v")}
+        near = []                                             # every light within 60 m: [id, state, distance]
+        for a, p in self.lights:
+            d = float(np.linalg.norm(p - xy))
+            if d <= 60.0:
+                near.append([int(a.id), code.get(a.get_state(), -1), round(d, 1)])
+        gt["lights"] = sorted(near, key=lambda x: x[2])[:10]
+        ahead = [s - ego_s - REAR_TO_BUMPER for s, _ in self.signs if -2.0 < s - ego_s - REAR_TO_BUMPER < 80.0]
+        gt["stop_dist"] = round(min(ahead), 2) if ahead else None
+        obs = self.priv.meta.get("obstacles") or []
+        if obs:
+            gt.update(block="static_block", block_dist=round(obs[0]["start_s"] - ego_s - REAR_TO_BUMPER, 2),
+                      side=self._side(obs[0]["start_s"]))
+        else:
+            lead = c.get("lead_gap") is not None and c["lead_gap"] < 40.0 and c.get("lead_v", 0.0) > 0.5
+            gt.update(block="moving_lead" if lead else "clear", block_dist=None, side="none_free")
+        return gt
 
-        # Helper for IDM stop target
-        def idm_stop(dist_to_stop):
-            return idm(speed, max(0.1, dist_to_stop + ARB_PARAMS["idm_s0"]), 0.0, 0.0,
-                       ARB_PARAMS["cruise_base"], ARB_PARAMS["idm_amax"], ARB_PARAMS["idm_b"],
-                       ARB_PARAMS["idm_s0"], ARB_PARAMS["idm_T"])
+    def _oracle_answer(self, gt):
+        d, tl = gt.get("tl_dist"), gt.get("tl")
+        light = "no_light"
+        if d is not None and d < LIGHT_M and tl in (0, 1, 2):
+            light = "green_for_ego" if tl == 0 else "red_or_yellow_for_ego"
+        if self.vlm_oracle == "stuckred":
+            light = "red_or_yellow_for_ego"
+        sd = gt.get("stop_dist")
+        return {"ok": True, "latency_ms": 0.0, "oracle": self.vlm_oracle, "Q_light": light,
+                "Q_sign": "yes" if sd is not None and sd <= SIGN_M else "no", "Q_block": gt["block"], "Q_side": gt["side"]}
 
-        # Check VLM answer validity and TTL
-        vlm_valid = False
-        ans = self.current_vlm_answer
-        if ans and (sim_t - ans.get("sim_t_effective", 0.0)) <= ARB_PARAMS["TTL_answer_s"]:
-            vlm_valid = True
+    # ------------------------------------------------------------------ the request (worker thread)
+    def _request(self, t_q, frames):
+        jpgs = {k: jpeg(v) for k, v in frames.items()}
+        if self.save_frames:
+            for k, b in jpgs.items():
+                (self.frame_dir / ("%08.2f_%s.jpg" % (t_q, k))).write_bytes(b)
+        ans = self.client.ask(jpgs, "base")
+        if ans["ok"] and self.light_variant != "base":         # Q_light from the diagnosed variant, latencies add up
+            alt = self.client.ask(jpgs, self.light_variant, only_light=True)
+            ans["latency_ms"] += alt["latency_ms"]
+            ans["Q_light_base"] = ans.get("Q_light")
+            if alt["ok"]:
+                ans.update({k: alt[k] for k in ("Q_light", "Q_light_conf", "Q_light_p") if k in alt})
+            else:
+                ans.update(ok=False, error=alt.get("error"))
+        return ans
 
-        # Track standstill duration for R5
+    def _ask(self, t, cams, gt):
+        if self.vlm_oracle:
+            self.queue.append((t, gt, self._oracle_answer(gt)))
+            return
+        frames = {}
+        for tag, name in (("OP_WIDE", "wide"), ("OP_ROAD", "road")):   # CARLA frames are BGRA
+            if tag in cams and cams[tag] is not None:
+                frames[name] = np.ascontiguousarray(cams[tag][:, :, [2, 1, 0]])
+        if frames:
+            self.queue.append((t, gt, self.pool.submit(self._request, t, frames)))
+
+    def _arrivals(self, t):
+        """Answers become usable at t_q + max(L, measured latency): the simulator waits for the VLM, the car would not."""
+        while self.queue and t >= self.queue[0][0] + self.L - 1e-6:
+            t_q, gt, a = self.queue[0]
+            ans = a if isinstance(a, dict) else a.result()
+            t_eff = t_q + max(self.L, ans.get("latency_ms", 0.0) / 1e3)
+            if t < t_eff - 1e-6:
+                self.queue[0] = (t_q, gt, ans)
+                break
+            self.queue.popleft()
+            ans.update(t_q=t_q, t_eff=t_eff)
+            if ans["ok"]:                                      # a failed request is no answer: the last one ages out
+                self.answer = ans
+                self.h_light.append(ans["Q_light"])
+                self.h_sign.append(ans["Q_sign"])
+                self.h_block.append((ans["Q_block"], ans["Q_side"]))
+            self.vlm_log.write(json.dumps(dict(k="a", t=t, t_q=t_q, t_eff=t_eff, gt=gt, ans=ans), default=_js) + "\n")
+
+    # ------------------------------------------------------------------ the table
+    def _table(self, speed, t, junc_dist, jid):
+        P, K, A = ARB_PARAMS, ARB_PARAMS["K_debounce"], self.arb
+        rows, out, active = self.rows, {}, []
+        fresh = bool(self.answer is not None and t - self.answer["t_eff"] <= P["TTL_answer_s"])
+        full = lambda h, ok: len(h) == K and all(ok(x) for x in h)     # noqa: E731
+        line = junc_dist - REAR_TO_BUMPER - 0.5                        # bumper to the stop position (junction entrance)
+        can_stop = line > max(0.5, speed * speed / 8.0 - 1.0) or (speed < 1.0 and line > -1.0)   # as the privileged arm
+        stop = lambda: idm(speed, max(0.1, line + A["idm_s0"]), 0.0, 0.0, A["cruise"], A["amax"], A["idm_b"],  # noqa: E731
+                           A["idm_s0"], A["idm_T"])
         if speed < 0.2:
-            if self.stop_started_sim_t is None:
-                self.stop_started_sim_t = sim_t
+            self.stop_since = t if self.stop_since is None else self.stop_since
         else:
-            self.stop_started_sim_t = None
-
-        # R5: Fallback if stopped for too long or VLM expired while holding stop
-        stopped_duration = (sim_t - self.stop_started_sim_t) if self.stop_started_sim_t is not None else 0.0
-        if (self.r2_holding_red or self.r3_holding_stop) and (stopped_duration > ARB_PARAMS["T_max_stop_s"] or (not vlm_valid and stopped_duration > 5.0)):
-            self.r5_fallback_active = True
-            self.r2_holding_red = False
-            self.r3_holding_stop = False
-            release = True
-            active_rules.append("R5_fallback")
-
-        # R1: `jslow` - Junction speed cap (Map-based, independent of VLM)
-        enable_r1 = self.vlm_arm in ("jslow", "vall")
-        cruise_cap = ARB_PARAMS["cruise_base"]
-        if enable_r1 and next_junc_dist <= ARB_PARAMS["N_jslow_m"] and next_junc_dist >= -10.0:
-            cruise_cap = min(cruise_cap, ARB_PARAMS["v_jslow"])
-            active_rules.append("R1_jslow")
-
-        # R2: Traffic Light (VLM-based)
-        enable_r2 = self.vlm_arm in ("vred", "vall") and not self.r5_fallback_active
-        if enable_r2 and vlm_valid:
-            # Trigger check: Q_light == red_or_yellow_for_ego for K consecutive queries
-            is_red_k = len(self.light_history) == K and all(x == "red_or_yellow_for_ego" for x in self.light_history)
-            is_green_k = len(self.light_history) == K and all(x == "green_for_ego" for x in self.light_history)
-            
-            # Stop position is entrance to intersection
-            dist_to_line = next_junc_dist - REAR_TO_BUMPER - 0.5
-            
-            if is_red_k and 0.0 < dist_to_line < 50.0:
-                self.r2_holding_red = True
-            elif self.r2_holding_red and (is_green_k or dist_to_line <= -2.0):
-                self.r2_holding_red = False
-                release = True
-                
-            if self.r2_holding_red and dist_to_line > -2.0:
-                out["R2_red"] = idm_stop(dist_to_line)
-                active_rules.append("R2_red")
-
-        # R3: Stop Sign (VLM-based, suppressed by R2)
-        enable_r3 = self.vlm_arm in ("vred", "vall") and not self.r5_fallback_active and not self.r2_holding_red
-        if enable_r3 and vlm_valid:
-            is_sign_k = len(self.sign_history) == K and all(x == "yes" for x in self.sign_history)
-            dist_to_line = next_junc_dist - REAR_TO_BUMPER - 0.5
-            
-            # Only trigger once per junction
-            if next_jid not in self.r3_stop_sign_completed_junctions and is_sign_k and 0.0 < dist_to_line < 25.0:
-                self.r3_holding_stop = True
-                
-            if self.r3_holding_stop:
-                if speed < 0.2:
-                    if self.r3_stopped_since is None:
-                        self.r3_stopped_since = sim_t
-                    elif sim_t - self.r3_stopped_since >= ARB_PARAMS["T_stop_sign_s"]:
-                        # Release stop sign
-                        self.r3_holding_stop = False
-                        self.r3_stopped_since = None
-                        self.r3_stop_sign_completed_junctions.add(next_jid)
-                        release = True
-                        
-                if self.r3_holding_stop:
-                    out["R3_sign"] = idm_stop(dist_to_line)
-                    active_rules.append("R3_sign")
-
-        # R4: Obstacle Bypass (VLM-based decision + geometry generator)
-        enable_r4 = self.vlm_arm in ("vbyp", "vall")
-        if enable_r4 and vlm_valid:
-            is_block_k = len(self.block_history) == K and all(
-                block == "static_block" and side in ("left_free", "right_free")
-                for block, side in self.block_history
-            )
-            is_clear_k = len(self.block_history) == K and all(
-                block == "clear" for block, _ in self.block_history
-            )
-            
-            if is_block_k and not self.r4_bypassing:
-                self.r4_bypassing = True
-                active_rules.append("R4_bypass")
-            elif self.r4_bypassing:
-                if is_clear_k or (self.priv.bypass_state is None and getattr(self.priv, "meta", {}).get("obstacles") == []):
-                    self.r4_bypassing = False
+            self.stop_since = None
+        stood = t - self.stop_since if self.stop_since is not None else 0.0
+        release_now = False
+        # R5: a held stop older than T_max, or held on an expired answer, is dropped until the car rolls again
+        if "R5" in rows and (self.r2_hold or self.r3_hold) and (stood > P["T_max_stop_s"] or not fresh):
+            self.r5, self.r2_hold, self.r3_hold, self.r3_since = True, False, False, None
+            self.release_until = t + 2.0
+            active.append("R5")
+        if self.r5 and speed > 1.0:
+            self.r5 = False
+        # R1: junction speed cap from the map
+        cap = A["cruise"]
+        if "R1" in rows and -10.0 <= junc_dist <= P["N_jslow_m"]:
+            cap = min(cap, P["v_jslow"])
+            active.append("R1")
+        # R2: red / yellow light for the ego, stop at the junction entrance; only green releases
+        if "R2" in rows and not self.r5 and fresh:
+            if not self.r2_hold and full(self.h_light, lambda x: x == "red_or_yellow_for_ego") and line < 50.0 and can_stop:
+                self.r2_hold = True
+            elif self.r2_hold and full(self.h_light, lambda x: x == "green_for_ego"):
+                self.r2_hold, self.release_until = False, t + 2.0
+        if self.r2_hold and line <= -2.0:                              # past the line: nothing left to hold
+            self.r2_hold = False
+        if self.r2_hold:
+            out["R2"] = stop()
+            active.append("R2")
+        # R3: stop sign, dwell T_s once per junction; suppressed while R2 holds
+        if "R3" in rows and not self.r5 and not self.r2_hold:
+            if (not self.r3_hold and fresh and jid not in self.r3_done and full(self.h_sign, lambda x: x == "yes")
+                    and line < 25.0 and can_stop):
+                self.r3_hold, self.r3_since = True, None
+            if self.r3_hold:
+                if speed < 0.2 and self.r3_since is None:
+                    self.r3_since = t
+                if (self.r3_since is not None and t - self.r3_since >= P["T_stop_sign_s"]) or line <= -2.0:
+                    self.r3_hold, self.r3_since = False, None
+                    self.r3_done.add(jid)
+                    self.release_until = t + 2.0
                 else:
-                    active_rules.append("R4_bypass")
-        else:
-            self.r4_bypassing = False
+                    out["R3"] = stop()
+                    active.append("R3")
+        # R4: bypass of a static block; not while a stop is held, not inside or within N m of a junction; once
+        # started it stays on until the privileged geometry has returned to the route
+        if "R4" in rows:
+            state = self.priv.bypass_state
+            if not self.r4_on:
+                trig = fresh and full(self.h_block, lambda x: x[0] == "static_block" and x[1] != "none_free")
+                if trig and not (self.r2_hold or self.r3_hold) and junc_dist > P["N_jslow_m"]:
+                    self.r4_on, self.r4_seen = True, False
+            else:
+                self.r4_seen = self.r4_seen or state is not None
+                done = self.r4_seen and state is None
+                idle = not self.r4_seen and fresh and full(self.h_block, lambda x: x[0] != "static_block")
+                if done or idle:
+                    self.r4_on = False
+            if self.r4_on:
+                active.append("R4")
+        if out and speed < 0.2:
+            self.owned_stop = True
+        release_now = bool(t < self.release_until and speed < 1.0 and self.owned_stop and not out)
+        if speed >= 1.0:
+            self.release_until, self.owned_stop = -1e9, False
+        self.table_state = dict(rules=active, release=release_now, r5=bool(self.r5), fresh=fresh,
+                                line=round(float(line), 2), jid=int(jid), light=list(self.h_light), sign=list(self.h_sign), block=list(self.h_block))
+        return out, cap, release_now, active
 
-        # Reset R5 fallback once moving again
-        if self.r5_fallback_active and speed > 1.0:
-            self.r5_fallback_active = False
-
-        return out, cruise_cap, release, active_rules
-
+    # ------------------------------------------------------------------ per plan
     def _plan(self, speed):
-        """Main agent tick: collect frames, execute VLM query, apply arbitration table."""
-        f, t_frame, cams, _ = self.cam_sets[-1]
-        sim_t = t_frame
-
-        # 1. Read camera frames (OP_WIDE, OP_ROAD)
-        # Note: CARLA raw camera frame is BGRA; convert to RGB for VLM
-        rgb_frames = []
-        for k in ("OP_WIDE", "OP_ROAD"):
-            if k in cams:
-                arr = cams[k]
-                if arr.ndim == 3 and arr.shape[-1] >= 3:
-                    rgb_frames.append(arr[:, :, [2, 1, 0]])
-        if not rgb_frames and cams:
-            first_k = next(iter(cams))
-            arr = cams[first_k]
-            if arr.ndim == 3 and arr.shape[-1] >= 3:
-                rgb_frames.append(arr[:, :, [2, 1, 0]])
-
-        # 2. VLM Query cadence: query every 0.5s of simulation time
-        if rgb_frames and (sim_t - self.last_vlm_query_sim_t >= self.frame_save_interval - 1e-4):
-            self._query_vlm(sim_t, rgb_frames)
-            self.last_vlm_query_sim_t = sim_t
-            
-            # Optional: save frame for offline inspection / multi-model evaluation
-            if self.save_frames:
-                frame_idx = len(self.cam_sets)
-                frame_path = self.frame_dir / f"frame_{sim_t:.2f}s_{frame_idx}.npy"
-                np.save(str(frame_path), rgb_frames[0])
-
-        # 3. Consume arrived VLM answers (accounting for delay L)
-        self._update_vlm_answer(sim_t)
-
-        # 4. Ego pose & junction info
-        xy, yaw = self.poses[-1][1], self.poses[-1][2] if self.poses else ([0., 0.], 0.)
+        f, t, cams, _ = self.cam_sets[-1]
+        xy = np.asarray(self.poses[-1][1], float)
+        self._prepare()
         ego_s = float(project([xy], self.route.xy)[0][0])
-        next_junc_dist, next_junc_s, next_jid = self._next_junction_info(ego_s)
-
-        # 5. Apply arbitration rules R1 - R5
-        vlm_constraints, cruise_cap, release, active_rules = self._apply_arbitration_table(
-            speed, sim_t, ego_s, next_junc_dist, next_junc_s, next_jid
-        )
-
-        # 6. Apply R1 speed cap to base governor
-        original_cruise = self.arb.get("cruise", ARB_PARAMS["cruise_base"])
-        self.arb["cruise"] = min(original_cruise, cruise_cap)
-
-        # 7. Store constraints and release for self.pc adapter
-        self.pending_vlm_cons = vlm_constraints
-        self.pending_vlm_release = release
-
-        # 8. Compute ground truth context for evaluation & logging
-        gt_ctx = self._extract_ground_truth(sim_t, ego_s, next_junc_dist)
-
-        # 9. Log step info to vlm_decisions.jsonl
-        log_entry = {
-            "t": sim_t,
-            "speed": speed,
-            "ego_s": ego_s,
-            "vlm_arm": self.vlm_arm,
-            "vlm_answer": self.current_vlm_answer,
-            "gt": gt_ctx,
-            "active_rules": active_rules,
-            "release": release,
-            "r5_fallback": self.r5_fallback_active
-        }
-        self.vlm_log.write(json.dumps(log_entry) + "\n")
-        self.vlm_log.flush()
-
-        # 10. Invoke base OpenPilot OpArbAgent _plan
+        junc_dist, jid = self._junction(ego_s)
+        if self.use_vlm and t - self.last_q >= ARB_PARAMS["query_s"] - 1e-4:
+            self.last_q = t
+            self._ask(t, cams, self._truth_labels(xy, ego_s, junc_dist))
+        self._arrivals(t)
+        cons, cap, release, active = self._table(speed, t, junc_dist, jid)
+        self.pending_cons, self.pending_release = cons, release
+        if t - self.last_s >= ARB_PARAMS["query_s"] - 1e-4:
+            self.last_s = t
+            self.vlm_log.write(json.dumps(dict(k="s", t=t, v=round(float(speed), 3), ego_s=round(ego_s, 2),
+                                               junc_dist=round(junc_dist, 2), cap=cap, **self.table_state), default=_js) + "\n")
+        cruise = self.arb["cruise"]
+        self.arb["cruise"] = min(cruise, cap)
         try:
-            ms = super()._plan(speed)
+            return super()._plan(speed)
         finally:
-            self.arb["cruise"] = original_cruise
-
-        return ms
+            self.arb["cruise"] = cruise
 
     def destroy(self):
-        """Cleanup resources and close logs."""
-        if hasattr(self, "vlm_log") and self.vlm_log and not self.vlm_log.closed:
-            self.vlm_log.close()
-        super().destroy()
+        try:
+            self.pool.shutdown(wait=True)
+            if getattr(self, "vlm_log", None) and not self.vlm_log.closed:
+                self.vlm_log.close()
+        finally:
+            super().destroy()

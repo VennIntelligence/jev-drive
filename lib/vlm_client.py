@@ -1,97 +1,72 @@
-"""Client for OpenJev System One server and VLM endpoints.
+"""Client of the OpenJev System One decision endpoint (Python 3.8, route process env or analysis env).
 
-Supports synchronous and non-blocking calls, base64 encoding of CARLA native camera frames,
-and fallbacks.
+One call = one HTTP request with JPEG frames and a question schema. A failed request returns {"ok": False, ...} with
+no answers: the caller must not treat it as an answer (the arbitration layer lets the previous answer age out).
 """
 import base64
 import json
 import time
 import urllib.request
-import urllib.error
 from io import BytesIO
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict
+
 import numpy as np
 from PIL import Image
 
 try:
-    from .vlm_protocol import QUESTIONS_SCHEMA, parse_vlm_response
+    from .vlm_protocol import CROP_BOX, QUESTIONS_SCHEMA, VARIANTS, parse_vlm_response
 except (ImportError, ValueError):
-    from vlm_protocol import QUESTIONS_SCHEMA, parse_vlm_response
+    from vlm_protocol import CROP_BOX, QUESTIONS_SCHEMA, VARIANTS, parse_vlm_response
+
+ENDPOINT = "http://127.0.0.1:8080/v1/systemone"
+
+
+def jpeg(frame, quality: int = 85) -> bytes:
+    """RGB array or PIL image -> JPEG bytes."""
+    img = frame if isinstance(frame, Image.Image) else Image.fromarray(np.ascontiguousarray(frame))
+    buf = BytesIO()
+    img.save(buf, format="JPEG", quality=quality)
+    return buf.getvalue()
+
+
+def crop_wide(jpg: bytes) -> bytes:
+    """Upper-centre crop of the wide frame (CROP_BOX), upsampled 2x: where a light facing the ego lane sits."""
+    img = Image.open(BytesIO(jpg)).convert("RGB")
+    w, h = img.size
+    x0, y0, x1, y1 = CROP_BOX
+    c = img.crop((int(x0 * w), int(y0 * h), int(x1 * w), int(y1 * h)))
+    return jpeg(c.resize((c.width * 2, c.height * 2), Image.BICUBIC))
 
 
 class VLMClient:
-    def __init__(self, endpoint: str = "http://127.0.0.1:8080/v1/systemone", model: str = "openjev-latest", timeout_s: float = 2.0):
-        self.endpoint = endpoint
-        self.model = model
-        self.timeout_s = timeout_s
+    def __init__(self, endpoint: str = ENDPOINT, model: str = "openjev-latest", timeout_s: float = 5.0):
+        self.endpoint, self.model, self.timeout_s = endpoint, model, timeout_s
 
-    def encode_frame(self, frame_np: np.ndarray, quality: int = 85) -> str:
-        """Encode an RGB numpy array (H, W, 3) to a base64 data URI."""
-        img = Image.fromarray(frame_np)
-        buf = BytesIO()
-        img.save(buf, format="JPEG", quality=quality)
-        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-        return f"data:image/jpeg;base64,{b64}"
-
-    def query(self, frames: List[np.ndarray], state_desc: str = "Driving in CARLA autonomous mode") -> Dict[str, Any]:
-        """Query the System One decision endpoint with the given camera frames."""
-        images = [self.encode_frame(f) for f in frames]
-        payload = {
-            "model": self.model,
-            "state": state_desc,
-            "images": images,
-            "questions": QUESTIONS_SCHEMA,
-            "steps": 1,
-            "samples": 1
-        }
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            self.endpoint,
-            data=data,
-            headers={"Content-Type": "application/json"}
-        )
-        
+    def ask(self, jpgs: Dict[str, bytes], variant: str = "base", only_light: bool = False, state: str = "") -> Dict[str, Any]:
+        """`jpgs`: {"wide": jpeg bytes, "road": jpeg bytes}. `only_light`: send the Q_light question alone."""
+        v = VARIANTS[variant]
+        images = [jpgs[c] for c in v["cams"] if c in jpgs]
+        if v["crop"] and "wide" in jpgs:
+            images.append(crop_wide(jpgs["wide"]))
+        questions = {"Q_light": v["light"]} if only_light else dict(QUESTIONS_SCHEMA, Q_light=v["light"])
+        payload = {"model": self.model, "state": state or "Driving in CARLA autonomous mode", "questions": questions,
+                   "images": ["data:image/jpeg;base64," + base64.b64encode(b).decode("ascii") for b in images],
+                   "steps": 1, "samples": 1}
+        req = urllib.request.Request(self.endpoint, data=json.dumps(payload).encode("utf-8"),
+                                     headers={"Content-Type": "application/json"})
         t0 = time.perf_counter()
         try:
             with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
-                raw = json.loads(resp.read().decode("utf-8"))
-                latency_ms = (time.perf_counter() - t0) * 1000
-                parsed = parse_vlm_response(raw)
-                parsed["latency_ms"] = latency_ms
-                parsed["ok"] = True
-                parsed["raw"] = raw
-                return parsed
-        except Exception as e:
-            latency_ms = (time.perf_counter() - t0) * 1000
-            return {
-                "ok": False,
-                "error": str(e),
-                "latency_ms": latency_ms,
-                "Q_light": "no_light",
-                "Q_light_conf": 0.0,
-                "Q_sign": "no",
-                "Q_sign_val": 0.0,
-                "Q_sign_conf": 0.0,
-                "Q_block": "clear",
-                "Q_block_conf": 0.0,
-                "Q_side": "none_free",
-                "Q_side_conf": 0.0
-            }
+                out = parse_vlm_response(json.loads(resp.read().decode("utf-8")))
+            out.update(ok=True)
+        except Exception as e:  # noqa: BLE001 - a failed request is data, not a crash of the route
+            out = {"ok": False, "error": str(e)[:200]}
+        out["latency_ms"] = round((time.perf_counter() - t0) * 1000, 1)
+        return out
 
-
-class DummyVLMClient(VLMClient):
-    """Fallback client for unit tests and local dry-runs."""
-    def query(self, frames: List[np.ndarray], state_desc: str = "") -> Dict[str, Any]:
-        return {
-            "ok": True,
-            "latency_ms": 50.0,
-            "Q_light": "no_light",
-            "Q_light_conf": 1.0,
-            "Q_sign": "no",
-            "Q_sign_val": 0.0,
-            "Q_sign_conf": 1.0,
-            "Q_block": "clear",
-            "Q_block_conf": 1.0,
-            "Q_side": "none_free",
-            "Q_side_conf": 1.0
-        }
+    def healthy(self) -> bool:
+        try:
+            with urllib.request.urlopen(self.endpoint.rsplit("/v1/", 1)[0] + "/health", timeout=2.0) as r:
+                return r.status == 200
+        except Exception:  # noqa: BLE001
+            return False
