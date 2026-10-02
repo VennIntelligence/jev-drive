@@ -11,7 +11,7 @@ The per-card Qwen servers are a separate process (vlm_qwen_server.py supervise, 
 $DATA_DIR/runs/vlm_arb_v2/qwen) and are not stopped by the lane.
 
 Stages (docs/long-runs.md: 1 unit -> a few -> all):
-  pre   three single-route units at once, one per card: `dbg-pbyp2-25169`, `dbg-pbyp2-24955` (debug obstacle routes, `pbyp2dbg`
+  pre   three single-route units at once, one per card: `dbg2-pbyp2-25169`, `dbg2-pbyp2-24955` (second round after the one adjustment of plans section 9; the first round is `dbg-pbyp2-*`) (debug obstacle routes, `pbyp2dbg`
         checks: obstacle detected, shifted path, valid shift, returned) and `dbg-vred2-334` (the real VLM drives R2 + R5 with the
         stop-line target on the debug red-light route 334, `red_stop2`).
   all   4  `cal2-s1-q0..q2` (shadow `drive`, Qwen servers) and `pbyp2-s0-q0..q2` at the same time (6 workers per card): `calibrate`
@@ -53,8 +53,8 @@ def tool(name, *args, deps=(), prio=0, ok=None):
 
 
 def pre_jobs():
-    return [base.unit("dbg-pbyp2", 0, "25169", ["25169"], None, "pbyp2dbg", 0, base="pbyp2"),
-            base.unit("dbg-pbyp2", 0, "24955", ["24955"], None, "pbyp2dbg", 0, base="pbyp2"),
+    return [base.unit("dbg2-pbyp2", 0, "25169", ["25169"], None, "pbyp2dbg", 0, base="pbyp2"),
+            base.unit("dbg2-pbyp2", 0, "24955", ["24955"], None, "pbyp2dbg", 0, base="pbyp2"),
             base.unit("dbg-vred2", 0, "334", ["334"], dict(vc.qwen_env(L_REGISTERED), **STOPLINE), "red_stop2", 0, base="vred")]
 
 
