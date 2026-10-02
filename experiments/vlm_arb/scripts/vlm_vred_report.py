@@ -197,19 +197,26 @@ def infraction_events(rid, seed, r):
     if not msgs:
         return []
     ticks = jsonl(a / "ticks.jsonl")
-    cross, prev = [], None
+    cross, prev, cur = [], None, None
     for t in ticks:
         c = t.get("ctx", {})
         if c.get("tl") is not None and c.get("tl_dist") is not None:
-            if prev is not None and prev[0] > 0 >= c["tl_dist"] and c["tl"] == 2:
-                cross.append((t["t"], c.get("tl_id"), t["v"]))
+            if prev is not None and prev[0] > 0 >= c["tl_dist"] and c["tl"] in (1, 2):    # the ego light's stop line passed on yellow / red
+                cur = [t["t"], c.get("tl_id"), t["v"], c["tl"], None]
+                cross.append(cur)
+            if cur is not None and cur[4] is None and c["tl"] == 2 and c["tl_dist"] <= 0 and t["v"] > 0.5:
+                cur[4] = t["t"]                                                   # first moment past the line on red while rolling
             prev = (c["tl_dist"], c["tl"])
+        elif prev is not None and prev[0] <= 0 and cur is not None and cur[4] is None and prev[1] == 2 and t["v"] > 0.5:
+            cur[4] = t["t"]                                                       # inside the junction (ctx without a light), light last seen red
+            prev = None
         else:
             prev = None
+    cross = [(x[4] if x[4] is not None else x[0], x[1], x[2], x[3], x[0]) for x in cross]      # (T, light id, v at the line, state at the line, t at the line)
     return [dict(route=rid, seed=seed, msg=m, cross=cross[i] if i < len(cross) else None, n_cross=len(cross)) for i, m in enumerate(msgs)]
 
 
-def timeline(r, T, back=8.0, fwd=0.5):
+def timeline(r, T, back=9.0, fwd=0.5):
     ans, st, head = vlm_rows(r["attempt"])
     A = {round(d["t_q"], 2): d for d in ans}
     rows = []
@@ -355,8 +362,9 @@ def report(_):
                 T = e["cross"][0] if e["cross"] else None
                 lab = classify(r, T) if T is not None else "crossing not found in the log (n_cross=%d)" % e["n_cross"]
                 tl, _ = timeline(r, T) if T is not None else ([], None)
-                infr.append(dict(route=rid, seed=s, light_id=re.findall(r"light (\d+)", e["msg"])[0], t_cross=None if T is None else round(T, 1),
-                                 v_cross=None if T is None else round(e["cross"][2], 1), cause=lab, timeline=tl))
+                infr.append(dict(route=rid, seed=s, light_id=re.findall(r"light (\d+)", e["msg"])[0], t_line=None if T is None else round(e["cross"][4], 1),
+                                 state_at_line={1: "yellow", 2: "red"}.get(e["cross"][3]) if T is not None else None, t_red_rolling=None if T is None else round(T, 1),
+                                 v_line=None if T is None else round(e["cross"][2], 1), cause=lab, timeline=tl))
         for arm in ("drive", "pred", "vred"):
             x = df[(df.arm == arm) & (df.route == rid)]
             row.update({"DS_" + arm: round(x.DS.mean(), 1), "red_" + arm: int(x.red_light.sum())})
@@ -388,7 +396,7 @@ def report(_):
           pd.DataFrame([{k: v for k, v in x.items() if k != "timeline"} for x in infr]).to_markdown(index=False) if infr else "none", ""]
     for x in infr:
         if x["timeline"]:
-            D += ["", "Route %s seed %s, light %s, crossing at t = %s s: %s" % (x["route"], x["seed"], x["light_id"], x["t_cross"], x["cause"]), "",
+            D += ["", "Route %s seed %s, light %s, stop line at t = %s s (%s), rolling on red at t = %s s: %s" % (x["route"], x["seed"], x["light_id"], x["t_line"], x["state_at_line"], x["t_red_rolling"], x["cause"]), "",
                   pd.DataFrame(x["timeline"]).to_markdown(index=False)]
     # registered lines
     pv = lambda a, rs, col: paired(df, a, "drive", rs, col)   # noqa: E731
