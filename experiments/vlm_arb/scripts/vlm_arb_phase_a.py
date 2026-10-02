@@ -333,6 +333,9 @@ def figure(R, path):
     fig.savefig(path)
 
 
+FIGURE = '\n![Phase A readouts](phase_a.png)\n\nFigure: share of correct answers (top six) and of false alarms (bottom four) with 95% route-cluster intervals; the tick on a row is its registered line. Look at which dots sit on the wrong side of their tick.\n'
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--stage", default="final", choices=["old", "final"])
@@ -346,7 +349,7 @@ def main():
     tag = "phase_a" if a.stage == "final" else "phase_a_old"
     head = "# Phase A (%s): VLM answers against ground truth, %d requests, %d routes\n\n" % (a.stage, len(df), df.route.nunique())
     acc = accounting(df) if a.stage == "final" else []
-    text = head + table(R, gate, df) + accounting_table(acc)
+    text = head + table(R, gate, df) + accounting_table(acc) + FIGURE.replace("phase_a.png", tag + ".png")
     (out / (tag + ".md")).write_text(text)
     write_json(out / (tag + ".json"), dict(readouts=R, gate=gate, lines=LINES, n=len(df), requests=acc))
     figure(R, out / (tag + ".png"))
