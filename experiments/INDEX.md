@@ -6,6 +6,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 - [b2d_privileged](b2d_privileged/README.md): live; Red light + green release DS 75.0 to 95.0 [d82]
 - [op_adapt_l](op_adapt_l/README.md) (op-adapt L): live; Stop capture 0.252 to 0.559 open loop; B2D no gain [d77-81]
+- [op_common_cause](op_common_cause/README.md): live; Plan follows fake history yaw, 3-7x more at low speed, real and CARLA alike [d-]
 - [vlm_arb](vlm_arb/README.md) (vlm-arb, vlm_arb): live; Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privileged 5), DS +5.0; fixed bypass pbyp2, stop-line R2 vred2, yellow rule vred3 [d84-87,89]
 
 **openpilot adaptation**

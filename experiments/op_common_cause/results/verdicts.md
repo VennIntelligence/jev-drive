@@ -1,0 +1,522 @@
+| effect                    | group        | pair       | a                          | b                          | verdict                   |
+|:--------------------------|:-------------|:-----------|:---------------------------|:---------------------------|:--------------------------|
+| E0_lat3                   | moving       | nav-carla  | 0.650 [0.606, 0.697]       | 1.436 [1.058, 1.908]       | same sign, different size |
+| E0_lat3                   | moving       | wod-carla  | 0.389 [0.344, 0.437]       | 1.436 [1.058, 1.908]       | same sign, different size |
+| E0_lat3                   | moving       | wodt-carla | 1.424 [1.279, 1.568]       | 1.436 [1.058, 1.908]       | consistent                |
+| E0_lat3                   | moving       | nav-wod    | 0.650 [0.606, 0.697]       | 0.389 [0.344, 0.437]       | consistent                |
+| E0_lat3                   | stop         | nav-carla  | 0.181 [0.136, 0.236]       | 0.358 [0.239, 0.500]       | consistent                |
+| E0_lat3                   | stop         | wod-carla  | 0.123 [0.092, 0.158]       | 0.358 [0.239, 0.500]       | same sign, different size |
+| E0_lat3                   | stop         | wodt-carla | 0.185 [0.114, 0.269]       | 0.358 [0.239, 0.500]       | consistent                |
+| E0_lat3                   | stop         | nav-wod    | 0.181 [0.136, 0.236]       | 0.123 [0.092, 0.158]       | consistent                |
+| E0_lat3                   | low          | nav-carla  | 0.485 [0.431, 0.542]       | 0.947 [0.589, 1.551]       | consistent                |
+| E0_lat3                   | low          | wod-carla  | 0.409 [0.334, 0.487]       | 0.947 [0.589, 1.551]       | same sign, different size |
+| E0_lat3                   | low          | wodt-carla | 1.268 [1.103, 1.449]       | 0.947 [0.589, 1.551]       | consistent                |
+| E0_lat3                   | low          | nav-wod    | 0.485 [0.431, 0.542]       | 0.409 [0.334, 0.487]       | consistent                |
+| E0_lat3                   | mid          | nav-carla  | 0.923 [0.846, 1.001]       | 1.497 [1.198, 1.818]       | consistent                |
+| E0_lat3                   | mid          | wod-carla  | 0.431 [0.356, 0.517]       | 1.497 [1.198, 1.818]       | same sign, different size |
+| E0_lat3                   | mid          | wodt-carla | 1.549 [1.346, 1.762]       | 1.497 [1.198, 1.818]       | consistent                |
+| E0_lat3                   | mid          | nav-wod    | 0.923 [0.846, 1.001]       | 0.431 [0.356, 0.517]       | same sign, different size |
+| E0_lat3                   | high         | nav-carla  | 0.532 [0.437, 0.632]       | 3.290 [1.644, 5.700]       | same sign, different size |
+| E0_lat3                   | high         | wod-carla  | 0.308 [0.253, 0.372]       | 3.290 [1.644, 5.700]       | same sign, different size |
+| E0_lat3                   | high         | wodt-carla | 1.816 [1.099, 2.545]       | 3.290 [1.644, 5.700]       | consistent                |
+| E0_lat3                   | high         | nav-wod    | 0.532 [0.437, 0.632]       | 0.308 [0.253, 0.372]       | consistent                |
+| E0_lat3                   | low-mid      | nav-carla  | -0.438 [-0.529, -0.346]    | -0.550 [-0.990, 0.058]     | one domain only           |
+| E0_lat3                   | low-mid      | wod-carla  | -0.022 [-0.133, 0.085]     | -0.550 [-0.990, 0.058]     | neither                   |
+| E0_lat3                   | low-mid      | wodt-carla | -0.281 [-0.538, -0.030]    | -0.550 [-0.990, 0.058]     | one domain only           |
+| E0_lat3                   | low-mid      | nav-wod    | -0.438 [-0.529, -0.346]    | -0.022 [-0.133, 0.085]     | one domain only           |
+| E0_bias_y3                | moving       | nav-carla  | -0.009 [-0.040, 0.021]     | 0.183 [-0.088, 0.556]      | neither                   |
+| E0_bias_y3                | moving       | wod-carla  | -0.010 [-0.050, 0.025]     | 0.183 [-0.088, 0.556]      | neither                   |
+| E0_bias_y3                | moving       | wodt-carla | nan [nan, nan]             | 0.183 [-0.088, 0.556]      | n/a                       |
+| E0_bias_y3                | moving       | nav-wod    | -0.009 [-0.040, 0.021]     | -0.010 [-0.050, 0.025]     | neither                   |
+| E0_bias_y3                | stop         | nav-carla  | -0.010 [-0.031, 0.011]     | -0.059 [-0.167, 0.025]     | neither                   |
+| E0_bias_y3                | stop         | wod-carla  | -0.008 [-0.028, 0.010]     | -0.059 [-0.167, 0.025]     | neither                   |
+| E0_bias_y3                | stop         | wodt-carla | nan [nan, nan]             | -0.059 [-0.167, 0.025]     | n/a                       |
+| E0_bias_y3                | stop         | nav-wod    | -0.010 [-0.031, 0.011]     | -0.008 [-0.028, 0.010]     | neither                   |
+| E0_bias_y3                | low          | nav-carla  | -0.006 [-0.022, 0.010]     | 0.088 [-0.064, 0.309]      | neither                   |
+| E0_bias_y3                | low          | wod-carla  | 0.005 [-0.052, 0.062]      | 0.088 [-0.064, 0.309]      | neither                   |
+| E0_bias_y3                | low          | wodt-carla | nan [nan, nan]             | 0.088 [-0.064, 0.309]      | n/a                       |
+| E0_bias_y3                | low          | nav-wod    | -0.006 [-0.022, 0.010]     | 0.005 [-0.052, 0.062]      | neither                   |
+| E0_bias_y3                | mid          | nav-carla  | -0.045 [-0.106, 0.015]     | -0.011 [-0.225, 0.217]     | neither                   |
+| E0_bias_y3                | mid          | wod-carla  | -0.015 [-0.088, 0.047]     | -0.011 [-0.225, 0.217]     | neither                   |
+| E0_bias_y3                | mid          | wodt-carla | nan [nan, nan]             | -0.011 [-0.225, 0.217]     | n/a                       |
+| E0_bias_y3                | mid          | nav-wod    | -0.045 [-0.106, 0.015]     | -0.015 [-0.088, 0.047]     | neither                   |
+| E0_bias_y3                | high         | nav-carla  | 0.015 [-0.054, 0.082]      | 1.114 [-0.264, 3.570]      | neither                   |
+| E0_bias_y3                | high         | wod-carla  | -0.016 [-0.079, 0.045]     | 1.114 [-0.264, 3.570]      | neither                   |
+| E0_bias_y3                | high         | wodt-carla | nan [nan, nan]             | 1.114 [-0.264, 3.570]      | n/a                       |
+| E0_bias_y3                | high         | nav-wod    | 0.015 [-0.054, 0.082]      | -0.016 [-0.079, 0.045]     | neither                   |
+| E0_bias_y3                | low-mid      | nav-carla  | 0.039 [-0.026, 0.102]      | 0.098 [-0.150, 0.356]      | neither                   |
+| E0_bias_y3                | low-mid      | wod-carla  | 0.020 [-0.065, 0.111]      | 0.098 [-0.150, 0.356]      | neither                   |
+| E0_bias_y3                | low-mid      | wodt-carla | nan [nan, nan]             | 0.098 [-0.150, 0.356]      | n/a                       |
+| E0_bias_y3                | low-mid      | nav-wod    | 0.039 [-0.026, 0.102]      | 0.020 [-0.065, 0.111]      | neither                   |
+| E0_bias_y3_repeat         | moving       | nav-carla  | -0.106 [-0.191, -0.024]    | -0.068 [-0.418, 0.266]     | one domain only           |
+| E0_bias_y3_repeat         | moving       | wod-carla  | 0.102 [0.028, 0.181]       | -0.068 [-0.418, 0.266]     | one domain only           |
+| E0_bias_y3_repeat         | moving       | wodt-carla | nan [nan, nan]             | -0.068 [-0.418, 0.266]     | n/a                       |
+| E0_bias_y3_repeat         | moving       | nav-wod    | -0.106 [-0.191, -0.024]    | 0.102 [0.028, 0.181]       | opposite                  |
+| E0_bias_y3_repeat         | stop         | nav-carla  | -0.011 [-0.034, 0.009]     | -0.021 [-0.092, 0.040]     | neither                   |
+| E0_bias_y3_repeat         | stop         | wod-carla  | 0.005 [-0.012, 0.022]      | -0.021 [-0.092, 0.040]     | neither                   |
+| E0_bias_y3_repeat         | stop         | wodt-carla | nan [nan, nan]             | -0.021 [-0.092, 0.040]     | n/a                       |
+| E0_bias_y3_repeat         | stop         | nav-wod    | -0.011 [-0.034, 0.009]     | 0.005 [-0.012, 0.022]      | neither                   |
+| E0_bias_y3_repeat         | low          | nav-carla  | -0.017 [-0.040, 0.004]     | -0.009 [-0.134, 0.085]     | neither                   |
+| E0_bias_y3_repeat         | low          | wod-carla  | -0.023 [-0.080, 0.032]     | -0.009 [-0.134, 0.085]     | neither                   |
+| E0_bias_y3_repeat         | low          | wodt-carla | nan [nan, nan]             | -0.009 [-0.134, 0.085]     | n/a                       |
+| E0_bias_y3_repeat         | low          | nav-wod    | -0.017 [-0.040, 0.004]     | -0.023 [-0.080, 0.032]     | neither                   |
+| E0_bias_y3_repeat         | mid          | nav-carla  | -0.186 [-0.387, 0.002]     | -0.166 [-0.489, 0.158]     | neither                   |
+| E0_bias_y3_repeat         | mid          | wod-carla  | 0.189 [0.095, 0.285]       | -0.166 [-0.489, 0.158]     | one domain only           |
+| E0_bias_y3_repeat         | mid          | wodt-carla | nan [nan, nan]             | -0.166 [-0.489, 0.158]     | n/a                       |
+| E0_bias_y3_repeat         | mid          | nav-wod    | -0.186 [-0.387, 0.002]     | 0.189 [0.095, 0.285]       | one domain only           |
+| E0_bias_y3_repeat         | high         | nav-carla  | -0.137 [-0.313, 0.032]     | 0.027 [-1.743, 2.329]      | neither                   |
+| E0_bias_y3_repeat         | high         | wod-carla  | 0.087 [-0.098, 0.294]      | 0.027 [-1.743, 2.329]      | neither                   |
+| E0_bias_y3_repeat         | high         | wodt-carla | nan [nan, nan]             | 0.027 [-1.743, 2.329]      | n/a                       |
+| E0_bias_y3_repeat         | high         | nav-wod    | -0.137 [-0.313, 0.032]     | 0.087 [-0.098, 0.294]      | neither                   |
+| E0_bias_y3_repeat         | low-mid      | nav-carla  | 0.169 [-0.027, 0.379]      | 0.157 [-0.155, 0.439]      | neither                   |
+| E0_bias_y3_repeat         | low-mid      | wod-carla  | -0.212 [-0.323, -0.101]    | 0.157 [-0.155, 0.439]      | one domain only           |
+| E0_bias_y3_repeat         | low-mid      | wodt-carla | nan [nan, nan]             | 0.157 [-0.155, 0.439]      | n/a                       |
+| E0_bias_y3_repeat         | low-mid      | nav-wod    | 0.169 [-0.027, 0.379]      | -0.212 [-0.323, -0.101]    | one domain only           |
+| E1_G_deg                  | moving       | nav-carla  | 11.737 [11.105, 12.381]    | 6.681 [5.504, 7.812]       | consistent                |
+| E1_G_deg                  | moving       | wod-carla  | 5.431 [4.741, 6.170]       | 6.681 [5.504, 7.812]       | consistent                |
+| E1_G_deg                  | moving       | wodt-carla | 12.465 [11.021, 13.955]    | 6.681 [5.504, 7.812]       | consistent                |
+| E1_G_deg                  | moving       | nav-wod    | 11.737 [11.105, 12.381]    | 5.431 [4.741, 6.170]       | same sign, different size |
+| E1_G_deg                  | stop         | nav-carla  | 22.951 [21.340, 24.535]    | 17.552 [15.776, 19.322]    | consistent                |
+| E1_G_deg                  | stop         | wod-carla  | 20.982 [19.661, 22.304]    | 17.552 [15.776, 19.322]    | consistent                |
+| E1_G_deg                  | stop         | wodt-carla | 20.982 [18.914, 23.159]    | 17.552 [15.776, 19.322]    | consistent                |
+| E1_G_deg                  | stop         | nav-wod    | 22.951 [21.340, 24.535]    | 20.982 [19.661, 22.304]    | consistent                |
+| E1_G_deg                  | low          | nav-carla  | 18.367 [17.332, 19.389]    | 10.594 [9.018, 11.901]     | consistent                |
+| E1_G_deg                  | low          | wod-carla  | 14.613 [13.091, 16.207]    | 10.594 [9.018, 11.901]     | consistent                |
+| E1_G_deg                  | low          | wodt-carla | 19.844 [17.936, 21.802]    | 10.594 [9.018, 11.901]     | consistent                |
+| E1_G_deg                  | low          | nav-wod    | 18.367 [17.332, 19.389]    | 14.613 [13.091, 16.207]    | consistent                |
+| E1_G_deg                  | mid          | nav-carla  | 8.147 [7.457, 8.862]       | 3.327 [2.676, 4.043]       | same sign, different size |
+| E1_G_deg                  | mid          | wod-carla  | 2.898 [2.320, 3.507]       | 3.327 [2.676, 4.043]       | consistent                |
+| E1_G_deg                  | mid          | wodt-carla | 5.796 [4.501, 7.146]       | 3.327 [2.676, 4.043]       | consistent                |
+| E1_G_deg                  | mid          | nav-wod    | 8.147 [7.457, 8.862]       | 2.898 [2.320, 3.507]       | same sign, different size |
+| E1_G_deg                  | high         | nav-carla  | 2.131 [1.701, 2.601]       | 4.247 [2.354, 6.755]       | consistent                |
+| E1_G_deg                  | high         | wod-carla  | 0.376 [0.151, 0.657]       | 4.247 [2.354, 6.755]       | same sign, different size |
+| E1_G_deg                  | high         | wodt-carla | 3.089 [1.130, 7.068]       | 4.247 [2.354, 6.755]       | consistent                |
+| E1_G_deg                  | high         | nav-wod    | 2.131 [1.701, 2.601]       | 0.376 [0.151, 0.657]       | same sign, different size |
+| E1_G_deg                  | low-mid      | nav-carla  | 10.220 [9.039, 11.436]     | 7.268 [5.722, 8.605]       | consistent                |
+| E1_G_deg                  | low-mid      | wod-carla  | 11.715 [10.133, 13.330]    | 7.268 [5.722, 8.605]       | consistent                |
+| E1_G_deg                  | low-mid      | wodt-carla | 14.048 [11.727, 16.418]    | 7.268 [5.722, 8.605]       | consistent                |
+| E1_G_deg                  | low-mid      | nav-wod    | 10.220 [9.039, 11.436]     | 11.715 [10.133, 13.330]    | consistent                |
+| E1_Gy_m                   | moving       | nav-carla  | 1.320 [1.278, 1.362]       | 1.004 [0.924, 1.095]       | consistent                |
+| E1_Gy_m                   | moving       | wod-carla  | 0.928 [0.878, 0.979]       | 1.004 [0.924, 1.095]       | consistent                |
+| E1_Gy_m                   | moving       | wodt-carla | 1.659 [1.572, 1.746]       | 1.004 [0.924, 1.095]       | consistent                |
+| E1_Gy_m                   | moving       | nav-wod    | 1.320 [1.278, 1.362]       | 0.928 [0.878, 0.979]       | consistent                |
+| E1_Gy_m                   | stop         | nav-carla  | 1.072 [1.023, 1.121]       | 0.880 [0.816, 0.947]       | consistent                |
+| E1_Gy_m                   | stop         | wod-carla  | 0.942 [0.893, 0.995]       | 0.880 [0.816, 0.947]       | consistent                |
+| E1_Gy_m                   | stop         | wodt-carla | 0.958 [0.868, 1.059]       | 0.880 [0.816, 0.947]       | consistent                |
+| E1_Gy_m                   | stop         | nav-wod    | 1.072 [1.023, 1.121]       | 0.942 [0.893, 0.995]       | consistent                |
+| E1_Gy_m                   | low          | nav-carla  | 1.212 [1.154, 1.271]       | 0.916 [0.828, 1.020]       | consistent                |
+| E1_Gy_m                   | low          | wod-carla  | 1.052 [0.970, 1.137]       | 0.916 [0.828, 1.020]       | consistent                |
+| E1_Gy_m                   | low          | wodt-carla | 1.587 [1.475, 1.704]       | 0.916 [0.828, 1.020]       | consistent                |
+| E1_Gy_m                   | low          | nav-wod    | 1.212 [1.154, 1.271]       | 1.052 [0.970, 1.137]       | consistent                |
+| E1_Gy_m                   | mid          | nav-carla  | 1.547 [1.479, 1.618]       | 0.978 [0.883, 1.077]       | consistent                |
+| E1_Gy_m                   | mid          | wod-carla  | 0.829 [0.762, 0.898]       | 0.978 [0.883, 1.077]       | consistent                |
+| E1_Gy_m                   | mid          | wodt-carla | 1.698 [1.566, 1.826]       | 0.978 [0.883, 1.077]       | consistent                |
+| E1_Gy_m                   | mid          | nav-wod    | 1.547 [1.479, 1.618]       | 0.829 [0.762, 0.898]       | consistent                |
+| E1_Gy_m                   | high         | nav-carla  | 1.150 [1.051, 1.253]       | 1.501 [1.208, 1.739]       | consistent                |
+| E1_Gy_m                   | high         | wod-carla  | 0.955 [0.861, 1.056]       | 1.501 [1.208, 1.739]       | consistent                |
+| E1_Gy_m                   | high         | wodt-carla | 2.098 [1.687, 2.639]       | 1.501 [1.208, 1.739]       | consistent                |
+| E1_Gy_m                   | high         | nav-wod    | 1.150 [1.051, 1.253]       | 0.955 [0.861, 1.056]       | consistent                |
+| E1_Gy_m                   | low-mid      | nav-carla  | -0.335 [-0.419, -0.251]    | -0.062 [-0.178, 0.060]     | one domain only           |
+| E1_Gy_m                   | low-mid      | wod-carla  | 0.224 [0.124, 0.327]       | -0.062 [-0.178, 0.060]     | one domain only           |
+| E1_Gy_m                   | low-mid      | wodt-carla | -0.112 [-0.285, 0.063]     | -0.062 [-0.178, 0.060]     | neither                   |
+| E1_Gy_m                   | low-mid      | nav-wod    | -0.335 [-0.419, -0.251]    | 0.224 [0.124, 0.327]       | opposite                  |
+| E2_dlat_repeat            | moving       | nav-carla  | 1.349 [1.248, 1.454]       | 0.462 [0.234, 0.736]       | same sign, different size |
+| E2_dlat_repeat            | moving       | wod-carla  | 0.598 [0.495, 0.704]       | 0.462 [0.234, 0.736]       | consistent                |
+| E2_dlat_repeat            | moving       | wodt-carla | 4.141 [3.765, 4.515]       | 0.462 [0.234, 0.736]       | same sign, different size |
+| E2_dlat_repeat            | moving       | nav-wod    | 1.349 [1.248, 1.454]       | 0.598 [0.495, 0.704]       | same sign, different size |
+| E2_dlat_repeat            | stop         | nav-carla  | 0.039 [0.009, 0.073]       | -0.037 [-0.095, 0.008]     | one domain only           |
+| E2_dlat_repeat            | stop         | wod-carla  | -0.002 [-0.026, 0.020]     | -0.037 [-0.095, 0.008]     | neither                   |
+| E2_dlat_repeat            | stop         | wodt-carla | 0.035 [-0.023, 0.109]      | -0.037 [-0.095, 0.008]     | neither                   |
+| E2_dlat_repeat            | stop         | nav-wod    | 0.039 [0.009, 0.073]       | -0.002 [-0.026, 0.020]     | one domain only           |
+| E2_dlat_repeat            | low          | nav-carla  | 0.675 [0.581, 0.773]       | -0.032 [-0.225, 0.154]     | one domain only           |
+| E2_dlat_repeat            | low          | wod-carla  | 0.390 [0.267, 0.522]       | -0.032 [-0.225, 0.154]     | one domain only           |
+| E2_dlat_repeat            | low          | wodt-carla | 2.365 [2.027, 2.732]       | -0.032 [-0.225, 0.154]     | one domain only           |
+| E2_dlat_repeat            | low          | nav-wod    | 0.675 [0.581, 0.773]       | 0.390 [0.267, 0.522]       | consistent                |
+| E2_dlat_repeat            | mid          | nav-carla  | 2.155 [1.973, 2.345]       | 1.025 [0.675, 1.400]       | same sign, different size |
+| E2_dlat_repeat            | mid          | wod-carla  | 0.833 [0.634, 1.045]       | 1.025 [0.675, 1.400]       | consistent                |
+| E2_dlat_repeat            | mid          | wodt-carla | 5.736 [5.219, 6.249]       | 1.025 [0.675, 1.400]       | same sign, different size |
+| E2_dlat_repeat            | mid          | nav-wod    | 2.155 [1.973, 2.345]       | 0.833 [0.634, 1.045]       | same sign, different size |
+| E2_dlat_repeat            | high         | nav-carla  | 1.470 [1.220, 1.725]       | 0.165 [-1.466, 1.216]      | one domain only           |
+| E2_dlat_repeat            | high         | wod-carla  | 0.455 [0.314, 0.616]       | 0.165 [-1.466, 1.216]      | one domain only           |
+| E2_dlat_repeat            | high         | wodt-carla | 6.539 [5.023, 8.030]       | 0.165 [-1.466, 1.216]      | one domain only           |
+| E2_dlat_repeat            | high         | nav-wod    | 1.470 [1.220, 1.725]       | 0.455 [0.314, 0.616]       | same sign, different size |
+| E2_dlat_repeat            | low-mid      | nav-carla  | -1.480 [-1.682, -1.281]    | -1.057 [-1.483, -0.663]    | consistent                |
+| E2_dlat_repeat            | low-mid      | wod-carla  | -0.443 [-0.686, -0.204]    | -1.057 [-1.483, -0.663]    | same sign, different size |
+| E2_dlat_repeat            | low-mid      | wodt-carla | -3.371 [-4.005, -2.730]    | -1.057 [-1.483, -0.663]    | same sign, different size |
+| E2_dlat_repeat            | low-mid      | nav-wod    | -1.480 [-1.682, -1.281]    | -0.443 [-0.686, -0.204]    | same sign, different size |
+| E2_dx_repeat              | moving       | nav-carla  | -10.244 [-10.719, -9.765]  | -12.156 [-14.470, -10.048] | consistent                |
+| E2_dx_repeat              | moving       | wod-carla  | -16.715 [-17.931, -15.527] | -12.156 [-14.470, -10.048] | consistent                |
+| E2_dx_repeat              | moving       | wodt-carla | -9.535 [-10.353, -8.759]   | -12.156 [-14.470, -10.048] | consistent                |
+| E2_dx_repeat              | moving       | nav-wod    | -10.244 [-10.719, -9.765]  | -16.715 [-17.931, -15.527] | consistent                |
+| E2_dx_repeat              | stop         | nav-carla  | -2.447 [-2.701, -2.201]    | -0.805 [-1.049, -0.585]    | same sign, different size |
+| E2_dx_repeat              | stop         | wod-carla  | -0.888 [-1.097, -0.704]    | -0.805 [-1.049, -0.585]    | consistent                |
+| E2_dx_repeat              | stop         | wodt-carla | -0.546 [-0.838, -0.310]    | -0.805 [-1.049, -0.585]    | consistent                |
+| E2_dx_repeat              | stop         | nav-wod    | -2.447 [-2.701, -2.201]    | -0.888 [-1.097, -0.704]    | same sign, different size |
+| E2_dx_repeat              | low          | nav-carla  | -4.698 [-4.898, -4.494]    | -6.683 [-7.807, -5.697]    | consistent                |
+| E2_dx_repeat              | low          | wod-carla  | -5.289 [-5.715, -4.884]    | -6.683 [-7.807, -5.697]    | consistent                |
+| E2_dx_repeat              | low          | wodt-carla | -5.909 [-6.374, -5.464]    | -6.683 [-7.807, -5.697]    | consistent                |
+| E2_dx_repeat              | low          | nav-wod    | -4.698 [-4.898, -4.494]    | -5.289 [-5.715, -4.884]    | consistent                |
+| E2_dx_repeat              | mid          | nav-carla  | -10.765 [-11.089, -10.440] | -15.070 [-15.743, -14.241] | consistent                |
+| E2_dx_repeat              | mid          | wod-carla  | -14.093 [-14.623, -13.564] | -15.070 [-15.743, -14.241] | consistent                |
+| E2_dx_repeat              | mid          | wodt-carla | -11.930 [-12.651, -11.231] | -15.070 [-15.743, -14.241] | consistent                |
+| E2_dx_repeat              | mid          | nav-wod    | -10.765 [-11.089, -10.440] | -14.093 [-14.623, -13.564] | consistent                |
+| E2_dx_repeat              | high         | nav-carla  | -23.083 [-23.916, -22.303] | -23.277 [-30.281, -8.036]  | consistent                |
+| E2_dx_repeat              | high         | wod-carla  | -31.405 [-33.746, -29.178] | -23.277 [-30.281, -8.036]  | consistent                |
+| E2_dx_repeat              | high         | wodt-carla | -25.829 [-30.122, -22.153] | -23.277 [-30.281, -8.036]  | consistent                |
+| E2_dx_repeat              | high         | nav-wod    | -23.083 [-23.916, -22.303] | -31.405 [-33.746, -29.178] | consistent                |
+| E2_dx_repeat              | low-mid      | nav-carla  | 6.068 [5.707, 6.418]       | 8.388 [6.993, 9.546]       | consistent                |
+| E2_dx_repeat              | low-mid      | wod-carla  | 8.804 [8.135, 9.467]       | 8.388 [6.993, 9.546]       | consistent                |
+| E2_dx_repeat              | low-mid      | wodt-carla | 6.021 [5.185, 6.851]       | 8.388 [6.993, 9.546]       | consistent                |
+| E2_dx_repeat              | low-mid      | nav-wod    | 6.068 [5.707, 6.418]       | 8.804 [8.135, 9.467]       | consistent                |
+| E3_dlat_single            | moving       | nav-carla  | 1.041 [0.956, 1.130]       | 0.298 [0.109, 0.521]       | same sign, different size |
+| E3_dlat_single            | moving       | wod-carla  | 0.476 [0.391, 0.563]       | 0.298 [0.109, 0.521]       | consistent                |
+| E3_dlat_single            | moving       | wodt-carla | 3.609 [3.274, 3.949]       | 0.298 [0.109, 0.521]       | same sign, different size |
+| E3_dlat_single            | moving       | nav-wod    | 1.041 [0.956, 1.130]       | 0.476 [0.391, 0.563]       | same sign, different size |
+| E3_dlat_single            | stop         | nav-carla  | 0.109 [0.064, 0.160]       | 0.178 [0.010, 0.392]       | consistent                |
+| E3_dlat_single            | stop         | wod-carla  | 0.068 [0.043, 0.096]       | 0.178 [0.010, 0.392]       | same sign, different size |
+| E3_dlat_single            | stop         | wodt-carla | 0.139 [0.061, 0.231]       | 0.178 [0.010, 0.392]       | consistent                |
+| E3_dlat_single            | stop         | nav-wod    | 0.109 [0.064, 0.160]       | 0.068 [0.043, 0.096]       | consistent                |
+| E3_dlat_single            | low          | nav-carla  | 0.697 [0.598, 0.799]       | -0.052 [-0.235, 0.105]     | one domain only           |
+| E3_dlat_single            | low          | wod-carla  | 0.419 [0.298, 0.549]       | -0.052 [-0.235, 0.105]     | one domain only           |
+| E3_dlat_single            | low          | wodt-carla | 2.269 [1.932, 2.632]       | -0.052 [-0.235, 0.105]     | one domain only           |
+| E3_dlat_single            | low          | nav-wod    | 0.697 [0.598, 0.799]       | 0.419 [0.298, 0.549]       | consistent                |
+| E3_dlat_single            | mid          | nav-carla  | 1.595 [1.423, 1.771]       | 0.782 [0.465, 1.131]       | same sign, different size |
+| E3_dlat_single            | mid          | wod-carla  | 0.656 [0.489, 0.836]       | 0.782 [0.465, 1.131]       | consistent                |
+| E3_dlat_single            | mid          | wodt-carla | 4.945 [4.438, 5.444]       | 0.782 [0.465, 1.131]       | same sign, different size |
+| E3_dlat_single            | mid          | nav-wod    | 1.595 [1.423, 1.771]       | 0.656 [0.489, 0.836]       | same sign, different size |
+| E3_dlat_single            | high         | nav-carla  | 0.828 [0.666, 1.001]       | -0.287 [-1.424, 0.447]     | one domain only           |
+| E3_dlat_single            | high         | wod-carla  | 0.267 [0.185, 0.352]       | -0.287 [-1.424, 0.447]     | one domain only           |
+| E3_dlat_single            | high         | wodt-carla | 3.645 [3.116, 4.150]       | -0.287 [-1.424, 0.447]     | one domain only           |
+| E3_dlat_single            | high         | nav-wod    | 0.828 [0.666, 1.001]       | 0.267 [0.185, 0.352]       | same sign, different size |
+| E3_dlat_single            | low-mid      | nav-carla  | -0.898 [-1.093, -0.707]    | -0.834 [-1.230, -0.484]    | consistent                |
+| E3_dlat_single            | low-mid      | wod-carla  | -0.238 [-0.451, -0.026]    | -0.834 [-1.230, -0.484]    | same sign, different size |
+| E3_dlat_single            | low-mid      | wodt-carla | -2.677 [-3.285, -2.048]    | -0.834 [-1.230, -0.484]    | same sign, different size |
+| E3_dlat_single            | low-mid      | nav-wod    | -0.898 [-1.093, -0.707]    | -0.238 [-0.451, -0.026]    | same sign, different size |
+| E3_dx_single              | moving       | nav-carla  | 9.001 [8.603, 9.406]       | 16.722 [13.219, 19.818]    | consistent                |
+| E3_dx_single              | moving       | wod-carla  | 4.907 [4.276, 5.538]       | 16.722 [13.219, 19.818]    | same sign, different size |
+| E3_dx_single              | moving       | wodt-carla | 2.858 [2.113, 3.613]       | 16.722 [13.219, 19.818]    | same sign, different size |
+| E3_dx_single              | moving       | nav-wod    | 9.001 [8.603, 9.406]       | 4.907 [4.276, 5.538]       | consistent                |
+| E3_dx_single              | stop         | nav-carla  | 13.342 [12.369, 14.340]    | 21.481 [18.370, 24.564]    | consistent                |
+| E3_dx_single              | stop         | wod-carla  | 11.553 [10.016, 13.276]    | 21.481 [18.370, 24.564]    | consistent                |
+| E3_dx_single              | stop         | wodt-carla | 10.546 [8.584, 12.777]     | 21.481 [18.370, 24.564]    | same sign, different size |
+| E3_dx_single              | stop         | nav-wod    | 13.342 [12.369, 14.340]    | 11.553 [10.016, 13.276]    | consistent                |
+| E3_dx_single              | low          | nav-carla  | 11.443 [10.863, 12.046]    | 21.697 [16.164, 25.563]    | consistent                |
+| E3_dx_single              | low          | wod-carla  | 9.147 [8.090, 10.322]      | 21.697 [16.164, 25.563]    | same sign, different size |
+| E3_dx_single              | low          | wodt-carla | 4.320 [3.425, 5.224]       | 21.697 [16.164, 25.563]    | same sign, different size |
+| E3_dx_single              | low          | nav-wod    | 11.443 [10.863, 12.046]    | 9.147 [8.090, 10.322]      | consistent                |
+| E3_dx_single              | mid          | nav-carla  | 7.365 [6.824, 7.904]       | 13.707 [11.680, 15.895]    | consistent                |
+| E3_dx_single              | mid          | wod-carla  | 4.792 [4.074, 5.526]       | 13.707 [11.680, 15.895]    | same sign, different size |
+| E3_dx_single              | mid          | wodt-carla | 1.765 [0.730, 2.932]       | 13.707 [11.680, 15.895]    | same sign, different size |
+| E3_dx_single              | mid          | nav-wod    | 7.365 [6.824, 7.904]       | 4.792 [4.074, 5.526]       | consistent                |
+| E3_dx_single              | high         | nav-carla  | 6.069 [5.288, 6.836]       | 8.199 [1.223, 17.387]      | consistent                |
+| E3_dx_single              | high         | wod-carla  | 1.039 [0.062, 1.998]       | 8.199 [1.223, 17.387]      | same sign, different size |
+| E3_dx_single              | high         | wodt-carla | -2.030 [-4.576, 0.826]     | 8.199 [1.223, 17.387]      | one domain only           |
+| E3_dx_single              | high         | nav-wod    | 6.069 [5.288, 6.836]       | 1.039 [0.062, 1.998]       | same sign, different size |
+| E3_dx_single              | low-mid      | nav-carla  | 4.078 [3.309, 4.847]       | 7.990 [2.625, 11.971]      | consistent                |
+| E3_dx_single              | low-mid      | wod-carla  | 4.355 [3.141, 5.620]       | 7.990 [2.625, 11.971]      | consistent                |
+| E3_dx_single              | low-mid      | wodt-carla | 2.555 [1.177, 3.859]       | 7.990 [2.625, 11.971]      | same sign, different size |
+| E3_dx_single              | low-mid      | nav-wod    | 4.078 [3.309, 4.847]       | 4.355 [3.141, 5.620]       | consistent                |
+| E4_dlat_short             | moving       | nav-carla  | nan [nan, nan]             | -0.019 [-0.050, 0.011]     | n/a                       |
+| E4_dlat_short             | moving       | wod-carla  | 0.030 [0.019, 0.042]       | -0.019 [-0.050, 0.011]     | one domain only           |
+| E4_dlat_short             | moving       | wodt-carla | 0.063 [0.010, 0.118]       | -0.019 [-0.050, 0.011]     | one domain only           |
+| E4_dlat_short             | moving       | nav-wod    | nan [nan, nan]             | 0.030 [0.019, 0.042]       | n/a                       |
+| E4_dlat_short             | stop         | nav-carla  | nan [nan, nan]             | -0.004 [-0.012, 0.006]     | n/a                       |
+| E4_dlat_short             | stop         | wod-carla  | -0.005 [-0.011, 0.000]     | -0.004 [-0.012, 0.006]     | neither                   |
+| E4_dlat_short             | stop         | wodt-carla | -0.015 [-0.040, 0.005]     | -0.004 [-0.012, 0.006]     | neither                   |
+| E4_dlat_short             | stop         | nav-wod    | nan [nan, nan]             | -0.005 [-0.011, 0.000]     | n/a                       |
+| E4_dlat_short             | low          | nav-carla  | nan [nan, nan]             | 0.001 [-0.023, 0.030]      | n/a                       |
+| E4_dlat_short             | low          | wod-carla  | 0.025 [0.004, 0.046]       | 0.001 [-0.023, 0.030]      | one domain only           |
+| E4_dlat_short             | low          | wodt-carla | 0.047 [-0.009, 0.109]      | 0.001 [-0.023, 0.030]      | neither                   |
+| E4_dlat_short             | low          | nav-wod    | nan [nan, nan]             | 0.025 [0.004, 0.046]       | n/a                       |
+| E4_dlat_short             | mid          | nav-carla  | nan [nan, nan]             | -0.012 [-0.068, 0.039]     | n/a                       |
+| E4_dlat_short             | mid          | wod-carla  | 0.038 [0.018, 0.060]       | -0.012 [-0.068, 0.039]     | one domain only           |
+| E4_dlat_short             | mid          | wodt-carla | 0.066 [-0.022, 0.155]      | -0.012 [-0.068, 0.039]     | neither                   |
+| E4_dlat_short             | mid          | nav-wod    | nan [nan, nan]             | 0.038 [0.018, 0.060]       | n/a                       |
+| E4_dlat_short             | high         | nav-carla  | nan [nan, nan]             | -0.121 [-0.254, 0.008]     | n/a                       |
+| E4_dlat_short             | high         | wod-carla  | 0.023 [0.009, 0.040]       | -0.121 [-0.254, 0.008]     | one domain only           |
+| E4_dlat_short             | high         | wodt-carla | 0.297 [0.069, 0.481]       | -0.121 [-0.254, 0.008]     | one domain only           |
+| E4_dlat_short             | high         | nav-wod    | nan [nan, nan]             | 0.023 [0.009, 0.040]       | n/a                       |
+| E4_dlat_short             | low-mid      | nav-carla  | nan [nan, nan]             | 0.013 [-0.043, 0.075]      | n/a                       |
+| E4_dlat_short             | low-mid      | wod-carla  | -0.014 [-0.043, 0.015]     | 0.013 [-0.043, 0.075]      | neither                   |
+| E4_dlat_short             | low-mid      | wodt-carla | -0.019 [-0.116, 0.081]     | 0.013 [-0.043, 0.075]      | neither                   |
+| E4_dlat_short             | low-mid      | nav-wod    | nan [nan, nan]             | -0.014 [-0.043, 0.015]     | n/a                       |
+| E4_dx_short               | moving       | nav-carla  | nan [nan, nan]             | -1.237 [-1.525, -0.998]    | n/a                       |
+| E4_dx_short               | moving       | wod-carla  | -0.577 [-0.660, -0.498]    | -1.237 [-1.525, -0.998]    | same sign, different size |
+| E4_dx_short               | moving       | wodt-carla | -0.394 [-0.489, -0.301]    | -1.237 [-1.525, -0.998]    | same sign, different size |
+| E4_dx_short               | moving       | nav-wod    | nan [nan, nan]             | -0.577 [-0.660, -0.498]    | n/a                       |
+| E4_dx_short               | stop         | nav-carla  | nan [nan, nan]             | -0.037 [-0.075, 0.000]     | n/a                       |
+| E4_dx_short               | stop         | wod-carla  | -0.071 [-0.104, -0.038]    | -0.037 [-0.075, 0.000]     | one domain only           |
+| E4_dx_short               | stop         | wodt-carla | -0.034 [-0.064, -0.006]    | -0.037 [-0.075, 0.000]     | one domain only           |
+| E4_dx_short               | stop         | nav-wod    | nan [nan, nan]             | -0.071 [-0.104, -0.038]    | n/a                       |
+| E4_dx_short               | low          | nav-carla  | nan [nan, nan]             | -0.713 [-0.905, -0.483]    | n/a                       |
+| E4_dx_short               | low          | wod-carla  | -0.030 [-0.120, 0.064]     | -0.713 [-0.905, -0.483]    | one domain only           |
+| E4_dx_short               | low          | wodt-carla | -0.168 [-0.271, -0.067]    | -0.713 [-0.905, -0.483]    | same sign, different size |
+| E4_dx_short               | low          | nav-wod    | nan [nan, nan]             | -0.030 [-0.120, 0.064]     | n/a                       |
+| E4_dx_short               | mid          | nav-carla  | nan [nan, nan]             | -1.295 [-1.453, -1.126]    | n/a                       |
+| E4_dx_short               | mid          | wod-carla  | -0.485 [-0.582, -0.389]    | -1.295 [-1.453, -1.126]    | same sign, different size |
+| E4_dx_short               | mid          | wodt-carla | -0.624 [-0.766, -0.490]    | -1.295 [-1.453, -1.126]    | same sign, different size |
+| E4_dx_short               | mid          | nav-wod    | nan [nan, nan]             | -0.485 [-0.582, -0.389]    | n/a                       |
+| E4_dx_short               | high         | nav-carla  | nan [nan, nan]             | -3.214 [-3.782, -2.482]    | n/a                       |
+| E4_dx_short               | high         | wod-carla  | -1.234 [-1.394, -1.076]    | -3.214 [-3.782, -2.482]    | same sign, different size |
+| E4_dx_short               | high         | wodt-carla | -1.125 [-1.557, -0.510]    | -3.214 [-3.782, -2.482]    | same sign, different size |
+| E4_dx_short               | high         | nav-wod    | nan [nan, nan]             | -1.234 [-1.394, -1.076]    | n/a                       |
+| E4_dx_short               | low-mid      | nav-carla  | nan [nan, nan]             | 0.582 [0.317, 0.871]       | n/a                       |
+| E4_dx_short               | low-mid      | wod-carla  | 0.455 [0.330, 0.583]       | 0.582 [0.317, 0.871]       | consistent                |
+| E4_dx_short               | low-mid      | wodt-carla | 0.456 [0.288, 0.626]       | 0.582 [0.317, 0.871]       | consistent                |
+| E4_dx_short               | low-mid      | nav-wod    | nan [nan, nan]             | 0.455 [0.330, 0.583]       | n/a                       |
+| E5_dlat_pulse             | moving       | nav-carla  | 0.234 [0.200, 0.271]       | -0.065 [-0.190, 0.062]     | one domain only           |
+| E5_dlat_pulse             | moving       | wod-carla  | 0.314 [0.168, 0.476]       | -0.065 [-0.190, 0.062]     | one domain only           |
+| E5_dlat_pulse             | moving       | wodt-carla | 0.334 [0.242, 0.426]       | -0.065 [-0.190, 0.062]     | one domain only           |
+| E5_dlat_pulse             | moving       | nav-wod    | 0.234 [0.200, 0.271]       | 0.314 [0.168, 0.476]       | consistent                |
+| E5_dlat_pulse             | stop         | nav-carla  | 0.009 [-0.016, 0.039]      | -0.015 [-0.043, 0.005]     | neither                   |
+| E5_dlat_pulse             | stop         | wod-carla  | 0.005 [-0.062, 0.069]      | -0.015 [-0.043, 0.005]     | neither                   |
+| E5_dlat_pulse             | stop         | wodt-carla | 0.007 [-0.032, 0.048]      | -0.015 [-0.043, 0.005]     | neither                   |
+| E5_dlat_pulse             | stop         | nav-wod    | 0.009 [-0.016, 0.039]      | 0.005 [-0.062, 0.069]      | neither                   |
+| E5_dlat_pulse             | low          | nav-carla  | 0.268 [0.219, 0.322]       | -0.094 [-0.196, 0.008]     | one domain only           |
+| E5_dlat_pulse             | low          | wod-carla  | 0.377 [0.195, 0.579]       | -0.094 [-0.196, 0.008]     | one domain only           |
+| E5_dlat_pulse             | low          | wodt-carla | 0.474 [0.358, 0.601]       | -0.094 [-0.196, 0.008]     | one domain only           |
+| E5_dlat_pulse             | low          | nav-wod    | 0.268 [0.219, 0.322]       | 0.377 [0.195, 0.579]       | consistent                |
+| E5_dlat_pulse             | mid          | nav-carla  | 0.200 [0.155, 0.246]       | -0.050 [-0.259, 0.167]     | one domain only           |
+| E5_dlat_pulse             | mid          | wod-carla  | 0.304 [0.088, 0.569]       | -0.050 [-0.259, 0.167]     | one domain only           |
+| E5_dlat_pulse             | mid          | wodt-carla | 0.235 [0.100, 0.366]       | -0.050 [-0.259, 0.167]     | one domain only           |
+| E5_dlat_pulse             | mid          | nav-wod    | 0.200 [0.155, 0.246]       | 0.304 [0.088, 0.569]       | consistent                |
+| E5_dlat_pulse             | high         | nav-carla  | 0.179 [0.080, 0.289]       | nan [nan, nan]             | n/a                       |
+| E5_dlat_pulse             | high         | wod-carla  | nan [nan, nan]             | nan [nan, nan]             | n/a                       |
+| E5_dlat_pulse             | high         | wodt-carla | -0.224 [-0.344, -0.110]    | nan [nan, nan]             | n/a                       |
+| E5_dlat_pulse             | high         | nav-wod    | 0.179 [0.080, 0.289]       | nan [nan, nan]             | n/a                       |
+| E5_dlat_pulse             | low-mid      | nav-carla  | 0.068 [0.003, 0.134]       | -0.044 [-0.296, 0.189]     | one domain only           |
+| E5_dlat_pulse             | low-mid      | wod-carla  | 0.073 [-0.252, 0.376]      | -0.044 [-0.296, 0.189]     | neither                   |
+| E5_dlat_pulse             | low-mid      | wodt-carla | 0.239 [0.067, 0.415]       | -0.044 [-0.296, 0.189]     | one domain only           |
+| E5_dlat_pulse             | low-mid      | nav-wod    | 0.068 [0.003, 0.134]       | 0.073 [-0.252, 0.376]      | one domain only           |
+| E5_dlat_pulse             | moving-left  | nav-carla  | 0.077 [0.052, 0.104]       | -0.086 [-0.227, 0.061]     | one domain only           |
+| E5_dlat_pulse             | moving-left  | wod-carla  | 0.133 [-0.009, 0.284]      | -0.086 [-0.227, 0.061]     | neither                   |
+| E5_dlat_pulse             | moving-left  | wodt-carla | 0.200 [0.087, 0.320]       | -0.086 [-0.227, 0.061]     | one domain only           |
+| E5_dlat_pulse             | moving-left  | nav-wod    | 0.077 [0.052, 0.104]       | 0.133 [-0.009, 0.284]      | one domain only           |
+| E5_dlat_pulse             | moving-right | nav-carla  | 0.383 [0.328, 0.441]       | -0.037 [-0.253, 0.188]     | one domain only           |
+| E5_dlat_pulse             | moving-right | wod-carla  | 0.463 [0.229, 0.741]       | -0.037 [-0.253, 0.188]     | one domain only           |
+| E5_dlat_pulse             | moving-right | wodt-carla | 0.422 [0.292, 0.550]       | -0.037 [-0.253, 0.188]     | one domain only           |
+| E5_dlat_pulse             | moving-right | nav-wod    | 0.383 [0.328, 0.441]       | 0.463 [0.229, 0.741]       | consistent                |
+| E5_dlat_sustained         | moving       | nav-carla  | 0.367 [0.325, 0.409]       | 0.470 [0.268, 0.681]       | consistent                |
+| E5_dlat_sustained         | moving       | wod-carla  | 0.734 [0.527, 0.952]       | 0.470 [0.268, 0.681]       | consistent                |
+| E5_dlat_sustained         | moving       | wodt-carla | 0.866 [0.742, 0.991]       | 0.470 [0.268, 0.681]       | consistent                |
+| E5_dlat_sustained         | moving       | nav-wod    | 0.367 [0.325, 0.409]       | 0.734 [0.527, 0.952]       | consistent                |
+| E5_dlat_sustained         | stop         | nav-carla  | 0.193 [0.136, 0.251]       | 0.245 [0.142, 0.340]       | consistent                |
+| E5_dlat_sustained         | stop         | wod-carla  | 0.218 [0.118, 0.304]       | 0.245 [0.142, 0.340]       | consistent                |
+| E5_dlat_sustained         | stop         | wodt-carla | 0.282 [0.221, 0.342]       | 0.245 [0.142, 0.340]       | consistent                |
+| E5_dlat_sustained         | stop         | nav-wod    | 0.193 [0.136, 0.251]       | 0.218 [0.118, 0.304]       | consistent                |
+| E5_dlat_sustained         | low          | nav-carla  | 0.424 [0.370, 0.481]       | 0.578 [0.297, 0.929]       | consistent                |
+| E5_dlat_sustained         | low          | wod-carla  | 0.831 [0.577, 1.105]       | 0.578 [0.297, 0.929]       | consistent                |
+| E5_dlat_sustained         | low          | wodt-carla | 1.060 [0.880, 1.254]       | 0.578 [0.297, 0.929]       | consistent                |
+| E5_dlat_sustained         | low          | nav-wod    | 0.424 [0.370, 0.481]       | 0.831 [0.577, 1.105]       | consistent                |
+| E5_dlat_sustained         | mid          | nav-carla  | 0.321 [0.254, 0.390]       | 0.400 [0.108, 0.690]       | consistent                |
+| E5_dlat_sustained         | mid          | wod-carla  | 0.636 [0.314, 0.981]       | 0.400 [0.108, 0.690]       | consistent                |
+| E5_dlat_sustained         | mid          | wodt-carla | 0.709 [0.558, 0.858]       | 0.400 [0.108, 0.690]       | consistent                |
+| E5_dlat_sustained         | mid          | nav-wod    | 0.321 [0.254, 0.390]       | 0.636 [0.314, 0.981]       | consistent                |
+| E5_dlat_sustained         | high         | nav-carla  | 0.222 [0.015, 0.434]       | nan [nan, nan]             | n/a                       |
+| E5_dlat_sustained         | high         | wod-carla  | nan [nan, nan]             | nan [nan, nan]             | n/a                       |
+| E5_dlat_sustained         | high         | wodt-carla | 0.365 [-0.255, 0.969]      | nan [nan, nan]             | n/a                       |
+| E5_dlat_sustained         | high         | nav-wod    | 0.222 [0.015, 0.434]       | nan [nan, nan]             | n/a                       |
+| E5_dlat_sustained         | low-mid      | nav-carla  | 0.103 [0.018, 0.191]       | 0.178 [-0.257, 0.649]      | one domain only           |
+| E5_dlat_sustained         | low-mid      | wod-carla  | 0.195 [-0.234, 0.622]      | 0.178 [-0.257, 0.649]      | neither                   |
+| E5_dlat_sustained         | low-mid      | wodt-carla | 0.351 [0.121, 0.582]       | 0.178 [-0.257, 0.649]      | one domain only           |
+| E5_dlat_sustained         | low-mid      | nav-wod    | 0.103 [0.018, 0.191]       | 0.195 [-0.234, 0.622]      | one domain only           |
+| E5_dlat_sustained         | moving-left  | nav-carla  | 0.526 [0.465, 0.589]       | 0.655 [0.388, 0.937]       | consistent                |
+| E5_dlat_sustained         | moving-left  | wod-carla  | 0.947 [0.679, 1.244]       | 0.655 [0.388, 0.937]       | consistent                |
+| E5_dlat_sustained         | moving-left  | wodt-carla | 1.167 [0.966, 1.379]       | 0.655 [0.388, 0.937]       | consistent                |
+| E5_dlat_sustained         | moving-left  | nav-wod    | 0.526 [0.465, 0.589]       | 0.947 [0.679, 1.244]       | consistent                |
+| E5_dlat_sustained         | moving-right | nav-carla  | 0.216 [0.165, 0.269]       | 0.225 [-0.053, 0.513]      | one domain only           |
+| E5_dlat_sustained         | moving-right | wod-carla  | 0.558 [0.279, 0.863]       | 0.225 [-0.053, 0.513]      | one domain only           |
+| E5_dlat_sustained         | moving-right | wodt-carla | 0.666 [0.531, 0.803]       | 0.225 [-0.053, 0.513]      | one domain only           |
+| E5_dlat_sustained         | moving-right | nav-wod    | 0.216 [0.165, 0.269]       | 0.558 [0.279, 0.863]       | same sign, different size |
+| E5_dlat_lc                | moving       | nav-carla  | 0.127 [0.104, 0.150]       | 0.063 [-0.005, 0.140]      | one domain only           |
+| E5_dlat_lc                | moving       | wod-carla  | 0.140 [0.044, 0.249]       | 0.063 [-0.005, 0.140]      | one domain only           |
+| E5_dlat_lc                | moving       | wodt-carla | 0.136 [0.091, 0.183]       | 0.063 [-0.005, 0.140]      | one domain only           |
+| E5_dlat_lc                | moving       | nav-wod    | 0.127 [0.104, 0.150]       | 0.140 [0.044, 0.249]       | consistent                |
+| E5_dlat_lc                | stop         | nav-carla  | 0.008 [-0.019, 0.035]      | 0.149 [0.088, 0.209]       | one domain only           |
+| E5_dlat_lc                | stop         | wod-carla  | 0.144 [0.076, 0.206]       | 0.149 [0.088, 0.209]       | consistent                |
+| E5_dlat_lc                | stop         | wodt-carla | 0.181 [0.133, 0.228]       | 0.149 [0.088, 0.209]       | consistent                |
+| E5_dlat_lc                | stop         | nav-wod    | 0.008 [-0.019, 0.035]      | 0.144 [0.076, 0.206]       | one domain only           |
+| E5_dlat_lc                | low          | nav-carla  | 0.145 [0.111, 0.182]       | 0.013 [-0.059, 0.106]      | one domain only           |
+| E5_dlat_lc                | low          | wod-carla  | 0.109 [-0.010, 0.234]      | 0.013 [-0.059, 0.106]      | neither                   |
+| E5_dlat_lc                | low          | wodt-carla | 0.215 [0.146, 0.293]       | 0.013 [-0.059, 0.106]      | one domain only           |
+| E5_dlat_lc                | low          | nav-wod    | 0.145 [0.111, 0.182]       | 0.109 [-0.010, 0.234]      | one domain only           |
+| E5_dlat_lc                | mid          | nav-carla  | 0.113 [0.078, 0.148]       | 0.097 [-0.006, 0.213]      | one domain only           |
+| E5_dlat_lc                | mid          | wod-carla  | 0.200 [0.044, 0.388]       | 0.097 [-0.006, 0.213]      | one domain only           |
+| E5_dlat_lc                | mid          | wodt-carla | 0.073 [0.022, 0.124]       | 0.097 [-0.006, 0.213]      | one domain only           |
+| E5_dlat_lc                | mid          | nav-wod    | 0.113 [0.078, 0.148]       | 0.200 [0.044, 0.388]       | consistent                |
+| E5_dlat_lc                | high         | nav-carla  | 0.071 [0.009, 0.135]       | nan [nan, nan]             | n/a                       |
+| E5_dlat_lc                | high         | wod-carla  | nan [nan, nan]             | nan [nan, nan]             | n/a                       |
+| E5_dlat_lc                | high         | wodt-carla | -0.090 [-0.150, -0.020]    | nan [nan, nan]             | n/a                       |
+| E5_dlat_lc                | high         | nav-wod    | 0.071 [0.009, 0.135]       | nan [nan, nan]             | n/a                       |
+| E5_dlat_lc                | low-mid      | nav-carla  | 0.033 [-0.018, 0.083]      | -0.084 [-0.224, 0.056]     | neither                   |
+| E5_dlat_lc                | low-mid      | wod-carla  | -0.092 [-0.312, 0.111]     | -0.084 [-0.224, 0.056]     | neither                   |
+| E5_dlat_lc                | low-mid      | wodt-carla | 0.142 [0.058, 0.228]       | -0.084 [-0.224, 0.056]     | one domain only           |
+| E5_dlat_lc                | low-mid      | nav-wod    | 0.033 [-0.018, 0.083]      | -0.092 [-0.312, 0.111]     | neither                   |
+| E5_dlat_lc                | moving-left  | nav-carla  | 0.119 [0.089, 0.150]       | 0.057 [-0.040, 0.169]      | one domain only           |
+| E5_dlat_lc                | moving-left  | wod-carla  | 0.076 [-0.077, 0.251]      | 0.057 [-0.040, 0.169]      | neither                   |
+| E5_dlat_lc                | moving-left  | wodt-carla | 0.163 [0.075, 0.256]       | 0.057 [-0.040, 0.169]      | one domain only           |
+| E5_dlat_lc                | moving-left  | nav-wod    | 0.119 [0.089, 0.150]       | 0.076 [-0.077, 0.251]      | one domain only           |
+| E5_dlat_lc                | moving-right | nav-carla  | 0.134 [0.100, 0.171]       | 0.070 [-0.019, 0.175]      | one domain only           |
+| E5_dlat_lc                | moving-right | wod-carla  | 0.193 [0.076, 0.338]       | 0.070 [-0.019, 0.175]      | one domain only           |
+| E5_dlat_lc                | moving-right | wodt-carla | 0.117 [0.071, 0.165]       | 0.070 [-0.019, 0.175]      | one domain only           |
+| E5_dlat_lc                | moving-right | nav-wod    | 0.134 [0.100, 0.171]       | 0.193 [0.076, 0.338]       | consistent                |
+| E5_S_steer_m              | moving       | nav-carla  | 0.219 [0.134, 0.305]       | 1.083 [0.896, 1.284]       | same sign, different size |
+| E5_S_steer_m              | moving       | wod-carla  | 0.208 [0.033, 0.395]       | 1.083 [0.896, 1.284]       | same sign, different size |
+| E5_S_steer_m              | moving       | wodt-carla | 0.394 [0.252, 0.540]       | 1.083 [0.896, 1.284]       | same sign, different size |
+| E5_S_steer_m              | moving       | nav-wod    | 0.219 [0.134, 0.305]       | 0.208 [0.033, 0.395]       | consistent                |
+| E5_S_steer_m              | stop         | nav-carla  | -0.041 [-0.064, -0.020]    | 0.013 [-0.008, 0.041]      | one domain only           |
+| E5_S_steer_m              | stop         | wod-carla  | -0.028 [-0.063, 0.004]     | 0.013 [-0.008, 0.041]      | neither                   |
+| E5_S_steer_m              | stop         | wodt-carla | -0.008 [-0.034, 0.014]     | 0.013 [-0.008, 0.041]      | neither                   |
+| E5_S_steer_m              | stop         | nav-wod    | -0.041 [-0.064, -0.020]    | -0.028 [-0.063, 0.004]     | one domain only           |
+| E5_S_steer_m              | low          | nav-carla  | -0.254 [-0.298, -0.211]    | 0.145 [0.042, 0.255]       | opposite                  |
+| E5_S_steer_m              | low          | wod-carla  | -0.193 [-0.325, -0.053]    | 0.145 [0.042, 0.255]       | opposite                  |
+| E5_S_steer_m              | low          | wodt-carla | -0.205 [-0.274, -0.134]    | 0.145 [0.042, 0.255]       | opposite                  |
+| E5_S_steer_m              | low          | nav-wod    | -0.254 [-0.298, -0.211]    | -0.193 [-0.325, -0.053]    | consistent                |
+| E5_S_steer_m              | mid          | nav-carla  | 0.332 [0.234, 0.435]       | 1.729 [1.515, 1.956]       | same sign, different size |
+| E5_S_steer_m              | mid          | wod-carla  | 0.529 [0.310, 0.757]       | 1.729 [1.515, 1.956]       | same sign, different size |
+| E5_S_steer_m              | mid          | wodt-carla | 0.815 [0.629, 1.009]       | 1.729 [1.515, 1.956]       | same sign, different size |
+| E5_S_steer_m              | mid          | nav-wod    | 0.332 [0.234, 0.435]       | 0.529 [0.310, 0.757]       | consistent                |
+| E5_S_steer_m              | high         | nav-carla  | 3.061 [2.619, 3.521]       | nan [nan, nan]             | n/a                       |
+| E5_S_steer_m              | high         | wod-carla  | nan [nan, nan]             | nan [nan, nan]             | n/a                       |
+| E5_S_steer_m              | high         | wodt-carla | 2.756 [2.127, 3.534]       | nan [nan, nan]             | n/a                       |
+| E5_S_steer_m              | high         | nav-wod    | 3.061 [2.619, 3.521]       | nan [nan, nan]             | n/a                       |
+| E5_S_steer_m              | low-mid      | nav-carla  | -0.586 [-0.695, -0.481]    | -1.584 [-1.795, -1.373]    | same sign, different size |
+| E5_S_steer_m              | low-mid      | wod-carla  | -0.722 [-0.981, -0.462]    | -1.584 [-1.795, -1.373]    | same sign, different size |
+| E5_S_steer_m              | low-mid      | wodt-carla | -1.020 [-1.221, -0.824]    | -1.584 [-1.795, -1.373]    | consistent                |
+| E5_S_steer_m              | low-mid      | nav-wod    | -0.586 [-0.695, -0.481]    | -0.722 [-0.981, -0.462]    | consistent                |
+| E5_S_steer_m              | moving-left  | nav-carla  | 0.481 [0.354, 0.621]       | 1.037 [0.850, 1.235]       | same sign, different size |
+| E5_S_steer_m              | moving-left  | wod-carla  | 0.280 [0.100, 0.481]       | 1.037 [0.850, 1.235]       | same sign, different size |
+| E5_S_steer_m              | moving-left  | wodt-carla | 0.455 [0.255, 0.676]       | 1.037 [0.850, 1.235]       | same sign, different size |
+| E5_S_steer_m              | moving-left  | nav-wod    | 0.481 [0.354, 0.621]       | 0.280 [0.100, 0.481]       | consistent                |
+| E5_S_steer_m              | moving-right | nav-carla  | -0.031 [-0.124, 0.071]     | 1.145 [0.794, 1.547]       | one domain only           |
+| E5_S_steer_m              | moving-right | wod-carla  | 0.149 [-0.128, 0.451]      | 1.145 [0.794, 1.547]       | one domain only           |
+| E5_S_steer_m              | moving-right | wodt-carla | 0.354 [0.165, 0.555]       | 1.145 [0.794, 1.547]       | same sign, different size |
+| E5_S_steer_m              | moving-right | nav-wod    | -0.031 [-0.124, 0.071]     | 0.149 [-0.128, 0.451]      | neither                   |
+| E5_toward_cmd_pulse_m     | moving       | nav-carla  | -0.255 [-0.294, -0.217]    | 0.064 [-0.064, 0.189]      | one domain only           |
+| E5_toward_cmd_pulse_m     | moving       | wod-carla  | -0.434 [-0.588, -0.295]    | 0.064 [-0.064, 0.189]      | one domain only           |
+| E5_toward_cmd_pulse_m     | moving       | wodt-carla | -0.440 [-0.535, -0.345]    | 0.064 [-0.064, 0.189]      | one domain only           |
+| E5_toward_cmd_pulse_m     | moving       | nav-wod    | -0.255 [-0.294, -0.217]    | -0.434 [-0.588, -0.295]    | consistent                |
+| E5_toward_cmd_pulse_m     | stop         | nav-carla  | -0.049 [-0.079, -0.026]    | -0.011 [-0.039, 0.008]     | one domain only           |
+| E5_toward_cmd_pulse_m     | stop         | wod-carla  | -0.079 [-0.148, -0.024]    | -0.011 [-0.039, 0.008]     | one domain only           |
+| E5_toward_cmd_pulse_m     | stop         | wodt-carla | -0.040 [-0.087, -0.004]    | -0.011 [-0.039, 0.008]     | one domain only           |
+| E5_toward_cmd_pulse_m     | stop         | nav-wod    | -0.049 [-0.079, -0.026]    | -0.079 [-0.148, -0.024]    | consistent                |
+| E5_toward_cmd_pulse_m     | low          | nav-carla  | -0.331 [-0.391, -0.277]    | -0.114 [-0.265, 0.032]     | one domain only           |
+| E5_toward_cmd_pulse_m     | low          | wod-carla  | -0.532 [-0.707, -0.376]    | -0.114 [-0.265, 0.032]     | one domain only           |
+| E5_toward_cmd_pulse_m     | low          | wodt-carla | -0.624 [-0.748, -0.505]    | -0.114 [-0.265, 0.032]     | one domain only           |
+| E5_toward_cmd_pulse_m     | low          | nav-wod    | -0.331 [-0.391, -0.277]    | -0.532 [-0.707, -0.376]    | consistent                |
+| E5_toward_cmd_pulse_m     | mid          | nav-carla  | -0.224 [-0.267, -0.181]    | 0.185 [-0.005, 0.378]      | one domain only           |
+| E5_toward_cmd_pulse_m     | mid          | wod-carla  | -0.392 [-0.653, -0.179]    | 0.185 [-0.005, 0.378]      | one domain only           |
+| E5_toward_cmd_pulse_m     | mid          | wodt-carla | -0.305 [-0.446, -0.167]    | 0.185 [-0.005, 0.378]      | one domain only           |
+| E5_toward_cmd_pulse_m     | mid          | nav-wod    | -0.224 [-0.267, -0.181]    | -0.392 [-0.653, -0.179]    | consistent                |
+| E5_toward_cmd_pulse_m     | high         | nav-carla  | 0.130 [-0.007, 0.271]      | nan [nan, nan]             | n/a                       |
+| E5_toward_cmd_pulse_m     | high         | wod-carla  | nan [nan, nan]             | nan [nan, nan]             | n/a                       |
+| E5_toward_cmd_pulse_m     | high         | wodt-carla | 0.224 [0.110, 0.344]       | nan [nan, nan]             | n/a                       |
+| E5_toward_cmd_pulse_m     | high         | nav-wod    | 0.130 [-0.007, 0.271]      | nan [nan, nan]             | n/a                       |
+| E5_toward_cmd_pulse_m     | low-mid      | nav-carla  | -0.107 [-0.174, -0.039]    | -0.299 [-0.539, -0.047]    | same sign, different size |
+| E5_toward_cmd_pulse_m     | low-mid      | wod-carla  | -0.140 [-0.414, 0.160]     | -0.299 [-0.539, -0.047]    | one domain only           |
+| E5_toward_cmd_pulse_m     | low-mid      | wodt-carla | -0.319 [-0.500, -0.136]    | -0.299 [-0.539, -0.047]    | consistent                |
+| E5_toward_cmd_pulse_m     | low-mid      | nav-wod    | -0.107 [-0.174, -0.039]    | -0.140 [-0.414, 0.160]     | one domain only           |
+| E5_toward_cmd_pulse_m     | moving-left  | nav-carla  | -0.056 [-0.087, -0.025]    | 0.164 [0.046, 0.289]       | opposite                  |
+| E5_toward_cmd_pulse_m     | moving-left  | wod-carla  | -0.177 [-0.320, -0.048]    | 0.164 [0.046, 0.289]       | opposite                  |
+| E5_toward_cmd_pulse_m     | moving-left  | wodt-carla | -0.253 [-0.390, -0.125]    | 0.164 [0.046, 0.289]       | opposite                  |
+| E5_toward_cmd_pulse_m     | moving-left  | nav-wod    | -0.056 [-0.087, -0.025]    | -0.177 [-0.320, -0.048]    | same sign, different size |
+| E5_toward_cmd_pulse_m     | moving-right | nav-carla  | -0.444 [-0.506, -0.383]    | -0.070 [-0.307, 0.164]     | one domain only           |
+| E5_toward_cmd_pulse_m     | moving-right | wod-carla  | -0.646 [-0.902, -0.422]    | -0.070 [-0.307, 0.164]     | one domain only           |
+| E5_toward_cmd_pulse_m     | moving-right | wodt-carla | -0.564 [-0.691, -0.432]    | -0.070 [-0.307, 0.164]     | one domain only           |
+| E5_toward_cmd_pulse_m     | moving-right | nav-wod    | -0.444 [-0.506, -0.383]    | -0.646 [-0.902, -0.422]    | consistent                |
+| E5_toward_cmd_sust_m      | moving       | nav-carla  | -0.405 [-0.452, -0.360]    | -0.957 [-1.152, -0.762]    | same sign, different size |
+| E5_toward_cmd_sust_m      | moving       | wod-carla  | -0.908 [-1.111, -0.717]    | -0.957 [-1.152, -0.762]    | consistent                |
+| E5_toward_cmd_sust_m      | moving       | wodt-carla | -0.994 [-1.121, -0.871]    | -0.957 [-1.152, -0.762]    | consistent                |
+| E5_toward_cmd_sust_m      | moving       | nav-wod    | -0.405 [-0.452, -0.360]    | -0.908 [-1.111, -0.717]    | same sign, different size |
+| E5_toward_cmd_sust_m      | stop         | nav-carla  | -0.172 [-0.242, -0.105]    | -0.322 [-0.429, -0.229]    | consistent                |
+| E5_toward_cmd_sust_m      | stop         | wod-carla  | -0.325 [-0.434, -0.231]    | -0.322 [-0.429, -0.229]    | consistent                |
+| E5_toward_cmd_sust_m      | stop         | wodt-carla | -0.320 [-0.392, -0.254]    | -0.322 [-0.429, -0.229]    | consistent                |
+| E5_toward_cmd_sust_m      | stop         | nav-wod    | -0.172 [-0.242, -0.105]    | -0.325 [-0.434, -0.231]    | consistent                |
+| E5_toward_cmd_sust_m      | low          | nav-carla  | -0.494 [-0.554, -0.438]    | -0.896 [-1.213, -0.605]    | consistent                |
+| E5_toward_cmd_sust_m      | low          | wod-carla  | -1.086 [-1.342, -0.854]    | -0.896 [-1.213, -0.605]    | consistent                |
+| E5_toward_cmd_sust_m      | low          | wodt-carla | -1.237 [-1.428, -1.057]    | -0.896 [-1.213, -0.605]    | consistent                |
+| E5_toward_cmd_sust_m      | low          | nav-wod    | -0.494 [-0.554, -0.438]    | -1.086 [-1.342, -0.854]    | same sign, different size |
+| E5_toward_cmd_sust_m      | mid          | nav-carla  | -0.326 [-0.401, -0.254]    | -1.009 [-1.278, -0.753]    | same sign, different size |
+| E5_toward_cmd_sust_m      | mid          | wod-carla  | -0.728 [-1.055, -0.419]    | -1.009 [-1.278, -0.753]    | consistent                |
+| E5_toward_cmd_sust_m      | mid          | wodt-carla | -0.798 [-0.960, -0.635]    | -1.009 [-1.278, -0.753]    | consistent                |
+| E5_toward_cmd_sust_m      | mid          | nav-wod    | -0.326 [-0.401, -0.254]    | -0.728 [-1.055, -0.419]    | same sign, different size |
+| E5_toward_cmd_sust_m      | high         | nav-carla  | -0.215 [-0.483, 0.028]     | nan [nan, nan]             | n/a                       |
+| E5_toward_cmd_sust_m      | high         | wod-carla  | nan [nan, nan]             | nan [nan, nan]             | n/a                       |
+| E5_toward_cmd_sust_m      | high         | wodt-carla | -0.365 [-0.969, 0.255]     | nan [nan, nan]             | n/a                       |
+| E5_toward_cmd_sust_m      | high         | nav-wod    | -0.215 [-0.483, 0.028]     | nan [nan, nan]             | n/a                       |
+| E5_toward_cmd_sust_m      | low-mid      | nav-carla  | -0.168 [-0.264, -0.071]    | 0.113 [-0.288, 0.514]      | one domain only           |
+| E5_toward_cmd_sust_m      | low-mid      | wod-carla  | -0.358 [-0.761, 0.046]     | 0.113 [-0.288, 0.514]      | neither                   |
+| E5_toward_cmd_sust_m      | low-mid      | wodt-carla | -0.439 [-0.676, -0.203]    | 0.113 [-0.288, 0.514]      | one domain only           |
+| E5_toward_cmd_sust_m      | low-mid      | nav-wod    | -0.168 [-0.264, -0.071]    | -0.358 [-0.761, 0.046]     | one domain only           |
+| E5_toward_cmd_sust_m      | moving-left  | nav-carla  | -0.666 [-0.731, -0.604]    | -1.172 [-1.399, -0.951]    | consistent                |
+| E5_toward_cmd_sust_m      | moving-left  | wod-carla  | -1.110 [-1.410, -0.827]    | -1.172 [-1.399, -0.951]    | consistent                |
+| E5_toward_cmd_sust_m      | moving-left  | wodt-carla | -1.336 [-1.562, -1.123]    | -1.172 [-1.399, -0.951]    | consistent                |
+| E5_toward_cmd_sust_m      | moving-left  | nav-wod    | -0.666 [-0.731, -0.604]    | -1.110 [-1.410, -0.827]    | consistent                |
+| E5_toward_cmd_sust_m      | moving-right | nav-carla  | -0.157 [-0.216, -0.098]    | -0.670 [-0.983, -0.373]    | same sign, different size |
+| E5_toward_cmd_sust_m      | moving-right | wod-carla  | -0.742 [-1.014, -0.491]    | -0.670 [-0.983, -0.373]    | consistent                |
+| E5_toward_cmd_sust_m      | moving-right | wodt-carla | -0.767 [-0.904, -0.636]    | -0.670 [-0.983, -0.373]    | consistent                |
+| E5_toward_cmd_sust_m      | moving-right | nav-wod    | -0.157 [-0.216, -0.098]    | -0.742 [-1.014, -0.491]    | same sign, different size |
+| E6_dG_sust_minus_off      | moving       | nav-carla  | -3.035 [-3.540, -2.561]    | -0.394 [-1.612, 0.770]     | one domain only           |
+| E6_dG_sust_minus_off      | moving       | wod-carla  | 0.317 [-1.262, 1.889]      | -0.394 [-1.612, 0.770]     | neither                   |
+| E6_dG_sust_minus_off      | moving       | wodt-carla | 0.903 [-0.128, 1.888]      | -0.394 [-1.612, 0.770]     | neither                   |
+| E6_dG_sust_minus_off      | moving       | nav-wod    | -3.035 [-3.540, -2.561]    | 0.317 [-1.262, 1.889]      | one domain only           |
+| E6_dG_sust_minus_off      | stop         | nav-carla  | -10.729 [-11.834, -9.596]  | -5.353 [-6.846, -3.890]    | same sign, different size |
+| E6_dG_sust_minus_off      | stop         | wod-carla  | -6.289 [-7.690, -4.911]    | -5.353 [-6.846, -3.890]    | consistent                |
+| E6_dG_sust_minus_off      | stop         | wodt-carla | -5.672 [-6.936, -4.461]    | -5.353 [-6.846, -3.890]    | consistent                |
+| E6_dG_sust_minus_off      | stop         | nav-wod    | -10.729 [-11.834, -9.596]  | -6.289 [-7.690, -4.911]    | consistent                |
+| E6_dG_sust_minus_off      | low          | nav-carla  | -6.363 [-7.146, -5.614]    | -2.722 [-4.032, -1.275]    | same sign, different size |
+| E6_dG_sust_minus_off      | low          | wod-carla  | -3.130 [-5.501, -0.905]    | -2.722 [-4.032, -1.275]    | consistent                |
+| E6_dG_sust_minus_off      | low          | wodt-carla | -3.117 [-4.639, -1.607]    | -2.722 [-4.032, -1.275]    | consistent                |
+| E6_dG_sust_minus_off      | low          | nav-wod    | -6.363 [-7.146, -5.614]    | -3.130 [-5.501, -0.905]    | same sign, different size |
+| E6_dG_sust_minus_off      | mid          | nav-carla  | 0.334 [-0.153, 0.806]      | 1.229 [-0.091, 2.437]      | neither                   |
+| E6_dG_sust_minus_off      | mid          | wod-carla  | 4.284 [1.874, 6.439]       | 1.229 [-0.091, 2.437]      | one domain only           |
+| E6_dG_sust_minus_off      | mid          | wodt-carla | 4.898 [3.825, 5.963]       | 1.229 [-0.091, 2.437]      | one domain only           |
+| E6_dG_sust_minus_off      | mid          | nav-wod    | 0.334 [-0.153, 0.806]      | 4.284 [1.874, 6.439]       | one domain only           |
+| E6_dG_sust_minus_off      | high         | nav-carla  | 1.770 [1.028, 2.578]       | nan [nan, nan]             | n/a                       |
+| E6_dG_sust_minus_off      | high         | wod-carla  | nan [nan, nan]             | nan [nan, nan]             | n/a                       |
+| E6_dG_sust_minus_off      | high         | wodt-carla | 1.239 [-0.732, 2.471]      | nan [nan, nan]             | n/a                       |
+| E6_dG_sust_minus_off      | high         | nav-wod    | 1.770 [1.028, 2.578]       | nan [nan, nan]             | n/a                       |
+| E6_dG_sust_minus_off      | low-mid      | nav-carla  | -6.697 [-7.656, -5.782]    | -3.951 [-5.431, -2.369]    | consistent                |
+| E6_dG_sust_minus_off      | low-mid      | wod-carla  | -7.414 [-10.870, -3.951]   | -3.951 [-5.431, -2.369]    | consistent                |
+| E6_dG_sust_minus_off      | low-mid      | wodt-carla | -8.016 [-9.883, -6.155]    | -3.951 [-5.431, -2.369]    | same sign, different size |
+| E6_dG_sust_minus_off      | low-mid      | nav-wod    | -6.697 [-7.656, -5.782]    | -7.414 [-10.870, -3.951]   | consistent                |
+| E6_dG_sust_minus_off      | moving-left  | nav-carla  | -2.678 [-3.231, -2.130]    | 0.761 [-0.377, 1.873]      | one domain only           |
+| E6_dG_sust_minus_off      | moving-left  | wod-carla  | 0.227 [-1.863, 2.253]      | 0.761 [-0.377, 1.873]      | neither                   |
+| E6_dG_sust_minus_off      | moving-left  | wodt-carla | 0.828 [-0.785, 2.367]      | 0.761 [-0.377, 1.873]      | neither                   |
+| E6_dG_sust_minus_off      | moving-left  | nav-wod    | -2.678 [-3.231, -2.130]    | 0.227 [-1.863, 2.253]      | one domain only           |
+| E6_dG_sust_minus_off      | moving-right | nav-carla  | -3.375 [-4.132, -2.641]    | -1.927 [-4.068, 0.183]     | one domain only           |
+| E6_dG_sust_minus_off      | moving-right | wod-carla  | 0.390 [-1.891, 2.665]      | -1.927 [-4.068, 0.183]     | neither                   |
+| E6_dG_sust_minus_off      | moving-right | wodt-carla | 0.953 [-0.398, 2.214]      | -1.927 [-4.068, 0.183]     | neither                   |
+| E6_dG_sust_minus_off      | moving-right | nav-wod    | -3.375 [-4.132, -2.641]    | 0.390 [-1.891, 2.665]      | one domain only           |
+| E6_dlat_sust_under_repeat | moving       | nav-carla  | 0.160 [0.143, 0.177]       | 0.232 [0.171, 0.295]       | consistent                |
+| E6_dlat_sust_under_repeat | moving       | wod-carla  | 0.212 [0.155, 0.275]       | 0.232 [0.171, 0.295]       | consistent                |
+| E6_dlat_sust_under_repeat | moving       | wodt-carla | 0.171 [0.135, 0.210]       | 0.232 [0.171, 0.295]       | consistent                |
+| E6_dlat_sust_under_repeat | moving       | nav-wod    | 0.160 [0.143, 0.177]       | 0.212 [0.155, 0.275]       | consistent                |
+| E6_dlat_sust_under_repeat | stop         | nav-carla  | 0.137 [0.100, 0.176]       | 0.168 [0.130, 0.209]       | consistent                |
+| E6_dlat_sust_under_repeat | stop         | wod-carla  | 0.220 [0.175, 0.267]       | 0.168 [0.130, 0.209]       | consistent                |
+| E6_dlat_sust_under_repeat | stop         | wodt-carla | 0.207 [0.171, 0.245]       | 0.168 [0.130, 0.209]       | consistent                |
+| E6_dlat_sust_under_repeat | stop         | nav-wod    | 0.137 [0.100, 0.176]       | 0.220 [0.175, 0.267]       | consistent                |
+| E6_dlat_sust_under_repeat | low          | nav-carla  | 0.150 [0.127, 0.174]       | 0.310 [0.214, 0.412]       | same sign, different size |
+| E6_dlat_sust_under_repeat | low          | wod-carla  | 0.195 [0.144, 0.247]       | 0.310 [0.214, 0.412]       | consistent                |
+| E6_dlat_sust_under_repeat | low          | wodt-carla | 0.196 [0.157, 0.235]       | 0.310 [0.214, 0.412]       | consistent                |
+| E6_dlat_sust_under_repeat | low          | nav-wod    | 0.150 [0.127, 0.174]       | 0.195 [0.144, 0.247]       | consistent                |
+| E6_dlat_sust_under_repeat | mid          | nav-carla  | 0.151 [0.127, 0.176]       | 0.176 [0.124, 0.230]       | consistent                |
+| E6_dlat_sust_under_repeat | mid          | wod-carla  | 0.229 [0.127, 0.342]       | 0.176 [0.124, 0.230]       | consistent                |
+| E6_dlat_sust_under_repeat | mid          | wodt-carla | 0.141 [0.087, 0.201]       | 0.176 [0.124, 0.230]       | consistent                |
+| E6_dlat_sust_under_repeat | mid          | nav-wod    | 0.151 [0.127, 0.176]       | 0.229 [0.127, 0.342]       | consistent                |
+| E6_dlat_sust_under_repeat | high         | nav-carla  | 0.281 [0.210, 0.358]       | nan [nan, nan]             | n/a                       |
+| E6_dlat_sust_under_repeat | high         | wod-carla  | nan [nan, nan]             | nan [nan, nan]             | n/a                       |
+| E6_dlat_sust_under_repeat | high         | wodt-carla | 0.248 [-0.083, 0.584]      | nan [nan, nan]             | n/a                       |
+| E6_dlat_sust_under_repeat | high         | nav-wod    | 0.281 [0.210, 0.358]       | nan [nan, nan]             | n/a                       |
+| E6_dlat_sust_under_repeat | low-mid      | nav-carla  | -0.000 [-0.033, 0.033]     | 0.134 [0.041, 0.236]       | one domain only           |
+| E6_dlat_sust_under_repeat | low-mid      | wod-carla  | -0.034 [-0.158, 0.080]     | 0.134 [0.041, 0.236]       | one domain only           |
+| E6_dlat_sust_under_repeat | low-mid      | wodt-carla | 0.055 [-0.012, 0.117]      | 0.134 [0.041, 0.236]       | one domain only           |
+| E6_dlat_sust_under_repeat | low-mid      | nav-wod    | -0.000 [-0.033, 0.033]     | -0.034 [-0.158, 0.080]     | neither                   |
+| E6_dlat_sust_under_repeat | moving-left  | nav-carla  | 0.274 [0.246, 0.303]       | 0.349 [0.270, 0.424]       | consistent                |
+| E6_dlat_sust_under_repeat | moving-left  | wod-carla  | 0.387 [0.295, 0.483]       | 0.349 [0.270, 0.424]       | consistent                |
+| E6_dlat_sust_under_repeat | moving-left  | wodt-carla | 0.389 [0.339, 0.443]       | 0.349 [0.270, 0.424]       | consistent                |
+| E6_dlat_sust_under_repeat | moving-left  | nav-wod    | 0.274 [0.246, 0.303]       | 0.387 [0.295, 0.483]       | consistent                |
+| E6_dlat_sust_under_repeat | moving-right | nav-carla  | 0.051 [0.037, 0.064]       | 0.077 [0.041, 0.113]       | consistent                |
+| E6_dlat_sust_under_repeat | moving-right | wod-carla  | 0.068 [0.035, 0.102]       | 0.077 [0.041, 0.113]       | consistent                |
+| E6_dlat_sust_under_repeat | moving-right | wodt-carla | 0.027 [-0.000, 0.053]      | 0.077 [0.041, 0.113]       | one domain only           |
+| E6_dlat_sust_under_repeat | moving-right | nav-wod    | 0.051 [0.037, 0.064]       | 0.068 [0.035, 0.102]       | consistent                |

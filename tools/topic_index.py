@@ -23,7 +23,7 @@ DRAFTS = Path("restructure/readmes")
 BEGIN, END = "<!-- files:begin -->", "<!-- files:end -->"
 AREAS = [  # INDEX.md order; live topics come first
     ("openpilot adaptation", ["vlm_arb", "op_adapt_l", "op_adapt_r2", "op_adapt_r1", "op_closed_loop", "op_openloop", "skill_pack",
-                              "log_expert_audit", "feature_adapter"]),
+                              "log_expert_audit", "feature_adapter", "op_common_cause"]),
     ("closed-loop harness and controllers", ["b2d_privileged", "cl_infra", "b2d_controller", "b2d_controller_eval", "b2d_tcp",
                                              "b2d_tfv6", "tfv6_rules", "simlingo_catalogue", "carla_rewind"]),
     ("zero-shot exams and leaderboards", ["zeroshot_openloop", "zeroshot_b2d", "model_smoke", "hugsim", "leaderboard_audit",

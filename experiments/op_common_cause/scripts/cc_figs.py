@@ -25,7 +25,7 @@ BINS = ["stop", "low", "mid", "high"]
 def main():
     PS.apply()
     E = pd.read_csv(TOP / "results" / "effects.csv")
-    fig, axs = plt.subplots(1, 3, figsize=(PS.DOUBLE_COLUMN_IN, 2.1), constrained_layout=True)
+    fig, axs = plt.subplots(1, 3, figsize=(PS.DOUBLE_COLUMN_IN, 2.4), constrained_layout=True)
     for ax, (eff, ylab, title) in zip(axs, PANELS):
         doms = [d for d in DOM if ((E.domain == d) & (E.effect == eff)).any()]
         w = 0.8 / len(doms)
@@ -41,9 +41,8 @@ def main():
         ax.set_xlabel("speed at t0 (m/s)")
         ax.set_ylabel(ylab)
         PS.panel(ax, title)
-    axs[0].legend(loc="upper right", fontsize=7)
     h, l = axs[2].get_legend_handles_labels()
-    axs[2].legend(h, l, loc="lower right", fontsize=7)
+    fig.legend(h, l, loc="outside upper center", ncol=4, fontsize=7.5)
     (TOP / "figs").mkdir(exist_ok=True)
     print(PS.save(fig, TOP / "figs" / "primary_effects"))
 
