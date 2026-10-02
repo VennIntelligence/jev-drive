@@ -49,11 +49,12 @@ vr.unit_dir = udir                                     # vr.attempts / answers r
 
 
 def run_dir(arm, seed, rid):
+    arm = ALIAS.get(arm, arm)
     if arm == "drive":
         return drive_dir(rid, seed)
     if arm in ("pred", "pbyp", "jslow"):
         return unit_dir(arm, seed, "tgt" if rid not in ROUTES[:10] else "dev")
-    return udir(arm, seed, next(k for k in SHARDS if rid in shards()[k]))
+    return unit_dir(arm, seed, next(k for k in SHARDS if rid in shards()[k]))
 
 
 def collect(arms):
