@@ -58,3 +58,27 @@ H1: correct the geometry in the adapter (e.g. a virtual camera at a comma height
 H2: no model fix exists; an adapter margin (keep the plan's lateral offset from the model edge >= m, m fitted on navtrain)
   is a labelled per-board trick. Score navhard two-stage EPDMS and navtest PDMS on CPU with the official scorers;
   adopt if navhard combined delta > 0 with CI lower bound > 0 and navtest delta >= -0.30 (as lane TRK).
+
+## Addendum 1 (after M1 / M2, before any fix was scored)
+What M1 / M2 showed: on real navtest frames the model's ego lane is 0.67-0.70 of the map lane and its road 0.72-0.77 of the
+scorer road at every distance, symmetric; its edges sit inside the scorer polygon (median -0.6 to -2.0 m); the plan speed at
+t0 is 0.81 of the logged speed. The NAVSIM ego origin is the rear axle at axle height: nearby vehicle boxes end at a median
+z = -0.35 m (9 781 boxes, 40 test logs), so CAM_F0 is ~1.87 m above the road, not 1.52. Projected with the ground at -0.35 m
+the map lane boundaries land on the painted lines, and the model's lane lines taken as camera rays land on the same pixels;
+the model's own lane-line z puts the camera 1.34 m above the road. Reading: the model sees the image right and scales the
+metric world by about 1.34 / 1.87 = 0.72 (a roof camera is outside openpilot's windshield-height training range). H1 holds
+as a camera-height scale error, not a warp error; H2 is rejected (the model is narrower than the map, not wider).
+
+Fix arms (native Cinque only; N4 picks among anchors and is not rebuilt). Per token, reference-free:
+  h_model = cam_z - median over the two ego lane lines and the knots with 5 <= x <= 30 m of the model's z (calib frame);
+  h_true = cam_z + 0.35;  k = h_true / h_model  (clipped to [1, 2]).
+  U(k): the 33 plan positions (calib frame, camera origin) times k, yaw unchanged, then the usual lever-arm conversion to
+        the 8 rear-axle poses. The inverse of a uniform scale error: path and speed both scaled.
+  P(k): path geometry times k, but each knot keeps its original arc length along the path (speed profile unchanged);
+        yaw from the scaled path's tangent.
+  Constants k in {1.15, 1.30, 1.45} for both families, and the per-token k ("own").
+Selection on navtrain only (official v1 PDMS, the 3 000-token lb_navtrain subset): per family the arm with the largest
+PDMS delta vs native (none if no delta > 0). Scored on navhard two-stage EPDMS and navtest PDMS (official scorers): U(own),
+P(own) regardless (the principled arms) and the navtrain pick per family if different. Adoption rule as in the main plan
+(navhard combined delta > 0 with CI lower bound > 0 and navtest delta >= -0.30; a navtest gain with CI lower bound > 0 counts
+on its own). Labelled as a NAVSIM rig adapter: it uses the known rig height, not a scorer quantity.
