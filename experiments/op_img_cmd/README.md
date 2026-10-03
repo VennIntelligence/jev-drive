@@ -17,6 +17,7 @@ drawings (band uptake 0.01 -> 0.54, correct 0.81; barrier 0.12 -> 0.64, correct 
 drawings (cones +0.16, lines +0.09, sign 0, grass fill -0.05) and moves the no-overlay plan by a median 0.29 m (guard
 0.10 m failed). CARLA (696 samples / 179 routes) replicates the zero-shot ordering: combo uptake 0.18, barrier 0.09,
 lines 0.09, sign 0.
+Closed-loop smoke, run as a diagnostic ([results/cl_smoke.md](results/cl_smoke.md), sheet [figs/cl_smoke_sheet.png](figs/cl_smoke_sheet.png)): 4 routes x 2 seeds, sky arrow from the official route; turn agreement vs drive 0.44: NA 0.49 (+0.05), SA 0.53 (+0.09), both under the +0.10 line, gain mostly on route 9196; DS not lower (60 / 70 / 80).
 Q3 (drift-free fine-tune, [results/ft-q3.md](results/ft-q3.md)): after the course change, the command is a magenta sky arrow
 (command and navigation distance only, no map, nothing covering the road). Zero-shot it does nothing (uptake 0.00). Fine-tuned
 with a large distillation pool, CARLA junction frames and residual targets, it reaches uptake 0.29 [0.23, 0.34] on navtrain and 0.39
