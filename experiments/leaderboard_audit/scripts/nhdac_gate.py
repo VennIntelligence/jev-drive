@@ -183,6 +183,7 @@ def cmd_navhard(a):
     with mp.get_context("fork").Pool(a.procs, initializer=T._init_nh, initargs=(arms,)) as pool:
         for i, (t, r) in enumerate(pool.imap_unordered(T.work_nh, tokens, chunksize=4)):
             rows[t] = r
+    pickle.dump(rows, open(O / "navhard_rows.pkl", "wb"), protocol=4)
     _, _, _, mapping, samp = L.setup_scoring()
     summ, grp, dfs = {}, {}, {}
     for v in arms:
@@ -190,7 +191,7 @@ def cmd_navhard(a):
         dfs[v] = df.set_index("token")
         summ[v] = dict(combined=100 * float(comb["score"]), stage1=100 * float(s1["score"]), stage2=100 * float(s2["score"]), **info.get(v, {}))
         grp[v] = group_scores(df, mapping)
-    off = {"native/base": T.load_csv(T.NATIVE_CSV)}
+    off = {"native/base": T.load_csv(L.NATIVE_CSV)}
     for k, d in off.items():
         summ[k]["official_combined"] = 100 * float(d.loc["extended_pdm_score_combined", "score"])
     B = np.random.default_rng(0).integers(0, len(grp["native/base"]), (5000, len(grp["native/base"])))
