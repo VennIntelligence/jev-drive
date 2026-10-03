@@ -75,17 +75,17 @@ def cmd_select(a):
                     ds = 100 * np.where(on, d.loc[idx, "score"] - base.loc[idx, "score"], 0.0)
                     rows.append(dict(mode=m, alpha=al, gate=g, frac=fr, thr=thr, delta=float(ds.mean()), n_on=int(on.sum()), n=len(idx), ds=ds, idx=idx))
     tab = pd.DataFrame(rows)
-    best = max(rows, key=lambda r: (round(r["delta"], 9), -r["alpha"], -r["frac"]))
-    B = rng.integers(0, best["n"], (5000, best["n"]))
-    cfg = dict(best, ci=T.ci(best["ds"], B), base_pdms=100 * float(base.score.mean()))
-    cfg = {k: v for k, v in cfg.items() if k not in ("ds", "idx")}
-    if cfg["delta"] <= 0:
-        cfg["selected"] = None
-    else:
-        cfg["selected"] = True
-    cfg["thr"] = None if cfg["thr"] == -np.inf else cfg["thr"]
+    out = {}
+    for nm, pool in (("registered", rows), ("posthoc_gated", [r for r in rows if r["frac"] < 100])):
+        best = max(pool, key=lambda r: (round(r["delta"], 9), -r["alpha"], -r["frac"]))
+        B = rng.integers(0, best["n"], (5000, best["n"]))
+        cfg = {k: v for k, v in best.items() if k not in ("ds", "idx")}
+        cfg.update(ci=T.ci(best["ds"], B), base_pdms=100 * float(base.score.mean()), selected=bool(best["delta"] > 0))
+        cfg["thr"] = None if cfg["thr"] == -np.inf else cfg["thr"]
+        out[nm] = cfg
     O.mkdir(parents=True, exist_ok=True)
-    (O / "gate_config.json").write_text(json.dumps(cfg, indent=1))
+    (O / "gate_config.json").write_text(json.dumps(out, indent=1))
+    cfg = out
     t = tab.drop(columns=["ds", "idx"])
     t.to_csv(OUT / "gated_navtrain_grid.csv", index=False)
     with pd.option_context("display.width", 200, "display.max_rows", 500):
@@ -94,8 +94,7 @@ def cmd_select(a):
 
 
 def load_cfg():
-    c = json.loads((O / "gate_config.json").read_text())
-    return c
+    return json.loads((O / "gate_config.json").read_text())
 
 
 def fire(data, model, cfg):
@@ -104,30 +103,31 @@ def fire(data, model, cfg):
 
 
 def cmd_navtest(a):
-    cfg = load_cfg()
-    m, al = cfg["mode"], cfg["alpha"]
+    cfgs = load_cfg()
     out, rng, miss = {}, np.random.default_rng(0), []
-    for model in ("native", "best"):
-        base = T.v1_rows(T.BASE_CSV["native", "navtest"] if model == "native" else BEST_NAVTEST_CSV)
-        comp = T.v1_rows(comp_csv("navtest", model, m, al))
-        if comp is None:
-            miss.append(f"{comp_csv('navtest', model, m, al)} <- {O}/lb_navtest/best_{m}_a{al:g}.npz" if model == "best" else comp_csv("navtest", model, m, al))
-            continue
-        on = fire("lb_navtest", model, cfg)
-        idx = base.index.intersection(comp.index).intersection(on.index)
-        o = on.loc[idx].to_numpy()
-        B = rng.integers(0, len(idx), (5000, len(idx)))
-        r = dict(base_pdms=100 * float(base.loc[idx, "score"].mean()), n=len(idx), n_on=int(o.sum()))
-        for nm, sel in (("gated", o), ("ungated", np.ones_like(o))):
-            sc = np.where(sel, comp.loc[idx, "score"], base.loc[idx, "score"])
-            x = 100 * (sc - base.loc[idx, "score"].to_numpy())
-            r[nm] = dict(pdms=100 * float(sc.mean()), delta=float(x.mean()), ci=T.ci(x, B))
-            for c in T.V1:
-                y = 100 * (np.where(sel, comp.loc[idx, c], base.loc[idx, c]) - base.loc[idx, c].to_numpy())
-                r[nm][f"{c}_delta"] = float(y.mean())
-        out[model] = r
+    for cn, cfg in cfgs.items():
+        m, al = cfg["mode"], cfg["alpha"]
+        for model in ("native", "best"):
+            base = T.v1_rows(T.BASE_CSV["native", "navtest"] if model == "native" else BEST_NAVTEST_CSV)
+            comp = T.v1_rows(comp_csv("navtest", model, m, al))
+            if comp is None:
+                miss.append(f"{comp_csv('navtest', model, m, al)} <- {O}/lb_navtest/best_{m}_a{al:g}.npz")
+                continue
+            on = fire("lb_navtest", model, cfg)
+            idx = base.index.intersection(comp.index).intersection(on.index)
+            o = on.loc[idx].to_numpy()
+            B = rng.integers(0, len(idx), (5000, len(idx)))
+            r = dict(cfg=cfg, base_pdms=100 * float(base.loc[idx, "score"].mean()), n=len(idx), n_on=int(o.sum()))
+            for nm, sel in (("gated", o), ("ungated", np.ones_like(o))):
+                sc = np.where(sel, comp.loc[idx, "score"], base.loc[idx, "score"])
+                x = 100 * (sc - base.loc[idx, "score"].to_numpy())
+                r[nm] = dict(pdms=100 * float(sc.mean()), delta=float(x.mean()), ci=T.ci(x, B))
+                for c in T.V1:
+                    y = 100 * (np.where(sel, comp.loc[idx, c], base.loc[idx, c]) - base.loc[idx, c].to_numpy())
+                    r[nm][f"{c}_delta"] = float(y.mean())
+            out[f"{cn}/{model}"] = r
     if miss:
-        print("MISSING", *miss, sep="\n")
+        print("MISSING", *sorted(set(miss)), sep="\n")
     (OUT / "gated_navtest.json").write_text(json.dumps(out, indent=1))
     print(json.dumps(out, indent=1))
 
@@ -141,8 +141,7 @@ def auc(score, pos):
 def cmd_navhard(a):
     import offroad_replay_cf as R
     from offroad_gain import group_scores
-    cfg = load_cfg()
-    m, al = cfg["mode"], cfg["alpha"]
+    cfgs = load_cfg()
     fl = pd.read_csv(OUT / "nhdac_failures.csv")
     tokens = [e["token"] for e in L.index()]
     stage = {e["token"]: e["stage"] for e in L.index()}
@@ -165,20 +164,21 @@ def cmd_navhard(a):
 
     for model in ("native", "best"):
         G = gate_stats("lb_navhard", model)
-        on = fire("lb_navhard", model, cfg).to_dict()
         Lset = set(fl[(fl.arm == model) & (fl.primary == "tracker_lag")].token)
         arms[f"{model}/base"] = (BASE_NPZ[model, "lb_navhard"], "real")
-        mix(f"{model}/gated", model, m, al, on)
-        mix(f"{model}/ungated", model, m, al, {t: True for t in tokens})
-        for mm, aa in {("full", 1.0), ("path", 1.0), (m, al)}:
+        diag[model] = {}
+        for cn, cfg in cfgs.items():
+            m, al = cfg["mode"], cfg["alpha"]
+            on = fire("lb_navhard", model, cfg).to_dict()
+            mix(f"{model}/{cn}_gated", model, m, al, on)
+            diag[model][cn] = dict(gate_L_captured=float(np.mean([on.get(t, False) for t in Lset])),
+                                   gate_s1=float(np.mean([on.get(t, False) for t in tokens if stage[t] == "one"])),
+                                   gate_s2=float(np.mean([on.get(t, False) for t in tokens if stage[t] == "two"])))
+        mix(f"{model}/ungated_path_a0.25", model, "path", 0.25, {t: True for t in tokens})
+        for mm, aa in (("full", 1.0), ("path", 1.0), ("path", 0.25)):
             mix(f"{model}/oracleL_{mm}_a{aa:g}", model, mm, aa, {t: t in Lset for t in tokens})
         yL = np.array([t in Lset for t in G.index])
-        diag[model] = {g: dict(auc_L=auc(G[g].to_numpy(), yL)) for g in GATES}
-        diag[model]["n_L"] = int(yL.sum())
-        diag[model]["gate_L_captured"] = float(np.mean([on.get(t, False) for t in Lset]))
-        diag[model]["gate_s1"] = float(np.mean([on.get(t, False) for t in tokens if stage[t] == "one"]))
-        diag[model]["gate_s2"] = float(np.mean([on.get(t, False) for t in tokens if stage[t] == "two"]))
-        # among L tokens, how often does compensation (cfg arm / alpha 1) fix their DAC? reported from the in-process scores below
+        diag[model].update({g: dict(auc_L=auc(G[g].to_numpy(), yL)) for g in GATES}, n_L=int(yL.sum()))
     rows = {}
     with mp.get_context("fork").Pool(a.procs, initializer=T._init_nh, initargs=(arms,)) as pool:
         for i, (t, r) in enumerate(pool.imap_unordered(T.work_nh, tokens, chunksize=4)):
@@ -203,7 +203,7 @@ def cmd_navhard(a):
         for st in ("one", "two"):
             tk = [t for t in tokens if stage[t] == st]
             summ[v][f"dac_{st}"] = 100 * float((dfs[v].loc[tk, "drivable_area_compliance"] - dfs[f"{model}/base"].loc[tk, "drivable_area_compliance"]).mean())
-    (OUT / "gated_navhard.json").write_text(json.dumps(dict(cfg=cfg, arms=summ, gate_diag=diag), indent=1))
+    (OUT / "gated_navhard.json").write_text(json.dumps(dict(cfg=cfgs, arms=summ, gate_diag=diag), indent=1))
     print(json.dumps(dict(arms=summ, gate_diag=diag), indent=1))
 
 
