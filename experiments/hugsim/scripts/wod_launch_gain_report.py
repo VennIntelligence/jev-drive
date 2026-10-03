@@ -61,14 +61,14 @@ HL = pd.read_csv(HS / "q2_log_inference.csv")
 res, lines = {}, []
 ss = s_star()
 lines.append(f"threshold: z(c * s) = 1 at s* = {ss:.3f} deg/deg (c = {C}), i.e. c * s* = {C * ss:.3f}")
-fig, ax = plt.subplots(1, 3, figsize=(16, 5))
-cols = {"cinque": "#1f77b4", "cinque-hs": "#ff7f0e", "it_dw3-s0": "#2ca02c"}
+fig, ax = plt.subplots(1, 3, figsize=(17, 5.5))
+cols = {"cinque": "#1f77b4", "cinque-hs": "#ff7f0e", "cinque-full": "#9467bd", "it_dw3-s0": "#2ca02c"}
 for g, c in (("spin", "#d62728"), ("non-spin", "#7f7f7f")):
     d = H[(H.grp == g) & (H.step <= 9)].groupby("step").s_local
     ax[0].plot(d.median().index, d.median().values, "-o", color=c, ms=3, label=f"HUGSIM {g} (median, 6 / 12 logs)")
     ax[0].fill_between(d.median().index, d.quantile(0.25), d.quantile(0.75), color=c, alpha=0.12)
 tab = []
-for model in ("cinque", "cinque-hs"):
+for model in ("cinque", "cinque-full", "cinque-hs"):
     D = load(model)
     if D.empty:
         continue
@@ -85,8 +85,8 @@ for model in ("cinque", "cinque-hs"):
                             frac_above_s_star=float((x.gain > ss).mean()), c_crit=C * ss / md, c_crit_lo=C * ss / hi, c_crit_hi=C * ss / lo))
     T = pd.DataFrame(tab)
     t = T[(T.model == model) & (T.subset == "all")]
-    ax[0].errorbar(t.step, t.gain_median, yerr=[t.gain_median - t.lo, t.hi - t.gain_median], fmt="-s", color=cols[model], capsize=3, label=f"WOD real, {model}{' (HUGSIM-shaped perturbation)' if model.endswith('-hs') else ''} (median, 95% cluster CI, n {int(t.n.iloc[0])})")
-    if model == "cinque-hs":
+    ax[0].errorbar(t.step, t.gain_median, yerr=[t.gain_median - t.lo, t.hi - t.gain_median], fmt="-s", color=cols[model], capsize=3, label=f"WOD real, {model}{' (HUGSIM-shaped perturbation, TRT)' if model.endswith('-hs') else ' (TRT, full-history yaw)' if model.endswith('-full') else ' (CPU, full-history yaw)'} (n {int(t.n.iloc[0])})")
+    if model != "cinque":
         continue
     # launch lean per event: mean |phi1| over steps 1-2
     e = D[D.m.isin([1, 2])].groupby("ev").agg(cluster=("cluster", "first"), split=("split", "first"), lean=("phi", lambda p: float(np.mean(np.abs(p)))), k=("m", "size"))
@@ -120,7 +120,7 @@ def zrow(label, md, lo, hi, color):
 for g, c in (("spin", "#d62728"), ("non-spin", "#7f7f7f")):
     x = H[(H.grp == g) & (H.step == 1)].s_local
     zrow(f"HUGSIM {g} (n {len(x)})", *boot(x, np.arange(len(x))), c)
-for model in ("cinque", "cinque-hs"):
+for model in ("cinque", "cinque-full", "cinque-hs"):
     t = T[(T.model == model) & (T.subset == "all") & (T.step == 1)]
     if len(t):
         r = t.iloc[0]
@@ -128,13 +128,13 @@ for model in ("cinque", "cinque-hs"):
 ax[2].axvline(1, color="k", lw=0.8)
 ax[2].set_yticks(range(len(labs)))
 ax[2].set_yticklabels(labs, fontsize=8)
-ax[2].set_xlabel("loop growth per step z (window kernel, c = 0.19), step-1 gain median, 95% CI")
+ax[2].set_xlabel("growth per step z (c = 0.19), 95% CI")
 ax[2].set_title("(c) loop growth")
 ax[0].set_xlabel("launch step (HUGSIM step = WOD m)")
-ax[0].set_ylabel("local gain (deg of 1 s plan direction per deg of added history yaw)")
+ax[0].set_ylabel("local gain (deg / deg)")
 ax[0].set_xlim(0.7, 9.3)
 ax[0].set_title("(a) local gain by step")
-ax[0].legend(fontsize=7)
+ax[0].legend(fontsize=6, loc="upper right")
 fig.tight_layout()
 fig.savefig(png, dpi=130)
 for _, r in T.iterrows():
@@ -146,5 +146,13 @@ for g, c1 in (("spin", None), ("non-spin", None)):
 x = H[H.step == 1].groupby("grp").s_local.agg(["median", "size"])
 for g in ("spin", "non-spin"):
     lines.append(f"HUGSIM {g} step 1 (CPU replay): median gain {x.loc[g, 'median']:.2f} (n {int(x.loc[g, 'size'])}), z {zwin(C * x.loc[g, 'median']):.2f}")
+Dc, Dg = load("cinque"), load("cinque-full")
+if len(Dc) and len(Dg):
+    j = Dc.merge(Dg, on="row", suffixes=("_cpu", "_trt"))
+    lines.append(f"CPU vs TRT, full-history yaw, same rows n={len(j)}: gain corr {np.corrcoef(j.gain_cpu, j.gain_trt)[0, 1]:.4f}, median ratio {np.median(j.gain_trt / j.gain_cpu):.3f}; lean corr {np.corrcoef(j.phi_cpu, j.phi_trt)[0, 1]:.4f}")
+Dh = load("cinque-hs")
+if len(Dc) and len(Dh):
+    j = Dc.merge(Dh, on="row", suffixes=("_full", "_hs"))
+    lines.append(f"full-history vs HUGSIM-shaped perturbation, same rows n={len(j)}: gain corr {np.corrcoef(j.gain_full, j.gain_hs)[0, 1]:.3f}, median full {j.gain_full.median():.2f}, median hs {j.gain_hs.median():.2f}")
 (out / "summary.txt").write_text("\n".join(lines))
 print("\n".join(lines))

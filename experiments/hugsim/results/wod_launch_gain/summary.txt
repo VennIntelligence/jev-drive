@@ -1,0 +1,26 @@
+threshold: z(c * s) = 1 at s* = 0.877 deg/deg (c = 0.19), i.e. c * s* = 0.167
+cinque: launch lean |phi1| steps 1-2 per event n=156: median 0.58 [0.39, 0.94], mean 2.41 [1.69, 3.41], p90 7.26; frac >= 1 deg 0.391; MWU vs HUGSIM native spin p=0.504, non-spin p=0.00545
+cinque all step 1: n=159 (155 segments) gain median 8.99 [8.48, 9.77], mean 9.85 [9.17, 10.56]; c*gain 1.707; z 2.70 [2.61, 2.85]; frac events above s* 1.00; c at which z = 1: 0.019 [0.017, 0.020]
+cinque all step 2: n=156 (152 segments) gain median 5.02 [4.41, 5.54], mean 6.17 [5.47, 6.92]; c*gain 0.954; z 1.94 [1.81, 2.04]; frac events above s* 0.98; c at which z = 1: 0.033 [0.030, 0.038]
+cinque all step 3: n=144 (140 segments) gain median 2.67 [2.27, 3.20], mean 3.87 [3.31, 4.49]; c*gain 0.507; z 1.45 [1.36, 1.57]; frac events above s* 0.89; c at which z = 1: 0.062 [0.052, 0.073]
+cinque dev step 1: n=62 (58 segments) gain median 8.72 [8.15, 9.96], mean 9.40 [8.49, 10.36]; c*gain 1.657; z 2.65 [2.54, 2.89]; frac events above s* 1.00; c at which z = 1: 0.019 [0.017, 0.020]
+cinque dev step 2: n=62 (58 segments) gain median 5.01 [4.22, 5.61], mean 5.84 [4.92, 6.81]; c*gain 0.952; z 1.93 [1.78, 2.05]; frac events above s* 0.97; c at which z = 1: 0.033 [0.030, 0.039]
+cinque dev step 3: n=61 (57 segments) gain median 2.88 [2.30, 3.52], mean 3.90 [3.13, 4.72]; c*gain 0.547; z 1.50 [1.37, 1.63]; frac events above s* 0.92; c at which z = 1: 0.058 [0.047, 0.072]
+cinque-full all step 1: n=70 (65 segments) gain median 8.69 [8.15, 9.66], mean 9.41 [8.50, 10.37]; c*gain 1.651; z 2.65 [2.54, 2.83]; frac events above s* 1.00; c at which z = 1: 0.019 [0.017, 0.020]
+cinque-full all step 2: n=70 (65 segments) gain median 5.01 [4.29, 5.90], mean 5.98 [5.05, 6.97]; c*gain 0.951; z 1.93 [1.79, 2.11]; frac events above s* 0.97; c at which z = 1: 0.033 [0.028, 0.039]
+cinque-full all step 3: n=69 (64 segments) gain median 2.86 [2.34, 3.80], mean 4.09 [3.26, 5.02]; c*gain 0.543; z 1.49 [1.38, 1.69]; frac events above s* 0.91; c at which z = 1: 0.058 [0.044, 0.071]
+cinque-full dev step 1: n=70 (65 segments) gain median 8.69 [8.15, 9.66], mean 9.41 [8.50, 10.37]; c*gain 1.651; z 2.65 [2.54, 2.83]; frac events above s* 1.00; c at which z = 1: 0.019 [0.017, 0.020]
+cinque-full dev step 2: n=70 (65 segments) gain median 5.01 [4.29, 5.90], mean 5.98 [5.05, 6.97]; c*gain 0.951; z 1.93 [1.79, 2.11]; frac events above s* 0.97; c at which z = 1: 0.033 [0.028, 0.039]
+cinque-full dev step 3: n=69 (64 segments) gain median 2.86 [2.34, 3.80], mean 4.09 [3.26, 5.02]; c*gain 0.543; z 1.49 [1.38, 1.69]; frac events above s* 0.91; c at which z = 1: 0.058 [0.044, 0.071]
+cinque-hs all step 1: n=300 (292 segments) gain median 9.34 [9.12, 9.59], mean 9.50 [9.27, 9.74]; c*gain 1.775; z 2.77 [2.73, 2.82]; frac events above s* 1.00; c at which z = 1: 0.018 [0.017, 0.018]
+cinque-hs all step 2: n=299 (291 segments) gain median 5.15 [4.84, 5.46], mean 5.69 [5.35, 6.06]; c*gain 0.979; z 1.96 [1.90, 2.02]; frac events above s* 1.00; c at which z = 1: 0.032 [0.031, 0.034]
+cinque-hs all step 3: n=295 (287 segments) gain median 2.32 [2.09, 2.71], mean 3.59 [3.17, 4.05]; c*gain 0.440; z 1.37 [1.32, 1.46]; frac events above s* 0.89; c at which z = 1: 0.072 [0.062, 0.080]
+cinque-hs dev step 1: n=70 (65 segments) gain median 9.22 [8.65, 9.84], mean 9.24 [8.83, 9.66]; c*gain 1.752; z 2.75 [2.64, 2.87]; frac events above s* 1.00; c at which z = 1: 0.018 [0.017, 0.019]
+cinque-hs dev step 2: n=70 (65 segments) gain median 5.11 [4.29, 5.79], mean 5.35 [4.73, 5.99]; c*gain 0.972; z 1.95 [1.79, 2.09]; frac events above s* 1.00; c at which z = 1: 0.033 [0.029, 0.039]
+cinque-hs dev step 3: n=69 (64 segments) gain median 2.21 [1.91, 2.79], mean 3.24 [2.61, 3.92]; c*gain 0.420; z 1.35 [1.28, 1.48]; frac events above s* 0.91; c at which z = 1: 0.075 [0.060, 0.087]
+HUGSIM spin step 1: c at which z = 1: 0.028
+HUGSIM non-spin step 1: c at which z = 1: 0.034
+HUGSIM spin step 1 (CPU replay): median gain 5.85 (n 6), z 2.10
+HUGSIM non-spin step 1 (CPU replay): median gain 4.87 (n 12), z 1.91
+CPU vs TRT, full-history yaw, same rows n=185: gain corr 0.9999, median ratio 1.001; lean corr 0.9999
+full-history vs HUGSIM-shaped perturbation, same rows n=459: gain corr 0.927, median full 5.54, median hs 5.77
