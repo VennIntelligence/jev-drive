@@ -16,6 +16,10 @@ Run root $DATA_DIR/runs/op_lb/<data>/, data = lb_navtest (12 146) | lb_navhard (
           plan_yaw / lead_prob) plus plan_mu / plan_std (33, 15), all non-hidden output heads (heads + info.heads_slices)
           and the desire per step. The plan heads of small / Cinque / Lebowski are one Gaussian (no hypotheses).
           Lebowski gets the 3.3 s ego-motion warp pre-roll by default (section 7), computed on the fly.
+  run --vcam H (lane EDGE fix, experiments/skill_pack/plans/2026-10-04-roadedge-diagnosis-plan.md addendum 3): no frame
+          cache; per token the 4 keys are rendered from the CAM_F0 images for a virtual camera H m above the road (0: the
+          true height, CAM_F0 z + 0.35 m) and the 6 context-rate frames by the CPU ego-motion warp at that height, in a
+          bounded CPU pool (--vcam-workers) next to the GPU; --frames names the arm (vh<cm>, e.g. vh130, vh187 = true height).
   compare two plan files: max / mean plan difference (the equivalence check against op_interp's stored plans).
 
 Export, scoring and report are op_interp's, pointed at this root: OPI_ROOT=op_lb experiments/op_openloop/lib/op_interp.py nav-export /
@@ -179,6 +183,37 @@ def _gpu_gate(gpu, cap, need, log):
 def _warp_job(args):
     keys, tr_args, cam = args
     return I.synth_cpu(keys, "warp", SYN_T, I.track_navsim(*tr_args), cam)
+
+
+ZG = 0.35      # the NAVSIM ego origin (rear axle) is ~0.35 m above the road (decision 104)
+_VMAPS = {}
+
+
+def _vcam_job(args):
+    """(entry, H) -> keys (4, 2, 6, 128, 256), context frames (6, ...), camera [x, y, H'] of the virtual camera at H m above
+    the road (H' = the true height when H <= 0)."""
+    e, H = args
+    from jevdrive import navsim_zs as Z
+    cam = e["cams"][-1]["CAM_F0"]
+    ht = float(cam["t"][2]) + ZG
+    r = 1.0 if H <= 0 else ht / H
+    key = (Z.calib_key({"CAM_F0": cam}), round(r, 4))
+    m = _VMAPS.get(key) or _VMAPS.setdefault(key, Z.OpenpilotMaps(cam, depress=r))
+    keys = np.stack([m(m.decode(e["cams"][f]["CAM_F0"]["path"])) for f in range(4)])
+    camv = np.r_[np.asarray(cam["t"], float)[:2], ht / r]
+    return keys, I.synth_cpu(keys, "warp", SYN_T, I.track_navsim(e["pose"], e["vel"]), camv), camv
+
+
+def _bounded_map(ex, fn, items, ahead):
+    """ex.map with at most `ahead` results in flight (keeps the rendered frames from piling up ahead of the GPU)."""
+    from collections import deque
+    items, q = iter(items), deque()
+    for x in items:
+        q.append(ex.submit(fn, x))
+        if len(q) >= ahead:
+            yield q.popleft().result()
+    while q:
+        yield q.popleft().result()
 
 
 def cmd_synth(a):
@@ -347,8 +382,17 @@ def cmd_run(a):
         return
     from jevdrive.openpilot.model import OPModel, decode
     mt = meta(a.data)
-    keys = Keys(a.data)
-    syn = np.load(root(a.data) / f"{a.frames}.npy", mmap_mode="r")
+    if a.vcam is None:
+        keys = Keys(a.data)
+        syn = np.load(root(a.data) / f"{a.frames}.npy", mmap_mode="r")
+    else:
+        assert a.frames.startswith("vh"), "--vcam arms are named vh<cm>"
+        from concurrent.futures import ProcessPoolExecutor
+        from jevdrive import navsim_zs as Z
+        idx = Z.load_index(mt["split"], slim=True)
+        ents = [idx[k] for k in mt["index"]]
+        assert [e["token"] for e in ents] == mt["names"]
+        del idx
     cr = a.model == "lebowski"
     backend = a.backend or BACKENDS[a.model]
     ctag = f"{a.model}-{backend}" if not a.onnx else f"{a.model}-{a.tag}-{backend}"
@@ -370,14 +414,17 @@ def cmd_run(a):
              "heads": np.zeros((R, len(keep)), np.float32), "desire_steps": np.zeros((R, len(ts)), np.int8)}
          for s in a.schedule}
     t0, tg = time.time(), 0.0
-    for r, i in enumerate(rows):
-        kf = keys[int(i)]
-        sf = np.asarray(syn[i])
+    if a.vcam is None:
+        src_it = ((keys[int(i)], np.asarray(syn[i]), mt["cam"][i]) for i in rows)
+    else:
+        ex = ProcessPoolExecutor(a.vcam_workers)
+        src_it = _bounded_map(ex, _vcam_job, ((ents[i], a.vcam) for i in rows), 4 * a.vcam_workers)
+    for r, (i, (kf, sf, camr)) in enumerate(zip(rows, src_it)):
         if a.align != "none":           # reference-free history alignment (jevdrive.op_interp.align_history)
-            kf, sf = I.align_history(kf, sf, SYN_T, I.track_navsim(mt["pose"][i], mt["vel"][i]), mt["cam"][i], a.align)
+            kf, sf = I.align_history(kf, sf, SYN_T, I.track_navsim(mt["pose"][i], mt["vel"][i]), camr, a.align)
         pw = {}
         if pre_t:
-            fr = I.synth_cpu(kf, "warp", np.array(pre_t), I.track_navsim(mt["pose"][i], mt["vel"][i]), mt["cam"][i])
+            fr = I.synth_cpu(kf, "warp", np.array(pre_t), I.track_navsim(mt["pose"][i], mt["vel"][i]), camr)
             pw = dict(zip(pre_t, fr))
         frames = [np.ascontiguousarray(kf[j] if s == "k" else sf[j] if s == "s" else pw[j]) for s, j in src]
         tok = {q: mt[q][i] for q in ("cmds", "cmd", "speed", "vel", "pose", "lht")} | {"token": mt["names"][i]}
@@ -400,7 +447,7 @@ def cmd_run(a):
     ms = 1e3 * tg / max(1, R * len(a.schedule))
     for s, stem in zip(a.schedule, stems):
         info = json.dumps({"model": a.model, "backend": backend, "frames": a.frames, "schedule": s, "preroll": pre, "align": a.align,
-                           "prereg": a.prereg, "step_times": ts.tolist(), "heads_slices": hs, "desires": DESIRES,
+                           "prereg": a.prereg, "vcam": a.vcam, "step_times": ts.tolist(), "heads_slices": hs, "desires": DESIRES,
                            "plan_std": "exp of the MDN log-std, as openpilot's parse_mdn"})
         out = pdir / (f"{stem}{sfx}" + (f".part{k}of{K}" if a.shard else "") + ".npz")
         np.savez(out, names=np.array(mt["names"])[rows], steps=len(ts), ms_per_scene=ms, info=info, **P[s])
@@ -458,6 +505,9 @@ if __name__ == "__main__":
     p.add_argument("--onnx", default="", help="serving ONNX path of an adapted checkpoint (replaces the shipped model's file)")
     p.add_argument("--tag", default="", help="with --onnx: plan stem suffix, plans/<frames>@<model>_<tag>[_al-<rule>].npz")
     p.add_argument("--align", choices=I.ALIGN, default="none", help="history-frame rule (jevdrive.op_interp.align_history)")
+    p.add_argument("--vcam", type=float, default=None, help="virtual camera height above the road, m (0: true height); "
+                   "renders keys + warp context frames on the fly, --frames vh<cm>")
+    p.add_argument("--vcam-workers", type=int, default=8, help="--vcam: CPU render processes per shard")
     p.add_argument("--procs", type=int, default=8)
     p.add_argument("--shard", default="")
     p.add_argument("--limit", type=int, default=0, help="staging: first N tokens -> plans_pilot/")

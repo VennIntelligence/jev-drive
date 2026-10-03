@@ -27,11 +27,11 @@ sys.path[:0] = [str(REPO), str(Path(__file__).resolve().parent)]
 import offroad_lib as L  # noqa: E402
 
 OUT = Path(os.environ.get("REPORT_OUT") or REPO / "experiments/skill_pack/results/history-align")
-BASE = ["gimm-cinque"]      # --base-stem: the base arm's pred stem; an arm starting with "gimm-" is a full stem (cross-model pairs)
+BASE = ["gimm-cinque"]      # --base-stem: the base arm's pred stem; an arm starting with "gimm-" / "vh" is a full stem (cross-model pairs)
 
 
 def stem(arm):
-    return BASE[0] if arm == "base" else arm if arm.startswith("gimm-") else f"{BASE[0]}_al-{arm}"
+    return BASE[0] if arm == "base" else arm if arm.startswith(("gimm-", "vh")) else f"{BASE[0]}_al-{arm}"
 
 
 POSES = lambda data, arm: L.D / f"runs/op_lb/{data}/preds/{stem(arm)}__base.npz"  # noqa: E731

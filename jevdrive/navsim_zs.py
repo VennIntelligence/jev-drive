@@ -163,15 +163,20 @@ class AlpamayoMaps:
 class OpenpilotMaps:
     """CAM_F0 -> openpilot road (focal 910) and wide (focal 455) 512x256 model frames, calib = the NAVSIM ego axes
     (level, straight). Nearest sampling at integer model pixels like tinygrad's warp; the source is libjpeg's own
-    YCbCr (no RGB round trip) and chroma is the 2x2 mean, as the WOD-E2E exam's openpilot runner."""
+    YCbCr (no RGB round trip) and chroma is the 2x2 mean, as the WOD-E2E exam's openpilot runner.
+    depress = r > 1: a virtual camera lowered from height h to h / r above a flat road (same x, y, axes): a model ray below
+    the horizon samples CAM_F0 along (x, y, r z), i.e. the same ground point; rays above the horizon are unchanged
+    (lane EDGE, experiments/skill_pack/plans/2026-10-04-roadedge-diagnosis-plan.md)."""
 
-    def __init__(self, cam: dict):
+    def __init__(self, cam: dict, depress: float = 1.0):
         from .openpilot.frames import MEDMODEL_K, SBIGMODEL_K, VIEW_FROM_DEVICE, MODEL_W, MODEL_H
         uu, vv = np.meshgrid(np.arange(MODEL_W, dtype=np.float64), np.arange(MODEL_H, dtype=np.float64))
         self.idx, self.coverage = [], []
         w, h = NUPLAN_WH
         for Km in (MEDMODEL_K, SBIGMODEL_K):
             ray_dev = np.stack([uu, vv, np.ones_like(uu)], -1) @ np.linalg.inv(Km @ VIEW_FROM_DEVICE).T  # x fwd, y right, z down
+            if depress != 1.0:
+                ray_dev[..., 2] = np.where(ray_dev[..., 2] > 0, ray_dev[..., 2] * depress, ray_dev[..., 2])
             uv, ok, _ = project_nuplan(ray_dev * np.array([1., -1., -1.]), cam, 1)
             xi = np.clip(np.rint(uv[..., 0]), 0, w - 1).astype(np.int64)
             yi = np.clip(np.rint(uv[..., 1]), 0, h - 1).astype(np.int64)
