@@ -4,7 +4,7 @@
 #   1 teachers of lwod / lcarla         5 launch dev of the arms                   9 h_chain.sh (dev, 10 deg/s probe, navtest, WOD capture)
 #   2 bank2 on all five domains         6 (b) small-rate probe                    10 (d)(f) HUGSIM all 64, only for arms whose (a) ratio <= GATE
 #   3 launch dev fixbanks + O           7 (a) ONNX + lean_probe replay / local
-# Usage (box, tmux): GPU=2 CPUS=150-199 SCPUS=150-199 [GATE=0.75] [BANK3=1 for arms with M rows] experiments/op_adapt_h/scripts/h_lchain.sh <name> <arm> [<arm> ...]
+# Usage (box, tmux): GPU=2 CPUS=150-199 SCPUS=150-199 [GATE=0.75] [BANK3=1 for arms with M rows] [BANKBATCH=32] [MAXPAR=2 trainings at once] [NAVBATCH=8] experiments/op_adapt_h/scripts/h_lchain.sh <name> <arm> [<arm> ...]
 # Files: $DATA_DIR/runs/op_adapt_H/chain/<name>/{STATUS,DONE,ERROR,log.txt}; report in $H/report/<name>/.
 set -uo pipefail
 : "${DATA_DIR:?}" "${GPU:?}" "${CPUS:?}" "${SCPUS:?}"
@@ -33,8 +33,8 @@ done
 st "1 teachers"
 g $PY $T teacher --domains lwod lcarla || fail "teacher"
 st "2 bank2"
-g $PY $T bank --name bank2 --domains "${DOMS[@]}" --workers 40 || fail "bank2"
-if [[ ${BANK3:-0} == 1 ]]; then g $PY $T bank --name bank3 --domains nav wod carla --workers 40 || fail "bank3"; fi
+g $PY $T bank --name bank2 --domains "${DOMS[@]}" --workers 40 --batch "${BANKBATCH:-32}" || fail "bank2"
+if [[ ${BANK3:-0} == 1 ]]; then g $PY $T bank --name bank3 --domains nav wod carla --workers 40 --batch "${BANKBATCH:-32}" || fail "bank3"; fi
 st "3 launch dev of O"
 [[ -f $H/dev/O_ldev.json ]] || { g $PY $T ldev --models O || fail "ldev O"; }
 
@@ -43,7 +43,7 @@ pids=()
 for a in "${ARMS[@]}"; do
   [[ -f $H/runs/$a-s0/ckpt-final.pt ]] && continue
   g $PY $T train --arm "$a" --no-eval & pids+=($!)
-  if (( ${#pids[@]} >= 2 )); then wait "${pids[0]}" || fail "train"; pids=("${pids[@]:1}"); fi
+  if (( ${#pids[@]} >= ${MAXPAR:-2} )); then wait "${pids[0]}" || fail "train"; pids=("${pids[@]:1}"); fi
 done
 for p in "${pids[@]}"; do wait "$p" || fail "train"; done
 
