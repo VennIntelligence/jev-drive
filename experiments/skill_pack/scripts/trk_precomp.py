@@ -221,6 +221,8 @@ def cmd_check(a):
 
 
 def cmd_make(a):
+    global OUT
+    OUT = Path(a.out) if a.out else OUT
     srcs = dict(s.split("=", 1) for s in a.src)
     OUT.mkdir(parents=True, exist_ok=True)
     tokens = sorted(set().union(*(np.load(f)["tokens"].tolist() for f in srcs.values())))
@@ -255,5 +257,6 @@ if __name__ == "__main__":
     ap.add_argument("--procs", type=int, default=48)
     ap.add_argument("--n", type=int, default=40)
     ap.add_argument("--modes", nargs="+", default=list(MODES), choices=["full", "path"])
+    ap.add_argument("--out", default="", help="make: output root (default runs/skill_pack/trk)")
     a = ap.parse_args()
     {"check": cmd_check, "make": cmd_make}[a.cmd](a)
