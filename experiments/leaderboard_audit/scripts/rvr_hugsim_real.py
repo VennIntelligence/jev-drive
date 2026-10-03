@@ -33,7 +33,8 @@ def index():
 def files(log, t0, cam, listing, offset=0):
     fs = sorted((int(f.rsplit("__", 1)[1][:-4]), d, f) for d, f in listing[cam] if f.startswith(log + "__"))
     k = next(i for i, (ts, _, _) in enumerate(fs) if ts >= t0 - 40000)       # cameras fire within ~40 ms of the sample time
-    return [str(NU / d / cam / f) for _, d, f in fs[k + offset:k + offset + N]]
+    k = max(0, k + offset)
+    return [str(NU / d / cam / f) for _, d, f in fs[k:k + N]]
 
 
 def load(path):
