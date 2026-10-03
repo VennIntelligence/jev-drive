@@ -30,7 +30,8 @@ DOMS = ("nav", "wod", "carla")
 AT = (0.275, 0.525)
 NIMG = 10
 T_FUT = 0.25 * np.arange(1, 21)
-ROLES = {"U": 1, "D": 2, "H": 3, "O": 4}
+ROLES = {"U": 1, "D": 2, "H": 3, "O": 4, "L": 5, "S": 6}
+LAUNCH_DOMS = ("lwod", "lcarla")       # real launch events (h_prep.py prep_lwod / prep_lcarla), table column m
 
 
 def hroot(*p) -> Path:
@@ -100,6 +101,21 @@ def hist_single(imgs, slot_valid):
     sv = np.zeros_like(slot_valid)
     sv[-1] = True
     return out, sv
+
+
+def hist_launch(imgs, t, valid, cam, m: int, delta_deg: float, freeze: bool):
+    """Launch history (plans/2026-10-04-launch-pairs-prereg.md): a static prefix, then the last m frames moving, plus a fake yaw
+    delta that the static prefix carries whole and the moving frames ramp down to 0 at t0 (the de-rotated view of a launch that
+    yawed delta since standing). freeze=True makes the prefix static by copying image 9 - m onto the earlier valid images
+    (synthetic launch from a moving sample); a real launch keeps its frames."""
+    imgs = np.array(imgs)
+    k0 = NIMG - 1 - m
+    if freeze:
+        imgs[:k0][valid[:k0]] = imgs[k0]
+    r = np.clip(np.asarray(t, float) / min(float(t[k0]), -1e-6), 0.0, 1.0)
+    r[:k0] = 1.0
+    d = np.radians(delta_deg)
+    return np.stack([warp(f, cam, 0.0, d * q) if v else f for f, q, v in zip(imgs, r, valid)])
 
 
 def drift(t, dy, dpsi, v, T=1.6):
@@ -178,8 +194,9 @@ def bank_plan(S: Samples, seed=0) -> dict:
     return {"sample": np.array(c[0]), "kind": np.array(c[1]), "rate": np.array(c[2]), "dy": np.array(c[3]), "dpsi": np.array(c[4])}
 
 
-def variant_imgs(S: Samples, i: int, kind: str, rate=0.0, dy=0.0, dpsi_deg=0.0):
-    """(imgs (10, ...), slot_valid (9,)) of one variant."""
+def variant_imgs(S: Samples, i: int, kind: str, rate=0.0, dy=0.0, dpsi_deg=0.0, m=0):
+    """(imgs (10, ...), slot_valid (9,)) of one variant (launch: rate = fake yaw delta in deg, m = moving frames; a real-launch
+    domain uses its own m and its frames)."""
     t = S.t
     imgs, sv = np.asarray(S.imgs[i]), t["slot_valid"][i].copy()
     if kind == "normal":
@@ -190,14 +207,46 @@ def variant_imgs(S: Samples, i: int, kind: str, rate=0.0, dy=0.0, dpsi_deg=0.0):
         return hist_repeat(imgs, t["img_valid"][i]), sv
     if kind == "single":
         return hist_single(imgs, sv)
+    if kind == "launch":
+        real = "m" in t
+        return hist_launch(imgs, t["img_t"][i], t["img_valid"][i], t["cam"][i], int(t["m"][i]) if real else int(m), rate, not real), sv
     if kind == "offset":
         return offset_imgs(imgs, t["img_t"][i], t["img_valid"][i], t["cam"][i], dy, np.radians(dpsi_deg), float(t["v0"][i])), sv
     raise KeyError(kind)
 
 
+# bank2 (plans/2026-10-04-launch-pairs-prereg.md): launch variants and small-rate fake yaw, beside the first bank.
+BANK2_DELTA = (0.3, 3.0)              # |fake yaw| of a launch (deg)
+BANK2_RATE = (0.3, 2.0)               # |small fake yaw rate| (deg/s)
+BANK2_LAUNCH_V = (0.5, 5.0)           # t0 speed of a synthetic launch (m/s)
+
+
+def bank2_plan(S: Samples, seed=0) -> dict:
+    """Variant table of bank2. Real-launch domain: normal + one launch (its own m). Other pools: one small-rate rot on stop / low /
+    mid samples, one synthetic launch (m 1-3) on 0.5 <= v0 < 5 m/s. Fake-yaw sign against the logged 3 s heading when |psi| > 3 deg."""
+    rng = np.random.default_rng([seed, 7, (DOMS + LAUNCH_DOMS).index(S.dom)])
+    real = "m" in S.t
+    rows = []
+    for i in range(S.n):
+        fy = fut_yaw_deg(S.t["fut20"][i])
+        sg = lambda: -np.sign(fy) if abs(fy) > 3.0 else rng.choice([-1.0, 1.0])  # noqa: E731
+        v0 = float(S.t["v0"][i])
+        if real:
+            rows += [(i, "normal", 0.0, 0), (i, "launch", float(sg() * rng.uniform(*BANK2_DELTA)), int(S.t["m"][i]))]
+            continue
+        if S.t["bin"][i] in ("stop", "low", "mid"):
+            rows.append((i, "rot", float(sg() * rng.uniform(*BANK2_RATE)), 0))
+        if BANK2_LAUNCH_V[0] <= v0 < BANK2_LAUNCH_V[1]:
+            rows.append((i, "launch", float(sg() * rng.uniform(*BANK2_DELTA)), int(rng.integers(1, 4))))
+    c = list(zip(*rows))
+    n = len(rows)
+    return {"sample": np.array(c[0]), "kind": np.array(c[1]), "rate": np.array(c[2]), "dy": np.zeros(n), "dpsi": np.zeros(n),
+            "m": np.array(c[3])}
+
+
 class Bank:
-    def __init__(self, dom: str):
-        d = hroot("bank", dom)
+    def __init__(self, dom: str, name: str = "bank"):
+        d = hroot(name, dom)
         self.T = np.load(d / "trunk.npy", mmap_mode="r")
         with np.load(d / "var.npz", allow_pickle=True) as z:
             self.v = {k: z[k] for k in z.files}
@@ -210,6 +259,16 @@ def pick_variant(B: Bank, S: Samples, i: int, role: str, rng, cfg: "HCfg"):
     kinds = v["kind"][lo:hi]
     if role in ("U", "D"):
         return lo + int(np.flatnonzero(kinds == "normal")[0])
+    if role == "L":
+        o = np.flatnonzero(kinds == "launch")
+        if not len(o):
+            return None
+        if "m" in S.t and rng.random() < cfg.launch_plain:     # a real launch without fake yaw (the synthetic ones always have one)
+            return lo + int(np.flatnonzero(kinds == "normal")[0])
+        return lo + int(o[rng.integers(len(o))])
+    if role == "S":
+        o = np.flatnonzero(kinds == "rot")
+        return lo + int(o[rng.integers(len(o))]) if len(o) else None
     if role == "H":
         opts, w = [], []
         r = np.abs(v["rate"][lo:hi])
@@ -253,7 +312,9 @@ class HCfg:
     lam_d: float = 10.0
     lam_c: float = 1.0
     dw: float = 1.0
-    w_role: dict = field(default_factory=lambda: {"U": 1.0, "H": 1.0, "O": 1.0})
+    w_role: dict = field(default_factory=lambda: {"U": 1.0, "H": 1.0, "O": 1.0, "L": 1.0, "S": 1.0})
+    dom_w_L: dict = field(default_factory=dict)          # domains of L rows (bank2 launch variants); S rows use dom_w
+    launch_plain: float = 0.25                           # share of L rows on real launches drawn without fake yaw
     ckpt_every: int = 500
     workers: int = 10
 
@@ -277,27 +338,36 @@ class Batcher(torch.utils.data.Dataset):
 
     def _open(self):
         c = self.cfg
-        self.S = {d: Samples(d) for d in DOMS if c.dom_w.get(d, 0) > 0}
-        self.B = {d: Bank(d) for d in self.S}
+        need2 = c.roles.get("L", 0) + c.roles.get("S", 0) > 0
+        self.S = {d: Samples(d) for d in DOMS + LAUNCH_DOMS if c.dom_w.get(d, 0) > 0 or c.dom_w_L.get(d, 0) > 0}
+        self.B = {d: Bank(d) for d in self.S if d not in LAUNCH_DOMS}
+        self.B2 = {d: Bank(d, "bank2") for d in self.S if need2 or d in LAUNCH_DOMS}
         self.pool = {}
         for d, S in self.S.items():
-            B = self.B[d]
-            B.first = np.searchsorted(B.v["sample"], np.arange(S.n + 1))
+            for B in (self.B.get(d), self.B2.get(d)):
+                if B is not None:
+                    B.first = np.searchsorted(B.v["sample"], np.arange(S.n + 1))
             self.pool[(d, "U")] = self.pool[(d, "D")] = self.pool[(d, "H")] = S.rows(self.split)
             self.pool[(d, "O")] = S.rows(self.split, vmin=c.off_vmin)
+            if d in self.B2:                                  # samples with an L / S variant in bank2
+                v, tr = self.B2[d].v, set(S.rows(self.split).tolist())
+                for r, kind in (("L", "launch"), ("S", "rot")):
+                    self.pool[(d, r)] = np.array(sorted(tr & set(v["sample"][v["kind"] == kind].tolist())), int)
 
     def __getitem__(self, k):
         if self.S is None:
             self._open()
         c = self.cfg
         rng = np.random.default_rng([c.seed, k])
-        doms = [d for d in c.dom_w if c.dom_w[d] > 0]
-        w = np.array([c.dom_w[d] for d in doms])
         rows = []
         for role, cnt in c.roles.items():
-            r = "U" if (c.control and role in ("H", "O")) else role
-            for d in rng.choice(doms, cnt, p=w / w.sum()):
-                S, B, p = self.S[d], self.B[d], self.pool[(d, r)]
+            r = "U" if (c.control and role in ("H", "O", "L", "S")) else role
+            dw = c.dom_w_L if r == "L" else {d: x for d, x in c.dom_w.items() if d not in LAUNCH_DOMS} if r in ("H", "O", "S") else c.dom_w
+            ds = [d for d in dw if dw[d] > 0]
+            pw = np.array([dw[d] for d in ds], float)
+            for d in rng.choice(ds, cnt, p=pw / pw.sum()):
+                S, p = self.S[d], self.pool[(d, r)]
+                B = self.B2[d] if (r in ("L", "S") or d in LAUNCH_DOMS) else self.B[d]
                 for _ in range(20):
                     i = int(p[rng.integers(len(p))])
                     j = pick_variant(B, S, i, r, rng, c)
@@ -359,15 +429,15 @@ class Losses:
         plan = base.plan(out)
         role = b["role"]
         L_ = {}
-        imit = (role == 1) | (role == 3) | (role == 4)
+        imit = (role == 1) | (role >= 3)
         w = torch.zeros_like(role, dtype=torch.float32)
-        for r, k in (("U", 1), ("H", 3), ("O", 4)):
+        for r, k in (("U", 1), ("H", 3), ("O", 4), ("L", 5), ("S", 6)):
             w = torch.where(role == k, torch.full_like(w, c.w_role.get(r, 1.0)), w)
         tot = 0.0
         if imit.any():
             d = base.imit_dist(plan[imit], None, b["cam"][imit], b["hum"][imit])
             L_["imit"] = (w[imit] * d).sum() / w[imit].sum()
-            for r, k in (("U", 1), ("H", 3), ("O", 4)):
+            for r, k in (("U", 1), ("H", 3), ("O", 4), ("L", 5), ("S", 6)):
                 m = role[imit] == k
                 if m.any():
                     L_[f"imit_{r}"] = d[m].mean().detach()

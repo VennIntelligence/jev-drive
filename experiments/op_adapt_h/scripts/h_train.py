@@ -39,6 +39,12 @@ ARMS = {
     "it_half": dict(roles={"U": 18, "D": 16, "H": 8, "O": 6}),   # half the pair share
     # iteration 2 (after pilot HUGSIM 6 / 10 spins): the spins grow from 1-2 deg leans, i.e. small yaw rates
     "it_lowrate": dict(dw=3.0, rot_dps=(3.0, 8.0), hist_p={"rot": 0.8, "repeat": 0.1, "single": 0.1}),
+    # round 2 (plans/2026-10-04-launch-pairs-prereg.md): launch rows (static prefix -> m moving frames + fake yaw 0.3-3 deg) and
+    # small-rate rows (0.3-2 deg/s) from bank2, on it_dw3's recipe
+    "ln1": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 10, "D": 10, "H": 8, "O": 6, "L": 10, "S": 4},
+                dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
+    "lsmoke": dict(steps=60, ckpt_every=10 ** 9, dw=3.0, roles={"U": 4, "D": 4, "H": 4, "O": 4, "L": 6, "S": 4},
+                   dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
 }
 
 
@@ -89,6 +95,8 @@ def _variant(job):
     """(dom, row, kind, arg) -> (imgs, slot_valid) of one probe / dev variant (arg: yaw rate deg/s, or (dy, dpsi deg))."""
     dom, i, kind, arg = job
     S = _S.get(dom) or _S.setdefault(dom, H.Samples(dom))
+    if kind == "launch":
+        return H.variant_imgs(S, i, kind, rate=arg[1], m=arg[0])
     if kind == "rot":
         return H.variant_imgs(S, i, kind, rate=arg)
     if kind == "offset":
@@ -97,29 +105,32 @@ def _variant(job):
 
 
 def _bank_job(job):
-    dom, i, kind, rate, dy, dpsi = job
+    dom, i, kind, rate, dy, dpsi, m = job
     S = _S.get(dom) or _S.setdefault(dom, H.Samples(dom))
-    return H.variant_imgs(S, i, kind, rate, dy, dpsi)
+    return H.variant_imgs(S, i, kind, rate, dy, dpsi, m)
 
 
 def cmd_bank(a):
-    """Stage-3 trunks of every bank variant (lib: bank_plan) -> $H/bank/<dom>/{trunk.npy, var.npz}; resumable per chunk."""
+    """Stage-3 trunks of every bank variant (lib: bank_plan, or bank2_plan with --name bank2) -> $H/<name>/<dom>/{trunk.npy,
+    var.npz}; resumable per chunk."""
     dev = torch.device("cuda")
     net = L.load_model(None, dev).net
     with ProcessPoolExecutor(a.workers) as ex:
         for d in a.domains:
-            out = H.hroot("bank", d)
+            out = H.hroot(a.name, d)
             if (out / "var.npz").exists():
-                print(d, "bank exists")
+                print(d, a.name, "exists")
                 continue
             S = H.Samples(d)
-            v = H.bank_plan(S)
+            v = H.bank2_plan(S) if a.name == "bank2" else H.bank_plan(S)
+            v.setdefault("m", np.zeros(len(v["sample"]), int))
             n = len(v["sample"])
             tmp, prog = out / "trunk.tmp.npy", out / "progress.json"
             T = np.lib.format.open_memmap(tmp, "r+" if tmp.exists() else "w+", np.float16, (n, 9, 1024, 8, 16))
             start = json.loads(prog.read_text())["done"] if prog.exists() and tmp.exists() else 0
             sv_all = np.zeros((n, 9), bool)
-            jobs = [(d, int(v["sample"][j]), str(v["kind"][j]), float(v["rate"][j]), float(v["dy"][j]), float(v["dpsi"][j])) for j in range(n)]
+            jobs = [(d, int(v["sample"][j]), str(v["kind"][j]), float(v["rate"][j]), float(v["dy"][j]), float(v["dpsi"][j]), int(v["m"][j]))
+                    for j in range(n)]
             for j in range(start):                                  # slot validity of variants done before a restart
                 sv_all[j] = S.t["slot_valid"][jobs[j][1]] if jobs[j][2] != "single" else np.eye(9, dtype=bool)[8]
             t0 = time.time()
@@ -270,6 +281,65 @@ def cmd_dev(a):
         r = dev_metrics(models, dev, ex)
     for k, v in r.items():
         p = (run_dir(k) / "dev.json") if k != "O" else (H.hroot("dev") / "O.json")
+        p.write_text(json.dumps(v, indent=1))
+    print(json.dumps(r, indent=1))
+
+
+# ---------------------------------------------------------------- launch dev (round 2, plans/2026-10-04-launch-pairs-prereg.md)
+LDEV_KINDS = [("normal", None), ("launch", (2, 1.0)), ("launch", (2, -1.0)), ("rot", 1.0), ("rot", -1.0)]
+
+
+def ldev_jobs(d, cap=200):
+    S = H.Samples(d)
+    rows = S.rows("dev")
+    if d not in H.LAUNCH_DOMS:
+        rows = rows[S.t["v0"][rows] < H.BANK2_LAUNCH_V[1]]
+    rows = np.sort(rows[np.random.default_rng(0).permutation(len(rows))[:cap]])
+    return [(d, int(i), k, a) for k, a in LDEV_KINDS for i in rows]
+
+
+def phi1(rear: np.ndarray) -> np.ndarray:
+    """Direction of the 1 s plan point (deg, left +), what the HUGSIM controller tracks."""
+    return np.degrees(np.arctan2(rear[:, 3, 1], np.maximum(rear[:, 3, 0], 1e-3)))
+
+
+def ldev_metrics(models: dict, dev, ex) -> dict:
+    """Per model and domain on the dev splits: launch gain at a 1 deg fake yaw (m = 2 on the pools, the own m on real launches),
+    G at +-1 deg/s on stop + low rows, ADE / drift of the unperturbed plan."""
+    res = {k: {} for k in models}
+    for d in H.DOMS + H.LAUNCH_DOMS:
+        S = H.Samples(d)
+        jobs = ldev_jobs(d)
+        n = len(jobs) // len(LDEV_KINDS)
+        rows = np.array([j[1] for j in jobs[:n]])
+        P = plans_of(models, jobs, dev, ex, bank=f"ldev_{d}")
+        t = S.t
+        cam = t["cam"][rows, 0]
+        launch = (t["v0"][rows] >= H.BANK2_LAUNCH_V[0]) if d not in H.LAUNCH_DOMS else np.ones(n, bool)
+        slow = np.isin(t["bin"][rows], ("stop", "low"))
+        for k in models:
+            pk = [P[k][j * n:(j + 1) * n] for j in range(len(LDEV_KINDS))]
+            rr = [H.plan_rear(q, cam) for q in pk]
+            r = {"n": int(n), "n_launch": int(launch.sum()), "ade4": float(np.linalg.norm(rr[0][:, :16] - t["fut20"][rows][:, :16], axis=-1).mean())}
+            if S.tea is not None:
+                r["drift_median"] = float(np.median(A.plan_drift(pk[0], S.tea["mu"][rows])))
+            r["GL_psi3"] = float(((H.psi3(pk[1]) - H.psi3(pk[2])) / 2)[launch].mean())
+            r["GL_phi1"] = float(((phi1(rr[1]) - phi1(rr[2])) / 2)[launch].mean())
+            r["lean_phi1_abs"] = float(np.abs(phi1(rr[0]) - phi1(t["fut20"][rows]))[launch].mean())
+            if slow.any():
+                r["G1_psi3_slow"] = float(((H.psi3(pk[3]) - H.psi3(pk[4])) / 2)[slow].mean())
+                r["G1_phi1_slow"] = float(((phi1(rr[3]) - phi1(rr[4])) / 2)[slow].mean())
+            res[k][d] = r
+    return res
+
+
+def cmd_ldev(a):
+    dev = torch.device("cuda")
+    models = load_models(a.models, dev)
+    with ProcessPoolExecutor(a.workers) as ex:
+        r = ldev_metrics(models, dev, ex)
+    for k, v in r.items():
+        p = (run_dir(k) / "ldev.json") if k != "O" else (H.hroot("dev") / "O_ldev.json")
         p.write_text(json.dumps(v, indent=1))
     print(json.dumps(r, indent=1))
 
@@ -484,6 +554,7 @@ if __name__ == "__main__":
     p.add_argument("--batch", type=int, default=32)
     p = sp.add_parser("bank")
     p.add_argument("--domains", nargs="+", default=list(H.DOMS))
+    p.add_argument("--name", default="bank", choices=("bank", "bank2"))
     p.add_argument("--batch", type=int, default=32)
     p.add_argument("--workers", type=int, default=40)
     p = sp.add_parser("train")
@@ -492,7 +563,7 @@ if __name__ == "__main__":
     p.add_argument("--steps", type=int, default=0)
     p.add_argument("--fresh", action="store_true")
     p.add_argument("--no-eval", action="store_true")
-    for name in ("dev", "probe"):
+    for name in ("dev", "probe", "ldev"):
         p = sp.add_parser(name)
         p.add_argument("--models", nargs="+", required=True)
         p.add_argument("--workers", type=int, default=24)
@@ -508,5 +579,5 @@ if __name__ == "__main__":
     p.add_argument("--batch", type=int, default=32)
     p.add_argument("--cpus", default="100-149")
     a = ap.parse_args()
-    {"teacher": cmd_teacher, "bank": cmd_bank, "train": cmd_train, "dev": cmd_dev, "probe": cmd_probe, "fixbank": cmd_fixbank, "probe-table": cmd_probe_table, "link": cmd_link,
+    {"teacher": cmd_teacher, "bank": cmd_bank, "train": cmd_train, "dev": cmd_dev, "probe": cmd_probe, "fixbank": cmd_fixbank, "ldev": cmd_ldev, "probe-table": cmd_probe_table, "link": cmd_link,
      "navhard": cmd_navhard}[a.cmd](a)

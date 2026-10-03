@@ -95,8 +95,8 @@ def cmd_table(a):
                         bs.append(ga[q].mean() / go[q].mean())
                     lo, hi = np.percentile(bs, [2.5, 97.5])
                     rat.append(dict(domain=d, bin=bn, model=k, rate=r, ratio=float(ga.mean() / go.mean()), lo=float(lo), hi=float(hi)))
-    pd.DataFrame(rec).to_csv(OUT / "g_rate.csv", index=False)
-    pd.DataFrame(rat).to_csv(OUT / "ratio.csv", index=False)
+    pd.DataFrame(rec).to_csv(OUT / f"g_rate{a.suffix}.csv", index=False)
+    pd.DataFrame(rat).to_csv(OUT / f"ratio{a.suffix}.csv", index=False)
     with pd.option_context("display.width", 200, "display.max_rows", 500):
         print(pd.DataFrame(rec).pivot_table(index=["domain", "bin", "model"], columns="rate", values="G").round(2))
         print(pd.DataFrame(rat).pivot_table(index=["domain", "bin", "model"], columns="rate", values="ratio").round(2))
@@ -111,6 +111,7 @@ def main():
     p.add_argument("--workers", type=int, default=24)
     p = sp.add_parser("table")
     p.add_argument("--models", nargs="+", default=["O", "pilot-s0", "it_dw3-s0"])
+    p.add_argument("--suffix", default="", help="output g_rate<suffix>.csv / ratio<suffix>.csv")
     a = ap.parse_args()
     {"run": cmd_run, "table": cmd_table}[a.cmd](a)
 

@@ -11,6 +11,9 @@ lever), traffic convention, t0 speed and the expert future on the 0.25 s grid (2
   wod      WOD-E2E train frames of op_adapt_l's prep table (its train / dev carve)  wod/r2-train rows, op_adapt_l train / dev
   carla    processed/carla_p6_v1 frames whose route and base route are outside        b2d/op-adapt-h-carla-{train,dev}
            bench2drive220 (BehaviorAgent / P6 expert), 5 Hz streams
+  lwod     WOD-E2E train / dev launch events (round 2): after >= 1.8 s at v < 0.1 m/s the first frame with v > 0.1 is the onset;
+           t0 = the m-th moving 5 Hz frame, m = 1, 2, 3 (table column m)
+  lcarla   the same on carla_p6_v1 streams outside bench2drive220, routes split by b2d/op-adapt-h-carla-{train,dev}
   pnav / pwod / pcarla   the decision-92 probe samples (runs/op_common_cause/samples/*.json): readout (a) only, never trained
 
 Output $DATA_DIR/runs/op_adapt_H/samples/<domain>/{imgs.npy, tab.npz}.
@@ -222,6 +225,77 @@ def prep_wod(run, rng):
                          "fut20": z["fut20"][sel].astype(np.float32), "cluster": seq[sel],
                          "cam": np.array([np.array(calib[s]["1"]["extrinsic"]).reshape(4, 4)[:3, 3] for s in seq[sel]], np.float32)}
     write("wod", _wod_render, n, tab, run, workers=40, jobs=[hist(names[k]) for k in sel], init=_wod_init, initargs=("train",))
+
+
+LAUNCH_V, LAUNCH_M = 0.1, (1, 2, 3)
+
+
+def prep_lwod(run, rng):
+    from collections import defaultdict
+    from jevdrive import drive_backbones as DB
+    z = np.load(data_dir() / "runs/op_adapt_L/prep/wod.npz", allow_pickle=True)
+    run.use_split(splits.load("wod/r2-train"))
+    spans = set(json.loads((DB.root() / DB.plan_name("trainval")).read_text())["spans"])
+    calib = wod_calib()
+    names, seq, split, v = z["name"].astype(str), z["seq"].astype(str), z["split"].astype(str), z["v0"].astype(float)
+    fr = np.array([int(n.rsplit("-", 1)[1]) for n in names])
+    by = defaultdict(dict)
+    for k, (q, f) in enumerate(zip(seq, fr)):
+        by[q][f] = k
+    hist = lambda n: [f"{n.rsplit('-', 1)[0]}-{int(n.rsplit('-', 1)[1]) - 2 * j:03d}" for j in range(NIMG - 1, -1, -1)]  # noqa: E731
+    sel, ms = [], []
+    for q, d in by.items():
+        if q not in calib:
+            continue
+        for f in sorted(d):
+            prev = [d.get(f - 2 * j) for j in range(1, NIMG)]
+            if v[d[f]] <= LAUNCH_V or any(p is None or v[p] >= LAUNCH_V for p in prev):
+                continue
+            for m in LAUNCH_M:
+                k = d.get(f + 2 * (m - 1))
+                if k is not None and z["has"][k] and split[k] in ("train", "dev") and all(h in spans for h in hist(names[k])):
+                    sel.append(k), ms.append(m)
+    sel, ms = np.array(sel), np.array(ms)
+    n = len(sel)
+    tab = base_tab(n) | {"id": names[sel], "split": split[sel], "v0": v[sel], "bin": speed_bin(v[sel]), "m": ms,
+                         "fut20": z["fut20"][sel].astype(np.float32), "cluster": seq[sel],
+                         "cam": np.array([np.array(calib[s]["1"]["extrinsic"]).reshape(4, 4)[:3, 3] for s in seq[sel]], np.float32)}
+    write("lwod", _wod_render, n, tab, run, workers=40, jobs=[hist(names[k]) for k in sel], init=_wod_init, initargs=("train",))
+
+
+def prep_lcarla(run, rng):
+    import pandas as pd
+    import p5_openpilot as PO
+    from jevdrive import p5_openpilot as P
+    D = data_dir() / "processed/carla_p6_v1"
+    t = pd.read_parquet(D / "index.parquet")
+    past, fut = np.load(D / "past.npy", mmap_mode="r"), np.load(D / "future.npy", mmap_mode="r")
+    tr, dv = splits.load("b2d/op-adapt-h-carla-train"), splits.load("b2d/op-adapt-h-carla-dev")
+    run.use_split(tr), run.use_split(dv)
+    rid_all = t.route_id.astype(str).to_numpy()
+    plan = json.loads((D / "op_plan.json").read_text())
+    pos = {n: k for k, n in enumerate(t.frame_name.astype(str))}
+    v = np.linalg.norm(np.asarray(past[:, -1, 2:4]), axis=1)
+    sel, files, ms = [], [], []
+    for s in plan["streams"]:
+        fr = [int(x.rsplit("-", 1)[1]) for x in s["names"]]
+        ks = [pos.get(x) for x in s["names"]]
+        for j in range(NIMG - 1, len(ks)):
+            if ks[j] is None or v[ks[j]] <= LAUNCH_V or any(ks[q] is None or v[ks[q]] >= LAUNCH_V for q in range(j - NIMG + 1, j)):
+                continue
+            for m in LAUNCH_M:
+                e = j + m - 1
+                if e >= len(ks) or ks[e] is None or np.any(np.diff(fr[e - NIMG + 1: e + 1]) != 4):
+                    continue
+                if rid_all[ks[e]] in tr or rid_all[ks[e]] in dv:
+                    sel.append(ks[e]), files.append(s["files"][e - NIMG + 1: e + 1]), ms.append(m)
+    k = np.array(sel)
+    n = len(k)
+    rid = rid_all[k]
+    tab = base_tab(n) | {"id": t.frame_name.astype(str).to_numpy()[k], "split": np.array(["dev" if r in dv else "train" for r in rid]),
+                         "v0": v[k], "bin": speed_bin(v[k]), "m": np.array(ms), "fut20": np.asarray(fut[k], np.float32), "cluster": rid,
+                         "cam": np.tile(np.array(P.RIG[0][1:4], np.float32), (n, 1))}
+    write("lcarla", _carla_render, n, tab, run, workers=40, jobs=[(f, PO.SEQ) for f in files], init=_carla_init, initargs=("train",))
 
 
 def prep_pwod(run, rng):
