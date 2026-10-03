@@ -1,0 +1,491 @@
+{
+ "base": {
+  "n": 64,
+  "spins": 10,
+  "spins10": 10,
+  "new": [],
+  "fg": 26,
+  "max_steps": 15,
+  "hd": 0.27754309400255905,
+  "rc": 0.3492014808475191,
+  "ev_init": [
+   64,
+   6
+  ],
+  "ev_re": [
+   27,
+   2
+  ],
+  "low_med": 6.375,
+  "v_med": [
+   1.3050000000000002,
+   2.154,
+   2.645
+  ]
+ },
+ "base_rerun": {
+  "n": 64,
+  "spins": 9,
+  "spins10": 8,
+  "new": [
+   "scene-2800_3000-easy-00"
+  ],
+  "fg": 25,
+  "max_steps": 14,
+  "hd": 0.27375417226995535,
+  "rc": 0.3426594543958965,
+  "ev_init": [
+   64,
+   6
+  ],
+  "ev_re": [
+   25,
+   0
+  ],
+  "low_med": 6.375,
+  "v_med": [
+   1.301,
+   2.136,
+   2.6215
+  ]
+ },
+ "base_rerun2": {
+  "n": 64,
+  "spins": 9,
+  "spins10": 8,
+  "new": [
+   "scene-2800_3000-easy-00"
+  ],
+  "fg": 25,
+  "max_steps": 15,
+  "hd": 0.2798564667633704,
+  "rc": 0.35009723545257726,
+  "ev_init": [
+   64,
+   6
+  ],
+  "ev_re": [
+   20,
+   0
+  ],
+  "low_med": 6.375,
+  "v_med": [
+   1.3050000000000002,
+   2.151,
+   2.637
+  ]
+ },
+ "launch_long_vs_base": [
+  0.010618746521173783,
+  -0.028923091159713123,
+  0.04777338896230293
+ ],
+ "launch_long_vs_base_rerun": [
+  0.015329709812453353,
+  -0.02423271446259819,
+  0.05362568070489924
+ ],
+ "launch_long_vs_base_rerun2": [
+  0.008252557599812863,
+  -0.030805056964735168,
+  0.045396808606288766
+ ],
+ "launch_long": {
+  "n": 64,
+  "spins": 11,
+  "spins10": 9,
+  "new": [
+   "scene-034-hard-00",
+   "scene-2800_3000-easy-00"
+  ],
+  "fg": 25,
+  "max_steps": 17,
+  "hd": 0.27203407101801924,
+  "rc": 0.3432928477288254,
+  "ev_init": [
+   64,
+   6
+  ],
+  "ev_re": [
+   21,
+   1
+  ],
+  "low_med": 3.875,
+  "v_med": [
+   1.781,
+   3.291,
+   3.737
+  ]
+ },
+ "ll": {
+  "scene-0013-extreme-00": {
+   "stop": 1,
+   "lead": 1,
+   "on": 8,
+   "disarmed": 3
+  },
+  "scene-0013-medium-00": {
+   "stop": 1,
+   "on": 7,
+   "model_faster": 1,
+   "disarmed": 12
+  },
+  "scene-0041-medium-00": {
+   "stop": 1,
+   "on": 5,
+   "model_faster": 3,
+   "disarmed": 13
+  },
+  "scene-0051-easy-00": {
+   "stop": 1,
+   "on": 5,
+   "model_faster": 2,
+   "disarmed": 46
+  },
+  "scene-0138-extreme-00": {
+   "stop": 1,
+   "lead": 8,
+   "on": 5,
+   "disarmed": 12
+  },
+  "scene-0166-easy-00": {
+   "stop": 1,
+   "on": 2,
+   "model_faster": 5,
+   "disarmed": 41
+  },
+  "scene-0167-easy-00": {
+   "stop": 1,
+   "on": 8,
+   "disarmed": 64
+  },
+  "scene-021-extreme-02": {
+   "stop": 28
+  },
+  "scene-0254-extreme-00": {
+   "stop": 1,
+   "lead": 4,
+   "on": 6,
+   "disarmed": 30
+  },
+  "scene-0254-hard-00": {
+   "stop": 385,
+   "lead": 15
+  },
+  "scene-032-medium-00": {
+   "stop": 367,
+   "lead": 4,
+   "on": 8,
+   "disarmed": 21
+  },
+  "scene-032-medium-02": {
+   "stop": 382,
+   "lead": 17,
+   "slowing": 1
+  },
+  "scene-034-easy-00": {
+   "stop": 353,
+   "lead": 1,
+   "on": 6,
+   "model_faster": 1,
+   "disarmed": 39
+  },
+  "scene-034-hard-00": {
+   "stop": 19,
+   "lead": 4,
+   "on": 11,
+   "model_faster": 3,
+   "disarmed": 40
+  },
+  "scene-034-hard-01": {
+   "stop": 350,
+   "lead": 10,
+   "on": 5,
+   "model_faster": 1,
+   "disarmed": 34
+  },
+  "scene-039-easy-00": {
+   "stop": 5,
+   "on": 8,
+   "model_faster": 6,
+   "disarmed": 38
+  },
+  "scene-040-easy-00": {
+   "stop": 15,
+   "on": 26,
+   "disarmed": 74
+  },
+  "scene-0411-easy-00": {
+   "stop": 1,
+   "on": 2,
+   "model_faster": 5,
+   "disarmed": 33
+  },
+  "scene-0411-hard-00": {
+   "stop": 1,
+   "on": 2,
+   "model_faster": 5,
+   "disarmed": 33
+  },
+  "scene-0411-medium-00": {
+   "stop": 380,
+   "on": 8,
+   "disarmed": 12
+  },
+  "scene-0418-hard-00": {
+   "stop": 1,
+   "on": 8,
+   "disarmed": 27
+  },
+  "scene-0528-extreme-00": {
+   "stop": 1,
+   "on": 8,
+   "disarmed": 9
+  },
+  "scene-0528-medium-00": {
+   "stop": 2,
+   "on": 7,
+   "disarmed": 6
+  },
+  "scene-053-extreme-02": {
+   "stop": 14,
+   "lead": 8
+  },
+  "scene-053-medium-02": {
+   "stop": 338,
+   "lead": 1,
+   "on": 4,
+   "model_faster": 2,
+   "disarmed": 55
+  },
+  "scene-090-hard-01": {
+   "stop": 367,
+   "lead": 2,
+   "on": 7,
+   "disarmed": 24
+  },
+  "scene-0930-hard-00": {
+   "stop": 1,
+   "on": 2,
+   "model_faster": 4,
+   "disarmed": 34
+  },
+  "scene-095-extreme-01": {
+   "stop": 1,
+   "on": 9,
+   "disarmed": 9
+  },
+  "scene-095-medium-01": {
+   "stop": 387,
+   "lead": 13
+  },
+  "scene-100613054308-hard-00": {
+   "stop": 5,
+   "lead": 3,
+   "on": 8,
+   "disarmed": 7
+  },
+  "scene-102751446607-medium-01": {
+   "stop": 1,
+   "lead": 5,
+   "on": 6,
+   "disarmed": 17
+  },
+  "scene-106762673266-hard-00": {
+   "stop": 29
+  },
+  "scene-113-easy-00": {
+   "stop": 376,
+   "on": 8,
+   "disarmed": 16
+  },
+  "scene-113792265837-easy-00": {
+   "stop": 378,
+   "on": 9,
+   "disarmed": 13
+  },
+  "scene-124-extreme-01": {
+   "stop": 1,
+   "on": 8,
+   "disarmed": 6
+  },
+  "scene-124-hard-01": {
+   "stop": 4,
+   "lead": 4,
+   "on": 7,
+   "disarmed": 10
+  },
+  "scene-1290_1490-medium-01": {
+   "stop": 44,
+   "lead": 18,
+   "on": 31,
+   "disarmed": 48,
+   "model_faster": 3
+  },
+  "scene-132384196576-medium-01": {
+   "stop": 382,
+   "lead": 18
+  },
+  "scene-144248042870-extreme-00": {
+   "stop": 2,
+   "on": 7,
+   "disarmed": 4
+  },
+  "scene-150623512729-extreme-00": {
+   "stop": 1,
+   "lead": 1,
+   "on": 8,
+   "disarmed": 9
+  },
+  "scene-150623512729-medium-01": {
+   "stop": 365,
+   "lead": 13,
+   "on": 7,
+   "disarmed": 15
+  },
+  "scene-152217047339-extreme-00": {
+   "stop": 1,
+   "on": 8,
+   "disarmed": 4
+  },
+  "scene-152217047339-medium-00": {
+   "stop": 1,
+   "on": 8,
+   "disarmed": 13
+  },
+  "scene-164701907483-easy-00": {
+   "stop": 381,
+   "on": 8,
+   "disarmed": 11
+  },
+  "scene-164701907483-hard-00": {
+   "stop": 378,
+   "lead": 3,
+   "on": 7,
+   "disarmed": 12
+  },
+  "scene-166085257829-extreme-00": {
+   "stop": 2,
+   "lead": 3,
+   "on": 7,
+   "disarmed": 12
+  },
+  "scene-250_450-hard-00": {
+   "stop": 1,
+   "lead": 1,
+   "on": 8,
+   "disarmed": 13
+  },
+  "scene-2510_2710-extreme-00": {
+   "stop": 17,
+   "lead": 8
+  },
+  "scene-2510_2710-hard-00": {
+   "stop": 200,
+   "lead": 14,
+   "on": 8,
+   "model_faster": 4,
+   "disarmed": 18
+  },
+  "scene-2800_3000-easy-00": {
+   "stop": 1,
+   "on": 8,
+   "disarmed": 91
+  },
+  "scene-3000_3200-hard-00": {
+   "stop": 1,
+   "on": 8,
+   "disarmed": 9
+  },
+  "scene-3000_3200-medium-00": {
+   "stop": 1,
+   "lead": 3,
+   "on": 5,
+   "model_faster": 1,
+   "disarmed": 6
+  },
+  "scene-322492347634-easy-00": {
+   "stop": 231,
+   "on": 52,
+   "disarmed": 117
+  },
+  "scene-3400_3600-extreme-00": {
+   "stop": 1,
+   "lead": 2,
+   "on": 7,
+   "disarmed": 7
+  },
+  "scene-3400_3600-hard-00": {
+   "stop": 15,
+   "on": 4,
+   "model_faster": 3,
+   "disarmed": 22
+  },
+  "scene-398895700423-easy-00": {
+   "stop": 376,
+   "on": 9,
+   "disarmed": 15
+  },
+  "scene-570_770-easy-00": {
+   "stop": 1,
+   "on": 6,
+   "model_faster": 1,
+   "disarmed": 34
+  },
+  "scene-570_770-medium-00": {
+   "stop": 1,
+   "on": 5,
+   "model_faster": 2,
+   "disarmed": 33
+  },
+  "scene-5980_6180-easy-00": {
+   "stop": 6,
+   "lead": 1,
+   "on": 16,
+   "disarmed": 47
+  },
+  "scene-5980_6180-extreme-00": {
+   "stop": 1,
+   "lead": 1,
+   "on": 8,
+   "disarmed": 9
+  },
+  "scene-6580_6780-medium-01": {
+   "stop": 1,
+   "lead": 14
+  },
+  "scene-770_970-extreme-00": {
+   "stop": 1,
+   "on": 8,
+   "disarmed": 13
+  },
+  "scene-8440_8640-easy-00": {
+   "stop": 69,
+   "on": 47,
+   "disarmed": 91,
+   "model_faster": 3
+  },
+  "scene-881121006469-hard-00": {
+   "stop": 23,
+   "on": 8,
+   "disarmed": 13
+  }
+ },
+ "fg_new": {
+  "base": [
+   "scene-0254-extreme-00",
+   "scene-0418-hard-00",
+   "scene-3000_3200-medium-00"
+  ],
+  "base_rerun": [
+   "scene-0254-extreme-00",
+   "scene-0418-hard-00",
+   "scene-3000_3200-medium-00"
+  ],
+  "base_rerun2": [
+   "scene-0254-extreme-00",
+   "scene-0418-hard-00",
+   "scene-3000_3200-medium-00"
+  ]
+ }
+}
