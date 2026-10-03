@@ -35,8 +35,9 @@ def jobs(args):
     e_sel = dict(e_it, OP_SEL=ratio)
     smoke = [base.unit("dbg3-od2sel", 2, SMOKE_ROUTE, [SMOKE_ROUTE], e_sel, "", 0, base="drive")]
     if args.get("stage") == "chk":                 # selector diagnosis on the smoke route: unrotated incremental (2), constant 0.01 deg (3)
-        return [base.unit("dbg%s-od2chk%s" % (args.get("try", ""), c), 2, SMOKE_ROUTE, [SMOKE_ROUTE], dict(e_sel, OP_SEL_CHECK=c), "", 0, base="drive")
-                for c in ("2", "3")]
+        n = {"OP_SEL_N": args["n"]} if "n" in args else {}
+        return [base.unit("dbg%s-od2chk%s" % (args.get("try", ""), c), 2, SMOKE_ROUTE, [SMOKE_ROUTE], dict(e_sel, OP_SEL_CHECK=c, **n), "", 0,
+                          base="drive") for c in args.get("chk", "2,3").split(",")]
     out = list(smoke)
     if args.get("stage", "smoke") == "all":
         sh = vc.shards()
