@@ -1,0 +1,3 @@
+tag,n,spins,hd_mean,base_rerun_spins,base_rerun_hd_mean,model
+cinque-fixed-Hpilot-s0,10,6,0.2515508345897663,8,0.31463702296502544,pilot-s0
+cinque-fixed-Hpilot_ctl-s0,10,7,0.17259227902941873,8,0.31463702296502544,pilot_ctl-s0
