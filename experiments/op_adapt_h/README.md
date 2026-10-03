@@ -16,7 +16,7 @@ base 8 / 10 (line <= 4 missed; control 7); (e) WOD start +0.007, stop +0.046. Op
 trainable away across three domains at no navtest cost; the closed-loop spins barely move. Results in results/pilot1, results/it1.
 Iteration 2 (results/it2): it_lowrate HUGSIM spins 9/10, navtest +0.40 [+0.15, +0.65], navhard combined 34.8 vs 33.6; it_dw3 navhard 35.4. Pilot on all 64 HUGSIM scenarios (results/hugsim64): 15 spins vs 10 base, non-spin HD delta +0.075 [+0.007, +0.151]; pilot + derot3 on the 10 spin scenarios: 1/10 spins.
 
-One-driver table (results/one_driver.md): it_dw3 + selector is the best row on all three boards: navtest 84.70 (+0.52 vs shipped), navhard 35.76 (+2.43 [+0.17, +4.58]), HUGSIM 64 spins 4 vs 10, non-spin HD +0.056 [+0.001, +0.115]; it_dw3 alone: navhard CI crosses 0, HUGSIM spins 13.
+One-driver table (results/one_driver.md): it_dw3 + selector is the best row on all three boards: navtest 84.70 (+0.52 vs shipped), navhard 35.76 (+2.43 [+0.17, +4.58]), HUGSIM 64 spins 4 vs 10, non-spin HD +0.056 [+0.001, +0.115]; it_dw3 alone: navhard CI crosses 0, HUGSIM spins 13. OD2 (same file): the navtrain refit of the selector ratio for it_dw3 gives 0.6 again; WOD val RFS 7.979 vs 8.004, -0.026 [-0.118, +0.062], selector inert on WOD (x1.06 trick row 8.080 vs shipped x1.06 8.120); B2D `drive` arm with it_dw3 and with the server-side selector: running (lane od2-b2d).
 
 **Next.** `it_lowrate` HUGSIM / navhard (queued); if spins stay >= 6, the closed-loop gain is not the open-loop G at 10 deg/s: measure G at 1-3 deg/s and the launch lean.
 
