@@ -13,7 +13,8 @@ rising-edge pulse; the class is imported, not copied), plus two things the arbit
           plan has a desire-free counterpart: the turn diagnosis compares the two plans frame by frame.
   sel     (env OP_SEL=<ratio>, off when unset; decision 94 / 101 selector, the B2D port of HUGSIM sel3,
           experiments/op_adapt_h/plans/2026-10-04-od2-prereg.md section 3) a second session per connection that sees the
-          last OP_SEL_N (100 = 5 s) camera frames rotated in place to a reference heading. It runs only while speed <
+          last OP_SEL_N (132 = 6.6 s: Cinque's ONNX state holds 132 desire / 128 feature steps; with 132 the
+          unrotated replay reproduces the native plan exactly in CARLA, with 100 it did not) camera frames rotated in place to a reference heading. It runs only while speed <
           OP_SEL_VMAX (3 m/s) and the buffered history holds >= 0.05 deg of yaw against now (meta "yaw", the agent's pose,
           rad, CARLA right-positive). It is rebuilt (reset + replay of the buffer) when it switches on or when the heading
           moved >= OP_SEL_REBUILD_DEG (0.5 deg) from its reference and >= OP_SEL_MIN_GAP (4) steps passed since the last
@@ -55,7 +56,7 @@ class ArbModel(ZP.OpenpilotModel):
         self.twin = not getattr(a, "no_twin", False)
         e = os.environ.get
         self.sel = float(e("OP_SEL", "0") or 0)
-        self.sel_n, self.sel_vmax = int(e("OP_SEL_N", "100")), float(e("OP_SEL_VMAX", "3.0"))
+        self.sel_n, self.sel_vmax = int(e("OP_SEL_N", "132")), float(e("OP_SEL_VMAX", "3.0"))
         self.sel_rebuild, self.sel_warm = np.radians(float(e("OP_SEL_REBUILD_DEG", "0.5"))), int(e("OP_SEL_WARM", "0"))
         self.sel_gap = int(e("OP_SEL_MIN_GAP", "4"))       # steps between rebuilds at least (HUGSIM replays once per 0.2 s step)
         self.sel_check = int(e("OP_SEL_CHECK", "0") or 0)  # control: unrotated, its plan must match the native one (1: rebuild every
