@@ -2,16 +2,20 @@
 
 status: live
 decisions: 92, 94, 96 (inputs)
-index: Layer-3 pilot: history-perturbation and offset-recover pairs (running)
+index: Fake-yaw following -71..-78%, navtest +0.82; HUGSIM spins 8 to 6 only
 
 **Question.** Does a light adaptation of Cinque on two pair types (history inconsistent with the future -> follow the logged
 future; heading / lateral offset -> recover to the logged path), trained on navtrain + WOD train + CARLA frames together, cut
 the history-yaw extrapolation of decision 92 without costing navtest PDMS, and does it reduce the HUGSIM low-speed spins
 without the de-rotation rule?
 
-**Conclusion.** Pending.
+**Conclusion.** Pilot (2 500 steps, seed 0, port readouts against shipped Cinque): (a) decision-92 probe G at 0.5-3 m/s
+18.4 -> 4.1 deg (nav), 12.9 -> 3.7 (WOD), 8.9 -> 2.1 (CARLA), all CIs < 0, control unchanged; (b) navtest PDMS +0.82 [+0.47,
++1.16] (control +1.43); (c) navhard two-stage EPDMS 33.55 vs 33.59 (control 30.12); (d) HUGSIM spin set 6 / 10 vs same-code
+base 8 / 10 (line <= 4 missed; control 7); (e) WOD start +0.007, stop +0.046. Open-loop history-yaw extrapolation is
+trainable away across three domains at no navtest cost; the closed-loop spins barely move. Results in results/pilot1, results/it1.
 
-**Next.** Pilot `pilot` vs control `pilot_ctl`, readouts (a)-(e) of the pre-registration.
+**Next.** `it_lowrate` HUGSIM / navhard (queued); if spins stay >= 6, the closed-loop gain is not the open-loop G at 10 deg/s: measure G at 1-3 deg/s and the launch lean.
 
 **Read more.** [plans/2026-10-04-op-adapt-H-prereg.md](plans/2026-10-04-op-adapt-H-prereg.md) (design, data, lines; iterations appended).
 
@@ -30,5 +34,5 @@ checkpoints unchanged.
 - `h_prep.py` (scripts): every domain in one layout so that the …
 - `h_nav_pool.py` (scripts): a fresh navtrain token pool on op_lb's …
 
-[results/](results/) 0 result files · [figs/](figs/) 0 figures · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 3 entry points
+[results/](results/) 20 result files · [figs/](figs/) 0 figures · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 7 entry points
 <!-- files:end -->

@@ -5,7 +5,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 **live**
 
 - [b2d_privileged](b2d_privileged/README.md): live; Red light + green release DS 75.0 to 95.0 [d82]
-- [op_adapt_h](op_adapt_h/README.md): live; Layer-3 pilot: history-perturbation and offset-recover pairs (running) [d92,94,96,(inputs)]
+- [op_adapt_h](op_adapt_h/README.md): live; Fake-yaw following -71..-78%, navtest +0.82; HUGSIM spins 8 to 6 only [d92,94,96,(inputs)]
 - [op_adapt_l](op_adapt_l/README.md) (op-adapt L): live; Stop capture 0.252 to 0.559 open loop; B2D no gain [d77-81]
 - [op_common_cause](op_common_cause/README.md): live; Plan follows fake history yaw, 3-7x more at low speed, real and CARLA alike [d92-93]
 - [op_img_cmd](op_img_cmd/README.md): live; Image route: zero-shot uptake <= 0.14; fine-tuned 0.54-0.64, drift 0.29 m [d(pending)]
