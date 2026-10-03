@@ -163,7 +163,8 @@ def main():
     G = {s["token"]: s for s in pickle.load(open(gp, "rb"))}
     raw = {}
     for f in sorted(x for g in a.glob for x in glob.glob(str(root / "raw" / a.domain / g))):
-        R = np.load(f)
+        with np.load(f) as z:          # read each array once (NpzFile re-reads the member on every key access)
+            R = {k: z[k] for k in ("token", "fam", "cmd", "plan_pos", "plan_yaw")}
         for i in range(len(R["token"])):
             raw.setdefault(str(R["token"][i]), {})[(str(R["fam"][i]), str(R["cmd"][i]))] = (R["plan_pos"][i], R["plan_yaw"][i])
     rows, srows = [], []

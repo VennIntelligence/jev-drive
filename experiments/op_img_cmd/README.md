@@ -15,9 +15,11 @@ non-drivable-looking regions; it does not read route semantics. Lane keeping on 
 A light fine-tune (port, stage 4 + plan pathway, 3 000 steps, 1 500 disjoint junction frames) teaches the two trained
 drawings (band uptake 0.01 -> 0.54, correct 0.81; barrier 0.12 -> 0.64, correct 0.91), transfers little to unseen
 drawings (cones +0.16, lines +0.09, sign 0, grass fill -0.05) and moves the no-overlay plan by a median 0.29 m (guard
-0.10 m failed).
+0.10 m failed). CARLA (696 samples / 179 routes) replicates the zero-shot ordering: combo uptake 0.18, barrier 0.09,
+lines 0.09, sign 0.
 
-**Next.** CARLA junction set (recording); a drift-free fine-tune (larger, more varied distillation pool, more seeds).
+**Next.** A drift-free fine-tune (larger, more varied distillation pool, more seeds), checked on the CARLA set; then a
+B2D closed-loop smoke with the overlay drawn from the route at the turn_agree-failure junctions (not run).
 
 ![overlay review sheet](figs/overlay_sheet.png)
 
@@ -88,6 +90,29 @@ lines should sit on the painted lane lines / curb before the junction and the ba
 frame (columns 2-3) and in the oldest history frame drawn with its own pose (column 4). Overlays are not occluded by
 vehicles (row 5). Many B2D weathers are fog / night.
 
+### CARLA zero-shot (same runner, metrics and families)
+
+n = 696 samples / 179 routes, 4 s (6 s in [results/carla_effects.md](results/carla_effects.md)); most junctions have
+three exits, so the no-overlay "correct" is 0.43, not 0.50. Fixed set: 1 101 (sample, command) pairs.
+
+| family | Delta (m) | uptake | correct | plan x change (m) |
+|:--|:--|:--|:--|:--|
+| none | 0 | 0 | 0.43 [0.42, 0.44] | 0 |
+| sign | +0.00 [-0.00, 0.01] | -0.00 | 0.43 | +0.01 |
+| arrow_road | +0.45 [0.32, 0.59] | 0.02 [0.01, 0.02] | 0.44 | +0.30 |
+| band | +1.26 [1.06, 1.48] | 0.05 [0.04, 0.06] | 0.48 | +0.46 |
+| lines | +2.02 [1.76, 2.28] | 0.09 [0.08, 0.10] | 0.51 | +0.03 |
+| fill_grey | -0.43 [-0.58, -0.27] | -0.02 [-0.02, -0.01] | 0.43 | +0.09 |
+| fill_grass | +1.69 [1.38, 2.02] | 0.06 [0.04, 0.07] | 0.50 | -0.41 |
+| cones | +1.37 [1.16, 1.60] | 0.05 [0.04, 0.06] | 0.48 | -0.88 |
+| wall | +2.38 [2.12, 2.63] | 0.07 [0.05, 0.08] | 0.54 | -2.32 |
+| barrier | +2.64 [2.37, 2.91] | 0.09 [0.07, 0.10] | 0.51 | -3.37 |
+| combo* | +5.10 [4.75, 5.46] | 0.18 [0.17, 0.20] | 0.67 [0.64, 0.70] | -3.38 |
+
+Same picture as navtrain: blocks and the combo move the plan, a sign or a grey fill do not (grey fill slightly pushes
+the plan onto the filled branch), uptake stays <= 0.19 (combo at 6 s 0.26). CARLA reads painted lane lines more than
+navtrain (0.09 vs 0.00). Left turns are taken up least (combo toward L / S / R +1.1 / +2.9 / +3.5 m).
+
 <!-- files:begin -->
 ## Files
 
@@ -97,5 +122,5 @@ vehicles (row 5). Many B2D weathers are fog / night.
 - `img_geom_nav.py` (scripts): Route geometry for the image-command …
 - `img_sheet.py` (scripts): what the model sees
 
-[results/](results/) 22 result files · [figs/](figs/) 3 figures · [plans/](plans/) 2 live plans · [scripts/](scripts/) 16 entry points
+[results/](results/) 24 result files · [figs/](figs/) 4 figures · [plans/](plans/) 2 live plans · [scripts/](scripts/) 16 entry points
 <!-- files:end -->
