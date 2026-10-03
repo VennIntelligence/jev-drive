@@ -14,6 +14,7 @@ import argparse
 import glob
 import json
 import multiprocessing as mp
+import os
 import sys
 import time
 from pathlib import Path
@@ -25,9 +26,16 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(Path(__file__).resolve().parent)]
 import offroad_lib as L  # noqa: E402
 
-OUT = REPO / "experiments/skill_pack/results/history-align"
-POSES = lambda data, arm: L.D / f"runs/op_lb/{data}/preds/gimm-cinque{'' if arm == 'base' else '_al-' + arm}__base.npz"  # noqa: E731
-CSV = lambda ver, split, data, arm: f"{ver}_{split}_opi_{data}_gimm-cinque{'' if arm == 'base' else '_al-' + arm}__base"  # noqa: E731
+OUT = Path(os.environ.get("REPORT_OUT") or REPO / "experiments/skill_pack/results/history-align")
+BASE = ["gimm-cinque"]      # --base-stem: the base arm's pred stem; an arm starting with "gimm-" is a full stem (cross-model pairs)
+
+
+def stem(arm):
+    return BASE[0] if arm == "base" else arm if arm.startswith("gimm-") else f"{BASE[0]}_al-{arm}"
+
+
+POSES = lambda data, arm: L.D / f"runs/op_lb/{data}/preds/{stem(arm)}__base.npz"  # noqa: E731
+CSV = lambda ver, split, data, arm: f"{ver}_{split}_opi_{data}_{stem(arm)}__base"  # noqa: E731
 SUBS = ["no_at_fault_collisions", "drivable_area_compliance", "driving_direction_compliance", "traffic_light_compliance", "ego_progress",
         "time_to_collision_within_bound", "lane_keeping", "history_comfort", "two_frame_extended_comfort"]
 _W = {}
@@ -146,7 +154,7 @@ def cmd_navtest(a):
         B = rng.integers(0, len(idx), (5000, len(idx)))
         out[v] = dict(pdms=100 * float(d.loc[idx, "score"].mean()), n=len(idx), pdms_delta=float(ds.mean()), pdms_delta_ci95=ci(ds, B),
                       **{f"{c}_delta": 100 * float((d.loc[idx, c] - base.loc[idx, c]).mean()) for c in subs})
-    (OUT / "navtest.json").write_text(json.dumps(out, indent=1))
+    (OUT / f"navtest{a.tag}.json").write_text(json.dumps(out, indent=1))
     print(json.dumps(out, indent=1))
 
 
@@ -186,7 +194,9 @@ if __name__ == "__main__":
     ap.add_argument("--data", default="lb_navtrain", help="select-v1: lb_navtrain | lb_navtest")
     ap.add_argument("--arms", nargs="+", default=["rot0", "straight", "straight_keys"])
     ap.add_argument("--procs", type=int, default=28)
+    ap.add_argument("--base-stem", default="gimm-cinque", help="pred stem of the base arm (op_lb preds/<stem>__base.npz)")
     ap.add_argument("--tag", default="", help="navhard: suffix of the output files")
     a = ap.parse_args()
+    BASE[0] = a.base_stem
     OUT.mkdir(parents=True, exist_ok=True)
     {"navhard": cmd_navhard, "navtest": cmd_navtest, "select-v1": cmd_select_v1}[a.cmd](a)

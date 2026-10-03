@@ -321,6 +321,9 @@ def cmd_run(a):
         sys.exit(f"desire schedules {bad} on {a.data} wait for the pre-registration (pass --prereg <id>)")
     pre = PREROLL[a.model] if a.preroll is None else a.preroll
     stems = [plan_stem(a.frames, a.model, s, pre, a.align) for s in a.schedule]
+    if a.onnx:                          # an adapted checkpoint's serving ONNX (op_adapt_l op_l_onnx.py): its own plan stems
+        assert a.tag, "--onnx needs --tag"
+        stems = [s.replace(f"@{a.model}", f"@{a.model}_{a.tag}", 1) for s in stems]
     pdir = root(a.data, "plans_pilot" if a.limit else "plans")
     sfx = f".first{a.limit}" if a.limit else ""
     if a.procs > 1 and not a.shard:
@@ -348,7 +351,8 @@ def cmd_run(a):
     syn = np.load(root(a.data) / f"{a.frames}.npy", mmap_mode="r")
     cr = a.model == "lebowski"
     backend = a.backend or BACKENDS[a.model]
-    m = OPModel(a.model, backend, cache=data_dir() / "runs" / "op_interp" / "trt_cache" / f"{a.model}-{backend}", context_rate=cr)
+    ctag = f"{a.model}-{backend}" if not a.onnx else f"{a.model}-{a.tag}-{backend}"
+    m = OPModel(a.onnx or a.model, backend, cache=data_dir() / "runs" / "op_interp" / "trt_cache" / ctag, context_rate=cr)
     ts, src = _steps(pre, cr)
     pre_t = sorted({j for s, j in src if s == "p"})
     n = min(len(mt["names"]), a.limit or 10 ** 9)
@@ -451,6 +455,8 @@ if __name__ == "__main__":
                    help="one plan file per schedule; frames are loaded once per token")
     p.add_argument("--preroll", type=float, default=None, help="s of warp pre-roll (default: 3.3 Lebowski, 0 others)")
     p.add_argument("--backend", default="")
+    p.add_argument("--onnx", default="", help="serving ONNX path of an adapted checkpoint (replaces the shipped model's file)")
+    p.add_argument("--tag", default="", help="with --onnx: plan stem suffix, plans/<frames>@<model>_<tag>[_al-<rule>].npz")
     p.add_argument("--align", choices=I.ALIGN, default="none", help="history-frame rule (jevdrive.op_interp.align_history)")
     p.add_argument("--procs", type=int, default=8)
     p.add_argument("--shard", default="")
