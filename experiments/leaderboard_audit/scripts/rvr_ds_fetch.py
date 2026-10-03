@@ -93,7 +93,7 @@ def kitti360():
                     if attempt == 7:
                         raise
             return f
-        with ThreadPoolExecutor(8) as ex:
+        with ThreadPoolExecutor(16) as ex:
             for i, _ in enumerate(ex.map(get, sorted(want & set(names)))):
                 if i % 500 == 0:
                     print("kitti360", c, i, flush=True)
