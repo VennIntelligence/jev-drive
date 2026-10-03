@@ -24,9 +24,12 @@ REAR_AXLE_X = -1.388633220199954           # rear axle in the vehicle (bounding-
 CAM_X = 1.779                              # openpilot camera ahead of the rear axle (zeroshot_rigs.OP_MOUNT_RIG)
 X_IDXS = 192.0 * (np.arange(33) / 32.0) ** 2
 # radar mounts (vehicle frame, CARLA: y right, yaw clockwise): front bumper, rear corners looking back-outwards
-RADARS = {"RADAR_F": dict(x=2.45, y=0.0, z=0.7, yaw=0.0, hfov=70.0),
-          "RADAR_RL": dict(x=-2.4, y=-0.8, z=0.7, yaw=-150.0, hfov=120.0),
-          "RADAR_RR": dict(x=-2.4, y=0.8, z=0.7, yaw=150.0, hfov=120.0)}
+# and (D6) a narrow long-range one straight back: Bench2Drive fixes 1500 points/s per radar, so the 120-degree corner radars only saw a
+# 13 m/s follower from 13 m (smoke round 3); the 30-degree one puts ~6 returns per frame on a car 30 m back
+RADARS = {"RADAR_F": dict(x=2.45, y=0.0, z=0.7, yaw=0.0, hfov=70.0, vfov=6.0),
+          "RADAR_RL": dict(x=-2.4, y=-0.8, z=0.7, yaw=-150.0, hfov=120.0, vfov=6.0),
+          "RADAR_RR": dict(x=-2.4, y=0.8, z=0.7, yaw=150.0, hfov=120.0, vfov=6.0),
+          "RADAR_B": dict(x=-2.45, y=0.0, z=0.8, yaw=180.0, hfov=30.0, vfov=4.0)}
 # registered before the first run (plan 2026-10-04-vmerge3.md); not tuned on the 19 evaluation routes
 P = dict(lane_x=(8.0, 30.0),       # openpilot lane lines / edges read as the median over this range ahead of the camera
          room_min=2.0,             # an adjacent lane needs this much (openpilot scale) between the ego lane line and the road edge on that side
@@ -46,12 +49,12 @@ P = dict(lane_x=(8.0, 30.0),       # openpilot lane lines / edges read as the me
          t_abort=0.8, d_abort=1.5,  # after the start, before the commit: a vehicle within d_abort + closing x t_abort is logged (late_threat)
          side_mem_s=0.5,           # a target seen within 8 m behind the rear bumper blocks for this long (it may be alongside)
          amax_byp=2.5,             # m/s2 while the bypass path is driven (go decisively; the default governor has 1.5)
-         radar_frames=3)           # radar frames pooled per decision (0.15 s)
+         radar_frames=4)           # radar frames pooled per decision (0.2 s)
 
 
 def radar_specs():
     return [dict(type="sensor.other.radar", id=k, x=m["x"], y=m["y"], z=m["z"], roll=0.0, pitch=0.0, yaw=m["yaw"],
-                 horizontal_fov=m["hfov"], vertical_fov=6.0) for k, m in RADARS.items()]
+                 horizontal_fov=m["hfov"], vertical_fov=m["vfov"]) for k, m in RADARS.items()]
 
 
 def radar_rig(tag, pts, v_ego):
