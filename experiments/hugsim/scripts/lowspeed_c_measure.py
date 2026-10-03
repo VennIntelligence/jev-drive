@@ -54,6 +54,59 @@ def hugsim_syn(psi_deg=2.0, n=6, rule=None):
     return out
 
 
+def hugsim_loop(v, s_gain, rule=None, K=30, kick=0.5):
+    """Virtual launch loop at held speed v: plan lean psi_k = s_gain * (theta_k - theta_{k-5}) (6-step window kernel of decision
+    100), controller + bicycle, a kick of `kick` deg on theta at step 1. Returns (growth per step z over steps 8..K, theta series)."""
+    import ctrl_offline as C
+    import lowspeed_ctrl as LC
+    heading, dt, cap = C.VARIANTS["fixed"]
+    sol = C.solver(dt, cap)
+    th, steer, hist = [0.0] * 6, 0.0, []
+    for k in range(K):
+        psi = math.radians(s_gain * (th[-1] - th[-6]))
+        d = max(v, 1.0) * 0.5 * np.arange(1, 7)
+        plan = np.stack([d * math.sin(psi), d * math.cos(psi)], -1)
+        s = sol.solve(np.array([0.0, 0.0, 0.0, v, steer]), C.reference(plan, heading, dt))
+        sr = s[-1].input_trajectory[0][1]
+        if rule is not None:
+            sr = LC.hugsim_rate(rule, v, steer, sr, DT)
+        steer += sr * DT
+        th.append(th[-1] + math.degrees(v * math.tan(steer) / L * DT) + (kick if k == 0 else 0.0))
+    e = np.abs(np.array(th[6:]))
+    lo, hi = 8, K
+    z = float((e[hi - 1] / e[lo - 1]) ** (1.0 / (hi - lo))) if e[lo - 1] > 1e-9 else float("nan")
+    return z, [round(x, 3) for x in th[6:]]
+
+
+def b2d_loop(v, s_gain, rule=None, K=30, kick=0.5, cfg=None):
+    import b2d_controller as BC
+    import lowspeed_ctrl as LC
+    cfg = cfg or str(REPO / "experiments/b2d_tfv6/results/tfv6-controller/controller-eval/P7.json")
+    c = BC.pursuit_from_config(cfg)
+    c.reset()
+    filt = LC.B2DFilter(rule) if rule is not None else None
+    th, t, rate = [0.0] * 6, 0.0, 0.0
+    for k in range(K):
+        psi = math.radians(s_gain * (th[-1] - th[-6]))                     # left +
+        sp = max(v, 1.0) * 0.25 * np.arange(1, 21)
+        c.update(np.stack([sp * math.cos(psi), sp * math.sin(psi)], -1), t)
+        x = 0.0
+        for _ in range(5):
+            _, st, _ = c.step(t, v, rate)
+            if filt is not None:
+                st = filt(st, v, 0.05)
+            sc = float(np.interp(v * 3.6, c.steering_curve[:, 0], c.steering_curve[:, 1]))
+            kap = math.tan(-st * c.max_steer_rad * sc) / c.wheelbase
+            rate = v * kap
+            x += math.degrees(rate * 0.05)
+            t += 0.05
+        th.append(th[-1] + x + (kick if k == 0 else 0.0))
+    e = np.abs(np.array(th[6:]))
+    lo, hi = 8, K
+    z = float((e[hi - 1] / e[lo - 1]) ** (1.0 / (hi - lo))) if e[lo - 1] > 1e-9 else float("nan")
+    return z, [round(x, 3) for x in th[6:]]
+
+
 def hugsim_log(root):
     X = {b: [] for b in BINS}
     runs = sorted((Path(root) / "scored-op" / "cinque-fixed" / "zs").iterdir())
@@ -162,12 +215,16 @@ def main():
         for psi in (1.0, 2.0, 5.0):
             res[f"hugsim_syn_psi{psi}"] = hugsim_syn(psi, rule=rule)
             res[f"b2d_syn_psi{psi}"] = b2d_syn(psi, rule=rule)
+    if a.part == "loop":
+        for sg in (4.3, 9.0):
+            for v in SPEEDS[1::2] + [3.0]:
+                res[f"loop_s{sg}_v{v}"] = {"hugsim": hugsim_loop(v, sg, rule)[0], "b2d": b2d_loop(v, sg, rule)[0]}
     if a.part in ("all", "log"):
         rows = hugsim_log(D / "runs/hugsim-exam")
         res["hugsim_log"] = {f"{b[0]}-{b[1]}": slope_ci(rows, b) for b in BINS}
         rows = b2d_log((a.b2d_arms, "v2-drive-s[23]-q*/attempts/*/1/ticks.jsonl"))
         res["b2d_log"] = {f"{b[0]}-{b[1]}": slope_ci(rows, b) for b in BINS}
-    (out / ("c_measure" + ("_rule" if rule else "") + ".json")).write_text(json.dumps(res, indent=1))
+    (out / ("c_measure" + ("_rule" if a.rule is not None else "") + ".json")).write_text(json.dumps(res, indent=1))
     for k, v in res.items():
         print(k)
         for kk, vv in v.items():
