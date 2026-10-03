@@ -3,13 +3,16 @@
 # no de-rotation rule (plans/2026-10-04-op-adapt-H-prereg.md). The checkpoint becomes a serving ONNX (op_adapt_l's op_l_onnx.py,
 # no adapter), one resident Cinque server serves it, zs_run drives the scenarios; then h_hugsim_report.py counts spins.
 # Usage (box, tmux):  GPU=<card> [WORKERS=3] experiments/op_adapt_h/scripts/h_hugsim.sh <run tag | O>
+# Optional env: SCEN=<scenario list file> (default derot_spin10.txt), OPTS=<json controller opts> (default {}), SUFFIX=<out dir / tag suffix>, REPORT=<report script>.
 # Files: $DATA_DIR/runs/op_adapt_H/hugsim/<tag>/{STATUS,DONE,ERROR,results.csv,servers/}. The server is killed above 40 GB RSS.
 set -uo pipefail
 : "${DATA_DIR:?}" "${GPU:?}"
 cd "$(dirname "$0")/../../.."
 TAG=$1
 H=$DATA_DIR/runs/op_adapt_H
-OUT=$H/hugsim/$TAG
+OUT=$H/hugsim/$TAG${SUFFIX:-}
+SCEN=${SCEN:-experiments/hugsim/scripts/derot_spin10.txt}
+OPTS=${OPTS-'{}'}
 W=${WORKERS:-3}
 HPY=$DATA_DIR/envs/hugsim/bin/python
 mkdir -p "$OUT/servers" "$H/onnx"
@@ -40,10 +43,10 @@ trap 'kill -- -$srv 2>/dev/null' EXIT
 until [[ -f $OUT/servers/cinque.ready ]]; do sleep 5; kill -0 $srv 2>/dev/null || fail "server died"; done
 st "server ready (pid $srv)"
 $HPY experiments/hugsim/archive/zs_run.py setup-trees official fixed || fail "setup-trees"
-st "10 spin scenarios"
+st "scenarios from $SCEN"
 $HPY experiments/hugsim/archive/zs_run.py run --out "$OUT" --agent cinque --controller fixed --gpu "$GPU" --workers "$W" \
-    --scenarios experiments/hugsim/scripts/derot_spin10.txt --socket "$OUT/servers/cinque.sock" --opts '{}' --tag "cinque-fixed-H$TAG" \
+    --scenarios "$SCEN" --socket "$OUT/servers/cinque.sock" --opts "$OPTS" --tag "cinque-fixed-H$TAG${SUFFIX:-}" \
     || fail "zs_run"
-$HPY experiments/op_adapt_h/scripts/h_hugsim_report.py "$OUT" "cinque-fixed-H$TAG" || fail "report"
+$HPY ${REPORT:-experiments/op_adapt_h/scripts/h_hugsim_report.py} "$OUT" "cinque-fixed-H$TAG${SUFFIX:-}" || fail "report"
 st "done"
 touch "$OUT/DONE"
