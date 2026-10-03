@@ -11,7 +11,7 @@ clash-start > /dev/null 2>&1 || true
 $J $H select --n 1500 >> "$R/log.txt" 2>&1 || die select
 st "dbs + locate"
 $J $H dbs --threads 8 >> "$R/dbs.log" 2>&1 & p1=$!
-$J $H locate --threads 64 >> "$R/locate.log" 2>&1 || die locate
+$J $H locate --threads 32 >> "$R/locate.log" 2>&1 || die locate
 wait $p1 || die dbs
 st "index"; $J $H index --threads 40 --logs 8 >> "$R/index.log" 2>&1 || die index
 st "fetch"; $J $H fetch --threads 32 >> "$R/fetch.log" 2>&1 || die fetch

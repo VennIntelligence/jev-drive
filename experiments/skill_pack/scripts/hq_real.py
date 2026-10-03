@@ -40,7 +40,7 @@ def proxy():
     urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({"http": p, "https": p})))
 
 
-def get(url, a, b, tries=6):
+def get(url, a, b, tries=12):
     """bytes [a, b) of url."""
     err = "short read"
     for k in range(tries):
