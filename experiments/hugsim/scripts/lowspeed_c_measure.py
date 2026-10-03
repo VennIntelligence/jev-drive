@@ -78,6 +78,32 @@ def hugsim_loop(v, s_gain, rule=None, K=30, kick=0.5):
     return z, [round(x, 3) for x in th[6:]]
 
 
+GAINS = {"hugsim_spin": [5.85, 2.27, 1.05], "wod_real": [9.34, 5.15, 2.32]}      # local gain at steps 1-3 since launch (decision 111)
+TAIL = 0.89                                                                       # steps 4+ (spin_attribution Q2: 0.89)
+
+
+def hugsim_launch(v, gains, lean0, rule=None, K=30):
+    """Time-varying-gain virtual launch (v held): plan lean psi_k = lean0 + G_k * (theta_k - theta_{k-5}) with G_k the gain k steps
+    after launch (GAINS, then TAIL); returns theta (deg) per step. A launch spins when |theta| runs away (> 60 deg)."""
+    import ctrl_offline as C
+    import lowspeed_ctrl as LC
+    heading, dt, cap = C.VARIANTS["fixed"]
+    sol = C.solver(dt, cap)
+    th, steer = [0.0] * 6, 0.0
+    for k in range(K):
+        g = gains[k] if k < len(gains) else TAIL
+        psi = math.radians(lean0 + g * (th[-1] - th[-6]))
+        d = max(v, 1.0) * 0.5 * np.arange(1, 7)
+        plan = np.stack([d * math.sin(psi), d * math.cos(psi)], -1)
+        s = sol.solve(np.array([0.0, 0.0, 0.0, v, steer]), C.reference(plan, heading, dt))
+        sr = s[-1].input_trajectory[0][1]
+        if rule is not None:
+            sr = LC.hugsim_rate(rule, v, steer, sr, DT)
+        steer += sr * DT
+        th.append(th[-1] + math.degrees(v * math.tan(steer) / L * DT))
+    return [round(x, 2) for x in th[6:]]
+
+
 def b2d_loop(v, s_gain, rule=None, K=30, kick=0.5, cfg=None):
     import b2d_controller as BC
     import lowspeed_ctrl as LC
@@ -219,6 +245,12 @@ def main():
         for sg in (4.3, 9.0):
             for v in SPEEDS[1::2] + [3.0]:
                 res[f"loop_s{sg}_v{v}"] = {"hugsim": hugsim_loop(v, sg, rule)[0], "b2d": b2d_loop(v, sg, rule)[0]}
+    if a.part == "launch":
+        for gk, gains in GAINS.items():
+            for lean0 in (0.7, 1.6, 3.0):
+                for v in (1.0, 2.0):
+                    th = hugsim_launch(v, gains, lean0, rule)
+                    res[f"launch_{gk}_lean{lean0}_v{v}"] = {"theta_6": th[5], "theta_12": th[11], "theta_30": th[29]}
     if a.part in ("all", "log"):
         rows = hugsim_log(D / "runs/hugsim-exam")
         res["hugsim_log"] = {f"{b[0]}-{b[1]}": slope_ci(rows, b) for b in BINS}
