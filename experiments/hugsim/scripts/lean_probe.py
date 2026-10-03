@@ -11,6 +11,7 @@ Readouts per plan, all + = left: lean10 = direction of the 10 s plan point, phi1
   rate    step K (default 6) with the history re-rendered at the step's heading (decision 96's de-rotation) plus a fake yaw rate
           w (deg / model-s, left +) on every history frame: G(w) = (x(+w) - x(-w)) / 2 on HUGSIM frames
   replay  the logged frame sequence step by step, normal stepping and the de-rotated replay at every step (decision 96 rule)
+  local   at every logged step, a fake rate +-w added on top of the logged (not de-rotated) history: the local loop gain
 
     CUDA_VISIBLE_DEVICES=2 $DATA_DIR/envs/openpilot/bin/python experiments/hugsim/scripts/lean_probe.py lean <jobs.json> --out <out.json> \
         [--models O pilot-s0 it_dw3-s0] [--variants base,mirror_tc]
@@ -214,9 +215,27 @@ def cmd_replay(a, jobs, models):
     return res
 
 
+def cmd_local(a, jobs, models):
+    """Local gain at the closed-loop operating point: at steps 1..steps-1 the logged history as it was (not de-rotated) plus a
+    fake rate +-w on every history frame; G_local(w) = (x(+w) - x(-w)) / 2."""
+    res = {}
+    for job in jobs:
+        R = LoggedRun(job, a.steps)
+        r = res[job.get("key", R.name)] = {"theta": R.th.tolist(), "v": R.v.tolist()}
+        for s in range(1, R.n):
+            j0 = max(0, s - CTX)
+            for w in (0.0, 0.5, -0.5, 2.0, -2.0):
+                seq = [(R.frame(j, w * (j - s) * 0.2), WARM if j == j0 else PER, R.des[j], j == s) for j in range(j0, s + 1)]
+                for k, m in models.items():
+                    r.setdefault(f"{k}|{w:+g}", []).append(feed(m, seq, R.tc)[0])
+        rss_guard()
+        print(f"local {job.get('key', R.name)}: done", flush=True)
+    return res
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=("lean", "rate", "replay"))
+    ap.add_argument("mode", choices=("lean", "rate", "replay", "local"))
     ap.add_argument("jobs")
     ap.add_argument("--out", required=True)
     ap.add_argument("--models", nargs="+", default=["O", "pilot-s0", "it_dw3-s0"])
@@ -227,7 +246,7 @@ def main():
     jobs = json.load(open(a.jobs))
     t0 = time.time()
     models = load_models(a.models)
-    res = {"lean": cmd_lean, "rate": cmd_rate, "replay": cmd_replay}[a.mode](a, jobs, models)
+    res = {"lean": cmd_lean, "rate": cmd_rate, "replay": cmd_replay, "local": cmd_local}[a.mode](a, jobs, models)
     res["_meta"] = dict(mode=a.mode, models=a.models, wall_s=time.time() - t0, k=a.k)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     json.dump(res, open(a.out + ".tmp", "w"))
