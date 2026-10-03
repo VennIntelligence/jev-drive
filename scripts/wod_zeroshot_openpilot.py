@@ -99,6 +99,8 @@ def main():
     ap.add_argument("--models", nargs="+", default=list(MODELS))
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=12)
+    ap.add_argument("--onnx", default="", help="serving ONNX of an adapted Cinque (op_l_onnx.py); runs only it, preds/op_cinque_<tag>/")
+    ap.add_argument("--tag", default="", help="with --onnx: the prediction directory suffix and TensorRT cache key")
     a = ap.parse_args()
     from jevdrive.openpilot.model import T_IDXS, OPModel, decode
     from jevdrive.common import data_dir
@@ -107,11 +109,17 @@ def main():
     sets = Z.load_sets()
     spans, _ = Z.load_spans()
     op_calib = json.loads((Z.root() / "op_calib.json").read_text())
+    if a.onnx:
+        assert a.tag, "--onnx needs --tag"
+        a.models = [f"cinque_{a.tag}"]
     outdir = {k: Z.root("preds", f"op_{k}") for k in a.models}
     todo = [str(n) for w in a.set for n in sets[w]["name"]]
     todo = [n for n in todo if not all((outdir[k] / f"{n}.npz").exists() for k in a.models)][: a.limit or None]
     todo.sort()  # consecutive targets of one sequence share a worker's maps more often
-    models = {k: OPModel(k, MODELS[k], context_rate=(k == "lebowski")) for k in a.models}
+    if a.onnx:
+        models = {a.models[0]: OPModel(a.onnx, MODELS["cinque"], cache=data_dir() / "runs" / "op_interp" / "trt_cache" / f"cinque-{a.tag}-trt")}
+    else:
+        models = {k: OPModel(k, MODELS[k], context_rate=(k == "lebowski")) for k in a.models}
     log.info(f"{len(todo)} targets, models {list(models)}, {a.workers} decode workers")
     t0, tm, n = time.time(), {k: 0.0 for k in models}, 0
     shard_dir = data_dir() / "datasets" / "waymo_e2e" / "front3"
