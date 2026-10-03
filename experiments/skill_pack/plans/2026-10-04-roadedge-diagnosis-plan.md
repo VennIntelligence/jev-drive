@@ -133,3 +133,32 @@ Frame-interpolation check: vh187 vs the shipped GIMM run on all three splits. Th
 vh<H*>-GIMM vs shipped GIMM is scored there, to say whether the fix gain depends on the interpolator.
 Side checks (CPU, existing dumps, no new runs): HUGSIM and CARLA / B2D camera heights above the road and openpilot's lane-width
 ratio there; whether Alpamayo / N-series NAVSIM inputs take the same CAM_F0 geometry (stated from code).
+
+## Addendum 4 (scope extension: one virtual rig with switches; written after the navtrain height sweep, before any test score)
+Read so far (navtrain only, official v1 PDMS, 3 000 tokens): control vh187 80.29; vh122 78.32, vh130 80.20, vh140 81.01, so
+H* = 1.40 m (+0.72). The warp control is 1.83 below the shipped GIMM run (82.12), so the frame-interpolation check of addendum 3
+has failed its 0.5 line and its conditional GIMM arm runs (below). No navtest / navhard number of any vh arm has been read.
+navhard vh187 native was killed (out of memory: orphaned render workers of the --vcam pool, fixed in c82d070) and is re-run.
+
+The user's rig points (wide too narrow, horizon wrong) checked against openpilot's own model-frame definition before any arm:
+- openpilot's model inputs are fixed calibrated frames (common/transformations/model.py, ported in jevdrive/openpilot/frames.py):
+  road f 910, cy 47.6 (hfov 31.4 deg, horizon at 18.6% of the rows, 3.0 deg up / 12.9 deg down); wide f 455, cy 151.8 (hfov 58.7
+  deg, horizon at 59.3% of the rows, 18.5 deg up / 12.9 deg down). The 120 deg physical wide camera is cropped to 58.7 deg by
+  modeld; "wide = mostly sky, road = mostly ground" is openpilot's own layout. Our frames use the same K with calib = the level
+  ego axes, so the horizon rows are 47.6 / 151.8 by construction.
+- CAM_F0 (f 1545, hfov 63.7, vfov 38.5) covers 100% of both model frames at every height and pitch used here (measured on the
+  ray maps); CAM_L0 / CAM_R0 add zero pixels to a 58.7 deg frame. The 3-camera wide switch is therefore a no-op for openpilot's
+  input and is not run (stated, not scored). A stitched wide would only matter for a model whose wide frame is wider.
+- Implied pitch from the model itself (navtest / navtrain heads): lane-line z slope over 5-40 m gives -0.15 to +0.03 deg;
+  road_transform pitch -0.27 to -0.33 deg (< 5 px in the road frame). No evidence of a horizon error.
+Horizon switch anyway (as asked), chosen on navtrain only: virtual pitch in {-1, -0.3, +0.3, +1} deg (> 0 = camera up, horizon
+lower) at H = 1.40, warp context frames as the keys (the warp assumes a level road frame; at <= 1 deg the error is small, stated).
+P* = largest navtrain delta vs vh140; the rig "height + horizon" = vh140 + P* is scored on the test boards regardless (factor
+arm); the "best rig" for the TRK / it_dw3 arms is vh140 + P* if its navtrain delta > 0, else vh140.
+Test arms (otherwise as addendum 3): A0 vh187, A1 vh140 (height), A1h vh140 + P* (height + horizon), on the best rig: A2 + TRK
+(path alpha refit on navtrain), B1 / B1s it_dw3 (+ selector 0.6); controls A0T, B0, B0s. Lines and contrasts as addendum 3; the
+factor contributions are A1 - A0 (height) and A1h - A1 (horizon), paired.
+GIMM check (conditional arm of addendum 3, now triggered): keys at 1.40 m for lb_navtrain rendered to a run dir, GIMM context
+frames on card 0, Cinque rollout, official navtrain PDMS vs the shipped GIMM run (82.12): says whether the height gain holds with
+the shipped interpolator. Test boards stay on the warp pipeline (GIMM there costs ~1.2 GPU-s/token, ~6 GPU-h per arm).
+Other boards (CPU, no reruns): camera height, horizon row and wide-frame coverage of our HUGSIM and CARLA / B2D renders.
