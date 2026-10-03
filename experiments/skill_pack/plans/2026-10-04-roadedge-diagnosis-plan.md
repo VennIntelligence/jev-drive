@@ -70,7 +70,8 @@ metric world by about 1.34 / 1.87 = 0.72 (a roof camera is outside openpilot's w
 as a camera-height scale error, not a warp error; H2 is rejected (the model is narrower than the map, not wider).
 
 Fix arms (native Cinque only; N4 picks among anchors and is not rebuilt). Per token, reference-free:
-  h_model = cam_z - median over the two ego lane lines and the knots with 5 <= x <= 30 m of the model's z (calib frame);
+  h_model = median over the two ego lane lines and the knots with 5 <= x <= 30 m of the model's z (calib frame, the height
+            of the road below the camera as the model reads it; wording fixed after the run, the code did this);
   h_true = cam_z + 0.35;  k = h_true / h_model  (clipped to [1, 2]).
   U(k): the 33 plan positions (calib frame, camera origin) times k, yaw unchanged, then the usual lever-arm conversion to
         the 8 rear-axle poses. The inverse of a uniform scale error: path and speed both scaled.
@@ -82,3 +83,15 @@ PDMS delta vs native (none if no delta > 0). Scored on navhard two-stage EPDMS a
 P(own) regardless (the principled arms) and the navtrain pick per family if different. Adoption rule as in the main plan
 (navhard combined delta > 0 with CI lower bound > 0 and navtest delta >= -0.30; a navtest gain with CI lower bound > 0 counts
 on its own). Labelled as a NAVSIM rig adapter: it uses the known rig height, not a scorer quantity.
+
+## Addendum 2 (intervention, before it ran; navtrain picks of addendum 1 were known: U1.15 +0.38, P1.15 +0.14, U-own -3.82)
+Show the model a lower camera. Seed-0 random 400 navtest tokens; keys rendered from CAM_F0 with the ground-plane homography
+of a camera lowered from h_true to h_true / r (rays below the horizon sample CAM_F0 at r times their depression slope; above
+the horizon unchanged); the 6 context-rate frames by the CPU ego-motion warp at the virtual height for every arm (so arms
+differ only by r); r = 1.0 (control) and 1.44 (virtual camera ~1.30 m). Script edge_height.py, card 1, a few minutes.
+Readouts on the same tokens: ego-lane width ratio on valid lane sections, road width ratio vs the scorer polygon, plan speed
+at t0 over the logged speed, the model's lane-line z.
+Confirmed (camera height sets the metric scale) if lane-width ratio(r 1.44) / ratio(r 1.0) >= 1.25 and the speed ratio
+moves the same way; rejected if < 1.10. If confirmed, the image-side adapter is the candidate fix; scoring it needs
+GIMM frames re-made at the virtual height for both boards (GPU hours), outside this lane's budget: it is reported as the next
+step with its cost, not run here.
