@@ -11,7 +11,8 @@ Stages: pre = smokes `dbg-vm3-s0-25169` (obstacle debug route) and `dbg-vm3-s0-3
 all = per seed the three arms (vmerge3 first), `report` last (vmerge3_report.py). Units `<arm>-s<seed>-q0..q2` under
 $DATA_DIR/runs/vlm_arb/arms/v2-<unit>. Two Qwen servers on the one card (ports 8202 / 8212, `vlm_qwen_server.py supervise --cards 2
 --port0 8200|8210`); each route process takes a free slot on one of them (VLM_PORTS / VLM_SLOT_DIR, lib/vlm_arb_agent._qwen_port),
-so two units of 3 routes share the card at the vmerge serving load of 3 routes per server.
+so two units of 3 routes share the card at the vmerge serving load of 3 routes per server. --arg ports=8202: one server, one unit at a time
+(the batch on 2026-10-04: card 2 had room for one unit only).
 """
 import sys
 from pathlib import Path
@@ -30,9 +31,9 @@ ARMS = {"vmerge3": dict(VM3_BYP="perc", VM3_REL="1", OP_LANES="1"),
         "vm3norel": dict(VM3_BYP="perc", OP_LANES="1")}
 
 
-def env(arm):
+def env(arm, ports=PORTS):
     e = dict(vm.env(), **vm.J_ENV)
-    e.update(ARMS[arm], VLM_PORTS=PORTS, VLM_SLOT_DIR=str(RUN.parent / ROOT / "qwen_slots"))
+    e.update(ARMS[arm], VLM_PORTS=ports, VLM_SLOT_DIR=str(RUN.parent / ROOT / "qwen_slots"))
     return e
 
 
@@ -47,7 +48,7 @@ def jobs(args):
     out, names = [], []
     for i, s in enumerate(seeds):
         for j, arm in enumerate(ARMS):
-            u = [base.unit(arm, s, k, sh[k], env(arm), "", 3 * i + j, deps=[x.name for x in smoke]) for k in vc.SHARDS]
+            u = [base.unit(arm, s, k, sh[k], env(arm, args.get("ports", PORTS)), "", 3 * i + j, deps=[x.name for x in smoke]) for k in vc.SHARDS]
             out += u
             names += [x.name for x in u]
     return smoke + out + [base.tool("report", "vmerge3_report.py", "report", deps=names, prio=99)]
