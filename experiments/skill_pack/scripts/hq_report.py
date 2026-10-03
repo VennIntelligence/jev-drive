@@ -31,7 +31,7 @@ B = 10000
 rng = np.random.default_rng(0)
 
 
-NT, NH = NT, NH
+NT, NH = "lb_hq_navtest", "lb_hq_navhard1"
 
 
 def pdms(stem):
