@@ -6,10 +6,10 @@
 
 | driver | navtest PDMS (n 12 146) | navhard two-stage EPDMS (n 5 912) | HUGSIM 64: HD mean | spins (of 64) | non-spin HD paired delta (n 54) | WOD val RFS (n 479, OD2) | B2D drive arm DS (19 routes x 2 seeds, OD2) |
 |:--|:--|:--|:--|:--|:--|:--|:--|
-| 1 shipped Cinque | 84.18 | 33.33 (s1 71.70 / s2 46.90) | 0.278 | 10 | - | 8.004 | pending (lane od2-b2d; shipped = vmerge2's drive s2 / s3) |
+| 1 shipped Cinque | 84.18 | 33.33 (s1 71.70 / s2 46.90) | 0.278 | 10 | - | 8.004 | 67.82 (38 runs; s2 65.9 / s3 69.8 per vmerge2; collisions 10, red lights 12) |
 | 2 shipped + selector | 84.09, -0.09 [-0.18, -0.01] | 34.31 (s1 71.76 / s2 48.24), +0.98 [+0.03, +1.97] | 0.294 | 3 | -0.005 [-0.015, +0.003] | 8.004, +0.000 (fires on 1 / 479) | not run |
-| 3 it_dw3-s0 | 84.68 (NEW op_lb ONNX run), +0.50 [+0.30, +0.71]; decision 98 port readout +0.49 [+0.25, +0.73] | 35.40 (decision 98 port readout, no CI); NEW op_lb ONNX run 35.17, +1.84 [-0.35, +3.98] | NEW 0.299 | NEW 13 | NEW +0.036 [-0.013, +0.086] | 7.979, -0.026 [-0.118, +0.062] | pending (od2it) |
-| 4 it_dw3-s0 + selector | NEW 84.70, +0.52 [+0.31, +0.73] vs shipped (+0.02 [-0.06, +0.09] vs it_dw3) | NEW 35.76 (s1 71.72 / s2 49.41), +2.43 [+0.17, +4.58] vs shipped (+0.58 [+0.13, +1.12] vs it_dw3) | NEW 0.345 | NEW 4 | NEW +0.056 [+0.001, +0.115] | 7.979, -0.026 [-0.118, +0.062] (fires on 0 / 479) | pending (od2sel) |
+| 3 it_dw3-s0 | 84.68 (NEW op_lb ONNX run), +0.50 [+0.30, +0.71]; decision 98 port readout +0.49 [+0.25, +0.73] | 35.40 (decision 98 port readout, no CI); NEW op_lb ONNX run 35.17, +1.84 [-0.35, +3.98] | NEW 0.299 | NEW 13 | NEW +0.036 [-0.013, +0.086] | 7.979, -0.026 [-0.118, +0.062] | NEW 64.48, -3.34 [-7.74, +0.47] vs shipped (within the 3.4 repeat noise; collisions 13, red lights 15) |
+| 4 it_dw3-s0 + selector | NEW 84.70, +0.52 [+0.31, +0.73] vs shipped (+0.02 [-0.06, +0.09] vs it_dw3) | NEW 35.76 (s1 71.72 / s2 49.41), +2.43 [+0.17, +4.58] vs shipped (+0.58 [+0.13, +1.12] vs it_dw3) | NEW 0.345 | NEW 4 | NEW +0.056 [+0.001, +0.115] | 7.979, -0.026 [-0.118, +0.062] (fires on 0 / 479) | NEW 62.64, -5.18 [-10.20, -0.46] vs shipped (-1.84 [-4.77, -0.03] vs it_dw3; collisions 14, red lights 14) |
 
 WOD: official RFS port, paired bootstrap over segments, training-port path (serving ONNX agrees to 0.001); B2D: vlm_arb `drive` arm, paired
 over (route, seed), route-cluster bootstrap; details and the per-board trick rows in the OD2 section below. Deltas are against the shipped row on the same board, 95% CI: navtest per-token paired bootstrap; navhard paired bootstrap over the 225
@@ -36,7 +36,8 @@ port readout (35.40) is the same weights through the training port, the 0.23 gap
 - HUGSIM: it_dw3 alone does not reduce spins (13 vs 10; 5 new, 8 of the 10 original still spin). With sel3 spins drop to 4 (3 of the 10
   original; 1 new: scene-164701907483-hard-00), HD mean 0.345 against 0.294 for shipped + sel3, non-spin delta +0.056 [+0.001, +0.115]
   (shipped + sel3: -0.005). The spin fix is the selector; the HD gain on non-spin scenes is the adapted model, as in decision 98 for pilot.
-- Row 4 is the best row on all three boards, and no board has it worse than shipped. It needs the selector on both open-loop and
+- Row 4 is the best row on navtest, navhard and HUGSIM (as first written, 2026-10-04: "best row on all three boards, no board worse than shipped"; that
+  claim is withdrawn after OD2: on B2D closed loop it is -5.18 [-10.20, -0.46] vs shipped, WOD is -0.026, within noise). It needs the selector on both open-loop and
   closed-loop and doubles compute where it fires.
 
 ## OD2: ratio refit, WOD, B2D (2026-10-04)
@@ -65,8 +66,21 @@ second session sees the last 132 camera frames (6.6 s, Cinque's state queues) ro
 the heading moved >= 0.5 deg and >= 4 steps passed, else stepped with the new frame), and its plan replaces the native one iff its
 0-4 s lateral std < 0.6 x native. The unrotated control reproduces the native plan exactly over a CARLA route (0.00 m). Three bugs
 were found in the smokes before the batch (0.1 deg rotation steps, black out-of-image rows, a spurious desire pulse at the replay
-start, a 100-frame window shorter than the model's 132-step queues); prereg section 3 lists them. Results: pending, see
-[one_driver/b2d/b2d.md](one_driver/b2d/b2d.md) when the lane finishes.
+start, a 100-frame window shorter than the model's 132-step queues); prereg section 3 lists them. Results (38 runs per arm, no missing run, no crash; [one_driver/b2d/b2d.md](one_driver/b2d/b2d.md), paired over (route, seed), route-cluster bootstrap):
+
+| contrast | DS all 19 routes | where it moves | collisions per run |
+|:--|:--|:--|:--|
+| od2it - drive | -3.34 [-7.74, +0.47] | light routes -7.50 [-17.50, 0.00], other -3.41 [-10.91, +5.00], obstacle +0.50 | +0.08 [0.00, +0.21] |
+| od2sel - drive | **-5.18 [-10.20, -0.46]** | other -9.17 [-19.17, +2.29], light -7.50 | +0.11 [0.00, +0.26] |
+| od2sel - od2it | -1.84 [-4.77, -0.03] | other -5.76 [-13.26, -0.10] | +0.03 [-0.08, +0.16] |
+
+Pre-registered reading: `od2it` is within the 3.4 repeat noise and its CI includes 0 (not worse, not better); `od2sel` has a CI upper bound below 0, so
+**the d101 driver loses on B2D**, and the selector adds -1.84 on top of it_dw3. Most of it is one route: 37969 seed 2 (58.2 -> 34.7 od2it -> 11.3 od2sel; seed 3 is back to 57.6 / 58.2) and
+27297 seed 3 (70 -> 25 under od2sel); 14 of 19 routes are identical in DS across the three arms, so the means are carried by a handful of routes
+whose seed-to-seed spread is already 20-30 DS (repeat sd up to 21-33). Red lights 12 / 15 / 14 and vehicle collisions 6 / 9 / 7 for drive / od2it / od2sel; 2 pedestrian
+collisions appear only under od2sel. The selector is on in 55.5% of non-warm steps (B2D drives slowly, below 3 m/s most of the time, and the
+history holds yaw), but swaps the plan on only 1.35% of steps (2.4% of the steps it ran); 486 rebuilds, 1525 s of selector time in total.
+Not tuned after seeing it (prereg section 3); the selector gate, speed threshold and ratio are the HUGSIM / navtrain values.
 
 ## Caveats
 
