@@ -18,6 +18,14 @@ Families (`FAMILIES`): what the image says about the commanded branch `cmd`.
   fill_grass  same, grass texture
   band_all    control: the band on every branch (paint without route information)
   combo       added after the first readout (not pre-registered): band + fill_grass + barrier together (the bluntest)
+
+Sky families (Q3 course change, plans/2026-10-04-img-cmd-ft2-prereg.md addendum; no occlusion of the road scene, nothing taken
+from the map at test time): a screen-fixed magenta arrow with a black outline above the horizon of both views (HUD, not
+projected), shape = command (left / straight / right), size from the distance to the junction (full at <= 10 m, 0.55 at >= 60 m;
+every history frame uses its own distance = t0 distance + its distance behind t0).
+  sky         the arrow for command `cmd`
+  sky_disc    control: a magenta disc at the same place (no direction)
+  sky_wrong   control: the arrow of an exit class the junction does not have (junctions with a missing class only)
 """
 import numpy as np
 
@@ -29,6 +37,25 @@ DIVERGE_M = 4.0     # blocks / fills start where the other branch centreline is 
 MAX_EGO_LANE_M = 1.5  # samples whose t0 ego is farther from the approach centreline are dropped (bad lane match)
 FAMILIES = ("band", "lines", "arrow_road", "sign", "cones", "barrier", "wall", "fill_grey", "fill_grass", "band_all", "combo")
 ROUTE_FREE = ("band_all",)          # carry no route information (one run per frame, not per command)
+SKY_FAMILIES = ("sky",)
+SKY_FREE = ("sky_disc", "sky_wrong")  # sky controls: one run per frame
+MAGENTA, BLACK = (255, 0, 255), (0, 0, 0)
+SKY_BOX = {"road": (2, 38), "wide": (6, 54)}     # (top row, full height in px) of the arrow per view; horizon rows 47.6 / 151.8
+SKY_SHAPES = {  # x right, y up, height 1, centred on x = 0
+    "straight": [(-0.15, 0), (0.15, 0), (0.15, 0.55), (0.45, 0.55), (0, 1), (-0.45, 0.55), (-0.15, 0.55)],
+    "right": [(-0.45, 0), (-0.15, 0), (-0.15, 0.45), (0.15, 0.45), (0.15, 0.2), (0.6, 0.6), (0.15, 1.0), (0.15, 0.75), (-0.45, 0.75)]}
+SKY_SHAPES["left"] = [(-x, y) for x, y in SKY_SHAPES["right"]]
+SKY_SHAPES["disc"] = [(0.45 * np.cos(a), 0.5 + 0.45 * np.sin(a)) for a in np.linspace(0, 2 * np.pi, 24, endpoint=False)]
+
+
+def sky_scale(d):
+    d = 60.0 if d is None or not np.isfinite(d) else float(d)
+    return float(np.interp(d, [10.0, 60.0], [1.0, 0.55]))
+
+
+def sky_missing(sample):
+    have = {b["cls"] for b in sample.get("branches", [])}
+    return [c for c in ("left", "straight", "right") if c not in have]
 
 GREEN, WHITE, BLUE, ORANGE, RED, CONCRETE, GREY, GRASS = (
     (0, 200, 83), (235, 235, 235), (20, 70, 200), (255, 110, 0), (210, 20, 20), (150, 150, 145), (105, 105, 105), (70, 120, 40))
@@ -176,6 +203,10 @@ def primitives(sample, fam, cmd):
     """Layers [(polys, rgb, alpha, noise)] in the t0 frame, painter's order (ground first)."""
     if fam == "none":
         return []
+    if fam in SKY_FAMILIES + SKY_FREE:
+        shape = "disc" if fam == "sky_disc" else sky_missing(sample)[0] if fam == "sky_wrong" else (cmd or "straight")
+        d0 = sample.get("dist", np.nan) if sample.get("kind", "junction") == "junction" else np.nan
+        return [("SKY", shape, d0)]
     if fam == "combo":
         return primitives(sample, "band", cmd) + primitives(sample, "fill_grass", cmd) + primitives(sample, "barrier", cmd)
     L = []
@@ -281,6 +312,8 @@ def draw(packed, layers, pose, cam):
     if not layers:
         return packed
     from jevdrive import op_interp as I
+    if isinstance(layers[0][0], str) and layers[0][0] == "SKY":
+        return draw_sky(packed, layers[0][1], layers[0][2], pose)
     out = np.empty_like(packed)
     for k, view in enumerate(("road", "wide")):
         Y, U, V = (z.astype(np.float32) for z in I.unpack(packed[k]))
@@ -303,4 +336,33 @@ def draw(packed, layers, pose, cam):
             V = V * (1 - ah) + cy[2] * ah
         q = lambda z: np.clip(np.rint(z), 0, 255).astype(np.uint8)  # noqa: E731
         out[k] = I.pack(q(Y), q(U), q(V))
+    return out
+
+
+def draw_sky(packed, shape, d0, pose):
+    """The sky arrow / disc (screen-fixed) on both views; distance of this frame = d0 + its distance behind the t0 pose."""
+    import cv2
+    from jevdrive import op_interp as I
+    d = 60.0 if d0 is None or not np.isfinite(d0) else float(d0) + max(0.0, -float(pose[0]))
+    sc = sky_scale(d)
+    out = np.empty_like(packed)
+    for k, view in enumerate(("road", "wide")):
+        Y, U, V = (z.astype(np.float32) for z in I.unpack(packed[k]))
+        top, h = SKY_BOX[view]
+        hh = h * sc
+        pts = np.array([[W / 2 + x * hh, top + (h - hh) / 2 + (1 - y) * hh] for x, y in SKY_SHAPES[shape]])
+        q = np.round((pts + 0.5) * SS - 0.5).astype(np.int32)
+        for rgb, thick in ((BLACK, 2.0), (MAGENTA, 0)):
+            m = np.zeros((H * SS, W * SS), np.uint8)
+            cv2.fillPoly(m, [q], 255)
+            if thick:
+                cv2.polylines(m, [q], True, 255, int(thick * SS))
+            a = cv2.resize(m.astype(np.float32) / 255, (W, H), interpolation=cv2.INTER_AREA)
+            cy = ycc(rgb)
+            Y = Y * (1 - a) + cy[0] * a
+            ah = a.reshape(H // 2, 2, W // 2, 2).mean((1, 3))
+            U = U * (1 - ah) + cy[1] * ah
+            V = V * (1 - ah) + cy[2] * ah
+        r = lambda z: np.clip(np.rint(z), 0, 255).astype(np.uint8)  # noqa: E731
+        out[k] = I.pack(r(Y), r(U), r(V))
     return out

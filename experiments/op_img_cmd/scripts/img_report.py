@@ -56,7 +56,7 @@ def sample_rows(s, runs):
             pl = {c: runs[(fam, c)] for c in cls if (fam, c) in runs}
             if fam == "none":
                 pl = {c: none for c in cls}
-            if fam in O.ROUTE_FREE:
+            if fam in O.ROUTE_FREE or fam in O.SKY_FREE:
                 P, Y = runs[(fam, "")]
                 xf = interp(P, tau)
                 rows.append(dict(fam=fam, tau=tau, dx=xf[0] - x0[0], dy=xf[1] - x0[1]))

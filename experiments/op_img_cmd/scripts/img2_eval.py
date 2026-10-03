@@ -67,17 +67,23 @@ def cmd_plans(a):
 
 
 # ---------------------------------------------------------------- sets
+SKY = os.environ.get("IMG_SETS", "") == "sky"
+if SKY:
+    OUT = FT / "report3"
+
+
 def set_def(name):
-    """(bank, G {token: sample}, token filter)"""
+    """(bank, G {token: sample}); IMG_SETS=sky: the sky banks of img3_bank.py"""
     import img2_bank as QB
+    bk = {"train": "skytrain", "eval": "skyeval", "carla": "skycarla"} if SKY else {"train": "train", "eval": "eval", "carla": "carla"}
     if name in ("navdev", "naveval"):
         if name == "navdev":
             G = {s["token"]: s for s in pickle.load(open(ROOT / "geom" / "ft.pkl", "rb")) if s["split"] == "dev"}
-            return "train", G
-        return "eval", {s["token"]: s for s in pickle.load(open(ROOT / "geom" / "nav.pkl", "rb"))}
+            return bk["train"], G
+        return bk["eval"], {s["token"]: s for s in pickle.load(open(ROOT / "geom" / "nav.pkl", "rb"))}
     sp = QB.carla_split()
     want = name[5:]
-    return "carla", {s["token"]: s for s in QB.carla_samples() if sp[s["token"]] == want}
+    return bk["carla"], {s["token"]: s for s in QB.carla_samples() if sp[s["token"]] == want}
 
 
 def runs(model, b, G):
@@ -103,7 +109,7 @@ def report(model, ref, name):
     Ja, Sa = FE.per_sample(G, ra)
     Jb, Sb = FE.per_sample(G, rb)
     E = []
-    for fam in ["none"] + [f for f in O.FAMILIES if f not in O.ROUTE_FREE]:
+    for fam in ["none"] + [f for f in O.FAMILIES + O.SKY_FAMILIES if f not in O.ROUTE_FREE]:
         da, db = Ja[Ja.fam == fam], Jb[Jb.fam == fam]
         if not len(da):
             continue
@@ -116,7 +122,7 @@ def report(model, ref, name):
             r.update({f"{nm}_a": pa, f"{nm}_a_lo": alo, f"{nm}_a_hi": ahi, f"{nm}_b": pb, f"{nm}_d": d, f"{nm}_d_lo": lo, f"{nm}_d_hi": hi,
                       f"{nm}_n": int(da[den].sum())})
         E.append(r)
-    for fam in ("band", "lines", "arrow_road", "sign"):
+    for fam in ("band", "lines", "arrow_road", "sign", "sky", "sky_disc"):
         if len(Sa) and (Sa.fam == fam).any():
             r = dict(fam=f"straight:{fam}", n=int((Sa.fam == fam).sum()), logs=Sa[Sa.fam == fam].log.nunique())
             r.update({f"dlat_err_{k}": x for k, x in FE.paired_mean(Sa[Sa.fam == fam], Sb[Sb.fam == fam], "dlat_err").items() if k != "n"})
@@ -128,12 +134,18 @@ def report(model, ref, name):
     for k in ("junction", "straight"):
         if (kind == k).any():
             g[f"none_drift_median_{k}"] = float(np.median(dr[kind == k]))
-    # band_all (no route information) on junction frames: plan change vs the model's own none, 0-5 s mean L2 (negatives)
-    ba = [(t, rr[("band_all", "")][0], rr[("none", "")][0]) for t, rr in ra.items() if ("band_all", "") in rr]
-    if ba:
-        g["band_all_move_median"] = float(np.median([np.linalg.norm(p[A.T5] - q[A.T5], axis=1).mean() for _, p, q in ba]))
-        bb = [(rb[t][("band_all", "")][0], rb[t][("none", "")][0]) for t, _, _ in ba]
-        g["band_all_move_median_ref"] = float(np.median([np.linalg.norm(p[A.T5] - q[A.T5], axis=1).mean() for p, q in bb]))
+    # route-free variants (band_all, sky_disc, sky_wrong) on junction frames: plan change vs the model's own none, 0-5 s mean L2
+    # (median) and the 4 s lateral move (mean |dy|), model and ref
+    for rf in O.ROUTE_FREE + O.SKY_FREE:
+        ks = [t for t, rr in ra.items() if (rf, "") in rr and G[t]["kind"] == "junction" and t in rb]
+        if not ks:
+            continue
+        for tag, rr in (("", ra), ("_ref", rb)):
+            mv = [np.linalg.norm(rr[t][(rf, "")][0][A.T5] - rr[t][("none", "")][0][A.T5], axis=1).mean() for t in ks]
+            dy = [abs(R.interp(rr[t][(rf, "")][0], TAU)[1] - R.interp(rr[t][("none", "")][0], TAU)[1]) for t in ks]
+            g[f"{rf}_move_median{tag}"] = float(np.median(mv))
+            g[f"{rf}_abs_dy4_mean{tag}"] = float(np.mean(dy))
+        g[f"{rf}_n"] = len(ks)
     ta, tb = FE.toward_taken(G, ra), FE.toward_taken(G, rb)
     tk = sorted(set(ta) & set(tb))
     if tk:
@@ -193,28 +205,30 @@ def cmd_report(a):
 
 
 def cmd_select(a):
+    fam_gate = a.family
     rows = []
     for m in a.models:
         r = {"model": m}
         for s in ("navdev", "carladev"):
             E = pd.read_csv(OUT / f"{m}_vs_O_{s}.csv").set_index("fam")
             g = json.loads((OUT / f"{m}_vs_O_{s}_guards.json").read_text())
-            for fam in ("band", "barrier"):
-                r[f"{s}_{fam}_uptake"] = float(E.loc[fam, "uptake_a"])
+            for fam in ("band", "barrier", "sky"):
+                if fam in E.index:
+                    r[f"{s}_{fam}_uptake"] = float(E.loc[fam, "uptake_a"])
             for k, x in g.items():
                 if k.startswith("none_drift_median"):
                     r[f"{s}_{k[18:]}_drift"] = x
         r |= {f"dist_{k}_drift": x for k, x in json.loads((OUT / f"{m}_vs_O_dist_drift.json").read_text()).items() if k.endswith("dev")}
         dk = ["navdev_junction_drift", "navdev_straight_drift", "carladev_junction_drift"]
         r["drift_ok"] = all(r[k] <= DRIFT_LINE for k in dk)
-        r["band_dev_min"] = min(r["navdev_band_uptake"], r["carladev_band_uptake"])
-        r["uptake_ok"] = r["band_dev_min"] >= UPTAKE_DEV_LINE
+        r["gate_dev_min"] = min(r[f"navdev_{fam_gate}_uptake"], r[f"carladev_{fam_gate}_uptake"])
+        r["uptake_ok"] = r["gate_dev_min"] >= UPTAKE_DEV_LINE
         rows.append(r)
     D = pd.DataFrame(rows)
     ok = D[D.drift_ok & D.uptake_ok]
-    sel = None if not len(ok) else str(ok.sort_values("band_dev_min").iloc[-1].model)
+    sel = None if not len(ok) else str(ok.sort_values("gate_dev_min").iloc[-1].model)
     out = {"selected": sel, "table": D.to_dict("records")}
-    (OUT / "select.json").write_text(json.dumps(out, indent=1))
+    (OUT / f"select{a.tag}.json").write_text(json.dumps(out, indent=1))
     print(D.T.to_string())
     print("selected:", sel)
 
@@ -232,5 +246,7 @@ if __name__ == "__main__":
     p.add_argument("--sets", nargs="+", default=["navdev", "carladev"])
     p = sp.add_parser("select")
     p.add_argument("--models", nargs="+", required=True)
+    p.add_argument("--family", default="band")
+    p.add_argument("--tag", default="")
     a = ap.parse_args()
     {"plans": cmd_plans, "report": cmd_report, "select": cmd_select}[a.cmd](a)
