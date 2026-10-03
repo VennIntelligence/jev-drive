@@ -42,6 +42,7 @@ def proxy():
 
 def get(url, a, b, tries=6):
     """bytes [a, b) of url."""
+    err = "short read"
     for k in range(tries):
         try:
             req = urllib.request.Request(url, headers={"Range": f"bytes={a}-{b - 1}"})
@@ -52,12 +53,18 @@ def get(url, a, b, tries=6):
         except Exception as e:  # noqa: BLE001
             err = e
         time.sleep(1 + 2 * k)
-    raise RuntimeError(f"range {a}-{b} of {url}: {err if 'err' in dir() else 'short read'}")
+    raise RuntimeError(f"range {a}-{b} of {url}: {err}")
 
 
-def size(url):
-    with urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=60) as r:
-        return int(r.headers["Content-Length"])
+def size(url, tries=6):
+    for k in range(tries):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=60) as r:
+                return int(r.headers["Content-Length"])
+        except Exception:  # noqa: BLE001
+            if k == tries - 1:
+                raise
+            time.sleep(1 + 2 * k)
 
 
 class HTTPFile(io.RawIOBase):

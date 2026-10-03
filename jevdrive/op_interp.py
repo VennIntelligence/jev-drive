@@ -215,7 +215,8 @@ def synth_cpu(keys: np.ndarray, method: str, times: np.ndarray, track: EgoTrack 
     return out
 
 
-ALIGN = ("none", "rot0", "straight", "straight_keys")
+ALIGN = ("none", "rot0", "straight", "straight_keys", "rotL", "rotR")
+FAKE_YAW = np.radians(10.0)      # rotL / rotR: the injected yaw rate of decision 92 (rad/s)
 
 
 def align_history(keys, syn, syn_t, track: EgoTrack, cam, rule: str):
@@ -234,6 +235,8 @@ def align_history(keys, syn, syn_t, track: EgoTrack, cam, rule: str):
     arc = np.r_[0, np.cumsum(np.linalg.norm(np.diff(xy, axis=0), axis=1))]
 
     def one(f, t):
+        if rule in ("rotL", "rotR"):
+            return warp_frame(f, cam, np.array([0.0, 0.0, (1 if rule == "rotL" else -1) * FAKE_YAW * t]), np.zeros(3))
         if rule == "rot0":
             p = track(t)
             return warp_frame(f, cam, np.r_[p[:2], 0.0], p)
