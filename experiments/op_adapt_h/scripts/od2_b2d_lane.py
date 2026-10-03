@@ -35,7 +35,7 @@ def jobs(args):
     e_sel = dict(e_it, OP_SEL=ratio)
     smoke = [base.unit("dbg3-od2sel", 2, SMOKE_ROUTE, [SMOKE_ROUTE], e_sel, "", 0, base="drive")]
     if args.get("stage") == "chk":                 # selector diagnosis on the smoke route: unrotated incremental (2), constant 0.01 deg (3)
-        return [base.unit("dbg-od2chk%s" % c, 2, SMOKE_ROUTE, [SMOKE_ROUTE], dict(e_sel, OP_SEL_CHECK=c), "", 0, base="drive")
+        return [base.unit("dbg%s-od2chk%s" % (args.get("try", ""), c), 2, SMOKE_ROUTE, [SMOKE_ROUTE], dict(e_sel, OP_SEL_CHECK=c), "", 0, base="drive")
                 for c in ("2", "3")]
     out = list(smoke)
     if args.get("stage", "smoke") == "all":

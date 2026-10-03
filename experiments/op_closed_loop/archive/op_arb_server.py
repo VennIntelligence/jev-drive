@@ -82,7 +82,7 @@ class ArbModel(ZP.OpenpilotModel):
         if state and "model" in state:
             for k in keys:
                 state[k].reset()
-            state.update(buf=deque(maxlen=self.sel_n), sel_ref=None)
+            state.update(buf=deque(maxlen=self.sel_n + 1), sel_ref=None)
             return state
         take = lambda: self.free.pop() if self.free else self.make()  # noqa: E731
         ss = {k: take() for k in keys}
@@ -90,7 +90,7 @@ class ArbModel(ZP.OpenpilotModel):
             m.reset()
         if state is None:
             self._warm = list(ss.values())
-        ss.update(buf=deque(maxlen=self.sel_n), sel_ref=None)
+        ss.update(buf=deque(maxlen=self.sel_n + 1), sel_ref=None)
         return ss
 
     def release(self, state):
@@ -177,7 +177,7 @@ class ArbModel(ZP.OpenpilotModel):
             return
         buf = state["buf"]
         buf.append((prep["raw"], float(yaw), int(meta.get("desire", 0))))
-        hist = max(abs(wrap(y - yaw)) for _, y, _ in buf)
+        hist = max(abs(wrap(y - yaw)) for _, y, _ in list(buf)[-self.sel_n:])
         on = speed < self.sel_vmax and len(buf) > 1 and np.degrees(hist) >= 0.05
         if self.sel_check:
             on = len(buf) == buf.maxlen
@@ -197,7 +197,12 @@ class ArbModel(ZP.OpenpilotModel):
         if rebuilt:
             state["sel_ref"], state["sel_age"] = float(yaw), 0
             m.reset()
-            for i, (raw, y, d) in enumerate(buf):
+            win = list(buf)[-self.sel_n:]
+            if len(buf) > self.sel_n:            # the desire before the window: no spurious rising-edge pulse at the replay start
+                m.prev_desire = np.zeros(8, np.float32)
+                m.prev_desire[buf[0][2]] = 1
+                m.prev_desire[0] = 0
+            for i, (raw, y, d) in enumerate(win):
                 img2 = self._pack_rot(raw, rot(y))
                 dv = np.zeros(8, np.float32)
                 dv[d] = 1
