@@ -3,7 +3,10 @@ intrinsics and dynamic-object poses: the training views, the renderer's best cas
 experiments/hugsim/archive/render_check.py renders them. Runs in envs/hugsim from the HUGSIM repo root:
   cd $DATA_DIR/third_party/HUGSIM && CUDA_VISIBLE_DEVICES=<card> $DATA_DIR/envs/hugsim/bin/python \
      $DATA_DIR/jev-drive/experiments/leaderboard_audit/scripts/rvr_hugsim_render.py scene-0010 scene-0013 ...
-Writes $DATA_DIR/runs/real_vs_render/hugsim/<scene>/render.npy (180, 3, 450, 800, 3) uint8, same layout as real.npy."""
+Writes $DATA_DIR/runs/real_vs_render/hugsim/<scene>/render.npy (180, 3, 450, 800, 3) uint8, same layout as real.npy.
+--env: render instead as the closed-loop env would along the logged trajectory (experiments/hugsim/archive/pairs_render.Scene: ego on
+the env's ground height, yaw only, camera = ego @ v2front @ inv(v2c) @ cam_rect, i.e. 0.3 m lower and level, simulator intrinsics, no
+recorded dynamic objects) -> render_env.npy. No real counterpart: it shows what the closed loop adds on top of the training-view render."""
 import json, os, sys
 from glob import glob
 from pathlib import Path
@@ -38,7 +41,33 @@ def load_scene(d):
     return g, dyn, bg
 
 
+def main_env(names):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "hugsim/archive"))
+    import pairs_render as PR
+    for name in names:
+        o = OUT / name
+        if (o / "render_env.npy").exists():
+            continue
+        S = PR.Scene("nuscenes", name)
+        frames = json.load(open(HS / name / "meta_data.json"))["frames"]
+        P = np.array([f["camtoworld"] for f in frames if "/CAM_FRONT/" in f["rgb_path"]], float)
+        arr = np.lib.format.open_memmap(o / "render_env.npy.tmp", "w+", np.uint8, (len(P), 3, 450, 800, 3))
+        for i, c2w in enumerate(P):
+            a, b, th = c2w[0, 3], c2w[2, 3], np.arctan2(c2w[0, 2], c2w[2, 2])
+            cw = S.c2ws(a, b, th)
+            for c, cam in enumerate(CAMS):
+                arr[i, c] = PR.to_rgb(S.render(cam, cw[cam]))
+        arr.flush()
+        del arr
+        os.replace(o / "render_env.npy.tmp", o / "render_env.npy")
+        print("rendered env", name, flush=True)
+        del S
+        torch.cuda.empty_cache()
+
+
 def main():
+    if sys.argv[1] == "--env":
+        return main_env(sys.argv[2:])
     for name in sys.argv[1:]:
         o = OUT / name
         o.mkdir(parents=True, exist_ok=True)
