@@ -168,7 +168,7 @@ def build_dist(net, dev, workers):
     ev_logs = {s["log"] for s in pickle.load(open(ROOT / "geom" / "nav.pkl", "rb"))}
     rows, tabs = [], {}
     for d in ("nav", "wod", "carla"):
-        with np.load(HS / d / "tab.npz") as z:
+        with np.load(HS / d / "tab.npz", allow_pickle=True) as z:
             tabs[d] = {k: z[k] for k in z.files}
         t = tabs[d]
         keep = np.isin(t["split"], ["train", "dev"])
