@@ -18,7 +18,7 @@ Iteration 2 (results/it2): it_lowrate HUGSIM spins 9/10, navtest +0.40 [+0.15, +
 
 **Next.** `it_lowrate` HUGSIM / navhard (queued); if spins stay >= 6, the closed-loop gain is not the open-loop G at 10 deg/s: measure G at 1-3 deg/s and the launch lean.
 
-**Read more.** [plans/2026-10-04-op-adapt-H-prereg.md](plans/2026-10-04-op-adapt-H-prereg.md) (design, data, lines; iterations appended).
+**Read more.** [../hugsim/results/launch_lean.md](../hugsim/results/launch_lean.md) (why HUGSIM spins did not drop: the cut of G is 20-25% at 0.5 deg/s, ~75% at 10; at the HUGSIM launch the local / large-signal gain is unchanged, 0.92 / 0.8 of shipped; `scripts/h_rate_probe.py`); [plans/2026-10-04-op-adapt-H-prereg.md](plans/2026-10-04-op-adapt-H-prereg.md) (design, data, lines; iterations appended).
 
 Why a new topic instead of extending op_adapt_l: op_adapt_l trains on cached stage-3 trunks of fixed frames (log imitation on
 behaviour slices of WOD). The pairs here change the images (warps of every history frame, offsets), so stage 1-3 runs online on
@@ -35,5 +35,5 @@ checkpoints unchanged.
 - `h_prep.py` (scripts): every domain in one layout so that the …
 - `h_nav_pool.py` (scripts): a fresh navtrain token pool on op_lb's …
 
-[results/](results/) 20 result files · [figs/](figs/) 0 figures · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 7 entry points
+[results/](results/) 35 result files · [figs/](figs/) 0 figures · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 12 entry points
 <!-- files:end -->
