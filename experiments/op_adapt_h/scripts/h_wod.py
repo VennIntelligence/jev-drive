@@ -87,7 +87,7 @@ def _job(job):
     imgs = np.zeros((NIMG, 2, 6, 128, 256), np.uint8)
     imgs[have] = DB.render([h for h, ok in zip(hn, have) if ok])
     rot = np.stack([H.warp(f, cam, 0.0, -p) if j < NIMG - 1 and ok else f for j, (f, p, ok) in enumerate(zip(imgs, psi, have))])
-    return imgs, rot, have[:-1] & have[1:]
+    return imgs, rot, have[1:]          # r2: a slot is valid when its current image exists; a missing previous image is zeros
 
 
 def cmd_run(a):
