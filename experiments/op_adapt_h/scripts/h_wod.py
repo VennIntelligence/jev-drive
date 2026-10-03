@@ -226,7 +226,10 @@ def cmd_score(a):
             r[f"d_ade {nm}"], r[f"d_ade {nm} lo"], r[f"d_ade {nm} hi"] = q["mean"], q["lo"], q["hi"]
     df = pd.DataFrame(out)
     RES.mkdir(parents=True, exist_ok=True)
-    meta = {"n_frames": len(names), "n_segments": len(uniq), "n_boot": a.boot, "ratios": a.ratios, "psi_valid": float(z["psi_ok"].mean()),
+    sel_ratio = {("shipped" if m == "O" else m): {"min": float(q.min()), "p05": float(np.percentile(q, 5)), "median": float(np.median(q)),
+                                                    **{f"frac_lt_{t:g}": float((q < t).mean()) for t in (0.6, 0.8, 1.0)}}
+                 for k, m in enumerate(MODELS) for q in [lat_std(k, 1) / lat_std(k, 0)]}
+    meta = {"rot0_over_native_lat_std": sel_ratio, "n_frames": len(names), "n_segments": len(uniq), "n_boot": a.boot, "ratios": a.ratios, "psi_valid": float(z["psi_ok"].mean()),
             "psi_abs_deg_at_-1.8s_median": float(np.median(np.abs(np.degrees(z["psi"][:, 0])))), "info": json.loads(str(z["info"]))}
     (RES / "wod.json").write_text(json.dumps({"meta": meta, "rows": out}, indent=1, default=float) + "\n")
     print(df.round(3).to_string())
