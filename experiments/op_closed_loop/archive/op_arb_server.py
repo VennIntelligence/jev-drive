@@ -103,8 +103,10 @@ class ArbModel(ZP.OpenpilotModel):
 
     def _rot_idx(self, deg):
         """Gather indices of the road / wide model frames for a virtual camera yawed by deg (device frame, right-positive)
-        against the frame's own camera, rounded to 0.1 deg, LRU-cached; source pixels outside the image are flagged (black)."""
-        key = round(float(deg), 1)
+        against the frame's own camera, rounded to 0.01 deg (0.16 px in the road model frame; 0.1 deg = 1.6 px made the replayed
+        history jitter between rounded and unrounded frames in the CARLA smoke), LRU-cached; source pixels outside the image are
+        flagged (black)."""
+        key = round(float(deg), 2)
         with self.rot_lock:
             if key in self.rot_cache:
                 self.rot_cache.move_to_end(key)
@@ -131,14 +133,14 @@ class ArbModel(ZP.OpenpilotModel):
             out[name] = (y, quad, ybad, qbad)
         with self.rot_lock:
             self.rot_cache[key] = out
-            if len(self.rot_cache) > 512:
+            if len(self.rot_cache) > 1024:
                 self.rot_cache.popitem(last=False)
         return out
 
     def _pack_rot(self, raw, deg):
         """img2 (2, 6, 128, 256) of one buffered frame pair seen from a camera yawed by deg: pack() with the rotated gather
         indices; source pixels outside the image are black (Y 16, U / V 128)."""
-        if round(float(deg), 1) == 0.0:
+        if round(float(deg), 2) == 0.0:
             return np.stack([self.pack(raw[0], "road"), self.pack(raw[1], "wide")])
         idx, H, W = self._rot_idx(deg), self.opf.MODEL_H, self.opf.MODEL_W
         res = []
