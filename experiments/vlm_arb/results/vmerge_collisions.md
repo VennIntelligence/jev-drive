@@ -6,6 +6,13 @@ twice, so vmerge has 10 distinct events / 11 official). Time = game seconds, ego
 about 0.1 s before contact, actor v in m/s. "R1" = junction slow-down active (cap 4.5 m/s inside 25 m of a junction); drive's cap is 8. All times are logged; the
 reading in the last column is from the 3-5 s timelines, not from a controlled test.
 
+**Correction (2026-10-04, lane BYP, from [vm3_cross_offline.md](vm3_cross_offline.md)):** the 17280 and 27297 rows below read the contact time on
+the world clock of contacts.jsonl, which runs ~1 s ahead of the scenario clock of privileged.jsonl, so they took the ego state ~1 s after the
+contact. On the scenario clock (frame numbers) the 17280 contacts are at 17.5-18.2 s with the ego moving at ~4 m/s, i.e. just after it left
+the stop sign, not standing at it; 27297 likewise. The class-B reading "hit while stopped" is therefore wrong: both are hits right after a
+release (stop-sign dwell end or cusum release), the case a release check addresses. The other rows are unaffected by this note only where
+their ego speed is not near a stop; they were not re-read.
+
 ## Per collision (vmerge, seeds 0 and 1) with the same route / seed in drive
 
 | route | seed | t | ego v | other actor (v, rel) | arbitration at contact | drive, same route and seed | class |
