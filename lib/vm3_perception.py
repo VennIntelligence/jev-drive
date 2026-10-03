@@ -40,10 +40,10 @@ P = dict(lane_x=(8.0, 30.0),       # openpilot lane lines / edges read as the me
          lead_y=1.5,               # a lead counts as in the ego lane within this lateral distance
          band=1.6,                 # half width of the target-lane band for radar targets
          moving_v=1.0,             # a radar return moves when its ego-motion-compensated radial speed exceeds this
-         t_start=2.0, d_start=3.0,  # start of the pull-out: no closing vehicle behind within d_start + v x t_start (m), v = the highest
+         t_start=3.0, d_start=3.0,  # start of the pull-out: no closing vehicle behind within d_start + v x t_start (m), v = the highest
                                     # closing speed seen in the band within 1 s (radial speeds under-read off-axis targets)
          open_s=0.5,               # ... and that has held for this long (one open snapshot is not a gap)
-         t_abort=0.8, d_abort=1.5,  # after the start, before the commit: a vehicle within d_abort + closing x t_abort stops the car where it is
+         t_abort=0.8, d_abort=1.5,  # after the start, before the commit: a vehicle within d_abort + closing x t_abort is logged (late_threat)
          side_mem_s=0.5,           # a target seen within 8 m behind the rear bumper blocks for this long (it may be alongside)
          amax_byp=2.5,             # m/s2 while the bypass path is driven (go decisively; the default governor has 1.5)
          radar_frames=3)           # radar frames pooled per decision (0.15 s)
@@ -187,9 +187,9 @@ class PerceivedBypass:
                 self.meta["gap_hold"] = True
                 return world
             st["started"], st["t_start"] = True, t
-        # once started the path is never taken back (swerving back into the obstacle's corner is what scraped it in the smoke run);
-        # an abort-level threat before the commit stops the car where it is
-        self.meta["hold_stop"] = bool(not st.get("committed") and not gap)
+        # once started the path is never taken back (swerving back into the obstacle's corner scraped it in smoke round 1) and the car is
+        # not stopped half in the lane either (round 2: the stop it made mid-entry is the stall of pullout_collisions.md); logged only
+        self.meta["late_threat"] = bool(not st.get("committed") and not gap)
         s = r.s
         enter = np.clip((s - (st["start_s"] - 20)) / 15, 0, 1)
         leave = np.clip((s - (st["end_s"] + 8)) / 15, 0, 1)
