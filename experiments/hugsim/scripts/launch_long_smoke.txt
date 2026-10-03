@@ -1,0 +1,4 @@
+nuscenes/scene-0013-medium-00.yaml
+kitti360/scene-3000_3200-medium-00.yaml
+kitti360/scene-6580_6780-medium-01.yaml
+pandaset/scene-032-medium-00.yaml
