@@ -4,7 +4,7 @@
 | base_rerun | 10 | 8 | 8 / 10 | 0  | 1 | 0.315 | 0.315 |  | 0 |
 | derot3 | 63 | 3 | 1 / 10 | 2 ['scene-0041-medium-00', 'scene-570_770-medium-00'] | 21 | 0.276 | 0.442 | -0.011 [-0.030, +0.008] | 53 |
 | replay3 | 10 | 8 | 8 / 10 | 0  | 1 | 0.363 | 0.363 |  | 0 |
-| sel3 | 11 | 0 | 0 / 5 | 0  | 0 | 0.285 | 0.486 | -0.000 [-0.003, +0.003] | 6 |
+| sel3 | 64 | 3 | 2 / 10 | 1 ['scene-2800_3000-easy-00'] | 17 | 0.294 | 0.482 | -0.005 [-0.015, +0.003] | 54 |
 
 Per spin scenario (max heading error vs route, HD, end, steps):
 
@@ -13,13 +13,13 @@ Per spin scenario (max heading error vs route, HD, end, steps):
 | scene-0013-medium-00 | SPIN 172 deg, HD 0.055, bg_collision 22 st | SPIN 172 deg, HD 0.055, bg_collision 22 st | 3 deg, HD 1.000, complete 49 st | SPIN 172 deg, HD 0.055, bg_collision 22 st | 3 deg, HD 1.000, complete 46 st |
 | scene-0528-medium-00 | SPIN 114 deg, HD 0.045, bg_collision 17 st | SPIN 113 deg, HD 0.045, bg_collision 17 st | 3 deg, HD 0.141, max_steps 400 st | SPIN 113 deg, HD 0.045, bg_collision 17 st | 13 deg, HD 0.840, complete 49 st |
 | scene-0254-extreme-00 | SPIN 178 deg, HD 0.821, complete 76 st | SPIN 178 deg, HD 0.818, complete 76 st | 0 deg, HD 0.026, fg_collision 39 st | SPIN 178 deg, HD 0.818, complete 76 st | 0 deg, HD 0.024, fg_collision 42 st |
-| scene-102751446607-medium-01 | SPIN 180 deg, HD 0.150, bg_collision 66 st | SPIN 177 deg, HD 0.141, bg_collision 66 st | 3 deg, HD 0.154, max_steps 400 st | SPIN 177 deg, HD 0.141, bg_collision 66 st | - |
-| scene-152217047339-medium-00 | SPIN 150 deg, HD 0.083, bg_collision 27 st | SPIN 151 deg, HD 0.083, bg_collision 27 st | 2 deg, HD 0.125, max_steps 400 st | SPIN 151 deg, HD 0.083, bg_collision 27 st | - |
+| scene-102751446607-medium-01 | SPIN 180 deg, HD 0.150, bg_collision 66 st | SPIN 177 deg, HD 0.141, bg_collision 66 st | 3 deg, HD 0.154, max_steps 400 st | SPIN 177 deg, HD 0.141, bg_collision 66 st | 12 deg, HD 0.250, max_steps 400 st |
+| scene-152217047339-medium-00 | SPIN 150 deg, HD 0.083, bg_collision 27 st | SPIN 151 deg, HD 0.083, bg_collision 27 st | 2 deg, HD 0.125, max_steps 400 st | SPIN 151 deg, HD 0.083, bg_collision 27 st | 25 deg, HD 0.155, max_steps 400 st |
 | scene-570_770-easy-00 | SPIN 63 deg, HD 0.225, bg_collision 45 st | 15 deg, HD 0.225, bg_collision 38 st | 45 deg, HD 0.244, bg_collision 42 st | 15 deg, HD 0.225, bg_collision 38 st | 52 deg, HD 0.260, bg_collision 43 st |
 | scene-5980_6180-easy-00 | SPIN 70 deg, HD 0.325, bg_collision 118 st | 49 deg, HD 0.304, bg_collision 92 st | 57 deg, HD 0.336, off_route 120 st | 54 deg, HD 0.336, off_route 115 st | 49 deg, HD 0.304, bg_collision 92 st |
-| scene-8440_8640-easy-00 | SPIN 150 deg, HD 0.557, bg_collision 256 st | SPIN 177 deg, HD 0.098, bg_collision 107 st | SPIN 60 deg, HD 0.807, max_steps 400 st | SPIN 140 deg, HD 0.555, bg_collision 235 st | - |
-| scene-040-easy-00 | SPIN 130 deg, HD 0.806, bg_collision 175 st | SPIN 89 deg, HD 0.945, off_route 193 st | 4 deg, HD 0.999, max_steps 400 st | SPIN 89 deg, HD 0.945, off_route 193 st | - |
-| scene-053-medium-02 | SPIN 179 deg, HD 0.432, max_steps 400 st | SPIN 179 deg, HD 0.431, max_steps 400 st | 9 deg, HD 0.586, max_steps 400 st | SPIN 179 deg, HD 0.431, max_steps 400 st | - |
+| scene-8440_8640-easy-00 | SPIN 150 deg, HD 0.557, bg_collision 256 st | SPIN 177 deg, HD 0.098, bg_collision 107 st | SPIN 60 deg, HD 0.807, max_steps 400 st | SPIN 140 deg, HD 0.555, bg_collision 235 st | SPIN 128 deg, HD 0.556, off_route 260 st |
+| scene-040-easy-00 | SPIN 130 deg, HD 0.806, bg_collision 175 st | SPIN 89 deg, HD 0.945, off_route 193 st | 4 deg, HD 0.999, max_steps 400 st | SPIN 89 deg, HD 0.945, off_route 193 st | 6 deg, HD 1.000, complete 198 st |
+| scene-053-medium-02 | SPIN 179 deg, HD 0.432, max_steps 400 st | SPIN 179 deg, HD 0.431, max_steps 400 st | 9 deg, HD 0.586, max_steps 400 st | SPIN 179 deg, HD 0.431, max_steps 400 st | SPIN 179 deg, HD 0.431, max_steps 400 st |
 
 Early lean (first 2 s; + right):
 
