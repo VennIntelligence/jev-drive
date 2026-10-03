@@ -1,9 +1,9 @@
 """Real vs render, HUGSIM nuScenes scenes: the real camera frames behind each reconstructed scene, in HUGSIM's own frame order.
-HUGSIM's nuScenes scene `scene-XXXX` holds 180 frames per camera at nominal 12 Hz (source_path scene-XXXX_0_180), but not every
-nuScenes sweep: on scene-0383 (whose reconstruction inputs ship with HUGSIM) frame i is sweep i up to i = 105 and sweep i-1 / i-2 later
-(found by image match, PSNR 51 dB). So frames are matched by pose: HUGSIM frame i's global camera position (inv(inv_pose) @ camtoworld)
-against every nuScenes sample_data of that camera in the log (ego_pose @ calibrated_sensor), nearest in position within a monotone
-time window; `check` compares this with the image match on scene-0383.
+HUGSIM's nuScenes scene `scene-XXXX` holds 180 frames per camera on a nominal 12 Hz clock (meta timestamps, source_path
+scene-XXXX_0_180), resampled from the sweeps (100 / 100 / 50 ms gaps): on scene-0383 (whose reconstruction inputs ship with HUGSIM)
+frame i is sweep i up to i = 105 and sweep i-1 / i-2 later (image match, PSNR 51 dB). Rule used: frame i = the sweep nearest in time to
+the first sweep + meta timestamp i; `check` verifies it on scene-0383 against the shipped images (pose matching through inv_pose was
+0.23 m off and is not used).
 Images are the nuScenes JPEGs resized 1600x900 -> 800x450 (INTER_AREA), the size HUGSIM trains and renders at.
 Project venv, CPU: .venv/bin/python experiments/leaderboard_audit/scripts/rvr_hugsim_real.py [check|build]
 Writes $DATA_DIR/runs/real_vs_render/hugsim/<scene>/real.npy (180, 3, 450, 800, 3) uint8 [FRONT, FRONT_LEFT, FRONT_RIGHT] + files.json."""
@@ -55,22 +55,18 @@ def pose_index(names):
 
 
 def match(name, cam, pidx):
-    """HUGSIM frame i -> nuScenes file, by nearest global camera position, searched forward from the previous match."""
+    """HUGSIM frame i -> the nuScenes file of that camera whose timestamp is nearest to t_first + meta timestamp_i (HUGSIM's
+    resampling to its nominal 12 Hz clock); err = that file's distance from the HUGSIM pose in time (s)."""
     m = json.load(open(HS / name / "meta_data.json"))
-    to_g = np.linalg.inv(np.asarray(m["inv_pose"]))
-    P = np.array([(to_g @ np.asarray(f["camtoworld"]))[:3, 3] for f in m["frames"] if f"/{cam}/" in f["rgb_path"]])
+    T = np.array([f["timestamp"] for f in m["frames"] if f"/{cam}/" in f["rgb_path"]])
     log, t0 = index_cache()[name]
     rows = pidx[(log, cam)]
-    X = np.array([r[2] for r in rows])
-    k0 = next(i for i, r in enumerate(rows) if r[0] >= t0 - 40000)
-    out, err, prev = [], [], k0 - 3
-    for p in P:
-        lo = max(0, prev)
-        d = np.linalg.norm(X[lo:lo + 12] - p, axis=1)
-        j = lo + int(np.argmin(d))
-        out.append(rows[j][1]), err.append(float(d.min()))
-        prev = j
-    return out, np.array(err)
+    ts = np.array([r[0] for r in rows], np.int64)
+    k0 = int(np.searchsorted(ts, t0 - 40000))
+    want = ts[k0] + np.rint(T * 1e6).astype(np.int64)
+    j = np.clip(np.searchsorted(ts, want), 1, len(ts) - 1)
+    j = np.where(np.abs(ts[j - 1] - want) <= np.abs(ts[j] - want), j - 1, j)
+    return [rows[k][1] for k in j], np.abs(ts[j] - want) / 1e6
 
 
 _IDX = {}
