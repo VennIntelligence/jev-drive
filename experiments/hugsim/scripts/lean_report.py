@@ -54,7 +54,7 @@ def main(L, RP, out):
     L, RP, out = Path(L), Path(RP), Path(out)
     out.mkdir(parents=True, exist_ok=True)
     md = []
-    D = Path(json.load(open(L / "jobs64.json"))[0]["run_dir"]).parents[3]          # runs/hugsim-exam/scored-op
+    D = Path(json.load(open(L / "jobs64.json"))[0]["run_dir"]).parents[2]          # runs/hugsim-exam/scored-op
 
     # ---------------------------------------------------------------- 1a: G by rate (port probe)
     g = pd.read_csv(RP / "g_rate.csv")
