@@ -223,6 +223,8 @@ def cmd_score(a):
         refs = {"vs shipped": "shipped (serving ONNX)" if serving else "shipped"}
         if r["row"].startswith("it_dw3") and not serving:
             refs["vs it_dw3"] = "it_dw3-s0"
+        if r["trick_x1.06"]:            # the trick on both sides
+            refs["vs shipped x1.06"] = "shipped (serving ONNX) x1.06" if serving else "shipped x1.06"
         for nm, ref in refs.items():
             fa, aa = per[r["row"]]
             fb, ab = per[ref]
