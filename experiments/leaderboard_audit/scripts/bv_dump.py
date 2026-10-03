@@ -100,12 +100,15 @@ def nav(board):
     split = "navtest" if board == "navtest" else "navhard_two_stage"
     idx = Z.load_index(split, slim=True)
     frames = np.load(Z.root("openpilot", split) / "frames.npy", mmap_mode="r")
-    cand = [k for k, e in enumerate(idx) if board == "navtest" or e["stage"] == 2]
+    cand = [k for k, e in enumerate(idx) if board == "navtest" or e["stage"] == "two"]
     sp = np.array([np.linalg.norm(idx[k]["vel"][-1]) for k in cand])
     cm = np.array([int(np.argmax(idx[k]["cmd"][-1])) for k in cand])
     rng = np.random.default_rng(1)
-    print(board, len(cand), np.bincount(cm))
+    print(board, len(cand), np.bincount(cm.astype(int)))
     pools = {"straight": [k for k, s, c in zip(cand, sp, cm) if c == 1 and s > 6], "turn": [k for k, s, c in zip(cand, sp, cm) if c in (0, 2) and s > 3]}
+    print("speed pct", np.percentile(sp, [5, 50, 95]))
+    pools = {"straight": pools["straight"] or [k for k, s, c in zip(cand, sp, cm) if c == 1 and s > 1.5],
+             "turn": pools["turn"] or [k for k, s, c in zip(cand, sp, cm) if c in (0, 2) and s > 1.5] or [k for k, c in zip(cand, cm) if c in (0, 2)]}
     for sc, pool in pools.items():
         k = int(rng.choice(pool))
         e = idx[k]
@@ -118,7 +121,7 @@ def nav(board):
     t = np.asarray(cam["t"], float)
     m = Z.OpenpilotMaps(cam)
     add_stats(board, dict(f=float(Kc[0, 0]), w=Z.NUPLAN_WH[0], h=Z.NUPLAN_WH[1], hfov=hfov(Kc[0, 0], Z.NUPLAN_WH[0]), cam_z_above_rear_axle=float(t[2]),
-                          cam_x=float(t[0]), pitch_deg=float(np.degrees(np.arcsin(R[2, 2]))), coverage_road_wide=m.coverage, cam_dist=cam["D"]))
+                          cam_x=float(t[0]), pitch_deg=float(np.degrees(np.arcsin(R[2, 2]))), coverage_road_wide=m.coverage, cam_dist=[float(x) for x in np.ravel(cam["D"])]))
 
 
 def hugsim():
