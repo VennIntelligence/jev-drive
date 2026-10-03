@@ -234,13 +234,16 @@ def cmd_locate(a):
 
 
 def cmd_index(a):
+    """Header walk of each log's CAM_F0 range; --threads walkers per log, --logs logs at a time."""
     loc = json.loads((R / "locate.json").read_text())
     (R / "index").mkdir(exist_ok=True)
     t0 = time.time()
-    for lg, o in loc.items():
+
+    def one_log(item):
+        lg, o = item
         out = R / "index" / f"{lg}.json"
         if o is None or out.exists():
-            continue
+            return
         u, s0, s1 = o["tar"], o["start"], o["end"]
         seg = np.linspace(s0, s1, a.threads + 1).astype(np.int64)
 
@@ -248,8 +251,7 @@ def cmd_index(a):
             off = s0 if k == 0 else header_after(u, int(seg[k]))[0]
             res = {}
             while off < seg[k + 1]:
-                blk = get(u, off, off + 512)
-                h = _parse(blk)
+                h = _parse(get(u, off, off + 512))
                 if h is None:
                     break
                 nm, sz = h
@@ -266,6 +268,9 @@ def cmd_index(a):
                 idx |= r
         out.write_text(json.dumps({"tar": u, "files": idx}))
         print(f"{time.time() - t0:5.0f} s  {lg}: {len(idx)} CAM_F0 images indexed", flush=True)
+
+    with ThreadPoolExecutor(a.logs) as ex:
+        list(ex.map(one_log, loc.items()))
 
 
 def cmd_fetch(a):
@@ -409,6 +414,7 @@ if __name__ == "__main__":
     ap.add_argument("--n", type=int, default=500)
     ap.add_argument("--per-log", type=int, default=20)
     ap.add_argument("--threads", type=int, default=32)
+    ap.add_argument("--logs", type=int, default=6)
     ap.add_argument("--step", type=int, default=1 << 29)
     ap.add_argument("--data", default="lb_hq_navtest")
     ap.add_argument("--copy", nargs="*", default=["gimm", "warp"])

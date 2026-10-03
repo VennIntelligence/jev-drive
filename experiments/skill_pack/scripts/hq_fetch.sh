@@ -14,7 +14,7 @@ st "dbs + locate"
 $J $H dbs --threads 8 >> "$R/dbs.log" 2>&1 & p1=$!
 [[ -f $R/locate.json ]] || $J $H locate --threads 64 >> "$R/locate.log" 2>&1 || die locate
 wait $p1 || die dbs
-st "index"; $J $H index --threads 48 >> "$R/index.log" 2>&1 || die index
+st "index"; $J $H index --threads 48 --logs 6 >> "$R/index.log" 2>&1 || die index
 st "fetch"; $J $H fetch --threads 32 >> "$R/fetch.log" 2>&1 || die fetch
 $J $H check-keys --n 40 >> "$R/fetch.log" 2>&1 || die check-keys
 st "render"
