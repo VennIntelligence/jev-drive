@@ -171,7 +171,8 @@ def cmd_select_v1(a):
             f = sorted(glob.glob(str(L.D / "runs/navsim/eval" / CSV("v1", split, data, arm) / "*/*.csv")))[-1]
             d = pd.read_csv(f).set_index("token")
             return d[d.valid.astype(bool) & (d.index != "average")]
-        zb, zr = np.load(R / "plans/gimm@cinque.npz"), np.load(R / f"plans/gimm@cinque_al-{rule}.npz")
+        pl = BASE[0].replace("gimm-", "gimm@", 1)   # plans stem of the base arm (op_lb plans/<model>.npz)
+        zb, zr = np.load(R / f"plans/{pl}.npz"), np.load(R / f"plans/{pl}_al-{rule}.npz")
         rb = pd.Series(zb["plan_std"][:, T, 1].sum(1), index=zb["names"])
         rr = pd.Series(zr["plan_std"][:, T, 1].sum(1), index=zr["names"])
         b, r = load("base"), load(rule)
@@ -184,7 +185,7 @@ def cmd_select_v1(a):
             d = 100 * (np.where(pick, sr, sb) - sb)
             res[f"r{x:g}"] = dict(pick_rate=float(pick.mean()), pdms=float(100 * sb.mean() + d.mean()), delta=float(d.mean()), delta_ci95=ci(d, B))
         out[rule] = res
-    (OUT / f"select_{split}.json").write_text(json.dumps(out, indent=1))
+    (OUT / f"select_{split}{a.tag}.json").write_text(json.dumps(out, indent=1))
     print(json.dumps(out, indent=1))
 
 
@@ -195,7 +196,7 @@ if __name__ == "__main__":
     ap.add_argument("--arms", nargs="+", default=["rot0", "straight", "straight_keys"])
     ap.add_argument("--procs", type=int, default=28)
     ap.add_argument("--base-stem", default="gimm-cinque", help="pred stem of the base arm (op_lb preds/<stem>__base.npz)")
-    ap.add_argument("--tag", default="", help="navhard: suffix of the output files")
+    ap.add_argument("--tag", default="", help="suffix of the output files")
     a = ap.parse_args()
     BASE[0] = a.base_stem
     OUT.mkdir(parents=True, exist_ok=True)
