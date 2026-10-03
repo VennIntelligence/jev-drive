@@ -172,6 +172,15 @@ def main():
         dth = [abs(np.trapezoid(e["yr"][e["j"]: ii + 1], e["t"][e["j"]: ii + 1])) for e, ii in zip(E, i)]
         print(f"+{T} s: v median {np.median([e['v'][ii] for e, ii in zip(E, i)]):.2f} m/s; |net heading change| median {np.median(dth):.2f} deg, p90 {np.percentile(dth, 90):.2f}, max {np.max(dth):.1f}")
 
+    # ---- lean tail and what the real car does after a strong lean
+    L = np.array([max(abs(e["ph"]["real"]["08"][e["j"] - e["lo"]]), abs(e["ph"]["real"]["08"][e["j"] - e["lo"] + 5])) for e in E])
+    H = np.array([abs(np.trapezoid(e["yr"][e["j"]: e["j"] + 61], e["t"][e["j"]: e["j"] + 61])) for e in E])
+    print(f"\nmax(|phi1|) over steps 1-2 per event: share >= 1 deg {np.mean(L >= 1):.2f}, >= 2 deg {np.mean(L >= 2):.2f}, >= 4 deg {np.mean(L >= 4):.2f}, p90 {np.percentile(L, 90):.1f}")
+    for lab, sel in (("lean < 1", L < 1), ("1 <= lean < 2", (L >= 1) & (L < 2)), ("lean >= 2", L >= 2)):
+        if sel.any():
+            print(f"- {lab}: n {sel.sum()}, |net heading change| over 3 s: median {np.median(H[sel]):.2f}, p90 {np.percentile(H[sel], 90):.2f}, share > 10 deg {np.mean(H[sel] > 10):.2f}")
+    print(f"- corr(|lean| steps 1-2, |heading change 3 s|): Spearman-like rank corr {np.corrcoef(np.argsort(np.argsort(L)), np.argsort(np.argsort(H)))[0, 1]:.2f}")
+
     # ---- realised loop: phi1 on actual heading change in the previous 1.25 s (decision 100 kernel s_gain)
     print("\n## realised kernel: phi1(t) on real heading change over the previous 1.25 s (0.25 s steps m = 1..4 and 5..12), through the origin\n")
     for c in ("real", "frozen"):
