@@ -17,6 +17,13 @@ import numpy as np
 
 
 def one(d):
+    try:
+        return one_(d)
+    except Exception as e:  # noqa: BLE001  (a run without logs: keep the row, flag it)
+        return {"dir": str(d), "run_err": repr(e), "steps": []}
+
+
+def one_(d):
     d = Path(d)
     out = {"dir": str(d)}
     L = [json.loads(x) for x in open(d / "zs_steps.jsonl")]
