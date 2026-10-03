@@ -27,11 +27,24 @@ def pandaset():
     names = [n for n in z0.namelist() if (m := pat.match(n)) and m.group(1) in want]
     print("pandaset members", len(names), flush=True)
 
+    import threading, time
+    tl = threading.local()
+
     def get(n):
         dst = OUT / "pandaset" / n.split("/", 1)[1].replace("/camera/", "/")
-        if not dst.exists():
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            dst.write_bytes(RemoteZip(PANDA_URL).read(n))
+        for attempt in range(8):
+            if dst.exists():
+                break
+            try:
+                if getattr(tl, "z", None) is None:
+                    tl.z = RemoteZip(PANDA_URL)
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                dst.write_bytes(tl.z.read(n))
+            except Exception as e:  # flaky proxy: reopen and retry
+                tl.z = None
+                time.sleep(2 + attempt * 3)
+                if attempt == 7:
+                    raise
         return n
     with ThreadPoolExecutor(12) as ex:
         for i, _ in enumerate(ex.map(get, names)):
