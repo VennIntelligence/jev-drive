@@ -163,6 +163,7 @@ class VlmArbAgent(OpArbAgent):
         self.use_vlm = self.shadow or bool(rows & {"R2", "R3", "R4"})
         self.save_frames = env("VLM_SAVE_FRAMES", "0") == "1"
         self.L = float(env("VLM_L", ARB_PARAMS["sim_delay_L_s"]))
+        self.lat_fixed = env("VLM_LAT", "") == "fixed"
         self.light_variant = env("VLM_LIGHT_VARIANT", "base")
         self.backend = env("VLM_BACKEND", "openjev")
         self.r2_target = env("VLM_R2_TARGET", "junction")
@@ -411,7 +412,9 @@ class VlmArbAgent(OpArbAgent):
         while self.queue and t >= self.queue[0][0] + self.L - 1e-6:
             t_q, gt, a = self.queue[0]
             ans = a if isinstance(a, dict) else a.result()
-            t_eff = t_q + max(self.L, ans.get("latency_ms", 0.0) / 1e3)
+            # VLM_LAT=fixed (vmerge3 D8): answers count at t_q + L whatever the wall-clock latency (the simulator waits for them), i.e. the
+            # VLM is simulated at the uncontended serving latency the registration measured (p95 <= L); a shared card only costs wall time
+            t_eff = t_q + (self.L if self.lat_fixed else max(self.L, ans.get("latency_ms", 0.0) / 1e3))
             if t < t_eff - 1e-6:
                 self.queue[0] = (t_q, gt, ans)
                 break

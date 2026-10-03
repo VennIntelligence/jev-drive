@@ -33,7 +33,7 @@ ARMS = {"vmerge3": dict(VM3_BYP="perc", VM3_REL="1", OP_LANES="1"),
 
 def env(arm, ports=PORTS):
     e = dict(vm.env(), **vm.J_ENV)
-    e.update(ARMS[arm], VLM_PORTS=ports, VLM_SLOT_DIR=str(RUN.parent / ROOT / "qwen_slots"))
+    e.update(ARMS[arm], VLM_LAT="fixed", VLM_PORTS=ports, VLM_SLOT_DIR=str(RUN.parent / ROOT / "qwen_slots"))
     return e
 
 
