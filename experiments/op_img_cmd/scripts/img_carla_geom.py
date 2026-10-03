@@ -170,6 +170,9 @@ def process(job):
             why["history gap"] += 1
             continue
         f0 = fnum[k]
+        if any(fnum[j] not in bf for j in range(k - HIST_N, k + 1)) or any(f0 + 10 * q not in bf for q in range(1, FUT_N + 1) if f0 + 10 * q <= last_tick):
+            why["missing pose tick"] += 1
+            continue
         if f0 + FUT_N * 10 > last_tick:
             why["short future"] += 1
             continue
