@@ -176,9 +176,10 @@ def selection(df, cont):
         c = cont[cont.unit.str.startswith(u + "-") & (cont.route.astype(str) == r)]
         for tc in c.t:
             sel |= df.unit.str.startswith(u + "-") & (df.route.astype(str) == r) & (df.t >= tc - 5) & (df.t <= tc + 0.5)
+    ep = sel & ~df.main
     rest = df.index[~sel & ~df.main]
     sel.loc[rng.choice(rest, min(N_SECONDARY, len(rest)), replace=False)] = True
-    return sel
+    return sel, ep
 
 
 def score(a):
@@ -186,9 +187,9 @@ def score(a):
     from vlm_thin_common import RES, SCORE_PREFIX, Thin
     df = pd.read_csv(OUT / "labels.csv")
     cont = pd.read_csv(OUT / "contacts.csv")
-    df = df[selection(df, cont)].reset_index(drop=True)
-    # order: main dev first, then main test, episodes, secondary
-    df["o"] = np.where(df.main, np.where(df.part == "dev", 0, 1), 2)
+    sel, ep = selection(df, cont)
+    df["o"] = np.where(df.main, np.where(df.part == "dev", 0, 1), np.where(ep, 2, 3))   # dev main, test main, episodes, secondary
+    df = df[sel].reset_index(drop=True)
     df = df.sort_values(["o", "id"]).reset_index(drop=True)
     if a.limit:
         df = df.head(a.limit)
