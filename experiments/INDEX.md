@@ -8,7 +8,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [op_adapt_h](op_adapt_h/README.md): live; Layer-3 pilot: history-perturbation and offset-recover pairs (running) [d92,94,96,(inputs)]
 - [op_adapt_l](op_adapt_l/README.md) (op-adapt L): live; Stop capture 0.252 to 0.559 open loop; B2D no gain [d77-81]
 - [op_common_cause](op_common_cause/README.md): live; Plan follows fake history yaw, 3-7x more at low speed, real and CARLA alike [d92-93]
-- [op_img_cmd](op_img_cmd/README.md): live; Route blocks drawn in the image: zero-shot uptake 0.12-0.15 of a switch [d(pending)]
+- [op_img_cmd](op_img_cmd/README.md): live; Image route: zero-shot uptake <= 0.14; fine-tuned 0.54-0.64, drift 0.29 m [d(pending)]
 - [vlm_arb](vlm_arb/README.md) (vlm-arb, vlm_arb): live; Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privileged 5), DS +5.0; fixed bypass pbyp2, stop-line R2 vred2, yellow rule vred3 [d84-87,89,91,95]
 
 **openpilot adaptation**
@@ -17,7 +17,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [op_adapt_r1](op_adapt_r1/README.md) (op-adapt r1, op_torch): Exact fp32 port; pedestrian AUC gain +0.076 nuScenes, +0.009 CARLA [d55]
 - [op_closed_loop](op_closed_loop/README.md) (op-arb, op-drive): Native never starts (6/6); arbitration +9.7 DS is slowness [d57,74]
 - [op_openloop](op_openloop/README.md) (op-interp, op-lb, navhard): NAVSIM score is input protocol: interpolation 52.1 to 84.2 [d34,36-37,39,66,73]
-- [skill_pack](skill_pack/README.md) (N0-N4, navsim raise): Navtest PDMS 84.2 to 91.59 (N3), flat at N4 [d64,68-73,75,88,94]
+- [skill_pack](skill_pack/README.md) (N0-N4, navsim raise): Navtest PDMS 84.2 to 91.59 (N3), flat at N4 [d64,68-73,75,88,94,97]
 - [log_expert_audit](log_expert_audit/README.md): Native stop capture 0.29 on WOD; motivated op_adapt_l [d77]
 - [feature_adapter](feature_adapter/README.md) (E0, E1): CARLA P5 pedestrian AUC 0.51-0.53 vs 0.83 nuScenes [d62-63]
 

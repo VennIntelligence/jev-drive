@@ -2,7 +2,7 @@
 
 status: live
 decisions: (pending)
-index: Route blocks drawn in the image: zero-shot uptake 0.12-0.15 of a switch
+index: Image route: zero-shot uptake <= 0.14; fine-tuned 0.54-0.64, drift 0.29 m
 
 **Question.** Does openpilot (Cinque, frozen) follow a route command given through the image (painted route, blocked
 other branches, a sign) instead of the desire input, zero-shot; and if only partly, can light fine-tuning teach it?
@@ -12,8 +12,12 @@ plan toward the commanded branch (barrier +0.96 m [0.72, 1.22] at 4 s, 12% of a 
 commanded branch 0.59 vs chance 0.50; combo of band + grass + barrier 14%, 0.62), and shortens it (-2.4 m: read as an
 obstacle). Painted route band / lane lines give <= 5%, a road arrow, a sign and a grey fill nothing. The model avoids
 non-drivable-looking regions; it does not read route semantics. Lane keeping on straight frames is unaffected.
+A light fine-tune (port, stage 4 + plan pathway, 3 000 steps, 1 500 disjoint junction frames) teaches the two trained
+drawings (band uptake 0.01 -> 0.54, correct 0.81; barrier 0.12 -> 0.64, correct 0.91), transfers little to unseen
+drawings (cones +0.16, lines +0.09, sign 0, grass fill -0.05) and moves the no-overlay plan by a median 0.29 m (guard
+0.10 m failed).
 
-**Next.** Light fine-tune on image-command pairs (Q2, running); CARLA junctions with sensors (recording).
+**Next.** CARLA junction set (recording); a drift-free fine-tune (larger, more varied distillation pool, more seeds).
 
 ![overlay review sheet](figs/overlay_sheet.png)
 
@@ -60,7 +64,8 @@ adapted plan's own point; blocks shorten the plan, so that set changes with the 
 table uses the fixed set decided on the no-overlay plan (the same pairs for every family); by it no family reaches the
 "works" line (correct >= 0.75), so barrier moves from "works" to "partial". combo was added after the first readout.
 
-**Read more.** [plans/2026-10-04-img-cmd-prereg.md](plans/2026-10-04-img-cmd-prereg.md) (samples, overlay families,
+**Read more.** [results/ft-q2.md](results/ft-q2.md) (Q2 fine-tune: arms, guards, side effects; pre-registration
+[plans/2026-10-04-img-cmd-ft-prereg.md](plans/2026-10-04-img-cmd-ft-prereg.md)); [plans/2026-10-04-img-cmd-prereg.md](plans/2026-10-04-img-cmd-prereg.md) (samples, overlay families,
 metrics and verdict rules, fixed before the full run).
 
 <!-- files:begin -->
@@ -72,5 +77,5 @@ metrics and verdict rules, fixed before the full run).
 - `img_geom_nav.py` (scripts): Route geometry for the image-command …
 - `img_sheet.py` (scripts): what the model sees
 
-[results/](results/) 2 result files · [figs/](figs/) 3 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 14 entry points
+[results/](results/) 22 result files · [figs/](figs/) 3 figures · [plans/](plans/) 2 live plans · [scripts/](scripts/) 16 entry points
 <!-- files:end -->
