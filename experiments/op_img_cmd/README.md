@@ -1,7 +1,7 @@
 # op_img_cmd: route command drawn into openpilot's image
 
 status: live
-decisions: 99
+decisions: 99, 102
 index: Image route: zero-shot uptake <= 0.14; fine-tuned 0.54-0.64, drift 0.29 m; sky arrow (no map) 0.29-0.39, junction drift 0.13-0.27 m
 
 **Question.** Does openpilot (Cinque, frozen) follow a route command given through the image (painted route, blocked
