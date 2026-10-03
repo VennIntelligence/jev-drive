@@ -126,6 +126,27 @@ def main():
             print(f"| comma1M launches | {c} | {b[0]}-{b[1]} m/s | {sum(len(x) for x in ok)} | {fmt(r)} |")
     out["c"] = cres
 
+    # ---- c from first differences (removes the slow road-geometry component shared by plan direction and heading)
+    print("\n## c from first differences: change of the next-step heading change on the change of phi1 between consecutive 0.25 s steps\n")
+    for c in ("real", "frozen"):
+        for b in bins:
+            A = []
+            for e in E:
+                X, prev = [], None
+                for k in range(0, 40):
+                    i = e["j"] + 5 * k
+                    if i + 5 >= e["lo"] + len(e["ph"][c]["08"]) or i + 5 >= len(e["yr"]):
+                        break
+                    cur = (e["ph"][c]["08"][i - e["lo"]], np.trapezoid(e["yr"][i:i + 6], e["t"][i:i + 6]))
+                    if prev is not None and b[0] <= e["v"][i] < b[1] and abs(cur[0]) < 15 and abs(prev[0]) < 15:
+                        X.append([cur[0] - prev[0], cur[1] - prev[1]])
+                    prev = cur
+                A.append(np.array(X) if X else np.zeros((0, 2)))
+            A = [x for x in A if len(x)]
+            if A:
+                fn = lambda M: float((M[:, 0] * M[:, 1]).sum() / max((M[:, 0] ** 2).sum(), 1e-9))   # noqa: E731
+                print(f"- {c}, {b[0]}-{b[1]} m/s: c_diff {fmt(boot(A, fn))} (n {sum(len(x) for x in A)})")
+
     # ---- (3) history content before onset
     print("\n## history before the onset (real stream), localizer motion\n")
     def stat(fn, lo_s, hi_s):
