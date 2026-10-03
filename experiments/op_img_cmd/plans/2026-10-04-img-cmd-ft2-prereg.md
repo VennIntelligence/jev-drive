@@ -151,3 +151,5 @@ N 12（直行箭头 4、圆盘 nav 3 / CARLA 2、错误箭头 nav 2 / CARLA 1）
 dev 选择：同样三条读在 dev 上（CARLA dev 的对照线取原模型在 CARLA dev 上的值的 2 倍），过线的配置里取 CARLA dev 吸收最高的。
 过线 → seed 1、2。三个 seed 都过三条线 → 闭环 smoke（27297 / 27043 / 9196 / 24944，对 drive，2 个 seed，读 turn agreement 和 DS）。
 dev 上都不过 → 停下报告，不再加配置。
+- 2026-10-03 12:41（chain4 自动）：NA / NB 都没过 dev。NA：相对护栏过，CARLA dev 吸收 0.34 过，错误出口箭头 3.8 m（线 1.0 m）不过；
+  NB：吸收 0.18、错误箭头 3.5 m 不过。按规则停：不训 seed 1–2，不跑闭环。考题各读一次（见 results/ft-q3.md）。

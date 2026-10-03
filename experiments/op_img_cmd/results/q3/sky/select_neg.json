@@ -1,0 +1,49 @@
+{
+ "selected": null,
+ "table": [
+  {
+   "model": "q3NA-s0",
+   "navdev_sky_uptake": 0.1591023759574309,
+   "navdev_junction_drift": 0.1000487357378006,
+   "navdev_junction_line": 0.19100464033475484,
+   "navdev_sky_disc_dy": 0.14482791175501156,
+   "navdev_sky_disc_dy_ref": 0.16747363358218734,
+   "navdev_sky_wrong_dy": 0.48959980263951824,
+   "navdev_sky_wrong_dy_ref": 0.17866676077937702,
+   "navdev_straight_drift": 0.09583401679992676,
+   "carladev_sky_uptake": 0.340654040031942,
+   "carladev_junction_drift": 0.22102133929729462,
+   "carladev_junction_line": 0.2535011741188035,
+   "carladev_sky_disc_dy": 0.30595514980653915,
+   "carladev_sky_disc_dy_ref": 0.37946966347835787,
+   "carladev_sky_wrong_dy": 3.78414355318292,
+   "carladev_sky_wrong_dy_ref": 0.5065774470283951,
+   "dist_dev_drift_max": 0.07891616225242615,
+   "guard_ok": true,
+   "ctl_ok": false,
+   "uptake_ok": true
+  },
+  {
+   "model": "q3NB-s0",
+   "navdev_sky_uptake": 0.0427451841099256,
+   "navdev_junction_drift": 0.08607068657875061,
+   "navdev_junction_line": 0.19100464033475484,
+   "navdev_sky_disc_dy": 0.07883734005700493,
+   "navdev_sky_disc_dy_ref": 0.16747363358218734,
+   "navdev_sky_wrong_dy": 0.27930755930870144,
+   "navdev_sky_wrong_dy_ref": 0.17866676077937702,
+   "navdev_straight_drift": 0.0675668865442276,
+   "carladev_sky_uptake": 0.176965481957059,
+   "carladev_junction_drift": 0.2017180621623993,
+   "carladev_junction_line": 0.2535011741188035,
+   "carladev_sky_disc_dy": 0.29170801190018203,
+   "carladev_sky_disc_dy_ref": 0.37946966347835787,
+   "carladev_sky_wrong_dy": 3.464057612982803,
+   "carladev_sky_wrong_dy_ref": 0.5065774470283951,
+   "dist_dev_drift_max": 0.06012583523988724,
+   "guard_ok": true,
+   "ctl_ok": false,
+   "uptake_ok": false
+  }
+ ]
+}

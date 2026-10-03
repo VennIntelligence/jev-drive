@@ -103,3 +103,52 @@ One seed per config; three configs per arm (the plan's stop rule). The CARLA tes
 closed-loop frames. Each history frame is drawn from t0 geometry (the green line from t0 perception), while at test time each frame
 would use its own. The sky arrow sits above the horizon, where far traffic lights can appear. Nav eval frames are mostly
 slow and near the stop line.
+
+## Negatives round, with the relative junction guard (main's decision 2026-10-03)
+
+**The guard was changed after seeing the data.** The absolute 0.10 m line sat below the shipped model's own junction sensitivity.
+The new line: no-overlay junction drift (median) ≤ the shipped model's own median plan change under the uninformative sky disc on
+the same frames. That is 0.17 m on navtrain eval and 0.24 m on CARLA test (dev: 0.19 / 0.25). Ordinary frames keep 0.10 m
+(nav straight frames and L3's dev pools). Pre-registered lines for this round:
+
+- (1) on CARLA, the controls (disc, arrow toward a missing exit) move the plan at most 2× the shipped model's lateral move;
+- (2) CARLA sky uptake ≥ 0.3;
+- (3) the relative guard holds.
+
+Training adds the negatives with the shipped plan as the target: the disc and the missing-exit arrow on junction frames (nav and
+CARLA), plus the straight arrow on straight roads. Two configs: NA (SA's weights) and NB (lam_d 20 / lam_c 2).
+
+| model | sky uptake nav / CARLA test | CARLA control \|dy\| at 4 s: disc / wrong (shipped 0.28 / 0.29) | junction drift nav / CARLA (old line 0.10, new 0.17 / 0.24) | ordinary frames (0.10) |
+|:--|:--|:--|:--|:--|
+| SA (no negatives) | 0.29 / 0.39 | 3.03 / 7.52 | 0.13 / 0.27 | 0.07 / 0.07-0.08 |
+| SB | 0.13 / 0.23 | 2.49 / 5.62 | 0.09 / 0.19 | 0.05 / 0.05 |
+| **NA** | 0.18 [0.13, 0.24] / **0.30 [0.26, 0.33]** | **0.36** / 4.91 | **0.12** / 0.25 | 0.07 / 0.06-0.08 |
+| NB | 0.07 / 0.15 | 0.27 / 3.29 | 0.10 / 0.21 | 0.06 / 0.06-0.08 |
+
+All earlier models re-read against the new guard (test): SA 0.13 ✓ / 0.27 ✗, SB ✓ / ✓, SC ✓ / ✓ (uptake 0), GA 0.15 ✓ / 0.37 ✗,
+GB 0.11 ✓ / 0.27 ✗, GC 0.13 ✓ / 0.33 ✗. Against the old 0.10 m line, only NB and SB pass on navtrain, and none passes on CARLA.
+
+On dev, neither config passed all three lines:
+
+| dev line | NA | NB |
+|:--|:--|:--|
+| relative guard | pass | pass |
+| CARLA uptake ≥ 0.3 | 0.34, pass | 0.18, fail |
+| missing-exit control on CARLA, line ≤ 1.0 m | 3.8 m, fail | 3.5 m, fail |
+
+By the plan this stops the round: no seeds 1-2 and no closed loop. On the test set NA is just at the uptake line (0.30) and just over
+the CARLA guard (0.25 vs 0.24).
+
+What the negatives did:
+
+- **The uninformative disc is fixed.** It moved the plan by 3.0 m under SA and by 0.36 m under NA (shipped 0.28 m); on nav 0.16 m.
+- **The missing-exit arrow is still followed.** The plan moves toward the side the arrow points: +5.7 m on CARLA and +0.5 m on nav
+  under NA, +8.6 / +1.3 m under SA, -0.2 / -0.0 m for the shipped model. Only one batch row in 56 was a CARLA missing-exit row
+  (≈ 100 train samples).
+- **Caveat on that control.** "Missing" means missing from the branches built from the ego lane's connectors. A junction can have
+  that exit from another lane, so part of this control may be "turn from the wrong lane", not "turn into nothing". Not checked.
+- **The negatives cost uptake.** Navtrain uptake 0.29 → 0.18, CARLA 0.39 → 0.30.
+
+Tables: q3/sky/q3N{A,B}-s0_vs_O_*.md, q3/sky/select_neg.json. Closed-loop pieces are written but not run:
+`scripts/img_cl_server.py` (draws the arrow server-side), `lib/op_arb_agent.py img_cmd()` (route command + distance),
+`scripts/img_cl_lane.py`, `scripts/img_cl_report.py`, and `SRV_PY` in op_arb.sh.

@@ -2,7 +2,7 @@
 
 status: live
 decisions: 99, 102
-index: Image route: zero-shot uptake <= 0.14; fine-tuned 0.54-0.64, drift 0.29 m; sky arrow (no map) 0.29-0.39, junction drift 0.13-0.27 m
+index: Image route: zero-shot uptake <= 0.14; fine-tuned 0.54-0.64, drift 0.29 m; sky arrow (no map) 0.29-0.39, junction drift 0.13-0.27 m; negatives: CARLA 0.30, wrong-exit control fails
 
 **Question.** Does openpilot (Cinque, frozen) follow a route command given through the image (painted route, blocked
 other branches, a sign) instead of the desire input, zero-shot; and if only partly, can light fine-tuning teach it?
@@ -23,12 +23,14 @@ with a large distillation pool, CARLA junction frames and residual targets, it r
 [0.37, 0.42] on CARLA, with lane keeping unchanged. The no-overlay junction drift stays at 0.13 (nav) / 0.27 m (CARLA); the
 configs that pass on nav (0.09 m) keep only 0.13 uptake. A perception-placed green line adds a little (correct 0.82 / 0.84) and
 costs drift. No config passed, so no seeds 1-2 and no closed loop. The 0.10 m line sits below the shipped model's own junction
-sensitivity: a non-informative sky disc moves its plan 0.17 / 0.24 m.
+sensitivity: a non-informative sky disc moves its plan 0.17 / 0.24 m. With main's relative guard (drift at most that disc move,
+changed after seeing the data) and negatives (disc, missing-exit arrow, straight arrow -> the shipped plan), NA keeps CARLA uptake
+0.30 and fixes the disc (0.36 m vs shipped 0.28). It still follows an arrow toward a missing exit (+5.7 m on CARLA) and sits at the
+CARLA guard (0.25 vs 0.24 m), so the round stopped on dev: no seeds 1-2 and no closed loop. The closed-loop pieces are written.
 
-**Next.** The junction drift guard needs a reference that the shipped model itself meets: for example, drift measured relative to
-the plan change from a non-informative overlay, or the guard read on ordinary frames, where every sky config is at 0.04-0.08 m.
-Changing the guard is a decision for main; it is not made here. If it is relaxed, run SA with seeds 1-2 and then the closed-loop
-smoke (sky arrow from the official route command and distance; ONNX via op_l_onnx.py) on 27297 / 27043 / 9196 / 24944.
+**Next.** The open failure is the missing-exit control. First check whether those exits exist from another lane (if so, the
+control is not "no exit"). Then weight the CARLA missing-exit negatives (1 row in 56 now). After that, seeds 1-2 and the closed-loop
+smoke with `scripts/img_cl_lane.py` on 27297 / 27043 / 9196 / 24944.
 
 ![overlay review sheet](figs/overlay_sheet.png)
 
