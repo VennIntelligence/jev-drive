@@ -155,21 +155,35 @@ def get(lane: str, rows: list = None) -> Lease:
     return Lease.from_row(r) if r else None
 
 
+def why_busy(card, others: list) -> str:
+    """Why a card cannot be leased ('' = free): a live row holds it, a compute process or CARLA server runs on it, or
+    VRAM is in use. Naming the reason tells a stale row (release it) from a real occupant (wait or ask its lane)."""
+    why = ["row %s (%s)" % (r["lane"], r["status"][:40]) for r in others if card.index in gpus(r)]
+    if card.compute_pids:
+        why.append("compute pids %s" % card.compute_pids[:6])
+    if card.carla:
+        why.append("%d CARLA servers" % card.carla)
+    if card.mem_used_mib >= 1024 and not card.compute_pids:
+        why.append("%.1f GB VRAM used by no listed process" % (card.mem_used_mib / 1024))
+    return ", ".join(why)
+
+
 def find_free(box, rows: list, lane: str, n_gpus: int = 1, want: list = None, cores_per_card: int = None,
               span: int = 24, workers: int = 6) -> Lease:
     """Free cards, NUMA-local free cores and conflict-free index blocks for a new lease (see module doc)."""
     others = [r for r in live(rows) if r["lane"] != lane]
-    held_cards = {g for r in others for g in gpus(r)}
-    free_cards = [c for c in box.cards if c.index not in held_cards and not c.compute_pids and not c.carla
-                  and c.mem_used_mib < 1024]
+    busy = {c.index: why_busy(c, others) for c in box.cards}
+    free_cards = [c for c in box.cards if not busy[c.index]]
     if want:
         bad = sorted(set(want) - {c.index for c in free_cards})
         if bad:
-            raise RuntimeError("cards not free: %s" % bad)
+            raise RuntimeError("cards not free: " + "; ".join("%d (%s)" % (g, busy.get(g) or "no such card") for g in bad))
         chosen = [box.card(g) for g in want]
     else:
         if len(free_cards) < n_gpus:
-            raise RuntimeError("only %d free cards (%s), %d wanted" % (len(free_cards), [c.index for c in free_cards], n_gpus))
+            raise RuntimeError("only %d free cards (%s), %d wanted; busy: %s" % (
+                len(free_cards), [c.index for c in free_cards], n_gpus,
+                "; ".join("%d (%s)" % (g, w) for g, w in sorted(busy.items()) if w)))
         chosen = free_cards[:n_gpus]
     cpc = int(cores_per_card or box.cores // max(len(box.cards), 1))
     taken = set().union(*[cpus(r) for r in others]) if others else set()

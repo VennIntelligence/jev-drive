@@ -154,7 +154,7 @@ class Lease(unittest.TestCase):
         self.assertFalse(ix & taken)
         self.assertTrue(all(i >= 160 for i in ix))
         self.assertEqual(L.conflicts([r for r in ROWS] + [ls.row()]), [])
-        with self.assertRaises(RuntimeError):
+        with self.assertRaisesRegex(RuntimeError, r"cards not free: 0 \(row "):     # the error names the holder
             L.find_free(self.box, ROWS, "new", want=[0])
 
     def test_grant_and_finish(self):
