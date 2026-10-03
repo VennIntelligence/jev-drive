@@ -12,6 +12,8 @@ from typing import Any, Dict
 PORT0 = 8200
 LIGHTS = ["no_light", "red_or_yellow_for_ego", "green_for_ego", "light_for_other_lane"]
 SIGNS = ["stop_sign_for_ego", "no_stop_sign_for_ego"]          # POST /sign (vmerge)
+CROSS = ["vehicle_crossing", "path_clear"]                       # POST /cross (vmerge3 release check; first option = positive)
+KEYS = {"light": ("Q_light", LIGHTS), "sign": ("Q_sign", SIGNS), "cross": ("Q_cross", CROSS)}
 
 
 class QwenClient:
@@ -19,7 +21,7 @@ class QwenClient:
         self.url, self.timeout_s = "http://127.0.0.1:%d" % port, timeout_s
 
     def ask(self, jpgs: Dict[str, bytes], q: str = "light") -> Dict[str, Any]:
-        """`jpgs`: {"wide": bytes, "road": bytes}. Returns Q_light, Q_light_p (q = "sign": Q_sign, Q_sign_p), the round trip in
+        """`jpgs`: {"wide": bytes, "road": bytes}. Returns Q_light, Q_light_p (q = "sign" / "cross": Q_sign / Q_cross and its _p), the round trip in
         `latency_ms` and the server's own `srv_queue_ms` / `srv_svc_ms` / `srv_depth`."""
         w, r = jpgs["wide"], jpgs["road"]
         req = urllib.request.Request(self.url + "/" + q, data=w + r, headers={"X-Sizes": "%d,%d" % (len(w), len(r)),
@@ -28,7 +30,7 @@ class QwenClient:
         try:
             with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
                 d = json.loads(resp.read().decode("utf-8"))
-            key, opts = ("Q_sign", SIGNS) if q == "sign" else ("Q_light", LIGHTS)
+            key, opts = KEYS[q]
             out = {key: d["ans"], key + "_p": dict(zip(opts, d["p"]))}
             out.update(ok=True, srv_queue_ms=d["queue_ms"],
                        srv_svc_ms=d["svc_ms"], srv_depth=d["depth"], srv_batch=d["batch"])

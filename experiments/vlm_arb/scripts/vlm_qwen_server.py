@@ -1,10 +1,11 @@
 """Qwen3-VL-4B traffic-light server: zero-shot, one forward pass, option scoring, both cameras (plan 2026-10-02-vlm-vred.md).
 
   python vlm_qwen_server.py serve --port 8200 [--max-batch 1] [--res r1153] [--log FILE]
-  python vlm_qwen_server.py supervise --cards 0,1,2 --run DIR     one `serve` per card, restarted if it dies; STOP file ends it
+  python vlm_qwen_server.py supervise --cards 0,1,2 --run DIR [--port0 8200]   one `serve` per card (port port0 + card), restarted if it dies; STOP file ends it
   python vlm_qwen_server.py bench [--res r1153]                    batch 1 / 2 / 4 service time on this card, JPEG in, answer out
 
-Answers the Q-light question (and, for the vmerge arm, the stop-sign question on POST /sign: SIGN_PROMPT, two options) with the same prompt, preprocessing and scoring as `vlm_thin_stage.py` (`fwd_<res>`):
+Answers the Q-light question (and, for the vmerge arm, the stop-sign question on POST /sign: SIGN_PROMPT, two options; for vmerge3 the cross-traffic
+release check on POST /cross: CROSS_PROMPT) with the same prompt, preprocessing and scoring as `vlm_thin_stage.py` (`fwd_<res>`):
 the first token after a forced `ANSWER:` is scored over the four options (argmax). No head, no truncation.
 
 Wire format: POST /light with the JPEG bytes of the wide and the road frame concatenated, header `X-Sizes: n_wide,n_road`.
@@ -38,6 +39,16 @@ SIGN_PROMPT = (CAMS2 + "\nStop sign controlling the ego vehicle lane at the junc
                "End your reply with one line of the form `ANSWER: <option>`, <option> being one of: %s. Reply with that line only."
                % ", ".join(SIGNS))
 
+# vmerge3 (plan 2026-10-04-vmerge3.md): the release check, asked only while a stop is about to be released (POST /cross); the prompt was
+# chosen offline on saved closed-loop frames (results/vm3_cross_offline.md); first option = a vehicle closing on the ego's path
+CROSS = ["vehicle_crossing", "path_clear"]
+CROSS_PROMPT = (CAMS2 + "\nCross traffic in front of the ego vehicle, which is stopped at a junction. Options:\n"
+                "  vehicle_crossing: a vehicle is crossing, turning into, or about to enter the road space directly in front of the ego vehicle\n"
+                "  path_clear: no vehicle is crossing or about to enter the road space in front of the ego vehicle\n"
+                "End your reply with one line of the form `ANSWER: <option>`, <option> being one of: %s. Reply with that line only."
+                % ", ".join(CROSS))
+EXTRA_Q = {"sign": (SIGN_PROMPT, SIGNS), "cross": (CROSS_PROMPT, CROSS)}
+
 
 class Job:
     __slots__ = ("jpgs", "t_in", "done", "out", "q")
@@ -53,11 +64,13 @@ class Engine:
         self.th = Thin()
         self.th.restore()                              # the whole model: no cut, final norm on
         th, tok = self.th, self.th.tok
-        th.set_prompt(SIGN_PROMPT)
         pre = tok(SCORE_PREFIX, add_special_tokens=False).input_ids
-        first = [tok(SCORE_PREFIX + " " + o, add_special_tokens=False).input_ids[len(pre)] for o in SIGNS]
-        assert len(set(first)) == 2, first
-        self.qs = {"sign": (th.pieces, th.m.lm_head.weight[first].float(), SIGNS)}
+        self.qs = {}
+        for q, (prompt, opts) in EXTRA_Q.items():
+            th.set_prompt(prompt)
+            first = [tok(SCORE_PREFIX + " " + o, add_special_tokens=False).input_ids[len(pre)] for o in opts]
+            assert len(set(first)) == len(opts), (q, first)
+            self.qs[q] = (th.pieces, th.m.lm_head.weight[first].float(), opts)
         th.set_prompt(FOUR_PROMPT)
         self.qs["light"] = (th.pieces, th.W, LIGHTS)
         self.q = queue.Queue()
@@ -156,7 +169,8 @@ def handler(eng):
             try:
                 sizes = [int(s) for s in self.headers["X-Sizes"].split(",")]
                 body = self.rfile.read(int(self.headers["Content-Length"]))
-                job = Job([body[:sizes[0]], body[sizes[0]:sizes[0] + sizes[1]]], "sign" if self.path.startswith("/sign") else "light")
+                q = self.path.strip("/").split("?")[0]
+                job = Job([body[:sizes[0]], body[sizes[0]:sizes[0] + sizes[1]]], q if q in EXTRA_Q else "light")
                 eng.q.put(job)
                 job.done.wait()
                 self._send(200 if "error" not in job.out else 500, job.out)
@@ -188,7 +202,7 @@ def supervise(a):
         env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(g), HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", OMP_NUM_THREADS="4",
                    TOKENIZERS_PARALLELISM="false", PYTHONUNBUFFERED="1")
         lf = open(run / "servers" / ("srv%d.log" % g), "a")
-        procs[g] = subprocess.Popen([sys.executable, __file__, "serve", "--port", str(PORT0 + g), "--max-batch", str(a.max_batch),
+        procs[g] = subprocess.Popen([sys.executable, __file__, "serve", "--port", str(a.port0 + g), "--max-batch", str(a.max_batch),
                                      "--res", a.res, "--log", str(run / "servers" / ("req%d.jsonl" % g))], env=env, stdout=lf, stderr=subprocess.STDOUT)
         (run / "servers" / ("srv%d.pid" % g)).write_text(str(procs[g].pid))
         log("card %d: server pid %d" % (g, procs[g].pid))
@@ -250,6 +264,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["serve", "supervise", "bench"])
     ap.add_argument("--port", type=int, default=PORT0)
+    ap.add_argument("--port0", type=int, default=PORT0)       # supervise: card g serves on port0 + g (vmerge3: a second server on a card at 8210 + g)
     ap.add_argument("--max-batch", type=int, default=1)       # measured: 126 / 122 / 119 / 121 ms per request at batch 1 / 2 / 3 / 4
     ap.add_argument("--res", default="r1153")
     ap.add_argument("--log", default="")

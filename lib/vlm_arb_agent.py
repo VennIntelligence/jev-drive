@@ -29,6 +29,11 @@ Environment (set per unit by experiments/vlm_arb/scripts/vlm_arb_chain.py):
                     and stops once per junction; R1 junction slow-down; the bypass is Privileged arm pbyp3 behind bypass_gate().
                     Needs VLM_BACKEND=qwen. VM_ABL (ablations, one component off): nocusum (release on K = 2 greens), nobyp (no bypass),
                     nor1 (no junction slow-down), nosign (no stop-sign question / R3).
+  vmerge3           (plans/2026-10-04-vmerge3.md) switches on top of vmerge (all unset = vmerge unchanged):
+                    VM3_BYP=perc   the bypass without privileged input (lib/vm3_perception.PerceivedBypass: openpilot lead, lane lines and
+                                   road edges, three radars, the route); the privileged geometry only logs (arm "drive")
+                    VM3_REL=1      release check: an R2 cusum release or the end of an R3 dwell waits while the cross-traffic question
+                                   (/cross, wide + road frame) says a vehicle is closing on the ego's path; up to VM3["rel_wait_s"]
   VLM_ENDPOINT      System One URL.
   VLM_BACKEND       openjev (default) | qwen: zero-shot Qwen3-VL-4B light reading, one forward pass with option scoring
                     (experiments/vlm_arb/scripts/vlm_qwen_server.py, one server per card on port VLM_BASE_PORT + VLM_GPU,
@@ -62,6 +67,7 @@ from b2d_privileged_geometry import Privileged, project  # noqa: E402
 from vlm_client import VLMClient, jpeg  # noqa: E402
 from vlm_qwen_client import QwenClient  # noqa: E402
 import yellow_rule  # noqa: E402
+import vm3_perception as V3  # noqa: E402
 import b2d_zeroshot_agent as Z  # noqa: E402
 
 
@@ -90,22 +96,41 @@ VM = {"stop_offset_m": 3.3,       # route command start - stop line (route_junct
       "sign_dwell_s": 2.5,        # R3 dwell (T_stop_sign_s)
       "byp_stand_s": 5.0, "byp_stand_v": 0.3, "byp_lead_x": 40.0, "byp_lead_v": 1.0, "byp_junction_m": 15.0, "byp_red_s": 5.0}   # bypass_timedet.md
 
+# vmerge3 release check (plans/2026-10-04-vmerge3.md, registered before the first run): ask /cross at 2 Hz while a release is near
+# (R2 cusum >= ask_cusum, R3 standing at its line) or pending; release only when the last K = 2 answers have P(vehicle_crossing) < thr
+VM3 = {"ask_cusum": 2.5, "thr": 0.5, "fresh_s": 1.5, "rel_wait_s": 8.0, "post_s": 4.0}
 LIGHT_M, SIGN_M = 50.0, 25.0          # truth windows of the oracle answers; the label bins are applied offline
 
 
 class VlmArbitrationPC:
     """The `pc` hook of OpArbAgent: privileged geometry (bypass path) + the table's stop constraints."""
 
-    def __init__(self, agent, priv):
-        self.agent, self.priv = agent, priv
+    def __init__(self, agent, priv, perc=None):
+        self.agent, self.priv, self.perc = agent, priv, perc
 
     @property
     def meta(self):
-        return dict(self.priv.meta, vlm=self.agent.table_state) if self.priv else {}
+        if not self.priv:
+            return {}
+        m = dict(self.priv.meta, vlm=self.agent.table_state)
+        if self.perc is not None:
+            m.update(self.perc.meta)
+        return m
 
     def geometry(self, speed, t, xy, yaw, world, warm):
-        self.priv.bypass = bool(self.agent.r4_on) or (self.agent.vm and self.agent.abl != "nobyp")
-        return self.priv.geometry(speed, t, xy, yaw, world, warm)
+        byp = bool(self.agent.r4_on) or (self.agent.vm and self.agent.abl != "nobyp")
+        if self.perc is None:
+            self.priv.bypass = byp
+            return self.priv.geometry(speed, t, xy, yaw, world, warm)
+        self.priv.bypass = False                              # vmerge3: the privileged geometry only logs the truth
+        self.priv.geometry(speed, t, xy, yaw, world, warm)
+        if not byp:
+            return world
+        gate = self.agent.bypass_gate(t) if self.perc.state is None else None
+        out = self.perc.geometry(speed, t, xy, yaw, world, warm, gate is None)
+        if gate:
+            self.perc.meta["suppressed"] = gate
+        return out
 
     def constraints(self, s_base, speed, path, t, warm):
         self.priv.constraints(s_base, speed, path, t, warm)      # arm "drive": no control, writes privileged.jsonl
@@ -115,6 +140,8 @@ class VlmArbitrationPC:
         if self.priv:
             self.priv.close()
             self.priv = None
+        if self.perc is not None:
+            self.perc.close()
 
 
 class VlmArbAgent(OpArbAgent):
@@ -162,12 +189,16 @@ class VlmArbAgent(OpArbAgent):
                 raise ValueError("the qwen backend answers Q_light only: VLM_ROWS must not contain R3 / R4")
             self.client = QwenClient(int(env("VLM_BASE_PORT", "8200")) + int(env("VLM_GPU", "0")))
         elif self.backend == "qwen":
-            self.client = QwenClient(int(env("VLM_BASE_PORT", "8200")) + int(env("VLM_GPU", "0")))
+            self.client = QwenClient(self._qwen_port())
         else:
             self.client = VLMClient(endpoint=env("VLM_ENDPOINT", "http://127.0.0.1:8080/v1/systemone"))
         self.pool = ThreadPoolExecutor(max_workers=4 if self.backend == "qwen" else 2)
-        self.priv = Privileged(self, "pbyp3" if self.vm else "drive")    # truth geometry and labels; arm "drive" = it controls nothing
-        self.pc = VlmArbitrationPC(self, self.priv)
+        self.vm3_byp = self.vm and env("VM3_BYP", "") == "perc"
+        self.vm3_rel = self.vm and env("VM3_REL", "") == "1"
+        self.priv = Privileged(self, "pbyp3" if self.vm and not self.vm3_byp else "drive")    # truth geometry and labels; "drive" = controls nothing
+        self.pc = VlmArbitrationPC(self, self.priv, V3.PerceivedBypass(self) if self.vm3_byp else None)
+        self.h_cross, self.cross_answer, self.last_cq = deque(maxlen=ARB_PARAMS["K_debounce"]), None, -1e9
+        self.rel_wait, self.rel_post, self.r6, self.n_cross_wait, self.n_cross_timeout, self.n_rehold = None, None, None, 0, 0, 0
         self.pc.byp_free = self.vm
         self.pending_cons, self.pending_release, self.table_state = {}, False, {}
         self.queue = deque()                            # (t_q, gt, future or answer dict)
@@ -191,7 +222,36 @@ class VlmArbAgent(OpArbAgent):
         if self.save_frames:
             self.frame_dir.mkdir(parents=True, exist_ok=True)
         self.vlm_log.write(json.dumps(dict(k="h", arm=self.vlm_arm, rows=sorted(rows), L=self.L, shadow=self.shadow,
-                                           oracle=self.vlm_oracle, light_variant=self.light_variant, backend=self.backend, params=ARB_PARAMS)) + "\n")
+                                           oracle=self.vlm_oracle, light_variant=self.light_variant, backend=self.backend, params=ARB_PARAMS,
+                                           vm3=dict(byp=self.vm3_byp, rel=self.vm3_rel, P=V3.P, VM3=VM3), qwen=getattr(self.client, "url", None))) + "\n")
+
+    def _qwen_port(self):
+        """VLM_PORTS (vmerge3: two servers on one card): take the first free slot, round robin over the servers, by an flock held for the
+        life of this route process (released by the OS when it exits); else VLM_BASE_PORT + VLM_GPU."""
+        env = os.environ.get
+        ports = [int(p) for p in env("VLM_PORTS", "").split(",") if p]
+        if not ports:
+            return int(env("VLM_BASE_PORT", "8200")) + int(env("VLM_GPU", "0"))
+        import fcntl
+        d = Path(env("VLM_SLOT_DIR"))
+        d.mkdir(parents=True, exist_ok=True)
+        for k in range(8):
+            for p in ports:
+                fh = open(d / ("%d.%d" % (p, k)), "w")
+                try:
+                    fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except OSError:
+                    fh.close()
+                    continue
+                self._slot_fh = fh
+                return p
+        return ports[0]
+
+    def sensors(self):
+        own = super().sensors()
+        if os.environ.get("VLM_ARM") == "vmerge" and os.environ.get("VM3_BYP", "") == "perc":
+            own += V3.radar_specs()                               # vmerge3: front + two rear-corner radars (Bench2Drive allows 4)
+        return own
 
     # ------------------------------------------------------------------ truth (labels and oracle; never a model input)
     def _prepare(self):
@@ -301,11 +361,11 @@ class VlmArbAgent(OpArbAgent):
         if self.save_frames and q == "light":
             for k, b in jpgs.items():
                 (self.frame_dir / ("%08.2f_%s.jpg" % (t_q, k))).write_bytes(b)
-        if self.backend == "qwen" and q == "sign":
-            ans = self.client.ask(jpgs, "sign")
+        if self.backend == "qwen" and q in ("sign", "cross"):
+            ans = self.client.ask(jpgs, q)
             ans["rtt_ms"] = ans["latency_ms"]
             ans["latency_ms"] = round((time.perf_counter() - t_sub) * 1e3, 1)
-            ans["kind"] = "sign"
+            ans["kind"] = q
             return ans
         if self.backend == "qwen":
             ans = self.client.ask(jpgs)
@@ -327,7 +387,7 @@ class VlmArbAgent(OpArbAgent):
 
     def _ask(self, t, cams, gt, q="light"):
         t_sub = time.perf_counter()
-        if self.vlm_oracle and q == "sign":
+        if self.vlm_oracle and q in ("sign", "cross"):
             return
         if self.vlm_oracle:
             self.queue.append((t, gt, self._oracle_answer(gt)))
@@ -355,6 +415,9 @@ class VlmArbAgent(OpArbAgent):
             if ans["ok"] and ans.get("kind") == "sign":        # vmerge stop-sign answers have their own history and age
                 self.sign_answer = ans
                 self.h_sign2.append(ans["Q_sign"])
+            elif ans["ok"] and ans.get("kind") == "cross":     # vmerge3 release check
+                self.cross_answer = ans
+                self.h_cross.append((t_eff, float(ans["Q_cross_p"]["vehicle_crossing"])))
             elif ans["ok"]:                                    # a failed request is no answer: the last one ages out
                 self.answer = ans
                 self.h_light.append(ans["Q_light"])
@@ -558,6 +621,28 @@ class VlmArbAgent(OpArbAgent):
         the dbg-vmerge-334 smoke run answered stop_sign_for_ego in front of a green light)."""
         return len(self.h_light) == 2 and all(x in ("no_light", "light_for_other_lane") for x in self.h_light)
 
+    def _crossing(self, t):
+        """The last K = 2 cross answers are fresh and both say a vehicle is closing on the ego's path."""
+        h = list(self.h_cross)
+        return len(h) == 2 and all(p >= VM3["thr"] for _, p in h) and t - h[0][0] <= VM3["fresh_s"] + 0.6
+
+    def _cross_ok(self, t, who):
+        """vmerge3 release check: True when the release may go ahead (always without VM3_REL)."""
+        if not self.vm3_rel:
+            return True
+        if self.rel_wait is None or self.rel_wait[0] != who:
+            self.rel_wait = (who, t)
+        h = list(self.h_cross)
+        clear = len(h) == 2 and all(p < VM3["thr"] for _, p in h) and t - h[0][0] <= VM3["fresh_s"] + 0.6
+        if clear or t - self.rel_wait[1] > VM3["rel_wait_s"]:
+            if not clear:
+                self.n_cross_timeout += 1
+            if t - self.rel_wait[1] > 0.05:
+                self.n_cross_wait += 1
+            self.rel_wait = None
+            return True
+        return False
+
     def _table_vm(self, speed, t, junc_dist, jid, stop_dist):
         P, K, A = ARB_PARAMS, ARB_PARAMS["K_debounce"], self.arb
         rows, out, active = self.rows, {}, []
@@ -607,10 +692,15 @@ class VlmArbAgent(OpArbAgent):
                 else:
                     c = VM["cusum_clip"]
                     self.cusum = max(0.0, self.cusum + min(c, max(-c, math.log((pg + 1e-3) / (pr + 1e-3)))))
-                if self.cusum >= VM["cusum_release"]:
+                if self.cusum < VM["cusum_release"] and self.rel_wait is not None and self.rel_wait[0] == "R2":
+                    self.rel_wait = None                          # the evidence fell back below the line: no release pending
+                if self.cusum >= VM["cusum_release"] and self._cross_ok(t, "R2"):
                     self.r2_hold, self.release_until, rel = False, t + 2.0, round(self.cusum, 2)
+            elif self.r2_hold and self.rel_wait is not None and self.rel_wait[0] == "R2" and self._cross_ok(t, "R2"):
+                self.r2_hold, self.release_until, rel = False, t + 2.0, round(self.cusum, 2)
         if rel is not None:
             self.n_rel, self.rel_t = self.n_rel + 1, t
+            self.rel_post = ("R2", t)
         if self.r2_hold and line2 <= -2.0:
             self.r2_hold = False
         if self.r2_hold:
@@ -627,19 +717,40 @@ class VlmArbAgent(OpArbAgent):
                 at_line = line3 <= 1.0 and not getattr(self, "warm_now", True)
                 if speed < 0.1 and at_line and self.r3_since is None:
                     self.r3_since = t
-                if (self.r3_since is not None and t - self.r3_since >= VM["sign_dwell_s"]) or line3 <= -2.0:
+                dwell = self.r3_since is not None and t - self.r3_since >= VM["sign_dwell_s"]
+                if line3 <= -2.0 or (dwell and self._cross_ok(t, "R3")):
                     self.r3_hold, self.r3_since = False, None
                     self.r3_done.add(jid)
                     self.release_until = t + 2.0
+                    self.rel_post = ("R3", t)
                 else:
                     out["R3"] = stop(line3)
                     active.append("R3")
+        # R6 (vmerge3): within post_s after an R2 / R3 release, two fresh "vehicle_crossing" answers stop the car again at the same line if it
+        # still can; it is released by two clear answers or after rel_wait_s
+        if self.vm3_rel and not out and not self.r5:
+            r6 = getattr(self, "r6", None)
+            ln = None
+            if self.rel_post is not None and t - self.rel_post[1] <= VM3["post_s"]:
+                ln = line2 if self.rel_post[0] == "R2" else line3
+            if r6 is None and ln is not None and self._crossing(t) and ln > max(0.5, speed * speed / 8.0 - 1.0) and speed < 5.0:
+                self.r6, self.n_rehold = (ln, t, self.rel_post[0]), self.n_rehold + 1
+                self.rel_wait = ("R6", t)
+            elif r6 is not None:
+                ln = line2 if r6[2] == "R2" else line3
+                if ln <= -2.0 or self._cross_ok(t, "R6"):
+                    self.r6, self.release_until, self.rel_post = None, t + 2.0, None
+            if getattr(self, "r6", None) is not None:
+                out["R6"] = stop(ln)
+                active.append("R6")
         if out and speed < 0.2:
             self.owned_stop = True
         release_now = bool(t < self.release_until and speed < 1.0 and self.owned_stop and not out)
         if speed >= 1.0:
             self.release_until, self.owned_stop = -1e9, False
         self.table_state = dict(rules=active, release=release_now, r5=bool(self.r5), fresh=fresh, sfresh=sfresh, cusum=round(self.cusum, 2), n_rel=self.n_rel, rel_t=self.rel_t,
+                                cross=[round(p, 3) for _, p in self.h_cross], rel_wait=self.rel_wait, n_cwait=self.n_cross_wait, n_ctime=self.n_cross_timeout,
+                                n_rehold=self.n_rehold,
                                 line_r2=round(float(line2), 2), d_stop=None if stop_dist is None else round(float(stop_dist), 2), jid=int(jid),
                                 light=list(self.h_light), sign=list(self.h_sign2), ask=self.ask_why, det=self.det_now,
                                 byp=self.priv.meta.get("suppressed"))
@@ -680,6 +791,13 @@ class VlmArbAgent(OpArbAgent):
             gt = self._truth_labels(xy, ego_s, junc_dist)
             gt.update(det=self.det_now, why="sign", jid_vm=jid)
             self._ask(t, cams, gt, "sign")
+        if self.vm3_rel and t - self.last_cq >= 0.5 - 1e-4 and t - self.last_q >= 0.25 - 1e-4 and (
+                (self.r2_hold and self.cusum >= VM3["ask_cusum"]) or (self.r3_hold and self.r3_since is not None) or self.rel_wait is not None
+                or getattr(self, "r6", None) is not None or (self.rel_post is not None and t - self.rel_post[1] <= VM3["post_s"])):
+            self.last_cq = t
+            gt = self._truth_labels(xy, ego_s, junc_dist)
+            gt.update(why="cross", jid_vm=jid)
+            self._ask(t, cams, gt, "cross")
         self._arrivals(t)
         cons, cap, release, active = self._table_vm(speed, t, junc_dist, jid, stop_dist)
         self.pending_cons, self.pending_release = cons, release

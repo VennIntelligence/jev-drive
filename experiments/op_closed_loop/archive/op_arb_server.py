@@ -52,6 +52,7 @@ class ArbModel(ZP.OpenpilotModel):
         # enabled by env OP_DET_HEAD=<det_head.npz>; adds out["det"] = P(light, stop sign within 40 m). No effect when unset.
         dp = os.environ.get("OP_DET_HEAD", "")
         self.det = dict(np.load(dp)) if dp else None
+        self.lanes = os.environ.get("OP_LANES", "") == "1"        # vmerge3: lane lines + road edges in out (no effect when unset)
         super().__init__(a)                       # its warm-up takes a state from new_state(None) and drops it
         self.free += self._warm
 
@@ -94,6 +95,15 @@ class ArbModel(ZP.OpenpilotModel):
             d = self.det
             z = (raw[:d["mu"].shape[0]].astype(np.float32) - d["mu"]) / d["sd"]
             out["det"] = sig(d["W"] @ z + d["b"]).astype(f32)
+        if self.lanes:
+            # vmerge3 (experiments/vlm_arb/plans/2026-10-04-vmerge3.md): lane lines (4 x 33) and road edges (2 x 33), lateral y (m,
+            # openpilot calib frame: right positive) and its std at X_IDXS = 192 (i / 32)^2 m ahead of the camera
+            for k, n in (("lane_lines", 4), ("road_edges", 2)):
+                if k in m.slices:
+                    r = s(k)
+                    h = r.shape[-1] // 2
+                    out[k] = r[:h].reshape(n, 33, 2)[:, :, 0].astype(f32)
+                    out[k + "_sd"] = np.exp(np.clip(r[h:].reshape(n, 33, 2)[:, :, 0], -10, 5)).astype(f32)
         if meta.get("twin"):
             t = state["twin"]
             traw = t.step(prep["img2"], desire=np.zeros(8, np.float32), traffic=(1, 0))
