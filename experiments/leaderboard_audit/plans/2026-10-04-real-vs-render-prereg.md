@@ -37,3 +37,6 @@
   「有效」= 主读数上 closure = 1 − median|real − fix(render)| / median|real − render| ≥ 0.5，且「不伤真实帧」：
   median|o_real − o_fix(real)| ≤ 底噪 median(RR)。修补若被采用，是 HUGSIM 专用 trick，单独标注。
 - 判读：渲染差 yes 且有修补有效 → 渲染域是原因之一且可廉价修；渲染差 no → 渲染帧本身（训练视角）不是原因，问题在新视角 / 闭环 / 相机压低。
+
+## 增补（2026-10-03，跑数之前）
+同一协议，换数据集：HUGSIM 的 Waymo、PandaSet（以及有真实帧时的 KITTI-360）场景。读数、底噪、线、判读规则全部不变。
