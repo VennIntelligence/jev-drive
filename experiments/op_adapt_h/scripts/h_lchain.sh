@@ -78,7 +78,7 @@ g $PY $S/h_launch_report.py "$H/report/$NAME" "${TAGS[@]}" || fail "report ab"
 touch "$C/AB_DONE"
 
 st "9 h_chain (dev, probe, navtest, capture)"
-GPU=$GPU CPUS=$CPUS SCPUS=$SCPUS EXAMS=0 $S/h_chain.sh "$NAME-x" "${ARMS[@]}" >> "$C/log.txt" 2>&1 || fail "h_chain"
+GPU=$GPU CPUS=$CPUS SCPUS=$SCPUS NAVBATCH=${NAVBATCH:-8} EXAMS=0 $S/h_chain.sh "$NAME-x" "${ARMS[@]}" >> "$C/log.txt" 2>&1 || fail "h_chain"
 g $PY $S/h_report.py "$NAME-x" "${TAGS[@]}" || log "h_report failed (non-fatal)"
 
 st "10 HUGSIM all 64 (gate ${GATE:-0.75})"

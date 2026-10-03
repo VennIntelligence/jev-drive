@@ -49,7 +49,7 @@ HT=(); for t in "${TAGS[@]}"; do HT+=("H-$t"); done
 
 st "4 navtest"
 todo=(); for t in "${HT[@]}"; do [[ -f $LR/readout/$t/navtest.json ]] || todo+=("$t"); done
-(( ${#todo[@]} )) && { g $PY $RO navtest --models "${todo[@]}" --cpus "$SCPUS" || fail "navtest"; }
+(( ${#todo[@]} )) && { g $PY $RO navtest --models "${todo[@]}" --cpus "$SCPUS" --batch "${NAVBATCH:-32}" || fail "navtest"; }
 
 st "5 WOD val capture"
 for t in "${HT[@]}"; do
