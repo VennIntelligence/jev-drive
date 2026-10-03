@@ -202,7 +202,7 @@ class VlmArbAgent(OpArbAgent):
         self.vm3_rel = self.vm and env("VM3_REL", "") == "1"
         self.priv = Privileged(self, "pbyp3" if self.vm and not self.vm3_byp else "drive")    # truth geometry and labels; "drive" = controls nothing
         self.pc = VlmArbitrationPC(self, self.priv, V3.PerceivedBypass(self) if self.vm3_byp else None)
-        self.h_cross, self.cross_answer, self.last_cq = deque(maxlen=ARB_PARAMS["K_debounce"]), None, -1e9
+        self.h_cross, self.cross_answer, self.last_cq = deque(maxlen=4), None, -1e9
         self.rel_wait, self.rel_post, self.r6, self.n_cross_wait, self.n_cross_timeout, self.n_rehold = None, None, None, 0, 0, 0
         self.pc.byp_free = self.vm
         self.pending_cons, self.pending_release, self.table_state = {}, False, {}
@@ -254,7 +254,7 @@ class VlmArbAgent(OpArbAgent):
 
     def sensors(self):
         own = super().sensors()
-        if os.environ.get("VLM_ARM") == "vmerge" and os.environ.get("VM3_BYP", "") == "perc":
+        if os.environ.get("VLM_ARM") == "vmerge" and (os.environ.get("VM3_BYP", "") == "perc" or os.environ.get("VM3_REL", "") == "1"):
             own += V3.radar_specs()                               # vmerge3: front + two rear-corner radars (Bench2Drive allows 4)
         return own
 
@@ -627,9 +627,9 @@ class VlmArbAgent(OpArbAgent):
         return len(self.h_light) == 2 and all(x in ("no_light", "light_for_other_lane") for x in self.h_light)
 
     def _crossing(self, t):
-        """The last K = 2 cross answers are fresh and both say a vehicle is closing on the ego's path."""
-        h = list(self.h_cross)
-        return len(h) == 2 and all(p >= VM3["thr"] for _, p in h) and t - h[0][0] <= VM3["fresh_s"] + 0.6
+        """D7: the front radar reported a side vehicle closing in at least 2 of the last 3 checks (0.2 s apart)."""
+        h = [x for x in self.h_cross if t - x[0] <= 0.65]
+        return sum(1 for x in h if x[1]) >= 2
 
     def _cross_ok(self, t, who):
         """vmerge3 release check: True when the release may go ahead (always without VM3_REL)."""
@@ -637,8 +637,8 @@ class VlmArbAgent(OpArbAgent):
             return True
         if self.rel_wait is None or self.rel_wait[0] != who:
             self.rel_wait = (who, t)
-        h = list(self.h_cross)
-        clear = len(h) == 2 and all(p < VM3["thr"] for _, p in h) and t - h[0][0] <= VM3["fresh_s"] + 0.6
+        h = [x for x in self.h_cross if t - x[0] <= 0.65]
+        clear = len(h) >= 3 and not any(x[1] for x in h)
         if clear or t - self.rel_wait[1] > VM3["rel_wait_s"]:
             if not clear:
                 self.n_cross_timeout += 1
@@ -754,7 +754,7 @@ class VlmArbAgent(OpArbAgent):
         if speed >= 1.0:
             self.release_until, self.owned_stop = -1e9, False
         self.table_state = dict(rules=active, release=release_now, r5=bool(self.r5), fresh=fresh, sfresh=sfresh, cusum=round(self.cusum, 2), n_rel=self.n_rel, rel_t=self.rel_t,
-                                cross=[round(p, 3) for _, p in self.h_cross], rel_wait=self.rel_wait, n_cwait=self.n_cross_wait, n_ctime=self.n_cross_timeout,
+                                cross=[int(p) for _, p in self.h_cross], rel_wait=self.rel_wait, n_cwait=self.n_cross_wait, n_ctime=self.n_cross_timeout,
                                 n_rehold=self.n_rehold,
                                 line_r2=round(float(line2), 2), d_stop=None if stop_dist is None else round(float(stop_dist), 2), jid=int(jid),
                                 light=list(self.h_light), sign=list(self.h_sign2), ask=self.ask_why, det=self.det_now,
@@ -797,13 +797,13 @@ class VlmArbAgent(OpArbAgent):
             gt = self._truth_labels(xy, ego_s, junc_dist)
             gt.update(det=self.det_now, why="sign", jid_vm=jid)
             self._ask(t, cams, gt, "sign")
-        if self.vm3_rel and t - self.last_cq >= 0.5 - 1e-4 and t - self.last_q >= 0.25 - 1e-4 and (
-                (self.r2_hold and self.cusum >= VM3["ask_cusum"]) or (self.r3_hold and self.r3_since is not None) or self.rel_wait is not None
-                or getattr(self, "r6", None) is not None or (self.rel_post is not None and t - self.rel_post[1] <= VM3["post_s"])):
+        if self.vm3_rel and t - self.last_cq >= 0.2 - 1e-4 and not getattr(self, "warm_now", True):
+            # D7: the release check reads the front radar every 0.2 s (the Qwen question failed its offline line)
             self.last_cq = t
-            gt = self._truth_labels(xy, ego_s, junc_dist)
-            gt.update(why="cross", jid_vm=jid)
-            self._ask(t, cams, gt, "cross")
+            thr, why_c = V3.cross_threat(V3.radar_returns(self, xy, float(self.poses[-1][2]), float(speed)))
+            self.h_cross.append((t, thr))
+            if thr and (self.r2_hold or self.r3_hold or self.rel_wait is not None or self.r6 is not None):
+                self.vlm_log.write(json.dumps(dict(k="c", t=t, why=why_c, rel_wait=self.rel_wait)) + "\n")
         self._arrivals(t)
         cons, cap, release, active = self._table_vm(speed, t, junc_dist, jid, stop_dist)
         self.pending_cons, self.pending_release = cons, release

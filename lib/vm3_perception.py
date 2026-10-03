@@ -26,7 +26,7 @@ X_IDXS = 192.0 * (np.arange(33) / 32.0) ** 2
 # radar mounts (vehicle frame, CARLA: y right, yaw clockwise): front bumper, rear corners looking back-outwards
 # and (D6) a narrow long-range one straight back: Bench2Drive fixes 1500 points/s per radar, so the 120-degree corner radars only saw a
 # 13 m/s follower from 13 m (smoke round 3); the 30-degree one puts ~6 returns per frame on a car 30 m back
-RADARS = {"RADAR_F": dict(x=2.45, y=0.0, z=0.7, yaw=0.0, hfov=70.0, vfov=6.0),
+RADARS = {"RADAR_F": dict(x=2.45, y=0.0, z=0.7, yaw=0.0, hfov=150.0, vfov=6.0),     # D7: 150 degrees, it also serves the release check
           "RADAR_RL": dict(x=-2.4, y=-0.8, z=0.7, yaw=-150.0, hfov=120.0, vfov=6.0),
           "RADAR_RR": dict(x=-2.4, y=0.8, z=0.7, yaw=150.0, hfov=120.0, vfov=6.0),
           "RADAR_B": dict(x=-2.45, y=0.0, z=0.8, yaw=180.0, hfov=30.0, vfov=4.0)}
@@ -97,6 +97,56 @@ def lanes_reading(o):
                 w=round(w, 2), room_l=round(float(y[1] - e[0]), 2), room_r=round(float(e[1] - y[2]), 2))
 
 
+def radar_returns(agent, xy, yaw, v_ego):
+    """Pooled radar returns of the last frames, ground returns (< 0.3 m high) dropped: rows (s, lateral, x_rig, y_rig, vr, comp,
+    z, tag index)."""
+    fr = getattr(agent.router, "frames", {})
+    if not fr:
+        return np.zeros((0, 8))
+    last = max(fr)
+    out = []
+    for k, tag in enumerate(RADARS):
+        for f in range(last - P["radar_frames"] + 1, last + 1):
+            d = fr.get(f, {}).get(tag)
+            if d is None:
+                continue
+            r = radar_rig(tag, d[1], v_ego)
+            if len(r):
+                out.append(np.c_[r, np.full(len(r), k)])
+    r = np.concatenate(out) if out else np.zeros((0, 6))
+    r = r[r[:, 4] > 0.3]
+    if not len(r):
+        return np.zeros((0, 8))
+    w = rig_to_world(xy, yaw, r[:, :2])
+    s, lat, _ = project_ext(w, agent.route.xy)
+    return np.c_[s, lat, r]
+
+
+# vmerge3 release check (D7, radar instead of the Qwen question that failed its offline line, results/vm3_cross_offline.md)
+CROSS = dict(v=1.5,          # moving: ego-motion-compensated radial speed above this
+             bearing=25.0,   # from the side: bearing from the front radar at least this many degrees off the ego heading
+             r=30.0, ttc=4.0,  # within this range and closing so that range / closing speed <= ttc
+             n=2)            # returns needed
+
+
+def cross_threat(tg):
+    """(threat, detail) from the front radar: moving returns off to the side that close on the ego within CROSS["ttc"] s."""
+    if not len(tg):
+        return False, None
+    m = RADARS["RADAR_F"]
+    f = tg[(tg[:, 7] == 0) & (np.abs(tg[:, 5]) >= CROSS["v"]) & (tg[:, 4] < -1.0)]
+    if not len(f):
+        return False, None
+    dx, dy = f[:, 2] - (m["x"] - REAR_AXLE_X), f[:, 3]
+    r = np.hypot(dx, dy)
+    b = np.degrees(np.abs(np.arctan2(dy, dx)))
+    hit = (b >= CROSS["bearing"]) & (r <= CROSS["r"]) & (r / np.maximum(-f[:, 4], 0.1) <= CROSS["ttc"])
+    if hit.sum() >= CROSS["n"]:
+        i = int(np.argmin(np.where(hit, r, 1e9)))
+        return True, "r %.1f m bearing %.0f closing %.1f" % (r[i], np.degrees(np.arctan2(dy[i], dx[i])), -f[i, 4])
+    return False, None
+
+
 class PerceivedBypass:
     """The bypass path of pbyp3 (route shifted by `offset`, smooth ramps), with every privileged input replaced:
     obstacle start = openpilot lead, extent = prior + front-radar static returns, side / offset = openpilot lane lines and road
@@ -113,28 +163,7 @@ class PerceivedBypass:
 
     # ------------------------------------------------------------------ inputs
     def radar(self, xy, yaw, v_ego):
-        """Pooled radar returns of the last frames, ground returns (< 0.3 m high) dropped: rows (s, lateral, x_rig, y_rig, vr, comp,
-        z, tag index)."""
-        fr = getattr(self.agent.router, "frames", {})
-        if not fr:
-            return np.zeros((0, 8))
-        last = max(fr)
-        out = []
-        for k, tag in enumerate(RADARS):
-            for f in range(last - P["radar_frames"] + 1, last + 1):
-                d = fr.get(f, {}).get(tag)
-                if d is None:
-                    continue
-                r = radar_rig(tag, d[1], v_ego)
-                if len(r):
-                    out.append(np.c_[r, np.full(len(r), k)])
-        r = np.concatenate(out) if out else np.zeros((0, 6))
-        r = r[r[:, 4] > 0.3]
-        if not len(r):
-            return np.zeros((0, 8))
-        w = rig_to_world(xy, yaw, r[:, :2])
-        s, lat, _ = project_ext(w, self.agent.route.xy)
-        return np.c_[s, lat, r]
+        return radar_returns(self.agent, xy, yaw, v_ego)
 
     def lead(self):
         o = getattr(self.agent, "op_out", None)
@@ -282,8 +311,9 @@ class PerceivedBypass:
             return
         self.last_log = t
         mv = tg[np.abs(tg[:, 5]) >= P["moving_v"]] if len(tg) else tg
+        fr, rr = mv[mv[:, 7] == 0][:30], mv[mv[:, 7] > 0][:60]          # front / rear returns logged separately (round 4 lost the rear ones)
         rec = dict(t=round(t, 2), v=round(float(speed), 2), ego_s=round(ego_s, 2), lead=lx, lanes=lanes, gap=gap, why=why,
-                   n_radar=int(len(tg)), moving=[[round(float(x), 1) for x in row[[0, 1, 4, 5, 6, 7]]] for row in mv[:40]],
+                   n_radar=int(len(tg)), moving=[[round(float(x), 1) for x in row[[0, 1, 4, 5, 6, 7, 2, 3]]] for row in np.r_[fr, rr]],
                    state=None if st is None else {k: (round(v, 2) if isinstance(v, float) else v) for k, v in st.items()})
         self.log.write(json.dumps(rec) + "\n")
 
