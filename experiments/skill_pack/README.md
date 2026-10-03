@@ -1,7 +1,7 @@
 # skill_pack: NAVSIM skill pack N0-N4
 
 status: concluded
-decisions: 64, 68, 69, 70, 71, 72, 73, 75, 88, 94
+decisions: 64, 68, 69, 70, 71, 72, 73, 75, 88, 94, 97
 index: Navtest PDMS 84.2 to 91.59 (N3), flat at N4
 
 **Question.** Can a scorer head over native plan plus extra slots raise NAVSIM PDMS, weights unchanged?
@@ -12,7 +12,7 @@ index: Navtest PDMS 84.2 to 91.59 (N3), flat at N4
 
 **History alignment as an input rule (2026-10-03 night).** Removing the history rotation everywhere is rejected (navhard 32.67 / 31.99 vs 33.33, navtest -8 / -10 PDMS: stage 2 up, real scenes down); a navtrain-calibrated confidence selector between the shipped and the aligned rollout (post hoc) gives navhard 34.31 (+0.98 [+0.03, +1.97]) at navtest -0.09 [-0.18, -0.01]. [results/history-align/report.md](results/history-align/report.md), plan [plans/2026-10-04-history-align-plan.md](plans/2026-10-04-history-align-plan.md).
 
-**Tracker-lag pre-compensation (2026-10-04, scorer-adapter trick, rejected).** Submitting poses that make the NAVSIM LQR + bicycle realise the plan (tracking error 1.0-1.4 m -> 0.07-0.09 m) loses: full alpha 1 navhard -5.70 [-8.06, -3.30] / navtest -5.91 (native), N4 -10.53 / -8.47; post hoc path variant at the navtrain alpha 0.25 navhard +0.42 [-1.01, +1.81], navtest -0.18. The exact plan (ideal tracker) also scores below the lagged one; losses are comfort plus DAC / LK on real scenes, gains only on stage-2 displaced starts. [results/tracker-precomp/](results/tracker-precomp/), plan [plans/2026-10-04-tracker-precomp-plan.md](plans/2026-10-04-tracker-precomp-plan.md).
+**Tracker-lag pre-compensation (2026-10-04, scorer-adapter trick, rejected).** Submitting poses that make the NAVSIM LQR + bicycle realise the plan (tracking error 1.0-1.4 m -> 0.07-0.09 m) loses: full alpha 1 navhard -5.70 [-8.06, -3.30] / navtest -5.91 (native), N4 -10.53 / -8.47; post hoc path variant at the navtrain alpha 0.25 navhard +0.42 [-1.01, +1.81], navtest -0.18. The exact plan (ideal tracker) also scores below the lagged one; losses are comfort plus DAC / LK on real scenes, gains only on stage-2 displaced starts. [results/tracker-precomp/report.md](results/tracker-precomp/report.md), plan [plans/2026-10-04-tracker-precomp-plan.md](plans/2026-10-04-tracker-precomp-plan.md).
 
 **Read more.** research/leaderboard-skill-pack.md, research/navhard-deficit-breakdown.md
 
