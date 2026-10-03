@@ -31,7 +31,10 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      derot_prev_desire true: the replay starts from the desire of the step before the window (no spurious
                      rising-edge pulse); with derot_sel > 0 and derot_rotate false the native plan is always kept and the
                      max |replay - native| plan position (m) is logged as derot.dpos (window control,
-                     experiments/hugsim/results/sel3_window_check.md)
+                     experiments/hugsim/results/sel3_window_check.md);
+                     lstab (openpilot, dict of lib/launch_stab.LaunchGate keywords, default off; plans/2026-10-04-launch-stab-prereg.md):
+                     launch stabilisation - for t_launch s after a standstill a forked second session sees the frames
+                     re-rendered at the launch heading and its lateral plan, rotated into the car frame, replaces the native one
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
@@ -54,6 +57,8 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(ROOT), str(ROOT / "scripts"), str(ROOT / "experiments/hugsim/archive")]
 import zeroshot_wire as wire  # noqa: E402
 from jevdrive import hugsim_zs as Z  # noqa: E402
+sys.path.insert(0, str(ROOT / "lib"))
+import launch_stab as LS  # noqa: E402
 
 OP_T = np.array([10.0 * (i / 32) ** 2 for i in range(33)])
 OP_CTX_S = 0.2                                     # openpilot context step (5 Hz)
@@ -183,6 +188,21 @@ class Agent:
                     r, out = r0, out0
         elif sel > 0:
             r, out = r0, out0
+        elif "lstab" in self.opts:
+            if not hasattr(self, "gate"):
+                self.gate = LS.LaunchGate(**self.opts["lstab"])
+            th = self.hist.th[-1]
+            mode = self.gate.step(float(info["timestamp"]), float(info["ego_velo"]), th, desire)
+            arrays = {"img2": img2}
+            if mode != "off":
+                yaw = float(np.degrees(self.gate.delta(th)))       # the frame seen from the launch heading
+                arrays["img2s"] = img2 if round(yaw, 1) == 0.0 else self.op.pack(obs["rgb"], self.op.rot_index(yaw))
+            r, out = self.call(dict(meta, desire=desire, reps=reps, stab=mode), arrays)
+            rec["lstab"] = {"mode": mode, "why": self.gate.why}
+            if mode != "off":
+                sp, _ = LS.to_car(out["stab_pos"], None, self.gate.delta(th))
+                rec["lstab"].update(delta=round(yaw, 2), dlat3=round(float(np.interp(3.0, out["t"], sp[:, 1] - out["pos"][:, 1])), 3))
+                out = dict(out, pos=LS.merge_lateral(out["pos"], sp))
         else:
             r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2})
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)

@@ -20,6 +20,11 @@ rising-edge pulse; the class is imported, not copied), plus two things the arbit
           moved >= OP_SEL_REBUILD_DEG (0.5 deg) from its reference and >= OP_SEL_MIN_GAP (4) steps passed since the last
           rebuild (HUGSIM's 0.2 s replay cadence), else stepped once with the new frame rotated to the reference. Its plan replaces the native one (pos, vel, yaw, acc, curvature, accel; the lead / meta heads stay
           native) iff its summed 0-4 s lateral plan std < ratio x the native plan's.
+  lstab   (env OP_LSTAB=<json of lib/launch_stab.LaunchGate keywords>, e.g. '{}'; off when unset; experiments/hugsim/plans/
+          2026-10-04-launch-stab-prereg.md) launch stabilisation: a second session per connection, forked (exact state copy)
+          from the native one when the car moves off after a standstill, is stepped on the frames rotated to the launch heading
+          (meta "yaw"); for the launch phase its lateral plan (pos y, yaw, curvature), rotated into the car frame, replaces the
+          native one; longitudinal heads stay native.
 
     CUDA_VISIBLE_DEVICES=6 $DATA_DIR/envs/openpilot/bin/python experiments/op_closed_loop/archive/op_arb_server.py cinque --pool 4 \
         --backend cuda-iob --socket S
@@ -38,6 +43,8 @@ import numpy as np
 HERE = Path(__file__).resolve().parents[3] / "scripts"
 sys.path[:0] = [str(HERE), str(HERE.parent)]
 import zeroshot_policy_server as ZP  # noqa: E402
+sys.path.insert(0, str(HERE.parent / "lib"))
+import launch_stab as LS  # noqa: E402
 
 # openpilot selfdrive/modeld/constants.py, Meta: indices into the 55 sigmoid outputs (times 2, 4, 6, 8, 10 s)
 META = {"engaged": slice(0, 1), "gas_disengage": slice(1, 31, 6), "brake_disengage": slice(2, 31, 6),
@@ -64,7 +71,9 @@ class ArbModel(ZP.OpenpilotModel):
         #                                                    rotated by the constant OP_SEL_CHECK_DEG, a camera mounted that much off)
         self.sel_check_deg = float(e("OP_SEL_CHECK_DEG", "0.01"))
         self.rot_cache, self.rot_lock = OrderedDict(), threading.Lock()
-        a.pool = (1 + self.twin + (self.sel > 0)) * a.pool   # a twin (unless --no-twin) and a selector session per connection
+        ls = e("OP_LSTAB", "")
+        self.lstab = None if not ls else __import__("json").loads(ls)
+        a.pool = (1 + self.twin + (self.sel > 0) + (self.lstab is not None)) * a.pool   # a twin (unless --no-twin) and a selector session per connection
         self._warm = []
         self.E = None                             # adapted model: intent adapter table (4, 32, 512), next to the ONNX
         if getattr(a, "onnx", ""):
@@ -79,11 +88,13 @@ class ArbModel(ZP.OpenpilotModel):
         self.free += self._warm
 
     def new_state(self, state=None):
-        keys = ("model",) + (("twin",) if self.twin else ()) + (("sel",) if self.sel > 0 else ())
+        keys = ("model",) + (("twin",) if self.twin else ()) + (("sel",) if self.sel > 0 else ()) + \
+            (("stab",) if self.lstab is not None else ())
+        gate = (lambda: LS.LaunchGate(**self.lstab)) if self.lstab is not None else (lambda: None)  # noqa: E731
         if state and "model" in state:
             for k in keys:
                 state[k].reset()
-            state.update(buf=deque(maxlen=self.sel_n + 1), sel_ref=None)
+            state.update(buf=deque(maxlen=self.sel_n + 1), sel_ref=None, gate=gate())
             return state
         take = lambda: self.free.pop() if self.free else self.make()  # noqa: E731
         ss = {k: take() for k in keys}
@@ -91,17 +102,17 @@ class ArbModel(ZP.OpenpilotModel):
             m.reset()
         if state is None:
             self._warm = list(ss.values())
-        ss.update(buf=deque(maxlen=self.sel_n + 1), sel_ref=None)
+        ss.update(buf=deque(maxlen=self.sel_n + 1), sel_ref=None, gate=gate())
         return ss
 
     def release(self, state):
         if state:
-            self.free += [state[k] for k in ("model", "twin", "sel") if k in state]
+            self.free += [state[k] for k in ("model", "twin", "sel", "stab") if k in state]
 
     # ------------------------------------------------------------------------ selector
     def prepare(self, meta, arrays):
         prep = super().prepare(meta, arrays)
-        if self.sel > 0 and "OP_ROAD" in arrays:
+        if (self.sel > 0 or self.lstab is not None) and "OP_ROAD" in arrays:
             prep["raw"] = (arrays["OP_ROAD"], arrays["OP_WIDE"])
         return prep
 
@@ -227,9 +238,29 @@ class ArbModel(ZP.OpenpilotModel):
                        yaw=d["plan_yaw"].astype(np.float32), acc=ZP_decode_plan(sraw[m.slices["plan"]])[:, 6].astype(np.float32))
             info.update(curvature=d["curvature"], accel=d["accel"])
 
+    def _lstab(self, state, meta, prep, info, out):
+        """Launch stabilisation step: the stab session sees this frame from the launch heading; its lateral plan, rotated into
+        the car frame, replaces the native lateral plan (lib/launch_stab.py)."""
+        g, m = state["gate"], state["stab"]
+        m.extra = state["model"].extra
+        delta = g.delta(float(meta["yaw"]))              # car heading past the launch heading, right-positive
+        dv = np.zeros(8, np.float32)
+        dv[int(meta.get("desire", 0))] = 1
+        sraw = m.step(self._pack_rot(prep["raw"], np.degrees(-delta)), desire=dv, traffic=(1, 0))
+        d = self.decode(sraw, m.slices, float(meta.get("speed", 0.0)))
+        sp, sy = LS.to_car(d["plan_pos"], d["plan_yaw"], delta)
+        info.update(ls_delta=round(float(np.degrees(delta)), 2), ls_dlat3=round(float(np.interp(3.0, self.t_idxs, sp[:, 1] - out["pos"][:, 1])), 3),
+                    curvature=d["curvature"])
+        out.update(pos=LS.merge_lateral(out["pos"], sp), yaw=sy.astype(np.float32))
+
     def plan(self, state, meta, prep):
         if self.E is not None:                           # intent adapter input of this step: 0 unknown, 1 straight, 2 left, 3 right
             state["model"].extra = {"intent_bias": self.E[int(meta.get("intent", 0))][None]}
+        g, mode = state.get("gate"), "off"
+        if g is not None and meta.get("yaw") is not None and "raw" in prep:
+            mode = g.step(float(meta.get("t", 0.0)), float(meta.get("speed", 0.0)), float(meta["yaw"]), int(meta.get("desire", 0)))
+            if mode == "fork":                           # the native state after the last standstill step, before this one
+                LS.fork_state(state["stab"], state["model"])
         info, out = super().plan(state, meta, prep)      # steps state["model"] with the route desire
         m = state["model"]
         raw = m.last_raw
@@ -259,6 +290,10 @@ class ArbModel(ZP.OpenpilotModel):
                     out[k + "_sd"] = np.exp(np.clip(r[h:].reshape(n, 33, 2)[:, :, 0], -10, 5)).astype(f32)
         if self.sel > 0:
             self._selector(state, meta, prep, info, out)
+        if g is not None:
+            info.update(ls=mode, ls_why=g.why)
+            if mode != "off":
+                self._lstab(state, meta, prep, info, out)
         if meta.get("twin"):
             t = state["twin"]
             traw = t.step(prep["img2"], desire=np.zeros(8, np.float32), traffic=(1, 0))

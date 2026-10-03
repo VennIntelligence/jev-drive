@@ -515,6 +515,8 @@ class OpArbAgent(Z.ZeroShotAgent):
             rec.update(tw_xy=r3(tw[[3, 7, 11, 19]]), tw_dp=r3(np.asarray(out["twin_desire_pred"])[:, :3]))
         if "sel" in info:                                    # server-side selector (op_arb_server.py OP_SEL)
             rec["sel"] = {k: info[k] for k in info if k.startswith("sel")}
+        if "ls" in info:                                     # server-side launch stabilisation (op_arb_server.py OP_LSTAB)
+            rec["ls"] = {k: info[k] for k in info if k.startswith("ls")}
         rec["ctx"] = self._ctx()
         if self.pc is not None:
             rec["pc"] = {k: v for k, v in self.pc.meta.items() if k not in ("junctions", "obstacles")}

@@ -20,6 +20,8 @@ import numpy as np
 
 sys.path[:0] = [str(Path(__file__).resolve().parents[3] / "scripts")]
 import zeroshot_policy_server as S  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "lib"))
+import launch_stab as LS  # noqa: E402
 
 
 class Alpamayo(S.Alpamayo):
@@ -90,9 +92,25 @@ class Openpilot(S.OpenpilotModel):
     def prepare(self, meta, arrays):
         if "img2" not in arrays:
             return super().prepare(meta, arrays)
-        return {"img2": np.ascontiguousarray(arrays["img2"]), "prep_ms": 0.0}
+        return {"img2": np.ascontiguousarray(arrays["img2"]), "img2s": arrays.get("img2s"), "prep_ms": 0.0}
+
+    def stab_session(self, state):
+        """Launch stabilisation (lib/launch_stab.py): a second pooled session per connection, taken on the first fork."""
+        if "stab" not in state:
+            with self.pool_lock:
+                m = self.pool.pop() if self.pool else self.make()
+            m.reset()
+            state["stab"] = m
+            import weakref
+            weakref.finalize(state, self._give_back, m)
+        return state["stab"]
 
     def plan(self, state, meta, prep):
+        stab = meta.get("stab", "off")                 # launch stabilisation: "fork" | "on" | "off" (lib/launch_stab.py)
+        if stab != "off" and not self.context_rate:
+            sm = self.stab_session(state)
+            if stab == "fork":                         # the native state after the last standstill step, before this one
+                LS.fork_state(sm, state["model"])
         desire = np.zeros(8, np.float32)
         desire[int(meta.get("desire", 0))] = 1
         traffic = tuple(meta.get("traffic", (1, 0)))
@@ -115,14 +133,23 @@ class Openpilot(S.OpenpilotModel):
                 raw = m.step(prep["img2"], desire=desire, traffic=traffic)
             for k in self.STATE:
                 state[k] = getattr(m, k)
+        sraw = None
+        if stab != "off" and not self.context_rate:
+            img2s = np.ascontiguousarray(prep["img2s"])
+            for _ in range(reps):
+                sraw = sm.step(img2s, desire=desire, traffic=traffic)
         d = self.decode(raw, m.slices, float(meta.get("speed", 0.0)))
         pl = raw[m.slices["plan"]]                         # MDN mu | log-std, (33, 15) each; column 1 = lateral position
         lat_std = np.exp(np.minimum(pl[pl.size // 2:], 11)).reshape(33, 15)[:, 1]
         info = {"infer_ms": 1e3 * (time.perf_counter() - t1), "curvature": d["curvature"], "accel": d["accel"],
                 "lat_std4": float(lat_std[self.t_idxs <= 4.0 + 1e-6].sum()),
                 "engaged": d["engaged"], "lead_prob": float(np.ravel(d["lead_prob"])[0])}
-        return info, {"pos": d["plan_pos"].astype(np.float32), "vel": d["plan_vel"][:, 0].astype(np.float32),
-                      "yaw": d["plan_yaw"].astype(np.float32), "t": self.t_idxs}
+        out = {"pos": d["plan_pos"].astype(np.float32), "vel": d["plan_vel"][:, 0].astype(np.float32),
+               "yaw": d["plan_yaw"].astype(np.float32), "t": self.t_idxs}
+        if sraw is not None:
+            ds = self.decode(sraw, sm.slices, float(meta.get("speed", 0.0)))
+            out.update(stab_pos=ds["plan_pos"].astype(np.float32), stab_yaw=ds["plan_yaw"].astype(np.float32))
+        return info, out
 
     def finish(self, meta, prep, info, out):
         pass
