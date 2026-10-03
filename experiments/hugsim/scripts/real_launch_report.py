@@ -112,7 +112,7 @@ def main():
                     vk = e["v"][i]
                     if not (b[0] <= vk < b[1]):
                         continue
-                    dth = np.trapz(e["yr"][i:i + 6], e["t"][i:i + 6])
+                    dth = np.trapezoid(e["yr"][i:i + 6], e["t"][i:i + 6])
                     p = e["ph"][c]["08"][i - e["lo"]]
                     if abs(p) < 15:
                         X.append(p), Y.append(dth)
@@ -132,7 +132,7 @@ def main():
         return np.array([fn(e, lo_s, hi_s) for e in E])
     win = lambda e, a_, b_: slice(e["j"] - int(b_ * 20), e["j"] - int(a_ * 20))   # noqa: E731
     sd = stat(lambda e, a_, b_: np.std(e["yr"][win(e, a_, b_)]), 0, 2)
-    net = stat(lambda e, a_, b_: abs(np.trapz(e["yr"][win(e, a_, b_)], e["t"][win(e, a_, b_)])), 0, 2)
+    net = stat(lambda e, a_, b_: abs(np.trapezoid(e["yr"][win(e, a_, b_)], e["t"][win(e, a_, b_)])), 0, 2)
     mx = stat(lambda e, a_, b_: np.max(np.abs(e["yr"][win(e, a_, b_)] - np.mean(e["yr"][win(e, a_, b_)]))), 0, 2)
     vmax = stat(lambda e, a_, b_: np.max(e["v"][win(e, a_, b_)]), 0, 2)
     print(f"2 s before onset: yaw-rate std median {np.median(sd):.3f} deg/s (p90 {np.percentile(sd, 90):.3f}); net |heading change| median {np.median(net):.3f} deg (p90 {np.percentile(net, 90):.3f}); "
@@ -148,7 +148,7 @@ def main():
     print("\n## the real car right after the onset\n")
     for T in (1, 2, 3):
         i = [min(e["j"] + 20 * T, len(e["v"]) - 1) for e in E]
-        dth = [abs(np.trapz(e["yr"][e["j"]: ii + 1], e["t"][e["j"]: ii + 1])) for e, ii in zip(E, i)]
+        dth = [abs(np.trapezoid(e["yr"][e["j"]: ii + 1], e["t"][e["j"]: ii + 1])) for e, ii in zip(E, i)]
         print(f"+{T} s: v median {np.median([e['v'][ii] for e, ii in zip(E, i)]):.2f} m/s; |net heading change| median {np.median(dth):.2f} deg, p90 {np.percentile(dth, 90):.2f}, max {np.max(dth):.1f}")
 
     # ---- realised loop: phi1 on actual heading change in the previous 1.25 s (decision 100 kernel s_gain)
@@ -162,7 +162,7 @@ def main():
                     i = e["j"] + 5 * k
                     if i - e["lo"] >= len(e["ph"][c]["08"]) or i >= len(e["yr"]) or i < 25:
                         continue
-                    th = np.trapz(e["yr"][i - 25:i + 1], e["t"][i - 25:i + 1])
+                    th = np.trapezoid(e["yr"][i - 25:i + 1], e["t"][i - 25:i + 1])
                     X.append([th, e["ph"][c]["08"][i - e["lo"]]])
                 A.append(np.array(X) if X else np.zeros((0, 2)))
             A = [x for x in A if len(x)]
