@@ -22,7 +22,7 @@ TRAJ = GATE + ["ego_progress", "time_to_collision_within_bound", "lane_keeping"]
 D5, D10 = np.deg2rad(5), np.deg2rad(10)
 ORDER = ["start_outside", "map_narrow", "wrong_direction", "tracker_lag", "early_start_offset", "under_turn", "over_turn", "too_fast",
          "lane_change", "other"]
-FLAGS = ["ref_fails", "d110_set", "junction", "bend", "straight", "cmd_fixable", "synthetic_history", "shallow", "walkway"]
+FLAGS = ["infeasible", "ref_fails", "d110_set", "junction", "bend", "straight", "cmd_fixable", "synthetic_history", "shallow", "walkway"]
 ARMS = ["native", "best"]
 NB, SEED = 2000, 0
 
@@ -70,7 +70,7 @@ def classify(feat, T, arm):
         x = dict(token=t, stage=r["stage"], cmd=r["cmd"], dac=dac, dac_geom=f["dac_geom"], ref_dac=float(T["ref"].loc[t, "drivable_area_compliance"]),
                  r_dpsi2=rf["dpsi2"], r_dpsi4=rf["dpsi4"], r_y4=rf["y4"], r_s4=rf["s4"], p_dpsi2=f["dpsi2"], p_dpsi4=f["dpsi4"], p_s4=f["s4"],
                  end_y=f["end_y"], ref_end_y=r["ref_end_y"], center_off=st["center_off"], head_err=st["center_head_err"])
-        for k in ("first", "start_outside", "side", "d_worst", "junction", "map_narrow", "walk", "raw_ok", "retime_ok", "rot0_ok"):
+        for k in ("first", "start_outside", "side", "d_worst", "junction", "map_narrow", "walk", "raw_ok", "retime_ok", "rot0_ok", "feasible", "n_feasible"):
             x[k] = f.get(k, np.nan)
         rows.append(x)
     d = pd.DataFrame(rows).set_index("token")
@@ -100,7 +100,8 @@ def classify(feat, T, arm):
     fl = {"ref_fails": d.ref_dac < 1, "d110_set": d.r_dpsi2.abs() >= D5, "junction": d.junction == True,  # noqa: E712
           "bend": (d.junction != True) & (d.r_dpsi4.abs() >= D10), "straight": (d.junction != True) & (d.r_dpsi4.abs() < D10),  # noqa: E712
           "cmd_fixable": (c["under_turn"] | c["wrong_direction"]) & d.cmd.isin([0, 2]) & (np.where(d.cmd == 0, 1, -1) == s),
-          "synthetic_history": (d.stage == "two") & (d.rot0_ok == True), "shallow": d.d_worst < 0.3, "walkway": d.walk == True}  # noqa: E712
+          "synthetic_history": (d.stage == "two") & (d.rot0_ok == True), "shallow": d.d_worst < 0.3, "walkway": d.walk == True,  # noqa: E712
+          "infeasible": d.feasible == False}  # noqa: E712
     for k, v in fl.items():
         d["f_" + k] = v & fail
     return d
@@ -114,16 +115,17 @@ def main(dd):
     T = {a: S[a].loc[tokens].copy() for a in ARMS + ["ref"]}
     for a in T:
         assert np.allclose(rescore(T[a]), T[a].score.to_numpy(), atol=1e-6), a
-    agg = Agg(S["mapping"], tokens, T["native"].weight.to_numpy())
-    B = boot_idx(len(agg.g))
+    AG = {a: Agg(S["mapping"], tokens, T[a].weight.to_numpy()) for a in ARMS + ["ref"]}      # stage-2 weights depend on the arm's stage-1 plan
+    B = boot_idx(len(AG["native"].g))
     out = {"check": {}, "arms": {}}
     for a in ARMS + ["ref"]:
+        agg = AG[a]
         mine = 100 * np.nanmean(agg.groups(T[a].score.to_numpy()))
         out["check"][a] = dict(fast=mine, devkit=100 * S[a + "_official"]["combined"])
         print(a, out["check"][a])
     allrows = []
     for a in ARMS:
-        t, r = T[a], T["ref"]
+        t, r, agg = T[a], T["ref"], AG[a]
         d = classify(feat, T, a).loc[tokens]
         fail = (d.dac < 1).to_numpy()
         base_g = agg.groups(t.score.to_numpy())
@@ -169,11 +171,13 @@ def main(dd):
         for k in ORDER[:-1]:
             res["flags"]["any_" + k] = int(d["c_" + k].sum())
         for k in FLAGS:
-            res["flags"][k] = row(d["f_" + k].to_numpy()) if k in ("cmd_fixable", "synthetic_history", "ref_fails", "shallow") else int(d["f_" + k].sum())
+            res["flags"][k] = row(d["f_" + k].to_numpy()) if k in ("cmd_fixable", "synthetic_history", "ref_fails", "shallow", "infeasible") else int(d["f_" + k].sum())
         res["cross"]["primary_x_geometry"] = pd.crosstab(d.primary[fail], np.select([d.f_junction[fail], d.f_bend[fail]], ["junction", "bend"], "straight")).to_dict()
         res["cross"]["primary_x_d110"] = pd.crosstab(d.primary[fail], d.f_d110_set[fail]).to_dict()
         res["cross"]["primary_x_stage"] = pd.crosstab(d.primary[fail], d.stage[fail]).to_dict()
         res["cross"]["primary_x_reffail"] = pd.crosstab(d.primary[fail], d.f_ref_fails[fail]).to_dict()
+        res["cross"]["primary_x_infeasible"] = pd.crosstab(d.primary[fail], d.f_infeasible[fail]).to_dict()
+        res["cross"]["primary_x_walkway"] = pd.crosstab(d.primary[fail], d.f_walkway[fail]).to_dict()
         res["cross"]["primary_x_shallow"] = pd.crosstab(d.primary[fail], d.f_shallow[fail]).to_dict()
         # base rate of the d110 set among all tokens vs DAC failures
         res["d110_rate_all"] = float((d.r_dpsi2.abs() >= D5).mean())

@@ -6,6 +6,8 @@ For every navhard token: reference kinematics (PDM-Closed), each arm's plan kine
   raw_ok       the plan itself (8 poses -> 41 states, plan heading) stays inside: an ideal tracker would pass
   retime_ok    the plan path re-timed to the reference's distance-time curve stays inside under the LQR replay
   rot0_ok      the same model on history-rotation-removed inputs (al-rot0 rollout) stays inside
+  feasible     some constant-curvature arc (41 curvatures x {plan, reference} distance-time curve) from the same start stays inside
+               under the same LQR replay (prereg addendum 1)
 Also exports the devkit post-aggregation score tables (native, best, ref) and the two-stage mapping for step 2.
 
   DATA_DIR=... PYTHONPATH=$DATA_DIR/third_party/navsim:$DATA_DIR/third_party/nuplan-devkit \
@@ -90,6 +92,33 @@ def retime(d, ref):
     return np.stack([np.interp(tgt, sp, d[:, 0]), np.interp(tgt, sp, d[:, 1]), np.interp(tgt, sp, h)], -1)
 
 
+KAP = np.linspace(-0.2, 0.2, 41)
+
+
+def arcs(sd):
+    """Constant-curvature arcs (len(KAP), 41, 3) along the distance profile sd (41,)."""
+    k = KAP[:, None]
+    z = np.abs(k) < 1e-9
+    kk = np.where(z, 1.0, k)
+    ks = k * sd[None]
+    return np.stack([np.where(z, sd[None], np.sin(ks) / kk), np.where(z, 0.0, (1 - np.cos(ks)) / kk), ks], -1)
+
+
+def feasible(mc, g, profiles):
+    from navsim.common.dataclasses import Trajectory
+    from navsim.evaluate.pdm_score import get_trajectory_as_array, transform_trajectory
+    W = _W
+    arr = [get_trajectory_as_array(transform_trajectory(Trajectory(L.poses_from_dense(a)), mc.ego_state), W["samp"], mc.ego_state.time_point)
+           for sd in profiles for a in arcs(sd)]
+    st = W["sim"].simulate_proposals(np.stack(arr), mc.ego_state)
+    ok = np.array([inside_of(mc, g, s)[1].all() for s in st])
+    return bool(ok.any()), int(ok.sum())
+
+
+def dist_profile(d):
+    return np.r_[0, np.cumsum(np.hypot(*np.diff(d[:, :2], axis=0).T))]
+
+
 def depart(mc, g, states, cor, inside):
     """Departure geometry of a failing replay."""
     import shapely
@@ -139,6 +168,7 @@ def work(token):
             f["raw_ok"] = bool(inside_of(mc, g, to_global(mc, d))[1].all())
             f["retime_ok"] = bool(inside_of(mc, g, L.simulate(W["sim"], mc, L.poses_from_dense(retime(d, ref))))[1].all())
             f["rot0_ok"] = bool(inside_of(mc, g, L.simulate(W["sim"], mc, W["P0"][a][token]))[1].all())
+            f["feasible"], f["n_feasible"] = feasible(mc, g, [dist_profile(d), dist_profile(ref)])
         out["arms"][a] = f
     out["ref_end_y"] = float(ref[-1, 1])
     return out
