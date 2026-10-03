@@ -1,0 +1,34 @@
+{
+ "dataset": "b2d",
+ "name": "img-carla-dev",
+ "version": 1,
+ "unit": "route",
+ "n": 18,
+ "sha256": "1491c2534eb7d74cd27066db39d487adb656422e8499280ea8c20bc609f326da",
+ "origin": "op_img_cmd CARLA junction set (179 bench2drive220 routes re-recorded with the P4 rig, img_carla_*.py); test = the decision-95 routes present + random routes to 60 (seed 20261004), dev 18 random routes, train = the rest",
+ "status": "frozen",
+ "used_by": [
+  "op_img_cmd"
+ ],
+ "notes": "op_img_cmd Q3 fine-tune split; train samples sharing a junction node with test are dropped",
+ "members": [
+  "10793",
+  "11738",
+  "12791",
+  "27494",
+  "27506",
+  "27787",
+  "27916",
+  "28008",
+  "28087",
+  "28111",
+  "28198",
+  "28243",
+  "3100",
+  "334",
+  "35330",
+  "3708",
+  "3869",
+  "4582"
+ ]
+}
