@@ -42,18 +42,22 @@ def sel_gain(rule, a_deg):
     return 1.0 if r["d1"] <= 0 else float(np.clip((abs(a_deg) - r["d0"]) / (r["d1"] - r["d0"]), 0.0, 1.0))
 
 
-def plan_select(rule, v, plan):
-    """HUGSIM plan (N, 2) in (x right, y forward): rotate the plan about the car so its 1 s point (index 1, 0.5 s spacing) direction a
-    becomes a * (1 - w + w * s(|a|)), w = speed taper. Plans with a short 1 s point are left alone."""
+def plan_select(rule, v, plan, idx=1, fwd=1, lat=0):
+    """Rotate a plan about the car so its direction at point `idx` (the 1 s point: index 1 for HUGSIM's 0.5 s spacing, 3 for B2D's 0.25 s) becomes
+    a * (1 - w + w * s(|a|)), w = speed taper. Columns: fwd / lat (HUGSIM (x right, y forward): lat=0, fwd=1; B2D rig (x forward, y lateral): fwd=0,
+    lat=1); the rotation turns the plan toward the forward axis, so the lateral sign convention does not matter. Short 1 s points are left alone."""
     r = full(rule)
     plan = np.asarray(plan, float)
     w = taper(rule, v)
-    if r["d1"] <= 0 or w <= 0 or len(plan) < 2 or np.linalg.norm(plan[1]) < 0.3:
+    if r["d1"] <= 0 or w <= 0 or len(plan) <= idx or np.linalg.norm(plan[idx]) < 0.3:
         return plan
-    a = math.atan2(plan[1, 0], plan[1, 1])
-    d = a * (sel_gain(rule, math.degrees(a)) - 1.0) * w          # rotation to apply (rad), atan2(x, y) convention
+    a = math.atan2(plan[idx, lat], plan[idx, fwd])
+    d = a * (sel_gain(rule, math.degrees(a)) - 1.0) * w          # rotation to apply (rad)
     c, s = math.cos(d), math.sin(d)
-    return np.stack([plan[:, 0] * c + plan[:, 1] * s, -plan[:, 0] * s + plan[:, 1] * c], -1)
+    out = plan.copy()
+    out[:, lat] = plan[:, lat] * c + plan[:, fwd] * s
+    out[:, fwd] = -plan[:, lat] * s + plan[:, fwd] * c
+    return out
 
 
 def clip_kappa(rule, v, k_prev, k_new, dt):
