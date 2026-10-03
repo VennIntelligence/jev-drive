@@ -7,7 +7,8 @@ frames on the 5 Hz lattice, f-18 .. f, zero state; port O reads 8.004 against th
          both -> $H/wod/plans.npz (plan MDN mean + std per model x variant) + headings
   check  rot0 sign check: horizontal phase-correlation shift of history frame 0 against the t0 frame, native vs rot0, on the
          turning samples (no model, no score)
-  score  RFS / ADE per row, selector at --ratios, x1.06 trick rows, paired bootstraps over segments
+  score  RFS / ADE per row, selector at --ratios, x1.06 trick rows, paired bootstraps over segments; when both exist, the
+         serving-ONNX exam predictions (wod_zeroshot_openpilot.py, preds/op_cinque and op_cinque_Oit_dw3-s0) as a path check
          -> experiments/op_adapt_h/results/one_driver/wod.{md,json}
 
   CUDA_VISIBLE_DEVICES=0 taskset -c 0-39 $DATA_DIR/envs/op-train/bin/python experiments/op_adapt_h/scripts/h_wod.py run
@@ -190,6 +191,10 @@ def cmd_score(a):
         for r in a.ratios:
             pick = lat_std(k, 1) < r * lat_std(k, 0)
             rows[f"{lab} + selector r{r:g}"] = (np.where(pick[:, None, None], wr, wn), pick)
+    srv = {"shipped (serving ONNX)": Z.root("preds", "op_cinque"), "it_dw3-s0 (serving ONNX)": Z.root("preds", "op_cinque_Oit_dw3-s0")}
+    if all((d / f"{n}.npz").exists() for d in srv.values() for n in names):      # path check: the exam runner, 10 s warm-up at 20 Hz
+        for lab, d in srv.items():
+            rows[lab] = (np.stack([np.load(d / f"{n}.npz")["wod"] for n in names]).astype(np.float64), None)
     groups = seq
     per, out = {}, []
     for lab, (w, pick) in rows.items():
@@ -213,11 +218,12 @@ def cmd_score(a):
         d0 = W.rfs_by_cluster(fa, cl)[0] - W.rfs_by_cluster(fb, cl)[0]
         bs = [W.rfs_by_cluster(fa[i], cl[i])[0] - W.rfs_by_cluster(fb[i], cl[i])[0] for i in draws]
         return d0, float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))
-    refs = {"vs shipped": "shipped", "vs it_dw3": "it_dw3-s0"}
     for r in out:
+        serving = "serving" in r["row"]
+        refs = {"vs shipped": "shipped (serving ONNX)" if serving else "shipped"}
+        if r["row"].startswith("it_dw3") and not serving:
+            refs["vs it_dw3"] = "it_dw3-s0"
         for nm, ref in refs.items():
-            if nm == "vs it_dw3" and not r["row"].startswith("it_dw3"):
-                continue
             fa, aa = per[r["row"]]
             fb, ab = per[ref]
             d = rfs_delta(fa, fb)
