@@ -4,7 +4,7 @@ Same measurement as spin_attr_cpu_gain.py / lean_probe.py (decisions 100, 110) o
 Per row and fake yaw w in (0, +W, -W) deg / model-s: the history frames get yaw w * (j - 9) * 0.2 deg (left +, t0 unchanged), frame 0 is held WARM
 reps (HUGSIM's static warm-up), the others PER reps; read phi1 = direction of the HUGSIM 1 s plan point (lean_probe.metrics, DIL 1.25).
     python wod_launch_gain.py <model: cinque | <onnx name>> <out.jsonl> --shard K --nshard N [--threads 4] [--limit E] [--w 2]
-Events are visited in a fixed random order, so a partial run is a random subset; resumable (rows already in out.jsonl are skipped)."""
+Events are visited dev-split first, then in a fixed random order, so a partial run is a random subset; resumable (rows already in out.jsonl are skipped)."""
 import argparse
 import json
 import os
@@ -40,13 +40,15 @@ def warp(f, cam, dpsi):
 
 
 def events(tab):
-    """event key (seq, onset frame) -> {m: row}; events in a fixed random order."""
+    """event key (seq, onset frame) -> {m: row}; events in a fixed random order, dev-split events first."""
     ev = {}
     for r, (i, m) in enumerate(zip(tab["id"], tab["m"])):
         q, f = str(i).rsplit("-", 1)
         ev.setdefault((q, int(f) - 2 * (int(m) - 1)), {})[int(m)] = r
     keys = sorted(ev)
-    return [ev[keys[i]] for i in np.random.default_rng(0).permutation(len(keys))]
+    order = [ev[keys[i]] for i in np.random.default_rng(0).permutation(len(keys))]
+    dev = lambda e: tab["split"][next(iter(e.values()))] == "dev"  # noqa: E731
+    return [e for e in order if dev(e)] + [e for e in order if not dev(e)]      # dev (held out of adapted models) first
 
 
 def main():
