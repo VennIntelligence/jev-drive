@@ -50,19 +50,6 @@ def controller_c(exam_csv):
     return float((X * Y).sum() / (X * X).sum()), len(X)
 
 
-def loop_sim(c, Hgrid, Fgrid, lean=1.0, n=12, win=6):
-    """theta_{k+1} = theta_k + c phi_k, phi_k = lean + F(H_k), H_k = theta_k - theta_{k-win} (deg, + left); F odd, interpolated."""
-    th = np.zeros(n + win + 1)
-    phis = []
-    for k in range(win, win + n):
-        H = th[k] - th[k - win]
-        F = np.sign(H) * np.interp(abs(H), Hgrid, Fgrid, left=0.0)
-        phi = lean + F
-        phis.append(phi)
-        th[k + 1] = th[k] + c * phi
-    return np.array(phis)
-
-
 def main(L, RP, out):
     L, RP, out = Path(L), Path(RP), Path(out)
     out.mkdir(parents=True, exist_ok=True)
@@ -120,26 +107,55 @@ def main(L, RP, out):
     md.append("\nRatio adapted / shipped of the mean G_phi1: " + "; ".join(
         f"{m}: " + ", ".join(f"{r:g}: {S[(m, r)] / S[('O', r)]:.2f}" for r in RATES) for m in MODELS[1:]))
 
+    # ---------------------------------------------------------------- local gain at the closed-loop operating point
+    LC = json.load(open(L / "local.json"))
+    lrows = []
+    for key in [k for k in LC if not k.startswith("_")]:
+        th = np.array(LC[key]["theta"])
+        for m in MODELS:
+            for w in (0.5, 2.0):
+                p, q = LC[key][f"{m}|{w:+g}"], LC[key][f"{m}|{-w:+g}"]
+                for i, (x, y) in enumerate(zip(p, q)):
+                    k = i + 1
+                    lrows.append(dict(log=key, model=m, w=w, step=k, v=LC[key]["v"][k], H=-np.degrees(th[k] - th[max(0, k - 6)]),
+                                      phi=LC[key][f"{m}|+0"][i]["phi1"], s=(x["phi1"] - y["phi1"]) / 2 / (1.2 * w)))
+    lc = pd.DataFrame(lrows)
+    lc.to_csv(out / "local_gain.csv", index=False)
+    md.append("\n## 1c. Local gain at the closed-loop operating point (logged history kept, fake rate +-w on top; 3 spin scenarios x 3 logs)\n")
+    md.append("s_local = (phi1(+w) - phi1(-w)) / 2 / (1.2 w), deg of 1 s plan direction per deg of added history yaw over 6 steps. Median over the 9 logs.\n")
+    md.append("| model | w | " + " | ".join(f"step {k}" for k in range(1, 11)) + " | steps 3-9 |\n|" + "---|" * 13)
+    SL = {}
+    for m in MODELS:
+        for w in (0.5, 2.0):
+            q = lc[(lc.model == m) & (lc.w == w)]
+            med = q.groupby("step").s.median()
+            SL[(m, w)] = float(q[(q.step >= 3) & (q.step <= 9)].s.median())
+            md.append(f"| {m} | {w:g} | " + " | ".join(f"{med.get(k, np.nan):.2f}" for k in range(1, 11)) + f" | {SL[(m, w)]:.2f} |")
+    pr = lc[lc.w == 2.0].pivot_table(index=["log", "step"], columns="model", values="s")
+    for m in MODELS[1:]:
+        t = boot((pr[m] / pr["O"]).values, f=np.median)
+        md.append(f"\nRatio {m} / shipped of s_local (w 2, per log x step, median [bootstrap CI]): {t[0]:.2f} [{t[1]:.2f}, {t[2]:.2f}]")
+
     # ---------------------------------------------------------------- loop gain
     c, nc = controller_c(D / "results.csv")
-    md.append(f"\n## Loop gain\n\nController transfer c = {c:.3f} deg of executed yaw per step per deg of the sent 1 s plan direction "
-              f"(base exam, v < 3 m/s, n = {nc} steps). Linear loop theta_(k+1) = theta_k + c phi_k, phi_k = lean + s H_k, "
-              "H_k = theta_k - theta_(k-6): dominant root z of z^6 (z - 1) = c s (z^6 - 1); z > 1 grows.\n")
-    md.append("| model | " + " | ".join(f"s({r:g})" for r in RATES) + " | z at s(0.5) | z at s(1) | z at s(2) | z at s(10) | simulated growth, steps 3-8, lean 1 deg |\n|" + "---|" * (6 + len(RATES)))
-    sim = {}
+    md.append(f"\n## Loop gain per step\n\nController transfer c = {c:.3f} deg of executed yaw per 0.25 s step per deg of the sent 1 s plan "
+              f"direction (base exam, v < 3 m/s, n = {nc} steps). Two bounds for how the plan reads the history: window kernel "
+              "phi_k = lean + s (theta_k - theta_(k-6)), growth = dominant root of z^7 - (1 + cs) z^6 + cs (lower bound, treats yaw as "
+              "accumulated over 6 steps); rate kernel phi_k = lean + 6 s (theta_k - theta_(k-1)), growth = 6 c s (upper bound, the plan "
+              "reads only the latest yaw rate). The fake history in every probe is a constant rate, so it cannot separate the two. "
+              "Decision 96 measured about x1.5 per step.\n")
+    md.append("| s from | model | s | window kernel z | rate kernel z |\n|---|---|---|---|---|")
+    def zwin(cs):
+        r = np.roots(np.r_[1.0, -(1 + cs), np.zeros(5), cs])
+        r = r[np.abs(r - 1) > 1e-6]
+        return float(np.max(np.abs(r)))
+    zsum = {}
     for m in MODELS:
-        s_r = [S[(m, r)] / (1.2 * r) for r in RATES]
-        zz = []
-        for sv in (s_r[0], s_r[1], s_r[2], s_r[-1]):
-            roots = np.roots(np.r_[1.0, -(1 + c * sv), np.zeros(5), c * sv])   # z^7 - (1 + cs) z^6 + cs
-            roots = roots[np.abs(roots - 1) > 1e-6]
-            zz.append(float(np.max(np.abs(roots))))
-        Hg = np.r_[0.0, [1.2 * r for r in RATES]]
-        Fg = np.r_[0.0, [S[(m, r)] for r in RATES]]
-        ph = loop_sim(c, Hg, Fg)
-        sim[m] = ph
-        gr = float(np.exp(np.mean(np.diff(np.log(np.abs(ph[2:8]) + 1e-9)))))
-        md.append(f"| {m} | " + " | ".join(f"{x:.2f}" for x in s_r) + " | " + " | ".join(f"{x:.2f}" for x in zz) + f" | x{gr:.2f} |")
+        for src, sv in ((f"HUGSIM step 6, de-rotated, w 2", S[(m, 2.0)] / 2.4), ("local, steps 3-9, w 2", SL[(m, 2.0)]),
+                        ("local, step 1, w 2", float(lc[(lc.model == m) & (lc.w == 2.0) & (lc.step == 1)].s.median()))):
+            zsum[(m, src)] = (zwin(c * sv), 6 * c * sv)
+            md.append(f"| {src} | {m} | {sv:.2f} | {zwin(c * sv):.2f} | {6 * c * sv:.2f} |")
+    sim = {m: lc[(lc.model == m) & (lc.w == 2.0)].groupby("step").s.median() for m in MODELS}
 
     # ---------------------------------------------------------------- 2: launch lean
     LO = json.load(open(L / "lean_O64.json"))
@@ -259,10 +275,10 @@ def fig(g, hr, sim, ln, W, rr, c, stem):
     P.panel(a, "(a)")
     a = ax[1]
     for m in col:
-        a.plot(np.arange(1, len(sim[m]) + 1), sim[m], "o-", color=col[m], ms=2.5)
+        a.plot(sim[m].index, sim[m].values, "o-", color=col[m], ms=2.5)
     a.set_yscale("log")
-    a.set_xlabel("step")
-    a.set_ylabel("plan direction (deg)")
+    a.set_xlabel("closed-loop step")
+    a.set_ylabel("local gain (deg / deg)")
     P.panel(a, "(b)")
     a = ax[2]
     b = W["lean10"]["base"]
