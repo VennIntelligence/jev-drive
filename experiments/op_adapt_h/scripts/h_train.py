@@ -55,6 +55,12 @@ ARMS = {
                 dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
     "ln4p10": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 9, "D": 10, "H": 6, "O": 5, "L": 8, "S": 4, "M": 6}, lam_p=10.0,
                    dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
+    # iteration 3: launch fake-yaw sign fixed (bank2 / bank3 rebuilt): ln1-x1 had the implied launch turn WITH the logged turn when
+    # |psi3| > 3 deg. ln5 = ln4 (pair consistency 3) on the fixed banks; ln6 = ln1 on the fixed bank2 (no M rows, no pair term)
+    "ln5": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 9, "D": 10, "H": 6, "O": 5, "L": 8, "S": 4, "M": 6}, lam_p=3.0,
+                dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
+    "ln6": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 10, "D": 10, "H": 8, "O": 6, "L": 10, "S": 4},
+                dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
     "lsmoke": dict(steps=60, ckpt_every=10 ** 9, dw=3.0, roles={"U": 4, "D": 4, "H": 4, "O": 4, "L": 6, "S": 4},
                    dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
 }

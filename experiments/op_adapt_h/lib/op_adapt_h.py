@@ -230,14 +230,15 @@ def bank2_plan(S: Samples, seed=0) -> dict:
     for i in range(S.n):
         fy = fut_yaw_deg(S.t["fut20"][i])
         sg = lambda: -np.sign(fy) if abs(fy) > 3.0 else rng.choice([-1.0, 1.0])  # noqa: E731
+        sl = lambda: -sg()     # noqa: E731  launch delta > 0 rotates the old frames left = an implied RIGHT turn (opposite to a rate's sign)
         v0 = float(S.t["v0"][i])
         if real:
-            rows += [(i, "normal", 0.0, 0), (i, "launch", float(sg() * rng.uniform(*BANK2_DELTA)), int(S.t["m"][i]))]
+            rows += [(i, "normal", 0.0, 0), (i, "launch", float(sl() * rng.uniform(*BANK2_DELTA)), int(S.t["m"][i]))]
             continue
         if S.t["bin"][i] in ("stop", "low", "mid"):
             rows.append((i, "rot", float(sg() * rng.uniform(*BANK2_RATE)), 0))
         if BANK2_LAUNCH_V[0] <= v0 < BANK2_LAUNCH_V[1]:
-            rows.append((i, "launch", float(sg() * rng.uniform(*BANK2_DELTA)), int(rng.integers(1, 4))))
+            rows.append((i, "launch", float(sl() * rng.uniform(*BANK2_DELTA)), int(rng.integers(1, 4))))
     c = list(zip(*rows))
     n = len(rows)
     return {"sample": np.array(c[0]), "kind": np.array(c[1]), "rate": np.array(c[2]), "dy": np.zeros(n), "dpsi": np.zeros(n),
@@ -257,7 +258,7 @@ def bank3_plan(S: Samples, seed=0) -> dict:
         if S.t["bin"][i] != "low":
             continue
         fy = fut_yaw_deg(S.t["fut20"][i])
-        sg = -np.sign(fy) if abs(fy) > 3.0 else rng.choice([-1.0, 1.0])
+        sg = np.sign(fy) if abs(fy) > 3.0 else rng.choice([-1.0, 1.0])     # launch sign: see bank2_plan
         rows.append((i, "launch", float(sg * rng.uniform(*BANK3_DELTA)), int(rng.integers(BANK3_M[0], BANK3_M[1] + 1))))
     c = list(zip(*rows))
     n = len(rows)
