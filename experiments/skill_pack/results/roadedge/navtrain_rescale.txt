@@ -1,0 +1,10 @@
+U-own 3000 78.304 -3.816 {'no_at_fault_collisions': -1.517, 'drivable_area_compliance': -5.267, 'ego_progress': 3.794, 'time_to_collision_within_bound': -5.967, 'comfort': -2.667}
+P-own 3000 78.297 -3.823 {'no_at_fault_collisions': 0.15, 'drivable_area_compliance': -3.7, 'ego_progress': -3.119, 'time_to_collision_within_bound': -1.567, 'comfort': 0.0}
+U1.15 3000 82.496 0.375 {'no_at_fault_collisions': -0.033, 'drivable_area_compliance': -1.3, 'ego_progress': 2.849, 'time_to_collision_within_bound': -0.433, 'comfort': -0.067}
+U1.3 3000 81.014 -1.106 {'no_at_fault_collisions': -0.683, 'drivable_area_compliance': -2.833, 'ego_progress': 4.356, 'time_to_collision_within_bound': -3.533, 'comfort': -0.833}
+U1.45 3000 76.934 -5.186 {'no_at_fault_collisions': -2.317, 'drivable_area_compliance': -5.433, 'ego_progress': 3.276, 'time_to_collision_within_bound': -8.1, 'comfort': -4.333}
+P1.15 3000 82.262 0.141 {'no_at_fault_collisions': 0.233, 'drivable_area_compliance': 0.033, 'ego_progress': 0.012, 'time_to_collision_within_bound': 0.233, 'comfort': 0.0}
+P1.3 3000 80.444 -1.677 {'no_at_fault_collisions': 0.267, 'drivable_area_compliance': -1.5, 'ego_progress': -1.37, 'time_to_collision_within_bound': -0.967, 'comfort': 0.0}
+P1.45 3000 78.193 -3.927 {'no_at_fault_collisions': -0.017, 'drivable_area_compliance': -3.633, 'ego_progress': -3.122, 'time_to_collision_within_bound': -1.9, 'comfort': 0.0}
+BASE 82.12 3000
+PICK U1.15 P1.15

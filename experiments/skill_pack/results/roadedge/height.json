@@ -1,0 +1,29 @@
+{
+ "shipped_gimm": {
+  "n_tokens": 400,
+  "n_lane_sections": 360,
+  "lane_ratio": 0.6885930326475813,
+  "road_ratio": 0.7156523939271651,
+  "speed_ratio": 0.8146395623263734,
+  "h_model": 1.3428854549632354,
+  "lane_prob_both": 0.2175
+ },
+ "hgt_r1.44": {
+  "n_tokens": 400,
+  "n_lane_sections": 353,
+  "lane_ratio": 0.9683388952421023,
+  "road_ratio": 0.9341397998805085,
+  "speed_ratio": 0.9978625646280115,
+  "h_model": 1.29245703125,
+  "lane_prob_both": 0.22
+ },
+ "hgt_r1": {
+  "n_tokens": 400,
+  "n_lane_sections": 311,
+  "lane_ratio": 0.6874737068782496,
+  "road_ratio": 0.7277290845958247,
+  "speed_ratio": 0.8363341914538727,
+  "h_model": 1.3461052389705883,
+  "lane_prob_both": 0.19
+ }
+}

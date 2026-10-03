@@ -1,0 +1,7 @@
+board,dac,section_beyond,n_sections,token_any_beyond,n_tokens
+navhard_one,0.0,0.5882,102,0.6667,30
+navhard_one,1.0,0.2421,1049,0.3616,318
+navhard_two,0.0,0.5438,2617,0.7072,912
+navhard_two,1.0,0.3184,11861,0.5052,3345
+navtest,0.0,0.5464,1111,0.6756,373
+navtest,1.0,0.1498,33306,0.2499,9182

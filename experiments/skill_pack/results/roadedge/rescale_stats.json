@@ -1,0 +1,41 @@
+{
+ "lb_navtrain": {
+  "n": 3000,
+  "h_model_median": 1.32421875,
+  "h_true_median": 1.8723318338394166,
+  "k_own_q": [
+   1.301,
+   1.366,
+   1.41,
+   1.464,
+   1.574
+  ],
+  "base_reproduction_max_abs": 0.0
+ },
+ "lb_navtest": {
+  "n": 12146,
+  "h_model_median": 1.33251953125,
+  "h_true_median": 1.8702898979187013,
+  "k_own_q": [
+   1.293,
+   1.361,
+   1.402,
+   1.45,
+   1.549
+  ],
+  "base_reproduction_max_abs": 0.0
+ },
+ "lb_navhard": {
+  "n": 5912,
+  "h_model_median": 1.3349609375,
+  "h_true_median": 1.8603482007980348,
+  "k_own_q": [
+   1.269,
+   1.342,
+   1.397,
+   1.453,
+   1.55
+  ],
+  "base_reproduction_max_abs": 0.0
+ }
+}
