@@ -45,6 +45,10 @@ ARMS = {
                 dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
     "ln_heavy": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 8, "D": 10, "H": 4, "O": 4, "L": 18, "S": 4},
                      dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),   # launch share x1.8
+    # iteration 1 (after (a) of ln1 / ln_heavy: local step-1 gain 0.20 / 0.09 of shipped, large-signal 0.59 / 0.61; the residual sits
+    # at steps 4-7 with |H| 1-15 deg): M rows = bank3 long launches (m 4-8, |delta| 2-12 deg)
+    "ln3": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 9, "D": 10, "H": 6, "O": 5, "L": 8, "S": 4, "M": 6},
+                dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
     "lsmoke": dict(steps=60, ckpt_every=10 ** 9, dw=3.0, roles={"U": 4, "D": 4, "H": 4, "O": 4, "L": 6, "S": 4},
                    dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
 }
@@ -124,7 +128,7 @@ def cmd_bank(a):
                 print(d, a.name, "exists")
                 continue
             S = H.Samples(d)
-            v = H.bank2_plan(S) if a.name == "bank2" else H.bank_plan(S)
+            v = {"bank2": H.bank2_plan, "bank3": H.bank3_plan}.get(a.name, H.bank_plan)(S)
             v.setdefault("m", np.zeros(len(v["sample"]), int))
             n = len(v["sample"])
             tmp, prog = out / "trunk.tmp.npy", out / "progress.json"
@@ -556,7 +560,7 @@ if __name__ == "__main__":
     p.add_argument("--batch", type=int, default=32)
     p = sp.add_parser("bank")
     p.add_argument("--domains", nargs="+", default=list(H.DOMS))
-    p.add_argument("--name", default="bank", choices=("bank", "bank2"))
+    p.add_argument("--name", default="bank", choices=("bank", "bank2", "bank3"))
     p.add_argument("--batch", type=int, default=32)
     p.add_argument("--workers", type=int, default=40)
     p = sp.add_parser("train")

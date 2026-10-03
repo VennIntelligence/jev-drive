@@ -30,7 +30,7 @@ DOMS = ("nav", "wod", "carla")
 AT = (0.275, 0.525)
 NIMG = 10
 T_FUT = 0.25 * np.arange(1, 21)
-ROLES = {"U": 1, "D": 2, "H": 3, "O": 4, "L": 5, "S": 6}
+ROLES = {"U": 1, "D": 2, "H": 3, "O": 4, "L": 5, "S": 6, "M": 7}
 LAUNCH_DOMS = ("lwod", "lcarla")       # real launch events (h_prep.py prep_lwod / prep_lcarla), table column m
 
 
@@ -244,6 +244,27 @@ def bank2_plan(S: Samples, seed=0) -> dict:
             "m": np.array(c[3])}
 
 
+# bank3 (round 2, iteration 1): the replayed HUGSIM spins reach |H| 1-15 deg at steps 4-7 (v ~2 m/s), beyond bank2's launch
+# window (m <= 3, |delta| <= 3): synthetic launches with m 4-8 moving frames and |delta| 2-12 deg, on low-bin samples only (disk).
+BANK3_DELTA = (2.0, 12.0)
+BANK3_M = (4, 8)
+
+
+def bank3_plan(S: Samples, seed=0) -> dict:
+    rng = np.random.default_rng([seed, 11, (DOMS + LAUNCH_DOMS).index(S.dom)])
+    rows = []
+    for i in range(S.n):
+        if S.t["bin"][i] != "low":
+            continue
+        fy = fut_yaw_deg(S.t["fut20"][i])
+        sg = -np.sign(fy) if abs(fy) > 3.0 else rng.choice([-1.0, 1.0])
+        rows.append((i, "launch", float(sg * rng.uniform(*BANK3_DELTA)), int(rng.integers(BANK3_M[0], BANK3_M[1] + 1))))
+    c = list(zip(*rows))
+    n = len(rows)
+    return {"sample": np.array(c[0]), "kind": np.array(c[1]), "rate": np.array(c[2]), "dy": np.zeros(n), "dpsi": np.zeros(n),
+            "m": np.array(c[3])}
+
+
 class Bank:
     def __init__(self, dom: str, name: str = "bank"):
         d = hroot(name, dom)
@@ -259,11 +280,11 @@ def pick_variant(B: Bank, S: Samples, i: int, role: str, rng, cfg: "HCfg"):
     kinds = v["kind"][lo:hi]
     if role in ("U", "D"):
         return lo + int(np.flatnonzero(kinds == "normal")[0])
-    if role == "L":
+    if role in ("L", "M"):
         o = np.flatnonzero(kinds == "launch")
         if not len(o):
             return None
-        if "m" in S.t and rng.random() < cfg.launch_plain:     # a real launch without fake yaw (the synthetic ones always have one)
+        if role == "L" and "m" in S.t and rng.random() < cfg.launch_plain:     # a real launch without fake yaw (the synthetic ones always have one)
             return lo + int(np.flatnonzero(kinds == "normal")[0])
         return lo + int(o[rng.integers(len(o))])
     if role == "S":
@@ -312,8 +333,9 @@ class HCfg:
     lam_d: float = 10.0
     lam_c: float = 1.0
     dw: float = 1.0
-    w_role: dict = field(default_factory=lambda: {"U": 1.0, "H": 1.0, "O": 1.0, "L": 1.0, "S": 1.0})
+    w_role: dict = field(default_factory=lambda: {"U": 1.0, "H": 1.0, "O": 1.0, "L": 1.0, "S": 1.0, "M": 1.0})
     dom_w_L: dict = field(default_factory=dict)          # domains of L rows (bank2 launch variants); S rows use dom_w
+    dom_w_M: dict = field(default_factory=lambda: {"nav": 0.4, "wod": 0.3, "carla": 0.3})   # M rows: bank3 long launches
     launch_plain: float = 0.25                           # share of L rows on real launches drawn without fake yaw
     ckpt_every: int = 500
     workers: int = 10
@@ -342,9 +364,10 @@ class Batcher(torch.utils.data.Dataset):
         self.S = {d: Samples(d) for d in DOMS + LAUNCH_DOMS if c.dom_w.get(d, 0) > 0 or c.dom_w_L.get(d, 0) > 0}
         self.B = {d: Bank(d) for d in self.S if d not in LAUNCH_DOMS}
         self.B2 = {d: Bank(d, "bank2") for d in self.S if need2 or d in LAUNCH_DOMS}
+        self.B3 = {d: Bank(d, "bank3") for d in DOMS if c.roles.get("M", 0) > 0 and d in self.S}
         self.pool = {}
         for d, S in self.S.items():
-            for B in (self.B.get(d), self.B2.get(d)):
+            for B in (self.B.get(d), self.B2.get(d), self.B3.get(d)):
                 if B is not None:
                     B.first = np.searchsorted(B.v["sample"], np.arange(S.n + 1))
             self.pool[(d, "U")] = self.pool[(d, "D")] = self.pool[(d, "H")] = S.rows(self.split)
@@ -353,6 +376,8 @@ class Batcher(torch.utils.data.Dataset):
                 v, tr = self.B2[d].v, set(S.rows(self.split).tolist())
                 for r, kind in (("L", "launch"), ("S", "rot")):
                     self.pool[(d, r)] = np.array(sorted(tr & set(v["sample"][v["kind"] == kind].tolist())), int)
+            if d in self.B3:
+                self.pool[(d, "M")] = np.array(sorted(set(S.rows(self.split).tolist()) & set(self.B3[d].v["sample"].tolist())), int)
 
     def __getitem__(self, k):
         if self.S is None:
@@ -361,13 +386,13 @@ class Batcher(torch.utils.data.Dataset):
         rng = np.random.default_rng([c.seed, k])
         rows = []
         for role, cnt in c.roles.items():
-            r = "U" if (c.control and role in ("H", "O", "L", "S")) else role
-            dw = c.dom_w_L if r == "L" else {d: x for d, x in c.dom_w.items() if d not in LAUNCH_DOMS} if r in ("H", "O", "S") else c.dom_w
+            r = "U" if (c.control and role in ("H", "O", "L", "S", "M")) else role
+            dw = c.dom_w_L if r == "L" else c.dom_w_M if r == "M" else {d: x for d, x in c.dom_w.items() if d not in LAUNCH_DOMS} if r in ("H", "O", "S") else c.dom_w
             ds = [d for d in dw if dw[d] > 0]
             pw = np.array([dw[d] for d in ds], float)
             for d in rng.choice(ds, cnt, p=pw / pw.sum()):
                 S, p = self.S[d], self.pool[(d, r)]
-                B = self.B2[d] if (r in ("L", "S") or d in LAUNCH_DOMS) else self.B[d]
+                B = self.B3[d] if r == "M" else self.B2[d] if (r in ("L", "S") or d in LAUNCH_DOMS) else self.B[d]
                 for _ in range(20):
                     i = int(p[rng.integers(len(p))])
                     j = pick_variant(B, S, i, r, rng, c)
@@ -431,13 +456,13 @@ class Losses:
         L_ = {}
         imit = (role == 1) | (role >= 3)
         w = torch.zeros_like(role, dtype=torch.float32)
-        for r, k in (("U", 1), ("H", 3), ("O", 4), ("L", 5), ("S", 6)):
+        for r, k in (("U", 1), ("H", 3), ("O", 4), ("L", 5), ("S", 6), ("M", 7)):
             w = torch.where(role == k, torch.full_like(w, c.w_role.get(r, 1.0)), w)
         tot = 0.0
         if imit.any():
             d = base.imit_dist(plan[imit], None, b["cam"][imit], b["hum"][imit])
             L_["imit"] = (w[imit] * d).sum() / w[imit].sum()
-            for r, k in (("U", 1), ("H", 3), ("O", 4), ("L", 5), ("S", 6)):
+            for r, k in (("U", 1), ("H", 3), ("O", 4), ("L", 5), ("S", 6), ("M", 7)):
                 m = role[imit] == k
                 if m.any():
                     L_[f"imit_{r}"] = d[m].mean().detach()
