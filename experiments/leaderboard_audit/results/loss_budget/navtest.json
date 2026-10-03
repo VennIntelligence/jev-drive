@@ -1,0 +1,153 @@
+{
+ "native": {
+  "score": 84.1803742291001,
+  "recomputed": 84.1803742291001,
+  "n": 12146,
+  "n_failing": 1264,
+  "rows": {
+   "wrong_direction": {
+    "n": 15,
+    "share": 0.011867088607594937,
+    "ceiling": 0.09338315291431343
+   },
+   "road_edge_wide": {
+    "n": null,
+    "share": null,
+    "ceiling": null
+   },
+   "early_clip": {
+    "n": 9,
+    "share": 0.007120253164556962,
+    "ceiling": 0.07039456480384843
+   },
+   "collisions": {
+    "n": 579,
+    "share": 0.45806962025316456,
+    "ceiling": 3.2355773983809115
+   },
+   "ep_progress": {
+    "n": 1096,
+    "share": 0.8670886075949367,
+    "ceiling": 7.665496194090963
+   },
+   "comfort": {
+    "n": 4,
+    "share": 0.0031645569620253164,
+    "ceiling": 0.0013721938635598008
+   },
+   "stopped_slow": {
+    "n": 263,
+    "share": 0.20806962025316456,
+    "ceiling": 0.8957406387390847
+   },
+   "no_command": {
+    "n": 160,
+    "share": 0.12658227848101267,
+    "ceiling": 0.5774917530763446
+   },
+   "offroad_all": {
+    "n": 539,
+    "share": 0.4264240506329114,
+    "ceiling": 4.178754286742432
+   },
+   "other_gate": {
+    "n": 0,
+    "share": 0.0,
+    "ceiling": 0.0
+   },
+   "ep_at_ref": {
+    "n": 1096,
+    "share": 0.8670886075949367,
+    "ceiling": 3.300790724888202
+   }
+  },
+  "all": 11.244610239283148,
+  "all_traj_only": 4.025236372257169,
+  "all_traj_unclipped": 4.025236372257169,
+  "primary": {
+   "offroad_other": 506,
+   "collisions": 483,
+   "no_command": 149,
+   "stopped_slow": 97,
+   "wrong_direction": 15,
+   "early_clip": 7,
+   "ep_progress": 7
+  }
+ },
+ "best": {
+  "score": 84.69617294549666,
+  "recomputed": 84.69617294549666,
+  "n": 12146,
+  "n_failing": 1200,
+  "rows": {
+   "wrong_direction": {
+    "n": 32,
+    "share": 0.02666666666666667,
+    "ceiling": 0.16793986719515885
+   },
+   "road_edge_wide": {
+    "n": null,
+    "share": null,
+    "ceiling": null
+   },
+   "early_clip": {
+    "n": 9,
+    "share": 0.0075,
+    "ceiling": 0.07094467985976394
+   },
+   "collisions": {
+    "n": 563,
+    "share": 0.4691666666666667,
+    "ceiling": 3.1510124795263152
+   },
+   "ep_progress": {
+    "n": 1033,
+    "share": 0.8608333333333333,
+    "ceiling": 7.507588326197379
+   },
+   "comfort": {
+    "n": 3,
+    "share": 0.0025,
+    "ceiling": 0.00274438772709118
+   },
+   "stopped_slow": {
+    "n": 232,
+    "share": 0.19333333333333333,
+    "ceiling": 0.7429737133536349
+   },
+   "no_command": {
+    "n": 176,
+    "share": 0.14666666666666667,
+    "ceiling": 0.6861449078609212
+   },
+   "offroad_all": {
+    "n": 493,
+    "share": 0.41083333333333333,
+    "ceiling": 3.822791054769823
+   },
+   "other_gate": {
+    "n": 0,
+    "share": 0.0,
+    "ceiling": 0.0
+   },
+   "ep_at_ref": {
+    "n": 1033,
+    "share": 0.8608333333333333,
+    "ceiling": 3.14956874624842
+   }
+  },
+  "all": 10.982863828180982,
+  "all_traj_only": 3.8840094550654953,
+  "all_traj_unclipped": 3.8840094550654953,
+  "primary": {
+   "collisions": 472,
+   "offroad_other": 454,
+   "no_command": 146,
+   "stopped_slow": 84,
+   "wrong_direction": 32,
+   "early_clip": 7,
+   "ep_progress": 5
+  }
+ },
+ "reference_score": 94.551403853208
+}

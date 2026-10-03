@@ -10,6 +10,8 @@ index: NAVSIM v2 +10.9 is the scorer; B2D DS SD 0.80
 
 **Read more.** research/leaderboard-vs-ability.md, research/human-baselines-and-leaderboard-integrity.md, `git show bcbdde4:todos/2026-09-24-hack-audit/README.md`
 
+**Loss budget (2026-10-04).** Oracle ceilings per failure class on navtest, navhard, HUGSIM 64 and B2D, shipped Cinque vs it_dw3 + selector: [results/loss_budget.md](results/loss_budget.md) (not achievable gains).
+
 <!-- files:begin -->
 ## Files
 

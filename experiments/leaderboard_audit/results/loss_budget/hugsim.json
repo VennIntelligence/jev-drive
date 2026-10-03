@@ -1,0 +1,166 @@
+{
+ "arms_ours": [
+  "cinque:base_rerun",
+  "cinque:derot3",
+  "cinque:fixed",
+  "cinque:replay3",
+  "cinque:sel3",
+  "it_dw3",
+  "it_dw3+sel3",
+  "it_dw3-s0",
+  "it_lowrate-s0",
+  "ln1-s0_all64",
+  "pilot-s0",
+  "pilot-s0_all64",
+  "pilot-s0_derot3",
+  "pilot_ctl-s0"
+ ],
+ "arms_other_models": [
+  "cv-fixed",
+  "lebowski-fixed",
+  "ltf-fixed"
+ ],
+ "n": 64,
+ "best_obs_ours_mean": 46.79984011268446,
+ "best_obs_any_mean": 55.29746089592861,
+ "cinque:fixed": {
+  "hd_mean": 27.754309400255906,
+  "rows": {
+   "collision: background (bg)": {
+    "n": 4,
+    "share_of_failures": 0.06557377049180328,
+    "hd_mean_points": 1.1945433478917538,
+    "ceiling_best_ours": 0.8686704478649635,
+    "ceiling_best_any": 1.3612310412911697,
+    "ceiling_one": 5.055456652108246
+   },
+   "collision: foreground (fg)": {
+    "n": 26,
+    "share_of_failures": 0.4262295081967213,
+    "hd_mean_points": 3.3940876606476094,
+    "ceiling_best_ours": 4.344726333589245,
+    "ceiling_best_any": 7.8165968299968025,
+    "ceiling_one": 37.230912339352386
+   },
+   "complete (HD < 1)": {
+    "n": 6,
+    "share_of_failures": 0.09836065573770492,
+    "hd_mean_points": 7.261107256482184,
+    "ceiling_best_ours": 0.6849609922717582,
+    "ceiling_best_any": 0.8044621800848452,
+    "ceiling_one": 2.1138927435178165
+   },
+   "route-end crash (collision at RC >= 0.9)": {
+    "n": 1,
+    "share_of_failures": 0.01639344262295082,
+    "hd_mean_points": 0.8913084474443581,
+    "ceiling_best_ours": 0.17609219702395557,
+    "ceiling_best_any": 0.38004248423266046,
+    "ceiling_one": 0.6711915525556419
+   },
+   "solved (HD ~ 1)": {
+    "n": 3,
+    "share_of_failures": null,
+    "hd_mean_points": 4.6875,
+    "ceiling_best_ours": 0.0,
+    "ceiling_best_any": 0.0,
+    "ceiling_one": 0.0
+   },
+   "spin (heading > 45 deg off route)": {
+    "n": 10,
+    "share_of_failures": 0.16393442622950818,
+    "hd_mean_points": 5.4689324355642706,
+    "ceiling_best_ours": 4.772585149648649,
+    "ceiling_best_any": 6.955896233124864,
+    "ceiling_one": 10.156067564435729
+   },
+   "stopped / max_steps": {
+    "n": 14,
+    "share_of_failures": 0.22950819672131148,
+    "hd_mean_points": 4.856830252225729,
+    "ceiling_best_ours": 8.198495592029982,
+    "ceiling_best_any": 10.224922726942365,
+    "ceiling_one": 17.01816974777427
+   }
+  },
+  "n_failing": 61,
+  "spins": 10,
+  "all_best_ours": 19.045530712428548,
+  "all_best_any": 27.543151495672703,
+  "all_one": 72.24569059974411
+ },
+ "it_dw3+sel3": {
+  "hd_mean": 34.539231801261785,
+  "rows": {
+   "collision: background (bg)": {
+    "n": 6,
+    "share_of_failures": 0.1016949152542373,
+    "hd_mean_points": 2.5993237665343503,
+    "ceiling_best_ours": 1.9134372339549888,
+    "ceiling_best_any": 3.1561624589730477,
+    "ceiling_one": 6.775676233465649
+   },
+   "collision: foreground (fg)": {
+    "n": 30,
+    "share_of_failures": 0.5084745762711864,
+    "hd_mean_points": 4.704471819182871,
+    "ceiling_best_ours": 5.759974785433843,
+    "ceiling_best_any": 9.236528138364978,
+    "ceiling_one": 42.170528180817115
+   },
+   "complete (HD < 1)": {
+    "n": 9,
+    "share_of_failures": 0.15254237288135594,
+    "hd_mean_points": 11.325132515702853,
+    "ceiling_best_ours": 0.8140466925568169,
+    "ceiling_best_any": 0.9335478803699039,
+    "ceiling_one": 2.7373674842971463
+   },
+   "off-road / off-route": {
+    "n": 1,
+    "share_of_failures": 0.01694915254237288,
+    "hd_mean_points": 0.3533441931774627,
+    "ceiling_best_ours": 0.04168337897034985,
+    "ceiling_best_any": 0.3430587304060992,
+    "ceiling_one": 1.2091558068225374
+   },
+   "route-end crash (collision at RC >= 0.9)": {
+    "n": 1,
+    "share_of_failures": 0.01694915254237288,
+    "hd_mean_points": 0.8489512151135111,
+    "ceiling_best_ours": 0.21844942935480266,
+    "ceiling_best_any": 0.4223997165635075,
+    "ceiling_one": 0.7135487848864889
+   },
+   "solved (HD ~ 1)": {
+    "n": 5,
+    "share_of_failures": null,
+    "hd_mean_points": 7.8125,
+    "ceiling_best_ours": 0.0,
+    "ceiling_best_any": 0.0,
+    "ceiling_one": 0.0
+   },
+   "spin (heading > 45 deg off route)": {
+    "n": 4,
+    "share_of_failures": 0.06779661016949153,
+    "hd_mean_points": 2.2618026906577384,
+    "ceiling_best_ours": 1.3584985392596878,
+    "ceiling_best_any": 1.8549264563734946,
+    "ceiling_one": 3.988197309342261
+   },
+   "stopped / max_steps": {
+    "n": 8,
+    "share_of_failures": 0.13559322033898305,
+    "hd_mean_points": 4.633705600892999,
+    "ceiling_best_ours": 2.154518251892179,
+    "ceiling_best_any": 4.81160571361579,
+    "ceiling_one": 7.866294399106999
+   }
+  },
+  "n_failing": 59,
+  "spins": 4,
+  "all_best_ours": 12.260608311422668,
+  "all_best_any": 20.75822909466682,
+  "all_one": 65.46076819873821
+ }
+}

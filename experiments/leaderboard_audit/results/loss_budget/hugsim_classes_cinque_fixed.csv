@@ -1,0 +1,65 @@
+scenario,hdscore,end,spin,rc,cls
+scene-0013-extreme-00,0.0139966529742887,fg_collision,False,0.0638977635782747,collision: foreground (fg)
+scene-0013-medium-00,0.0552881623169163,bg_collision,True,0.1091586794462193,spin (heading > 45 deg off route)
+scene-0041-medium-00,0.1153958515921706,bg_collision,False,0.1615541922290388,collision: background (bg)
+scene-0051-easy-00,0.9487870619946092,complete,False,1.0,complete (HD < 1)
+scene-0138-extreme-00,0.1064563347567835,fg_collision,False,0.1317262728051109,collision: foreground (fg)
+scene-0166-easy-00,1.0,complete,False,1.0,solved (HD ~ 1)
+scene-0167-easy-00,0.971830985915493,complete,False,1.0,complete (HD < 1)
+scene-021-extreme-02,0.0159984942593638,fg_collision,False,0.0263504611330698,collision: foreground (fg)
+scene-0254-extreme-00,0.8214285714285715,complete,True,1.0,spin (heading > 45 deg off route)
+scene-0254-hard-00,0.0621411685241472,max_steps,False,0.0621411685241472,stopped / max_steps
+scene-032-medium-00,0.1202590194264569,max_steps,False,0.1202590194264569,stopped / max_steps
+scene-032-medium-02,0.2179052317812725,max_steps,False,0.2179052317812725,stopped / max_steps
+scene-034-easy-00,0.955038584603802,max_steps,False,0.9907773386034257,stopped / max_steps
+scene-034-hard-00,0.1522604931300583,fg_collision,False,0.2081686429512516,collision: foreground (fg)
+scene-034-hard-01,0.1423793597706641,fg_collision,False,0.1739130434782608,collision: foreground (fg)
+scene-039-easy-00,1.0,complete,False,1.0,solved (HD ~ 1)
+scene-040-easy-00,0.8056298939438993,bg_collision,True,0.8811576965011398,spin (heading > 45 deg off route)
+scene-0411-easy-00,0.8877551020408163,complete,False,1.0,complete (HD < 1)
+scene-0411-hard-00,0.8877551020408163,complete,False,1.0,complete (HD < 1)
+scene-0411-medium-00,0.073487846240814,max_steps,False,0.073487846240814,stopped / max_steps
+scene-0418-hard-00,0.2142857142857142,complete,False,1.0,complete (HD < 1)
+scene-0528-extreme-00,0.1200146996247727,fg_collision,False,0.2301651773625778,collision: foreground (fg)
+scene-0528-medium-00,0.0451835215537609,bg_collision,True,0.1453199747269609,spin (heading > 45 deg off route)
+scene-053-extreme-02,0.0245253209680087,fg_collision,False,0.0755379885814668,collision: foreground (fg)
+scene-053-medium-02,0.4322699040090344,max_steps,True,0.4409310496267018,spin (heading > 45 deg off route)
+scene-090-hard-01,0.0301643614924503,fg_collision,False,0.0575865083037688,collision: foreground (fg)
+scene-0930-hard-00,1.0,complete,False,1.0,solved (HD ~ 1)
+scene-095-extreme-01,0.0825875222564175,fg_collision,False,0.131168417701369,collision: foreground (fg)
+scene-095-medium-01,0.1025151225724291,max_steps,False,0.1025151225724291,stopped / max_steps
+scene-100613054308-hard-00,0.2276401175818391,fg_collision,False,0.2668884137166389,collision: foreground (fg)
+scene-102751446607-medium-01,0.1496406217177611,bg_collision,True,0.2754341324048033,spin (heading > 45 deg off route)
+scene-106762673266-hard-00,0.0500793624283542,fg_collision,False,0.0631435439314031,collision: foreground (fg)
+scene-113-easy-00,0.1230174421159,max_steps,False,0.1230174421159,stopped / max_steps
+scene-113792265837-easy-00,0.1333697482816696,max_steps,False,0.1333697482816696,stopped / max_steps
+scene-124-extreme-01,0.2901610952909045,fg_collision,False,0.3065436978480457,collision: foreground (fg)
+scene-124-hard-01,0.0393500219587176,fg_collision,False,0.049187527448397,collision: foreground (fg)
+scene-1290_1490-medium-01,0.39344245345141,bg_collision,False,0.4886301438025576,collision: background (bg)
+scene-132384196576-medium-01,0.1219099221131053,max_steps,False,0.1219099221131053,stopped / max_steps
+scene-144248042870-extreme-00,0.0,fg_collision,False,0.045678567135473,collision: foreground (fg)
+scene-150623512729-extreme-00,0.0490365495098849,fg_collision,False,0.0936152308825076,collision: foreground (fg)
+scene-150623512729-medium-01,0.1532204340661267,max_steps,False,0.1532204340661267,stopped / max_steps
+scene-152217047339-extreme-00,0.0549775860610674,fg_collision,False,0.1480165778567199,collision: foreground (fg)
+scene-152217047339-medium-00,0.0828892835997631,bg_collision,True,0.1598579040852575,spin (heading > 45 deg off route)
+scene-164701907483-easy-00,0.1056988220312002,max_steps,False,0.1056988220312002,stopped / max_steps
+scene-164701907483-hard-00,0.2063037249283667,max_steps,False,0.2063037249283667,stopped / max_steps
+scene-166085257829-extreme-00,0.0730039191577653,fg_collision,False,0.134209225118316,collision: foreground (fg)
+scene-250_450-hard-00,0.0339225799680837,fg_collision,False,0.0629990770835841,collision: foreground (fg)
+scene-2510_2710-extreme-00,0.0015273004963726,fg_collision,False,0.0381825124093165,collision: foreground (fg)
+scene-2510_2710-hard-00,0.0440874823516875,fg_collision,False,0.0801832760595647,collision: foreground (fg)
+scene-2800_3000-easy-00,0.5704374063643892,bg_collision,False,0.9096620178414372,route-end crash (collision at RC >= 0.9)
+scene-3000_3200-hard-00,0.0669980169189446,fg_collision,False,0.1839161248755344,collision: foreground (fg)
+scene-3000_3200-medium-00,0.7366946778711484,complete,False,1.0,complete (HD < 1)
+scene-322492347634-easy-00,0.6004109657695584,max_steps,False,0.6004109657695584,stopped / max_steps
+scene-3400_3600-extreme-00,0.0274810302665455,fg_collision,False,0.0446566741831365,collision: foreground (fg)
+scene-3400_3600-hard-00,0.1367418769023447,fg_collision,False,0.1923332006897466,collision: foreground (fg)
+scene-398895700423-easy-00,0.1330933289696176,max_steps,False,0.1330933289696176,stopped / max_steps
+scene-570_770-easy-00,0.2254872733983503,bg_collision,True,0.5340488054171458,spin (heading > 45 deg off route)
+scene-570_770-medium-00,0.2528176461746,bg_collision,False,0.5004045824283463,collision: background (bg)
+scene-5980_6180-easy-00,0.3250260498819391,bg_collision,True,0.5162913792355417,spin (heading > 45 deg off route)
+scene-5980_6180-extreme-00,0.0116212045146055,fg_collision,False,0.07158661980997,collision: foreground (fg)
+scene-6580_6780-medium-01,0.0028517914325418,bg_collision,False,0.0427768714881276,collision: background (bg)
+scene-770_970-extreme-00,0.0101703534197813,fg_collision,False,0.1281464530892448,collision: foreground (fg)
+scene-8440_8640-easy-00,0.5572734769111369,bg_collision,True,0.6096667097831242,spin (heading > 45 deg off route)
+scene-881121006469-hard-00,0.3670343667547638,fg_collision,False,0.4220895217679783,collision: foreground (fg)

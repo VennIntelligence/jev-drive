@@ -1,0 +1,141 @@
+{
+ "n_runs": {
+  "drive": 76,
+  "vmerge2": 76
+ },
+ "routes": 19,
+ "drive": {
+  "ds": 66.86114807894738,
+  "n_failing_runs": 53,
+  "rows": {
+   "red_light": {
+    "n_runs": 25,
+    "share_of_failing_runs": 0.4716981132075472,
+    "events": 25,
+    "ceiling": 8.712903163533824,
+    "ceiling_exposure_aware": 8.712903163533824
+   },
+   "stop_sign": {
+    "n_runs": 4,
+    "share_of_failing_runs": 0.07547169811320754,
+    "events": 4,
+    "ceiling": 1.05263157894737,
+    "ceiling_exposure_aware": 1.05263157894737
+   },
+   "collision_vehicle": {
+    "n_runs": 12,
+    "share_of_failing_runs": 0.22641509433962265,
+    "events": 12,
+    "ceiling": 5.239296087719296,
+    "ceiling_exposure_aware": 5.239296087719296
+   },
+   "collision_layout": {
+    "n_runs": 9,
+    "share_of_failing_runs": 0.16981132075471697,
+    "events": 9,
+    "ceiling": 1.3657053208501821,
+    "ceiling_exposure_aware": 1.3657053208501821
+   },
+   "collision_pedestrian": {
+    "n_runs": 0,
+    "share_of_failing_runs": 0.0,
+    "events": 0,
+    "ceiling": 0.0,
+    "ceiling_exposure_aware": 0.0
+   },
+   "route_deviation": {
+    "n_runs": 4,
+    "share_of_failing_runs": 0.07547169811320754,
+    "events": 4,
+    "ceiling": 0.07172323684210369,
+    "ceiling_exposure_aware": 0.07172323684210369
+   },
+   "blocked_timeout": {
+    "n_runs": 19,
+    "share_of_failing_runs": 0.3584905660377358,
+    "events": 19,
+    "ceiling": 12.574998559967696,
+    "ceiling_exposure_aware": 12.912181631578946
+   },
+   "collision_all": {
+    "n_runs": 20,
+    "share_of_failing_runs": 0.37735849056603776,
+    "events": 21,
+    "ceiling": 6.675256710188918
+   }
+  },
+  "all_removed": 33.13885192105262,
+  "by_status": {
+   "Completed": 57,
+   "Failed - TickRuntime": 16,
+   "Failed - Agent got blocked": 3
+  }
+ },
+ "vmerge2": {
+  "ds": 76.08294078947368,
+  "n_failing_runs": 36,
+  "rows": {
+   "red_light": {
+    "n_runs": 10,
+    "share_of_failing_runs": 0.2777777777777778,
+    "events": 10,
+    "ceiling": 3.413171052631583,
+    "ceiling_exposure_aware": 3.413171052631583
+   },
+   "stop_sign": {
+    "n_runs": 0,
+    "share_of_failing_runs": 0.0,
+    "events": 0,
+    "ceiling": 0.0,
+    "ceiling_exposure_aware": 0.0
+   },
+   "collision_vehicle": {
+    "n_runs": 20,
+    "share_of_failing_runs": 0.5555555555555556,
+    "events": 21,
+    "ceiling": 8.650682929824569,
+    "ceiling_exposure_aware": 8.650682929824569
+   },
+   "collision_layout": {
+    "n_runs": 8,
+    "share_of_failing_runs": 0.2222222222222222,
+    "events": 8,
+    "ceiling": 1.5698548724696337,
+    "ceiling_exposure_aware": 1.5698548724696337
+   },
+   "collision_pedestrian": {
+    "n_runs": 0,
+    "share_of_failing_runs": 0.0,
+    "events": 0,
+    "ceiling": 0.0,
+    "ceiling_exposure_aware": 0.0
+   },
+   "route_deviation": {
+    "n_runs": 10,
+    "share_of_failing_runs": 0.2777777777777778,
+    "events": 10,
+    "ceiling": 0.2007868421052592,
+    "ceiling_exposure_aware": 0.2007868421052592
+   },
+   "blocked_timeout": {
+    "n_runs": 12,
+    "share_of_failing_runs": 0.3333333333333333,
+    "events": 12,
+    "ceiling": 5.830723070844755,
+    "ceiling_exposure_aware": 7.670047527404478
+   },
+   "collision_all": {
+    "n_runs": 24,
+    "share_of_failing_runs": 0.6666666666666666,
+    "events": 29,
+    "ceiling": 10.701648293522268
+   }
+  },
+  "all_removed": 23.91705921052632,
+  "by_status": {
+   "Completed": 64,
+   "Failed - Agent got blocked": 8,
+   "Failed - TickRuntime": 4
+  }
+ }
+}
