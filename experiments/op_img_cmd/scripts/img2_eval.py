@@ -206,7 +206,40 @@ def cmd_report(a):
         print("dist drift", d)
 
 
+def select_rel(a):
+    """Negatives round (plan addendum): relative junction guard, ordinary-frame 0.10 m, CARLA dev uptake >= 0.3, CARLA dev controls
+    <= 2x the original's lateral move."""
+    rows = []
+    for m in a.models:
+        r = {"model": m}
+        for s in ("navdev", "carladev"):
+            E = pd.read_csv(OUT / f"{m}_vs_O_{s}.csv").set_index("fam")
+            g = json.loads((OUT / f"{m}_vs_O_{s}_guards.json").read_text())
+            r[f"{s}_sky_uptake"] = float(E.loc["sky", "uptake_a"])
+            r[f"{s}_junction_drift"] = g["none_drift_median_junction"]
+            r[f"{s}_junction_line"] = g["sky_disc_move_median_ref"]
+            for c in ("sky_disc", "sky_wrong"):
+                r[f"{s}_{c}_dy"], r[f"{s}_{c}_dy_ref"] = g[f"{c}_abs_dy4_mean"], g[f"{c}_abs_dy4_mean_ref"]
+            if "none_drift_median_straight" in g:
+                r[f"{s}_straight_drift"] = g["none_drift_median_straight"]
+        dd = json.loads((OUT / f"{m}_vs_O_dist_drift.json").read_text())
+        r["dist_dev_drift_max"] = max(x for k, x in dd.items() if k.endswith("dev"))
+        r["guard_ok"] = (r["navdev_junction_drift"] <= r["navdev_junction_line"] and r["carladev_junction_drift"] <= r["carladev_junction_line"]
+                         and r["navdev_straight_drift"] <= DRIFT_LINE and r["dist_dev_drift_max"] <= DRIFT_LINE)
+        r["ctl_ok"] = all(r[f"carladev_{c}_dy"] <= 2 * r[f"carladev_{c}_dy_ref"] for c in ("sky_disc", "sky_wrong"))
+        r["uptake_ok"] = r["carladev_sky_uptake"] >= 0.3
+        rows.append(r)
+    D = pd.DataFrame(rows)
+    ok = D[D.guard_ok & D.ctl_ok & D.uptake_ok]
+    sel = None if not len(ok) else str(ok.sort_values("carladev_sky_uptake").iloc[-1].model)
+    (OUT / f"select{a.tag}.json").write_text(json.dumps({"selected": sel, "table": D.to_dict("records")}, indent=1))
+    print(D.T.to_string())
+    print("selected:", sel)
+
+
 def cmd_select(a):
+    if a.rule == "rel":
+        return select_rel(a)
     fam_gate = a.family
     rows = []
     for m in a.models:
@@ -250,5 +283,6 @@ if __name__ == "__main__":
     p.add_argument("--models", nargs="+", required=True)
     p.add_argument("--family", default="band")
     p.add_argument("--tag", default="")
+    p.add_argument("--rule", default="abs", choices=("abs", "rel"))
     a = ap.parse_args()
     {"plans": cmd_plans, "report": cmd_report, "select": cmd_select}[a.cmd](a)

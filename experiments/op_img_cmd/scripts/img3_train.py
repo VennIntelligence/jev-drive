@@ -33,6 +33,10 @@ MIX = (("IN", "I", 16), ("IC", "I", 8),
        ("QJ", "D", 6), ("CJ", "D", 4), ("QS", "D", 2), ("DN", "D", 4), ("DW", "D", 4), ("DC", "D", 4),
        ("NS", "N", 8))
 ARMS = {"smoke": dict(steps=40, ckpt_every=10 ** 9), "SA": dict(), "SB": dict(lam_d=30.0, lam_c=3.0), "SC": dict(lr=5e-5, steps=2000)}
+MIX_NEG = (("IN", "I", 16), ("IC", "I", 8),                          # negatives round (plan addendum "负样本一轮")
+           ("QJ", "D", 6), ("CJ", "D", 4), ("QS", "D", 2), ("DN", "D", 3), ("DW", "D", 2), ("DC", "D", 3),
+           ("NS", "N", 4), ("ND", "N", 3), ("NDC", "N", 2), ("NW", "N", 2), ("NWC", "N", 1))
+ARMS |= {"NA": dict(), "NB": dict(lam_d=20.0, lam_c=2.0), "nsmoke": ARMS["smoke"]}
 ARMS |= {"G" + k[1]: v for k, v in ARMS.items() if k.startswith("S")} | {"gsmoke": ARMS["smoke"]}   # sg arm: same configs
 
 
@@ -75,7 +79,11 @@ class Pool(Q2.Pool):
                     "DN": ("dist", np.flatnonzero((vd["split"] == "train") & (vd["dom"] == "nav"))),
                     "DW": ("dist", np.flatnonzero((vd["split"] == "train") & (vd["dom"] == "wod"))),
                     "DC": ("dist", np.flatnonzero((vd["split"] == "train") & (vd["dom"] == "carla"))),
-                    "NS": (TB, np.flatnonzero(tr & st & (vt["fam"] == FAM)))}
+                    "NS": (TB, np.flatnonzero(tr & st & (vt["fam"] == FAM))),
+                    "ND": (TB, np.flatnonzero(tr & jt & (vt["fam"] == "sky_disc"))),
+                    "NDC": (CB, np.flatnonzero(ct & (vc["fam"] == "sky_disc"))),
+                    "NW": (TB, np.flatnonzero(tr & jt & (vt["fam"] == "sky_wrong"))),
+                    "NWC": (CB, np.flatnonzero(ct & (vc["fam"] == "sky_wrong")))}
         for k, (b, ix) in self.idx.items():
             assert len(ix), k
         self.hum = {}
@@ -121,7 +129,8 @@ def cmd_teacher(a):
 
 
 def cmd_train(a):
-    Q2.Pool, Q2.MIX, Q2.ARMS, Q2.BANKS = Pool, MIX, ARMS, BANKS        # img2_train's loop and Batcher on this lane's pools
+    Q2.Pool, Q2.ARMS, Q2.BANKS = Pool, ARMS, BANKS
+    Q2.MIX = MIX_NEG if a.arm in ("NA", "NB", "nsmoke") else MIX        # img2_train's loop and Batcher on this lane's pools
     Q2.cmd_train(a)
 
 
