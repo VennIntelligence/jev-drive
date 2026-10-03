@@ -35,7 +35,7 @@ def unit(arm, seed, ids, model, extra=None):
         e.update(DESIRE="true", DRIVE_ARGS=R1)
     else:
         e.update(DESIRE="false", DRIVE_ARGS=f'{R1}, "img_cmd": true', SRV_ONNX=str(RUN / "onnx" / f"{model}.onnx"),
-                 SRV_PY="experiments/op_img_cmd/scripts/img_cl_server.py")
+                 SRV_PY="experiments/op_img_cmd/scripts/img_cl_server.py", IMG_CL_DUMP=str(RUN / "dump" / arm))
     e.update(extra or {})
     return Job(f"{arm}-s{seed}" + ("" if len(ids) > 1 else f"-{ids[0]}"), ["bash", OP_ARB, "arm", "drive", ",".join(ids), str(out)],
                workers=len(ids), vram_gb=7.5, cores=12, tries=2, env=e, out=str(out),
@@ -43,7 +43,8 @@ def unit(arm, seed, ids, model, extra=None):
 
 
 def jobs(args):
-    model = args.get("model", "q3NA-s0")
+    models = args.get("model", "q3NA-s0").split(",")          # "q3NA-s0,q3SA-s0": one sky arm per model (skyNA, skySA), one shared drive arm
     if args.get("stage", "all") == "1":
-        return [unit("imgsky", 0, ["27043"], model, dict(IMG_CL_DUMP=str(RUN / "stage1" / "dump")))]
-    return [unit(a, s, ROUTES, model) for a in ("imgsky", "drive") for s in (0, 1)]
+        return [unit("imgsky", 0, ["27043"], models[0], dict(IMG_CL_DUMP=str(RUN / "stage1" / "dump")))]
+    sky = lambda m: [unit("sky" + m[2:-3], s, ROUTES, m) for s in (0, 1)]        # noqa: E731
+    return sky(models[0]) + [unit("drive", s, ROUTES, models[0]) for s in (0, 1)] + [j for m in models[1:] for j in sky(m)]
