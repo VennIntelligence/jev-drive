@@ -1,0 +1,198 @@
+{
+ "registered/native": {
+  "cfg": {
+   "mode": "path",
+   "alpha": 0.25,
+   "gate": "gE",
+   "frac": 100,
+   "thr": null,
+   "delta": 0.22745633084408556,
+   "n_on": 3000,
+   "n": 3000,
+   "ci": [
+    -0.257511804233387,
+    0.6985665608155124
+   ],
+   "base_pdms": 82.12036617271691,
+   "selected": true
+  },
+  "base_pdms": 84.1803742291001,
+  "n": 12146,
+  "n_on": 12146,
+  "gated": {
+   "pdms": 84.00114302849254,
+   "delta": -0.17923120060755152,
+   "ci": [
+    -0.40417460637854424,
+    0.052677827830721335
+   ],
+   "no_at_fault_collisions_delta": -0.01234974477194138,
+   "drivable_area_compliance_delta": -0.39519183270212416,
+   "driving_direction_compliance_delta": -0.2634612218014161,
+   "ego_progress_delta": -0.052736236340659916,
+   "time_to_collision_within_bound_delta": 0.1399637740820023,
+   "comfort_delta": -0.16466326362588507
+  },
+  "ungated": {
+   "pdms": 84.00114302849254,
+   "delta": -0.17923120060755152,
+   "ci": [
+    -0.40417460637854424,
+    0.052677827830721335
+   ],
+   "no_at_fault_collisions_delta": -0.01234974477194138,
+   "drivable_area_compliance_delta": -0.39519183270212416,
+   "driving_direction_compliance_delta": -0.2634612218014161,
+   "ego_progress_delta": -0.052736236340659916,
+   "time_to_collision_within_bound_delta": 0.1399637740820023,
+   "comfort_delta": -0.16466326362588507
+  }
+ },
+ "registered/best": {
+  "cfg": {
+   "mode": "path",
+   "alpha": 0.25,
+   "gate": "gE",
+   "frac": 100,
+   "thr": null,
+   "delta": 0.22745633084408556,
+   "n_on": 3000,
+   "n": 3000,
+   "ci": [
+    -0.257511804233387,
+    0.6985665608155124
+   ],
+   "base_pdms": 82.12036617271691,
+   "selected": true
+  },
+  "base_pdms": 84.69617294549666,
+  "n": 12146,
+  "n_on": 12146,
+  "gated": {
+   "pdms": 84.67611771457828,
+   "delta": -0.020055230918386145,
+   "ci": [
+    -0.22811180490356062,
+    0.19189193842408492
+   ],
+   "no_at_fault_collisions_delta": -0.05763214226905977,
+   "drivable_area_compliance_delta": -0.2469948954388276,
+   "driving_direction_compliance_delta": -0.24287831384818048,
+   "ego_progress_delta": 0.014012574625022322,
+   "time_to_collision_within_bound_delta": 0.3210933640704759,
+   "comfort_delta": -0.1399637740820023
+  },
+  "ungated": {
+   "pdms": 84.67611771457828,
+   "delta": -0.020055230918386145,
+   "ci": [
+    -0.22811180490356062,
+    0.19189193842408492
+   ],
+   "no_at_fault_collisions_delta": -0.05763214226905977,
+   "drivable_area_compliance_delta": -0.2469948954388276,
+   "driving_direction_compliance_delta": -0.24287831384818048,
+   "ego_progress_delta": 0.014012574625022322,
+   "time_to_collision_within_bound_delta": 0.3210933640704759,
+   "comfort_delta": -0.1399637740820023
+  }
+ },
+ "posthoc_gated/native": {
+  "cfg": {
+   "mode": "path",
+   "alpha": 0.25,
+   "gate": "gK",
+   "frac": 5,
+   "thr": 0.9914950728416443,
+   "delta": 0.14983565827701417,
+   "n_on": 150,
+   "n": 3000,
+   "ci": [
+    -0.04547209374222443,
+    0.35786029629703436
+   ],
+   "base_pdms": 82.12036617271691,
+   "selected": true
+  },
+  "base_pdms": 84.1803742291001,
+  "n": 12146,
+  "n_on": 428,
+  "gated": {
+   "pdms": 84.17417461110387,
+   "delta": -0.006199617996229612,
+   "ci": [
+    -0.08028174512800725,
+    0.06305461862717049
+   ],
+   "no_at_fault_collisions_delta": -0.008233163181294254,
+   "drivable_area_compliance_delta": -0.05763214226905977,
+   "driving_direction_compliance_delta": -0.10291453976617816,
+   "ego_progress_delta": 0.024640100079261346,
+   "time_to_collision_within_bound_delta": 0.008233163181294254,
+   "comfort_delta": -0.032932652725177015
+  },
+  "ungated": {
+   "pdms": 84.00114302849254,
+   "delta": -0.17923120060755152,
+   "ci": [
+    -0.40385827114986916,
+    0.04467296118807884
+   ],
+   "no_at_fault_collisions_delta": -0.01234974477194138,
+   "drivable_area_compliance_delta": -0.39519183270212416,
+   "driving_direction_compliance_delta": -0.2634612218014161,
+   "ego_progress_delta": -0.052736236340659916,
+   "time_to_collision_within_bound_delta": 0.1399637740820023,
+   "comfort_delta": -0.16466326362588507
+  }
+ },
+ "posthoc_gated/best": {
+  "cfg": {
+   "mode": "path",
+   "alpha": 0.25,
+   "gate": "gK",
+   "frac": 5,
+   "thr": 0.9914950728416443,
+   "delta": 0.14983565827701417,
+   "n_on": 150,
+   "n": 3000,
+   "ci": [
+    -0.04547209374222443,
+    0.35786029629703436
+   ],
+   "base_pdms": 82.12036617271691,
+   "selected": true
+  },
+  "base_pdms": 84.69617294549666,
+  "n": 12146,
+  "n_on": 450,
+  "gated": {
+   "pdms": 84.69551986960741,
+   "delta": -0.0006530758892381511,
+   "ci": [
+    -0.0703365894136664,
+    0.0688603218520684
+   ],
+   "no_at_fault_collisions_delta": -0.028816071134529886,
+   "drivable_area_compliance_delta": -0.032932652725177015,
+   "driving_direction_compliance_delta": -0.1234974477194138,
+   "ego_progress_delta": 0.026217069667966,
+   "time_to_collision_within_bound_delta": 0.0,
+   "comfort_delta": -0.016466326362588508
+  },
+  "ungated": {
+   "pdms": 84.67611771457828,
+   "delta": -0.020055230918386145,
+   "ci": [
+    -0.22392363299829215,
+    0.18248892424842666
+   ],
+   "no_at_fault_collisions_delta": -0.05763214226905977,
+   "drivable_area_compliance_delta": -0.2469948954388276,
+   "driving_direction_compliance_delta": -0.24287831384818048,
+   "ego_progress_delta": 0.014012574625022322,
+   "time_to_collision_within_bound_delta": 0.3210933640704759,
+   "comfort_delta": -0.1399637740820023
+  }
+ }
+}

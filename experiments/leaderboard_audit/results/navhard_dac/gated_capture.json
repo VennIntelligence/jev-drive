@@ -1,0 +1,102 @@
+{
+ "native/gE/5": {
+  "L_captured": 0.13284132841328414,
+  "tokens_fired": 0.04296346414073072,
+  "precision_L": 0.14173228346456693
+ },
+ "native/gE/10": {
+  "L_captured": 0.2177121771217712,
+  "tokens_fired": 0.07831529093369419,
+  "precision_L": 0.12742980561555076
+ },
+ "native/gE/20": {
+  "L_captured": 0.39114391143911437,
+  "tokens_fired": 0.1388700947225981,
+  "precision_L": 0.12911084043848964
+ },
+ "native/gE/35": {
+  "L_captured": 0.5645756457564576,
+  "tokens_fired": 0.21803112313937753,
+  "precision_L": 0.1186966640806827
+ },
+ "native/gE/50": {
+  "L_captured": 0.7638376383763837,
+  "tokens_fired": 0.35994587280108253,
+  "precision_L": 0.09727443609022557
+ },
+ "native/gK/5": {
+  "L_captured": 0.033210332103321034,
+  "tokens_fired": 0.03822733423545332,
+  "precision_L": 0.03982300884955752
+ },
+ "native/gK/10": {
+  "L_captured": 0.09225092250922509,
+  "tokens_fired": 0.061569688768606225,
+  "precision_L": 0.06868131868131869
+ },
+ "native/gK/20": {
+  "L_captured": 0.2066420664206642,
+  "tokens_fired": 0.10960757780784844,
+  "precision_L": 0.08641975308641975
+ },
+ "native/gK/35": {
+  "L_captured": 0.35424354243542433,
+  "tokens_fired": 0.18792286874154263,
+  "precision_L": 0.08640864086408641
+ },
+ "native/gK/50": {
+  "L_captured": 0.6051660516605166,
+  "tokens_fired": 0.31495263870094725,
+  "precision_L": 0.08807733619763695
+ },
+ "best/gE/5": {
+  "L_captured": 0.1124031007751938,
+  "tokens_fired": 0.021820027063599458,
+  "precision_L": 0.2248062015503876
+ },
+ "best/gE/10": {
+  "L_captured": 0.19767441860465115,
+  "tokens_fired": 0.04972936400541272,
+  "precision_L": 0.17346938775510204
+ },
+ "best/gE/20": {
+  "L_captured": 0.35271317829457366,
+  "tokens_fired": 0.10791610284167795,
+  "precision_L": 0.1426332288401254
+ },
+ "best/gE/35": {
+  "L_captured": 0.5736434108527132,
+  "tokens_fired": 0.20551420838971582,
+  "precision_L": 0.12181069958847737
+ },
+ "best/gE/50": {
+  "L_captured": 0.8255813953488372,
+  "tokens_fired": 0.37652232746955344,
+  "precision_L": 0.09568733153638814
+ },
+ "best/gK/5": {
+  "L_captured": 0.050387596899224806,
+  "tokens_fired": 0.035690121786197564,
+  "precision_L": 0.061611374407582936
+ },
+ "best/gK/10": {
+  "L_captured": 0.10077519379844961,
+  "tokens_fired": 0.05412719891745602,
+  "precision_L": 0.08125
+ },
+ "best/gK/20": {
+  "L_captured": 0.21705426356589147,
+  "tokens_fired": 0.0959066305818674,
+  "precision_L": 0.09876543209876543
+ },
+ "best/gK/35": {
+  "L_captured": 0.32945736434108525,
+  "tokens_fired": 0.16965493910690121,
+  "precision_L": 0.0847457627118644
+ },
+ "best/gK/50": {
+  "L_captured": 0.5775193798449613,
+  "tokens_fired": 0.30074424898511504,
+  "precision_L": 0.08380202474690664
+ }
+}

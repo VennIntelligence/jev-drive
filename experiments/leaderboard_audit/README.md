@@ -18,6 +18,7 @@ helps: [results/real_vs_render.md](results/real_vs_render.md) (pre-registration 
 
 **navhard DAC attribution (2026-10-04).** The 1 314 / 1 249 DAC failures (shipped / it_dw3 + selector) split into causes, each with a replay check and an oracle ceiling. About half are on the scorer side: pavement outside the cached polygon (26-29%, about 5.2 points) and tracker lag, where the plan is inside but the replay is not (21%, 2.3-2.8). A fifth are displaced stage-2 starts, mostly with no feasible arc. Planning errors (wrong direction, under-turn, over-turn, corner cutting) are about 30%, 4.7-4.9 points:
 [results/navhard_dac.md](results/navhard_dac.md) (pre-registration [plans/2026-10-04-navhard-dac-prereg.md](plans/2026-10-04-navhard-dac-prereg.md)).
+Follow-ups: no map-free gate isolates the tracker-lag tokens (precision 7-14%), compensating only the scorer-identified ones would give about +2 EPDMS (oracle); an eye check puts about 3/4 of the M class on real pavement ([plans/2026-10-04-navhard-dac-gated-comp-prereg.md](plans/2026-10-04-navhard-dac-gated-comp-prereg.md)).
 
 <!-- files:begin -->
 ## Files

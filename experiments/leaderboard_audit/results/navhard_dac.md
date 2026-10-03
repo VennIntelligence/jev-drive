@@ -156,3 +156,87 @@ parked cars. **R** is mostly corner cutting on the inside of a turn with about t
 failure and arm: primary, checks, kinematics), `results/navhard_dac/slow.txt` (slowed-path pass rates), `figs/navhard_dac_review.jpg`. The box keeps the
 full per-token table, feat.pkl, scores.pkl and the GIFs of the figure tokens under `runs/leaderboard_audit/navhard_dac/`. Compute: CPU only, about 1 min for the
 features on 100 cores.
+
+## Follow-up 1: gated tracker compensation (decision 97 x class L)
+
+Pre-registration (written before any gated score): [plans/2026-10-04-navhard-dac-gated-comp-prereg.md](../plans/2026-10-04-navhard-dac-gated-comp-prereg.md). Code: `scripts/nhdac_gate.py`,
+`scripts/nhdac_gate_comp.sh` (compensating the best arm), `scripts/nhdac_gate_fig.py`. Numbers: `navhard_dac/gated_*.json`, `gated_navtrain_grid.csv`.
+
+**Is the gate computable without the map? Class L itself is not.** L is "the plan stays inside the scorer's polygon, the LQR replay leaves it", which needs the polygon.
+Gating on L is therefore a scorer-side oracle, reported only as an upper bound. Two reference-free, map-free proxies were pre-registered (inputs: the plan and ego_status, run through
+the devkit simulator, the same inputs as the compensation itself): **gE**, the predicted tracking error (mean distance of the replay of the unmodified plan to the plan polyline), and
+**gK**, the plan's end heading (curvature proxy). openpilot's own road edges were not tried (not stored in the prediction files).
+
+**Selection on navtrain** (3 000 real tokens, native Cinque, official per-token v1 scores; a gated arm takes the compensated token score where the gate fires and the original elsewhere;
+48 configs: mode full / path x alpha 0.25 ... 1 x gate x top-5 ... 100% of tokens):
+
+![navtrain delta vs share compensated](../figs/navhard_gated_comp_navtrain.png)
+
+*What to look at: every curve falls as the share of compensated tokens grows, for both gates and both modes. The tokens with the largest predicted lag are where compensation loses
+most on real scenes, so a stronger gate (smaller share) is always closer to zero than a weaker one. The only positive points are tiny (at most +0.23) and sit at alpha 0.25: path with a weak or no gate (best +0.23 [-0.26, +0.70]
+ungated), path or full with the gK top-5% gate (+0.15 [-0.05, +0.36] and +0.14).* The pre-registered argmax is **path, alpha 0.25, no gate (100%)**: the gate does not help on navtrain.
+
+**Gate quality on navhard** (shipped Cinque; thresholds from navtrain; L = 271 tokens = 4.6% of 5 912):
+
+| gate, share of tokens fired (navtrain quantile) | L captured | tokens fired | L precision | AUC for L |
+|:--|--:|--:|--:|--:|
+| gE top 10% | 21.8% | 7.8% | 12.7% | 0.78 |
+| gE top 20% | 39.1% | 13.9% | 12.9% | |
+| gE top 35% | 56.5% | 21.8% | 11.9% | |
+| gK top 10% | 9.2% | 6.2% | 6.9% | 0.71 |
+| gK top 20% | 20.7% | 11.0% | 8.6% | |
+
+The proxies rank L tokens above the rest (AUC 0.78 / 0.71; best arm 0.80 / 0.72) but the precision is 7-14% (base rate 4.6%): most fired tokens are not L, and those are where
+compensation hurts. The post hoc gK top-5% gate fires on 7.6% of stage 1 tokens and 3.5% of stage 2 tokens, so it is not a stage-2 (displaced start) detector either.
+
+**Test boards** (one config chosen on navtrain, same for both models, no refit; navhard: in-process devkit two-stage EPDMS, 225 mapping groups, 5 000 bootstrap draws, base arm
+matches the official 33.33; navtest: official v1 PDMS, 12 146 tokens, token bootstrap). Decision rule of decision 97: pass = navhard delta > 0 with CI lower bound > 0 and navtest delta >= -0.30.
+
+| arm | navhard delta [95% CI] | navtest delta [95% CI] | tokens compensated | verdict |
+|:--|:--|:--|--:|:--|
+| native, registered config (path alpha 0.25, no gate) | +0.42 [-1.01, +1.81] | -0.18 [-0.40, +0.05] | all | ambiguous (reproduces decision 97 exactly) |
+| **best (it_dw3 + selector), same config** | **+1.76 [+0.41, +3.16]** (35.76 -> 37.52) | **-0.02 [-0.23, +0.19]** | all | **passes the decision 97 rule** |
+| native, post hoc gate (path alpha 0.25, gK top 5%) | -0.14 [-0.53, +0.26] | -0.01 [-0.08, +0.06] | 226 navhard / 428 navtest | no effect |
+| best, same gate | +0.28 [-0.15, +0.85] | -0.00 [-0.07, +0.07] | 211 / 450 | no effect |
+| **oracle L**, native, full alpha 1 / path alpha 1 / path 0.25 | +2.01 [+1.18, +2.94] / +2.19 [+1.30, +3.18] / +0.74 [+0.20, +1.42] | not computed | 271 | upper bound, not deployable |
+| **oracle L**, best, full alpha 1 / path alpha 1 / path 0.25 | +2.12 [+1.20, +3.16] / +1.99 [+1.09, +2.99] / +0.93 [+0.36, +1.61] | not computed | 258 | upper bound, not deployable |
+
+The post hoc gate row is the best gated config on navtrain (the argmax over configs with share < 100%), added after the registered argmax came out ungated; it is labelled post hoc and only
+shows that a gate that small does nothing.
+
+**Reading.**
+1. **A deployable gate does not exist at this precision.** The gate that is allowed (reference-free) cannot separate the 4.6% of tokens whose DAC the lag breaks from the tokens where the lag
+   is a useful low-pass; every navtrain curve is monotone in the share compensated. The L upper bound is real: compensating only the scorer-identified L tokens gains **+2.0 to +2.2 EPDMS** on navhard
+   for both arms (all CIs above 0), but that needs the polygon, so it is a scorer-side oracle, not a trick. Full alpha 1 and path alpha 1 are equal within noise on L tokens (the L tokens are mostly stage 2 and
+   do not carry the real-scene losses); alpha 0.25 gets 35-45% of it.
+2. **Side finding, not a gate result:** the ungated path alpha 0.25 (selected on native navtrain, the pre-registered argmax) passes the decision 97 rule for the best arm
+   (+1.76 [+0.41, +3.16] navhard, -0.02 navtest), while it does not for native (+0.42, CI includes 0) and, in decision 97, not for N4 (-0.66 / -0.05). Per-token DAC delta of the best arm: stage 1 +1.78, stage 2 +2.12 points.
+   Caveats: the path variant and alpha 0.25 came out of decision 97's post hoc analysis; the alpha was fitted on native, the best arm was not refit; the sign differs across the three models; this adds two arms to
+   the six already scored on navhard without correction. Treat it as a labelled candidate NAVSIM adapter trick worth one more model, not as adopted.
+
+## Follow-up 2: class M eye-check
+
+Plan: same pre-registration, section 4. 40 of the 345 shipped-model M tokens (primary class M) drawn with seed 0 without replacement (`scripts/nhdac_msheet.py`; token list and labels in
+`navhard_dac/mcheck_labels.csv`). Each panel shows nuPlan CAM_F0 at t0 with the scorer's polygon (yellow), the raw generic drivable area (cyan), the shipped plan (blue) and a red ring on the worst
+off-polygon corner at the first exit, next to a BEV (grey = scorer polygon, cyan = generic drivable area, red box = ego at the first exit). The 10 pages are
+`figs/navhard_M_review/p01.jpg` ... `p10.jpg`, four tokens per page, in sample order #01-#40. Labels were assigned by one reader (the executing agent) from these pages, applying one rule:
+**real pavement** = a car could physically drive there (asphalt or concrete road surface: lane, parking or bike lane, shoulder, painted gore, crosswalk, parking lot);
+**not drivable** = curb, sidewalk, grass, planted island; **unclear** = cannot tell from a dark or blurred (stage-2 synthetic) image.
+
+| label | n | share [Wilson 95% CI] |
+|:--|--:|--:|
+| real pavement | 29 | 72.5% [57.2, 83.9] |
+| not drivable | 9 | 22.5% [12.3, 37.5] |
+| unclear | 2 | 5.0% [1.4, 16.5] |
+| real pavement among the 38 decided | 29 | 76.3% [60.8, 87.0] |
+
+What the 29 real-pavement cases are: 14 gaps, hatched gore areas or slivers of road surface that the polygon does not cover inside the carriageway (the double-line median strip, the hatched
+gore at a merge); 11 parking, bike or shoulder lane at the road edge; 3 crosswalks / intersection mouths; 1 paved parking lot. The 9 not-drivable cases are curb corners at intersections (6) and curb or grass
+edges (3). Every case is a graze: first exit 0.1-4.0 s, the largest overshoot is 0.19 m, the median 0.035 m (0.00-0.19 m), so even the real-pavement cases are decided by centimetres.
+
+What to look at in the pages: the red ring against the yellow polygon edge. In the gore and median cases the ring sits on a sliver where the polygon has a notch or hole in the middle of asphalt; in the
+curb cases it sits exactly on the curb line. Single reader, no second labeller, stage-2 images are re-rendered and blurry, so the shares are a point estimate with that bias; decision 104's earlier
+38% (40 different cases, a different class definition) is lower, consistent with M containing mostly shallow grazes of unmapped pavement.
+
+Consequence for M (26.3% of the native DAC failures, 5.15 points of DAC = 1 ceiling): about three quarters of M by this eye check is pavement the scorer's polygon does not cover, so roughly 19% of
+the failures (0.725 x 26.3%) and about 3.7 points of the M ceiling (0.725 x 5.15) are map artifacts in the scorer rather than driving errors; the rest is on the curb or boundary.
