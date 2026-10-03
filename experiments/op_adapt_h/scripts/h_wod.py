@@ -78,10 +78,14 @@ def hist(name):
 def _job(job):
     import drive_backbones_openpilot as DB
     from experiments.op_adapt_h.lib import op_adapt_h as H
+    import wod_zeroshot_openpilot as WZ
     name, cam, psi = job
-    imgs = DB.render(hist(name))
-    rot = np.stack([H.warp(f, cam, 0.0, -p) if j < NIMG - 1 else f for j, (f, p) in enumerate(zip(imgs, psi))])
-    return imgs, rot
+    hn = hist(name)
+    have = np.array([h in WZ._ctx["spans"] for h in hn])
+    imgs = np.zeros((NIMG, 2, 6, 128, 256), np.uint8)
+    imgs[have] = DB.render([h for h, ok in zip(hn, have) if ok])
+    rot = np.stack([H.warp(f, cam, 0.0, -p) if j < NIMG - 1 and ok else f for j, (f, p, ok) in enumerate(zip(imgs, psi, have))])
+    return imgs, rot, have[:-1] & have[1:]
 
 
 def cmd_run(a):
@@ -95,7 +99,7 @@ def cmd_run(a):
     from jevdrive import wod_zeroshot as Z
     spans, _ = Z.load_spans()
     miss = [n for n in names if not all(h in spans for h in hist(n))]
-    assert not miss, f"{len(miss)} rater frames lack the 1.8 s history: {miss[:3]}"
+    print(f"{len(miss)} rater frames miss history images (zero image, its context slots invalid as in r2's rater cache): {miss}")
     n = len(names) if not a.limit else a.limit
     dev = torch.device("cuda")
     models = {m: L.load_model(None if m == "O" else H_ROOT / "runs" / m / "ckpt-final.pt", dev) for m in MODELS}
@@ -104,7 +108,6 @@ def cmd_run(a):
     assert net.slices["plan"].stop - ps == 990, "plan head is not a single 33 x 15 Gaussian"
     mu = np.zeros((len(MODELS), 2, n, 33, 15), np.float32)
     sd = np.zeros_like(mu)
-    sv = torch.ones((a.bs, 9), dtype=torch.bool, device=dev)
     tc = torch.tensor([[1.0, 0.0]] * a.bs, device=dev)
     jobs = [(names[i], cam[i], psi[i]) for i in range(n)]
     t0 = time.time()
@@ -113,12 +116,13 @@ def cmd_run(a):
         for i0 in range(0, n, a.bs):
             ch = [next(it) for _ in range(min(a.bs, n - i0))]
             b = len(ch)
+            sv = torch.from_numpy(np.stack([c[2] for c in ch])).to(dev)
             for v in range(2):
                 x = torch.from_numpy(np.stack([c[v] for c in ch])).to(dev)
-                tr = H.trunks(net, x)
+                tr = H.trunks(net, x) * sv[:, :, None, None, None]
                 with torch.no_grad():
                     for k, m in enumerate(models.values()):
-                        o = m(tr, sv[:b], tc[:b])["outputs"].float()
+                        o = m(tr, sv, tc[:b])["outputs"].float()
                         mu[k, v, i0:i0 + b] = o[:, ps:ps + 495].reshape(b, 33, 15).cpu().numpy()
                         sd[k, v, i0:i0 + b] = torch.exp(torch.clamp(o[:, ps + 495:ps + 990], max=11)).reshape(b, 33, 15).cpu().numpy()
             print(f"{i0 + b}/{n} in {time.time() - t0:.0f} s", flush=True)
@@ -141,7 +145,7 @@ def cmd_check(a):
     _init()
     res = []
     for i in sel:
-        imgs, rot = _job((names[i], cam[i], psi[i]))
+        imgs, rot, _ = _job((names[i], cam[i], psi[i]))
 
         def shift(f0, f1):
             y0 = I.unpack(f0[0])[0].astype(np.float32)[:128]
