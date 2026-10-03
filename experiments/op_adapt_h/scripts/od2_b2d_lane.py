@@ -9,8 +9,9 @@ Arms (agent = the unchanged `drive` arm, lib/vlm_arb_agent.py VLM_ARM=drive, sam
   od2sel  + OP_SEL=<ratio>: op_arb_server.py's selector (second session on the heading-aligned 5 s history, below 3 m/s)
 The shipped `drive` arm is not rerun: seeds 2, 3 of vmerge2 (v2-drive-s<seed>-q<k>) are the same code path (the server and agent
 changes are inert without OP_SEL / SRV_ONNX). Units v2-od2<arm>-s<seed>-q<k> under $DATA_DIR/runs/vlm_arb/arms, 3 workers each.
-Stages: smoke = `dbg-od2chk` (OP_SEL_CHECK: the replay unrotated must reproduce the native plan) and `dbg-od2sel` on one route;
-all = smoke + the batch (od2it and od2sel per seed, interleaved), each batch unit after both smokes.
+Stages: smoke = `dbg-od2sel` on one route (the replay-fidelity check, OP_SEL_CHECK, was run off-CARLA: the unrotated 100-frame
+replay reproduces the native plan exactly, max position difference 0.0 m over 30 steps); all = smoke + the batch (od2it and od2sel
+per seed), each batch unit after the smoke.
 Hand-offs in $DATA_DIR/runs/od2_b2d: STATUS, DONE / ERROR, lane/<ts>/log.txt.
 """
 import sys
@@ -32,8 +33,7 @@ def jobs(args):
     ratio = args.get("ratio", "0.6")
     e_it = dict(OP_DET_HEAD=vm.DET, SRV_ONNX=ONNX)
     e_sel = dict(e_it, OP_SEL=ratio)
-    smoke = [base.unit("dbg-od2chk", 2, SMOKE_ROUTE, [SMOKE_ROUTE], dict(e_sel, OP_SEL_CHECK="1"), "", 0, base="drive"),
-             base.unit("dbg-od2sel", 2, SMOKE_ROUTE, [SMOKE_ROUTE], e_sel, "", 0, base="drive")]
+    smoke = [base.unit("dbg-od2sel", 2, SMOKE_ROUTE, [SMOKE_ROUTE], e_sel, "", 0, base="drive")]
     out = list(smoke)
     if args.get("stage", "smoke") == "all":
         sh = vc.shards()

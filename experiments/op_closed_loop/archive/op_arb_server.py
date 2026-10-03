@@ -16,8 +16,8 @@ rising-edge pulse; the class is imported, not copied), plus two things the arbit
           last OP_SEL_N (100 = 5 s) camera frames rotated in place to a reference heading. It runs only while speed <
           OP_SEL_VMAX (3 m/s) and the buffered history holds >= 0.05 deg of yaw against now (meta "yaw", the agent's pose,
           rad, CARLA right-positive). It is rebuilt (reset + replay of the buffer) when it switches on or when the heading
-          moved >= OP_SEL_REBUILD_DEG (0.5 deg) from its reference, else stepped once with the new frame rotated to the
-          reference. Its plan replaces the native one (pos, vel, yaw, acc, curvature, accel; the lead / meta heads stay
+          moved >= OP_SEL_REBUILD_DEG (0.5 deg) from its reference and >= OP_SEL_MIN_GAP (4) steps passed since the last
+          rebuild (HUGSIM's 0.2 s replay cadence), else stepped once with the new frame rotated to the reference. Its plan replaces the native one (pos, vel, yaw, acc, curvature, accel; the lead / meta heads stay
           native) iff its summed 0-4 s lateral plan std < ratio x the native plan's.
 
     CUDA_VISIBLE_DEVICES=6 $DATA_DIR/envs/openpilot/bin/python experiments/op_closed_loop/archive/op_arb_server.py cinque --pool 4 \
@@ -57,6 +57,7 @@ class ArbModel(ZP.OpenpilotModel):
         self.sel = float(e("OP_SEL", "0") or 0)
         self.sel_n, self.sel_vmax = int(e("OP_SEL_N", "100")), float(e("OP_SEL_VMAX", "3.0"))
         self.sel_rebuild, self.sel_warm = np.radians(float(e("OP_SEL_REBUILD_DEG", "0.5"))), int(e("OP_SEL_WARM", "0"))
+        self.sel_gap = int(e("OP_SEL_MIN_GAP", "4"))       # steps between rebuilds at least (HUGSIM replays once per 0.2 s step)
         self.sel_check = e("OP_SEL_CHECK", "") == "1"     # smoke control: replay unrotated, its plan must match the native one
         self.rot_cache, self.rot_lock = OrderedDict(), threading.Lock()
         a.pool = (1 + self.twin + (self.sel > 0)) * a.pool   # a twin (unless --no-twin) and a selector session per connection
@@ -183,9 +184,11 @@ class ArbModel(ZP.OpenpilotModel):
         traffic = (1, 0)
         t0 = time.perf_counter()
         rot = (lambda y: 0.0) if self.sel_check else (lambda y: np.degrees(wrap(state["sel_ref"] - y)))   # noqa: E731
-        rebuilt = state["sel_ref"] is None or abs(wrap(yaw - state["sel_ref"])) >= self.sel_rebuild or self.sel_check
+        state["sel_age"] = state.get("sel_age", 0) + 1
+        rebuilt = state["sel_ref"] is None or self.sel_check or \
+            (abs(wrap(yaw - state["sel_ref"])) >= self.sel_rebuild and state["sel_age"] >= self.sel_gap)
         if rebuilt:
-            state["sel_ref"] = float(yaw)
+            state["sel_ref"], state["sel_age"] = float(yaw), 0
             m.reset()
             for i, (raw, y, d) in enumerate(buf):
                 img2 = self._pack_rot(raw, rot(y))
