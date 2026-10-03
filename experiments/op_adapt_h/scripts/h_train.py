@@ -43,6 +43,8 @@ ARMS = {
     # small-rate rows (0.3-2 deg/s) from bank2, on it_dw3's recipe
     "ln1": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 10, "D": 10, "H": 8, "O": 6, "L": 10, "S": 4},
                 dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
+    "ln_heavy": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 8, "D": 10, "H": 4, "O": 4, "L": 18, "S": 4},
+                     dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),   # launch share x1.8
     "lsmoke": dict(steps=60, ckpt_every=10 ** 9, dw=3.0, roles={"U": 4, "D": 4, "H": 4, "O": 4, "L": 6, "S": 4},
                    dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
 }
