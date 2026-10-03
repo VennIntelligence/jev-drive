@@ -56,6 +56,8 @@ def load():
         z = np.load(f)
         info = json.loads(str(z["info"]))
         S[d.name] = dict(v=z["v"], **{a: heads(z[a], info["heads_slices"]) for a in info["arms"]})
+        if (d / "stream_env.npz").exists():
+            S[d.name]["env"] = heads(np.load(d / "stream_env.npz")["env"], info["heads_slices"])
     return S
 
 
@@ -130,6 +132,21 @@ def main():
         real_lvl = np.nanmedian(np.concatenate([np.nanmean(x["real"][m][FIRST:], 1) if m != "lane_p" else x["real"][m][FIRST:, 1:3].mean(1) for x in S.values()]))
         sh[m].append(float(real_lvl))
     out["shift_render_minus_real"] = sh
+    # 1b. the closed-loop rig (render_env: 0.3 m lower, level, no recorded dynamic objects) against real and the training-view render
+    if all("env" in x for x in S.values()):
+        RE, VE = pairs(S, "real", "env"), pairs(S, "render", "env")
+        out["env"] = {m: dict(real_env=float(np.median(RE[m][0])), render_env=float(np.median(VE[m][0])),
+                              ratio_real_env=ratio_stat(RE[m], RR[m])) for m in METRICS}
+        she = {}
+        for m in ("plan_v0", "plan_x4", "lane_w10", "road_z", "lane_p", "plan_lat4", "yaw3"):
+            g = []
+            for x in S.values():
+                k = np.arange(FIRST, len(x["v"]))
+                d = (x["env"][m][k] - x["real"][m][k])
+                d = d.mean(1) if m != "lane_p" else d[:, 1:3].mean(1)
+                g.append(d[np.isfinite(d)])
+            she[m] = boot(lambda gs: np.median(np.concatenate(gs)), [x for x in g if len(x)])
+        out["shift_env_minus_real"] = she
     # 2. fixes (eval scenes only)
     RRe, RSe = pairs(S, "real", "real", 1, evals), pairs(S, "real", "render", 0, evals)
     fixes = {}
@@ -280,6 +297,9 @@ def pp(o):
     print("spearman PSNR vs gap", o["spearman_psnr_vs_gap"])
     for k, v in o["probes"].items():
         print(k, v)
+    if "env" in o:
+        print("env rig:", {m: (round(r["real_env"], 3), round(r["render_env"], 3), round(r["ratio_real_env"][0], 2), f3(r["ratio_real_env"])) for m, r in o["env"].items()})
+        print("env - real shifts:", {m: (round(r[0], 3), f3(r)) for m, r in o["shift_env_minus_real"].items()})
     print("phase-matched floor:", {m: (round(r["rr3"], 3), round(r["ratio"][0], 2), f3(r["ratio"])) for m, r in o["gap_phase_floor"].items()})
     print("nav:", json.dumps(o["nav"], indent=0, default=float)[:3000])
 
