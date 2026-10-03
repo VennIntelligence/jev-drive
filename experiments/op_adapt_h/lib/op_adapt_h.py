@@ -337,6 +337,8 @@ class HCfg:
     dom_w_L: dict = field(default_factory=dict)          # domains of L rows (bank2 launch variants); S rows use dom_w
     dom_w_M: dict = field(default_factory=lambda: {"nav": 0.4, "wod": 0.3, "carla": 0.3})   # M rows: bank3 long launches
     launch_plain: float = 0.25                           # share of L rows on real launches drawn without fake yaw
+    lam_p: float = 0.0                                   # pair consistency: plan(perturbed history) to the stop-gradient plan of
+    pair_roles: tuple = ("H", "L", "S", "M")             # the same sample's unperturbed history (same t0 image), per these roles
     ckpt_every: int = 500
     workers: int = 10
 
@@ -384,7 +386,7 @@ class Batcher(torch.utils.data.Dataset):
             self._open()
         c = self.cfg
         rng = np.random.default_rng([c.seed, k])
-        rows = []
+        rows, twins = [], []
         for role, cnt in c.roles.items():
             r = "U" if (c.control and role in ("H", "O", "L", "S", "M")) else role
             dw = c.dom_w_L if r == "L" else c.dom_w_M if r == "M" else {d: x for d, x in c.dom_w.items() if d not in LAUNCH_DOMS} if r in ("H", "O", "S") else c.dom_w
@@ -399,7 +401,17 @@ class Batcher(torch.utils.data.Dataset):
                     if j is not None:
                         break
                 rows.append(bank_row(S, B, i, j, r))
-        return collate(rows)
+                if c.lam_p > 0 and r in c.pair_roles:          # the unperturbed twin of the row (same sample, normal variant)
+                    B0 = self.B2[d] if d in LAUNCH_DOMS else self.B[d]
+                    lo, hi = B0.first[i], B0.first[i + 1]
+                    j0 = lo + int(np.flatnonzero(B0.v["kind"][lo:hi] == "normal")[0])
+                    twins.append((len(rows) - 1, np.asarray(B0.T[j0]), B0.v["slot_valid"][j0]))
+        out = collate(rows)
+        if c.lam_p > 0:
+            out["pidx"] = torch.tensor([t[0] for t in twins], dtype=torch.long)
+            out["trunk0"] = torch.from_numpy(np.stack([t[1] for t in twins])) if twins else out["trunk"][:0]
+            out["valid0"] = torch.from_numpy(np.stack([t[2] for t in twins])) if twins else out["valid"][:0]
+        return out
 
 
 def bank_row(S: Samples, B: Bank, i: int, j: int, role: str) -> dict:
@@ -448,12 +460,17 @@ class Losses:
         self.cfg = cfg
         self.base = L.Losses(net, cfg.lcfg(), tstd, dev)
 
-    def __call__(self, o, b):
+    def __call__(self, o, b, o0=None):
         c, base = self.cfg, self.base
         out = o["outputs"].float()
         plan = base.plan(out)
         role = b["role"]
         L_ = {}
+        tot0 = 0.0
+        if o0 is not None and len(b["pidx"]):
+            p0 = base.plan(o0["outputs"].float()).detach()
+            L_["pair"] = base.imit_dist(plan[b["pidx"]], p0, b["cam"][b["pidx"]]).mean()
+            tot0 = c.lam_p * L_["pair"]
         imit = (role == 1) | (role >= 3)
         w = torch.zeros_like(role, dtype=torch.float32)
         for r, k in (("U", 1), ("H", 3), ("O", 4), ("L", 5), ("S", 6), ("M", 7)):
@@ -478,7 +495,7 @@ class Losses:
             num = e[:, ~base.plan_cols].sum(1) + keep * e[:, base.plan_cols].sum(1)
             L_["distill"] = (num / e.shape[1]).mean()
             tot = tot + c.dw * c.lam_d * L_["distill"]
-        return tot, L_
+        return tot + tot0, L_
 
 
 # ---------------------------------------------------------------- probe / dev metrics

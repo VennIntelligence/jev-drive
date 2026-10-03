@@ -49,6 +49,12 @@ ARMS = {
     # at steps 4-7 with |H| 1-15 deg): M rows = bank3 long launches (m 4-8, |delta| 2-12 deg)
     "ln3": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 9, "D": 10, "H": 6, "O": 5, "L": 8, "S": 4, "M": 6},
                 dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
+    # iteration 2 (after ln3: long launches do not move (a), 0.63; the adapted gain is a flattened step, local gain at steps 3-6 rises
+    # above shipped): pair consistency, plan(fake history) -> stop-gradient plan(real history) of the same t0 image, on H / L / S / M rows
+    "ln4": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 9, "D": 10, "H": 6, "O": 5, "L": 8, "S": 4, "M": 6}, lam_p=3.0,
+                dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
+    "ln4p10": dict(dw=3.0, rot_dps=(3.0, 15.0), roles={"U": 9, "D": 10, "H": 6, "O": 5, "L": 8, "S": 4, "M": 6}, lam_p=10.0,
+                   dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
     "lsmoke": dict(steps=60, ckpt_every=10 ** 9, dw=3.0, roles={"U": 4, "D": 4, "H": 4, "O": 4, "L": 6, "S": 4},
                    dom_w_L={"lwod": 0.35, "lcarla": 0.15, "nav": 0.2, "wod": 0.15, "carla": 0.15}),
 }
@@ -510,8 +516,14 @@ def train(cfg: H.HCfg, run, d: Path, a):
         for k in b.get("kind", []):
             kinds[k] = kinds.get(k, 0) + 1
         bd = {k: v.to(dev, non_blocking=True) for k, v in b.items() if k != "kind"}
-        o = model(bd["trunk"], bd["valid"], bd["tc"])
-        total, Ls = lossf(o, bd)
+        if "trunk0" in bd and len(bd["pidx"]):            # pair consistency: the unperturbed twins ride in the same forward
+            n = len(bd["trunk"])
+            oo = model(torch.cat([bd["trunk"], bd["trunk0"]]), torch.cat([bd["valid"], bd["valid0"]]), torch.cat([bd["tc"], bd["tc"][bd["pidx"]]]))
+            o, o0 = {"outputs": oo["outputs"][:n]}, {"outputs": oo["outputs"][n:]}
+            total, Ls = lossf(o, bd, o0)
+        else:
+            o = model(bd["trunk"], bd["valid"], bd["tc"])
+            total, Ls = lossf(o, bd)
         frac = step / cfg.steps
         for g in opt.param_groups:
             g["lr"] = cfg.lr * min(1.0, (step + 1) / cfg.warmup) * 0.5 * (1 + np.cos(np.pi * frac))
