@@ -192,13 +192,13 @@ _VMAPS = {}
 def _vcam_job(args):
     """(entry, H) -> keys (4, 2, 6, 128, 256), context frames (6, ...), camera [x, y, H'] of the virtual camera at H m above
     the road (H' = the true height when H <= 0)."""
-    e, H = args
+    e, H, pitch = args
     from jevdrive import navsim_zs as Z
     cam = e["cams"][-1]["CAM_F0"]
     ht = float(cam["t"][2]) + ZG
     r = 1.0 if H <= 0 else ht / H
-    key = (Z.calib_key({"CAM_F0": cam}), round(r, 4))
-    m = _VMAPS.get(key) or _VMAPS.setdefault(key, Z.OpenpilotMaps(cam, depress=r))
+    key = (Z.calib_key({"CAM_F0": cam}), round(r, 4), pitch)
+    m = _VMAPS.get(key) or _VMAPS.setdefault(key, Z.OpenpilotMaps(cam, depress=r, pitch_deg=pitch))
     keys = np.stack([m(m.decode(e["cams"][f]["CAM_F0"]["path"])) for f in range(4)])
     camv = np.r_[np.asarray(cam["t"], float)[:2], ht / r]
     return keys, I.synth_cpu(keys, "warp", SYN_T, I.track_navsim(e["pose"], e["vel"]), camv), camv
@@ -418,7 +418,7 @@ def cmd_run(a):
         src_it = ((keys[int(i)], np.asarray(syn[i]), mt["cam"][i]) for i in rows)
     else:
         ex = ProcessPoolExecutor(a.vcam_workers)
-        src_it = _bounded_map(ex, _vcam_job, ((ents[i], a.vcam) for i in rows), 4 * a.vcam_workers)
+        src_it = _bounded_map(ex, _vcam_job, ((ents[i], a.vcam, a.vpitch) for i in rows), 4 * a.vcam_workers)
     for r, (i, (kf, sf, camr)) in enumerate(zip(rows, src_it)):
         if a.align != "none":           # reference-free history alignment (jevdrive.op_interp.align_history)
             kf, sf = I.align_history(kf, sf, SYN_T, I.track_navsim(mt["pose"][i], mt["vel"][i]), camr, a.align)
@@ -447,12 +447,15 @@ def cmd_run(a):
     ms = 1e3 * tg / max(1, R * len(a.schedule))
     for s, stem in zip(a.schedule, stems):
         info = json.dumps({"model": a.model, "backend": backend, "frames": a.frames, "schedule": s, "preroll": pre, "align": a.align,
-                           "prereg": a.prereg, "vcam": a.vcam, "step_times": ts.tolist(), "heads_slices": hs, "desires": DESIRES,
+                           "prereg": a.prereg, "vcam": a.vcam, "vpitch": a.vpitch, "step_times": ts.tolist(), "heads_slices": hs, "desires": DESIRES,
                            "plan_std": "exp of the MDN log-std, as openpilot's parse_mdn"})
         out = pdir / (f"{stem}{sfx}" + (f".part{k}of{K}" if a.shard else "") + ".npz")
         np.savez(out, names=np.array(mt["names"])[rows], steps=len(ts), ms_per_scene=ms, info=info, **P[s])
     print(f"shard {a.shard or '0/1'}: {R} scenes x {len(a.schedule)} schedules, {len(ts)} steps, {ms:.1f} ms/scene, "
           f"{time.time() - t0:.0f} s wall")
+    if a.vcam is not None:             # the render pool must not outlive the shard (os._exit leaves its workers orphaned)
+        for pr in list(ex._processes.values()):
+            pr.kill()
     if a.shard:                        # ORT / TensorRT teardown can hang for minutes after the outputs are written
         sys.stdout.flush()
         os._exit(0)
@@ -484,7 +487,7 @@ if __name__ == "__main__":
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--workers", type=int, default=16)
     p = sp.add_parser("synth")
-    p.add_argument("--data", nargs="+", choices=list(SPLITS), required=True, help="processed in order")
+    p.add_argument("--data", nargs="+", required=True, help="processed in order")
     p.add_argument("--method", choices=("gimm", "warp"), required=True)
     p.add_argument("--gpu", type=int, default=0, help="physical GPU index (gimm)")
     p.add_argument("--vram-gb", type=float, default=12.0, help="hard cap of this process's CUDA memory")
@@ -495,7 +498,7 @@ if __name__ == "__main__":
     p.add_argument("--workers", type=int, default=16, help="warp: CPU processes")
     p.add_argument("--limit-chunks", type=int, default=0, help="staging: only the first N chunks per split")
     p = sp.add_parser("run")
-    p.add_argument("--data", choices=list(SPLITS), required=True)
+    p.add_argument("--data", required=True)
     p.add_argument("--frames", required=True, help="gimm | warp")
     p.add_argument("--model", choices=list(BACKENDS), required=True)
     p.add_argument("--schedule", nargs="+", choices=list(SCHEDULES), default=["none"],
@@ -507,6 +510,7 @@ if __name__ == "__main__":
     p.add_argument("--align", choices=I.ALIGN, default="none", help="history-frame rule (jevdrive.op_interp.align_history)")
     p.add_argument("--vcam", type=float, default=None, help="virtual camera height above the road, m (0: true height); "
                    "renders keys + warp context frames on the fly, --frames vh<cm>")
+    p.add_argument("--vpitch", type=float, default=0.0, help="--vcam: virtual camera pitch, deg, > 0 up (horizon lower)")
     p.add_argument("--vcam-workers", type=int, default=8, help="--vcam: CPU render processes per shard")
     p.add_argument("--procs", type=int, default=8)
     p.add_argument("--shard", default="")

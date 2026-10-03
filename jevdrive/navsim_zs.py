@@ -166,15 +166,19 @@ class OpenpilotMaps:
     YCbCr (no RGB round trip) and chroma is the 2x2 mean, as the WOD-E2E exam's openpilot runner.
     depress = r > 1: a virtual camera lowered from height h to h / r above a flat road (same x, y, axes): a model ray below
     the horizon samples CAM_F0 along (x, y, r z), i.e. the same ground point; rays above the horizon are unchanged
-    (lane EDGE, experiments/skill_pack/plans/2026-10-04-roadedge-diagnosis-plan.md)."""
+    (lane EDGE, experiments/skill_pack/plans/2026-10-04-roadedge-diagnosis-plan.md). pitch_deg > 0 pitches the virtual
+    camera up about its own y axis before the depression (horizon moves down in the model frame)."""
 
-    def __init__(self, cam: dict, depress: float = 1.0):
+    def __init__(self, cam: dict, depress: float = 1.0, pitch_deg: float = 0.0):
         from .openpilot.frames import MEDMODEL_K, SBIGMODEL_K, VIEW_FROM_DEVICE, MODEL_W, MODEL_H
         uu, vv = np.meshgrid(np.arange(MODEL_W, dtype=np.float64), np.arange(MODEL_H, dtype=np.float64))
         self.idx, self.coverage = [], []
         w, h = NUPLAN_WH
         for Km in (MEDMODEL_K, SBIGMODEL_K):
             ray_dev = np.stack([uu, vv, np.ones_like(uu)], -1) @ np.linalg.inv(Km @ VIEW_FROM_DEVICE).T  # x fwd, y right, z down
+            if pitch_deg:
+                c, s_ = np.cos(np.radians(pitch_deg)), np.sin(np.radians(pitch_deg))
+                ray_dev = ray_dev @ np.array([[c, 0, s_], [0, 1, 0], [-s_, 0, c]]).T
             if depress != 1.0:
                 ray_dev[..., 2] = np.where(ray_dev[..., 2] > 0, ray_dev[..., 2] * depress, ray_dev[..., 2])
             uv, ok, _ = project_nuplan(ray_dev * np.array([1., -1., -1.]), cam, 1)
