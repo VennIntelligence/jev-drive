@@ -185,7 +185,7 @@ def main():
     dt = np.array([v["dt"] for v in need.values()])
     kdt = np.array([[x if x is not None else np.nan for x in v["key_dt"]] for v in need.values()], float)
     res["timing"] = dict(n_tokens=len(need), ctx_dt_err_max_ms=round(float(np.abs(dt - np.array([-1.4, -1.2, -0.8, -0.6, -0.4, -0.2])).max() * 1e3), 1),
-                         key_dt_err_max_ms=round(float(np.nanmax(np.abs(kdt - np.array([-1.5, -1.0, -0.5, 0.0]))) * 1e3), 1),
+                         key_dt_err_max_ms=round(float(np.nanmax(np.abs(kdt)) * 1e3), 1),      # need.json stores the error already
                          key_missing=int(np.isnan(kdt).sum()))
     mt = json.loads((P / "lb_hq_navtest/meta.json").read_text())
     from jevdrive import navsim_zs as Z
