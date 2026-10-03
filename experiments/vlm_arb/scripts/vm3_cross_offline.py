@@ -3,7 +3,7 @@ the forced `ANSWER:`, both cameras, r1153, exactly like the light / stop-sign qu
 "a vehicle is closing on the ego's path from the side" on the saved closed-loop frames of the vmerge-family runs?
 
   python vm3_cross_offline.py label                 privileged-truth labels of every saved frame pair (CPU)
-  python vm3_cross_offline.py score [--limit N]     P(positive) of every candidate prompt on the selected frames (GPU, resumable)
+  python vm3_cross_offline.py score [--limit N]     logit margin (positive - negative option) of every candidate prompt on the selected frames (GPU, resumable)
   python vm3_cross_offline.py report                dev choice, test numbers, collision episodes -> results/vm3_cross_offline.{md,csv}
 
 Env: $DATA_DIR/envs/jevdrive/bin/python, CUDA_VISIBLE_DEVICES=2. Outputs: $DATA_DIR/runs/vlm_arb/vm3_cross/.
@@ -14,7 +14,9 @@ Pre-registered (written before any model answer was read):
   |lateral| <= 2.5 m); snapshot = the last privileged row <= t_q. ttc = first time inside.
 - main set: ego v < 0.5 m/s inside a junction window (state rules contain R2 or R3, or 0 <= junc_dist <= 10 m).
 - split: routes sorted by id, alternate routes dev / test (DEV below); one prompt chosen by dev AUC on main-set frames.
-- threshold: on dev main-set negatives, the P(positive) at which dev FPR = 0.10 (margin under the 0.15 line); also argmax.
+- threshold: on dev main-set negatives, the score at which dev FPR = 0.10 (margin under the 0.15 line); also argmax.
+- addendum 12:10 (before any test answer was read): scores are stored as the logit margin (positive - negative option), since the
+  5-decimal softmax saturated (ties at 1.00000 on dev); dev and test main sets are each a 1200-frame random subsample (budget).
 - line: usable as a release check iff on the test main set, at the dev threshold, recall >= 0.6 and FPR <= 0.15.
 """
 import argparse
@@ -35,8 +37,8 @@ OUT = DATA / "runs/vlm_arb/vm3_cross"
 RES_DIR = HERE.parent / "results"
 UNIT_GLOBS = ["v2-vmerge-*", "v2-vmerge2-*", "v2-vmj-*", "v2-vmnobyp-*", "v2-vmnocusum-*", "v2-vmnor1-*", "v2-dbg*-vm*"]
 HORIZON, DT, V_MIN, HEAD_MIN, LONG, LAT = 3.0, 0.1, 1.0, np.deg2rad(30), 20.0, 2.5
-N_SECONDARY = 800                                      # random other frames scored for the secondary all-frames readout
-N_DEV = 1200                                           # random dev main-set frames for the prompt choice (consecutive frames are redundant)
+N_SECONDARY = 400                                      # random other frames scored for the secondary all-frames readout
+N_DEV = N_TEST = 1200                                  # random dev / test main-set frames (consecutive frames are redundant)
 EPISODES = [("v2-vmerge-s1", "27297"), ("v2-vmerge-s1", "17280"), ("v2-vmerge2-s1", "17280"), ("v2-vmerge2-s2", "17280"),
             ("v2-vmerge2-s3", "17280")]
 
@@ -166,12 +168,14 @@ def label(a):
 
 
 def selection(df, cont):
-    """Frames to score: the test main set, N_DEV random dev main-set frames, every frame of the collision episodes within 5 s before a contact, a fixed random
+    """Frames to score: N_DEV / N_TEST random dev / test main-set frames, every frame of the collision episodes within 5 s before a contact, a fixed random
     subset of the rest (secondary readout)."""
     rng = np.random.default_rng(0)
-    sel = df.main & (df.part == "test")
+    sel = df.main & False
     dm = df.index[df.main & (df.part == "dev")]
     sel.loc[rng.choice(dm, min(N_DEV, len(dm)), replace=False)] = True
+    tm = df.index[df.main & (df.part == "test")]
+    sel.loc[rng.choice(tm, min(N_TEST, len(tm)), replace=False)] = True
     for u, r in EPISODES:
         c = cont[cont.unit.str.startswith(u + "-") & (cont.route.astype(str) == r)]
         for tc in c.t:
@@ -193,7 +197,7 @@ def score(a):
     df = df.sort_values(["o", "id"]).reset_index(drop=True)
     if a.limit:
         df = df.head(a.limit)
-    outp = OUT / "scores.csv"
+    outp = OUT / "scores_m.csv"
     done = set(pd.read_csv(outp).id) if outp.exists() else set()
     todo = df[~df.id.isin(done)]
     print("selected %d, done %d, todo %d" % (len(df), len(done), len(todo)), flush=True)
@@ -210,7 +214,7 @@ def score(a):
     res = RES[a.res]
     f = open(outp, "a")
     if not done:
-        f.write("id," + ",".join("p_" + k for k in PROMPTS) + "\n")
+        f.write("id," + ",".join("m_" + k for k in PROMPTS) + "\n")
     t0, B = time.time(), a.batch
     rows = list(todo.itertuples())
     with torch.no_grad():
@@ -225,9 +229,9 @@ def score(a):
                     lg = torch.cat([run1(th, [x]) @ W.T for x in xs])
                 else:
                     lg = run1(th, xs) @ W.T
-                ps.append(torch.softmax(lg, -1)[:, 0].cpu().numpy())
+                ps.append((lg[:, 0] - lg[:, 1]).cpu().numpy())        # logit margin: P(positive) = sigmoid(margin), no saturation
             for i, r in enumerate(chunk):
-                f.write(r.id + "," + ",".join("%.5f" % p[i] for p in ps) + "\n")
+                f.write(r.id + "," + ",".join("%.4f" % p[i] for p in ps) + "\n")
             f.flush()
             n = b + len(chunk)
             if n % (20 * B) < B or n == len(rows):
@@ -269,6 +273,10 @@ def boot_auc(d, col, n=1000):
     return np.percentile(v, [2.5, 97.5]) if len(v) else (np.nan, np.nan)
 
 
+def sig(m):
+    return 1 / (1 + np.exp(-m))
+
+
 def rates(d, col, thr):
     yhat = d[col] >= thr
     P, N = d.pos == 1, d.pos == 0
@@ -278,10 +286,10 @@ def rates(d, col, thr):
 
 def report(a):
     lab = pd.read_csv(OUT / "labels.csv")
-    sc = pd.read_csv(OUT / "scores.csv").drop_duplicates("id")
+    sc = pd.read_csv(OUT / "scores_m.csv").drop_duplicates("id")
     cont = pd.read_csv(OUT / "contacts.csv")
     d = lab.merge(sc, on="id")
-    cols = ["p_" + k for k in PROMPTS]
+    cols = ["m_" + k for k in PROMPTS]
     M = d[d.main]
     dev, test = M[M.part == "dev"], M[M.part == "test"]
     L = ["# vm3 cross-traffic release check: zero-shot Qwen3-VL-4B, offline on the vmerge-family frames", "",
@@ -305,14 +313,14 @@ def report(a):
     for c in cols:
         A = auc(dev.pos, dev[c])
         lo, hi = boot_auc(dev, c)
-        r = rates(dev, c, 0.5)
+        r = rates(dev, c, 0.0)
         L.append("| %s | %.3f [%.3f, %.3f] | %.2f / %.2f |" % (c[2:], A, lo, hi, r["recall"], r["fpr"]))
         if A > ba:
             best, ba = c, A
     neg = dev[dev.pos == 0][best].to_numpy()
-    thr = float(np.quantile(neg, 0.90)) if len(neg) else 0.5
+    thr = float(np.quantile(neg, 0.90)) if len(neg) else 0.0
     k = best[2:]
-    L += ["", "Chosen: **%s** (highest dev AUC). Dev threshold (dev FPR = 0.10): P(positive) >= %.4f." % (k, thr), "",
+    L += ["", "Chosen: **%s** (highest dev AUC). Dev threshold (dev FPR = 0.10): logit margin >= %.3f, i.e. P(positive) >= %.4f; argmax = margin >= 0." % (k, thr, sig(thr)), "",
           "Prompt (exact string):", "", "```", PROMPTS[k][0], "```", "", "Options: positive `%s`, negative `%s`." % tuple(PROMPTS[k][1]), ""]
     L += ["## Test (main set, the chosen prompt only)", "", "| set | n | n pos | AUC [95%] | recall @dev thr | FPR @dev thr | recall @argmax | FPR @argmax |",
           "|:--|--:|--:|--:|--:|--:|--:|--:|"]
@@ -320,10 +328,10 @@ def report(a):
     for name, x in [("test main", test), ("dev main", dev), ("all scored frames (secondary)", d),
                     ("all scored, ego moving (secondary)", d[d.v >= 0.5])]:
         lo, hi = boot_auc(x, best)
-        r1, r2 = rates(x, best, thr), rates(x, best, 0.5)
+        r1, r2 = rates(x, best, thr), rates(x, best, 0.0)
         L.append("| %s | %d | %d | %.3f [%.3f, %.3f] | %.2f | %.2f | %.2f | %.2f |" % (
             name, len(x), r1["n_pos"], auc(x.pos, x[best]), lo, hi, r1["recall"], r1["fpr"], r2["recall"], r2["fpr"]))
-        rows.append(dict(set=name, prompt=k, thr=thr, auc=auc(x.pos, x[best]), auc_lo=lo, auc_hi=hi, **{"thr_" + q: v for q, v in r1.items()},
+        rows.append(dict(set=name, prompt=k, thr_margin=thr, thr_p=sig(thr), auc=auc(x.pos, x[best]), auc_lo=lo, auc_hi=hi, **{"thr_" + q: v for q, v in r1.items()},
                          **{"argmax_" + q: v for q, v in r2.items() if q in ("recall", "fpr")}))
     for c in cols:
         if c != best:
@@ -357,8 +365,8 @@ def report(a):
                 L.append("| %s | %s | %.2f | %s | no frame | | | | |" % (u, r, tc, typ))
             for e in x.itertuples():
                 L.append("| %s | %s | %.2f | %s | %.2f | %.2f | %s | %.3f | %s |" % (
-                    u, r, tc, typ, e.t, e.v, ("pos (%.1f s)" % e.ttc) if e.pos else "neg", getattr(e, best), "STOP" if getattr(e, best) >= thr else "-"))
-                ep_rows.append(dict(unit=u, route=r, t_contact=tc, other=typ, t=e.t, v=e.v, pos=e.pos, ttc=e.ttc, p=getattr(e, best)))
+                    u, r, tc, typ, e.t, e.v, ("pos (%.1f s)" % e.ttc) if e.pos else "neg", sig(getattr(e, best)), "STOP" if getattr(e, best) >= thr else "-"))
+                ep_rows.append(dict(unit=u, route=r, t_contact=tc, other=typ, t=e.t, v=e.v, pos=e.pos, ttc=e.ttc, margin=getattr(e, best), p=sig(getattr(e, best))))
     pd.DataFrame(rows).to_csv(RES_DIR / "vm3_cross_offline.csv", index=False)
     pd.DataFrame(ep_rows).to_csv(RES_DIR / "vm3_cross_episodes.csv", index=False)
     (RES_DIR / "vm3_cross_offline.md").write_text("\n".join(L) + "\n")
