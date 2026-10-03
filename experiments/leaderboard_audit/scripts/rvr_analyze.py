@@ -196,10 +196,13 @@ def main():
             return dict(G1=(r[:, ix["g1L"]] - r[:, ix["g1R"]]) / 2, G10=(r[:, ix["g10L"]] - r[:, ix["g10R"]]) / 2,
                         L=(r[:, ix["launchL"]] - r[:, ix["launchR"]]) / 2, H0=r[:, ix["normal"]])
         for s_, z in P.items():
-            fe = RUN / "hugsim" / s_ / "probe_env.npz"
-            if fe.exists():
-                P[s_] = {**{k: z[k] for k in z.files}, "env": np.load(fe)["env"]}
-        for arm in ("render", "render_all", "env"):
+            z = {k: z[k] for k in z.files}
+            for extra, key in (("probe_env.npz", "env"), ("probe_blur.npz", "real_blur")):
+                fe = RUN / "hugsim" / s_ / extra
+                if fe.exists():
+                    z[key] = np.load(fe)[key]
+            P[s_] = z
+        for arm in ("render", "render_all", "env", "real_blur"):
             if not all(arm in (z.files if hasattr(z, "files") else z) for z in P.values()):
                 continue
             for g in ("G1", "G10", "L"):

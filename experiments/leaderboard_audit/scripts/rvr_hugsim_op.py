@@ -86,6 +86,8 @@ def apply_fix(rgb, kind, P, seed=0):
     if kind == "none":
         return rgb
     x = rgb.astype(np.float32)
+    if kind == "blur":
+        return np.clip(np.rint(cv2.GaussianBlur(x, (0, 0), P["blur_sigma"])), 0, 255).astype(np.uint8)
     if kind in ("stat", "all"):
         x = x * np.asarray(P["gain"], np.float32) + np.asarray(P["bias"], np.float32)
     if kind in ("sharp", "all"):
@@ -176,6 +178,24 @@ def cmd_fit(a):
     stats["psnr_front_by_scene"] = psnr
     (OUT.parent / "imgstats.json").write_text(json.dumps(stats, indent=1))
     print(json.dumps(stats, indent=1))
+
+
+def cmd_fitblur(a):
+    """Gaussian blur of the REAL frames that matches the render's high-frequency share (a check added after the probes: does softness
+    alone raise the launch gain?) -> fixes.json blur_sigma."""
+    P = json.loads((OUT.parent / "fixes.json").read_text())
+    R = {"real": [], "render": []}
+    for s in calib_scenes():
+        A = load(s)
+        for k in range(6, 180, 30):
+            for src in R:
+                R[src].append(np.asarray(A[src][k, 0]))
+    hf_r = np.mean([hf_share(grey(x)) for x in R["render"]])
+    best = min((abs(np.mean([hf_share(grey(apply_fix(x, "blur", dict(blur_sigma=sg)))) for x in R["real"]]) - hf_r), sg)
+               for sg in (0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.2, 1.5))
+    P["blur_sigma"], P["hf_render"] = best[1], hf_r
+    (OUT.parent / "fixes.json").write_text(json.dumps(P, indent=1))
+    print("blur sigma", best)
 
 
 # ---------------------------------------------------------------- model
@@ -272,7 +292,7 @@ def cmd_probe(a):
     m = model()
     keep, hs = keep_layout(m)
     sl = {q: s.start for q, s in m.slices.items()}
-    arms, fn = (("env",), "probe_env.npz") if a.env else (PROBE_ARMS, "probe.npz")
+    arms, fn = (("env",), "probe_env.npz") if a.env else (("real_blur",), "probe_blur.npz") if a.blur else (PROBE_ARMS, "probe.npz")
     for s in a.scenes or scenes():
         f = OUT / s / fn
         if f.exists() or (a.env and not (OUT / s / "render_env.npy").exists()):
@@ -304,9 +324,10 @@ def cmd_probe(a):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["fit", "stream", "probe"])
+    ap.add_argument("cmd", choices=["fit", "fitblur", "stream", "probe"])
+    ap.add_argument("--blur", action="store_true", help="probe: real frames blurred to the render's softness -> probe_blur.npz")
     ap.add_argument("scenes", nargs="*")
     ap.add_argument("--workers", type=int, default=12)
     ap.add_argument("--env", action="store_true", help="stream / probe: the closed-loop-rig render (render_env.npy) only -> stream_env.npz / probe_env.npz")
     a = ap.parse_args()
-    {"fit": cmd_fit, "stream": cmd_stream, "probe": cmd_probe}[a.cmd](a)
+    {"fit": cmd_fit, "fitblur": cmd_fitblur, "stream": cmd_stream, "probe": cmd_probe}[a.cmd](a)
