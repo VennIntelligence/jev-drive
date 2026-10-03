@@ -4,7 +4,8 @@ experiments/leaderboard_audit/plans/2026-10-04-real-vs-render-prereg.md.
 
   fit     image-side fixes fitted on the calibration scenes (scene[::4]): sharpening to the real high-frequency share, per-channel
           colour affine, additive noise to the real noise level -> fixes.json; plus per-arm image statistics -> imgstats.json
-  stream  continuous 20 Hz rollouts from a zero state over each scene (every arm), raw heads at every new-frame step -> stream_<scene>.npz
+  stream  continuous 20 Hz rollouts from a zero state over each scene (every arm), raw heads at every new-frame step -> <scene>/stream.npz
+          (--env: the closed-loop-rig render only -> <scene>/stream_env.npz)
   probe   history-yaw probes (G at 1 and 10 deg/s, launch gain L) every 12 frames from frame 18 -> probe_<scene>.npz
 
 envs/openpilot on a leased card:
@@ -96,6 +97,8 @@ def apply_fix(rgb, kind, P, seed=0):
 
 
 def arm_src(arm):
+    if arm == "env":
+        return "render_env", "none"
     src, _, kind = arm.partition("_")
     return src, kind or "none"
 
@@ -106,7 +109,8 @@ def frame_rgb(arrs, arm, k, P):
 
 
 def load(scene):
-    return {s: np.load(OUT / scene / f"{s}.npy", mmap_mode="r") for s in ("real", "render")}
+    return {s: np.load(OUT / scene / f"{s}.npy", mmap_mode="r") for s in ("real", "render", "render_env")
+            if (OUT / scene / f"{s}.npy").exists()}
 
 
 def meta(scene):
@@ -206,12 +210,13 @@ def _pack(job):
 
 
 def cmd_stream(a):
+    arms, fn = (("env",), "stream_env.npz") if a.env else (STREAM_ARMS, "stream.npz")
     P = json.loads((OUT.parent / "fixes.json").read_text())
     m = model()
     keep, hs = keep_layout(m)
     for s in a.scenes or scenes():
-        f = OUT / s / "stream.npz"
-        if f.exists():
+        f = OUT / s / fn
+        if f.exists() or (a.env and not (OUT / s / "render_env.npy").exists()):
             continue
         T, v = meta(s)
         n = len(T)
@@ -221,7 +226,7 @@ def cmd_stream(a):
         H = {}
         t0 = time.time()
         with ProcessPoolExecutor(a.workers, initializer=_winit, initargs=(s, P)) as ex:
-            for arm in STREAM_ARMS:
+            for arm in arms:
                 packed = list(ex.map(_pack, [(arm, k, 0.0) for k in range(n)], chunksize=8))
                 m.reset()
                 out = np.full((n, len(keep)), np.nan, np.float32)
@@ -230,7 +235,7 @@ def cmd_stream(a):
                     if first[j]:
                         out[k] = raw[keep]
                 H[arm] = out
-        np.savez(f, **H, T=T, v=v, info=json.dumps(dict(heads_slices=hs, arms=STREAM_ARMS)))
+        np.savez(f, **H, T=T, v=v, info=json.dumps(dict(heads_slices=hs, arms=arms)))
         print(s, "stream", f"{time.time() - t0:.0f}s", flush=True)
 
 
@@ -301,5 +306,6 @@ if __name__ == "__main__":
     ap.add_argument("cmd", choices=["fit", "stream", "probe"])
     ap.add_argument("scenes", nargs="*")
     ap.add_argument("--workers", type=int, default=12)
+    ap.add_argument("--env", action="store_true", help="stream: the closed-loop-rig render (render_env.npy) only -> stream_env.npz")
     a = ap.parse_args()
     {"fit": cmd_fit, "stream": cmd_stream, "probe": cmd_probe}[a.cmd](a)
