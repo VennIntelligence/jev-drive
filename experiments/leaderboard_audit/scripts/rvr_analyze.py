@@ -110,6 +110,11 @@ def main():
         tab[m] = dict(rr=float(np.median(RR[m][0])), rs=float(np.median(RS[m][0])), ratio=r, n=int(len(RS[m][0])),
                       meaningful=bool(r[1] > 1))
     out["gap"] = tab
+    # added after the pre-registration (disclosed): the 12 Hz source fed at 20 Hz repeats frames 1-2 steps in a 3-frame / 5-step cycle, and
+    # nuScenes sweeps come at 100 / 100 / 50 ms, so adjacent frames sit at different phases of openpilot's 0.2 s frame pair; frames k and
+    # k + 3 (0.25 s) share the phase. Secondary floor, not the pre-registered line.
+    RR3 = pairs(S, "real", "real", 3)
+    out["gap_phase_floor"] = {m: dict(rr3=float(np.median(RR3[m][0])), ratio=ratio_stat(RS[m], RR3[m])) for m in METRICS}
     n_yes = sum(tab[m]["meaningful"] for m in PRIMARY)
     out["verdict_gap"] = "yes" if n_yes >= 2 else "partly" if n_yes == 1 else "no"
     # signed shifts render - real (scale-type readouts)
@@ -193,8 +198,65 @@ def main():
             hd.append(np.abs(gains(z, "render")["H0"] - gains(z, "real")["H0"]))
         pr["normal_heading_absdiff_deg"] = boot(lambda gs: np.median(np.concatenate(gs)), hd)
     out["probes"] = pr
+    out["nav"] = nav()
     (RUN / "stats.json").write_text(json.dumps(out, indent=1, default=float))
     pp(out)
+
+
+def nav():
+    """navhard near-pose pairs (rvr_nav_op.py): syn vs real at the same timestamp (pose offset < 0.5 m, < 1 deg) against the floor real vs
+    next real (0.5 s), lane lines / road edges compensated rigidly for the pose offset (expressed in the other side's camera frame)."""
+    f = RUN / "nav_heads.npz"
+    if not f.exists():
+        return None
+    z = np.load(f)
+    info = json.loads(str(z["info"]))
+    hs = info["heads_slices"]
+
+    def lines(H):
+        n = len(H)
+        ll = H[:, hs["lane_lines"]:hs["lane_lines"] + 264].reshape(n, 4, 33, 2)[:, 1:3, :, 0]
+        re = H[:, hs["road_edges"]:hs["road_edges"] + 132].reshape(n, 2, 33, 2)[:, :, :, 0]
+        return ll, re, sig(H[:, hs["lane_lines_prob"]:hs["lane_lines_prob"] + 8][:, 1::2])
+
+    def moved(y, d):
+        """y (2, 33) right-positive at X_IDXS in frame B -> y at x = 10 m in frame A, A = B moved by d = (dlon, dlat left, dyaw left deg)."""
+        a = np.radians(d[2])
+        out = []
+        for row in y:
+            px, py = X_IDXS - d[0], -row - d[1]
+            xa, ya = np.cos(a) * px + np.sin(a) * py, -np.sin(a) * px + np.cos(a) * py
+            out.append(-np.interp(10.0, xa, ya))
+        return np.array(out)
+
+    L, E, P = {}, {}, {}
+    for side in ("syn", "real", "next", "syn_sharp"):
+        L[side], E[side], P[side] = lines(z[side])
+    res = {}
+    for side in ("syn", "syn_sharp"):
+        rs_l, rs_e, rr_l, rr_e, rs_p, rr_p, cl = [], [], [], [], [], [], []
+        for i, (d, dn) in enumerate(zip(info["d"], info["d_next"])):
+            okl = (P["real"][i, 1:3] > .5) & (P[side][i, 1:3] > .5)
+            okn = (P["real"][i, 1:3] > .5) & (P["next"][i, 1:3] > .5)
+            a = np.array([np.interp(10.0, X_IDXS, r) for r in L[side][i]])
+            rs_l.append(np.nanmean(np.where(okl, np.abs(a - moved(L["real"][i], d)), np.nan)))
+            rs_e.append(np.mean(np.abs(np.array([np.interp(10.0, X_IDXS, r) for r in E[side][i]]) - moved(E["real"][i], d))))
+            b = np.array([np.interp(10.0, X_IDXS, r) for r in L["next"][i]])
+            rr_l.append(np.nanmean(np.where(okn, np.abs(b - moved(L["real"][i], dn)), np.nan)))
+            rr_e.append(np.mean(np.abs(np.array([np.interp(10.0, X_IDXS, r) for r in E["next"][i]]) - moved(E["real"][i], dn))))
+            rs_p.append(np.mean(np.abs(P[side][i] - P["real"][i]))), rr_p.append(np.mean(np.abs(P["next"][i] - P["real"][i])))
+            cl.append(info["log"][i])
+        cl = np.unique(np.array(cl), return_inverse=True)[1]
+        r = {}
+        for m, num, den in (("lane_y10", rs_l, rr_l), ("edge_y10", rs_e, rr_e), ("lane_p", rs_p, rr_p)):
+            num, den = np.array(num), np.array(den)
+            ok = np.isfinite(num) & np.isfinite(den)
+            r[m] = dict(rs=float(np.median(num[ok])), rr=float(np.median(den[ok])), n=int(ok.sum()), logs=int(len(np.unique(cl[ok]))),
+                        ratio=ratio_stat((num[ok], cl[ok]), (den[ok], cl[ok])))
+        res[side] = r
+    res["n_pairs"] = len(info["d"])
+    res["imgstats"] = json.loads((RUN / "nav_imgstats.json").read_text())
+    return res
 
 
 def f3(x):
@@ -218,6 +280,8 @@ def pp(o):
     print("spearman PSNR vs gap", o["spearman_psnr_vs_gap"])
     for k, v in o["probes"].items():
         print(k, v)
+    print("phase-matched floor:", {m: (round(r["rr3"], 3), round(r["ratio"][0], 2), f3(r["ratio"])) for m, r in o["gap_phase_floor"].items()})
+    print("nav:", json.dumps(o["nav"], indent=0, default=float)[:3000])
 
 
 if __name__ == "__main__":
