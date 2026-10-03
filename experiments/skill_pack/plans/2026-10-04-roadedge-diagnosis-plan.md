@@ -95,3 +95,41 @@ Confirmed (camera height sets the metric scale) if lane-width ratio(r 1.44) / ra
 moves the same way; rejected if < 1.10. If confirmed, the image-side adapter is the candidate fix; scoring it needs
 GIMM frames re-made at the virtual height for both boards (GPU hours), outside this lane's budget: it is reported as the next
 step with its cost, not run here.
+
+## Addendum 3 (scored fix, written before any scored run of it; lane EDGE-FIX)
+Known before writing: addendum 2 (400 navtest tokens: lane ratio 0.69 -> 0.97, speed 0.84 -> 1.00 at 1.30 m); the output-side
+rescale arms (all negative on the test boards); navtrain warp (road plane 1.52 m) 81.17 vs GIMM 82.12 (shipped runs). No PDMS of
+any virtual-camera input has been read.
+
+Pipeline (`scripts/op_lb.py run --vcam H`, `--frames vh<cm>`): no frame cache. Per token the 4 CAM_F0 keyframes are rendered for
+a virtual camera H m above the road at the same x, y and axes (ground homography: a model ray below the horizon samples CAM_F0
+along (x, y, r z), r = h_true / H, h_true = CAM_F0 z + 0.35 m; rays above the horizon unchanged); the 6 context-rate frames are
+the CPU ego-motion warp of those keys with the road plane H below the camera. Control `vh187` = r 1 (the true height, the same
+code; its keys are bit-identical to the shipped frame cache, checked on 2 tokens), so every comparison below differs only in H.
+The history frames are therefore at the same virtual height by construction. Plans are in metric ego coordinates of the real
+world (the virtual camera sees the same ground points), exported by the usual lever-arm conversion. Cinque, zero state,
+desire none, op_lb step schedule, as the shipped runs.
+
+Height choice, navtrain only: H in {1.22, 1.30, 1.40} and the control vh187 on the lb_navtrain 3 000-token subset, official v1
+PDMS (`v1_navtrain_oplb` cache). H* = the H with the largest navtrain PDMS delta vs vh187 (taken even if no delta is > 0; then the
+fix fails its line on navtrain already and the test scores are read as confirmation only).
+
+Arms (test boards: navtest v1 PDMS n 12 146, navhard two-stage v2 EPDMS n 5 912, official scorers):
+- A0 `vh187` native Cinque (control); A1 `vh<H*>` native.
+- A2 = A1 + tracker pre-compensation, decision 97's `path` variant (`trk_precomp.py --modes path`), alpha in {0.25, 0.5, 0.75, 1}
+  refitted on navtrain against `vh<H*>` native (largest navtrain delta, taken even if negative). A0T = A0 + the same alpha
+  (interaction: does pre-compensation only pay once the plan is correctly scaled).
+- B0 / B1: it_dw3-s0 serving ONNX at vh187 / vh<H*>; B0s / B1s: + decision 94's selector (rot0 rollout at the same height,
+  ratio fixed at 0.6, not refitted).
+Lines (paired; navtest per-token bootstrap, navhard bootstrap over the 225 scene-mapping groups, 5 000 draws, 95% CI):
+- Fix (A1 vs A0), primary: adopt if navhard combined delta > 0 with CI lower bound > 0 and navtest delta >= -0.30; a navtest gain
+  with CI lower bound > 0 counts on its own (as addendum 1).
+- TRK (A2 vs A1): the same line.
+- Adapted model (B1s vs B0s): the same line. Gains add if the interaction (B1 - B0) - (A1 - A0) has a CI that contains 0 or is
+  > 0 on both boards and B1 > B0; sub-additive if its CI is < 0 on a board.
+- Context only (pipeline differs): every arm against the shipped GIMM rows (84.18 / 33.33; it_dw3 + selector 84.70 / 35.76).
+Frame-interpolation check: vh187 vs the shipped GIMM run on all three splits. The cheap warp path "matches" if |navtrain delta|
+<= 0.5 and |navtest delta| <= 0.5. If not, GIMM context frames at H* are made for navtrain only (cost ~1.2 GPU-s/token) and
+vh<H*>-GIMM vs shipped GIMM is scored there, to say whether the fix gain depends on the interpolator.
+Side checks (CPU, existing dumps, no new runs): HUGSIM and CARLA / B2D camera heights above the road and openpilot's lane-width
+ratio there; whether Alpamayo / N-series NAVSIM inputs take the same CAM_F0 geometry (stated from code).
