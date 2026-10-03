@@ -76,7 +76,7 @@ def main(dss):
                 d = d.mean(1) if m != "lane_p" else d[:, 1:3].mean(1)
                 g.append(d[np.isfinite(d)])
             sh[m] = A.boot(lambda gs: np.median(np.concatenate(gs)), [x for x in g if len(x)])
-        info = json.loads(str(np.load(next(iter(sorted((RUN / ds).glob("*/stream.npz"))))["info"])))
+        info = json.loads(str(np.load(sorted((RUN / ds).glob("*/stream.npz"))[0])["info"]))
         out = dict(n_scenes=len(S), scenes=list(S), verdict_gap="yes" if n_yes >= 2 else "partly" if n_yes == 1 else "no", gap=gap,
                    shift_render_minus_real=sh, probes=probes(ds), coverage=info.get("coverage"))
         (RUN / f"stats_{ds}.json").write_text(json.dumps(out, indent=1, default=float))
