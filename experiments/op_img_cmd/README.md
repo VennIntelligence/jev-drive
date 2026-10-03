@@ -68,6 +68,26 @@ table uses the fixed set decided on the no-overlay plan (the same pairs for ever
 [plans/2026-10-04-img-cmd-ft-prereg.md](plans/2026-10-04-img-cmd-ft-prereg.md)); [plans/2026-10-04-img-cmd-prereg.md](plans/2026-10-04-img-cmd-prereg.md) (samples, overlay families,
 metrics and verdict rules, fixed before the full run).
 
+## CARLA junction set
+
+The 179 Bench2Drive junction traversals with a map alternative (op_common_cause `carla_traversals.json`), re-driven
+by a privileged BehaviorAgent with the P4 Waymo-like 3-camera rig (`img_carla_prep.py`, `img_carla_agent.py`: stops
+2 s after the junction exit, cameras every tick, every 4th set saved = 5 Hz). `img_carla_geom.py` picks t0 at 20 / 10
+/ 5 / 1 m before the connector start (rear axle, along the approach) plus the last stopped frame within 8 m, and builds
+nav.pkl-schema geometry from carla waypoints (left-handed world converted to x fwd / y left); `img_carla_frames.py`
+renders 9 frames (t0 - 1.6 s ... t0) into packed model frames. 179 / 179 routes recorded, 699 samples, 696 pass
+`img_overlay.valid` (left 436, right 212, straight 48; moving 601, low 32, stop 63). Model-frame camera: origin at the
+front camera, (1.519, 0.026, 1.806) m from the ground point under the rear axle, axes = vehicle axes (no pitch); the
+rear axle is 1.389 m behind the CARLA actor origin (bounding-box centre on the ground). Road height ahead is not
+modelled by the overlay: |dz30| > 0.5 m in 44 samples (`dz15` / `dz30` keys).
+
+![CARLA geometry check](figs/carla_geom_check.png)
+
+What to look at: green band = approach + taken branch, white = taken-branch edges, red = approach lane edges; the red
+lines should sit on the painted lane lines / curb before the junction and the band centred in the ego lane, in the t0
+frame (columns 2-3) and in the oldest history frame drawn with its own pose (column 4). Overlays are not occluded by
+vehicles (row 5). Many B2D weathers are fog / night.
+
 <!-- files:begin -->
 ## Files
 
