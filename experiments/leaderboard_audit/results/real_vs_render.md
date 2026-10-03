@@ -135,3 +135,72 @@ as sharp and noisy as the real boards, so softness cannot be a cause shared by a
 Limits: training-view renders are the best case (closed-loop views are novel); 19 scenes, one dataset (nuScenes) of HUGSIM; the 12 Hz source fed at 20 Hz
 adds phase jitter to the floor (second floor reported); launch and G probes are open-loop; navhard uses a single-frame protocol on 146 offset-matched
 frames; board_views sharpness uses 2 frames per board.
+
+## 7. Other HUGSIM datasets: Waymo, PandaSet, KITTI-360 (same protocol, 2026-10-03)
+
+Pre-registration addendum: [plans/2026-10-04-real-vs-render-prereg.md](../plans/2026-10-04-real-vs-render-prereg.md) (written before the runs; the only
+earlier run was a one-scene Waymo smoke test of the pipeline). Code `scripts/rvr_ds_{fetch,real,render,op,analyze,chain,check}.py`; numbers on the box
+`runs/real_vs_render/stats_{waymo,pandaset,kitti360}.json`. Thresholds, readouts, floor and bootstrap (scenes resampled) are those of sections 1-2.
+Image-side fixes and the closed-loop-rig arm were not run (not asked for).
+
+What the datasets forced (each is a deviation from the nuScenes run, none changes a threshold):
+- **Real frames** are not shipped with HUGSIM: Waymo v1.4.3 segments (22, via gcloud; segment id = the scene id prefix), PandaSet (15 sequences, range reads from the
+  HF zip), KITTI-360 sequence 0000 image_00 `data_rect` (26 scenes, 5150 frames from the official S3 zip). Frame i = tfrecord frame i / PandaSet NN = i / KITTI frame start+i,
+  resized to the scene's training size (INTER_AREA). Alignment check (`rvr_ds_check.py`): render vs real PSNR is 24-30 dB at shift 0 and 12-21 dB at shifts of +-1 / +-2 frames, on every
+  camera of the scenes checked (Waymo 3, PandaSet 3, KITTI-360 2); Waymo cam_1/2/3 = FRONT / FRONT_LEFT / FRONT_RIGHT from the recorded relative poses.
+- **Source rate 10 Hz** (nuScenes 12 Hz): the floor is the adjacent frame at 0.1 s with no phase jitter, frames >= 3 s are frames >= 30, probes every 10 frames from frame 15.
+  PandaSet scenes are 8 s (80 frames), so 7 probe frames per scene.
+- **Calibration**: the recorded training intrinsics and camera rig of the scene (the sim's yaml intrinsics differ from the training ones for these datasets; for nuScenes they are equal),
+  with the dataset's `cam_rect` from `configs/sim/<ds>_camera.yaml` as before. Both arms share it. KITTI-360 uses the front camera only (no real counterpart for the angled
+  rig cameras); its 103-degree, 376 px high image covers 75% of the road model frame and 88% of the wide frame, so its readouts are weaker evidence.
+- Speed bins: probes with speed < 3 m/s are rare (Waymo 23 of 418, KITTI-360 4 of 491, PandaSet 0 of 105).
+
+### Per-frame gap, real vs training-view render (RS / adjacent-frame floor RR, median ratio [95% CI])
+
+| readout | nuScenes (19 scenes, sec. 1) | Waymo (22 scenes, 3699 frames) | PandaSet (15 scenes, 735) | KITTI-360 (26 scenes, 4418) |
+|---|---|---|---|---|
+| plan lateral @4 s | 0.63 [0.46, 0.85] | **1.59 [1.30, 1.90]** | **2.20 [1.49, 3.10]** | 1.08 [0.97, 1.19] |
+| road edge y @10 m | **1.82 [1.55, 2.18]** | **2.66 [2.15, 3.14]** | 0.96 [0.81, 1.17] | **1.13 [1.05, 1.23]** |
+| lane line y @10 m | 1.03 [0.83, 1.30] | **1.77 [1.27, 2.15]** (322) | 0.89 [0.68, 1.15] (404) | 1.38 [0.89, 2.21] (107) |
+| plan speed v0 | 0.53 [0.33, 0.82] | **2.29 [1.90, 2.67]** | **3.67 [2.33, 5.06]** | **3.14 [2.79, 3.39]** |
+| primaries meaningful (lower bound > 1) | 1 of 4: partly | 4 of 4: **yes** | 2 of 4: **yes** | 2 of 4: **yes** |
+| floor RR (lat m / edge m / lane m / v0 m/s) | 0.241 / 0.159 / 0.024 / 0.585 | 0.043 / 0.101 / 0.012 / 0.066 | 0.032 / 0.133 / 0.017 / 0.094 | 0.289 / 0.337 / 0.038 / 0.164 |
+| plan x @4 s | 0.49 | 2.00 [1.75, 2.32] | 1.94 [1.44, 3.00] | 1.93 [1.70, 2.18] |
+| lane probability | 1.29 [1.05, 1.56] | 1.46 [1.33, 1.67] | 1.50 [1.21, 1.84] | 1.07 [0.99, 1.18] |
+
+Signed shifts render minus real (median [CI]): plan speed Waymo -0.03 m/s [-0.08, +0.02], PandaSet -0.33 [-0.48, -0.20] (about -6%), KITTI-360 +0.51 [+0.45, +0.56]
+(+10%); lane width Waymo +0.039 m [+0.018, +0.065], PandaSet +0.008 [-0.007, +0.027], KITTI-360 -0.040 [-0.068, -0.019]; plan lateral @4 s -0.02 / -0.06 / +0.01 m.
+The floors here are small (0.1 s apart, lower speed), so the ratios are large while the absolute gaps stay small (plan lateral 0.07 m, edge 0.13-0.38 m).
+The speed and x readouts differ in sign across datasets (Waymo about 0, PandaSet low, KITTI-360 high), so the render does not shift the speed scale in one direction.
+
+### History-yaw probes: launch gain L and G10 by speed, render / real [95% CI]
+
+| | nuScenes | Waymo | PandaSet | KITTI-360 |
+|---|---|---|---|---|
+| L real -> render (all) | 3.56 -> 5.09 | 4.85 -> 4.23 | 5.72 -> 6.83 | 5.16 -> 5.28 |
+| **L, all** | **1.43 [1.34, 1.52]** (19 / 19 scenes up) | **0.87 [0.83, 0.92]** (4 / 22 up) | **1.19 [1.04, 1.38]** (10 / 15 up) | 1.02 [0.99, 1.05] (15 / 26 up) |
+| L, >= 3 m/s | 1.43 [1.34, 1.52] | 0.88 [0.83, 0.93] | 1.19 [1.04, 1.40] | 1.02 [0.99, 1.05] |
+| L, 0.5-3 m/s | 1.44 [1.28, 1.69] (14) | 0.79 [0.71, 0.92] (13) | none | 1.37 [0.97, 1.50] (4) |
+| G10, >= 3 m/s | 1.20 [1.03, 1.43] | **1.29 [1.21, 1.41]** (22 / 22 up) | 1.09 [0.92, 1.38] (8 / 15 up) | **1.65 [1.40, 1.90]** (24 / 26 up) |
+| G10, 0.5-3 m/s | 0.92 [0.57, 1.54] | 0.90 [0.82, 1.00] (13) | none | 1.65 [0.74, 1.79] (4) |
+| G10, stopped (< 0.5 m/s) | not read | 0.96 [0.84, 0.99] (10) | none | none |
+| G1, all | 1.16 [0.29, 2.87] | 1.28 [1.05, 1.93] | 1.39 [-4.8, 9.0] (G1 near 0: not read) | 1.34 [0.96, 1.79] |
+
+By the pre-registered rule (CI excludes 1 and deviates >= 20%): launch gain L rises on PandaSet only barely (+19%, CI lower bound 1.04, below the 20% line: **no**), is **lower** on Waymo (-13%),
+and is unchanged on KITTI-360. G10 at speed rises on Waymo (+29%, 22 / 22 scenes) and KITTI-360 (+65%, 24 / 26): **yes**; PandaSet +9% (CI includes 1): no.
+
+### Reading
+
+1. (Evidence) The per-frame gap against the 0.1 s floor is meaningful on all three new datasets (Waymo 4 of 4 primaries, PandaSet and KITTI-360 2 of 4): pre-registered verdict **yes**, where nuScenes was
+   partly. Which readouts move differs: Waymo moves everything (road edge 2.7x), PandaSet the plan (lateral 2.2x, speed 3.7x) but not edges or lines, KITTI-360 the speed (3.1x) and edges (1.1x).
+   Absolute gaps stay small (plan lateral <= 0.07 m on Waymo / PandaSet). The floors are small here, so a yes means "the render differs more than 0.1 s of driving", not "the plan is abnormal".
+2. (Evidence) **The nuScenes launch-gain rise (1.43) does not replicate**: Waymo 0.87 [0.83, 0.92], PandaSet 1.19 [1.04, 1.38], KITTI-360 1.02 [0.99, 1.05]. Only PandaSet points the same way, weakly.
+   The launch gain is therefore not a general property of 3DGS renders; nuScenes-specific reconstruction quality (render PSNR 22-30 dB there, 24-30 dB here) or the nuScenes camera is a candidate, not tested.
+3. (Evidence) What does generalise is a sensitivity increase at speed to a fast injected yaw (G10 >= 3 m/s: nuScenes 1.20 weak, Waymo 1.29, KITTI-360 1.65, PandaSet 1.09 n.s.), i.e. renders respond more to
+   a 10 deg/s history yaw while moving, but not to a standstill launch.
+4. (Inference) The decision-109 mechanism "render raises the launch gain, which the closed loop amplifies into spins" rests on nuScenes alone; on three other datasets the gain is equal or lower. HUGSIM spins on Waymo / PandaSet / KITTI-360 scenes,
+   if they occur, are not explained by this gain.
+
+Limits: training-view renders; open-loop probes; KITTI-360 front camera only (road model frame 75% covered, one 103-degree lens); PandaSet has no probes below 3 m/s and 105 probe frames;
+Waymo / KITTI-360 low-speed bins hold 4-13 frames; calibration from the recorded training rig, not the simulator's yaml; real frames resized with INTER_AREA from the originals (Waymo 1920x1280 -> 960x640, PandaSet 1920x1080 -> 960x540);
+no image-side fixes or rig arm on these datasets.
