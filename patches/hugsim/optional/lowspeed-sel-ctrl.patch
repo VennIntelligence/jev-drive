@@ -1,0 +1,17 @@
+diff --git a/sim/utils/sim_utils.py b/sim/utils/sim_utils.py
+--- a/sim/utils/sim_utils.py
++++ b/sim/utils/sim_utils.py
+@@ -60,6 +60,13 @@ def traj2control(plan_traj, info):
+         The input plan trajectory is under lidar coordinates
+         x to right, y to forward and z to upward
+     """
++    # jev-drive (patches/hugsim/optional/lowspeed-sel-ctrl.patch): selective low-speed rule, lib/lowspeed_ctrl.py plan_select; inert without LOWSPEED_SEL
++    sel = os.environ.get('LOWSPEED_SEL')
++    if sel:
++        import sys, json
++        sys.path.insert(0, os.environ['LOWSPEED_LIB'])
++        import lowspeed_ctrl
++        plan_traj = lowspeed_ctrl.plan_select(json.loads(sel), float(info['ego_velo']), plan_traj)
+     plan_traj_stats = np.zeros((plan_traj.shape[0]+1, 5))
+     plan_traj_stats[1:, :2] = plan_traj[:, [1,0]]
+     prev_a, prev_b = 0.0, 0.0

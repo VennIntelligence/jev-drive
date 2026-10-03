@@ -7,13 +7,16 @@ clip_curvature; jerk = 5.0 m/s^3, MIN_SPEED = 1 m/s). The jerk bound is the prin
 above anything a car can steer, so the low-pass (tau0, v0, v1) is the tuned part and is reported as such.
 
 Rule parameters (dict, JSON-serialisable): {"jerk": 5.0, "v_floor": 1.0, "tau0": 3.0, "v0": 1.0, "v1": 3.0}; tau0 = 0 turns the
-low-pass off. Hooks: hugsim_rate (the HUGSIM tree's traj2control output), B2DFilter (scripts/b2d_zeroshot_agent.py, env LOWSPEED_CTRL).
+low-pass off. Selective variant (second arm, experiments/hugsim/plans/2026-10-04-lowspeed-ctrl-selective-prereg.md): the rule parameters d0, d1 (degrees)
+define a gain s(|a|) = clip((|a| - d0) / (d1 - d0), 0, 1) on the plan's 1 s direction a (deadband below d0, ramp to d1, pass-through beyond), applied
+below v1 with the same speed taper; plan_select rotates the plan accordingly (HUGSIM tree `lowsel`, env LOWSPEED_SEL). Off when d1 = 0.
+Hooks: hugsim_rate (the HUGSIM tree's traj2control output), B2DFilter (scripts/b2d_zeroshot_agent.py, env LOWSPEED_CTRL).
 """
 import math
 
 import numpy as np
 
-DEFAULT = dict(jerk=5.0, v_floor=1.0, tau0=0.0, v0=1.0, v1=3.0)
+DEFAULT = dict(jerk=5.0, v_floor=1.0, tau0=0.0, v0=1.0, v1=3.0, d0=0.0, d1=0.0)
 
 
 def full(rule):
@@ -26,6 +29,31 @@ def alpha(rule, v, dt):
         return 1.0
     f = 1.0 if v <= r["v0"] else (r["v1"] - v) / (r["v1"] - r["v0"])
     return dt / (r["tau0"] * f + dt)
+
+
+def taper(rule, v):
+    r = full(rule)
+    return 1.0 if v <= r["v0"] else max(0.0, (r["v1"] - v) / (r["v1"] - r["v0"]))
+
+
+def sel_gain(rule, a_deg):
+    """Selective rule: gain on a plan direction of a_deg degrees (0 = deadband, 1 = pass-through); 1 when the rule is off."""
+    r = full(rule)
+    return 1.0 if r["d1"] <= 0 else float(np.clip((abs(a_deg) - r["d0"]) / (r["d1"] - r["d0"]), 0.0, 1.0))
+
+
+def plan_select(rule, v, plan):
+    """HUGSIM plan (N, 2) in (x right, y forward): rotate the plan about the car so its 1 s point (index 1, 0.5 s spacing) direction a
+    becomes a * (1 - w + w * s(|a|)), w = speed taper. Plans with a short 1 s point are left alone."""
+    r = full(rule)
+    plan = np.asarray(plan, float)
+    w = taper(rule, v)
+    if r["d1"] <= 0 or w <= 0 or len(plan) < 2 or np.linalg.norm(plan[1]) < 0.3:
+        return plan
+    a = math.atan2(plan[1, 0], plan[1, 1])
+    d = a * (sel_gain(rule, math.degrees(a)) - 1.0) * w          # rotation to apply (rad), atan2(x, y) convention
+    c, s = math.cos(d), math.sin(d)
+    return np.stack([plan[:, 0] * c + plan[:, 1] * s, -plan[:, 0] * s + plan[:, 1] * c], -1)
 
 
 def clip_kappa(rule, v, k_prev, k_new, dt):
