@@ -1,7 +1,7 @@
 # hugsim: HUGSIM install, controller, zero-shot exam, I3
 
 status: concluded
-decisions: 19, 44, 90, 96, 100, 110, 111, 113, 114
+decisions: 19, 44, 90, 96, 100, 110, 111, 113, 114, 115
 index: fixed2 controller passes acceptance; 4 Hz clock +25-38% lateral
 
 **Question.** Can HUGSIM be the real-appearance closed-loop column, and how do Alpamayo and openpilot score on it?
