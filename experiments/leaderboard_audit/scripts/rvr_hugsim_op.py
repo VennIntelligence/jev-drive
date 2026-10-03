@@ -272,9 +272,10 @@ def cmd_probe(a):
     m = model()
     keep, hs = keep_layout(m)
     sl = {q: s.start for q, s in m.slices.items()}
+    arms, fn = (("env",), "probe_env.npz") if a.env else (PROBE_ARMS, "probe.npz")
     for s in a.scenes or scenes():
-        f = OUT / s / "probe.npz"
-        if f.exists():
+        f = OUT / s / fn
+        if f.exists() or (a.env and not (OUT / s / "render_env.npy").exists()):
             continue
         T, v = meta(s)
         ks = list(range(18, len(T), 12))
@@ -282,7 +283,7 @@ def cmd_probe(a):
         R = {}
         t0 = time.time()
         with ProcessPoolExecutor(a.workers, initializer=_winit, initargs=(s, P)) as ex:
-            for arm in PROBE_ARMS:
+            for arm in arms:
                 rows = []
                 for k in ks:
                     V = probe_jobs(arm, T, k)
@@ -306,6 +307,6 @@ if __name__ == "__main__":
     ap.add_argument("cmd", choices=["fit", "stream", "probe"])
     ap.add_argument("scenes", nargs="*")
     ap.add_argument("--workers", type=int, default=12)
-    ap.add_argument("--env", action="store_true", help="stream: the closed-loop-rig render (render_env.npy) only -> stream_env.npz")
+    ap.add_argument("--env", action="store_true", help="stream / probe: the closed-loop-rig render (render_env.npy) only -> stream_env.npz / probe_env.npz")
     a = ap.parse_args()
     {"fit": cmd_fit, "stream": cmd_stream, "probe": cmd_probe}[a.cmd](a)

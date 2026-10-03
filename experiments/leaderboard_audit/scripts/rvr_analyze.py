@@ -195,7 +195,13 @@ def main():
             r = z[arm]
             return dict(G1=(r[:, ix["g1L"]] - r[:, ix["g1R"]]) / 2, G10=(r[:, ix["g10L"]] - r[:, ix["g10R"]]) / 2,
                         L=(r[:, ix["launchL"]] - r[:, ix["launchR"]]) / 2, H0=r[:, ix["normal"]])
-        for arm in ("render", "render_all"):
+        for s_, z in P.items():
+            fe = RUN / "hugsim" / s_ / "probe_env.npz"
+            if fe.exists():
+                P[s_] = {**{k: z[k] for k in z.files}, "env": np.load(fe)["env"]}
+        for arm in ("render", "render_all", "env"):
+            if not all(arm in (z.files if hasattr(z, "files") else z) for z in P.values()):
+                continue
             for g in ("G1", "G10", "L"):
                 for bn, lo, hi in (("stop", -1, 0.5), ("low", 0.5, 3), ("mid", 3, 99), ("all", -1, 99)):
                     grp = []
