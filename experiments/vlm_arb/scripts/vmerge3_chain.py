@@ -48,7 +48,7 @@ def jobs(args):
     out, names = [], []
     for i, s in enumerate(seeds):
         for j, arm in enumerate(ARMS):
-            u = [base.unit(arm, s, k, sh[k], env(arm, args.get("ports", PORTS)), "", 3 * i + j, deps=[x.name for x in smoke]) for k in vc.SHARDS]
+            u = [base.unit(arm, s, k, sh[k], env(arm, args.get("ports", PORTS)), "", 3 * i + j, deps=[x.name for x in smoke], base="vmerge") for k in vc.SHARDS]
             out += u
             names += [x.name for x in u]
     return smoke + out + [base.tool("report", "vmerge3_report.py", "report", deps=names, prio=99)]
