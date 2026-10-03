@@ -1,0 +1,68 @@
+{
+ "base": {
+  "stem": "vh187-cinque",
+  "pdms": 80.291,
+  "n": 3000
+ },
+ "122": {
+  "stem": "vh122-cinque",
+  "n": 3000,
+  "pdms": 78.319,
+  "delta": -1.971,
+  "delta_ci95": [
+   -3.078,
+   -0.851
+  ],
+  "no_at_fault_collisions_delta": -1.2,
+  "drivable_area_compliance_delta": -3.2,
+  "ego_progress_delta": 3.714,
+  "time_to_collision_within_bound_delta": -4.867,
+  "comfort_delta": -0.033
+ },
+ "130": {
+  "stem": "vh130-cinque",
+  "n": 3000,
+  "pdms": 80.2,
+  "delta": -0.091,
+  "delta_ci95": [
+   -1.081,
+   0.892
+  ],
+  "no_at_fault_collisions_delta": -0.65,
+  "drivable_area_compliance_delta": -1.733,
+  "ego_progress_delta": 4.553,
+  "time_to_collision_within_bound_delta": -3.267,
+  "comfort_delta": -0.033
+ },
+ "140": {
+  "stem": "vh140-cinque",
+  "n": 3000,
+  "pdms": 81.009,
+  "delta": 0.718,
+  "delta_ci95": [
+   -0.142,
+   1.602
+  ],
+  "no_at_fault_collisions_delta": -0.167,
+  "drivable_area_compliance_delta": -0.833,
+  "ego_progress_delta": 4.508,
+  "time_to_collision_within_bound_delta": -2.1,
+  "comfort_delta": -0.033
+ },
+ "gimm": {
+  "stem": "gimm-cinque",
+  "n": 3000,
+  "pdms": 82.12,
+  "delta": 1.83,
+  "delta_ci95": [
+   1.074,
+   2.563
+  ],
+  "no_at_fault_collisions_delta": 0.2,
+  "drivable_area_compliance_delta": 0.433,
+  "ego_progress_delta": 3.334,
+  "time_to_collision_within_bound_delta": 0.2,
+  "comfort_delta": -0.033
+ },
+ "pick": "gimm"
+}

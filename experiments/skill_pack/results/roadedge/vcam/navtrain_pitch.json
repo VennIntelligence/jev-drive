@@ -1,0 +1,68 @@
+{
+ "base": {
+  "stem": "vh140-cinque",
+  "pdms": 81.009,
+  "n": 3000
+ },
+ "m1": {
+  "stem": "vh140pm1-cinque",
+  "n": 3000,
+  "pdms": 79.167,
+  "delta": -1.842,
+  "delta_ci95": [
+   -2.541,
+   -1.124
+  ],
+  "no_at_fault_collisions_delta": -0.067,
+  "drivable_area_compliance_delta": -0.2,
+  "ego_progress_delta": -4.342,
+  "time_to_collision_within_bound_delta": 0.4,
+  "comfort_delta": 0.033
+ },
+ "m0.3": {
+  "stem": "vh140pm0_3-cinque",
+  "n": 3000,
+  "pdms": 80.336,
+  "delta": -0.673,
+  "delta_ci95": [
+   -1.2,
+   -0.118
+  ],
+  "no_at_fault_collisions_delta": 0.217,
+  "drivable_area_compliance_delta": -0.433,
+  "ego_progress_delta": -1.386,
+  "time_to_collision_within_bound_delta": 0.267,
+  "comfort_delta": 0.0
+ },
+ "p0.3": {
+  "stem": "vh140p0_3-cinque",
+  "n": 3000,
+  "pdms": 81.173,
+  "delta": 0.165,
+  "delta_ci95": [
+   -0.362,
+   0.678
+  ],
+  "no_at_fault_collisions_delta": -0.367,
+  "drivable_area_compliance_delta": -0.1,
+  "ego_progress_delta": 0.868,
+  "time_to_collision_within_bound_delta": -0.3,
+  "comfort_delta": 0.0
+ },
+ "p1": {
+  "stem": "vh140p1-cinque",
+  "n": 3000,
+  "pdms": 79.943,
+  "delta": -1.066,
+  "delta_ci95": [
+   -1.879,
+   -0.275
+  ],
+  "no_at_fault_collisions_delta": -1.117,
+  "drivable_area_compliance_delta": -1.233,
+  "ego_progress_delta": 0.872,
+  "time_to_collision_within_bound_delta": -1.533,
+  "comfort_delta": -0.033
+ },
+ "pick": "p0.3"
+}
