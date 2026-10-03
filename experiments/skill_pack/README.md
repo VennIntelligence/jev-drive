@@ -16,6 +16,8 @@ index: Navtest PDMS 84.2 to 91.59 (N3), flat at N4
 
 **Road-edge diagnosis (2026-10-04, root cause found, fix not scored).** NAVSIM's CAM_F0 sits ~1.87 m above ground (ego origin is the rear axle, 0.35 m up) vs ~1.22 m for openpilot's training cameras, so openpilot reads the image correctly but scales the world to ~0.7 (lane 0.67-0.70 of map at every distance, plan speed 0.81). A virtual camera at 1.30 m gives lane ratio 0.97, speed 1.00 (400 tokens); output-side plan rescale loses on navhard (-2.6 to -13.8). Map narrowness explains about a third of edge disagreements. [results/roadedge/report.md](results/roadedge/report.md), plan [plans/2026-10-04-roadedge-diagnosis-plan.md](plans/2026-10-04-roadedge-diagnosis-plan.md).
 
+**History-frame quality (2026-10-04, lane C).** Real nuPlan 10 Hz CAM_F0 history vs the shipped GIMM history on 1 499 navtest tokens: +0.51 [-0.51, +1.54] PDMS (EP +3.0, DAC -1.7: faster plans, more off-road); GIMM recovers 98% of the hold -> real gap, warp 87%. Mid-speed history-yaw gain 6.2 deg (GIMM) vs 4.4 (real). No deployable interpolator screened (gate not met). [results/history_quality.md](results/history_quality.md), plan [plans/2026-10-04-history-quality-prereg.md](plans/2026-10-04-history-quality-prereg.md).
+
 **Read more.** research/leaderboard-skill-pack.md, research/navhard-deficit-breakdown.md
 
 <!-- files:begin -->
