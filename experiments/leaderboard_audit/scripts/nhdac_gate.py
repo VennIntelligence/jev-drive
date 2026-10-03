@@ -208,9 +208,26 @@ def cmd_navhard(a):
     print(json.dumps(dict(arms=summ, gate_diag=diag), indent=1))
 
 
+def cmd_capture(a):
+    """Share of class-L tokens (and of all tokens) that each gate fires on, thresholds = navtrain quantiles."""
+    fl = pd.read_csv(OUT / "nhdac_failures.csv")
+    tr = gate_stats("lb_navtrain", "native")
+    out = {}
+    for model in ("native", "best"):
+        G = gate_stats("lb_navhard", model)
+        Lset = set(fl[(fl.arm == model) & (fl.primary == "tracker_lag")].token)
+        y = G.index.isin(Lset)
+        for g in GATES:
+            for fr in FRACS[:-1]:
+                on = (G[g] >= np.quantile(tr[g], 1 - fr / 100)).to_numpy()
+                out[f"{model}/{g}/{fr}"] = dict(L_captured=float(on[y].mean()), tokens_fired=float(on.mean()), precision_L=float(y[on].mean()))
+    (OUT / "gated_capture.json").write_text(json.dumps(out, indent=1))
+    print(json.dumps(out))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["select", "navtest", "navhard"])
+    ap.add_argument("cmd", choices=["select", "navtest", "navhard", "capture"])
     ap.add_argument("--procs", type=int, default=100)
     a = ap.parse_args()
-    {"select": cmd_select, "navtest": cmd_navtest, "navhard": cmd_navhard}[a.cmd](a)
+    {"select": cmd_select, "navtest": cmd_navtest, "navhard": cmd_navhard, "capture": cmd_capture}[a.cmd](a)
