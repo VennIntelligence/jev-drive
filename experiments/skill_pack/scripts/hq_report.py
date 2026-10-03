@@ -31,8 +31,11 @@ B = 10000
 rng = np.random.default_rng(0)
 
 
+NT, NH = NT, NH
+
+
 def pdms(stem):
-    d = D / "runs/navsim/eval" / f"v1_navtest_opi_lb_hq_navtest_{stem.replace('@', '-')}__base"
+    d = D / "runs/navsim/eval" / f"v1_navtest_opi_{NT}_{stem.replace('@', '-')}__base"
     f = sorted(d.glob("*/*.csv"))[-1]
     df = pd.read_csv(f)
     return df[df.token != "average"].set_index("token")
@@ -148,9 +151,9 @@ def figure(tok_i, mt, warp, pd_rows):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import op_lb as L
-    keys = L.Keys("lb_hq_navtest")[tok_i]
-    fr = {"hold": np.load(P / "lb_hq_navtest/hold.npy", mmap_mode="r")[tok_i], "warp": warp[tok_i],
-          "gimm": np.load(P / "lb_hq_navtest/gimm.npy", mmap_mode="r")[tok_i], "real": np.load(P / "lb_hq_navtest/real.npy", mmap_mode="r")[tok_i]}
+    keys = L.Keys(NT)[tok_i]
+    fr = {"hold": np.load(P / NT / "hold.npy", mmap_mode="r")[tok_i], "warp": warp[tok_i],
+          "gimm": np.load(P / NT / "gimm.npy", mmap_mode="r")[tok_i], "real": np.load(P / NT / "real.npy", mmap_mode="r")[tok_i]}
     ts = [-1.4, -1.2, -0.8, -0.6, -0.4, -0.2]
     fig = plt.figure(figsize=(18, 9.5))
     gs = fig.add_gridspec(4, 8, width_ratios=[1] * 7 + [1.6])
@@ -167,7 +170,7 @@ def figure(tok_i, mt, warp, pd_rows):
     ax = fig.add_subplot(gs[:, 7])
     cols = {"hold": "#999999", "warp": "#e69f00", "gimm": "#0072b2", "real": "#009e73"}
     for a, stem in ARMS.items():
-        p = plans("lb_hq_navtest", stem)["plan_pos"][tok_i]
+        p = plans(NT, stem)["plan_pos"][tok_i]
         m = I.T_IDXS <= 4.0
         ax.plot(-p[m, 1], p[m, 0], color=cols[a], lw=2.2, label=a)
     ax.set_aspect("equal"); ax.grid(alpha=.3); ax.legend(loc="upper left")
@@ -187,7 +190,7 @@ def main():
     res["timing"] = dict(n_tokens=len(need), ctx_dt_err_max_ms=round(float(np.abs(dt - np.array([-1.4, -1.2, -0.8, -0.6, -0.4, -0.2])).max() * 1e3), 1),
                          key_dt_err_max_ms=round(float(np.nanmax(np.abs(kdt)) * 1e3), 1),      # need.json stores the error already
                          key_missing=int(np.isnan(kdt).sum()))
-    mt = json.loads((P / "lb_hq_navtest/meta.json").read_text())
+    mt = json.loads((P / NT / "meta.json").read_text())
     from jevdrive import navsim_zs as Z
     logs = {e["token"]: e["log_name"] for e in Z.load_index("navtest", slim=True)}
     S = {a: pdms(s) for a, s in ARMS.items()}
@@ -218,11 +221,11 @@ def main():
     for c, name in enumerate(("left", "straight", "right")):
         m = d[cmd[toks] == c]
         res["real-gimm_by"][name] = dict(n=len(m), delta=boot(m.values) if len(m) > 2 else None)
-    res["plan"] = plan_readouts("lb_hq_navtest", list(ARMS), mt)
-    res["lane"] = lane_ratio("lb_hq_navtest", mt)
-    res["psnr"], warp = psnr("lb_hq_navtest", mt)
-    mh = json.loads((P / "lb_hq_navhard1/meta.json").read_text())
-    res["navhard_stage1"] = dict(n=len(mh["names"]), plan=plan_readouts("lb_hq_navhard1", ["gimm", "warp", "real"], mh))
+    res["plan"] = plan_readouts(NT, list(ARMS), mt)
+    res["lane"] = lane_ratio(NT, mt)
+    res["psnr"], warp = psnr(NT, mt)
+    mh = json.loads((P / NH / "meta.json").read_text())
+    res["navhard_stage1"] = dict(n=len(mh["names"]), plan=plan_readouts(NH, ["gimm", "warp", "real"], mh))
     (OUT / "results.json").write_text(json.dumps(res, indent=1))
     pd.DataFrame({a: S[a].loc[toks, "score"] for a in ARMS}).assign(log=cl).to_csv(OUT / "per_token_pdms.csv")
     # figure token (fixed in advance): the moving token with the largest real - gimm PDMS gain
@@ -235,4 +238,14 @@ def main():
 
 
 if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--nt", default=NT)
+    ap.add_argument("--nh", default=NH)
+    ap.add_argument("--tag", default="", help="output subdir / figure suffix")
+    a = ap.parse_args()
+    NT, NH = a.nt, a.nh
+    if a.tag:
+        OUT = OUT / a.tag
+        FIG = FIG.with_name(f"history_quality_{a.tag}.jpg")
     main()

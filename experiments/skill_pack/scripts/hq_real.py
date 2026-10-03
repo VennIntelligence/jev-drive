@@ -183,7 +183,8 @@ def cmd_locate(a):
     """Coarse probes every --step bytes of every tar -> which logs each tar holds and where; then for each wanted log a
     bisection of the first and last byte of its CAM_F0 directory between the probes."""
     sel = json.loads((R / "sel.json").read_text())
-    want = set(sel["logs"])
+    have = json.loads((R / "locate.json").read_text()) if (R / "locate.json").exists() else {}
+    want = set(sel["logs"]) - {k for k, v in have.items() if v}
     sizes = dict(zip(TARS, ThreadPoolExecutor(12).map(size, TARS)))
     jobs = [(u, o) for u in TARS for o in range(0, sizes[u], a.step)]
     t0 = time.time()
@@ -229,7 +230,7 @@ def cmd_locate(a):
 
     with ThreadPoolExecutor(len(out) or 1) as ex:
         res = dict(ex.map(bounds, sorted(out)))
-    (R / "locate.json").write_text(json.dumps(res, indent=1))
+    (R / "locate.json").write_text(json.dumps(have | res, indent=1))
     print(f"bounds for {sum(v is not None for v in res.values())} logs in {time.time() - t0:.0f} s")
 
 
@@ -354,7 +355,7 @@ def cmd_check_keys(a):
 def cmd_render(a):
     from concurrent.futures import ProcessPoolExecutor
     need = json.loads((R / "need.json").read_text())
-    src = {"lb_hq_navtest": ("lb_navtest", "navtest"), "lb_hq_navhard1": ("lb_navhard", "navhard_two_stage")}[a.data]
+    src = ("lb_navhard", "navhard_two_stage") if a.data.startswith("lb_hq_navhard") else ("lb_navtest", "navtest")
     base = data_dir() / "runs" / "op_lb" / src[0]
     mt = json.loads((base / "meta.json").read_text())
     rows = [i for i, t in enumerate(mt["names"]) if f"{src[1]}/{t}" in need]
