@@ -21,16 +21,22 @@ def scenes(ds):
 
 def pandaset():
     from remotezip import RemoteZip
-    for seq in scenes("pandaset"):
-        z = RemoteZip(PANDA_URL)
-        names = [n for n in z.namelist() if re.match(rf"pandaset/{seq}/camera/(front_camera|front_left_camera|front_right_camera)/[^/]+$", n)]
-        for n in names:
-            dst = OUT / "pandaset" / seq / n.split("/", 3)[3]
-            if dst.exists():
-                continue
+    z0 = RemoteZip(PANDA_URL)
+    pat = re.compile(r"pandaset/(\d+)/camera/(front_camera|front_left_camera|front_right_camera)/[^/]+$")
+    want = set(scenes("pandaset"))
+    names = [n for n in z0.namelist() if (m := pat.match(n)) and m.group(1) in want]
+    print("pandaset members", len(names), flush=True)
+
+    def get(n):
+        dst = OUT / "pandaset" / n.split("/", 1)[1].replace("/camera/", "/")
+        if not dst.exists():
             dst.parent.mkdir(parents=True, exist_ok=True)
-            dst.write_bytes(z.read(n))
-        print("pandaset", seq, len(names), flush=True)
+            dst.write_bytes(RemoteZip(PANDA_URL).read(n))
+        return n
+    with ThreadPoolExecutor(12) as ex:
+        for i, _ in enumerate(ex.map(get, names)):
+            if i % 200 == 0:
+                print("pandaset", i, flush=True)
 
 
 def kitti360():
