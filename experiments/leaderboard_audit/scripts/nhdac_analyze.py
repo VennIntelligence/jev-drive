@@ -168,6 +168,13 @@ def main(dd):
             res["rows"][k] = row((d.primary == k).to_numpy())
             print(a, k, {q: (round(v, 3) if isinstance(v, float) else v) for q, v in res["rows"][k].items()}, flush=True)
         res["rows"]["all_dac"] = row(fail)
+        pr = d.primary.to_numpy()
+        inf = d.f_infeasible.to_numpy()
+        for name, m in (("grp_scorer_M_L", np.isin(pr, ["map_narrow", "tracker_lag"])), ("grp_start_E", pr == "early_start_offset"),
+                        ("grp_plan_W_U_O_F_C_R", np.isin(pr, ["wrong_direction", "under_turn", "over_turn", "too_fast", "lane_change", "other"])),
+                        ("E_infeasible", (pr == "early_start_offset") & inf), ("E_feasible", (pr == "early_start_offset") & ~inf),
+                        ("scorer_or_infeasible", np.isin(pr, ["map_narrow", "tracker_lag"]) | (fail & inf))):
+            res["rows"][name] = row(m)
         for k in ORDER[:-1]:
             res["flags"]["any_" + k] = int(d["c_" + k].sum())
         for k in FLAGS:
