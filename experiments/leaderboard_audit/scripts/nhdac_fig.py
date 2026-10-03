@@ -39,7 +39,7 @@ def picks():
     out, used = [], set()
     for c in CAUSES:
         g = d[d.primary == c].copy()
-        g["log"] = [S["native"].loc[t, "log_name"] for t in g.index]
+        g["log"] = [idx[t]["log_name"] for t in g.index]
         g["k"] = (g.d_worst - g.d_worst.median()).abs() + np.where(g.stage == "two", 0, 100)
         n = 0
         for t, r in g.sort_values("k").iterrows():
