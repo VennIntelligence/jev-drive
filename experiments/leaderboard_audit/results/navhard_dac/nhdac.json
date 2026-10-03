@@ -1,0 +1,1440 @@
+{
+ "check": {
+  "native": {
+   "fast": 33.33074231183842,
+   "devkit": 33.33074231183842
+  },
+  "best": {
+   "fast": 35.75606623741627,
+   "devkit": 35.75606623741627
+  },
+  "ref": {
+   "fast": 52.823636686106646,
+   "devkit": 52.823636686106646
+  }
+ },
+ "arms": {
+  "native": {
+   "score": 33.33074231183842,
+   "n_fail": 1314,
+   "n_fail_s1": 48,
+   "n_fail_s2": 1266,
+   "geom_agree": 0.9979702300405954,
+   "geom_fail_official_pass": 12,
+   "official_fail_geom_pass": 0,
+   "n_tokens": 5912,
+   "rows": {
+    "start_outside": {
+     "n": 0,
+     "n_s1": 0,
+     "n_s2": 0,
+     "share": 0.0,
+     "share_ci": [
+      0.0,
+      0.0
+     ],
+     "ref_fails": 0,
+     "oracle_ref": 0.0,
+     "oracle_ref_ci": [
+      0.0,
+      0.0
+     ],
+     "oracle_dac1": 0.0,
+     "oracle_dac1_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "map_narrow": {
+     "n": 345,
+     "n_s1": 18,
+     "n_s2": 327,
+     "share": 0.2625570776255708,
+     "share_ci": [
+      0.21040307357907295,
+      0.315664157271385
+     ],
+     "ref_fails": 126,
+     "oracle_ref": 4.723911768578881,
+     "oracle_ref_ci": [
+      3.114033254221572,
+      6.446601880862967
+     ],
+     "oracle_dac1": 5.151036118097309,
+     "oracle_dac1_ci": [
+      3.556540364177962,
+      6.902915956073108
+     ]
+    },
+    "wrong_direction": {
+     "n": 143,
+     "n_s1": 0,
+     "n_s2": 143,
+     "share": 0.10882800608828005,
+     "share_ci": [
+      0.08170778863132,
+      0.13750101439654827
+     ],
+     "ref_fails": 29,
+     "oracle_ref": 1.5214148813494603,
+     "oracle_ref_ci": [
+      0.619389759620563,
+      2.681207531345003
+     ],
+     "oracle_dac1": 1.019921626373657,
+     "oracle_dac1_ci": [
+      0.45695704562490463,
+      1.7496407037928725
+     ]
+    },
+    "tracker_lag": {
+     "n": 271,
+     "n_s1": 9,
+     "n_s2": 262,
+     "share": 0.20624048706240486,
+     "share_ci": [
+      0.17093409560620784,
+      0.2401685070246458
+     ],
+     "ref_fails": 79,
+     "oracle_ref": 2.919105152615432,
+     "oracle_ref_ci": [
+      1.7531898572272584,
+      4.246099443772855
+     ],
+     "oracle_dac1": 2.762675658150855,
+     "oracle_dac1_ci": [
+      1.7259539901228014,
+      3.943853461060014
+     ]
+    },
+    "early_start_offset": {
+     "n": 258,
+     "n_s1": 0,
+     "n_s2": 258,
+     "share": 0.1963470319634703,
+     "share_ci": [
+      0.16729410886764526,
+      0.22635063417255877
+     ],
+     "ref_fails": 165,
+     "oracle_ref": 1.237851897727516,
+     "oracle_ref_ci": [
+      0.44919236086058667,
+      2.179296258558615
+     ],
+     "oracle_dac1": 2.183473608709237,
+     "oracle_dac1_ci": [
+      1.2790180586528905,
+      3.12728127408154
+     ]
+    },
+    "under_turn": {
+     "n": 36,
+     "n_s1": 5,
+     "n_s2": 31,
+     "share": 0.0273972602739726,
+     "share_ci": [
+      0.015031480905599892,
+      0.04251436851918694
+     ],
+     "ref_fails": 19,
+     "oracle_ref": 0.34294170794376977,
+     "oracle_ref_ci": [
+      0.00838544823485467,
+      0.8095712953522165
+     ],
+     "oracle_dac1": 0.5478815453339472,
+     "oracle_dac1_ci": [
+      0.197468580131468,
+      0.9597993301419201
+     ]
+    },
+    "over_turn": {
+     "n": 53,
+     "n_s1": 1,
+     "n_s2": 52,
+     "share": 0.04033485540334855,
+     "share_ci": [
+      0.023826809693127872,
+      0.059486489277333014
+     ],
+     "ref_fails": 6,
+     "oracle_ref": 0.2317383236855943,
+     "oracle_ref_ci": [
+      0.04003860192844492,
+      0.5193347052936593
+     ],
+     "oracle_dac1": 0.14189348332081805,
+     "oracle_dac1_ci": [
+      0.02219858105250577,
+      0.30707748838542254
+     ]
+    },
+    "too_fast": {
+     "n": 6,
+     "n_s1": 0,
+     "n_s2": 6,
+     "share": 0.0045662100456621,
+     "share_ci": [
+      0.001503731167758815,
+      0.00853242352604866
+     ],
+     "ref_fails": 1,
+     "oracle_ref": 0.0,
+     "oracle_ref_ci": [
+      0.0,
+      0.0
+     ],
+     "oracle_dac1": 0.0,
+     "oracle_dac1_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "lane_change": {
+     "n": 7,
+     "n_s1": 1,
+     "n_s2": 6,
+     "share": 0.00532724505327245,
+     "share_ci": [
+      0.001496645386214368,
+      0.010358978854492305
+     ],
+     "ref_fails": 2,
+     "oracle_ref": 0.4710385415174702,
+     "oracle_ref_ci": [
+      0.0,
+      1.0930510519609793
+     ],
+     "oracle_dac1": 0.38838740149564505,
+     "oracle_dac1_ci": [
+      7.186724353565783e-05,
+      0.8943690254802775
+     ]
+    },
+    "other": {
+     "n": 195,
+     "n_s1": 14,
+     "n_s2": 181,
+     "share": 0.14840182648401826,
+     "share_ci": [
+      0.12036336213350296,
+      0.1802919555455446
+     ],
+     "ref_fails": 45,
+     "oracle_ref": 3.1689507947966855,
+     "oracle_ref_ci": [
+      1.7845754279022115,
+      4.677435148942133
+     ],
+     "oracle_dac1": 2.83716608316116,
+     "oracle_dac1_ci": [
+      1.5644150090357085,
+      4.364685188833236
+     ]
+    },
+    "all_dac": {
+     "n": 1314,
+     "n_s1": 48,
+     "n_s2": 1266,
+     "share": 1.0,
+     "share_ci": [
+      1.0,
+      1.0
+     ],
+     "ref_fails": 472,
+     "oracle_ref": 15.10293694743019,
+     "oracle_ref_ci": [
+      12.292625070125753,
+      17.931128871059975
+     ],
+     "oracle_dac1": 15.881514511747632,
+     "oracle_dac1_ci": [
+      13.165646073593917,
+      18.56408493451861
+     ]
+    },
+    "grp_scorer_M_L": {
+     "n": 616,
+     "n_s1": 27,
+     "n_s2": 589,
+     "share": 0.4687975646879756,
+     "share_ci": [
+      0.4218555301427841,
+      0.5135419368743896
+     ],
+     "ref_fails": 205,
+     "oracle_ref": 7.643189682486097,
+     "oracle_ref_ci": [
+      5.660433050392566,
+      9.781485295669738
+     ],
+     "oracle_dac1": 8.103843861621819,
+     "oracle_dac1_ci": [
+      6.015307831872858,
+      10.142047031432153
+     ]
+    },
+    "grp_start_E": {
+     "n": 258,
+     "n_s1": 0,
+     "n_s2": 258,
+     "share": 0.1963470319634703,
+     "share_ci": [
+      0.16729410886764526,
+      0.22635063417255877
+     ],
+     "ref_fails": 165,
+     "oracle_ref": 1.237851897727516,
+     "oracle_ref_ci": [
+      0.44919236086058667,
+      2.179296258558615
+     ],
+     "oracle_dac1": 2.183473608709237,
+     "oracle_dac1_ci": [
+      1.2790180586528905,
+      3.12728127408154
+     ]
+    },
+    "grp_plan_W_U_O_F_C_R": {
+     "n": 440,
+     "n_s1": 21,
+     "n_s2": 419,
+     "share": 0.334855403348554,
+     "share_ci": [
+      0.29626898691058157,
+      0.378515139222145
+     ],
+     "ref_fails": 102,
+     "oracle_ref": 5.748786884774259,
+     "oracle_ref_ci": [
+      3.945770345120075,
+      7.686466851479953
+     ],
+     "oracle_dac1": 4.942251532882444,
+     "oracle_dac1_ci": [
+      3.345556382110142,
+      6.5811659912693905
+     ]
+    },
+    "E_infeasible": {
+     "n": 145,
+     "n_s1": 0,
+     "n_s2": 145,
+     "share": 0.11035007610350075,
+     "share_ci": [
+      0.08718814048916101,
+      0.13380361050367354
+     ],
+     "ref_fails": 134,
+     "oracle_ref": 2.9518457481154793e-05,
+     "oracle_ref_ci": [
+      4.876938359327849e-12,
+      8.803821726470701e-05
+     ],
+     "oracle_dac1": 1.118494641154257,
+     "oracle_dac1_ci": [
+      0.5070567603314726,
+      1.8267700376230642
+     ]
+    },
+    "E_feasible": {
+     "n": 113,
+     "n_s1": 0,
+     "n_s2": 113,
+     "share": 0.08599695585996955,
+     "share_ci": [
+      0.06535935197025537,
+      0.10764754321426151
+     ],
+     "ref_fails": 31,
+     "oracle_ref": 1.2378223792700347,
+     "oracle_ref_ci": [
+      0.4491631985046242,
+      2.1792956255301106
+     ],
+     "oracle_dac1": 1.0649789675549794,
+     "oracle_dac1_ci": [
+      0.4250116261839157,
+      1.7657605133240857
+     ]
+    },
+    "scorer_or_infeasible": {
+     "n": 832,
+     "n_s1": 29,
+     "n_s2": 803,
+     "share": 0.6331811263318112,
+     "share_ci": [
+      0.5856472313404083,
+      0.6775286391377449
+     ],
+     "ref_fails": 398,
+     "oracle_ref": 8.14242961783285,
+     "oracle_ref_ci": [
+      6.071683013586871,
+      10.356480510376839
+     ],
+     "oracle_dac1": 10.162341449992965,
+     "oracle_dac1_ci": [
+      7.965666863422801,
+      12.391602419052468
+     ]
+    }
+   },
+   "flags": {
+    "any_start_outside": 0,
+    "any_map_narrow": 345,
+    "any_wrong_direction": 166,
+    "any_tracker_lag": 441,
+    "any_early_start_offset": 547,
+    "any_under_turn": 191,
+    "any_over_turn": 285,
+    "any_too_fast": 67,
+    "any_lane_change": 54,
+    "infeasible": {
+     "n": 406,
+     "n_s1": 3,
+     "n_s2": 403,
+     "share": 0.3089802130898021,
+     "share_ci": [
+      0.2631977416574955,
+      0.3548968113958835
+     ],
+     "ref_fails": 328,
+     "oracle_ref": 1.348126747999166,
+     "oracle_ref_ci": [
+      0.5587762282400744,
+      2.2390313833372306
+     ],
+     "oracle_dac1": 3.216986940724119,
+     "oracle_dac1_ci": [
+      2.125377938580873,
+      4.436919805052515
+     ]
+    },
+    "ref_fails": {
+     "n": 472,
+     "n_s1": 2,
+     "n_s2": 470,
+     "share": 0.3592085235920852,
+     "share_ci": [
+      0.30851580426096914,
+      0.4075745977461338
+     ],
+     "ref_fails": 472,
+     "oracle_ref": 0.0,
+     "oracle_ref_ci": [
+      0.0,
+      0.0
+     ],
+     "oracle_dac1": 3.2303806424472556,
+     "oracle_dac1_ci": [
+      2.1402427085895943,
+      4.507679514402323
+     ]
+    },
+    "d110_set": 683,
+    "junction": 611,
+    "bend": 254,
+    "straight": 449,
+    "cmd_fixable": {
+     "n": 195,
+     "n_s1": 11,
+     "n_s2": 184,
+     "share": 0.14840182648401826,
+     "share_ci": [
+      0.10956396609544754,
+      0.19155851900577545
+     ],
+     "ref_fails": 72,
+     "oracle_ref": 2.5152931879583247,
+     "oracle_ref_ci": [
+      1.205056913392144,
+      3.998502725162465
+     ],
+     "oracle_dac1": 3.0592515805038394,
+     "oracle_dac1_ci": [
+      1.8328275283046194,
+      4.414053407766563
+     ]
+    },
+    "synthetic_history": {
+     "n": 425,
+     "n_s1": 0,
+     "n_s2": 425,
+     "share": 0.3234398782343988,
+     "share_ci": [
+      0.27947177812457086,
+      0.36904872879385947
+     ],
+     "ref_fails": 23,
+     "oracle_ref": 4.691392653374338,
+     "oracle_ref_ci": [
+      3.248288567836627,
+      6.3704877444364945
+     ],
+     "oracle_dac1": 3.1728234287817276,
+     "oracle_dac1_ci": [
+      2.075589047363797,
+      4.421398905867838
+     ]
+    },
+    "shallow": {
+     "n": 368,
+     "n_s1": 22,
+     "n_s2": 346,
+     "share": 0.2800608828006088,
+     "share_ci": [
+      0.2442382887005806,
+      0.31784429997205726
+     ],
+     "ref_fails": 90,
+     "oracle_ref": 5.472831535355484,
+     "oracle_ref_ci": [
+      3.729593202105966,
+      7.406841746914692
+     ],
+     "oracle_dac1": 5.915912505595535,
+     "oracle_dac1_ci": [
+      4.2137078052105545,
+      7.71308227249203
+     ]
+    },
+    "walkway": 403
+   },
+   "cross": {
+    "primary_x_geometry": {
+     "bend": {
+      "early_start_offset": 52,
+      "lane_change": 0,
+      "map_narrow": 43,
+      "other": 43,
+      "over_turn": 8,
+      "too_fast": 1,
+      "tracker_lag": 70,
+      "under_turn": 14,
+      "wrong_direction": 23
+     },
+     "junction": {
+      "early_start_offset": 124,
+      "lane_change": 2,
+      "map_narrow": 154,
+      "other": 100,
+      "over_turn": 24,
+      "too_fast": 4,
+      "tracker_lag": 108,
+      "under_turn": 22,
+      "wrong_direction": 73
+     },
+     "straight": {
+      "early_start_offset": 82,
+      "lane_change": 5,
+      "map_narrow": 148,
+      "other": 52,
+      "over_turn": 21,
+      "too_fast": 1,
+      "tracker_lag": 93,
+      "under_turn": 0,
+      "wrong_direction": 47
+     }
+    },
+    "primary_x_d110": {
+     "false": {
+      "early_start_offset": 123,
+      "lane_change": 5,
+      "map_narrow": 194,
+      "other": 70,
+      "over_turn": 24,
+      "too_fast": 4,
+      "tracker_lag": 108,
+      "under_turn": 3,
+      "wrong_direction": 100
+     },
+     "true": {
+      "early_start_offset": 135,
+      "lane_change": 2,
+      "map_narrow": 151,
+      "other": 125,
+      "over_turn": 29,
+      "too_fast": 2,
+      "tracker_lag": 163,
+      "under_turn": 33,
+      "wrong_direction": 43
+     }
+    },
+    "primary_x_stage": {
+     "one": {
+      "early_start_offset": 0,
+      "lane_change": 1,
+      "map_narrow": 18,
+      "other": 14,
+      "over_turn": 1,
+      "too_fast": 0,
+      "tracker_lag": 9,
+      "under_turn": 5,
+      "wrong_direction": 0
+     },
+     "two": {
+      "early_start_offset": 258,
+      "lane_change": 6,
+      "map_narrow": 327,
+      "other": 181,
+      "over_turn": 52,
+      "too_fast": 6,
+      "tracker_lag": 262,
+      "under_turn": 31,
+      "wrong_direction": 143
+     }
+    },
+    "primary_x_reffail": {
+     "false": {
+      "early_start_offset": 93,
+      "lane_change": 5,
+      "map_narrow": 219,
+      "other": 150,
+      "over_turn": 47,
+      "too_fast": 5,
+      "tracker_lag": 192,
+      "under_turn": 17,
+      "wrong_direction": 114
+     },
+     "true": {
+      "early_start_offset": 165,
+      "lane_change": 2,
+      "map_narrow": 126,
+      "other": 45,
+      "over_turn": 6,
+      "too_fast": 1,
+      "tracker_lag": 79,
+      "under_turn": 19,
+      "wrong_direction": 29
+     }
+    },
+    "primary_x_infeasible": {
+     "false": {
+      "early_start_offset": 113,
+      "lane_change": 4,
+      "map_narrow": 233,
+      "other": 162,
+      "over_turn": 48,
+      "too_fast": 6,
+      "tracker_lag": 193,
+      "under_turn": 25,
+      "wrong_direction": 124
+     },
+     "true": {
+      "early_start_offset": 145,
+      "lane_change": 3,
+      "map_narrow": 112,
+      "other": 33,
+      "over_turn": 5,
+      "too_fast": 0,
+      "tracker_lag": 78,
+      "under_turn": 11,
+      "wrong_direction": 19
+     }
+    },
+    "primary_x_walkway": {
+     "false": {
+      "early_start_offset": 163,
+      "lane_change": 6,
+      "map_narrow": 324,
+      "other": 139,
+      "over_turn": 36,
+      "too_fast": 1,
+      "tracker_lag": 168,
+      "under_turn": 17,
+      "wrong_direction": 57
+     },
+     "true": {
+      "early_start_offset": 95,
+      "lane_change": 1,
+      "map_narrow": 21,
+      "other": 56,
+      "over_turn": 17,
+      "too_fast": 5,
+      "tracker_lag": 103,
+      "under_turn": 19,
+      "wrong_direction": 86
+     }
+    },
+    "primary_x_shallow": {
+     "false": {
+      "early_start_offset": 241,
+      "lane_change": 6,
+      "map_narrow": 134,
+      "other": 165,
+      "over_turn": 48,
+      "too_fast": 5,
+      "tracker_lag": 173,
+      "under_turn": 34,
+      "wrong_direction": 140
+     },
+     "true": {
+      "early_start_offset": 17,
+      "lane_change": 1,
+      "map_narrow": 211,
+      "other": 30,
+      "over_turn": 5,
+      "too_fast": 1,
+      "tracker_lag": 98,
+      "under_turn": 2,
+      "wrong_direction": 3
+     }
+    }
+   },
+   "d110_rate_all": 0.3915764546684709,
+   "d110_rate_fail": 0.5197869101978692,
+   "turn_ratio_fail_refturn_median": 0.8025888755975823,
+   "turn_ratio_pass_refturn_median": 0.4027262780425438
+  },
+  "best": {
+   "score": 35.75606623741627,
+   "n_fail": 1249,
+   "n_fail_s1": 48,
+   "n_fail_s2": 1201,
+   "geom_agree": 0.9981393775372125,
+   "geom_fail_official_pass": 11,
+   "official_fail_geom_pass": 0,
+   "n_tokens": 5912,
+   "rows": {
+    "start_outside": {
+     "n": 0,
+     "n_s1": 0,
+     "n_s2": 0,
+     "share": 0.0,
+     "share_ci": [
+      0.0,
+      0.0
+     ],
+     "ref_fails": 0,
+     "oracle_ref": 0.0,
+     "oracle_ref_ci": [
+      0.0,
+      0.0
+     ],
+     "oracle_dac1": 0.0,
+     "oracle_dac1_ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "map_narrow": {
+     "n": 362,
+     "n_s1": 20,
+     "n_s2": 342,
+     "share": 0.2898318654923939,
+     "share_ci": [
+      0.23033178634941578,
+      0.35063329115509984
+     ],
+     "ref_fails": 130,
+     "oracle_ref": 4.565959201049511,
+     "oracle_ref_ci": [
+      3.0401611724868722,
+      6.173988401459122
+     ],
+     "oracle_dac1": 5.222909764043921,
+     "oracle_dac1_ci": [
+      3.6328979787192646,
+      6.9718671018968275
+     ]
+    },
+    "wrong_direction": {
+     "n": 87,
+     "n_s1": 0,
+     "n_s2": 87,
+     "share": 0.06965572457966374,
+     "share_ci": [
+      0.047618054784834385,
+      0.09398348033428192
+     ],
+     "ref_fails": 30,
+     "oracle_ref": 0.33473650106006314,
+     "oracle_ref_ci": [
+      0.06539192193762011,
+      0.7069334619954882
+     ],
+     "oracle_dac1": 0.3021585157831669,
+     "oracle_dac1_ci": [
+      0.10289472982361195,
+      0.5665919503980649
+     ]
+    },
+    "tracker_lag": {
+     "n": 258,
+     "n_s1": 6,
+     "n_s2": 252,
+     "share": 0.20656525220176142,
+     "share_ci": [
+      0.17409298643469812,
+      0.2433865662664175
+     ],
+     "ref_fails": 75,
+     "oracle_ref": 2.295268804177902,
+     "oracle_ref_ci": [
+      1.296029831279633,
+      3.4668913846898697
+     ],
+     "oracle_dac1": 2.262745446268071,
+     "oracle_dac1_ci": [
+      1.2562477959042682,
+      3.431338296366425
+     ]
+    },
+    "early_start_offset": {
+     "n": 260,
+     "n_s1": 0,
+     "n_s2": 260,
+     "share": 0.20816653322658127,
+     "share_ci": [
+      0.17767768055200578,
+      0.2377516366541385
+     ],
+     "ref_fails": 182,
+     "oracle_ref": 0.7017292522697711,
+     "oracle_ref_ci": [
+      0.19088423017769401,
+      1.3734529762582646
+     ],
+     "oracle_dac1": 2.1592693762975297,
+     "oracle_dac1_ci": [
+      1.2950785863532257,
+      3.0719961211706055
+     ]
+    },
+    "under_turn": {
+     "n": 49,
+     "n_s1": 7,
+     "n_s2": 42,
+     "share": 0.03923138510808647,
+     "share_ci": [
+      0.022956690145656468,
+      0.05904354993253945
+     ],
+     "ref_fails": 18,
+     "oracle_ref": 0.770556902043271,
+     "oracle_ref_ci": [
+      0.2222890227798759,
+      1.5057392651907178
+     ],
+     "oracle_dac1": 1.080884047337981,
+     "oracle_dac1_ci": [
+      0.4700462617738771,
+      1.8298056730637238
+     ]
+    },
+    "over_turn": {
+     "n": 41,
+     "n_s1": 1,
+     "n_s2": 40,
+     "share": 0.03282626100880705,
+     "share_ci": [
+      0.019276691135019064,
+      0.049121201038360575
+     ],
+     "ref_fails": 4,
+     "oracle_ref": 0.3113543028687557,
+     "oracle_ref_ci": [
+      0.013126821452559943,
+      0.6909829760029543
+     ],
+     "oracle_dac1": 0.28708149421331813,
+     "oracle_dac1_ci": [
+      0.044756820461147394,
+      0.6118290213425148
+     ]
+    },
+    "too_fast": {
+     "n": 13,
+     "n_s1": 1,
+     "n_s2": 12,
+     "share": 0.010408326661329063,
+     "share_ci": [
+      0.0039052681531757116,
+      0.019417680893093345
+     ],
+     "ref_fails": 1,
+     "oracle_ref": 0.20984978626158077,
+     "oracle_ref_ci": [
+      0.0,
+      0.4977775107855588
+     ],
+     "oracle_dac1": 0.18686272969052345,
+     "oracle_dac1_ci": [
+      0.0,
+      0.47479045421450145
+     ]
+    },
+    "lane_change": {
+     "n": 8,
+     "n_s1": 1,
+     "n_s2": 7,
+     "share": 0.006405124099279423,
+     "share_ci": [
+      0.0015810276381671429,
+      0.013029669574461875
+     ],
+     "ref_fails": 1,
+     "oracle_ref": 0.39034944459905446,
+     "oracle_ref_ci": [
+      0.0,
+      0.9553792339750813
+     ],
+     "oracle_dac1": 0.32356061237222833,
+     "oracle_dac1_ci": [
+      0.0,
+      0.8047981396717592
+     ]
+    },
+    "other": {
+     "n": 171,
+     "n_s1": 12,
+     "n_s2": 159,
+     "share": 0.13690952762209768,
+     "share_ci": [
+      0.1069820187985897,
+      0.16795636788010596
+     ],
+     "ref_fails": 43,
+     "oracle_ref": 2.7385500394497098,
+     "oracle_ref_ci": [
+      1.46832605393771,
+      4.159163756203536
+     ],
+     "oracle_dac1": 2.4035712847803423,
+     "oracle_dac1_ci": [
+      1.3124909820841635,
+      3.616982921520624
+     ]
+    },
+    "all_dac": {
+     "n": 1249,
+     "n_s1": 48,
+     "n_s2": 1201,
+     "share": 1.0,
+     "share_ci": [
+      1.0,
+      1.0
+     ],
+     "ref_fails": 484,
+     "oracle_ref": 13.00189989716219,
+     "oracle_ref_ci": [
+      10.407339839294844,
+      15.684754965571173
+     ],
+     "oracle_dac1": 15.014597434204665,
+     "oracle_dac1_ci": [
+      12.266320229604363,
+      17.650650458102152
+     ]
+    },
+    "grp_scorer_M_L": {
+     "n": 620,
+     "n_s1": 26,
+     "n_s2": 594,
+     "share": 0.49639711769415534,
+     "share_ci": [
+      0.44337412267923354,
+      0.5481903210282325
+     ],
+     "ref_fails": 205,
+     "oracle_ref": 6.878154355775978,
+     "oracle_ref_ci": [
+      5.14359851594993,
+      8.85423289601086
+     ],
+     "oracle_dac1": 7.6808414330888075,
+     "oracle_dac1_ci": [
+      5.8182005410870214,
+      9.712105376898286
+     ]
+    },
+    "grp_start_E": {
+     "n": 260,
+     "n_s1": 0,
+     "n_s2": 260,
+     "share": 0.20816653322658127,
+     "share_ci": [
+      0.17767768055200578,
+      0.2377516366541385
+     ],
+     "ref_fails": 182,
+     "oracle_ref": 0.7017292522697711,
+     "oracle_ref_ci": [
+      0.19088423017769401,
+      1.3734529762582646
+     ],
+     "oracle_dac1": 2.1592693762975297,
+     "oracle_dac1_ci": [
+      1.2950785863532257,
+      3.0719961211706055
+     ]
+    },
+    "grp_plan_W_U_O_F_C_R": {
+     "n": 369,
+     "n_s1": 22,
+     "n_s2": 347,
+     "share": 0.2954363490792634,
+     "share_ci": [
+      0.2516625814139843,
+      0.3409845449030399
+     ],
+     "ref_fails": 97,
+     "oracle_ref": 4.896084975372418,
+     "oracle_ref_ci": [
+      3.192437102162296,
+      6.702132173361904
+     ],
+     "oracle_dac1": 4.691260833762745,
+     "oracle_dac1_ci": [
+      3.143935366298397,
+      6.314611620339752
+     ]
+    },
+    "E_infeasible": {
+     "n": 172,
+     "n_s1": 0,
+     "n_s2": 172,
+     "share": 0.1377101681345076,
+     "share_ci": [
+      0.11148641631007195,
+      0.16372066512703895
+     ],
+     "ref_fails": 153,
+     "oracle_ref": 0.034481196976912654,
+     "oracle_ref_ci": [
+      0.00018314160640337776,
+      0.08592064655043277
+     ],
+     "oracle_dac1": 1.4175718448479049,
+     "oracle_dac1_ci": [
+      0.7186352805278042,
+      2.212256297803318
+     ]
+    },
+    "E_feasible": {
+     "n": 88,
+     "n_s1": 0,
+     "n_s2": 88,
+     "share": 0.07045636509207366,
+     "share_ci": [
+      0.054872616473585364,
+      0.08789593279361724
+     ],
+     "ref_fails": 29,
+     "oracle_ref": 0.6672480552928585,
+     "oracle_ref_ci": [
+      0.16106286548364337,
+      1.3350005598248411
+     ],
+     "oracle_dac1": 0.7416975314496247,
+     "oracle_dac1_ci": [
+      0.2491654957243085,
+      1.3435907639683426
+     ]
+    },
+    "scorer_or_infeasible": {
+     "n": 867,
+     "n_s1": 28,
+     "n_s2": 839,
+     "share": 0.6941553242594075,
+     "share_ci": [
+      0.6453754052519798,
+      0.7391975820064545
+     ],
+     "ref_fails": 415,
+     "oracle_ref": 7.5225079282144796,
+     "oracle_ref_ci": [
+      5.6685484559801464,
+      9.500835281311339
+     ],
+     "oracle_dac1": 9.846529824043635,
+     "oracle_dac1_ci": [
+      7.773502578816168,
+      12.009971930485394
+     ]
+    }
+   },
+   "flags": {
+    "any_start_outside": 0,
+    "any_map_narrow": 362,
+    "any_wrong_direction": 98,
+    "any_tracker_lag": 425,
+    "any_early_start_offset": 525,
+    "any_under_turn": 195,
+    "any_over_turn": 222,
+    "any_too_fast": 92,
+    "any_lane_change": 54,
+    "infeasible": {
+     "n": 458,
+     "n_s1": 4,
+     "n_s2": 454,
+     "share": 0.366693354683747,
+     "share_ci": [
+      0.3164277672767639,
+      0.4165988564491272
+     ],
+     "ref_fails": 345,
+     "oracle_ref": 1.5939911816990824,
+     "oracle_ref_ci": [
+      0.6844032861513403,
+      2.6131735703606247
+     ],
+     "oracle_dac1": 3.9962746975286185,
+     "oracle_dac1_ci": [
+      2.5186414356477136,
+      5.588906440470616
+     ]
+    },
+    "ref_fails": {
+     "n": 484,
+     "n_s1": 3,
+     "n_s2": 481,
+     "share": 0.3875100080064051,
+     "share_ci": [
+      0.3357118345797062,
+      0.43723122850060464
+     ],
+     "ref_fails": 484,
+     "oracle_ref": 0.0,
+     "oracle_ref_ci": [
+      0.0,
+      0.0
+     ],
+     "oracle_dac1": 4.102833196720863,
+     "oracle_dac1_ci": [
+      2.657796878577898,
+      5.6073471346493555
+     ]
+    },
+    "d110_set": 694,
+    "junction": 615,
+    "bend": 260,
+    "straight": 374,
+    "cmd_fixable": {
+     "n": 193,
+     "n_s1": 12,
+     "n_s2": 181,
+     "share": 0.1545236188951161,
+     "share_ci": [
+      0.11621484756469727,
+      0.1918926429003477
+     ],
+     "ref_fails": 75,
+     "oracle_ref": 2.3982606609275035,
+     "oracle_ref_ci": [
+      1.2290479364999556,
+      3.7379678187784773
+     ],
+     "oracle_dac1": 3.0222225883259854,
+     "oracle_dac1_ci": [
+      1.8695771663664955,
+      4.301760600020968
+     ]
+    },
+    "synthetic_history": {
+     "n": 161,
+     "n_s1": 0,
+     "n_s2": 161,
+     "share": 0.1289031224979984,
+     "share_ci": [
+      0.10085132028907537,
+      0.16038610637187958
+     ],
+     "ref_fails": 12,
+     "oracle_ref": 1.4324718617983,
+     "oracle_ref_ci": [
+      0.6619058940510157,
+      2.3353265974027964
+     ],
+     "oracle_dac1": 1.3342095827228457,
+     "oracle_dac1_ci": [
+      0.6266006316498938,
+      2.1766077855844195
+     ]
+    },
+    "shallow": {
+     "n": 389,
+     "n_s1": 29,
+     "n_s2": 360,
+     "share": 0.311449159327462,
+     "share_ci": [
+      0.273394338786602,
+      0.3524550653994083
+     ],
+     "ref_fails": 101,
+     "oracle_ref": 5.650971093634621,
+     "oracle_ref_ci": [
+      3.963430546567227,
+      7.59207846907627
+     ],
+     "oracle_dac1": 6.340322072187224,
+     "oracle_dac1_ci": [
+      4.676344970769708,
+      8.118193363838913
+     ]
+    },
+    "walkway": 362
+   },
+   "cross": {
+    "primary_x_geometry": {
+     "bend": {
+      "early_start_offset": 58,
+      "lane_change": 0,
+      "map_narrow": 49,
+      "other": 36,
+      "over_turn": 5,
+      "too_fast": 1,
+      "tracker_lag": 64,
+      "under_turn": 21,
+      "wrong_direction": 26
+     },
+     "junction": {
+      "early_start_offset": 130,
+      "lane_change": 1,
+      "map_narrow": 168,
+      "other": 102,
+      "over_turn": 22,
+      "too_fast": 9,
+      "tracker_lag": 97,
+      "under_turn": 28,
+      "wrong_direction": 58
+     },
+     "straight": {
+      "early_start_offset": 72,
+      "lane_change": 7,
+      "map_narrow": 145,
+      "other": 33,
+      "over_turn": 14,
+      "too_fast": 3,
+      "tracker_lag": 97,
+      "under_turn": 0,
+      "wrong_direction": 3
+     }
+    },
+    "primary_x_d110": {
+     "false": {
+      "early_start_offset": 113,
+      "lane_change": 6,
+      "map_narrow": 209,
+      "other": 50,
+      "over_turn": 24,
+      "too_fast": 7,
+      "tracker_lag": 118,
+      "under_turn": 4,
+      "wrong_direction": 24
+     },
+     "true": {
+      "early_start_offset": 147,
+      "lane_change": 2,
+      "map_narrow": 153,
+      "other": 121,
+      "over_turn": 17,
+      "too_fast": 6,
+      "tracker_lag": 140,
+      "under_turn": 45,
+      "wrong_direction": 63
+     }
+    },
+    "primary_x_stage": {
+     "one": {
+      "early_start_offset": 0,
+      "lane_change": 1,
+      "map_narrow": 20,
+      "other": 12,
+      "over_turn": 1,
+      "too_fast": 1,
+      "tracker_lag": 6,
+      "under_turn": 7,
+      "wrong_direction": 0
+     },
+     "two": {
+      "early_start_offset": 260,
+      "lane_change": 7,
+      "map_narrow": 342,
+      "other": 159,
+      "over_turn": 40,
+      "too_fast": 12,
+      "tracker_lag": 252,
+      "under_turn": 42,
+      "wrong_direction": 87
+     }
+    },
+    "primary_x_reffail": {
+     "false": {
+      "early_start_offset": 78,
+      "lane_change": 7,
+      "map_narrow": 232,
+      "other": 128,
+      "over_turn": 37,
+      "too_fast": 12,
+      "tracker_lag": 183,
+      "under_turn": 31,
+      "wrong_direction": 57
+     },
+     "true": {
+      "early_start_offset": 182,
+      "lane_change": 1,
+      "map_narrow": 130,
+      "other": 43,
+      "over_turn": 4,
+      "too_fast": 1,
+      "tracker_lag": 75,
+      "under_turn": 18,
+      "wrong_direction": 30
+     }
+    },
+    "primary_x_infeasible": {
+     "false": {
+      "early_start_offset": 88,
+      "lane_change": 4,
+      "map_narrow": 237,
+      "other": 133,
+      "over_turn": 36,
+      "too_fast": 13,
+      "tracker_lag": 172,
+      "under_turn": 39,
+      "wrong_direction": 69
+     },
+     "true": {
+      "early_start_offset": 172,
+      "lane_change": 4,
+      "map_narrow": 125,
+      "other": 38,
+      "over_turn": 5,
+      "too_fast": 0,
+      "tracker_lag": 86,
+      "under_turn": 10,
+      "wrong_direction": 18
+     }
+    },
+    "primary_x_walkway": {
+     "false": {
+      "early_start_offset": 157,
+      "lane_change": 7,
+      "map_narrow": 336,
+      "other": 119,
+      "over_turn": 30,
+      "too_fast": 6,
+      "tracker_lag": 173,
+      "under_turn": 29,
+      "wrong_direction": 30
+     },
+     "true": {
+      "early_start_offset": 103,
+      "lane_change": 1,
+      "map_narrow": 26,
+      "other": 52,
+      "over_turn": 11,
+      "too_fast": 7,
+      "tracker_lag": 85,
+      "under_turn": 20,
+      "wrong_direction": 57
+     }
+    },
+    "primary_x_shallow": {
+     "false": {
+      "early_start_offset": 245,
+      "lane_change": 3,
+      "map_narrow": 137,
+      "other": 144,
+      "over_turn": 34,
+      "too_fast": 12,
+      "tracker_lag": 159,
+      "under_turn": 41,
+      "wrong_direction": 85
+     },
+     "true": {
+      "early_start_offset": 15,
+      "lane_change": 5,
+      "map_narrow": 225,
+      "other": 27,
+      "over_turn": 7,
+      "too_fast": 1,
+      "tracker_lag": 99,
+      "under_turn": 8,
+      "wrong_direction": 2
+     }
+    }
+   },
+   "d110_rate_all": 0.3915764546684709,
+   "d110_rate_fail": 0.55564451561249,
+   "turn_ratio_fail_refturn_median": 0.7987142749478068,
+   "turn_ratio_pass_refturn_median": 0.35250024135079905
+  }
+ },
+ "paired": {
+  "start_outside": {
+   "native": 0,
+   "best": 0,
+   "fixed": 0,
+   "moved": 0,
+   "new": 0
+  },
+  "map_narrow": {
+   "native": 345,
+   "best": 362,
+   "fixed": 73,
+   "moved": 42,
+   "new": 79
+  },
+  "wrong_direction": {
+   "native": 143,
+   "best": 87,
+   "fixed": 50,
+   "moved": 56,
+   "new": 16
+  },
+  "tracker_lag": {
+   "native": 271,
+   "best": 258,
+   "fixed": 46,
+   "moved": 72,
+   "new": 29
+  },
+  "early_start_offset": {
+   "native": 258,
+   "best": 260,
+   "fixed": 8,
+   "moved": 53,
+   "new": 1
+  },
+  "under_turn": {
+   "native": 36,
+   "best": 49,
+   "fixed": 2,
+   "moved": 10,
+   "new": 9
+  },
+  "over_turn": {
+   "native": 53,
+   "best": 41,
+   "fixed": 17,
+   "moved": 12,
+   "new": 7
+  },
+  "too_fast": {
+   "native": 6,
+   "best": 13,
+   "fixed": 3,
+   "moved": 1,
+   "new": 5
+  },
+  "lane_change": {
+   "native": 7,
+   "best": 8,
+   "fixed": 0,
+   "moved": 3,
+   "new": 1
+  },
+  "other": {
+   "native": 195,
+   "best": 171,
+   "fixed": 30,
+   "moved": 44,
+   "new": 17
+  }
+ }
+}
