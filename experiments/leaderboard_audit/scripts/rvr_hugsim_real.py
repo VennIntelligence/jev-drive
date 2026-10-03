@@ -62,7 +62,7 @@ def match(name, cam, pidx):
     log, t0 = index_cache()[name]
     rows = pidx[(log, cam)]
     ts = np.array([r[0] for r in rows], np.int64)
-    k0 = int(np.searchsorted(ts, t0 - 40000))
+    k0 = int(np.argmin(np.abs(ts - t0)))          # the camera's key frame of the first sample (FRONT_LEFT fires ~45 ms early)
     want = ts[k0] + np.rint(T * 1e6).astype(np.int64)
     j = np.clip(np.searchsorted(ts, want), 1, len(ts) - 1)
     j = np.where(np.abs(ts[j - 1] - want) <= np.abs(ts[j] - want), j - 1, j)
