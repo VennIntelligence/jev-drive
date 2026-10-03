@@ -1,0 +1,24 @@
+{
+ "tag": "cinque-fixed-Hln3-s0_all64",
+ "n": 64,
+ "spins": 8,
+ "base_spins": 10,
+ "spins10": 2,
+ "n10": 10,
+ "new_spins": [
+  "scene-0041-medium-00",
+  "scene-090-hard-01",
+  "scene-095-medium-01",
+  "scene-132384196576-medium-01",
+  "scene-2800_3000-easy-00",
+  "scene-570_770-medium-00"
+ ],
+ "hd_mean": 0.30865586710110415,
+ "base_hd_mean": 0.27754309400255905,
+ "n_nonspin10": 54,
+ "dhd_nonspin": 0.020868776441783737,
+ "dhd_ci": [
+  -0.021050895263705335,
+  0.06465287929242725
+ ]
+}
