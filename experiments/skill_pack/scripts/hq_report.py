@@ -155,19 +155,20 @@ def figure(tok_i, mt, warp, pd_rows):
     fr = {"hold": np.load(P / NT / "hold.npy", mmap_mode="r")[tok_i], "warp": warp[tok_i],
           "gimm": np.load(P / NT / "gimm.npy", mmap_mode="r")[tok_i], "real": np.load(P / NT / "real.npy", mmap_mode="r")[tok_i]}
     ts = [-1.4, -1.2, -0.8, -0.6, -0.4, -0.2]
-    fig = plt.figure(figsize=(18, 9.5))
-    gs = fig.add_gridspec(4, 8, width_ratios=[1] * 7 + [1.6])
+    show = [1, 3, 5]                                  # t = -1.2, -0.6, -0.2 (one per keyframe gap) + the t0 key
+    fig = plt.figure(figsize=(16, 9))
+    gs = fig.add_gridspec(4, 5, width_ratios=[1, 1, 1, 1, 1.15], wspace=0.04, hspace=0.12)
     for r, a in enumerate(fr):
-        for c in range(7):
+        for c, j in enumerate(show + [None]):
             ax = fig.add_subplot(gs[r, c])
-            y = I.unpack(np.asarray(keys[3][0] if c == 6 else fr[a][c][0]))[0]
-            ax.imshow(y[:200], cmap="gray", vmin=0, vmax=255)
+            y = I.unpack(np.asarray(keys[3][0] if j is None else fr[a][j][0]))[0]
+            ax.imshow(y[40:200, 64:448], cmap="gray", vmin=0, vmax=255, aspect="auto")
             ax.set_xticks([]); ax.set_yticks([])
             if r == 0:
-                ax.set_title("t0 key" if c == 6 else f"t = {ts[c]:+.1f} s", fontsize=10)
+                ax.set_title("t0 key (same in every arm)" if j is None else f"t = {ts[j]:+.1f} s", fontsize=11)
             if c == 0:
-                ax.set_ylabel(f"{a}\nPDMS {pd_rows[a]:.2f}", fontsize=11)
-    ax = fig.add_subplot(gs[:, 7])
+                ax.set_ylabel(f"{a}\nPDMS {pd_rows[a]:.0f}", fontsize=12)
+    ax = fig.add_subplot(gs[:, 4])
     cols = {"hold": "#999999", "warp": "#e69f00", "gimm": "#0072b2", "real": "#009e73"}
     for a, stem in ARMS.items():
         p = plans(NT, stem)["plan_pos"][tok_i]
@@ -175,10 +176,9 @@ def figure(tok_i, mt, warp, pd_rows):
         ax.plot(-p[m, 1], p[m, 0], color=cols[a], lw=2.2, label=a)
     ax.set_aspect("equal"); ax.grid(alpha=.3); ax.legend(loc="upper left")
     ax.set_xlabel("left (m)"); ax.set_ylabel("forward (m)"); ax.set_title("plan to 4 s (camera frame)")
-    fig.suptitle(f"navtest {mt['names'][tok_i]} (v0 {mt['speed'][tok_i]:.1f} m/s): road view, luma, the 6 context frames per history arm", fontsize=12)
-    fig.tight_layout()
+    fig.suptitle(f"navtest {mt['names'][tok_i]} (v0 {mt['speed'][tok_i]:.1f} m/s): road-view luma of 3 of the 6 synthesized context frames per history arm, and the plans", fontsize=12)
     FIG.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIG, dpi=80, pil_kwargs={"quality": 85})
+    fig.savefig(FIG, dpi=80, bbox_inches="tight", pil_kwargs={"quality": 85})
 
 
 def main():
