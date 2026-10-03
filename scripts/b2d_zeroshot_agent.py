@@ -243,6 +243,11 @@ class ZeroShotAgent(AutonomousAgent):
         for key in ("adapter", "metadata", "preset"):
             params.pop(key, None)
         self.controller = Controller(preset=self.cfg.get("controller_preset", "carla"), **params)
+        self.lowspeed = None                         # low-speed lateral transfer limit (lib/lowspeed_ctrl.py); inert without LOWSPEED_CTRL
+        if os.environ.get("LOWSPEED_CTRL"):
+            sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+            import lowspeed_ctrl
+            self.lowspeed = lowspeed_ctrl.B2DFilter(json.loads(os.environ["LOWSPEED_CTRL"]))
         self.zoo = self.zoo_control = self.zoo_target = None
         self.zoo_lateral = self.cfg.get("zoo_lateral", "zoo")
         assert self.zoo_lateral in ("zoo", "fixed", "time"), self.zoo_lateral
@@ -416,6 +421,8 @@ class ZeroShotAgent(AutonomousAgent):
             throttle, steer, brake, reason = self._native_control(speed, throttle, steer, brake, reason)
         elif self.zoo is None and self.lateral == "curvature" and self.curvature is not None and self.controller.diagnostics["reason"] == "tracking":
             steer = self._curvature_steer(speed)
+        if self.lowspeed is not None:
+            steer = self.lowspeed(steer, speed, DELTA)
         if self.guide:
             if self.route_t0 is None:
                 self.route_t0 = now
