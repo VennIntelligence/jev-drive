@@ -60,3 +60,5 @@
 - D2：训练结束时不在训练进程里算 dev，改为 chain 里对 O 和全部臂一次算完（避免两个进程同时建同一个 dev bank）。
 - 2026-10-04 07:28（box 时间）启动 chain `pilot1`：`pilot`、`pilot_ctl` 各 2 500 步，seed 0，EXAMS=1（含 navhard 与 HUGSIM）。
 - 迭代 1（07:55 box，看了 pilot / pilot_ctl 的 dev，没看任何考题读数）：dev 上 G_low 降约 80%（nav 14.3 → 2.3，wod 13.7 → 2.8，carla 4.2 → 1.5），control 不动；recover_psi_1s 从 ≈0 到 0.63–1.08；但 drift 中位 0.16–0.25 m 超 0.15 护栏（control 0.19–0.58）。加两臂：`it_dw3`（D 行蒸馏权重 3）、`it_half`（配对份额减半：U 18 / D 16 / H 8 / O 6）。期望：drift 降到 ≤ 0.15，G_low 降幅仍 ≥ 50%，recover 仍 ≥ 0.4。只读 dev 与 (a)(b)(e)，navhard / HUGSIM 只考被选中的那一个。
+- 选择（08:45 box，只看 dev）：`it_dw3` drift 中位 0.07–0.11 m（过 0.15 护栏），G_low dev 降 73–75%，recover_psi_1s 0.52–0.99；`it_half` drift 0.13–0.28 不过。按登记，迭代模型里 navhard / HUGSIM 给 `it_dw3`。
+- 迭代 2（08:45，已看到 pilot 的 (a)–(e)：HUGSIM 6 / 10 未过 ≤ 4 线）：`it_lowrate` = dw 3 + 假偏航率只取 3–8°/s + rot 份额 0.8。理由：闭环打转从 1–2° 的偏向开始放大，对应的历史偏航率小，pilot 的训练率 5–15°/s 可能没压住小率的跟随。期望：HUGSIM 打转 ≤ 4 / 10，navtest Δ ≥ −0.3。这是迭代模型里第 2 个也是最后一个考 navhard / HUGSIM 的。

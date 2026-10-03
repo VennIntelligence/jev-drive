@@ -37,6 +37,8 @@ ARMS = {
     # iteration 1 (prereg addendum, before readout b): dev drift 0.16-0.25 m over the 0.15 guard, G_low cut ~80%
     "it_dw3": dict(dw=3.0),                                  # stronger distillation on D rows (op_adapt_l main used dw 3)
     "it_half": dict(roles={"U": 18, "D": 16, "H": 8, "O": 6}),   # half the pair share
+    # iteration 2 (after pilot HUGSIM 6 / 10 spins): the spins grow from 1-2 deg leans, i.e. small yaw rates
+    "it_lowrate": dict(dw=3.0, rot_dps=(3.0, 8.0), hist_p={"rot": 0.8, "repeat": 0.1, "single": 0.1}),
 }
 
 
