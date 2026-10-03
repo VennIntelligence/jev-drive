@@ -1,7 +1,7 @@
 # op_adapt_h: layer-3 history and offset pairs for Cinque
 
 status: live
-decisions: 98, 101, 106 (inputs: 92, 94, 96, 100)
+decisions: 98, 101, 106, 107 (inputs: 92, 94, 96, 100)
 index: Fake-yaw following -71..-78%, navtest +0.82; HUGSIM spins 8 to 6 only
 
 **Question.** Does a light adaptation of Cinque on two pair types (history inconsistent with the future -> follow the logged
