@@ -1,0 +1,47 @@
+{
+ "selected": null,
+ "table": [
+  {
+   "model": "q3GA-s0",
+   "navdev_sg_uptake": 0.3521745078630396,
+   "navdev_junction_drift": 0.13564065098762512,
+   "navdev_straight_drift": 0.10972334444522858,
+   "carladev_sg_uptake": 0.4440196556050288,
+   "carladev_junction_drift": 0.33655890822410583,
+   "dist_nav_dev_drift": 0.09887544810771942,
+   "dist_wod_dev_drift": 0.0910148024559021,
+   "dist_carla_dev_drift": 0.07404501736164093,
+   "drift_ok": false,
+   "gate_dev_min": 0.3521745078630396,
+   "uptake_ok": false
+  },
+  {
+   "model": "q3GB-s0",
+   "navdev_sg_uptake": 0.2698129422226515,
+   "navdev_junction_drift": 0.10614694654941559,
+   "navdev_straight_drift": 0.08405830711126328,
+   "carladev_sg_uptake": 0.3542401343790439,
+   "carladev_junction_drift": 0.2554677128791809,
+   "dist_nav_dev_drift": 0.07563640177249908,
+   "dist_wod_dev_drift": 0.062270283699035645,
+   "dist_carla_dev_drift": 0.05938902124762535,
+   "drift_ok": false,
+   "gate_dev_min": 0.2698129422226515,
+   "uptake_ok": false
+  },
+  {
+   "model": "q3GC-s0",
+   "navdev_sg_uptake": 0.0176423584894683,
+   "navdev_junction_drift": 0.1300801783800125,
+   "navdev_straight_drift": 0.11055377125740051,
+   "carladev_sg_uptake": 0.1688628033760367,
+   "carladev_junction_drift": 0.2899336516857147,
+   "dist_nav_dev_drift": 0.09738167375326157,
+   "dist_wod_dev_drift": 0.07893627882003784,
+   "dist_carla_dev_drift": 0.06050712615251541,
+   "drift_ok": false,
+   "gate_dev_min": 0.0176423584894683,
+   "uptake_ok": false
+  }
+ ]
+}

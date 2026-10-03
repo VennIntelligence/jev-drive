@@ -2,7 +2,7 @@
 
 status: live
 decisions: 99
-index: Image route: zero-shot uptake <= 0.14; fine-tuned 0.54-0.64, drift 0.29 m
+index: Image route: zero-shot uptake <= 0.14; fine-tuned 0.54-0.64, drift 0.29 m; sky arrow (no map) 0.29-0.39, junction drift 0.13-0.27 m
 
 **Question.** Does openpilot (Cinque, frozen) follow a route command given through the image (painted route, blocked
 other branches, a sign) instead of the desire input, zero-shot; and if only partly, can light fine-tuning teach it?
@@ -17,9 +17,18 @@ drawings (band uptake 0.01 -> 0.54, correct 0.81; barrier 0.12 -> 0.64, correct 
 drawings (cones +0.16, lines +0.09, sign 0, grass fill -0.05) and moves the no-overlay plan by a median 0.29 m (guard
 0.10 m failed). CARLA (696 samples / 179 routes) replicates the zero-shot ordering: combo uptake 0.18, barrier 0.09,
 lines 0.09, sign 0.
+Q3 (drift-free fine-tune, [results/ft-q3.md](results/ft-q3.md)): after the course change, the command is a magenta sky arrow
+(command and navigation distance only, no map, nothing covering the road). Zero-shot it does nothing (uptake 0.00). Fine-tuned
+with a large distillation pool, CARLA junction frames and residual targets, it reaches uptake 0.29 [0.23, 0.34] on navtrain and 0.39
+[0.37, 0.42] on CARLA, with lane keeping unchanged. The no-overlay junction drift stays at 0.13 (nav) / 0.27 m (CARLA); the
+configs that pass on nav (0.09 m) keep only 0.13 uptake. A perception-placed green line adds a little (correct 0.82 / 0.84) and
+costs drift. No config passed, so no seeds 1-2 and no closed loop. The 0.10 m line sits below the shipped model's own junction
+sensitivity: a non-informative sky disc moves its plan 0.17 / 0.24 m.
 
-**Next.** A drift-free fine-tune (larger, more varied distillation pool, more seeds), checked on the CARLA set; then a
-B2D closed-loop smoke with the overlay drawn from the route at the turn_agree-failure junctions (not run).
+**Next.** The junction drift guard needs a reference that the shipped model itself meets: for example, drift measured relative to
+the plan change from a non-informative overlay, or the guard read on ordinary frames, where every sky config is at 0.04-0.08 m.
+Changing the guard is a decision for main; it is not made here. If it is relaxed, run SA with seeds 1-2 and then the closed-loop
+smoke (sky arrow from the official route command and distance; ONNX via op_l_onnx.py) on 27297 / 27043 / 9196 / 24944.
 
 ![overlay review sheet](figs/overlay_sheet.png)
 
@@ -66,7 +75,14 @@ adapted plan's own point; blocks shorten the plan, so that set changes with the 
 table uses the fixed set decided on the no-overlay plan (the same pairs for every family); by it no family reaches the
 "works" line (correct >= 0.75), so barrier moves from "works" to "partial". combo was added after the first readout.
 
-**Read more.** [results/ft-q2.md](results/ft-q2.md) (Q2 fine-tune: arms, guards, side effects; pre-registration
+![sky arrow and green line](figs/sky_sheet.png)
+
+What to look at: three CARLA test junctions (road view above the wide view). Left to right: no overlay; the sky arrow for left /
+straight / right; the uninformative disc; the arrow for a missing exit (control); then sky + green line for each command. The arrow
+stays above the horizon and covers no road user. The green line follows the model's own lane centre and then a fixed arc.
+
+**Read more.** [results/ft-q3.md](results/ft-q3.md) (Q3: drift-free attempt, sky arrow, sky + green; pre-registration and addenda
+[plans/2026-10-04-img-cmd-ft2-prereg.md](plans/2026-10-04-img-cmd-ft2-prereg.md)); [results/ft-q2.md](results/ft-q2.md) (Q2 fine-tune: arms, guards, side effects; pre-registration
 [plans/2026-10-04-img-cmd-ft-prereg.md](plans/2026-10-04-img-cmd-ft-prereg.md)); [plans/2026-10-04-img-cmd-prereg.md](plans/2026-10-04-img-cmd-prereg.md) (samples, overlay families,
 metrics and verdict rules, fixed before the full run).
 

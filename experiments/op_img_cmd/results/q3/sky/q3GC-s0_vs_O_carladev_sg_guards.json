@@ -1,0 +1,16 @@
+{
+ "none_drift_median_junction": 0.2899336516857147,
+ "sg_wrong_move_median": 0.63865420667652,
+ "sg_wrong_abs_dy4_mean": 1.971654610119102,
+ "sg_wrong_move_median_ref": 0.4942496132499641,
+ "sg_wrong_abs_dy4_mean_ref": 0.5756932344192192,
+ "sg_wrong_n": 30,
+ "none_toward_taken": {
+  "n": 75,
+  "mean": 0.09151474382436343,
+  "lo": -0.25875220248067704,
+  "hi": 0.44241291207765,
+  "mean_a": 3.254851360274383,
+  "mean_b": 3.163336616450019
+ }
+}

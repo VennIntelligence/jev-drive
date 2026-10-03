@@ -1,0 +1,25 @@
+{
+ "none_drift_median_junction": 0.0,
+ "none_drift_median_straight": 0.0,
+ "sg_wrong_move_median": 0.2612884469846402,
+ "sg_wrong_abs_dy4_mean": 0.3043523218799173,
+ "sg_wrong_move_median_ref": 0.2612884469846402,
+ "sg_wrong_abs_dy4_mean_ref": 0.3043523218799173,
+ "sg_wrong_n": 313,
+ "none_toward_taken": {
+  "n": 385,
+  "mean": 0.0,
+  "lo": 0.0,
+  "hi": 0.0,
+  "mean_a": 1.3288051303246329,
+  "mean_b": 1.3288051303246329
+ },
+ "straight_none_lat_err_3s": {
+  "n": 293,
+  "mean": 0.0,
+  "lo": 0.0,
+  "hi": 0.0,
+  "mean_a": 0.1607757679680714,
+  "mean_b": 0.1607757679680714
+ }
+}

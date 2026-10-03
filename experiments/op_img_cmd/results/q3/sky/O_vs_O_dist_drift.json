@@ -1,0 +1,8 @@
+{
+ "nav_train": 0.0,
+ "nav_dev": 0.0,
+ "wod_train": 0.0,
+ "wod_dev": 0.0,
+ "carla_train": 0.0,
+ "carla_dev": 0.0
+}
