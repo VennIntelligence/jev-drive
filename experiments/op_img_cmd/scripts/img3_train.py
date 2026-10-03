@@ -26,11 +26,14 @@ import img_overlay as O  # noqa: E402
 from img_report import near  # noqa: E402
 
 FT = Q2.FT
-BANKS = ("skytrain", "skycarla", "dist")
+SG = _os.environ.get("IMG_ARM", "") == "sg"          # the sky + green-line arm (banks sg*, family sg)
+BANKS = ("sgtrain", "sgcarla", "dist") if SG else ("skytrain", "skycarla", "dist")
+TB, CB, FAM = BANKS[0], BANKS[1], ("sg" if SG else "sky")
 MIX = (("IN", "I", 16), ("IC", "I", 8),
        ("QJ", "D", 6), ("CJ", "D", 4), ("QS", "D", 2), ("DN", "D", 4), ("DW", "D", 4), ("DC", "D", 4),
        ("NS", "N", 8))
 ARMS = {"smoke": dict(steps=40, ckpt_every=10 ** 9), "SA": dict(), "SB": dict(lam_d=30.0, lam_c=3.0), "SC": dict(lr=5e-5, steps=2000)}
+ARMS |= {"G" + k[1]: v for k, v in ARMS.items() if k.startswith("S")} | {"gsmoke": ARMS["smoke"]}   # sg arm: same configs
 
 
 def residual_target(s, c, o20):
@@ -60,19 +63,19 @@ class Pool(Q2.Pool):
         self.none_row = {str(self.B[b][1]["token"][r]): (b, k) for b in BANKS for k, r in enumerate(self.tea[b]["rows"])}
         G = {s["token"]: s for s in Q2.FB.samples("train")}
         G |= {s["token"]: s for s in QB.carla_samples()}
-        vt, vc, vd = self.B["skytrain"][1], self.B["skycarla"][1], self.B["dist"][1]
+        vt, vc, vd = self.B[TB][1], self.B[CB][1], self.B["dist"][1]
         tr = vt["split"] == "train"
         jt, st = vt["kind"] == "junction", vt["kind"] == "straight"
         ct = vc["split"] == "train"
-        self.idx = {"IN": ("skytrain", np.flatnonzero(tr & jt & (vt["fam"] == "sky"))),
-                    "IC": ("skycarla", np.flatnonzero(ct & (vc["fam"] == "sky"))),
-                    "QJ": ("skytrain", np.flatnonzero(tr & jt & (vt["fam"] == "none"))),
-                    "CJ": ("skycarla", np.flatnonzero(ct & (vc["fam"] == "none"))),
-                    "QS": ("skytrain", np.flatnonzero(tr & st & (vt["fam"] == "none"))),
+        self.idx = {"IN": (TB, np.flatnonzero(tr & jt & (vt["fam"] == FAM))),
+                    "IC": (CB, np.flatnonzero(ct & (vc["fam"] == FAM))),
+                    "QJ": (TB, np.flatnonzero(tr & jt & (vt["fam"] == "none"))),
+                    "CJ": (CB, np.flatnonzero(ct & (vc["fam"] == "none"))),
+                    "QS": (TB, np.flatnonzero(tr & st & (vt["fam"] == "none"))),
                     "DN": ("dist", np.flatnonzero((vd["split"] == "train") & (vd["dom"] == "nav"))),
                     "DW": ("dist", np.flatnonzero((vd["split"] == "train") & (vd["dom"] == "wod"))),
                     "DC": ("dist", np.flatnonzero((vd["split"] == "train") & (vd["dom"] == "carla"))),
-                    "NS": ("skytrain", np.flatnonzero(tr & st & (vt["fam"] == "sky")))}
+                    "NS": (TB, np.flatnonzero(tr & st & (vt["fam"] == FAM)))}
         for k, (b, ix) in self.idx.items():
             assert len(ix), k
         self.hum = {}

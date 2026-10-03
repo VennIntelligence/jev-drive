@@ -26,6 +26,10 @@ every history frame uses its own distance = t0 distance + its distance behind t0
   sky         the arrow for command `cmd`
   sky_disc    control: a magenta disc at the same place (no direction)
   sky_wrong   control: the arrow of an exit class the junction does not have (junctions with a missing class only)
+  sg          sky arrow + a green ground line placed by perception (green_path: the centre of the original model's own t0 inner
+              lane lines up to the navigation distance to the junction, then a fixed-radius quarter arc toward the command;
+              sample["lanes"] = (4, 33, 2) lane lines, sample["cam"] / ["lane_cam"] the camera); no map geometry
+  sg_wrong    control: sg for an exit class the junction does not have
 """
 import numpy as np
 
@@ -38,7 +42,9 @@ MAX_EGO_LANE_M = 1.5  # samples whose t0 ego is farther from the approach centre
 FAMILIES = ("band", "lines", "arrow_road", "sign", "cones", "barrier", "wall", "fill_grey", "fill_grass", "band_all", "combo")
 ROUTE_FREE = ("band_all",)          # carry no route information (one run per frame, not per command)
 SKY_FAMILIES = ("sky",)
-SKY_FREE = ("sky_disc", "sky_wrong")  # sky controls: one run per frame
+SKY_FREE = ("sky_disc", "sky_wrong", "sg_wrong")  # sky controls: one run per frame
+GREEN_R = {"left": 12.0, "right": 8.0}
+X_IDXS = 192.0 * (np.arange(33) / 32) ** 2
 MAGENTA, BLACK = (255, 0, 255), (0, 0, 0)
 SKY_BOX = {"road": (256, 1, 28), "wide": (64, 2, 42)}  # (centre column, top row, full height px) per view; horizons at rows 47.6 / 151.8;
 # the wide arrow sits top-left, away from the lights that hang over the lanes (rows 10-100 at 12-30 m)
@@ -204,6 +210,11 @@ def primitives(sample, fam, cmd):
     """Layers [(polys, rgb, alpha, noise)] in the t0 frame, painter's order (ground first)."""
     if fam == "none":
         return []
+    if fam in ("sg", "sg_wrong"):
+        c = sky_missing(sample)[0] if fam == "sg_wrong" else (cmd or "straight")
+        p = green_path(sample["lanes"], sample["lane_cam"], c, sample.get("dist", np.nan) if sample.get("kind", "junction") == "junction" else np.nan)
+        p = p[arc(p) >= 3.0]
+        return [(ribbon(p, 0.15), GREEN, 0.9, 0)] + primitives(sample, "sky", c)
     if fam in SKY_FAMILIES + SKY_FREE:
         shape = "disc" if fam == "sky_disc" else sky_missing(sample)[0] if fam == "sky_wrong" else (cmd or "straight")
         d0 = sample.get("dist", np.nan) if sample.get("kind", "junction") == "junction" else np.nan
@@ -313,8 +324,10 @@ def draw(packed, layers, pose, cam):
     if not layers:
         return packed
     from jevdrive import op_interp as I
-    if isinstance(layers[0][0], str) and layers[0][0] == "SKY":
-        return draw_sky(packed, layers[0][1], layers[0][2], pose)
+    sky = [x for x in layers if isinstance(x[0], str) and x[0] == "SKY"]
+    if sky:
+        rest = [x for x in layers if not (isinstance(x[0], str) and x[0] == "SKY")]
+        return draw_sky(draw(packed, rest, pose, cam) if rest else packed, sky[0][1], sky[0][2], pose)
     out = np.empty_like(packed)
     for k, view in enumerate(("road", "wide")):
         Y, U, V = (z.astype(np.float32) for z in I.unpack(packed[k]))
@@ -338,6 +351,31 @@ def draw(packed, layers, pose, cam):
         q = lambda z: np.clip(np.rint(z), 0, 255).astype(np.uint8)  # noqa: E731
         out[k] = I.pack(q(Y), q(U), q(V))
     return out
+
+
+def green_path(lanes, cam, cmd, d):
+    """Ground line in the t0 rear-axle frame from perception + navigation only: the centre of the inner lane lines (openpilot
+    calibrated frame at the camera, y right) up to the junction distance d (nan: 60 m), then for left / right a quarter arc of
+    GREEN_R and 20 m straight; for straight the lane centre to 60 m."""
+    yc = 0.5 * (np.asarray(lanes)[1, :, 0] + np.asarray(lanes)[2, :, 0])
+    P = np.stack([X_IDXS + cam[0], -yc + cam[1]], 1)
+    d = 60.0 if d is None or not np.isfinite(d) else float(np.clip(d, 0.0, 60.0))
+    if cmd == "straight":
+        d = 60.0
+    P = resample(P[P[:, 0] <= max(d + cam[0] + 5.0, 8.0)])
+    a = arc(P)
+    P = P[a <= d + 1e-6] if (a <= d).sum() >= 2 else P[:2]
+    if cmd == "straight":
+        return P
+    t = P[-1] - P[-2]
+    t = t / max(np.linalg.norm(t), 1e-9)
+    n = np.array([-t[1], t[0]]) * (1 if cmd == "left" else -1)
+    R = GREEN_R[cmd]
+    c = P[-1] + R * n
+    th = np.linspace(0, np.pi / 2, 24)[1:]
+    arcp = c - R * (np.outer(np.cos(th), n) - np.outer(np.sin(th), t))
+    end = arcp[-1] + np.outer(np.arange(1, 41) * 0.5, n)
+    return np.r_[P, arcp, end]
 
 
 def draw_sky(packed, shape, d0, pose):

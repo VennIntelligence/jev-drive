@@ -67,15 +67,17 @@ def cmd_plans(a):
 
 
 # ---------------------------------------------------------------- sets
-SKY = os.environ.get("IMG_SETS", "") == "sky"
+SKY = os.environ.get("IMG_SETS", "") in ("sky", "sg")
 if SKY:
     OUT = FT / "report3"
+PFX = "sg" if os.environ.get("IMG_SETS", "") == "sg" else "sky"
+SFX = "_sg" if PFX == "sg" and SKY else ""          # report file suffix of the sky + green arm
 
 
 def set_def(name):
     """(bank, G {token: sample}); IMG_SETS=sky: the sky banks of img3_bank.py"""
     import img2_bank as QB
-    bk = {"train": "skytrain", "eval": "skyeval", "carla": "skycarla"} if SKY else {"train": "train", "eval": "eval", "carla": "carla"}
+    bk = {"train": f"{PFX}train", "eval": f"{PFX}eval", "carla": f"{PFX}carla"} if SKY else {"train": "train", "eval": "eval", "carla": "carla"}
     if name in ("navdev", "naveval"):
         if name == "navdev":
             G = {s["token"]: s for s in pickle.load(open(ROOT / "geom" / "ft.pkl", "rb")) if s["split"] == "dev"}
@@ -109,7 +111,7 @@ def report(model, ref, name):
     Ja, Sa = FE.per_sample(G, ra)
     Jb, Sb = FE.per_sample(G, rb)
     E = []
-    for fam in ["none"] + [f for f in O.FAMILIES + O.SKY_FAMILIES if f not in O.ROUTE_FREE]:
+    for fam in ["none"] + [f for f in O.FAMILIES + O.SKY_FAMILIES + ("sg",) if f not in O.ROUTE_FREE]:
         da, db = Ja[Ja.fam == fam], Jb[Jb.fam == fam]
         if not len(da):
             continue
@@ -122,7 +124,7 @@ def report(model, ref, name):
             r.update({f"{nm}_a": pa, f"{nm}_a_lo": alo, f"{nm}_a_hi": ahi, f"{nm}_b": pb, f"{nm}_d": d, f"{nm}_d_lo": lo, f"{nm}_d_hi": hi,
                       f"{nm}_n": int(da[den].sum())})
         E.append(r)
-    for fam in ("band", "lines", "arrow_road", "sign", "sky", "sky_disc"):
+    for fam in ("band", "lines", "arrow_road", "sign", "sky", "sky_disc", "sg"):
         if len(Sa) and (Sa.fam == fam).any():
             r = dict(fam=f"straight:{fam}", n=int((Sa.fam == fam).sum()), logs=Sa[Sa.fam == fam].log.nunique())
             r.update({f"dlat_err_{k}": x for k, x in FE.paired_mean(Sa[Sa.fam == fam], Sb[Sb.fam == fam], "dlat_err").items() if k != "n"})
@@ -157,7 +159,7 @@ def report(model, ref, name):
         r = stats.paired(np.array([lat(ra[t], G[t]) for t in st]), np.array([lat(rb[t], G[t]) for t in st]), groups=np.array([G[t]["log"] for t in st]))
         g["straight_none_lat_err_3s"] = {k: r[k] for k in ("n", "mean", "lo", "hi", "mean_a", "mean_b")}
     OUT.mkdir(parents=True, exist_ok=True)
-    stem = f"{model}_vs_{ref}_{name}"
+    stem = f"{model}_vs_{ref}_{name}{SFX}"
     (OUT / f"{stem}_guards.json").write_text(json.dumps(g, indent=1))
     E.to_csv(OUT / f"{stem}.csv", index=False)
     f = lambda x: "" if not np.isfinite(x) else f"{x:+.2f}"  # noqa: E731
@@ -200,7 +202,7 @@ def cmd_report(a):
         report(a.model, a.ref, s)
     if (FT / "plans" / a.model / "dist.npz").exists():
         d = dist_drift(a.model, a.ref)
-        (OUT / f"{a.model}_vs_{a.ref}_dist_drift.json").write_text(json.dumps(d, indent=1))
+        (OUT / f"{a.model}_vs_{a.ref}_dist_drift{SFX}.json").write_text(json.dumps(d, indent=1))
         print("dist drift", d)
 
 
@@ -210,15 +212,15 @@ def cmd_select(a):
     for m in a.models:
         r = {"model": m}
         for s in ("navdev", "carladev"):
-            E = pd.read_csv(OUT / f"{m}_vs_O_{s}.csv").set_index("fam")
-            g = json.loads((OUT / f"{m}_vs_O_{s}_guards.json").read_text())
-            for fam in ("band", "barrier", "sky"):
+            E = pd.read_csv(OUT / f"{m}_vs_O_{s}{SFX}.csv").set_index("fam")
+            g = json.loads((OUT / f"{m}_vs_O_{s}{SFX}_guards.json").read_text())
+            for fam in ("band", "barrier", "sky", "sg"):
                 if fam in E.index:
                     r[f"{s}_{fam}_uptake"] = float(E.loc[fam, "uptake_a"])
             for k, x in g.items():
                 if k.startswith("none_drift_median"):
                     r[f"{s}_{k[18:]}_drift"] = x
-        r |= {f"dist_{k}_drift": x for k, x in json.loads((OUT / f"{m}_vs_O_dist_drift.json").read_text()).items() if k.endswith("dev")}
+        r |= {f"dist_{k}_drift": x for k, x in json.loads((OUT / f"{m}_vs_O_dist_drift{SFX}.json").read_text()).items() if k.endswith("dev")}
         dk = ["navdev_junction_drift", "navdev_straight_drift", "carladev_junction_drift"]
         r["drift_ok"] = all(r[k] <= DRIFT_LINE for k in dk)
         r["gate_dev_min"] = min(r[f"navdev_{fam_gate}_uptake"], r[f"carladev_{fam_gate}_uptake"])
