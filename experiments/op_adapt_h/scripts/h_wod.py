@@ -82,6 +82,8 @@ def _job(job):
     name, cam, psi = job
     hn = hist(name)
     have = np.array([h in WZ._ctx["spans"] for h in hn])
+    if not have.all():                  # a gap in the clip: keep the contiguous tail, as r2's rater cache (op_adapt_r2_readout rater)
+        have[: np.flatnonzero(~have).max() + 1] = False
     imgs = np.zeros((NIMG, 2, 6, 128, 256), np.uint8)
     imgs[have] = DB.render([h for h, ok in zip(hn, have) if ok])
     rot = np.stack([H.warp(f, cam, 0.0, -p) if j < NIMG - 1 and ok else f for j, (f, p, ok) in enumerate(zip(imgs, psi, have))])
@@ -99,7 +101,7 @@ def cmd_run(a):
     from jevdrive import wod_zeroshot as Z
     spans, _ = Z.load_spans()
     miss = [n for n in names if not all(h in spans for h in hist(n))]
-    print(f"{len(miss)} rater frames miss history images (zero image, its context slots invalid as in r2's rater cache): {miss}")
+    print(f"{len(miss)} rater frames miss history images (contiguous tail kept, earlier slots invalid, as r2's rater cache): {miss}")
     n = len(names) if not a.limit else a.limit
     dev = torch.device("cuda")
     models = {m: L.load_model(None if m == "O" else H_ROOT / "runs" / m / "ckpt-final.pt", dev) for m in MODELS}
