@@ -14,7 +14,7 @@ st() { echo "$(date '+%F %T') $*" | tee "$L/STATUS"; }
 job() {   # name, args...
   local n=$1; shift
   [[ -f $L/$n.json ]] && return 0
-  CUDA_VISIBLE_DEVICES=$GPU taskset -c "$CPUS" $PY $P "$@" "$L/$n.json" > "$L/$n.log" 2>&1
+  CUDA_VISIBLE_DEVICES=$GPU taskset -c "$CPUS" $PY $P "$@" --out "$L/$n.json" > "$L/$n.log" 2>&1
 }
 st "running lean_O64, lean_adapt20, rate20, replay"
 job lean_O64 lean "$L/jobs64.json" --models O & p1=$!

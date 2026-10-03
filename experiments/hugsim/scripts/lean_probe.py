@@ -12,7 +12,7 @@ Readouts per plan, all + = left: lean10 = direction of the 10 s plan point, phi1
           w (deg / model-s, left +) on every history frame: G(w) = (x(+w) - x(-w)) / 2 on HUGSIM frames
   replay  the logged frame sequence step by step, normal stepping and the de-rotated replay at every step (decision 96 rule)
 
-    CUDA_VISIBLE_DEVICES=2 $DATA_DIR/envs/openpilot/bin/python experiments/hugsim/scripts/lean_probe.py lean <jobs.json> <out.json> \
+    CUDA_VISIBLE_DEVICES=2 $DATA_DIR/envs/openpilot/bin/python experiments/hugsim/scripts/lean_probe.py lean <jobs.json> --out <out.json> \
         [--models O pilot-s0 it_dw3-s0] [--variants base,mirror_tc]
 jobs.json: [{"scenario", "run_dir", "dataset"}]; run_dir holds video.mp4, infos.pkl, zs_steps.jsonl.
 """
@@ -218,7 +218,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mode", choices=("lean", "rate", "replay"))
     ap.add_argument("jobs")
-    ap.add_argument("out")
+    ap.add_argument("--out", required=True)
     ap.add_argument("--models", nargs="+", default=["O", "pilot-s0", "it_dw3-s0"])
     ap.add_argument("--variants", default="")
     ap.add_argument("--k", type=int, default=6)
