@@ -15,13 +15,25 @@ PANDA_URL = "https://huggingface.co/datasets/georghess/pandaset/resolve/main/pan
 KITTI_URL = "https://s3.eu-central-1.amazonaws.com/avg-projects/KITTI-360/data_2d_raw/2013_05_28_drive_0000_sync_image_0{c}.zip"
 
 
+def open_zip(url, tries=12):
+    import time
+    from remotezip import RemoteZip
+    for i in range(tries):
+        try:
+            return RemoteZip(url)
+        except Exception as e:  # flaky proxy / S3: retry
+            print("open_zip retry", i, str(e)[:80], flush=True)
+            time.sleep(5 + 5 * i)
+    raise RuntimeError(url)
+
+
 def scenes(ds):
     return sorted(p.name for p in (HS / ds).iterdir() if p.is_dir() and p.name != ds)
 
 
 def pandaset():
     from remotezip import RemoteZip
-    z0 = RemoteZip(PANDA_URL)
+    z0 = open_zip(PANDA_URL)
     pat = re.compile(r"pandaset/(\d+)/camera/(front_camera|front_left_camera|front_right_camera)/[^/]+$")
     want = set(scenes("pandaset"))
     names = [n for n in z0.namelist() if (m := pat.match(n)) and m.group(1) in want]
@@ -37,7 +49,7 @@ def pandaset():
                 break
             try:
                 if getattr(tl, "z", None) is None:
-                    tl.z = RemoteZip(PANDA_URL)
+                    tl.z = open_zip(PANDA_URL)
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 dst.write_bytes(tl.z.read(n))
             except Exception as e:  # flaky proxy: reopen and retry
@@ -53,23 +65,35 @@ def pandaset():
 
 
 def kitti360():
-    from remotezip import RemoteZip
+    import threading, time
     want = set()
     for s in scenes("kitti360"):
         a, b = map(int, s.split("_")[1:3])
         want |= set(range(a, b + 1))
+    tl = threading.local()
     for c in (0, 1):
-        z = RemoteZip(KITTI_URL.format(c=c))
+        url = KITTI_URL.format(c=c)
+        z = open_zip(url)
         names = {int(re.search(r"(\d+)\.png$", n).group(1)): n for n in z.namelist() if "data_rect" in n and n.endswith(".png")}
         print("kitti360 cam", c, "members", len(names), "wanted", len(want), "missing", len(want - set(names)), flush=True)
         (OUT / "kitti360" / f"cam_{c}").mkdir(parents=True, exist_ok=True)
 
         def get(f):
             dst = OUT / "kitti360" / f"cam_{c}" / f"{f:010d}.png"
-            if not dst.exists():
-                dst.write_bytes(RemoteZip(KITTI_URL.format(c=c)).read(names[f]))
+            for attempt in range(8):
+                if dst.exists():
+                    break
+                try:
+                    if getattr(tl, "u", None) != url:
+                        tl.z, tl.u = open_zip(url), url
+                    dst.write_bytes(tl.z.read(names[f]))
+                except Exception:
+                    tl.u = None
+                    time.sleep(2 + attempt * 3)
+                    if attempt == 7:
+                        raise
             return f
-        with ThreadPoolExecutor(6) as ex:
+        with ThreadPoolExecutor(8) as ex:
             for i, _ in enumerate(ex.map(get, sorted(want & set(names)))):
                 if i % 500 == 0:
                     print("kitti360", c, i, flush=True)
