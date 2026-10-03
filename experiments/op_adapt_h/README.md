@@ -16,6 +16,8 @@ base 8 / 10 (line <= 4 missed; control 7); (e) WOD start +0.007, stop +0.046. Op
 trainable away across three domains at no navtest cost; the closed-loop spins barely move. Results in results/pilot1, results/it1.
 Iteration 2 (results/it2): it_lowrate HUGSIM spins 9/10, navtest +0.40 [+0.15, +0.65], navhard combined 34.8 vs 33.6; it_dw3 navhard 35.4. Pilot on all 64 HUGSIM scenarios (results/hugsim64): 15 spins vs 10 base, non-spin HD delta +0.075 [+0.007, +0.151]; pilot + derot3 on the 10 spin scenarios: 1/10 spins.
 
+One-driver table (results/one_driver.md): it_dw3 + selector is the best row on all three boards: navtest 84.70 (+0.52 vs shipped), navhard 35.76 (+2.43 [+0.17, +4.58]), HUGSIM 64 spins 4 vs 10, non-spin HD +0.056 [+0.001, +0.115]; it_dw3 alone: navhard CI crosses 0, HUGSIM spins 13.
+
 **Next.** `it_lowrate` HUGSIM / navhard (queued); if spins stay >= 6, the closed-loop gain is not the open-loop G at 10 deg/s: measure G at 1-3 deg/s and the launch lean.
 
 **Read more.** [../hugsim/results/launch_lean.md](../hugsim/results/launch_lean.md) (why HUGSIM spins did not drop: the cut of G is 20-25% at 0.5 deg/s, ~75% at 10; at the HUGSIM launch the local / large-signal gain is unchanged, 0.92 / 0.8 of shipped; `scripts/h_rate_probe.py`); [plans/2026-10-04-op-adapt-H-prereg.md](plans/2026-10-04-op-adapt-H-prereg.md) (design, data, lines; iterations appended).

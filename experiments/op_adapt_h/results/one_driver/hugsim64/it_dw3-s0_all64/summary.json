@@ -1,0 +1,23 @@
+{
+ "tag": "cinque-fixed-Hit_dw3-s0_all64",
+ "n": 64,
+ "spins": 13,
+ "base_spins": 10,
+ "spins10": 8,
+ "n10": 10,
+ "new_spins": [
+  "scene-0528-extreme-00",
+  "scene-095-medium-01",
+  "scene-164701907483-hard-00",
+  "scene-398895700423-easy-00",
+  "scene-570_770-medium-00"
+ ],
+ "hd_mean": 0.2989505457050228,
+ "base_hd_mean": 0.27754309400255905,
+ "n_nonspin10": 54,
+ "dhd_nonspin": 0.03561445682200554,
+ "dhd_ci": [
+  -0.012934087091702472,
+  0.08561028083650689
+ ]
+}

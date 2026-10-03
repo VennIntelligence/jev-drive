@@ -1,0 +1,82 @@
+{
+ "arms": {
+  "base": {
+   "combined": 35.1724307994876,
+   "stage1": 71.7369434151604,
+   "stage2": 48.698748793794515,
+   "official_combined": 35.17243079948762,
+   "no_at_fault_collisions_s1": 98.44444444444444,
+   "drivable_area_compliance_s1": 88.88888888888889,
+   "driving_direction_compliance_s1": 98.33333333333333,
+   "traffic_light_compliance_s1": 100.0,
+   "ego_progress_s1": 75.66484689618339,
+   "time_to_collision_within_bound_s1": 98.22222222222223,
+   "lane_keeping_s1": 95.33333333333334,
+   "history_comfort_s1": 97.77777777777777,
+   "two_frame_extended_comfort_s1": 37.333333333333336,
+   "no_at_fault_collisions_s2": 89.68816850537638,
+   "drivable_area_compliance_s2": 75.32756693130412,
+   "driving_direction_compliance_s2": 89.63692741348807,
+   "traffic_light_compliance_s2": 98.91586252279025,
+   "ego_progress_s2": 70.94009660833649,
+   "time_to_collision_within_bound_s2": 86.60810449770393,
+   "lane_keeping_s2": 48.76980631147412,
+   "history_comfort_s2": 97.89125267028712,
+   "two_frame_extended_comfort_s2": 58.94650641554677
+  },
+  "gimm-cinque_Oit_dw3-s0_al-sel-rot0-r0.6": {
+   "combined": 35.75606623741627,
+   "stage1": 71.72244636102937,
+   "stage2": 49.409523547832514,
+   "official_combined": 35.75606623741627,
+   "no_at_fault_collisions_s1": 98.44444444444444,
+   "drivable_area_compliance_s1": 89.33333333333333,
+   "driving_direction_compliance_s1": 98.11111111111111,
+   "traffic_light_compliance_s1": 100.0,
+   "ego_progress_s1": 75.56081173484183,
+   "time_to_collision_within_bound_s1": 98.22222222222223,
+   "lane_keeping_s1": 95.33333333333334,
+   "history_comfort_s1": 97.77777777777777,
+   "two_frame_extended_comfort_s1": 36.0,
+   "no_at_fault_collisions_s2": 89.9620109489802,
+   "drivable_area_compliance_s2": 75.80617622414997,
+   "driving_direction_compliance_s2": 89.73287645766149,
+   "traffic_light_compliance_s2": 98.91586252279025,
+   "ego_progress_s2": 71.53557320919614,
+   "time_to_collision_within_bound_s2": 86.52118136668273,
+   "lane_keeping_s2": 49.30297294058889,
+   "history_comfort_s2": 98.03011816248691,
+   "two_frame_extended_comfort_s2": 58.43311836205388,
+   "combined_delta": 0.5836354379286635,
+   "combined_delta_ci95": [
+    0.12697777148412523,
+    1.117556064224387
+   ],
+   "n_groups": 225
+  }
+ },
+ "wrong_direction": {
+  "n_stage2": 5462,
+  "n_base_opposite": 193,
+  "base": {
+   "opposite_rate_stage2": 0.03533504210911754,
+   "opposite_n": 193,
+   "still_opposite_on_base_set": 1.0,
+   "dac_on_base_set": 0.49740932642487046,
+   "score_on_base_set": 0.2931071457851871,
+   "dac_stage2": 0.7746246796045405,
+   "dac_off_base_set": 0.784778895426077,
+   "score_off_base_set": 0.47868855999967863
+  },
+  "gimm-cinque_Oit_dw3-s0_al-sel-rot0-r0.6": {
+   "opposite_rate_stage2": 0.03625045770779934,
+   "opposite_n": 198,
+   "still_opposite_on_base_set": 0.927461139896373,
+   "dac_on_base_set": 0.538860103626943,
+   "score_on_base_set": 0.3138260258092828,
+   "dac_stage2": 0.7801171731966313,
+   "dac_off_base_set": 0.7889542607705446,
+   "score_off_base_set": 0.482695610174008
+  }
+ }
+}

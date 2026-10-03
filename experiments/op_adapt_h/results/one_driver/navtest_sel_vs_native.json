@@ -1,0 +1,20 @@
+{
+ "base": {
+  "pdms": 84.68104318268468,
+  "n": 12146
+ },
+ "gimm-cinque_Oit_dw3-s0_al-sel-rot0-r0.6": {
+  "pdms": 84.69617294549666,
+  "n": 12146,
+  "pdms_delta": 0.015129762811977171,
+  "pdms_delta_ci95": [
+   -0.057499667120573944,
+   0.08729932770926688
+  ],
+  "no_at_fault_collisions_delta": -0.03704923431582414,
+  "drivable_area_compliance_delta": 0.04939897908776551,
+  "ego_progress_delta": -0.02790724206535002,
+  "time_to_collision_within_bound_delta": -0.008233163181294254,
+  "comfort_delta": 0.0
+ }
+}
