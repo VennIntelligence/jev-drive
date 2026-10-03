@@ -12,6 +12,10 @@ index: NAVSIM v2 +10.9 is the scorer; B2D DS SD 0.80
 
 **Loss budget (2026-10-04).** Oracle ceilings per failure class on navtest, navhard, HUGSIM 64 and B2D, shipped Cinque vs it_dw3 + selector: [results/loss_budget.md](results/loss_budget.md) (not achievable gains).
 
+**Real vs render (2026-10-04).** Same-pose real vs 3DGS frames through openpilot (HUGSIM nuScenes 19 scenes, navhard near-pose pairs): renders move road
+edges (1.8x the frame-to-frame floor) but not the plan; they raise the launch gain to a small history yaw by 43% in every scene; no image-side fix
+helps: [results/real_vs_render.md](results/real_vs_render.md) (pre-registration [plans/2026-10-04-real-vs-render-prereg.md](plans/2026-10-04-real-vs-render-prereg.md)).
+
 <!-- files:begin -->
 ## Files
 
