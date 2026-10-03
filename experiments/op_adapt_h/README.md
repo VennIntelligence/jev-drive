@@ -14,6 +14,7 @@ without the de-rotation rule?
 +1.16] (control +1.43); (c) navhard two-stage EPDMS 33.55 vs 33.59 (control 30.12); (d) HUGSIM spin set 6 / 10 vs same-code
 base 8 / 10 (line <= 4 missed; control 7); (e) WOD start +0.007, stop +0.046. Open-loop history-yaw extrapolation is
 trainable away across three domains at no navtest cost; the closed-loop spins barely move. Results in results/pilot1, results/it1.
+Iteration 2 (results/it2): it_lowrate HUGSIM spins 9/10, navtest +0.40 [+0.15, +0.65], navhard combined 34.8 vs 33.6; it_dw3 navhard 35.4. Pilot on all 64 HUGSIM scenarios (results/hugsim64): 15 spins vs 10 base, non-spin HD delta +0.075 [+0.007, +0.151]; pilot + derot3 on the 10 spin scenarios: 1/10 spins.
 
 **Next.** `it_lowrate` HUGSIM / navhard (queued); if spins stay >= 6, the closed-loop gain is not the open-loop G at 10 deg/s: measure G at 1-3 deg/s and the launch lean.
 

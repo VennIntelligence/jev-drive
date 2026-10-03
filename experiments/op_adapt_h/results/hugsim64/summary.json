@@ -1,0 +1,27 @@
+{
+ "tag": "cinque-fixed-Hpilot-s0_all64",
+ "n": 64,
+ "spins": 15,
+ "base_spins": 10,
+ "spins10": 6,
+ "n10": 10,
+ "new_spins": [
+  "scene-034-hard-00",
+  "scene-0528-extreme-00",
+  "scene-053-extreme-02",
+  "scene-106762673266-hard-00",
+  "scene-113792265837-easy-00",
+  "scene-150623512729-medium-01",
+  "scene-164701907483-easy-00",
+  "scene-164701907483-hard-00",
+  "scene-398895700423-easy-00"
+ ],
+ "hd_mean": 0.3246909722247633,
+ "base_hd_mean": 0.27754309400255905,
+ "n_nonspin10": 54,
+ "dhd_nonspin": 0.07490956808211216,
+ "dhd_ci": [
+  0.006901407073471965,
+  0.1513900174498509
+ ]
+}
