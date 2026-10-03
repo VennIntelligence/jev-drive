@@ -35,7 +35,8 @@ OUT = DATA / "runs/vlm_arb/vm3_cross"
 RES_DIR = HERE.parent / "results"
 UNIT_GLOBS = ["v2-vmerge-*", "v2-vmerge2-*", "v2-vmj-*", "v2-vmnobyp-*", "v2-vmnocusum-*", "v2-vmnor1-*", "v2-dbg*-vm*"]
 HORIZON, DT, V_MIN, HEAD_MIN, LONG, LAT = 3.0, 0.1, 1.0, np.deg2rad(30), 20.0, 2.5
-N_SECONDARY = 1500                                     # random other frames scored for the secondary all-frames readout
+N_SECONDARY = 800                                      # random other frames scored for the secondary all-frames readout
+N_DEV = 1200                                           # random dev main-set frames for the prompt choice (consecutive frames are redundant)
 EPISODES = [("v2-vmerge-s1", "27297"), ("v2-vmerge-s1", "17280"), ("v2-vmerge2-s1", "17280"), ("v2-vmerge2-s2", "17280"),
             ("v2-vmerge2-s3", "17280")]
 
@@ -165,15 +166,17 @@ def label(a):
 
 
 def selection(df, cont):
-    """Frames to score: the main set, every frame of the collision episodes within 5 s before a contact, a fixed random
+    """Frames to score: the test main set, N_DEV random dev main-set frames, every frame of the collision episodes within 5 s before a contact, a fixed random
     subset of the rest (secondary readout)."""
-    sel = df.main.copy()
+    rng = np.random.default_rng(0)
+    sel = df.main & (df.part == "test")
+    dm = df.index[df.main & (df.part == "dev")]
+    sel.loc[rng.choice(dm, min(N_DEV, len(dm)), replace=False)] = True
     for u, r in EPISODES:
         c = cont[cont.unit.str.startswith(u + "-") & (cont.route.astype(str) == r)]
         for tc in c.t:
             sel |= df.unit.str.startswith(u + "-") & (df.route.astype(str) == r) & (df.t >= tc - 5) & (df.t <= tc + 0.5)
-    rest = df.index[~sel]
-    rng = np.random.default_rng(0)
+    rest = df.index[~sel & ~df.main]
     sel.loc[rng.choice(rest, min(N_SECONDARY, len(rest)), replace=False)] = True
     return sel
 
