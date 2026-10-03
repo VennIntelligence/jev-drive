@@ -1,0 +1,142 @@
+{
+ "native/base": {
+  "pdms": 84.1803742291001,
+  "n": 12146,
+  "no_at_fault_collisions": 98.29161863988143,
+  "drivable_area_compliance": 95.56232504528239,
+  "driving_direction_compliance": 97.80997859377572,
+  "ego_progress": 73.12178523763554,
+  "time_to_collision_within_bound": 95.43059443438169,
+  "comfort": 99.95883418409352
+ },
+ "native/a1": {
+  "pdms": 78.26551618707224,
+  "n": 12146,
+  "score_delta": -5.914858042027867,
+  "score_delta_ci95": [
+   -6.291424097912382,
+   -5.524932180178672
+  ],
+  "no_at_fault_collisions_delta": -0.10291453976617816,
+  "no_at_fault_collisions_delta_ci95": [
+   -0.259344640210769,
+   0.05763214226905977
+  ],
+  "drivable_area_compliance_delta": -2.412316812119216,
+  "drivable_area_compliance_delta_ci95": [
+   -2.80750864482134,
+   -2.008891816235798
+  ],
+  "driving_direction_compliance_delta": -1.0250288160711345,
+  "driving_direction_compliance_delta_ci95": [
+   -1.206158406059608,
+   -0.8397826444920138
+  ],
+  "ego_progress_delta": -4.7910887712022046,
+  "ego_progress_delta_ci95": [
+   -5.1048331561125835,
+   -4.472149646273147
+  ],
+  "time_to_collision_within_bound_delta": -0.4034249958834184,
+  "time_to_collision_within_bound_delta_ci95": [
+   -0.7162851967726,
+   -0.09056479499423678
+  ],
+  "comfort_delta": -18.532850321093363,
+  "comfort_delta_ci95": [
+   -19.216202865140787,
+   -17.82479828750206
+  ],
+  "changed_tokens": 9468
+ },
+ "native/gain_single": {
+  "pdms": 80.80049673387937,
+  "n": 12146,
+  "score_delta": -3.379877495220724,
+  "score_delta_ci95": [
+   -3.736045961344019,
+   -3.0345698440770024
+  ],
+  "no_at_fault_collisions_delta": -0.6998188704100116,
+  "no_at_fault_collisions_delta_ci95": [
+   -0.8644821340358966,
+   -0.5392721883747736
+  ],
+  "drivable_area_compliance_delta": -3.383830067511938,
+  "drivable_area_compliance_delta_ci95": [
+   -3.770788737032768,
+   -3.021570887534991
+  ],
+  "driving_direction_compliance_delta": -1.5149020253581427,
+  "driving_direction_compliance_delta_ci95": [
+   -1.6960316153466162,
+   -1.3336695208299043
+  ],
+  "ego_progress_delta": -2.6365875944668695,
+  "ego_progress_delta_ci95": [
+   -2.960147636460609,
+   -2.3254967743241877
+  ],
+  "time_to_collision_within_bound_delta": -1.1444096821999012,
+  "time_to_collision_within_bound_delta_ci95": [
+   -1.4078709040013173,
+   -0.8809484603984851
+  ],
+  "comfort_delta": -0.016466326362588508,
+  "comfort_delta_ci95": [
+   -0.04116581590647127,
+   0.0
+  ],
+  "changed_tokens": 8852
+ },
+ "n4/base": {
+  "pdms": 91.42525259686604,
+  "n": 12146,
+  "no_at_fault_collisions": 99.11081837642021,
+  "drivable_area_compliance": 98.07343981557715,
+  "driving_direction_compliance": 96.35270871068664,
+  "ego_progress": 85.32579127333061,
+  "time_to_collision_within_bound": 97.06899390745924,
+  "comfort": 99.98353367363741
+ },
+ "n4/a1": {
+  "pdms": 82.9586276924329,
+  "n": 12146,
+  "score_delta": -8.466624904433147,
+  "score_delta_ci95": [
+   -8.821144748156948,
+   -8.115378625459936
+  ],
+  "no_at_fault_collisions_delta": -0.8191997365387782,
+  "no_at_fault_collisions_delta_ci95": [
+   -1.004445908117899,
+   -0.6380701465503046
+  ],
+  "drivable_area_compliance_delta": -2.4781821175695704,
+  "drivable_area_compliance_delta_ci95": [
+   -2.7992754816400462,
+   -2.1488555903178
+  ],
+  "driving_direction_compliance_delta": -0.9344640210768977,
+  "driving_direction_compliance_delta_ci95": [
+   -1.1197101926560185,
+   -0.7533344310884241
+  ],
+  "ego_progress_delta": -2.808506755754015,
+  "ego_progress_delta_ci95": [
+   -3.1266173390773444,
+   -2.494128128128959
+  ],
+  "time_to_collision_within_bound_delta": -1.9100938580602667,
+  "time_to_collision_within_bound_delta_ci95": [
+   -2.2311872221307425,
+   -1.6054668203523794
+  ],
+  "comfort_delta": -32.628025687469126,
+  "comfort_delta_ci95": [
+   -33.47604149514243,
+   -31.771776716614525
+  ],
+  "changed_tokens": 9153
+ }
+}

@@ -1,0 +1,71 @@
+{
+ "base": {
+  "pdms": 82.12036617271691,
+  "n": 3000
+ },
+ "a0.25": {
+  "alpha": 0.25,
+  "pdms": 79.76181748118115,
+  "n": 3000,
+  "delta": -2.3585486915357508,
+  "delta_ci95": [
+   -3.0304996555268575,
+   -1.7266097291721083
+  ],
+  "no_at_fault_collisions_delta": -0.46666666666666673,
+  "drivable_area_compliance_delta": -1.8333333333333333,
+  "driving_direction_compliance_delta": -0.2833333333333333,
+  "ego_progress_delta": -2.315044684838749,
+  "time_to_collision_within_bound_delta": -0.6333333333333333,
+  "comfort_delta": -1.1333333333333333
+ },
+ "a0.5": {
+  "alpha": 0.5,
+  "pdms": 77.29008216872477,
+  "n": 3000,
+  "delta": -4.8302840039921335,
+  "delta_ci95": [
+   -5.668909856842017,
+   -3.9838890295195624
+  ],
+  "no_at_fault_collisions_delta": -1.0166666666666666,
+  "drivable_area_compliance_delta": -4.0,
+  "driving_direction_compliance_delta": -0.5,
+  "ego_progress_delta": -4.68032140381925,
+  "time_to_collision_within_bound_delta": -1.0,
+  "comfort_delta": -4.133333333333333
+ },
+ "a0.75": {
+  "alpha": 0.75,
+  "pdms": 77.08710920368073,
+  "n": 3000,
+  "delta": -5.03325696903617,
+  "delta_ci95": [
+   -5.939027118628126,
+   -4.152280590546921
+  ],
+  "no_at_fault_collisions_delta": -1.0833333333333335,
+  "drivable_area_compliance_delta": -2.7666666666666666,
+  "driving_direction_compliance_delta": -0.65,
+  "ego_progress_delta": -4.700567546872395,
+  "time_to_collision_within_bound_delta": -1.0,
+  "comfort_delta": -10.466666666666667
+ },
+ "a1": {
+  "alpha": 1.0,
+  "pdms": 75.3514965616289,
+  "n": 3000,
+  "delta": -6.768869611087989,
+  "delta_ci95": [
+   -7.6224963428182715,
+   -5.944354934239134
+  ],
+  "no_at_fault_collisions_delta": -0.5666666666666667,
+  "drivable_area_compliance_delta": -2.166666666666667,
+  "driving_direction_compliance_delta": -0.31666666666666665,
+  "ego_progress_delta": -4.833509377262756,
+  "time_to_collision_within_bound_delta": -0.7000000000000001,
+  "comfort_delta": -24.033333333333335
+ },
+ "alpha_star": null
+}

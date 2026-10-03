@@ -1,0 +1,71 @@
+{
+ "base": {
+  "pdms": 82.12036617271691,
+  "n": 3000
+ },
+ "a0.25": {
+  "alpha": 0.25,
+  "pdms": 82.34782250356099,
+  "n": 3000,
+  "delta": 0.22745633084408556,
+  "delta_ci95": [
+   -0.257511804233387,
+   0.6985665608155124
+  ],
+  "no_at_fault_collisions_delta": -0.08333333333333334,
+  "drivable_area_compliance_delta": 0.03333333333333333,
+  "driving_direction_compliance_delta": 0.23333333333333336,
+  "ego_progress_delta": 0.3155741918113637,
+  "time_to_collision_within_bound_delta": 0.33333333333333337,
+  "comfort_delta": -0.16666666666666669
+ },
+ "a0.5": {
+  "alpha": 0.5,
+  "pdms": 80.74250224215416,
+  "n": 3000,
+  "delta": -1.3778639305627596,
+  "delta_ci95": [
+   -2.0727688323460702,
+   -0.6919877705637452
+  ],
+  "no_at_fault_collisions_delta": -0.5,
+  "drivable_area_compliance_delta": -1.4000000000000001,
+  "driving_direction_compliance_delta": -0.2833333333333333,
+  "ego_progress_delta": -0.7547907098908333,
+  "time_to_collision_within_bound_delta": -0.06666666666666667,
+  "comfort_delta": -2.1999999999999997
+ },
+ "a0.75": {
+  "alpha": 0.75,
+  "pdms": 78.26187790394843,
+  "n": 3000,
+  "delta": -3.8584882687684847,
+  "delta_ci95": [
+   -4.72077619598398,
+   -3.0223050899002497
+  ],
+  "no_at_fault_collisions_delta": -0.6833333333333333,
+  "drivable_area_compliance_delta": -3.0,
+  "driving_direction_compliance_delta": -0.5666666666666667,
+  "ego_progress_delta": -2.225805139014602,
+  "time_to_collision_within_bound_delta": -0.13333333333333333,
+  "comfort_delta": -9.333333333333334
+ },
+ "a1": {
+  "alpha": 1.0,
+  "pdms": 75.16326145839216,
+  "n": 3000,
+  "delta": -6.957104714324753,
+  "delta_ci95": [
+   -7.878872256518696,
+   -6.039035369567689
+  ],
+  "no_at_fault_collisions_delta": -0.9833333333333333,
+  "drivable_area_compliance_delta": -4.366666666666666,
+  "driving_direction_compliance_delta": -0.5166666666666666,
+  "ego_progress_delta": -3.487127508080597,
+  "time_to_collision_within_bound_delta": -1.0999999999999999,
+  "comfort_delta": -20.666666666666668
+ },
+ "alpha_star": 0.25
+}
