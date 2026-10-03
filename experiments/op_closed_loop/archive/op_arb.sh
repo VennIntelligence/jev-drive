@@ -60,7 +60,7 @@ EOF
 
 srv_alive() { local p; p=$(cat "$O/srv/op.pid" 2>/dev/null) && [[ -n $p ]] && kill -0 "$p" 2>/dev/null; }
 srv_start() {
-    local mid="${SRV_ONNX:-base}:$WORKERS:${SRV_NO_TWIN:-0}"      # KEEP_SRV: a live server with the same model and pool is reused across set calls
+    local mid="${SRV_ONNX:-base}:$WORKERS:${SRV_NO_TWIN:-0}:${SRV_PY:-}"      # KEEP_SRV: a live server with the same model and pool is reused across set calls
     if srv_alive; then
         [[ $(cat "$O/srv/model_id" 2>/dev/null) == "$mid" ]] && return 0
         log "openpilot server model / pool changed ($(cat "$O/srv/model_id" 2>/dev/null) -> $mid): restarting"
@@ -69,7 +69,7 @@ srv_start() {
     echo "$mid" > "$O/srv/model_id"
     rm -f "$O/srv/op.ready" "$SOCK"
     (
-        CUDA_VISIBLE_DEVICES=$GPU PYTHONUNBUFFERED=1 setsid taskset -c "$CPUS" "$PY_OP" experiments/op_closed_loop/archive/op_arb_server.py cinque \
+        CUDA_VISIBLE_DEVICES=$GPU PYTHONUNBUFFERED=1 setsid taskset -c "$CPUS" "$PY_OP" "${SRV_PY:-experiments/op_closed_loop/archive/op_arb_server.py}" cinque \
             --pool "$WORKERS" --backend cuda-iob --socket "$SOCK" --ready-file "$O/srv/op.ready" \
             ${SRV_ONNX:+--onnx "$SRV_ONNX"} ${SRV_NO_TWIN:+--no-twin} >> "$O/srv/op.log" 2>&1 &
         echo $! > "$O/srv/op.pid"

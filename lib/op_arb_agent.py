@@ -229,6 +229,14 @@ class OpArbAgent(Z.ZeroShotAgent):
                 return k
         return 1
 
+    def img_cmd(self):
+        """op_img_cmd sky arrow from the official route only: the next LEFT / RIGHT / STRAIGHT command and the route distance to its
+        start (0 inside it); 'straight' with no distance beyond 60 m (as the lane-keeping frames of training)."""
+        c, d = self.route.next_maneuver([Z.LEFT, Z.RIGHT, Z.STRAIGHT])
+        if c is None or d > 60.0:
+            return ["straight", None]
+        return [{Z.LEFT: "left", Z.RIGHT: "right", Z.STRAIGHT: "straight"}[c], round(float(d), 2)]
+
     def in_zone(self):
         s = self.route.s[self.route.i]
         return any(a <= s <= b for a, b in self.zones)
@@ -326,6 +334,9 @@ class OpArbAgent(Z.ZeroShotAgent):
         intent = self.route_intent() if A["intent"] == "route" else 0
         meta = {"cmd": "plan", "seed": 0, "dump": "", "speed": speed, "t": t_frame, "desire": desire,
                 "twin": bool(A["twin"]), "intent": intent, "yaw": float(now_yaw)}   # yaw: the server's selector (OP_SEL), unused otherwise
+        img = self.img_cmd() if A.get("img_cmd") else None
+        if img is not None:                                  # op_img_cmd: the server draws the sky arrow (command + nav distance only)
+            meta["img_cmd"] = img
         wire.send(self.sock, meta, dict(cams))
         info, out = wire.recv(self.sock)
         self.op_out = out                                    # the latest openpilot heads (vmerge reads its trigger / lead heads)
@@ -489,7 +500,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         mt = np.asarray(out["meta"], float)
         rec = {"frame": f, "t": t_frame, "v": speed, "warm": warm, "acc": accepted, "desire": desire, "intent": intent, "src": src,
                "zone": self.in_zone(), "latch": self.latch, "rel": rel, "rb": self.resume_blocked, "tls": tl_on, "ri": int(self.route.i),
-               "lat": lat_src, "lat_why": lat_why, "div": round(div, 2), "go": self.want_go,
+               "lat": lat_src, "lat_why": lat_why, "div": round(div, 2), "go": self.want_go, "img": img,
                "cmd": self.route.next_maneuver([Z.LEFT, Z.RIGHT, Z.STRAIGHT, Z.CHANGE_LEFT, Z.CHANGE_RIGHT]),
                "s": {k: round(float(v[-1]), 2) for k, v in cons.items()}, "s2": {k: round(float(v[7]), 2) for k, v in cons.items()},
                "op_xy": r3(op_path[[3, 7, 11, 19]]), "base_xy": r3(place(bpath, np.array([5.0, 10, 15, 20, 30]))),
