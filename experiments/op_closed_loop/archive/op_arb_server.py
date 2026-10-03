@@ -58,7 +58,10 @@ class ArbModel(ZP.OpenpilotModel):
         self.sel_n, self.sel_vmax = int(e("OP_SEL_N", "100")), float(e("OP_SEL_VMAX", "3.0"))
         self.sel_rebuild, self.sel_warm = np.radians(float(e("OP_SEL_REBUILD_DEG", "0.5"))), int(e("OP_SEL_WARM", "0"))
         self.sel_gap = int(e("OP_SEL_MIN_GAP", "4"))       # steps between rebuilds at least (HUGSIM replays once per 0.2 s step)
-        self.sel_check = e("OP_SEL_CHECK", "") == "1"     # smoke control: replay unrotated, its plan must match the native one
+        self.sel_check = int(e("OP_SEL_CHECK", "0") or 0)  # control: unrotated, its plan must match the native one (1: rebuild every
+        #                                                    step, 2: the normal rebuild / incremental policy; 3: as 2 but every frame
+        #                                                    rotated by the constant OP_SEL_CHECK_DEG, a camera mounted that much off)
+        self.sel_check_deg = float(e("OP_SEL_CHECK_DEG", "0.01"))
         self.rot_cache, self.rot_lock = OrderedDict(), threading.Lock()
         a.pool = (1 + self.twin + (self.sel > 0)) * a.pool   # a twin (unless --no-twin) and a selector session per connection
         self._warm = []
@@ -186,9 +189,10 @@ class ArbModel(ZP.OpenpilotModel):
         m.extra = state["model"].extra                  # adapted model with an intent adapter: the same intent input
         traffic = (1, 0)
         t0 = time.perf_counter()
-        rot = (lambda y: 0.0) if self.sel_check else (lambda y: np.degrees(wrap(state["sel_ref"] - y)))   # noqa: E731
+        rot = (lambda y: np.degrees(wrap(state["sel_ref"] - y))) if not self.sel_check else \
+            (lambda y: self.sel_check_deg) if self.sel_check == 3 else (lambda y: 0.0)   # noqa: E731
         state["sel_age"] = state.get("sel_age", 0) + 1
-        rebuilt = state["sel_ref"] is None or self.sel_check or \
+        rebuilt = state["sel_ref"] is None or self.sel_check == 1 or \
             (abs(wrap(yaw - state["sel_ref"])) >= self.sel_rebuild and state["sel_age"] >= self.sel_gap)
         if rebuilt:
             state["sel_ref"], state["sel_age"] = float(yaw), 0
