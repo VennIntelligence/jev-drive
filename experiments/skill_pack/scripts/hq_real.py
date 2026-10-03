@@ -376,6 +376,20 @@ def cmd_render(a):
     print(f"{a.data}: {len(rows)} tokens rendered; copied {[x for x in a.copy if (base / f'{x}.npy').exists()]}")
 
 
+def cmd_hold(a):
+    """hold.npy: every context slot shows the latest keyframe at or before it (the exam's sample-and-hold feed)."""
+    sys.path.insert(0, str(REPO / "scripts"))
+    from jevdrive import op_interp as I
+    import op_lb as L
+    d = data_dir() / "runs" / "op_lb" / a.data
+    keys = L.Keys(a.data)
+    out = np.lib.format.open_memmap(d / "hold.npy", "w+", np.uint8, (len(keys), len(CTX_T), 2, 6, 128, 256))
+    for i in range(len(keys)):
+        out[i] = I.synth_cpu(keys[i], "hold", L.SYN_T)
+    out.flush()
+    print(f"{a.data}: hold for {len(keys)} tokens")
+
+
 _M = {}
 
 
@@ -390,7 +404,7 @@ def _render(job):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["select", "dbs", "locate", "index", "fetch", "check-keys", "render"])
+    ap.add_argument("cmd", choices=["select", "dbs", "locate", "index", "fetch", "check-keys", "render", "hold"])
     ap.add_argument("--seed", type=int, default=20261004)
     ap.add_argument("--n", type=int, default=500)
     ap.add_argument("--per-log", type=int, default=20)
@@ -400,6 +414,6 @@ if __name__ == "__main__":
     ap.add_argument("--copy", nargs="*", default=["gimm", "warp"])
     ap.add_argument("--workers", type=int, default=24)
     a = ap.parse_args()
-    if a.cmd not in ("select", "render"):
+    if a.cmd not in ("select", "render", "hold"):
         proxy()
     globals()["cmd_" + a.cmd.replace("-", "_")](a)
