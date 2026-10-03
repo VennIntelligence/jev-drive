@@ -59,13 +59,14 @@ def main():
     ap.add_argument("--nshard", type=int, default=1)
     ap.add_argument("--threads", type=int, default=4)
     ap.add_argument("--limit", type=int, default=0, help="events in total (all shards)")
+    ap.add_argument("--backend", default="cpu", help="cpu | trt (GPU; CUDA_VISIBLE_DEVICES picks the card)")
     ap.add_argument("--w", type=float, default=2.0)
     ap.add_argument("--shape", choices=("full", "hugsim"), default="full",
                     help="hugsim: the perturbation of spin_attr_cpu_gain at step m (the static prefix is one frame carrying yaw w*0.2*(-m); frames after it w*0.2*(idx - m)); w = +-W only")
     a = ap.parse_args()
     from jevdrive.openpilot.model import OPModel
     name = "cinque" if a.model == "cinque" else str(data_dir() / "runs" / "op_adapt_H" / "onnx" / f"{a.model}.onnx")
-    m = OPModel(name, "cpu", threads=a.threads)
+    m = OPModel(name, a.backend, threads=a.threads)
     z = np.load(SAMPLES / "tab.npz", allow_pickle=True)
     tab = {k: z[k] for k in z.files}
     imgs = np.load(SAMPLES / "imgs.npy", mmap_mode="r")

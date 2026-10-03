@@ -50,7 +50,7 @@ def load(model):
     if not rows:
         return pd.DataFrame()
     D = pd.DataFrame([dict(row=r["row"], id=r["id"], m=r["m"], cluster=r["cluster"], split=r["split"], v0=r["v0"],
-                           phi=r["+0"]["phi1"], gain=(r["+2"]["phi1"] - r["-2"]["phi1"]) / 2 / (1.2 * W)) for r in rows])
+                           phi=r.get("+0", {}).get("phi1", np.nan), gain=(r["+2"]["phi1"] - r["-2"]["phi1"]) / 2 / (1.2 * W)) for r in rows])
     D["ev"] = [f"{i.rsplit('-', 1)[0]}|{int(i.rsplit('-', 1)[1]) - 2 * (m - 1)}" for i, m in zip(D.id, D.m)]   # onset frame identifies the event
     return D
 
@@ -62,13 +62,13 @@ res, lines = {}, []
 ss = s_star()
 lines.append(f"threshold: z(c * s) = 1 at s* = {ss:.3f} deg/deg (c = {C}), i.e. c * s* = {C * ss:.3f}")
 fig, ax = plt.subplots(1, 3, figsize=(16, 5))
-cols = {"cinque": "#1f77b4", "it_dw3-s0": "#2ca02c"}
+cols = {"cinque": "#1f77b4", "cinque-hs": "#ff7f0e", "it_dw3-s0": "#2ca02c"}
 for g, c in (("spin", "#d62728"), ("non-spin", "#7f7f7f")):
     d = H[(H.grp == g) & (H.step <= 9)].groupby("step").s_local
     ax[0].plot(d.median().index, d.median().values, "-o", color=c, ms=3, label=f"HUGSIM {g} (median, 6 / 12 logs)")
     ax[0].fill_between(d.median().index, d.quantile(0.25), d.quantile(0.75), color=c, alpha=0.12)
 tab = []
-for model in ("cinque", "it_dw3-s0"):
+for model in ("cinque", "cinque-hs"):
     D = load(model)
     if D.empty:
         continue
@@ -82,10 +82,12 @@ for model in ("cinque", "it_dw3-s0"):
             mn, mlo, mhi = boot(x.gain, x.cluster, np.mean)
             tab.append(dict(model=model, subset=sub, step=m, n=len(x), n_cluster=x.cluster.nunique(), gain_median=md, lo=lo, hi=hi,
                             gain_mean=mn, mean_lo=mlo, mean_hi=mhi, ct=C * md, z=zwin(C * md), z_lo=zwin(max(C * lo, 0)), z_hi=zwin(max(C * hi, 0)),
-                            frac_above_s_star=float((x.gain > ss).mean())))
+                            frac_above_s_star=float((x.gain > ss).mean()), c_crit=C * ss / md, c_crit_lo=C * ss / hi, c_crit_hi=C * ss / lo))
     T = pd.DataFrame(tab)
     t = T[(T.model == model) & (T.subset == "all")]
-    ax[0].errorbar(t.step, t.gain_median, yerr=[t.gain_median - t.lo, t.hi - t.gain_median], fmt="-s", color=cols[model], capsize=3, label=f"WOD real, {model} (median, 95% cluster CI, n {int(t.n.iloc[0])})")
+    ax[0].errorbar(t.step, t.gain_median, yerr=[t.gain_median - t.lo, t.hi - t.gain_median], fmt="-s", color=cols[model], capsize=3, label=f"WOD real, {model}{' (HUGSIM-shaped perturbation)' if model.endswith('-hs') else ''} (median, 95% cluster CI, n {int(t.n.iloc[0])})")
+    if model == "cinque-hs":
+        continue
     # launch lean per event: mean |phi1| over steps 1-2
     e = D[D.m.isin([1, 2])].groupby("ev").agg(cluster=("cluster", "first"), split=("split", "first"), lean=("phi", lambda p: float(np.mean(np.abs(p)))), k=("m", "size"))
     e = e[e.k == 2]
@@ -118,7 +120,7 @@ def zrow(label, md, lo, hi, color):
 for g, c in (("spin", "#d62728"), ("non-spin", "#7f7f7f")):
     x = H[(H.grp == g) & (H.step == 1)].s_local
     zrow(f"HUGSIM {g} (n {len(x)})", *boot(x, np.arange(len(x))), c)
-for model in ("cinque", "it_dw3-s0"):
+for model in ("cinque", "cinque-hs"):
     t = T[(T.model == model) & (T.subset == "all") & (T.step == 1)]
     if len(t):
         r = t.iloc[0]
@@ -137,7 +139,10 @@ fig.tight_layout()
 fig.savefig(png, dpi=130)
 for _, r in T.iterrows():
     lines.append(f"{r.model} {r.subset} step {int(r.step)}: n={int(r.n)} ({int(r.n_cluster)} segments) gain median {r.gain_median:.2f} [{r.lo:.2f}, {r.hi:.2f}], mean {r.gain_mean:.2f} [{r.mean_lo:.2f}, {r.mean_hi:.2f}]; "
-                 f"c*gain {r.ct:.3f}; z {r.z:.2f} [{r.z_lo:.2f}, {r.z_hi:.2f}]; frac events above s* {r.frac_above_s_star:.2f}")
+                 f"c*gain {r.ct:.3f}; z {r.z:.2f} [{r.z_lo:.2f}, {r.z_hi:.2f}]; frac events above s* {r.frac_above_s_star:.2f}; c at which z = 1: {r.c_crit:.3f} [{r.c_crit_lo:.3f}, {r.c_crit_hi:.3f}]")
+for g, c1 in (("spin", None), ("non-spin", None)):
+    xx = H[(H.grp == g) & (H.step == 1)].s_local
+    lines.append(f"HUGSIM {g} step 1: c at which z = 1: {C * ss / xx.median():.3f}")
 x = H[H.step == 1].groupby("grp").s_local.agg(["median", "size"])
 for g in ("spin", "non-spin"):
     lines.append(f"HUGSIM {g} step 1 (CPU replay): median gain {x.loc[g, 'median']:.2f} (n {int(x.loc[g, 'size'])}), z {zwin(C * x.loc[g, 'median']):.2f}")
