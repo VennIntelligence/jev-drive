@@ -60,6 +60,8 @@ def main():
     ap.add_argument("--threads", type=int, default=4)
     ap.add_argument("--limit", type=int, default=0, help="events in total (all shards)")
     ap.add_argument("--w", type=float, default=2.0)
+    ap.add_argument("--shape", choices=("full", "hugsim"), default="full",
+                    help="hugsim: the perturbation of spin_attr_cpu_gain at step m (the static prefix is one frame carrying yaw w*0.2*(-m); frames after it w*0.2*(idx - m)); w = +-W only")
     a = ap.parse_args()
     from jevdrive.openpilot.model import OPModel
     name = "cinque" if a.model == "cinque" else str(data_dir() / "runs" / "op_adapt_H" / "onnx" / f"{a.model}.onnx")
@@ -81,8 +83,9 @@ def main():
                 t = tab["img_t"][r]
                 res = {"row": int(r), "m": mm, "id": str(tab["id"][r]), "cluster": str(tab["cluster"][r]), "split": str(tab["split"][r]),
                        "v0": float(tab["v0"][r]), "model": a.model}
-                for w in (0.0, a.w, -a.w):
-                    seq = [(warp(fr[j], tab["cam"][r], np.radians(w * t[j])), P.WARM if j == 0 else P.PER, 0, j == 9) for j in range(10)]
+                for w in ((0.0, a.w, -a.w) if a.shape == "full" else (a.w, -a.w)):
+                    yaw = [w * t[j] for j in range(10)] if a.shape == "full" else [w * 0.2 * (max(j - (9 - mm), 0) - mm) for j in range(10)]
+                    seq = [(warp(fr[j], tab["cam"][r], np.radians(yaw[j])), P.WARM if j == 0 else P.PER, 0, j == 9) for j in range(10)]
                     res[f"{w:+g}"] = P.feed(m, seq, [float(x) for x in tab["tc"][r]])[0]
                 fo.write(json.dumps(res) + "\n")
                 fo.flush()
