@@ -40,7 +40,8 @@ ROUTE_FREE = ("band_all",)          # carry no route information (one run per fr
 SKY_FAMILIES = ("sky",)
 SKY_FREE = ("sky_disc", "sky_wrong")  # sky controls: one run per frame
 MAGENTA, BLACK = (255, 0, 255), (0, 0, 0)
-SKY_BOX = {"road": (2, 38), "wide": (6, 54)}     # (top row, full height in px) of the arrow per view; horizon rows 47.6 / 151.8
+SKY_BOX = {"road": (256, 1, 28), "wide": (64, 2, 42)}  # (centre column, top row, full height px) per view; horizons at rows 47.6 / 151.8;
+# the wide arrow sits top-left, away from the lights that hang over the lanes (rows 10-100 at 12-30 m)
 SKY_SHAPES = {  # x right, y up, height 1, centred on x = 0
     "straight": [(-0.15, 0), (0.15, 0), (0.15, 0.55), (0.45, 0.55), (0, 1), (-0.45, 0.55), (-0.15, 0.55)],
     "right": [(-0.45, 0), (-0.15, 0), (-0.15, 0.45), (0.15, 0.45), (0.15, 0.2), (0.6, 0.6), (0.15, 1.0), (0.15, 0.75), (-0.45, 0.75)]}
@@ -348,9 +349,9 @@ def draw_sky(packed, shape, d0, pose):
     out = np.empty_like(packed)
     for k, view in enumerate(("road", "wide")):
         Y, U, V = (z.astype(np.float32) for z in I.unpack(packed[k]))
-        top, h = SKY_BOX[view]
+        cx, top, h = SKY_BOX[view]
         hh = h * sc
-        pts = np.array([[W / 2 + x * hh, top + (h - hh) / 2 + (1 - y) * hh] for x, y in SKY_SHAPES[shape]])
+        pts = np.array([[cx + x * hh, top + (h - hh) / 2 + (1 - y) * hh] for x, y in SKY_SHAPES[shape]])
         q = np.round((pts + 0.5) * SS - 0.5).astype(np.int32)
         for rgb, thick in ((BLACK, 2.0), (MAGENTA, 0)):
             m = np.zeros((H * SS, W * SS), np.uint8)
