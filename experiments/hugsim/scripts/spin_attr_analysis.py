@@ -180,7 +180,27 @@ def main():
         fs = [c for c in FEATS if c in df and df[c].nunique() > 1 and c not in ("n_actors",)]
         r, _ = loo(df, fs)
         # best single feature LOO AUC reference = its own AUC (no fitting): report max |AUC-0.5| feature
-        res[agent] = dict(n=len(df), n_spin=int(df.spin.sum()), n_sep=int(A.sep.sum()), n_feat=len(A), loo=r)
+        clean = [c for c in fs if not c.startswith("frac_") and c != "launch_rate"]     # drop window-length-dependent features
+        rc, _ = loo(df, clean)
+        print(agent, "LOO clean", rc)
+        # launch events: initial launch (step 0) and re-launches (v >= 1 after < 0.4 within the previous 2 s), spin = divergence start within 12 steps
+        ev = {"initial": [0, 0], "relaunch": [0, 0]}
+        for t in T:
+            if t["tag"] != f"{agent}-fixed":
+                continue
+            e = ep[(ep.scenario == t["scenario"]) & (ep.agent == agent) & (ep.controller == "fixed")].iloc[0]
+            v = np.array([x["v"] for x in t["steps"]])
+            end = int(e.start) if e.spin else len(v)
+            ev["initial"][0] += 1
+            ev["initial"][1] += int(bool(e.spin) and e.start <= 12)
+            last = -99
+            for k in range(8, end):
+                if v[k] >= 1.0 and v[max(0, k - 8):k].min() < 0.4 and k - last > 8:
+                    last = k
+                    ev["relaunch"][0] += 1
+                    ev["relaunch"][1] += int(bool(e.spin) and 0 <= e.start - k <= 12)
+        print(agent, "launch events [n, spins]", ev)
+        res[agent] = dict(n=len(df), n_spin=int(df.spin.sum()), n_sep=int(A.sep.sum()), n_feat=len(A), loo=r, loo_clean=rc, launch_events=ev)
         print(agent, "LOO", r)
     json.dump(res, open(out / "q1_loo.json", "w"), indent=1, default=str)
     # blocked hypothesis
