@@ -38,8 +38,9 @@ def env(arm):
 
 def jobs(args):
     seeds = [int(s) for s in args.get("seeds", "0,1").split(",")]
-    smoke = [base.unit("dbg-vm3", 0, "25169", ["25169"], env("vmerge3"), "", 0, base="vmerge"),
-             base.unit("dbg-vm3", 0, "334", ["334"], env("vmerge3"), "", 0, base="vmerge")]
+    tag = args.get("smoke", "dbg-vm3")              # smoke rounds after a code change: dbg2-vm3, dbg3-vm3, ... (execution log)
+    only = args.get("smoke_routes", "25169,334").split(",")
+    smoke = [base.unit(tag, 0, r, [r], env("vmerge3"), "", 0, base="vmerge") for r in only]
     if args.get("stage", "pre") == "pre":
         return smoke
     sh = vc.shards()

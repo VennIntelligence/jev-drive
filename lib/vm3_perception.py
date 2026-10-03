@@ -5,7 +5,7 @@ Plan: experiments/vlm_arb/plans/2026-10-04-vmerge3.md. Inputs, all on-board:
     lead (x, y, v), lead_prob, lane_lines (4 x 33, y right-positive at X_IDXS), lane_lines prob, road_edges (2 x 33);
   - three radars (Bench2Drive allows 4): front (oncoming traffic, the obstacle's extent) and two rear corners (blind-spot monitoring,
     as the BSM signals openpilot's lane-change assist reads on production cars); parsed by leaderboard's sensor_interface to
-    rows [depth, azimuth, altitude, velocity];
+    rows [depth, altitude, azimuth, velocity];
   - the official route (arc position of the ego from its own pose; the bypass path is the route shifted sideways) and the ego pose.
 Nothing here reads a CARLA actor, the map or a scenario. lib/b2d_privileged_geometry.py keeps logging the truth beside it (arm "drive").
 
@@ -29,17 +29,23 @@ RADARS = {"RADAR_F": dict(x=2.45, y=0.0, z=0.7, yaw=0.0, hfov=70.0),
           "RADAR_RR": dict(x=-2.4, y=0.8, z=0.7, yaw=150.0, hfov=120.0)}
 # registered before the first run (plan 2026-10-04-vmerge3.md); not tuned on the 19 evaluation routes
 P = dict(lane_x=(8.0, 30.0),       # openpilot lane lines / edges read as the median over this range ahead of the camera
-         room_min=2.6,             # an adjacent lane needs this much between the ego lane line and the road edge on that side
-         lane_w=(2.6, 4.5),        # plausible ego lane width; outside it the reading is rejected
+         room_min=2.0,             # an adjacent lane needs this much (openpilot scale) between the ego lane line and the road edge on that side
+         far_p=0.1,                # ... and openpilot's far lane line on that side present with at least this probability
+         lane_w=(2.2, 4.5),        # plausible ego lane width (openpilot scale); outside it the reading is rejected
+         lat_k=1.2,                # openpilot's lateral scale on CARLA: debug route 25169 (outside the 19) w 2.87 vs map lane offset 3.49
+         lane_s=5.0,               # lane readings pooled (median) over the last seconds before the decision
          obs_len=15.0,             # obstacle extent prior past the lead (Bench2Drive obstacle scenarios: one car ~5 m, construction / accident ~15 m)
-         obs_ext_max=40.0,         # front-radar static returns can extend the obstacle up to this far past its start
+         obs_ext_max=25.0,         # front-radar static returns can extend the obstacle up to this far past its start
          obs_ext_gap=8.0,          # ... while consecutive returns are at most this far apart
          lead_y=1.5,               # a lead counts as in the ego lane within this lateral distance
          band=1.6,                 # half width of the target-lane band for radar targets
          moving_v=1.0,             # a radar return moves when its ego-motion-compensated radial speed exceeds this
-         t_start=2.5, d_start=3.0,  # start of the pull-out: no closing vehicle behind within d_start + closing x t_start (m)
-         t_abort=0.8, d_abort=1.5,  # after it began (shift 5 % - 30 %): only a vehicle within d_abort + closing x t_abort aborts it
-         side_mem_s=1.0,           # a target seen within 8 m behind the rear bumper blocks for this long (it may be alongside)
+         t_start=2.0, d_start=3.0,  # start of the pull-out: no closing vehicle behind within d_start + v x t_start (m), v = the highest
+                                    # closing speed seen in the band within 1 s (radial speeds under-read off-axis targets)
+         open_s=0.5,               # ... and that has held for this long (one open snapshot is not a gap)
+         t_abort=0.8, d_abort=1.5,  # after the start, before the commit: a vehicle within d_abort + closing x t_abort stops the car where it is
+         side_mem_s=0.5,           # a target seen within 8 m behind the rear bumper blocks for this long (it may be alongside)
+         amax_byp=2.5,             # m/s2 while the bypass path is driven (go decisively; the default governor has 1.5)
          radar_frames=3)           # radar frames pooled per decision (0.15 s)
 
 
@@ -49,13 +55,15 @@ def radar_specs():
 
 
 def radar_rig(tag, pts, v_ego):
-    """Radar rows [depth, azimuth, altitude, velocity] -> rig x, y(left), radial velocity (negative = closing), the
+    """Radar rows [depth, altitude, azimuth, velocity] -> rig x, y(left), radial velocity (negative = closing), the
     ego-motion-compensated radial velocity of the target itself, and the height of the return above the ground."""
     pts = np.asarray(pts, float).reshape(-1, 4)
     if not len(pts):
         return np.zeros((0, 5))
     m = RADARS[tag]
-    d, az, alt, vr = pts[:, 0], pts[:, 1], pts[:, 2], pts[:, 3]
+    # sensor_interface flips CARLA's raw (velocity, azimuth, altitude, depth): the columns are depth, altitude, azimuth, velocity
+    # (its comment says depth, azimuth, altitude, velocity; the smoke run's returns only make sense this way)
+    d, alt, az, vr = pts[:, 0], pts[:, 1], pts[:, 2], pts[:, 3]
     yaw = math.radians(m["yaw"])
     ux, uy = np.cos(alt) * np.cos(az), np.cos(alt) * np.sin(az)          # sensor frame, y right
     vx, vy = ux * math.cos(yaw) - uy * math.sin(yaw), ux * math.sin(yaw) + uy * math.cos(yaw)   # vehicle frame, y right
@@ -96,6 +104,9 @@ class PerceivedBypass:
         self.last_close = -1e9
         self.log = (Path(agent.out) / "perc.jsonl").open("w", buffering=1)
         self.last_log = -1e9
+        self.lane_buf = []                                       # (t, reading) of the last P["lane_s"] seconds
+        self.vbuf = []                                           # (t, closing speed) of band returns behind, last 1 s
+        self.open_since = None
 
     # ------------------------------------------------------------------ inputs
     def radar(self, xy, yaw, v_ego):
@@ -140,13 +151,15 @@ class PerceivedBypass:
         lat_ego = float(project_ext([xy], r.xy)[1][0])
         o = getattr(self.agent, "op_out", None)
         lanes = lanes_reading(o)
+        if lanes is not None:
+            self.lane_buf = [x for x in self.lane_buf if t - x[0] <= P["lane_s"]] + [(t, lanes)]
         tg = self.radar(xy, yaw, speed) if not warm else np.zeros((0, 8))
         self.meta = dict(bypass=False, ego_s=round(ego_s, 3), perc=True)
         lx = self.lead()
         if self.state is not None and ego_s > self.state["end_s"] + 23:
             self.state = None
         if self.state is None and gate_free and not warm:
-            self.state = self._new(ego_s, lx, lanes)
+            self.state = self._new(ego_s, lx, self._pooled())
         st = self.state
         if st is not None:
             if lx is not None and not st.get("committed"):          # refine the start while the ego still looks at it
@@ -164,11 +177,19 @@ class PerceivedBypass:
             st["committed"] = True
         self.meta.update(gap_open=gap, gap_why=why, shift_frac=round(frac, 3), committed=bool(st.get("committed")),
                          bypass_state=dict(start_s=st["start_s"], end_s=st["end_s"], offset=st["offset"], borrow=False))
-        if not st.get("committed") and not gap:
-            st["held"] = st.get("held", 0) + 1
-            self.meta["gap_hold"] = True
-            return world
-        st["started"] = True
+        if gap:
+            self.open_since = t if self.open_since is None else self.open_since
+        else:
+            self.open_since = None
+        if not st.get("started"):
+            if self.open_since is None or t - self.open_since < P["open_s"] - 1e-6:
+                st["held"] = st.get("held", 0) + 1
+                self.meta["gap_hold"] = True
+                return world
+            st["started"], st["t_start"] = True, t
+        # once started the path is never taken back (swerving back into the obstacle's corner is what scraped it in the smoke run);
+        # an abort-level threat before the commit stops the car where it is
+        self.meta["hold_stop"] = bool(not st.get("committed") and not gap)
         s = r.s
         enter = np.clip((s - (st["start_s"] - 20)) / 15, 0, 1)
         leave = np.clip((s - (st["end_s"] + 8)) / 15, 0, 1)
@@ -186,6 +207,14 @@ class PerceivedBypass:
         self.meta["bypass"] = True
         return np.r_[np.asarray(xy)[None], sel]
 
+    def _pooled(self):
+        if not self.lane_buf:
+            return None
+        L = [x[1] for x in self.lane_buf]
+        med = lambda f: float(np.median([f(x) for x in L]))  # noqa: E731
+        return dict(w=round(med(lambda x: x["w"]), 2), room_l=round(med(lambda x: x["room_l"]), 2), room_r=round(med(lambda x: x["room_r"]), 2),
+                    p_far_l=round(med(lambda x: x["prob"][0]), 3), p_far_r=round(med(lambda x: x["prob"][3]), 3), n=len(L))
+
     def _new(self, ego_s, lx, lanes):
         if lx is None:
             self.meta["no_obstacle"] = True
@@ -193,13 +222,15 @@ class PerceivedBypass:
         if lanes is None or not P["lane_w"][0] <= lanes["w"] <= P["lane_w"][1]:
             self.meta["no_lanes"] = True
             return None
-        # side: the side with room for a lane; both: the right (right-hand traffic: the right lane runs the ego's way)
-        side = "right" if lanes["room_r"] >= P["room_min"] else "left" if lanes["room_l"] >= P["room_min"] else None
-        if side is None:
+        # side: room for a lane up to the road edge and the far lane line seen on that side; both: the likelier far line
+        ok = {sd: lanes["room_" + sd[0]] >= P["room_min"] and lanes["p_far_" + sd[0]] >= P["far_p"] for sd in ("left", "right")}
+        cand = [sd for sd in ("left", "right") if ok[sd]]
+        if not cand:
             self.meta["no_adjacent_lane"] = True
             return None
+        side = max(cand, key=lambda sd: lanes["p_far_" + sd[0]])
         start = ego_s + CAM_X + lx
-        return dict(start_s=start, end_s=start + P["obs_len"], offset=lanes["w"] * (1.0 if side == "right" else -1.0),
+        return dict(start_s=start, end_s=start + P["obs_len"], offset=P["lat_k"] * lanes["w"] * (1.0 if side == "right" else -1.0),
                     side=side, lanes=lanes, t0=None)
 
     def _extend(self, st, tg):
@@ -216,8 +247,7 @@ class PerceivedBypass:
     def _gap(self, st, tg, ego_s, speed, t, lat_ego):
         """(open, reason). Rear radars: moving targets closing in the target-lane band behind; front radar: oncoming targets in
         the band ahead (the band is the target lane: route lateral within P["band"] of `offset`)."""
-        frac = lat_ego / st["offset"] if st["offset"] else 0.0
-        began = frac >= 0.05
+        began = bool(st.get("started"))
         T, D = (P["t_abort"], P["d_abort"]) if began else (P["t_start"], P["d_start"])
         if not len(tg):
             return (t - self.last_close > P["side_mem_s"]), ("side_memory" if t - self.last_close <= P["side_mem_s"] else None)
@@ -225,12 +255,15 @@ class PerceivedBypass:
         moving = np.abs(tg[:, 5]) >= P["moving_v"]
         rear = band & moving & (tg[:, 7] > 0) & (tg[:, 4] < -0.5)
         rear_bumper = ego_s - EGO_BACK
+        self.vbuf = [x for x in self.vbuf if t - x[0] <= 1.0] + [(t, float(-v)) for v in tg[rear, 4]]
+        vmax = max([x[1] for x in self.vbuf], default=0.0)
         for s_, vr in zip(tg[rear, 0], tg[rear, 4]):
             d_behind = rear_bumper - s_
             if d_behind < 8.0:
                 self.last_close = t
-            if d_behind < D + (-vr) * T:
-                return False, "behind %.1f m closing %.1f" % (d_behind, -vr)
+            v = (-vr) if began else max(-vr, vmax)
+            if d_behind < D + v * T:
+                return False, "behind %.1f m closing %.1f" % (d_behind, v)
         if t - self.last_close <= P["side_mem_s"]:
             return False, "side_memory"
         front = band & moving & (tg[:, 7] == 0) & (tg[:, 4] < -(speed + 1.0))
@@ -248,7 +281,7 @@ class PerceivedBypass:
         mv = tg[np.abs(tg[:, 5]) >= P["moving_v"]] if len(tg) else tg
         rec = dict(t=round(t, 2), v=round(float(speed), 2), ego_s=round(ego_s, 2), lead=lx, lanes=lanes, gap=gap, why=why,
                    n_radar=int(len(tg)), moving=[[round(float(x), 1) for x in row[[0, 1, 4, 5, 6, 7]]] for row in mv[:40]],
-                   state=None if st is None else {k: (round(v, 2) if isinstance(v, float) else v) for k, v in st.items() if k != "lanes"})
+                   state=None if st is None else {k: (round(v, 2) if isinstance(v, float) else v) for k, v in st.items()})
         self.log.write(json.dumps(rec) + "\n")
 
     def close(self):

@@ -108,7 +108,8 @@ def latency(arm, seed):
 
 def smoke(_):
     truth = truth_obstacles()
-    for name, rid in (("dbg-vm3-s0-25169", "25169"), ("dbg-vm3-s0-334", "334")):
+    tag = _[0] if _ else "dbg-vm3"
+    for name, rid in (("%s-s0-25169" % tag, "25169"), ("%s-s0-334" % tag, "334")):
         d = RUN / "arms" / ("v2-" + name)
         r = route_row(d, rid)
         print("==", name, None if not r else {k: r[k] for k in ("DS", "RC", "collisions_vehicle", "collisions_layout", "red_light", "vehicle_blocked", "crash")})

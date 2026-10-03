@@ -107,6 +107,7 @@ class VlmArbitrationPC:
 
     def __init__(self, agent, priv, perc=None):
         self.agent, self.priv, self.perc = agent, priv, perc
+        self.amax0 = agent.arb["amax"]
 
     @property
     def meta(self):
@@ -130,10 +131,14 @@ class VlmArbitrationPC:
         out = self.perc.geometry(speed, t, xy, yaw, world, warm, gate is None)
         if gate:
             self.perc.meta["suppressed"] = gate
+        # go decisively once the pull-out has started (restored by the next call)
+        self.agent.arb["amax"] = V3.P["amax_byp"] if self.perc.meta.get("bypass") else self.amax0
         return out
 
     def constraints(self, s_base, speed, path, t, warm):
         self.priv.constraints(s_base, speed, path, t, warm)      # arm "drive": no control, writes privileged.jsonl
+        if self.perc is not None and self.perc.meta.get("hold_stop"):
+            return dict(self.agent.pending_cons, byp_hold=np.zeros(len(s_base))), False
         return self.agent.pending_cons, self.agent.pending_release
 
     def close(self):
@@ -763,7 +768,8 @@ class VlmArbAgent(OpArbAgent):
         ego_s = float(project([xy], self.route.xy)[0][0])
         junc_dist, jid, stop_dist = self._junction_vm(ego_s)
         self.vm_junc = junc_dist
-        if speed < VM["byp_stand_v"]:
+        if speed < VM["byp_stand_v"] and not (self.vm3_byp and getattr(self, "warm_now", True)):
+            # vmerge3: the warm-up hold is the harness's, not a stop (dbg-vm3-334 started a bypass at the spawn behind a queue)
             self.still_since = t if self.still_since is None else self.still_since
         else:
             self.still_since = None
