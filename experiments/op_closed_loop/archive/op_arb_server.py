@@ -105,7 +105,7 @@ class ArbModel(ZP.OpenpilotModel):
         """Gather indices of the road / wide model frames for a virtual camera yawed by deg (device frame, right-positive)
         against the frame's own camera, rounded to 0.01 deg (0.16 px in the road model frame; 0.1 deg = 1.6 px made the replayed
         history jitter between rounded and unrounded frames in the CARLA smoke), LRU-cached; source pixels outside the image are
-        flagged (black)."""
+        flagged."""
         key = round(float(deg), 2)
         with self.rot_lock:
             if key in self.rot_cache:
@@ -139,17 +139,18 @@ class ArbModel(ZP.OpenpilotModel):
 
     def _pack_rot(self, raw, deg):
         """img2 (2, 6, 128, 256) of one buffered frame pair seen from a camera yawed by deg: pack() with the rotated gather
-        indices; source pixels outside the image are black (Y 16, U / V 128)."""
+        indices. Source pixels outside the image are clipped to the border as in the native warp (_nn_index): blacking them
+        (HUGSIM) also blacked a bottom row the native road frame clips, and the replay drifted from the native rollout."""
         if round(float(deg), 2) == 0.0:
             return np.stack([self.pack(raw[0], "road"), self.pack(raw[1], "wide")])
         idx, H, W = self._rot_idx(deg), self.opf.MODEL_H, self.opf.MODEL_W
         res = []
         for bgra, name in ((raw[0], "road"), (raw[1], "wide")):
-            y_idx, quad, ybad, qbad = idx[name]
+            y_idx, quad = idx[name][:2]
             px = bgra.reshape(-1, 4)
-            b, g, r = (np.where(ybad, 0.0, px[y_idx, k].astype(np.float32)) for k in range(3))
+            b, g, r = (px[y_idx, k].astype(np.float32) for k in range(3))
             Y = (16 + 0.257 * r + 0.504 * g + 0.098 * b).reshape(H, W)
-            q = np.where(qbad[:, None], 0.0, px[quad].astype(np.float32).mean(0))
+            q = px[quad].astype(np.float32).mean(0)
             b, g, r = q[:, 0], q[:, 1], q[:, 2]
             U = 128 - 0.148 * r - 0.291 * g + 0.439 * b
             V = 128 + 0.439 * r - 0.368 * g - 0.071 * b
