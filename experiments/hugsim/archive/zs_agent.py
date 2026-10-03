@@ -34,7 +34,10 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      experiments/hugsim/results/sel3_window_check.md);
                      lstab (openpilot, dict of lib/launch_stab.LaunchGate keywords, default off; plans/2026-10-04-launch-stab-prereg.md):
                      launch stabilisation - for t_launch s after a standstill a forked second session sees the frames
-                     re-rendered at the launch heading and its lateral plan, rotated into the car frame, replaces the native one
+                     re-rendered at the launch heading and its lateral plan, rotated into the car frame, replaces the native one;
+                     launch_long (openpilot, dict of lib/launch_long.LaunchAssist keywords, default off; plans/2026-10-04-launch-long-prereg.md):
+                     non-privileged longitudinal launch assist - during a launch (until 3.5 m/s) the plan is re-timed along its own path to cover
+                     at least a launch-profile distance, when the plan is not a stop and the lead head reports no close lead
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
@@ -59,6 +62,7 @@ import zeroshot_wire as wire  # noqa: E402
 from jevdrive import hugsim_zs as Z  # noqa: E402
 sys.path.insert(0, str(ROOT / "lib"))
 import launch_stab as LS  # noqa: E402
+import launch_long as LL  # noqa: E402
 
 OP_T = np.array([10.0 * (i / 32) ** 2 for i in range(33)])
 OP_CTX_S = 0.2                                     # openpilot context step (5 Hz)
@@ -207,7 +211,7 @@ class Agent:
             r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2})
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)
         rec.update(desire=desire, reps=reps, infer_ms=r.get("infer_ms"), rtt_ms=r["rtt_ms"],
-                   lead_prob=r.get("lead_prob"), engaged=r.get("engaged"),
+                   lead_prob=r.get("lead_prob"), lead_x=r.get("lead_x"), lead_v=r.get("lead_v"), engaged=r.get("engaged"),
                    model_pos=np.round(out["pos"][[4, 8, 12, 16, 20, 24, 32], :2], 3).tolist(),
                    model_v=np.round(out["vel"][[0, 8, 16, 24]], 3).tolist())
         if self.dump_every and self.step % self.dump_every == 0:
@@ -250,6 +254,14 @@ class Agent:
                 if not np.array_equal(st, plan):
                     rec["stop"] = True
                 plan = st
+            if "launch_long" in self.opts and self.model != "alpamayo":
+                if not hasattr(self, "assist"):
+                    self.assist = LL.LaunchAssist(**self.opts["launch_long"])
+                new, why = self.assist.step(float(info["ego_velo"]), plan, rec.get("lead_prob"), rec.get("lead_x"), bool(rec.get("stop")))
+                rec["ll"] = why
+                if why == "on":
+                    rec["plan_before_ll"] = np.round(plan, 3).tolist()
+                plan = new
             ta = info["timestamp"] + np.r_[0.0, Z.plan_times()]
             self.last = (Z.plan_to_world(np.r_[[[0.0, 0.0]], plan], pos, th), ta)
         if self.engage_s > 0 and info["timestamp"] < self.engage_s - 1e-6:

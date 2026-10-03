@@ -24,6 +24,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "lib"))
 import launch_stab as LS  # noqa: E402
 
 
+def lead_xv(lead):
+    """Selection 0 at t = 0 of the lead head: distance and speed (m, m/s), as nq4_k.lead_decode; {} when the layout has no lead."""
+    try:
+        m = np.asarray(lead, np.float64).reshape(3, 6, 4)
+        return {"lead_x": float(m[0, 0, 0]), "lead_v": float(m[0, 0, 2])}
+    except (ValueError, TypeError):
+        return {}
+
+
 class Alpamayo(S.Alpamayo):
     def prepare(self, meta, arrays):
         if "frames" not in arrays:                        # CARLA-shaped warm-up of the parent constructor
@@ -143,7 +152,8 @@ class Openpilot(S.OpenpilotModel):
         lat_std = np.exp(np.minimum(pl[pl.size // 2:], 11)).reshape(33, 15)[:, 1]
         info = {"infer_ms": 1e3 * (time.perf_counter() - t1), "curvature": d["curvature"], "accel": d["accel"],
                 "lat_std4": float(lat_std[self.t_idxs <= 4.0 + 1e-6].sum()),
-                "engaged": d["engaged"], "lead_prob": float(np.ravel(d["lead_prob"])[0])}
+                "engaged": d["engaged"], "lead_prob": float(np.ravel(d["lead_prob"])[0]),
+                **lead_xv(d.get("lead"))}
         out = {"pos": d["plan_pos"].astype(np.float32), "vel": d["plan_vel"][:, 0].astype(np.float32),
                "yaw": d["plan_yaw"].astype(np.float32), "t": self.t_idxs}
         if sraw is not None:
