@@ -2,7 +2,9 @@
 same timestamp (synthetic frames share the log's timestamps), so frames rendered at (nearly) the logged pose can be paired with the
 real CAM_F0 of that log frame. navsim2 env (nuplan pickles), CPU:
   $DATA_DIR/envs/navsim2/bin/python experiments/leaderboard_audit/scripts/rvr_nav_pairs.py
-Writes $DATA_DIR/runs/real_vs_render/nav_pairs.csv (one row per synthetic frame)."""
+Writes $DATA_DIR/runs/real_vs_render/nav_pairs.csv (one row per synthetic frame).
+  export: the pairs within 0.5 m and 1 deg -> nav_pairs.pkl (numpy only: paths, CAM_F0 calibrations of both sides, the pose offset,
+          and the next real log frame 0.5 s later with its pose offset from the current one: the adjacent-frame floor)."""
 import csv, os, pickle
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -50,7 +52,49 @@ def one(p):
     return rows
 
 
+def cam(cd, root):
+    c = {k.upper(): v for k, v in cd.items()}["CAM_F0"]
+    return {"path": str(root / c["data_path"]), "R": np.asarray(c["sensor2lidar_rotation"], np.float32),
+            "t": np.asarray(c["sensor2lidar_translation"], np.float32), "K": np.asarray(c["cam_intrinsic"], np.float32),
+            "D": np.asarray(c["distortion"], np.float32)}
+
+
+def rel(a, b):
+    """Pose of log frame b in log frame a's ego frame: (dlon, dlat left, dyaw deg left)."""
+    X, Y = a["ego2global_translation"][:2]
+    H = yaw_of(a["ego2global_rotation"])
+    dx, dy = b["ego2global_translation"][0] - X, b["ego2global_translation"][1] - Y
+    c, s = np.cos(H), np.sin(H)
+    return (c * dx + s * dy, -s * dx + c * dy, float(np.degrees((yaw_of(b["ego2global_rotation"]) - H + np.pi) % (2 * np.pi) - np.pi)))
+
+
+def export(max_d=0.5, max_yaw=1.0):
+    import pandas as pd
+    P = pd.read_csv(OUT / "nav_pairs.csv")
+    P = P[(np.hypot(P.dlon, P.dlat) < max_d) & (P.dyaw.abs() < max_yaw)]
+    SB, RB = NAV / "navhard_two_stage/sensor_blobs", NAV / "sensor_blobs/test"
+    out = []
+    for r in P.itertuples():
+        d = pickle.load(open(NAV / "navhard_two_stage/synthetic_scene_pickles" / f"{r.syn}.pkl", "rb"))
+        f = d["frames"][r.k]
+        L = log(r.log)
+        cur = L[r.ts]
+        byt = {x["token"]: x for x in L.values()}
+        nxt = byt.get(cur["sample_next"]) if cur.get("sample_next") else None
+        if nxt is None:
+            continue
+        out.append(dict(syn=r.syn, k=r.k, log=r.log, ts=r.ts, d=(r.dlon, r.dlat, r.dyaw), v=r.v,
+                        syn_cam=cam(f["camera_dict"], SB), real_cam=cam(cur["cams"], RB), next_cam=cam(nxt["cams"], RB),
+                        d_next=rel(cur, nxt)))
+    pickle.dump(out, open(OUT / "nav_pairs.pkl", "wb"))
+    print(len(out), "pairs exported")
+
+
 if __name__ == "__main__":
+    import sys
+    if sys.argv[1:] == ["export"]:
+        export()
+        raise SystemExit
     OUT.mkdir(parents=True, exist_ok=True)
     ps = sorted((NAV / "navhard_two_stage/synthetic_scene_pickles").glob("*.pkl"))
     rows = []
