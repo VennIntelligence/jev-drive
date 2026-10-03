@@ -201,7 +201,7 @@ def main():
                 E.append(r)
     E = pd.DataFrame(E).drop(columns=[c for c in ("_n", "_n2", "_n3", "_n4") if c in E])
     for fam in ["band", "lines", "arrow_road", "sign"]:
-        d = S[S.fam == fam]
+        d = S[S.fam == fam] if len(S) else S
         if len(d):
             m, lo, hi, n = boot(d, "dlat_err")
             E = pd.concat([E, pd.DataFrame([dict(tau=3.0, fam=f"straight:{fam}", vbin="all", n=n, logs=d.log.nunique(),
@@ -217,7 +217,7 @@ def main():
 
     f = lambda x: "" if not np.isfinite(x) else f"{x:+.2f}"  # noqa: E731
     lines = [f"# {a.domain}: image-command zero-shot effects", "",
-             f"n samples: junction {J.token.nunique()} ({J.log.nunique()} logs), straight {S.token.nunique()}. "
+             f"n samples: junction {J.token.nunique()} ({J.log.nunique()} logs), straight {S.token.nunique() if len(S) else 0}. "
              "Delta = paired move toward the commanded branch (m); dpsi in deg; correct = fraction of (sample, command) plans nearer the "
              "commanded branch, on the fixed set where the branches are >= 1.5 m apart at the `none` plan point (none = chance); "
              "uptake = sum of the move toward the command / sum of 2 x branch separation on that set (1 = full switch); toward = "
@@ -235,7 +235,7 @@ def main():
                          f"{f(r.dx)} | {verdict(r) if tau == 4.0 and r.vbin == 'all' else ''} |")
         lines.append("")
     lines += ["## straight frames (lane keeping, 3 s)", "", "| family | n | d lateral error (m) | dx (m) |", "|:--|--:|:--|:--|"]
-    for _, r in E[E.fam.str.startswith("straight")].iterrows():
+    for _, r in E[E.fam.str.startswith("straight")].iterrows() if len(S) else []:
         lines.append(f"| {r.fam} | {r.n} | {f(r.dlat)} [{f(r.dlat_lo)}, {f(r.dlat_hi)}] | {f(r.dx)} |")
     (out / f"{a.domain}_effects.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
