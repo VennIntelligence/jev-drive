@@ -325,7 +325,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         desire = self.route.desire() if self.cfg.get("desire", True) else Z.DESIRE_NONE
         intent = self.route_intent() if A["intent"] == "route" else 0
         meta = {"cmd": "plan", "seed": 0, "dump": "", "speed": speed, "t": t_frame, "desire": desire,
-                "twin": bool(A["twin"]), "intent": intent}
+                "twin": bool(A["twin"]), "intent": intent, "yaw": float(now_yaw)}   # yaw: the server's selector (OP_SEL), unused otherwise
         wire.send(self.sock, meta, dict(cams))
         info, out = wire.recv(self.sock)
         self.op_out = out                                    # the latest openpilot heads (vmerge reads its trigger / lead heads)
@@ -502,6 +502,8 @@ class OpArbAgent(Z.ZeroShotAgent):
         if A["twin"]:
             tw = Z.resample(out["t"], rigs.openpilot_plan_to_rig(out["twin_pos"], out["twin_yaw"], self.op_mount), TIMES)
             rec.update(tw_xy=r3(tw[[3, 7, 11, 19]]), tw_dp=r3(np.asarray(out["twin_desire_pred"])[:, :3]))
+        if "sel" in info:                                    # server-side selector (op_arb_server.py OP_SEL)
+            rec["sel"] = {k: info[k] for k in info if k.startswith("sel")}
         rec["ctx"] = self._ctx()
         if self.pc is not None:
             rec["pc"] = {k: v for k, v in self.pc.meta.items() if k not in ("junctions", "obstacles")}
