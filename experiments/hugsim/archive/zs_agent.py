@@ -27,7 +27,11 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      step 0, skipped when the history holds < 0.05 deg of yaw; derot_rotate false replays the same
                      frames unrotated (control); derot_sel r (> 0): selector (skill_pack sel-rot0-r0.6) - the main
                      session steps normally every step and the replay runs on a second session; the replayed plan is
-                     used only if its summed 0-4 s lateral plan std < r x the normal plan's (server reply lat_std4)
+                     used only if its summed 0-4 s lateral plan std < r x the normal plan's (server reply lat_std4);
+                     derot_prev_desire true: the replay starts from the desire of the step before the window (no spurious
+                     rising-edge pulse); with derot_sel > 0 and derot_rotate false the native plan is always kept and the
+                     max |replay - native| plan position (m) is logged as derot.dpos (window control,
+                     experiments/hugsim/results/sel3_window_check.md)
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
@@ -138,6 +142,8 @@ class Agent:
         below, ctx = float(self.opts.get("derot_below", 0)), int(self.opts.get("derot_ctx", 25))
         if below > 0:
             self.buf.append((self.step, {c: obs["rgb"][c] for c in self.op.cams}, img2, desire))
+            if len(self.buf) > ctx + 1:
+                self.buf_prev_desire = self.buf[0][3]          # desire of the step just before the window (no replay-start pulse)
             self.buf = self.buf[-(ctx + 1):]
         hist_yaw = max(abs(np.degrees(self.hist.th[j] - self.hist.th[-1])) for j, *_ in self.buf) if self.buf else 0.0
         # no rotation in the history (< 0.05 deg, rounds to the unrotated frames): the replay would feed the same frames,
@@ -160,13 +166,19 @@ class Agent:
                 yaws.append(yaw)
                 if rot and round(yaw, 1) != 0.0:
                     im = self.op.pack(rgb, self.op.rot_index(yaw))
-                r, out = self.call(dict(meta, desire=des, reps=warm if i == 0 else per_ctx), {"img2": im}, sk)
+                mi = dict(meta, desire=des, reps=warm if i == 0 else per_ctx)
+                if i == 0 and self.opts.get("derot_prev_desire", False):
+                    mi["prev_desire"] = int(getattr(self, "buf_prev_desire", 0))
+                r, out = self.call(mi, {"img2": im}, sk)
                 ms += r.get("infer_ms") or 0.0
             r["infer_ms"] = ms
             rec["derot"] = {"n": len(self.buf), "rotate": bool(rot), "max_abs_yaw": round(float(np.max(np.abs(yaws))), 2)}
             if sel > 0:
                 use = r["lat_std4"] < sel * r0["lat_std4"]
                 rec["derot"].update(std_rule=round(r["lat_std4"], 3), std_base=round(r0["lat_std4"], 3), used=bool(use))
+                if not rot:                              # window check (sel3_window_check.md): replay vs native, native plan kept
+                    rec["derot"]["dpos"] = round(float(np.abs(out["pos"][:, :2] - out0["pos"][:, :2]).max()), 4)
+                    use = False
                 if not use:
                     r, out = r0, out0
         elif sel > 0:

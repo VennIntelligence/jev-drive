@@ -97,6 +97,11 @@ class Openpilot(S.OpenpilotModel):
         desire[int(meta.get("desire", 0))] = 1
         traffic = tuple(meta.get("traffic", (1, 0)))
         reps = int(meta.get("reps", 1))
+        if "prev_desire" in meta and not self.context_rate:    # replay start: the desire of the step before the window
+            pd = np.zeros(8, np.float32)
+            pd[int(meta["prev_desire"])] = 1
+            pd[0] = 0
+            state["model"].prev_desire = pd
         t1 = time.perf_counter()
         if not self.context_rate:
             m = state["model"]
