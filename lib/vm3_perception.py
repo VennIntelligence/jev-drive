@@ -14,6 +14,7 @@ route lateral (b2d_privileged_geometry.project) = RIGHT positive, which is also 
 """
 import json
 import math
+import os
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +32,7 @@ RADARS = {"RADAR_F": dict(x=2.45, y=0.0, z=0.7, yaw=0.0, hfov=150.0, vfov=6.0), 
           "RADAR_RR": dict(x=-2.4, y=0.8, z=0.7, yaw=150.0, hfov=120.0, vfov=6.0),
           "RADAR_B": dict(x=-2.45, y=0.0, z=0.8, yaw=180.0, hfov=30.0, vfov=4.0)}
 # registered before the first run (plan 2026-10-04-vmerge3.md); not tuned on the 19 evaluation routes
+_T = float(os.environ.get("VM3_T", "3.0"))   # follower headway T of the start rule (d = T + T x v); the gap sweep sets it per arm (plan vmerge3 addendum)
 P = dict(lane_x=(8.0, 30.0),       # openpilot lane lines / edges read as the median over this range ahead of the camera
          room_min=2.0,             # an adjacent lane needs this much (openpilot scale) between the ego lane line and the road edge on that side
          far_p=0.1,                # ... and openpilot's far lane line on that side present with at least this probability
@@ -43,7 +45,7 @@ P = dict(lane_x=(8.0, 30.0),       # openpilot lane lines / edges read as the me
          lead_y=1.5,               # a lead counts as in the ego lane within this lateral distance
          band=1.6,                 # half width of the target-lane band for radar targets
          moving_v=1.0,             # a radar return moves when its ego-motion-compensated radial speed exceeds this
-         t_start=3.0, d_start=3.0,  # start of the pull-out: no closing vehicle behind within d_start + v x t_start (m), v = the highest
+         t_start=_T, d_start=_T,  # start of the pull-out: no closing vehicle behind within d_start + v x t_start (m), v = the highest
                                     # closing speed seen in the band within 1 s (radial speeds under-read off-axis targets)
          open_s=0.5,               # ... and that has held for this long (one open snapshot is not a gap)
          t_abort=0.8, d_abort=1.5,  # after the start, before the commit: a vehicle within d_abort + closing x t_abort is logged (late_threat)
