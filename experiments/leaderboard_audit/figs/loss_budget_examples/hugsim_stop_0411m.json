@@ -1,0 +1,47 @@
+{
+ "stem": "hugsim_stop_0411m",
+ "scenario": "scene-0411-medium-00",
+ "cls": "stopped / max_steps",
+ "frames": 124,
+ "still_step": 23,
+ "gif_scale": 0.36,
+ "timeline_ff": 40,
+ "arms": [
+  {
+   "label": "shipped cinque-fixed",
+   "run_dir": "/root/autodl-tmp/ujs/runs/hugsim-exam/scored-op/cinque-fixed/zs/scene-0411_medium_00",
+   "end": "max_steps",
+   "steps": 400,
+   "hd": 0.07348784624081402,
+   "rc": 0.07348784624081402,
+   "stop_step": 23,
+   "cam_h": 1.4801653630391234,
+   "ahead_end": [
+    20.7,
+    -0.5
+   ],
+   "ahead_stop": [
+    21.5,
+    -0.3
+   ]
+  },
+  {
+   "label": "best it_dw3 + sel3",
+   "run_dir": "/root/autodl-tmp/ujs/runs/op_adapt_H/hugsim/it_dw3-s0_sel3/cinque-fixed-Hit_dw3-s0_sel3/zs/scene-0411_medium_00",
+   "end": "fg_collision",
+   "steps": 168,
+   "hd": 0.24503960242472714,
+   "rc": 0.2575215124678098,
+   "stop_step": 29,
+   "cam_h": 1.4801653630391234,
+   "ahead_end": [
+    4.3,
+    0.6
+   ],
+   "ahead_stop": [
+    14.1,
+    -0.4
+   ]
+  }
+ ]
+}

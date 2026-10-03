@@ -3,7 +3,7 @@
 2026-10-04. **Every number below is an oracle ceiling, not an achievable gain.** A class is fixed by substituting the reference, a better arm, or a
 term value of 1 on its own failing cases, then re-scoring with the board's scorer; nothing is predicted and no new driving was run. Points are the board's own scale
 (navtest PDMS, navhard two-stage EPDMS, HUGSIM mean HD x 100, B2D mean DS); they are not comparable across boards. Reference driver = shipped Cinque; "current best" = it_dw3-s0 +
-selector (decision 101) on navtest / navhard / HUGSIM, and `vmerge2` on B2D (the adapted model is not in B2D yet). Code: `scripts/loss_budget_*.py`.
+selector (decision 101) on navtest / navhard / HUGSIM, and `vmerge2` on B2D (the adapted model is not in B2D yet). Code: `scripts/loss_budget_*.py`. Typical examples of each class as clips / stills, with the model's own input view: [loss_budget_examples.md](loss_budget_examples.md).
 "Recovered so far" = reference-driver ceiling minus best-driver ceiling per class (how much of that class's headroom the best driver already removed); it is a
 difference of two ceilings and the classes overlap, so it does not add up to the measured total gain.
 
