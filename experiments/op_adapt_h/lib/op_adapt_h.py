@@ -386,7 +386,7 @@ def bank_row(S: Samples, B: Bank, i: int, j: int, role: str) -> dict:
     else:
         tgt = L.human_targets(t["fut20"][i][None])[0]
     return {"trunk": np.asarray(B.T[j]), "valid": sv, "tc": t["tc"][i], "role": ROLES[role], "hum": tgt,
-            "cam": np.float32(t["cam"][i][0]), "tgt": S.tea["out"][i], "tmu": S.tea["mu"][i], "dom": DOMS.index(S.dom), "kind": kind}
+            "cam": np.float32(t["cam"][i][0]), "tgt": S.tea["out"][i], "tmu": S.tea["mu"][i], "dom": (DOMS + LAUNCH_DOMS).index(S.dom), "kind": kind}
 
 
 def collate(rows: list[dict]) -> dict:
