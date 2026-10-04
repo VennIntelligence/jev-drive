@@ -95,7 +95,7 @@ def cmd_select(a):
             fut = slice(i, i + C.K + 1)
             rows.append(dict(seg=f.stem, i=i, v=float(v[i]), dv=float(v[i + 5] - v[i]), w=float(w[i]), ey_max=float(np.abs(ey[fut]).max()),
                              w_abs=float(np.abs(np.diff(p[fut, 2])).max() / C.DT * 57.3), vmax=float(v[fut].max())))
-    cats = {"launch": lambda r: r["v"] < 3.0 and r["dv"] > 1.5,
+    cats = {"launch": lambda r: r["v"] < 3.5 and r["dv"] > 0.6,
             "cruise": lambda r: r["v"] > 8 and r["w_abs"] < 1.5 and r["ey_max"] < 0.15,
             "curve": lambda r: r["v"] > 3 and abs(r["w"]) > 5,
             "natdev": lambda r: r["v"] > 4 and abs(r["w"]) < 3 and r["ey_max"] > 0.25}
