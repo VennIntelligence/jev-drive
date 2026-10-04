@@ -69,7 +69,7 @@ def main():
                 if c == 0:
                     a_.set_ylabel(f"{an['cat']} {name}\nv={v[i]:.1f} m/s", fontsize=7)
     fig.tight_layout(pad=0.3)
-    fig.savefig(out, dpi=110)
+    fig.savefig(out, dpi=72)
     print("saved", out)
 
 
