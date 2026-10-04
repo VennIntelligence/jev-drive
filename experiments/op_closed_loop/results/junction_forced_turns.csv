@@ -1,0 +1,198 @@
+route,town,mi,angle,rmin,g0,g1,kind,n_exits,exit_angles,taken_deg,straight,forced,single_exit,xml
+34183,Town13,0,-89.3,13.4,29.0,55.0,junction,3,-90 0 88,-90.1,1,0,0,bench2drive_0.0.4_val.xml
+26872,Town11,0,-61.0,12.6,31.5,47.5,junction,3,-64 7 116,-63.8,1,0,0,bench2drive_0.0.4_val.xml
+11658,Town12,0,-89.6,8.5,25.0,44.5,junction,3,-90 0 90,-90.2,1,0,0,bench2drive_0.0.4_val.xml
+10364,Town12,0,-75.5,8.1,27.5,42.0,junction,3,-88 -20 92,-87.5,1,0,0,bench2drive_0.0.4_val.xml
+16390,Town12,0,89.6,6.4,7.0,20.5,junction,3,-90 0 90,90.0,1,0,0,bench2drive_0.0.4_val.xml
+24416,Town03,0,51.1,36.6,2.5,34.5,curve,1,55,55.5,0,1,1,bench2drive_0.0.4_val.xml
+7616,Town12,0,-89.7,6.1,30.5,44.0,junction,3,-90 0 90,-90.0,1,0,0,bench2drive_0.0.4_val.xml
+11177,Town12,0,89.3,7.1,27.0,41.5,junction,3,-90 0 90,89.8,1,0,0,bench2drive_0.0.4_val.xml
+5423,Town12,0,89.7,6.2,26.5,39.5,junction,3,-90 0 90,90.2,1,0,0,bench2drive_0.0.4_val.xml
+24944,Town02,0,-89.0,10.7,13.5,34.5,curve,1,-90,-89.9,0,1,1,bench2drive_0.0.4_val.xml
+24944,Town02,1,-89.4,8.7,80.5,97.5,junction,2,-90 0,-90.0,1,0,0,bench2drive_0.0.4_val.xml
+4721,Town12,0,-89.0,9.4,26.0,43.5,junction,3,-90 0 90,-89.7,1,0,0,bench2drive_0.0.4_val.xml
+13674,Town12,0,-89.5,8.5,27.5,46.5,junction,3,-90 0 90,-90.4,1,0,0,bench2drive_0.0.4_val.xml
+36360,Town12,0,-89.8,12.7,27.0,51.0,junction,2,-89 0,-89.4,1,0,0,bench2drive_0.0.4_val.xml
+4104,Town12,0,-89.6,8.5,28.0,47.0,junction,3,-91 0 89,-90.5,1,0,0,bench2drive_0.0.4_val.xml
+27392,Town11,0,91.0,6.6,28.0,42.0,junction,3,-87 -1 93,92.6,1,0,0,bench2drive_0.0.4_val.xml
+9196,Town12,0,-89.4,8.1,24.5,43.0,junction,3,-90 0 90,-90.1,1,0,0,bench2drive_0.0.4_val.xml
+10255,Town12,0,89.5,6.4,27.5,41.0,junction,3,-90 0 90,89.9,1,0,0,bench2drive_0.0.4_val.xml
+34391,Town13,0,-88.8,11.6,27.5,48.0,junction,3,-89 0 91,-89.5,1,0,0,bench2drive_0.0.4_val.xml
+16529,Town12,0,-89.4,9.0,7.0,24.0,junction,3,-90 0 90,-90.0,1,0,0,bench2drive_0.0.4_val.xml
+27005,Town03,0,-90.0,11.7,30.0,50.5,junction,3,-91 -1 89,-90.8,1,0,0,bench2drive_0.0.4_val.xml
+6999,Town12,0,-89.5,6.1,30.5,43.5,junction,3,-90 0 90,-90.0,1,0,0,bench2drive_0.0.4_val.xml
+12791,Town12,0,-89.1,8.1,29.0,47.5,junction,3,-90 0 90,-89.9,1,0,0,bench2drive_0.0.4_val.xml
+334,Town07,0,-88.0,7.4,37.0,53.0,junction,3,-86 -3 87,-86.1,1,0,0,bench2drive_0.0.4_val.xml
+7841,Town12,0,90.7,8.4,29.0,44.5,junction,3,-90 0 90,90.3,1,0,0,bench2drive_0.0.4_val.xml
+12933,Town12,0,-89.1,9.6,25.5,46.0,junction,3,-90 0 90,-90.1,1,0,0,bench2drive_0.0.4_val.xml
+16508,Town12,0,89.8,6.4,7.5,21.5,junction,3,-90 0 90,90.2,1,0,0,bench2drive_0.0.4_val.xml
+35243,Town13,0,-94.5,11.6,29.0,50.5,junction,3,-94 5 86,-93.5,1,0,0,bench2drive_0.0.4_val.xml
+3740,Town13,0,89.5,5.8,32.0,47.0,junction,3,-90 0 90,90.1,1,0,0,bench2drive_0.0.4_val.xml
+35418,Town12,0,-89.1,12.7,26.5,50.0,junction,2,-90 -1,-90.1,1,0,0,bench2drive_0.0.4_val.xml
+8859,Town12,0,-89.0,11.1,26.0,47.0,junction,3,-90 0 90,-89.9,1,0,0,bench2drive_0.0.4_val.xml
+15102,Town12,0,-80.4,11.5,9.5,32.0,junction,3,-81 9 99,-81.4,1,0,0,bench2drive_0.0.4_val.xml
+35330,Town13,0,-88.5,11.9,29.0,50.0,junction,3,-89 0 91,-89.3,1,0,0,bench2drive_0.0.4_val.xml
+11333,Town12,0,-89.3,8.4,27.0,46.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive_0.0.4_val.xml
+16486,Town12,0,89.5,6.2,10.0,23.5,junction,3,-90 0 90,89.9,1,0,0,bench2drive_0.0.4_val.xml
+7157,Town12,0,-89.2,9.3,26.0,43.5,junction,3,-90 0 90,-89.8,1,0,0,bench2drive_0.0.4_val.xml
+15612,Town12,0,89.6,6.4,7.5,21.0,junction,3,-90 0 90,90.1,1,0,0,bench2drive_0.0.4_val.xml
+25051,Town01,0,89.6,6.2,29.5,43.0,junction,2,-90 90,89.9,0,1,0,bench2drive_0.0.4_val.xml
+13231,Town12,0,90.7,8.6,28.5,44.5,junction,3,-90 0 90,89.7,1,0,0,bench2drive_0.0.4_val.xml
+27870,Town04,0,90.1,4.4,11.5,22.5,junction,3,-90 0 90,86.8,1,0,0,bench2drive_0.0.4_val.xml
+27870,Town04,1,-84.4,12.3,36.5,60.5,curve,1,0,0.3,1,0,1,bench2drive_0.0.4_val.xml
+28180,Town11,0,87.0,4.7,78.5,90.0,junction,2,-93 87,87.2,0,1,0,bench2drive_0.0.4_val.xml
+26723,Town15,0,69.2,12.0,0.0,17.5,curve,1,77,76.7,0,1,1,bench2drive_0.0.4_val.xml
+26723,Town15,1,81.8,11.3,107.5,127.0,curve,1,82,87.3,0,1,1,bench2drive_0.0.4_val.xml
+9646,Town12,0,89.4,6.4,25.5,39.0,junction,3,-90 0 90,89.8,1,0,0,bench2drive_0.0.4_val.xml
+4183,Town12,0,-89.3,8.5,23.5,43.0,junction,3,-90 0 90,-89.9,1,0,0,bench2drive_0.0.4_val.xml
+24519,Town05,0,61.0,47.6,54.0,103.0,curve,1,71,72.1,0,1,1,bench2drive_0.0.4_val.xml
+6673,Town12,0,-89.0,8.3,28.5,48.5,junction,3,-90 0 90,-89.9,1,0,0,bench2drive_0.0.4_val.xml
+27043,Town15,0,92.8,7.2,28.5,43.5,junction,2,0 93,93.2,1,0,0,bench2drive_0.0.4_val.xml
+14955,Town12,0,-89.0,8.5,7.5,26.5,junction,3,-90 0 90,-89.8,1,0,0,bench2drive_0.0.4_val.xml
+11215,Town12,0,-89.4,9.0,27.5,44.5,junction,3,-90 0 90,-90.0,1,0,0,bench2drive_0.0.4_val.xml
+34436,Town13,0,-89.7,11.8,24.0,45.0,junction,3,-90 0 90,-90.4,1,0,0,bench2drive_0.0.4_val.xml
+9102,Town12,0,-89.1,11.1,25.5,46.5,junction,3,-90 0 90,-90.0,1,0,0,bench2drive_0.0.4_val.xml
+28147,Town10HD,0,-87.5,15.2,27.5,61.5,junction,3,-90 -90 -1,-90.3,1,0,0,bench2drive_0.0.4_val.xml
+15071,Town12,0,-89.1,11.1,8.5,30.5,junction,3,-90 0 90,-89.8,1,0,0,bench2drive_0.0.4_val.xml
+24948,Town07,0,89.0,5.2,26.5,39.0,junction,3,-87 6 90,90.2,1,0,0,bench2drive_0.0.4_val.xml
+17280,Town12,0,-88.9,11.1,8.0,29.0,junction,3,-90 0 90,-89.8,1,0,0,bench2drive_0.0.4_val.xml
+10791,Town12,0,89.9,5.9,30.5,45.5,junction,3,-89 0 91,90.6,1,0,0,bench2drive_0.0.4_val.xml
+4734,Town12,0,-88.7,8.6,28.5,47.5,junction,3,-89 0 91,-89.4,1,0,0,bench2drive_0.0.4_val.xml
+16502,Town12,0,-88.6,13.0,8.5,34.5,junction,3,-90 0 90,-89.9,1,0,0,bench2drive_0.0.4_val.xml
+9218,Town12,0,-89.6,11.1,27.5,49.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive_0.0.4_val.xml
+10552,Town12,0,-89.6,8.4,26.5,46.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive_0.0.4_val.xml
+34867,Town13,0,-89.3,11.8,27.5,48.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive_0.0.4_val.xml
+6951,Town12,0,-88.9,11.1,26.0,47.0,junction,3,-90 0 90,-89.8,1,0,0,bench2drive_0.0.4_val.xml
+26365,Town03,0,84.6,42.5,58.5,121.5,curve,1,88,90.6,0,1,1,bench2drive_0.0.4_val.xml
+27916,Town05,0,89.1,6.5,10.0,23.5,junction,2,0 88,86.1,1,0,0,bench2drive_0.0.4_val.xml
+16522,Town12,0,-86.8,17.1,9.0,37.5,junction,3,-88 -1 92,-87.7,1,0,0,bench2drive_0.0.4_val.xml
+25134,Town10HD,0,-89.1,13.3,83.5,110.0,junction,2,-90 -8,-90.2,1,0,0,bench2drive_0.0.4_val.xml
+7165,Town12,0,-89.5,11.1,25.5,47.0,junction,3,-90 0 90,-90.1,1,0,0,bench2drive_0.0.4_val.xml
+26990,Town03,0,-90.0,11.7,30.0,50.5,junction,3,-91 -1 89,-90.8,1,0,0,bench2drive_0.0.4_val.xml
+4027,Town12,0,-89.0,11.1,26.0,48.0,junction,2,-90 0,-89.7,1,0,0,bench2drive_0.0.4_val.xml
+15483,Town12,0,90.1,6.4,7.0,21.0,junction,3,-90 0 90,90.4,1,0,0,bench2drive_0.0.4_val.xml
+23469,Town12,0,81.3,49.2,33.0,101.0,curve,1,89,88.9,0,1,1,bench2drive_0.0.4_val.xml
+24758,Town07,0,-79.2,33.3,3.5,104.5,curve,1,-58,-61.9,0,1,1,bench2drive_0.0.4_val.xml
+24758,Town07,1,34.9,31.2,112.5,131.0,curve,1,10,9.5,1,0,1,bench2drive_0.0.4_val.xml
+4582,Town12,0,-88.7,8.1,28.0,48.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive_0.0.4_val.xml
+7230,Town12,0,-89.6,11.1,27.5,49.0,junction,3,-90 0 90,-90.3,1,0,0,bench2drive_0.0.4_val.xml
+35907,Town12,0,-89.1,12.7,24.5,48.0,junction,2,-90 -1,-90.1,1,0,0,bench2drive_0.0.4_val.xml
+7456,Town12,0,-89.1,11.1,25.5,46.5,junction,3,-90 0 90,-90.0,1,0,0,bench2drive_0.0.4_val.xml
+27787,Town11,0,91.0,6.6,8.0,22.0,junction,3,-89 -3 91,91.1,1,0,0,bench2drive_0.0.4_val.xml
+10089,Town12,0,89.7,6.4,27.0,40.5,junction,3,-90 0 90,90.2,1,0,0,bench2drive_0.0.4_val.xml
+9395,Town12,0,-88.9,6.2,28.5,42.0,junction,3,-91 0 91,-90.2,1,0,0,bench2drive_0.0.4_val.xml
+26153,Town15,0,36.6,41.0,29.5,54.5,curve,1,43,43.3,0,1,1,bench2drive_0.0.4_val.xml
+26153,Town15,1,-111.7,15.4,70.0,105.0,curve,1,-112,-99.4,0,1,1,bench2drive_0.0.4_val.xml
+27994,Town11,0,-101.3,7.0,81.0,96.5,junction,2,-102 78,-101.9,0,1,0,bench2drive_0.0.4_val.xml
+27297,Town11,0,87.7,6.6,24.5,38.0,junction,3,-107 -24 73,73.5,1,0,0,bench2drive_0.0.4_val.xml
+11738,Town12,0,-89.1,8.1,27.0,45.5,junction,3,-90 0 90,-89.9,1,0,0,bench2drive_0.0.4_val.xml
+16542,Town12,0,89.5,6.2,10.0,23.5,junction,3,-90 0 90,89.9,1,0,0,bench2drive_0.0.4_val.xml
+24906,Town03,0,62.0,30.1,8.5,41.0,curve,1,67,73.7,0,1,1,bench2drive_0.0.4_val.xml
+35623,Town12,0,-91.4,8.2,23.5,44.5,junction,2,-95 -5,-94.8,1,0,0,bench2drive_0.0.4_val.xml
+4621,Town12,0,-89.3,8.5,28.0,47.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive_0.0.4_val.xml
+10793,Town12,0,-89.1,8.3,28.5,48.5,junction,3,-90 0 90,-90.1,1,0,0,bench2drive_0.0.4_val.xml
+4619,Town12,0,-89.5,9.0,25.5,42.5,junction,3,-90 0 90,-90.1,1,0,0,bench2drive_0.0.4_val.xml
+28008,Town05,0,-52.9,33.7,2.5,34.0,curve,1,-57,-57.2,0,1,1,bench2drive_0.0.4_val.xml
+28008,Town05,1,-90.3,8.1,83.5,101.5,junction,2,-91 -1,-90.6,1,0,0,bench2drive_0.0.4_val.xml
+11010,Town12,0,-88.7,8.1,26.0,46.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive_0.0.4_val.xml
+10220,Town12,0,79.9,6.6,28.0,41.0,junction,3,-100 -9 80,80.4,1,0,0,bench2drive_0.0.4_val.xml
+2050,Town12,0,90.9,10.5,27.0,48.0,junction,3,-90 0 90,90.1,1,0,0,bench2drive220.xml
+2082,Town12,0,-89.3,10.7,28.5,51.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive220.xml
+2084,Town12,0,-90.1,6.1,30.5,44.0,junction,3,-90 0 90,-90.5,1,0,0,bench2drive220.xml
+2086,Town12,0,-91.0,6.3,31.0,44.5,junction,3,-103 -12 96,-101.8,1,0,0,bench2drive220.xml
+2091,Town12,0,-89.1,11.1,24.5,45.5,junction,3,-90 0 90,-90.0,1,0,0,bench2drive220.xml
+2115,Town12,0,91.4,8.6,26.0,42.0,junction,3,-90 0 90,90.3,1,0,0,bench2drive220.xml
+2127,Town12,0,-88.9,11.1,26.0,47.0,junction,3,-90 0 90,-89.8,1,0,0,bench2drive220.xml
+2129,Town12,0,-89.2,11.1,28.5,49.5,junction,3,-90 0 90,-90.1,1,0,0,bench2drive220.xml
+2143,Town12,0,-89.1,6.1,32.0,45.0,junction,3,-88 1 92,-88.5,1,0,0,bench2drive220.xml
+2144,Town12,0,-89.5,9.0,28.5,45.5,junction,3,-90 0 90,-90.1,1,0,0,bench2drive220.xml
+2164,Town12,0,-88.9,6.2,28.0,41.5,junction,3,-89 0 91,-89.3,1,0,0,bench2drive220.xml
+2201,Town12,0,-89.2,8.7,31.0,52.0,junction,3,-91 0 89,-90.5,1,0,0,bench2drive220.xml
+2204,Town12,0,89.7,8.4,27.5,42.5,junction,3,-90 0 76,74.9,1,0,0,bench2drive220.xml
+2215,Town12,0,89.4,6.4,26.5,40.0,junction,3,-90 0 90,89.9,1,0,0,bench2drive220.xml
+2373,Town12,0,-88.6,12.6,10.5,34.0,junction,2,-90 1,-89.6,1,0,0,bench2drive220.xml
+2390,Town12,0,89.6,10.7,11.5,32.5,junction,2,1 90,89.8,1,0,0,bench2drive220.xml
+2397,Town12,0,89.5,11.9,12.0,33.5,junction,2,0 90,90.1,1,0,0,bench2drive220.xml
+2403,Town12,0,88.5,12.9,11.5,34.0,junction,2,-7 89,89.7,1,0,0,bench2drive220.xml
+2416,Town12,0,-90.1,6.1,10.5,24.0,junction,3,-90 0 90,-90.5,1,0,0,bench2drive220.xml
+2881,Town12,0,-89.3,6.1,30.5,43.5,junction,3,-90 0 90,-89.8,1,0,0,bench2drive220.xml
+2903,Town12,0,89.6,10.9,29.5,50.5,junction,2,0 90,89.7,1,0,0,bench2drive220.xml
+2913,Town12,0,-89.6,11.1,25.5,47.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive220.xml
+2943,Town12,0,-89.5,9.0,26.5,43.5,junction,3,-90 0 90,-90.1,1,0,0,bench2drive220.xml
+2989,Town12,0,89.2,6.0,27.5,43.0,junction,3,-90 0 90,89.7,1,0,0,bench2drive220.xml
+3086,Town12,0,-88.7,10.6,32.0,54.5,junction,2,-90 0,-89.8,1,0,0,bench2drive220.xml
+3090,Town12,0,-89.2,9.3,30.5,52.0,junction,2,-90 0,-90.2,1,0,0,bench2drive220.xml
+3093,Town12,0,-89.7,12.7,31.5,55.5,junction,2,-90 0,-90.4,1,0,0,bench2drive220.xml
+3099,Town12,0,-88.6,8.1,30.5,51.0,junction,2,-90 0,-89.8,1,0,0,bench2drive220.xml
+3100,Town12,0,-88.2,8.1,30.0,50.0,junction,2,-90 0,-89.8,1,0,0,bench2drive220.xml
+3144,Town12,0,89.6,6.6,8.0,22.0,junction,3,-90 0 90,89.9,1,0,0,bench2drive220.xml
+3178,Town12,0,89.3,10.6,12.5,33.0,junction,2,0 90,89.6,1,0,0,bench2drive220.xml
+3184,Town12,0,-88.4,11.3,9.5,30.5,junction,3,-90 0 90,-90.2,1,0,0,bench2drive220.xml
+3189,Town12,0,-89.3,11.1,9.0,30.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive220.xml
+3666,Town13,0,87.5,9.3,28.5,45.5,junction,3,-95 0 88,88.2,1,0,0,bench2drive220.xml
+3670,Town13,0,90.0,8.7,24.0,41.0,junction,3,-90 0 90,90.3,1,0,0,bench2drive220.xml
+3676,Town13,0,89.3,6.3,28.0,41.5,junction,3,-90 0 90,89.7,1,0,0,bench2drive220.xml
+3697,Town13,0,90.2,8.7,28.0,44.5,junction,3,-89 0 91,90.8,1,0,0,bench2drive220.xml
+3708,Town13,0,89.6,6.3,23.5,37.0,junction,3,-90 0 90,90.0,1,0,0,bench2drive220.xml
+3712,Town13,0,-89.9,9.0,27.5,45.0,junction,3,-90 0 90,-90.3,1,0,0,bench2drive220.xml
+3717,Town13,0,-75.5,8.9,24.5,42.0,junction,3,-76 0 88,-76.3,1,0,0,bench2drive220.xml
+3731,Town13,0,-91.6,9.0,28.0,45.5,junction,3,-92 0 87,-91.9,1,0,0,bench2drive220.xml
+3737,Town13,0,85.9,6.3,29.0,42.5,junction,3,-89 -3 81,81.0,1,0,0,bench2drive220.xml
+3865,Town13,0,86.5,12.0,11.0,32.5,junction,3,-94 -1 86,85.8,1,0,0,bench2drive220.xml
+3869,Town13,0,-89.3,11.4,9.5,29.5,junction,3,-90 0 90,-90.1,1,0,0,bench2drive220.xml
+3876,Town13,0,88.8,5.9,9.5,24.5,junction,3,-89 0 89,89.4,1,0,0,bench2drive220.xml
+3890,Town13,0,91.2,10.9,11.0,32.5,junction,2,0 91,91.4,1,0,0,bench2drive220.xml
+3904,Town13,0,-89.8,9.0,9.0,26.0,junction,3,-90 0 90,-90.5,1,0,0,bench2drive220.xml
+3905,Town13,0,-88.1,11.7,10.0,30.0,junction,3,-89 0 91,-89.1,1,0,0,bench2drive220.xml
+3936,Town12,0,-88.9,8.4,29.0,49.0,junction,3,-90 0 90,-89.9,1,0,0,bench2drive220.xml
+4183,Town12,0,-89.3,8.5,23.5,43.0,junction,3,-90 0 90,-89.9,1,0,0,bench2drive220.xml
+4468,Town12,0,-89.5,9.3,29.5,47.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive220.xml
+4669,Town12,0,-89.3,11.1,26.0,48.0,junction,2,-90 0,-90.1,1,0,0,bench2drive220.xml
+4683,Town12,0,-88.5,8.7,27.0,46.0,junction,3,-89 0 91,-89.2,1,0,0,bench2drive220.xml
+4937,Town12,0,89.6,6.4,23.5,37.0,junction,3,-90 0 90,90.1,1,0,0,bench2drive220.xml
+10857,Town12,0,-89.2,9.3,28.0,45.5,junction,3,-90 0 90,-89.9,1,0,0,bench2drive220.xml
+11381,Town12,0,-89.3,9.3,26.0,43.5,junction,3,-90 0 90,-90.0,1,0,0,bench2drive220.xml
+14842,Town12,0,-89.5,8.2,7.5,26.5,junction,3,-90 0 90,-90.1,1,0,0,bench2drive220.xml
+14862,Town12,0,-89.5,10.9,9.0,31.0,junction,3,-90 -1 90,-90.3,1,0,0,bench2drive220.xml
+14909,Town12,0,-89.2,8.3,8.5,28.5,junction,3,-90 0 90,-90.2,1,0,0,bench2drive220.xml
+23700,Town12,0,54.0,45.1,16.0,58.0,junction,1,66,66.5,0,1,1,bench2drive220.xml
+24078,Town12,0,54.0,45.1,16.0,58.0,junction,1,66,66.5,0,1,1,bench2drive220.xml
+24206,Town03,0,-55.5,46.2,4.0,48.5,curve,1,-62,-62.3,0,1,1,bench2drive220.xml
+24240,Town10HD,0,-50.8,41.5,23.5,59.0,curve,1,-76,-67.9,0,1,1,bench2drive220.xml
+24330,Town10HD,0,-50.8,41.5,23.5,59.0,curve,1,-76,-67.9,0,1,1,bench2drive220.xml
+24340,Town10HD,0,-50.8,41.5,23.5,59.0,curve,1,-76,-67.9,0,1,1,bench2drive220.xml
+25358,Town06,0,162.5,40.3,14.0,134.5,curve,1,176,168.1,0,1,1,bench2drive220.xml
+25854,Town03,0,51.1,36.6,2.5,34.5,curve,1,55,55.5,0,1,1,bench2drive220.xml
+25857,Town05,0,70.8,47.1,49.0,105.5,curve,1,81,80.8,0,1,1,bench2drive220.xml
+25896,Town03,0,51.1,36.6,2.5,34.5,curve,1,55,55.5,0,1,1,bench2drive220.xml
+25968,Town07,0,88.8,3.7,12.0,22.0,junction,3,-91 0 89,89.0,1,0,0,bench2drive220.xml
+25975,Town07,0,87.6,6.0,8.0,23.0,junction,3,-96 -6 87,87.0,1,0,0,bench2drive220.xml
+26393,Town03,0,-66.7,40.1,86.0,132.0,curve,1,-76,-71.5,0,1,1,bench2drive220.xml
+26435,Town03,0,51.1,36.6,2.5,34.5,curve,1,55,55.5,0,1,1,bench2drive220.xml
+26456,Town03,0,51.1,36.6,2.5,34.5,curve,1,55,55.5,0,1,1,bench2drive220.xml
+26458,Town07,0,-89.5,7.7,28.5,44.0,junction,2,-90 0,-89.9,1,0,0,bench2drive220.xml
+26950,Town03,0,89.3,6.5,31.0,46.0,junction,2,0 90,89.8,1,0,0,bench2drive220.xml
+26956,Town05,0,88.9,6.2,29.5,43.5,junction,2,-2 88,88.3,1,0,0,bench2drive220.xml
+26966,Town05,0,89.8,7.2,29.0,46.0,junction,2,0 91,90.6,1,0,0,bench2drive220.xml
+26990,Town03,0,-90.0,11.7,30.0,50.5,junction,3,-91 -1 89,-90.8,1,0,0,bench2drive220.xml
+27018,Town15,0,86.3,7.3,29.5,44.0,junction,2,0 87,86.8,1,0,0,bench2drive220.xml
+27494,Town04,0,-86.4,9.6,31.5,49.5,junction,3,-68 20 112,-68.0,1,0,0,bench2drive220.xml
+27506,Town05,0,90.0,6.5,30.0,44.0,junction,2,-8 90,90.4,1,0,0,bench2drive220.xml
+27515,Town03,0,88.4,7.6,29.0,44.5,junction,2,17 106,106.2,1,0,0,bench2drive220.xml
+27529,Town04,0,90.0,6.9,24.0,38.0,junction,3,-89 0 91,90.6,1,0,0,bench2drive220.xml
+27532,Town11,0,88.3,6.6,26.0,40.0,junction,3,-94 -4 86,85.9,1,0,0,bench2drive220.xml
+27582,Town11,0,89.8,6.6,26.0,39.5,junction,3,-93 0 89,88.5,1,0,0,bench2drive220.xml
+28035,Town01,0,89.4,9.0,75.0,92.0,junction,2,0 90,90.0,1,0,0,bench2drive220.xml
+28048,Town02,0,-89.3,12.4,26.5,49.0,junction,2,-90 0,-90.0,1,0,0,bench2drive220.xml
+28087,Town04,0,-88.8,9.9,28.0,48.0,junction,3,-89 0 91,-89.4,1,0,0,bench2drive220.xml
+28093,Town04,0,-89.9,10.4,29.0,48.0,junction,3,-91 0 89,-90.6,1,0,0,bench2drive220.xml
+28099,Town04,0,-90.5,9.5,30.5,50.5,junction,3,-91 0 89,-91.2,1,0,0,bench2drive220.xml
+28111,Town04,0,36.7,24.8,67.0,83.5,curve,1,39,40.9,0,1,1,bench2drive220.xml
+28154,Town10HD,0,53.2,40.2,114.5,150.5,junction,1,57,57.6,0,1,1,bench2drive220.xml
+28198,Town15,0,-100.5,13.9,28.0,55.0,junction,2,-113 -26,-112.6,1,0,0,bench2drive220.xml
+28210,Town12,0,-89.0,11.1,26.0,47.0,junction,3,-90 0 90,-89.9,1,0,0,bench2drive220.xml
+28219,Town12,0,-89.3,11.1,28.0,49.0,junction,3,-90 0 90,-90.2,1,0,0,bench2drive220.xml
+28229,Town12,0,-86.8,17.1,27.0,55.5,junction,3,-88 -1 92,-87.7,1,0,0,bench2drive220.xml
+28241,Town12,0,-89.4,8.5,26.5,45.5,junction,3,-90 0 90,-90.2,1,0,0,bench2drive220.xml
+28243,Town12,0,-88.6,10.7,29.0,51.5,junction,2,-90 0,-89.7,1,0,0,bench2drive220.xml
+28330,Town12,0,-92.4,16.6,28.0,56.0,junction,3,-94 0 88,-93.6,1,0,0,bench2drive220.xml

@@ -23,7 +23,7 @@ AD=${OP_ARB_ARMS:-$O/arms}      # arm dirs; two cards can run with their own $O 
 mkdir -p "$O/srv" "$O/cfg" "$AD"
 export B2D_PIDS_WAIT=${B2D_PIDS_WAIT:-17000} B2D_SENSOR_TICK=1
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMBA_NUM_THREADS=1
-XML=$DATA_DIR/third_party/Bench2Drive/leaderboard/data/bench2drive_0.0.4_val.xml
+XML=${B2D_XML:-$DATA_DIR/third_party/Bench2Drive/leaderboard/data/bench2drive_0.0.4_val.xml}
 P7=$REPO/experiments/b2d_tfv6/results/tfv6-controller/controller-eval/P7.json
 PY_CARLA=$DATA_DIR/envs/carla/bin/python PY_OP=$DATA_DIR/envs/openpilot/bin/python
 SOCK=$O/srv/op.sock

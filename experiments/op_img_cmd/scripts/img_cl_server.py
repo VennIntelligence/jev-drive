@@ -24,17 +24,18 @@ class ImgArbModel(S.ArbModel):
         if c:
             d = np.nan if c[1] is None else float(c[1])
             prep = dict(prep, img2=O.draw_sky(np.asarray(prep["img2"]), str(c[0]), d, (0.0, 0.0, 0.0)))
-            self.plan_dump(prep["img2"], c)
+            self.plan_dump(prep["img2"], c, meta.get("t"))
         return super().plan(state, meta, prep)
 
     _n = 0
 
-    def plan_dump(self, img2, c):
-        """IMG_CL_DUMP=<dir>: every 200th overlaid request as a png (both views, RGB from YUV) to check the drawing."""
+    def plan_dump(self, img2, c, t=None):
+        """IMG_CL_DUMP=<dir>: every IMG_CL_DUMP_EVERY-th (default 200) overlaid request as a png (both views, RGB from YUV) to check the drawing;
+        the file name carries the sim time t of the frame set, so a clip can pair it with the chase camera."""
         import os
         d = os.environ.get("IMG_CL_DUMP", "")
         ImgArbModel._n += 1
-        if not d or ImgArbModel._n % 200:
+        if not d or ImgArbModel._n % int(os.environ.get("IMG_CL_DUMP_EVERY", "200")):
             return
         from PIL import Image
         from jevdrive import op_interp as I
@@ -44,7 +45,7 @@ class ImgArbModel(S.ArbModel):
             U, V = (np.repeat(np.repeat(z, 2, 0), 2, 1) - 128 for z in (U, V))
             return np.clip(np.stack([Y + 1.402 * V, Y - 0.344 * U - 0.714 * V, Y + 1.772 * U], -1), 0, 255).astype(np.uint8)
         os.makedirs(d, exist_ok=True)
-        Image.fromarray(np.concatenate([rgb(img2[0]), rgb(img2[1])], 0)).save(f"{d}/{ImgArbModel._n:07d}_{c[0]}_{c[1]}.png")
+        Image.fromarray(np.concatenate([rgb(img2[0]), rgb(img2[1])], 0)).save(f"{d}/{ImgArbModel._n:07d}_t{0.0 if t is None else float(t):09.3f}_{c[0]}_{c[1]}.png")
 
 if __name__ == "__main__":
     S._patch_step()
