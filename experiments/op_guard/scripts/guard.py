@@ -174,6 +174,7 @@ def main():
                 print("shipped reference run reported a non-pass; continuing")
     t_start = time.time()
     log = out / "logs" / "guard.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
     lock = threading.Lock()
 
     def say(msg):
