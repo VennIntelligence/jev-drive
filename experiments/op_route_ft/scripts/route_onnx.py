@@ -16,6 +16,9 @@ fp32}, "adapter": None}, "cfg": ...}) plus its `adapter.npz` (lib/route_adapter.
   ref    (op-train env)    route_onnx.py ref --ckpt CKPT --adapter A.npz --out ref.npz     port (LModel + torch RouteAdapter) on the WOD
                                                                    reference frame streams, route command cycled per 3 frames
   check  (openpilot env)   route_onnx.py check --onnx X.onnx --ref ref.npz                onnxruntime + NumpyAdapter vs the port
+  serve  (openpilot env)   route_onnx.py serve --onnx X.onnx      the closed-loop server class in process (op_arb_server.ArbModel, as op_arb.sh
+                                                                   starts it): the same camera frames with no / straight / left / right route
+                                                                   requests -> features, desired curvature and plan y at 3 s per request
 """
 import argparse
 import shutil
@@ -189,6 +192,29 @@ def check(a):
     return rows
 
 
+def serve(a):
+    sys.path.insert(0, str(REPO / "experiments/op_closed_loop/archive"))
+    import op_arb_server as S
+    S._patch_step()
+    ad = adapter_path(a.onnx)
+    pol = S.ArbModel(argparse.Namespace(model="cinque", backend=a.backend, onnx=str(a.onnx), pool=1, no_twin=True))
+    w, h = S.ZP.rigs.OP_CAMERA_WH
+    rng = np.random.default_rng(0)
+    base = rng.integers(0, 255, (h, w, 4), np.uint8)
+    for name, poly, mask in check_routes():
+        st = pol.new_state({})
+        for i in range(60):                                  # 3 s at 20 Hz on slowly changing frames
+            img = {"OP_ROAD": np.roll(base, i, 0), "OP_WIDE": np.roll(base, i, 1)}
+            meta = {"cmd": "plan", "desire": 0, "speed": 8.0, "t": 0.05 * i}
+            if poly is not None and ad is not None:
+                meta.update(route_adapter=str(ad), route_poly=poly.ravel().tolist(), route_mask=mask.astype(int).tolist())
+            info, out = pol.plan(st, meta, pol.prepare(meta, img))
+        pol.release(st)
+        print("%-9s adapter %-5s f %s | curvature %+.5f | plan y@3s %+.3f m" % (
+            name, "on" if "ra_f" in info else "off", np.round(info.get("ra_f", [])[:6], 3).tolist(), info["curvature"],
+            float(np.interp(3.0, pol.t_idxs, out["pos"][:, 1]))))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -207,5 +233,8 @@ if __name__ == "__main__":
     c.add_argument("--onnx", required=True)
     c.add_argument("--ref", required=True)
     c.add_argument("--backend", default="cuda-iob")
+    v = sp.add_parser("serve")
+    v.add_argument("--onnx", required=True)
+    v.add_argument("--backend", default="cuda-iob")
     a = ap.parse_args()
-    {"build": build, "synth": synth, "ref": ref, "check": check}[a.cmd](a)
+    {"build": build, "synth": synth, "ref": ref, "check": check, "serve": serve}[a.cmd](a)
