@@ -1,0 +1,167 @@
+{
+ "line": "navhard",
+ "candidate": "rc-all-s0",
+ "mode": "subset",
+ "status": "ok",
+ "runtime_s": 691.0,
+ "rows": [
+  {
+   "id": "navhard",
+   "metric": "EPDMS two-stage (5912 tokens)",
+   "value": 35.23279032564046,
+   "ref": 33.33074231183842,
+   "delta": 1.9020480138020375,
+   "ci": [
+    -0.4957506492659122,
+    4.29085796972222
+   ],
+   "rule": "no drop",
+   "pass": true,
+   "note": "devkit harness (official aggregation; no official CSV in subset mode); harness - official combined: shipped -0.0000; CI paired over 225 mapping groups",
+   "harness_delta": 1.9020480138020377
+  },
+  {
+   "id": "navhard",
+   "metric": "EPDMS stage 1",
+   "value": 71.74784170114724,
+   "ref": 71.70437136063057,
+   "delta": 0.043470340516662986,
+   "ci": [
+    -1.9249698671668811,
+    2.0203449983159545
+   ],
+   "rule": "",
+   "pass": null,
+   "note": "diagnostic (no rule); CI over mapping groups",
+   "harness_delta": 0.043470340516678904
+  },
+  {
+   "id": "navhard",
+   "metric": "EPDMS stage 2",
+   "value": 48.747949592486684,
+   "ref": 46.89721982971663,
+   "delta": 1.850729762770051,
+   "ci": [
+    -0.8783456838416683,
+    4.565930282005968
+   ],
+   "rule": "",
+   "pass": null,
+   "note": "diagnostic (no rule); CI over mapping groups",
+   "harness_delta": 1.8507297627700443
+  },
+  {
+   "id": "navhard",
+   "metric": "EPDMS early-turn set (stages pooled)",
+   "value": 43.24145772941505,
+   "ref": 43.88838567860082,
+   "delta": -0.6469279491857662,
+   "ci": [
+    -1.5745496705838264,
+    0.28029140097719085
+   ],
+   "rule": "no drop",
+   "pass": false,
+   "note": "3852 tokens, PDM ref heading change >= 5 deg in 2 s (decision 110); per-token score, CI clustered by 220 mapping groups",
+   "n": 3852
+  },
+  {
+   "id": "navhard",
+   "metric": "EPDMS early-turn stage 1",
+   "value": 66.8186408673347,
+   "ref": 66.7236849041299,
+   "delta": 0.09495596320479649,
+   "ci": [
+    -3.2307711365058784,
+    3.3715183931360695
+   ],
+   "rule": "",
+   "pass": null,
+   "note": "231 tokens, PDM ref heading change >= 5 deg in 2 s (decision 110); per-token score, CI clustered by 128 mapping groups; diagnostic (no rule)",
+   "n": 231
+  },
+  {
+   "id": "navhard",
+   "metric": "EPDMS early-turn stage 2",
+   "value": 41.73736236767536,
+   "ref": 42.431618453774185,
+   "delta": -0.6942560860988252,
+   "ci": [
+    -1.664279586276695,
+    0.251848959014105
+   ],
+   "rule": "",
+   "pass": null,
+   "note": "3621 tokens, PDM ref heading change >= 5 deg in 2 s (decision 110); per-token score, CI clustered by 219 mapping groups; diagnostic (no rule)",
+   "n": 3621
+  }
+ ],
+ "provenance": {
+  "shipped": {
+   "plans": {
+    "source": "rollout",
+    "procs": 4,
+    "gpu": 2,
+    "ms_per_scene": 407.6871075758218,
+    "plan": "/root/autodl-tmp/ujs/runs/op_lb/g_navhard/plans/gimm@cinque.npz",
+    "n": 5912,
+    "seconds": 655.5,
+    "onnx": null,
+    "t": "2026-10-05 01:26:43",
+    "hit": true
+   },
+   "harness": {
+    "poses": "/root/autodl-tmp/ujs/runs/op_lb/g_navhard/preds/gimm-cinque__base.npz",
+    "combined": 33.33074231183842,
+    "stage1": 71.70437136063057,
+    "stage2": 46.89721982971663,
+    "n_tokens": 5912,
+    "n_groups": 225,
+    "n_ungrouped": 0,
+    "score_s": 212.1,
+    "procs": 25,
+    "seconds": 229.9,
+    "hit": true
+   },
+   "official": {
+    "csv": "/root/autodl-tmp/ujs/runs/navsim/eval/v2_navhard_two_stage_opg_g_navhard_gimm-cinque__base/2026.10.05.02.08.22/2026.10.05.02.20.02.csv",
+    "hit": true,
+    "seconds": null
+   },
+   "work": "/root/autodl-tmp/ujs/runs/op_guard/shipped/nav/navhard"
+  },
+  "rc-all-s0": {
+   "plans": {
+    "source": "rollout",
+    "procs": 4,
+    "gpu": 0,
+    "ms_per_scene": 279.8462640375369,
+    "plan": "/root/autodl-tmp/ujs/runs/op_lb/g_navhard/plans/gimm@cinque_Orc-all-s0.npz",
+    "n": 5912,
+    "seconds": 458.8,
+    "onnx": {
+     "path": "/root/autodl-tmp/ujs/runs/op_route_ft/onnx/rc-all-s0.onnx",
+     "size": 766355143,
+     "sha256": "8d74c5e5e5fa01eb7a435abd81e3e1916462c89b079554432fb5f1b3f29e42d7"
+    },
+    "t": "2026-10-05 04:05:24",
+    "hit": false
+   },
+   "harness": {
+    "poses": "/root/autodl-tmp/ujs/runs/op_lb/g_navhard/preds/gimm-cinque_Orc-all-s0__base.npz",
+    "combined": 35.23279032564046,
+    "stage1": 71.74784170114724,
+    "stage2": 48.747949592486684,
+    "n_tokens": 5912,
+    "n_groups": 225,
+    "n_ungrouped": 0,
+    "score_s": 206.9,
+    "procs": 25,
+    "seconds": 223.1,
+    "hit": false
+   },
+   "official": null,
+   "work": "/root/autodl-tmp/ujs/runs/op_guard/rc-all-s0/nav/navhard"
+  }
+ }
+}

@@ -1,0 +1,63 @@
+{
+ "line": "wod",
+ "candidate": "rc-bear-s0",
+ "mode": "subset",
+ "status": "ok",
+ "runtime_s": 386.8,
+ "rows": [
+  {
+   "id": "wod.rfs",
+   "metric": "RFS, 479 rater frames (serving ONNX)",
+   "value": 8.069539034326777,
+   "ref": 8.004717366024249,
+   "delta": 0.06482166830252822,
+   "ci": [
+    -0.004359530356148333,
+    0.13398724536962117
+   ],
+   "rule": "RFS no drop (paired 95% upper bound >= 0)",
+   "pass": true,
+   "note": "segment bootstrap B=2000; shipped vs itself = 0"
+  },
+  {
+   "id": "wod.false_start",
+   "metric": "false-start rate, WOD val stay rows (port, plan >= 3 m at 4 s)",
+   "value": 0.043002915451895045,
+   "ref": 0.0413022351797862,
+   "delta": 0.0017006802721088454,
+   "ci": [
+    -0.0019098137466155524,
+    0.004573242540130649
+   ],
+   "rule": "false start <= shipped + 2 pp",
+   "pass": true,
+   "note": "n 4116 rows / 144 segments; op_adapt_L/H metric and rows"
+  },
+  {
+   "id": "wod.false_start_rater",
+   "metric": "false-start rate, the stay frames among the rater frames (serving)",
+   "value": 0.09090909090909091,
+   "ref": 0.045454545454545456,
+   "delta": 0.045454545454545456,
+   "ci": null,
+   "rule": "info (n too small for a 2 pp line)",
+   "pass": null,
+   "note": "n 22 frames (1 frame = 4.5 pp)"
+  }
+ ],
+ "provenance": {
+  "cache": [
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/wod_rater.npz (this line's own earlier result)",
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/wod_stay.npz (this line's own earlier result)"
+  ],
+  "interface": "WOD spec: true roof height 1.81 m, real 10 Hz frames fed twice, 10 s warm-up, open loop, no x1.06",
+  "subset": "subset = full (479 rater frames + 4116 WOD-val stay rows)",
+  "serving_s": 369.2,
+  "serving_cmd": "taskset -c 52-76 /root/autodl-tmp/ujs/envs/openpilot/bin/python /root/autodl-tmp/ujs/jev-drive/scripts/wod_zeroshot_openpilot.py --set rater --workers 12 --onnx /root/autodl-tmp/ujs/runs/op_route_ft/onnx/rc-bear-s0.onnx --tag guard-rc-bear-s0",
+  "port": {
+   "port": "onnx->port",
+   "changed": 232
+  },
+  "port_s": 5.0
+ }
+}

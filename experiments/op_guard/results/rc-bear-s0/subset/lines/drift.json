@@ -1,0 +1,137 @@
+{
+ "line": "drift",
+ "candidate": "rc-bear-s0",
+ "mode": "subset",
+ "status": "ok",
+ "runtime_s": 15.5,
+ "rows": [
+  {
+   "id": "drift.max",
+   "metric": "4 s lateral drift vs shipped, max over sets / kinds (median per set)",
+   "value": 0.03847903891457094,
+   "ref": 0.0,
+   "delta": 0.03847903891457094,
+   "ci": null,
+   "rule": "<= 0.10 m",
+   "pass": true,
+   "note": "max at carladev/junction"
+  },
+  {
+   "id": "drift.navdev.junction",
+   "metric": "4 s lateral drift median, navdev junction (nav)",
+   "value": 0.02512404875795753,
+   "ref": 0.0,
+   "delta": 0.02512404875795753,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 136; p90 0.108; plan_drift (0-5 s L2) median 0.115",
+   "n": 136,
+   "plan_drift_median": 0.1152709424495697
+  },
+  {
+   "id": "drift.navdev.straight",
+   "metric": "4 s lateral drift median, navdev straight (nav)",
+   "value": 0.01738578455772083,
+   "ref": 0.0,
+   "delta": 0.01738578455772083,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 30; p90 0.072; plan_drift (0-5 s L2) median 0.097",
+   "n": 30,
+   "plan_drift_median": 0.09748980402946472
+  },
+  {
+   "id": "drift.carladev.junction",
+   "metric": "4 s lateral drift median, carladev junction (carla)",
+   "value": 0.03847903891457094,
+   "ref": 0.0,
+   "delta": 0.03847903891457094,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 75; p90 0.386; plan_drift (0-5 s L2) median 0.178",
+   "n": 75,
+   "plan_drift_median": 0.17799463868141174
+  },
+  {
+   "id": "drift.dist:nav.all",
+   "metric": "4 s lateral drift median, dist:nav all (nav)",
+   "value": 0.01089410538962967,
+   "ref": 0.0,
+   "delta": 0.01089410538962967,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 153; p90 0.093; plan_drift (0-5 s L2) median 0.092",
+   "n": 153,
+   "plan_drift_median": 0.09193525463342667
+  },
+  {
+   "id": "drift.dist:wod.all",
+   "metric": "4 s lateral drift median, dist:wod all (wod)",
+   "value": 0.011188474881020385,
+   "ref": 0.0,
+   "delta": 0.011188474881020385,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 380; p90 0.093; plan_drift (0-5 s L2) median 0.087",
+   "n": 380,
+   "plan_drift_median": 0.08708833158016205
+  },
+  {
+   "id": "drift.dist:carla.all",
+   "metric": "4 s lateral drift median, dist:carla all (carla)",
+   "value": 0.011929208588091322,
+   "ref": 0.0,
+   "delta": 0.011929208588091322,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 333; p90 0.049; plan_drift (0-5 s L2) median 0.085",
+   "n": 333,
+   "plan_drift_median": 0.08543611317873001
+  },
+  {
+   "id": "drift.plan_drift_max",
+   "metric": "plan_drift (0-5 s mean L2, x and y) median, max over sets / kinds",
+   "value": 0.17799463868141174,
+   "ref": 0.0,
+   "delta": 0.17799463868141174,
+   "ci": null,
+   "rule": "info: the metric op_img_cmd's 0.10 m line was set on",
+   "pass": null,
+   "note": "max at carladev.junction"
+  }
+ ],
+ "provenance": {
+  "cache": [
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/drift/navdev.npz (this line's own earlier result)",
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/drift/carladev.npz (this line's own earlier result)",
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/drift/dist_nav.npz (this line's own earlier result)",
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/drift/dist_wod.npz (this line's own earlier result)",
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/drift/dist_carla.npz (this line's own earlier result)"
+  ],
+  "frames": "op_img_cmd Q3 sky banks, `none` rows; dist = op_adapt_H dev pools",
+  "sets": [
+   "navdev",
+   "carladev",
+   "dist:nav",
+   "dist:wod",
+   "dist:carla"
+  ],
+  "adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+  "plans_s": {
+   "navdev": 10.9,
+   "carladev": 0.3,
+   "dist:nav": 0.5,
+   "dist:wod": 1.2,
+   "dist:carla": 1.0
+  },
+  "port": {
+   "port": "adapter"
+  }
+ }
+}

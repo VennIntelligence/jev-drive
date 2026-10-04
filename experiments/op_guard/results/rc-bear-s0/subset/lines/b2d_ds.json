@@ -1,0 +1,320 @@
+{
+ "line": "b2d_ds",
+ "candidate": "rc-bear-s0",
+ "mode": "subset",
+ "status": "ok",
+ "runtime_s": 2.3,
+ "rows": [
+  {
+   "id": "ds",
+   "metric": "DS mean (paired over seed x route)",
+   "value": 66.82194494736841,
+   "ref": 69.26474926315788,
+   "delta": -2.4428043157894734,
+   "ci": [
+    -10.779292842105264,
+    6.641680842105263
+   ],
+   "rule": "delta >= -7.6 (no drop beyond decision-38 noise)",
+   "pass": true,
+   "note": "n 19, paired diff -2.44",
+   "tol": 7.628237017817419
+  },
+  {
+   "id": "rc",
+   "metric": "RC mean",
+   "value": 86.10789473684211,
+   "ref": 78.57105263157895,
+   "delta": 7.536842105263162,
+   "ci": null,
+   "rule": "reported",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "id": "collisions",
+   "metric": "collisions (sum)",
+   "value": 4,
+   "ref": 5,
+   "delta": -1,
+   "ci": null,
+   "rule": "reported",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "id": "red_light",
+   "metric": "red lights (sum)",
+   "value": 8,
+   "ref": 3,
+   "delta": 5,
+   "ci": null,
+   "rule": "reported",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "id": "completed",
+   "metric": "routes completed",
+   "value": 15,
+   "ref": 13,
+   "delta": 2,
+   "ci": null,
+   "rule": "reported",
+   "pass": null,
+   "note": ""
+  }
+ ],
+ "provenance": {
+  "routes": [
+   "27043",
+   "15102",
+   "24944",
+   "27870",
+   "22535",
+   "37969",
+   "24497",
+   "27297",
+   "9196",
+   "28147",
+   "16390",
+   "15612",
+   "15483",
+   "17280",
+   "16529",
+   "16508",
+   "19324",
+   "2520",
+   "19832"
+  ],
+  "seeds": [
+   2
+  ],
+  "arm": "op_arb.sh spec (zones on, desire on, open-loop camera)",
+  "tol": 7.628237017817419,
+  "missing": [],
+  "missing_ref": [],
+  "per_run": {
+   "s2-27043": {
+    "DS": 60.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 1,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k0/attempts/27043/1",
+    "wall_s": 61.5
+   },
+   "s2-15102": {
+    "DS": 100.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k1/attempts/15102/1",
+    "wall_s": 125.1
+   },
+   "s2-24944": {
+    "DS": 70.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 1,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k2/attempts/24944/1",
+    "wall_s": 176.6
+   },
+   "s2-27870": {
+    "DS": 70.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 1,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k3/attempts/27870/1",
+    "wall_s": 60.0
+   },
+   "s2-22535": {
+    "DS": 100.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k4/attempts/22535/1",
+    "wall_s": 119.6
+   },
+   "s2-37969": {
+    "DS": 57.909454,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 1,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k5/attempts/37969/1",
+    "wall_s": 183.3
+   },
+   "s2-24497": {
+    "DS": 21.71,
+    "RC": 33.4,
+    "status": "Failed - TickRuntime",
+    "collisions": 1,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k6/attempts/24497/1",
+    "wall_s": 625.1
+   },
+   "s2-27297": {
+    "DS": 70.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 1,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k0/attempts/27297/1",
+    "wall_s": 67.8
+   },
+   "s2-9196": {
+    "DS": 70.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 1,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k1/attempts/9196/1",
+    "wall_s": 148.5
+   },
+   "s2-28147": {
+    "DS": 100.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k2/attempts/28147/1",
+    "wall_s": 102.1
+   },
+   "s2-16390": {
+    "DS": 70.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 1,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k3/attempts/16390/1",
+    "wall_s": 97.1
+   },
+   "s2-15612": {
+    "DS": 70.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 1,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k4/attempts/15612/1",
+    "wall_s": 106.7
+   },
+   "s2-15483": {
+    "DS": 70.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 1,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k5/attempts/15483/1",
+    "wall_s": 115.5
+   },
+   "s2-17280": {
+    "DS": 80.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k6/attempts/17280/1",
+    "wall_s": 90.4
+   },
+   "s2-16529": {
+    "DS": 70.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 1,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k0/attempts/16529/1",
+    "wall_s": 134.1
+   },
+   "s2-16508": {
+    "DS": 100.0,
+    "RC": 100.0,
+    "status": "Completed",
+    "collisions": 0,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k1/attempts/16508/1",
+    "wall_s": 125.2
+   },
+   "s2-19324": {
+    "DS": 33.36,
+    "RC": 33.36,
+    "status": "Failed - TickRuntime",
+    "collisions": 0,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k2/attempts/19324/1",
+    "wall_s": 912.4
+   },
+   "s2-2520": {
+    "DS": 23.4975,
+    "RC": 36.15,
+    "status": "Failed - TickRuntime",
+    "collisions": 1,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k3/attempts/2520/1",
+    "wall_s": 705.4
+   },
+   "s2-19832": {
+    "DS": 33.14,
+    "RC": 33.14,
+    "status": "Failed - TickRuntime",
+    "collisions": 0,
+    "red_light": 0,
+    "attempt": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/b2d/ds-s2-k4/attempts/19832/1",
+    "wall_s": 622.9
+   }
+  },
+  "unit_wall_s": 4579.3,
+  "cache_hits": [],
+  "run": {
+   "lines": [
+    "hugsim",
+    "b2d_turns",
+    "b2d_ds"
+   ],
+   "root": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/cl",
+   "stage": "all",
+   "jobs": [
+    "hugsim",
+    "turns-s2-k0",
+    "turns-s2-k1",
+    "turns-s2-k2",
+    "turns-s2-k3",
+    "turns-s2-k4",
+    "turns-s2-k5",
+    "turns-s2-k6",
+    "ds-s2-k0",
+    "ds-s2-k1",
+    "ds-s2-k2",
+    "ds-s2-k3",
+    "ds-s2-k4",
+    "ds-s2-k5",
+    "ds-s2-k6"
+   ],
+   "lane": "op-guard-rc-bear-s0-subset-ol",
+   "rc": 0,
+   "wall_s": 1.8,
+   "job_wall_s": {
+    "hugsim": 643.6,
+    "turns-s2-k0": 524.1,
+    "turns-s2-k1": 766.4,
+    "turns-s2-k2": 444.3,
+    "turns-s2-k3": 867.3,
+    "turns-s2-k4": 746.0,
+    "turns-s2-k5": 705.2,
+    "turns-s2-k6": 523.5,
+    "ds-s2-k0": 181.7,
+    "ds-s2-k1": 243.0,
+    "ds-s2-k2": 1028.6,
+    "ds-s2-k3": 786.1,
+    "ds-s2-k4": 705.5,
+    "ds-s2-k5": 261.9,
+    "ds-s2-k6": 704.4
+   },
+   "failed": []
+  }
+ }
+}

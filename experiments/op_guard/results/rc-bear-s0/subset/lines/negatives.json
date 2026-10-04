@@ -1,0 +1,127 @@
+{
+ "line": "negatives",
+ "candidate": "rc-bear-s0",
+ "mode": "subset",
+ "status": "ok",
+ "runtime_s": 16.0,
+ "rows": [
+  {
+   "id": "negatives.offset",
+   "metric": "|y(4 s) - logged| on the negative frames, mean (m)",
+   "value": 0.7429882749755513,
+   "ref": 0.779449408708582,
+   "delta": -0.036461133733030726,
+   "ci": [
+    -0.06971395120613559,
+    -0.0027456167129841823
+   ],
+   "rule": "<= original + 0.3 m",
+   "pass": true,
+   "note": "offset under the negative command (adapter) vs shipped without a command; n 158, 135 of 158 await the visual check (all used)"
+  },
+  {
+   "id": "negatives.offset_n1a",
+   "metric": "same, the map-certain N1 tier-A rows (no visual check needed)",
+   "value": 0.4857775522838793,
+   "ref": 0.5511639482020181,
+   "delta": -0.06538639591813877,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 23"
+  },
+  {
+   "id": "negatives.offset_N1_exit",
+   "metric": "same, N1_exit",
+   "value": 0.7210159720952674,
+   "ref": 0.7713922815249407,
+   "delta": -0.050376309429673305,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 58"
+  },
+  {
+   "id": "negatives.offset_N2_side",
+   "metric": "same, N2_side",
+   "value": 0.4545894774877711,
+   "ref": 0.4565853054759218,
+   "delta": -0.001995827988150678,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 40"
+  },
+  {
+   "id": "negatives.offset_N3_wrong",
+   "metric": "same, N3_wrong",
+   "value": 1.2624588369808019,
+   "ref": 1.3316571649606443,
+   "delta": -0.06919832797984249,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 30"
+  },
+  {
+   "id": "negatives.offset_N4_uturn",
+   "metric": "same, N4_uturn",
+   "value": 0.6505292285225558,
+   "ref": 0.6733042359884407,
+   "delta": -0.0227750074658849,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": "n 30"
+  },
+  {
+   "id": "negatives.offset_cmd_none",
+   "metric": "offset with command 'none'",
+   "value": 0.7728596757235354,
+   "ref": 0.779449408708582,
+   "delta": -0.006589732985046615,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "id": "negatives.offset_cmd_correct",
+   "metric": "offset with command 'correct'",
+   "value": 0.7526552491370857,
+   "ref": 0.779449408708582,
+   "delta": -0.026794159571496334,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "id": "negatives.pull",
+   "metric": "|y_negative - y_none| at 4 s, mean",
+   "value": 0.14141388385006148,
+   "ref": 0.0,
+   "delta": 0.14141388385006148,
+   "ci": null,
+   "rule": "info",
+   "pass": null,
+   "note": ""
+  }
+ ],
+ "provenance": {
+  "cache": [
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/negatives.npz (this line's own earlier result)"
+  ],
+  "frames": "negatives_sample.npz, 158 navtrain tokens, op_lb lb_guardneg (4 keys + GIMM)",
+  "subset": "all 158 in both modes",
+  "adapter": {
+   "adapter": "route_ft",
+   "enc": "bear",
+   "adapter_npz": "/root/autodl-tmp/ujs/runs/op_route_ft/onnx/rc-bear-s0.adapter.npz",
+   "onnx": "/root/autodl-tmp/ujs/runs/op_route_ft/onnx/rc-bear-s0.onnx",
+   "runtime": "training port (portcand) + torch RouteAdapter, bias before the valid mask, no noise",
+   "port": null
+  },
+  "plans_s": 14.7
+ }
+}

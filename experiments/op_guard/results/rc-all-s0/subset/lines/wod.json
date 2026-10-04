@@ -1,0 +1,31 @@
+{
+ "line": "wod",
+ "candidate": "rc-all-s0",
+ "mode": "subset",
+ "status": "error",
+ "runtime_s": 128.5,
+ "rows": [
+  {
+   "id": "wod",
+   "metric": "error",
+   "value": null,
+   "ref": null,
+   "delta": null,
+   "ci": null,
+   "rule": "RFS no drop; false start <= shipped + 2 pp",
+   "pass": null,
+   "note": "ModuleNotFoundError: No module named 'onnx'"
+  }
+ ],
+ "provenance": {
+  "cache": [
+   "/root/autodl-tmp/ujs/runs/op_guard/rc-all-s0/subset/wod_stay.npz (this line's own earlier result)",
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/wod_rater.npz (this line's own earlier result)",
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/wod_stay.npz (this line's own earlier result)"
+  ],
+  "interface": "WOD spec: true roof height 1.81 m, real 10 Hz frames fed twice, 10 s warm-up, open loop, no x1.06",
+  "subset": "subset = full (479 rater frames + 4116 WOD-val stay rows)",
+  "serving_s": 125.2,
+  "serving_cmd": "taskset -c 0-24 /root/autodl-tmp/ujs/envs/openpilot/bin/python /root/autodl-tmp/ujs/jev-drive/scripts/wod_zeroshot_openpilot.py --set rater --workers 12 --onnx /root/autodl-tmp/ujs/runs/op_route_ft/onnx/rc-all-s0.onnx --tag guard-rc-all-s0"
+ }
+}

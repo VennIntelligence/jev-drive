@@ -1,0 +1,77 @@
+{
+ "line": "navtest",
+ "candidate": "rc-all-s0",
+ "mode": "subset",
+ "status": "ok",
+ "runtime_s": 630.7,
+ "rows": [
+  {
+   "id": "navtest",
+   "metric": "PDMS v1 (subset, 4026 tokens)",
+   "value": 84.80761969161945,
+   "ref": 84.03003401998014,
+   "delta": 0.777585671639315,
+   "ci": [
+    0.33355946260843633,
+    1.2666005937609766
+   ],
+   "rule": "not below shipped - 0.3",
+   "pass": true,
+   "note": "4026 / 4026 tokens valid in both; paired mean delta, 95% CI log-cluster bootstrap over 136 logs; sub-score deltas (pp) NC +0.14 DAC +0.82 EP +0.75 TTC +0.25 C +0.00",
+   "n": 4026,
+   "n_expected": 4026,
+   "sub_deltas": {
+    "NC": 0.1366120218579235,
+    "DAC": 0.819672131147541,
+    "EP": 0.7534288953897427,
+    "TTC": 0.24838549428713363,
+    "C": 0.0
+   }
+  }
+ ],
+ "provenance": {
+  "shipped": {
+   "plans": {
+    "source": "rollout",
+    "procs": 4,
+    "gpu": 2,
+    "ms_per_scene": 410.32074703333507,
+    "plan": "/root/autodl-tmp/ujs/runs/op_lb/g_navtest_sub/plans/gimm@cinque.npz",
+    "n": 4026,
+    "seconds": 468.1,
+    "onnx": null,
+    "t": "2026-10-05 01:14:40",
+    "hit": true
+   },
+   "official": {
+    "csv": "/root/autodl-tmp/ujs/runs/navsim/eval/v1_navtest_opg_g_navtest_sub_gimm-cinque__base/2026.10.05.01.14.55/2026.10.05.01.15.43.csv",
+    "hit": true,
+    "seconds": null
+   }
+  },
+  "rc-all-s0": {
+   "plans": {
+    "source": "rollout",
+    "procs": 4,
+    "gpu": 2,
+    "ms_per_scene": 217.033205957473,
+    "plan": "/root/autodl-tmp/ujs/runs/op_lb/g_navtest_sub/plans/gimm@cinque_Orc-all-s0.npz",
+    "n": 4026,
+    "seconds": 559.0,
+    "onnx": {
+     "path": "/root/autodl-tmp/ujs/runs/op_route_ft/onnx/rc-all-s0.onnx",
+     "size": 766355143,
+     "sha256": "8d74c5e5e5fa01eb7a435abd81e3e1916462c89b079554432fb5f1b3f29e42d7"
+    },
+    "t": "2026-10-05 03:48:38",
+    "hit": false
+   },
+   "official": {
+    "csv": "/root/autodl-tmp/ujs/runs/navsim/eval/v1_navtest_opg_g_navtest_sub_gimm-cinque_Orc-all-s0__base/2026.10.05.03.48.53/2026.10.05.03.49.46.csv",
+    "hit": false,
+    "seconds": 66.4
+   }
+  },
+  "split": "navsim/op-guard-navtest-sub@v1:63602dc7cfd6"
+ }
+}

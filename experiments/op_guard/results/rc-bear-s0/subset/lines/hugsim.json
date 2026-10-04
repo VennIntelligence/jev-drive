@@ -1,0 +1,234 @@
+{
+ "line": "hugsim",
+ "candidate": "rc-bear-s0",
+ "mode": "subset",
+ "status": "ok",
+ "runtime_s": 2402.5,
+ "rows": [
+  {
+   "id": "spins",
+   "metric": "spins (heading err >= 60 deg)",
+   "value": 0,
+   "ref": 0,
+   "delta": 0,
+   "ci": null,
+   "rule": "not up vs shipped",
+   "pass": true,
+   "note": "11 scenes"
+  },
+  {
+   "id": "stuck",
+   "metric": "stuck (end max_steps)",
+   "value": 4,
+   "ref": 6,
+   "delta": -2,
+   "ci": null,
+   "rule": "reported (stuck: reduction is the goal)",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "id": "complete",
+   "metric": "completes",
+   "value": 4,
+   "ref": 3,
+   "delta": 1,
+   "ci": null,
+   "rule": "reported",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "id": "hd",
+   "metric": "HD-Score mean (paired over scenes)",
+   "value": 0.47886968037303373,
+   "ref": 0.5435120748636554,
+   "delta": -0.06464239449062165,
+   "ci": [
+    -0.23375822776089583,
+    0.09588341595491165
+   ],
+   "rule": "reported",
+   "pass": null,
+   "note": "paired mean diff -0.065"
+  }
+ ],
+ "provenance": {
+  "scenes": "unified_hugsim_small.txt",
+  "n": 11,
+  "missing": [],
+  "missing_ref": [],
+  "per_scene": {
+   "scene-0013-medium-00": {
+    "spin": false,
+    "max_abs_e": 1.8,
+    "end": "complete",
+    "hd": 0.9383753501400562,
+    "rc": 1.0,
+    "steps": 51,
+    "wall_s": 182.7,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/scene-0013_medium_00",
+    "src": "run"
+   },
+   "scene-0254-extreme-00": {
+    "spin": false,
+    "max_abs_e": 1.9,
+    "end": "fg_collision",
+    "hd": 0.021242823370482944,
+    "rc": 0.024991556906450524,
+    "steps": 40,
+    "wall_s": 179.5,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/scene-0254_extreme_00",
+    "src": "run"
+   },
+   "scene-102751446607-medium-01": {
+    "spin": false,
+    "max_abs_e": 1.2,
+    "end": "max_steps",
+    "hd": 0.1491004865854203,
+    "rc": 0.1491004865854203,
+    "steps": 400,
+    "wall_s": 417.6,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/102751446607_0_200_medium_01",
+    "src": "run"
+   },
+   "scene-8440_8640-easy-00": {
+    "spin": false,
+    "max_abs_e": 22.3,
+    "end": "max_steps",
+    "hd": 0.7461777260380287,
+    "rc": 0.7605743112145905,
+    "steps": 400,
+    "wall_s": 366.5,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/0000_8440_8640_easy_00",
+    "src": "run"
+   },
+   "scene-040-easy-00": {
+    "spin": false,
+    "max_abs_e": 4.8,
+    "end": "complete",
+    "hd": 0.9951899951899952,
+    "rc": 1.0,
+    "steps": 297,
+    "wall_s": 306.3,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/040_easy_00",
+    "src": "run"
+   },
+   "scene-053-medium-02": {
+    "spin": false,
+    "max_abs_e": 2.8,
+    "end": "max_steps",
+    "hd": 0.5483643892339545,
+    "rc": 0.5507246376811594,
+    "steps": 400,
+    "wall_s": 262.6,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/053_medium_02",
+    "src": "run"
+   },
+   "scene-0051-easy-00": {
+    "spin": false,
+    "max_abs_e": 6.9,
+    "end": "complete",
+    "hd": 0.8909090909090913,
+    "rc": 1.0,
+    "steps": 55,
+    "wall_s": 46.6,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/scene-0051_easy_00",
+    "src": "run"
+   },
+   "scene-0418-hard-00": {
+    "spin": false,
+    "max_abs_e": 1.7,
+    "end": "complete",
+    "hd": 0.5507936507936507,
+    "rc": 1.0,
+    "steps": 90,
+    "wall_s": 70.9,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/scene-0418_hard_00",
+    "src": "run"
+   },
+   "scene-0930-hard-00": {
+    "spin": false,
+    "max_abs_e": 8.8,
+    "end": "fg_collision",
+    "hd": 0.2839335905448578,
+    "rc": 0.3250641573994867,
+    "steps": 35,
+    "wall_s": 36.8,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/scene-0930_hard_00",
+    "src": "run"
+   },
+   "scene-3000_3200-medium-00": {
+    "spin": false,
+    "max_abs_e": 2.8,
+    "end": "max_steps",
+    "hd": 0.07672055291981492,
+    "rc": 0.0784864991507058,
+    "steps": 400,
+    "wall_s": 188.2,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/0000_3000_3200_medium_00",
+    "src": "run"
+   },
+   "scene-034-hard-01": {
+    "spin": false,
+    "max_abs_e": 1.0,
+    "end": "fg_collision",
+    "hd": 0.06675882837801878,
+    "rc": 0.09749670619235837,
+    "steps": 29,
+    "wall_s": 33.5,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/hugsim/guard-spec/zs/034_hard_01",
+    "src": "run"
+   }
+  },
+  "cache_hits": [],
+  "unit_wall_s": 2091.2,
+  "run": {
+   "lines": [
+    "hugsim",
+    "b2d_turns",
+    "b2d_ds"
+   ],
+   "root": "/root/autodl-tmp/ujs/runs/op_guard/rc-bear-s0/subset/cl",
+   "stage": "all",
+   "jobs": [
+    "hugsim",
+    "turns-s2-k0",
+    "turns-s2-k1",
+    "turns-s2-k2",
+    "turns-s2-k3",
+    "turns-s2-k4",
+    "turns-s2-k5",
+    "turns-s2-k6",
+    "ds-s2-k0",
+    "ds-s2-k1",
+    "ds-s2-k2",
+    "ds-s2-k3",
+    "ds-s2-k4",
+    "ds-s2-k5",
+    "ds-s2-k6"
+   ],
+   "lane": "op-guard-rc-bear-s0-subset-ol",
+   "rc": 0,
+   "wall_s": 2401.9,
+   "job_wall_s": {
+    "hugsim": 643.6,
+    "turns-s2-k0": 524.1,
+    "turns-s2-k1": 766.4,
+    "turns-s2-k2": 444.3,
+    "turns-s2-k3": 867.3,
+    "turns-s2-k4": 746.0,
+    "turns-s2-k5": 705.2,
+    "turns-s2-k6": 523.5,
+    "ds-s2-k0": 181.7,
+    "ds-s2-k1": 243.0,
+    "ds-s2-k2": 1028.6,
+    "ds-s2-k3": 786.1,
+    "ds-s2-k4": 705.5,
+    "ds-s2-k5": 261.9,
+    "ds-s2-k6": 704.4
+   },
+   "failed": []
+  }
+ }
+}
