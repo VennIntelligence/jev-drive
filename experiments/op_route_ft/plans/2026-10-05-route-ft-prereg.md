@@ -11,7 +11,7 @@
 | rc-ctl | adapter 存在但输入恒为 0（= 无指令，输出严格为原模型通路） | 同样的行、同样的目标 | 分离「微调本身」与「指令」 |
 | rc-all | 同 rc-bear | rc-bear + T4（op_adapt_L start + stop 两个切片 + stay 对照，dw 3）+ T5（layer-3 H / O 历史一致性配对，it_dw3 配方，不含 ln 起步配对）+ T6（navtrain 行上 nuPlan 地图可行驶区 hinge，权重 0.3，余量 0.4 m，只在日志路径本身在区内的帧上） | **探索性**，优先级最低，合并版本预览 |
 
-可训练：stage 4 + plan pathway（off-policy，节点 479–665）+ **on-policy action pathway（节点 665–830）** + adapter；stage 1–3 冻结（trunk bank）。action pathway 是相对既有配方的唯一增项，理由：闭环横向的来源是 action 头（第 118 条），既有线只放开 plan pathway，action 只能经 stage 4 间接变；不放开它，开环 plan 学会转弯也传不到闭环。action[0] 的目标 = 目标轨迹 1 s 点的 pure-pursuit 曲率 × max(1, v0)²（v0 < 1 m/s 不监督）。
+可训练：stage 4 + plan pathway（off-policy，节点 479–665）+ **on-policy action pathway（节点 665–830）** + adapter；stage 1–3 冻结（trunk bank）。action pathway 是相对既有配方的唯一增项，理由：闭环横向的来源是 action 头（第 118 条），既有线只放开 plan pathway，action 只能经 stage 4 间接变；不放开它，开环 plan 学会转弯也传不到闭环。action[0] 的目标 = −0.45 × 目标轨迹 1 s 点的 pure-pursuit 曲率（左正）× max(1, v0)²（v0 < 1 m/s 不监督）；−0.45 是 shipped 头自己的关系（op_adapt_H 教师在 v0 > 3 m/s 上对日志 1 s 曲率的斜率 nav −0.51、wod −0.39，r −0.92），保持它在直路与宽弯上的增益不变。
 
 超参（沿用，不扫）：layer-3 it_dw3 的 lam_i 1 / lam_d 10 / lam_c 1 / dw 3，base lr 3e-5，adapter lr 3e-4（op_adapt_L 的 lr_new），AdamW wd 0.01，warmup 100，cosine，clip 1，batch 48，4000 步（op_adapt_L 的步数；layer-3 用 2500）。pilot = 400 步（1/10）。
 

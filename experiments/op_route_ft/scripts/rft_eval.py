@@ -174,7 +174,7 @@ def main(a):
         pp = np.array(list(allok))
         r["carla_exit_3pose_all"] = boot(np.array([float(np.all(allok[p])) for p in pp]), C.tab["cluster"][pp]) if len(pp) else {"n": 0}
         turn = s["cmd"] != "straight"
-        sg = np.where(s["cmd"] == "left", 1.0, -1.0)
+        sg = np.where(s["cmd"] == "left", -1.0, 1.0)          # action[0] is right-positive
         r["carla_action_sign_turn"] = boot((np.sign(ac[turn]) == sg[turn]).astype(float), s["cluster"][turn])
         r["carla_plan_class_counts"] = {f"{cm}->{k}": int(((s["cmd"] == cm) & (c == k)).sum()) for cm in ("left", "straight", "right")
                                         for k in ("left", "straight", "right")}

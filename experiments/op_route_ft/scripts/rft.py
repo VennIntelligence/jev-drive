@@ -4,7 +4,8 @@ The port, trainable set and recipe of the layer-3 line (experiments/op_adapt_h, 
 trainable, every output head distilled to the original, dw 3) plus
   * lib/route_adapter.RouteAdapter: the route (noised navigation polyline) -> bias on the hidden tokens of the 9 context frames;
   * the on-policy action pathway (ONNX nodes 665-830, `action` = desired lateral acceleration, the closed-loop lateral source, decision 118)
-    trainable and supervised: action[0] -> kappa_T * max(1, v0)^2, kappa_T = pure-pursuit curvature of the target at 1 s.
+    trainable and supervised: action[0] -> -0.45 kappa_T * max(1, v0)^2, kappa_T = pure-pursuit curvature (left +) of the target at 1 s; 0.45 and
+    the sign are the shipped head's own relation to logged curvature (ACT_ALPHA).
 
 Rows of one batch (48):
   P  positives with the route: real (op_adapt_H nav / wod pools, target = logged future) and CARLA exit pairs (route_carla packed set, target = the
@@ -42,6 +43,8 @@ from experiments.op_adapt_h.lib import op_adapt_h as H  # noqa: E402
 T16 = L.T16
 ACT_NODES = (665, 831)            # cinque.ort.onnx: the on-policy pathway that ends in `action` (mul_48, node 829)
 SIG_A = 0.5                       # m/s^2, scale of the action loss
+ACT_ALPHA = 0.45                  # action[0] = -ACT_ALPHA * kappa_T * max(1, v)^2: the shipped head's own convention (sign: right +), fitted on the
+                                  # op_adapt_H teachers at v0 > 3 m/s against the logged 1 s pure-pursuit curvature (slope nav -0.51, wod -0.39, r -0.92)
 ALAT_CAP = 3.0                    # m/s^2, speed cap of the CARLA targets on the exit's curvature
 ROUTE_NPZ = {"nav": "processed/op_route_cmd/navtrain/route.npz", "wod": "processed/op_route_cmd/wod/route.npz"}
 CARLA_ROOTS = {"ol": "runs/op_route_cmd/carla_pairs_s10000ol/packed", "old": "runs/op_route_cmd/carla_pairs_s10000/packed"}
@@ -146,7 +149,7 @@ def act_target(hum, v0):
     d2 = x * x + y * y
     if v0 < 1.0 or d2 < 4.0 or not np.isfinite(d2):
         return 0.0, 0.0
-    return 2.0 * y / d2 * max(1.0, v0) ** 2, 1.0
+    return -ACT_ALPHA * 2.0 * y / d2 * max(1.0, v0) ** 2, 1.0
 
 
 def turn_weight(deg, rmin, s):
