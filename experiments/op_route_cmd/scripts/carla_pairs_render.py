@@ -157,7 +157,12 @@ class Rig:
         if self.use_hero:
             vb = self.world.get_blueprint_library().find("vehicle.lincoln.mkz_2020")
             vb.set_attribute("role_name", "hero")
-            self.hero = self.world.spawn_actor(vb, carla.Transform(carla.Location(at[0], at[1], at[2] + 0.6)))
+            for dx, dz in ((0, 0.6), (0, 1.5), (0, 3.0), (6, 0.6), (-6, 0.6), (12, 1.5), (-12, 1.5)):   # a prop may overlap the first pose
+                self.hero = self.world.try_spawn_actor(vb, carla.Transform(carla.Location(at[0] + dx, at[1], at[2] + dz)))
+                if self.hero is not None:
+                    break
+            if self.hero is None:
+                raise RuntimeError("hero spawn failed at %s" % (at,))
             self.hero.set_simulate_physics(False)
             self.world.tick()
         for i, ((W, H), _) in enumerate(zip(self.sizes, self.cams)):
