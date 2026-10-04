@@ -20,5 +20,11 @@
   "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-poly-s0.adapter.npz",
   "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
   "note": "op_route_ft rc-poly-s0 (route-choice fine-tune; adapter route polyline)"
+ },
+ "rc-ctl-s0": {
+  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-ctl-s0.onnx",
+  "route_adapter": null,
+  "command_adapter": null,
+  "note": "op_route_ft rc-ctl-s0 (route-choice fine-tune; adapter none: zero bias)"
  }
 }
