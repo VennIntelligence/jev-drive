@@ -11,7 +11,8 @@ assert (d["id"] == t["id"]).all()
 ok, ins, mn = d["ok"], d["logged_inside"], d["min_sdf_logged"]
 rng = np.random.default_rng(0)
 bad = np.flatnonzero(ok & ~ins)
-pick = np.r_[rng.choice(np.flatnonzero(ok & ins), 5, replace=False), rng.choice(bad, 3, replace=False)]
+low = np.argsort(np.where(ok, mn, 99))[:3]                      # the 3 lowest min_sdf_logged (the logged-outside rows first)
+pick = np.r_[rng.choice(np.setdiff1d(np.flatnonzero(ok), low), 5, replace=False), low]
 x0, y0, r = float(d["x0"]), float(d["y0"]), float(d["res"])
 ext = [y0, y0 + 160 * r, x0, x0 + 160 * r]                       # imshow: columns = y (left), rows = x (forward); flip y so left is on the left
 fig, ax = plt.subplots(2, 4, figsize=(16, 9))
@@ -26,7 +27,8 @@ for a, k in zip(ax.ravel(), pick):
     a.set_xlim(ext[1], ext[0]); a.set_ylim(ext[2], ext[3])
     a.set_title(f"{str(d['id'][k])[:8]} min_sdf_logged {mn[k]:.2f}  {'inside' if ins[k] else 'OUTSIDE'}", fontsize=9)
     a.set_xlabel("y left (m)"); a.set_ylabel("x forward (m)")
-fig.suptitle("Drivable SDF (blue = inside, red = outside, black = zero contour, green = logged future, yellow = ego rear axle). Top row + first of bottom: logged_inside; last 3: logged_inside False.")
+fig.suptitle("Drivable SDF (blue = inside, red = outside, black = zero contour, green = logged future, yellow = ego rear axle). Last 3 panels: the lowest min_sdf_logged rows; first 5: random.")
 fig.tight_layout()
 fig.savefig("/root/autodl-tmp/ujs/runs/op_route_ft/drivable/drivable_sdf_check.png", dpi=90)
-print("ok", ok.sum(), len(ok), "inside", ins.sum() / ok.sum(), "min_sdf pct", np.percentile(mn[ok], [1, 5, 10, 50]), "bad", len(bad))
+g = d["sdf"][ok].astype(np.float32)
+print("grid frac inside", (g > 0).mean(), "frac samples with any outside cell", ((g < 0).any((1, 2))).mean(), "ok", ok.sum(), len(ok), "inside", ins.sum() / ok.sum(), "min_sdf pct", np.percentile(mn[ok], [1, 5, 10, 50]), "bad", len(bad))
