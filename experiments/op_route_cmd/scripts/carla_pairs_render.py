@@ -138,7 +138,9 @@ class Rig:
         self.carla, self.client, self.sizes, self.cams, self.use_hero = carla, client, sizes, cams, hero
         self.world, self.town, self.sensors, self.q, self.hero = None, None, [], None, None
 
-    def load(self, town):
+    def load(self, town, at):
+        """at = (x, y, z) of the first pose: sensors (and the hero) are spawned there; spawning on a Large Map far from the
+        hero puts the sensor to sleep and crashes the server (docs/carla.md)."""
         carla = self.carla
         self.teardown()
         self.world = self.client.load_world(town)
@@ -150,7 +152,13 @@ class Rig:
         self.town = town
         bp = self.world.get_blueprint_library().find("sensor.camera.rgb")
         self.q = queue.Queue()
-        self.sensors = []
+        self.sensors, self.hero = [], None
+        if self.use_hero:
+            vb = self.world.get_blueprint_library().find("vehicle.lincoln.mkz_2020")
+            vb.set_attribute("role_name", "hero")
+            self.hero = self.world.spawn_actor(vb, carla.Transform(carla.Location(at[0], at[1], at[2] + 0.6)))
+            self.hero.set_simulate_physics(False)
+            self.world.tick()
         for i, ((W, H), _) in enumerate(zip(self.sizes, self.cams)):
             b = self.world.get_blueprint_library().find("sensor.camera.rgb")
             b.set_attribute("image_size_x", str(W))
@@ -159,15 +167,9 @@ class Rig:
             for k, v in (("exposure_speed_up", "100.0"), ("exposure_speed_down", "100.0")):
                 if b.has_attribute(k):
                     b.set_attribute(k, v)
-            cam = self.world.spawn_actor(b, carla.Transform(carla.Location(0, 0, -200)))
+            cam = self.world.spawn_actor(b, carla.Transform(carla.Location(at[0], at[1], at[2] + 2.0)))
             cam.listen(lambda im, i=i: self.q.put((i, im.frame, im)))
             self.sensors.append(cam)
-        self.hero = None
-        if self.use_hero:
-            vb = self.world.get_blueprint_library().find("vehicle.lincoln.mkz_2020")
-            vb.set_attribute("role_name", "hero")
-            self.hero = self.world.spawn_actor(vb, carla.Transform(carla.Location(0, 0, -300)))
-            self.hero.set_simulate_physics(False)
 
     def teardown(self):
         for s in self.sensors:
@@ -256,7 +258,7 @@ def compare3(rig_front, client, port, poses, a):
     sizes3, maps3 = build_maps([(n, x, y, z, yw) for n, x, y, z, yw in [(r[0], r[1], r[2], 1.22, r[4]) for r in RIG3]])
     cams3 = [(r[1], r[2], 1.22, r[4]) for r in RIG3]
     r3 = Rig(client, [sizes3] * 3, cams3, a.hero)
-    r3.load(poses[0]["town"])
+    r3.load(poses[0]["town"], (poses[0]["hist"]["x"][0], poses[0]["hist"]["y"][0], poses[0]["hist"]["z"][0]))
     for p in poses:
         h = p["hist"]
         for rig in (r3,):
@@ -309,7 +311,7 @@ def main():
         for p in todo:
             if p["town"] != town:
                 t = time.time()
-                rig.load(p["town"])
+                rig.load(p["town"], (p["hist"]["x"][0], p["hist"]["y"][0], p["hist"]["z"][0]))
                 town = p["town"]
                 print("loaded %s in %.1f s" % (town, time.time() - t), flush=True)
                 log.write(json.dumps(dict(event="load", town=town, wall=time.time() - t)) + "\n")
