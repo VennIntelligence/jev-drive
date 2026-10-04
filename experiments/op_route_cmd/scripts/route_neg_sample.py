@@ -124,7 +124,7 @@ def main():
     res = keep
     RES.mkdir(exist_ok=True)
     FIGS.mkdir(exist_ok=True)
-    flag = lambda r: r["kind"] != "N1_exit" or r["tier"] == "B"  # noqa: E731  needs a human / visual check
+    flag = lambda r: r["kind"] != "N1_exit" or r["tier"] == "B" or r["neg"]["missing"] == "straight"  # noqa: E731  needs a human / visual check
     tab = pd.DataFrame([dict(id=z["id"][r["i"]], log=z["cluster"][r["i"]], kind=r["kind"], tier=r["tier"], missing=r["neg"]["missing"], s_turn=round(r["neg"]["s_turn"], 1),
                              angle=round(r["neg"]["angle"], 0), radius=round(abs(r["neg"]["radius"]), 1), v0=round(float(z["v0"][r["i"]]), 1),
                              plen_pos=round(r["pos"]["plen"], 0), plen_neg=round(r["neg"]["plen"], 0), needs_visual=flag(r), target="follow_logged_path") for r in res])
