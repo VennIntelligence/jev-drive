@@ -25,7 +25,7 @@ import turn_calibration_lib as L  # noqa: E402
 from vlm_arb_gif import Attempt, FONT  # noqa: E402
 
 
-def window(att, mi, before, after):
+def window(att, mi, before, after, max_s=40.0):
     xy = np.array(json.load(open(att.d / "route.json"))["xy"])
     P, g = L.resample(xy)
     ms = [m for m in maneuvers(P) if abs(m["angle"]) >= 25]
@@ -33,9 +33,14 @@ def window(att, mi, before, after):
     s0, s1 = g[m["i0"]] - before, g[m["i1"]] + after
     tk = [t for t in att.ticks if "truth" in t]
     T = np.array([t["t"] for t in tk])
-    near = np.array([int(np.argmin(np.linalg.norm(P - np.array(t["truth"][:2]), axis=1))) for t in tk])
+    dd = [np.linalg.norm(P - np.array(t["truth"][:2]), axis=1) for t in tk]
+    near, dev = np.array([int(np.argmin(d)) for d in dd]), np.array([float(d.min()) for d in dd])
     sc = g[near]
-    ok = np.where((sc >= s0) & (sc <= s1))[0]
+    ok = np.where((sc >= s0) & (sc <= s1) & (dev < 8.0))[0]
+    ok = ok[T[ok] <= T[ok[0]] + max_s]
+    after = np.where((T > T[ok[0]]) & ((dev > 25.0) | (sc > s1)))[0]               # stop at the first exit of the window or 25 m off the route
+    if len(after):
+        ok = ok[T[ok] <= T[after[0]]]
     return float(T[ok[0]]), float(T[ok[-1]]), m
 
 
