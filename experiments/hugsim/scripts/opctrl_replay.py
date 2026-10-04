@@ -31,10 +31,13 @@ def main():
     ap.add_argument("--steps", type=int, default=40)
     ap.add_argument("--threads", type=int, default=4)
     ap.add_argument("--tag", default="cinque-fixed")
+    ap.add_argument("--only", default="", help="comma-separated scenario names (default: all of the tag)")
     a = ap.parse_args()
     from jevdrive.openpilot.model import OPModel, T_IDXS, curvature_from_plan, decode
     i, n = map(int, a.part.split("/"))
     rows = [r for r in csv.DictReader(open(a.results)) if r["tag"] == a.tag]
+    if a.only:
+        rows = [r for r in rows if r["scenario"] in a.only.split(",")]
     rows = sorted({r["scenario"]: r for r in rows}.values(), key=lambda r: r["scenario"])[i::n]
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -47,7 +50,7 @@ def main():
         R = P.LoggedRun({"scenario": r["scenario"], "run_dir": r["run_dir"], "dataset": r["dataset"]}, a.steps)
         m.reset()
         res = {"scenario": r["scenario"], "v": R.v.tolist(), "theta": R.th.tolist(), "steer": [x["steer"] for x in R.recs[:R.n]],
-               "plan_logged": [x["plan"][:2] for x in R.recs[:R.n]], "k_act": [], "k_plan": [], "phi1": [], "p1": [], "pos_err": [], "lat25_err": []}
+               "plan_logged": [x["plan"][:2] for x in R.recs[:R.n]], "k_act": [], "acc_act": [], "plan_acc0": [], "k_plan": [], "phi1": [], "p1": [], "pos_err": [], "lat25_err": []}
         for j in range(R.n):
             dv = np.zeros(8, np.float32)
             dv[R.des[j]] = 1
@@ -58,6 +61,8 @@ def main():
             d = decode(raw, m.slices, vm, ACTION_T)
             plan = Z.openpilot_to_plan(d["plan_pos"], T_IDXS, DIL)
             res["k_act"].append(d["curvature"])
+            res["acc_act"].append(d["accel"])                                                    # action head acceleration (model units, v = 1.25 v)
+            res["plan_acc0"].append(float(d["plan_acc"][0, 0]))
             res["k_plan"].append(float(curvature_from_plan(d["plan_yaw"], np.asarray(raw[m.slices["plan"]][:495]).reshape(33, 15)[:, 14], vm, ACTION_T[0])))
             res["phi1"].append(float(np.degrees(np.arctan2(plan[1, 0], plan[1, 1]))))          # + right, HUGSIM plan (x right, y fwd)
             res["p1"].append(np.round(plan[1], 4).tolist())

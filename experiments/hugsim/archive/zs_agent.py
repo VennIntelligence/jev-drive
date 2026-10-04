@@ -41,6 +41,9 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      op_ctrl (openpilot, bool, default false; plans/2026-10-05-op-control-stack-prereg.md): append the model's desired
                      curvature (server `curvature`: action[0] / max(1, v)^2) as a last plan row [kappa, 1e9]; the HUGSIM tree `opctrl`
                      (patches/hugsim/optional/op-ctrl.patch, env OP_CTRL) strips it and steers through lib/op_ctrl.py
+                     op_long (bool, default false, needs op_ctrl; plans/2026-10-04-op-control-stack-long-prereg.md): also append the raw action
+                     acceleration (server `accel` = action[1]) as the row before it, [accel, 2e9]; tree `opctrl_long` (op-ctrl-long.patch, env
+                     OP_CTRL_LONG) strips it and sets the acceleration through lib/op_ctrl.py OpLongitudinal
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
@@ -215,7 +218,7 @@ class Agent:
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)
         rec.update(desire=desire, reps=reps, infer_ms=r.get("infer_ms"), rtt_ms=r["rtt_ms"],
                    lead_prob=r.get("lead_prob"), lead_x=r.get("lead_x"), lead_v=r.get("lead_v"), engaged=r.get("engaged"),
-                   kappa=r.get("curvature"), model_pos=np.round(out["pos"][[4, 8, 12, 16, 20, 24, 32], :2], 3).tolist(),
+                   kappa=r.get("curvature"), accel=r.get("accel"), model_pos=np.round(out["pos"][[4, 8, 12, 16, 20, 24, 32], :2], 3).tolist(),
                    model_v=np.round(out["vel"][[0, 8, 16, 24]], 3).tolist())
         if self.dump_every and self.step % self.dump_every == 0:
             np.savez_compressed(self.out / "zs_dump" / f"{self.step:04d}.npz", img2=img2, pos=out["pos"],
@@ -277,7 +280,10 @@ class Agent:
         self.log.write(json.dumps(rec) + "\n")
         self.step += 1
         if self.opts.get("op_ctrl") and rec.get("kappa") is not None:       # openpilot lateral path: curvature rides as a last row
-            plan = np.vstack([np.asarray(plan, np.float64), [[float(rec["kappa"]), 1e9]]])
+            rows = [[float(rec["kappa"]), 1e9]]
+            if self.opts.get("op_long") and rec.get("accel") is not None:   # + the model's raw action acceleration (openpilot longitudinal path)
+                rows.insert(0, [float(rec["accel"]), 2e9])
+            plan = np.vstack([np.asarray(plan, np.float64), rows])
         return plan
 
 
