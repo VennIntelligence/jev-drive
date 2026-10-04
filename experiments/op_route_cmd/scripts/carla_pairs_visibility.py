@@ -82,12 +82,12 @@ def main():
     turn = ang >= 25
     r = z["turn_rmin"]
     d = z["d"]
-    t_ang, o_ang = table("exit turn angle |angle|", [("straight (< 25 deg)", ang < 25), ("25 - 60 deg", (ang >= 25) & (ang < 60)),
+    t_ang, o_ang = table("exit turn angle (abs, connector heading change)", [("straight (< 25 deg)", ang < 25), ("25 - 60 deg", (ang >= 25) & (ang < 60)),
                                                      ("60 - 120 deg (right-angle)", (ang >= 60) & (ang < 120)), (">= 120 deg (u-turn)", ang >= 120)], F)
     t_r, o_r = table("min turn radius R_min (turning rows)", [("tight: R_min < 7 m", turn & (r < 7)), ("mid: 7 - 10 m", turn & (r >= 7) & (r < 10)),
                                                               ("wide: R_min >= 10 m", turn & (r >= 10))], F)
-    t_d, o_d = table("pose distance d (rows with |angle| >= 60 deg)", [(f"d = {int(v)} m", (ang >= 60) & (d == v)) for v in (10, 20, 30)], F)
-    t_dr, _ = table("d x R_min (|angle| >= 60 deg)", [(f"d = {int(v)} m, " + nm, (ang >= 60) & (d == v) & mm) for v in (10, 20, 30)
+    t_d, o_d = table("pose distance d (rows with turn angle >= 60 deg)", [(f"d = {int(v)} m", (ang >= 60) & (d == v)) for v in (10, 20, 30)], F)
+    t_dr, _ = table("d x R_min (turn angle >= 60 deg)", [(f"d = {int(v)} m, " + nm, (ang >= 60) & (d == v) & mm) for v in (10, 20, 30)
                                                       for nm, mm in (("tight (< 7 m)", r < 7), ("wide (>= 10 m)", r >= 10))], F)
     n_ok = int((~np.isnan(F["road 31 deg"])).sum())
     md = f"""# Exit visibility from the open-loop-rig camera (geometry only)
@@ -112,7 +112,7 @@ FOV half-angles: road {FOVS['road 31 deg']:.1f} deg, wide {FOVS['wide 59 deg']:.
     import matplotlib.pyplot as plt
     cols = ["#9aa0a6", "#1a73e8", "#e8710a", "#188038"]
     fig, axs = plt.subplots(1, 3, figsize=(15, 4.2), sharey=True)
-    for ax, (title, o) in zip(axs, (("turn angle", o_ang), ("R_min (turning rows)", o_r), ("d (|angle| >= 60 deg)", o_d))):
+    for ax, (title, o) in zip(axs, (("turn angle", o_ang), ("R_min (turning rows)", o_r), ("d (turn angle >= 60 deg)", o_d))):
         keys, w = list(o), 0.2
         for j, k in enumerate(FOVS):
             ax.bar(np.arange(len(keys)) + (j - 1.5) * w, [100 * o[g][j] for g in keys], w, label=k, color=cols[j])
