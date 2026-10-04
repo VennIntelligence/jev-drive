@@ -49,10 +49,8 @@ def project(poly, mask, cam):
     return np.stack([cx - f * yc[ok] / xc[ok], cy + f * cam[2] / xc[ok]], -1)
 
 
-def pick(src, tb, rt):
+def pick(rt):
     """12 diverse rows (dom, row) of the sample tables, by category."""
-    td, ts, jc = rt["turn_deg"], rt["turn_s"], rt["jct_s"]
-    nav = np.arange(len(tb["nav"]["id"]))
     cats = [
         ("nav", "left ~90, near", lambda r: (r["turn_deg"] > 75) & (r["turn_deg"] < 105) & (r["turn_s"] < 35)),
         ("nav", "right ~90, near", lambda r: (r["turn_deg"] < -75) & (r["turn_deg"] > -105) & (r["turn_s"] < 35)),
@@ -81,7 +79,7 @@ def main():
     rt = {"nav": RP.attach(R / "navtrain/route.npz", tb["nav"]["id"]), "wod": RP.attach(R / "wod/route.npz", tb["wod"]["id"])}
     for d in rt:
         rt[d]["v0"] = tb[d]["v0"]
-    sel = pick(None, tb, rt)
+    sel = pick(rt)
     rng = np.random.default_rng(0)
     fig, axs = plt.subplots(3, 4, figsize=(17, 17))
     for ax, (dom, name, i) in zip(axs.ravel(), sel):
