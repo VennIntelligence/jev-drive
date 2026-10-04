@@ -1,0 +1,4 @@
+{
+  "shipped": {"onnx": null, "note": "shipped Cinque (comma v3 382M); the reference of every paired line", "command_adapter": null},
+  "it_dw3-s0": {"onnx": "$DATA_DIR/runs/op_adapt_H/onnx/it_dw3-s0.onnx", "note": "layer-3 pilot, distillation weight 3 (decisions 98, 107)", "command_adapter": null}
+}
