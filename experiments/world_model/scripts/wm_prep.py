@@ -114,7 +114,7 @@ def cmd_select(a):
             if n >= a.per_cat:
                 break
         print(cat, len(cand), "candidates,", n, "chosen", flush=True)
-    json.dump(out, open(C.RUN / "anchors.json", "w"), indent=1)
+    json.dump(out, open(C.RUN / a.out, "w"), indent=1)
     for r in out:
         print(r)
 
@@ -123,6 +123,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("render").add_argument("--workers", type=int, default=5)
-    sp.add_parser("select").add_argument("--per-cat", type=int, default=3)
+    q = sp.add_parser("select")
+    q.add_argument("--per-cat", type=int, default=3)
+    q.add_argument("--seg-cap", type=int, default=3)
+    q.add_argument("--out", default="anchors.json")
     a = ap.parse_args()
     {"render": cmd_render, "select": cmd_select}[a.cmd](a)

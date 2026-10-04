@@ -55,9 +55,10 @@ def main():
     from jevdrive.openpilot.model import OPModel
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--anchors", default="anchors.json")
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
-    anchors = json.load(open(C.RUN / "anchors.json"))[: a.limit or None]
+    anchors = json.load(open(C.RUN / a.anchors))[: a.limit or None]
     m = OPModel("cinque", "trt", taps=[TAP])
     t0 = time.time()
     for n, an in enumerate(anchors):
