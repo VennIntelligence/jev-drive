@@ -163,7 +163,7 @@ def build_sets(carla, cap, seed=0):
 def main(a):
     dev = torch.device("cuda")
     C, R, S = build_sets(a.carla, a.cap)
-    out_dir = F.rroot("evalol")
+    out_dir = F.rroot(f"evalol_{a.carla}")
     zc = lambda n: np.zeros((n, 6), np.float32)  # noqa: E731
     ctr = lambda r: C.T[r]  # noqa: E731
     cv, ctc = C.tab["slot_valid"], C.tab["tc"]
