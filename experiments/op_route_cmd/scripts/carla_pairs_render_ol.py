@@ -87,7 +87,7 @@ class Rig:
     def __init__(self, client, hero):
         import carla
         self.carla, self.client, self.use_hero = carla, client, hero
-        self.world, self.town, self.sensors, self.q, self.hero = None, None, [], None, None
+        self.world, self.town, self.sensors, self.q, self.hero, self.on = None, None, [], None, None, set()
         x, y, z = MOUNT
         self.cams = [(x, y, z, 0.0)] * 2 + [(x, y, z, yw) for yw in PANO_YAW]              # (x fwd, y left, z, yaw left +)
         self.specs = [(SENSOR_WH, FOCAL["road"]), (SENSOR_WH, FOCAL["wide"])] + [(PANO_WH, PANO_F)] * 3
@@ -103,7 +103,7 @@ class Rig:
         self.world.apply_settings(s)
         self.town = town
         self.q = queue.Queue()
-        self.sensors, self.hero = [], None
+        self.sensors, self.hero, self.on = [], None, set()
         if self.use_hero:
             vb = self.world.get_blueprint_library().find("vehicle.lincoln.mkz_2020")
             vb.set_attribute("role_name", "hero")
@@ -130,18 +130,20 @@ class Rig:
     def listen(self, which):
         which = set(which)
         for i, s in enumerate(self.sensors):
-            if i in which and not s.is_listening:
+            if i in which and i not in self.on:
                 s.listen(lambda im, i=i: self.q.put((i, im.frame, im)))
-            elif i not in which and s.is_listening:
+            elif i not in which and i in self.on:
                 s.stop()
+        self.on = which
         self.active = sorted(which)
         while not self.q.empty():
             self.q.get_nowait()
 
     def teardown(self):
-        for s in self.sensors:
+        for i, s in enumerate(self.sensors):
             try:
-                s.stop()
+                if i in self.on:
+                    s.stop()
                 s.destroy()
             except RuntimeError:
                 pass
@@ -150,7 +152,7 @@ class Rig:
                 self.hero.destroy()
             except RuntimeError:
                 pass
-        self.sensors, self.hero = [], None
+        self.sensors, self.hero, self.on = [], None, set()
 
     def set_pose(self, x, y, z, yaw, pitch):
         """Rig pose = rear axle on the road (CARLA coordinates, yaw deg clockwise)."""
