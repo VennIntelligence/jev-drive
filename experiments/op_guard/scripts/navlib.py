@@ -195,6 +195,8 @@ def plans(cand: dict, board: str, gpu: int, cpus: str, procs: int, force: bool, 
         np.savez(f, **{k: (v[ix] if v.ndim and len(v) == n else v) for k, v in z.items()})
         p = dict(source="legacy", legacy=leg)
     else:
+        if gpu < 0:
+            raise SystemExit(f"{ps} on {board} needs a rollout but --gpu is {gpu} (no card held)")
         trt_guard(cand)
         cmd = taskset(cpus) + [ENVS / "openpilot/bin/python", "scripts/op_lb.py", "run", "--data", b["data"], "--frames", "gimm", "--model", "cinque",
                                "--procs", procs]
