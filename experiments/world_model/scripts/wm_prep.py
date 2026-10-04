@@ -105,7 +105,7 @@ def cmd_select(a):
         cand = sorted([r for r in rows if ok(r)], key=lambda r: -score[cat](r))
         n = 0
         for r in cand:
-            if any(u["seg"] == r["seg"] and abs(u["i"] - r["i"]) < 20 for u in out if u["cat"] == cat):
+            if any(u["seg"] == r["seg"] and abs(u["i"] - r["i"]) < a.gap for u in out if u["cat"] == cat):
                 continue
             if sum(u["seg"] == r["seg"] for u in out) >= 2:
                 continue
@@ -127,5 +127,6 @@ if __name__ == "__main__":
     q.add_argument("--per-cat", type=int, default=3)
     q.add_argument("--seg-cap", type=int, default=3)
     q.add_argument("--out", default="anchors.json")
+    q.add_argument("--gap", type=int, default=20, help="min spacing (5 Hz frames) of two anchors of one category in one segment")
     a = ap.parse_args()
     {"render": cmd_render, "select": cmd_select}[a.cmd](a)
