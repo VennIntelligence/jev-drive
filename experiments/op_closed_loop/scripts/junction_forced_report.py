@@ -63,6 +63,7 @@ def run_routes():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=2)
+    ap.add_argument("--panel", default="28180:0,24944:0,26365:0,24758:0", help="route:turn list for the BEV panels")
     ap.add_argument("--routes", default="", help="comma list: only these routes")
     ap.add_argument("--arms", default="", help="comma list: only these arms")
     ap.add_argument("--out", default=str(HERE.parent / "results"))
@@ -100,7 +101,7 @@ def main():
                          for key, x, y in infr if key in R.HARD)
                 traj[(rid, T["mi"], k)] = (tr, e)
                 L = lab[(rid, T["mi"])]
-                rows.append(dict(route=rid, turn=T["mi"], arm=k, angle=round(T["angle"], 1), forced=int(L["forced"]), kind=L["kind"], n_exits=int(L["n_exits"]),
+                rows.append(dict(route=rid, turn=T["mi"], arm=k, angle=round(T["angle"], 1), rmin=round(T["rmin"], 1), forced=int(L["forced"]), kind=L["kind"], n_exits=int(L["n_exits"]),
                                  entered=e["entered"], branch=e["branch"], peak=e["peak"], head=e["head"], leaves=int(e["peak"] > HALF) if e["entered"] else np.nan, zone_hard=zi))
     with open(out / "junction_forced_per_turn.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
@@ -154,6 +155,13 @@ def main():
             kk = [(r, t) for r, t in ks if lo_ <= abs(ix[(r, t, arms[0])]["angle"]) < hi_]
             if kk:
                 L_.append("| %s | %s | %d | " % (gname, bn, len(kk)) + " | ".join("%d%%" % round(100 * np.mean([ix[(r, t, k)]["branch"] == "yes" for r, t in kk])) for k in arms) + " |")
+    L_.append("\n### By minimum radius R_min of the turn (took intended branch %, n turns; forced turns only)\n")
+    L_.append("| R_min | n | routes | " + " | ".join(arms) + " |\n|---|---|---|" + "---|" * len(arms))
+    for bn, lo_, hi_ in (("< 10 m (tight)", 0, 10), ("10-20 m", 10, 20), ("> 20 m (wide)", 20, 1e9)):
+        kk = [(r, t) for r, t in forced if lo_ <= ix[(r, t, arms[0])]["rmin"] < hi_]
+        if kk:
+            L_.append("| %s | %d | %d | " % (bn, len(kk), len({r for r, _ in kk})) + " | ".join(
+                "%d%% (peak %.1f m)" % (round(100 * np.mean([ix[(r, t, k)]["branch"] == "yes" for r, t in kk])), np.nanmedian([ix[(r, t, k)]["peak"] for r, t in kk])) for k in arms) + " |")
     # ------------------------------------------------------------------ paired vs A
     L_.append("\n## Paired against A (route-clustered CIs)\n")
     L_.append("Branch rate: per-turn took-branch indicator minus A's on the same turn, averaged within a route, bootstrap over routes. DS / RC: per route, official, all routes finished by both arms.\n")
@@ -191,17 +199,8 @@ def main():
     # ------------------------------------------------------------------ panels
     def spread(r, t):
         return len({ix[(r, t, k)]["branch"] for k in arms})
-    pick = []
-    for ks, n in ((forced, 3), (choice, 3)):
-        # varied outcomes first (an arm differs), then the smallest route id; at most one turn per route; forced: one per kind where possible
-        order = sorted(ks, key=lambda x: (-spread(*x), lab_by[x]["kind"] != "junction", x[0]))
-        seen, sel = set(), []
-        for x in order:
-            if x[0] not in seen and len(sel) < n:
-                seen.add(x[0])
-                sel.append(x)
-        pick += sel
-    fig, axs = plt.subplots(2, 3, figsize=(18, 12.5))
+    pick = [(r, int(t)) for r, t in (x.split(":") for x in a.panel.split(","))] if a.panel else []
+    fig, axs = plt.subplots(2, 2, figsize=(13, 13))
     cap = []
     for ax, (rid, mi) in zip(axs.ravel(), pick):
         D, gd, psiD, turns = roads[rid]
@@ -236,7 +235,7 @@ def main():
     fig.tight_layout(rect=(0, 0, 1, 0.93), h_pad=9)
     (out.parent / "figs").mkdir(exist_ok=True)
     fig.savefig(out.parent / "figs/junction_forced_panels.png", dpi=105)
-    L_ += ["\n## Panels\n", "![panels](../figs/junction_forced_panels.png)\n", "Top row forced, bottom row choice; turns picked by outcome spread across arms (then T-stems first, then route id).\n"] + cap
+    L_ += ["\n## Panels\n", "![panels](../figs/junction_forced_panels.png)\n", "Turns picked to span R_min (tight T-stem, tight curve, two wide curves).\n"] + cap
     (out / "junction_forced_tables.md").write_text("\n".join(L_) + "\n")
     print("\n".join(L_))
 
