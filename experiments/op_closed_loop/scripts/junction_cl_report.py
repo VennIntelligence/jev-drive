@@ -117,9 +117,9 @@ def main():
     ap.add_argument("--out", default=str(HERE.parent / "results"))
     a = ap.parse_args()
     out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
     (out.parent / "figs").mkdir(exist_ok=True)
     rng = np.random.default_rng(0)
-    routes = json.load(open("/tmp/turn_routes.json")) if Path("/tmp/turn_routes.json").exists() else None
     rows, roads, traj = [], {}, {}
     from junction_cl_lane import ROUTES  # noqa: E402
     for rid in ROUTES:
