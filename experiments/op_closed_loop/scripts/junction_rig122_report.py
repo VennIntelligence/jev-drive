@@ -118,7 +118,7 @@ def main():
             pt, pk = np.array([p["t"] for p in pl]), np.array([p["act_k"] for p in pl])
             near, dev = R.project(tr, D)
             ev = {T["mi"]: R.eval_turn(tr, yaw, D, psiD, T) for T in turns}
-            wins = {mi: e["span"] for mi, e in ev.items() if e["entered"]}
+            wins = {mi: (e["span"][0], min(e["span"][1], e["span"][0] + 300)) for mi, e in ev.items() if e["entered"]}   # 300 ticks = 15 s after the entry: a lost car's span runs to the end of the run
             cl = collisions(rec, tk, tr, near, dev, wins)
             for c in cl:
                 cols.append(dict(route=rid, arm=k, **{x: y for x, y in c.items() if x != "tick"}))
@@ -216,12 +216,18 @@ def main():
     L_.append("| arm | route | t s | kind | object | v | off-centre m | turn |\n|---|---|---|---|---|---|---|---|")
     for c in sorted(cols, key=lambda c: (ARMS.index(c["arm"]), c["route"], c["t"])):
         L_.append("| %s | %s | %.1f | %s | %s | %.1f | %.1f | %s |" % (SHORT[c["arm"]], c["route"], c["t"], c["kind"], c["what"], c["v"], c["dev"], c["turn"]))
-    L_.append("\n### Collision classes (hit events only)\n\n| arm | n | vehicle, ego within 1.75 m of centre | vehicle, ego outside 1.75 m | static / layout | pedestrian | in a turn window | outside any window |\n|---|---|---|---|---|---|---|---|")
+    L_.append("\n### Collision classes (hit events only)\n\n| arm | n | vehicle, ego within 1.75 m of centre | vehicle, ego outside 1.75 m | static / layout | pedestrian | in a turn window (entry + 15 s) | outside any window |\n|---|---|---|---|---|---|---|---|")
     for k in ARMS:
         h = [c for c in cols if c["arm"] == k and c["kind"].startswith("hit")]
         L_.append("| %s | %d | %d | %d | %d | %d | %d | %d |" % (SHORT[k], len(h), sum(c["kind"] == "hit vehicle" and c["dev"] <= HALF for c in h), sum(c["kind"] == "hit vehicle" and c["dev"] > HALF for c in h),
                                                           sum(c["kind"] == "hit layout" for c in h), sum(c["kind"] == "hit pedestrian" for c in h), sum(c["turn"] != "-" for c in h),
                                                           sum(c["turn"] == "-" for c in h)))
+    from junction_rig122_lane import OLD6
+    L_.append("\n### Collision classes on the 6 routes of decision 125 (%s): the 10 vs 3 of s122nz vs s143nz\n\n| arm | hits | vehicle, ego in lane | vehicle, ego off lane | static / layout | ego v < 0.5 m/s at the hit |\n|---|---|---|---|---|---|" % " ".join(OLD6))
+    for k in ARMS:
+        h = [c for c in cols if c["arm"] == k and c["route"] in OLD6 and c["kind"].startswith("hit")]
+        L_.append("| %s | %d | %d | %d | %d | %d |" % (SHORT[k], len(h), sum(c["kind"] == "hit vehicle" and c["dev"] <= HALF for c in h), sum(c["kind"] == "hit vehicle" and c["dev"] > HALF for c in h),
+                                                   sum(c["kind"] == "hit layout" for c in h), sum(abs(c["v"]) < 0.5 for c in h)))
     # per-turn listing
     L_.append("\n## Every turn: branch (y / l / n), peak cross-track m, head peak / needed curvature, hits+red in window\n")
     L_.append("| route | turn | group | angle | R_min | kind | " + " | ".join(SHORT[k] for k in ARMS) + " |\n|---|---|---|---|---|---|" + "---|" * len(ARMS))
