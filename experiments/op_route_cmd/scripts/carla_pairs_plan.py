@@ -35,6 +35,7 @@ WEATHER = (("ClearNoon", 4), ("CloudyNoon", 3), ("WetNoon", 2), ("WetCloudyNoon"
 AHEAD_M = 185.0                            # path beyond the pose (150 m horizon + smoothing margin)
 HIST_MARGIN_M = 6.0
 TURN_STOP_DEG = 25.0
+CONVERGE_M = 20.0                          # arc length over which the ego's lateral offset to the lane centre decays
 
 
 # ---------------------------------------------------------------- map walking
@@ -142,7 +143,11 @@ def polyline(path_xy, ego, yaw):
     d0 = np.linalg.norm(q, axis=1)
     j = int(np.argmin(d0))
     q = q[j:]
-    q = q[np.r_[False, np.cumsum(np.linalg.norm(np.diff(q, axis=0), axis=1)) > 0.3]] if len(q) > 1 else q
+    if len(q) > 1:
+        s = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(q, axis=0), axis=1))]
+        w = np.clip(s / CONVERGE_M, 0.0, 1.0)
+        q = q - (1 - w * w * (3 - 2 * w))[:, None] * q[0]            # the car starts off the lane centre and converges onto it smoothly
+        q = q[np.r_[False, np.diff(s) > 0.3]] if len(q) > 1 else q
     return RP.hindsight(np.vstack([[0.0, 0.0], q]))
 
 
