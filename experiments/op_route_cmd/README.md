@@ -1,7 +1,7 @@
 # op_route_cmd: route polyline input material
 
 status: live
-decisions: (inputs: 93, 102, 118)
+decisions: (inputs: 93, 102, 118, 121)
 index: Route polyline material: navtrain 103 k / WOD 522 k labelled, 32 k / 62 k turns >= 25 deg; noise + negatives + CARLA plan, no training
 
 **Question.** Can openpilot be told which junction exit to take by a navigation-level route polyline (ego frame, 10 m vertices, 150 m ahead; the geometry
