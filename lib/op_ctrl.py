@@ -76,7 +76,7 @@ class OpLateral:
         self.des = 0.0                       # controlsd desired_curvature
         self.real = 0.0                      # realised curvature now
         self.wheel = 0.0                     # LTA: steering-wheel angle (deg), left +
-        self.buf = [0.0] * (self.n_delay + 1)
+        self.buf = [0.0] * self.n_delay
 
     def model_step(self, kappa_model, v_ego):
         """modeld.get_action_from_model, lateral half."""

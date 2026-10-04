@@ -95,6 +95,8 @@ def main(d, out):
     m = [(np.sign(k), np.sign(p)) for r in runs for k, p, ok in zip(r["k_act"], r["phi1"], r["ok"]) if ok and abs(p) > 0.5 and abs(p) < 15]
     dth = [(np.sign(s), np.sign(r["th"][j + 1] - r["th"][j])) for r in runs for j, s in enumerate(r["steer"][:-1])
            if abs(s) > 1e-3 and r["v"][j + 1] > 0.5]
+    mf = [(np.sign(k), np.sign(p)) for r in runs for k, p, ok, v in zip(r["k_act"], r["phi1"], r["ok"], r["v"]) if ok and 0.5 < abs(p) < 15 and v >= 3]
+    R["signs_v3plus"] = dict(kact_vs_phi1_agree=round(float(np.mean([a == b for a, b in mf])), 3), n=len(mf))
     R["signs"] = dict(kact_vs_phi1_agree=round(float(np.mean([a == b for a, b in m])), 3), n1=len(m),
                       steer_vs_dtheta_agree=round(float(np.mean([a == b for a, b in dth])), 3), n2=len(dth))
     # model side: instantaneous heading per step per degree of phi1
@@ -111,7 +113,8 @@ def main(d, out):
     for b in ("0-1", "1-2", "2-3"):
         ci, ct = R["c_ilqr_logged"][b], R["transfer_act"][b]
         for G in (2.27, 5.85, 9.34):
-            gr[f"{b}|G{G}"] = dict(ilqr=round(growth(ci["c"], G, 0), 3) if ci else None, op=round(growth(ct["c"], G, 1), 3) if ct else None)
+            gr[f"{b}|G{G}"] = dict(ilqr=round(growth(ci["c"], G, 0), 3) if ci else None, op=round(growth(max(ct["c"], 0.0), G, 1), 3) if ct else None,
+                                   op_ci_hi=round(growth(ct["hi"], G, 1), 3) if ct else None)
     R["growth"] = gr
     R["growth_check_d111"] = dict(c=0.19, G=9.34, z=round(growth(0.19, 9.34, 0), 3), z_c_018=round(growth(0.018, 9.34, 0), 3))
     json.dump(R, open(out / "offline.json", "w"), indent=1)
