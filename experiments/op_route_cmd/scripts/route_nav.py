@@ -90,11 +90,17 @@ def work(job):
     fr = pickle.load(open(os.path.join(os.environ["OPENSCENE_DATA_ROOT"], "navsim_logs", "trainval", log + ".pkl"), "rb"))
     xs = np.array([(f["ego2global_translation"][0], f["ego2global_translation"][1], _quat_yaw(f["ego2global_rotation"])) for f in fr])
     ts = np.array([f["timestamp"] for f in fr]) / 1e6
-    assert (np.abs(np.diff(ts) - 0.5) < 0.05).all(), f"{log}: not a contiguous 2 Hz log"
     tok = [f["token"] for f in fr]
     idx = np.array([r[1] for r in rows])
     assert [tok[i] for i in idx] == [r[0] for r in rows]
-    res = label_frames(xs, idx, _conn_fn(fr[0]["map_location"]))
+    seg = np.r_[0, np.cumsum(np.abs(np.diff(ts) - 0.5) > 0.05)]          # a gap in the 2 Hz clock ends the path (some logs have gaps)
+    conn, res = _conn_fn(fr[0]["map_location"]), {}
+    for sg in np.unique(seg[idx]):
+        lo = int(np.flatnonzero(seg == sg)[0])
+        hi = int(np.flatnonzero(seg == sg)[-1]) + 1
+        todo = idx[seg[idx] == sg]
+        res.update(zip(todo.tolist(), label_frames(xs[lo:hi], todo - lo, conn)))
+    res = [res[i] for i in idx.tolist()]
     return [(r[0], h) for r, h in zip(rows, res)]
 
 
