@@ -1,5 +1,7 @@
 # CARLA counterfactual route-polyline pairs (stage 3): feasibility, cost, plan
 
+> Executed 2026-10-04: see [carla_pairs.md](carla_pairs.md) for the rendered material, measured rates and the differences from this plan (one front pinhole camera instead of the three-camera stitch, hero actor for Large-Map streaming, free-camera teleport, per-pose rather than per-lane sampling).
+
 Stage 3 of op_route_cmd: the same junction, the same approach images, a different exit, so each exit gets its own clean
 route polyline. The image is exit-independent, so the cost is per approach pose, not per exit. This note gives the
 map census, the hold-out, the rendering path, a cost estimate and a staged plan. The pilot here is CPU-only: all three

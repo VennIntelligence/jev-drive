@@ -13,13 +13,13 @@ a complete turn >= 25 deg within 150 m of the driven path: navtrain 32 269 sampl
 junction frames), WOD train 52 135 / val 9 799 (949 / 232 events; WOD has no map and only 5 s future per frame, chained to <= 22 s). The route fields attach to the
 op_adapt_H sample tables by `id` (100% coverage of nav 2 400 and wod 2 780 rows). The noise function (`NavNoise`) is bit-identical to the closed-loop option C in
 its C preset and has unit tests; a negative-route generator (4 kinds, 158 samples, 135 flagged for a visual check) and a CARLA pair plan (10 628 held-out-safe
-(road, exit) polylines, ~2 card-h for 10 k poses) are written.
+(road, exit) polylines, ~2 card-h for 10 k poses) are written. The CARLA pair material itself is rendered (results/carla_pairs.md): 8 607 poses / 21 151 (pose, exit) rows (3 917 poses with 3 exits), 1 310 junctions, none of the 172 Bench2Drive junctions, openpilot rig at 1.22 m, 0.63 s per pose per server; a 2 000-pose subset set is separate.
 
-**Next.** Merge lane: read `route.npz` through `lib/route_poly.attach`, call `noise_polyline` per sample at train time, decide the model-side encoding. Before it:
-human check of `figs/negatives_sample.png` (tier B / N2-N4), then the CARLA render smoke when a card frees up.
+**Next.** Merge lane (the CARLA rows join as `samples/route_carla` + `route.npz`, see results/carla_pairs.md): read `route.npz` through `lib/route_poly.attach`, call `noise_polyline` per sample at train time, decide the model-side encoding. Before it:
+human check of `figs/negatives_sample.png` (tier B / N2-N4).
 
 **Read more.** [results/data_prep.md](results/data_prep.md) (counts, format, merge notes, doubts), [results/negatives.md](results/negatives.md),
-[results/carla_pairs_plan.md](results/carla_pairs_plan.md), [../op_img_cmd/README.md](../op_img_cmd/README.md) (the image-side command channel this competes with),
+[results/carla_pairs_plan.md](results/carla_pairs_plan.md), [results/carla_pairs.md](results/carla_pairs.md) (rendered CARLA pairs: format, rates, doubts), [../op_img_cmd/README.md](../op_img_cmd/README.md) (the image-side command channel this competes with),
 [../op_common_cause/results/pair_inventory.md](../op_common_cause/results/pair_inventory.md) (decision 93), [../op_closed_loop/scripts/turn_calibration_options.py](../op_closed_loop/scripts/turn_calibration_options.py) (option C).
 
 <!-- files:begin -->
