@@ -74,11 +74,21 @@ def main():
         hist = op[start: i + 1]
         keep_from = i - start - (C.HIST - 1)
         res = {"G": run_branch(m, op[start: i + C.K + 1], v[start: i + C.K + 1], keep_from)}
+        arm_frames = {}
         for name, Q in pose_arms.items():
             fut = [I.warp_frame(op[i], cam, Q[j], np.zeros(3)) for j in range(1, C.K + 1)]
-            res[name] = run_branch(m, np.concatenate([hist, np.stack(fut)]), v[start: i + C.K + 1], keep_from)
+            arm_frames[name] = np.stack(fut)
+        arm_frames["hold"] = np.stack([op[i]] * C.K)                                          # control: the anchor frame repeated
+        arm_frames["idw"] = np.stack([I.warp_frame(op[i], cam, np.zeros(3), np.zeros(3))] * C.K)   # control: the warp pipeline with no motion
+        for name, fut in arm_frames.items():
+            res[name] = run_branch(m, np.concatenate([hist, fut]), v[start: i + C.K + 1], keep_from)
+        # luma L1 to the real frame (road view, rows below the horizon band excluded: 60..256) of every arm, per step
+        real = op[i + 1: i + C.K + 1]
+        img = {name: np.array([np.abs(I.unpack(fut[j][0])[0][60:].astype(np.float32) - I.unpack(real[j][0])[0][60:].astype(np.float32)).mean() for j in range(C.K)])
+               for name, fut in arm_frames.items() if name in ("nom", "hold", "idw")}
         flat = {f"{b}/{k}": x for b, d in res.items() for k, x in d.items()}
         flat |= {f"pose/{b}": Q for b, Q in pose_arms.items()}
+        flat |= {f"img/{b}": x for b, x in img.items()}
         np.savez(out.with_suffix(".tmp.npz"), anchor=json.dumps(an), v=v[i - C.HIST + 1: i + C.K + 1], step_v=step_v, **flat)
         out.with_suffix(".tmp.npz").replace(out)
         print(f"anchor {n + 1}/{len(anchors)} {an['cat']} {an['seg'][:12]} i={i}: {len(res)} branches, {time.time() - t0:.0f}s", flush=True)

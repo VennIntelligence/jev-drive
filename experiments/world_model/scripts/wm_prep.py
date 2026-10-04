@@ -101,7 +101,8 @@ def cmd_select(a):
             "natdev": lambda r: r["v"] > 4 and abs(r["w"]) < 3 and r["ey_max"] > 0.2}
     score = {"launch": lambda r: r["dv"], "cruise": lambda r: r["v"], "curve": lambda r: abs(r["w"]), "natdev": lambda r: r["ey_max"]}
     out, used = [], {}
-    for cat, ok in cats.items():
+    for cat in ("natdev", "curve", "cruise", "launch"):          # rarest first, so that the per-segment cap does not starve them
+        ok = cats[cat]
         cand = sorted([r for r in rows if ok(r)], key=lambda r: -score[cat](r))
         n = 0
         for r in cand:

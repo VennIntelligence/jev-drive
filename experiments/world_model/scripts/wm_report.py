@@ -28,9 +28,10 @@ def load(run):
         if not w.exists():
             continue
         wz = np.load(w, allow_pickle=True)
-        d = {"an": an, "v": z["v"], "br": {}, "W": {}, "pose": {k.split("/")[1]: z[k] for k in z.files if k.startswith("pose/")}}
+        d = {"an": an, "v": z["v"], "br": {}, "W": {}, "pose": {k.split("/")[1]: z[k] for k in z.files if k.startswith("pose/")},
+             "img": {k.split("/")[1]: z[k] for k in z.files if k.startswith("img/")}}
         for k in z.files:
-            if "/" in k and not k.startswith("pose/"):
+            if "/" in k and not k.startswith(("pose/", "img/")):
                 b, q = k.split("/")
                 d["br"].setdefault(b, {})[q] = z[k]
         for k in wz.files:
@@ -119,7 +120,7 @@ def main():
 
     T = {"n_anchors": len(A), "cats": {c: sum(x["an"]["cat"] == c for x in A) for c in sorted({x["an"]["cat"] for x in A})}, "probe_r2_loso": probe_r2, "lam": LAM}
     # ---------- fidelity on the nominal (natural) motion: the ground truth G exists
-    fid = {s: {k: [] for k in ("zR", "zWB", "zWA", "zP", "p_R", "p_WB", "p_WA", "p_P", "p_floor", "c_R", "c_WB", "c_P", "c_floor", "ph_R", "ph_P", "cu_R", "cu_P")} for s in STEPS}
+    fid = {s: {k: [] for k in ("zR", "zWB", "zWA", "zP", "p_R", "p_WB", "p_WA", "p_P", "p_floor", "c_R", "c_WB", "c_P", "c_floor", "ph_R", "ph_P", "cu_R", "cu_P", "zH", "zI", "ph_H", "ph_I", "cu_H", "cu_I", "iR", "iH", "iI")} for s in STEPS}
     cat_rows = []
     for x in A:
         pr = probes[x["an"]["seg"]]
@@ -149,6 +150,11 @@ def main():
             f["ph_P"].append(abs(G["phi1"][H - 1] - G["phi1"][r]))        # persistence of the head
             f["cu_R"].append(abs(R["curv"][r] - G["curv"][r]) * 1e3)
             f["cu_P"].append(abs(G["curv"][H - 1] - G["curv"][r]) * 1e3)
+            for tag, br in (("H", "hold"), ("I", "idw")):
+                f["z" + tag].append(dist(x["br"][br]["z"][r], G["z"][r]))
+                f["ph_" + tag].append(abs(x["br"][br]["phi1"][r] - G["phi1"][r]))
+                f["cu_" + tag].append(abs(x["br"][br]["curv"][r] - G["curv"][r]) * 1e3)
+            f["iR"].append(float(x["img"]["nom"][s - 1])), f["iH"].append(float(x["img"]["hold"][s - 1])), f["iI"].append(float(x["img"]["idw"][s - 1]))
             if s == 5:
                 row |= {"zR": f["zR"][-1], "zWB": f["zWB"][-1], "zP": f["zP"][-1], "ph_R": f["ph_R"][-1], "ph_P": f["ph_P"][-1],
                         "phiG": float(G["phi1"][r]), "yaw_deg": float(np.degrees(x["pose"]["nom"][s, 2])), "lat_m": float(x["pose"]["nom"][s, 1])}
@@ -211,26 +217,31 @@ def figs(T, out):
     import matplotlib.pyplot as plt
     plt.rcParams.update({"font.size": 9, "axes.spines.top": False, "axes.spines.right": False})
     c = {"R": "#d95f02", "W": "#1b9e77", "A": "#7570b3", "P": "#999999", "G": "#000000"}
-    fig, ax = plt.subplots(1, 3, figsize=(11, 3.3))
+    fig, ax = plt.subplots(1, 4, figsize=(14.5, 3.3))
     st = [str(s) for s in STEPS]
     t = [0.2 * s for s in STEPS]
-    for k, lab, col in (("zR", "R (reprojection)", c["R"]), ("zWB", "W (WL-2 B)", c["W"]), ("zWA", "W (WL-2 A)", c["A"]), ("zP", "persistence", c["P"])):
+    for k, lab, col in (("zR", "R (reprojection)", c["R"]), ("zWB", "W (WL-2 B)", c["W"]), ("zWA", "W (WL-2 A)", c["A"]), ("zP", "persistence (z at t0)", c["P"]), ("zH", "R control: hold the anchor frame", "#66a61e"), ("zI", "R control: warp with no motion", "#a6761d")):
         m = np.array([T["fidelity"][s][k] for s in st])
         ax[0].errorbar(t, m[:, 0], [m[:, 0] - m[:, 1], m[:, 2] - m[:, 0]], label=lab, color=col, marker="o", ms=3, capsize=2)
     ax[0].set(xlabel="horizon (s)", ylabel="standardised MSE of `temporal` vs G", title="latent distance to the real frame")
     ax[0].legend(frameon=False, fontsize=7)
     for k, lab, col in (("p_R", "R, via probe", c["R"]), ("p_WB", "W (B), via probe", c["W"]), ("p_WA", "W (A), via probe", c["A"]), ("p_P", "persistence, via probe", c["P"]),
-                        ("p_floor", "probe floor (G)", c["G"]), ("ph_R", "R, true head", "#e6ab02")):
+                        ("p_floor", "probe floor (G)", c["G"]), ("ph_R", "R, true head", "#e6ab02"), ("ph_H", "hold, true head", "#66a61e")):
         m = np.array([T["fidelity"][s][k] for s in st])
-        ax[1].errorbar(t, m[:, 0], [m[:, 0] - m[:, 1], m[:, 2] - m[:, 0]], label=lab, color=col, marker="o", ms=3, capsize=2, ls="--" if k in ("p_floor", "ph_R") else "-")
+        ax[1].errorbar(t, m[:, 0], [m[:, 0] - m[:, 1], m[:, 2] - m[:, 0]], label=lab, color=col, marker="o", ms=3, capsize=2, ls="--" if k in ("p_floor", "ph_R", "ph_H") else "-")
     ax[1].set(xlabel="horizon (s)", ylabel="|phi1 - phi1(G)| (deg)", title="plan direction at 1 s")
     ax[1].legend(frameon=False, fontsize=6)
     for k, lab, col in (("c_R", "R, via probe", c["R"]), ("c_WB", "W (B), via probe", c["W"]), ("c_P", "persistence, via probe", c["P"]), ("c_floor", "probe floor (G)", c["G"]),
-                        ("cu_R", "R, true head", "#e6ab02")):
+                        ("cu_R", "R, true head", "#e6ab02"), ("cu_H", "hold, true head", "#66a61e")):
         m = np.array([T["fidelity"][s][k] for s in st])
-        ax[2].errorbar(t, m[:, 0], [m[:, 0] - m[:, 1], m[:, 2] - m[:, 0]], label=lab, color=col, marker="o", ms=3, capsize=2, ls="--" if k in ("c_floor", "cu_R") else "-")
+        ax[2].errorbar(t, m[:, 0], [m[:, 0] - m[:, 1], m[:, 2] - m[:, 0]], label=lab, color=col, marker="o", ms=3, capsize=2, ls="--" if k in ("c_floor", "cu_R", "cu_H") else "-")
     ax[2].set(xlabel="horizon (s)", ylabel="|action curvature - G| (1e-3 / m)", title="action-head curvature")
     ax[2].legend(frameon=False, fontsize=6)
+    for k, lab, col in (("iR", "R", c["R"]), ("iH", "hold", "#66a61e"), ("iI", "warp, no motion", "#a6761d")):
+        m = np.array([T["fidelity"][s][k] for s in st])
+        ax[3].errorbar(t, m[:, 0], [m[:, 0] - m[:, 1], m[:, 2] - m[:, 0]], label=lab, color=col, marker="o", ms=3, capsize=2)
+    ax[3].set(xlabel="horizon (s)", ylabel="luma L1 to the real frame (0-255)", title="image error, road view, below row 60")
+    ax[3].legend(frameon=False, fontsize=7)
     fig.suptitle(f"Nominal real motion, {T['n_anchors']} anchors: medians and IQR", fontsize=9)
     fig.tight_layout()
     fig.savefig(out / "wm-vs-reproj-fidelity.png", dpi=150)
