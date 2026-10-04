@@ -2,7 +2,13 @@
 
 Conventions: curvature is right-positive (CARLA x forward-ish / y right, standard signed curvature in the CARLA frame), like the logged `act_k`.
 """
+import sys
+from pathlib import Path
+
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "lib"))
+from route_poly import curvature, heading, maneuvers  # noqa: E402,F401  (moved to lib/route_poly.py, shared with op_route_cmd)
 
 
 def resample(xy, step=0.5, sigma=1.5):
@@ -23,22 +29,6 @@ def resample(xy, step=0.5, sigma=1.5):
     return P, g
 
 
-def heading(P):
-    d = np.gradient(P, axis=0)
-    return np.unwrap(np.arctan2(d[:, 1], d[:, 0]))
-
-
-def curvature(P, step=0.5, win=3.0):
-    """Signed curvature along the grid (right-positive in the CARLA frame): d heading / d s over a +-win/2 m window."""
-    psi = heading(P)
-    k = max(int(round(win / step / 2)), 1)
-    out = np.zeros(len(P))
-    for i in range(len(P)):
-        a, b = max(i - k, 0), min(i + k, len(P) - 1)
-        out[i] = (psi[b] - psi[a]) / max((b - a) * step, 1e-6)
-    return out
-
-
 def chord_kappa(P, i0, a, step=0.5):
     """Chord curvature 2*y/(x^2+y^2) of the route point a metres ahead of grid index i0, in the route frame at i0 (right-positive)."""
     i1 = min(i0 + int(round(a / step)), len(P) - 1)
@@ -49,34 +39,6 @@ def chord_kappa(P, i0, a, step=0.5):
     c, s_ = np.cos(psi), np.sin(psi)
     x, y = c * d[0] + s_ * d[1], -s_ * d[0] + c * d[1]      # y > 0 = to the right in the CARLA frame
     return 2 * y / max(x * x + y * y, 1e-6)
-
-
-def maneuvers(P, step=0.5, k_th=0.02, gap=8.0, min_deg=8.0):
-    """Turn segments of the route: |kappa| > k_th (R < 50 m) merged over gaps < gap m. Returns a list of dicts
-    (i0, i1, angle_deg signed right-positive, rmin_m)."""
-    k = curvature(P, step)
-    on = np.abs(k) > k_th
-    segs, i = [], 0
-    while i < len(on):
-        if on[i]:
-            j = i
-            while j + 1 < len(on) and on[j + 1]:
-                j += 1
-            if segs and (i - segs[-1][1]) * step < gap:
-                segs[-1][1] = j
-            else:
-                segs.append([i, j])
-            i = j + 1
-        else:
-            i += 1
-    psi = heading(P)
-    out = []
-    for i0, i1 in segs:
-        a0, a1 = max(i0 - 2, 0), min(i1 + 2, len(P) - 1)
-        ang = np.degrees(psi[a1] - psi[a0])
-        if abs(ang) >= min_deg:
-            out.append(dict(i0=i0, i1=i1, angle=float(ang), rmin=float(1.0 / max(np.abs(k[i0:i1 + 1]).max(), 1e-6))))
-    return out
 
 
 TYPES = ["straight", "bend 8-25", "turn 25-60", "turn 60-120", "tight >120"]

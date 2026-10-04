@@ -21,6 +21,8 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(Path(__file__).parent))
 import turn_calibration_lib as L  # noqa: E402
+sys.path.insert(0, str(REPO / "lib"))
+from route_poly import noisy_road, poly_resample  # noqa: E402,F401  (shared with experiments/op_route_cmd: one navigation-noise definition)
 from jevdrive.common import data_dir  # noqa: E402
 
 ARMS = data_dir() / "runs/vlm_arb/arms"
@@ -28,31 +30,6 @@ WB, DELTA_MAX, DT = 2.8605, 0.6, 0.05
 SPEEDS = (3.0, 5.0, 8.0)
 SIGMAS = (1.0, 2.0, 4.0)
 N_DRAW = 20
-
-
-def poly_resample(xy, step=0.25):
-    xy = np.asarray(xy, float)
-    xy = xy[np.r_[True, np.linalg.norm(np.diff(xy, axis=0), axis=1) > 1e-6]]
-    s = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(xy, axis=0), axis=1))]
-    g = np.arange(0.0, s[-1] + 1e-9, step)
-    return np.stack([np.interp(g, s, xy[:, k]) for k in range(2)], -1), g
-
-
-def noisy_road(xy, sigma, rng, decim=10.0, corr=30.0):
-    P, g = poly_resample(xy, 0.25)
-    keep = np.arange(0, len(P), int(decim / 0.25))
-    keep = np.r_[keep, len(P) - 1] if keep[-1] != len(P) - 1 else keep
-    Q = P[keep]
-    s = g[keep]
-    t = np.gradient(Q, axis=0)
-    t /= np.maximum(np.linalg.norm(t, axis=1, keepdims=True), 1e-9)
-    nrm = np.stack([-t[:, 1], t[:, 0]], -1)
-    a = np.exp(-decim / corr)
-    e = np.zeros(len(Q))
-    e[0] = rng.normal()
-    for i in range(1, len(Q)):
-        e[i] = a * e[i - 1] + np.sqrt(1 - a * a) * rng.normal()
-    return Q + sigma * e[:, None] * nrm
 
 
 def pursue(path, start_xy, start_psi, v, end_xy_idx_s, ld):
