@@ -359,9 +359,10 @@ def main():
             for p, d in compare3(rig, client, srv.port, ref, a):
                 f1 = np.load(out / "frames" / p["town"] / (p["id"] + ".npz"))["frames"][-1]
                 for mi, m in enumerate(("road", "wide")):
-                    p1 = np.stack([pack(d[m])]) if False else pack(d[m])
-                    print("compare3", p["id"], m, "mean |front-only - 3cam| (Y, 0..255):", float(np.abs(f1[mi][:4].astype(float) - p1[:4].astype(float)).mean()),
-                          flush=True)
+                    p1 = pack(d[m])
+                    a1, b1 = f1[mi][:4].astype(float), p1[:4].astype(float)
+                    print("compare3", p["id"], m, "Y mean front-only %.1f 3-cam %.1f; mean |diff| %.2f, after removing the mean %.2f" % (
+                        a1.mean(), b1.mean(), np.abs(a1 - b1).mean(), np.abs((a1 - a1.mean()) - (b1 - b1.mean())).mean()), flush=True)
         (out / f"DONE_{k}of{n}").write_text("ok\n")
     except BaseException as e:  # noqa: BLE001
         (out / f"ERROR_{k}of{n}").write_text(repr(e) + "\n")
