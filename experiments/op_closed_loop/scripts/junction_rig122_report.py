@@ -6,6 +6,7 @@ Arms, all seed 2 (turn metrics are junction_cl_report.py's: entered, took the in
 leaves lane = peak > 1.75 m):
   A       shipped `drive`, zones on, 1.433 m          (jcl / jfa lanes)
   D       `drive`, zones off, 1.433 m, raw curvature  (jcl / jfa lanes; the arm of decisions 121 / 122)
+  ol / olnz  `spec` at the open-loop-aligned camera (x 1.59, z 1.86 m; interface.B2D_MOUNTS["openloop"]), zones on / off (rig122 lane, stage ol)
   s143nz  `spec` (clip + delay), zones off, 1.433 m   (unified lane for 6 routes, rig122 lane for the rest): height-only control of s122nz
   s122    `spec`, zones on, 1.22 m
   s122nz  `spec`, zones off, 1.22 m
@@ -33,12 +34,16 @@ import junction_forced_report as F  # noqa: E402
 from jevdrive.common import data_dir  # noqa: E402
 
 DATA = data_dir()
-ARMS = ["A", "D", "s143nz", "s122nz", "s122"]
-LABEL = {"A": "A drive, zones on, 1.433 m", "D": "D drive, zones off, 1.433 m", "s143nz": "s143nz spec, zones off, 1.433 m", "s122nz": "s122nz spec, zones off, 1.22 m",
+MAIN = ["A", "D", "olnz", "ol"]
+SIDE = ["s143nz", "s122nz", "s122"]
+ARMS = MAIN + SIDE
+LABEL = {"olnz": "olnz spec, zones off, open-loop camera (1.59 m, 1.86 m)", "ol": "ol spec, zones on, open-loop camera",
+         "A": "A drive, zones on, 1.433 m", "D": "D drive, zones off, 1.433 m", "s143nz": "s143nz spec, zones off, 1.433 m", "s122nz": "s122nz spec, zones off, 1.22 m",
          "s122": "s122 spec, zones on, 1.22 m"}
-COL = {"A": "#000000", "D": "#0072B2", "s143nz": "#56B4E9", "s122nz": "#D55E00", "s122": "#009E73"}
-SHORT = {"A": "A", "D": "D", "s143nz": "143nz", "s122nz": "122nz", "s122": "122"}
+COL = {"olnz": "#CC79A7", "ol": "#E69F00", "A": "#000000", "D": "#0072B2", "s143nz": "#56B4E9", "s122nz": "#D55E00", "s122": "#009E73"}
+SHORT = {"olnz": "OLnz", "ol": "OL", "A": "A", "D": "D", "s143nz": "143nz", "s122nz": "122nz", "s122": "122"}
 HALF = R.HALF
+PANEL_ARMS = ("D", "s143nz", "olnz", "ol", "s122nz")
 HARD = ("collisions_layout", "collisions_pedestrian", "collisions_vehicle")
 
 
@@ -46,6 +51,8 @@ def attempt(arm, seed, rid):
     if arm in ("A", "D"):
         return F.attempt(arm, seed, rid)
     dirs = list((DATA / "runs/unified/b2d/arms").glob("%s-s%d" % (arm, seed))) + sorted((DATA / "runs/rig122/arms").glob("%s-s%d-k*" % (arm, seed)))
+    if arm in ("ol", "olnz"):
+        dirs = sorted((DATA / "runs/rig122/arms").glob("%s-s%d-k*" % (arm, seed)))
     for u in dirs:
         f = u / "done" / (rid + ".json")
         if f.exists():
@@ -140,23 +147,25 @@ def main():
         w.writeheader()
         w.writerows(cols)
     ix = {(r["route"], r["turn"], r["arm"]): r for r in rows}
-    keys = sorted({(r["route"], r["turn"]) for r in rows if all((r["route"], r["turn"], k) in ix for k in ARMS)})
+    keys = sorted({(r["route"], r["turn"]) for r in rows if all((r["route"], r["turn"], k) in ix for k in MAIN)})
+    have = lambda ks, arms: [k for k in ks if all(k + (m,) in ix for m in arms)]  # noqa: E731
     rng = np.random.default_rng(0)
-    L_ = ["# Junction turns at 1.22 m vs 1.433 m: raw tables (seed %d)\n" % a.seed]
+    L_ = ["# Junction turns at the open-loop camera (1.86 m) vs 1.433 m, with the 1.22 m side row: raw tables (seed %d)\n" % a.seed]
     forced = [k for k in keys if ix[k + ("A",)]["forced"] == 1]
     choice = [k for k in keys if ix[k + ("A",)]["forced"] == 0]
-    L_.append("Turns scored by every arm: %d on %d routes (%d forced, %d choice). Arms: %s.\n" % (len(keys), len({r for r, _ in keys}), len(forced), len(choice),
+    L_.append("Turns scored by the main arms (A, D, OL, OLnz): %d on %d routes (%d forced, %d choice). Arms: %s.\n" % (len(keys), len({r for r, _ in keys}), len(forced), len(choice),
                                                                                               "; ".join("%s = %s" % (k, LABEL[k][len(k) + 1:]) for k in ARMS)))
 
     def rate(ks, k, f, pred=lambda r: True):
         g = [np.array([f(ix[(r, t, k)]) for r2, t in ks if r2 == r and pred(ix[(r, t, k)])], float) for r in sorted({r for r, _ in ks})]
         return R.boot(g, np.mean, rng)
 
-    def table(title, ks):
+    def table(title, ks, arms=MAIN):
+        ks = have(ks, arms)
         L_.append("\n### %s (%d turns, %d routes)\n" % (title, len(ks), len({r for r, _ in ks})))
         L_.append("| arm | took branch (n, %) | lost % | leaves lane % of entered | median peak cross-track m | median head peak / needed | collisions in window (n) | red lights in window (n) |")
         L_.append("|---|---|---|---|---|---|---|---|")
-        for k in ARMS:
+        for k in arms:
             n = sum(ix[(r, t, k)]["branch"] == "yes" for r, t in ks)
             lo = rate(ks, k, lambda r: r["branch"] == "lost")
             lv = rate(ks, k, lambda r: r["leaves"], lambda r: r["entered"] == 1)
@@ -168,22 +177,27 @@ def main():
     L_.append("\n## Per-group outcomes\n")
     table("Choice turns", choice)
     table("Forced turns", forced)
+    side = ["D", "olnz", "s143nz", "s122nz", "s122"]
+    L_.append("\n## Side row: the 1.22 m bumper-line runs (stopped by the change of plan; turns where s143nz, s122nz and s122 all exist)\n")
+    table("Choice turns, 1.22 m side row", choice, side)
+    table("Forced turns, 1.22 m side row", forced, side)
     L_.append("\n### By minimum radius (took intended branch n / turns; head peak / needed, median)\n")
-    L_.append("| group | R_min | n | " + " | ".join(SHORT[k] for k in ARMS) + " |\n|---|---|---|" + "---|" * len(ARMS))
+    L_.append("| group | R_min | n | " + " | ".join(SHORT[k] for k in MAIN) + " |\n|---|---|---|" + "---|" * len(MAIN))
     for gname, ks in (("choice", choice), ("forced", forced)):
         for bn, lo_, hi_ in (("< 10 m", 0, 10), ("10-20 m", 10, 20), ("> 20 m", 20, 1e9)):
             kk = [(r, t) for r, t in ks if lo_ <= ix[(r, t, "A")]["rmin"] < hi_]
             if kk:
                 cells = []
-                for k in ARMS:
+                for k in MAIN:
                     ent = [ix[(r, t, k)]["head_pk"] / ix[(r, t, k)]["need"] for r, t in kk if ix[(r, t, k)]["entered"]]
                     cells.append("%d / %d (%.2f)" % (sum(ix[(r, t, k)]["branch"] == "yes" for r, t in kk), len(kk), np.nanmedian(ent) if ent else np.nan))
                 L_.append("| %s | %s | %d | " % (gname, bn, len(kk)) + " | ".join(cells) + " |")
     # paired comparisons against the existing 1.433 m numbers
     L_.append("\n## Paired comparisons (same turn; discordant pairs = turns where only one of the two arms took the branch)\n")
     L_.append("| pair | group | n | both | only first | only second | rate diff pp [route-cluster CI] |\n|---|---|---|---|---|---|---|")
-    for p, q in (("s122nz", "D"), ("s122nz", "s143nz"), ("s143nz", "D"), ("s122", "A")):
-        for gname, ks in (("choice", choice), ("forced", forced)):
+    for p, q in (("olnz", "D"), ("ol", "A"), ("olnz", "ol"), ("olnz", "s143nz"), ("olnz", "s122nz"), ("s122nz", "D"), ("s122nz", "s143nz"), ("s143nz", "D"), ("s122", "A")):
+        for gname, ks0 in (("choice", choice), ("forced", forced)):
+            ks = have(ks0, (p, q))
             y = lambda k, r, t: ix[(r, t, k)]["branch"] == "yes"  # noqa: E731
             both = sum(y(p, r, t) and y(q, r, t) for r, t in ks)
             o1 = sum(y(p, r, t) and not y(q, r, t) for r, t in ks)
@@ -215,6 +229,9 @@ def main():
         x = ix[(r, t, "A")]
         cells = []
         for k in ARMS:
+            if (r, t, k) not in ix:
+                cells.append("-")
+                continue
             z = ix[(r, t, k)]
             cells.append("%s %.1f, %.2f/%.2f, %d+%d" % (z["branch"][0], z["peak"], z["head_pk"], z["need"], z["coll"], z["red"]) if z["entered"] else "n")
         L_.append("| %s | %d | %s | %+.0f | %.1f | %s | " % (r, t, "forced" if x["forced"] else "choice", x["angle"], x["rmin"], x["kind"]) + " | ".join(cells) + " |")
@@ -233,11 +250,11 @@ def main():
             poly = np.vstack([Dp + HALF * nr, (Dp - HALF * nr)[::-1]])
             ax.fill(poly[:, 0], poly[:, 1], color="#dddddd", zorder=0, label="lane +-1.75 m about the dense centreline")
             txt = []
-            for k in ("D", "s143nz", "s122nz", "s122"):
+            for k in [m for m in PANEL_ARMS if (rid, mi, m) in traj]:
                 tr, e = traj[(rid, mi, k)]
                 near, dev = R.project(tr, D)
                 sel = (near >= a0) & (near <= a1 - 1) & (dev < 30)
-                ax.plot(tr[sel, 0], tr[sel, 1], color=COL[k], lw=2.0, ls="-" if "122" in k else "--", zorder=3, label=LABEL[k])
+                ax.plot(tr[sel, 0], tr[sel, 1], color=COL[k], lw=2.0, ls="-" if k.startswith("ol") else "--", zorder=3, label=LABEL[k])
                 z = ix[(rid, mi, k)]
                 txt.append("%-6s %-5s peak %5.1f m  head %.2f / need %.2f 1/m  hits %d" % (SHORT[k], e["branch"], e["peak"] if np.isfinite(e["peak"]) else np.nan, z["head_pk"], z["need"], z["coll"]))
             L = lab[(rid, mi)]
