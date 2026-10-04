@@ -4,7 +4,7 @@
     -> <out>.md (tables) and <out>.json (per turn x arm). Runs on the box (needs the attempt dirs).
 
 Per entered turn (window = entry .. exit of C.eval_turn, <= 15 s): commanded side from the labelled angle (> 0 = right in CARLA's frame,
-checked against the logged desire pulse), signed desired curvature s = act_k * (+1 left / -1 right) (convention checked on the turns shipped took),
+checked against the logged desire pulse), signed desired curvature s = act_k * (+1 right / -1 left) (convention checked on the turns shipped took),
 peak signed s over the approach + window, turn-in time = first plan step with s >= 0.5 / R_min (relative to entry), speed stats in the window.
 """
 import argparse
@@ -50,7 +50,7 @@ def split_one(rid, arm, att, geom, lab):
             a, b = e["span"]
             b = min(b, a + int(WIN_S * 20)) if len(tt) > 1 else b
             t0, t1 = tt[a], tt[min(b, len(tt) - 1)]
-            sg = (-1.0 if right else 1.0)
+            sg = (1.0 if right else -1.0)
             sel = (pt >= t0 - APPROACH_S) & (pt <= t1)
             s = pk[sel] * sg
             pw = (pt >= t0) & (pt <= t1)
@@ -109,7 +109,7 @@ def main():
         r["cause"] = classify(r)
     Path(a.out + ".json").write_text(json.dumps(res, indent=1, default=float))
     L = ["# Failure split of the 25 B2D junction turns (rft_split.py)\n",
-         "Window = entry .. exit of the turn (<= 15 s). s = desired curvature act_k signed to the commanded side (+ = towards the exit side; L positive, R negative convention). "
+         "Window = entry .. exit of the turn (<= 15 s). s = desired curvature act_k signed to the commanded side (+ = towards the exit side; act_k is positive to the right: shipped took the left turn 28008 0 with k -0.16, right turns lost with k +0.1..+0.18). "
          "Causes, first match: not entered; `wrong side` (peak s < 0.5 / R_min and the opposite sign reaches -0.5 / R_min); `not chosen` (peak s over approach 6 s + window < 0.5 / R_min); "
          "`crawl / stop` (steered, but stopped > 25% of the window or median speed < 1.5 m/s); `late` (first s >= 0.5 / R_min later than 0.5 s after entry or never); `too little` (steered in time, still lost).\n"]
     arms = list(dict.fromkeys(r["arm"] for r in res))
