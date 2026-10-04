@@ -59,16 +59,23 @@ def _conn_fn(loc):
     return f
 
 
+def ego_path(xs, cum, i):
+    """Poses of frame i onwards (until PATH_M of path, the log end or MAX_FRAMES) in the ego frame of frame i (rear axle, x forward, y left)."""
+    n = len(xs)
+    j1 = int(min(n, i + MAX_FRAMES + 1, np.searchsorted(cum, cum[i] + PATH_M) + 2))
+    d = xs[i:j1, :2] - xs[i, :2]
+    c, s = np.cos(xs[i, 2]), np.sin(xs[i, 2])
+    return np.stack([c * d[:, 0] + s * d[:, 1], -s * d[:, 0] + c * d[:, 1]], -1)
+
+
 def label_frames(xs, idx, conn=None):
     """xs (n, 3) global (x, y, yaw) of the consecutive 2 Hz frames of one log; idx = frame indices to label.
     Returns a list of dicts: hindsight fields + jct_s, turn_junction."""
-    n, out = len(xs), []
+    out = []
     cum = np.r_[0.0, np.cumsum(np.hypot(*np.diff(xs[:, :2], axis=0).T))]
     for i in idx:
-        j1 = int(min(n, i + MAX_FRAMES + 1, np.searchsorted(cum, cum[i] + PATH_M) + 2))
-        d = xs[i:j1, :2] - xs[i, :2]
+        loc = ego_path(xs, cum, i)
         c, s = np.cos(xs[i, 2]), np.sin(xs[i, 2])
-        loc = np.stack([c * d[:, 0] + s * d[:, 1], -s * d[:, 0] + c * d[:, 1]], -1)     # ego frame of frame i
         h = RP.hindsight(loc, want_path=True)
         P = h.pop("path", None)
         h["jct_s"], h["turn_junction"] = np.nan, False
