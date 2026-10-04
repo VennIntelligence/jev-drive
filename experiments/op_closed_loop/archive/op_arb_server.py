@@ -25,6 +25,10 @@ rising-edge pulse; the class is imported, not copied), plus two things the arbit
           from the native one when the car moves off after a standstill, is stepped on the frames rotated to the launch heading
           (meta "yaw"); for the launch phase its lateral plan (pos y, yaw, curvature), rotated into the car frame, replaces the
           native one; longitudinal heads stay native.
+  route   (meta "route_adapter": <adapter.npz>, "route_poly" (16 x 2 rear-axle frame, x fwd, y left, 10 m vertices), "route_mask"; sent
+          by lib/op_arb_agent.py when its config names "route_adapter"; experiments/op_route_ft) the route-choice adapter: the bias
+          lib/route_adapter.NumpyAdapter(adapter).bias_from_route(poly, mask) is the served ONNX's `intent_bias` input (an ONNX built by
+          experiments/op_route_ft/scripts/route_onnx.py build); info "ra_f" = the feature vector. Requests without it: unchanged.
 
     CUDA_VISIBLE_DEVICES=6 $DATA_DIR/envs/openpilot/bin/python experiments/op_closed_loop/archive/op_arb_server.py cinque --pool 4 \
         --backend cuda-iob --socket S
@@ -83,6 +87,7 @@ class ArbModel(ZP.OpenpilotModel):
         # enabled by env OP_DET_HEAD=<det_head.npz>; adds out["det"] = P(light, stop sign within 40 m). No effect when unset.
         dp = os.environ.get("OP_DET_HEAD", "")
         self.det = dict(np.load(dp)) if dp else None
+        self.ra_cache, self.ra_lock = {}, threading.Lock()   # route adapters by path (meta "route_adapter")
         self.lanes = os.environ.get("OP_LANES", "") == "1"        # vmerge3: lane lines + road edges in out (no effect when unset)
         super().__init__(a)                       # its warm-up takes a state from new_state(None) and drops it
         self.free += self._warm
@@ -253,15 +258,35 @@ class ArbModel(ZP.OpenpilotModel):
                     curvature=d["curvature"])
         out.update(pos=LS.merge_lateral(out["pos"], sp), yaw=sy.astype(np.float32))
 
+    def _route_bias(self, state, meta, info):
+        """Route-choice adapter (experiments/op_route_ft): the route polyline of this step -> the `intent_bias` input."""
+        import route_adapter as RA
+        path = meta["route_adapter"]
+        with self.ra_lock:
+            if path not in self.ra_cache:
+                self.ra_cache[path] = RA.NumpyAdapter(path)
+            na = self.ra_cache[path]
+        m = state["model"]
+        if "intent_bias" not in m.inputs:
+            raise RuntimeError("route_adapter set but the served ONNX has no intent_bias input (build it with route_onnx.py build)")
+        f = RA.features(na.enc, np.asarray(meta["route_poly"], np.float32).reshape(-1, 2), np.asarray(meta["route_mask"], bool))
+        m.extra = {"intent_bias": na.bias(f)}
+        info["ra_f"] = [round(float(x), 4) for x in f]
+
     def plan(self, state, meta, prep):
         if self.E is not None:                           # intent adapter input of this step: 0 unknown, 1 straight, 2 left, 3 right
             state["model"].extra = {"intent_bias": self.E[int(meta.get("intent", 0))][None]}
+        ra_info = {}
+        if meta.get("route_adapter"):
+            assert self.E is None, "an intent E table and a route adapter on one ONNX"
+            self._route_bias(state, meta, ra_info)
         g, mode = state.get("gate"), "off"
         if g is not None and meta.get("yaw") is not None and "raw" in prep:
             mode = g.step(float(meta.get("t", 0.0)), float(meta.get("speed", 0.0)), float(meta["yaw"]), int(meta.get("desire", 0)))
             if mode == "fork":                           # the native state after the last standstill step, before this one
                 LS.fork_state(state["stab"], state["model"])
         info, out = super().plan(state, meta, prep)      # steps state["model"] with the route desire
+        info.update(ra_info)
         m = state["model"]
         raw = m.last_raw
         s = lambda k: raw[m.slices[k]]  # noqa: E731

@@ -25,7 +25,8 @@ Keys (values in SPEC):
   lon.source            action    action[1] -> LongControl (selfdrive/controls); plan-ilqr, plan-scorer, plan-idm-latch
   command.channel       none      nothing tells the model where to go; desire only for a driver-initiated lane change.
                                   desire is NOT a choice signal (decisions 92, 121). desire-route, desire-sim, onehot, intent, sky-arrow
-  command.route_geometry none     dense-zones: the route geometry steers in command zones / on divergence (B2D DRIVE_ZONES, semi)
+  command.route_geometry none     dense-zones: the route geometry steers in command zones / on divergence (B2D DRIVE_ZONES, semi);
+                                  nav-polyline: the route ahead as a navigation polyline input of a route-choice fine-tune (semi)
   light.source          none      the model sees the light like any pixel; vlm (a VLM reads it), gt-stop (privileged ceiling);
                                   gt-latch (nored) is forbidden
   tricks                ()        harness post-processing outside openpilot (forward_only, coast_v, x1.06, selector, ...)
@@ -122,9 +123,14 @@ DECLARED = {
                                "latch + timer resume; action acceleration not used (d119)", "d74, d82, d119"),
         "command.channel": ("semi", "route turn desire 20 m before LEFT / RIGHT (not a choice signal, d121); sky arrow arms",
                             "d92, d102, d121"),
-        "command.route_geometry": ("semi", "DRIVE_ZONES: the dense route geometry steers in command zones (LEFT / RIGHT 15/5 m, "
-                                           "STRAIGHT 5/5, lane change 5/10) and on divergence > 1 m at 15 m; a fallback, not an "
-                                           "openpilot capability; every report row carries the zones-off reading", "d121, d122"),
+        "command.route_geometry": ("semi", "dense-zones = DRIVE_ZONES: the dense route geometry steers in command zones (LEFT / RIGHT "
+                                           "15/5 m, STRAIGHT 5/5, lane change 5/10) and on divergence > 1 m at 15 m; a fallback, not an "
+                                           "openpilot capability; every report row carries the zones-off reading. nav-polyline = the "
+                                           "route-choice fine-tune's input (experiments/op_route_ft, lib/route_adapter.py): the route "
+                                           "ahead as a 10 m-vertex polyline to 150 m in the ego frame, taken from the dense route without "
+                                           "noise, i.e. what a car's navigation knows about the route (semi: the dense route is lane-exact, "
+                                           "a navigation route is road-level); it only conditions the model, nothing steers from it",
+                                   "d121, d122, op_route_ft"),
         "light.source": ("priv", "R3a tl_stop is a privileged ceiling (diagnosis only); VLM arms read the light from pixels",
                          "d82, d107"),
         "tricks": ("semi", "coast_v 2.5 (MKZ stops dead on a light brake); camera_at_bumper_x3.80 only in the "
@@ -268,6 +274,7 @@ def b2d_values(cfg, env=None):
     channel = "sky-arrow" if a.get("img_cmd") else "intent" if a.get("intent") == "route" else \
         "desire-route" if cfg.get("desire", True) else "none"
     zones = drive and a.get("zones", True) and lat_op
+    geom = "+".join((["dense-zones"] if zones else []) + (["nav-polyline"] if cfg.get("route_adapter") else [])) or "none"
     tricks = []
     if float(mount[0]) > 3.0:
         tricks.append("camera_at_bumper_x%.2f" % float(mount[0]))
@@ -284,7 +291,7 @@ def b2d_values(cfg, env=None):
             "lateral.source": "action" if curv else "plan", "lateral.exec": "op-path" if opc else "bicycle" if curv else "p7",
             "lateral.delay_s": float(opc_rule.get("delay", 0.25)) if opc else "carla",
             "lon.source": "plan-idm-latch" if drive else "plan-p7",
-            "command.channel": channel, "command.route_geometry": "dense-zones" if zones else "none",
+            "command.channel": channel, "command.route_geometry": geom,
             "light.source": light, "tricks": tuple(tricks)}
 
 

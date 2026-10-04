@@ -41,6 +41,11 @@ Presets (PRESETS; "preset" at the top level of the config or inside "arb"; expli
            desire, coast_v, camera height) are declared in interface.DECLARED["b2d"].
   drive    the `drive` arm of every result up to 2026-10-05 (moved verbatim from experiments/op_closed_loop/archive/op_arb.sh):
            raw action curvature through the bicycle model on lane-follow segments, no clip / delay, 1.433 m windshield rig.
+Route-choice adapter (experiments/op_route_ft): top-level "route_adapter": <adapter.npz> sends, with every plan request, the route ahead
+of the ego as the navigation polyline the adapter was trained on (lib/route_adapter.route_poly_from_path: the dense route from the ego's
+projection on, in the rear-axle frame x forward / y left, 10 m vertices to 150 m, no noise) plus the adapter path; the server turns it into
+the ONNX's intent_bias input. plans.jsonl then carries "ra": {"f": the adapter features, "poly": the vertices}. Absent: unchanged.
+Declared as command.route_geometry = nav-polyline (interface.DECLARED["b2d"]).
 Every route attempt writes interface.json (resolved interface values + declared deviations) next to plans.jsonl; a config the
 interface refuses (an undeclared deviation, or "resume": "nored") fails at setup.
 
@@ -235,6 +240,10 @@ class OpArbAgent(Z.ZeroShotAgent):
             self.lateral = "curvature"                         # the parent's tick loop steers from self.curvature
         if self.arb["coast_v"] > 0:
             self.rules = "coast"                               # the parent's post-controller hook -> _k_rules below
+        self.route_adapter = self.cfg.get("route_adapter") or None
+        if self.route_adapter:
+            import route_adapter as RA                       # lib/: numpy only on this path (features run on the server)
+            self.route_poly_from_path = RA.route_poly_from_path
         self.pc = None
         if self.cfg.get("pc"):
             from b2d_privileged_geometry import Privileged
@@ -298,6 +307,26 @@ class OpArbAgent(Z.ZeroShotAgent):
         if c is None or d > 60.0:
             return ["straight", None]
         return [{Z.LEFT: "left", Z.RIGHT: "right", Z.STRAIGHT: "straight"}[c], round(float(d), 2)]
+
+    def nav_polyline(self, xy, yaw):
+        """The route ahead as the adapter's polyline: dense route points from the ego's (rear axle) projection on, up to 170 m of arc,
+        in the rear-axle frame (x forward, y left) -> (16, 2) vertices, (16,) mask."""
+        i0, s = self.route.i, self.route.s
+        a = max(i0 - 2, 0)
+        b = min(int(np.searchsorted(s, s[i0] + 170.0)) + 1, len(s))
+        loc = world_to_local(self.route.xy[a:b], xy, yaw)
+        if len(loc) < 2:
+            return self.route_poly_from_path(np.array([[0.1, 0.0]]))
+        best, proj, nxt = 1e9, loc[0], 1                     # projection of the origin on the first few segments
+        for k in range(min(len(loc) - 1, 6)):
+            p, q = loc[k], loc[k + 1]
+            d = q - p
+            t = float(np.clip(-np.dot(p, d) / max(float(np.dot(d, d)), 1e-9), 0.0, 1.0))
+            c = p + t * d
+            n = float(np.hypot(*c))
+            if n < best:
+                best, proj, nxt = n, c, k + 1
+        return self.route_poly_from_path(np.vstack([proj[None], loc[nxt:]]))
 
     def in_zone(self):
         s = self.route.s[self.route.i]
@@ -399,6 +428,11 @@ class OpArbAgent(Z.ZeroShotAgent):
         img = self.img_cmd() if A.get("img_cmd") else None
         if img is not None:                                  # op_img_cmd: the server draws the sky arrow (command + nav distance only)
             meta["img_cmd"] = img
+        ra_poly = None
+        if self.route_adapter:                               # op_route_ft: the navigation polyline -> the server's route adapter
+            ra_poly, ra_mask = self.nav_polyline(now_xy, now_yaw)
+            meta.update(route_adapter=self.route_adapter, route_poly=np.round(ra_poly, 3).ravel().tolist(),
+                        route_mask=[int(x) for x in ra_mask])
         wire.send(self.sock, meta, dict(cams))
         info, out = wire.recv(self.sock)
         self.op_out = out                                    # the latest openpilot heads (vmerge reads its trigger / lead heads)
@@ -577,6 +611,8 @@ class OpArbAgent(Z.ZeroShotAgent):
         if A["twin"]:
             tw = Z.resample(out["t"], rigs.openpilot_plan_to_rig(out["twin_pos"], out["twin_yaw"], self.op_mount), TIMES)
             rec.update(tw_xy=r3(tw[[3, 7, 11, 19]]), tw_dp=r3(np.asarray(out["twin_desire_pred"])[:, :3]))
+        if ra_poly is not None:
+            rec["ra"] = {"f": info.get("ra_f"), "poly": np.round(ra_poly[ra_mask], 2).tolist()}
         if "sel" in info:                                    # server-side selector (op_arb_server.py OP_SEL)
             rec["sel"] = {k: info[k] for k in info if k.startswith("sel")}
         if "ls" in info:                                     # server-side launch stabilisation (op_arb_server.py OP_LSTAB)

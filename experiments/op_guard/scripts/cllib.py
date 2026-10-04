@@ -96,7 +96,7 @@ def turns_cache_ok(udir: Path) -> bool:
 
 
 # ---------------------------------------------------------------- lane jobs
-def b2d_unit(name, ids, out, seed, nz, onnx, priority=0.0):
+def b2d_unit(name, ids, out, seed, nz, onnx, priority=0.0, route_adapter=None):
     from jevdrive.cl import Job
     e = dict(GPU="{gpu}", IDX0="{idx}", WORKERS="{workers}", CPUS="{cpus}", SEED=str(seed), OP_ARB_DIR="{job_dir}/op",
              OP_ARB_ARMS=str(Path(out).parent), SRV_NO_TWIN="1", OPENBLAS_CORETYPE="Haswell", OP_ARB_AGENT="lib/op_arb_agent.py", DESIRE="true")
@@ -104,6 +104,8 @@ def b2d_unit(name, ids, out, seed, nz, onnx, priority=0.0):
         e["DRIVE_ARGS"] = NOZ
     if onnx:
         e["SRV_ONNX"] = onnx
+    if route_adapter:                         # op_route_ft: the agent sends the route polyline, the server adds the adapter's bias
+        e["TOP_ARGS"] = '"route_adapter": "%s"' % route_adapter
     n = len(ids)
     return Job(name, ["bash", OP_ARB, "arm", "spec", ",".join(ids), str(out)], workers=n, vram_gb=7.5, cores=12, tries=2, env=e,
                out=str(out), priority=priority, ok=lambda j, out=Path(out), ids=tuple(ids): all((out / "done" / (r + ".json")).exists() for r in ids))
@@ -137,7 +139,7 @@ def shards(ids, stage):
 def lane_jobs(candidate: str, mode: str, lines, stage: str = "all", force: bool = False):
     c = G.resolve(candidate)
     rd = G.run_dir(c["name"], mode)
-    onnx = c.get("onnx")
+    onnx, ra = c.get("onnx"), c.get("route_adapter")
     jobs = []
     if "hugsim" in lines and not (candidate == G.SHIPPED and mode == "subset" and not force and hugsim_cached()):
         scen = HUGSIM_SETS[mode]
@@ -148,12 +150,12 @@ def lane_jobs(candidate: str, mode: str, lines, stage: str = "all", force: bool 
     if "b2d_turns" in lines and not (candidate == G.SHIPPED and not force and turns_cached()):
         for k, ids in shards(TURN_ROUTES, stage):
             jobs.append(b2d_unit("turns-s%d-k%d%s" % (TURN_SEED, k, "-smoke" if stage == "smoke" else ""), ids,
-                                 rd / "b2d" / ("turns-s%d-k%d" % (TURN_SEED, k)), TURN_SEED, True, onnx, priority=2))
+                                 rd / "b2d" / ("turns-s%d-k%d" % (TURN_SEED, k)), TURN_SEED, True, onnx, priority=2, route_adapter=ra))
     if "b2d_ds" in lines:
         for s in DS_SEEDS[mode][:1] if stage == "smoke" else DS_SEEDS[mode]:
             for k, ids in shards(DS_ROUTES, stage):
                 jobs.append(b2d_unit("ds-s%d-k%d%s" % (s, k, "-smoke" if stage == "smoke" else ""), ids,
-                                     rd / "b2d" / ("ds-s%d-k%d" % (s, k)), s, False, onnx, priority=1))
+                                     rd / "b2d" / ("ds-s%d-k%d" % (s, k)), s, False, onnx, priority=1, route_adapter=ra))
     return jobs
 
 

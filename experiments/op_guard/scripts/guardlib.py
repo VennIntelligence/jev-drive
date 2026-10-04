@@ -33,7 +33,7 @@ def candidates() -> dict:
 
 
 def resolve(candidate: str) -> dict:
-    """Registry name or a path to an ONNX file -> {name, onnx (absolute path or None for shipped), command_adapter}."""
+    """Registry name or a path to an ONNX file -> {name, onnx (absolute path or None for shipped), command_adapter, route_adapter}."""
     reg = candidates()
     if candidate in reg:
         c = dict(reg[candidate], name=candidate)
@@ -46,6 +46,14 @@ def resolve(candidate: str) -> dict:
         c["onnx"] = os.path.expandvars(c["onnx"])
         if not Path(c["onnx"]).is_file():
             raise SystemExit(f"missing ONNX {c['onnx']}")
+    # route-choice adapter (experiments/op_route_ft): closed-loop B2D units serve it through the agent's "route_adapter" (the route polyline
+    # -> the ONNX's intent_bias input). Registry key `route_adapter`, else `<onnx stem>.adapter.npz` next to the ONNX (route_onnx.py build).
+    ra = c.get("route_adapter")
+    if ra is None and c.get("onnx") and Path(c["onnx"][: -len(".onnx")] + ".adapter.npz").is_file():
+        ra = c["onnx"][: -len(".onnx")] + ".adapter.npz"
+    c["route_adapter"] = os.path.expandvars(ra) if ra else None
+    if c["route_adapter"] and not Path(c["route_adapter"]).is_file():
+        raise SystemExit(f"missing route adapter {c['route_adapter']}")
     return c
 
 

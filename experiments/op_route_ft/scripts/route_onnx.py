@@ -87,8 +87,8 @@ def synth(a):
     for enc in ("bear", "poly"):
         m = RA.RouteAdapter(enc)
         with torch.no_grad():
-            m.out.weight.copy_(torch.randn(m.out.weight.shape, generator=g) * 0.01)
-            m.out.bias.copy_(torch.randn(m.out.bias.shape, generator=g) * 0.01)
+            m.out.weight.copy_(torch.randn(m.out.weight.shape, generator=g) * a.std)
+            m.out.bias.copy_(torch.randn(m.out.bias.shape, generator=g) * a.std)
         m.to_npz(out / f"adapter-{enc}.npz")
     print("wrote", out, "tensors", list(st))
 
@@ -169,19 +169,23 @@ def check(a):
     for k in (0, 1):
         frames = np.load(REF_DIR / f"frames_{k}.npz")["frames"]
         cmd = z[f"cmd_{k}"]
-        m.reset()
-        got = []
-        for f, fr in enumerate(frames):
-            m.extra = {"intent_bias": B[int(cmd[f])][None]}
-            m.step(fr)
-            got.append(m.step(fr))
-        got = np.stack(got)[:, cols]
+        res = {}
+        for tag, bias_of in (("served", lambda f: B[int(cmd[f])][None]), ("bias dropped", lambda f: np.zeros((1, 32, 512), np.float16))):
+            m.reset()
+            got = []
+            for f, fr in enumerate(frames):
+                m.extra = {"intent_bias": bias_of(f)}
+                m.step(fr)
+                got.append(m.step(fr))
+            res[tag] = np.stack(got)[:, cols]
         ref_ = z[f"out_{k}"][:, cols]
         ok = np.arange(len(frames)) >= 2 * 8
-        d = np.abs(got[ok] - ref_[ok])
-        pg = got[ok][:, :495].reshape(-1, 33, 15)[:, :, :2] - ref_[ok][:, :495].reshape(-1, 33, 15)[:, :, :2]
-        rows.append((k, int(ok.sum()), float(d.max()), float(np.percentile(d, 99)), float(np.abs(pg).max()), float(np.linalg.norm(pg, axis=-1).mean())))
-        print("stream %d frames %d | all cols max %.4f p99 %.5f | plan xy max %.4f m, mean dist %.5f m" % rows[-1])
+        for tag, got in res.items():                         # "bias dropped": what the check would see if the bias were lost
+            d = np.abs(got[ok] - ref_[ok])
+            pg = got[ok][:, :495].reshape(-1, 33, 15)[:, :, :2] - ref_[ok][:, :495].reshape(-1, 33, 15)[:, :, :2]
+            r = (k, tag, int(ok.sum()), float(d.max()), float(np.percentile(d, 99)), float(np.abs(pg).max()), float(np.linalg.norm(pg, axis=-1).mean()))
+            rows.append(r)
+            print("stream %d %-12s frames %d | all cols max %.4f p99 %.5f | plan xy max %.4f m, mean dist %.5f m" % r)
     return rows
 
 
@@ -194,6 +198,7 @@ if __name__ == "__main__":
     b.add_argument("--out", required=True)
     s = sp.add_parser("synth")
     s.add_argument("--out", required=True)
+    s.add_argument("--std", type=float, default=0.01, help="std of the adapter's random out layer")
     r = sp.add_parser("ref")
     r.add_argument("--ckpt", required=True)
     r.add_argument("--adapter", required=True)
