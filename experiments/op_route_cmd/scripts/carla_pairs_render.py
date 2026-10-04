@@ -314,31 +314,60 @@ def main():
     todo = [p for p in poses if not (out / "frames" / p["town"] / (p["id"] + ".npz")).exists()]
     print("poses", len(poses), "todo", len(todo), flush=True)
     log = open(out / f"render_{k}of{n}.jsonl", "a")
-    srv = Server(a.idx, a.gpu, a.cpus, out / f"server_{k}of{n}.log")
-    rig = None
-    try:
+    cams = [(CAM_XYZ[0], CAM_XYZ[1], CAM_XYZ[2], 0.0)]
+    sizes, maps = build_maps([("front", *CAM_XYZ[:2], CAM_XYZ[2], 0.0)])
+    print("render size", sizes, flush=True)
+    state = dict(srv=None, rig=None, client=None, restarts=0)
+
+    def start():
+        stop()
+        state["srv"] = Server(a.idx, a.gpu, a.cpus, out / f"server_{k}of{n}.log")
         time.sleep(25)
-        client = connect(srv.port)
-        cams = [(CAM_XYZ[0], CAM_XYZ[1], CAM_XYZ[2], 0.0)]
-        sizes, maps = build_maps([("front", *CAM_XYZ[:2], CAM_XYZ[2], 0.0)])
-        print("render size", sizes, flush=True)
-        rig = Rig(client, [sizes], cams, a.hero)
-        t_start, n_done, n_render, town = time.time(), 0, 0, None
-        for p in todo:
-            if p["town"] != town:
-                t = time.time()
-                rig.load(p["town"], (p["hist"]["x"][0], p["hist"]["y"][0], p["hist"]["z"][0]))
-                town = p["town"]
-                print("loaded %s in %.1f s" % (town, time.time() - t), flush=True)
-                log.write(json.dumps(dict(event="load", town=town, wall=time.time() - t)) + "\n")
-            st = dict(id=p["id"], town=p["town"], profile=p["profile"], weather=p["weather"])
+        state["client"] = connect(state["srv"].port)
+        state["rig"] = Rig(state["client"], [sizes], cams, a.hero)
+
+    def stop():
+        if state["rig"] is not None:
             try:
-                fr = render_pose(rig, maps, p, st)
-            except TimeoutError as e:
-                st["error"] = str(e)
-                log.write(json.dumps(st) + "\n")
+                state["rig"].teardown()
+            except Exception:  # noqa: BLE001
+                pass
+        if state["srv"] is not None:
+            state["srv"].stop()
+        state["srv"] = state["rig"] = None
+
+    try:
+        start()
+        t_start, n_done, n_render, town, tries = time.time(), 0, 0, None, 0
+        i = 0
+        while i < len(todo):
+            p = todo[i]
+            try:
+                if p["town"] != town:
+                    t = time.time()
+                    state["rig"].load(p["town"], (p["hist"]["x"][0], p["hist"]["y"][0], p["hist"]["z"][0]))
+                    town = p["town"]
+                    print("loaded %s in %.1f s" % (town, time.time() - t), flush=True)
+                    log.write(json.dumps(dict(event="load", town=town, wall=time.time() - t)) + "\n")
+                st = dict(id=p["id"], town=p["town"], profile=p["profile"], weather=p["weather"])
+                fr = render_pose(state["rig"], maps, p, st)
+            except (RuntimeError, TimeoutError) as e:
+                # a server crash (Signal 11 on a Large-Map load or tile stream) or a lost frame: restart the server, redo the pose
+                tries += 1
+                state["restarts"] += 1
+                log.write(json.dumps(dict(event="restart", id=p["id"], error=str(e)[:200], tries=tries)) + "\n")
                 log.flush()
-                raise
+                print("RESTART (%d) at %s: %s" % (state["restarts"], p["id"], str(e)[:120]), flush=True)
+                if state["restarts"] > 12:
+                    raise
+                if tries > 3:                      # this pose keeps killing the server: skip it, record it
+                    log.write(json.dumps(dict(event="skip", id=p["id"])) + "\n")
+                    i, tries = i + 1, 0
+                start()
+                town = None
+                continue
+            tries = 0
+            i += 1
             dst = out / "frames" / p["town"] / (p["id"] + ".npz")
             dst.parent.mkdir(parents=True, exist_ok=True)
             tmp = dst.with_name(dst.stem + ".tmp.npz")
@@ -355,8 +384,8 @@ def main():
                 print("%d/%d poses  %.2f poses/s  %.1f ticks/s" % (n_done, len(todo), n_done / el, n_render / el), flush=True)
         if a.compare3:
             ref = poses[: a.compare3]
-            rig.teardown()
-            for p, d in compare3(rig, client, srv.port, ref, a):
+            state["rig"].teardown()
+            for p, d in compare3(state["rig"], state["client"], state["srv"].port, ref, a):
                 f1 = np.load(out / "frames" / p["town"] / (p["id"] + ".npz"))["frames"][-1]
                 for mi, m in enumerate(("road", "wide")):
                     p1 = pack(d[m])
@@ -368,12 +397,7 @@ def main():
         (out / f"ERROR_{k}of{n}").write_text(repr(e) + "\n")
         raise
     finally:
-        if rig is not None:
-            try:
-                rig.teardown()
-            except Exception:  # noqa: BLE001
-                pass
-        srv.stop()
+        stop()
 
 
 if __name__ == "__main__":
