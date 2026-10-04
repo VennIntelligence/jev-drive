@@ -8,6 +8,8 @@ index: Native never starts (6/6); arbitration +9.7 DS is slowness
 
 **Conclusion.** Native never starts (6/6); arbitration DS 66.2 vs 56.6 (+9.7 [-5.5, +27.0]) but a slow base gets 67.7 (decisions 57). op-drive fails S2 (-6.4); red-light stop 62.6 vs 63.2 (decisions 74).
 
+**Junction turns, action head alone (camera rig).** [results/junction_rig122.md](results/junction_rig122.md): at the open-loop-aligned camera (1.59 m, 1.86 m) zones off takes 0/13 choice, 1/12 forced turns (1.433 m: 2/13, 4/12); 1.22 m is the only height where the head reaches the exit (5/10, 3/9) but over-steers. Earlier: [results/junction_closed_loop.md](results/junction_closed_loop.md), [results/junction_forced_and_arrow.md](results/junction_forced_and_arrow.md).
+
 **Read more.** research/openpilot-closedloop-integration.md, research/openpilot-seed0-video-diagnosis.md
 
 <!-- files:begin -->
