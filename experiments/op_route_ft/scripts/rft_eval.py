@@ -1,8 +1,9 @@
 """Open-loop readouts of op_route_ft (plans/2026-10-05-route-ft-prereg.md), called as `rft.py evalol --models O rc-bear-s0 ...`.
 
-  carla_exit   CARLA dev junctions (none of them on a B2D route), every (pose, exit) row with the clean exit polyline as the command: the plan's
-               class at 4 s (heading > +30 deg left, < -30 deg right, else straight) against the commanded exit; rows whose original-speed arc at
-               4 s passes the junction mouth by >= 15 m. Per row and all-exits-correct per 3-exit pose; cluster = junction.
+  carla_exit   CARLA dev junctions (none of them on a B2D route), every (pose, exit) row of a moving pose (profile != stopped) with the clean exit
+               polyline as the command: the class of the plan path at arc length d + 12 m (heading > +30 deg left, < -30 deg right, else straight;
+               'short' = the 10 s plan does not get there, counted wrong) against the commanded exit. Per row and all-exits-correct per 3-exit pose;
+               cluster = junction.
   drift        no command: |y(4 s)| of the model's plan minus the original's, rear axle; junction rows (CARLA dev poses, real rows with a >= 25 deg
                turn starting within 60 m) and straight rows (real, no turn within 150 m).
   negatives    negative command (CARLA N1 on dev poses with a missing class; real N3 / N4 on dev rows): |y(4 s)| of the plan minus the original's
@@ -36,6 +37,28 @@ def yaw4(plan):
 
 def cls(deg):
     return np.where(deg > 30, "left", np.where(deg < -30, "right", "straight"))
+
+
+TS = np.linspace(0.125, 10.0, 80)
+
+
+def cls_at_arc(plan, cam, s_eval):
+    """Class of the plan path at arc length s_eval (heading of the rear-axle path there, > +30 deg left, < -30 deg right); 'short' when the
+    10 s plan does not reach it."""
+    p = L.rear_np(plan, cam, TS).astype(np.float64)
+    p = np.concatenate([np.zeros((len(p), 1, 2)), p], 1)
+    seg = np.diff(p, axis=1)
+    arc = np.cumsum(np.linalg.norm(seg, axis=-1), 1)
+    out = []
+    for k in range(len(p)):
+        j = np.searchsorted(arc[k], s_eval[k])
+        if j >= len(arc[k]):
+            out.append("short")
+            continue
+        a, b = max(j - 2, 0), min(j + 2, len(seg[k]) - 1)
+        d = p[k, b + 1] - p[k, a]
+        out.append(str(cls(np.degrees(np.arctan2(d[1], d[0])))))
+    return np.array(out)
 
 
 @torch.no_grad()
@@ -74,8 +97,7 @@ def build_sets(carla, cap, seed=0):
     C.rows_of = {k: np.array(v) for k, v in C.rows_of.items()}
     S = {}
     dev_p = np.flatnonzero(C.tab["split"] == "dev")
-    s4 = np.array([F.plan_arc(C.tea["mu"][p], C.cam)[15] for p in dev_p])
-    elig = dev_p[s4 >= C.tab["d"][dev_p] + 15.0]
+    elig = dev_p[C.tab["profile"][dev_p] != "stopped"]
     rows = np.concatenate([C.rows_of[p] for p in elig if p in C.rows_of])
     S["carla_exit"] = dict(rows=rows, pose=C.r["pose_row"][rows], cmd=C.r["cmd"][rows], cluster=C.r["cluster"][rows],
                            n_exits=C.tab["n_exits"][C.r["pose_row"][rows]],
@@ -161,7 +183,8 @@ def main(a):
         # carla exits
         s = S["carla_exit"]
         (pl, ac), cam = run_rows(m, ctr, s["pose"], s[fk], cv[s["pose"]], ctc[s["pose"]], dev), C.cam
-        c = cls(yaw4(pl))
+        c = cls_at_arc(pl, C.cam, C.tab["d"][s["pose"]] + 12.0)
+        r["carla_exit_short"] = float((c == "short").mean())
         ok = (c == s["cmd"]).astype(float)
         r["carla_exit_row"] = boot(ok, s["cluster"])
         for cm in ("left", "straight", "right"):
@@ -177,7 +200,7 @@ def main(a):
         sg = np.where(s["cmd"] == "left", -1.0, 1.0)          # action[0] is right-positive
         r["carla_action_sign_turn"] = boot((np.sign(ac[turn]) == sg[turn]).astype(float), s["cluster"][turn])
         r["carla_plan_class_counts"] = {f"{cm}->{k}": int(((s["cmd"] == cm) & (c == k)).sum()) for cm in ("left", "straight", "right")
-                                        for k in ("left", "straight", "right")}
+                                        for k in ("left", "straight", "right", "short")}
         # drift without command
         for key in ("carla_pose", "nav_junction", "nav_straight", "wod_junction", "wod_straight"):
             (pm, _), cam = plans(m, key)

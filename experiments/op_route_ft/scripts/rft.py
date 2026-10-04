@@ -9,7 +9,7 @@ trainable, every output head distilled to the original, dw 3) plus
 
 Rows of one batch (48):
   P  positives with the route: real (op_adapt_H nav / wod pools, target = logged future) and CARLA exit pairs (route_carla packed set, target = the
-     exit polyline timed by the original's own plan, speed capped at 3 m/s^2 lateral). Sampling weight by turn class (T2): straight 1, 25-60 deg 1.5,
+     exit polyline timed by the original's own plan (creep / cruise poses: at least their own speed), speed capped at 3 m/s^2 lateral). Sampling weight by turn class (T2): straight 1, 25-60 deg 1.5,
      >= 60 deg 2, >= 60 deg with R_min < 15 m 4. Non-plan / non-action heads distilled.
   N  negatives (T3, ~12%): CARLA N1 (an exit class the approach road lacks, map-certain), real N3 (wrong side) / N4 (mid-block U-turn) from
      lib/route_neg.make; target = the original's plan + every head (teacher = original, as q3NA).
@@ -123,7 +123,7 @@ def plan_arc(mu, cam):
     return s[1:]
 
 
-def path_target(poly, pmask, mu, cam):
+def path_target(poly, pmask, mu, cam, vfloor=0.0):
     """CARLA positive: exit polyline (10 m vertices) -> (16, 3) rear-axle x, y, speed at T16: smoothed path, timed by the original's arc length
     with the speed capped at ALAT_CAP on the path's curvature (within the next 60 m)."""
     v = np.asarray(poly, float)[: int(pmask.sum())]
@@ -135,7 +135,7 @@ def path_target(poly, pmask, mu, cam):
     P, g = RP.poly_resample(P, 0.5)
     k = np.abs(RP.curvature(P, 0.5))
     kmax = k[: int(60 / 0.5)].max() if len(k) else 0.0
-    vt = np.diff(np.r_[0.0, s_tea]) / 0.25
+    vt = np.maximum(np.diff(np.r_[0.0, s_tea]) / 0.25, vfloor)        # creep / cruise poses keep at least their own speed
     vt = np.minimum(vt, np.sqrt(ALAT_CAP / max(kmax, 1e-3)))
     s = np.cumsum(vt * 0.25)
     s = np.minimum(s, g[-1])
@@ -338,7 +338,8 @@ class Batcher(torch.utils.data.Dataset):
                    hum=np.full((16, 3), np.nan, np.float32), role=ROLE[key[0]], fb=np.zeros(RA.ENC_DIM["bear"], np.float32),
                    fp=np.zeros(RA.ENC_DIM["poly"], np.float32), at=np.float32(0), aw=np.float32(0), sdf=np.int64(-1))
         if key == "Pcar":
-            hum = path_target(C.r["poly"][j], C.r["pmask"][j], C.tea["mu"][p], C.cam)
+            vf = float(C.tab["v0"][p]) if C.tab["profile"][p] in ("creep", "cruise") else 0.0
+            hum = path_target(C.r["poly"][j], C.r["pmask"][j], C.tea["mu"][p], C.cam, vf)
             if hum is None:
                 out["role"] = ROLE["D"]
                 return out
