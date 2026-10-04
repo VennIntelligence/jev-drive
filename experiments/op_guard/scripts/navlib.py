@@ -112,13 +112,13 @@ def ensure_data(board: str):
     stamp = d / "split_id"
     if stamp.is_file() and stamp.read_text().strip() == sp.id:
         return d
-    say(f"building {d} for {sp.id} ({sp.n} tokens)")
+    say(f"building {d} for {sp.id} ({len(sp)} tokens)")
     for f in ("meta.json", "gimm.npy", "tokens.txt", "split_id"):
         (d / f).unlink(missing_ok=True)
     mt = json.loads((OPLB / b["src"] / "meta.json").read_text())
     keep = set(sp.members)
     rows = np.array([i for i, t in enumerate(mt["names"]) if t in keep])
-    assert len(rows) == sp.n, (len(rows), sp.n)
+    assert len(rows) == len(sp), (len(rows), len(sp))
     n = len(mt["names"])
     sub = {k: ([v[i] for i in rows] if isinstance(v, list) and len(v) == n else v) for k, v in mt.items()}
     src = np.load(OPLB / b["src"] / "gimm.npy", mmap_mode="r")
