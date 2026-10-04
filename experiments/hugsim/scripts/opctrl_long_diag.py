@@ -1,10 +1,12 @@
 """Diagnosis of the stuck runs of the opctrl arm (decision 118): per run, when the car stops, what the model plans while standing,
 and whether it ever asks to go. Reads zs_steps.jsonl of the opctrl and same-day base3 arms. CPU only.
-Usage: python opctrl_long_diag.py <closed_dir> [out.json]"""
+Usage: python opctrl_long_diag.py <closed_dir> [out.json] [arm_tag] [base_tag]   (defaults cinque-opctrl, cinque-fixed-base3)"""
 import csv, json, sys, collections
 import numpy as np
 
 D = sys.argv[1]
+ARM = sys.argv[3] if len(sys.argv) > 3 else "cinque-opctrl"
+BASE = sys.argv[4] if len(sys.argv) > 4 else "cinque-fixed-base3"
 R = collections.defaultdict(dict)
 for r in csv.DictReader(open(f"{D}/results.csv")):
     R[r["scenario"]][r["tag"]] = r
@@ -49,9 +51,9 @@ def summ(S):
 
 res = {}
 for s, d in R.items():
-    o, b = d.get("cinque-opctrl"), d.get("cinque-fixed-base3")
+    o, b = d.get(ARM), d.get(BASE)
     if not o or not b:
         continue
     if o["end"] == "max_steps":
-        res[s] = dict(op_end=o["end"], base_end=b["end"], op=summ(load("cinque-opctrl", o)), base=summ(load("cinque-fixed-base3", b)))
+        res[s] = dict(op_end=o["end"], base_end=b["end"], op=summ(load(ARM, o)), base=summ(load(BASE, b)))
 json.dump(res, open(sys.argv[2] if len(sys.argv) > 2 else "/dev/stdout", "w"), indent=1)
