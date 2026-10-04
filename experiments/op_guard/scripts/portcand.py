@@ -30,7 +30,7 @@ def changed_weights(onnx_path) -> dict:
     for t in onnx.load(str(onnx_path)).graph.initializer:
         b = base.get(t.name)
         a = numpy_helper.to_array(t)
-        if a.dtype.kind != "f":
+        if a.dtype.kind != "f" or (b is None and t.name == "l_mask"):     # l_mask: op_l_onnx's intent_bias plumbing, not a weight
             continue
         if b is None or b.raw_data != t.raw_data or not np.array_equal(numpy_helper.to_array(b), a):
             out[t.name] = a.astype(np.float32)
