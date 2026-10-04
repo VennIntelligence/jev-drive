@@ -63,7 +63,7 @@ def run_routes():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=2)
-    ap.add_argument("--panel", default="28180:0,24944:0,26365:0,24758:0", help="route:turn list for the BEV panels")
+    ap.add_argument("--panel", default="28180:0,24944:0,28008:0,24758:0", help="route:turn list for the BEV panels")
     ap.add_argument("--routes", default="", help="comma list: only these routes")
     ap.add_argument("--arms", default="", help="comma list: only these arms")
     ap.add_argument("--out", default=str(HERE.parent / "results"))
@@ -235,7 +235,7 @@ def main():
     fig.tight_layout(rect=(0, 0, 1, 0.93), h_pad=9)
     (out.parent / "figs").mkdir(exist_ok=True)
     fig.savefig(out.parent / "figs/junction_forced_panels.png", dpi=105)
-    L_ += ["\n## Panels\n", "![panels](../figs/junction_forced_panels.png)\n", "Turns picked to span R_min (tight T-stem, tight curve, two wide curves).\n"] + cap
+    L_ += ["\n## Panels\n", "![panels](../figs/junction_forced_panels.png)\n", "Turns picked to span R_min (tight T-stem 4.7 m, tight curve 10.7 m, two wide curves 33 m).\n"] + cap
     (out / "junction_forced_tables.md").write_text("\n".join(L_) + "\n")
     print("\n".join(L_))
 
