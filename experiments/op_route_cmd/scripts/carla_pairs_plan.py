@@ -152,6 +152,14 @@ def hist_noise(rng):
     return d0 + 0.04 * rng.normal(size=K_HIST), e0 + 0.15 * rng.normal(size=K_HIST)   # lateral m (left +), yaw deg
 
 
+def need_m(d, profile):
+    """Free approach length (m before the connector start) that a pose of distance d and speed profile needs."""
+    v0 = min(math.sqrt(2 * 2.0 * d), 9.0) if profile == "brake" else SPEED.get(profile)
+    a = v0 * v0 / (2 * d) if profile == "brake" else 0.0
+    tau = DT * (K_HIST - 1)
+    return d + (0.0 if profile == "stopped" else v0 * tau + 0.5 * a * tau * tau) + HIST_MARGIN_M
+
+
 def build_pose(m, town, jid, road, direction, exits, lane, d, profile, weather, rng, split, pid):
     ex_lane = [e for e in exits if lane in e["lanes"]]
     conn_of = {}
@@ -290,7 +298,7 @@ def main():
         held = {tuple(x) for x in json.load(open(Path(a.topo) / "holdout.json"))["b2d_any"]}
         run.info("hold-out: %d junctions (any Bench2Drive route)", len(held))
         cands = candidates(a.topo, a.towns.split(","), held)
-        pick = allocate(cands, int(a.n_poses / a.poses_per_road), a.p3)
+        pick = allocate(cands, int(1.2 * a.n_poses / a.poses_per_road), a.p3)
         run.info("roads picked: %d of %d candidates", len(pick), sum(map(len, cands.values())))
         rng = np.random.default_rng(a.seed)
         wnames, wp = zip(*WEATHER)
@@ -299,13 +307,10 @@ def main():
             m = PI.get_map(town)
             for t, x in sorted((p for p in pick if p[0] == town), key=lambda p: (p[1]["j"], p[1]["road"], p[1]["dir"])):
                 dev = h01(town, x["j"], "dev") < a.dev_frac
-                for k in range(a.poses_per_road):
-                    d = DISTS[(k + int(h01(town, x["j"], x["road"], "d") * 3)) % 3]
-                    prof = PROFILES[int(rng.integers(len(PROFILES)))]
-                    if d == 10.0 and prof == "cruise":
-                        prof = "brake"
-                    if d == 30.0 and prof == "stopped":
-                        prof = "creep"
+                feas = [(d, pr) for d in DISTS for pr in PROFILES if need_m(d, pr) <= x["free"] - 0.5 and not (d == 10.0 and pr == "cruise")
+                        and not (d == 30.0 and pr == "stopped")]
+                order = [feas[i] for i in rng.permutation(len(feas))]
+                for k, (d, prof) in enumerate(order[: a.poses_per_road]):
                     wth = wnames[int(rng.choice(len(wnames), p=np.array(wp) / sum(wp)))]
                     pid = "%s-j%d-r%dd%d-l%d-d%d-%s-%d" % (town, x["j"], x["road"], x["dir"], x["lane"], int(d), prof, k)
                     try:
@@ -319,6 +324,9 @@ def main():
                         continue
                     poses.append(p)
             run.info("%s: %d poses so far, dropped %s", town, len(poses), dict(drop))
+        if len(poses) > a.n_poses:                      # 20% more roads were picked than needed: drop random poses
+            keep = np.sort(rng.permutation(len(poses))[: a.n_poses])
+            poses = [poses[i] for i in keep]
         poses = tour(poses)
         pickle.dump(poses, open(run.path("poses.pkl"), "wb"))
         rows = [r for p in poses for r in p["exits"]]
