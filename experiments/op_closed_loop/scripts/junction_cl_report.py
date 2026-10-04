@@ -172,7 +172,7 @@ def main():
           "Arms: **A** shipped `drive` agent (dense route steers in the junction zones and on divergence); **D** `zones: false`, `div_m: 1e9`: the action-head curvature "
           "steers everywhere, longitudinal and everything else identical; **E** D plus action curvature x1.95 inside LEFT / RIGHT command runs +-3 m. "
           "No privileged light (`resume` stays `timer`). Routes finished by all three arms: %d of %d (%d turns). Definitions: scripts/junction_cl_report.py docstring. "
-          "CIs: cluster bootstrap over routes (2000).\n" % (a.seed, len(done), len(ROUTES), len(keys))]
+          "CIs: cluster bootstrap over routes (2000).\n" % (len(done), len(ROUTES), len(keys))]
     L_.append("\n## Per-turn outcomes\n")
     L_.append("| arm | turns | entered | took intended branch | lost (entered, no exit) | leaves lane (>1.75 m), of entered | median peak cross-track m [CI], entered | median abs exit heading err deg, branch | zone collisions + off-road infractions (n) |")
     L_.append("|---|---|---|---|---|---|---|---|---|")
