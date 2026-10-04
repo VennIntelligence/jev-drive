@@ -48,6 +48,7 @@ def main():
     ap.add_argument("--towns", default="")
     ap.add_argument("--only-3", action="store_true")
     ap.add_argument("--dpi", type=int, default=70)
+    ap.add_argument("--lane-change", action="store_true")
     a = ap.parse_args()
     P = [p for p in pickle.load(open(a.plan, "rb")) if (Path(a.frames) / "frames" / p["town"] / (p["id"] + ".npz")).exists()]
     if a.towns:
@@ -56,13 +57,22 @@ def main():
         P = [p for p in P if p["n_exits"] >= 3]
     if a.ids:
         P = [p for ids in a.ids.split(",") for p in P if p["id"] == ids]
-    else:   # spread over towns, 3-exit roads first
-        P.sort(key=lambda p: (-p["n_exits"], p["town"], p["id"]))
-        seen, sel = set(), []
+    else:   # round robin over towns, one pose per junction, 3-exit roads first (--lane-change: poses that have a lane-change exit)
+        if a.lane_change:
+            P = [p for p in P if any(e["lane_change"] for e in p["exits"])]
+        P.sort(key=lambda p: (-p["n_exits"], p["id"]))
+        by = {}
         for p in P:
-            if (p["town"], p["junction"]) not in seen:
-                seen.add((p["town"], p["junction"]))
-                sel.append(p)
+            by.setdefault(p["town"], []).append(p)
+        sel, seen = [], set()
+        while any(by.values()) and len(sel) < a.n:
+            for t in sorted(by):
+                while by[t]:
+                    p = by[t].pop(0)
+                    if (t, p["junction"]) not in seen:
+                        seen.add((t, p["junction"]))
+                        sel.append(p)
+                        break
         P = sel[: a.n]
     fig, axs = plt.subplots(len(P), 4, figsize=(19, 3.6 * len(P)), gridspec_kw=dict(width_ratios=[0.7, 1.5, 1.5, 1.5]))
     axs = np.atleast_2d(axs)
