@@ -27,7 +27,7 @@ until [[ -f $OUT/servers/cinque.ready ]]; do sleep 5; kill -0 $srv 2>/dev/null |
 st "server ready (pid $srv)"
 $HPY experiments/hugsim/archive/zs_run.py setup-trees official fixed lowspeed lowsel || fail "setup-trees"
 run() {  # tag controller list workers
-    $HPY experiments/hugsim/archive/zs_run.py run --out "$OUT" --agent cinque --controller "$2" --gpu "$GPU" --workers "$4" \
+    $HPY experiments/hugsim/archive/zs_run.py run --preset exam --out "$OUT" --agent cinque --controller "$2" --gpu "$GPU" --workers "$4" \
         --scenarios "$3" --socket "$OUT/servers/cinque.sock" --opts '{}' --tag "$1"
 }
 for s in ${STAGES:-1 2}; do

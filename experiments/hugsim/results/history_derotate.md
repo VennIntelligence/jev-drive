@@ -3,7 +3,7 @@
 Written 2026-10-03 (night lane, follow-up of decision 90 and op_common_cause). Pre-registration with two addenda written before
 their runs: [../plans/2026-10-03-history-derotate-plan.md](../plans/2026-10-03-history-derotate-plan.md). Per-run table
 [derot/derot_runs.csv](derot/derot_runs.csv), generated summary [derot/summary.md](derot/summary.md), code
-`experiments/hugsim/scripts/derot_*`, rule in `experiments/hugsim/archive/zs_agent.py` (`derot_below`, `derot_sel`) and
+`experiments/hugsim/scripts/derot_*`, rule in `experiments/hugsim/lib/zs_agent.py` (`derot_below`, `derot_sel`) and
 `jevdrive/hugsim_zs.py` (`OpenpilotFrames.rot_index`). Box runs: `$DATA_DIR/runs/hugsim-derot/`.
 
 ## Answer

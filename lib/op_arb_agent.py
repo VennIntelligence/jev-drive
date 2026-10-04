@@ -34,6 +34,16 @@ The base (observable inputs only: the route every Bench2Drive agent gets, the se
 route geometry (b2d_controller_adapter.RouteAdapter's rejoin path) timed by a speed governor: a set speed ("cruise"),
 lateral acceleration <= alat on the path's curvature, accel <= amax, and a stop at the route end. It has no perception.
 
+Presets (PRESETS; "preset" at the top level of the config or inside "arb"; explicit keys of the config file override the preset's):
+  spec     openpilot as on the car (jevdrive/openpilot/interface.py, docs/openpilot-interface.md): the drive arbitration with openpilot's
+           lateral path (action curvature -> clip_curvature -> 0.2 s lateralDelay, lib/op_ctrl.py) and no privileged light. The default
+           when the config names neither a preset nor an arb mode. Its deviations (dense-route zones, our longitudinal scheduler, route
+           desire, coast_v, camera height) are declared in interface.DECLARED["b2d"].
+  drive    the `drive` arm of every result up to 2026-10-05 (moved verbatim from experiments/op_closed_loop/archive/op_arb.sh):
+           raw action curvature through the bicycle model on lane-follow segments, no clip / delay, 1.433 m windshield rig.
+Every route attempt writes interface.json (resolved interface values + declared deviations) next to plans.jsonl; a config the
+interface refuses (an undeclared deviation, or "resume": "nored") fails at setup.
+
 Config: the b2d_zeroshot_agent keys, plus "arb": {"mode", "cruise", "alat", "amax", "bmax", "twin", "lead_p",
 "plan_vmin", "plan_form" ("abs" | "rel"), "plan_gate" ("always" | "brake": only while meta brake_press > brake_th), "meta_k" (meta time slot: 0 = now, 1 = 2 s),
 "release" ("none" | "gas" | "planx" | "nobrake"), "release_th", "latch_max_s",
@@ -58,6 +68,8 @@ import b2d_zeroshot_agent as Z  # noqa: E402
 import zeroshot_rigs as rigs  # noqa: E402
 import zeroshot_wire as wire  # noqa: E402
 from b2d_controller_adapter import RouteAdapter, world_to_local  # noqa: E402
+sys.path.insert(0, str(_repo))
+from jevdrive.openpilot import interface as IF  # noqa: E402
 
 
 def _json_scalar(value):
@@ -81,6 +93,31 @@ DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3
             "resume": "timer", "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "zone_gain": 1.0, "gain_m": 3.0, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
 DRIVE_ZONES = {Z.LEFT: (15.0, 5.0), Z.RIGHT: (15.0, 5.0), Z.STRAIGHT: (5.0, 5.0),
                Z.CHANGE_LEFT: (5.0, 10.0), Z.CHANGE_RIGHT: (5.0, 10.0)}
+# DRIVE_ZONES is a semi-privileged fallback (interface key command.route_geometry = dense-zones): the dense route's metre-exact
+# command extents steer, not openpilot. Report every row with the zones-off reading ("zones": false, "div_m": 1e9) next to it.
+
+_DRIVE_TOP = {"model": "cinque", "plan_every": 1, "ctl_every": 4, "op_camera_tick": 0.05, "plan_origin": "rear", "warmup_s": 5.0,
+              "desire": True, "controller": "fixed", "controller_preset": "pursuit", "seed": 0, "dump_every": 0}
+_DRIVE_ARB = {"mode": "drive", "lat": "op", "lat_exec": "curv", "lon": "op", "hold": "intent", "release": "planx", "release_th": 2.0,
+              "release_s": 1.0, "latch_max_s": 5.0, "coast_v": 2.5}
+PRESETS = {
+    "drive": dict(_DRIVE_TOP, arb=dict(_DRIVE_ARB)),
+    "spec": dict(_DRIVE_TOP, op_ctrl=dict(IF.B2D_SPEC_OP_CTRL), op_mount=list(IF.B2D_SPEC_MOUNT), arb=dict(_DRIVE_ARB, resume="timer")),
+}
+
+
+def resolve_config(cfg):
+    """(preset name, config with the preset merged under the explicit keys). No preset and no arb mode -> "spec"."""
+    arb = dict(cfg.get("arb") or {})
+    name = cfg.get("preset") or arb.pop("preset", None) or (None if "mode" in arb else "spec")
+    if name is None:
+        return "explicit", dict(cfg)
+    if name not in PRESETS:
+        raise ValueError("unknown op_arb preset %r (have %s)" % (name, sorted(PRESETS)))
+    base = json.loads(json.dumps(PRESETS[name]))
+    out = dict(base, **{k: v for k, v in cfg.items() if k not in ("arb", "preset")})
+    out["arb"] = dict(base.get("arb", {}), **arb)
+    return name, out
 
 
 def get_entry_point():
@@ -165,7 +202,19 @@ def plan_arc(path_rear, v_ego, v_plan0, form):
 
 class OpArbAgent(Z.ZeroShotAgent):
     def setup(self, path_to_conf_file):
+        src = path_to_conf_file.split("+")[0]
+        with open(src) as fh:
+            raw = json.load(fh)
+        self.preset, resolved = resolve_config(raw)
+        if resolved != raw:                                  # the parent reads a file: hand it the resolved config
+            path = "%s.%s.%d.resolved.json" % (src, self.preset, os.getpid())
+            with open(path, "w") as fh:
+                json.dump(resolved, fh, indent=1)
+            path_to_conf_file = path + path_to_conf_file[len(src):]
         super().setup(path_to_conf_file)
+        self.cam_to_bumper = REAR_TO_BUMPER - float(self.op_mount[0])
+        IF.write(self.out, IF.record("b2d", self.preset, IF.b2d_values(self.cfg), config=self.cfg,
+                                     route=os.environ.get("BENCHMARK_ROUTE_ID", ""), vlm_arm=os.environ.get("VLM_ARM", "")))
         self.arb = dict(DEFAULTS, **self.cfg.get("arb", {}))
         by_route = self.arb.get("cruise_by_route") or {}      # matched-speed control: a set speed per route id
         rid = os.environ.get("BENCHMARK_ROUTE_ID", "")
@@ -385,7 +434,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         mode = A["mode"]
         op_lon = mode in ("acc", "e2e", "switch") or (mode == "drive" and A["lon"] == "op")
         if lp > A["lead_p"] and op_lon:
-            cons["lead"] = idm(speed, float(lead[0, 0]) - CAM_TO_BUMPER, float(lead[0, 2]), float(lead[0, 3]),
+            cons["lead"] = idm(speed, float(lead[0, 0]) - self.cam_to_bumper, float(lead[0, 2]), float(lead[0, 3]),
                                A["cruise"], A["amax"], A["idm_b"], A["idm_s0"], A["idm_T"])
         tl_on, tlc = False, {}
         if mode == "drive" and A["tl_stop"] and not warm:   # R3a: privileged traffic-light stop
@@ -452,7 +501,7 @@ class OpArbAgent(Z.ZeroShotAgent):
             cons.pop("latch", None)
             self.latch = False
             if "lead" in cons and lp > A["lead_p"] and float(lead[0, 2]) < 1.0 and st:
-                s_lead = self.pc.meta.get("ego_s", 0.0) + REAR_TO_BUMPER + float(lead[0, 0]) - CAM_TO_BUMPER
+                s_lead = self.pc.meta.get("ego_s", 0.0) + REAR_TO_BUMPER + float(lead[0, 0]) - self.cam_to_bumper
                 if st["start_s"] - 3.0 <= s_lead <= st["end_s"] + 3.0:
                     cons.pop("lead")
         if pc_release:

@@ -1,5 +1,5 @@
 """Launch stabilisation (experiments/hugsim/plans/2026-10-04-launch-stab-prereg.md): an inference-time rule against the
-closed-loop spin at launch (decisions 96, 100, 109). Shared by the HUGSIM agent (experiments/hugsim/archive/zs_agent.py) and
+closed-loop spin at launch (decisions 96, 100, 109). Shared by the HUGSIM agent (experiments/hugsim/lib/zs_agent.py) and
 the B2D openpilot server (experiments/op_closed_loop/archive/op_arb_server.py).
 
 After a standstill the model's response to the first ~1 deg of its own yaw is near a step (5 deg / deg), the loop grows x1.6-1.8

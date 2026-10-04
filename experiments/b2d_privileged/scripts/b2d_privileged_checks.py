@@ -39,7 +39,7 @@ def _json_scalar(value):
 
 
 def source_check():
-    paths=('experiments/op_closed_loop/lib/op_arb_agent.py','experiments/b2d_privileged/lib/b2d_privileged_geometry.py')
+    paths=('lib/op_arb_agent.py','experiments/b2d_privileged/lib/b2d_privileged_geometry.py')
     old=[subprocess.check_output(['git','show',BASE_COMMIT+':'+p],cwd=REPO) for p in paths]
     new=[(REPO/p).read_bytes() for p in paths]
     assert old[1]==new[1], 'Privileged geometry changed during logging repair'

@@ -7,7 +7,7 @@ on how the openpilot road / wide inputs are built. Variants (jevdrive.hugsim_zs.
   yaw:X       the virtual camera turned X degrees left (+) / right (-) of the ego heading (X signed), both inputs
   ramp:R      yaw rotating by R degrees per simulator step (a synthetic yaw rate), to measure how the plan responds to
               perceived yaw rate
-Same request sequence as experiments/hugsim/archive/zs_agent.py (warm-up 100 model steps on frame 0, then 4 per step,
+Same request sequence as experiments/hugsim/lib/zs_agent.py (warm-up 100 model steps on frame 0, then 4 per step,
 speed = ego speed x 1.25, command -> desire, traffic flag, forward_only, straight_stop).
 
     CUDA_VISIBLE_DEVICES=<idle card> $DATA_DIR/envs/openpilot/bin/python spin_input_replay.py <jobs.json> <out_dir> [--images]

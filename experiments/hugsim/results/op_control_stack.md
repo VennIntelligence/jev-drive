@@ -3,7 +3,7 @@
 Written 2026-10-04. Pre-registration (committed before any closed-loop run, commit b0c2ea98): [../plans/2026-10-05-op-control-stack-prereg.md](../plans/2026-10-05-op-control-stack-prereg.md).
 Follows decisions 113 / 114 (lateral rules), 115 (user's real-car note: lateral engaged at low-speed launches, no spins) and 117 (longitudinal launch: no effect).
 Code: `lib/op_ctrl.py` (the path), `patches/hugsim/optional/op-ctrl.patch` + tree `opctrl` in `experiments/hugsim/archive/zs_run.py`, agent opt `op_ctrl`
-(`experiments/hugsim/archive/zs_agent.py`), `experiments/hugsim/scripts/opctrl_{replay,replay.sh,offline,chain.sh,report,fig}.py`.
+(`experiments/hugsim/lib/zs_agent.py`), `experiments/hugsim/scripts/opctrl_{replay,replay.sh,offline,chain.sh,report,fig}.py`.
 Tables: `op_control_stack/` (`offline.json`, `summary.md/json`, `opctrl_runs.csv`). Shipped Cinque, 64 exam scenarios, one run per arm, card 0 under lease `opctrl` (released).
 Tags: **[E]** measured here, **[S]** read from source, **[I]** inference.
 

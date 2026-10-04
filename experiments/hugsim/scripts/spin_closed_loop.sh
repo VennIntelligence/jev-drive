@@ -21,7 +21,7 @@ until [[ -f $OUT/servers/cinque.ready ]]; do sleep 5; kill -0 $srv 2>/dev/null |
 echo "$(date +%T) server ready"
 $HPY experiments/hugsim/archive/zs_run.py setup-trees official fixed fixed2 ideal
 for c in ${CTRLS:-fixed fixed2 ideal}; do
-    $HPY experiments/hugsim/archive/zs_run.py run --out "$OUT" --agent cinque --controller $c --gpu "$GPU" --workers 2 \
+    $HPY experiments/hugsim/archive/zs_run.py run --preset exam --out "$OUT" --agent cinque --controller $c --gpu "$GPU" --workers 2 \
         --scenarios "$L" --socket "$OUT/servers/cinque.sock" --opts "${OPTS:-{\}}" ${TAG:+--tag cinque-$c-$TAG}
 done
 echo "$(date +%T) done"

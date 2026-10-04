@@ -27,6 +27,7 @@ the pre-registered smoke:
                     plans reach the controller (openpilot is engaged only once modeld has been running)
   "drive"           "model" | "oracle": shadow mode, the route-oracle adapter drives (b2d_controller_adapter.
                     RouteAdapter, as b2d_agent --drive controller) and the model's plans are only logged
+  "op_ctrl"         openpilot's lateral path rule for lib/op_ctrl.OpLateral (e.g. {"delay": 0.2}); env OP_CTRL wins; absent: off
   "op_mount"        rig [x, y, z] of the camera pair (default the windshield top, zeroshot_rigs.OP_MOUNT_RIG)
   "controller"      "fixed" (the pre-registered smoke: scripts/b2d_controller.py) | "zoo_pid": Bench2DriveZoo's
                     UniAD/VAD PID, vendored verbatim (scripts/b2d_zoo_pid_wrap.py -> b2d_zoo_pid.py). It is
@@ -249,10 +250,12 @@ class ZeroShotAgent(AutonomousAgent):
             import lowspeed_ctrl
             self.lowspeed = lowspeed_ctrl.B2DFilter(json.loads(os.environ["LOWSPEED_CTRL"]))
         self.opctrl = None                           # openpilot's lateral path (lib/op_ctrl.py) behind _curvature_steer; inert without OP_CTRL
-        if os.environ.get("OP_CTRL"):
+        rule = os.environ.get("OP_CTRL")
+        rule = json.loads(rule) if rule else self.cfg.get("op_ctrl")      # env (older lanes) or the config key (op_arb preset "spec")
+        if rule is not None:
             sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
             import op_ctrl
-            self.opctrl = op_ctrl.OpLateral(json.loads(os.environ["OP_CTRL"]))
+            self.opctrl = op_ctrl.OpLateral(rule)
         self.zoo = self.zoo_control = self.zoo_target = None
         self.zoo_lateral = self.cfg.get("zoo_lateral", "zoo")
         assert self.zoo_lateral in ("zoo", "fixed", "time"), self.zoo_lateral

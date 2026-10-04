@@ -12,7 +12,7 @@ phase=$1; GPU=${2:-0}
 HPY=$DATA_DIR/envs/hugsim/bin/python
 L=experiments/cl_infra/results/closed-loop-infra-acceptance
 run() {  # controller scenarios out
-    $HPY experiments/hugsim/archive/zs_run.py run --out "$3" --agent preset --controller "$1" --gpu "$GPU" --workers 1 \
+    $HPY experiments/hugsim/archive/zs_run.py run --preset exam --out "$3" --agent preset --controller "$1" --gpu "$GPU" --workers 1 \
         --scenarios "$2" --tag "preset-$1" --timeout 1800 || touch "$3/FAILED-$1"
 }
 case $phase in

@@ -39,7 +39,7 @@ rm -f "$OUT"/FAILED-*
 run() {  # agent controller gpu workers scenarios [opts] [tag]
     local opts=${6:-}
     [[ -n $opts ]] || opts='{}'
-    $HPY experiments/hugsim/archive/zs_run.py run --out "$OUT" --agent "$1" --controller "$2" --gpu "$3" --workers "$4" \
+    $HPY experiments/hugsim/archive/zs_run.py run --preset exam --out "$OUT" --agent "$1" --controller "$2" --gpu "$3" --workers "$4" \
         --scenarios "$5" --socket "$OUT/servers/$1.sock" --opts "$opts" ${7:+--tag "$7"} || touch "$OUT/FAILED-$1-$2${7:+-$7}"
 }
 

@@ -44,7 +44,7 @@ until [[ -f $OUT/servers/cinque.ready ]]; do sleep 5; kill -0 $srv 2>/dev/null |
 st "server ready (pid $srv)"
 $HPY experiments/hugsim/archive/zs_run.py setup-trees official fixed || fail "setup-trees"
 st "scenarios from $SCEN"
-$HPY experiments/hugsim/archive/zs_run.py run --out "$OUT" --agent cinque --controller fixed --gpu "$GPU" --workers "$W" \
+$HPY experiments/hugsim/archive/zs_run.py run --preset exam --out "$OUT" --agent cinque --controller fixed --gpu "$GPU" --workers "$W" \
     --scenarios "$SCEN" --socket "$OUT/servers/cinque.sock" --opts "$OPTS" --tag "cinque-fixed-H$TAG${SUFFIX:-}" \
     || fail "zs_run"
 $HPY ${REPORT:-experiments/op_adapt_h/scripts/h_hugsim_report.py} "$OUT" "cinque-fixed-H$TAG${SUFFIX:-}" || fail "report"

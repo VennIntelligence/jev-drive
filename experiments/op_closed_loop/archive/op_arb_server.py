@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """openpilot policy server for the closed-loop integration study (research/openpilot-closedloop-integration.md,
-fc65452:todos/2026-09-28-op-closedloop.md). envs/openpilot. Agent side: experiments/op_closed_loop/lib/op_arb_agent.py.
+fc65452:todos/2026-09-28-op-closedloop.md). envs/openpilot. Agent side: lib/op_arb_agent.py.
 
 Same model path as scripts/zeroshot_policy_server.py (Cinque at 20 Hz, road + wide warped as modeld, desire as a
 rising-edge pulse; the class is imported, not copied), plus two things the arbitration and the diagnosis need:

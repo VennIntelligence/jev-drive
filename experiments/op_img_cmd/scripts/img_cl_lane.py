@@ -6,7 +6,7 @@ Plan: ../plans/2026-10-04-img-cmd-ft2-prereg.md (runs only if the negatives roun
   scripts/tmux_run.sh img-cl .venv/bin/python -m jevdrive.cl run experiments/op_img_cmd/scripts/img_cl_lane.py [--arg stage=1|all] [--arg model=q3NA-s0]
 
 Units (op_arb.sh arm, one openpilot server per unit, 4 CARLA workers):
-  drive    shipped Cinque (base ONNX), route desire on, resume nored: decision 81's drive arm
+  drive    shipped Cinque (base ONNX), route desire on, resume timer (decision 102's smoke ran nored = decision 81's drive arm; refused since 2026-10-05)
   imgsky   the fine-tune (ONNX in $DATA_DIR/runs/op_img_cmd/cl/onnx/<model>.onnx), desire off, the agent sends [command, distance]
            of the next route command (lib/op_arb_agent.py img_cmd) and img_cl_server.py draws the sky arrow on every frame
 stage 1 = imgsky seed 0 on 27043 alone with frame dumps (IMG_CL_DUMP); all = the 2 x 2 units.
@@ -23,7 +23,7 @@ DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 RUN = DATA / "runs" / ROOT
 ROUTES = ["27297", "27043", "9196", "24944"]
 OP_ARB = "experiments/op_closed_loop/archive/op_arb.sh"
-R1 = '"resume": "nored"'
+R1 = '"resume": "timer"'   # was nored (ground-truth light) in the decision-102 smoke; nored is refused now (docs/openpilot-interface.md)
 
 
 def unit(arm, seed, ids, model, extra=None):

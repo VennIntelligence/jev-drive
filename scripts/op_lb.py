@@ -445,8 +445,12 @@ def cmd_run(a):
             p["heads"][r] = raw[keep]
             p["desire_steps"][r] = des.argmax(1)
     ms = 1e3 * tg / max(1, R * len(a.schedule))
+    from jevdrive.openpilot import interface as IF
     for s, stem in zip(a.schedule, stems):
-        info = json.dumps({"model": a.model, "backend": backend, "frames": a.frames, "schedule": s, "preroll": pre, "align": a.align,
+        iface = IF.record("navsim", "spec" if a.vcam is None else "vcam", IF.resolve_navsim(a.vcam, a.frames if a.vcam is None else "warp", s),
+                          config={"model": a.model, "frames": a.frames, "schedule": s, "vcam": a.vcam, "onnx": a.onnx})
+        IF.write(pdir, iface, f"{stem}{sfx}.interface.json")
+        info = json.dumps({"interface": iface["resolved"], "model": a.model, "backend": backend, "frames": a.frames, "schedule": s, "preroll": pre, "align": a.align,
                            "prereg": a.prereg, "vcam": a.vcam, "vpitch": a.vpitch, "step_times": ts.tolist(), "heads_slices": hs, "desires": DESIRES,
                            "plan_std": "exp of the MDN log-std, as openpilot's parse_mdn"})
         out = pdir / (f"{stem}{sfx}" + (f".part{k}of{K}" if a.shard else "") + ".npz")

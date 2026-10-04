@@ -1,6 +1,6 @@
 """Record a chase camera alongside the unchanged op-drive control loop (Python 3.8)."""
 import sys as _sys, pathlib as _pl  # restructure: dirs of the script modules this file imports by bare name
-_sys.path[:0] = [str(_pl.Path(__file__).resolve().parents[3] / _d) for _d in ("experiments/op_closed_loop/lib",)]
+_sys.path[:0] = [str(_pl.Path(__file__).resolve().parents[3] / _d) for _d in ("lib",)]  # the stale experiments/op_closed_loop/lib copy was removed 2026-10-05 (3fc2eece:experiments/op_closed_loop/lib/op_arb_agent.py)
 import json
 import os
 from pathlib import Path

@@ -21,7 +21,7 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 import zs_agent  # noqa: E402  (puts the repo root on sys.path)
 from experiments.hugsim.archive.hugsim_preset import LoggedPlan  # noqa: E402
 

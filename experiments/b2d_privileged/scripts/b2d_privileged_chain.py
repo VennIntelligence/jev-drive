@@ -83,7 +83,7 @@ class Chain:
         self.pack(args.slots)
 
     def physics_hash(self):
-        return hashlib.sha256(b"".join((REPO/p).read_bytes() for p in ("experiments/op_closed_loop/lib/op_arb_agent.py","experiments/b2d_privileged/lib/b2d_privileged_geometry.py"))).hexdigest()
+        return hashlib.sha256(b"".join((REPO/p).read_bytes() for p in ("lib/op_arb_agent.py","experiments/b2d_privileged/lib/b2d_privileged_geometry.py"))).hexdigest()
 
     def pack(self,count):
         assert not self.active
@@ -123,12 +123,12 @@ class Chain:
             self.log.event("unit_start",unit=name,gpu=g,slot=k,cpus=cpus,workers=workers,ids=ids,record=record)
             env=dict(os.environ,GPU=str(g),IDX0=str(300+12*g+6*k),CPUS=cpus,WORKERS=str(workers),
                      ARMS=arm,SEEDS=str(seed),LAT_EXEC="curv",RESUME_S="5",KEEP_SRV="1",SRV_NO_TWIN="1",
-                     DESIRE="true",DRIVE_ARGS='"resume": "nored"',PC_ENABLE="1",OPL_IDS=",".join(ids),
+                     DESIRE="true",DRIVE_ARGS='"resume": "timer"',PC_ENABLE="1",OPL_IDS=",".join(ids),
                      OP_ARB_DIR=str(ROOT/f"card{g}s{k}"),OP_ARB_ARMS=str(ROOT/"arms"),
                      OPENBLAS_CORETYPE="Haswell",OPENBLAS_NUM_THREADS="1",OMP_NUM_THREADS="1",MKL_NUM_THREADS="1",
                      B2D_PIDS_WAIT="17000")
-            env.pop("SRV_ONNX",None)
-            env["OP_ARB_AGENT"]="experiments/op_closed_loop/archive/op_drive_record_agent.py" if record else "experiments/op_closed_loop/lib/op_arb_agent.py"
+            env.pop("SRV_ONNX",None)  # resume was nored (ground-truth light) up to 2026-10-05; refused now
+            env["OP_ARB_AGENT"]="experiments/op_closed_loop/archive/op_drive_record_agent.py" if record else "lib/op_arb_agent.py"  # runs before 2026-10-05 used 3fc2eece:experiments/op_closed_loop/lib/op_arb_agent.py
             start=time.perf_counter()
             for attempt in range(2):
                 with (ROOT/("unit-"+name+".log")).open("a") as out:

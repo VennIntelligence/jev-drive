@@ -358,7 +358,7 @@ input; and send x-right/y-forward waypoints at 0.5 s spacing relative to the fro
 
 ## Zero-shot agents (Alpamayo 1.5, openpilot)
 
-Code: `jevdrive/hugsim_zs.py` (geometry), `experiments/hugsim/archive/zs_agent.py` (per-scenario agent process),
+Code: `jevdrive/hugsim_zs.py` (geometry), `experiments/hugsim/lib/zs_agent.py` (per-scenario agent process),
 `experiments/hugsim/archive/hugsim_zs_server.py` (resident model server), `experiments/hugsim/archive/zs_run.py` (batch runner over two private HUGSIM
 trees, `official` and `fixed` = + PR #57), `experiments/hugsim/archive/zs_exam.sh` (phases). Pre-registration, checklist and results:
 [experiments/hugsim/results/hugsim-exam-plan/README.md](../experiments/hugsim/results/hugsim-exam-plan/README.md).

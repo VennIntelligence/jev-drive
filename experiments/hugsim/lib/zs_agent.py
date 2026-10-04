@@ -11,7 +11,8 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      traffic ([1, 0] right-hand / [0, 1] left-hand), op_clock (openpilot frame synthesis: "dilate",
                      default, one 4 Hz frame per 0.2 s context step, model clock 1.25x fast; "hold", Cinque only, the
                      20 Hz clock at face value with every frame held 5 steps), dilation (default 1.25),
-                     warmup_s (openpilot, model seconds of the first frame before the first plan, default 5),
+                     warmup_s (openpilot, model seconds of the first frame before the first plan, default 5; 0 = no static
+                     warm-up: the first frame gets one step's model steps like every later frame, interface preset "spec"),
                      replan (Alpamayo: plan every k-th step, re-issue the last plan in between, default 1),
                      rigid (Alpamayo rear -> camera: rigid body, default true), dump_every (npz every k steps),
                      engage_s (engage while rolling: for the first engage_s simulated seconds the privileged route
@@ -45,6 +46,10 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      acceleration (server `accel` = action[1]) as the row before it, [accel, 2e9]; tree `opctrl_long` (op-ctrl-long.patch, env
                      OP_CTRL_LONG) strips it and sets the acceleration through lib/op_ctrl.py OpLongitudinal
 
+Interface (jevdrive/openpilot/interface.py, docs/openpilot-interface.md): experiments/hugsim/archive/zs_run.py resolves a named
+preset (--preset spec | spec_hold | opctrl_d118 | exam) into the controller tree, OP_CTRL and these opts and passes HUGSIM_ZS_PRESET /
+HUGSIM_ZS_CONTROLLER; the agent writes <output>/interface.json (resolved interface values + declared deviations) at setup.
+
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
 """
@@ -66,6 +71,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(ROOT), str(ROOT / "scripts"), str(ROOT / "experiments/hugsim/archive")]
 import zeroshot_wire as wire  # noqa: E402
 from jevdrive import hugsim_zs as Z  # noqa: E402
+from jevdrive.openpilot import interface as IF  # noqa: E402
 sys.path.insert(0, str(ROOT / "lib"))
 import launch_stab as LS  # noqa: E402
 import launch_long as LL  # noqa: E402
@@ -109,8 +115,17 @@ class Agent:
         else:
             self.op = Z.OpenpilotFrames(cal)
             cov = {"coverage": self.op.coverage, "sources": self.op.src_frac}
+        iface = None
+        if self.model != "alpamayo":
+            ctrl = os.environ.get("HUGSIM_ZS_CONTROLLER") or ("opctrl" if self.opts.get("op_ctrl") else "unknown")
+            rule = json.loads(os.environ.get("OP_CTRL") or "{}")
+            iface = IF.record("hugsim", os.environ.get("HUGSIM_ZS_PRESET", "exam"),
+                              IF.resolve_hugsim(self.opts, ctrl, self.dataset, rule), config=self.opts, controller=ctrl,
+                              op_ctrl_rule=rule, model=self.model)
+            IF.write(self.out, iface)
         self.log.write(json.dumps({"setup": True, "model": self.model, "server": self.server, "opts": self.opts,
-                                   "rear_offset": self.d, "coverage": cov}) + "\n")
+                                   "rear_offset": self.d, "coverage": cov,
+                                   "interface": iface and iface["preset"]}) + "\n")
 
     def call(self, meta, arrays, sock=None):
         sock = sock or self.sock
@@ -147,11 +162,11 @@ class Agent:
         hold = self.opts.get("op_clock", "dilate") == "hold" and self.model != "lebowski"
         if hold:            # 20 Hz clock at face value: each 4 Hz frame held for 5 model steps (0.25 s)
             per_ctx, dil = 5, 1.0
-            reps = 5 if self.step else int(round(20 * self.opts.get("warmup_s", 5.0)))
+            reps = 5 if self.step else max(5, int(round(20 * self.opts.get("warmup_s", 5.0))))
         else:               # one simulator step = one 0.2 s context step; Lebowski steps at the context rate
             per_ctx = 1 if self.model == "lebowski" else 4
             dil = float(self.opts.get("dilation", 1.25))
-            reps = per_ctx if self.step else per_ctx * int(round(self.opts.get("warmup_s", 5.0) / OP_CTX_S))
+            reps = per_ctx if self.step else per_ctx * max(1, int(round(self.opts.get("warmup_s", 5.0) / OP_CTX_S)))
         desire = Z.DESIRE[int(info["command"])] if self.opts.get("desire", True) else 0
         meta = {"traffic": self.opts.get("traffic", [1, 0]), "speed": float(info["ego_velo"]) * dil}
         below, ctx = float(self.opts.get("derot_below", 0)), int(self.opts.get("derot_ctx", 25))
@@ -174,7 +189,7 @@ class Agent:
             wire.send(sk, {"cmd": "reset"}, {})
             wire.recv(sk)
             th_now, rot = self.hist.th[-1], self.opts.get("derot_rotate", True)
-            warm = per_ctx * int(round(self.opts.get("warmup_s", 5.0) / OP_CTX_S))
+            warm = per_ctx * max(1, int(round(self.opts.get("warmup_s", 5.0) / OP_CTX_S)))
             yaws, ms = [], 0.0
             for i, (j, rgb, im, des) in enumerate(self.buf):
                 yaw = np.degrees(self.hist.th[j] - th_now)

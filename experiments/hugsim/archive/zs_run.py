@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Batch runner of HUGSIM's official closed_loop.py for the zero-shot exam (experiments/hugsim/results/hugsim-exam-plan).
 
-One job = (scenario, agent, controller). Agents: alpamayo / cinque / lebowski (experiments/hugsim/archive/zs_agent.py against a
+One job = (scenario, agent, controller). Agents: alpamayo / cinque / lebowski (experiments/hugsim/lib/zs_agent.py against a
 resident experiments/hugsim/archive/hugsim_zs_server.py), cv / route (experiments/hugsim/archive/agent_client.py), ltf (the official LTF client),
 preset (the scene's logged trajectory as the plan, experiments/hugsim/archive/preset_agent.py; controller acceptance).
 Controllers run from private copies of the patched HUGSIM tree, so nobody else's apply / revert of the optional
@@ -14,6 +14,12 @@ and curvature-rate limit below 3 m/s, lib/lowspeed_ctrl.py, parameters in env LO
     python experiments/hugsim/archive/zs_run.py setup-trees
     python experiments/hugsim/archive/zs_run.py run --out $DATA_DIR/runs/hugsim-exam --agent cinque --controller official \
         --socket $DATA_DIR/runs/hugsim-exam/cinque.sock --scenarios <list.txt> --workers 2 --gpu 0
+
+Interface presets (jevdrive/openpilot/interface.py HUGSIM_PRESETS, docs/openpilot-interface.md): --preset spec (the default for
+the openpilot agents cinque / lebowski: openpilot's lateral path in tree opctrl, no static warm-up, dilate clock) | spec_hold |
+opctrl_d118 | exam (legacy: --controller and --opts taken literally; every result before 2026-10-05; the default for the other
+agents). A preset sets the controller tree, OP_CTRL / OP_CTRL_LIB and the agent opts; --opts are merged on top. The agent writes
+interface.json into every run dir.
 
 Writes <out>/<agent>-<controller>/<ad>/<scene>_<mode>/ (closed_loop.py's outputs + zs_steps.jsonl) and appends one
 row per finished job to <out>/results.csv (resumable: finished jobs are skipped).
@@ -164,8 +170,10 @@ def run_job(a, scen, tag_dir, traffic):
     run_dir.mkdir(parents=True)
     tree = TREES[a.controller]
     check_tree(a.controller)
-    opts = dict(json.loads(a.opts), traffic=traffic)
-    env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(a.gpu), OMP_NUM_THREADS="2", MKL_NUM_THREADS="2",
+    opts = dict(a.preset_opts, **json.loads(a.opts), traffic=traffic)
+    env = dict(os.environ, **a.preset_env)
+    env = dict(env, CUDA_VISIBLE_DEVICES=str(a.gpu), OMP_NUM_THREADS="2", MKL_NUM_THREADS="2",
+               HUGSIM_ZS_PRESET=a.preset, HUGSIM_ZS_CONTROLLER=a.controller,
                HUGSIM_ZS_MODEL=a.agent, HUGSIM_ZS_SOCKET=a.socket or "", HUGSIM_ZS_DATASET=ds,
                HUGSIM_ZS_CAMYAML=str(tree / "configs" / "sim" / f"{ds}_camera.yaml"), HUGSIM_ZS_OPTS=json.dumps(opts),
                HUGSIM_POLICY=a.agent if ad == "jev" else "", HUGSIM_SCENE_DIR=str(DATA / "scenes" / ds / scene))
@@ -194,7 +202,27 @@ def run_job(a, scen, tag_dir, traffic):
     return row
 
 
+def apply_preset(a):
+    """Resolve --preset into a.controller / a.preset_env / a.preset_opts (jevdrive.openpilot.interface.HUGSIM_PRESETS)."""
+    sys.path.insert(0, str(REPO))
+    from jevdrive.openpilot import interface as IF
+    a.preset = a.preset or ("spec" if a.agent in ("cinque", "lebowski") else "exam")
+    p = IF.HUGSIM_PRESETS[a.preset]
+    a.preset_env, a.preset_opts = {}, dict(p["opts"])
+    if p["controller"] is None:                       # legacy: everything as given
+        a.controller = a.controller or "official"
+        return
+    if a.controller not in (None, p["controller"]):
+        raise SystemExit(f"--preset {a.preset} runs tree {p['controller']}, not --controller {a.controller}")
+    a.controller = p["controller"]
+    for k, v in p["env"].items():
+        a.preset_env[k] = json.dumps(v)
+    if "OP_CTRL" in p["env"]:
+        a.preset_env["OP_CTRL_LIB"] = str(REPO / "lib")
+
+
 def run(a):
+    apply_preset(a)
     tag = a.tag or f"{a.agent}-{a.controller}"
     out = Path(a.out)
     tag_dir = out / tag
@@ -253,7 +281,8 @@ if __name__ == "__main__":
     r = sub.add_parser("run")
     r.add_argument("--out", required=True)
     r.add_argument("--agent", required=True, choices=list(AD))
-    r.add_argument("--controller", default="official", choices=list(TREES))
+    r.add_argument("--controller", default=None, choices=list(TREES), help="exam preset: default official; other presets set it")
+    r.add_argument("--preset", default=None, help="interface preset: spec | spec_hold | opctrl_d118 | exam (see the docstring)")
     r.add_argument("--scenarios", required=True, help="a .txt list (paths relative to scenarios/) or one yaml")
     r.add_argument("--socket", default="")
     r.add_argument("--opts", default="{}")

@@ -19,7 +19,7 @@ srv=$!
 trap 'kill -- -$srv 2>/dev/null' EXIT
 until [[ -f $OUT/servers/cinque-sel.ready ]]; do sleep 5; kill -0 $srv 2>/dev/null || { echo server died > "$OUT/SEL_ERROR"; exit 3; }; done
 OPTS='{"derot_below": 3.0, "derot_sel": 0.6}'
-run() { timeout $(( $(date -d "${STOP_AT:-07:25}" +%s) - $(date +%s) )) $HPY experiments/hugsim/archive/zs_run.py run --out "$OUT" \
+run() { timeout $(( $(date -d "${STOP_AT:-07:25}" +%s) - $(date +%s) )) $HPY experiments/hugsim/archive/zs_run.py run --preset exam --out "$OUT" \
         --agent cinque --controller fixed --gpu "$GPU" --workers "${WORKERS:-2}" --scenarios "$1" --socket "$SOCK" --opts "$OPTS" --tag cinque-fixed-sel3 --timeout 900; }
 echo "$(date +%T) sel3 stage 1" > "$OUT/SEL_STATUS"
 run $S/derot_spin10.txt

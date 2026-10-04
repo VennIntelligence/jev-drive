@@ -12,7 +12,7 @@ HUGSIM 起步慢的原因，按低于 3 m/s 的步（前 10 s，n = 1556）分�
 
 ## 规则（唯一臂 `launch_long`；参数离线定，不按闭环结果调，已披露）
 
-代码 `lib/launch_long.py`，agent 侧（`experiments/hugsim/archive/zs_agent.py`，opts `launch_long`）；控制器、横向、模型输入一概不动。输入只有本车速度和 openpilot 自己的输出（计划、lead 头），不看场景、路线、地图。
+代码 `lib/launch_long.py`，agent 侧（`experiments/hugsim/lib/zs_agent.py`，opts `launch_long`）；控制器、横向、模型输入一概不动。输入只有本车速度和 openpilot 自己的输出（计划、lead 头），不看场景、路线、地图。
 
 - 起步阶段（锁存）：开局和每次 v < 0.5 m/s（停车）后上膛；v 第一次 ≥ 3.5 m/s 即解除，之后不再干预，所以只是起步，不是速度下限。
 - 门：计划 3 s 弧长 ≥ 3 m 且不是 straight_stop 的停车计划；计划 1 s 弧长 ≥ 0.7·v（模型不在要求减速）；lead 头不报近前车（不是 lead_prob > 0.5 且 0 < lead_x < 20 m）。永不向已报告的前车加速。

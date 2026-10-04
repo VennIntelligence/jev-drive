@@ -2,7 +2,7 @@
 
 Written 2026-10-04. Pre-registration (committed before any closed-loop run, commit e7f0c3fa): [../plans/2026-10-04-launch-long-prereg.md](../plans/2026-10-04-launch-long-prereg.md).
 Follows decision 115 (real cars leave 0-3 m/s in ~1.8 s; HUGSIM spends a median 6.4 s of the first 10 s below 3 m/s) and 113 / 114 (lateral rules).
-Code: `lib/launch_long.py`, agent hook `experiments/hugsim/archive/zs_agent.py` (opts `launch_long`), lead x / v logged by `hugsim_zs_server.py`, chain `experiments/hugsim/scripts/launch_long_chain.sh`,
+Code: `lib/launch_long.py`, agent hook `experiments/hugsim/lib/zs_agent.py` (opts `launch_long`), lead x / v logged by `hugsim_zs_server.py`, chain `experiments/hugsim/scripts/launch_long_chain.sh`,
 report `experiments/hugsim/scripts/launch_long_report.py`; tables `launch_long/{summary.md,summary.json,launch_long_runs.csv}`. Shipped Cinque, PR#57 controller (tree `fixed`), 64 exam scenarios, one run,
 card 1 (lease `hugsim-launchlong`, released), 23 min wall. Tags: **[E]** measured, **[I]** inference.
 

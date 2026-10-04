@@ -1,7 +1,7 @@
 # HUGSIM sel3: is the 25-step replay window faithful? (2026-10-04, OD2)
 
 Question: the B2D selector port needed a 132-step replay window and a fix for a spurious desire rising edge at replay start. HUGSIM sel3
-(`derot_below` / `derot_sel` in `experiments/hugsim/archive/zs_agent.py`) replays 25 simulator steps (4 model steps each, first frame held
+(`derot_below` / `derot_sel` in `experiments/hugsim/lib/zs_agent.py`) replays 25 simulator steps (4 model steps each, first frame held
 for the 80-step warm-up) and does not handle the desire edge. Does the replay reproduce the native plan when nothing is rotated?
 
 Control (partial: no rerun of the 64 scenes was made): it_dw3-s0, PR #57 controller, 6 scenarios (`scripts/sel3_check6.txt`, the first six of the

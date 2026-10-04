@@ -32,7 +32,7 @@ AD = ROOT / "arms"
 ONNX = DATA / "runs" / "op_adapt_L" / "b2d" / "onnx"
 DEV_ROUTES = 10
 TZ = '"zone_m": {"3": [5.0, 5.0], "5": [5.0, 10.0], "6": [5.0, 10.0]}'      # STRAIGHT and lane changes only: LEFT / RIGHT handed to openpilot
-R1 = '"resume": "nored"'
+R1 = '"resume": "timer"'   # was nored (ground-truth light) for every run up to 2026-10-05 (decision 81); nored is refused now (docs/openpilot-interface.md)
 INT = '"intent": "route"'
 # arm -> (served model, DESIRE, DRIVE_ARGS)
 ARMS = {

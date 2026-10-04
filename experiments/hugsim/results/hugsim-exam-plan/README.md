@@ -3,7 +3,7 @@
 状态: 预注册（2026-09-25，写于任何计分运行之前）；rate study 与 openpilot 适配清单排队中，Alpamayo 部分等 GPU 2
 接口: [docs/hugsim.md](../../../../docs/hugsim.md)；清单: [docs/zeroshot-adapters.md](../../../../docs/zeroshot-adapters.md)
 教训来源: [openpilot 迁移](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-zeroshot-exam/openpilot-migration.md)、[Alpamayo 闭环诊断](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-24-zeroshot-exam/alpamayo-closed-loop-diagnosis.md)
-代码: `jevdrive/hugsim_zs.py`（几何）、`experiments/hugsim/archive/zs_agent.py`（每场景的 agent 进程）、`experiments/hugsim/archive/hugsim_zs_server.py`（常驻模型）、
+代码: `jevdrive/hugsim_zs.py`（几何）、`experiments/hugsim/lib/zs_agent.py`（每场景的 agent 进程）、`experiments/hugsim/archive/hugsim_zs_server.py`（常驻模型）、
 `experiments/hugsim/archive/zs_run.py`（批量跑官方 `closed_loop.py`）、`experiments/hugsim/archive/zs_exam.sh`（各阶段）、`experiments/hugsim/archive/zs_rate_{op,alp}.py`、
 `experiments/hugsim/archive/zs_collect.py`、`experiments/hugsim/archive/zs_figs.py`
 

@@ -1,7 +1,7 @@
 # openpilot 进 Bench2Drive 闭环：为什么起不了步、不转弯，以及「base + openpilot modifier」怎么接
 
 2026-09-28。计划、登记与执行日志在 [fc65452:todos/2026-09-28-op-closedloop.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-28-op-closedloop.md)，小表在 [results/op_arb/](../experiments/op_closed_loop/results/op_arb/)，
-代码 `experiments/op_closed_loop/lib/op_arb_agent.py`（agent 与各仲裁模式）、`experiments/op_closed_loop/archive/op_arb_server.py`（openpilot server）、`experiments/op_closed_loop/archive/op_arb.sh`（启动）、`experiments/op_closed_loop/lib/op_arb_report.py`（读数）、`experiments/op_closed_loop/archive/op_arb_figs.py`（图）。
+代码 `lib/op_arb_agent.py`（agent 与各仲裁模式）、`experiments/op_closed_loop/archive/op_arb_server.py`（openpilot server）、`experiments/op_closed_loop/archive/op_arb.sh`（启动）、`experiments/op_closed_loop/lib/op_arb_report.py`（读数）、`experiments/op_closed_loop/archive/op_arb_figs.py`（图）。
 本文供用户与 main 讨论；所有数字都是 GPU 6 测试卡上的小规模 pilot（phase 1 诊断 6 条路线、phase 2 评测 10 条路线，TM seed 0 单次），只能给方向。
 
 ## 结论先行
@@ -283,7 +283,7 @@ op-drive 的每个部件在那边的对应：
 | 模型接口 | `op_arb_server.py`（ORT，Cinque） | 同一个 server 与 wire 协议 | 适配后的模型换权重即可，两边同时生效 |
 
 实现上唯一需要的重构：把 `OpArbAgent._plan` 里与 CARLA 无关的部分（`governor`、`idm`、`plan_arc`、`place`、横向归属与锁存状态机）抽成一个纯函数模块（例如 `jevdrive/op_drive.py`），
-CARLA agent 与 HUGSIM agent（`experiments/hugsim/archive/zs_agent.py` 的一个新 model 分支）都调它。估计 0.5–1 天，外加 HUGSIM 上的分级 smoke；本轮没做。
+CARLA agent 与 HUGSIM agent（`experiments/hugsim/lib/zs_agent.py` 的一个新 model 分支）都调它。估计 0.5–1 天，外加 HUGSIM 上的分级 smoke；本轮没做。
 
 ## 10. 标定链审计：CARLA rig 是不是已经等价于「收敛后的 liveCalibration」（2026-09-29，只读源码 + CPU 数值，没有 CARLA）
 

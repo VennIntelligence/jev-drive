@@ -117,7 +117,10 @@ OP_FOCAL = {"road": 2648.0, "wide": 567.0}
 # road frames show none), and anywhere below ~1.4 m the camera is behind CARLA's tinted windshield glass, which
 # darkens the whole image.
 OP_MOUNT_RIG = (1.779, 0.0, 1.433)
-OP_CAMERA_TICK = 0.2                # pre-registered smoke: 5 Hz, the model's context rate (frames t-0.2 s and t)
+# Every scored openpilot run set "op_camera_tick": 0.05 explicitly (op_arb.sh, nq3_b.sh, nq4_opl.sh, nq4_gk.sh, zeroshot_b2d_op*.sh);
+# 0.2 (5 Hz, the model's context rate) was only the pre-registered smoke's default and the opfix "origin-only" arm, which sets it.
+# Default 0.05 since 2026-10-05 (ledger 2026-10-05 section 12.6): openpilot sees 20 Hz frames on the car (interface history.rate_hz).
+OP_CAMERA_TICK = 0.05
 
 
 def openpilot_sensor_specs(tick=OP_CAMERA_TICK, mount=OP_MOUNT_RIG):

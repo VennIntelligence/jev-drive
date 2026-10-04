@@ -113,6 +113,9 @@ def main():
         assert a.tag, "--onnx needs --tag"
         a.models = [f"cinque_{a.tag}"]
     outdir = {k: Z.root("preds", f"op_{k}") for k in a.models}
+    from jevdrive.openpilot import interface as IF
+    for k in a.models:                                 # the interface this prediction set runs under (docs/openpilot-interface.md)
+        IF.write(outdir[k], IF.record("wod", "spec", IF.resolve_wod(), config={"model": k, "argv": sys.argv[1:]}))
     todo = [str(n) for w in a.set for n in sets[w]["name"]]
     todo = [n for n in todo if not all((outdir[k] / f"{n}.npz").exists() for k in a.models)][: a.limit or None]
     todo.sort()  # consecutive targets of one sequence share a worker's maps more often
