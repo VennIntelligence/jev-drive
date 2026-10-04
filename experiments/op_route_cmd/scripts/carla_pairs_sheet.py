@@ -47,6 +47,7 @@ def main():
     ap.add_argument("--ids", default="")
     ap.add_argument("--towns", default="")
     ap.add_argument("--only-3", action="store_true")
+    ap.add_argument("--dpi", type=int, default=70)
     a = ap.parse_args()
     P = [p for p in pickle.load(open(a.plan, "rb")) if (Path(a.frames) / "frames" / p["town"] / (p["id"] + ".npz")).exists()]
     if a.towns:
@@ -93,7 +94,9 @@ def main():
         ax.axis("off")
         ax.set_title("wide, oldest history frame (t0 - 1.8 s)", fontsize=7)
     fig.tight_layout()
-    fig.savefig(a.out, dpi=80)
+    fig.savefig(a.out, dpi=a.dpi)
+    from PIL import Image
+    Image.open(a.out).convert("RGB").quantize(128).save(a.out, optimize=True)
     print(a.out, os.path.getsize(a.out) // 1024, "KB", len(P), "rows")
 
 
