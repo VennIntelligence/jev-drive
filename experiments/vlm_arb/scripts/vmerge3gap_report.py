@@ -17,7 +17,7 @@ import vmerge2_report as m2  # noqa: E402
 import vmerge_collisions as vc  # noqa: E402
 import vlm_vred_chain as vch  # noqa: E402
 import vmerge3gap_chain as ch  # noqa: E402
-from vlm_arb_common import OBS_ROUTES, ROUTES, RUN, route_row, unit_dir  # noqa: E402
+from vlm_arb_common import OBS_ROUTES, ROUTES, RUN, jsonl, route_row, unit_dir  # noqa: E402
 
 OUT = RUN / "vm3gap/results"
 ARMS = ("gap20", "gap25", "gap30")
@@ -50,8 +50,11 @@ def collect():
 def collisions(df):
     rows = []
     for _, r in df[df.collisions_vehicle > 0].iterrows():
+        plans = jsonl(Path(r.attempt) / "plans.jsonl")
         for e in vc.describe(r.arm, r.seed, r.route, dict(DS=r.DS, attempt=r.attempt)):
-            e["pullout"] = bool(e["pc_bypass_now"])
+            # pull-out = the bypass path was active (shift_frac >= 0.05) within 3 s before to 1 s after the contact stamp (contacts.jsonl runs ~1 s ahead)
+            e["pullout"] = bool(e["pc_bypass_now"]) or any((p.get("pc") or {}).get("bypass") and (p.get("pc") or {}).get("shift_frac", 0) >= 0.05
+                                                           for p in plans if e["t"] - 3 <= p.get("t", -1e9) <= e["t"] + 1)
             e["side"] = e["pullout"] and e["rel_lat"] is not None and abs(e["rel_lat"]) >= 1.0
             rows.append(e)
     return pd.DataFrame(rows)
