@@ -5,7 +5,75 @@ own clean polyline, frames in the openpilot model-input format from a camera at 
 (poses + polylines, CPU), `carla_pairs_render.py` (CARLA server + client), `carla_pairs_pack.py`, `carla_pairs_sheet.py`, `carla_pairs_stats.py`,
 `carla_pairs_splits.py`, chain `run_carla_pairs.sh`.
 
-## Results
+## Open-loop-rig re-render (2026-10-05): the set to use
+
+The 1.22 m set below is **superseded** (kept, not deleted): the user principle is one viewpoint for training and evaluation, no per-board camera, and the B2D `spec`
+camera is now the open-loop boards' viewpoint. Same 8 607 poses, 21 151 (pose, exit) rows, 1 310 junctions, same splits (`route.npz` and `tab.npz` are bit-identical
+to the 1.22 m set, checked key by key), only the images differ. Code: `scripts/carla_pairs_render_ol.py` (renderer), `run_carla_pairs_ol.sh` (chain), `carla_pairs_sheet_ol.py`,
+`carla_pairs_visibility.py`; `tests/test_carla_pairs_ol.py` checks the warp indices and `pack` against `OpenpilotModel.pack` / `frames.get_warp_matrix` bit for bit.
+
+- **Mount** = `interface.B2D_SPEC_MOUNT` (imported, not hardcoded): x 1.59 m ahead of the rear axle, y 0, z 1.86 m above the road, level (pitch = road pitch, roll 0, rpy 0).
+- **Model frames built the way the B2D closed-loop harness builds them, not stitched from three cameras.** The harness (`scripts/zeroshot_rigs.openpilot_sensor_specs`,
+  `zeroshot_policy_server.OpenpilotModel.pack`) mounts two separate pinhole sensors at the same point, 1928 x 1208, road f 2648 px (40.0 deg) and wide f 567 px (118.9 deg,
+  one pinhole), and warps each to the 512 x 256 model frame with modeld's nearest-neighbour warp (rpy 0), BT.601 limited-range YUV (Y 16..235), 2 x 2 chroma means. The renderer
+  does exactly that: two sensors per tick, the same indices and arithmetic. Differences to the 1.22 m set: native sensors instead of one 1260 x 750 pinhole cut twice, nearest
+  instead of bilinear sampling, limited instead of full-range YCbCr (a consumer must not mix the two sets), road and wide sensors auto-expose separately, camera y 0 (was 0.026).
+- **Wide raw capture per pose (t0 only)**: three level pinhole cameras at the same mount, yaw +60 / 0 / -60 deg, 960 x 540, f 480 px (90 deg each, ~210 deg in total, 30 deg overlap),
+  JPEG q90, `render/pano/<town>/<pose id>.npz` (`jpeg_l`, `jpeg_c`, `jpeg_r` byte arrays, BGR; geometry in `render/rig.json`). A wider model input (any pinhole / cylindrical cut up to
+  +-105 deg) can be cut from them with rays, without re-rendering. Pano cameras only render for the t0 grab (3 ticks, exposure settles), history frames are road + wide only.
+  **344 KB per pose, 2.9 GB for 8 607 poses** (the estimate from the 5-pose stage was 300 KB).
+- **Sheet**: `../figs/carla_pairs_sheet_ol.png` (6 three-exit approaches from 6 towns; left = BEV, then the road and wide model frame at t0 exactly as the model gets them, then the pano with
+  the exit polylines projected through the same rays). Look at: dashed row = horizon row (47.6 / 151.8) sits on the true horizon; the polylines leave the ego lane and fan into the real branches;
+  no hood or body; the pano tiles join with the same exposure. Checked on 5 poses before the full run, and on the 6 above after it.
+- **Counts and rate.** 8 607 / 8 607 poses rendered (frames + pano), 21 151 rows, packed (`imgs.npy` 33.8 GB, shape (8 607, 10, 2, 6, 128, 256)). Solo server (5-pose stage): 0.65 s per pose
+  (settle 0.2, 10 history frames 0.4, pano 0.2). 18 servers at once (6 per card on 3 cards, 4 cores each, one lease): 1.57 s per pose per server (p50 1.28, p90 2.86), **~5 poses/s aggregate**
+  in the first wave (7 745 poses in 25 min; the old set ran 2 servers at ~2.4 poses/s), 15.8 renders per pose. Unsettled (60-tick cap, frames kept, flagged in `render/render_*of18.jsonl`): **101 poses (1.2%,
+  67 in Town13)**, against 0.3% before: 18 servers share 75 cores and tile streaming lags more. 6 server restarts (frame timeouts), all recovered.
+- **Incidents (no data lost):** shard 0 (862 small-town poses) stalled for ~10 min in a dead-server destroy loop (120 s time-out per actor), was killed and rerun; shard 9 died with an uncaught
+  C++ `TimeoutException` after 111 of 455 poses and its 344 poses were rerun as 3 id lists on 3 servers; the renderer no longer destroys actors on a dead server (`stop()` kills the server only).
+  Because shard 0 was killed the chain script ended in ERROR; the pack and stats were run by hand (same commands).
+- **Mean t0 road luminance 141** (min 47, max 205), 9 weather presets as before.
+- **Where (box):** `$DATA_DIR/runs/op_route_cmd/carla_pairs_s10000ol/{packed,render,plan.path}` (`packed/` = same layout as below, `render/frames`, `render/pano`, `render/rig.json`; frames
+  31 GB are redundant after packing and can go; pano must stay). Old 1.22 m set: `carla_pairs_s10000/` (superseded), `carla_pairs_s2000/` (the 2 000-pose subset, **not re-rendered**).
+
+### Can openpilot see the exit it is told to take? (geometry only, no model)
+
+Camera level at the mount above, pose at distance d (10 / 20 / 30 m) before the junction; the exit window is the first 20 m of the exit polyline after the junction mouth (arc length d ... d + 20).
+Cell = mean fraction of the window inside the FOV (share of rows with the whole window inside). Road / wide = the two model frames (+-15.7 / +-29.4 deg), 120 / 180 = hypothetical horizontal FOVs.
+Full tables incl. d x R_min: [carla_pairs_visibility.md](carla_pairs_visibility.md); figure: `../figs/carla_pairs_visibility.png` (grouped bars, one panel per grouping; look at how far the grey road bars and the blue
+wide bars sit below 100 for turns, and that 120 deg is already complete).
+
+| exit turn angle (abs, connector heading change) | rows | road 31 deg | wide 59 deg | 120 deg | 180 deg |
+|---|--:|--:|--:|--:|--:|
+| straight (< 25 deg) | 7220 | 100% (99%) | 100% (100%) | 100% (100%) | 100% (100%) |
+| 25 - 60 deg | 207 | 81% (67%) | 93% (85%) | 98% (98%) | 100% (100%) |
+| 60 - 120 deg (right-angle) | 13612 | 60% (4%) | 89% (54%) | 100% (100%) | 100% (100%) |
+| >= 120 deg (u-turn) | 109 | 52% (5%) | 82% (36%) | 98% (91%) | 100% (100%) |
+
+| min turn radius R_min (turning rows) | rows | road 31 deg | wide 59 deg | 120 deg | 180 deg |
+|---|--:|--:|--:|--:|--:|
+| tight: R_min < 7 m | 5137 | 52% (2%) | 84% (40%) | 100% (99%) | 100% (100%) |
+| mid: 7 - 10 m | 4959 | 62% (4%) | 91% (55%) | 100% (100%) | 100% (100%) |
+| wide: R_min >= 10 m | 3593 | 73% (9%) | 96% (76%) | 100% (100%) | 100% (100%) |
+
+| pose distance d (rows with turn angle >= 60 deg) | rows | road 31 deg | wide 59 deg | 120 deg | 180 deg |
+|---|--:|--:|--:|--:|--:|
+| d = 10 m | 4225 | 43% (1%) | 74% (11%) | 100% (99%) | 100% (100%) |
+| d = 20 m | 5447 | 62% (3%) | 94% (57%) | 100% (100%) | 100% (100%) |
+| d = 30 m | 4049 | 76% (8%) | 99% (95%) | 100% (100%) | 100% (100%) |
+
+![visibility](../figs/carla_pairs_visibility.png)
+
+Reading: the road frame cannot see the exit of a right-angle turn (60% of its first 20 m on average, whole window in 4% of the rows, 43% at d = 10 m); the wide frame sees most of it (89%, whole in 54%) but at
+d = 10 m only 74% (whole in 11%), and for tight turns (R_min < 7 m, d = 10 m) 64% (whole in 3%); from d = 30 m the wide frame sees 99%. A 120 deg FOV sees the whole exit at every d (99-100%).
+Doubts: the window runs along the label polyline, whose 10 m vertices cut the corner of every 90-degree turn (sidecar convention), so it is straighter than the real connector; level camera,
+no pitch / sway; the bottom-of-image clip (8.1 m) never binds (d >= 10 m); a visible exit in FOV terms is not a legible exit in pixels (the wide frame at the far end of the window is a few dozen pixels).
+
+---
+
+**The sections below describe the 1.22 m set (superseded); the polyline, split, format and doubt sections still apply unchanged to the new set.**
+
+## Results (1.22 m set, superseded)
 
 | set | poses | (pose, exit) rows | 3-exit poses (4-exit) | junctions | lane-change rows | dev poses | size |
 |---|--:|--:|--:|--:|--:|--:|--:|
@@ -48,7 +116,7 @@ is the spec and the same as the real-data labels.
 
 ## What was rendered, and how it differs from the real-data pipeline
 
-**Against the B2D evaluation rig (2026-10-05, docs/openpilot-interface.md).** The B2D `spec` preset now mounts the openpilot cameras at 1.22 m
+**Against the B2D evaluation rig (2026-10-05, docs/openpilot-interface.md; the open-loop-rig re-render above removes these differences except the body, traffic and real history).** The B2D `spec` preset now mounts the openpilot cameras at 1.22 m
 too, so the height matches; what still differs: x 3.8 m (front bumper line) on B2D against 1.519 m here, B2D's wide frame comes from CARLA's
 own wide sensor (f 567) and the road frame from a separate road sensor, against one pinhole cut twice here; B2D has the MKZ body, traffic and real
 20 Hz history, these pairs have none and a synthetic 5 Hz history. Not re-rendered; a model trained on these pairs and scored on B2D carries
