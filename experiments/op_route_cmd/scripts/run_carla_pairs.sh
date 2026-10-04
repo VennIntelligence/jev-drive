@@ -2,7 +2,7 @@
 # CARLA pair material, one self-advancing chain: plan -> render (N shards, one CARLA server each) -> pack.
 # Usage (box, in tmux via scripts/tmux_run.sh): run_carla_pairs.sh <tag> <n-poses> <gpu> "<idx0> <cpus0>" "<idx1> <cpus1>" ...
 #   e.g. run_carla_pairs.sh s2000 2000 2 "240 102-103,206-207" "241 156-159"
-# Resumable: the plan is reused if it exists, the renderer skips poses that already have frames. STATUS / DONE / ERROR in the run root.
+# ID_PREFIX=<p> in the environment prefixes the pose ids. Resumable: the plan is reused if it exists, the renderer skips poses that already have frames. STATUS / DONE / ERROR in the run root.
 set -uo pipefail
 TAG=$1; N=$2; GPU=$3; shift 3
 D=${DATA_DIR:?}; R=$D/runs/op_route_cmd/carla_pairs_$TAG; mkdir -p "$R"
@@ -12,7 +12,7 @@ rm -f "$R/ERROR" "$R/DONE"
 if [ ! -s "$R/plan.path" ]; then
   echo "planning" > "$R/STATUS"
   T=$(ls -d $D/runs/op_route_cmd/carla_topo/*/ | while read d; do [ -e $d/DONE ] && echo $d; done | tail -1)
-  $PY $S/carla_pairs_plan.py --topo "$T" --n-poses "$N" --tag "$TAG" > "$R/plan.log" 2>&1 || fail "plan failed"
+  $PY $S/carla_pairs_plan.py --topo "$T" --n-poses "$N" --tag "$TAG" ${ID_PREFIX:+--id-prefix "$ID_PREFIX"} > "$R/plan.log" 2>&1 || fail "plan failed"
   ls -d $D/runs/op_route_cmd/carla_plan_$TAG/*/poses.pkl | tail -1 > "$R/plan.path"
 fi
 P=$(cat "$R/plan.path"); K=$#; i=0; pids=()

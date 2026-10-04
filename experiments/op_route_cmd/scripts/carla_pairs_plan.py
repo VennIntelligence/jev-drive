@@ -298,6 +298,7 @@ def main():
     ap.add_argument("--towns", default=",".join(CT.TOWNS))
     ap.add_argument("--tag", default="plan")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--id-prefix", default="", help="prefix of every pose id (sets of different size share road keys)")
     a = ap.parse_args()
     with Run("op_route_cmd", "carla_plan_" + a.tag, config=vars(a)) as run:
         held = {tuple(x) for x in json.load(open(Path(a.topo) / "holdout.json"))["b2d_any"]}
@@ -317,7 +318,7 @@ def main():
                 order = [feas[i] for i in rng.permutation(len(feas))]
                 for k, (d, prof) in enumerate(order[: a.poses_per_road]):
                     wth = wnames[int(rng.choice(len(wnames), p=np.array(wp) / sum(wp)))]
-                    pid = "%s-j%d-r%dd%d-l%d-d%d-%s-%d" % (town, x["j"], x["road"], x["dir"], x["lane"], int(d), prof, k)
+                    pid = a.id_prefix + "%s-j%d-r%dd%d-l%d-d%d-%s-%d" % (town, x["j"], x["road"], x["dir"], x["lane"], int(d), prof, k)
                     try:
                         p = build_pose(m, town, x["j"], x["road"], x["dir"], x["exits"], x["lane"], d, prof, wth, rng,
                                        "dev" if dev else "train", pid)

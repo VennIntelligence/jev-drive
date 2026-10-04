@@ -96,7 +96,7 @@ def main():
             ax.axhline(K[1, 2], color="w", ls="--", lw=0.8, alpha=0.8)
             for kk, e in enumerate(p["exits"]):
                 u, v = project(e["poly"], e["pmask"], K)
-                ax.plot(u, v, "-", color=COLORS[kk % len(COLORS)], lw=2.0, alpha=0.9)
+                ax.plot(u, v, "-", color=COLORS[kk % len(COLORS)], lw=2.6, alpha=0.95)
             ax.set_xlim(0, 512), ax.set_ylim(256, 0), ax.axis("off")
             ax.set_title(f"{name} model frame t0 (dashed = nominal horizon row {K[1, 2]:.1f}); polylines = check only", fontsize=7)
         ax = axs[r, 3]
@@ -106,7 +106,7 @@ def main():
     fig.tight_layout()
     fig.savefig(a.out, dpi=a.dpi)
     from PIL import Image
-    Image.open(a.out).convert("RGB").quantize(128).save(a.out, optimize=True)
+    Image.open(a.out).convert("RGB").quantize(192).save(a.out, optimize=True)
     print(a.out, os.path.getsize(a.out) // 1024, "KB", len(P), "rows")
 
 

@@ -313,7 +313,9 @@ def main():
     poses = pickle.load(open(a.plan, "rb"))
     if a.towns:
         poses = [p for p in poses if p["town"] in a.towns.split(",")]
-    poses = poses[k * len(poses) // n:(k + 1) * len(poses) // n]      # contiguous: the plan is ordered by a spatial tour
+    cost = np.cumsum([1.0 if q["town"] in LARGE else 0.4 for q in poses])    # contiguous slices of equal cost: the plan is a spatial tour
+    lo, hi = np.searchsorted(cost, cost[-1] * k / n, "left"), np.searchsorted(cost, cost[-1] * (k + 1) / n, "left")
+    poses = poses[lo if k else 0:hi if k + 1 < n else len(poses)]
     if a.limit:
         poses = poses[: a.limit]
     todo = [p for p in poses if not (out / "frames" / p["town"] / (p["id"] + ".npz")).exists()]
