@@ -1,0 +1,8 @@
+|   frac |        n |   shipped_abs_err_mean |   shipped_abs_err_max |   delta_abs_err_mean |   delta_abs_err_p95 |   delta_abs_err_max |   ci_halfwidth_median |   seed0_n |   seed0_shipped_err |   seed0_delta_abs_err_mean |   seed0_delta_abs_err_max |
+|-------:|---------:|-----------------------:|----------------------:|---------------------:|--------------------:|--------------------:|----------------------:|----------:|--------------------:|---------------------------:|--------------------------:|
+|  0.200 | 2430.740 |                  0.324 |                 0.872 |                0.209 |               1.342 |               2.202 |                 0.553 |  2424.000 |              -0.273 |                      0.182 |                     0.508 |
+|  0.250 | 3036.580 |                  0.272 |                 0.730 |                0.193 |               1.272 |               1.754 |                 0.506 |  3035.000 |              -0.494 |                      0.161 |                     0.461 |
+|  0.330 | 4008.620 |                  0.229 |                 0.647 |                0.161 |               1.103 |               1.392 |                 0.462 |  4012.000 |              -0.185 |                      0.097 |                     0.433 |
+|  0.500 | 6074.520 |                  0.118 |                 0.353 |                0.108 |               0.747 |               1.021 |                 0.371 |  6086.000 |              -0.034 |                      0.092 |                     0.299 |
+
+50 seeds per fraction; 36 arms with full official navtest v1 scores (v1_navtest_opi_lb_navtest_*__base) vs gimm-cinque__base; errors in PDMS points; delta_abs_err_max = worst arm per seed (p95 / max over seeds); CI = log-cluster paired bootstrap.

@@ -1,0 +1,154 @@
+{
+ "split_id": "navsim/op-guard-navtest-sub@v1:63602dc7cfd6",
+ "n": 4026,
+ "frac": 0.33,
+ "seed": 0,
+ "shipped_subset": 84.03003401998014,
+ "shipped_full": 84.1803742291001,
+ "arms": {
+  "gimm-cinque.lc_m1.0__base": {
+   "full": 0.7166964057024954,
+   "subset": 0.5368299441428125
+  },
+  "gimm-cinque_LH-it_dw3-s0__base": {
+   "full": 0.47695788831195984,
+   "subset": 0.48749141333723106
+  },
+  "gimm-cinque_LH-it_half-s0__base": {
+   "full": 1.3434104996927934,
+   "subset": 1.371425635137235
+  },
+  "gimm-cinque_LH-it_lowrate-s0__base": {
+   "full": 0.3913133055662751,
+   "subset": 0.4885506685243529
+  },
+  "gimm-cinque_LH-ln1-s0__base": {
+   "full": 0.37046702429949535,
+   "subset": 0.3528814629796807
+  },
+  "gimm-cinque_LH-ln3-s0__base": {
+   "full": 0.24773902737331574,
+   "subset": 0.25868109273528045
+  },
+  "gimm-cinque_LH-ln4-s0__base": {
+   "full": 0.18129097120352783,
+   "subset": 0.21536372247419472
+  },
+  "gimm-cinque_LH-ln4p10-s0__base": {
+   "full": -0.20779637338999793,
+   "subset": -0.27558385462837864
+  },
+  "gimm-cinque_LH-ln5-s0__base": {
+   "full": 0.2813201244612398,
+   "subset": 0.43847936739608734
+  },
+  "gimm-cinque_LH-ln6-s0__base": {
+   "full": 0.4282275441443991,
+   "subset": 0.424488472713278
+  },
+  "gimm-cinque_LH-ln_heavy-s0__base": {
+   "full": 0.5129162206865365,
+   "subset": 0.4613123312408229
+  },
+  "gimm-cinque_LH-pilot-s0__base": {
+   "full": 0.8091041744623276,
+   "subset": 0.8518605519455698
+  },
+  "gimm-cinque_LH-pilot_ctl-s0__base": {
+   "full": 1.413834084906919,
+   "subset": 1.298840900458021
+  },
+  "gimm-cinque_Lmain-s0__base": {
+   "full": 0.26051465312167815,
+   "subset": 0.18315601701801798
+  },
+  "gimm-cinque_Lmain-s1__base": {
+   "full": 0.3172888789061074,
+   "subset": 0.2686048159409302
+  },
+  "gimm-cinque_Lmain-s2__base": {
+   "full": 0.29288627914418297,
+   "subset": 0.23354443834109967
+  },
+  "gimm-cinque_Lnoint-s0__base": {
+   "full": -0.06260027689403266,
+   "subset": -0.19080881477813966
+  },
+  "gimm-cinque_Lport__base": {
+   "full": -0.011282554032064997,
+   "subset": -0.061097331127491
+  },
+  "gimm-cinque_Oit_dw3-s0__base": {
+   "full": 0.5006689535845787,
+   "subset": 0.5411156109065111
+  },
+  "gimm-cinque_Oit_dw3-s0_al-rot0__base": {
+   "full": -6.78998318649019,
+   "subset": -6.70049305228706
+  },
+  "gimm-cinque_Oit_dw3-s0_al-sel-rot0-r0.6__base": {
+   "full": 0.5157987163965558,
+   "subset": 0.49660305269220134
+  },
+  "gimm-cinque_al-rot0__base": {
+   "full": -8.03856522339346,
+   "subset": -7.754431624156019
+  },
+  "gimm-cinque_al-sel-rot0-r0.6__base": {
+   "full": -0.09446338898567964,
+   "subset": -0.11659982924505709
+  },
+  "gimm-cinque_al-sel-rot0__base": {
+   "full": -0.6521002622370929,
+   "subset": -0.6461886439025339
+  },
+  "gimm-cinque_al-sel-straight__base": {
+   "full": -3.380388153098545,
+   "subset": -3.4729158762829027
+  },
+  "gimm-cinque_al-straight__base": {
+   "full": -10.082173315355377,
+   "subset": -9.266946082056979
+  },
+  "gimm-cinque_edge-P-own__base": {
+   "full": -4.70848849766801,
+   "subset": -4.778268364274254
+  },
+  "gimm-cinque_edge-P1.15__base": {
+   "full": -0.45766833582473826,
+   "subset": -0.5297358889533152
+  },
+  "gimm-cinque_edge-P1.3__base": {
+   "full": -2.8909351973848296,
+   "subset": -3.118177309305403
+  },
+  "gimm-cinque_edge-P1.45__base": {
+   "full": -5.036241613851298,
+   "subset": -5.146046356982246
+  },
+  "gimm-cinque_edge-U-own__base": {
+   "full": -5.093134429181928,
+   "subset": -5.477989086946124
+  },
+  "gimm-cinque_edge-U1.15__base": {
+   "full": 0.15204433619677765,
+   "subset": -0.023887185078017962
+  },
+  "gimm-cinque_edge-U1.3__base": {
+   "full": -1.6863191640077662,
+   "subset": -2.0965909304725088
+  },
+  "gimm-cinque_edge-U1.45__base": {
+   "full": -6.2413203711626855,
+   "subset": -6.500136598408423
+  },
+  "gimm-cinque_r2O__base": {
+   "full": -0.011282554032064997,
+   "subset": -0.061097331127491
+  },
+  "gimm-cinque_r2port__base": {
+   "full": -0.011282554032064997,
+   "subset": -0.061097331127491
+  }
+ }
+}
