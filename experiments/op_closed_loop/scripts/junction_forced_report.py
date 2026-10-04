@@ -63,12 +63,16 @@ def run_routes():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=2)
+    ap.add_argument("--routes", default="", help="comma list: only these routes")
+    ap.add_argument("--arms", default="", help="comma list: only these arms")
     ap.add_argument("--out", default=str(HERE.parent / "results"))
     a = ap.parse_args()
     out = Path(a.out)
     rng = np.random.default_rng(0)
     lab = load_labels()
-    routes = run_routes()
+    routes = a.routes.split(",") if a.routes else run_routes()
+    global ARMS
+    ARMS = a.arms.split(",") if a.arms else ARMS
     rows, traj, roads, rr = [], {}, {}, {}
     for rid in routes:
         att = {k: attempt(k, a.seed, rid) for k in ARMS}
