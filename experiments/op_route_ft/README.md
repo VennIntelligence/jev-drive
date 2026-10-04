@@ -7,7 +7,7 @@ key: experiments/op_route_ft/plans/2026-10-05-route-ft-prereg.md, experiments/op
 
 **Question.** Does a lightly fine-tuned openpilot (shipped Cinque, stage 4 + plan / action pathways + a small route adapter) turn at B2D junctions by itself when it is told the route?
 
-**Conclusion.** Pending (training 2026-10-05 night).
+**Conclusion.** Pending. Open loop (results/openloop.md): the adapter is read (CARLA dev exit correct 0.58-0.59 vs shipped 0.16 and rc-ctl 0.29; drift <= 0.06 m) but misses the 0.8 line and executes CARLA N1 negatives (0.44-0.51 m vs 0.3); B2D 25 turns running.
 
 **Next.** Pilot rc-bear (400 steps), then rc-bear / rc-poly full, rc-ctl, rc-all (exploratory); open-loop readouts, B2D 25 turns, guard subset. Pre-registered lines: [plans/2026-10-05-route-ft-prereg.md](plans/2026-10-05-route-ft-prereg.md).
 
