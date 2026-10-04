@@ -79,7 +79,7 @@ def main():
     D = ["# vmerge3 gap-rule sweep: DS against collisions of the perceived non-privileged bypass", "",
          "Plan: [../plans/2026-10-04-vmerge3.md](../plans/2026-10-04-vmerge3.md) (addendum, pre-registered). Arms are `vm3norel` (perceived bypass, no release "
          "check) with the follower headway T of the start rule d = T + T x v: `gap20` T = 2.0 s, `gap25` 2.5 s, `gap30` 3.0 s (seeds 0, 1 are the earlier "
-         "vm3norel runs, seeds 2, 3 new). References: `drive`, `vmerge2` (privileged bypass). Pull-out collision = contact while the bypass path is active; side = pull-out "
+         "vm3norel runs, seeds 2, 3 new). References: `drive`, `vmerge2` (privileged bypass). Collision counts: `coll_vehicle` = official vehicle collisions; `pullout_coll` / `side_pullout` count first contacts per actor, so they can exceed it (the scorer merges contacts within a cool-down). Pull-out collision = contact while the bypass path is active; side = pull-out "
          "contact with the other vehicle >= 1 m lateral.", ""]
     stats = {}
     for name, routes, seeds in (("obstacle routes, seeds 0-3", OBS_ROUTES, range(4)), ("obstacle routes, seeds 0-1", OBS_ROUTES, range(2)),
@@ -110,7 +110,7 @@ def main():
         full = arm_row(df, C, a, ROUTES, range(2))
         have_full = full["runs"] >= 38
         okd = o.est >= LINE_DS
-        okc = full["coll_per_run"] <= LINE_COL if have_full else None
+        okc = bool(full["coll_per_run"] <= LINE_COL) if have_full else None
         verdict = "n/a" if not okd else ("acceptable" if okc else ("fails collisions" if okc is False else "obstacle only: DS line met, full-route collisions not run"))
         if not okd:
             verdict = "fails DS" + ("" if okc is not False else " and collisions")
