@@ -23,7 +23,7 @@ DRAFTS = Path("restructure/readmes")
 BEGIN, END = "<!-- files:begin -->", "<!-- files:end -->"
 AREAS = [  # INDEX.md order; live topics come first
     ("openpilot adaptation", ["vlm_arb", "op_adapt_l", "op_adapt_h", "op_adapt_r2", "op_adapt_r1", "op_closed_loop", "op_openloop", "skill_pack",
-                              "log_expert_audit", "feature_adapter", "op_common_cause", "op_img_cmd"]),
+                              "log_expert_audit", "feature_adapter", "op_common_cause", "op_img_cmd", "op_route_cmd"]),
     ("closed-loop harness and controllers", ["b2d_privileged", "cl_infra", "b2d_controller", "b2d_controller_eval", "b2d_tcp",
                                              "b2d_tfv6", "tfv6_rules", "simlingo_catalogue", "carla_rewind"]),
     ("zero-shot exams and leaderboards", ["zeroshot_openloop", "zeroshot_b2d", "model_smoke", "hugsim", "leaderboard_audit",
@@ -43,7 +43,7 @@ ALIASES = {  # names the decision log and old notes use: a grep on INDEX.md find
     "prediag": "P0-P4, L0", "probe_planner_v0": "probe v0, stage A", "reactivity": "P5, M-C, I4", "fusion_diag": "fusion Q1-Q9",
     "elicitation": "E1-E6", "real_transfer": "G0-G3", "night_queue_2": "nq2, N1-N6, P6", "night_queue_3": "nq3, Q1-Q6",
     "night_queue_4": "nq4, G K X OPL", "p3_ped_exam": "P3, ped dose", "world_model": "W, WL, WL-2", "controlnet_pair": "cn_pair",
-    "statepol": "state-space",
+    "statepol": "state-space", "op_route_cmd": "route polyline, nav route",
 }
 
 

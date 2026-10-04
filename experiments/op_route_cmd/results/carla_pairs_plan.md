@@ -166,7 +166,7 @@ Per-sample fields (one row per (pose, exit)):
 | `id` | pose id + exit index |
 | `group` | pose id; rows of one group share the frames |
 | `poly` | (16, 2), ego rear-axle frame, x forward, y left, 0 ... 150 m at 10 m |
-| `mask` | (16,) |
+| `pmask` | (16,) bool, same field names and conventions as `lib/route_poly.py` / `results/data_prep.md` (the real-data sidecars), so the merged trainer reads real and CARLA rows alike |
 | `cls` | left / straight / right / uturn |
 | `index_from_left` | among the road's exits (u-turn leftmost) |
 | `n_exits` | |
