@@ -1,7 +1,7 @@
 """Forced turns and the sky arrow in closed loop (results/junction_forced_and_arrow.md).
 
   scripts/tmux_run.sh jfa .venv/bin/python -m jevdrive.cl run experiments/op_closed_loop/scripts/junction_forced_lane.py \
-      --lane jfa --workers-per-card 6 --arg stage=smoke|few|all [--arg seeds=2] [--arg arms=A,D,N,Z,NA,SA,NA0]
+      --lane jfa --workers-per-card 6 --arg stage=smoke|few|forced|all [--arg seeds=2] [--arg arms=A,D,N,Z,NA,SA,NA0]
       [--arg gif=<arm>:<route>:<xml>]            (stage=gif: one chase-camera unit with every overlaid model frame dumped)
 
 All arms are the shipped `drive` agent (lib/vlm_arb_agent.py -> op_arb_agent.py), never "resume": "nored" (no privileged light), `zones: false`
@@ -93,6 +93,8 @@ def jobs(args):
     few = [unit(a, 2, "few", few_ids, "v", dump(a, "few", 100), tag="jfafew") for a in ("Z", "NA", "SA", "N") if a in arms]
     if stage == "few":
         return smoke + few
+    if stage == "forced":                                   # D and A on the routes holding the forced turns that the 36 earlier routes do not cover
+        return [unit(a, s, "f%s%d" % (k, i), ids, k) for s in seeds for a in ("D", "A") for k in "vx" for i, ids in enumerate(split(new[k], 2 if k == "x" else 1))]
     out = list(smoke) + few
     dep = [j.name for j in smoke]
     for s in seeds:
