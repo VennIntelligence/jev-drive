@@ -47,7 +47,7 @@ def main():
         R = P.LoggedRun({"scenario": r["scenario"], "run_dir": r["run_dir"], "dataset": r["dataset"]}, a.steps)
         m.reset()
         res = {"scenario": r["scenario"], "v": R.v.tolist(), "theta": R.th.tolist(), "steer": [x["steer"] for x in R.recs[:R.n]],
-               "plan_logged": [x["plan"][:2] for x in R.recs[:R.n]], "k_act": [], "k_plan": [], "phi1": [], "pos_err": []}
+               "plan_logged": [x["plan"][:2] for x in R.recs[:R.n]], "k_act": [], "k_plan": [], "phi1": [], "p1": [], "pos_err": [], "lat25_err": []}
         for j in range(R.n):
             dv = np.zeros(8, np.float32)
             dv[R.des[j]] = 1
@@ -60,8 +60,11 @@ def main():
             res["k_act"].append(d["curvature"])
             res["k_plan"].append(float(curvature_from_plan(d["plan_yaw"], np.asarray(raw[m.slices["plan"]][:495]).reshape(33, 15)[:, 14], vm, ACTION_T[0])))
             res["phi1"].append(float(np.degrees(np.arctan2(plan[1, 0], plan[1, 1]))))          # + right, HUGSIM plan (x right, y fwd)
+            res["p1"].append(np.round(plan[1], 4).tolist())
             lp = np.asarray(R.recs[j]["model_pos"], float)
-            res["pos_err"].append(float(np.abs(np.round(d["plan_pos"][[4, 8, 12, 16, 20, 24, 32], :2], 3) - lp).max()))
+            dp = np.round(d["plan_pos"][[4, 8, 12, 16, 20, 24, 32], :2], 3) - lp
+            res["pos_err"].append(float(np.abs(dp).max()))
+            res["lat25_err"].append(float(dp[3, 1]))                                             # lateral error at 2.5 s
         res["wall_s"] = round(time.time() - t0, 1)
         json.dump(res, open(f, "w"))
         print(f"{r['scenario']}: {R.n} steps {res['wall_s']} s, max plan err {max(res['pos_err']):.3f} m", flush=True)
