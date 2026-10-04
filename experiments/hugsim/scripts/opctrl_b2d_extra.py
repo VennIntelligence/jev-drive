@@ -8,8 +8,8 @@
    (sum |d yaw| over its ticks), per arm. Junction turns are zone-owned in both arms; the opc path acts only on op-owned ticks.
 3. opc path trace on op-owned ticks (`opc` field): how often modeld's hold / inactive, jerk / lateral-acceleration / |kappa| clipping bind
    (clipped = des != act), the delay's effect (|real - des|), and the peak |kappa| the model asked for vs the car realised.
-4. Turning in op-owned bends: ticks with |commanded kappa| > 0.01 (R < 100 m): realised / commanded kappa, and the lag-free steer from the shipped path is not logged, so
-   drive's own steer is compared through the steer->kappa geometry (steer log) at the same speed bins.
+4. Turning in op-owned bends: ticks with |commanded kappa| > 0.01 (R < 100 m): realised / commanded kappa slope.
+5. Junction turns (zone-owned, route geometry): the action curvature openpilot asked for there (counterfactual) against the curvature the car realised.
 """
 import json
 import math
@@ -62,6 +62,29 @@ def trace(arm="opc"):
     return np.array(rows, float)
 
 
+def junction(arm):
+    """Counterfactual: on zone-owned ticks (route geometry steers; the junction turns) with v > 1 m/s, the curvature the car realised (truth yaw rate / speed over
+    5 ticks) against the action curvature (plans.jsonl act_k) openpilot asked for at the same tick. Slope through the origin, and over turn ticks
+    (|kappa_real| > 0.03, R < 33 m) the ratio of summed |act_k| to summed |kappa_real| (1 = the action head alone would have turned as much)."""
+    x, y, vv = [], [], []
+    for f in runs(arm):
+        d = f.parent
+        tk = [json.loads(z) for z in open(d / "ticks.jsonl")]
+        pl = {p["frame"]: p for p in map(json.loads, open(d / "plans.jsonl"))}
+        yaw = np.unwrap(np.array([t["truth"][2] for t in tk]))
+        for i in range(0, len(tk) - 5, 5):
+            p = pl.get(tk[i]["frame"])
+            if p is None or p.get("warm") or p.get("lat_why") != "zone" or tk[i]["v"] < 1.0:
+                continue
+            dt = tk[i + 5]["t"] - tk[i]["t"]
+            x.append(-(yaw[i + 5] - yaw[i]) / max(tk[i]["v"] * dt, 1e-6))        # CARLA yaw convention is flipped against the right-positive act_k
+            y.append(p["act_k"]); vv.append(tk[i]["v"])
+    x, y, vv = map(np.array, (x, y, vv))
+    t = np.abs(x) > 0.03
+    return dict(n=len(x), slope=float((x * y).sum() / (x ** 2).sum()), n_turn=int(t.sum()), ratio_turn=float(np.abs(y[t]).sum() / np.abs(x[t]).sum()) if t.any() else float("nan"),
+                same_sign=float((np.sign(x[t]) == np.sign(y[t])).mean()) if t.any() else float("nan"), v_turn=float(vv[t].mean()) if t.any() else float("nan"))
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     L = ["# B2D openpilot lateral path: extra readouts (drive = shipped, opc = OP_CTRL)", ""]
@@ -93,6 +116,11 @@ def main():
         if bend.sum() > 20:
             sl = float((cmd[bend] * real[bend]).sum() / (cmd[bend] ** 2).sum())
             L += ["- bends (|kappa_cmd| > 0.01, R < 100 m; %d ticks): realised / commanded kappa slope %.3f (delay-lagged but not attenuated if ~1)" % (bend.sum(), sl)]
+    L += ["", "## 4. Junction turns (zone-owned in both arms): would the action curvature have turned enough? (counterfactual, from the logged act_k)", "",
+          "| arm | zone ticks (v > 1) | slope of act_k on realised kappa | turn ticks (R < 33 m) | summed act_k / realised | same sign | mean v on turns |", "|---|---|---|---|---|---|---|"]
+    for arm in ("drive", "opc"):
+        j = junction(arm)
+        L.append("| %s | %d | %.2f | %d | %.2f | %.0f%% | %.1f |" % (arm, j["n"], j["slope"], j["n_turn"], j["ratio_turn"], 100 * j["same_sign"], j["v_turn"]))
     (OUT / "extra.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 
