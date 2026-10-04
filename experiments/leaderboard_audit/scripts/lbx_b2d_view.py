@@ -1,8 +1,7 @@
 """B2D loss-budget example clips from the reruns of lbx_b2d_rerun.py: third-person chase view | openpilot road input | openpilot wide input.
 
 The two model panels are the frames the network actually received (dumped by lbx_dump_server.py after modeld's warp, YUV -> RGB, 512 x 256 each),
-with the model's own outputs drawn on them (no ground truth): green = plan (pos over the next 10 s, x fwd / y right), cyan = lane lines (opacity ~ lane
-prob), red = road edges, yellow box = first lead (prob > 0.5). Ground-plane projection with the model calibration (zero), camera height 1.433 m.
+with the model's own outputs drawn on them (no ground truth): green = plan (pos over the next 10 s, x fwd / y right), cyan = lane lines (drawn when lane prob > 0.5), red = road edges, yellow box = first lead (prob > 0.5). Ground-plane projection with the model calibration (zero), camera height 1.433 m.
 
 Dump records carry no clock (meta has no "t"): record k of the route session (the cid with most records) is plan request 2k + off of ticks.jsonl;
 off in 0..3 is chosen by the speed match (mean |v_dump - v_tick|, printed).
@@ -61,6 +60,8 @@ class View(C.Run):
 
 
 def poly(d, name, X, Y, col, w, alpha=1.0):
+    if alpha < 0.5:
+        return
     pts = [tuple(C.project(name, x, y)) for x, y in zip(X, Y) if x > 1.0]
     pts = [p for p in pts if abs(p[0]) < 4000 and abs(p[1]) < 4000]
     if len(pts) > 1:
@@ -72,7 +73,7 @@ def panel(run, k, name, w):
     im = Image.fromarray(run.frames(k)[name].copy())
     d = ImageDraw.Draw(im)
     for i, ll in enumerate(r["lane_lines"] or []):
-        poly(d, name, X_IDXS, ll, (0, 230, 255), 2, 0.35 + 0.65 * min(r["lane_prob"][i], 1.0))
+        poly(d, name, X_IDXS, ll, (0, 230, 255), 2, r["lane_prob"][i])
     for e in r["road_edges"] or []:
         poly(d, name, X_IDXS, e, (255, 60, 60), 2)
     pos = np.array(r["pos"])
@@ -155,7 +156,7 @@ if __name__ == "__main__":
     ap.add_argument("--seg", action="append", default=[])
     ap.add_argument("--key", type=float)
     ap.add_argument("--width", type=int, default=512)
-    ap.add_argument("--fps", type=int, default=8)
+    ap.add_argument("--fps", type=int, default=5)
     ap.add_argument("--max-mb", type=float, default=3.0)
     a = ap.parse_args()
     run = View(a.attempt, a.dump)
