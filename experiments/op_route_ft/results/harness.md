@@ -93,7 +93,7 @@ Reports only (finished units): `.venv/bin/python experiments/op_route_ft/scripts
 
 Shipped report from the cache reproduces decision 127: choice 0 / 13, forced 1 / 12, leaves lane 11 / 11 entered choice turns.
 
-CARLA smoke (synthetic std 0.3 bear and poly candidates, `--stage smoke` = route 10255, one choice turn each): see below.
+CARLA smoke (synthetic std 0.3 bear and poly candidates, `--stage smoke` = route 10255): not run. All three cards were leased or occupied from 01:15 to 02:05 JST (op-route-cmd-ol render, then op-guard-wod / op-guard-nav, plus an unleased leftover CARLA and rc-ctl training on card 1). I stopped it so that it does not race the real rc-bear-s0 run for the lane name. The rc-bear-s0 run is the first end-to-end CARLA test; check that plans.jsonl has `ra.f` filled and that interface.json says `command.route_geometry: nav-polyline`. What was run on the box without CARLA: the ONNX equivalence, the server class in process (`serve`), the agent's `nav_polyline` on a synthetic CARLA left turn (bear: has 1, d 33 m, bearing +93 deg; first vertex y +0.88 m for an ego 0.4 m right of the route heading 3 deg right), and the import in the carla env (py3.8).
 
 ## Open-loop guard lines (drift, negatives) and registration
 
