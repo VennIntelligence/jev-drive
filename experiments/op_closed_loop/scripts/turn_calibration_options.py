@@ -297,7 +297,7 @@ def main():
         ax.grid(axis="y", alpha=.3)
     a1.axhline(HALF, color="gray", ls=":", lw=1)
     a1.legend(handles=[plt.Rectangle((0, 0), 1, 1, color="gray", alpha=1.0), plt.Rectangle((0, 0), 1, 1, color="gray", alpha=.45)], labels=["5 m/s", "3 m/s (light)"], fontsize=8)
-    fig.suptitle("Junction options over the route turns >= 25 deg with logged head data (n = %d; 95%% CI over routes)  " % len(full_keys) + "  ".join("%s=%s" % (o, NAMES[o][2:].split(' (')[0]) for o in OPTS), fontsize=7)
+    fig.suptitle("Junction options, route turns >= 25 deg with logged head data (n = %d turns, 95%% CI over routes); A dense, B lb50 sparse, C 10 m road + 1 m noise, D head, E head x1.95, F plan" % len(full_keys), fontsize=9)
     fig.tight_layout(rect=(0, 0, 1, 0.93))
     fig.savefig(out / "summary.png", dpi=130)
     print("done ->", out, "panels:", sel)
