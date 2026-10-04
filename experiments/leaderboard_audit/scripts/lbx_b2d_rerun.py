@@ -36,17 +36,17 @@ UNITS = [
 
 def jobs(args):
     only = set(args["only"].split(",")) if "only" in args else None
-    tag = args.get("tag", "")                       # --arg tag=b: a further attempt of the same unit (unit / dump names get the suffix)
+    tags = args.get("tag", "").split(",")           # --arg tag=b,c: further attempts of the same units (unit / dump names get the suffix)
     out = []
     for arm, real, seed, route, env, _ in UNITS:
         key = "%s-%s-s%d" % (arm, route, seed)
         if only and key not in only:
             continue
-        key += tag
-        e = dict(env, OP_ARB_AGENT=AGENT, SRV_PY=SRV, OP_LANES="1", LBX_DUMP=str(DATA / "runs/lbx_b2d/dump" / key))
-        if real in ("drive", "vmerge"):
-            e["GIF_BASE"] = "vlm"
-        j = base.unit("lbx-" + arm + tag, seed, route, [route], e, "", 0, base=real)
-        j.ok = None
-        out.append(j)
+        for tag in tags:
+            e = dict(env, OP_ARB_AGENT=AGENT, SRV_PY=SRV, OP_LANES="1", LBX_DUMP=str(DATA / "runs/lbx_b2d/dump" / (key + tag)))
+            if real in ("drive", "vmerge"):
+                e["GIF_BASE"] = "vlm"
+            j = base.unit("lbx-" + arm + tag, seed, route, [route], e, "", 0, base=real)
+            j.ok = None
+            out.append(j)
     return out
