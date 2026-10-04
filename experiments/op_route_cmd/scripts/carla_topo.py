@@ -18,10 +18,10 @@ route files (op_common_cause carla_traversals.json, 226 traversals) -- a fine-tu
 later B2D closed-loop score there.
 
   $DATA_DIR/envs/carla/bin/python experiments/op_route_cmd/scripts/carla_topo.py [--workers 4]
-  -> $DATA_DIR/runs/op_route_cmd/carla_topo/<ts>/{topo_<town>.json, summary.json}; summary also copied to
-     experiments/op_route_cmd/results/carla_topo_summary.json
+  -> $DATA_DIR/runs/op_route_cmd/carla_topo/<ts>/{topo_<town>.json, holdout.json, summary.json}; the summary is copied
+     by hand to experiments/op_route_cmd/results/carla_topo_summary.json
 """
-import argparse, json, math, os, shutil, sys
+import argparse, json, math, sys
 from collections import Counter, defaultdict
 from multiprocessing import Pool
 from pathlib import Path
@@ -253,7 +253,6 @@ def main():
         json.dump(H, open(run.path("holdout.json"), "w"))
         S = summarize(sorted(res), H)
         json.dump(S, open(run.path("summary.json"), "w"), indent=1)
-        shutil.copy(run.path("summary.json"), REPO / "experiments" / "op_route_cmd" / "results" / "carla_topo_summary.json")
         run.summary.update(S["total"])
         print(json.dumps(S["total"], indent=1))
 
