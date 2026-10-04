@@ -111,7 +111,7 @@ def main():
         splits.check_disjoint(tr, va, te)
         df = W.load_index().reset_index(drop=True)
         past, fut = W.load_ego()
-        sel = (df.split.isin(["train", "val"]) & df.has_future).to_numpy()
+        sel = (df.split.isin(["train", "val"]) & df.has_future).to_numpy().copy()
         assert not df.sequence[sel].isin(set(te)).any() and tr.mask(df.sequence[sel & (df.split == "train").to_numpy()]).all()
         if a.limit_seq:
             keep = sorted(set(df.sequence[sel]))[: a.limit_seq]
