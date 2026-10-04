@@ -33,17 +33,23 @@ OUT = REPO / "experiments/op_guard/results"
 SPLIT = ("navsim", "op-guard-navtest-sub")
 
 
-def strata() -> pd.DataFrame:
+SBINS = [-0.5, 0.0, 50.0, 80.0, 90.0, 100.5]     # shipped per-token PDMS bins (0 / (0, 50] / ... / (90, 100]): the reference's own score
+
+
+def strata(S: pd.DataFrame | None = None) -> pd.DataFrame:
     from jevdrive import navsim_zs as Z
     idx = Z.load_index("navtest", slim=True)
-    return pd.DataFrame(dict(token=[e["token"] for e in idx], log=[e["log_name"] for e in idx],
-                             cmd=[int(np.argmax(e["cmd"][-1])) for e in idx])).set_index("token")
+    st = pd.DataFrame(dict(token=[e["token"] for e in idx], log=[e["log_name"] for e in idx],
+                           cmd=[int(np.argmax(e["cmd"][-1])) for e in idx])).set_index("token")
+    if S is not None:
+        st["sbin"] = pd.cut(S[SHIPPED].reindex(st.index), SBINS, labels=False, include_lowest=True).fillna(-1).astype(int)
+    return st
 
 
-def draw(st: pd.DataFrame, frac: float, seed: int) -> list:
+def draw(st: pd.DataFrame, frac: float, seed: int, by=("log", "cmd")) -> list:
     rng = np.random.default_rng(seed)
     out = []
-    for _, g in st.groupby(["log", "cmd"], sort=True):
+    for _, g in st.groupby(list(by), sort=True):
         t = g.index.to_numpy()[rng.permutation(len(g))]
         out += t[: int(np.floor(frac * len(t) + rng.random()))].tolist()
     return sorted(out)
@@ -63,7 +69,8 @@ def scores() -> pd.DataFrame:
 
 
 def cmd_study(a):
-    st, S = strata(), scores()
+    S = scores()
+    st = strata(S)
     S = S.loc[st.index.intersection(S.index)]
     arms = [c for c in S if c != SHIPPED and S[c].notna().all()]
     full = {c: float((S[c] - S[SHIPPED]).mean()) for c in arms}
@@ -71,7 +78,7 @@ def cmd_study(a):
     rows = []
     for f in a.fracs:
         for s in range(a.seeds):
-            sub = draw(st, f, s)
+            sub = draw(st, f, s, a.by)
             x = S.loc[sub]
             err = np.array([float((x[c] - x[SHIPPED]).mean()) - full[c] for c in arms])
             r = dict(frac=f, seed=s, n=len(sub), shipped_err=float(x[SHIPPED].mean() - S[SHIPPED].mean()),
@@ -88,7 +95,7 @@ def cmd_study(a):
                                 delta_abs_err_max=("delta_abs_err_max", "max"), ci_halfwidth_median=("ci_halfwidth_median", "mean")).reset_index()
     seed0 = R[R.seed == 0].set_index("frac")[["n", "shipped_err", "delta_abs_err_mean", "delta_abs_err_max"]].add_prefix("seed0_").reset_index()
     agg = agg.merge(seed0, on="frac")
-    stats.write_table(agg, OUT / "navtest_subset_study", floatfmt=".3f",
+    stats.write_table(agg, OUT / f"navtest_subset_study_{'-'.join(a.by)}", floatfmt=".3f",
                       note=f"{a.seeds} seeds per fraction; {len(arms)} arms with full official navtest v1 scores ({PFX}*__base) vs {SHIPPED}; "
                            "errors in PDMS points; delta_abs_err_max = worst arm per seed (p95 / max over seeds); CI = log-cluster paired bootstrap.")
     print(agg.round(3).to_string(index=False))
@@ -96,13 +103,14 @@ def cmd_study(a):
 
 def cmd_freeze(a):
     from jevdrive.data import splits
-    st, S = strata(), scores()
-    sub = draw(st, a.frac, 0)
+    S = scores()
+    st = strata(S)
+    sub = draw(st, a.frac, 0, a.by)
     x = S.loc[sub]
     arms = [c for c in S if c != SHIPPED and S[c].notna().all()]
     per_arm = {c: dict(full=float((S[c] - S[SHIPPED]).mean()), subset=float((x[c] - x[SHIPPED]).mean())) for c in arms}
     sp = splits.define(*SPLIT, sub, unit="token", status="frozen",
-                       origin=f"navsim/navtest@v1, stratum (log, driving command at t0), frac {a.frac}, seed 0, randomised rounding "
+                       origin=f"navsim/navtest@v1, stratum {tuple(a.by)} (cmd = driving command at t0, sbin = shipped gimm-cinque__base PDMS bin {SBINS}), frac {a.frac}, seed 0, randomised rounding "
                               "(experiments/op_guard/scripts/nav_subset.py draw)",
                        used_by=["experiments/op_guard (navtest line, subset mode)"],
                        notes=f"shipped PDMS subset {x[SHIPPED].mean():.3f} vs full {S[SHIPPED].mean():.3f}; study: experiments/op_guard/results/navtest_subset_study.md")
@@ -119,8 +127,10 @@ if __name__ == "__main__":
     p.add_argument("--fracs", type=float, nargs="+", default=[0.1, 0.15, 0.2, 0.25, 0.33, 0.5])
     p.add_argument("--seeds", type=int, default=50)
     p.add_argument("--ci-seeds", type=int, default=3)
+    p.add_argument("--by", nargs="+", default=["log", "cmd"], help="stratum keys: log cmd sbin")
     p = sp.add_parser("freeze")
     p.add_argument("--frac", type=float, required=True)
+    p.add_argument("--by", nargs="+", default=["log", "cmd"])
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     {"study": cmd_study, "freeze": cmd_freeze}[a.cmd](a)
