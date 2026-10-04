@@ -15,7 +15,7 @@ JOBS = {
     "b2d_red_drive_24944_s0": ("lbx-drive-s0", "24944", "drive-24944-s0", "drive r24944 s0", 52.0, ["46:60"]),
     "b2d_blocked_drive_19324_s0": ("lbx-drive-s0", "19324", "drive-19324-s0", "drive r19324 s0", 60.0, ["36:42", "42:190:40", "190:196"]),
     "b2d_blocked_drive_9196_s0": ("lbx-drivec-s0", "9196", "drive-9196-s0c", "drive r9196 s0 (attempt c)", 30.0, ["27:33", "33:50:4", "50:100:12"]),
-    "b2d_blocked_vmerge2_15612_s1": ("lbx-vmerge2-s1", "15612", "vmerge2-15612-s1", "vmerge2 r15612 s1", 22.0, ["6:24", "24:43:6"]),
+    "b2d_blocked_vmerge2_15612_s1": ("lbx-vmerge2-s1", "15612", "vmerge2-15612-s1", "vmerge2 r15612 s1", 22.0, ["8:22", "22:43:8"]),
     "b2d_byp_pbyp2ng_19832_s0": ("lbx-pbyp2ng-s0", "19832", "pbyp2ng-19832-s0", "pbyp2ng r19832 s0", 21.0, ["15:26"]),
     "b2d_byp_pbyp2ng_2520_s0": ("lbx-pbyp2ng-s0", "2520", "pbyp2ng-2520-s0", "pbyp2ng r2520 s0", 21.0, ["15:26"]),
     "b2d_byp_vmerge2_19832_s1": ("lbx-vmerge2c-s1", "19832", "vmerge2-19832-s1c", "vmerge2 r19832 s1 (attempt c)", 35.0, ["29:40"]),
