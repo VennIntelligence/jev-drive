@@ -1,4 +1,4 @@
-"""Classify every route turn >= 25 deg of the Bench2Drive val routes as FORCED (the map offers no way to go straight) or CHOICE.
+"""Classify every route turn >= 25 deg of the Bench2Drive routes (0.0.4 val + the 220 exam xml) as FORCED (the map offers no way to go straight) or CHOICE.
 
   $DATA_DIR/envs/carla/bin/python experiments/op_closed_loop/scripts/forced_turns.py [--out experiments/op_closed_loop/results/junction_forced_turns.csv]
 
@@ -30,7 +30,8 @@ from route_poly import maneuvers  # noqa: E402
 import turn_calibration_lib as L  # noqa: E402
 
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
-XML = DATA / "third_party/Bench2Drive/leaderboard/data/bench2drive_0.0.4_val.xml"
+XMLS = ("bench2drive_0.0.4_val.xml", "bench2drive220.xml")           # route ids are disjoint; the val ids first
+XML_DIR = DATA / "third_party/Bench2Drive/leaderboard/data"
 XODR = "/home/ujs/carlaCache/0.9.15/Carla/Maps/{t}/OpenDrive/{t}.xodr"
 XODR_FLAT = "/home/ujs/carlaCache/0.9.15/Carla/Maps/OpenDrive/{t}.xodr"
 CARLA_PY = Path(os.path.expanduser("~/data/third_party/carla/CARLA_0.9.15/PythonAPI/carla"))
@@ -128,13 +129,15 @@ def main():
     sys.path.insert(0, str(REPO / "experiments/op_common_cause/scripts"))
     import pair_inv_carla as PI
     rows = []
-    for e in ET.parse(XML).getroot().iter("route"):
+    for xml, e in [(x, e) for x in XMLS for e in ET.parse(XML_DIR / x).getroot().iter("route")]:
         rid, town = e.get("id"), e.get("town")
         if town not in PI.TAB:
             PI.TAB[town] = PI.xodr_tables(town)
         pts = [(float(p.get("x")), float(p.get("y")), float(p.get("z"))) for p in e.find("waypoints")]
         try:
             r, _ = route_turns(rid, town, pts, PI.TAB[town][0])
+            for x in r:
+                x["xml"] = xml
         except Exception as ex:   # noqa: BLE001
             print("route", rid, "failed:", ex, file=sys.stderr)
             continue
