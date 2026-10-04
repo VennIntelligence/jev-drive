@@ -48,20 +48,22 @@ def split_one(rid, arm, att, geom, lab):
                  need=1 / T["rmin"], entered=e["entered"], branch=e["branch"], side="R" if right else "L")
         if e["entered"]:
             a, b = e["span"]
-            b = min(b, a + int(WIN_S * 20)) if len(tt) > 1 else b
-            t0, t1 = tt[a], tt[min(b, len(tt) - 1)]
+            bw = min(b, a + int(WIN_S * 20))                  # speed window (<= 15 s); steering is read over the whole span (to the exit or 25 m off the route)
+            t0, t1, tw = tt[a], tt[min(b, len(tt) - 1)], tt[min(bw, len(tt) - 1)]
             sg = (1.0 if right else -1.0)
             sel = (pt >= t0 - APPROACH_S) & (pt <= t1)
             s = pk[sel] * sg
-            pw = (pt >= t0) & (pt <= t1)
-            vw = v[a:b + 1]
+            pw = (pt >= t0) & (pt <= tw)
+            vw = v[a:bw + 1]
             tin = pt[sel][np.where(s >= 0.5 * d["need"])[0]]
+            ia = np.abs(tt[:, None] - tin[:1][None, :]).argmin(0) if len(tin) else []
+            d["tin_m"] = round(float((near[ia[0]] - T["i0"]) * 0.25), 1) if len(tin) else None   # arc of the car at turn-in, m after the turn start (< 0: before)
             des = pdz[sel]
             want = 2 if right else 1
             # stopped inside the window: runs of v < 0.3 m/s longer than 1 s
             stop = (vw < 0.3)
             dt = float(np.median(np.diff(tt))) if len(tt) > 1 else 0.05
-            d.update(win_s=round(float(t1 - t0), 1), v_entry=round(float(v[a]), 1), v_med=round(float(np.median(vw)), 1), v_min=round(float(vw.min()), 1),
+            d.update(win_s=round(float(tw - t0), 1), span_s=round(float(t1 - t0), 1), v_entry=round(float(v[a]), 1), v_med=round(float(np.median(vw)), 1), v_min=round(float(vw.min()), 1),
                      stop_frac=round(float(stop.mean()), 2), stop_s=round(float(stop.sum() * dt), 1),
                      s_peak=round(float(s.max()), 3) if len(s) else np.nan, s_neg=round(float(s.min()), 3) if len(s) else np.nan,
                      s_win_peak=round(float((pk[pw] * sg).max()), 3) if pw.any() else np.nan,
@@ -72,7 +74,7 @@ def split_one(rid, arm, att, geom, lab):
 
 
 def classify(d):
-    """First matching cause of a lost turn, in this order (heuristic, thresholds in the md header)."""
+    """Steering cause of a lost turn, first match (thresholds in the md header)."""
     if not d["entered"]:
         return "never entered"
     if d["branch"] == "yes":
@@ -80,13 +82,11 @@ def classify(d):
     n = d["need"]
     if d["s_peak"] < 0.5 * n and d["s_neg"] < -0.5 * n:
         return "wrong side"
-    if d["s_peak"] < 0.5 * n:
+    if d["tin"] is None:
         return "not chosen"
-    if d["stop_frac"] > 0.25 or d["v_med"] < 1.5:
-        return "crawl / stop"
-    if d["tin"] is None or d["tin"] > 0.5:
+    if d["tin_m"] > 3.0:
         return "late"
-    return "too little"
+    return "in time, crawl / stop" if (d["stop_frac"] > 0.25 or d["v_med"] < 1.5) else "in time, moving"
 
 
 def main():
@@ -110,26 +110,27 @@ def main():
     Path(a.out + ".json").write_text(json.dumps(res, indent=1, default=float))
     L = ["# Failure split of the 25 B2D junction turns (rft_split.py)\n",
          "Window = entry .. exit of the turn (<= 15 s). s = desired curvature act_k signed to the commanded side (+ = towards the exit side; act_k is positive to the right: shipped took the left turn 28008 0 with k -0.16, right turns lost with k +0.1..+0.18). "
-         "Causes, first match: not entered; `wrong side` (peak s < 0.5 / R_min and the opposite sign reaches -0.5 / R_min); `not chosen` (peak s over approach 6 s + window < 0.5 / R_min); "
-         "`crawl / stop` (steered, but stopped > 25% of the window or median speed < 1.5 m/s); `late` (first s >= 0.5 / R_min later than 0.5 s after entry or never); `too little` (steered in time, still lost).\n"]
+         "Causes, first match: not entered; `wrong side` (peak s < 0.5 / R_min and the opposite sign reaches -0.5 / R_min); `not chosen` (s never reaches 0.5 / R_min between 6 s before entry and the end of the span); "
+         "`late` (it does, but the car is already > 3 m of arc past the turn start); `in time, crawl / stop` (steered by the turn start, but stopped > 25% of the speed window or median speed < 1.5 m/s there); "
+         "`in time, moving` (steered by the turn start, moving, still lost). Speed window = first 15 s after entry; steering is read over the whole span (to the exit or 25 m off the route).\n"]
     arms = list(dict.fromkeys(r["arm"] for r in res))
-    causes = ["took", "not chosen", "wrong side", "crawl / stop", "late", "too little", "never entered"]
+    causes = ["took", "not chosen", "wrong side", "late", "in time, crawl / stop", "in time, moving", "never entered"]
     L += ["## Cause counts (turns)\n", "| arm | group | n | " + " | ".join(causes) + " |", "|---|---|--:|" + "--:|" * len(causes)]
     for arm in arms:
         for g, sel in (("choice", lambda r: r["forced"] == 0), ("forced", lambda r: r["forced"] == 1), ("all", lambda r: True)):
             rr = [r for r in res if r["arm"] == arm and sel(r)]
             L.append("| %s | %s | %d | %s |" % (arm, g, len(rr), " | ".join(str(sum(r["cause"] == c for r in rr)) for c in causes)))
     L += ["\n## Entered turns: longitudinal and steering medians\n",
-          "| arm | entered | v at entry (m/s) | median v in window | min v | stopped share of window | stopped s | window s | peak s approach+window (1/m) | peak s / needed | turn-in s after entry (median; n steered) | desire pulse matches side |",
-          "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+          "| arm | entered | v at entry (m/s) | median v in window | min v | stopped share of window | stopped s | peak s over span (1/m) | peak s / needed | turn-in arc m after turn start (median; n steered) | desire pulse matches side |",
+          "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
     for arm in arms:
         rr = [r for r in res if r["arm"] == arm and r["entered"]]
         if not rr:
             continue
         m = lambda k: np.nanmedian([r[k] for r in rr])  # noqa: E731
-        tins = [r["tin"] for r in rr if r["tin"] is not None]
-        L.append("| %s | %d | %.1f | %.1f | %.1f | %.2f | %.1f | %.1f | %.3f | %.2f | %s (%d) | %.2f |" % (
-            arm, len(rr), m("v_entry"), m("v_med"), m("v_min"), m("stop_frac"), m("stop_s"), m("win_s"), m("s_peak"),
+        tins = [r["tin_m"] for r in rr if r["tin_m"] is not None]
+        L.append("| %s | %d | %.1f | %.1f | %.1f | %.2f | %.1f | %.3f | %.2f | %s (%d) | %.2f |" % (
+            arm, len(rr), m("v_entry"), m("v_med"), m("v_min"), m("stop_frac"), m("stop_s"), m("s_peak"),
             np.nanmedian([r["s_peak"] / r["need"] for r in rr]), "%.1f" % np.median(tins) if tins else "-", len(tins), m("desire_ok")))
     L.append("\n## By R_min (entered turns; share lost / steered, median v in window)\n")
     L += ["| arm | R_min bin | n | took | steered (peak s >= 0.5 need) | median v in window | stopped share |", "|---|---|--:|--:|--:|--:|--:|"]
@@ -140,14 +141,14 @@ def main():
                 L.append("| %s | %s | %d | %d | %d | %.1f | %.2f |" % (arm, nm, len(rr), sum(r["branch"] == "yes" for r in rr), sum(r["s_peak"] >= 0.5 * r["need"] for r in rr),
                                                                      np.median([r["v_med"] for r in rr]), np.mean([r["stop_frac"] for r in rr])))
     L.append("\n## Per turn\n")
-    L += ["| route | turn | forced | kind | side | angle | R_min | " + " | ".join("%s: cause, s peak, v med, stop s, turn-in" % a_ for a_ in arms) + " |", "|---|--:|--:|---|---|--:|--:|" + "---|" * len(arms)]
+    L += ["| route | turn | forced | kind | side | angle | R_min | " + " | ".join("%s: cause, s peak, v med, stop s, turn-in arc m" % a_ for a_ in arms) + " |", "|---|--:|--:|---|---|--:|--:|" + "---|" * len(arms)]
     ix = {(r["route"], r["turn"], r["arm"]): r for r in res}
     for k in sorted({(r["route"], r["turn"]) for r in res}):
         b = next(ix[k + (a_,)] for a_ in arms if k + (a_,) in ix)
         cells = []
         for a_ in arms:
             r = ix.get(k + (a_,))
-            cells.append("-" if r is None else ("%s" % r["cause"] if not r["entered"] else "%s, %.2f, %.1f, %.1f, %s" % (r["cause"], r["s_peak"], r["v_med"], r["stop_s"], r["tin"])))
+            cells.append("-" if r is None else ("%s" % r["cause"] if not r["entered"] else "%s, %.2f, %.1f, %.1f, %s" % (r["cause"], r["s_peak"], r["v_med"], r["stop_s"], r["tin_m"])))
         L.append("| %s | %d | %d | %s | %s | %d | %.1f | %s |" % (k[0], k[1], b["forced"], b["kind"], b["side"], b["angle"], b["rmin"], " | ".join(cells)))
     Path(a.out + ".md").write_text("\n".join(L) + "\n")
     print("wrote", a.out + ".md")
