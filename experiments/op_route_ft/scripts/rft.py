@@ -45,6 +45,7 @@ ACT_NODES = (665, 831)            # cinque.ort.onnx: the on-policy pathway that 
 SIG_A = 0.5                       # m/s^2, scale of the action loss
 ACT_ALPHA = 0.45                  # action[0] = -ACT_ALPHA * kappa_T * max(1, v)^2: the shipped head's own convention (sign: right +), fitted on the
                                   # op_adapt_H teachers at v0 > 3 m/s against the logged 1 s pure-pursuit curvature (slope nav -0.51, wod -0.39, r -0.92)
+VFLOOR = 4.0                      # m/s, CARLA targets of moving poses drive through the junction at least this fast
 ALAT_CAP = 3.0                    # m/s^2, speed cap of the CARLA targets on the exit's curvature
 NEG_NPZ = "processed/op_route_cmd/navtrain/route_neg.npz"   # map-screened negatives (op_route_cmd results/negatives.md), navtrain tokens
 ROUTE_NPZ = {"nav": "processed/op_route_cmd/navtrain/route.npz", "wod": "processed/op_route_cmd/wod/route.npz"}
@@ -117,31 +118,39 @@ def load_rmodel(tag, dev):
 
 
 # ---------------------------------------------------------------- targets
-def plan_arc(mu, cam):
-    """original plan (33, 15) -> arc length (16,) and speed (16,) at T16 (rear axle)."""
-    p = L.rear_np(mu[None], cam, np.r_[0.0, T16])[0].astype(np.float64)
+TL = A.T_IDXS[1:]                                 # the plan's own times (32 points to 10 s)
+TL_MAX = 8.0                                      # long CARLA target up to 8 s
+
+
+def plan_arc(mu, cam, ts=T16):
+    """original plan (33, 15) -> arc length at ts (rear axle)."""
+    p = L.rear_np(mu[None], cam, np.r_[0.0, ts])[0].astype(np.float64)
     s = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(p, axis=0), axis=1))]
     return s[1:]
 
 
 def path_target(poly, pmask, mu, cam, vfloor=0.0):
-    """CARLA positive: exit polyline (10 m vertices) -> (16, 3) rear-axle x, y, speed at T16: smoothed path, timed by the original's arc length
-    with the speed capped at ALAT_CAP on the path's curvature (within the next 60 m)."""
+    """CARLA positive: exit polyline (10 m vertices) -> ((16, 3) rear-axle x, y, speed at T16, (32, 2) x, y at the plan times, (32,) mask t <= 8 s):
+    smoothed path, timed by the original's own speed with a floor `vfloor`, capped at ALAT_CAP on the path's curvature (next 60 m)."""
     v = np.asarray(poly, float)[: int(pmask.sum())]
     P = RP.smooth_path(v, 0.5, 1.5)
-    s_tea = plan_arc(mu, cam)
     if P is None:
         return None
     P[0] = 0.0
     P, g = RP.poly_resample(P, 0.5)
     k = np.abs(RP.curvature(P, 0.5))
     kmax = k[: int(60 / 0.5)].max() if len(k) else 0.0
-    vt = np.maximum(np.diff(np.r_[0.0, s_tea]) / 0.25, vfloor)        # creep / cruise poses keep at least their own speed
+    tg = np.arange(0.125, TL_MAX + 1e-9, 0.125)
+    s_tea = plan_arc(mu, cam, tg)
+    vt = np.maximum(np.diff(np.r_[0.0, s_tea]) / 0.125, vfloor)
     vt = np.minimum(vt, np.sqrt(ALAT_CAP / max(kmax, 1e-3)))
-    s = np.cumsum(vt * 0.25)
-    s = np.minimum(s, g[-1])
-    xy = np.stack([np.interp(s, g, P[:, c]) for c in range(2)], -1)
-    return np.concatenate([xy, vt[:, None]], -1).astype(np.float32)
+    st = np.minimum(np.cumsum(vt * 0.125), g[-1])
+    at = lambda ts: np.stack([np.interp(np.interp(ts, tg, st), g, P[:, c]) for c in range(2)], -1)  # noqa: E731
+    hum = np.concatenate([at(T16), np.interp(T16, tg, vt)[:, None]], -1).astype(np.float32)
+    ltm = TL <= TL_MAX
+    lt = np.zeros((len(TL), 2), np.float32)
+    lt[ltm] = at(TL[ltm])
+    return hum, lt, ltm
 
 
 def act_target(hum, v0):
@@ -208,7 +217,7 @@ class RCfg:
     rows: dict = field(default_factory=lambda: {"Pnav": 7, "Pwod": 5, "Pcar": 16, "Ncar": 3, "Nreal": 3, "Dnav": 5, "Dwod": 4, "Dhc": 2, "Dcar": 3})
     lam_i: float = 1.0
     lam_a: float = 1.0
-    lam_p: float = 1.0                    # path-shape loss: plan points (to 10 s, within the target path's length) to the target path
+    lam_p: float = 1.0                    # long timed loss: plan points at the plan's times <= 8 s to the CARLA exit target (L's sigma growth)
     lam_d: float = 10.0
     lam_c: float = 1.0
     lam_n: float = 1.0                    # N rows: plan to the original's plan (same scale as the P imitation, not dw * lam_c)
@@ -354,7 +363,8 @@ class Batcher(torch.utils.data.Dataset):
         hum = L.human_targets(t["fut20"][i][None])[0]
         out = dict(trunk=R.B.T[j], valid=R.B.v["slot_valid"][j], tc=t["tc"][i], cam=np.float32(cam), tgt=R.S.tea["out"][i], tmu=R.S.tea["mu"][i],
                    hum=hum, role=ROLE[role[0]], fb=np.zeros(RA.ENC_DIM["bear"], np.float32), fp=np.zeros(RA.ENC_DIM["poly"], np.float32),
-                   at=np.float32(0), aw=np.float32(0), sdf=np.int64(-1), tp=np.zeros((NPATH, 2), np.float32), tm=np.zeros(NPATH, bool))
+                   at=np.float32(0), aw=np.float32(0), sdf=np.int64(-1), tp=np.zeros((NPATH, 2), np.float32), tm=np.zeros(NPATH, bool),
+                   lt=np.zeros((32, 2), np.float32), ltm=np.zeros(32, bool))
         if role[0] == "P":
             rt = R.route
             out["tp"], out["tm"] = target_path(rt["poly"][i], rt["pmask"][i])
@@ -397,14 +407,15 @@ class Batcher(torch.utils.data.Dataset):
         out = dict(trunk=C.T[p], valid=C.tab["slot_valid"][p], tc=C.tab["tc"][p], cam=np.float32(C.cam), tgt=C.tea["out"][p], tmu=C.tea["mu"][p],
                    hum=np.full((16, 3), np.nan, np.float32), role=ROLE[key[0]], fb=np.zeros(RA.ENC_DIM["bear"], np.float32),
                    fp=np.zeros(RA.ENC_DIM["poly"], np.float32), at=np.float32(0), aw=np.float32(0), sdf=np.int64(-1),
-                   tp=np.zeros((NPATH, 2), np.float32), tm=np.zeros(NPATH, bool))
+                   tp=np.zeros((NPATH, 2), np.float32), tm=np.zeros(NPATH, bool),
+                   lt=np.zeros((32, 2), np.float32), ltm=np.zeros(32, bool))
         if key == "Pcar":
-            vf = float(C.tab["v0"][p]) if C.tab["profile"][p] in ("creep", "cruise") else 0.0
-            hum = path_target(C.r["poly"][j], C.r["pmask"][j], C.tea["mu"][p], C.cam, vf)
-            if hum is None:
+            vf = max(float(C.tab["v0"][p]), VFLOOR) if C.tab["profile"][p] != "stopped" else 0.0
+            pt = path_target(C.r["poly"][j], C.r["pmask"][j], C.tea["mu"][p], C.cam, vf)
+            if pt is None:
                 out["role"] = ROLE["D"]
                 return out
-            out["hum"] = hum
+            out["hum"], out["lt"], out["ltm"] = pt
             self._neg_feat(out, C.r["poly"][j], C.r["pmask"][j], rng)
             out["tp"], out["tm"] = target_path(C.r["poly"][j], C.r["pmask"][j])
             a, w = act_target_path(out["tp"], out["tm"], float(C.tab["v0"][p]))
@@ -513,18 +524,15 @@ class RLoss:
                 e = L.huber((out[P][:, self.a0] - b["at"][P]) / SIG_A)
                 Ls["act"] = (aw * e).sum() / aw.sum()
                 tot = tot + c.lam_a * Ls["act"]
-        tm = b["tm"] & P[:, None]
-        if tm.any():
-            q = self.plan_xy(plan, b["cam"])                                     # (B, 32, 2) rear axle, t 0.0098 .. 10 s
-            Pm = P & (b["tm"].sum(1) >= 5)
-            if Pm.any():
-                dist = torch.cdist(q[Pm], b["tp"][Pm].float())                    # (b, 32, NPATH)
-                dist = dist.masked_fill(~b["tm"][Pm][:, None, :], 1e3).min(-1).values
-                arc = torch.cat([q.new_zeros(int(Pm.sum()), 1), (q[Pm][:, 1:] - q[Pm][:, :-1]).norm(dim=-1).cumsum(1)], 1)
-                lim = (b["tm"][Pm].sum(1).float() - 2.0)[:, None]
-                w = (arc <= lim).float()
-                Ls["path"] = (L.huber(dist / 0.5) * w).sum() / w.sum().clamp(min=1.0)
-                tot = tot + c.lam_p * Ls["path"]
+        lm = b["ltm"] & P[:, None]
+        if lm.any():
+            q = self.plan_xy(plan, b["cam"])                                     # (B, 32, 2) at the plan's times
+            sx = torch.as_tensor(0.3 + 0.2 * TL, device=q.device, dtype=q.dtype)
+            sy = torch.as_tensor(0.1 + 0.1 * TL, device=q.device, dtype=q.dtype)
+            e = L.huber((q[..., 0] - b["lt"][..., 0]) / sx) + L.huber((q[..., 1] - b["lt"][..., 1]) / sy)
+            w = lm.float()
+            Ls["long"] = (e * w).sum() / w.sum()
+            tot = tot + c.lam_p * Ls["long"]
         cn = D | N
         if D.any():
             Ls["cons"] = base.imit_dist(plan[D], b["tmu"][D].float(), b["cam"][D]).mean()
