@@ -78,6 +78,12 @@ class OpLateral:
         self.wheel = 0.0                     # LTA: steering-wheel angle (deg), left +
         self.buf = [0.0] * self.n_delay
 
+    def sync(self, kappa):
+        """The path is not the lateral owner (controlsd inactive: desired curvature := measured curvature): follow the measured curvature, so the
+        hand-over back to this path starts from where the wheel is, not from a stale command or a stale delay line."""
+        self.act = self.des = self.real = float(kappa)
+        self.buf = [float(kappa)] * self.n_delay
+
     def model_step(self, kappa_model, v_ego):
         """modeld.get_action_from_model, lateral half."""
         if v_ego > self.r["v_hold"]:

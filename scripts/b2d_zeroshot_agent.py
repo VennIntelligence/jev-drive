@@ -248,6 +248,11 @@ class ZeroShotAgent(AutonomousAgent):
             sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
             import lowspeed_ctrl
             self.lowspeed = lowspeed_ctrl.B2DFilter(json.loads(os.environ["LOWSPEED_CTRL"]))
+        self.opctrl = None                           # openpilot's lateral path (lib/op_ctrl.py) behind _curvature_steer; inert without OP_CTRL
+        if os.environ.get("OP_CTRL"):
+            sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+            import op_ctrl
+            self.opctrl = op_ctrl.OpLateral(json.loads(os.environ["OP_CTRL"]))
         self.zoo = self.zoo_control = self.zoo_target = None
         self.zoo_lateral = self.cfg.get("zoo_lateral", "zoo")
         assert self.zoo_lateral in ("zoo", "fixed", "time"), self.zoo_lateral
@@ -300,6 +305,7 @@ class ZeroShotAgent(AutonomousAgent):
         self.first_set_t = None
         self.route_t0, self.engaged, self.warm_now = None, False, True
         self.curvature = None                    # latest desired curvature (1/m, right-positive), lateral=curvature
+        self.opctrl_log = None                   # this tick's OP_CTRL trace (None when another owner steered)
         self.last_steer = 0.0
         self.poses = deque(maxlen=64)            # (sim time, xy, yaw) rear axle, world
         self.frame_time = {}
@@ -417,10 +423,13 @@ class ZeroShotAgent(AutonomousAgent):
         else:
             throttle, steer, brake = o_throttle, o_steer, o_brake
             reason = self.controller.diagnostics["reason"]
+        self.opctrl_log = None
         if self.native:
             throttle, steer, brake, reason = self._native_control(speed, throttle, steer, brake, reason)
         elif self.zoo is None and self.lateral == "curvature" and self.curvature is not None and self.controller.diagnostics["reason"] == "tracking":
             steer = self._curvature_steer(speed)
+        elif self.opctrl is not None:   # another lateral owner steers this tick: the openpilot path follows the measured curvature
+            self.opctrl.sync(self._steer_curvature(self.last_steer, speed))
         if self.lowspeed is not None:
             steer = self.lowspeed(steer, speed, DELTA)
         if self.guide:
@@ -465,6 +474,9 @@ class ZeroShotAgent(AutonomousAgent):
         rec = {"frame": frame, "t": now, "v": speed, "throttle": float(throttle), "steer": float(steer),
                "brake": float(brake), "reason": reason, "agent_ms": round(tick_ms, 2),
                "plan_ms": round(plan_ms, 1)}
+        if self.opctrl_log is not None:
+            rec["opc"] = {k: (bool(v) if k == "active" else round(float(v), 5)) for k, v in self.opctrl_log.items()}
+            rec["opc"]["cmd"] = round(float(self.curvature), 5)
         if zoo_tick is not None:
             rec["zoo_desired"] = round(zoo_tick["desired_speed"], 3)
         if share is not None:
@@ -552,11 +564,20 @@ class ZeroShotAgent(AutonomousAgent):
         kinematic bicycle model and CARLA's speed-dependent steering curve, at the fixed controller's rate limit."""
         curve = np.asarray(self.vehicle["steering_curve"], float)
         scale = float(np.interp(speed * 3.6, curve[:, 0], curve[:, 1]))
-        angle = math.atan(float(self.vehicle["wheelbase"]) * self.curvature)
+        kappa = self.curvature
+        if self.opctrl is not None:   # OP_CTRL: modeld hold, controlsd latActive + clip_curvature, lateralDelay (lib/op_ctrl.py); the geometry below is unchanged
+            kappa, self.opctrl_log = self.opctrl.step(kappa, speed, DELTA)
+        angle = math.atan(float(self.vehicle["wheelbase"]) * kappa)
         raw = angle / (math.radians(float(self.vehicle["max_steer_deg"])) * scale)
         step = self.controller.steer_rate * DELTA
         return float(np.clip(np.clip(raw, self.last_steer - step, self.last_steer + step),
                              -self.controller.max_steer, self.controller.max_steer))
+
+    def _steer_curvature(self, steer, speed):
+        """Inverse of the geometry in _curvature_steer: the curvature a normalised steer command stands for."""
+        curve = np.asarray(self.vehicle["steering_curve"], float)
+        scale = float(np.interp(speed * 3.6, curve[:, 0], curve[:, 1]))
+        return math.tan(steer * math.radians(float(self.vehicle["max_steer_deg"])) * scale) / float(self.vehicle["wheelbase"])
 
     # openpilot's own actuation semantics, pre-specified (not tuned on any route): lateral = desired curvature through
     # the kinematic bicycle model (as openpilot's angle-controlled cars do); longitudinal = desired acceleration as
