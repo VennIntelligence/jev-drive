@@ -102,7 +102,7 @@ def main():
                 u, v = project(e["poly"], e["pmask"], K)
                 ax.plot(u, v, "-", color=COLORS[kk % len(COLORS)], lw=2.6, alpha=0.95)
             ax.set_xlim(0, 512), ax.set_ylim(256, 0), ax.axis("off")
-            ax.set_title(f"{name} model frame t0 (dashed = nominal horizon row {K[1, 2]:.1f}); polylines = check only", fontsize=7)
+            ax.set_title(f"{name} model frame t0 (dashed: horizon row {K[1, 2]:.1f})", fontsize=7)
         ax = axs[r, 3]
         z = np.load(Path(a.frames) / "pano" / p["town"] / (p["id"] + ".npz"))
         tiles = [cv2.cvtColor(cv2.imdecode(z[k], cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB) for k in ("jpeg_l", "jpeg_c", "jpeg_r")]
