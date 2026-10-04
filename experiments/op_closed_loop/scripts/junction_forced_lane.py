@@ -94,7 +94,7 @@ def jobs(args):
     if stage == "few":
         return smoke + few
     if stage == "forced":                                   # D and A on the routes holding the forced turns that the 36 earlier routes do not cover
-        return [unit(a, s, "f%s%d" % (k, i), ids, k) for s in seeds for a in ("D", "A") for k in "vx" for i, ids in enumerate(split(new[k], 2 if k == "x" else 1))]
+        return [unit(a, s, "f%s%d" % (k, i), ids, k) for s in seeds for a in ("D", "A") for k in "vx" for i, ids in enumerate(split(new[k], 4 if k == "v" else 5))]
     out = list(smoke) + few
     dep = [j.name for j in smoke]
     for s in seeds:
