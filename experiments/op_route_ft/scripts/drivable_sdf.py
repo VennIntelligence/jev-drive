@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 REPO = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments" / "op_adapt_h" / "lib")]
+sys.path[:0] = [str(REPO), str(REPO / "lib")]
 from jevdrive.common import data_dir  # noqa: E402
 
 X0, Y0, RES, H, W = -10.0, -40.0, 0.5, 160, 160
@@ -114,9 +114,9 @@ def main():
     from jevdrive import par
     from jevdrive.data import splits
     from jevdrive.run import Run
-    from op_adapt_h import Samples
     with Run("op_route_ft", "drivable_sdf") as run:
-        S = Samples("nav").t
+        with np.load(data_dir() / "runs" / "op_adapt_H" / "samples" / "nav" / "tab.npz", allow_pickle=True) as z:   # = Samples("nav").t (that import needs onnx, absent in navsim2)
+            S = {k: z[k] for k in ("id", "fut20")}
         for sp in ("navsim/op-adapt-h-nav-train", "navsim/op-adapt-h-nav-dev"):
             run.use_split(splits.load(sp))
         ids = S["id"].astype(str)
