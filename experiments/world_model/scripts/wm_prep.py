@@ -97,8 +97,8 @@ def cmd_select(a):
                              w_abs=float(np.abs(np.diff(p[fut, 2])).max() / C.DT * 57.3), vmax=float(v[fut].max())))
     cats = {"launch": lambda r: r["v"] < 3.5 and r["dv"] > 0.6,
             "cruise": lambda r: r["v"] > 8 and r["w_abs"] < 1.5 and r["ey_max"] < 0.15,
-            "curve": lambda r: r["v"] > 3 and abs(r["w"]) > 5,
-            "natdev": lambda r: r["v"] > 4 and abs(r["w"]) < 3 and r["ey_max"] > 0.25}
+            "curve": lambda r: r["v"] > 3 and abs(r["w"]) > 3,
+            "natdev": lambda r: r["v"] > 4 and abs(r["w"]) < 3 and r["ey_max"] > 0.2}
     score = {"launch": lambda r: r["dv"], "cruise": lambda r: r["v"], "curve": lambda r: abs(r["w"]), "natdev": lambda r: r["ey_max"]}
     out, used = [], {}
     for cat, ok in cats.items():
