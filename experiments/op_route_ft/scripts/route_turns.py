@@ -34,7 +34,7 @@ sys.path[:0] = [str(GUARD), str(REPO)]
 import cllib as C  # noqa: E402
 import guardlib as G  # noqa: E402
 
-LANE = "op-route-ft-turns"
+LANE = os.environ.get("RFT_TURNS_LANE", "op-route-ft-turns")   # a second concurrent run needs its own lane name
 PY = str(REPO / ".venv/bin/python")
 OUT = G.data_dir() / "runs/op_route_ft/turns"
 
