@@ -64,7 +64,7 @@ def fit_probes(A):
         g = a["br"]["G"]
         rows[s][0].append(g["z"]), rows[s][1].append(targets(g))
         for name, b in a["br"].items():
-            if name != "G":
+            if name not in ("G", "hold", "idw"):               # the hold control feeds inconsistent frames (phi1 up to 40 deg): not a training row
                 rr[s][0].append(b["z"][H - 1:]), rr[s][1].append(targets(b)[H - 1:])
     out, r2 = {}, {"G": [], "R": []}
     for s in segs:
