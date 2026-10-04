@@ -69,7 +69,8 @@ def serving_preds(c: dict, a, prov: dict) -> Path:
         shutil.rmtree(d)
     cpus = cpu_list(a.cpus) or list(range(os.cpu_count() or 8))
     py = G.data_dir() / "envs" / "openpilot" / "bin" / "python"
-    cmd = [str(py), str(G.REPO / "scripts" / "wod_zeroshot_openpilot.py"), "--set", "rater", "--workers", str(max(2, len(cpus) - 2)),
+    # decode workers each hold a copy of the WOD span index: 23 of them were SIGKILLed (memory) on the box, the harness default is 12
+    cmd = [str(py), str(G.REPO / "scripts" / "wod_zeroshot_openpilot.py"), "--set", "rater", "--workers", str(max(2, min(12, len(cpus) - 2))),
            "--onnx", str(onnx or SHIPPED_ONNX), "--tag", tag]
     if a.cpus:
         cmd = ["taskset", "-c", a.cpus] + cmd
