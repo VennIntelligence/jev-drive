@@ -326,7 +326,7 @@ def main_line(line: str, doc: str, collect) -> int:
     c = G.resolve(a.candidate)
     out = G.run_dir(c["name"], a.mode)
     lines = [x for x in (a.cl_lines or line).split(",") if x]
-    if not (a.force or a.collect_only or a.stage == "smoke") and all(G.done(out, x) for x in lines):
+    if not (a.force or a.collect_only or a.stage == "smoke") and all((G.load_line(out, x) or {}).get("status") == "ok" for x in lines):
         print("%s: lines %s already done for %s / %s (--force recomputes)" % (line, lines, c["name"], a.mode))
         return 0
     t0 = time.time()
