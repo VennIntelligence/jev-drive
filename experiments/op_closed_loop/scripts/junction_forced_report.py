@@ -27,7 +27,8 @@ from jevdrive.common import data_dir  # noqa: E402
 
 RES = data_dir() / "runs/vlm_arb/arms"
 ARMS = ["A", "D", "N", "Z", "NA", "SA", "NA0"]
-PREFIX = {"A": ("jclA", "jfaA"), "D": ("jclD", "jfaD"), "N": ("jfaN",), "Z": ("jfaZ",), "NA": ("jfaNA",), "SA": ("jfaSA",), "NA0": ("jfaNA0",)}
+PREFIX = {"A": ("jclA", "jfaA"), "D": ("jclD", "jfaD"), "N": ("jfaN", "jfafewN"), "Z": ("jfaZ", "jfafewZ"),
+          "NA": ("jfaNA", "jfafewNA"), "SA": ("jfaSA", "jfafewSA"), "NA0": ("jfaNA0",)}
 LABEL = {"A": "A drive as shipped (route steers, desire on)", "D": "D action head only (desire on)", "N": "N action head only, desire off",
          "Z": "Z + sky arrow, shipped Cinque", "NA": "NA fine-tune q3NA + arrow", "SA": "SA fine-tune q3SA + arrow", "NA0": "NA0 q3NA, no arrow"}
 COL = {"A": "#000000", "D": "#0072B2", "N": "#56B4E9", "Z": "#CC79A7", "NA": "#D55E00", "SA": "#009E73", "NA0": "#E69F00"}
