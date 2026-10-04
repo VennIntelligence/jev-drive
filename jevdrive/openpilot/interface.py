@@ -110,8 +110,10 @@ DECLARED = {
                            "derot / selector / launch_stab / launch_long arms", "d90, d96"),
     },
     "b2d": {
-        "rig.height_m": ("LB", "1.433 m windshield top: at 1.22 m inside the MKZ the hood fills 20% of the road frame and the "
-                               "tinted glass darkens it; 1.22 m needs a camera ahead of the body", "d104.8, unified_interface.md"),
+        "rig.height_m": ("LB", "spec camera aligned with the open-loop boards' viewpoint (mean of NAVSIM CAM_F0 and WOD front, "
+                               "B2D_MOUNTS['openloop']: x 1.59 m, z 1.86 m) instead of openpilot's 1.22 m; named presets keep "
+                               "1.22 m at the bumper line (x 3.8 m) and the legacy 1.433 m windshield top (hood fills 20% of the "
+                               "frame at 1.22 m inside the MKZ)", "d104.8, d125, unified_interface.md"),
         "history.warmup": ("real-car", "warm-up while braked at the start: real frames from a standing car", "-"),
         "lateral.source": ("LB", "legacy p7 arms track the plan path", "d118.5"),
         "lateral.exec": ("LB", "legacy drive preset: raw action curvature through the bicycle model, no clip / delay", "d118.5"),
@@ -125,8 +127,8 @@ DECLARED = {
                                            "openpilot capability; every report row carries the zones-off reading", "d121, d122"),
         "light.source": ("priv", "R3a tl_stop is a privileged ceiling (diagnosis only); VLM arms read the light from pixels",
                          "d82, d107"),
-        "tricks": ("semi", "coast_v 2.5 (MKZ stops dead on a light brake); spec camera at the front bumper line (x 3.8 m, ~2 m ahead "
-                           "of a windshield camera); Privileged bypass (priv, vmerge2)", "d74, d101, unified_interface.md"),
+        "tricks": ("semi", "coast_v 2.5 (MKZ stops dead on a light brake); camera_at_bumper_x3.80 only in the "
+                           "bumper122 preset; Privileged bypass (priv, vmerge2)", "d74, d101, unified_interface.md"),
     },
 }
 
@@ -288,7 +290,14 @@ def b2d_values(cfg, env=None):
 
 # B2D spec preset: the shipped `drive` arbitration with openpilot's lateral path (clip + 0.2 s delay) and no privileged light.
 B2D_SPEC_OP_CTRL = {"delay": 0.2}
-# rear-axle frame (x, y, z) of the camera pair: 1.22 m at the front bumper line (no MKZ hood in view, outside the tinted glass;
-# chosen on the small set of unified_interface.md); the legacy 1.433 m windshield top stays in the `drive` preset (declared).
-# lib/b2d_privileged_geometry.py and lib/vm3_perception.py still assume 1.779 m: privileged / vmerge arms keep the drive preset.
-B2D_SPEC_MOUNT = (3.8, 0.0, 1.22)
+# Rear-axle frame (x, y, z above the road) of the B2D camera pair. `openloop` is the spec camera: one viewpoint for every board,
+# derived from the open-loop boards' real front-camera extrinsics (ego origin = rear axle; both level after openpilot's own calibration,
+# real pitch NAVSIM -1.3 deg / WOD -0.2 deg removed):
+#   NAVSIM CAM_F0 (40 navtest / navhard frames): x 1.665, y -0.019, z 1.512 above the ego origin (0.35 m above the road) = 1.862 m
+#   WOD front (1984 segments): x 1.519, y +0.026, z 1.8065 above the ground origin (~1.86 m true, decision 108)
+#   mean: x 1.59, y 0, z 1.86   (the mean, not NAVSIM's alone, so neither board is privileged)
+# The camera sits ~0.4 m above the MKZ roof and 2.2 m behind the bumper: no body in the frame (the hood tip is 21 deg below the horizon,
+# the 256-row road frame ends at 13 deg). `bumper122` (1.22 m at the front bumper line) and `windshield143` (1.433 m, the legacy `drive`
+# preset) are the earlier rigs. lib/b2d_privileged_geometry.py and lib/vm3_perception.py still assume 1.779 m: privileged / vmerge arms keep `drive`.
+B2D_MOUNTS = {"openloop": (1.59, 0.0, 1.86), "bumper122": (3.8, 0.0, 1.22), "windshield143": (1.779, 0.0, 1.433)}
+B2D_SPEC_MOUNT = B2D_MOUNTS["openloop"]

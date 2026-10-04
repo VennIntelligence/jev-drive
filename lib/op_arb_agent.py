@@ -104,6 +104,8 @@ PRESETS = {
     "drive": dict(_DRIVE_TOP, arb=dict(_DRIVE_ARB)),
     "spec": dict(_DRIVE_TOP, op_ctrl=dict(IF.B2D_SPEC_OP_CTRL), op_mount=list(IF.B2D_SPEC_MOUNT), arb=dict(_DRIVE_ARB, resume="timer")),
 }
+for _k in ("bumper122", "windshield143"):                 # `spec` with the earlier camera rigs (interface.B2D_MOUNTS), op_arb.sh arm spec_<name>
+    PRESETS["spec_" + _k] = dict(PRESETS["spec"], op_mount=list(IF.B2D_MOUNTS[_k]))
 
 
 def resolve_config(cfg):

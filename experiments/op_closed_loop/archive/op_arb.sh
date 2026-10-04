@@ -106,8 +106,8 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
         # op-adapt L and vlm_arb arms: drive, jslow, vred, vbyp, vall
         # the `drive` arbitration is the named preset "drive" of lib/op_arb_agent.py PRESETS (moved there verbatim 2026-10-05)
         drive|pjunc|pbyp|pbypgap|pbyp2|pbyp2ng|pred|pall|jslow|vred|vred3|vmerge|vbyp|vall|dlon|dnod|dtz|lmain*|lnoint*|ldw10*|lkd*|ltz*) arb="{\"preset\": \"drive\"$([[ $arm == dlon ]] && echo ', "lat": "route"' || true)${LAT_EXEC:+, \"lat_exec\": \"$LAT_EXEC\"}${RESUME_S:+, \"latch_max_s\": $RESUME_S}${DRIVE_ARGS:+, $DRIVE_ARGS}}" ;;
-        # openpilot as on the car (jevdrive/openpilot/interface.py, docs/openpilot-interface.md): preset "spec"; zones off: DRIVE_ARGS='"zones": false, "div_m": 1e9'
-        spec*) arb="{\"preset\": \"spec\"${LAT_EXEC:+, \"lat_exec\": \"$LAT_EXEC\"}${RESUME_S:+, \"latch_max_s\": $RESUME_S}${DRIVE_ARGS:+, $DRIVE_ARGS}}" ;;
+        # openpilot as on the car (jevdrive/openpilot/interface.py, docs/openpilot-interface.md): preset "spec" (camera: open-loop-aligned) or spec_bumper122 / spec_windshield143 (earlier rigs); zones off: DRIVE_ARGS='"zones": false, "div_m": 1e9'
+        spec|spec_*) arb="{\"preset\": \"$arm\"${LAT_EXEC:+, \"lat_exec\": \"$LAT_EXEC\"}${RESUME_S:+, \"latch_max_s\": $RESUME_S}${DRIVE_ARGS:+, $DRIVE_ARGS}}" ;;
         # R3a (fc65452:todos/2026-09-29-op-drive.md): drive + privileged traffic-light stop; a stop latch is released only by plan / lead away from a red light, or at green
         dtl) arb="{\"mode\": \"drive\", \"lat\": \"op\", \"lat_exec\": \"${LAT_EXEC:-p7}\", \"lon\": \"op\", \"hold\": \"intent\", \"release\": \"planx\",
  \"release_th\": 2.0, \"release_s\": 1.0, \"latch_max_s\": 1e9, \"coast_v\": 2.5, \"tl_stop\": true, \"tl_n\": ${TL_N:-50}}" ;;
