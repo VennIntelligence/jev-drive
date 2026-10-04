@@ -11,7 +11,9 @@ onnxruntime (experiments/op_closed_loop/archive/op_arb_server.py), so a checkpoi
     context frames, as in training (the 24 unused past slots stay zero).
 `E.npy` (4, 32, 512) fp16 is written next to the ONNX; the server picks E[intent] per request.
 
-  build  (op-train env)    op_l_onnx.py build --ckpt CKPT --out DIR/name.onnx [--no-adapter]
+  build  (op-train env)    op_l_onnx.py build --ckpt CKPT --out DIR/name.onnx [--no-adapter] [--bias-input]
+                           --bias-input: add the `intent_bias` input even without an E table (experiments/op_route_ft: the route adapter's
+                           bias is computed per request by the server, lib/route_adapter.NumpyAdapter); zeros = the unconditioned model
   ref    (op-train env)    op_l_onnx.py ref --ckpt CKPT|none --out ref.npz     port outputs on the stored WOD frame streams
   check  (openpilot env)   op_l_onnx.py check --onnx DIR/name.onnx --ref ref.npz   onnxruntime outputs of the served model vs the port
 """
@@ -48,8 +50,8 @@ def build(a):
         t.CopyFrom(numpy_helper.from_array(arr, t.name))
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    if st.get("adapter") is not None and not a.no_adapter:
-        E = (st["adapter"]["E"] * st["adapter"]["on"]).numpy().astype(np.float16)       # intent 0 adds nothing
+    has_e = st.get("adapter") is not None and not a.no_adapter
+    if has_e or getattr(a, "bias_input", False):
         names = {n.output[0]: i for i, n in enumerate(g.node)}
         cur, past = names["unsqueeze_1"], names["cat_3"]
         assert g.node[cur].input[0] == "view_39" and g.node[names["mean"]].input[0] == "view_39"
@@ -71,9 +73,12 @@ def build(a):
         assert max(names["view_39"], names["_to_copy_1"]) < first
         del g.node[:]
         g.node.extend(nodes[:first] + new + nodes[first:])
-        np.save(out.with_suffix(".E.npy"), E)
+        if has_e:
+            E = (st["adapter"]["E"] * st["adapter"]["on"]).numpy().astype(np.float16)    # intent 0 adds nothing
+            np.save(out.with_suffix(".E.npy"), E)
     onnx.save(m, str(out))
-    print("wrote", out, "adapter" if out.with_suffix(".E.npy").exists() and not a.no_adapter else "no adapter", "trained tensors", len(st["net"]))
+    print("wrote", out, "intent E table" if has_e else "bias input" if getattr(a, "bias_input", False) else "no adapter",
+          "trained tensors", len(st["net"]))
 
 
 def ref(a):
@@ -143,6 +148,7 @@ if __name__ == "__main__":
     b.add_argument("--ckpt", required=True)
     b.add_argument("--out", required=True)
     b.add_argument("--no-adapter", action="store_true")
+    b.add_argument("--bias-input", action="store_true", help="add the intent_bias input without an E table (route adapter)")
     r = sp.add_parser("ref")
     r.add_argument("--ckpt", required=True)
     r.add_argument("--out", required=True)
