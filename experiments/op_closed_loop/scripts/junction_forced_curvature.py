@@ -34,8 +34,9 @@ def steer_k(steer, v):
 
 
 def one(rid, mi, seed=2):
-    at = R.RES and next((u / "attempts" / rid / str(json.loads((u / "done" / (rid + ".json")).read_text()).get("attempt", 1))
-                         for u in sorted(R.RES.glob("v2-jfaD-s%d-*" % seed)) + sorted(R.RES.glob("v2-jclD-s%d-*" % seed)) if (u / "done" / (rid + ".json")).exists()))
+    RES = R.RUN / "arms"
+    at = next((u / "attempts" / rid / str(json.loads((u / "done" / (rid + ".json")).read_text()).get("attempt", 1))
+                         for u in sorted(RES.glob("v2-jfaD-s%d-*" % seed)) + sorted(RES.glob("v2-jclD-s%d-*" % seed)) if (u / "done" / (rid + ".json")).exists()))
     D, gd, psiD, turns = R.turn_geometry(np.array(json.load(open(at / "route.json"))["xy"]))
     T = next(t for t in turns if t["mi"] == mi)
     tk = [t for t in map(json.loads, open(at / "ticks.jsonl")) if "truth" in t]
