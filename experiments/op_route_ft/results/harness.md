@@ -94,3 +94,21 @@ Reports only (finished units): `.venv/bin/python experiments/op_route_ft/scripts
 Shipped report from the cache reproduces decision 127: choice 0 / 13, forced 1 / 12, leaves lane 11 / 11 entered choice turns.
 
 CARLA smoke (synthetic std 0.3 bear and poly candidates, `--stage smoke` = route 10255, one choice turn each): see below.
+
+## Open-loop guard lines (drift, negatives) and registration
+
+`scripts/guard_adapter.py:RouteCmdAdapter` implements op_guard's CommandAdapter: the candidate ONNX on the training port (portcand.load)
++ the torch RouteAdapter from the adapter.npz, bias before the valid mask; Command none = zero bias, correct / negative = `Command.poly`
+padded to 16 vertices -> `route_adapter.features(enc)`, no noise. Frame sources: `op_img_cmd/ft/bank/<bank>#<row>` (line_drift) and
+`op_lb/<data>#<i>` (line_negatives). Checked on the synthetic std 0.3 bear candidate: command none on 8 `dist` bank rows equals
+portcand.plans_from_trunks bit for bit (max |d| 0); a left-turn polyline moves the plan end y by -0.5..+2.3 m; the nav path runs on
+op_lb/g_navtest (negative vs none: -4.0..+0.4 m). lb_guardneg's frames are built by line_negatives itself (ensure_frames).
+
+Register an arm (on the Mac, then commit candidates.json, push, pull on the box):
+
+    python3 experiments/op_route_ft/scripts/guard_adapter.py register rc-bear-s0        # onnx + .adapter.npz under $DATA_DIR/runs/op_route_ft/onnx
+    python3 experiments/op_route_ft/scripts/guard_adapter.py register rc-ctl-s0 --adapter none   # command_adapter null, zero bias
+
+Entry: `{"onnx": "$DATA_DIR/runs/op_route_ft/onnx/<name>.onnx", "route_adapter": ".../<name>.adapter.npz", "command_adapter":
+"experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter", "note": ...}`; guardlib.resolve passes `route_adapter` to the B2D units
+(b2d_turns, b2d_ds). HUGSIM has no route plumbing: a route candidate runs there with zero bias (no command).
