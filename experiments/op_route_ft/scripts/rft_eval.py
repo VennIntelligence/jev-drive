@@ -187,6 +187,8 @@ def main(a):
         r["carla_exit_short"] = float((c == "short").mean())
         ok = (c == s["cmd"]).astype(float)
         r["carla_exit_row"] = boot(ok, s["cluster"])
+        rch = c != "short"
+        r["carla_exit_reached"] = boot(ok[rch], s["cluster"][rch]) if rch.any() else {"n": 0}
         for cm in ("left", "straight", "right"):
             mm = s["cmd"] == cm
             r[f"carla_exit_{cm}"] = boot(ok[mm], s["cluster"][mm]) if mm.any() else {"n": 0}
