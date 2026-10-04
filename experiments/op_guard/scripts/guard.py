@@ -29,6 +29,7 @@ import guardlib as G  # noqa: E402
 OPEN_LOOP = ["navtest", "navhard", "wod", "drift", "negatives"]
 CLOSED_LOOP = ["hugsim", "b2d_turns", "b2d_ds"]
 CL_LANE_ENV = "OP_GUARD_LANE"
+WANT: list = []
 
 
 def run(cmd, log: Path, env=None, cwd=G.REPO) -> int:
@@ -63,6 +64,8 @@ def line_cmd(line: str, cand: str, mode: str, gpu: int, cpus: str, force: bool):
     c = [sys.executable, script, "--candidate", cand, "--mode", mode, "--gpu", gpu]
     if cpus:
         c += ["--cpus", cpus]
+    if line in CLOSED_LOOP:   # the first closed-loop line packs every wanted closed-loop line into one lane; later calls only collect
+        c += ["--cl-lines", ",".join(x for x in CLOSED_LOOP if x in WANT)]
     return c + (["--force"] if force else [])
 
 
@@ -148,6 +151,7 @@ def main():
     bad = [x for x in want if x not in G.LINES]
     if bad:
         sys.exit(f"unknown lines {bad}; known {list(G.LINES)}")
+    WANT[:] = want
     full = set(a.full.split(",")) if a.full else set()
     mode_of = lambda line: "full" if (a.mode == "full" or line in full) else "subset"  # noqa: E731
     out = G.run_dir(name, a.mode)
