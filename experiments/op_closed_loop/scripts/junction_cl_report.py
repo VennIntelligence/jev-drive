@@ -176,7 +176,7 @@ def main():
     L_.append("\n## Per-turn outcomes\n")
     L_.append("| arm | turns | entered | took intended branch | lost (entered, no exit) | leaves lane (>1.75 m), of entered | median peak cross-track m [CI], entered | median abs exit heading err deg, branch | zone collisions + off-road infractions (n) |")
     L_.append("|---|---|---|---|---|---|---|---|---|")
-    S_ = {}
+    S_, extra = {}, {}
     for k in ARMS:
         rs = [r for r in rows if r["arm"] == k and (r["route"], r["turn"]) in set(keys)]
         by = lambda f, sel=lambda r: True: [np.array([f(r) for r in rs if r["route"] == rid and sel(r)], float) for rid in sorted(done)]  # noqa: E731
@@ -184,11 +184,19 @@ def main():
         br = boot(by(lambda r: r["branch"] == "yes"), np.mean, rng)
         lost = boot(by(lambda r: r["branch"] == "lost"), np.mean, rng)
         lv = boot(by(lambda r: r["leaves"], lambda r: r["entered"] == 1), np.mean, rng)
-        pk = boot(by(lambda r: r["peak"], lambda r: r["entered"] == 1), np.median, rng)
-        hd = boot(by(lambda r: abs(r["head"]), lambda r: r["branch"] == "yes"), np.median, rng)
+        pk = boot(by(lambda r: r["peak"], lambda r: r["entered"] == 1), np.nanmedian, rng)
+        hd = boot(by(lambda r: abs(r["head"]), lambda r: r["branch"] == "yes"), np.nanmedian, rng)
+        pk2 = boot(by(lambda r: r["peak"], lambda r: r["branch"] == "yes"), np.nanmedian, rng)
+        lv2 = boot(by(lambda r: r["peak"] > HALF, lambda r: r["branch"] == "yes"), np.mean, rng)
         zh = sum(r["zone_hard"] for r in rs)
         S_[k] = (ent, br, lost, lv, pk, hd)
+        extra[k] = (pk2, lv2)
         L_.append("| %s | %d | %s | %s | %s | %s | %s | %s | %d |" % (k, len(rs), fmt(ent, 0, True), fmt(br, 0, True), fmt(lost, 0, True), fmt(lv, 0, True), fmt(pk), fmt(hd, 1), zh))
+    L_.append("\nTurns that did take the intended branch only (survivors; the lost turns above carry the large peaks, a lost car is cut at 25 m off the centreline):\n")
+    L_.append("| arm | n branch-yes turns | median peak cross-track m [CI] | leaves lane (>1.75 m) % [CI] |\n|---|---|---|---|")
+    for k in ARMS:
+        n = sum(1 for r in rows if r["arm"] == k and r["branch"] == "yes" and (r["route"], r["turn"]) in set(keys))
+        L_.append("| %s | %d | %s | %s |" % (k, n, fmt(extra[k][0]), fmt(extra[k][1], 0, True)))
     L_.append("\n## Per route (official DS / RC) and paired differences\n")
     L_.append("| arm | routes | DS mean [CI] | RC mean [CI] | routes with route_dev / agent-failed status |")
     L_.append("|---|---|---|---|---|")
