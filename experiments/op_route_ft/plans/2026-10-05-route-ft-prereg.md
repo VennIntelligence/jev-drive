@@ -19,7 +19,7 @@
 
 - P（正样本，带指令）：real nav 7 + wod 5（op_adapt_H 池，route.npz 事后折线，目标 = 日志未来）；CARLA 出口配对 16（**重渲的对齐视角 1.86 m 集合** `carla_pairs_s10000ol`；目标 = 出口折线平滑后按原模型自己的弧长计时（creep / cruise 位姿至少保持自身速度：smoke 中原模型在空城路口 4 s 只走 13 m），横向加速度上限 3 m/s²）。只有代码 smoke 用旧 1.22 m 集合。
 - T2：P 行按转角 / 半径采样加权：直行 1，25–60° 1.5，≥ 60° 2，≥ 60° 且 R_min < 15 m 4。
-- N（负样本，6/48 = 12.5%）：CARLA N1（进近道路没有的出口类，按 CARLA 拓扑是确定不存在的）3；real N3（逆向侧 4–7 m）/ N4（无路口直路上掉头）3，`lib/route_neg.make` 在线生成。目标 = 原模型 plan + 全部输出头。另一位执行者的自动筛选负样本集（navtrain token）若与图像池有交集再加入；没有就只用以上两类（在报告里写明）。
+- N（负样本，6/48 = 12.5%）：CARLA N1（进近道路没有的出口类，按 CARLA 拓扑确定不存在）3；real 3，按类均分：navtrain 地图筛过的 `route_neg.npz`（main 规则：N1 只取 tier A 且 clear_m > 6，N2 / N4 clear_m > 8，N3 照筛选结果，去掉 trivial straight，不用 aux）落在 nav 图像池上的 N1 / N2 / N3 / N4 各一份，加 WOD 在线 N3 / N4（无地图，未筛）一份。目标 = 原模型 plan（权重 lam_n 1，与 P 行模仿同量级）+ 全部输出头。pilot（旧数据、训练前）里 N 行用 dw·lam_c = 3 的权重时指令吸收几乎为零，改为 1 后再放全量（见下）。
 - D（无指令）：nav 5 / wod 4 / layer-3 CARLA 2 / CARLA 配对位姿 3，plan 一致性 + 全部输出头蒸馏回原模型。
 - 切分：op_adapt_H 的 train / dev；CARLA 配对按路口 hash 的 train / dev（`b2d/route-carla-*`，与 B2D 172 个路口不相交）。
 

@@ -46,6 +46,7 @@ SIG_A = 0.5                       # m/s^2, scale of the action loss
 ACT_ALPHA = 0.45                  # action[0] = -ACT_ALPHA * kappa_T * max(1, v)^2: the shipped head's own convention (sign: right +), fitted on the
                                   # op_adapt_H teachers at v0 > 3 m/s against the logged 1 s pure-pursuit curvature (slope nav -0.51, wod -0.39, r -0.92)
 ALAT_CAP = 3.0                    # m/s^2, speed cap of the CARLA targets on the exit's curvature
+NEG_NPZ = "processed/op_route_cmd/navtrain/route_neg.npz"   # map-screened negatives (op_route_cmd results/negatives.md), navtrain tokens
 ROUTE_NPZ = {"nav": "processed/op_route_cmd/navtrain/route.npz", "wod": "processed/op_route_cmd/wod/route.npz"}
 CARLA_ROOTS = {"ol": "runs/op_route_cmd/carla_pairs_s10000ol/packed", "old": "runs/op_route_cmd/carla_pairs_s10000/packed"}
 CARLA_CAM = {"ol": 1.59, "old": 1.519}
@@ -182,6 +183,7 @@ class RCfg:
     lam_a: float = 1.0
     lam_d: float = 10.0
     lam_c: float = 1.0
+    lam_n: float = 1.0                    # N rows: plan to the original's plan (same scale as the P imitation, not dw * lam_c)
     dw: float = 3.0
     lr: float = 3e-5
     lr_new: float = 3e-4
@@ -241,6 +243,32 @@ def missing_classes(C: Carla, p):
     return [c for c in ("left", "straight", "right") if c not in have]
 
 
+NEG_CLEAR = {"N1_exit": 6.0, "N2_side": 8.0, "N4_uturn": 8.0}     # main's T3 rules 2026-10-05: clear_m above these; N3 as screened
+
+
+def screened_negs(R: "Real", split) -> dict:
+    """Map-screened navtrain negatives on the frames of the nav pool (rules: N1 tier A with clear_m > 6, N2 / N4 clear_m > 8, N3 as screened,
+    no trivial straight N1; route_neg_aux not used): {sample row: [neg rows]}, 'poly' / 'pmask' / 'kind', 'rows' (pool rows of `split` with
+    one) and 'by_kind' {kind: [(sample row, neg row)]} for a per-kind balanced draw."""
+    with np.load(data_dir() / NEG_NPZ, allow_pickle=True) as z:
+        kind, cm = z["kind"].astype(str), z["clear_m"]
+        ok = ~z["trivial_straight"]
+        for k, th in NEG_CLEAR.items():
+            ok &= ~((kind == k) & ~(np.nan_to_num(cm, nan=-1.0) > th))
+        ok &= ~((kind == "N1_exit") & (z["tier"] != "A"))
+        ids, poly, pm, kind = z["id"][ok], z["poly"][ok], z["pmask"][ok], kind[ok]
+    pos = {k: i for i, k in enumerate(R.S.t["id"].tolist())}
+    out = {"poly": poly, "pmask": pm, "kind": kind, "by_kind": {}}
+    sp = R.S.t["split"]
+    for k, t in enumerate(ids.tolist()):
+        i = pos.get(t)
+        if i is not None and sp[i] == split:
+            out.setdefault(i, []).append(k)
+            out["by_kind"].setdefault(kind[k], []).append((i, k))
+    out["rows"] = np.array(sorted(k for k in out if isinstance(k, (int, np.integer))), int)
+    return out
+
+
 class Batcher(torch.utils.data.Dataset):
     def __init__(self, cfg: RCfg, split="train", n=10 ** 9):
         self.cfg, self.split, self.n, self.ok = cfg, split, n, False
@@ -269,6 +297,7 @@ class Batcher(torch.utils.data.Dataset):
             nr = rows[(R.route["plen"][rows] >= 60) & (R.S.t["v0"][rows] >= 2.0)]
             self.pool[f"N{d}"] = (nr, None)
         self.pool["Dhc"] = (tr(self.hc), None)
+        self.negs = screened_negs(self.real["nav"], self.split)
         cr = np.flatnonzero((C.r["split"] == self.split) & (C.r["pmask"].sum(1) >= 3))
         w = np.array([turn_weight(C.r["angle"][j], C.r["turn_rmin"][j], 0.0) for j in cr])
         self.pool["Pcar"] = (cr, w / w.sum())
@@ -289,7 +318,7 @@ class Batcher(torch.utils.data.Dataset):
         self.ok = True
 
     # one row -> dict
-    def _real(self, d, i, role, rng):
+    def _real(self, d, i, role, rng, neg_row=None):
         R = self.real[d] if d in self.real else self.hc
         t = R.S.t
         j = R.normal[i]
@@ -308,12 +337,14 @@ class Batcher(torch.utils.data.Dataset):
             rt = R.route
             P = dense_from_poly(rt["poly"][i], rt["pmask"][i])
             neg = None
-            for kind in (("N3_wrong", "N4_uturn") if rng.random() < 0.5 else ("N4_uturn", "N3_wrong")):
+            for kind in () if neg_row is not None else (("N3_wrong", "N4_uturn") if rng.random() < 0.5 else ("N4_uturn", "N3_wrong")):
                 if kind == "N4_uturn" and (int(rt["n_turn"][i]) > 0 or bool(rt["in_turn"][i])):
                     continue
                 neg = RN.make(kind, P, rng, lht=bool(t["tc"][i][1] > 0.5)) if P is not None else None
                 if neg is not None:
                     break
+            if neg_row is not None:                                        # a map-screened navtrain negative
+                neg = {"poly": self.negs["poly"][neg_row], "pmask": self.negs["pmask"][neg_row]}
             if neg is None:
                 out["role"] = ROLE["D"]
             else:
@@ -370,10 +401,16 @@ class Batcher(torch.utils.data.Dataset):
             if not cnt:
                 continue
             if key == "Nreal":
+                bk = self.negs["by_kind"]
+                kinds = sorted(bk) + ["wod"]                                # equal share per kind (nav screened kinds + online WOD N3 / N4)
                 for _ in range(cnt):
-                    d = "nav" if rng.random() < 0.5 else "wod"
-                    p, _ = self.pool[f"N{d}"]
-                    rows.append(self._real(d, int(p[rng.integers(len(p))]), "N", rng))
+                    kd = kinds[rng.integers(len(kinds))]
+                    if kd == "wod":
+                        p = self.pool["Nwod"][0]
+                        rows.append(self._real("wod", int(p[rng.integers(len(p))]), "N", rng))
+                    else:
+                        i, kk = bk[kd][rng.integers(len(bk[kd]))]
+                        rows.append(self._real("nav", int(i), "N", rng, neg_row=kk))
                 continue
             p, w = self.pool[key]
             pick = rng.choice(p, cnt, p=w) if w is not None else p[rng.integers(len(p), size=cnt)]
@@ -440,11 +477,12 @@ class RLoss:
                 Ls["act"] = (aw * e).sum() / aw.sum()
                 tot = tot + c.lam_a * Ls["act"]
         cn = D | N
-        if cn.any():
-            Ls["cons"] = base.imit_dist(plan[cn], b["tmu"][cn].float(), b["cam"][cn]).mean()
+        if D.any():
+            Ls["cons"] = base.imit_dist(plan[D], b["tmu"][D].float(), b["cam"][D]).mean()
             tot = tot + c.dw * c.lam_c * Ls["cons"]
-            if N.any():
-                Ls["neg"] = base.imit_dist(plan[N], b["tmu"][N].float(), b["cam"][N]).mean().detach()
+        if N.any():
+            Ls["neg"] = base.imit_dist(plan[N], b["tmu"][N].float(), b["cam"][N]).mean()
+            tot = tot + c.lam_n * Ls["neg"]
         e = ((out[:, base.di] - b["tgt"].float()) / base.tstd).pow(2)
         free = base.plan_cols | self.act_col
         keep = cn.float()

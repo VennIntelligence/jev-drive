@@ -133,14 +133,19 @@ def build_sets(carla, cap, seed=0):
         S[f"{d}_uptake"] = dict(rows=up, fb=np.stack([RA.features("bear", rt["poly"][i], rt["pmask"][i]) for i in up]) if len(up) else np.zeros((0, 6), np.float32),
                                 fp=np.stack([RA.features("poly", rt["poly"][i], rt["pmask"][i]) for i in up]) if len(up) else np.zeros((0, 46), np.float32))
         nn_ = []
+        if d == "nav":                                                   # map-screened negatives of the dev frames first
+            ng = F.screened_negs(Rd, "dev")
+            for i in ng["rows"]:
+                for k in ng[i][:1]:
+                    nn_.append((i, str(ng["kind"][k]), ng["poly"][k], ng["pmask"][k]))
         for i in dv[(rt["plen"][dv] >= 60) & (t["v0"][dv] >= 2)]:
+            if len(nn_) >= cap // 2:
+                break
             P = F.dense_from_poly(rt["poly"][i], rt["pmask"][i])
             kind = "N4_uturn" if (rt["n_turn"][i] == 0 and not rt["in_turn"][i]) and rng.random() < 0.5 else "N3_wrong"
             n = RN.make(kind, P, rng, lht=bool(t["tc"][i][1] > 0.5)) if P is not None else None
             if n is not None:
                 nn_.append((i, kind, n["poly"], n["pmask"]))
-            if len(nn_) >= cap // 2:
-                break
         S[f"{d}_neg"] = dict(rows=np.array([x[0] for x in nn_]), kind=np.array([x[1] for x in nn_]),
                              fb=np.stack([RA.features("bear", x[2], x[3]) for x in nn_]), fp=np.stack([RA.features("poly", x[2], x[3]) for x in nn_]))
     return C, R, S
@@ -215,6 +220,10 @@ def main(a):
             (pm, _), cam = plans(m, key, fk)
             (po, _), _ = base[key]
             dy = np.abs(y4(pm, cam)[:, 1] - y4(po, cam)[:, 1])
+            if "kind" in S[key]:
+                for kd in np.unique(S[key]["kind"]):
+                    mk = S[key]["kind"] == kd
+                    r[f"neg_{key}_{kd}"] = {"n": int(mk.sum()), "mean": float(dy[mk].mean())}
             r[f"neg_{key}"] = {"n": int(len(dy)), "mean": float(dy.mean()) if len(dy) else None, "median": float(np.median(dy)) if len(dy) else None,
                                "p90": float(np.percentile(dy, 90)) if len(dy) else None}
         # uptake on real turns
