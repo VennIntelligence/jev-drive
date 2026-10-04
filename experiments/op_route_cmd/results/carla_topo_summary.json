@@ -1,0 +1,866 @@
+{
+ "per_town": {
+  "Town01": {
+   "junctions": 12,
+   "junctions_with_connectors": 12,
+   "junctions_with_choice": 12,
+   "junction_distinct_exits": {
+    "3": 12
+   },
+   "approach_roads": 36,
+   "approach_road_exits": {
+    "2": 36
+   },
+   "approach_lanes": 36,
+   "approach_lane_legal_exits": {
+    "2": 36
+   },
+   "lane_exit_polylines": 72,
+   "road_exit_polylines": 72,
+   "road_exit_polylines_choice": 72,
+   "approach_roads_3plus_exits": 0,
+   "exit_cls": {
+    "left": 24,
+    "straight": 24,
+    "right": 24
+   },
+   "connectors_dropped": {},
+   "choice_lanes_free_ge": {
+    "20": 36,
+    "30": 36,
+    "45": 22,
+    "60": 18,
+    "80": 18
+   },
+   "held_b2d_any": {
+    "junctions": 2,
+    "train_junctions": 10,
+    "train_approach_roads": 30,
+    "train_roads_3plus": 0,
+    "train_polylines": 60
+   },
+   "held_img_test": {
+    "junctions": 2,
+    "train_junctions": 10,
+    "train_approach_roads": 30,
+    "train_roads_3plus": 0,
+    "train_polylines": 60
+   },
+   "held_img_test_dev": {
+    "junctions": 2,
+    "train_junctions": 10,
+    "train_approach_roads": 30,
+    "train_roads_3plus": 0,
+    "train_polylines": 60
+   },
+   "held_d95": {
+    "junctions": 0,
+    "train_junctions": 12,
+    "train_approach_roads": 36,
+    "train_roads_3plus": 0,
+    "train_polylines": 72
+   }
+  },
+  "Town02": {
+   "junctions": 8,
+   "junctions_with_connectors": 8,
+   "junctions_with_choice": 8,
+   "junction_distinct_exits": {
+    "3": 8
+   },
+   "approach_roads": 24,
+   "approach_road_exits": {
+    "2": 24
+   },
+   "approach_lanes": 24,
+   "approach_lane_legal_exits": {
+    "2": 24
+   },
+   "lane_exit_polylines": 48,
+   "road_exit_polylines": 48,
+   "road_exit_polylines_choice": 48,
+   "approach_roads_3plus_exits": 0,
+   "exit_cls": {
+    "left": 16,
+    "right": 16,
+    "straight": 16
+   },
+   "connectors_dropped": {},
+   "choice_lanes_free_ge": {
+    "20": 24,
+    "30": 22,
+    "45": 12,
+    "60": 10,
+    "80": 6
+   },
+   "held_b2d_any": {
+    "junctions": 2,
+    "train_junctions": 6,
+    "train_approach_roads": 18,
+    "train_roads_3plus": 0,
+    "train_polylines": 36
+   },
+   "held_img_test": {
+    "junctions": 1,
+    "train_junctions": 7,
+    "train_approach_roads": 21,
+    "train_roads_3plus": 0,
+    "train_polylines": 42
+   },
+   "held_img_test_dev": {
+    "junctions": 1,
+    "train_junctions": 7,
+    "train_approach_roads": 21,
+    "train_roads_3plus": 0,
+    "train_polylines": 42
+   },
+   "held_d95": {
+    "junctions": 1,
+    "train_junctions": 7,
+    "train_approach_roads": 21,
+    "train_roads_3plus": 0,
+    "train_polylines": 42
+   }
+  },
+  "Town03": {
+   "junctions": 31,
+   "junctions_with_connectors": 31,
+   "junctions_with_choice": 25,
+   "junction_distinct_exits": {
+    "2": 11,
+    "3": 14,
+    "4": 5,
+    "5+": 1
+   },
+   "approach_roads": 89,
+   "approach_road_exits": {
+    "2": 31,
+    "3": 20,
+    "4": 4,
+    "<2": 34
+   },
+   "approach_lanes": 138,
+   "approach_lane_legal_exits": {
+    "2": 52,
+    "3": 14,
+    "4+": 2,
+    "<2": 70
+   },
+   "lane_exit_polylines": 224,
+   "road_exit_polylines": 172,
+   "road_exit_polylines_choice": 138,
+   "approach_roads_3plus_exits": 24,
+   "exit_cls": {
+    "uturn": 2,
+    "left": 42,
+    "straight": 45,
+    "right": 49
+   },
+   "connectors_dropped": {},
+   "choice_lanes_free_ge": {
+    "20": 68,
+    "30": 65,
+    "45": 40,
+    "60": 26,
+    "80": 22
+   },
+   "held_b2d_any": {
+    "junctions": 4,
+    "train_junctions": 21,
+    "train_approach_roads": 42,
+    "train_roads_3plus": 12,
+    "train_polylines": 100
+   },
+   "held_img_test": {
+    "junctions": 0,
+    "train_junctions": 25,
+    "train_approach_roads": 55,
+    "train_roads_3plus": 24,
+    "train_polylines": 138
+   },
+   "held_img_test_dev": {
+    "junctions": 0,
+    "train_junctions": 25,
+    "train_approach_roads": 55,
+    "train_roads_3plus": 24,
+    "train_polylines": 138
+   },
+   "held_d95": {
+    "junctions": 0,
+    "train_junctions": 25,
+    "train_approach_roads": 55,
+    "train_roads_3plus": 24,
+    "train_polylines": 138
+   }
+  },
+  "Town04": {
+   "junctions": 27,
+   "junctions_with_connectors": 27,
+   "junctions_with_choice": 25,
+   "junction_distinct_exits": {
+    "2": 3,
+    "3": 15,
+    "4": 9
+   },
+   "approach_roads": 87,
+   "approach_road_exits": {
+    "2": 24,
+    "3": 36,
+    "<2": 27
+   },
+   "approach_lanes": 161,
+   "approach_lane_legal_exits": {
+    "2": 19,
+    "3": 36,
+    "<2": 106
+   },
+   "lane_exit_polylines": 252,
+   "road_exit_polylines": 183,
+   "road_exit_polylines_choice": 156,
+   "approach_roads_3plus_exits": 36,
+   "exit_cls": {
+    "left": 46,
+    "straight": 56,
+    "right": 54
+   },
+   "connectors_dropped": {},
+   "choice_lanes_free_ge": {
+    "20": 85,
+    "30": 80,
+    "45": 61,
+    "60": 55,
+    "80": 47
+   },
+   "held_b2d_any": {
+    "junctions": 6,
+    "train_junctions": 19,
+    "train_approach_roads": 37,
+    "train_roads_3plus": 16,
+    "train_polylines": 90
+   },
+   "held_img_test": {
+    "junctions": 1,
+    "train_junctions": 24,
+    "train_approach_roads": 56,
+    "train_roads_3plus": 32,
+    "train_polylines": 144
+   },
+   "held_img_test_dev": {
+    "junctions": 4,
+    "train_junctions": 21,
+    "train_approach_roads": 45,
+    "train_roads_3plus": 24,
+    "train_polylines": 114
+   },
+   "held_d95": {
+    "junctions": 1,
+    "train_junctions": 24,
+    "train_approach_roads": 56,
+    "train_roads_3plus": 32,
+    "train_polylines": 144
+   }
+  },
+  "Town05": {
+   "junctions": 21,
+   "junctions_with_connectors": 21,
+   "junctions_with_choice": 21,
+   "junction_distinct_exits": {
+    "3": 8,
+    "4": 13
+   },
+   "approach_roads": 76,
+   "approach_road_exits": {
+    "2": 20,
+    "3": 52,
+    "<2": 4
+   },
+   "approach_lanes": 150,
+   "approach_lane_legal_exits": {
+    "2": 116,
+    "3": 1,
+    "<2": 33
+   },
+   "lane_exit_polylines": 268,
+   "road_exit_polylines": 200,
+   "road_exit_polylines_choice": 196,
+   "approach_roads_3plus_exits": 52,
+   "exit_cls": {
+    "straight": 66,
+    "right": 66,
+    "left": 64
+   },
+   "connectors_dropped": {},
+   "choice_lanes_free_ge": {
+    "20": 142,
+    "30": 130,
+    "45": 106,
+    "60": 70,
+    "80": 34
+   },
+   "held_b2d_any": {
+    "junctions": 5,
+    "train_junctions": 16,
+    "train_approach_roads": 53,
+    "train_roads_3plus": 36,
+    "train_polylines": 142
+   },
+   "held_img_test": {
+    "junctions": 0,
+    "train_junctions": 21,
+    "train_approach_roads": 72,
+    "train_roads_3plus": 52,
+    "train_polylines": 196
+   },
+   "held_img_test_dev": {
+    "junctions": 3,
+    "train_junctions": 18,
+    "train_approach_roads": 61,
+    "train_roads_3plus": 44,
+    "train_polylines": 166
+   },
+   "held_d95": {
+    "junctions": 0,
+    "train_junctions": 21,
+    "train_approach_roads": 72,
+    "train_roads_3plus": 52,
+    "train_polylines": 196
+   }
+  },
+  "Town06": {
+   "junctions": 23,
+   "junctions_with_connectors": 23,
+   "junctions_with_choice": 12,
+   "junction_distinct_exits": {
+    "2": 10,
+    "3": 3,
+    "4": 1,
+    "<2": 9
+   },
+   "approach_roads": 42,
+   "approach_road_exits": {
+    "2": 17,
+    "<2": 25
+   },
+   "approach_lanes": 146,
+   "approach_lane_legal_exits": {
+    "2": 9,
+    "<2": 137
+   },
+   "lane_exit_polylines": 155,
+   "road_exit_polylines": 59,
+   "road_exit_polylines_choice": 34,
+   "approach_roads_3plus_exits": 0,
+   "exit_cls": {
+    "left": 8,
+    "straight": 18,
+    "right": 8
+   },
+   "connectors_dropped": {},
+   "choice_lanes_free_ge": {
+    "20": 70,
+    "30": 70,
+    "45": 65,
+    "60": 50,
+    "80": 41
+   },
+   "held_b2d_any": {
+    "junctions": 3,
+    "train_junctions": 11,
+    "train_approach_roads": 16,
+    "train_roads_3plus": 0,
+    "train_polylines": 32
+   },
+   "held_img_test": {
+    "junctions": 0,
+    "train_junctions": 12,
+    "train_approach_roads": 17,
+    "train_roads_3plus": 0,
+    "train_polylines": 34
+   },
+   "held_img_test_dev": {
+    "junctions": 0,
+    "train_junctions": 12,
+    "train_approach_roads": 17,
+    "train_roads_3plus": 0,
+    "train_polylines": 34
+   },
+   "held_d95": {
+    "junctions": 0,
+    "train_junctions": 12,
+    "train_approach_roads": 17,
+    "train_roads_3plus": 0,
+    "train_polylines": 34
+   }
+  },
+  "Town07": {
+   "junctions": 31,
+   "junctions_with_connectors": 31,
+   "junctions_with_choice": 22,
+   "junction_distinct_exits": {
+    "2": 9,
+    "3": 19,
+    "4": 3
+   },
+   "approach_roads": 87,
+   "approach_road_exits": {
+    "2": 55,
+    "3": 12,
+    "<2": 20
+   },
+   "approach_lanes": 88,
+   "approach_lane_legal_exits": {
+    "2": 56,
+    "3": 11,
+    "<2": 21
+   },
+   "lane_exit_polylines": 166,
+   "road_exit_polylines": 166,
+   "road_exit_polylines_choice": 146,
+   "approach_roads_3plus_exits": 12,
+   "exit_cls": {
+    "left": 51,
+    "straight": 42,
+    "right": 53
+   },
+   "connectors_dropped": {},
+   "choice_lanes_free_ge": {
+    "20": 54,
+    "30": 49,
+    "45": 31,
+    "60": 17,
+    "80": 8
+   },
+   "held_b2d_any": {
+    "junctions": 3,
+    "train_junctions": 19,
+    "train_approach_roads": 56,
+    "train_roads_3plus": 4,
+    "train_polylines": 116
+   },
+   "held_img_test": {
+    "junctions": 3,
+    "train_junctions": 19,
+    "train_approach_roads": 56,
+    "train_roads_3plus": 4,
+    "train_polylines": 116
+   },
+   "held_img_test_dev": {
+    "junctions": 3,
+    "train_junctions": 19,
+    "train_approach_roads": 56,
+    "train_roads_3plus": 4,
+    "train_polylines": 116
+   },
+   "held_d95": {
+    "junctions": 0,
+    "train_junctions": 22,
+    "train_approach_roads": 67,
+    "train_roads_3plus": 12,
+    "train_polylines": 146
+   }
+  },
+  "Town10HD": {
+   "junctions": 9,
+   "junctions_with_connectors": 9,
+   "junctions_with_choice": 9,
+   "junction_distinct_exits": {
+    "3": 8,
+    "4": 1
+   },
+   "approach_roads": 28,
+   "approach_road_exits": {
+    "2": 16,
+    "3": 4,
+    "<2": 8
+   },
+   "approach_lanes": 50,
+   "approach_lane_legal_exits": {
+    "2": 21,
+    "<2": 29
+   },
+   "lane_exit_polylines": 71,
+   "road_exit_polylines": 52,
+   "road_exit_polylines_choice": 44,
+   "approach_roads_3plus_exits": 4,
+   "exit_cls": {
+    "straight": 16,
+    "right": 16,
+    "left": 12
+   },
+   "connectors_dropped": {},
+   "choice_lanes_free_ge": {
+    "20": 30,
+    "30": 23,
+    "45": 17,
+    "60": 12,
+    "80": 12
+   },
+   "held_b2d_any": {
+    "junctions": 3,
+    "train_junctions": 6,
+    "train_approach_roads": 12,
+    "train_roads_3plus": 0,
+    "train_polylines": 24
+   },
+   "held_img_test": {
+    "junctions": 2,
+    "train_junctions": 7,
+    "train_approach_roads": 13,
+    "train_roads_3plus": 0,
+    "train_polylines": 26
+   },
+   "held_img_test_dev": {
+    "junctions": 2,
+    "train_junctions": 7,
+    "train_approach_roads": 13,
+    "train_roads_3plus": 0,
+    "train_polylines": 26
+   },
+   "held_d95": {
+    "junctions": 1,
+    "train_junctions": 8,
+    "train_approach_roads": 16,
+    "train_roads_3plus": 0,
+    "train_polylines": 32
+   }
+  },
+  "Town11": {
+   "junctions": 174,
+   "junctions_with_connectors": 174,
+   "junctions_with_choice": 173,
+   "junction_distinct_exits": {
+    "2": 2,
+    "3": 114,
+    "4": 57,
+    "5+": 1
+   },
+   "approach_roads": 580,
+   "approach_road_exits": {
+    "2": 344,
+    "3": 231,
+    "<2": 5
+   },
+   "approach_lanes": 580,
+   "approach_lane_legal_exits": {
+    "2": 344,
+    "3": 231,
+    "<2": 5
+   },
+   "lane_exit_polylines": 1386,
+   "road_exit_polylines": 1386,
+   "road_exit_polylines_choice": 1381,
+   "approach_roads_3plus_exits": 231,
+   "exit_cls": {
+    "left": 460,
+    "straight": 460,
+    "right": 461
+   },
+   "connectors_dropped": {
+    "no incoming / outgoing lane": 4
+   },
+   "choice_lanes_free_ge": {
+    "20": 575,
+    "30": 573,
+    "45": 573,
+    "60": 571,
+    "80": 571
+   },
+   "held_b2d_any": {
+    "junctions": 7,
+    "train_junctions": 166,
+    "train_approach_roads": 549,
+    "train_roads_3plus": 211,
+    "train_polylines": 1309
+   },
+   "held_img_test": {
+    "junctions": 4,
+    "train_junctions": 169,
+    "train_approach_roads": 560,
+    "train_roads_3plus": 219,
+    "train_polylines": 1339
+   },
+   "held_img_test_dev": {
+    "junctions": 5,
+    "train_junctions": 168,
+    "train_approach_roads": 556,
+    "train_roads_3plus": 215,
+    "train_polylines": 1327
+   },
+   "held_d95": {
+    "junctions": 1,
+    "train_junctions": 172,
+    "train_approach_roads": 571,
+    "train_roads_3plus": 227,
+    "train_polylines": 1369
+   }
+  },
+  "Town12": {
+   "junctions": 628,
+   "junctions_with_connectors": 628,
+   "junctions_with_choice": 591,
+   "junction_distinct_exits": {
+    "2": 80,
+    "3": 298,
+    "4": 229,
+    "<2": 21
+   },
+   "approach_roads": 1992,
+   "approach_road_exits": {
+    "2": 856,
+    "3": 887,
+    "<2": 249
+   },
+   "approach_lanes": 2473,
+   "approach_lane_legal_exits": {
+    "2": 1211,
+    "3": 699,
+    "<2": 563
+   },
+   "lane_exit_polylines": 5082,
+   "road_exit_polylines": 4622,
+   "road_exit_polylines_choice": 4373,
+   "approach_roads_3plus_exits": 887,
+   "exit_cls": {
+    "straight": 1526,
+    "left": 1375,
+    "right": 1468,
+    "uturn": 4
+   },
+   "connectors_dropped": {},
+   "choice_lanes_free_ge": {
+    "20": 2109,
+    "30": 2097,
+    "45": 2055,
+    "60": 2032,
+    "80": 1966
+   },
+   "held_b2d_any": {
+    "junctions": 101,
+    "train_junctions": 497,
+    "train_approach_roads": 1398,
+    "train_roads_3plus": 561,
+    "train_polylines": 3357
+   },
+   "held_img_test": {
+    "junctions": 40,
+    "train_junctions": 551,
+    "train_approach_roads": 1585,
+    "train_roads_3plus": 733,
+    "train_polylines": 3903
+   },
+   "held_img_test_dev": {
+    "junctions": 43,
+    "train_junctions": 548,
+    "train_approach_roads": 1573,
+    "train_roads_3plus": 721,
+    "train_polylines": 3867
+   },
+   "held_d95": {
+    "junctions": 8,
+    "train_junctions": 583,
+    "train_approach_roads": 1711,
+    "train_roads_3plus": 855,
+    "train_polylines": 4277
+   }
+  },
+  "Town13": {
+   "junctions": 774,
+   "junctions_with_connectors": 774,
+   "junctions_with_choice": 743,
+   "junction_distinct_exits": {
+    "2": 58,
+    "3": 437,
+    "4": 259,
+    "<2": 20
+   },
+   "approach_roads": 2484,
+   "approach_road_exits": {
+    "2": 1233,
+    "3": 994,
+    "<2": 257
+   },
+   "approach_lanes": 2864,
+   "approach_lane_legal_exits": {
+    "2": 1257,
+    "3": 966,
+    "<2": 641
+   },
+   "lane_exit_polylines": 6053,
+   "road_exit_polylines": 5705,
+   "road_exit_polylines_choice": 5448,
+   "approach_roads_3plus_exits": 994,
+   "exit_cls": {
+    "straight": 1888,
+    "right": 1830,
+    "left": 1728,
+    "uturn": 2
+   },
+   "connectors_dropped": {
+    "no incoming / outgoing lane": 2
+   },
+   "choice_lanes_free_ge": {
+    "20": 2508,
+    "30": 2493,
+    "45": 2490,
+    "60": 2462,
+    "80": 2258
+   },
+   "held_b2d_any": {
+    "junctions": 33,
+    "train_junctions": 716,
+    "train_approach_roads": 2133,
+    "train_roads_3plus": 906,
+    "train_polylines": 5172
+   },
+   "held_img_test": {
+    "junctions": 4,
+    "train_junctions": 739,
+    "train_approach_roads": 2211,
+    "train_roads_3plus": 978,
+    "train_polylines": 5400
+   },
+   "held_img_test_dev": {
+    "junctions": 7,
+    "train_junctions": 736,
+    "train_approach_roads": 2199,
+    "train_roads_3plus": 966,
+    "train_polylines": 5364
+   },
+   "held_d95": {
+    "junctions": 1,
+    "train_junctions": 743,
+    "train_approach_roads": 2227,
+    "train_roads_3plus": 994,
+    "train_polylines": 5448
+   }
+  },
+  "Town15": {
+   "junctions": 99,
+   "junctions_with_connectors": 99,
+   "junctions_with_choice": 73,
+   "junction_distinct_exits": {
+    "2": 60,
+    "3": 19,
+    "4": 2,
+    "<2": 18
+   },
+   "approach_roads": 204,
+   "approach_road_exits": {
+    "2": 98,
+    "3": 8,
+    "<2": 98
+   },
+   "approach_lanes": 272,
+   "approach_lane_legal_exits": {
+    "2": 119,
+    "<2": 153
+   },
+   "lane_exit_polylines": 391,
+   "road_exit_polylines": 318,
+   "road_exit_polylines_choice": 220,
+   "approach_roads_3plus_exits": 8,
+   "exit_cls": {
+    "left": 83,
+    "right": 86,
+    "uturn": 2,
+    "straight": 49
+   },
+   "connectors_dropped": {},
+   "choice_lanes_free_ge": {
+    "20": 84,
+    "30": 75,
+    "45": 71,
+    "60": 58,
+    "80": 55
+   },
+   "held_b2d_any": {
+    "junctions": 3,
+    "train_junctions": 70,
+    "train_approach_roads": 95,
+    "train_roads_3plus": 0,
+    "train_polylines": 190
+   },
+   "held_img_test": {
+    "junctions": 1,
+    "train_junctions": 72,
+    "train_approach_roads": 102,
+    "train_roads_3plus": 4,
+    "train_polylines": 208
+   },
+   "held_img_test_dev": {
+    "junctions": 2,
+    "train_junctions": 71,
+    "train_approach_roads": 98,
+    "train_roads_3plus": 0,
+    "train_polylines": 196
+   },
+   "held_d95": {
+    "junctions": 1,
+    "train_junctions": 72,
+    "train_approach_roads": 102,
+    "train_roads_3plus": 4,
+    "train_polylines": 208
+   }
+  }
+ },
+ "total": {
+  "approach_lane_legal_exits.2": 3264,
+  "approach_lane_legal_exits.3": 1958,
+  "approach_lane_legal_exits.4+": 2,
+  "approach_lane_legal_exits.<2": 1758,
+  "approach_lanes": 6982,
+  "approach_road_exits.2": 2754,
+  "approach_road_exits.3": 2244,
+  "approach_road_exits.4": 4,
+  "approach_road_exits.<2": 727,
+  "approach_roads": 5729,
+  "approach_roads_3plus_exits": 2248,
+  "choice_lanes_free_ge.20": 5785,
+  "choice_lanes_free_ge.30": 5713,
+  "choice_lanes_free_ge.45": 5543,
+  "choice_lanes_free_ge.60": 5381,
+  "choice_lanes_free_ge.80": 5038,
+  "connectors_dropped.no incoming / outgoing lane": 6,
+  "exit_cls.left": 3909,
+  "exit_cls.right": 4131,
+  "exit_cls.straight": 4206,
+  "exit_cls.uturn": 10,
+  "held_b2d_any.junctions": 172,
+  "held_b2d_any.train_approach_roads": 4439,
+  "held_b2d_any.train_junctions": 1557,
+  "held_b2d_any.train_polylines": 10628,
+  "held_b2d_any.train_roads_3plus": 1746,
+  "held_d95.junctions": 14,
+  "held_d95.train_approach_roads": 4951,
+  "held_d95.train_junctions": 1701,
+  "held_d95.train_polylines": 12106,
+  "held_d95.train_roads_3plus": 2200,
+  "held_img_test.junctions": 58,
+  "held_img_test.train_approach_roads": 4778,
+  "held_img_test.train_junctions": 1656,
+  "held_img_test.train_polylines": 11606,
+  "held_img_test.train_roads_3plus": 2046,
+  "held_img_test_dev.junctions": 72,
+  "held_img_test_dev.train_approach_roads": 4724,
+  "held_img_test_dev.train_junctions": 1642,
+  "held_img_test_dev.train_polylines": 11450,
+  "held_img_test_dev.train_roads_3plus": 1998,
+  "junction_distinct_exits.2": 233,
+  "junction_distinct_exits.3": 955,
+  "junction_distinct_exits.4": 579,
+  "junction_distinct_exits.5+": 2,
+  "junction_distinct_exits.<2": 68,
+  "junctions": 1837,
+  "junctions_with_choice": 1714,
+  "junctions_with_connectors": 1837,
+  "lane_exit_polylines": 14168,
+  "road_exit_polylines": 12983,
+  "road_exit_polylines_choice": 12256
+ },
+ "holdout_junctions": {
+  "b2d_any": 172,
+  "img_test": 58,
+  "img_test_dev": 72,
+  "d95": 14
+ }
+}

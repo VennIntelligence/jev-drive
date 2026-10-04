@@ -126,6 +126,8 @@ def fig(a):
     fig.tight_layout()
     dst = OUT / "carla_pilot.png"         # copied to experiments/op_route_cmd/figs/ on the Mac
     fig.savefig(dst, dpi=90)
+    from PIL import Image
+    Image.open(dst).convert("RGB").quantize(96).save(dst, optimize=True)
     json.dump(rows, open(OUT / "pilot_samples.json", "w"), indent=0)
     print(dst, os.path.getsize(dst) // 1024, "KB")
 
