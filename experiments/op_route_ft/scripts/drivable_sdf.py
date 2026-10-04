@@ -146,7 +146,7 @@ def main():
         out.parent.mkdir(parents=True, exist_ok=True)
         np.savez(out, id=ids[:n], sdf=sdf, x0=X0, y0=Y0, res=RES, ok=ok, logged_inside=inside, min_sdf_logged=mn, pose=pose,
                  layers=np.array(LAYERS), axes="sdf[i, j]: i = x forward (H), j = y left (W); cell centre x0+(i+.5)res")
-        run.summary.update(n=n, ok=int(ok.sum()), logged_inside=float(inside.sum() / max(ok.sum(), 1)), wall_s=wall, fail_examples=bad, out=str(out))
+        run.summary.update(n=n, ok=int(ok.sum()), logged_inside=float(inside.sum() / max(ok.sum(), 1)), compute_s=wall, fail_examples=bad, out=str(out))
         run.info(f"ok {ok.sum()}/{n}, logged_inside {inside.sum() / max(ok.sum(), 1):.4f}, {wall:.0f} s, fails {bad}")
 
 
