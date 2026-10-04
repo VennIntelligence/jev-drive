@@ -29,7 +29,7 @@ def collect(cand, mode, force):
     ks = both if have_ref else [k for k in want if k in me]
     tol = C.ds_tol(len(want))
     rows = []
-    v = sum(me[k]["DS"] for k in ks) / max(len(ks), 1)
+    v = sum(me[k]["DS"] for k in ks) / len(ks) if ks else None
     d, ci = C.paired_ci([me[k]["DS"] for k in both], [ref[k]["DS"] for k in both], [k[1] for k in both]) if have_ref else (None, None)
     rv = v - d if d is not None else None
     rows.append(G.row("ds", "DS mean (paired over seed x route)", v, rv, "delta >= -%.1f (no drop beyond decision-38 noise)" % tol,
@@ -37,7 +37,7 @@ def collect(cand, mode, force):
     for rid, metric, key in (("rc", "RC mean", "RC"), ("collisions", "collisions (sum)", "collisions"), ("red_light", "red lights (sum)", "red_light"),
                              ("completed", "routes completed", None)):
         f = (lambda r: r["status"] == "Completed") if key is None else (lambda r, key=key: r[key])
-        agg = (lambda d: sum(f(d[k]) for k in ks) / max(len(ks), 1)) if rid == "rc" else (lambda d: sum(f(d[k]) for k in ks))
+        agg = (lambda d: sum(f(d[k]) for k in ks) / len(ks) if ks else None) if rid == "rc" else (lambda d: sum(f(d[k]) for k in ks) if ks else None)
         rows.append(G.row(rid, metric, agg(me), agg(ref) if have_ref else None, "reported", None))
     missing = [k for k in want if k not in me]
     prov = dict(routes=C.DS_ROUTES, seeds=list(C.DS_SEEDS[mode]), arm="op_arb.sh spec (zones on, desire on, open-loop camera)", tol=tol,
