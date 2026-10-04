@@ -15,6 +15,9 @@ Readouts (rule: no drop = candidate paired value >= shipped):
               decision 110's set: stage 1 231 / 450, stage 2 66 %); mean per-token EPDMS (stage-2 tokens unweighted, as
               decision 110), stages pooled for the rule, each stage as a diagnostic; CI clustered by mapping group.
 Work files: $DATA_DIR/runs/op_guard/<candidate>/nav/navhard/ (mode-independent). --force redoes this candidate only.
+Cold runtime (2026-10-05, one RTX 6000D card, 25 cores, 4 rollout shards): subset 11.3 min (it_dw3-s0: rollout 7.3, harness 3.8)
+to 14.9 min (shipped, card shared with a training job: rollout 10.9); full 20.6 min (it_dw3-s0: rollout 8.4, official script on
+12 cores 12.0 || harness on 13). Cold rollouts were bit-identical to the legacy op_lb plan files (all 5 912 tokens, both candidates).
 """
 import sys
 import threading

@@ -6,8 +6,15 @@
 Modes: `subset` = jevdrive.data.splits navsim/op-guard-navtest-sub (log x driving-command x shipped-score stratified draw,
 nav_subset.py; tracking study in results/navtest_subset_study_*.md), `full` = all 12 146 navtest tokens.
 Rule: candidate PDMS >= shipped PDMS - 0.3 on the paired mean (same tokens); the CI is the log-cluster paired bootstrap
-(jevdrive.stats.paired, groups = log). Chain and cache rules: navlib.py. Resumable: every step skips what exists; --force
-redoes this candidate's rollout and scoring (never shipped's, unless the candidate is shipped).
+(jevdrive.stats.paired, groups = log). Chain and cache rules: navlib.py.
+Subset choice: 0.33 of navtest = the largest fraction whose rollout fits the ~35 min nav budget next to navhard; on the 26 arms
+already scored in full whose delta is within 1.5 PDMS of shipped, the frozen subset's delta is off the full delta by 0.06 mean,
+0.18 max (results/navtest_subset_freeze.json; 50-seed study: results/navtest_subset_study_log-cmd-sbin.md).
+Cold runtime (2026-10-05, one RTX 6000D card, 25 cores, 4 rollout shards): subset 6.5 min (it_dw3-s0) to 9.4 min (shipped, card
+shared with a training job; includes the one-time 26 s subset frame copy), of which ~1 min export + scoring; full 19.5 min
+(rollout 17.0, export 0.5, scoring 2.0). The reference (shipped) is computed once and cached.
+Resumable: every step skips what exists; --force redoes this candidate's rollout and scoring (never shipped's, unless the
+candidate is shipped).
 """
 import sys
 import time

@@ -48,7 +48,10 @@ BOARDS = {
     "navhard": dict(src="lb_navhard", data="g_navhard", ver="v2", split="navhard_two_stage"),
 }
 NATIVE = dict(frames="gimm", backend="trt", preroll=0.0, schedule="none")
-PROCS = 4                                          # op_lb rollout shards per card (measured: see the line docstrings)
+# op_lb rollout shards per card. 2026-10-05 pilot (1200 navhard tokens, card shared with a training job at 100 % util): 4 shards
+# 9.0 tokens/s, 6 shards 12.4/s, 8 shards 13.8/s, but at 6 and 8 shards some shards were SIGKILLed (rc -9) and op_lb re-ran them
+# (net wall 223 / 253 s vs 178 s at 4); 4 never lost a shard (here and in every earlier op_lb run).
+PROCS = 4
 
 
 def say(*a):
