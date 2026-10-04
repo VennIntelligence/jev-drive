@@ -1,4 +1,4 @@
-# Low-speed lateral transfer limit (controller side): HUGSIM spins 10 -> 1, non-spin HD line fails, B2D not run
+# Low-speed lateral transfer limit (controller side): HUGSIM spins 10 -> 1, non-spin HD line fails, B2D line fails too
 
 Written 2026-10-04. Pre-registration (committed before any closed-loop run): [../plans/2026-10-04-lowspeed-ctrl-prereg.md](../plans/2026-10-04-lowspeed-ctrl-prereg.md).
 Code: `lib/lowspeed_ctrl.py` (rule), `patches/hugsim/optional/lowspeed-ctrl.patch` + tree `lowspeed` in `experiments/hugsim/archive/zs_run.py`,
@@ -17,7 +17,7 @@ Tags: **[E]** measured here, **[I]** inference or estimate.
 | 4 | **HUGSIM all 64, line (i) spins <= 2: PASS, 1 (base 10).** All 10 baseline spinners stop spinning (heading error 0-51 deg; two remain below 60 deg but near it: 5980_6180 51, 8440_8640 44, 570_770 24). Per launch event (initial / re-launch, spin = divergence within 0-12 steps of the event): base 6 / 64 and 2 / 27; rule 0 / 64 and 0 / 32; same-day base rerun 6 / 64 and 0 / 25. The one spin under the rule is scene-2800_3000-easy at step 87, not a launch; it also appears in the same-day base rerun, so it is run-to-run noise of that scene, not a rule effect. |
 | 5 | **Line (ii) non-spin HD paired CI lower bound > -0.02: FAIL.** Paired HD on the 54 baseline non-spinners: rule - base -0.028 [-0.058, -0.006] (bootstrap over scenes); same-day base rerun - base -0.005 [-0.015, +0.003] (run-to-run noise); rule - rerun -0.023 [-0.052, -0.004]. One scene carries about half of the drop: scene-3000_3200-medium-00 goes from complete (HD 0.736) to stuck at 400 steps (0.073); without it -0.016 [-0.031, -0.003] (exploratory, after seeing the result, not a pre-registered readout). Other losers: 322492347634-easy -0.21 (both arms max_steps), 124-extreme-01 -0.20 (collision at step 68 against 139), 034-easy -0.14. Route completion mean 0.349 -> 0.315; scenarios ending at max_steps 15 -> 21 (rule) / 14 (rerun). No crashes. |
 | 6 | **All 64 together** (the exam's score): HD mean 0.278 (base) / 0.274 (rerun) / 0.268 (rule); paired rule - base -0.009 [-0.054, +0.037]. The ten spinners gain on average but the rule gives back the same amount on non-spinners: scene-0013-medium 0.055 -> 1.000 and 040-easy 0.806 -> 1.000 versus 0254-extreme 0.821 -> 0.022 (fg collision at step 40), 3000_3200 above. |
-| 7 | **B2D: not run.** The pre-registered gate was "A passes, or spins <= 4 and the non-spin HD CI lower bound > -0.04". Lower bound -0.058: gate not met, so no CARLA run (the lane file and report script exist). **NAVSIM: not run**: it is open loop, a controller rule does not exist there, and the rule cannot change a navtest / navhard score. |
+| 7 | **B2D: run later the same day, see the B2D section below (line FAIL).** The pre-registered gate was "A passes, or spins <= 4 and the non-spin HD CI lower bound > -0.04"; lower bound -0.058, gate not met. B2D was run anyway on main's call, to finish evaluating the rule as a disclosed per-board trick (dated note in the prereg). **NAVSIM: not run**: it is open loop, a controller rule does not exist there, and the rule cannot change a navtest / navhard score. |
 
 ## What this says
 
@@ -33,3 +33,30 @@ Tags: **[E]** measured here, **[I]** inference or estimate.
 - c readouts: synthetic = constant lean in the car frame, plan speed max(v, 1), speed held, a 2 deg lean (c identical at 1 and 5 deg for HUGSIM); logged = regression through the origin of the next-step heading change on the plan's 1 s direction, |direction| < 15 deg, cluster bootstrap over runs; B2D logged c uses the openpilot plan's 1 s point and the truth yaw 5 ticks later, `lat == op`, non-warm, non-zone steps only. The B2D synthetic plant has no steering lag and uses the nominal steering angle (no Ackermann correction), so it is an upper bound; the logged values are lower by 3-6x.
 - The offline virtual loops (constant and time-varying gain) did not reproduce the spin runaway (no rule setting changed a sign of z robustly) and were not used to choose parameters; tau0 comes from the c arithmetic above only.
 - The B2D filter is a first-order low-pass at 20 Hz (alpha = 0.05 / (tau + 0.05)) on the normalised steer command plus the same curvature clip; the code path is unit-checked only offline (`lowspeed_c_measure.py b2d_syn`), never in CARLA.
+
+## B2D (run 2026-10-04 on main's call although the HUGSIM gate was missed)
+
+Prereg section B ([../plans/2026-10-04-lowspeed-ctrl-prereg.md](../plans/2026-10-04-lowspeed-ctrl-prereg.md), dated note at its end). Arm `lsc` = shipped `drive` + `LOWSPEED_CTRL` (same RULE as HUGSIM: tau0 3.0 s, v0 2.5, v1 3.5, jerk 5), 19 routes x seeds 2, 3 = 38 runs, one card (card 1, lease `lsc-b2d`, released), 0 crashes, 0 missing. Baseline = vmerge2's `v2-drive-s{2,3}-q*` logs (same code path, hook inert). Smoke on route 17280 first (DS 80, same as baseline; mean |steer| below 3 m/s 0.0003 vs 0.0011, so the filter is live). Tables: `lowspeed_ctrl_b2d/` (`b2d.md`, `paired.csv`, `runs.csv`); lane `experiments/hugsim/scripts/lowspeed_b2d_lane.py`, report `lowspeed_b2d_report.py`.
+
+| paired lsc - drive (route-cluster bootstrap) | n routes | DS | RC | red light | collisions |
+|---|--:|---|---|---|---|
+| **all** | 19 | **-4.11 [-10.69, +1.05]** | -4.14 [-13.10, +0.48] | +0.03 [-0.05, +0.13] | +0.05 [0.00, +0.13] |
+| obstacle | 4 | +0.62 [0.00, +1.25] | +0.76 [0.00, +1.51] | 0 | 0 |
+| light | 6 | -7.42 [-17.27, 0.00] | 0 | +0.17 [0.00, +0.33] | +0.08 [0.00, +0.25] |
+| stop sign | 3 | 0 | 0 | 0 | 0 |
+| other | 6 | -6.00 [-23.88, +6.96] | -13.61 [-41.73, +0.89] | -0.08 [-0.25, 0.00] | +0.08 [0.00, +0.25] |
+
+Arm totals over 38 runs: DS 67.82 (drive) vs 63.72 (lsc), RC 84.71 vs 80.57, red light 12 vs 13, stop sign 2 vs 2, collisions 10 vs 12 (vehicle 6 vs 5, layout 4 vs 7, pedestrian 0 vs 0), outside route lanes 3 vs 2, blocked 1 vs 1, mean speed 2.22 vs 2.00 m/s. Per-route seed noise of DS: sd mean 3.1 (drive) / 3.3 (lsc).
+
+**Line (DS point >= -2 and CI upper > 0): FAIL on the point estimate** (-4.11 < -2); the CI upper bound (+1.05) does pass, so the interval does not exclude zero but the point estimate is beyond the pre-registered tolerance. Starts are not the issue: no launch spins occurred in either arm (0 / 0 on B2D, as the prereg anticipated), so the rule has nothing to buy on B2D and only costs.
+
+Where the cost sits (per-route DS change, seed 2 / seed 3; post hoc readout):
+- **37969** (MergerIntoSlowTrafficV2, Town12-type merge around slow traffic): 58.2 / 58.8 -> 11.0 / 10.5. Both seeds end with a layout collision at ~16-17% route progress ("Failed - TickRuntime"), where baseline completes the route at 100% RC with a vehicle collision penalty. This one route carries -2.5 of the -4.11; without it the mean is about -1.7 (post hoc).
+- 15612: 70 / 100 -> 40.9 / 70 (-29, -30); 15483 seed 2: 100 -> 70 (-30). Both are light-class routes (red light +0.17 per route).
+- Gains: 27870 seed 2 70 -> 100 (+30), 19324 seed 3 28.8 -> 31.8, 24497 +1.0; 9196 -17.1 on s3 +1.5 vs s2 -8 (mixed). Fourteen of 19 routes are unchanged to within 0.1.
+- The cost class matches the HUGSIM one: legitimate low-speed steering (merge around slow traffic, junction turns on red-light routes) is slowed by the filter.
+
+**Realised c on the B2D logs** (same readout as `lowspeed_c_measure.py b2d_log`, `lat == op` non-warm non-zone steps, run-cluster bootstrap; magnitude, sign flipped by CARLA yaw convention): v < 1 m/s drive 0.014 [0.00, 0.043] -> lsc 0.000 [-0.011, 0.011]; 1-2 m/s 0.059 [0.017, 0.097] -> 0.026 [0.004, 0.071]; 2-3 m/s 0.157 [0.081, 0.230] -> 0.034 [-0.042, 0.166]; pooled 0-3 m/s 0.071 [0.032, 0.121] -> 0.024 [-0.011, 0.066] (n steps 782 -> 700). So on B2D the rule does cut c by 2-5x (more than on HUGSIM, where the 2-3 bin barely moved), but B2D started with a c already below the HUGSIM spin regime, and the reduction bought no spin avoidance because there were none.
+
+**Verdict.** A passes (spins 10 -> 1), A line (ii) fails (-0.058 lower bound), B fails (-4.11 point). As a disclosed per-board trick the uniform low-pass is not adoptable on either board: it fixes the HUGSIM launch spin at a measurable HD cost and has no effect to fix on B2D while costing DS. The only open follow-up is the selective rule already pre-registered separately (`2026-10-04-lowspeed-ctrl-selective-prereg.md`).
+Limits: one run per arm and seed; seeds 2 and 3 only; route 37969 is a single-scenario effect (two seeds agree); the ex-37969 number and the per-route attribution are post hoc.
