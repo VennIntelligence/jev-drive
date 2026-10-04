@@ -57,7 +57,9 @@ def one(rid, mi, seed=2):
         for _ in range(5):
             prev = op_ctrl.clip_curvature(max(v[i], 0.0), prev, kd[i])
         kc[i] = prev
-    kroute = np.gradient(psiD, gd)
+    from route_poly import curvature
+    P, g = R.L.resample(np.array(json.load(open(at / "route.json"))["xy"]))
+    kroute, gd = curvature(P, 0.5, 3.0), g
     return dict(s=s, dev=dev, kd=kd, kc=kc, ks=ksteer, ka=kact, v=v, T=T, sr=gd - T["g0"], kr=kroute, near=near, a0=T["it0"], i1=T["i1"])
 
 
@@ -72,7 +74,7 @@ def main():
         rid, mi = x.split(":")
         d = one(rid, int(mi))
         T = d["T"]
-        m = (d["near"] >= d["a0"] - 80) & (d["near"] <= d["i1"] + 60) & (d["dev"] < 30)
+        m = (d["near"] >= d["a0"] - 80) & (d["near"] <= d["i1"] + 60) & (d["dev"] < 30) & (d["v"] >= 1.0)   # below 1 m/s the steer-implied / path curvature is numerically meaningless
         mr = (d["sr"] > -20) & (d["sr"] < (T["g1"] - T["g0"]) + 15)
         ax.plot(d["sr"][mr], d["kr"][mr], color="#999999", lw=3, label="route (dense centreline)")
         ax.plot(d["s"][m], d["kd"][m], color="#0072B2", lw=1.8, label="desired: head act_k")
@@ -84,16 +86,16 @@ def main():
             ax.axvline(d["s"][lv[0]], color="#CC79A7", lw=1, ls=":", label="car > 1.75 m off the route")
         ax.axvspan(0, T["g1"] - T["g0"], color="#eeeeee", zorder=0)
         ax.set_ylim(-0.25, 0.25)
-        ax.set_title("route %s turn %d: %+.0f deg, R_min %.1f m (required peak %.3f 1/m)" % (rid, int(mi), T["angle"], T["rmin"], 1 / T["rmin"]), fontsize=9)
+        ax.set_title("route %s turn %d: %+.0f deg, R_min %.1f m (1/R_min = %.3f 1/m)" % (rid, int(mi), T["angle"], T["rmin"], 1 / T["rmin"]), fontsize=9)
         ax.set_xlabel("route arc length from the turn start (m)")
         ax.set_ylabel("curvature (1/m, right +)")
         ax.grid(alpha=.3)
         kk = d["kd"][m & (d["s"] > -5) & (d["s"] < T["g1"] - T["g0"] + 5)]
         kv = d["kr"][mr & (d["sr"] > 0) & (d["sr"] < T["g1"] - T["g0"])]
         sgn = np.sign(T["angle"])
-        lines.append("- route %s (R_min %.1f m): required peak %.3f; head desired peak (in the turn window, same sign) %.3f, clipped %.3f, steer-implied %.3f, car %.3f; min speed %.1f m/s" % (
+        lines.append("- route %s (R_min %.1f m): required peak %.3f; head desired peak (in the turn window, same sign) %.3f, clipped %.3f, steer-implied %.3f, car %.3f; min speed in the window %.1f m/s" % (
             rid, T["rmin"], np.max(sgn * kv), np.max(sgn * kk) if len(kk) else np.nan, np.max(sgn * d["kc"][m & (d["s"] > -5) & (d["s"] < T["g1"] - T["g0"] + 5)]),
-            np.max(sgn * d["ks"][m & (d["s"] > -5) & (d["s"] < T["g1"] - T["g0"] + 5)]), np.max(sgn * d["ka"][m & (d["s"] > -5) & (d["s"] < T["g1"] - T["g0"] + 5)]), d["v"][m].min()))
+            np.max(sgn * d["ks"][m & (d["s"] > -5) & (d["s"] < T["g1"] - T["g0"] + 5)]), np.max(sgn * d["ka"][m & (d["s"] > -5) & (d["s"] < T["g1"] - T["g0"] + 5)]), d["v"][(d["near"] >= d["a0"] - 80) & (d["near"] <= d["i1"] + 60) & (d["dev"] < 30)].min()))
     axs.ravel()[0].legend(fontsize=7, loc="upper left")
     fig.tight_layout()
     fig.savefig(a.out, dpi=110)
