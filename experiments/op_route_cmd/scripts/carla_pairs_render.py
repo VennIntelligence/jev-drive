@@ -34,6 +34,7 @@ FOCAL = 1113.5                            # px; any value works, the model frame
 MARGIN_PX = 3
 SETTLE_MIN, SETTLE_MAX, SETTLE_EPS = 2, 60, 0.35
 LARGE = ("Town11", "Town12", "Town13", "Town15")
+LAGCHECK = False
 RIG3 = P5.RIG                              # the P4 three-camera rig (front, front_left, front_right), for --compare3
 
 
@@ -214,6 +215,13 @@ class Rig:
         self.world.set_weather(getattr(self.carla.WeatherParameters, name))
 
 
+def rig_next_preview(rig, h, k):
+    """Render the next history pose (only used by --lagcheck, which re-renders it again right after)."""
+    rig.set_pose(h["x"][k], h["y"][k], h["z"][k], h["yaw"][k], h["pitch"][k])
+    rig.grab()
+    return rig.grab()[0]
+
+
 def small(im):
     return cv2.resize(im[:, :, :3], (64, 40), interpolation=cv2.INTER_AREA).astype(np.float32)
 
@@ -246,6 +254,11 @@ def render_pose(rig, maps, pose, stats):
             rig.set_pose(h["x"][k], h["y"][k], h["z"][k], h["yaw"][k], h["pitch"][k])
             imgs = rig.grab()
         frames.append(np.stack([pack(model_frame(imgs, maps[m])) for m in ("road", "wide")]))
+        if LAGCHECK:                              # a render that lags the teleport by a tick would differ from the next, unmoved one
+            nxt = rig.grab()
+            stats.setdefault("lag_diff", []).append(round(float(np.abs(small(imgs[0]) - small(nxt[0])).mean()), 3))
+            if j + 1 < len(order):
+                stats.setdefault("move_diff", []).append(round(float(np.abs(small(imgs[0]) - small(rig_next_preview(rig, h, order[j + 1]))).mean()), 3))
     if stopped:
         frames = frames * n
     t1 = time.perf_counter()
@@ -285,14 +298,17 @@ def main():
     ap.add_argument("--hero", action="store_true", help="spawn a hero vehicle 60 m behind the camera (Large Map tile streaming)")
     ap.add_argument("--compare3", type=int, default=0, help="N poses: also render the 3-camera rig and print the model-frame difference")
     ap.add_argument("--towns", default="")
+    ap.add_argument("--lagcheck", action="store_true", help="after every history frame tick once more without moving and record the difference")
     a = ap.parse_args()
+    global LAGCHECK
+    LAGCHECK = a.lagcheck
     out = Path(a.out)
     (out / "frames").mkdir(parents=True, exist_ok=True)
     k, n = map(int, a.shard.split("/"))
     poses = pickle.load(open(a.plan, "rb"))
     if a.towns:
         poses = [p for p in poses if p["town"] in a.towns.split(",")]
-    poses = [p for i, p in enumerate(poses) if i % n == k]
+    poses = poses[k * len(poses) // n:(k + 1) * len(poses) // n]      # contiguous: the plan is ordered by a spatial tour
     if a.limit:
         poses = poses[: a.limit]
     todo = [p for p in poses if not (out / "frames" / p["town"] / (p["id"] + ".npz")).exists()]

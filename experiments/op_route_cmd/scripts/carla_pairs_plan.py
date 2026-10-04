@@ -254,6 +254,26 @@ def allocate(cands, n_roads, p3):
     return pick
 
 
+def tour(poses):
+    """Order by town, then a greedy nearest-neighbour tour over the junctions (poses of one junction stay together): teleports between
+    consecutive poses are short, which keeps Large-Map tile streaming cheap."""
+    out = []
+    for town in sorted({p["town"] for p in poses}):
+        J = defaultdict(list)
+        for p in poses:
+            if p["town"] == town:
+                J[p["junction"]].append(p)
+        cen = {j: np.array([ps[0]["hist"]["x"][-1], ps[0]["hist"]["y"][-1]]) for j, ps in J.items()}
+        cur = min(cen, key=lambda j: tuple(cen[j]))
+        todo = set(cen)
+        while todo:
+            todo.discard(cur)
+            out += sorted(J[cur], key=lambda p: p["id"])
+            if todo:
+                cur = min(todo, key=lambda j: np.linalg.norm(cen[j] - cen[cur]))
+    return out
+
+
 def main():
     from jevdrive.run import Run
     ap = argparse.ArgumentParser()
@@ -299,6 +319,7 @@ def main():
                         continue
                     poses.append(p)
             run.info("%s: %d poses so far, dropped %s", town, len(poses), dict(drop))
+        poses = tour(poses)
         pickle.dump(poses, open(run.path("poses.pkl"), "wb"))
         rows = [r for p in poses for r in p["exits"]]
         S = dict(poses=len(poses), rows=len(rows), dropped=dict(drop), dev_poses=sum(p["split"] == "dev" for p in poses),
