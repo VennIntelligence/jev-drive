@@ -77,7 +77,7 @@ def junction(arm):
             if p is None or p.get("warm") or p.get("lat_why") != "zone" or tk[i]["v"] < 1.0:
                 continue
             dt = tk[i + 5]["t"] - tk[i]["t"]
-            x.append(-(yaw[i + 5] - yaw[i]) / max(tk[i]["v"] * dt, 1e-6))        # CARLA yaw convention is flipped against the right-positive act_k
+            x.append((yaw[i + 5] - yaw[i]) / max(tk[i]["v"] * dt, 1e-6))          # CARLA yaw grows to the right, like the right-positive act_k
             y.append(p["act_k"]); vv.append(tk[i]["v"])
     x, y, vv = map(np.array, (x, y, vv))
     t = np.abs(x) > 0.03
