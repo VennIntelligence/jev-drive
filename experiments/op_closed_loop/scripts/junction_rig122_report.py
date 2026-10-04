@@ -85,6 +85,51 @@ def collisions(rec, tk, tr, near, dev, wins):
     return out
 
 
+def route_geometry(att, rid, lab):
+    """Dense route geometry and the labelled turns of a route (from any attempt's route.json)."""
+    D, gd, psiD, turns = R.turn_geometry(np.array(json.load(open(att / "route.json"))["xy"]))
+    return D, gd, psiD, [T for T in turns if (rid, T["mi"]) in lab and abs(float(lab[(rid, T["mi"])]["angle"]) - T["angle"]) < 5.0]
+
+
+def score_attempt(rid, k, att, geom, lab):
+    """Per-turn rows, collisions, the official route score and the turn trajectories of one attempt dir (None if unscored).
+    Also used by experiments/op_guard/scripts/line_b2d_turns.py."""
+    if att is None:
+        return None
+    D, gd, psiD, turns = geom
+    rec = R.official(att)
+    tk = [t for t in rows_of(att / "ticks.jsonl") if "truth" in t]
+    if rec is None or not tk:
+        return None
+    rows, traj = [], {}
+    tr, yaw = np.array([t["truth"][:2] for t in tk]), np.array([t["truth"][2] for t in tk])
+    tt = np.array([t["t"] for t in tk])
+    pl = [p for p in rows_of(att / "plans.jsonl") if not p.get("warm") and "act_k" in p]
+    pt, pk = np.array([p["t"] for p in pl]), np.array([p["act_k"] for p in pl])
+    near, dev = R.project(tr, D)
+    ev = {T["mi"]: R.eval_turn(tr, yaw, D, psiD, T) for T in turns}
+    wins = {mi: (e["span"][0], min(e["span"][1], e["span"][0] + 300)) for mi, e in ev.items() if e["entered"]}   # 300 ticks = 15 s after the entry: a lost car's span runs to the end of the run
+    cl = collisions(rec, tk, tr, near, dev, wins)
+    cols = [dict(route=rid, arm=k, **{x: y for x, y in c.items() if x != "tick"}) for c in cl]
+    for T in turns:
+        e = ev[T["mi"]]
+        L = lab[(rid, T["mi"])]
+        if e["entered"]:
+            s0, s1 = e["span"]
+            sel = (pt >= tt[s0]) & (pt <= tt[s1])
+            hp = float(np.abs(pk[sel]).max()) if sel.any() else np.nan
+            vmin = float(np.min([t["v"] for t in tk[s0:s1 + 1]]))
+        else:
+            hp, vmin = np.nan, np.nan
+        inwin = [c for c in cl if c["turn"] == T["mi"]]
+        traj[T["mi"]] = (tr, e)
+        rows.append(dict(route=rid, turn=T["mi"], arm=k, angle=round(T["angle"], 1), rmin=round(T["rmin"], 1), need=round(1 / T["rmin"], 3), forced=int(L["forced"]),
+                         kind=L["kind"], n_exits=int(L["n_exits"]), entered=e["entered"], branch=e["branch"], peak=round(e["peak"], 2), head_pk=round(hp, 3),
+                         vmin=round(vmin, 1), coll=sum(c["kind"].startswith("hit") for c in inwin), red=sum(c["kind"] == "red light" for c in inwin),
+                         leaves=int(e["peak"] > HALF) if e["entered"] else np.nan))
+    return dict(rows=rows, cols=cols, traj=traj, rr=(rec["scores"]["score_composed"], rec["scores"]["score_route"], rec["status"]))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=2)
@@ -101,43 +146,15 @@ def main():
         ref = next((v for v in att.values() if v is not None and (v / "route.json").exists()), None)
         if ref is None:
             continue
-        D, gd, psiD, turns = R.turn_geometry(np.array(json.load(open(ref / "route.json"))["xy"]))
-        turns = [T for T in turns if (rid, T["mi"]) in lab and abs(float(lab[(rid, T["mi"])]["angle"]) - T["angle"]) < 5.0]
-        roads[rid] = (D, gd, psiD, turns)
+        roads[rid] = geom = route_geometry(ref, rid, lab)
         for k in ARMS:
-            if att[k] is None:
+            s = score_attempt(rid, k, att[k], geom, lab)
+            if s is None:
                 continue
-            rec = R.official(att[k])
-            tk = [t for t in rows_of(att[k] / "ticks.jsonl") if "truth" in t]
-            if rec is None or not tk:
-                continue
-            rr[(rid, k)] = (rec["scores"]["score_composed"], rec["scores"]["score_route"], rec["status"])
-            tr, yaw = np.array([t["truth"][:2] for t in tk]), np.array([t["truth"][2] for t in tk])
-            tt = np.array([t["t"] for t in tk])
-            pl = [p for p in rows_of(att[k] / "plans.jsonl") if not p.get("warm") and "act_k" in p]
-            pt, pk = np.array([p["t"] for p in pl]), np.array([p["act_k"] for p in pl])
-            near, dev = R.project(tr, D)
-            ev = {T["mi"]: R.eval_turn(tr, yaw, D, psiD, T) for T in turns}
-            wins = {mi: (e["span"][0], min(e["span"][1], e["span"][0] + 300)) for mi, e in ev.items() if e["entered"]}   # 300 ticks = 15 s after the entry: a lost car's span runs to the end of the run
-            cl = collisions(rec, tk, tr, near, dev, wins)
-            for c in cl:
-                cols.append(dict(route=rid, arm=k, **{x: y for x, y in c.items() if x != "tick"}))
-            for T in turns:
-                e = ev[T["mi"]]
-                L = lab[(rid, T["mi"])]
-                if e["entered"]:
-                    s0, s1 = e["span"]
-                    sel = (pt >= tt[s0]) & (pt <= tt[s1])
-                    hp = float(np.abs(pk[sel]).max()) if sel.any() else np.nan
-                    vmin = float(np.min([t["v"] for t in tk[s0:s1 + 1]]))
-                else:
-                    hp, vmin = np.nan, np.nan
-                inwin = [c for c in cl if c["turn"] == T["mi"]]
-                traj[(rid, T["mi"], k)] = (tr, e)
-                rows.append(dict(route=rid, turn=T["mi"], arm=k, angle=round(T["angle"], 1), rmin=round(T["rmin"], 1), need=round(1 / T["rmin"], 3), forced=int(L["forced"]),
-                                 kind=L["kind"], n_exits=int(L["n_exits"]), entered=e["entered"], branch=e["branch"], peak=round(e["peak"], 2), head_pk=round(hp, 3),
-                                 vmin=round(vmin, 1), coll=sum(c["kind"].startswith("hit") for c in inwin), red=sum(c["kind"] == "red light" for c in inwin),
-                                 leaves=int(e["peak"] > HALF) if e["entered"] else np.nan))
+            rr[(rid, k)] = s["rr"]
+            cols += s["cols"]
+            rows += s["rows"]
+            traj.update({(rid, mi, k): v for mi, v in s["traj"].items()})
     with open(out / "junction_rig122_per_turn.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
