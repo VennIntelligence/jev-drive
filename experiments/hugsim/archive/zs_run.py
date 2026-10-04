@@ -16,8 +16,8 @@ and curvature-rate limit below 3 m/s, lib/lowspeed_ctrl.py, parameters in env LO
         --socket $DATA_DIR/runs/hugsim-exam/cinque.sock --scenarios <list.txt> --workers 2 --gpu 0
 
 Interface presets (jevdrive/openpilot/interface.py HUGSIM_PRESETS, docs/openpilot-interface.md): --preset spec (the default for
-the openpilot agents cinque / lebowski: openpilot's lateral path in tree opctrl, no static warm-up, dilate clock) | spec_hold |
-opctrl_d118 | exam (legacy: --controller and --opts taken literally; every result before 2026-10-05; the default for the other
+the openpilot agents cinque / lebowski: openpilot's lateral path in tree opctrl, 5 s static warm-up, dilate clock = decision 118's
+arm) | spec_cold (no static warm-up: does not launch) | spec_hold (hold clock) | opctrl_d118 (alias of spec) | exam (legacy: --controller and --opts taken literally; every result before 2026-10-05; the default for the other
 agents). A preset sets the controller tree, OP_CTRL / OP_CTRL_LIB and the agent opts; --opts are merged on top. The agent writes
 interface.json into every run dir.
 
@@ -282,7 +282,7 @@ if __name__ == "__main__":
     r.add_argument("--out", required=True)
     r.add_argument("--agent", required=True, choices=list(AD))
     r.add_argument("--controller", default=None, choices=list(TREES), help="exam preset: default official; other presets set it")
-    r.add_argument("--preset", default=None, help="interface preset: spec | spec_hold | opctrl_d118 | exam (see the docstring)")
+    r.add_argument("--preset", default=None, help="interface preset: spec | spec_cold | spec_hold | opctrl_d118 | exam (see the docstring)")
     r.add_argument("--scenarios", required=True, help="a .txt list (paths relative to scenarios/) or one yaml")
     r.add_argument("--socket", default="")
     r.add_argument("--opts", default="{}")

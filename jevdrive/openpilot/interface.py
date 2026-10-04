@@ -98,8 +98,9 @@ DECLARED = {
         "history.rate_hz": ("LB", "4 Hz renders", "ledger s2"),
         "history.clock": ("LB", "dilate: one 0.25 s step = one 0.2 s context step, speed x1.25 in, plan times /1.25 out; "
                                 "hold: 20 Hz at face value, each render held 5 model steps", "this note"),
-        "history.warmup": ("LB", "no real history exists (the car spawns moving at 1.0 m/s): cold start, or the legacy 5 s "
-                                 "static warm-up that amplifies the launch lean (d100)", "d100, d119"),
+        "history.warmup": ("LB", "no real history exists (the car spawns moving at 1.0 m/s): 5 s static warm-up on the first frame "
+                                 "(amplifies the launch lean, d100, but the action path removes the spins, d118; a cold start "
+                                 "does not launch, unified_interface.md)", "d100, d118, unified_interface.md"),
         "lateral.source": ("LB", "legacy exam preset: iLQR tracks the plan", "d118"),
         "lateral.exec": ("LB", "legacy exam preset: iLQR (PR#57)", "d118"),
         "lateral.delay_s": ("LB", "pure delay in simulator seconds (0.25 under dilate = 0.2 model s)", "d118"),
@@ -124,7 +125,8 @@ DECLARED = {
                                            "openpilot capability; every report row carries the zones-off reading", "d121, d122"),
         "light.source": ("priv", "R3a tl_stop is a privileged ceiling (diagnosis only); VLM arms read the light from pixels",
                          "d82, d107"),
-        "tricks": ("semi", "coast_v 2.5 (MKZ stops dead on a light brake), Privileged bypass (priv, vmerge2)", "d74, d101"),
+        "tricks": ("semi", "coast_v 2.5 (MKZ stops dead on a light brake); spec camera at the front bumper line (x 3.8 m, ~2 m ahead "
+                           "of a windshield camera); Privileged bypass (priv, vmerge2)", "d74, d101, unified_interface.md"),
     },
 }
 
@@ -202,11 +204,14 @@ def resolve_wod(height=1.8065, long_scale=1.0, intent=False):
 
 HUGSIM_HEIGHT = {"nuscenes": 1.2, "pandaset": 1.5, "kitti360": 1.5, "waymo": 1.8}   # approximate, d108.4
 HUGSIM_PRESETS = {
-    # spec: openpilot's lateral path (action + clip_curvature + lateralDelay), no static warm-up, dilate clock, iLQR longitudinal
-    "spec": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True, "warmup_s": 0.0}),
+    # spec: openpilot's lateral path (action + clip_curvature + lateralDelay), iLQR longitudinal, dilate clock, and the 5 s static
+    # warm-up kept (declared): without it the model does not launch (cold start: 6 of 11 stuck, mean HD 0.358 vs 0.544; hold clock: 8 of
+    # 11 stuck, HD 0.049; experiments/leaderboard_audit/results/unified_interface.md). = decision 118's arm.
+    "spec": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True}),
+    "spec_cold": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True, "warmup_s": 0.0}),
     "spec_hold": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.2}},
                       opts={"op_ctrl": True, "warmup_s": 0.0, "op_clock": "hold"}),
-    "opctrl_d118": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True}),   # decision 118's arm
+    "opctrl_d118": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True}),   # alias of spec
     # legacy: the exam / every result before 2026-10-05; --controller and --opts are taken literally
     "exam": dict(controller=None, env={}, opts={}),
 }
@@ -262,6 +267,8 @@ def b2d_values(cfg, env=None):
         "desire-route" if cfg.get("desire", True) else "none"
     zones = drive and a.get("zones", True) and lat_op
     tricks = []
+    if float(mount[0]) > 3.0:
+        tricks.append("camera_at_bumper_x%.2f" % float(mount[0]))
     if float(a.get("coast_v", 0)) > 0:
         tricks.append("coast_v:%g" % float(a["coast_v"]))
     if cfg.get("pc"):
@@ -281,4 +288,7 @@ def b2d_values(cfg, env=None):
 
 # B2D spec preset: the shipped `drive` arbitration with openpilot's lateral path (clip + 0.2 s delay) and no privileged light.
 B2D_SPEC_OP_CTRL = {"delay": 0.2}
-B2D_SPEC_MOUNT = (1.779, 0.0, 1.433)        # rear-axle frame (x, y, z) of the camera pair; see DECLARED["b2d"]["rig.height_m"]
+# rear-axle frame (x, y, z) of the camera pair: 1.22 m at the front bumper line (no MKZ hood in view, outside the tinted glass;
+# chosen on the small set of unified_interface.md); the legacy 1.433 m windshield top stays in the `drive` preset (declared).
+# lib/b2d_privileged_geometry.py and lib/vm3_perception.py still assume 1.779 m: privileged / vmerge arms keep the drive preset.
+B2D_SPEC_MOUNT = (3.8, 0.0, 1.22)

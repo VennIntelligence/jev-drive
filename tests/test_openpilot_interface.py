@@ -65,7 +65,9 @@ class Hugsim(unittest.TestCase):
         v = IF.resolve_hugsim(p["opts"], p["controller"], "nuscenes", p["env"]["OP_CTRL"])
         keys = {d.key for d in IF.deviations("hugsim", v)}
         self.assertFalse(keys & {"lateral.source", "lateral.exec", "lateral.delay_s", "rig.height_m"})   # 0.25 s / 1.25 = 0.2
-        self.assertEqual(v["history.warmup"], "cold")
+        self.assertEqual(v["history.warmup"], "static")
+        c = IF.HUGSIM_PRESETS["spec_cold"]
+        self.assertEqual(IF.resolve_hugsim(c["opts"], c["controller"])["history.warmup"], "cold")
         self.assertIn("lon.source", keys)
         h = IF.HUGSIM_PRESETS["spec_hold"]
         vh = IF.resolve_hugsim(h["opts"], h["controller"], "waymo", h["env"]["OP_CTRL"])
@@ -104,6 +106,7 @@ class B2D(unittest.TestCase):
         keys = {d.key for d in IF.deviations("b2d", v)}
         self.assertFalse(keys & {"lateral.source", "lateral.exec", "lateral.delay_s", "light.source", "history.rate_hz"})
         self.assertIn("command.route_geometry", keys)
+        self.assertNotIn("rig.height_m", keys)                          # spec rig: 1.22 m at the bumper line
         _, nz = self.A.resolve_config(dict(OLD_TOP, arb={"preset": "spec", "zones": False, "div_m": 1e9}))
         self.assertEqual(IF.b2d_values(nz, env={})["command.route_geometry"], "none")
 

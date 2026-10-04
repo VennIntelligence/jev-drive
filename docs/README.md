@@ -18,6 +18,7 @@ with "Last verified: <date>"; one topic per file, keep it short.
 | [carla.md](carla.md) | you need a CARLA server on the box |
 | [bench2drive-cost.md](bench2drive-cost.md) | you need what a Bench2Drive evaluation costs and why |
 | [b2d-controller.md](b2d-controller.md), [b2d-controller-lateral.md](b2d-controller-lateral.md), [b2d-tcp-controller.md](b2d-tcp-controller.md) | you use the fixed trajectory controller or its TCP / lateral variants |
+| [openpilot-interface.md](openpilot-interface.md) | you run or quote openpilot on any board: the as-on-the-car spec, per-board deviations, presets |
 | [zeroshot-adapters.md](zeroshot-adapters.md) | you score an external driving model in closed loop |
 | [driving-runtime.md](driving-runtime.md), [tokyo-python-optimization.md](tokyo-python-optimization.md) | you need frame / preview helpers or the TCP Python speed-ups |
 | [waymo-e2e.md](waymo-e2e.md), [navsim.md](navsim.md), [hugsim.md](hugsim.md) | you need WOD-E2E, NAVSIM / OpenScene or HUGSIM data and setup |

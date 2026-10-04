@@ -20,6 +20,10 @@ helps: [results/real_vs_render.md](results/real_vs_render.md) (pre-registration 
 [results/navhard_dac.md](results/navhard_dac.md) (pre-registration [plans/2026-10-04-navhard-dac-prereg.md](plans/2026-10-04-navhard-dac-prereg.md)).
 Follow-ups: no map-free gate isolates the tracker-lag tokens (precision 7-14%), compensating only the scorer-identified ones would give about +2 EPDMS (oracle); an eye check puts about 3/4 of the M class on real pavement ([plans/2026-10-04-navhard-dac-gated-comp-prereg.md](plans/2026-10-04-navhard-dac-gated-comp-prereg.md)).
 
+**Unified openpilot interface (2026-10-05).** One as-on-the-car spec for every board ([docs/openpilot-interface.md](../../docs/openpilot-interface.md));
+small-step checks: HUGSIM keeps the static warm-up (cold start does not launch), B2D spec camera 1.22 m at the bumper line, nored inflated decision 102's
+drive by 2.1 DS, virtual 1.22 m cameras cost NAVSIM / WOD open-loop score: [results/unified_interface.md](results/unified_interface.md).
+
 <!-- files:begin -->
 ## Files
 

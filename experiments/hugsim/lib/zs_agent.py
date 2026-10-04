@@ -47,7 +47,7 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      OP_CTRL_LONG) strips it and sets the acceleration through lib/op_ctrl.py OpLongitudinal
 
 Interface (jevdrive/openpilot/interface.py, docs/openpilot-interface.md): experiments/hugsim/archive/zs_run.py resolves a named
-preset (--preset spec | spec_hold | opctrl_d118 | exam) into the controller tree, OP_CTRL and these opts and passes HUGSIM_ZS_PRESET /
+preset (--preset spec | spec_cold | spec_hold | opctrl_d118 | exam) into the controller tree, OP_CTRL and these opts and passes HUGSIM_ZS_PRESET /
 HUGSIM_ZS_CONTROLLER; the agent writes <output>/interface.json (resolved interface values + declared deviations) at setup.
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the

@@ -48,6 +48,13 @@ is the spec and the same as the real-data labels.
 
 ## What was rendered, and how it differs from the real-data pipeline
 
+**Against the B2D evaluation rig (2026-10-05, docs/openpilot-interface.md).** The B2D `spec` preset now mounts the openpilot cameras at 1.22 m
+too, so the height matches; what still differs: x 3.8 m (front bumper line) on B2D against 1.519 m here, B2D's wide frame comes from CARLA's
+own wide sensor (f 567) and the road frame from a separate road sensor, against one pinhole cut twice here; B2D has the MKZ body, traffic and real
+20 Hz history, these pairs have none and a synthetic 5 Hz history. Not re-rendered; a model trained on these pairs and scored on B2D carries
+this shift. The legacy B2D `drive` preset (1.433 m windshield top) differs in height as well.
+
+
 - **Rig.** Free RGB camera, no vehicle: 1.22 m above the road surface (openpilot device height), level (pitch = road pitch, roll 0, calibration rpy 0), 1.519 m
   ahead of the rear axle (the Waymo FRONT / P4 camera position that `camgeom`'s rotation-only warp assumes), 1260 x 750 render, f = 1113.5 px. Both model frames are cut
   from the render with the same rays as the real-data path (`jevdrive.camgeom` `OP_K`: road f 910 cy 47.6, wide f 455 cy 151.8 in 512 x 256, so the horizon rows are the
