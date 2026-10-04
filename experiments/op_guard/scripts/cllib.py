@@ -128,6 +128,12 @@ def hugsim_rows(out: Path, tag: str = HUGSIM_TAG):
     return [r for r in csv.DictReader(open(p)) if r["tag"] == tag] if p.exists() else []
 
 
+def shards(ids, stage):
+    """Routes dealt round-robin over ceil(n / SHARD) jobs; smoke = the first route alone, in shard 0's dir (the batch reuses it)."""
+    n = -(-len(ids) // SHARD)
+    return [(0, ids[:1])] if stage == "smoke" else [(k, ids[k::n]) for k in range(n)]
+
+
 def lane_jobs(candidate: str, mode: str, lines, stage: str = "all", force: bool = False):
     c = G.resolve(candidate)
     rd = G.run_dir(c["name"], mode)
@@ -140,16 +146,14 @@ def lane_jobs(candidate: str, mode: str, lines, stage: str = "all", force: bool 
             scen.write_text(HUGSIM_SETS[mode].read_text().split()[0] + "\n")
         jobs.append(hugsim_job("hugsim" + ("-smoke" if stage == "smoke" else ""), rd / "hugsim", scen, onnx, priority=3))
     if "b2d_turns" in lines and not (candidate == G.SHIPPED and not force and turns_cached()):
-        ids = TURN_ROUTES[:1] if stage == "smoke" else TURN_ROUTES
-        for k in range(0, len(ids), SHARD):
-            jobs.append(b2d_unit("turns-s%d-k%d%s" % (TURN_SEED, k // SHARD, "-smoke" if stage == "smoke" else ""), ids[k:k + SHARD],
-                                 rd / "b2d" / ("turns-s%d-k%d" % (TURN_SEED, k // SHARD)), TURN_SEED, True, onnx, priority=2))
+        for k, ids in shards(TURN_ROUTES, stage):
+            jobs.append(b2d_unit("turns-s%d-k%d%s" % (TURN_SEED, k, "-smoke" if stage == "smoke" else ""), ids,
+                                 rd / "b2d" / ("turns-s%d-k%d" % (TURN_SEED, k)), TURN_SEED, True, onnx, priority=2))
     if "b2d_ds" in lines:
         for s in DS_SEEDS[mode][:1] if stage == "smoke" else DS_SEEDS[mode]:
-            ids = DS_ROUTES[:1] if stage == "smoke" else DS_ROUTES
-            for k in range(0, len(ids), SHARD):
-                jobs.append(b2d_unit("ds-s%d-k%d%s" % (s, k // SHARD, "-smoke" if stage == "smoke" else ""), ids[k:k + SHARD],
-                                     rd / "b2d" / ("ds-s%d-k%d" % (s, k // SHARD)), s, False, onnx, priority=1))
+            for k, ids in shards(DS_ROUTES, stage):
+                jobs.append(b2d_unit("ds-s%d-k%d%s" % (s, k, "-smoke" if stage == "smoke" else ""), ids,
+                                     rd / "b2d" / ("ds-s%d-k%d" % (s, k)), s, False, onnx, priority=1))
     return jobs
 
 
