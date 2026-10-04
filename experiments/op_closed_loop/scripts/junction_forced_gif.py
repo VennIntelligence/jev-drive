@@ -57,6 +57,9 @@ def main():
     t0, t1, m = window(att, n.route_turn, n.before, n.after)
     files = sorted(Path(n.dump).glob("*.png"))
     ft = np.array([float(re.search(r"_t([\d.]+)_", f.name).group(1)) for f in files])
+    cut = np.flatnonzero(np.diff(ft) < -1.0) + 1                  # the server outlives a retried attempt: sim time restarts at 0; keep the last block (= the attempt dir given)
+    if len(cut):
+        files, ft = files[cut[-1]:], ft[cut[-1]:]
     ncmd = [re.search(r"_t[\d.]+_(\w+?)_([\w.]+)\.png", f.name).groups() for f in files]
     h = int(round(n.width * 9 / 16 / 2) * 2)
     targets = np.arange(t0, t1, n.speedup / n.fps)
