@@ -248,6 +248,13 @@ def official(cand: dict, board: str, cpus: str, force: bool, logd: Path) -> dict
     return dict(csv=fs[-1], hit=False, seconds=round(time.time() - t0, 1))
 
 
+def official_cached(cand: dict, board: str):
+    """The candidate's official CSV if one exists and is newer than its pose file, else None (no scoring)."""
+    preds = OPLB / BOARDS[board]["data"] / "preds" / f"{stems(cand)[1]}.npz"
+    fs = sorted(glob.glob(str(EVAL / eval_name(cand, board) / "*/*.csv")))
+    return dict(csv=fs[-1], hit=True, seconds=None) if fs and Path(fs[-1]).stat().st_mtime > preds.stat().st_mtime else None
+
+
 def v1_tokens(csv: str) -> pd.DataFrame:
     x = pd.read_csv(csv)
     return x[x.valid.astype(bool) & (x.token != "average")].set_index("token")

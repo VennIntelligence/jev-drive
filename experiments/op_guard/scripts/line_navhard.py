@@ -6,9 +6,11 @@
 Both modes score all 5 912 navhard_two_stage tokens: the official score combines every stage-2 token with its stage-1 scene
 through the devkit's scene mapping, so a token subset is not the official score (and the full board fits the subset budget).
 Readouts (rule: no drop = candidate paired value >= shipped):
-  official    combined EPDMS from the devkit's own run (navsim_zs_score.sh); stage 1 / stage 2 as diagnostics. CIs: paired
-              bootstrap over the 225 scene-mapping groups of the per-token devkit harness (nav_harness.py), whose mean equals
-              the official number (checked; the mismatch is in the note).
+  official    combined EPDMS; stage 1 / stage 2 as diagnostics. CIs: paired bootstrap over the 225 scene-mapping groups of the
+              per-token devkit harness (nav_harness.py: the devkit's pdm_score + aggregation, whose mean is the official number).
+              `full` mode also runs the devkit's own script (navsim_zs_score.sh) and reports its number (harness - official in the
+              note); `subset` mode runs only the harness on all leased cores (the official script on the other half doubles the CPU
+              time: 17 min on 8 cores vs the harness 12.5 min) and uses an existing official CSV of the candidate if there is one.
   early-turn  tokens whose PDM reference heading change within 2 s is >= 5 deg (results/navhard_early_turn.csv, frozen from
               decision 110's set: stage 1 231 / 450, stage 2 66 %); mean per-token EPDMS (stage-2 tokens unweighted, as
               decision 110), stages pooled for the rule, each stage as a diagnostic; CI clustered by mapping group.
@@ -48,6 +50,10 @@ def chain(c, a, force, logd):
     redo = force or not p["hit"]
     N.export(c, BOARD, redo, logd)
     work = G.data_dir() / "runs" / "op_guard" / c["name"] / "nav" / BOARD
+    if a.mode == "subset":
+        h = N.harness(c, a.cpus, redo, work, logd)
+        o = N.official_cached(c, BOARD) if not redo else None
+        return dict(plans=p, harness=h, official=o, work=str(work))
     c1, c2, _, _ = split_cpus(a.cpus)
     res, err = {}, []
 
@@ -84,16 +90,17 @@ def main():
     prov[cand["name"]] = chain(cand, a, a.force, logd)
     from jevdrive import stats
     pc, ps = prov[cand["name"]], prov[G.SHIPPED]
-    oc, os_ = N.v2_summary(pc["official"]["csv"]), N.v2_summary(ps["official"]["csv"])
+    off = all(p.get("official") for p in (pc, ps))      # both have the devkit script's CSV: report its numbers
+    oc, os_ = ((N.v2_summary(pc["official"]["csv"]), N.v2_summary(ps["official"]["csv"])) if off else (pc["harness"], ps["harness"]))
     gc, gs = (pd.read_csv(Path(p["work"]) / "harness_groups.csv").set_index("group") for p in (pc, ps))
     tc, ts = (pd.read_csv(Path(p["work"]) / "harness_tokens.csv").set_index("token") for p in (pc, ps))
-    chk = {n: round(p["harness"]["combined"] - N.v2_summary(p["official"]["csv"])["combined"], 4) for n, p in prov.items() if n != "split"}
+    chk = {n: round(p["harness"]["combined"] - N.v2_summary(p["official"]["csv"])["combined"], 4) for n, p in prov.items() if p.get("official")}
+    src = ("official script" if off else "devkit harness (official aggregation; no official CSV in subset mode)") + \
+        ("; harness - official combined: " + ", ".join(f"{n} {v:+.4f}" for n, v in chk.items()) if chk else "")
     rows = []
-    for k, label, rule in (("combined", "EPDMS official (two-stage, 5912 tokens)", True), ("stage1", "EPDMS official stage 1", False),
-                           ("stage2", "EPDMS official stage 2", False)):
+    for k, label, rule in (("combined", "EPDMS two-stage (5912 tokens)", True), ("stage1", "EPDMS stage 1", False), ("stage2", "EPDMS stage 2", False)):
         r = stats.paired(gc[k].to_numpy(), gs[k].to_numpy())
-        note = (f"paired over {r['units']} mapping groups (devkit harness; harness - official combined: " + ", ".join(f"{n} {v:+.4f}" for n, v in chk.items()) + ")"
-                if rule else "diagnostic (no rule); CI over mapping groups")
+        note = (f"{src}; CI paired over {r['units']} mapping groups" if rule else "diagnostic (no rule); CI over mapping groups")
         rows.append(G.row(LINE, label, oc[k], os_[k], rule=G.LINES[LINE][2] if rule else "", ok=G.at_least(oc[k], os_[k], 0.0) if rule else None,
                           ci=N.ci(r), note=note, harness_delta=r["mean"]))
     E = pd.read_csv(N.EARLY).set_index("token")
