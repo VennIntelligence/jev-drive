@@ -82,8 +82,8 @@ def jobs(args):
         out = []
         for g in args["gif"].split(","):
             a, rid, xml = g.split(":")
-            out.append(unit(a, seeds[0], "g" + rid, [rid], xml, dict(OP_ARB_AGENT="experiments/vlm_arb/scripts/vlm_arb_record_agent.py", GIF_BASE="vlm",
-                                                                    **dump(a, "gif_" + rid, 1)), prio=0, tag="jfagif"))
+            out.append(unit(a, seeds[0], "g" + rid, [rid], xml, dict(OP_ARB_AGENT="experiments/vlm_arb/scripts/vlm_arb_record_agent.py", GIF_BASE="vlm", SRV_PY=SRV,
+                                                                    IMG_CL_DUMP=str(DATA / "runs/jfa/dump" / ("gif_" + a + "_" + rid)), IMG_CL_DUMP_EVERY="1"), prio=0, tag="jfagif"))
         return out
     smoke = [unit("NA", 2, "dbg", ["28180"], "v", dump("NA", "smoke", 100), tag="jfadbg"),         # a forced T-stem
              unit("D", 2, "dbg", ["28180"], "v", tag="jfadbg")]

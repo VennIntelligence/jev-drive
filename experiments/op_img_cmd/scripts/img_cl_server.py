@@ -7,6 +7,7 @@ steps one frame per request, so every frame of its history carries the arrow dra
 
   op_arb.sh with SRV_PY=experiments/op_img_cmd/scripts/img_cl_server.py (and SRV_ONNX = the fine-tuned model)
 """
+import os
 import sys
 from pathlib import Path
 
@@ -25,6 +26,8 @@ class ImgArbModel(S.ArbModel):
             d = np.nan if c[1] is None else float(c[1])
             prep = dict(prep, img2=O.draw_sky(np.asarray(prep["img2"]), str(c[0]), d, (0.0, 0.0, 0.0)))
             self.plan_dump(prep["img2"], c, meta.get("t"))
+        elif os.environ.get("IMG_CL_DUMP"):                  # no command: dump the unmodified model input too (clips of arms without an arrow)
+            self.plan_dump(prep["img2"], ["none", None], meta.get("t"))
         return super().plan(state, meta, prep)
 
     _n = 0
