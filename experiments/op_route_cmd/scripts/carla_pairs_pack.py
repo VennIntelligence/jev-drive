@@ -89,6 +89,9 @@ def main():
              by_cls=dict(Counter(cls.tolist())), lane_change_rows=int(route["lane_change"].sum()), profile=dict(Counter(tab["profile"].tolist())),
              imgs_gb=round(n * 10 * 2 * 6 * 128 * 256 / 1e9, 2))
     (root / "pack_summary.json").write_text(json.dumps(S, indent=1))
+    J = {sp: sorted({"%s:J%d" % (t, j) for t, j, s_ in zip(tab["town"].tolist(), tab["junction"].tolist(), tab["split"].tolist()) if s_ == sp})
+         for sp in ("train", "dev")}
+    (root / "junctions.json").write_text(json.dumps(J))            # junction-level membership for carla_pairs_splits.py
     print(json.dumps(S))
     if a.drop_frames:
         for p in P:
