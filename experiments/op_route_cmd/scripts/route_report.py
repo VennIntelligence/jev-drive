@@ -54,6 +54,14 @@ def block(z, m, label):
     return d
 
 
+def events(cluster, frame, m, gap):
+    """Number of runs of consecutive labelled frames (same cluster, frame step <= gap) among the rows m: one run ~ one turn seen from all its approach frames."""
+    c, f = cluster[m], frame[m]
+    o = np.lexsort((f, c))
+    c, f = c[o], f[o]
+    return int(1 + ((c[1:] != c[:-1]) | (f[1:] - f[:-1] > gap)).sum()) if len(c) else 0
+
+
 def wod_chain_check(n=30000, seed=0):
     """Independent check of the link composition: the chained position at t = 5.0 s against the logged future[19] of the same frame."""
     sys.path.insert(0, str(Path(__file__).parent))
@@ -82,10 +90,13 @@ def main():
     out["navtrain"] = block(nav, np.ones(len(nav["id"]), bool), "navtrain (all tokens)")
     # decision-93 junction segments
     inv = pd.read_parquet(INV).set_index("token").loc[nav["id"]]
+    fr_nav = inv.frame_idx.to_numpy()
+    out["navtrain"]["turn_events"] = events(nav["cluster"], fr_nav, ~np.isnan(nav["turn_deg"]), 2)
     pe = (inv.status.to_numpy() == "branch") & inv.classes.str.contains(",").to_numpy() & (inv.taken.to_numpy() != "")
     out["navtrain_pair_eligible"] = block(nav, pe, "navtrain, decision-93 pair-eligible frames (branch, >= 2 exit classes, taken known)")
     seg = inv[pe].groupby(["log", "node"]).ngroups
     out["navtrain_pair_eligible"]["segments"] = int(seg)
+    out["navtrain_pair_eligible"]["turn_events"] = events(nav["cluster"], fr_nav, pe & ~np.isnan(nav["turn_deg"]), 2)
     # sanity: map-derived taken class vs the sign of the hindsight turn
     taken, td, ts = nav["taken_cls"], nav["turn_deg"], nav["turn_s"]
     near = pe & ~np.isnan(td) & (ts <= nav["jct_dist"] + 40)
@@ -99,8 +110,12 @@ def main():
     for sp in ("train", "val"):
         m = wod["split"] == sp
         out[f"wod_{sp}"] = block(wod, m, f"WOD-E2E {sp} (frames with a logged future)")
-    # WOD intent vs turn sign
+        fr = np.array([int(i.rsplit("-", 1)[1]) for i in wod["id"]])
+        out[f"wod_{sp}"]["turn_events"] = events(wod["cluster"], fr, m & ~np.isnan(wod["turn_deg"]), 3)
+    # WOD intent vs turn sign, by distance to the turn
     has = ~np.isnan(wod["turn_deg"])
+    out["wod_intent_vs_turn_by_dist"] = {nm: {c: [int((m_ & (wod["cmd"] == c) & (wod["turn_deg"] > 0)).sum()), int((m_ & (wod["cmd"] == c) & (wod["turn_deg"] < 0)).sum())]
+                                              for c in np.unique(wod["cmd"])} for nm, m_ in (("s<=15", has & (wod["turn_s"] <= 15)), ("15<s<=50", has & (wod["turn_s"] > 15) & (wod["turn_s"] <= 50)), ("s>50", has & (wod["turn_s"] > 50)))}
     out["wod_intent_vs_turn"] = {c: dict(n=int((has & (wod["cmd"] == c)).sum()), left=int((has & (wod["cmd"] == c) & (wod["turn_deg"] > 0)).sum()),
                                          right=int((has & (wod["cmd"] == c) & (wod["turn_deg"] < 0)).sum())) for c in np.unique(wod["cmd"])}
     for k in ("plen", "dur"):
