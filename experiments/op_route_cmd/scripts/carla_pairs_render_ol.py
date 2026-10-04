@@ -266,12 +266,7 @@ def main():
         state["client"] = R0.connect(state["srv"].port)
         state["rig"] = Rig(state["client"], a.hero)
 
-    def stop():
-        if state["rig"] is not None:
-            try:
-                state["rig"].teardown()
-            except Exception:  # noqa: BLE001
-                pass
+    def stop():                                   # the server dies with its actors: no per-actor destroy (120 s time-out each on a dead server)
         if state["srv"] is not None:
             state["srv"].stop()
         state["srv"] = state["rig"] = None
