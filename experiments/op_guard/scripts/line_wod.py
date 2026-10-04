@@ -61,7 +61,7 @@ def serving_preds(c: dict, a, prov: dict) -> Path:
         d = Z.root("preds", known)
         files = [d / f"{n}.npz" for n in names]
         if all(f.exists() for f in files) and (onnx is None or min(f.stat().st_mtime for f in files) >= Path(onnx).stat().st_mtime):
-            prov["cache"].append(f"serving preds {d} (same harness, 479/479, newer than the ONNX)")
+            prov["cache"].append(f"serving preds {d} (same harness, 479/479" + (", newer than the ONNX)" if onnx else ")"))
             return d
     tag = f"guard-{c['name']}"
     d = Z.root("preds", f"op_cinque_{tag}")

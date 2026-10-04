@@ -44,9 +44,16 @@ def ensure_frames(a, prov: dict):
     root = G.data_dir() / "runs" / "op_lb" / DATA
     env = dict(os.environ)
     ts = ["taskset", "-c", a.cpus] if a.cpus else []
+    if (root / "meta.json").exists():                  # the sample was regenerated: rebuild the frames for its tokens
+        have = set(json.loads((root / "meta.json").read_text())["names"])
+        if not set(sample()["id"].astype(str)) <= have:
+            import shutil
+            shutil.rmtree(root)
+            root.mkdir(parents=True)
+            prov["frames_rebuilt"] = "negatives_sample.npz tokens changed"
     for step, envname, extra, done in (("prep", "openpilot", [], root / "keys.npy"),
                                        ("synth", "vfi", ["--gpu", str(a.gpu)], root / "gimm.chunks")):
-        if step == "synth" and done.exists() and all((done / f"{k:05d}.done").exists() for k in range(-(-158 // 32))):
+        if step == "synth" and done.exists() and all((done / f"{k:05d}.done").exists() for k in range(-(-len(sample()["id"]) // 32))):
             continue
         if step == "prep" and done.exists():
             continue
@@ -161,9 +168,9 @@ def main():
             note = "offset under the negative command (adapter) vs shipped without a command"
         rows = [G.row("negatives.offset", "|y(4 s) - logged| on the negative frames, mean (m)", float(off.mean()), float(ref.mean()), rule=rule,
                       ok=G.at_most(float(off.mean()), float(ref.mean()), MARGIN), ci=[r["lo"], r["hi"]],
-                      note=note + f"; n {len(off)}, 135 of 158 await the visual check (all used)")]
+                      note=note + f"; n {len(off)}, {int(za['needs_visual'].astype(bool).sum())} of {len(off)} await the visual check (all used)")]
         cert = (za["kind"].astype(str) == "N1_exit") & (za["tier"].astype(str) == "A") & ~za["needs_visual"].astype(bool)
-        rows.append(G.row("negatives.offset_n1a", "same, the 23 map-certain N1 tier-A left / right rows", float(off[cert].mean()),
+        rows.append(G.row("negatives.offset_n1a", "same, the map-certain N1 tier-A rows (no visual check needed)", float(off[cert].mean()),
                           float(ref[cert].mean()), rule="info", note=f"n {int(cert.sum())}"))
         for kd in sorted(set(za["kind"].astype(str))):
             m = za["kind"].astype(str) == kd
