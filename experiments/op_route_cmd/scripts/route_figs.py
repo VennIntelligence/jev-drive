@@ -97,12 +97,15 @@ def main():
         ax.plot(0, 0, "k^", ms=11)
         ax.set_aspect("equal")
         ax.grid(alpha=0.3)
-        ax.set_xlim(-80, 80)
-        ax.set_ylim(-15, 155)
+        pts = poly[mask]
+        lo, hi = np.minimum(pts.min(0), [0, 0]) - 8, np.maximum(pts.max(0), [0, 0]) + 8
+        c, half = (lo + hi) / 2, max(hi[0] - lo[0], hi[1] - lo[1], 30) / 2
+        ax.set_xlim(-(c[1] + half), -(c[1] - half))
+        ax.set_ylim(c[0] - half, c[0] + half)
         td = r["turn_deg"][i]
         ax.set_title(f"{name}\n{tb[dom]['id'][i][:8]} v={tb[dom]['v0'][i]:.1f} m/s  turn={'none' if np.isnan(td) else '%+.0f deg at %.0f m' % (td, r['turn_s'][i])}  path={r['plen'][i]:.0f} m",
                      fontsize=9)
-    fig.suptitle("Route polylines (hindsight, 10 m vertices): black = clean label, colours = navigation noise draws, orange dashed = closed-loop option C", y=0.995, fontsize=11)
+    fig.suptitle("Route polylines (hindsight, vertices every 10 m; panels zoom to each path): black = clean label, colours = navigation noise draws, orange dashed = closed-loop option C", y=0.995, fontsize=11)
     fig.tight_layout(rect=(0, 0, 1, 0.985))
     fig.savefig(FIGS / "route_samples.png", dpi=75)
     plt.close(fig)
@@ -139,7 +142,7 @@ def main():
     ax.grid(alpha=0.3)
     ax.set_xlim(-60, 60)
     ax.set_ylim(-10, 110)
-    ax.set_title(f"same sample in BEV: clean (black) and 2 noise draws; turn {r['turn_deg'][i]:+.0f} deg at {r['turn_s'][i]:.0f} m, camera height {cam[2]:.2f} m", fontsize=9)
+    ax.set_title(f"BEV: clean (black), 2 noise draws; turn {r['turn_deg'][i]:+.0f} deg at {r['turn_s'][i]:.0f} m", fontsize=9)
     fig.tight_layout()
     fig.savefig(FIGS / "route_input_frame.png", dpi=80)
     print("selected", [(d, n, int(i), str(tb[d]["id"][i])) for d, n, i in sel])
