@@ -12,12 +12,13 @@
              acc, steer_rate = traj2control(plan_traj, info)
 --- a/sim/utils/sim_utils.py
 +++ b/sim/utils/sim_utils.py
-@@ -68,6 +68,19 @@
+@@ -68,6 +68,20 @@
          [0.0, 0.0, 0.0, info['ego_velo'], info['ego_steer']]
      )
      acc, steer_rate = plan2control(plan_traj_stats, curr_stat)
 +    # jev-drive (patches/hugsim/optional/op-ctrl.patch): openpilot's production lateral path (lib/op_ctrl.py) sets the steering from the model's
 +    # desired curvature; the longitudinal command stays iLQR's; inert without OP_CTRL
++    import os
 +    rule = os.environ.get('OP_CTRL')
 +    if rule and 'op_kappa' in info:
 +        import sys, json
