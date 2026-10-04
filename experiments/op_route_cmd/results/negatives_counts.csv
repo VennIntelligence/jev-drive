@@ -1,0 +1,7 @@
+kind,tier,cap_straight,lane_change_needed,ok,rej_ambiguous_area_or_cross,rej_drivable_near_leg,rej_not_built,rej_same_direction_lane
+N1_exit,,0,0,0,0,0,1383,0
+N1_exit,A,838,0,9661,0,0,0,0
+N1_exit,B,0,4343,0,0,0,0,0
+N2_side,,0,0,23877,0,7099,38,0
+N3_wrong,,0,0,13148,292,0,0,16977
+N4_uturn,,0,0,17007,0,16218,32,0

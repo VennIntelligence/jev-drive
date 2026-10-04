@@ -15,8 +15,9 @@ op_adapt_H sample tables by `id` (100% coverage of nav 2 400 and wod 2 780 rows)
 its C preset and has unit tests; a negative-route generator (4 kinds, 158 samples, 135 flagged for a visual check) and a CARLA pair plan (10 628 held-out-safe
 (road, exit) polylines, ~2 card-h for 10 k poses) are written. The CARLA pair material itself is rendered (results/carla_pairs.md): 8 607 poses / 21 151 (pose, exit) rows (3 917 poses with 3 exits), 1 310 junctions, none of the 172 Bench2Drive junctions, openpilot rig at 1.22 m, 0.63 s per pose per server; a 2 000-pose subset set is separate.
 
-**Next.** Merge lane (the CARLA rows join as `samples/route_carla` + `route.npz`, see results/carla_pairs.md): read `route.npz` through `lib/route_poly.attach`, call `noise_polyline` per sample at train time, decide the model-side encoding. Before it:
-human check of `figs/negatives_sample.png` (tier B / N2-N4).
+**Negatives (2026-10-05).** `route_neg.npz` sidecar (63 693 map-screened rows on 32 754 navtrain frames, N1-A / N2 / N3 / N4; tier B kept apart as `lane_change_needed`), results/negatives.md.
+
+**Next.** Merge lane (the CARLA rows join as `samples/route_carla` + `route.npz`, see results/carla_pairs.md): read `route.npz` through `lib/route_poly.attach`, call `noise_polyline` per sample at train time, decide the model-side encoding. Spot check of `figs/negatives_screened_sheet.png` / `negatives_borderline_sheet.png`.
 
 **Read more.** [results/data_prep.md](results/data_prep.md) (counts, format, merge notes, doubts), [results/negatives.md](results/negatives.md),
 [results/carla_pairs_plan.md](results/carla_pairs_plan.md), [results/carla_pairs.md](results/carla_pairs.md) (rendered CARLA pairs: format, rates, doubts), [../op_img_cmd/README.md](../op_img_cmd/README.md) (the image-side command channel this competes with),
