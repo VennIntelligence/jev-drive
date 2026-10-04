@@ -78,7 +78,7 @@ DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3
             "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0,
             "lat": "route", "lat_exec": "p7", "lon": "op", "hold": "any", "lead_go_v": 1.0, "coast_v": 0.0,
             "intent": "none", "intent_before_m": 20.0, "intent_after_m": 5.0,
-            "resume": "timer", "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
+            "resume": "timer", "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "zone_gain": 1.0, "gain_m": 3.0, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
 DRIVE_ZONES = {Z.LEFT: (15.0, 5.0), Z.RIGHT: (15.0, 5.0), Z.STRAIGHT: (5.0, 5.0),
                Z.CHANGE_LEFT: (5.0, 10.0), Z.CHANGE_RIGHT: (5.0, 10.0)}
 
@@ -207,6 +207,17 @@ class OpArbAgent(Z.ZeroShotAgent):
             else:
                 i += 1
         self.zones = zones if a["zones"] else []
+        self.gain_zones = []                                 # "zone_gain": the action curvature is scaled inside LEFT / RIGHT runs +- gain_m (a counterfactual gain, not a shipped behaviour)
+        i = 0
+        while i < len(cmd):
+            if cmd[i] in (Z.LEFT, Z.RIGHT):
+                j = i
+                while j + 1 < len(cmd) and cmd[j + 1] == cmd[i]:
+                    j += 1
+                self.gain_zones.append((s[i] - a["gain_m"], s[j] + a["gain_m"]))
+                i = j + 1
+            else:
+                i += 1
         self.intent_zones = []                               # op-adapt L: (start, end, WOD intent 2 left / 3 right) of every LEFT / RIGHT run
         i = 0
         while i < len(cmd):
@@ -473,6 +484,8 @@ class OpArbAgent(Z.ZeroShotAgent):
         self.want_go = bool(s_fin[7] - s_fin[3] > 0.5) and not warm   # the profile moves >= 0.5 m/s at 1-2 s
         if mode == "drive":
             self.curvature = float(info["curvature"]) if lat_src == "op" and A["lat_exec"] == "curv" else None
+            if self.curvature is not None and A["zone_gain"] != 1.0 and any(a0 <= self.route.s[self.route.i] <= b0 for a0, b0 in self.gain_zones):
+                self.curvature *= A["zone_gain"]
         if mode == "native":
             drive_path, src = op_path, "op"
         elif mode == "switch" and not warm and speed >= 2.0 and not self.in_zone() and not self.latch:
