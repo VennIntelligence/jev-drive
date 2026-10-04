@@ -121,17 +121,18 @@ def main():
             rr = [r for r in res if r["arm"] == arm and sel(r)]
             L.append("| %s | %s | %d | %s |" % (arm, g, len(rr), " | ".join(str(sum(r["cause"] == c for r in rr)) for c in causes)))
     L += ["\n## Entered turns: longitudinal and steering medians\n",
-          "| arm | entered | v at entry (m/s) | median v in window | min v | stopped share of window | stopped s | peak s over span (1/m) | peak s / needed | turn-in arc m after turn start (median; n steered) | desire pulse matches side |",
-          "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+          "| arm | entered | v at entry (m/s) | median v in window | min v | stopped share of window | stopped s | peak s over span (1/m) | peak s / needed | turn-in arc m after turn start (median; n steered) | peak |k| towards the commanded side (choice / forced) | desire pulse matches side |",
+          "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
     for arm in arms:
         rr = [r for r in res if r["arm"] == arm and r["entered"]]
         if not rr:
             continue
         m = lambda k: np.nanmedian([r[k] for r in rr])  # noqa: E731
         tins = [r["tin_m"] for r in rr if r["tin_m"] is not None]
-        L.append("| %s | %d | %.1f | %.1f | %.1f | %.2f | %.1f | %.3f | %.2f | %s (%d) | %.2f |" % (
+        so = lambda g: "%d / %d" % (sum(r["s_peak"] > -r["s_neg"] for r in rr if r["forced"] == g), sum(r["forced"] == g for r in rr))  # noqa: E731
+        L.append("| %s | %d | %.1f | %.1f | %.1f | %.2f | %.1f | %.3f | %.2f | %s (%d) | %s / %s | %.2f |" % (
             arm, len(rr), m("v_entry"), m("v_med"), m("v_min"), m("stop_frac"), m("stop_s"), m("s_peak"),
-            np.nanmedian([r["s_peak"] / r["need"] for r in rr]), "%.1f" % np.median(tins) if tins else "-", len(tins), m("desire_ok")))
+            np.nanmedian([r["s_peak"] / r["need"] for r in rr]), "%.1f" % np.median(tins) if tins else "-", len(tins), so(0), so(1), m("desire_ok")))
     L.append("\n## By R_min (entered turns; share lost / steered, median v in window)\n")
     L += ["| arm | R_min bin | n | took | steered (peak s >= 0.5 need) | median v in window | stopped share |", "|---|---|--:|--:|--:|--:|--:|"]
     for arm in arms:
