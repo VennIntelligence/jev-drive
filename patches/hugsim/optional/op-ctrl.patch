@@ -1,0 +1,34 @@
+--- a/closed_loop.py
++++ b/closed_loop.py
+@@ -59,6 +59,9 @@
+             pipe.write(pickle.dumps((obs, info)))
+         with open(plan_pipe, "rb") as pipe:
+             plan_traj = pickle.loads(pipe.read())
++        # jev-drive (patches/hugsim/optional/op-ctrl.patch): the agent appends openpilot's desired curvature as a last row [kappa, 1e9]; inert without OP_CTRL
++        if plan_traj is not None and os.environ.get('OP_CTRL') and len(plan_traj) > 1 and plan_traj[-1, 1] == 1e9:
++            info['op_kappa'], plan_traj = float(plan_traj[-1, 0]), plan_traj[:-1]
+ 
+         if plan_traj is not None:
+             acc, steer_rate = traj2control(plan_traj, info)
+--- a/sim/utils/sim_utils.py
++++ b/sim/utils/sim_utils.py
+@@ -68,6 +68,19 @@
+         [0.0, 0.0, 0.0, info['ego_velo'], info['ego_steer']]
+     )
+     acc, steer_rate = plan2control(plan_traj_stats, curr_stat)
++    # jev-drive (patches/hugsim/optional/op-ctrl.patch): openpilot's production lateral path (lib/op_ctrl.py) sets the steering from the model's
++    # desired curvature; the longitudinal command stays iLQR's; inert without OP_CTRL
++    rule = os.environ.get('OP_CTRL')
++    if rule and 'op_kappa' in info:
++        import sys, json
++        sys.path.insert(0, os.environ['OP_CTRL_LIB'])
++        import op_ctrl
++        global _OP_STATE
++        if '_OP_STATE' not in globals():
++            _OP_STATE = op_ctrl.OpLateral(json.loads(rule))
++        steer, log = op_ctrl.hugsim_steer(_OP_STATE, info['op_kappa'], float(info['ego_velo']), 0.25, 2.7)
++        steer_rate = (steer - float(info['ego_steer'])) / 0.25
++        print('op_ctrl ' + json.dumps({k: (round(float(v), 6) if not isinstance(v, bool) else v) for k, v in log.items()}), flush=True)
+     return acc, steer_rate
+ 
+ def dense_cam_poses(cam_poses, cmds):

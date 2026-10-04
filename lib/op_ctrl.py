@@ -1,7 +1,7 @@
 """openpilot's production lateral path from the model's desired curvature to the car, for simulators that otherwise track plan positions.
 
 Plan: experiments/hugsim/plans/2026-10-05-op-control-stack-prereg.md. Source (read, not recalled): openpilot master ec95db3f (2026-10-02) with
-opendbc 35f7e081. The functions marked VERBATIM are copied unchanged (Python 2-space style kept out, logic identical); the rest wires them the
+opendbc 35f7e081. The functions marked VERBATIM are copied with their logic unchanged (clip_curvature returns only the curvature); the rest wires them the
 way selfdrive/modeld/modeld.py and selfdrive/controls/controlsd.py do at 20 Hz / 100 Hz:
 
   modeld (20 Hz)      desired_curvature = action[0] / max(1, v)^2 (Cinque has an `action` head; decode() in jevdrive/openpilot/model.py);
@@ -102,7 +102,7 @@ class OpLateral:
         return float(np.mean(ks)), dict(act=act, des=self.des, real=self.real, active=active)
 
 
-def hugsim_steer(state, kappa_model, v_now, v_next, dt, wheelbase):
+def hugsim_steer(state, kappa_model, v_now, dt, wheelbase):
     """Front-wheel angle for HUGSIM's step (kinematic bicycle, theta += v_next tan(steer) / L dt): the angle whose curvature is the mean realised
     curvature of the emulated car over the step, so the simulator's heading change equals openpilot's (speed is the simulator's own)."""
     k, log = state.step(kappa_model, v_now, dt)

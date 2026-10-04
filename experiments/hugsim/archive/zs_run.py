@@ -9,7 +9,7 @@ patch can touch a running job:  official = patches/hugsim/*.patch,  fixed = + op
 ideal = + optional/ideal-tracker.patch (no iLQR: the ego moves exactly along the plan; reference for acceptance,
 created only by `setup-trees ideal`), fixed2 = fixed + optional/lqr-tracker-v2.patch (iLQR at the 0.25 s simulator step,
 steering-rate cost 1; created only by `setup-trees fixed2`), lowspeed = fixed + optional/lowspeed-ctrl.patch (steering low-pass
-and curvature-rate limit below 3 m/s, lib/lowspeed_ctrl.py, parameters in env LOWSPEED_CTRL; created only by `setup-trees lowspeed`), lowsel = lowspeed + optional/lowspeed-sel-ctrl.patch (selective plan-direction rule, env LOWSPEED_SEL; `setup-trees lowsel`). The patch state of the job's tree is verified before every job.
+and curvature-rate limit below 3 m/s, lib/lowspeed_ctrl.py, parameters in env LOWSPEED_CTRL; created only by `setup-trees lowspeed`), lowsel = lowspeed + optional/lowspeed-sel-ctrl.patch (selective plan-direction rule, env LOWSPEED_SEL; `setup-trees lowsel`), opctrl = fixed + optional/op-ctrl.patch (openpilot's lateral path from the model's desired curvature, lib/op_ctrl.py, env OP_CTRL + OP_CTRL_LIB, agent opt op_ctrl; `setup-trees opctrl`). The patch state of the job's tree is verified before every job.
 
     python experiments/hugsim/archive/zs_run.py setup-trees
     python experiments/hugsim/archive/zs_run.py run --out $DATA_DIR/runs/hugsim-exam --agent cinque --controller official \
@@ -37,12 +37,13 @@ REPO = Path(__file__).resolve().parents[3]
 D = Path(os.environ.get("DATA_DIR", Path.home() / "data"))
 DATA = D / "datasets" / "hugsim"
 PY = D / "envs" / "hugsim" / "bin" / "python"
-TREES = {c: D / "third_party" / "HUGSIM-zs" / c for c in ("official", "fixed", "ideal", "fixed2", "lowspeed", "lowsel")}
+TREES = {c: D / "third_party" / "HUGSIM-zs" / c for c in ("official", "fixed", "ideal", "fixed2", "lowspeed", "lowsel", "opctrl")}
 FIX = REPO / "patches" / "hugsim" / "optional" / "lqr-heading-fix.patch"
 IDEAL = REPO / "patches" / "hugsim" / "optional" / "ideal-tracker.patch"
 LOWSPEED = REPO / "patches" / "hugsim" / "optional" / "lowspeed-ctrl.patch"
 LOWSEL = REPO / "patches" / "hugsim" / "optional" / "lowspeed-sel-ctrl.patch"
 V2 = REPO / "patches" / "hugsim" / "optional" / "lqr-tracker-v2.patch"
+OPCTRL = REPO / "patches" / "hugsim" / "optional" / "op-ctrl.patch"
 AD = {"alpamayo": "zs", "cinque": "zs", "lebowski": "zs", "cv": "jev", "route": "jev", "ltf": "ltf", "preset": "pre"}
 FIELDS = ["scenario", "dataset", "difficulty", "agent", "controller", "tag", "hdscore", "rc", "nc", "dac", "ttc", "c",
           "pdms", "steps", "end", "wall_s", "rc_code", "finished", "scene", "run_dir"]
@@ -64,8 +65,10 @@ def setup_trees(names=("official", "fixed")):
             sh("git", "-C", str(dst), "checkout", "-q", sh("git", "-C", str(src), "rev-parse", "HEAD").strip())
             for p in sorted((REPO / "patches" / "hugsim").glob("*.patch")):
                 sh("git", "-C", str(dst), "apply", str(p))
-            if name in ("fixed", "fixed2", "lowspeed", "lowsel"):
+            if name in ("fixed", "fixed2", "lowspeed", "lowsel", "opctrl"):
                 sh("git", "-C", str(dst), "apply", str(FIX))
+            if name == "opctrl":
+                sh("git", "-C", str(dst), "apply", str(OPCTRL))
             if name in ("lowspeed", "lowsel"):
                 sh("git", "-C", str(dst), "apply", str(LOWSPEED))
             if name == "lowsel":
@@ -86,7 +89,7 @@ def applied(t, patch):
 
 def check_tree(name):
     t = str(TREES[name])
-    if applied(t, FIX) is not (name in ("fixed", "fixed2", "lowspeed", "lowsel")):
+    if applied(t, FIX) is not (name in ("fixed", "fixed2", "lowspeed", "lowsel", "opctrl")):
         raise SystemExit(f"tree {t}: optional LQR patch state wrong for controller '{name}'")
     if name == "ideal" and not applied(t, IDEAL):
         raise SystemExit(f"tree {t}: ideal-tracker patch not applied")
@@ -94,6 +97,8 @@ def check_tree(name):
         raise SystemExit(f"tree {t}: lowspeed-sel-ctrl patch not applied")
     if name in ("lowspeed", "lowsel") and not applied(t, LOWSPEED):
         raise SystemExit(f"tree {t}: lowspeed-ctrl patch not applied")
+    if name == "opctrl" and not applied(t, OPCTRL):
+        raise SystemExit(f"tree {t}: op-ctrl patch not applied")
     if name == "fixed2" and not applied(t, V2):
         raise SystemExit(f"tree {t}: tracker-v2 patch not applied")
 
