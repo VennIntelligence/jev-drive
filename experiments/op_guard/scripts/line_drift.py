@@ -125,6 +125,9 @@ def main():
                 rows.append(G.row(f"drift.{s}.{k}", f"4 s lateral drift median, {s} {k} ({za['dom']})", med, 0.0, rule="info",
                                   note=f"n {int(m.sum())}; p90 {np.percentile(dy[m], 90):.3f}; plan_drift (0-5 s L2) median "
                                        f"{np.median(dr[m]):.3f}", n=int(m.sum()), plan_drift_median=float(np.median(dr[m]))))
+        pd_max = max((r["plan_drift_median"], r["id"][6:]) for r in rows)
+        rows.append(G.row("drift.plan_drift_max", "plan_drift (0-5 s mean L2, x and y) median, max over sets / kinds", pd_max[0], 0.0,
+                          rule="info: the metric op_img_cmd's 0.10 m line was set on", note=f"max at {pd_max[1]}"))
         w, where = max(worst)
         note = f"max at {where}" + ("; shipped vs itself = 0 by definition" if c["name"] == G.SHIPPED else "")
         rows.insert(0, G.row("drift.max", "4 s lateral drift vs shipped, max over sets / kinds (median per set)", w, 0.0, rule=rule,
