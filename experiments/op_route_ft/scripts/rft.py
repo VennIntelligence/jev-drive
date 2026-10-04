@@ -414,8 +414,8 @@ class RLoss:
         """g (B, Hx, Wy) sdf grid, x / y (B, 16) metres -> sdf values (B, 16) (bilinear, outside the grid = +10)."""
         x0, y0, res = self.g0
         Hx, Wy = g.shape[1:]
-        u = (y - y0) / res / (Wy - 1) * 2 - 1           # grid_sample: last dim of grid = (W index, H index)
-        v = (x - x0) / res / (Hx - 1) * 2 - 1
+        u = ((y - y0) / res - 0.5) / (Wy - 1) * 2 - 1   # cell centres at x0 + (i + 0.5) res; grid_sample grid = (W index, H index)
+        v = ((x - x0) / res - 0.5) / (Hx - 1) * 2 - 1
         s = torch.nn.functional.grid_sample(g[:, None].float(), torch.stack([u, v], -1)[:, None], align_corners=True, padding_mode="border")[:, 0, 0]
         inside = (u.abs() <= 1) & (v.abs() <= 1)
         return torch.where(inside, s, torch.full_like(s, 10.0))
