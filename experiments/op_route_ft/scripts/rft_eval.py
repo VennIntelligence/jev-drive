@@ -42,6 +42,15 @@ def cls(deg):
 TS = np.linspace(0.125, 10.0, 80)
 
 
+def lat_at_arc(plan, cam, s_eval):
+    """y (left +) of the rear-axle plan path at arc length s_eval, or at its end when shorter."""
+    p = L.rear_np(plan, cam, TS).astype(np.float64)
+    p = np.concatenate([np.zeros((len(p), 1, 2)), p], 1)
+    arc = np.r_[0.0, 0.0][None].repeat(len(p), 0)
+    arc = np.concatenate([np.zeros((len(p), 1)), np.cumsum(np.linalg.norm(np.diff(p, axis=1), axis=-1), 1)], 1)
+    return np.array([np.interp(min(s_eval[k], arc[k, -1]), arc[k], p[k, :, 1]) for k in range(len(p))])
+
+
 def cls_at_arc(plan, cam, s_eval):
     """Class of the plan path at arc length s_eval (heading of the rear-axle path there, > +30 deg left, < -30 deg right); 'short' when the
     10 s plan does not reach it."""
@@ -192,6 +201,11 @@ def main(a):
         r["carla_exit_short"] = float((c == "short").mean())
         ok = (c == s["cmd"]).astype(float)
         r["carla_exit_row"] = boot(ok, s["cluster"])
+        # command-signed lateral offset of the plan path at arc d + 10 m (or its end): positive = toward the commanded side
+        lat = lat_at_arc(pl, C.cam, C.tab["d"][s["pose"]] + 10.0)
+        tn = s["cmd"] != "straight"
+        sgn = np.where(s["cmd"] == "left", 1.0, -1.0)
+        r["carla_turn_lat"] = boot((sgn * lat)[tn], s["cluster"][tn])
         rch = c != "short"
         r["carla_exit_reached"] = boot(ok[rch], s["cluster"][rch]) if rch.any() else {"n": 0}
         for cm in ("left", "straight", "right"):

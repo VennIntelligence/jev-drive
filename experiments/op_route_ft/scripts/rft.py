@@ -153,6 +153,33 @@ def act_target(hum, v0):
     return -ACT_ALPHA * 2.0 * y / d2 * max(1.0, v0) ** 2, 1.0
 
 
+NPATH = 80                        # target path for the path-shape loss: 1 m spacing up to 80 m
+
+
+def target_path(poly, pmask):
+    """Clean route polyline (10 m vertices) -> smoothed dense path (NPATH, 2) at 1 m and its mask."""
+    out, m = np.zeros((NPATH, 2), np.float32), np.zeros(NPATH, bool)
+    v = np.asarray(poly, float)[: int(np.asarray(pmask).sum())]
+    P = RP.smooth_path(v, 0.5, 1.5) if len(v) >= 2 else None
+    if P is None:
+        return out, m
+    P[0] = 0.0
+    P, g = RP.poly_resample(P, 1.0)
+    n = min(len(P), NPATH)
+    out[:n], m[:n] = P[:n], True
+    return out, m
+
+
+def act_target_path(tp, tm, v0):
+    """Pure pursuit on the target path at the arc-length lookahead clip(v0 * 1 s, 4, 15) m (timing-free, for CARLA rows whose timing comes from
+    the slow original plan) -> (target action[0], weight)."""
+    if v0 < 1.0 or tm.sum() < 5:
+        return 0.0, 0.0
+    k = int(min(np.clip(v0, 4.0, 15.0), tm.sum() - 1))
+    x, y = float(tp[k, 0]), float(tp[k, 1])
+    return -ACT_ALPHA * 2.0 * y / max(x * x + y * y, 1.0) * max(1.0, v0) ** 2, 1.0
+
+
 def turn_weight(deg, rmin, s):
     a = abs(deg) if np.isfinite(deg) and (not np.isfinite(s) or s <= 80.0) else 0.0
     if a < 25:
@@ -181,6 +208,7 @@ class RCfg:
     rows: dict = field(default_factory=lambda: {"Pnav": 7, "Pwod": 5, "Pcar": 16, "Ncar": 3, "Nreal": 3, "Dnav": 5, "Dwod": 4, "Dhc": 2, "Dcar": 3})
     lam_i: float = 1.0
     lam_a: float = 1.0
+    lam_p: float = 1.0                    # path-shape loss: plan points (to 10 s, within the target path's length) to the target path
     lam_d: float = 10.0
     lam_c: float = 1.0
     lam_n: float = 1.0                    # N rows: plan to the original's plan (same scale as the P imitation, not dw * lam_c)
@@ -326,9 +354,10 @@ class Batcher(torch.utils.data.Dataset):
         hum = L.human_targets(t["fut20"][i][None])[0]
         out = dict(trunk=R.B.T[j], valid=R.B.v["slot_valid"][j], tc=t["tc"][i], cam=np.float32(cam), tgt=R.S.tea["out"][i], tmu=R.S.tea["mu"][i],
                    hum=hum, role=ROLE[role[0]], fb=np.zeros(RA.ENC_DIM["bear"], np.float32), fp=np.zeros(RA.ENC_DIM["poly"], np.float32),
-                   at=np.float32(0), aw=np.float32(0), sdf=np.int64(-1))
+                   at=np.float32(0), aw=np.float32(0), sdf=np.int64(-1), tp=np.zeros((NPATH, 2), np.float32), tm=np.zeros(NPATH, bool))
         if role[0] == "P":
             rt = R.route
+            out["tp"], out["tm"] = target_path(rt["poly"][i], rt["pmask"][i])
             out["fb"] = RA.features("bear", rt["poly"][i], rt["pmask"][i], np.random.default_rng(rng.integers(1 << 62)))
             out["fp"] = RA.features("poly", rt["poly"][i], rt["pmask"][i], np.random.default_rng(rng.integers(1 << 62)))
             a, w = act_target(hum, float(t["v0"][i]))
@@ -367,7 +396,8 @@ class Batcher(torch.utils.data.Dataset):
             p = x
         out = dict(trunk=C.T[p], valid=C.tab["slot_valid"][p], tc=C.tab["tc"][p], cam=np.float32(C.cam), tgt=C.tea["out"][p], tmu=C.tea["mu"][p],
                    hum=np.full((16, 3), np.nan, np.float32), role=ROLE[key[0]], fb=np.zeros(RA.ENC_DIM["bear"], np.float32),
-                   fp=np.zeros(RA.ENC_DIM["poly"], np.float32), at=np.float32(0), aw=np.float32(0), sdf=np.int64(-1))
+                   fp=np.zeros(RA.ENC_DIM["poly"], np.float32), at=np.float32(0), aw=np.float32(0), sdf=np.int64(-1),
+                   tp=np.zeros((NPATH, 2), np.float32), tm=np.zeros(NPATH, bool))
         if key == "Pcar":
             vf = float(C.tab["v0"][p]) if C.tab["profile"][p] in ("creep", "cruise") else 0.0
             hum = path_target(C.r["poly"][j], C.r["pmask"][j], C.tea["mu"][p], C.cam, vf)
@@ -376,7 +406,8 @@ class Batcher(torch.utils.data.Dataset):
                 return out
             out["hum"] = hum
             self._neg_feat(out, C.r["poly"][j], C.r["pmask"][j], rng)
-            a, w = act_target(hum, float(C.tab["v0"][p]))
+            out["tp"], out["tm"] = target_path(C.r["poly"][j], C.r["pmask"][j])
+            a, w = act_target_path(out["tp"], out["tm"], float(C.tab["v0"][p]))
             out["at"], out["aw"] = np.float32(a), np.float32(w)
         elif key == "Ncar":
             miss = missing_classes(C, p)
@@ -451,6 +482,12 @@ class RLoss:
             with np.load(data_dir() / "runs/op_route_ft/drivable/nav.npz") as z:
                 self.g0 = (float(z["x0"]), float(z["y0"]), float(z["res"]))
 
+    def plan_xy(self, plan, cam):
+        """(B, 33, 15) -> (B, 32, 2) rear-axle x fwd / y left at the plan's own times 1..32 (as L.rear_np, in torch)."""
+        c = cam[:, None]
+        x, y, psi = plan[:, 1:, 0], plan[:, 1:, 1], -plan[:, 1:, 11]
+        return torch.stack([x + c - c * torch.cos(psi), -y - c * torch.sin(psi)], -1)
+
     def sdf_at(self, g, x, y):
         """g (B, Hx, Wy) sdf grid, x / y (B, 16) metres -> sdf values (B, 16) (bilinear, outside the grid = +10)."""
         x0, y0, res = self.g0
@@ -476,6 +513,18 @@ class RLoss:
                 e = L.huber((out[P][:, self.a0] - b["at"][P]) / SIG_A)
                 Ls["act"] = (aw * e).sum() / aw.sum()
                 tot = tot + c.lam_a * Ls["act"]
+        tm = b["tm"] & P[:, None]
+        if tm.any():
+            q = self.plan_xy(plan, b["cam"])                                     # (B, 32, 2) rear axle, t 0.0098 .. 10 s
+            Pm = P & (b["tm"].sum(1) >= 5)
+            if Pm.any():
+                dist = torch.cdist(q[Pm], b["tp"][Pm].float())                    # (b, 32, NPATH)
+                dist = dist.masked_fill(~b["tm"][Pm][:, None, :], 1e3).min(-1).values
+                arc = torch.cat([q.new_zeros(int(Pm.sum()), 1), (q[Pm][:, 1:] - q[Pm][:, :-1]).norm(dim=-1).cumsum(1)], 1)
+                lim = (b["tm"][Pm].sum(1).float() - 2.0)[:, None]
+                w = (arc <= lim).float()
+                Ls["path"] = (L.huber(dist / 0.5) * w).sum() / w.sum().clamp(min=1.0)
+                tot = tot + c.lam_p * Ls["path"]
         cn = D | N
         if D.any():
             Ls["cons"] = base.imit_dist(plan[D], b["tmu"][D].float(), b["cam"][D]).mean()
