@@ -1,7 +1,7 @@
 # op_closed_loop: openpilot in B2D: arbitration, op-drive
 
 status: concluded
-decisions: 57, 74, 118, 120, 121, 122
+decisions: 57, 74, 118, 120, 121, 122, 127
 index: Native never starts (6/6); arbitration +9.7 DS is slowness
 
 **Question.** Can openpilot drive B2D routes, and how to arbitrate its plan with a route base?
