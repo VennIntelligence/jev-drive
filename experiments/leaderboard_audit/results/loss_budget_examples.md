@@ -5,7 +5,7 @@
 **读这页之前**
 - 数字是 oracle 上限，不是可得增益；见 loss_budget.md。
 - navhard / navtest 是 open loop，GIF 是对缓存 plan 的回放，没有重新推理。HUGSIM 的 GIF 是原运行自己的数据（按构造复现）；B2D 是同 arm、route、seed 的重跑或官方运行本身，每个例子写了有没有复现。
-- 模型视角是重建的，不是 tensor dump：NAV 从原运行用过的 packed YUV 帧解码；HUGSIM 从 `video.mp4` 用 `OpenpilotFrames` 的 gather 重建（差 mp4 压缩）；B2D 从 `vlm_frames/`（只在 VLM 发请求时存，约 2 Hz）重建，差 JPEG 损失、显示 RGB。没有存帧的 B2D 例子（`drive`、`pbyp*`）标「third-person only」。
+- 模型视角是重建的，不是 tensor dump：NAV 从原运行用过的 packed YUV 帧解码；HUGSIM 从 `video.mp4` 用 `OpenpilotFrames` 的 gather 重建（差 mp4 压缩）；B2D 的 `drive`、`pbyp*`、`vmerge2` 例子是带帧转储的重跑（openpilot server 把喂给网络的 road / wide 帧和模型输出逐 10 Hz 存下来，见下），不是重建；红灯组的 `vred` 例子（R1 的 `vred`、R2、R3）仍从 `vlm_frames/`（只在 VLM 发请求时存，约 2 Hz）重建，差 JPEG 损失、显示 RGB。
 - HUGSIM 没存 chase cam，左边是 BEV reconstruction，不是渲染。
 - **对已有结论的一处修正线索（B2D 17280）**：画面支持 `vmerge_collisions.md` 的修正说法，不是「停在 stop sign 前被撞」，而是 R3 停 / 爬到约 13.5 s、放行加速后在路口里 17.7 s 被警车撞；第 95 条和 vmerge2.md 里的「停着被撞」说法需要改（见 B2D 的 C5）。这里没有改 decisions。
 - 媒体约 157 MB，在 `../figs/loss_budget_examples/`。
@@ -381,9 +381,9 @@
 - **blocked / timeout**（`Agent got blocked`、TickRuntime 200 s 上限）：`drive` 12.6（exposure-aware 12.9），`vmerge2` 剩 5.8（7.7）。
 - **车辆碰撞**：`drive` 5.2 → `vmerge2` 8.7（全部碰撞类 6.7 → 10.7），唯一变坏的杠杆。`vmerge2` 的 21 次车辆碰撞里，11 次是和 `drive` 共有的路口冲突（27043、9196、37969），7 次在 bypass 进行中，3 次是 17280 stop sign 之后（`vmerge_collisions.md`）。
 
-**怎么挑的**：每类取在 `vmerge2_runs.csv` 里跨 seed 反复出现的那种失败（比如 24944 的红灯 4/4 seed、19324 的 TickRuntime 4/4 seed），不挑最极端的。有 chase 录像的只有 vlm_arb 的 GIF 重跑（`v2-gif*`，arm 是 `drive`、`vred*`、`pbyp*`，同 route、同 traffic seed、同配置重跑）；`vmerge2` 自己没有 chase 录像。现在三张卡都被 lease 占着（od2-b2d、img-cl、vlm-vmerge3），没有空闲 lease，所以**没有补跑**。`vmerge2` 的例子改用原始运行自己的日志：第三人称换成 BEV（`privileged.jsonl`，5 Hz，特权日志里的 actor 框；红框是之后会撞上的那辆车，标出接触时刻），模型视角来自 `vlm_frames`。这几段就是官方运行本身，不是重跑，所以结果不存在复现问题。
+**怎么挑的**：每类取在 `vmerge2_runs.csv` 里跨 seed 反复出现的那种失败（比如 24944 的红灯 4/4 seed、19324 的 TickRuntime 4/4 seed），不挑最极端的。`drive`、`pbyp2ng`、`vmerge2` 的例子都在 2026-10-04 用同 arm / route / traffic seed / 配置重跑了一遍（`lbx_b2d_rerun.py`，一张卡，每个 unit 自己的 openpilot server 带转储 + chase 相机）；CARLA 不是 bit-deterministic，所以每个例子写了有没有复现，没复现的重跑了多次（`b`、`c`），留下最能说明杠杆的那次。`vred` 的三个例子（R1 右、R2、R3）沿用 v2-gif 重跑和 `vlm_frames` 重建。
 
-**画面怎么读**：顶栏是 sim 时间（scenario clock）、车速、日志里的 ego 灯态和到灯的距离、当前生效的 VLM 答案、仲裁行（`drive` / `pbyp*` 显示 bypass 状态）。下面两块是 **openpilot 实际吃进去的 road / wide 帧**：拿 VLM 通道存下的原始 CARLA 相机帧（`VLM_SAVE_FRAMES=1`，1928×1208 JPEG），用和 modeld / `op_arb_server` 相同的 nearest-neighbour warp 下标（calibration 0；road 用 MEDMODEL_K，wide 用 SBIGMODEL_K）重建成 512×256 的模型帧，显示的是 RGB（模型张量是同一批像素的 YUV，另外有 JPEG 压缩损失）。绿线是模型 plan（1/2/3/5 s 四个点投到地面），黄框是 lead 头（p > 0.5）。这些帧只在 VLM 发请求时才存（约 2 Hz），两次请求之间沿用上一帧，标 `held`；超过 1.5 s 没有新帧的会压暗，标 `STALE`，这时模型其实看到的是更新的帧，只是没存下来。`drive` / `pbyp*` 没开 VLM，没存帧，标 `model view not saved`，只有第三人称。没有慢放段；快进段在画面上标 `xN speed`。接触时刻按帧号换成 scenario clock（`contacts.jsonl` 的 t 是 world clock，大约快 1 s），所以比 `tmp/gifs_block.md` 里写的早 0.8–1.5 s。
+**画面怎么读**：顶栏是 sim 时间（scenario clock）、车速、日志里的 ego 灯态和到灯的距离、当前生效的 VLM 答案、仲裁行（`drive` / `pbyp*` 显示 bypass 状态）。左边是第三人称 chase 相机；右边两块是 **openpilot 实际吃进去的 road / wide 帧**（`lbx_dump_server.py` 在 modeld warp 之后、送进网络之前 dump，512×256，YUV 转 RGB，不是重建），每 0.1 s 一帧，和第三人称同一时间轴（用速度对齐，误差 0.000 m/s）。叠在帧上的全是模型自己的输出：绿线 = plan（未来 10 s 的位置），青线 = 车道线（lane prob > 0.5 才画），红线 = road edge，黄框 = 第一个 lead（p > 0.5，框按 1.8 m × 1.5 m 画，示意）。投影用 calibration 0、相机高 1.433 m 的地面平面。没有慢放段；快进段在画面上标 `xN speed`。每个例子有 GIF（≤ 3 MB）和一张 JPG 关键帧。`vred` 的 R1（右）/ R2 / R3 仍是旧版画面（BEV 之外的重建帧，绿线只有 4 个点，`held` / `STALE` 标注含义见 `lbx_b2d_clips.py`）。接触时刻按帧号换成 scenario clock（`contacts.jsonl` 的 t 是 world clock，大约快 1 s），所以比 `tmp/gifs_block.md` 里写的早 0.8–1.5 s。
 
 **从模型帧上能直接算出来的一点**（模型帧内参）：road crop 只到地平线上方 3.0°，wide crop 到 18.5°。约 5 m 高的灯头（比相机高 3.6 m）在 road crop 里只有 **68 m 以外**才进画面，在 wide crop 里要 **11 m 以外**。所以接近停止线时，openpilot 只能从 wide crop 看到灯，而且灯只占几个像素；road crop 基本只有路面和前车。VLM 读的是未裁剪的原始帧，看到的比 openpilot 多。
 
@@ -394,12 +394,13 @@
 ![drive vs vred 24944, stills](../figs/loss_budget_examples/b2d_red_drive_24944_s0_sheet.png)
 ![vred 24944, stills](../figs/loss_budget_examples/b2d_red_vred_24944_s0_sheet.png)
 
-![drive 24944 s0](../figs/loss_budget_examples/b2d_red_drive_24944_s0.gif) ![vred 24944 s0](../figs/loss_budget_examples/b2d_red_vred_24944_s0.gif)
+![drive 24944 s0](../figs/loss_budget_examples/b2d_red_drive_24944_s0.gif) ![drive 24944 s0 key frame](../figs/loss_budget_examples/b2d_red_drive_24944_s0.jpg) ![vred 24944 s0](../figs/loss_budget_examples/b2d_red_vred_24944_s0.gif)
 
 - 类别：红灯。对应 `drive` 的 8.7（25 次红灯里 24944 占 4/4 seed，每次扣 0.7）。`vmerge2` 在 24944 上 4 个 seed 都是 DS 100。`vmerge2` 没有 chase 录像，这里用 `vred` 代替：它就是 `vmerge2` 的读灯和 R2 停车部分，而且 `vmerge2` 的 R2 停车目标也是路口入口（`vmj`）。
 - 看点：上面两张静帧是两个 arm 在同样的 sim 秒（50 / 55 s，第三格是 drive 57 s、vred 76.5 s）。灯 39 在 42.6 s 变红。`drive` 47–53 s 停在线后约 3 m，然后起步，约 56 s 红灯穿过路口。`vred` 由 R2 压住，一直停到 74.8 s 变绿，76.1 s 放行。`vred` 的 52–74 s 是 x6 快进。
-- 模型视角（只有 `vred`）：46.5 s 还在接近时，红灯只出现在 wide crop 右上角，几个像素；road crop 里没有灯。55.5 s 车停在线后，wide crop 右边能看到灯，road crop 里还是没有。夜里有雾，road crop 几乎全黑，lead 头在 39 m 处报了一个画面上看不出来的 lead。openpilot 本身没有任何灯态输出，停车完全靠 VLM 读原始帧加上 R2。`drive` 没有存帧。
-- 复现：`drive` 重跑 `red_light` 1、DS 70，`vred` 重跑 DS 100，都和原运行一致。目录：`v2-gif-drive-s0-a/attempts/24944/1`、`v2-gif-vred-s0-a/attempts/24944/1`。
+- 模型视角（只有 `vred`）：46.5 s 还在接近时，红灯只出现在 wide crop 右上角，几个像素；road crop 里没有灯。55.5 s 车停在线后，wide crop 右边能看到灯，road crop 里还是没有。夜里有雾，road crop 几乎全黑，lead 头在 39 m 处报了一个画面上看不出来的 lead。openpilot 本身没有任何灯态输出，停车完全靠 VLM 读原始帧加上 R2。`drive` 的重跑见下一条。
+- `drive` 的模型视角（2026-10-04 带转储重跑，clip 是 46–60 s）：52 s 车停在线前（v = 0），wide 输入里红灯清楚地在右上，是个明显的灯头；road 输入里没有灯，整幅是雾夜的黑暗路面。模型的 plan（绿）是一小段竖直短线，也就是「在这里停」，没有任何和灯有关的输出；车道线几乎没有（雾夜，prob 低），只有 road edge。起步闯灯发生在这之后，不是模型看不见灯，是 openpilot 没有灯这个概念。
+- 复现：`drive` 重跑（`v2-lbx-drive-s0-24944`）`red_light` 1（灯 39）、DS 70，复现；原 `drive` 和 `vred` 重跑（DS 70 / 100）也一致。目录：`v2-gif-drive-s0-a/attempts/24944/1`、`v2-gif-vred-s0-a/attempts/24944/1`。
 
 #### R2. 剩下的红灯一：黄灯在线前约 7 m 出现（route 27297，seed 0）
 
@@ -423,80 +424,81 @@
 
 #### B1. `drive` 停在障碍物后面，直到 200 s（route 19324，seed 0）
 
-![drive 19324 s0](../figs/loss_budget_examples/b2d_blocked_drive_19324_s0.gif)
+![drive 19324 s0](../figs/loss_budget_examples/b2d_blocked_drive_19324_s0.gif) ![drive 19324 s0 key frame](../figs/loss_budget_examples/b2d_blocked_drive_19324_s0.jpg)
 
 - 类别：TickRuntime。`drive` 的 19 次 blocked / timeout 里有 16 次是 TickRuntime，都在障碍路线上（2520、19324、19832、24497 各 4/4 seed）；19324 每次扣到 DS 约 33。`vmerge2` 用 bypass 拿掉了大部分（障碍路线 +41，第 95 条）。
 - 看点：36.3 s 起停在障碍物后面，到 200 s 一直没动。30–42 s 正常速度，42–196 s x20 快进，196–200 s 正常速度。
-- 模型视角：第三人称 only，这次运行没有存模型帧。
-- 复现：`Failed - TickRuntime`、DS 33.36，复现。目录：`v2-gif-drive-s0-a/attempts/19324/1`。
+- 模型视角（带转储重跑，36–42 s 正常速度，42–190 s x40，190–196 s 正常速度）：60 s 时 road / wide 输入里正前方 4 m 是一辆警车（`lead 4m p1.00`），车道线（青）和 road edge（红）都很清楚，plan 是一条笔直、没有绕行意图的短线。模型把它当成 lead，在 lead 后面停住；openpilot 没有「lead 不动就绕过去」的行为。
+- 复现：重跑 `Failed - TickRuntime`、DS 33.36，和原运行完全一致（第一次重跑 24944 / 19324 时 lane 被别的 lane 抢了 lease 被 drain，不是失败，重启后正常）。目录：`v2-lbx-drive-s0-19324`（原 `v2-gif-drive-s0-a/attempts/19324/1`）。
 
 #### B2. 路口被消防车撞，之后被卡住（route 9196，seed 0，`drive`）
 
-![drive 9196 s0](../figs/loss_budget_examples/b2d_blocked_drive_9196_s0.gif)
+![drive 9196 s0](../figs/loss_budget_examples/b2d_blocked_drive_9196_s0.gif) ![drive 9196 s0 key frame](../figs/loss_budget_examples/b2d_blocked_drive_9196_s0.jpg)
 
 - 类别：`Agent got blocked`，`vmerge2` 剩下的 5.8 里最大的一组：9196 上 `vmerge2` 4/4 seed 都是先被消防车撞、再 `Agent got blocked`（DS 21–34）。`drive` 在 seed 1、2 上也是这样。clip 是 `drive` 的重跑，`vmerge2` 没有 chase 录像。
 - 看点：29.6 s 红灯进入路口（3.8 m/s），29.75 s 与对向开来的消防车接触（车速 4.7 m/s）；之后车停在一个 static.prop.mesh 前面，49.1 s 开始反复接触它，直到被判 blocked。26–34 s 正常速度，34–50 s x3，50–90 s x10 快进。
-- 模型视角：第三人称 only，没有存帧。
-- 复现：这是 seed 0 的第三次重跑，DS 14.87，`Failed - Agent got blocked`。和原始 seed 0（DS 42，Completed，只有碰撞和红灯）**不一致**；但和原始 seed 1 的结果（DS 14.874，碰撞、红灯、layout、blocked）完全相同。碰撞复现了，后面被卡住的部分是 seed 1 的结局。目录：`v2-gifr2-drive-s0-d/attempts/9196/1`。
+- 模型视角（带转储重跑，clip 是 27–100 s，x1 / x4 / x12）：30 s 时消防车从右边横向开进路口，在 road 输入里只占右上角（plan 是向前的直线，没有避让），wide 输入里是路口左边排队的车。模型输出没有任何对它的反应；这又是一辆侧面来的车。
+- 复现：重跑了三次（`v2-lbx-drive-s0-9196`、`...driveb...`、`...drivec...`）：a 只有红灯（DS 70，没撞）；b 撞消防车（30.3 s）+ 红灯，DS 42，Completed，和原始 seed 0 一样；c 撞（29.9 s）、第二次接触（41.7 s）、`Agent got blocked`、DS 15.5，和原始 seed 1 / 旧 GIF 的结局一样。clip 用的是 c。同 seed 三次重跑三种结果，所以这条 route 的 CARLA 本身就不稳，碰撞部分三次里两次复现。
 
 #### B3. `vmerge2` 在路口里被前车堵住 60 s（route 15612，seed 1，BEV + 模型视角）
 
-![vmerge2 15612 s1](../figs/loss_budget_examples/b2d_blocked_vmerge2_15612_s1.gif)
+![vmerge2 15612 s1](../figs/loss_budget_examples/b2d_blocked_vmerge2_15612_s1.gif) ![vmerge2 15612 s1 key frame](../figs/loss_budget_examples/b2d_blocked_vmerge2_15612_s1.jpg)
 
 - 类别：`Agent got blocked` 加红灯，属于 `vmerge2` 剩下的 5.8（15612 seed 1、2 两次，DS 22–24；第 95 条「vmj 的灯路线收益在新 seed 上没守住」说的就是这个）。
 - 看点：R2 停在线前；8.4 s 和 9.4 s VLM 两次答绿（真值红），车起步又停。14.4 s 灯变绿时车头已过线 0.8 m，16.1 s 灯又变红，车在 21.5 s 带着红灯穿过（2 m/s），22 s 起停在一辆静止的 mercedes coupe 后面 9 m，一直到 81.9 s 被判 blocked。6–24 s 正常速度，24–81 s x8 快进。
-- 模型视角：8.1 s 时 road crop 里能看到停止线和横穿的车，看不到灯头；wide crop 里路口远端的灯架很暗，只有几个像素（雨夜）。21–40 s 那辆 coupe 占满 road crop，lead 头框住了它。这一段 openpilot 看得很清楚，是前车不动。
-- 复现：这是官方运行本身（`v2-vmerge2-s1-q1/attempts/15612/1`），不是重跑。BEV 是特权日志，不是相机画面。
+- 模型视角（重跑的 clip，8–43 s；注意这次重跑没有走到「被 coupe 堵住」，见复现）：22 s 时车在路口里（0.5 km/h），VLM 答绿，仲裁行 R1；road 输入里路口正中有一个 `lead 8m p0.74` 的大框，wide 输入里同一个位置是路面和对向的车，plan 是一条绕过去的弧线。雨夜，灯头在两块画面里都看不见。
+- 复现：**没复现 blocked**。三次重跑（a / b / c）都没有被判 blocked：a、b 是闯红灯、DS 70，c 是 DS 100。原运行（DS 22–24，blocked + 红灯）的红灯部分复现了两次，被 coupe 堵 60 s 的部分没有。clip 是 a（红灯那次）。原官方运行目录 `v2-vmerge2-s1-q1/attempts/15612/1`，重跑 `v2-lbx-vmerge2-s1-15612`。
 
 ### 车辆碰撞
 
 #### C1. bypass 拉出时撞上同向车（route 19832，seed 0，`pbyp2ng`）
 
-![pbyp2ng 19832 s0](../figs/loss_budget_examples/b2d_byp_pbyp2ng_19832_s0.gif)
+![pbyp2ng 19832 s0](../figs/loss_budget_examples/b2d_byp_pbyp2ng_19832_s0.gif) ![pbyp2ng 19832 s0 key frame](../figs/loss_budget_examples/b2d_byp_pbyp2ng_19832_s0.jpg)
 
 - 类别：车辆碰撞，bypass 起步。对应 `vmerge2` 碰撞里 bypass 那一类（21 次里 7 次，扣 0.6 一次）。`pbyp2ng` 就是 `vmerge2` 现在用的 bypass 门（只拒绝贴车起步，不等整段变道的 gap，第 87、95 条）。
 - 看点：约 20–21 s 停了一下，然后拉出去，21.75 s 与同向的 impala 接触：自车 1.3 m/s，对方 7.1 m/s，对方在侧前方约 2 m。14–26 s 正常速度。
-- 模型视角：第三人称 only（特权 arm，没有存帧）。
-- 复现：`collisions_vehicle` 1、DS 60，原运行也是 impala、同向，复现。目录：`v2-gif-pbyp2ng-s0-a/attempts/19832/1`。
+- 模型视角（带转储重跑，15–26 s）：21 s 时 bypass 在 `gap_open`，road / wide 输入里正前方 lead 是一辆灰色车（`lead` 黄框），plan 是向右拉出的弧线，右边车道里有同向来车在远处；撞上的 impala 在接触前一直在自车侧后，两块画面里都看不到它（bypass 门看的是特权相邻车道几何）。
+- 复现：`collisions_vehicle` 1、DS 60，同样是 impala、同向，接触 21.90 s（原 21.75 s），复现。目录：`v2-lbx-pbyp2ng-s0-19832`。
 
 #### C2. 同一类，拉出时车速更高（route 2520，seed 0，`pbyp2ng`）
 
-![pbyp2ng 2520 s0](../figs/loss_budget_examples/b2d_byp_pbyp2ng_2520_s0.gif)
+![pbyp2ng 2520 s0](../figs/loss_budget_examples/b2d_byp_pbyp2ng_2520_s0.gif) ![pbyp2ng 2520 s0 key frame](../figs/loss_budget_examples/b2d_byp_pbyp2ng_2520_s0.jpg)
 
 - 看点：21.55 s 与同向的 mustang 接触：自车 6.1 m/s，对方 8.2 m/s，侧向 2.2 m。14–26 s 正常速度。
-- 模型视角：第三人称 only。
-- 复现：`collisions_vehicle` 1、DS 60，复现；这条 route 第一次尝试掉线了，用的是第二次尝试，官方结果也来自那一次。目录：`v2-gif-pbyp2ng-s0-a/attempts/2520/2`。
+- 模型视角（带转储重跑，15–26 s）：**这里模型能看见那辆车**。21 s 时 road 输入左边偏前能看到那辆深绿 mustang 的车尾（同向、8 m/s，在自车左侧车道往前超），前方 lead 是施工架（黄框）；plan（绿线）却是向左拉出的弧线，正好拉进 mustang 所在的车道。wide 输入里 mustang 在左下。也就是说它进了画面，但 plan 没有把它当成侧向障碍，模型没有「向侧方让行」的输出。
+- 复现：`collisions_vehicle`，接触 21.45 s（原 21.55 s），和原运行的 mustang 同类；但这次重跑多了第二次接触（37.9 s，mini cooper），DS 36 而不是 60。碰撞部分复现，第二次接触是新的。这次第一次尝试没有掉线。目录：`v2-lbx-pbyp2ng-s0-2520`。
 
 #### C3. `vmerge2` 自己的 bypass 碰撞（route 19832，seed 1，BEV + 模型视角）
 
-![vmerge2 19832 s1](../figs/loss_budget_examples/b2d_byp_vmerge2_19832_s1.gif)
+![vmerge2 19832 s1](../figs/loss_budget_examples/b2d_byp_vmerge2_19832_s1.gif) ![vmerge2 19832 s1 key frame](../figs/loss_budget_examples/b2d_byp_vmerge2_19832_s1.jpg)
 
 - 看点：BEV 左下角显示 bypass 状态：32.2 s 起 bypass 开、`gap_open` 闪了几次，37.2 s 起 bypass 一直开着，车拉出到 2.8–3.3 m/s，37.35 s 被同向的 lincoln mkz 从侧后方撞上（自车 4.0 m/s）。30–41 s 正常速度。
-- 模型视角：这一段 VLM 没有发请求，最后一张存下的帧是 29.7 s，所以整个拉出过程模型面板都是 `STALE`。29.7 s 那张帧里 road crop 是前方的白色 mercedes（就是障碍物前的停车），lead 框在它上面。按特权日志里的视锥标志（只做视锥判断，不做遮挡判断），撞上来的 mkz 在接触前两块画面里都不在（46.7 s 才进 wide），即它从相机看不到的侧后方过来。openpilot 本来就看不到这辆车；bypass 门用的是特权的相邻车道几何。
-- 复现：官方运行本身（`collisions_vehicle` 1，DS 60），目录 `v2-vmerge2-s1-q1/attempts/19832/1`。
+- 模型视角：带转储重跑的画面（29–40 s）每 0.1 s 都有帧，不再有旧版的 `STALE`；撞上来的车是从侧后方来的，key frame 是 35 s（接触瞬间）：road / wide 输入里正前方是一辆红色车（黄框 lead），plan 是笔直朝它去的细线，左边车道有一辆深红车并排；VLM 没有答案、仲裁行 none。openpilot 本来就看不到后方来车；bypass 门用的是特权的相邻车道几何。
+- 复现：重跑了三次：a 撞 audi tt（44.3 s，两次接触），DS 36；b 没撞、DS 100；c 撞（35.5 s，id 3697，自车 4.3 m/s）、`outside_route_lanes`，DS 55.9，和原运行（37.35 s、lincoln mkz、DS 60）最接近。clip 用 c。碰撞三次里两次复现（不是同一辆车）。原官方运行 `v2-vmerge2-s1-q1/attempts/19832/1`，重跑 `v2-lbx-vmerge2c-s1-19832`。
 
 #### C4. 不是 bypass：路口里被横向来车撞（route 27043，`drive` seed 0 和 `vmerge2` seed 0）
 
-![drive 27043 s0](../figs/loss_budget_examples/b2d_coll_drive_27043_s0.gif) ![vmerge2 27043 s0](../figs/loss_budget_examples/b2d_coll_vmerge2_27043_s0.gif)
+![drive 27043 s0](../figs/loss_budget_examples/b2d_coll_drive_27043_s0.gif) ![drive 27043 s0 key frame](../figs/loss_budget_examples/b2d_coll_drive_27043_s0.jpg)
+![vmerge2 27043 s0](../figs/loss_budget_examples/b2d_coll_vmerge2_27043_s0.gif) ![vmerge2 27043 s0 key frame](../figs/loss_budget_examples/b2d_coll_vmerge2_27043_s0.jpg)
 
 - 类别：车辆碰撞，路口冲突，是碰撞杠杆里最大的一块（`vmerge2` 21 次里 11 次，`drive` 12 次全是这一类）。27043 上两个 arm 都是 4/4 seed 碰撞、DS 60。
 - 看点：`drive`（chase）绿灯过线后转弯，23.35 s 与 ford mustang 接触，自车 6.9 m/s，对方从后方 3.3 m、侧向 2.9 m 过来。`vmerge2`（BEV）更早进路口，19.5 s 被一辆 mini cooper 撞上，自车 7.4 m/s。两段都是 16–27 s / 11–22 s 正常速度。
-- 模型视角（只有 `vmerge2`）：14.6 s 时 road crop 里能看到停止线和路口，plan 往右弯，wide crop 里能看到远端的灯架；17.6 s 一辆蓝色轿车贴着左侧，占了两块画面的一半；19.1 s 能看到前方一辆 lincoln。按视锥标志，撞上来的 mini 在接触前一直不在两块画面里（侧面来的），模型没有机会看到它。
-- 复现：`drive` 重跑 DS 60，复现（`v2-gif-drive-s0-a/attempts/27043/1`）；`vmerge2` 是官方运行本身（`v2-vmerge2-s0-q0/attempts/27043/1`）。
+- 模型视角（两个 arm 都是带转储重跑）：`drive` 22 s 时车在路口前（14.5 km/h，黄灯），road 输入里能看到停止线、灯杆和路口，plan 往右弯（转弯）；横穿的车在 chase 里清楚可见，key frame（22 s，接触前 1.4 s）的两块输入里它们还在远处路口、占的像素很少，plan 没有任何减速意图。`vmerge2` 的 key frame 是 18 s（接触前 1.5 s）：一辆蓝色轿车（撞上来的 mini cooper）已经横在车前，占满 road 输入右下、wide 输入下方，也就是模型**看得见它**，但 plan（和车道线 / road edge 的输出）没有变化。这是侧向来车：openpilot 的 lead 头只看同车道前车，没有横穿车的概念。
+- 复现：`drive` 重跑 DS 60、mustang（id 277）接触 23.40 s（原 23.35 s），完全复现（`v2-lbx-drive-s0-27043`）；`vmerge2` 重跑 DS 60、mini cooper（id 272）接触 19.50 s（原 19.5 s），完全复现（`v2-lbx-vmerge2-s0-27043`）。
 
 #### C5. 17280：stop sign 停完、起步后被转弯的警车撞（`vmerge2` seed 2，BEV + 模型视角）
 
-![vmerge2 17280 s2](../figs/loss_budget_examples/b2d_stop_vmerge2_17280_s2.gif)
+![vmerge2 17280 s2](../figs/loss_budget_examples/b2d_stop_vmerge2_17280_s2.gif) ![vmerge2 17280 s2 key frame](../figs/loss_budget_examples/b2d_stop_vmerge2_17280_s2.jpg)
 
 - 类别：车辆碰撞，第 95 条第 5 点的 17280 类（`vmerge2` seed 1、2、3 都撞，21 次里 3 次）。`drive` 不停 stop sign，只扣 stop 0.8（DS 80）；`vmerge2` 停了，换成碰撞 0.6（DS 60）。
 - **和第 95 条的说法不一样**：第 95 条和 `vmerge2.md` 写的是「停在 stop sign 前被撞」，`vmerge_collisions.md` 已经按 scenario clock 改正过，这里的画面支持改正后的说法：R3 让车在路口入口前约 8 m 停住 / 爬行（约 6–13.5 s），13.5 s 放行，车加速到 4.5 m/s 进入路口，17.70 s 被 nissan patrol 撞上（自车正在从 4.1 m/s 减速，接触时 1.9 m/s）。不是停着被撞，是 stop 结束后起步时被撞。seed 1、3 的接触时刻是 17.50 s 和 18.20 s，接触前 0.5 s 的车速都在 3.9–4.2 m/s。
 - 看点：5–13 s x2 快进（stop 段），13–20 s 正常速度。BEV 里红框就是那辆 patrol：一开始停在路口左侧，之后转弯开过来。
-- 模型视角：11.6 s 时 wide crop 里能看到 STOP 牌（右侧），road crop 里看不到；road crop 里是路口和远处排队的车。按视锥标志，patrol 从 3.9 s 起就在 wide 相机视锥里（39 m），17.1 s 才进 road 视锥（7.8 m，接触前 0.6 s）。也就是说 wide 一直能看到它，但它在左侧远处、离路线很远。17.6 s 时它占满了两块画面。R3 放行时没有横向来车检查（`vmerge3` 的 `VM3_REL` 就是为这个加的）。
-- 复现：官方运行本身（`v2-vmerge2-s2-q0/attempts/17280/1`，`collisions_vehicle` 1，DS 60）。
+- 模型视角（带转储重跑，5–20 s）：17 s 时车 14 km/h 进路口，R1 行；road 输入里右上有一辆深色轿车（lincoln）正对着路口，红线是 road edge，没有车道线，plan 没有显示避让；wide 输入左下能看到一辆红色 SUV。撞上来的 nissan patrol 是左侧转弯过来的，第三人称里 17 s 时它在左边（红色那辆旁边），不在 road 输入里。
+- 复现：重跑 `collisions_vehicle` 1、DS 60，同样是 nissan patrol（id 3706），接触 18.05 s（原 17.70 s），接触时自车 1.0 m/s（原 1.9 m/s），复现；起步后被撞的说法和重跑一致。目录 `v2-lbx-vmerge2-s2-17280`，原官方运行 `v2-vmerge2-s2-q0/attempts/17280/1`。
 
 ### 没做的
 
-- **`vmerge2` 的 chase 录像**：没有。`vmerge2` 的例子用 BEV + 模型帧代替；红灯那组用 `vred` 的 chase 代替 `vmerge2`。要补录 `vmerge2` 的 chase，得用 v2-gif 的机制重跑（`vlm_arb_gif_chain.py` 加一个 vmerge2 set，再加每卡一个 Qwen server），现在三张卡都在 lease 上，按规则不能起，跳过。
-- **`drive` / `pbyp*` 的模型视角**：这些运行没存帧（没开 VLM），而 openpilot 的输入帧没法从 chase 相机重建（是另一台相机）。所以 R1 的 `drive`、B1、B2、C1、C2、C4 的 `drive` 都标第三人称 only。补的话需要带帧转储的重跑，同上，没有 lease。
-- **模型帧的局限**：帧只在 VLM 请求时存（约 2 Hz，而且只在路口窗口 / 检测头触发 / 停车保持时才有请求），bypass 段（C3）之类的没有覆盖。重建的帧和模型张量差在两处：JPEG 压缩、以及显示的是 RGB 而不是 YUV。plan 只记了 4 个点，lead 框按 1.8 m × 1.5 m 画，只是示意。
+- **`vred` 三个例子（R1 右、R2、R3）**：仍是旧的重建画面，没有重跑带转储；它们有 chase 录像和模型帧（`vlm_frames`），不是 third-person only。要统一格式需要再跑 `vred` 的转储 unit。
+- **转储的局限**：dump 没有时钟，靠速度和 `ticks.jsonl` 对齐（误差 0.000 m/s，每个例子的脚本输出里都有）；plan 的 pos 是未来 10 s 的 33 个点，lane line / road edge 在 openpilot 的距离网格（0–192 m）上，投影用地面平面，远处的线可能和图像对不齐。JPG / GIF 是 8-bit 调色板，不是原始帧。
+- **没复现的部分**：15612 的 blocked（三次都没有）。9196、19832 vmerge2、2520 都有重跑间的差异，见各自「复现」。
 - **视锥标志**：特权日志的 `view` 只看 bounding box 在不在原生相机视锥里，不判断遮挡，是可见性的上限；而且是原生相机（比 road crop 大），不是模型 crop。
