@@ -100,10 +100,12 @@ def check_tree(name):
         raise SystemExit(f"tree {t}: lowspeed-sel-ctrl patch not applied")
     if name in ("lowspeed", "lowsel") and not applied(t, LOWSPEED):
         raise SystemExit(f"tree {t}: lowspeed-ctrl patch not applied")
-    if name in ("opctrl", "opctrl_long") and not applied(t, OPCTRL):
+    if name == "opctrl" and not applied(t, OPCTRL):          # opctrl_long: the long patch extends op-ctrl's hunks, so op-ctrl alone no longer reverses cleanly
         raise SystemExit(f"tree {t}: op-ctrl patch not applied")
     if bool(applied(t, OPCTRL_LONG)) is not (name == "opctrl_long"):
         raise SystemExit(f"tree {t}: op-ctrl-long patch state wrong for controller '{name}'")
+    if name == "opctrl_long" and "op_kappa" not in (Path(t) / "closed_loop.py").read_text():
+        raise SystemExit(f"tree {t}: op-ctrl patch not applied")
     if name == "fixed2" and not applied(t, V2):
         raise SystemExit(f"tree {t}: tracker-v2 patch not applied")
 
