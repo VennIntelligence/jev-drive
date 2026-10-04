@@ -91,7 +91,7 @@ def main():
             cmd, dist = ncmd[k]
             d.rectangle((0, 0, n.width, 16), fill=(12, 16, 24))
             d.text((4, 2), "%s  t=%.1f s  v=%.1f km/h  x%d" % (n.label, att.t[i], x["v"] * 3.6, n.speedup), font=font, fill="white")
-            d.text((n.width + 4, model.height - 15), "model input: arrow = %s %s m" % (cmd, dist), font=font, fill=(110, 220, 255))
+            d.text((n.width + 4, model.height - 15), "model input: arrow = %s %s m" % (cmd, dist) if cmd != "none" else "model input (road + wide), no command drawn", font=font, fill=(110, 220, 255))
             frames[j] = canvas
     src.close()
     frames = [f for f in frames if f is not None]
