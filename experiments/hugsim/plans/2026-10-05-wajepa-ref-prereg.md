@@ -29,3 +29,12 @@
 
 - 1 偏低：先查 fallback 步数（planner_stats.json n_failures）、命令映射、BACK 相机；不是模型弱之前先排除适配问题。
 - 2/3 失败：说明无状态窗口也会起步打转，假设「循环 temporal 状态是起步打转的来源」不成立，回到场景内容（launch_lean.md）。
+
+## 补充：早读门（2026-10-05 19:20 加，用户指示 GPU 0 专用 + 先小子集早读）
+
+**时间线如实记录：这条在子集结果出来之后才写。** 之前的流水线是 smoke -> 10 个 spinner -> 全部 64 自动串联；门写入前，10 个 spinner 的 HD 与 end、以及全部 64 中先跑完的 25 个场景的一行日志（HD / end）我已经看过，spin 计数（航向误差）尚未算。
+所以门的子集成员按只依赖 Cinque 数据的规则事后固定，门的判据保持用户给的原样；「看过 HD」这一点在报告里作为 caveat 写明。已 cancel 在跑的全量 job，剩余场景在 GPU 0 上续跑（pool 的 `--gpus 0`）。
+
+- 子集（16）：10 个 spinner；cinque-fixed 失败（max_steps / 碰撞）的非 spinner 中按 scored_op.csv 顺序的 nuscenes 与 waymo 前 4 个（0041-medium-00、0411-medium-00、0254-hard-00、113792265837-easy-00）；cinque-fixed 完成的 easy 中按文件顺序的前 2 个（0051-easy-00、0166-easy-00）。
+- 早停规则：WA-JEPA 在 10 个 spinner 中打转 >= 3 个，或子集平均 HD 不高于 cinque-fixed 同一子集 -> 子集后停下并报告；否则不等回复，直接续跑全 64。
+- 早读消息给 main：逐场景 HD 与失败类（WA vs cinque-fixed）、spin 数、设置是否合理（车在动、相机对、BACK 的表现）。
