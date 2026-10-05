@@ -125,7 +125,7 @@ def line(name, f):
 def cmd_report(a):
     out = Path(a.out)
     B, C = np.load(out / "bank.npz", allow_pickle=True), np.load(out / "comma.npz")
-    hdr = "| target | n (clusters) | slope decoded ~ target [95% CI] | reverse slope | r |\n|---|---|---|---|---|"
+    hdr = "| target | n (clusters) | g_reg: slope decoded ~ measured [95% CI] | g_cal: 1 / slope measured ~ decoded [95% CI] | r |\n|---|---|---|---|---|"
     res = {}
     # ---- comma1M (native rig)
     v, win = C["v"], C["win"]
@@ -270,7 +270,7 @@ def cmd_b2d(a):
     X, Y, G, Z, VR = map(np.array, (X, Y, G, Z, VR))
     sign = np.sign(np.corrcoef(X, Y)[0, 1])
     print(f"## B2D eval-drive-s0* ({len(files)} runs), route-steered ticks, v > {VMIN}; CARLA yaw sign flip {sign:+.0f}\n"
-          "| subset | n (runs) | slope act_k ~ measured [95% CI] | reverse slope | r |\n|---|---|---|---|---|")
+          "| subset | n (runs) | g_reg [95% CI] | g_cal [95% CI] | r |\n|---|---|---|---|---|")
     kt = np.abs(X)
     for name, m in (("all", np.ones(len(X), bool)), ("command zone", Z), ("divergence fallback", ~Z), ("|k| > 0.02 (R < 50 m)", kt > 0.02)):
         print(line(name, fit(sign * X[m], Y[m], G[m])))
