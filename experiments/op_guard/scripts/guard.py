@@ -29,6 +29,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import guardlib as G  # noqa: E402
 
+sys.path.insert(0, str(G.REPO))
+
 OPEN_LOOP = ["navtest", "navhard", "wod", "drift", "negatives"]
 CLOSED_LOOP = ["hugsim", "b2d_turns", "b2d_ds"]
 WANT: list = []
