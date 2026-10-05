@@ -1,0 +1,25 @@
+# op_parity: Cinque with WA-JEPA's inputs, fine-tuned on navtrain
+
+status: live
+decisions: (pending) (inputs: 92, 96, 104, 111, 118, 128, 135, 136, 137, 138, 139)
+index: Cinque + ego / pose / cmd / side cams vs WA-JEPA, equal inputs and data
+key: experiments/op_parity/plans/2026-10-06-parity-prereg.md, lib/parity_adapter.py, experiments/op_parity/scripts/pp_prep.py, experiments/op_parity/scripts/pp_train.py, experiments/op_parity/scripts/pp_eval.py, jevdrive/navsim_zs.py, experiments/hugsim/results/wajepa_ref.md
+
+**Question.** With no input disadvantage relative to WA-JEPA (command, ego velocity / acceleration, 4-pose history, side and rear cameras)
+and the same fine-tuning data (navtrain), how much of WA-JEPA's lead over openpilot Cinque (HUGSIM 0.451 vs 0.278, navtest EPDMS 91.71)
+remains: comma pretraining vs V-JEPA 2 + nuPlan video pretraining.
+
+**Design.** Cinque's vision encoder stays frozen (its hidden tokens are cached once); the new inputs enter through a zero-initialised bias on
+the 9 policy context frames (lib/parity_adapter.py: ego MLP tokens + side / rear camera tokens from Cinque's own encoder, read by 32 slot
+queries); the plan pathway is fine-tuned on navtrain with an anchor (same navtrain frames, inputs zeroed, distilled to shipped). Arms P0
+shipped, P1 inputs zeroed, P2 + ego / pose / command, P3 + side / rear cameras. Readouts: NAVSIM navtest EPDMS on the devkit that
+reproduced WA-JEPA's 91.71, HUGSIM 64 (spins, launch stalls). Pre-registration: [plans/2026-10-06-parity-prereg.md](plans/2026-10-06-parity-prereg.md).
+
+**Next.** Feature cache, init-equivalence test, pilot (600 steps per arm) and its gate.
+
+<!-- files:begin -->
+<!-- files:end -->
+
+Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded
+experiment, `results/` small result files, `figs/` figures, `plans/` live plan notes. Refresh the file list and
+INDEX.md with `python tools/topic_index.py`.

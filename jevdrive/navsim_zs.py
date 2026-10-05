@@ -160,6 +160,12 @@ class AlpamayoMaps:
         return np.stack(out)
 
 
+def cam_yaw_deg(cam: dict) -> float:
+    """Mounting yaw of a nuPlan camera (deg, left positive): heading of its optical axis in the ego frame."""
+    f = np.asarray(cam["R"], np.float64)[:, 2]
+    return float(np.degrees(np.arctan2(f[1], f[0])))
+
+
 class OpenpilotMaps:
     """CAM_F0 -> openpilot road (focal 910) and wide (focal 455) 512x256 model frames, calib = the NAVSIM ego axes
     (level, straight). Nearest sampling at integer model pixels like tinygrad's warp; the source is libjpeg's own
@@ -167,9 +173,11 @@ class OpenpilotMaps:
     depress = r > 1: a virtual camera lowered from height h to h / r above a flat road (same x, y, axes): a model ray below
     the horizon samples CAM_F0 along (x, y, r z), i.e. the same ground point; rays above the horizon are unchanged
     (lane EDGE, experiments/skill_pack/plans/2026-10-04-roadedge-diagnosis-plan.md). pitch_deg > 0 pitches the virtual
-    camera up about its own y axis before the depression (horizon moves down in the model frame)."""
+    camera up about its own y axis before the depression (horizon moves down in the model frame).
+    yaw_deg turns the (level) virtual camera about the vertical axis, left positive: a side or rear camera rendered along its own
+    heading (experiments/op_parity; `cam_yaw_deg(cam)` is the camera's mounting yaw)."""
 
-    def __init__(self, cam: dict, depress: float = 1.0, pitch_deg: float = 0.0):
+    def __init__(self, cam: dict, depress: float = 1.0, pitch_deg: float = 0.0, yaw_deg: float = 0.0):
         from .openpilot.frames import MEDMODEL_K, SBIGMODEL_K, VIEW_FROM_DEVICE, MODEL_W, MODEL_H
         uu, vv = np.meshgrid(np.arange(MODEL_W, dtype=np.float64), np.arange(MODEL_H, dtype=np.float64))
         self.idx, self.coverage = [], []
@@ -181,7 +189,11 @@ class OpenpilotMaps:
                 ray_dev = ray_dev @ np.array([[c, 0, s_], [0, 1, 0], [-s_, 0, c]]).T
             if depress != 1.0:
                 ray_dev[..., 2] = np.where(ray_dev[..., 2] > 0, ray_dev[..., 2] * depress, ray_dev[..., 2])
-            uv, ok, _ = project_nuplan(ray_dev * np.array([1., -1., -1.]), cam, 1)
+            rays = ray_dev * np.array([1., -1., -1.])                                                  # x fwd, y left, z up
+            if yaw_deg:
+                c, s_ = np.cos(np.radians(yaw_deg)), np.sin(np.radians(yaw_deg))
+                rays = rays @ np.array([[c, -s_, 0], [s_, c, 0], [0, 0, 1]]).T
+            uv, ok, _ = project_nuplan(rays, cam, 1)
             xi = np.clip(np.rint(uv[..., 0]), 0, w - 1).astype(np.int64)
             yi = np.clip(np.rint(uv[..., 1]), 0, h - 1).astype(np.int64)
             self.idx.append((yi * w + xi).ravel())
