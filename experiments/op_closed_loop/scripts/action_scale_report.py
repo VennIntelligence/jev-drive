@@ -234,9 +234,52 @@ def figure(path, C, curve, j2, vmin):
     print("fig", path)
 
 
+def cmd_b2d(a):
+    """B2D (CARLA, `drive` arms, camera 1.433 m): logged action curvature act_k vs the curvature the car drove (truth yaw rate / v at t + 0.2 s),
+    on ticks where the route geometry steers (lat == route: in a command zone or after divergence), so the car's motion does not come from
+    the action head. Also the model's own speed vplan[0] / v."""
+    import glob
+    from jevdrive.common import data_dir
+    X, Y, G, Z, VR = [], [], [], [], []
+    files = sorted(glob.glob(str(data_dir() / "runs/vlm_arb/arms/eval-drive-s0*/attempts/*/1/plans.jsonl")))
+    for k, f in enumerate(files):
+        try:
+            P = [json.loads(x) for x in open(f)]
+            T = {t["frame"]: t for t in map(json.loads, open(Path(f).with_name("ticks.jsonl")))}
+        except (OSError, ValueError):
+            continue
+        fr = np.array([t for t in sorted(T) if "truth" in T[t]])
+        if len(fr) < 50:
+            continue
+        tt = np.array([T[t]["t"] for t in fr])
+        tr = np.array([T[t]["truth"] for t in fr])
+        yaw = np.unwrap(tr[:, 2] if np.abs(tr[:, 2]).max() <= 2 * np.pi + 0.1 else np.radians(tr[:, 2]))
+        ds = np.r_[0, np.hypot(*np.diff(tr[:, :2], axis=0).T)]
+        s = np.cumsum(ds)
+        for p in P:
+            if p.get("warm") or p["v"] < VMIN or p.get("lat") != "route" or "act_k" not in p:
+                continue
+            t0 = p["t"] + 0.2
+            if t0 + 0.15 > tt[-1]:
+                continue
+            a_, b_ = np.interp([t0 - 0.15, t0 + 0.15], tt, s), np.interp([t0 - 0.15, t0 + 0.15], tt, yaw)
+            if a_[1] - a_[0] < 0.5:
+                continue
+            X.append((b_[1] - b_[0]) / (a_[1] - a_[0])), Y.append(p["act_k"]), G.append(k), Z.append(p.get("lat_why") == "zone")
+            VR.append(p["vplan"][0] / p["v"])
+    X, Y, G, Z, VR = map(np.array, (X, Y, G, Z, VR))
+    sign = np.sign(np.corrcoef(X, Y)[0, 1])
+    print(f"## B2D eval-drive-s0* ({len(files)} runs), route-steered ticks, v > {VMIN}; CARLA yaw sign flip {sign:+.0f}\n"
+          "| subset | n (runs) | slope act_k ~ measured [95% CI] | reverse slope | r |\n|---|---|---|---|---|")
+    kt = np.abs(X)
+    for name, m in (("all", np.ones(len(X), bool)), ("command zone", Z), ("divergence fallback", ~Z), ("|k| > 0.02 (R < 50 m)", kt > 0.02)):
+        print(line(name, fit(sign * X[m], Y[m], G[m])))
+    print(f"vplan[0] / v median {np.median(VR):.3f}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["extract", "report"])
+    ap.add_argument("cmd", choices=["extract", "report", "b2d"])
     ap.add_argument("out")
     ap.add_argument("--fig")
     a = ap.parse_args()
