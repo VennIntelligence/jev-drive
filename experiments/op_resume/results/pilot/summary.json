@@ -1,0 +1,149 @@
+{
+ "stuck": {
+  "n": 6,
+  "launched": 5,
+  "fired": 5,
+  "hd": {
+   "n": 6,
+   "units": 6,
+   "mean": 0.12176147156680327,
+   "lo": -0.0002001466429468815,
+   "hi": 0.3068501523625924,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.40674420318007115,
+   "mean_b": 0.28498273161326787
+  },
+  "rc": {
+   "n": 6,
+   "units": 6,
+   "mean": 0.16609212423716815,
+   "lo": 0.03161148623610364,
+   "hi": 0.33646399292128276,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.595632069949547,
+   "mean_b": 0.4295399457123788
+  },
+  "coll_spec": 0,
+  "coll_rule": 0,
+  "coll_after_fire": 0,
+  "max_steps_spec": 5,
+  "max_steps_rule": 4
+ },
+ "other": {
+  "n": 2,
+  "launched": 1,
+  "fired": 1,
+  "hd": {
+   "n": 2,
+   "units": 2,
+   "mean": 0.024902570921769125,
+   "lo": 0.0,
+   "hi": 0.04980514184353825,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.571894226609077,
+   "mean_b": 0.5469916556873079
+  },
+  "rc": {
+   "n": 2,
+   "units": 2,
+   "mean": 0.028546332894158984,
+   "lo": 0.0,
+   "hi": 0.05709266578831797,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.5755379885814669,
+   "mean_b": 0.5469916556873079
+  },
+  "coll_spec": 0,
+  "coll_rule": 1,
+  "coll_after_fire": 1,
+  "max_steps_spec": 1,
+  "max_steps_rule": 0
+ },
+ "pilot_stuck": {
+  "n": 6,
+  "launched": 5,
+  "fired": 5,
+  "hd": {
+   "n": 6,
+   "units": 6,
+   "mean": 0.12176147156680327,
+   "lo": -0.0002001466429468815,
+   "hi": 0.3068501523625924,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.40674420318007115,
+   "mean_b": 0.28498273161326787
+  },
+  "rc": {
+   "n": 6,
+   "units": 6,
+   "mean": 0.16609212423716815,
+   "lo": 0.03161148623610364,
+   "hi": 0.33646399292128276,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.595632069949547,
+   "mean_b": 0.4295399457123788
+  },
+  "coll_spec": 0,
+  "coll_rule": 0,
+  "coll_after_fire": 0,
+  "max_steps_spec": 5,
+  "max_steps_rule": 4
+ },
+ "b2d": {
+  "n": 3,
+  "ds": {
+   "n": 3,
+   "units": 3,
+   "mean": -20.0,
+   "lo": -40.0,
+   "hi": 0.0,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 70.0,
+   "mean_b": 90.0
+  },
+  "runs_fired": 0,
+  "fires_at_light": 0,
+  "totals": {
+   "red_light": [
+    1,
+    1
+   ],
+   "stop_infraction": [
+    0,
+    1
+   ],
+   "collisions_vehicle": [
+    0,
+    1
+   ]
+  },
+  "totals_fired": {
+   "red_light": [
+    0,
+    0
+   ],
+   "stop_infraction": [
+    0,
+    0
+   ],
+   "collisions_vehicle": [
+    0,
+    0
+   ]
+  }
+ }
+}

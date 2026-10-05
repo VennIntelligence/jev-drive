@@ -1,0 +1,4 @@
+route,seed,DS_spec,RC_spec,status_spec,red_light_spec,stop_infraction_spec,collisions_vehicle_spec,collisions_layout_spec,collisions_pedestrian_spec,vehicle_blocked_spec,route_timeout_spec,min_speed_infractions_spec,outside_route_lanes_spec,fires_spec,fires_at_light_spec,DS_rule,RC_rule,status_rule,red_light_rule,stop_infraction_rule,collisions_vehicle_rule,collisions_layout_rule,collisions_pedestrian_rule,vehicle_blocked_rule,route_timeout_rule,min_speed_infractions_rule,outside_route_lanes_rule,fires_rule,fires_at_light_rule
+17280,2,100.0,100.0,Completed,0,0,0,0,0,0,0,20,0,0,0,80.0,100.0,Completed,0,1,0,0,0,0,0,20,0,0,0
+24944,2,70.0,100.0,Completed,1,0,0,0,0,0,0,20,0,0,0,70.0,100.0,Completed,1,0,0,0,0,0,0,20,0,0,0
+9196,2,100.0,100.0,Completed,0,0,0,0,0,0,0,20,0,0,0,60.0,100.0,Completed,0,0,1,0,0,0,0,20,0,0,0

@@ -1,0 +1,9 @@
+scenario,set,hd_spec,hd_rule,rc_spec,rc_rule,end_spec,end_rule,fires,t_fire,launched,handbacks,lead_at_fire,gt_lane_at_fire,coll_after_fire,dist_after_fire
+scene-0051-easy-00,other,1.0,1.0,1.0,1.0,complete,complete,0,,False,,,,False,
+scene-034-easy-00,stuck,0.8966186711838885,0.8625850340136054,0.930171277997365,1.0,max_steps,complete,1,23.25,True,speed,"(0.27, 36.8)",,False,5.0
+scene-0411-medium-00,stuck,0.06218202374222724,0.18026505872746684,0.06218202374222724,0.18026505872746684,max_steps,max_steps,2,15.75,True,lead_abort;lead_abort,"(0.85, 29.7)",,False,12.5
+scene-0418-hard-00,stuck,0.1726844583987441,0.1556122448979592,1.0,1.0,complete,complete,1,18.0,True,plan,"(0.04, 39.8)",3.0,False,81.6
+scene-095-medium-01,stuck,0.19866284622731614,0.7449856733524355,0.19866284622731614,0.7449856733524355,max_steps,max_steps,4,24.75,True,plan;plan;plan;plan,"(0.53, 32.2)",,False,54.6
+scene-113792265837-easy-00,stuck,0.11152077927989439,0.2282176833590188,0.11152077927989439,0.3732532204469935,max_steps,max_steps,4,15.75,True,speed;speed;speed;timeout,"(0.05, 38.7)",,False,40.9
+scene-124-extreme-01,other,0.09398331137461573,0.14378845321815398,0.09398331137461573,0.1510759771629337,max_steps,fg_collision,1,16.5,True,plan,"(0.13, 33.7)",,True,5.3
+scene-3000_3200-medium-00,stuck,0.26822761084753705,0.26879952472994123,0.2747027470274703,0.275288467170386,max_steps,max_steps,0,,False,,,,False,
