@@ -60,9 +60,8 @@ def main():
                 rgb = (I.to_rgb(torch.from_numpy(np.asarray(imgs[c, :, k])).cuda()) * 255).clamp(0, 255).to(torch.uint8)   # (nf, 3, 256, 512)
                 D = []
                 with torch.inference_mode():
-                    for b in range(0, nf, a.batch):
-                        x = rgb[b: b + a.batch]
-                        D.append(m.infer(x, K[None].expand(len(x), 3, 3).clone())["depth"][:, 0].float())
+                    for b in range(nf):                                                    # UniDepth's camera takes one image per K
+                        D.append(m.infer(rgb[b: b + 1], K[None].clone())["depth"][:, 0].float())
                 D = torch.cat(D)                                                                   # (nf, 256, 512)
                 pl = torch.as_tensor(plane_lam(view, float(cam[c][2])), dtype=torch.float32, device="cuda")
                 ys, xs = PATCH[view]
