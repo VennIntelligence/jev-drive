@@ -129,7 +129,7 @@ def main(a):
             with ThreadPoolExecutor(8) as ex:
                 for rows, prev, cur in run.tqdm(ex.map(load, chunks), total=len(chunks), desc="front"):
                     out[rows] = enc(prev, cur).reshape(len(rows), 8, *A.H_SHAPE)
-            timing["front_pairs_per_s"] = 8 * N / (time.time() - t0)
+            timing.update(front_pairs_per_s=8 * N / (time.time() - t0))
             return out
         front = cache.cached(root / "front.npy", cache.key(params=kbase | dict(steps=STEPS.tolist()), code=[encoder]), make_front, force=a.force)
 
@@ -146,6 +146,8 @@ def main(a):
                 buf, rows = [], []
                 for i, fr in enumerate(run.tqdm(ex.map(render_side, items, chunksize=4), total=N, desc="side")):
                     buf.append(fr), rows.append(i)
+                    if i < 4:                                                       # a few rendered tokens for the visual check
+                        np.save(root / f"side_sample{i}.npy", fr)
                     if len(buf) == 32 or i == N - 1:
                         x = np.stack(buf)                                           # (b, 3, 4, ...)
                         prev, cur = x[:, :, :-1].reshape(-1, *FRAME), x[:, :, 1:].reshape(-1, *FRAME)
@@ -153,7 +155,7 @@ def main(a):
                         out[rows] = enc(prev, cur).reshape(len(rows), len(PA.SIDE_CAMS), PA.SIDE_T, *A.H_SHAPE)
                         tb.append(time.time() - t1)
                         buf, rows = [], []
-            timing |= {"side_tokens_per_s": N / (time.time() - t0), "side_gpu_busy": sum(tb) / (time.time() - t0), "render_workers": W}
+            timing.update({"side_tokens_per_s": N / (time.time() - t0), "side_gpu_busy": sum(tb) / (time.time() - t0), "render_workers": W})
             return out
         side = cache.cached(root / "side.npy", cache.key(params=kbase | dict(cams=PA.SIDE_CAMS, t=PA.SIDE_T), code=[render_side, encoder]),
                             make_side, force=a.force)
