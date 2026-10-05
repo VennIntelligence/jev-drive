@@ -11,6 +11,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "experiments/op_guard/scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cllib as C  # noqa: E402
 import guardlib as G  # noqa: E402
 
@@ -29,4 +30,7 @@ def jobs(args):
                                C.TURN_SEED, True, c.get("onnx"), priority=3 if de == "off" else 2, route_adapter=c.get("route_adapter"))
                 j.env["DESIRE"] = "false" if de == "off" else "true"
                 out.append(j)
+    if args.get("flip"):                       # command-flip control units (pre_flip_lane.py), selected with --only on a second lane
+        import pre_flip_lane as F
+        out += F.jobs({})
     return out
