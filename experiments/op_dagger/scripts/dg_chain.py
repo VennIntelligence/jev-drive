@@ -33,13 +33,13 @@ def status(msg):
     print(time.strftime("%T"), msg, flush=True)
 
 
-def lease(max_cards):
-    """Poll until 1..max_cards cards are granted; returns (cards, {card: cpus})."""
+def lease(max_cards, gpus=None):
+    """Poll until 1..max_cards cards (or exactly the explicit card list `gpus`, e.g. "1") are granted; returns (cards, {card: cpus})."""
     from jevdrive.cl import lease as L
     while True:
-        for k in range(max_cards, 0, -1):
-            r = subprocess.run([sys.executable, "-m", "jevdrive.cl", "lease", LANE, "--gpus", str(k), "--status", "op_dagger pilot (train / rollouts)"],
-                               capture_output=True, text=True, cwd=REPO)
+        for k in ([gpus] if gpus else range(max_cards, 0, -1)):
+            r = subprocess.run([sys.executable, "-m", "jevdrive.cl", "lease", LANE, "--gpus", str(k)] + (["--explicit"] if gpus else [])
+                               + ["--status", "op_dagger pilot (train / rollouts)"], capture_output=True, text=True, cwd=REPO)
             if r.returncode == 0 and "granted" in r.stdout:
                 ls = L.get(LANE)
                 return sorted(ls.cards), {c: ls.cards[c]["cpus"] for c in ls.cards}
@@ -82,6 +82,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=400)
     ap.add_argument("--max-cards", type=int, default=3)
+    ap.add_argument("--gpus", default=None, help="explicit card list to lease (e.g. 1); overrides --max-cards")
     a = ap.parse_args()
     sys.path.insert(0, str(REPO))
     for f in ("DONE", "ERROR"):
@@ -93,7 +94,7 @@ def main():
     tr = lambda tag, extra: ([S + "dg_train.py", "--tag", tag, "--steps", str(a.steps), "--workers", "12"] + extra, f"train-{tag}", OUT / "runs" / tag / "ckpt-final.pt")  # noqa: E731
     ev = lambda m: ([S + "dg_roll.py", "eval", "--model", m, "--set", "heldout", "--workers", "12"], f"eval-{m}", R / m / "heldout-eval-0of1.npz")  # noqa: E731
     co = lambda m, i: ([S + "dg_roll.py", "collect", "--model", m, "--set", "train", "--shard", f"{i}/2", "--workers", "12"], f"collect-{m}-{i}", R / m / f"train-collect-{i}of2.npz")  # noqa: E731
-    cards, cpus = lease(a.max_cards)
+    cards, cpus = lease(a.max_cards, a.gpus)
     try:
         run_stage("stage 1", [tr("dg1", ["--rolls", "shipped"]), tr("st1", ["--rolls", "shipped", "--static"]), ev("shipped")], cards, cpus)
         run_stage("stage 2", [co("dg1", 0), co("dg1", 1), ev("dg1"), ev("st1")], cards, cpus)
