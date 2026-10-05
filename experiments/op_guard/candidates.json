@@ -32,5 +32,17 @@
   "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-all-s0.adapter.npz",
   "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
   "note": "op_route_ft rc-all-s0 (route-choice fine-tune; adapter route polyline)"
+ },
+ "rc-bear-pre-s0": {
+  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-bear-pre-s0.onnx",
+  "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-bear-pre-s0.adapter.npz",
+  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+  "note": "op_route_ft rc-bear-pre-s0 (rc-bear + turn-in action target at approach poses)"
+ },
+ "rc-ctl-pre-s0": {
+  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-ctl-pre-s0.onnx",
+  "route_adapter": null,
+  "command_adapter": null,
+  "note": "op_route_ft rc-ctl-pre-s0 (rc-ctl + turn-in action target at approach poses; adapter none: zero bias)"
  }
 }
