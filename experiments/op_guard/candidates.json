@@ -44,5 +44,17 @@
   "route_adapter": null,
   "command_adapter": null,
   "note": "op_route_ft rc-ctl-pre-s0 (rc-ctl + turn-in action target at approach poses; adapter none: zero bias)"
+ },
+ "pilot-bear-fix": {
+  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-fix.onnx",
+  "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-fix.adapter.npz",
+  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+  "note": "op_route_ft pilot-bear-fix (rc-bear + decision-130 action target, 400-step pilot)"
+ },
+ "pilot-bear-near": {
+  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-near.onnx",
+  "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-near.adapter.npz",
+  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+  "note": "op_route_ft pilot-bear-near (rc-bear-fix + near CARLA rows, 400-step pilot)"
  }
 }
