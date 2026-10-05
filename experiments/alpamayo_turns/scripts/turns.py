@@ -32,7 +32,10 @@ ARMS = {"A": (("cross_left", "front_wide", "cross_right", "front_tele"), False),
         "B": (("front_wide", "front_tele"), False),
         "B1": (("front_wide",), False),
         "An": (("cross_left", "front_wide", "cross_right", "front_tele"), True),
-        "Bn": (("front_wide", "front_tele"), True)}
+        "Bn": (("front_wide", "front_tele"), True),
+        # post-hoc diagnostics (added after the pilot readout, not pre-registered): which camera carries B's turn?
+        "C": (("cross_left", "front_wide", "cross_right"), False),
+        "B1n": (("front_wide",), True)}
 T0_OFFSETS = {"p": 0, "s": 1_500_000}          # primary t0, secondary t0 + 1.5 s
 N_SAMPLES = 6
 # scan rule (plan): heading change over the 6.4 s horizon, low speed, small radius
@@ -251,7 +254,7 @@ def cmd_oprun(a, run):
     from jevdrive.openpilot.frames import unpack_luma
     from jevdrive.openpilot.model import T_IDXS, OPModel, decode
     ACTION_T = (0.275, 0.525)
-    mod = OPModel("cinque", "trt")
+    mod = OPModel("cinque", a.op_backend)
     files = sorted(cache("op").glob("*_[ps].npz"))
     res = {}
     for f in run.tqdm(files, desc="op"):
@@ -271,7 +274,7 @@ def cmd_oprun(a, run):
         rear = dv + p - np.stack([cy * dv[0] - sy * dv[1], sy * dv[0] + cy * dv[1]], -1)
         res[f.stem] = dict(yaw=np.interp(T, T_IDXS, yaw), xy=np.stack([np.interp(T, T_IDXS, rear[:, k]) for k in range(2)], -1),
                            curv=-o["curvature"], v=v, luma=np.stack([unpack_luma(z["frames"][-1, k]) for k in (0, 1)]))
-    np.savez(cache("op") / "preds.npz", keys=np.array(list(res)), yaw=np.stack([r["yaw"] for r in res.values()]),
+    np.savez(cache("op") / f"preds{'' if a.op_backend == 'trt' else '_' + a.op_backend}.npz", keys=np.array(list(res)), yaw=np.stack([r["yaw"] for r in res.values()]),
              xy=np.stack([r["xy"] for r in res.values()]), curv=np.array([r["curv"] for r in res.values()]),
              luma=np.stack([r["luma"] for r in res.values()]))
     run.summary["n"] = len(res)
@@ -344,6 +347,7 @@ if __name__ == "__main__":
     ap.add_argument("--per-side", type=int, default=5)
     ap.add_argument("--arms", default="A,B,B1,An,Bn")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--op-backend", default="trt")
     a = ap.parse_args()
     (TOPIC / "results").mkdir(exist_ok=True)
     with Run("alpamayo_turns", a.cmd, config=vars(a)) as run:
