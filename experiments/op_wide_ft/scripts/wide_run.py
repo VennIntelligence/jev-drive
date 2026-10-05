@@ -51,6 +51,7 @@ class Lane:
             self.say(f"{name}: already done ({done})")
             return
         kw.setdefault("env", dict(ENV))
+        drop_cache()
         jid = P.submit(cmd, name=name, log_dir=str(W / "chain/pool" / name), **kw)
         self.say(f"{name}: pool job {jid}")
         st = P.wait([jid], poll_s=30)
@@ -60,6 +61,7 @@ class Lane:
     def jobs(self, specs):
         """Several jobs in parallel: [(name, cmd, done, kw)]."""
         ids = {}
+        drop_cache()
         for name, cmd, done, kw in specs:
             if done is not None and Path(done).exists():
                 continue
@@ -71,6 +73,21 @@ class Lane:
             bad = [ids[i] for i, s in st.items() if s != "done"]
             if bad:
                 self.die("failed: %s" % bad)
+
+
+def drop_cache():
+    """Evict this lane's big files (renders, packs, banks) from the page cache: the pool's memory rule counts the cgroup's memory.current,
+    file cache included, and 68 GB of fresh packs alone held a 20 GB bank job back (2026-10-05)."""
+    n = 0
+    for f in [*W.glob("carla/render/frames/*/*.npz"), *W.glob("carla/p*/samples/route_carla/imgs.npy"), *W.glob("bank/*/trunk.npy")]:
+        try:
+            fd = os.open(f, os.O_RDONLY)
+            os.posix_fadvise(fd, 0, 0, os.POSIX_FADV_DONTNEED)
+            os.close(fd)
+            n += 1
+        except OSError:
+            pass
+    return n
 
 
 def losses(run):
