@@ -1,7 +1,7 @@
 # Junction turns with the action head alone, at the open-loop-aligned camera (and 1.22 m as a side row)
 
 2026-10-05. Question: with the B2D camera moved from the legacy 1.433 m, does the action head alone (zones off, `"zones": false, "div_m": 1e9`, turn desire on) take the
-junction turns of decisions 121 (choice) and 122 (forced)? One run per cell, seed 2, shipped Cinque, no `nored`. Lane `experiments/op_closed_loop/scripts/junction_rig122_lane.py`
+junction turns of decisions 121 (choice) and 122 (forced)? One run per cell, seed 2, shipped Cinque, no `nored`. Lane [`experiments/op_closed_loop/scripts/junction_rig122_lane.py`](https://github.com/VennIntelligence/jev-drive/blob/1dc08a0aae9ce639995e644d8a90f27da1ae6d7c/experiments/op_closed_loop/scripts/junction_rig122_lane.py)
 (runs `$DATA_DIR/runs/rig122`), report `scripts/junction_rig122_report.py`, full tables [junction_rig122_tables.md](junction_rig122_tables.md), per-turn
 [junction_rig122_per_turn.csv](junction_rig122_per_turn.csv), every collision [junction_rig122_collisions.csv](junction_rig122_collisions.csv). Turn metrics are
 `junction_cl_report.py`'s (took branch = came within 5 m of the dense exit; leaves lane = peak cross-track > 1.75 m).

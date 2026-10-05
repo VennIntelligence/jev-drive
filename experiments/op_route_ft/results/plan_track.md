@@ -7,7 +7,7 @@ route-command fine-tune's plan (reads the command open loop, CARLA exit 0.58 vs 
 Setup: the guard `b2d_turns` unit set (decision 127): 25 turns (13 choice, 12 forced) on 20 val routes, B2D `spec` preset (aligned camera 1.59 m / 1.86 m), zones off (`"zones": false, "div_m": 1e9`),
 seed 2, route turn desire OFF, one run per cell. Arms shipped, rc-ctl-s0, rc-bear-s0, rc-poly-s0 with `LAT_EXEC=p7`; hybrid `hyb` for shipped (action curvature below 3 m/s, plan tracking above, hysteresis 0.5 m/s;
 new `lat_exec: hyb` in `lib/op_arb_agent.py`, declared as trick `hybrid_plan_above_3mps`). Reference = the existing curv units with desire off (`results/desire_off.md`; rc-poly-s0 has no desire-off curv run, its
-curv row is the guard's desire-ON unit, so its pairing mixes desire; shipped curv lacks route 26365, 24 turns paired). Code: `scripts/plan_track_lane.py`, `plan_track_report.py`, `plan_track_gif_lane.py`;
+curv row is the guard's desire-ON unit, so its pairing mixes desire; shipped curv lacks route 26365, 24 turns paired). Code: [`scripts/plan_track_lane.py`](https://github.com/VennIntelligence/jev-drive/blob/826b5fddc728f5632ca2a8631e802b2ca4ae4932/experiments/op_route_ft/scripts/plan_track_lane.py), `plan_track_report.py`, `plan_track_gif_lane.py`;
 units `$DATA_DIR/runs/op_route_ft/plan_track/<arm>/b2d/turns-s2-k*`; per-turn json `plan_track.json`. 35 jobs ran on three cards (6 CARLA workers each) in about 85 min.
 
 ## Result

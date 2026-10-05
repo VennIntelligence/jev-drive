@@ -2,7 +2,7 @@
 
 Pre-registration: [plans/2026-10-05-route-ft-prereg.md](../plans/2026-10-05-route-ft-prereg.md), section "2026-10-06" (written before training; pilot recorded there).
 Code: `scripts/rft.py` (`act_target_pre`, arms `rc-bear-pre` / `rc-ctl-pre`), `scripts/rft_eval.py` (`turnin` readout), `scripts/pre_chain.sh`,
-`scripts/pre_lane.py` (B2D desire off / on), `scripts/pre_report.py` (tables, split, panels), `scripts/pre_fig.py` (turn-in timing figure).
+[`scripts/pre_lane.py`](https://github.com/VennIntelligence/jev-drive/blob/901d1612dbbd0bb253dd00e5f536defe15900b0d/experiments/op_route_ft/scripts/pre_lane.py) (B2D desire off / on), `scripts/pre_report.py` (tables, split, panels), `scripts/pre_fig.py` (turn-in timing figure).
 
 **One change from rc-bear / rc-ctl** (same rows, data, losses, 4000 steps, hyper-parameters, seed 0): on P rows (real and CARLA exit pairs) whose
 target path is straight up to v0 * 0.2 s + 2 m and whose next maneuver (|kappa| > 0.02) starts within W = v0 * 1.5 s + R / 2, the action[0] target

@@ -4,7 +4,7 @@
 `jevdrive/openpilot/interface.py` (tests `tests/test_openpilot_interface.py`). Ledger: `tmp/2026-10-05-op-config-ledger.md` sections 13 and 16.
 Shipped Cinque everywhere, one run per cell. Per-scene / per-route tables: [unified_interface/hugsim_runs.md](unified_interface/hugsim_runs.md),
 [unified_interface/b2d_runs.md](unified_interface/b2d_runs.md). Lanes: `scripts/unified_hugsim_chain.sh` (box `$DATA_DIR/runs/unified/hugsim`),
-`scripts/unified_b2d_lane.py` (`$DATA_DIR/runs/unified/b2d/arms/<arm>-s<seed>`). Every run dir has `interface.json`. No pre-registration; the
+[`scripts/unified_b2d_lane.py`](https://github.com/VennIntelligence/jev-drive/blob/abab70314a9915f21135840f9f8cdd31792a12aa/experiments/leaderboard_audit/scripts/unified_b2d_lane.py) (`$DATA_DIR/runs/unified/b2d/arms/<arm>-s<seed>`). Every run dir has `interface.json`. No pre-registration; the
 decision rules below were set before the runs in the lane docstrings and the task brief (default to the spec value unless the small set shows harm).
 
 ## 1. HUGSIM: lateral path with and without the static warm-up, dilate vs hold clock

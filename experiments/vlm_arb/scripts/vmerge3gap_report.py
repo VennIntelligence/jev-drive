@@ -15,24 +15,24 @@ sys.path.insert(0, str(HERE))
 import vlm_v2_report as v2  # noqa: E402
 import vmerge2_report as m2  # noqa: E402
 import vmerge_collisions as vc  # noqa: E402
-import vlm_vred_chain as vch  # noqa: E402
-import vmerge3gap_chain as ch  # noqa: E402
-from vlm_arb_common import OBS_ROUTES, ROUTES, RUN, jsonl, route_row, unit_dir  # noqa: E402
+from vlm_arb_common import OBS_ROUTES, ROUTES, RUN, jsonl, route_row, unit_dir, vred_shards  # noqa: E402
 
 OUT = RUN / "vm3gap/results"
 ARMS = ("gap20", "gap25", "gap30")
 REFS = ("drive", "vmerge2")
 LINE_DS, LINE_COL = 20.7, 0.158
+GAP_T = {"gap20": "2.0", "gap25": "2.5", "gap30": "3.0"}      # follower headway T (s) of the start rule, per arm
+OBS_UNITS = {"oa": ["19324", "2520"], "ob": ["19832", "24497"]}
 
 
 def rdir(arm, seed, rid):
-    if arm not in ch.T:
+    if arm not in GAP_T:
         return m2.run_dir(arm, seed, rid)
     if arm == "gap30" and seed < 2:
         return m2.run_dir("vm3norel", seed, rid)
     if rid in OBS_ROUTES:
-        return unit_dir(arm, seed, next(k for k, v in ch.OBS_UNITS.items() if rid in v))
-    return unit_dir(arm, seed, next(k for k, v in vch.shards().items() if rid in v))
+        return unit_dir(arm, seed, next(k for k, v in OBS_UNITS.items() if rid in v))
+    return unit_dir(arm, seed, next(k for k, v in vred_shards().items() if rid in v))
 
 
 def collect():
@@ -129,7 +129,7 @@ def main():
             continue
         o = o.iloc[0]
         x = arm_row(df, C, a, OBS_ROUTES, range(4))["coll_per_run"]
-        ax.errorbar(x, o.est, yerr=[[o.est - o.lo], [o.hi - o.est]], marker=mk, capsize=3, ls="none", label=a + (" (T=%ss)" % ch.T[a] if a in ch.T else ""))
+        ax.errorbar(x, o.est, yerr=[[o.est - o.lo], [o.hi - o.est]], marker=mk, capsize=3, ls="none", label=a + (" (T=%ss)" % GAP_T[a] if a in GAP_T else ""))
     xd = arm_row(df, C, "drive", OBS_ROUTES, range(4))["coll_per_run"]
     ax.plot([xd], [0], "k*", label="drive (reference)")
     ax.axhline(LINE_DS, color="gray", ls="--", lw=0.8)

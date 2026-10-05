@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # CARLA pair material at the open-loop-aligned rig, one self-advancing chain: render (one CARLA server + client per shard) -> pack -> stats.
 # The plan is the existing one (same poses as the 1.22 m set): <root>/plan.path must exist (copy it from carla_pairs_<tag>/plan.path).
-# Usage (box, in tmux via scripts/tmux_run.sh): run_carla_pairs_ol.sh <root tag> "<gpu> <idx> <cpus>" "<gpu> <idx> <cpus>" ...   (specs from `python -m jevdrive.cl lease`)
+# Usage (box, in tmux via scripts/tmux_run.sh): run_carla_pairs_ol.sh <root tag> "<gpu> <idx> <cpus>" "<gpu> <idx> <cpus>" ...   (specs from cards held outside the pool, `python -m jevdrive.cl hold`)
 #   e.g. run_carla_pairs_ol.sh s10000ol "0 160 0-3" "0 161 4-7" "1 184 52-55"
 # Resumable: the renderer skips poses that already have frames. STATUS / DONE / ERROR in the run root.
 set -uo pipefail

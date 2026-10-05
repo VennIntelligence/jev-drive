@@ -37,6 +37,8 @@ DATA = data_dir()
 MAIN = ["A", "D", "olnz", "ol"]
 SIDE = ["s143nz", "s122nz", "s122"]
 ARMS = MAIN + SIDE
+NEW = "10255 15102 28147 5423 334 26872 25051 27994 26153 26723 26365 24758 28008 24416".split()   # val routes outside the unified-interface run
+OLD6 = "28180 24944 27297 9196 6999 34183".split()                                                  # the 6 routes of decision 125
 LABEL = {"olnz": "olnz spec, zones off, open-loop camera (1.59 m, 1.86 m)", "ol": "ol spec, zones on, open-loop camera",
          "A": "A drive, zones on, 1.433 m", "D": "D drive, zones off, 1.433 m", "s143nz": "s143nz spec, zones off, 1.433 m", "s122nz": "s122nz spec, zones off, 1.22 m",
          "s122": "s122 spec, zones on, 1.22 m"}
@@ -138,7 +140,6 @@ def main():
     a = ap.parse_args()
     out = Path(a.out)
     lab = F.load_labels()
-    from junction_rig122_lane import NEW
     routes = NEW + "28180 24944 27297 9196 6999 34183".split()
     rows, cols, traj, roads, rr, hold = [], [], {}, {}, {}, {}
     for rid in routes:
@@ -239,7 +240,6 @@ def main():
         L_.append("| %s | %d | %d | %d | %d | %d | %d | %d |" % (SHORT[k], len(h), sum(c["kind"] == "hit vehicle" and c["dev"] <= HALF for c in h), sum(c["kind"] == "hit vehicle" and c["dev"] > HALF for c in h),
                                                           sum(c["kind"] == "hit layout" for c in h), sum(c["kind"] == "hit pedestrian" for c in h), sum(c["turn"] != "-" for c in h),
                                                           sum(c["turn"] == "-" for c in h)))
-    from junction_rig122_lane import OLD6
     L_.append("\n### Collision classes on the 6 routes of decision 125 (%s): the 10 vs 3 of s122nz vs s143nz\n\n| arm | hits | vehicle, ego in lane | vehicle, ego off lane | static / layout | ego v < 0.5 m/s at the hit |\n|---|---|---|---|---|---|" % " ".join(OLD6))
     for k in ARMS:
         h = [c for c in cols if c["arm"] == k and c["route"] in OLD6 and c["kind"].startswith("hit")]

@@ -32,6 +32,9 @@ import turn_calibration_sparse as S  # noqa: E402
 from jevdrive.common import data_dir  # noqa: E402
 
 ARMS = {"A": "jclA", "D": "jclD", "E": "jclE"}
+# the 36 B2D routes holding the 38 turns >= 25 deg of turn_calibration_options.py
+ROUTES = ("10255 10364 15102 24944 25051 27043 27297 27870 28147 28180 34183 34391 35330 4104 4183 4721 5423 6999 7157 7616 7841 8859 "
+          "9102 9196 9218 9646 35243 334 17280 15612 16390 15483 16508 16529 26872 27787").split()
 COL = {"A": "#000000", "D": "#0072B2", "E": "#D55E00", "R": "#56B4E9"}
 NAME = {"A": "A drive as shipped (route steers in zones)", "D": "D action head steers everywhere", "E": "E D + curvature x1.95 in turns",
         "R": "open-loop replay of D (kinematic)"}
@@ -121,7 +124,6 @@ def main():
     (out.parent / "figs").mkdir(exist_ok=True)
     rng = np.random.default_rng(0)
     rows, roads, traj = [], {}, {}
-    from junction_cl_lane import ROUTES  # noqa: E402
     for rid in ROUTES:
         att = {k: attempt(k, a.seed, rid) for k in ARMS}
         rec = {k: official(v) if v else None for k, v in att.items()}

@@ -52,10 +52,17 @@ def load_labels():
     return lab
 
 
+def route_sets():
+    """({xml key: routes} of the arrow arms, {xml key: new routes} of A / D): the 36 earlier routes + routes with a forced turn."""
+    rows = list(csv.DictReader(open(HERE.parent / "results/junction_forced_turns.csv")))
+    forced = {r["route"]: ("v" if r["xml"].startswith("bench2drive_0") else "x") for r in rows if r["forced"] == "1"}
+    new = {"v": sorted(r for r, k in forced.items() if k == "v" and r not in R.ROUTES), "x": sorted(r for r, k in forced.items() if k == "x")}
+    return {"v": R.ROUTES + new["v"], "x": new["x"]}, new
+
+
 def run_routes():
     """Routes with at least one finished arm attempt, in the order: earlier 36, then the rest."""
-    from junction_cl_lane import ROUTES as R36
-    from junction_forced_lane import route_sets
+    R36 = R.ROUTES
     allr, _ = route_sets()
     return R36 + [r for k in "vx" for r in allr[k] if r not in R36]
 

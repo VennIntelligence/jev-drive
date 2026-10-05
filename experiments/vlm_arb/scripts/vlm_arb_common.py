@@ -150,3 +150,23 @@ def write_json(path, value):
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(value, indent=2, default=lambda o: o.item() if isinstance(o, np.generic) else str(o)) + "\n")
     tmp.replace(path)
+
+
+VRED_SHARDS = ("q0", "q1", "q2")
+
+
+def vred_shards():
+    """Routes dealt over the three vred shards by decreasing drive game time (LPT), fixed once in gates/vred_shards.json."""
+    p = RUN / "gates/vred_shards.json"
+    if not p.exists():
+        t = {}
+        for rid in ROUTES:
+            v = [r["game_s"] for r in (route_row(drive_dir(rid, s), rid) for s in SEEDS) if r]
+            t[rid] = sum(v) / len(v) if v else 60.0
+        out, load = {k: [] for k in VRED_SHARDS}, {k: 0.0 for k in VRED_SHARDS}
+        for rid in sorted(ROUTES, key=lambda r: (-t[r], r)):
+            k = min(VRED_SHARDS, key=lambda k: (load[k], k))
+            out[k].append(rid)
+            load[k] += t[rid]
+        write_json(p, out)
+    return json.loads(p.read_text())

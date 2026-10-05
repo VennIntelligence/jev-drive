@@ -18,10 +18,10 @@ import guardlib as G  # noqa: E402
 import junction_forced_report as F  # noqa: E402
 import junction_rig122_report as J  # noqa: E402
 import rft_split as S  # noqa: E402
-from pre_flip_lane import CHOICE_ROUTES  # noqa: E402
 
 RUNS = G.data_dir() / "runs/op_route_ft"
 ARM = "rc-bear-pre-s0"
+CHOICE_ROUTES = "10255 15102 24758 24944 26872 27297 28008 28147 334 34183 5423 6999 9196".split()   # routes with a choice (forced 0) turn
 CONDS = {"correct": RUNS / "desire_off" / ARM / "b2d", "flipped": RUNS / "pre/flip" / ARM / "b2d"}
 
 

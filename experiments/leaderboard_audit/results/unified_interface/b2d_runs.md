@@ -1,7 +1,7 @@
 # Unified interface on B2D: camera height (A) and the nored resume (B)
 
 Lane `uni-b2d`, 1 card (card 2 held a foreign CARLA server, so the lease took card 1 only), repo abab703, shipped Cinque, one run per cell.
-Lane file `experiments/leaderboard_audit/scripts/unified_b2d_lane.py`. Units: `$DATA_DIR/runs/unified/b2d/arms/<arm>-s<seed>`
+Lane file [`experiments/leaderboard_audit/scripts/unified_b2d_lane.py`](https://github.com/VennIntelligence/jev-drive/blob/abab70314a9915f21135840f9f8cdd31792a12aa/experiments/leaderboard_audit/scripts/unified_b2d_lane.py). Units: `$DATA_DIR/runs/unified/b2d/arms/<arm>-s<seed>`
 (`s122dbg-s2` smoke, `legacy / s143 / s122 / s143nz / s122nz -s2`, `drivetimer-s0 / -s1`). All 7 + 1 units finished all routes
 (`routes_never_finished` empty in every summary.json, 0 restarts, 0 failed jobs; 38 + 1 route-runs, ~1 h wall).
 Readout: `drive_row` (op_arb_report) + the junction turn geometry of `junction_cl_report.py` (branch = car came within 5 m of the dense exit point);

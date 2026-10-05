@@ -57,7 +57,7 @@ Arm `plan_vmin = 0` (plan always in the arbitration; one config key under `arb`,
 
 ## Confirming run: `plan_vmin = 0` (2026-10-05)
 
-Shipped, B2D `spec`, zones off, seed 2, routes 24944 / 10255 / 26153, one config key (`DRIVE_ARGS` += `"plan_vmin": 0`; arb in all three attempts shows it). Lane `scripts/vmin_lane.py`, readout `scripts/crawl_dump.py --arms shipped,vmin0 --routes ...` + `scripts/vmin_report.py`, data `results/vmin0.json`. Baseline = the existing guard shipped units on the same three routes (same config: spec, zones off, aligned camera, seed 2, desire on). One run, one seed, 3 routes.
+Shipped, B2D `spec`, zones off, seed 2, routes 24944 / 10255 / 26153, one config key (`DRIVE_ARGS` += `"plan_vmin": 0`; arb in all three attempts shows it). Lane [`scripts/vmin_lane.py`](https://github.com/VennIntelligence/jev-drive/blob/fdddb1f72b304e7638d525279b38b747d3f748e9/experiments/op_route_ft/scripts/vmin_lane.py), readout `scripts/crawl_dump.py --arms shipped,vmin0 --routes ...` + `scripts/vmin_report.py`, data `results/vmin0.json`. Baseline = the existing guard shipped units on the same three routes (same config: spec, zones off, aligned camera, seed 2, desire on). One run, one seed, 3 routes.
 
 | arm | turns entered (of 5 labelled) | stopped share, 15 s turn windows | stop-go cycles per entered turn | stop length median / max | took exit |
 |---|--:|--:|--:|--:|--:|

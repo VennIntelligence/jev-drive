@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Superseded by jevdrive.cl (2026-10-01): experiments/cl_infra/archive/cl_worker_profile.py --arg stage=old reproduces this lane on the
-# library (20/20 routes, DS differences only on the known flaky routes 1956 / 3564 / 17563; fc65452:todos/2026-10-01-cl-lib.md).
-# Kept for the record; new runs go through `python -m jevdrive.cl run`.
+# Superseded by jevdrive.cl (2026-10-01): the library re-expression (20/20 routes, DS differences only on the known flaky routes
+# 1956 / 3564 / 17563; fc65452:todos/2026-10-01-cl-lib.md) is no longer in the tree. Kept for the record; new closed-loop runs go
+# through the GPU pool (`python -m jevdrive.cl submit`).
 # Route-level equivalence of reduced CARLA thread pools (docs/carla.md, "Threads per server"): PDM-Lite (SimLingo's
 # expert, as the 2026-09-25 controller acceptance ran it: runs/infra-accept/b2d-ctl/expert-a, expert-b) on the same 20
 # routes, once per arm, one arm after another on the same card and cores. Arms: "base" (stock pools) or "reduced"
@@ -9,7 +9,7 @@
 #   experiments/cl_infra/archive/carla_threads_routes.sh <out-root> <gpu> <server-index> <cpus> <arm>[:<name>] ...
 #   e.g. experiments/cl_infra/archive/carla_threads_routes.sh $DATA_DIR/runs/infra/carla-threads/routes 1 210 110-117,200-207 base:base-c reduced:red-a
 set -euo pipefail
-(( $# >= 5 )) || { sed -n 2,7p "$0"; exit 1; }
+(( $# >= 5 )) || { sed -n 5,10p "$0"; exit 1; }
 root=$1 gpu=$2 idx=$3 cpus=$4; shift 4
 SIM=$DATA_DIR/third_party/simlingo
 ROUTES=2390,24211,1711,2373,3564,1833,1852,1956,2668,4183,11381,1825,2084,2086,2091,2115,2286,24330,17563,26458
