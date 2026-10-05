@@ -38,6 +38,7 @@ N_SAMPLES = 6
 # scan rule (plan): heading change over the 6.4 s horizon, low speed, small radius
 H_MIN, H_MAX, V_LO, V_HI, K_MIN = np.radians(60), np.radians(135), 2.0, 10.0, 1 / 20
 HOR_S = 6.4
+HIST_MAX_DEG = 10                               # heading change over the 1.5 s before t0
 T0_LO, T0_HI = 5_100_000, 18_400_000           # 5 s openpilot warm-up before t0; secondary t0 (+1.5 s) inside the ~20 s of video
 FEATS = ("egomotion", "camera_cross_left_120fov", "camera_front_wide_120fov", "camera_cross_right_120fov",
          "camera_front_tele_30fov")
@@ -82,8 +83,10 @@ def turn_of(ts, yaw, v):
     Hm = abs(H[k])
     if not H_MIN <= Hm <= H_MAX:
         return None
-    j = int(np.argmax(np.abs(H) >= 0.9 * Hm))                         # earliest t0 with >= 90 % of the turn ahead
+    j = int(np.argmax(np.sign(H[k]) * H >= 0.9 * Hm))                 # earliest t0 with >= 90 % of the turn ahead
     first = int(i0[j])
+    if abs(yaw[first] - yaw[max(first - 15, 0)]) >= np.radians(HIST_MAX_DEG):   # already turning at t0
+        return None
     w = slice(first, first + h + 1)
     vmed = float(np.median(v[w]))
     om = np.convolve(np.gradient(yaw, 0.1), np.ones(10) / 10, "same")  # 1 s smoothing
