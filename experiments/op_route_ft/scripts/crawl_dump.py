@@ -17,7 +17,7 @@ import junction_forced_report as F  # noqa: E402
 import junction_rig122_report as J  # noqa: E402
 import junction_cl_report as R  # noqa: E402
 
-ARMS = {"shipped": None, "rc-ctl-s0": None, "rc-bear-s0": None, "rc-poly-s0": None, "rc-all-s0": None, "zones-on": "olz"}
+ARMS = {"shipped": None, "rc-ctl-s0": None, "rc-bear-s0": None, "rc-poly-s0": None, "rc-all-s0": None, "zones-on": "olz", "vmin0": None}
 PRE_S, WIN_S = 6.0, 15.0
 
 
@@ -26,6 +26,8 @@ def rows(p):
 
 
 def dirs_of(arm):
+    if arm == "vmin0":
+        return sorted((C.DATA / "runs/op_route_ft/vmin0/b2d").glob("turns-s%d-k*" % C.TURN_SEED))
     if arm == "zones-on":
         return sorted(Path(C.CACHE_TURNS).glob("ol-s%d-k*" % C.TURN_SEED))
     return C.b2d_dirs(arm, "subset", "turns", C.TURN_SEED)
@@ -34,12 +36,16 @@ def dirs_of(arm):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
+    ap.add_argument("--arms", default="", help="comma list, default all")
+    ap.add_argument("--routes", default="", help="comma list of route ids, default the 20 turn routes")
     a = ap.parse_args()
+    arms = a.arms.split(",") if a.arms else list(ARMS)
+    routes = a.routes.split(",") if a.routes else C.TURN_ROUTES
     lab = F.load_labels()
     out, geo = [], {}
-    for arm in ARMS:
+    for arm in arms:
         dirs = dirs_of(arm)
-        for rid in C.TURN_ROUTES:
+        for rid in routes:
             att, _ = C.attempt_of(dirs, rid)
             if att is None or not (att / "route.json").exists() or not (att / "ticks.jsonl").exists():
                 continue
