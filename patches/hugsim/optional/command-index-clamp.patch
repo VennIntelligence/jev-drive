@@ -1,0 +1,10 @@
+--- a/sim/hugsim_env/envs/hug_sim.py
++++ b/sim/hugsim_env/envs/hug_sim.py
+@@ -244,7 +244,7 @@
+         dist = np.sum((cam_poses[:, :3, 3] - self.vt) ** 2, axis=-1)
+         nearest_cam_idx = np.argmin(dist)
+-        command = commands[nearest_cam_idx]
++        command = commands[min(nearest_cam_idx, len(commands) - 1)]  # jev-drive: the route-end step indexed past the command list
+         return {
+             'ego_pos'  : wego_t.tolist(),
+             'ego_rot'  : wego_r.tolist(),

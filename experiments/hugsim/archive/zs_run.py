@@ -43,13 +43,14 @@ REPO = Path(__file__).resolve().parents[3]
 D = Path(os.environ.get("DATA_DIR", Path.home() / "data"))
 DATA = D / "datasets" / "hugsim"
 PY = D / "envs" / "hugsim" / "bin" / "python"
-TREES = {c: D / "third_party" / "HUGSIM-zs" / c for c in ("official", "fixed", "ideal", "fixed2", "lowspeed", "lowsel", "opctrl", "opctrl_long")}
+TREES = {c: D / "third_party" / "HUGSIM-zs" / c for c in ("official", "fixed", "ideal", "fixed2", "lowspeed", "lowsel", "opctrl", "opctrl_long", "fixedc")}
 FIX = REPO / "patches" / "hugsim" / "optional" / "lqr-heading-fix.patch"
 IDEAL = REPO / "patches" / "hugsim" / "optional" / "ideal-tracker.patch"
 LOWSPEED = REPO / "patches" / "hugsim" / "optional" / "lowspeed-ctrl.patch"
 LOWSEL = REPO / "patches" / "hugsim" / "optional" / "lowspeed-sel-ctrl.patch"
 V2 = REPO / "patches" / "hugsim" / "optional" / "lqr-tracker-v2.patch"
 OPCTRL = REPO / "patches" / "hugsim" / "optional" / "op-ctrl.patch"
+CLAMP = REPO / "patches" / "hugsim" / "optional" / "command-index-clamp.patch"
 OPCTRL_LONG = REPO / "patches" / "hugsim" / "optional" / "op-ctrl-long.patch"
 AD = {"alpamayo": "zs", "cinque": "zs", "lebowski": "zs", "cv": "jev", "route": "jev", "ltf": "ltf", "preset": "pre", "wajepa": "wj"}
 FIELDS = ["scenario", "dataset", "difficulty", "agent", "controller", "tag", "hdscore", "rc", "nc", "dac", "ttc", "c",
@@ -72,8 +73,10 @@ def setup_trees(names=("official", "fixed")):
             sh("git", "-C", str(dst), "checkout", "-q", sh("git", "-C", str(src), "rev-parse", "HEAD").strip())
             for p in sorted((REPO / "patches" / "hugsim").glob("*.patch")):
                 sh("git", "-C", str(dst), "apply", str(p))
-            if name in ("fixed", "fixed2", "lowspeed", "lowsel", "opctrl", "opctrl_long"):
+            if name in ("fixed", "fixed2", "lowspeed", "lowsel", "opctrl", "opctrl_long", "fixedc"):
                 sh("git", "-C", str(dst), "apply", str(FIX))
+            if name == "fixedc":
+                sh("git", "-C", str(dst), "apply", str(CLAMP))
             if name in ("opctrl", "opctrl_long"):
                 sh("git", "-C", str(dst), "apply", str(OPCTRL))
             if name == "opctrl_long":
@@ -98,8 +101,10 @@ def applied(t, patch):
 
 def check_tree(name):
     t = str(TREES[name])
-    if applied(t, FIX) is not (name in ("fixed", "fixed2", "lowspeed", "lowsel", "opctrl", "opctrl_long")):
+    if applied(t, FIX) is not (name in ("fixed", "fixed2", "lowspeed", "lowsel", "opctrl", "opctrl_long", "fixedc")):
         raise SystemExit(f"tree {t}: optional LQR patch state wrong for controller '{name}'")
+    if bool(applied(t, CLAMP)) is not (name == "fixedc"):
+        raise SystemExit(f"tree {t}: command-index-clamp patch state wrong for controller '{name}'")
     if name == "ideal" and not applied(t, IDEAL):
         raise SystemExit(f"tree {t}: ideal-tracker patch not applied")
     if name == "lowsel" and not applied(t, LOWSEL):
