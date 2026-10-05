@@ -37,7 +37,8 @@ T0_OFFSETS = {"p": 0, "s": 1_500_000}          # primary t0, secondary t0 + 1.5 
 N_SAMPLES = 6
 # scan rule (plan): heading change over the 6.4 s horizon, low speed, small radius
 H_MIN, H_MAX, V_LO, V_HI, K_MIN = np.radians(60), np.radians(135), 2.0, 10.0, 1 / 20
-PRE_S, HOR_S = 5.1, 6.4
+HOR_S = 6.4
+T0_LO, T0_HI = 5_100_000, 18_400_000           # 5 s openpilot warm-up before t0; secondary t0 (+1.5 s) inside the ~20 s of video
 FEATS = ("egomotion", "camera_cross_left_120fov", "camera_front_wide_120fov", "camera_cross_right_120fov",
          "camera_front_tele_30fov")
 
@@ -60,35 +61,38 @@ def yaw_of(R: np.ndarray) -> np.ndarray:
 
 # ---------------------------------------------------------------- scan
 def ego_series(avdi, clip: str, dt_us: int = 100_000):
+    """Heading (rig yaw, left +, unwrapped) and speed at 10 Hz on the clip clock. Egomotion runs ~140 s, the cameras only
+    ~0 ... 20 s, so t0 (the last image) must lie inside the camera span while the logged future may run past it."""
     ego = avdi.get_clip_feature(clip, avdi.features.LABELS.EGOMOTION, maybe_stream=False)
-    ts = np.arange(ego.timestamps[0], ego.timestamps[-1], dt_us, dtype=np.int64)
+    ts = np.arange(max(0, int(np.ceil(ego.timestamps[0] / dt_us)) * dt_us), ego.timestamps[-1], dt_us, dtype=np.int64)
     st = ego(ts)
-    yaw = np.unwrap(st.pose.rotation.as_euler("zyx")[:, 0])
+    yaw = np.unwrap(st.pose.rotation.as_euler("ZYX")[:, 0])
     v = np.linalg.norm(st.velocity[:, :2], axis=1)
     return ts, yaw, v
 
 
 def turn_of(ts, yaw, v):
     """The clip's sharpest turn under the plan's rule, or None. All arrays at 10 Hz."""
-    h, pre = int(HOR_S * 10), int(PRE_S * 10)
-    if len(ts) < pre + h + 1:
+    h = int(HOR_S * 10)
+    i0 = np.flatnonzero((ts >= T0_LO) & (ts <= T0_HI) & (np.arange(len(ts)) + h < len(ts)))
+    if len(i0) == 0:
         return None
-    i0 = np.arange(pre, len(ts) - h)
     H = yaw[i0 + h] - yaw[i0]
     k = int(np.argmax(np.abs(H)))
     Hm = abs(H[k])
     if not H_MIN <= Hm <= H_MAX:
         return None
-    first = int(i0[np.argmax(np.abs(H) >= 0.9 * Hm)])               # earliest t0 with >= 90 % of the turn ahead
+    j = int(np.argmax(np.abs(H) >= 0.9 * Hm))                         # earliest t0 with >= 90 % of the turn ahead
+    first = int(i0[j])
     w = slice(first, first + h + 1)
     vmed = float(np.median(v[w]))
     om = np.convolve(np.gradient(yaw, 0.1), np.ones(10) / 10, "same")  # 1 s smoothing
     kap = np.abs(om[w]) / np.maximum(v[w], 1.0)
     if not (V_LO <= vmed <= V_HI and kap.max() >= K_MIN):
         return None
-    return dict(t0=int(ts[first]), H_deg=float(np.degrees(H[first - pre])), side="L" if H[k] > 0 else "R",
+    return dict(t0=int(ts[first]), H_deg=float(np.degrees(H[j])), side="L" if H[k] > 0 else "R",
                 v_med=float(vmed), k_peak=float(kap.max()), r_min=float(1 / kap.max()),
-                hist_dpsi_deg=float(np.degrees(yaw[first] - yaw[first - 15])), t0_rel_s=float((ts[first] - ts[0]) * 1e-6))
+                hist_dpsi_deg=float(np.degrees(yaw[first] - yaw[max(first - 15, 0)])), t0_s=float(ts[first] * 1e-6))
 
 
 def cmd_scan(a, run):
