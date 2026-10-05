@@ -62,7 +62,7 @@ def main():
                 with torch.inference_mode():
                     for b in range(0, nf, a.batch):
                         x = rgb[b: b + a.batch]
-                        D.append(m.infer(x, K[None].expand(len(x), 3, 3))["depth"][:, 0].float())
+                        D.append(m.infer(x, K[None].expand(len(x), 3, 3).clone())["depth"][:, 0].float())
                 D = torch.cat(D)                                                                   # (nf, 256, 512)
                 pl = torch.as_tensor(plane_lam(view, float(cam[c][2])), dtype=torch.float32, device="cuda")
                 ys, xs = PATCH[view]
