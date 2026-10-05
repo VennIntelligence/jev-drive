@@ -103,6 +103,7 @@ def main():
     ap.add_argument("--steps", type=int, default=400)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--workers", type=int, default=16)
+    ap.add_argument("--dev", default="cuda")
     a = ap.parse_args()
     d = C.root("runs", a.tag)
     if (d / "ckpt-final.pt").exists():
@@ -111,12 +112,13 @@ def main():
     cfg = rft.RCfg(name=a.tag, enc=None, seed=a.seed, steps=a.steps, lam_p=0.0, workers=a.workers, warmup=min(100, a.steps // 5))
     with Run("op_dagger", a.tag, seed=a.seed, config=cfg.dump() | vars(a)) as run:
         run.use_split(splits.load("wod/r2-train"))
-        dev = torch.device("cuda")
-        model = rft.RModel(cfg.lcfg(), None).to(dev)
-        teacher = L.LModel(None).to(dev).eval()
+        dev = torch.device(a.dev)
+        dt = torch.float16 if dev.type == "cuda" else torch.float32
+        model = rft.RModel(cfg.lcfg(), None, dtype=dt).to(dev)
+        teacher = L.LModel(None, dtype=dt).to(dev).eval()
         base, _ = model.trainable()
         opt = torch.optim.AdamW(base, lr=cfg.lr, weight_decay=cfg.wd)
-        scaler = torch.amp.GradScaler()
+        scaler = torch.amp.GradScaler(enabled=dev.type == "cuda")
         tstd = np.load(L.r2t() / "teacher" / "tstd.npy")
         lossf = rft.RLoss(model.net, cfg, tstd, dev)
         didx = torch.as_tensor(A.distill_index(model.net.slices), device=dev)
@@ -137,7 +139,7 @@ def main():
             wait += time.time() - tw
             b = {k: v.to(dev, non_blocking=True) for k, v in b.items()}
             valid = torch.ones(len(b["role"]), 9, dtype=torch.bool, device=dev)
-            tc = b["tc"].half()
+            tc = b["tc"].to(dt)
             with torch.no_grad():
                 tr = H.trunks(teacher.net, b["imgs"])
                 o0 = teacher(tr, valid, tc)["outputs"].float()
