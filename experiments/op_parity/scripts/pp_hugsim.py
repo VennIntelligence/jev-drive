@@ -317,7 +317,7 @@ def signs(a):
         for f in sorted(Path(d).glob("*/zs_steps.jsonl")):
             for line in open(f):
                 r = json.loads(line)
-                if "parity" in r:
+                if "step" in r and "parity" in r:
                     E.append(r["parity"]["ego"])
                     turn.append(-np.radians(r["hyaw15"]))
                     v.append(r["v"])
