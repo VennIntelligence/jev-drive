@@ -284,7 +284,7 @@ def fits(spec: Spec, a: CardAcct, cfg: dict) -> str:
     need = spec.vram_gb if not spec.exclusive else a.total_gb - cfg["headroom_gb"]
     av = a.avail_gb(cfg["headroom_gb"])
     if av < need:
-        return "VRAM %.0f GB free of the pool's view < %.0f" % (max(av, 0), need)
+        return "VRAM %.1f GB free of the pool's view < %.1f" % (max(av, 0), need)
     if spec.carla and a.carla_pool + a.carla_foreign + spec.carla > cfg["carla_per_card"]:
         return "CARLA %d + %d > %d per card" % (a.carla_pool + a.carla_foreign, spec.carla, cfg["carla_per_card"])
     if spec.carla and a.started_carla:
@@ -661,6 +661,16 @@ class Dispatcher:
         self.log("launch", id=jid, name=s.name, gpu=g, idx=idx, span=span, cpus=cpus, pid=p.pid, try_=k,
                  vram_gb=s.vram_gb, carla=s.carla)
 
+    def prune_holds(self, rows: dict) -> None:
+        """Drop holds whose process has exited (logged once)."""
+        with _flock(self.pool / "holds.lock"):
+            hs = load_holds(self.pool)
+            keep = live_holds(hs, rows)
+            procs.atomic_json(self.pool / "holds.json", keep)
+        for h in hs:
+            if h not in keep:
+                self.log("hold_ended", hold=h["id"], card=h["card"], note=h.get("note"))
+
     # -------------------------------------------------------------- loop
     def round(self) -> None:
         cfg = self.cfg()
@@ -669,6 +679,8 @@ class Dispatcher:
         live = self.reap(rows)
         rows = processes()
         holds = live_holds(load_holds(self.pool), rows)
+        if len(holds) < len(load_holds(self.pool)):
+            self.prune_holds(rows)
         box = self.probe_fn(rows) if self.probe_fn else probe(rows=rows, query=lambda q: smi(q, cfg["smi_age_s"]))
         if not self.halt:
             self.admit(box, rows, live, holds, cfg)
