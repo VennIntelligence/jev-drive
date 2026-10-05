@@ -1,11 +1,10 @@
-"""Closed-loop guard lines (hugsim, b2d_turns, b2d_ds): unit sets, lane jobs, the blocking runner and the readers.
+"""Closed-loop guard lines (hugsim, b2d_turns, b2d_ds): unit sets, GPU-pool units, the blocking runner and the readers.
 
-Every closed-loop unit runs as a `jevdrive.cl` lane job (lane file `cl_lane.py`, root `<run_dir>/cl`) on a lease:
-  - env OP_GUARD_LANE set: that lane is already leased by the caller (guard.py); it is used as is, never released here;
-  - unset: `op-guard-cl-<candidate>` is leased with `--cards N` cards and released at the end.
-`--cl-lines a,b,c` packs several lines' jobs into one lane run so the cards stay busy (guard.py passes all three on its
-first call; the later lines then find their units done and only collect). Units are resumable: b2d_run resumes its
-`--out`, zs_run skips finished scenarios, finished lane jobs stay done in `<root>/state.json`.
+Every closed-loop unit is one GPU-pool job (`jevdrive.cl.pool`, the dispatcher in tmux jev:pool picks the card), log dir
+`<run_dir>/cl/<unit>/` (log.txt, STATUS, DONE / ERROR, pool_id). `--cl-lines a,b,c` submits several lines' units at once so
+the pool can spread them (guard.py passes all three on its first call; the later lines then find their units done and only
+collect). Units are resumable: b2d_run resumes its `--out`, zs_run skips finished scenarios, a finished unit is not resubmitted
+and a unit still in the pool is waited on, not submitted twice. `--dry-run` prints the pool specs.
 
 Harnesses, unchanged: HUGSIM `experiments/hugsim/archive/zs_run.py --preset spec` behind one resident
 `hugsim_zs_server.py cinque [--onnx]` (guard_hugsim.sh); B2D `experiments/op_closed_loop/archive/op_arb.sh arm spec`
@@ -18,9 +17,8 @@ from __future__ import annotations
 
 import csv
 import json
-import os
+import shlex
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -33,7 +31,6 @@ sys.path.insert(0, str(G.REPO))
 
 REPO = G.REPO
 DATA = G.data_dir()
-LANEFILE = HERE / "cl_lane.py"
 NOZ = '"zones": false, "div_m": 1e9'
 OP_ARB = "experiments/op_closed_loop/archive/op_arb.sh"
 
@@ -95,10 +92,11 @@ def turns_cache_ok(udir: Path) -> bool:
             and d["config"].get("tm_seed") == TURN_SEED and mid.startswith("base:"))
 
 
-# ---------------------------------------------------------------- lane jobs
-def b2d_unit(name, ids, out, seed, nz, onnx, priority=0.0, route_adapter=None):
-    from jevdrive.cl import Job
-    e = dict(GPU="{gpu}", IDX0="{idx}", WORKERS="{workers}", CPUS="{cpus}", SEED=str(seed), OP_ARB_DIR="{job_dir}/op",
+# ---------------------------------------------------------------- pool units
+def b2d_unit(name, ids, out, seed, nz, onnx, priority=0.0, route_adapter=None) -> dict:
+    """One op_arb.sh `arm spec` invocation on len(ids) CARLA workers (7.5 GB each, 12 pinned cores); done when every route has
+    out/done/<id>.json (the command fails otherwise, so a retry resumes the unfinished routes)."""
+    e = dict(GPU="{gpu}", IDX0="{idx}", WORKERS="{carla}", CPUS="{cpus}", SEED=str(seed), OP_ARB_DIR="{job_dir}/op",
              OP_ARB_ARMS=str(Path(out).parent), SRV_NO_TWIN="1", OPENBLAS_CORETYPE="Haswell", OP_ARB_AGENT="lib/op_arb_agent.py", DESIRE="true")
     if nz:
         e["DRIVE_ARGS"] = NOZ
@@ -106,23 +104,28 @@ def b2d_unit(name, ids, out, seed, nz, onnx, priority=0.0, route_adapter=None):
         e["SRV_ONNX"] = onnx
     if route_adapter:                         # op_route_ft: the agent sends the route polyline, the server adds the adapter's bias
         e["TOP_ARGS"] = '"route_adapter": "%s"' % route_adapter
-    n = len(ids)
-    return Job(name, ["bash", OP_ARB, "arm", "spec", ",".join(ids), str(out)], workers=n, vram_gb=7.5, cores=12, tries=2, env=e,
-               out=str(out), priority=priority, ok=lambda j, out=Path(out), ids=tuple(ids): all((out / "done" / (r + ".json")).exists() for r in ids))
+    out, ids = Path(out), [str(r) for r in ids]
+    check = " && ".join("test -f %s" % shlex.quote(str(out / "done" / (r + ".json"))) for r in ids)
+    cmd = "%s && %s" % (shlex.join(["bash", OP_ARB, "arm", "spec", ",".join(ids), str(out)]), check)
+    return dict(name=name, cmd=cmd, env=e, vram_gb=7.5 * len(ids), carla=len(ids), cpu=12, tries=2, priority=priority,
+                out=str(out), done=lambda out=out, ids=tuple(ids): all((out / "done" / (r + ".json")).exists() for r in ids))
 
 
-def hugsim_job(name, out, scen_file, onnx, priority=0.0):
-    from jevdrive.cl import Job
+def hugsim_unit(name, out, scen_file, onnx, priority=0.0) -> dict:
+    """guard_hugsim.sh: one resident Cinque server + 5 HUGSIM workers (no CARLA; ~30 GB VRAM measured as budget); done when every
+    scenario of scen_file has a non-crash row (checked after the run by `cllib.py hugsim-check`)."""
     e = dict(GPU="{gpu}", OUT=str(out), SCEN=str(scen_file), TAG=HUGSIM_TAG, WORKERS="5")
     if onnx:
         e["ONNX"] = onnx
+    cmd = "bash %s && %s %s hugsim-check %s %s" % (shlex.quote(str(HERE / "guard_hugsim.sh")), shlex.quote(sys.executable),
+                                                  shlex.quote(str(HERE / "cllib.py")), shlex.quote(str(out)), shlex.quote(str(scen_file)))
+    return dict(name=name, cmd=cmd, env=e, vram_gb=30.0, carla=0, cpu=12, tries=2, priority=priority, out=str(out),
+                done=lambda out=Path(out), scen=Path(scen_file): hugsim_complete(out, scen))
 
-    def ok(j, out=Path(out), scen=Path(scen_file)):
-        want = {Path(s).stem for s in scen.read_text().split()}
-        return want <= {(r["scenario"]) for r in hugsim_rows(out) if r["end"] != "crash"}
-    # 5 HUGSIM workers + the server count as 3 CARLA-worker slots (~30 GB VRAM measured as budget, see the line's provenance)
-    return Job(name, ["bash", str(HERE / "guard_hugsim.sh")], workers=3, vram_gb=10, cores=12, tries=2, env=e, out=str(out),
-               priority=priority, ok=ok)
+
+def hugsim_complete(out: Path, scen: Path) -> bool:
+    want = {Path(s).stem for s in Path(scen).read_text().split()}
+    return want <= {r["scenario"] for r in hugsim_rows(out) if r["end"] != "crash"}
 
 
 def hugsim_rows(out: Path, tag: str = HUGSIM_TAG):
@@ -131,12 +134,50 @@ def hugsim_rows(out: Path, tag: str = HUGSIM_TAG):
 
 
 def shards(ids, stage):
-    """Routes dealt round-robin over ceil(n / SHARD) jobs; smoke = the first route alone, in shard 0's dir (the batch reuses it)."""
+    """Routes dealt round-robin over ceil(n / SHARD) units; smoke = the first route alone, in shard 0's dir (the batch reuses it)."""
     n = -(-len(ids) // SHARD)
     return [(0, ids[:1])] if stage == "smoke" else [(k, ids[k::n]) for k in range(n)]
 
 
-def lane_jobs(candidate: str, mode: str, lines, stage: str = "all", force: bool = False):
+def submit_units(units, log_root, owner: str, dry_run: bool = False, force: bool = False) -> dict:
+    """Submit each unit to the GPU pool (jevdrive.cl.pool) with log_dir <log_root>/<name> (log.txt, STATUS, DONE / ERROR, pool_id).
+    Resumable: a finished unit (its `done` check) is skipped, a unit whose recorded pool job is still queued / running is reused,
+    so rerunning a submitter never double-books. Returns name -> pool id ("" = already finished). dry_run prints the specs."""
+    from jevdrive.cl import pool as P
+    out = {}
+    for u in units:
+        ld = Path(log_root) / u["name"]
+        if not force and u["done"]():
+            out[u["name"]] = ""
+            print("finished  %s" % u["name"])
+            continue
+        old = (ld / "pool_id").read_text().strip() if (ld / "pool_id").exists() else ""
+        if old and P.job_states([old])[old] in ("inbox", "queued", "running"):
+            out[u["name"]] = old
+            print("in pool   %s  %s" % (u["name"], old))
+            continue
+        kw = dict(owner=owner, vram_gb=u["vram_gb"], carla=u["carla"], cpu=u["cpu"], tries=u["tries"], priority=u["priority"],
+                  env=u["env"], log_dir=str(ld), cwd=str(REPO))
+        if dry_run:
+            print("would submit %s\n  %s\n  %s" % (u["name"], json.dumps(kw), u["cmd"]))
+            continue
+        ld.mkdir(parents=True, exist_ok=True)
+        jid = P.submit(u["cmd"], name=u["name"], **kw)
+        (ld / "pool_id").write_text(jid + "\n")
+        out[u["name"]] = jid
+        print("submitted %s  %s" % (u["name"], jid))
+    return out
+
+
+def wait_units(ids: dict, poll_s: float = 60.0) -> list:
+    """Block until every submitted unit is final (jevdrive.cl.pool.wait); returns the names that did not finish done."""
+    from jevdrive.cl import pool as P
+    live = {n: i for n, i in ids.items() if i}
+    st = P.wait(list(live.values()), poll_s) if live else {}
+    return [n for n, i in live.items() if st.get(i) != "done"]
+
+
+def line_units(candidate: str, mode: str, lines, stage: str = "all", force: bool = False):
     c = G.resolve(candidate)
     rd = G.run_dir(c["name"], mode)
     onnx, ra = c.get("onnx"), c.get("route_adapter")
@@ -145,8 +186,9 @@ def lane_jobs(candidate: str, mode: str, lines, stage: str = "all", force: bool 
         scen = HUGSIM_SETS[mode]
         if stage == "smoke":
             scen = rd / "hugsim_smoke.txt"
+            scen.parent.mkdir(parents=True, exist_ok=True)
             scen.write_text(HUGSIM_SETS[mode].read_text().split()[0] + "\n")
-        jobs.append(hugsim_job("hugsim" + ("-smoke" if stage == "smoke" else ""), rd / "hugsim", scen, onnx, priority=3))
+        jobs.append(hugsim_unit("hugsim" + ("-smoke" if stage == "smoke" else ""), rd / "hugsim", scen, onnx, priority=3))
     if "b2d_turns" in lines and not (candidate == G.SHIPPED and not force and turns_cached()):
         for k, ids in shards(TURN_ROUTES, stage):
             jobs.append(b2d_unit("turns-s%d-k%d%s" % (TURN_SEED, k, "-smoke" if stage == "smoke" else ""), ids,
@@ -161,63 +203,42 @@ def lane_jobs(candidate: str, mode: str, lines, stage: str = "all", force: bool 
 
 # ---------------------------------------------------------------- blocking runner
 def add_args(ap):
-    ap.add_argument("--cl-lines", default="", help="closed-loop lines whose jobs this call runs in one lane (default: this line only)")
-    ap.add_argument("--cards", type=int, default=2, help="cards to lease when OP_GUARD_LANE is unset")
+    ap.add_argument("--cl-lines", default="", help="closed-loop lines whose units this call submits together (default: this line only)")
     ap.add_argument("--stage", choices=("smoke", "all"), default="all", help="smoke = one unit per line (same dirs, reused by all)")
     ap.add_argument("--collect-only", action="store_true", help="do not run anything; read the finished units")
+    ap.add_argument("--dry-run", action="store_true", help="print the pool specs of the units this call would submit, run nothing")
     return ap
 
 
-def lanes_cmd(*a):
-    return subprocess.run([str(REPO / ".venv/bin/python"), "-m", "jevdrive.cl", *a], cwd=REPO, text=True, capture_output=True)
-
-
 def run_lines(a, line: str) -> dict:
-    """Lease (or use OP_GUARD_LANE), run the lane for --cl-lines (or `line`) of a.candidate / a.mode, block until it ends.
-    Returns run provenance (lane, root, rc, wall_s, per-job wall)."""
+    """Submit the units of --cl-lines (or `line`) of a.candidate / a.mode to the GPU pool (log dirs <run_dir>/cl/<unit>), block until
+    they are final. Returns run provenance (root, pool ids, wall, per-unit wall, failed units)."""
     lines = [x for x in (a.cl_lines or line).split(",") if x]
     c = G.resolve(a.candidate)
     rd = G.run_dir(c["name"], a.mode)
     root = rd / "cl"
-    if a.force:                                        # recompute: forget the lane state and these lines' own units
-        kill = [root] + ([rd / "hugsim"] if "hugsim" in lines else []) + [
+    if a.force and not a.dry_run:                      # recompute: forget these lines' own units
+        kill = ([rd / "hugsim"] if "hugsim" in lines else []) + [
             p for p in (rd / "b2d").glob("*") if (p.name.startswith("turns-") and "b2d_turns" in lines) or (p.name.startswith("ds-") and "b2d_ds" in lines)]
         for p in kill:
             if p.exists():
                 shutil.rmtree(p)
-    elif (root / "state.json").exists():               # a rerun retries jobs that failed before (their units resume)
-        st = json.loads((root / "state.json").read_text())
-        for v in st["jobs"].values():
-            if v.get("state") == "failed":
-                v.update(state="queued", tries=0)
-        (root / "state.json").write_text(json.dumps(st, indent=1))
-    jobs = lane_jobs(a.candidate, a.mode, lines, a.stage, a.force)
-    prov = dict(lines=lines, root=str(root), stage=a.stage, jobs=[j.name for j in jobs])
-    if not jobs:
+    units = line_units(a.candidate, a.mode, lines, a.stage, a.force)
+    prov = dict(lines=lines, root=str(root), stage=a.stage, jobs=[u["name"] for u in units])
+    if not units:
         return dict(prov, rc=0, wall_s=0.0, note="every unit cached or finished")
-    lane = os.environ.get("OP_GUARD_LANE")
-    own = not lane
-    if own:
-        lane = "op-guard-cl-" + c["name"]
-        r = lanes_cmd("lease", lane, "--gpus", str(a.cards), "--status", "op_guard closed-loop lines %s for %s" % (",".join(lines), c["name"]))
-        print(r.stdout + r.stderr, flush=True)
-        if r.returncode:
-            raise SystemExit("lease %s failed (rc %d); free cards are needed, see `python -m jevdrive.cl probe`" % (lane, r.returncode))
     t0 = time.time()
-    try:
-        cmd = [str(REPO / ".venv/bin/python"), "-m", "jevdrive.cl", "run", str(LANEFILE), "--lane", lane, "--root", str(root),
-               "--arg", "candidate=" + a.candidate, "--arg", "mode=" + a.mode, "--arg", "lines=" + ",".join(lines), "--arg", "stage=" + a.stage]
-        if a.force:
-            cmd += ["--arg", "force=1"]
-        print(" ".join(cmd), flush=True)
-        rc = subprocess.run(cmd, cwd=REPO).returncode
-    finally:
-        if own:
-            print(lanes_cmd("release", lane, "done: op_guard %s %s" % (c["name"], ",".join(lines))).stdout, flush=True)
-    st = json.loads((root / "state.json").read_text()) if (root / "state.json").exists() else {"jobs": {}}
-    return dict(prov, lane=lane, rc=rc, wall_s=round(time.time() - t0, 1),
-                job_wall_s={n: st["jobs"].get(n, {}).get("wall_s") for n in prov["jobs"]},
-                failed=[n for n in prov["jobs"] if st["jobs"].get(n, {}).get("state") == "failed"])
+    ids = submit_units(units, root, "op_guard " + c["name"], dry_run=a.dry_run)
+    if a.dry_run:
+        return dict(prov, rc=0, wall_s=0.0, note="dry run")
+    failed = wait_units(ids)
+    wall = {}
+    for u in units:
+        try:
+            wall[u["name"]] = json.loads((root / u["name"] / "DONE").read_text()).get("wall_s")
+        except (OSError, ValueError):
+            wall[u["name"]] = None
+    return dict(prov, pool_ids=ids, rc=1 if failed else 0, wall_s=round(time.time() - t0, 1), job_wall_s=wall, failed=failed)
 
 
 # ---------------------------------------------------------------- readers
@@ -324,6 +345,9 @@ def main_line(line: str, doc: str, collect) -> int:
     `collect(candidate, mode, force) -> (rows, provenance, status)` into lines/<line>.json."""
     a = add_args(G.line_args(line, doc)).parse_args()
     c = G.resolve(a.candidate)
+    if a.dry_run:
+        print(json.dumps(run_lines(a, line), indent=1, default=str))
+        return 0
     out = G.run_dir(c["name"], a.mode)
     lines = [x for x in (a.cl_lines or line).split(",") if x]
     if not (a.force or a.collect_only or a.stage == "smoke") and all((G.load_line(out, x) or {}).get("status") == "ok" for x in lines):
@@ -358,3 +382,11 @@ def paired_ci(a, b, groups=None):
         return None, None
     r = stats.paired(a, b, groups=groups)
     return float(r["mean"]), [float(r["lo"]), float(r["hi"])]
+
+
+if __name__ == "__main__":                 # `cllib.py hugsim-check <out> <scen_file>`: the HUGSIM unit's output check
+    if sys.argv[1:2] == ["hugsim-check"] and len(sys.argv) == 4:
+        ok = hugsim_complete(Path(sys.argv[2]), Path(sys.argv[3]))
+        print("hugsim-check", "ok" if ok else "missing scenarios")
+        sys.exit(0 if ok else 1)
+    sys.exit("usage: cllib.py hugsim-check <out> <scen_file>")
