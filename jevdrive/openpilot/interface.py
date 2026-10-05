@@ -29,6 +29,8 @@ Keys (values in SPEC):
                                   nav-polyline: the route ahead as a navigation polyline input of a route-choice fine-tune (semi)
   light.source          none      the model sees the light like any pixel; vlm (a VLM reads it), gt-stop (privileged ceiling);
                                   gt-latch (nored) is forbidden
+  inputs.extra          ()        model inputs besides the road / wide frames, desire and traffic convention (modeld feeds none):
+                                  ego-status (speed / acceleration), pose-history, side-cams (experiments/op_parity)
   tricks                ()        harness post-processing outside openpilot (forward_only, coast_v, x1.06, selector, ...)
 """
 import json
@@ -43,6 +45,7 @@ SPEC = {
     "lon.source": "action",
     "command.channel": "none", "command.route_geometry": "none",
     "light.source": "none",
+    "inputs.extra": (),
     "tricks": (),
 }
 DEVICE = {"road_focal_px": 910.0, "wide_focal_px": 455.0, "road_horizon_row": 47.6, "wide_horizon_row": 151.8,
@@ -106,7 +109,12 @@ DECLARED = {
         "lateral.exec": ("LB", "legacy exam preset: iLQR (PR#57)", "d118"),
         "lateral.delay_s": ("LB", "pure delay in simulator seconds (0.25 under dilate = 0.2 model s)", "d118"),
         "lon.source": ("LB", "iLQR tracks the plan's speed: action acceleration -> LongControl fails launches (d119)", "d119"),
-        "command.channel": ("LB", "simulator command (from the recorded route) -> turn desire; d92: no help", "d90, d92"),
+        "command.channel": ("LB", "simulator command (from the recorded route) -> turn desire; d92: no help. op_parity arms "
+                                  "(+onehot) also read it as a NAVSIM one-hot [L, S, R] (WA-JEPA's command map [2, 0, 1])",
+                            "d90, d92, op_parity"),
+        "inputs.extra": ("real-car", "op_parity arms: simulator ego speed / acceleration and a 4-pose 2 Hz history (odometry), "
+                                     "side / rear camera renders, through lib/parity_adapter.py's bias (WA-JEPA's inputs)",
+                         "op_parity"),
         "tricks": ("semi", "forward_only / straight_stop plan post-processing; simulator initial speed 1.0 m/s; optional "
                            "derot / selector / launch_stab / launch_long arms", "d90, d96"),
     },
@@ -247,6 +255,10 @@ def resolve_hugsim(opts, controller, dataset="nuscenes", op_ctrl_env=None):
             "lateral.delay_s": round(delay / dil, 4) if opc else "n/a",
             "lon.source": "action" if (opc and o.get("op_long") and controller == "opctrl_long") else "plan-ilqr",
             "command.channel": "desire-sim" if o.get("desire", True) else "none", "tricks": tuple(tricks)}
+    par = o.get("parity")
+    if par and par.get("ego", True):              # experiments/op_parity (lib/parity_hugsim.py): what the served arm reads
+        vals["command.channel"] += "+onehot"
+        vals["inputs.extra"] = ("ego-status", "pose-history") + (("side-cams",) if par.get("side", True) else ())
     return vals
 
 

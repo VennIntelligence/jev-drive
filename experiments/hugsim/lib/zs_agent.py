@@ -45,6 +45,11 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      op_long (bool, default false, needs op_ctrl; plans/2026-10-04-op-control-stack-long-prereg.md): also append the raw action
                      acceleration (server `accel` = action[1]) as the row before it, [accel, 2e9]; tree `opctrl_long` (op-ctrl-long.patch, env
                      OP_CTRL_LONG) strips it and sets the acceleration through lib/op_ctrl.py OpLongitudinal
+                     parity (openpilot, dict, default off; experiments/op_parity, lib/parity_hugsim.py): {"socket": the parity bias
+                     server, "clock": "model" | "sim"}; every step the agent sends the ego status, 4-pose history, route command
+                     (and, for an arm that reads them, the side / rear camera key frames) to that server and passes the returned
+                     (32, 512) bias to the policy server as `intent_bias` (the served ONNX must have that input: pp_hugsim.py onnx);
+                     not combined with derot / lstab
 
 Interface (jevdrive/openpilot/interface.py, docs/openpilot-interface.md): experiments/hugsim/archive/zs_run.py resolves a named
 preset (--preset spec | spec_cold | spec_hold | opctrl_d118 | exam) into the controller tree, OP_CTRL and these opts and passes HUGSIM_ZS_PRESET /
@@ -115,17 +120,31 @@ class Agent:
         else:
             self.op = Z.OpenpilotFrames(cal)
             cov = {"coverage": self.op.coverage, "sources": self.op.src_frac}
+        self.par = None
+        if self.opts.get("parity") and self.model != "alpamayo":
+            import parity_hugsim as PH
+            if any(k in self.opts for k in ("derot_below", "derot_sel", "lstab")):
+                raise ValueError("parity is not combined with derot / lstab")
+            dil = 1.0 if self.opts.get("op_clock", "dilate") == "hold" else float(self.opts.get("dilation", 1.25))
+            self.par = PH.ParityInputs(self.opts["parity"], cal, self.d, dil)
         iface = None
         if self.model != "alpamayo":
             ctrl = os.environ.get("HUGSIM_ZS_CONTROLLER") or ("opctrl" if self.opts.get("op_ctrl") else "unknown")
             rule = json.loads(os.environ.get("OP_CTRL") or "{}")
             iface = IF.record("hugsim", os.environ.get("HUGSIM_ZS_PRESET", "exam"),
-                              IF.resolve_hugsim(self.opts, ctrl, self.dataset, rule), config=self.opts, controller=ctrl,
-                              op_ctrl_rule=rule, model=self.model)
+                              IF.resolve_hugsim(self._iface_opts(), ctrl, self.dataset, rule), config=self.opts, controller=ctrl,
+                              op_ctrl_rule=rule, model=self.model, parity=self.par and self.par.describe())
             IF.write(self.out, iface)
         self.log.write(json.dumps({"setup": True, "model": self.model, "server": self.server, "opts": self.opts,
                                    "rear_offset": self.d, "coverage": cov,
-                                   "interface": iface and iface["preset"]}) + "\n")
+                                   "interface": iface and iface["preset"], "parity": self.par and self.par.describe()}) + "\n")
+
+    def _iface_opts(self):
+        """Opts for the interface record; parity: which inputs the served arm actually reads (from the bias server)."""
+        if self.par is None:
+            return self.opts
+        return dict(self.opts, parity=dict(self.opts["parity"], ego=bool(self.par.server.get("use_ego")),
+                                           side=bool(self.par.server.get("use_side"))))
 
     def call(self, meta, arrays, sock=None):
         sock = sock or self.sock
@@ -228,6 +247,9 @@ class Agent:
                 sp, _ = LS.to_car(out["stab_pos"], None, self.gate.delta(th))
                 rec["lstab"].update(delta=round(yaw, 2), dlat3=round(float(np.interp(3.0, out["t"], sp[:, 1] - out["pos"][:, 1])), 3))
                 out = dict(out, pos=LS.merge_lateral(out["pos"], sp))
+        elif self.par is not None:                        # op_parity: the bias of this step rides with the frame
+            bias, rec["parity"] = self.par.bias(obs["rgb"], info, self.hist)
+            r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2, "intent_bias": bias})
         else:
             r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2})
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)

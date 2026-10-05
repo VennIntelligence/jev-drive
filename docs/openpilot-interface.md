@@ -23,6 +23,7 @@ Tests: `python -m unittest tests.test_openpilot_interface -v`.
 | `command.channel` | none: nothing tells the model where to go; desire only for a driver-initiated lane change. **desire is not a choice signal** (decisions 92, 121) | - |
 | `command.route_geometry` | none | - |
 | `light.source` | none: the model sees the light as pixels; a VLM reading pixels is a declared deviation | - |
+| `inputs.extra` | none: modeld feeds only the frames, desire and traffic convention | HUGSIM op_parity arms: ego status, 4-pose history, side / rear cameras through `lib/parity_adapter.py` (real-car; `lib/parity_hugsim.py`) |
 | forbidden | `"resume": "nored"` (a ground-truth light holds the stop latch), on every board | ledger 2026-10-05 section 8 |
 
 ## Per-board resolution (default presets)

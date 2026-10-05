@@ -6,6 +6,9 @@ the model images arrive already built by the HUGSIM agent (jevdrive.hugsim_zs: A
 3, 320, 576) uint8, openpilot packed model frames (2, 6, 128, 256)), and the replies carry what the HUGSIM adapter
 needs (Alpamayo headings; openpilot plan after `reps` steps with the traffic convention of the scene).
 Protocol and threading as the CARLA server (scripts/zeroshot_wire.py, one connection per scenario).
+An adapted ONNX with an `intent_bias` input (--onnx, experiments/op_adapt_l/scripts/op_l_onnx.py build --bias-input) takes the
+bias from the request's `intent_bias` array (1 x 32 x 512 or 32 x 512, fp16; zeros when a request carries none), set before the
+request's `reps` steps (experiments/op_parity, zs_agent.py opt `parity`).
 
     $DATA_DIR/third_party/alpamayo1.5/.venv/bin/python experiments/hugsim/archive/hugsim_zs_server.py alpamayo --socket <path>
     $DATA_DIR/envs/openpilot/bin/python experiments/hugsim/archive/hugsim_zs_server.py cinque --socket <path>
@@ -74,6 +77,10 @@ class State(dict):
 
 
 class Openpilot(S.OpenpilotModel):
+    def __init__(self, a):
+        super().__init__(a)
+        self.meta["onnx"] = getattr(a, "onnx", "") or None
+
     def new_state(self, state=None):
         """Queued models (small / Cinque) own one ONNX session (TensorRT engine, ~2.3 GB, ~2 min to deserialize) per
         connection. HUGSIM opens one connection per scenario, so sessions are pooled: a connection takes a free one
@@ -101,7 +108,8 @@ class Openpilot(S.OpenpilotModel):
     def prepare(self, meta, arrays):
         if "img2" not in arrays:
             return super().prepare(meta, arrays)
-        return {"img2": np.ascontiguousarray(arrays["img2"]), "img2s": arrays.get("img2s"), "prep_ms": 0.0}
+        return {"img2": np.ascontiguousarray(arrays["img2"]), "img2s": arrays.get("img2s"), "bias": arrays.get("intent_bias"),
+                "prep_ms": 0.0}
 
     def stab_session(self, state):
         """Launch stabilisation (lib/launch_stab.py): a second pooled session per connection, taken on the first fork."""
@@ -132,6 +140,9 @@ class Openpilot(S.OpenpilotModel):
         t1 = time.perf_counter()
         if not self.context_rate:
             m = state["model"]
+            if "intent_bias" in m.inputs:              # adapted ONNX: this request's bias (or none), never a stale one from the pool
+                b = prep.get("bias")
+                m.extra = {} if b is None else {"intent_bias": np.asarray(b, np.float16).reshape(1, 32, 512)}
             for _ in range(reps):
                 raw = m.step(prep["img2"], desire=desire, traffic=traffic)
         else:
