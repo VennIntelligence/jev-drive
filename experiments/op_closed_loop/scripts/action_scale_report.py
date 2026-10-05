@@ -163,6 +163,13 @@ def cmd_report(a):
         f = fit(C["kin"][s, j2], kd[s], win[s])
         res[f"comma_v_{lo}"] = f
         print(line(f"v {lo}-{hi} m/s", f))
+    print("\nspeed x |curvature| (action, then plan-derived g_cal):")
+    for vn, vm in (("v 3-8", mv & (v < 8)), ("v > 8", v >= 8)):
+        for lo, hi in ((0.003, 0.02), (0.02, 1)):
+            s = vm & (kt >= lo) & (kt < hi)
+            f, fp = fit(C["kin"][s, j2], kd[s], win[s]), fit(C["kin"][s, j2], kpl[s], win[s])
+            res[f"comma_{vn}_{lo}"], res[f"comma_plan_{vn}_{lo}"] = f, fp
+            print(line(f"{vn}, |k| {lo}-{hi}", f), f"plan g_cal {fp['rev']:.2f} [{fp['rev_ci'][0]:.2f}, {fp['rev_ci'][1]:.2f}]")
     print(f"\nplan speed / localizer speed (v > {VMIN}): median {np.median(C['vplan'][mv] / v[mv]):.3f}")
     # ---- WOD / navtrain teachers (wrong camera height)
     bank_curves = {}
