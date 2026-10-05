@@ -36,8 +36,10 @@ English version in `docs/` or code. `tmp/` is gitignored scratch.
 - Third-party code is run as it ships: measure it, do not rewrite it.
 
 ## Closed loop (CARLA / Bench2Drive)
-- Read docs/closed-loop-runbook.md first. Lanes are job lists run by `python -m jevdrive.cl run <lanefile>` on a
-  lease from `python -m jevdrive.cl lease`; no other scheduler. Thread flags / env live only in `jevdrive/cl/profiles.py`.
+- Read docs/closed-loop-runbook.md first. Every GPU job (CARLA, training, inference) is submitted to the GPU pool
+  (`python -m jevdrive.cl submit`, dispatcher in tmux `jev:pool`); whichever card has room takes it, and the pool
+  allocates cards, cores and CARLA ports. Nobody picks a card or port by hand; no other scheduler. Chain stages with
+  `--after`. Thread flags / env live only in `jevdrive/cl/profiles.py`.
 
 ## Results and research notes
 - Results land in research/decisions.md as they arrive; a wrong entry is corrected in place (say what it claimed
