@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# rc-*-near chain (plans/2026-10-05-route-ft-prereg.md, section "2026-10-06 near"). Every phase runs on a lease the caller holds. STATUS / DONE / ERROR
+# rc-*-near chain (plans/2026-10-05-route-ft-prereg.md, section "2026-10-06 near"). Every phase runs on cards the caller holds. STATUS / DONE / ERROR
 # in $R/chain/near-<phase>/. Data root $N = $DATA_DIR/runs/op_route_ft/carla_near/{plan.path, render/, packed/}.
-#   near_chain.sh render "<gpu> <idx> <cpus>" ...   one CARLA server + renderer per spec (from `python -m jevdrive.cl lease`), carla_pairs_render_ol.py
+#   near_chain.sh render "<gpu> <idx> <cpus>" ...   one CARLA server + renderer per spec (cards held outside the pool: `python -m jevdrive.cl hold`), carla_pairs_render_ol.py
 #                                                  unchanged; LIMIT=<n> env renders only the first n poses of shard 0 (stage 5); IDS=a,b only these ids
 #   near_chain.sh pack                              CPU: carla_pairs_pack + near columns (near_pack.py)
 #   near_chain.sh bank <gpu>                        stage-3 trunks + original outputs per near pose (rft.py bank --which near)
