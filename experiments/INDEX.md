@@ -72,3 +72,4 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [cosmos](cosmos/README.md): Cosmos v1 no-go (80% diff outside ped); G4 made 2004 pairs [d56,63]
 - [controlnet_pair](controlnet_pair/README.md) (cn_pair): Paused, not no-go: deletion unclean, insertion fake-ish on 19 scenes [d59]
 - [world_model](world_model/README.md) (W, WL, WL-2): W failed from action-scene confounding; WL-2 held-out no-go (H 0.38) [d54,60-61,65,76]
+- [wm_policy](wm_policy/README.md) (worldmodel-4B as policy, WM-uncond): Stopped at step 0: anchors are fixed future video, no history-only mode [d(pending)]

@@ -31,7 +31,7 @@ AREAS = [  # INDEX.md order; live topics come first
     ("frozen features and the reaction line", ["probe_planner_v0", "prediag", "driving_backbones", "reactivity", "fusion_diag",
                                                "fastperc", "elicitation", "real_transfer", "statepol"]),
     ("night queues", ["night_queue_2", "night_queue_3", "night_queue_4"]),
-    ("real-appearance pairs and world models", ["p3_ped_exam", "cosmos", "controlnet_pair", "world_model"]),
+    ("real-appearance pairs and world models", ["p3_ped_exam", "cosmos", "controlnet_pair", "world_model", "wm_policy"]),
 ]
 ALIASES = {  # names the decision log and old notes use: a grep on INDEX.md finds the topic
     "vlm_arb": "vlm-arb, vlm_arb",
@@ -43,7 +43,7 @@ ALIASES = {  # names the decision log and old notes use: a grep on INDEX.md find
     "prediag": "P0-P4, L0", "probe_planner_v0": "probe v0, stage A", "reactivity": "P5, M-C, I4", "fusion_diag": "fusion Q1-Q9",
     "elicitation": "E1-E6", "real_transfer": "G0-G3", "night_queue_2": "nq2, N1-N6, P6", "night_queue_3": "nq3, Q1-Q6",
     "night_queue_4": "nq4, G K X OPL", "p3_ped_exam": "P3, ped dose", "world_model": "W, WL, WL-2", "controlnet_pair": "cn_pair",
-    "statepol": "state-space", "op_route_cmd": "route polyline, nav route",
+    "statepol": "state-space", "op_route_cmd": "route polyline, nav route", "wm_policy": "worldmodel-4B as policy, WM-uncond",
 }
 
 
