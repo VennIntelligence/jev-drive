@@ -35,7 +35,11 @@ ARMS = {"A": (("cross_left", "front_wide", "cross_right", "front_tele"), False),
         "Bn": (("front_wide", "front_tele"), True),
         # post-hoc diagnostics (added after the pilot readout, not pre-registered): which camera carries B's turn?
         "C": (("cross_left", "front_wide", "cross_right"), False),
-        "B1n": (("front_wide",), True)}
+        "B1n": (("front_wide",), True),
+        # tele slot kept but its 4 frames set to black: does B / A need the tele *content* or just a 4th / tele slot?
+        "Tblk": (("cross_left", "front_wide", "cross_right", "front_tele"), False),
+        "B1t": (("front_wide", "front_tele"), False)}
+BLANK = {"Tblk": (6,), "B1t": (6,)}             # camera indices whose frames are zeroed (post-hoc diagnostics)
 T0_OFFSETS = {"p": 0, "s": 1_500_000}          # primary t0, secondary t0 + 1.5 s
 N_SAMPLES = 6
 # scan rule (plan): heading change over the 6.4 s horizon, low speed, small radius
@@ -182,6 +186,8 @@ def cmd_infer(a, run):
                 cams, nav = ARMS[arm]
                 d = load_physical_aiavdataset(c["clip"], t0_us=t0, avdi=avdi, maybe_stream=False,
                                               camera_features=[getattr(avdi.features.CAMERA, CAMS[k]) for k in cams])
+                for ci_ in BLANK.get(arm, ()):
+                    d["image_frames"][d["camera_indices"] == ci_] = 0
                 gxy = d["ego_future_xyz"][0, 0, :, :2].numpy()
                 gyaw = yaw_of(d["ego_future_rot"][0, 0].numpy())
                 nt = nav_text(c, gxy, gyaw) if nav else None
@@ -340,7 +346,7 @@ def cmd_score(a, run):
     df.to_csv(TOPIC / "results" / "per_case.csv", index=False)
     eff = []
     pairs = [("An", "Bn"), ("A", "B"), ("A", "B1"), ("An", "A"), ("A", "OP"), ("An", "OP"), ("B", "OP"),
-             ("A", "C"), ("C", "B1"), ("B", "B1"), ("Bn", "B1n")]
+             ("A", "C"), ("C", "B1"), ("B", "B1"), ("Bn", "B1n"), ("A", "Tblk"), ("Tblk", "C"), ("B1t", "B1"), ("B", "B1t")]
     for tk in T0_OFFSETS:
         d = df[df.t0 == tk]
         piv = {k: d.pivot(index="case", columns="arm", values=k) for k in ("A_H", "lag50", "R_end", "ade64", "turn_rate", "A_S", "prog")}

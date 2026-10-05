@@ -23,7 +23,7 @@ ARM_LABEL = {"A": "A: 4 cameras", "B": "B: front-wide + tele", "B1": "B1: front-
              "C": "C: 3 cameras, no tele (post-hoc)", "B1n": "B1n: front-wide only + nav (post-hoc)",
              "Bn": "Bn: front-wide + tele + nav", "OP": "OP: openpilot Cinque (front-wide reprojected)"}
 COL = {"A": "#1f6fb4", "B": "#d9822b", "B1": "#b85450", "An": "#2a9d8f", "Bn": "#e9c46a", "OP": "#6c757d", "C": "#7b5ea7",
-       "B1n": "#c9a0a0"}
+       "B1n": "#c9a0a0", "Tblk": "#264653", "B1t": "#f4a261"}
 
 
 def showcase(cases, alp):
@@ -86,8 +86,8 @@ def fig_arm(arm, c, z, op, opk, out):
 def fig_summary(df, eff, out):
     import matplotlib.pyplot as plt
     d = df[df.t0 == "p"]
-    arms = [a for a in ("A", "C", "B", "B1", "An", "Bn", "B1n", "OP") if a in set(d.arm)]
-    fig, axs = plt.subplots(1, 4, figsize=(20, 4.8))
+    arms = [a for a in ("A", "Tblk", "C", "B", "B1t", "B1", "An", "Bn", "B1n", "OP") if a in set(d.arm)]
+    fig, axs = plt.subplots(1, 4, figsize=(22, 4.8))
     for ax, m, lab in ((axs[0], "A_H", "heading gain A_H over time (1 = logged)"), (axs[1], "lag50", "lag50 (s, + = late)"),
                        (axs[3], "A_S", "post-hoc: heading gain over distance A_S")):
         piv = d.pivot(index="case", columns="arm", values=m)[arms]
@@ -100,7 +100,7 @@ def fig_summary(df, eff, out):
         ax.set_xticks(range(len(arms)), arms)
         ax.set_ylabel(lab)
         ax.axhline(1.0 if m == "A_H" else 0.0, color="k", lw=0.6, ls=":")
-    cons = [c for c in ("An-Bn", "A-B", "A-C", "C-B1", "B-B1", "Bn-B1n", "An-A", "A-OP", "An-OP", "B-OP") if c in set(eff.contrast)]
+    cons = [c for c in ("An-Bn", "A-B", "A-C", "A-Tblk", "Tblk-C", "B-B1", "B-B1t", "B1t-B1", "An-A", "A-OP", "An-OP", "B-OP") if c in set(eff.contrast)]
     e = eff[(eff.t0 == "p") & (eff.metric == "A_H")].set_index("contrast").loc[cons]
     y = np.arange(len(cons))[::-1]
     axs[2].errorbar(e["mean"], y, xerr=[e["mean"] - e["lo"], e["hi"] - e["mean"]], fmt="o", color="k")
@@ -150,9 +150,10 @@ def main(src):
     eff = pd.read_csv(TOPIC / "results" / "effects.csv")
     op = np.load(src / "op" / "preds.npz") if (src / "op" / "preds.npz").exists() else None
     opk = {k: i for i, k in enumerate(op["keys"])} if op is not None else {}
+    (TOPIC / "figs").mkdir(exist_ok=True)
     c = showcase(cases, src / "alp")
     z = np.load(src / "alp" / f"{c['clip']}_p.npz", allow_pickle=True)
-    for arm in ("A", "C", "B", "B1", "An", "Bn", "B1n", "OP"):
+    for arm in ("A", "Tblk", "C", "B", "B1t", "B1", "An", "Bn", "B1n", "OP"):
         if arm == "OP" and f"{c['clip']}_p" not in opk or arm != "OP" and f"{arm}_xyz" not in z.files:
             continue
         fig_arm(arm, c, z, op, opk, TOPIC / "figs" / f"turn_{arm}.png")
