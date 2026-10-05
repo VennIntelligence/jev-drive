@@ -12,7 +12,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [op_route_cmd](op_route_cmd/README.md) (route polyline, nav route): live; Route polyline material: navtrain 103 k / WOD 522 k labelled, 32 k / 62 k turns >= 25 deg; noise + negatives + CARLA plan, no training [d(inputs:,93,102,118)]
 - [op_route_ft](op_route_ft/README.md) (route adapter fine-tune): live; Route-choice adapter (bear / poly) + action pathway fine-tune; B2D 25 junction turns primary [d(inputs:,118,121,122,127)]
 - [op_dagger](op_dagger/README.md): live; Reprojection rollout engine on real WOD logs + DAgger pilot (paper §3 fig 8) [d(inputs:,92,98,100,111,118,123,124)]
-- [factor_wm](factor_wm/README.md) (factorized world model, exact-ego sim): live; Stage 1 pre-registered: on-policy openpilot in exact-ego reprojection sim; no runs yet [d(inputs:,54,76,103,123,132,138,139)]
+- [factor_wm](factor_wm/README.md) (factorized world model, exact-ego sim): live; G0: shipped fails 52% in exact-ego engine (stall/heading/lane); depth warp not better [d(inputs:,54,76,103,123,132,138,139)]
 - [op_fov](op_fov/README.md) (wide FOV, fisheye): concluded; Wide FOV 90/116 deg: turn gain -0.005..-0.033, early stop; wide frame barely used [d(pending)]
 - [op_resume](op_resume/README.md) (driver resume, standstill launch): live; Driver-resume rule: 5/6 stuck HUGSIM runs launch (HD +0.12), missed-lead collision: gate stop [d(inputs:,90,96,107,113,117,118,119,124,126)]
 - [op_parity](op_parity/README.md) (input parity, WA-JEPA inputs): live; Cinque + ego / pose / cmd / side cams vs WA-JEPA, equal inputs and data [d(inputs:,92,104,111,118,137,138,139)]

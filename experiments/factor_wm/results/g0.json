@@ -1,0 +1,335 @@
+{
+ "g0a": {
+  "launch": {
+   "arms": {
+    "depth-anchor": {
+     "n": 24,
+     "median": 3.0177320482194054
+    },
+    "depth-step1": {
+     "n": 24,
+     "median": 2.377277698254268
+    },
+    "estar-anchor": {
+     "n": 24,
+     "median": 3.019236258371328
+    },
+    "estar-step1": {
+     "n": 24,
+     "median": 2.358179925225472
+    },
+    "plane-anchor": {
+     "n": 24,
+     "median": 3.0526600608701173
+    },
+    "plane-step1": {
+     "n": 24,
+     "median": 2.449968860726237
+    }
+   },
+   "ratio_estar_plane": 0.9890509254773484,
+   "ratio_ci": [
+    0.7788803020722213,
+    1.070616683628648
+   ],
+   "line_pass": false
+  },
+  "sharp": {
+   "arms": {
+    "depth-anchor": {
+     "n": 20,
+     "median": 10.616789415790102
+    },
+    "depth-step1": {
+     "n": 20,
+     "median": 7.945576140329839
+    },
+    "estar-anchor": {
+     "n": 20,
+     "median": 8.924637491253103
+    },
+    "estar-step1": {
+     "n": 20,
+     "median": 7.20823392461156
+    },
+    "plane-anchor": {
+     "n": 20,
+     "median": 10.500839242829475
+    },
+    "plane-step1": {
+     "n": 20,
+     "median": 8.066331377273352
+    }
+   },
+   "ratio_estar_plane": 0.8498975448412197,
+   "ratio_ci": [
+    0.6723763558876614,
+    0.9913645461518836
+   ],
+   "line_pass": false
+  },
+  "cruise": {
+   "arms": {
+    "depth-anchor": {
+     "n": 24,
+     "median": 0.1518642604760119
+    },
+    "depth-step1": {
+     "n": 24,
+     "median": 0.10455675443421918
+    },
+    "estar-anchor": {
+     "n": 24,
+     "median": 0.1518642604760119
+    },
+    "estar-step1": {
+     "n": 24,
+     "median": 0.10455675443421918
+    },
+    "plane-anchor": {
+     "n": 24,
+     "median": 0.13932338273677336
+    },
+    "plane-step1": {
+     "n": 24,
+     "median": 0.09851579577809982
+    }
+   },
+   "ratio_estar_plane": 1.0900127278917158,
+   "ratio_ci": [
+    0.8599731175820399,
+    1.657288555966415
+   ],
+   "line_pass": true
+  },
+  "pass": false,
+  "launch_accel_real_frames": {
+   "n": 24,
+   "model_acc_t0_median": -0.09490966796875,
+   "model_acc_2s_median": 0.27072012424468994,
+   "log_acc_2s_median": 0.9407928586006165,
+   "share_model_acc_t0_below_0p3": 0.8333333333333334
+  }
+ },
+ "g0b": {
+  "reclassified_to_stall": 24,
+  "estar closed": {
+   "perturbed": {
+    "n": 362,
+    "stall": 0.1712707182320442,
+    "heading": 0.17403314917127072,
+    "lane": 0.17955801104972377,
+    "behind": 0.052486187845303865,
+    "ahead": 0.17955801104972377,
+    "any_failure": 0.5248618784530387,
+    "by_cat": {
+     "launch": {
+      "n": 80,
+      "stall": 57,
+      "heading": 2,
+      "lane": 0,
+      "behind": 9,
+      "ahead": 0
+     },
+     "turn": {
+      "n": 122,
+      "stall": 5,
+      "heading": 61,
+      "lane": 35,
+      "behind": 0,
+      "ahead": 21
+     },
+     "cruise": {
+      "n": 160,
+      "stall": 0,
+      "heading": 0,
+      "lane": 30,
+      "behind": 10,
+      "ahead": 44
+     }
+    }
+   },
+   "free": {
+    "n": 120,
+    "stall": 0.24166666666666667,
+    "heading": 0.20833333333333334,
+    "lane": 0.125,
+    "behind": 0.075,
+    "ahead": 0.11666666666666667,
+    "any_failure": 0.575,
+    "by_cat": {
+     "launch": {
+      "n": 40,
+      "stall": 27,
+      "heading": 1,
+      "lane": 1,
+      "behind": 5,
+      "ahead": 0
+     },
+     "turn": {
+      "n": 40,
+      "stall": 2,
+      "heading": 24,
+      "lane": 8,
+      "behind": 0,
+      "ahead": 6
+     },
+     "cruise": {
+      "n": 40,
+      "stall": 0,
+      "heading": 0,
+      "lane": 6,
+      "behind": 4,
+      "ahead": 8
+     }
+    }
+   }
+  },
+  "plane closed": {
+   "perturbed": {
+    "n": 362,
+    "stall": 0.17679558011049723,
+    "heading": 0.17679558011049723,
+    "lane": 0.1712707182320442,
+    "behind": 0.04143646408839779,
+    "ahead": 0.18232044198895028,
+    "any_failure": 0.5248618784530387,
+    "by_cat": {
+     "launch": {
+      "n": 80,
+      "stall": 58,
+      "heading": 2,
+      "lane": 0,
+      "behind": 8,
+      "ahead": 0
+     },
+     "turn": {
+      "n": 122,
+      "stall": 6,
+      "heading": 62,
+      "lane": 33,
+      "behind": 0,
+      "ahead": 21
+     },
+     "cruise": {
+      "n": 160,
+      "stall": 0,
+      "heading": 0,
+      "lane": 29,
+      "behind": 7,
+      "ahead": 45
+     }
+    }
+   },
+   "free": {
+    "n": 120,
+    "stall": 0.24166666666666667,
+    "heading": 0.19166666666666668,
+    "lane": 0.13333333333333333,
+    "behind": 0.06666666666666667,
+    "ahead": 0.11666666666666667,
+    "any_failure": 0.5666666666666667,
+    "by_cat": {
+     "launch": {
+      "n": 40,
+      "stall": 27,
+      "heading": 1,
+      "lane": 1,
+      "behind": 5,
+      "ahead": 0
+     },
+     "turn": {
+      "n": 40,
+      "stall": 2,
+      "heading": 22,
+      "lane": 10,
+      "behind": 0,
+      "ahead": 6
+     },
+     "cruise": {
+      "n": 40,
+      "stall": 0,
+      "heading": 0,
+      "lane": 5,
+      "behind": 3,
+      "ahead": 8
+     }
+    }
+   }
+  },
+  "estar closedlat": {
+   "perturbed": {
+    "n": 362,
+    "stall": 0.0055248618784530384,
+    "heading": 0.31215469613259667,
+    "lane": 0.20165745856353592,
+    "behind": 0.0,
+    "ahead": 0.0,
+    "any_failure": 0.5193370165745856,
+    "by_cat": {
+     "launch": {
+      "n": 80,
+      "stall": 2,
+      "heading": 27,
+      "lane": 8,
+      "behind": 0,
+      "ahead": 0
+     },
+     "turn": {
+      "n": 122,
+      "stall": 0,
+      "heading": 86,
+      "lane": 36,
+      "behind": 0,
+      "ahead": 0
+     },
+     "cruise": {
+      "n": 160,
+      "stall": 0,
+      "heading": 0,
+      "lane": 29,
+      "behind": 0,
+      "ahead": 0
+     }
+    }
+   },
+   "free": {
+    "n": 120,
+    "stall": 0.008333333333333333,
+    "heading": 0.38333333333333336,
+    "lane": 0.14166666666666666,
+    "behind": 0.0,
+    "ahead": 0.0,
+    "any_failure": 0.5333333333333333,
+    "by_cat": {
+     "launch": {
+      "n": 40,
+      "stall": 1,
+      "heading": 13,
+      "lane": 3,
+      "behind": 0,
+      "ahead": 0
+     },
+     "turn": {
+      "n": 40,
+      "stall": 0,
+      "heading": 33,
+      "lane": 7,
+      "behind": 0,
+      "ahead": 0
+     },
+     "cruise": {
+      "n": 40,
+      "stall": 0,
+      "heading": 0,
+      "lane": 7,
+      "behind": 0,
+      "ahead": 0
+     }
+    }
+   }
+  },
+  "pass": true,
+  "replay_identity_max_abs_offset": 0.0
+ }
+}
