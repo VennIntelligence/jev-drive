@@ -1,7 +1,7 @@
 # op_dagger: DAgger fine-tune on reprojection rollouts
 
 status: live
-decisions: (inputs: 92, 98, 100, 111, 118, 123, 124)
+decisions: 132 (inputs: 92, 98, 100, 111, 118, 123, 124)
 index: Reprojection rollout engine on real WOD logs + DAgger pilot (paper §3 fig 8)
 key: experiments/op_dagger/plans/2026-10-06-dagger-prereg.md, experiments/op_dagger/results/pilot.md, experiments/op_dagger/scripts/dg_common.py, experiments/op_dagger/scripts/dg_roll.py, experiments/op_dagger/scripts/dg_train.py, experiments/op_dagger/scripts/dg_report.py, experiments/op_dagger/scripts/dg_clips.py
 

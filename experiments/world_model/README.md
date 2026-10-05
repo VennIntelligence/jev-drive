@@ -1,7 +1,7 @@
 # world_model: Latent world model on openpilot + V-JEPA 2
 
 status: concluded
-decisions: 54, 60, 61, 65, 76, 123
+decisions: 54, 60, 61, 65, 76, 123, 132
 index: W failed from action-scene confounding; WL-2 held-out no-go (H 0.38)
 
 **Question.** Can an action-conditioned world model on frozen latents support a critic and action selection?
