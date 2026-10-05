@@ -30,7 +30,7 @@ Layout `$DATA_DIR/runs/<experiment>/<tag>/<YYYYmmdd-HHMMSS>/` (same as `jevdrive
 | `DONE` | written on a clean exit: JSON `{t, wall_s, **run.summary}` |
 | `ERROR` | written on any exception (incl. Ctrl-C): header line + traceback; the exception is re-raised |
 
-These are the `jevdrive.cl` lane semantics: a watcher waits for `DONE` or `ERROR`. `resume=DIR` reopens a run dir and
+These are the `jevdrive.cl` pool job semantics: a watcher waits for `DONE` or `ERROR`. `resume=DIR` reopens a run dir and
 renames a stale `DONE` / `ERROR` to `DONE.<ts>` / `ERROR.<ts>`. `seed_everything(seed)` seeds random, numpy, torch and
 `PYTHONHASHSEED` (children) and returns a numpy Generator (`run.rng` when `Run(seed=...)`).
 

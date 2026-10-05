@@ -92,29 +92,21 @@ Last verified: 2026-09-20
 ## Sharing the box between several agents
 
 When more than one agent (or person) runs jobs on the box at the same time:
-- The box's schedule is `$DATA_DIR/runs/sched/table.tsv`, one row per lane (GPUs, CARLA workers per GPU, server
-  index block, core list, status, GO file), kept by `scripts/sch_table.py` (`show`, `check`, `grant`, `revoke`, `finish`). The table holds live rows only: a lane
-  updates its own row in place, its status column is one current sentence (not a log), and when the lane finishes or is
-  revoked `sch_table.py finish <lane>` moves the row to `runs/sched/archive.tsv` (append-only history). Never append a row
-  per state change.
-  A grant writes the lane's shell-sourceable GO file, which the lane re-reads at its step boundaries; the G lane
-  (`experiments/night_queue_4/lib/nq4_g_lane.py`) re-reads its row every round and yields cards to lanes that write
-  `runs/sched/demand/<lane>.json`. (Was: `$DATA_DIR/runs/schedule.md`, a hand-edited timetable for the old
-  five-GPU box; it went out of use on 2026-09-26/27 when the table and GO grants replaced it.)
-  CARLA sizing and closed-loop lanes: [closed-loop-runbook.md](closed-loop-runbook.md) (`jevdrive.cl`). Before it: about 6 servers per card is still the GPU knee on the RTX 6000D box (docs/remote-box.md). The old
+- Every GPU job goes through the GPU pool ([closed-loop-runbook.md](closed-loop-runbook.md#the-gpu-pool)):
+  `python -m jevdrive.cl submit --name N --vram GB [--carla N] [--cpu N] [--train] [--after ID] -- cmd`. One
+  dispatcher (tmux `jev:pool`) starts each job on whichever card has room, sets `CUDA_VISIBLE_DEVICES`, allocates
+  CARLA server indices and cores, and writes `log.txt`, `STATUS`, `DONE` / `ERROR` into the job's log dir. Nobody picks
+  cards by hand; `queue`, `top`, `show ID`, `cancel ID` show and steer it. Work started outside the pool declares what
+  it uses with `python -m jevdrive.cl hold ... --pid PID` (ends by itself when that process exits).
+  CARLA sizing: about 6 servers per card is the GPU knee on the RTX 6000D box (docs/remote-box.md); the old
   thread-cap limit (pids.max 20480, ~650 threads per worker) no longer binds with reduced thread pools
   (docs/carla.md, "Budget with the reduced pools"); docs/bench2drive-cost.md has the 2026-09-25 measurements from the previous
   instance.
-- Launch every scheduled job through `scripts/slot_run.sh <slot> [--after a,b] [--gpu N --vram-gb G] -- cmd`
-  inside tmux. It waits with plain `sleep` until the dependency sentinels `$DATA_DIR/runs/sched/<slot>.done`
-  exist (and the GPU has room), runs the command, then writes `<slot>.done` or `<slot>.failed`. A failed
-  dependency fails the dependent slot instead of starting it on bad inputs.
 - `$DATA_DIR/runs/zeroshot-exam/gpu-plan.md` is the append-only log (`>>` only, never rewrite).
-- A job that dies by a signal (rc > 128) gets `$DATA_DIR/runs/sched/<slot>.death-<HHMMSS>.txt` from `slot_run.sh`:
-  container memory, the largest processes and the last 2 min of `scripts/boxwatch.sh`, the box-wide 5 s
-  memory/process sampler that `slot_run.sh` starts (one per box, `$DATA_DIR/runs/boxwatch/`). Unexplained SIGKILLs:
-  experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md.
-- Agents arm their slots and then stop; they watch only their own final sentinel. No polling loops in the agent
+- `scripts/boxwatch.sh` is the box-wide 5 s memory/process sampler (one per box, `$DATA_DIR/runs/boxwatch/`); read it
+  for a job that died by a signal. Unexplained SIGKILLs: experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md.
+- Agents submit their jobs and then stop; they watch only their own final DONE / ERROR (`P.wait` or a
+  `run_in_background` until-loop). No polling loops in the agent
   and no interim status messages: waiting costs nothing when bash does it, and tokens when an agent does it.
 - Waiters that look for a process with `pgrep -f <name>` must not carry `<name>` on their own command line
   (e.g. inside `bash -c "... pgrep -f name ..."`): they match themselves and wait forever. Put the check in a

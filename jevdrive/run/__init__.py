@@ -5,7 +5,7 @@
         run.scalar("loss", 0.1, step=1); run.summary["acc"] = 0.9
 
 Run dir `$DATA_DIR/runs/<experiment>/<tag>/<YYYYmmdd-HHMMSS>/`: log.txt, events.jsonl, tb/, meta.json, STATUS,
-and DONE (JSON summary) or ERROR (traceback), with the semantics of jevdrive.cl lanes.
+and DONE (JSON summary) or ERROR (traceback), with the semantics of jevdrive.cl pool jobs.
 """
 from __future__ import annotations
 
@@ -78,7 +78,7 @@ def _default_root() -> Path:
 class Run:
     """Context manager owning one run dir. Exiting cleanly writes DONE (JSON: wall time + `summary`); an exception
     (incl. KeyboardInterrupt) writes ERROR (traceback text) and is re-raised. Stale DONE / ERROR from an earlier
-    attempt in the same dir (`resume=`) are renamed to DONE.<ts> / ERROR.<ts> on entry, as jevdrive.cl lanes do."""
+    attempt in the same dir (`resume=`) are renamed to DONE.<ts> / ERROR.<ts> on entry, as the jevdrive.cl pool does."""
 
     def __init__(self, experiment: str, tag: str = "", *, root: Path | None = None, resume: Path | None = None,
                  seed: int | None = None, config: dict | None = None, env: tuple = ENV_KEYS, probe: bool = True):

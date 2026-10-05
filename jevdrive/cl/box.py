@@ -1,9 +1,9 @@
 """Live resource probe. The box is elastic (1 to 7 cards, a CPU quota and pids.max that change with the instance), so
-everything that sizes a closed-loop lane reads it here at run time instead of trusting a number in a doc.
+everything that sizes closed-loop work reads it here at run time instead of trusting a number in a doc.
 
 Every path is read under `root` (default "/"), so tests run against a fake tree, and nvidia-smi goes through
 `smi()`, which caches each query for 60 s: every call takes the NVIDIA driver's device lock, and on 2026-09-28 per-round
-queries from several lanes helped ~50 starting CARLA servers pile up on it (docs/carla.md, "Traps").
+queries from several schedulers helped ~50 starting CARLA servers pile up on it (docs/carla.md, "Traps").
 """
 from __future__ import annotations
 

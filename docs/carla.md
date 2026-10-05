@@ -376,8 +376,8 @@ Two corrections to that paragraph, both from 2026-09-22 and both in
   on.** A Town12 server holds about 6.3 GB, so ten instances sit at 83.5 GB with peaks at 87.4 and
   twelve do not fit. On Town12, VRAM is the binding constraint, not the GPU and not the cores.
   (Measured on the previous instance's 96 GB RTX PRO 6000. Since 2026-09-28 the cards are RTX 6000D with
-  83.6 GiB, and the schedule caps a card at 75 GB (`VRAM_CAP_GB` in `scripts/sch_table.py`, 7.5 GB budgeted
-  per worker), so ten Town12 servers no longer have headroom; six per card remains the layout, see remote-box.md.)
+  83.6 GiB, and the GPU pool keeps 4 GB headroom and books 9 GB per CARLA server unless a job declares less
+  (closed-loop-runbook.md, "The GPU pool"), so ten Town12 servers no longer have headroom; six per card remains the layout, see remote-box.md.)
 
 **From the real leaderboard via `scripts/b2d_run.py`** - closed-loop, real routes, blocking sensor
 waits and the scenario tree included. These are the numbers that count. See

@@ -1,8 +1,7 @@
 """Capacity model: threads per worker, PID admission and per-card sizing, all derived from the live probe.
 
-One set of constants replaces the ones the lane scripts disagreed on (sch_table 16000 / 400 per worker, b2d_run waits at
-17000, nq4_g 16000 / 700, G lane 250, privileged chain 17500 ...): the caps are fractions of the measured pids.max and
-the per-worker cost comes from the thread model below, evaluated for the actual profile and core slice.
+The caps are fractions of the measured pids.max and the per-worker cost comes from the thread model below, evaluated for
+the actual profile and core slice (the pool's PID admission and b2d_run's B2D_PIDS_WAIT both use it).
 """
 from __future__ import annotations
 
@@ -12,7 +11,7 @@ from .profiles import Profile
 
 # Threads of one CARLA 0.9.15 server with reduced pools (4 each) at an affinity of C cores. UE4 sizes its TaskGraph and
 # PoolThread pools from the affinity mask, so the count follows the slice. Measured: 8 / 16 / 32 cores 2026-09-27
-# (experiments/cl_infra/archive/carla_threads.py), 24 / 128 cores in the G lane 2026-09-28 (docs/carla.md), 25 cores 2026-10-01 (this lane).
+# (experiments/cl_infra/archive/carla_threads.py), 24 / 128 cores in the G lane 2026-09-28 (docs/carla.md), 25 cores 2026-10-01 (docs/closed-loop-runbook.md).
 REDUCED_SERVER_THREADS = ((8, 69), (16, 109), (24, 149), (25, 154), (32, 169), (128, 263))
 # Route client: ~21 threads of its own plus carla.Client's worker threads (29 at --client-threads 8, ~215 at the default
 # on the 208-thread host, 2026-09-27). An agent adds its own (SimLingo ~40 more; PDM-Lite measured 2026-10-01).
@@ -96,7 +95,7 @@ def workers_per_card(cores_per_card: float, card_total_gb: float, cores_per_work
 
 def plan(box, profile: Profile, cards: list = None, cores_per_card: float = None, workers: int = None,
          agent_threads: int = AGENT_THREADS) -> dict:
-    """The sizing a lane on `cards` (default: every card) would get, with the numbers it was derived from."""
+    """The sizing a CARLA campaign on `cards` (default: every card) would get, with the numbers it was derived from."""
     cards = [box.card(i) for i in cards] if cards else list(box.cards)
     n = max(len(box.cards), 1)
     cpc = cores_per_card or (box.cores / n)

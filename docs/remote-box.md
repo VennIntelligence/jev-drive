@@ -12,7 +12,7 @@ with a monitor, for looking at CARLA with your own eyes.
   retry after a few seconds.
 - **The box is elastic.** Cards, CPU quota, RAM and pids.max change with the instance: 7 cards / 175 cores / 644 GiB
   on 2026-09-28, 3 cards / 75 cores / 276 GiB on 2026-10-01. Do not trust a count on this page; run
-  `.venv/bin/python -m jevdrive.cl probe` (cards, NUMA, quota, pids, memory, who holds what in the schedule table).
+  `.venv/bin/python -m jevdrive.cl probe` (cards, NUMA, quota, pids, memory, pool jobs per card); `python -m jevdrive.cl top` for the GPU pool.
   Closed-loop sizing: [closed-loop-runbook.md](closed-loop-runbook.md).
 - GPUs: **NVIDIA RTX 6000D** (Blackwell, sm_120, 156 SMs, 450 W cap) since 2026-09-28, 83.6 GiB each
   (85651 MiB; the old RTX PRO 6000 Server Edition had 96 GB and 188 SMs), driver 595.91.07, CUDA 13.2, PCIe gen5 x8.

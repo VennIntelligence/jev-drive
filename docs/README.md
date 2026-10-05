@@ -13,7 +13,7 @@ with "Last verified: <date>"; one topic per file, keep it short.
 | [lib.md](lib.md) | you start a new experiment (Run, splits, cache, par, stats) |
 | [long-runs.md](long-runs.md) | you start a job over a minute: tmux, logs, curves, the pre-run checklist |
 | [web-reader.md](web-reader.md) | you show docs to someone without pushing |
-| [closed-loop-runbook.md](closed-loop-runbook.md) | any CARLA / Bench2Drive run: entry points, `jevdrive.cl`, profile default, capacity |
+| [closed-loop-runbook.md](closed-loop-runbook.md) | any GPU job (the GPU pool: submit / queue / top) and any CARLA / Bench2Drive run: profile default, capacity |
 | [closed-loop-acceptance.md](closed-loop-acceptance.md) | before scoring a model in closed loop: what is accepted |
 | [carla.md](carla.md) | you need a CARLA server on the box |
 | [bench2drive-cost.md](bench2drive-cost.md) | you need what a Bench2Drive evaluation costs and why |
