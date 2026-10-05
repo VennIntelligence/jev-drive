@@ -87,7 +87,7 @@ def _warn_dispatcher(age):
 
 
 def cmd_submit(a):
-    cmd = a.cmd[1:] if a.cmd[:1] == ["--"] else a.cmd
+    cmd = a.argv[1:] if a.argv[:1] == ["--"] else a.argv
     if not cmd:
         sys.exit("no command (put it after --)")
     cmd = cmd[0] if len(cmd) == 1 and " " in cmd[0] else cmd
@@ -243,7 +243,7 @@ def main(argv=None):
     s.add_argument("--copy-env", action="store_true", help="run with this shell's whole environment")
     s.add_argument("--cwd", default="")
     s.add_argument("--log-dir", default="", help="log.txt / STATUS / DONE / ERROR here (default runs/pool/jobs/<id>)")
-    s.add_argument("cmd", nargs=argparse.REMAINDER)
+    s.add_argument("argv", nargs=argparse.REMAINDER, metavar="CMD")
     s = sub.add_parser("queue")
     s.add_argument("--all", action="store_true")
     sub.add_parser("show").add_argument("id")
