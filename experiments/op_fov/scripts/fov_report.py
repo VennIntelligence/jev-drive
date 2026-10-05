@@ -20,6 +20,13 @@ LAT_T = 0.275
 ONSET_FRAC = 0.3          # action / measured curvature reaches 0.3 x the measured peak
 
 
+def curvature_from_plan(yaws, yaw_rates, v_ego, action_t):
+    """jevdrive.openpilot.model.curvature_from_plan (copied: that module loads onnxruntime at import)."""
+    psi = np.interp(action_t, T_IDXS, yaws) if action_t >= 0.3 else action_t / 0.3 * np.interp(0.3, T_IDXS, yaws)
+    v = max(v_ego, 1.0)
+    return 2 * psi / (v * action_t) - yaw_rates[0] / v
+
+
 def calib_future(z, i, ts):
     """Logged positions at t_i + ts in the calibrated frame of frame i (x fwd, y right, z down); NaN past the segment end."""
     from scipy.spatial.transform import Rotation
@@ -73,7 +80,6 @@ def window_metrics(f):
         if ev["kind"] == "turn":
             km, ka = k_meas[sel], k_act[sel]
             r["A_act"] = float((ka * km).sum() / (km * km).sum())
-            from jevdrive.openpilot.model import curvature_from_plan
             kp = np.array([curvature_from_plan(p[:, 11], p[:, 14], max(x, 0.0), LAT_T) for p, x in zip(plan[sel], vv[sel])])
             r["A_plan"] = float((kp * km).sum() / (km * km).sum())
             h2 = np.array([np.interp(2.0, T_IDXS, p[:, 11]) for p in plan[sel]])
