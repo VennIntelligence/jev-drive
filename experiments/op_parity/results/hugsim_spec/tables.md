@@ -1,0 +1,68 @@
+## T1 per arm on all 29 scenarios (one run each, spec preset (tree opctrl), 400-step cap; class = spin, else end)
+
+| arm | n | HD-Score | RC | spins >= 60 deg | launch stalls (v_max first 40 steps < 1.6 m/s) | stuck (max_steps end) | standing share (v < 0.3 m/s) | complete | fg coll | bg coll | off_route | max heading err median (deg) |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| Cinque spec (cinque-opctrl, decision 118) | 29 | 0.290 | 0.309 | 0 | 7 | 24 | 0.77 | 2 | 1 | 1 | 1 | 2 |
+| P0 shipped, parity path | 29 | 0.306 | 0.326 | 0 | 7 | 24 | 0.75 | 2 | 1 | 1 | 1 | 2 |
+| P1 fine-tuned, no inputs | 29 | 0.349 | 0.388 | 1 | 6 | 17 | 0.64 | 5 | 3 | 1 | 2 | 3 |
+| P2 + ego / pose / command | 29 | 0.453 | 0.600 | 2 | 0 | 0 | 0.11 | 9 | 10 | 6 | 2 | 4 |
+
+## T1a the 10 PR #57 spinner scenarios
+
+| arm | n | HD-Score | RC | spins >= 60 deg | launch stalls (v_max first 40 steps < 1.6 m/s) | stuck (max_steps end) | standing share (v < 0.3 m/s) | complete | fg coll | bg coll | off_route | max heading err median (deg) |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| Cinque spec (cinque-opctrl, decision 118) | 10 | 0.450 | 0.478 | 0 | 4 | 5 | 0.49 | 2 | 1 | 1 | 1 | 3 |
+| P0 shipped, parity path | 10 | 0.450 | 0.478 | 0 | 4 | 5 | 0.47 | 2 | 1 | 1 | 1 | 3 |
+| P1 fine-tuned, no inputs | 10 | 0.489 | 0.517 | 1 | 3 | 3 | 0.43 | 3 | 1 | 1 | 1 | 5 |
+| P2 + ego / pose / command | 10 | 0.408 | 0.503 | 2 | 0 | 0 | 0.10 | 1 | 4 | 3 | 0 | 21 |
+
+## T1b the 19 other decision-118 stuck scenarios
+
+| arm | n | HD-Score | RC | spins >= 60 deg | launch stalls (v_max first 40 steps < 1.6 m/s) | stuck (max_steps end) | standing share (v < 0.3 m/s) | complete | fg coll | bg coll | off_route | max heading err median (deg) |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| Cinque spec (cinque-opctrl, decision 118) | 19 | 0.206 | 0.221 | 0 | 3 | 19 | 0.91 | 0 | 0 | 0 | 0 | 2 |
+| P0 shipped, parity path | 19 | 0.231 | 0.246 | 0 | 3 | 19 | 0.90 | 0 | 0 | 0 | 0 | 2 |
+| P1 fine-tuned, no inputs | 19 | 0.275 | 0.320 | 0 | 3 | 14 | 0.75 | 2 | 2 | 0 | 1 | 2 |
+| P2 + ego / pose / command | 19 | 0.476 | 0.651 | 0 | 0 | 0 | 0.12 | 8 | 6 | 3 | 2 | 2 |
+
+## T2 per scenario: HD-Score / class / max heading error (deg) / v_max over the first 40 steps (m/s)
+
+| scenario | Cinque spec (cinque-opctrl, decision 118) | P0 shipped, parity path | P1 fine-tuned, no inputs | P2 + ego / pose / command |
+|---|---|---|---|---|
+| scene-0013-medium-00 | 1.000 complete 2 11.8 | 1.000 complete 2 11.9 | 1.000 complete 2 13.3 | 0.256 fg_coll 1 10.3 |
+| scene-0528-medium-00 | 0.153 stuck 3 1.5 | 0.153 stuck 3 1.5 | 0.195 stuck 4 1.9 | 0.097 fg_coll 5 4.7 |
+| scene-0254-extreme-00 | 0.030 fg_coll 2 1.3 | 0.030 fg_coll 1 1.3 | 0.037 fg_coll 2 1.4 | 0.047 fg_coll 1 3.7 |
+| scene-102751446607-medium-01 | 0.150 stuck 1 1.1 | 0.150 stuck 1 1.1 | 0.171 stuck 1 1.3 | 0.943 bg_coll 44 4.6 |
+| scene-152217047339-medium-00 | 0.125 stuck 2 1.0 | 0.125 stuck 2 1.0 | 0.144 stuck 5 1.0 | 0.274 bg_coll 35 3.0 |
+| scene-570_770-easy-00 | 0.224 bg_coll 43 12.0 | 0.226 bg_coll 40 11.5 | 0.222 bg_coll 46 13.0 | 0.214 bg_coll 49 13.5 |
+| scene-5980_6180-easy-00 | 0.341 off_route 53 4.6 | 0.338 off_route 57 4.6 | 0.336 off_route 57 5.2 | 0.304 spin 61 9.4 |
+| scene-8440_8640-easy-00 | 0.778 stuck 53 3.1 | 0.776 stuck 52 3.1 | 0.785 spin 64 3.4 | 0.764 spin 63 7.0 |
+| scene-040-easy-00 | 1.000 complete 6 2.5 | 1.000 complete 6 2.5 | 1.000 complete 6 2.7 | 1.000 complete 7 8.4 |
+| scene-053-medium-02 | 0.703 stuck 3 4.5 | 0.704 stuck 3 4.5 | 1.000 complete 5 4.7 | 0.180 fg_coll 2 8.3 |
+| scene-0041-medium-00 | 0.130 stuck 6 3.6 | 0.130 stuck 6 3.6 | 0.258 off_route 45 4.1 | 0.180 off_route 45 9.2 |
+| scene-0254-hard-00 | 0.062 stuck 2 1.8 | 0.062 stuck 2 1.8 | 0.105 stuck 3 2.1 | 0.071 fg_coll 1 4.9 |
+| scene-032-medium-00 | 0.127 stuck 0 1.8 | 0.126 stuck 0 1.8 | 0.400 stuck 2 2.1 | 0.402 fg_coll 3 6.2 |
+| scene-032-medium-02 | 0.223 stuck 1 2.7 | 0.221 stuck 1 2.7 | 0.294 stuck 1 2.9 | 0.305 bg_coll 2 5.9 |
+| scene-034-easy-00 | 0.883 stuck 1 9.5 | 0.892 stuck 1 9.5 | 0.871 stuck 2 9.3 | 0.580 complete 1 14.9 |
+| scene-034-hard-01 | 0.787 stuck 2 7.4 | 0.812 stuck 2 7.2 | 0.057 fg_coll 1 1.3 | 0.128 fg_coll 4 7.5 |
+| scene-0411-medium-00 | 0.062 stuck 1 2.4 | 0.062 stuck 1 2.4 | 0.183 stuck 3 2.7 | 0.200 fg_coll 2 5.4 |
+| scene-0418-hard-00 | 0.002 stuck 0 2.8 | 0.002 stuck 0 2.8 | 0.253 complete 2 3.4 | 0.289 complete 2 18.1 |
+| scene-095-medium-01 | 0.195 stuck 0 2.0 | 0.197 stuck 0 2.0 | 0.278 stuck 1 2.2 | 0.566 fg_coll 1 4.5 |
+| scene-113-easy-00 | 0.128 stuck 0 3.5 | 0.129 stuck 0 3.5 | 0.185 stuck 0 4.0 | 0.658 complete 1 13.8 |
+| scene-113792265837-easy-00 | 0.112 stuck 5 2.0 | 0.112 stuck 5 2.0 | 0.132 stuck 6 2.1 | 0.863 complete 17 7.0 |
+| scene-132384196576-medium-01 | 0.106 stuck 3 1.5 | 0.106 stuck 3 1.5 | 0.132 stuck 3 1.6 | 0.936 complete 4 3.5 |
+| scene-150623512729-medium-01 | 0.088 stuck 2 1.7 | 0.088 stuck 2 1.7 | 0.155 stuck 2 1.9 | 0.980 complete 2 5.2 |
+| scene-164701907483-easy-00 | 0.107 stuck 6 1.0 | 0.107 stuck 6 1.0 | 0.130 stuck 8 1.0 | 0.450 bg_coll 9 5.2 |
+| scene-164701907483-hard-00 | 0.162 stuck 10 1.7 | 0.163 stuck 10 1.7 | 0.192 stuck 10 1.8 | 0.307 off_route 24 6.0 |
+| scene-2510_2710-hard-00 | 0.003 stuck 4 1.0 | 0.003 stuck 4 1.0 | 0.016 fg_coll 5 1.1 | 0.040 fg_coll 5 1.7 |
+| scene-3000_3200-medium-00 | 0.273 stuck 4 5.0 | 0.274 stuck 4 5.0 | 0.289 stuck 4 5.8 | 0.093 bg_coll 4 8.3 |
+| scene-322492347634-easy-00 | 0.334 stuck 1 3.2 | 0.770 stuck 1 3.2 | 0.998 complete 1 3.5 | 1.000 complete 2 7.2 |
+| scene-398895700423-easy-00 | 0.126 stuck 1 2.0 | 0.126 stuck 1 2.0 | 0.293 stuck 1 2.2 | 1.000 complete 2 12.4 |
+
+## T3 parity path per arm (means over runs)
+
+| arm | parity steps | bias rms | bias server round trip median (ms) |
+|---|--:|--:|--:|
+| P0 shipped, parity path | 10049 | 0.0000 | 27.5 |
+| P1 fine-tuned, no inputs | 8694 | 0.0000 | 0.6 |
+| P2 + ego / pose / command | 2654 | 0.4860 | 8.0 |

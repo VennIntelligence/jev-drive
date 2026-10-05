@@ -24,6 +24,8 @@ speed (0.5 s pairs: x1.93), GIMM vs real frames -0.38 EPDMS: [results/stageA.md]
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner
 scenarios: [results/hugsim_spin10.md](results/hugsim_spin10.md) (spins P1 8, P2 7, P3 8 of 10; the launch spin onset is unchanged).
+Under the `spec` preset (decision 118's lateral path) on the 10 + 19 decision-118 stuck scenarios: [results/hugsim_spec.md](results/hugsim_spec.md)
+(P2 stuck 0 of 29 vs 24, HD 0.453 vs 0.306, fg collisions 10 vs 1).
 
 <!-- files:begin -->
 <!-- files:end -->
