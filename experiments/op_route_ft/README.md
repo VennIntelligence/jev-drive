@@ -1,7 +1,7 @@
 # op_route_ft: route-choice adapter fine-tune of openpilot
 
 status: live
-decisions: 128, 129, 133 (inputs: 118, 121, 122, 127)
+decisions: 128, 129, 133, 134 (inputs: 118, 121, 122, 127)
 index: Route-choice adapter (bear / poly) + action pathway fine-tune; B2D 25 junction turns primary
 key: experiments/op_route_ft/plans/2026-10-05-route-ft-prereg.md, experiments/op_route_ft/scripts/rft.py, experiments/op_route_ft/scripts/rft_eval.py, lib/route_adapter.py, tests/test_route_adapter.py
 
