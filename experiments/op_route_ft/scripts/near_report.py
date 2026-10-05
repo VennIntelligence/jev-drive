@@ -61,19 +61,18 @@ def main():
         ss = [r for r in S if r["arm"] == arm]
         tin = [r["tin_m"] for r in ss if r.get("entered") and r.get("tin_m") is not None and np.isfinite(r["tin_m"])]
         out[arm].update(tin_median_m=float(np.median(tin)) if tin else None, n_tin=len(tin), late=sum(r["cause"] == "late" for r in ss),
-                        peak_over_need=float(np.median([r["peak"] / r["need"] for r in ss if r.get("peak") is not None and r.get("need")]))
-                        if ss else None, causes={r["route"] + ":" + str(r["turn"]): r["cause"] for r in ss},
+                        causes={r["route"] + ":" + str(r["turn"]): r["cause"] for r in ss},
                         v_med=float(np.median([r["v_med"] for r in ss if r.get("v_med") is not None])) if ss else None)
     json.dump(dict(keys=[list(k) for k in keys], arms=out), open(RES / "near_small.json", "w"), indent=1, default=float)
     L = ["# rc-*-near staged read: 9 of the 25 B2D turns (desire off, zones off, curv, seed 2)", "",
-         "| arm | took (9) | choice (5) | forced (4) | entered | late | turn-in arc vs turn start, median m (n) | peak / needed curvature, median | v median in window | collisions |",
-         "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+         "| arm | took (9) | choice (5) | forced (4) | entered | late | turn-in arc vs turn start, median m (n) | v median in window | collisions |",
+         "|---|--:|--:|--:|--:|--:|--:|--:|--:|"]
     for arm in arms:
         r = out[arm]
-        L.append("| %s | %d / %d | %d | %d | %d | %d | %s (%d) | %s | %s | %d |" % (
+        L.append("| %s | %d / %d | %d | %d | %d | %d | %s (%d) | %s | %d |" % (
             arm, r["took"], r["scored"], r["choice"], r["forced"], r["entered"], r["late"],
             "%.1f" % r["tin_median_m"] if r["tin_median_m"] is not None else "-", r["n_tin"],
-            "%.2f" % r["peak_over_need"] if r["peak_over_need"] is not None else "-", "%.2f" % r["v_med"] if r["v_med"] is not None else "-", r["coll"]))
+            "%.2f" % r["v_med"] if r["v_med"] is not None else "-", r["coll"]))
     L += ["", "Per turn (exit taken / cause):", "", "| turn | " + " | ".join(arms) + " |", "|---|" + "---|" * len(arms)]
     for k in keys:
         kk = "%s:%d" % k

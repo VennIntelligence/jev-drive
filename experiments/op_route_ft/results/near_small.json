@@ -1,0 +1,212 @@
+{
+ "keys": [
+  [
+   "10255",
+   0
+  ],
+  [
+   "15102",
+   0
+  ],
+  [
+   "25051",
+   0
+  ],
+  [
+   "27994",
+   0
+  ],
+  [
+   "28008",
+   0
+  ],
+  [
+   "28008",
+   1
+  ],
+  [
+   "28180",
+   0
+  ],
+  [
+   "34183",
+   0
+  ],
+  [
+   "5423",
+   0
+  ]
+ ],
+ "arms": {
+  "shipped@doff": {
+   "scored": 9,
+   "took": 2,
+   "choice": 1,
+   "forced": 1,
+   "entered": 9,
+   "coll": 3,
+   "per_turn": {
+    "10255:0": "lost",
+    "15102:0": "lost",
+    "25051:0": "lost",
+    "27994:0": "lost",
+    "28008:0": "yes",
+    "28008:1": "lost",
+    "28180:0": "lost",
+    "34183:0": "lost",
+    "5423:0": "yes"
+   },
+   "tin_median_m": 3.0,
+   "n_tin": 4,
+   "late": 1,
+   "causes": {
+    "10255:0": "not chosen",
+    "15102:0": "not chosen",
+    "5423:0": "took",
+    "25051:0": "wrong side",
+    "27994:0": "wrong side",
+    "28008:0": "took",
+    "28008:1": "not chosen",
+    "28180:0": "in time, crawl / stop",
+    "34183:0": "late"
+   },
+   "v_med": 1.6
+  },
+  "rc-ctl-s0@doff": {
+   "scored": 9,
+   "took": 2,
+   "choice": 2,
+   "forced": 0,
+   "entered": 9,
+   "coll": 2,
+   "per_turn": {
+    "10255:0": "lost",
+    "15102:0": "lost",
+    "25051:0": "lost",
+    "27994:0": "lost",
+    "28008:0": "lost",
+    "28008:1": "yes",
+    "28180:0": "lost",
+    "34183:0": "lost",
+    "5423:0": "yes"
+   },
+   "tin_median_m": 3.5,
+   "n_tin": 8,
+   "late": 3,
+   "causes": {
+    "10255:0": "late",
+    "15102:0": "late",
+    "5423:0": "took",
+    "25051:0": "in time, crawl / stop",
+    "27994:0": "wrong side",
+    "28008:0": "in time, crawl / stop",
+    "28008:1": "took",
+    "28180:0": "in time, crawl / stop",
+    "34183:0": "late"
+   },
+   "v_med": 1.1
+  },
+  "rc-bear-s0@doff": {
+   "scored": 9,
+   "took": 2,
+   "choice": 0,
+   "forced": 2,
+   "entered": 9,
+   "coll": 6,
+   "per_turn": {
+    "10255:0": "lost",
+    "15102:0": "lost",
+    "25051:0": "lost",
+    "27994:0": "yes",
+    "28008:0": "yes",
+    "28008:1": "lost",
+    "28180:0": "lost",
+    "34183:0": "lost",
+    "5423:0": "lost"
+   },
+   "tin_median_m": 4.8,
+   "n_tin": 9,
+   "late": 6,
+   "causes": {
+    "10255:0": "late",
+    "15102:0": "late",
+    "5423:0": "late",
+    "25051:0": "late",
+    "27994:0": "took",
+    "28008:0": "took",
+    "28008:1": "late",
+    "28180:0": "in time, crawl / stop",
+    "34183:0": "late"
+   },
+   "v_med": 1.6
+  },
+  "pilot-bear-fix@small": {
+   "scored": 9,
+   "took": 0,
+   "choice": 0,
+   "forced": 0,
+   "entered": 8,
+   "coll": 1,
+   "per_turn": {
+    "10255:0": "lost",
+    "15102:0": "lost",
+    "25051:0": "lost",
+    "27994:0": "lost",
+    "28008:0": "lost",
+    "28008:1": "never",
+    "28180:0": "lost",
+    "34183:0": "lost",
+    "5423:0": "lost"
+   },
+   "tin_median_m": -2.5,
+   "n_tin": 1,
+   "late": 0,
+   "causes": {
+    "10255:0": "not chosen",
+    "15102:0": "not chosen",
+    "5423:0": "wrong side",
+    "25051:0": "not chosen",
+    "27994:0": "not chosen",
+    "28008:0": "in time, crawl / stop",
+    "28008:1": "never entered",
+    "28180:0": "not chosen",
+    "34183:0": "not chosen"
+   },
+   "v_med": 2.05
+  },
+  "pilot-bear-near@small": {
+   "scored": 9,
+   "took": 0,
+   "choice": 0,
+   "forced": 0,
+   "entered": 8,
+   "coll": 1,
+   "per_turn": {
+    "10255:0": "lost",
+    "15102:0": "lost",
+    "25051:0": "lost",
+    "27994:0": "lost",
+    "28008:0": "lost",
+    "28008:1": "never",
+    "28180:0": "lost",
+    "34183:0": "lost",
+    "5423:0": "lost"
+   },
+   "tin_median_m": 3.25,
+   "n_tin": 2,
+   "late": 1,
+   "causes": {
+    "10255:0": "not chosen",
+    "15102:0": "not chosen",
+    "5423:0": "late",
+    "25051:0": "not chosen",
+    "27994:0": "not chosen",
+    "28008:0": "in time, crawl / stop",
+    "28008:1": "never entered",
+    "28180:0": "not chosen",
+    "34183:0": "not chosen"
+   },
+   "v_med": 2.2
+  }
+ }
+}
