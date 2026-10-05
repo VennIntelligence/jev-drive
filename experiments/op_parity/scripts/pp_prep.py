@@ -48,6 +48,21 @@ def croot(data, *p):
 _MAPS = {}
 
 
+def _bounded(ex, fn, items, depth):
+    """ex.map(fn, items) in order with at most `depth` items in flight (Executor.map submits everything at once: host RAM)."""
+    from collections import deque
+    it, q = iter(items), deque()
+    for x in it:
+        q.append(ex.submit(fn, x))
+        if len(q) >= depth:
+            break
+    while q:
+        yield q.popleft().result()
+        for x in it:
+            q.append(ex.submit(fn, x))
+            break
+
+
 def _warp_job(args):
     """CPU ego-motion warp of the 6 lattice frames (jevdrive.op_interp.synth_cpu), as op_lb's `warp` synthesis."""
     from jevdrive import op_interp as I
@@ -75,7 +90,7 @@ def encoder(dev):
     net = A.load("cinque", torch.float16).to(dev).eval()
 
     @torch.no_grad()
-    def enc(prev: np.ndarray, cur: np.ndarray, bs=256) -> np.ndarray:
+    def enc(prev: np.ndarray, cur: np.ndarray, bs=128) -> np.ndarray:
         """(n, 2, 6, 128, 256) uint8 pairs -> (n, 32, 512) fp16 hidden tokens."""
         out = []
         for i in range(0, len(cur), bs):
@@ -152,7 +167,7 @@ def main(a):
             out = np.zeros((N, n_slot) + A.H_SHAPE, np.float16)
             chunks = [np.arange(i, min(i + 32, N)) for i in range(0, N, 32)]
             with ThreadPoolExecutor(8) as ex:
-                for rows, prev, cur in run.tqdm(ex.map(load, chunks), total=len(chunks), desc=f"front {a.frames}"):
+                for rows, prev, cur in run.tqdm(_bounded(ex, load, chunks, 16), total=len(chunks), desc=f"front {a.frames}"):
                     out[rows] = enc(prev, cur).reshape(len(rows), n_slot, *A.H_SHAPE)
             if a.frames == "warp":
                 pool.shutdown()
