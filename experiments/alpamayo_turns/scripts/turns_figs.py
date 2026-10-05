@@ -20,7 +20,7 @@ sys.path.insert(0, str(TOPIC.parents[1]))
 T = np.arange(1, 65) * 0.1
 CAM_NAMES = {0: "cross-left 120°", 1: "front-wide 120°", 2: "cross-right 120°", 6: "front-tele 30°"}
 ARM_LABEL = {"A": "A: 4 cameras", "B": "B: front-wide + tele", "B1": "B1: front-wide only", "An": "An: 4 cameras + nav",
-             "C": "C: 3 cameras, no tele (post-hoc)", "B1n": "B1n: front-wide only + nav (post-hoc)",
+             "C": "C: 3 cameras, no tele (post-hoc)", "B1n": "B1n: front-wide only + nav (post-hoc)", "Tblk": "Tblk: 4 cameras, tele frames black (post-hoc)", "B1t": "B1t: front-wide + black tele (post-hoc)",
              "Bn": "Bn: front-wide + tele + nav", "OP": "OP: openpilot Cinque (front-wide reprojected)"}
 COL = {"A": "#1f6fb4", "B": "#d9822b", "B1": "#b85450", "An": "#2a9d8f", "Bn": "#e9c46a", "OP": "#6c757d", "C": "#7b5ea7",
        "B1n": "#c9a0a0", "Tblk": "#264653", "B1t": "#f4a261"}
