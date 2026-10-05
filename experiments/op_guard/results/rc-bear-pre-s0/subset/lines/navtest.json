@@ -1,0 +1,77 @@
+{
+ "line": "navtest",
+ "candidate": "rc-bear-pre-s0",
+ "mode": "subset",
+ "status": "ok",
+ "runtime_s": 523.9,
+ "rows": [
+  {
+   "id": "navtest",
+   "metric": "PDMS v1 (subset, 4026 tokens)",
+   "value": 84.33757949813453,
+   "ref": 84.03003401998014,
+   "delta": 0.30754547815439537,
+   "ci": [
+    -0.06443644129306547,
+    0.7258981308373356
+   ],
+   "rule": "not below shipped - 0.3",
+   "pass": true,
+   "note": "4026 / 4026 tokens valid in both; paired mean delta, 95% CI log-cluster bootstrap over 136 logs; sub-score deltas (pp) NC -0.01 DAC +0.52 EP +0.28 TTC -0.10 C +0.00",
+   "n": 4026,
+   "n_expected": 4026,
+   "sub_deltas": {
+    "NC": -0.012419274714356682,
+    "DAC": 0.5216095380029807,
+    "EP": 0.2807569792360845,
+    "TTC": -0.09935419771485346,
+    "C": 0.0
+   }
+  }
+ ],
+ "provenance": {
+  "shipped": {
+   "plans": {
+    "source": "rollout",
+    "procs": 4,
+    "gpu": 2,
+    "ms_per_scene": 410.32074703333507,
+    "plan": "/root/autodl-tmp/ujs/runs/op_lb/g_navtest_sub/plans/gimm@cinque.npz",
+    "n": 4026,
+    "seconds": 468.1,
+    "onnx": null,
+    "t": "2026-10-05 01:14:40",
+    "hit": true
+   },
+   "official": {
+    "csv": "/root/autodl-tmp/ujs/runs/navsim/eval/v1_navtest_opg_g_navtest_sub_gimm-cinque__base/2026.10.05.01.14.55/2026.10.05.01.15.43.csv",
+    "hit": true,
+    "seconds": null
+   }
+  },
+  "rc-bear-pre-s0": {
+   "plans": {
+    "source": "rollout",
+    "procs": 4,
+    "gpu": 0,
+    "ms_per_scene": 173.73552160355248,
+    "plan": "/root/autodl-tmp/ujs/runs/op_lb/g_navtest_sub/plans/gimm@cinque_Orc-bear-pre-s0.npz",
+    "n": 4026,
+    "seconds": 459.1,
+    "onnx": {
+     "path": "/root/autodl-tmp/ujs/runs/op_route_ft/onnx/rc-bear-pre-s0.onnx",
+     "size": 766355143,
+     "sha256": "6fc077ff6c65cbc635f3ed3f56ecfa6041726bb48a29bff5624563cabf5f23a4"
+    },
+    "t": "2026-10-05 09:00:14",
+    "hit": false
+   },
+   "official": {
+    "csv": "/root/autodl-tmp/ujs/runs/navsim/eval/v1_navtest_opg_g_navtest_sub_gimm-cinque_Orc-bear-pre-s0__base/2026.10.05.09.00.28/2026.10.05.09.01.15.csv",
+    "hit": false,
+    "seconds": 59.4
+   }
+  },
+  "split": "navsim/op-guard-navtest-sub@v1:63602dc7cfd6"
+ }
+}

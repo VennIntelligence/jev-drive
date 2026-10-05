@@ -1,0 +1,63 @@
+{
+ "line": "wod",
+ "candidate": "rc-bear-pre-s0",
+ "mode": "subset",
+ "status": "ok",
+ "runtime_s": 383.0,
+ "rows": [
+  {
+   "id": "wod.rfs",
+   "metric": "RFS, 479 rater frames (serving ONNX)",
+   "value": 8.06439787756251,
+   "ref": 8.004717366024249,
+   "delta": 0.059680511538260816,
+   "ci": [
+    -0.007715967940250823,
+    0.1279134492898771
+   ],
+   "rule": "RFS no drop (paired 95% upper bound >= 0)",
+   "pass": true,
+   "note": "segment bootstrap B=2000; shipped vs itself = 0"
+  },
+  {
+   "id": "wod.false_start",
+   "metric": "false-start rate, WOD val stay rows (port, plan >= 3 m at 4 s)",
+   "value": 0.042759961127308066,
+   "ref": 0.0413022351797862,
+   "delta": 0.0014577259475218665,
+   "ci": [
+    -0.0019718168051050793,
+    0.004211511464670099
+   ],
+   "rule": "false start <= shipped + 2 pp",
+   "pass": true,
+   "note": "n 4116 rows / 144 segments; op_adapt_L/H metric and rows"
+  },
+  {
+   "id": "wod.false_start_rater",
+   "metric": "false-start rate, the stay frames among the rater frames (serving)",
+   "value": 0.09090909090909091,
+   "ref": 0.045454545454545456,
+   "delta": 0.045454545454545456,
+   "ci": null,
+   "rule": "info (n too small for a 2 pp line)",
+   "pass": null,
+   "note": "n 22 frames (1 frame = 4.5 pp)"
+  }
+ ],
+ "provenance": {
+  "cache": [
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/wod_rater.npz (this line's own earlier result)",
+   "shipped: /root/autodl-tmp/ujs/runs/op_guard/shipped/subset/wod_stay.npz (this line's own earlier result)"
+  ],
+  "interface": "WOD spec: true roof height 1.81 m, real 10 Hz frames fed twice, 10 s warm-up, open loop, no x1.06",
+  "subset": "subset = full (479 rater frames + 4116 WOD-val stay rows)",
+  "serving_s": 367.4,
+  "serving_cmd": "taskset -c 0-24 /root/autodl-tmp/ujs/envs/openpilot/bin/python /root/autodl-tmp/ujs/jev-drive/scripts/wod_zeroshot_openpilot.py --set rater --workers 12 --onnx /root/autodl-tmp/ujs/runs/op_route_ft/onnx/rc-bear-pre-s0.onnx --tag guard-rc-bear-pre-s0",
+  "port": {
+   "port": "onnx->port",
+   "changed": 232
+  },
+  "port_s": 3.8
+ }
+}

@@ -46,16 +46,62 @@ target), so the turn-in in rc-bear-pre comes from the command. Serving ONNX equi
 
 ### Closed loop (B2D 25 turns, zones off, seed 2)
 
-PENDING: lane `rft-pre` (desire off and desire on, both arms) running on card 2; see tmp/2026-10-06-pre-handoff.md.
+Primary setting = desire off (`results/desire_off.md`: desire on / off changes nothing measurable, training fed desire 0; the prereg default). Desire on is the secondary row. Full tables: [pre_turns.md](pre_turns.md), failure split [pre_split_doff.md](pre_split_doff.md) / [pre_split_don.md](pre_split_don.md). One seed, one run per cell, 25 turns (13 choice, 12 forced); closed loop is not bitwise deterministic (1-2 turns are noise). shipped desire off has 24 turns (route 26365 failed in that lane).
+
+| arm | desire off: took (choice / forced) | desire on: took | entered (off / on) | leaves lane (off) | window collisions (off / on) | turn-in median m after the turn start (n steered), off / on | "late" turns, off / on |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| shipped | 3 / 24 (1 / 2) | 1 / 25 | 21 / 20 | 17 / 21 | 7 / 5 | 3.0 (10) / 3.1 (8) | 4 / 4 |
+| rc-ctl | 5 / 25 (3 / 2) | 6 / 25 | 21 / 21 | 18 / 21 | 3 / 7 | 2.9 (20) / 3.5 (19) | 8 / 9 |
+| rc-bear | 6 / 25 (1 / 5) | 4 / 25 | 22 / 21 | 18 / 22 | 11 / 5 | 4.5 (22) / 2.5 (17) | 11 / 6 |
+| rc-ctl-pre | 3 / 25 (2 / 1) | 1 / 25 | 20 / 20 | 16 / 20 | 7 / 7 | 4.0 (7) / 0.6 (6) | 3 / 2 |
+| **rc-bear-pre** | **1 / 25 (1 / 0)** | **0 / 25** | 19 / 19 | 18 / 19 | 6 / 6 | 1.7 (10) / 5.6 (12) | 4 / 7 |
+
+Paired took-rate differences (route-cluster bootstrap, 95%, n 25), desire off | on:
+- rc-bear-pre - rc-ctl-pre (primary): -0.08 [-0.24, +0.08] | -0.04 [-0.12, +0.00].
+- rc-bear-pre - rc-bear (effect of the change): -0.20 [-0.41, +0.00] | -0.16 [-0.33, +0.00].
+- rc-ctl-pre - rc-ctl: -0.08 [-0.24, +0.08] | -0.20 [-0.39, -0.04].
+
+Lines (prereg): primary (rc-bear-pre >= 13 / 25 and the paired CI lower bound above 0) **FAILS** (1 / 25; CI contains 0 and is negative-leaning). Turn-in median <= 0 m **FAILS** (1.7 m desire off, 5.6 m on); "late" fewer than rc-bear (6): desire off 4 vs rc-bear 11 (pass in count) but only because turns are lost earlier in the split (not chosen 6, never entered 6 vs 0 and 3 for rc-bear), desire on 7 vs 4 (fail). Open-loop transmission: the 4.6x larger left-minus-right gap (0.0106 vs 0.0023 1/m) did not reach the closed loop.
+
+Reading:
+1. The turn-in target did not make the closed loop turn earlier or take more exits. It made it worse: rc-bear-pre takes 1 / 25 (desire off), the fewest of all arms, and rc-ctl-pre drops from rc-ctl's 6 to 1 (desire on, CI excludes 0). The cause split moves from "late" (rc-bear 11 of 25) to "not chosen" (6), "crawl / stop" (5) and "never entered" (6): the car no longer steers at all in a third of the turns (peak steer / needed 0.70 desire off, 0.81 on, vs rc-bear 2.27 / 1.34).
+2. The speed profile is slower: median speed in the turn window 0.4 m/s (desire off) vs 1.6 rc-bear, stopped share 0.48 vs 0.37 (rc-ctl-pre 0.5 m/s, 0.48). The model drives the junction approach with a lower curvature gain (see the diagnosis below), the harness stops longer, and the longer stop starves the window; the open-loop head is right, the closed loop does not use it.
+3. rc-ctl-pre loses the side bit it had as rc-ctl: steered to the commanded side in 5 / 10 entered choice turns and 6 / 10 forced (desire off; rc-ctl 9 / 11 and 9 / 10), peak steer / needed 0.40. The target that conflicts across left / right commands of one pose pushes the command-less head to a near-zero action at junctions (the diagnosis below).
+4. Command-flip control (rc-bear-pre, desire off, mirrored navigation polyline, the 13 routes with a choice turn): [pre_flip.md](pre_flip.md). Correct command: 10 entered, steered to the true side 5, to the other side 3, neither 2, took 1; flipped command: 10 entered, steered to the true side 1, to the flipped side 2, neither 7, took 0. Mean peak curvature / needed towards the true side falls 1.11 -> 0.20; towards the other side it does not rise (0.36 -> 0.41). So the command does steer rc-bear-pre (true-side steering collapses in 8 of the 10 entered turns when the command is mirrored), but a flipped command produces no steering to the other side, it removes steering: the head follows the command only as a gain on a turn the scene already suggests, it does not choose the exit. Caveat: the mirror also flips forced-curve geometry on those routes (not scored) and 10 entered turns is small.
+
+Diagnosis (open loop, real dev P rows, [`scripts/pre_diag.py`](../scripts/pre_diag.py); gain = least-squares slope of action[0] on the old target through the origin, 1 = the old scale; WOD in-turn n = 7 only):
+
+| gain on the old target | O | rc-ctl | rc-bear | rc-ctl-pre | rc-bear-pre |
+|---|--:|--:|--:|--:|--:|
+| nav approach (n 56) | 1.19 | 0.97 | 0.96 | 0.47 | 0.50 |
+| wod approach (n 60) | 0.91 | 0.96 | 0.97 | 0.22 | 0.22 |
+| wod in turn (n 7) | 1.21 | 0.95 | 0.98 | 0.30 | 0.31 |
+| nav / wod straight | 1.60 / 1.08 | 1.00 / 0.79 | 0.95 / 0.82 | 0.87 / 0.66 | 0.88 / 0.73 |
+
+On the turn-in target the bear-pre fit is 0.85 (nav) / 0.73 (wod) with correlation 0.93 / 0.82, rc-ctl-pre only 0.65 / 0.42. So the supervision change reduced the action gain on in-turn and approach poses to a third (WOD in turn 0.98 -> 0.31) in exchange for the ramp shape on approach poses: the head follows the small turn-in ramp (0.01-0.02 1/m at 10-20 m) and under-commands the actual turn (needs 0.1-0.17 1/m), exactly the gap named in Doubts. This explains the closed loop (less steering, more crawl) better than "not enough supervision before the turn".
 
 ### Guard subset
 
-PENDING: guard.py rc-bear-pre-s0 (lines navtest, navhard, hugsim, b2d_ds, then drift, negatives, wod; b2d_turns from the lane's desire-on units).
+`python experiments/op_guard/scripts/guard.py --candidate rc-bear-pre-s0` (subset, 2026-10-05): **FAIL, 7 pass / 3 fail** (rc-bear: 8 pass / 2 fail), copy in [experiments/op_guard/results/rc-bear-pre-s0/subset/guard.md](../../op_guard/results/rc-bear-pre-s0/subset/guard.md).
+
+| line | rc-bear-pre | rc-bear | shipped | rule | result |
+|---|--:|--:|--:|---|---|
+| navtest PDMS (subset) | 84.34 (+0.31 [-0.06, +0.73]) | 84.26 | 84.03 | >= shipped - 0.3 | pass |
+| navhard EPDMS two-stage | 32.87 (-0.47 [-1.67, +0.74]) | 32.90 | 33.33 | no drop | FAIL (as rc-bear) |
+| navhard early-turn set | 43.66 (-0.23 [-0.58, +0.13]) | 43.59 | 43.89 | no drop | FAIL (as rc-bear) |
+| WOD RFS / false start | 8.064 (+0.06) / 0.043 | 8.070 | 8.005 | no drop / <= +2 pp | pass / pass |
+| HUGSIM spins / HD-Score | 0 / 0.430 (-0.113) | 0 / 0.479 | 0.544 | spins not up | pass |
+| B2D DS (19 routes) | 67.98 (-1.28 [-13.5, +10.5]) | 66.82 | 69.27 | >= -7.6 | pass |
+| B2D turns: took all / window collisions | 0 / 25 / 6 | 4 / 25 / 5 | 1 / 25 / 5 | collisions not up vs shipped | **FAIL** (6 vs 5, new) |
+| drift (max 4 s lateral, m) | 0.038 | 0.038 | 0 | <= 0.10 | pass |
+| negatives (offset vs shipped, m) | 0.745 (-0.035) | | 0.779 | <= +0.3 | pass |
+
+The b2d_turns line uses the desire-on units (0 / 25 took). The two navhard failures are rc-bear's and are unchanged by the action-target change (-0.47 vs -0.43); the new failure is one window collision more than shipped.
 
 ## Figures
 
-- figs/pre_turnin_timing.png (after the closed loop): open-loop turn-in by profile and d (left three panels; dashed = target) and closed-loop turn-in arc relative to the turn start per arm (filled = took the exit).
-- figs/pre_b2d_turn_panels*.png: BEV tracks of four turns.
+- [figs/pre_turnin_timing.png](../figs/pre_turnin_timing.png): left three panels = open-loop turn-in by profile and d (dashed = target; rc-bear-pre pink follows it, every other arm stays flat near 0); right two = closed-loop turn-in arc after the turn start per arm (desire off, desire on; filled = took the exit, thick bar = median, dotted = shipped). Look at: the pink open-loop curve on target vs the closed-loop dots, which sit no earlier than the other arms (median 1.7 / 5.6 m) and are fewer (10 / 19 steered).
+- [figs/pre_b2d_turn_panels_doff.png](../figs/pre_b2d_turn_panels_doff.png) (primary), [figs/pre_b2d_turn_panels_don.png](../figs/pre_b2d_turn_panels_don.png): BEV tracks of four choice turns (shipped grey, rc-ctl-pre blue, rc-bear-pre red; shaded = route lane). Look at: route 334 (rc-bear-pre red takes the left turn, the others stop at the corner) and 15102 / 10255 (red begins the turn only after stopping, short of the corner; blue and grey drive straight on or sit still).
 
 ## Doubts
 
