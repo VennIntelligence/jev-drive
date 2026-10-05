@@ -292,15 +292,31 @@ def sample_metrics(yaw, xy, gyaw, gxy) -> dict:
     tg = t_half(gyaw[None], gyaw[-1])[0]
     tp = t_half(yaw, gyaw[-1])
     ade = np.linalg.norm(xy - gxy[None], axis=-1).mean(-1)
+    sg = arclen(gxy)
+    A_S, prog = [], []
+    for y, p in zip(yaw, xy):                 # post-hoc: heading against distance travelled (path shape, not speed)
+        sp = arclen(p)
+        prog.append(sp[-1] / sg[-1])
+        grid = np.arange(1.0, min(sp[-1], sg[-1]), 0.5)
+        if sp[-1] < 5.0 or len(grid) < 4:
+            A_S.append(np.nan)
+            continue
+        yp, yg = np.interp(grid, sp, y), np.interp(grid, sg, gyaw)
+        A_S.append((yp * yg).sum() / (yg ** 2).sum())
     return dict(A_H=(yaw * gyaw).sum(-1) / (gyaw ** 2).sum(), R_end=yaw[:, -1] / gyaw[-1], lag50=tp - tg,
-                censored=(tp > 6.4).astype(float), ade64=ade)
+                censored=(tp > 6.4).astype(float), ade64=ade, A_S=np.array(A_S), prog=np.array(prog))
+
+
+def arclen(xy: np.ndarray) -> np.ndarray:
+    return np.cumsum(np.linalg.norm(np.diff(np.vstack([[0.0, 0.0], xy]), axis=0), axis=1))
 
 
 def cmd_score(a, run):
     import pandas as pd
     from jevdrive import stats
     cases = json.loads((TOPIC / "results" / "cases.json").read_text())
-    op = np.load(cache("op") / "preds.npz") if (cache("op") / "preds.npz").exists() else None
+    opf = cache("op") / f"preds{'' if a.op_backend == 'trt' else '_' + a.op_backend}.npz"
+    op = np.load(opf) if opf.exists() else None
     opk = {k: i for i, k in enumerate(op["keys"])} if op is not None else {}
     rows = []
     for c in cases:
@@ -317,23 +333,24 @@ def cmd_score(a, run):
             for arm, (yaw, xy) in arms.items():
                 m = sample_metrics(yaw, xy, gyaw, gxy)
                 r = dict(case=c["case"], side=c["side"], t0=tk, arm=arm, gt_dpsi_deg=float(np.degrees(gyaw[-1])),
-                         **{k: float(np.mean(v)) for k, v in m.items()}, minade=float(m["ade64"].min()),
+                         **{k: float(np.nanmean(v)) if np.isfinite(v).any() else np.nan for k, v in m.items()}, minade=float(m["ade64"].min()),
                          turn_rate=float(np.mean(m["R_end"] >= 0.5)), n=len(yaw))
                 rows.append(r)
     df = pd.DataFrame(rows)
     df.to_csv(TOPIC / "results" / "per_case.csv", index=False)
     eff = []
-    pairs = [("An", "Bn"), ("A", "B"), ("A", "B1"), ("An", "A"), ("A", "OP"), ("An", "OP"), ("B", "OP")]
+    pairs = [("An", "Bn"), ("A", "B"), ("A", "B1"), ("An", "A"), ("A", "OP"), ("An", "OP"), ("B", "OP"),
+             ("A", "C"), ("C", "B1"), ("B", "B1"), ("Bn", "B1n")]
     for tk in T0_OFFSETS:
         d = df[df.t0 == tk]
-        piv = {k: d.pivot(index="case", columns="arm", values=k) for k in ("A_H", "lag50", "R_end", "ade64", "turn_rate")}
+        piv = {k: d.pivot(index="case", columns="arm", values=k) for k in ("A_H", "lag50", "R_end", "ade64", "turn_rate", "A_S", "prog")}
         for x, y in pairs:
             if x not in piv["A_H"] or y not in piv["A_H"]:
                 continue
             for k, p in piv.items():
                 eff.append(dict(t0=tk, contrast=f"{x}-{y}", metric=k, **stats.paired(p[x].to_numpy(), p[y].to_numpy())))
         for arm in sorted(d.arm.unique()):
-            for k in ("A_H", "lag50", "R_end", "ade64", "minade", "turn_rate", "censored"):
+            for k in ("A_H", "lag50", "R_end", "ade64", "minade", "turn_rate", "censored", "A_S", "prog"):
                 eff.append(dict(t0=tk, contrast=arm, metric=k, **stats.bootstrap(d[d.arm == arm][k].to_numpy())))
     stats.write_table(eff, TOPIC / "results" / "effects")
     run.info("\n" + df.groupby(["t0", "arm"])[["A_H", "R_end", "lag50", "ade64", "turn_rate"]].mean().round(3).to_string())
