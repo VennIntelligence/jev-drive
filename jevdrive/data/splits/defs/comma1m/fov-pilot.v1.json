@@ -1,0 +1,28 @@
+{
+ "dataset": "comma1m",
+ "name": "fov-pilot",
+ "version": 1,
+ "unit": "window",
+ "n": 12,
+ "sha256": "251572ae8695fd22e03013410cf90d2b3a3cdce613b16ad9bc1b0f7c0f35ec3c",
+ "origin": "experiments/op_fov/scripts/fov_replay.py scan over comma1M (126 segments with both 1928x1208 cameras), frozen as experiments/op_fov/results/events.json; turn = heading change >= 45 deg within <= 10 s at median 2-10 m/s; straight = 10 s, |yaw rate| < 0.03, v > 8. Selection numpy default_rng(0): 4 left + 4 right turns, then 30 straights; pilot = first 4 straights",
+ "notes": "op_fov pilot: 8 turns + 4 straights",
+ "used_by": [
+  "op_fov"
+ ],
+ "status": "frozen",
+ "members": [
+  "0045b4fe97931624e169d500d6009784_779",
+  "004ab781e7af5f89bcdcdd056adfa822_500",
+  "03474dee49e9a0ec6c684d8800162899_200",
+  "04e56888081faf9768537d0795c97214_216",
+  "057552da3f95f60a91eb62baba24271f_227",
+  "0b9a7a45d817fcad06924d0c9e3b417e_410",
+  "0d0e3d2ca47f15b94109bbb457009dcd_500",
+  "0e46e9bc95066b1b5fae51ed7f784c64_832",
+  "0fba7ecdbe9e81077e2d43af57d56780_259",
+  "134a53512fcd822515618b2839061353_600",
+  "1991767a29543439e2f0935326ff6b98_347",
+  "1ae802a77ca006d8feae3eb4140cace8_66"
+ ]
+}

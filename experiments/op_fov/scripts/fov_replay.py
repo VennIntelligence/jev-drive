@@ -9,6 +9,7 @@ get_warp_matrix + nearest-neighbour gather, jevdrive/openpilot/frames.py) is run
   N       road 910 / wide 455   (shipped: 31.4 / 58.7 deg)
   W90     wide 256              (90 deg)
   W116    wide 160              (116 deg, the ecam's full width)
+  W90h    wide fx 256 / fy 455  (90 deg across, rows unchanged: ground row <-> distance as shipped, lateral squeezed)
   R40     road 720 (39.2 deg), rows the road camera does not cover (bottom ~12%) filled from the wide camera
 
   scan <out>                    turn + straight events over every comma1M segment -> <out>/events.json
@@ -28,19 +29,21 @@ WARM = 120                        # 6 s warm-up (> the 5 s context) before the s
 PRE, POST = 80, 200               # scored part: 4 s before turn onset .. 10 s after
 STRAIGHT_SCORE = 200
 F_ROAD, F_WIDE = 2648.0, 567.0    # comma 3/3X AR0231 / OX03C10 at 1928x1208 (frames.CAMERAS)
-ARMS = {"N": (910.0, 455.0), "W90": (910.0, 256.0), "W116": (910.0, 160.0), "R40": (720.0, 455.0)}
+ARMS = {"N": (910.0, 455.0), "W90": (910.0, 256.0), "W116": (910.0, 160.0), "W90h": (910.0, (256.0, 455.0)), "R40": (720.0, 455.0)}
 CACHE_VERSION = "fov-v1"
 
 
 def hfov(f):
-    return float(np.degrees(2 * np.arctan(256.0 / f)))
+    return float(np.degrees(2 * np.arctan(256.0 / np.atleast_1d(f)[0])))
 
 
 # ---------------------------------------------------------------- geometry
 def model_K(f, wide):
+    """f: focal, or (fx, fy) for an anisotropic frame. Principal point as openpilot's medmodel / sbigmodel frames."""
     from jevdrive.openpilot.frames import MEDMODEL_CY, MODEL_H, MODEL_W
+    fx, fy = (f, f) if np.isscalar(f) else f
     cy = 0.5 * (MODEL_H + MEDMODEL_CY) if wide else MEDMODEL_CY
-    return np.array([[f, 0, MODEL_W / 2], [0, f, cy], [0, 0, 1.0]])
+    return np.array([[fx, 0, MODEL_W / 2], [0, fy, cy], [0, 0, 1.0]])
 
 
 def warp_matrix(rpy, cam_f, f_model, wide, wh=(1928, 1208)):
