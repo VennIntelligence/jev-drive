@@ -18,7 +18,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
 from jevdrive.cl import pool as P  # noqa: E402
-from jevdrive.common import data_dir  # noqa: E402
+from jevdrive.common import data_dir, n_cpus  # noqa: E402
 
 W = data_dir() / "runs/op_wide_ft"
 CH = "bash experiments/op_wide_ft/scripts/wide_chain.sh"
@@ -45,28 +45,38 @@ class Lane:
         (self.d / "ERROR").write_text(msg + "\n")
         sys.exit(1)
 
-    def job(self, name, cmd, done=None, **kw):
-        """Submit (unless `done` exists) and wait; die on failure."""
+    def submit(self, name, cmd, done=None, **kw):
+        """Submit unless `done` exists or a live pool job of this name (pool_id in its log dir) is queued / running; returns the id or None."""
         if done is not None and Path(done).exists():
             self.say(f"{name}: already done ({done})")
-            return
+            return None
+        ld = W / "chain/pool" / name
+        f = ld / "lane_pool_id"
+        if f.exists():
+            old = f.read_text().strip()
+            if P.job_states([old])[old] in ("queued", "running", "inbox", "done"):
+                self.say(f"{name}: reusing pool job {old}")
+                return old
         kw.setdefault("env", dict(ENV))
+        kw.setdefault("cpu", max(8, n_cpus() // 4))
         drop_cache()
-        jid = P.submit(cmd, name=name, log_dir=str(W / "chain/pool" / name), **kw)
+        jid = P.submit(cmd, name=name, log_dir=str(ld), **kw)
+        ld.mkdir(parents=True, exist_ok=True)
+        f.write_text(jid + "\n")
         self.say(f"{name}: pool job {jid}")
-        st = P.wait([jid], poll_s=30)
-        if st[jid] != "done":
-            self.die(f"{name}: pool job {jid} {st[jid]} (log {W / 'chain/pool' / name / 'log.txt'})")
+        return jid
+
+    def job(self, name, cmd, done=None, **kw):
+        """Submit (or reuse) and wait; die on failure."""
+        self.jobs([(name, cmd, done, kw)])
 
     def jobs(self, specs):
         """Several jobs in parallel: [(name, cmd, done, kw)]."""
         ids = {}
-        drop_cache()
         for name, cmd, done, kw in specs:
-            if done is not None and Path(done).exists():
-                continue
-            kw.setdefault("env", dict(ENV))
-            ids[P.submit(cmd, name=name, log_dir=str(W / "chain/pool" / name), **kw)] = name
+            jid = self.submit(name, cmd, done, **kw)
+            if jid:
+                ids[jid] = name
         if ids:
             self.say("waiting for %s" % ", ".join(ids.values()))
             st = P.wait(list(ids), poll_s=30)
@@ -114,10 +124,14 @@ def stage1():
         L.say("pack (CPU)")
         if subprocess.call(["bash", "experiments/op_wide_ft/scripts/wide_chain.sh", "pack"], cwd=REPO) != 0:
             L.die("pack (see %s)" % (W / "chain/pack/log.txt"))
-    L.job("wf-bank", f"{CH} bank", W / "bank/w116/teacher.npz", vram_gb=20, cpu=8)
+    L.job("wf-bank", f"{CH} bank", W / "bank/w116/teacher.npz", vram_gb=20)
+    # full training of both arms starts with the pilot (one card each, the pool spreads them); nothing downstream runs before the pilot checks pass
+    TRAIN = [(f"wf-train-{a}", f"TAG={a} {CH} train {a} 0 {a}-s0", W / f"runs/{a}-s0/DONE", dict(vram_gb=18, train=True)) for a in ("wf-w58", "wf-w116")]
+    for t in TRAIN:
+        L.submit(t[0], t[1], t[2], **t[3])
     # pilot: W116 400 steps; checks of the pre-registration (step 0)
     L.job("wf-pilot", f"TAG=pilot {CH} train wf-w116 400 pilot-wf-w116 && OP_RFT_ROOT={W} {PYT} experiments/op_route_ft/scripts/rft.py evalol --models O pilot-wf-w116 --carla w116",
-          W / "evalol_w116/pilot-wf-w116.json", vram_gb=18, cpu=12, train=True)
+          W / "evalol_w116/pilot-wf-w116.json", vram_gb=18, train=True)
     ls = losses("pilot-wf-w116")
     o, p = (json.load(open(W / f"evalol_w116/{m}.json")) for m in ("O", "pilot-wf-w116"))
     drift = max(v["median"] for k, v in p.items() if k.startswith("drift_") and v.get("median") is not None)
@@ -129,11 +143,11 @@ def stage1():
     if not (chk["loss_down"] and chk["exit_ok"] and chk["drift_ok"]):
         L.die("pilot check failed: %s" % chk)
     # full training, both arms in parallel
-    L.jobs([(f"wf-train-{a}", f"TAG={a} {CH} train {a} 0 {a}-s0", W / f"runs/{a}-s0/DONE", dict(vram_gb=18, cpu=12, train=True)) for a in ("wf-w58", "wf-w116")])
-    L.jobs([(f"wf-onnx-{a}", f"TAG={a} {CH} onnx {a}-s0", W / f"chain/onnx-{a}/DONE", dict(vram_gb=12, cpu=6)) for a in ("wf-w58", "wf-w116")] +
+    L.jobs(TRAIN)
+    L.jobs([(f"wf-onnx-{a}", f"TAG={a} {CH} onnx {a}-s0", W / f"chain/onnx-{a}/DONE", dict(vram_gb=12)) for a in ("wf-w58", "wf-w116")] +
            [("wf-ol2x2", f"OP_RFT_ROOT={W} {PYT} experiments/op_wide_ft/scripts/wide_ol.py --models O wf-w58-s0 wf-w116-s0",
-             REPO / "experiments/op_wide_ft/results/ol2x2_gate.json", dict(vram_gb=18, cpu=8)),
-            ("wf-evalol", f"TAG=full {CH} evalol O wf-w58-s0 wf-w116-s0", W / "chain/evalol-full/DONE", dict(vram_gb=18, cpu=8))])
+             REPO / "experiments/op_wide_ft/results/ol2x2_gate.json", dict(vram_gb=18)),
+            ("wf-evalol", f"TAG=full {CH} evalol O wf-w58-s0 wf-w116-s0", W / "chain/evalol-full/DONE", dict(vram_gb=18))])
     L.say("B2D small set")
     if subprocess.call([sys.executable, "experiments/op_wide_ft/scripts/wide_lane.py", "--routes", "small", "--arms", "wf-w58-s0@58,wf-w116-s0@116",
                         "--wait"], cwd=REPO) != 0:
