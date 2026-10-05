@@ -8,6 +8,9 @@ experiments/hugsim/scripts/spin_analysis.py; launch stall = peak speed over the 
   report   (Mac)               pp_hugsim_report.py report      -> results/hugsim_spin10/tables.md
 Reference rows: Cinque PR #57 `cinque-fixed` (2026-09-25) and WA-JEPA from experiments/hugsim/results (scored_op / scored_wajepa,
 wajepa_ref/wajepa_extract.csv).
+A second argument `spec` (extract spec / report spec) reads the preset-`spec` arms (tags pp-spec-*, scripts/pp_hugsim_spec.txt: the 10 spinners
++ the 19 other max_steps scenarios of decision 118's opctrl run) with the stored decision-118 run `cinque-opctrl` (runs/opctrl/closed) as
+reference -> results/hugsim_spec/.
 """
 import csv
 import json
@@ -21,8 +24,16 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[3]
 HR = REPO / "experiments/hugsim/results"
 OUT = REPO / "experiments/op_parity/results/hugsim_spin10"
-SPIN10 = [Path(p).stem for p in open(REPO / "experiments/hugsim/scripts/derot_spin10.txt").read().split()]
-ARMS = ["pp-P0", "pp-P1-s0", "pp-P2-s0", "pp-P3-s0"]
+MODE = sys.argv[2] if len(sys.argv) > 2 else "exam"
+if MODE == "spec":
+    OUT = REPO / "experiments/op_parity/results/hugsim_spec"
+    SPIN10 = [Path(p).stem for p in open(REPO / "experiments/op_parity/scripts/pp_hugsim_spec.txt").read().split()]
+    ARMS = ["pp-spec-P0", "pp-spec-P1-s0", "pp-spec-P2-s0"]
+    REF_TAG, REF_CSV = "cinque-opctrl", "runs/opctrl/closed/results.csv"
+else:
+    SPIN10 = [Path(p).stem for p in open(REPO / "experiments/hugsim/scripts/derot_spin10.txt").read().split()]
+    ARMS = ["pp-P0", "pp-P1-s0", "pp-P2-s0", "pp-P3-s0"]
+    REF_TAG, REF_CSV = "cinque-fixed-base", "runs/hugsim-derot/results.csv"
 
 
 def extract():
@@ -35,8 +46,8 @@ def extract():
         subprocess.run([sys.executable, str(REPO / "experiments/hugsim/scripts/spin_export_routes.py"), str(HR / "hugsim-exam/scored_op.csv"),
                         str(routes_json)], check=True)
     routes = json.load(open(routes_json))
-    src = [(D / "runs/op_parity/hugsim/results.csv", lambda t: t.startswith("pp-")),
-           (D / "runs/hugsim-derot/results.csv", lambda t: t == "cinque-fixed-base")]
+    src = [(D / "runs/op_parity/hugsim/results.csv", lambda t: t in ARMS),
+           (D / REF_CSV, lambda t: t == REF_TAG)]
     runs, rows = [], []
     for path, want in src:
         last = {}
@@ -77,11 +88,12 @@ def report():
     ref = {"cinque-fixed (stored)": (pd.read_csv(HR / "hugsim-exam/scored_op.csv").query("tag == 'cinque-fixed'"), wex[wex.tag == "cinque-fixed"]),
            "wajepa": (pd.read_csv(HR / "hugsim-exam/scored_wajepa.csv").query("tag == 'wajepa'"), wex[wex.tag == "wajepa"])}
     arms = {}
-    for t in ["cinque-fixed-base"] + ARMS:
+    for t in [REF_TAG] + ARMS:
         r, e = runs[runs.tag == t], ex[ex.tag == t]
         if len(r):
             arms[t] = (r, e)
-    arms.update(ref)
+    if MODE != "spec":
+        arms.update(ref)
     tab = {}
     for name, (r, e) in arms.items():
         r = r[r.scenario.isin(SPIN10)].drop_duplicates("scenario", keep="last").set_index("scenario")
@@ -93,15 +105,26 @@ def report():
         tab[name] = d
     names = {"cinque-fixed-base": "Cinque rerun (cinque-fixed-base, 2026-10-03)", "cinque-fixed (stored)": "Cinque PR #57 (cinque-fixed, 2026-09-25)",
              "wajepa": "WA-JEPA", "pp-P0": "P0 shipped, through the parity path", "pp-P1-s0": "P1 fine-tuned, no inputs",
-             "pp-P2-s0": "P2 + ego / pose / command", "pp-P3-s0": "P3 + side / rear cameras"}
-    L = ["## T1 per arm on the 10 spinner scenarios (one run each, PR #57 controller, 400-step cap)\n",
-         "| arm | n | HD-Score | RC | spins >= 60 deg | launch stalls (v_max first 40 steps < 1.6 m/s) | complete | stuck | fg coll | bg coll | off_route | max heading err median (deg) |",
-         "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
-    for k, d in tab.items():
-        c = d["cls"]
-        n = lambda s: int((c == s).sum())  # noqa: E731
-        L.append(f"| {names.get(k, k)} | {len(d)} | {d.hdscore.mean():.3f} | {d.rc.mean():.3f} | {int(d.spin.astype(bool).sum())} | {int((d.v_max40 < 1.6).sum())} | "
-                 f"{n('complete')} | {n('stuck')} | {n('fg_coll')} | {n('bg_coll')} | {n('off_route')} | {d.max_abs_e.median():.0f} |")
+             "pp-P2-s0": "P2 + ego / pose / command", "pp-P3-s0": "P3 + side / rear cameras",
+             "cinque-opctrl": "Cinque spec (cinque-opctrl, decision 118)", "pp-spec-P0": "P0 shipped, parity path",
+             "pp-spec-P1-s0": "P1 fine-tuned, no inputs", "pp-spec-P2-s0": "P2 + ego / pose / command"}
+    def block(title, sel):
+        L = [title, "| arm | n | HD-Score | RC | spins >= 60 deg | launch stalls (v_max first 40 steps < 1.6 m/s) | stuck (max_steps end) | "
+             "standing share (v < 0.3 m/s) | complete | fg coll | bg coll | off_route | max heading err median (deg) |",
+             "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+        for k, d in tab.items():
+            d = d[d.index.isin(sel)]
+            c, stuck = d["cls"], int((d["end"] == "max_steps").sum())
+            n = lambda s: int((c == s).sum())  # noqa: E731
+            L.append(f"| {names.get(k, k)} | {len(d)} | {d.hdscore.mean():.3f} | {d.rc.mean():.3f} | {int(d.spin.astype(bool).sum())} | {int((d.v_max40 < 1.6).sum())} | "
+                     f"{stuck} | {d.standing.mean():.2f} | {n('complete')} | {n('fg_coll')} | {n('bg_coll')} | {n('off_route')} | {d.max_abs_e.median():.0f} |")
+        return L
+    hdr = "spec preset (tree opctrl)" if MODE == "spec" else "PR #57 controller"
+    L = block(f"## T1 per arm on all {len(SPIN10)} scenarios (one run each, {hdr}, 400-step cap; class = spin, else end)\n", SPIN10)
+    if MODE == "spec":
+        sp = [Path(p).stem for p in open(REPO / "experiments/hugsim/scripts/derot_spin10.txt").read().split()]
+        L += [""] + block("## T1a the 10 PR #57 spinner scenarios\n", sp) + [""] + block("## T1b the 19 other decision-118 stuck scenarios\n",
+                                                                                            [s for s in SPIN10 if s not in sp])
     L += ["", "## T2 per scenario: HD-Score / class / max heading error (deg) / v_max over the first 40 steps (m/s)\n"]
     cols = list(tab)
     L.append("| scenario | " + " | ".join(names.get(k, k) for k in cols) + " |")

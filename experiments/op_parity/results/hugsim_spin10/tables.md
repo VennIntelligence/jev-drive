@@ -1,14 +1,14 @@
-## T1 per arm on the 10 spinner scenarios (one run each, PR #57 controller, 400-step cap)
+## T1 per arm on all 10 scenarios (one run each, PR #57 controller, 400-step cap; class = spin, else end)
 
-| arm | n | HD-Score | RC | spins >= 60 deg | launch stalls (v_max first 40 steps < 1.6 m/s) | complete | stuck | fg coll | bg coll | off_route | max heading err median (deg) |
-|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| Cinque rerun (cinque-fixed-base, 2026-10-03) | 10 | 0.315 | 0.416 | 8 | 0 | 0 | 0 | 0 | 2 | 0 | 161 |
-| P0 shipped, through the parity path | 10 | 0.352 | 0.456 | 8 | 0 | 0 | 0 | 0 | 2 | 0 | 154 |
-| P1 fine-tuned, no inputs | 10 | 0.330 | 0.438 | 8 | 0 | 0 | 0 | 0 | 2 | 0 | 148 |
-| P2 + ego / pose / command | 10 | 0.265 | 0.392 | 7 | 0 | 1 | 0 | 1 | 1 | 0 | 98 |
-| P3 + side / rear cameras | 10 | 0.321 | 0.484 | 8 | 0 | 1 | 0 | 0 | 1 | 0 | 115 |
-| Cinque PR #57 (cinque-fixed, 2026-09-25) | 10 | 0.350 | 0.467 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 150 |
-| WA-JEPA | 10 | 0.593 | 0.670 | 1 | 0 | 4 | 0 | 3 | 0 | 2 | 7 |
+| arm | n | HD-Score | RC | spins >= 60 deg | launch stalls (v_max first 40 steps < 1.6 m/s) | stuck (max_steps end) | standing share (v < 0.3 m/s) | complete | fg coll | bg coll | off_route | max heading err median (deg) |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| Cinque rerun (cinque-fixed-base, 2026-10-03) | 10 | 0.315 | 0.416 | 8 | 0 | 1 | 0.12 | 0 | 0 | 2 | 0 | 161 |
+| P0 shipped, through the parity path | 10 | 0.352 | 0.456 | 8 | 0 | 1 | 0.14 | 0 | 0 | 2 | 0 | 154 |
+| P1 fine-tuned, no inputs | 10 | 0.330 | 0.438 | 8 | 0 | 1 | 0.12 | 0 | 0 | 2 | 0 | 148 |
+| P2 + ego / pose / command | 10 | 0.265 | 0.392 | 7 | 0 | 0 | 0.00 | 1 | 1 | 1 | 0 | 98 |
+| P3 + side / rear cameras | 10 | 0.321 | 0.484 | 8 | 0 | 0 | 0.00 | 1 | 0 | 1 | 0 | 115 |
+| Cinque PR #57 (cinque-fixed, 2026-09-25) | 10 | 0.350 | 0.467 | 10 | 0 | 1 | 0.14 | 0 | 0 | 0 | 0 | 150 |
+| WA-JEPA | 10 | 0.593 | 0.670 | 1 | 0 | 0 | 0.02 | 4 | 3 | 0 | 2 | 7 |
 
 ## T2 per scenario: HD-Score / class / max heading error (deg) / v_max over the first 40 steps (m/s)
 
