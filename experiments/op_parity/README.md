@@ -25,7 +25,12 @@ less without synthesis (interaction N vs G -2.08 [-2.63, -1.52]); pre-registered
 [results/stageB.md](results/stageB.md). HUGSIM under `spec` (29 stuck / spinner scenarios): P2 ends every stuck run (24 -> 0) but fg
 collisions 1 -> 10, HD 0.453 vs P0 0.306, P2 - P1 +0.104 [-0.042, +0.248]: [results/hugsim_spec.md](results/hugsim_spec.md).
 
-**Next.** Full run under W (estimate ~6-9 GPU·h in results/stageB.md) waits for main.
+**Full run (2026-10-06, protocol W, 103 k navtrain tokens, 2 seeds).** navtest EPDMS P0 80.51, P1 81.98, P2 88.21, P3 88.16, WA-JEPA 91.71:
+P3 - P1 +6.18 [+5.40, +7.00], P3 - WA-JEPA -3.55 [-4.27, -2.84] (gap 11.2 -> 3.5; rest is DAC / TTC / NC). HUGSIM 64 HD exam / spec: P0 0.263 /
+0.294, P2 0.396 / 0.393, WA-JEPA 0.451 (P2 - WA-JEPA -0.055 [-0.135, +0.025]); stuck runs 16 / 24 -> 0. Side cameras add nothing.
+[results/full.md](results/full.md), [results/hugsim_full.md](results/hugsim_full.md).
+
+**Next.** Decision entry by main.
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner
 scenarios: [results/hugsim_spin10.md](results/hugsim_spin10.md) (spins P1 8, P2 7, P3 8 of 10; the launch spin onset is unchanged).
