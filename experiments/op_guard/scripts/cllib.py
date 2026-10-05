@@ -8,7 +8,7 @@ and a unit still in the pool is waited on, not submitted twice. `--dry-run` prin
 
 Harnesses, unchanged: HUGSIM `experiments/hugsim/archive/zs_run.py --preset spec` behind one resident
 `hugsim_zs_server.py cinque [--onnx]` (guard_hugsim.sh); B2D `experiments/op_closed_loop/archive/op_arb.sh arm spec`
-with `SRV_ONNX` (the candidate serving ONNX) and agent `lib/op_arb_agent.py` (the rig122 lane's unit, verbatim env).
+with `SRV_ONNX` (the candidate serving ONNX) and agent `lib/op_arb_agent.py` (the rig122 unit, verbatim env).
 Scorers, reused: HUGSIM spin = `experiments/hugsim/scripts/spin_analysis.analyse` (decision 118 definition), end
 class from zs_run's results.csv; B2D turns = `junction_rig122_report.score_attempt` (junction_cl_report turn geometry,
 branch / leaves-lane / collision-window definitions); B2D DS = the official record (`vlm_arb_common.route_row`).
@@ -38,13 +38,13 @@ OP_ARB = "experiments/op_closed_loop/archive/op_arb.sh"
 HUGSIM_SETS = {"subset": REPO / "experiments/leaderboard_audit/scripts/unified_hugsim_small.txt",   # decision 124's 11 scenes
                "full": REPO / "experiments/hugsim/scripts/derot_all64.txt"}                       # all 64
 HUGSIM_TAG = "guard-spec"
-# decision 127's 25 turns: 20 val routes (junction_rig122_lane NEW + OLD6), seed 2; the turn keys are the labelled turns
+# decision 127's 25 turns: 20 val routes (junction_rig122_report NEW + OLD6), seed 2; the turn keys are the labelled turns
 # scored there (results/junction_rig122_per_turn.csv, arm olnz)
 TURN_ROUTES = ("10255 15102 28147 5423 334 26872 25051 27994 26153 26723 26365 24758 28008 24416 "
                "28180 24944 27297 9196 6999 34183").split()
 TURN_CSV = REPO / "experiments/op_closed_loop/results/junction_rig122_per_turn.csv"
 TURN_SEED = 2
-# decision 107's 19 routes (vlm_arb_common.ROUTES = DEV + TGT; the `drive` arm of od2_b2d_lane.py, seeds 2 and 3)
+# decision 107's 19 routes (vlm_arb_common.ROUTES = DEV + TGT; the `drive` arm of op_adapt_h's od2 B2D run, seeds 2 and 3)
 DS_ROUTES = ("27043 15102 24944 27870 22535 37969 24497 27297 9196 28147 "
              "16390 15612 15483 17280 16529 16508 19324 2520 19832").split()
 DS_SEEDS = {"subset": (2,), "full": (2, 3)}
@@ -147,6 +147,8 @@ def submit_units(units, log_root, owner: str, dry_run: bool = False, force: bool
     out = {}
     for u in units:
         ld = Path(log_root) / u["name"]
+        if "{job_dir}/op" in u["env"].values() and len(str(ld / "op/srv/op.sock")) > 107:   # op_arb.sh's AF_UNIX socket (<= 108 bytes)
+            raise SystemExit("unit %s: socket path %s too long for AF_UNIX; shorten the root or the unit name" % (u["name"], ld / "op/srv/op.sock"))
         if not force and u["done"]():
             out[u["name"]] = ""
             print("finished  %s" % u["name"])
