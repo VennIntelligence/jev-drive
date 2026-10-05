@@ -86,10 +86,12 @@ def losses(run):
 def stage1():
     L = Lane("stage1")
     R = W / "carla/render"
-    L.say("waiting for the 18 render shards")
-    while len(list(R.glob("DONE_*of18"))) < 18:
-        if list(R.glob("ERROR_*of18")):
-            L.die("render shard error: %s" % [p.name for p in R.glob("ERROR_*of18")])
+    L.say("waiting for the 3 render pool jobs (chain/pool/render{0,1,2})")
+    jobs = [W / "chain/pool" / f"render{j}" for j in range(3)]
+    while not all((j / "DONE").exists() for j in jobs):
+        bad = [j.name for j in jobs if (j / "ERROR").exists()]
+        if bad:
+            L.die("render job failed: %s (see %s)" % (bad, R))
         time.sleep(60)
     if not (W / "chain/pack/DONE").exists():
         L.say("pack (CPU)")
