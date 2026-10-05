@@ -1,6 +1,8 @@
+diff --git a/sim/hugsim_env/envs/hug_sim.py b/sim/hugsim_env/envs/hug_sim.py
 --- a/sim/hugsim_env/envs/hug_sim.py
 +++ b/sim/hugsim_env/envs/hug_sim.py
-@@ -244,7 +244,7 @@
+@@ -243,7 +244,7 @@ class HUGSimEnv(gymnasium.Env):
+         cam_poses, _, commands = self.ground_model
          dist = np.sum((cam_poses[:, :3, 3] - self.vt) ** 2, axis=-1)
          nearest_cam_idx = np.argmin(dist)
 -        command = commands[nearest_cam_idx]
