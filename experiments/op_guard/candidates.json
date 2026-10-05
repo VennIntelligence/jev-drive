@@ -1,78 +1,96 @@
 {
- "shipped": {
-  "onnx": null,
-  "note": "shipped Cinque (comma v3 382M); the reference of every paired line",
-  "command_adapter": null
- },
- "it_dw3-s0": {
-  "onnx": "$DATA_DIR/runs/op_adapt_H/onnx/it_dw3-s0.onnx",
-  "note": "layer-3 pilot, distillation weight 3 (decisions 98, 107)",
-  "command_adapter": null
- },
- "rc-bear-s0": {
-  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-bear-s0.onnx",
-  "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-bear-s0.adapter.npz",
-  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
-  "note": "op_route_ft rc-bear-s0 (route-choice fine-tune; adapter route polyline)"
- },
- "rc-poly-s0": {
-  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-poly-s0.onnx",
-  "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-poly-s0.adapter.npz",
-  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
-  "note": "op_route_ft rc-poly-s0 (route-choice fine-tune; adapter route polyline)"
- },
- "rc-ctl-s0": {
-  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-ctl-s0.onnx",
-  "route_adapter": null,
-  "command_adapter": null,
-  "note": "op_route_ft rc-ctl-s0 (route-choice fine-tune; adapter none: zero bias)"
- },
- "rc-all-s0": {
-  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-all-s0.onnx",
-  "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-all-s0.adapter.npz",
-  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
-  "note": "op_route_ft rc-all-s0 (route-choice fine-tune; adapter route polyline)"
- },
- "rc-bear-pre-s0": {
-  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-bear-pre-s0.onnx",
-  "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-bear-pre-s0.adapter.npz",
-  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
-  "note": "op_route_ft rc-bear-pre-s0 (rc-bear + turn-in action target at approach poses)"
- },
- "rc-ctl-pre-s0": {
-  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-ctl-pre-s0.onnx",
-  "route_adapter": null,
-  "command_adapter": null,
-  "note": "op_route_ft rc-ctl-pre-s0 (rc-ctl + turn-in action target at approach poses; adapter none: zero bias)"
- },
- "pilot-bear-fix": {
-  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-fix.onnx",
-  "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-fix.adapter.npz",
-  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
-  "note": "op_route_ft pilot-bear-fix (rc-bear + decision-130 action target, 400-step pilot)"
- },
- "pilot-bear-near": {
-  "onnx": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-near.onnx",
-  "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-near.adapter.npz",
-  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
-  "note": "op_route_ft pilot-bear-near (rc-bear-fix + near CARLA rows, 400-step pilot)"
- },
- "dg1": {
-  "onnx": "$DATA_DIR/runs/op_dagger/onnx/dg1.onnx",
-  "route_adapter": null,
-  "command_adapter": null,
-  "note": "op_dagger dg1 (400-step DAgger fine-tune on shipped reprojection rollouts; adapter none)"
- },
- "wf-w58-s0": {
-  "onnx": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w58-s0.onnx",
-  "route_adapter": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w58-s0.adapter.npz",
-  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
-  "note": "op_wide_ft W58: rc-bear-fix recipe on the re-rendered CARLA pairs, wide 58.7 deg"
- },
- "wf-w116-s0": {
-  "onnx": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w116-s0.onnx",
-  "route_adapter": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w116-s0.adapter.npz",
-  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
-  "note": "op_wide_ft W116: as W58 with the CARLA rows' wide slot at 116 deg (served here at the board's 58.7 deg wide)"
- }
+  "shipped": {
+    "onnx": null,
+    "note": "shipped Cinque (comma v3 382M); the reference of every paired line",
+    "command_adapter": null
+  },
+  "it_dw3-s0": {
+    "onnx": "$DATA_DIR/runs/op_adapt_H/onnx/it_dw3-s0.onnx",
+    "note": "layer-3 pilot, distillation weight 3 (decisions 98, 107)",
+    "command_adapter": null
+  },
+  "rc-bear-s0": {
+    "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-bear-s0.onnx",
+    "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-bear-s0.adapter.npz",
+    "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+    "note": "op_route_ft rc-bear-s0 (route-choice fine-tune; adapter route polyline)"
+  },
+  "rc-poly-s0": {
+    "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-poly-s0.onnx",
+    "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-poly-s0.adapter.npz",
+    "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+    "note": "op_route_ft rc-poly-s0 (route-choice fine-tune; adapter route polyline)"
+  },
+  "rc-ctl-s0": {
+    "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-ctl-s0.onnx",
+    "route_adapter": null,
+    "command_adapter": null,
+    "note": "op_route_ft rc-ctl-s0 (route-choice fine-tune; adapter none: zero bias)"
+  },
+  "rc-all-s0": {
+    "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-all-s0.onnx",
+    "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-all-s0.adapter.npz",
+    "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+    "note": "op_route_ft rc-all-s0 (route-choice fine-tune; adapter route polyline)"
+  },
+  "rc-bear-pre-s0": {
+    "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-bear-pre-s0.onnx",
+    "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/rc-bear-pre-s0.adapter.npz",
+    "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+    "note": "op_route_ft rc-bear-pre-s0 (rc-bear + turn-in action target at approach poses)"
+  },
+  "rc-ctl-pre-s0": {
+    "onnx": "$DATA_DIR/runs/op_route_ft/onnx/rc-ctl-pre-s0.onnx",
+    "route_adapter": null,
+    "command_adapter": null,
+    "note": "op_route_ft rc-ctl-pre-s0 (rc-ctl + turn-in action target at approach poses; adapter none: zero bias)"
+  },
+  "pilot-bear-fix": {
+    "onnx": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-fix.onnx",
+    "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-fix.adapter.npz",
+    "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+    "note": "op_route_ft pilot-bear-fix (rc-bear + decision-130 action target, 400-step pilot)"
+  },
+  "pilot-bear-near": {
+    "onnx": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-near.onnx",
+    "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-near.adapter.npz",
+    "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+    "note": "op_route_ft pilot-bear-near (rc-bear-fix + near CARLA rows, 400-step pilot)"
+  },
+  "dg1": {
+    "onnx": "$DATA_DIR/runs/op_dagger/onnx/dg1.onnx",
+    "route_adapter": null,
+    "command_adapter": null,
+    "note": "op_dagger dg1 (400-step DAgger fine-tune on shipped reprojection rollouts; adapter none)"
+  },
+  "wf-w58-s0": {
+    "onnx": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w58-s0.onnx",
+    "route_adapter": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w58-s0.adapter.npz",
+    "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+    "note": "op_wide_ft W58: rc-bear-fix recipe on the re-rendered CARLA pairs, wide 58.7 deg"
+  },
+  "wf-w116-s0": {
+    "onnx": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w116-s0.onnx",
+    "route_adapter": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w116-s0.adapter.npz",
+    "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+    "note": "op_wide_ft W116: as W58 with the CARLA rows' wide slot at 116 deg (served here at the board's 58.7 deg wide)"
+  },
+  "fw-S1": {
+    "onnx": "$DATA_DIR/runs/factor_wm/onnx/fw-S1.onnx",
+    "route_adapter": null,
+    "command_adapter": null,
+    "note": "factor_wm G1 S1: off-policy imitation of the WOD train clips' logged states (2400 steps); acceleration target, catch-up label"
+  },
+  "fw-S2": {
+    "onnx": "$DATA_DIR/runs/factor_wm/onnx/fw-S2.onnx",
+    "route_adapter": null,
+    "command_adapter": null,
+    "note": "factor_wm G1 S2: DAgger 3 rounds, decision-132 engine (lateral, logged speed, 2 s); acceleration target, catch-up label"
+  },
+  "fw-S3": {
+    "onnx": "$DATA_DIR/runs/factor_wm/onnx/fw-S3.onnx",
+    "route_adapter": null,
+    "command_adapter": null,
+    "note": "factor_wm G1 S3: DAgger 3 rounds, exact-ego engine (SPEC lateral + longitudinal, 8 s); acceleration target, catch-up label"
+  }
 }
