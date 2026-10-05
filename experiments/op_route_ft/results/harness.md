@@ -66,16 +66,16 @@ Optional equivalence on the real checkpoint (one card, ~3 min):
     CUDA_VISIBLE_DEVICES=<card> $DATA_DIR/envs/openpilot/bin/python experiments/op_route_ft/scripts/route_onnx.py check \
         --onnx $R/onnx/<arm>-s0.onnx --ref $R/onnx/<arm>-s0.ref.npz          # pass: served plan xy mean ~0.01 m, max <= ~0.25 m
 
-(b) Run the 25 turns for a list of arms (leases `op-route-ft-turns`, retries every 5 min up to `--wait-h` while no card is free; ~30-40 min
-per arm on one card, arms one after another; run in tmux):
+(b) Run the 25 turns for a list of arms (every arm's B2D units go to the GPU pool at once, which spreads them over the free cards;
+~30-40 min per arm on one card; run in tmux, `--dry-run` prints the pool specs):
 
     scripts/tmux_run.sh rft-turns .venv/bin/python experiments/op_route_ft/scripts/route_turns.py run \
-        $R/onnx/rc-bear-s0.onnx $R/onnx/rc-poly-s0.onnx $R/onnx/rc-ctl-s0.onnx --cards 1
+        $R/onnx/rc-bear-s0.onnx $R/onnx/rc-poly-s0.onnx $R/onnx/rc-ctl-s0.onnx
 
-`--cards 2` halves the wall time when two cards are free. Shipped is not rerun: decision 127's olnz units (`$DATA_DIR/runs/rig122/arms/olnz-s2-k*`)
+Shipped is not rerun: decision 127's olnz units (`$DATA_DIR/runs/rig122/arms/olnz-s2-k*`)
 are the guard's checked cache (same agent config; a candidate differs only by `SRV_ONNX` and `route_adapter`). The same units are what
 `experiments/op_guard/scripts/line_b2d_turns.py --candidate $R/onnx/<arm>-s0.onnx` runs (the guard picks up `<stem>.adapter.npz` next to
-the ONNX, or a `route_adapter` key in candidates.json), so the guard set and this lane share runs.
+the ONNX, or a `route_adapter` key in candidates.json), so the guard set and this run share units.
 
 (c) Results:
 - per arm: `$R/turns/<arm>-s0.{json,md}` (+ `shipped.{json,md}`): summary (choice / forced / all: took exit, shipped took, gained / lost,
@@ -85,7 +85,7 @@ the ONNX, or a `route_adapter` key in candidates.json), so the guard set and thi
 - guard line file: `$DATA_DIR/runs/op_guard/<arm>-s0/subset/lines/b2d_turns.json`; units `.../b2d/turns-s2-k*/attempts/<route>/<n>/`
   (plans.jsonl with `ra` + `act_k`, ticks.jsonl, route.json, interface.json).
 - GIF of one turn (chase camera + model input frames): the rig122 lane's `stage=gif` unit with `SRV_ONNX` + `TOP_ARGS='"route_adapter": "..."'`
-  added to its env (junction_rig122_lane.py `unit(..., extra=...)`); not wired as a command.
+  added to its env ([junction_rig122_lane.py](https://github.com/VennIntelligence/jev-drive/blob/1dc08a0aae9ce639995e644d8a90f27da1ae6d7c/experiments/op_closed_loop/scripts/junction_rig122_lane.py) `unit(..., extra=...)`); not wired as a command.
 
 Reports only (finished units): `.venv/bin/python experiments/op_route_ft/scripts/route_turns.py report <onnx> [...]`.
 

@@ -1,7 +1,7 @@
 """rc-*-near readouts (op-train env).
 
   stats --plan <poses.pkl>                     CPU, before rendering: the near action targets (rft._near rules) by pose class -> stdout + <plan dir>/target_stats.json
-  eval  --models O rc-bear-s0 ... [--out f]    one leased card: action head on the near DEV rows -> $R/evalol_near/<model>.json
+  eval  --models O rc-bear-s0 ... [--out f]    one card: action head on the near DEV rows -> $R/evalol_near/<model>.json
         per moving (v0 >= rft.NEAR_VMIN) row: curvature k = -action[0] / max(1, v_model)^2 (left +, v_model = the original's plan speed, the
         training convention) against the target kt (training rule: instantaneous curvature of the dense lane-centre path at arc v0 * 0.275 s);
         gain = slope of k on kt through 0 (1 = the target), by where (app / in) x d bin, turn rows (cmd left / right);

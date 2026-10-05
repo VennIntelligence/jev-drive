@@ -9,7 +9,7 @@ Shipped subset cache: $DATA_DIR/runs/unified/hugsim tag uni-d118 (preset opctrl_
 is the spec resolution; --force reruns it.
 
   python experiments/op_guard/scripts/line_hugsim.py --candidate it_dw3-s0 [--mode subset|full] [--cl-lines hugsim,b2d_turns,b2d_ds]
-      [--cards 2] [--stage smoke|all] [--collect-only] [--force]          (blocking; lease: OP_GUARD_LANE or its own, see cllib.py)
+      [--stage smoke|all] [--collect-only] [--dry-run] [--force]          (blocking: units go to the GPU pool, see cllib.py)
 """
 import sys
 from pathlib import Path

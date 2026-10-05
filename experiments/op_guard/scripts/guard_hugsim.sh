@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# HUGSIM job of the guard line `hugsim` (cllib.py, run by the lane on a leased card): one resident Cinque server (the candidate's
+# HUGSIM job of the guard line `hugsim` (cllib.hugsim_unit, one GPU-pool job): one resident Cinque server (the candidate's
 # serving ONNX if $ONNX is set, shipped otherwise) and zs_run.py with interface preset `spec` on the scenarios of $SCEN, tag $TAG.
 # Resumable (zs_run skips finished scenarios). Env: DATA_DIR GPU OUT SCEN TAG [ONNX] [WORKERS=5].
 # Same server / zs_run calls as experiments/leaderboard_audit/scripts/unified_hugsim_chain.sh (arm d118 = spec) and

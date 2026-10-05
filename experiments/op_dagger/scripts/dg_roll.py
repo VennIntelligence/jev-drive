@@ -1,4 +1,4 @@
-"""op_dagger rollout engine runs (op-train env; GPU when leased, CPU fp32 otherwise). See dg_common for the engine.
+"""op_dagger rollout engine runs (op-train env; GPU when given a card, CPU fp32 otherwise). See dg_common for the engine.
 
   check    sf + heldout: (a) replay arm == the batch pipeline on the logged frames (engine identity); (b) port vs decision 123's ONNX phi1 on the
            same sf frames; (c) open yaw +-1 / +-2 deg arms with the anchor-frame source (decision 123's R) and the logged-frame source -> step gains

@@ -7,8 +7,11 @@
     .venv/bin/python experiments/op_guard/scripts/guard.py --candidate it_dw3-s0 --report-only   # only re-render the table
 
 Paired lines compare with the `shipped` candidate of the same mode; if its lines are missing, shipped is run first.
-Leases: one row for the open-loop chain (1 card) and one for the closed-loop chain (the other free cards), through
-`jevdrive.cl.lease`; both are released at the end. Lines are `line_<id>.py` scripts that follow guardlib's contract.
+GPU pool (jevdrive.cl.pool): the open-loop chain is one pool job (`guard.py --chain-only --gpu {gpu}`, --ol-vram GB, --ol-cpu cores,
+log $DATA_DIR/runs/op_guard/<candidate>/<mode>/logs/ol-pool/); the closed-loop lines submit their units as pool jobs themselves
+(cllib.run_lines); guard.py blocks on both (pool.wait). --gpu N skips the pool for the open-loop chain (an already-held card).
+--dry-run prints the open-loop pool job and the closed-loop unit specs, runs nothing. Lines are `line_<id>.py` scripts that follow
+guardlib's contract.
 Output: $DATA_DIR/runs/op_guard/<candidate>/<mode>/{lines/*.json, guard.json, guard.md, logs/}, copied to
 experiments/op_guard/results/<candidate>/<mode>/ (commit that copy).
 """
@@ -28,7 +31,6 @@ import guardlib as G  # noqa: E402
 
 OPEN_LOOP = ["navtest", "navhard", "wod", "drift", "negatives"]
 CLOSED_LOOP = ["hugsim", "b2d_turns", "b2d_ds"]
-CL_LANE_ENV = "OP_GUARD_LANE"
 WANT: list = []
 
 
@@ -40,49 +42,40 @@ def run(cmd, log: Path, env=None, cwd=G.REPO) -> int:
         return subprocess.call(list(map(str, cmd)), stdout=f, stderr=subprocess.STDOUT, env={**os.environ, **(env or {})}, cwd=cwd)
 
 
-def sh_lease(lane: str, n: int, note: str):
-    """Lease up to n free cards (fewer if the box is shared); returns (lane, cards, cpus string) or None."""
-    from jevdrive.cl import lease as L
-    for k in range(n, 0, -1):
-        r = subprocess.run([sys.executable, "-m", "jevdrive.cl", "lease", lane, "--gpus", str(k), "--status", note], capture_output=True, text=True, cwd=G.REPO)
-        if r.returncode == 0 and "granted" in r.stdout:
-            ls = L.get(lane)
-            cards = sorted(ls.cards)
-            cpus = ",".join(ls.cards[c]["cpus"] for c in cards if ls.cards[c]["cpus"])
-            return lane, cards, cpus
-    return None
-
-
-def release(lane: str, note: str):
-    subprocess.run([sys.executable, "-m", "jevdrive.cl", "release", lane, note], capture_output=True, text=True, cwd=G.REPO)
-
-
-def line_cmd(line: str, cand: str, mode: str, gpu: int, cpus: str, force: bool):
+def line_cmd(line: str, cand: str, mode: str, gpu, cpus: str, force: bool, dry_run: bool = False):
     script = G.GUARD / "scripts" / f"line_{line}.py"
     if not script.is_file():
         return None
     c = [sys.executable, script, "--candidate", cand, "--mode", mode, "--gpu", gpu]
+    if dry_run:
+        c += ["--dry-run"]
     if cpus:
         c += ["--cpus", cpus]
-    if line in CLOSED_LOOP:   # the first closed-loop line packs every wanted closed-loop line into one lane; later calls only collect
+    if line in CLOSED_LOOP:   # the first closed-loop line submits every wanted closed-loop line's units; later calls only collect
         c += ["--cl-lines", ",".join(x for x in CLOSED_LOOP if x in WANT)]
     return c + (["--force"] if force else [])
 
 
-def run_chain(lines, cand, mode_of, out: Path, gpu: int, cpus: str, lane: str | None, force: bool, say):
+def run_chain(lines, cand, mode_of, out: Path, gpu, cpus: str, force: bool, say, dry_run: bool = False):
     for line in lines:
         mode = mode_of(line)
         if G.done(out, line) and not force:
             say(f"{line}: cached ({out}/lines/{line}.json)")
             continue
-        c = line_cmd(line, cand, mode, gpu, cpus, force)
+        if dry_run and line not in CLOSED_LOOP:
+            say(f"{line}: would run on card {gpu}")
+            continue
+        c = line_cmd(line, cand, mode, gpu, cpus, force, dry_run)
         if c is None:
             G.write_line(out, line, cand, mode, [G.row(line, "line script missing", None, ok=None, note=f"scripts/line_{line}.py not wired")], time.time(), status="stub")
             say(f"{line}: no script, stub")
             continue
         t0 = time.time()
         say(f"{line}: start ({mode}, card {gpu})")
-        rc = run(c, out / "logs" / f"{line}.log", env={CL_LANE_ENV: lane} if lane else {})
+        if dry_run:
+            print(subprocess.run(list(map(str, c)), capture_output=True, text=True, cwd=G.REPO).stdout)
+            continue
+        rc = run(c, out / "logs" / f"{line}.log")
         if rc != 0 or not G.done(out, line):
             G.write_line(out, line, cand, mode, [G.row(line, "line failed", None, ok=None, note=f"rc {rc}; see logs/{line}.log")], t0, status="error")
         say(f"{line}: rc {rc} in {(time.time() - t0) / 60:.1f} min")
@@ -138,9 +131,12 @@ def main():
     ap.add_argument("--mode", choices=("subset", "full"), default="subset")
     ap.add_argument("--full", default="", help="comma list of lines to run in full mode while --mode subset (e.g. navtest)")
     ap.add_argument("--lines", default="", help="comma list, default all: " + ",".join(G.LINES))
-    ap.add_argument("--cards", type=int, default=3, help="most cards to lease (fewer when the box is shared)")
-    ap.add_argument("--gpu", type=int, default=None, help="skip leasing: run everything on this already-held card (--cpus: its cores)")
+    ap.add_argument("--gpu", type=int, default=None, help="run the open-loop chain here on this already-held card (--cpus: its cores), not in the pool")
     ap.add_argument("--cpus", default="")
+    ap.add_argument("--ol-vram", type=float, default=24.0, help="VRAM GB the open-loop pool job declares")
+    ap.add_argument("--ol-cpu", type=int, default=16, help="cores the open-loop pool job pins")
+    ap.add_argument("--chain-only", action="store_true", help="internal: run only the given lines on --gpu (the open-loop pool job), no render")
+    ap.add_argument("--dry-run", action="store_true", help="print the pool specs, run nothing")
     ap.add_argument("--force", action="store_true", help="recompute every line (shipped's lines are reused unless --force-ref)")
     ap.add_argument("--force-ref", action="store_true")
     ap.add_argument("--report-only", action="store_true")
@@ -160,12 +156,17 @@ def main():
         print((out / "guard.md").read_text())
         return 0 if res["verdict"] == "PASS" else 1
     # a line that runs in full mode lives in the same lines/ dir (its json carries mode); shipped is needed for the paired lines
+    if a.chain_only:
+        WANT[:] = []
+        run_chain(want, name, mode_of, out, a.gpu, a.cpus, a.force, lambda m: print(f"{time.strftime('%H:%M:%S')} [{name}/{a.mode}] {m}", flush=True))
+        return 0 if all(G.done(out, x) for x in want) else 1
     if name != G.SHIPPED:
         shipped_out = G.run_dir(G.SHIPPED, a.mode)
         missing = [ln for ln in want if not G.done(shipped_out, ln)]
         if missing:
             print(f"shipped reference lacks {missing}: running shipped first")
-            cmd = [sys.executable, __file__, "--candidate", G.SHIPPED, "--mode", a.mode, "--lines", ",".join(missing), "--cards", str(a.cards)]
+            cmd = [sys.executable, __file__, "--candidate", G.SHIPPED, "--mode", a.mode, "--lines", ",".join(missing),
+                   "--ol-vram", str(a.ol_vram), "--ol-cpu", str(a.ol_cpu)] + (["--dry-run"] if a.dry_run else [])
             if full:
                 cmd += ["--full", a.full]
             if a.gpu is not None:
@@ -187,34 +188,29 @@ def main():
 
     ol = [x for x in OPEN_LOOP if x in want]
     cl = [x for x in CLOSED_LOOP if x in want]
-    leases = []
-    try:
-        if a.gpu is not None:
-            chains = [(ol + cl, a.gpu, a.cpus, None)]
-        else:
-            tag = f"op-guard-{name}-{a.mode}"[:40]
-            need_ol, need_cl = bool(ol), bool(cl)
-            lo = sh_lease(tag + "-ol", 1, f"guard open-loop {time.strftime('%F %H:%M')}") if need_ol else None
-            if need_ol and lo is None:
-                sys.exit("no free card for the open-loop chain (python -m jevdrive.cl probe)")
-            leases.append(lo)
-            lc = sh_lease(tag + "-cl", max(a.cards - 1, 1), f"guard closed-loop {time.strftime('%F %H:%M')}") if need_cl else None
-            if need_cl and lc is None:
-                say("no free card for the closed-loop chain: running it after the open-loop chain on the same card")
-                chains = [(ol + cl, lo[1][0], lo[2], lo[0])]
+    ol_job = None
+    if ol and a.gpu is None:                  # the open-loop chain as one pool job on whichever card has room
+        from jevdrive.cl import pool as P
+        todo = [x for x in ol if a.force or not G.done(out, x)]
+        if todo:
+            cmd = [sys.executable, __file__, "--candidate", a.candidate, "--mode", a.mode, "--lines", ",".join(todo), "--chain-only",
+                   "--gpu", "{gpu}", "--cpus", "{cpus}"] + (["--full", a.full] if full else []) + (["--force"] if a.force else [])
+            kw = dict(owner="op_guard " + name, vram_gb=a.ol_vram, cpu=a.ol_cpu, log_dir=str(out / "logs" / "ol-pool"), cwd=str(G.REPO))
+            if a.dry_run:
+                say(f"would submit open-loop chain {json.dumps(kw)}: {' '.join(map(str, cmd))}")
             else:
-                leases.append(lc)
-                chains = ([(ol, lo[1][0], lo[2], lo[0])] if lo else []) + ([(cl, lc[1][0], lc[2], lc[0])] if lc else [])
-            for x in leases:
-                if x:
-                    say(f"lease {x[0]}: cards {x[1]} cpus {x[2]}")
-        ths = [threading.Thread(target=run_chain, args=(ls, name, mode_of, out, g, c, lane, a.force, say)) for ls, g, c, lane in chains]
-        [t.start() for t in ths]
-        [t.join() for t in ths]
-    finally:
-        for x in leases:
-            if x:
-                release(x[0], f"done {time.strftime('%F %T')}")
+                ol_job = P.submit(list(map(str, cmd)), name=f"guard-ol-{name}", **kw)
+                say(f"open-loop chain {todo}: pool job {ol_job} (log {out}/logs/ol-pool/log.txt)")
+        ol = []
+    gpu = a.gpu if a.gpu is not None else 0      # closed-loop lines ignore --gpu (their units go to the pool)
+    ths = [threading.Thread(target=run_chain, args=(ls, name, mode_of, out, gpu, a.cpus, a.force, say, a.dry_run)) for ls in (ol, cl) if ls]
+    [t.start() for t in ths]
+    [t.join() for t in ths]
+    if ol_job:
+        st = P.wait([ol_job], 60)[ol_job]
+        say(f"open-loop chain pool job {ol_job}: {st}")
+    if a.dry_run:
+        return 0
     res = render(name, a.mode, out)
     (out / ("DONE" if res["verdict"] != "NO EVALUABLE LINE" else "ERROR")).write_text(json.dumps(dict(verdict=res["verdict"], t=res["t"])) + "\n")
     say(f"finished in {(time.time() - t_start) / 60:.1f} min: {res['verdict']}")

@@ -1,4 +1,4 @@
-"""rc-*-pre diagnosis (op-train env, one leased card): action-head gain on real dev P rows by pose class, against the old target (logged 1 s pure
+"""rc-*-pre diagnosis (op-train env, one card): action-head gain on real dev P rows by pose class, against the old target (logged 1 s pure
 pursuit) and the turn-in target, for O / rc-ctl / rc-bear / rc-ctl-pre / rc-bear-pre.
 
   CUDA_VISIBLE_DEVICES=<card> $DATA_DIR/envs/op-train/bin/python experiments/op_route_ft/scripts/pre_diag.py [--models ...] -> $R/evalol_ol/pre_diag.json

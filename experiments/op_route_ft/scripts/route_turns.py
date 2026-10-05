@@ -8,10 +8,9 @@ A candidate is a serving ONNX from route_onnx.py build; its adapter is `<stem>.a
 the B2D units pass it to the agent as "route_adapter"); no adapter file = zero bias (arm rc-ctl). Shipped is decision 127's olnz run itself
 (cllib.turns_cached: same agent config, shipped server; a candidate run differs only by SRV_ONNX and route_adapter).
 
-  .venv/bin/python experiments/op_route_ft/scripts/route_turns.py run X.onnx [Y.onnx ...] [--cards 1] [--stage smoke|all]
-        [--wait-h 3] [--force]
-      leases lane `op-route-ft-turns` (retries every 5 min up to --wait-h while no card is free), runs the candidates one after the
-      other through it (OP_GUARD_LANE), releases it, then writes the reports. Run it in tmux (scripts/tmux_run.sh).
+  .venv/bin/python experiments/op_route_ft/scripts/route_turns.py run X.onnx [Y.onnx ...] [--stage smoke|all] [--force] [--dry-run]
+      runs line_b2d_turns.py for every candidate at once (each submits its B2D units to the GPU pool and blocks until they are final),
+      then writes the reports. Run it in tmux (scripts/tmux_run.sh). --dry-run prints the pool specs only.
   .venv/bin/python experiments/op_route_ft/scripts/route_turns.py report X.onnx [...]      reports only (finished units)
 
 Outputs: units and line files under $DATA_DIR/runs/op_guard/<stem>/subset/ (b2d/turns-s2-k*/, lines/b2d_turns.json); the report
@@ -22,10 +21,8 @@ for BEV panels / GIFs. smoke = route 10255 (one choice turn) only, line not writ
 """
 import argparse
 import json
-import os
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -34,39 +31,20 @@ sys.path[:0] = [str(GUARD), str(REPO)]
 import cllib as C  # noqa: E402
 import guardlib as G  # noqa: E402
 
-LANE = os.environ.get("RFT_TURNS_LANE", "op-route-ft-turns")   # a second concurrent run needs its own lane name
 PY = str(REPO / ".venv/bin/python")
 OUT = G.data_dir() / "runs/op_route_ft/turns"
 
 
-def lanes(*a):
-    return subprocess.run([PY, "-m", "jevdrive.cl", *a], cwd=REPO, text=True, capture_output=True)
-
-
-def lease(cards, wait_h):
-    t_end = time.time() + 3600 * wait_h
-    while True:
-        r = lanes("lease", LANE, "--gpus", str(cards), "--status", "op_route_ft 25 junction turns")
-        print(r.stdout + r.stderr, flush=True)
-        if r.returncode == 0:
-            return
-        if time.time() > t_end:
-            raise SystemExit("no free card for %.1f h" % wait_h)
-        time.sleep(300)
-
-
 def run(a):
-    lease(a.cards, a.wait_h)
-    env = dict(os.environ, OP_GUARD_LANE=LANE)
-    rcs = {}
-    try:
-        for x in a.cand:
-            cmd = [PY, str(GUARD / "line_b2d_turns.py"), "--candidate", x, "--mode", "subset", "--stage", a.stage] + (["--force"] if a.force else [])
-            print(" ".join(cmd), flush=True)
-            rcs[x] = subprocess.run(cmd, cwd=REPO, env=env).returncode
-    finally:
-        print(lanes("release", LANE, "done: op_route_ft turns").stdout, flush=True)
-    report(a)
+    procs = {}
+    for x in a.cand:
+        cmd = [PY, str(GUARD / "line_b2d_turns.py"), "--candidate", x, "--mode", "subset", "--stage", a.stage] + (["--force"] if a.force else []) + (
+            ["--dry-run"] if a.dry_run else [])
+        print(" ".join(cmd), flush=True)
+        procs[x] = subprocess.Popen(cmd, cwd=REPO)
+    rcs = {x: p.wait() for x, p in procs.items()}
+    if not a.dry_run:
+        report(a)
     print("line rc", rcs)
     return int(any(rcs.values()))
 
@@ -174,9 +152,8 @@ if __name__ == "__main__":
         p.add_argument("cand", nargs="+", help="serving ONNX paths (route_onnx.py build)")
         p.add_argument("--no-steps", dest="steps", action="store_false", help="leave the per-plan step series out of the json")
         if n == "run":
-            p.add_argument("--cards", type=int, default=1)
             p.add_argument("--stage", choices=("smoke", "all"), default="all")
-            p.add_argument("--wait-h", type=float, default=3.0)
             p.add_argument("--force", action="store_true")
+            p.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     sys.exit(run(a) if a.cmd == "run" else report(a) or 0)

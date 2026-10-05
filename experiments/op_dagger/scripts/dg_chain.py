@@ -1,21 +1,23 @@
 #!/usr/bin/env python
-"""op_dagger pilot chain (box, .venv python): waits for a lease of 1-3 cards (`jevdrive.cl lease op-dagger`), then runs the GPU stages, the
-independent ones in parallel on the leased cards, and releases the lease. Resumable: every stage skips when its output exists.
-STATUS / DONE / ERROR in $DATA_DIR/runs/op_dagger/chain/.
+"""op_dagger pilot chain (box, .venv python): submits every GPU stage to the GPU pool up front (jevdrive.cl.pool), each stage `after`
+the previous one, the independent jobs of a stage in parallel on whichever cards have room; then the report. Resumable: a job whose output
+exists is not submitted (and drops out of the next stage's `after`). Per job log dir $DATA_DIR/runs/op_dagger/chain/<job>/ (log.txt, STATUS,
+DONE / ERROR); chain STATUS / DONE in $DATA_DIR/runs/op_dagger/chain/ (DONE is written by the report job). --wait blocks until the report
+job is final; --dry-run prints the specs.
 
   stage 1  train dg1 (DAgger on shipped rollouts) | train st1 (static control) | eval shipped (if missing, else idle)
   stage 2  collect dg1 rollouts on train (2 shards) | eval dg1 | eval st1
   stage 3  train dg2 (shipped + dg1 states, from shipped)
-  stage 4  eval dg2; report -> experiments/op_dagger/results/pilot (box copy, commit from the Mac)
+  stage 4  eval dg2; report -> $DATA_DIR/runs/op_dagger/report/pilot (box copy, commit from the Mac)
 
-  scripts/tmux_run.sh dg-chain .venv/bin/python experiments/op_dagger/scripts/dg_chain.py [--steps 400] [--max-cards 3]
+  .venv/bin/python experiments/op_dagger/scripts/dg_chain.py [--steps 400] [--train-vram 24] [--roll-vram 12] [--wait] [--dry-run]
 """
 import argparse
+import json
 import os
-import subprocess
+import shlex
 import sys
 import time
-import traceback
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -24,7 +26,6 @@ PY = str(DD / "envs/op-train/bin/python")
 S = "experiments/op_dagger/scripts/"
 OUT = DD / "runs/op_dagger"
 CH = OUT / "chain"
-LANE = "op-dagger"
 
 
 def status(msg):
@@ -33,84 +34,64 @@ def status(msg):
     print(time.strftime("%T"), msg, flush=True)
 
 
-def lease(max_cards, gpus=None):
-    """Poll until 1..max_cards cards (or exactly the explicit card list `gpus`, e.g. "1") are granted; returns (cards, {card: cpus})."""
-    from jevdrive.cl import lease as L
-    while True:
-        for k in ([gpus] if gpus else range(max_cards, 0, -1)):
-            r = subprocess.run([sys.executable, "-m", "jevdrive.cl", "lease", LANE, "--gpus", str(k)] + (["--explicit"] if gpus else [])
-                               + ["--status", "op_dagger pilot (train / rollouts)"], capture_output=True, text=True, cwd=REPO)
-            if r.returncode == 0 and "granted" in r.stdout:
-                ls = L.get(LANE)
-                return sorted(ls.cards), {c: ls.cards[c]["cpus"] for c in ls.cards}
-        status("waiting for a free card (lease op-dagger)")
-        time.sleep(300)
-
-
-def release(note):
-    subprocess.run([sys.executable, "-m", "jevdrive.cl", "release", LANE, note], capture_output=True, text=True, cwd=REPO)
-
-
-def job(args, card, cpus, log):
-    env = {**os.environ, "CUDA_VISIBLE_DEVICES": str(card), "OMP_NUM_THREADS": "8"}
-    cmd = (["taskset", "-c", cpus] if cpus else []) + [PY] + args
-    f = open(CH / f"{log}.log", "a")
-    f.write(f"$ {' '.join(cmd)}\n")
-    f.flush()
-    return subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT, env=env, cwd=REPO)
-
-
-def run_stage(name, jobs, cards, cpus):
-    """jobs: list of (args, log, done_path); runs them over the cards, at most one per card at a time."""
-    todo = [j for j in jobs if not Path(j[2]).exists()]
-    status(f"{name}: {len(todo)} jobs on cards {cards}")
-    running = {}
-    while todo or running:
-        for c in cards:
-            if c not in running and todo:
-                a, log, _ = todo.pop(0)
-                running[c] = (job(a, c, cpus.get(c, ""), log), log)
-        time.sleep(15)
-        for c, (p, log) in list(running.items()):
-            if p.poll() is not None:
-                if p.returncode != 0:
-                    raise RuntimeError(f"{name}: {log} exited {p.returncode} (see {CH / log}.log)")
-                del running[c]
+def submit_stage(name, jobs, after, a):
+    """jobs: list of (args, log, done_path, train); submits the unfinished ones after `after`; returns their pool ids."""
+    from jevdrive.cl import pool as P
+    ids = []
+    for args, log, done, train in jobs:
+        if Path(done).exists():
+            print(f"{name}: {log} finished ({done})")
+            continue
+        cmd = f"{shlex.join([PY] + args)} && test -f {shlex.quote(str(done))}"
+        kw = dict(owner="op_dagger pilot", vram_gb=a.train_vram if train else a.roll_vram, cpu=12, train=train, after=list(after),
+                  env={"OMP_NUM_THREADS": "8"}, log_dir=str(CH / log), cwd=str(REPO))
+        if a.dry_run:
+            print(f"{name}: would submit {log} {json.dumps(kw)}\n  {cmd}")
+            ids.append(f"<{log}>")
+            continue
+        jid = P.submit(cmd, name=f"dg-{log}", **kw)
+        print(f"{name}: {log} -> {jid}")
+        ids.append(jid)
+    return ids or list(after)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=400)
-    ap.add_argument("--max-cards", type=int, default=3)
-    ap.add_argument("--gpus", default=None, help="explicit card list to lease (e.g. 1); overrides --max-cards")
+    ap.add_argument("--train-vram", type=float, default=24.0, help="VRAM GB a train job declares")
+    ap.add_argument("--roll-vram", type=float, default=12.0, help="VRAM GB a collect / eval job declares")
+    ap.add_argument("--wait", action="store_true")
+    ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     sys.path.insert(0, str(REPO))
-    for f in ("DONE", "ERROR"):
-        (CH / f).unlink(missing_ok=True)
+    if not a.dry_run:
+        for f in ("DONE", "ERROR"):
+            (CH / f).unlink(missing_ok=True)
     R = OUT / "roll"
-    while not all((R / "shipped" / f"train-collect-{i}of2.npz").exists() for i in (0, 1)):
+    while not a.dry_run and not all((R / "shipped" / f"train-collect-{i}of2.npz").exists() for i in (0, 1)):
         status("waiting for the shipped train collection (CPU)")
         time.sleep(60)
-    tr = lambda tag, extra: ([S + "dg_train.py", "--tag", tag, "--steps", str(a.steps), "--workers", "12"] + extra, f"train-{tag}", OUT / "runs" / tag / "ckpt-final.pt")  # noqa: E731
-    ev = lambda m: ([S + "dg_roll.py", "eval", "--model", m, "--set", "heldout", "--workers", "12"], f"eval-{m}", R / m / "heldout-eval-0of1.npz")  # noqa: E731
-    co = lambda m, i: ([S + "dg_roll.py", "collect", "--model", m, "--set", "train", "--shard", f"{i}/2", "--workers", "12"], f"collect-{m}-{i}", R / m / f"train-collect-{i}of2.npz")  # noqa: E731
-    cards, cpus = lease(a.max_cards, a.gpus)
-    try:
-        run_stage("stage 1", [tr("dg1", ["--rolls", "shipped"]), tr("st1", ["--rolls", "shipped", "--static"]), ev("shipped")], cards, cpus)
-        run_stage("stage 2", [co("dg1", 0), co("dg1", 1), ev("dg1"), ev("st1")], cards, cpus)
-        run_stage("stage 3", [tr("dg2", ["--rolls", "shipped,dg1"])], cards, cpus)
-        run_stage("stage 4", [ev("dg2")], cards, cpus)
-        release("op_dagger pilot done")
-        status("report")
-        subprocess.run([PY, S + "dg_report.py", "--models", "shipped", "dg1", "st1", "dg2", "--control", "st1", "--out", str(OUT / "report/pilot")],
-                       check=True, cwd=REPO, stdout=open(CH / "report.log", "w"), stderr=subprocess.STDOUT)
-        (CH / "DONE").write_text(time.strftime("%F %T\n"))
-        status("DONE")
-    except BaseException:
-        release("op_dagger pilot error")
-        (CH / "ERROR").write_text(traceback.format_exc())
-        status("ERROR")
-        raise
+    tr = lambda tag, extra: ([S + "dg_train.py", "--tag", tag, "--steps", str(a.steps), "--workers", "12"] + extra, f"train-{tag}", OUT / "runs" / tag / "ckpt-final.pt", True)  # noqa: E731
+    ev = lambda m: ([S + "dg_roll.py", "eval", "--model", m, "--set", "heldout", "--workers", "12"], f"eval-{m}", R / m / "heldout-eval-0of1.npz", False)  # noqa: E731
+    co = lambda m, i: ([S + "dg_roll.py", "collect", "--model", m, "--set", "train", "--shard", f"{i}/2", "--workers", "12"], f"collect-{m}-{i}", R / m / f"train-collect-{i}of2.npz", False)  # noqa: E731
+    after = []
+    for name, jobs in (("stage 1", [tr("dg1", ["--rolls", "shipped"]), tr("st1", ["--rolls", "shipped", "--static"]), ev("shipped")]),
+                       ("stage 2", [co("dg1", 0), co("dg1", 1), ev("dg1"), ev("st1")]),
+                       ("stage 3", [tr("dg2", ["--rolls", "shipped,dg1"])]),
+                       ("stage 4", [ev("dg2")])):
+        after = submit_stage(name, jobs, after, a)
+    rep = shlex.join([PY, S + "dg_report.py", "--models", "shipped", "dg1", "st1", "dg2", "--control", "st1", "--out", str(OUT / "report/pilot")])
+    rep += f" && date '+%F %T' > {shlex.quote(str(CH / 'DONE'))}"
+    if a.dry_run:
+        print(f"report: would submit after {after}\n  {rep}")
+        return
+    from jevdrive.cl import pool as P
+    jid = P.submit(rep, name="dg-report", owner="op_dagger pilot", vram_gb=2, after=after, log_dir=str(CH / "report"), cwd=str(REPO))
+    status(f"submitted; report job {jid} (python -m jevdrive.cl queue)")
+    if a.wait:
+        st = P.wait([jid], 120)[jid]
+        status(f"report job {jid}: {st}")
+        sys.exit(0 if st == "done" else 1)
 
 
 if __name__ == "__main__":

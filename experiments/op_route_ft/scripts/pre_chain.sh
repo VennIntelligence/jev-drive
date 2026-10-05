@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rc-*-pre chain (plans/2026-10-05-route-ft-prereg.md, 2026-10-06 section) on a leased card (lane rft-pre). STATUS / DONE / ERROR in $R/chain/<phase>/.
+# rc-*-pre chain (plans/2026-10-05-route-ft-prereg.md, 2026-10-06 section) on one card the caller holds (a pool job's {gpu} / {cpus}, or `python -m jevdrive.cl hold`). STATUS / DONE / ERROR in $R/chain/<phase>/.
 #   pre_chain.sh pilot <gpu> <cpus>     rc-bear-pre 400 steps (tag pilot-bear-pre), open-loop readouts with O, rc-bear-s0, rc-ctl-s0
 #   pre_chain.sh full <gpu> <cpus>      rc-bear-pre and rc-ctl-pre (4000 steps) in parallel on the card, readouts, serving ONNX + adapter,
 #                                       real-checkpoint equivalence for rc-bear-pre

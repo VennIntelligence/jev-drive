@@ -8,7 +8,7 @@ Rule "DS no drop", made noise-aware: paired mean DS difference over (seed, route
 scaled to n paired runs (subset n = 19: 7.6 DS; full n = 38: 5.4 DS). The CI is jevdrive.stats.paired with routes as clusters.
 
   python experiments/op_guard/scripts/line_b2d_ds.py --candidate it_dw3-s0 [--mode subset|full] [--cl-lines b2d_turns,b2d_ds]
-      [--cards 2] [--stage smoke|all] [--collect-only] [--force]
+      [--stage smoke|all] [--collect-only] [--dry-run] [--force]
 """
 import sys
 from pathlib import Path

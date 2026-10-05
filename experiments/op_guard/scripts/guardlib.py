@@ -67,8 +67,8 @@ def line_args(line: str, desc: str = "") -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=desc or line)
     ap.add_argument("--candidate", required=True)
     ap.add_argument("--mode", choices=("subset", "full"), default="subset")
-    ap.add_argument("--gpu", type=int, default=0, help="physical card index (use the leased one)")
-    ap.add_argument("--cpus", default="", help="cpu list of the lease (taskset syntax), empty = unpinned")
+    ap.add_argument("--gpu", type=int, default=0, help="physical card index (the pool job's {gpu}, or a card held outside the pool)")
+    ap.add_argument("--cpus", default="", help="cpu list (taskset syntax; the pool job's {cpus}), empty = unpinned")
     ap.add_argument("--force", action="store_true", help="recompute even if lines/<id>.json exists")
     return ap
 

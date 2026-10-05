@@ -9,7 +9,7 @@ Readouts (rule: no drop = candidate paired value >= shipped):
   official    combined EPDMS; stage 1 / stage 2 as diagnostics. CIs: paired bootstrap over the 225 scene-mapping groups of the
               per-token devkit harness (nav_harness.py: the devkit's pdm_score + aggregation, whose mean is the official number).
               `full` mode also runs the devkit's own script (navsim_zs_score.sh) and reports its number (harness - official in the
-              note); `subset` mode runs only the harness on all leased cores (the official script on the other half doubles the CPU
+              note); `subset` mode runs only the harness on all given cores (the official script on the other half doubles the CPU
               time: 17 min on 8 cores vs the harness 12.5 min) and uses an existing official CSV of the candidate if there is one.
   early-turn  tokens whose PDM reference heading change within 2 s is >= 5 deg (results/navhard_early_turn.csv, frozen from
               decision 110's set: stage 1 231 / 450, stage 2 66 %); mean per-token EPDMS (stage-2 tokens unweighted, as

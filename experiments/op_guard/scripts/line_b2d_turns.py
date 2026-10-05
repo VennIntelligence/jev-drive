@@ -8,7 +8,7 @@ Primary readout: took-exit rate (choice, forced; paired vs shipped with a route-
 subset = full = the 25 turns (one seed; closed loop is not bitwise deterministic, single turns flip: decision 127).
 Shipped cache: $DATA_DIR/runs/rig122/arms/olnz-s2-k* (decision 127's olnz), used when the unit config is arm olnz exactly; --force reruns it.
 
-  python experiments/op_guard/scripts/line_b2d_turns.py --candidate it_dw3-s0 [--cl-lines b2d_turns,b2d_ds] [--cards 2]
+  python experiments/op_guard/scripts/line_b2d_turns.py --candidate it_dw3-s0 [--cl-lines b2d_turns,b2d_ds]
       [--stage smoke|all] [--collect-only] [--force]
 """
 import sys

@@ -1,4 +1,4 @@
-"""op_dagger fine-tune (op-train env, one leased GPU): the op_route_ft recipe without a route adapter (rft.RModel: stage 4 + plan pathway + action
+"""op_dagger fine-tune (op-train env, one GPU): the op_route_ft recipe without a route adapter (rft.RModel: stage 4 + plan pathway + action
 pathway trainable, stage 1-3 frozen; rft.RLoss: imitation + action target in the shipped head's scale on P rows, plan consistency + every head distilled
 to shipped on D rows, every other head distilled on all rows, dw 3), on WOD train clips with the images rendered online from the clip frames.
 
