@@ -112,7 +112,7 @@ def cmd_scan(a, run):
         if r:
             rows.append(dict(clip=c, chunk=int(ci.chunk[c]), **r))
     df = pd.DataFrame(rows)
-    df = df[avdi.feature_presence.reindex(df.clip)[list(FEATS[1:])].all(1).to_numpy()]
+    df = df[avdi.feature_presence.reindex(df["clip"])[list(FEATS[1:])].all(1).to_numpy()]
     df.to_csv(TOPIC / "results" / "candidates.csv", index=False)
     run.info(f"{len(df)} candidate turns ({(df.side == 'L').sum()} L / {(df.side == 'R').sum()} R)")
     rng = np.random.default_rng(0)
@@ -241,6 +241,7 @@ def cmd_opframes(a, run):
 
 
 def cmd_oprun(a, run):
+    from jevdrive.openpilot.frames import unpack_luma
     from jevdrive.openpilot.model import T_IDXS, OPModel, decode
     ACTION_T = (0.275, 0.525)
     mod = OPModel("cinque", "trt")
@@ -262,9 +263,10 @@ def cmd_oprun(a, run):
         cy, sy = np.cos(yaw), np.sin(yaw)
         rear = dv + p - np.stack([cy * dv[0] - sy * dv[1], sy * dv[0] + cy * dv[1]], -1)
         res[f.stem] = dict(yaw=np.interp(T, T_IDXS, yaw), xy=np.stack([np.interp(T, T_IDXS, rear[:, k]) for k in range(2)], -1),
-                           curv=-o["curvature"], v=v)
+                           curv=-o["curvature"], v=v, luma=np.stack([unpack_luma(z["frames"][-1, k]) for k in (0, 1)]))
     np.savez(cache("op") / "preds.npz", keys=np.array(list(res)), yaw=np.stack([r["yaw"] for r in res.values()]),
-             xy=np.stack([r["xy"] for r in res.values()]), curv=np.array([r["curv"] for r in res.values()]))
+             xy=np.stack([r["xy"] for r in res.values()]), curv=np.array([r["curv"] for r in res.values()]),
+             luma=np.stack([r["luma"] for r in res.values()]))
     run.summary["n"] = len(res)
 
 
