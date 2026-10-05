@@ -18,14 +18,14 @@ import numpy as np  # noqa: E402
 
 from jevdrive.common import data_dir  # noqa: E402
 
-DATA = "lb_navtest"
+DATA, FRAMES = "lb_navtest", "gimm"       # set from --data / --frames (Stage B: lb_hq_navtestX, protocols warp / keys / real)
 WAJEPA_CSV = "runs/top10_t2/navsim/wajepa/20260926-122804/v2/2026.09.26.16.32.53.csv"
 V2 = ["no_at_fault_collisions", "drivable_area_compliance", "driving_direction_compliance", "traffic_light_compliance", "ego_progress",
       "time_to_collision_within_bound", "lane_keeping", "history_comfort", "two_frame_extended_comfort"]
 
 
 def stem(m):
-    return f"gimm@cinque_PP{m.replace(':', '_')}"
+    return f"{FRAMES}@cinque_PP{m.replace(':', '_')}"
 
 
 def cmd_plans(a):
@@ -38,7 +38,8 @@ def cmd_plans(a):
     dev = torch.device("cuda")
     with Run("op_parity", "navtest-plans", config=vars(a)) as run:
         run.use_split(splits.load("navsim/navtest"))
-        S = T.Store([DATA], dev, need_side=True)
+        side_ok = (data_dir() / "runs" / "op_parity" / "cache" / DATA / "side.npy").exists()
+        S = T.Store([DATA], dev, need_side=side_ok, frames=FRAMES)
         names = S.tab["names"]
         assert names.tolist() == OL.meta(DATA)["names"]
         pdir = OL.root(DATA, "plans")
@@ -54,7 +55,7 @@ def cmd_plans(a):
                 for i in range(0, S.n, a.batch):
                     r = torch.arange(i, min(i + a.batch, S.n), device=dev)
                     mask = torch.zeros(len(r), 3, dtype=torch.bool, device=dev) if opt == "noside" else None
-                    o = model(S.front[r], S.ego[r], S.tc[r], S.side[r], mask).float().cpu().numpy()
+                    o = model(S.front[r], S.ego[r], S.tc[r], S.side[r] if side_ok else None, mask).float().cpu().numpy()
                     mu[i:i + len(r)] = o[:, pi].reshape(-1, 33, 15)
                     sd[i:i + len(r)] = np.exp(np.minimum(o[:, ps], 11)).reshape(-1, 33, 15)
             plans[m] = mu
@@ -67,7 +68,7 @@ def cmd_plans(a):
             del model
             torch.cuda.empty_cache()
         onnx = pdir / "gimm@cinque.npz"
-        if onnx.exists():
+        if onnx.exists() and FRAMES == "gimm" and DATA == "lb_navtest":
             z = np.load(onnx)
             assert z["names"].tolist() == names.tolist()
             ref = z["plan_mu"] if "plan_mu" in z else None
@@ -79,7 +80,7 @@ def cmd_plans(a):
                 run.info(f"P0 vs ONNX: {eq['P0_vs_onnx']}")
         out = data_dir() / "runs" / "op_parity" / "navtest"
         out.mkdir(parents=True, exist_ok=True)
-        (out / f"equivalence_{a.tag}.json").write_text(json.dumps(eq, indent=1))
+        (out / f"equivalence_{a.tag}_{DATA}_{FRAMES}.json").write_text(json.dumps(eq, indent=1))
         run.summary["equivalence"] = eq
 
 
@@ -89,10 +90,12 @@ def cmd_score(a):
     stems = [stem(m) for m in a.models]
     subprocess.check_call([jev, str(_R / "experiments/op_openloop/lib/op_interp.py"), "nav-export", "--data", DATA, "--adapters", "base",
                            "--plans", *stems], env=env)
+    if DATA != "lb_navtest":                                   # subset run dir: score only its tokens (full v2_navtest metric cache)
+        env["TOKENS_FILE"] = str(data_dir() / "runs" / "op_lb" / DATA / "tokens.txt")
     sc = str(_R / "experiments/zeroshot_openloop/archive/navsim_zs_score.sh")       # per stem (op_interp_score.sh would score every unscored file)
     for st in stems:
         name = f"opi_{DATA}_{st.replace('@', '-')}__base"
-        if eval_csv(st[len("gimm@cinque_PP"):], a.ver) is not None:
+        if eval_csv(st[len(f"{FRAMES}@cinque_PP"):], a.ver) is not None:
             continue
         f = data_dir() / "runs" / "op_lb" / DATA / "preds" / f"{st.replace('@', '-')}__base.npz"
         with open(data_dir() / "runs" / "op_lb" / DATA / f"score_{name}.log", "w") as log:
@@ -165,6 +168,8 @@ def cmd_report(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
+    ap.add_argument("--data", default="lb_navtest")
+    ap.add_argument("--frames", default="gimm", choices=["gimm", "warp", "keys", "real"])
     p = sp.add_parser("plans")
     p.add_argument("--models", nargs="+", required=True)
     p.add_argument("--batch", type=int, default=128)
@@ -178,4 +183,5 @@ if __name__ == "__main__":
     p.add_argument("--ver", default="v2")
     p.add_argument("--tag", default="pilot")
     a = ap.parse_args()
+    DATA, FRAMES = a.data, a.frames
     {"plans": cmd_plans, "score": cmd_score, "report": cmd_report}[a.cmd](a)

@@ -10,6 +10,9 @@ $DATA_DIR/runs/op_parity/cache/<data>/:
                                    (jevdrive.navsim_zs.OpenpilotMaps(yaw_deg)), pair (key k - 1, key k) at 2 Hz, k = 1..3
   tab.npz    names, log, ego (N, 20) lib/parity_adapter.ego_features, raw pose / vel / acc / cmd, fut (N, 8, 3) logged future
              (x, y, yaw at 0.5 .. 4 s, rear axle), cam (N, 3) camera position, lht, speed
+  <data>@<frames>/front.npy  the same tokens under another frame protocol (prereg addendum 1, Stage B): warp (8 slots, CPU ego-motion
+             warp lattice frames), real (8 slots, real 10 Hz lattice frames; lb_hq_navtestX), keys (N: (N, 4, 32, 512), 4 slots at the 2 Hz keys,
+             pairs (key k - 1, key k), the first with a zero image)
   teacher.npz  shipped Cinque (port, fp16) on the same rows: out (N, Dd) distilled output positions, plan (N, 33, 15) MDN mean
 
 Rendering runs on a CPU process pool (all cores of the job), the encoder on one GPU, overlapped (rendered chunks stream into the GPU
@@ -43,6 +46,13 @@ def croot(data, *p):
 
 # ---------------------------------------------------------------- side cameras (CPU workers)
 _MAPS = {}
+
+
+def _warp_job(args):
+    """CPU ego-motion warp of the 6 lattice frames (jevdrive.op_interp.synth_cpu), as op_lb's `warp` synthesis."""
+    from jevdrive import op_interp as I
+    kf, pose, vel, cam, times = args
+    return I.synth_cpu(kf, "warp", times, I.track_navsim(pose, vel), cam)
 
 
 def render_side(cams4: list) -> np.ndarray:
@@ -111,27 +121,52 @@ def main(a):
         tab = cache.cached(root / "tab.npz", cache.key(params=kbase, code=[PA.ego_features]), make_tab, force=a.force)
         run.info(f"tab: {N} rows, future missing {int(np.isnan(tab['fut'][:, 0, 0]).sum())}")
 
-        # ---- front hidden tokens (keys + GIMM, nav_plans protocol)
+        # ---- front hidden tokens, one frame protocol (prereg addendum 1)
         def make_front():
             keys = OL.Keys(a.data)
-            syn = np.load(OL.root(a.data) / "gimm.npy", mmap_mode="r")
             _, src = OL._steps(0.0, False)
-            out = np.zeros((N, 8) + A.H_SHAPE, np.float16)
             t0 = time.time()
+            pool = None
+            if a.frames == "keys":                                  # N: 4 slots at the 2 Hz keys, pairs (key k - 1, key k); key -1 is a zero image
+                def load(rows):
+                    kf = keys[rows]                                 # (b, 4, 2, 6, 128, 256)
+                    prev = np.concatenate([np.zeros_like(kf[:, :1]), kf[:, :-1]], 1)
+                    return rows, prev.reshape(-1, *FRAME), kf.reshape(-1, *FRAME)
+                n_slot = 4
+            else:                                                   # Q8: steps 2, 6, .., 30 of the op_lb rollout, keys + 6 lattice frames
+                syn = None if a.frames == "warp" else np.load(OL.root(a.data) / f"{a.frames}.npy", mmap_mode="r")
+                pool = ProcessPoolExecutor(a.workers or max(1, n_cpus() - 4)) if a.frames == "warp" else None
 
-            def load(rows):
-                kf, sf = keys[rows], np.asarray(syn[rows[0]:rows[-1] + 1])
-                img = lambda j, s: (kf[j][src[s][1]] if src[s][0] == "k" else sf[j][src[s][1]]) if s >= 0 else np.zeros(FRAME, np.uint8)  # noqa: E731
-                cur = np.stack([[img(j, s) for s in STEPS] for j in range(len(rows))])
-                prev = np.stack([[img(j, s - 4) for s in STEPS] for j in range(len(rows))])
-                return rows, prev.reshape(-1, *FRAME), cur.reshape(-1, *FRAME)
+                def load(rows):
+                    kf = keys[rows]
+                    if syn is None:
+                        sf = np.stack(list(pool.map(_warp_job, [(kf[j], mt["pose"][i], mt["vel"][i], mt["cam"][i], np.asarray(mt["syn_t"]))
+                                                                for j, i in enumerate(rows)])))
+                    else:
+                        sf = np.asarray(syn[rows[0]:rows[-1] + 1])
+                    img = lambda j, s: (kf[j][src[s][1]] if src[s][0] == "k" else sf[j][src[s][1]]) if s >= 0 else np.zeros(FRAME, np.uint8)  # noqa: E731
+                    cur = np.stack([[img(j, s) for s in STEPS] for j in range(len(rows))])
+                    prev = np.stack([[img(j, s - 4) for s in STEPS] for j in range(len(rows))])
+                    return rows, prev.reshape(-1, *FRAME), cur.reshape(-1, *FRAME)
+                n_slot = 8
+            out = np.zeros((N, n_slot) + A.H_SHAPE, np.float16)
             chunks = [np.arange(i, min(i + 32, N)) for i in range(0, N, 32)]
             with ThreadPoolExecutor(8) as ex:
-                for rows, prev, cur in run.tqdm(ex.map(load, chunks), total=len(chunks), desc="front"):
-                    out[rows] = enc(prev, cur).reshape(len(rows), 8, *A.H_SHAPE)
-            timing.update(front_pairs_per_s=8 * N / (time.time() - t0))
+                for rows, prev, cur in run.tqdm(ex.map(load, chunks), total=len(chunks), desc=f"front {a.frames}"):
+                    out[rows] = enc(prev, cur).reshape(len(rows), n_slot, *A.H_SHAPE)
+            if a.frames == "warp":
+                pool.shutdown()
+            timing.update({f"front_{a.frames}_pairs_per_s": n_slot * N / (time.time() - t0)})
             return out
-        front = cache.cached(root / "front.npy", cache.key(params=kbase | dict(steps=STEPS.tolist()), code=[encoder]), make_front, force=a.force)
+        fparams = kbase | dict(steps=STEPS.tolist()) if a.frames == "gimm" else kbase | dict(frames=a.frames, steps=STEPS.tolist(), v="pp2")
+        froot = root if a.frames == "gimm" else croot(f"{tag}@{a.frames}")
+        froot.mkdir(parents=True, exist_ok=True)
+        front = cache.cached(froot / "front.npy", cache.key(params=fparams, code=[encoder]), make_front, force=a.force)
+        if a.frames != "gimm":                                      # tab / side / teacher live in the base dir (the G protocol's)
+            run.summary |= {"n": N, "front_shape": list(front.shape), **timing}
+            if timing:
+                (froot / "timing.json").write_text(json.dumps(timing, indent=1))
+            return
 
         # ---- side cameras
         def make_side():
@@ -157,6 +192,8 @@ def main(a):
                         buf, rows = [], []
             timing.update({"side_tokens_per_s": N / (time.time() - t0), "side_gpu_busy": sum(tb) / (time.time() - t0), "render_workers": W})
             return out
+        if a.no_side:
+            return
         side = cache.cached(root / "side.npy", cache.key(params=kbase | dict(cams=PA.SIDE_CAMS, t=PA.SIDE_T), code=[render_side, encoder]),
                             make_side, force=a.force)
 
@@ -187,5 +224,9 @@ if __name__ == "__main__":
     ap.add_argument("--data", required=True)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=0)
+    ap.add_argument("--frames", default="gimm", choices=["gimm", "warp", "keys", "real"],
+                    help="front frame protocol: gimm / warp / real = 8 slots at 0.2 s with that lattice source (real: lb_hq_navtestX only), "
+                         "keys = N, 4 slots at the 2 Hz keys; non-gimm fronts go to cache/<data>@<frames>/, tab and side stay in cache/<data>/")
+    ap.add_argument("--no-side", action="store_true", help="skip the side / rear cameras (and the teacher): eval-only subsets")
     cli_args(ap)
     main(ap.parse_args())

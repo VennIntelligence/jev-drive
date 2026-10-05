@@ -54,6 +54,7 @@ class Cfg:
     warmup: int = 100
     eval_every: int = 200
     data: tuple = ("lb_navtrain", "lb_h1train")
+    frames: str = "gimm"                  # front protocol (prereg addendum 1): gimm (G) | warp (W) | keys (N)
     split: str = "navsim/op-parity-pilot"
 
 
@@ -74,11 +75,12 @@ class PModel(nn.Module):
         self.adapter = PA.ParityAdapter(use_ego=k["ego"], use_side=k["side"]) if (k["ego"] or k["side"]) else None
 
     def forward(self, front, ego, tc, side=None, side_mask=None, inputs_on=True):
-        """front (B, 8, 32, 512) cached hidden tokens -> outputs (B, n). inputs_on False / no adapter: the bias is not added (P1, anchor rows)."""
-        B = front.shape[0]
-        H = torch.cat([torch.zeros_like(front[:, :1]), front], 1).to(self.net.dtype)
-        valid = torch.ones(B, A.CONTEXT, dtype=torch.bool, device=H.device)
-        valid[:, 0] = False
+        """front (B, n, 32, 512) cached hidden tokens of the n newest policy slots (n = 8: the 0.2 s protocols; 4: N, one slot per 2 Hz key)
+        -> outputs (B, n_out). The 9 - n older slots are zero and invalid. inputs_on False / no adapter: the bias is not added."""
+        B, n = front.shape[:2]
+        H = torch.cat([front.new_zeros(B, A.CONTEXT - n, *front.shape[2:]), front], 1).to(self.net.dtype)
+        valid = torch.zeros(B, A.CONTEXT, dtype=torch.bool, device=H.device)
+        valid[:, A.CONTEXT - n:] = True
         if self.adapter is not None and inputs_on:
             H = self.adapter.apply(H, ego, side if self.adapter.use_side else None, side_mask)
         H = H * valid[:, :, None, None].to(H.dtype)
@@ -125,8 +127,11 @@ def rear(plan: torch.Tensor, cam_x: torch.Tensor, W: torch.Tensor):
 class Store:
     """The pp_prep caches of several data dirs, concatenated and moved to the device once (fp16 tokens)."""
 
-    def __init__(self, datas, dev, need_side=True, rows=None):
+    def __init__(self, datas, dev, need_side=True, rows=None, frames="gimm"):
+        """frames: the front protocol (cache/<data>@<frames>/front.npy; gimm = cache/<data>/front.npy). tab, side and the teacher always come from
+        cache/<data>/ (teacher = shipped Cinque on the G protocol, its in-distribution input: every protocol is anchored to the same targets)."""
         cr = data_dir() / "runs" / "op_parity" / "cache"
+        fdir = (lambda d: d) if frames == "gimm" else (lambda d: f"{d}@{frames}")
         tabs = [dict(np.load(cr / d / "tab.npz")) for d in datas]
         self.tab = {k: np.concatenate([t[k] for t in tabs]) for k in tabs[0]}
         n = len(self.tab["names"])
@@ -134,12 +139,15 @@ class Store:
         sel = self.rows
         cat = lambda f: np.concatenate([np.load(cr / d / f, mmap_mode="r") for d in datas]) if len(datas) > 1 else np.load(cr / datas[0] / f, mmap_mode="r")  # noqa: E731
         t = lambda x, dt=None: torch.from_numpy(np.ascontiguousarray(x)).to(dev, dt)  # noqa: E731
-        self.front = t(cat("front.npy")[sel])
+        self.front = t(np.concatenate([np.load(cr / fdir(d) / "front.npy", mmap_mode="r") for d in datas])[sel])
         self.side = t(cat("side.npy")[sel]) if need_side else None
-        tz = [dict(np.load(cr / d / "teacher.npz")) for d in datas]
-        self.t_out = t(np.concatenate([z["out"] for z in tz])[sel])
-        self.t_plan = t(np.concatenate([z["plan"] for z in tz])[sel])
-        self.di, self.pi = tz[0]["di"], tz[0]["pi"]
+        if all((cr / d / "teacher.npz").exists() for d in datas):
+            tz = [dict(np.load(cr / d / "teacher.npz")) for d in datas]
+            self.t_out = t(np.concatenate([z["out"] for z in tz])[sel])
+            self.t_plan = t(np.concatenate([z["plan"] for z in tz])[sel])
+            self.di, self.pi = tz[0]["di"], tz[0]["pi"]
+        else:                                                                     # eval-only subsets (lb_hq_navtestX)
+            self.t_out = self.t_plan = self.di = self.pi = None
         tb = {k: v[sel] for k, v in self.tab.items()}
         self.tb = tb
         self.ego = t(tb["ego"])
@@ -219,13 +227,13 @@ def main(a):
         torch.distributed.init_process_group("nccl")
         torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
     dev = torch.device("cuda")
-    cfg = Cfg(arm=a.arm, seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data), split=a.split)
+    cfg = Cfg(arm=a.arm, seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data), split=a.split, frames=a.frames)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
     tabs = np.concatenate([np.load(data_dir() / "runs" / "op_parity" / "cache" / d / "tab.npz")["names"] for d in cfg.data])
     tr_rows, dv_rows, sp = split_rows({"names": tabs}, cfg.split)
-    S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"])
+    S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames)
     model = PModel(cfg.arm).to(dev)
     base, new = model.groups()
     tstd = S.t_out[torch.as_tensor(tr_rows, device=dev)].float().std(0).clamp_min(1e-3)
@@ -312,4 +320,5 @@ if __name__ == "__main__":
     ap.add_argument("--data", nargs="+", default=["lb_navtrain", "lb_h1train"])
     ap.add_argument("--split", default="navsim/op-parity-pilot")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--frames", default="gimm", choices=["gimm", "warp", "keys"])
     main(ap.parse_args())
