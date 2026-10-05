@@ -9,7 +9,9 @@
 Join: `Samples("route_carla")` with OP_H_ROOT=<root> reads imgs + tab; `route_poly.attach(<root>/route.npz, ids)` gives the polylines of the
 exit rows. A trainer samples an exit row, takes `imgs[pose_row]` and `poly` (noise at train time with route_poly.noise_polyline).
 
-  python carla_pairs_pack.py --plan <poses.pkl> --render <render dir> --root <out root> [--drop-frames]
+  python carla_pairs_pack.py --plan <poses.pkl> --render <render dir> --root <out root> [--drop-frames] [--wide-key frames_wf160] [--ids-from <root>]
+  --wide-key: the wide slot of imgs.npy from that per-pose array (carla_pairs_render_ol.py --wide-focals) instead of frames[:, 1].
+  --ids-from: keep only (and require) the poses of an existing packed root, in that root's order (paired sets, experiments/op_wide_ft).
 """
 import argparse, json, math, pickle, sys
 from collections import Counter
@@ -39,17 +41,28 @@ def main():
     ap.add_argument("--render", required=True)
     ap.add_argument("--root", required=True)
     ap.add_argument("--drop-frames", action="store_true", help="delete the per-pose npz after they are packed and verified")
+    ap.add_argument("--wide-key", default="", help="per-pose array for the wide slot (e.g. frames_wf160)")
+    ap.add_argument("--ids-from", default="", help="packed root whose pose ids (and order) this pack must reproduce")
     a = ap.parse_args()
     root = Path(a.root)
     d = root / "samples" / "route_carla"
     d.mkdir(parents=True, exist_ok=True)
     P = [p for p in pickle.load(open(a.plan, "rb")) if (Path(a.render) / "frames" / p["town"] / (p["id"] + ".npz")).exists()]
+    if a.ids_from:
+        with np.load(Path(a.ids_from) / "samples/route_carla/tab.npz", allow_pickle=True) as z:
+            want = z["id"].tolist()
+        have = {p["id"]: p for p in P}
+        miss = [i for i in want if i not in have]
+        assert not miss, "%d poses of %s not rendered, e.g. %s" % (len(miss), a.ids_from, miss[:5])
+        P = [have[i] for i in want]
     n = len(P)
     assert n and len({p["id"] for p in P}) == n
     imgs = np.lib.format.open_memmap(d / "imgs.npy.tmp", mode="w+", dtype=np.uint8, shape=(n, 10, 2, 6, 128, 256))
     for i, p in enumerate(P):
         with np.load(Path(a.render) / "frames" / p["town"] / (p["id"] + ".npz")) as z:
             imgs[i] = z["frames"]
+            if a.wide_key:
+                imgs[i, :, 1] = z[a.wide_key]
     imgs.flush()
     del imgs
     (d / "imgs.npy.tmp").replace(d / "imgs.npy")

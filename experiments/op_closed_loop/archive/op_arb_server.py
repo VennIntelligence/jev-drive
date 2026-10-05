@@ -145,7 +145,7 @@ class ArbModel(ZP.OpenpilotModel):
             return (v * src_wh[0] + u).ravel(), bad.ravel()
         out = {}
         for name, f in ZP.rigs.OP_FOCAL.items():
-            M = opf.get_warp_matrix(np.array([0.0, 0.0, np.radians(key)]), opf.intrinsics(w, h, f), name == "wide")
+            M = opf.get_warp_matrix(np.array([0.0, 0.0, np.radians(key)]), opf.intrinsics(w, h, f), name == "wide", model_K=self.model_K[name])
             y, ybad = nn(M, (opf.MODEL_W, opf.MODEL_H), (w, h))
             uv, qbad = nn(M * np.array([[1, 1, .5], [1, 1, .5], [2, 2, 1]], np.float32), (opf.MODEL_W // 2, opf.MODEL_H // 2), (w // 2, h // 2))
             r, c = np.divmod(uv, w // 2)

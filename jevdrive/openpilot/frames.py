@@ -33,9 +33,28 @@ def rot_from_euler(rpy):
     return Rotation.from_euler("xyz", rpy).as_matrix()
 
 
-def get_warp_matrix(device_from_calib_euler, cam_K, bigmodel_frame=False):
-    """camera pixel <- model pixel (the M_inv the warp kernel samples with), as in modeld."""
-    model_K = SBIGMODEL_K if bigmodel_frame else MEDMODEL_K
+def wide_K(focal=None):
+    """Wide (big) model-frame intrinsics with model-frame focal `focal` (default openpilot's 455 = 58.7 deg HFOV); principal point,
+    and so the horizon row 151.8, unchanged. A smaller focal squeezes a wider scene into the same 512 x 256 frame (experiments/op_fov,
+    op_wide_ft: 160 = 116 deg)."""
+    if focal is None or float(focal) == SBIGMODEL_K[0, 0]:
+        return SBIGMODEL_K
+    K = SBIGMODEL_K.copy()
+    K[0, 0] = K[1, 1] = float(focal)
+    return K
+
+
+def env_wide_focal():
+    """Model-frame focal of the wide input for a harness process: env OP_WIDE_FOCAL (unset = openpilot's 455)."""
+    import os
+    v = os.environ.get("OP_WIDE_FOCAL", "")
+    return float(v) if v else None
+
+
+def get_warp_matrix(device_from_calib_euler, cam_K, bigmodel_frame=False, model_K=None):
+    """camera pixel <- model pixel (the M_inv the warp kernel samples with), as in modeld. model_K overrides the model-frame
+    intrinsics (wide_K(f) for a widened wide frame)."""
+    model_K = model_K if model_K is not None else SBIGMODEL_K if bigmodel_frame else MEDMODEL_K
     calib_from_model = np.linalg.inv(model_K @ VIEW_FROM_DEVICE)  # view_frame_from_calib_frame(0,0,0) = VIEW_FROM_DEVICE
     return cam_K @ VIEW_FROM_DEVICE @ rot_from_euler(device_from_calib_euler) @ calib_from_model
 

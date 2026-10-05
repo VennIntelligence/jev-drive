@@ -115,6 +115,9 @@ DECLARED = {
                                "B2D_MOUNTS['openloop']: x 1.59 m, z 1.86 m) instead of openpilot's 1.22 m; named presets keep "
                                "1.22 m at the bumper line (x 3.8 m) and the legacy 1.433 m windshield top (hood fills 20% of the "
                                "frame at 1.22 m inside the MKZ)", "d104.8, d125, unified_interface.md"),
+        "rig.wide": ("real-car", "sensor-f<focal>: the same wide sensor (1928 x 1208, f 567, 118.9 deg) warped to a wide model frame of "
+                                 "focal <focal> instead of 455 (160 = 116 deg HFOV, horizon row unchanged); only for models fine-tuned on "
+                                 "that input (experiments/op_wide_ft); a comma device can do the same warp", "op_wide_ft"),
         "history.warmup": ("real-car", "warm-up while braked at the start: real frames from a standing car", "-"),
         "lateral.source": ("LB", "legacy p7 arms track the plan path", "d118.5"),
         "lateral.exec": ("LB", "legacy drive preset: raw action curvature through the bicycle model, no clip / delay", "d118.5"),
@@ -288,7 +291,9 @@ def b2d_values(cfg, env=None):
         tricks.append("hybrid_plan_above_%gmps" % float(a.get("hyb_v", 3.0)))
     if float(a.get("zone_gain", 1.0)) != 1.0:
         tricks.append("zone_gain:%g" % float(a["zone_gain"]))
-    return {"rig.height_m": float(mount[2]), "history.rate_hz": round(1.0 / tick, 2),
+    wf = env.get("OP_WIDE_FOCAL", "")                    # server-side wide warp focal (zeroshot_policy_server; experiments/op_wide_ft)
+    wide = "sensor" if not wf or float(wf) == DEVICE["wide_focal_px"] else "sensor-f%g" % float(wf)
+    return {"rig.height_m": float(mount[2]), "rig.wide": wide, "history.rate_hz": round(1.0 / tick, 2),
             "history.warmup": "real" if float(cfg.get("warmup_s", 0)) > 0 else "cold",
             "lateral.source": "action" if curv else "plan", "lateral.exec": "op-path" if opc else "bicycle" if curv else "p7",
             "lateral.delay_s": float(opc_rule.get("delay", 0.25)) if opc else "carla",

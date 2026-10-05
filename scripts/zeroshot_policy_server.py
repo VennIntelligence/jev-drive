@@ -136,15 +136,18 @@ class OpenpilotModel:
         self.free = [] if self.context_rate else [self.make() for _ in range(max(0, a.pool - 1))] + [self.model]
         w, h = rigs.OP_CAMERA_WH
         self.idx = {}
+        # env OP_WIDE_FOCAL: model-frame focal of the wide input (unset = 455, 58.7 deg; experiments/op_wide_ft trains with 160 = 116 deg)
+        self.model_K = {"road": opf.MEDMODEL_K, "wide": opf.wide_K(opf.env_wide_focal())}
         for name, f in rigs.OP_FOCAL.items():
-            M = opf.get_warp_matrix(np.zeros(3), opf.intrinsics(w, h, f), name == "wide")
+            M = opf.get_warp_matrix(np.zeros(3), opf.intrinsics(w, h, f), name == "wide", model_K=self.model_K[name])
             y = opf._nn_index(M, (opf.MODEL_W, opf.MODEL_H), (w, h))
             uv = opf._nn_index(M * np.array([[1, 1, .5], [1, 1, .5], [2, 2, 1]], np.float32),
                                (opf.MODEL_W // 2, opf.MODEL_H // 2), (w // 2, h // 2))
             r, c = np.divmod(uv, w // 2)
             quad = np.stack([(2 * r + i) * w + 2 * c + j for i in (0, 1) for j in (0, 1)])   # 2x2 block per chroma
             self.idx[name] = (y, quad)
-        self.meta = {"model": a.model, "backend": a.backend, "step_hz": 5 if self.context_rate else 20}
+        self.meta = {"model": a.model, "backend": a.backend, "step_hz": 5 if self.context_rate else 20,
+                     "wide_focal": float(self.model_K["wide"][0, 0])}
         st = self.new_state()
         img = {"OP_ROAD": np.zeros((h, w, 4), np.uint8), "OP_WIDE": np.zeros((h, w, 4), np.uint8)}
         for _ in range(3):
@@ -224,7 +227,7 @@ class OpenpilotModel:
         from PIL import Image, ImageDraw
         opf = self.opf
         tiles = []
-        for k, K in enumerate((opf.MEDMODEL_K, opf.SBIGMODEL_K)):
+        for k, K in enumerate((self.model_K["road"], self.model_K["wide"])):
             im = Image.fromarray(opf.unpack_luma(img2[k])).convert("RGB")
             p = plan_pos[plan_pos[:, 0] > 1] + [0, 0, rigs.OP_MOUNT_RIG[2]]   # plan z is height above the road
             uvw = (K @ opf.VIEW_FROM_DEVICE @ p.T).T

@@ -55,8 +55,10 @@ ALAT_CAP = 3.0                    # m/s^2, speed cap of the CARLA targets on the
 NEG_NPZ = "processed/op_route_cmd/navtrain/route_neg.npz"   # map-screened negatives (op_route_cmd results/negatives.md), navtrain tokens
 ROUTE_NPZ = {"nav": "processed/op_route_cmd/navtrain/route.npz", "wod": "processed/op_route_cmd/wod/route.npz"}
 CARLA_ROOTS = {"ol": "runs/op_route_cmd/carla_pairs_s10000ol/packed", "old": "runs/op_route_cmd/carla_pairs_s10000/packed",
-               "near": "runs/op_route_ft/carla_near/packed"}
-CARLA_CAM = {"ol": 1.59, "old": 1.519, "near": 1.59}
+               "near": "runs/op_route_ft/carla_near/packed",
+               # experiments/op_wide_ft: the ol poses re-rendered once, wide slot cut at model focal 455 (58.7 deg) / 160 (116 deg) from one capture
+               "w58": "runs/op_wide_ft/carla/p58", "w116": "runs/op_wide_ft/carla/p116"}
+CARLA_CAM = {"ol": 1.59, "old": 1.519, "near": 1.59, "w58": 1.59, "w116": 1.59}
 NEAR_VMIN = 0.3                   # m/s, near rows: action supervised from openpilot's latActive speed (curvature = action / max(1, v)^2 holds there)
 NEAR_AUP = 1.5                    # m/s^2, near rows: the speed floor of the plan target ramps from v0 to VFLOOR at this rate (not a jump to VFLOOR)
 
@@ -319,6 +321,7 @@ class RCfg:
     t6: float = 0.0                       # rc-all: drivable hinge weight on nav rows
     t6_margin: float = 0.4
     pre: bool = False                     # rc-*-pre: turn-in action target at approach poses (act_target_pre), P rows only
+    carla_trunk: str | None = None        # op_wide_ft: CARLA input pixels (trunks) from this bank; rows / targets / teacher from `carla`
     # rc-*-near: rows["Pnear"] > 0 draws P rows from the near set (CARLA_ROOTS["near"]); same losses, targets from its dense path
 
     def dump(self):
@@ -343,19 +346,32 @@ ARMS = {
     "smoke-near": dict(steps=30, ckpt_every=10 ** 9, workers=4, rows={"Pnav": 7, "Pwod": 5, "Pcar": 10, "Pnear": 6, "Ncar": 3, "Nreal": 3, "Dnav": 5,
                                                                       "Dwod": 4, "Dhc": 2, "Dcar": 3}),
     "smoke-all": dict(steps=20, carla="old", ckpt_every=10 ** 9, workers=4, t4=True, t5=True, t6=0.3),
+    # experiments/op_wide_ft: rc-bear-fix on the re-rendered CARLA pairs, wide slot 58.7 deg (wf-w58) vs 116 deg (wf-w116), same rows / targets /
+    # teacher (w58 bank) / seed; real and Dhc rows keep 58.7 deg in both (no wide coverage there)
+    "wf-w58": dict(enc="bear", carla="w58"),
+    "wf-w116": dict(enc="bear", carla="w58", carla_trunk="w116"),
+    "wf-w116-ctl": dict(enc="bear", zero_cmd=True, carla="w58", carla_trunk="w116"),
+    "smoke-wf": dict(steps=30, ckpt_every=10 ** 9, workers=4, carla="w58", carla_trunk="w116"),
 }
 ROLE = {"P": 1, "D": 2, "N": 3}
 
 
 class Carla:
-    def __init__(self, which):
+    def __init__(self, which, trunk=None):
+        """trunk: take the stage-3 trunks (the input pixels) from another bank of the same poses (op_wide_ft: W116 arm = w58 rows, targets and
+        teacher with the w116 trunks)."""
         root = data_dir() / CARLA_ROOTS[which]
         with np.load(root / "samples/route_carla/tab.npz", allow_pickle=True) as z:
             self.tab = {k: z[k] for k in z.files}
         with np.load(root / "route.npz", allow_pickle=True) as z:
             self.r = {k: z[k] for k in z.files}
         b = rroot("bank", which)
-        self.T = np.load(b / "trunk.npy", mmap_mode="r")
+        if trunk and trunk != which:
+            with np.load(data_dir() / CARLA_ROOTS[trunk] / "samples/route_carla/tab.npz", allow_pickle=True) as z:
+                assert (z["id"] == self.tab["id"]).all(), f"bank {trunk} poses differ from {which}"
+            self.T = np.load(rroot("bank", trunk) / "trunk.npy", mmap_mode="r")
+        else:
+            self.T = np.load(b / "trunk.npy", mmap_mode="r")
         with np.load(b / "teacher.npz") as z:
             self.tea = {k: z[k] for k in z.files}
         self.cam = CARLA_CAM[which]
@@ -419,7 +435,7 @@ class Batcher(torch.utils.data.Dataset):
 
     def _open(self):
         c = self.cfg
-        self.C = Carla(c.carla)
+        self.C = Carla(c.carla, c.carla_trunk)
         C = self.C
         rows_of(C)
         self.real = {d: Real(d) for d in ("nav", "wod")}
@@ -744,6 +760,8 @@ def cfg_of(arm, seed=0, steps=0, carla=None) -> RCfg:
     if carla:
         c = replace(c, carla=carla)
     return c
+
+
 
 
 def cmd_train(a):

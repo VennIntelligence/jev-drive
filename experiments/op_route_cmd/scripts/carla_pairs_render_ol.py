@@ -11,6 +11,8 @@
   * Extra: a wide raw capture of the t0 pose, three level pinhole cameras at yaw -60 / 0 / +60 deg, 960 x 540, f 480 px (90 deg each, ~210 deg
     in total, 30 deg overlap), same mount, JPEG q90 in <out>/pano/<town>/<pose id>.npz (jpeg_l, jpeg_c, jpeg_r as uint8 byte arrays, BGR). A wider
     model input can be cut from them later (rays from the f / yaw above) without re-rendering. The pano sensors only render for the t0 grab.
+  * Optional (--wide-focals 160[,..], experiments/op_wide_ft): extra wide model frames cut from the SAME wide sensor capture at a smaller model-frame
+    focal (horizon row unchanged), stored per pose as `frames_wf<f>` (10, 6, 128, 256) next to `frames`; --no-pano skips the pano capture.
 
   $DATA_DIR/envs/carla/bin/python carla_pairs_render_ol.py --plan <poses.pkl> --out <dir> --gpu 0 --idx 160 --cpus 0-3 [--shard 0/6] [--limit N] [--hero]
   -> <dir>/frames/<town>/<id>.npz (frames (10, 2, 6, 128, 256) uint8, same layout as before), <dir>/pano/<town>/<id>.npz, <dir>/render_<shard>.jsonl, DONE_/ERROR_
@@ -48,13 +50,21 @@ def nn_index(M, dst_wh, src_wh):
     return (yi * src_wh[0] + xi).ravel()
 
 
-def build_idx():
-    """zeroshot_policy_server.OpenpilotModel.__init__: name -> (luma gather index, 2 x 2 chroma block indices); rpy 0."""
+def wide_model_K(fm):
+    K = MODEL_K["wide"].copy()
+    K[0, 0] = K[1, 1] = float(fm)
+    return K
+
+
+def build_idx(wide_focals=()):
+    """zeroshot_policy_server.OpenpilotModel.__init__: name -> (luma gather index, 2 x 2 chroma block indices); rpy 0. Extra wide model focals
+    (OP_WIDE_FOCAL in the server) under the names `wf<f>`, cut from the wide sensor."""
     w, h = SENSOR_WH
     out = {}
-    for name, f in FOCAL.items():
+    jobs = [(name, f, MODEL_K[name]) for name, f in FOCAL.items()] + [("wf%g" % fm, FOCAL["wide"], wide_model_K(fm)) for fm in wide_focals]
+    for name, f, MK in jobs:
         cam_K = np.array([[f, 0, w / 2], [0, f, h / 2], [0, 0, 1.]])
-        M = cam_K @ VIEW_FROM_DEVICE @ np.linalg.inv(MODEL_K[name] @ VIEW_FROM_DEVICE)      # frames.get_warp_matrix(zeros)
+        M = cam_K @ VIEW_FROM_DEVICE @ np.linalg.inv(MK @ VIEW_FROM_DEVICE)      # frames.get_warp_matrix(zeros)
         y = nn_index(M, (MODEL_W, MODEL_H), (w, h))
         uv = nn_index(M * np.array([[1, 1, .5], [1, 1, .5], [2, 2, 1]], np.float32), (MODEL_W // 2, MODEL_H // 2), (w // 2, h // 2))
         r, c = np.divmod(uv, w // 2)
@@ -181,7 +191,7 @@ class Rig:
         self.world.set_weather(getattr(self.carla.WeatherParameters, name))
 
 
-def render_pose(rig, idx, pose, stats):
+def render_pose(rig, idx, pose, stats, pano_on=True):
     h = pose["hist"]
     n = len(h["x"])
     stopped = pose["profile"] == "stopped"
@@ -202,24 +212,29 @@ def render_pose(rig, idx, pose, stats):
             break
     stats["settle_ticks"] = ticks
     t_settle = time.perf_counter()
-    frames = []
+    frames, extra = [], {k: [] for k in idx if k.startswith("wf")}
     for j, k in enumerate(order):
         if j:
             rig.set_pose(h["x"][k], h["y"][k], h["z"][k], h["yaw"][k], h["pitch"][k])
             got = rig.grab()
         frames.append(np.stack([pack(got[0], idx["road"]), pack(got[1], idx["wide"])]))
+        for name in extra:
+            extra[name].append(pack(got[1], idx[name]))
     if stopped:
         frames = frames * n
+        extra = {k: v * n for k, v in extra.items()}
     t1 = time.perf_counter()
-    rig.listen(range(5))                          # pano at t0: the pose is unmoved; exposure of the fresh sensors needs a few ticks
-    for _ in range(3):
-        got = rig.grab()
-    pano = [cv2.imencode(".jpg", got[2 + i][:, :, :3], [cv2.IMWRITE_JPEG_QUALITY, PANO_Q])[1] for i in range(3)]
-    rig.listen(range(2))
+    pano = None
+    if pano_on:
+        rig.listen(range(5))                      # pano at t0: the pose is unmoved; exposure of the fresh sensors needs a few ticks
+        for _ in range(3):
+            got = rig.grab()
+        pano = [cv2.imencode(".jpg", got[2 + i][:, :, :3], [cv2.IMWRITE_JPEG_QUALITY, PANO_Q])[1] for i in range(3)]
+        rig.listen(range(2))
     t2 = time.perf_counter()
-    stats.update(renders=ticks + len(order) - 1 + 3, wall_settle=t_settle - t0, wall_frames=t1 - t_settle, wall_pano=t2 - t1,
-                 mean_y=float(frames[-1][0][:4].mean()), pano_kb=round(sum(len(p) for p in pano) / 1024, 1))
-    return np.stack(frames), pano
+    stats.update(renders=ticks + len(order) - 1 + (3 if pano_on else 0), wall_settle=t_settle - t0, wall_frames=t1 - t_settle, wall_pano=t2 - t1,
+                 mean_y=float(frames[-1][0][:4].mean()), pano_kb=round(sum(len(p) for p in pano) / 1024, 1) if pano else 0.0)
+    return np.stack(frames), pano, {"frames_" + k: np.stack(v) for k, v in extra.items()}
 
 
 # ---------------------------------------------------------------- main
@@ -235,7 +250,10 @@ def main():
     ap.add_argument("--ids", default="", help="comma list of pose ids (test)")
     ap.add_argument("--hero", action="store_true")
     ap.add_argument("--towns", default="")
+    ap.add_argument("--wide-focals", default="", help="extra wide model-frame focals, e.g. 160 (stored as frames_wf160)")
+    ap.add_argument("--no-pano", action="store_true", help="skip the t0 pano capture")
     a = ap.parse_args()
+    wfs = [float(x) for x in a.wide_focals.split(",") if x]
     out = Path(a.out)
     for sub in ("frames", "pano"):
         (out / sub).mkdir(parents=True, exist_ok=True)
@@ -253,8 +271,8 @@ def main():
     todo = [p for p in poses if not (out / "frames" / p["town"] / (p["id"] + ".npz")).exists()]
     print("poses", len(poses), "todo", len(todo), "mount", MOUNT, flush=True)
     log = open(out / f"render_{k}of{n}.jsonl", "a")
-    idx = build_idx()
-    (out / "rig.json").write_text(json.dumps(dict(mount=MOUNT, sensors={m: dict(wh=SENSOR_WH, f=FOCAL[m]) for m in FOCAL},
+    idx = build_idx(wfs)
+    (out / "rig.json").write_text(json.dumps(dict(mount=MOUNT, sensors={m: dict(wh=SENSOR_WH, f=FOCAL[m]) for m in FOCAL}, extra_wide_model_focals=wfs,
                                                   pano=dict(yaw_deg_left_positive=PANO_YAW, wh=PANO_WH, f=PANO_F, jpeg_q=PANO_Q, order="left centre right"),
                                                   model="frames.py nearest warp, BT.601 limited-range YUV, as OpenpilotModel.pack")))
     state = dict(srv=None, rig=None, client=None, restarts=0)
@@ -284,7 +302,7 @@ def main():
                     print("loaded %s in %.1f s" % (town, time.time() - t), flush=True)
                     log.write(json.dumps(dict(event="load", town=town, wall=time.time() - t)) + "\n")
                 st = dict(id=p["id"], town=p["town"], profile=p["profile"], weather=p["weather"])
-                fr, pano = render_pose(state["rig"], idx, p, st)
+                fr, pano, ext = render_pose(state["rig"], idx, p, st, not a.no_pano)
             except (RuntimeError, TimeoutError) as e:
                 tries += 1
                 state["restarts"] += 1
@@ -301,9 +319,9 @@ def main():
                 continue
             tries = 0
             i += 1
-            for sub, payload in (("pano", dict(jpeg_l=pano[0], jpeg_c=pano[1], jpeg_r=pano[2])),
-                                 ("frames", dict(frames=fr, frame_t=np.asarray(p["hist"]["t"], np.float32), x=p["hist"]["x"], y=p["hist"]["y"],
-                                                 z=p["hist"]["z"], yaw=p["hist"]["yaw"], pitch=p["hist"]["pitch"]))):
+            for sub, payload in ((("pano", dict(jpeg_l=pano[0], jpeg_c=pano[1], jpeg_r=pano[2])),) if pano else ()) + \
+                    (("frames", dict(frames=fr, frame_t=np.asarray(p["hist"]["t"], np.float32), x=p["hist"]["x"], y=p["hist"]["y"],
+                                     z=p["hist"]["z"], yaw=p["hist"]["yaw"], pitch=p["hist"]["pitch"], **ext)),):
                 dst = out / sub / p["town"] / (p["id"] + ".npz")
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 tmp = dst.with_name(dst.stem + ".tmp.npz")

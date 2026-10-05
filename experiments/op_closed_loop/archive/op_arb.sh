@@ -60,7 +60,7 @@ EOF
 
 srv_alive() { local p; p=$(cat "$O/srv/op.pid" 2>/dev/null) && [[ -n $p ]] && kill -0 "$p" 2>/dev/null; }
 srv_start() {
-    local mid="${SRV_ONNX:-base}:$WORKERS:${SRV_NO_TWIN:-0}:${SRV_PY:-}"      # KEEP_SRV: a live server with the same model and pool is reused across set calls
+    local mid="${SRV_ONNX:-base}:$WORKERS:${SRV_NO_TWIN:-0}:${SRV_PY:-}:${OP_WIDE_FOCAL:-}"      # KEEP_SRV: a live server with the same model and pool is reused across set calls
     if srv_alive; then
         [[ $(cat "$O/srv/model_id" 2>/dev/null) == "$mid" ]] && return 0
         log "openpilot server model / pool changed ($(cat "$O/srv/model_id" 2>/dev/null) -> $mid): restarting"
