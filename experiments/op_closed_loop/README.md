@@ -10,6 +10,8 @@ index: Native never starts (6/6); arbitration +9.7 DS is slowness
 
 **Junction turns, action head alone (camera rig).** [results/junction_rig122.md](results/junction_rig122.md): at the open-loop-aligned camera (1.59 m, 1.86 m) zones off takes 0/13 choice, 1/12 forced turns (1.433 m: 2/13, 4/12); 1.22 m is the only height where the head reaches the exit (5/10, 3/9) but over-steers. Earlier: [results/junction_closed_loop.md](results/junction_closed_loop.md), [results/junction_forced_and_arrow.md](results/junction_forced_and_arrow.md).
 
+**Action-head curvature scale (2026-10-05).** [results/action_scale.md](results/action_scale.md): `decode()` = modeld exactly and the car-side controllers have gain 1; on the native comma rig the head matches the driven curvature (g_cal 0.97-1.04 above 8 m/s) except slow sharp turns (0.65, plan 0.98). rft.py's 0.45 = 1 s pure-pursuit target + board camera scale (v_model / v)^2, not the head. Figure `figs/action_scale.png`.
+
 **Read more.** research/openpilot-closedloop-integration.md, research/openpilot-seed0-video-diagnosis.md
 
 <!-- files:begin -->
