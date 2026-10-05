@@ -74,6 +74,39 @@ comma 的 0.11 版已从重投影转向纯学习世界模型；我们反过来�
    线 G0b：扰动臂（kick + swerve）的任一类失败率 ≥ 15%，且 stall / heading / lane 中至少两类各 ≥ 5%。描述性旁列：plane 引擎同样的臂；纵向用日志车速的臂（closedlat，
    = 第 132 条式）；free 臂失败率。
 
+### 3.2 起步是不是产品设计（2026-10-06，G1 之前读源码，披露）
+
+读 openpilot ec95db3f / opendbc 35f7e081（第 118 条用的版本）：
+- **离开静止只由 planner 的 shouldStop 门控**：`should_stop = v_ego < 0.3 and a_target < 0.1`（`selfdrive/controls/lib/drive_helpers.py:17-18`）。
+  a_target = min(候选)，experimental 模式下候选含模型 e2e 的 `action.desiredAcceleration`（`longitudinal_planner.py:138-145`）。
+  LongControl 只在 `not should_stop and not cruise_standstill and not brake_pressed` 时离开 STOPPING（`longcontrol.py:13-30`）。
+  `autoResumeSng` 在 selfdrive 里没有任何引用，只是描述字段（`opendbc/car/interfaces.py:200`）。
+- **车端**：Toyota openpilot-long 车在 `actuators.accel > 0` 时自己放行（`toyota/carcontroller.py:180-185`）。
+  需要司机按 resume 的是车型限制，不是模型的事：Toyota 无自动恢复（`car_events.py:63-64`）、GM（`:80-81`）、Honda 非 Bosch（minEnableSpeed）。
+- **结论**：起步与否的第一道门是模型自己的加速度（≥ 0.1 m/s² 才放行）。G0 里 shipped 在真实画面上起步时 t0 加速度中位 −0.09，83% < 0.3，
+  这是**模型行为，在产品范围内**；在支持 stop-and-go 的车上会表现为不起步。stall 留在 G1 的主读数里。引擎的 OpLongitudinal 复刻了 should_stop 与 STOPPING
+  （`lib/op_ctrl.py`），没有复刻 `cruise_standstill`：日志车已经在动的起步片段里车端不会再拦。
+
+### 3.3 G1 实现与护栏（2026-10-06，用户批准，写在任何 G1 读数之前）
+
+1. **引擎**：plane（G0a 不过，深度不采用，S3−depth 消融取消）；时间同步源帧；SPEC 横向 + 纵向；8 s。
+2. **截断**：访问状态只在有效域内收标签（从 rollout 开始到该步都满足 |dy| ≤ 1 m、|dψ| ≤ 5°、|dx| ≤ 5 m，且在第一个失败事件之前）。
+   超出的弯道状态没有标签，记为限制；侧前相机作源推迟。
+3. **片段**：WOD-E2E train（`wod/r2-train`）约 1 150 段 × 50 帧：起步 ≤ 400、弯 300、巡航 150、中速 150、静止 150。比第 4 节写的 2 000 少，原因是盘只剩约 266 GB（每段 20 MB）。
+4. **标签（所有臂同一个函数，只有状态不同）**：时间同步日志帧的 5 s 未来，横向恢复（`recover_target`，t_rec 4 s，比第 132 条的 2.5 s 慢，这就是第 1 节写的
+   action 增益约束），加纵向追赶：与日志位姿的纵向差 −dx 按 smoothstep 在 3 s 内补上。action[0] = `rft.act_target`；**action[1] 新加监督**：
+   (v(0.5 s) − v) / 0.5，截在 [−3.5, 2] m/s²。现有配方里 action[1] 不受监督，SPEC 纵向读的正是它。
+5. **臂与步数**：S1 = 日志状态模仿，2 400 步。S2 = 第 132 条式（横向闭环、日志车速、2 s）。S3 = 闭环横纵、8 s。
+   S2 和 S3 各做 3 轮 DAgger：r1 用 shipped 采，训 800 步；r2 用 r1 模型采，在 r1+r2 上训 1 600 步；r3 用 r2 模型采；最终在 r1–r3 上从 shipped 训 2 400 步。
+6. **G1 读数改用 HUGSIM 全 64 场景、单次**：第 5 节闸门要的 24 场景从中读，全量 3 次重复仍等 G1 过后。另加 NAVSIM navtest 全量与 navhard，
+   都经 `experiments/op_guard` 的 guard 线（serving ONNX，spec 预设）。引擎内读数在 g0b（val 120 段）上照 G0b 读。
+7. **护栏 G1-guard（用户要求：只是把 stall 换成碰撞的修法不算过）**：
+   - (a) HUGSIM 64 碰撞数（fg + bg）S3 ≤ S0 + 2；
+   - (b) S0 有 ego 运动失败、S3 修好的场景里，若 S3 在同一场景改成碰撞，不算修好；且「S0 失败 → S3 碰撞」的场景数 ≤「S0 失败 → S3 HD ≥ 0.5」的一半；
+   - (c) 在真实障碍前停住：WOD val 静止片段 g1s（40 段，日志车 8 s 都没动，排队、红灯、前车），误起步率（ego 走出 > 2 m，或越出 +5 m 有效域）S3 ≤ S0 + 0.05；
+   - (d) navtest NC（no at-fault collision）S3 − S0 ≥ −0.005。
+   任一不过，G1 判不过，不管 stall 修好多少。
+
 ## 4. 训练臂（G0 过了才做）
 
 全部从 shipped Cinque 出发，同一批 WOD-E2E train 片段（`wod/r2-train@v1`，op_dagger 已用；扩到约 2 000 段 8 s 片段，经 `jevdrive.data.splits`），

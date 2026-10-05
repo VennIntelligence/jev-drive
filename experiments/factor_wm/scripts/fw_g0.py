@@ -59,8 +59,9 @@ class Runner(DR.Runner):
         d["acc"] = o[:, self.H.a0 + 1]
         return d
 
-    def run(self, S, specs, batch=48):
+    def run(self, S, specs, batch=48, kl=None):
         torch = self.torch
+        kl = kl or S.kl
         res = [None] * len(specs)
         order = sorted(range(len(specs)), key=lambda i: specs[i]["c"])
         for b0 in range(0, len(order), batch):
@@ -71,11 +72,11 @@ class Runner(DR.Runner):
             Th = self.history(S, uc)
             T9 = Th[[uc.index(c) for c in cs]].clone()
             tc = S.t["tc"][cs].astype(np.float32)
-            egos = [C.Ego(S.t["pose"][c], S.t["v"][c], s["kind"], s.get("exo"), float(S.t["k0"][c]), float(S.t["a0"][c]), str(S.t["cat"][c]))
+            egos = [C.Ego(S.t["pose"][c][: kl + 1], S.t["v"][c], s["kind"], s.get("exo"), float(S.t["k0"][c]), float(S.t["a0"][c]), str(S.t["cat"][c]))
                     for c, s in zip(cs, sp)]
             prev = np.asarray(S.imgs[cs, C.T0])
             rec = [self.heads(T9, tc, np.array([e.v for e in egos]))]
-            for j in range(1, S.kl + 1):
+            for j in range(1, kl + 1):
                 for b, e in enumerate(egos):
                     e.advance(j, rec[-1]["kappa"][b], rec[-1]["acc"][b])
                 jobs = []
