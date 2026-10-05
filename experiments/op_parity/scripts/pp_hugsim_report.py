@@ -208,7 +208,7 @@ def report_full():
     ex["cls"] = ex.end.astype(str).replace({"max_steps": "stuck", "bg_collision": "bg_coll", "fg_collision": "fg_coll"})
     ex.loc[ex.spin.astype(bool), "cls"] = "spin"
     ex["stall"] = ex.v_max40 < 1.6
-    CL = ["complete", "fg_coll", "bg_coll", "off_route", "stuck", "spin"]
+    CL = ["complete", "fg_coll", "bg_coll", "off_route", "spin"]
     W["cls"] = W.end.astype(str).replace({"max_steps": "stuck", "bg_collision": "bg_coll", "fg_collision": "fg_coll"})
     W.loc[W.spin.astype(bool), "cls"] = "spin"
     W["stall"] = W.v_max40 < 1.6
@@ -237,7 +237,8 @@ def report_full():
             if len(ts) > 1:
                 hd[pr][g + " seed-mean"] = pd.concat([hd[pr][t] for t in ts], axis=1).mean(1, skipna=False)
     # ---- T1 per arm
-    def row(name, d, ref_hd=None):
+    def row(name, d):
+        d = d[d.hdscore.notna()]
         b = stats.bootstrap(d.hdscore.values)
         c = d.cls
         r = dict(arm=name, n=int(d.hdscore.notna().sum()), HD=stats.fmt(b), NC=d.nc.mean(), DAC=d.dac.mean(), TTC=d.ttc.mean(), Comfort=d.c.mean(), RC=d.rc.mean(),
@@ -271,20 +272,27 @@ def report_full():
               + " | ".join(str(getattr(r, k)) for k in CL) + " |")
         miss = {t: [s for s in SC if pd.isna(run(pr, t).hdscore.get(s))] for t in FULL_TAGS}
         miss = {t: m for t, m in miss.items() if m}
-        P("\nMissing scenarios (no finished row): " + ("; ".join(f"{t}: {len(m)} ({', '.join(m)})" for t, m in miss.items()) if miss else "none") + ".\n")
+        P("\nMissing scenarios (no finished row): " + ("; ".join(f"{t}: {len(m)}" + (f" ({', '.join(m)})" if len(m) <= 8 else "") for t, m in miss.items()) if miss else "none") + ".\n")
+        out_csv[f"missing_{pr}"] = pd.DataFrame([dict(arm=t, scenario=x) for t, m in miss.items() for x in m], columns=["arm", "scenario"])
     # ---- T2 paired
     comps = []
     for pr in PRESETS:
         h = hd[pr]
         names = list(h)
-        pairs = [(a, b) for a, b in (("P2", "P1"), ("P3", "P1"), ("P2", "P0")) if a + " seed-mean" in h or a in h]
-        for a, b in pairs:
-            comps.append((pr, h.get(a + " seed-mean", h.get(a)), h.get(b + " seed-mean", h.get(b)), a if a + " seed-mean" not in h else a + " seed-mean",
-                          b if b + " seed-mean" not in h else b + " seed-mean"))
-            if a + " seed-mean" in h:                                   # also per matched seed
-                for t in FULL_TAGS:
-                    if grp(t) == a and t.replace(a, b, 1) in h:
-                        comps.append((pr, h[t], h[t.replace(a, b, 1)], t, t.replace(a, b, 1)))
+
+        def resolve(g):                                                 # group -> (label, series): seed-mean, else the sole tag
+            if g + " seed-mean" in h:
+                return g + " seed-mean", h[g + " seed-mean"]
+            ts = [t for t in FULL_TAGS if grp(t) == g]
+            return (ts[0], h[ts[0]]) if len(ts) == 1 else (None, None)
+        for ga, gb in (("P2", "P1"), ("P3", "P1"), ("P2", "P0")):
+            (na, a), (nb, b) = resolve(ga), resolve(gb)
+            if a is not None and b is not None:
+                comps.append((pr, a, b, na, nb))
+            for t in FULL_TAGS:                                         # matched seeds
+                tb = "P0" if gb == "P0" else t.replace(ga, gb, 1)
+                if grp(t) == ga and tb in h and len([x for x in FULL_TAGS if grp(x) == ga]) > 1:
+                    comps.append((pr, h[t], h[tb], t, tb))
         for n in names:
             if n != "WA-JEPA":
                 comps.append((pr, h[n], h["WA-JEPA"], n, "WA-JEPA"))
@@ -424,7 +432,7 @@ def report_full():
                 cells = []
                 for a in arms:
                     x = g[(g.level == lv) & (g.arm == a)].iloc[0]
-                    cells.append(f"{x.hd:.3f}" + ("" if x["diff"] == "-" else f" ({x['diff']})"))
+                    cells.append(f"{x.hd:.3f}" + ("" if x.n == 16 else f" [n={x.n}]") + ("" if x["diff"] == "-" else f" ({x['diff']})"))
                 P(f"| {lv} | " + " | ".join(cells) + " |")
             P("")
     FULL.mkdir(parents=True, exist_ok=True)
