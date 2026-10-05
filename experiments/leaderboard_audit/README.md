@@ -1,7 +1,7 @@
 # leaderboard_audit: What leaderboard scores are made of
 
 status: concluded
-decisions: 35, 38, 103, 108, 109, 112, 124, 125, 126
+decisions: 35, 38, 103, 108, 109, 112, 124, 125, 126, 131
 index: NAVSIM v2 +10.9 is the scorer; B2D DS SD 0.80
 
 **Question.** Which parts of high leaderboard scores reflect driving ability, and how noisy is B2D?
