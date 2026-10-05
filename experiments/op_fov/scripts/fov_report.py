@@ -125,7 +125,7 @@ def cmd_table(src, split, stem):
     rows = []
     diff_m = ("A_act", "A_plan", "H2", "Y2", "peak_ratio", "lead", "FDE3")
     ratio_m = ("lane_w10", "v_ratio", "ADE5")
-    for arm in [a for a in ("W90", "W116", "W90h", "R40") if a in set(d.arm)]:
+    for arm in [a for a in ("W90", "W116", "W90h", "R40", "Wfrz") if a in set(d.arm)]:
         x = d[d.arm == arm].set_index("win")
         for kind, ms in (("turn", diff_m + ratio_m[:2]), ("straight", ratio_m)):
             w = base.index[(base.kind == kind)].intersection(x.index)

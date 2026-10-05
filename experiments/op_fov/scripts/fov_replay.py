@@ -10,7 +10,8 @@ get_warp_matrix + nearest-neighbour gather, jevdrive/openpilot/frames.py) is run
   W90     wide 256              (90 deg)
   W116    wide 160              (116 deg, the ecam's full width)
   W90h    wide fx 256 / fy 455  (90 deg across, rows unchanged: ground row <-> distance as shipped, lateral squeezed)
-  R40     road 720 (39.2 deg), rows the road camera does not cover (bottom ~12%) filled from the wide camera
+  R40     road 720 (39.2 deg), rows the road camera does not cover (bottom ~3%) filled from the wide camera
+  Wfrz    shipped intrinsics, wide frame frozen at the window's first frame (post-hoc diagnostic: does the wide content matter?)
 
   scan <out>                    turn + straight events over every comma1M segment -> <out>/events.json
   run  --windows F [--arms ..]  replay each window x arm (pool job; one CUDA session per worker) -> <cache>/<win>.npz
@@ -29,7 +30,8 @@ WARM = 120                        # 6 s warm-up (> the 5 s context) before the s
 PRE, POST = 80, 200               # scored part: 4 s before turn onset .. 10 s after
 STRAIGHT_SCORE = 200
 F_ROAD, F_WIDE = 2648.0, 567.0    # comma 3/3X AR0231 / OX03C10 at 1928x1208 (frames.CAMERAS)
-ARMS = {"N": (910.0, 455.0), "W90": (910.0, 256.0), "W116": (910.0, 160.0), "W90h": (910.0, (256.0, 455.0)), "R40": (720.0, 455.0)}
+ARMS = {"N": (910.0, 455.0), "W90": (910.0, 256.0), "W116": (910.0, 160.0), "W90h": (910.0, (256.0, 455.0)), "R40": (720.0, 455.0), "Wfrz": (910.0, 455.0)}
+FROZEN_WIDE = {"Wfrz"}
 CACHE_VERSION = "fov-v1"
 
 
@@ -209,6 +211,8 @@ def replay(job):
         if n >= lo:
             for j, k in enumerate(arms):
                 warps[k](pr, pw, fr[j, n - lo])
+                if k in FROZEN_WIDE and n > lo:
+                    fr[j, n - lo, 1] = fr[j, 0, 1]
     if _M is None:
         _M = OPModel("cinque", backend)
     sl = _M.slices
@@ -232,7 +236,7 @@ def replay(job):
 
 def window_key(w, arms):
     from jevdrive import cache
-    return cache.key(params=dict(w=w, arms={k: ARMS[k] for k in arms}, warm=WARM), code=[replay, gather_index], version=CACHE_VERSION)
+    return cache.key(params=dict(w=w, arms={k: ARMS[k] for k in arms}, warm=WARM), code=[replay, gather_index], version=CACHE_VERSION + str(sorted(FROZEN_WIDE & set(arms))))
 
 
 def cmd_run(a):
