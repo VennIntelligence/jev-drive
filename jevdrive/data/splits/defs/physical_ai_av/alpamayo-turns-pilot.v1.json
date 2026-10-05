@@ -1,0 +1,26 @@
+{
+ "dataset": "physical_ai_av",
+ "name": "alpamayo-turns-pilot",
+ "version": 1,
+ "unit": "clip@t0_us",
+ "n": 10,
+ "sha256": "dfd40ff5bdcf157761f0596660fe7992404c66b4a9ad146e1ef0200cedb79295",
+ "origin": "experiments/alpamayo_turns/scripts/turns.py scan: PhysicalAI-AV @ 33f9bf4 test split, rng(0) 12 chunks [308, 323, 345, 1292, 1351, 1375, 2185, 2263, 2277, 2674, 2690, 3030], heading change 60-135 deg over 6.4 s, median 2-10 m/s, peak curvature >= 1/20, t0 = earliest with >= 90 % of the turn ahead; rng(0) 5 per side",
+ "used_by": [
+  "alpamayo_turns"
+ ],
+ "status": "frozen",
+ "notes": "alpamayo_turns pilot: sharp real turns",
+ "members": [
+  "1d240959-807c-4a68-b1a5-11b7cddd37ef@5100000",
+  "22123ecc-fc75-4876-9392-039185ae2b1c@9000000",
+  "292d7c4d-4fa6-4100-b0fb-01dc0fff2d99@12300000",
+  "29f777e1-473a-4aa2-b1c8-0f37e4d3124f@5300000",
+  "45baa092-336b-4139-86d2-10e9b34a62ed@14400000",
+  "4a64805d-a9d1-4ed7-9957-fa2b615b647e@5100000",
+  "5f3f6e30-fce9-44a9-a213-c7652bcc9bd2@5600000",
+  "72e5cf27-3312-4d7f-9345-c17a0cbf0518@7000000",
+  "cf3fc128-f5b8-4921-b2e1-cdff059ebaeb@6500000",
+  "d966165b-2008-440e-87b4-9094c3799787@5900000"
+ ]
+}
