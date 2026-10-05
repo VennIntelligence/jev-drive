@@ -1,29 +1,29 @@
 """python -m jevdrive.cl <command>: see docs/closed-loop-runbook.md.
 
-  probe [--json]                       what the box has now: quota, pids, memory, NUMA, cards, CARLA per card, table rows
+GPU pool (jevdrive/cl/pool.py): agents submit jobs, the dispatcher (tmux jev:pool) runs each on a card with room.
+  submit --name N --vram GB [--carla N] [--cpu N] [--train] [--priority P] [--after ID,..] [...] -- CMD ...
+                                       queue a job; prints its id (one shell string or an argv after --)
+  queue [--all] | show ID | cancel ID.. [--drain] | top
+  hold --card G (--whole | --vram GB [--carla N]) [--idx a-b] [--cpus ..] [--pid PID] --note TEXT | holds | unhold HID
+                                       resources used outside the pool (ends by itself when --pid exits)
+  dispatch [--once]                    the dispatcher (run it once, in tmux jev:pool)
+Box:
+  probe [--json]                       what the box has now: quota, pids, memory, NUMA, cards, CARLA per card, pool
   plan [--profile P] [--gpus 1,2] ...  per-card sizing the defaults would give (workers, threads, PID caps, indices)
   profiles                             the named worker profiles
-  lease LANE --gpus N|1,2 [--cores-per-card C] [--workers-per-card W] [--span S] [--status TEXT] [--dry-run]
-                                       find free cards / NUMA-local cores / index blocks and write the lane's table row
-  release LANE [NOTE]                  archive the lane's row (sch_table.py finish)
-  run LANEFILE [--gpus ..] [--cpus ..] [--workers-per-card W] [--profile P] [--num-threads T] [--client-threads N]
-      [--only a,b] [--fail-fast] [--arg k=v ...] [--dry-run]
-                                       run the jobs a lane file declares on the lane's lease (re-read every round)
-  status ROOT | drain ROOT | stop ROOT one lane root: its STATUS / stop new work and let routes finish / stop by record
 """
 from __future__ import annotations
 
 import argparse
 import dataclasses
-import importlib.util
 import json
+import os
 import sys
 import time
 from pathlib import Path
 
-from . import capacity, lease as L, profiles
+from . import capacity, pool as P, profiles
 from .box import probe
-from .lane import Lane, data_dir, stop as stop_lane
 
 
 def _gpus(spec):
@@ -39,9 +39,9 @@ def _profile(a) -> profiles.Profile:
 
 def cmd_probe(a):
     box = probe()
-    rows = L.load()
+    st, status, inbox, age = P.snapshot()
     if a.json:
-        print(json.dumps(dict(box=box.to_dict(), table=rows), indent=2, default=str))
+        print(json.dumps(dict(box=box.to_dict(), pool=status), indent=2, default=str))
         return 0
     print("host CPUs %d, cgroup quota %s cores, affinity %d CPUs, NUMA %s" % (
         box.host_cpus, box.quota_cores or "none", len(box.affinity),
@@ -49,16 +49,15 @@ def cmd_probe(a):
     print("pids %d / %s, memory %.0f / %s GiB, load %s, ephemeral ports %d-%d" % (
         box.pids_current, box.pids_max or "max", box.mem_current_gb, "%.0f" % box.mem_max_gb if box.mem_max_gb else "max",
         " ".join(box.load), *box.ephemeral))
-    held = {g: r["lane"] for r in L.live(rows) for g in L.gpus(r)}
-    print("\n| card | NUMA | VRAM used / total GB | util % | CARLA | compute procs | table lane |\n|--:|--:|--:|--:|--:|--:|:--|")
+    held = {}
+    for j in st["jobs"].values():
+        if j["state"] == "running":
+            held.setdefault(j.get("gpu"), []).append(j["spec"]["name"])
+    print("\n| card | NUMA | VRAM used / total GB | util % | CARLA | compute procs | pool jobs |\n|--:|--:|--:|--:|--:|--:|:--|")
     for c in box.cards:
         print("| %d | %d | %.1f / %.1f | %d | %d | %d | %s |" % (c.index, c.numa, c.mem_used_mib / 1024, c.mem_total_mib / 1024,
-                                                           c.util, c.carla, len(c.compute_pids), held.get(c.index, "")))
-    print("\nlive table rows:")
-    for r in L.live(rows):
-        print("  " + "\t".join(r[k] for k in L.COLS))
-    for b in L.conflicts(rows, box.ephemeral[0]):
-        print("CONFLICT:", b)
+                                                           c.util, c.carla, len(c.compute_pids), ", ".join(held.get(c.index, []))))
+    print("\npool dispatcher: %s" % ("heartbeat %.0f s ago" % age if age < P.STALE_S else "NOT RUNNING"))
     p = capacity.plan(box, profiles.get())
     print("\ndefault plan (%s): %s cores per card, %d workers per card (%.1f cores each), ~%d threads per worker, "
           "PID plan cap %d / wait cap %d, server indices %d-%d" % (
@@ -80,101 +79,127 @@ def cmd_profiles(a):
     return 0
 
 
-def cmd_lease(a):
+def _warn_dispatcher(age):
+    if age > P.STALE_S:
+        print("WARNING: the pool dispatcher is not running (no heartbeat for %s); jobs stay queued. Start it: "
+              "scripts/tmux_run.sh pool .venv/bin/python -m jevdrive.cl dispatch" % (
+                  "ever" if age == float("inf") else "%.0f s" % age), file=sys.stderr)
+
+
+def cmd_submit(a):
+    cmd = a.cmd[1:] if a.cmd[:1] == ["--"] else a.cmd
+    if not cmd:
+        sys.exit("no command (put it after --)")
+    cmd = cmd[0] if len(cmd) == 1 and " " in cmd[0] else cmd
+    env = dict(os.environ) if a.copy_env else {}
+    env.update(dict(kv.split("=", 1) for kv in a.env))
+    jid = P.submit(cmd, name=a.name, owner=a.owner or None, cwd=a.cwd or os.getcwd(), log_dir=a.log_dir, env=env,
+                   vram_gb=a.vram, carla=a.carla, span=a.span, cpu=a.cpu, ram_gb=a.ram, threads=a.threads,
+                   train=a.train, exclusive=a.exclusive, gpus=[int(g) for g in a.gpus.split(",") if g] if a.gpus else [],
+                   priority=a.priority, after=a.after.split(",") if a.after else [], when_exists=a.when_exists,
+                   tries=a.tries, timeout_h=a.timeout_h, max_rss_gb=a.max_rss, profile=a.profile or "")
+    print(jid)
+    _warn_dispatcher(P.snapshot()[3])
+    return 0
+
+
+def _age(t):
+    s = time.time() - t
+    return "%dm" % (s / 60) if s < 5400 else "%.1fh" % (s / 3600)
+
+
+def cmd_queue(a):
+    st, status, inbox, age = P.snapshot()
+    jobs = list(st["jobs"].values()) + [dict(j, state="inbox", why="not yet read by the dispatcher") for j in inbox]
+    order = {"running": 0, "queued": 1, "inbox": 2, "failed": 3, "cancelled": 4, "done": 5}
+    if not a.all:
+        cut = time.time() - 6 * 3600
+        jobs = [j for j in jobs if j["state"] in ("running", "queued", "inbox") or j.get("t1", 0) > cut]
+    jobs.sort(key=lambda j: (order.get(j["state"], 9), -float(j["spec"].get("priority") or 0), j["t_submit"]))
+    print("%-16s %-9s %4s %-22s %-10s %6s %5s %4s %5s  %s" % ("id", "state", "card", "name", "owner", "vram", "carla",
+                                                            "cpu", "age", "why / log"))
+    for j in jobs:
+        s = j["spec"]
+        tail = j.get("why") or ""
+        if j["state"] in ("running", "failed", "done"):
+            tail = (tail + " " if tail else "") + str(Path(s.get("log_dir") or P.pool_dir() / "jobs" / j["id"]) / "log.txt")
+        print("%-16s %-9s %4s %-22s %-10s %6s %5s %4s %5s  %s" % (
+            j["id"], j["state"], j.get("gpu", "") if j.get("gpu") is not None else "", s["name"][:22],
+            (s.get("owner") or "")[:10], "%.0f" % s["vram_gb"] if not s.get("exclusive") else "card", s.get("carla") or "",
+            s.get("cpu") or "", _age(j.get("t0") or j["t_submit"]), tail[:160]))
+    _warn_dispatcher(age)
+    return 0
+
+
+def cmd_show(a):
+    st, _, inbox, _ = P.snapshot()
+    j = st["jobs"].get(a.id) or next((x for x in inbox if x["id"] == a.id), None)
+    if j is None:
+        sys.exit("no job %s" % a.id)
+    print(json.dumps(j, indent=2, default=str))
+    log = Path(j["spec"].get("log_dir") or P.pool_dir() / "jobs" / a.id) / "log.txt"
+    if log.exists():
+        print("\n--- tail of %s" % log)
+        print(log.read_bytes()[-3000:].decode(errors="replace"))
+    return 0
+
+
+def cmd_cancel(a):
+    for jid in a.ids:
+        P.cancel(jid, a.drain)
+        print("%s requested for %s (the dispatcher acts within one round)" % ("drain" if a.drain else "cancel", jid))
+    return 0
+
+
+def cmd_top(a):
+    st, status, inbox, age = P.snapshot()
     box = probe()
-    want = _gpus(a.gpus) if "," in str(a.gpus) or a.explicit else None
-    n = len(want) if want else int(a.gpus)
-    cpc = a.cores_per_card or int(box.cores // max(len(box.cards), 1))
-    w = a.workers_per_card or capacity.workers_per_card(cpc, min(c.mem_total_mib for c in box.cards) / 1024)
-    ls = L.find_free(box, L.load(), a.lane, n, want, cpc, a.span, w)
-    ls.status = a.status or "running since %s" % time.strftime("%F %H:%M")
-    print("\t".join(ls.row()[k] for k in L.COLS))
-    if not a.dry_run:
-        L.grant(ls, ephemeral_lo=box.ephemeral[0])
-        print("granted")
+    acct = {int(g): v for g, v in (status.get("cards") or {}).items()}
+    run = [j for j in st["jobs"].values() if j["state"] == "running"]
+    q = [j for j in st["jobs"].values() if j["state"] == "queued"]
+    b = status.get("box", {})
+    print("box: %s cores, pids %s / %s, memory %s / %s GiB, load %s; pool: %d running, %d queued, %d in inbox" % (
+        b.get("cores"), b.get("pids"), b.get("pids_max"), b.get("mem_gb"), b.get("mem_max_gb"), " ".join(b.get("load", [])),
+        len(run), len(q), len(inbox)))
+    print("\n| card | util % | VRAM used / total | pool booked | outside pool | free for pool | CARLA pool / other | train | jobs |")
+    print("|--:|--:|--:|--:|--:|--:|--:|--:|:--|")
+    hd = (status.get("cfg") or {}).get("headroom_gb", P.DEFAULTS["headroom_gb"])
+    for c in box.cards:
+        x = acct.get(c.index, {})
+        jobs = ", ".join("%s %s (%.0f/%.0f GB)" % (j["id"], j["spec"]["name"][:18], j.get("vram_now", 0), j["spec"]["vram_gb"])
+                         for j in run if j.get("gpu") == c.index)
+        free = x.get("total_gb", 0) - hd - x.get("foreign_gb", 0) - x.get("pool_gb", 0)
+        print("| %d | %d | %.0f / %.0f | %.0f | %.0f | %s | %s / %s | %s | %s |" % (
+            c.index, c.util, c.mem_used_mib / 1024, c.mem_total_mib / 1024, x.get("pool_gb", 0), x.get("foreign_gb", 0),
+            "held: " + x["whole_hold"] if x.get("whole_hold") else "%.0f" % max(free, 0), x.get("carla_pool", 0),
+            x.get("carla_foreign", 0), x.get("train", 0), jobs or "-"))
+    for h in status.get("holds", []):
+        print("hold %s card %d: %s" % (h["id"], h["card"], h.get("note")))
+    _warn_dispatcher(age)
     return 0
 
 
-def cmd_release(a):
-    L.finish(a.lane, " ".join(a.note))
-    print("archived", a.lane)
+def cmd_hold(a):
+    if not a.whole and a.vram <= 0:
+        sys.exit("a hold declares --whole or --vram")
+    h = P.add_hold(a.card, " ".join(a.note), a.whole, a.vram, a.carla, a.cpu, a.cpus, a.idx, a.pid, a.train)
+    print("hold", h["id"], json.dumps(h))
     return 0
 
 
-def load_lanefile(path: str):
-    spec = importlib.util.spec_from_file_location("lanefile_" + Path(path).stem, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-def cmd_run(a):
-    mod = load_lanefile(a.lanefile)
-    name = a.lane or mod.NAME
-    root = Path(a.root or getattr(mod, "ROOT", name))
-    root = root if root.is_absolute() else data_dir() / "runs" / root
-    args = dict(kv.split("=", 1) for kv in a.arg)
-    jobs = mod.jobs(args)
-    if a.only:
-        keep = set(a.only.split(","))
-        jobs = [j for j in jobs if j.name in keep]
-    prof = _profile(a) if (a.profile or a.num_threads is not None or a.client_threads is not None) else \
-        getattr(mod, "PROFILE", None) or profiles.get()
-    row = L.get(name)
-    fixed = None
-    if a.gpus or a.cpus or a.idx0:
-        if row is None:
-            sys.exit("lane %s has no table row: lease it first (python -m jevdrive.cl lease %s ...)" % (name, name))
-        fixed = L.Lease(row.lane, dict(row.cards), row.span, row.workers, row.status)
-        if a.gpus:
-            fixed.cards = {g: fixed.cards[g] for g in _gpus(a.gpus)}
-        for g, v in L._map(a.cpus or "").items():
-            fixed.cards[g]["cpus"] = v
-        for g, v in L._map(a.idx0 or "").items():
-            fixed.cards[g]["idx0"] = int(v)
-    elif row is None:
-        sys.exit("lane %s has no table row: lease it first (python -m jevdrive.cl lease %s ...)" % (name, name))
-    lane = Lane(name, jobs, root, lease=fixed, profile=prof, workers_per_card=a.workers_per_card or getattr(
-        mod, "WORKERS_PER_CARD", None), poll_s=a.poll_s, fail_fast=a.fail_fast,
-        generate=(lambda lane: mod.more(lane, args)) if hasattr(mod, "more") else None)
-    if a.dry_run:
-        ls = fixed or row
-        print("lane %s -> %s, profile %s, lease %s" % (name, root, prof.describe(), ls.row()))
-        for j in jobs:
-            print("%-28s workers %2d deps %-20s %s" % (j.name, j.workers, ",".join(j.deps) or "-", " ".join(j.cmd)[:160]))
-        return 0
-    root.mkdir(parents=True, exist_ok=True)
-    try:
-        rel = root.relative_to(data_dir() / "runs")
-        from ..runlog import RunLog
-        log = RunLog(*rel.parts, "lane")
-    except (ValueError, ImportError):
-        log = None
-    return lane.run(log)
-
-
-def cmd_status(a):
-    root = Path(a.root)
-    print((root / "STATUS").read_text().strip() if (root / "STATUS").exists() else "no STATUS in %s" % root)
-    if (root / "status.json").exists():
-        s = json.loads((root / "status.json").read_text())
-        for g, why in s.get("blocked", {}).items():
-            print("  card %s blocked: %s" % (g, why))
-    for f in sorted(root.glob("ERROR*")):
-        print("  %s" % f.name)
+def cmd_holds(a):
+    for h in P.load_holds():
+        print(json.dumps(h))
     return 0
 
 
-def cmd_drain(a):
-    (Path(a.root) / "DRAIN").touch()
-    print("drain requested: no new jobs; running ones finish their current routes")
+def cmd_unhold(a):
+    print("dropped" if P.drop_hold(a.hid) else "no hold %s" % a.hid)
     return 0
 
 
-def cmd_stop(a):
-    print("stopped pids:", stop_lane(Path(a.root)))
-    return 0
-
+def cmd_dispatch(a):
+    return P.Dispatcher().run(once=a.once)
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m jevdrive.cl", description=__doc__,
@@ -195,32 +220,52 @@ def main(argv=None):
     s.add_argument("--cores-per-card", type=float, default=None)
     s.add_argument("--agent-threads", type=int, default=capacity.AGENT_THREADS)
     sub.add_parser("profiles")
-    s = sub.add_parser("lease")
-    s.add_argument("lane")
-    s.add_argument("--gpus", default="1", help="a count, or an explicit list '1,2' (a single card: --gpus 2 --explicit)")
-    s.add_argument("--explicit", action="store_true")
-    s.add_argument("--cores-per-card", type=int, default=None)
-    s.add_argument("--workers-per-card", type=int, default=None)
-    s.add_argument("--span", type=int, default=24)
-    s.add_argument("--status", default="")
-    s.add_argument("--dry-run", action="store_true")
-    s = sub.add_parser("release")
-    s.add_argument("lane")
-    s.add_argument("note", nargs="*")
-    s = sub.add_parser("run")
-    s.add_argument("lanefile")
-    knobs(s)
-    s.add_argument("--lane", default=None)
-    s.add_argument("--root", default=None)
-    s.add_argument("--cpus", default=None, help="per-card core lists '1:52-76,2:77-101' (override the lease)")
-    s.add_argument("--idx0", default=None, help="per-card first server index '1:160,2:200' (override the lease)")
-    s.add_argument("--only", default="")
-    s.add_argument("--fail-fast", action="store_true")
-    s.add_argument("--poll-s", type=float, default=20.0)
-    s.add_argument("--arg", action="append", default=[], help="k=v passed to the lane file's jobs(args)")
-    s.add_argument("--dry-run", action="store_true")
-    for n in ("status", "drain", "stop"):
-        sub.add_parser(n).add_argument("root")
+    s = sub.add_parser("submit")
+    s.add_argument("--name", required=True)
+    s.add_argument("--owner", default="", help="who to ask about it (default: $CL_OWNER, the submitting pool job, $USER)")
+    s.add_argument("--vram", type=float, default=0.0, help="peak VRAM GB on the card (default 9 per CARLA server)")
+    s.add_argument("--carla", type=int, default=0, help="CARLA servers the job starts ({carla}, {idx}, {span} in cmd)")
+    s.add_argument("--span", type=int, default=0, help="server indices to reserve (default 2 x carla)")
+    s.add_argument("--cpu", type=int, default=0, help="cores; > 0 pins the job (taskset) to that many free cores")
+    s.add_argument("--ram", type=float, default=0.0, help="host RAM GB (admission)")
+    s.add_argument("--max-rss", type=float, default=0.0, help="stop the job when its process tree's RSS exceeds this GB")
+    s.add_argument("--threads", type=int, default=0, help="PID estimate (default from the thread model)")
+    s.add_argument("--train", action="store_true", help="a training job (per-card cap)")
+    s.add_argument("--exclusive", action="store_true", help="alone on its card")
+    s.add_argument("--gpus", default="", help="allowed cards, e.g. 1,2 (default any)")
+    s.add_argument("--priority", type=float, default=0.0, help="higher starts first")
+    s.add_argument("--after", default="", help="job ids that must finish with rc 0 first")
+    s.add_argument("--when-exists", default="", help="stay queued until this path exists")
+    s.add_argument("--tries", type=int, default=1)
+    s.add_argument("--timeout-h", type=float, default=0.0)
+    s.add_argument("--profile", default=None, choices=sorted(profiles.PROFILES))
+    s.add_argument("--env", action="append", default=[], help="K=V (repeatable)")
+    s.add_argument("--copy-env", action="store_true", help="run with this shell's whole environment")
+    s.add_argument("--cwd", default="")
+    s.add_argument("--log-dir", default="", help="log.txt / STATUS / DONE / ERROR here (default runs/pool/jobs/<id>)")
+    s.add_argument("cmd", nargs=argparse.REMAINDER)
+    s = sub.add_parser("queue")
+    s.add_argument("--all", action="store_true")
+    sub.add_parser("show").add_argument("id")
+    s = sub.add_parser("cancel")
+    s.add_argument("ids", nargs="+")
+    s.add_argument("--drain", action="store_true", help="touch the job's DRAIN file (b2d_run finishes routes) instead")
+    sub.add_parser("top")
+    s = sub.add_parser("hold")
+    s.add_argument("--card", type=int, required=True)
+    s.add_argument("--whole", action="store_true")
+    s.add_argument("--vram", type=float, default=0.0)
+    s.add_argument("--carla", type=int, default=0)
+    s.add_argument("--cpu", type=int, default=0, help="cores counted against the pool's CPU budget")
+    s.add_argument("--cpus", default="", help="core list the pool must not pin jobs to")
+    s.add_argument("--idx", default="", help="server indices in use, e.g. 170-175")
+    s.add_argument("--train", action="store_true")
+    s.add_argument("--pid", type=int, default=0, help="the hold ends when this process exits")
+    s.add_argument("--note", nargs="+", required=True)
+    sub.add_parser("holds")
+    sub.add_parser("unhold").add_argument("hid")
+    s = sub.add_parser("dispatch")
+    s.add_argument("--once", action="store_true")
     a = ap.parse_args(argv)
     return globals()["cmd_" + a.cmd](a)
 
