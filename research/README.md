@@ -13,6 +13,7 @@
 [midterm-inventory.md](midterm-inventory.md)、[midterm-gaps.md](midterm-gaps.md)、
 [openpilot-cross-board-synthesis.md](openpilot-cross-board-synthesis.md)（第 88–119 条跨榜诊断综合）、
 [2026-10-06-d125-d135-review.md](2026-10-06-d125-d135-review.md)（第 125–135 条实验逐条复核：图、动图、数字、核对出的不一致）；
+[factorized-world-model.md](factorized-world-model.md)（分解世界模型文献查新：ego 精确、外生预训练）；
 `articles/`（深度长文）、`roadmap/`、`lit/`（不进 git）只在这台 Mac 上。
 
 ## 写作惯例
