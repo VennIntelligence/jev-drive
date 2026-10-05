@@ -59,8 +59,32 @@ def g0a(Z):
     return out
 
 
+def reclassify(Z):
+    """prereg 3.1 correction: a heading / lane event while the ego is slower than STALL_V and > 1 m behind the log is a stall."""
+    ev = Z["event"].astype(object).copy()
+    for i, e in enumerate(ev):
+        if e in ("heading", "lane"):
+            j = int(round(Z["t_event"][i] / C.DT))
+            if Z["vs"][i][j] < C.STALL_V and Z["off"][i][j, 0] < -1.0:
+                ev[i] = "stall"
+    Z["event_raw"], Z["event"] = Z["event"], ev.astype(str)
+    return int(np.sum(Z["event_raw"] != Z["event"]))
+
+
+def launch_accel(ZA):
+    """descriptive: the model's acceleration on the real logged frames (g0a ref arm) at launch clips vs the logged acceleration, first 2 s."""
+    S = C.Clips("g0a")
+    m = (ZA["arm"] == "ref") & (ZA["cat"] == "launch")
+    acc = ZA["acc"][m][:, :10]
+    c = ZA["c"][m]
+    v = S.t["v"][c][:, C.T0: C.T0 + 11]
+    a_log = np.diff(v, axis=1) / C.DT
+    return dict(n=int(m.sum()), model_acc_t0_median=float(np.median(acc[:, 0])), model_acc_2s_median=float(np.median(acc.mean(1))),
+                log_acc_2s_median=float(np.median(a_log.mean(1))), share_model_acc_t0_below_0p3=float(np.mean(acc[:, 0] < 0.3)))
+
+
 def g0b(Z):
-    out = {}
+    out = {"reclassified_to_stall": reclassify(Z)}
     kinds = [("estar closed", "closed", "estar"), ("plane closed", "closed", "plane"), ("estar closedlat", "closedlat", "estar")]
     pert = np.array([a.startswith(("kick", "swerve")) for a in Z["arm"]])
     for label, kind, eng in kinds:
@@ -103,7 +127,11 @@ def write_md(path, A, B):
             L.append(f"| {cat} | {ar['plane-anchor']['n']} | {fmt(ar['plane-anchor']['median'])} | {fmt(ar['depth-anchor']['median'])} | "
                      f"{fmt(ar['estar-anchor']['median'])} | {r['ratio_estar_plane']:.2f} [{r['ratio_ci'][0]:.2f}, {r['ratio_ci'][1]:.2f}] | "
                      f"{'pass' if r['line_pass'] else 'fail'} | {fmt(ar['plane-step1']['median'])} | {fmt(ar['estar-step1']['median'])} |")
-        L += ["", f"G0a overall: **{'pass' if A['pass'] else 'fail'}**", ""]
+        la = A.get("launch_accel_real_frames", {})
+        L += ["", f"G0a overall: **{'pass' if A['pass'] else 'fail'}**", "",
+              f"Launch, real logged frames (descriptive, n {la.get('n')}): model acceleration at t0 median {fmt(la.get('model_acc_t0_median'))} m/s2, "
+              f"over 2 s {fmt(la.get('model_acc_2s_median'))}; logged {fmt(la.get('log_acc_2s_median'))}; share with t0 acceleration < 0.3: "
+              f"{fmt(la.get('share_model_acc_t0_below_0p3'))}", ""]
     if B:
         L += ["## G0b shipped Cinque closed loop 8 s (WOD val g0b)", "",
               "| engine / kind | arms | n | any failure | stall | heading | lane | behind (not failure) | ahead (validity end) |", "|:--|:--|--:|--:|--:|--:|--:|--:|--:|"]
@@ -115,6 +143,7 @@ def write_md(path, A, B):
         L += ["", "Per category (estar closed, perturbed arms; counts):", "", "| category | n | stall | heading | lane | behind | ahead |", "|:--|--:|--:|--:|--:|--:|--:|"]
         for cat, r in B["estar closed"]["perturbed"]["by_cat"].items():
             L.append(f"| {cat} | {r['n']} | {r['stall']} | {r['heading']} | {r['lane']} | {r['behind']} | {r['ahead']} |")
+        L += ["", f"heading / lane events reclassified to stall (slow and behind): {B['reclassified_to_stall']}", ""]
         L += ["", f"G0b: **{'pass' if B['pass'] else 'fail'}**; replay identity max |offset| {B.get('replay_identity_max_abs_offset', float('nan')):.2g}", ""]
     Path(path).with_suffix(".md").write_text("\n".join(L))
 
@@ -157,6 +186,8 @@ def main():
     ZA, ZB = load("g0a"), load("g0b")
     A = g0a(ZA) if ZA is not None else None
     B = g0b(ZB) if ZB is not None else None
+    if A is not None:
+        A["launch_accel_real_frames"] = launch_accel(ZA)
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump(dict(g0a=A, g0b=B), open(out.with_suffix(".json"), "w"), indent=1)

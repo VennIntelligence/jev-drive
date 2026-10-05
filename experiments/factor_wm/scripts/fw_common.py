@@ -234,10 +234,8 @@ class Ego:
         dx, dy, dpsi = off
         ev = None
         vmax4 = max(self.vs[: min(len(self.vs), 21)])
-        if abs(dpsi) > FAIL_PSI:
-            ev = "heading"
-        elif abs(dy) > FAIL_DY:
-            ev = "lane"
+        if abs(dpsi) > FAIL_PSI or abs(dy) > FAIL_DY:
+            ev = "stall" if (self.v < STALL_V and dx < -1.0) else "heading" if abs(dpsi) > FAIL_PSI else "lane"
         elif self.cat == "launch" and j >= 20 and self.s_log[20] > 3.0 and vmax4 < STALL_V:
             ev = "stall"
         elif dx < -DX_CAP:
