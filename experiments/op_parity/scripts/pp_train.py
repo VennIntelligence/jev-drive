@@ -54,6 +54,7 @@ class Cfg:
     warmup: int = 100
     eval_every: int = 200
     data: tuple = ("lb_navtrain", "lb_h1train")
+    host: bool = False                    # token arrays gathered per batch from the page cache (full navtrain) instead of held on the GPU
     frames: str = "gimm"                  # front protocol (prereg addendum 1): gimm (G) | warp (W) | keys (N)
     split: str = "navsim/op-parity-pilot"
 
@@ -123,11 +124,48 @@ def rear(plan: torch.Tensor, cam_x: torch.Tensor, W: torch.Tensor):
     return x + c - c * torch.cos(psi), -y - c * torch.sin(psi), psi
 
 
-# ---------------------------------------------------------------- data on the GPU
+# ---------------------------------------------------------------- data on the GPU (or gathered per batch from the page cache)
+class Tokens:
+    """Row access to token arrays of several cache dirs. On the GPU (one tensor), or host mode: the .npy files stay memory-mapped and every
+    batch gathers its rows (the OS page cache is shared by all concurrent runs, so N runs cost the files once in RAM, not N copies)."""
+
+    def __init__(self, files, dev, host=False):
+        self.dev, self.host = dev, host
+        mms = [np.load(f, mmap_mode="r") for f in files]
+        if host:
+            self.mms, self.off = mms, np.cumsum([0] + [len(m) for m in mms])
+        else:
+            n = sum(len(m) for m in mms)
+            self.t = torch.empty((n,) + mms[0].shape[1:], dtype=torch.float16, device=dev)
+            i = 0
+            for m in mms:                                                       # shard by shard: no host-side concatenation
+                for j in range(0, len(m), 4096):
+                    x = torch.from_numpy(np.ascontiguousarray(m[j:j + 4096]))
+                    self.t[i:i + len(x)] = x.to(dev)
+                    i += len(x)
+        self.device = dev
+
+    def __getitem__(self, rows):
+        if not self.host:
+            return self.t[rows]
+        r = rows.cpu().numpy() if torch.is_tensor(rows) else np.asarray(rows)
+        out = np.empty((len(r),) + self.mms[0].shape[1:], np.float16)
+        k = np.searchsorted(self.off, r, side="right") - 1
+        for s in np.unique(k):
+            m = k == s
+            loc = r[m] - self.off[s]
+            o = np.argsort(loc)                                                 # sorted reads, then back to the batch order
+            g = self.mms[s][loc[o]]
+            tmp = np.empty_like(g)
+            tmp[o] = g
+            out[m] = tmp
+        return torch.from_numpy(out).to(self.dev, non_blocking=True)
+
+
 class Store:
     """The pp_prep caches of several data dirs, concatenated and moved to the device once (fp16 tokens)."""
 
-    def __init__(self, datas, dev, need_side=True, rows=None, frames="gimm"):
+    def __init__(self, datas, dev, need_side=True, rows=None, frames="gimm", host=False):
         """frames: the front protocol (cache/<data>@<frames>/front.npy; gimm = cache/<data>/front.npy). tab, side and the teacher always come from
         cache/<data>/ (teacher = shipped Cinque on the G protocol, its in-distribution input: every protocol is anchored to the same targets)."""
         cr = data_dir() / "runs" / "op_parity" / "cache"
@@ -137,12 +175,13 @@ class Store:
         n = len(self.tab["names"])
         self.rows = np.arange(n) if rows is None else rows
         sel = self.rows
-        cat = lambda f: np.concatenate([np.load(cr / d / f, mmap_mode="r") for d in datas]) if len(datas) > 1 else np.load(cr / datas[0] / f, mmap_mode="r")  # noqa: E731
+        assert rows is None, "row subsets are selected by the caller (split_rows)"
         t = lambda x, dt=None: torch.from_numpy(np.ascontiguousarray(x)).to(dev, dt)  # noqa: E731
-        self.front = t(np.concatenate([np.load(cr / fdir(d) / "front.npy", mmap_mode="r") for d in datas])[sel])
-        self.side = t(cat("side.npy")[sel]) if need_side else None
-        if all((cr / d / "teacher.npz").exists() for d in datas):
-            tz = [dict(np.load(cr / d / "teacher.npz")) for d in datas]
+        self.front = Tokens([cr / fdir(d) / "front.npy" for d in datas], dev, host)
+        self.side = Tokens([cr / d / "side.npy" for d in datas], dev, host) if need_side else None
+        tdir = lambda d: cr / fdir(d) if (cr / fdir(d) / "teacher.npz").exists() else cr / d  # noqa: E731  W full run: teacher on its own frames
+        if all((tdir(d) / "teacher.npz").exists() for d in datas):
+            tz = [dict(np.load(tdir(d) / "teacher.npz")) for d in datas]
             self.t_out = t(np.concatenate([z["out"] for z in tz])[sel])
             self.t_plan = t(np.concatenate([z["plan"] for z in tz])[sel])
             self.di, self.pi = tz[0]["di"], tz[0]["pi"]
@@ -227,13 +266,14 @@ def main(a):
         torch.distributed.init_process_group("nccl")
         torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
     dev = torch.device("cuda")
-    cfg = Cfg(arm=a.arm, seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data), split=a.split, frames=a.frames)
+    cfg = Cfg(arm=a.arm, seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data), split=a.split, frames=a.frames, host=a.host,
+              warmup=a.warmup, eval_every=a.eval_every)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
     tabs = np.concatenate([np.load(data_dir() / "runs" / "op_parity" / "cache" / d / "tab.npz")["names"] for d in cfg.data])
     tr_rows, dv_rows, sp = split_rows({"names": tabs}, cfg.split)
-    S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames)
+    S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames, host=cfg.host)
     model = PModel(cfg.arm).to(dev)
     base, new = model.groups()
     tstd = S.t_out[torch.as_tensor(tr_rows, device=dev)].float().std(0).clamp_min(1e-3)
@@ -251,18 +291,32 @@ def main(a):
                      f"adapter {sum(p.numel() for p in new) / 1e6:.2f}M, world {world}")
         t0, hist = time.time(), []
         nB = cfg.batch
+        use_side = ARMS[cfg.arm]["side"]
+
+        def draw():                                                             # the rng order of the GPU-store loop (same row stream)
+            r = rng.choice(tr_rows, nB, replace=len(tr_rows) < nB)
+            an = rng.random(nB) < cfg.d_frac
+            sm = rng.random((nB, len(PA.SIDE_CAMS))) >= cfg.cam_drop if use_side else None
+            return r, an, sm
+
+        def fetch(dr):
+            r = dr[0]
+            return dr, S.front[r], (S.side[r] if use_side else None)
+        from concurrent.futures import ThreadPoolExecutor
+        pre = ThreadPoolExecutor(2)
+        nxt = pre.submit(fetch, draw())
         for step in range(cfg.steps):
-            rows = torch.as_tensor(rng.choice(tr_rows, nB, replace=len(tr_rows) < nB), device=dev)
-            anchor = torch.as_tensor(rng.random(nB) < cfg.d_frac, device=dev)
-            side, smask = None, None
-            if ARMS[cfg.arm]["side"]:
-                side = S.side[rows]
-                smask = torch.as_tensor(rng.random((nB, len(PA.SIDE_CAMS))) >= cfg.cam_drop, device=dev)
+            (rows_np, an_np, sm_np), front_b, side = nxt.result()
+            if step + 1 < cfg.steps:
+                nxt = pre.submit(fetch, draw())
+            rows = torch.as_tensor(rows_np, device=dev)
+            anchor = torch.as_tensor(an_np, device=dev)
+            smask = torch.as_tensor(sm_np, device=dev) if use_side else None
             frac = step / cfg.steps
             for g in opt.param_groups:
                 g["lr"] = g["base"] * min(1.0, (step + 1) / cfg.warmup) * 0.5 * (1 + np.cos(np.pi * frac))
             ego = S.ego[rows] * (~anchor)[:, None].float()                           # present = 0 on anchor rows -> the bias is exactly 0
-            out = model(S.front[rows], ego, S.tc[rows], side, smask)
+            out = model(front_b, ego, S.tc[rows], side, smask)
             total, Ls = LS(out, S, rows, anchor)
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {k: float(v) for k, v in Ls.items()} }")
@@ -321,4 +375,7 @@ if __name__ == "__main__":
     ap.add_argument("--split", default="navsim/op-parity-pilot")
     ap.add_argument("--tag", default="")
     ap.add_argument("--frames", default="gimm", choices=["gimm", "warp", "keys"])
+    ap.add_argument("--host", action="store_true", help="gather token rows per batch from the memory-mapped caches (full navtrain)")
+    ap.add_argument("--warmup", type=int, default=100)
+    ap.add_argument("--eval-every", type=int, default=200)
     main(ap.parse_args())

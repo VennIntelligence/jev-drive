@@ -63,6 +63,32 @@ def _bounded(ex, fn, items, depth):
             break
 
 
+def full_meta(data: str):
+    """'navtrain_full.s<i>of<n>' -> (op_lb-style meta of shard i of the navtrain tokens with a logged future, the full index list, entries)."""
+    import op_lb as OL
+    from jevdrive import navsim_zs as Z
+    from jevdrive import par
+    i, n = map(int, data.split(".s", 1)[1].split("of"))
+    idx = Z.load_index("navtrain")
+    fut = set(np.load(Z.root("index") / "navtrain_future.npz")["tokens"].tolist())
+    by = {e["token"]: e for e in idx}
+    names = par.shards(sorted(t for t in by if t in fut), n, i)
+    ents = [by[t] for t in names]
+    mt = {"split": "navtrain", "names": names, "cam": [np.asarray(e["cams"][-1]["CAM_F0"]["t"], float).tolist() for e in ents],
+          "pose": [np.asarray(e["pose"], float) for e in ents], "vel": [np.asarray(e["vel"], float) for e in ents],
+          "speed": [float(np.linalg.norm(e["vel"][-1])) for e in ents], "lht": [e["map"] in OL.LHT_MAPS for e in ents],
+          "syn_t": OL.SYN_T.tolist()}
+    return mt, idx, ents
+
+
+def _full_job(args):
+    """One full-navtrain token: the 4 CAM_F0 keys (navsim_zs_openpilot.render_token, the op_lb key rendering) + the 6 warped lattice frames."""
+    import navsim_zs_openpilot as NZ
+    e, pose, vel, cam, times = args
+    kf = NZ.render_token(e)
+    return kf, _warp_job((kf, pose, vel, cam, times))
+
+
 def _warp_job(args):
     """CPU ego-motion warp of the 6 lattice frames (jevdrive.op_interp.synth_cpu), as op_lb's `warp` synthesis."""
     from jevdrive import op_interp as I
@@ -106,7 +132,12 @@ def main(a):
     from jevdrive import navsim_zs as Z
     from jevdrive import op_adapt as A
     from jevdrive.data import splits
-    mt = OL.meta(a.data)
+    full_idx, ents = None, None
+    if a.data.startswith("navtrain_full"):                         # full navtrain shard "navtrain_full.s<i>of<n>": no op_lb dir, keys rendered here
+        assert a.frames == "warp", "full navtrain: protocol W only (Stage B decision)"
+        mt, full_idx, ents = full_meta(a.data)
+    else:
+        mt = OL.meta(a.data)
     names = mt["names"][: a.limit] if a.limit else mt["names"]
     N = len(names)
     tag = a.data + (f"-first{a.limit}" if a.limit else "")
@@ -120,7 +151,7 @@ def main(a):
 
         # ---- tab
         def make_tab():
-            idx = {e["token"]: e for e in Z.load_index(mt["split"], slim=True)}
+            idx = {e["token"]: e for e in (full_idx or Z.load_index(mt["split"], slim=True))}
             ents = [idx[t] for t in names]
             fz = np.load(Z.root("index") / f"{mt['split']}_future.npz")
             fpos = dict(zip(fz["tokens"].tolist(), range(len(fz["tokens"]))))
@@ -138,7 +169,7 @@ def main(a):
 
         # ---- front hidden tokens, one frame protocol (prereg addendum 1)
         def make_front():
-            keys = OL.Keys(a.data)
+            keys = OL.Keys(a.data) if ents is None else None
             _, src = OL._steps(0.0, False)
             t0 = time.time()
             pool = None
@@ -153,11 +184,15 @@ def main(a):
                 pool = ProcessPoolExecutor(a.workers or max(1, n_cpus() - 4)) if a.frames == "warp" else None
 
                 def load(rows):
-                    kf = keys[rows]
-                    if syn is None:
+                    if ents is not None:                            # full navtrain: render the 4 CAM_F0 keys and warp in one CPU job per token
+                        kf, sf = (np.stack(x) for x in zip(*pool.map(_full_job, [(ents[i], mt["pose"][i], mt["vel"][i], mt["cam"][i],
+                                                                                     np.asarray(mt["syn_t"])) for i in rows])))
+                    elif syn is None:
+                        kf = keys[rows]
                         sf = np.stack(list(pool.map(_warp_job, [(kf[j], mt["pose"][i], mt["vel"][i], mt["cam"][i], np.asarray(mt["syn_t"]))
                                                                 for j, i in enumerate(rows)])))
                     else:
+                        kf = keys[rows]
                         sf = np.asarray(syn[rows[0]:rows[-1] + 1])
                     img = lambda j, s: (kf[j][src[s][1]] if src[s][0] == "k" else sf[j][src[s][1]]) if s >= 0 else np.zeros(FRAME, np.uint8)  # noqa: E731
                     cur = np.stack([[img(j, s) for s in STEPS] for j in range(len(rows))])
@@ -177,7 +212,7 @@ def main(a):
         froot = root if a.frames == "gimm" else croot(f"{tag}@{a.frames}")
         froot.mkdir(parents=True, exist_ok=True)
         front = cache.cached(froot / "front.npy", cache.key(params=fparams, code=[encoder]), make_front, force=a.force)
-        if a.frames != "gimm":                                      # tab / side / teacher live in the base dir (the G protocol's)
+        if a.frames != "gimm" and ents is None:                    # tab / side / teacher live in the base dir (the G protocol's)
             run.summary |= {"n": N, "front_shape": list(front.shape), **timing}
             if timing:
                 (froot / "timing.json").write_text(json.dumps(timing, indent=1))
@@ -185,10 +220,9 @@ def main(a):
 
         # ---- side cameras
         def make_side():
-            full = Z.load_index(mt["split"])
+            full = full_idx or Z.load_index(mt["split"])
             pos = {e["token"]: k for k, e in enumerate(full)}
             items = [[{c: full[pos[t]]["cams"][f][c] for c in PA.SIDE_CAMS} for f in range(4)] for t in names]
-            del full
             out = np.zeros((N, len(PA.SIDE_CAMS), PA.SIDE_T) + A.H_SHAPE, np.float16)
             t0, tb = time.time(), []
             W = a.workers or max(1, n_cpus() - 4)
@@ -227,7 +261,8 @@ def main(a):
                     o = A._policy(net, H, (0.275, 0.525), torch.from_numpy(tc_all[r]).to(dev), valid)["outputs"].float()
                     out[r], plan[r] = o[:, di].cpu().numpy(), o[:, pi].cpu().numpy().reshape(-1, 33, 15)
             return dict(out=out, plan=plan, di=di, pi=pi)
-        cache.cached(root / "teacher.npz", cache.key(params=kbase, inputs=[root / "front.npy"]),
+        troot = froot if ents is not None else root                  # full navtrain (W): teacher = shipped on the W frames, next to its front
+        cache.cached(troot / "teacher.npz", cache.key(params=kbase, inputs=[froot / "front.npy"]),
                      make_teacher, force=a.force)
         run.summary |= {"n": N, "front_shape": list(front.shape), "side_shape": list(side.shape), **timing}
         if timing:
