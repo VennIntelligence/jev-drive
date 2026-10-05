@@ -21,7 +21,8 @@ def main(events, win, out):
     w = {F.wname(e): e for e in json.load(open(events))}[win]
     meta = load_segment_meta(F.ROOT / w["seg"])
     want = {w["onset"] - 20: "1 s before onset", w["onset"] + 40: "2 s after onset"}
-    warps = {k: F.ArmWarper(meta["rpy_calib"], *F.ARMS[k]) for k in F.ARMS}
+    arms = [k for k in F.ARMS if k not in F.FROZEN_WIDE]
+    warps = {k: F.ArmWarper(meta["rpy_calib"], *F.ARMS[k]) for k in arms}
     got = {}
     for n, (pr, pw) in enumerate(zip(decode_hevc(F.ROOT / w["seg"] / "fcamera.hevc"), decode_hevc(F.ROOT / w["seg"] / "ecamera.hevc"))):
         if n in want:
@@ -30,8 +31,8 @@ def main(events, win, out):
                 got[(n, k)] = (unpack_luma(o[0]), unpack_luma(o[1]))
         if n >= max(want):
             break
-    fig, ax = plt.subplots(len(F.ARMS), 4, figsize=(16, 2.1 * len(F.ARMS)))
-    for r, k in enumerate(F.ARMS):
+    fig, ax = plt.subplots(len(arms), 4, figsize=(16, 2.1 * len(arms)))
+    for r, k in enumerate(arms):
         fr, fw = F.ARMS[k]
         for c, (n, lab) in enumerate(want.items()):
             for j, cam in enumerate(("road", "wide")):
