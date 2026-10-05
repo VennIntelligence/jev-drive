@@ -80,7 +80,7 @@ class Reaper(unittest.TestCase):
 
     def test_non_leader_is_never_group_killed(self):
         # The old reaper did killpg(getpgid(pid)): a reused pid in a shell's group took the whole
-        # group (a tmux window's slot_run, say). Here that group would be this test process's.
+        # group (a tmux window's job wrapper, say). Here that group would be this test process's.
         foreign = self.spawn("sleep 300; true", self.out / "attempts-log.txt", argv0="b2d_route.py",
                              session=False)
         rid = self.out / "attempts" / "r1" / "1"

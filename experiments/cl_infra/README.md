@@ -24,5 +24,5 @@ index: 220 routes take a measured 3.11 h; reduced profile
 - `cl_profile_report.py` (archive): Worker-profile experiment readout
 - `make_infra_scale_figs.py` (archive): Figures and the flat result table of …
 
-[archive/](archive/) 23 one-off code · [results/](results/) 38 result files · [figs/](figs/) 5 figures
+[archive/](archive/) 22 one-off code · [results/](results/) 38 result files · [figs/](figs/) 5 figures
 <!-- files:end -->

@@ -145,8 +145,8 @@ Two single-process SIGKILLs on 2026-09-25 (openpilot Cinque policy server ~02:20
 extraction 13:41) hit the largest anonymous-memory process in the container while memory sat at `memory.high`,
 with `memory.events` oom / oom_kill = 0 before the next restart. Kernel OOM, our reapers, the agents' own commands,
 rlimits, pids.max and SIGHUP are ruled out; the leading explanation is AutoDL enforcing the memory limit outside the
-kernel. It cannot be confirmed without root. `scripts/boxwatch.sh` (5 s memory / largest-process sampler) and the
-`slot_run.sh` post-mortem (`<slot>.death-*.txt`) are armed so the next kill can be attributed by correlation; keep
+kernel. It cannot be confirmed without root. `scripts/boxwatch.sh` (5 s memory / largest-process sampler) is armed (see "The GPU pool" in
+docs/closed-loop-runbook.md) so the next kill can be attributed by correlation; keep
 application memory below ~85% of the container limit and count ~27 GB per openpilot Cinque process. The reapers in
 `b2d_run.py` and `b2d_tfv6_campaign.py` could kill a stranger that inherited a recorded pid (pid_max wraps in ~4 h
 here); both now kill only groups that still write into their own run directory.

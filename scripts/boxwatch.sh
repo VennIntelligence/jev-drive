@@ -10,7 +10,7 @@
 #              and the three largest processes by RSS as pid:rss_kB:comm
 #   every 60 s a full `ps` (pid ppid pgid user etimes rss nlwp args) in ps/<HHMMSS>.txt, kept 3 h
 #
-# One instance per box (flock); scripts/slot_run.sh starts it on demand, detached, so any scheduled job arms it.
+# One instance per box (flock); started on demand, detached, by the box tooling.
 # Cost: one `ps` every 5 s (~30 ms of one core) and ~4 MB/day.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"

@@ -13,7 +13,7 @@ index: Cosmos v1 no-go (80% diff outside ped); G4 made 2004 pairs
 <!-- files:begin -->
 ## Files
 
-- `cosmos_full.py` (lib): Cosmos-Transfer G4 full generation
+- `cosmos_full.py` (archive): Cosmos-Transfer G4 full generation
 - `cosmos_pilot.py` (lib): CARLA counterfactual pairs re-rendered …
 - `cosmos_openpilot.py` (lib): openpilot Cinque on the Cosmos pilot …
 - `cosmos_v2.py` (archive): tune the generator so that a translated …
@@ -24,5 +24,5 @@ index: Cosmos v1 no-go (80% diff outside ped); G4 made 2004 pairs
 - `cosmos_gen.sh` (archive): drive the selected P5 v1 worlds again …
 - `cosmos_infer.py` (archive): Cosmos-Transfer2.5 on the pilot clips
 
-[archive/](archive/) 12 one-off code · [results/](results/) 47 result files · [figs/](figs/) 13 figures · [lib/](lib/) 4 library
+[archive/](archive/) 13 one-off code · [results/](results/) 47 result files · [figs/](figs/) 13 figures · [lib/](lib/) 3 library
 <!-- files:end -->
