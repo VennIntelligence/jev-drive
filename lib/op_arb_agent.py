@@ -241,6 +241,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         if self.arb["coast_v"] > 0:
             self.rules = "coast"                               # the parent's post-controller hook -> _k_rules below
         self.route_adapter = self.cfg.get("route_adapter") or None
+        self.route_flip = bool(self.cfg.get("route_flip"))   # control: mirror the navigation polyline (left <-> right command)
         if self.route_adapter:
             import route_adapter as RA                       # lib/: numpy only on this path (features run on the server)
             self.route_poly_from_path = RA.route_poly_from_path
@@ -431,6 +432,8 @@ class OpArbAgent(Z.ZeroShotAgent):
         ra_poly = None
         if self.route_adapter:                               # op_route_ft: the navigation polyline -> the server's route adapter
             ra_poly, ra_mask = self.nav_polyline(now_xy, now_yaw)
+            if self.route_flip:
+                ra_poly = ra_poly * np.array([1.0, -1.0], np.float32)
             meta.update(route_adapter=self.route_adapter, route_poly=np.round(ra_poly, 3).ravel().tolist(),
                         route_mask=[int(x) for x in ra_mask])
         wire.send(self.sock, meta, dict(cams))
