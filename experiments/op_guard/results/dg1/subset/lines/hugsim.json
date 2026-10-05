@@ -1,0 +1,204 @@
+{
+ "line": "hugsim",
+ "candidate": "dg1",
+ "mode": "subset",
+ "status": "ok",
+ "runtime_s": 546.9,
+ "rows": [
+  {
+   "id": "spins",
+   "metric": "spins (heading err >= 60 deg)",
+   "value": 0,
+   "ref": 0,
+   "delta": 0,
+   "ci": null,
+   "rule": "not up vs shipped",
+   "pass": true,
+   "note": "11 scenes"
+  },
+  {
+   "id": "stuck",
+   "metric": "stuck (end max_steps)",
+   "value": 4,
+   "ref": 6,
+   "delta": -2,
+   "ci": null,
+   "rule": "reported (stuck: reduction is the goal)",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "id": "complete",
+   "metric": "completes",
+   "value": 3,
+   "ref": 3,
+   "delta": 0,
+   "ci": null,
+   "rule": "reported",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "id": "hd",
+   "metric": "HD-Score mean (paired over scenes)",
+   "value": 0.5315218812210752,
+   "ref": 0.5435120748636554,
+   "delta": -0.011990193642580138,
+   "ci": [
+    -0.19992353003394658,
+    0.18907638984394923
+   ],
+   "rule": "reported",
+   "pass": null,
+   "note": "paired mean diff -0.012"
+  }
+ ],
+ "provenance": {
+  "scenes": "unified_hugsim_small.txt",
+  "n": 11,
+  "missing": [],
+  "missing_ref": [],
+  "per_scene": {
+   "scene-0013-medium-00": {
+    "spin": false,
+    "max_abs_e": 1.8,
+    "end": "complete",
+    "hd": 0.9642857142857142,
+    "rc": 1.0,
+    "steps": 40,
+    "wall_s": 170.8,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/scene-0013_medium_00",
+    "src": "run"
+   },
+   "scene-0254-extreme-00": {
+    "spin": false,
+    "max_abs_e": 1.6,
+    "end": "fg_collision",
+    "hd": 0.04000727404982724,
+    "rc": 0.04728132387706856,
+    "steps": 39,
+    "wall_s": 173.0,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/scene-0254_extreme_00",
+    "src": "run"
+   },
+   "scene-102751446607-medium-01": {
+    "spin": false,
+    "max_abs_e": 1.2,
+    "end": "max_steps",
+    "hd": 0.15847506807731798,
+    "rc": 0.15847506807731798,
+    "steps": 400,
+    "wall_s": 369.7,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/102751446607_0_200_medium_01",
+    "src": "run"
+   },
+   "scene-8440_8640-easy-00": {
+    "spin": false,
+    "max_abs_e": 58.0,
+    "end": "max_steps",
+    "hd": 0.7803065580131936,
+    "rc": 0.7942051481050316,
+    "steps": 400,
+    "wall_s": 333.1,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/0000_8440_8640_easy_00",
+    "src": "run"
+   },
+   "scene-040-easy-00": {
+    "spin": false,
+    "max_abs_e": 10.2,
+    "end": "max_steps",
+    "hd": 0.9049459807711369,
+    "rc": 0.9049459807711369,
+    "steps": 400,
+    "wall_s": 339.3,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/040_easy_00",
+    "src": "run"
+   },
+   "scene-053-medium-02": {
+    "spin": false,
+    "max_abs_e": 7.4,
+    "end": "fg_collision",
+    "hd": 0.7317073170731716,
+    "rc": 0.8695652173913043,
+    "steps": 82,
+    "wall_s": 61.2,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/053_medium_02",
+    "src": "run"
+   },
+   "scene-0051-easy-00": {
+    "spin": false,
+    "max_abs_e": 2.5,
+    "end": "complete",
+    "hd": 1.0,
+    "rc": 1.0,
+    "steps": 50,
+    "wall_s": 39.1,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/scene-0051_easy_00",
+    "src": "run"
+   },
+   "scene-0418-hard-00": {
+    "spin": false,
+    "max_abs_e": 1.4,
+    "end": "max_steps",
+    "hd": 0.11174484719260837,
+    "rc": 0.3150912106135986,
+    "steps": 400,
+    "wall_s": 187.4,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/scene-0418_hard_00",
+    "src": "run"
+   },
+   "scene-0930-hard-00": {
+    "spin": false,
+    "max_abs_e": 5.2,
+    "end": "complete",
+    "hd": 1.0,
+    "rc": 1.0,
+    "steps": 44,
+    "wall_s": 48.9,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/scene-0930_hard_00",
+    "src": "run"
+   },
+   "scene-3000_3200-medium-00": {
+    "spin": false,
+    "max_abs_e": 5.3,
+    "end": "bg_collision",
+    "hd": 0.09869062583875447,
+    "rc": 0.3151174368886546,
+    "steps": 26,
+    "wall_s": 22.6,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/0000_3000_3200_medium_00",
+    "src": "run"
+   },
+   "scene-034-hard-01": {
+    "spin": false,
+    "max_abs_e": 0.8,
+    "end": "fg_collision",
+    "hd": 0.05657730813010315,
+    "rc": 0.08871321914800176,
+    "steps": 28,
+    "wall_s": 25.2,
+    "run_dir": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/hugsim/guard-spec/zs/034_hard_01",
+    "src": "run"
+   }
+  },
+  "cache_hits": [],
+  "unit_wall_s": 1770.3,
+  "run": {
+   "lines": [
+    "hugsim"
+   ],
+   "root": "/root/autodl-tmp/ujs/runs/op_guard/dg1/subset/cl",
+   "stage": "all",
+   "jobs": [
+    "hugsim"
+   ],
+   "lane": "op-dagger",
+   "rc": 0,
+   "wall_s": 546.3,
+   "job_wall_s": {
+    "hugsim": 543.9
+   },
+   "failed": []
+  }
+ }
+}

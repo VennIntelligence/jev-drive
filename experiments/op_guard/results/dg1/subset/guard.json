@@ -1,0 +1,77 @@
+{
+ "candidate": "dg1",
+ "mode": "subset",
+ "verdict": "PASS",
+ "n_pass": 1,
+ "n_fail": 0,
+ "n_na": 3,
+ "lines": {
+  "hugsim": {
+   "status": "ok",
+   "mode": "subset",
+   "runtime_s": 546.9
+  }
+ },
+ "rows": [
+  {
+   "line": "hugsim",
+   "mode": "subset",
+   "status": "ok",
+   "id": "spins",
+   "metric": "spins (heading err >= 60 deg)",
+   "value": 0,
+   "ref": 0,
+   "delta": 0,
+   "ci": null,
+   "rule": "not up vs shipped",
+   "pass": true,
+   "note": "11 scenes"
+  },
+  {
+   "line": "hugsim",
+   "mode": "subset",
+   "status": "ok",
+   "id": "stuck",
+   "metric": "stuck (end max_steps)",
+   "value": 4,
+   "ref": 6,
+   "delta": -2,
+   "ci": null,
+   "rule": "reported (stuck: reduction is the goal)",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "line": "hugsim",
+   "mode": "subset",
+   "status": "ok",
+   "id": "complete",
+   "metric": "completes",
+   "value": 3,
+   "ref": 3,
+   "delta": 0,
+   "ci": null,
+   "rule": "reported",
+   "pass": null,
+   "note": ""
+  },
+  {
+   "line": "hugsim",
+   "mode": "subset",
+   "status": "ok",
+   "id": "hd",
+   "metric": "HD-Score mean (paired over scenes)",
+   "value": 0.5315218812210752,
+   "ref": 0.5435120748636554,
+   "delta": -0.011990193642580138,
+   "ci": [
+    -0.19992353003394658,
+    0.18907638984394923
+   ],
+   "rule": "reported",
+   "pass": null,
+   "note": "paired mean diff -0.012"
+  }
+ ],
+ "t": "2026-10-05 12:38:42"
+}
