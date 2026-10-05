@@ -13,6 +13,10 @@ Per step (sim step 0.25 s; one GIF frame per step = real time unless marked) and
 
     CUDA_VISIBLE_DEVICES= $DATA_DIR/envs/hugsim/bin/python experiments/leaderboard_audit/scripts/lbx_hugsim_clips.py scan <scenario> ...
     CUDA_VISIBLE_DEVICES= $DATA_DIR/envs/hugsim/bin/python experiments/leaderboard_audit/scripts/lbx_hugsim_clips.py make <out_dir>
+
+`unified <out_dir> [stem ...]` draws the same panels for the unified-interface runs (experiments/leaderboard_audit/results/unified_interface.md):
+shipped under the legacy `exam` preset (iLQR tracks the plan) above shipped under `spec` (= decision 118's arm: action curvature ->
+clip_curvature -> 0.25 s delay), cases UNI_CASES (a spin the spec removes, a launch the spec loses).
 """
 import csv
 import io
@@ -51,6 +55,15 @@ CASES = [
     ("hugsim_fg_0138x", "scene-0138-extreme-00", "fg collision"),
     ("hugsim_fg_3400x", "scene-3400_3600-extreme-00", "fg collision"),
     ("hugsim_fg_034h", "scene-034-hard-00", "fg collision"),
+]
+
+
+UNI_RES = D / "runs/unified/hugsim/results.csv"
+UNI_ARMS = (("shipped exam: iLQR tracks plan", UNI_RES, "uni-exam"),
+            ("shipped spec: action curv + clip + delay", UNI_RES, "uni-d118"))
+UNI_CASES = [
+    ("hugsim_spec_vs_exam_0013m", "scene-0013-medium-00", "exam: spin / bg collision"),
+    ("hugsim_spec_vs_exam_3000m", "scene-3000_3200-medium-00", "spec: stuck / max_steps"),
 ]
 
 
@@ -294,7 +307,7 @@ def make_case(args):
     for k, lab in tl:
         rows = [a.panel(k, lo, world, rt_bev, cls) for a in arms]
         top = np.full((30, rows[0].shape[1], 3), 30, np.uint8)
-        put(top, f"HUGSIM {sc}  |  class (shipped): {cls}  |  sim step 0.25 s  |  {lab}", (8, 21), 0.55,
+        put(top, f"HUGSIM {sc}  |  {cls if ':' in cls else 'class (shipped): ' + cls}  |  sim step 0.25 s  |  {lab}", (8, 21), 0.55,
             (255, 255, 255) if lab == "real time" else (0, 255, 255), (30, 30, 30))
         sep = np.full((6, rows[0].shape[1], 3), 255, np.uint8)
         frames.append(np.concatenate([top, rows[0], sep, rows[1]], 0))
@@ -323,15 +336,24 @@ def make_case(args):
     return stem, out.stat().st_size, len(frames)
 
 
+def _set_arms(arms):
+    global ARMS
+    ARMS = arms
+
+
 def main():
     cv2.setNumThreads(2)
     if sys.argv[1] == "scan":
         return scan(sys.argv[2:])
+    global ARMS
     out = Path(sys.argv[2])
     out.mkdir(parents=True, exist_ok=True)
     only = set(sys.argv[3:])
-    jobs = [(s, sc, c, out) for s, sc, c in CASES if not only or s in only]
-    with ProcessPoolExecutor(min(len(jobs), 9)) as ex:
+    cases = CASES
+    if sys.argv[1] == "unified":
+        ARMS, cases = UNI_ARMS, UNI_CASES
+    jobs = [(s, sc, c, out) for s, sc, c in cases if not only or s in only]
+    with ProcessPoolExecutor(min(len(jobs), 9), initializer=_set_arms, initargs=(ARMS,)) as ex:
         for r in ex.map(make_case, jobs):
             print(*r, flush=True)
 
