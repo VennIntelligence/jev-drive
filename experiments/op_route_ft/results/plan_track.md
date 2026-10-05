@@ -26,6 +26,8 @@ Does the command matter under plan execution? rc-bear - rc-ctl took +0.04 [+0.00
 choice could show. Under curv the same contrast is +0.04 [-0.17, +0.26] (d128), i.e. no difference there either. "Turn-in" under p7 in the table is the action head's own logged curvature (the plan is what steers), median -2.5 to -3.5 m = the
 car is not at the junction yet, meaningless as a timing readout.
 
+GIF: [figs/plan_track_rc-bear-s0_5423_turn0.gif](../figs/plan_track_rc-bear-s0_5423_turn0.gif) (rc-bear p7, route 5423, third-person next to the model input frames): the car loops before reaching the corner and passes within 5 m of the exit by accident. BEV: [figs/plan_track_panels.png](../figs/plan_track_panels.png) (curv dashed, p7 solid, shipped and rc-bear; turns picked where the executors differ in outcome).
+
 ## Reading
 
 1. The plan-versus-action gap (d120: plan-derived curvature 1.2-1.35x vs action 0.3-0.5x) cannot be exploited through this executor: tracking the plan in the B2D harness fails before any junction.
