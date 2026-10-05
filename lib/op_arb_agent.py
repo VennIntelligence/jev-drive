@@ -95,7 +95,7 @@ DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3
             "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0,
             "lat": "route", "lat_exec": "p7", "lon": "op", "hold": "any", "lead_go_v": 1.0, "coast_v": 0.0,
             "intent": "none", "intent_before_m": 20.0, "intent_after_m": 5.0,
-            "resume": "timer", "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "zone_gain": 1.0, "gain_m": 3.0, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
+            "resume": "timer", "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "zone_gain": 1.0, "hyb_v": 3.0, "gain_m": 3.0, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
 DRIVE_ZONES = {Z.LEFT: (15.0, 5.0), Z.RIGHT: (15.0, 5.0), Z.STRAIGHT: (5.0, 5.0),
                Z.CHANGE_LEFT: (5.0, 10.0), Z.CHANGE_RIGHT: (5.0, 10.0)}
 # DRIVE_ZONES is a semi-privileged fallback (interface key command.route_geometry = dense-zones): the dense route's metre-exact
@@ -236,7 +236,8 @@ class OpArbAgent(Z.ZeroShotAgent):
         self.ctx_frame, self.ctx = None, {}
         self.resume_blocked = False
         self.div_on, self.agree_t, self.intent_t, self.want_go, self.lat_src = False, 0.0, -1e9, True, "route"
-        if self.arb["lat_exec"] == "curv":
+        self.hyb_plan = False                                  # lat_exec "hyb": plan tracking above hyb_v m/s (hysteresis 0.5), action curvature below
+        if self.arb["lat_exec"] in ("curv", "hyb"):
             self.lateral = "curvature"                         # the parent's tick loop steers from self.curvature
         if self.arb["coast_v"] > 0:
             self.rules = "coast"                               # the parent's post-controller hook -> _k_rules below
@@ -567,11 +568,14 @@ class OpArbAgent(Z.ZeroShotAgent):
         lat_src = "op" if mode == "drive" and A["lat"] == "op" and lat_why is None else "route"
         if self.pc is not None and self.pc.meta.get("bypass"):
             lat_src, lat_why = "route", "privileged_bypass"
-        geom = np.r_[[[0.0, 0.0]], op_path] if lat_src == "op" and A["lat_exec"] == "p7" else bpath
+        if A["lat_exec"] == "hyb":
+            self.hyb_plan = speed >= A["hyb_v"] or (self.hyb_plan and speed >= A["hyb_v"] - 0.5)
+        plan_exec = A["lat_exec"] == "p7" or (A["lat_exec"] == "hyb" and self.hyb_plan)
+        geom = np.r_[[[0.0, 0.0]], op_path] if lat_src == "op" and plan_exec else bpath
         arb_path = place(geom, s_fin)
         self.want_go = bool(s_fin[7] - s_fin[3] > 0.5) and not warm   # the profile moves >= 0.5 m/s at 1-2 s
         if mode == "drive":
-            self.curvature = float(info["curvature"]) if lat_src == "op" and A["lat_exec"] == "curv" else None
+            self.curvature = float(info["curvature"]) if lat_src == "op" and not plan_exec else None
             if self.curvature is not None and A["zone_gain"] != 1.0 and any(a0 <= self.route.s[self.route.i] <= b0 for a0, b0 in self.gain_zones):
                 self.curvature *= A["zone_gain"]
         if mode == "native":

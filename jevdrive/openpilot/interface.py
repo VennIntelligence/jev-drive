@@ -258,7 +258,7 @@ def b2d_values(cfg, env=None):
     tick = float(cfg.get("op_camera_tick", 0.05))           # scripts/zeroshot_rigs.OP_CAMERA_TICK
     drive = a.get("mode") == "drive"
     lat_op = drive and a.get("lat", "route") == "op"
-    curv = lat_op and a.get("lat_exec", "p7") == "curv"
+    curv = lat_op and a.get("lat_exec", "p7") in ("curv", "hyb")   # hyb: action below hyb_v, plan tracking above (op_route_ft/plan_tracking)
     opc = curv and bool(cfg.get("op_ctrl") is not None or env.get("OP_CTRL"))
     opc_rule = cfg.get("op_ctrl") if cfg.get("op_ctrl") is not None else json.loads(env.get("OP_CTRL") or "{}")
     if a.get("resume") == "nored":
@@ -284,6 +284,8 @@ def b2d_values(cfg, env=None):
         tricks.append("privileged:%s" % cfg["pc"].get("arm"))
     if lat_op and float(a.get("div_m", 1.0)) < 1e8:
         tricks.append("divergence_fallback")
+    if lat_op and a.get("lat_exec") == "hyb":
+        tricks.append("hybrid_plan_above_%gmps" % float(a.get("hyb_v", 3.0)))
     if float(a.get("zone_gain", 1.0)) != 1.0:
         tricks.append("zone_gain:%g" % float(a["zone_gain"]))
     return {"rig.height_m": float(mount[2]), "history.rate_hz": round(1.0 / tick, 2),
