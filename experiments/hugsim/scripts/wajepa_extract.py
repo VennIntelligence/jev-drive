@@ -28,7 +28,7 @@ rows = []
 srcs = [("wajepa", D / "runs/hugsim-wajepa/results.csv", None), ("cinque-fixed", HERE.parent / "results/hugsim-exam/scored_op.csv", "cinque-fixed")]
 for tag, csvp, want in srcs:
     for r in csv.DictReader(open(csvp)):
-        if (want or tag) != r["tag"]:
+        if (want or tag) != r["tag"] or r["end"] == "crash":
             continue
         d = Path(r["run_dir"])
         if not (d / "infos.pkl").exists():
