@@ -123,6 +123,11 @@ $P top              # per card: util, VRAM booked by the pool / used outside it 
 $P show <id>        # spec, state, log tail       $P cancel <id> [--drain]
 ```
 
+**Fail fast.** `submit` refuses a command whose script paths are missing or whose `.py` files do not compile (`--no-check`
+skips). `--preflight "<smoke cmd>"` (the same job on 1-2 items) runs that smoke first at top priority with the job's
+resources; the job waits for it and fails with it. Jobs of a batch that pass the same smoke command share one run, so
+one broken script costs one 20 s smoke, not N launches. Smoke runs see `CL_PREFLIGHT=1`, log under `<log-dir>/preflight`.
+
 From Python (chains, guards): `from jevdrive.cl import pool as P; jid = P.submit(cmd, name=..., vram_gb=..., carla=...,
 cpu=..., after=[...]); P.wait([jid])`. A CARLA job: `P.submit(P.b2d_cmd(out, route_ids, agent=..., agent_config=...),
 name=..., carla=6, cpu=12)` (6 servers, 9 GB each unless `vram_gb` says otherwise).
@@ -150,7 +155,7 @@ command when rc alone is not enough.
 | CARLA | servers of pool jobs + servers outside the pool + `carla` <= 6 per card; one CARLA job starts per card per round (staggered starts) |
 | ports | a free block of 2 x `carla` server indices in 160-494 whose RPC and TM port blocks (index i: RPC 2000 + 50i, TM = RPC block of i + 120) miss every pool job, every hold and every LISTENING TCP port on the box; freed only when the job's whole process tree has exited |
 | CPU | declared cores of pool jobs + holds <= cgroup quota (`cpu_overcommit` 1.0) |
-| PIDs / RAM | pids.current + threads of jobs younger than 5 min + the job's estimate (thread model) <= 0.80 pids.max; memory + young `ram_gb` <= 0.85 memory.max |
+| PIDs / RAM | pids.current + threads of jobs younger than 5 min + the job's estimate (thread model) <= 0.80 pids.max; cgroup memory without page cache (`memory.stat` anon + shmem + kernel) + young `ram_gb` <= 0.85 memory.max |
 | order | priority, then submit order; jobs that fit start out of order (backfill), but a head job blocked > 15 min reserves the card closest to fitting it |
 
 Among the cards that fit, the least loaded (pool jobs + foreign GPU processes) wins, VRAM best-fit breaks ties: spreading

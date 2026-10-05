@@ -46,8 +46,8 @@ def cmd_probe(a):
     print("host CPUs %d, cgroup quota %s cores, affinity %d CPUs, NUMA %s" % (
         box.host_cpus, box.quota_cores or "none", len(box.affinity),
         "; ".join("%d: %d CPUs" % (n, len(c)) for n, c in sorted(box.numa.items())) or "-"))
-    print("pids %d / %s, memory %.0f / %s GiB, load %s, ephemeral ports %d-%d" % (
-        box.pids_current, box.pids_max or "max", box.mem_current_gb, "%.0f" % box.mem_max_gb if box.mem_max_gb else "max",
+    print("pids %d / %s, memory (no page cache) %.0f / %s GiB, load %s, ephemeral ports %d-%d" % (
+        box.pids_current, box.pids_max or "max", box.mem_used_gb, "%.0f" % box.mem_max_gb if box.mem_max_gb else "max",
         " ".join(box.load), *box.ephemeral))
     held = {}
     for j in st["jobs"].values():
@@ -93,11 +93,22 @@ def cmd_submit(a):
     cmd = cmd[0] if len(cmd) == 1 and " " in cmd[0] else cmd
     env = dict(os.environ) if a.copy_env else {}
     env.update(dict(kv.split("=", 1) for kv in a.env))
-    jid = P.submit(cmd, name=a.name, owner=a.owner or None, cwd=a.cwd or os.getcwd(), log_dir=a.log_dir, env=env,
-                   vram_gb=a.vram, carla=a.carla, span=a.span, cpu=a.cpu, ram_gb=a.ram, threads=a.threads,
-                   train=a.train, exclusive=a.exclusive, gpus=[int(g) for g in a.gpus.split(",") if g] if a.gpus else [],
-                   priority=a.priority, after=a.after.split(",") if a.after else [], when_exists=a.when_exists,
-                   tries=a.tries, timeout_h=a.timeout_h, max_rss_gb=a.max_rss, profile=a.profile or "")
+    cwd = a.cwd or os.getcwd()
+    if not a.no_check:
+        bad = P.static_check(cmd, cwd) + (P.static_check(a.preflight, cwd) if a.preflight else [])
+        if bad:
+            sys.exit("not submitted (--no-check to override): " + "; ".join(bad))
+    res = dict(owner=a.owner or None, cwd=cwd, log_dir=a.log_dir, env=env, vram_gb=a.vram, carla=a.carla, span=a.span,
+               cpu=a.cpu, ram_gb=a.ram, threads=a.threads, train=a.train, exclusive=a.exclusive,
+               gpus=[int(g) for g in a.gpus.split(",") if g] if a.gpus else [], max_rss_gb=a.max_rss,
+               profile=a.profile or "")
+    after = a.after.split(",") if a.after else []
+    if a.preflight:
+        pf = P.preflight(a.preflight, a.name, timeout_min=a.preflight_min, **res)
+        print("preflight", pf, file=sys.stderr)
+        after.append(pf)
+    jid = P.submit(cmd, name=a.name, priority=a.priority, after=after, when_exists=a.when_exists, tries=a.tries,
+                   timeout_h=a.timeout_h, **res)
     print(jid)
     _warn_dispatcher(P.snapshot()[3])
     return 0
@@ -243,6 +254,11 @@ def main(argv=None):
     s.add_argument("--copy-env", action="store_true", help="run with this shell's whole environment")
     s.add_argument("--cwd", default="")
     s.add_argument("--log-dir", default="", help="log.txt / STATUS / DONE / ERROR here (default runs/pool/jobs/<id>)")
+    s.add_argument("--preflight", default="", help="smoke command (one shell string, e.g. the job with --limit 2): runs "
+                   "first at top priority with the same resources, the job waits for it and fails if it fails; batches "
+                   "sharing the same smoke command share one run")
+    s.add_argument("--preflight-min", type=float, default=15.0, help="timeout of the smoke run, minutes")
+    s.add_argument("--no-check", action="store_true", help="skip the static check (script paths exist, .py compiles)")
     s.add_argument("argv", nargs=argparse.REMAINDER, metavar="CMD")
     s = sub.add_parser("queue")
     s.add_argument("--all", action="store_true")

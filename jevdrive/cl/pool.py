@@ -29,8 +29,8 @@ card when (all measured live, nvidia-smi cached <= 15 s):
             inside capacity.index_bounds. A block is freed only when every process of the job's tree has exited.
   CPU       sum of declared cores (pool + holds) <= cpu budget (cgroup quota x cpu_overcommit); cpu > 0 pins the job
             (taskset) to free physical cores, NUMA-local to the card first.
-  PIDs/RAM  pids.current + threads of jobs younger than 5 min + the job's estimate <= 0.80 pids.max; cgroup memory +
-            young ram_gb + ram_gb <= 0.85 memory.max.
+  PIDs/RAM  pids.current + threads of jobs younger than 5 min + the job's estimate <= 0.80 pids.max; cgroup memory
+            without page cache (anon + shmem + kernel) + young ram_gb + ram_gb <= 0.85 memory.max.
 Among the cards that fit, the least loaded (fewest pool jobs + foreign GPU processes) wins and VRAM best-fit breaks ties:
 spreading keeps every card computing, best-fit keeps room for a large job. A job blocked > hold_s (15 min) at the head
 of the queue reserves the card closest to fitting it: lower-priority jobs stop starting there until it starts.
@@ -47,8 +47,10 @@ log_dir gets log.txt (all tries), STATUS (one line), DONE (JSON) or ERROR (reaso
 from __future__ import annotations
 
 import fcntl
+import hashlib
 import json
 import os
+import re
 import secrets
 import shlex
 import signal
@@ -152,6 +154,45 @@ def submit(cmd, name: str = "job", pool: Path = None, **kw) -> str:
     jid = new_id(name)
     procs.atomic_json(pool / "inbox" / ("%s.json" % jid), dict(id=jid, t_submit=time.time(), spec=spec.__dict__))
     return jid
+
+
+def preflight(cmd, name: str, timeout_min: float = 15.0, pool: Path = None, **kw) -> str:
+    """Queue a short smoke run of `cmd` (the caller's job then goes `after` it) and return its id. It starts ahead of
+    normal work (priority + 1000) with the caller's resources, so a broken script fails in one smoke run instead of in
+    every job of a batch. Identical smoke commands (same cmd and cwd, last 6 h, not failed / cancelled) are reused."""
+    pool = Path(pool or pool_dir())
+    key = hashlib.sha1(json.dumps([cmd, kw.get("cwd") or ""], sort_keys=True).encode()).hexdigest()[:12]
+    st, _, inbox, _ = snapshot(pool)
+    for j in list(st["jobs"].values()) + [dict(x, state="inbox") for x in inbox]:
+        if (j["spec"].get("env") or {}).get("CL_PREFLIGHT_KEY") == key and j["state"] not in ("failed", "cancelled") \
+                and time.time() - j.get("t_submit", 0) < 6 * 3600:
+            return j["id"]
+    kw = {k: v for k, v in kw.items() if k not in ("after", "when_exists", "tries", "timeout_h", "priority")}
+    kw["env"] = dict(kw.get("env") or {}, CL_PREFLIGHT="1", CL_PREFLIGHT_KEY=key)
+    if kw.get("log_dir"):
+        kw["log_dir"] = str(Path(kw["log_dir"]) / "preflight")
+    return submit(cmd, name=name + "-pf", pool=pool, priority=1000.0, tries=1,
+                  timeout_h=timeout_min / 60, **kw)
+
+
+def static_check(cmd, cwd: str = "") -> list:
+    """Problems visible without running: script paths in the command that do not exist, Python files that do not
+    compile. Returns messages (empty = fine)."""
+    toks = shlex.split(cmd) if isinstance(cmd, str) else [str(x) for x in cmd]
+    base, out = Path(cwd or REPO), []
+    for t in toks:
+        if not re.fullmatch(r"[\w./~-]+\.(py|sh)", t):
+            continue
+        f = Path(os.path.expanduser(t))
+        f = f if f.is_absolute() else base / f
+        if not f.exists():
+            out.append("missing %s" % f)
+        elif f.suffix == ".py":
+            try:
+                compile(f.read_bytes(), str(f), "exec")
+            except SyntaxError as e:
+                out.append("syntax error %s:%s %s" % (f, e.lineno, e.msg))
+    return out
 
 
 def cancel(jid: str, drain: bool = False, pool: Path = None) -> None:
@@ -563,8 +604,8 @@ class Dispatcher:
                 why = "CPU %d + %d cores > budget %.0f" % (cpu_used, n_cpu, budget)
             elif box.pids_current + young_threads + pid_need > adm.plan_cap:
                 why = "PIDs %d + %d + %d > %d" % (box.pids_current, young_threads, pid_need, adm.plan_cap)
-            elif box.mem_max_gb and box.mem_current_gb + young_ram + s.ram_gb > 0.85 * box.mem_max_gb:
-                why = "memory %.0f + %.0f GB > 85%% of %.0f" % (box.mem_current_gb + young_ram, s.ram_gb, box.mem_max_gb)
+            elif box.mem_max_gb and box.mem_used_gb + young_ram + s.ram_gb > 0.85 * box.mem_max_gb:
+                why = "memory %.0f + %.0f GB > 85%% of %.0f" % (box.mem_used_gb + young_ram, s.ram_gb, box.mem_max_gb)
             if why:
                 self.set_why(j, why)
                 continue
@@ -689,7 +730,7 @@ class Dispatcher:
             t=time.time(), pid=os.getpid(), cfg=cfg, holds=holds,
             cards={g: a.__dict__ for g, a in self.last.items()},
             counts={s: len(self.jobs(s)) for s in ("queued", "running", "done", "failed", "cancelled")},
-            box=dict(cores=box.cores, pids=box.pids_current, pids_max=box.pids_max, mem_gb=round(box.mem_current_gb, 1),
+            box=dict(cores=box.cores, pids=box.pids_current, pids_max=box.pids_max, mem_gb=round(box.mem_used_gb, 1),
                      mem_max_gb=round(box.mem_max_gb, 1), load=box.load)))
 
     def run(self, once: bool = False) -> int:

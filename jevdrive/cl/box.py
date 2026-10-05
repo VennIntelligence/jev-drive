@@ -45,6 +45,16 @@ def _read(root: Path, rel: str, default=None):
         return default
 
 
+def mem_used(root: Path) -> int:
+    """Bytes the cgroup cannot reclaim: anon + shmem + kernel from memory.stat. memory.current also counts page cache,
+    which the kernel drops under pressure; gating on it queues jobs behind a warm file cache."""
+    stat = dict(l.split() for l in (_read(root, "sys/fs/cgroup/memory.stat", "") or "").splitlines() if l.count(" ") == 1)
+    if "anon" not in stat:
+        v = _read(root, "sys/fs/cgroup/memory.current")
+        return int(v) if v and v != "max" else 0
+    return sum(int(stat.get(k, 0)) for k in ("anon", "shmem", "kernel"))
+
+
 _SMI = {}
 
 
@@ -93,6 +103,7 @@ class Box:
     cards: list
     load: list = field(default_factory=list)
     time: float = 0.0
+    mem_used_gb: float = 0.0      # non-reclaimable cgroup memory (anon + shmem + kernel); memory.current minus page cache
 
     @property
     def cores(self) -> float:
@@ -189,4 +200,5 @@ def probe(root: Path = Path("/"), rows: dict = None, query=smi) -> Box:
                pids_max=num("sys/fs/cgroup/pids.max"), pids_current=num("sys/fs/cgroup/pids.current"),
                mem_max_gb=num("sys/fs/cgroup/memory.max") / 2 ** 30, mem_current_gb=num("sys/fs/cgroup/memory.current") / 2 ** 30,
                ephemeral=(int(eph[0]), int(eph[1])), cards=sorted(cards, key=lambda c: c.index),
-               load=(_read(root, "proc/loadavg", "") or "").split()[:3], time=time.time())
+               load=(_read(root, "proc/loadavg", "") or "").split()[:3], time=time.time(),
+               mem_used_gb=mem_used(root) / 2 ** 30)

@@ -27,6 +27,7 @@ def fake_root(tmp):
     write(tmp, "sys/fs/cgroup/pids.current", "716\n")
     write(tmp, "sys/fs/cgroup/memory.max", "296352743424\n")
     write(tmp, "sys/fs/cgroup/memory.current", "129582235648\n")
+    write(tmp, "sys/fs/cgroup/memory.stat", "anon 10737418240\nfile 107374182400\nkernel 1073741824\nshmem 0\n")
     write(tmp, "sys/devices/system/cpu/online", "0-207\n")
     write(tmp, "proc/self/status", "Name:\tx\nCpus_allowed_list:\t0-207\n")
     write(tmp, "proc/sys/net/ipv4/ip_local_port_range", "32768\t60999\n")
@@ -62,6 +63,7 @@ class Probe(unittest.TestCase):
         b = self.box
         self.assertEqual((b.host_cpus, b.cores, b.pids_max, b.pids_current), (208, 75.0, 20480, 716))
         self.assertAlmostEqual(b.mem_max_gb, 276.0, places=0)
+        self.assertAlmostEqual(b.mem_used_gb, 11.0, places=3)   # page cache ("file") not counted
         self.assertEqual(b.numa[1][:2], [52, 53])
         self.assertEqual(len(b.primary_cpus(1)), 52)
         self.assertNotIn(156, b.primary_cpus(1))

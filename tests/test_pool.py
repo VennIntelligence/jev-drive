@@ -79,6 +79,24 @@ class Placement(unittest.TestCase):
         P.cancel(jid, pool=tmp)
         self.assertEqual((tmp / "cancel" / jid).read_text(), "stop")
 
+    def test_preflight_shared_and_ahead(self):
+        tmp = Path(tempfile.mkdtemp())
+        a = P.preflight("python x.py --limit 2", "b", pool=tmp, vram_gb=4, cwd="/r", log_dir="/l", after=["z"])
+        b = P.preflight("python x.py --limit 2", "b", pool=tmp, vram_gb=4, cwd="/r")
+        c = P.preflight("python x.py --limit 3", "b", pool=tmp, vram_gb=4, cwd="/r")
+        self.assertEqual(a, b)
+        self.assertNotEqual(a, c)
+        j = json.loads((tmp / "inbox" / ("%s.json" % a)).read_text())["spec"]
+        self.assertEqual((j["name"], j["priority"], j["after"], j["log_dir"], j["env"]["CL_PREFLIGHT"]),
+                         ("b-pf", 1000.0, [], "/l/preflight", "1"))
+
+    def test_static_check(self):
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "ok.py").write_text("x = 1\n")
+        (tmp / "bad.py").write_text("def f(:\n")
+        self.assertEqual(P.static_check(["python", "ok.py", "--n", "3"], str(tmp)), [])
+        self.assertEqual(len(P.static_check("python bad.py && bash missing.sh", str(tmp))), 2)
+
 
 def fake_box(cards=(0, 1, 2), used_mib=0, pids=700):
     cs = [Card(g, "GPU-%d" % g, "0000:%02x:00.0" % g, used_mib, 85651, 0, 0 if g == 0 else 1) for g in cards]
