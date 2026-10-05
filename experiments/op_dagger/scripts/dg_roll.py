@@ -53,7 +53,7 @@ class Runner:
         import rft
         if tag == "shipped":
             return L.LModel(None, dtype=self.dtype).to(self.dev).eval()
-        p = Path(tag) if Path(tag).exists() else C.root("runs", tag, "ckpt-final.pt")
+        p = Path(tag) if Path(tag).exists() else C.root("runs", tag) / "ckpt-final.pt"
         ck = torch.load(p, map_location="cpu", weights_only=False)
         m = rft.RModel(L.LCfg(tag, intent="none"), None, dtype=self.dtype).to(self.dev).eval()
         m.load_state(ck["model"])
