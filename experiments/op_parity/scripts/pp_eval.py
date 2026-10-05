@@ -128,10 +128,23 @@ def cmd_report(a):
         arms[m] = read_csv(f)
     arms["WA-JEPA"] = read_csv(data_dir() / WAJEPA_CSV)
     toks = sorted(set.intersection(*[set(t.index) for t, _ in arms.values()]))
+    from jevdrive import navsim_zs as Z
+    fz = np.load(Z.root("index") / "navtest_future.npz")
+    fut = dict(zip(fz["tokens"].tolist(), fz["poses"]))
+    plen = lambda P: np.linalg.norm(np.diff(np.concatenate([np.zeros_like(P[:, :1, :2]), P[:, :, :2]], 1), axis=-1), axis=-1).sum(1)  # noqa: E731
     rows = []
     for m, (t, avg) in arms.items():
+        geo = {}
+        pf = data_dir() / "runs" / "op_lb" / DATA / "preds" / f"{stem(m).replace('@', '-')}__base.npz"
+        if pf.exists():
+            z = np.load(pf)
+            F = np.stack([fut[k] for k in z["tokens"]])
+            Lg, Pp = plen(F), z["poses"]
+            mv = Lg > 2.0
+            geo = {"ade_vs_log": float(np.linalg.norm(Pp[:, :, :2] - F[:, :, :2], axis=-1).mean()),
+                   "speed_ratio_med": float(np.median(plen(Pp)[mv] / Lg[mv]))}
         r = {"arm": m, "n": len(t), "EPDMS (devkit average row)": 100 * float(avg.score) if avg is not None else np.nan,
-             "EPDMS (token mean)": 100 * float(t.score.mean())}
+             "EPDMS (token mean)": 100 * float(t.score.mean())} | geo
         r |= {s: 100 * float(t[s].mean()) for s in V2 if s in t}
         rows.append(r)
     out = _R / "experiments" / "op_parity" / "results"
