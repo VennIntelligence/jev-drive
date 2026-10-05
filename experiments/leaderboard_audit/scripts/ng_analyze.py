@@ -88,40 +88,50 @@ def nusc_frames():
     return o
 
 
-def gap(o, col, a="night", b="day", matched=False, idx=None):
-    """mean(a) - mean(b); matched: b re-weighted to a's (vbin, tbin) mix, cells without b dropped from both."""
-    x = o[o.lab == a].dropna(subset=[col]) if idx is None else o.loc[idx][lambda d: d.lab == a].dropna(subset=[col])
-    y = o[o.lab == b].dropna(subset=[col]) if idx is None else o.loc[idx][lambda d: d.lab == b].dropna(subset=[col])
-    if not matched:
-        return x[col].mean() - y[col].mean()
-    cx, cy = x.groupby(["vbin", "tbin"])[col].agg(["mean", "size"]), y.groupby(["vbin", "tbin"])[col].mean()
-    c = cx.join(cy.rename("m_b"), how="inner")
-    return float((c["mean"] * c["size"]).sum() / c["size"].sum() - (c["m_b"] * c["size"]).sum() / c["size"].sum())
-
-
-def boot(o, cluster, fn):
-    """fn(dataframe) -> float or dict; resample clusters with replacement."""
-    ids = o[cluster].to_numpy()
-    u, inv = np.unique(ids, return_inverse=True)
-    groups = [np.flatnonzero(inv == k) for k in range(len(u))]
-    out = []
-    for _ in range(B):
-        pick = rng.integers(0, len(u), len(u))
-        out.append(fn(o.iloc[np.concatenate([groups[k] for k in pick])]))
-    return out
-
-
 def summarise(o, cluster, metrics, a="night", b="day"):
+    """Raw and matched gap (mean_a - mean_b) with cluster-bootstrap CIs. Per cluster k, label and (vbin, tbin) cell the metric sums / counts are
+    tabulated once; a bootstrap draw is a multinomial weight vector over clusters (vectorised over draws). Matched: b re-weighted to a's cell mix over
+    the cells where both labels occur."""
+    o = o.reset_index(drop=True)
+    u, inv = np.unique(o[cluster].to_numpy(), return_inverse=True)
+    K, cell = len(u), (o.vbin.astype(int) * 3 + o.tbin.astype(int)).to_numpy()
+    W_ = rng.multinomial(len(u), np.full(len(u), 1 / len(u)), B).astype(np.float64)     # (B, K) cluster weights
     res = {}
     for m in metrics:
-        row = {"n_a": int((o.lab == a).sum()), "n_b": int((o.lab == b).sum()), "mean_a": float(o[o.lab == a][m].mean()), "mean_b": float(o[o.lab == b][m].mean())}
-        for mt in (False, True):
-            f = lambda d, mt=mt: gap(d.reset_index(drop=True), m, a, b, mt)  # noqa: E731
-            pt = f(o.reset_index(drop=True))
-            bs = np.array([v for v in boot(o, cluster, f) if np.isfinite(v)])
-            row["matched" if mt else "raw"] = [float(pt), *map(float, np.percentile(bs, [2.5, 97.5]))]
-        res[m] = row
+        x = o[m].to_numpy(float)
+        ok = np.isfinite(x)
+        out = {"n_a": int((o.lab[ok] == a).sum()), "n_b": int((o.lab[ok] == b).sum()), "mean_a": float(x[ok & (o.lab == a)].mean()), "mean_b": float(x[ok & (o.lab == b)].mean())}
+        T = {}
+        for lab in (a, b):
+            sel = ok & (o.lab == lab).to_numpy()
+            S, N = np.zeros((K, 12)), np.zeros((K, 12))
+            np.add.at(S, (inv[sel], cell[sel]), x[sel]); np.add.at(N, (inv[sel], cell[sel]), 1)
+            T[lab] = (S, N)
+        def stat(w):                                                                  # w (B', K) -> raw, matched gaps
+            sa, na, sb, nb = (w @ T[a][0]), (w @ T[a][1]), (w @ T[b][0]), (w @ T[b][1])
+            raw = sa.sum(1) / na.sum(1) - sb.sum(1) / nb.sum(1)
+            both = (na > 0) & (nb > 0)
+            ma = np.where(both, sa, 0).sum(1) / np.where(both, na, 0).sum(1)
+            mb = (np.where(both, na, 0) * np.divide(sb, nb, out=np.zeros_like(sb), where=nb > 0)).sum(1) / np.where(both, na, 0).sum(1)
+            return raw, ma - mb
+        r0, m0 = stat(np.ones((1, K)))
+        rb, mb_ = stat(W_)
+        out["raw"] = [float(r0[0]), *map(float, np.nanpercentile(rb, [2.5, 97.5]))]
+        out["matched"] = [float(m0[0]), *map(float, np.nanpercentile(mb_, [2.5, 97.5]))]
+        res[m] = out
     return res
+
+
+def point_gap(o, col, matched):
+    r = summarise_point(o, col)
+    return r[1] if matched else r[0]
+
+
+def summarise_point(o, col, a="night", b="day"):
+    x, y = o[o.lab == a].dropna(subset=[col]), o[o.lab == b].dropna(subset=[col])
+    cx, cy = x.groupby(["vbin", "tbin"])[col].agg(["mean", "size"]), y.groupby(["vbin", "tbin"])[col].mean()
+    c = cx.join(cy.rename("m_b"), how="inner")
+    return x[col].mean() - y[col].mean(), float(((c["mean"] - c["m_b"]) * c["size"]).sum() / c["size"].sum())
 
 
 def main():
@@ -147,7 +157,7 @@ def main():
     sens = {}
     for t in (35, 50, 65):
         w2 = w.copy(); w2["lab"] = np.where(w2.luma < t, "night", np.where(w2.luma >= DAY_T, "day", "dusk"))
-        sens[str(t)] = {"n_night": int((w2.lab == "night").sum()), "ade3_gap": float(gap(w2, "op_ade3")), "ade3_gap_matched": float(gap(w2, "op_ade3", matched=True))}
+        sens[str(t)] = {"n_night": int((w2.lab == "night").sum()), "ade3_gap": float(point_gap(w2, "op_ade3", False)), "ade3_gap_matched": float(point_gap(w2, "op_ade3", True))}
     S["wod_luma_cut_sensitivity"] = sens
     # per cluster night share and per-cluster night-day op ade3 for clusters with >= 15 frames in each
     cl = {}
