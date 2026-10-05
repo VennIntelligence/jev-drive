@@ -32,7 +32,7 @@ from jevdrive.common import data_dir  # noqa: E402
 
 SHARDS = data_dir() / "datasets" / "waymo_e2e" / "front3"
 CAM_H = 1.86                     # true front camera height above the road (decision 108)
-PPM, BW, BH = 5.0, 300, 512
+PPM, BW, BH = 9.0, 300, 512
 
 
 def candidates():
@@ -87,7 +87,7 @@ def read_frame(row, idx):
             if front is None:
                 fr = Image.open(io.BytesIO(b))
                 fr.draft("RGB", (fr.size[0] // 2, fr.size[1] // 2))
-                front = np.asarray(fr.convert("RGB").resize((768, 512)))
+                front = np.asarray(fr.convert("RGB").resize((600, 400)))
     cat = np.concatenate(planes)
     packed, rgb = np.empty((2, 6, 128, 256), np.uint8), {}
     for m, k in enumerate(("road", "wide")):
@@ -107,7 +107,7 @@ def put(img, txt, xy, scale=0.5, col=(255, 255, 255), bg=(0, 0, 0)):
 def bev(past, fut, wod_plan):
     img = np.full((BH, BW, 3), 245, np.uint8)
     q = lambda p: np.stack([BW / 2 - p[:, 1] * PPM, 0.75 * BH - p[:, 0] * PPM], 1).round().astype(np.int32)  # noqa: E731
-    for r in range(10, 80, 10):
+    for r in range(5, 60, 5):
         cv2.circle(img, (BW // 2, int(0.75 * BH)), int(r * PPM), (225, 225, 225), 1)
     cv2.polylines(img, [q(past[:, :2])], False, (140, 140, 140), 3, cv2.LINE_AA)
     cv2.polylines(img, [q(np.r_[np.zeros((1, 2)), fut[:, :2]])], False, (40, 160, 40), 3, cv2.LINE_AA)
@@ -152,7 +152,7 @@ def make(a):
         packed, rgb, front = read_frame(r, idx)
         for _ in range(2):
             raw = m.step(packed, action_t=(0.275, 0.525))
-        if f < f0:
+        if f < f0 or (f - f0) % a.every:
             continue
         i = df.index.get_loc(pos[f])
         v = float(np.linalg.norm(past[i, -1, 2:4]))
@@ -167,6 +167,7 @@ def make(a):
         put(fr, f"t {(f - ev) / 10:+5.1f} s from launch   v {v:4.1f} m/s", (6, 44), 0.5)
         put(fr, f"action: curvature {d['curvature']:+.3f} 1/m  accel {d['accel']:+.2f} m/s2", (6, 68), 0.5)
         put(fr, f"plan v(+1 s) {float(np.interp(1.0, T_IDXS, np.linalg.norm(d['plan_vel'][:, :2], axis=1))):4.1f} m/s", (6, 92), 0.5)
+        fr = np.concatenate([fr, np.full((512 - fr.shape[0], fr.shape[1], 3), 20, np.uint8)], 0)
         panel = np.concatenate([fr, bev(past[i], fut[i], wp), np.concatenate([road, wide], 0)], 1)
         top = np.full((30, panel.shape[1], 3), 30, np.uint8)
         put(top, f"WOD-E2E val {seq} frames {f0}-{f1} | shipped Cinque, open loop (plan scored, nothing executed) | 10 Hz frame fed twice, "
@@ -175,13 +176,13 @@ def make(a):
         log.append(dict(frame=f, v=v, curvature=d["curvature"], accel=d["accel"], plan_y5=float(wp[-1, 1]), fut_y5=float(fut[i, -1, 1])))
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    save_gif(frames, out, a.max_mb, 100)
+    save_gif(frames, out, a.max_mb, 100 * a.every)
     json.dump(dict(seq=seq, event=ev, f0=f0, f1=f1, warm_from=fw, backend=a.backend, steps=log), open(out.with_suffix(".json"), "w"), indent=1)
     print(out, out.stat().st_size, len(frames))
 
 
 def save_gif(frames, out, max_mb, ms):
-    for scale, ncol in ((0.6, 128), (0.52, 96), (0.45, 80), (0.4, 64), (0.34, 64)):
+    for scale, ncol in ((0.7, 128), (0.62, 96), (0.55, 80), (0.48, 64), (0.4, 64)):
         ims = [Image.fromarray(cv2.resize(f, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)) for f in frames]
         pal = ims[len(ims) // 2].quantize(colors=ncol, method=Image.Quantize.MEDIANCUT)
         q = [im.quantize(palette=pal, dither=Image.Dither.NONE) for im in ims]
@@ -199,6 +200,7 @@ def main():
     ap.add_argument("--before", type=int, default=30, help="shown frames before the event")
     ap.add_argument("--after", type=int, default=80)
     ap.add_argument("--n", type=int, default=10)
+    ap.add_argument("--every", type=int, default=2, help="show every n-th 10 Hz frame (the model still gets all)")
     ap.add_argument("--backend", default="cuda")
     ap.add_argument("--max-mb", type=float, default=4.5)
     a = ap.parse_args()
