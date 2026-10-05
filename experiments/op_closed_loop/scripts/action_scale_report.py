@@ -110,8 +110,11 @@ def fut_kappa(fut, tau):
 
 def plan_kappa(plan, v, t=0.275):
     """openpilot's get_curvature_from_plan (the path for models without an action head), on the plan mean."""
-    from jevdrive.openpilot.model import curvature_from_plan
-    return np.array([curvature_from_plan(p[:, 11], p[:, 14], vv, t) for p, vv in zip(plan, v)])
+    from jevdrive.openpilot.model import T_IDXS, MIN_STABLE_DELAY
+    ti = T_IDXS[:plan.shape[1]]                                     # the stored plan keeps its first 8 times (0-0.48 s)
+    psi = np.array([np.interp(max(t, MIN_STABLE_DELAY), ti, p[:, 11]) for p in plan]) * (t / MIN_STABLE_DELAY if t < MIN_STABLE_DELAY else 1.0)
+    vv = np.maximum(v, 1.0)
+    return 2 * psi / (vv * t) - plan[:, 0, 14] / vv
 
 
 def line(name, f):
@@ -120,7 +123,6 @@ def line(name, f):
 
 
 def cmd_report(a):
-    from jevdrive.openpilot.model import T_IDXS
     out = Path(a.out)
     B, C = np.load(out / "bank.npz", allow_pickle=True), np.load(out / "comma.npz")
     hdr = "| target | n (clusters) | slope decoded ~ target [95% CI] | reverse slope | r |\n|---|---|---|---|---|"
