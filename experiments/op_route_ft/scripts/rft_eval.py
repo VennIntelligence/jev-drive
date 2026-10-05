@@ -90,6 +90,44 @@ def run_rows(m, trunk_of, rows, feat, valid, tc, dev, bs=64):
     return np.concatenate(P), np.concatenate(Ac)
 
 
+def turnin(C, s, ac):
+    """Turn-in response of the action head on CARLA dev (pose, exit) rows (rc-*-pre readout): desired curvature k = -action[0] / max(1, v0)^2
+    (left +), signed to the commanded side, by profile x d for turn commands; the turn-in target (rft.act_target_pre) on the same rows; and the
+    command spread k(left command) - k(right command) per pose that has both exits (positive = the head turns towards the command)."""
+    v0 = C.tab["v0"][s["pose"]].astype(float)
+    k = -ac / np.maximum(1.0, v0) ** 2
+    sg = np.where(s["cmd"] == "left", 1.0, np.where(s["cmd"] == "right", -1.0, 0.0))
+    tk = np.full(len(k), np.nan)
+    for n, j in enumerate(s["rows"]):
+        tp, tm = F.target_path(C.r["poly"][j], C.r["pmask"][j])
+        pre = F.act_target_pre(tp, tm, v0[n])
+        if pre:
+            tk[n] = -pre[0] / max(1.0, v0[n]) ** 2
+    prof, d = C.tab["profile"][s["pose"]], C.tab["d"][s["pose"]]
+    out = {}
+    for pf in ("creep", "brake", "cruise", "all"):
+        for dd in (10, 20, 30, 0):
+            m = (sg != 0) & ((prof == pf) if pf != "all" else True) & ((d == dd) if dd else True)
+            if m.sum() < 10:
+                continue
+            key = f"{pf}_d{dd or 'all'}"
+            out[key] = {"k_signed": boot((sg * k)[m], s["cluster"][m]), "target_signed": float(np.nanmean((sg * tk)[m])) if np.isfinite(tk[m]).any() else None,
+                        "share_pre": float(np.isfinite(tk[m]).mean()), "sign_ok": float((np.sign(k[m]) == sg[m]).mean())}
+    spread, cl = [], []
+    for p in np.unique(s["pose"]):
+        mm = s["pose"] == p
+        kl, kr = k[mm & (s["cmd"] == "left")], k[mm & (s["cmd"] == "right")]
+        if len(kl) and len(kr):
+            spread.append(kl.mean() - kr.mean())
+            cl.append(C.tab["cluster"][p])
+    out["spread_lr"] = boot(np.array(spread), np.array(cl)) if spread else {"n": 0}
+    pre = np.isfinite(tk) & (sg != 0)
+    out["approach_k_vs_target"] = {"n": int(pre.sum()), "k_signed": float((sg * k)[pre].mean()) if pre.any() else None,
+                                   "target_signed": float((sg * tk)[pre].mean()) if pre.any() else None,
+                                   "corr": float(np.corrcoef(k[pre], tk[pre])[0, 1]) if pre.sum() > 2 else None}
+    return out
+
+
 def boot(x, groups):
     gi, Lc, W = L.cluster_boot(np.asarray(groups), B=2000)
     m, ci = L.boot_mean(np.asarray(x, float), gi, Lc, W)
@@ -220,6 +258,7 @@ def main(a):
         turn = s["cmd"] != "straight"
         sg = np.where(s["cmd"] == "left", -1.0, 1.0)          # action[0] is right-positive
         r["carla_action_sign_turn"] = boot((np.sign(ac[turn]) == sg[turn]).astype(float), s["cluster"][turn])
+        r["turnin"] = turnin(C, s, ac)
         r["carla_plan_class_counts"] = {f"{cm}->{k}": int(((s["cmd"] == cm) & (c == k)).sum()) for cm in ("left", "straight", "right")
                                         for k in ("left", "straight", "right", "short")}
         # drift without command
