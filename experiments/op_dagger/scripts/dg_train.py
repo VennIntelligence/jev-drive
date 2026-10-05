@@ -109,7 +109,7 @@ def main():
     if (d / "ckpt-final.pt").exists():
         print("exists", d)
         return
-    cfg = rft.RCfg(name=a.tag, enc=None, seed=a.seed, steps=a.steps, lam_p=0.0, workers=a.workers, warmup=min(100, a.steps // 5))
+    cfg = rft.RCfg(name=a.tag, enc=None, seed=a.seed, steps=a.steps, lam_p=0.0, workers=a.workers, warmup=max(1, min(100, a.steps // 5)))
     with Run("op_dagger", a.tag, seed=a.seed, config=cfg.dump() | vars(a)) as run:
         run.use_split(splits.load("wod/r2-train"))
         dev = torch.device(a.dev)
