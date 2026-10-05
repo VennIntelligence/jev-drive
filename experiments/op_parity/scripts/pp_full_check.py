@@ -40,7 +40,7 @@ def check_cache(a):
         logs += tab["log"].tolist()
         fut = tab["fut"]
         cam = tab["cam"][:, 0].astype(np.float64)
-        W = torch.as_tensor(R2.t_weights(0.5 * np.arange(1, 9)))
+        W = torch.as_tensor(R2.t_weights(0.5 * np.arange(1, 9)), dtype=torch.float64)
         x, y, _ = rear(torch.as_tensor(tz["plan"], dtype=torch.float64), torch.as_tensor(cam), W)
         P = np.stack([x.numpy(), y.numpy()], -1)
         ade = float(np.linalg.norm(P - fut[:, :, :2], axis=-1).mean())
