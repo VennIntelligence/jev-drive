@@ -54,10 +54,10 @@ def label(fut20, off, v):
     return hum, at, aw, a1
 
 
-def states_of(rolls):
+def states_of(rolls, smoke=False):
     out = []
     for r in rolls:
-        for f in sorted(glob.glob(str(C.root("roll", r) / "train-collect-[0-9]*of*.npz"))):
+        for f in sorted(glob.glob(str(C.root("roll", r) / ("train-collect-*of*.npz" if smoke else "train-collect-[0-9]*of*.npz")))):
             z = np.load(f, allow_pickle=True)
             for c, off, vs, te in zip(z["c"], z["off"], z["vs"], z["t_event"]):
                 ok = (np.abs(off[:, 1]) <= CAP_Y) & (np.abs(off[:, 2]) <= CAP_PSI) & (np.abs(off[:, 0]) <= C.DX_CAP)
@@ -78,7 +78,7 @@ class Batcher(torch.utils.data.Dataset):
 
     def _open(self):
         self.S = C.Clips("train")
-        self.st = states_of([r for r in self.a.rolls.split(",") if r and r != "none"])
+        self.st = states_of([r for r in self.a.rolls.split(",") if r and r != "none"], self.a.include_smoke)
 
     def row(self, c, j, oh, off, v, role):
         S = self.S
@@ -126,6 +126,7 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--lam-acc", type=float, default=1.0)
+    ap.add_argument("--include-smoke", action="store_true", help="staged-launch check: read --limit collect files too")
     a = ap.parse_args()
     d = C.root("runs", a.tag)
     if (d / "ckpt-final.pt").exists():
