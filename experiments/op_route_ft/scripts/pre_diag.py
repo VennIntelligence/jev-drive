@@ -23,6 +23,7 @@ from experiments.op_adapt_l.lib import op_adapt_l as L  # noqa: E402
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="+", default=["O", "rc-ctl-s0", "rc-bear-s0", "rc-ctl-pre-s0", "rc-bear-pre-s0"])
+    ap.add_argument("--out", default="pre_diag.json", help="file name under $R/evalol_ol/")
     a = ap.parse_args()
     dev = torch.device("cuda")
     out = {}
@@ -64,7 +65,7 @@ def main():
         print(name, json.dumps({k: {kk: round(vv, 3) for kk, vv in v.items()} for k, v in res.items()}), flush=True)
         del m
         torch.cuda.empty_cache()
-    p = F.rroot("evalol_ol") / "pre_diag.json"
+    p = F.rroot("evalol_ol") / a.out
     p.write_text(json.dumps(out, indent=1))
     print("wrote", p)
 

@@ -16,7 +16,9 @@ Rows of one batch (48):
   D  no command: plan consistency + every head to the original (nav / wod / carla H pools, CARLA pair poses).
 Arms: rc-bear (bear encoding), rc-poly (poly encoding), rc-ctl (command zeroed on every row, same rows and targets), rc-all (rc-bear + op_adapt_L
 start / stop slices with stay contrast (T4) + layer-3 H / O pairs (T5) + nuPlan drivable hinge on nav rows (T6); exploratory), rc-bear-pre /
-rc-ctl-pre (rc-bear / rc-ctl with the turn-in action target at approach poses, act_target_pre; decision 128 suspect a).
+rc-ctl-pre (rc-bear / rc-ctl with the turn-in action target at approach poses, act_target_pre; decision 128 suspect a), rc-bear-near /
+rc-ctl-near (rc-bear / rc-ctl with 6 of the 16 CARLA P rows drawn from the near set: 0-10 m before / 0.5-6 m into the junction at 0-3 m/s,
+near_plan.py; targets from the dense lane-centre path, same rules; decision 129 follow-up).
 
   bank   --root <carla packed root> --tag <tag>     stage-3 trunks + the original's outputs per CARLA pose -> $R/bank/<tag>/
   train  --arm <arm> [--steps n] [--tag t]           -> $R/runs/<arm>-s<seed>/ (Run dir, ckpt-final.pt in op_adapt_l format, adapter.npz)
@@ -50,8 +52,11 @@ VFLOOR = 4.0                      # m/s, CARLA targets of moving poses drive thr
 ALAT_CAP = 3.0                    # m/s^2, speed cap of the CARLA targets on the exit's curvature
 NEG_NPZ = "processed/op_route_cmd/navtrain/route_neg.npz"   # map-screened negatives (op_route_cmd results/negatives.md), navtrain tokens
 ROUTE_NPZ = {"nav": "processed/op_route_cmd/navtrain/route.npz", "wod": "processed/op_route_cmd/wod/route.npz"}
-CARLA_ROOTS = {"ol": "runs/op_route_cmd/carla_pairs_s10000ol/packed", "old": "runs/op_route_cmd/carla_pairs_s10000/packed"}
-CARLA_CAM = {"ol": 1.59, "old": 1.519}
+CARLA_ROOTS = {"ol": "runs/op_route_cmd/carla_pairs_s10000ol/packed", "old": "runs/op_route_cmd/carla_pairs_s10000/packed",
+               "near": "runs/op_route_ft/carla_near/packed"}
+CARLA_CAM = {"ol": 1.59, "old": 1.519, "near": 1.59}
+NEAR_VMIN = 0.3                   # m/s, near rows: action supervised from openpilot's latActive speed (curvature = action / max(1, v)^2 holds there)
+NEAR_AUP = 1.5                    # m/s^2, near rows: the speed floor of the plan target ramps from v0 to VFLOOR at this rate (not a jump to VFLOOR)
 
 
 def rroot(*p) -> Path:
@@ -130,9 +135,10 @@ def plan_arc(mu, cam, ts=T16):
     return s[1:]
 
 
-def path_target(poly, pmask, mu, cam, vfloor=0.0):
+def path_target(poly, pmask, mu, cam, vfloor=0.0, v0=None):
     """CARLA positive: exit polyline (10 m vertices) -> ((16, 3) rear-axle x, y, speed at T16, (32, 2) x, y at the plan times, (32,) mask t <= 8 s):
-    smoothed path, timed by the original's own speed with a floor `vfloor`, capped at ALAT_CAP on the path's curvature (next 60 m)."""
+    smoothed path, timed by the original's own speed with a floor `vfloor`, capped at ALAT_CAP on the path's curvature (next 60 m).
+    v0 given (near rows): the floor ramps min(vfloor, v0 + NEAR_AUP * t) instead of applying from t = 0."""
     v = np.asarray(poly, float)[: int(pmask.sum())]
     P = RP.smooth_path(v, 0.5, 1.5)
     if P is None:
@@ -143,7 +149,8 @@ def path_target(poly, pmask, mu, cam, vfloor=0.0):
     kmax = k[: int(60 / 0.5)].max() if len(k) else 0.0
     tg = np.arange(0.125, TL_MAX + 1e-9, 0.125)
     s_tea = plan_arc(mu, cam, tg)
-    vt = np.maximum(np.diff(np.r_[0.0, s_tea]) / 0.125, vfloor)
+    vf = vfloor if v0 is None else np.minimum(vfloor, v0 + NEAR_AUP * tg)
+    vt = np.maximum(np.diff(np.r_[0.0, s_tea]) / 0.125, vf)
     vt = np.minimum(vt, np.sqrt(ALAT_CAP / max(kmax, 1e-3)))
     st = np.minimum(np.cumsum(vt * 0.125), g[-1])
     at = lambda ts: np.stack([np.interp(np.interp(ts, tg, st), g, P[:, c]) for c in range(2)], -1)  # noqa: E731
@@ -180,10 +187,10 @@ def target_path(poly, pmask):
     return out, m
 
 
-def act_target_path(tp, tm, v0):
+def act_target_path(tp, tm, v0, vmin=1.0):
     """Pure pursuit on the target path at the arc-length lookahead clip(v0 * 1 s, 4, 15) m (timing-free, for CARLA rows whose timing comes from
-    the slow original plan) -> (target action[0], weight)."""
-    if v0 < 1.0 or tm.sum() < 5:
+    the slow original plan) -> (target action[0], weight). On an arc of radius R >= 2 m it returns 1 / R; before a turn it ramps in over the 4 m."""
+    if v0 < vmin or tm.sum() < 5:
         return 0.0, 0.0
     k = int(min(np.clip(v0, 4.0, 15.0), tm.sum() - 1))
     x, y = float(tp[k, 0]), float(tp[k, 1])
@@ -270,6 +277,7 @@ class RCfg:
     t6: float = 0.0                       # rc-all: drivable hinge weight on nav rows
     t6_margin: float = 0.4
     pre: bool = False                     # rc-*-pre: turn-in action target at approach poses (act_target_pre), P rows only
+    # rc-*-near: rows["Pnear"] > 0 draws P rows from the near set (CARLA_ROOTS["near"]); same losses, targets from its dense path
 
     def dump(self):
         return asdict(self)
@@ -286,6 +294,11 @@ ARMS = {
     "rc-all": dict(enc="bear", t4=True, t5=True, t6=0.3),
     "rc-bear-pre": dict(enc="bear", pre=True),
     "rc-ctl-pre": dict(enc="bear", zero_cmd=True, pre=True),
+    "rc-bear-near": dict(enc="bear", rows={"Pnav": 7, "Pwod": 5, "Pcar": 10, "Pnear": 6, "Ncar": 3, "Nreal": 3, "Dnav": 5, "Dwod": 4, "Dhc": 2, "Dcar": 3}),
+    "rc-ctl-near": dict(enc="bear", zero_cmd=True, rows={"Pnav": 7, "Pwod": 5, "Pcar": 10, "Pnear": 6, "Ncar": 3, "Nreal": 3, "Dnav": 5, "Dwod": 4, "Dhc": 2,
+                                                         "Dcar": 3}),
+    "smoke-near": dict(steps=30, ckpt_every=10 ** 9, workers=4, rows={"Pnav": 7, "Pwod": 5, "Pcar": 10, "Pnear": 6, "Ncar": 3, "Nreal": 3, "Dnav": 5,
+                                                                      "Dwod": 4, "Dhc": 2, "Dcar": 3}),
     "smoke-all": dict(steps=20, carla="old", ckpt_every=10 ** 9, workers=4, t4=True, t5=True, t6=0.3),
 }
 ROLE = {"P": 1, "D": 2, "N": 3}
@@ -304,6 +317,14 @@ class Carla:
             self.tea = {k: z[k] for k in z.files}
         self.cam = CARLA_CAM[which]
         self.n = len(self.tab["id"])
+
+
+def rows_of(C: Carla) -> Carla:
+    C.rows_of = {}
+    for j, p in enumerate(C.r["pose_row"]):
+        C.rows_of.setdefault(int(p), []).append(j)
+    C.rows_of = {k: np.array(v) for k, v in C.rows_of.items()}
+    return C
 
 
 class Real:
@@ -357,10 +378,7 @@ class Batcher(torch.utils.data.Dataset):
         c = self.cfg
         self.C = Carla(c.carla)
         C = self.C
-        C.rows_of = {}
-        for j, p in enumerate(C.r["pose_row"]):
-            C.rows_of.setdefault(int(p), []).append(j)
-        C.rows_of = {k: np.array(v) for k, v in C.rows_of.items()}
+        rows_of(C)
         self.real = {d: Real(d) for d in ("nav", "wod")}
         self.hc = Real("carla")
         tr = lambda R: R.S.rows(self.split)  # noqa: E731
@@ -381,6 +399,11 @@ class Batcher(torch.utils.data.Dataset):
         cp = np.flatnonzero(C.tab["split"] == self.split)
         self.pool["Dcar"] = (cp, None)
         self.pool["Ncar"] = (np.array([p for p in cp if p in C.rows_of and missing_classes(C, p) and C.tab["profile"][p] != "stopped"]), None)
+        if c.rows.get("Pnear"):
+            self.CN = rows_of(Carla("near"))
+            nr = np.flatnonzero((self.CN.r["split"] == self.split) & (self.CN.r["dmask"].sum(1) >= 5))
+            w = np.array([turn_weight(self.CN.r["angle"][j], self.CN.r["turn_rmin"][j], 0.0) for j in nr])
+            self.pool["Pnear"] = (nr, w / w.sum())
         if c.t6:
             with np.load(data_dir() / "runs/op_route_ft/drivable/nav.npz") as z:
                 self.sdf = {k: z[k] for k in z.files}
@@ -440,6 +463,8 @@ class Batcher(torch.utils.data.Dataset):
         out["fp"] = RA.features("poly", poly, pmask, np.random.default_rng(rng.integers(1 << 62)))
 
     def _carla(self, key, x, rng):
+        if key == "Pnear":
+            return self._near(x, rng)
         C = self.C
         if key == "Pcar":
             j = x
@@ -477,6 +502,30 @@ class Batcher(torch.utils.data.Dataset):
                 self._neg_feat(out, neg["poly"], neg["pmask"], rng)
         return out
 
+    def _near(self, j, rng):
+        """Near P row (rc-*-near): the rc-bear CARLA P recipe on a near pose, targets from the dense lane-centre path (the 10 m vertices cut the
+        corner, which matters 0-10 m from it): plan timed by the original with the floor ramping from v0 at NEAR_AUP (moving poses, v0 >= NEAR_VMIN;
+        else the original's own timing, as `stopped`), action = act_target_path from NEAR_VMIN on."""
+        C = self.CN
+        p = int(C.r["pose_row"][j])
+        v0 = float(C.tab["v0"][p])
+        out = dict(trunk=C.T[p], valid=C.tab["slot_valid"][p], tc=C.tab["tc"][p], cam=np.float32(C.cam), tgt=C.tea["out"][p], tmu=C.tea["mu"][p],
+                   hum=np.full((16, 3), np.nan, np.float32), role=ROLE["P"], fb=np.zeros(RA.ENC_DIM["bear"], np.float32),
+                   fp=np.zeros(RA.ENC_DIM["poly"], np.float32), at=np.float32(0), aw=np.float32(0), sdf=np.int64(-1),
+                   tp=np.zeros((NPATH, 2), np.float32), tm=np.zeros(NPATH, bool), lt=np.zeros((32, 2), np.float32), ltm=np.zeros(32, bool))
+        dn, dm = C.r["dense"][j], C.r["dmask"][j]
+        moving = v0 >= NEAR_VMIN
+        pt = path_target(dn, dm, C.tea["mu"][p], C.cam, VFLOOR if moving else 0.0, v0 if moving else None)
+        if pt is None:
+            out["role"] = ROLE["D"]
+            return out
+        out["hum"], out["lt"], out["ltm"] = pt
+        self._neg_feat(out, C.r["poly"][j], C.r["pmask"][j], rng)
+        out["tp"], out["tm"] = target_path(dn, dm)
+        a, w = act_target_path(out["tp"], out["tm"], v0, NEAR_VMIN)
+        out["at"], out["aw"] = np.float32(a), np.float32(w)
+        return out
+
     def __getitem__(self, k):
         if not self.ok:
             self._open()
@@ -501,7 +550,7 @@ class Batcher(torch.utils.data.Dataset):
             p, w = self.pool[key]
             pick = rng.choice(p, cnt, p=w) if w is not None else p[rng.integers(len(p), size=cnt)]
             for x in pick:
-                if key.endswith("car"):
+                if key.endswith("car") or key == "Pnear":
                     rows.append(self._carla(key, int(x), rng))
                 else:
                     d = {"Pnav": "nav", "Pwod": "wod", "Dnav": "nav", "Dwod": "wod", "Dhc": "hc"}[key]

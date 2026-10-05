@@ -4,7 +4,7 @@ Same map walking, hold-out, dev hash, weather and polyline convention as experim
   * approach poses: rear axle 0-10 m before the connector start (d ~ U(0, 10)), on the ego lane (the approach lane with the most legal exits);
     rows = every exit LEGAL from that lane (no lane-change blends: a car < 10 m before the mouth does not change lanes), so 3-exit lanes give 3 rows;
   * in-turn poses: rear axle 0.5-6 m along the connector of one legal turning exit (|angle| >= 25 deg); rows = that exit plus any other legal exit
-    whose lane-centre path still passes within 0.75 m and 10 deg of the pose (undiverged), usually none;
+    whose lane-centre path still passes within 0.5 m and 6 deg of the pose (undiverged), usually none;
   * speed 0-3 m/s with a history consistent with it: kind `stopped` (v 0 throughout, one render repeated, 10%), `halted` (v0 0, was decelerating at
     0.5-1.5 m/s^2, 10%), `rolling` (v0 ~ U(0.3, 3), constant acceleration ~ U(-1, 1) m/s^2 over the 1.8 s history, speed clipped to [0, 5]; 80%).
     `profile` = kind (the renderer renders one frame only for `stopped`).
@@ -32,7 +32,7 @@ S_IN = (0.5, 6.0)                          # in-turn: rear axle this far along t
 V_ROLL, A_ROLL, A_HALT, V_CAP = (0.3, 3.0), (-1.0, 1.0), (0.5, 1.5), 5.0
 KINDS = (("stopped", 0.1), ("halted", 0.1), ("rolling", 0.8))
 TURN_MIN_DEG = 25.0
-UNDIV_M, UNDIV_DEG = 0.75, 10.0
+UNDIV_M, UNDIV_DEG = 0.5, 6.0
 NDENSE = 80                                # dense path: 1 m spacing up to 80 m (= rft.NPATH)
 
 
