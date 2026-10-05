@@ -16,7 +16,7 @@ import guardlib as G  # noqa: E402
 
 NAME, ROOT = "op-route-ft-plan-track", "op_route_ft/plan_track/cl"
 OUT = G.data_dir() / "runs/op_route_ft/plan_track"
-ARMS = "shipped,rc-bear-s0,rc-ctl-s0,rc-poly-s0,shipped-hyb"
+ARMS = "shipped,rc-bear-s0,rc-ctl-s0,shipped-hyb,rc-poly-s0"
 
 
 def jobs(args):
