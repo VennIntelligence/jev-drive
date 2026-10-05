@@ -1,0 +1,45 @@
+| group   | model   | metric     |   n |   units |   mean |     lo |     hi |
+|:--------|:--------|:-----------|----:|--------:|-------:|-------:|-------:|
+| launch  | shipped | g1         |  40 |      39 | 16.497 | 15.803 | 17.179 |
+| launch  | shipped | g2         |  40 |      39 | -2.098 | -2.642 | -1.605 |
+| launch  | shipped | g3         |  40 |      39 | -1.650 | -3.120 | -0.506 |
+| launch  | shipped | gk1        |  40 |      39 | -3.970 | -4.654 | -3.269 |
+| launch  | shipped | gk2        |  40 |      39 | -0.943 | -1.386 | -0.481 |
+| launch  | shipped | gk3        |  40 |      39 |  0.180 | -0.252 |  0.629 |
+| launch  | shipped | kick10     |  40 |      39 |  0.958 |  0.887 |  1.026 |
+| launch  | shipped | free_dy    |  40 |      39 |  0.044 |  0.028 |  0.061 |
+| launch  | shipped | free_dpsi  |  40 |      39 |  2.378 |  1.435 |  3.505 |
+| launch  | shipped | rep_dphi   |  40 |      39 |  0.000 |  0.000 |  0.000 |
+| launch  | shipped | rep_dkappa |  40 |      39 |  0.000 |  0.000 |  0.000 |
+| launch  | shipped | kick_ok10  |  40 |      39 |  0.812 |  0.705 |  0.910 |
+| launch  | shipped | free_ok10  |  40 |      39 |  0.850 |  0.738 |  0.949 |
+| moving  | shipped | g1         |  80 |      73 |  6.281 |  5.129 |  7.499 |
+| moving  | shipped | g2         |  80 |      73 | -0.825 | -0.974 | -0.701 |
+| moving  | shipped | g3         |  80 |      73 | -0.408 | -0.466 | -0.359 |
+| moving  | shipped | gk1        |  80 |      73 |  0.524 |  0.263 |  0.796 |
+| moving  | shipped | gk2        |  80 |      73 |  0.783 |  0.513 |  1.046 |
+| moving  | shipped | gk3        |  80 |      73 |  1.437 |  1.194 |  1.689 |
+| moving  | shipped | kick10     |  80 |      73 |  0.308 |  0.227 |  0.392 |
+| moving  | shipped | sw10       |  56 |      53 |  0.933 |  0.866 |  0.998 |
+| moving  | shipped | free_dy    |  80 |      73 |  0.100 |  0.056 |  0.172 |
+| moving  | shipped | free_dpsi  |  80 |      73 |  0.677 |  0.455 |  0.954 |
+| moving  | shipped | rep_dphi   |  80 |      73 |  0.000 |  0.000 |  0.000 |
+| moving  | shipped | rep_dkappa |  80 |      73 |  0.000 |  0.000 |  0.000 |
+| moving  | shipped | kick_ok10  |  80 |      73 |  0.950 |  0.909 |  0.982 |
+| moving  | shipped | free_ok10  |  80 |      73 |  0.988 |  0.961 |  1.000 |
+| all     | shipped | g1         | 120 |     111 |  9.687 |  8.513 | 10.877 |
+| all     | shipped | g2         | 120 |     111 | -1.249 | -1.484 | -1.033 |
+| all     | shipped | g3         | 120 |     111 | -0.822 | -1.334 | -0.436 |
+| all     | shipped | gk1        | 120 |     111 | -0.974 | -1.470 | -0.503 |
+| all     | shipped | gk2        | 120 |     111 |  0.207 | -0.077 |  0.473 |
+| all     | shipped | gk3        | 120 |     111 |  1.018 |  0.762 |  1.257 |
+| all     | shipped | kick10     | 120 |     111 |  0.525 |  0.443 |  0.608 |
+| all     | shipped | sw10       |  56 |      53 |  0.933 |  0.866 |  0.998 |
+| all     | shipped | free_dy    | 120 |     111 |  0.081 |  0.051 |  0.131 |
+| all     | shipped | free_dpsi  | 120 |     111 |  1.244 |  0.871 |  1.691 |
+| all     | shipped | rep_dphi   | 120 |     111 |  0.000 |  0.000 |  0.000 |
+| all     | shipped | rep_dkappa | 120 |     111 |  0.000 |  0.000 |  0.000 |
+| all     | shipped | kick_ok10  | 120 |     111 |  0.904 |  0.857 |  0.946 |
+| all     | shipped | free_ok10  | 120 |     111 |  0.942 |  0.897 |  0.983 |
+
+CI: percentile bootstrap, n_boot = 10000, seed = 0, alpha = 0.05
