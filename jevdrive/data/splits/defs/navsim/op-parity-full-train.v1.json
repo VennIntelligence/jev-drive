@@ -1,0 +1,15 @@
+{
+ "dataset": "navsim",
+ "name": "op-parity-full-train",
+ "version": 1,
+ "unit": "token",
+ "n": 101499,
+ "sha256": "fc6eff272683fd719d5b978b92557e8b20ca6b9d9e0f8a75ea6e77005ea7dfb5",
+ "origin": "navsim navtrain tokens with a logged future (navtrain_future.npz), 103288 tokens; dev = navtrain logs with sha256(log) % 50 == 0",
+ "used_by": [
+  "experiments/op_parity"
+ ],
+ "status": "frozen",
+ "notes": "op_parity full run (protocol W)",
+ "members_file": "op-parity-full-train.v1.txt.gz"
+}
