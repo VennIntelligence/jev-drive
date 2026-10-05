@@ -192,7 +192,7 @@ class Losses:
 
 
 @torch.no_grad()
-def dev_eval(model: PModel, S: Store, dev_rows: np.ndarray, W, bs=512) -> dict:
+def dev_eval(model: PModel, S: Store, dev_rows: np.ndarray, W, bs=128) -> dict:
     """ADE of the 8 poses to the log (inputs on) and drift to shipped (inputs on / off), dev rows."""
     pi = torch.as_tensor(S.pi, device=S.front.device)
     acc = {"ade": [], "drift_on": [], "drift_off": []}

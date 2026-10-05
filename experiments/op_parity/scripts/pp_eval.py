@@ -154,7 +154,7 @@ if __name__ == "__main__":
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("plans")
     p.add_argument("--models", nargs="+", required=True)
-    p.add_argument("--batch", type=int, default=512)
+    p.add_argument("--batch", type=int, default=128)
     p.add_argument("--tag", default="pilot")
     p = sp.add_parser("score")
     p.add_argument("--models", nargs="+", required=True)
