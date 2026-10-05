@@ -54,3 +54,18 @@ Single seed per arm, 20-23 entered turns; intervals are logged-plan attributions
 ## Smallest test of the harness rule
 
 Arm `plan_vmin = 0` (plan always in the arbitration; one config key under `arb`, no code change) on routes 24944, 10255, 26153 (3 routes, zones off, shipped, seed 2), readout: stopped share and number of stop-go cycles in the window against this table. Pre-registered reading: if the launches against the plan were what keeps the loop alive, stops lengthen (the model holds as long as it wants) and the cycle disappears; if stopped share falls, the model's stop wish was self-induced by the base launch. A route-aware floor on the plan stop (ignore plan stops when no light / actor is in the way) is a different, privileged per-board trick and would have to be labelled.
+
+## Confirming run: `plan_vmin = 0` (2026-10-05)
+
+Shipped, B2D `spec`, zones off, seed 2, routes 24944 / 10255 / 26153, one config key (`DRIVE_ARGS` += `"plan_vmin": 0`; arb in all three attempts shows it). Lane `scripts/vmin_lane.py`, readout `scripts/crawl_dump.py --arms shipped,vmin0 --routes ...` + `scripts/vmin_report.py`, data `results/vmin0.json`. Baseline = the existing guard shipped units on the same three routes (same config: spec, zones off, aligned camera, seed 2, desire on). One run, one seed, 3 routes.
+
+| arm | turns entered (of 5 labelled) | stopped share, 15 s turn windows | stop-go cycles per entered turn | stop length median / max | took exit |
+|---|--:|--:|--:|--:|--:|
+| baseline (plan_vmin 1.0) | 3 | 0.54 | 3.3 (5, 3, 2) | 2.1 / 5.5 s | 0 of 3 |
+| `plan_vmin = 0` | **0** | n/a | n/a | n/a | 0 of 0 |
+
+Whole attempt (the vmin0 cars never reach a turn window, so this is the only comparable view): vmin0 stopped share 0.98 / 0.93 / 0.94 over 67-70 s per route (24944 / 10255 / 26153), path length 2.3 / 13.2 / 8.1 m, max speed 1.9 / 4.1 / 2.5 m/s (all of it in the 5 s warm-up and the first seconds after). After that v = 0.0 for the rest of the route (reason `stationary_trajectory` / `stop_hold`), never one launch. Runs ended `finished` with no turn entered.
+
+Reading against the pre-registered branches: the first one, stops lengthen and the cycle disappears, holds in the extreme. With the plan always in the arbitration, the model's stop wish is never overridden, and it does not release: a standing car sees a standing scene, plan speed stays ~0, and the stop lasts the whole route (>60 s against 2 s). The second branch (stopped share falls, the stop wish was induced by the base launch) is not supported. So the base launch at `plan_vmin` is what produces every move after the first stop; the limit cycle in the 25-turn crawl is the harness rule re-starting a car that the model would otherwise leave parked. This strengthens the main reading: the model's plan is the stopper (it holds indefinitely once the harness stops overriding it), and the harness rule adds motion, not stopping. It also means the crawl is not an artefact of the launch rule that a different `plan_vmin` could remove; removing the rule gives a parked car.
+
+Caveats: 3 routes, 1 seed; in the baseline the cycle starts only after rolling >= 1 m/s, here the car is stopped from the early warm-up on, so the two arms differ from the first seconds on, not only at the turns. A route-aware floor on the plan stop is still the per-board trick named above and is not tested.

@@ -1,0 +1,137 @@
+{
+ "shipped": {
+  "turns": 5,
+  "entered": 3,
+  "took": 0,
+  "stopped_share": 0.54,
+  "cycles_per_turn": 3.33,
+  "cycles_nowarm_per_turn": 3.33,
+  "stop_len_mean": 2.35,
+  "stop_len_median": 2.1,
+  "stop_len_max": 5.5,
+  "v_med_nowarm": 0.08,
+  "per_turn": [
+   {
+    "route": "24944",
+    "turn": 0,
+    "entered": true,
+    "took": false,
+    "ticks": 301,
+    "stopped": 191,
+    "cycles": 5,
+    "cycles_nowarm": 5,
+    "stop_len": [
+     2.1,
+     1.8,
+     2.1,
+     1.9,
+     1.6
+    ],
+    "causes": [
+     "model",
+     "model",
+     "model",
+     "model",
+     "model"
+    ],
+    "longest_run": 2.1
+   },
+   {
+    "route": "24944",
+    "turn": 1,
+    "entered": false,
+    "took": false
+   },
+   {
+    "route": "10255",
+    "turn": 0,
+    "entered": true,
+    "took": false,
+    "ticks": 301,
+    "stopped": 128,
+    "cycles": 3,
+    "cycles_nowarm": 3,
+    "stop_len": [
+     2.2,
+     2.0,
+     2.2
+    ],
+    "causes": [
+     "red light",
+     "model",
+     "model"
+    ],
+    "longest_run": 2.25
+   },
+   {
+    "route": "26153",
+    "turn": 0,
+    "entered": true,
+    "took": false,
+    "ticks": 301,
+    "stopped": 169,
+    "cycles": 2,
+    "cycles_nowarm": 2,
+    "stop_len": [
+     5.5,
+     2.1
+    ],
+    "causes": [
+     "model",
+     "model"
+    ],
+    "longest_run": 5.45
+   },
+   {
+    "route": "26153",
+    "turn": 1,
+    "entered": false,
+    "took": false
+   }
+  ]
+ },
+ "vmin0": {
+  "turns": 5,
+  "entered": 0,
+  "took": 0,
+  "stopped_share": 0.0,
+  "cycles_per_turn": 0.0,
+  "cycles_nowarm_per_turn": 0.0,
+  "stop_len_mean": null,
+  "stop_len_median": null,
+  "stop_len_max": null,
+  "v_med_nowarm": null,
+  "per_turn": [
+   {
+    "route": "24944",
+    "turn": 0,
+    "entered": false,
+    "took": false
+   },
+   {
+    "route": "24944",
+    "turn": 1,
+    "entered": false,
+    "took": false
+   },
+   {
+    "route": "10255",
+    "turn": 0,
+    "entered": false,
+    "took": false
+   },
+   {
+    "route": "26153",
+    "turn": 0,
+    "entered": false,
+    "took": false
+   },
+   {
+    "route": "26153",
+    "turn": 1,
+    "entered": false,
+    "took": false
+   }
+  ]
+ }
+}
