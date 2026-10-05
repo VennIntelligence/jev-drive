@@ -188,6 +188,7 @@ def collect_specs(S, seed):
 def eval_specs(S):
     sp = open_yaw_specs(S, (2.0,))
     for c in range(S.n):
+        sp.append(dict(c=c, kind="replay", exo=None, arm="replay"))
         sp.append(dict(c=c, kind="closed", exo=None, arm="free"))
         for s in (1, -1):
             sp.append(dict(c=c, kind="closed", exo=C.kick_exo(2.0 * s), arm=f"ckick{s * 2:+g}"))
