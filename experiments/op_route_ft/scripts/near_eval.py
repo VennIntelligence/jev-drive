@@ -2,8 +2,8 @@
 
   stats --plan <poses.pkl>                     CPU, before rendering: the near action targets (rft._near rules) by pose class -> stdout + <plan dir>/target_stats.json
   eval  --models O rc-bear-s0 ... [--out f]    one leased card: action head on the near DEV rows -> $R/evalol_near/<model>.json
-        per moving (v0 >= rft.NEAR_VMIN) row: desired curvature k = -action[0] / max(1, v0)^2 (left +) against the target curvature kt (the same
-        rule as training: pure pursuit on the dense lane-centre path, lookahead clip(v0, 4, 15) m);
+        per moving (v0 >= rft.NEAR_VMIN) row: curvature k = -action[0] / max(1, v_model)^2 (left +, v_model = the original's plan speed, the
+        training convention) against the target kt (training rule: instantaneous curvature of the dense lane-centre path at arc v0 * 0.275 s);
         gain = slope of k on kt through 0 (1 = the target), by where (app / in) x d bin, turn rows (cmd left / right);
         sign = sign(k) == command side on turn rows; spread = k(left cmd) - k(right cmd) per approach pose with both;
         exits = plan class at arc d + 12 m (approach rows, as rft_eval.carla_exit).
@@ -23,9 +23,10 @@ BINS = (("app d0-3", "app", 0, 3), ("app d3-6", "app", 3, 6), ("app d6-10", "app
 
 
 def target_k(dense, dmask, v0):
+    """Target curvature (left +) of a near row: rft.kappa_path (the act_target_path convention, decision 130), clipped; nan below NEAR_VMIN."""
     tp, tm = F.target_path(dense, dmask)
-    a, w = F.act_target_path(tp, tm, v0, F.NEAR_VMIN)
-    return -a / (F.ACT_ALPHA * max(1.0, v0) ** 2) if w else np.nan
+    k = F.kappa_path(tp, tm, v0) if v0 >= F.NEAR_VMIN else None
+    return float(np.clip(k, -F.K_CLIP, F.K_CLIP)) if k is not None else np.nan
 
 
 def cmd_stats(a):
@@ -74,7 +75,8 @@ def cmd_eval(a):
         m = F.load_rmodel(name, dev)
         f = fp if (m.route is not None and m.route.enc == "poly") else fb
         pl, ac = E.run_rows(m, lambda r: C.T[r], pose, f, C.tab["slot_valid"][pose], C.tab["tc"][pose], dev)
-        k = -ac / np.maximum(1.0, v0) ** 2
+        vm = np.array([F.vmodel(C.tea["mu"][q]) for q in pose])
+        k = -ac / np.maximum(1.0, vm) ** 2
         r = {"n_rows": int(len(rows))}
         for bn, wh, lo, hi in BINS + (("all", None, -99, 99),):
             mm = (sg != 0) & np.isfinite(kt) & ((where == wh) if wh else True) & (d >= lo) & (d < hi)

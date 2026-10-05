@@ -4,8 +4,9 @@ The port, trainable set and recipe of the layer-3 line (experiments/op_adapt_h, 
 trainable, every output head distilled to the original, dw 3) plus
   * lib/route_adapter.RouteAdapter: the route (noised navigation polyline) -> bias on the hidden tokens of the 9 context frames;
   * the on-policy action pathway (ONNX nodes 665-830, `action` = desired lateral acceleration, the closed-loop lateral source, decision 118)
-    trainable and supervised: action[0] -> -0.45 kappa_T * max(1, v0)^2, kappa_T = pure-pursuit curvature (left +) of the target at 1 s; 0.45 and
-    the sign are the shipped head's own relation to logged curvature (ACT_ALPHA).
+    trainable and supervised: action[0] -> -kappa_inst(t + ACT_T) * max(1, v_model)^2, gain 1, right-positive (modeld's decode; decision 130).
+    Until 2026-10-06 the target was -0.45 x the 1 s pure-pursuit curvature x max(1, v0)^2 (ACT_ALPHA), which decision 130 showed is not the
+    shipped head's convention and asks for about half the curvature: every rc-* arm trained before that date carried it.
 
 Rows of one batch (48):
   P  positives with the route: real (op_adapt_H nav / wod pools, target = logged future) and CARLA exit pairs (route_carla packed set, target = the
@@ -46,8 +47,9 @@ from experiments.op_adapt_h.lib import op_adapt_h as H  # noqa: E402
 T16 = L.T16
 ACT_NODES = (665, 831)            # cinque.ort.onnx: the on-policy pathway that ends in `action` (mul_48, node 829)
 SIG_A = 0.5                       # m/s^2, scale of the action loss
-ACT_ALPHA = 0.45                  # action[0] = -ACT_ALPHA * kappa_T * max(1, v)^2: the shipped head's own convention (sign: right +), fitted on the
-                                  # op_adapt_H teachers at v0 > 3 m/s against the logged 1 s pure-pursuit curvature (slope nav -0.51, wod -0.39, r -0.92)
+ACT_ALPHA = 0.45                  # LEGACY (rc-* arms before 2026-10-06, act_target_pre only): -0.45 x 1 s pure pursuit; wrong per decision 130
+ACT_T = 0.275                     # s, modeld's lat_action_t = lateralDelay 0.2 + DT_MDL 0.05 + DT_MDL / 2: action[0] is for this time ahead
+K_CLIP = 0.2                      # 1/m, controlsd's clip_curvature bound; targets beyond it cannot be executed
 VFLOOR = 4.0                      # m/s, CARLA targets of moving poses drive through the junction at least this fast
 ALAT_CAP = 3.0                    # m/s^2, speed cap of the CARLA targets on the exit's curvature
 NEG_NPZ = "processed/op_route_cmd/navtrain/route_neg.npz"   # map-screened negatives (op_route_cmd results/negatives.md), navtrain tokens
@@ -161,13 +163,33 @@ def path_target(poly, pmask, mu, cam, vfloor=0.0, v0=None):
     return hum, lt, ltm
 
 
-def act_target(hum, v0):
-    """(16, 3) target -> (target action[0], weight): pure-pursuit curvature to the 1 s point times max(1, v0)^2; weight 0 below 1 m/s or < 2 m."""
-    x, y = float(hum[3, 0]), float(hum[3, 1])
-    d2 = x * x + y * y
-    if v0 < 1.0 or d2 < 4.0 or not np.isfinite(d2):
+def kappa_inst_hum(hum, t=ACT_T):
+    """(16, 3) timed target at 0.25 ... 4 s (rear axle, y left) -> its instantaneous curvature (left +) at time t: cubic fit of x(t), y(t) through
+    the origin and the points up to 1.5 s (as experiments/op_closed_loop/results/action_scale.md); None when it barely moves (< 0.5 m/s at t)."""
+    P = np.vstack([[0.0, 0.0], np.asarray(hum, float)[:6, :2]])
+    if not np.isfinite(P).all():
+        return None
+    ts = 0.25 * np.arange(7)
+    cx, cy = np.polyfit(ts, P[:, 0], 3), np.polyfit(ts, P[:, 1], 3)
+    dx, dy = np.polyval(np.polyder(cx), t), np.polyval(np.polyder(cy), t)
+    ddx, ddy = np.polyval(np.polyder(cx, 2), t), np.polyval(np.polyder(cy, 2), t)
+    sp = np.hypot(dx, dy)
+    if sp < 0.5:
+        return None
+    return float((dx * ddy - dy * ddx) / sp ** 3)
+
+
+def act_target(hum, v0, v_model=None):
+    """(16, 3) timed target -> (target action[0], weight) in modeld's convention (decision 130): action[0] = -kappa_inst(t + ACT_T) *
+    max(1, v_model)^2 (gain 1, right +, |kappa| clipped at K_CLIP); v_model = the model's own speed (the original's plan speed at t0 where the
+    camera scale is off), default v0. Weight 0 below 1 m/s or when the target does not move."""
+    if not np.isfinite(v0) or v0 < 1.0:
         return 0.0, 0.0
-    return -ACT_ALPHA * 2.0 * y / d2 * max(1.0, v0) ** 2, 1.0
+    k = kappa_inst_hum(hum)
+    if k is None:
+        return 0.0, 0.0
+    vm = v0 if v_model is None else float(v_model)
+    return -float(np.clip(k, -K_CLIP, K_CLIP)) * max(1.0, vm) ** 2, 1.0
 
 
 NPATH = 80                        # target path for the path-shape loss: 1 m spacing up to 80 m
@@ -187,14 +209,24 @@ def target_path(poly, pmask):
     return out, m
 
 
-def act_target_path(tp, tm, v0, vmin=1.0):
-    """Pure pursuit on the target path at the arc-length lookahead clip(v0 * 1 s, 4, 15) m (timing-free, for CARLA rows whose timing comes from
-    the slow original plan) -> (target action[0], weight). On an arc of radius R >= 2 m it returns 1 / R; before a turn it ramps in over the 4 m."""
-    if v0 < vmin or tm.sum() < 5:
+def kappa_path(tp, tm, v0):
+    """Instantaneous curvature (left +) of an untimed target path (1 m grid, vertex 0 = the car) where a car at v0 is after ACT_T: arc v0 * ACT_T
+    (route_poly.curvature, 3 m window). None when the path is too short."""
+    n = int(tm.sum())
+    if n < 5:
+        return None
+    k = RP.curvature(np.asarray(tp, float)[:n], 1.0)
+    return float(np.interp(v0 * ACT_T, np.arange(n, dtype=float), k))
+
+
+def act_target_path(tp, tm, v0, vmin=1.0, v_model=None):
+    """Untimed target path (CARLA rows, whose timing comes from the slow original plan) -> (target action[0], weight): the act_target convention
+    with kappa_path; supervised from vmin."""
+    k = kappa_path(tp, tm, v0) if v0 >= vmin else None
+    if k is None:
         return 0.0, 0.0
-    k = int(min(np.clip(v0, 4.0, 15.0), tm.sum() - 1))
-    x, y = float(tp[k, 0]), float(tp[k, 1])
-    return -ACT_ALPHA * 2.0 * y / max(x * x + y * y, 1.0) * max(1.0, v0) ** 2, 1.0
+    vm = v0 if v_model is None else float(v_model)
+    return -float(np.clip(k, -K_CLIP, K_CLIP)) * max(1.0, vm) ** 2, 1.0
 
 
 LAT_DELAY = 0.2                   # s, openpilot lateralDelay (lagd initial value): action[0] is the desired lateral acceleration for t + this
@@ -210,7 +242,7 @@ def act_target_pre(tp, tm, v0):
     s_ts within the turn-in distance W = v0 * T_TI + R / 2 (R = the maneuver's minimum radius, capped at 30 m): a clothoid entry of length about R
     centred on the arc's tangent point starts R / 2 before it, plus the distance driven during the driver's preview.
     Target = the curvature a driven path has at the car: the commanded path's curvature averaged over [s_d, s_d + W] (a linear turn-in ramp from 0 at
-    s_ts = s_d + W to the arc's curvature at s_ts = s_d), as action[0] = -ACT_ALPHA * kappa * max(1, v0)^2 like every other row."""
+    s_ts = s_d + W to the arc's curvature at s_ts = s_d), as action[0] = -ACT_ALPHA * kappa * max(1, v0)^2 (LEGACY scale of the rc-*-pre arms, kept to reproduce them)."""
     n = int(tm.sum())
     if v0 < 1.0 or n < 5:
         return None
@@ -231,6 +263,11 @@ def act_target_pre(tp, tm, v0):
     a, b = int(round(s_d)), min(int(round(s_d + W)), n - 1)
     kap = float(k[a:b + 1].mean())
     return -ACT_ALPHA * kap * max(1.0, v0) ** 2, 1.0
+
+
+def vmodel(mu):
+    """The model's own speed: the original's plan speed at t0 (plan[0, 3]); decision 130 (camera height scales it, 0.87 at the B2D spec camera)."""
+    return max(float(np.asarray(mu)[0, 3]), 0.0)
 
 
 def turn_weight(deg, rmin, s):
@@ -433,7 +470,7 @@ class Batcher(torch.utils.data.Dataset):
             out["tp"], out["tm"] = target_path(rt["poly"][i], rt["pmask"][i])
             out["fb"] = RA.features("bear", rt["poly"][i], rt["pmask"][i], np.random.default_rng(rng.integers(1 << 62)))
             out["fp"] = RA.features("poly", rt["poly"][i], rt["pmask"][i], np.random.default_rng(rng.integers(1 << 62)))
-            a, w = act_target(hum, float(t["v0"][i]))
+            a, w = act_target(hum, float(t["v0"][i]), v_model=vmodel(R.S.tea["mu"][i]))
             if self.cfg.pre:
                 a, w = act_target_pre(out["tp"], out["tm"], float(t["v0"][i])) or (a, w)
             out["at"], out["aw"] = np.float32(a), np.float32(w)
@@ -485,7 +522,7 @@ class Batcher(torch.utils.data.Dataset):
             out["hum"], out["lt"], out["ltm"] = pt
             self._neg_feat(out, C.r["poly"][j], C.r["pmask"][j], rng)
             out["tp"], out["tm"] = target_path(C.r["poly"][j], C.r["pmask"][j])
-            a, w = act_target_path(out["tp"], out["tm"], float(C.tab["v0"][p]))
+            a, w = act_target_path(out["tp"], out["tm"], float(C.tab["v0"][p]), v_model=vmodel(C.tea["mu"][p]))
             if self.cfg.pre:
                 a, w = act_target_pre(out["tp"], out["tm"], float(C.tab["v0"][p])) or (a, w)
             out["at"], out["aw"] = np.float32(a), np.float32(w)
@@ -522,7 +559,7 @@ class Batcher(torch.utils.data.Dataset):
         out["hum"], out["lt"], out["ltm"] = pt
         self._neg_feat(out, C.r["poly"][j], C.r["pmask"][j], rng)
         out["tp"], out["tm"] = target_path(dn, dm)
-        a, w = act_target_path(out["tp"], out["tm"], v0, NEAR_VMIN)
+        a, w = act_target_path(out["tp"], out["tm"], v0, NEAR_VMIN, v_model=vmodel(C.tea["mu"][p]))
         out["at"], out["aw"] = np.float32(a), np.float32(w)
         return out
 

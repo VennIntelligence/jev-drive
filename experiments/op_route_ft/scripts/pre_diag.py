@@ -3,7 +3,9 @@ pursuit) and the turn-in target, for O / rc-ctl / rc-bear / rc-ctl-pre / rc-bear
 
   CUDA_VISIBLE_DEVICES=<card> $DATA_DIR/envs/op-train/bin/python experiments/op_route_ft/scripts/pre_diag.py [--models ...] -> $R/evalol_ol/pre_diag.json
 Classes: approach (act_target_pre defined), in turn (route in_turn or a maneuver within v0 * 0.2 + 2 m), straight (no turn within 150 m).
-Gain = least-squares slope of action[0] on the old target through the origin (1 = the target's scale); also mean |action| and sign agreement.
+Gain = least-squares slope of action[0] on rft.act_target through the origin (1 = the target's scale); also mean |action| and sign agreement.
+Since 2026-10-06 act_target is decision 130's convention (kappa_inst(t + 0.275) * max(1, v_model)^2, gain 1); pre_diag.json (decision 129) was read
+against the legacy 0.45 x 1 s pure pursuit, so gains before and after that date are on different scales.
 """
 import argparse
 import json
@@ -37,7 +39,7 @@ def main():
         for i in rows:
             tp, tm = F.target_path(rt["poly"][i], rt["pmask"][i])
             v0 = float(t["v0"][i])
-            old.append(F.act_target(L.human_targets(t["fut20"][i][None])[0], v0)[0])
+            old.append(F.act_target(L.human_targets(t["fut20"][i][None])[0], v0, v_model=F.vmodel(R.S.tea["mu"][i]))[0])
             p = F.act_target_pre(tp, tm, v0)
             pre.append(p[0] if p else np.nan)
             strt = not np.isfinite(rt["turn_deg"][i]) and rt["n_turn"][i] == 0 and not rt["in_turn"][i]
