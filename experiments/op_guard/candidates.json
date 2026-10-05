@@ -62,5 +62,17 @@
   "route_adapter": null,
   "command_adapter": null,
   "note": "op_dagger dg1 (400-step DAgger fine-tune on shipped reprojection rollouts; adapter none)"
+ },
+ "wf-w58-s0": {
+  "onnx": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w58-s0.onnx",
+  "route_adapter": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w58-s0.adapter.npz",
+  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+  "note": "op_wide_ft W58: rc-bear-fix recipe on the re-rendered CARLA pairs, wide 58.7 deg"
+ },
+ "wf-w116-s0": {
+  "onnx": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w116-s0.onnx",
+  "route_adapter": "$DATA_DIR/runs/op_wide_ft/onnx/wf-w116-s0.adapter.npz",
+  "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
+  "note": "op_wide_ft W116: as W58 with the CARLA rows' wide slot at 116 deg (served here at the board's 58.7 deg wide)"
  }
 }
