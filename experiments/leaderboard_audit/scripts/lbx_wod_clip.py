@@ -44,7 +44,7 @@ def candidates():
     d3 = np.linalg.norm(fut[:, 11, :2], axis=1)                     # displacement at 3 s
     ch = fut[:, -1, :2] - fut[:, -5, :2]
     turn = np.degrees(np.abs(np.arctan2(ch[:, 1], ch[:, 0])))        # heading of the last 1 s of the future against t0
-    ok = val & (v0 < 0.2) & (d3 > 3.0) & (turn > 45) & (np.linalg.norm(ch, axis=1) > 2.0) & (df.frame.to_numpy() >= 40)
+    ok = val & (v0 < 0.2) & (d3 > 3.0) & (turn > 45) & (np.linalg.norm(ch, axis=1) > 2.0) & (df.frame.to_numpy() >= 40) & (df.frame.to_numpy() <= 120)
     rows = np.flatnonzero(ok)
     seen, out = set(), []
     for r in rows:
@@ -53,6 +53,7 @@ def candidates():
             continue
         seen.add(s)
         out.append((s, int(df.frame.iloc[r]), float(turn[r]), float(d3[r])))
+    out.sort(key=lambda c: -c[2])                                       # sharpest turn first
     return df, past, fut, calib, out
 
 
