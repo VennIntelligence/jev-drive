@@ -25,7 +25,8 @@ import dg_common as C  # noqa: E402
 import dg_roll as DR  # noqa: E402
 from jevdrive import camgeom as G  # noqa: E402
 
-PPM, BW, BH = 18.0, 300, 512
+PPM, BW, BH = 30.0, 300, 512
+GREEN, BLUE, CYAN = (40, 160, 40), (30, 90, 230), (0, 190, 230)     # RGB (frames are RGB)
 OFF = 0.5
 
 
@@ -79,24 +80,24 @@ def world(P, j, off):
     return np.array([P[j, 0] + c * off[0] - s * off[1], P[j, 1] + s * off[0] + c * off[1], P[j, 2] + off[2]])
 
 
-def bev(P, trace, plan, cam, j, label):
+def bev(P, fut, trace, plan, cam, j, label):
     img = np.full((BH, BW, 3), 245, np.uint8)
     x0 = P[j, 0]                                           # scroll with the log so the ego stays near the bottom
     q = lambda p: np.stack([BW / 2 - p[:, 1] * PPM, 0.8 * BH - (p[:, 0] - x0) * PPM], 1).round().astype(np.int32)  # noqa: E731
-    cv2.polylines(img, [q(P[:, :2])], False, (40, 160, 40), 3, cv2.LINE_AA)
-    if len(trace):
-        cv2.polylines(img, [q(np.array(trace)[:, :2])], False, (200, 80, 0), 2, cv2.LINE_AA)
+    cv2.polylines(img, [q(np.r_[np.zeros((1, 2)), fut])], False, GREEN, 3, cv2.LINE_AA)
+    if len(trace) > 1:
+        cv2.polylines(img, [q(np.array(trace)[:, :2])], False, BLUE, 3, cv2.LINE_AA)
     e = trace[-1]
     cy, sy = np.cos(e[2]), np.sin(e[2])
     p = plan[plan[:, 0] < 30.0]
     pw = np.stack([e[0] + cy * (cam[0] + p[:, 0]) + sy * p[:, 1], e[1] + sy * (cam[0] + p[:, 0]) - cy * p[:, 1]], 1)   # plan y right
-    cv2.polylines(img, [q(pw)], False, (0, 170, 220), 2, cv2.LINE_AA)
+    cv2.polylines(img, [q(pw)], False, CYAN, 2, cv2.LINE_AA)
     car = np.array([[3.8, 0.95], [3.8, -0.95], [-1.0, -0.95], [-1.0, 0.95]])
     cw = np.stack([e[0] + cy * car[:, 0] - sy * car[:, 1], e[1] + sy * car[:, 0] + cy * car[:, 1]], 1)
-    cv2.polylines(img, [q(cw)], True, (200, 80, 0), 2, cv2.LINE_AA)
+    cv2.polylines(img, [q(cw)], True, BLUE, 2, cv2.LINE_AA)
     put(img, label, (6, 18), 0.5, (255, 255, 0))
     put(img, "green logged path  blue ego", (6, 40), 0.4, (0, 0, 0), (245, 245, 245))
-    put(img, "cyan plan (first 30 m)", (6, 58), 0.4, (0, 120, 170), (245, 245, 245))
+    put(img, "cyan plan", (6, 58), 0.4, (0, 120, 170), (245, 245, 245))
     cv2.line(img, (8, BH - 12), (8 + int(2 * PPM), BH - 12), (0, 0, 0), 2)
     put(img, "2 m", (8, BH - 18), 0.4, (0, 0, 0), (245, 245, 245))
     return img
@@ -111,7 +112,7 @@ def model_panel(frame, plan, cam_h):
             xyz = np.stack([p[:, 1], np.full(len(p), cam_h), p[:, 0]], 1)
             uv = xyz @ G.OP_K[k].T
             uv = (uv[:, :2] / uv[:, 2:]).round().astype(np.int32)
-            cv2.polylines(im, [uv], False, (0, 220, 255), 2, cv2.LINE_AA)
+            cv2.polylines(im, [uv], False, CYAN, 2, cv2.LINE_AA)
         put(im, f"openpilot {k} input", (6, 18))
         ims.append(im)
     return np.concatenate(ims, 0)
@@ -138,7 +139,7 @@ def main():
         c = min(d, key=lambda k: abs(d[k] - med))
         print("clips", len(d), "median shipped - dg1 |dy| at K", round(med, 3), "-> clip", c, S.t["id"][c], flush=True)
     exo = C.swerve_exo(OFF, S.t["v"][c])
-    P, cam = S.t["pose"][c], S.t["cam"][c]
+    P, cam, fut = S.t["pose"][c], S.t["cam"][c], S.t["fut20"][c][0]
     rolls = [run(R, S, c, exo) for R in Rs]
     frames = []
     for j in range(-C.T0, C.K + 1):                        # logged history (model frames only) then the rollout
@@ -147,13 +148,13 @@ def main():
             if j < 0:
                 fr = np.asarray(S.imgs[c, C.T0 + j])
                 trace = [world(P, 0, (0, 0, 0))]
-                b = bev(P, trace, st[0]["plan"], cam, 0, f"{m}")
+                b = bev(P, fut, trace, st[0]["plan"], cam, 0, f"{m}")
                 put(b, f"logged history t {j * C.DT:+.1f} s", (6, 80), 0.45, (255, 255, 255), (90, 90, 90))
                 mp = model_panel(fr, np.zeros((0, 15)), cam[2])
             else:
                 s = st[j]
                 trace = [world(P, i, st[i]["off"]) for i in range(j + 1)]
-                b = bev(P, trace, s["plan"], cam, j, f"{m}")
+                b = bev(P, fut, trace, s["plan"], cam, j, f"{m}")
                 put(b, f"t +{j * C.DT:.1f} s  dy {s['off'][1]:+.2f} m  dpsi {np.degrees(s['off'][2]):+.1f} deg", (6, 80), 0.42)
                 put(b, f"desired curvature {s['kappa']:+.4f} 1/m", (6, 100), 0.42)
                 if 1 <= j <= 3:
@@ -161,7 +162,7 @@ def main():
                 mp = model_panel(s["frame"], s["plan"], cam[2])
             rows.append(np.concatenate([b, mp], 1))
         top = np.full((30, rows[0].shape[1], 3), 30, np.uint8)
-        put(top, f"WOD-E2E held-out {S.t['id'][c]} ({S.t['cat'][c]}) | reprojection rollout, swerve +{OFF} m, openpilot lateral path | 5 Hz",
+        put(top, f"WOD-E2E held-out {S.t['id'][c][:8]} ({S.t['cat'][c]}) | reprojection, swerve +{OFF} m, op lateral path | 5 Hz",
             (8, 21), 0.48, (255, 255, 255), (30, 30, 30))
         sep = np.full((6, rows[0].shape[1], 3), 255, np.uint8)
         frames.append(np.concatenate([top, rows[0], sep, rows[1]], 0))
