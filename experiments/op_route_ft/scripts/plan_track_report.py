@@ -50,7 +50,12 @@ def collect(lab, arms=ARMS, conds=CONDS):
                 if sc is None:
                     continue
                 att_of[(arm, cond, rid)] = att
-                runs[(arm, cond, rid)] = dict(ds=sc["rr"][0], rc=sc["rr"][1], status=sc["rr"][2], run_coll=sum(c["kind"].startswith("hit") for c in sc["cols"]))
+                tk = [json.loads(x) for x in open(att / "ticks.jsonl")]
+                tk = [t for t in tk if "truth" in t]
+                xy, tt = np.array([t["truth"][:2] for t in tk]), np.array([t["t"] for t in tk])
+                _, dev = R.project(xy, geo[rid][0])
+                runs[(arm, cond, rid)] = dict(ds=sc["rr"][0], rc=sc["rr"][1], status=sc["rr"][2], run_coll=sum(c["kind"].startswith("hit") for c in sc["cols"]),
+                                              dev20=float(dev[tt <= 20.0].max()), dist=float(np.linalg.norm(xy[-1] - xy[0])))
                 pd_ = {r["turn"]: r for r in sc["rows"]}
                 for r in S.split_one(rid, arm, att, g, lab):
                     if (rid, r["turn"]) in keys:
@@ -88,8 +93,8 @@ def report(a):
          "collisions = window collisions over the 25 turns; turn-in = arc past the turn start at the first plan step with act_k >= 0.5 / R_min towards the commanded side "
          "(median over turns that steer; the action head's own curvature, also logged under p7); v med = median speed in the 15 s window after entry, stop = share of time < 0.3 m/s; "
          "route DS = mean over the routes finished.\n",
-         "| arm | executor | took choice (13) | took forced (12) | took all | entered | leaves lane | peak m, median | window collisions | turn-in m, median (n) | v med m/s | stop share | route DS (n) |",
-         "|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+         "| arm | executor | took choice (13) | took forced (12) | took all | entered | leaves lane | peak m, median | window collisions | turn-in m, median (n) | v med m/s | stop share | route DS (n) | route RC | off route > 3 m in first 20 s |",
+         "|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
     for arm in ARMS:
         for cond in CONDS:
             R_ = rows(res, arm, cond)
@@ -99,12 +104,14 @@ def report(a):
             ent = [r for r in v if r["entered"]]
             tin = [r["tin_m"] for r in ent if r["tin_m"] is not None]
             ds = [x["ds"] for k, x in runs.items() if k[:2] == (arm, cond)]
-            L.append("| %s | %s%s | %d / %d | %d / %d | %d / %d | %d | %d / %d | %.2f | %d | %s | %.1f | %.2f | %.1f (%d) |" % (
+            rc = [x["rc"] for k, x in runs.items() if k[:2] == (arm, cond)]
+            dv = [x["dev20"] > 3.0 for k, x in runs.items() if k[:2] == (arm, cond)]
+            L.append("| %s | %s%s | %d / %d | %d / %d | %d / %d | %d | %d / %d | %.2f | %d | %s | %.1f | %.2f | %.1f (%d) | %.1f | %d / %d |" % (
                 arm, cond, " (desire ON)" if (arm == "rc-poly-s0" and cond == "curv") else "", sum(r["took"] for r in v if ch(r)), sum(ch(r) for r in v),
                 sum(r["took"] for r in v if fo(r)), sum(fo(r) for r in v), sum(r["took"] for r in v), len(v), len(ent),
                 sum(r["leaves"] == 1 for r in ent), len(ent), np.nanmedian([r["peak"] for r in ent]) if ent else np.nan, sum(r["coll"] for r in v),
                 ("%.1f (%d)" % (np.median(tin), len(tin))) if tin else "-", np.nanmedian([r["v_med"] for r in ent]) if ent else np.nan,
-                np.mean([r["stop_frac"] for r in ent]) if ent else np.nan, np.mean(ds) if ds else np.nan, len(ds)))
+                np.mean([r["stop_frac"] for r in ent]) if ent else np.nan, np.mean(ds) if ds else np.nan, len(ds), np.mean(rc) if rc else np.nan, sum(dv), len(dv)))
     took, ent_ = (lambda r: r["took"]), (lambda r: float(r["entered"]))
     L += ["\n## Paired differences (turns paired, route-cluster bootstrap, 95%)\n", "| contrast | took, all | took, choice | took, forced | entered |", "|---|---|---|---|---|"]
     def line(name, x, y):
