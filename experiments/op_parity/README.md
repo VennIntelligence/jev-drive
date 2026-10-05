@@ -20,7 +20,12 @@ P3 86.10, WA-JEPA 91.71 (P2 - WA-JEPA -5.14 [-6.02, -4.27]); side cameras add no
 onset unchanged. Gate holds: [results/pilot.md](results/pilot.md). Frame-protocol Stage A (no training): the image-pair gap sets the plan
 speed (0.5 s pairs: x1.93), GIMM vs real frames -0.38 EPDMS: [results/stageA.md](results/stageA.md).
 
-**Next.** Stage B (frame protocol N / W / G x P1 / P2 x 2 seeds, prereg addendum 1) after main has seen the design; then the full-run estimate.
+**Stage B (2026-10-06).** Train protocol x arm x 2 seeds on the pilot set: P2 navtest EPDMS G 86.63, W 85.73, N 82.63; the inputs help
+less without synthesis (interaction N vs G -2.08 [-2.63, -1.52]); pre-registered rule picks **W** (G - W 0.90, guards pass), N fails (4.0):
+[results/stageB.md](results/stageB.md). HUGSIM under `spec` (29 stuck / spinner scenarios): P2 ends every stuck run (24 -> 0) but fg
+collisions 1 -> 10, HD 0.453 vs P0 0.306, P2 - P1 +0.104 [-0.042, +0.248]: [results/hugsim_spec.md](results/hugsim_spec.md).
+
+**Next.** Full run under W (estimate ~6-9 GPU·h in results/stageB.md) waits for main.
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner
 scenarios: [results/hugsim_spin10.md](results/hugsim_spin10.md) (spins P1 8, P2 7, P3 8 of 10; the launch spin onset is unchanged).
