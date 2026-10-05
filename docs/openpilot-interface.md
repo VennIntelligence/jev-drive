@@ -20,6 +20,7 @@ Tests: `python -m unittest tests.test_openpilot_interface -v`.
 | `lateral.exec` | `op-path`: controlsd latActive (v > 0.3), `clip_curvature` (jerk 5 m/s^3 / max(v,1)^2, lateral accel 3 m/s^2, abs curvature <= 0.2), then the car realises it after `lateralDelay` | `lib/op_ctrl.py` (VERBATIM functions), decision 118 |
 | `lateral.delay_s` | 0.2 s (model time) | lagd initial value; HUGSIM 0.25 simulator s = 0.2 model s under the 1.25 clock dilation |
 | `lon.source` | action[1] -> LongControl | decision 119; **no board runs it** (it fails launches), see deviations |
+| `lon.resume` | driver: a held standstill ends when the driver presses resume / taps the gas (many cars; the model never launched from a held standstill alone) | user's car; HUGSIM `none` (nobody resumes), B2D `timer` (resume after `latch_max_s` whatever is ahead); option `rule` = `jevdrive/openpilot/resume.py` (below) |
 | `command.channel` | none: nothing tells the model where to go; desire only for a driver-initiated lane change. **desire is not a choice signal** (decisions 92, 121) | - |
 | `command.route_geometry` | none | - |
 | `light.source` | none: the model sees the light as pixels; a VLM reading pixels is a declared deviation | - |
@@ -51,6 +52,12 @@ heights; a virtual 1.22 m camera costs -1.97 PDMS (navtrain) and -0.49 RFS (WOD 
 HUGSIM warm-up and clock: `spec` keeps the 5 s static warm-up and the dilate clock (= decision 118's arm). Without the warm-up the car does
 not launch (11 scenes: mean HD 0.358 vs 0.544, 3 scenes -0.75 to -0.94); the hold clock is worse (HD 0.049, 8 of 11 stuck). Both stay as diagnostic
 presets.
+
+Resume rule (option, both closed-loop boards, `jevdrive/openpilot/resume.py`, experiments/op_resume): an emulated driver resume from
+the ego speed and the model's own lead head only. Fires after 10 s of standstill (< 0.1 m/s) when the lead head has been clear
+(not prob > 0.5 within 15 m) for 1 s; launches at 1.2 m/s^2 to 2.5 m/s, never slower than the model's plan, and hands back on
+2.5 m/s, on the plan asking as much, on a lead, or after 6 s; 10 s cooldown. HUGSIM agent opt `"resume": {}` (lon.resume `rule`),
+B2D arb `"resume_rule": {}` (`timer+rule`). Pre-registration and results: experiments/op_resume/.
 
 ## Presets and reproducibility
 

@@ -54,7 +54,11 @@ Config: the b2d_zeroshot_agent keys, plus "arb": {"mode", "cruise", "alat", "ama
 "release" ("none" | "gas" | "planx" | "nobrake"), "release_th", "latch_max_s",
 "resume" ("timer" | "nored": the driver's resume after latch_max_s is withheld while a ground-truth red / yellow light is
 within resume_tl_m ahead of the bumper, i.e. the driver sees the light),
-"zone_before_m", "zone_after_m", "cruise_by_route" ({route id: set speed})}. Per plan (every tick) one line in plans.jsonl with openpilot's heads, the base and
+"zone_before_m", "zone_after_m", "cruise_by_route" ({route id: set speed}),
+"resume_rule" (drive only; None = off; {} or a dict of jevdrive/openpilot/resume.py ResumeRule keywords: the shared emulated driver
+resume, interface lon.resume = timer+rule; experiments/op_resume/plans/2026-10-05-op-resume-prereg.md. While it launches, the plan
+and latch constraints are dropped and replaced by max(the rule's launch profile, the plan); the lead-head IDM and the set-speed
+governor stay; inputs: game time, speed, the lead head, the plan's 1 s distance)}. Per plan (every tick) one line in plans.jsonl with openpilot's heads, the base and
 arbitration state, and ground-truth context (evaluation only; only mode oshadow reads it for control).
 """
 import sys as _sys, pathlib as _pl  # restructure: dirs of the script modules this file imports by bare name
@@ -95,7 +99,7 @@ DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3
             "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0,
             "lat": "route", "lat_exec": "p7", "lon": "op", "hold": "any", "lead_go_v": 1.0, "coast_v": 0.0,
             "intent": "none", "intent_before_m": 20.0, "intent_after_m": 5.0,
-            "resume": "timer", "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "zone_gain": 1.0, "hyb_v": 3.0, "gain_m": 3.0, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
+            "resume": "timer", "resume_rule": None, "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "zone_gain": 1.0, "hyb_v": 3.0, "gain_m": 3.0, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
 DRIVE_ZONES = {Z.LEFT: (15.0, 5.0), Z.RIGHT: (15.0, 5.0), Z.STRAIGHT: (5.0, 5.0),
                Z.CHANGE_LEFT: (5.0, 10.0), Z.CHANGE_RIGHT: (5.0, 10.0)}
 # DRIVE_ZONES is a semi-privileged fallback (interface key command.route_geometry = dense-zones): the dense route's metre-exact
@@ -235,6 +239,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         self.blend_from, self.blend_t = None, -1e9
         self.ctx_frame, self.ctx = None, {}
         self.resume_blocked = False
+        self.rr = IF.resume_rule(self.arb["resume_rule"]) if self.arb["mode"] == "drive" else None
         self.div_on, self.agree_t, self.intent_t, self.want_go, self.lat_src = False, 0.0, -1e9, True, "route"
         self.hyb_plan = False                                  # lat_exec "hyb": plan tracking above hyb_v m/s (hysteresis 0.5), action curvature below
         if self.arb["lat_exec"] in ("curv", "hyb"):
@@ -531,6 +536,16 @@ class OpArbAgent(Z.ZeroShotAgent):
                 self.latch, rel = False, why
             else:
                 cons["latch"] = np.zeros(len(TIMES))
+        rr = None
+        if self.rr is not None and not warm:                 # shared emulated driver resume (jevdrive/openpilot/resume.py)
+            on, rr = self.rr.step(t_frame, speed, lp, float(lead[0, 0]), float(s_plan[3]))   # TIMES[3] = 1.0 s
+            if on:
+                cons.pop("plan", None)
+                cons.pop("latch", None)
+                self.latch = False
+                self.binding_t = self.intent_t = -1e9
+                cons["resume"] = np.maximum(np.asarray(self.rr.profile(speed, TIMES)), s_plan)
+                rel = rel or "resume_rule"
         cons.update(pc_cons)
         if self.pc is not None and getattr(self.pc, "byp_free", False) and self.pc.meta.get("bypass"):
             # vmerge (experiments/vlm_arb/plans/2026-10-03-vmerge.md): while the bypass path is driven, the parked obstacle
@@ -604,7 +619,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         r3 = lambda x: np.round(np.asarray(x, float), 3).tolist()  # noqa: E731
         mt = np.asarray(out["meta"], float)
         rec = {"frame": f, "t": t_frame, "v": speed, "warm": warm, "acc": accepted, "desire": desire, "intent": intent, "src": src,
-               "zone": self.in_zone(), "latch": self.latch, "rel": rel, "rb": self.resume_blocked, "tls": tl_on, "ri": int(self.route.i),
+               "zone": self.in_zone(), "latch": self.latch, "rel": rel, "rb": self.resume_blocked, "rr": rr, "tls": tl_on, "ri": int(self.route.i),
                "lat": lat_src, "lat_why": lat_why, "div": round(div, 2), "go": self.want_go, "img": img,
                "cmd": self.route.next_maneuver([Z.LEFT, Z.RIGHT, Z.STRAIGHT, Z.CHANGE_LEFT, Z.CHANGE_RIGHT]),
                "s": {k: round(float(v[-1]), 2) for k, v in cons.items()}, "s2": {k: round(float(v[7]), 2) for k, v in cons.items()},

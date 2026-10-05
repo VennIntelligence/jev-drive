@@ -14,6 +14,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [op_dagger](op_dagger/README.md): live; Reprojection rollout engine on real WOD logs + DAgger pilot (paper §3 fig 8) [d(inputs:,92,98,100,111,118,123,124)]
 - [factor_wm](factor_wm/README.md) (factorized world model, exact-ego sim): live; Stage 1 pre-registered: on-policy openpilot in exact-ego reprojection sim; no runs yet [d(inputs:,54,76,103,123,132,138,139)]
 - [op_fov](op_fov/README.md) (wide FOV, fisheye): concluded; Wide FOV 90/116 deg: turn gain -0.005..-0.033, early stop; wide frame barely used [d(pending)]
+- [op_resume](op_resume/README.md) (driver resume, standstill launch): live; Shared driver-resume rule (standstill 10 s + lead head clear) for HUGSIM stuck runs; pilot pending [d(inputs:,90,96,107,113,117,118,119,124,126)]
 - [op_parity](op_parity/README.md) (input parity, WA-JEPA inputs): live; Cinque + ego / pose / cmd / side cams vs WA-JEPA, equal inputs and data [d(inputs:,92,104,111,118,137,138,139)]
 - [op_wide_ft](op_wide_ft/README.md) (wide FOV fine-tune, W116): concluded; Fine-tune with 116 deg wide: B2D small set 0/9 both arms, ol exit -0.002; gate stop [d(pending)]
 - [alpamayo_turns](alpamayo_turns/README.md) (Alpamayo side cameras, multi-view turns): concluded; Cross cams off: dA_H +0.01 [-0.15,0.14] (nav); tele-slot drop -0.39 [d(pending)]

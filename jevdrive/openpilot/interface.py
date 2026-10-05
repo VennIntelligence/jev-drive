@@ -23,6 +23,10 @@ Keys (values in SPEC):
                                   bicycle (raw curvature, no clip / delay), ilqr, p7, scorer-lqr (the leaderboard replays it)
   lateral.delay_s       0.2       lateralDelay in model seconds (lagd's initial steerActuatorDelay + 0.2 class value)
   lon.source            action    action[1] -> LongControl (selfdrive/controls); plan-ilqr, plan-scorer, plan-idm-latch
+  lon.resume            driver    a held standstill is left when the driver presses resume / taps the gas (many cars; the model
+                                  never launched from a held standstill alone). none (nobody resumes: only the model's plan),
+                                  timer (B2D: resume after latch_max_s whatever is ahead), rule (jevdrive/openpilot/resume.py:
+                                  an emulated driver from the ego speed and the model's own lead head), timer+rule
   command.channel       none      nothing tells the model where to go; desire only for a driver-initiated lane change.
                                   desire is NOT a choice signal (decisions 92, 121). desire-route, desire-sim, onehot, intent, sky-arrow
   command.route_geometry none     dense-zones: the route geometry steers in command zones / on divergence (B2D DRIVE_ZONES, semi);
@@ -42,7 +46,7 @@ SPEC = {
     "rig.height_m": 1.22, "rig.level": True, "rig.wide": "sensor",
     "history.frames": "real", "history.rate_hz": 20.0, "history.clock": "real", "history.warmup": "real",
     "lateral.source": "action", "lateral.exec": "op-path", "lateral.delay_s": 0.2,
-    "lon.source": "action",
+    "lon.source": "action", "lon.resume": "driver",
     "command.channel": "none", "command.route_geometry": "none",
     "light.source": "none",
     "inputs.extra": (),
@@ -109,6 +113,9 @@ DECLARED = {
         "lateral.exec": ("LB", "legacy exam preset: iLQR (PR#57)", "d118"),
         "lateral.delay_s": ("LB", "pure delay in simulator seconds (0.25 under dilate = 0.2 model s)", "d118"),
         "lon.source": ("LB", "iLQR tracks the plan's speed: action acceleration -> LongControl fails launches (d119)", "d119"),
+        "lon.resume": ("real-car", "none: no driver in the simulator, a standstill ends only when the model's plan moves (decision 118's "
+                                   "stuck runs); rule: an emulated driver resume (jevdrive/openpilot/resume.py) from the ego speed and "
+                                   "the model's own lead head, no light / route / actor state", "d118, d119, op_resume"),
         "command.channel": ("LB", "simulator command (from the recorded route) -> turn desire; d92: no help. op_parity arms "
                                   "(+onehot) also read it as a NAVSIM one-hot [L, S, R] (WA-JEPA's command map [2, 0, 1])",
                             "d90, d92, op_parity"),
@@ -132,6 +139,9 @@ DECLARED = {
         "lateral.delay_s": ("LB", "CARLA's own steering lag stands in for lateralDelay in the legacy preset", "d118.5"),
         "lon.source": ("semi", "our scheduler: min(set speed 8 m/s + curvature cap, lead-head IDM, plan while rolling) + stop "
                                "latch + timer resume; action acceleration not used (d119)", "d74, d82, d119"),
+        "lon.resume": ("semi", "timer: the stop latch's driver resume after latch_max_s whatever is ahead (blind to the light and the "
+                               "lead; d126); +rule: also the emulated driver resume of jevdrive/openpilot/resume.py (ego speed and "
+                               "the model's lead head only); none: modes without a stop latch", "d74, d126, op_resume"),
         "command.channel": ("semi", "route turn desire 20 m before LEFT / RIGHT (not a choice signal, d121); sky arrow arms",
                             "d92, d102, d121"),
         "command.route_geometry": ("semi", "dense-zones = DRIVE_ZONES: the dense route geometry steers in command zones (LEFT / RIGHT "
@@ -254,6 +264,7 @@ def resolve_hugsim(opts, controller, dataset="nuscenes", op_ctrl_env=None):
             "lateral.source": "action" if opc else "plan", "lateral.exec": "op-path" if opc else "ilqr",
             "lateral.delay_s": round(delay / dil, 4) if opc else "n/a",
             "lon.source": "action" if (opc and o.get("op_long") and controller == "opctrl_long") else "plan-ilqr",
+            "lon.resume": "rule" if o.get("resume") is not None else "none",
             "command.channel": "desire-sim" if o.get("desire", True) else "none", "tricks": tuple(tricks)}
     par = o.get("parity")
     if par and par.get("ego", True):              # experiments/op_parity (lib/parity_hugsim.py): what the served arm reads
@@ -263,6 +274,15 @@ def resolve_hugsim(opts, controller, dataset="nuscenes", op_ctrl_env=None):
 
 
 VLM_LIGHT_ARMS = ("jslow", "vred", "vred3", "vall", "vmerge")   # lib/vlm_arb_agent.py ARM_ROWS with a light row (R1 / R2)
+
+
+def resume_rule(params):
+    """The shared resume rule (jevdrive/openpilot/resume.py) for a board's config value: None = off (lon.resume none / timer),
+    {} = the pre-registered defaults, a dict = overrides (recorded with the run)."""
+    if params is None:
+        return None
+    from jevdrive.openpilot.resume import ResumeRule
+    return ResumeRule(**({} if params is True else dict(params)))
 
 
 def b2d_values(cfg, env=None):
@@ -310,6 +330,7 @@ def b2d_values(cfg, env=None):
             "lateral.source": "action" if curv else "plan", "lateral.exec": "op-path" if opc else "bicycle" if curv else "p7",
             "lateral.delay_s": float(opc_rule.get("delay", 0.25)) if opc else "carla",
             "lon.source": "plan-idm-latch" if drive else "plan-p7",
+            "lon.resume": ("timer" if drive else "none") + ("+rule" if drive and a.get("resume_rule") is not None else ""),
             "command.channel": channel, "command.route_geometry": geom,
             "light.source": light, "tricks": tuple(tricks)}
 

@@ -45,6 +45,11 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      op_long (bool, default false, needs op_ctrl; plans/2026-10-04-op-control-stack-long-prereg.md): also append the raw action
                      acceleration (server `accel` = action[1]) as the row before it, [accel, 2e9]; tree `opctrl_long` (op-ctrl-long.patch, env
                      OP_CTRL_LONG) strips it and sets the acceleration through lib/op_ctrl.py OpLongitudinal
+                     resume (openpilot, dict of jevdrive/openpilot/resume.py ResumeRule keywords, {} = the pre-registered defaults,
+                     default off; experiments/op_resume/plans/2026-10-05-op-resume-prereg.md): the shared emulated driver resume
+                     (interface lon.resume = rule). After forward_only / straight_stop, while the rule is launching, the plan is
+                     re-timed along its own path to max(its own arc, the rule's launch profile); lateral untouched (op_ctrl);
+                     inputs: simulator time and speed, the model's lead head, the plan's 1 s distance
                      parity (openpilot, dict, default off; experiments/op_parity, lib/parity_hugsim.py): {"socket": the parity bias
                      server, "clock": "model" | "sim"}; every step the agent sends the ego status, 4-pose history, route command
                      (and, for an arm that reads them, the side / rear camera key frames) to that server and passes the returned
@@ -77,6 +82,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "scripts"), str(ROOT / "experiments/hugsim
 import zeroshot_wire as wire  # noqa: E402
 from jevdrive import hugsim_zs as Z  # noqa: E402
 from jevdrive.openpilot import interface as IF  # noqa: E402
+from jevdrive.openpilot import resume as RR  # noqa: E402
 sys.path.insert(0, str(ROOT / "lib"))
 import launch_stab as LS  # noqa: E402
 import launch_long as LL  # noqa: E402
@@ -305,6 +311,18 @@ class Agent:
                 if why == "on":
                     rec["plan_before_ll"] = np.round(plan, 3).tolist()
                 plan = new
+            if "resume" in self.opts and self.model != "alpamayo":
+                if not hasattr(self, "rr"):
+                    self.rr = IF.resume_rule(self.opts["resume"])
+                v_now = float(info["ego_velo"])
+                on, why = self.rr.step(float(info["timestamp"]), v_now, rec.get("lead_prob"), rec.get("lead_x"),
+                                       RR.plan_s1_from_points(plan, LL.PLAN_DT))
+                rec["rr"] = why
+                if on:
+                    s_old = LL.arclen(plan)
+                    s_new = np.maximum(s_old, self.rr.profile(v_now, LL.PLAN_DT * np.arange(1, len(plan) + 1)))
+                    rec["plan_before_rr"] = np.round(plan, 3).tolist()
+                    plan = LL.retime(np.asarray(plan, float), s_new)
             ta = info["timestamp"] + np.r_[0.0, Z.plan_times()]
             self.last = (Z.plan_to_world(np.r_[[[0.0, 0.0]], plan], pos, th), ta)
         if self.engage_s > 0 and info["timestamp"] < self.engage_s - 1e-6:
