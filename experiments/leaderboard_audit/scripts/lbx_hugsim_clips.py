@@ -313,13 +313,14 @@ def make_case(args):
         frames.append(np.concatenate([top, rows[0], sep, rows[1]], 0))
     from PIL import Image
     out = Path(out_dir) / f"{stem}.gif"
-    for scale, ncol in ((0.62, 128), (0.55, 96), (0.48, 80), (0.42, 64), (0.36, 64)):     # shrink until < 3 MB
+    max_b = float(os.environ.get("CLIP_MAX_MB", "3.0")) * 1e6
+    for scale, ncol in ((0.8, 128), (0.7, 128), (0.62, 128), (0.55, 96), (0.48, 80), (0.42, 64), (0.36, 64)):     # shrink until < CLIP_MAX_MB
         ims = [Image.fromarray(cv2.cvtColor(cv2.resize(f, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB))
                for f in frames]
         pal = ims[len(ims) // 2].quantize(colors=ncol, method=Image.Quantize.MEDIANCUT)
         q = [im.quantize(palette=pal, dither=Image.Dither.NONE) for im in ims]
         q[0].save(out, save_all=True, append_images=q[1:], duration=250, loop=0, optimize=True)
-        if out.stat().st_size < 3.0e6:
+        if out.stat().st_size < max_b and (scale <= 0.62 or max_b > 3.0e6):
             break
     # still: the frame at the shipped arm's event (end or stop onset)
     a0 = arms[0]
