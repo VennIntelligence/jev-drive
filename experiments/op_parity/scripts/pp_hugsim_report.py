@@ -357,6 +357,14 @@ def report_full():
     P("| preset | arm | n | fg collisions | P0 stuck / stopped there | P0 also collides | P0 completes or other |\n|---|---|--:|--:|--:|--:|--:|")
     for _, r in sdf.iterrows():
         P(f"| {r.preset} | {r.arm} | {r.n} | {r.fg_coll} | " + (" | ".join(str(r[k]) for k in CATS) if r.arm != "P0" else "- | - | -") + " |")
+    # P0's own end in the same scenarios, whatever the class
+    e2 = ddf[ddf.arm != "P0"].assign(p0_ended=lambda x: x.p0_end.replace({"fg_collision": "P0 fg_coll", "bg_collision": "P0 bg_coll", "max_steps": "P0 max_steps",
+                                                                         "complete": "P0 other", "off_route": "P0 other"}))
+    t3b = e2.pivot_table(index=["preset", "arm"], columns="p0_ended", values="step", aggfunc="size", fill_value=0).reset_index()
+    out_csv["fg_p0_end"] = t3b
+    P("\nThe same collisions by how P0 itself ended in that scenario (a stopped P0 often ended in its own collision at near-zero speed):\n")
+    P("\n".join(md(t3b)))
+    P("")
     P("\nPer-collision rows (arm, scenario, step, speeds, P0 state) are in `fg_detail.csv` / `fg_detail.md`.\n")
     # inverse view
     inv = []

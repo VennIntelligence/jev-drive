@@ -1,0 +1,13 @@
+preset,arm,P0 bg_coll,P0 fg_coll,P0 max_steps,P0 other
+exam,P1-F-s0,1,22,1,2
+exam,P1-F-s1,1,23,0,2
+exam,P2-F-s0,2,21,4,1
+exam,P2-F-s1,3,20,4,1
+exam,P3-F-s0,2,21,6,1
+exam,P3-F-s1,2,22,4,1
+spec,P1-F-s0,0,24,2,1
+spec,P1-F-s1,0,24,3,1
+spec,P2-F-s0,1,19,8,2
+spec,P2-F-s1,1,18,7,2
+spec,P3-F-s0,2,18,7,2
+spec,P3-F-s1,1,19,6,2

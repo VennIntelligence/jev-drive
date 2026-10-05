@@ -1,0 +1,15 @@
+preset,arm,n,fg_coll,P0 stuck / stopped there,P0 also collides,P0 completes or other
+exam,P0,64,26,0,0,0
+exam,P1-F-s0,64,26,10,15,1
+exam,P1-F-s1,64,26,12,13,1
+exam,P2-F-s0,64,28,10,17,1
+exam,P2-F-s1,64,28,9,18,1
+exam,P3-F-s0,64,30,11,18,1
+exam,P3-F-s1,64,29,10,18,1
+spec,P0,64,24,0,0,0
+spec,P1-F-s0,64,27,20,7,0
+spec,P1-F-s1,64,28,23,5,0
+spec,P2-F-s0,64,30,21,7,2
+spec,P2-F-s1,64,28,21,6,1
+spec,P3-F-s0,64,29,18,9,2
+spec,P3-F-s1,64,28,18,8,2
