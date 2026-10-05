@@ -132,3 +132,4 @@
 | 135 | 加宽视场 zero-shot（comma1M 真实转弯，wide 58.7° → 90° / 116°）：action 曲率幅度不变或略降、转向略晚；转向靠 road 相机，wide 冻结也几乎不变；改 road 焦距破坏尺度；预注册早停 | 弱 | 结论 |
 | 136 | Alpamayo 急弯不靠 cross 侧机（PhysicalAI-AV 10 弯，An − Bn +0.011 [−0.145, +0.141]），120° front-wide 已够；胜 openpilot 主要在 nav（+0.11）与宽前视；checkpoint 对 slot 布局敏感 | 弱 | 结论 |
 | 137 | wide 槽换 116° 再微调：B2D 9 弯 W116 0/9 对 W58 0/9，开环出口走对 −0.002，闸门不过；rc-bear-fix 配方在 comma1M 原生相机上直路 ADE ×2.6（1.86 m 视角训练伤原生） | 弱 | 结论 |
+| 138 | WA-JEPA 在 HUGSIM 64 场景 HD 0.451（复现论文 0.446），同一 PR #57 控制器下比 Cinque +0.173 [0.081, 0.268]；差距在 medium，来自卡死与起步（打转 4 对 10，停滞 2 对 9）；控制器不是差距来源 | 中 | 待定 |
