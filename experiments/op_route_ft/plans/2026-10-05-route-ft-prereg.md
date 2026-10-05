@@ -121,3 +121,17 @@ pilot 放行条件（rc-bear，400 步）：(1) imit 与 act 损失比第 25 步
 | 护栏子集（guard.py subset，desire 开，工具的线） | 工具的线；rc-bear 的 navhard −0.43、早转 −0.30 当参考 |
 
 判读：主线过且真实增益保持 → 训练状态分布是瓶颈；闭环不变而近集合开环增益高 → 瓶颈不在 action 头的监督，在闭环（速度控制 / 停车 / 执行器）；真实增益掉 → 近集合目标与真实目标冲突（与第 129 条同类），看是哪类位姿。
+
+### 更正（2026-10-06，训练前）：action 目标的换算错了，rc-* 全部臂都带着它
+
+第 130 条（`experiments/op_closed_loop/results/action_scale.md`）：`ACT_ALPHA = 0.45 × 1 s pure pursuit × max(1, v0)²` 不是 shipped 头的约定。modeld 的约定是 action[0] = κ_inst(t + 0.275 s) · max(1, v_model)²，增益 1，右正；0.45 来自 1 s pure pursuit 当比较目标、回归方向，以及开环榜相机高度让模型低估自身速度（v_model / v：WOD 0.92、nav 0.81、B2D spec 0.87）。**第 128、129 条的 rc-bear / rc-poly / rc-ctl / rc-all / rc-*-pre 都用了旧目标**（相对 shipped 自己的尺度约一半）。本节以上关于「0.45」「纯追踪前视 clip(v0, 4, 15) m」的写法作废，改为（`rft.py` e57a3bb5 / eb749f1a，单测 `tests/test_rft_act_target.py`）：
+- 真实行：`act_target(hum, v0, v_model)`，κ_inst = 日志未来 0–1.5 s 三次拟合在 t = 0.275 s 的曲率，v_model = 原模型 plan 在 t0 的速度（`vmodel(tea mu)`，相机尺度不对时用模型自估速度），|κ| 截到 0.2（controlsd 上限），v0 < 1 不监督（不变）。
+- CARLA 行与近距离行：`act_target_path`，κ_inst = 稠密目标路径在弧长 v0 · 0.275 处的曲率（3 m 窗口的航向差，路径起点处窗口前移），v_model 同上；近距离行从 0.3 m/s 起监督。
+- `act_target_pre` 保留旧尺度，仅用于复现 rc-*-pre。
+- 目标统计（新约定，带符号均值 1/m）：近集合弯中 左 0.067 / 右 −0.096（瞬时曲率 = 车所在处的曲率；连接段入口段曲率仍在上升，故低于弧的最大曲率 0.098 / 0.148）；接近 d 0–3 左 0.036 / 右 −0.064；d 3–10 ≤ 0.011；直行 0.000。真实 train 行（v0 ≥ 1）新目标对旧目标斜率 nav 1.24、wod 1.12（相关 0.94 / 0.95；含 v_model² 的 0.66–0.84 缩小）。
+
+**因此设计改一处**：rc-bear-near 与 rc-bear 之间现在有两处差别（目标约定 + 近集合），配对不再是单变量。加对照臂 **rc-bear-fix** = rc-bear 配方 + 新目标、无近集合行。主比较改为 **rc-bear-near − rc-bear-fix**；rc-bear-fix − rc-bear 读「目标更正本身」。rc-ctl-near 降为可选（卡有余时）。
+- pilot：rc-bear-near 与 rc-bear-fix 各 400 步并行；放行条件 2 改为「pilot-bear-near 的真实 nav / wod 接近增益（对新目标）≥ pilot-bear-fix − 0.05」；条件 3 改为对 pilot-bear-fix 比；条件 1、4 不变。
+- 主读数：rc-bear-near ≥ 13/25，且 rc-bear-near − rc-bear-fix 配对 CI 下界 > 0；同时报 rc-bear-fix − rc-bear（desire 关，6/25）。
+- 真实行增益线：对新目标，rc-bear-near 在 nav 接近、wod 接近、wod 弯中都 ≥ rc-bear-fix − 0.05（旧线「≥ 0.90，rc-bear 0.96」是对旧目标量的，作废；rc-bear 对新目标的增益在全量 pre_diag 里一并报）。
+- 其余读数与线不变。

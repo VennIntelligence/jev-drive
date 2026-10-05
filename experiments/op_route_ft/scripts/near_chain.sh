@@ -5,8 +5,9 @@
 #                                                  unchanged; LIMIT=<n> env renders only the first n poses of shard 0 (stage 5); IDS=a,b only these ids
 #   near_chain.sh pack                              CPU: carla_pairs_pack + near columns (near_pack.py)
 #   near_chain.sh bank <gpu>                        stage-3 trunks + original outputs per near pose (rft.py bank --which near)
-#   near_chain.sh pilot <gpu> <cpus>                rc-bear-near 400 steps (tag pilot-bear-near); real-row gain (pre_diag) and near readout vs pilot-bear
-#   near_chain.sh full <gpu> <cpus> [ctl]           rc-bear-near (+ rc-ctl-near with `ctl`) 4000 steps, readouts, serving ONNX + adapter, equivalence
+#   near_chain.sh pilot <gpu> <cpus>                rc-bear-near and rc-bear-fix 400 steps in parallel (tags pilot-bear-near / pilot-bear-fix, both with the
+#                                                  decision-130 action target); real-row gain (pre_diag) and near readout
+#   near_chain.sh full <gpu> <cpus> [ctl]           rc-bear-near + rc-bear-fix (+ rc-ctl-near with `ctl`) 4000 steps, readouts, ONNX + adapter, equivalence
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
 R=$DATA_DIR/runs/op_route_ft; N=$R/carla_near
@@ -38,14 +39,18 @@ case $phase in
   pilot)
     gpu=$1; cpus=$2
     run() { CUDA_VISIBLE_DEVICES=$gpu taskset -c "$cpus" "$PY" "$@"; }
-    say "pilot rc-bear-near 400 steps"; run $S/rft.py train --arm rc-bear-near --steps 400 --tag pilot-bear-near --fresh >> "$D/log.txt" 2>&1 || die "train"
-    say "real-row gain"; run $S/pre_diag.py --models O pilot-bear pilot-bear-near --out near_pilot_diag.json >> "$D/log.txt" 2>&1 || die "pre_diag"
-    say "near readout"; run $S/near_eval.py eval --models O pilot-bear pilot-bear-near >> "$D/log.txt" 2>&1 || die "near_eval"
-    say "ol readouts"; run $S/rft.py evalol --models pilot-bear-near --carla ol >> "$D/log.txt" 2>&1 || die "evalol" ;;
+    say "pilot rc-bear-near + rc-bear-fix 400 steps"
+    run $S/rft.py train --arm rc-bear-near --steps 400 --tag pilot-bear-near --fresh > "$D/train-near.log" 2>&1 & p1=$!
+    run $S/rft.py train --arm rc-bear-fix --steps 400 --tag pilot-bear-fix --fresh > "$D/train-fix.log" 2>&1 & p2=$!
+    wait $p1 || die "train near"; wait $p2 || die "train fix"
+    M="O pilot-bear pilot-bear-fix pilot-bear-near"
+    say "real-row gain"; run $S/pre_diag.py --models $M --out near_pilot_diag.json >> "$D/log.txt" 2>&1 || die "pre_diag"
+    say "near readout"; run $S/near_eval.py eval --models $M >> "$D/log.txt" 2>&1 || die "near_eval"
+    say "ol readouts"; run $S/rft.py evalol --models pilot-bear-fix pilot-bear-near --carla ol >> "$D/log.txt" 2>&1 || die "evalol" ;;
   full)
     gpu=$1; cpus=$2; ctl=${3:-}
     run() { CUDA_VISIBLE_DEVICES=$gpu taskset -c "$cpus" "$PY" "$@"; }
-    arms="rc-bear-near"; [ "$ctl" = ctl ] && arms="rc-bear-near rc-ctl-near"
+    arms="rc-bear-near rc-bear-fix"; [ "$ctl" = ctl ] && arms="rc-bear-near rc-bear-fix rc-ctl-near"
     say "train $arms"; pids=()
     for a in $arms; do run $S/rft.py train --arm $a --fresh > "$D/train-$a.log" 2>&1 & pids+=($!); done
     for p in "${pids[@]}"; do wait "$p" || die "train (see $D/train-*.log)"; done

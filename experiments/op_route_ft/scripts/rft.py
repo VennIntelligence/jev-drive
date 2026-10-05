@@ -336,6 +336,7 @@ ARMS = {
     "rc-all": dict(enc="bear", t4=True, t5=True, t6=0.3),
     "rc-bear-pre": dict(enc="bear", pre=True),
     "rc-ctl-pre": dict(enc="bear", zero_cmd=True, pre=True),
+    "rc-bear-fix": dict(enc="bear"),        # = rc-bear retrained with the decision-130 action target (control of rc-bear-near, no near rows)
     "rc-bear-near": dict(enc="bear", rows={"Pnav": 7, "Pwod": 5, "Pcar": 10, "Pnear": 6, "Ncar": 3, "Nreal": 3, "Dnav": 5, "Dwod": 4, "Dhc": 2, "Dcar": 3}),
     "rc-ctl-near": dict(enc="bear", zero_cmd=True, rows={"Pnav": 7, "Pwod": 5, "Pcar": 10, "Pnear": 6, "Ncar": 3, "Nreal": 3, "Dnav": 5, "Dwod": 4, "Dhc": 2,
                                                          "Dcar": 3}),
