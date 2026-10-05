@@ -23,7 +23,10 @@ import fw_common as C  # noqa: E402
 import dg_clips as DGC  # noqa: E402
 
 SETS = {"g0a": dict(kl=10, quota={"launch": 24, "sharp": 20, "cruise": 24}),
-        "g0b": dict(kl=40, quota={"launch": 40, "turn": 40, "cruise": 40})}
+        "g0b": dict(kl=40, quota={"launch": 40, "turn": 40, "cruise": 40}),
+        "g1s": dict(kl=40, quota={"stay": 40}),                                              # G1 false-go guard: log stands still 8 s
+        "train": dict(kl=40, quota={"launch": 400, "turn": 300, "cruise": 150, "mid": 150, "stay": 150}, src="train")}
+SRC = {"val": ("wodval", "val", "wod/val"), "train": ("wod", "train", "wod/r2-train")}
 SPLIT = "wod/val"
 
 
@@ -38,6 +41,8 @@ def cat_of(name, v, has, fut, ks, kl):
     if not all(has[k] for k in m):
         return None
     vh, v0 = v[ks[:T0]], v[ks[T0]]
+    if name in ("g1s", "train") and v0 <= 0.1 and np.all(v[ks[T0:]] <= 0.1):
+        return "stay"
     if v0 > 0.1 and np.all(vh <= 0.1):
         return "launch"
     if v0 < 2.0:
@@ -53,22 +58,29 @@ def cat_of(name, v, has, fut, ks, kl):
         return "turn"
     if v0 >= 8.0 and np.max(np.abs(psi)) < 20.0 and np.min(v[ks[T0:]]) > 3.0:
         return "cruise"
+    if name == "train" and 2.0 <= v0 < 8.0 and np.max(np.abs(psi)) < 20.0:
+        return "mid"
     return None
 
 
 def cmd_select(a):
     from experiments.op_adapt_l.lib import op_adapt_l as L
     from jevdrive.data import splits
-    S = splits.load(SPLIT)
-    z = np.load(L.lroot("prep") / "wodval.npz", allow_pickle=True)
-    names, seq, split, v, fut, has = (z["name"].astype(str), z["seq"].astype(str), z["split"].astype(str), z["v0"].astype(float),
-                                      z["fut20"].astype(float), z["has"].astype(bool))
-    keep = (split == "val") & S.mask(seq)
-    fr = np.array([int(x.rsplit("-", 1)[1]) for x in names])
-    by = {}
-    for k in np.flatnonzero(keep):
-        by.setdefault(seq[k], {})[fr[k]] = k
-    for name, cfg in SETS.items():
+    for name in (a.sets or list(SETS)):
+        cfg = SETS[name]
+        if (C.root("clips") / f"{name}.json").exists():
+            print(name, "selection exists")
+            continue
+        src, sp, sid = SRC[cfg.get("src", "val")]
+        S = splits.load(sid)
+        z = np.load(L.lroot("prep") / f"{src}.npz", allow_pickle=True)
+        names, seq, split, v, fut, has = (z["name"].astype(str), z["seq"].astype(str), z["split"].astype(str), z["v0"].astype(float),
+                                          z["fut20"].astype(float), z["has"].astype(bool))
+        keep = (split == sp) & S.mask(seq)
+        fr = np.array([int(x.rsplit("-", 1)[1]) for x in names])
+        by = {}
+        for k in np.flatnonzero(keep):
+            by.setdefault(seq[k], {})[fr[k]] = k
         rng = np.random.default_rng([0, len(name), cfg["kl"]])
         nf = C.NH + cfg["kl"]
         cand = {c: [] for c in cfg["quota"]}
@@ -93,7 +105,7 @@ def cmd_select(a):
                 rows.append(dict(seq=q, f0=int(f0), cat=c, names=[str(names[k]) for k in ks], rows=[int(k) for k in ks]))
                 got += 1
             print(f"{name} {c}: {len(cand[c])} candidates, {got} chosen", flush=True)
-        json.dump(dict(split_id=S.id, src="wodval", kl=cfg["kl"], clips=rows), open(C.root("clips") / f"{name}.json", "w"))
+        json.dump(dict(split_id=S.id, src=src, kl=cfg["kl"], clips=rows), open(C.root("clips") / f"{name}.json", "w"))
 
 
 def render(name, workers):
@@ -105,7 +117,7 @@ def render(name, workers):
     js = json.load(open(C.root("clips") / f"{name}.json"))
     clips, kl = js["clips"], js["kl"]
     nf = C.NH + kl
-    z = np.load(L.lroot("prep") / "wodval.npz", allow_pickle=True)
+    z = np.load(L.lroot("prep") / f"{js['src']}.npz", allow_pickle=True)
     v_all, fut_all = z["v0"].astype(float), z["fut20"].astype(np.float64)
     calib = DGC.wod_calib()
     n = len(clips)
@@ -125,7 +137,7 @@ def render(name, workers):
     v = v_all[ks]
     a0 = (v[:, C.T0 + 1] - v[:, C.T0 - 1]) / (2 * C.DT)
     tab = dict(id=np.array([c["names"][C.T0] for c in clips]), seq=np.array([c["seq"] for c in clips]), cat=np.array([c["cat"] for c in clips]),
-               v=v.astype(np.float32), pose=pose, a0=a0.astype(np.float32),
+               v=v.astype(np.float32), pose=pose, a0=a0.astype(np.float32), fut20=fut_all[ks].astype(np.float32),
                cam=np.array([np.array(calib[c["seq"]]["1"]["extrinsic"]).reshape(4, 4)[:3, 3] for c in clips], np.float32),
                tc=np.tile(np.array([1.0, 0.0], np.float32), (n, 1)),
                k0=np.array([DG_k0(p, vv) for p, vv in zip(pose, v)]), split_id=np.array(js["split_id"]))
