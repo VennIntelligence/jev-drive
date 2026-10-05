@@ -78,7 +78,7 @@ def main():
         if v is None:
             continue
         ade, sr = geo(v)
-        r = {"protocol": p, "arm": arm, "seed": s, "EPDMS": per_tok(v).mean()} | {k: per_tok(v, c).mean() for k, c in SUBS.items()}
+        r = {"protocol": p, "arm": arm, "seed": s, "EPDMS": per_tok(v).mean()} | {k: float(np.nanmean(per_tok(v, c))) for k, c in SUBS.items()}
         rows.append(r | {"ade_vs_log": ade.mean(), "speed_ratio_med": float(np.median(sr[mv]))})
     cells = pd.DataFrame(rows).sort_values(["protocol", "arm", "seed"])
     out = _R / "experiments" / "op_parity" / "results"
