@@ -98,4 +98,4 @@ The 1.86 m camera sits above the MKZ roof, so objects close in front of the car 
 - `figs/spec_shipped_28180_sharp_turn.gif` (2026-10-06): shipped under the B2D `spec` preset (open-loop-aligned camera 1.86 m, op-path, zones
   off, desire on), route 28180 turn 0 (forced right turn at a T junction, R_min 4.7 m), chase camera next to both model input frames; made with
   `experiments/op_route_ft/scripts/rft_gif_lane.py --gif shipped:28180` + `scripts/junction_forced_gif.py --speedup 3 --fps 8 --width 480`. A
-  re-run for recording, not the scored cell. Look at how little the car turns as it reaches the T (the head asks ~0.3x the needed curvature).
+  re-run for recording, not the scored cell. Look at the car at the T: it does not turn right and runs straight over the kerb towards the pole.
