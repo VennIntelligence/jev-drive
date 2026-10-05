@@ -66,7 +66,7 @@ def gather_index(rpy, f_model, wide, fill=False, wh=(1928, 1208)):
     out, miss = [], 0.0
     for sub, (W, H) in ((1, (MODEL_W, MODEL_H)), (2, (MODEL_W // 2, MODEL_H // 2))):
         cw, ch = wh[0] // sub, wh[1] // sub
-        S = uv_scale if sub == 2 else np.eye(3)
+        S = uv_scale if sub == 2 else np.ones((3, 3))
         idx = np.full(H * W, -1, np.int64)
         for j, (cf, cam) in enumerate(srcs):
             sx, sy = _proj(warp_matrix(rpy, cf, f_model, wide, wh) * S, W, H)
