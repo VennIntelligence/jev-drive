@@ -15,7 +15,12 @@ queries); the plan pathway is fine-tuned on navtrain with an anchor (same navtra
 shipped, P1 inputs zeroed, P2 + ego / pose / command, P3 + side / rear cameras. Readouts: NAVSIM navtest EPDMS on the devkit that
 reproduced WA-JEPA's 91.71, HUGSIM 64 (spins, launch stalls). Pre-registration: [plans/2026-10-06-parity-prereg.md](plans/2026-10-06-parity-prereg.md).
 
-**Next.** Feature cache, init-equivalence test, pilot (600 steps per arm) and its gate.
+**Pilot (2026-10-06).** navtest EPDMS (devkit that reproduces WA-JEPA 91.71): P0 81.11, P1 81.73, P2 86.57 (+4.84 [+4.11, +5.55] vs P1),
+P3 86.10, WA-JEPA 91.71 (P2 - WA-JEPA -5.14 [-6.02, -4.27]); side cameras add nothing; HUGSIM spin10 spins P1 8 / P2 7 / P3 8, launch-spin
+onset unchanged. Gate holds: [results/pilot.md](results/pilot.md). Frame-protocol Stage A (no training): the image-pair gap sets the plan
+speed (0.5 s pairs: x1.93), GIMM vs real frames -0.38 EPDMS: [results/stageA.md](results/stageA.md).
+
+**Next.** Stage B (frame protocol N / W / G x P1 / P2 x 2 seeds, prereg addendum 1) after main has seen the design; then the full-run estimate.
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner
 scenarios: [results/hugsim_spin10.md](results/hugsim_spin10.md) (spins P1 8, P2 7, P3 8 of 10; the launch spin onset is unchanged).
