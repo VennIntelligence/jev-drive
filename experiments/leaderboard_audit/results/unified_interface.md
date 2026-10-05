@@ -101,3 +101,13 @@ true camera height, declared as an LB deviation.
 - [E, direction only, n = 6, one seed] B2D 1.22 m at the bumper line is not worse than 1.433 m; with the zones off it turns (5/7 vs 0/7).
 - [E] nored inflated decision 102's drive arm by 2.1 DS (5.6 on the runs where it acted, all three red lights hidden).
 - [E] WOD h1.22 -0.49 RFS; NAVSIM h1.22 -1.97: the virtual camera is not adopted on the open-loop boards.
+
+## Clips (2026-10-06)
+
+`scripts/lbx_hugsim_clips.py unified` on the runs above (shipped `exam` on top, shipped `spec` = decision 118's arm below; left a BEV
+reconstruction from the run's point clouds, not a render; right the road / wide frames rebuilt from the run's video with openpilot's own gather,
+plan in cyan):
+- [figs/hugsim_spec_vs_exam_0013m.gif](../figs/hugsim_spec_vs_exam_0013m.gif): scene-0013-medium. Look at the exam car curling off the road
+  within 5 s while the spec car holds the lane and completes (HD 0.06 vs 1.00): the spin is the executor, not the model's view.
+- [figs/hugsim_spec_vs_exam_3000m.gif](../figs/hugsim_spec_vs_exam_3000m.gif): scene-3000_3200-medium. Look at the spec car stopping behind
+  a car ahead (lead_prob 1.0) and never relaunching (400 steps, HD 0.27 vs 0.72): the price of the spec preset, the "stuck 6 of 11" row above.

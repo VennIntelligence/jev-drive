@@ -64,3 +64,11 @@ Inference, not measured:
 1. Per-dataset split of the HUGSIM exam (nuScenes about 1.2 m vs Waymo about 1.8 m scenes) against the height prediction.
 2. WOD lane-width / scale read to settle whether 1.81 m is a real scale error there.
 3. Dump B2D native OP_ROAD / OP_WIDE frames in one short run if a source column is wanted.
+
+## WOD-E2E clip (2026-10-06)
+
+[figs/wod_launch_turn.gif](../figs/wod_launch_turn.gif), `scripts/lbx_wod_clip.py make` (`pick` lists the candidates: val sequences with a launch
+from standstill into a > 45 deg turn; the sharpest is taken; frames and numbers in `figs/wod_launch_turn.json`). Shipped Cinque fed as the WOD
+harness feeds it (three cameras stitched, each 10 Hz frame twice, zero state 10 s before the first shown frame), open loop. Left the WOD FRONT
+camera (WOD has no third-person view), middle a BEV in the rear-axle frame (grey logged past, green logged future, cyan the plan as scored),
+right the road / wide model frames with the plan. Look at how early the cyan plan leaves the standstill and follows the green turn.

@@ -69,6 +69,11 @@ Pre-registered lines:
 
 Open-loop gains: the step-1 yaw gain halves, but the plan and action path changed more than these lines look at (next section).
 
+Clip: [figs/dagger_swerve.gif](../figs/dagger_swerve.gif) (`scripts/dg_gif.py`): held-out clip 87 (cruise), closed swerve +0.5 m, shipped
+on top, dg1 below; left a BEV in the t0 frame (green logged path, blue ego, cyan plan), right the road / wide frames the model gets (logged
+history, then the logged frame re-projected to the ego's offset). The clip is the one whose shipped - dg1 offset at step 10 is closest to the
+median over the 56 feasible mid / cruise clips (0.34 m). Look at dy at +2 s: shipped stays at +0.53 m, dg1 is back to +0.18 m.
+
 ### Flag: action-curvature gain sign flip (gk1)
 
 Shipped at launch has gk1 -3.97 (restoring, but the controller is inactive below 0.3 m/s) and +0.52 moving. dg1 has +3.24 at launch and +4.46 moving (8x shipped moving), and its gk2 / gk3 go from +0.8 / +1.4 to +3.2 / +3.6. In other words dg1 steers into a heading offset much harder at every step, which is what produces the 2 s recovery (S10 0.24, K10 0), yet replay on logged states stays within 0.05 deg median. st1 goes the other way at launch (-21.5). The action target was relabelled by decision 130 (`rft.act_target`) before this training, so this is not the old target. A gain this large can over-correct in a loop that includes the controller lag, which the HUGSIM result below hints at.
