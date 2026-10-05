@@ -135,3 +135,11 @@ pilot 放行条件（rc-bear，400 步）：(1) imit 与 act 损失比第 25 步
 - 主读数：rc-bear-near ≥ 13/25，且 rc-bear-near − rc-bear-fix 配对 CI 下界 > 0；同时报 rc-bear-fix − rc-bear（desire 关，6/25）。
 - 真实行增益线：对新目标，rc-bear-near 在 nav 接近、wod 接近、wod 弯中都 ≥ rc-bear-fix − 0.05（旧线「≥ 0.90，rc-bear 0.96」是对旧目标量的，作废；rc-bear 对新目标的增益在全量 pre_diag 里一并报）。
 - 其余读数与线不变。
+
+### 范围变更（2026-10-05，用户；pilot 读数之前写定）
+
+B 只做 400 步 pilot（rc-bear-fix、rc-bear-near）+ B2D 小集（8 条路线、25 个转弯中的 9 个：choice 迟入 10255 / 5423 / 15102 / 34183 / 28008#1，forced 25051 迟入、28180 急弯低速、27994 与 28008#0 已走对；desire 关、zones 关、curv、seed 2）。不训全量、不跑 25 转弯与护栏。产出是打包好的近距离数据与更正后的目标代码，交给合并训练。
+结论只回答「合并训练里要不要放近距离 / 低速目标」：
+- **要**：pilot-bear-near 小集走对 ≥ pilot-bear-fix + 2，或进入的转弯里入弯位置中位早 ≥ 2 m；且真实接近行增益 ≥ pilot-bear-fix − 0.05，近集合 dev 弯中增益高于 pilot-bear-fix。
+- **不要**：小集走对差 ≤ 1 且入弯时机不变，或真实接近行增益掉 > 0.05。
+- 介于两者：报「不确定」，给出数字。参照 rc-bear-s0（desire 关）在这 9 个上走对 2 个。
