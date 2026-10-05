@@ -198,6 +198,14 @@ def eval_specs(S):
     return sp
 
 
+def bye():
+    """Terminate the pool workers (os._exit alone orphans them and they keep their CUDA contexts), then exit."""
+    import multiprocessing as mp
+    for c in mp.active_children():
+        c.terminate()
+    os._exit(0)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["check", "collect", "eval"])
@@ -228,11 +236,11 @@ def main():
         out = C.root("roll", Path(a.model).parent.name if Path(a.model).exists() else a.model) / f"{a.set}-{a.cmd}-{i}of{n}.npz"
         if out.exists():
             print("exists", out)
-            os._exit(0)
+            bye()
         save(out, sp, R.rollouts(S, sp, batch=a.batch), S)
         print(f"{a.cmd} {a.set} {a.model}: {len(sp)} rollouts in {time.time() - t0:.0f} s -> {out}", flush=True)
     print(f"done in {time.time() - t0:.0f} s", flush=True)
-    os._exit(0)
+    bye()
 
 
 if __name__ == "__main__":
