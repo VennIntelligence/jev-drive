@@ -136,3 +136,4 @@
 | 139 | comma worldmodel-4B 不能零样本当策略：每次以日志未来画面（5 anchor，0.2–9.8 s）为条件，cfg 无条件分支只去位姿；plan head 是看过未来的逆动力学；当主干需 anchor dropout 新训练 | 中 | 结论 |
 | 140 | resume 启停规则（静止且 lead 头看不到车才起步）：HUGSIM 卡死起步 5/6、HD +0.122 [−0.000, +0.307]，但 124-extreme 起步后撞上 lead 头没看到的目标，闸门判停；B2D 0 次触发；模型停的理由不全在输出里 | 弱 | 待定 |
 | 141 | factor_wm G0：shipped 在真实日志重投影引擎里加扰动失败率 0.52（起步停滞、急弯欠转、出车道），起因在模型（起步 t0 加速度 −0.09、急弯曲率 0.63×）；深度不比 plane 好，引擎定 plane | 中 | 待定 |
+| 142 | Cinque 输入对齐 WA-JEPA（op_parity）：ego + 位姿历史 + 指令 navtest +4.86（GIMM）/ +4.15（warp）/ +2.78（原生 2 Hz），距 WA-JEPA 10.6 → 5.1；全量协议定 warp；HUGSIM spec 29 失败场景卡死 24 → 0 但前景碰撞 1 → 10 | 中 | 待定 |
