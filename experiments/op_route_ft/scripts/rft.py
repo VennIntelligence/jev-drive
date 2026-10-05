@@ -15,7 +15,8 @@ Rows of one batch (48):
      lib/route_neg.make; target = the original's plan + every head (teacher = original, as q3NA).
   D  no command: plan consistency + every head to the original (nav / wod / carla H pools, CARLA pair poses).
 Arms: rc-bear (bear encoding), rc-poly (poly encoding), rc-ctl (command zeroed on every row, same rows and targets), rc-all (rc-bear + op_adapt_L
-start / stop slices with stay contrast (T4) + layer-3 H / O pairs (T5) + nuPlan drivable hinge on nav rows (T6); exploratory).
+start / stop slices with stay contrast (T4) + layer-3 H / O pairs (T5) + nuPlan drivable hinge on nav rows (T6); exploratory), rc-bear-pre /
+rc-ctl-pre (rc-bear / rc-ctl with the turn-in action target at approach poses, act_target_pre; decision 128 suspect a).
 
   bank   --root <carla packed root> --tag <tag>     stage-3 trunks + the original's outputs per CARLA pose -> $R/bank/<tag>/
   train  --arm <arm> [--steps n] [--tag t]           -> $R/runs/<arm>-s<seed>/ (Run dir, ckpt-final.pt in op_adapt_l format, adapter.npz)
@@ -189,6 +190,42 @@ def act_target_path(tp, tm, v0):
     return -ACT_ALPHA * 2.0 * y / max(x * x + y * y, 1.0) * max(1.0, v0) ** 2, 1.0
 
 
+LAT_DELAY = 0.2                   # s, openpilot lateralDelay (lagd initial value): action[0] is the desired lateral acceleration for t + this
+T_TI = 1.5                        # s, preview of a driver's turn-in ahead of the curve (includes LAT_DELAY)
+K_TH = 0.02                       # 1/m, curvature of a maneuver (route_poly.maneuvers' threshold, R < 50 m)
+
+
+def act_target_pre(tp, tm, v0):
+    """rc-*-pre (plans/2026-10-05-route-ft-prereg.md, 2026-10-06 section): turn-in target at approach poses -> (target action[0], weight) or None
+    when the pose is not an approach pose (then the arm keeps its old target).
+
+    Approach pose: the target path is straight (|kappa| <= K_TH) from the car to s_d = v0 * LAT_DELAY + 2 m and a maneuver (|kappa| > K_TH) starts at
+    s_ts within the turn-in distance W = v0 * T_TI + R / 2 (R = the maneuver's minimum radius, capped at 30 m): a clothoid entry of length about R
+    centred on the arc's tangent point starts R / 2 before it, plus the distance driven during the driver's preview.
+    Target = the curvature a driven path has at the car: the commanded path's curvature averaged over [s_d, s_d + W] (a linear turn-in ramp from 0 at
+    s_ts = s_d + W to the arc's curvature at s_ts = s_d), as action[0] = -ACT_ALPHA * kappa * max(1, v0)^2 like every other row."""
+    n = int(tm.sum())
+    if v0 < 1.0 or n < 5:
+        return None
+    k = RP.curvature(tp[:n], 1.0)
+    s_d = v0 * LAT_DELAY
+    on = np.abs(k) > K_TH
+    i_d = int(np.ceil(s_d + 2.0))
+    if on[: i_d + 1].any() or not on.any():
+        return None
+    i0 = int(np.argmax(on))
+    j = i0
+    while j + 1 < n and on[j + 1]:
+        j += 1
+    r = min(1.0 / max(np.abs(k[i0:j + 1]).max(), 1e-6), 30.0)
+    W = v0 * T_TI + 0.5 * r
+    if i0 > s_d + W:
+        return None
+    a, b = int(round(s_d)), min(int(round(s_d + W)), n - 1)
+    kap = float(k[a:b + 1].mean())
+    return -ACT_ALPHA * kap * max(1.0, v0) ** 2, 1.0
+
+
 def turn_weight(deg, rmin, s):
     a = abs(deg) if np.isfinite(deg) and (not np.isfinite(s) or s <= 80.0) else 0.0
     if a < 25:
@@ -232,6 +269,7 @@ class RCfg:
     t5: bool = False                      # rc-all: layer-3 H / O rows
     t6: float = 0.0                       # rc-all: drivable hinge weight on nav rows
     t6_margin: float = 0.4
+    pre: bool = False                     # rc-*-pre: turn-in action target at approach poses (act_target_pre), P rows only
 
     def dump(self):
         return asdict(self)
@@ -246,6 +284,8 @@ ARMS = {
     "rc-poly": dict(enc="poly"),
     "rc-ctl": dict(enc="bear", zero_cmd=True),
     "rc-all": dict(enc="bear", t4=True, t5=True, t6=0.3),
+    "rc-bear-pre": dict(enc="bear", pre=True),
+    "rc-ctl-pre": dict(enc="bear", zero_cmd=True, pre=True),
     "smoke-all": dict(steps=20, carla="old", ckpt_every=10 ** 9, workers=4, t4=True, t5=True, t6=0.3),
 }
 ROLE = {"P": 1, "D": 2, "N": 3}
@@ -371,6 +411,8 @@ class Batcher(torch.utils.data.Dataset):
             out["fb"] = RA.features("bear", rt["poly"][i], rt["pmask"][i], np.random.default_rng(rng.integers(1 << 62)))
             out["fp"] = RA.features("poly", rt["poly"][i], rt["pmask"][i], np.random.default_rng(rng.integers(1 << 62)))
             a, w = act_target(hum, float(t["v0"][i]))
+            if self.cfg.pre:
+                a, w = act_target_pre(out["tp"], out["tm"], float(t["v0"][i])) or (a, w)
             out["at"], out["aw"] = np.float32(a), np.float32(w)
         if role[0] == "N":
             rt = R.route
@@ -419,6 +461,8 @@ class Batcher(torch.utils.data.Dataset):
             self._neg_feat(out, C.r["poly"][j], C.r["pmask"][j], rng)
             out["tp"], out["tm"] = target_path(C.r["poly"][j], C.r["pmask"][j])
             a, w = act_target_path(out["tp"], out["tm"], float(C.tab["v0"][p]))
+            if self.cfg.pre:
+                a, w = act_target_pre(out["tp"], out["tm"], float(C.tab["v0"][p])) or (a, w)
             out["at"], out["aw"] = np.float32(a), np.float32(w)
         elif key == "Ncar":
             miss = missing_classes(C, p)
