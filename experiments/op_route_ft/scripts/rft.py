@@ -210,13 +210,18 @@ def target_path(poly, pmask):
 
 
 def kappa_path(tp, tm, v0):
-    """Instantaneous curvature (left +) of an untimed target path (1 m grid, vertex 0 = the car) where a car at v0 is after ACT_T: arc v0 * ACT_T
-    (route_poly.curvature, 3 m window). None when the path is too short."""
+    """Instantaneous curvature (left +) of an untimed target path (1 m grid, vertex 0 = the car) where a car at v0 is after ACT_T: heading change
+    over a 3 m window centred on arc v0 * ACT_T, shifted forward where it would start behind the car (no one-sided shrink at the path start).
+    None when the path is too short."""
     n = int(tm.sum())
     if n < 5:
         return None
-    k = RP.curvature(np.asarray(tp, float)[:n], 1.0)
-    return float(np.interp(v0 * ACT_T, np.arange(n, dtype=float), k))
+    Q, g = RP.poly_resample(np.asarray(tp, float)[:n], 0.25)
+    d = np.diff(Q, axis=0)
+    psi, gm = np.unwrap(np.arctan2(d[:, 1], d[:, 0])), 0.5 * (g[1:] + g[:-1])
+    lo = max(v0 * ACT_T - 1.5, gm[0])
+    hi = min(lo + 3.0, gm[-1])
+    return float((np.interp(hi, gm, psi) - np.interp(lo, gm, psi)) / max(hi - lo, 1e-6))
 
 
 def act_target_path(tp, tm, v0, vmin=1.0, v_model=None):
