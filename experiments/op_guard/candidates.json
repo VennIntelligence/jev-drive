@@ -56,5 +56,11 @@
   "route_adapter": "$DATA_DIR/runs/op_route_ft/onnx/pilot-bear-near.adapter.npz",
   "command_adapter": "experiments.op_route_ft.scripts.guard_adapter:RouteCmdAdapter",
   "note": "op_route_ft pilot-bear-near (rc-bear-fix + near CARLA rows, 400-step pilot)"
+ },
+ "dg1": {
+  "onnx": "$DATA_DIR/runs/op_dagger/onnx/dg1.onnx",
+  "route_adapter": null,
+  "command_adapter": null,
+  "note": "op_dagger dg1 (400-step DAgger fine-tune on shipped reprojection rollouts; adapter none)"
  }
 }
