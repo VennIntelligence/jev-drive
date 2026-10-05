@@ -12,7 +12,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [op_route_cmd](op_route_cmd/README.md) (route polyline, nav route): live; Route polyline material: navtrain 103 k / WOD 522 k labelled, 32 k / 62 k turns >= 25 deg; noise + negatives + CARLA plan, no training [d(inputs:,93,102,118)]
 - [op_route_ft](op_route_ft/README.md) (route adapter fine-tune): live; Route-choice adapter (bear / poly) + action pathway fine-tune; B2D 25 junction turns primary [d(inputs:,118,121,122,127)]
 - [op_dagger](op_dagger/README.md): live; Reprojection rollout engine on real WOD logs + DAgger pilot (paper §3 fig 8) [d(inputs:,92,98,100,111,118,123,124)]
-- [op_fov](op_fov/README.md) (wide FOV, fisheye): live; Wider wide-camera FOV on real comma1M turns, shipped Cinque zero-shot [d(pending)]
+- [op_fov](op_fov/README.md) (wide FOV, fisheye): concluded; Wide FOV 90/116 deg: turn gain -0.005..-0.033, early stop; wide frame barely used [d(pending)]
 - [vlm_arb](vlm_arb/README.md) (vlm-arb, vlm_arb): live; Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privileged 5), DS +5.0; fixed bypass pbyp2, stop-line R2 vred2, yellow rule vred3 [d84-87,89,91,95]
 
 **openpilot adaptation**
