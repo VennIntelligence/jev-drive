@@ -1,0 +1,52 @@
+{
+ "hugsim": {
+  "n": 3057,
+  "n_moving": 1818,
+  "frac_x_oldest_neg_moving": 1.0,
+  "frac_vx_pos_moving": 1.0,
+  "n_turning": 825,
+  "frac_sign_y_opposite_yaw_turning": 1.0,
+  "n_turn_ref": 783,
+  "frac_yaw_oldest_opposite_turn": 1.0,
+  "cmd_hist": {
+   "left": 143,
+   "straight": 2645,
+   "right": 269
+  },
+  "cmd_map": {
+   "hugsim_0": {
+    "left": 0,
+    "straight": 0,
+    "right": 269
+   },
+   "hugsim_1": {
+    "left": 143,
+    "straight": 0,
+    "right": 0
+   },
+   "hugsim_2": {
+    "left": 0,
+    "straight": 2645,
+    "right": 0
+   }
+  },
+  "yaw_oldest_over_turn15_median": 1.1613495405674275
+ },
+ "navsim": {
+  "n": 3000,
+  "n_moving": 2625,
+  "frac_x_oldest_neg_moving": 1.0,
+  "frac_vx_pos_moving": 1.0,
+  "n_turning": 1345,
+  "frac_sign_y_opposite_yaw_turning": 0.9992565055762082,
+  "n_turn_ref": 1090,
+  "frac_yaw_oldest_opposite_turn": 0.981651376146789,
+  "cmd_hist": {
+   "left": 1000,
+   "straight": 1000,
+   "right": 1000
+  },
+  "frac_left_cmd_future_left": 0.986,
+  "frac_right_cmd_future_right": 0.957
+ }
+}

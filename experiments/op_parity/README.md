@@ -17,6 +17,9 @@ reproduced WA-JEPA's 91.71, HUGSIM 64 (spins, launch stalls). Pre-registration: 
 
 **Next.** Feature cache, init-equivalence test, pilot (600 steps per arm) and its gate.
 
+**HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner
+scenarios: [results/hugsim_spin10.md](results/hugsim_spin10.md) (spins P1 8, P2 7, P3 8 of 10; the launch spin onset is unchanged).
+
 <!-- files:begin -->
 <!-- files:end -->
 

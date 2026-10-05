@@ -1,0 +1,65 @@
+{
+ "onnx": "/root/autodl-tmp/ujs/runs/op_parity/hugsim/onnx/pp-shipped.onnx",
+ "ref": "/root/autodl-tmp/ujs/runs/op_parity/hugsim/equiv/ref-P2-init.npz",
+ "ref_tag": "P2-init",
+ "server": {
+  "tag": "P2-init",
+  "arm": "P2",
+  "use_ego": true,
+  "use_side": false,
+  "adapter_params": 2515712
+ },
+ "backend": "trt",
+ "streams": [
+  {
+   "stream": 0,
+   "frames": 134,
+   "bias_absmax_server": 0.0,
+   "bias_absmax_ref": 0.0,
+   "bias_maxdiff": 0.0,
+   "served_vs_port": {
+    "all_max": 0.5,
+    "all_p99": 0.0625,
+    "plan_xy_max_m": 0.05859375,
+    "plan_dist_mean_m": 0.006102222483605146
+   },
+   "bias_dropped_vs_port": {
+    "all_max": 0.5,
+    "all_p99": 0.0625,
+    "plan_xy_max_m": 0.05859375,
+    "plan_dist_mean_m": 0.006102222483605146
+   },
+   "zero_bias_vs_base": {
+    "all_max": 0.375,
+    "all_p99": 0.0625,
+    "plan_xy_max_m": 0.03515625,
+    "plan_dist_mean_m": 0.003852635156363249
+   }
+  },
+  {
+   "stream": 1,
+   "frames": 134,
+   "bias_absmax_server": 0.0,
+   "bias_absmax_ref": 0.0,
+   "bias_maxdiff": 0.0,
+   "served_vs_port": {
+    "all_max": 0.75,
+    "all_p99": 0.0625,
+    "plan_xy_max_m": 0.08203125,
+    "plan_dist_mean_m": 0.0066678486764431
+   },
+   "bias_dropped_vs_port": {
+    "all_max": 0.75,
+    "all_p99": 0.0625,
+    "plan_xy_max_m": 0.08203125,
+    "plan_dist_mean_m": 0.0066678486764431
+   },
+   "zero_bias_vs_base": {
+    "all_max": 0.375,
+    "all_p99": 0.0625,
+    "plan_xy_max_m": 0.0390625,
+    "plan_dist_mean_m": 0.004075019154697657
+   }
+  }
+ ]
+}
