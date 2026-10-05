@@ -32,7 +32,8 @@ def units(arms, execs, stage="all", small=False):
             base = DATA / "desire_off" / arm if ex == "curv" else DATA / "plan_track" / (arm + ("-hyb" if ex == "hyb" else ""))
             sub = "turns-small" if small else "turns"
             for k, ids in C.shards(SMALL if small else C.TURN_ROUTES, stage):
-                u = C.b2d_unit("near-%s-%s-%s-s%d-k%d" % (ex, arm, sub, C.TURN_SEED, k), ids, base / "b2d" / ("%s-s%d-k%d" % (sub, C.TURN_SEED, k)),
+                # unit name short: the openpilot server's AF_UNIX socket lives under <root>/<unit>/ (path <= 108 chars)
+                u = C.b2d_unit("%s-%s-%s-k%d" % (ex[0], arm, "sm" if small else "all", k), ids, base / "b2d" / ("%s-s%d-k%d" % (sub, C.TURN_SEED, k)),
                                C.TURN_SEED, True, c.get("onnx"), priority=3 if arm.startswith("rc-bear") else 2, route_adapter=c.get("route_adapter"))
                 u["env"]["DESIRE"] = "false"
                 if ex != "curv":

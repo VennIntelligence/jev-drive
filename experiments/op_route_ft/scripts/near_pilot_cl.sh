@@ -19,8 +19,8 @@ for t in pilot-bear-fix pilot-bear-near; do
   say "onnx $t"
   $PY $S/route_onnx.py build --ckpt $R/runs/$t/ckpt-final.pt --adapter $R/runs/$t/adapter.npz --out $R/onnx/$t.onnx >> "$D/log.txt" 2>&1 || die "onnx $t"
 done
-say "B2D small set (pool units, logs in $R/near/cl-pilot/<unit>/)"
-.venv/bin/python $S/near_lane.py --root $R/near/cl-pilot --arms pilot-bear-fix,pilot-bear-near --routes small --exec curv --wait >> "$D/log.txt" 2>&1 \
-  || { echo 1 > /tmp/near_pcl.rc; die "B2D units (see $R/near/cl-pilot/*/ERROR)"; }
+say "B2D small set (pool units, logs in $R/nrp/<unit>/)"
+.venv/bin/python $S/near_lane.py --root $R/nrp --arms pilot-bear-fix,pilot-bear-near --routes small --exec curv --wait >> "$D/log.txt" 2>&1 \
+  || { echo 1 > /tmp/near_pcl.rc; die "B2D units (see $R/nrp/*/ERROR)"; }
 echo 0 > /tmp/near_pcl.rc
 say "done"; date '+%F %T' > "$D/DONE"
