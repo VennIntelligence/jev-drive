@@ -338,5 +338,6 @@ if __name__ == "__main__":
     ap.add_argument("--arms", default="A,B,B1,An,Bn")
     ap.add_argument("--limit", type=int, default=0)
     a = ap.parse_args()
+    (TOPIC / "results").mkdir(exist_ok=True)
     with Run("alpamayo_turns", a.cmd, config=vars(a)) as run:
         globals()[f"cmd_{a.cmd}"](a, run)
