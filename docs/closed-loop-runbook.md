@@ -121,6 +121,7 @@ $P submit --name dg-eval --vram 12 --cpu 8 --after <id> -- "bash experiments/x/e
 $P queue            # running / queued jobs, the card, and why a job waits
 $P top              # per card: util, VRAM booked by the pool / used outside it / free, CARLA servers, jobs
 $P show <id>        # spec, state, log tail       $P cancel <id> [--drain]
+$P retarget <id>... --gpus 0,2   # change the allowed cards of queued jobs; ids and --after chains stay
 ```
 
 **Fail fast.** `submit` refuses a command whose script paths are missing or whose `.py` files do not compile (`--no-check`

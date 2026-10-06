@@ -209,6 +209,12 @@ def cmd_unhold(a):
     return 0
 
 
+def cmd_retarget(a):
+    for jid in a.ids:
+        P.retarget(jid, [int(g) for g in a.gpus.split(",") if g] if a.gpus else [])
+    return 0
+
+
 def cmd_dispatch(a):
     return P.Dispatcher().run(once=a.once)
 
@@ -266,6 +272,9 @@ def main(argv=None):
     s = sub.add_parser("cancel")
     s.add_argument("ids", nargs="+")
     s.add_argument("--drain", action="store_true", help="touch the job's DRAIN file (b2d_run finishes routes) instead")
+    s = sub.add_parser("retarget", help="change the allowed cards of queued jobs (ids and after-chains stay)")
+    s.add_argument("ids", nargs="+")
+    s.add_argument("--gpus", default="", help="allowed cards, e.g. 0,2 (empty = any)")
     sub.add_parser("top")
     s = sub.add_parser("hold")
     s.add_argument("--card", type=int, required=True)

@@ -1,10 +1,12 @@
 """The GPU pool: agents submit jobs, one dispatcher puts each on whichever card has room ("any free card takes the next
 job"). Nobody picks cards, cores or CARLA ports by hand.
 
-Spool, under $DATA_DIR/runs/pool/ (the dispatcher is its only writer, except inbox/, cancel/ and holds.json):
+Spool, under $DATA_DIR/runs/pool/ (the dispatcher is its only writer, except inbox/, cancel/, retarget/ and holds.json):
 
   inbox/<id>.json   a submitted job (written by `submit`, atomic rename); the dispatcher moves it into its state
   cancel/<id>       a cancel request (`cancel`; content "drain" = touch the job's DRAIN file instead of stopping it)
+  retarget/<id>     new allowed cards for a queued job (`retarget`; content "0,2", empty = any); the id stays, so
+                    `after` chains keep working
   holds.json        resources held outside the pool (`hold`): a card or part of it, server indices, cores; a hold
                     with a pid ends by itself when that process exits
   state.json        every job: spec, state, card, server-index block, cores, tries, why it waits (dispatcher only)
@@ -193,6 +195,13 @@ def static_check(cmd, cwd: str = "") -> list:
             except SyntaxError as e:
                 out.append("syntax error %s:%s %s" % (f, e.lineno, e.msg))
     return out
+
+
+def retarget(jid: str, gpus, pool: Path = None) -> None:
+    """Change the allowed cards of a queued job (empty = any card)."""
+    p = Path(pool or pool_dir()) / "retarget" / jid
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(",".join(str(int(g)) for g in gpus))
 
 
 def cancel(jid: str, drain: bool = False, pool: Path = None) -> None:
@@ -421,6 +430,13 @@ class Dispatcher:
             self.status_line(j, "queued")
             self.log("submit", id=j["id"], name=j["spec"]["name"], owner=j["spec"].get("owner"))
             p.unlink(missing_ok=True)
+        for p in sorted((self.pool / "retarget").glob("*")):
+            j = self.st["jobs"].get(p.name)
+            gpus = [int(g) for g in p.read_text().split(",") if g.strip()] if p.exists() else []
+            p.unlink(missing_ok=True)
+            if j is not None and j["state"] == "queued":
+                j["spec"]["gpus"] = gpus
+                self.log("retarget", id=j["id"], gpus=gpus)
         for p in sorted((self.pool / "cancel").glob("*")):
             j = self.st["jobs"].get(p.name)
             mode = p.read_text().strip() if p.exists() else "stop"
@@ -735,7 +751,7 @@ class Dispatcher:
 
     def run(self, once: bool = False) -> int:
         self.pool.mkdir(parents=True, exist_ok=True)
-        for sub in ("inbox", "cancel", "jobs"):
+        for sub in ("inbox", "cancel", "retarget", "jobs"):
             (self.pool / sub).mkdir(exist_ok=True)
         with (self.pool / "dispatch.lock").open("a") as lk:
             try:

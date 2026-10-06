@@ -90,6 +90,12 @@ class Placement(unittest.TestCase):
         self.assertEqual((j["name"], j["priority"], j["after"], j["log_dir"], j["env"]["CL_PREFLIGHT"]),
                          ("b-pf", 1000.0, [], "/l/preflight", "1"))
 
+    def test_retarget_file(self):
+        tmp = Path(tempfile.mkdtemp())
+        P.retarget("j1", [0, 2], pool=tmp)
+        P.retarget("j2", [], pool=tmp)
+        self.assertEqual(((tmp / "retarget" / "j1").read_text(), (tmp / "retarget" / "j2").read_text()), ("0,2", ""))
+
     def test_static_check(self):
         tmp = Path(tempfile.mkdtemp())
         (tmp / "ok.py").write_text("x = 1\n")
