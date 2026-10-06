@@ -137,6 +137,7 @@
 | 140 | resume 启停规则（静止且 lead 头看不到车才起步）：HUGSIM 卡死起步 5/6、HD +0.122 [−0.000, +0.307]，但 124-extreme 起步后撞上 lead 头没看到的目标，闸门判停；B2D 0 次触发；模型停的理由不全在输出里 | 弱 | 待定 |
 | 141 | factor_wm G0：shipped 在真实日志重投影引擎里加扰动失败率 0.52（起步停滞、急弯欠转、出车道），起因在模型（起步 t0 加速度 −0.09、急弯曲率 0.63×）；深度不比 plane 好，引擎定 plane | 中 | 待定 |
 | 142 | Cinque 输入对齐 WA-JEPA（op_parity）：ego + 位姿历史 + 指令 navtest +4.86（GIMM）/ +4.15（warp）/ +2.78（原生 2 Hz），距 WA-JEPA 10.6 → 5.1；全量协议定 warp；HUGSIM spec 29 失败场景卡死 24 → 0 但前景碰撞 1 → 10 | 中 | 待定 |
-| 143 | factor_wm G1 不过：精确自车引擎 on-policy（S3）引擎内起步停滞 0.18 → 0.02，HUGSIM 反而 18 → 48、HD 0.286 → 0.182；S2（横向 2 s）闭环最好 0.328 也不过线；停换撞再现 | 中 | 待定 |
+| 143 | factor_wm G1 不过：精确自车引擎 on-policy（S3）引擎内起步停滞 0.18 → 0.02，HUGSIM 反而 18 → 48、HD 0.286 → 0.182；S2（横向 2 s）闭环最好 0.328 也不过线；停换撞再现（S3 标签有 bug，见第 146 条） | 中 | 待定 |
 | 144 | Cinque 输入对齐 WA-JEPA 全量微调：navtest 88.2，距 WA-JEPA 从 −11.2 缩到 −3.55 [−4.27, −2.84]；HUGSIM 64 HD 0.396 对 0.451 不显著；卡死与起步停滞清零，前景碰撞基本不变 | 中 | 待定 |
 | 145 | op_parity navhard 与解冻视觉：navhard P2 30.34（G 帧）对 shipped 33.54 / WA-JEPA 35.41 / factor_wm S3 35.77，stage 2 −4.6；解冻 encoder 与 1.40 m 虚拟相机 pilot 全部 < +0.5，线停 | 中 | 待定 |
+| 146 | factor_wm on-policy 从 P2 起步闸门停：HUGSIM-12 起步停滞 P2 1 → 9、HD 0.414 → 0.313；navhard +2.58 n.s.、navtest −0.29；疑为引擎「静止—静态」片段教成不走；G1 恢复标签 bug 已修 | 中 | 待定 |
