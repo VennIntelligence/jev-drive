@@ -84,8 +84,7 @@ class ParityInputs:
         self.clock = self.cfg.get("clock", "model")
         self.scale = float(dilation) if self.clock == "model" else 1.0
         self.back = key_steps(self.scale)
-        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock.connect(self.cfg["socket"])
+        self.sock = wire.connect_retry(self.cfg["socket"])
         wire.send(self.sock, {"cmd": "reset"}, {})
         self.server = wire.recv(self.sock)[0].get("server", {})
         self.use_side = bool(self.server.get("use_side"))

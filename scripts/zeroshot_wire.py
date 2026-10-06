@@ -6,9 +6,25 @@ A message is  <uint32 header_len><header JSON><raw array buffers in header order
 The header is {"meta": {...}, "arrays": [[name, dtype, shape], ...]}.
 """
 import json
+import socket
 import struct
+import time
 
 import numpy as np
+
+
+def connect_retry(path, tries=8, wait=3.0):
+    """Unix-socket client connect that survives a transient ECONNREFUSED / ENOENT (listen backlog full under many workers); fails after tries * wait s."""
+    for i in range(tries):
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            sock.connect(path)
+            return sock
+        except OSError:
+            sock.close()
+            if i == tries - 1:
+                raise
+            time.sleep(wait * (1 + i % 3))
 
 
 def _recv_exactly(sock, n):

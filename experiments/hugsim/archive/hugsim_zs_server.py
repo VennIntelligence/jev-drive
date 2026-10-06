@@ -161,7 +161,7 @@ class Openpilot(S.OpenpilotModel):
         d = self.decode(raw, m.slices, float(meta.get("speed", 0.0)))
         pl = raw[m.slices["plan"]]                         # MDN mu | log-std, (33, 15) each; column 1 = lateral position
         lat_std = np.exp(np.minimum(pl[pl.size // 2:], 11)).reshape(33, 15)[:, 1]
-        info = {"infer_ms": 1e3 * (time.perf_counter() - t1), "curvature": d["curvature"], "accel": d["accel"],
+        info = {"infer_ms": 1e3 * (time.perf_counter() - t1), "curvature": d["curvature"], "curvature_plan": d["curvature_plan"], "accel": d["accel"],
                 "lat_std4": float(lat_std[self.t_idxs <= 4.0 + 1e-6].sum()),
                 "engaged": d["engaged"], "lead_prob": float(np.ravel(d["lead_prob"])[0]),
                 **lead_xv(d.get("lead"))}

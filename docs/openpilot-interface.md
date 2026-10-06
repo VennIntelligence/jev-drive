@@ -64,6 +64,7 @@ B2D arb `"resume_rule": {}` (`timer+rule`). Pre-registration and results: experi
 | Board | Preset | What it is |
 |---|---|---|
 | HUGSIM | `spec` | tree `opctrl`, `OP_CTRL {"delay": 0.25}`, opts `{"op_ctrl": true}` (5 s static warm-up), dilate clock = decision 118's arm (default for cinque / lebowski; alias `opctrl_d118`) |
+| HUGSIM | `spec_plan` | diagnostic (2026-10-06): `spec` with the lateral curvature from the model's own plan instead of the action head (`modeld.get_curvature_from_plan`: 2 psi / (v t) - yaw_rate0 / v at action_t 0.275 s, `jevdrive/openpilot/model.py curvature_from_plan`); opts `{"op_ctrl": true, "op_ctrl_src": "plan"}`; clip_curvature, lateralDelay and the iLQR longitudinal unchanged. Not openpilot's path for a model with an action head; tests whether a better plan steers the car |
 | HUGSIM | `spec_cold`, `spec_hold` | diagnostics: no static warm-up; + hold clock with `OP_CTRL {"delay": 0.2}` (neither launches) |
 | HUGSIM | `exam` | legacy: `--controller` and `--opts` literally; every HUGSIM number before 2026-10-05; all older chain scripts pass it |
 | B2D | `spec` | `drive` + `op_ctrl {"delay": 0.2}` + rig `B2D_SPEC_MOUNT` = (1.59, 0, 1.86) (open-loop-aligned), resume timer; `spec_bumper122`, `spec_windshield143` = same with the earlier cameras; default when a config names neither a preset nor an arb mode |

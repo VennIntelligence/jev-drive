@@ -18,7 +18,8 @@ Keys (values in SPEC):
   history.clock         real      model clock = wall clock; dilate (HUGSIM 4 Hz -> 5 Hz context), hold, repeat2 (10 Hz fed twice)
   history.warmup        real      what the model saw before the first plan: real frames (the car stands with openpilot on);
                                   static (one frame repeated), cold (no warm-up beyond the first step)
-  lateral.source        action    desired curvature = action[0] / max(1, v)^2 (modeld); plan = a tracker follows the plan positions
+  lateral.source        action    desired curvature = action[0] / max(1, v)^2 (modeld); plan = a tracker follows the plan positions;
+                                  plan-curvature = modeld.get_curvature_from_plan (the plan's own yaw / yaw rate at action_t) through the op path
   lateral.exec          op-path   controlsd clip_curvature + latActive + lateralDelay (lib/op_ctrl.py OpLateral);
                                   bicycle (raw curvature, no clip / delay), ilqr, p7, scorer-lqr (the leaderboard replays it)
   lateral.delay_s       0.2       lateralDelay in model seconds (lagd's initial steerActuatorDelay + 0.2 class value)
@@ -109,7 +110,8 @@ DECLARED = {
         "history.warmup": ("LB", "no real history exists (the car spawns moving at 1.0 m/s): 5 s static warm-up on the first frame "
                                  "(amplifies the launch lean, d100, but the action path removes the spins, d118; a cold start "
                                  "does not launch, unified_interface.md)", "d100, d118, unified_interface.md"),
-        "lateral.source": ("LB", "legacy exam preset: iLQR tracks the plan", "d118"),
+        "lateral.source": ("LB", "legacy exam preset: iLQR tracks the plan; spec_plan: the curvature of the model's own plan (modeld.get_curvature_from_plan) "
+                                 "through the op path, a diagnostic", "d118, d133"),
         "lateral.exec": ("LB", "legacy exam preset: iLQR (PR#57)", "d118"),
         "lateral.delay_s": ("LB", "pure delay in simulator seconds (0.25 under dilate = 0.2 model s)", "d118"),
         "lon.source": ("LB", "iLQR tracks the plan's speed: action acceleration -> LongControl fails launches (d119)", "d119"),
@@ -240,6 +242,9 @@ HUGSIM_PRESETS = {
     "spec_cold": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True, "warmup_s": 0.0}),
     "spec_hold": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.2}},
                       opts={"op_ctrl": True, "warmup_s": 0.0, "op_clock": "hold"}),
+    # spec_plan: spec with the lateral curvature taken from the model's OWN plan (modeld.get_curvature_from_plan: yaw and yaw rate at
+    # action_t 0.275 s) instead of the action head; clip_curvature, lateralDelay and the longitudinal path unchanged (a diagnostic, not openpilot)
+    "spec_plan": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True, "op_ctrl_src": "plan"}),
     "opctrl_d118": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True}),   # alias of spec
     # legacy: the exam / every result before 2026-10-05; --controller and --opts are taken literally
     "exam": dict(controller=None, env={}, opts={}),
@@ -261,7 +266,7 @@ def resolve_hugsim(opts, controller, dataset="nuscenes", op_ctrl_env=None):
     vals = {"rig.height_m": HUGSIM_HEIGHT.get(dataset, 1.5), "rig.level": dataset != "kitti360", "rig.wide": "stitched3",
             "history.frames": "render", "history.rate_hz": 4.0, "history.clock": "hold" if hold else "dilate",
             "history.warmup": "static" if warm > 0 else "cold",
-            "lateral.source": "action" if opc else "plan", "lateral.exec": "op-path" if opc else "ilqr",
+            "lateral.source": ("plan-curvature" if o.get("op_ctrl_src") == "plan" else "action") if opc else "plan", "lateral.exec": "op-path" if opc else "ilqr",
             "lateral.delay_s": round(delay / dil, 4) if opc else "n/a",
             "lon.source": "action" if (opc and o.get("op_long") and controller == "opctrl_long") else "plan-ilqr",
             "lon.resume": "rule" if o.get("resume") is not None else "none",
