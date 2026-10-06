@@ -270,12 +270,12 @@ def _panels(path, clip, ego, lab, pairs, t0s, plan, r):
     """GIF material: every 4 ticks in a window around the first turn (else the whole clip), up to 90 frames."""
     import cv2
     n = len(ego["t"])
-    turn = np.where(lab["cmd"][:, 0] + lab["cmd"][:, 2] > 0)[0]
+    turn = np.where((lab["turn_dist"] <= 0) & (lab["turn_next"] > 0))[0]          # ticks inside the junction turn
     if len(turn):
-        lo, hi = max(0, turn[0] - 120), min(n, turn[-1] + 80)
+        lo, hi = max(0, turn[0] - 200), min(n, turn[-1] + 100)
     else:
         lo, hi = 0, n
-    ticks = np.arange(lo, hi, 4)[:90]
+    ticks = np.arange(lo, hi, 4)[-90:]
     chase_ok = (clip / "chase.mp4").exists()
     ch = F.decode(clip / "chase.mp4", w=480, h=270, fmt="rgb24") if chase_ok else None
     pmap = {int(t): plan[k] for k, t in enumerate(t0s)} if plan is not None else {}
