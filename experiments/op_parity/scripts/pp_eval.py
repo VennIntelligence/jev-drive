@@ -169,7 +169,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
     ap.add_argument("--data", default="lb_navtest")
-    ap.add_argument("--frames", default="gimm", choices=["gimm", "warp", "keys", "real"])
+    ap.add_argument("--frames", default="gimm", choices=["gimm", "warp", "keys", "real", "vh140"])
     p = sp.add_parser("plans")
     p.add_argument("--models", nargs="+", required=True)
     p.add_argument("--batch", type=int, default=128)
