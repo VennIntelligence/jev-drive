@@ -44,17 +44,17 @@ done
 # ---------------------------------------------------------------- WA-JEPA (card GW): its runner, fp32 (its NAVSIM path)
 # check first: 1 200 navtest tokens through our request path, scored by the devkit, vs its stored navtest per-token scores
 W=$D/wajepa; mkdir -p "$W"
-CHK=wj_navtest1200
-j_wc=$(sub ppH-wj-check $L/wj-check2 --gpus $GW --vram 60 --cpu 24 --ram 48 -- bash -c "
-  bash $S/pp_navhard_wajepa.sh navtest 1200 $W/navtest1200 &&
-  OPENBLAS_CORETYPE=Haswell NAVSIM_THREADS=20 TOKENS_FILE=$W/navtest1200_req.tokens experiments/zeroshot_openloop/archive/navsim_zs_score.sh score v2 navtest $CHK $W/navtest1200_preds.npz > $W/score_check.log 2>&1 &&
+CHK=wj_navtestlogs
+j_wc=$(sub ppH-wj-check $L/wj-check3 --gpus $GW --vram 40 --cpu 20 --ram 48 -- bash -c "
+  bash $S/pp_navhard_wajepa.sh navtest 1200 $W/navtestlogs &&
+  OPENBLAS_CORETYPE=Haswell NAVSIM_THREADS=20 TOKENS_FILE=$W/navtestlogs_req.tokens experiments/zeroshot_openloop/archive/navsim_zs_score.sh score v2 navtest $CHK $W/navtestlogs_preds.npz > $W/score_check.log 2>&1 &&
   $PY $S/pp_navhard.py wcheck --name $CHK")
-j_wj=$(sub ppH-wj $L/wj --gpus $GW --vram 60 --cpu 24 --ram 48 $(aft $j_wc) -- bash $S/pp_navhard_wajepa.sh navhard_two_stage 0 $W/navhard)
+j_wj=$(sub ppH-wj $L/wj --gpus $GW --vram 40 --cpu 24 --ram 48 -- bash $S/pp_navhard_wajepa.sh navhard_two_stage 0 $W/navhard)
 sub ppH-h-wajepa $L/h-wajepa --gpus $GA,$GW --vram 1 --cpu 10 --ram 24 $(aft $j_wj) -- \
   $NAV2 experiments/op_guard/scripts/nav_harness.py --poses $W/navhard_preds.npz --out $D/harness/wajepa --procs 10 >/dev/null
 
 # ---------------------------------------------------------------- report
-waitdirs $L/plans $L/wj; status "GPU inference done (cards $GA $GW free); scoring"
+waitdirs $L/plans $L/wj $L/wj-check3; status "GPU inference done (cards $GA $GW free); scoring"
 date > "$D/GPU_DONE"
 waitdirs $(for m in $MODELS wajepa; do echo $L/h-$m; done)
 $PY $S/pp_navhard.py report || die "report"
