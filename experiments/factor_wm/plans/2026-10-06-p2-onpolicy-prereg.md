@@ -93,7 +93,7 @@ CPU：navtest 打分约 10 个模型 × 5 min（24 核），navhard harness 每�
 
 | 线 | 结果 |
 |:--|:--|
-| 闸门（seed 0） | |
-| X − C（navtest W / navhard G / HUGSIM exam / spec） | |
-| X − WA-JEPA（同上） | |
-| 护栏 | |
+| 闸门（seed 0） | **停**：HUGSIM-12 起步停滞 X 9 对 P2 1（两预设），平均 HD X − P2 −0.126 / −0.101；navtest −0.29、navhard G +2.58 过（[../results/p2-onpolicy.md](../results/p2-onpolicy.md)） |
+| X − C（navtest W / navhard G / HUGSIM exam / spec） | 未跑全量；seed 0：−0.17 / +0.94 / HUGSIM-12 HD −0.065 / −0.089 |
+| X − WA-JEPA（同上） | 未跑全量 |
+| 护栏 | drift_off 0.049–0.061 过；其余未到全量 |

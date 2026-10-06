@@ -1,0 +1,47 @@
+{
+ "rollouts": 5345,
+ "labelled_states": 40035,
+ "nonfinite": 0,
+ "free_arm_events": {
+  "cruise": {
+   "stall": 0.007,
+   "heading": 0.2,
+   "lane": 0.0,
+   "behind": 0.793,
+   "ahead": 0.0,
+   "": 0.0
+  },
+  "launch": {
+   "stall": 0.066,
+   "heading": 0.718,
+   "lane": 0.022,
+   "behind": 0.088,
+   "ahead": 0.05,
+   "": 0.056
+  },
+  "mid": {
+   "stall": 0.287,
+   "heading": 0.407,
+   "lane": 0.033,
+   "behind": 0.233,
+   "ahead": 0.013,
+   "": 0.027
+  },
+  "stay": {
+   "stall": 0.0,
+   "heading": 0.213,
+   "lane": 0.0,
+   "behind": 0.0,
+   "ahead": 0.247,
+   "": 0.54
+  },
+  "turn": {
+   "stall": 0.117,
+   "heading": 0.643,
+   "lane": 0.053,
+   "behind": 0.153,
+   "ahead": 0.03,
+   "": 0.003
+  }
+ }
+}
