@@ -453,7 +453,8 @@ def cmd_decode(a):
                 torch.manual_seed(0)
                 net = nn.Sequential(nn.Dropout(0.1), nn.Linear(Xa.shape[1], 1024), nn.GELU(), nn.Linear(1024, 1024), nn.GELU(), nn.Linear(1024, 24)).to(dev)
                 opt = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-2)
-                sched = torch.optim.lr_scheduler.OneCycleLR(opt, 1e-3, total_steps=a.steps, pct_start=0.05)
+                wu = max(1, a.steps // 20)
+                sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda k: min(1.0, (k + 1) / wu) * 0.5 * (1 + np.cos(np.pi * min(k, a.steps) / a.steps)))
                 g = torch.Generator(device=dev).manual_seed(0)
                 t1 = time.time()
                 for step in range(a.steps):
