@@ -10,8 +10,9 @@ Per clip (labels from scripts/b2dc_labels.py):
   integrity   ticks == video pictures, picture index = tick, sim clock exactly 0.05 s per tick, consecutive frame numbers, camera data
               frame = world frame of the logged state (sensor_frame), frozen pictures (identical to the previous one) < 1 %, luma range
   time        from the pictures alone, at every launch from standstill: the first big change of the ground just ahead (road frame rows
-              200-255) must fall between pictures s - 1 and s, s = the first logged tick above 0.2 m/s (lag 0); scene motion makes a
-              correlation over the whole clip ambiguous (a waiting ego starts after the traffic ahead moves)
+              200-255) must fall between pictures s - 1 and s, s = the first logged tick above 0.2 m/s (lag 0). Gated on the launch from the spawn
+              (s < 40 ticks), where the ego moves first; later launches are reported only (a waiting ego starts after the traffic ahead
+              moves, so the ground region changes before it does: smoke clip lags -2 / -1 at the blocked-intersection restarts)
   horizon     body pitch (deg) -> horizon row shift in the road frame (910 tan(pitch)); nominal rows 47.6 (road) / 151.8 (wide)
   model       every `stride` ticks with a full 4 s future, the 8 context slots (pairs (t0 - 4k - 4, t0 - 4k), k = 7..0: op_parity's 0.2 s
               protocol, native frames, no synthesis) -> Cinque's frozen encoder -> P0 (shipped) and P2 (+ ego / pose / command from the labels)
@@ -158,6 +159,8 @@ def main(a):
                     w = np.where(g[s_ - 5:s_ + 3] > max(2 * base, base + 1.0))[0]
                     if len(w):
                         lags.append(int(w[0] + s_ - 5 - (s_ - 1)))
+                        if s_ < 40 and "first_launch_lag" not in c:
+                            c["first_launch_lag"] = lags[-1]
             c["launch_lags"] = " ".join(map(str, lags))
             c["moving_ticks"] = int((lab["speed"] > 0.5).sum())
             # command vs the heading change actually driven over the next 50 m of path (distance-based: stops do not count)
@@ -251,6 +254,9 @@ def main(a):
         ll = [int(x) for v in C.launch_lags.fillna("") for x in str(v).split()]
         agg["launch_lags"] = {str(k): ll.count(k) for k in sorted(set(ll))}
         agg["launch_lag0_share"] = float(np.mean([x == 0 for x in ll])) if ll else None
+        fl = C.first_launch_lag.dropna() if "first_launch_lag" in C else []
+        agg["first_launch_lag0_share"] = float((fl == 0).mean()) if len(fl) else None
+        agg["first_launches"] = int(len(fl))
         for k in ("dt_max_err", "frozen_share", "horizon_shift_p95_rows", "pitch_p95_abs_deg"):
             agg[k + "_max"] = float(C[k].max())
         for k in ("cmd_agree", "fut_footprint_drivable"):
