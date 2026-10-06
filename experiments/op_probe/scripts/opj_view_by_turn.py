@@ -5,7 +5,7 @@
   3 P0 vh140 - P0 W    shipped model, zero-shot camera height change (decision 145)
   4 P3 side masked - P3  side cameras masked at test
   5 decoders (op_probe, 2 152 scored tokens, weighted back to navtest): V = Cinque vision, Cf = WA front-only, Ca = WA all-view encoder; Cf - V, Ca - Cf
-  6 geometry proxy: share of the logged 4 s path outside a camera half-FOV (bearing from the front axle)
+  6 geometry proxy: share of the logged 4 s path poses (> 3 m from the camera) outside a camera half-FOV
 
   $DATA_DIR/envs/op-train/bin/python experiments/op_probe/scripts/opj_view_by_turn.py [--out DIR]   (box)  -> view_by_turn.{md,csv}; the md is copied to results/ on the Mac
 """
@@ -109,14 +109,17 @@ def decoder_table(d, dec, obj):
 
 def fov_table(d, fut):
     """Share of the logged 4 s path (8 poses at 0.5 s) whose bearing from the front axle exceeds a half-FOV; per token mean, then bin mean."""
-    b = np.degrees(np.abs(np.arctan2(fut[:, :, 1], fut[:, :, 0] - 1.5)))      # camera ~ 1.5 m ahead of the rear axle (t0 frame x forward)
+    dx, dy = fut[:, :, 0] - 1.5, fut[:, :, 1]                              # camera ~ 1.5 m ahead of the rear axle (t0 frame, x forward)
+    b = np.degrees(np.abs(np.arctan2(dy, dx)))
+    ok = np.hypot(dx, dy) > 3.0                                            # poses within 3 m of the camera have no meaningful bearing (stopped ego)
     rows = []
     for grp, lab, m in strata(d):
-        if grp == "|heading change|" or grp == "all":
-            r = {"stratum": lab, "n": int(m.sum())}
+        if grp in ("|heading change|", "all"):
+            r = {"stratum": lab, "n": int(m.sum()), "tokens with any pose > 3 m": f"{100 * ok[m].any(1).mean():.0f}%"}
             for h in (30, 45, 60, 75):
-                r[f"path share outside +-{h} deg"] = f"{100 * (b[m] > h).mean():.1f}%"
-                r[f"tokens with end pose outside +-{h}"] = f"{100 * (b[m][:, -1] > h).mean():.1f}%"
+                r[f"poses outside +-{h} deg"] = f"{100 * (b[m][ok[m]] > h).mean():.1f}%"
+                e = ok[m][:, -1]
+                r[f"end pose outside +-{h}"] = f"{100 * (b[m][:, -1][e] > h).mean():.1f}%"
             rows.append(r)
     return rows
 
