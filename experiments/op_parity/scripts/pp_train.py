@@ -60,6 +60,9 @@ class Cfg:
     hinge_lam: float = 0.0                # footprint drivable-area SDF hinge on the plan (lib/drivable_hinge.py), imitation rows only; 0 = off
     hinge_margin: float = 0.3
     hinge_labels: str = "runs/op_probe/labels/navtrain_all.npz"
+    turn_bal: str = ""                    # turn-balanced sampling: target mass per |heading change| bin (<5, 5-20, 20-45, >45 deg), "a,b,c,d"; "" = off
+    anchor_off_turn: bool = False         # no anchor rows on tokens with logged |heading change| > 20 deg
+    late_lat_w: float = 1.0               # loss weight on the y and yaw terms of the poses at >= 2 s (imitation rows), 1 = off
 
 
 def proot(*p) -> _pl.Path:
@@ -218,10 +221,11 @@ class Losses:
         self.plan_cols = torch.as_tensor(np.isin(di, pi), device=dev)
         self.tstd = tstd
 
-    def dist(self, plan, cam_x, tx, ty, tpsi):
+    def dist(self, plan, cam_x, tx, ty, tpsi, wl=None):
         x, y, psi = rear(plan, cam_x, self.W)
         h = lambda z: F.huber_loss(z, torch.zeros_like(z), reduction="none", delta=1.0)  # noqa: E731
-        return (h((x - tx) / self.s[0]) + h((y - ty) / self.s[1]) + h((psi - tpsi) / self.s[2])).mean(1)
+        wl = 1.0 if wl is None else wl
+        return (h((x - tx) / self.s[0]) + wl * (h((y - ty) / self.s[1]) + h((psi - tpsi) / self.s[2]))).mean(1)
 
     def __call__(self, out, S: Store, rows, anchor):
         c, out = self.cfg, out.float()
@@ -230,7 +234,10 @@ class Losses:
         Ls = {}
         if imit.any():
             f = S.fut[rows][imit]
-            Ls["imit"] = self.dist(plan[imit], S.cam_x[rows][imit], f[..., 0], f[..., 1], f[..., 2]).mean()
+            wl = None
+            if c.late_lat_w != 1.0:
+                wl = torch.where(torch.as_tensor(T8 >= 2.0, device=f.device), c.late_lat_w, 1.0).float()
+            Ls["imit"] = self.dist(plan[imit], S.cam_x[rows][imit], f[..., 0], f[..., 1], f[..., 2], wl).mean()
             if self.hinge is not None:
                 Ls["hinge"] = self.hinge(*rear(plan[imit], S.cam_x[rows][imit], self.W), rows[imit])
         if anchor.any():
@@ -275,7 +282,8 @@ def main(a):
     dev = torch.device("cuda")
     cfg = Cfg(arm=a.arm, seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data), split=a.split, frames=a.frames, host=a.host,
               warmup=a.warmup, eval_every=a.eval_every,
-              hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, hinge_labels=a.hinge_labels)
+              hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, hinge_labels=a.hinge_labels,
+              turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
@@ -306,9 +314,27 @@ def main(a):
         nB = cfg.batch
         use_side = ARMS[cfg.arm]["side"]
 
+        turn = np.zeros(S.n, bool)
+        pw = None
+        if cfg.turn_bal or cfg.anchor_off_turn:
+            fut = np.nan_to_num(S.tb["fut"][:, :, 2].astype(np.float64))           # logged yaw of the 8 future poses (rear-axle frame); no log -> 0
+            dy = np.abs(np.degrees(np.unwrap(fut, axis=1)[:, -1]))
+            turn = dy > 20
+            if cfg.turn_bal:
+                bi = np.digitize(dy[tr_rows], [5, 20, 45])
+                nat = np.bincount(bi, minlength=4) / len(tr_rows)
+                tgt = np.asarray([float(x) for x in cfg.turn_bal.split(",")])
+                w = tgt / np.maximum(nat, 1e-9)
+                pw = w[bi] / w[bi].sum()
+                if run:
+                    run.info(f"turn-balanced sampling: natural mass {np.round(nat, 3).tolist()}, target {tgt.tolist()}, per-token weights {np.round(w / w[0], 3).tolist()} "
+                             f"(relative to the < 5 deg bin); anchor off on turning tokens: {cfg.anchor_off_turn} ({turn[tr_rows].mean():.3f} of train rows)")
+
         def draw():                                                             # the rng order of the GPU-store loop (same row stream)
-            r = rng.choice(tr_rows, nB, replace=len(tr_rows) < nB)
+            r = rng.choice(tr_rows, nB, replace=len(tr_rows) < nB, p=pw)
             an = rng.random(nB) < cfg.d_frac
+            if cfg.anchor_off_turn:
+                an &= ~turn[r]
             sm = rng.random((nB, len(PA.SIDE_CAMS))) >= cfg.cam_drop if use_side else None
             return r, an, sm
 
@@ -394,4 +420,7 @@ if __name__ == "__main__":
     ap.add_argument("--hinge-lam", type=float, default=0.0, help="weight of the footprint drivable-area SDF hinge on the plan (0 = off)")
     ap.add_argument("--hinge-margin", type=float, default=0.3)
     ap.add_argument("--hinge-labels", default=Cfg.hinge_labels)
+    ap.add_argument("--turn-bal", default="", help="target sampling mass per |heading change| bin <5,5-20,20-45,>45 deg, e.g. 0.4,0.2,0.2,0.2")
+    ap.add_argument("--anchor-off-turn", action="store_true", help="no anchor rows on tokens with logged |heading change| > 20 deg")
+    ap.add_argument("--late-lat-w", type=float, default=1.0, help="weight on y / yaw imitation terms of poses at >= 2 s")
     main(ap.parse_args())
