@@ -44,6 +44,11 @@ the +0.5 gate, the line stops (no full run). The remaining gap to WA-JEPA is not
 
 **Gap page (2026-10-06).** Where P2 still loses to WA-JEPA, per sub-metric (Shapley split of the EPDMS gap), navtest / navhard / HUGSIM 64, with GIF cases: open [results/gap/index.html](results/gap/index.html) (generators `scripts/pp_gap_*.py`).
 
+**Joint action head (2026-10-07, pre-registered, small read stopped).** Action head (on-policy pathway) trained jointly with the P2 + hinge plan on
+own-plan / logged curvature labels: offline gain on logged curvature 0.68 -> 0.87-0.99 and agreement with the plan 0.99 above 3 m/s, but HUGSIM turn23
+`spec` HD JC 0.178 / JL 0.213 / JW 0.279 vs HP 0.251 (none >= +0.03): at 1-3 m/s the a_lat / v^2 command is noise (abs kappa 0.03-0.04 vs plan 0.015).
+[results/joint_action.md](results/joint_action.md), plan [plans/2026-10-07-joint-action-prereg.md](plans/2026-10-07-joint-action-prereg.md).
+
 **Next.** Decision entries by main (navhard, unfreeze).
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner
