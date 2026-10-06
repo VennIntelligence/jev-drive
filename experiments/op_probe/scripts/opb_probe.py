@@ -159,6 +159,7 @@ def has_feats(model, data, tokens):
     return np.array([t in toks for t in tokens])
 
 
+MLP_STAGES = ("E", "P2-V", "P2-H", "WA-Cf", "WA-Ca", "WA-H")
 STAGES = [("E", None, None), ("P2-V", "P2-F-s0", "V"), ("P2-M", "P2-F-s0", "M"), ("P2-T", "P2-F-s0", "T"), ("P2-H", "P2-F-s0", "H"),
           ("P0-T", "P0", "T"), ("P0-H", "P0", "H"), ("WA-Cf", "WA", "Cf"), ("WA-Ca", "WA", "Ca"), ("WA-T", "WA", "T"), ("WA-H", "WA", "H")]
 
@@ -201,6 +202,39 @@ def ridge_predict(m, X, dev, bs=4096):
         x = (torch.as_tensor(X[i:i + bs], device=dev) - m["mu"]) / m["sd"]
         out.append((x @ m["W"] + m["ym"]).cpu().numpy())
     return np.concatenate(out)
+
+
+def mlp_fit_predict(Xtr, Ys_tr, Xev, dev, steps=3000, bs=512, seed=0):
+    """2-layer MLP probe (1024 hidden, dropout 0.1) on z-scored inputs, MSE on z-scored targets; one net for the concatenated target blocks.
+    Report-only check of the ridge probes (prereg section 4)."""
+    import torch
+    import torch.nn as nn
+    torch.manual_seed(seed)
+    X = torch.as_tensor(Xtr, device=dev)
+    mu, sd = X.mean(0), X.std(0).clamp_min(1e-6)
+    X = (X - mu) / sd
+    Y = torch.as_tensor(np.concatenate(Ys_tr, 1), device=dev)
+    ym, ys = Y.mean(0), Y.std(0).clamp_min(1e-6)
+    Y = (Y - ym) / ys
+    net = nn.Sequential(nn.Dropout(0.1), nn.Linear(X.shape[1], 1024), nn.GELU(), nn.Dropout(0.1), nn.Linear(1024, 1024), nn.GELU(),
+                        nn.Linear(1024, Y.shape[1])).to(dev)
+    opt = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=5e-2)
+    sch = torch.optim.lr_scheduler.LambdaLR(opt, lambda k: min(1.0, (k + 1) / 100) * 0.5 * (1 + np.cos(np.pi * min(k, steps) / steps)))
+    g = torch.Generator(device=dev).manual_seed(seed)
+    for _ in range(steps):
+        b = torch.randint(0, len(X), (bs,), device=dev, generator=g)
+        loss = ((net(X[b]) - Y[b]) ** 2).mean()
+        opt.zero_grad(set_to_none=True)
+        loss.backward()
+        opt.step()
+        sch.step()
+    net.eval()
+    with torch.no_grad():
+        Xe = (torch.as_tensor(Xev, device=dev) - mu) / sd
+        P = torch.cat([net(Xe[i:i + 4096]) for i in range(0, len(Xe), 4096)]) * ys + ym
+    P = P.cpu().numpy()
+    cut = np.cumsum([y.shape[1] for y in Ys_tr])[:-1]
+    return np.split(P, cut, axis=1)
 
 
 def auc(score, y):
@@ -318,8 +352,19 @@ def cmd_probe(a):
             use = ok & has_fut & ~np.isnan(Yc).any(1)
             tr, dv_ = use & ~is_dev, use & is_dev
             mr, mc = ridge_fit(Xa[tr], [Yr[tr], Yc[tr]], Xa[dv_], [Yr[dv_], Yc[dv_]], lams, dev)
-            del Xa
             Xe = stage_matrix(name, model, stage, e_toks, np.array(["lb_navtest"] * len(e_toks)), e_ego)
+            if a.mlp and name in MLP_STAGES:
+                t2 = time.time()
+                qr, qc = mlp_fit_predict(Xa[tr], [Yr[tr], Yc[tr]], Xe, dev)
+                qr = qr.reshape(-1, NH1, NW1)
+                nm = f"{name}+mlp"
+                res[f"{nm}/corr_direct"] = qc
+                res[f"{nm}/corr_raster"] = np.stack([corridor(g, RES1, f) if h else np.full(6, np.nan, np.float32) for g, f, h in zip(qr, e_fut, e_hf)])
+                res[f"{nm}/margin"] = np.array([margin(g, RES1, p) for g, p in zip(qr, e_plan)])
+                r2m = float(1 - ((qr.reshape(len(qr), -1) - e_r1.reshape(len(qr), -1)) ** 2).mean() / e_r1.reshape(len(qr), -1).var(0).mean())
+                rows.append(dict(stage=nm, test_r2_raster=r2m, dim=int(Xe.shape[1]), fit_s=time.time() - t2))
+                run.info(json.dumps(rows[-1]))
+            del Xa
             pr = ridge_predict(mr, Xe, dev).reshape(-1, NH1, NW1)
             pc = ridge_predict(mc, Xe, dev)
             pc_r = np.stack([corridor(g, RES1, f) if h else np.full(6, np.nan, np.float32) for g, f, h in zip(pr, e_fut, e_hf)])
@@ -327,7 +372,7 @@ def cmd_probe(a):
             res[f"{name}/corr_direct"], res[f"{name}/corr_raster"], res[f"{name}/margin"] = pc, pc_r, mp
             np.save(out / f"raster_{name}.npy", pr.astype(np.float16))
             r2_test = float(1 - ((pr.reshape(len(pr), -1) - e_r1.reshape(len(pr), -1)) ** 2).mean() / e_r1.reshape(len(pr), -1).var(0).mean())
-            rows.append(dict(stage=name, lam_raster=mr["lam"], dev_r2_raster=mr["dev_r2"], lam_corr=mc["lam"], dev_r2_corr=mc["dev_r2"],
+            rows.insert(len(rows) - (1 if a.mlp and name in MLP_STAGES else 0), dict(stage=name, lam_raster=mr["lam"], dev_r2_raster=mr["dev_r2"], lam_corr=mc["lam"], dev_r2_corr=mc["dev_r2"],
                              test_r2_raster=r2_test, dim=int(Xe.shape[1]), fit_s=time.time() - t1))
             run.info(json.dumps(rows[-1]))
             torch.cuda.empty_cache()
@@ -335,7 +380,7 @@ def cmd_probe(a):
         import pandas as pd
         pd.DataFrame(rows).to_csv(out / "fits.csv", index=False)
         summ = summarize(res, [r["stage"] for r in rows])
-        summ = summ.merge(pd.DataFrame(rows)[["stage", "dev_r2_raster", "dev_r2_corr", "test_r2_raster", "dim"]], on="stage", how="left")
+        summ = summ.merge(pd.DataFrame(rows).reindex(columns=["stage", "dev_r2_raster", "dev_r2_corr", "test_r2_raster", "dim"]), on="stage", how="left")
         summ.to_csv(out / "metrics.csv", index=False)
         run.info("\n" + summ.to_string())
         run.summary["out"] = str(out)
@@ -347,7 +392,7 @@ def cmd_summarize(a):
     out = ROOT / ("probe-small" if a.small else "probe")
     res = dict(np.load(out / "probe_outputs.npz", allow_pickle=True))
     fits = pd.read_csv(out / "fits.csv")
-    summ = summarize(res, fits.stage.tolist()).merge(fits[["stage", "dev_r2_raster", "dev_r2_corr", "test_r2_raster", "dim"]], on="stage", how="left")
+    summ = summarize(res, fits.stage.tolist()).merge(fits.reindex(columns=["stage", "dev_r2_raster", "dev_r2_corr", "test_r2_raster", "dim"]), on="stage", how="left")
     summ.to_csv(out / "metrics.csv", index=False)
     print(summ.to_string())
 
@@ -385,6 +430,11 @@ def summarize(res, stages):
         r["auc_lo"], r["auc_hi"] = auc_ci(sc, y, lg[sel])
         sel2 = Fp | PP
         r["auc_Fplan_vs_PP"] = auc(-res[f"{name}/margin"][sel2], Fp[sel2])
+        mb = res[f"{name}/margin"] - res["margin_true"]                     # post hoc (not pre-registered): predicted - true footprint margin
+        for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP)):
+            b = stats.bootstrap(mb[m], groups=lg[m])
+            r[f"margin_bias_{sn}"], r[f"margin_bias_{sn}_lo"], r[f"margin_bias_{sn}_hi"] = b["mean"], b["lo"], b["hi"]
+        r["margin_bias_F_minus_PP"], r["margin_bias_FmPP_lo"], r["margin_bias_FmPP_hi"] = twoset(mb, F, PP, lg)
         r["margin_F_med"] = float(np.median(res[f"{name}/margin"][F]))
         r["margin_PP_med"] = float(np.median(res[f"{name}/margin"][PP]))
         rows.append(r)
@@ -509,6 +559,7 @@ if __name__ == "__main__":
     p = sp.add_parser("select")
     p = sp.add_parser("probe")
     p.add_argument("--small", action="store_true")
+    p.add_argument("--mlp", action="store_true")
     p = sp.add_parser("summarize")
     p.add_argument("--small", action="store_true")
     p = sp.add_parser("decode")
