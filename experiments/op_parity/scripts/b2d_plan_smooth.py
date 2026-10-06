@@ -5,7 +5,7 @@ cinque, each under `action` (op_arb.sh arm spec) or `plan_smooth` (arm spec_plan
 open-loop camera (1.59, 0, 1.86), route turn desire on, tm seed 2. Units are GPU-pool jobs (cllib.b2d_unit, 3 routes per unit); the shipped
 `action` reference is decision 127's cached olnz run. Resumable.
 
-  b2d_plan_smooth.py run    [--routes small|all|ID,ID,..] [--arms P2-F-s0,P2H10-F-s0,cinque] [--execs action,plan_smooth] [--wait] [--dry-run]
+  b2d_plan_smooth.py run    [--routes small|all|b2d220|ID,ID,..] [--arms P2-F-s0,P2H10-F-s0,cinque] [--execs action,plan_smooth] [--wait] [--dry-run]
   b2d_plan_smooth.py gif    --gif ARM:EXEC:ROUTE[,..] [--wait]   one recorded run (chase camera + every model input frame dump) per case, then
                             experiments/op_closed_loop/scripts/junction_forced_gif.py <attempt> <dump> <out.gif> --route-turn <mi>
   b2d_plan_smooth.py report [--routes ...] [--out DIR]     per-turn table (class, requested curvature vs needed) + route DS, markdown + csv
@@ -25,6 +25,7 @@ import guardlib as G  # noqa: E402
 DATA = G.data_dir() / "runs/op_parity/b2d_plan_smooth"
 ONNX = G.data_dir() / "runs/op_parity/hugsim/onnx"
 ROUTES = {"small": "28008 5423 10255".split(), "all": list(C.TURN_ROUTES)}
+ROUTES["b2d220"] = sorted(__import__("jevdrive.data.splits", fromlist=["load"]).load("b2d/bench2drive220").members)   # the 220 DS routes (B2D P2 prereg)
 ARM_ARB = {"action": "spec", "plan_smooth": "spec_plan_smooth"}
 
 
