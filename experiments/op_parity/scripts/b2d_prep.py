@@ -23,6 +23,8 @@ Resumable: `tokens` skips clips with a marker file.
   b2d_prep.py plan                          (CPU, tmux)  clip table, tab / extra / hinge labels / index files, preallocated ticks.npy + teacher
   b2d_prep.py tokens --shard i --of n       (GPU pool job per card) frames -> tokens + teacher of the shard's clips
   b2d_prep.py finish                        teacher.npz, meta.json
+  b2d_prep.py recmd --lookahead L           new cache dir b2d_v2L<L> (symlinks to the heavy files, own tab.npz): the route command re-cut from the stored raw
+                                            turn_next / turn_dist at another lookahead (m), ego features recomputed. L = 30 reproduces tab.npz exactly.
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
@@ -233,14 +235,36 @@ def finish(a):
         run.summary |= dict(rows=pl["rows"], ticks=pl["ticks"])
 
 
+def recmd(a):
+    import parity_adapter as PA
+    tab = dict(np.load(OUT / "tab.npz"))
+    ex = np.load(OUT / "extra.npz")
+    tn, td = ex["turn_next"], ex["turn_dist"]
+    cmd = np.zeros((len(tn), 4), np.float32)
+    cmd[:, 0] = (tn == 1) & (td <= a.lookahead)
+    cmd[:, 2] = (tn == 2) & (td <= a.lookahead)
+    cmd[:, 1] = 1.0 - cmd[:, 0] - cmd[:, 2]
+    ego = PA.ego_features(tab["pose"], tab["vel"], tab["acc"], cmd)
+    if a.lookahead == 30.0:
+        assert np.array_equal(cmd, tab["cmd"][:, -1]) and np.abs(ego - tab["ego"]).max() < 1e-6, "recmd(30) does not reproduce the cache"
+    new = OUT.with_name(f"b2d_v2L{a.lookahead:g}")
+    new.mkdir(exist_ok=True)
+    for f in ("ticks.npy", "front_idx.npy", "teacher.npz", "hinge_labels.npz", "extra.npz", "plan.json", "meta.json"):
+        if not (new / f).exists():
+            (new / f).symlink_to(OUT / f)
+    np.savez(new / "tab.npz", **(tab | dict(cmd=np.repeat(cmd[:, None], 4, 1), ego=ego)))
+    print(f"{new}: left {cmd[:, 0].mean():.4f} right {cmd[:, 2].mean():.4f} (was {tab['cmd'][:, -1, 0].mean():.4f} / {tab['cmd'][:, -1, 2].mean():.4f})")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["plan", "tokens", "finish"])
+    ap.add_argument("cmd", choices=["plan", "tokens", "finish", "recmd"])
     ap.add_argument("--shard", type=int, default=0)
     ap.add_argument("--of", type=int, default=1)
     ap.add_argument("--threads", type=int, default=8, help="clip decode read-ahead")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--lookahead", type=float, default=30.0, help="recmd: route command lookahead (m)")
     from jevdrive.run import cli_args
     cli_args(ap)
     a = ap.parse_args()
-    {"plan": plan, "tokens": tokens, "finish": finish}[a.cmd](a)
+    {"plan": plan, "tokens": tokens, "finish": finish, "recmd": recmd}[a.cmd](a)

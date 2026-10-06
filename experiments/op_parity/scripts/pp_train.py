@@ -76,6 +76,7 @@ class Cfg:
     hinge_labels: tuple = ("runs/op_probe/labels/navtrain_all.npz",)   # one label file per source (first file that labels a row wins)
     hinge_footprint: tuple = ("pacifica",)                                # footprint of each label file: pacifica (NAVSIM) | mkz (B2D)
     b2d_split: str = "b2d/b2dc-v2"                                        # route split of the b2d_* data dirs: <ref>-train / <ref>-val
+    anchor_b2d: bool = True               # anchor rows may fall on b2d_* rows (False: anchors only on the other sources, B2D rows are imitation only)
     b2d_mass: float = 0.0                                                 # share of the imitation batch rows drawn from the b2d_* rows (0 = natural mix)
     turn_bal: str = ""                    # turn-balanced sampling: target mass per |heading change| bin (<5, 5-20, 20-45, >45 deg), "a,b,c,d"; "" = off
     anchor_off_turn: bool = False         # no anchor rows on tokens with logged |heading change| > 20 deg
@@ -392,7 +393,7 @@ def main(a):
     cfg = Cfg(arm=a.arm, seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data), split=a.split, frames=a.frames, host=a.host,
               warmup=a.warmup, eval_every=a.eval_every,
               hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, hinge_labels=tuple(a.hinge_labels), hinge_footprint=tuple(a.hinge_footprint),
-              b2d_split=a.b2d_split, b2d_mass=a.b2d_mass,
+              b2d_split=a.b2d_split, b2d_mass=a.b2d_mass, anchor_b2d=not a.no_anchor_b2d,
               turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
               act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop)
     tag = a.tag or f"{a.arm}-s{a.seed}"
@@ -467,6 +468,8 @@ def main(a):
             an = rng.random(nB) < cfg.d_frac
             if cfg.anchor_off_turn:
                 an &= ~turn[r]
+            if not cfg.anchor_b2d:
+                an &= ~S.is_b2d[r]
             sm = rng.random((nB, len(PA.SIDE_CAMS))) >= cfg.cam_drop if use_side else None
             return r, an, sm
 
@@ -559,6 +562,7 @@ if __name__ == "__main__":
     ap.add_argument("--hinge-margin", type=float, default=0.3)
     ap.add_argument("--hinge-labels", nargs="+", default=list(Cfg.hinge_labels), help="hinge label file(s) under $DATA_DIR (the first that labels a row wins)")
     ap.add_argument("--hinge-footprint", nargs="+", default=list(Cfg.hinge_footprint), help="footprint of each --hinge-labels file: pacifica | mkz")
+    ap.add_argument("--no-anchor-b2d", action="store_true", help="no anchor rows on b2d_* rows (imitation only there)")
     ap.add_argument("--b2d-split", default=Cfg.b2d_split)
     ap.add_argument("--b2d-mass", type=float, default=0.0, help="share of imitation draws from the b2d_* rows (turn balancing then acts inside them)")
     ap.add_argument("--turn-bal", default="", help="target sampling mass per |heading change| bin <5,5-20,20-45,>45 deg, e.g. 0.35,0.15,0.25,0.25")
