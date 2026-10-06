@@ -240,6 +240,13 @@ class TestB2D(TmpData):
         self.assertIn("--route-ids 1,2,3", c)
         self.assertEqual(st[0].carla, 2)
 
+    def test_submit_dry(self):
+        from jevdrive.bench import b2d as B
+        with mock.patch.object(RN, "box_cards", return_value=[0]), mock.patch.object(RN, "submit") as sub:
+            d = B.submit(B.B2DAgent("pdm"), routes=str(self.D / "r.xml"), route_ids=["1"], workers=1, run_dir=self.D / "b2d")
+        self.assertEqual(d, self.D / "b2d")
+        self.assertEqual([s.name for s in sub.call_args.args[2]], ["w0", "collect"])
+
 
 if __name__ == "__main__":
     unittest.main()

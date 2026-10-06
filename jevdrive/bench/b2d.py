@@ -79,6 +79,15 @@ def stages(a: B2DAgent, run_dir: Path, routes: str = "bench2drive220", ids=None,
     return S
 
 
+def submit(a: B2DAgent, routes: str = "bench2drive220", route_ids=None, workers: int = 6, jobs: int = 0, tm_seed: int = 0, max_attempts: int = 3,
+           run_dir=None, dry: bool = False, priority: float = 0.0) -> Path:
+    """The call the module docstring names (first real run 2026-10-07, route 24211 with the default agent: DS 50, units.csv written): every
+    stage of one agent on a route list to the pool at once; returns the run dir (default $DATA_DIR/runs/bench/b2d/<agent name>). Idempotent."""
+    d = Path(run_dir) if run_dir else R.bench_root("b2d", a.name)
+    R.submit(d, f"bn-b2d-{a.name}", stages(a, d, routes, route_ids, workers, jobs, tm_seed, max_attempts), dry=dry, priority=priority)
+    return d
+
+
 def _q(x: str) -> str:
     import shlex
     x = str(x)
