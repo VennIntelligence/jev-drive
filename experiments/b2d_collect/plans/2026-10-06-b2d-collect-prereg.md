@@ -76,12 +76,14 @@ Driving / Parking / Bidirectional 的车道多边形，0.25 m 世界栅格上 ED
 4. 地平线：车身俯仰 p95 → road 帧地平线偏移行数；GIF 上画标称地平线行（47.6 / 151.8）和投影到地面的记录未来（绿）/ P2 规划（红）。
 5. GIF：第三人称 + 两路模型实际输入，中文字幕（Mac 上合成，盒子没有 CJK 字体）。
 
-## 吞吐与存储（冒烟后补实测）
+## 吞吐与存储（实测，results/stages.md）
 
-- 每个 worker = 一个 CARLA server + PDM-Lite + 两路 1928×1208 渲染 + 打包 + x264。实时因子（RTF）、每 tick 各段耗时由 agent 记录在
-  meta.json；VRAM / 核数由池实测（`queue` 的 m/d）。按实测装箱：每卡 worker 数 = min(6, 显存, 核)。（实测：…）
-- 存储估计：每 tick 一张 512×512 无损 yuv420p，约 …KB；1000 段 × … tick ≈ … GB；SDF / 标签 / actors ≈ … GB。数据盘余 ~620 GB。
-- 全量时间：1000 段 × … s 仿真 / (RTF × 并行 worker) ≈ … h（含加载地图、重试）。
+- 1 worker（卡上同时有 HUGSIM）：RTF 0.41；agent 每 tick：PDM-Lite 21 ms、打包 7.5 ms、记录 5 ms、H.264 管道 0.8 ms；每条路线加载 ~50 s；
+  7.2 GB 显存、2.2 核。5 worker 一个作业：31.6 GB（6.3 / worker）、11.4 核（2.3 / worker），每 worker RTF 0.33–0.64。
+- 存储：无损模型帧 88 KB / tick（比原始 393 KB 小 4.5 倍）；1000 段 × ~500 tick ≈ 45–60 GB，标签 / SDF / actors 几 GB。盘余 587 GB。
+- 全量：3 个作业 × 6 worker（每卡一个，CARLA 上限 6），稳态 ~650 条 / h → ~1.5–2 h，所以不需要 > 3 h 的 profile。
+- 冒烟后改动（都是实测失败）：路线 v2（路口内不放关键点 + 重规划校验，id 920000+）；站立 45 s / 仿真 240 s 提前结束；路线指令改由几何标注；
+  对齐门槛改为结构性（相机帧号 = 状态帧号）+ 出生起步时刻，模型转弯能力只报告不设门槛。
 
 ## 分阶段（docs/long-runs.md）
 

@@ -3,7 +3,7 @@
 status: live
 decisions: (pending) (inputs: 121, 127, 128, 133, 134, 137, 144, 147, 148)
 index: B2D collector: 1000 hold-out routes, 61% junction turns, openpilot frames at 20 Hz
-key: experiments/b2d_collect/plans/2026-10-06-b2d-collect-prereg.md, experiments/b2d_collect/scripts/b2dc_agent.py, experiments/b2d_collect/lib/b2dc_frames.py, experiments/b2d_collect/lib/b2dc_labels.py, experiments/b2d_collect/scripts/b2dc_routes.py, experiments/b2d_collect/scripts/b2dc_labels.py, experiments/b2d_collect/scripts/b2dc_check.py, experiments/b2d_collect/scripts/b2dc_lane.py, experiments/b2d_collect/scripts/b2dc_gif.py, tests/test_b2dc_frames.py
+key: experiments/b2d_collect/plans/2026-10-06-b2d-collect-prereg.md, experiments/b2d_collect/results/stages.md, experiments/b2d_collect/scripts/b2dc_agent.py, experiments/b2d_collect/lib/b2dc_frames.py, experiments/b2d_collect/lib/b2dc_labels.py, experiments/b2d_collect/scripts/b2dc_routes.py, experiments/b2d_collect/scripts/b2dc_labels.py, experiments/b2d_collect/scripts/b2dc_check.py, experiments/b2d_collect/scripts/b2dc_lane.py, experiments/b2d_collect/scripts/b2dc_gif.py, tests/test_b2dc_frames.py
 
 **Question.** Can we collect a Bench2Drive imitation dataset (PDM-Lite driving, openpilot road + wide cameras on the open-loop-aligned rig at
 native 20 Hz, stored as the model frames Cinque consumes) that op_parity P2 (decision 144, + drivable-SDF hinge, decision 148) can train on
@@ -18,9 +18,13 @@ Labels (`b2dc_labels.py`): op_parity's ego features / 8-pose future / NAVSIM com
 op_probe's grid. Checks (`b2dc_check.py`): replay through Cinque / P2 (frame-lag and turn-sign alignment), SDF and command consistency, GIFs.
 Staged lane (`b2dc_lane.py`): 1 -> 10 -> all through the GPU pool. Plan: [plans/2026-10-06-b2d-collect-prereg.md](plans/2026-10-06-b2d-collect-prereg.md).
 
-**Status.** Route set built; smoke (1 route) running.
+**Status (2026-10-07).** Smoke and 10-route stage pass every gate after seven fixes (chase camera, junction keypoints -> route set v2,
+stuck routes, route commands from geometry, alignment checks that do not depend on the model's turning): frames bit-identical to the
+closed-loop packing and lossless, camera frame = state frame on every tick, launch visible in the picture within 1 tick, footprint inside
+the SDF 0.94, turn-command precision 0.91; 88 KB per tick, 6.3 GB VRAM and 2.3 cores per worker. Full run (route set v2, 1000 routes,
+3 jobs x 6 workers) launched 2026-10-07 00:04: [results/stages.md](results/stages.md).
 
-**Next.** Smoke -> throughput and storage estimate -> 10 routes -> full collection when the pool has room.
+**Next.** Full-run labels and checks; then the B2D P2 training data cache (pp_prep-style tokens from the stored frames).
 
 <!-- files:begin -->
 <!-- files:end -->
