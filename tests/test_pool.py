@@ -189,6 +189,13 @@ class Dispatch(unittest.TestCase):
             time.sleep(0.1)
         self.fail("timeout; states %s" % {k: (j["state"], j.get("why")) for k, j in d.st["jobs"].items()})
 
+    def cancel_all(self, d):
+        for j in d.st["jobs"].values():
+            if j["state"] not in P.FINAL:
+                P.cancel(j["id"], pool=self.tmp)
+        d.halt = True                                  # nothing starts while the others stop
+        self.until(d, lambda: not d.jobs("running"))
+
     def states(self, d):
         return {j["spec"]["name"]: j["state"] for j in d.st["jobs"].values()}
 
@@ -300,9 +307,7 @@ class Dispatch(unittest.TestCase):
         a["cores_peak"] = 0.5                                                    # measured: charged 1 core
         d.round()
         self.assertEqual(d.st["jobs"][b]["state"], "running")
-        for j in d.jobs("running"):
-            P.cancel(j["id"], pool=self.tmp)
-        self.until(d, lambda: not d.jobs("running"))
+        self.cancel_all(d)
 
     def test_idle_card_admits_cpu_blocked_job(self):
         P.submit("sleep 30", name="a", pool=self.tmp, vram_gb=5, cpu=3)
@@ -318,9 +323,7 @@ class Dispatch(unittest.TestCase):
         self.assertIn("CPU", d2.st["jobs"][small]["why"])
         ev = [json.loads(l) for l in (self.tmp / "events.jsonl").read_text().splitlines()]
         self.assertIn(b, [e["id"] for e in ev if e["kind"] == "admit_idle"])
-        for j in d2.jobs("running"):
-            P.cancel(j["id"], pool=self.tmp)
-        self.until(d2, lambda: not d2.jobs("running"))
+        self.cancel_all(d2)
 
     def test_idle_rule_never_relaxes_ram(self):
         self.box.mem_max_gb, self.box.mem_used_gb = 100.0, 90.0
@@ -345,9 +348,7 @@ class Dispatch(unittest.TestCase):
         self.assertEqual(d.st["jobs"][strict]["state"], "queued")
         self.assertEqual(d.st["jobs"][strict]["spec"]["gpus"], [0])              # pinned: never widened
         self.assertIn("auto_retarget", (self.tmp / "events.jsonl").read_text())
-        for j in d.jobs("running"):
-            P.cancel(j["id"], pool=self.tmp)
-        self.until(d, lambda: not d.jobs("running"))
+        self.cancel_all(d)
 
 
 if __name__ == "__main__":

@@ -760,7 +760,7 @@ class Dispatcher:
             if box.mem_max_gb and box.mem_used_gb + young_ram + s.ram_gb > 0.85 * box.mem_max_gb:
                 hard = "memory %.0f + %.0f GB > 85%% of %.0f" % (box.mem_used_gb + young_ram, s.ram_gb, box.mem_max_gb)
             if hard or (soft and s.vram_gb <= 1):
-                self.set_why(j, soft or hard)
+                self.set_why(j, hard or soft)
                 continue
             every = list(cards.values())
             idle = self.idle_cards(every, now, cfg) if soft else None
