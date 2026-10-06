@@ -5,6 +5,10 @@
   table   (.venv, CPU)         navtest table: scene attributes, logged-motion classes, devkit sub-scores of P2-F-s0 / s1 and WA-JEPA, op_probe
                                sets, true footprint margins / excursion geometry of each plan, op_probe probe-predicted margins along both
                                plans; decoder per-token scores; navhard (Protocol G) per-token table
+  replay  (.venv, CPU)         WA-JEPA plans of the op_probe eval tokens -> joint/wa_eval_poses.npz (+ tokens) and P2-F-s0's devkit replay rows
+                               (score/ablate_P2.csv, key full) -> joint/p2_eval_score.csv; then score WA with the devkit replay:
+                               envs/navsim2/bin/python experiments/op_probe/scripts/opb_score.py --poses joint/wa_eval_poses.npz
+                                 --tokens joint/wa_eval_tokens.txt --out joint/wa_eval_score.csv --procs 96
   cases   (.venv, CPU)         representative paired cases per quadrant (rule in pick_cases) -> joint/cases_pick.json
   export  (envs/navsim2, CPU)  scene export of the picked cases (pp_gap_export.export_case) -> joint/cases.json
   frames  (.venv, CPU)         model inputs of the picked cases: P2's protocol-W road frame (as pp_gap_frames) and the WA-JEPA camera views
@@ -258,6 +262,17 @@ def cmd_table(a):
         run.info(json.dumps(run.summary))
 
 
+def cmd_replay(a):
+    import pandas as pd
+    w = pickle.load(open(WA_TRAJ, "rb"))["trajectories"]
+    ev = [t for t in (x.strip() for x in open(ROOT / "sets/eval_tokens.txt")) if t and t in w]
+    np.savez(OUT / "wa_eval_poses.npz", tokens=np.array(ev), WA=np.stack([np.asarray(w[t], np.float32) for t in ev]))
+    (OUT / "wa_eval_tokens.txt").write_text("\n".join(ev) + "\n")
+    q = pd.read_csv(ROOT / "score/ablate_P2.csv")
+    q[q.key == "full"].to_csv(OUT / "p2_eval_score.csv", index=False)
+    print(len(ev), "WA eval tokens")
+
+
 # ---------------------------------------------------------------- cases
 QUAD = {"P2 fails, WA passes": ("P2", "WA"), "WA fails, P2 passes": ("WA", "P2"), "both fail": ("both", None)}
 GATES = ["NC", "DAC", "DDC", "TLC", "TTC"]
@@ -373,6 +388,8 @@ def cmd_frames(a):
         out[f"{t}/f0_full"] = np.asarray(Image.open(D / "datasets/navsim/sensor_blobs/test" / c0["data_path"]).convert("RGB").resize((960, 540), Image.BILINEAR))
         print("frames", t, flush=True)
     np.savez_compressed(OUT / "frames.npz", **out)
+    np.savez_compressed(OUT / "frames_small.npz", **{k: np.asarray(Image.fromarray(v).resize((384, 192), Image.LANCZOS))
+                                                     for k, v in out.items() if k.endswith(("/p2_road", "/wa_CAM_F0"))})
 
 
 if __name__ == "__main__":
@@ -383,7 +400,8 @@ if __name__ == "__main__":
         p.add_argument("--workers", type=int, default=96)
     p = sp.add_parser("cases")
     p.add_argument("--per", type=int, default=3)
+    sp.add_parser("replay")
     sp.add_parser("export")
     sp.add_parser("frames")
     a = ap.parse_args()
-    {"attrs": cmd_attrs, "table": cmd_table, "cases": cmd_cases, "export": cmd_export, "frames": cmd_frames}[a.cmd](a)
+    {"attrs": cmd_attrs, "table": cmd_table, "replay": cmd_replay, "cases": cmd_cases, "export": cmd_export, "frames": cmd_frames}[a.cmd](a)

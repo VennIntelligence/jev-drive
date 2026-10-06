@@ -21,6 +21,14 @@ WA-H). Probes: road SDF R^2 0.66 (Cinque vision) vs 0.78 (WA front encoder); on 
 inside the road than it is (WA all-view 0.11 m). The pre-registered probe rule names no class (vision has coarse road geometry; AUC readout
 confounded), so the verdict rests on the addendum-1 decoder readouts (medium).
 
+**Joint diagnosis P2 vs WA-JEPA (2026-10-06).** [results/joint/index.html](results/joint/index.html) (paper figures in
+`results/joint/figs/`, numbers in `results/joint/stats.json`; code `scripts/opj_build.py` box, `scripts/opj_figs.py` Mac). WA-JEPA leads on every
+navtest scene type; the gap is a turning problem (EPDMS x100 straight -1.4, left / right turns -8.2 / -10.8; P2 DAC failures 1.6% -> 11.3% from
+< 5 deg to > 45 deg, WA 1.0% -> 3.2%) and carries into HUGSIM only on turning routes (HD -0.14 [-0.28, -0.01], straight routes -0.01; P2 ahead on
+nuScenes +0.12 [0.04, 0.22]). Mirror of decision 147: on each model's own DAC failures no stage of that model adds anything over ego state
+(decoder lift P2-V on F -0.2 pp, WA-Cf on R -2.6 pp), while the other model's stages gain +26 / +28 pp. P2's DAC failures are in the plan and cut
+the inside of turns (+0.36 m); 60% of WA's arise only in the LQR replay and 82% are < 0.3 m deep.
+
 **Next.** Decision entry by main. Candidates: footprint SDF hinge in P2's plan-pathway fine-tune (cheap, about -0.9 pp DAC failures); encoder
 unfreeze with a dense drivable-SDF auxiliary head; WA / V-JEPA front tokens as adapter memory (trade test).
 

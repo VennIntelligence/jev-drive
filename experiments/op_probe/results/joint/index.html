@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P2 vs WA-JEPA joint diagnosis</title>
+<style>
+:root { --ink:#1d1d1f; --mute:#5f6368; --line:#e3e3e3; --bg:#ffffff; --p2:#D55E00; --wa:#0072B2; --both:#CC79A7; --card:#fafafa; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ink:#e8e8e8; --mute:#a0a0a0; --line:#3a3a3a; --bg:#161616; --card:#1f1f1f; }
+  :root:not([data-theme="light"]) figure img { background:#fff; } }
+body { background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; margin:0; }
+main { max-width:1080px; margin:0 auto; padding:24px 16px 64px; }
+h1 { font-size:26px; line-height:1.25; margin:8px 0 4px; } h2 { font-size:20px; margin:40px 0 8px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+h3 { font-size:16px; margin:22px 0 6px; } .sub { color:var(--mute); margin:0 0 18px; }
+.p2 { color:var(--p2); font-weight:600; } .wa { color:var(--wa); font-weight:600; }
+.key { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 18px; }
+.key li { margin:6px 0; }
+figure { margin:22px 0; } figure img { width:100%; height:auto; border:1px solid var(--line); border-radius:4px; }
+figcaption { font-size:13.5px; color:var(--ink); margin-top:6px; } .look { color:var(--mute); }
+table { border-collapse:collapse; font-size:13px; margin:10px 0; width:100%; display:block; overflow-x:auto; }
+th, td { border-bottom:1px solid var(--line); padding:4px 8px; text-align:right; white-space:nowrap; } th:first-child, td:first-child { text-align:left; }
+th { font-weight:600; } code { font-size:12.5px; } .note { font-size:13.5px; color:var(--mute); }
+nav a { margin-right:12px; font-size:14px; }
+</style></head><body><main>
+<h1>Where <span class="p2">P2</span> and <span class="wa">WA-JEPA</span> work, where each fails, and at which stage</h1>
+<p class="sub">Joint diagnosis, 2026-10-06. <span class="p2">P2</span> = op_parity P2-F (Cinque 382M, comma vision frozen, ego / pose / command
+inputs, protocol W frames; 2 seeds). <span class="wa">WA-JEPA</span> = released checkpoint (V-JEPA 2.1 ViT-L + MMDiT, one run). Builds on
+<a href="../dac-localize.md">dac-localize.md</a> (decision 147) and the op_parity gap page. No model was re-run; all numbers come from stored
+plans, devkit sub-scores, op_probe features / probes / decoders, and HUGSIM run logs.</p>
+<nav><a href="#summary">Summary</a><a href="#overview">Overview</a><a href="#taxonomy">Taxonomy</a><a href="#stages">Stages</a><a href="#geometry">Geometry</a><a href="#closed">Closed loop</a><a href="#cases">Cases</a><a href="#method">Method</a></nav>
+
+<h2 id="summary">Summary</h2>
+<div class="key"><ul>
+<li><b>WA-JEPA is ahead on every navtest scene type; the gap is a turning problem.</b> Per-token EPDMS P2 − WA is -1.4 [-2.2, -0.8] on
+straight driving and -8.2 [-10.7, -5.7] / -10.8 [-13.3, -8.1] on left / right turns
+(× 100). DAC failures rise with curvature for P2 (1.6% below 5° → 11.3% above 45°) and barely for WA
+(1.0% → 3.2%). Near parity: straight, ≥ 10 m/s (-1.5 [-3.5, +0.3]), Las Vegas
+(-1.4 [-2.1, -0.6]). Largest non-manoeuvre gaps: Singapore, left-hand traffic (-6.5 [-8.4, -4.7]),
+near-empty roads with 0-3 vehicles (-5.4 [-6.5, -4.1], i.e. turns at open junctions).</li>
+<li><b>Where P2 is not worse.</b> Closed loop on straight routes: HUGSIM HD P2 − WA -0.6 [-10.5, +8.2] (× 100, 41
+scenarios); on the nuScenes scenes P2 is ahead, +11.9 [+3.6, +21.6]. Open loop: extended comfort (EC fail rate P2 − WA
+-0.5 [-1.0, +0.1] pp), launch scenes on navhard stage 1, lane changes on navhard stage 2 (both CIs include 0). No navtest scene type has P2 ahead.</li>
+<li><b>Each model's failures are fixed at its own encoder (mirror of decision 147, point 4).</b> A fresh decoder (stage + ego, drivable hinge) on
+P2's vision tokens passes DAC on P2's failure set F no more often than an ego-only decoder (-0.2 [-9.3, +8.6] pp), while on WA-JEPA's
+failure set R it gains +26.1 [+9.2, +41.6] pp. The same holds the other way: WA's front-encoder decoder gains +27.9 [+19.9, +35.5] pp on F and
+-2.6 [-19.7, +13.0] pp on R; WA's head hidden +38.6 [+31.5, +45.4] vs -3.5 [-23.4, +14.5]. On the tokens both fail (FF), no stage of either model
+adds anything over ego state. Caveat: F and R are each selected by one model failing and the other passing, which inflates the cross-set gains (regression to the mean); the
+readable part is that every stage of the failing model sits at the ego-only level on its own failure set.</li>
+<li><b>P2's DAC failures are in the plan; most of WA-JEPA's arise only in the tracker replay.</b> When P2 fails DAC its raw plan footprint already leaves the road in
+63.7 [57.8, 69.2]% of cases; for WA only 23.3 [15.7, 31.8]%. In the devkit's LQR replay 59.8 [51.4, 67.6]% of WA's DAC failures are
+tracker-only and 82.2 [74.8, 88.9]% are shallower than 0.3 m (median 10 cm); P2: 30.4 [24.8, 36.4]% and 52.0 [46.8, 57.8]% (median
+29 cm).</li>
+<li><b>P2's specific turn failures cut the corner.</b> On turns > 20° where P2 fails and WA passes, P2's 4 s end point lies
++0.36 [+0.08, +0.66] m toward the inside of the logged turn; on turns both pass it lies -0.09 [-0.16, -0.02] m (slightly wide). WA on its own
+failures: +0.04 [-0.18, +0.25] m. Tokens both fail are the opposite: both run wide (-0.33 [-0.66, +0.01] / -0.41 [-0.88, -0.08] m).</li>
+<li><b>The open-loop deficit carries into closed loop where the route turns.</b> HUGSIM HD gap is -5.5 [-13.7, +2.0] overall (n.s., as in
+decision 144), -14.1 [-28.3, -0.7] on the 23 scenarios whose route turns ≥ 30°, with DAC -12.9 [-20.5, -6.0] there and
+-1.2 [-3.6, +1.0] on straight routes. How runs end: P2 completes 17.5 vs 28, spins 9.5
+vs 4, bg-collides 7.5 vs 1; WA leaves the route 5 vs 1.5.
+Foreground collisions are shared (28 vs 26; 22 scenarios end that way for both).</li>
+<li><b>navhard.</b> Stage 1 (logged) P2 − WA -8.8 [-13.2, -4.3], from DAC (+4.8 pp failures), DDC
+(+3.1) and EP; stage 2 (rendered) -3.3 [-4.5, -2.1], from DAC (+4.5) and EP
+(-8.2 [-9.1, -7.4]): in synthetic follow-up states P2 also drives too slowly. Turns are the worst manoeuvre in both stages.</li>
+</ul></div>
+
+<h2 id="overview">Overview</h2>
+<figure id="fig1_overview"><a href="figs/fig1_overview.pdf"><img src="figs/fig1_overview.png" alt="Figure 1. Where each model works and fails."></a><figcaption><b>Figure 1. Where each model works and fails.</b> <span class="look">What to look at: (a) WA-JEPA leads on every benchmark, by less in closed loop. (b) The shared failures (purple) are a small part of each gate; P2-only DAC failures are 4x WA-only ones, every gate has WA-only failures too. (c) Bars near 0 on a model's own failure set (orange F for P2 stages, blue R for WA stages): no encoder adds information over ego state where its model fails. (d) The navtest deficit concentrates in turns, left-hand traffic and open junctions. (e) In closed loop the deficit is confined to turning routes and the KITTI-360 / medium scenarios; P2 leads on nuScenes.</span> <a href="figs/fig1_overview.pdf">PDF</a></figcaption></figure>
+
+<h2 id="taxonomy">1. Failure taxonomy by sub-metric and scene type</h2>
+<p>navtest, 12 146 tokens, 136 logs. Rates are the share of tokens with the sub-score below 1 (P2: mean of its two seeds); the three
+right-hand columns split tokens by P2 seed 0 vs WA. Scene attributes: logged 4 s motion (manoeuvre classes in <a href="#method">Method</a>),
+ego speed, a path through an INTERSECTION polygon, the route command, agents within 30 m, a red light listed for the frame, city, and the sun
+elevation at the log's time (navtest has no night frames; weather is not labelled in nuPlan).</p>
+<table><tr><th>gate</th><th>P2 fail %</th><th>WA fail %</th><th>P2 − WA (pp)</th><th>only P2 %</th><th>only WA %</th><th>both %</th></tr><tr><td>DAC</td><td>4.3 [3.5, 5.2]</td><td>1.8 [1.4, 2.2]</td><td>+2.5 [+1.8, +3.3]</td><td>3.56</td><td>0.95</td><td>0.86</td></tr><tr><td>NC</td><td>1.5 [1.1, 2.0]</td><td>0.6 [0.4, 0.9]</td><td>+0.9 [+0.6, +1.3]</td><td>1.21</td><td>0.27</td><td>0.35</td></tr><tr><td>TTC</td><td>2.1 [1.6, 2.6]</td><td>1.1 [0.8, 1.4]</td><td>+1.0 [+0.6, +1.4]</td><td>1.51</td><td>0.46</td><td>0.65</td></tr><tr><td>LK</td><td>2.6 [2.1, 3.1]</td><td>1.6 [1.2, 1.9]</td><td>+1.0 [+0.6, +1.5]</td><td>1.83</td><td>0.77</td><td>0.79</td></tr><tr><td>DDC</td><td>0.8 [0.5, 1.2]</td><td>0.5 [0.2, 0.9]</td><td>+0.3 [+0.1, +0.5]</td><td>0.54</td><td>0.20</td><td>0.34</td></tr><tr><td>TLC</td><td>0.3 [0.1, 0.4]</td><td>0.1 [0.1, 0.2]</td><td>+0.1 [+0.1, +0.2]</td><td>0.14</td><td>0.02</td><td>0.12</td></tr><tr><td>HC</td><td>1.6 [1.2, 2.2]</td><td>1.7 [1.2, 2.2]</td><td>-0.0 [-0.1, +0.0]</td><td>0.02</td><td>0.07</td><td>1.62</td></tr><tr><td>EC</td><td>11.5 [9.9, 13.0]</td><td>12.0 [10.4, 13.5]</td><td>-0.5 [-1.0, +0.1]</td><td>2.18</td><td>2.67</td><td>9.28</td></tr></table>
+<figure id="fig2_taxonomy"><a href="figs/fig2_taxonomy.pdf"><img src="figs/fig2_taxonomy.png" alt="Figure 2. Score difference and per-gate failure rates by scene type (navtest)."></a><figcaption><b>Figure 2. Score difference and per-gate failure rates by scene type (navtest).</b> <span class="look">What to look at: turns and lane changes carry DAC and LK failures for both models, but P2's grow much faster; NC / TTC failures of both concentrate in coming-to-a-stop scenes (P2 more); EC failures are turn-driven and equal for both; in Singapore P2 has 3x WA's DAC failures but no NC / TTC excess.</span> <a href="figs/fig2_taxonomy.pdf">PDF</a></figcaption></figure>
+<figure id="fig3_navhard"><a href="figs/fig3_navhard.pdf"><img src="figs/fig3_navhard.png" alt="Figure 3. navhard two-stage (Protocol G frames for P2)."></a><figcaption><b>Figure 3. navhard two-stage (Protocol G frames for P2).</b> <span class="look">What to look at: stage 1 differences sit in DAC and DDC; in stage 2 DAC remains and the large shared LK / DDC / TTC failure rates are the same for both models: the synthetic states are hard for both, not specifically for P2. Stage 2 is scored unweighted here (official stage-2 weights are arm-specific).</span> <a href="figs/fig3_navhard.pdf">PDF</a></figcaption></figure>
+<table><tr><th>navhard</th><th>stage 1 P2</th><th>stage 1 WA</th><th>stage 2 P2</th><th>stage 2 WA</th></tr><tr><td>NC</td><td>2.9 [1.1, 4.9]</td><td>2.0 [0.7, 3.6]</td><td>13.7 [11.4, 16.1]</td><td>12.5 [10.2, 15.0]</td></tr><tr><td>DAC</td><td>13.0 [9.7, 16.7]</td><td>8.2 [5.3, 11.3]</td><td>27.3 [24.5, 30.2]</td><td>22.8 [20.0, 25.7]</td></tr><tr><td>DDC</td><td>3.6 [1.8, 5.8]</td><td>0.4 [0.0, 1.3]</td><td>21.4 [18.7, 24.1]</td><td>21.1 [18.2, 24.0]</td></tr><tr><td>TTC</td><td>2.6 [0.9, 4.6]</td><td>2.4 [0.9, 4.2]</td><td>16.0 [13.5, 18.6]</td><td>15.6 [13.1, 18.2]</td></tr><tr><td>LK</td><td>3.6 [1.7, 5.8]</td><td>1.6 [0.7, 2.9]</td><td>51.1 [47.5, 54.4]</td><td>51.1 [47.5, 54.3]</td></tr><tr><td>EP</td><td>80.4 [78.2, 82.5]</td><td>84.4 [82.2, 86.4]</td><td>74.5 [72.8, 76.1]</td><td>82.6 [81.3, 84.0]</td></tr></table>
+<p class="note">EP row: mean ego-progress (× 100), not a failure rate. Score: stage 1 P2 73.1 [69.3, 76.7] vs WA 81.9 [78.5, 85.0];
+stage 2 44.9 [42.8, 47.1] vs 48.2 [46.0, 50.5]. Clusters: 225 scene groups.</p>
+
+<h2 id="stages">2. Stage localisation in both directions</h2>
+<p>Sets as in dac-localize.md, on DAC: F = P2 seed 0 fails, WA passes (433); R = WA fails, P2 passes (115); FF = both fail
+(104); PP-turn = both pass with a logged turn > 20°. Stages: P2 V (current vision tokens), M (after adapter bias and token MLPs), T (temporal
+summary), H (plan-head hidden); WA Cf (front-view encoder, newest tubelet, pooled like V), Ca (all views), T (trajectory-head input), H (its last hidden).
+Decoders: 2-layer MLP on [stage, ego], imitation + drivable hinge (λ = 10), trained on navtrain, scored with the devkit.</p>
+<figure id="fig4_localisation"><a href="figs/fig4_localisation.pdf"><img src="figs/fig4_localisation.png" alt="Figure 4. Which stage decides each model&#x27;s failures."></a><figcaption><b>Figure 4. Which stage decides each model's failures.</b> <span class="look">What to look at: (a) the mirror: orange bars (F) are at 0 for all P2 stages and high for all WA stages; blue bars (R) are high for all P2 stages and at 0 for all WA stages. (b) probes find more road-edge information in every WA stage than in every P2 stage, on all sets alike, so the failure sets are not where either encoder is blind in general. (c) on its own failures P2's vision stage is as optimistic about the remaining margin as an ego-only probe (dashed), i.e. it adds no road edge there; WA's front encoder roughly halves the ego-only bias on R and its head hidden returns to it.</span> <a href="figs/fig4_localisation.pdf">PDF</a></figcaption></figure>
+<table><tr><th>decoder lift over ego-only (pp), hinge λ = 10</th><th>F</th><th>R</th><th>FF</th><th>PP-turn</th></tr>
+<tr><td>P2-V</td><td>-0.2 [-9.3, +8.6]</td><td>+26.1 [+9.2, +41.6]</td><td>+2.9 [-12.2, +18.4]</td><td>+12.5 [+8.2, +16.4]</td></tr><tr><td>P2-M</td><td>-1.6 [-10.9, +7.1]</td><td>+27.8 [+12.3, +43.4]</td><td>+3.8 [-11.5, +18.8]</td><td>+13.1 [+8.5, +17.4]</td></tr><tr><td>P2-T</td><td>+1.4 [-7.9, +10.4]</td><td>+35.7 [+22.3, +49.6]</td><td>+11.5 [-4.2, +26.3]</td><td>+14.2 [+9.5, +18.3]</td></tr><tr><td>P2-H</td><td>-2.3 [-10.9, +6.3]</td><td>+33.0 [+18.2, +48.3]</td><td>+9.6 [-5.8, +24.1]</td><td>+16.1 [+11.4, +20.2]</td></tr><tr><td>WA-Cf</td><td>+27.9 [+19.9, +35.5]</td><td>-2.6 [-19.7, +13.0]</td><td>-1.0 [-16.8, +13.2]</td><td>+16.1 [+11.3, +20.6]</td></tr><tr><td>WA-Ca</td><td>+30.0 [+22.3, +37.0]</td><td>-1.7 [-19.8, +17.6]</td><td>-2.9 [-16.3, +10.1]</td><td>+15.0 [+10.2, +19.3]</td></tr><tr><td>WA-H</td><td>+38.6 [+31.5, +45.4]</td><td>-3.5 [-23.4, +14.5]</td><td>+1.9 [-14.0, +17.0]</td><td>+18.3 [+13.7, +22.5]</td></tr>
+</table>
+<p class="note">Imitation-only decoders give the same pattern (P2-V on F +6.5 [-3.4, +16.1], on R +31.3 [+14.7, +47.3]; WA-Cf on F +33.3 [+24.7, +41.4], on R
++1.7 [-13.9, +16.5]). Margin bias (probe − true footprint margin along the model's own plan, m): P2-V on F +0.75 [+0.56, +0.93] vs ego-only +0.81 [+0.43, +1.17];
+WA-Cf on R +0.30 [-0.04, +0.73], WA-H on R +0.82 [+0.38, +1.40] vs ego-only +0.68 [+0.17, +1.18]. Reading: P2's failures are encoder-level by both readouts; WA's are
+encoder-level by the decoder readout, while its front encoder still carries some road-edge information on R that the head hidden no longer
+shows (n = 115, wide CIs).</p>
+
+<h2 id="geometry">3. Geometry of the failures</h2>
+<figure id="fig5_geometry"><a href="figs/fig5_geometry.pdf"><img src="figs/fig5_geometry.png" alt="Figure 5. Margins, excursion depth, curvature and corner cutting."></a><figcaption><b>Figure 5. Margins, excursion depth, curvature and corner cutting.</b> <span class="look">What to look at: (a) P2's raw plans leave the drivable area on 4.6 [3.7, 5.6]% of navtest tokens vs 1.6 [1.2, 2.2]% for WA. (b) WA's DAC failures are mostly sub-0.3 m tracker grazes; P2's go deeper. (c) the P2 − WA DAC gap grows from +0.6 [+0.0, +1.2] pp below 5° to +8.1 [+5.9, +10.1] pp above 45°. (d) on its specific failures P2 ends inside the turn; on shared turns both are slightly wide.</span> <a href="figs/fig5_geometry.pdf">PDF</a></figcaption></figure>
+<p class="note">Margins: smallest signed distance of the ego footprint (4 corners, plan linearly interpolated to 0.1 s) to the scorer's drivable polygons
+(ROADBLOCK, INTERSECTION, CARPARK_AREA), 0.5 m SDF labels of opb_labels.py. Depth: largest corner distance outside those polygons along the devkit's LQR
+replay (opb_score.py), on the op_probe eval tokens (F ∪ R ∪ FF ∪ 1 500 random PP); both models' replays reproduce their devkit DAC on
+100% / 100% of tokens. End offset: lateral offset of the plan's 4 s pose from the logged 4 s pose,
+along the logged pose's normal, signed + toward the inside of the logged turn.</p>
+
+<h2 id="closed">4. Closed loop: HUGSIM 64</h2>
+<figure id="fig6_hugsim"><a href="figs/fig6_hugsim.pdf"><img src="figs/fig6_hugsim.png" alt="Figure 6. HUGSIM outcome matrix, per-scenario scores, and the link to open loop."></a><figcaption><b>Figure 6. HUGSIM outcome matrix, per-scenario scores, and the link to open loop.</b> <span class="look">What to look at: (a) the diagonal (same end) holds 37 of 64; where WA-JEPA completes and P2 does not, P2 mostly spins or collides (background more than foreground); where P2 completes and WA-JEPA does not, WA-JEPA hit a foreground agent. (b) tick marks under the strip: routes that turn ≥ 30°; WA-JEPA's wins cluster on them. (c) DAC is the one sub-metric where the open-loop deficit reappears in closed loop, and only on turning routes.</span> <a href="figs/fig6_hugsim.pdf">PDF</a></figcaption></figure>
+<p class="note">exam preset; P2 = mean of seeds s0 / s1 (one run each), WA-JEPA one run (decision 138), single runs vary by about 0.2 HD per scenario
+(decision 144), so per-scenario differences below 0.2 are not read. Route turn = range of the recorded route heading. spec-preset counts in
+<a href="../../../op_parity/results/hugsim_full.md">hugsim_full.md</a>.</p>
+
+<h2 id="cases">5. Paired cases per quadrant</h2>
+<figure id="fig7_cases"><a href="figs/fig7_cases.pdf"><img src="figs/fig7_cases.png" alt="Figure 7. Three cases per quadrant: what each model sees and both plans in BEV."></a><figcaption><b>Figure 7. Three cases per quadrant: what each model sees and both plans in BEV.</b> <span class="look">What to look at: top of each case: P2's current road-camera input (protocol W) and WA-JEPA's front view (it also sees L0 / R0 / B0); bottom: BEV at t0 with drivable area, lanes, agents (dashed: 4 s later), the logged future and both plans with their 4 s ego boxes. Numbers in brackets: token EPDMS × 100.</span> <a href="figs/fig7_cases.pdf">PDF</a></figcaption></figure>
+<p class="note">Selection rule (fixed before looking at plans): a token &#x27;fails&#x27; for a model when any of NC, DAC, DDC, TLC, TTC is below 1 (P2 = seed 0, the plan that is drawn; both P2 seeds must agree). Quadrants: P2 fails &amp; WA passes, WA fails &amp; P2 passes, both fail. Eligible: logged speed &gt; 2 m/s, label raster ok, WA plan present. Within a quadrant, the failing sub-metric of the token is its first failing gate in the order above; each quadrant takes 3 tokens drawn uniformly at random (numpy seed 0) from the eligible set, stratified so that the drawn sub-metrics follow the quadrant&#x27;s own sub-metric frequencies (largest-remainder rounding), distinct logs. No look at the plans before drawing. Drawn: P2 fails, WA passes / DAC 3b0c5c39, P2 fails, WA passes / DAC 223d02be, P2 fails, WA passes / NC d56cc988, WA fails, P2 passes / DAC 72be63ed, WA fails, P2 passes / DAC cec165c3, WA fails, P2 passes / TTC c32ae6a1, both fail / DAC cbcd5548, both fail / NC e7da21c4, both fail / DDC 60abcfb4.</p>
+
+<h2 id="method">Method and caveats</h2>
+<ul class="note">
+<li>Manoeuvre classes from the logged 4 s future (priority order): stationary (v0 &lt; 0.5 m/s, path &lt; 1 m), launch (v0 &lt; 1.5, end speed &gt; 2.5),
+stop (v0 &gt; 2.5, end &lt; 0.5), left / right turn (|Δ heading| &gt; 20°), lane change (|Δ heading| &lt; 8°, |lateral| &gt; 2 m, path &gt; 10 m),
+curve (8-20°), straight. navhard stage-2 tokens have no logged future and take the class of their scene group's stage-1 token.</li>
+<li>CIs: 95% percentile cluster bootstrap, B 2 000 (navtest logs, navhard scene groups, HUGSIM scenarios). Strata overlap across groups; no
+multiplicity correction; differences whose CI excludes 0 in one of ~30 strata are descriptive.</li>
+<li>F / R / FF are defined on P2 seed 0 as in decision 147; the taxonomy uses the 2-seed mean. Decoder and probe readouts are DAC-only.</li>
+<li>Inputs differ (WA: 4 cameras, 2 Hz history; P2: front cameras, protocol W). WA-JEPA is a single run on every benchmark.</li>
+<li>The case figure shows P2's current road frame only (it also sees the wide camera and 8 history slots); GIF-style context is on the
+<a href="../../../op_parity/results/gap/index.html">op_parity gap page</a>.</li>
+</ul>
+<p class="note">Reproduce: <code>experiments/op_probe/scripts/opj_build.py</code> (box: attrs / table / cases / export / frames; devkit replays via
+<code>opb_score.py</code>), then <code>.venv/bin/python experiments/op_probe/scripts/opj_figs.py --cases DIR</code> (Mac). Per-token tables in
+<code>results/joint/data/</code>, every number on this page in <a href="stats.json">stats.json</a>.</p>
+</main></body></html>
