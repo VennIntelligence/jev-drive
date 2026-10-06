@@ -9,7 +9,7 @@ table{border-collapse:collapse;margin:12px 0;font-size:14px}th,td{border:1px sol
 figure{margin:20px 0}img{max-width:100%}figcaption{font-size:14px;color:#444}
 @media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}}
 </style></head><body>
-<h1>用模型自己的 plan 来转向：转弯路线更差，但没有打转或振荡</h1>
+<h1>用模型自己的 plan 来转向：单点转换更差，平滑转换更好，传统横向 MPC 与 spec 持平</h1>
 <div class="v"><b>结论：联合训练 plan 与 action 的理由，在这个检验里没有得到支持。</b>把 HUGSIM spec 预设的横向曲率从 action 头换成 plan 的曲率（openpilot 的 get_curvature_from_plan，0.275 秒处的偏航与偏航率），其余链路（clip、延迟、纵向）不变。4 个臂（P2 与 P2+hinge 各两个 seed）×64 个场景：全部 HD 0.339（spec 0.394，exam 0.398，WA-JEPA 0.451）；23 条转弯路线 HD 0.170（spec 0.279，WA-JEPA 0.442）；41 条直路线 0.433（spec 0.459）。转弯路线上配对差 -0.109（95% 区间 -0.198 到 -0.029），3 胜 12 负 8 平，每个臂单独看也都是负的。</div>
 <h2>设置</h2>
 <p>新预设 <code>spec_plan</code>：横向指令曲率 = 2ψ(t)/(v·t) − 偏航率(0)/v，t = 0.275 秒，ψ 与偏航率取自模型 plan 输出的偏航通道。之后仍经过 clip_curvature、0.25 秒横向延迟，纵向仍由 iLQR 跟随 plan 的速度。对照是同一批臂已有的 spec 与 exam 结果，没有重跑。转弯路线指记录路线的航向变化范围不小于 30°，共 23 条；其余 41 条为直路线。</p>
@@ -36,8 +36,45 @@ figure{margin:20px 0}img{max-width:100%}figcaption{font-size:14px;color:#444}
 <tr><td>spec</td><td>-0.056 [-0.108, -0.007]</td><td>-0.109 [-0.198, -0.029]</td><td>-0.026 [-0.092, +0.037]</td></tr>
 <tr><td>exam</td><td>-0.059 [-0.122, -0.001]</td><td>-0.141 [-0.228, -0.062]</td><td>-0.013 [-0.095, +0.069]</td></tr>
 <tr><td>WA-JEPA 0.451</td><td>-0.112 [-0.201, -0.025]</td><td>-0.271 [-0.413, -0.137]</td><td>-0.023 [-0.128, +0.084]</td></tr></table>
-<h2>局限与偏差</h2>
-<ul><li>只检验了 openpilot 原样的单点转换；对 plan 做平滑（例如取 0.5 到 1.5 秒的平均曲率）没有检验，那属于声明的执行层选择，不是 openpilot 自己的路径。</li>
+<h2>后续检验：平滑转换与 openpilot 旧版横向 MPC</h2>
+<div class="v"><b>结论：plan 是可以拿来转向的，只是单点转换太抖。</b>把曲率取为 plan 在 0.5 到 1.5 秒内的平均曲率（航向变化除以弧长，开环转换），再走同样的 clip 与 0.25 秒延迟：转弯路线 HD 0.333（spec 0.279，配对 +0.054，区间 +0.006 到 +0.116），平均每臂走完 5.25 条转弯（spec 为 2.0），4 个臂全部 64 个场景零打转，曲率变号几乎为零。全部 64 个场景 HD 0.428（spec 0.394，WA-JEPA 0.451）。旧版 openpilot 横向 MPC 在转弯路线上 0.291，与 spec 持平（配对 +0.013，区间 -0.006 到 +0.033），也零打转。两者在转弯路线上都没追上 WA-JEPA（0.442）。</div>
+<h3>两个新臂怎么做的</h3>
+<p><b>spec_plan_smooth：</b>曲率 = (ψ(1.5 s) − ψ(0.5 s)) / (s(1.5 s) − s(0.5 s))，ψ 为 plan 偏航角，s 为 plan 位置累计弧长，弧长下限 1 米；窗口是事先定的，没有调。</p>
+<p><b>spec_plan_mpc：</b>openpilot v0.9.4（提交 68aba7ce）的 lateral_planner.py 与 lat_mpc.py，加 controlsd 的 get_lag_adjusted_curvature（延迟补偿 0.275 秒、曲率变化率限制）。每一步把 plan 表达在当前车体坐标系里作为参考，代价权重为路径 1.0、航向 0.11、横向加加速度 0.04、转向速率 700，初始偏航率沿用上一步解出的期望偏航率。与原版的差别：acados 的 SQP_RTI 换成小角度线性化后的精确二次规划解，不加状态边界，旋转半径用丰田级常数，不做速度误差修正。圆弧测试：目标曲率 0.030，稳态输出 0.0284。</p>
+<table><tr><th>HD-Score（4 臂均值）</th><th>exam</th><th>spec</th><th>spec_plan</th><th>smooth</th><th>MPC</th><th>WA-JEPA</th></tr>
+<tr><td>全部 64</td><td>0.398</td><td>0.394</td><td>0.339</td><td><b>0.428</b></td><td>0.395</td><td>0.451</td></tr>
+<tr><td>转弯 23</td><td>0.312</td><td>0.279</td><td>0.170</td><td><b>0.333</b></td><td>0.291</td><td>0.442</td></tr>
+<tr><td>直路 41</td><td>0.446</td><td>0.459</td><td>0.433</td><td>0.482</td><td>0.454</td><td>0.456</td></tr></table>
+<figure><img src="figs/fig1_hd.png" alt=""><figcaption>五种预设下的 HD-Score（两个 seed 的均值，竖线为 95% 区间），虚线为 WA-JEPA。</figcaption></figure>
+<table><tr><th>转弯路线每臂平均场景数</th><th>完成</th><th>打转</th><th>背景碰撞</th><th>前景碰撞</th><th>偏离路线</th></tr>
+<tr><td>exam</td><td>3.25</td><td>5.5</td><td>4.5</td><td>9.0</td><td>0.75</td></tr>
+<tr><td>spec</td><td>2.0</td><td>1.5</td><td>9.0</td><td>7.5</td><td>3.0</td></tr>
+<tr><td>spec_plan（单点）</td><td>0.25</td><td>2.25</td><td>4.75</td><td>11.25</td><td>4.5</td></tr>
+<tr><td>smooth</td><td>5.25</td><td>0</td><td>6.0</td><td>10.25</td><td>1.5</td></tr>
+<tr><td>MPC</td><td>3.0</td><td>0</td><td>7.0</td><td>9.5</td><td>3.5</td></tr>
+<tr><td>WA-JEPA</td><td>8</td><td>1</td><td>0</td><td>9</td><td>5</td></tr></table>
+<figure><img src="figs/fig3_classes.png" alt=""><figcaption>结局类别。smooth 在转弯路线上完成最多，且两个新臂都没有打转。</figcaption></figure>
+<table><tr><th>配对差（转弯 23）</th><th>均值与区间</th><th>胜 / 负 / 平</th></tr>
+<tr><td>smooth − spec</td><td>+0.054 [+0.006, +0.116]</td><td>8 / 3 / 12</td></tr>
+<tr><td>smooth − exam</td><td>+0.021 [−0.059, +0.102]</td><td>8 / 4 / 11</td></tr>
+<tr><td>smooth − spec_plan</td><td>+0.162 [+0.065, +0.268]</td><td>11 / 2 / 10</td></tr>
+<tr><td>smooth − WA-JEPA</td><td>−0.109 [−0.273, +0.035]</td><td>8 / 8 / 7</td></tr>
+<tr><td>MPC − spec</td><td>+0.013 [−0.006, +0.033]</td><td>6 / 3 / 14</td></tr>
+<tr><td>MPC − exam</td><td>−0.020 [−0.105, +0.061]</td><td>8 / 6 / 9</td></tr>
+<tr><td>MPC − spec_plan</td><td>+0.121 [+0.036, +0.214]</td><td>12 / 3 / 8</td></tr>
+<tr><td>MPC − WA-JEPA</td><td>−0.150 [−0.299, −0.026]</td><td>8 / 9 / 6</td></tr></table>
+<figure><img src="figs/fig2_paired.png" alt=""><figcaption>每个场景四个臂的平均 HD，纵轴为三种 plan 转向，横轴为 spec；橙色为转弯路线。</figcaption></figure>
+<h3>打转、振荡与曲率请求</h3>
+<p>两个新臂在 4 个臂 × 64 个场景里都是零打转（spec 为 2、1、2、2，exam 为 8、11、7、11）。每 100 个行驶步的航向率变号数：smooth 0 到 0.08，MPC 为 0，spec 为 0，单点转换 1.9 到 3.0。转弯路线上请求曲率的平均绝对值与相邻步变化（1/m）：spec 0.0066 与 0.0018，单点 0.0220 与 0.0090，smooth 0.0141 与 0.0035，MPC 0.0089 与 0.0013。直路线 smooth 0.0028 与 0.0009，MPC 0.0020 与 0.0003。</p>
+<figure><img src="figs/fig4_oscillation.png" alt=""><figcaption>转弯路线上的航向率变号比例与均方根。</figcaption></figure>
+<figure><img src="figs/fig6_kappa.png" alt=""><figcaption>请求曲率的幅值与相邻步变化。</figcaption></figure>
+<h3>怎么读</h3>
+<ul><li>单点转换的失败来自噪声放大，不是 plan 本身不稳：把窗口拉到 0.5 到 1.5 秒就从最差变成最好。</li>
+<li>MPC 给出最平滑的曲率，但转弯路线上并不比 spec 好；它的稳态增益约 0.95，转弯保守。转弯路线上剩下的失败主要是前景和背景碰撞（9.5 与 7.0 个），不是转向抖动。</li>
+<li>支持联合训练 plan 与 action 的理由比第一次检验强：plan 的曲率经平滑后已经超过 action 头，转弯路线上与 exam（HUGSIM 自带的 iLQR 跟踪）持平；但仍低于 WA-JEPA，区间包含零但偏负。</li>
+<li>局限：转弯 23 条来自 17 个场景；单场景差别小于约 0.2 不算证据；MPC 是 acados 的二次规划替代，常数未针对 P2 的 plan 调整。</li></ul>
+<h2>局限与偏差（第一次检验）</h2>
+<ul><li>第一次检验只用 openpilot 原样的单点转换；平滑与 MPC 见上一节，平滑属于声明的执行层选择，不是 openpilot 自己的路径。</li>
 <li>每个场景一次运行；单场景差别小于约 0.2 不算证据；转弯路线来自 17 个场景。</li>
 <li>本次运行把单场景超时降到 600 秒、重试 2 次，并让 unix socket 连接带重试；P2-F-s0 有三个场景在高并发下起动失败两次，单独重跑后 768 次运行全部完成。</li></ul>
 <p>数据与表格：experiments/op_parity/results/hugsim_specplan.md 及其目录下 tables.md。</p>

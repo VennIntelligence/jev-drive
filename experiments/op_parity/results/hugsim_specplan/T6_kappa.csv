@@ -1,7 +1,11 @@
 turning,preset,k_abs,k_step,k_sign_flips
 False,exam,0.0045,0.0015,0.076
+False,mpc,0.002,0.0003,0.0104
+False,smooth,0.0028,0.0009,0.0594
 False,spec,0.0036,0.0011,0.0673
 False,specplan,0.0126,0.0071,0.131
 True,exam,0.0113,0.003,0.0765
+True,mpc,0.0089,0.0013,0.0229
+True,smooth,0.0141,0.0035,0.0501
 True,spec,0.0066,0.0018,0.0686
 True,specplan,0.022,0.009,0.1159

@@ -1,24 +1,24 @@
-scenario,route turn deg,exam,spec,specplan,"specplan classes (P2 s0, s1, hinge s0, s1)"
-scene-0041-medium-00,86.0,0.138,0.166,0.126,fg_coll fg_coll fg_coll fg_coll
-scene-100613054308-hard-00,37.0,0.55,0.182,0.135,fg_coll fg_coll fg_coll fg_coll
-scene-102751446607-medium-01,92.0,0.784,0.95,0.382,off_route off_route fg_coll off_route
-scene-113792265837-easy-00,86.0,0.742,0.829,0.762,spin off_route off_route spin
-scene-1290_1490-medium-01,154.0,0.156,0.147,0.116,fg_coll fg_coll fg_coll fg_coll
-scene-132384196576-medium-01,40.0,0.803,0.984,0.376,spin complete spin spin
-scene-144248042870-extreme-00,64.0,0.0,0.004,0.0,fg_coll fg_coll fg_coll fg_coll
-scene-152217047339-extreme-00,44.0,0.064,0.051,0.046,fg_coll fg_coll fg_coll fg_coll
-scene-152217047339-medium-00,44.0,0.78,0.222,0.261,off_route off_route off_route off_route
-scene-164701907483-easy-00,108.0,0.135,0.439,0.113,spin spin spin spin
-scene-164701907483-hard-00,108.0,0.401,0.433,0.128,fg_coll fg_coll fg_coll fg_coll
-scene-166085257829-extreme-00,82.0,0.092,0.039,0.155,fg_coll fg_coll fg_coll fg_coll
-scene-3000_3200-hard-00,237.0,0.044,0.062,0.053,bg_coll bg_coll bg_coll bg_coll
-scene-3000_3200-medium-00,237.0,0.08,0.079,0.053,bg_coll bg_coll bg_coll bg_coll
-scene-3400_3600-extreme-00,80.0,0.0,0.0,0.0,fg_coll fg_coll fg_coll fg_coll
-scene-3400_3600-hard-00,80.0,0.057,0.053,0.05,fg_coll fg_coll fg_coll fg_coll
-scene-570_770-easy-00,96.0,0.211,0.205,0.205,off_route bg_coll off_route off_route
-scene-570_770-medium-00,96.0,0.2,0.215,0.19,off_route off_route bg_coll bg_coll
-scene-5980_6180-easy-00,102.0,0.44,0.254,0.219,off_route off_route off_route off_route
-scene-5980_6180-extreme-00,102.0,0.009,0.008,0.008,fg_coll fg_coll fg_coll fg_coll
-scene-770_970-extreme-00,107.0,0.024,0.022,0.02,fg_coll fg_coll fg_coll fg_coll
-scene-8440_8640-easy-00,87.0,0.594,0.712,0.102,bg_coll bg_coll bg_coll bg_coll
-scene-881121006469-hard-00,73.0,0.862,0.36,0.417,bg_coll bg_coll bg_coll bg_coll
+scenario,route turn deg,exam,spec,specplan,smooth,mpc,"specplan classes (P2 s0, s1, hinge s0, s1)","smooth classes (P2 s0, s1, hinge s0, s1)","mpc classes (P2 s0, s1, hinge s0, s1)"
+scene-0041-medium-00,86.0,0.138,0.166,0.126,0.194,0.17,fg_coll fg_coll fg_coll fg_coll,bg_coll bg_coll bg_coll bg_coll,fg_coll off_route off_route off_route
+scene-100613054308-hard-00,37.0,0.55,0.182,0.135,0.169,0.165,fg_coll fg_coll fg_coll fg_coll,bg_coll bg_coll bg_coll bg_coll,bg_coll bg_coll bg_coll bg_coll
+scene-102751446607-medium-01,92.0,0.784,0.95,0.382,0.997,0.98,off_route off_route fg_coll off_route,complete complete complete complete,bg_coll complete bg_coll bg_coll
+scene-113792265837-easy-00,86.0,0.742,0.829,0.762,0.998,0.99,spin off_route off_route spin,complete complete complete complete,complete complete complete complete
+scene-1290_1490-medium-01,154.0,0.156,0.147,0.116,0.161,0.162,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll
+scene-132384196576-medium-01,40.0,0.803,0.984,0.376,0.993,0.993,spin complete spin spin,complete complete complete complete,complete complete complete complete
+scene-144248042870-extreme-00,64.0,0.0,0.004,0.0,0.001,0.026,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll,bg_coll bg_coll bg_coll bg_coll
+scene-152217047339-extreme-00,44.0,0.064,0.051,0.046,0.054,0.045,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll
+scene-152217047339-medium-00,44.0,0.78,0.222,0.261,0.819,0.289,off_route off_route off_route off_route,bg_coll complete complete complete,bg_coll bg_coll bg_coll bg_coll
+scene-164701907483-easy-00,108.0,0.135,0.439,0.113,0.706,0.491,spin spin spin spin,complete bg_coll complete complete,off_route complete off_route bg_coll
+scene-164701907483-hard-00,108.0,0.401,0.433,0.128,0.596,0.535,fg_coll fg_coll fg_coll fg_coll,complete fg_coll complete complete,bg_coll fg_coll complete complete
+scene-166085257829-extreme-00,82.0,0.092,0.039,0.155,0.075,0.042,fg_coll fg_coll fg_coll fg_coll,bg_coll bg_coll bg_coll bg_coll,bg_coll bg_coll bg_coll bg_coll
+scene-3000_3200-hard-00,237.0,0.044,0.062,0.053,0.052,0.053,bg_coll bg_coll bg_coll bg_coll,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll
+scene-3000_3200-medium-00,237.0,0.08,0.079,0.053,0.029,0.004,bg_coll bg_coll bg_coll bg_coll,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll
+scene-3400_3600-extreme-00,80.0,0.0,0.0,0.0,0.0,0.0,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll
+scene-3400_3600-hard-00,80.0,0.057,0.053,0.05,0.06,0.056,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll
+scene-570_770-easy-00,96.0,0.211,0.205,0.205,0.208,0.202,off_route bg_coll off_route off_route,bg_coll off_route off_route off_route,off_route off_route bg_coll off_route
+scene-570_770-medium-00,96.0,0.2,0.215,0.19,0.217,0.216,off_route off_route bg_coll bg_coll,off_route bg_coll off_route off_route,bg_coll bg_coll off_route bg_coll
+scene-5980_6180-easy-00,102.0,0.44,0.254,0.219,0.215,0.21,off_route off_route off_route off_route,bg_coll bg_coll bg_coll bg_coll,bg_coll off_route bg_coll bg_coll
+scene-5980_6180-extreme-00,102.0,0.009,0.008,0.008,0.009,0.007,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll
+scene-770_970-extreme-00,107.0,0.024,0.022,0.02,0.025,0.025,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll
+scene-8440_8640-easy-00,87.0,0.594,0.712,0.102,0.64,0.677,bg_coll bg_coll bg_coll bg_coll,bg_coll bg_coll bg_coll bg_coll,off_route off_route off_route off_route
+scene-881121006469-hard-00,73.0,0.862,0.36,0.417,0.434,0.362,bg_coll bg_coll bg_coll bg_coll,fg_coll fg_coll fg_coll fg_coll,fg_coll fg_coll fg_coll fg_coll

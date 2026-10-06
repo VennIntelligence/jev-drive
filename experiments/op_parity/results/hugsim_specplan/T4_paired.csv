@@ -2,35 +2,123 @@ group,stratum,comparison,mean diff [CI],wins,losses,ties
 P2,all 64,specplan - spec,"-0.055 [-0.107, -0.007]",13,22,29
 P2,all 64,specplan - exam,"-0.057 [-0.118, +0.001]",15,24,25
 P2,all 64,specplan - WA-JEPA,"-0.112 [-0.200, -0.027]",24,24,16
+P2,all 64,smooth - spec,"+0.030 [+0.003, +0.063]",15,7,42
+P2,all 64,smooth - exam,"+0.028 [-0.018, +0.074]",18,9,37
+P2,all 64,smooth - specplan,"+0.085 [+0.029, +0.149]",22,14,28
+P2,all 64,smooth - WA-JEPA,"-0.027 [-0.105, +0.043]",30,16,18
+P2,all 64,mpc - spec,"+0.002 [-0.008, +0.014]",8,9,47
+P2,all 64,mpc - exam,"+0.000 [-0.050, +0.051]",18,17,29
+P2,all 64,mpc - specplan,"+0.058 [+0.008, +0.111]",21,13,30
+P2,all 64,mpc - WA-JEPA,"-0.055 [-0.133, +0.018]",28,20,16
 P2,turning 23,specplan - spec,"-0.108 [-0.190, -0.037]",2,11,10
 P2,turning 23,specplan - exam,"-0.129 [-0.212, -0.055]",1,13,9
 P2,turning 23,specplan - WA-JEPA,"-0.270 [-0.411, -0.142]",4,14,5
+P2,turning 23,smooth - spec,"+0.033 [+0.001, +0.078]",7,3,13
+P2,turning 23,smooth - exam,"+0.012 [-0.069, +0.084]",9,4,10
+P2,turning 23,smooth - specplan,"+0.141 [+0.060, +0.231]",12,2,9
+P2,turning 23,smooth - WA-JEPA,"-0.129 [-0.284, +0.003]",8,8,7
+P2,turning 23,mpc - spec,"+0.004 [-0.014, +0.024]",5,5,13
+P2,turning 23,mpc - exam,"-0.016 [-0.103, +0.061]",9,7,7
+P2,turning 23,mpc - specplan,"+0.112 [+0.034, +0.198]",11,2,10
+P2,turning 23,mpc - WA-JEPA,"-0.158 [-0.305, -0.037]",8,9,6
 P2,straight 41,specplan - spec,"-0.026 [-0.092, +0.036]",11,11,19
 P2,straight 41,specplan - exam,"-0.018 [-0.100, +0.068]",14,11,16
 P2,straight 41,specplan - WA-JEPA,"-0.024 [-0.130, +0.081]",20,10,11
+P2,straight 41,smooth - spec,"+0.028 [-0.006, +0.080]",8,4,29
+P2,straight 41,smooth - exam,"+0.037 [-0.020, +0.089]",9,5,27
+P2,straight 41,smooth - specplan,"+0.054 [-0.021, +0.136]",10,12,19
+P2,straight 41,smooth - WA-JEPA,"+0.030 [-0.051, +0.114]",22,8,11
+P2,straight 41,mpc - spec,"+0.001 [-0.010, +0.015]",3,4,34
+P2,straight 41,mpc - exam,"+0.009 [-0.064, +0.074]",9,10,22
+P2,straight 41,mpc - specplan,"+0.027 [-0.037, +0.092]",10,11,20
+P2,straight 41,mpc - WA-JEPA,"+0.003 [-0.089, +0.091]",20,11,10
 P2+hinge,all 64,specplan - spec,"-0.056 [-0.115, -0.002]",14,18,32
 P2+hinge,all 64,specplan - exam,"-0.061 [-0.131, +0.004]",17,21,26
 P2+hinge,all 64,specplan - WA-JEPA,"-0.112 [-0.204, -0.021]",26,24,14
+P2+hinge,all 64,smooth - spec,"+0.038 [+0.001, +0.078]",16,8,40
+P2+hinge,all 64,smooth - exam,"+0.033 [-0.007, +0.078]",17,9,38
+P2+hinge,all 64,smooth - specplan,"+0.094 [+0.026, +0.166]",21,15,28
+P2+hinge,all 64,smooth - WA-JEPA,"-0.018 [-0.096, +0.054]",31,16,17
+P2+hinge,all 64,mpc - spec,"-0.001 [-0.022, +0.017]",8,9,47
+P2+hinge,all 64,mpc - exam,"-0.005 [-0.054, +0.042]",19,17,28
+P2+hinge,all 64,mpc - specplan,"+0.056 [-0.003, +0.120]",22,16,26
+P2+hinge,all 64,mpc - WA-JEPA,"-0.056 [-0.130, +0.013]",29,21,14
 P2+hinge,turning 23,specplan - spec,"-0.110 [-0.212, -0.019]",4,11,8
 P2+hinge,turning 23,specplan - exam,"-0.154 [-0.252, -0.055]",2,10,11
 P2+hinge,turning 23,specplan - WA-JEPA,"-0.273 [-0.426, -0.137]",5,13,5
+P2+hinge,turning 23,smooth - spec,"+0.074 [+0.010, +0.158]",8,4,11
+P2+hinge,turning 23,smooth - exam,"+0.030 [-0.057, +0.123]",8,4,11
+P2+hinge,turning 23,smooth - specplan,"+0.184 [+0.068, +0.307]",11,3,9
+P2+hinge,turning 23,smooth - WA-JEPA,"-0.090 [-0.260, +0.068]",8,8,7
+P2+hinge,turning 23,mpc - spec,"+0.021 [-0.007, +0.056]",4,3,16
+P2+hinge,turning 23,mpc - exam,"-0.024 [-0.119, +0.065]",8,6,9
+P2+hinge,turning 23,mpc - specplan,"+0.130 [+0.034, +0.239]",12,3,8
+P2+hinge,turning 23,mpc - WA-JEPA,"-0.143 [-0.295, -0.015]",8,10,5
 P2+hinge,straight 41,specplan - spec,"-0.027 [-0.098, +0.039]",10,7,24
 P2+hinge,straight 41,specplan - exam,"-0.009 [-0.097, +0.073]",15,11,15
 P2+hinge,straight 41,specplan - WA-JEPA,"-0.021 [-0.130, +0.090]",21,11,9
+P2+hinge,straight 41,smooth - spec,"+0.017 [-0.024, +0.067]",8,4,29
+P2+hinge,straight 41,smooth - exam,"+0.035 [-0.006, +0.078]",9,5,27
+P2+hinge,straight 41,smooth - specplan,"+0.044 [-0.035, +0.133]",10,12,19
+P2+hinge,straight 41,smooth - WA-JEPA,"+0.023 [-0.052, +0.092]",23,8,10
+P2+hinge,straight 41,mpc - spec,"-0.013 [-0.041, +0.006]",4,6,31
+P2+hinge,straight 41,mpc - exam,"+0.005 [-0.057, +0.059]",11,11,19
+P2+hinge,straight 41,mpc - specplan,"+0.014 [-0.056, +0.090]",10,13,18
+P2+hinge,straight 41,mpc - WA-JEPA,"-0.007 [-0.092, +0.067]",21,11,9
 all 4,all 64,specplan - spec,"-0.056 [-0.108, -0.007]",15,23,26
 all 4,all 64,specplan - exam,"-0.059 [-0.122, -0.001]",15,22,27
 all 4,all 64,specplan - WA-JEPA,"-0.112 [-0.201, -0.025]",25,25,14
+all 4,all 64,smooth - spec,"+0.034 [+0.005, +0.068]",16,8,40
+all 4,all 64,smooth - exam,"+0.031 [-0.009, +0.073]",18,9,37
+all 4,all 64,smooth - specplan,"+0.090 [+0.032, +0.155]",21,13,30
+all 4,all 64,smooth - WA-JEPA,"-0.022 [-0.102, +0.046]",31,16,17
+all 4,all 64,mpc - spec,"+0.001 [-0.011, +0.012]",10,8,46
+all 4,all 64,mpc - exam,"-0.003 [-0.050, +0.047]",20,15,29
+all 4,all 64,mpc - specplan,"+0.057 [+0.006, +0.112]",21,16,27
+all 4,all 64,mpc - WA-JEPA,"-0.055 [-0.132, +0.013]",29,20,15
 all 4,turning 23,specplan - spec,"-0.109 [-0.198, -0.029]",3,12,8
 all 4,turning 23,specplan - exam,"-0.141 [-0.228, -0.062]",1,11,11
 all 4,turning 23,specplan - WA-JEPA,"-0.271 [-0.413, -0.137]",4,14,5
+all 4,turning 23,smooth - spec,"+0.054 [+0.006, +0.116]",8,3,12
+all 4,turning 23,smooth - exam,"+0.021 [-0.059, +0.102]",8,4,11
+all 4,turning 23,smooth - specplan,"+0.162 [+0.065, +0.268]",11,2,10
+all 4,turning 23,smooth - WA-JEPA,"-0.109 [-0.273, +0.035]",8,8,7
+all 4,turning 23,mpc - spec,"+0.013 [-0.006, +0.033]",6,3,14
+all 4,turning 23,mpc - exam,"-0.020 [-0.105, +0.061]",8,6,9
+all 4,turning 23,mpc - specplan,"+0.121 [+0.036, +0.214]",12,3,8
+all 4,turning 23,mpc - WA-JEPA,"-0.150 [-0.299, -0.026]",8,9,6
 all 4,straight 41,specplan - spec,"-0.026 [-0.092, +0.037]",12,11,18
 all 4,straight 41,specplan - exam,"-0.013 [-0.095, +0.069]",14,11,16
 all 4,straight 41,specplan - WA-JEPA,"-0.023 [-0.128, +0.084]",21,11,9
+all 4,straight 41,smooth - spec,"+0.023 [-0.012, +0.072]",8,5,28
+all 4,straight 41,smooth - exam,"+0.036 [-0.012, +0.082]",10,5,26
+all 4,straight 41,smooth - specplan,"+0.049 [-0.024, +0.130]",10,11,20
+all 4,straight 41,smooth - WA-JEPA,"+0.026 [-0.052, +0.101]",23,8,10
+all 4,straight 41,mpc - spec,"-0.006 [-0.022, +0.008]",4,5,32
+all 4,straight 41,mpc - exam,"+0.007 [-0.057, +0.065]",12,9,20
+all 4,straight 41,mpc - specplan,"+0.020 [-0.044, +0.089]",9,13,19
+all 4,straight 41,mpc - WA-JEPA,"-0.002 [-0.089, +0.079]",21,11,9
 P2-F-s0,all 64,specplan - spec,"-0.046 [-0.110, +0.014]",14,23,27
 P2-F-s0,all 64,specplan - exam,"-0.082 [-0.160, -0.006]",13,24,27
+P2-F-s0,all 64,smooth - spec,"+0.040 [+0.008, +0.078]",14,8,42
+P2-F-s0,all 64,smooth - exam,"+0.003 [-0.059, +0.064]",16,15,33
+P2-F-s0,all 64,mpc - spec,"+0.008 [-0.006, +0.024]",8,9,47
+P2-F-s0,all 64,mpc - exam,"-0.028 [-0.091, +0.030]",17,16,31
 P2-F-s1,all 64,specplan - spec,"-0.064 [-0.115, -0.020]",10,22,32
 P2-F-s1,all 64,specplan - exam,"-0.033 [-0.096, +0.026]",16,19,29
+P2-F-s1,all 64,smooth - spec,"+0.021 [-0.011, +0.061]",12,10,42
+P2-F-s1,all 64,smooth - exam,"+0.052 [+0.009, +0.102]",17,8,39
+P2-F-s1,all 64,mpc - spec,"-0.003 [-0.017, +0.011]",9,13,42
+P2-F-s1,all 64,mpc - exam,"+0.029 [-0.030, +0.090]",19,15,30
 P2H10-F-s0,all 64,specplan - spec,"-0.041 [-0.103, +0.022]",14,18,32
 P2H10-F-s0,all 64,specplan - exam,"-0.066 [-0.151, +0.015]",16,23,25
+P2H10-F-s0,all 64,smooth - spec,"+0.030 [-0.017, +0.076]",17,8,39
+P2H10-F-s0,all 64,smooth - exam,"+0.006 [-0.043, +0.054]",15,13,36
+P2H10-F-s0,all 64,mpc - spec,"-0.008 [-0.047, +0.018]",10,9,45
+P2H10-F-s0,all 64,mpc - exam,"-0.033 [-0.088, +0.021]",18,17,29
 P2H10-F-s1,all 64,specplan - spec,"-0.071 [-0.132, -0.017]",13,23,28
 P2H10-F-s1,all 64,specplan - exam,"-0.056 [-0.123, +0.004]",17,21,26
+P2H10-F-s1,all 64,smooth - spec,"+0.045 [+0.013, +0.085]",14,8,42
+P2H10-F-s1,all 64,smooth - exam,"+0.061 [+0.015, +0.112]",20,8,36
+P2H10-F-s1,all 64,mpc - spec,"+0.007 [-0.004, +0.021]",11,13,40
+P2H10-F-s1,all 64,mpc - exam,"+0.022 [-0.032, +0.077]",19,15,30

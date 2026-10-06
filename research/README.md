@@ -15,7 +15,7 @@
 [2026-10-06-d125-d135-review.md](2026-10-06-d125-d135-review.md)（第 125–135 条实验逐条复核：图、动图、数字、核对出的不一致）；
 [factorized-world-model.md](factorized-world-model.md)（分解世界模型文献查新：ego 精确、外生预训练）；
 [turn-gain/index.html](turn-gain/index.html)（转弯增益诊断：P2 急转弯失败是轻微比例缩小，不是封顶，控制链路不裁剪）；
-[hugsim-specplan/index.html](hugsim-specplan/index.html)（用模型自己的 plan 曲率转向：HUGSIM 转弯路线 HD 0.17 对 0.28，不转圈但更抖，联合训练理由不成立）；
+[hugsim-specplan/index.html](hugsim-specplan/index.html)（用模型自己的 plan 转向：单点曲率更差（转弯 HD 0.17 对 0.28），0.5 到 1.5 秒平均曲率更好（0.333），旧版横向 MPC 持平）；
 `articles/`（深度长文）、`roadmap/`、`lit/`（不进 git）只在这台 Mac 上。
 
 ## 写作惯例
