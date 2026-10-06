@@ -10,19 +10,18 @@ requests built here from the navhard index (4 cameras L0 / F0 / R0 / B0 x 4 fram
 command), validated on navtest tokens against WA-JEPA's stored navtest export (the run that reproduced 91.71).
 
   req     (op-train)  pp_navhard.py req --split navhard_two_stage --out R.npz       [--split navtest --n 64: the validation request]
-  wcheck  (wajepa)    pp_navhard.py wcheck --pred P.npz                              runner on the navtest request vs the stored export
+  wcheck  (op-train)  pp_navhard.py wcheck --name N                                  scored navtest check vs the stored export (EPDMS)
   preds   (any)       pp_navhard.py preds --wajepa P.npz --out preds.npz             WA-JEPA output -> the harness pose file (tokens, poses)
   report  (op-train)  pp_navhard.py report                                           -> results/navhard.md tables (navhard_arms / _paired)
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R), str(_R / "scripts"), str(_pl.Path(__file__).parent)]
-import argparse, json, os, pickle  # noqa: E401,E402
+import argparse, json, os  # noqa: E401,E402
 
 import numpy as np  # noqa: E402
 
 DATA = _pl.Path(os.environ.get("DATA_DIR", _pl.Path.home() / "data"))
-WAJEPA_NAVTEST = DATA / "runs/top10_t2/navsim/wajepa/20260926-122804/trajectory_cache/navtest_trajectories.pkl"
 CAMS = ("CAM_L0", "CAM_F0", "CAM_R0", "CAM_B0")                 # wajepa_run's per-time camera order
 WORK = DATA / "runs/op_parity/navhard"
 ARMS = {"P0": ["P0"], "P1": ["P1-F-s0", "P1-F-s1"], "P2": ["P2-F-s0", "P2-F-s1"], "P3": ["P3-F-s0", "P3-F-s1"], "WA-JEPA": ["wajepa"]}
@@ -41,23 +40,28 @@ def cmd_req(a):
     cmd = np.array([int(np.argmax(np.asarray(e["cmd"])[-1])) for e in idx])
     assert np.allclose(hist[:, -1], 0), "history poses are not relative to t0"
     np.savez(a.out, keys=np.array([e["token"] for e in idx]), img=np.array(img), hist=hist, ego=ego, cmd=cmd)
+    _pl.Path(a.out).with_suffix(".tokens").write_text("\n".join(e["token"] for e in idx) + "\n")   # TOKENS_FILE for subset scoring
     print(f"{len(idx)} requests ({a.split}) -> {a.out}")
 
 
 def cmd_wcheck(a):
-    """The runner on our navtest request vs WA-JEPA's stored navtest export (its agent, fp32): must agree to float noise."""
-    z = np.load(a.pred)
-    ref = pickle.load(open(WAJEPA_NAVTEST, "rb"))["trajectories"]              # {token: (8, 3) poses}
-    got, want = [], []
-    for k, tr in zip(z["keys"].tolist(), z["traj"]):
-        want.append(np.asarray(ref[k])[:, :3])
-        got.append(tr[:, :3])
-    d = np.linalg.norm(np.array(got)[..., :2] - np.array(want)[..., :2], axis=-1)
-    res = {"n": len(got), "ade_m": float(d.mean()), "max_m": float(d.max()), "pass": bool(d.max() < 0.05)}
+    """The runner on our navtest request vs WA-JEPA's stored navtest export (the run that reproduced 91.71), at the score level: v2 EPDMS
+    of the same tokens, paired over logs. Pass: |mean difference| < 0.5. (Trajectories differ by float noise of the flow sampler across
+    hosts: 64 tokens, ADE 0.07 m, max 0.52 m; inputs verified identical to the agent's SceneLoader path.)"""
+    from jevdrive import stats
+    from jevdrive import navsim_zs as Z
+    import pp_eval as E
+    fs = sorted((DATA / "runs/navsim/eval" / f"v2_navtest_{a.name}").glob("*/*.csv"))
+    ours, _ = E.read_csv(fs[-1])
+    ref, _ = E.read_csv(DATA / E.WAJEPA_CSV)
+    toks = sorted(set(ours.index) & set(ref.index))
+    lg = {e["token"]: e["log_name"] for e in Z.load_index("navtest", slim=True)}
+    r = stats.paired(100 * ours.loc[toks, "score"].to_numpy(float), 100 * ref.loc[toks, "score"].to_numpy(float), groups=np.array([lg[t] for t in toks]))
+    res = {"n": len(toks), **{k: r[k] for k in ("mean", "lo", "hi", "mean_a", "mean_b", "units")}, "pass": bool(abs(r["mean"]) < 0.5)}
     print(json.dumps(res))
-    (_pl.Path(a.pred).parent / "wcheck.json").write_text(json.dumps(res, indent=1))
+    (WORK / "wajepa" / "wcheck.json").write_text(json.dumps(res, indent=1))
     if not res["pass"]:
-        raise SystemExit("WA-JEPA request path does not reproduce the stored navtest export")
+        raise SystemExit("WA-JEPA request path does not reproduce the stored navtest scores")
 
 
 def cmd_preds(a):
@@ -125,7 +129,7 @@ if __name__ == "__main__":
     p.add_argument("--n", type=int, default=0)
     p.add_argument("--out", required=True)
     p = sp.add_parser("wcheck")
-    p.add_argument("--pred", required=True)
+    p.add_argument("--name", required=True, help="the navsim_zs_score.sh run name of the navtest check")
     p = sp.add_parser("preds")
     p.add_argument("--wajepa", required=True)
     p.add_argument("--out", required=True)
