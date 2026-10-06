@@ -9,9 +9,9 @@ A run = (model, preset) over a scenario set; units are scenarios. Stages:
              scenario slots. The slots of all jobs pull from one shared queue (claim files), longest expected scenario first,
              so the cards finish together. Every scenario is one `zs_run.py run` of that single scenario (resumable rows in
              <run>/results.csv), watched: no sim.log growth for `stall_s` or longer than `timeout_s` -> its process tree is
-             stopped (jevdrive.cl.procs) and it is retried; before every scenario the servers are pinged (reset round trip,
-             20 s) and restarted when dead or unresponsive. So a refused / dead socket costs one retry, not the 5400 s
-             timeout of the old shell runners.
+             stopped (jevdrive.cl.procs) and it is retried; before every scenario each server is checked (process alive, socket
+             accepting; a policy-server reset would build a model instance) and the job's servers are restarted when one is dead
+             or refusing. So a refused / dead socket costs one retry, not the 5400 s timeout of the old shell runners.
   collect    (envs/hugsim) units.csv: one row per scenario, HUGSIM's scores (hdscore, rc, nc, dac, ttc, c, pdms), the runner's
              end class and the behaviour of experiments/op_parity/results/hugsim_spin10.md (spin = heading error >= 60 deg vs the
              recorded route, experiments/hugsim/scripts/spin_analysis.py; launch stall = peak speed over the first 40 steps
@@ -146,7 +146,7 @@ def _wire():
 
 
 def ping(path: str, timeout: float = 20.0) -> bool:
-    """A reset round trip on a policy / bias server socket."""
+    """A reset round trip (bias server only: a reset on the policy server builds a model instance)."""
     wire = _wire()
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.settimeout(timeout)
@@ -156,6 +156,19 @@ def ping(path: str, timeout: float = 20.0) -> bool:
         meta, _ = wire.recv(s)
         return bool(meta.get("ok"))
     except (OSError, ValueError, KeyError):
+        return False
+    finally:
+        s.close()
+
+
+def accepts(path: str, timeout: float = 10.0) -> bool:
+    """Does the server's listening socket accept a connection? (no request: the server's connection thread sees EOF and ends)"""
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    try:
+        s.connect(path)
+        return True
+    except OSError:
         return False
     finally:
         s.close()
@@ -184,7 +197,10 @@ class Server:
             time.sleep(2)
 
     def alive(self) -> bool:
-        return self.p is not None and self.p.poll() is None and ping(self.sock)
+        """Process running and its socket accepting (twice, 5 s apart, before calling it dead)."""
+        if self.p is None or self.p.poll() is not None:
+            return False
+        return accepts(self.sock) or (time.sleep(5) is None and accepts(self.sock))
 
     def stop(self) -> None:
         from ..cl import procs
