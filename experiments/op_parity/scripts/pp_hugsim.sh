@@ -8,6 +8,7 @@
 #                         env PRESET=spec: interface preset `spec` instead (tree opctrl: openpilot's lateral path, action curvature ->
 #                         clip_curvature -> lateralDelay 0.25 s; decisions 118 / 124), zs_run tag pp-spec-<TAG>
 #                         PRESET=spec_plan: spec with the curvature of the model's own plan (modeld get_curvature_from_plan), tag pp-specplan-<TAG>
+#                         PRESET=spec_plan_smooth (mean plan curvature over 0.5-1.5 s) / spec_plan_mpc (legacy lateral MPC, lib/op_lat_mpc.py): tags pp-specplansmooth- / pp-specplanmpc-
 #                         env TIMEOUT (s per scenario, default 5400) and RETRIES (default 1)
 #   python -m jevdrive.cl submit --name pp-hug-P2 --vram 40 --cpu 12 --log-dir $DATA_DIR/runs/op_parity/hugsim/pool/P2-s0 -- \
 #       bash experiments/op_parity/scripts/pp_hugsim.sh arm P2-s0 experiments/hugsim/scripts/derot_spin10.txt 4
@@ -72,7 +73,7 @@ arm)
     bias_server "b-$TAG" "$SRV"
     op_server "op-$TAG" "$(onnx_of "$TAG")"
     if [[ ${PRESET:-exam} == spec ]]; then CTRL=(--preset spec); TREE=opctrl; PFX=pp-spec-
-    elif [[ ${PRESET:-exam} == spec_plan ]]; then CTRL=(--preset spec_plan); TREE=opctrl; PFX=pp-specplan-
+    elif [[ ${PRESET:-exam} == spec_plan* ]]; then CTRL=(--preset "$PRESET"); TREE=opctrl; PFX=pp-${PRESET//_/}-
     else CTRL=(--preset exam --controller fixed); TREE=fixed; PFX=pp-; fi
     $HPY experiments/hugsim/archive/zs_run.py setup-trees $TREE || fail setup-trees
     $HPY experiments/hugsim/archive/zs_run.py run "${CTRL[@]}" --out "$R" --agent cinque --gpu "$CL_GPU" \

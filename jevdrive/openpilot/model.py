@@ -328,6 +328,7 @@ def decode(raw, slices, v_ego, action_t=(0.275, 0.525)):
     plan = mdn_mu(s("plan"), (33, 15))
     lat_t, long_t = action_t
     curv_plan = curvature_from_plan(plan[:, 11], plan[:, 14], v_ego, lat_t)   # modeld.get_curvature_from_plan (always computed)
+    curv_smooth = curvature_window(plan[:, 0:2], plan[:, 11], *SMOOTH_WINDOW)
     if "action" in slices:
         act = mdn_mu(s("action"), (2,))
         curv, accel = act[0] / max(1.0, v_ego) ** 2, act[1]
@@ -335,7 +336,7 @@ def decode(raw, slices, v_ego, action_t=(0.275, 0.525)):
         curv = curv_plan
         accel = accel_from_plan(plan[:, 3], plan[:, 6], long_t)
     return dict(plan_pos=plan[:, 0:3], plan_vel=plan[:, 3:6], plan_acc=plan[:, 6:9], plan_yaw=plan[:, 11],
-                curvature=float(curv), curvature_plan=float(curv_plan), accel=float(accel),
+                curvature=float(curv), curvature_plan=float(curv_plan), curvature_smooth=float(curv_smooth), plan_yaw_rate=plan[:, 14], accel=float(accel),
                 lead=mdn_mu(s("lead"), (3, 6, 4)), lead_prob=sigmoid(s("lead_prob")),
                 lane_lines=mdn_mu(s("lane_lines"), (4, 33, 2)), lane_prob=sigmoid(s("lane_lines_prob"))[1::2],
                 engaged=float(sigmoid(s("meta"))[0]))
@@ -348,6 +349,17 @@ def accel_from_plan(speeds, accels, action_t):
     else:
         v_target = np.interp(action_t, T_IDXS, speeds)
     return 2 * (v_target - v_now) / action_t - a_now
+
+
+SMOOTH_WINDOW = (0.5, 1.5)
+
+
+def curvature_window(xy, yaws, t0, t1):
+    """Mean curvature of the model plan over [t0, t1] model seconds: heading change over arc length between the two plan times,
+    (psi(t1) - psi(t0)) / (s(t1) - s(t0)), s = cumulative length of the plan positions; the arc length is floored at MIN_SPEED * (t1 - t0)."""
+    s = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(xy, axis=0), axis=1))]
+    ds = np.interp(t1, T_IDXS, s) - np.interp(t0, T_IDXS, s)
+    return (np.interp(t1, T_IDXS, yaws) - np.interp(t0, T_IDXS, yaws)) / max(ds, MIN_SPEED * (t1 - t0))
 
 
 def curvature_from_plan(yaws, yaw_rates, v_ego, action_t):

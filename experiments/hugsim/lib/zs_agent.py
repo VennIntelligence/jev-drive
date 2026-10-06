@@ -42,7 +42,7 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      op_ctrl (openpilot, bool, default false; plans/2026-10-05-op-control-stack-prereg.md): append the model's desired
                      curvature (server `curvature`: action[0] / max(1, v)^2) as a last plan row [kappa, 1e9]; the HUGSIM tree `opctrl`
                      (patches/hugsim/optional/op-ctrl.patch, env OP_CTRL) strips it and steers through lib/op_ctrl.py
-                     op_ctrl_src ("action" default | "plan", needs op_ctrl; preset spec_plan): the curvature that rides is modeld's
+                     op_ctrl_src ("action" default | "plan" | "plan_smooth" | "plan_mpc", needs op_ctrl; presets spec_plan, spec_plan_smooth, spec_plan_mpc): the curvature that rides is modeld's
                      get_curvature_from_plan (the model's own plan yaw and yaw rate at the lateral action time), not the action head
                      op_long (bool, default false, needs op_ctrl; plans/2026-10-04-op-control-stack-long-prereg.md): also append the raw action
                      acceleration (server `accel` = action[1]) as the row before it, [accel, 2e9]; tree `opctrl_long` (op-ctrl-long.patch, env
@@ -153,6 +153,17 @@ class Agent:
         return dict(self.opts, parity=dict(self.opts["parity"], ego=bool(self.par.server.get("use_ego")),
                                            side=bool(self.par.server.get("use_side"))))
 
+    def lateral_kappa(self, r, out):
+        """The curvature that rides to the op path: opts op_ctrl_src action (default) | plan (modeld get_curvature_from_plan) | plan_smooth (mean curvature
+        of the plan over 0.5-1.5 s) | plan_mpc (legacy lateral MPC, lib/op_lat_mpc.py, fed the plan in the current frame)."""
+        src = self.opts.get("op_ctrl_src", "action")
+        if src == "plan_mpc":
+            if not hasattr(self, "mpc"):
+                import op_lat_mpc
+                self.mpc = op_lat_mpc.LatMpc()
+            return self.mpc.step(out["pos"], out["yaw"], out["vel"], int(self.opts.get("mpc_reps", 4)))
+        return r.get({"plan": "curvature_plan", "plan_smooth": "curvature_smooth"}.get(src, "curvature"))
+
     def call(self, meta, arrays, sock=None):
         sock = sock or self.sock
         t = time.perf_counter()
@@ -262,7 +273,7 @@ class Agent:
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)
         rec.update(desire=desire, reps=reps, infer_ms=r.get("infer_ms"), rtt_ms=r["rtt_ms"],
                    lead_prob=r.get("lead_prob"), lead_x=r.get("lead_x"), lead_v=r.get("lead_v"), engaged=r.get("engaged"),
-                   kappa=r.get("curvature_plan" if self.opts.get("op_ctrl_src") == "plan" else "curvature"), accel=r.get("accel"), model_pos=np.round(out["pos"][[4, 8, 12, 16, 20, 24, 32], :2], 3).tolist(),
+                   kappa=self.lateral_kappa(r, out), accel=r.get("accel"), model_pos=np.round(out["pos"][[4, 8, 12, 16, 20, 24, 32], :2], 3).tolist(),
                    model_v=np.round(out["vel"][[0, 8, 16, 24]], 3).tolist())
         if self.dump_every and self.step % self.dump_every == 0:
             np.savez_compressed(self.out / "zs_dump" / f"{self.step:04d}.npz", img2=img2, pos=out["pos"],

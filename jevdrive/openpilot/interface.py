@@ -245,6 +245,8 @@ HUGSIM_PRESETS = {
     # spec_plan: spec with the lateral curvature taken from the model's OWN plan (modeld.get_curvature_from_plan: yaw and yaw rate at
     # action_t 0.275 s) instead of the action head; clip_curvature, lateralDelay and the longitudinal path unchanged (a diagnostic, not openpilot)
     "spec_plan": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True, "op_ctrl_src": "plan"}),
+    "spec_plan_smooth": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True, "op_ctrl_src": "plan_smooth"}),
+    "spec_plan_mpc": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True, "op_ctrl_src": "plan_mpc"}),
     "opctrl_d118": dict(controller="opctrl", env={"OP_CTRL": {"delay": 0.25}}, opts={"op_ctrl": True}),   # alias of spec
     # legacy: the exam / every result before 2026-10-05; --controller and --opts are taken literally
     "exam": dict(controller=None, env={}, opts={}),
@@ -266,7 +268,7 @@ def resolve_hugsim(opts, controller, dataset="nuscenes", op_ctrl_env=None):
     vals = {"rig.height_m": HUGSIM_HEIGHT.get(dataset, 1.5), "rig.level": dataset != "kitti360", "rig.wide": "stitched3",
             "history.frames": "render", "history.rate_hz": 4.0, "history.clock": "hold" if hold else "dilate",
             "history.warmup": "static" if warm > 0 else "cold",
-            "lateral.source": ("plan-curvature" if o.get("op_ctrl_src") == "plan" else "action") if opc else "plan", "lateral.exec": "op-path" if opc else "ilqr",
+            "lateral.source": {"plan": "plan-curvature", "plan_smooth": "plan-smooth", "plan_mpc": "plan-mpc"}.get(o.get("op_ctrl_src"), "action") if opc else "plan", "lateral.exec": "op-path" if opc else "ilqr",
             "lateral.delay_s": round(delay / dil, 4) if opc else "n/a",
             "lon.source": "action" if (opc and o.get("op_long") and controller == "opctrl_long") else "plan-ilqr",
             "lon.resume": "rule" if o.get("resume") is not None else "none",
