@@ -8,6 +8,7 @@ Per tag (op_parity checkpoint), moving rows (v0 > 3 m/s), curvatures in the left
              curvature d over the last 1.5 s (yaw d s, y d s^2 / 2, ay d v^2), g_h = d k_cmd / d (central difference, d = 0.01 1/m); same for
              the plan curvature. g_h >= 1 means the command perpetuates whatever the car did (an integrator in the loop)
   latdrop    slope of k_cmd(vy = ay = 0) on k_cmd(as logged): what the head does with HUGSIM's missing lateral components
+  v1_3       the same at 1-3 m/s (k_cmd vs plan, RMS of k_cmd - plan curvature): the low-speed regime where a_lat / v^2 amplifies head noise
 
   python experiments/op_parity/scripts/pp_joint_probe.py --tags HP-F-s0 JC-F-s0 --out experiments/op_parity/results/joint_action/probe_s0.json
 """
@@ -72,6 +73,13 @@ def probe(tag: str, S, rows: np.ndarray, Wk, bs=256) -> dict:
     out["g_hist_cmd"] = float(np.mean((a["cmd_p"] - a["cmd_m"])[mv]) / (2 * D))
     out["g_hist_plan"] = float(np.mean((a["pk_p"] - a["pk_m"])[mv]) / (2 * D))
     out["latdrop_slope"] = slope(a["cmd_z"][mv], c)
+    lo = (a["v"] > 1) & (a["v"] <= 3) & a["ok"].astype(bool)                        # low speed: where a_lat / v^2 amplifies head noise
+    out["n_v1_3"] = int(lo.sum())
+    if lo.any():
+        cl, pl = a["cmd"][lo], a["pk"][lo]
+        out["gain_v1_3"], out["cmd_on_plan_v1_3"] = slope(cl, a["klog"][lo]), slope(cl, pl)
+        out["cmd_abs_v1_3"], out["plan_abs_v1_3"], out["cmd_minus_plan_rms_v1_3"] = (float(np.abs(cl).mean()), float(np.abs(pl).mean()),
+                                                                                     float(np.sqrt(np.mean((cl - pl) ** 2))))
     return out
 
 
