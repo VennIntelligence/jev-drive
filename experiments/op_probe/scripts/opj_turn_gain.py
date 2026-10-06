@@ -142,3 +142,19 @@ def ratio_of_sums(x, y):
 
 def fmt(r, k=2):
     return f"{r[0]:.{k}f} [{r[1]:.{k}f}, {r[2]:.{k}f}]"
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("cmd", choices=["navtest", "hugsim", "report"])
+    ap.add_argument("--out")
+    a = ap.parse_args()
+    if a.cmd == "report":
+        from opj_turn_gain_report import report   # noqa: PLC0415  (Mac-side report lives below when merged)
+        report(a)
+    else:
+        {"navtest": cmd_navtest, "hugsim": cmd_hugsim}[a.cmd](a)
+
+
+if __name__ == "__main__":
+    main()
