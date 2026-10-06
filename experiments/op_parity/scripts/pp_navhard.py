@@ -32,8 +32,11 @@ REFS = {"shipped GIMM (op_guard `shipped`, decision 37 / 143 S0)": DATA / "runs/
 def cmd_req(a):
     from jevdrive import navsim_zs as Z
     idx = Z.load_index(a.split)
-    if a.n:
-        idx = idx[:: max(1, len(idx) // a.n)][: a.n]
+    if a.n:                                            # whole logs (the devkit's EPDMS aggregation pairs consecutive frames), every k-th log
+        logs = sorted({e["log_name"] for e in idx})
+        per = len(idx) / len(logs)
+        keep = set(logs[:: max(1, int(len(logs) * per / a.n))])
+        idx = [e for e in idx if e["log_name"] in keep]
     img = [[e["cams"][f][c]["path"] for f in range(4) for c in CAMS] for e in idx]
     hist = np.stack([np.asarray(e["pose"], np.float32) for e in idx])          # (n, 4, 3) in the t0 rear-axle frame, oldest first
     ego = np.stack([np.r_[np.asarray(e["vel"], np.float32)[-1], np.asarray(e["acc"], np.float32)[-1]] for e in idx])
