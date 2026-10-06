@@ -49,6 +49,10 @@ own-plan / logged curvature labels: offline gain on logged curvature 0.68 -> 0.8
 `spec` HD JC 0.178 / JL 0.213 / JW 0.279 vs HP 0.251 (none >= +0.03): at 1-3 m/s the a_lat / v^2 command is noise (abs kappa 0.03-0.04 vs plan 0.015).
 [results/joint_action.md](results/joint_action.md), plan [plans/2026-10-07-joint-action-prereg.md](plans/2026-10-07-joint-action-prereg.md).
 
+**B2D `spec_plan_smooth` (2026-10-07, small read, stopped).** Smoothed plan curvature as the lateral source on 3 B2D routes (4 turns), P2 / P2H10 / shipped:
+junction turns 0 / 3 under both `action` and `plan_smooth`; the failure moves from "not chosen / late" to "requested in time and at 0.9-2 x the needed curvature, but the
+car is stopped in the junction" (the plan asks for a near stop): [results/b2d_plan_smooth.md](results/b2d_plan_smooth.md).
+
 **Next.** Decision entries by main (navhard, unfreeze).
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner

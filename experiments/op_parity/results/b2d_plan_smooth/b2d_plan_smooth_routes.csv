@@ -1,0 +1,19 @@
+arm,exec,route,DS,RC,status,hits
+P2-F-s0,action,28008,34.3,71.5,Failed - Agent deviated from the route,1
+P2-F-s0,action,5423,19.8,57.7,Failed - TickRuntime,2
+P2-F-s0,action,10255,16.0,60.3,Failed - Agent got blocked,2
+P2-F-s0,plan_smooth,28008,49.8,100,Completed,0
+P2-F-s0,plan_smooth,5423,23.9,38.7,Failed - TickRuntime,1
+P2-F-s0,plan_smooth,10255,26.9,41.4,Failed - Agent got blocked,1
+P2H10-F-s0,action,28008,34.3,71.5,Failed - Agent deviated from the route,1
+P2H10-F-s0,action,5423,19.8,57.7,Failed - TickRuntime,2
+P2H10-F-s0,action,10255,14.8,71.6,Failed - Agent got blocked,2
+P2H10-F-s0,plan_smooth,28008,45.8,77.8,Failed - TickRuntime,1
+P2H10-F-s0,plan_smooth,5423,23.9,38.7,Failed - TickRuntime,1
+P2H10-F-s0,plan_smooth,10255,25.9,41.4,Failed - Agent got blocked,1
+cinque,action,28008,20.6,71.5,Failed - Agent deviated from the route,2
+cinque,action,5423,34.6,93.0,Failed - Agent deviated from the route,1
+cinque,action,10255,37.9,54.1,Failed - Agent deviated from the route,0
+cinque,plan_smooth,28008,53.3,100,Completed,1
+cinque,plan_smooth,5423,6.5,50.3,Failed - TickRuntime,2
+cinque,plan_smooth,10255,25.9,41.4,Failed - Agent got blocked,1
