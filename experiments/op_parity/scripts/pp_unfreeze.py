@@ -152,9 +152,14 @@ def _torch_model():
             self.adapter = PA.ParityAdapter(use_ego=True, use_side=False)
             self.vkeys = {_key(w) for w in self.vis}
 
-        def encode(self, prev, cur):
-            """(n, 2, 6, 128, 256) uint8 pairs -> (n, 32, 512)."""
-            return self.net.run_batched(A.vision_feeds(prev, cur), ["view_39"])["view_39"].reshape(len(cur), *A.H_SHAPE)
+        def encode(self, prev, cur, chunk=128, ckpt=0):
+            """(n, 2, 6, 128, 256) uint8 pairs -> (n, 32, 512), in chunks; ckpt > 0: activation checkpointing per chunk of that size
+            (only each chunk's output is kept; the backward recomputes it)."""
+            from torch.utils.checkpoint import checkpoint
+            f = lambda p, c: self.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(len(c), *A.H_SHAPE)  # noqa: E731
+            k = ckpt or chunk
+            return torch.cat([checkpoint(f, prev[i:i + k], cur[i:i + k], use_reentrant=False) if ckpt else f(prev[i:i + k], cur[i:i + k])
+                              for i in range(0, len(cur), k)])
 
         def tokens(self, x):
             """The variant's input -> (B, 8, 32, 512) hidden tokens of the 8 valid slots."""
@@ -168,7 +173,7 @@ def _torch_model():
             B = cur.shape[0]
             with torch.no_grad():
                 hp = self.encode(prev[:, :7].reshape(-1, *prev.shape[2:]), cur[:, :7].reshape(-1, *cur.shape[2:])).reshape(B, 7, *A.H_SHAPE)
-            return torch.cat([hp, self.encode(prev[:, 7], cur[:, 7])[:, None]], 1)
+            return torch.cat([hp, self.encode(prev[:, 7], cur[:, 7], ckpt=8)[:, None]], 1)
 
         def forward(self, x, ego, tc, inputs_on=True):
             front = self.tokens(x)
