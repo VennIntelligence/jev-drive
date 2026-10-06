@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>转弯增益诊断</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:980px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:4px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:14px}th,td{border:1px solid #ccc;padding:4px 10px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f3f3f3}
+figure{margin:20px 0}img{max-width:100%}figcaption{font-size:14px;color:#444}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}}
+</style></head><body>
+<h1>转弯增益诊断：P2 的急转弯失败是比例缩小，不是封顶</h1>
+<div class="v"><b>结论：比例缩小（轻微）。</b>在 navtest 上转角大于 20° 的片段，P2 预测的 4 秒航向变化约为日志值的 0.94（置信区间 0.93 到 0.95），出厂 P0 为 0.80，WA-JEPA 为 0.98；转角大于 45° 时 P2 为 0.92 到 0.93。模型输出里没有天花板。HUGSIM spec 预设中 openpilot 横向链路只裁剪 0.0% 到 0.2% 的步，且从未发生在失败前 8 步内。和 WA-JEPA 的增益差只有 3% 到 4%，所以单纯提高转弯幅度的训练补不上急转弯的失败差距；闭环转弯失败也不是控制链路限幅造成的。</div>
+<p>数据全部来自已有输出，没有跑模型。脚本 <code>experiments/op_probe/scripts/opj_turn_gain.py</code>，完整英文版结果见 <code>experiments/op_probe/results/turn-gain.md</code>。分箱与 op_probe 联合诊断一致（日志 4 秒航向变化小于 5°、5° 到 20°、20° 到 45°、大于 45°，左右分开），不确定性为按 136 个日志重采样的聚类 bootstrap。</p>
+
+<h2>一、navtest 上的转弯增益</h2>
+<p>增益定义为预测值对日志值过原点回归的斜率，或预测总和除以日志总和。下表是 4 秒航向变化的总和比值。</p>
+<table><tr><th>分层</th><th>片段数</th><th>P0（W 帧）</th><th>P2</th><th>P2 加 hinge</th><th>WA-JEPA</th></tr>
+<tr><td>5° 到 20°，左 / 右</td><td>1446 / 1146</td><td>1.00 / 1.02</td><td>1.02 / 1.01</td><td>1.03 / 1.01</td><td>0.98 / 1.07</td></tr>
+<tr><td>20° 到 45°，左 / 右</td><td>1057 / 580</td><td>0.91 / 0.88</td><td>0.99 / 1.00</td><td>0.99 / 1.00</td><td>0.98 / 1.05</td></tr>
+<tr><td>大于 45°，左 / 右</td><td>918 / 599</td><td>0.79 / 0.75</td><td>0.93 / 0.94</td><td>0.93 / 0.94</td><td>0.96 / 0.99</td></tr>
+<tr><td>大于 20°，斜率及区间</td><td>3154</td><td>0.80 [0.76, 0.84]</td><td>0.94 [0.93, 0.95]</td><td>0.94 [0.93, 0.95]</td><td>0.98 [0.97, 0.995]</td></tr></table>
+<p>读法：增益在 45° 以内几乎为 1，之后轻微下降到 0.93，所有模型方向一致（WA 为 0.96 到 0.99）。按日志值分箱本身会带来向均值回归，所以 0.93 是真实饱和程度的上界。hinge 对增益没有影响。出厂 P0 确实欠转（0.75 到 0.79），P2 微调已经补回大部分。横向偏移（4 秒）大于 20° 时 P2 为 0.97，WA 为 0.99；2 秒处 P2 为 0.99。</p>
+<figure><img src="fig1_gain_scatter.png" alt=""><figcaption>图一：预测与日志的 4 秒航向变化（转向方向对齐）。灰色为密度，实线为中位数，色带为四分位和 5% 到 95%。P2 的中位线在 60° 以上略低于对角线，没有水平的平台；WA-JEPA 几乎贴着对角线。</figcaption></figure>
+<figure><img src="fig2_gain_by_bin.png" alt=""><figcaption>图二：增益随日志转角的变化（含 95% 区间）。比例缩小应为一条水平线，封顶则应随转角下降；P2 只有末端轻微下降，与 WA 平行。</figcaption></figure>
+
+<h2>二、有没有天花板</h2>
+<table><tr><th>量（转向方向）</th><th>日志 p99 / 最大</th><th>P2 p99 / 最大</th><th>hinge p99 / 最大</th><th>WA p99 / 最大</th></tr>
+<tr><td>4 秒航向变化（度）</td><td>79.8 / 103</td><td>76.0 / 94.7</td><td>76.2 / 94.7</td><td>79.1 / 99.4</td></tr>
+<tr><td>峰值段曲率（每米）</td><td>0.155 / 0.252</td><td>0.129 / 0.22</td><td>0.129 / 0.21</td><td>0.147 / 0.305</td></tr>
+<tr><td>峰值横向加速度（米每二次方秒）</td><td>2.69 / 3.32</td><td>2.45 / 3.22</td><td>2.45 / 3.12</td><td>2.62 / 3.33</td></tr></table>
+<p>预测分布整条尾部是日志分布乘以 0.90 到 0.95，P2 自己能到 3.1 到 3.2 米每二次方秒和 0.21 到 0.22 每米，和日志、WA 的最大值相邻，曲线在 3 米每二次方秒或 0.2 每米处没有变平。日志本身最高只到 3.3，训练目标即使在 3 附近封顶也只会影响最极端的 0.1%。</p>
+<figure><img src="fig3_ceiling.png" alt=""><figcaption>图三：左、中为峰值横向加速度和峰值曲率的分位数曲线，红色虚线为 openpilot 限幅；右为按日志峰值横向加速度分箱后预测值的中位数（实线）和第 90 百分位（点线）。</figcaption></figure>
+
+<h2>三、与速度的关系</h2>
+<p>如果是横向加速度限制造成的封顶，欠转应随速度的平方增大。实际并非如此：P2 的相对欠转与起点速度的 Spearman 相关为 负 0.10（hinge 负 0.12，WA 正 0.07，P0 负 0.45），快一点反而略好。P2 按速度三分位（中位 1.9、4.2、6.4 米每秒）的增益为 0.92、0.98、0.96。按日志转弯的峰值横向加速度分三档（小于 1.5、1.5 到 2.5、大于 2.5）为 0.98、0.94、0.89；WA 为 1.00、0.98、0.94，曲线与 P2 平行、高出约 0.05。</p>
+<p>残差结构：大于 45° 时 P2 的航向误差偏差为负 4.3°，均方根 10.9°（WA 为负 1.5° 和 9.9°）；偏移均方根 1.62 米对 1.52 米；欠转超过 30% 的片段占 6.4%（WA 2.2%）。P2 与 WA 的差距主要是离散度加上约 3° 的偏差，不是增益塌陷。</p>
+<figure><img src="fig5_speed.png" alt=""><figcaption>图四：转角大于 20° 的片段，增益随起点速度四分位（左）和随日志转弯剧烈程度（右）的变化。</figcaption></figure>
+
+<h2>四、HUGSIM 闭环（64 个场景，23 个转弯场景）</h2>
+<p>来源是每步日志里模型请求的曲率，以及仿真日志中 openpilot 横向链路的请求值、裁剪后值和实际值，不需要估计。用 <code>lib/op_ctrl.py</code> 在 CPU 上重放，得到与日志完全一致的裁剪步。</p>
+<table><tr><th>spec，23 个转弯场景</th><th>P2 种子 0</th><th>P2 种子 1</th><th>hinge 种子 0</th><th>hinge 种子 1</th></tr>
+<tr><td>被裁剪的步</td><td>3（0.19%）</td><td>0</td><td>2（0.13%）</td><td>1（0.07%）</td></tr>
+<tr><td>出现过裁剪的运行数</td><td>1</td><td>0</td><td>1</td><td>1</td></tr>
+<tr><td>请求曲率最大值（限幅 0.2）</td><td>0.065</td><td>0.051</td><td>0.061</td><td>0.090</td></tr>
+<tr><td>请求横向加速度最大值（限幅 3）</td><td>2.04</td><td>1.82</td><td>1.79</td><td>1.44</td></tr>
+<tr><td>请求相对横向加速度限幅的最大比例</td><td>0.68</td><td>0.61</td><td>0.60</td><td>0.48</td></tr>
+<tr><td>结束前 8 步内的裁剪数</td><td>0</td><td>0</td><td>0</td><td>0</td></tr></table>
+<p>全部 64 个场景的裁剪步占比为 0.08%、0、0.05%、0.03%。链路基本是直通：最大的请求也只用了横向加速度限幅的 68%。说明一处已声明的偏差：harness 把仿真速度送进裁剪，若按 1.25 倍的模型时钟计算，限幅会紧 1.56 倍，P2 种子 0 会有 4 步越限，其余为 0。exam 预设由 iLQR 跟踪位置，没有曲率链路；对其日志曲率用同一条链路重放，转弯场景的裁剪步占 0.00%、0.05%、0.00%、0.00%，同样不是封顶。</p>
+<p>请求曲率对路线曲率的斜率（弯道步，距路线 3 米以内）在 spec 的四个模型上只有 0.09 到 0.10，中位速度 3.0 到 3.3 米每秒，13% 到 23% 的弯道步低于 2 米每秒。这不是转弯映射的增益：模型拿不到路线信息，这些步多半贴近失败；它只说明闭环失败发生时模型请求的曲率很小，远没有碰到任何限幅。仅作描述性参考。</p>
+<figure><img src="fig4_closed_loop.png" alt=""><figcaption>图五：左，请求曲率与横向加速度限幅曲率之比的分布（1 以上才会被裁剪）；中，请求横向加速度对速度，红线为 3；右，弯道步上模型请求曲率对路线曲率。</figcaption></figure>
+
+<h2>五、判断与局限</h2>
+<ul>
+<li>转弯增益 P2 已有 0.94，WA 为 0.98。一个只拉大转弯幅度的训练试验，在大于 45° 的转弯上最多换回 3% 到 6% 的航向变化；而在转弯上与 WA 的 EPDMS 差距（6 到 9 分）来自离散度和视觉特征，而不是幅度。</li>
+<li>控制链路排除：spec 中裁剪占 0.0% 到 0.2%，从未先于失败；请求始终远低于 3 米每二次方秒和 0.2 每米。</li>
+<li>局限：每个片段只有一条日志未来；按日志值分箱有向均值回归偏差；闭环的路线曲率对比只是描述性的；裁剪按 harness 实际使用的仿真速度计算；没有重读 WA-JEPA 的闭环日志。</li>
+</ul>
+</body></html>
