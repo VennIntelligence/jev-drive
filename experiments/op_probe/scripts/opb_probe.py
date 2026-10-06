@@ -335,9 +335,21 @@ def cmd_probe(a):
         import pandas as pd
         pd.DataFrame(rows).to_csv(out / "fits.csv", index=False)
         summ = summarize(res, [r["stage"] for r in rows])
+        summ = summ.merge(pd.DataFrame(rows)[["stage", "dev_r2_raster", "dev_r2_corr", "test_r2_raster", "dim"]], on="stage", how="left")
         summ.to_csv(out / "metrics.csv", index=False)
         run.info("\n" + summ.to_string())
         run.summary["out"] = str(out)
+
+
+def cmd_summarize(a):
+    """Recompute metrics.csv from a finished probe run's probe_outputs.npz + fits.csv (no refit)."""
+    import pandas as pd
+    out = ROOT / ("probe-small" if a.small else "probe")
+    res = dict(np.load(out / "probe_outputs.npz", allow_pickle=True))
+    fits = pd.read_csv(out / "fits.csv")
+    summ = summarize(res, fits.stage.tolist()).merge(fits[["stage", "dev_r2_raster", "dev_r2_corr", "test_r2_raster", "dim"]], on="stage", how="left")
+    summ.to_csv(out / "metrics.csv", index=False)
+    print(summ.to_string())
 
 
 def summarize(res, stages):
@@ -346,6 +358,10 @@ def summarize(res, stages):
     from jevdrive import stats
     F, PP = res["set_F"], res["set_PP"]
     lg = res["log"]
+    import pandas as pd_
+    sc = pd_.read_csv(ROOT / "score" / "ablate_P2.csv")
+    raw = dict(zip(sc[sc.key == "full"].token, sc[sc.key == "full"].raw_out))
+    Fp = F & np.array([bool(raw.get(t, False)) for t in res["tokens"]])        # F-plan: the raw plan footprint itself leaves the polygons
     ct = res["corr_true"]
     rows = []
     base = {}
@@ -353,13 +369,13 @@ def summarize(res, stages):
         r = {"stage": name}
         for kind in ("direct", "raster"):
             err = np.nanmean(np.abs(res[f"{name}/corr_{kind}"] - ct), 1)
-            for sn, m in (("F", F), ("PP", PP)):
+            for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP)):
                 b = stats.bootstrap(err[m], groups=lg[m])
                 r[f"mae_{kind}_{sn}"], r[f"mae_{kind}_{sn}_lo"], r[f"mae_{kind}_{sn}_hi"] = b["mean"], b["lo"], b["hi"]
             if name == "E":
                 base[kind] = err
             if kind in base:
-                for sn, m in (("F", F), ("PP", PP)):
+                for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP)):
                     r[f"skill_{kind}_{sn}"] = 1 - np.nanmean(err[m]) / np.nanmean(base[kind][m])
             r[f"excess_{kind}_F_minus_PP"], r[f"excess_{kind}_lo"], r[f"excess_{kind}_hi"] = twoset(err, F, PP, lg)
         sel = F | PP
@@ -367,12 +383,14 @@ def summarize(res, stages):
         sc = -res[f"{name}/margin"][sel]
         r["auc_F_vs_PP"] = auc(sc, y)
         r["auc_lo"], r["auc_hi"] = auc_ci(sc, y, lg[sel])
+        sel2 = Fp | PP
+        r["auc_Fplan_vs_PP"] = auc(-res[f"{name}/margin"][sel2], Fp[sel2])
         r["margin_F_med"] = float(np.median(res[f"{name}/margin"][F]))
         r["margin_PP_med"] = float(np.median(res[f"{name}/margin"][PP]))
         rows.append(r)
     sel = F | PP
     for nm, key in (("TRUE 0.5 m", "margin_true"), ("TRUE 1 m", "margin_true1")):
-        rows.append({"stage": nm, "auc_F_vs_PP": auc(-res[key][sel], F[sel]), "margin_F_med": float(np.median(res[key][F])),
+        rows.append({"stage": nm, "auc_F_vs_PP": auc(-res[key][sel], F[sel]), "auc_Fplan_vs_PP": auc(-res[key][Fp | PP], Fp[Fp | PP]), "margin_F_med": float(np.median(res[key][F])),
                      "margin_PP_med": float(np.median(res[key][PP]))})
     err1 = np.nanmean(np.abs(res["corr_true1"] - ct), 1)
     rows.append({"stage": "TRUE 1 m raster (resolution floor)", "mae_raster_F": float(np.nanmean(err1[F])), "mae_raster_PP": float(np.nanmean(err1[PP]))})
@@ -491,6 +509,8 @@ if __name__ == "__main__":
     p = sp.add_parser("select")
     p = sp.add_parser("probe")
     p.add_argument("--small", action="store_true")
+    p = sp.add_parser("summarize")
+    p.add_argument("--small", action="store_true")
     p = sp.add_parser("decode")
     p.add_argument("--small", action="store_true")
     p.add_argument("--steps", type=int, default=4000)
@@ -498,4 +518,4 @@ if __name__ == "__main__":
     p.add_argument("--lam-hinge", type=float, default=1.0)
     p.add_argument("--hinge-margin", type=float, default=0.3)
     a = ap.parse_args()
-    {"select": cmd_select, "probe": cmd_probe, "decode": cmd_decode}[a.cmd](a)
+    {"select": cmd_select, "probe": cmd_probe, "decode": cmd_decode, "summarize": cmd_summarize}[a.cmd](a)
