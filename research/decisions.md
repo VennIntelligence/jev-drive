@@ -142,3 +142,4 @@
 | 145 | op_parity navhard 与解冻视觉：navhard P2 30.34（G 帧）对 shipped 33.54 / WA-JEPA 35.41 / factor_wm S3 35.77，stage 2 −4.6；解冻 encoder 与 1.40 m 虚拟相机 pilot 全部 < +0.5，线停 | 中 | 待定 |
 | 146 | factor_wm on-policy 从 P2 起步闸门停：HUGSIM-12 起步停滞 P2 1 → 9、HD 0.414 → 0.313；navhard +2.58 n.s.、navtest −0.29；「静止—静态教成不走」被 t0 探针否定，差异在闭环前几步；G1 恢复标签 bug 已修 | 中 | 待定 |
 | 147 | P2 DAC 失败定位：约 2/3 在冻结 comma 视觉（encoder 层同 head 失败 5.12% 对 WA 3.41%），约 1/3 是 plan head 目标（hinge head −0.93 pp），时序不丢；不是闭环 / 容量问题 | 弱—中 | 待定 |
+| 148 | P2 + 可行驶 SDF hinge：navtest 88.67（+0.46），DAC −0.50 pp，转弯为主；navhard +1.49，与 WA-JEPA 不再可分；HUGSIM 不变（含转弯路线） | 中 | 待定 |
