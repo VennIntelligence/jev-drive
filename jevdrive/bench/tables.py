@@ -197,9 +197,10 @@ def report(bench: str, arms: list, vs: list = (), preset: str = "exam", out: str
         else:
             r |= {k: M[k].mean() for k in ("hdscore", "rc", "nc", "dac", "ttc", "c", "pdms")}
             r["per seed"] = " / ".join(f"{u.hdscore.mean():.3f}" for u in U)
-            for c in ("complete", "fg_coll", "bg_coll", "off_route", "stuck", "spin"):
+            for c in ("complete", "fg_coll", "bg_coll", "off_route", "spin"):
                 if "cls" in U[0]:
                     r[c] = np.mean([(u.cls == c).sum() for u in U])
+            r["stuck (max_steps end)"] = np.mean([(u.end == "max_steps").sum() for u in U])
             if "launch_stall" in U[0]:
                 r["launch stall"] = np.mean([u.launch_stall.astype(bool).sum() for u in U])
                 r["spin (any end)"] = np.mean([u.spin.fillna(False).astype(bool).sum() for u in U])
