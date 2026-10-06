@@ -124,6 +124,44 @@ def cmd_report(a):
     print(pd.DataFrame(rows).to_string()), print(pd.DataFrame(pr).to_string())
 
 
+def cmd_report_gimm(a):
+    """Protocol G (GIMM frames) tables: P0-G / P2-G (harness in navhard_gimm/) vs the W run, WA-JEPA and the GIMM references."""
+    import pandas as pd
+    from jevdrive import stats
+    from jevdrive import navsim_zs as Z
+    lg = {e["token"]: e["log_name"] for e in Z.load_index("navhard_two_stage", slim=True)}
+    G = DATA / "runs/op_parity/navhard_gimm/harness"
+    src = {"P0-G": [G / "P0"], "P2-G": [G / "P2-F-s0", G / "P2-F-s1"], "P2-W": [harness_dir("P2-F-s0"), harness_dir("P2-F-s1")],
+           "P0-W": [harness_dir("P0")], "WA-JEPA": [harness_dir("wajepa")], "shipped (op_guard, GIMM)": [REFS_D["shipped"]],
+           "factor_wm S3 (GIMM)": [REFS_D["fw-S3"]]}
+    runs = {k: [(pd.read_csv(d / "harness_groups.csv").set_index("group"), json.loads((d / "harness_summary.json").read_text())) for d in v
+                if (d / "harness_groups.csv").exists()] for k, v in src.items()}
+    runs = {k: v for k, v in runs.items() if v}
+    g0 = runs["P0-W"][0][0]
+    logs = np.array([lg.get(o, "?") for o in g0.orig])
+    rows = []
+    for k, v in runs.items():
+        assert all((t.orig.values == g0.orig.values).all() for t, _ in v), "group order differs"
+        r = {"arm": k, "seeds": len(v)} | {c: float(np.mean([s[c] for _, s in v])) for c in ("combined", "stage1", "stage2")}
+        r["combined s0 / s1"] = " / ".join(f"{s['combined']:.2f}" for _, s in v)
+        rows.append(r)
+    out = _R / "experiments/op_parity/results"
+    stats.write_table(rows, out / "navhard_gimm_arms", floatfmt=".2f", note="navhard_two_stage, protocol G (GIMM frames) unless marked W; seed means")
+    grp = lambda k, c: np.mean([t[c].to_numpy(float) for t, _ in runs[k]], 0)  # noqa: E731
+    pr = []
+    for x, y in [("P0-G", "shipped (op_guard, GIMM)"), ("P2-G", "P0-G"), ("P2-G", "WA-JEPA"), ("P2-G", "factor_wm S3 (GIMM)"), ("P2-G", "shipped (op_guard, GIMM)"),
+                 ("P2-G", "P2-W"), ("P0-G", "P0-W")]:
+        if x in runs and y in runs:
+            for c in ("combined", "stage1", "stage2"):
+                r = stats.paired(grp(x, c), grp(y, c), groups=logs)
+                pr.append({"pair": f"{x} - {y}", "score": c, **{k: r[k] for k in ("mean", "lo", "hi", "mean_a", "mean_b", "n", "units")}})
+    stats.write_table(pr, out / "navhard_gimm_paired", floatfmt=".2f", note="per-group two-stage EPDMS, seed means, cluster bootstrap over stage-1 logs, B 10000")
+    print(pd.DataFrame(rows).to_string()), print(pd.DataFrame(pr).to_string())
+
+
+REFS_D = {"shipped": DATA / "runs/op_guard/shipped/nav/navhard", "fw-S3": DATA / "runs/op_guard/fw-S3/nav/navhard"}
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -137,5 +175,6 @@ if __name__ == "__main__":
     p.add_argument("--wajepa", required=True)
     p.add_argument("--out", required=True)
     sp.add_parser("report")
+    sp.add_parser("report-gimm")
     a = ap.parse_args()
-    {"req": cmd_req, "wcheck": cmd_wcheck, "preds": cmd_preds, "report": cmd_report}[a.cmd](a)
+    {"req": cmd_req, "wcheck": cmd_wcheck, "preds": cmd_preds, "report": cmd_report, "report-gimm": cmd_report_gimm}[a.cmd](a)
