@@ -100,13 +100,33 @@ def poses_at(q, tq, s_min=0.6):
     return np.c_[xy, psi]
 
 
+def recover(fut20, dy, dpsi, v0, t_rec, s_min=8.0, ds_min=0.05):
+    """op_adapt_h.recover_target with one fix: segments shorter than ds_min (5 cm) keep the last direction. The original (1 mm) takes the
+    direction of centimetre jitter of a standing log (often backwards), which flips the normal and puts a 2 x dy jump into the path."""
+    p = np.concatenate([np.zeros((1, 2)), np.asarray(fut20, float)])
+    seg = np.diff(p, axis=0)
+    ds = np.linalg.norm(seg, axis=1)
+    s = np.r_[0.0, np.cumsum(ds)]
+    tang = np.where(ds[:, None] > ds_min, seg / np.maximum(ds[:, None], 1e-9), np.nan)
+    tang = np.r_[[[1.0, 0.0]], tang]
+    for i in range(1, len(tang)):
+        if not np.isfinite(tang[i]).all():
+            tang[i] = tang[i - 1]
+    n = np.stack([-tang[:, 1], tang[:, 0]], 1)
+    S = max(s_min, t_rec * max(v0, s[-1] / 5.0))
+    u = np.clip(s / S, 0, 1)
+    e = dy * (2 * u ** 3 - 3 * u ** 2 + 1) + S * np.tan(dpsi) * (u ** 3 - 2 * u ** 2 + u)
+    q = p + e[:, None] * n - np.array([0.0, dy])
+    c, sn = np.cos(-dpsi), np.sin(-dpsi)
+    return (q @ np.array([[c, -sn], [sn, c]]).T)[1:]
+
+
 def target8(fut20, off, v) -> np.ndarray:
-    """fw_train's target path for a state at offset off with speed v -> (8, 3) poses at 0.5 .. 4 s (heading 0 at t = 0)."""
+    """fw_train's target path (with recover()'s fix) for a state at offset off with speed v -> (8, 3) poses at 0.5 .. 4 s (heading 0 at t = 0)."""
     import fw_train as FT
-    from experiments.op_adapt_h.lib import op_adapt_h as H
     dx, dy, dp = (float(x) for x in off)
     f = np.asarray(fut20, float)
-    q = H.recover_target(f, dy, dp, v, t_rec=FT.T_REC).astype(float) if (abs(dy) > 1e-6 or abs(dp) > 1e-9) else f.copy()
+    q = recover(f, dy, dp, v, FT.T_REC) if (abs(dy) > 1e-6 or abs(dp) > 1e-9) else f.copy()
     if abs(dx) > 1e-6:
         u = np.clip(FT.TF / FT.T_CATCH, 0, 1)
         q[:, 0] += -dx * (3 * u ** 2 - 2 * u ** 3)
