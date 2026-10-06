@@ -11,6 +11,9 @@ import torch
 X0, Y0, NH, NW = -8.0, -24.0, 128, 96
 # nuPlan ego footprint (Pacifica) about the rear axle: front 4.049 m, rear -1.127 m, half width 1.1485 m
 CORNERS = np.array([[4.049, 1.1485], [4.049, -1.1485], [-1.127, 1.1485], [-1.127, -1.1485]])
+# CARLA vehicle.lincoln.mkz_2020 (B2D hero) about the rear axle, the footprint the b2d_collect SDF labels were generated with (sdf.npz `footprint`)
+MKZ_CORNERS = np.array([[3.8286, 0.9184], [3.8286, -0.9184], [-1.0638, 0.9184], [-1.0638, -0.9184]])
+FOOTPRINTS = {"pacifica": CORNERS, "mkz": MKZ_CORNERS}
 T_POSE, T_DENSE = np.arange(1, 9) * 0.5, np.arange(0, 41) * 0.1
 
 
@@ -26,32 +29,46 @@ def interp_matrix() -> np.ndarray:
 
 
 class Hinge:
-    """Labels aligned to a row order (tokens), on `dev`; __call__(x, y, psi, rows) -> mean footprint-corner hinge over the rows with a label."""
+    """Labels aligned to a row order (tokens), on `dev`; __call__(x, y, psi, rows) -> mean footprint-corner hinge over the rows with a label.
 
-    def __init__(self, label_file, tokens, dev, margin: float = 0.3):
-        z = np.load(label_file)
-        pos = {t: i for i, t in enumerate(z["tokens"].tolist())}
-        idx = np.array([pos.get(t, -1) for t in tokens.tolist()])
-        ok = (idx >= 0) & z["ok"][np.maximum(idx, 0)]
-        sdf = z["sdf"]
-        self.sdf = torch.empty((len(tokens), 1, NH, NW), dtype=torch.float16, device=dev)
-        for i in range(0, len(tokens), 8192):                                    # chunked: no second host copy of the full array
-            j = np.maximum(idx[i:i + 8192], 0)
-            self.sdf[i:i + len(j), 0] = torch.from_numpy(sdf[j]).to(dev)
-        self.ok = torch.as_tensor(ok, device=dev)
+    label_file / footprint may be lists of equal length (one per label source, e.g. NAVSIM Pacifica + B2D MKZ): a row takes the first source that
+    labels it and uses that source's footprint ("pacifica" | "mkz"). The default (one file, "pacifica") is the original behaviour."""
+
+    def __init__(self, label_file, tokens, dev, margin: float = 0.3, footprint="pacifica"):
+        files = label_file if isinstance(label_file, (list, tuple)) else [label_file]
+        fps = footprint if isinstance(footprint, (list, tuple)) else [footprint] * len(files)
+        assert len(files) == len(fps)
+        n = len(tokens)
+        self.sdf = torch.empty((n, 1, NH, NW), dtype=torch.float16, device=dev)
+        ok_all, src = np.zeros(n, bool), np.zeros(n, np.int64)
+        for s, f in enumerate(files):
+            z = np.load(f)
+            pos = {t: i for i, t in enumerate(z["tokens"].tolist())}
+            idx = np.array([pos.get(t, -1) for t in tokens.tolist()])
+            ok = (idx >= 0) & z["ok"][np.maximum(idx, 0)] & ~ok_all
+            sdf = z["sdf"]
+            rows = np.flatnonzero(ok)
+            for i in range(0, len(rows), 8192):                                  # chunked: no second host copy of the full array
+                r = rows[i:i + 8192]
+                self.sdf[torch.as_tensor(r, device=dev), 0] = torch.from_numpy(sdf[idx[r]]).to(dev)
+            ok_all |= ok
+            src[ok] = s
+        self.ok = torch.as_tensor(ok_all, device=dev)
+        self.src = torch.as_tensor(src, device=dev)
         self.M = torch.as_tensor(interp_matrix(), dtype=torch.float32, device=dev)
-        self.C = torch.as_tensor(CORNERS, dtype=torch.float32, device=dev)
+        self.C = torch.as_tensor(np.stack([FOOTPRINTS[f] for f in fps]), dtype=torch.float32, device=dev)      # (S, 4, 2)
         self.margin = margin
-        self.coverage = float(ok.mean())
+        self.coverage = float(ok_all.mean())
 
     def margins(self, x, y, psi, rows):
         """x, y, psi (B, 8) -> sdf at the interpolated footprint corners (B, 164)."""
         P = torch.stack([x, y, psi], -1)
         P0 = torch.cat([torch.zeros_like(P[:, :1]), P], 1)
         d = torch.einsum("kj,bjc->bkc", self.M, P0)
+        C = self.C[self.src[rows]]                                               # (B, 4, 2)
         c, s = torch.cos(d[..., 2:3]), torch.sin(d[..., 2:3])
-        cx = d[..., :1] + c * self.C[None, None, :, 0] - s * self.C[None, None, :, 1]
-        cy = d[..., 1:2] + s * self.C[None, None, :, 0] + c * self.C[None, None, :, 1]
+        cx = d[..., :1] + c * C[:, None, :, 0] - s * C[:, None, :, 1]
+        cy = d[..., 1:2] + s * C[:, None, :, 0] + c * C[:, None, :, 1]
         xy = torch.stack([cx, cy], -1).reshape(len(P), -1, 2)
         g = torch.stack([(xy[..., 1] - Y0) / 24.0 - 1.0, (xy[..., 0] - X0) / 32.0 - 1.0], -1)[:, :, None]
         grid = self.sdf[rows].float()
