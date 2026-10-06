@@ -5,8 +5,9 @@
   $DATA_DIR/envs/navsim2/bin/python experiments/op_probe/scripts/opb_labels.py build --split navtrain --shards 2 3 4 5 6
   $DATA_DIR/envs/navsim2/bin/python experiments/op_probe/scripts/opb_labels.py check [--n 300]    # vs the v2 navtest metric cache
 
-Drivable surface = ROADBLOCK | ROADBLOCK_CONNECTOR | INTERSECTION | CARPARK_AREA (navsim PDMDrivableMap.from_simulation), fetched within 80 m
-(the scorer uses 50 m; 80 m covers the raster). Frame: rear axle at t0 (nuPlan ego pose), x forward, y left. SDF (m, + inside) on a 0.25 m
+Drivable surface = ROADBLOCK | INTERSECTION | CARPARK_AREA: the polygon types of PDMScorer's NON_DRIVABLE_AREA check (PDMDrivableMap holds
+roadblock connectors only as LANE_CONNECTOR polygons, which that check ignores; DRIVABLE_AREA is never cached). Fetched within 80 m (the
+scorer's map uses 50 m; 80 m covers the raster). Frame: rear axle at t0 (nuPlan ego pose), x forward, y left. SDF (m, + inside) on a 0.25 m
 canvas (EDT both sides), stored at 0.5 m: sdf[i, j] at cell centre x = X0 + (i + .5) RES, y = Y0 + (j + .5) RES, float16, clipped to +-20 m.
 Out: $DATA_DIR/runs/op_probe/labels/<split>.npz (tokens, log, pose_global, sdf, ok).
 """
@@ -33,7 +34,7 @@ X0, Y0, RES, NH, NW = -8.0, -24.0, 0.5, 128, 96          # stored raster: x in [
 FINE, PAD = 0.25, 8.0
 CX0, CY0 = X0 - PAD, Y0 - PAD
 NX, NY = int((NH * RES + 2 * PAD) / FINE), int((NW * RES + 2 * PAD) / FINE)
-LAYERS = ("ROADBLOCK", "ROADBLOCK_CONNECTOR", "INTERSECTION", "CARPARK_AREA")
+LAYERS = ("ROADBLOCK", "INTERSECTION", "CARPARK_AREA")      # the scorer's drivable_area_idcs (roadblock connectors only enter as lane connectors, not drivable)
 RADIUS = 80.0
 OUT = D / "runs" / "op_probe" / "labels"
 LOGDIR = {"navtest": "test", "navtrain": "trainval"}
@@ -161,8 +162,10 @@ def _check_one(args):
     assert np.hypot(*(o[:2] - pose[:2])) < 0.05, "pose mismatch"
     c, s = np.cos(o[2]), np.sin(o[2])
     G = np.stack([o[0] + c * px - s * py, o[1] + s * px + c * py], -1)
+    from nuplan.common.maps.maps_datatypes import SemanticMapLayer as L
+    idc = am.get_indices_of_map_type([L.ROADBLOCK, L.INTERSECTION, L.DRIVABLE_AREA, L.CARPARK_AREA])
     ins = am.points_in_polygons(G[None])                       # (n_poly, 1, n)
-    inside = ins.any(0)[0]
+    inside = ins[idc].any(0)[0]
     agree = float(np.mean(inside == (sdf[sel] > 0)))
     # the logged future path inside the label surface
     return tok, agree, int(sel.sum()), float(np.mean(inside))

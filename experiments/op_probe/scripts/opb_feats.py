@@ -81,6 +81,9 @@ def run_model(model, tab, front, dev, rows, bs, ego_fn=None, front_fn=None, keep
         o = forward(model, f, torch.as_tensor(e, device=dev), tc)
         if not shape_logged:
             print({k: tuple(v.shape) for k, v in o.items()}, flush=True)
+            m9, v0 = o["add_40"].reshape(len(r), 9, 32, 512).float(), f[:, -1].float()
+            cs = [float(torch.nn.functional.cosine_similarity(m9[:, j], v0, dim=-1).mean()) for j in range(9)]
+            print("cos(add_40 frame j, current vision tokens) j = 0..8:", np.round(cs, 3).tolist(), flush=True)
             shape_logged = True
         out["plan_mu"][i:i + len(r)] = o["outputs"].float().reshape(len(r), -1)[:, pi].reshape(-1, 33, 15).cpu().numpy()
         if "V" in keep:

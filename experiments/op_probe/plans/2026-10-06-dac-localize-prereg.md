@@ -27,8 +27,8 @@ P2-s0 失败而 WA 通过 433 个 token，反向 115）。代码 `scripts/opb_*.
 
 ## 2. 标签（NAVSIM 地图 API，评分器自己的图层）
 
-- 可行驶面 = ROADBLOCK ∪ ROADBLOCK_CONNECTOR ∪ INTERSECTION ∪ CARPARK_AREA（`PDMDrivableMap.from_simulation` 的图层；半径取 80 m 而不是 50 m，
-  覆盖整个栅格）。t0 后轴坐标系（x 前、y 左），有符号距离场 SDF（+ 在内，m），0.25 m 精栅格做 EDT，存 0.5 m（128 × 96，x ∈ [−8, 56)，y ∈ [−24, 24)）。
+- 可行驶面 = ROADBLOCK ∪ INTERSECTION ∪ CARPARK_AREA（`PDMScorer` 判 NON_DRIVABLE_AREA 用的多边形类型；`PDMDrivableMap` 里 roadblock connector
+  只以 LANE_CONNECTOR 出现，这个判据不认；半径取 80 m 而不是 50 m，覆盖整个栅格）。t0 后轴坐标系（x 前、y 左），有符号距离场 SDF（+ 在内，m），0.25 m 精栅格做 EDT，存 0.5 m（128 × 96，x ∈ [−8, 56)，y ∈ [−24, 24)）。
 - 探针目标：1 m 下采样 SDF（64 × 48 = 3 072 格，截断到 ±10 m）。
 - 派生量（全部从真值 SDF 算，评估时从预测 SDF 同样算）：
   - **走廊**：沿日志未来路径（8 个位姿 + 末段直线外推）弧长 s ∈ {5, 10, 20} m 处，沿法向到左 / 右边界的自由距离（截断 15 m），6 个数。
