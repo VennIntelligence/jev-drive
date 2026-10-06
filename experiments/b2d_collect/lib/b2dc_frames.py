@@ -7,7 +7,8 @@ the half-resolution indices. tests/test_b2dc_frames.py checks bit equality again
 (scripts/zeroshot_rigs.openpilot_sensor_specs: 1928 x 1208, road focal 2648, wide focal 567, level, rpy 0).
 
 Storage: a packed pair (road, wide) is a 512 x 512 yuv420p picture (Y rows 0-255 road, 256-511 wide; U / V rows 0-127 road, 128-255
-wide), i.e. exactly the model's YUV420 planes with no colour conversion; one picture per 20 Hz tick, libx264 (crf 0 = lossless).
+wide), i.e. exactly the model's YUV420 planes with no colour conversion; one picture per 20 Hz tick, libx264 (crf 0 = lossless). The ffmpeg is the static
+build in envs/comma-wm (no pipe protocol: stdin / stdout are opened as /dev/stdin, /dev/stdout).
 """
 from __future__ import annotations
 
@@ -101,7 +102,7 @@ class Encoder:
         self.path = Path(path)
         q = ["-qp", "0"] if crf == 0 else ["-crf", str(crf)]
         cmd = [FFMPEG, "-hide_banner", "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", fmt, "-s", f"{w}x{h}", "-r", str(fps),
-               "-i", "-", "-c:v", "libx264", "-preset", preset, *q, "-g", str(gop), "-threads", str(threads), "-pix_fmt", "yuv420p"]
+               "-i", "/dev/stdin", "-c:v", "libx264", "-preset", preset, *q, "-g", str(gop), "-threads", str(threads), "-pix_fmt", "yuv420p"]
         if fmt == "yuv420p":
             cmd += ["-color_range", "tv"]
         self.proc = subprocess.Popen(cmd + [str(self.path)], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -123,7 +124,7 @@ class Encoder:
 def decode(path, w=PIC_W, h=PIC_H, fmt="yuv420p", frames=None) -> np.ndarray:
     """Whole stream -> (n, bytes per picture) uint8 ('yuv420p') or (n, h, w, 3) ('rgb24'). frames: optional index array to keep."""
     nb = w * h * 3 // 2 if fmt == "yuv420p" else w * h * 3
-    raw = subprocess.run([FFMPEG, "-hide_banner", "-loglevel", "error", "-i", str(path), "-f", "rawvideo", "-pix_fmt", fmt, "-"],
+    raw = subprocess.run([FFMPEG, "-hide_banner", "-loglevel", "error", "-i", str(path), "-f", "rawvideo", "-pix_fmt", fmt, "-y", "/dev/stdout"],
                          check=True, stdout=subprocess.PIPE).stdout
     a = np.frombuffer(raw, np.uint8).reshape(-1, nb)
     if frames is not None:
