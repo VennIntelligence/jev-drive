@@ -49,6 +49,42 @@ def strat(v, sets, groups, B=2000, seed=0):
     return f"{100 * sv.sum() / sw.sum():.2f} [{100 * np.percentile(b, 2.5):.2f}, {100 * np.percentile(b, 97.5):.2f}]"
 
 
+def strat_paired(a, b, sets, groups, B=2000, seed=0):
+    """Navtest-wide (stratified as `strat`) mean of a - b over the same tokens, log-cluster bootstrap CI (x100)."""
+    S = np.load(P.SETS / "navtest_sets.npz")
+    w = np.where(sets["PP"].values, S["PP"].sum() / max(sets["PP"].sum(), 1), 1.0)
+    v = np.asarray(a, float) - np.asarray(b, float)
+    ug, inv = np.unique(groups, return_inverse=True)
+    sw, sv = np.bincount(inv, w, len(ug)), np.bincount(inv, w * v, len(ug))
+    idx = np.random.default_rng(seed).integers(0, len(ug), (B, len(ug)))
+    bs = sv[idx].sum(1) / sw[idx].sum(1)
+    return f"{100 * sv.sum() / sw.sum():+.2f} [{100 * np.percentile(bs, 2.5):+.2f}, {100 * np.percentile(bs, 97.5):+.2f}]"
+
+
+def t_decode_paired(sf, name="decode", extra=()):
+    f = P.ROOT / "score" / f"{name}.csv"
+    if not f.exists():
+        return
+    df = pd.concat([pd.read_csv(f)] + [pd.read_csv(P.ROOT / "score" / f"{e}.csv").assign(key=lambda d, e=e: d.key + f"@{e}") for e in extra
+                                       if (P.ROOT / "score" / f"{e}.csv").exists()])
+    ab = pd.read_csv(P.ROOT / "score" / "ablate_P2.csv")
+    df = pd.concat([df, ab[ab.key == "full"].assign(key="P2 (itself)")])
+    fail = df.assign(fail=1 - df.drivable_area_compliance).pivot_table(index="token", columns="key", values="fail")
+    score = df.pivot_table(index="token", columns="key", values="score")
+    ss = sf.loc[fail.index]
+    pairs = [("P2-V|imit", "WA-Cf|imit"), ("P2-V|hinge", "WA-Cf|hinge"), ("P2-V|imit", "WA-Ca|imit"), ("P2-V|hinge", "WA-Ca|hinge"),
+             ("P2-V|imit", "E|imit"), ("WA-Cf|imit", "E|imit"), ("P2-H|imit", "P2 (itself)"), ("P2-H|hinge", "P2 (itself)"),
+             ("P2-T|hinge", "P2 (itself)"), ("WA-Cf|hinge", "P2 (itself)"), ("WA-Ca|hinge", "P2 (itself)"), ("P2-V|hinge", "P2-H|hinge"),
+             ("WA-Cf|hinge", "WA-H|hinge")]
+    pairs += [(k, k.split("@")[0]) for k in fail.columns if "@" in k]
+    rows = []
+    for x, y in pairs:
+        if x in fail and y in fail:
+            rows.append({"a - b": f"{x} - {y}", "DAC fail pp (stratified navtest)": strat_paired(fail[x], fail[y], ss, ss.log.values),
+                         "score x100 (stratified)": strat_paired(score[x], score[y], ss, ss.log.values)})
+    stats.write_table(rows, OUT / f"{name}_paired", note="paired over the same tokens (F, R, FF all, PP 1 500 reweighted to 11 494), log-cluster bootstrap")
+
+
 def rate(v, groups):
     r = stats.bootstrap(v, groups=groups)
     return f"{100 * r['mean']:.1f} [{100 * r['lo']:.1f}, {100 * r['hi']:.1f}]"
@@ -100,8 +136,8 @@ def t_probe(small):
                            "AUC of -margin (raster probe sampled on P2's own plan footprint) for F vs PP; CIs log-clustered")
 
 
-def t_decode(small, sf):
-    f = P.ROOT / "score" / ("decode_small.csv" if small else "decode.csv")
+def t_decode(small, sf, name=None):
+    f = P.ROOT / "score" / (name or ("decode_small.csv" if small else "decode.csv"))
     if not f.exists():
         return
     df = pd.read_csv(f)
@@ -120,7 +156,7 @@ def t_decode(small, sf):
         r["PP score x100"] = 100 * g.score.values[m].mean()
         r["F score x100"] = 100 * g.score.values[sf.loc[g.index, "F"].values.astype(bool)].mean()
         rows.append(r)
-    stats.write_table(rows, OUT / ("decode_small" if small else "decode"), note="MLP decoders on [stage, E] trained on navtrain (imit: log poses; "
+    stats.write_table(rows, OUT / (f.stem if name else ("decode_small" if small else "decode")), note="MLP decoders on [stage, E] trained on navtrain (imit: log poses; "
                       "hinge: + drivable hinge on the footprint, true SDF); navtest scored with opb_score.py")
 
 
@@ -133,3 +169,6 @@ if __name__ == "__main__":
     t_ablate(sf)
     t_probe(a.small)
     t_decode(a.small, sf)
+    if not a.small:
+        t_decode(False, sf, "decode_h10.csv")
+        t_decode_paired(sf, extra=("decode_h10",))
