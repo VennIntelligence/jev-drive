@@ -65,3 +65,26 @@ Reading:
 - Neither reaches WA-JEPA on the turning routes (0.442; smooth -0.109 [-0.273, +0.035], mpc -0.150 [-0.299, -0.026]).
 - Caveats: 23 turning routes from 17 scenes; per-scenario differences below ~0.2 are not evidence; the smoothing window (0.5-1.5 s) was the pre-specified one, not tuned; the MPC is a declared QP replacement for acados, with Toyota-class constants and no tuning for the P2 plan.
 - Process notes: server socket names were shared by two presets of the same arm (a collision that stalled four jobs; fixed with per-preset names, `pp_hugsim.sh`); the four affected jobs were cancelled and rerun, no collided rows kept apart from fully completed runs on identical servers. Jobs declared 33 GB (measured 45-48) until the coordinator's note; reruns declared 50 GB.
+
+## Repeats (2026-10-07): spec vs spec_plan_smooth, 2 more runs of every arm
+
+Question: does decision 149's smooth - spec contrast survive repeats? 4 arms (P2-F-s0/s1, P2H10-F-s0/s1) x 2 presets x 2 new runs (`r1`, `r2`) x 64 scenarios = 16 bench runs (`jevdrive.bench run --repeat r1 r2 --workers 2 --jobs 2`, run keys `<arm>_<preset>-rr1/-rr2`), all finished, no missing scenario. `r0` = the stored run behind the tables above. Pooling: HD averaged over repeats within (arm, scenario), then over the 4 arms; contrast bootstrapped over scenarios (B 10000, seed 0). Script `scripts/pp_specrep_report.py`; tables in [hugsim_specplan/repeats/repeats.md](hugsim_specplan/repeats/repeats.md) (+ CSVs).
+
+**HUGSIM is effectively deterministic.** There is no seed anywhere in the harness; repeats differ only through server / GPU timing. Per (arm, preset), 41-49 of 64 scenarios have identical HD across the three runs, 62-64 of 64 the same end, per-scenario sd mean 0.001-0.006 and median 0.000. Largest spreads: P2-F-s0 smooth, one scenario with range 0.578 (a chaotic collision timing); otherwise max range 0.015-0.068, and only 3 scenarios in 512 arm-scenario cells exceed 0.05. Arm HD varies by at most 0.009 between repeats (smooth P2-F-s0 0.419 / 0.419 / 0.428; all others within 0.004). So the repeats confirm that the earlier numbers are reproducible; they add almost no information about generalisation, which is limited by the 64 scenarios (23 turning from 17 scenes), not by run noise.
+
+Paired smooth - spec (HD, 4-arm and repeat mean; W / L / T at |d| 0.02):
+
+| pool | all 64 | turning 23 | straight 41 |
+|---|---|---|---|
+| r1 + r2 (new) | +0.034 [+0.003, +0.072] | +0.055 [+0.006, +0.124] | +0.022 [-0.013, +0.069] |
+| r0 + r1 + r2 (pooled) | **+0.034 [+0.004, +0.072]** | **+0.055 [+0.006, +0.122]** | +0.022 [-0.013, +0.070] |
+| r0 alone (decision 149) | +0.034 [+0.004, +0.071] | +0.054 [+0.007, +0.117] | +0.023 [-0.012, +0.070] |
+| W / L / T (pooled) | 16 / 8 / 40 | 8 / 3 / 12 | 8 / 5 / 28 |
+
+Single repeats give turning +0.054 / +0.052 / +0.059 and all +0.034 / +0.033 / +0.035. Means: spec 0.394, smooth 0.429 (all 64); turning 0.279 vs 0.334; straight 0.459 vs 0.482. Per arm (3 runs), turning: P2-F-s0 +0.045 [+0.008, +0.090], P2-F-s1 +0.029 [-0.029, +0.110], P2H10-F-s0 +0.070 [+0.008, +0.151], P2H10-F-s1 +0.075 [+0.010, +0.161]; all positive, three of four CIs above 0.
+
+End classes, mean per arm x run (spec / smooth), turning 23: complete 2.0 / 5.3, fg 7.5 / 10.3, bg 9.2 / 6.0, off_route 2.8 / 1.4, spin 1.5 / 0. All 64: complete 20.3 / 24.7, bg 11.4 / 7.8, spin 1.5 / 0. Spins over 64, identical in all three runs: spec 1 / 1 / 2 / 2, smooth 0 / 0 / 0 / 0.
+
+Reading: the +0.054 turning and +0.034 all-64 gains reproduce to the third decimal, with the same CI, because the pooled data are nearly the same data. The caveat of decision 149 is unchanged: scenario selection is the uncertainty (lower bound +0.004 to +0.006), the 64 scenarios are what generalises, and the gain is concentrated in a few scenarios (best scene-0013-medium-00 +0.75, scene-152217047339-medium-00 +0.64; worst scene-090-hard-01 -0.24). A new CI needs new scenarios or a second dataset, not more repeats of these.
+
+Process: one command (`bench run`, 16 runs) had all 3 cards running a HUGSIM job within about 1 min (submitted 00:21:29 box time, all 3 cards busy at the first look 57 s later). Default 6-slot jobs (59 GB declared) did not fit beside the B2D collection (pool free VRAM 32-37 GB per card), so I used 2 slots per job (25 GB); first attempt cancelled and resubmitted. Bench issue found, not fixed in code: resubmitting 15 s after `cl cancel` reused the still-cancelling jobs of the old `jobs.json`, so 12 of 16 runs got stale ERROR files and ran nothing until a second `run` (2.5 h lost; wait for the cancel or check the job state first). After that, with other lanes' jobs queued ahead and later cards freed, the remaining 12 runs finished 2 h after the resubmission; total wall 3 h 55 min from the first command.

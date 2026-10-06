@@ -1,0 +1,9 @@
+preset,arm,r0,r1,r2
+spec,P2-F-s0,1,1,1
+spec,P2-F-s1,1,1,1
+spec,P2H10-F-s0,2,2,2
+spec,P2H10-F-s1,2,2,2
+spec_plan_smooth,P2-F-s0,0,0,0
+spec_plan_smooth,P2-F-s1,0,0,0
+spec_plan_smooth,P2H10-F-s0,0,0,0
+spec_plan_smooth,P2H10-F-s1,0,0,0
