@@ -22,7 +22,7 @@ own engine (stall 0.18 to 0.02), but on HUGSIM 64 launch stalls rise 18 to 48 an
 S0 ego failures turn into collisions (14) rather than fixes (2). Open loop it gains (navhard +2.44, navtest +0.26). S2 (decision 132's lateral 2 s engine) is
 the best closed-loop arm (HD 0.328, 15 completes) but fixes only 2 of 12.
 
-**Next.** None scheduled. Diagnostics ([results/g1-diag.md](results/g1-diag.md)): S3's launch only appears with motion in the history (H1), and only action[1] was raised; HUGSIM reads plan speed, which S3 lowered by 1.47 m/s. navhard +2.44 [+0.70, +4.05] (log-cluster).
+**Next.** Running (2026-10-06): on-policy training from op_parity P2 (input parity + this engine with the ego executing the plan) against an off-policy control, read on navtest, navhard and HUGSIM 64: [plans/2026-10-06-p2-onpolicy-prereg.md](plans/2026-10-06-p2-onpolicy-prereg.md). Diagnostics ([results/g1-diag.md](results/g1-diag.md)): S3's launch only appears with motion in the history (H1), and only action[1] was raised; HUGSIM reads plan speed, which S3 lowered by 1.47 m/s. navhard +2.44 [+0.70, +4.05] (log-cluster).
 (results/g1.md).
 
 **Read more.** [plans/2026-10-05-stage1-prereg.md](plans/2026-10-05-stage1-prereg.md) (stage 1 design, lines, compute; stage 2 sketch on WL-2

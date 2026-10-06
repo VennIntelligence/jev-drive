@@ -152,7 +152,7 @@ def report():
 
 
 # ---------------------------------------------------------------------------------------------------------------- full run
-FULL = REPO / "experiments/op_parity/results/hugsim_full"
+FULL = Path(os.environ.get("FULL_OUT") or REPO / "experiments/op_parity/results/hugsim_full")
 FULL_TAGS = os.environ.get("FULL_TAGS", "P0,P1-F-s0,P1-F-s1,P2-F-s0,P2-F-s1,P3-F-s0,P3-F-s1").split(",")
 PRESETS = {"exam": "pp-", "spec": "pp-spec-"}
 STOP_V = 0.5            # P0 "stopped at the collision step": P0 speed there < 0.5 m/s
