@@ -77,6 +77,9 @@ def t_decode_paired(sf, name="decode", extra=()):
              ("P2-T|hinge", "P2 (itself)"), ("WA-Cf|hinge", "P2 (itself)"), ("WA-Ca|hinge", "P2 (itself)"), ("P2-V|hinge", "P2-H|hinge"),
              ("WA-Cf|hinge", "WA-H|hinge")]
     pairs += [(k, k.split("@")[0]) for k in fail.columns if "@" in k]
+    pairs += [("P2-H|hinge@decode_h10", "P2 (itself)"), ("P2-T|hinge@decode_h10", "P2 (itself)"), ("P2-V|hinge@decode_h10", "WA-Cf|hinge@decode_h10"),
+              ("P2-V|hinge@decode_h10", "WA-Ca|hinge@decode_h10"), ("P2-H|hinge@decode_h10", "WA-H|hinge@decode_h10"),
+              ("WA-Cf|hinge@decode_h10", "P2 (itself)"), ("WA-H|hinge@decode_h10", "P2 (itself)")]
     rows = []
     for x, y in pairs:
         if x in fail and y in fail:
