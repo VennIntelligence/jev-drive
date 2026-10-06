@@ -12,7 +12,8 @@ them (lib/b2dc_frames.Packer) and stored, one 512 x 512 yuv420p picture per tick
 
 Outputs in clip/ under the attempt directory ($B2D_ATTEMPT_OUT):
   frames.mp4    packed (road, wide) model frames, one per tick (ego.npz `vid` = picture index; -1 = sensor frame missing, never so far)
-  chase.mp4     optional third-person view (cfg chase), every `chase_every` ticks (ego.npz `chase` = picture index or -1)
+  chase.mp4     optional third-person view (cfg chase; a plain CARLA camera on the hero, not a leaderboard sensor), about every
+                `chase_every` ticks (ego.npz `chase` = picture index or -1; the newest image delivered by that tick)
   ego.npz       per tick (20 Hz), CARLA world frame (left-handed: x, y, yaw clockwise): t, frame, loc (x, y, z of the actor origin), rot
                 (pitch, yaw, roll deg), vel / acc / angvel (world), speed, wheel steer angle (deg, front left), ctl_applied / ctl_expert
                 (steer, throttle, brake), driver (0 expert, 1 policy), PDM-Lite internals (target speed, junction, stop sign / walker flags,
@@ -95,15 +96,32 @@ class B2DCollectAgent(AutoPilot):
         self._k = 0
         self._t = {"pack": 0.0, "enc": 0.0, "log": 0.0, "expert": 0.0, "wall0": time.time()}
         self._static_done = False
+        self._chase = None
 
-    # The leaderboard reads sensors() after setup(); PDM-Lite's own IMU stays first (it reads input_data["imu"]).
+    # The leaderboard reads sensors() after setup(); PDM-Lite's own IMU stays first (it reads input_data["imu"]). The chase view is not a
+    # leaderboard sensor (it allows a 3 m mounting radius): _chase_start() spawns it as a plain CARLA camera on the hero, for people only.
     def sensors(self):
-        own = [dict(s) for s in self.cam_specs]
-        if self.cfg.get("chase"):
-            c = self.cfg
-            own.append({"type": "sensor.camera.rgb", "id": "CHASE", "x": -7.5, "y": 0.0, "z": 3.4, "roll": 0.0, "pitch": -13.0, "yaw": 0.0,
-                        "width": c["chase_w"], "height": c["chase_h"], "fov": 90.0, "sensor_tick": c["tick"] * c["chase_every"]})
-        return super().sensors() + own
+        return super().sensors() + [dict(s) for s in self.cam_specs]
+
+    def _chase_start(self, world, hero):
+        import queue
+        c = self.cfg
+        bp = world.get_blueprint_library().find("sensor.camera.rgb")
+        for k, v in (("image_size_x", c["chase_w"]), ("image_size_y", c["chase_h"]), ("fov", 90.0), ("sensor_tick", c["tick"] * c["chase_every"])):
+            bp.set_attribute(k, str(v))
+        tf = carla.Transform(carla.Location(x=-7.5, z=3.4), carla.Rotation(pitch=-13.0))
+        self._chase_q = queue.Queue()
+        self._chase = world.spawn_actor(bp, tf, attach_to=hero)
+        self._chase.listen(lambda im: self._chase_q.put((im.frame, np.frombuffer(im.raw_data, np.uint8).reshape(im.height, im.width, 4).copy())))
+
+    def _chase_take(self):
+        """Newest chase image delivered so far (frame, BGRA) or None; older ones are dropped."""
+        got = None
+        while True:
+            try:
+                got = self._chase_q.get_nowait()
+            except Exception:
+                return got
 
     # ------------------------------------------------------------------ per tick
     def run_step(self, input_data, timestamp, sensors=None, plant=False):
@@ -138,9 +156,9 @@ class B2DCollectAgent(AutoPilot):
             self._t["enc"] += time.perf_counter() - t2
         else:
             self.rows["vid"].append(-1)
-        ch = input_data.get("CHASE")
-        if self.chase_enc is not None and ch is not None and k % self.cfg["chase_every"] == 0:
-            self.chase_enc.write(ch[1][:, :, :4])
+        ch = self._chase_take() if self._chase is not None else None
+        if ch is not None:
+            self.chase_enc.write(ch[1])
             self.rows["chase"].append(self.chase_enc.n - 1)
         else:
             self.rows["chase"].append(-1)
@@ -225,6 +243,8 @@ class B2DCollectAgent(AutoPilot):
 
     def _write_static(self, hero, world):
         self._static_done = True
+        if self.chase_enc is not None:
+            self._chase_start(world, hero)
         plan = getattr(self, "org_dense_route_world_coord", None) or []
         pts = np.array([[tf.location.x, tf.location.y, tf.location.z, tf.rotation.yaw] for tf, _ in plan], np.float64).reshape(-1, 4)
         opt = np.array([ROUTE_OPT.get(getattr(o, "name", str(o)).upper(), int(getattr(o, "value", -1))) for _, o in plan], np.int8)
@@ -275,6 +295,13 @@ class B2DCollectAgent(AutoPilot):
         if not hasattr(self, "rows") or getattr(self, "_finished", False):
             return
         self._finished = True
+        if self._chase is not None:                      # stop before destroy (docs/carla.md: a callback on a destroyed sensor aborts)
+            try:
+                self._chase.stop()
+                self._chase.destroy()
+            except Exception:
+                pass
+            self._chase = None
         n_vid = self.enc.close()
         n_chase = self.chase_enc.close() if self.chase_enc is not None else 0
         self.scen.close()
@@ -301,4 +328,5 @@ class B2DCollectAgent(AutoPilot):
         meta = json.loads(mp.read_text()) if mp.exists() else {}
         meta["timing"] = timing
         mp.write_text(json.dumps(meta, indent=1, default=str))
-        (self.out / "DONE").write_text(json.dumps(timing))
+        if self._k > 0:                                  # an attempt that never ticked is not a clip
+            (self.out / "DONE").write_text(json.dumps(timing))
