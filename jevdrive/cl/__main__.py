@@ -98,9 +98,18 @@ def cmd_submit(a):
         bad = P.static_check(cmd, cwd) + (P.static_check(a.preflight, cwd) if a.preflight else [])
         if bad:
             sys.exit("not submitted (--no-check to override): " + "; ".join(bad))
+    hist = P.history_defaults(a.name)
+    if a.vram <= 0 and not a.exclusive and "vram_gb" in hist:
+        a.vram = hist["vram_gb"]
+        print("vram %.1f GB from history of '%s' (p95 x 1.2); pass --vram to override" % (a.vram, P.hist_prefix(a.name)),
+              file=sys.stderr)
+    if a.cpu <= 0 and "cpu" in hist:
+        a.cpu = hist["cpu"]
+        print("cpu %d cores from history of '%s' (p95 x 1.2); pass --cpu to override" % (a.cpu, P.hist_prefix(a.name)),
+              file=sys.stderr)
     res = dict(owner=a.owner or None, cwd=cwd, log_dir=a.log_dir, env=env, vram_gb=a.vram, carla=a.carla, span=a.span,
                cpu=a.cpu, ram_gb=a.ram, threads=a.threads, train=a.train, exclusive=a.exclusive,
-               gpus=[int(g) for g in a.gpus.split(",") if g] if a.gpus else [], max_rss_gb=a.max_rss,
+               gpus=[int(g) for g in a.gpus.split(",") if g] if a.gpus else [], pin_strict=a.pin_strict, max_rss_gb=a.max_rss,
                profile=a.profile or "")
     after = a.after.split(",") if a.after else []
     if a.preflight:
@@ -119,6 +128,14 @@ def _age(t):
     return "%dm" % (s / 60) if s < 5400 else "%.1fh" % (s / 3600)
 
 
+def _cpu(j):
+    """declared cores, with the measured 5-min peak in front for a running job (m/d)."""
+    d = j["spec"].get("cpu") or ""
+    if j["state"] == "running" and j.get("cores_peak") is not None:
+        return "%.0f/%s" % (j["cores_peak"], d or "-")
+    return str(d)
+
+
 def cmd_queue(a):
     st, status, inbox, age = P.snapshot()
     jobs = list(st["jobs"].values()) + [dict(j, state="inbox", why="not yet read by the dispatcher") for j in inbox]
@@ -127,17 +144,17 @@ def cmd_queue(a):
         cut = time.time() - 6 * 3600
         jobs = [j for j in jobs if j["state"] in ("running", "queued", "inbox") or j.get("t1", 0) > cut]
     jobs.sort(key=lambda j: (order.get(j["state"], 9), -float(j["spec"].get("priority") or 0), j["t_submit"]))
-    print("%-16s %-9s %4s %-22s %-10s %6s %5s %4s %5s  %s" % ("id", "state", "card", "name", "owner", "vram", "carla",
-                                                            "cpu", "age", "why / log"))
+    print("%-16s %-9s %4s %-22s %-10s %6s %5s %7s %5s  %s" % ("id", "state", "card", "name", "owner", "vram", "carla",
+                                                            "cpu m/d", "age", "why / log"))
     for j in jobs:
         s = j["spec"]
         tail = j.get("why") or ""
         if j["state"] in ("running", "failed", "done"):
             tail = (tail + " " if tail else "") + str(Path(s.get("log_dir") or P.pool_dir() / "jobs" / j["id"]) / "log.txt")
-        print("%-16s %-9s %4s %-22s %-10s %6s %5s %4s %5s  %s" % (
+        print("%-16s %-9s %4s %-22s %-10s %6s %5s %7s %5s  %s" % (
             j["id"], j["state"], j.get("gpu", "") if j.get("gpu") is not None else "", s["name"][:22],
             (s.get("owner") or "")[:10], "%.0f" % s["vram_gb"] if not s.get("exclusive") else "card", s.get("carla") or "",
-            s.get("cpu") or "", _age(j.get("t0") or j["t_submit"]), tail[:160]))
+            _cpu(j), _age(j.get("t0") or j["t_submit"]), tail[:160]))
     _warn_dispatcher(age)
     return 0
 
@@ -177,13 +194,16 @@ def cmd_top(a):
     hd = (status.get("cfg") or {}).get("headroom_gb", P.DEFAULTS["headroom_gb"])
     for c in box.cards:
         x = acct.get(c.index, {})
-        jobs = ", ".join("%s %s (%.0f/%.0f GB)" % (j["id"], j["spec"]["name"][:18], j.get("vram_now", 0), j["spec"]["vram_gb"])
+        jobs = ", ".join("%s %s (%.0f/%.0f GB, cpu %s)" % (j["id"], j["spec"]["name"][:18], j.get("vram_now", 0),
+                                                         j["spec"]["vram_gb"], _cpu(j))
                          for j in run if j.get("gpu") == c.index)
         free = x.get("total_gb", 0) - hd - x.get("foreign_gb", 0) - x.get("pool_gb", 0)
         print("| %d | %d | %.0f / %.0f | %.0f | %.0f | %s | %s / %s | %s | %s |" % (
             c.index, c.util, c.mem_used_mib / 1024, c.mem_total_mib / 1024, x.get("pool_gb", 0), x.get("foreign_gb", 0),
             "held: " + x["whole_hold"] if x.get("whole_hold") else "%.0f" % max(free, 0), x.get("carla_pool", 0),
             x.get("carla_foreign", 0), x.get("train", 0), jobs or "-"))
+    if status.get("cpu"):
+        print("cpu charged %(charged)s / budget %(budget)s cores (measured peak x 1.2 after 5 min, else declared)" % status["cpu"])
     for h in status.get("holds", []):
         print("hold %s card %d: %s" % (h["id"], h["card"], h.get("note")))
     _warn_dispatcher(age)
@@ -240,16 +260,20 @@ def main(argv=None):
     s = sub.add_parser("submit")
     s.add_argument("--name", required=True)
     s.add_argument("--owner", default="", help="who to ask about it (default: $CL_OWNER, the submitting pool job, $USER)")
-    s.add_argument("--vram", type=float, default=0.0, help="peak VRAM GB on the card (default 9 per CARLA server)")
+    s.add_argument("--vram", type=float, default=0.0, help="peak VRAM GB on the card (default: p95 x 1.2 of "
+                   "finished jobs with the same name prefix, else 9 per CARLA server)")
     s.add_argument("--carla", type=int, default=0, help="CARLA servers the job starts ({carla}, {idx}, {span} in cmd)")
     s.add_argument("--span", type=int, default=0, help="server indices to reserve (default 2 x carla)")
-    s.add_argument("--cpu", type=int, default=0, help="cores; > 0 pins the job (taskset) to that many free cores")
+    s.add_argument("--cpu", type=int, default=0, help="cores; > 0 pins the job (taskset) to that many free cores "
+                   "(default: p95 x 1.2 of the name prefix's history, else unpinned)")
     s.add_argument("--ram", type=float, default=0.0, help="host RAM GB (admission)")
     s.add_argument("--max-rss", type=float, default=0.0, help="stop the job when its process tree's RSS exceeds this GB")
     s.add_argument("--threads", type=int, default=0, help="PID estimate (default from the thread model)")
     s.add_argument("--train", action="store_true", help="a training job (per-card cap)")
     s.add_argument("--exclusive", action="store_true", help="alone on its card")
     s.add_argument("--gpus", default="", help="allowed cards, e.g. 1,2 (default any)")
+    s.add_argument("--pin-strict", action="store_true", help="never widen --gpus (default: an idle card outside --gpus "
+                   "may take the job when the allowed ones are busy)")
     s.add_argument("--priority", type=float, default=0.0, help="higher starts first")
     s.add_argument("--after", default="", help="job ids that must finish with rc 0 first")
     s.add_argument("--when-exists", default="", help="stay queued until this path exists")

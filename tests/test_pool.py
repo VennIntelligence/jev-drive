@@ -104,6 +104,65 @@ class Placement(unittest.TestCase):
         self.assertEqual(len(P.static_check("python bad.py && bash missing.sh", str(tmp))), 2)
 
 
+class MeasuredAndHistory(unittest.TestCase):
+    def test_cpu_charge_declared_young_then_measured(self):
+        now = time.time()
+        j = dict(spec=dict(cpu=20), t0=now - 60, cores_peak=2.0)
+        self.assertEqual(P.cpu_charge(j, now), 20)                  # young: declared
+        j["t0"] = now - 1000
+        self.assertAlmostEqual(P.cpu_charge(j, now), 2.4)           # 1.2 x peak
+        j["cores_peak"] = 0.1
+        self.assertEqual(P.cpu_charge(j, now), 1.0)                 # at least one core
+        del j["cores_peak"]
+        self.assertEqual(P.cpu_charge(j, now), 20)                  # no measurement yet: declared
+
+    def test_measure_cpu_rolling_peak(self):
+        tmp = Path(tempfile.mkdtemp())
+        d = P.Dispatcher(tmp)
+        d.st["jobs"]["a"] = j = dict(id="a", spec=dict(cpu=8))
+        ticks = {1: 0, 2: 0}
+        d.ticks_fn = lambda p: ticks.get(p)
+        t = 1000.0
+        d.measure_cpu({"a": [1, 2]}, t)                              # first sight: no delta yet
+        self.assertNotIn("cores_peak", j)
+        for step, cores in enumerate([4, 1, 1]):
+            t += 20
+            ticks[1] += int(cores * P.CLK_TCK * 20)
+            d.measure_cpu({"a": [1, 2]}, t)
+        self.assertEqual((j["cores_now"], j["cores_peak"]), (1.0, 4.0))
+        for _ in range(16):                                          # the 4-core sample leaves the 5-min window
+            t += 20
+            ticks[1] += int(1 * P.CLK_TCK * 20)
+            d.measure_cpu({"a": [1, 2]}, t)
+        self.assertEqual(j["cores_peak"], 1.0)
+        self.assertGreaterEqual(j["cores_max"], 4.0)
+        ticks.pop(2)                                                 # a member exits: no negative delta
+        t += 20
+        d.measure_cpu({"a": [1]}, t)
+        self.assertGreaterEqual(j["cores_now"], 0)
+
+    def test_history_prefix_and_defaults(self):
+        for n, want in [("op-eval-s3", "op-eval"), ("op-eval-k12-pf", "op-eval"), ("Dg_Train-007", "dg_train"),
+                        ("op_parity-u2-t0", "op_parity"), ("train2", "train"), ("b2d-route", "b2d-route"), ("s3", "s")]:
+            self.assertEqual(P.hist_prefix(n), want, n)
+        tmp = Path(tempfile.mkdtemp())
+        self.assertEqual(P.history_defaults("x-s1", tmp), {})
+        for v, c in [(10, 4), (20, 8), (30, 5)]:
+            P.hist_record(tmp, "x-s%d" % v, v, c)
+        self.assertEqual(P.history_defaults("x-k9", tmp), dict(vram_gb=36.0, cpu=10))     # p95 = max here
+        from jevdrive.cl import __main__ as cli
+        old = os.environ.get("CL_POOL_DIR")
+        os.environ["CL_POOL_DIR"] = str(tmp)
+        try:
+            self.assertEqual(cli.main(["submit", "--name", "x-s7", "--no-check", "--", "true"]), 0)
+            self.assertEqual(cli.main(["submit", "--name", "x-s8", "--no-check", "--vram", "5", "--cpu", "2", "--", "true"]), 0)
+        finally:
+            os.environ.pop("CL_POOL_DIR") if old is None else os.environ.update(CL_POOL_DIR=old)
+        specs = {j["spec"]["name"]: j["spec"] for j in (json.loads(f.read_text()) for f in (tmp / "inbox").glob("*.json"))}
+        self.assertEqual((specs["x-s7"]["vram_gb"], specs["x-s7"]["cpu"]), (36.0, 10))
+        self.assertEqual((specs["x-s8"]["vram_gb"], specs["x-s8"]["cpu"]), (5, 2))        # explicit wins
+
+
 def fake_box(cards=(0, 1, 2), used_mib=0, pids=700):
     cs = [Card(g, "GPU-%d" % g, "0000:%02x:00.0" % g, used_mib, 85651, 0, 0 if g == 0 else 1) for g in cards]
     return Box(208, 75, list(range(208)), {0: list(range(52)), 1: list(range(52, 104))},
@@ -228,6 +287,67 @@ class Dispatch(unittest.TestCase):
         for j in d.jobs("running"):
             P.cancel(j["id"], pool=self.tmp)
         self.until(d, lambda: st["big"]["state"] == "done" or d.st["jobs"][st["big"]["id"]]["state"] == "done")
+
+    def test_measured_cpu_charge_frees_budget(self):
+        P.submit("sleep 30", name="a", pool=self.tmp, vram_gb=5, cpu=3)
+        d = self.disp(cpu_budget=4, idle_s=1e9)
+        d.round()
+        b = P.submit("sleep 30", name="b", pool=self.tmp, vram_gb=5, cpu=3)
+        d.round()
+        self.assertIn("CPU 3 + 3 cores > budget 4", d.st["jobs"][b]["why"])      # declared while young
+        a = next(j for j in d.jobs("running"))
+        a["t0"] -= 1000
+        a["cores_peak"] = 0.5                                                    # measured: charged 1 core
+        d.round()
+        self.assertEqual(d.st["jobs"][b]["state"], "running")
+        for j in d.jobs("running"):
+            P.cancel(j["id"], pool=self.tmp)
+        self.until(d, lambda: not d.jobs("running"))
+
+    def test_idle_card_admits_cpu_blocked_job(self):
+        P.submit("sleep 30", name="a", pool=self.tmp, vram_gb=5, cpu=3)
+        small = P.submit("sleep 30", name="cpuonly", pool=self.tmp, vram_gb=1, cpu=3)
+        b = P.submit("sleep 30", name="b", pool=self.tmp, vram_gb=5, cpu=3)
+        d = self.disp(cpu_budget=4, idle_s=1e9)
+        d.round()
+        self.assertEqual(d.st["jobs"][b]["state"], "queued")                     # no card idle long enough
+        d2 = self.disp(cpu_budget=4, idle_s=0)
+        d2.round()
+        self.assertEqual(d2.st["jobs"][b]["state"], "running")                   # idle card: CPU bookkeeping relaxed
+        self.assertEqual(d2.st["jobs"][small]["state"], "queued")                # vram_gb <= 1 never uses the rule
+        self.assertIn("CPU", d2.st["jobs"][small]["why"])
+        ev = [json.loads(l) for l in (self.tmp / "events.jsonl").read_text().splitlines()]
+        self.assertIn(b, [e["id"] for e in ev if e["kind"] == "admit_idle"])
+        for j in d2.jobs("running"):
+            P.cancel(j["id"], pool=self.tmp)
+        self.until(d2, lambda: not d2.jobs("running"))
+
+    def test_idle_rule_never_relaxes_ram(self):
+        self.box.mem_max_gb, self.box.mem_used_gb = 100.0, 90.0
+        jid = P.submit("true", name="r", pool=self.tmp, vram_gb=5, cpu=3, ram_gb=1)
+        d = self.disp(cpu_budget=1, idle_s=0)
+        d.round()
+        self.assertIn("memory", d.st["jobs"][jid]["why"])
+
+    def test_auto_retarget_and_pin_strict(self):
+        P.submit("sleep 30", name="fill", pool=self.tmp, vram_gb=70, gpus=[0])
+        wide = P.submit("sleep 30", name="w", pool=self.tmp, vram_gb=70, gpus=[0])
+        strict = P.submit("sleep 30", name="s", pool=self.tmp, vram_gb=70, gpus=[0], pin_strict=True)
+        d = self.disp(idle_s=1e9)
+        d.round()
+        self.assertEqual((d.st["jobs"][wide]["state"], d.st["jobs"][strict]["state"]), ("queued", "queued"))
+        d = self.disp(idle_s=0)
+        d.round()
+        j = d.st["jobs"][wide]
+        self.assertEqual(j["state"], "running")
+        self.assertIn(j["gpu"], (1, 2))
+        self.assertEqual(sorted(j["spec"]["gpus"]), sorted({0, j["gpu"]}))
+        self.assertEqual(d.st["jobs"][strict]["state"], "queued")
+        self.assertEqual(d.st["jobs"][strict]["spec"]["gpus"], [0])              # pinned: never widened
+        self.assertIn("auto_retarget", (self.tmp / "events.jsonl").read_text())
+        for j in d.jobs("running"):
+            P.cancel(j["id"], pool=self.tmp)
+        self.until(d, lambda: not d.jobs("running"))
 
 
 if __name__ == "__main__":

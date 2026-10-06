@@ -7,6 +7,7 @@ Spool, under $DATA_DIR/runs/pool/ (the dispatcher is its only writer, except inb
   cancel/<id>       a cancel request (`cancel`; content "drain" = touch the job's DRAIN file instead of stopping it)
   retarget/<id>     new allowed cards for a queued job (`retarget`; content "0,2", empty = any); the id stays, so
                     `after` chains keep working
+  history.json      per finished job-name prefix: recent peak VRAM and peak cores (dispatcher only; `submit` reads it)
   holds.json        resources held outside the pool (`hold`): a card or part of it, server indices, cores; a hold
                     with a pid ends by itself when that process exits
   state.json        every job: spec, state, card, server-index block, cores, tries, why it waits (dispatcher only)
@@ -16,7 +17,8 @@ Spool, under $DATA_DIR/runs/pool/ (the dispatcher is its only writer, except inb
 
 A job: cmd (argv, or one shell string), cwd, log_dir, env, need = {vram_gb, carla servers, cpu cores, ram_gb, train},
 priority (higher first, then submit order), owner, after (job ids that must be done first), when_exists (a file gate),
-gpus (allowed cards), exclusive, tries, timeout_h, max_rss_gb, profile (thread env from profiles.py).
+gpus (allowed cards), pin_strict (never widen gpus), exclusive, tries, timeout_h, max_rss_gb, profile (thread env from
+profiles.py).
 
 Every round (default 20 s) the dispatcher reaps finished jobs, then admits queued ones in priority order. A job fits a
 card when (all measured live, nvidia-smi cached <= 15 s):
@@ -29,13 +31,28 @@ card when (all measured live, nvidia-smi cached <= 15 s):
   ports     a free block of 2 x carla server indices: every RPC (2000 + 50 i) and traffic-manager (8000 + 50 i = the RPC
             block of i + 120) port block clear of pool jobs, holds and every LISTENING port on the box (/proc/net/tcp),
             inside capacity.index_bounds. A block is freed only when every process of the job's tree has exited.
-  CPU       sum of declared cores (pool + holds) <= cpu budget (cgroup quota x cpu_overcommit); cpu > 0 pins the job
-            (taskset) to free physical cores, NUMA-local to the card first.
+  CPU       sum of charged cores (pool + holds) <= cpu budget (cgroup quota x cpu_overcommit); cpu > 0 pins the job
+            (taskset) to free physical cores, NUMA-local to the card first. A job is charged its declared cores while
+            younger than 5 min (and when no measurement exists yet), then max(1, 1.2 x its peak measured cores over the
+            last 5 min): utime + stime deltas over its process tree, sampled every round. Holds keep declared cores.
   PIDs/RAM  pids.current + threads of jobs younger than 5 min + the job's estimate <= 0.80 pids.max; cgroup memory
             without page cache (anon + shmem + kernel) + young ram_gb + ram_gb <= 0.85 memory.max.
 Among the cards that fit, the least loaded (fewest pool jobs + foreign GPU processes) wins and VRAM best-fit breaks ties:
 spreading keeps every card computing, best-fit keeps room for a large job. A job blocked > hold_s (15 min) at the head
 of the queue reserves the card closest to fitting it: lower-priority jobs stop starting there until it starts.
+
+Work conservation (an idle card never waits on bookkeeping). A card is idle when it has no pool job, no whole hold and
+at most idle_vram_gb (1 GB) used outside the pool, for >= idle_s (120 s, config). Then:
+  admit_idle     a queued job with vram_gb > 1 blocked only by the CPU budget or the PID plan cap starts on that card
+                 anyway (highest priority first; logged `admit_idle`). VRAM, RAM, CARLA, ports and pinning are never
+                 relaxed, and CPU-only jobs (vram_gb <= 1) never use this rule.
+  auto_retarget  a queued job restricted by `gpus` whose allowed cards cannot take it, while a card outside `gpus` is idle
+                 and would fit it, gets that card added to its gpus and starts there (logged `auto_retarget`).
+                 `submit --pin-strict` opts out.
+History: when a job ends done (>= 60 s), its peak VRAM (measured) and peak cores are appended to history.json under
+its name prefix (hist_prefix: lower case, trailing -s3 / -k2 / _t0 / -007 / -pf / trailing digits stripped repeatedly,
+so `op-eval-s3-pf` and `op-eval-k2` are `op-eval`), last 20 kept. `submit` without --vram / --cpu defaults to p95 x 1.2
+of that history and says so on stderr; explicit values win.
 
 A job's process tree is recorded by (pid, start time) plus a CL_TOKEN env entry (procs.py). When its root exits, any
 member still alive is stopped through a pidfd; resources are freed only after the tree is empty. Cancel, timeout and the
@@ -51,6 +68,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
+import math
 import os
 import re
 import secrets
@@ -59,6 +77,8 @@ import signal
 import subprocess
 import time
 import traceback
+from collections import deque
+import dataclasses
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -68,9 +88,14 @@ from .box import CARLA_BIN, format_cpus, parse_cpus, probe, processes, smi
 
 REPO = Path(__file__).resolve().parents[2]
 YOUNG_S = 300.0
+CPU_WINDOW_S = 300.0                  # peak of measured cores over this window
+CPU_MARGIN = 1.2                      # charge = margin x recent peak cores
+HIST_KEEP = 20
+HIST_MIN_WALL_S = 60.0
+CLK_TCK = os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") else 100
 STALE_S = 120.0                       # status.json older than this: the dispatcher is not running
 DEFAULTS = dict(poll_s=20.0, headroom_gb=4.0, carla_per_card=capacity.GPU_KNEE, train_per_card=2, cpu_overcommit=1.0,
-                max_starts=4, hold_s=900.0, cards=None, smi_age_s=15.0)
+                max_starts=4, hold_s=900.0, cards=None, smi_age_s=15.0, idle_s=120.0, idle_vram_gb=1.0)
 FINAL = ("done", "failed", "cancelled")
 
 
@@ -97,6 +122,60 @@ def _flock(p: Path):
         yield
 
 
+# ---------------------------------------------------------------------------------------------------- measured CPU, history
+def proc_ticks(pid: int):
+    """utime + stime of a process in clock ticks, None when it is gone."""
+    try:
+        f = Path("/proc/%d/stat" % pid).read_text().rsplit(")", 1)[1].split()
+        return int(f[11]) + int(f[12])
+    except (OSError, IndexError, ValueError):
+        return None
+
+
+def cpu_charge(j: dict, now: float) -> float:
+    """Cores a running job is charged against the CPU budget: declared while young or unmeasured, then 1.2 x peak."""
+    declared = float(max(int(j["spec"].get("cpu") or 0), 1))
+    peak = j.get("cores_peak")
+    if peak is None or now - j.get("t0", 0) < YOUNG_S:
+        return declared
+    return max(1.0, CPU_MARGIN * float(peak))
+
+
+_SUFFIX = re.compile(r"(?:[-_.](?:[a-z]?\d+|pf)|\d+)+$")
+
+
+def hist_prefix(name: str) -> str:
+    """Key of a job name in history.json: lower case, trailing -s3 / -k2 / _t0 / -007 / -pf / digits stripped."""
+    n = name.lower()
+    return _SUFFIX.sub("", n) or n
+
+
+def hist_record(pool: Path, name: str, vram_gb: float, cores: float) -> None:
+    pool = Path(pool)
+    h = _read_json(pool / "history.json", {}) or {}
+    e = h.setdefault(hist_prefix(name), dict(vram=[], cores=[]))
+    for k, v in (("vram", vram_gb), ("cores", cores)):
+        if v > 0:
+            e[k] = (e[k] + [round(v, 2)])[-HIST_KEEP:]
+    procs.atomic_json(pool / "history.json", h)
+
+
+def _p95(xs: list) -> float:
+    xs = sorted(xs)
+    return xs[min(len(xs) - 1, math.ceil(0.95 * len(xs)) - 1)]
+
+
+def history_defaults(name: str, pool: Path = None) -> dict:
+    """{vram_gb, cpu} = p95 x 1.2 of the finished jobs under this name prefix (only the keys that have samples)."""
+    e = (_read_json(Path(pool or pool_dir()) / "history.json", {}) or {}).get(hist_prefix(name)) or {}
+    out = {}
+    if e.get("vram"):
+        out["vram_gb"] = round(math.ceil(_p95(e["vram"]) * 1.2 * 10) / 10, 1)
+    if e.get("cores"):
+        out["cpu"] = max(1, math.ceil(_p95(e["cores"]) * 1.2))
+    return out
+
+
 # ---------------------------------------------------------------------------------------------------- job spec
 @dataclass
 class Spec:
@@ -115,6 +194,7 @@ class Spec:
     train: bool = False                           # counts against train_per_card
     exclusive: bool = False                       # alone on its card
     gpus: list = field(default_factory=list)      # allowed cards (empty: any)
+    pin_strict: bool = False                      # never widen gpus (auto_retarget opt-out)
     priority: float = 0.0                         # higher first
     after: list = field(default_factory=list)     # job ids that must be done (a failed one fails this job)
     when_exists: str = ""                         # stay queued until this path exists
@@ -385,6 +465,11 @@ class Dispatcher:
         self.halt = False
         self.log_f = None
         self.last = {}
+        self.ticks_fn = proc_ticks
+        self.cpu_prev = {}                                    # job id -> ({pid: ticks}, t)
+        self.cpu_win = {}                                     # job id -> deque of (t, cores)
+        self.idle_since = {}                                  # card -> t since which it has been idle
+        self.cpu_info = {}
 
     # -------------------------------------------------------------- helpers
     def cfg(self) -> dict:
@@ -468,6 +553,11 @@ class Dispatcher:
                 pass
             (d / "ERROR").write_text("# job %s %s: %s (rc %s, try %d) %s\n\n%s\n" % (
                 j["id"], state, why, rc, j["tries"], time.strftime("%F %T"), tail))
+        if state == "done" and info["wall_s"] >= HIST_MIN_WALL_S and not j["spec"].get("env", {}).get("CL_PREFLIGHT"):
+            try:
+                hist_record(self.pool, j["spec"]["name"], float(j.get("vram_peak") or 0), float(j.get("cores_max") or 0))
+            except OSError:
+                pass
         self.status_line(j, "%s%s" % (state, ": " + why if why else ""))
         self.log("end", id=j["id"], state=state, rc=rc, why=why, gpu=j.get("gpu"), wall_s=info["wall_s"])
 
@@ -543,6 +633,7 @@ class Dispatcher:
             a, s = cards[g], j["spec"]
             act = sum(v for (cg, p), v in per_pid.items() if cg == g and p in mem)
             j["vram_now"] = round(act, 1)
+            j["vram_peak"] = max(float(j.get("vram_peak") or 0), round(act, 1))
             a.pool_gb += max(float(s["vram_gb"]), act)
             a.foreign_gb -= act                                # foreign = used - pool actual (used added below)
             a.exclusive = a.exclusive or bool(s.get("exclusive"))
@@ -571,6 +662,49 @@ class Dispatcher:
             a.carla_foreign = max(a.carla_foreign, hold_carla.get(g, 0))
         return cards
 
+    # -------------------------------------------------------------- measured CPU, idle cards
+    def measure_cpu(self, live: dict, now: float) -> None:
+        """Cores each running job used since the last round (utime + stime over its live tree); keeps the peak over the
+        last CPU_WINDOW_S in j["cores_peak"] (what admission charges) and the lifetime max in j["cores_max"]."""
+        for jid in list(self.cpu_prev):
+            if jid not in live:
+                self.cpu_prev.pop(jid, None)
+                self.cpu_win.pop(jid, None)
+        for jid, mem in live.items():
+            j = self.st["jobs"].get(jid)
+            if j is None:
+                continue
+            cur = {p: t for p in mem if (t := self.ticks_fn(p)) is not None}
+            prev, t_prev = self.cpu_prev.get(jid, (None, 0.0))
+            self.cpu_prev[jid] = (cur, now)
+            if prev is None or now - t_prev < 1.0:
+                continue
+            d = sum(max(t - prev.get(p, 0), 0) for p, t in cur.items())
+            cores = d / CLK_TCK / (now - t_prev)
+            w = self.cpu_win.get(jid)
+            if w is None:
+                w = self.cpu_win[jid] = deque()
+                if j.get("cores_peak") is not None:           # after a restart: keep the old peak for one window
+                    w.append((now - 1.0, float(j["cores_peak"])))
+            w.append((now, cores))
+            while w and now - w[0][0] > CPU_WINDOW_S:
+                w.popleft()
+            j["cores_now"] = round(cores, 1)
+            j["cores_peak"] = round(max(c for _, c in w), 1)
+            j["cores_max"] = max(float(j.get("cores_max") or 0), j["cores_peak"])
+
+    def track_idle(self, cards: dict, now: float, cfg: dict) -> None:
+        for g, a in cards.items():
+            if a.jobs == 0 and not a.whole_hold and not a.exclusive and a.foreign_gb <= cfg["idle_vram_gb"]:
+                self.idle_since.setdefault(g, now)
+            else:
+                self.idle_since.pop(g, None)
+
+    def idle_cards(self, cards, now: float, cfg: dict) -> list:
+        """Cards idle for >= idle_s that still have no job this round."""
+        return [a for a in cards if a.jobs == 0 and not a.whole_hold and not a.exclusive and a.index in self.idle_since
+                and now - self.idle_since[a.index] >= cfg["idle_s"]]
+
     # -------------------------------------------------------------- admission
     def admit(self, box, rows: dict, live: dict, holds: list, cfg: dict) -> None:
         cards = self.account(box, rows, live, holds, cfg)
@@ -581,18 +715,20 @@ class Dispatcher:
         taken_cpu = set()
         for h in holds:
             taken_cpu |= set(parse_cpus(h.get("cpus") or ""))
-        cpu_used = sum(int(h.get("cpu") or 0) for h in holds)
+        cpu_used = float(sum(int(h.get("cpu") or 0) for h in holds))
         now = time.time()
+        self.track_idle(cards, now, cfg)
         young_threads = young_ram = 0
         for j in self.jobs("running"):
             if j.get("span"):
                 used_blocks |= blocks_of(range(j["idx"], j["idx"] + j["span"]))
             taken_cpu |= set(parse_cpus(j.get("cpus") or ""))
-            cpu_used += max(int(j["spec"].get("cpu") or 0), 1)
+            cpu_used += cpu_charge(j, now)
             if now - j.get("t0", 0) < YOUNG_S:
                 young_threads += Spec(**j["spec"]).est_threads(box.host_cpus)
                 young_ram += float(j["spec"].get("ram_gb") or 0)
         budget = box.cores * cfg["cpu_overcommit"] if not cfg.get("cpu_budget") else cfg["cpu_budget"]
+        self.cpu_info = dict(charged=round(cpu_used, 1), budget=round(budget, 1))
         adm = capacity.Admission.from_box(box)
         state = {j["id"]: j["state"] for j in self.st["jobs"].values()}
         queue = sorted(self.jobs("queued"), key=lambda j: (-float(j["spec"].get("priority") or 0), j["t_submit"]))
@@ -616,16 +752,27 @@ class Dispatcher:
                 continue
             n_cpu = max(s.cpu, 1)
             pid_need = s.est_threads(box.host_cpus)
+            soft = hard = ""                           # soft: CPU / PID plan cap, relaxed on an idle card
             if cpu_used + n_cpu > budget:
-                why = "CPU %d + %d cores > budget %.0f" % (cpu_used, n_cpu, budget)
+                soft = "CPU %.0f + %d cores > budget %.0f" % (cpu_used, n_cpu, budget)
             elif box.pids_current + young_threads + pid_need > adm.plan_cap:
-                why = "PIDs %d + %d + %d > %d" % (box.pids_current, young_threads, pid_need, adm.plan_cap)
-            elif box.mem_max_gb and box.mem_used_gb + young_ram + s.ram_gb > 0.85 * box.mem_max_gb:
-                why = "memory %.0f + %.0f GB > 85%% of %.0f" % (box.mem_used_gb + young_ram, s.ram_gb, box.mem_max_gb)
-            if why:
-                self.set_why(j, why)
+                soft = "PIDs %d + %d + %d > %d" % (box.pids_current, young_threads, pid_need, adm.plan_cap)
+            if box.mem_max_gb and box.mem_used_gb + young_ram + s.ram_gb > 0.85 * box.mem_max_gb:
+                hard = "memory %.0f + %.0f GB > 85%% of %.0f" % (box.mem_used_gb + young_ram, s.ram_gb, box.mem_max_gb)
+            if hard or (soft and s.vram_gb <= 1):
+                self.set_why(j, soft or hard)
                 continue
-            a, reasons = choose(s, list(cards.values()), cfg, j["id"])
+            every = list(cards.values())
+            idle = self.idle_cards(every, now, cfg) if soft else None
+            a, reasons = choose(s, idle if soft else every, cfg, j["id"])
+            widened = None
+            if a is None and s.gpus and not s.pin_strict:      # pinning watchdog: an idle card outside gpus would fit
+                extra = [c for c in (idle if soft else self.idle_cards(every, now, cfg)) if c.index not in s.gpus]
+                a, _ = choose(dataclasses.replace(s, gpus=[]), extra, cfg, j["id"])
+                widened = a
+            if soft and a is None:
+                self.set_why(j, soft)
+                continue
             span = s.span or 2 * s.carla
             i0 = None
             if a is not None and span:
@@ -648,6 +795,12 @@ class Dispatcher:
                         best.reserved_for = j["id"]
                         self.set_why(j, j["why"] + " [reserves card %d]" % best.index)
                 continue
+            if widened is not None:
+                s.gpus = j["spec"]["gpus"] = sorted(set(s.gpus) | {a.index})
+                self.log("auto_retarget", id=j["id"], name=s.name, gpus=s.gpus, card=a.index)
+            if soft:
+                self.log("admit_idle", id=j["id"], name=s.name, card=a.index, blocked=soft,
+                         idle_s=round(now - self.idle_since[a.index]))
             self.launch(j, s, a.index, i0, span if i0 is not None else 0, cpus, box, adm)
             starts += 1
             a.jobs += 1
@@ -735,6 +888,7 @@ class Dispatcher:
         rows = processes()
         live = self.reap(rows)
         rows = processes()
+        self.measure_cpu(live, time.time())
         holds = live_holds(load_holds(self.pool), rows)
         if len(holds) < len(load_holds(self.pool)):
             self.prune_holds(rows)
@@ -744,7 +898,7 @@ class Dispatcher:
         self.save()
         procs.atomic_json(self.pool / "status.json", dict(
             t=time.time(), pid=os.getpid(), cfg=cfg, holds=holds,
-            cards={g: a.__dict__ for g, a in self.last.items()},
+            cards={g: a.__dict__ for g, a in self.last.items()}, cpu=self.cpu_info,
             counts={s: len(self.jobs(s)) for s in ("queued", "running", "done", "failed", "cancelled")},
             box=dict(cores=box.cores, pids=box.pids_current, pids_max=box.pids_max, mem_gb=round(box.mem_used_gb, 1),
                      mem_max_gb=round(box.mem_max_gb, 1), load=box.load)))

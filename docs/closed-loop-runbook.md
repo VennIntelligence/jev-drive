@@ -155,13 +155,21 @@ command when rc alone is not enough.
 | VRAM | total - 4 GB headroom - (VRAM of processes outside the pool, at least what holds declare) - sum over the card's pool jobs of max(declared, measured) >= `vram_gb`. Declared VRAM stays booked for the job's life, so a job that has not reached its peak is never overbooked. |
 | CARLA | servers of pool jobs + servers outside the pool + `carla` <= 6 per card; one CARLA job starts per card per round (staggered starts) |
 | ports | a free block of 2 x `carla` server indices in 160-494 whose RPC and TM port blocks (index i: RPC 2000 + 50i, TM = RPC block of i + 120) miss every pool job, every hold and every LISTENING TCP port on the box; freed only when the job's whole process tree has exited |
-| CPU | declared cores of pool jobs + holds <= cgroup quota (`cpu_overcommit` 1.0) |
+| CPU | charged cores of pool jobs + holds <= cgroup quota x `cpu_overcommit` (1.0). Charge = declared `cpu` while the job is younger than 5 min (or unmeasured), then max(1, 1.2 x its peak measured cores over the last 5 min) (utime + stime of its process tree, every round); holds keep declared cores. `queue` shows `cpu m/d` = measured peak / declared, `top` the charged total. |
 | PIDs / RAM | pids.current + threads of jobs younger than 5 min + the job's estimate (thread model) <= 0.80 pids.max; cgroup memory without page cache (`memory.stat` anon + shmem + kernel) + young `ram_gb` <= 0.85 memory.max |
+| idle card (work conservation) | A card with no pool job, no whole hold and <= 1 GB used outside the pool for >= `idle_s` (120 s, config) takes the highest-priority queued job with `vram_gb` > 1 that is blocked **only** by the CPU budget or the PID plan cap (event `admit_idle`). VRAM, RAM, CARLA and ports are never relaxed; CPU-only jobs (`vram_gb` <= 1) never use the rule. |
+| pinning watchdog | A queued job restricted by `gpus` whose allowed cards are busy gets an idle card (>= `idle_s`) outside `gpus` added to its `gpus` and starts there (event `auto_retarget`). `submit --pin-strict` opts out. |
 | order | priority, then submit order; jobs that fit start out of order (backfill), but a head job blocked > 15 min reserves the card closest to fitting it |
 
 Among the cards that fit, the least loaded (pool jobs + foreign GPU processes) wins, VRAM best-fit breaks ties: spreading
 keeps every card computing (one serial chain per card left cards at 0-20% util with one CARLA server where six
 fit, 2026-10-05); best-fit plus the head-job reservation keeps room for a large job.
+
+**History defaults.** When a job ends `done` (>= 60 s), the dispatcher appends its peak VRAM and peak cores to
+`runs/pool/history.json` under its name prefix (lower case, trailing `-s3`, `-k2`, `_t0`, `-007`, `-pf`, digits stripped
+repeatedly: `op-eval-s3-pf` and `op-eval-k2` are `op-eval`; last 20 kept). `submit` without `--vram` / `--cpu` then
+defaults to p95 x 1.2 of that history and prints the choice on stderr; explicit values win. Dispatcher config keys:
+`idle_s`, `idle_vram_gb` (trivial foreign VRAM), `cpu_overcommit`, `cpu_budget`.
 
 **Process safety.** Each job runs in its own session; its tree is recorded by (pid, start time) plus a `CL_TOKEN` env
 entry (`jevdrive.cl.procs`). When the root exits, members still alive (orphan CARLA servers, setsid children) are
