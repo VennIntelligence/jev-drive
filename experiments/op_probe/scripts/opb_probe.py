@@ -407,6 +407,9 @@ def summarize(res, stages):
     sc = pd_.read_csv(ROOT / "score" / "ablate_P2.csv")
     raw = dict(zip(sc[sc.key == "full"].token, sc[sc.key == "full"].raw_out))
     Fp = F & np.array([bool(raw.get(t, False)) for t in res["tokens"]])        # F-plan: the raw plan footprint itself leaves the polygons
+    tb = np.load(CACHE / "lb_navtest" / "tab.npz")
+    yaw4 = dict(zip(tb["names"].tolist(), np.abs(np.degrees(tb["fut"][:, -1, 2]))))
+    PPt = PP & np.array([yaw4[t] > 20 for t in res["tokens"]])                  # difficulty-matched pass set: logged turn > 20 deg in 4 s
     ct = res["corr_true"]
     rows = []
     base = {}
@@ -414,7 +417,7 @@ def summarize(res, stages):
         r = {"stage": name}
         for kind in ("direct", "raster"):
             err = np.nanmean(np.abs(res[f"{name}/corr_{kind}"] - ct), 1)
-            for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP), ("R", Rs), ("FF", FF)):
+            for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP), ("PPturn", PPt), ("R", Rs), ("FF", FF)):
                 if not m.any():
                     continue
                 b = stats.bootstrap(err[m], groups=lg[m])
@@ -422,10 +425,11 @@ def summarize(res, stages):
             if name == "E":
                 base[kind] = err
             if kind in base:
-                for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP), ("R", Rs), ("FF", FF)):
+                for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP), ("PPturn", PPt), ("R", Rs), ("FF", FF)):
                     if m.any():
                         r[f"skill_{kind}_{sn}"] = 1 - np.nanmean(err[m]) / np.nanmean(base[kind][m])
             r[f"excess_{kind}_F_minus_PP"], r[f"excess_{kind}_lo"], r[f"excess_{kind}_hi"] = twoset(err, F, PP, lg)
+            r[f"excess_{kind}_F_minus_PPturn"], r[f"excess_{kind}_t_lo"], r[f"excess_{kind}_t_hi"] = twoset(err, F, PPt, lg)
         sel = F | PP
         y = F[sel]
         sc = -res[f"{name}/margin"][sel]
@@ -434,12 +438,15 @@ def summarize(res, stages):
         sel2 = Fp | PP
         r["auc_Fplan_vs_PP"] = auc(-res[f"{name}/margin"][sel2], Fp[sel2])
         mb = res[f"{name}/margin"] - res["margin_true"]                     # post hoc (not pre-registered): predicted - true footprint margin
-        for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP), ("R", Rs), ("FF", FF)):
+        for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP), ("PPturn", PPt), ("R", Rs), ("FF", FF)):
             if not m.any():
                 continue
             b = stats.bootstrap(mb[m], groups=lg[m])
             r[f"margin_bias_{sn}"], r[f"margin_bias_{sn}_lo"], r[f"margin_bias_{sn}_hi"] = b["mean"], b["lo"], b["hi"]
         r["margin_bias_F_minus_PP"], r["margin_bias_FmPP_lo"], r["margin_bias_FmPP_hi"] = twoset(mb, F, PP, lg)
+        r["margin_bias_F_minus_PPturn"], r["margin_bias_FmPPt_lo"], r["margin_bias_FmPPt_hi"] = twoset(mb, F, PPt, lg)
+        sel3 = F | PPt
+        r["auc_F_vs_PPturn"] = auc(-res[f"{name}/margin"][sel3], F[sel3])
         r["margin_F_med"] = float(np.median(res[f"{name}/margin"][F]))
         r["margin_PP_med"] = float(np.median(res[f"{name}/margin"][PP]))
         rows.append(r)
