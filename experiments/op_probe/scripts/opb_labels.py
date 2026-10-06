@@ -139,7 +139,7 @@ def cmd_build(a):
         f = OUT / f"{tag}{'-lim' if a.limit else ''}.npz"
         np.savez(f, tokens=toks, log=logs, pose_global=pose, sdf=sdf, ok=ok, x0=X0, y0=Y0, res=RES, layers=np.array(LAYERS))
         bad = [R[t][3] for t in toks if R[t][2] is None][:5]
-        run.summary.update(n=len(toks), ok=int(ok.sum()), wall_s=time.time() - t0, out=str(f), fails=bad)
+        run.summary.update(n=len(toks), ok=int(ok.sum()), compute_s=time.time() - t0, out=str(f), fails=bad)
         run.info(f"ok {ok.sum()}/{len(toks)} in {time.time() - t0:.0f} s -> {f}; fails {bad}")
 
 
