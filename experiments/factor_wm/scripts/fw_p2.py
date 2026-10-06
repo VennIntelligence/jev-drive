@@ -148,12 +148,14 @@ def cmd_prep(a):
         d = P("logged", name)
         S = C.Clips(name)
         js = json.load(open(C.root("clips") / f"{name}.json"))
-        intent = np.load(L.lroot("prep") / f"{js['src']}.npz", allow_pickle=True)["intent"]
+        z = np.load(L.lroot("prep") / f"{js['src']}.npz", allow_pickle=True)
+        intent = z["intent"]
         rows = np.array([c["rows"] for c in js["clips"]])
+        fut0 = S.t["fut20"][:, 0] if "fut20" in S.t else z["fut20"][rows[:, 0]].astype(float)      # the G0 sets' tables have no fut20
         nf = rows.shape[1]
         v = S.t["v"].astype(float)
         alog = np.gradient(v, C.DT, axis=1)
-        hist = np.stack([hist_poses(S.t["fut20"][c, 0]) for c in range(S.n)])
+        hist = np.stack([hist_poses(fut0[c]) for c in range(S.n)])
         cmd = np.stack([[cmd_of(intent[r]) for r in rr] for rr in rows])
         tab = dict(hist=hist.astype(np.float32), cmd=cmd, alog=alog.astype(np.float32))
         if name == "train":
