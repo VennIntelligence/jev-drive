@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Low-speed lateral transfer limit in HUGSIM closed loop (plans/2026-10-04-lowspeed-ctrl-prereg.md), Cinque, PR #57 controller + lowspeed patch.
-# One resident Cinque server on one leased card; stages resumable (zs_run skips finished jobs):
+# Shared bench workers on the GPU pool; legacy tags/outputs retained. Previously one resident server on one leased card; stages resumable (zs_run skips finished jobs):
 #   1 lowspeed on all 64    2 base rerun on all 64 (same-day noise control; tree `fixed`, no rule)
 #   3 lowsel (selective rule, plans/2026-10-04-lowspeed-ctrl-selective-prereg.md) on all 64    4 lowsel smoke (SMOKE list)    5 base rerun #2 (tag cinque-fixed-base2)
 # Usage (box, tmux):  GPU=<card> [WORKERS=5] [STAGES="1 2"] experiments/hugsim/scripts/lowspeed_chain.sh [out_dir]
 # Files: <out>/STATUS, DONE or ERROR; results in <out>/results.csv.
 set -uo pipefail
-: "${DATA_DIR:?}" "${GPU:?}"
+: "${DATA_DIR:?}"
 cd "$(dirname "$0")/../../.."
 OUT=${1:-$DATA_DIR/runs/hugsim-lowspeed/closed}
 HPY=$DATA_DIR/envs/hugsim/bin/python
@@ -15,20 +15,13 @@ RULE=${RULE:-'{"jerk": 5.0, "tau0": 3.0, "v0": 2.5, "v1": 3.5}'}
 SEL=${SEL:-'{"d0": 2.0, "d1": 4.0, "v0": 2.5, "v1": 3.5, "tau0": 0, "jerk": 0}'}
 SMOKE=${SMOKE:-experiments/hugsim/scripts/lowsel_smoke.txt}
 L=${SCEN:-experiments/hugsim/scripts/derot_all64.txt}
-mkdir -p "$OUT/servers"
-rm -f "$OUT/servers/cinque.ready" "$OUT/DONE" "$OUT/ERROR"
+mkdir -p "$OUT"
+rm -f "$OUT/DONE" "$OUT/ERROR"
+source scripts/bench_lane.sh
 fail() { echo "$(date +%T) $*" | tee "$OUT/ERROR"; exit 1; }
 st() { echo "$(date +%T) $*" | tee "$OUT/STATUS"; }
-CUDA_VISIBLE_DEVICES=$GPU setsid "$DATA_DIR/envs/openpilot/bin/python" -u experiments/hugsim/archive/hugsim_zs_server.py cinque \
-    --socket "$OUT/servers/cinque.sock" --ready-file "$OUT/servers/cinque.ready" > "$OUT/servers/cinque.log" 2>&1 &
-srv=$!
-trap 'kill -- -$srv 2>/dev/null' EXIT
-until [[ -f $OUT/servers/cinque.ready ]]; do sleep 5; kill -0 $srv 2>/dev/null || fail "server died"; done
-st "server ready (pid $srv)"
-$HPY experiments/hugsim/archive/zs_run.py setup-trees official fixed lowspeed lowsel || fail "setup-trees"
-run() {  # tag controller list workers
-    $HPY experiments/hugsim/archive/zs_run.py run --preset exam --out "$OUT" --agent cinque --controller "$2" --gpu "$GPU" --workers "$4" \
-        --scenarios "$3" --socket "$OUT/servers/cinque.sock" --opts '{}' --tag "$1"
+run() {
+    bench_hugsim cinque exam "$1" "$3" "$4" "$2"
 }
 for s in ${STAGES:-1 2}; do
     case $s in

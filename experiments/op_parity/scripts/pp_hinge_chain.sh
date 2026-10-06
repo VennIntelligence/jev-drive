@@ -16,6 +16,7 @@ NAV2=$DATA_DIR/envs/navsim2/bin/python
 HPY=$DATA_DIR/envs/hugsim/bin/python
 CL="$JEV -m jevdrive.cl"
 S=experiments/op_parity/scripts
+B=("$PWD/.venv/bin/python" -m jevdrive.bench)
 L=$D/pool
 K=12 SPLIT=navsim/op-parity-full STEPS=${STEPS:-10000} BATCH=${BATCH:-128}
 LAM0=${LAM0:-10} LAM1=${LAM1:-3}
@@ -49,13 +50,8 @@ train() {  # lam seed -> job id
   sub ppK-t-$tag-s$s $L/t-$tag-s$s --train --vram 40 --cpu 6 --ram 40 --preflight "$smoke" -- $PY $S/pp_train.py --arm P2 --seed $s \
       --frames warp --host --data $DATA --split $SPLIT --steps $STEPS --batch $BATCH --warmup 300 --eval-every 1000 --hinge-lam $lam --tag $tag-F-s$s >/dev/null
 }
-navtest_plans() {  # model... -> job id
-  sub ppK-plans-$(echo "$@" | tr ' ' '_') $L/plans-$(echo "$@" | tr ' ' '_') --vram 30 --cpu 8 --ram 24 -- \
-      $PY $S/pp_eval.py --data lb_navtest --frames warp plans --models "$@" --tag hinge >/dev/null
-}
-navtest_score() {
-  sub ppK-score-$(echo "$@" | tr ' ' '_') $L/score-$(echo "$@" | tr ' ' '_') --vram 1 --cpu 24 --ram 48 --env NAVSIM_THREADS=22 -- \
-      $PY $S/pp_eval.py --data lb_navtest --frames warp score --models "$@" >/dev/null
+navtest_read() {
+  "${B[@]}" run --model "$@" --bench navtest --wait || die "bench navtest $*"
 }
 small_read() {  # lam -> 0 pass, 1 lower lambda, 2 stop
   local lam=$1 tag; tag=$(lam_tag $lam)
@@ -63,8 +59,7 @@ small_read() {  # lam -> 0 pass, 1 lower lambda, 2 stop
   train $lam 0 >/dev/null; waitdirs $L/t-$tag-s0
   $PY $S/pp_full_check.py train --tag $tag-F-s0 || die "training sanity, $tag-F-s0"
   status "small read lambda $lam: navtest plans + scoring"
-  navtest_plans $tag-F-s0 >/dev/null; waitdirs $L/plans-$tag-F-s0
-  navtest_score $tag-F-s0 >/dev/null; waitdirs $L/score-$tag-F-s0
+  navtest_read $tag-F-s0
   $PY $S/pp_hinge_report.py gate --new $tag-F-s0 --ref P2-F-s0; return $?
 }
 
@@ -84,29 +79,20 @@ status "gate passed at lambda $LAM; launching s1, navtest s1, navhard, HUGSIM"
 
 # ---------------------------------------------------------------- 2. everything else, in parallel
 train $LAM 1 >/dev/null
-navhard_g() {  # model -> last job id (plans -> export -> harness)
-  local m=$1
-  local jp; jp=$(sub ppK-nh-plans-$m $L/nh-plans-$m --vram 30 --cpu 8 --ram 24 $(aft ${2:-}) -- \
-      $PY $S/pp_eval.py --data lb_navhard --frames gimm plans --models $m --tag navhard_gimm_hinge)
-  local je; je=$(sub ppK-nh-export-$m $L/nh-export-$m --vram 1 --cpu 4 --ram 16 --env OPI_ROOT=op_lb $(aft $jp) -- \
-      $JEV experiments/op_openloop/lib/op_interp.py nav-export --data lb_navhard --adapters base --plans gimm@cinque_PP$m)
-  sub ppK-nh-h-$m $L/nh-h-$m --vram 1 --cpu 10 --ram 24 $(aft $je) -- \
-      $NAV2 experiments/op_guard/scripts/nav_harness.py --poses $DATA_DIR/runs/op_lb/lb_navhard/preds/gimm-cinque_PP${m}__base.npz \
-      --out $D/harness/$m --procs 10 >/dev/null
-}
-hug() {  # model preset
-  local m=$1 pr=$2 dn=exam; [[ $pr == spec ]] && dn=spec
-  sub ppK-h$dn-$m $L/h-$dn-$m --vram 40 --cpu 14 --ram 45 --env PRESET=$pr -- bash $S/pp_hugsim.sh arm $m $LIST 6 >/dev/null
-}
 m0=$TAG-F-s0; m1=$TAG-F-s1
-navhard_g $m0 >/dev/null; hug $m0 exam; hug $m0 spec
+"${B[@]}" run --model "$m0@gimm" --bench navhard || die "bench navhard s0"
+"${B[@]}" run --model "$m0" --bench hugsim --preset exam spec --scenarios "$LIST" || die "bench hugsim s0"
 waitdirs $L/t-$TAG-s1
 $PY $S/pp_full_check.py train --tag $m1 || die "training sanity, $m1"
 status "s1 trained; navtest s1, navhard s1, HUGSIM s1"
-navtest_plans $m1 >/dev/null; waitdirs $L/plans-$m1
-navtest_score $m1 >/dev/null
-navhard_g $m1 >/dev/null; hug $m1 exam; hug $m1 spec
-waitdirs $L/score-$m1 $L/nh-h-$m0 $L/nh-h-$m1 $L/h-exam-$m0 $L/h-spec-$m0 $L/h-exam-$m1 $L/h-spec-$m1
+"${B[@]}" run --model "$m1" --bench navtest || die "bench navtest s1"
+"${B[@]}" run --model "$m1@gimm" --bench navhard || die "bench navhard s1"
+"${B[@]}" run --model "$m1" --bench hugsim --preset exam spec --scenarios "$LIST" || die "bench hugsim s1"
+"${B[@]}" status --model "$m1" --bench navtest --wait || die "navtest"
+"${B[@]}" status --model "$m0@gimm" "$m1@gimm" --bench navhard --wait || die "navhard"
+for pr in exam spec; do
+  "${B[@]}" status --model "$m0" "$m1" --bench hugsim --preset "$pr" --wait || die "hugsim $pr"
+done
 
 # ---------------------------------------------------------------- 3. reports
 status "reports"

@@ -4,7 +4,7 @@
 # The native plan is kept in both (derot_sel with derot_rotate false), so the dynamics equal the native run; derot.dpos in zs_steps.jsonl is
 # the max |replay - native| plan position (m). Usage (box, tmux): GPU=0 experiments/hugsim/scripts/sel3_window_chain.sh
 set -uo pipefail
-: "${DATA_DIR:?}" "${GPU:?}"
+: "${DATA_DIR:?}"
 cd "$(dirname "$0")/../../.."
 C=$DATA_DIR/runs/op_adapt_H/chain/sel3_window; mkdir -p "$C"; rm -f "$C/DONE" "$C/ERROR"
 H=experiments/op_adapt_h/scripts

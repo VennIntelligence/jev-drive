@@ -25,6 +25,7 @@ from pathlib import Path
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO))
 HR = REPO / "experiments/hugsim/results"
 OUT = REPO / "experiments/op_parity/results/hugsim_spin10"
 MODE = sys.argv[2] if len(sys.argv) > 2 else "exam"
@@ -49,12 +50,14 @@ def extract():
         subprocess.run([sys.executable, str(REPO / "experiments/hugsim/scripts/spin_export_routes.py"), str(HR / "hugsim-exam/scored_op.csv"),
                         str(routes_json)], check=True)
     routes = json.load(open(routes_json))
-    src = [(D / "runs/op_parity/hugsim/results.csv", lambda t: t in ARMS),
-           (D / REF_CSV, lambda t: t == REF_TAG)]
+    from jevdrive.bench.compat import parity_hugsim_rows
+    pre = "pp-spec-" if MODE == "spec" else "pp-"
+    src = [(parity_hugsim_rows({t: ("spec" if MODE == "spec" else "exam", t[len(pre):]) for t in ARMS}), lambda t: t in ARMS),
+           (list(csv.DictReader(open(D / REF_CSV))) if (D / REF_CSV).exists() else [], lambda t: t == REF_TAG)]
     runs, rows = [], []
-    for path, want in src:
+    for available, want in src:
         last = {}
-        for r in csv.DictReader(open(path)):
+        for r in available:
             if want(r["tag"]) and r["scenario"] in SPIN10 and r["end"] != "crash":
                 last[(r["tag"], r["scenario"])] = r                     # the latest finished row of a (tag, scenario)
         for (tag, sc), r in sorted(last.items()):
@@ -173,7 +176,8 @@ def extract_full():
     routes = json.load(open(routes_json))
     want = {pfx + t: (pr, t) for t in FULL_TAGS for pr, pfx in PRESETS.items()}
     last = {}
-    for r in csv.DictReader(open(D / "runs/op_parity/hugsim/results.csv")):
+    from jevdrive.bench.compat import parity_hugsim_rows
+    for r in parity_hugsim_rows(want):
         if r["tag"] in want and r["scenario"] in scen and r["end"] != "crash":
             last[(r["tag"], r["scenario"])] = r                         # the latest finished row of a (tag, scenario)
     rows, speeds = [], {}

@@ -53,7 +53,7 @@ def cmd_pilot(a):
             if f is None:
                 continue
             t, _ = E.read_csv(f)
-            z = np.load(data_dir() / "runs/op_lb/lb_navtest/preds" / f"{E.stem(m).replace('@', '-')}__base.npz")
+            z = np.load(E.pred_file(m))
             got.append((m, t, dict(zip(z["tokens"].tolist(), z["poses"]))))
         if got:
             runs[v] = got

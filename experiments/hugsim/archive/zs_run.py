@@ -177,6 +177,12 @@ def run_job(a, scen, tag_dir, traffic):
     check_tree(a.controller)
     opts = dict(a.preset_opts, **json.loads(a.opts), traffic=traffic)
     env = dict(os.environ, **a.preset_env)
+    for k, v in json.loads(getattr(a, "controller_env", "{}") or "{}").items():
+        env[k] = json.dumps(v) if isinstance(v, dict) else str(v)
+    if a.controller in ("lowspeed", "lowsel"):
+        env["LOWSPEED_LIB"] = str(REPO / "lib")
+    if a.controller in ("opctrl", "opctrl_long"):
+        env["OP_CTRL_LIB"] = str(REPO / "lib")
     env = dict(env, CUDA_VISIBLE_DEVICES=str(a.gpu), OMP_NUM_THREADS="2", MKL_NUM_THREADS="2",
                HUGSIM_ZS_PRESET=a.preset, HUGSIM_ZS_CONTROLLER=a.controller,
                HUGSIM_ZS_MODEL=a.agent, HUGSIM_ZS_SOCKET=a.socket or "", HUGSIM_ZS_DATASET=ds,
@@ -291,6 +297,7 @@ if __name__ == "__main__":
     r.add_argument("--scenarios", required=True, help="a .txt list (paths relative to scenarios/) or one yaml")
     r.add_argument("--socket", default="")
     r.add_argument("--opts", default="{}")
+    r.add_argument("--controller-env", default="{}", help="explicit controller parameter objects, applied after preset defaults")
     r.add_argument("--tag", default="")
     r.add_argument("--workers", type=int, default=1)
     r.add_argument("--gpu", default="0")

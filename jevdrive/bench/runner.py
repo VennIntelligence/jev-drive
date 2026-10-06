@@ -13,6 +13,7 @@ A stage is finished when its `done` output exists (outputs are written atomicall
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shlex
@@ -92,7 +93,11 @@ def submit(run_dir: Path, name: str, stages: list, owner: str = "bench", dry: bo
         for f in ("ERROR",):
             if (log_dir / f).exists():
                 (log_dir / f).rename(log_dir / f"{f}.{time.strftime('%Y%m%d-%H%M%S')}")
-        kw = dict(name=f"{name}-{s.name}"[:60], owner=owner, vram_gb=max(s.vram, 0.5), cpu=s.cpu, ram_gb=s.ram, after=after,
+        job_name = f"{name}-{s.name}"
+        if len(job_name) > 60:
+            suffix = f"-{hashlib.sha256(name.encode()).hexdigest()[:8]}-{s.name}"
+            job_name = name[:60 - len(suffix)] + suffix
+        kw = dict(name=job_name, owner=owner, vram_gb=max(s.vram, 0.5), cpu=s.cpu, ram_gb=s.ram, after=after,
                   env=dict(s.env), tries=s.tries, carla=s.carla, timeout_h=s.timeout_h, log_dir=str(log_dir), cwd=str(REPO), priority=priority)
         if gpus:
             kw["gpus"] = list(gpus)
@@ -128,9 +133,9 @@ def state(run_dir: Path) -> dict:
     return out
 
 
-def wait(run_dirs: list, poll_s: float = 30.0, quiet: bool = False) -> bool:
+def wait(run_dirs: list, poll_s: float = 30.0, quiet: bool = False, timeout_s: float = 0.0) -> bool:
     """Block until every run has DONE or a failed stage; True when all are DONE."""
-    last = None
+    last, started = None, time.monotonic()
     while True:
         rows = []
         for d in run_dirs:
@@ -145,6 +150,18 @@ def wait(run_dirs: list, poll_s: float = 30.0, quiet: bool = False) -> bool:
             last = txt
         if all(fin):
             return all((Path(d) / "DONE").exists() for d, _, _ in rows)
+        if timeout_s and time.monotonic() - started >= timeout_s:
+            from ..cl import pool as P
+            for d, st, _ in rows:
+                if (Path(d) / "DONE").exists():
+                    continue
+                ids = json.loads((Path(d) / "jobs.json").read_text())
+                for stage, job_state in st.items():
+                    if job_state in ("inbox", "queued", "running"):
+                        P.cancel(ids[stage])
+                atomic_write(Path(d) / "WAIT_TIMEOUT", "wait deadline exceeded; cancellation requested\n")
+                atomic_write(Path(d) / "ERROR", "wait deadline exceeded; cancellation requested\n")
+            return False
         time.sleep(poll_s)
 
 

@@ -12,27 +12,20 @@
 # Usage (box, tmux):  GPU=<card> [WORKERS=5] [STAGES="smoke small"] experiments/leaderboard_audit/scripts/unified_hugsim_chain.sh [out]
 # Files: <out>/STATUS, DONE or ERROR; rows in <out>/results.csv; interface.json in every run dir.
 set -uo pipefail
-: "${DATA_DIR:?}" "${GPU:?}"
+: "${DATA_DIR:?}"
 cd "$(dirname "$0")/../../.."
 OUT=${1:-$DATA_DIR/runs/unified/hugsim}
 HPY=$DATA_DIR/envs/hugsim/bin/python
 W=${WORKERS:-5}
 SMALL=experiments/leaderboard_audit/scripts/unified_hugsim_small.txt
 ALL=experiments/hugsim/scripts/derot_all64.txt
-mkdir -p "$OUT/servers"
-rm -f "$OUT/servers/cinque.ready" "$OUT/DONE" "$OUT/ERROR"
+mkdir -p "$OUT"
+rm -f "$OUT/DONE" "$OUT/ERROR"
+source scripts/bench_lane.sh
 fail() { echo "$(date +%T) $*" | tee "$OUT/ERROR"; exit 1; }
 st() { echo "$(date +%T) $*" | tee "$OUT/STATUS"; }
-CUDA_VISIBLE_DEVICES=$GPU setsid "$DATA_DIR/envs/openpilot/bin/python" -u experiments/hugsim/archive/hugsim_zs_server.py cinque \
-    --socket "$OUT/servers/cinque.sock" --ready-file "$OUT/servers/cinque.ready" > "$OUT/servers/cinque.log" 2>&1 &
-srv=$!
-trap 'kill -- -$srv 2>/dev/null' EXIT
-until [[ -f $OUT/servers/cinque.ready ]]; do sleep 5; kill -0 $srv 2>/dev/null || fail "server died"; done
-st "server ready (pid $srv)"
-$HPY experiments/hugsim/archive/zs_run.py setup-trees official fixed opctrl || fail "setup-trees"
-run() {  # tag preset list workers [controller]
-    $HPY experiments/hugsim/archive/zs_run.py run --out "$OUT" --agent cinque --preset "$2" ${5:+--controller $5} --gpu "$GPU" \
-        --workers "$4" --scenarios "$3" --socket "$OUT/servers/cinque.sock" --tag "$1"
+run() {  # tag preset list workers [controller]; each repeat tag has an independent bench identity
+    bench_hugsim cinque "$2" "$1" "$3" "$4" "${5:-}"
 }
 for s in ${STAGES:-smoke small}; do
     case $s in

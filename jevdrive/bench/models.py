@@ -134,6 +134,9 @@ def resolve(spec: str, check: bool = False) -> Model:
     elif re.fullmatch(r"P0|P[123]-init", name):
         m = Model(name, "parity", "warp", note="shipped Cinque through the parity path" + (" (untrained adapter, bias 0)" if name != "P0" else ""),
                   inputs=PARITY_INPUTS)
+    elif name.startswith("H-") and re.fullmatch(r"H-[\w.-]+", name):
+        m = Model(name, "adapt_h", ckpt=str(data_dir() / "runs/op_adapt_H/runs" / name[2:] / "ckpt-final.pt"),
+                  note="op_adapt H checkpoint; no-adapter ONNX export with stream equivalence gate", inputs=OP_INPUTS, benches=("hugsim",))
     elif name in guard_candidates() and name != "shipped":
         c = guard_candidates()[name]
         if c.get("command_adapter") or c.get("route_adapter"):
@@ -172,4 +175,6 @@ def listing() -> list:
         for d in sorted(runs.iterdir()):
             if (d / "ckpt-final.pt").exists() and not d.name.startswith(("smoke", "eqtest", "time-")):
                 rows.append(dict(name=d.name, family="parity", frames=parity_frames(d.name), weights=str(d / "ckpt-final.pt"), note=""))
+    for ck in sorted((data_dir() / "runs/op_adapt_H/runs").glob("*/ckpt-final.pt")):
+        rows.append(dict(name=f"H-{ck.parent.name}", family="adapt_h", frames="", weights=str(ck), note="HUGSIM; checked no-adapter export"))
     return rows

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # op_parity arms in the HUGSIM harness of experiments/hugsim/results/wajepa_ref.md: Cinque under the PR #57 controller (tree `fixed`),
 # preset exam, opts as the 2026-09-25 `cinque-fixed` run ({} + the scene's traffic convention), plus opt `parity` (lib/parity_hugsim.py).
-# One GPU-pool job per call (needs CL_GPU); every server is started here and killed on exit.
+# Standard arms use bench stages; leased callers reuse their job. Equivalence keeps its diagnostic servers here.
 #   equiv                 equivalence tests 1-3 (results/hugsim_harness.md) -> $R/equiv/*.json
 #   arm TAG LIST [W]      TAG = P0 (shipped weights + an untrained P3 adapter: bias exactly 0, full input path) | P2-init | P3-init |
 #                         a pp_train run tag (P1-s0, P2-s0, P3-s0); zs_run tag pp-<TAG>, resumable; results in $R/results.csv
@@ -72,6 +72,8 @@ arm)
     PRESET=${PRESET:-exam}
     PFX=pp-; [[ $PRESET != exam ]] && PFX=pp-${PRESET//_/}-
     mode=(); [[ -n ${CL_POOL_JOB:-} ]] && mode=(--in-pool)
+    [[ -n ${TIMEOUT:-} ]] && mode+=(--timeout-s "$TIMEOUT")
+    [[ -n ${RETRIES:-} ]] && mode+=(--retries "$RETRIES")
     "$PWD/.venv/bin/python" -m jevdrive.bench run --model "$TAG" --bench hugsim --preset "$PRESET" \
         --scenarios "$LIST" --workers "$W" --wait --publish-out "$R" --publish-tag "$PFX$TAG" "${mode[@]}" || fail "bench hugsim $TAG"
     echo "$(date +%T) arm $TAG done";;

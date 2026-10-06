@@ -111,15 +111,17 @@ def b2d_unit(name, ids, out, seed, nz, onnx, priority=0.0, route_adapter=None) -
                 out=str(out), done=lambda out=out, ids=tuple(ids): all((out / "done" / (r + ".json")).exists() for r in ids))
 
 
-def hugsim_unit(name, out, scen_file, onnx, priority=0.0) -> dict:
-    """guard_hugsim.sh: one resident Cinque server + 5 HUGSIM workers (no CARLA; ~30 GB VRAM measured as budget); done when every
+def hugsim_unit(name, out, scen_file, onnx, priority=0.0, repeat="") -> dict:
+    """guard_hugsim.sh: shared bench stages + 5 HUGSIM slots (no CARLA; 50.5 GB budget); done when every
     scenario of scen_file has a non-crash row (checked after the run by `cllib.py hugsim-check`)."""
     e = dict(GPU="{gpu}", OUT=str(out), SCEN=str(scen_file), TAG=HUGSIM_TAG, WORKERS="5")
     if onnx:
         e["ONNX"] = onnx
+    if repeat:
+        e["BENCH_REPEAT"] = repeat
     cmd = "bash %s && %s %s hugsim-check %s %s" % (shlex.quote(str(HERE / "guard_hugsim.sh")), shlex.quote(sys.executable),
                                                   shlex.quote(str(HERE / "cllib.py")), shlex.quote(str(out)), shlex.quote(str(scen_file)))
-    return dict(name=name, cmd=cmd, env=e, vram_gb=30.0, carla=0, cpu=12, tries=2, priority=priority, out=str(out),
+    return dict(name=name, cmd=cmd, env=e, vram_gb=50.5, carla=0, cpu=13, tries=2, priority=priority, out=str(out),
                 done=lambda out=Path(out), scen=Path(scen_file): hugsim_complete(out, scen))
 
 
@@ -190,7 +192,8 @@ def line_units(candidate: str, mode: str, lines, stage: str = "all", force: bool
             scen = rd / "hugsim_smoke.txt"
             scen.parent.mkdir(parents=True, exist_ok=True)
             scen.write_text(HUGSIM_SETS[mode].read_text().split()[0] + "\n")
-        jobs.append(hugsim_unit("hugsim" + ("-smoke" if stage == "smoke" else ""), rd / "hugsim", scen, onnx, priority=3))
+        jobs.append(hugsim_unit("hugsim" + ("-smoke" if stage == "smoke" else ""), rd / "hugsim", scen, onnx, priority=3,
+                                repeat=f"force-{time.time_ns()}" if force else ""))
     if "b2d_turns" in lines and not (candidate == G.SHIPPED and not force and turns_cached()):
         for k, ids in shards(TURN_ROUTES, stage):
             jobs.append(b2d_unit("turns-s%d-k%d%s" % (TURN_SEED, k, "-smoke" if stage == "smoke" else ""), ids,

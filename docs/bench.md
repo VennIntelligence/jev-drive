@@ -27,6 +27,7 @@ Name syntax `<name>[@<frames>][:<opt>]`, e.g. `P0@gimm`, `P3-F-s0:noside`.
 |---|---|---|---|
 | onnx | `cinque`, `lebowski`, `small` (shipped), op_guard candidates without a command adapter (`fw-S3`, `it_dw3-s0`, `dg1` ...) | `scripts/op_lb.py run` (envs/openpilot, TensorRT; an existing op_lb plan file of the same stem is reused) | `hugsim_zs_server.py <base> [--onnx X]` |
 | parity | `P0` (shipped weights through the parity path), `P1-init`..`P3-init` (bias exactly 0), every checkpoint under `$DATA_DIR/runs/op_parity/runs/<tag>/ckpt-final.pt` (P1/P2/P3-F-s*, P2H10, HP, T*P, PX, PC, UF-*) | torch port on the pp_prep token cache (`pp_train.PModel`, fp16, batch 128); UF-* arms from pixels (`pp_unfreeze.py plans`) | the arm's ONNX (`pp_hugsim.py onnx`) + its bias server (`pp_hugsim.py serve`); P0 serves the untrained P3 adapter, as the lane did |
+| adapt_h | `H-<tag>` (checkpoint in `runs/op_adapt_H/runs/<tag>`) | HUGSIM only | no-adapter ONNX export, training-port stream equivalence gate (plan xy <= 0.5 m), then the shared policy server |
 | wajepa | `WA-JEPA` | stored references (its navtest CSV, navhard harness dir) | its shipped client (`zs_run --agent wajepa`), exam preset only |
 
 Frame protocols (navsim only; closed loop renders its own frames): `gimm` (G, GIMM-synthesised 0.2 s pairs; shipped models and
@@ -44,7 +45,7 @@ protocol adds a `prep` stage (`pp_prep.py`).
 | CARLA / B2D | route | `jevdrive.bench.b2d`: any leaderboard agent through `scripts/b2d_run.py` and `jevdrive.cl.pool.b2d_cmd` (Python API, see below) | `units.csv` (DS, RC, status, infractions) |
 
 HUGSIM presets: `exam` (preset exam, tree `fixed`: the wajepa_ref harness and every result before 2026-10-05), `spec` (openpilot's
-lateral path, tree opctrl, decision 118), `spec_plan` (spec with the lateral curvature from the model's own plan). Scenario sets
+lateral path, tree opctrl, decision 118), `spec_plan` (spec with the lateral curvature from the model's own plan). Also supported: `spec_cold`, `spec_hold`, `spec_plan_smooth`, `spec_plan_mpc`; `opctrl_d118` aliases `spec`. Scenario sets
 (`$B sets`): `all64`, `spin10`, `spec29`, `small11`, `turn23` (route heading range >= 30 deg), a `.txt` list, or comma-separated
 scenario stems. Behaviour classes follow `experiments/op_parity/results/hugsim_spin10.md`: spin = heading error >= 60 deg vs the
 recorded route, launch stall = peak speed over the first 40 steps < 1.6 m/s, stuck = `max_steps` end, cls = spin, else the end.
@@ -67,6 +68,42 @@ WOD RFS is not wrapped: since decision 107 it is only the op_guard `wod` guard l
   dead bias-server socket costs one retry instead of the old 5400 s timeout. A scenario that fails all attempts is listed in `summary.json`
   (`failed`, `missing`); a new `run` retries it.
 - Jobs go to the pool as `bn-<bench>-<model>[-<preset>]-<stage>`; `--priority`, `--gpus` pass through.
+
+## HUGSIM configurations and legacy callers
+
+```bash
+# Rule options / controller parameters are recorded and get separate run identities.
+$B run --model cinque --bench hugsim --preset spec --opts '{"resume": {}}' --scenarios spin10
+$B run --model cinque --bench hugsim --preset exam --controller opctrl_long \
+  --opts '{"op_ctrl": true, "op_long": true}' --controller-env '{"OP_CTRL_LONG": {"max_accel": 2}}' --scenarios spin10
+$B run --model H-my-checkpoint --bench hugsim --scenarios spin10
+$B run --model P2-F-s0 --bench hugsim --preset spec_plan_smooth --repeat r0 r1 --scenarios all64
+$B report --bench hugsim --arms run:<exact-run-directory-key> --vs P0 --preset spec
+```
+
+Run keys retain `<model>_<preset>` for default arms, add `-c<configuration hash>` for options, controller/env or custom
+`--onnx`, and `-r<label>` for independent repeats. The same repeat label resumes; a new label starts an independent run.
+Scenario sets are unioned on resume. `config.json` stores both requested options and preset-resolved options/env. Status and
+report accept the same identity flags; `run:<key>` selects a precise arm for mixed-configuration reports. Configured arms never
+fall back to baseline historical results. Custom ONNX paths must point to immutable exports; replacing a file at the same path
+requires a new repeat label.
+
+Legacy HUGSIM orchestrators source `scripts/bench_lane.sh`, which translates their inputs to bench flags and publishes the
+finished raw rows to their original `results.csv`/tags. `bench-runs.json` maps each tag to its canonical run directory; trace
+paths keep pointing there. Output-directory/tag pairs receive stable repeat labels so old independent lanes remain separate.
+`BENCH_REPEAT` overrides that label (used by the guard's force mode). Options/controller changes invalidate old rows of that
+legacy tag, and publishing fails for incomplete runs. Reports that intentionally read legacy CSVs, including the spec-plan
+publication report, continue to read those exports.
+
+Call from the orchestrator to let bench place its stages. Historical leased workers use `--in-pool` to execute exactly those
+stages inside their existing lease, with no nested pool submission. Budget HUGSIM leases as 8 + 8.5 W GB VRAM / 2 W + 3 cores.
+`--wait-timeout-s N` is an orchestrator-only deadline: it cancels this run's jobs, waits for cancellation, returns 124 and can
+export partial rows for deadline-limited diagnostics. Partial runs carry `WAIT_TIMEOUT`/`ERROR`, never `DONE`. Derotation
+selector orchestration preserves its `STOP_AT` cutoff; invoke it outside a GPU lease.
+
+`jevdrive.bench.compat` supplies bench-first navtest CSVs with devkit column names, navhard harness directories, prediction
+paths and HUGSIM rows, with historical fallback. Experiment-specific gates, bootstrap methods and training remain in their
+original topics.
 
 ## Reports (`tables.py`)
 
@@ -119,9 +156,107 @@ on 24 threads, so ~5 min on an idle 75-core box (here 22 min, waiting for CPU be
   servers in `hugsim.Servers`; a test in `tests/test_bench.py`.
 - A benchmark: a module with `stages(model, ..., run_dir) -> [runner.Stage]` and a `collect` that writes `units.csv`,
   `summary.json`, `DONE`; register the stage functions in `stage.py` and the loader in `tables.load`.
-- Tests: `python -m unittest tests.test_bench -v` (no GPU; the watchdog test needs Linux). GPU smoke through the pool:
+- Tests: `python -m unittest tests.test_bench tests.test_bench_migration -v` (no GPU; the watchdog test needs Linux). GPU smoke through the pool:
   `$B run --model P0 --bench hugsim --scenarios scene-0013-medium-00 --wait` (one scenario, ~3 min).
 
 Not wrapped yet: WA-JEPA re-runs on NAVSIM (its runner is experiments/top10; the bench reads its stored runs), op_guard
-candidates with a command / route adapter, WOD RFS (a guard line only). The lane scripts (pp_eval / pp_hugsim / pp_navhard ...)
-are left as they are; new tests use the bench.
+candidates with a command / route adapter, WOD RFS (a guard line only). The first two migration batches below now use bench for their standard evaluation sections; training and topic diagnostics remain local.
+
+## Existing-script migration audit (2026-10-07)
+
+**Assessment:** the standard parity evaluation stages are a small migration; every old experiment chain together is a larger
+project. Unify evaluation execution and result loading, while keeping training, experiment gates and diagnostic analysis in
+their topics. Batches 1 and 2 have been migrated; the remaining interfaces below describe subsequent work.
+
+Scope: tracked `.py` / `.sh` files in `scripts/`, `experiments/` and `jevdrive/`, excluding `archive/`, `results/` and `figs/`:
+49 + 548 + 97 = 694 files. A text search for the existing runners / exporters / scoring helpers / bench found 182 files,
+including 37 shell scripts. These are search hits, **not 182 redundant runners**: they include library code, agents, reports,
+training and references in comments. The 556 experiment sources under `archive/` (excluding `results/`) were inventoried
+separately; historical chains need no bulk rewrite. Some archived files are still execution dependencies, listed below.
+
+### Evaluation stages already covered
+
+Paths in this table are relative to `experiments/`. “Covered” means the model / metric / serving protocol is supported; callers
+and readers in batch 1 now use bench. Keep staged training and gate order, and invoke bench from the orchestration process,
+outside a job that already reserves GPU resources. Do not replace a leased worker command with a nested `bench run --wait`.
+
+| Existing entry | Bench replacement | What stays / compatibility work |
+|---|---|---|
+| `op_parity/scripts/pp_full_chain.sh` | `run --model P0 <full tags> --bench navtest hugsim --preset exam spec` | Keep cache sanity, split registration and training; replace the final readout section and its result readers. |
+| `op_parity/scripts/pp_hinge_chain.sh` | Per-checkpoint navtest; passing arms on navhard with `@gimm`, HUGSIM exam / spec | Keep lambda selection, train sanity and gate return codes. The hinge-specific navhard report reads its own `hinge/harness/`, so adapt it too. |
+| `op_parity/scripts/pp_turn_chain.sh` | Navtest for HP / T*P tags; HUGSIM exam / spec after the gate | Keep turn balancing, overall guard and gap-closure gate. Standard bench strata do not replace the custom closure calculation. |
+| `op_parity/scripts/pp_score_chain.sh` | Navtest for its explicit model/frame specs, plus `cinque` | Replace waiting / export / scoring; bench regenerates or reuses plans through its own stages. Confirm checkpoint completion before submission. |
+| `op_parity/scripts/pp_navhard_chain.sh` | `run --model P0 <full tags> --bench navhard` | Our arms are covered. WA-JEPA inference / request equivalence is not; preserve that branch until it gets bench stages. Keep the training lane's `GPU_DONE` dependency until callers are updated. |
+| `op_parity/scripts/pp_navhard_gimm_chain.sh` | `run --model P0@gimm P2-F-s0@gimm P2-F-s1@gimm --bench navhard` | Replace plans / export / harness; update `pp_navhard.py report-gimm` or use a bench report with matching references. |
+| `op_parity/scripts/pp_hugsim.sh arm` | `run --model <tag> --bench hugsim --preset exam/spec/spec_plan --scenarios <list>` | Includes smooth / MPC presets. `equiv` remains local; leased callers execute shared stages in their existing job. |
+| `hugsim/scripts/wajepa_run.sh` | `run --model WA-JEPA --bench hugsim --preset exam --scenarios <list>` | Default `fixed` and optional `TREE=fixedc` are covered. Keep the shipped client launcher `wajepa_e2e.sh`. |
+
+The first batch is these **eight entries' standard evaluation sections**, plus the readers they feed. It does not require
+another scheduler or changes to model training. `pp_eval.py`'s standard plans / v2 scoring and generic arm / paired tables,
+`pp_full_report.py`, and the generic parts of `pp_navhard.py` / `pp_hugsim_report.py` can delegate to bench. Custom extraction,
+pixel equivalence, gate calculations, plots and timeline diagnostics stay in their topics and consume bench outputs.
+
+### Shared HUGSIM extensions completed (batch 2)
+
+Options, controller trees/env, interface presets, repeat identities and H checkpoint export/equivalence stages are implemented.
+The derotation, launch, low-speed, opctrl/longitudinal, spin comparison, unified interface, H readout and op_resume HUGSIM
+wrappers delegate execution to bench. Guard plain-ONNX HUGSIM workers also share these stages and preserve force/completeness
+checks. WA-JEPA HUGSIM supports its optional controller tree. Smooth/MPC presets use the existing interface definitions.
+CARLA branches, route adapters, custom NAVSIM metrics/predictions and WA-JEPA NAVSIM generation remain outside this batch.
+
+### Remaining interfaces and original size assessment
+
+| Existing family / entries | Missing piece before migration | Size |
+|---|---|---|
+| `op_guard/scripts/{navlib,line_navtest,line_navhard}.py` | Guard navtest is **v1 PDMS**, bench navtest is **v2 EPDMS**. Add an explicit metric/version identity, v1 collector and score columns. Keep frozen subset membership, force/provenance rules, early-turn readout and the original gate / CI semantics. Navhard full mode also cross-checks the devkit script against the harness. | Medium |
+| `op_guard/scripts/{cllib,line_hugsim,guard_hugsim}.py/.sh` | Plain ONNX `spec` serving is covered. Adapt guard completion/provenance/cache readers and retain its spin gate. Candidates with command / route adapters are explicitly rejected by `models.resolve`; they need adapter-aware plan and server stages. | Small for plain ONNX; medium for adapters |
+| `hugsim/scripts/{derot_chain,derot_sel,launch_long_chain,lowspeed_chain,opctrl_chain,opctrl_long_chain,spin_closed_loop}.sh`; `op_adapt_h/scripts/{h_hugsim,h_onedriver_hugsim,h_x64_chain}.sh` | Add agent opts, controller-tree/env configuration and ONNX build/equivalence stages where needed. Preserve fixed/fixed2/ideal/lowspeed/lowsel/opctrl_long distinctions. Ordinary opctrl's default lateral arm maps to `spec`, but arbitrary `OP_CTRL` overrides do not. Register H checkpoints beyond those already in `op_guard/candidates.json`. | Medium; one shared extension serves many wrappers |
+| `op_resume/scripts/{or_hugsim.sh,or_submit.py}` | Forward `{"resume": {}}` as agent opts, retain batch preflight and completeness checks, and distinguish rule vs baseline in run identity. Its CARLA branch additionally needs the resident policy-server lifecycle. | Medium |
+| `leaderboard_audit/scripts/unified_hugsim_chain.sh`; smooth / MPC parity presets | Expose interface presets `spec_cold`, `spec_hold`, `spec_plan_smooth`, `spec_plan_mpc`; canonicalise `opctrl_d118` to `spec`. Add repeat identity for its repeat runs, and preserve resolved warm-up / clock / delay in provenance. | Small interface addition; medium with repeats and readers |
+| `op_parity/scripts/{pp_stageB_submit,pp_unfreeze_chain}.sh` | Standard full-navtest evaluation is covered. Stage B also uses the separate real-history dataset `lb_hq_navtestX`, which `--subset` of `lb_navtest` cannot reproduce. Unfreeze needs its pixel-path equivalence gate and readers of the original plan/pred files; keep P0 / P2 pixel control generation for that check. | Partial migration |
+| `op_adapt_h/scripts/{h_onedriver_nav,h_od2_ratio}.sh`; `skill_pack/scripts/{hist_align_chain,hist_align_chain2,hq_chain,edge_chain,edge_vcam_chain,trk_chain,trk_chain2}.sh` | Add scoring of supplied predictions, v1 / navtrain calibration, alternate frame/rig protocols and selector/compensation identities. Bench currently generates `base` exports from registered models; it cannot directly score these transformed pose files. | Medium to large |
+| `op_parity/scripts/pp_navhard_wajepa.sh`; WA-JEPA NAVSIM runners in `top10/` | Add request building, shipped inference, shard merge, pose conversion and request-path equivalence as stages; current NAVSIM support only loads stored WA-JEPA references. | Medium |
+| `b2d_collect/scripts/b2dc_lane.py` | `B2DAgent` already fits the recording agent / custom env / XML. Reuse CARLA stages, preserve output layout plus labels/check stages and gates; carry its stall/route timeout and per-route seed settings. | Small to medium |
+| `b2d_tfv6/lib/{b2d_tfv6_campaign,b2d_tfv6_w2b}.py`; `b2d_controller/lib/b2d_controller_campaign.py`; `b2d_privileged/scripts/{b2d_privileged_chain,b2d_privileged_focus}.py` | Use explicit arm/route/seed identity and pool placement, while preserving attempt archives, paired ordering where required, invariant failures, cancellation and diagnostic recording. Controller campaigns also reuse a world/server across rounds; replacing them with independent route jobs changes that protocol. | Large compared with a wrapper rewrite |
+| CARLA consumers of `op_guard/scripts/cllib.py`: guard B2D, `op_resume`, `op_route_ft/scripts/near_lane.py`, `op_wide_ft/scripts/wide_lane.py`, `op_img_cmd/scripts/img_cl_lane.py` | Their agents need a resident policy server / adapter, configuration and lane-specific readouts. `B2DAgent` accepts the agent and env, but does not supply those server stages. Add shared serving hooks before replacing the old `op_arb.sh` launchers. | Medium |
+
+The original audit identified these cross-cutting prerequisites (HUGSIM identity and batch-1 readers are now implemented):
+
+1. **Run identity.** Before batch 2, HUGSIM keyed results by model + preset and unions requested scenarios on rerun. A rule arm,
+   controller override or independent repeat must have a distinct identity/config; adding only `--opts` would reuse the
+   baseline's finished scenarios. NAVSIM versions and transformed predictions similarly need separate identities.
+2. **Result readers.** Before batch 1, compatibility was one-way: `tables.load` can read legacy results; `pp_eval.eval_csv` and
+   topic gates cannot read bench's new CSV names. Hinge, turn and unfreeze readers also use old harness/pred/extract paths.
+   Prefer a common bench-first loader with legacy fallback; retain diagnostic artifacts not present in `units.csv`.
+3. **CARLA completeness.** B2D is a Python stage API, not a `run` / `report` CLI choice, and `tables.load` has no B2D
+   branch. `b2d.collect` writes `DONE` even with fewer rows than requested, reporting that in the summary. Data collection
+   and invariant-sensitive campaigns must retain their stricter gates; a generic `DONE` is not gate acceptance.
+
+### Code that remains outside generic benchmark execution
+
+Training and feature/bank preparation (`pp_train`, `pp_prep`, `h_train`, `rft`, `img*_chain`, `fw_p2_chain`, etc.), CARLA
+pair rendering / label creation (`op_route_cmd`, `near_chain`), offline probes / replay, latency measurements, figures,
+downloads, box operations and research serving are not duplicate benchmark runners. A mixed chain can call bench for its
+standard evaluation tail without moving its entire experiment into bench. WOD RFS stays the existing guard line (decision 107).
+
+Keep execution dependencies even when their wrappers are retired: `scripts/{op_lb,b2d_run,b2d_route}.py`,
+`op_openloop/lib/op_interp.py`, `op_guard/scripts/nav_harness.py`, `op_parity/scripts/{pp_train,pp_prep,pp_unfreeze,pp_hugsim}.py`,
+`hugsim/archive/{zs_run,hugsim_zs_server}.py`, `hugsim/scripts/spin_analysis.py`, `hugsim/scripts/wajepa_e2e.sh`, and the shipped model clients.
+The existing `op_arb.sh` server setup also remains needed until the CARLA serving hooks above exist. Archive placement alone
+does not mean a file is unused.
+
+### Effort and migration order
+
+Static-review estimates, including caller/reader changes and focused regression work, not measured completion times:
+
+| Batch | Scope | Estimate |
+|---|---|---|
+| 1 | Eight covered entries above; migrate common readers, preserve topic gates, standard parity NAVSIM/HUGSIM smoke | 1-2 engineer-days; hundreds of changed lines across wrappers and readers |
+| 2 | HUGSIM options/presets/controller configuration/repeats with distinct identities; migrate related wrappers | Another 1-2 engineer-days, plus box checks for each new controller protocol |
+| 3 | v1 / supplied-prediction scoring, route adapters, WA-JEPA NAVSIM stages and CARLA serving / campaign integration | Several more days; invariant-sensitive CARLA campaigns can take longer |
+
+The broad migration is **at least a week-scale effort**, rather than a few command substitutions; adding every historical
+model or rewriting archived experiments is outside that estimate. Batches 1 and 2 are complete; batch 3 remains a separate migration.
+Compare plans and per-unit scores against the existing path; check gate decisions, frame protocols, resume/skip behavior,
+failure propagation and report sources. Use small pool runs on the box for changed runtime paths, rather than rerunning
+every stored result. Only retire a wrapper once callers and result readers have moved; keep reproducibility dependencies.

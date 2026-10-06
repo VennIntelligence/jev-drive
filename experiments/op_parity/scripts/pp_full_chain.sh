@@ -11,6 +11,7 @@ exec > >(tee -a "$D/log.txt") 2>&1
 PY=$DATA_DIR/envs/op-train/bin/python
 CL="$DATA_DIR/envs/jevdrive/bin/python -m jevdrive.cl"
 S=experiments/op_parity/scripts
+B=("$PWD/.venv/bin/python" -m jevdrive.bench)
 L=$DATA_DIR/runs/op_parity/pool/full
 K=${K:-12}
 SPLIT=navsim/op-parity-full
@@ -48,15 +49,7 @@ TAGS="P1-F-s0 P1-F-s1 P2-F-s0 P2-F-s1 P3-F-s0 P3-F-s1"
 # ---------------------------------------------------------------- 3. readouts as checkpoints arrive
 waitdirs $(for a in P1 P2 P3; do for s in 0 1; do echo $L/t-$a-s$s; done; done)
 status "readouts: navtest plans + scoring, HUGSIM 64 x {exam, spec}"
-sub ppF-plans $L/plans --vram 30 --cpu 8 --ram 24 -- $PY $S/pp_eval.py --data lb_navtest --frames warp plans --models P0 $TAGS --tag full >/dev/null
-waitdirs $L/plans
-sub ppF-score $L/score --vram 1 --cpu 24 --ram 48 --env NAVSIM_THREADS=22 -- $PY $S/pp_eval.py --data lb_navtest --frames warp score --models P0 $TAGS >/dev/null
-LIST=experiments/hugsim/scripts/derot_all64.txt
-for t in P0 $TAGS; do
-  sub ppF-h-$t $L/h-exam-$t --vram 40 --cpu 14 --ram 45 -- bash $S/pp_hugsim.sh arm $t $LIST 6 >/dev/null
-  sub ppF-hs-$t $L/h-spec-$t --vram 40 --cpu 14 --ram 45 --env PRESET=spec -- bash $S/pp_hugsim.sh arm $t $LIST 6 >/dev/null
-done
-waitdirs $L/score $(for t in P0 $TAGS; do echo $L/h-exam-$t $L/h-spec-$t; done)
+"${B[@]}" run --model P0 $TAGS --bench navtest hugsim --preset exam spec --scenarios all64 --wait || die "bench readouts"
 $PY $S/pp_eval.py --data lb_navtest --frames warp report --models P0 $TAGS --ref P1-F-s0 --tag full || die "navtest report"
 status "done"
 date > "$D/DONE"

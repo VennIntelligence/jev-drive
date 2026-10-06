@@ -137,11 +137,13 @@ def navtest():
 
 
 def navhard(root, p2, p0, label):
-    from jevdrive import navsim_zs as Z  # noqa: F401
+    from jevdrive.bench.compat import navhard_dir
     ar = data_dir() / "runs" / "op_parity"
     wa = pd.read_csv(ar / "navhard" / "harness" / "wajepa" / "harness_tokens.csv").set_index("token")
-    tabs = {"P0": [pd.read_csv(ar / root / "harness" / p0 / "harness_tokens.csv").set_index("token")],
-            "P2": [pd.read_csv(ar / root / "harness" / p / "harness_tokens.csv").set_index("token") for p in p2]}
+    def tokens(model):
+        spec = model + ("@gimm" if root == "navhard_gimm" else "@warp")
+        return pd.read_csv(navhard_dir(spec, ar / root / "harness" / model) / "harness_tokens.csv").set_index("token")
+    tabs = {"P0": [tokens(p0)], "P2": [tokens(p) for p in p2]}
     res = {"label": label, "arms": {}}
     for st in (1, 2):
         toks = wa.index[wa.stage == st]

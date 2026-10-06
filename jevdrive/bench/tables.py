@@ -88,7 +88,11 @@ def _hugsim_legacy_rows(m: Model, preset: str) -> list:
         f, tag = (REPO / m.stored["hugsim:exam"]).as_posix().split("#")
         return [r for r in csv.DictReader(open(f)) if r["tag"] == tag] if preset == "exam" else []
     if m.family == "parity":
-        tag = {"exam": f"pp-{m.name}", "spec": f"pp-spec-{m.name}", "spec_plan": f"pp-specplan-{m.name}"}[preset]
+        prefix = {"exam": "pp-", "spec": "pp-spec-", "spec_plan": "pp-specplan-",
+                  "spec_plan_smooth": "pp-specplansmooth-", "spec_plan_mpc": "pp-specplanmpc-"}.get(preset)
+        if prefix is None:
+            return []
+        tag = prefix + m.name
         f = data_dir() / "runs/op_parity/hugsim/results.csv"
         return [r for r in csv.DictReader(open(f)) if r["tag"] == tag] if f.exists() else []
     return []
@@ -100,18 +104,25 @@ def tokens_meta(bench: str):
     return dict(zip(toks, logs))
 
 
-def load(bench: str, spec: str, preset: str = "exam", behaviour: bool = True):
+def load(bench: str, spec: str, preset: str = "exam", behaviour: bool = True, **kw):
     """(units DataFrame indexed by unit, source string) of one model; None if nothing is stored."""
     import pandas as pd
-    m = resolve(spec)
-    if bench == "hugsim":
-        d = R.bench_root("hugsim", f"{m.key('hugsim')}_{preset}")
+    from . import run_dir
+    explicit = spec.startswith("run:")
+    if explicit:
+        key = spec[4:]
+        if not key or Path(key).name != key or key in (".", ".."):
+            raise ValueError(f"invalid bench run reference {spec!r}")
+        d = R.bench_root(bench, key)
     else:
-        d = R.bench_root(bench, m.key(bench))
+        m = resolve(spec)
+        d = run_dir(spec, bench, preset, **kw)
     if (d / "units.csv").exists():
         u = pd.read_csv(d / "units.csv")
         idx = {"navtest": "token", "navhard": "group", "hugsim": "scenario"}[bench]
         return u.set_index(idx), f"bench {d}"
+    if explicit:
+        return None, ""
     if bench == "navtest":
         f = _navtest_legacy(m)
         if f is None or not Path(f).exists():
@@ -129,10 +140,13 @@ def load(bench: str, spec: str, preset: str = "exam", behaviour: bool = True):
         g = pd.read_csv(h / "harness_groups.csv")
         lg = tokens_meta("navhard")
         return g.assign(log=[lg.get(o, "?") for o in g.orig]).set_index("group"), f"stored {h}"
+    from . import hugsim as H
+    if H.run_key(m, preset, **kw) != H.run_key(m, preset):
+        return None, ""                    # custom rules/repeats must never fall back to baseline rows
+    preset = H.configuration(preset)["preset"]
     rows = _hugsim_legacy_rows(m, preset)
     if not rows:
         return None, ""
-    from . import hugsim as H
     if behaviour:
         try:
             rts = H.routes()
@@ -152,11 +166,11 @@ def parse_arm(a: str) -> tuple:
 
 
 # ---------------------------------------------------------------- tables
-def _arm_units(bench, specs, preset, need):
+def _arm_units(bench, specs, preset, need, **kw):
     """Per-seed unit frames of one arm, aligned on their common units."""
     got = []
     for s in specs:
-        u, src = load(bench, s, preset)
+        u, src = load(bench, s, preset, **kw)
         if u is None:
             raise SystemExit(f"{bench}: no result for {s} (preset {preset}); run `python -m jevdrive.bench run --model {s} --bench {bench}`")
         got.append((s, u, src))
@@ -164,14 +178,14 @@ def _arm_units(bench, specs, preset, need):
     return [(s, u.loc[common], src) for s, u, src in got], common
 
 
-def report(bench: str, arms: list, vs: list = (), preset: str = "exam", out: str = "", strata: bool = True, units_subset=None) -> dict:
+def report(bench: str, arms: list, vs: list = (), preset: str = "exam", out: str = "", strata: bool = True, units_subset=None, **kw) -> dict:
     """Write <out>/<bench>_{arms,paired[,shapley,strata]}.{md,csv}; returns the DataFrames."""
     import pandas as pd
     from .. import stats
     allarms = [parse_arm(a) for a in list(arms) + [v for v in vs if v not in arms]]
     arm_data = {}
     for lab, specs in allarms:
-        arm_data[lab], _ = _arm_units(bench, specs, preset, None)
+        arm_data[lab], _ = _arm_units(bench, specs, preset, None, **kw)
     common = sorted(set.intersection(*[set(v[0][1].index) for v in arm_data.values()]))
     if units_subset is not None:
         common = [c for c in common if c in set(units_subset)]
@@ -359,8 +373,10 @@ def strata_table(bench, seedmean, refs, common, metric, scale, stem):
                              note="strata of the units in common; paired CIs as in the paired table, within the stratum")
 
 
-def summary_json(bench, spec, preset="exam") -> dict:
-    m = resolve(spec)
-    d = R.bench_root("hugsim", f"{m.key('hugsim')}_{preset}") if bench == "hugsim" else R.bench_root(bench, m.key(bench))
+def summary_json(bench, spec, preset="exam", **kw) -> dict:
+    from . import run_dir
+    if spec.startswith("run:") and (not spec[4:] or Path(spec[4:]).name != spec[4:] or spec[4:] in (".", "..")):
+        raise ValueError(f"invalid bench run reference {spec!r}")
+    d = R.bench_root(bench, spec[4:]) if spec.startswith("run:") else run_dir(spec, bench, preset, **kw)
     f = d / "summary.json"
     return json.loads(f.read_text()) if f.exists() else {}

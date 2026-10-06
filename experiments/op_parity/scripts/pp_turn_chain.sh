@@ -12,6 +12,7 @@ JEV=$DATA_DIR/envs/jevdrive/bin/python
 HPY=$DATA_DIR/envs/hugsim/bin/python
 CL="$JEV -m jevdrive.cl"
 S=experiments/op_parity/scripts
+B=("$PWD/.venv/bin/python" -m jevdrive.bench)
 L=$D/pool
 SH="navtrain_full.s0of12 navtrain_full.s1of12"
 SPLIT=navsim/op-parity-full STEPS=${STEPS:-3000} BATCH=${BATCH:-64} LAM=${LAM:-10}
@@ -40,14 +41,8 @@ for a in $ARMS; do for s in 0 1; do $PY $S/pp_full_check.py train --tag $a-F-s$s
 
 # ---------------------------------------------------------------- 2. navtest plans + scoring
 status "navtest plans + scoring"
-for a in $ARMS; do
-  sub ppT-plans-$a $L/plans-$a --vram 30 --cpu 8 --ram 24 -- $PY $S/pp_eval.py --data lb_navtest --frames warp plans --models $a-F-s0 $a-F-s1 --tag turn >/dev/null
-done
-for a in $ARMS; do
-  waitdirs $L/plans-$a
-  sub ppT-score-$a $L/score-$a --vram 1 --cpu 24 --ram 48 --env NAVSIM_THREADS=22 -- $PY $S/pp_eval.py --data lb_navtest --frames warp score --models $a-F-s0 $a-F-s1 >/dev/null
-done
-waitdirs $(for a in $ARMS; do echo $L/score-$a; done)
+MODELS=$(for a in $ARMS; do for s in 0 1; do echo "$a-F-s$s"; done; done)
+"${B[@]}" run --model $MODELS --bench navtest --wait || die "bench navtest"
 T_ARMS=$(echo $ARMS | sed 's/HP //')
 $PY $S/pp_turn_report.py gate --arms $T_ARMS || die "gate"
 $PY $S/pp_turn_report.py report --arms $T_ARMS || die "navtest report"
@@ -60,9 +55,8 @@ PYEOF
 )
 if [[ -n $PASS ]]; then
   status "HUGSIM for HP $PASS"
-  hug() { sub ppT-h$2-$1 $L/h-$2-$1 --vram 40 --cpu 14 --ram 45 --env PRESET=$2 -- bash $S/pp_hugsim.sh arm $1 $LIST 6 >/dev/null; }
-  for a in HP $PASS; do for s in 0 1; do for pr in exam spec; do hug $a-F-s$s $pr; done; done; done
-  waitdirs $(for a in HP $PASS; do for s in 0 1; do for pr in exam spec; do echo $L/h-$pr-$a-F-s$s; done; done; done)
+  MODELS=$(for a in HP $PASS; do for s in 0 1; do echo "$a-F-s$s"; done; done)
+  "${B[@]}" run --model $MODELS --bench hugsim --preset exam spec --scenarios all64 --wait || die "bench hugsim"
   export FULL_TAGS="P0,$(for a in HP $PASS; do echo -n "$a-F-s0,$a-F-s1,"; done | sed 's/,$//')" FULL_OUT=$PWD/experiments/op_parity/results/hugsim_turn
   $HPY $S/pp_hugsim_report.py extract full || die "hugsim extract"
   $PY $S/pp_turn_report.py report --arms $T_ARMS || die "report with hugsim"

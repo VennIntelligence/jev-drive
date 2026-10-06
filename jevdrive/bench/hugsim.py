@@ -24,13 +24,16 @@ spec_plan = spec with the lateral curvature from the model's own plan. WA-JEPA r
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
 import threading
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from . import runner as R
@@ -40,17 +43,62 @@ ZS_RUN = REPO / "experiments/hugsim/archive/zs_run.py"
 SERVER = REPO / "experiments/hugsim/archive/hugsim_zs_server.py"
 PPH = REPO / "experiments/op_parity/scripts/pp_hugsim.py"
 LEGACY_ONNX = lambda: data_dir() / "runs/op_parity/hugsim/onnx"  # noqa: E731
-PRESETS = ("exam", "spec", "spec_plan")
+from ..openpilot.interface import HUGSIM_PRESETS
+
+PRESETS = tuple(HUGSIM_PRESETS)
+CONTROLLERS = ("official", "fixed", "ideal", "fixed2", "lowspeed", "lowsel", "opctrl", "opctrl_long", "fixedc")
+CONTROLLER_ENV = ("OP_CTRL", "OP_CTRL_LONG", "LOWSPEED_CTRL", "LOWSPEED_SEL")
 TAG = "bench"
 AD = {"cinque": "zs", "lebowski": "zs", "small": "zs", "wajepa": "wj"}
 STALL_S, TIMEOUT_S = 420.0, 1500.0      # sim.log silent this long -> stuck; any scenario longer than this -> stuck (max seen 723 s)
 
 
-def run_key(m: Model, preset: str) -> str:
-    return f"{m.key('hugsim')}_{preset}"
+def configuration(preset="exam", opts=None, controller="", controller_env=None, repeat="", onnx="") -> dict:
+    """Canonical behaviour identity; scenario sets and worker counts are execution choices, not arms."""
+    preset = "spec" if preset == "opctrl_d118" else preset
+    if preset not in HUGSIM_PRESETS:
+        raise ValueError(f"unknown HUGSIM preset {preset!r}: {PRESETS}")
+    p = HUGSIM_PRESETS[preset]
+    tree = controller or p["controller"] or "fixed"
+    if tree not in CONTROLLERS or (p["controller"] and tree != p["controller"]):
+        raise ValueError(f"preset {preset} cannot use controller {tree!r}")
+    def obj(value):
+        value = json.loads(value) if isinstance(value, str) else {} if value is None else value
+        if not isinstance(value, dict):
+            raise ValueError("HUGSIM opts / controller-env must be JSON objects")
+        return json.loads(json.dumps(value, sort_keys=True, allow_nan=False))
+    options, env = obj(opts), obj(controller_env)
+    if "parity" in options and not isinstance(options["parity"], dict):
+        raise ValueError("parity options must be an object")
+    if options.get("parity", {}).get("socket"):
+        raise ValueError("bench manages the parity socket")
+    for k, v in env.items():
+        if k not in CONTROLLER_ENV:
+            raise ValueError(f"unsupported controller env {k!r}: {CONTROLLER_ENV}")
+        env[k] = obj(v)
+    repeat = str(repeat) if repeat is not None else ""
+    if repeat and not re.fullmatch(r"[A-Za-z0-9_.-]+", repeat):
+        raise ValueError("repeat must be a filename-safe label")
+    from .models import expand
+    return dict(preset=preset, controller=tree, opts=options, controller_env=env, repeat=repeat,
+                onnx=str(Path(expand(onnx)).resolve()) if onnx else "")
+
+
+def run_key(m: Model, preset: str, **kw) -> str:
+    cfg = configuration(preset, **kw)
+    key = f"{m.key('hugsim')}_{cfg['preset']}"
+    identity = {k: cfg[k] for k in ("controller", "opts", "controller_env", "onnx")}
+    default = configuration(preset)
+    if identity != {k: default[k] for k in identity}:
+        key += "-c" + hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:12]
+    if cfg["repeat"]:
+        key += "-r" + cfg["repeat"]
+    return key
 
 
 def onnx_path(m: Model) -> Path:
+    if m.family == "adapt_h":
+        return R.bench_root("hugsim", "_onnx", f"{m.name}.onnx")
     return R.bench_root("hugsim", "_onnx", "pp-shipped.onnx" if m.shipped else f"pp-{m.name}.onnx")
 
 
@@ -65,11 +113,13 @@ def expected_walls(run_dir: Path) -> dict:
     w = {}
     for f in (data_dir() / "runs/op_parity/hugsim/results.csv", Path(run_dir) / "results.csv"):
         if f.exists():
-            for r in csv.DictReader(open(f)):
-                try:
-                    w.setdefault(r["scenario"], []).append(float(r["wall_s"]))
-                except (KeyError, ValueError):
-                    pass
+            with open(f) as fh:
+                for r in csv.DictReader(fh):
+                    try:
+                        wall = float(r["wall_s"])
+                        w.setdefault(r["scenario"], []).append(wall)
+                    except (KeyError, ValueError):
+                        pass
     return {k: statistics.median(v) for k, v in w.items()}
 
 
@@ -82,15 +132,22 @@ def done_set(run_dir: Path) -> set:
 
 
 def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int = 6, jobs: int = 0, stall_s: float = STALL_S,
-           timeout_s: float = TIMEOUT_S, retries: int = 2) -> list:
-    if preset not in PRESETS:
-        raise SystemExit(f"preset {preset!r}: one of {PRESETS}")
+           timeout_s: float = TIMEOUT_S, retries: int = 2, opts=None, controller="", controller_env=None, repeat="", onnx="") -> list:
+    identity = configuration(preset, opts, controller, controller_env, repeat, onnx)
+    if identity["onnx"]:
+        if m.family != "onnx":
+            raise ValueError("--onnx overrides apply only to ONNX models")
+        if not Path(identity["onnx"]).is_file():
+            raise FileNotFoundError(identity["onnx"])
+    preset = identity["preset"]
     if m.family == "wajepa" and preset != "exam":
         raise SystemExit("WA-JEPA runs the exam preset only (its client has no openpilot lateral path)")
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     cf = run_dir / "config.json"
     old = json.loads(cf.read_text()) if cf.exists() else {}
+    if old and configuration(**{k: old.get(k) for k in identity}) != identity:
+        raise ValueError(f"different HUGSIM configuration already exists in {run_dir}")
     want = list(dict.fromkeys(list(old.get("scenarios", [])) + list(scenarios)))
     walls = expected_walls(run_dir)
     med = sorted(walls.values())[len(walls) // 2] if walls else 100.0
@@ -101,11 +158,14 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
         f.unlink()                                                    # a new submit retries scenarios that failed before
     w = max(1, min(workers, len(todo) or 1))
     k = jobs or max(1, min(len(R.box_cards()), -(-len(todo) // w)))
-    cfg = dict(model=m.spec, preset=preset, agent=agent_of(m), scenarios=want, workers=w, jobs=k, stall_s=stall_s,
+    cfg = dict(model=m.spec, **identity, agent=agent_of(m), scenarios=want, workers=w, jobs=k, stall_s=stall_s,
                timeout_s=timeout_s, retries=retries, tag=TAG)
+    p = HUGSIM_PRESETS[preset]
+    cfg["resolved_opts"] = dict(p["opts"], **identity["opts"])
+    cfg["resolved_controller_env"] = dict(p["env"], **identity["controller_env"])
     R.atomic_write(cf, json.dumps(cfg, indent=1))
     S = []
-    if m.family == "parity":
+    if m.family in ("parity", "adapt_h"):
         S.append(R.Stage("onnx", R.stage_cmd("jev", "hugsim-onnx", m.spec), done=str(onnx_path(m)), vram=10, cpu=4, ram=24))
     per = 12.5 if m.family == "wajepa" else 8.5
     base = 6 if m.family == "wajepa" else 8
@@ -116,7 +176,7 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
                              tries=2))
     S.append(R.Stage("collect", R.stage_cmd("hugsim", "hugsim-collect", run_dir), done=str(run_dir / "DONE"), vram=0.5, cpu=4, ram=16,
                      after=[s.name for s in S if s.name.startswith("w")]))
-    for f in [run_dir / "DONE", run_dir / "ERROR"] + [run_dir / "workers" / f"w{i}.DONE" for i in range(k)]:
+    for f in [run_dir / "DONE", run_dir / "ERROR", run_dir / "WAIT_TIMEOUT"] + [run_dir / "workers" / f"w{i}.DONE" for i in range(k)]:
         if todo and f.exists():                                       # new work: the run is open again
             f.rename(f.with_name(f"{f.name}.{time.strftime('%Y%m%d-%H%M%S')}"))
     return S
@@ -127,6 +187,9 @@ def build_onnx(spec: str) -> None:
     m = resolve(spec, check=True)
     out = onnx_path(m)
     out.parent.mkdir(parents=True, exist_ok=True)
+    if m.family == "adapt_h":
+        build_h_onnx(m, out)
+        return
     leg = LEGACY_ONNX() / out.name
     if leg.exists():
         if not out.exists():
@@ -134,6 +197,23 @@ def build_onnx(spec: str) -> None:
         return
     tmp = out.with_name(f".{out.stem}.{os.getpid()}.onnx")
     subprocess.run([R.py("op-train"), str(PPH), "onnx", "--tag", "P0" if m.shipped else m.name, "--out", str(tmp)], check=True, cwd=REPO)
+    os.replace(tmp, out)
+
+
+def build_h_onnx(m: Model, out: Path) -> None:
+    """H lane's no-adapter export and the same stream equivalence gate, before publishing the serving ONNX."""
+    script = REPO / "experiments/op_adapt_l/scripts/op_l_onnx.py"
+    tmp = out.with_name(f".{out.stem}.{os.getpid()}.onnx")
+    ref = out.with_suffix(".ref.npz")
+    log = out.with_suffix(".check.txt")
+    subprocess.run([R.py("op-train"), str(script), "build", "--ckpt", m.ckpt, "--out", str(tmp), "--no-adapter"], check=True, cwd=REPO)
+    subprocess.run([R.py("op-train"), str(script), "ref", "--ckpt", m.ckpt, "--out", str(ref)], check=True, cwd=REPO)
+    with open(log, "w") as f:
+        subprocess.run([R.py("openpilot"), str(script), "check", "--onnx", str(tmp), "--ref", str(ref)], check=True, cwd=REPO, stdout=f,
+                       stderr=subprocess.STDOUT)
+    streams = [line.split() for line in log.read_text().splitlines() if line.startswith("stream")]
+    if not streams or any(float(row[15]) > 0.5 for row in streams):
+        raise RuntimeError(f"H ONNX plan xy differs from training port by > 0.5 m: {log}")
     os.replace(tmp, out)
 
 
@@ -226,9 +306,9 @@ class Servers:
             self.list.append(Server("bias", [R.py("op-train"), "-u", str(PPH), "serve", "--tag", tag, "--socket", self.bias_sock,
                                              "--ready-file", str(d / f"w{i}-bias.ready")], self.bias_sock, d / f"w{i}-bias.ready",
                                     d / f"w{i}-bias.log", env))
-        if m.family in ("parity", "onnx"):
+        if m.family in ("parity", "onnx", "adapt_h"):
             self.op_sock = str(tmp / "op.sock")
-            onnx = str(onnx_path(m)) if m.family == "parity" else m.onnx
+            onnx = str(onnx_path(m)) if m.family in ("parity", "adapt_h") else m.onnx
             self.list.append(Server("policy", [R.py("openpilot"), "-u", str(SERVER), m.base] + (["--onnx", onnx] if onnx else [])
                                     + ["--socket", self.op_sock, "--ready-file", str(d / f"w{i}-op.ready")], self.op_sock,
                                     d / f"w{i}-op.ready", d / f"w{i}-op.log", env))
@@ -324,15 +404,19 @@ def scenario_dir(run_dir: Path, scen: str, agent: str) -> Path:
     return run_dir / TAG / AD[agent] / f"{c['scene_name']}_{c['mode']}"
 
 
-def preset_args(preset: str) -> list:
-    return ["--preset", "exam", "--controller", "fixed"] if preset == "exam" else ["--preset", preset]
+def preset_args(preset: str, controller="") -> list:
+    cfg = configuration(preset, controller=controller)
+    return ["--preset", cfg["preset"], "--controller", cfg["controller"]]
 
 
 def run_one(cfg: dict, run_dir: Path, scen: str, srv: Servers, gpu: str, log: Path) -> str:
     """One scenario through zs_run.py under the watchdog -> 'done' | 'crash' | 'stall' | 'timeout'."""
     from ..cl import procs
-    opts = {"parity": {"socket": srv.bias_sock}} if srv.bias_sock else {}
-    cmd = [R.py("hugsim"), str(ZS_RUN), "run", "--out", str(run_dir), "--agent", cfg["agent"], *preset_args(cfg["preset"]),
+    opts = dict(cfg.get("opts", {}))
+    if srv.bias_sock:
+        opts["parity"] = dict(opts.get("parity", {}), socket=srv.bias_sock)
+    cmd = [R.py("hugsim"), str(ZS_RUN), "run", "--out", str(run_dir), "--agent", cfg["agent"],
+           *preset_args(cfg["preset"], cfg.get("controller", "")), "--controller-env", json.dumps(cfg.get("controller_env", {})),
            "--gpu", gpu, "--workers", "1", "--scenarios", scen, "--tag", TAG, "--timeout", str(cfg["timeout_s"]), "--retries", "0",
            "--max-fail", "0", "--opts", json.dumps(opts)] + (["--socket", srv.op_sock] if srv.op_sock else [])
     sd = scenario_dir(run_dir, scen, cfg["agent"])
@@ -342,7 +426,8 @@ def run_one(cfg: dict, run_dir: Path, scen: str, srv: Servers, gpu: str, log: Pa
     with open(log, "a") as lf:
         lf.write(f"\n==> {time.strftime('%F %T')} {scen}\n")
         lf.flush()
-        p = subprocess.Popen(cmd, cwd=REPO, stdout=lf, stderr=subprocess.STDOUT, start_new_session=True)
+        env = {k: v for k, v in os.environ.items() if k not in CONTROLLER_ENV}
+        p = subprocess.Popen(cmd, cwd=REPO, env=env, stdout=lf, stderr=subprocess.STDOUT, start_new_session=True)
     procs.capture(rec, p.pid)
     why = ""
     while p.poll() is None:
@@ -373,9 +458,11 @@ def worker(run_dir: str, i: int) -> None:
     i = int(i)
     cfg = json.loads((run_dir / "config.json").read_text())
     m = resolve(cfg["model"])
+    if cfg.get("onnx"):
+        m = replace(m, onnx=cfg["onnx"])
     gpu = os.environ.get("CL_GPU", os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0])
     (run_dir / "workers").mkdir(parents=True, exist_ok=True)
-    tree = "fixed" if cfg["preset"] == "exam" else "opctrl"
+    tree = cfg.get("controller") or configuration(cfg["preset"])["controller"]
     subprocess.run([R.py("hugsim"), str(ZS_RUN), "setup-trees", tree], check=True, cwd=REPO)
     q = Queue(run_dir, cfg["scenarios"], i)
     srv = Servers(m, run_dir, i)
@@ -487,5 +574,8 @@ def collect(run_dir: str) -> None:
         summ |= {f"n_{c}": int((u.cls == c).sum()) for c in ("complete", "fg_coll", "bg_coll", "off_route", "stuck", "spin")}
         summ |= dict(n_launch_stall=int(u.launch_stall.sum()), n_spin_any=int(u.spin.fillna(False).astype(bool).sum()))
     R.atomic_write(run_dir / "summary.json", json.dumps(summ, indent=1, default=str))
+    if missing:
+        R.atomic_write(run_dir / "ERROR", f"missing {len(missing)} scenarios: {', '.join(missing)}\n")
+        raise RuntimeError(f"HUGSIM incomplete: {len(missing)} scenarios missing; {run_dir}/summary.json")
     R.status(run_dir, f"done: {len(u)} scenarios, HD {summ['HD']:.3f}" + (f", MISSING {len(missing)}" if missing else ""))
     R.atomic_write(run_dir / "DONE", json.dumps(dict(t=time.strftime("%F %T"), **summ), default=str) + "\n")

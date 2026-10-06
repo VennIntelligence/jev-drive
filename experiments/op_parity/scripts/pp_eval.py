@@ -29,62 +29,60 @@ def stem(m):
 
 
 def cmd_plans(a):
-    import torch
-    import pp_train as T
-    from jevdrive import op_adapt as A
+    from jevdrive.bench.navsim import parity_plans
     from jevdrive.run import Run
     from jevdrive.data import splits
     import op_lb as OL
-    dev = torch.device("cuda")
     with Run("op_parity", "navtest-plans", config=vars(a)) as run:
         run.use_split(splits.load("navsim/navtest"))
-        side_ok = (data_dir() / "runs" / "op_parity" / "cache" / DATA / "side.npy").exists()
-        S = T.Store([DATA], dev, need_side=side_ok, frames=FRAMES)
-        names = S.tab["names"]
-        assert names.tolist() == OL.meta(DATA)["names"]
         pdir = OL.root(DATA, "plans")
         eq, plans = {}, {}
         for m in ["P0"] + [x for x in a.models if x != "P0"]:
-            tag, _, opt = m.partition(":")
-            model = T.load_pmodel(tag, dev)
-            sl = model.net.slices
-            pi = np.arange(sl["plan"].start, sl["plan"].start + 495)
-            ps = np.arange(sl["plan"].start + 495, sl["plan"].start + 990)
-            mu, sd = np.zeros((S.n, 33, 15), np.float32), np.zeros((S.n, 33, 15), np.float32)
-            with torch.no_grad():
-                for i in range(0, S.n, a.batch):
-                    r = torch.arange(i, min(i + a.batch, S.n), device=dev)
-                    mask = torch.zeros(len(r), 3, dtype=torch.bool, device=dev) if opt == "noside" else None
-                    o = model(S.front[r], S.ego[r], S.tc[r], S.side[r] if side_ok else None, mask).float().cpu().numpy()
-                    mu[i:i + len(r)] = o[:, pi].reshape(-1, 33, 15)
-                    sd[i:i + len(r)] = np.exp(np.minimum(o[:, ps], 11)).reshape(-1, 33, 15)
-            plans[m] = mu
-            np.savez(pdir / f"{stem(m)}.npz", names=names, plan_pos=mu[:, :, 0:3], plan_vel=mu[:, :, 3:6], plan_yaw=mu[:, :, 11], plan_mu=mu,
-                     plan_std=sd, steps=31, info=json.dumps({"model": f"op_parity {m}", "source": "experiments/op_parity/scripts/pp_eval.py"}))
-            d = np.abs(mu - plans["P0"])
+            out = pdir / f"{stem(m)}.npz"
+            parity_plans(model_spec(m), "navtest", str(out), batch=a.batch, data=DATA)
+            plans[m] = np.load(out)["plan_mu"]
+            d = np.abs(plans[m] - plans["P0"])
             eq[m] = {"max_abs_vs_P0": float(d.max()), "p99_abs_vs_P0": float(np.percentile(d.max((1, 2)), 99)),
-                     "mean_pos_l2_vs_P0": float(np.linalg.norm(mu[:, :, :2] - plans["P0"][:, :, :2], axis=-1).mean())}
+                     "mean_pos_l2_vs_P0": float(np.linalg.norm(plans[m][:, :, :2] - plans["P0"][:, :, :2], axis=-1).mean())}
             run.info(f"{m}: {eq[m]}")
-            del model
-            torch.cuda.empty_cache()
         onnx = pdir / "gimm@cinque.npz"
         if onnx.exists() and FRAMES == "gimm" and DATA == "lb_navtest":
             z = np.load(onnx)
-            assert z["names"].tolist() == names.tolist()
-            ref = z["plan_mu"] if "plan_mu" in z else None
-            if ref is not None:
-                d = np.abs(plans["P0"] - ref)
+            assert z["names"].tolist() == OL.meta(DATA)["names"]
+            if "plan_mu" in z:
+                d = np.abs(plans["P0"] - z["plan_mu"])
                 eq["P0_vs_onnx"] = {"max_abs": float(d.max()), "p99_row_max": float(np.percentile(d.max((1, 2)), 99)),
                                     "median_row_max": float(np.median(d.max((1, 2)))),
-                                    "pos4s_l2_mean": float(np.linalg.norm(plans["P0"][:, 22, :2] - ref[:, 22, :2], axis=-1).mean())}
+                                    "pos4s_l2_mean": float(np.linalg.norm(plans["P0"][:, 22, :2] - z["plan_mu"][:, 22, :2], axis=-1).mean())}
                 run.info(f"P0 vs ONNX: {eq['P0_vs_onnx']}")
-        out = data_dir() / "runs" / "op_parity" / "navtest"
+        out = data_dir() / "runs/op_parity/navtest"
         out.mkdir(parents=True, exist_ok=True)
         (out / f"equivalence_{a.tag}_{DATA}_{FRAMES}.json").write_text(json.dumps(eq, indent=1))
         run.summary["equivalence"] = eq
 
 
 def cmd_score(a):
+    if DATA == "lb_navtest" and a.ver == "v2":
+        from jevdrive import bench
+        from jevdrive.bench import navsim, runner
+        from jevdrive.bench.models import resolve
+        specs = [model_spec(m) for m in a.models]
+        if os.environ.get("CL_POOL_JOB"):
+            # Historical CPU worker: share the scoring stages, without queueing work behind its own lease.
+            for spec in specs:
+                m = resolve(spec, check=True)
+                d = bench.run_dir(spec, "navtest")
+                stages = navsim.stages(m, "navtest", d, shards=1)
+                if not navsim.plan_file(m, "navtest").exists():
+                    raise RuntimeError(f"plans missing for {spec}; use jevdrive.bench run from the orchestrator")
+                for stage in stages:
+                    if stage.name in ("prep", "plans") or _pl.Path(stage.done).exists():
+                        continue
+                    subprocess.run(stage.cmd, check=True, cwd=_R, env=dict(os.environ, **stage.env))
+        else:
+            if not bench.wait([bench.run(spec, "navtest") for spec in specs]):
+                raise SystemExit(1)
+        return
     env = dict(os.environ, OPI_ROOT="op_lb")
     jev = str(data_dir() / "envs" / "jevdrive" / "bin" / "python")
     stems = [stem(m) for m in a.models]
@@ -112,7 +110,24 @@ def read_csv(path):
 
 def eval_csv(m, ver="v2"):
     fs = sorted((data_dir() / "runs" / "navsim" / "eval").glob(f"{ver}_navtest_opi_{DATA}_{stem(m).replace('@', '-')}__base/*/*.csv"))
-    return fs[-1] if fs else None
+    legacy = fs[-1] if fs else None
+    if DATA == "lb_navtest" and ver == "v2":
+        from jevdrive.bench.compat import navtest_csv
+        return navtest_csv(model_spec(m), legacy)
+    return legacy
+
+
+def model_spec(m):
+    tag, sep, opt = m.partition(":")
+    return f"{tag}@{FRAMES}" + (f":{opt}" if sep else "")
+
+
+def pred_file(m):
+    legacy = data_dir() / "runs" / "op_lb" / DATA / "preds" / f"{stem(m).replace('@', '-')}__base.npz"
+    if DATA == "lb_navtest":
+        from jevdrive.bench.compat import pred_file as bench_pred
+        return bench_pred(model_spec(m), legacy=legacy)
+    return legacy
 
 
 def cmd_report(a):
@@ -138,7 +153,7 @@ def cmd_report(a):
     rows = []
     for m, (t, avg) in arms.items():
         geo = {}
-        pf = data_dir() / "runs" / "op_lb" / DATA / "preds" / f"{stem(m).replace('@', '-')}__base.npz"
+        pf = pred_file(m)
         if pf.exists():
             z = np.load(pf)
             F = np.stack([fut[k] for k in z["tokens"]])

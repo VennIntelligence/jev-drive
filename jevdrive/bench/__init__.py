@@ -23,12 +23,13 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def run_dir(model: str, bench: str, preset: str = "exam", subset: str = ""):
+def run_dir(model: str, bench: str, preset: str = "exam", subset: str = "", **kw):
     from .models import resolve
     from .runner import bench_root
     m = resolve(model)
     if bench == "hugsim":
-        return bench_root("hugsim", f"{m.key('hugsim')}_{preset}")
+        from .hugsim import run_key
+        return bench_root("hugsim", run_key(m, preset, **kw))
     if bench == "b2d":
         return bench_root("b2d", m.key("b2d"))
     return bench_root(bench, m.key(bench) + (f"_{subset.replace('/', '-')}" if subset else ""))
@@ -39,7 +40,10 @@ def plan(model: str, bench: str, preset: str = "exam", scenarios: str = "all64",
     """(run dir, stages) of one model on one bench, without submitting."""
     from .models import resolve
     m = resolve(model, check=True)
-    d = run_dir(model, bench, preset, subset)
+    if bench not in m.benches:
+        raise ValueError(f"{model} is registered for {m.benches}, not {bench}")
+    identity = {k: v for k, v in kw.items() if k in ("opts", "controller", "controller_env", "repeat", "onnx")}
+    d = run_dir(model, bench, preset, subset, **identity)
     if bench in ("navtest", "navhard"):
         from . import navsim
         return d, navsim.stages(m, bench, d, shards=shards, subset=subset)
@@ -54,16 +58,16 @@ def run(model: str, bench: str, dry: bool = False, priority: float = 0.0, gpus=N
     """Submit one model x bench run to the GPU pool; returns its run dir (idempotent: finished stages are skipped)."""
     from . import runner
     d, st = plan(model, bench, **kw)
-    name = f"bn-{bench}-{model}" + (f"-{kw['preset']}" if bench == "hugsim" and kw.get("preset") else "")
+    name = f"bn-{bench}-{d.name}"
     runner.submit(d, name, st, dry=dry, priority=priority, gpus=gpus)
     if not dry:
         runner.status(d, f"submitted: {', '.join(s.name for s in st if not Path(s.done).exists()) or 'nothing left'}")
     return d
 
 
-def wait(dirs, poll_s: float = 30.0) -> bool:
+def wait(dirs, poll_s: float = 30.0, timeout_s: float = 0) -> bool:
     from .runner import wait as _w
-    return _w(list(dirs), poll_s)
+    return _w(list(dirs), poll_s, timeout_s=timeout_s)
 
 
 def report(bench: str, arms, vs=(), preset: str = "exam", out: str = "", **kw):

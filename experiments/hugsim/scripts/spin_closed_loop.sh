@@ -6,22 +6,14 @@
 # drives the first 5 s up to 5 m/s, then the model takes over) with TAG=engage5.
 # Output: <out_dir>/cinque-<controller>/..., <out_dir>/results.csv (same layout as the zero-shot exam).
 set -uo pipefail
-: "${DATA_DIR:?}" "${GPU:?}"
+: "${DATA_DIR:?}"
 cd "$(dirname "$0")/../../.."
 OUT=${1:-$DATA_DIR/runs/hugsim-spin}
 L=experiments/hugsim/scripts/spin_scenarios.txt
 HPY=$DATA_DIR/envs/hugsim/bin/python
-mkdir -p "$OUT/servers"
-rm -f "$OUT/servers/cinque.ready"
-CUDA_VISIBLE_DEVICES=$GPU setsid "$DATA_DIR/envs/openpilot/bin/python" -u experiments/hugsim/archive/hugsim_zs_server.py cinque \
-    --socket "$OUT/servers/cinque.sock" --ready-file "$OUT/servers/cinque.ready" > "$OUT/servers/cinque.log" 2>&1 &
-srv=$!
-trap 'kill -- -$srv 2>/dev/null' EXIT
-until [[ -f $OUT/servers/cinque.ready ]]; do sleep 5; kill -0 $srv 2>/dev/null || { echo "server died"; exit 3; }; done
-echo "$(date +%T) server ready"
-$HPY experiments/hugsim/archive/zs_run.py setup-trees official fixed fixed2 ideal
+mkdir -p "$OUT"
+source scripts/bench_lane.sh
 for c in ${CTRLS:-fixed fixed2 ideal}; do
-    $HPY experiments/hugsim/archive/zs_run.py run --preset exam --out "$OUT" --agent cinque --controller $c --gpu "$GPU" --workers 2 \
-        --scenarios "$L" --socket "$OUT/servers/cinque.sock" --opts "${OPTS:-{\}}" ${TAG:+--tag cinque-$c-$TAG}
+    bench_hugsim cinque exam "cinque-$c${TAG:+-$TAG}" "$L" 2 "$c" "${OPTS:-\{\}}" || exit 1
 done
 echo "$(date +%T) done"

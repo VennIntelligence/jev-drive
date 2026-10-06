@@ -74,7 +74,8 @@ def cmd_preds(a):
 
 
 def harness_dir(m: str) -> _pl.Path:
-    return WORK / "harness" / m
+    from jevdrive.bench.compat import navhard_dir
+    return navhard_dir("WA-JEPA" if m == "wajepa" else m, WORK / "harness" / m)
 
 
 def _boot(d, g=None):
@@ -134,6 +135,9 @@ def cmd_report_gimm(a):
     src = {"P0-G": [G / "P0"], "P2-G": [G / "P2-F-s0", G / "P2-F-s1"], "P2-W": [harness_dir("P2-F-s0"), harness_dir("P2-F-s1")],
            "P0-W": [harness_dir("P0")], "WA-JEPA": [harness_dir("wajepa")], "shipped (op_guard, GIMM)": [REFS_D["shipped"]],
            "factor_wm S3 (GIMM)": [REFS_D["fw-S3"]]}
+    from jevdrive.bench.compat import navhard_dir
+    src["P0-G"] = [navhard_dir("P0@gimm", G / "P0")]
+    src["P2-G"] = [navhard_dir(f"P2-F-s{s}@gimm", G / f"P2-F-s{s}") for s in (0, 1)]
     runs = {k: [(pd.read_csv(d / "harness_groups.csv").set_index("group"), json.loads((d / "harness_summary.json").read_text())) for d in v
                 if (d / "harness_groups.csv").exists()] for k, v in src.items()}
     runs = {k: v for k, v in runs.items() if v}

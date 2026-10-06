@@ -85,7 +85,7 @@ def cmd_navtest(a):
         r |= {k: float(np.nanmean(vec(arm, c) if k != "DAC" else vec(arm, c))) for k, c in SUBS.items()}
         r["DAC fail %"] = float(vec(arm, SUBS["DAC"], fail=True).mean())
         if arm != "WA-JEPA":
-            zs = [np.load(data_dir() / "runs/op_lb/lb_navtest/preds" / f"warp-cinque_PP{m}__base.npz") for m in groups[arm]]
+            zs = [np.load(E.pred_file(m)) for m in groups[arm]]
             P = np.mean([np.stack([dict(zip(z["tokens"].tolist(), z["poses"]))[k] for k in toks]) for z in zs], 0)
             r |= {"ade_vs_log": float(np.linalg.norm(P[:, :, :2] - F[:, :, :2], axis=-1).mean()), "speed_ratio_med": float(np.median(plen(P)[mv] / Lg[mv]))}
         rows.append(r)
@@ -127,6 +127,8 @@ def cmd_navhard(a):
     src = {"P2 (G)": [D / "navhard_gimm/harness/P2-F-s0", D / "navhard_gimm/harness/P2-F-s1"],
            f"{a.hinge} (G)": [RUN / f"harness/{a.hinge}-F-s0", RUN / f"harness/{a.hinge}-F-s1"],
            "P0 (G)": [D / "navhard_gimm/harness/P0"], "WA-JEPA": [D / "navhard/harness/wajepa"]}
+    from jevdrive.bench.compat import navhard_dir
+    src = {k: [navhard_dir("WA-JEPA" if d.name == "wajepa" else d.name + "@gimm", d) for d in v] for k, v in src.items()}
     runs = {k: [(pd.read_csv(d / "harness_groups.csv").set_index("group"), json.loads((d / "harness_summary.json").read_text())) for d in v
                 if (d / "harness_groups.csv").exists()] for k, v in src.items()}
     runs = {k: v for k, v in runs.items() if v}

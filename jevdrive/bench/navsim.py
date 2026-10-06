@@ -77,6 +77,11 @@ def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "
         raise SystemExit(f"{m.name} on {bench}: stored reference only ({m.stored.get(bench)}); its runner is experiments/top10 "
                          "(navhard: experiments/op_parity/scripts/pp_navhard_wajepa.sh)")
     pf = plan_file(m, bench)
+    if m.family == "parity" and not pf.exists():
+        old_stem = f"{m.frames}@cinque_PP{m.name}" + (f"_{m.opt}" if m.opt else "")
+        old = data_dir() / "runs/op_lb" / data / "plans" / f"{old_stem}.npz"
+        if old.exists():
+            _copy_into(old, pf)
     if m.family == "parity" and not m.unfreeze:
         need = [cache_dir(data, "gimm") / "tab.npz", cache_dir(data, m.frames) / "front.npy"]
         if not all(p.exists() for p in need):
@@ -132,13 +137,13 @@ def _pp_path():
             sys.path.insert(0, str(p))
 
 
-def parity_plans(spec: str, bench: str, out: str, batch: int = 128) -> None:
+def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = "") -> None:
     """pp_eval.py plans for one model (the same loop, batch and fp16 path, so plans are bit-identical), written atomically."""
     import torch
     _pp_path()
     import pp_train as T
     m = resolve(spec, check=True)
-    data = NAVSIM[bench]["data"]
+    data = data or NAVSIM[bench]["data"]
     dev = torch.device("cuda")
     side_ok = (cache_dir(data, "gimm") / "side.npy").exists()
     S = T.Store([data], dev, need_side=side_ok, frames=m.frames)

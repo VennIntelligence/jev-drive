@@ -41,7 +41,7 @@ def hugsim_unit(stage, arm):
     opts = json.dumps({} if ARMS[arm] is None else {"resume": ARMS[arm]})
     env = dict(GPU="{gpu}", OUT=str(out), SCEN=str(scen), TAG="or-%s" % arm, OPTS=opts, WORKERS="5")
     return dict(name="or-%s-hug-%s" % (stage, arm), cmd="bash %s" % shlex.quote(str(HERE / "or_hugsim.sh")), env=env,
-                vram_gb=30.0, carla=0, cpu=5, out=out,
+                vram_gb=50.5, carla=0, cpu=13, out=out,
                 done=lambda: (out / "results.csv").exists() and _hug_done(out, scen, "or-%s" % arm))
 
 
