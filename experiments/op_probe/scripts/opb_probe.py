@@ -498,7 +498,7 @@ def cmd_decode(a):
     from jevdrive.data import splits
     from jevdrive.run import Run
     dev = torch.device("cuda")
-    tag = "decode-small" if a.small else "decode"
+    tag = ("decode-small" if a.small else "decode") + a.tag
     out = ROOT / tag
     out.mkdir(parents=True, exist_ok=True)
     with Run("op_probe", tag, seed=0, config=vars(a)) as run:
@@ -530,7 +530,7 @@ def cmd_decode(a):
             mu, sd = Xa.mean(0), Xa.std(0).clamp_min(1e-6)
             Xa = (Xa - mu) / sd
             Xe = (torch.as_tensor(stage_matrix(name, model, stage, tt, np.array(["lb_navtest"] * len(tt)), e_ego), device=dev) - mu) / sd
-            for kind, lam_h in (("imit", 0.0), ("hinge", a.lam_hinge)):
+            for kind, lam_h in ((("imit", 0.0),) if not a.hinge_only else ()) + (("hinge", a.lam_hinge),):
                 torch.manual_seed(0)
                 net = nn.Sequential(nn.Dropout(0.1), nn.Linear(Xa.shape[1], 1024), nn.GELU(), nn.Linear(1024, 1024), nn.GELU(), nn.Linear(1024, 24)).to(dev)
                 opt = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-2)
@@ -580,5 +580,7 @@ if __name__ == "__main__":
     p.add_argument("--batch", type=int, default=512)
     p.add_argument("--lam-hinge", type=float, default=1.0)
     p.add_argument("--hinge-margin", type=float, default=0.3)
+    p.add_argument("--hinge-only", action="store_true")
+    p.add_argument("--tag", default="")
     a = ap.parse_args()
     {"select": cmd_select, "probe": cmd_probe, "decode": cmd_decode, "summarize": cmd_summarize}[a.cmd](a)
