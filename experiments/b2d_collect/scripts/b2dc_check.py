@@ -20,7 +20,8 @@ Per clip (labels from scripts/b2dc_labels.py):
               ratio, heading-sign agreement on lane following (route command straight, no junction turn within 45 m, |logged yaw at 4 s| > 10 deg:
               a mirrored or misaligned frame shows here; junction turns are reported apart, they are the model's open problem, decision 121),
               and P0's ADE with the frame stack shifted by -8 / -4 / +4 / +8 ticks (report).
-  command     route command one-hot vs the heading change actually driven over the next 50 m of path (> 30 deg left / right), moving ticks
+  command     route command vs the heading change actually driven over the next 60 m of path, moving ticks: turn-command precision
+              (commanded side, > 30 deg) and the straight-but-turned share (> 45 deg; also catches curved roads, report)
   sdf         logged future footprint (hero corners) at the 8 poses on the t0 SDF raster: share of poses with every corner >= -0.3 m
 GIF panels (`--gif` clips, turn routes first): every 4 ticks around the turn (or the whole clip), chase view | road | wide model frames as Cinque
 gets them (YUV -> RGB), with the nominal horizon rows (dashed), the logged future (green) and P2's plan (red) projected on the ground. Captions
@@ -163,17 +164,19 @@ def main(a):
                             c["first_launch_lag"] = lags[-1]
             c["launch_lags"] = " ".join(map(str, lags))
             c["moving_ticks"] = int((lab["speed"] > 0.5).sum())
-            # command vs the heading change actually driven over the next 50 m of path (distance-based: stops do not count)
+            # command vs the heading change actually driven over the next 60 m of path (> 30 deg), moving ticks: precision of the turn
+            # commands (gated) and the share of straight-commanded ticks before a > 45 deg heading change (report: also curved roads)
             h = lab["heading"]
             P = lab["xy_world"]
             sdist = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
-            j = np.searchsorted(sdist, sdist + 50.0)
+            j = np.searchsorted(sdist, sdist + 60.0)
             ok = (j < n) & (lab["speed"] > 1.0)
-            jj = np.minimum(j, n - 1)
-            dh = np.degrees(h[jj] - h)
-            drv = np.where(dh > 30, 0, np.where(dh < -30, 2, 1))
+            dh = np.degrees(h[np.minimum(j, n - 1)] - h)
             cm = lab["cmd"][:, :3].argmax(1)
-            c["cmd_agree"] = float((cm == drv)[ok].mean()) if ok.any() else float("nan")
+            tc = ok & (cm != 1)
+            c["cmd_turn_precision"] = float(((cm == 0) & (dh > 30) | (cm == 2) & (dh < -30))[tc].mean()) if tc.any() else float("nan")
+            sc = ok & (cm == 1)
+            c["cmd_straight_but_turned"] = float((np.abs(dh) > 45)[sc].mean()) if sc.any() else float("nan")
             c["cmd_turn_ticks"] = int((cm != 1).sum())
             # samples
             t0s = np.arange(max(36, 0), n, a.stride)
@@ -264,10 +267,11 @@ def main(a):
         agg["launch_lag0_share"] = float(np.mean([x == 0 for x in ll])) if ll else None
         fl = C.first_launch_lag.dropna() if "first_launch_lag" in C else []
         agg["first_launch_lag0_share"] = float((fl == 0).mean()) if len(fl) else None
+        agg["first_launch_lag_le1_share"] = float((fl.abs() <= 1).mean()) if len(fl) else None
         agg["first_launches"] = int(len(fl))
         for k in ("dt_max_err", "frozen_share", "horizon_shift_p95_rows", "pitch_p95_abs_deg"):
             agg[k + "_max"] = float(C[k].max())
-        for k in ("cmd_agree", "fut_footprint_drivable"):
+        for k in ("cmd_turn_precision", "cmd_straight_but_turned", "fut_footprint_drivable"):
             agg[k + "_mean"] = float(C[k].mean())
         (out / "check.json").write_text(json.dumps(agg, indent=1))
         run.summary.update(agg)

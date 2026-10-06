@@ -10,7 +10,8 @@ Per tick i (20 Hz):
   fut (8, 3)        poses at t0 + 0.5 .. 4.0 s (NaN past the clip end); op_parity's `fut`
   hist (4, 3)       poses at t0 - 1.5, -1.0, -0.5, 0 s, oldest first (before the clip start: the first tick, as WA-JEPA's buffer clamps)
   vel / acc (4, 2)  body-frame velocity / acceleration at the same times (each in its own body frame), CARLA's get_velocity / acceleration
-  cmd (4,)          NAVSIM one-hot [left, straight, right, unknown]: route_command(), from the leaderboard's dense route only
+  cmd (4,)          NAVSIM one-hot [left, straight, right, unknown]: route_command(), from the route only (re-densified with CARLA's
+                    planner, junction turns labelled from geometry: Route.from_geometry)
   ego (20,)         lib/parity_adapter.ego_features(hist, vel, acc, cmd)
   turn_next / turn_dist   the next LEFT / RIGHT junction RoadOption along the route (1 / 2, 0 none) and its distance (m), for other lookaheads
   route_poly (16, 2), route_mask   route ahead as 10 m vertices from the rear axle (vertex 0 = origin), op_route_ft's nav-polyline input
@@ -35,6 +36,7 @@ DT = 0.05
 FUT_T = np.arange(1, 9) * 0.5
 HIST_T = np.array([-1.5, -1.0, -0.5, 0.0])
 LAT_DELAY = 0.2                                   # s, openpilot lateralDelay (experiments/op_route_ft/scripts/rft.py LAT_DELAY)
+TURN_DEG = 30.0                                   # junction heading change that makes a LEFT / RIGHT command
 CMD_LOOKAHEAD = 30.0                              # m: a LEFT / RIGHT junction option within this distance -> left / right (see the plan)
 X0, Y0, RES, NH, NW = -8.0, -24.0, 0.5, 128, 96   # lib/drivable_hinge.py / op_probe grid
 DRIVABLE = ("Driving", "Parking", "Bidirectional")
@@ -86,6 +88,39 @@ class Route:
     def load(cls, path):
         z = np.load(path)
         return cls(z["xyzyaw"], z["option"])
+
+    @classmethod
+    def from_geometry(cls, xyz_carla, jid, turn_deg=TURN_DEG):
+        """Route from a dense planner path (CARLA x, y, z; junction id per point, -1 outside) with the turn labels taken from geometry: each
+        junction traversal is LEFT / RIGHT when the heading 5 m after its exit differs from the heading 5 m before its entry by more than
+        turn_deg (left positive in the right-handed frame), else STRAIGHT. The leaderboard's own RoadOptions are not used: in the agent's
+        plan they mislabel junction turns (10-route stage: a 108 deg T-junction turn as STRAIGHT, a 148 deg left turn as RIGHT)."""
+        P = np.asarray(xyz_carla, float)
+        jid = np.asarray(jid, int)
+        xy = np.stack([P[:, 0], -P[:, 1]], -1)
+        s = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(xy, axis=0), axis=1))]
+        opt = np.full(len(P), 4, int)
+        inj = jid >= 0
+        i = 0
+        while i < len(P):
+            if not inj[i]:
+                i += 1
+                continue
+            j = i
+            while j + 1 < len(P) and jid[j + 1] == jid[i]:
+                j += 1
+            a = max(0, int(np.searchsorted(s, s[i] - 5.0)) - 1)
+            b = min(len(P) - 1, int(np.searchsorted(s, s[j] + 5.0)))
+
+            def hd(k):
+                k0, k1 = max(0, k - 2), min(len(P) - 1, k + 2)
+                d = xy[k1] - xy[k0]
+                return math.atan2(d[1], d[0])
+            dh = math.degrees(wrap(hd(b) - hd(a)))
+            opt[i:j + 1] = 1 if dh > turn_deg else 2 if dh < -turn_deg else 3
+            i = j + 1
+        yaw = -np.degrees(np.unwrap([0.0] + [math.atan2(*(xy[k + 1] - xy[k])[::-1]) for k in range(len(P) - 1)]))
+        return cls(np.c_[P[:, :3], yaw], opt)
 
     def progress(self, xy, hint=None):
         """Arc length of the route point nearest to xy (searched within 30 m of `hint` when given)."""
@@ -276,8 +311,14 @@ def footprint(meta: dict) -> np.ndarray:
     return np.array([[front, e[1]], [front, -e[1]], [rear, e[1]], [rear, -e[1]]])
 
 
-def load_clip(clip: Path):
+def load_clip(clip: Path, dense=None):
+    """(ego, Route, meta). dense(town, keypoints) -> object with .xyz / .jid (scripts/b2dc_routes.dense, CARLA's planner at 1 m, as the
+    leaderboard interpolates): given, the route is re-densified from the agent's plan and its turns labelled from geometry."""
     clip = Path(clip)
     ego = dict(np.load(clip / "ego.npz"))
     meta = json.loads((clip / "meta.json").read_text())
-    return ego, Route.load(clip / "route.npz"), meta
+    if dense is None:
+        return ego, Route.load(clip / "route.npz"), meta
+    kp = np.load(clip / "route.npz")["xyzyaw"][:, :3]
+    D = dense(meta["town"], kp)
+    return ego, Route.from_geometry(D.xyz, D.jid), meta

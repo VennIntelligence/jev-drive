@@ -20,7 +20,7 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
-sys.path[:0] = [str(REPO), str(HERE.parent / "lib")]
+sys.path[:0] = [str(REPO), str(HERE.parent / "lib"), str(HERE)]
 import b2dc_labels as L  # noqa: E402
 from jevdrive import par  # noqa: E402
 from jevdrive.common import data_dir  # noqa: E402
@@ -65,7 +65,8 @@ def work(args):
     rid, adir, stride, force = args
     clip = Path(adir) / "clip"
     lf, sf = clip / "labels.npz", clip / "sdf.npz"
-    ego, route, meta = L.load_clip(clip)
+    import b2dc_routes as BR
+    ego, route, meta = L.load_clip(clip, dense=BR.dense)
     if force or not lf.exists() or lf.stat().st_mtime < (clip / "ego.npz").stat().st_mtime:
         lab = L.tick_labels(ego, route)
         np.savez_compressed(lf, **lab)

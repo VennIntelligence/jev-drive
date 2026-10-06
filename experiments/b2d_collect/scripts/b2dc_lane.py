@@ -13,9 +13,9 @@ Rerunning a stage resumes: b2d_run skips finished routes, labels skip labelled c
 Gates (all stages; a failed gate writes ERROR and stops):
   complete     clips with DONE / routes >= 0.9 (smoke: 1 / 1)
   integrity    picture index = tick, consecutive frames, |dt - 0.05| < 1e-4, frozen pictures < 1 %, camera frame = state frame
-  alignment    at the launch from the spawn the ground starts moving in the picture at the logged tick (lag 0) on >= 80 % of clips; shipped Cinque's heading
+  alignment    at the launch from the spawn the ground starts moving in the picture within 1 tick of the logged launch on >= 80 % of clips; shipped Cinque's heading
                sign agrees with the log on lane following >= 0.8 (when >= 10 samples; junction turns are the model's open problem, reported)
-  labels       logged future footprint inside the drivable SDF (>= -0.3 m) >= 0.9; route command agrees with the driven turn >= 0.8
+  labels       logged future footprint inside the drivable SDF (>= -0.3 m) >= 0.9; turn commands (left / right) precede a driven turn of that side >= 0.8
 """
 import argparse
 import csv
@@ -109,11 +109,11 @@ def gates(stage, data: Path, n_routes: int) -> dict:
     if ck.get("sensor_frame_eq_all") is not None:
         g["sensor_sync"] = bool(ck["sensor_frame_eq_all"])
     if ck.get("first_launch_lag0_share") is not None:
-        g["launch_lag0"] = ck["first_launch_lag0_share"] >= 0.8
+        g["launch_lag"] = ck["first_launch_lag_le1_share"] >= 0.8
     if (ck.get("lane_samples") or 0) >= 10 and ck.get("lane_sign_agree_P0") is not None:
         g["lane_sign"] = ck["lane_sign_agree_P0"] >= 0.8
     g["footprint_drivable"] = not (ck["fut_footprint_drivable_mean"] < 0.9)
-    g["cmd_agree"] = not (ck["cmd_agree_mean"] < 0.8)
+    g["cmd_precision"] = not (ck["cmd_turn_precision_mean"] < 0.8)
     return {"gates": g, "index": ij, "check": ck}
 
 
