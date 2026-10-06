@@ -9,8 +9,9 @@ pipeline and check that frames, ego, command and labels line up. GPU (envs/op-tr
 Per clip (labels from scripts/b2dc_labels.py):
   integrity   ticks == video pictures, picture index = tick, sim clock exactly 0.05 s per tick, consecutive frame numbers, camera data
               frame = world frame of the logged state (sensor_frame), frozen pictures (identical to the previous one) < 1 %, luma range
-  time        from the pictures alone: correlation of the ground-flow energy (mean |Y_k - Y_k-1| over the road frame's lower half) with the
-              logged speed at lags -6..6 ticks; best lag must be 0 +- 1
+  time        from the pictures alone, at every launch from standstill: the first big change of the ground just ahead (road frame rows
+              200-255) must fall between pictures s - 1 and s, s = the first logged tick above 0.2 m/s (lag 0); scene motion makes a
+              correlation over the whole clip ambiguous (a waiting ego starts after the traffic ahead moves)
   horizon     body pitch (deg) -> horizon row shift in the road frame (910 tan(pitch)); nominal rows 47.6 (road) / 151.8 (wide)
   model       every `stride` ticks with a full 4 s future, the 8 context slots (pairs (t0 - 4k - 4, t0 - 4k), k = 7..0: op_parity's 0.2 s
               protocol, native frames, no synthesis) -> Cinque's frozen encoder -> P0 (shipped) and P2 (+ ego / pose / command from the labels)
@@ -144,15 +145,20 @@ def main(a):
             c["pitch_p95_abs_deg"] = float(np.percentile(np.abs(pitch), 95))
             c["horizon_shift_p95_rows"] = float(910.0 * math.tan(math.radians(c["pitch_p95_abs_deg"])))
             c["sensor_frame_eq"] = bool((ego["sensor_frame"] == ego["frame"][:, None]).all()) if "sensor_frame" in ego else None
-            # time alignment from the pictures alone: ground-flow energy (lower half of the road frame) vs logged speed, best lag in ticks
-            Yd = np.abs(np.diff(pairs[:, 0, :4, 64:].astype(np.int16), axis=0)).mean((1, 2, 3))      # tick k vs k - 1, k = 1..n-1
-            sp = lab["speed"][1:]
-            cors = {}
-            for lag in range(-6, 7):
-                a_, b_ = (Yd[max(0, -lag):len(Yd) - max(0, lag)], sp[max(0, lag):len(sp) - max(0, -lag)])
-                cors[lag] = float(np.corrcoef(a_, b_)[0, 1]) if len(a_) > 20 and a_.std() > 0 and b_.std() > 0 else float("nan")
-            c["motion_lag"] = int(max(cors, key=lambda k: -np.inf if np.isnan(cors[k]) else cors[k]))
-            c["motion_corr0"] = cors[0]
+            # time alignment from the pictures alone, at launches (>= 10 ticks below 0.05 m/s, then above 0.2 m/s at tick s): the first big
+            # change of the ground just ahead (road frame rows 200-255, centre half) must be between pictures s - 1 and s (lag 0)
+            from jevdrive.openpilot import frames as opf
+            Yg = np.stack([opf.unpack_luma(x)[200:256, 128:384] for x in pairs[:, 0]]).astype(np.int16)
+            g = np.abs(np.diff(Yg, axis=0)).mean((1, 2))                 # g[k] = change from picture k to k + 1
+            sp = lab["speed"]
+            lags = []
+            for s_ in range(11, n - 3):
+                if sp[s_] > 0.2 and sp[s_ - 1] <= 0.2 and (sp[s_ - 10:s_ - 1] < 0.05).all():
+                    base = np.median(g[s_ - 9:s_ - 2])
+                    w = np.where(g[s_ - 5:s_ + 3] > max(2 * base, base + 1.0))[0]
+                    if len(w):
+                        lags.append(int(w[0] + s_ - 5 - (s_ - 1)))
+            c["launch_lags"] = " ".join(map(str, lags))
             c["moving_ticks"] = int((lab["speed"] > 0.5).sum())
             # command vs the heading change actually driven over the next 50 m of path (distance-based: stops do not count)
             h = lab["heading"]
@@ -242,9 +248,9 @@ def main(a):
         for k in ("vid_is_tick", "frames_consecutive"):
             agg[k] = bool(C[k].all())
         agg["sensor_frame_eq_all"] = bool(C.sensor_frame_eq.dropna().all()) if C.sensor_frame_eq.notna().any() else None
-        mv_c = C[C.moving_ticks >= 100]
-        agg["motion_lag_values"] = mv_c.motion_lag.value_counts().to_dict() if len(mv_c) else {}
-        agg["motion_lag_ok_share"] = float((mv_c.motion_lag.abs() <= 1).mean()) if len(mv_c) else None
+        ll = [int(x) for v in C.launch_lags.fillna("") for x in str(v).split()]
+        agg["launch_lags"] = {str(k): ll.count(k) for k in sorted(set(ll))}
+        agg["launch_lag0_share"] = float(np.mean([x == 0 for x in ll])) if ll else None
         for k in ("dt_max_err", "frozen_share", "horizon_shift_p95_rows", "pitch_p95_abs_deg"):
             agg[k + "_max"] = float(C[k].max())
         for k in ("cmd_agree", "fut_footprint_drivable"):
