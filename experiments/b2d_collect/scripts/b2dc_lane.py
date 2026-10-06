@@ -12,8 +12,9 @@ Rerunning a stage resumes: b2d_run skips finished routes, labels skip labelled c
 
 Gates (all stages; a failed gate writes ERROR and stops):
   complete     clips with DONE / routes >= 0.9 (smoke: 1 / 1)
-  integrity    picture index = tick, consecutive frames, |dt - 0.05| < 1e-4, frozen pictures < 1 %
-  alignment    P0 frame-lag ADE lowest at lag 0 (when >= 20 moving samples); P2 turn-sign agreement >= 0.8 (when >= 5 turn samples)
+  integrity    picture index = tick, consecutive frames, |dt - 0.05| < 1e-4, frozen pictures < 1 %, camera frame = state frame
+  alignment    picture-motion vs logged speed best lag within +-1 tick on >= 90 % of clips with >= 100 moving ticks; shipped Cinque's heading
+               sign agrees with the log on lane following >= 0.8 (when >= 10 samples; junction turns are the model's open problem, reported)
   labels       logged future footprint inside the drivable SDF (>= -0.3 m) >= 0.9; route command agrees with the driven turn >= 0.8
 """
 import argparse
@@ -109,10 +110,12 @@ def gates(stage, data: Path, n_routes: int) -> dict:
     ck = json.loads((data / "check" / "check.json").read_text())
     g = {"complete": ij["clips"] / max(1, n_routes) >= (1.0 if stage == "smoke" else 0.9),
          "integrity": ck["vid_is_tick"] and ck["frames_consecutive"] and ck["dt_max_err_max"] < 1e-4 and ck["frozen_share_max"] < 0.01}
-    if ck.get("lag_ade_P0") and ck["samples"] >= 20:
-        g["lag_min_at_0"] = bool(ck["lag_min_at_0"])
-    if (ck.get("turn_samples") or 0) >= 5 and ck.get("turn_sign_agree_P2-F-s0") is not None:
-        g["turn_sign"] = ck["turn_sign_agree_P2-F-s0"] >= 0.8
+    if ck.get("sensor_frame_eq_all") is not None:
+        g["sensor_sync"] = bool(ck["sensor_frame_eq_all"])
+    if ck.get("motion_lag_ok_share") is not None:
+        g["motion_lag"] = ck["motion_lag_ok_share"] >= 0.9
+    if (ck.get("lane_samples") or 0) >= 10 and ck.get("lane_sign_agree_P0") is not None:
+        g["lane_sign"] = ck["lane_sign_agree_P0"] >= 0.8
     g["footprint_drivable"] = not (ck["fut_footprint_drivable_mean"] < 0.9)
     g["cmd_agree"] = not (ck["cmd_agree_mean"] < 0.8)
     return {"gates": g, "index": ij, "check": ck}

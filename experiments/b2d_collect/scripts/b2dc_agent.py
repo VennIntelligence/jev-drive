@@ -14,7 +14,8 @@ Outputs in clip/ under the attempt directory ($B2D_ATTEMPT_OUT):
   frames.mp4    packed (road, wide) model frames, one per tick (ego.npz `vid` = picture index; -1 = sensor frame missing, never so far)
   chase.mp4     optional third-person view (cfg chase; a plain CARLA camera on the hero, not a leaderboard sensor), about every
                 `chase_every` ticks (ego.npz `chase` = picture index or -1; the newest image delivered by that tick)
-  ego.npz       per tick (20 Hz), CARLA world frame (left-handed: x, y, yaw clockwise): t, frame, loc (x, y, z of the actor origin), rot
+  ego.npz       per tick (20 Hz), CARLA world frame (left-handed: x, y, yaw clockwise): t, frame, sensor_frame (road, wide: the frame
+                the leaderboard's camera data came from; must equal frame), loc (x, y, z of the actor origin), rot
                 (pitch, yaw, roll deg), vel / acc / angvel (world), speed, wheel steer angle (deg, front left), ctl_applied / ctl_expert
                 (steer, throttle, brake), driver (0 expert, 1 policy), PDM-Lite internals (target speed, junction, stop sign / walker flags,
                 its remaining route ahead: 64 points at 1 m, the lane-shifted path it steers along), traffic light affecting the ego
@@ -89,7 +90,7 @@ class B2DCollectAgent(AutoPilot):
         self.chase_enc = F.Encoder(self.out / "chase.mp4", w=cfg["chase_w"], h=cfg["chase_h"], fmt="bgra", crf=cfg["chase_crf"],
                                    fps=20.0 / cfg["chase_every"], threads=1) if cfg["chase"] else None
         self.rows = {k: [] for k in ("t", "frame", "loc", "rot", "vel", "acc", "angvel", "speed", "wheel", "ctl_applied", "ctl_expert",
-                                     "driver", "target_speed", "flags", "ahead", "tl", "speed_limit", "vid", "chase")}
+                                     "driver", "target_speed", "flags", "ahead", "tl", "speed_limit", "vid", "chase", "sensor_frame")}
         self.actor_rows, self.light_rows, self.kinds = [], [], {}
         self.scen = open(self.out / "scen.jsonl", "w")
         self._last_scen = None
@@ -147,6 +148,7 @@ class B2DCollectAgent(AutoPilot):
         t1 = time.perf_counter()
         road, wide = input_data.get("OP_ROAD"), input_data.get("OP_WIDE")
         frame = int(GameTime.get_frame())
+        self.rows["sensor_frame"].append([road[0] if road is not None else -1, wide[0] if wide is not None else -1])
         if road is not None and wide is not None:
             img2 = np.stack([self.packer(road[1], "road"), self.packer(wide[1], "wide")])
             t2 = time.perf_counter()
@@ -306,8 +308,9 @@ class B2DCollectAgent(AutoPilot):
         n_chase = self.chase_enc.close() if self.chase_enc is not None else 0
         self.scen.close()
         R = self.rows
-        ego = {k: np.asarray(v, np.float32 if k not in ("t", "loc", "frame", "vid", "chase", "tl", "driver") else None) for k, v in R.items()}
+        ego = {k: np.asarray(v, np.float32 if k not in ("t", "loc", "frame", "vid", "chase", "tl", "driver", "sensor_frame") else None) for k, v in R.items()}
         ego["loc"], ego["t"] = np.asarray(R["loc"], np.float64), np.asarray(R["t"], np.float64)
+        ego["sensor_frame"] = np.asarray(R["sensor_frame"], np.int64).reshape(-1, 2)
         for k in ("frame", "vid", "chase", "driver"):
             ego[k] = np.asarray(R[k], np.int64)
         ego["tl"] = np.asarray(R["tl"], np.int64).reshape(-1, 2)

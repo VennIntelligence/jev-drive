@@ -7,15 +7,18 @@ pipeline and check that frames, ego, command and labels line up. GPU (envs/op-tr
   -> <data>/check/{check.json, samples.csv, panels/<route>.npz}
 
 Per clip (labels from scripts/b2dc_labels.py):
-  integrity   ticks == video pictures, picture index = tick, sim clock exactly 0.05 s per tick, consecutive frame numbers, frozen pictures
-              (identical to the previous one) < 1 %, luma range
+  integrity   ticks == video pictures, picture index = tick, sim clock exactly 0.05 s per tick, consecutive frame numbers, camera data
+              frame = world frame of the logged state (sensor_frame), frozen pictures (identical to the previous one) < 1 %, luma range
+  time        from the pictures alone: correlation of the ground-flow energy (mean |Y_k - Y_k-1| over the road frame's lower half) with the
+              logged speed at lags -6..6 ticks; best lag must be 0 +- 1
   horizon     body pitch (deg) -> horizon row shift in the road frame (910 tan(pitch)); nominal rows 47.6 (road) / 151.8 (wide)
   model       every `stride` ticks with a full 4 s future, the 8 context slots (pairs (t0 - 4k - 4, t0 - 4k), k = 7..0: op_parity's 0.2 s
               protocol, native frames, no synthesis) -> Cinque's frozen encoder -> P0 (shipped) and P2 (+ ego / pose / command from the labels)
               -> plan -> 8 rear-axle poses (pp_train.rear, camera 1.59 m ahead of the rear axle). ADE to the logged future, 4 s path-length
-              ratio, turn-sign agreement (|logged yaw at 4 s| > 20 deg), and the frame-lag test: P0's ADE with the frame stack shifted by
-              -8 / -4 / +4 / +8 ticks (labels fixed) must be lowest at lag 0.
-  command     route command one-hot vs the heading change actually driven over the next 10 s (> 30 deg left / right)
+              ratio, heading-sign agreement on lane following (route command straight, no junction turn within 45 m, |logged yaw at 4 s| > 10 deg:
+              a mirrored or misaligned frame shows here; junction turns are reported apart, they are the model's open problem, decision 121),
+              and P0's ADE with the frame stack shifted by -8 / -4 / +4 / +8 ticks (report).
+  command     route command one-hot vs the heading change actually driven over the next 50 m of path (> 30 deg left / right), moving ticks
   sdf         logged future footprint (hero corners) at the 8 poses on the t0 SDF raster: share of poses with every corner >= -0.3 m
 GIF panels (`--gif` clips, turn routes first): every 4 ticks around the turn (or the whole clip), chase view | road | wide model frames as Cinque
 gets them (YUV -> RGB), with the nominal horizon rows (dashed), the logged future (green) and P2's plan (red) projected on the ground. Captions
@@ -140,13 +143,28 @@ def main(a):
             pitch = ego["rot"][:, 0]
             c["pitch_p95_abs_deg"] = float(np.percentile(np.abs(pitch), 95))
             c["horizon_shift_p95_rows"] = float(910.0 * math.tan(math.radians(c["pitch_p95_abs_deg"])))
-            # command vs what was driven over the next 10 s
+            c["sensor_frame_eq"] = bool((ego["sensor_frame"] == ego["frame"][:, None]).all()) if "sensor_frame" in ego else None
+            # time alignment from the pictures alone: ground-flow energy (lower half of the road frame) vs logged speed, best lag in ticks
+            Yd = np.abs(np.diff(pairs[:, 0, :4, 64:].astype(np.int16), axis=0)).mean((1, 2, 3))      # tick k vs k - 1, k = 1..n-1
+            sp = lab["speed"][1:]
+            cors = {}
+            for lag in range(-6, 7):
+                a_, b_ = (Yd[max(0, -lag):len(Yd) - max(0, lag)], sp[max(0, lag):len(sp) - max(0, -lag)])
+                cors[lag] = float(np.corrcoef(a_, b_)[0, 1]) if len(a_) > 20 and a_.std() > 0 and b_.std() > 0 else float("nan")
+            c["motion_lag"] = int(max(cors, key=lambda k: -np.inf if np.isnan(cors[k]) else cors[k]))
+            c["motion_corr0"] = cors[0]
+            c["moving_ticks"] = int((lab["speed"] > 0.5).sum())
+            # command vs the heading change actually driven over the next 50 m of path (distance-based: stops do not count)
             h = lab["heading"]
-            j = np.minimum(np.arange(n) + 200, n - 1)
-            dh = np.degrees(h[j] - h)
+            P = lab["xy_world"]
+            sdist = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
+            j = np.searchsorted(sdist, sdist + 50.0)
+            ok = (j < n) & (lab["speed"] > 1.0)
+            jj = np.minimum(j, n - 1)
+            dh = np.degrees(h[jj] - h)
             drv = np.where(dh > 30, 0, np.where(dh < -30, 2, 1))
             cm = lab["cmd"][:, :3].argmax(1)
-            c["cmd_agree"] = float((cm == drv)[j - np.arange(n) >= 100].mean()) if (j - np.arange(n) >= 100).any() else float("nan")
+            c["cmd_agree"] = float((cm == drv)[ok].mean()) if ok.any() else float("nan")
             c["cmd_turn_ticks"] = int((cm != 1).sum())
             # samples
             t0s = np.arange(max(36, 0), n, a.stride)
@@ -167,6 +185,7 @@ def main(a):
                 mv = L > 2.0
                 for k, t in enumerate(t0s):
                     row = {"route_id": r["route_id"], "t0": int(t), "speed": float(lab["speed"][t]), "cmd": int(cm[t]),
+                           "junction_turn": bool(lab["turn_dist"][t] < 45.0 and lab["turn_next"][t] > 0),
                            "fut_yaw4": float(np.degrees(fut[k, -1, 2])), "log_len": float(L[k])}
                     for (m, lag), P in res.items():
                         ade = float(np.linalg.norm(P[k, :, :2] - fut[k, :, :2], axis=-1).mean())
@@ -213,12 +232,19 @@ def main(a):
                 agg[f"len_ratio_med_{m}"] = float((S.loc[mv, f"len_{m}"] / S.loc[mv, "log_len"]).median())
                 big = mv & (S.fut_yaw4.abs() > 20)
                 agg[f"turn_sign_agree_{m}"] = float((np.sign(S.loc[big, f"yaw4_{m}"]) == np.sign(S.loc[big, "fut_yaw4"])).mean()) if big.any() else None
-                agg[f"turn_samples"] = int(big.sum())
+                agg["turn_samples"] = int(big.sum())
+                lane = mv & ~S.junction_turn & (S.fut_yaw4.abs() > 10)            # lane following on curved roads: what Cinque can do
+                agg[f"lane_sign_agree_{m}"] = float((np.sign(S.loc[lane, f"yaw4_{m}"]) == np.sign(S.loc[lane, "fut_yaw4"])).mean()) if lane.any() else None
+                agg["lane_samples"] = int(lane.sum())
             if a.lag:
                 agg["lag_ade_P0"] = {int(l): float(S.loc[mv, "ade_P0" + (f"_lag{l}" if l else "")].mean()) for l in LAGS}
                 agg["lag_min_at_0"] = min(agg["lag_ade_P0"], key=agg["lag_ade_P0"].get) == 0
         for k in ("vid_is_tick", "frames_consecutive"):
             agg[k] = bool(C[k].all())
+        agg["sensor_frame_eq_all"] = bool(C.sensor_frame_eq.dropna().all()) if C.sensor_frame_eq.notna().any() else None
+        mv_c = C[C.moving_ticks >= 100]
+        agg["motion_lag_values"] = mv_c.motion_lag.value_counts().to_dict() if len(mv_c) else {}
+        agg["motion_lag_ok_share"] = float((mv_c.motion_lag.abs() <= 1).mean()) if len(mv_c) else None
         for k in ("dt_max_err", "frozen_share", "horizon_shift_p95_rows", "pitch_p95_abs_deg"):
             agg[k + "_max"] = float(C[k].max())
         for k in ("cmd_agree", "fut_footprint_drivable"):
