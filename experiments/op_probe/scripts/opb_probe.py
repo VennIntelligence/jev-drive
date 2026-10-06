@@ -401,7 +401,7 @@ def summarize(res, stages):
     """M1 (corridor MAE, skill vs E) and M2 (AUC of -margin for F vs PP) per stage, with log-cluster CIs."""
     import pandas as pd
     from jevdrive import stats
-    F, PP = res["set_F"], res["set_PP"]
+    F, PP, Rs, FF = res["set_F"], res["set_PP"], res["set_R"], res["set_FF"]
     lg = res["log"]
     import pandas as pd_
     sc = pd_.read_csv(ROOT / "score" / "ablate_P2.csv")
@@ -414,14 +414,17 @@ def summarize(res, stages):
         r = {"stage": name}
         for kind in ("direct", "raster"):
             err = np.nanmean(np.abs(res[f"{name}/corr_{kind}"] - ct), 1)
-            for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP)):
+            for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP), ("R", Rs), ("FF", FF)):
+                if not m.any():
+                    continue
                 b = stats.bootstrap(err[m], groups=lg[m])
                 r[f"mae_{kind}_{sn}"], r[f"mae_{kind}_{sn}_lo"], r[f"mae_{kind}_{sn}_hi"] = b["mean"], b["lo"], b["hi"]
             if name == "E":
                 base[kind] = err
             if kind in base:
-                for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP)):
-                    r[f"skill_{kind}_{sn}"] = 1 - np.nanmean(err[m]) / np.nanmean(base[kind][m])
+                for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP), ("R", Rs), ("FF", FF)):
+                    if m.any():
+                        r[f"skill_{kind}_{sn}"] = 1 - np.nanmean(err[m]) / np.nanmean(base[kind][m])
             r[f"excess_{kind}_F_minus_PP"], r[f"excess_{kind}_lo"], r[f"excess_{kind}_hi"] = twoset(err, F, PP, lg)
         sel = F | PP
         y = F[sel]
@@ -431,7 +434,9 @@ def summarize(res, stages):
         sel2 = Fp | PP
         r["auc_Fplan_vs_PP"] = auc(-res[f"{name}/margin"][sel2], Fp[sel2])
         mb = res[f"{name}/margin"] - res["margin_true"]                     # post hoc (not pre-registered): predicted - true footprint margin
-        for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP)):
+        for sn, m in (("F", F), ("Fplan", Fp), ("PP", PP), ("R", Rs), ("FF", FF)):
+            if not m.any():
+                continue
             b = stats.bootstrap(mb[m], groups=lg[m])
             r[f"margin_bias_{sn}"], r[f"margin_bias_{sn}_lo"], r[f"margin_bias_{sn}_hi"] = b["mean"], b["lo"], b["hi"]
         r["margin_bias_F_minus_PP"], r["margin_bias_FmPP_lo"], r["margin_bias_FmPP_hi"] = twoset(mb, F, PP, lg)

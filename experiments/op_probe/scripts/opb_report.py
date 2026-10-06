@@ -34,6 +34,18 @@ def sets_frame():
     return df
 
 
+def strat(v, sets, groups, B=2000, seed=0):
+    """Navtest-wide mean of v from the scored strata: F / R / FF tokens weight 1, PP tokens weight n_PP / n_PP scored; log-cluster bootstrap CI."""
+    S = np.load(P.SETS / "navtest_sets.npz")
+    w = np.where(sets["PP"].values, S["PP"].sum() / max(sets["PP"].sum(), 1), 1.0)
+    v = np.asarray(v, float)
+    ug, inv = np.unique(groups, return_inverse=True)
+    sw, sv = np.bincount(inv, w, len(ug)), np.bincount(inv, w * v, len(ug))
+    idx = np.random.default_rng(seed).integers(0, len(ug), (B, len(ug)))
+    b = sv[idx].sum(1) / sw[idx].sum(1)
+    return f"{100 * sv.sum() / sw.sum():.2f} [{100 * np.percentile(b, 2.5):.2f}, {100 * np.percentile(b, 97.5):.2f}]"
+
+
 def rate(v, groups):
     r = stats.bootstrap(v, groups=groups)
     return f"{100 * r['mean']:.1f} [{100 * r['lo']:.1f}, {100 * r['hi']:.1f}]"
@@ -61,6 +73,9 @@ def t_ablate(sf):
     for k, g in df.groupby("key", sort=False):
         g = g.set_index("token")
         r = {"variant": k}
+        ss = sf.loc[g.index]
+        if ss.PP.any() and ss.R.any():
+            r["DAC fail % navtest (stratified)"] = strat(1 - g.drivable_area_compliance.values, ss, ss.log.values)
         for c in ("F", "Fplan", "Fcore", "R", "FF", "PP"):
             m = sf.loc[g.index, c].values.astype(bool)
             r[f"DAC {c} %"] = rate(g.drivable_area_compliance.values[m], sf.loc[g.index[m], "log"].values)
@@ -91,7 +106,11 @@ def t_decode(small, sf):
     for k, g in df.groupby("key", sort=False):
         g = g.set_index("token")
         r = {"decoder": k}
-        for c in ("F", "Fplan", "PP"):
+        ss = sf.loc[g.index]
+        if ss.PP.any() and ss.R.any():
+            r["DAC fail % navtest (stratified)"] = strat(1 - g.drivable_area_compliance.values, ss, ss.log.values)
+            r["score x100 navtest (stratified)"] = strat(g.score.values, ss, ss.log.values)
+        for c in ("F", "Fplan", "R", "FF", "PP"):
             m = sf.loc[g.index, c].values.astype(bool)
             r[f"DAC {c} %"] = rate(g.drivable_area_compliance.values[m], sf.loc[g.index[m], "log"].values)
         m = sf.loc[g.index, "PP"].values.astype(bool)
