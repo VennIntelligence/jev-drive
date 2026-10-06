@@ -1,0 +1,475 @@
+"""HUGSIM closed-loop readouts through the harness every HUGSIM result used (experiments/hugsim/archive/zs_run.py: HUGSIM's
+closed_loop.py from patched private trees, scored by HUGSIM itself), with the serving of experiments/op_parity/scripts/pp_hugsim.sh.
+
+A run = (model, preset) over a scenario set; units are scenarios. Stages:
+  onnx       parity arms: the arm's serving ONNX (pp_hugsim.py onnx: trained initializers + `intent_bias` input); an existing build
+             under $DATA_DIR/runs/op_parity/hugsim/onnx is linked instead of rebuilt
+  w<i>       K worker jobs (one per card by default), each starting its own servers (parity: bias server pp_hugsim.py serve +
+             policy server hugsim_zs_server.py --onnx; onnx: policy server; WA-JEPA: none, its client loads the model) and W
+             scenario slots. The slots of all jobs pull from one shared queue (claim files), longest expected scenario first,
+             so the cards finish together. Every scenario is one `zs_run.py run` of that single scenario (resumable rows in
+             <run>/results.csv), watched: no sim.log growth for `stall_s` or longer than `timeout_s` -> its process tree is
+             stopped (jevdrive.cl.procs) and it is retried; before every scenario the servers are pinged (reset round trip,
+             20 s) and restarted when dead or unresponsive. So a refused / dead socket costs one retry, not the 5400 s
+             timeout of the old shell runners.
+  collect    (envs/hugsim) units.csv: one row per scenario, HUGSIM's scores (hdscore, rc, nc, dac, ttc, c, pdms), the runner's
+             end class and the behaviour of experiments/op_parity/results/hugsim_spin10.md (spin = heading error >= 60 deg vs the
+             recorded route, experiments/hugsim/scripts/spin_analysis.py; launch stall = peak speed over the first 40 steps
+             < 1.6 m/s; stuck = max_steps end; cls = spin, else the end class); summary.json; DONE.
+
+Presets (jevdrive.openpilot.interface.HUGSIM_PRESETS, docs/openpilot-interface.md): exam = the wajepa_ref harness (preset exam, tree
+`fixed`, PR #57 controller; every result before 2026-10-05), spec = openpilot's lateral path (tree opctrl, decision 118),
+spec_plan = spec with the lateral curvature from the model's own plan. WA-JEPA runs exam only.
+"""
+from __future__ import annotations
+
+import csv
+import json
+import os
+import socket
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+from . import runner as R
+from .models import REPO, Model, data_dir, resolve
+
+ZS_RUN = REPO / "experiments/hugsim/archive/zs_run.py"
+SERVER = REPO / "experiments/hugsim/archive/hugsim_zs_server.py"
+PPH = REPO / "experiments/op_parity/scripts/pp_hugsim.py"
+LEGACY_ONNX = lambda: data_dir() / "runs/op_parity/hugsim/onnx"  # noqa: E731
+PRESETS = ("exam", "spec", "spec_plan")
+TAG = "bench"
+AD = {"cinque": "zs", "lebowski": "zs", "small": "zs", "wajepa": "wj"}
+STALL_S, TIMEOUT_S = 420.0, 1500.0      # sim.log silent this long -> stuck; any scenario longer than this -> stuck (max seen 723 s)
+
+
+def run_key(m: Model, preset: str) -> str:
+    return f"{m.key('hugsim')}_{preset}"
+
+
+def onnx_path(m: Model) -> Path:
+    return R.bench_root("hugsim", "_onnx", "pp-shipped.onnx" if m.shipped else f"pp-{m.name}.onnx")
+
+
+def agent_of(m: Model) -> str:
+    return "wajepa" if m.family == "wajepa" else m.base
+
+
+# ---------------------------------------------------------------- planning
+def expected_walls(run_dir: Path) -> dict:
+    """scenario -> median wall (s) over earlier HUGSIM runs (LPT order of the queue)."""
+    import statistics
+    w = {}
+    for f in (data_dir() / "runs/op_parity/hugsim/results.csv", Path(run_dir) / "results.csv"):
+        if f.exists():
+            for r in csv.DictReader(open(f)):
+                try:
+                    w.setdefault(r["scenario"], []).append(float(r["wall_s"]))
+                except (KeyError, ValueError):
+                    pass
+    return {k: statistics.median(v) for k, v in w.items()}
+
+
+def done_set(run_dir: Path) -> set:
+    f = Path(run_dir) / "results.csv"
+    if not f.exists():
+        return set()
+    with open(f) as fh:
+        return {r["scenario"] for r in csv.DictReader(fh) if r["end"] != "crash" and r["tag"] == TAG}
+
+
+def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int = 6, jobs: int = 0, stall_s: float = STALL_S,
+           timeout_s: float = TIMEOUT_S, retries: int = 2) -> list:
+    if preset not in PRESETS:
+        raise SystemExit(f"preset {preset!r}: one of {PRESETS}")
+    if m.family == "wajepa" and preset != "exam":
+        raise SystemExit("WA-JEPA runs the exam preset only (its client has no openpilot lateral path)")
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    cf = run_dir / "config.json"
+    old = json.loads(cf.read_text()) if cf.exists() else {}
+    want = list(dict.fromkeys(list(old.get("scenarios", [])) + list(scenarios)))
+    walls = expected_walls(run_dir)
+    med = sorted(walls.values())[len(walls) // 2] if walls else 100.0
+    want.sort(key=lambda s: -walls.get(Path(s).stem, med))
+    done = done_set(run_dir)
+    todo = [s for s in want if Path(s).stem not in done]
+    for f in (run_dir / "claims").glob("*.failed") if (run_dir / "claims").is_dir() else []:
+        f.unlink()                                                    # a new submit retries scenarios that failed before
+    w = max(1, min(workers, len(todo) or 1))
+    k = jobs or max(1, min(len(R.box_cards()), -(-len(todo) // w)))
+    cfg = dict(model=m.spec, preset=preset, agent=agent_of(m), scenarios=want, workers=w, jobs=k, stall_s=stall_s,
+               timeout_s=timeout_s, retries=retries, tag=TAG)
+    R.atomic_write(cf, json.dumps(cfg, indent=1))
+    S = []
+    if m.family == "parity":
+        S.append(R.Stage("onnx", R.stage_cmd("jev", "hugsim-onnx", m.spec), done=str(onnx_path(m)), vram=10, cpu=4, ram=24))
+    per = 12.5 if m.family == "wajepa" else 8.5
+    base = 6 if m.family == "wajepa" else 8
+    if todo:
+        for i in range(k):
+            S.append(R.Stage(f"w{i}", R.stage_cmd("jev", "hugsim-worker", run_dir, i), done=str(run_dir / "workers" / f"w{i}.DONE"),
+                             vram=round(base + per * w, 1), cpu=2 * w + 3, ram=6 * w + 8, after=[s.name for s in S if s.name == "onnx"],
+                             tries=2))
+    S.append(R.Stage("collect", R.stage_cmd("hugsim", "hugsim-collect", run_dir), done=str(run_dir / "DONE"), vram=0.5, cpu=4, ram=16,
+                     after=[s.name for s in S if s.name.startswith("w")]))
+    for f in [run_dir / "DONE", run_dir / "ERROR"] + [run_dir / "workers" / f"w{i}.DONE" for i in range(k)]:
+        if todo and f.exists():                                       # new work: the run is open again
+            f.rename(f.with_name(f"{f.name}.{time.strftime('%Y%m%d-%H%M%S')}"))
+    return S
+
+
+# ---------------------------------------------------------------- stage: ONNX
+def build_onnx(spec: str) -> None:
+    m = resolve(spec, check=True)
+    out = onnx_path(m)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    leg = LEGACY_ONNX() / out.name
+    if leg.exists():
+        if not out.exists():
+            out.symlink_to(leg)
+        return
+    tmp = out.with_name(f".{out.stem}.{os.getpid()}.onnx")
+    subprocess.run([R.py("op-train"), str(PPH), "onnx", "--tag", "P0" if m.shipped else m.name, "--out", str(tmp)], check=True, cwd=REPO)
+    os.replace(tmp, out)
+
+
+# ---------------------------------------------------------------- servers
+def _wire():
+    if str(REPO / "scripts") not in sys.path:
+        sys.path.insert(0, str(REPO / "scripts"))
+    import zeroshot_wire as wire
+    return wire
+
+
+def ping(path: str, timeout: float = 20.0) -> bool:
+    """A reset round trip on a policy / bias server socket."""
+    wire = _wire()
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    try:
+        s.connect(path)
+        wire.send(s, {"cmd": "reset"}, {})
+        meta, _ = wire.recv(s)
+        return bool(meta.get("ok"))
+    except (OSError, ValueError, KeyError):
+        return False
+    finally:
+        s.close()
+
+
+class Server:
+    def __init__(self, name: str, cmd: list, sock: str, ready: Path, log: Path, env: dict):
+        self.name, self.cmd, self.sock, self.ready, self.log, self.env = name, cmd, sock, ready, log, env
+        self.p, self.rec = None, ready.with_suffix(".procs.json")
+
+    def start(self, timeout: float = 900.0) -> None:
+        from ..cl import procs
+        self.ready.unlink(missing_ok=True)
+        with open(self.log, "a") as lf:
+            lf.write(f"\n==> {time.strftime('%F %T')} start {' '.join(self.cmd)}\n")
+            lf.flush()
+            self.p = subprocess.Popen(self.cmd, cwd=REPO, env=self.env, stdout=lf, stderr=subprocess.STDOUT, start_new_session=True)
+        procs.capture(self.rec, self.p.pid)
+        t0 = time.time()
+        while not self.ready.exists():
+            if self.p.poll() is not None:
+                raise RuntimeError(f"{self.name} died at start (rc {self.p.returncode}): {self.log}")
+            if time.time() - t0 > timeout:
+                self.stop()
+                raise RuntimeError(f"{self.name} not ready after {timeout:.0f} s: {self.log}")
+            time.sleep(2)
+
+    def alive(self) -> bool:
+        return self.p is not None and self.p.poll() is None and ping(self.sock)
+
+    def stop(self) -> None:
+        from ..cl import procs
+        if self.rec.exists():
+            procs.refresh(self.rec)
+            procs.stop(self.rec, grace=10)
+
+
+class Servers:
+    """The model's resident servers of one worker job; `ensure` pings them and restarts them when needed."""
+
+    def __init__(self, m: Model, run_dir: Path, i: int):
+        self.m, self.lock, self.restarts = m, threading.Lock(), 0
+        d = run_dir / "servers"
+        d.mkdir(parents=True, exist_ok=True)
+        tmp = Path("/tmp") / f"jb-{os.getpid()}-{i}"
+        tmp.mkdir(parents=True, exist_ok=True)
+        env = dict(os.environ)
+        self.list, self.op_sock, self.bias_sock = [], "", ""
+        if m.family == "parity":
+            self.bias_sock = str(tmp / "bias.sock")
+            tag = "P3-init" if m.name == "P0" else m.name          # P0: shipped weights + an untrained P3 adapter (bias exactly 0)
+            self.list.append(Server("bias", [R.py("op-train"), "-u", str(PPH), "serve", "--tag", tag, "--socket", self.bias_sock,
+                                             "--ready-file", str(d / f"w{i}-bias.ready")], self.bias_sock, d / f"w{i}-bias.ready",
+                                    d / f"w{i}-bias.log", env))
+        if m.family in ("parity", "onnx"):
+            self.op_sock = str(tmp / "op.sock")
+            onnx = str(onnx_path(m)) if m.family == "parity" else m.onnx
+            self.list.append(Server("policy", [R.py("openpilot"), "-u", str(SERVER), m.base] + (["--onnx", onnx] if onnx else [])
+                                    + ["--socket", self.op_sock, "--ready-file", str(d / f"w{i}-op.ready")], self.op_sock,
+                                    d / f"w{i}-op.ready", d / f"w{i}-op.log", env))
+
+    def start(self) -> None:
+        for s in self.list:
+            s.start()
+
+    def ensure(self) -> None:
+        with self.lock:
+            bad = [s.name for s in self.list if not s.alive()]
+            if not bad:
+                return
+            self.restarts += 1
+            print(f"{time.strftime('%T')} servers {bad} unhealthy: restart {self.restarts}", flush=True)
+            if self.restarts > 6:
+                raise RuntimeError(f"servers {bad} keep failing (6 restarts)")
+            self.stop()
+            self.start()
+
+    def stop(self) -> None:
+        for s in self.list:
+            s.stop()
+
+
+# ---------------------------------------------------------------- the shared scenario queue
+class Queue:
+    """Claim files <run>/claims/<stem>.claim (O_EXCL), heartbeat = the file's mtime; stale claims (no heartbeat for 300 s) are
+    taken over; <stem>.failed marks a scenario that exhausted its retries in this submission."""
+
+    STALE_S = 300.0
+
+    def __init__(self, run_dir: Path, scenarios: list, i: int):
+        self.dir = run_dir / "claims"
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.run_dir, self.scen, self.i, self.mine, self.lock = run_dir, scenarios, i, set(), threading.Lock()
+        for f in self.dir.glob("*.claim"):                          # claims of an earlier attempt of this worker job
+            try:
+                if json.loads(f.read_text()).get("worker") == i:
+                    f.unlink()
+            except (OSError, ValueError):
+                pass
+
+    def _claim(self, f: Path) -> bool:
+        try:
+            fd = os.open(f, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            try:
+                if time.time() - f.stat().st_mtime > self.STALE_S:
+                    f.rename(f.with_name(f"{f.name}.stale.{time.time():.0f}"))
+                    return self._claim(f)
+            except OSError:
+                pass
+            return False
+        os.write(fd, json.dumps(dict(worker=self.i, job=os.environ.get("CL_POOL_JOB", ""), pid=os.getpid(), t=time.time())).encode())
+        os.close(fd)
+        return True
+
+    def next(self):
+        with self.lock:
+            done = done_set(self.run_dir)
+            for s in self.scen:
+                st = Path(s).stem
+                if st in done or (self.dir / f"{st}.failed").exists():
+                    continue
+                f = self.dir / f"{st}.claim"
+                if self._claim(f):
+                    self.mine.add(f)
+                    return s
+            return None
+
+    def release(self, s: str, failed: str = "") -> None:
+        f = self.dir / f"{Path(s).stem}.claim"
+        if failed:
+            R.atomic_write(self.dir / f"{Path(s).stem}.failed", failed + "\n")
+        with self.lock:
+            self.mine.discard(f)
+        f.unlink(missing_ok=True)
+
+    def beat(self) -> None:
+        with self.lock:
+            for f in list(self.mine):
+                try:
+                    os.utime(f)
+                except OSError:
+                    pass
+
+
+# ---------------------------------------------------------------- stage: worker
+def scenario_dir(run_dir: Path, scen: str, agent: str) -> Path:
+    import yaml
+    c = yaml.safe_load((data_dir() / "datasets/hugsim/scenarios" / scen).read_text())
+    return run_dir / TAG / AD[agent] / f"{c['scene_name']}_{c['mode']}"
+
+
+def preset_args(preset: str) -> list:
+    return ["--preset", "exam", "--controller", "fixed"] if preset == "exam" else ["--preset", preset]
+
+
+def run_one(cfg: dict, run_dir: Path, scen: str, srv: Servers, gpu: str, log: Path) -> str:
+    """One scenario through zs_run.py under the watchdog -> 'done' | 'crash' | 'stall' | 'timeout'."""
+    from ..cl import procs
+    opts = {"parity": {"socket": srv.bias_sock}} if srv.bias_sock else {}
+    cmd = [R.py("hugsim"), str(ZS_RUN), "run", "--out", str(run_dir), "--agent", cfg["agent"], *preset_args(cfg["preset"]),
+           "--gpu", gpu, "--workers", "1", "--scenarios", scen, "--tag", TAG, "--timeout", str(cfg["timeout_s"]), "--retries", "0",
+           "--max-fail", "0", "--opts", json.dumps(opts)] + (["--socket", srv.op_sock] if srv.op_sock else [])
+    sd = scenario_dir(run_dir, scen, cfg["agent"])
+    rec = run_dir / "workers" / f"{Path(scen).stem}.procs.json"
+    t0 = last = time.time()
+    size = -1
+    with open(log, "a") as lf:
+        lf.write(f"\n==> {time.strftime('%F %T')} {scen}\n")
+        lf.flush()
+        p = subprocess.Popen(cmd, cwd=REPO, stdout=lf, stderr=subprocess.STDOUT, start_new_session=True)
+    procs.capture(rec, p.pid)
+    why = ""
+    while p.poll() is None:
+        time.sleep(5)
+        procs.refresh(rec)
+        try:
+            sz = (sd / "sim.log").stat().st_size
+        except OSError:
+            sz = -1
+        if sz != size:
+            size, last = sz, time.time()
+        if time.time() - last > cfg["stall_s"]:
+            why = "stall"
+        elif time.time() - t0 > cfg["timeout_s"] + 60:
+            why = "timeout"
+        if why:
+            procs.stop(rec, grace=10)
+            p.wait()
+            break
+    rec.unlink(missing_ok=True)
+    if why:
+        return why
+    return "done" if Path(scen).stem in done_set(run_dir) else "crash"
+
+
+def worker(run_dir: str, i: int) -> None:
+    run_dir = Path(run_dir)
+    i = int(i)
+    cfg = json.loads((run_dir / "config.json").read_text())
+    m = resolve(cfg["model"])
+    gpu = os.environ.get("CL_GPU", os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0])
+    (run_dir / "workers").mkdir(parents=True, exist_ok=True)
+    tree = "fixed" if cfg["preset"] == "exam" else "opctrl"
+    subprocess.run([R.py("hugsim"), str(ZS_RUN), "setup-trees", tree], check=True, cwd=REPO)
+    q = Queue(run_dir, cfg["scenarios"], i)
+    srv = Servers(m, run_dir, i)
+    stop_beat = threading.Event()
+
+    def beat():
+        while not stop_beat.wait(30):
+            q.beat()
+    threading.Thread(target=beat, daemon=True).start()
+    stats = dict(done=0, failed=0, retries=0)
+    lock = threading.Lock()
+
+    def slot(k: int):
+        time.sleep(8 * k)                                            # staggered scene loads
+        log = run_dir / "workers" / f"w{i}-slot{k}.log"
+        while True:
+            s = q.next()
+            if s is None:
+                return
+            res = ""
+            for att in range(1 + cfg["retries"]):
+                srv.ensure()
+                res = run_one(cfg, run_dir, s, srv, gpu, log)
+                if res == "done":
+                    break
+                with lock:
+                    stats["retries"] += 1
+                print(f"{time.strftime('%T')} w{i}: {Path(s).stem} {res} (attempt {att + 1})", flush=True)
+            q.release(s, "" if res == "done" else f"{res} after {1 + cfg['retries']} attempts")
+            with lock:
+                stats["done" if res == "done" else "failed"] += 1
+                n = len(done_set(run_dir))
+            R.status(run_dir, f"w{i}: {n} / {len(cfg['scenarios'])} scenarios done, this job {stats}")
+
+    try:
+        srv.start()
+        th = [threading.Thread(target=slot, args=(k,)) for k in range(cfg["workers"])]
+        for t in th:
+            t.start()
+        for t in th:
+            t.join()
+    finally:
+        stop_beat.set()
+        srv.stop()
+    R.atomic_write(run_dir / "workers" / f"w{i}.DONE", json.dumps(dict(t=time.strftime("%F %T"), **stats, restarts=srv.restarts)) + "\n")
+
+
+# ---------------------------------------------------------------- stage: collect (envs/hugsim)
+def routes() -> dict:
+    f = data_dir() / "runs/op_parity/hugsim/routes.json"
+    if not f.exists():
+        f = R.bench_root("hugsim", "routes.json")
+        if not f.exists():
+            f.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run([sys.executable, str(REPO / "experiments/hugsim/scripts/spin_export_routes.py"),
+                            str(REPO / "experiments/hugsim/results/hugsim-exam/scored_op.csv"), str(f)], check=True)
+    return json.loads(f.read_text())
+
+
+def behaviour(row: dict, rts: dict) -> dict:
+    """Spin / launch stall / standing of one finished run (pp_hugsim_report.py extract)."""
+    sys.path.insert(0, str(REPO / "experiments/hugsim/scripts"))
+    import spin_analysis as SA
+    d = Path(row["run_dir"])
+    pos, th, v, steer, plans = SA.load_run(d, row["agent"])
+    res, _ = SA.analyse(pos, th, v, steer, plans, rts[row["scene"]])
+    return dict(spin=bool(res["spin"]), max_abs_e=res["max_abs_e"], k60=res.get("k60", -1), v_max40=float(v[:40].max()),
+                v_max=float(v.max()), v_end=float(v[-1]), standing=float((v < 0.3).mean()), n_steps=len(v))
+
+
+CLS = {"max_steps": "stuck", "bg_collision": "bg_coll", "fg_collision": "fg_coll"}
+NUM = ("hdscore", "rc", "nc", "dac", "ttc", "c", "pdms")
+
+
+def units_from_rows(rows: list, rts: dict, want=None) -> list:
+    """Last finished row per scenario (+ behaviour) -> unit dicts."""
+    last = {}
+    for r in rows:
+        if r["end"] != "crash" and (want is None or r["scenario"] in want):
+            last[r["scenario"]] = r
+    out = []
+    for sc, r in last.items():
+        u = dict(scenario=sc, dataset=r["dataset"], difficulty=r["difficulty"], scene=r["scene"], end=r["end"], steps=int(r["steps"]),
+                 wall_s=float(r["wall_s"]), run_dir=r["run_dir"], **{k: float(r[k]) if r[k] != "" else float("nan") for k in NUM})
+        try:
+            u.update(behaviour(r, rts))
+        except Exception as e:                                       # a run without infos.pkl: scores only
+            u.update(spin=None, behaviour_error=repr(e)[:200])
+        u["cls"] = "spin" if u.get("spin") else CLS.get(u["end"], u["end"])
+        u["launch_stall"] = bool(u.get("v_max40", 99) < 1.6)
+        u["stuck"] = u["end"] == "max_steps"
+        out.append(u)
+    return out
+
+
+def collect(run_dir: str) -> None:
+    import pandas as pd
+    run_dir = Path(run_dir)
+    cfg = json.loads((run_dir / "config.json").read_text())
+    rows = [r for r in csv.DictReader(open(run_dir / "results.csv")) if r["tag"] == TAG] if (run_dir / "results.csv").exists() else []
+    want = {Path(s).stem for s in cfg["scenarios"]}
+    u = pd.DataFrame(units_from_rows(rows, routes(), want))
+    u.to_csv(run_dir / "units.csv", index=False)
+    missing = sorted(want - set(u.scenario)) if len(u) else sorted(want)
+    failed = {f.stem: f.read_text().strip() for f in (run_dir / "claims").glob("*.failed")} if (run_dir / "claims").is_dir() else {}
+    summ = dict(model=cfg["model"], preset=cfg["preset"], n=len(u), missing=missing, failed=failed,
+                HD=float(u.hdscore.mean()) if len(u) else float("nan"), RC=float(u.rc.mean()) if len(u) else float("nan"))
+    if len(u):
+        summ |= {f"n_{c}": int((u.cls == c).sum()) for c in ("complete", "fg_coll", "bg_coll", "off_route", "stuck", "spin")}
+        summ |= dict(n_launch_stall=int(u.launch_stall.sum()), n_spin_any=int(u.spin.fillna(False).astype(bool).sum()))
+    R.atomic_write(run_dir / "summary.json", json.dumps(summ, indent=1, default=str))
+    R.status(run_dir, f"done: {len(u)} scenarios, HD {summ['HD']:.3f}" + (f", MISSING {len(missing)}" if missing else ""))
+    R.atomic_write(run_dir / "DONE", json.dumps(dict(t=time.strftime("%F %T"), **summ), default=str) + "\n")
