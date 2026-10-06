@@ -378,11 +378,122 @@ def summarize(res, stages):
     return pd.DataFrame(rows)
 
 
+# ---------------------------------------------------------------- decoders (M3)
+DEC_STAGES = ["E", "P2-V", "P2-M", "P2-T", "P2-H", "WA-Cf", "WA-Ca", "WA-H"]
+
+
+def _interp_matrix():
+    """(41, 9) linear interpolation of [origin, 8 poses] onto the 0.1 s grid."""
+    t = np.r_[0, T_POSE]
+    M = np.zeros((41, 9))
+    for k, tt in enumerate(T_DENSE):
+        j = min(np.searchsorted(t, tt, side="right") - 1, 7)
+        f = (tt - t[j]) / (t[j + 1] - t[j])
+        M[k, j], M[k, j + 1] = 1 - f, f
+    return M
+
+
+def corners_torch(P, M, C):
+    """P (B, 8, 3) poses -> (B, 41 * 4, 2) footprint corners of the linearly interpolated plan."""
+    import torch
+    P0 = torch.cat([torch.zeros_like(P[:, :1]), P], 1)
+    d = torch.einsum("kj,bjc->bkc", M, P0)
+    c, s = torch.cos(d[..., 2:3]), torch.sin(d[..., 2:3])
+    x = d[..., :1] + c * C[None, None, :, 0] - s * C[None, None, :, 1]
+    y = d[..., 1:2] + s * C[None, None, :, 0] + c * C[None, None, :, 1]
+    return torch.stack([x, y], -1).reshape(len(P), -1, 2)
+
+
+def sdf_at(grid, xy):
+    """grid (B, 1, 128, 96) 0.5 m SDF, xy (B, K, 2) metres -> (B, K) bilinear (border clamp)."""
+    import torch
+    g = torch.stack([(xy[..., 1] - Y0) / 24.0 - 1.0, (xy[..., 0] - X0) / 32.0 - 1.0], -1)[:, :, None]
+    return torch.nn.functional.grid_sample(grid, g, mode="bilinear", padding_mode="border", align_corners=False)[:, 0, :, 0]
+
+
+def cmd_decode(a):
+    import torch
+    import torch.nn as nn
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    dev = torch.device("cuda")
+    tag = "decode-small" if a.small else "decode"
+    out = ROOT / tag
+    out.mkdir(parents=True, exist_ok=True)
+    with Run("op_probe", tag, seed=0, config=vars(a)) as run:
+        toks, datas, is_dev, dvs = train_tokens(a.small)
+        run.use_split(dvs), run.use_split(splits.load("navsim/navtrain")), run.use_split(splits.load("navsim/navtest"))
+        lab_pos, LZ = labels("navtrain_s23456")
+        li = np.array([lab_pos[t] for t in toks])
+        tabs = {d: np.load(CACHE / d / "tab.npz") for d in dict.fromkeys(datas)}
+        fut = np.concatenate([tabs[d]["fut"] for d in dict.fromkeys(datas)])
+        ego = np.concatenate([tabs[d]["ego"] for d in dict.fromkeys(datas)]).astype(np.float32)
+        use = LZ["ok"][li] & ~np.isnan(fut[:, 0, 0]) & ~is_dev
+        sdf = torch.as_tensor(LZ["sdf"][li[use]], device=dev)[:, None]                        # (n, 1, 128, 96) fp16
+        Y = torch.as_tensor(fut[use], device=dev).float()
+        tt = np.array([t.strip() for t in open(SETS / "eval_tokens.txt") if t.strip()])
+        if a.small:
+            tt = np.array([t.strip() for t in open(SETS / "small400_tokens.txt") if t.strip()])
+        ttab = np.load(CACHE / "lb_navtest" / "tab.npz")
+        tp = {t: i for i, t in enumerate(ttab["names"].tolist())}
+        e_ego = ttab["ego"][[tp[t] for t in tt]].astype(np.float32)
+        M = torch.as_tensor(_interp_matrix(), device=dev, dtype=torch.float32)
+        C = torch.as_tensor(CORNERS, device=dev, dtype=torch.float32)
+        res = {"tokens": tt}
+        rows = []
+        for name, model, stage in [x for x in STAGES if x[0] in DEC_STAGES]:
+            if model is not None and not has_feats(model, "lb_navtest", tt).all():
+                run.info(f"{name}: navtest features missing, skipped")
+                continue
+            Xa = torch.as_tensor(stage_matrix(name, model, stage, toks[use], datas[use], ego[use]), device=dev)
+            mu, sd = Xa.mean(0), Xa.std(0).clamp_min(1e-6)
+            Xa = (Xa - mu) / sd
+            Xe = (torch.as_tensor(stage_matrix(name, model, stage, tt, np.array(["lb_navtest"] * len(tt)), e_ego), device=dev) - mu) / sd
+            for kind, lam_h in (("imit", 0.0), ("hinge", a.lam_hinge)):
+                torch.manual_seed(0)
+                net = nn.Sequential(nn.Dropout(0.1), nn.Linear(Xa.shape[1], 1024), nn.GELU(), nn.Linear(1024, 1024), nn.GELU(), nn.Linear(1024, 24)).to(dev)
+                opt = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-2)
+                sched = torch.optim.lr_scheduler.OneCycleLR(opt, 1e-3, total_steps=a.steps, pct_start=0.05)
+                g = torch.Generator(device=dev).manual_seed(0)
+                t1 = time.time()
+                for step in range(a.steps):
+                    b = torch.randint(0, len(Xa), (a.batch,), device=dev, generator=g)
+                    P = net(Xa[b]).view(-1, 8, 3)
+                    li_ = nn.functional.huber_loss(P[..., :2], Y[b, :, :2], delta=1.0) + 3.0 * nn.functional.huber_loss(P[..., 2], Y[b, :, 2], delta=0.1)
+                    loss = li_
+                    if lam_h > 0:
+                        v = sdf_at(sdf[b].float(), corners_torch(P, M, C))
+                        lh = torch.relu(a.hinge_margin - v).mean()
+                        loss = loss + lam_h * lh
+                    opt.zero_grad(set_to_none=True)
+                    loss.backward()
+                    opt.step()
+                    sched.step()
+                net.eval()
+                with torch.no_grad():
+                    Pe = torch.cat([net(Xe[i:i + 2048]).view(-1, 8, 3) for i in range(0, len(Xe), 2048)]).cpu().numpy()
+                res[f"{name}|{kind}"] = Pe.astype(np.float32)
+                rows.append(dict(stage=name, kind=kind, final_loss=float(loss), imit=float(li_), train_s=time.time() - t1))
+                run.info(json.dumps(rows[-1]))
+            del Xa, Xe
+            torch.cuda.empty_cache()
+        np.savez(out / "decoder_poses.npz", **res)
+        import pandas as pd
+        pd.DataFrame(rows).to_csv(out / "fits.csv", index=False)
+        run.summary["out"] = str(out / "decoder_poses.npz")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("select")
     p = sp.add_parser("probe")
     p.add_argument("--small", action="store_true")
+    p = sp.add_parser("decode")
+    p.add_argument("--small", action="store_true")
+    p.add_argument("--steps", type=int, default=4000)
+    p.add_argument("--batch", type=int, default=512)
+    p.add_argument("--lam-hinge", type=float, default=1.0)
+    p.add_argument("--hinge-margin", type=float, default=0.3)
     a = ap.parse_args()
-    {"select": cmd_select, "probe": cmd_probe}[a.cmd](a)
+    {"select": cmd_select, "probe": cmd_probe, "decode": cmd_decode}[a.cmd](a)
