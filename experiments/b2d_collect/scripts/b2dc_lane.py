@@ -144,10 +144,10 @@ def main(a):
     L.status(f"collect: {jobs} job(s) x {W} workers")
     L.wait(cids, "collect")
     lid = L.sub([PY_SIM, str(S / "b2dc_labels.py"), "--data", str(data)], f"b2dc-{a.stage}-labels", pool_dir / "labels", vram_gb=0.5,
-                cpu=min(24, max(2, len(ids))), ram_gb=48)
+                cpu=min(24, max(2, len(ids))), ram_gb=24)
     L.wait([lid], "labels")
     kid = L.sub([PY_TRAIN, str(S / "b2dc_check.py"), "--data", str(data), "--gif", str(a.gif)], f"b2dc-{a.stage}-check", pool_dir / "check",
-                vram_gb=12, cpu=8, ram_gb=48)
+                vram_gb=12, cpu=8, ram_gb=16)
     L.wait([kid], "check")
     res = gates(a.stage, data, len(ids))
     (L.dir / "gates.json").write_text(json.dumps(res, indent=1))
