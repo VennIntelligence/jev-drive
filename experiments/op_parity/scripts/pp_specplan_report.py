@@ -18,9 +18,11 @@ from pathlib import Path
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO))
 OUT = REPO / "experiments/op_parity/results/hugsim_specplan"
 ARMS = ["P2-F-s0", "P2-F-s1", "P2H10-F-s0", "P2H10-F-s1"]
-PRE = {"exam": "pp-", "spec": "pp-spec-", "specplan": "pp-specplan-"}
+PRE = {"exam": "pp-", "spec": "pp-spec-", "specplan": "pp-specplan-", "smooth": "pp-specplansmooth-", "mpc": "pp-specplanmpc-"}
+SHORT = ["exam", "spec", "spec_plan", "smooth", "MPC"]
 FLIP_DEG, MOVING = 0.3, 1.0
 CLS = ["complete", "spin", "bg_coll", "fg_coll", "off_route", "stuck"]
 
@@ -45,7 +47,8 @@ def extract():
     turn = {k: float(np.degrees(np.ptp(np.unwrap(np.asarray(v["yaw"], float))))) for k, v in routes.items()}
     want = {pfx + a: (pr, a) for a in ARMS for pr, pfx in PRE.items()}
     last = {}
-    for r in csv.DictReader(open(D / "runs/op_parity/hugsim/results.csv")):
+    from jevdrive.bench.compat import parity_hugsim_rows
+    for r in parity_hugsim_rows(want):
         if r["tag"] in want and r["scenario"] in scen and r["end"] != "crash":
             last[(r["tag"], r["scenario"])] = r
     rows, traces = [], {}
@@ -75,8 +78,8 @@ def extract():
 
 # ------------------------------------------------------------------------------------------------------------------------- report
 HR = REPO / "experiments/hugsim/results"
-LAB = {"exam": "exam (iLQR tracks plan)", "spec": "spec (action curvature)", "specplan": "spec_plan (plan curvature)"}
-COL = {"exam": "#999999", "spec": "#0072B2", "specplan": "#D55E00"}
+LAB = {"exam": "exam (iLQR tracks plan)", "spec": "spec (action curvature)", "specplan": "spec_plan (point plan curvature)", "smooth": "spec_plan_smooth (0.5-1.5 s)", "mpc": "spec_plan_mpc (legacy lateral MPC)"}
+COL = {"exam": "#999999", "spec": "#0072B2", "specplan": "#D55E00", "smooth": "#E69F00", "mpc": "#009E73"}
 GROUPS = {"P2": ["P2-F-s0", "P2-F-s1"], "P2+hinge": ["P2H10-F-s0", "P2H10-F-s1"], "all 4": ARMS}
 
 
@@ -179,32 +182,35 @@ def report():
     rows = []
     for g, arms in GROUPS.items():
         for sn, scs in strata.items():
-            sp = seedmean(ex, arms, "specplan", scs)
-            for ref in ("spec", "exam"):
-                d = (sp - seedmean(ex, arms, ref, scs)).values
-                rows.append([g, sn, f"specplan - {ref}", fmt(boot(d)), int((d > 0.02).sum()), int((d < -0.02).sum()), int((abs(d) <= 0.02).sum())])
-            d = (sp - wa.hdscore.reindex(scs)).values
-            rows.append([g, sn, "specplan - WA-JEPA", fmt(boot(d)), int((d > 0.02).sum()), int((d < -0.02).sum()), int((abs(d) <= 0.02).sum())])
+            for new in ("specplan", "smooth", "mpc"):
+                sp = seedmean(ex, arms, new, scs)
+                for ref in [r for r in ("spec", "exam", "specplan") if r != new]:
+                    d = (sp - seedmean(ex, arms, ref, scs)).values
+                    rows.append([g, sn, f"{new} - {ref}", fmt(boot(d)), int((d > 0.02).sum()), int((d < -0.02).sum()), int((abs(d) <= 0.02).sum())])
+                d = (sp - wa.hdscore.reindex(scs)).values
+                rows.append([g, sn, f"{new} - WA-JEPA", fmt(boot(d)), int((d > 0.02).sum()), int((d < -0.02).sum()), int((abs(d) <= 0.02).sum())])
     for a in ARMS:
-        sp = seedmean(ex, [a], "specplan", sc_all)
-        for ref in ("spec", "exam"):
-            d = (sp - seedmean(ex, [a], ref, sc_all)).values
-            rows.append([a, "all 64", f"specplan - {ref}", fmt(boot(d)), int((d > 0.02).sum()), int((d < -0.02).sum()), int((abs(d) <= 0.02).sum())])
+        for new in ("specplan", "smooth", "mpc"):
+            sp = seedmean(ex, [a], new, sc_all)
+            for ref in ("spec", "exam"):
+                d = (sp - seedmean(ex, [a], ref, sc_all)).values
+                rows.append([a, "all 64", f"{new} - {ref}", fmt(boot(d)), int((d > 0.02).sum()), int((d < -0.02).sum()), int((abs(d) <= 0.02).sum())])
     T4 = pd.DataFrame(rows, columns=["group", "stratum", "comparison", "mean diff [CI]", "wins", "losses", "ties"])
     T4.to_csv(OUT / "T4_paired.csv", index=False)
     P(T4.to_markdown(index=False) + "\n")
 
     # per-scenario table of the turning routes
-    P("## T5 the turning routes: HD per preset (mean over the 4 arms), specplan end classes of the 4 arms\n")
+    P("## T5 the turning routes: HD per preset (mean over the 4 arms), end classes of the 4 arms\n")
     rows = []
     for sc in tur:
         r = [sc, round(turn_deg(ex, sc), 0)]
         for pr in PRE:
             r.append(round(seedmean(ex, ARMS, pr, [sc]).iloc[0], 3))
-        d = ex[(ex.preset == "specplan") & (ex.scenario == sc)]
-        r.append(" ".join(f"{k}" for k in d.sort_values("arm").cls))
+        for pr in ("specplan", "smooth", "mpc"):
+            d = ex[(ex.preset == pr) & (ex.scenario == sc)]
+            r.append(" ".join(f"{k}" for k in d.sort_values("arm").cls))
         rows.append(r)
-    T5 = pd.DataFrame(rows, columns=["scenario", "route turn deg"] + list(PRE) + ["specplan classes (P2 s0, s1, hinge s0, s1)"])
+    T5 = pd.DataFrame(rows, columns=["scenario", "route turn deg"] + list(PRE) + [f"{k} classes (P2 s0, s1, hinge s0, s1)" for k in ("specplan", "smooth", "mpc")])
     T5.to_csv(OUT / "T5_turning.csv", index=False)
     P(T5.to_markdown(index=False) + "\n")
     tr = json.load(gzip.open(OUT / "traces.json.gz", "rt"))
@@ -242,22 +248,23 @@ def figures(ex, wa, tur, stra, seedmean, plt):
                 continue
             for pi, pr in enumerate(PRE):
                 m = boot(seedmean(ex, arms, pr, scs).values)
-                ax.bar(gi * 4 + pi, m[0], color=COL[pr], yerr=[[m[0] - m[1]], [m[2] - m[0]]], capsize=1.5, error_kw=dict(lw=.6))
+                ax.bar(gi * 6 + pi, m[0], color=COL[pr], yerr=[[m[0] - m[1]], [m[2] - m[0]]], capsize=1.5, error_kw=dict(lw=.6))
         ax.axhline(wa.hdscore.reindex(scs).mean(), color="k", ls="--", lw=.7)
-        ax.set_xticks([1, 5]); ax.set_xticklabels(["P2", "P2+hinge"]); ax.set_title(sn)
+        ax.set_xticks([2, 8]); ax.set_xticklabels(["P2", "P2+hinge"]); ax.set_title(sn)
     axs[0].set_ylabel("HD-Score (seed mean)")
     axs[0].text(0.02, wa.hdscore.mean() + .01, "WA-JEPA", fontsize=6.5, transform=axs[0].get_yaxis_transform())
-    fig.legend([plt.Rectangle((0, 0), 1, 1, color=COL[p]) for p in PRE], [LAB[p] for p in PRE], loc="lower center", ncol=3, fontsize=6.5)
-    fig.tight_layout(rect=(0, 0.07, 1, 1)); fig.savefig(figs / "fig1_hd.png"); plt.close(fig)
+    fig.legend([plt.Rectangle((0, 0), 1, 1, color=COL[p]) for p in PRE], [LAB[p] for p in PRE], loc="lower center", ncol=3, fontsize=6)
+    fig.tight_layout(rect=(0, 0.11, 1, 1)); fig.savefig(figs / "fig1_hd.png"); plt.close(fig)
     # fig2: paired scatter
-    fig, axs = plt.subplots(1, 2, figsize=(6.875, 3.1))
-    for ax, ref in zip(axs, ("spec", "exam")):
-        x = seedmean(ex, ARMS, ref, sc_all); y = seedmean(ex, ARMS, "specplan", sc_all)
+    fig, axs = plt.subplots(1, 3, figsize=(6.875, 2.6))
+    for ax, new in zip(axs, ("specplan", "smooth", "mpc")):
+        ref = "spec"
+        x = seedmean(ex, ARMS, ref, sc_all); y = seedmean(ex, ARMS, new, sc_all)
         t = np.array([s in tur for s in sc_all])
         ax.plot([0, 1], [0, 1], color="#999", lw=.6)
         ax.scatter(x[~t], y[~t], s=9, color="#777", label="straight")
         ax.scatter(x[t], y[t], s=12, color=COL["specplan"], label="turning")
-        ax.set_xlabel(f"HD under {ref}"); ax.set_ylabel("HD under spec_plan"); ax.set_title(f"mean of the 4 arms, per scenario")
+        ax.set_xlabel("HD under spec"); ax.set_ylabel(f"HD under {new}"); ax.set_title("4-arm mean per scenario", fontsize=7)
     axs[0].legend(); fig.tight_layout(); fig.savefig(figs / "fig2_paired.png"); plt.close(fig)
     # fig3: classes
     fig, axs = plt.subplots(1, 2, figsize=(6.875, 2.5), sharey=True)
@@ -274,7 +281,7 @@ def figures(ex, wa, tur, stra, seedmean, plt):
                     d = ex[(ex.preset == pr) & ex.scenario.isin(scs)]
                     v.append((d.cls == k).sum() / d.arm.nunique())
             ax.bar(range(len(names)), v, bottom=bot, color=cc[k], label=k, width=.7); bot += v
-        ax.set_xticks(range(len(names))); ax.set_xticklabels(["exam", "spec", "spec_plan", "WA-JEPA"]); ax.set_title(sn)
+        ax.set_xticks(range(len(names))); ax.set_xticklabels(SHORT + ["WA-JEPA"], fontsize=6); ax.set_title(sn)
     axs[0].set_ylabel("scenarios (mean per arm)"); axs[1].legend(fontsize=6, loc="upper right", ncol=2); fig.tight_layout(); fig.savefig(figs / "fig3_classes.png"); plt.close(fig)
     # fig4: oscillation
     fig, axs = plt.subplots(1, 2, figsize=(6.875, 2.5))
@@ -283,7 +290,7 @@ def figures(ex, wa, tur, stra, seedmean, plt):
             d = ex[(ex.preset == pr) & ex.scenario.isin(tur)][key].values
             ax.scatter(pi + np.random.default_rng(0).uniform(-.18, .18, len(d)), d, s=5, color=COL[pr], alpha=.6)
             ax.hlines(np.mean(d), pi - .3, pi + .3, color="k", lw=1)
-        ax.set_xticks(range(3)); ax.set_xticklabels(["exam", "spec", "spec_plan"]); ax.set_ylabel(yl); ax.set_title("turning routes, 4 arms")
+        ax.set_xticks(range(5)); ax.set_xticklabels(SHORT, fontsize=6.5); ax.set_ylabel(yl); ax.set_title("turning routes, 4 arms")
     fig.tight_layout(); fig.savefig(figs / "fig4_oscillation.png"); plt.close(fig)
     # fig6: requested curvature jitter
     KR = pd.read_csv(OUT / "kappa_runs.csv")
@@ -293,7 +300,7 @@ def figures(ex, wa, tur, stra, seedmean, plt):
             d = KR[(KR.preset == pr) & KR.turning][key].values
             ax.scatter(pi + np.random.default_rng(1).uniform(-.18, .18, len(d)), d, s=5, color=COL[pr], alpha=.6)
             ax.hlines(np.mean(d), pi - .3, pi + .3, color="k", lw=1)
-        ax.set_xticks(range(3)); ax.set_xticklabels(["exam", "spec", "spec_plan"]); ax.set_ylabel(yl); ax.set_title("turning routes, 4 arms")
+        ax.set_xticks(range(5)); ax.set_xticklabels(SHORT, fontsize=6.5); ax.set_ylabel(yl); ax.set_title("turning routes, 4 arms")
     fig.tight_layout(); fig.savefig(figs / "fig6_kappa.png"); plt.close(fig)
     # fig5: example traces (largest specplan - spec swing among turning scenarios, arm P2-F-s0)
     tr = json.load(gzip.open(OUT / "traces.json.gz", "rt"))
@@ -301,7 +308,7 @@ def figures(ex, wa, tur, stra, seedmean, plt):
     picks = [d.idxmax(), d.idxmin()]
     fig, axs = plt.subplots(2, 2, figsize=(6.875, 3.9), sharex="col")
     for j, sc in enumerate(picks):
-        for pr in ("spec", "specplan"):
+        for pr in ("spec", "specplan", "smooth", "mpc"):
             t = tr.get(f"{pr}|P2-F-s0|{sc}")
             if not t:
                 continue

@@ -13,7 +13,7 @@
 #   python -m jevdrive.cl submit --name pp-hug-P2 --vram 40 --cpu 12 --log-dir $DATA_DIR/runs/op_parity/hugsim/pool/P2-s0 -- \
 #       bash experiments/op_parity/scripts/pp_hugsim.sh arm P2-s0 experiments/hugsim/scripts/derot_spin10.txt 4
 set -uo pipefail
-: "${DATA_DIR:?}" "${CL_GPU:?run inside a pool job}"
+: "${DATA_DIR:?}"
 cd "$(dirname "$0")/../../.."
 R=$DATA_DIR/runs/op_parity/hugsim
 S=experiments/op_parity/scripts/pp_hugsim.py
@@ -48,6 +48,7 @@ op_server() {  # name onnx
 
 case ${1:?equiv | arm} in
 equiv)
+    : "${CL_GPU:?run equivalence inside a pool job}"
     E=$R/equiv
     build P0
     [[ -f $E/synth/ckpt-final.pt ]] || $TPY $S synth --out "$E/synth" || fail synth
@@ -68,17 +69,11 @@ equiv)
     echo "$(date +%T) equiv done";;
 arm)
     TAG=${2:?tag}; LIST=${3:?scenario list}; W=${4:-4}
-    SRV=$TAG; [[ $TAG == P0 ]] && SRV=P3-init
-    build "$TAG"
-    bias_server "b-$TAG" "$SRV"
-    op_server "op-$TAG" "$(onnx_of "$TAG")"
-    if [[ ${PRESET:-exam} == spec ]]; then CTRL=(--preset spec); TREE=opctrl; PFX=pp-spec-
-    elif [[ ${PRESET:-exam} == spec_plan* ]]; then CTRL=(--preset "$PRESET"); TREE=opctrl; PFX=pp-${PRESET//_/}-
-    else CTRL=(--preset exam --controller fixed); TREE=fixed; PFX=pp-; fi
-    $HPY experiments/hugsim/archive/zs_run.py setup-trees $TREE || fail setup-trees
-    $HPY experiments/hugsim/archive/zs_run.py run "${CTRL[@]}" --out "$R" --agent cinque --gpu "$CL_GPU" \
-        --workers "$W" --scenarios "$LIST" --socket "$R/servers/op-$TAG.sock" --tag "$PFX$TAG" --timeout "${TIMEOUT:-5400}" --retries "${RETRIES:-1}" \
-        --opts "{\"parity\": {\"socket\": \"$R/servers/b-$TAG.sock\"}}" || fail "zs_run $TAG"
+    PRESET=${PRESET:-exam}
+    PFX=pp-; [[ $PRESET != exam ]] && PFX=pp-${PRESET//_/}-
+    mode=(); [[ -n ${CL_POOL_JOB:-} ]] && mode=(--in-pool)
+    "$PWD/.venv/bin/python" -m jevdrive.bench run --model "$TAG" --bench hugsim --preset "$PRESET" \
+        --scenarios "$LIST" --workers "$W" --wait --publish-out "$R" --publish-tag "$PFX$TAG" "${mode[@]}" || fail "bench hugsim $TAG"
     echo "$(date +%T) arm $TAG done";;
 *) fail "unknown mode $1";;
 esac
