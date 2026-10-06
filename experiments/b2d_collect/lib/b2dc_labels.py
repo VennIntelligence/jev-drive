@@ -11,7 +11,7 @@ Per tick i (20 Hz):
   hist (4, 3)       poses at t0 - 1.5, -1.0, -0.5, 0 s, oldest first (before the clip start: the first tick, as WA-JEPA's buffer clamps)
   vel / acc (4, 2)  body-frame velocity / acceleration at the same times (each in its own body frame), CARLA's get_velocity / acceleration
   cmd (4,)          NAVSIM one-hot [left, straight, right, unknown]: route_command(), from the route only (re-densified with CARLA's
-                    planner, junction turns labelled from geometry: Route.from_geometry)
+                    plan, junction turns labelled from geometry: Route.from_geometry)
   ego (20,)         lib/parity_adapter.ego_features(hist, vel, acc, cmd)
   turn_next / turn_dist   the next LEFT / RIGHT junction RoadOption along the route (1 / 2, 0 none) and its distance (m), for other lookaheads
   route_poly (16, 2), route_mask   route ahead as 10 m vertices from the rear axle (vertex 0 = origin), op_route_ft's nav-polyline input
@@ -311,14 +311,30 @@ def footprint(meta: dict) -> np.ndarray:
     return np.array([[front, e[1]], [front, -e[1]], [rear, e[1]], [rear, -e[1]]])
 
 
-def load_clip(clip: Path, dense=None):
-    """(ego, Route, meta). dense(town, keypoints) -> object with .xyz / .jid (scripts/b2dc_routes.dense, CARLA's planner at 1 m, as the
-    leaderboard interpolates): given, the route is re-densified from the agent's plan and its turns labelled from geometry."""
+_maps = {}
+
+
+def junction_ids(town: str, xodr: str, xyz) -> np.ndarray:
+    """Junction id (or -1) of the lane waypoint nearest to each CARLA point (offline carla.Map, cached per process)."""
+    import carla
+    if town not in _maps:
+        _maps[town] = carla.Map(town, Path(xodr).read_text())
+    m = _maps[town]
+    out = np.full(len(xyz), -1, int)
+    for k, (x, y, z) in enumerate(np.asarray(xyz, float)):
+        w = m.get_waypoint(carla.Location(x=x, y=y, z=z))
+        if w is not None and w.is_junction:
+            out[k] = w.get_junction().id
+    return out
+
+
+def load_clip(clip: Path, xodr=None):
+    """(ego, Route, meta). The route is the agent's plan (route.npz, the leaderboard's ~1 m interpolation); with `xodr` (town -> OpenDrive
+    path) its junction turns are labelled from geometry (Route.from_geometry) instead of the plan's RoadOptions."""
     clip = Path(clip)
     ego = dict(np.load(clip / "ego.npz"))
     meta = json.loads((clip / "meta.json").read_text())
-    if dense is None:
+    if xodr is None:
         return ego, Route.load(clip / "route.npz"), meta
     kp = np.load(clip / "route.npz")["xyzyaw"][:, :3]
-    D = dense(meta["town"], kp)
-    return ego, Route.from_geometry(D.xyz, D.jid), meta
+    return ego, Route.from_geometry(kp, junction_ids(meta["town"], str(xodr(meta["town"])), kp)), meta
