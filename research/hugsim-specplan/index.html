@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>plan 曲率闭环检验</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:980px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:4px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:14px}th,td{border:1px solid #ccc;padding:4px 10px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f3f3f3}
+figure{margin:20px 0}img{max-width:100%}figcaption{font-size:14px;color:#444}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}}
+</style></head><body>
+<h1>用模型自己的 plan 来转向：转弯路线更差，但没有打转或振荡</h1>
+<div class="v"><b>结论：联合训练 plan 与 action 的理由，在这个检验里没有得到支持。</b>把 HUGSIM spec 预设的横向曲率从 action 头换成 plan 的曲率（openpilot 的 get_curvature_from_plan，0.275 秒处的偏航与偏航率），其余链路（clip、延迟、纵向）不变。4 个臂（P2 与 P2+hinge 各两个 seed）×64 个场景：全部 HD 0.339（spec 0.394，exam 0.398，WA-JEPA 0.451）；23 条转弯路线 HD 0.170（spec 0.279，WA-JEPA 0.442）；41 条直路线 0.433（spec 0.459）。转弯路线上配对差 -0.109（95% 区间 -0.198 到 -0.029），3 胜 12 负 8 平，每个臂单独看也都是负的。</div>
+<h2>设置</h2>
+<p>新预设 <code>spec_plan</code>：横向指令曲率 = 2ψ(t)/(v·t) − 偏航率(0)/v，t = 0.275 秒，ψ 与偏航率取自模型 plan 输出的偏航通道。之后仍经过 clip_curvature、0.25 秒横向延迟，纵向仍由 iLQR 跟随 plan 的速度。对照是同一批臂已有的 spec 与 exam 结果，没有重跑。转弯路线指记录路线的航向变化范围不小于 30°，共 23 条；其余 41 条为直路线。</p>
+<figure><img src="figs/fig1_hd.png" alt=""><figcaption>三种预设下的 HD-Score（两个 seed 的均值，竖线为 95% 自助法区间），虚线为 WA-JEPA。转弯路线上橙色（spec_plan）明显最低。</figcaption></figure>
+<h2>结局分布</h2>
+<table><tr><th>每臂平均场景数</th><th>完成</th><th>打转</th><th>背景碰撞</th><th>前景碰撞</th><th>偏离路线</th></tr>
+<tr><td>转弯 exam</td><td>3.25</td><td>5.5</td><td>4.5</td><td>9.0</td><td>0.75</td></tr>
+<tr><td>转弯 spec</td><td>2.0</td><td>1.5</td><td>9.0</td><td>7.5</td><td>3.0</td></tr>
+<tr><td>转弯 spec_plan</td><td>0.25</td><td>2.25</td><td>4.75</td><td>11.25</td><td>4.5</td></tr>
+<tr><td>转弯 WA-JEPA</td><td>8</td><td>1</td><td>0</td><td>9</td><td>5</td></tr>
+<tr><td>直路 spec</td><td>18.25</td><td>0.25</td><td>2.0</td><td>20.5</td><td>0</td></tr>
+<tr><td>直路 spec_plan</td><td>15.25</td><td>1.0</td><td>5.75</td><td>16.75</td><td>2.25</td></tr></table>
+<figure><img src="figs/fig3_classes.png" alt=""><figcaption>结局类别。spec_plan 在转弯路线上几乎一条都走不完（平均每臂 0.25 条），WA-JEPA 为 8 条。</figcaption></figure>
+<h2>打转与振荡</h2>
+<p>四个臂在全部 64 个场景里的打转数分别为 6、1、2、4（spec 为 2、1、2、2，exam 为 8、11、7、11），没有出现 spec 之外新的打转爆发。按「至少 8 次航向率变号且占行驶步数 15% 以上」的定义，没有一次运行算振荡；但每 100 个行驶步的航向率变号数是 2.0 到 3.0，spec 下是 0，航向率均方根 0.8 到 1.0 度/步，spec 下只有 0.26 到 0.29。也就是说车更抖，但没有失控。</p>
+<figure><img src="figs/fig4_oscillation.png" alt=""><figcaption>转弯路线上每次运行的航向率变号比例（左）和航向率均方根（右），横线为均值。</figcaption></figure>
+<h2>为什么更差：曲率请求更大、更抖</h2>
+<p>转弯路线上请求曲率的平均绝对值 0.022 1/m，spec 为 0.0066；相邻步变化 0.0090，spec 为 0.0018。直路线同样放大（0.0126 对 0.0036，0.0071 对 0.0011）。单点外推 plan 的偏航和偏航率，把 plan 的噪声放大了，这不是 plan 方向错。</p>
+<figure><img src="figs/fig6_kappa.png" alt=""><figcaption>请求曲率的幅值（左）和相邻步变化（右）。exam 列是模型 action 头的值，在 exam 里并不用来转向。</figcaption></figure>
+<figure><img src="figs/fig5_traces.png" alt=""><figcaption>P2-F-s0 的两个例子：左，spec_plan 比 spec 好 0.15 的场景；右，差 0.81 的场景，请求曲率出现 -0.18 1/m 的尖峰，航向率 6 度/步，第 66 步就碰撞，而 spec 开满 300 步。</figcaption></figure>
+<h2>配对对比</h2>
+<figure><img src="figs/fig2_paired.png" alt=""><figcaption>每个场景四个臂的平均 HD，spec_plan 对 spec（左）和对 exam（右）；点在对角线下方表示 spec_plan 更差，橙色是转弯路线。</figcaption></figure>
+<table><tr><th>spec_plan 减去</th><th>全部 64</th><th>转弯 23</th><th>直路 41</th></tr>
+<tr><td>spec</td><td>-0.056 [-0.108, -0.007]</td><td>-0.109 [-0.198, -0.029]</td><td>-0.026 [-0.092, +0.037]</td></tr>
+<tr><td>exam</td><td>-0.059 [-0.122, -0.001]</td><td>-0.141 [-0.228, -0.062]</td><td>-0.013 [-0.095, +0.069]</td></tr>
+<tr><td>WA-JEPA 0.451</td><td>-0.112 [-0.201, -0.025]</td><td>-0.271 [-0.413, -0.137]</td><td>-0.023 [-0.128, +0.084]</td></tr></table>
+<h2>局限与偏差</h2>
+<ul><li>只检验了 openpilot 原样的单点转换；对 plan 做平滑（例如取 0.5 到 1.5 秒的平均曲率）没有检验，那属于声明的执行层选择，不是 openpilot 自己的路径。</li>
+<li>每个场景一次运行；单场景差别小于约 0.2 不算证据；转弯路线来自 17 个场景。</li>
+<li>本次运行把单场景超时降到 600 秒、重试 2 次，并让 unix socket 连接带重试；P2-F-s0 有三个场景在高并发下起动失败两次，单独重跑后 768 次运行全部完成。</li></ul>
+<p>数据与表格：experiments/op_parity/results/hugsim_specplan.md 及其目录下 tables.md。</p>
+</body></html>

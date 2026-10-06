@@ -1,0 +1,36 @@
+group,stratum,comparison,mean diff [CI],wins,losses,ties
+P2,all 64,specplan - spec,"-0.055 [-0.107, -0.007]",13,22,29
+P2,all 64,specplan - exam,"-0.057 [-0.118, +0.001]",15,24,25
+P2,all 64,specplan - WA-JEPA,"-0.112 [-0.200, -0.027]",24,24,16
+P2,turning 23,specplan - spec,"-0.108 [-0.190, -0.037]",2,11,10
+P2,turning 23,specplan - exam,"-0.129 [-0.212, -0.055]",1,13,9
+P2,turning 23,specplan - WA-JEPA,"-0.270 [-0.411, -0.142]",4,14,5
+P2,straight 41,specplan - spec,"-0.026 [-0.092, +0.036]",11,11,19
+P2,straight 41,specplan - exam,"-0.018 [-0.100, +0.068]",14,11,16
+P2,straight 41,specplan - WA-JEPA,"-0.024 [-0.130, +0.081]",20,10,11
+P2+hinge,all 64,specplan - spec,"-0.056 [-0.115, -0.002]",14,18,32
+P2+hinge,all 64,specplan - exam,"-0.061 [-0.131, +0.004]",17,21,26
+P2+hinge,all 64,specplan - WA-JEPA,"-0.112 [-0.204, -0.021]",26,24,14
+P2+hinge,turning 23,specplan - spec,"-0.110 [-0.212, -0.019]",4,11,8
+P2+hinge,turning 23,specplan - exam,"-0.154 [-0.252, -0.055]",2,10,11
+P2+hinge,turning 23,specplan - WA-JEPA,"-0.273 [-0.426, -0.137]",5,13,5
+P2+hinge,straight 41,specplan - spec,"-0.027 [-0.098, +0.039]",10,7,24
+P2+hinge,straight 41,specplan - exam,"-0.009 [-0.097, +0.073]",15,11,15
+P2+hinge,straight 41,specplan - WA-JEPA,"-0.021 [-0.130, +0.090]",21,11,9
+all 4,all 64,specplan - spec,"-0.056 [-0.108, -0.007]",15,23,26
+all 4,all 64,specplan - exam,"-0.059 [-0.122, -0.001]",15,22,27
+all 4,all 64,specplan - WA-JEPA,"-0.112 [-0.201, -0.025]",25,25,14
+all 4,turning 23,specplan - spec,"-0.109 [-0.198, -0.029]",3,12,8
+all 4,turning 23,specplan - exam,"-0.141 [-0.228, -0.062]",1,11,11
+all 4,turning 23,specplan - WA-JEPA,"-0.271 [-0.413, -0.137]",4,14,5
+all 4,straight 41,specplan - spec,"-0.026 [-0.092, +0.037]",12,11,18
+all 4,straight 41,specplan - exam,"-0.013 [-0.095, +0.069]",14,11,16
+all 4,straight 41,specplan - WA-JEPA,"-0.023 [-0.128, +0.084]",21,11,9
+P2-F-s0,all 64,specplan - spec,"-0.046 [-0.110, +0.014]",14,23,27
+P2-F-s0,all 64,specplan - exam,"-0.082 [-0.160, -0.006]",13,24,27
+P2-F-s1,all 64,specplan - spec,"-0.064 [-0.115, -0.020]",10,22,32
+P2-F-s1,all 64,specplan - exam,"-0.033 [-0.096, +0.026]",16,19,29
+P2H10-F-s0,all 64,specplan - spec,"-0.041 [-0.103, +0.022]",14,18,32
+P2H10-F-s0,all 64,specplan - exam,"-0.066 [-0.151, +0.015]",16,23,25
+P2H10-F-s1,all 64,specplan - spec,"-0.071 [-0.132, -0.017]",13,23,28
+P2H10-F-s1,all 64,specplan - exam,"-0.056 [-0.123, +0.004]",17,21,26
