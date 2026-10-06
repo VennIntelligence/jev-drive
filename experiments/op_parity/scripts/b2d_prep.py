@@ -211,7 +211,7 @@ def tokens(a):
                 if done % 10 == 0 or not futs:
                     run.info(f"{done}/{len(mine)} clips, {n_pairs / (time.time() - t0):.0f} pairs/s")
         tk.flush(), to.flush(), tp.flush()
-        run.summary |= dict(clips=len(mine), pairs=n_pairs, pairs_per_s=n_pairs / max(1e-9, time.time() - t0), wall_s=time.time() - t0)
+        run.summary |= dict(clips=len(mine), pairs=n_pairs, pairs_per_s=n_pairs / max(1e-9, time.time() - t0), loop_s=time.time() - t0)
 
 
 def finish(a):
