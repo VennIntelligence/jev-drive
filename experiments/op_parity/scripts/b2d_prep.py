@@ -46,7 +46,7 @@ VERSION = "b2d1"
 # ---------------------------------------------------------------- collision cut
 def collision_tick(clip: _pl.Path, loc: np.ndarray) -> tuple:
     """(first collision tick or -1, closest approach m) from the leaderboard record's collision locations (CARLA x, y of the ego at the event)."""
-    res = clip.parents[1] / "results.json"
+    res = clip.parent / "results.json"
     rec = json.loads(res.read_text())["_checkpoint"]["records"][0]["infractions"]
     pts = [tuple(map(float, m)) for k, v in rec.items() if k.startswith("collisions_") for s in v
            for m in re.findall(r"at \(x=([-\d.]+), y=([-\d.]+)", s)]

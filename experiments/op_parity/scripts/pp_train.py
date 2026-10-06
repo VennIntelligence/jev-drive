@@ -18,6 +18,11 @@ fitted on every row to a label x max(1, v0)^2: `plan` the curvature of the model
 spec_plan_smooth), `log` the logged curvature at t + 0.275 s (cubic spline through the 4 history + 8 future poses), `logwin` the logged
 curvature over 0.5-1.5 s. Speed weight min(1, v0 / 3); vy / ay of the ego input zeroed on a fraction --ego-lat-drop of rows (HUGSIM feeds 0). Multi-GPU: torchrun -> DDP-style gradient all-reduce, each rank its own row stream; single GPU without torchrun.
 
+B2D rows (experiments/op_parity/scripts/b2d_prep.py, plans/2026-10-07-b2d-p2-prereg.md): a data dir named b2d_* is a tick-indexed token store
+(ticks.npy + front_idx.npy, read through IndexedMM; needs --host), its rows are split by route (--b2d-split b2d/b2dc-v2: -train / -val), sampled with
+--b2d-mass of the batch (turn balancing then acts inside the B2D rows only), and carry the MKZ footprint hinge (--hinge-labels may list one label
+file per source, --hinge-footprint one footprint per file).
+
   python experiments/op_parity/scripts/pp_train.py --arm P2 --steps 600 --data lb_navtrain lb_h1train [--tag pilot]
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
@@ -68,7 +73,10 @@ class Cfg:
     split: str = "navsim/op-parity-pilot"
     hinge_lam: float = 0.0                # footprint drivable-area SDF hinge on the plan (lib/drivable_hinge.py), imitation rows only; 0 = off
     hinge_margin: float = 0.3
-    hinge_labels: str = "runs/op_probe/labels/navtrain_all.npz"
+    hinge_labels: tuple = ("runs/op_probe/labels/navtrain_all.npz",)   # one label file per source (first file that labels a row wins)
+    hinge_footprint: tuple = ("pacifica",)                                # footprint of each label file: pacifica (NAVSIM) | mkz (B2D)
+    b2d_split: str = "b2d/b2dc-v2"                                        # route split of the b2d_* data dirs: <ref>-train / <ref>-val
+    b2d_mass: float = 0.0                                                 # share of the imitation batch rows drawn from the b2d_* rows (0 = natural mix)
     turn_bal: str = ""                    # turn-balanced sampling: target mass per |heading change| bin (<5, 5-20, 20-45, >45 deg), "a,b,c,d"; "" = off
     anchor_off_turn: bool = False         # no anchor rows on tokens with logged |heading change| > 20 deg
     late_lat_w: float = 1.0               # loss weight on the y and yaw terms of the poses at >= 2 s (imitation rows), 1 = off
@@ -152,13 +160,36 @@ def rear(plan: torch.Tensor, cam_x: torch.Tensor, W: torch.Tensor):
 
 
 # ---------------------------------------------------------------- data on the GPU (or gathered per batch from the page cache)
+class IndexedMM:
+    """A b2d_prep cache as a (N, 8, 32, 512) fp16 array: row r = ticks[front_idx[r]] (the memory-mapped per-tick token store; no copy)."""
+
+    def __init__(self, d):
+        self.ticks = np.load(d / "ticks.npy", mmap_mode="r")
+        self.idx = np.load(d / "front_idx.npy")
+        self.shape = (len(self.idx), self.idx.shape[1]) + self.ticks.shape[1:]
+
+    def __len__(self):
+        return len(self.idx)
+
+    def __getitem__(self, rows):
+        r = np.arange(len(self.idx))[rows] if isinstance(rows, slice) else np.asarray(rows)
+        return self.ticks[self.idx[r]]
+
+
+def open_front(f):
+    """np.load(f, mmap) of a front.npy, or the IndexedMM of a b2d_prep dir that has no front.npy."""
+    f = _pl.Path(f)
+    return np.load(f, mmap_mode="r") if f.exists() else IndexedMM(f.parent)
+
+
 class Tokens:
     """Row access to token arrays of several cache dirs. On the GPU (one tensor), or host mode: the .npy files stay memory-mapped and every
     batch gathers its rows (the OS page cache is shared by all concurrent runs, so N runs cost the files once in RAM, not N copies)."""
 
     def __init__(self, files, dev, host=False):
         self.dev, self.host = dev, host
-        mms = [np.load(f, mmap_mode="r") for f in files]
+        mms = [open_front(f) if _pl.Path(f).name == "front.npy" else np.load(f, mmap_mode="r") for f in files]
+        assert host or not any(isinstance(m, IndexedMM) for m in mms), "b2d_* token stores need --host (410k rows x 8 slots do not fit a card)"
         if host:
             self.mms, self.off = mms, np.cumsum([0] + [len(m) for m in mms])
         else:
@@ -196,10 +227,11 @@ class Store:
         """frames: the front protocol (cache/<data>@<frames>/front.npy; gimm = cache/<data>/front.npy). tab, side and the teacher always come from
         cache/<data>/ (teacher = shipped Cinque on the G protocol, its in-distribution input: every protocol is anchored to the same targets)."""
         cr = data_dir() / "runs" / "op_parity" / "cache"
-        fdir = (lambda d: d) if frames == "gimm" else (lambda d: f"{d}@{frames}")
+        fdir = (lambda d: d) if frames == "gimm" else (lambda d: d if d.startswith("b2d_") else f"{d}@{frames}")   # b2d_*: native 0.2 s frames = W protocol
         tabs = [dict(np.load(cr / d / "tab.npz")) for d in datas]
         self.tab = {k: np.concatenate([t[k] for t in tabs]) for k in tabs[0]}
         n = len(self.tab["names"])
+        self.is_b2d = np.concatenate([np.full(len(t["names"]), d.startswith("b2d_")) for d, t in zip(datas, tabs)])
         self.rows = np.arange(n) if rows is None else rows
         sel = self.rows
         assert rows is None, "row subsets are selected by the caller (split_rows)"
@@ -229,11 +261,18 @@ class Store:
         self.klab, self.klab_ok = (torch.from_numpy(x).to(self.ego.device) for x in (k, ok))
 
 
-def split_rows(tab, split_ref) -> tuple:
+def split_rows(tab, split_ref, b2d_split=None) -> tuple:
+    """Train / dev rows: NAVSIM rows by token (<split_ref>-train / -dev), b2d_* rows (tab["is_b2d"]) by route (tab["log"]; <b2d_split>-train / -val)."""
     from jevdrive.data import splits
     tr, dv = splits.load(f"{split_ref}-train"), splits.load(f"{split_ref}-dev")
     toks = tab["names"]
-    return np.flatnonzero(tr.mask(toks)), np.flatnonzero(dv.mask(toks)), (tr, dv)
+    trm, dvm, sp = tr.mask(toks), dv.mask(toks), [tr, dv]
+    if b2d_split and tab.get("is_b2d") is not None and tab["is_b2d"].any():
+        bt, bv = splits.load(f"{b2d_split}-train"), splits.load(f"{b2d_split}-val")
+        trm |= tab["is_b2d"] & bt.mask(tab["log"])
+        dvm |= tab["is_b2d"] & bv.mask(tab["log"])
+        sp += [bt, bv]
+    return np.flatnonzero(trm), np.flatnonzero(dvm), tuple(sp)
 
 
 # ---------------------------------------------------------------- losses
@@ -352,14 +391,17 @@ def main(a):
     dev = torch.device("cuda")
     cfg = Cfg(arm=a.arm, seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data), split=a.split, frames=a.frames, host=a.host,
               warmup=a.warmup, eval_every=a.eval_every,
-              hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, hinge_labels=a.hinge_labels,
+              hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, hinge_labels=tuple(a.hinge_labels), hinge_footprint=tuple(a.hinge_footprint),
+              b2d_split=a.b2d_split, b2d_mass=a.b2d_mass,
               turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
               act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
-    tabs = np.concatenate([np.load(data_dir() / "runs" / "op_parity" / "cache" / d / "tab.npz")["names"] for d in cfg.data])
-    tr_rows, dv_rows, sp = split_rows({"names": tabs}, cfg.split)
+    tz = [np.load(data_dir() / "runs" / "op_parity" / "cache" / d / "tab.npz") for d in cfg.data]
+    tabs = dict(names=np.concatenate([z["names"] for z in tz]), log=np.concatenate([z["log"] for z in tz]),
+                is_b2d=np.concatenate([np.full(len(z["names"]), d.startswith("b2d_")) for d, z in zip(cfg.data, tz)]))
+    tr_rows, dv_rows, sp = split_rows(tabs, cfg.split, cfg.b2d_split)
     S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames, host=cfg.host)
     model = PModel(cfg.arm, act=bool(cfg.act_lab)).to(dev)
     if cfg.act_lab in ("log", "logwin"):
@@ -370,7 +412,7 @@ def main(a):
     hinge = None
     if cfg.hinge_lam > 0:
         from drivable_hinge import Hinge
-        hinge = Hinge(data_dir() / cfg.hinge_labels, S.tab["names"], dev, cfg.hinge_margin)
+        hinge = Hinge([data_dir() / f for f in cfg.hinge_labels], S.tab["names"], dev, cfg.hinge_margin, list(cfg.hinge_footprint))
         print(f"hinge lambda {cfg.hinge_lam}, margin {cfg.hinge_margin}: labels cover {hinge.coverage:.4f} of {S.n} rows", flush=True)
     LS = Losses(model.net, cfg, tstd, S.di, S.pi, dev, hinge)
     opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}] + ([{"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}] if new else []),
@@ -381,7 +423,8 @@ def main(a):
     run = ctx.__enter__() if ctx else None
     try:
         if run:
-            run.use_split(sp[0]), run.use_split(sp[1])
+            for x in sp:
+                run.use_split(x)
             run.info(f"{tag}: train {len(tr_rows)} dev {len(dv_rows)} rows, base {sum(p.numel() for p in base) / 1e6:.1f}M, "
                      f"adapter {sum(p.numel() for p in new) / 1e6:.2f}M, world {world}")
         t0, hist = time.time(), []
@@ -394,15 +437,30 @@ def main(a):
             fut = np.nan_to_num(S.tb["fut"][:, :, 2].astype(np.float64))           # logged yaw of the 8 future poses (rear-axle frame); no log -> 0
             dy = np.abs(np.degrees(np.unwrap(fut, axis=1)[:, -1]))
             turn = dy > 20
+        if cfg.b2d_mass > 0:                                                    # share of the draws from the b2d_* rows; turn balancing inside them
+            b = S.is_b2d[tr_rows]
+            assert b.any() and (~b).any(), "--b2d-mass needs b2d_* and other rows in the train split"
+            w = np.where(b, cfg.b2d_mass / b.sum(), (1 - cfg.b2d_mass) / (~b).sum())
             if cfg.turn_bal:
-                bi = np.digitize(dy[tr_rows], [5, 20, 45])
-                nat = np.bincount(bi, minlength=4) / len(tr_rows)
+                bi = np.digitize(dy[tr_rows][b], [5, 20, 45])
+                nat = np.bincount(bi, minlength=4) / len(bi)
                 tgt = np.asarray([float(x) for x in cfg.turn_bal.split(",")])
-                w = tgt / np.maximum(nat, 1e-9)
-                pw = w[bi] / w[bi].sum()
+                wb = (tgt / np.maximum(nat, 1e-9))[bi]
+                w[b] = cfg.b2d_mass * wb / wb.sum()
                 if run:
-                    run.info(f"turn-balanced sampling: natural mass {np.round(nat, 3).tolist()}, target {tgt.tolist()}, per-token weights {np.round(w / w[0], 3).tolist()} "
-                             f"(relative to the < 5 deg bin); anchor off on turning tokens: {cfg.anchor_off_turn} ({turn[tr_rows].mean():.3f} of train rows)")
+                    run.info(f"B2D turn bins (<5, 5-20, 20-45, >45 deg): natural {np.round(nat, 3).tolist()}, target {tgt.tolist()}")
+            pw = w / w.sum()
+            if run:
+                run.info(f"b2d mass {cfg.b2d_mass}: {int(b.sum())} B2D / {int((~b).sum())} other train rows")
+        elif cfg.turn_bal:
+            bi = np.digitize(dy[tr_rows], [5, 20, 45])
+            nat = np.bincount(bi, minlength=4) / len(tr_rows)
+            tgt = np.asarray([float(x) for x in cfg.turn_bal.split(",")])
+            w = tgt / np.maximum(nat, 1e-9)
+            pw = w[bi] / w[bi].sum()
+            if run:
+                run.info(f"turn-balanced sampling: natural mass {np.round(nat, 3).tolist()}, target {tgt.tolist()}, per-token weights {np.round(w / w[0], 3).tolist()} "
+                         f"(relative to the < 5 deg bin); anchor off on turning tokens: {cfg.anchor_off_turn} ({turn[tr_rows].mean():.3f} of train rows)")
 
         def draw():                                                             # the rng order of the GPU-store loop (same row stream)
             r = rng.choice(tr_rows, nB, replace=len(tr_rows) < nB, p=pw)
@@ -460,6 +518,9 @@ def main(a):
                     run.status(f"step {step + 1}/{cfg.steps}")
             if run and ((step + 1) % cfg.eval_every == 0 or step + 1 == cfg.steps):
                 ev = dev_eval(model.eval(), S, dv_rows, LS.W)
+                dvb = dv_rows[S.is_b2d[dv_rows]]
+                if len(dvb) and len(dvb) < len(dv_rows):
+                    ev |= {"b2d_" + k: v for k, v in dev_eval(model, S, dvb, LS.W).items()}
                 model.train()
                 run.scalars({f"dev/{k}": v for k, v in ev.items()}, step + 1)
                 run.info(f"dev @ {step + 1}: " + ", ".join(f"{k} {v:.3f}" for k, v in ev.items()))
@@ -496,7 +557,10 @@ if __name__ == "__main__":
     ap.add_argument("--eval-every", type=int, default=200)
     ap.add_argument("--hinge-lam", type=float, default=0.0, help="weight of the footprint drivable-area SDF hinge on the plan (0 = off)")
     ap.add_argument("--hinge-margin", type=float, default=0.3)
-    ap.add_argument("--hinge-labels", default=Cfg.hinge_labels)
+    ap.add_argument("--hinge-labels", nargs="+", default=list(Cfg.hinge_labels), help="hinge label file(s) under $DATA_DIR (the first that labels a row wins)")
+    ap.add_argument("--hinge-footprint", nargs="+", default=list(Cfg.hinge_footprint), help="footprint of each --hinge-labels file: pacifica | mkz")
+    ap.add_argument("--b2d-split", default=Cfg.b2d_split)
+    ap.add_argument("--b2d-mass", type=float, default=0.0, help="share of imitation draws from the b2d_* rows (turn balancing then acts inside them)")
     ap.add_argument("--turn-bal", default="", help="target sampling mass per |heading change| bin <5,5-20,20-45,>45 deg, e.g. 0.35,0.15,0.25,0.25")
     ap.add_argument("--anchor-off-turn", action="store_true", help="no anchor rows on tokens with logged |heading change| > 20 deg")
     ap.add_argument("--late-lat-w", type=float, default=1.0, help="weight on y / yaw imitation terms of poses at >= 2 s")
