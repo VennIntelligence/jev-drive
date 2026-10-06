@@ -54,7 +54,7 @@ def run(model: str, bench: str, dry: bool = False, priority: float = 0.0, gpus=N
     """Submit one model x bench run to the GPU pool; returns its run dir (idempotent: finished stages are skipped)."""
     from . import runner
     d, st = plan(model, bench, **kw)
-    name = f"bn-{bench[:3]}-{model}" + (f"-{kw['preset']}" if bench == "hugsim" and kw.get("preset") else "")
+    name = f"bn-{bench}-{model}" + (f"-{kw['preset']}" if bench == "hugsim" and kw.get("preset") else "")
     runner.submit(d, name, st, dry=dry, priority=priority, gpus=gpus)
     if not dry:
         runner.status(d, f"submitted: {', '.join(s.name for s in st if not Path(s.done).exists()) or 'nothing left'}")

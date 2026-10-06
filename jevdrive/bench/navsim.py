@@ -71,6 +71,7 @@ def cache_dir(data: str, frames: str) -> Path:
 # ---------------------------------------------------------------- stages
 def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "", procs: int = 0) -> list:
     data = NAVSIM[bench]["data"]
+    ol_root(data)                                            # plans/ and the meta.json link that op_interp reads
     S = []
     if m.family == "wajepa":
         raise SystemExit(f"{m.name} on {bench}: stored reference only ({m.stored.get(bench)}); its runner is experiments/top10 "
