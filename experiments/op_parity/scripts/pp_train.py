@@ -10,7 +10,13 @@ Every arm: same rows, same row order (seeded), same targets, same steps.
 
 Batch rows: (1 - d_frac) imitation rows (plan -> logged 8 poses x, y, yaw at 0.5 .. 4 s; every non-plan head distilled to shipped) and d_frac
 anchor rows (new inputs zeroed, plan + every head distilled to shipped on the same navtrain frames: the decision-137 guard, built from
-navtrain only). Multi-GPU: torchrun -> DDP-style gradient all-reduce, each rank its own row stream; single GPU without torchrun.
+navtrain only).
+
+Joint action arms (plans/2026-10-07-joint-action-prereg.md, --act-lab): the on-policy action pathway is trainable too and action[0] (the
+lateral command openpilot steers with: desired curvature = action[0] / max(1, v)^2, + = right) is no longer distilled to shipped; it is
+fitted on every row to a label x max(1, v0)^2: `plan` the curvature of the model's own (detached) plan over 0.5-1.5 s (= HUGSIM
+spec_plan_smooth), `log` the logged curvature at t + 0.275 s (cubic spline through the 4 history + 8 future poses), `logwin` the logged
+curvature over 0.5-1.5 s. Speed weight min(1, v0 / 3); vy / ay of the ego input zeroed on a fraction --ego-lat-drop of rows (HUGSIM feeds 0). Multi-GPU: torchrun -> DDP-style gradient all-reduce, each rank its own row stream; single GPU without torchrun.
 
   python experiments/op_parity/scripts/pp_train.py --arm P2 --steps 600 --data lb_navtrain lb_h1train [--tag pilot]
 """
@@ -35,6 +41,9 @@ AT = (0.275, 0.525)
 T8 = 0.5 * np.arange(1, 9)
 SIG_X, SIG_Y, SIG_PSI = 0.3 + 0.2 * T8, 0.1 + 0.1 * T8, np.radians(1.0 + 1.0 * T8)
 ARMS = {"P1": dict(ego=False, side=False), "P2": dict(ego=True, side=False), "P3": dict(ego=True, side=True)}
+ACT_COL = 2062                                    # raw output column of action[0] mu (lateral; openpilot sign, + = right turn)
+ACT_T, ACT_WIN = 0.275, (0.5, 1.5)                # lateral action time; the spec_plan_smooth window (jevdrive/openpilot/model.py)
+EGO_LAT = [5, 7]                                  # vy / 10, ay / 3 in parity_adapter.ego_features
 
 
 @dataclass
@@ -63,6 +72,9 @@ class Cfg:
     turn_bal: str = ""                    # turn-balanced sampling: target mass per |heading change| bin (<5, 5-20, 20-45, >45 deg), "a,b,c,d"; "" = off
     anchor_off_turn: bool = False         # no anchor rows on tokens with logged |heading change| > 20 deg
     late_lat_w: float = 1.0               # loss weight on the y and yaw terms of the poses at >= 2 s (imitation rows), 1 = off
+    act_lab: str = ""                     # action[0] label: "" distilled to shipped (P2 recipe) | plan | log | logwin (module docstring)
+    act_lam: float = 3.0
+    ego_lat_drop: float = 0.0             # fraction of rows with vy / ay of the ego input zeroed (own rng stream; row order unchanged)
 
 
 def proot(*p) -> _pl.Path:
@@ -72,11 +84,20 @@ def proot(*p) -> _pl.Path:
 
 
 # ---------------------------------------------------------------- model
+def act_weights(model="cinque") -> list[str]:
+    """Float initializers of the on-policy action pathway (its temporal summarizer + action hydra), disjoint from L.pol_weights."""
+    import onnx
+    g = onnx.load(str(A.MODELS_DIR / A.FILES[model]), load_external_data=False).graph
+    w = sorted(t.name for t in g.initializer if t.name.startswith("model.on_policy.") and t.data_type in (1, 10, 11, 16) and len(t.dims) >= 1)
+    assert w and not set(w) & set(L.pol_weights(model)), "on-policy weights missing or shared with the plan pathway"
+    return w
+
+
 class PModel(nn.Module):
-    def __init__(self, arm: str, dtype=torch.float16, pol: bool = True):
+    def __init__(self, arm: str, dtype=torch.float16, pol: bool = True, act: bool = False):
         super().__init__()
         self.arm = arm
-        tr = L.pol_weights() if pol else []
+        tr = (L.pol_weights() if pol else []) + (act_weights() if act else [])
         self.net = A.load("cinque", dtype, trainable=tr)
         k = ARMS.get(arm, dict(ego=False, side=False))
         self.adapter = PA.ParityAdapter(use_ego=k["ego"], use_side=k["side"]) if (k["ego"] or k["side"]) else None
@@ -200,7 +221,12 @@ class Store:
         self.has_fut = t(~np.isnan(tb["fut"][:, 0, 0]))
         self.cam_x = t(tb["cam"][:, 0].astype(np.float32))
         self.tc = t(np.where(tb["lht"][:, None], [[0.0, 1.0]], [[1.0, 0.0]]).astype(np.float32))
+        self.v0 = t(tb["speed"].astype(np.float32))
         self.n = len(sel)
+
+    def act_labels(self, kind: str):
+        k, ok = log_curv(self.tb, kind)
+        self.klab, self.klab_ok = (torch.from_numpy(x).to(self.ego.device) for x in (k, ok))
 
 
 def split_rows(tab, split_ref) -> tuple:
@@ -220,6 +246,12 @@ class Losses:
         self.pi = torch.as_tensor(pi, device=dev)
         self.plan_cols = torch.as_tensor(np.isin(di, pi), device=dev)
         self.tstd = tstd
+        self.dmask = torch.ones(len(di), device=dev)
+        if cfg.act_lab:
+            j = int(np.flatnonzero(np.asarray(di) == ACT_COL)[0])
+            self.dmask[j] = 0.0                                                 # action[0] leaves the distillation
+            self.asd = tstd[j]
+            self.Wk = torch.as_tensor(R2.t_weights(np.asarray(ACT_WIN)), device=dev)
 
     def dist(self, plan, cam_x, tx, ty, tpsi, wl=None):
         x, y, psi = rear(plan, cam_x, self.W)
@@ -243,13 +275,51 @@ class Losses:
         if anchor.any():
             tx, ty, tpsi = rear(S.t_plan[rows][anchor], S.cam_x[rows][anchor], self.W)
             Ls["cons"] = self.dist(plan[anchor], S.cam_x[rows][anchor], tx, ty, tpsi).mean()
-        e = ((out[:, self.di] - S.t_out[rows]) / self.tstd).pow(2)
+        e = ((out[:, self.di] - S.t_out[rows]) / self.tstd).pow(2) * self.dmask
         num = e[:, ~self.plan_cols].sum(1) + (~imit).float() * e[:, self.plan_cols].sum(1)
         Ls["distill"] = (num / e.shape[1]).mean()
         total = c.lam_i * Ls.get("imit", 0.0) + c.lam_c * Ls.get("cons", 0.0) + c.lam_d * Ls["distill"]
         if "hinge" in Ls:
             total = total + c.hinge_lam * Ls["hinge"]
+        if c.act_lab:
+            if c.act_lab == "plan":
+                k, ok = plan_curv(plan.detach(), self.Wk), torch.ones(len(rows), dtype=torch.bool, device=out.device)
+            else:
+                k, ok = S.klab[rows], S.klab_ok[rows]
+            v0 = S.v0[rows]
+            w = (v0 / 3).clamp(0, 1) * ok
+            z = (out[:, ACT_COL] - k * v0.clamp_min(1).pow(2)) / self.asd
+            Ls["act"] = (w * F.huber_loss(z, torch.zeros_like(z), reduction="none", delta=1.0)).sum() / w.sum().clamp_min(1.0)
+            total = total + c.act_lam * Ls["act"]
         return total, Ls
+
+
+def plan_curv(plan: torch.Tensor, Wk: torch.Tensor) -> torch.Tensor:
+    """(B, 33, 15) plans -> mean curvature over the window of Wk (2, 33): heading change / arc length (floored at 1 m x window), as
+    jevdrive.openpilot.model.curvature_window, in the plan's own sign (= the action's)."""
+    s = torch.cat([plan.new_zeros(plan.shape[0], 1), torch.linalg.norm(plan[:, 1:, :2] - plan[:, :-1, :2], dim=-1).cumsum(1)], 1)
+    sq, pq = s @ Wk.T, plan[..., 11] @ Wk.T
+    return (pq[:, 1] - pq[:, 0]) / (sq[:, 1] - sq[:, 0]).clamp_min(ACT_WIN[1] - ACT_WIN[0])
+
+
+def log_curv(tb: dict, kind: str) -> tuple:
+    """Logged curvature labels in the action sign (+ = right) from the rear-axle poses (x fwd, y left, yaw left): `log` d psi / ds at
+    t = ACT_T of a cubic spline through the 4 history poses (-1.5 .. 0 s) and the 8 future ones (0.5 .. 4 s); `logwin` the heading change
+    over arc length between the logged poses at 0.5 and 1.5 s (floored at 1 m). -> (k (n,), ok (n,))."""
+    from scipy.interpolate import CubicSpline
+    fut = tb["fut"].astype(np.float64)
+    ok = ~np.isnan(fut[:, :, :3]).any((1, 2))
+    P = np.concatenate([tb["pose"].astype(np.float64), np.nan_to_num(fut)], 1)
+    tt = np.r_[-1.5, -1.0, -0.5, 0.0, 0.5 * np.arange(1, 9)]
+    psi = np.unwrap(P[..., 2], axis=1)
+    s = np.concatenate([np.zeros((len(P), 1)), np.cumsum(np.linalg.norm(np.diff(P[..., :2], axis=1), axis=-1), 1)], 1)
+    if kind == "log":
+        k = CubicSpline(tt, psi, axis=1)(ACT_T, 1) / np.maximum(CubicSpline(tt, s, axis=1)(ACT_T, 1), 0.5)
+    elif kind == "logwin":
+        k = (psi[:, 6] - psi[:, 4]) / np.maximum(s[:, 6] - s[:, 4], ACT_WIN[1] - ACT_WIN[0])
+    else:
+        raise ValueError(kind)
+    return (-k).astype(np.float32), ok & np.isfinite(k)
 
 
 @torch.no_grad()
@@ -283,14 +353,18 @@ def main(a):
     cfg = Cfg(arm=a.arm, seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data), split=a.split, frames=a.frames, host=a.host,
               warmup=a.warmup, eval_every=a.eval_every,
               hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, hinge_labels=a.hinge_labels,
-              turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w)
+              turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
+              act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
     tabs = np.concatenate([np.load(data_dir() / "runs" / "op_parity" / "cache" / d / "tab.npz")["names"] for d in cfg.data])
     tr_rows, dv_rows, sp = split_rows({"names": tabs}, cfg.split)
     S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames, host=cfg.host)
-    model = PModel(cfg.arm).to(dev)
+    model = PModel(cfg.arm, act=bool(cfg.act_lab)).to(dev)
+    if cfg.act_lab in ("log", "logwin"):
+        S.act_labels(cfg.act_lab)
+    lrng = np.random.default_rng([cfg.seed, rank, 7])                       # ego_lat_drop: own stream, the row stream is unchanged
     base, new = model.groups()
     tstd = S.t_out[torch.as_tensor(tr_rows, device=dev)].float().std(0).clamp_min(1e-3)
     hinge = None
@@ -355,6 +429,9 @@ def main(a):
             for g in opt.param_groups:
                 g["lr"] = g["base"] * min(1.0, (step + 1) / cfg.warmup) * 0.5 * (1 + np.cos(np.pi * frac))
             ego = S.ego[rows] * (~anchor)[:, None].float()                           # present = 0 on anchor rows -> the bias is exactly 0
+            if cfg.ego_lat_drop > 0:
+                dm = torch.as_tensor(lrng.random(nB) < cfg.ego_lat_drop, device=dev)
+                ego[:, EGO_LAT] = ego[:, EGO_LAT] * (~dm)[:, None].float()
             out = model(front_b, ego, S.tc[rows], side, smask)
             total, Ls = LS(out, S, rows, anchor)
             if not torch.isfinite(total):
@@ -423,4 +500,7 @@ if __name__ == "__main__":
     ap.add_argument("--turn-bal", default="", help="target sampling mass per |heading change| bin <5,5-20,20-45,>45 deg, e.g. 0.35,0.15,0.25,0.25")
     ap.add_argument("--anchor-off-turn", action="store_true", help="no anchor rows on tokens with logged |heading change| > 20 deg")
     ap.add_argument("--late-lat-w", type=float, default=1.0, help="weight on y / yaw imitation terms of poses at >= 2 s")
+    ap.add_argument("--act-lab", default="", choices=["", "plan", "log", "logwin"], help="train action[0] on this label (joint action arms)")
+    ap.add_argument("--act-lam", type=float, default=3.0)
+    ap.add_argument("--ego-lat-drop", type=float, default=0.0, help="fraction of rows with vy / ay of the ego input zeroed")
     main(ap.parse_args())
