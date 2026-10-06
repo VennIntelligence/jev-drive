@@ -93,6 +93,9 @@ def report(arms, execs, routes, out):
     import junction_forced_report as F
     import junction_rig122_report as J
     import numpy as np
+    sys.path.insert(0, str(REPO / "experiments/op_route_ft/scripts"))
+    import rft_split as RS                                   # steering split of a turn: signed requested curvature, turn-in arc, cause
+    rows_of = RS.rows_of
     lab = F.load_labels()
     keys = set(C.turn_keys())
     rows, ds = [], []
@@ -104,22 +107,19 @@ def report(arms, execs, routes, out):
                 s = J.score_attempt(rid, f"{arm}/{ex}", att, J.route_geometry(att, rid, lab), lab)
                 if s is None:
                     continue
-                src = "k_sm" if ex == "plan_smooth" else "act_k"        # the curvature that rides to the op path
-                pl = [p for p in map(json.loads, open(att / "plans.jsonl")) if not p.get("warm") and src in p]
-                tt = np.array([t["t"] for t in map(json.loads, open(att / "ticks.jsonl")) if "truth" in t])
                 ds.append(dict(arm=arm, exec=ex, route=rid, DS=round(s["rr"][0], 1), RC=round(s["rr"][1], 1), status=s["rr"][2],
                                hits=sum(c["kind"].startswith("hit") for c in s["cols"])))
+                RS.rows_of = lambda q, ex=ex: [dict(p, act_k=p.get("k_sm", p["act_k"])) if ex == "plan_smooth" and Path(q).name == "plans.jsonl" else p
+                                               for p in rows_of(q)]          # split_one reads act_k: for plan_smooth the executed curvature is k_sm
+                sp = {d["turn"]: d for d in RS.split_one(rid, f"{arm}/{ex}", att, J.route_geometry(att, rid, lab), lab)}
                 for r in s["rows"]:
                     if (r["route"], r["turn"]) not in keys:
                         continue
-                    kk = None
-                    if r["entered"] and pl:
-                        e = s["traj"][r["turn"]][1]
-                        t0, t1 = tt[e["span"][0]], tt[min(e["span"][1], len(tt) - 1)]
-                        w = [abs(p[src]) for p in pl if t0 <= p["t"] <= t1]
-                        kk = max(w) if w else None
+                    d = sp[r["turn"]]
+                    sg = d.get("s_peak")
                     rows.append(dict(arm=arm, exec=ex, route=rid, turn=r["turn"], kind=r["kind"], forced=r["forced"], angle=r["angle"], need=r["need"],
-                                     req_peak=None if kk is None else round(kk, 3), ratio=None if kk is None else round(kk / r["need"], 2),
+                                     req_peak=None if sg is None else round(sg, 3), ratio=None if sg is None else round(sg / r["need"], 2),
+                                     turn_in_m=d.get("tin_m"), v_med=d.get("v_med"), stop_frac=d.get("stop_frac"), cause=RS.classify(d),
                                      cls=classify(r), vmin=r["vmin"], coll=r["coll"]))
     out.mkdir(parents=True, exist_ok=True)
     for name, data in (("turns", rows), ("routes", ds)):
@@ -139,10 +139,10 @@ def report(arms, execs, routes, out):
             rat = [r["ratio"] for r in R if r["ratio"] is not None]
             L.append("| %s | %s | %d | %d | %d | %d | %d | %d | %s | %s |" % (arm, ex, len(R), n("turned"), n("went straight"), n("off-route"), n("collision"),
                      n("never entered"), "%.2f" % np.median(rat) if rat else "n/a", "%.1f (%d)" % (np.mean(D), len(D)) if D else "n/a"))
-    L += ["", "| arm | exec | route:turn | kind | need 1/m | req peak 1/m | ratio | class | vmin |", "|" + "---|" * 9]
+    L += ["", "| arm | exec | route:turn | kind | need 1/m | signed req peak 1/m | ratio | class | steering cause | turn-in m | v median | stopped frac |", "|" + "---|" * 12]
     for r in rows:
-        L.append("| %s | %s | %s:%s | %s | %.3f | %s | %s | %s | %s |" % (r["arm"], r["exec"], r["route"], r["turn"], "forced" if r["forced"] else "choice",
-                 r["need"], r["req_peak"], r["ratio"], r["cls"], r["vmin"]))
+        L.append("| %s | %s | %s:%s | %s | %.3f | %s | %s | %s | %s | %s | %s | %s |" % (r["arm"], r["exec"], r["route"], r["turn"], "forced" if r["forced"] else "choice",
+                 r["need"], r["req_peak"], r["ratio"], r["cls"], r["cause"], r["turn_in_m"], r["v_med"], r["stop_frac"]))
     (out / "b2d_plan_smooth_tables.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 
