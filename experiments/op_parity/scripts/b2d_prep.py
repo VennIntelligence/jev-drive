@@ -77,12 +77,11 @@ def _clip_job(r: dict) -> dict:
     out = dict(route=r["route_id"], clip=r["clip"], type=r["type"], town=r["town"], turn=r["turn"], n=n, t_col=t_col, d_col=d_col, n_rows=len(t0))
     if len(t0) == 0:
         return out | dict(t0=t0)
-    pos = {int(t): k for k, t in enumerate(sd["ticks"])}
-    has = np.array([int(t) in pos for t in t0])
+    st, sd_all = sd["ticks"], sd["sdf"]                                 # NpzFile reads a member on every access: load once
+    j = np.searchsorted(st, t0)
+    has = (j < len(st)) & (st[np.minimum(j, len(st) - 1)] == t0)
     sdf = np.zeros((len(t0), 128, 96), np.float16)
-    for k, t in enumerate(t0):
-        if has[k]:
-            sdf[k] = sd["sdf"][pos[int(t)]]
+    sdf[has] = sd_all[j[has]]
     g = lambda k: lab[k][t0]  # noqa: E731
     cmd = g("cmd")
     return out | dict(t0=t0, sdf=sdf, sdf_ok=has, ego=g("ego"), hist=g("hist"), vel=g("vel"), acc=g("acc"), cmd=cmd, fut=g("fut"), speed=g("speed"),
