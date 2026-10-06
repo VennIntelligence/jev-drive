@@ -57,6 +57,9 @@ class Cfg:
     host: bool = False                    # token arrays gathered per batch from the page cache (full navtrain) instead of held on the GPU
     frames: str = "gimm"                  # front protocol (prereg addendum 1): gimm (G) | warp (W) | keys (N)
     split: str = "navsim/op-parity-pilot"
+    hinge_lam: float = 0.0                # footprint drivable-area SDF hinge on the plan (lib/drivable_hinge.py), imitation rows only; 0 = off
+    hinge_margin: float = 0.3
+    hinge_labels: str = "runs/op_probe/labels/navtrain_all.npz"
 
 
 def proot(*p) -> _pl.Path:
@@ -206,8 +209,8 @@ def split_rows(tab, split_ref) -> tuple:
 
 # ---------------------------------------------------------------- losses
 class Losses:
-    def __init__(self, net, cfg: Cfg, tstd: torch.Tensor, di, pi, dev):
-        self.cfg = cfg
+    def __init__(self, net, cfg: Cfg, tstd: torch.Tensor, di, pi, dev, hinge=None):
+        self.cfg, self.hinge = cfg, hinge
         self.W = torch.as_tensor(R2.t_weights(T8), device=dev)
         self.s = [torch.as_tensor(x, dtype=torch.float32, device=dev) for x in (SIG_X, SIG_Y, SIG_PSI)]
         self.di = torch.as_tensor(di, device=dev)
@@ -228,6 +231,8 @@ class Losses:
         if imit.any():
             f = S.fut[rows][imit]
             Ls["imit"] = self.dist(plan[imit], S.cam_x[rows][imit], f[..., 0], f[..., 1], f[..., 2]).mean()
+            if self.hinge is not None:
+                Ls["hinge"] = self.hinge(*rear(plan[imit], S.cam_x[rows][imit], self.W), rows[imit])
         if anchor.any():
             tx, ty, tpsi = rear(S.t_plan[rows][anchor], S.cam_x[rows][anchor], self.W)
             Ls["cons"] = self.dist(plan[anchor], S.cam_x[rows][anchor], tx, ty, tpsi).mean()
@@ -235,6 +240,8 @@ class Losses:
         num = e[:, ~self.plan_cols].sum(1) + (~imit).float() * e[:, self.plan_cols].sum(1)
         Ls["distill"] = (num / e.shape[1]).mean()
         total = c.lam_i * Ls.get("imit", 0.0) + c.lam_c * Ls.get("cons", 0.0) + c.lam_d * Ls["distill"]
+        if "hinge" in Ls:
+            total = total + c.hinge_lam * Ls["hinge"]
         return total, Ls
 
 
@@ -267,7 +274,8 @@ def main(a):
         torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
     dev = torch.device("cuda")
     cfg = Cfg(arm=a.arm, seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data), split=a.split, frames=a.frames, host=a.host,
-              warmup=a.warmup, eval_every=a.eval_every)
+              warmup=a.warmup, eval_every=a.eval_every,
+              hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, hinge_labels=a.hinge_labels)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
@@ -277,7 +285,12 @@ def main(a):
     model = PModel(cfg.arm).to(dev)
     base, new = model.groups()
     tstd = S.t_out[torch.as_tensor(tr_rows, device=dev)].float().std(0).clamp_min(1e-3)
-    LS = Losses(model.net, cfg, tstd, S.di, S.pi, dev)
+    hinge = None
+    if cfg.hinge_lam > 0:
+        from drivable_hinge import Hinge
+        hinge = Hinge(data_dir() / cfg.hinge_labels, S.tab["names"], dev, cfg.hinge_margin)
+        print(f"hinge lambda {cfg.hinge_lam}, margin {cfg.hinge_margin}: labels cover {hinge.coverage:.4f} of {S.n} rows", flush=True)
+    LS = Losses(model.net, cfg, tstd, S.di, S.pi, dev, hinge)
     opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}] + ([{"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}] if new else []),
                             weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
@@ -378,4 +391,7 @@ if __name__ == "__main__":
     ap.add_argument("--host", action="store_true", help="gather token rows per batch from the memory-mapped caches (full navtrain)")
     ap.add_argument("--warmup", type=int, default=100)
     ap.add_argument("--eval-every", type=int, default=200)
+    ap.add_argument("--hinge-lam", type=float, default=0.0, help="weight of the footprint drivable-area SDF hinge on the plan (0 = off)")
+    ap.add_argument("--hinge-margin", type=float, default=0.3)
+    ap.add_argument("--hinge-labels", default=Cfg.hinge_labels)
     main(ap.parse_args())

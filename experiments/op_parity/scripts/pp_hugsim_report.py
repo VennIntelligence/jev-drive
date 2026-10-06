@@ -285,7 +285,7 @@ def report_full():
                 return g + " seed-mean", h[g + " seed-mean"]
             ts = [t for t in FULL_TAGS if grp(t) == g]
             return (ts[0], h[ts[0]]) if len(ts) == 1 else (None, None)
-        for ga, gb in (("P2", "P1"), ("P3", "P1"), ("P2", "P0")):
+        for ga, gb in (("P2", "P1"), ("P3", "P1"), ("P2", "P0"), ("P2H10", "P2"), ("P2H3", "P2"), ("P2H10", "P0")):
             (na, a), (nb, b) = resolve(ga), resolve(gb)
             if a is not None and b is not None:
                 comps.append((pr, a, b, na, nb))
