@@ -146,7 +146,7 @@ def main(a):
             c["pitch_p95_abs_deg"] = float(np.percentile(np.abs(pitch), 95))
             c["horizon_shift_p95_rows"] = float(910.0 * math.tan(math.radians(c["pitch_p95_abs_deg"])))
             c["sensor_frame_eq"] = bool((ego["sensor_frame"] == ego["frame"][:, None]).all()) if "sensor_frame" in ego else None
-            # time alignment from the pictures alone, at launches (>= 10 ticks below 0.05 m/s, then above 0.2 m/s at tick s): the first big
+            # time alignment from the pictures alone, at launches (5 ticks below 0.1 m/s, then above 0.2 m/s at tick s; spawn drop has vz): the first big
             # change of the ground just ahead (road frame rows 200-255, centre half) must be between pictures s - 1 and s (lag 0)
             from jevdrive.openpilot import frames as opf
             Yg = np.stack([opf.unpack_luma(x)[200:256, 128:384] for x in pairs[:, 0]]).astype(np.int16)
@@ -154,7 +154,7 @@ def main(a):
             sp = lab["speed"]
             lags = []
             for s_ in range(11, n - 3):
-                if sp[s_] > 0.2 and sp[s_ - 1] <= 0.2 and (sp[s_ - 10:s_ - 1] < 0.05).all():
+                if sp[s_] > 0.2 and sp[s_ - 1] <= 0.2 and (sp[s_ - 6:s_ - 1] < 0.1).all():
                     base = np.median(g[s_ - 9:s_ - 2])
                     w = np.where(g[s_ - 5:s_ + 3] > max(2 * base, base + 1.0))[0]
                     if len(w):
@@ -299,7 +299,8 @@ def _panels(path, clip, ego, lab, pairs, t0s, plan, r):
         caps.append({"t": round(float(ego["t"][t] - ego["t"][0]), 1), "speed": round(float(lab["speed"][t]), 1),
                      "cmd": int(lab["cmd"][t, :3].argmax()), "turn_dist": float(lab["turn_dist"][t]),
                      "ctl": [round(float(x), 2) for x in lab["ctl"][t]], "plan": last_plan is not None})
-    np.savez_compressed(path, frames=np.stack(frames), caps=json.dumps(caps), route=json.dumps(r))
+    jpg = [cv2.imencode(".jpg", f[:, :, ::-1], [cv2.IMWRITE_JPEG_QUALITY, 88])[1].tobytes() for f in frames]   # small: the link to the Mac is slow
+    np.savez(path, jpg=np.array(jpg, dtype=object), caps=json.dumps(caps), route=json.dumps(r))
 
 
 if __name__ == "__main__":

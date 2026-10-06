@@ -33,8 +33,13 @@ def main(a):
     small = ImageFont.truetype(FONT, 13)
     made = []
     for f in sorted(Path(a.panels).glob("*.npz")):
-        z = np.load(f)
-        frames, caps, r = z["frames"], json.loads(str(z["caps"])), json.loads(str(z["route"]))
+        z = np.load(f, allow_pickle=True)
+        caps, r = json.loads(str(z["caps"])), json.loads(str(z["route"]))
+        if "jpg" in z:
+            import io
+            frames = [np.asarray(Image.open(io.BytesIO(b)).convert("RGB")) for b in z["jpg"]]
+        else:
+            frames = z["frames"]
         imgs = []
         for fr, c in list(zip(frames, caps))[: a.max_frames]:
             im = Image.fromarray(fr)
