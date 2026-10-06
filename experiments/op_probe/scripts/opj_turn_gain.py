@@ -97,12 +97,12 @@ def cmd_hugsim(a):
                 d = Path(x.run_dir)
                 if not (d / "zs_steps.jsonl").exists():
                     continue
-                st = [json.loads(l) for l in open(d / "zs_steps.jsonl")]
+                st = [s for s in map(json.loads, open(d / "zs_steps.jsonl")) if "step" in s and "pos" in s]
                 oc = []
                 if (d / "sim.log").exists():
                     oc = [json.loads(m.group(1)) for m in (re.match(r"op_ctrl (\{.*\})", l) for l in open(d / "sim.log")) if m]
-                for i, s in enumerate(st):
-                    o = oc[i] if i < len(oc) else {}
+                for s in st:
+                    o = oc[s["step"]] if s["step"] < len(oc) else {}
                     rows.append(dict(preset=preset, arm=arm, scenario=x.scenario, scene=x.scene, step=s["step"], t=s["t"], x=s["pos"][0], z=s["pos"][1],
                                      theta=s["theta"], v=s["v"], steer=s["steer"], kappa=s.get("kappa"), act=o.get("act"), des=o.get("des"),
                                      real=o.get("real"), kmean=o.get("kmean"), n_steps=int(x.steps), end=x.end, hd=x.hdscore, dac=x.dac, nc=x.nc))
