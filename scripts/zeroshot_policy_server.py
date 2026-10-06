@@ -214,7 +214,7 @@ class OpenpilotModel:
                 state[k] = getattr(m, k)
         d = self.decode(raw, m.slices, float(meta.get("speed", 0.0)))
         info = {"prep_ms": prep["prep_ms"], "infer_ms": 1e3 * (time.perf_counter() - t1),
-                "curvature": d["curvature"], "accel": d["accel"], "engaged": d["engaged"]}
+                "curvature": d["curvature"], "curvature_smooth": d["curvature_smooth"], "accel": d["accel"], "engaged": d["engaged"]}
         return info, {"pos": d["plan_pos"].astype(np.float32), "vel": d["plan_vel"][:, 0].astype(np.float32),
                       "yaw": d["plan_yaw"].astype(np.float32), "t": self.t_idxs}
 

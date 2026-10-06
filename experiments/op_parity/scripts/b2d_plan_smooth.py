@@ -6,6 +6,8 @@ open-loop camera (1.59, 0, 1.86), route turn desire on, tm seed 2. Units are GPU
 `action` reference is decision 127's cached olnz run. Resumable.
 
   b2d_plan_smooth.py run    [--routes small|all|ID,ID,..] [--arms P2-F-s0,P2H10-F-s0,cinque] [--execs action,plan_smooth] [--wait] [--dry-run]
+  b2d_plan_smooth.py gif    --gif ARM:EXEC:ROUTE[,..] [--wait]   one recorded run (chase camera + every model input frame dump) per case, then
+                            experiments/op_closed_loop/scripts/junction_forced_gif.py <attempt> <dump> <out.gif> --route-turn <mi>
   b2d_plan_smooth.py report [--routes ...] [--out DIR]     per-turn table (class, requested curvature vs needed) + route DS, markdown + csv
 """
 import argparse
@@ -42,6 +44,21 @@ def units(arms, execs, routes):
                 out.append(C.b2d_unit("ps-%s-%s-k%d" % (arm.replace("-F-s0", "").replace("cinque", "C"), ex[:3], k), ids,
                                       DATA / "arms" / ("%s-%s-s%d-k%d" % (arm, ex, C.TURN_SEED, k)), C.TURN_SEED, True, onnx, priority=3,
                                       arm=ARM_ARB[ex], env=env))
+    return out
+
+
+def gif_units(spec):
+    """ARM:EXEC:ROUTE -> one-route record unit (rft_gif_lane.gif_unit's recipe: vlm_arb record agent + img_cl_server frame dump)."""
+    out = []
+    for g in spec.split(","):
+        arm, ex, rid = g.split(":")
+        onnx = None if arm == "cinque" else str(ONNX / f"pp-{arm}.onnx")
+        tag = "%s-%s-%s" % (arm, ex, rid)
+        u = C.b2d_unit("psg-%s-%s-%s" % (arm.replace("-F-s0", "").replace("cinque", "C"), ex[:3], rid), [rid], DATA / "gif" / tag, C.TURN_SEED, True, onnx,
+                       priority=3, arm=ARM_ARB[ex], env={} if arm == "cinque" else {"PARITY_TAG": arm})
+        u["env"].update(OP_ARB_AGENT="experiments/vlm_arb/scripts/vlm_arb_record_agent.py", GIF_BASE="vlm", VLM_ARM="drive",
+                        SRV_PY="experiments/op_img_cmd/scripts/img_cl_server.py", IMG_CL_DUMP=str(DATA / "gif" / "dump" / tag), IMG_CL_DUMP_EVERY="1")
+        out.append(u)
     return out
 
 
@@ -132,17 +149,19 @@ def report(arms, execs, routes, out):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("cmd", choices=("run", "report"))
+    ap.add_argument("cmd", choices=("run", "report", "gif"))
     ap.add_argument("--routes", default="small")
     ap.add_argument("--arms", default="P2-F-s0,P2H10-F-s0,cinque")
     ap.add_argument("--execs", default="action,plan_smooth")
+    ap.add_argument("--gif", default="")
     ap.add_argument("--wait", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--out", default=str(REPO / "experiments/op_parity/results/b2d_plan_smooth"))
     a = ap.parse_args()
     arms, execs, routes = a.arms.split(","), a.execs.split(","), route_list(a.routes)
-    if a.cmd == "run":
-        ids = C.submit_units(units(arms, execs, routes), DATA / "pool", "op_parity b2d_plan_smooth", dry_run=a.dry_run)
+    if a.cmd in ("run", "gif"):
+        us = units(arms, execs, routes) if a.cmd == "run" else gif_units(a.gif)
+        ids = C.submit_units(us, DATA / "pool", "op_parity b2d_plan_smooth", dry_run=a.dry_run)
         if a.wait and not a.dry_run:
             bad = C.wait_units(ids)
             print("units not done: %s" % bad if bad else "all units done", flush=True)

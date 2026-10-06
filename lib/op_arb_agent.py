@@ -79,7 +79,6 @@ import zeroshot_wire as wire  # noqa: E402
 from b2d_controller_adapter import RouteAdapter, world_to_local  # noqa: E402
 sys.path.insert(0, str(_repo))
 from jevdrive.openpilot import interface as IF  # noqa: E402
-from jevdrive.openpilot.model import SMOOTH_WINDOW, curvature_window  # noqa: E402
 
 
 def _json_scalar(value):
@@ -616,7 +615,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         geom = np.r_[[[0.0, 0.0]], op_path] if lat_src == "op" and plan_exec else bpath
         arb_path = place(geom, s_fin)
         self.want_go = bool(s_fin[7] - s_fin[3] > 0.5) and not warm   # the profile moves >= 0.5 m/s at 1-2 s
-        k_sm = curvature_window(np.asarray(out["pos"], float)[:, :2], np.asarray(out["yaw"], float), *SMOOTH_WINDOW)   # always logged
+        k_sm = float(info["curvature_smooth"])           # the server's model.curvature_window of the plan (0.5-1.5 s), always logged
         if mode == "drive":
             self.curvature = None if lat_src != "op" or plan_exec else k_sm if A["curv_src"] == "plan_smooth" else float(info["curvature"])
             if self.curvature is not None and A["zone_gain"] != 1.0 and any(a0 <= self.route.s[self.route.i] <= b0 for a0, b0 in self.gain_zones):
