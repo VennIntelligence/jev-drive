@@ -6,7 +6,7 @@ HUGSIM sets (scenario paths relative to $DATA_DIR/datasets/hugsim/scenarios):
   spec29   spin10 + the 19 other decision-118 stuck scenarios (experiments/op_parity/scripts/pp_hugsim_spec.txt)
   small11  the 11-scenario guard / leaderboard-audit subset (experiments/leaderboard_audit/scripts/unified_hugsim_small.txt)
   turn23   the 23 turning scenarios of all64: recorded route heading range >= 30 deg (experiments/op_probe/results/turn-gain.md),
-           frozen in jevdrive/bench/data/hugsim_turn23.txt
+           frozen in jevdrive/bench/lists/hugsim_turn23.txt
   <file>   any .txt list of scenario paths; <scenario stem> for one scenario; a comma list of stems
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ HUGSIM_SETS = {
     "spin10": REPO / "experiments/hugsim/scripts/derot_spin10.txt",
     "spec29": REPO / "experiments/op_parity/scripts/pp_hugsim_spec.txt",
     "small11": REPO / "experiments/leaderboard_audit/scripts/unified_hugsim_small.txt",
-    "turn23": HERE / "data/hugsim_turn23.txt",
+    "turn23": HERE / "lists/hugsim_turn23.txt",
 }
 TURN_DEG = 30.0
 
