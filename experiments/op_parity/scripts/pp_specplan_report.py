@@ -47,8 +47,7 @@ def extract():
     turn = {k: float(np.degrees(np.ptp(np.unwrap(np.asarray(v["yaw"], float))))) for k, v in routes.items()}
     want = {pfx + a: (pr, a) for a in ARMS for pr, pfx in PRE.items()}
     last = {}
-    from jevdrive.bench.compat import parity_hugsim_rows
-    for r in parity_hugsim_rows(want):
+    for r in csv.DictReader(open(D / "runs/op_parity/hugsim/results.csv")):
         if r["tag"] in want and r["scenario"] in scen and r["end"] != "crash":
             last[(r["tag"], r["scenario"])] = r
     rows, traces = [], {}
