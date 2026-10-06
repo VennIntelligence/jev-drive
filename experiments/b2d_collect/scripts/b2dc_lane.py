@@ -132,12 +132,14 @@ def main(a):
     W = 1 if a.stage == "smoke" else min(a.workers, max(1, len(ids) // jobs))
     pool_dir = ROOT / "pool" / a.stage
     cids = []
-    for j in range(jobs):
+    for j in range(0 if a.skip_collect else jobs):
         cmd = P.b2d_cmd(data, ids, routes=str(ROUTES / "routes.xml"), agent=str(S / "b2dc_agent.py"), agent_config=f"{cfg}+{a.stage}",
                         python=PY_SIM, max_attempts=2, stall_s=480, route_timeout_s=3600, extra=["--tm-seed-from-id"])
         cids.append(L.sub(cmd, f"b2dc-{a.stage}-c{j}", pool_dir / f"collect{j}", carla=W, vram_gb=a.vram_per_worker * W,
                           cpu=a.cpu_per_worker * W, ram_gb=6 * W, env=env, timeout_h=a.timeout_h))
     L.status(f"collect: {jobs} job(s) x {W} workers")
+    if a.skip_collect:                    # b2d_run exits 1 when any route never finished (7 of 1000 in the full run); the completion gate judges
+        L.status("collect skipped (--skip-collect): labelling what was collected")
     L.wait(cids, "collect")
     lid = L.sub([PY_SIM, str(S / "b2dc_labels.py"), "--data", str(data)], f"b2dc-{a.stage}-labels", pool_dir / "labels", vram_gb=0.5,
                 cpu=min(24, max(2, len(ids))), ram_gb=24)
@@ -165,4 +167,5 @@ if __name__ == "__main__":
     ap.add_argument("--timeout-h", type=float, default=24.0)
     ap.add_argument("--crf", type=int, default=0)
     ap.add_argument("--gif", type=int, default=4)
+    ap.add_argument("--skip-collect", action="store_true", help="go straight to labels / check (collect jobs ended, some routes unfinished)")
     main(ap.parse_args())
