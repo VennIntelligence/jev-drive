@@ -27,7 +27,7 @@ from jevdrive.common import data_dir  # noqa: E402
 from jevdrive.run import Run, cli_args  # noqa: E402
 
 CARLA_ROOT = Path(os.environ.get("CARLA_ROOT", data_dir() / "third_party/carla/CARLA_0.9.15"))
-MANIFEST = data_dir() / "runs/b2d_collect/routes/v1/manifest.csv"
+MANIFESTS = [data_dir() / f"runs/b2d_collect/routes/{v}/manifest.csv" for v in ("v1", "v2")]
 
 
 def xodr(town):
@@ -86,9 +86,10 @@ def work(args):
 def main(a):
     data = Path(a.data)
     man = {}
-    if MANIFEST.exists():
-        with open(MANIFEST) as fh:
-            man = {r["route_id"]: r for r in csv.DictReader(fh)}
+    for mf in MANIFESTS:
+        if mf.exists():
+            with open(mf) as fh:
+                man.update({r["route_id"]: r for r in csv.DictReader(fh)})
     with Run("b2d_collect", f"labels-{data.name}", config=vars(a)) as run:
         from jevdrive.data import splits
         run.use_split(splits.load("b2d/b2dc-train"))

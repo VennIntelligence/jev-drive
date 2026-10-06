@@ -180,15 +180,23 @@ def main(a):
             t0s = t0s[lab["fut_ok"][t0s]] if len(t0s) else t0s
             t0s = t0s[(t0s + max(LAGS) < n) & (t0s + min(LAGS) - 32 >= 0)] if len(t0s) else t0s
             if len(t0s):
+                if len(t0s) > a.max_samples:                              # long clips: evenly spaced subset (host / GPU memory)
+                    t0s = t0s[np.linspace(0, len(t0s) - 1, a.max_samples).astype(int)]
                 res = {}
                 for lag in LAGS if a.lag else (0,):
-                    cur = np.stack([[pairs[t + lag - 4 * k] for k in range(7, -1, -1)] for t in t0s])        # (S, 8, 2, 6, 128, 256)
-                    prev = np.stack([[pairs[t + lag - 4 * k - 4] for k in range(7, -1, -1)] for t in t0s])
-                    fr = encode(prev.reshape(-1, 2, 6, 128, 256), cur.reshape(-1, 2, 6, 128, 256)).view(len(t0s), 8, *A.H_SHAPE)
-                    for m, model in models.items():
-                        if lag != 0 and m != "P0":
-                            continue
-                        res[(m, lag)] = plans(model, fr, lab["ego"][t0s])
+                    parts = {}
+                    for i0 in range(0, len(t0s), 32):
+                        tt = t0s[i0:i0 + 32]
+                        cur = np.stack([[pairs[t + lag - 4 * k] for k in range(7, -1, -1)] for t in tt])        # (s, 8, 2, 6, 128, 256)
+                        prev = np.stack([[pairs[t + lag - 4 * k - 4] for k in range(7, -1, -1)] for t in tt])
+                        fr = encode(prev.reshape(-1, 2, 6, 128, 256), cur.reshape(-1, 2, 6, 128, 256)).view(len(tt), 8, *A.H_SHAPE)
+                        for m, model in models.items():
+                            if lag != 0 and m != "P0":
+                                continue
+                            parts.setdefault(m, []).append(plans(model, fr, lab["ego"][tt]))
+                        del fr
+                    for m, v in parts.items():
+                        res[(m, lag)] = np.concatenate(v)
                 fut = lab["fut"][t0s]
                 L = np.linalg.norm(np.diff(np.concatenate([np.zeros((len(t0s), 1, 2)), fut[:, :, :2]], 1), axis=1), axis=-1).sum(1)
                 mv = L > 2.0
@@ -309,6 +317,7 @@ if __name__ == "__main__":
     ap.add_argument("--models", nargs="+", default=["P0", "P2-F-s0"])
     ap.add_argument("--stride", type=int, default=10)
     ap.add_argument("--clips", type=int, default=0)
+    ap.add_argument("--max-samples", type=int, default=150)
     ap.add_argument("--gif", type=int, default=4)
     ap.add_argument("--no-lag", dest="lag", action="store_false")
     main(ap.parse_args())

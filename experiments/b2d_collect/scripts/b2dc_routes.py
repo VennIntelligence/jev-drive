@@ -55,7 +55,8 @@ SIM = DATA / "third_party/simlingo/leaderboard/data"
 EVAL_XMLS = [B2D / "bench2drive220.xml", B2D / "bench2drive_0.0.4_val.xml"]
 LB_XMLS = [SIM / "routes_training.xml", SIM / "routes_validation.xml"]
 TOWNS = ["Town01", "Town02", "Town03", "Town04", "Town05", "Town06", "Town07", "Town10HD", "Town11", "Town12", "Town13", "Town15"]
-VERSION = "v1"
+ID_BASE = {"v1": 900000, "v2": 920000}             # route ids differ per version, so split memberships differ too
+VERSION = "v2"                                     # v1: keypoints inside junctions (planner detours), used by the smoke / 10-route stages
 
 TRIG_M, NEAR_M, OVERLAP_M = 50.0, 3.0, 20.0
 MIN_PER_TYPE, TURN_SHARE = 12, 0.55
@@ -150,11 +151,23 @@ class Path_:
         return "left" if (o == 1).any() else "right" if (o == 2).any() else ""
 
     def keypoints(self, step=2.0):
-        """Positions every `step` m (B2D route style) plus the last point."""
+        """Positions every `step` m (B2D route style) plus the last point, none inside a junction: there the overlapping connector lanes
+        let the leaderboard's planner snap a position to another connector and detour (route 900239 of the 10-route stage: 111 m planned,
+        3431 m driven). Bench2Drive's own routes also jump across junctions."""
         if len(self.s) == 0:
             return np.zeros((0, 3))
         idx = np.unique(np.r_[np.searchsorted(self.s, np.arange(0, self.s[-1], step)), len(self.s) - 1])
+        idx = idx[self.jid[idx] < 0]
         return self.xyz[idx]
+
+    def replans(self, town) -> bool:
+        """The leaderboard's interpolation of keypoints() (planner at 1 m between consecutive positions) gives this path back: length within
+        10 % + 5 m and the same junctions."""
+        kp = self.keypoints(2.0)
+        if len(kp) < 2:
+            return False
+        Q = dense(town, kp)
+        return abs(Q.s[-1] - self.s[-1]) <= 0.1 * self.s[-1] + 5.0 and Q.junctions() == self.junctions()
 
 
 def dense(town, pts) -> Path_:
@@ -512,12 +525,15 @@ def main_build(a):
         for v in by_type.values():
             rng.shuffle(v)
         all_types = sorted(set(by_type) | set(B2D_ONLY))
-        used, chosen = set(), []
+        used, chosen, rejected = set(), [], Counter()
 
         def take(c, typ):
             if c["key"] in used:
                 return False
             used.add(c["key"])
+            if not c["path"].replans(c["town"]):
+                rejected["replan"] += 1
+                return False
             chosen.append(c if c["src"] == "LB" else realize(c, typ))
             return True
 
@@ -568,7 +584,7 @@ def main_build(a):
         root = ET.Element("routes")
         rows = []
         for i, c in enumerate(chosen):
-            rid = 900000 + i
+            rid = ID_BASE[VERSION] + i
             r, w = route_xml(rid, c, random.Random(f"{a.seed}:w:{rid}"))
             root.append(r)
             rows.append(dict(route_id=rid, town=c["town"], type=c["type"], src=c["src"], turn=c["turn"],
@@ -592,7 +608,7 @@ def main_build(a):
                 "length_m": {"mean": float(np.mean([r["length_m"] for r in rows])), "p10": float(np.percentile([r["length_m"] for r in rows], 10)),
                              "p90": float(np.percentile([r["length_m"] for r in rows], 90)), "sum_km": float(np.sum([r["length_m"] for r in rows]) / 1e3)},
                 "night_share": float(np.mean([r["sun_alt"] < 0 for r in rows])),
-                "candidates": {"LB": len(lb), "JT": len(jt), "SLC": len(slc), "kept": len(cands)}, "trigger_to_junction_m": tjd}
+                "candidates": {"LB": len(lb), "JT": len(jt), "SLC": len(slc), "kept": len(cands)}, "rejected": dict(rejected), "trigger_to_junction_m": tjd}
         (out / "overlap.json").write_text(json.dumps(dict(overlap), indent=1))
         (out / "summary.json").write_text(json.dumps(summ, indent=1))
         sha = hashlib.sha256((out / "routes.xml").read_bytes()).hexdigest()[:16]

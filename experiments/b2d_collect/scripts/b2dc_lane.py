@@ -32,7 +32,7 @@ from jevdrive.common import data_dir  # noqa: E402
 
 D = data_dir()
 ROOT = D / "runs" / "b2d_collect"
-ROUTES = ROOT / "routes" / "v1"
+ROUTES = ROOT / "routes" / ("v1" if "--stage" in sys.argv and sys.argv[sys.argv.index("--stage") + 1] in ("smoke", "ten") else "v2")
 S = REPO / "experiments" / "b2d_collect" / "scripts"
 SIM = D / "third_party" / "simlingo"
 PY_SIM = str(D / "envs" / "simlingo" / "bin" / "python")
@@ -60,11 +60,7 @@ def pick(stage):
                 out.append(c[0]["route_id"])
                 towns.add(c[0]["town"])
         return out
-    done = set()
-    for st in ("smoke", "ten"):
-        dd = ROOT / "data" / st / "done"
-        done |= {p.stem for p in dd.glob("*.json")} if dd.exists() else set()
-    return [r["route_id"] for r in rows if r["route_id"] not in done]
+    return [r["route_id"] for r in rows]                     # v2 ids (920000+); the smoke / ten clips (v1) are a separate check set
 
 
 class Lane:
