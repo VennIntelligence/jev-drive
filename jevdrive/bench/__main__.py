@@ -25,7 +25,7 @@ def main(argv=None) -> int:
     r.add_argument("--preset", nargs="+", default=["exam"])
     r.add_argument("--scenarios", default="all64")
     r.add_argument("--subset", default="", help="navtest: a jevdrive.data.splits token / log split (default: all of navtest)")
-    r.add_argument("--shards", type=int, default=0, help="navtest scoring shards (default: one per ~24 cores)")
+    r.add_argument("--shards", type=int, default=0, help="navtest scoring shards (default: one per ~12 cores)")
     r.add_argument("--workers", type=int, default=6, help="HUGSIM scenario slots per worker job")
     r.add_argument("--jobs", type=int, default=0, help="HUGSIM worker jobs (default: one per card)")
     r.add_argument("--stall-s", type=float, default=None)

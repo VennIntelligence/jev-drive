@@ -95,14 +95,14 @@ def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "
                      done=str(pr), env={"OPI_ROOT": OL_REL}, vram=0.5, cpu=2, ram=8, after=["plans"]))
     if bench == "navtest":
         k = shards or default_shards()
-        thr = max(4, min(24, int(R_cores() // max(k, 1)) - 1))
+        thr = max(4, min(16, int(R_cores() // max(k, 1)) - 1))
         for i in range(k):
             S.append(R.Stage(f"score{i}of{k}", R.stage_cmd("jev", "navsim-score", m.spec, bench, run_dir, i, k, subset),
                              done=str(run_dir / "score" / f"s{i}of{k}.csv"), vram=0.5, cpu=thr + 1, ram=24,
                              env={"NAVSIM_THREADS": str(thr)}, after=["export"], tries=2))
         sc = [s.name for s in S if s.name.startswith("score")]
     else:
-        n = procs or max(8, min(30, int(R_cores()) - 2))
+        n = procs or max(8, min(16, int(R_cores()) - 2))
         S.append(R.Stage("harness", [R.py("navsim2"), str(HARNESS), "--poses", str(pr), "--out", str(run_dir / "harness"), "--procs", str(n)],
                          done=str(run_dir / "harness" / "harness_summary.json"), vram=0.5, cpu=n, ram=32, after=["export"], tries=2))
         sc = ["harness"]
@@ -120,8 +120,9 @@ def R_cores() -> float:
 
 
 def default_shards() -> int:
-    """navtest scoring shards: one per ~24 cores of the box's quota (3 on the 75-core box)."""
-    return max(1, round(R_cores() / 24))
+    """navtest scoring shards: one per ~12 cores of the box's quota (6 on the 75-core box). Small shards backfill a busy box
+    (the pool charges the declared cores for a job's first 5 min); whole logs per shard keep the scores identical."""
+    return max(1, round(R_cores() / 12))
 
 
 # ---------------------------------------------------------------- plans
