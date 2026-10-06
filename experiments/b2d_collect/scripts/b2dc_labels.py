@@ -123,6 +123,5 @@ if __name__ == "__main__":
     ap.add_argument("--data", required=True)
     ap.add_argument("--workers", type=int, default=0)
     ap.add_argument("--sdf-stride", type=int, default=2)
-    ap.add_argument("--force", action="store_true")
     cli_args(ap)
     main(ap.parse_args())
