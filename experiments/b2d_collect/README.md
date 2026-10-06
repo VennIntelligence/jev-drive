@@ -12,7 +12,7 @@ as is, weighted toward the junction turns that stay open (decisions 121-148), wi
 **Design.** Route set (`b2dc_routes.py`, CPU, offline carla.Map): one scenario per route from the LB2.0 long routes (Town12 / Town13) and a
 junction-manoeuvre generator over all twelve towns (the eight Bench2Drive-only types included), with a positional hold-out from
 bench2drive220 and bench2drive_0.0.4_val (no shared junction, no trigger within 50 m, no 20 m of shared path); 1000 routes, all 44 B2D
-types, 60.6% junction turns, split `b2d/b2dc-train@v1`. Collector (`b2dc_agent.py`): PDM-Lite as shipped plus the recording; frames packed
+types, 59.8% junction turns (route set v2; v1 = the smoke / 10-route stages), split `b2d/b2dc-train@v2`. Collector (`b2dc_agent.py`): PDM-Lite as shipped plus the recording; frames packed
 bit-identically to the closed-loop policy server and stored losslessly (H.264 crf 0); ego, route, expert controls and path, actors, lights.
 Labels (`b2dc_labels.py`): op_parity's ego features / 8-pose future / NAVSIM command, action targets at the lateral delay, drivable SDF on
 op_probe's grid. Checks (`b2dc_check.py`): replay through Cinque / P2 (frame-lag and turn-sign alignment), SDF and command consistency, GIFs.
