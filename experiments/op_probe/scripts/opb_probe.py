@@ -131,7 +131,7 @@ def margin(grid, res, p8):
 
 # ---------------------------------------------------------------- data
 def labels(split_tag):
-    z = np.load(ROOT / "labels" / f"{split_tag}.npz")
+    z = dict(np.load(ROOT / "labels" / f"{split_tag}.npz"))           # materialised (an NpzFile re-reads the array on every access)
     return {t: i for i, t in enumerate(z["tokens"].tolist())}, z
 
 
@@ -278,11 +278,12 @@ def cmd_probe(a):
         fut = np.concatenate([tabs[d]["fut"] for d in dict.fromkeys(datas)])
         ego = np.concatenate([tabs[d]["ego"] for d in dict.fromkeys(datas)]).astype(np.float32)
         assert (np.concatenate([tabs[d]["names"] for d in dict.fromkeys(datas)]) == toks).all()
-        Yr = raster1m(LZ["sdf"][li]).reshape(len(toks), -1)
+        sdf_tr = LZ["sdf"][li]
+        Yr = raster1m(sdf_tr).reshape(len(toks), -1)
         has_fut = ~np.isnan(fut[:, 0, 0])
         t0 = time.time()
-        Yc = np.stack([corridor(LZ["sdf"][i].astype(np.float32), RES05, f) if h else np.full(6, np.nan, np.float32)
-                       for i, f, h in zip(li, fut, has_fut)])
+        Yc = np.stack([corridor(g.astype(np.float32), RES05, f) if h else np.full(6, np.nan, np.float32)
+                       for g, f, h in zip(sdf_tr, fut, has_fut)])
         run.info(f"train targets: {len(toks)} tokens ({is_dev.sum()} dev), corridors in {time.time() - t0:.0f} s")
         # navtest eval rows
         S = np.load(SETS / "navtest_sets.npz")
