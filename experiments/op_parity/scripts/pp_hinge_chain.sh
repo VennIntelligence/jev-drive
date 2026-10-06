@@ -37,7 +37,7 @@ status "labels"
 if [[ ! -f $LABELS ]]; then
   j_lab=$(sub ppK-labels $L/labels --vram 1 --cpu 64 --ram 64 -- bash -c \
     "$NAV2 experiments/op_probe/scripts/opb_labels.py build --split navtrain --shards $(seq -s' ' 0 $((K - 1))) --workers 60 && \
-     mv $DATA_DIR/runs/op_probe/labels/navtrain_s$(seq -s'' 0 $((K - 1))).npz $LABELS")
+     mv $DATA_DIR/runs/op_probe/labels/navtrain_s01234567891011.npz $LABELS")
   waitdirs $L/labels
 fi
 [[ -f $LABELS ]] || die "labels missing"
