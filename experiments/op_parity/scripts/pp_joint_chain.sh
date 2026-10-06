@@ -20,6 +20,7 @@ J="--hinge-lam 10 --ego-lat-drop 0.5 --act-lam 3"
 declare -A LAB=([JC]=plan [JL]=log [JW]=logwin)
 ARMS=${ARMS:-"JC JL JW"}
 OUT=experiments/op_parity/results/joint_action
+HSZ=${HSZ:-}                                   # HUGSIM sizing, e.g. "--workers 2 --jobs 2" on a crowded box
 status() { echo "$(date '+%F %T') op_parity joint: $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && { echo done; return; }
@@ -47,7 +48,7 @@ waitdirs $L/probe-s$SEED
 # ---------------------------------------------------------------- 3. HUGSIM small read: turn23 first (primary), then spin10
 for sc in turn23 spin10; do
   status "HUGSIM $sc: $TAGS x spec, spec_plan_smooth"
-  "${B[@]}" run --model $TAGS --bench hugsim --preset spec spec_plan_smooth --scenarios $sc --wait || die "bench hugsim $sc"
+  "${B[@]}" run --model $TAGS --bench hugsim --preset spec spec_plan_smooth --scenarios $sc $HSZ --wait || die "bench hugsim $sc"
 done
 status "done (stage 1 small read; gate by pp_joint_report.py)"
 date > "$D/DONE"
