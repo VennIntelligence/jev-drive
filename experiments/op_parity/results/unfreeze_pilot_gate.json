@@ -1,0 +1,80 @@
+{
+ "U1": {
+  "diff_vs_F": 0.007994805791915976,
+  "ci": [
+   -0.05858706373295972,
+   0.07904044934509132
+  ],
+  "speed_ratio": 1.000777244567871,
+  "dEP": -0.017006506396145565,
+  "dDAC": -0.01234974477194138,
+  "drift_off": 0.0505864005535841,
+  "checks": {
+   "diff": false,
+   "speed": true,
+   "no_trade": true,
+   "drift_off": true
+  },
+  "pass": false
+ },
+ "U1L": {
+  "diff_vs_F": 0.0007932050389386353,
+  "ci": [
+   -0.10131455791364,
+   0.10737355327857241
+  ],
+  "speed_ratio": 1.001416563987732,
+  "dEP": 0.010868152680694729,
+  "dDAC": 0.0,
+  "drift_off": 0.05177108943462372,
+  "checks": {
+   "diff": false,
+   "speed": true,
+   "no_trade": true,
+   "drift_off": true
+  },
+  "pass": false
+ },
+ "U2": {
+  "diff_vs_F": 0.11201738154412819,
+  "ci": [
+   0.012496475570335917,
+   0.2175415221718522
+  ],
+  "speed_ratio": 1.0005261898040771,
+  "dEP": -0.03477942562108939,
+  "dDAC": 0.08644821340358966,
+  "drift_off": 0.05370739847421646,
+  "checks": {
+   "diff": false,
+   "speed": true,
+   "no_trade": true,
+   "drift_off": true
+  },
+  "pass": false
+ },
+ "V": {
+  "diff_vs_F": 0.16790603487358954,
+  "ci": [
+   -0.14144545862616978,
+   0.483171513343764
+  ],
+  "speed_ratio": 0.999060869216919,
+  "dEP": 0.024143769262447812,
+  "dDAC": -0.06586530545035403,
+  "drift_off": 0.046860188245773315,
+  "checks": {
+   "diff": false,
+   "speed": true,
+   "no_trade": true,
+   "drift_off": true
+  },
+  "pass": false
+ },
+ "_decision": {
+  "line": 0.5,
+  "drift_line_m": 0.1,
+  "best_U": null,
+  "V_pass": false
+ }
+}

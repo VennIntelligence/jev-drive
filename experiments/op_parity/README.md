@@ -3,7 +3,7 @@
 status: live
 decisions: (pending) (inputs: 92, 96, 104, 111, 118, 128, 135, 136, 137, 138, 139)
 index: Cinque + ego / pose / cmd / side cams vs WA-JEPA, equal inputs and data
-key: experiments/op_parity/plans/2026-10-06-parity-prereg.md, lib/parity_adapter.py, experiments/op_parity/scripts/pp_prep.py, experiments/op_parity/scripts/pp_train.py, experiments/op_parity/scripts/pp_eval.py, jevdrive/navsim_zs.py, experiments/hugsim/results/wajepa_ref.md
+key: experiments/op_parity/plans/2026-10-06-parity-prereg.md, lib/parity_adapter.py, experiments/op_parity/scripts/pp_prep.py, experiments/op_parity/scripts/pp_train.py, experiments/op_parity/scripts/pp_eval.py, experiments/op_parity/scripts/pp_unfreeze.py, experiments/op_parity/scripts/pp_navhard.py, jevdrive/navsim_zs.py, experiments/hugsim/results/wajepa_ref.md
 
 **Question.** With no input disadvantage relative to WA-JEPA (command, ego velocity / acceleration, 4-pose history, side and rear cameras)
 and the same fine-tuning data (navtrain), how much of WA-JEPA's lead over openpilot Cinque (HUGSIM 0.451 vs 0.278, navtest EPDMS 91.71)
@@ -30,7 +30,17 @@ P3 - P1 +6.18 [+5.40, +7.00], P3 - WA-JEPA -3.55 [-4.27, -2.84] (gap 11.2 -> 3.5
 0.294, P2 0.396 / 0.393, WA-JEPA 0.451 (P2 - WA-JEPA -0.055 [-0.135, +0.025]); stuck runs 16 / 24 -> 0. Side cameras add nothing.
 [results/full.md](results/full.md), [results/hugsim_full.md](results/hugsim_full.md).
 
-**Next.** Decision entry by main.
+**navhard two-stage (2026-10-06, protocol W, same devkit).** Combined P0 28.05, P1 27.60, P2 29.31, P3 28.56, WA-JEPA 35.41 (its released
+checkpoint in our harness; request path checked on 1 021 navtest tokens, -0.45 vs its stored scores); references shipped GIMM 33.33,
+factor_wm S3 35.77. P2 - P1 stage 1 +8.85 [+5.11, +12.65] but stage 2 -2.82; P2 - WA-JEPA -6.10 [-10.04, -2.30]; W frames cost the
+shipped model 5.3 points here: [results/navhard.md](results/navhard.md).
+
+**Vision unfreeze pilot (2026-10-06, pre-registered, 17 k navtrain tokens, 3 000 steps, 2 seeds).** navtest EPDMS F (frozen) 87.39, U1
+stage 4 87.40, U1L LoRA 87.40, U2 whole encoder 87.51 (+0.11 [+0.01, +0.22]), V 1.40 m virtual camera 87.56 (+0.17 n.s.); no arm reaches
+the +0.5 gate, the line stops (no full run). The remaining gap to WA-JEPA is not reachable by adapting the front encoder on navtrain:
+[results/unfreeze_pilot.md](results/unfreeze_pilot.md), plan [plans/2026-10-06-unfreeze-prereg.md](plans/2026-10-06-unfreeze-prereg.md).
+
+**Next.** Decision entries by main (navhard, unfreeze).
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner
 scenarios: [results/hugsim_spin10.md](results/hugsim_spin10.md) (spins P1 8, P2 7, P3 8 of 10; the launch spin onset is unchanged).
