@@ -31,6 +31,9 @@ def sets_frame():
     df["out_depth"] = full.out_depth.reindex(df.index)
     df["Fplan"] = df.F & (df.raw_out == True)  # noqa: E712
     df["Fcore"] = df.Fplan & (df.out_depth >= 0.3)
+    tb = np.load(P.CACHE / "lb_navtest" / "tab.npz")
+    yaw4 = pd.Series(np.abs(np.degrees(tb["fut"][:, -1, 2])), index=tb["names"])
+    df["PPturn"] = df.PP & (yaw4.reindex(df.index).values > 20)
     return df
 
 
@@ -76,7 +79,7 @@ def t_ablate(sf):
         ss = sf.loc[g.index]
         if ss.PP.any() and ss.R.any():
             r["DAC fail % navtest (stratified)"] = strat(1 - g.drivable_area_compliance.values, ss, ss.log.values)
-        for c in ("F", "Fplan", "Fcore", "R", "FF", "PP"):
+        for c in ("F", "Fplan", "Fcore", "R", "FF", "PP", "PPturn"):
             m = sf.loc[g.index, c].values.astype(bool)
             r[f"DAC {c} %"] = rate(g.drivable_area_compliance.values[m], sf.loc[g.index[m], "log"].values)
         m = sf.loc[g.index, "PP"].values.astype(bool)
@@ -110,7 +113,7 @@ def t_decode(small, sf):
         if ss.PP.any() and ss.R.any():
             r["DAC fail % navtest (stratified)"] = strat(1 - g.drivable_area_compliance.values, ss, ss.log.values)
             r["score x100 navtest (stratified)"] = strat(g.score.values, ss, ss.log.values)
-        for c in ("F", "Fplan", "R", "FF", "PP"):
+        for c in ("F", "Fplan", "R", "FF", "PP", "PPturn"):
             m = sf.loc[g.index, c].values.astype(bool)
             r[f"DAC {c} %"] = rate(g.drivable_area_compliance.values[m], sf.loc[g.index[m], "log"].values)
         m = sf.loc[g.index, "PP"].values.astype(bool)
