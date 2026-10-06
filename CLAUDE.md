@@ -10,6 +10,7 @@ English version in `docs/` or code. `tmp/` is gitignored scratch.
 | Any experiment: question, status, conclusion, code, results, figures | [experiments/INDEX.md](experiments/INDEX.md) (grep a name or alias) -> `<topic>/README.md` |
 | What did we decide, is it still open | [research/decisions.md](research/decisions.md) -> `research/decisions/<NNN>.md` |
 | Start a new experiment or result | rules below, [docs/lib.md](docs/lib.md), [experiments/TEMPLATE.md](experiments/TEMPLATE.md) |
+| Run any model on any benchmark (navtest, navhard, HUGSIM, B2D) and report it | `python -m jevdrive.bench`: [docs/bench.md](docs/bench.md); never write a new runner |
 | A CARLA / Bench2Drive run | [docs/closed-loop-runbook.md](docs/closed-loop-runbook.md) |
 | Box, Tokyo box, env, data, proxy, long runs | [README.md](README.md) -> docs/ |
 

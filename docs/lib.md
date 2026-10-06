@@ -4,6 +4,9 @@ Five small modules that every new experiment builds on, so that run dirs, splits
 confidence intervals mean the same thing everywhere. Tests: `python -m unittest tests.test_lib -v` (no GPU, no
 network). A complete example in 40 lines: [scripts/lib_demo.py](../scripts/lib_demo.py).
 
+**Benchmarks.** Running a model on navtest / navhard / HUGSIM / Bench2Drive and reporting it (arms, paired CIs, Shapley,
+strata) is `jevdrive.bench` ([bench.md](bench.md)): one command, all GPUs through the pool; do not write a lane runner.
+
 **Rule.** Every new experiment runs inside `jevdrive.run.Run` and reads its train / val / test membership from
 `jevdrive.data.splits` (and calls `run.use_split` for each). `cache`, `par` and `stats` are the recommended defaults;
 deviate only with a stated reason. Old scripts are not migrated.

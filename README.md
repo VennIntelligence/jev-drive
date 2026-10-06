@@ -9,7 +9,7 @@ Every doc in the repo is reachable from this page through one of the places belo
 | [research/decisions.md](research/decisions.md) | the decision log: one line per standing decision, full entries in `research/decisions/` |
 | [research/README.md](research/README.md) | narrative layer (Chinese): writing rules, surveys and cross-cutting essays |
 | [docs/README.md](docs/README.md) | how-to docs: GPU box, Tokyo box, storage, env, data, long runs, closed loop, shared libraries |
-| [jevdrive/](jevdrive) | shared Python package ([docs/lib.md](docs/lib.md)) |
+| [jevdrive/](jevdrive) | shared Python package ([docs/lib.md](docs/lib.md)); run any model on any benchmark: [docs/bench.md](docs/bench.md) |
 | [scripts/](scripts) | shared box entry points (tmux, downloads, CARLA server, Bench2Drive harness) |
 | [tests/](tests), [patches/](patches), [tools/](tools) | shared tests, third-party patches, repo tooling |
 
