@@ -420,7 +420,7 @@ if __name__ == "__main__":
     ap.add_argument("--hinge-lam", type=float, default=0.0, help="weight of the footprint drivable-area SDF hinge on the plan (0 = off)")
     ap.add_argument("--hinge-margin", type=float, default=0.3)
     ap.add_argument("--hinge-labels", default=Cfg.hinge_labels)
-    ap.add_argument("--turn-bal", default="", help="target sampling mass per |heading change| bin <5,5-20,20-45,>45 deg, e.g. 0.4,0.2,0.2,0.2")
+    ap.add_argument("--turn-bal", default="", help="target sampling mass per |heading change| bin <5,5-20,20-45,>45 deg, e.g. 0.35,0.15,0.25,0.25")
     ap.add_argument("--anchor-off-turn", action="store_true", help="no anchor rows on tokens with logged |heading change| > 20 deg")
     ap.add_argument("--late-lat-w", type=float, default=1.0, help="weight on y / yaw imitation terms of poses at >= 2 s")
     main(ap.parse_args())

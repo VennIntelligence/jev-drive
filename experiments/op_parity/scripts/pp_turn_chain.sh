@@ -15,7 +15,7 @@ S=experiments/op_parity/scripts
 L=$D/pool
 SH="navtrain_full.s0of12 navtrain_full.s1of12"
 SPLIT=navsim/op-parity-full STEPS=${STEPS:-3000} BATCH=${BATCH:-64} LAM=${LAM:-10}
-BAL=${BAL:-0.4,0.2,0.2,0.2}
+BAL=${BAL:-0.35,0.15,0.25,0.25}
 VERDICT=${VERDICT:?set VERDICT (shrinkage|mixed) from experiments/op_probe/results/turn-gain.md}
 LIST=experiments/hugsim/scripts/derot_all64.txt
 ARMS="HP T1P T2P"; [[ $VERDICT == shrinkage ]] && ARMS="$ARMS T3P"
