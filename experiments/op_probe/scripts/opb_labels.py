@@ -148,7 +148,7 @@ def _check_one(args):
     import glob
     import lzma
     tok, sdf, pose = args
-    fs = glob.glob(str(D / "runs/navsim/metric_cache/v2_navtest/*/*" / tok / "metric_cache.pkl"))
+    fs = glob.glob(str(D / "runs/navsim/metric_cache/v2_navtest/*/unknown" / tok / "metric_cache.pkl"))
     if not fs:
         return tok, np.nan, 0, np.nan
     with lzma.open(fs[0], "rb") as f:
@@ -174,15 +174,15 @@ def _check_one(args):
 def cmd_check(a):
     from multiprocessing import Pool
     from jevdrive.run import Run
-    z = np.load(OUT / "navtest.npz")
+    z = dict(np.load(OUT / "navtest.npz"))                      # materialised: NpzFile re-reads the whole array on every z[key]
     rng = np.random.default_rng(0)
     pick = rng.choice(np.flatnonzero(z["ok"]), a.n, replace=False)
     with Run("op_probe", "labels-check", config=vars(a)) as run:
         with Pool(a.workers) as p:
-            res = p.map(_check_one, [(z["tokens"][i], z["sdf"][i].astype(np.float32), z["pose_global"][i]) for i in pick])
+            res = p.map(_check_one, [(z["tokens"][i], z["sdf"][i].astype(np.float32), z["pose_global"][i]) for i in pick], chunksize=1)
         ag = np.array([r[1] for r in res])
         tab = np.load(D / "runs/op_parity/cache/lb_navtest/tab.npz")
-        idx = {t: k for k, t in enumerate(z["tokens"])}
+        assert (tab["names"] == z["tokens"]).all()
         fut = tab["fut"]
         inside = []
         from scipy.ndimage import map_coordinates
@@ -195,7 +195,6 @@ def cmd_check(a):
         run.summary.update(n=len(res), agree_mean=float(np.nanmean(ag)), agree_p05=float(np.nanpercentile(ag, 5)),
                            frac_tokens_agree98=float(np.nanmean(ag >= 0.98)), log_future_inside=float(np.mean(inside)), n_future=len(inside))
         run.info(str(run.summary))
-        _ = idx
 
 
 if __name__ == "__main__":
