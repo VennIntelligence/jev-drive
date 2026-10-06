@@ -7,7 +7,9 @@ Requests are built per token from the OpenScene log (CAM_L0 / F0 / R0 / B0 of th
 experiments/top10/lib/top10_t2/wajepa_run.py) and from op_parity's tab.npz (4-pose history, t0 velocity / acceleration, command), i.e. the
 inputs of pp_navhard.py req. The model runs its own predict_trajectory on a batch (bf16 autocast = its HUGSIM adapter precision; the flow noise
 of a batch differs from batch-1 calls, which only matters for the plan, not for the encoder features). Taps:
-  C   context_scene (V-JEPA 2.1 encoder + scene projector, history tokens) mean-pooled to 32 contiguous token groups x 512
+  C   context_scene (V-JEPA 2.1 encoder + scene projector): 4096 history tokens = [view l0 / f0 / r0 / b0][tubelet t 2][16 x 32 patches] x 512;
+      Cf = front view, newest tubelet, 4 x 4 average-pooled -> 4 x 8 = 32 tokens (the size of Cinque's view_39);
+      Ca = all 4 views, newest tubelet, 8 x 8 pooled -> 4 x 2 x 4 = 32 tokens
   T   input of predictor.traj_out at the last flow step (8 trajectory tokens x 512)
   H   input of the final Linear of traj_out at the last flow step (8 x 512), the analogue of Cinque's add_54
   traj its plan (8 x 3)
@@ -28,7 +30,6 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "experiments/top10/lib/top10_t2"), str(REPO)]
 CAMS = ("CAM_L0", "CAM_F0", "CAM_R0", "CAM_B0")
 LOGDIR = {True: "test", False: "trainval"}
-N_GROUPS = 32
 
 
 def requests(data, rows):
@@ -62,6 +63,7 @@ def main():
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--workers", type=int, default=24)
     ap.add_argument("--tag", default="")
+    ap.add_argument("--shard", type=int, nargs=2, default=(0, 1))
     a = ap.parse_args()
     from jevdrive.run import Run
     with Run("op_probe", f"wajepa-{a.data}{a.tag}", config=vars(a)) as run:
@@ -73,6 +75,9 @@ def extract(a):
     import wajepa_run as WR
     n_all = len(np.load(D / "runs/op_parity/cache" / a.data / "tab.npz")["names"])
     rows = np.load(a.rows_file) if a.rows_file else np.arange(n_all)[: a.limit or None]
+    rows = rows[a.shard[0]::a.shard[1]]
+    if a.shard[1] > 1:
+        a.tag += f".s{a.shard[0]}of{a.shard[1]}"
     t0 = time.time()
     z = requests(a.data, rows)
     print(f"{len(rows)} requests in {time.time() - t0:.0f} s", flush=True)
@@ -91,7 +96,7 @@ def extract(a):
     to[3].register_forward_pre_hook(lambda m, x: cap.__setitem__("H", x[0]))
     dl = torch.utils.data.DataLoader(WR.Req(z, np.arange(len(rows))), batch_size=a.batch, num_workers=a.workers, pin_memory=True,
                                      prefetch_factor=4)
-    C, T, H, traj = [], [], [], []
+    Cf, Ca, T, H, traj = [], [], [], [], []
     t1, k = time.time(), 0
     with torch.no_grad():
         for f in dl:
@@ -99,9 +104,12 @@ def extract(a):
             with torch.autocast("cuda", dtype=torch.bfloat16):
                 tr = model.predict_trajectory(f).float()
             c = cap["C"].float()
-            B, N, Dd = c.shape
-            g = torch.tensor_split(torch.arange(N, device=c.device), N_GROUPS)
-            C.append(torch.stack([c[:, ix].mean(1) for ix in g], 1).half().cpu().numpy())
+            B = c.shape[0]
+            c = c.reshape(B, 4, 2, 16, 32, 512)[:, :, 1].permute(0, 1, 4, 2, 3)            # newest tubelet: (B, view, 512, 16, 32)
+            pf = torch.nn.functional.avg_pool2d(c[:, 1], 4)                                # front: (B, 512, 4, 8)
+            pa = torch.nn.functional.avg_pool2d(c.reshape(B * 4, 512, 16, 32), 8).reshape(B, 4, 512, 2, 4)
+            Cf.append(pf.flatten(2).transpose(1, 2).half().cpu().numpy())
+            Ca.append(pa.permute(0, 1, 3, 4, 2).reshape(B, 32, 512).half().cpu().numpy())
             T.append(cap["T"].float().half().cpu().numpy())
             H.append(cap["H"].float().half().cpu().numpy())
             traj.append(tr.cpu().numpy())
@@ -113,7 +121,7 @@ def extract(a):
     out = D / "runs/op_probe/feats/WA"
     out.mkdir(parents=True, exist_ok=True)
     f = out / f"{a.data}{a.tag}{'-lim' if a.limit else ''}.npz"
-    np.savez(f, tokens=z["keys"], rows=rows, C=np.concatenate(C), T=np.concatenate(T), H=np.concatenate(H), traj=np.concatenate(traj))
+    np.savez(f, tokens=z["keys"], rows=rows, Cf=np.concatenate(Cf), Ca=np.concatenate(Ca), T=np.concatenate(T), H=np.concatenate(H), traj=np.concatenate(traj))
     msg = f"{len(rows)} tokens in {time.time() - t1:.0f} s ({len(rows) / (time.time() - t1):.2f}/s) -> {f}"
     if "navtest" in a.data:                     # against its stored navtest export (the run that reproduced 91.71)
         st = pickle.load(open(D / "runs/top10_t2/navsim/wajepa/20260926-122804/trajectory_cache/done_union.pkl", "rb"))["trajectories"]
