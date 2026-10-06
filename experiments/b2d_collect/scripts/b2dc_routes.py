@@ -177,7 +177,9 @@ def parse_routes(xml):
     for r in ET.parse(str(xml)).getroot().iter("route"):
         pts = [(float(p.get("x")), float(p.get("y")), float(p.get("z"))) for p in r.find("waypoints").iter("position")]
         scen = list(r.find("scenarios").iter("scenario")) if r.find("scenarios") is not None else []
-        out.append(dict(id=r.get("id"), town=r.get("town"), pts=pts, scen=[ET.tostring(s).decode() for s in scen]))
+        for s in scen:
+            s.tail = None
+        out.append(dict(id=r.get("id"), town=r.get("town"), pts=pts, scen=[ET.tostring(s).decode().strip() for s in scen]))
     return out
 
 
