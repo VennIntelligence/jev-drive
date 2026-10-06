@@ -2,8 +2,8 @@
 
 status: live
 decisions: (pending) (inputs: 121, 127, 128, 133, 134, 137, 144, 147, 148)
-index: B2D collector: 1000 hold-out routes, 61% junction turns, openpilot frames at 20 Hz
-key: experiments/b2d_collect/plans/2026-10-06-b2d-collect-prereg.md, experiments/b2d_collect/results/stages.md, experiments/b2d_collect/scripts/b2dc_agent.py, experiments/b2d_collect/lib/b2dc_frames.py, experiments/b2d_collect/lib/b2dc_labels.py, experiments/b2d_collect/scripts/b2dc_routes.py, experiments/b2d_collect/scripts/b2dc_labels.py, experiments/b2d_collect/scripts/b2dc_check.py, experiments/b2d_collect/scripts/b2dc_lane.py, experiments/b2d_collect/scripts/b2dc_gif.py, tests/test_b2dc_frames.py
+index: 998 B2D clips, 902 k ticks at 20 Hz, 60% junction turns, all gates pass
+key: experiments/b2d_collect/plans/2026-10-06-b2d-collect-prereg.md, experiments/b2d_collect/results/full.md, experiments/b2d_collect/results/stages.md, experiments/b2d_collect/scripts/b2dc_agent.py, experiments/b2d_collect/lib/b2dc_frames.py, experiments/b2d_collect/lib/b2dc_labels.py, experiments/b2d_collect/scripts/b2dc_routes.py, experiments/b2d_collect/scripts/b2dc_labels.py, experiments/b2d_collect/scripts/b2dc_check.py, experiments/b2d_collect/scripts/b2dc_lane.py, experiments/b2d_collect/scripts/b2dc_gif.py, tests/test_b2dc_frames.py
 
 **Question.** Can we collect a Bench2Drive imitation dataset (PDM-Lite driving, openpilot road + wide cameras on the open-loop-aligned rig at
 native 20 Hz, stored as the model frames Cinque consumes) that op_parity P2 (decision 144, + drivable-SDF hinge, decision 148) can train on
@@ -18,13 +18,15 @@ Labels (`b2dc_labels.py`): op_parity's ego features / 8-pose future / NAVSIM com
 op_probe's grid. Checks (`b2dc_check.py`): replay through Cinque / P2 (frame-lag and turn-sign alignment), SDF and command consistency, GIFs.
 Staged lane (`b2dc_lane.py`): 1 -> 10 -> all through the GPU pool. Plan: [plans/2026-10-06-b2d-collect-prereg.md](plans/2026-10-06-b2d-collect-prereg.md).
 
-**Status (2026-10-07).** Smoke and 10-route stage pass every gate after seven fixes (chase camera, junction keypoints -> route set v2,
-stuck routes, route commands from geometry, alignment checks that do not depend on the model's turning): frames bit-identical to the
-closed-loop packing and lossless, camera frame = state frame on every tick, launch visible in the picture within 1 tick, footprint inside
-the SDF 0.94, turn-command precision 0.91; 88 KB per tick, 6.3 GB VRAM and 2.3 cores per worker. Full run (route set v2, 1000 routes,
-3 jobs x 6 workers) launched 2026-10-07 00:04: [results/stages.md](results/stages.md).
+**Status (2026-10-07).** Collected: 998 clips (route set v2), 902 k ticks at 20 Hz (12.5 simulated hours, 822 k with a full 4 s
+future), 597 junction-turn clips (301 left / 296 right), PDM-Lite DS 95.6. Model frames 102 GB lossless (113 KB per tick); 3.3 h on 3 cards.
+Every gate passes: camera frame = state frame on every tick, launch visible in the picture within 1 tick (0.97), future footprint inside the
+SDF 0.99, turn-command precision 0.94, Cinque's heading sign on lane following 0.82. Shipped Cinque matches 0.69 of junction-turn heading
+signs, P2 0.86 (the open problem, not the data): [results/full.md](results/full.md); smoke / 10-route stage and the seven fixes they forced:
+[results/stages.md](results/stages.md).
 
-**Next.** Full-run labels and checks; then the B2D P2 training data cache (pp_prep-style tokens from the stored frames).
+**Next.** B2D P2 training cache from the stored frames (pp_prep-style hidden tokens; the 0.2 s pairs need no synthesis); hinge with the MKZ
+`footprint`; DAgger through the agent's `_drive()` hook.
 
 <!-- files:begin -->
 <!-- files:end -->

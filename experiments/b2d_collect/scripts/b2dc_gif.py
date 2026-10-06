@@ -19,7 +19,7 @@ CMD = {0: "左转", 1: "直行", 2: "右转"}
 
 def caption(c, r):
     td = c["turn_dist"]
-    turn = f"，距下一个转弯 {td:.0f} m" if np.isfinite(td) and td < 200 else ""
+    turn = ("，正在路口转弯中" if td <= 0 else f"，距下一个转弯 {td:.0f} m") if np.isfinite(td) and td < 200 else ""
     return (f"路线 {r['route_id']}（{r['town']}，场景 {r.get('type', '')}）  t = {c['t']:.1f} s  车速 {c['speed']:.1f} m/s  "
             f"路线指令 {CMD[c['cmd']]}{turn}",
             f"左：第三人称（模型看不到）  中：road 帧  右：wide 帧（均为 Cinque 实际输入）  "
