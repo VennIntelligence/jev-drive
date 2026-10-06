@@ -53,6 +53,11 @@ own-plan / logged curvature labels: offline gain on logged curvature 0.68 -> 0.8
 junction turns 0 / 3 under both `action` and `plan_smooth`; the failure moves from "not chosen / late" to "requested in time and at 0.9-2 x the needed curvature, but the
 car is stopped in the junction" (the plan asks for a near stop): [results/b2d_plan_smooth.md](results/b2d_plan_smooth.md).
 
+**B2D P2 cache (2026-10-07, built and validated, nothing trained).** The collected PDM-Lite dataset (decision 152) as an op_parity training cache: 383 089 rows at native 0.2 s
+frame pairs (per-tick token store, 26 GB), teacher, MKZ-footprint hinge labels, raw distance to the next turn, route split b2d/b2dc-v2-train / -val, collision rule. P2-F-s0 on the cached tokens reproduces
+the collection check (turn-direction 0.865 vs 0.863): [results/b2d_cache.md](results/b2d_cache.md). Draft pre-registration with the open decisions at the top:
+[plans/2026-10-07-b2d-p2-prereg.md](plans/2026-10-07-b2d-p2-prereg.md). Scripts: `scripts/b2d_prep.py`, `b2d_split.py`, `b2d_validate.py`, `b2d_open_read.py`, `b2d_trainer_check.py`.
+
 **Next.** Decision entries by main (navhard, unfreeze).
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner
