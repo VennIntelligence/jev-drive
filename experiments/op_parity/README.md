@@ -40,6 +40,8 @@ stage 4 87.40, U1L LoRA 87.40, U2 whole encoder 87.51 (+0.11 [+0.01, +0.22]), V 
 the +0.5 gate, the line stops (no full run). The remaining gap to WA-JEPA is not reachable by adapting the front encoder on navtrain:
 [results/unfreeze_pilot.md](results/unfreeze_pilot.md), plan [plans/2026-10-06-unfreeze-prereg.md](plans/2026-10-06-unfreeze-prereg.md).
 
+**Hinge lane (2026-10-06, pre-registered).** P2 recipe + footprint drivable-SDF hinge (lambda 10), 2 seeds: navtest EPDMS 88.67 vs P2 88.21 (+0.46 [+0.33, +0.61]), DAC failures 3.83% vs 4.33% (-0.50 pp [-0.64, -0.36]; predicted -0.9), navhard G +1.49, HUGSIM unchanged: [results/hinge.md](results/hinge.md), plan [plans/2026-10-06-hinge-prereg.md](plans/2026-10-06-hinge-prereg.md).
+
 **Gap page (2026-10-06).** Where P2 still loses to WA-JEPA, per sub-metric (Shapley split of the EPDMS gap), navtest / navhard / HUGSIM 64, with GIF cases: open [results/gap/index.html](results/gap/index.html) (generators `scripts/pp_gap_*.py`).
 
 **Next.** Decision entries by main (navhard, unfreeze).
