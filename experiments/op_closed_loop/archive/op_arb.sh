@@ -60,14 +60,27 @@ EOF
 
 srv_alive() { local p; p=$(cat "$O/srv/op.pid" 2>/dev/null) && [[ -n $p ]] && kill -0 "$p" 2>/dev/null; }
 srv_start() {
-    local mid="${SRV_ONNX:-base}:$WORKERS:${SRV_NO_TWIN:-0}:${SRV_PY:-}:${OP_WIDE_FOCAL:-}"      # KEEP_SRV: a live server with the same model and pool is reused across set calls
+    local mid="${SRV_ONNX:-base}:$WORKERS:${SRV_NO_TWIN:-0}:${SRV_PY:-}:${OP_WIDE_FOCAL:-}:${PARITY_TAG:-}"      # KEEP_SRV: a live server with the same model and pool is reused across set calls
     if srv_alive; then
         [[ $(cat "$O/srv/model_id" 2>/dev/null) == "$mid" ]] && return 0
         log "openpilot server model / pool changed ($(cat "$O/srv/model_id" 2>/dev/null) -> $mid): restarting"
         srv_stop; sleep 8
     fi
     echo "$mid" > "$O/srv/model_id"
-    rm -f "$O/srv/op.ready" "$SOCK"
+    rm -f "$O/srv/op.ready" "$SOCK" "$O/srv/bias.ready" "$O/srv/bias.sock"
+    if [[ -n ${PARITY_TAG:-} ]]; then      # op_parity arm: the arm's bias server (pp_hugsim.py serve) next to the openpilot server; the agent config gets "parity"
+        (
+            CUDA_VISIBLE_DEVICES=$GPU PYTHONUNBUFFERED=1 setsid taskset -c "$CPUS" "$DATA_DIR/envs/op-train/bin/python" -u experiments/op_parity/scripts/pp_hugsim.py serve \
+                --tag "$PARITY_TAG" --socket "$O/srv/bias.sock" --ready-file "$O/srv/bias.ready" >> "$O/srv/bias.log" 2>&1 &
+            echo $! > "$O/srv/bias.pid"
+            wait $!
+        ) &
+        until [[ -s $O/srv/bias.pid ]]; do sleep 0.2; done
+        until [[ -e $O/srv/bias.ready ]]; do
+            kill -0 "$(cat "$O/srv/bias.pid")" 2>/dev/null || error "parity bias server died at start-up (see $O/srv/bias.log)"
+            sleep 3
+        done
+    fi
     (
         CUDA_VISIBLE_DEVICES=$GPU PYTHONUNBUFFERED=1 setsid taskset -c "$CPUS" "$PY_OP" "${SRV_PY:-experiments/op_closed_loop/archive/op_arb_server.py}" cinque \
             --pool "$WORKERS" --backend cuda-iob --socket "$SOCK" --ready-file "$O/srv/op.ready" \
@@ -85,7 +98,8 @@ srv_start() {
     done
     ev server_ready "\"pid\": $(cat "$O/srv/op.pid")"
 }
-srv_stop() { local p; p=$(cat "$O/srv/op.pid" 2>/dev/null) && [[ -n $p ]] && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; }; rm -f "$O/srv/op.pid"; }
+srv_stop() { local p; p=$(cat "$O/srv/op.pid" 2>/dev/null) && [[ -n $p ]] && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; }; rm -f "$O/srv/op.pid"
+    p=$(cat "$O/srv/bias.pid" 2>/dev/null) && [[ -n $p ]] && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; }; rm -f "$O/srv/bias.pid"; }
 
 arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path and P7; only "arb" differs)
     local arm=$1 arb
@@ -113,6 +127,7 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
  \"release_th\": 2.0, \"release_s\": 1.0, \"latch_max_s\": 1e9, \"coast_v\": 2.5, \"tl_stop\": true, \"tl_n\": ${TL_N:-50}}" ;;
         *) error "unknown arm $arm" ;;
     esac
+    [[ -n ${PARITY_TAG:-} ]] && TOP_ARGS="\"parity\": {\"socket\": \"$O/srv/bias.sock\"}${TOP_ARGS:+, $TOP_ARGS}"
     local pc=""   # TOP_ARGS: extra top-level agent keys, e.g. '"op_mount": [3.8, 0.0, 1.22]' 
     [[ ${PC_ENABLE:-0} == 1 ]] && pc=", \"pc\": {\"arm\": \"$arm\"}"
     echo "{\"model\": \"cinque\", \"socket\": \"$SOCK\", \"plan_every\": 1, \"ctl_every\": 4, \"op_camera_tick\": 0.05,

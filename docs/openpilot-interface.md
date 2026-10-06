@@ -70,6 +70,7 @@ B2D arb `"resume_rule": {}` (`timer+rule`). Pre-registration and results: experi
 | HUGSIM | `spec_cold`, `spec_hold` | diagnostics: no static warm-up; + hold clock with `OP_CTRL {"delay": 0.2}` (neither launches) |
 | HUGSIM | `exam` | legacy: `--controller` and `--opts` literally; every HUGSIM number before 2026-10-05; all older chain scripts pass it |
 | B2D | `spec` | `drive` + `op_ctrl {"delay": 0.2}` + rig `B2D_SPEC_MOUNT` = (1.59, 0, 1.86) (open-loop-aligned), resume timer; `spec_bumper122`, `spec_windshield143` = same with the earlier cameras; default when a config names neither a preset nor an arb mode |
+| B2D | `spec_plan_smooth` | diagnostic (2026-10-07): `spec` with the lateral curvature = mean plan curvature over 0.5-1.5 s (`model.curvature_window`, agent arb key `curv_src: plan_smooth`), then the same clip + 0.2 s delay; every B2D plan record also logs `k_sm` next to `act_k`. Result: experiments/op_parity/results/b2d_plan_smooth.md |
 | B2D | `drive` | the `drive` arbitration of every B2D result up to 2026-10-05 (moved verbatim from `op_arb.sh`): raw action curvature through the bicycle model, no clip / delay, 1.433 m |
 | B2D | explicit `"arb": {"mode": ...}` | the older arms (native, acc, e2e, switch, base, ...) unchanged |
 

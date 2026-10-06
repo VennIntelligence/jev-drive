@@ -87,6 +87,7 @@ class ArbModel(ZP.OpenpilotModel):
         # enabled by env OP_DET_HEAD=<det_head.npz>; adds out["det"] = P(light, stop sign within 40 m). No effect when unset.
         dp = os.environ.get("OP_DET_HEAD", "")
         self.det = dict(np.load(dp)) if dp else None
+        self.par_tls = threading.local()                     # per-thread sockets to the parity bias server
         self.ra_cache, self.ra_lock = {}, threading.Lock()   # route adapters by path (meta "route_adapter")
         self.lanes = os.environ.get("OP_LANES", "") == "1"        # vmerge3: lane lines + road edges in out (no effect when unset)
         super().__init__(a)                       # its warm-up takes a state from new_state(None) and drops it
@@ -273,7 +274,29 @@ class ArbModel(ZP.OpenpilotModel):
         m.extra = {"intent_bias": na.bias(f)}
         info["ra_f"] = [round(float(x), 4) for x in f]
 
+    def _parity_bias(self, state, meta, info):
+        """op_parity arm (experiments/op_parity): the agent's ego features -> the arm's bias server (pp_hugsim.py serve) -> `intent_bias`."""
+        import zeroshot_wire as wire
+        m = state["model"]
+        if "intent_bias" not in m.inputs:
+            raise RuntimeError("parity_ego sent but the served ONNX has no intent_bias input (pp_hugsim.py onnx)")
+        key = meta["parity_socket"]
+        c = getattr(self.par_tls, "socks", None)
+        if c is None:
+            c = self.par_tls.socks = {}
+        if key not in c:
+            c[key] = wire.connect_retry(key)
+        wire.send(c[key], {"cmd": "bias"}, {"ego": np.asarray(meta["parity_ego"], np.float32)})
+        _, arr = wire.recv(c[key])
+        m.extra = {"intent_bias": np.asarray(arr["bias"], np.float16).reshape(1, 32, 512)}
+        info["par_bias_rms"] = round(float(np.sqrt(np.mean(np.square(np.asarray(arr["bias"], np.float32))))), 5)
+
     def plan(self, state, meta, prep):
+        if meta.get("parity_ego") is not None:
+            assert self.E is None, "an intent E table and a parity bias on one ONNX"
+            self._parity_bias(state, meta, par_info := {})
+        else:
+            par_info = {}
         if self.E is not None:                           # intent adapter input of this step: 0 unknown, 1 straight, 2 left, 3 right
             state["model"].extra = {"intent_bias": self.E[int(meta.get("intent", 0))][None]}
         ra_info = {}
@@ -286,7 +309,7 @@ class ArbModel(ZP.OpenpilotModel):
             if mode == "fork":                           # the native state after the last standstill step, before this one
                 LS.fork_state(state["stab"], state["model"])
         info, out = super().plan(state, meta, prep)      # steps state["model"] with the route desire
-        info.update(ra_info)
+        info.update(ra_info, **par_info)
         m = state["model"]
         raw = m.last_raw
         s = lambda k: raw[m.slices[k]]  # noqa: E731

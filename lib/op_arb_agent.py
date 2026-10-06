@@ -79,6 +79,7 @@ import zeroshot_wire as wire  # noqa: E402
 from b2d_controller_adapter import RouteAdapter, world_to_local  # noqa: E402
 sys.path.insert(0, str(_repo))
 from jevdrive.openpilot import interface as IF  # noqa: E402
+from jevdrive.openpilot.model import SMOOTH_WINDOW, curvature_window  # noqa: E402
 
 
 def _json_scalar(value):
@@ -99,7 +100,7 @@ DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3
             "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0,
             "lat": "route", "lat_exec": "p7", "lon": "op", "hold": "any", "lead_go_v": 1.0, "coast_v": 0.0,
             "intent": "none", "intent_before_m": 20.0, "intent_after_m": 5.0,
-            "resume": "timer", "resume_rule": None, "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "zone_gain": 1.0, "hyb_v": 3.0, "gain_m": 3.0, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
+            "resume": "timer", "resume_rule": None, "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "zone_gain": 1.0, "hyb_v": 3.0, "curv_src": "action", "gain_m": 3.0, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
 DRIVE_ZONES = {Z.LEFT: (15.0, 5.0), Z.RIGHT: (15.0, 5.0), Z.STRAIGHT: (5.0, 5.0),
                Z.CHANGE_LEFT: (5.0, 10.0), Z.CHANGE_RIGHT: (5.0, 10.0)}
 # DRIVE_ZONES is a semi-privileged fallback (interface key command.route_geometry = dense-zones): the dense route's metre-exact
@@ -113,6 +114,9 @@ PRESETS = {
     "drive": dict(_DRIVE_TOP, arb=dict(_DRIVE_ARB)),
     "spec": dict(_DRIVE_TOP, op_ctrl=dict(IF.B2D_SPEC_OP_CTRL), op_mount=list(IF.B2D_SPEC_MOUNT), arb=dict(_DRIVE_ARB, resume="timer")),
 }
+# `spec` with the lateral curvature from the model's own plan, mean over 0.5-1.5 s (model.curvature_window; HUGSIM preset spec_plan_smooth,
+# decision 149); same clip + delay path. A declared execution-layer choice, not openpilot's conversion.
+PRESETS["spec_plan_smooth"] = dict(PRESETS["spec"], arb=dict(PRESETS["spec"]["arb"], curv_src="plan_smooth"))
 for _k in ("bumper122", "windshield143"):                 # `spec` with the earlier camera rigs (interface.B2D_MOUNTS), op_arb.sh arm spec_<name>
     PRESETS["spec_" + _k] = dict(PRESETS["spec"], op_mount=list(IF.B2D_MOUNTS[_k]))
 
@@ -247,6 +251,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         if self.arb["coast_v"] > 0:
             self.rules = "coast"                               # the parent's post-controller hook -> _k_rules below
         self.route_adapter = self.cfg.get("route_adapter") or None
+        self.parity = self.cfg.get("parity") or None         # op_parity arms: {"socket": bias server socket}; the op server fetches the bias (ego inputs below)
         self.route_flip = bool(self.cfg.get("route_flip"))   # control: mirror the navigation polyline (left <-> right command)
         if self.route_adapter:
             import route_adapter as RA                       # lib/: numpy only on this path (features run on the server)
@@ -314,6 +319,26 @@ class OpArbAgent(Z.ZeroShotAgent):
         if c is None or d > 60.0:
             return ["straight", None]
         return [{Z.LEFT: "left", Z.RIGHT: "right", Z.STRAIGHT: "straight"}[c], round(float(d), 2)]
+
+    def parity_ego(self, speed, desire):
+        """parity_adapter.ego_features of this step (op_parity P2 arms, jevdrive/openpilot parity path as lib/parity_hugsim.ego_inputs, real clock):
+        4 rear-axle poses at -1.5 / -1 / -0.5 / 0 s in the current frame (x forward, y left, yaw left-positive; the first state repeated before the
+        start), vx = speed, ax = speed change over 0.5 s, vy = ay = 0, command one-hot [left, straight, right] from the route turn desire (20 m
+        before a LEFT / RIGHT command; the only navigation signal this agent gives the model)."""
+        import parity_adapter as PA
+        t = np.array([p[0] for p in self.poses])
+        xy = np.array([p[1] for p in self.poses], float)
+        yaw = np.unwrap(np.array([p[2] for p in self.poses], float))
+        tq = t[-1] + np.array([-1.5, -1.0, -0.5, 0.0])
+        q = np.stack([np.interp(tq, t, xy[:, k]) for k in (0, 1)], -1)
+        loc = world_to_local(q, xy[-1], float(yaw[-1]))
+        pose = np.column_stack([loc, -(np.interp(tq, t, yaw) - yaw[-1])])
+        v_prev = np.hypot(*(np.interp(t[-1] - 0.5, t, xy[:, k]) - np.interp(t[-1] - 1.0, t, xy[:, k]) for k in (0, 1))) / 0.5
+        a = (speed - v_prev) / 0.5
+        cmd = np.zeros(4, np.float32)
+        cmd[{Z.DESIRE_TURN_LEFT: 0, Z.DESIRE_TURN_RIGHT: 2}.get(desire, 1)] = 1.0
+        ego = PA.ego_features(pose, np.tile([speed, 0.0], (4, 1)), np.tile([a, 0.0], (4, 1)), cmd)
+        return [round(float(x), 5) for x in ego]
 
     def nav_polyline(self, xy, yaw):
         """The route ahead as the adapter's polyline: dense route points from the ego's (rear axle) projection on, up to 170 m of arc,
@@ -442,6 +467,8 @@ class OpArbAgent(Z.ZeroShotAgent):
                 ra_poly = ra_poly * np.array([1.0, -1.0], np.float32)
             meta.update(route_adapter=self.route_adapter, route_poly=np.round(ra_poly, 3).ravel().tolist(),
                         route_mask=[int(x) for x in ra_mask])
+        if self.parity:
+            meta.update(parity_socket=self.parity["socket"], parity_ego=self.parity_ego(speed, desire))
         wire.send(self.sock, meta, dict(cams))
         info, out = wire.recv(self.sock)
         self.op_out = out                                    # the latest openpilot heads (vmerge reads its trigger / lead heads)
@@ -589,8 +616,9 @@ class OpArbAgent(Z.ZeroShotAgent):
         geom = np.r_[[[0.0, 0.0]], op_path] if lat_src == "op" and plan_exec else bpath
         arb_path = place(geom, s_fin)
         self.want_go = bool(s_fin[7] - s_fin[3] > 0.5) and not warm   # the profile moves >= 0.5 m/s at 1-2 s
+        k_sm = curvature_window(np.asarray(out["pos"], float)[:, :2], np.asarray(out["yaw"], float), *SMOOTH_WINDOW)   # always logged
         if mode == "drive":
-            self.curvature = float(info["curvature"]) if lat_src == "op" and not plan_exec else None
+            self.curvature = None if lat_src != "op" or plan_exec else k_sm if A["curv_src"] == "plan_smooth" else float(info["curvature"])
             if self.curvature is not None and A["zone_gain"] != 1.0 and any(a0 <= self.route.s[self.route.i] <= b0 for a0, b0 in self.gain_zones):
                 self.curvature *= A["zone_gain"]
         if mode == "native":
@@ -625,7 +653,7 @@ class OpArbAgent(Z.ZeroShotAgent):
                "s": {k: round(float(v[-1]), 2) for k, v in cons.items()}, "s2": {k: round(float(v[7]), 2) for k, v in cons.items()},
                "op_xy": r3(op_path[[3, 7, 11, 19]]), "base_xy": r3(place(bpath, np.array([5.0, 10, 15, 20, 30]))),
                "vplan": r3(np.interp([0, 1, 2, 3, 5], out["t"], v_plan)), "aplan": r3(np.interp([0, 1, 2], out["t"], out["acc"])),
-               "act_a": round(float(info["accel"]), 3), "act_k": round(float(info["curvature"]), 5),
+               "act_a": round(float(info["accel"]), 3), "act_k": round(float(info["curvature"]), 5), "k_sm": round(float(k_sm), 5),
                "lead": r3(lead[[0, 1], :]), "lp": r3(out["lead_prob"]), "pose_v": round(float(np.asarray(out["pose"])[0]), 3),
                "gas": r3(mt[31:55:4]), "brk": r3(mt[32:55:4]), "hb3": r3(mt[4:31:6]), "eng": round(float(mt[0]), 3),
                "ds": r3(out["desire_state"]), "dp": r3(np.asarray(out["desire_pred"])[:, :3]), "lane": r3(out["lane_prob"]),

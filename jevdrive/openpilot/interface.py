@@ -334,7 +334,7 @@ def b2d_values(cfg, env=None):
     wide = "sensor" if not wf or float(wf) == DEVICE["wide_focal_px"] else "sensor-f%g" % float(wf)
     return {"rig.height_m": float(mount[2]), "rig.wide": wide, "history.rate_hz": round(1.0 / tick, 2),
             "history.warmup": "real" if float(cfg.get("warmup_s", 0)) > 0 else "cold",
-            "lateral.source": "action" if curv else "plan", "lateral.exec": "op-path" if opc else "bicycle" if curv else "p7",
+            "lateral.source": ("plan-smooth" if a.get("curv_src") == "plan_smooth" else "action") if curv else "plan", "lateral.exec": "op-path" if opc else "bicycle" if curv else "p7",
             "lateral.delay_s": float(opc_rule.get("delay", 0.25)) if opc else "carla",
             "lon.source": "plan-idm-latch" if drive else "plan-p7",
             "lon.resume": ("timer" if drive else "none") + ("+rule" if drive and a.get("resume_rule") is not None else ""),

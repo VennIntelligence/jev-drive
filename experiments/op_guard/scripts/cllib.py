@@ -93,7 +93,7 @@ def turns_cache_ok(udir: Path) -> bool:
 
 
 # ---------------------------------------------------------------- pool units
-def b2d_unit(name, ids, out, seed, nz, onnx, priority=0.0, route_adapter=None) -> dict:
+def b2d_unit(name, ids, out, seed, nz, onnx, priority=0.0, route_adapter=None, arm="spec", env=None) -> dict:
     """One op_arb.sh `arm spec` invocation on len(ids) CARLA workers (7.5 GB each, 12 pinned cores); done when every route has
     out/done/<id>.json (the command fails otherwise, so a retry resumes the unfinished routes)."""
     e = dict(GPU="{gpu}", IDX0="{idx}", WORKERS="{carla}", CPUS="{cpus}", SEED=str(seed), OP_ARB_DIR="{job_dir}/op",
@@ -102,11 +102,12 @@ def b2d_unit(name, ids, out, seed, nz, onnx, priority=0.0, route_adapter=None) -
         e["DRIVE_ARGS"] = NOZ
     if onnx:
         e["SRV_ONNX"] = onnx
+    e.update(env or {})                       # e.g. PARITY_TAG (op_parity arm: bias server next to the openpilot server)
     if route_adapter:                         # op_route_ft: the agent sends the route polyline, the server adds the adapter's bias
         e["TOP_ARGS"] = '"route_adapter": "%s"' % route_adapter
     out, ids = Path(out), [str(r) for r in ids]
     check = " && ".join("test -f %s" % shlex.quote(str(out / "done" / (r + ".json"))) for r in ids)
-    cmd = "%s && %s" % (shlex.join(["bash", OP_ARB, "arm", "spec", ",".join(ids), str(out)]), check)
+    cmd = "%s && %s" % (shlex.join(["bash", OP_ARB, "arm", arm, ",".join(ids), str(out)]), check)
     return dict(name=name, cmd=cmd, env=e, vram_gb=7.5 * len(ids), carla=len(ids), cpu=12, tries=2, priority=priority,
                 out=str(out), done=lambda out=out, ids=tuple(ids): all((out / "done" / (r + ".json")).exists() for r in ids))
 
