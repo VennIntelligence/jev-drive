@@ -2,7 +2,8 @@
 
   .venv/bin/python experiments/op_probe/scripts/opj_figs.py [--cases DIR]
 
-Inputs: results/joint/data/ (opj_build.py table on the box: navtest / navhard per-token tables, decoder scores; devkit replays of both
+Inputs: results/joint/data/ (gitignored; copy of the box's $DATA_DIR/runs/op_probe/joint/ plus runs/op_parity/hugsim/routes.json as
+hugsim_routes.json; opj_build.py table on the box: navtest / navhard per-token tables, decoder scores; devkit replays of both
 models' plans on the op_probe eval tokens, opb_score.py; HUGSIM routes), the op_parity HUGSIM CSVs in the repo, and for the case figure
 cases.json + frames_small.npz (opj_build.py export / frames; not committed: --cases points at a local copy of joint/, the figure is committed).
 Out: results/joint/figs/*.pdf|png, results/joint/stats.json, results/joint/index.html.
@@ -929,8 +930,8 @@ multiplicity correction; differences whose CI excludes 0 in one of ~30 strata ar
 <a href="../../../op_parity/results/gap/index.html">op_parity gap page</a>.</li>
 </ul>
 <p class="note">Reproduce: <code>experiments/op_probe/scripts/opj_build.py</code> (box: attrs / table / cases / export / frames; devkit replays via
-<code>opb_score.py</code>), then <code>.venv/bin/python experiments/op_probe/scripts/opj_figs.py --cases DIR</code> (Mac). Per-token tables in
-<code>results/joint/data/</code>, every number on this page in <a href="stats.json">stats.json</a>.</p>
+<code>opb_score.py</code>), then <code>.venv/bin/python experiments/op_probe/scripts/opj_figs.py --cases DIR</code> (Mac). Per-token tables (gitignored <code>results/joint/data/</code>, from
+<code>$DATA_DIR/runs/op_probe/joint/</code> on the box), every number on this page in <a href="stats.json">stats.json</a>.</p>
 </main></body></html>
 """
     (J / "index.html").write_text(H)
