@@ -6,6 +6,8 @@ import csv
 import json
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from jevdrive.bench.compat import trace_dir
 
 import matplotlib
 matplotlib.use("Agg")
@@ -20,7 +22,7 @@ def runs(root, tag):
     d = {}
     for r in csv.DictReader(open(root / "results.csv")):
         if r["tag"] == tag and r["end"] != "crash":
-            d[r["scenario"]] = [x for x in map(json.loads, open(root / tag / "zs" / r["run_dir"].split("/")[-1] / "zs_steps.jsonl")) if "step" in x]
+            d[r["scenario"]] = [x for x in map(json.loads, open(trace_dir(r, root) / "zs_steps.jsonl")) if "step" in x]
     return d
 
 

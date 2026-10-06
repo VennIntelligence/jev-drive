@@ -267,14 +267,39 @@ bench_hugsim cinque exam rule spin10 2 lowspeed '{{"resume": {{}}}}'
     def test_h_export_is_published_only_after_equivalence_gate(self):
         m = M.Model("H-test", "adapt_h", ckpt="checkpoint", benches=("hugsim",))
         out = self.d / "H-test.onnx"
+        distance = "0.6000"
         def check_run(argv, **kw):
             if "build" in argv:
                 Path(argv[argv.index("--out") + 1]).write_text("onnx")
             if "stdout" in kw:
-                kw["stdout"].write("stream 0 frames 8 | all cols max 1.0000 p99 0.01000 | plan xy max 0.6000 m, mean dist 0.01000 m\n")
-        with mock.patch.object(H.subprocess, "run", side_effect=check_run), self.assertRaises(RuntimeError):
+                kw["stdout"].write(f"stream 0 frames 8 | all cols max 1.0000 p99 0.01000 | plan xy max {distance} m, mean dist 0.01000 m\n")
+        with mock.patch.object(H.subprocess, "run", side_effect=check_run):
+            for distance in ("0.6000", "nan", "inf"):
+                with self.assertRaises(RuntimeError):
+                    H.build_h_onnx(m, out)
+                self.assertFalse(out.exists())
+            distance = "0.1000"
             H.build_h_onnx(m, out)
-        self.assertFalse(out.exists())
+        self.assertEqual(out.read_text(), "onnx")
+
+    def test_trace_readers_follow_canonical_exports(self):
+        d = self.d / "canonical/bench/zs/scene"
+        d.mkdir(parents=True)
+        (d / "zs_steps.jsonl").write_text('{"derot":{"dpos":0.1}}\n')
+        out = self.d / "legacy"
+        out.mkdir()
+        row = dict(tag="legacy-arm", scenario="scene", end="complete", run_dir=str(d))
+        pd.DataFrame([row]).to_csv(out / "results.csv", index=False)
+        path = REPO / "experiments/hugsim/scripts/derot_report.py"
+        spec = importlib.util.spec_from_file_location("derot_report_test", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.assertEqual(mod.runs(out / "results.csv", out, {"legacy-arm"})[("legacy-arm", "scene")][1], d)
+        proc = subprocess.run([sys.executable, str(path.with_name("sel3_window_report.py")), str(out)],
+                              capture_output=True, text=True, check=True)
+        self.assertIn("replays 1 in 1 scenes", proc.stdout)
+        relocated = dict(row, run_dir="/missing/old/zs/scene")
+        self.assertEqual(C.trace_dir(relocated, out), out / "legacy-arm/zs/scene")
 
 
 if __name__ == "__main__":

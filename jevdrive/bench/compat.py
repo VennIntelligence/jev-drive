@@ -24,6 +24,14 @@ def read_rows(path) -> list:
         return list(csv.DictReader(f))
 
 
+def trace_dir(row: dict, legacy_root=None) -> Path:
+    """Use the recorded trace path; relocated historical exports can still reconstruct their local directory."""
+    d = Path(row["run_dir"])
+    if d.exists() or legacy_root is None:
+        return d
+    return Path(legacy_root) / row["tag"] / d.parent.name / d.name
+
+
 def navtest_csv(spec: str, legacy=None):
     from .navsim import SUBS
     d = R.bench_root("navtest", resolve(spec).key("navtest"))

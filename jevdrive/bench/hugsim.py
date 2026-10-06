@@ -26,6 +26,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import math
 import os
 import re
 import socket
@@ -212,7 +213,7 @@ def build_h_onnx(m: Model, out: Path) -> None:
         subprocess.run([R.py("openpilot"), str(script), "check", "--onnx", str(tmp), "--ref", str(ref)], check=True, cwd=REPO, stdout=f,
                        stderr=subprocess.STDOUT)
     streams = [line.split() for line in log.read_text().splitlines() if line.startswith("stream")]
-    if not streams or any(float(row[15]) > 0.5 for row in streams):
+    if not streams or any(not math.isfinite(float(row[15])) or float(row[15]) > 0.5 for row in streams):
         raise RuntimeError(f"H ONNX plan xy differs from training port by > 0.5 m: {log}")
     os.replace(tmp, out)
 

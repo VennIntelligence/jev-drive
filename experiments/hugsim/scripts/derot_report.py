@@ -12,6 +12,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from jevdrive.bench.compat import trace_dir
 from spin_analysis import analyse, load_run  # noqa: E402
 
 SPIN10 = [Path(x).stem for x in open(Path(__file__).resolve().parent / "derot_spin10.txt").read().split()]
@@ -22,8 +24,7 @@ def runs(results, root, tag_filter):
     for r in csv.DictReader(open(results)):
         if r["tag"] not in tag_filter or r["end"] == "crash":
             continue
-        d = Path(r["run_dir"])
-        d = root / r["tag"] / d.parent.name / d.name
+        d = trace_dir(r, root)
         out[(r["tag"], r["scenario"])] = (r, d)
     return out
 

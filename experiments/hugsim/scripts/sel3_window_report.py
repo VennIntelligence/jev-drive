@@ -2,10 +2,17 @@
 """Summarise derot.dpos (replay vs native plan, unrotated control) per run directory: python sel3_window_report.py <dir>..."""
 import json, sys, pathlib
 import numpy as np
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3]))
+from jevdrive.bench.compat import read_rows, trace_dir
 
 for d in map(pathlib.Path, sys.argv[1:]):
     dp, per = [], {}
-    for f in sorted(d.rglob("zs_steps.jsonl")):
+    if (d / "results.csv").exists():
+        last = {(r["tag"], r["scenario"]): r for r in read_rows(d / "results.csv") if r["end"] != "crash"}
+        files = {trace_dir(r, d) / "zs_steps.jsonl" for r in last.values()}
+    else:
+        files = set(d.rglob("zs_steps.jsonl"))
+    for f in sorted(files):
         v = [json.loads(l).get("derot", {}).get("dpos") for l in open(f)]
         v = [x for x in v if x is not None]
         per[f.parent.name] = v
