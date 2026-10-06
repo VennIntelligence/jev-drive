@@ -14,7 +14,15 @@ drivable signed-distance raster (scorer's map layers) at each stage of P2 (visio
 head hidden) and of WA-JEPA (encoder context, trajectory head hidden), trained on navtrain, read on navtest DAC-fail vs pass tokens;
 plan decoders per stage scored with the devkit's `pdm_score`; input ablations on P2.
 
-**Next.** Small read (400 navtest tokens), then the full read: [results/dac-localize.md](results/dac-localize.md).
+**Result (2026-10-06).** [results/dac-localize.md](results/dac-localize.md). Graded (a) plus a smaller (c); (b) not supported. Navtest-wide DAC
+failures (stratified, paired): thin heads on Cinque's vision tokens fail 1.7 pp [0.7, 2.8] more than the same heads on WA-JEPA's front encoder;
+a drivable-hinge head on P2's plan-head hidden recovers 0.9 pp [0.1, 1.7] of P2's 2.6 pp gap; 1.9 pp [1.1, 2.8] remains at the head (P2-H vs
+WA-H). Probes: road SDF R^2 0.66 (Cinque vision) vs 0.78 (WA front encoder); on P2's failures its representations place its plan 0.75 m further
+inside the road than it is (WA all-view 0.11 m). The pre-registered probe rule names no class (vision has coarse road geometry; AUC readout
+confounded), so the verdict rests on the addendum-1 decoder readouts (medium).
+
+**Next.** Decision entry by main. Candidates: footprint SDF hinge in P2's plan-pathway fine-tune (cheap, about -0.9 pp DAC failures); encoder
+unfreeze with a dense drivable-SDF auxiliary head; WA / V-JEPA front tokens as adapter memory (trade test).
 
 <!-- files:begin -->
 <!-- files:end -->

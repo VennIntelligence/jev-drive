@@ -1,0 +1,4 @@
+set,n,raw_plan_out,lqr_only,depth_lt_0_3,depth_median_m,depth_p90_m
+"F (P2-s0 DAC fail, WA pass)",433,0.7159353348729792,0.2840646651270208,0.5034642032332564,0.2965384623015339,1.2068632860094834
+F-plan (raw plan footprint out),310,1.0,0.0,0.3709677419354839,0.4215362310999121,1.3840481211099314
+"F-core (F-plan, depth >= 0.3 m)",195,,,,,

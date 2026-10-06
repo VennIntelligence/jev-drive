@@ -16,7 +16,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [op_fov](op_fov/README.md) (wide FOV, fisheye): concluded; Wide FOV 90/116 deg: turn gain -0.005..-0.033, early stop; wide frame barely used [d(pending)]
 - [op_resume](op_resume/README.md) (driver resume, standstill launch): live; Driver-resume rule: 5/6 stuck HUGSIM runs launch (HD +0.12), missed-lead collision: gate stop [d(inputs:,90,96,107,113,117,118,119,124,126)]
 - [op_parity](op_parity/README.md) (input parity, WA-JEPA inputs): live; Cinque + ego / pose / cmd / side cams vs WA-JEPA, equal inputs and data [d(inputs:,92,104,111,118,137,138,139)]
-- [op_probe](op_probe/README.md) (DAC localization, stage probes): live; P2 vs WA-JEPA navtest DAC failures probed per stage (vision / temporal / head) [d(inputs:,104,112,144,145,146)]
+- [op_probe](op_probe/README.md) (DAC localization, stage probes): live; navtest DAC gap starts in Cinque vision (thin heads +1.7 pp vs WA encoder); hinge head -0.9 pp [d(inputs:,104,112,144,145,146)]
 - [op_wide_ft](op_wide_ft/README.md) (wide FOV fine-tune, W116): concluded; Fine-tune with 116 deg wide: B2D small set 0/9 both arms, ol exit -0.002; gate stop [d(pending)]
 - [alpamayo_turns](alpamayo_turns/README.md) (Alpamayo side cameras, multi-view turns): concluded; Cross cams off: dA_H +0.01 [-0.15,0.14] (nav); tele-slot drop -0.39 [d(pending)]
 - [vlm_arb](vlm_arb/README.md) (vlm-arb, vlm_arb): live; Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privileged 5), DS +5.0; fixed bypass pbyp2, stop-line R2 vred2, yellow rule vred3 [d84-87,89,91,95]
