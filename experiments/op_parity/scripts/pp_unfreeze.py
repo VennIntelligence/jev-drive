@@ -520,7 +520,7 @@ def cmd_plans(a):
                 d = np.linalg.norm(mu[m][:, :, :2] - z["plan_mu"][:N, :, :2], axis=-1)
                 eq[m] = {"vs_cached_plan_max_m": float(d.max()), "vs_cached_plan_mean_m": float(d.mean())}
                 run.info(f"{m} online vs cached plans: {eq[m]}")
-            if a.limit:
+            if a.limit or (ref.exists() and m in ("P0", "P2-F-s0") and a.frames == "warp"):   # checks only: keep the cached-path files
                 continue
             np.savez(pdir / f"{stem}.npz", names=np.array(names), plan_pos=mu[m][:, :, 0:3], plan_vel=mu[m][:, :, 3:6], plan_yaw=mu[m][:, :, 11],
                      plan_mu=mu[m], plan_std=sd[m], steps=31,
