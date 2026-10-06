@@ -29,6 +29,8 @@ Outputs in clip/ under the attempt directory ($B2D_ATTEMPT_OUT):
   meta.json     route id, town, weather, rig (sensor specs, intrinsics, model K, mount, rear axle), vehicle extent, config, timings
   DONE          written last by destroy(); a clip without it is incomplete
 
+Early end: ego below 0.1 m/s for cfg stuck_s (45 s) or cfg max_sim_s (240 s) ends the route (timing.stop in meta.json / DONE).
+
 DAgger: cfg driver "policy" (not built) would apply a learned policy's control while PDM-Lite still runs every tick on the true state, so
 ctl_expert keeps labelling; the hook is `_drive()`.
 """
@@ -52,6 +54,7 @@ os.environ.pop("SAVE_PATH", None)
 
 import carla  # noqa: E402
 from autopilot import AutoPilot  # noqa: E402
+from leaderboard.scenarios.scenario_manager import ScenarioManager  # noqa: E402
 from srunner.scenariomanager.carla_data_provider import CarlaDataProvider  # noqa: E402
 from srunner.scenariomanager.timer import GameTime  # noqa: E402
 
@@ -61,8 +64,30 @@ import zeroshot_rigs as rigs  # noqa: E402
 B2D_SPEC_MOUNT = (1.59, 0.0, 1.86)                 # jevdrive.openpilot.interface.B2D_SPEC_MOUNT (not imported: keeps the agent env lean)
 DEFAULT = dict(mount=list(B2D_SPEC_MOUNT), tick=0.05, crf=0, preset="veryfast", enc_threads=2,
                chase=True, chase_w=480, chase_h=270, chase_every=4, chase_crf=26,
-               actor_radius=80.0, light_radius=120.0, prop_every=20, route_ahead=64, driver="expert")
+               actor_radius=80.0, light_radius=120.0, prop_every=20, route_ahead=64, driver="expert",
+               stuck_s=45.0, max_sim_s=240.0)
 ROUTE_OPT = {"VOID": -1, "LEFT": 1, "RIGHT": 2, "STRAIGHT": 3, "LANEFOLLOW": 4, "CHANGELANELEFT": 5, "CHANGELANERIGHT": 6}
+
+
+STOP = {"flag": False, "why": ""}
+
+
+def _patch_scenario_manager():
+    """End the route after the current tick when STOP is set (scripts/p4_carla_agent.py's hook, as b2d_route.py --max-ticks)."""
+    if getattr(ScenarioManager, "_b2dc_patched", False):
+        return
+    inner = ScenarioManager._tick_scenario
+
+    def tick(self):
+        inner(self)
+        if STOP["flag"]:
+            self._running = False
+
+    ScenarioManager._tick_scenario = tick
+    ScenarioManager._b2dc_patched = True
+
+
+_patch_scenario_manager()
 
 
 def get_entry_point():
@@ -98,6 +123,8 @@ class B2DCollectAgent(AutoPilot):
         self._t = {"pack": 0.0, "enc": 0.0, "log": 0.0, "expert": 0.0, "wall0": time.time()}
         self._static_done = False
         self._chase = None
+        self._still = 0
+        STOP.update(flag=False, why="")
 
     # The leaderboard reads sensors() after setup(); PDM-Lite's own IMU stays first (it reads input_data["imu"]). The chase view is not a
     # leaderboard sensor (it allows a 3 m mounting radius): _chase_start() spawns it as a plain CARLA camera on the hero, for people only.
@@ -131,7 +158,18 @@ class B2DCollectAgent(AutoPilot):
         self._t["expert"] += time.perf_counter() - t0
         applied = self._drive(control, input_data)
         self._record(input_data, control, applied)
+        self._check_stop()
         return applied
+
+    def _check_stop(self):
+        """Stuck (ego below 0.1 m/s for stuck_s: PDM-Lite waiting on a scenario that never clears, seen at 350-500 s in the 10-route
+        stage) or max_sim_s: end the route; the clip keeps what was recorded and meta.json says why."""
+        sp = self.rows["speed"]
+        self._still = self._still + 1 if sp[-1] < 0.1 else 0
+        if self._still * 0.05 >= self.cfg["stuck_s"]:
+            STOP.update(flag=True, why="stuck")
+        elif self._k * 0.05 >= self.cfg["max_sim_s"]:
+            STOP.update(flag=True, why="max_sim")
 
     def _drive(self, expert_control, input_data):
         """The control the car gets. DAgger hook: a learned policy would act here (cfg driver 'policy'); PDM-Lite keeps labelling."""
@@ -323,7 +361,7 @@ class B2DCollectAgent(AutoPilot):
         (self.out / "kinds.json").write_text(json.dumps({str(k): v for k, v in self.kinds.items()}))
         n = max(1, self._k)
         wall = time.time() - self._t["wall0"]
-        timing = {"ticks": self._k, "frames": n_vid, "chase_frames": n_chase, "wall_s": round(wall, 1),
+        timing = {"ticks": self._k, "stop": STOP["why"] or "route_end", "frames": n_vid, "chase_frames": n_chase, "wall_s": round(wall, 1),
                   "sim_s": round(self._k * 0.05, 2), "rtf": round(self._k * 0.05 / max(wall, 1e-6), 3),
                   **{f"{k}_ms_per_tick": round(1e3 * v / n, 2) for k, v in self._t.items() if k != "wall0"},
                   "video_mb": round((self.out / "frames.mp4").stat().st_size / 1e6, 2)}
