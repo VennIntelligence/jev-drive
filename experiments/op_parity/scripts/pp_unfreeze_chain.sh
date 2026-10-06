@@ -18,7 +18,9 @@ SH="navtrain_full.s0of12 navtrain_full.s1of12"
 STEPS=${STEPS:-3000} BATCH=${BATCH:-64}
 status() { echo "$(date '+%F %T') op_parity unfreeze: $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
-sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && { echo done; return; }; rm -f "$ld/ERROR"
+sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && { echo done; return; }
+        local live; live=$($CL queue 2>/dev/null | awk -v n="$n" '$4 == n && ($2 == "queued" || $2 == "running") {print $1; exit}')
+        [[ -n $live ]] && { echo "$live"; return; }; rm -f "$ld/ERROR"
         local id; id=$($CL submit --owner op_parity --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; echo "$id"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 30; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; }
 
