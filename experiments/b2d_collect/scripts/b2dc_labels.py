@@ -98,7 +98,7 @@ def main(a):
             (jobs.append((rdir.name, str(adir), a.sdf_stride, a.force)) if adir else missing.append(rdir.name))
         run.info(f"{len(jobs)} clips with DONE, {len(missing)} routes without a complete clip")
         res = par.pmap(work, jobs, run=run, workers=a.workers or None)
-        rows = [r for r in res.results if r]
+        rows = [r for r in res.values if isinstance(r, dict)]
         for r in rows:
             m = man.get(str(r["route_id"]), {})
             r.update(type=m.get("type", ""), src=m.get("src", ""), turn=m.get("turn", ""))
