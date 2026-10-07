@@ -42,7 +42,7 @@ COLUMNS = ["key", "token", *SUBS, "score", "raw_out", "raw_depth", "lqr_out", "o
 CORES_PER_JOB = 12                    # pool job size: small enough to backfill a busy box (as the navtest log shards)
 CHUNK = 24                            # tokens per claim
 MIN_TOKENS_PER_WORKER = 16            # fewer jobs for small token sets
-RAM_BASE_GB, RAM_PER_WORKER_GB = 4.0, 1.0
+RAM_BASE_GB, RAM_PER_WORKER_GB = 2.0, 0.75     # measured: worker max RSS 0.59 GB (forked, partly shared), init 4 s
 STALE_S = 300.0
 _W = {}
 
