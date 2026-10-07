@@ -27,7 +27,7 @@
 
 - **复现命令不匹配当前正式实验。** `docs/b2d-controller.md` campaign示例给所有preset同一个旧 `results/controller_config.json`；它不会复现PI-CARLA/TCP-vendor/PI-max。应补上冻结 `results/v4-freeze/preset-configs.json` 的精确 `--preset-configs` 命令，注明旧命令只是vendor兼容示例。不要用旧 `campaign-v2` 名称暗示当前formal-v4。
 - **contract.md过期。** 仍说标定默认稍后提供，constructor没有 `longitudinal_mode/pi_kp/pi_ki`；没有 `motion.jsonl` 非有限字符串编码、`pose_status` 的degraded/age、compass<=.2s预测、超时制动、复位后强制新轨迹，以及故障tick日志边界。与实现/使用说明同步，不要让后续planner按旧契约接入。
-- **研究/索引头部状态落后于正文。** `research/trajectory-to-control.md` 首行仍称首轮Dev10完成、第二seed/holdout运行中，正文已追加v4；共享README仍笼统“独立v2开发继续”。`docs/b2d-controller.md`末尾Last verified仍为2026-09-22。最终按阶段给“v1完成、v4正式完成/不合格/确认待做”等状态，历史进展段落则保留时间上下文。
+- **研究/索引头部状态落后于正文。** `research/b2d-closed-loop/index.html` 首行仍称首轮Dev10完成、第二seed/holdout运行中，正文已追加v4；共享README仍笼统“独立v2开发继续”。`docs/b2d-controller.md`末尾Last verified仍为2026-09-22。最终按阶段给“v1完成、v4正式完成/不合格/确认待做”等状态，历史进展段落则保留时间上下文。
 - **阶段版本表。** 参数/控制核心d140e30、集成修复1ee2eb2、正式执行归档2cca3a9等各有含义；列源码hash和config hash对应实验，避免把文档后续commit当已跑的运行时代码。
 - **目录交付。** 原计划G5写 `experiments/cl_infra/results/b2d/controller/`，当前实际材料在已接受的 `todos/.../results/`。该旧目录不存在；建议把计划/研究链接指向共享目录并明确路径调整，不为字面一致复制大份CSV/图。审阅时两个工作树的controller/adapter源码字节相同，`docs/b2d-controller.md`不同；最终确认用户工作树能看到最新文档和准确交付路径。
 - `iteration-v2.md`的现有v4、舒适性、NaN、真实TCP说明总体准确。完成正式阶段后更新“正在运行”，补上最终结论链接；不需要重写已保留的历史失败。

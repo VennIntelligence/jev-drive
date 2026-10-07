@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-"""Straight / left / right / start-frame split of an op_interp full-benchmark run (research/openpilot-openloop-
-integration.md section 9), same convention as the 2000-token subset's by-command table: driving command from
+"""Straight / left / right / start-frame split of an op_interp full-benchmark run (research/openpilot-diagnosis/index.html),
+same convention as the 2000-token subset's by-command table: driving command from
 meta.json's "cmd" (NAVSIM one-hot, argmax), overridden to "start (v0<1)" when meta.json's "speed" < 1 m/s.
 
     envs/jevdrive/bin/python experiments/op_openloop/archive/op_interp_by_command.py --data navfull --ver v1 --split navtest

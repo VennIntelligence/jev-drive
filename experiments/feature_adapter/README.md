@@ -8,7 +8,7 @@ index: CARLA P5 pedestrian AUC 0.51-0.53 vs 0.83 nuScenes
 
 **Conclusion.** P5 AUC 0.51-0.53 at every layer vs 0.83: adapter infeasible (decisions 62). Cosmos pairs stage 3 AUC 0.815; size-driven, so narrowed to P5 (decisions 63).
 
-**Read more.** research/feature-adapter-domain-shift.md, `git show bcbdde4:todos/2026-09-29-e0-layer-probe.md`
+**Read more.** `git show bcbdde4:todos/2026-09-29-e0-layer-probe.md`
 
 <!-- files:begin -->
 ## Files

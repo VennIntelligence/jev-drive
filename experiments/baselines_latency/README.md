@@ -8,7 +8,7 @@ index: batch 1: Qwen-Drive-4B 702 ms, AutoVLA 1362 ms; our head <0.1 ms
 
 **Conclusion.** Batch 1: Qwen-Drive-4B 702 ms, AutoVLA 1362 ms, openjev 471 ms, our head < 0.1 ms (decisions 11); AutoVLA think rate 0/150 (decisions 15); latency is no contribution (decisions 18).
 
-**Read more.** docs/baselines.md, research/frozen-vlm-planner.md
+**Read more.** docs/baselines.md, experiments/probe_planner_v0/README.md
 
 <!-- files:begin -->
 ## Files

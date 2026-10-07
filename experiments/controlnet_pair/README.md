@@ -8,7 +8,7 @@ index: Paused, not no-go: deletion unclean, insertion fake-ish on 19 scenes
 
 **Conclusion.** Paused, not no-go (decisions 59): only Edge Distilled tried, no automatic checks. Restart if real-appearance pairs beyond cosmos G4 are needed, with a detector-recall check (< 5%) first.
 
-**Read more.** research/controlnet-pair-pilot.md, experiments/controlnet_pair/results/, `git show bcbdde4:tmp/2026-09-29-controlnet-pair-handoff.md`
+**Read more.** experiments/controlnet_pair/results/, `git show bcbdde4:tmp/2026-09-29-controlnet-pair-handoff.md`
 
 <!-- files:begin -->
 ## Files

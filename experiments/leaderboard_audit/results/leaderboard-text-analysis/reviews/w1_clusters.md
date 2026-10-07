@@ -4,7 +4,7 @@
 
 ## BLUE：训练 gate 不等于全部权重不变
 
-论文 [blue.pdf](../../../../../research/results/papers/blue.pdf#page=3) PDF p.3 Figure 3 明确：视觉编码器及 VLA 主干冻结，但单隐层 MLP gate 用 BCE **另行训练**。PDF p.4 Table 1 标 gate 有 0.11M 可训练参数；PDF p.6 Table 6 明说 SimLingo 与 CriticVLA 各有自己训练的 gate，转移 gate 是在另一主干训练的。PDF p.9 Table 11 及正文又说明 ReCogDrive gate 在 NAVSIM 训练集 90% 上训练，10% 用于阈值选择。因此“主干冻结”不能概括为“完整系统同权重”。
+论文 [BLUE](../../../../../research/benchmarks/index.html)（BLUE 论文）PDF p.3 Figure 3 明确：视觉编码器及 VLA 主干冻结，但单隐层 MLP gate 用 BCE **另行训练**。PDF p.4 Table 1 标 gate 有 0.11M 可训练参数；PDF p.6 Table 6 明说 SimLingo 与 CriticVLA 各有自己训练的 gate，转移 gate 是在另一主干训练的。PDF p.9 Table 11 及正文又说明 ReCogDrive gate 在 NAVSIM 训练集 90% 上训练，10% 用于阈值选择。因此“主干冻结”不能概括为“完整系统同权重”。
 
 | CSV 物理行 | 当前 `same_weights_or_retrained` | 建议值 | 具体原因／附注 |
 | --- | --- | --- | --- |
@@ -18,7 +18,7 @@
 
 ## BEV-Planner++：Table 1 的 checkpoint 来源混杂
 
-[bev_planner.pdf](../../../../../research/results/papers/bev_planner.pdf#page=5) PDF p.5 Table 1 的 `ckpt. source` 逐项为 UniAD **ID1 Reproduce / ID2 Official / ID3 Reproduce**，VAD-Base **ID4 Reproduce / ID5 Official / ID6 Official**。表注称 ID1、3、4 来自作者对官方代码的修改；附录 PDF p.11 说明 ID1/4 关闭 BEV 的 CAN bus，ID3 在规划头拼接 ego 状态。`Official` 是来源标签，**不能推出 ID5 与 ID6 为同一个 checkpoint**，更不能推出跨 `Official`/`Reproduce` 的配对同权重。Table 2 的 VAD-Base*（对应 ID5）与 VAD-Base（ID6）检测 NDS/mAP 也不同（46.0/47.5 对 45.5/47.0），进一步不支持简单视作完全相同模型仅切一个推理开关。
+[BEV-Planner](../../../../../research/benchmarks/index.html) PDF p.5 Table 1 的 `ckpt. source` 逐项为 UniAD **ID1 Reproduce / ID2 Official / ID3 Reproduce**，VAD-Base **ID4 Reproduce / ID5 Official / ID6 Official**。表注称 ID1、3、4 来自作者对官方代码的修改；附录 PDF p.11 说明 ID1/4 关闭 BEV 的 CAN bus，ID3 在规划头拼接 ego 状态。`Official` 是来源标签，**不能推出 ID5 与 ID6 为同一个 checkpoint**，更不能推出跨 `Official`/`Reproduce` 的配对同权重。Table 2 的 VAD-Base*（对应 ID5）与 VAD-Base（ID6）检测 NDS/mAP 也不同（46.0/47.5 对 45.5/47.0），进一步不支持简单视作完全相同模型仅切一个推理开关。
 
 | CSV 物理行 | 配对（Table 1 ID） | 当前值 | 建议值与应加 `notes` |
 | --- | --- | --- | --- |
@@ -32,7 +32,7 @@
 
 ## DriveMA：收窄 `REAL-WOD-001`
 
-原 finding [`REAL-WOD-001`](../../../../../research/results/out/findings.jsonl) 记录 `trajectory_reward.py` 用官方 RFS 计算器构造轨迹奖励；[drivema.pdf](../../../../../research/results/papers/drivema.pdf#page=5) PDF p.5 §4.1 明说 WOD-E2E 的 `Rtraj` 由 RFS 实例化。PDF p.7 Table 3 说明所有 RL 变体都从 `Meta-Action SFT w/ ACP` 初始化，Vanilla GRPO 使用完整奖励但没有 turn-level credit assignment。故 finding ID 应连到**比较两端首次加入 RFS 轨迹奖励**的增量；仅在两个已用 `Rtraj` 的 RL 变体之间加 `Rcons` 或 `Rmeta`，不是该代码发现的增量。
+原 finding [`REAL-WOD-001`](../../hack-audit/findings.jsonl) 记录 `trajectory_reward.py` 用官方 RFS 计算器构造轨迹奖励；[DriveMA](../../../../../research/benchmarks/index.html) PDF p.5 §4.1 明说 WOD-E2E 的 `Rtraj` 由 RFS 实例化。PDF p.7 Table 3 说明所有 RL 变体都从 `Meta-Action SFT w/ ACP` 初始化，Vanilla GRPO 使用完整奖励但没有 turn-level credit assignment。故 finding ID 应连到**比较两端首次加入 RFS 轨迹奖励**的增量；仅在两个已用 `Rtraj` 的 RL 变体之间加 `Rcons` 或 `Rmeta`，不是该代码发现的增量。
 
 | CSV 物理行 | 当前 `hack_finding_id` | 建议值 | 原因 |
 | --- | --- | --- | --- |

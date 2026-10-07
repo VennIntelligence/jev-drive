@@ -1,7 +1,7 @@
 # Bench2Drive · BLUE
 
 - 固定源码：[George-Ling3/BLUE `6970cb69e05ef904b37f4264207ea0e1dab35ef2`](https://github.com/George-Ling3/BLUE/tree/6970cb69e05ef904b37f4264207ea0e1dab35ef2)；本地 `repos/bench2drive__blue/`。
-- 论文：[BLUE](../../../../../research/results/papers/blue.pdf)；README 报 3 seed 平均 90.58±0.12 DS。
+- 论文：[BLUE](../../../../../research/benchmarks/index.html)；README 报 3 seed 平均 90.58±0.12 DS。
 
 ## 已读与未读
 

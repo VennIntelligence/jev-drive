@@ -8,7 +8,7 @@ index: Only 2 BehaviorBench PPO ran: yield 43.0% vs null 2.0%
 
 **Conclusion.** Only 2 BehaviorBench weights ran: yield 43.0% (null 2.0%), aggressive PPO bypasses 79.5% with 15.8% crashes, none recover; no direct executor (decisions 51). PufferDrive v1 numbers voided; v2 only.
 
-**Read more.** research/state-space-policies.md, `git show bcbdde4:todos/2026-09-26-state-space-policies.md`
+**Read more.** `git show bcbdde4:todos/2026-09-26-state-space-policies.md`
 
 <!-- files:begin -->
 ## Files

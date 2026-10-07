@@ -65,7 +65,7 @@ VARIANTS = [
                                 "--decimate", "4", "--overlap"]),
     ("policy129_all", ["--rig", "front3", "--policy", "sleep", "--infer-ms", "129",
                        "--decimate", "4", "--overlap", "--zero-copy", "--no-spectator"]),
-    # the ladder of real models (research/carla-efficiency.md). These need a policy server:
+    # the ladder of real models (research/b2d-closed-loop/index.html). These need a policy server:
     #   b2d_policy_server.py --socket /tmp/b2d-policy.sock --backbone qwen
     # and then --extra "--policy gpu --policy-socket /tmp/b2d-policy.sock".
     # The stand-in above leaves the GPU idle; these compete with the renderer for the same card,

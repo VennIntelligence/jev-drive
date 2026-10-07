@@ -8,7 +8,7 @@ index: Exact fp32 port; pedestrian AUC gain +0.076 nuScenes, +0.009 CARLA
 
 **Conclusion.** Exact fp32 port (error 2e-4 m); drift 0.058 / 0.061 m. Pedestrian AUC gain +0.076 nuScenes (line +0.10), +0.009 CARLA P5 (line 0.60): both fail (decisions 55).
 
-**Read more.** research/feature-adapter-domain-shift.md, `git show bcbdde4:todos/2026-09-28-op-adapt.md`
+**Read more.** experiments/feature_adapter/README.md, `git show bcbdde4:todos/2026-09-28-op-adapt.md`
 
 <!-- files:begin -->
 ## Files

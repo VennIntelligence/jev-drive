@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Run exactly one Bench2Drive route against an already-running CARLA server, with a per-phase
-profile. See research/carla-efficiency.md.
+profile. See research/b2d-closed-loop/index.html.
 
 One route per process is the unit of isolation: a route that segfaults the server takes down this
 process and nothing else (R1), and the result file it leaves behind is what makes resume work (R2).

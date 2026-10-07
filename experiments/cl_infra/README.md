@@ -8,7 +8,7 @@ index: 220 routes take a measured 3.11 h; reduced profile
 
 **Conclusion.** Needs libegl1 (decisions 16); 220 routes take 3.11 h, 209 complete (17). Default `reduced`: 59.1 vs 59.8 tick/s, 3.3x fewer threads (83).
 
-**Read more.** research/carla-efficiency.md, docs/closed-loop-runbook.md, docs/bench2drive-cost.md
+**Read more.** research/b2d-closed-loop/index.html, docs/closed-loop-runbook.md, docs/bench2drive-cost.md
 
 <!-- files:begin -->
 ## Files

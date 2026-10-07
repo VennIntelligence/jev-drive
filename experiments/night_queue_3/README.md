@@ -8,7 +8,7 @@ index: No public lateral-readout examinee bypasses; zero speed -22.1 PDMS
 
 **Conclusion.** Apart from PDM-Lite no lateral-readout examinee bypasses (decisions 47); Q3 misses gates (52). Zeroing NAVSIM speed drops DrivoR PDMS by 22.115, WA-JEPA 8.159: ego-prior reading (35, 44, 48, 53).
 
-**Read more.** research/review-sheet-nq3.md, experiments/night_queue_3/results/, `git show bcbdde4:todos/2026-09-26-night-queue-3.md`
+**Read more.** experiments/night_queue_3/results/, `git show bcbdde4:todos/2026-09-26-night-queue-3.md`
 
 <!-- files:begin -->
 ## Files

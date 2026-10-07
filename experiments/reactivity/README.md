@@ -8,7 +8,7 @@ index: Dual-stream paired-diff head flips pedestrians 43.3%; ridge_late 0%
 
 **Conclusion.** P5 v0 exam is valid, but ridge_late flips 0%, TFv6 39.4% (decisions 32). On P5 v1 the dual-stream paired-difference head flips pedestrians 43.3% [35.0, 50.7] vs 0-3% for reweighting (42).
 
-**Read more.** experiments/reactivity/results/reactivity/, research/prediag-2026-09/README.md, `git show bcbdde4:todos/2026-09-25-reactivity-program.md`
+**Read more.** experiments/reactivity/results/reactivity/, experiments/prediag/README.md, `git show bcbdde4:todos/2026-09-25-reactivity-program.md`
 
 <!-- files:begin -->
 ## Files

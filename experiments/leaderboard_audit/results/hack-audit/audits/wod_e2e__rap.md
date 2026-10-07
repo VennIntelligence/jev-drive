@@ -1,7 +1,7 @@
 # WOD-E2E / RAP-DINO
 
 - 仓库：[vita-epfl/RAP，固定 commit 5fd8630](https://github.com/vita-epfl/RAP/tree/5fd8630ae54442dd41827de4a9afe1690e3f02bb)。
-- 论文：[RAP](../../../../../research/results/papers/rap.pdf)，核对 §4 Waymo、Table 3、附录 A.4。
+- 论文：[RAP](../../../../../research/benchmarks/index.html)，核对 §4 Waymo、Table 3、附录 A.4。
 - 读过：根 README 的 Waymo Fine-tuning 与 Leaderboard Submission、`navsim/planning/script/run_waymo_dataset_caching.py`、`run_waymo_submission.py`、`navsim/planning/training/dataset.py` 的 Waymo 分支、`navsim/agents/rap_dino/rap_agent.py`、`rap_features.py`、`rap_model.py`、`navsim/common/waymo_utils.py`。
 - 未读：RAP 的 NAVSIM/B2D 全部训练流程、上游 nuPlan 仿真器及 DINO 内部；未运行代码或评测。
 

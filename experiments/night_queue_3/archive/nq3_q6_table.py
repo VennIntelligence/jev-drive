@@ -1,5 +1,5 @@
 """Night queue 3, Q6 (a): the backbone x head x exam main table under one protocol (fc65452:todos/2026-09-26-night-queue-3.md,
-Q6 and the [D] 16:50 entry, items 1-15; research/ablation-matrix-inventory.md section 9).
+Q6 and the [D] 16:50 entry, items 1-15; research/decisions/048.md section 9).
 
 Every cell comes from a stored result (the small tables in research/results/ or the box run dirs) and is either taken
 ("take": the stored number is already in the unified protocol) or recomputed ("recompute": re-judged from stored
@@ -27,7 +27,7 @@ BB = {"qwen L18_last": "Qwen3-VL-4B", "vjepa2 mean": "V-JEPA 2 ViT-L", "siglip2 
       "dinov2 patch_mean": "DINOv2-B", "opsmall temporal": "openpilot small"}
 MOD = {"cinque": "openpilot Cinque", "lebowski": "openpilot Lebowski"}
 
-# the inventory's numbers (research/ablation-matrix-inventory.md sections 1-5): (row, column) -> old value
+# the inventory's numbers (research/decisions/048.md sections 1-5): (row, column) -> old value
 OLD = {
     ("ego-only | ridge ego", "P5 BA ped"): 7.6, ("ego-only | ridge ego", "P5 BA cut-in"): 3.8, ("ego-only | ridge ego", "P5 BA null"): 0.5,
     ("Qwen3-VL-4B | ridge_late", "P5 BA ped"): 0.0, ("Qwen3-VL-4B | ridge_late", "P5 BA null"): 5.1,

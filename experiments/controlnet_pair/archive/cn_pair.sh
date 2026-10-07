@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ControlNet pair pilot (research/controlnet-pair-pilot.md), one stage.
+# ControlNet pair pilot (research/world-model/index.html), one stage.
 # Usage: experiments/controlnet_pair/archive/cn_pair.sh <tag> <scenes: comma list or all> <arms, comma list, in order; EG / EI / EIG after E, BVI after BV>
 # SCENES_<ARM>=<list> overrides the scene list for one arm (e.g. SCENES_BV=p3_000).
 # GPU from CN_GPU (default 2). Writes $DATA_DIR/runs/cn_pair/<tag>.{DONE,ERROR,STATUS}.

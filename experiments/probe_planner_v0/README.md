@@ -8,7 +8,7 @@ index: pre-onset vision delta null (CI [-0.062, +0.030]); K >= 1024
 
 **Conclusion.** Vision-over-ego at pre-onset falsified on Waymo train (CI [-0.062, +0.030], decisions 3d). Defaults: 800 px, K >= 1024, late fusion ADE -0.029 m (decisions 4-10).
 
-**Read more.** research/frozen-vlm-planner.md, research/qwen-latent-driving.md, docs/waymo-e2e.md
+**Read more.** research/decisions/001.md, docs/waymo-e2e.md
 
 <!-- files:begin -->
 ## Files

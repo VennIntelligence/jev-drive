@@ -1,6 +1,6 @@
 # factor_wm 第 1 阶段预登记：ego 精确的模拟器里在策略上训练 openpilot（2026-10-05，未跑任何打分实验）
 
-判据在训练前写死，结果栏留空。文献定位见 [research/factorized-world-model.md](../../../research/factorized-world-model.md)。
+判据在训练前写死，结果栏留空。文献定位见 [research/world-model/index.html](../../../research/world-model/index.html)。
 
 ## 0. 为什么第 1 阶段只做 ego 部分
 

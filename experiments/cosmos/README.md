@@ -8,7 +8,7 @@ index: Cosmos v1 no-go (80% diff outside ped); G4 made 2004 pairs
 
 **Conclusion.** v1 no-go: 80% of the difference lies outside the pedestrian (decisions 56). v2 passes the ring check on 1/10 pairs; G4 made 2004 pairs anyway (123 GPU-h); readability follows pedestrian size (63).
 
-**Read more.** experiments/cosmos/results/, research/feature-adapter-domain-shift.md, `git show bcbdde4:todos/2026-09-28-cosmos-pilot.md`
+**Read more.** experiments/cosmos/results/, experiments/feature_adapter/README.md, `git show bcbdde4:todos/2026-09-28-cosmos-pilot.md`
 
 <!-- files:begin -->
 ## Files

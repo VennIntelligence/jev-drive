@@ -2,7 +2,7 @@
 
 - 原备料 main 固定版本 `696ef77924eb9e0a4b4047d013a50e9854bfa026` 仅含 NAVSIM；其 README L14 明示 Bench2Drive 代码另在 `bench2drive` 分支。
 - 本单元实际审计：[swc-17/SparseDriveV2 `e42ea59dd4946238dc65097495a9aa0708121fae`](https://github.com/swc-17/SparseDriveV2/tree/e42ea59dd4946238dc65097495a9aa0708121fae)，本地 `repos/bench2drive__sparsedrivev2_b2d/`。阶段 0 清单应记录此 commit。
-- 论文：[SparseDriveV2](../../../../../research/results/papers/sparsedrivev2.pdf)；表 4 报 Bench2Drive DS 89.15、SR 70.00。
+- 论文：[SparseDriveV2](../../../../../research/benchmarks/index.html)；表 4 报 Bench2Drive DS 89.15、SR 70.00。
 
 ## 已读与未读
 

@@ -20,7 +20,7 @@ The navtrain refit of the ratio for it_dw3 (od2_ratio chain) returned 0.6, so th
 
 ## Per-board trick: longitudinal x1.06 (labelled, separate)
 
-The plan's WOD longitudinal coordinate times 1.06 (the val two-fold cross-fitted factor, research/leaderboard-skill-pack.md; same
+The plan's WOD longitudinal coordinate times 1.06 (the val two-fold cross-fitted factor, experiments/skill_pack/README.md; same
 factor as the 7.921 test submission).
 
 | driver + x1.06 | RFS | delta vs shipped (no trick) | delta vs shipped x1.06 | ADE (m) |

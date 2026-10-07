@@ -8,7 +8,7 @@ index: P6 v0 holds, placement null misses gate; V-JEPA 2 flips 47%
 
 **Conclusion.** P6 v0 holds (PDM-Lite bypasses 9 classes 100%) but placement null 0.889 misses 0.90 (decisions 52). Desire shifts 0.61-0.68 m (49); V-JEPA 2 flips pedestrians 47.0%, Qwen 41.5%, openpilot 3.0% (48).
 
-**Read more.** research/behavior-layer-instruments.md, experiments/night_queue_2/results/, `git show bcbdde4:todos/2026-09-26-night-queue-2.md`
+**Read more.** research/decisions/047.md, experiments/night_queue_2/results/, `git show bcbdde4:todos/2026-09-26-night-queue-2.md`
 
 <!-- files:begin -->
 ## Files

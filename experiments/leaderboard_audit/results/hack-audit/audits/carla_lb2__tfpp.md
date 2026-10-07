@@ -1,7 +1,7 @@
 # CARLA Leaderboard 2.0 · TF++
 
 - 固定源码：[autonomousvision/carla_garage `f22bc491b3094792aef475149e09a94dcbb526f9`](https://github.com/autonomousvision/carla_garage/tree/f22bc491b3094792aef475149e09a94dcbb526f9)，`leaderboard_2` 分支；本地 `repos/carla_lb2__tfpp/`。
-- 论文：[TF++ Leaderboard 2.0 技术报告](../../../../../research/results/papers/tfpp.pdf)。SimLingo 论文 Table 1 将 TF++ 官方 5.56 DS 列在 **MAP** 区、5.18 DS 列在 **SENSORS** 区；两者不能混排。公开仓库 `leaderboard/run_leaderboard.sh` 默认 `SENSORS`，agent 根据 `CHALLENGE_TRACK_CODENAME` 可切换为 MAP；5.56 对应的确切提交配置未见公开脚本。
+- 论文：[TF++ Leaderboard 2.0 技术报告](../../../../../research/benchmarks/index.html)。SimLingo 论文 Table 1 将 TF++ 官方 5.56 DS 列在 **MAP** 区、5.18 DS 列在 **SENSORS** 区；两者不能混排。公开仓库 `leaderboard/run_leaderboard.sh` 默认 `SENSORS`，agent 根据 `CHALLENGE_TRACK_CODENAME` 可切换为 MAP；5.56 对应的确切提交配置未见公开脚本。
 
 ## 已读与未读
 

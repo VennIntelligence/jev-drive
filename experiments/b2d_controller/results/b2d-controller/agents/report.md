@@ -40,7 +40,7 @@ Ran 9 tests in 0.216s — OK
 
 ## 根代理追加分工：research修订
 
-已更新 `research/trajectory-to-control.md`：修正aim_y与法向cross-track、CARLA加法lookahead、FF+完整bearing PID重复转向、绝对时间速度裁剪、CARLA/TCP离散语义、MinimumSpeed unused、finished≠completion与成本预算边界；替换原“半天/必能跑完”建议为共享计划G1–G4。写入实际MKZ轮距/后轴偏移/70°/km/h转向曲线，直接读calibration-units JSON核对；明确10 m/s右转sweep速度塌陷不可拟合，不宣称真实plant精确或Dev10已通过。
+已更新 `research/b2d-closed-loop/index.html`：修正aim_y与法向cross-track、CARLA加法lookahead、FF+完整bearing PID重复转向、绝对时间速度裁剪、CARLA/TCP离散语义、MinimumSpeed unused、finished≠completion与成本预算边界；替换原“半天/必能跑完”建议为共享计划G1–G4。写入实际MKZ轮距/后轴偏移/70°/km/h转向曲线，直接读calibration-units JSON核对；明确10 m/s右转sweep速度塌陷不可拟合，不宣称真实plant精确或Dev10已通过。
 
 ## 根代理追加分工：复用 CARLA server 的 Python API
 

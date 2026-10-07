@@ -2,7 +2,7 @@
 """Instrumentation and optional optimisations for the Bench2Drive closed-loop.
 
 Everything here is a monkeypatch applied to an unmodified Bench2Drive checkout, so the checkout
-stays the reference implementation and every optimisation is a flag (research/carla-efficiency.md:
+stays the reference implementation and every optimisation is a flag (research/b2d-closed-loop/index.html:
 "每个优化留开关"). Two groups:
 
 Measurement (always on)

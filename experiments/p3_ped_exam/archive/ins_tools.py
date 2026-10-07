@@ -1,4 +1,4 @@
-"""Insertion-tool comparison (research/insertion-options.md): one inserted pedestrian and one inserted vehicle in the
+"""Insertion-tool comparison (experiments/p3_ped_exam/README.md): one inserted pedestrian and one inserted vehicle in the
 same OmniRe scene, harmonised by each open tool, on identical frames, measured with one metric table.
 
 Options (front camera at the reconstruction's 960 x 640, the 49 frames t* - 2.9 s .. t* + 1.9 s at 10 Hz; TTR 3 s):

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Insertion-tool comparison (research/insertion-options.md): envs and weights for the two open tools we try.
+# Insertion-tool comparison (experiments/p3_ped_exam/README.md): envs and weights for the two open tools we try.
 #   R3D2  (zenseact/R3D2 @ bdd2b4b, code Apache-2.0, weights bertaveira/R3D2{,-big} non-commercial / Waymo licence):
 #         one-step SD-Turbo harmonizer trained on Waymo FRONT 3DGS renders with inserted assets (adds shadow + relight).
 #   VACE  (ali-vilab/VACE @ 48eb44f + Wan2.1, Apache-2.0; weights Wan-AI/Wan2.1-VACE-14B from ModelScope):

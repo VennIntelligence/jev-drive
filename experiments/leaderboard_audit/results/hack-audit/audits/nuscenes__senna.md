@@ -1,7 +1,7 @@
 # nuScenes / Senna：排除记录
 
 - 仓库：[hustvl/Senna，固定 commit 31a3a23](https://github.com/hustvl/Senna/tree/31a3a2336e9494c254b612665fe55e95f67e9cae)。
-- 论文：[Senna](../../../../../research/results/papers/senna.pdf)，重点核对 §III-C、Table II 和附录。
+- 论文：[Senna](../../../../../research/benchmarks/index.html)，重点核对 §III-C、Table II 和附录。
 - 读过：仓库根目录 README、`data_tools/senna_nusc_data_converter.py`、`data_tools/senna_qa_utils.py`、`eval_tools/senna_plan_cmd_eval_multi_img.py`，以及训练脚本清单。
 - 未读：`llava/` 和 `llava_next/` 下与 nuScenes 轨迹规划无关的上游通用模块；没有下载模型权重、运行代码。
 

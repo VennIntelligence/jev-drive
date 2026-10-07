@@ -1,6 +1,6 @@
 # CARLA Leaderboard 2.0 · CarLLaVA（排除核验记录）
 
-- 论文：[CarLLaVA 技术报告](../../../../../research/results/papers/carllava.pdf)；官方 **SENSORS** DS 6.87、RC 18.08、IS 0.42（Table 1）。
+- 论文：[CarLLaVA 技术报告](../../../../../research/benchmarks/index.html)；官方 **SENSORS** DS 6.87、RC 18.08、IS 0.42（Table 1）。
 - 原抽样仓库：[RenzKa/simlingo `743b243afd6cf5ff51b9fa1f8cac86f22d569684`](https://github.com/RenzKa/simlingo/tree/743b243afd6cf5ff51b9fa1f8cac86f22d569684)；本地 `repos/carla_lb2__carllava/`。
 - 核验结论：当前仓库明确把 CarLLaVA 称作 SimLingo-BASE 的旧名，非独立方法；只能定位 Base 训练代码，不能定位 2024 官方提交的闭环 agent/配置。因此该条从 A/B 可审计抽样降为 C 并排除，发现数 0。
 

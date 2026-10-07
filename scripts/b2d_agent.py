@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Stand-in agent for Bench2Drive closed-loop cost measurement. See research/carla-efficiency.md.
+"""Stand-in agent for Bench2Drive closed-loop cost measurement. See research/b2d-closed-loop/index.html.
 
 The leaderboard loads this file by path (`--agent`) and calls `get_entry_point()`. Everything is
 configured through the JSON file passed as `--agent-config`:

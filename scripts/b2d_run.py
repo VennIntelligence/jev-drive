@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Run a set of Bench2Drive routes with per-route isolation, a tick-progress watchdog and resume.
-See research/carla-efficiency.md, section "可靠性和续跑".
+See research/b2d-closed-loop/index.html and docs/closed-loop-runbook.md.
 
 The properties this exists for, in the order they matter:
 
@@ -651,7 +651,7 @@ class Runner(object):
     def learn_maps(self, server):
         """Ask the server which maps it has, once. A route whose town is not installed is not a
         failure to retry, it is out of scope, and it has to be reported as such rather than
-        dropped (research/carla-efficiency.md R6)."""
+        dropped (research/b2d-closed-loop/index.html R6)."""
         if self.available_maps is not None:
             return
         import carla
@@ -849,7 +849,7 @@ class Runner(object):
     def summarise(self):
         """Built from what is on disk, not from this process's memory: a run that resumes after a
         crash must still report the whole history, including the attempts its predecessor made.
-        R6 in research/carla-efficiency.md - the number of restarts and the routes that never
+        R6 in research/b2d-closed-loop/index.html - the number of restarts and the routes that never
         finished are results, not logistics, because a score over the routes that happened to
         finish is a score on a selected subset."""
         requested = [rid for rid, _ in self.requested]

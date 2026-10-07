@@ -8,7 +8,7 @@ index: pre-onset vision delta null (CI [-0.062, +0.030])
 
 **Conclusion.** Pre-onset delta CI [-0.062, +0.030], DiD +0.111 (decisions 3d); no readout or backbone (Qwen-32B, Wan2.2, V-JEPA 2) buys it (decisions 20-24); Waymo heads fail on CARLA.
 
-**Read more.** research/prediag-2026-09/README.md, research/p3-exam-filter.md
+**Read more.** experiments/p3_ped_exam/README.md
 
 <!-- files:begin -->
 ## Files

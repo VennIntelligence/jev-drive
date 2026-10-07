@@ -8,7 +8,7 @@ index: Qwen+openpilot complementary under paired-diff; SAM gate flips 29.2%
 
 **Conclusion.** Redundant under imitation, complementary under paired-difference training (decisions 43). SAM pedestrian recall 0.49 (0.88 within 20 m); rule gate flips 29.2% vs learned 43%.
 
-**Read more.** experiments/fusion_diag/results/, research/behavior-layer-instruments.md, `git show bcbdde4:todos/2026-09-25-fusion-diagnostics.md`
+**Read more.** experiments/fusion_diag/results/, research/decisions/047.md, `git show bcbdde4:todos/2026-09-25-fusion-diagnostics.md`
 
 <!-- files:begin -->
 ## Files

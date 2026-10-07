@@ -1,6 +1,6 @@
 # CARLA Leaderboard 2.0 · SimLingo-BASE（排除核验记录）
 
-- 论文：[SimLingo](../../../../../research/results/papers/simlingo_base.pdf)；Table 1 在 **MAP** 区列 Base DS 6.25，在 **SENSORS** 区列 Base DS 6.87。抽样所用 6.25 不可与 SENSORS 数字混排。
+- 论文：[SimLingo](../../../../../research/benchmarks/index.html)；Table 1 在 **MAP** 区列 Base DS 6.25，在 **SENSORS** 区列 Base DS 6.87。抽样所用 6.25 不可与 SENSORS 数字混排。
 - 原抽样仓库：[RenzKa/simlingo `743b243afd6cf5ff51b9fa1f8cac86f22d569684`](https://github.com/RenzKa/simlingo/tree/743b243afd6cf5ff51b9fa1f8cac86f22d569684)；本地 `repos/carla_lb2__simlingo_base/`。
 - 核验结论：论文 Table 1 脚注原文：“we changed the naming of our model from CarLLaVA to SimLingo-BASE”；README L193 同样确认“previously CarLLaVA”。这是旧名对应的 Base 模型，非新增独立方法。仓库没有可对应 MAP 6.25 官方提交的闭环 Base agent/参数，故降 C、排除、发现数 0。
 

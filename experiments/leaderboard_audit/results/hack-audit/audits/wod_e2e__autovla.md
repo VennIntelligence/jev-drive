@@ -1,7 +1,7 @@
 # WOD-E2E / AutoVLA
 
 - 仓库：[ucla-mobility/AutoVLA，固定 commit ba34eed](https://github.com/ucla-mobility/AutoVLA/tree/ba34eed74ce6729e7986592d0e66cbaca397b4fa)。
-- 论文：[AutoVLA](../../../../../research/results/papers/autovla.pdf)，核对 §3/§4、Fig. 6、附录 B.1。
+- 论文：[AutoVLA](../../../../../research/benchmarks/index.html)，核对 §3/§4、Fig. 6、附录 B.1。
 - 读过：根 README、Waymo 数据预处理 `dataset_utils/preprocessing/waymo_e2e_dataset.py`、`cot_prompts.py`、`dataset_utils/sft_dataset.py`、`tools/preprocessing/cot_sample_generation.py`、`models/autovla.py` 的奖励路径、公开配置与脚本清单。
 - 未读：全部 NAVSIM 上游代码、动作码本细节及未发布的 Waymo 提交脚本；未运行代码或评测。
 

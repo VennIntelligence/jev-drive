@@ -1,7 +1,7 @@
 # WOD-E2E / DriveMA-4B
 
 - 仓库：[Tsinghua-MARS-Lab/DriveMA，固定 commit de20e6c](https://github.com/Tsinghua-MARS-Lab/DriveMA/tree/de20e6c64878bc3413d26d69362c3be9b3a91533)。
-- 论文：[DriveMA](../../../../../research/results/papers/drivema.pdf)，核对 §4、Table 1、Table 3、附录方法和提示词。
+- 论文：[DriveMA](../../../../../research/benchmarks/index.html)，核对 §4、Table 1、Table 3、附录方法和提示词。
 - 读过：根 README、`README_DriveMA_Pipeline.md`、`examples/train/grpo/internal/gspo.sh`、`examples/train/grpo/plugin/trajectory_reward.py`、`tools/infer_scripts/run_vllm_infer_mutil_turn.py`、`tools/other/convert_to_submission.py`、RFS 工具。
 - 未读：捆绑的通用 ms-swift 实现全集和数据包中的每条标注；未运行代码、模型或评测。
 

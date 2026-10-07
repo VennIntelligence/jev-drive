@@ -19,7 +19,7 @@
 
 ## 判定与修正建议
 
-**事实一致率 11/12 = 91.7%，达到 README 的 ≥90% 抽检阈值。** 唯一实质错误为第 19 行的方法映射。应删除 `LTF[A]`：若 `related_methods` 表示抽样仓库归属，写明 `PDM-Closed[A,excluded]（仅仓库关联；帖文讨论 TransFuser）`；若表示 issue 真正讨论的方法，应标 `TransFuser（样本外）`，并重新判断该行是否保留。该行建议去掉无证据的 `protocol_split`，仅留配置差异疑问，且不得把非维护者关于训练设置的猜测写成确定原因。[抽样表](../../../../../research/results/out/sampling.csv)记录了相关仓库与档位。
+**事实一致率 11/12 = 91.7%，达到 README 的 ≥90% 抽检阈值。** 唯一实质错误为第 19 行的方法映射。应删除 `LTF[A]`：若 `related_methods` 表示抽样仓库归属，写明 `PDM-Closed[A,excluded]（仅仓库关联；帖文讨论 TransFuser）`；若表示 issue 真正讨论的方法，应标 `TransFuser（样本外）`，并重新判断该行是否保留。该行建议去掉无证据的 `protocol_split`，仅留配置差异疑问，且不得把非维护者关于训练设置的猜测写成确定原因。[抽样表](../../hack-audit/sampling.csv)记录了相关仓库与档位。
 
 `w3_notes.md` 对 `resolved` 的定义明确区分问题解决程度与 GitHub `issue_state`。抽样中 open/yes（SparseDriveV2 #13）及 closed/no（AutoVLA #43）均按此执行；closed/partial（TF++ #47、AutoVLA #48）也未被误判为已复现。SparseDriveV2 #9 的 `yes` 只覆盖主崩溃，若约定所有子问题都须答复，应改为 `partial`，并在 notes 中说明多问题帖如何判定。
 

@@ -1,7 +1,7 @@
 # nuScenes / AD-MLP
 
 - 仓库：[E2E-AD/AD-MLP，固定 commit 4b93ba0](https://github.com/E2E-AD/AD-MLP/tree/4b93ba085ee47474152f282177865796ea577fc0)。
-- 论文：[Rethinking the Open-Loop Evaluation of End-to-End Autonomous Driving in nuScenes](../../../../../research/results/papers/ad_mlp.pdf)，核对 §2、§3、§4、Table 1。
+- 论文：[Rethinking the Open-Loop Evaluation of End-to-End Autonomous Driving in nuScenes](../../../../../research/benchmarks/index.html)，核对 §2、§3、§4、Table 1。
 - 读过：根 README、`pytorch/admlp/planner.py`、`train.py`、`eval_weight.py`、`evaluate_for_mlp.py`、`generate_fengze.py`、`stp3/datas/NuscenesData.py`，以及 ST-P3 评测依赖的关键入口。
 - 未读：全部 ST-P3 上游实现和 Paddle 细节；未运行模型、仓库代码或评测。
 

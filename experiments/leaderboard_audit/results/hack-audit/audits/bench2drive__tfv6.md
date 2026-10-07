@@ -1,7 +1,7 @@
 # Bench2Drive · TFv6（LEAD）
 
 - 固定源码：[kesai-labs/lead `730bc1a2f44d5f28312dd55f0ca958e94a24c038`](https://github.com/kesai-labs/lead/tree/730bc1a2f44d5f28312dd55f0ca958e94a24c038)，`cvpr2026` 分支；本地 `repos/bench2drive__tfv6/`。
-- 论文：[TFv6](../../../../../research/results/papers/tfv6.pdf)；榜单为 Bench2Drive 0.0.3，README §1.3 报 95.28 DS。
+- 论文：[TFv6](../../../../../research/benchmarks/index.html)；榜单为 Bench2Drive 0.0.3，README §1.3 报 95.28 DS。
 
 ## 已读与未读
 

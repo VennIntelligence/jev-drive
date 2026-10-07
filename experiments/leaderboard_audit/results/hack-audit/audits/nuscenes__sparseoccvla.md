@@ -1,7 +1,7 @@
 # nuScenes / SparseOccVLA
 
 - 仓库：[MSunDYY/SparseOccVLA，固定 commit e41b48e](https://github.com/MSunDYY/SparseOccVLA/tree/e41b48ebe35b78635d533500d1f433e8143d9754)。
-- 论文：[SparseOccVLA](../../../../../research/results/papers/sparseoccvla.pdf)，核对 §3.3、§4、Table 2、Table 4。
+- 论文：[SparseOccVLA](../../../../../research/benchmarks/index.html)，核对 §3.3、§4、Table 2、Table 4。
 - 读过：根 README、`projects/configs/SparseOccVLA/` 中 nuScenes 配置、`projects/mmdet3d_plugin/datasets/nuscenes_dataset_v2.py`、`models/detectors/sparseoccvla.py` 的训练与推理路径、`evaluation/eval_planning.py`、`data_gen/planning_anchor.py` 与提示生成入口。
 - 未读：仓库携带的 InternVL 通用子树、所有 CUDA kernel、完整数据生成依赖；未运行代码或评测。
 

@@ -74,7 +74,7 @@ routes of (ticks / route wall); two repeats on two cards (card-to-card spread ~5
 
 
 `OPENBLAS_CORETYPE` is not a profile knob but a correctness setting of particular envs: `Haswell` for the NAVSIM devkit
-on the GPU box (without it NumPy's OpenBLAS returns wrong results there, research/navsim-openblas-audit.md),
+on the GPU box (without it NumPy's OpenBLAS returns wrong results there, research/decisions/073.md),
 `Barcelona` only to replay controller goldens recorded on Tokyo bit for bit (docs/b2d-controller.md). Put it in a job's
 `env`.
 

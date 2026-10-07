@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-"""openpilot on the NAVSIM leaderboard splits, infrastructure for the navigation arms (research/openpilot-openloop-
-integration.md sections 2.5, 7, 9): compact context-rate frame caches and a rollout with a pluggable per-step desire
+"""openpilot on the NAVSIM leaderboard splits, infrastructure for the navigation arms (research/openpilot-diagnosis/index.html):
+compact context-rate frame caches and a rollout with a pluggable per-step desire
 schedule that keeps the plan's full Gaussian (mu and std) and every output head.
 Run root $DATA_DIR/runs/op_lb/<data>/, data = lb_navtest (12 146) | lb_navhard (navhard_two_stage, 5 912, both stages)
 | lb_navtrain (seed-0 subset, 1000 tokens per driving command).

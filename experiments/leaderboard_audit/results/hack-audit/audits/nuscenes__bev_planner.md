@@ -1,7 +1,7 @@
 # nuScenes / BEV-Planner++
 
 - 仓库：[NVlabs/BEV-Planner，固定 commit 01c28d6](https://github.com/NVlabs/BEV-Planner/tree/01c28d6db56a178ee3a65bf017fe7996360ef026)。
-- 论文：[Is Ego Status All You Need for Open-Loop End-to-End Autonomous Driving?](../../../../../research/results/papers/bev_planner.pdf)，核对 §3–§4、Table 1–3、附录中按转向命令分组的结果。
+- 论文：[Is Ego Status All You Need for Open-Loop End-to-End Autonomous Driving?](../../../../../research/benchmarks/index.html)，核对 §3–§4、Table 1–3、附录中按转向命令分组的结果。
 - 读过：根 README、`configs/bev_next/bev_planner_plus_plus.py`、`mmdet3d/datasets/pipelines/loading.py` 的 `LoadGTPlaner`、`mmdet3d/datasets/nuscenes_dataset.py` 的样本输入和评测入口、`mmdet3d/models/fbbev/detectors/bev_planner.py` 的测试路径、`mmdet3d/models/fbbev/planner_head/naive_planner.py` 的规划前向与输出、`tools/data_converter/nuscenes_converter.py` 的 ego 轨迹和状态构造。
 - 未读：全部 BEV 感知骨干、nuScenes devkit 与其他模型的重实现细节；未运行模型、仓库代码或评测。
 

@@ -7,7 +7,7 @@ not. This is that second process, and it is also what makes the measurement hone
 stand-in leaves the GPU idle, while the real thing competes with CARLA's renderer for the same
 card. The difference between the two is exactly the question "does closed-loop take hours or days".
 
-Backbones, matching the ladder in research/carla-efficiency.md:
+Backbones, matching the ladder in research/b2d-closed-loop/index.html:
   dinov2  DINOv2 ViT-B/14 on the front camera. A cheap backbone in the loop.
   qwen    Qwen3-VL-4B, the decoder truncated at `--layers`. What we would actually run.
 

@@ -340,7 +340,7 @@ Two places where the baselines are visibly weak, and where a visual model should
 
 `jevdrive/labels.py` calls a nuScenes frame **hard** when the car is not turning yet (`|current yaw rate| <
 1 deg/s`) but turns within the horizon. On that subset the ego-state probe's turn recall collapses to 0.010
-while mid-layer Qwen features reach 0.246 ([research/qwen-latent-driving.md](../research/qwen-latent-driving.md)).
+while mid-layer Qwen features reach 0.246 ([research/decisions/001.md](../research/decisions/001.md)).
 `subsets()["pre_onset"]` is the Waymo version of it, with the same structure and thresholds picked from Waymo:
 
 | | |
