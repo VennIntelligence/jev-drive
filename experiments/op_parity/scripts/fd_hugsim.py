@@ -221,6 +221,11 @@ def analyse(row, d, route, scene, wajepa=False):
     kexe = np.r_[wrap(np.diff(YAW)) / (np.maximum(V[:-1], 0.3) * DT)]
     # requested curvature: zs_steps kappa is + right (HUGSIM theta convention; corr with executed -0.8..-0.9) -> + left
     kreq = -np.array([R["steps"].get(k, {}).get("kappa", np.nan) if R["steps"] else np.nan for k in range(n)], float)
+    kdes = np.full(n, np.nan)                     # after clip_curvature (sim.log op_ctrl `des`), same sign flip as kappa
+    if (d / "sim.log").exists() and R["steps"]:
+        oc = [json.loads(ln.split("op_ctrl ", 1)[1]) for ln in open(d / "sim.log", errors="ignore") if ln.startswith("op_ctrl {")]
+        m = min(n, len(oc))
+        kdes[:m] = [-float(o["des"]) for o in oc[:m]]
     kneed = np.full(n, np.nan)
     kseg = np.full(n, np.nan)
     kcirc = np.full(n, np.nan)
@@ -281,6 +286,8 @@ def analyse(row, d, route, scene, wajepa=False):
     mv = V[:n] > 0.5
     pick = lambda arr: arr[A][mv[A]] if mv[A].any() else arr[A]   # noqa: E731
     ev.update(k_need=float(np.nanmean(sg * pick(kneed))) if n else np.nan, k_req=float(np.nanmean(sg * pick(kreq))) if R["steps"] else np.nan,
+              k_des=float(np.nanmean(sg * pick(kdes))) if R["steps"] else np.nan,
+              clip_frac=float(np.mean(np.abs(kdes[A]) < 0.9 * np.abs(kreq[A]) - 1e-4)) if R["steps"] else np.nan,
               k_exe=float(np.nanmean(sg * pick(kexe))), k_plan=float(np.nanmean(sg * pick(kseg))), k_plan_circ=float(np.nanmean(sg * pick(kcirc))),
               v_app=float(np.mean(V[A])), herr_end=float(np.degrees(wrap(YAW[-1] - route.heading(s[-1])))))
     # lag: first step in the approach where plan / requested / executed curvature exceeds half the peak route curvature (signed)
@@ -367,7 +374,7 @@ def analyse(row, d, route, scene, wajepa=False):
             ev["lat_m1"] = float(-q1[0] * s1 + q1[1] * c1)
         ev.update(lead_prob_m1=st.get("lead_prob"), lead_x_m1=st.get("lead_x"), lead_v_m1=st.get("lead_v"))
     trace = dict(X=np.round(X, 2).tolist(), Y=np.round(Y, 2).tolist(), YAW=np.round(YAW, 4).tolist(), V=np.round(V, 2).tolist(),
-                 s=np.round(s, 2).tolist(), lat=np.round(lat, 2).tolist(), kexe=np.round(kexe, 4).tolist(), kreq=np.round(kreq, 4).tolist(),
+                 s=np.round(s, 2).tolist(), lat=np.round(lat, 2).tolist(), kexe=np.round(kexe, 4).tolist(), kreq=np.round(kreq, 4).tolist(), kdes=np.round(kdes, 4).tolist(),
                  kneed=np.round(kneed, 4).tolist(), kplan=np.round(kseg, 4).tolist(), cov=cov.tolist(), plan_cov=np.round(plan_cov_min, 2).tolist(),
                  v13=np.round(plan_v13, 2).tolist())
     if R["steps"]:
@@ -460,8 +467,8 @@ def extract(args):
     for key, t in trs.items():
         a, p, rep, sc = key.split("|")
         for k in range(len(t["kexe"])):
-            rows.append((a, p, rep, sc, k, t["V"][k], t["kneed"][k], t["kreq"][k], t["kexe"][k], t["kplan"][k], t["lat"][k], t["cov"][k]))
-    S = pd.DataFrame(rows, columns=["arm", "preset", "rep", "scenario", "k", "v", "k_need", "k_req", "k_exe", "k_plan", "lat", "cov"])
+            rows.append((a, p, rep, sc, k, t["V"][k], t["kneed"][k], t["kreq"][k], t["kdes"][k], t["kexe"][k], t["kplan"][k], t["lat"][k], t["cov"][k]))
+    S = pd.DataFrame(rows, columns=["arm", "preset", "rep", "scenario", "k", "v", "k_need", "k_req", "k_des", "k_exe", "k_plan", "lat", "cov"])
     S.to_csv(OUT / "hugsim_steps.csv.gz", index=False, float_format="%.4f")
     with gzip.open(Path(args.cases_out) / "hugsim_traces.json.gz", "wt") as f:
         json.dump(trs, f)
