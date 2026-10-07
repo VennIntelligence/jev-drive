@@ -264,8 +264,8 @@ def cmd_pretrain(a):
                 run_loss = 0.0
         info["pretrain"] = {"rows": int(i), "s_per_row": (time.time() - t0) / max(i, 1)}
         dev_eval("online, after the LoRA pre-training (FT)")
-        torch.save({"lora": E.lora_state(), "head": hd.state_dict()}, FT / "ft_pre.pt")
-        (FT / "pretrain.json").write_text(json.dumps(info, indent=1))
+        torch.save({"lora": E.lora_state(), "head": hd.state_dict()}, FT / f"ft_pre{a.tag}.pt")
+        (FT / f"pretrain{a.tag}.json").write_text(json.dumps(info, indent=1))
         run.summary.update(**{k: v for k, v in info.items() if isinstance(v, dict) and "dev_nll" in v})
 
 
@@ -295,7 +295,7 @@ def cmd_kfold(a):
         it, _ = clip_items(D["va_names"].astype(str)[full][:1])
         v1 = E.back(E.front(E.fx.collate([W.Shards(it, E.fx.transform)[0]])))                    # sets the token positions and the rotary table
         run.info("first frame, online vs cached feature: relative L2 %.4f", float((v1[0] - xraw[np.flatnonzero(full)[0]]).norm() / xraw[np.flatnonzero(full)[0]].norm()))
-        pre = torch.load(FT / "ft_pre.pt")
+        pre = torch.load(FT / f"ft_pre{a.tag}.pt")
         fz = torch.load(FT / "fz_head.pt")
         Head = head_cls()
 
@@ -321,8 +321,10 @@ def cmd_kfold(a):
 
         def run_arm(arm, Jt, tag):
             d, ins = np.zeros(n), []
-            for f in range(FOLDS):
+            for f in range(1 if a.tag else FOLDS):
                 tr, te = np.flatnonzero((fold != f) & full), np.flatnonzero((fold == f) & full)
+                if a.tag:
+                    tr, te = tr[:24], te[:16]
                 hd = Head(np.zeros(xraw.shape[1], np.float32), np.ones(xraw.shape[1], np.float32)).to(dev)
                 hd.load_state_dict(fz if arm == "FZ" else pre["head"])
                 if arm == "FZ":
@@ -332,7 +334,7 @@ def cmd_kfold(a):
                     opt = torch.optim.AdamW([{"params": E.lora_params(), "lr": 5e-5, "weight_decay": 1e-2}, {"params": hd.parameters(), "lr": 3e-4, "weight_decay": 1e-2}])
                 g = np.random.default_rng(100 + f)
                 hd.train()
-                for ep in range(EPOCHS):
+                for ep in range(1 if a.tag else EPOCHS):
                     o = g.permutation(tr)
                     for i in range(0, len(o), BATCH):
                         b = o[i:i + BATCH]
@@ -362,13 +364,13 @@ def cmd_kfold(a):
             hd.load_state_dict(fz if arm == "FZ" else pre["head"])
             if arm == "FT":
                 E.load_lora(pre["lora"])
-            idx = np.flatnonzero(full)
+            idx = np.flatnonzero(full)[: 16 if a.tag else None]
             d = np.zeros(n)
             d[idx] = np.concatenate([realised(hd, xraw[torch.as_tensor(idx[i:i + 8], device=dev)] if arm == "FZ" else feats(idx[i:i + 8], False), idx[i:i + 8])
                                      for i in range(0, len(idx), 8)])
             ev0[f"{arm} a only"] = d
-        np.savez(FT / "kfold.npz", **out, **ev0, fold=fold, full=full)
-        (FT / "kfold.json").write_text(json.dumps(info, indent=1))
+        np.savez(FT / f"kfold{a.tag}.npz", **out, **ev0, fold=fold, full=full)
+        (FT / f"kfold{a.tag}.json").write_text(json.dumps(info, indent=1))
         run.summary.update(**{k: float(v.mean()) for k, v in (out | ev0).items()})
 
 
@@ -404,8 +406,10 @@ if __name__ == "__main__":
     p = sp_.add_parser("pretrain")
     p.add_argument("--n-pre", type=int, default=N_PRE)
     p.add_argument("--n-dev", type=int, default=N_DEV)
+    p.add_argument("--tag", default="")
     p = sp_.add_parser("kfold")
     p.add_argument("--perm", type=int, default=1)
+    p.add_argument("--tag", default="")
     sp_.add_parser("report")
     a = ap.parse_args()
     {"cache": cmd_cache, "pretrain": cmd_pretrain, "kfold": cmd_kfold, "report": cmd_report}[a.cmd](a)

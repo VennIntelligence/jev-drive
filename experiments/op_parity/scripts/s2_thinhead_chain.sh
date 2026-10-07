@@ -6,19 +6,21 @@
 #   extract  long-span multi-frame Qwen3 features of the 479 rater frames (GPU)  |
 #   prep     the input / target table (CPU)
 #   heads    frozen-feature arms, out-of-fold (ridge heads on the CPU in this window, MLP heads as a small GPU job)
-#   STAGES=... selects (default: all that exist). State: $DATA_DIR/runs/op_parity/s2_thinhead/{STATUS, DONE, ERROR, chain.log, jobs.txt}.
+#   ft       Q3 joint fine-tune pilot: cache -> smoke -> pretrain (a) -> k-fold (b) -> report;  latency: the head-path bench
+#   STAGES=... selects; KEY=<name> keeps one state per chain instance: $DATA_DIR/runs/op_parity/s2_thinhead/{STATUS,DONE,ERROR}.<KEY>, chain.<KEY>.log, jobs.txt.
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
-D=$DATA_DIR/runs/op_parity/s2_thinhead; mkdir -p "$D"; rm -f "$D/DONE" "$D/ERROR"
-exec > >(tee -a "$D/chain.log") 2>&1
+D=$DATA_DIR/runs/op_parity/s2_thinhead; mkdir -p "$D"; K=${KEY:-main}                # KEY: one state per chain instance (main, ft, ...)
+DONE=$D/DONE.$K; ERR=$D/ERROR.$K; rm -f "$DONE" "$ERR"
+exec > >(tee -a "$D/chain.$K.log") 2>&1
 PY=$DATA_DIR/envs/op-train/bin/python
 J=$DATA_DIR/envs/jevdrive/bin/python
 CL="$J -m jevdrive.cl"
 S=experiments/op_parity/scripts
 L=$D/pool
 STAGES=${STAGES:-q0 plans extract prep heads}
-status() { echo "$(date '+%F %T') op_parity s2_thinhead: $*" | tee "$D/STATUS"; }
-die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
+status() { echo "$(date '+%F %T') op_parity s2_thinhead ($K): $*" | tee "$D/STATUS.$K"; }
+die() { status "ERROR $*"; echo "$*" > "$ERR"; exit 1; }
 has() { [[ " $STAGES " == *" $1 "* ]]; }
 sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return 0
         local live; live=$($CL queue 2>/dev/null | awk -v n="$n" '($3 == n || $4 == n) && ($2 == "queued" || $2 == "running") {print $1; exit}')
@@ -39,4 +41,22 @@ if has heads; then
     waitdirs $L/mlp
     PYTHONPATH=. $J $S/s2_thinhead_heads.py report || die report
 fi
-status "done ($STAGES)"; touch "$D/DONE"
+if has ft; then                                                              # Q3: the joint fine-tune pilot (chained in the pool)
+    F="env PYTHONPATH=. $J $S/s2_thinhead_ft.py"
+    status "ft: cache + smoke"
+    sub s2th-ft-cache $L/ft-cache --vram 16 --cpu 8 --ram 40 -- $F cache
+    waitdirs $L/ft-cache
+    sub s2th-ft-smoke $L/ft-smoke --train --vram 30 --cpu 10 --ram 40 -- bash -c "$F pretrain --n-pre 32 --n-dev 16 --tag _smoke && $F kfold --tag _smoke"
+    waitdirs $L/ft-smoke
+    status "ft: pretrain + kfold"
+    sub s2th-ft-pre $L/ft-pre --train --vram 30 --cpu 10 --ram 40 -- $F pretrain
+    waitdirs $L/ft-pre
+    sub s2th-ft-kfold $L/ft-kfold --train --vram 30 --cpu 6 --ram 40 -- $F kfold
+    waitdirs $L/ft-kfold
+    PYTHONPATH=. $J $S/s2_thinhead_ft.py report || die "ft report"
+fi
+if has latency; then
+    sub s2th-latency $L/latency --vram 14 --cpu 4 --ram 16 -- env PYTHONPATH=. $J $S/s2_thinhead.py latency
+    waitdirs $L/latency
+fi
+status "done ($STAGES)"; touch "$DONE"
