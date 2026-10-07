@@ -153,7 +153,7 @@ def cmd_prep(a):
     with Run("op_parity", "wod-prep" + (f"-first{a.limit}" if a.limit else ""), config=vars(a)) as run:
         run.use_split(tr), run.use_split(dv), run.use_split(val)
         df = W.load_index()
-        seq = df.sequence.astype(str).to_numpy()
+        seq = df.sequence.astype(str).to_numpy().astype(str)
         names_all = W.frame_names(df)
         ok = (df.split.astype(str).to_numpy() == "train") & (tr.mask(seq) | dv.mask(seq))
         off, T, rows = stream_rows(streams, set(names_all[ok]))
