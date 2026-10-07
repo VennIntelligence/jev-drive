@@ -501,6 +501,119 @@ def cmd_report(a):
 
 OUT = T.OUT
 
+
+# ---------------------------------------------------------------- figures
+def cmd_figs(a):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    from PIL import Image
+    from jevdrive import wod_zeroshot as Z
+    T.FIG.mkdir(parents=True, exist_ok=True)
+    df, perm, cur = pd.read_csv(OUT / "arms.csv"), pd.read_csv(OUT / "permutation.csv"), pd.read_csv(OUT / "learning_curve.csv")
+    feats = [f for f in ARMS if f in set(df.features)]
+    col = {"a": "#7f7f7f", "b": "#1f77b4", "c": "#d62728"}
+    # ---- 1. out-of-fold gain per arm (ridge head), in-sample next to it
+    fig, axs = plt.subplots(1, 3, figsize=(15, 4.6), sharey=True)
+    for ax, sn in zip(axs, ("all", "stopped", "moving")):
+        g = df[(df.stratum == sn) & (df["head"] == "L")]
+        for i, f in enumerate(feats):
+            for j, sup in enumerate("abc"):
+                x = g[(g.features == f) & (g.supervision == sup) & (g.variant == "oof")]
+                if len(x):
+                    r = x.iloc[0]
+                    ax.errorbar(i + (j - 1) * 0.22, r.d, yerr=[[r.d - r.lo], [r.hi - r.d]], fmt="o", color=col[sup], capsize=3, ms=5, label=sup if i == 1 else None)
+                y = g[(g.features == f) & (g.supervision == sup) & (g.variant == "ins")]
+                if len(y):
+                    ax.plot(i + (j - 1) * 0.22, y.iloc[0].d, "x", color=col[sup], ms=7, alpha=0.6)
+        o = g["oracle d"].iloc[0]
+        ax.axhline(0, color="k", lw=0.8)
+        ax.axhline(o, color="g", ls="--", lw=1)
+        ax.text(len(feats) - 0.5, o, f"F20 oracle {o:+.2f}", color="g", ha="right", va="bottom", fontsize=8)
+        ax.set_xticks(range(len(feats)), feats, rotation=30, ha="right", fontsize=8)
+        ax.set_title(f"{sn} (n {int(g.n.iloc[0])})", fontsize=10)
+        ax.grid(alpha=0.3, axis="y")
+    axs[0].set_ylabel("RFS of the selected candidate - WP2")
+    h = [plt.Line2D([], [], marker="o", ls="", color=col[k]) for k in "abc"] + [plt.Line2D([], [], marker="x", ls="", color="0.4")]
+    axs[0].legend(h, ["a: hindsight class (r2-train)", "b: rater scores, out-of-fold", "c: a then b, out-of-fold", "in-sample fit (b, c)"], fontsize=7.5, loc="upper left")
+    fig.suptitle("Thin head (ridge) selecting among F20 on WOD val: out-of-fold gain over WP2, 95 % CI (paired bootstrap over sequences)", fontsize=10)
+    fig.savefig(T.FIG / "01_arms_oof.png", dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    # ---- 2. permutation null and learning curve
+    z = dict(np.load(T.RUNS / "heads.npz"))
+    Bd = T.board()
+    pk = [k for k in z if k.startswith("perm:") and k.endswith("|all")]
+    fig, axs = plt.subplots(1, len(pk) + 1, figsize=(3.6 * (len(pk) + 1), 3.6))
+    for ax, k in zip(axs, pk):
+        arm = k[5:].split("|")[0]
+        null = np.array([Bd.C.cm(d.astype(np.float64)) for d in z[k]])
+        act = Bd.C.cm(z[f"{arm}|b|L|rep3"].astype(np.float64))
+        ax.hist(null, bins=30, color="0.6")
+        ax.axvline(act, color="#d62728", lw=2)
+        ax.axvline(0, color="k", lw=0.8)
+        ax.set_title(f"{arm}: actual {act:+.3f}, null {null.mean():+.3f} (p {(1 + (null >= act).sum()) / (1 + len(null)):.3f})", fontsize=8)
+        ax.set_xlabel("out-of-fold gain, inputs permuted across frames", fontsize=8)
+    ax = axs[-1]
+    full = df[(df.stratum == "all") & (df["head"] == "L") & (df.supervision == "b") & (df.variant == "oof")].set_index("features")
+    for f, g in cur.groupby("features"):
+        xs, ys = list(g["training fraction"]) + [1.0], list(g.d) + [full.loc[f, "d"]]
+        ax.plot(xs, ys, "o-", label=f, ms=4)
+    ax.axhline(0, color="k", lw=0.8)
+    ax.set_xlabel("share of the training sequences of each fold", fontsize=8)
+    ax.set_title("learning curve (b, ridge), out-of-fold gain", fontsize=8)
+    ax.legend(fontsize=7)
+    fig.savefig(T.FIG / "02_permutation_curve.png", dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    # ---- 3. eight frames: the 4 largest out-of-fold gains and losses of the arm with the best point estimate (repeat 0 picks, seed 0)
+    pri = [f for f in feats if f"picks:{f}|b|L" in z and f not in ("E0",)]
+    arm = max(pri, key=lambda f: full.loc[f, "d"])
+    picks = z[f"picks:{arm}|b|L"][0]
+    ii = np.arange(Bd.n)
+    g0 = Bd.J[0][picks, ii] - Bd.J[0][KEEP]
+    o = np.argsort(-g0, kind="stable")
+    sel = [(int(i), "gain") for i in o[:4]] + [(int(i), "loss") for i in o[::-1][:4]]
+    jb = T.first(Bd.J[0])
+    t2, C = Z.root("t2_jpg"), Bd.C
+    fig, axs = plt.subplots(4, 4, figsize=(17, 17), gridspec_kw={"width_ratios": [1, 1.25, 1, 1.25]})
+    rows = []
+    for q, (i, why) in enumerate(sel):
+        r, c = q % 4, (q // 4) * 2
+        ax = axs[r, c]
+        ax.imshow(Image.open(t2 / Bd.names[i] / "1.jpg").convert("RGB"))
+        ax.axis("off")
+        ax.set_title(f"{why} {q % 4 + 1}: {Bd.cluster[i]}, v0 {Bd.v0[i]:.1f} m/s", fontsize=8, loc="left")
+        ax = axs[r, c + 1]
+        for m in range(20):
+            p = Bd.F[0][i, m]
+            ax.plot(-np.r_[0, p[:, 1]], np.r_[0, p[:, 0]], color="0.8", lw=0.8)
+        order = np.argsort(-C.sc[i])
+        for j, o_ in enumerate(order):
+            t = C.traj[i, o_]
+            ax.plot(-np.r_[0, t[:, 1]], np.r_[0, t[:, 0]], "-" if j == 0 else "--", color="k" if j == 0 else "0.45", lw=2 if j == 0 else 1.2,
+                    label=f"rater {j + 1}: score {C.sc[i, o_]:.0f}")
+        name = lambda m: f"{T.G.PATHS[m // 4][1]} / {T.G.SPEEDS[m % 4]}"  # noqa: E731
+        for lab, m, cl, ls, lw in (("WP2", KEEP, "#d62728", "-", 2.2), ("head", picks[i], "#1f77b4", "-", 2.0), ("oracle", jb[i], "#2ca02c", (0, (3, 2)), 2.0)):
+            p = Bd.F[0][i, m]
+            ax.plot(-np.r_[0, p[:, 1]], np.r_[0, p[:, 0]], color=cl, ls=ls, lw=lw, label=f"{lab}: {name(m)}, RFS {Bd.J[0][m, i]:.1f}")
+            ax.plot(-p[[11, 19], 1], p[[11, 19], 0], "^", color=cl, ms=5)
+        allp = np.concatenate([C.traj[i].reshape(-1, 2), Bd.F[0][i, [KEEP, picks[i], jb[i]]].reshape(-1, 2)])
+        lim = max(3.0, 1.2 * np.abs(allp[:, 1]).max())
+        ax.set_xlim(-lim, lim)
+        ax.set_ylim(-0.05 * max(3.0, allp[:, 0].max()), 1.1 * max(3.0, allp[:, 0].max()))
+        ax.plot(0, 0, "k*", ms=9)
+        ax.grid(alpha=0.3)
+        ax.legend(fontsize=6.5, loc="upper center", bbox_to_anchor=(0.5, -0.06), frameon=False, ncol=2)
+        rows.append({"panel": f"{why} {q % 4 + 1}", "frame": Bd.names[i], "cluster": Bd.cluster[i], "v0": Bd.v0[i], "head pick": name(picks[i]), "oracle pick": name(jb[i]),
+                     "RFS WP2": Bd.J[0][KEEP, i], "RFS head": Bd.J[0][picks[i], i], "RFS oracle": Bd.J[0][jb[i], i], "rater scores": " ".join(f"{x:.0f}" for x in C.sc[i][order])})
+    fig.suptitle(f"Arm {arm}, supervision b, ridge head (out-of-fold picks of repeat 0, WP2 seed 0): left block = 4 largest gains, right block = 4 largest losses.\n"
+                 "FRONT camera at t0; BEV: ego at the star heading up, lateral axis stretched, grey = the 20 candidates, markers at 3 s and 5 s", fontsize=10, y=0.9)
+    fig.savefig(T.FIG / "03_frames.png", dpi=95, bbox_inches="tight")
+    plt.close(fig)
+    pd.DataFrame(rows).to_csv(OUT / "figure_frames.csv", index=False, float_format="%.2f")
+    print(arm, pd.DataFrame(rows).to_string())
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp_ = ap.add_subparsers(dest="cmd", required=True)
@@ -509,5 +622,6 @@ if __name__ == "__main__":
     p.add_argument("--workers", type=int, default=24)
     p.add_argument("--part", default="ridge", choices=("ridge", "mlp"))
     sp_.add_parser("report")
+    sp_.add_parser("figs")
     a = ap.parse_args()
-    {"fit": cmd_fit, "report": cmd_report}[a.cmd](a)
+    {"fit": cmd_fit, "report": cmd_report, "figs": cmd_figs}[a.cmd](a)
