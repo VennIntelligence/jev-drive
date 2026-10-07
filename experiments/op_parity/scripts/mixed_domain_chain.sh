@@ -132,9 +132,9 @@ fi
 if [[ $STAGE == report ]]; then
   have() { [[ -f $DATA_DIR/runs/op_parity/runs/$1/ckpt-final.pt ]]; }
   tags="P2H10-F-s0 P2H10-F-s1 WP2-full-s0 WP2-full-s1"; arms="P2H10=P2H10-F-s0+P2H10-F-s1 WP2=WP2-full-s0+WP2-full-s1"; vars=""; navx=""
-  have WLG-full-s1 && [[ -d $DATA_DIR/runs/wod_zeroshot/preds/op_cinque_WLG-full-s1 || -n $(ls -d $DATA_DIR/runs/*/preds/op_cinque_WLG-full-s1 2>/dev/null) ]] && {
+  [[ -f $DATA_DIR/runs/op_parity/wod/launch/pool/e-WLG-full-s0/DONE && -f $DATA_DIR/runs/op_parity/wod/launch/pool/e-WLG-full-s1/DONE ]] && {
     tags="$tags WLG-full-s0 WLG-full-s1"; arms="$arms WLG=WLG-full-s0+WLG-full-s1"; }
-  have P2HG-F-s1 && { tags="$tags P2HG-F-s0 P2HG-F-s1"; arms="P2HG=P2HG-F-s0:sg+P2HG-F-s1:sg $arms"; }
+  for a in P2HG P2HGA; do have $a-F-s1 && { tags="$tags $a-F-s0 $a-F-s1"; arms="$a=$a-F-s0:sg+$a-F-s1:sg $arms"; }; done
   have MX-F-s1 && { tags="$tags MX-F-s0 MX-F-s1"; arms="MX=MX-F-s0+MX-F-s1 $arms"; navx="MXdn=MX-F-s0:dn+MX-F-s1:dn"
                     for v in zero biasmean biasresid; do vars="$vars MX_$v=mx-MX-F-s0_$v+mx-MX-F-s1_$v"; done; }
   status "bias decomposition: $tags"

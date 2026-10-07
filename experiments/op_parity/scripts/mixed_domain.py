@@ -309,6 +309,31 @@ def hugsim_tables(g, refs):
     return rows, per
 
 
+def hugsim_gate(g):
+    """Stop-gate behaviour of the `:sg` runs from the per-step logs (zs_steps.jsonl parity.gated; conventions of stop_gate_xboard): per run the
+    scenarios with a gated step, the latched ones (gate on to the end), how those end."""
+    import pandas as pd
+    from sg_xboard import flips
+    rows = []
+    for k, tags in g.items():
+        for tag in tags:
+            if not tag.endswith(":sg"):
+                continue
+            for u in hs_units(tag):
+                st = []
+                for scn, r in u.iterrows():
+                    f, _, _ = flips(None, _pl.Path(str(r.run_dir).replace("/root/autodl-tmp/ujs/runs", str(D))))
+                    st.append(f | {"cls": r.cls, "hd": float(r.hdscore)})
+                f = pd.DataFrame(st)
+                gt = f[f.gated_steps > 0]
+                lat = gt[(gt.flips == 1) & (gt.first_gate + gt.gated_steps == gt.steps)]
+                rows.append({"arm": k, "run": tag, "scenarios": len(f), "with a gated step": len(gt), "gated steps": int(f.gated_steps.sum()), "max flips": int(f.flips.max()),
+                             "oscillating (>= 6 flips or >= 3 in 20 steps)": int(((f.flips >= 6) | (f.max_flips_20 >= 3)).sum()), "latched to the end": len(lat),
+                             "gated and stuck": int((gt.cls == "stuck").sum()), "gated and relaunched (gate off again)": int((gt.flips >= 2).sum()),
+                             "mean HD, gated scenarios": float(gt.hd.mean()) if len(gt) else np.nan})
+    return rows
+
+
 # ---------------------------------------------------------------- gate / report
 def cmd_gate(a):
     from jevdrive.stats import paired
@@ -374,6 +399,8 @@ def cmd_ng_diag(a):
                   f"{k} EPDMS": float(np.nanmean(N.col(k)[m])), f"{k} EP": float(np.nanmean(N.col(k, "EP")[m])), f"{k} EC": float(np.nanmean(N.col(k, "EC")[m]))}
         for k in ("gated", "ungated"):
             r[f"{k} vs shipped plan xy, mean (m)"] = float(np.linalg.norm(P[k][m] - P["shipped"][m], axis=-1).mean())
+        for k in g:                                                             # does the plan's distance follow the scene's (the log's) within the group
+            r[f"{k} corr(d4, logged)"] = float(np.corrcoef(d4[k][m], t.path_len.to_numpy()[m])[0, 1])
         rows.append(r)
     stats.write_table(rows, OUT / f"{a.name}_ng_diag")
     print(open(OUT / f"{a.name}_ng_diag.md").read())
@@ -409,6 +436,9 @@ def cmd_report(a):
             stats.write_table(N.subs(na, nr), OUT / f"{a.name}_navtest_subscores", floatfmt=".2f")
         if "hugsim" in a.boards:
             rows, per = hugsim_tables({k: v for k, v in g.items() if k != "shipped"} | groups(a.hugsim_extra), refs)
+            gr = hugsim_gate(g)
+            if gr:
+                stats.write_table(gr, OUT / f"{a.name}_hugsim_gate")
             if rows:
                 stats.write_table(rows, OUT / f"{a.name}_hugsim")
                 per.to_csv(OUT / f"{a.name}_hugsim_scenarios.csv", index=False, float_format="%.4f")
