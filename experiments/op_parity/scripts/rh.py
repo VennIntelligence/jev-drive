@@ -340,7 +340,11 @@ def cmd_pilot(a):
     """Arm vs reference on navtest from the bench's per-token scores (W frames): DAC failure and EPDMS, paired, log-clustered."""
     import pandas as pd
     from jevdrive import stats
-    rd = lambda m: pd.read_csv(D / "runs/bench/navtest" / f"{m}@warp" / "scores.csv").set_index("token")  # noqa: E731
+    from jevdrive.bench import compat
+
+    def rd(m):
+        d = pd.read_csv(compat.navtest_csv(m))
+        return d[~d.token.astype(str).str.startswith(("average", "extended"))].set_index("token")
     arms = {m: rd(m) for m in a.arms + a.refs}
     toks = sorted(set.intersection(*[set(d.index) for d in arms.values()]))
     tab = np.load(TAB)
