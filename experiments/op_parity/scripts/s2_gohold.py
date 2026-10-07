@@ -111,6 +111,13 @@ def factored(plan, v0, K, cb):
     return np.stack([offset_path(plan, v0, s, *pp[2:]) for pp in PATHS for s in sp], 1)
 
 
+def first_best(J):
+    """(20, n) scores of the F20 candidates -> index of the best one per frame; ties go to the plan itself, then to the smaller change
+    (path order keep, nudges, lane shifts; speed order follow, hold, creep, go)."""
+    pr = np.array([p_ * 4 + s_ for p_ in (KEEP, 1, 3, 0, 4) for s_ in range(4)])
+    return pr[(J[pr] >= J.max(0) - 1e-9).argmax(0)]
+
+
 def project(xy, cal):
     """Ground points (m, 2) in the vehicle frame -> pixels (m, 2) of a WOD camera (calibration dict of op_calib.json) and a validity mask."""
     E = np.asarray(cal["extrinsic"], np.float64).reshape(4, 4)
@@ -537,7 +544,7 @@ def cmd_report(a):
                           | {f"rfs_shipped_oracle_V{K}_gate": keep[("shipped", K, "gate", "all")] for K in KS}
                           | {"cluster": cluster, "turn": st["turn"]} | {f"rfs_best_{nm}": SEL[nm]["joint"] for nm in SEL}
                           | {"rfs_best_F20_lon": SEL["F20"]["lon"], "rfs_best_F20_lat": SEL["F20"]["lat"],
-                             "oracle_F20_s0": [f"{PATHS[j // 4][0]}/{SPEEDS[j % 4]}" for j in SETS["F20"][0][0].argmax(0)]})
+                             "oracle_F20_s0": [f"{PATHS[j // 4][0]}/{SPEEDS[j % 4]}" for j in first_best(SETS["F20"][0][0])]})
         if not (OUT / "qwen.csv").exists():
             pf.to_csv(OUT / "frames.csv", index=False, float_format="%.4f")
             run.info("no qwen.csv yet: oracle part only")
@@ -679,8 +686,9 @@ def cmd_report(a):
                          "speed: follow can reach it": mean2(lambda s_: sbest[s_][0] >= mx[s_] - tol),
                          "Qwen3 path counts A/B/C/D/E": " / ".join(str(int((pi[m] == j).sum())) for j in range(5)),
                          "Qwen3 speed counts follow/hold/creep/go": " / ".join(str(int((si[m] == j).sum())) for j in range(4)),
-                         "oracle path counts (seed 0, first best)": " / ".join(str(int(((J[0].argmax(0) // 4)[m] == j).sum())) for j in range(5)),
-                         "oracle speed counts (seed 0, first best)": " / ".join(str(int(((J[0].argmax(0) % 4)[m] == j).sum())) for j in range(4))})
+                         "oracle path counts A/B/C/D/E (seed 0; ties to keep / follow)": " / ".join(str(int(((first_best(J[0]) // 4)[m] == j).sum())) for j in range(5)),
+                         "oracle speed counts follow/hold/creep/go (seed 0; ties to keep / follow)": " / ".join(str(int(((first_best(J[0]) % 4)[m] == j).sum()))
+                                                                                                                 for j in range(4))})
         stats.write_table(grow, OUT / "selector_agreement")
         run.info("selector agreement:\n%s", pd.DataFrame(grow).T.to_string())
         F[("WP2", "sel_joint", "", "all")], F[("WP2", "sel_path", "", "all")], F[("WP2", "sel_speed", "", "all")] = QS_["joint"], QS_["path only"], QS_["speed only"]
@@ -774,7 +782,7 @@ def cmd_figs(a):
     J = np.stack([C.rfs(np.ascontiguousarray(F20[:, m])) for m in range(20)])
     pi = q.path.map({pp[0]: j for j, pp in enumerate(PATHS)}).to_numpy().astype(int)
     si = q.speed4.map({k: j for j, k in enumerate(SPEEDS)}).to_numpy().astype(int)
-    jb = J.argmax(0)
+    jb = first_best(J)
     fs, fb = F20[ii, pi * 4 + si], F20[ii, jb]
     s_w, s_q, s_o, s_l, s_s, s_b = C.rfs(wp2), C.rfs(fq), C.rfs(fo), C.rfs(C.fut[:n]), C.rfs(fs), C.rfs(fb)
     d = (pf.rfs_WP2_qwen_decomp_gate_stop - pf.rfs_WP2).to_numpy()            # seed-mean change of primary arm A
