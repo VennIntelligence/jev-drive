@@ -9,17 +9,18 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "experiments/hugsim/scripts"))
+from jevdrive.bench.hugsim import routes as bench_routes
 from derot_report import SPIN10, runs  # noqa: E402
 from spin_analysis import analyse, load_run  # noqa: E402
 
 DATA = Path(os.environ["DATA_DIR"])
-ROUTES = DATA / "tmp_spin" / "routes.json"
 BASE = DATA / "runs" / "hugsim-derot"
 
 
 def table(root, tag):
-    routes = json.load(open(ROUTES))
+    routes = bench_routes()
     out = []
     for (t, scen), (r, d) in sorted(runs(root / "results.csv", root, {tag}).items()):
         pos, th, v, steer, plans = load_run(d, "cinque")

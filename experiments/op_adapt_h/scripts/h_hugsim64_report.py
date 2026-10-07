@@ -4,24 +4,24 @@
 """
 import csv
 import json
-import os
 import sys
 from pathlib import Path
 
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "experiments/hugsim/scripts"))
+from jevdrive.bench.hugsim import routes as bench_routes
 from derot_report import SPIN10, runs  # noqa: E402
 from spin_analysis import analyse, load_run  # noqa: E402
 
-ROUTES = Path(os.environ["DATA_DIR"]) / "tmp_spin" / "routes.json"
 BASE = {r["scenario"]: r for r in csv.DictReader(open(REPO / "experiments/hugsim/results/derot/derot_runs.csv")) if r["arm"] == "base"}
 
 
 def main(out, tag):
     out = Path(out)
-    routes = json.load(open(ROUTES))
+    routes = bench_routes()
     rows = []
     for (t, scen), (r, d) in sorted(runs(out / "results.csv", out, {tag}).items()):
         pos, th, v, steer, plans = load_run(d, "cinque")

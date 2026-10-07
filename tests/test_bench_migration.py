@@ -311,6 +311,15 @@ bench_hugsim cinque exam rule spin10 2 lowspeed '{{"resume": {{}}}}'
         relocated = dict(row, run_dir="/missing/old/zs/scene")
         self.assertEqual(C.trace_dir(relocated, out), out / "legacy-arm/zs/scene")
 
+    def test_h_report_uses_shared_routes(self):
+        path = REPO / "experiments/op_adapt_h/scripts/h_hugsim_report.py"
+        spec = importlib.util.spec_from_file_location("h_report_test", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        with mock.patch.object(mod, "bench_routes", return_value={}) as routes:
+            self.assertEqual(mod.table(self.d / "no-runs", "h"), [])
+        routes.assert_called_once_with()
+
 
 if __name__ == "__main__":
     unittest.main()
