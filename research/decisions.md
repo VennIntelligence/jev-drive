@@ -149,10 +149,11 @@
 | 152 | B2D 数据集 b2dc-train@v2：PDM-Lite 998 条完整路线、902k tick、openpilot rig 原生 20 Hz 模型输入帧 102 GB，带 P2 / action / SDF 标签，与测试路线位置隔离，闸门全过 | 中 | 待定 |
 | 153 | HUGSIM + NAVSIM 四方向（P2H 对 WA-JEPA）：HUGSIM 主要丢在撞车，可修的是前方静止 / 慢车停车点太近（+1.95 m）；navtest 急弯主体是切内角 54%（转不过去 26%）；HUGSIM 急弯是入弯太快；宽弯是 < 0.3 m 余量；本档无夜间，移到 WOD | 中 | 待定 |
 | 154 | 转弯训练 pilot（平衡采样 / 关 anchor / 后段加权）> 20° 闭合 0.01–0.02，不闭合急弯差距；T1 > 45° +0.97 但 DAC 不变、直行缓弯付代价 | 中 | 待定 |
-| 155 | P2H 在 WOD val 比 shipped 差：RFS 7.708 对 8.005（−0.30 [−0.50, −0.09]），ADE@3s +0.28 m，主要在白天；权重本身中性，损失来自 ego / 位姿输入通道；WOD 档要单独训或先定位原因 | 中 | 待定 |
+| 155 | P2H 在 WOD val 比 shipped 差：RFS 7.708 对 8.005（−0.30 [−0.50, −0.09]），ADE@3s +0.28 m，主要在白天；原因见第 162 条（bias 常数项） | 中 | 待定 |
 | 156 | 「弯前减速靠 ego 历史」navtest 不成立：匀速历史只 +0.13 m，不过线；历史信息只经 t0 加速度进模型，不专属转弯；HUGSIM 快速入弯的候选是 ax 输入正反馈，未测 | 中 | 待定 |
 | 157 | lead 停车余量规则（扣 2 m）离线闸门两榜不过：HUGSIM D3b 0/10 实改，navtest −0.75、碰撞失败反增；近距偏差在接触处更大、侧偏目标 lead 头看不到；执行层修不了，走 agent hinge 与表征 | 中 | 待定 |
 | 158 | agent hinge pilot 闸门停：NC + TTC −0.16 pp（线 −0.3）、EPDMS +0.18（线 +0.2）；方向对、只有一半，前方静止车 token +2.26；agent loss 不降，冻结特征上学不成约束 | 中 | 待定 |
 | 159 | HUGSIM 快速入弯不是 ax 正反馈：ax 置零急弯入弯只降 −1.09 m/s、仍 6.4–10.4（WA 2.6–2.8）、照样失败，直路降得一样多且一个场景塌；剩下的是视觉预判，归表征 | 弱 | 待定 |
 | 160 | 表征线：冻结原版 V-JEPA 2.1 不比 Cinque 好（闭合 0.35）；只有 WA-JEPA 在 navtrain 上微调过的 encoder 作 memory 时 pilot 全过（navtest +0.95，> 20° DAC −1.33 pp，NC + TTC −0.63 pp）；要「NAVSIM 监督过的 encoder」，WA-Cf 是诊断上限不是方法 | 中 | 待定 |
 | 161 | replay hinge 全量 navtest +0.52（89.19，距 WA 2.52），但增益全在「只在回放里出界」、原始 plan 出界反升：plan 学会预补偿 devkit 跟踪器（按榜调整，需声明）；navhard / HUGSIM 不显著 | 中 | 待定 |
+| 162 | P2H 在 WOD 掉分是 adapter bias 的常数项（navtrain 速度先验），不是 ego 输入映射：只留 ego 相关部分 RFS +0.10（胜 shipped），只留常数 −1.11；损失全在速度剖面；hinge 无关 | 中 | 待定 |
