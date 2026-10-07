@@ -192,11 +192,15 @@ def cmd_extract(a):
 
 
 # ---------------------------------------------------------------- prep
-def shard_feats(name, arrays, names):
+def shard_feats(name, arrays, names, cache=None):
     """Rows of a shard-keyed feature set for the frame names (order of `names`): {array: (n, d) float32}, found mask."""
     import pandas as pd
     from jevdrive import par
     from jevdrive import waymo as W
+    if cache is not None and cache.exists():
+        z = np.load(cache)
+        if len(z["found"]) == len(names):
+            return {k: z[k] for k in arrays}, z["found"]
     root = W.out_dir("features", name)
     parts = sorted(d for d in root.iterdir() if d.is_dir() and (d / "meta.json").exists())
     pos = pd.Series(np.arange(len(names)), index=names)
@@ -208,7 +212,7 @@ def shard_feats(name, arrays, names):
     res = par.pmap(one, parts, threads=True, workers=16, desc=name)
     res.raise_if_failed()
     out, found = None, np.zeros(len(names), bool)
-    for r in res:
+    for r in res.values:
         if r is None:
             continue
         p, x = r
@@ -218,6 +222,8 @@ def shard_feats(name, arrays, names):
         for k in arrays:
             out[k][p[new]] = x[k][new]
         found[p[new]] = True
+    if cache is not None:
+        np.savez(cache, found=found, **out)
     return out, found
 
 
@@ -281,7 +287,7 @@ def cmd_prep(a):
         df = W.load_index()
         key = dict(zip(W.frame_names(df), range(len(df))))
         past_all, fut_all = W.load_ego()
-        qv, has_qv = shard_feats(QV_SET, ["L18_mean"], tn)
+        qv, has_qv = shard_feats(QV_SET, ["L18_mean"], tn, RUNS / "cache_qv_train.npz")
         keep = has_qv & (frame % 4 == 0)
         run.info("train rows %d (r2-train %d, r2-dev %d); with the multi-frame cache and frame %% 4 == 0: %d / %d", len(tn), (~isdev).sum(), isdev.sum(),
                  (keep & ~isdev).sum(), (keep & isdev).sum())
@@ -294,7 +300,7 @@ def cmd_prep(a):
         ch = [slice(i, i + 1000) for i in range(0, len(tn), 1000)]
         res = par.pmap(_cand, [(tplan[c], tv0[c], tlog[c], cb) for c in ch], workers=min(n_cpus(), 48), run=run, desc="train candidates")
         res.raise_if_failed()
-        tlab, tade, tpd = (np.concatenate([x[j] for x in res]) for j in range(3))
+        tlab, tade, tpd = (np.concatenate([x[j] for x in res.values]) for j in range(3))
         # ---- val rater frames
         vego = PW.wod_ego(r["past"], r["intent"])[0].astype(np.float32)
         vpd = np.stack([plan_desc(p, Bd.v0, cb) for p in Bd.P]).astype(np.float32)
@@ -324,7 +330,7 @@ def cmd_prep(a):
         qv_va, fv = shard_feats(QV_SET, ["L18_mean"], Bd.names)
         stream("QV", qv, qv_va["L18_mean"], fv)
         del qv
-        q_tr, f1 = shard_feats(Q1_SET, ["L18_mean"], tn)
+        q_tr, f1 = shard_feats(Q1_SET, ["L18_mean"], tn, RUNS / "cache_q1_train.npz")
         q_va, f2 = shard_feats(Q1_SET, ["L18_mean"] + list(Q1_LAYERS), Bd.names)
         assert f1.all() and f2.all()
         stream("Q1", q_tr["L18_mean"], q_va["L18_mean"])

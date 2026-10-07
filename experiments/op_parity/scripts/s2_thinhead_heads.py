@@ -319,7 +319,7 @@ def cmd_fit(a):
         res.raise_if_failed()
         run.info("ridge units: %d in %.0f s", len(units), time.time() - t0)
         out, hp, picks, perm = {}, {}, {}, {}
-        for tag, d, ex in res:
+        for tag, d, ex in res.values:
             kind, arm = tag[0], tag[1]
             if kind == "const":
                 out["const|b|L"] = out.get("const|b|L", 0) + d / REPS
