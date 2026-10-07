@@ -182,7 +182,7 @@ def cmd_hugsim(a):
     ST = pd.DataFrame(steps)
     ST["err"] = ST.lead_x - ST.true_gap
     ST["why"] = np.where(ST.clear_rule, "clear", np.where(ST.lead_prob <= 0.5, "not_triggered",
-                         np.where(ST.err > 4.0, "lead_far (> 4 m: another object)", "under_corrected (bias > table)")))
+                         np.where(ST.lat.abs() >= 1.0, "offset_actor (|lateral| >= 1 m)", "under_corrected (in-lane, bias > table)")))
     ST.to_csv(OUT / "offline_d3b_steps.csv", index=False, float_format="%.3f")
     S = R.groupby("scenario").agg(runs=("arm", "size"), conv_primary=("conv_primary", "mean"), conv_secondary=("conv_secondary", "mean"),
                                   base_all_clear=("base_all_clear", "mean"), clear_base=("clear_base", "mean"), clear_rule=("clear_rule", "mean"),
@@ -219,7 +219,9 @@ def cmd_hugsim(a):
                 fail_why_last2=ST[~ST.clear_rule & (ST.k >= -2)].why.value_counts().to_dict(),
                 clear_rule_by_k=ST.groupby("k").clear_rule.mean().round(3).to_dict(),
                 clear_base_by_k=ST.groupby("k").clear_base.mean().round(3).to_dict(),
-                err_last2_triggered_median=round(float(ST[(ST.k >= -2) & (ST.lead_prob > 0.5) & (ST.err <= 4)].err.median()), 2),
+                err_last2_inlane_triggered_median=round(float(ST[(ST.k >= -2) & (ST.lead_prob > 0.5) & (ST.lat.abs() < 1.0)].err.median()), 2),
+                err_last2_offset_triggered_median=round(float(ST[(ST.k >= -2) & (ST.lead_prob > 0.5) & (ST.lat.abs() >= 1.0)].err.median()), 2),
+                scen_offset_actor=sorted(ST[(ST.k == -1) & (ST.lat.abs() >= 1.0)].scenario.unique().tolist()),
                 true_gap_last2_median=round(float(ST[ST.k >= -2].true_gap.median()), 2))
     by.round(4).to_csv(OUT / "offline_complete.csv")
     (OUT / "offline.json").write_text(json.dumps(summ, indent=1, default=str) + "\n")
