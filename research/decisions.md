@@ -154,3 +154,4 @@
 | 157 | lead 停车余量规则（扣 2 m）离线闸门两榜不过：HUGSIM D3b 0/10 实改，navtest −0.75、碰撞失败反增；近距偏差在接触处更大、侧偏目标 lead 头看不到；执行层修不了，走 agent hinge 与表征 | 中 | 待定 |
 | 158 | agent hinge pilot 闸门停：NC + TTC −0.16 pp（线 −0.3）、EPDMS +0.18（线 +0.2）；方向对、只有一半，前方静止车 token +2.26；agent loss 不降，冻结特征上学不成约束 | 中 | 待定 |
 | 159 | HUGSIM 快速入弯不是 ax 正反馈：ax 置零急弯入弯只降 −1.09 m/s、仍 6.4–10.4（WA 2.6–2.8）、照样失败，直路降得一样多且一个场景塌；剩下的是视觉预判，归表征 | 弱 | 待定 |
+| 160 | 表征线：冻结原版 V-JEPA 2.1 不比 Cinque 好（闭合 0.35）；只有 WA-JEPA 在 navtrain 上微调过的 encoder 作 memory 时 pilot 全过（navtest +0.95，> 20° DAC −1.33 pp，NC + TTC −0.63 pp）；要「NAVSIM 监督过的 encoder」，WA-Cf 是诊断上限不是方法 | 中 | 待定 |
