@@ -79,7 +79,7 @@ def cmd_vj21(a):
                     mx = model.mask_sampler.full_future_mask(B, device=dev).masks_x[0]
                     with torch.autocast("cuda", dtype=torch.bfloat16):
                         z = model.encoder(clip, masks=mx, training=True)                                   # (B, 1024 history tokens, 4 x 1024)
-                        z = model.scene_projector(z) if kind == "wa" else z[..., -model.encoder.embed_dim:]
+                        z = model.scene_projector(z[:, None])[:, 0] if kind == "wa" else z[..., -model.encoder.embed_dim:]
                     z = z.float()
                     c = z.shape[-1]
                     z = z.reshape(B, 2, 16, 32, c)[:, 1].permute(0, 3, 1, 2)                                # newest tubelet (B, c, 16, 32)
