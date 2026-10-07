@@ -157,4 +157,5 @@
 | 160 | 表征线：冻结原版 V-JEPA 2.1 不比 Cinque 好（闭合 0.35）；只有 WA-JEPA 在 navtrain 上微调过的 encoder 作 memory 时 pilot 全过（navtest +0.95，> 20° DAC −1.33 pp，NC + TTC −0.63 pp）；要「NAVSIM 监督过的 encoder」，WA-Cf 是诊断上限不是方法 | 中 | 待定 |
 | 161 | replay hinge 全量 navtest +0.52（89.19，距 WA 2.52），但增益全在「只在回放里出界」、原始 plan 出界反升：plan 学会预补偿 devkit 跟踪器（按榜调整，需声明）；navhard / HUGSIM 不显著 | 中 | 待定 |
 | 162 | P2H 在 WOD 掉分是 adapter bias 的常数项（navtrain 速度先验），不是 ego 输入映射：只留 ego 相关部分 RFS +0.10（胜 shipped），只留常数 −1.11；损失全在速度剖面；hinge 无关 | 中 | 待定 |
-| 163 | WOD 档 P2 式训练 WP2：RFS 8.111 对 shipped 8.005（+0.11，CI 含 0），ADE@3s −45%；增益来自 WOD 输入（输入置零对照无差）；日志本身 RFS 8.13，模仿日志的配方在 RFS 上已近上限 | 中 | 待定 |
+| 163 | WOD 档 P2 式训练 WP2：RFS 8.111 对 shipped 8.005（+0.11，CI 含 0），ADE@3s −45%；增益来自 WOD 输入（输入置零对照无差）；日志本身 RFS 8.13，总分已到日志水平（原写「模仿日志的配方已近上限」，第 164 条：日志不是逐帧上限，相等是抵消） | 中 | 待定 |
+| 164 | WOD val WP2 距 top-rated 1.476：约一半速度剖面、路径约 20%；rater 偏好「走得更远」（起步、被切入后继续走）；WP2 与日志逐帧不同（相关 0.38）；seed 平均 / 弧长缩放 out-of-fold 都含 0，不训练拿不回分 | 中 | 待定 |
