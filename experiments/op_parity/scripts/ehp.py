@@ -29,6 +29,7 @@ OUT = data_dir() / "runs/op_parity/ehp"
 RES = _R / "experiments/op_parity/results"
 VARIANTS = ["orig", "cv", "cvlong", "acc0", "pose"]
 ARMS = ["P2H10-F-s0", "P2H10-F-s1"]
+WA_VARIANTS = ["orig", "cv", "cvlong"]            # WA-JEPA is slow (batch 1, ~1 plan/s per card): no channel ablations
 DT = 0.5
 
 
@@ -209,7 +210,7 @@ def cmd_wareq(a):
     assert np.allclose(z["ego"][zi], np.concatenate([t["vel"][ti, 3], t["acc"][ti, 3]], 1), atol=1e-4)
     v = np.hypot(t["vel"][ti, 3, 0], t["vel"][ti, 3, 1])
     keys, img, hist, ego, cmd = [], [], [], [], []
-    for var in VARIANTS:
+    for var in a.variants:
         p, vl, ac = edit(t["pose"][ti], t["vel"][ti], t["acc"][ti], v, var)
         keys += [f"{x}|{var}" for x in sel.token]
         img.append(z["img"][zi])
@@ -281,7 +282,7 @@ def cmd_report(a):
         P[("P2H", v)] = {k: (P[("P2H-s0", v)][k] + P[("P2H-s1", v)][k]) / 2 for k in ("D2", "D4", "v13")}
     wa = np.load(OUT / "wa.npz")
     wk = {k: i for i, k in enumerate(wa["keys"].tolist())}
-    for v in VARIANTS:
+    for v in WA_VARIANTS:
         P[("WA-JEPA", v)] = metrics(wa["traj"][np.array([wk[f"{x}|{v}"] for x in sel.token])][:, :, :3])
     sets = {s: np.flatnonzero(sel["set"].values == s) for s in ["T", "CT", "P", "CP"]}
     lg = sel.log.values
@@ -298,6 +299,8 @@ def cmd_report(a):
     eff = {}
     for mo in models:
         for v in VARIANTS[1:]:
+            if mo == "WA-JEPA" and v not in WA_VARIANTS:
+                continue
             for k in ("D2", "D4", "v13"):
                 eff[(mo, v, k)] = P[(mo, v)][k] - P[(mo, "orig")][k]
     for (mo, v, k), e in eff.items():
@@ -315,6 +318,8 @@ def cmd_report(a):
             crow.append({"contrast": f"{sa} - {sb}", "model": mo, "variant": v, "metric": k, "mean": m, "lo": np.percentile(b, 2.5), "hi": np.percentile(b, 97.5)})
         if mo == "P2H":
             for s, ix in sets.items():
+                if ("WA-JEPA", v, k) not in eff:
+                    continue
                 m, b = contrast(e[ix], lg[ix], eff[("WA-JEPA", v, k)][ix], lg[ix], paired=True)
                 crow.append({"contrast": f"P2H - WA-JEPA on {s}", "model": "-", "variant": v, "metric": k, "mean": m, "lo": np.percentile(b, 2.5), "hi": np.percentile(b, 97.5)})
     C = pd.DataFrame(crow)
@@ -372,5 +377,6 @@ if __name__ == "__main__":
         if n == "wareq":
             q.add_argument("--full", required=True)
             q.add_argument("--out", required=True)
+            q.add_argument("--variants", nargs="+", default=WA_VARIANTS)
     a = ap.parse_args()
     a.fn(a)
