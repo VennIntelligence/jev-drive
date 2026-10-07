@@ -47,7 +47,10 @@ T8 = 0.5 * np.arange(1, 9)
 SIG_X, SIG_Y, SIG_PSI = 0.3 + 0.2 * T8, 0.1 + 0.1 * T8, np.radians(1.0 + 1.0 * T8)
 ARMS = {"P1": dict(ego=False, side=False), "P2": dict(ego=True, side=False), "P3": dict(ego=True, side=True)}
 # representation fix (plans/2026-10-07-representation-design.md, --mem): P2 + 32 front JEPA tokens as adapter memory (side channel, n_cam = n_t = 1)
-ARMS |= {f"P2+{k}": dict(ego=True, side=False, mem=k) for k in ("wa_cf", "vj21")}
+# turn-oracle (plans/2026-10-08-turn-oracle-prereg.md): drivable-SDF banks in the same 32 x 512 slot (scripts/turn_oracle.py bank): sdf_gt = true
+# geometry (privileged, an oracle probe only), sdf_shuf = the same rows permuted across logs (matched control), sdf_wa / sdf_v = probe read-outs
+MEM_KINDS = ("wa_cf", "vj21", "sdf_gt", "sdf_shuf", "sdf_wa", "sdf_v")
+ARMS |= {f"P2+{k}": dict(ego=True, side=False, mem=k) for k in MEM_KINDS}
 MEM_ROOT = data_dir() / "runs" / "op_parity" / "mem"          # <kind>/<data>.npy (N, 32, 512) fp16 in tab order (scripts/rep.py mem)
 MEM_DROP = 0.25                                                 # rows whose memory is masked in training ("memory off" in distribution)
 ACT_COL = 2062                                    # raw output column of action[0] mu (lateral; openpilot sign, + = right turn)
@@ -620,5 +623,5 @@ if __name__ == "__main__":
     ap.add_argument("--act-lab", default="", choices=["", "plan", "log", "logwin"], help="train action[0] on this label (joint action arms)")
     ap.add_argument("--act-lam", type=float, default=3.0)
     ap.add_argument("--ego-lat-drop", type=float, default=0.0, help="fraction of rows with vy / ay of the ego input zeroed")
-    ap.add_argument("--mem", default="", choices=["", "wa_cf", "vj21"], help="front-token memory for arm P2 (representation fix; runs/op_parity/mem)")
+    ap.add_argument("--mem", default="", choices=["", *MEM_KINDS], help="32-token memory for arm P2 (representation fix / turn-oracle; runs/op_parity/mem)")
     main(ap.parse_args())
