@@ -190,6 +190,30 @@ class OPModel:
                 ro.add_run_config_entry("gpu_graph_id", str(k + 1))
             self.bindings.append((io, ro))
 
+    def snapshot(self) -> dict:
+        """Everything step() reads and writes (host queues, step count, recurrent states) as host copies; restore() puts it
+        back, so one warm-up can be followed by several alternative last steps (e.g. one per `intent_bias`)."""
+        s = {k: np.copy(getattr(self, k)) for k in ("prev_desire", "img_q", "desire_q", "feat_q", "prev_feat") if hasattr(self, k)}
+        s["n"] = self.n
+        if not self.device:
+            s["state"] = {n: np.copy(v) for n, v in self.state.items()}
+        else:
+            s["sets"] = [{n: v.numpy().copy() for n, v in st.items()} for st in self.sets]
+        return s
+
+    def restore(self, s: dict):
+        for k, v in s.items():
+            if k == "n":
+                self.n = v
+            elif k == "state":
+                self.state = {n: np.copy(a) for n, a in v.items()}
+            elif k == "sets":
+                for st, sv in zip(self.sets, v):
+                    for n, a in sv.items():
+                        st[n].update_inplace(a)
+            else:
+                setattr(self, k, np.copy(v))
+
     # ---- one 20 Hz step ----
     def feeds(self, img2, desire, traffic, action_t):
         """Model inputs other than the ONNX-internal states, following modeld's rising-edge desire pulse."""
