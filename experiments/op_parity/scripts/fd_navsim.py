@@ -629,7 +629,8 @@ def mechanism(bench, pd, stats, tabs, rp, geo, fut, F, toks, g):
     """Per direction and arm: DAC side (inside / outside), raw vs LQR-only, graze, t0 speed, heading gain, turn-in offsets, decision-147 split
     (navtest eval tokens); collision types, plan vs path speed, WA overlap. Per-token rows -> nav_tokens_<bench>.csv."""
     pos = {t: i for i, t in enumerate(toks)}
-    P = {k: np.stack([plans_cache(bench)[k][t] for t in toks]) for k in ("P2Hs0", "P2Hs1", "WA")}
+    nanp = np.full((8, 3), np.nan)
+    P = {k: np.stack([plans_cache(bench)[k].get(t, nanp) for t in toks]) for k in ("P2Hs0", "P2Hs1", "WA")}   # a few WA plans are not stored
     kin = {k: plan_kin(P[k], fut) for k in P}
     farc = _arc(fut)
     res, case_rows = {}, []
