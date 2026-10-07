@@ -180,6 +180,23 @@ def cmd_p2h(a):
         (OUT / "equivalence.json").write_text(json.dumps(eq, indent=1))
 
 
+def cmd_eq(a):
+    """`orig` poses of the p2h step vs the stored plan files of the same checkpoints (op_lb plans of the bench / pilot runs), on the selected tokens."""
+    t = tab()
+    names = t["names"].tolist()
+    mt = json.loads((data_dir() / "runs/op_lb/lb_navtest/meta.json").read_text())
+    sel = sel_rows()
+    row = np.array([names.index(x) for x in sel.token])
+    eq = json.loads((OUT / "equivalence.json").read_text())
+    for arm in ARMS:
+        f = data_dir() / f"runs/op_lb/lb_navtest/plans/warp@cinque_PP{arm}.npz"
+        mu = np.load(f)["plan_mu"][row]
+        d = np.abs(adapt_poses(mu, row, mt) - np.load(OUT / f"p2h_{arm}.npz")["orig"])
+        eq[arm] = {"stored_plan_file": str(f), "orig_vs_stored_pose_max_abs_m": float(d.max()), "n_tokens": len(row)}
+        print(arm, eq[arm])
+    (OUT / "equivalence.json").write_text(json.dumps(eq, indent=1))
+
+
 def cmd_wareq(a):
     t = tab()
     names = t["names"].tolist()
@@ -347,7 +364,7 @@ def cmd_report(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
-    for n, f in [("select", cmd_select), ("p2h", cmd_p2h), ("wareq", cmd_wareq), ("report", cmd_report)]:
+    for n, f in [("select", cmd_select), ("p2h", cmd_p2h), ("wareq", cmd_wareq), ("eq", cmd_eq), ("report", cmd_report)]:
         q = sp.add_parser(n)
         q.set_defaults(fn=f)
         if n == "p2h":
