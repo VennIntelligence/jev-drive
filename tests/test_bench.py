@@ -1,5 +1,5 @@
 """jevdrive.bench without GPU / network / benchmarks: registry, sets, EPDMS algebra (vs the lane code it replaces), stage graph ->
-pool inbox, the HUGSIM scenario queue and watchdog (Linux: needs /proc), the CARLA command.
+pool inbox, the HUGSIM scenario queue and watchdog (Linux: needs /proc), the CARLA command, pose scoring (no devkit).
 
     python -m unittest tests.test_bench -v
 """
@@ -225,6 +225,120 @@ class TestHugsim(TmpData):
             res = H.run_one(cfg, self.rd, "nuscenes/x.yaml", srv, "0", self.rd / "w.log")
         self.assertEqual(res, "stall")
         self.assertLess(time.time() - t0, 60)
+
+
+class TestPoses(TmpData):
+    """jevdrive.bench.poses without the devkit: input checks, sizing, the chunk queue, the merge, the stage graph."""
+
+    def setUp(self):
+        super().setUp()
+        from jevdrive.bench import poses as PS
+        self.PS = PS
+        self.toks = [f"t{i:03d}" for i in range(50)]
+        mc = PS.mcache_dir()
+        for t in self.toks:
+            (mc / "log" / "unknown" / t).mkdir(parents=True)
+            (mc / "log" / "unknown" / t / "metric_cache.pkl").write_bytes(b"")
+        self.npz = self.D / "p.npz"
+        np.savez(self.npz, tokens=np.array(self.toks), a=np.zeros((50, 8, 3)), b=np.ones((50, 8, 3)), other=np.zeros((50, 3)))
+
+    def test_check_inputs(self):
+        PS = self.PS
+        self.assertEqual(PS.check_inputs(self.npz), (["a", "b"], self.toks))
+        self.assertEqual(PS.check_inputs(self.npz, ["b"], self.toks[:3]), (["b"], self.toks[:3]))
+        for keys, toks, msg in ((["other"], None, "pose arrays"), (["zz"], None, "pose arrays"), ([], ["t001", "t001"], "duplicate"),
+                                ([], ["nope"], "not in"), ([], [], "no tokens")):
+            with self.assertRaisesRegex(ValueError, msg):
+                PS.check_inputs(self.npz, keys, toks)
+        (PS.mcache_dir() / "log/unknown/t007/metric_cache.pkl").unlink()
+        with self.assertRaisesRegex(ValueError, "metric cache"):
+            PS.check_inputs(self.npz)
+        dup = self.D / "d.npz"
+        np.savez(dup, tokens=np.array(["x", "x"]), a=np.zeros((2, 8, 3)))
+        with self.assertRaisesRegex(ValueError, "duplicate tokens in the poses"):
+            PS.check_inputs(dup, mcache=False)
+
+    def test_plan_jobs(self):
+        PS = self.PS
+        self.assertEqual(PS.plan_jobs(12146, budget=75), (6, 12))       # 75-core quota: 6 jobs x 12 cores
+        self.assertEqual(PS.plan_jobs(12146, cpu=24, budget=75), (3, 24))
+        self.assertEqual(PS.plan_jobs(300, budget=75), (2, 12))         # few tokens: >= 16 per worker
+        self.assertEqual(PS.plan_jobs(5, budget=75), (1, 12))
+        self.assertEqual(PS.plan_jobs(12146, jobs=2, budget=75), (2, 12))
+
+    def test_chunks(self):
+        PS = self.PS
+        rd = self.D / "run"
+        q0, q1 = PS.Chunks(rd, 3, 0), PS.Chunks(rd, 3, 1)
+        self.assertEqual((q0.next(), q1.next()), (0, 1))
+        PS._atomic_pickle(q0.out(2), {})                               # chunk 2 finished elsewhere
+        self.assertIsNone(q1.next())
+        q1.release(1)
+        self.assertEqual(q0.next(), 1)
+        old = time.time() - 1000
+        os.utime(q0.claim_path(0), (old, old))
+        self.assertEqual(PS.Chunks(rd, 3, 2).next(), 0)                 # stale claim taken over
+        PS.Chunks(rd, 3, 0)                                             # a restarted worker 0 drops its own claims
+        self.assertFalse(q0.claim_path(1).exists())
+        self.assertTrue(q0.claim_path(0).exists())                      # worker 2's claim stays
+
+    def test_frame(self):
+        PS = self.PS
+        row = lambda k, t: {"key": k, "token": t, **{m: 1.0 for m in PS.SUBS}, "score": 1.0, "raw_out": False, "raw_depth": 0.0,
+                            "lqr_out": False, "out_depth": 0.0}
+        toks, keys = self.toks[:3], ["b", "a"]
+        rows = [row(k, t) for t in reversed(toks) for k in keys]
+        df = PS.frame(rows, toks, keys)
+        self.assertEqual(list(df.columns), PS.COLUMNS)
+        self.assertEqual(list(zip(df.token, df.key)), [(t, k) for t in toks for k in keys])
+        with self.assertRaisesRegex(RuntimeError, "missing"):
+            PS.frame(rows[1:], toks, keys)
+        with self.assertRaisesRegex(RuntimeError, "duplicate"):
+            PS.frame(rows + rows[:1], toks, keys)
+
+    def test_stages_and_resume(self):
+        PS = self.PS
+        out = self.D / "o.csv"
+        with mock.patch.object(PS, "pool_budget", return_value=75.0):
+            d, st = PS.stages(self.npz, out, keys=["a"], chunk=10)
+        cfg = json.loads((d / "config.json").read_text())
+        self.assertEqual((cfg["n"], cfg["n_chunks"], cfg["keys"], cfg["jobs"]), (50, 5, ["a"], 1))
+        self.assertEqual([s.name for s in st], ["w0", "collect"])
+        self.assertEqual(st[0].cpu, 12)
+        self.assertEqual(st[0].env["OMP_NUM_THREADS"], "1")
+        self.assertEqual(st[0].env["OPENBLAS_CORETYPE"], "Haswell")
+        self.assertIn("navsim2", st[0].cmd[0])
+        self.assertEqual(st[1].after, ["w0"])
+        self.assertEqual(PS.read_tokens(d / "tokens.txt"), self.toks)
+        d2, _ = PS.stages(self.npz, out, keys=["b"], chunk=10)
+        self.assertNotEqual(d, d2)                                      # keys are part of the run identity
+        for j in range(5):                                              # every chunk finished: collect only
+            PS._atomic_pickle(d / "chunks" / f"c{j:05d}.pkl", {})
+        _, st = PS.stages(self.npz, self.D / "o2.csv", keys=["a"], chunk=10)
+        self.assertEqual([s.name for s in st], ["collect"])
+        self.assertEqual(len(json.loads((d / "config.json").read_text())["outs"]), 2)
+
+    def test_collect(self):
+        PS = self.PS
+        out = self.D / "o.csv"
+        with mock.patch.object(PS, "pool_budget", return_value=75.0):
+            d, _ = PS.stages(self.npz, out, chunk=20)
+        row = lambda k, t: {"key": k, "token": t, **{m: 0.5 for m in PS.SUBS}, "score": 0.1 + 0.2, "raw_out": True, "raw_depth": 0.25,
+                            "lqr_out": False, "out_depth": 0.0}
+        cost = dict(load=0.1, pdm=1.0, diag=0.1, union=0.0, rss_gb=0.4)
+        for j in range(3):
+            tk = self.toks[j * 20:(j + 1) * 20]
+            PS._atomic_pickle(d / "chunks" / f"c{j:05d}.pkl", dict(rows=[row(k, t) for t in tk for k in ("a", "b")],
+                                                                   cost=[dict(cost, token=t) for t in tk]))
+        PS.collect(d)
+        import pandas as pd
+        df = pd.read_csv(out, float_precision="round_trip")
+        self.assertEqual(len(df), 100)
+        self.assertEqual(df.score.iloc[0], 0.1 + 0.2)                   # floats round-trip exactly
+        self.assertTrue((d / "DONE").exists())
+        (d / "chunks" / "c00001.pkl").unlink()
+        with self.assertRaisesRegex(RuntimeError, "chunks missing"):
+            PS.collect(d)
 
 
 class TestB2D(TmpData):

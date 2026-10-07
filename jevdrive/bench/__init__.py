@@ -8,15 +8,18 @@ Start at docs/bench.md.
   hugsim    HUGSIM 64 under the exam / spec / spec_plan presets: per-card worker jobs with own servers, shared scenario queue,
             stall watchdog + server health checks, end classes / spins / launch stalls
   b2d       CARLA / Bench2Drive: generic agent wrapper over scripts/b2d_run.py and the pool's CARLA placement
+  poses     per-token devkit pdm_score + DAC diagnostics of arbitrary (N, 8, 3) pose arrays (score-poses): token-chunk claim queue
+            pulled by concurrent CPU pool jobs sized from the box
   runner    stages -> GPU-pool jobs (jevdrive.cl), resumable run dirs with STATUS / DONE / ERROR
   tables    per-arm tables, paired cluster-bootstrap contrasts, Shapley EPDMS attribution, strata
 
-CLI: python -m jevdrive.bench {models, run, status, report, sets}. Python:
+CLI: python -m jevdrive.bench {models, run, status, report, sets, score-poses}. Python:
 
     from jevdrive import bench
     d = bench.run("P2-F-s0", "hugsim", preset="spec", scenarios="all64")         # submits; returns the run dir
     bench.wait([d])
     bench.report("hugsim", ["P2=P2-F-s0+P2-F-s1"], vs=["WA-JEPA"], preset="exam")
+    d = bench.score_poses("f.npz", "o.csv", keys=["a"]); bench.wait([d])        # pose scoring on the pool
 """
 from __future__ import annotations
 
@@ -73,3 +76,9 @@ def wait(dirs, poll_s: float = 30.0, timeout_s: float = 0) -> bool:
 def report(bench: str, arms, vs=(), preset: str = "exam", out: str = "", **kw):
     from .tables import report as _r
     return _r(bench, list(arms), list(vs), preset=preset, out=out, **kw)
+
+
+def score_poses(poses, out, keys=(), tokens=None, **kw):
+    """Submit pose scoring (jevdrive.bench.poses) to the pool; returns its run dir (wait with bench.wait)."""
+    from .poses import submit
+    return submit(poses, out, keys, tokens, **kw)

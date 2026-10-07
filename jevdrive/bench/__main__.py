@@ -1,10 +1,11 @@
-"""python -m jevdrive.bench {models, sets, run, status, report}   (docs/bench.md)
+"""python -m jevdrive.bench {models, sets, run, status, report, score-poses}   (docs/bench.md)
 
   run     --model M [M ...] --bench navtest|navhard|hugsim [--preset exam|spec|spec_plan] [--scenarios all64|turn23|...]
           [--shards K] [--workers W] [--jobs K] [--subset SPLIT] [--wait] [--dry]
   status  [--model M ... --bench B --preset P]      (no args: every run dir with a live job)
   report  --bench B --arms A [A ...] [--vs REF ...] [--preset P] [--out DIR] [--scenarios SET]
           arm = label=spec+spec (seeds) or one spec; e.g. --arms P2=P2-F-s0+P2-F-s1 P0 --vs WA-JEPA
+  score-poses --poses f.npz [--keys K ...] [--tokens t.txt] --out o.csv [--cpu C] [--jobs K] [--wait] [--dry]
 """
 from __future__ import annotations
 
@@ -63,9 +64,27 @@ def main(argv=None) -> int:
     p.add_argument("--out", default="")
     p.add_argument("--scenarios", default="", help="HUGSIM: restrict the tables to a scenario set (e.g. turn23)")
     p.add_argument("--no-strata", action="store_true")
+    q = sp.add_parser("score-poses", help="devkit pdm_score + DAC diagnostics of (N, 8, 3) pose arrays on navtest tokens")
+    q.add_argument("--poses", required=True, help="npz with `tokens` and (N, 8, 3) pose arrays")
+    q.add_argument("--keys", nargs="*", default=[], help="pose arrays to score (default: every (N, 8, 3) array)")
+    q.add_argument("--tokens", default="", help="token list file (default: every token of the poses file)")
+    q.add_argument("--out", required=True)
+    q.add_argument("--cpu", type=int, default=0, help="cores per pool job (default 12)")
+    q.add_argument("--jobs", type=int, default=0, help="pool jobs (default: the pool's CPU budget / cores per job)")
+    q.add_argument("--priority", type=float, default=0.0)
+    q.add_argument("--owner", default="bench")
+    q.add_argument("--wait", action="store_true")
+    q.add_argument("--dry", action="store_true")
     a = ap.parse_args(argv)
 
     from . import runner as RN
+    if a.cmd == "score-poses":
+        from . import poses
+        from .poses import read_tokens
+        d = poses.submit(a.poses, a.out, a.keys, read_tokens(a.tokens) if a.tokens else None, cpu=a.cpu, jobs=a.jobs,
+                         priority=a.priority, dry=a.dry, owner=a.owner)
+        print(d)
+        return 0 if not a.wait or a.dry or RN.wait([d]) else 1
     if a.cmd == "models":
         from .models import listing
         for x in listing():
