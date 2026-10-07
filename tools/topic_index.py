@@ -14,7 +14,6 @@ import argparse
 import ast
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -175,9 +174,6 @@ def main():
     for t, x in out.items():
         (EXP / t / "README.md").write_text(x)
     (EXP / "INDEX.md").write_text(idx)
-    sd = [p for p in (Path(__file__).with_name("split_decisions.py"), Path("tools/restructure/split_decisions.py")) if p.exists()]
-    if Path("research/decisions.md").exists() and sd:
-        subprocess.run([sys.executable, str(sd[0]), "--topics", str(EXP)], check=True)
     big = {t: len(x.encode()) // 4 for t, x in out.items() if len(x.encode()) // 4 > 300 or x.count("\n") > 60}
     print(f"{len(out)} READMEs (avg {sum(len(x.encode()) for x in out.values()) // 4 // len(out)} tok), "
           f"INDEX.md {len(idx.encode()) // 4} tok; over 300 tok / 60 lines: {big}")

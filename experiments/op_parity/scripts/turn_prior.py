@@ -50,7 +50,16 @@ def build(C, P, cb):
     F = np.stack([G.factored(p, C.v0, 3, cb) for p in P])
     J = np.stack([np.stack([C.rfs(np.ascontiguousarray(f[:, m])) for m in range(20)]) for f in F])
     assert np.abs(J[:, KEEP] - np.stack([C.rfs(p) for p in P])).max() < 1e-9
-    return F.astype(np.float32), J, np.stack([T.plan_desc(p, C.v0, cb) for p in P]).astype(np.float32)
+    return F.astype(np.float32), J, np.stack([T.plan_desc(p, C.v0, cb) for p in P])
+
+
+def plan_scaler(raw, std):
+    """(mu, sd) of the s2-thinhead plan-stream standardisation (WOD train rows), recovered from WP2's raw and stored values: std = (raw - mu) / sd."""
+    x, y = raw.reshape(-1, raw.shape[-1]), std.reshape(-1, std.shape[-1])
+    sd = np.array([np.polyfit(y[:, j], x[:, j], 1)[0] for j in range(x.shape[1])])
+    mu = np.array([np.polyfit(y[:, j], x[:, j], 1)[1] for j in range(x.shape[1])])
+    assert np.abs((x - mu) / sd - y).max() < 1e-3
+    return mu, sd
 
 
 def cmd_prep(a):
@@ -64,7 +73,11 @@ def cmd_prep(a):
             F, J, pd_ = build(C, plans_of(C, k), cb)
             out |= {f"F_{k}": F, f"J_{k}": J, f"pd_{k}": pd_}
             run.info("%s: RFS %.3f, F20 oracle d %+.3f (%.0f s)", k, C.cm(J[:, KEEP].mean(0)), C.cm(J.max(1).mean(0) - J[:, KEEP].mean(0)), time.time() - t0)
-        assert np.abs(out["J_wp2"] - z["va_J"]).max() < 1e-6 and np.abs(out["pd_wp2"] - z["va_plan"]).max() < 1e-4
+        assert np.abs(out["J_wp2"] - z["va_J"]).max() < 1e-6
+        mu, sd = plan_scaler(out["pd_wp2"], z["va_plan"])
+        for k in SETS:
+            out[f"pd_{k}"] = ((out[f"pd_{k}"] - mu) / sd).astype(np.float32)
+        out["plan_mu_sd"] = np.stack([mu, sd])
         out["J_shipped"] = C.rfs(C.preds("shipped"))
         RUNS.mkdir(parents=True, exist_ok=True)
         np.savez(RUNS / "sets.npz", **out)
