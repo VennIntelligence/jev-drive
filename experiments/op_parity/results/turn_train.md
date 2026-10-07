@@ -26,6 +26,8 @@ Reference: H 87.79 all, 78.63 on > 20 deg, 76.92 on > 45 deg (WA-JEPA 87.84 / 87
   (-0.03 pp [-0.86, +0.91]); the gain is in the non-DAC terms (progress / heading), not in the drivable-area failures that make the gap. The price is paid on
   straight and gentle tokens (straight -0.22, curve 8-20 deg -0.75 [-1.34, -0.11], DAC failures +0.15 to +0.62 pp): the re-weighted sampler moves effective
   data from where the model was already good.
+- Collisions do not rise on turns: NC / TTC failures on > 20 deg tokens T1 -0.17 pp [-0.39, +0.03], T2 -0.10, T3 -0.16 vs H (3.03%); all tokens
+  +0.09 to +0.15 pp ([four_dirs/turn_train_collisions.csv](four_dirs/turn_train_collisions.csv), `scripts/fd_entry.py turncoll`).
 - Turning off the anchor (T2) and the late lateral weight (T3) add nothing over T1 on > 45 deg and cost more DAC failures: the anchor to shipped is not
   what holds the turns back.
 

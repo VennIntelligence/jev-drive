@@ -58,7 +58,17 @@ frame pairs (per-tick token store, 26 GB), teacher, MKZ-footprint hinge labels, 
 the collection check (turn-direction 0.865 vs 0.863): [results/b2d_cache.md](results/b2d_cache.md). Draft pre-registration with the open decisions at the top:
 [plans/2026-10-07-b2d-p2-prereg.md](plans/2026-10-07-b2d-p2-prereg.md). Scripts: `scripts/b2d_prep.py`, `b2d_split.py`, `b2d_validate.py`, `b2d_open_read.py`, `b2d_trainer_check.py`.
 
-**Next.** Decision entries by main (navhard, unfreeze).
+**Turn training pilot (2026-10-07, pre-registered).** Turn-balanced sampling (T1), + anchor off on turns (T2), + late lateral weight (T3) on the pilot P2H recipe:
+closure of the > 20 deg navtest gap to WA-JEPA 0.01-0.02 (T1 > 20 deg +0.13 [-0.52, +0.76]; > 45 deg +0.97 but DAC failures unchanged), T2 / T3 fail the -0.3 guard;
+gate not passed, no HUGSIM: [results/turn_train.md](results/turn_train.md), plan [plans/2026-10-06-turn-train-prereg.md](plans/2026-10-06-turn-train-prereg.md).
+
+**Four directions (2026-10-07, CPU diagnosis of P2H, `spec_plan_smooth` on HUGSIM).** Sharp turns, wide-turn edge grazes, vehicle contacts and night, each sized
+(replacement oracles, Shapley) on navtest / navhard / HUGSIM 64 with mechanism shares: collisions are the HUGSIM board (42.8 HD x 100 of headroom, mostly scripted
+oncoming actors WA-JEPA hits too; reachable part the stopped lead, 3.8), navtest turn failures are inside corner cuts and replay-only grazes (sharp 1.04, wide 1.00,
+~half decided at the frozen encoder), HUGSIM sharp-turn failures are 3-5x too fast junction entries; no night units on this tier. Ranked fixes with draft
+pre-registrations (agent hinge, replay hinge, lead margin): [results/four_dirs.md](results/four_dirs.md).
+
+**Next.** Decision entries by main (navhard, unfreeze, turn training, four directions); review of the three 2026-10-07 drafts.
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner
 scenarios: [results/hugsim_spin10.md](results/hugsim_spin10.md) (spins P1 8, P2 7, P3 8 of 10; the launch spin onset is unchanged).
