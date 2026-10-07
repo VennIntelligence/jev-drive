@@ -1,0 +1,12 @@
+{
+ "onnx": [
+  "/root/autodl-tmp/ujs/runs/op_parity/hugsim/onnx/pp-P2H10-F-s0.onnx",
+  "/root/autodl-tmp/ujs/runs/op_parity/wod_slot/onnx/pp-P2H10-F-s0_keep.onnx"
+ ],
+ "n": 8,
+ "plan_shift_m_1_vs_0": {
+  "mean": 0.020787816494703293,
+  "mean_at_5s": 0.029944682493805885,
+  "max": 0.1786583662033081
+ }
+}

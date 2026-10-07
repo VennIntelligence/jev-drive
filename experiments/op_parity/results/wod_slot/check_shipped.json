@@ -1,0 +1,12 @@
+{
+ "onnx": [
+  "/root/autodl-tmp/ujs/runs/op_parity/hugsim/onnx/pp-shipped.onnx",
+  "/root/autodl-tmp/ujs/runs/op_parity/wod_slot/onnx/pp-shipped_s8.onnx"
+ ],
+ "n": 8,
+ "plan_shift_m_1_vs_0": {
+  "mean": 1.011427879333496,
+  "mean_at_5s": 2.1222994327545166,
+  "max": 4.2022294998168945
+ }
+}
