@@ -151,7 +151,7 @@ def hugsim_scores():
     us = [pd.read_csv(HUG / f"P2H10-F-s{s}_spec_plan_smooth-rr{r}/units.csv").set_index("scenario").hdscore for s in (0, 1) for r in (1, 2)]
     W = pd.read_csv(HR / "hugsim-exam/scored_wajepa.csv").query("tag == 'wajepa'").drop_duplicates("scenario", keep="last").set_index("scenario")
     sc = list(W.index)
-    return pd.DataFrame({"scenario": sc, "p2h": 100 * pd.concat([u.reindex(sc) for u in us], axis=1).mean(1, skipna=False).to_numpy(), "wa": 100 * W.hdscore.to_numpy(float)})
+    return pd.DataFrame({"scenario": sc, "p2h": 100 * pd.concat([u.reindex(sc) for u in us], axis=1).mean(axis=1, skipna=False).to_numpy(), "wa": 100 * W.hdscore.to_numpy(float)})
 
 
 # ---------------------------------------------------------------- analysis
@@ -181,7 +181,7 @@ def gap_table(d, cut, B=10000, seed=0, lab_fn=None):
             out[f"share_{b}"] = 100 * n / N
             for nm, x in (("p2h", d.p2h), ("wa", d.wa), ("gap", gap)):
                 with np.errstate(invalid="ignore", divide="ignore"):
-                    out[f"{nm}_{b}"] = S(x.to_numpy(float), m)[ix].sum(1) / n
+                    out[f"{nm}_{b}"] = S(np.asarray(x, float), m)[ix].sum(1) / n
         out["gap_diff"] = out["gap_night"] - out["gap_day"]
         out["size_replace"] = out["share_night"] / 100 * out["gap_night"]              # score points gained by giving WA-JEPA's score on night units
         out["size_excess"] = out["share_night"] / 100 * out["gap_diff"]                # part of that above what day's gap would give
