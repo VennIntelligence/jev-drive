@@ -1,0 +1,41 @@
+k,name,light,stop_sign,lead,cross,stop_ctrl_inferred,note
+0,00c73f2a3515da4249d4416a544c09b2-150,no_light_for_ego,no_stop_sign,none_ahead,clear,yes,
+1,0824d90db4395e53f693374259e5b1d8-149,red_or_yellow_for_ego,no_stop_sign,none_ahead,clear,no,
+2,0aa96f6f7fbe3f29c65db92b52fa17ef-150,no_light_for_ego,no_stop_sign,none_ahead,clear,yes,
+3,0f71456c67c9eeff7b8cea4e979e0393-148,no_light_for_ego,no_stop_sign,none_ahead,clear,no,"stop sign far ahead (~50 m), ego stopped mid-block"
+4,12a6bf38f129fd612291f2fe25113cad-148,no_light_for_ego,no_stop_sign,none_ahead,crossing,unk,
+5,1bbb0008698212719802e03983c052d7-148,red_or_yellow_for_ego,no_stop_sign,none_ahead,crossing,no,amber lamps; oncoming car turning across
+6,1c2695b6dc58bde4cdaacebf572c199a-148,green_for_ego,no_stop_sign,none_ahead,clear,no,just turned green (red 1 s earlier)
+7,24fe50afd86ac25fe1162a605cc2e99e-149,red_or_yellow_for_ego,no_stop_sign,none_ahead,crossing,no,
+8,32f8e8643df8e82246f01dbf093c5b19-147,green_for_ego,no_stop_sign,none_ahead,clear,no,
+9,3721a68c3a5f6b637f192a2bc4c05824-148,no_light_for_ego,no_stop_sign,none_ahead,clear,yes,
+10,44c94c0119f575d93542ddbce114e4e9-149,green_for_ego,no_stop_sign,none_ahead,clear,no,just turned green
+11,4b390f75983c892cbb4144d5af260054-148,no_light_for_ego,no_stop_sign,none_ahead,clear,yes,
+12,5a295ea24311b3bbdfbe12130c81fc72-148,no_light_for_ego,no_stop_sign,none_ahead,clear,unk,
+13,622e0fc649b4053ecfd9f35962a55107-149,red_or_yellow_for_ego,no_stop_sign,none_ahead,clear,no,
+14,62502fb60c74f34c9edf8ad3c7461776-147,red_or_yellow_for_ego,no_stop_sign,none_ahead,clear,no,amber/red horizontal signals
+15,68503f559b4bdc0f537be00af353593f-148,no_light_for_ego,no_stop_sign,none_ahead,clear,no,freeway shoulder
+16,710f3838dd1c3647ec4487d18e28fd05-149,green_for_ego,no_stop_sign,none_ahead,clear,no,"light far ahead (~100 m), ego at the kerb: ambiguous"
+17,75c6ed420afbb9713f97bdc97efdc668-148,no_light_for_ego,no_stop_sign,moving_lead,clear,no,"on-ramp queue, lead half in lane: uncertain"
+18,774c537b284a58c77de4106b1c190117-148,red_or_yellow_for_ego,no_stop_sign,stopped_lead,clear,no,
+19,7ad8f335c9fef5efec345675d4518593-148,no_light_for_ego,no_stop_sign,none_ahead,clear,yes,
+20,8153b57ce578c9a06aee465fa068d92b-150,no_light_for_ego,no_stop_sign,stopped_lead,clear,no,"narrow street, oncoming van"
+21,83adcd95fbe56e9859b14315d34ca356-147,red_or_yellow_for_ego,no_stop_sign,none_ahead,crossing,no,pedestrian leaving the crosswalk at the right edge: uncertain
+22,85fee823d4b998f5c966e756355a4477-148,red_or_yellow_for_ego,no_stop_sign,none_ahead,clear,no,
+23,86320ad09f69467fbf38a207d47673de-148,no_light_for_ego,no_stop_sign,none_ahead,clear,yes,
+24,9526b433b10847e33db125af036acd94-150,no_light_for_ego,no_stop_sign,none_ahead,clear,yes,
+25,95d5b62454366d5c86c21338889d397b-150,no_light_for_ego,no_stop_sign,none_ahead,clear,unk,T-junction
+26,99dc1a0ccab5acb7c14e16293d3702aa-148,no_light_for_ego,no_stop_sign,none_ahead,crossing,unk,
+27,a45e0ced7d86d8413f0b830677bb6c8a-149,no_light_for_ego,no_stop_sign,none_ahead,crossing,unk,
+28,b3bc3bb4fd3c712bcb77619c01efd8fd-149,no_light_for_ego,no_stop_sign,none_ahead,clear,yes,
+29,b6f3c55758b8c847063c1fe9e5154a08-148,no_light_for_ego,no_stop_sign,none_ahead,clear,no,roadworks at the right
+30,c854b63a132a637adeea5c6c22cb1d46-149,red_or_yellow_for_ego,no_stop_sign,none_ahead,crossing,no,
+31,cebae2c5032c3a89f91b562c8a6910fb-149,no_light_for_ego,stop_sign_for_ego,stopped_lead,clear,yes,"garbage truck ahead, stop sign beyond it"
+32,cfa25430b89e6b16b86ed4b49651ea9b-148,no_light_for_ego,no_stop_sign,none_ahead,clear,yes,
+33,d71c0cbf7217a87fa25e05a66f3f0d46-149,no_light_for_ego,no_stop_sign,stopped_lead,clear,no,queue
+34,daeb6b01224335fac3f28974b53c32ec-148,no_light_for_ego,no_stop_sign,none_ahead,clear,yes,
+35,e28d4950a156ff8b3a5fe5315d6131df-148,red_or_yellow_for_ego,no_stop_sign,none_ahead,crossing,no,
+36,e3e6244899ebdbf1a0d0d45fc513b34c-149,green_for_ego,no_stop_sign,stopped_lead,crossing,no,pedestrians cross beyond the lead
+37,e9bc10d535da62710806f50d8c21b1ee-148,green_for_ego,no_stop_sign,none_ahead,clear,no,just turned green
+38,f13fbfd6a820bc93fba9fd494307a062-148,no_light_for_ego,no_stop_sign,none_ahead,crossing,yes,car entering from the right: uncertain
+39,fd039b1d7ab769f228f3717ab41f92a2-149,no_light_for_ego,no_stop_sign,none_ahead,crossing,yes,cyclist
