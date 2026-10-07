@@ -64,18 +64,22 @@ def cmd_bias(a):
     out = data_dir() / "runs/op_parity/wod"
     out.mkdir(parents=True, exist_ok=True)
     import pp_hugsim as H
-    for tag in a.tags:
-        if H.is_shipped(tag):
+    for tag0 in a.tags:
+        tag, _, var = tag0.partition(":")                          # variants (diagnostics): ":nobias" zero bias, ":nocmd" command one-hot zeroed
+        e = ego.copy()
+        if var == "nocmd":
+            e[:, 1:4] = 0
+        if H.is_shipped(tag) or var == "nobias":
             bias = np.zeros((len(names), 32, 512), np.float16)
         else:
             m = H.pmodel(tag, torch.device("cpu"))
             assert m.adapter is not None and not m.adapter.use_side, tag
             with torch.no_grad():
-                bias = np.concatenate([m.adapter(torch.from_numpy(ego[i:i + 256]), None, None).to(torch.float16).numpy()
+                bias = np.concatenate([m.adapter(torch.from_numpy(e[i:i + 256]), None, None).to(torch.float16).numpy()
                                        for i in range(0, len(ego), 256)])
         rms = float(np.sqrt(np.mean(bias.astype(np.float32) ** 2)))
-        np.savez(out / f"bias-{tag}.npz", names=names, bias=bias, ego=ego)
-        print(f"{tag}: {len(names)} frames, bias rms {rms:.4f}, |max| {float(np.abs(bias).max()):.3f}", flush=True)
+        np.savez(out / f"bias-{tag0.replace(':', '_')}.npz", names=names, bias=bias, ego=e)
+        print(f"{tag0}: {len(names)} frames, bias rms {rms:.4f}, |max| {float(np.abs(bias).max()):.3f}", flush=True)
     st = {"n": len(names), "intent_counts": np.bincount(intent, minlength=4).tolist(), "ego_mean": ego.mean(0).round(3).tolist(),
           "ego_std": ego.std(0).round(3).tolist(), "yaw_abs_deg_p50_p99": [float(np.degrees(np.percentile(np.abs(pose[:, :3, 2]), q))) for q in (50, 99)]}
     (out / "ego_stats.json").write_text(json.dumps(st))
