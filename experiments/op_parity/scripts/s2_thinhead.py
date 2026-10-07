@@ -169,7 +169,7 @@ def cmd_plans(a):
         RUNS.mkdir(parents=True, exist_ok=True)
         np.savez(RUNS / ("train_plans.npz" if not a.limit else "train_plans_smoke.npz"), names=tab["names"][sel], seq=tab["log"][sel], intent=tab["intent"][sel],
                  ego=tab["ego"][sel], **{f"plan_{t}": p for t, p in plans.items()})
-        run.summary.update(rows=len(sel), wall_s=time.time() - t0)
+        run.summary.update(rows=len(sel), plan_s=time.time() - t0)
 
 
 # ---------------------------------------------------------------- long-span multi-frame Qwen3 features of the rater frames
