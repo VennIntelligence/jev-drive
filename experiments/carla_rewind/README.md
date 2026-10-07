@@ -8,7 +8,7 @@ index: rewind not equivalent (ego speed p95 0.305 vs 0.3); only 3.0x faster
 
 **Conclusion.** Not equivalent: best `tree+w40f` missed ego speed p95 (0.305 vs 0.3) and openpilot `temporal` cosine (0.87 vs 0.99); speedup 3.0x, not 6.7x (decisions 65). WL-2 generates from scratch.
 
-**Read more.** research/carla-rewind-branching.md, research/wl2-results.md, `git show bcbdde4:todos/2026-09-29-carla-rewind.md`
+**Read more.** research/b2d-closed-loop/index.html, research/wl2-results.md, `git show bcbdde4:todos/2026-09-29-carla-rewind.md`
 
 <!-- files:begin -->
 ## Files

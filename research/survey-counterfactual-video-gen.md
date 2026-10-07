@@ -3,7 +3,7 @@
 状态: 文献现状，2026-09-22 汇总。只写「别人做到了哪里」，不写我们的计划。
 来源: 四份 round-4 deep-research 原始报告（`research/lit/2026-09-22-round4-*.md`，不进 git）：
 intervention pairs、generative editing、video-gen as encoder、H3 deployment。
-背景: [decisions.md](decisions.md) 第 18–20 条，[trajectory-to-control.md](trajectory-to-control.md)。
+背景: [decisions.md](decisions.md) 第 18–20 条，[b2d-closed-loop/index.html](b2d-closed-loop/index.html)。
 
 **覆盖度限定**（引用本文任何「没人做过」时必须带上）：四个 agent 的 WebSearch 配额都在中途或开工前耗尽，
 arXiv API 大部分时间返回 429，因此是关键词驱动的定向检索，不是按日期穷举；workshop 论文、

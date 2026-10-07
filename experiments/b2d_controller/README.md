@@ -8,7 +8,7 @@ index: No controller qualified; PI DS 59.1 vs 53.8, lateral +10.8%
 
 **Conclusion.** None qualified (decisions 26); PI DS 59.147 vs 53.811, completion 16/20 vs 17/20 (27). Turn CTE .392 -> .089 m but guards failed (29, 30).
 
-**Read more.** research/trajectory-to-control.md, docs/b2d-controller.md, docs/b2d-controller-lateral.md
+**Read more.** research/b2d-closed-loop/index.html, docs/b2d-controller.md, docs/b2d-controller-lateral.md
 
 <!-- files:begin -->
 ## Files

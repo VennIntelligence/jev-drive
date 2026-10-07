@@ -8,7 +8,7 @@ index: representation +14.3 DS [+5.1, +25.9]; controller +1.0, not detected
 
 **Conclusion.** Representation A - B = +14.3 DS [+5.1, +25.9]; controller C - B -6.1 was voided (tangent phantom targets), W2b rerun +1.0 [-12.2, +15.4], not detected; D - C +0.4 (decisions 31).
 
-**Read more.** research/trajectory-to-control.md, experiments/b2d_tfv6/results/tfv6-controller/report-w2b.md
+**Read more.** research/b2d-closed-loop/index.html, experiments/b2d_tfv6/results/tfv6-controller/report-w2b.md
 
 <!-- files:begin -->
 ## Files

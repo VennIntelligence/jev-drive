@@ -7,7 +7,7 @@ are set to the snapshot, the agent returns the snapshot's expert control, and th
 tree and the world as it did at tick k-1, so the next tick is the branch's tick k.
 
 Methods (what is put back; every method also restores the ego and the agent's own controller):
-  poc       the external proposal (research/carla-rewind-branching.md): ego + vehicles within 50 m, transform and
+  poc       the external proposal (research/b2d-closed-loop/index.html): ego + vehicles within 50 m, transform and
             linear / angular velocity. Nothing else.
   teleport  every vehicle, walker and static prop (transform, velocities), walker controls, traffic-light states.
   tree      teleport + the scenario tree (every node's state, BackgroundActivity's tables), the py_trees blackboard,

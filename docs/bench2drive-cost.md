@@ -620,7 +620,7 @@ current RTX 6000D cards are slower for GPU-bound work, remote-box.md).
 
   Part of why it never arrives is ours: `AutonomousAgent.set_global_plan` hands the agent
   `downsample_route(..., 50)`, so `_steer_to_route` aims at a sparse route and cannot take corners.
-  [research/trajectory-to-control.md](../research/trajectory-to-control.md) works out what should
+  [research/b2d-closed-loop/index.html](../research/b2d-closed-loop/index.html) works out what should
   replace it.
 - **Ten workers instead of eight** is about 23% on Town12, and was available on the 96 GB card whenever it was
   not shared - see the Large Map ladder above for why we did not take it here. On the 83.6 GiB RTX 6000D

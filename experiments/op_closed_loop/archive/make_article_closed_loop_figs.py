@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "research"))
 import plot_style as ps  # noqa: E402
 
-OUT = ROOT / "research/articles/closed-loop-and-control/figs"
+OUT = ROOT / "research/b2d-closed-loop/figs"
 CTRL = ROOT / "experiments/b2d_controller/results/b2d-controller/results"
 NEXT = ROOT / "experiments/b2d_controller/results/controller-next"
 

@@ -8,7 +8,7 @@ index: Ours win L1 (ramp 0.92 vs 2.38), not closed loop (DS 86 vs 95)
 
 **Conclusion.** L1 ramp C/D 0.92/0.90 vs TFv6 A/B 2.38/2.10; closed-loop DS A 94.1, B 95.0, C 86.5, D 86.0: none better (decisions 41, pending).
 
-**Read more.** research/trajectory-to-control.md, docs/b2d-controller.md
+**Read more.** research/b2d-closed-loop/index.html, docs/b2d-controller.md
 
 <!-- files:begin -->
 ## Files

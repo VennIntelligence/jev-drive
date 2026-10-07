@@ -11,7 +11,7 @@
 [capability-vs-leaderboard.md](capability-vs-leaderboard.md)（方向骨架）、
 [nohack-mechanisms.md](nohack-mechanisms.md)、[ablation-matrix-inventory.md](ablation-matrix-inventory.md)、
 [midterm-inventory.md](midterm-inventory.md)、[midterm-gaps.md](midterm-gaps.md)、
-[transfuser-series-and-tfv6.md](transfuser-series-and-tfv6.md)（TransFuser 六代演进与 TFv6 闭环实测剖析）；
+[b2d-closed-loop/index.html](b2d-closed-loop/index.html)（Bench2Drive 闭环与控制：表征压倒控制、双通道分裂与动力学实测）；
 [factorized-world-model.md](factorized-world-model.md)（分解世界模型文献查新：ego 精确、外生预训练）；
 [turn-gain/index.html](turn-gain/index.html)（转弯增益诊断：P2 急转弯失败是轻微比例缩小，不是封顶，控制链路不裁剪）；
 [hugsim-specplan/index.html](hugsim-specplan/index.html)（用模型自己的 plan 转向：单点曲率更差（转弯 HD 0.17 对 0.28），0.5 到 1.5 秒平均曲率更好（0.333），旧版横向 MPC 持平）；

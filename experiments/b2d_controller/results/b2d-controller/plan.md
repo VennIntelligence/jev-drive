@@ -1,7 +1,7 @@
 # B2D trajectory controller：实现、验证与验收方案
 
 状态: running，2026-09-22；用户已授权按本方案实践，由多个子代理协作。
-主题: [trajectory-to-control](../../../../research/trajectory-to-control.md)
+主题: [b2d-closed-loop](../../../../research/b2d-closed-loop/index.html)
 原始交接: `tmp/2026-09-22-handoff-b2d-controller.md`
 
 ## 目标
