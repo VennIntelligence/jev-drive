@@ -75,6 +75,12 @@ the last 0.5 s, or tracks another object), navtest -0.75 [-0.96, -0.55] with NC 
 
 **WOD-E2E val, P2H vs shipped (2026-10-07, measurement only).** Same harness as decision 34 (shipped RFS 8.005 reproduced), real 10 Hz frames, intent -> command, past states -> ego features: P2H10-F seed mean RFS 7.708 vs 8.005 (-0.297 [-0.501, -0.094]; s0 -0.287, s1 -0.306), ADE@3s +0.284 m, ADE@5s +0.551 m; day RFS -0.36 [-0.61, -0.12], night -0.21 [-0.72, +0.33] (n.s.). With the bias zeroed P2H weights read -0.02: the loss is the ego-state bias, not the weights: [results/wod_p2h.md](results/wod_p2h.md), `scripts/pp_wod.py`.
 
+**WOD-E2E val, P2 recipe trained on WOD train (2026-10-07, pre-registered).** WOD's own inputs (decision 155 mapping), 179 k r2-train rows from the cached
+Cinque trunk, 10 000 steps x 2 seeds: WP2 RFS 8.111 vs shipped 8.005 (+0.106 [-0.060, +0.279], n.s.; seeds +0.109 / +0.104), vs P2H +0.40 [+0.21, +0.59];
+ADE@3s 0.574 vs 1.041 m (-0.47); the inputs-zeroed control WP1 is shipped (+0.007), so the gain is the WOD inputs, not the fine-tune; night RFS gap 0.49 ->
+0.23 (dd +0.27 [-0.16, +0.74], n.s.), night ADE@3s -0.81 m; RFS bounded by the log's own 8.13: [results/wod_parity.md](results/wod_parity.md), plan
+[plans/2026-10-07-wod-parity-prereg.md](plans/2026-10-07-wod-parity-prereg.md), `scripts/wod_parity.py`.
+
 **Why P2H loses on WOD (2026-10-07, inference only).** The input-independent part of the adapter bias carries it: P2H with the bias minus its mean scores +0.097 [+0.009, +0.194] vs shipped (main -0.297), the constant alone -1.11; no ego-mapping intervention moves RFS (acceleration, speed source, yaw, pose history, all within 0.07); hinge irrelevant (P2-F -0.33), P1 +0.01. The loss is the speed profile (P2H path at shipped speed +0.06): rolling from standstill (stopped frames -0.69, +0.94 m at 3 s) and shorter at speed; under warp-synthesised WOD frames P2H is level with shipped (+0.05, interaction +0.35 [+0.13, +0.57]). Serving fix without WOD data: subtract the navtest-mean bias, +0.091 [+0.000, +0.188] (NAVSIM effect untested): [results/wod_p2h_diag.md](results/wod_p2h_diag.md), `scripts/pp_wod_diag.py`.
 
 **Replay hinge (2026-10-07, pre-registered, all gates passed).** Drivable hinge on a differentiable torch proxy of the devkit's LQR replay (`lib/lqr_proxy.py`,

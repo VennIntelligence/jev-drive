@@ -1,0 +1,23 @@
+{
+ "n_rater": 479,
+ "n_frames": 1437,
+ "n_night_rater": 133,
+ "n_day_rater": 325,
+ "n_night_all": 397,
+ "n_day_all": 977,
+ "B": 4000,
+ "groups": {
+  "shipped": "shipped",
+  "WP2s0": "WP2-full-s0",
+  "WP2s1": "WP2-full-s1",
+  "WP1s0": "WP1-full-s0",
+  "WP1s1": "WP1-full-s1"
+ },
+ "plan_5s_displacement_over_log_median": {
+  "WP1-full-s0": 0.9604613151779839,
+  "WP1-full-s1": 0.9607699461254456,
+  "WP2-full-s0": 0.9915901892102479,
+  "WP2-full-s1": 0.9936304892928335,
+  "shipped": 0.9594997686376275
+ }
+}
