@@ -21,7 +21,9 @@ status "small fit"
 sub tp-fit-small --vram 24 --cpu 8 --ram 64 -- $PY $T fit --small
 status "small report (gate)"
 sub tp-report-small --vram 0.5 --cpu 8 --ram 48 -- $PY $T report --small
-grep -q '"G0": true' "$O/turn_probe-small/report/verdict.json" || die "gate G0 failed on the small read: lane stops"
+# prereg gate: the lane stops only if BOTH arms have T45 skill < 0.15 on the small read (the per-arm G0 of the rule is read on the full run)
+$PY -c "import json,sys; s=json.load(open('$O/turn_probe-small/report/verdict.json'))['rules']['ridge']['skill_T45']; print('small-gate skill', s); sys.exit(max(s.values()) < 0.15)" \
+    || die "small gate: both arms below 0.15 skill on T45: lane stops"
 status "full fit"
 sub tp-fit --vram 32 --cpu 8 --ram 96 -- $PY $T fit
 status "full report"
