@@ -23,6 +23,12 @@ B2D rows (experiments/op_parity/scripts/b2d_prep.py, plans/2026-10-07-b2d-p2-pre
 --b2d-mass of the batch (turn balancing then acts inside the B2D rows only), and carry the MKZ footprint hinge (--hinge-labels may list one label
 file per source, --hinge-footprint one footprint per file).
 
+Mixed-domain rows (plans/2026-10-08-mixed-domain-prereg.md, --wod-mass): wod_* data dirs (scripts/wod_parity.py prep) next to NAVSIM ones. NAVSIM
+rows are split by token (--split), the wod_* rows by sequence (--wod-split wod/r2: -train / -dev); every batch takes --wod-mass of its rows from
+the wod_* rows. Each source keeps its own frames (NAVSIM: the --frames protocol, 8 slots + a zero slot; WOD: the cached real frames) and its own
+teacher; the hinge acts on the rows its label file covers (NAVSIM). --wod-slots 8 zeroes the oldest of the 9 WOD slots (teacher8.npz of
+scripts/mixed_domain.py teacher8), so the number of real slots is not a domain cue. Needs --host.
+
   python experiments/op_parity/scripts/pp_train.py --arm P2 --steps 600 --data lb_navtrain lb_h1train [--tag pilot]
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
@@ -99,6 +105,9 @@ class Cfg:
     ego_lat_drop: float = 0.0             # fraction of rows with vy / ay of the ego input zeroed (own rng stream; row order unchanged)
     stop_gate: float = 0.0                # wod-launch (plans/2026-10-08-wod-launch-prereg.md addendum): adapter off (present = 0) on rows fed a speed below this (m/s); 0 = off
     mem: str = ""                         # front-token memory (wa_cf | vj21; arm P2+<mem>), dropped per row with MEM_DROP (own rng stream)
+    wod_split: str = "wod/r2"             # mixed-domain: sequence split of the wod_* data dirs when --split is a NAVSIM token split (<ref>-train / -dev)
+    wod_mass: float = 0.0                 # mixed-domain: exact share of every batch drawn from the wod_* rows (0 = natural mix)
+    wod_slots: int = 0                    # mixed-domain: real policy slots kept on wod_* rows (8 = oldest slot zeroed, as NAVSIM rows; 0 = all cached)
 
 
 def proot(*p) -> _pl.Path:
@@ -131,13 +140,16 @@ class PModel(nn.Module):
         else:
             self.adapter = PA.ParityAdapter(use_ego=k["ego"], use_side=k["side"]) if (k["ego"] or k["side"]) else None
 
-    def forward(self, front, ego, tc, side=None, side_mask=None, inputs_on=True):
+    def forward(self, front, ego, tc, side=None, side_mask=None, inputs_on=True, nv=None):
         """front (B, n, 32, 512) cached hidden tokens of the n newest policy slots (n = 8: the 0.2 s protocols; 4: N, one slot per 2 Hz key)
-        -> outputs (B, n_out). The 9 - n older slots are zero and invalid. inputs_on False / no adapter: the bias is not added."""
+        -> outputs (B, n_out). The 9 - n older slots are zero and invalid. inputs_on False / no adapter: the bias is not added.
+        nv (B,) int, mixed-domain batches only: the number of real (newest) slots of each row; the older ones are invalid."""
         B, n = front.shape[:2]
         H = torch.cat([front.new_zeros(B, A.CONTEXT - n, *front.shape[2:]), front], 1).to(self.net.dtype)
         valid = torch.zeros(B, A.CONTEXT, dtype=torch.bool, device=H.device)
         valid[:, A.CONTEXT - n:] = True
+        if nv is not None:
+            valid = valid & (torch.arange(A.CONTEXT, device=H.device)[None] >= (A.CONTEXT - nv)[:, None])
         if self.mem and side is not None and side.dim() == 3:
             side = side[:, None, None]                                  # memory (B, 32, 512) -> side channel (B, 1 cam, 1 time, 32, 512)
         if self.adapter is not None and inputs_on:
@@ -221,6 +233,9 @@ class Tokens:
         self.dev, self.host = dev, host
         mms = [open_front(f) if _pl.Path(f).name == "front.npy" else np.load(f, mmap_mode="r") for f in files]
         assert host or not any(isinstance(m, IndexedMM) for m in mms), "b2d_* token stores need --host (410k rows x 8 slots do not fit a card)"
+        self.nslot = [m.shape[1] for m in mms]                                  # sources may differ in slot count (NAVSIM 8, WOD 9): host mode only
+        self.ns, self.mixed = max(self.nslot), len(set(self.nslot)) > 1
+        assert host or not self.mixed, "sources with different slot counts need --host"
         if host:
             self.mms, self.off = mms, np.cumsum([0] + [len(m) for m in mms])
         else:
@@ -238,7 +253,7 @@ class Tokens:
         if not self.host:
             return self.t[rows]
         r = rows.cpu().numpy() if torch.is_tensor(rows) else np.asarray(rows)
-        out = np.empty((len(r),) + self.mms[0].shape[1:], np.float16)
+        out = (np.zeros if self.mixed else np.empty)((len(r), self.ns) + self.mms[0].shape[2:], np.float16)
         k = np.searchsorted(self.off, r, side="right") - 1
         for s in np.unique(k):
             m = k == s
@@ -247,22 +262,27 @@ class Tokens:
             g = self.mms[s][loc[o]]
             tmp = np.empty_like(g)
             tmp[o] = g
-            out[m] = tmp
+            if self.mixed:
+                out[m, self.ns - g.shape[1]:] = tmp                             # right-aligned: the missing older slots stay zero
+            else:
+                out[m] = tmp
         return torch.from_numpy(out).to(self.dev, non_blocking=True)
 
 
 class Store:
     """The pp_prep caches of several data dirs, concatenated and moved to the device once (fp16 tokens)."""
 
-    def __init__(self, datas, dev, need_side=True, rows=None, frames="gimm", host=False, mem=None):
+    def __init__(self, datas, dev, need_side=True, rows=None, frames="gimm", host=False, mem=None, wod_slots=0):
         """frames: the front protocol (cache/<data>@<frames>/front.npy; gimm = cache/<data>/front.npy). tab, side and the teacher always come from
         cache/<data>/ (teacher = shipped Cinque on the G protocol, its in-distribution input: every protocol is anchored to the same targets)."""
         cr = data_dir() / "runs" / "op_parity" / "cache"
-        fdir = (lambda d: d) if frames == "gimm" else (lambda d: d if d.startswith("b2d_") else f"{d}@{frames}")   # b2d_*: native 0.2 s frames = W protocol
+        own = ("b2d_", "wod_")                                                     # b2d_*: native 0.2 s frames = W protocol; wod_*: its real frames
+        fdir = (lambda d: d) if frames == "gimm" else (lambda d: d if d.startswith(own) else f"{d}@{frames}")
         tabs = [dict(np.load(cr / d / "tab.npz")) for d in datas]
-        self.tab = {k: np.concatenate([t[k] for t in tabs]) for k in tabs[0]}
+        self.tab = {k: np.concatenate([t[k] for t in tabs]) for k in tabs[0] if all(k in t for t in tabs)}   # mixed sources: the shared columns
         n = len(self.tab["names"])
         self.is_b2d = np.concatenate([np.full(len(t["names"]), d.startswith("b2d_")) for d, t in zip(datas, tabs)])
+        self.is_wod = np.concatenate([np.full(len(t["names"]), d.startswith("wod_")) for d, t in zip(datas, tabs)])
         self.rows = np.arange(n) if rows is None else rows
         sel = self.rows
         assert rows is None, "row subsets are selected by the caller (split_rows)"
@@ -270,8 +290,12 @@ class Store:
         self.front = Tokens([cr / fdir(d) / "front.npy" for d in datas], dev, host)
         self.side = Tokens([cr / d / "side.npy" for d in datas], dev, host) if need_side else None
         tdir = lambda d: cr / fdir(d) if (cr / fdir(d) / "teacher.npz").exists() else cr / d  # noqa: E731  W full run: teacher on its own frames
-        if all((tdir(d) / "teacher.npz").exists() for d in datas):
-            tz = [dict(np.load(tdir(d) / "teacher.npz")) for d in datas]
+        tfile = lambda d: tdir(d) / ("teacher8.npz" if wod_slots == 8 and d.startswith("wod_") else "teacher.npz")  # noqa: E731
+        ns = [min(k, wod_slots) if wod_slots and d.startswith("wod_") else k for d, k in zip(datas, self.front.nslot)]
+        self.nv = (t(np.concatenate([np.full(len(z["names"]), k) for z, k in zip(tabs, ns)])[sel])      # per-row real slots (PModel.forward nv)
+                   if (self.front.mixed or wod_slots) else None)                                          # None = uniform (every other run)
+        if all(tfile(d).exists() for d in datas):
+            tz = [dict(np.load(tfile(d))) for d in datas]
             self.t_out = t(np.concatenate([z["out"] for z in tz])[sel])
             self.t_plan = t(np.concatenate([z["plan"] for z in tz])[sel])
             self.di, self.pi = tz[0]["di"], tz[0]["pi"]
@@ -293,7 +317,7 @@ class Store:
         self.klab, self.klab_ok = (torch.from_numpy(x).to(self.ego.device) for x in (k, ok))
 
 
-def split_rows(tab, split_ref, b2d_split=None) -> tuple:
+def split_rows(tab, split_ref, b2d_split=None, wod_split=None) -> tuple:
     """Train / dev rows: NAVSIM rows by token (<split_ref>-train / -dev), b2d_* rows (tab["is_b2d"]) by route (tab["log"]; <b2d_split>-train / -val).
     A split whose unit is `sequence` (WOD, e.g. wod/r2) selects rows by tab["log"] (= the WOD sequence of the row; scripts/wod_parity.py)."""
     from jevdrive.data import splits
@@ -305,6 +329,11 @@ def split_rows(tab, split_ref, b2d_split=None) -> tuple:
         trm |= tab["is_b2d"] & bt.mask(tab["log"])
         dvm |= tab["is_b2d"] & bv.mask(tab["log"])
         sp += [bt, bv]
+    if wod_split and tr.unit != "sequence" and tab.get("is_wod") is not None and tab["is_wod"].any():   # mixed-domain: wod_* rows by sequence
+        wt, wv = splits.load(f"{wod_split}-train"), splits.load(f"{wod_split}-dev")
+        trm |= tab["is_wod"] & wt.mask(tab["log"])
+        dvm |= tab["is_wod"] & wv.mask(tab["log"])
+        sp += [wt, wv]
     return np.flatnonzero(trm), np.flatnonzero(dvm), tuple(sp)
 
 
@@ -408,7 +437,7 @@ def dev_eval(model: PModel, S: Store, dev_rows: np.ndarray, W, bs=128) -> dict:
         side = S.side[r] if S.side is not None else (S.mem[r] if getattr(S, "mem", None) is not None else None)
         tx, ty, _ = rear(S.t_plan[r], S.cam_x[r], W)
         for on in (True, False):
-            p = model(S.front[r], S.ego[r], S.tc[r], side, None, inputs_on=on).float()[:, pi].view(-1, 33, 15)
+            p = model(S.front[r], S.ego[r], S.tc[r], side, None, inputs_on=on, nv=None if S.nv is None else S.nv[r]).float()[:, pi].view(-1, 33, 15)
             x, y, _ = rear(p, S.cam_x[r], W)
             d = torch.hypot(x - tx, y - ty).mean(1)
             acc["drift_on" if on else "drift_off"].append(d)
@@ -433,18 +462,20 @@ def main(a):
               b2d_split=a.b2d_split, b2d_mass=a.b2d_mass, anchor_b2d=not a.no_anchor_b2d,
               turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
               act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop, mem=a.mem, stop_gate=a.stop_gate,
+              wod_split=a.wod_split, wod_mass=a.wod_mass, wod_slots=a.wod_slots,
               agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
     tz = [np.load(data_dir() / "runs" / "op_parity" / "cache" / d / "tab.npz") for d in cfg.data]
     tabs = dict(names=np.concatenate([z["names"] for z in tz]), log=np.concatenate([z["log"] for z in tz]),
-                is_b2d=np.concatenate([np.full(len(z["names"]), d.startswith("b2d_")) for d, z in zip(cfg.data, tz)]))
-    tr_rows, dv_rows, sp = split_rows(tabs, cfg.split, cfg.b2d_split)
+                is_b2d=np.concatenate([np.full(len(z["names"]), d.startswith("b2d_")) for d, z in zip(cfg.data, tz)]),
+                is_wod=np.concatenate([np.full(len(z["names"]), d.startswith("wod_")) for d, z in zip(cfg.data, tz)]))
+    tr_rows, dv_rows, sp = split_rows(tabs, cfg.split, cfg.b2d_split, cfg.wod_split)
     if cfg.mem:
         assert cfg.arm == "P2", "--mem extends arm P2"
         cfg.arm = f"P2+{cfg.mem}"
-    S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames, host=cfg.host, mem=cfg.mem or None)
+    S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames, host=cfg.host, mem=cfg.mem or None, wod_slots=cfg.wod_slots)
     model = PModel(cfg.arm, act=bool(cfg.act_lab)).to(dev)
     if cfg.stop_gate > 0:                                           # the whole ego row is zeroed (present = 0 -> bias exactly 0) in training and dev eval
         S.ego = S.ego * (S.ego[:, 4:5] * 10.0 >= cfg.stop_gate).float()
@@ -519,8 +550,20 @@ def main(a):
                 run.info(f"turn-balanced sampling: natural mass {np.round(nat, 3).tolist()}, target {tgt.tolist()}, per-token weights {np.round(w / w[0], 3).tolist()} "
                          f"(relative to the < 5 deg bin); anchor off on turning tokens: {cfg.anchor_off_turn} ({turn[tr_rows].mean():.3f} of train rows)")
 
+        if cfg.wod_mass > 0:                                                    # mixed-domain: an exact share of every batch from the wod_* rows
+            assert pw is None, "--wod-mass does not combine with --b2d-mass / --turn-bal"
+            w_tr, o_tr = tr_rows[S.is_wod[tr_rows]], tr_rows[~S.is_wod[tr_rows]]
+            kw = int(round(nB * cfg.wod_mass))
+            assert len(w_tr) and len(o_tr) and 0 < kw < nB, "--wod-mass needs wod_* and other rows in the train split"
+            if run:
+                run.info(f"wod mass {cfg.wod_mass}: {kw} WOD + {nB - kw} other rows per batch; {len(w_tr)} WOD / {len(o_tr)} other train rows; "
+                         f"real slots per row: {torch.unique(S.nv).tolist() if S.nv is not None else 'uniform'}")
+
         def draw():                                                             # the rng order of the GPU-store loop (same row stream)
-            r = rng.choice(tr_rows, nB, replace=len(tr_rows) < nB, p=pw)
+            if cfg.wod_mass > 0:
+                r = np.concatenate([rng.choice(o_tr, nB - kw, replace=len(o_tr) < nB - kw), rng.choice(w_tr, kw, replace=len(w_tr) < kw)])
+            else:
+                r = rng.choice(tr_rows, nB, replace=len(tr_rows) < nB, p=pw)
             an = rng.random(nB) < cfg.d_frac
             if cfg.anchor_off_turn:
                 an &= ~turn[r]
@@ -551,7 +594,7 @@ def main(a):
             if cfg.ego_lat_drop > 0:
                 dm = torch.as_tensor(lrng.random(nB) < cfg.ego_lat_drop, device=dev)
                 ego[:, EGO_LAT] = ego[:, EGO_LAT] * (~dm)[:, None].float()
-            out = model(front_b, ego, S.tc[rows], side, smask)
+            out = model(front_b, ego, S.tc[rows], side, smask, nv=None if S.nv is None else S.nv[rows])
             total, Ls = LS(out, S, rows, anchor)
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {k: float(v) for k, v in Ls.items()} }")
@@ -582,6 +625,10 @@ def main(a):
                 dvb = dv_rows[S.is_b2d[dv_rows]]
                 if len(dvb) and len(dvb) < len(dv_rows):
                     ev |= {"b2d_" + k: v for k, v in dev_eval(model, S, dvb, LS.W).items()}
+                dvw = dv_rows[S.is_wod[dv_rows]]
+                if len(dvw) and len(dvw) < len(dv_rows):                    # mixed-domain: each domain's dev rows
+                    ev |= {"wod_" + k: v for k, v in dev_eval(model, S, dvw, LS.W).items()}
+                    ev |= {"nav_" + k: v for k, v in dev_eval(model, S, dv_rows[~S.is_wod[dv_rows]], LS.W).items()}
                 model.train()
                 run.scalars({f"dev/{k}": v for k, v in ev.items()}, step + 1)
                 run.info(f"dev @ {step + 1}: " + ", ".join(f"{k} {v:.3f}" for k, v in ev.items()))
@@ -636,5 +683,8 @@ if __name__ == "__main__":
     ap.add_argument("--act-lam", type=float, default=3.0)
     ap.add_argument("--ego-lat-drop", type=float, default=0.0, help="fraction of rows with vy / ay of the ego input zeroed")
     ap.add_argument("--stop-gate", type=float, default=0.0, help="adapter off on rows whose fed speed (ego vx) is below this, m/s (wod-launch); 0 = off")
+    ap.add_argument("--wod-split", default=Cfg.wod_split, help="mixed-domain: sequence split of the wod_* dirs when --split is a NAVSIM split")
+    ap.add_argument("--wod-mass", type=float, default=0.0, help="mixed-domain: exact share of every batch drawn from the wod_* rows (0 = natural mix)")
+    ap.add_argument("--wod-slots", type=int, default=0, choices=[0, 8], help="mixed-domain: 8 = oldest WOD slot zeroed (teacher8.npz); 0 = all 9")
     ap.add_argument("--mem", default="", choices=["", *MEM_KINDS], help="32-token memory for arm P2 (representation fix / turn-oracle; runs/op_parity/mem)")
     main(ap.parse_args())
