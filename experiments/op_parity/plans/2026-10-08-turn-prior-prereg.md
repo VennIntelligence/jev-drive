@@ -38,3 +38,22 @@ plan 的 5 s 横向偏移。同时报 WLG 已经修掉的部分：静止起步�
 
 约 3 card-hour，绝大部分是 CPU。Step 2 的 2a 对 WLG 的 CI 含 0 且点估计 < +0.05 → 「floor 的增益被 WLG 吃掉」，Step 3 仍可做（规则可能在 WLG 上给不同的数）
 但不得写成 additive。四个以上对比被选出一个贴边 CI 时按「弱」标注。
+
+## 补记 A（Step 1 读完后、任何规则打分之前提交）
+
+Step 1 的描述读数（已打分的 floor head 的选择，见 `results/turn_prior/desc_picks.csv`）：WP2 上转弯意图帧 52 个，head 选的速度档 follow / hold / creep = 29 / 50 / 20 %，
+5 s 位移是 plan 的 0.44（中位数），路径以向转弯外侧偏移为主（外移 3.2 m 的均值），v0 < 0.5 档的增益（+1.80）在 WLG 上缩到 +0.28，0.5-3 档（+0.80 -> +0.84）和 >= 3 档
+（+0.95 -> +1.18）不变。规则的形式（速度缩放 + 向外侧偏移）来自这批已打分的帧，这一点在报告里按「形式事后、参数 out-of-fold」标注。
+
+**规则族 R(alpha, nudge, v-range)**：只对 command 为左 / 右的帧、且 v0 落在 v-range 内的帧改写 plan：同一条路径，弧长剖面乘 alpha（`offset_path(plan, v0, alpha * arc(plan), dy, l0, lt)`），
+dy = 0 或 1.2 m 向转弯外侧（即 F20 的 nudge 路径，`l0 = 10, lt = 2`）。输入只有 command、v0、plan 本身，label-free。
+网格：alpha in {0.5, 0.7, 0.85, 1.0}，dy in {0, 1.2 m 外侧}，v-range in {[0.5, 3), [0.5, inf), [0, inf)} m/s，共 24 个（含恒等）。其余帧不动。
+
+- **3a-oof（主）**：参数由训练折（wod_pref 的 5 个外层折，打分折之外的 4 折）上的转弯意图帧的 cluster-mean RFS 最大化选出，平局取最接近恒等者；作用在打分折。
+  系统一 = WLG plan（对比 `WLG+rule − WLG`、`− shipped`）；叠 pref：参数在 WLG plan 上拟合，作用在打分折的 pref plan（与 2b 同一嵌套）。
+- **3a-log**：参数只来自 WOD 日志：alpha = `r2-dev` 转弯意图行上（0.5 <= v0 < 3）日志 5 s 位移 / plan 5 s 位移 的中位数，dy = 0，v-range = [0.5, 3)。
+  这是「由训练日志导出的速度先验」的字面版本；预期 ~1（plan 在模仿日志），按实际数报。
+- 判据同 Step 2：对 WLG 的 CI 下界 > 0；无分层整体 < 0。另报 5 折各自选出的参数（是否稳定）。
+- **3b 训练臂的触发条件**：只有当 3a-oof 的 5 个折选出的 (alpha, dy, v-range) 完全一致且 dy = 0（则单个训练臂等价于对每个折都嵌套），才训练一个臂：
+  WOD train 上 turn-intent 且 v0 在该 v-range 的行，监督轨迹沿原路径把弧长乘 alpha（label 重定时），其余同 WLG recipe（`--stop-gate 0.5`），2 seed，
+  经决策 155 的 harness 服务；对比 `new − WLG`、`− shipped`。条件不满足则 3b 不做并写明原因，不用不一致的 alpha 训练。
