@@ -56,8 +56,9 @@ def key_steps(scale: float) -> np.ndarray:
     return np.floor(-KEYS_S * scale / SIM_DT + 1e-6).astype(int)
 
 
-def ego_inputs(hist: "Z.History", info: dict, d: float, scale: float):
-    """parity_adapter.ego_features of the current step and the raw pose (4, 3) (rear axle, current frame, oldest first)."""
+def ego_inputs(hist: "Z.History", info: dict, d: float, scale: float, zero_acc: bool = False):
+    """parity_adapter.ego_features of the current step and the raw pose (4, 3) (rear axle, current frame, oldest first).
+    zero_acc: ax = ay = 0 at the model input (probe option, default off; HUGSIM already reports ay = 0)."""
     t, pos, th = np.asarray(hist.t), np.asarray(hist.pos), np.asarray(hist.th)
     f, _ = Z.fwd_right(th)
     rear = pos - d * f
@@ -68,7 +69,7 @@ def ego_inputs(hist: "Z.History", info: dict, d: float, scale: float):
     rel = xy - xy[-1]
     pose = np.stack([rel @ f0, -(rel @ r0), -(hq - hq[-1])], -1)    # x forward, y left, yaw left-positive (theta is right-positive)
     v = float(np.ravel(info["ego_velo"])[0]) * scale
-    a = float(np.ravel(info.get("accelerate", 0.0))[0]) * scale ** 2
+    a = 0.0 if zero_acc else float(np.ravel(info.get("accelerate", 0.0))[0]) * scale ** 2
     vel, acc = np.tile([v, 0.0], (4, 1)), np.tile([a, 0.0], (4, 1))
     cmd = np.zeros(4, np.float32)
     cmd[NAV_MAP[int(np.ravel(info["command"])[0])]] = 1.0
@@ -77,11 +78,13 @@ def ego_inputs(hist: "Z.History", info: dict, d: float, scale: float):
 
 class ParityInputs:
     """Per scenario: side-camera key frames, ego features and the bias request. `cfg` = the agent opt `parity`:
-    {"socket": bias server socket, "clock": "model" | "sim"}; which inputs are sent follows the server (its arm)."""
+    {"socket": bias server socket, "clock": "model" | "sim", "zero_acc": bool (default false: ax = ay = 0 at the model input,
+    experiments/op_parity/results/hugsim_ax_probe.md)}; which inputs are sent follows the server (its arm)."""
 
     def __init__(self, cfg: dict, cal: dict, d: float, dilation: float):
         self.cfg, self.d = dict(cfg), d
         self.clock = self.cfg.get("clock", "model")
+        self.zero_acc = bool(self.cfg.get("zero_acc", False))
         self.scale = float(dilation) if self.clock == "model" else 1.0
         self.back = key_steps(self.scale)
         self.sock = wire.connect_retry(self.cfg["socket"])
@@ -103,13 +106,13 @@ class ParityInputs:
         return {k: float((idx[k] >= 0).mean()) for k in ("road", "wide")}
 
     def describe(self) -> dict:
-        return {"server": self.server, "clock": self.clock, "scale": self.scale, "key_steps_back": self.back.tolist(),
+        return {"server": self.server, "clock": self.clock, "zero_acc": self.zero_acc, "scale": self.scale, "key_steps_back": self.back.tolist(),
                 "side_cams": list(self.yaw), "mount_yaw_deg": {c: round(y, 2) for c, y in self.yaw.items()}, "coverage": self.coverage}
 
     def bias(self, rgb: dict, info: dict, hist) -> tuple[np.ndarray, dict]:
         """(32, 512) fp16 bias for this step and a log record."""
         t0 = time.perf_counter()
-        ego, pose = ego_inputs(hist, info, self.d, self.scale)
+        ego, pose = ego_inputs(hist, info, self.d, self.scale, self.zero_acc)
         arrays = {"ego": ego}
         if self.use_side:
             self.frames.append(np.stack([fr.pack(rgb, idx) for fr, idx in (self.packers[c] for c in SIDE)]))   # (3, 2, 6, 128, 256)
@@ -119,6 +122,6 @@ class ParityInputs:
         wire.send(self.sock, {"cmd": "bias"}, arrays)
         meta, out = wire.recv(self.sock)
         b = out["bias"]
-        rec = {"ego": np.round(ego, 4).tolist(), "bias_rms": round(float(np.sqrt(np.mean(np.square(b.astype(np.float32))))), 5),
+        rec = {"ego": np.round(ego, 4).tolist(), "ax_raw": round(float(np.ravel(info.get("accelerate", 0.0))[0]), 4), "bias_rms": round(float(np.sqrt(np.mean(np.square(b.astype(np.float32))))), 5),
                "prep_ms": round(1e3 * (t1 - t0), 1), "rtt_ms": round(1e3 * (time.perf_counter() - t1), 1)}
         return b, rec

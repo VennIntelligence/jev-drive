@@ -1,0 +1,11 @@
+scenario,set,s_ref,stored_vmax_median
+scene-0041-medium-00,sharp,30.0,
+scene-570_770-easy-00,sharp,62.2,
+scene-570_770-medium-00,sharp,63.8,
+scene-5980_6180-easy-00,sharp,48.7,
+scene-8440_8640-easy-00,sharp,108.2,
+scene-0418-hard-00,control,62.2,19.23
+scene-0013-medium-00,control,62.2,19.04
+scene-0411-easy-00,control,62.2,16.62
+scene-0167-easy-00,control,62.2,16.17
+scene-0166-easy-00,control,62.2,15.14
