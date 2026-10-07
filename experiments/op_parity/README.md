@@ -68,6 +68,8 @@ oncoming actors WA-JEPA hits too; reachable part the stopped lead, 3.8), navtest
 ~half decided at the frozen encoder), HUGSIM sharp-turn failures are 3-5x too fast junction entries; no night units on this tier. Ranked fixes with draft
 pre-registrations (agent hinge, replay hinge, lead margin): [results/four_dirs.md](results/four_dirs.md).
 
+**WOD-E2E val, P2H vs shipped (2026-10-07, measurement only).** Same harness as decision 34 (shipped RFS 8.005 reproduced), real 10 Hz frames, intent -> command, past states -> ego features: P2H10-F seed mean RFS 7.708 vs 8.005 (-0.297 [-0.501, -0.094]; s0 -0.287, s1 -0.306), ADE@3s +0.284 m, ADE@5s +0.551 m; day RFS -0.36 [-0.61, -0.12], night -0.21 [-0.72, +0.33] (n.s.). With the bias zeroed P2H weights read -0.02: the loss is the ego-state bias, not the weights: [results/wod_p2h.md](results/wod_p2h.md), `scripts/pp_wod.py`.
+
 **Next.** Decision entries by main (navhard, unfreeze, turn training, four directions); review of the three 2026-10-07 drafts.
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner
