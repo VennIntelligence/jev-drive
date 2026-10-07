@@ -418,9 +418,11 @@ def cmd_geomtab(a):
                 x = stats.paired(f(G[m].loc[toks]).to_numpy()[k] * 100.0, f(G[r].loc[toks]).to_numpy()[k] * 100.0, groups=logs[k])
                 out.append(dict(contrast=f"{m} - {r}", stratum=sname, metric=f"{met} %", n=int(k.sum()), arm=x["mean_a"], ref=x["mean_b"],
                                 diff=x["mean"], lo=x["lo"], hi=x["hi"]))
-    stats.write_table(out, RES / a.out, floatfmt=".2f", note="footprint departures from the scorer's drivable polygons, devkit replay vs raw plan; "
+    res = Path(a.res_dir) if a.res_dir else RES
+    res.mkdir(parents=True, exist_ok=True)
+    stats.write_table(out, res / a.out, floatfmt=".2f", note="footprint departures from the scorer's drivable polygons, devkit replay vs raw plan; "
                       "paired, cluster bootstrap over navtest logs, B 10 000")
-    print((RES / f"{a.out}.md").read_text())
+    print((res / f"{a.out}.md").read_text())
 
 
 if __name__ == "__main__":
@@ -451,5 +453,6 @@ if __name__ == "__main__":
     p = sp.add_parser("geomtab")
     p.add_argument("--pairs", nargs="+", required=True, help="arm:ref model names with geom_<name>.parquet")
     p.add_argument("--out", default="geom")
+    p.add_argument("--res-dir", default="", help="output directory (default results/replay_hinge)")
     a = ap.parse_args()
     {"proxy": cmd_proxy, "train": cmd_train, "merge": cmd_merge, "report": cmd_report, "pilot": cmd_pilot, "geomtab": cmd_geomtab}[a.cmd](a)

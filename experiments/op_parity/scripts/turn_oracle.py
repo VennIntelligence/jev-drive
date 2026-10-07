@@ -424,7 +424,7 @@ TABLE = (("EPDMS", "all"), ("EPDMS", "S5 (< 5 deg)"), ("EPDMS", "T20 (> 20 deg)"
          ("DAC fail %", "T20 (> 20 deg)"), ("DAC fail %", "T45 (> 45 deg)"), ("inside-cut %", "T45 (> 45 deg)"), ("cannot-make-turn %", "T45 (> 45 deg)"),
          ("other DAC fail %", "T45 (> 45 deg)"), ("raw-plan departure %", "T45 (> 45 deg)"), ("inside-cut %", "T20 (> 20 deg)"),
          ("cannot-make-turn %", "T20 (> 20 deg)"), ("DAC fail %", "sharp R < 15 m"), ("inside-cut %", "sharp R < 15 m"),
-         ("cannot-make-turn %", "sharp R < 15 m"), ("EP", "all"), ("NC+TTC fail %", "all"))
+         ("cannot-make-turn %", "sharp R < 15 m"), ("EP", "all"), ("EP", "S5 (< 5 deg)"), ("EP", "T20 (> 20 deg)"), ("NC+TTC fail %", "all"))
 PRIMARY = ("inside-cut %", "T45 (> 45 deg)")
 
 
