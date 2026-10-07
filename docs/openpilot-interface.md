@@ -59,6 +59,14 @@ the ego speed and the model's own lead head only. Fires after 10 s of standstill
 2.5 m/s, on the plan asking as much, on a lead, or after 6 s; 10 s cooldown. HUGSIM agent opt `"resume": {}` (lon.resume `rule`),
 B2D arb `"resume_rule": {}` (`timer+rule`). Pre-registration and results: experiments/op_resume/.
 
+Lead standstill margin (option, HUGSIM + NAVSIM, `jevdrive/openpilot/lead_margin.py`, trick `lead_margin`, semi): when the model's own
+lead head reports a lead (prob > 0.5), the plan's arc length is capped at s_max(t) = max(0, g + max(lead_v, 0) t - 2.5 m) along its own
+path, g = lead_x minus the near-range bias measured on HUGSIM (2.0 m below 6 m, linear to 0 at 10 m); shape kept, never adds motion,
+untriggered plans unchanged. HUGSIM agent opt `"lead_margin": {}` (after forward_only, before straight_stop; lead_v / 1.25 under the
+dilate clock); NAVSIM export adapter `lm`, bench model option `:lm` (e.g. `P2H10-F-s0:lm`; the parity plans stage now also stores
+lead_prob / lead_x / lead_v). Margin from the camera: HUGSIM 1.0 m bumper gap, NAVSIM 0.12 m. Pre-registration and result:
+experiments/op_parity/plans/2026-10-07-lead-margin-prereg.md, results/lead_margin.md.
+
 ## Presets and reproducibility
 
 | Board | Preset | What it is |

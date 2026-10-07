@@ -170,6 +170,8 @@ def cmd_proxy(a):
         (RES / "proxy.json").write_text(json.dumps(summ, indent=1))
         run.summary.update(summ)
         run.info(json.dumps(summ, indent=1))
+    if not summ["verdict"]["pass_"]:
+        sys.exit("proxy validation failed: the prereg stops here")
 
 
 def _ego_mc(token):
@@ -190,7 +192,7 @@ def cmd_train(a):
     from jevdrive.common import n_cpus
     from jevdrive.data import splits
     from jevdrive.run import Run
-    torch.set_num_threads(n_cpus())
+    torch.set_num_threads(min(n_cpus(), len(os.sched_getaffinity(0))))
     dev = torch.device(a.device)
     OUT.mkdir(parents=True, exist_ok=True)
     with Run("op_parity", "replay_hinge-train", seed=0, config=vars(a)) as run:

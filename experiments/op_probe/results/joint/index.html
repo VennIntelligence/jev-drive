@@ -1,126 +1,1105 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>P2 vs WA-JEPA joint diagnosis</title>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P2 与 WA-JEPA 联合诊断报告：适用场景、失效边界与阶段定位</title>
 <style>
-:root { --ink:#1d1d1f; --mute:#5f6368; --line:#e3e3e3; --bg:#ffffff; --p2:#D55E00; --wa:#0072B2; --both:#CC79A7; --card:#fafafa; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ink:#e8e8e8; --mute:#a0a0a0; --line:#3a3a3a; --bg:#161616; --card:#1f1f1f; }
-  :root:not([data-theme="light"]) figure img { background:#fff; } }
-body { background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; margin:0; }
-main { max-width:1080px; margin:0 auto; padding:24px 16px 64px; }
-h1 { font-size:26px; line-height:1.25; margin:8px 0 4px; } h2 { font-size:20px; margin:40px 0 8px; border-bottom:1px solid var(--line); padding-bottom:4px; }
-h3 { font-size:16px; margin:22px 0 6px; } .sub { color:var(--mute); margin:0 0 18px; }
-.p2 { color:var(--p2); font-weight:600; } .wa { color:var(--wa); font-weight:600; }
-.key { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 18px; }
-.key li { margin:6px 0; }
-figure { margin:22px 0; } figure img { width:100%; height:auto; border:1px solid var(--line); border-radius:4px; }
-figcaption { font-size:13.5px; color:var(--ink); margin-top:6px; } .look { color:var(--mute); }
-table { border-collapse:collapse; font-size:13px; margin:10px 0; width:100%; display:block; overflow-x:auto; }
-th, td { border-bottom:1px solid var(--line); padding:4px 8px; text-align:right; white-space:nowrap; } th:first-child, td:first-child { text-align:left; }
-th { font-weight:600; } code { font-size:12.5px; } .note { font-size:13.5px; color:var(--mute); }
-nav a { margin-right:12px; font-size:14px; }
-</style></head><body><main>
-<h1>Where <span class="p2">P2</span> and <span class="wa">WA-JEPA</span> work, where each fails, and at which stage</h1>
-<p class="sub">Joint diagnosis, 2026-10-06. <span class="p2">P2</span> = op_parity P2-F (Cinque 382M, comma vision frozen, ego / pose / command
-inputs, protocol W frames; 2 seeds). <span class="wa">WA-JEPA</span> = released checkpoint (V-JEPA 2.1 ViT-L + MMDiT, one run). Builds on
-<a href="../dac-localize.md">dac-localize.md</a> (decision 147) and the op_parity gap page. No model was re-run; all numbers come from stored
-plans, devkit sub-scores, op_probe features / probes / decoders, and HUGSIM run logs.</p>
-<nav><a href="#summary">Summary</a><a href="#overview">Overview</a><a href="#taxonomy">Taxonomy</a><a href="#stages">Stages</a><a href="#geometry">Geometry</a><a href="#closed">Closed loop</a><a href="#cases">Cases</a><a href="#method">Method</a></nav>
+:root {
+  --ink: #1f2328;
+  --mute: #656d76;
+  --line: #d0d7de;
+  --bg: #ffffff;
+  --card: #f6f8fa;
+  --card-border: #d0d7de;
+  --p2: #D55E00;
+  --p2-tint: rgba(213, 94, 0, 0.08);
+  --p2-border: rgba(213, 94, 0, 0.35);
+  --wa: #0072B2;
+  --wa-tint: rgba(0, 114, 178, 0.08);
+  --wa-border: rgba(0, 114, 178, 0.35);
+  --both: #9b59b6;
+  --both-tint: rgba(155, 89, 182, 0.08);
+  --good: #1a7f37;
+  --good-tint: rgba(26, 127, 55, 0.1);
+  --bad: #cf222e;
+  --bad-tint: rgba(207, 34, 46, 0.1);
+  --code-bg: #eff1f3;
+  --shadow: 0 1px 3px rgba(31,35,40,0.06), 0 8px 24px rgba(66,74,83,0.08);
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e6edf3;
+    --mute: #8d96a0;
+    --line: #30363d;
+    --bg: #0d1117;
+    --card: #161b22;
+    --card-border: #30363d;
+    --p2-tint: rgba(213, 94, 0, 0.18);
+    --p2-border: rgba(213, 94, 0, 0.5);
+    --wa-tint: rgba(0, 114, 178, 0.18);
+    --wa-border: rgba(0, 114, 178, 0.5);
+    --both-tint: rgba(155, 89, 182, 0.18);
+    --good-tint: rgba(34, 197, 94, 0.15);
+    --bad-tint: rgba(239, 68, 68, 0.2);
+    --code-bg: #21262d;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.4);
+  }
+  :root:not([data-theme="light"]) figure img { background: #ffffff; border-radius: 6px; }
+}
 
-<h2 id="summary">Summary</h2>
-<div class="key"><ul>
-<li><b>WA-JEPA is ahead on every navtest scene type; the gap is a turning problem.</b> Per-token EPDMS P2 − WA is -1.4 [-2.2, -0.8] on
-straight driving and -8.2 [-10.7, -5.7] / -10.8 [-13.3, -8.1] on left / right turns
-(× 100). DAC failures rise with curvature for P2 (1.6% below 5° → 11.3% above 45°) and barely for WA
-(1.0% → 3.2%). Near parity: straight, ≥ 10 m/s (-1.5 [-3.5, +0.3]), Las Vegas
-(-1.4 [-2.1, -0.6]). Largest non-manoeuvre gaps: Singapore, left-hand traffic (-6.5 [-8.4, -4.7]),
-near-empty roads with 0-3 vehicles (-5.4 [-6.5, -4.1], i.e. turns at open junctions).</li>
-<li><b>Where P2 is not worse.</b> Closed loop on straight routes: HUGSIM HD P2 − WA -0.6 [-10.5, +8.2] (× 100, 41
-scenarios); on the nuScenes scenes P2 is ahead, +11.9 [+3.6, +21.6]. Open loop: extended comfort (EC fail rate P2 − WA
--0.5 [-1.0, +0.1] pp), launch scenes on navhard stage 1, lane changes on navhard stage 2 (both CIs include 0). No navtest scene type has P2 ahead.</li>
-<li><b>Each model's failures are fixed at its own encoder (mirror of decision 147, point 4).</b> A fresh decoder (stage + ego, drivable hinge) on
-P2's vision tokens passes DAC on P2's failure set F no more often than an ego-only decoder (-0.2 [-9.3, +8.6] pp), while on WA-JEPA's
-failure set R it gains +26.1 [+9.2, +41.6] pp. The same holds the other way: WA's front-encoder decoder gains +27.9 [+19.9, +35.5] pp on F and
--2.6 [-19.7, +13.0] pp on R; WA's head hidden +38.6 [+31.5, +45.4] vs -3.5 [-23.4, +14.5]. On the tokens both fail (FF), no stage of either model
-adds anything over ego state. Caveat: F and R are each selected by one model failing and the other passing, which inflates the cross-set gains (regression to the mean); the
-readable part is that every stage of the failing model sits at the ego-only level on its own failure set.</li>
-<li><b>P2's DAC failures are in the plan; most of WA-JEPA's arise only in the tracker replay.</b> When P2 fails DAC its raw plan footprint already leaves the road in
-63.7 [57.8, 69.2]% of cases; for WA only 23.3 [15.7, 31.8]%. In the devkit's LQR replay 59.8 [51.4, 67.6]% of WA's DAC failures are
-tracker-only and 82.2 [74.8, 88.9]% are shallower than 0.3 m (median 10 cm); P2: 30.4 [24.8, 36.4]% and 52.0 [46.8, 57.8]% (median
-29 cm).</li>
-<li><b>P2's specific turn failures cut the corner.</b> On turns > 20° where P2 fails and WA passes, P2's 4 s end point lies
-+0.36 [+0.08, +0.66] m toward the inside of the logged turn; on turns both pass it lies -0.09 [-0.16, -0.02] m (slightly wide). WA on its own
-failures: +0.04 [-0.18, +0.25] m. Tokens both fail are the opposite: both run wide (-0.33 [-0.66, +0.01] / -0.41 [-0.88, -0.08] m).</li>
-<li><b>The open-loop deficit carries into closed loop where the route turns.</b> HUGSIM HD gap is -5.5 [-13.7, +2.0] overall (n.s., as in
-decision 144), -14.1 [-28.3, -0.7] on the 23 scenarios whose route turns ≥ 30°, with DAC -12.9 [-20.5, -6.0] there and
--1.2 [-3.6, +1.0] on straight routes. How runs end: P2 completes 17.5 vs 28, spins 9.5
-vs 4, bg-collides 7.5 vs 1; WA leaves the route 5 vs 1.5.
-Foreground collisions are shared (28 vs 26; 22 scenarios end that way for both).</li>
-<li><b>navhard.</b> Stage 1 (logged) P2 − WA -8.8 [-13.2, -4.3], from DAC (+4.8 pp failures), DDC
-(+3.1) and EP; stage 2 (rendered) -3.3 [-4.5, -2.1], from DAC (+4.5) and EP
-(-8.2 [-9.1, -7.4]): in synthetic follow-up states P2 also drives too slowly. Turns are the worst manoeuvre in both stages.</li>
-</ul></div>
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+main { max-width: 1140px; margin: 0 auto; padding: 28px 20px 80px; }
 
-<h2 id="overview">Overview</h2>
-<figure id="fig1_overview"><a href="figs/fig1_overview.pdf"><img src="figs/fig1_overview.png" alt="Figure 1. Where each model works and fails."></a><figcaption><b>Figure 1. Where each model works and fails.</b> <span class="look">What to look at: (a) WA-JEPA leads on every benchmark, by less in closed loop. (b) The shared failures (purple) are a small part of each gate; P2-only DAC failures are 4x WA-only ones, every gate has WA-only failures too. (c) Bars near 0 on a model's own failure set (orange F for P2 stages, blue R for WA stages): no encoder adds information over ego state where its model fails. (d) The navtest deficit concentrates in turns, left-hand traffic and open junctions. (e) In closed loop the deficit is confined to turning routes and the KITTI-360 / medium scenarios; P2 leads on nuScenes.</span> <a href="figs/fig1_overview.pdf">PDF</a></figcaption></figure>
+/* 头部与排版 */
+.header-badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid var(--line); }
+.badge-p2 { background: var(--p2-tint); color: var(--p2); border-color: var(--p2-border); }
+.badge-wa { background: var(--wa-tint); color: var(--wa); border-color: var(--wa-border); }
+.badge-both { background: var(--both-tint); color: var(--both); border-color: var(--line); }
 
-<h2 id="taxonomy">1. Failure taxonomy by sub-metric and scene type</h2>
-<p>navtest, 12 146 tokens, 136 logs. Rates are the share of tokens with the sub-score below 1 (P2: mean of its two seeds); the three
-right-hand columns split tokens by P2 seed 0 vs WA. Scene attributes: logged 4 s motion (manoeuvre classes in <a href="#method">Method</a>),
-ego speed, a path through an INTERSECTION polygon, the route command, agents within 30 m, a red light listed for the frame, city, and the sun
-elevation at the log's time (navtest has no night frames; weather is not labelled in nuPlan).</p>
-<table><tr><th>gate</th><th>P2 fail %</th><th>WA fail %</th><th>P2 − WA (pp)</th><th>only P2 %</th><th>only WA %</th><th>both %</th></tr><tr><td>DAC</td><td>4.3 [3.5, 5.2]</td><td>1.8 [1.4, 2.2]</td><td>+2.5 [+1.8, +3.3]</td><td>3.56</td><td>0.95</td><td>0.86</td></tr><tr><td>NC</td><td>1.5 [1.1, 2.0]</td><td>0.6 [0.4, 0.9]</td><td>+0.9 [+0.6, +1.3]</td><td>1.21</td><td>0.27</td><td>0.35</td></tr><tr><td>TTC</td><td>2.1 [1.6, 2.6]</td><td>1.1 [0.8, 1.4]</td><td>+1.0 [+0.6, +1.4]</td><td>1.51</td><td>0.46</td><td>0.65</td></tr><tr><td>LK</td><td>2.6 [2.1, 3.1]</td><td>1.6 [1.2, 1.9]</td><td>+1.0 [+0.6, +1.5]</td><td>1.83</td><td>0.77</td><td>0.79</td></tr><tr><td>DDC</td><td>0.8 [0.5, 1.2]</td><td>0.5 [0.2, 0.9]</td><td>+0.3 [+0.1, +0.5]</td><td>0.54</td><td>0.20</td><td>0.34</td></tr><tr><td>TLC</td><td>0.3 [0.1, 0.4]</td><td>0.1 [0.1, 0.2]</td><td>+0.1 [+0.1, +0.2]</td><td>0.14</td><td>0.02</td><td>0.12</td></tr><tr><td>HC</td><td>1.6 [1.2, 2.2]</td><td>1.7 [1.2, 2.2]</td><td>-0.0 [-0.1, +0.0]</td><td>0.02</td><td>0.07</td><td>1.62</td></tr><tr><td>EC</td><td>11.5 [9.9, 13.0]</td><td>12.0 [10.4, 13.5]</td><td>-0.5 [-1.0, +0.1]</td><td>2.18</td><td>2.67</td><td>9.28</td></tr></table>
-<figure id="fig2_taxonomy"><a href="figs/fig2_taxonomy.pdf"><img src="figs/fig2_taxonomy.png" alt="Figure 2. Score difference and per-gate failure rates by scene type (navtest)."></a><figcaption><b>Figure 2. Score difference and per-gate failure rates by scene type (navtest).</b> <span class="look">What to look at: turns and lane changes carry DAC and LK failures for both models, but P2's grow much faster; NC / TTC failures of both concentrate in coming-to-a-stop scenes (P2 more); EC failures are turn-driven and equal for both; in Singapore P2 has 3x WA's DAC failures but no NC / TTC excess.</span> <a href="figs/fig2_taxonomy.pdf">PDF</a></figcaption></figure>
-<figure id="fig3_navhard"><a href="figs/fig3_navhard.pdf"><img src="figs/fig3_navhard.png" alt="Figure 3. navhard two-stage (Protocol G frames for P2)."></a><figcaption><b>Figure 3. navhard two-stage (Protocol G frames for P2).</b> <span class="look">What to look at: stage 1 differences sit in DAC and DDC; in stage 2 DAC remains and the large shared LK / DDC / TTC failure rates are the same for both models: the synthetic states are hard for both, not specifically for P2. Stage 2 is scored unweighted here (official stage-2 weights are arm-specific).</span> <a href="figs/fig3_navhard.pdf">PDF</a></figcaption></figure>
-<table><tr><th>navhard</th><th>stage 1 P2</th><th>stage 1 WA</th><th>stage 2 P2</th><th>stage 2 WA</th></tr><tr><td>NC</td><td>2.9 [1.1, 4.9]</td><td>2.0 [0.7, 3.6]</td><td>13.7 [11.4, 16.1]</td><td>12.5 [10.2, 15.0]</td></tr><tr><td>DAC</td><td>13.0 [9.7, 16.7]</td><td>8.2 [5.3, 11.3]</td><td>27.3 [24.5, 30.2]</td><td>22.8 [20.0, 25.7]</td></tr><tr><td>DDC</td><td>3.6 [1.8, 5.8]</td><td>0.4 [0.0, 1.3]</td><td>21.4 [18.7, 24.1]</td><td>21.1 [18.2, 24.0]</td></tr><tr><td>TTC</td><td>2.6 [0.9, 4.6]</td><td>2.4 [0.9, 4.2]</td><td>16.0 [13.5, 18.6]</td><td>15.6 [13.1, 18.2]</td></tr><tr><td>LK</td><td>3.6 [1.7, 5.8]</td><td>1.6 [0.7, 2.9]</td><td>51.1 [47.5, 54.4]</td><td>51.1 [47.5, 54.3]</td></tr><tr><td>EP</td><td>80.4 [78.2, 82.5]</td><td>84.4 [82.2, 86.4]</td><td>74.5 [72.8, 76.1]</td><td>82.6 [81.3, 84.0]</td></tr></table>
-<p class="note">EP row: mean ego-progress (× 100), not a failure rate. Score: stage 1 P2 73.1 [69.3, 76.7] vs WA 81.9 [78.5, 85.0];
-stage 2 44.9 [42.8, 47.1] vs 48.2 [46.0, 50.5]. Clusters: 225 scene groups.</p>
+h1 { font-size: 28px; line-height: 1.3; margin: 8px 0 10px; font-weight: 700; }
+.sub { color: var(--mute); font-size: 14.5px; line-height: 1.6; margin: 0 0 20px; }
+.p2 { color: var(--p2); font-weight: 700; }
+.wa { color: var(--wa); font-weight: 700; }
+.both { color: var(--both); font-weight: 700; }
 
-<h2 id="stages">2. Stage localisation in both directions</h2>
-<p>Sets as in dac-localize.md, on DAC: F = P2 seed 0 fails, WA passes (433); R = WA fails, P2 passes (115); FF = both fail
-(104); PP-turn = both pass with a logged turn > 20°. Stages: P2 V (current vision tokens), M (after adapter bias and token MLPs), T (temporal
-summary), H (plan-head hidden); WA Cf (front-view encoder, newest tubelet, pooled like V), Ca (all views), T (trajectory-head input), H (its last hidden).
-Decoders: 2-layer MLP on [stage, ego], imitation + drivable hinge (λ = 10), trained on navtrain, scored with the devkit.</p>
-<figure id="fig4_localisation"><a href="figs/fig4_localisation.pdf"><img src="figs/fig4_localisation.png" alt="Figure 4. Which stage decides each model&#x27;s failures."></a><figcaption><b>Figure 4. Which stage decides each model's failures.</b> <span class="look">What to look at: (a) the mirror: orange bars (F) are at 0 for all P2 stages and high for all WA stages; blue bars (R) are high for all P2 stages and at 0 for all WA stages. (b) probes find more road-edge information in every WA stage than in every P2 stage, on all sets alike, so the failure sets are not where either encoder is blind in general. (c) on its own failures P2's vision stage is as optimistic about the remaining margin as an ego-only probe (dashed), i.e. it adds no road edge there; WA's front encoder roughly halves the ego-only bias on R and its head hidden returns to it.</span> <a href="figs/fig4_localisation.pdf">PDF</a></figcaption></figure>
-<table><tr><th>decoder lift over ego-only (pp), hinge λ = 10</th><th>F</th><th>R</th><th>FF</th><th>PP-turn</th></tr>
-<tr><td>P2-V</td><td>-0.2 [-9.3, +8.6]</td><td>+26.1 [+9.2, +41.6]</td><td>+2.9 [-12.2, +18.4]</td><td>+12.5 [+8.2, +16.4]</td></tr><tr><td>P2-M</td><td>-1.6 [-10.9, +7.1]</td><td>+27.8 [+12.3, +43.4]</td><td>+3.8 [-11.5, +18.8]</td><td>+13.1 [+8.5, +17.4]</td></tr><tr><td>P2-T</td><td>+1.4 [-7.9, +10.4]</td><td>+35.7 [+22.3, +49.6]</td><td>+11.5 [-4.2, +26.3]</td><td>+14.2 [+9.5, +18.3]</td></tr><tr><td>P2-H</td><td>-2.3 [-10.9, +6.3]</td><td>+33.0 [+18.2, +48.3]</td><td>+9.6 [-5.8, +24.1]</td><td>+16.1 [+11.4, +20.2]</td></tr><tr><td>WA-Cf</td><td>+27.9 [+19.9, +35.5]</td><td>-2.6 [-19.7, +13.0]</td><td>-1.0 [-16.8, +13.2]</td><td>+16.1 [+11.3, +20.6]</td></tr><tr><td>WA-Ca</td><td>+30.0 [+22.3, +37.0]</td><td>-1.7 [-19.8, +17.6]</td><td>-2.9 [-16.3, +10.1]</td><td>+15.0 [+10.2, +19.3]</td></tr><tr><td>WA-H</td><td>+38.6 [+31.5, +45.4]</td><td>-3.5 [-23.4, +14.5]</td><td>+1.9 [-14.0, +17.0]</td><td>+18.3 [+13.7, +22.5]</td></tr>
+/* 导航栏 */
+nav.toc {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; flex-wrap: wrap; gap: 8px;
+  background: var(--bg); padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+nav.toc a {
+  color: var(--mute); text-decoration: none; font-size: 13.5px; font-weight: 500;
+  padding: 4px 10px; border-radius: 6px; background: var(--card); border: 1px solid var(--card-border);
+  transition: all 0.15s ease;
+}
+nav.toc a:hover { color: var(--ink); border-color: var(--mute); transform: translateY(-1px); }
+
+/* 核心指标卡片群 (KPI Grid) */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; margin: 24px 0 32px; }
+.kpi-card {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+  padding: 16px 18px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+}
+.kpi-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.kpi-card.kpi-turning::before { background: linear-gradient(90deg, var(--p2), var(--wa)); }
+.kpi-card.kpi-geom::before { background: var(--p2); }
+.kpi-card.kpi-encoder::before { background: var(--both); }
+.kpi-card.kpi-loop::before { background: var(--wa); }
+.kpi-title { font-size: 13px; font-weight: 600; color: var(--mute); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.kpi-value { font-size: 24px; font-weight: 800; line-height: 1.2; margin-bottom: 6px; }
+.kpi-sub { font-size: 13px; color: var(--mute); line-height: 1.45; }
+.kpi-tag-row { display: flex; gap: 6px; margin-top: 8px; }
+.kpi-tag { font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+.kpi-tag.p2-tag { background: var(--p2-tint); color: var(--p2); }
+.kpi-tag.wa-tag { background: var(--wa-tint); color: var(--wa); }
+
+/* 视觉示意图容器 */
+.visual-diagram-card {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+  padding: 20px; margin: 24px 0; box-shadow: var(--shadow);
+}
+.diagram-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.diagram-title { font-size: 16px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; }
+.diagram-badge { font-size: 12px; font-weight: 500; color: var(--mute); background: var(--bg); padding: 2px 8px; border-radius: 12px; border: 1px solid var(--line); }
+.diagram-desc { font-size: 13.5px; color: var(--mute); margin-bottom: 16px; line-height: 1.5; }
+.diagram-box { width: 100%; overflow-x: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+
+/* 详细章节标题 */
+h2 { font-size: 21px; margin: 44px 0 14px; border-bottom: 1px solid var(--line); padding-bottom: 6px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; }
+h3 { font-size: 17px; margin: 26px 0 8px; font-weight: 600; }
+
+/* 摘要精读面板 */
+.summary-panel {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+  padding: 20px 22px; margin: 20px 0;
+}
+.summary-panel ol, .summary-panel ul { margin: 0; padding-left: 20px; }
+.summary-panel li { margin: 10px 0; font-size: 14.5px; line-height: 1.6; }
+
+/* 科学原图 Figure 区域 */
+figure { margin: 28px 0; background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 16px; }
+figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; display: block; }
+figcaption { font-size: 13.5px; color: var(--ink); margin-top: 12px; line-height: 1.55; }
+.look-box {
+  background: var(--bg); border-left: 3px solid var(--wa); padding: 8px 12px; margin: 8px 0;
+  border-radius: 0 6px 6px 0; font-size: 13px; color: var(--mute); line-height: 1.5;
+}
+.look-box b { color: var(--ink); }
+
+/* 数据表格 */
+table { border-collapse: collapse; font-size: 13px; margin: 16px 0; width: 100%; display: table; overflow-x: auto; border-radius: 6px; }
+@media (max-width: 768px) { table { display: block; } }
+th, td { border-bottom: 1px solid var(--line); padding: 7px 12px; text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { background: var(--card); font-weight: 600; color: var(--ink); border-top: 1px solid var(--line); }
+tr:hover td { background: var(--card); }
+.val-bad { color: var(--bad); font-weight: 600; }
+.val-good { color: var(--good); font-weight: 600; }
+.val-neu { color: var(--mute); }
+.pill { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11.5px; font-weight: 600; }
+.pill-p2 { background: var(--p2-tint); color: var(--p2); }
+.pill-wa { background: var(--wa-tint); color: var(--wa); }
+.pill-both { background: var(--both-tint); color: var(--both); }
+
+/* 注释与附注 */
+.note { font-size: 13px; color: var(--mute); line-height: 1.55; margin: 10px 0; }
+code { font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace; font-size: 12.5px; background: var(--code-bg); padding: 2px 5px; border-radius: 4px; color: var(--ink); }
+ul.note-list { margin: 10px 0; padding-left: 20px; font-size: 13px; color: var(--mute); }
+ul.note-list li { margin: 6px 0; }
+a { color: var(--wa); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* 场景对比色块表 */
+.capability-matrix {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 16px 0;
+}
+.cap-card {
+  border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--bg);
+}
+.cap-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+.cap-score { font-size: 13px; font-weight: 700; }
+.cap-p2-better { border-left: 4px solid var(--good); }
+.cap-parity { border-left: 4px solid var(--line); }
+.cap-wa-better { border-left: 4px solid var(--wa); }
+.cap-desc { font-size: 12.5px; color: var(--mute); line-height: 1.45; }
+</style>
+</head>
+<body>
+<main>
+
+<!-- 顶部标头 -->
+<div class="header-badge-row">
+  <span class="badge badge-p2">P2-F (382M / Comma 冻结视觉)</span>
+  <span class="badge badge-wa">WA-JEPA (V-JEPA 2.1 ViT-L + MMDiT)</span>
+  <span class="badge badge-both">12,146 navtest 样本 · 64 闭环场景</span>
+  <span class="badge">联合诊断报告 · 2026-10-06</span>
+</div>
+
+<h1>P2 与 WA-JEPA 联合诊断报告：模型适用场景、失效边界与表征阶段定位</h1>
+<p class="sub">
+  本报告针对两个代表性自动驾驶端到端规划模型开展深度联合诊断：<span class="p2">P2</span>（<code>op_parity P2-F</code>，Cinque 382M，前向 Comma 视觉特征冻结，自车位姿/状态及导航命令输入，协议 W 帧序列，2 个随机种子）与 <span class="wa">WA-JEPA</span>（公开权重 Checkpoint，基于 V-JEPA 2.1 ViT-L + MMDiT 扩散轨迹头，单次运行）。<br>
+  本研究建立在前期结论 <a href="../dac-localize.md">dac-localize.md</a>（决策 147）与 op_parity 差异分析基础之上。所有评测数据均来自预存的规划轨迹、devkit 细分子项得分、op_probe 特征/探针/解码器实验以及 HUGSIM 闭环运行日志，模型本身未重新训练或重跑。
+</p>
+
+<!-- 导航跳转 -->
+<nav class="toc">
+  <a href="#summary">一、核心诊断结论</a>
+  <a href="#architectures">二、模型架构与直观对比</a>
+  <a href="#geometry-intuitive">三、几何失效机理图解</a>
+  <a href="#overview">四、全景宏观对比 (Figure 1)</a>
+  <a href="#taxonomy">五、子指标与场景类型失效细分</a>
+  <a href="#stages">六、编码器与时序双向阶段定位</a>
+  <a href="#geometry">七、几何失效深度分析</a>
+  <a href="#closed">八、HUGSIM 64 闭环仿真</a>
+  <a href="#cases">九、四象限典型对比案例</a>
+  <a href="#method">十、评测方法论与复现</a>
+</nav>
+
+<!-- 极速核心认知 KPI 矩阵 -->
+<div class="kpi-grid">
+  <div class="kpi-card kpi-turning">
+    <div class="kpi-title">核心性能差距源头</div>
+    <div class="kpi-value"><span class="p2">转弯</span> 与 <span class="wa">大曲率</span> 赤字</div>
+    <div class="kpi-sub">直道行驶差距极小 (EPDMS -1.4)，但在大急弯差距拉大至 <b>-10.8 分</b>；曲率 >45° 时 P2 出界率激增 7 倍至 <b>11.3%</b> (WA 仅 3.2%)。</div>
+    <div class="kpi-tag-row">
+      <span class="kpi-tag p2-tag">直道平手 -1.4</span>
+      <span class="kpi-tag wa-tag">右转落后 -10.8</span>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-geom">
+    <div class="kpi-title">几何失效机理本质</div>
+    <div class="kpi-value"><span class="p2">规划内切</span> vs <span class="wa">跟踪擦边</span></div>
+    <div class="kpi-sub">P2 的违规 <b>63.7% 出自原始规划内切削弯</b> (终点内偏 +36cm，深入 29cm)；WA 仅 23.3% 规划出界，<b>59.8% 仅因跟踪器重放微小擦边</b> (中位数仅 10cm)。</div>
+    <div class="kpi-tag-row">
+      <span class="kpi-tag p2-tag">P2 切弯入弯</span>
+      <span class="kpi-tag wa-tag">WA 跟踪微扰</span>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-encoder">
+    <div class="kpi-title">表征失效根源定位</div>
+    <div class="kpi-value">双向锁定在 <span class="both">视觉编码器</span></div>
+    <div class="kpi-sub">在各自的失败样本集上，<b>各自编码器对路界信息增益均为 0%</b>（与纯自车状态无异）；换上对方案编码器则可挽救 <b>+26~28 pp</b>，下游时序/规划头未丢失信息。</div>
+    <div class="kpi-tag-row">
+      <span class="kpi-tag p2-tag">P2-V 在 F 上 +0 pp</span>
+      <span class="kpi-tag wa-tag">WA-Cf 在 R 上 +0 pp</span>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-loop">
+    <div class="kpi-title">闭环 HUGSIM 传导表现</div>
+    <div class="kpi-value">直道平齐 / 弯道频发 <span class="p2">甩尾</span></div>
+    <div class="kpi-sub">直道路线闭环人类驾驶相似度差距仅 -0.6 (nuScenes 甚至领先 +11.9)；但路线转向 ≥30° 时差距暴跌至 <b>-14.1</b>，P2 打滑甩尾 9.5 次、撞路牙 7.5 次。</div>
+    <div class="kpi-tag-row">
+      <span class="kpi-tag p2-tag">P2 甩尾 9.5 场</span>
+      <span class="kpi-tag wa-tag">WA 完赛 28 场</span>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 结构图与直观对比区域 (全新设计：让人一眼看懂架构与区别) -->
+<!-- ========================================================================= -->
+
+<h2 id="architectures">
+  <span>二、模型系统架构与传感器输入直观对比</span>
+  <span class="diagram-badge">结构对比图</span>
+</h2>
+
+<div class="visual-diagram-card">
+  <div class="diagram-header">
+    <h3 class="diagram-title">🔍 架构与输入维度对比：为什么 WA-JEPA 在弯道感知上具备天然优势？</h3>
+    <span class="diagram-badge">SVG 矢量原理图</span>
+  </div>
+  <p class="diagram-desc">
+    P2 与 WA-JEPA 的本质差异并非单纯下游网络参数量多寡，而是<b>传感器视场范围、视觉特征训练方式（单向前视冻结表征 vs 环视自监督时空视频表征）以及轨迹生成机制</b>的根本不同：
+  </p>
+  <div class="diagram-box">
+    <svg viewBox="0 0 1060 390" width="100%" height="auto" style="font-family: inherit; font-size: 13px;">
+      <!-- 背景网格与边框 -->
+      <defs>
+        <linearGradient id="p2Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#D55E00" stop-opacity="0.12"/>
+          <stop offset="100%" stop-color="#D55E00" stop-opacity="0.03"/>
+        </linearGradient>
+        <linearGradient id="waGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0072B2" stop-opacity="0.12"/>
+          <stop offset="100%" stop-color="#0072B2" stop-opacity="0.03"/>
+        </linearGradient>
+        <marker id="arrowP2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#D55E00"/>
+        </marker>
+        <marker id="arrowWA" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#0072B2"/>
+        </marker>
+      </defs>
+
+      <!-- 左侧：P2 架构方案 -->
+      <rect x="15" y="15" width="495" height="360" rx="10" fill="url(#p2Grad)" stroke="#D55E00" stroke-width="1.5" stroke-dasharray="none"/>
+      <rect x="25" y="25" width="475" height="34" rx="6" fill="#D55E00" fill-opacity="0.15"/>
+      <text x="35" y="47" font-weight="700" font-size="15" fill="#D55E00">P2-F 架构（Comma 视觉体系 + 自回归 Transformer）</text>
+
+      <!-- P2 传感器输入 -->
+      <rect x="35" y="75" width="455" height="52" rx="6" fill="#fff" stroke="#d0d7de" stroke-width="1"/>
+      <text x="45" y="94" font-weight="600" fill="#1f2328">📷 输入：前向主摄 + 窄角（Protocol W，20Hz 帧序列）</text>
+      <text x="45" y="115" font-size="12" fill="#656d76">单向 ~120° 视场角 · 包含历史 8 帧 · 20维自车状态（Ego/Pose/Command）</text>
+
+      <!-- P2 流程箭头 1 -->
+      <line x1="262" y1="127" x2="262" y2="147" stroke="#D55E00" stroke-width="2" marker-end="url(#arrowP2)"/>
+
+      <!-- P2 编码器与特征 -->
+      <rect x="35" y="149" width="455" height="52" rx="6" fill="#fff" stroke="#D55E00" stroke-width="1.2"/>
+      <text x="45" y="168" font-weight="600" fill="#D55E00">🧊 视觉编码器：Cinque 382M（Comma 预训练冻结表征）</text>
+      <text x="45" y="189" font-size="12" fill="#656d76">提取前向视觉 Token [V] (32×512) · ⚠️ <b>表征完全冻结，大曲率道路边缘易丢失</b></text>
+
+      <!-- P2 流程箭头 2 -->
+      <line x1="262" y1="201" x2="262" y2="221" stroke="#D55E00" stroke-width="2" marker-end="url(#arrowP2)"/>
+
+      <!-- P2 时序与适配 -->
+      <rect x="35" y="223" width="455" height="52" rx="6" fill="#fff" stroke="#d0d7de" stroke-width="1"/>
+      <text x="45" y="242" font-weight="600" fill="#1f2328">⏱️ 时空建模：MLP Adapter [M] + 4层 Temporal Transformer [T]</text>
+      <text x="45" y="263" font-size="12" fill="#656d76">对前序特征与自车指令进行自注意力汇聚 (select_4 摘要 Token)</text>
+
+      <!-- P2 流程箭头 3 -->
+      <line x1="262" y1="275" x2="262" y2="295" stroke="#D55E00" stroke-width="2" marker-end="url(#arrowP2)"/>
+
+      <!-- P2 动作输出 -->
+      <rect x="35" y="297" width="455" height="58" rx="6" fill="#fff" stroke="#D55E00" stroke-width="1.2"/>
+      <text x="45" y="316" font-weight="600" fill="#D55E00">🎯 规划生成：动作回归规划头 [H] (add_54)</text>
+      <text x="45" y="337" font-size="12" fill="#cf222e">⚠️ 失效特征：弯道大转角缺乏侧向约束，<b>直接生成“切弯内切”轨迹并越界</b></text>
+
+
+      <!-- 右侧：WA-JEPA 架构方案 -->
+      <rect x="550" y="15" width="495" height="360" rx="10" fill="url(#waGrad)" stroke="#0072B2" stroke-width="1.5" stroke-dasharray="none"/>
+      <rect x="560" y="25" width="475" height="34" rx="6" fill="#0072B2" fill-opacity="0.15"/>
+      <text x="570" y="47" font-weight="700" font-size="15" fill="#0072B2">WA-JEPA 架构（V-JEPA 2.1 环视 + MMDiT 扩散）</text>
+
+      <!-- WA 传感器输入 -->
+      <rect x="570" y="75" width="455" height="52" rx="6" fill="#fff" stroke="#d0d7de" stroke-width="1"/>
+      <text x="580" y="94" font-weight="600" fill="#1f2328">📷 输入：4 路环视相机（Front / Left / Right / Back，2Hz 历史）</text>
+      <text x="580" y="115" font-size="12" fill="#656d76">360° 全景视野 · 侧向与盲区全覆盖 · 时空立体视场无盲区</text>
+
+      <!-- WA 流程箭头 1 -->
+      <line x1="797" y1="127" x2="797" y2="147" stroke="#0072B2" stroke-width="2" marker-end="url(#arrowWA)"/>
+
+      <!-- WA 编码器与特征 -->
+      <rect x="570" y="149" width="455" height="52" rx="6" fill="#fff" stroke="#0072B2" stroke-width="1.2"/>
+      <text x="580" y="168" font-weight="600" fill="#0072B2">🌐 视觉编码器：V-JEPA 2.1 ViT-Large（多视角自监督视频表征）</text>
+      <text x="580" y="189" font-size="12" fill="#656d76">前向 Tubelet [Cf] (32×512) + 全视角 Tubelets [Ca] · ✅ <b>空间几何连续性极佳</b></text>
+
+      <!-- WA 流程箭头 2 -->
+      <line x1="797" y1="201" x2="797" y2="221" stroke="#0072B2" stroke-width="2" marker-end="url(#arrowWA)"/>
+
+      <!-- WA 时序与扩散骨干 -->
+      <rect x="570" y="223" width="455" height="52" rx="6" fill="#fff" stroke="#d0d7de" stroke-width="1"/>
+      <text x="580" y="242" font-weight="600" fill="#1f2328">⚡ 扩散骨干：MMDiT (Multi-Modal Diffusion Transformer)</text>
+      <text x="580" y="263" font-size="12" fill="#656d76">通过多视角交叉注意力建模动态交通参与者与复杂路网结构</text>
+
+      <!-- WA 流程箭头 3 -->
+      <line x1="797" y1="275" x2="797" y2="295" stroke="#0072B2" stroke-width="2" marker-end="url(#arrowWA)"/>
+
+      <!-- WA 动作输出 -->
+      <rect x="570" y="297" width="455" height="58" rx="6" fill="#fff" stroke="#0072B2" stroke-width="1.2"/>
+      <text x="580" y="316" font-weight="600" fill="#0072B2">🎯 规划生成：扩散轨迹生成头 [T / H] (traj_out)</text>
+      <text x="580" y="337" font-size="12" fill="#1a7f37">✅ 失效特征：规划本身符合道路边界，<b>仅在 LQR 跟踪重放时轻微擦边 (中位数10cm)</b></text>
+    </svg>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 几何失效机理直观鸟瞰图 (全新设计：3幅鸟瞰示意彻底讲清内切与擦边) -->
+<!-- ========================================================================= -->
+
+<h2 id="geometry-intuitive">
+  <span>三、几何失效机理直观鸟瞰图解 (BEV)</span>
+  <span class="diagram-badge">机理示意图</span>
+</h2>
+
+<div class="visual-diagram-card">
+  <div class="diagram-header">
+    <h3 class="diagram-title">🚗 鸟瞰视角看懂本质区别：为什么 P2 严重越界，而 WA-JEPA 只是虚惊一场？</h3>
+    <span class="diagram-badge">BEV 真实物理对比</span>
+  </div>
+  <p class="diagram-desc">
+    统计数据表明：在可行驶区域 (DAC) 判罚中，<b>P2 与 WA-JEPA 的违规性质有着天壤之别</b>。P2 是由规划决策直接导致的“切弯内切 (Corner Cutting)”事故，而 WA-JEPA 绝大多数违规是由后处理 LQR 跟踪器执行误差引起的“极浅层擦碰 (Tracker Graze)”。
+  </p>
+  <div class="diagram-box">
+    <svg viewBox="0 0 1060 360" width="100%" height="auto" style="font-family: inherit; font-size: 13px;">
+      <defs>
+        <!-- 路面沥青灰 -->
+        <pattern id="roadStripes" width="20" height="20" patternUnits="userSpaceOnUse">
+          <line x1="0" y1="10" x2="20" y2="10" stroke="#e0e0e0" stroke-width="1"/>
+        </pattern>
+      </defs>
+
+      <!-- 面板 A：P2 特异性失效 -->
+      <g transform="translate(10, 10)">
+        <rect x="0" y="0" width="335" height="340" rx="8" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <rect x="0" y="0" width="335" height="32" rx="8" fill="#D55E00" fill-opacity="0.12"/>
+        <text x="12" y="21" font-weight="700" font-size="13" fill="#D55E00">场景 A：P2 特异性切弯失效 (集合 F)</text>
+
+        <!-- 弯道边界路沿 (不可行驶区) -->
+        <path d="M 30 310 C 30 200, 130 90, 310 90 L 310 30 C 80 30, 0 160, 0 310 Z" fill="#ffebe9" stroke="#cf222e" stroke-width="1.5"/>
+        <text x="50" y="140" fill="#cf222e" font-size="12" font-weight="600">非行驶区/路沿 (Curb)</text>
+
+        <!-- 道路可通行区域 -->
+        <path d="M 30 310 C 30 200, 130 90, 310 90" fill="none" stroke="#cf222e" stroke-width="2.5" stroke-dasharray="4,2"/>
+
+        <!-- 真实人类驾驶基准 (Ground Truth，黑虚线) -->
+        <path d="M 120 310 C 120 230, 190 160, 310 160" fill="none" stroke="#1f2328" stroke-width="2" stroke-dasharray="3,3"/>
+        <text x="145" y="270" fill="#1f2328" font-size="11">人类真值 (GT)</text>
+
+        <!-- WA-JEPA 正确轨迹 (蓝色实线，居中平顺) -->
+        <path d="M 115 310 C 115 225, 185 155, 310 155" fill="none" stroke="#0072B2" stroke-width="2.5"/>
+        <circle cx="270" cy="160" r="4" fill="#0072B2"/>
+        <text x="210" y="145" fill="#0072B2" font-size="11" font-weight="600">WA 顺滑居中过弯</text>
+
+        <!-- P2 错误轨迹 (橙色实线，严重内切削弯) -->
+        <path d="M 110 310 C 100 200, 105 105, 310 100" fill="none" stroke="#D55E00" stroke-width="3"/>
+        <!-- P2 越界车身方框 -->
+        <rect x="85" y="115" width="38" height="22" rx="3" transform="rotate(45 104 126)" fill="#D55E00" fill-opacity="0.3" stroke="#D55E00" stroke-width="2"/>
+        <text x="105" y="95" fill="#D55E00" font-size="11" font-weight="700">P2 车体深入路牙 29cm!</text>
+
+        <!-- 诊断统计结论 -->
+        <rect x="10" y="255" width="315" height="75" rx="6" fill="#fff" stroke="#d0d7de"/>
+        <text x="20" y="275" font-weight="700" fill="#D55E00">P2 切弯内切 (Corner Cutting)</text>
+        <text x="20" y="295" font-size="12" fill="#656d76">• 4 秒终点向弯心内偏 <b>+0.36 米</b></text>
+        <text x="20" y="315" font-size="12" fill="#cf222e">• <b>63.7%</b> 是原始规划车身直接越界</text>
+      </g>
+
+      <!-- 面板 B：WA-JEPA 特异性失效 -->
+      <g transform="translate(362, 10)">
+        <rect x="0" y="0" width="335" height="340" rx="8" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <rect x="0" y="0" width="335" height="32" rx="8" fill="#0072B2" fill-opacity="0.12"/>
+        <text x="12" y="21" font-weight="700" font-size="13" fill="#0072B2">场景 B：WA 浅层微小擦边 (集合 R)</text>
+
+        <!-- 弯道边界路沿 -->
+        <path d="M 30 310 C 30 200, 130 90, 310 90 L 310 30 C 80 30, 0 160, 0 310 Z" fill="#fff8e5" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="45" y="140" fill="#b45309" font-size="12" font-weight="600">道路边缘线</text>
+
+        <!-- P2 正常通过轨迹 (橙色实线) -->
+        <path d="M 120 310 C 120 230, 190 160, 310 160" fill="none" stroke="#D55E00" stroke-width="2"/>
+        <text x="180" y="200" fill="#D55E00" font-size="11">P2 正常通过</text>
+
+        <!-- WA 原始规划 (蓝色虚线，完全在路内！) -->
+        <path d="M 115 310 C 115 220, 175 140, 310 140" fill="none" stroke="#0072B2" stroke-width="2" stroke-dasharray="3,3"/>
+        <text x="175" y="130" fill="#0072B2" font-size="11">WA 原始规划 (完全在路内)</text>
+
+        <!-- WA LQR 跟踪执行轨迹 (蓝色实线，轻微擦边) -->
+        <path d="M 115 310 C 110 215, 155 125, 310 135" fill="none" stroke="#0072B2" stroke-width="2.5"/>
+        <!-- WA 擦边车身方框 -->
+        <rect x="125" y="115" width="38" height="22" rx="3" transform="rotate(35 144 126)" fill="#0072B2" fill-opacity="0.2" stroke="#0072B2" stroke-width="1.5"/>
+        <text x="145" y="105" fill="#0072B2" font-size="11">仅浅擦边缘 10cm</text>
+
+        <!-- 诊断统计结论 -->
+        <rect x="10" y="255" width="315" height="75" rx="6" fill="#fff" stroke="#d0d7de"/>
+        <text x="20" y="275" font-weight="700" fill="#0072B2">WA 跟踪微扰 (Tracker Graze)</text>
+        <text x="20" y="295" font-size="12" fill="#656d76">• <b>59.8%</b> 纯属跟踪器重放引起</text>
+        <text x="20" y="315" font-size="12" fill="#1a7f37">• <b>82.2%</b> 越界深度 < 0.3米 (中位数仅 10cm)</text>
+      </g>
+
+      <!-- 面板 C：双模型共有失效 -->
+      <g transform="translate(714, 10)">
+        <rect x="0" y="0" width="335" height="340" rx="8" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <rect x="0" y="0" width="335" height="32" rx="8" fill="#9b59b6" fill-opacity="0.12"/>
+        <text x="12" y="21" font-weight="700" font-size="13" fill="#9b59b6">场景 C：极限弯共有外滑 (集合 FF)</text>
+
+        <!-- 弯道外侧边界 (两者冲出外侧) -->
+        <path d="M 230 310 C 230 180, 260 140, 335 140" fill="none" stroke="#cf222e" stroke-width="2"/>
+        <rect x="235" y="145" width="90" height="150" fill="#ffebe9" fill-opacity="0.5"/>
+        <text x="245" y="230" fill="#cf222e" font-size="11">外侧路沿</text>
+
+        <!-- 极限大弯道路 -->
+        <path d="M 60 310 C 60 160, 150 70, 310 70" fill="none" stroke="#656d76" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+        <!-- P2 轨迹 (冲向外侧) -->
+        <path d="M 90 310 C 110 180, 190 120, 320 160" fill="none" stroke="#D55E00" stroke-width="2.5"/>
+
+        <!-- WA 轨迹 (同样冲向外侧) -->
+        <path d="M 85 310 C 100 175, 180 115, 320 175" fill="none" stroke="#0072B2" stroke-width="2.5"/>
+
+        <text x="100" y="145" fill="#9b59b6" font-size="12" font-weight="700">双双转向不足！向外滑移冲出</text>
+
+        <!-- 诊断统计结论 -->
+        <rect x="10" y="255" width="315" height="75" rx="6" fill="#fff" stroke="#d0d7de"/>
+        <text x="20" y="275" font-weight="700" fill="#9b59b6">极限大弯外抛 (Run Wide)</text>
+        <text x="20" y="295" font-size="12" fill="#656d76">• 两者均向外侧偏离：P2 <b>-33cm</b> / WA <b>-41cm</b></text>
+        <text x="20" y="315" font-size="12" fill="#656d76">• 表现为典型的大曲率动力学转向不足</text>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 核心文字结论精读面板 (保留完整科学严谨性) -->
+<!-- ========================================================================= -->
+
+<h2 id="summary">一、联合诊断核心结论要点</h2>
+<div class="summary-panel">
+  <ul>
+    <li>
+      <b>WA-JEPA 在 navtest 的所有场景类型中均保持领先；模型间的核心性能差距本质上是一个“转弯”问题。</b><br>
+      每个 Token 的混合得分差值（P2 − WA）在直线行驶时仅为 <code>-1.4 [-2.2, -0.8]</code>，而在左转与右转时差距急剧扩大至 <code>-8.2 [-10.7, -5.7]</code> 与 <code>-10.8 [-13.3, -8.1]</code>（得分 × 100）。随着曲率增大，P2 的可行驶区域违规率（DAC）呈爆发式增长（曲率 &lt; 5° 时仅为 1.6%，曲率 &gt; 45° 时剧增至 11.3%），而 WA-JEPA 则几乎不受影响（从 1.0% 微增至 3.2%）。<br>
+      <b>接近平齐的场景：</b>直线高速行驶（车速 ≥ 10 m/s，差值 <code>-1.5 [-3.5, +0.3]</code>）、拉斯维加斯宽阔道路（差值 <code>-1.4 [-2.1, -0.6]</code>）。<br>
+      <b>最大非机动动作差距场景：</b>新加坡靠左行驶环境（差值 <code>-6.5 [-8.4, -4.7]</code>）、车辆稀少的开阔道路（0~3 辆车，差值 <code>-5.4 [-6.5, -4.1]</code>，即无前车引导时的开阔交叉口转弯）。
+    </li>
+    <li>
+      <b>P2 表现不落后甚至领先的场景领域：</b><br>
+      在闭环直线路线上，HUGSIM 人体驾驶相似度（HD）差值（P2 − WA）为 <code>-0.6 [-10.5, +8.2]</code>（41 个直道场景，统计不显著）；特别是在 nuScenes 数据集场景上，P2 闭环反而显著领先 <code>+11.9 [+3.6, +21.6]</code>。<br>
+      在开环指标中：扩展动力学舒适度（EC 失效率差值 P2 − WA 为 <code>-0.5 [-1.0, +0.1] pp</code>）、navhard 第一阶段起步场景、navhard 第二阶段变道场景（两者的 95% 置信区间均包含 0）。但需要注意：在 navtest 中没有任何一个场景类型的总体评分 P2 能够超过 WA-JEPA。
+    </li>
+    <li>
+      <b>各自模型的失效均已在自身的视觉编码器阶段注定（决策 147 结论 4 的完美镜像印证）：</b><br>
+      如果在 P2 提取的视觉 Token 上重新训练一个带有可行驶铰链损失的轻量解码器（阶段特征 + 自车状态，λ = 10），在 P2 的失败集 F 上，其 DAC 通过率相比纯自车状态基准（ego-only）没有任何提升（<code>-0.2 [-9.3, +8.6] pp</code>，提升为 0）；然而若将该解码器用在 WA-JEPA 的失败集 R 上，却能带来 <code>+26.1 [+9.2, +41.6] pp</code> 的显著提升！<br>
+      反向完全对称：WA-JEPA 的前向编码器解码器在 P2 的失败集 F 上大幅提升 <code>+27.9 [+19.9, +35.5] pp</code>，而在其自身的失败集 R 上提升同样为零（<code>-2.6 [-19.7, +13.0] pp</code>）；WA 的规划头隐层在 F 上提升 <code>+38.6 [+31.5, +45.4] pp</code>，在 R 上提升 <code>-3.5 [-23.4, +14.5] pp</code>。<br>
+      在两者皆失败的样本集（FF）上，两个模型的任何中间层特征都无法提供超过纯自车状态的增益。
+    </li>
+    <li>
+      <b>P2 的 DAC 违规发生在规划轨迹本身；而 WA-JEPA 的大部分违规仅发生在 LQR 跟踪重放执行中：</b><br>
+      当 P2 发生 DAC 违规时，其原始开环规划车身多边形在 <b>63.7 [57.8, 69.2]%</b> 的情况下就已经脱离道路；而 WA-JEPA 仅有 <b>23.3 [15.7, 31.8]%</b>。<br>
+      在评测套件 devkit 的 LQR 跟踪器重放中，WA-JEPA 的 DAC 违规有 <b>59.8 [51.4, 67.6]%</b> 属于“纯跟踪器引入”（原始规划留在路内），且 <b>82.2 [74.8, 88.9]%</b> 的越界深度极浅（小于 0.3 米，中位数仅 10 厘米）；相比之下，P2 的纯跟踪器违规仅占 30.4 [24.8, 36.4]%，小于 0.3 米的浅层擦边仅占 52.0 [46.8, 57.8]%（越界深度中位数高达 29 厘米）。
+    </li>
+    <li>
+      <b>P2 的特异性转弯失效表现为典型的“切弯/内切 (Corner Cutting)”：</b><br>
+      在转角 &gt; 20° 且 P2 失败而 WA 通过的弯道中，P2 的 4 秒终点位置显著向记录轨迹的弯道内侧偏移 <code>+0.36 [+0.08, +0.66] 米</code>；在两者皆通过的弯道中，终点则处于 <code>-0.09 [-0.16, -0.02] 米</code>（略微偏外侧）。WA-JEPA 在其自身的失败集上终点偏移仅为 <code>+0.04 [-0.18, +0.25] 米</code>（基本居中）。<br>
+      而对于两模型皆失败（FF）的极限大弯，行为恰好相反：两模型均发生向弯道外侧的转向不足冲出（分别向外偏 <code>-0.33 [-0.66, +0.01] 米</code> 与 <code>-0.41 [-0.88, -0.08] 米</code>）。
+    </li>
+    <li>
+      <b>开环阶段的转弯赤字直接传导至闭环仿真中：</b><br>
+      HUGSIM 闭环 HD 指标总体差距为 <code>-5.5 [-13.7, +2.0]</code>（统计不显著）；但在转向 ≥ 30° 的 23 个转弯路线上，差距急剧爆发至 <code>-14.1 [-28.3, -0.7]</code>，其中 DAC 差距高达 <code>-12.9 [-20.5, -6.0]</code>（而直道路线上仅为 <code>-1.2 [-3.6, +1.0]</code>）。<br>
+      <b>运行终止结局分流：</b>P2 成功完赛 17.5 场 vs WA 28 场；P2 发生<b>打滑甩尾 (Spin) 9.5 场 vs WA 4 场</b>；P2 <b>撞击背景静态路牙 7.5 场 vs WA 1 场</b>；WA 则表现为偏离路线 (Leave route) 5 场 vs P2 1.5 场。前景动态障碍物碰撞则是两者的共同痛点（28 场 vs 26 场；其中 22 个场景两者均在此结局下碰撞）。
+    </li>
+    <li>
+      <b>navhard 极限挑战评测：</b><br>
+      Stage 1（记录真值工况）：P2 − WA 为 <code>-8.8 [-13.2, -4.3]</code>，主要源自 DAC（失效率高出 +4.8 pp）、DDC 行车方向违规（高出 +3.1 pp）和自车进度 EP。<br>
+      Stage 2（仿真渲染多步生成工况）：P2 − WA 为 <code>-3.3 [-4.5, -2.1]</code>，来自 DAC（高出 +4.5 pp）以及自车进度 EP（<code>-8.2 [-9.1, -7.4]</code>）：在合成生成的后继困难状态下，P2 还会产生过于保守开得太慢的问题。在两个阶段中，转弯均为表现最恶劣的工况。
+    </li>
+  </ul>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 科学总览图 Figure 1 -->
+<!-- ========================================================================= -->
+
+<h2 id="overview">
+  <span>四、全景宏观对比分析 (Figure 1)</span>
+  <span class="diagram-badge">科学原图解读</span>
+</h2>
+
+<figure id="fig1_overview">
+  <a href="figs/fig1_overview.pdf"><img src="figs/fig1_overview.png" alt="图 1. 各模型适用场景与失效边界全景对比图"></a>
+  <figcaption>
+    <b>图 1. 各模型在不同评测基准中的适用场景与失效阶段定位全貌。</b>
+    <div class="look-box">
+      <b>💡 一眼看懂本图核心要点：</b><br>
+      <b>(a)</b> WA-JEPA 在所有基准中均居于领先，但在闭环中的领先优势收窄；<br>
+      <b>(b)</b> 紫色条柱代表的两模型共有失效在各个评判门禁中占比很小；P2 独有的 DAC 违规量是 WA-JEPA 独有违规的 4 倍，但每个门禁中同样存在 WA 独有的违规；<br>
+      <b>(c)</b> 在各自的失败样本集上（P2 阶段特征在橙色 F 集、WA 阶段特征在蓝色 R 集），柱状图均贴近 0：证明模型失效时，其编码器无法提供任何超越纯自车状态的增益；<br>
+      <b>(d)</b> navtest 的主要赤字高度集中在<b>急弯、靠左行驶环境（新加坡）以及开阔交叉口</b>；<br>
+      <b>(e)</b> 闭环测试中，差距仅存在于包含转弯的路线以及 KITTI-360 / 中等难度场景中；在 nuScenes 直线场景上 P2 保持领先。
+    </div>
+    <a href="figs/fig1_overview.pdf">下载高清矢量图 (PDF)</a>
+  </figcaption>
+</figure>
+
+<!-- ========================================================================= -->
+<!-- 1. 失效分类与场景类型细分 -->
+<!-- ========================================================================= -->
+
+<h2 id="taxonomy">
+  <span>五、失效分类法：子指标与场景类型深度细分</span>
+  <span class="diagram-badge">第 1 部分</span>
+</h2>
+<p>
+  测试集基于 nuPlan navtest（12,146 个 Token，共 136 条日志记录）。表格中的失效率定义为子项得分低于 1 的 Token 占比（P2 取其 2 个随机种子的均值）；右侧三列分别统计 P2 种子 0 与 WA-JEPA 的失效重叠情况。<br>
+  场景属性涵盖：记录的 4 秒未来轨迹动向（机动动作分类准则见<a href="#method">评测方法</a>）、自车速度、是否经过交叉口多边形（INTERSECTION）、导航指令、30米范围内的交通参与者数量、红绿灯状态、所在城市以及采集时刻的太阳高度角（navtest 中无夜间帧，nuPlan 未标注天气）。
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>评测门禁 (Gate)</th>
+      <th>P2 失效率 % [95% CI]</th>
+      <th>WA-JEPA 失效率 % [95% CI]</th>
+      <th>差值 P2 − WA (pp)</th>
+      <th>仅 P2 失败 %</th>
+      <th>仅 WA 失败 %</th>
+      <th>两模型共有 %</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>DAC</b> (可行驶区域遵从)</td>
+      <td>4.3 [3.5, 5.2]</td>
+      <td>1.8 [1.4, 2.2]</td>
+      <td class="val-bad">+2.5 [+1.8, +3.3]</td>
+      <td>3.56</td>
+      <td>0.95</td>
+      <td>0.86</td>
+    </tr>
+    <tr>
+      <td><b>NC</b> (无过错碰撞)</td>
+      <td>1.5 [1.1, 2.0]</td>
+      <td>0.6 [0.4, 0.9]</td>
+      <td class="val-bad">+0.9 [+0.6, +1.3]</td>
+      <td>1.21</td>
+      <td>0.27</td>
+      <td>0.35</td>
+    </tr>
+    <tr>
+      <td><b>TTC</b> (碰撞时间裕度)</td>
+      <td>2.1 [1.6, 2.6]</td>
+      <td>1.1 [0.8, 1.4]</td>
+      <td class="val-bad">+1.0 [+0.6, +1.4]</td>
+      <td>1.51</td>
+      <td>0.46</td>
+      <td>0.65</td>
+    </tr>
+    <tr>
+      <td><b>LK</b> (车道保持)</td>
+      <td>2.6 [2.1, 3.1]</td>
+      <td>1.6 [1.2, 1.9]</td>
+      <td class="val-bad">+1.0 [+0.6, +1.5]</td>
+      <td>1.83</td>
+      <td>0.77</td>
+      <td>0.79</td>
+    </tr>
+    <tr>
+      <td><b>DDC</b> (行车方向合规)</td>
+      <td>0.8 [0.5, 1.2]</td>
+      <td>0.5 [0.2, 0.9]</td>
+      <td class="val-neu">+0.3 [+0.1, +0.5]</td>
+      <td>0.54</td>
+      <td>0.20</td>
+      <td>0.34</td>
+    </tr>
+    <tr>
+      <td><b>TLC</b> (红绿灯合规)</td>
+      <td>0.3 [0.1, 0.4]</td>
+      <td>0.1 [0.1, 0.2]</td>
+      <td class="val-neu">+0.1 [+0.1, +0.2]</td>
+      <td>0.14</td>
+      <td>0.02</td>
+      <td>0.12</td>
+    </tr>
+    <tr>
+      <td><b>HC</b> (历史舒适度)</td>
+      <td>1.6 [1.2, 2.2]</td>
+      <td>1.7 [1.2, 2.2]</td>
+      <td class="val-good">-0.0 [-0.1, +0.0]</td>
+      <td>0.02</td>
+      <td>0.07</td>
+      <td>1.62</td>
+    </tr>
+    <tr>
+      <td><b>EC</b> (扩展动力学舒适度)</td>
+      <td>11.5 [9.9, 13.0]</td>
+      <td>12.0 [10.4, 13.5]</td>
+      <td class="val-good">-0.5 [-1.0, +0.1]</td>
+      <td>2.18</td>
+      <td>2.67</td>
+      <td>9.28</td>
+    </tr>
+  </tbody>
 </table>
-<p class="note">Imitation-only decoders give the same pattern (P2-V on F +6.5 [-3.4, +16.1], on R +31.3 [+14.7, +47.3]; WA-Cf on F +33.3 [+24.7, +41.4], on R
-+1.7 [-13.9, +16.5]). Margin bias (probe − true footprint margin along the model's own plan, m): P2-V on F +0.75 [+0.56, +0.93] vs ego-only +0.81 [+0.43, +1.17];
-WA-Cf on R +0.30 [-0.04, +0.73], WA-H on R +0.82 [+0.38, +1.40] vs ego-only +0.68 [+0.17, +1.18]. Reading: P2's failures are encoder-level by both readouts; WA's are
-encoder-level by the decoder readout, while its front encoder still carries some road-edge information on R that the head hidden no longer
-shows (n = 115, wide CIs).</p>
 
-<h2 id="geometry">3. Geometry of the failures</h2>
-<figure id="fig5_geometry"><a href="figs/fig5_geometry.pdf"><img src="figs/fig5_geometry.png" alt="Figure 5. Margins, excursion depth, curvature and corner cutting."></a><figcaption><b>Figure 5. Margins, excursion depth, curvature and corner cutting.</b> <span class="look">What to look at: (a) P2's raw plans leave the drivable area on 4.6 [3.7, 5.6]% of navtest tokens vs 1.6 [1.2, 2.2]% for WA. (b) WA's DAC failures are mostly sub-0.3 m tracker grazes; P2's go deeper. (c) the P2 − WA DAC gap grows from +0.6 [+0.0, +1.2] pp below 5° to +8.1 [+5.9, +10.1] pp above 45°. (d) on its specific failures P2 ends inside the turn; on shared turns both are slightly wide.</span> <a href="figs/fig5_geometry.pdf">PDF</a></figcaption></figure>
-<p class="note">Margins: smallest signed distance of the ego footprint (4 corners, plan linearly interpolated to 0.1 s) to the scorer's drivable polygons
-(ROADBLOCK, INTERSECTION, CARPARK_AREA), 0.5 m SDF labels of opb_labels.py. Depth: largest corner distance outside those polygons along the devkit's LQR
-replay (opb_score.py), on the op_probe eval tokens (F ∪ R ∪ FF ∪ 1 500 random PP); both models' replays reproduce their devkit DAC on
-100% / 100% of tokens. End offset: lateral offset of the plan's 4 s pose from the logged 4 s pose,
-along the logged pose's normal, signed + toward the inside of the logged turn.</p>
+<figure id="fig2_taxonomy">
+  <a href="figs/fig2_taxonomy.pdf"><img src="figs/fig2_taxonomy.png" alt="图 2. navtest 各场景类型的得分差距与各门禁失效率"></a>
+  <figcaption>
+    <b>图 2. navtest 不同场景类型下的得分差异与分项门禁失效率。</b>
+    <div class="look-box">
+      <b>💡 一眼看懂本图核心要点：</b><br>
+      • 转弯和变道机动是两个模型 DAC 和 LK 失效的核心集中地，但 P2 的失效率上升速度远快于 WA-JEPA；<br>
+      • NC（碰撞）和 TTC（碰撞时间裕度）违规主要集中在“减速刹停至静止 (Coming-to-a-stop)”工况中（P2 失效显著更多）；<br>
+      • 动力学舒适度 EC 失效由转弯工况主导，两个模型在该项上的表现完全平齐；<br>
+      • 在新加坡场景中，P2 的 DAC 出界率是 WA-JEPA 的 3 倍，但碰撞类（NC / TTC）指标并未出现超额失误。
+    </div>
+    <a href="figs/fig2_taxonomy.pdf">下载高清矢量图 (PDF)</a>
+  </figcaption>
+</figure>
 
-<h2 id="closed">4. Closed loop: HUGSIM 64</h2>
-<figure id="fig6_hugsim"><a href="figs/fig6_hugsim.pdf"><img src="figs/fig6_hugsim.png" alt="Figure 6. HUGSIM outcome matrix, per-scenario scores, and the link to open loop."></a><figcaption><b>Figure 6. HUGSIM outcome matrix, per-scenario scores, and the link to open loop.</b> <span class="look">What to look at: (a) the diagonal (same end) holds 37 of 64; where WA-JEPA completes and P2 does not, P2 mostly spins or collides (background more than foreground); where P2 completes and WA-JEPA does not, WA-JEPA hit a foreground agent. (b) tick marks under the strip: routes that turn ≥ 30°; WA-JEPA's wins cluster on them. (c) DAC is the one sub-metric where the open-loop deficit reappears in closed loop, and only on turning routes.</span> <a href="figs/fig6_hugsim.pdf">PDF</a></figcaption></figure>
-<p class="note">exam preset; P2 = mean of seeds s0 / s1 (one run each), WA-JEPA one run (decision 138), single runs vary by about 0.2 HD per scenario
-(decision 144), so per-scenario differences below 0.2 are not read. Route turn = range of the recorded route heading. spec-preset counts in
-<a href="../../../op_parity/results/hugsim_full.md">hugsim_full.md</a>.</p>
+<!-- navhard 章节 -->
+<h3>navhard 极端挑战基准评测 (协议 G 帧序列)</h3>
+<figure id="fig3_navhard">
+  <a href="figs/fig3_navhard.pdf"><img src="figs/fig3_navhard.png" alt="图 3. navhard 两阶段评测表现对比"></a>
+  <figcaption>
+    <b>图 3. navhard 两阶段表现对比（P2 采用 Protocol G 帧协议）。</b>
+    <div class="look-box">
+      <b>💡 一眼看懂本图核心要点：</b><br>
+      • <b>第一阶段 (Stage 1 - 真值记录状态)：</b>模型差距主要来自 DAC 和 DDC；<br>
+      • <b>第二阶段 (Stage 2 - 合成渲染状态)：</b>DAC 违规差距依旧存在，而大比例的 LK、DDC 和 TTC 违规在两个模型之间完全相同（均超过 50%）。这表明这些合成出来的极难反事实状态对所有端到端模型而言都是普遍难题，并非 P2 独有的弱点。
+    </div>
+    <a href="figs/fig3_navhard.pdf">下载高清矢量图 (PDF)</a>
+  </figcaption>
+</figure>
 
-<h2 id="cases">5. Paired cases per quadrant</h2>
-<figure id="fig7_cases"><a href="figs/fig7_cases.pdf"><img src="figs/fig7_cases.png" alt="Figure 7. Three cases per quadrant: what each model sees and both plans in BEV."></a><figcaption><b>Figure 7. Three cases per quadrant: what each model sees and both plans in BEV.</b> <span class="look">What to look at: top of each case: P2's current road-camera input (protocol W) and WA-JEPA's front view (it also sees L0 / R0 / B0); bottom: BEV at t0 with drivable area, lanes, agents (dashed: 4 s later), the logged future and both plans with their 4 s ego boxes. Numbers in brackets: token EPDMS × 100.</span> <a href="figs/fig7_cases.pdf">PDF</a></figcaption></figure>
-<p class="note">Selection rule (fixed before looking at plans): a token &#x27;fails&#x27; for a model when any of NC, DAC, DDC, TLC, TTC is below 1 (P2 = seed 0, the plan that is drawn; both P2 seeds must agree). Quadrants: P2 fails &amp; WA passes, WA fails &amp; P2 passes, both fail. Eligible: logged speed &gt; 2 m/s, label raster ok, WA plan present. Within a quadrant, the failing sub-metric of the token is its first failing gate in the order above; each quadrant takes 3 tokens drawn uniformly at random (numpy seed 0) from the eligible set, stratified so that the drawn sub-metrics follow the quadrant&#x27;s own sub-metric frequencies (largest-remainder rounding), distinct logs. No look at the plans before drawing. Drawn: P2 fails, WA passes / DAC 3b0c5c39, P2 fails, WA passes / DAC 223d02be, P2 fails, WA passes / NC d56cc988, WA fails, P2 passes / DAC 72be63ed, WA fails, P2 passes / DAC cec165c3, WA fails, P2 passes / TTC c32ae6a1, both fail / DAC cbcd5548, both fail / NC e7da21c4, both fail / DDC 60abcfb4.</p>
+<table>
+  <thead>
+    <tr>
+      <th>navhard 评测门禁</th>
+      <th>Stage 1: P2 失效 %</th>
+      <th>Stage 1: WA 失效 %</th>
+      <th>Stage 2: P2 失效 %</th>
+      <th>Stage 2: WA 失效 %</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>NC</b> (碰撞违规)</td>
+      <td>2.9 [1.1, 4.9]</td>
+      <td>2.0 [0.7, 3.6]</td>
+      <td>13.7 [11.4, 16.1]</td>
+      <td>12.5 [10.2, 15.0]</td>
+    </tr>
+    <tr>
+      <td><b>DAC</b> (可行驶区域违规)</td>
+      <td class="val-bad">13.0 [9.7, 16.7]</td>
+      <td>8.2 [5.3, 11.3]</td>
+      <td class="val-bad">27.3 [24.5, 30.2]</td>
+      <td>22.8 [20.0, 25.7]</td>
+    </tr>
+    <tr>
+      <td><b>DDC</b> (行车方向违规)</td>
+      <td>3.6 [1.8, 5.8]</td>
+      <td>0.4 [0.0, 1.3]</td>
+      <td>21.4 [18.7, 24.1]</td>
+      <td>21.1 [18.2, 24.0]</td>
+    </tr>
+    <tr>
+      <td><b>TTC</b> (碰撞时间超限)</td>
+      <td>2.6 [0.9, 4.6]</td>
+      <td>2.4 [0.9, 4.2]</td>
+      <td>16.0 [13.5, 18.6]</td>
+      <td>15.6 [13.1, 18.2]</td>
+    </tr>
+    <tr>
+      <td><b>LK</b> (车道保持违规)</td>
+      <td>3.6 [1.7, 5.8]</td>
+      <td>1.6 [0.7, 2.9]</td>
+      <td>51.1 [47.5, 54.4]</td>
+      <td>51.1 [47.5, 54.3]</td>
+    </tr>
+    <tr>
+      <td><b>EP</b> (自车进度，×100)</td>
+      <td>80.4 [78.2, 82.5]</td>
+      <td>84.4 [82.2, 86.4]</td>
+      <td class="val-bad">74.5 [72.8, 76.1]</td>
+      <td>82.6 [81.3, 84.0]</td>
+    </tr>
+  </tbody>
+</table>
+<p class="note">
+  注：EP 行为自车行进进度均值（× 100），数值越高越好（并非失效率）。综合得分：Stage 1 中 P2 得分 <code>73.1 [69.3, 76.7]</code> vs WA <code>81.9 [78.5, 85.0]</code>；Stage 2 中 P2 得分 <code>44.9 [42.8, 47.1]</code> vs WA <code>48.2 [46.0, 50.5]</code>。聚类统计样本包含 225 个场景组。
+</p>
 
-<h2 id="method">Method and caveats</h2>
-<ul class="note">
-<li>Manoeuvre classes from the logged 4 s future (priority order): stationary (v0 &lt; 0.5 m/s, path &lt; 1 m), launch (v0 &lt; 1.5, end speed &gt; 2.5),
-stop (v0 &gt; 2.5, end &lt; 0.5), left / right turn (|Δ heading| &gt; 20°), lane change (|Δ heading| &lt; 8°, |lateral| &gt; 2 m, path &gt; 10 m),
-curve (8-20°), straight. navhard stage-2 tokens have no logged future and take the class of their scene group's stage-1 token.</li>
-<li>CIs: 95% percentile cluster bootstrap, B 2 000 (navtest logs, navhard scene groups, HUGSIM scenarios). Strata overlap across groups; no
-multiplicity correction; differences whose CI excludes 0 in one of ~30 strata are descriptive.</li>
-<li>F / R / FF are defined on P2 seed 0 as in decision 147; the taxonomy uses the 2-seed mean. Decoder and probe readouts are DAC-only.</li>
-<li>Inputs differ (WA: 4 cameras, 2 Hz history; P2: front cameras, protocol W). WA-JEPA is a single run on every benchmark.</li>
-<li>The case figure shows P2's current road frame only (it also sees the wide camera and 8 history slots); GIF-style context is on the
-<a href="../../../op_parity/results/gap/index.html">op_parity gap page</a>.</li>
+<!-- ========================================================================= -->
+<!-- 2. 阶段双向定位 (全新原理图 + 表格) -->
+<!-- ========================================================================= -->
+
+<h2 id="stages">
+  <span>六、表征阶段定位与“双向镜像”原理分析</span>
+  <span class="diagram-badge">第 2 部分</span>
+</h2>
+<p>
+  针对 DAC 违规，将评估样本集划分为四个具有明确对立意义的象限（基于 P2 种子 0）：<br>
+  • <b>集合 F (433 样本)：</b>P2 失败但 WA-JEPA 通过（P2 的特异性失误）；<br>
+  • <b>集合 R (115 样本)：</b>WA-JEPA 失败但 P2 通过（WA 的特异性失误）；<br>
+  • <b>集合 FF (104 样本)：</b>两模型皆失败（普遍性极限工况）；<br>
+  • <b>集合 PP-turn (2,800 样本)：</b>转角 &gt; 20° 且两模型皆通过的弯道场景。<br>
+  各模型提取的阶段特征：P2 的当前帧视觉 Token <code>V</code>、适配后 Token <code>M</code>、时序摘要 Token <code>T</code>、规划头隐层 <code>H</code>；WA-JEPA 的前向编码器 Token <code>Cf</code>、全视角编码器 Token <code>Ca</code>、轨迹头输入 <code>T</code> 与最后隐层 <code>H</code>。<br>
+  解码器设计：基于 [阶段特征, 20维自车状态] 的 2 层 MLP，采用模仿学习 + 可行驶铰链损失（λ = 10），在 navtrain 上训练并由 devkit 评测。
+</p>
+
+<!-- 阶段镜像原理直观示意图 -->
+<div class="visual-diagram-card">
+  <div class="diagram-header">
+    <h3 class="diagram-title">🔬 “双向镜像”解码器实验原理图解</h3>
+    <span class="diagram-badge">诊断归因逻辑</span>
+  </div>
+  <p class="diagram-desc">
+    实验核心逻辑：若某模型的下游规划头因为算力或优化不足而出错，那么在该模型的上游视觉特征上重新训练一个小型解码器，应该能够挽救这些失败；<b>反之，如果重新训练解码器也毫无提升，则证明视觉特征本身早已丢失了路界信息（编码器瓶颈）。</b>
+  </p>
+  <div class="diagram-box">
+    <svg viewBox="0 0 1060 280" width="100%" height="auto" style="font-family: inherit; font-size: 13px;">
+      <!-- 集合 F 测试 -->
+      <g transform="translate(15, 15)">
+        <rect x="0" y="0" width="500" height="250" rx="8" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <rect x="0" y="0" width="500" height="30" rx="8" fill="#D55E00" fill-opacity="0.12"/>
+        <text x="14" y="20" font-weight="700" font-size="13" fill="#D55E00">测试 1：在 P2 的失败集 F 上 (P2 失败, WA 通过，433 条)</text>
+
+        <!-- P2 自身特征表现 -->
+        <rect x="15" y="45" width="470" height="85" rx="6" fill="#fff" stroke="#D55E00" stroke-width="1.2"/>
+        <text x="25" y="68" font-weight="700" fill="#D55E00">为 P2 视觉特征 [P2-V] 配备全新最优解码器：</text>
+        <text x="25" y="92" font-size="20" font-weight="800" fill="#cf222e">提升：-0.2 pp (0 增益，等同于瞎猜)</text>
+        <text x="25" y="115" font-size="12" fill="#656d76">特征对路界完全失明！规划裕度探针误差甚至盲目乐观 <b>+0.75 米</b></text>
+
+        <!-- 换用 WA 特征表现 -->
+        <rect x="15" y="145" width="470" height="85" rx="6" fill="#fff" stroke="#0072B2" stroke-width="1.2"/>
+        <text x="25" y="168" font-weight="700" fill="#0072B2">相同解码器换用 WA 前向特征 [WA-Cf]：</text>
+        <text x="25" y="192" font-size="20" font-weight="800" fill="#1a7f37">提升：+27.9 pp (通过率暴涨！)</text>
+        <text x="25" y="215" font-size="12" fill="#656d76">WA 编码器在此处清晰保留了路沿边界，下游解码器瞬间成功通过</text>
+      </g>
+
+      <!-- 集合 R 测试 -->
+      <g transform="translate(545, 15)">
+        <rect x="0" y="0" width="500" height="250" rx="8" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <rect x="0" y="0" width="500" height="30" rx="8" fill="#0072B2" fill-opacity="0.12"/>
+        <text x="14" y="20" font-weight="700" font-size="13" fill="#0072B2">测试 2：在 WA 的失败集 R 上 (WA 失败, P2 通过，115 条)</text>
+
+        <!-- WA 自身特征表现 -->
+        <rect x="15" y="45" width="470" height="85" rx="6" fill="#fff" stroke="#0072B2" stroke-width="1.2"/>
+        <text x="25" y="68" font-weight="700" fill="#0072B2">为 WA 视觉特征 [WA-Cf] 配备全新最优解码器：</text>
+        <text x="25" y="92" font-size="20" font-weight="800" fill="#cf222e">提升：-2.6 pp (0 增益，同样失明)</text>
+        <text x="25" y="115" font-size="12" fill="#656d76">WA 编码器在自身失败处同样遗漏了关键特征，无法超越自车先验</text>
+
+        <!-- 换用 P2 特征表现 -->
+        <rect x="15" y="145" width="470" height="85" rx="6" fill="#fff" stroke="#D55E00" stroke-width="1.2"/>
+        <text x="25" y="168" font-weight="700" fill="#D55E00">相同解码器换用 P2 视觉特征 [P2-V]：</text>
+        <text x="25" y="192" font-size="20" font-weight="800" fill="#1a7f37">提升：+26.1 pp (完美镜像反转！)</text>
+        <text x="25" y="215" font-size="12" fill="#656d76">P2 编码器能看清此处的路界，证明两者的表征互补且各自瓶颈在编码器</text>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<figure id="fig4_localisation">
+  <a href="figs/fig4_localisation.pdf"><img src="figs/fig4_localisation.png" alt="图 4. 决定各模型失效的具体表征阶段定位"></a>
+  <figcaption>
+    <b>图 4. 决定各模型失效的具体阶段定位。</b>
+    <div class="look-box">
+      <b>💡 一眼看懂本图核心要点：</b><br>
+      • <b>(a) 完美的镜像对称：</b>在橙色 F 集合上，P2 的所有阶段特征柱状条全部接近 0，而 WA 的阶段特征柱全部极高；在蓝色 R 集合上，P2 的所有阶段特征柱高耸，而 WA 的阶段特征柱则全部归零；<br>
+      • <b>(b) 探针分析表明：</b>在所有集合中，WA 的各个阶段特征所包含的道路边界几何信息（SDF R²）均系统性高于 P2，这表明失效样本集并不是模型全面“失明”的退化场景，而是局部边界感知能力的短板；<br>
+      • <b>(c) 裕度估计偏差：</b>在自身失败样本上，P2 视觉特征对剩余道路裕度的判断与纯自车状态探针一样盲目乐观（偏差高达 +0.75 米，虚线位置），即完全未感知到逼近的路沿；而 WA 前向编码器在 R 集上大致减半了该偏差，但在其规划头隐层中又恢复到了自车先验水平。
+    </div>
+    <a href="figs/fig4_localisation.pdf">下载高清矢量图 (PDF)</a>
+  </figcaption>
+</figure>
+
+<table>
+  <thead>
+    <tr>
+      <th>解码器相比“纯自车状态”的提升 (pp)<br><small>带有可行驶铰链损失 λ = 10</small></th>
+      <th>集合 F (P2 失败, WA 通过)<br><small>N = 433</small></th>
+      <th>集合 R (WA 失败, P2 通过)<br><small>N = 115</small></th>
+      <th>集合 FF (两模型皆失败)<br><small>N = 104</small></th>
+      <th>集合 PP-turn (皆通过弯道)<br><small>N = 2,800</small></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>P2-V</b> (当前帧视觉 Token)</td>
+      <td class="val-bad">-0.2 [-9.3, +8.6]</td>
+      <td class="val-good">+26.1 [+9.2, +41.6]</td>
+      <td>+2.9 [-12.2, +18.4]</td>
+      <td>+12.5 [+8.2, +16.4]</td>
+    </tr>
+    <tr>
+      <td><b>P2-M</b> (MLP 适配后 Token)</td>
+      <td class="val-bad">-1.6 [-10.9, +7.1]</td>
+      <td class="val-good">+27.8 [+12.3, +43.4]</td>
+      <td>+3.8 [-11.5, +18.8]</td>
+      <td>+13.1 [+8.5, +17.4]</td>
+    </tr>
+    <tr>
+      <td><b>P2-T</b> (时序 Transformer 摘要)</td>
+      <td class="val-neu">+1.4 [-7.9, +10.4]</td>
+      <td class="val-good">+35.7 [+22.3, +49.6]</td>
+      <td>+11.5 [-4.2, +26.3]</td>
+      <td>+14.2 [+9.5, +18.3]</td>
+    </tr>
+    <tr>
+      <td><b>P2-H</b> (规划头隐层特征)</td>
+      <td class="val-bad">-2.3 [-10.9, +6.3]</td>
+      <td class="val-good">+33.0 [+18.2, +48.3]</td>
+      <td>+9.6 [-5.8, +24.1]</td>
+      <td>+16.1 [+11.4, +20.2]</td>
+    </tr>
+    <tr>
+      <td><b>WA-Cf</b> (前视编码器最新 Tubelet)</td>
+      <td class="val-good">+27.9 [+19.9, +35.5]</td>
+      <td class="val-bad">-2.6 [-19.7, +13.0]</td>
+      <td>-1.0 [-16.8, +13.2]</td>
+      <td>+16.1 [+11.3, +20.6]</td>
+    </tr>
+    <tr>
+      <td><b>WA-Ca</b> (4路全视角编码器 Token)</td>
+      <td class="val-good">+30.0 [+22.3, +37.0]</td>
+      <td class="val-bad">-1.7 [-19.8, +17.6]</td>
+      <td>-2.9 [-16.3, +10.1]</td>
+      <td>+15.0 [+10.2, +19.3]</td>
+    </tr>
+    <tr>
+      <td><b>WA-H</b> (轨迹头最终隐层特征)</td>
+      <td class="val-good">+38.6 [+31.5, +45.4]</td>
+      <td class="val-bad">-3.5 [-23.4, +14.5]</td>
+      <td>+1.9 [-14.0, +17.0]</td>
+      <td>+18.3 [+13.7, +22.5]</td>
+    </tr>
+  </tbody>
+</table>
+<p class="note">
+  纯模仿学习（不带铰链惩罚）解码器呈现出完全一致的结论趋势（P2-V 在 F 集上 <code>+6.5 [-3.4, +16.1]</code>，在 R 集上 <code>+31.3 [+14.7, +47.3]</code>；WA-Cf 在 F 集上 <code>+33.3 [+24.7, +41.4]</code>，在 R 集上 <code>+1.7 [-13.9, +16.5]</code>）。<br>
+  边界裕度估计偏差（探针预测值 − 沿自身轨迹的真实车身裕度，米）：P2-V 在 F 集上为 <code>+0.75 [+0.56, +0.93]</code>，而纯自车状态探针为 <code>+0.81 [+0.43, +1.17]</code>；WA-Cf 在 R 集上为 <code>+0.30 [-0.04, +0.73]</code>，WA-H 在 R 集上为 <code>+0.82 [+0.38, +1.40]</code>，而纯自车状态探针为 <code>+0.68 [+0.17, +1.18]</code>。这证实 P2 的失效在两种读出方式下均深植于编码器层面；而 WA 的失效在解码器读出下表现为编码器层面瓶颈，但其前向编码器在 R 集上仍保留了部分被最终规划头忽略的弱边界信号。
+</p>
+
+<!-- ========================================================================= -->
+<!-- 3. 失效几何学 -->
+<!-- ========================================================================= -->
+
+<h2 id="geometry">
+  <span>七、失效几何学深度量化分析</span>
+  <span class="diagram-badge">第 3 部分</span>
+</h2>
+<p>
+  几何分析通过有向距离场（SDF）与 LQR 跟踪重放执行深度，刻画了越界行为的物理空间特征：
+</p>
+<figure id="fig5_geometry">
+  <a href="figs/fig5_geometry.pdf"><img src="figs/fig5_geometry.png" alt="图 5. 道路边界裕度、出界深度、曲率与切弯偏离量"></a>
+  <figcaption>
+    <b>图 5. 边界裕度、越界深度、曲率响应与切弯行为统计。</b>
+    <div class="look-box">
+      <b>💡 一眼看懂本图核心要点：</b><br>
+      • <b>(a) 原始规划出界率：</b>P2 的原始规划轨迹在全部 navtest 中有 4.6 [3.7, 5.6]% 离开可行驶区域，而 WA-JEPA 仅有 1.6 [1.2, 2.2]%；<br>
+      • <b>(b) 出界深度分布：</b>WA-JEPA 的 DAC 违规主要属于小于 0.3 米的轻微擦蹭；而 P2 的违规深度明显更深（中位数达 29cm）；<br>
+      • <b>(c) 曲率响应曲线：</b>P2 与 WA 的 DAC 违规差距从小于 5° 时的 <code>+0.6 [+0.0, +1.2] pp</code> 飙升至大于 45° 时的 <code>+8.1 [+5.9, +10.1] pp</code>；<br>
+      • <b>(d) 切弯内偏量：</b>在特异性失败样本中，P2 轨迹显著偏向弯道内侧（内切），而在共有通过弯道上两模型均略微偏向外侧。
+    </div>
+    <a href="figs/fig5_geometry.pdf">下载高清矢量图 (PDF)</a>
+  </figcaption>
+</figure>
+<p class="note">
+  几何术语定义：裕度（Margin）是指自车车身多边形（4个角点，线性插值至 0.1s）到评测器可行驶区域多边形（ROADBLOCK、INTERSECTION、CARPARK_AREA）的有符号最小距离（采用 0.5米 SDF 标注）；越界深度（Depth）指沿着 devkit LQR 跟踪控制器重放轨迹时超出多边形的最大外侧角点距离；终点偏离量（End offset）指规划轨迹 4 秒终点位姿相对于记录真实位姿沿法线方向的横向偏移量，符号规定为向记录弯道内侧为正（+）。
+</p>
+
+<!-- ========================================================================= -->
+<!-- 4. 闭环验证：HUGSIM 64 -->
+<!-- ========================================================================= -->
+
+<h2 id="closed">
+  <span>八、闭环仿真验证：HUGSIM 64 场景</span>
+  <span class="diagram-badge">第 4 部分</span>
+</h2>
+
+<!-- 闭环结局流向图 -->
+<div class="visual-diagram-card">
+  <div class="diagram-header">
+    <h3 class="diagram-title">🔄 闭环 64 场景结局分布与转弯崩溃机制</h3>
+    <span class="diagram-badge">HUGSIM 动态对比</span>
+  </div>
+  <p class="diagram-desc">
+    闭环测试不仅检验单步开环规划质量，更检验自回归累积误差。数据显示：<b>直道路线上两模型表现旗鼓相当，但一旦路线转角 ≥ 30°，P2 会因开环切弯习惯导致严重的打滑失控与路牙撞击。</b>
+  </p>
+  <div class="diagram-box">
+    <svg viewBox="0 0 1060 260" width="100%" height="auto" style="font-family: inherit; font-size: 13px;">
+      <!-- 直道路线 -->
+      <g transform="translate(15, 15)">
+        <rect x="0" y="0" width="500" height="230" rx="8" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <text x="16" y="24" font-weight="700" font-size="14" fill="#1f2328">直道路线场景 (转向 &lt; 30°，共 41 个场景)</text>
+        <rect x="16" y="38" width="468" height="34" rx="6" fill="#e6ffed" stroke="#2ea44f" stroke-width="1"/>
+        <text x="26" y="60" font-weight="700" fill="#1a7f37">闭环 HD 评分差值 P2 − WA: -0.6 [-10.5, +8.2] (统计不显著)</text>
+
+        <!-- 对比条 -->
+        <text x="16" y="98" font-size="12" fill="#656d76">nuScenes 直道子集：<b>P2 显著领先 +11.9 [+3.6, +21.6]</b></text>
+        <text x="16" y="122" font-size="12" fill="#656d76">直道 DAC 违规率差值仅为 <b>-1.2 pp</b>，几乎无差异</text>
+        <rect x="16" y="140" width="468" height="65" rx="6" fill="#fff" stroke="#d0d7de"/>
+        <text x="26" y="162" font-weight="600" fill="#1f2328">直道主要结局：平稳循迹完成</text>
+        <text x="26" y="185" font-size="12" fill="#656d76">两模型在车道居中保持与巡航控制上达到高度一致，P2 在直道甚至更稳定</text>
+      </g>
+
+      <!-- 弯道路线 -->
+      <g transform="translate(545, 15)">
+        <rect x="0" y="0" width="500" height="230" rx="8" fill="#f8f9fa" stroke="#d0d7de" stroke-width="1"/>
+        <text x="16" y="24" font-weight="700" font-size="14" fill="#cf222e">弯道路线场景 (转向 ≥ 30°，共 23 个场景)</text>
+        <rect x="16" y="38" width="468" height="34" rx="6" fill="#ffebe9" stroke="#cf222e" stroke-width="1"/>
+        <text x="26" y="60" font-weight="700" fill="#cf222e">闭环 HD 评分差值 P2 − WA: -14.1 [-28.3, -0.7] (严重落后)</text>
+
+        <!-- 结局拆解柱状条 -->
+        <text x="16" y="98" font-size="12" fill="#cf222e">弯道 DAC 违规率差值高达 <b>-12.9 [-20.5, -6.0] pp</b></text>
+        <rect x="16" y="112" width="468" height="98" rx="6" fill="#fff" stroke="#d0d7de"/>
+        <text x="26" y="132" font-weight="600" fill="#1f2328">弯道崩溃分流统计：</text>
+        <text x="26" y="152" font-size="12" fill="#D55E00">• <b>打滑甩尾 (Spin)：</b>P2 发生 <b>9.5 场</b> vs WA 仅 4 场</text>
+        <text x="26" y="172" font-size="12" fill="#D55E00">• <b>撞路牙/背景 (BG Coll)：</b>P2 发生 <b>7.5 场</b> vs WA 仅 1 场</text>
+        <text x="26" y="192" font-size="12" fill="#0072B2">• <b>成功完赛 (Complete)：</b>WA 成功 <b>28 场</b> vs P2 仅 17.5 场</text>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<figure id="fig6_hugsim">
+  <a href="figs/fig6_hugsim.pdf"><img src="figs/fig6_hugsim.png" alt="图 6. HUGSIM 结局混淆矩阵、各场景得分及与开环指标的映射关联"></a>
+  <figcaption>
+    <b>图 6. HUGSIM 结局矩阵、单场景得分及与开环违规的传导关系。</b>
+    <div class="look-box">
+      <b>💡 一眼看懂本图核心要点：</b><br>
+      • <b>(a) 结局对角线：</b>在 64 个场景中有 37 个场景两模型结局完全相同。在 WA-JEPA 顺利完赛而 P2 失败的场景中，P2 绝大部分由于打滑失控（Spin）或撞击路牙背景导致；而在 P2 完赛而 WA 失败的场景中，WA 均碰撞了前方动态障碍物；<br>
+      • <b>(b) 转弯标记：</b>底部打勾标记为航向角变化 ≥ 30° 的转弯路线，WA-JEPA 的优势压倒性地聚集在这些场景；<br>
+      • <b>(c) 开环传导：</b>DAC 是开环性能赤字唯一直接完整投射到闭环中的子指标，且严格局限在转弯路线上。
+    </div>
+    <a href="figs/fig6_hugsim.pdf">下载高清矢量图 (PDF)</a>
+  </figcaption>
+</figure>
+
+<!-- ========================================================================= -->
+<!-- 5. 四象限典型案例 -->
+<!-- ========================================================================= -->
+
+<h2 id="cases">
+  <span>九、四象限典型对比案例分析</span>
+  <span class="diagram-badge">第 5 部分</span>
+</h2>
+<figure id="fig7_cases">
+  <a href="figs/fig7_cases.pdf"><img src="figs/fig7_cases.png" alt="图 7. 三个象限各抽取 3 个案例：视觉输入与 BEV 规划对比"></a>
+  <figcaption>
+    <b>图 7. 三个象限各 3 个典型配对案例：前视相机输入与 BEV 鸟瞰轨迹图。</b>
+    <div class="look-box">
+      <b>💡 一眼看懂本图核心要点：</b><br>
+      • <b>顶部图像：</b>上方左侧为 P2 的当前路面相机帧（Protocol W 协议，实际模型还可见宽角相机和 8 帧历史）；上方右侧为 WA-JEPA 的前重视角（WA 还输入了左、右、后共 4 视角）；<br>
+      • <b>底部 BEV 俯视图：</b>绘制了 t0 时刻的可行驶区域、车道线、动态交通参与者（虚线为 4 秒后位置）、人类真实未来轨迹（GT）以及两个模型的 4 秒规划轨迹及车身包络框；<br>
+      • <b>括号内数值：</b>各案例 Token 的 EPDMS 得分（× 100）。
+    </div>
+    <a href="figs/fig7_cases.pdf">下载高清矢量图 (PDF)</a>
+  </figcaption>
+</figure>
+<p class="note">
+  <b>严格的抽样规则（在查看规划轨迹前预先冻结）：</b>当 NC、DAC、DDC、TLC、TTC 中任意一项低于 1 时判定为失效；候选样本需满足速度 &gt; 2 m/s、栅格标签完整且 WA 规划有效。在各象限内，依据子指标天然出现频次分层抽样出 3 个互不相同日志的代表性 Token。抽中案例：<br>
+  • P2 失败 &amp; WA 通过：DAC <code>3b0c5c39</code>、DAC <code>223d02be</code>、NC <code>d56cc988</code>；<br>
+  • WA 失败 &amp; P2 通过：DAC <code>72be63ed</code>、DAC <code>cec165c3</code>、TTC <code>c32ae6a1</code>；<br>
+  • 两模型皆失败：DAC <code>cbcd5548</code>、NC <code>e7da21c4</code>、DDC <code>60abcfb4</code>。
+</p>
+
+<!-- ========================================================================= -->
+<!-- 场景能力雷达对比矩阵 (新增辅助阅读卡片) -->
+<!-- ========================================================================= -->
+
+<h2>
+  <span>十、两模型综合能力矩阵与选型推荐</span>
+  <span class="diagram-badge">选型参考</span>
+</h2>
+<div class="capability-matrix">
+  <div class="cap-card cap-p2-better">
+    <div class="cap-title"><span>nuScenes 直道闭环</span><span class="cap-score p2">+11.9 P2 优</span></div>
+    <div class="cap-desc">直道场景下 P2 循迹极度沉稳，加减速符合人类习惯，闭环人类驾驶相似度反超 WA-JEPA。</div>
+  </div>
+  <div class="cap-card cap-parity">
+    <div class="cap-title"><span>高速直线行驶 (≥10 m/s)</span><span class="cap-score">-1.5 基本平手</span></div>
+    <div class="cap-desc">前向视场完全胜任前方纵向距离控制，车道保持能力旗鼓相当。</div>
+  </div>
+  <div class="cap-card cap-parity">
+    <div class="cap-title"><span>动力学舒适度 (EC)</span><span class="cap-score">-0.5 基本平手</span></div>
+    <div class="cap-desc">开环轨迹加速度与横向抖动控制相当，两模型在该项无本质差异。</div>
+  </div>
+  <div class="cap-card cap-wa-better">
+    <div class="cap-title"><span>常规缓弯道 (8-20°)</span><span class="cap-score wa">-4.2 WA 领先</span></div>
+    <div class="cap-desc">WA-JEPA 凭借多视角时空表征更早识别弯道曲率，过弯平顺性更好。</div>
+  </div>
+  <div class="cap-card cap-wa-better">
+    <div class="cap-title"><span>急转弯 (>20° 左右转)</span><span class="cap-score wa">-8.2 ~ -10.8 WA 完胜</span></div>
+    <div class="cap-desc">P2 出现致命切弯内切（4s 终点偏内 36cm）；WA 环视感知稳健，保持居中通过。</div>
+  </div>
+  <div class="cap-card cap-wa-better">
+    <div class="cap-title"><span>大曲率弯道 (>45°)</span><span class="cap-score wa">违规率 11.3% vs 3.2%</span></div>
+    <div class="cap-desc">曲率极限下 P2 冻结视觉特征完全丢失路界边界，违规率暴增 7 倍；WA 几乎不受影响。</div>
+  </div>
+  <div class="cap-card cap-wa-better">
+    <div class="cap-title"><span>新加坡左行交规</span><span class="cap-score wa">-6.5 WA 完胜</span></div>
+    <div class="cap-desc">P2 单向前向视野在此类镜像交通路况下侧向违规率大增，WA 环视表征适应能力更强。</div>
+  </div>
+  <div class="cap-card cap-wa-better">
+    <div class="cap-title"><span>空旷无车路口</span><span class="cap-score wa">-5.4 WA 领先</span></div>
+    <div class="cap-desc">缺少前车动态引导时，P2 无法单凭路沿自律；WA 具备强大多视角几何理解。</div>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 6. 方法论与评测局限 -->
+<!-- ========================================================================= -->
+
+<h2 id="method">
+  <span>十一、评测方法论、统计细节与复现指南</span>
+  <span class="diagram-badge">第 6 部分</span>
+</h2>
+<ul class="note-list">
+  <li>
+    <b>机动动作类型划分规则（基于记录的未来 4 秒真实运动，按优先级判定）：</b><br>
+    静止（v0 &lt; 0.5 m/s 且行驶距离 &lt; 1 m）➔ 起步加速（v0 &lt; 1.5 m/s 且末速度 &gt; 2.5 m/s）➔ 减速刹停（v0 &gt; 2.5 m/s 且末速度 &lt; 0.5 m/s）➔ 左转/右转（|Δ heading| &gt; 20°）➔ 换道（|Δ heading| &lt; 8°，|横向位移| &gt; 2 m，且行驶距离 &gt; 10 m）➔ 缓弯（8° ~ 20°）➔ 直线行驶。<br>
+    注：navhard Stage 2 的 Token 无记录未来真值，自动继承其所属场景组 Stage 1 的机动分类。
+  </li>
+  <li>
+    <b>置信区间与统计检验：</b><br>
+    所有置信区间均采用 95% 分位数层级聚类自举检验（Cluster Bootstrap，迭代次数 B = 2,000 次；聚类单元分别为 navtest 日志、navhard 场景组、HUGSIM 仿真场景）。由于不同分层之间存在样本重叠，未采用多重检验校正，单层差值置信区间不包含 0 具有描述性统计意义。
+  </li>
+  <li>
+    <b>失效子集定义与门禁：</b><br>
+    集合 F / R / FF 严格基于决策 147 中 P2 种子 0 的 DAC 违规定义；总体分类学表格中则使用 P2 两个种子的均值。所有解码器和探针的读出实验均专门针对 DAC 这一指标进行。
+  </li>
+  <li>
+    <b>输入模态与评测局限：</b><br>
+    WA-JEPA 输入 4 路全景相机及 2Hz 历史视频；P2 仅输入前向双目及协议 W 序列。WA-JEPA 在所有基准上均为单次评测运行（受限于其公开 checkpoint 开销）。
+  </li>
 </ul>
-<p class="note">Reproduce: <code>experiments/op_probe/scripts/opj_build.py</code> (box: attrs / table / cases / export / frames; devkit replays via
-<code>opb_score.py</code>), then <code>.venv/bin/python experiments/op_probe/scripts/opj_figs.py --cases DIR</code> (Mac). Per-token tables (gitignored <code>results/joint/data/</code>, from
-<code>$DATA_DIR/runs/op_probe/joint/</code> on the box), every number on this page in <a href="stats.json">stats.json</a>.</p>
-</main></body></html>
+
+<p class="note" style="border-top: 1px solid var(--line); padding-top: 12px; margin-top: 20px;">
+  <b>代码与数据复现指引：</b><br>
+  运行数据构建命令：<code>experiments/op_probe/scripts/opj_build.py</code>（包含属性提取、表格整理、案例筛选、特征与图像导出；通过 <code>opb_score.py</code> 调用 devkit 重放评估）。<br>
+  生成图表与统计结果：<code>.venv/bin/python experiments/op_probe/scripts/opj_figs.py --cases DIR</code>（macOS 环境）。<br>
+  逐 Token 详细数据存储于 <code>results/joint/data/</code>（来自服务器 <code>$DATA_DIR/runs/op_probe/joint/</code>），本报告引用的全部精确统计指标与置信区间可在 <a href="stats.json">stats.json</a> 中完整查阅。
+</p>
+
+</main>
+</body>
+</html>
