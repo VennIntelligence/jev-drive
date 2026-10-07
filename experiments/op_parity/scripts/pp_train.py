@@ -46,6 +46,10 @@ AT = (0.275, 0.525)
 T8 = 0.5 * np.arange(1, 9)
 SIG_X, SIG_Y, SIG_PSI = 0.3 + 0.2 * T8, 0.1 + 0.1 * T8, np.radians(1.0 + 1.0 * T8)
 ARMS = {"P1": dict(ego=False, side=False), "P2": dict(ego=True, side=False), "P3": dict(ego=True, side=True)}
+# representation fix (plans/2026-10-07-representation-design.md, --mem): P2 + 32 front JEPA tokens as adapter memory (side channel, n_cam = n_t = 1)
+ARMS |= {f"P2+{k}": dict(ego=True, side=False, mem=k) for k in ("wa_cf", "vj21")}
+MEM_ROOT = data_dir() / "runs" / "op_parity" / "mem"          # <kind>/<data>.npy (N, 32, 512) fp16 in tab order (scripts/rep.py mem)
+MEM_DROP = 0.25                                                 # rows whose memory is masked in training ("memory off" in distribution)
 ACT_COL = 2062                                    # raw output column of action[0] mu (lateral; openpilot sign, + = right turn)
 ACT_T, ACT_WIN = 0.275, (0.5, 1.5)                # lateral action time; the spec_plan_smooth window (jevdrive/openpilot/model.py)
 EGO_LAT = [5, 7]                                  # vy / 10, ay / 3 in parity_adapter.ego_features
@@ -88,6 +92,7 @@ class Cfg:
     act_lab: str = ""                     # action[0] label: "" distilled to shipped (P2 recipe) | plan | log | logwin (module docstring)
     act_lam: float = 3.0
     ego_lat_drop: float = 0.0             # fraction of rows with vy / ay of the ego input zeroed (own rng stream; row order unchanged)
+    mem: str = ""                         # front-token memory (wa_cf | vj21; arm P2+<mem>), dropped per row with MEM_DROP (own rng stream)
 
 
 def proot(*p) -> _pl.Path:
@@ -113,7 +118,11 @@ class PModel(nn.Module):
         tr = (L.pol_weights() if pol else []) + (act_weights() if act else [])
         self.net = A.load("cinque", dtype, trainable=tr)
         k = ARMS.get(arm, dict(ego=False, side=False))
-        self.adapter = PA.ParityAdapter(use_ego=k["ego"], use_side=k["side"]) if (k["ego"] or k["side"]) else None
+        self.mem = k.get("mem")
+        if self.mem:
+            self.adapter = PA.ParityAdapter(use_ego=True, use_side=True, n_cam=1, n_t=1)
+        else:
+            self.adapter = PA.ParityAdapter(use_ego=k["ego"], use_side=k["side"]) if (k["ego"] or k["side"]) else None
 
     def forward(self, front, ego, tc, side=None, side_mask=None, inputs_on=True):
         """front (B, n, 32, 512) cached hidden tokens of the n newest policy slots (n = 8: the 0.2 s protocols; 4: N, one slot per 2 Hz key)
@@ -122,6 +131,8 @@ class PModel(nn.Module):
         H = torch.cat([front.new_zeros(B, A.CONTEXT - n, *front.shape[2:]), front], 1).to(self.net.dtype)
         valid = torch.zeros(B, A.CONTEXT, dtype=torch.bool, device=H.device)
         valid[:, A.CONTEXT - n:] = True
+        if self.mem and side is not None and side.dim() == 3:
+            side = side[:, None, None]                                  # memory (B, 32, 512) -> side channel (B, 1 cam, 1 time, 32, 512)
         if self.adapter is not None and inputs_on:
             H = self.adapter.apply(H, ego, side if self.adapter.use_side else None, side_mask)
         H = H * valid[:, :, None, None].to(H.dtype)
@@ -228,7 +239,7 @@ class Tokens:
 class Store:
     """The pp_prep caches of several data dirs, concatenated and moved to the device once (fp16 tokens)."""
 
-    def __init__(self, datas, dev, need_side=True, rows=None, frames="gimm", host=False):
+    def __init__(self, datas, dev, need_side=True, rows=None, frames="gimm", host=False, mem=None):
         """frames: the front protocol (cache/<data>@<frames>/front.npy; gimm = cache/<data>/front.npy). tab, side and the teacher always come from
         cache/<data>/ (teacher = shipped Cinque on the G protocol, its in-distribution input: every protocol is anchored to the same targets)."""
         cr = data_dir() / "runs" / "op_parity" / "cache"
@@ -260,6 +271,7 @@ class Store:
         self.tc = t(np.where(tb["lht"][:, None], [[0.0, 1.0]], [[1.0, 0.0]]).astype(np.float32))
         self.v0 = t(tb["speed"].astype(np.float32))
         self.n = len(sel)
+        self.mem = Tokens([MEM_ROOT / mem / f"{d}.npy" for d in datas], dev, host) if mem else None   # front-token memory (--mem)
 
     def act_labels(self, kind: str):
         k, ok = log_curv(self.tb, kind)
@@ -377,7 +389,7 @@ def dev_eval(model: PModel, S: Store, dev_rows: np.ndarray, W, bs=128) -> dict:
     acc = {"ade": [], "drift_on": [], "drift_off": []}
     for i in range(0, len(dev_rows), bs):
         r = torch.as_tensor(dev_rows[i:i + bs], device=S.front.device)
-        side = S.side[r] if S.side is not None else None
+        side = S.side[r] if S.side is not None else (S.mem[r] if getattr(S, "mem", None) is not None else None)
         tx, ty, _ = rear(S.t_plan[r], S.cam_x[r], W)
         for on in (True, False):
             p = model(S.front[r], S.ego[r], S.tc[r], side, None, inputs_on=on).float()[:, pi].view(-1, 33, 15)
@@ -403,7 +415,7 @@ def main(a):
               hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, hinge_labels=tuple(a.hinge_labels), hinge_footprint=tuple(a.hinge_footprint),
               b2d_split=a.b2d_split, b2d_mass=a.b2d_mass, anchor_b2d=not a.no_anchor_b2d,
               turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
-              act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop,
+              act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop, mem=a.mem,
               agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
@@ -412,11 +424,15 @@ def main(a):
     tabs = dict(names=np.concatenate([z["names"] for z in tz]), log=np.concatenate([z["log"] for z in tz]),
                 is_b2d=np.concatenate([np.full(len(z["names"]), d.startswith("b2d_")) for d, z in zip(cfg.data, tz)]))
     tr_rows, dv_rows, sp = split_rows(tabs, cfg.split, cfg.b2d_split)
-    S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames, host=cfg.host)
+    if cfg.mem:
+        assert cfg.arm == "P2", "--mem extends arm P2"
+        cfg.arm = f"P2+{cfg.mem}"
+    S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames, host=cfg.host, mem=cfg.mem or None)
     model = PModel(cfg.arm, act=bool(cfg.act_lab)).to(dev)
     if cfg.act_lab in ("log", "logwin"):
         S.act_labels(cfg.act_lab)
     lrng = np.random.default_rng([cfg.seed, rank, 7])                       # ego_lat_drop: own stream, the row stream is unchanged
+    mrng = np.random.default_rng([cfg.seed, rank, 11])                      # memory drop: own stream, the row stream is unchanged
     base, new = model.groups()
     tstd = S.t_out[torch.as_tensor(tr_rows, device=dev)].float().std(0).clamp_min(1e-3)
     hinge = None
@@ -446,6 +462,7 @@ def main(a):
         t0, hist = time.time(), []
         nB = cfg.batch
         use_side = ARMS[cfg.arm]["side"]
+        use_mem = bool(cfg.mem)
 
         turn = np.zeros(S.n, bool)
         pw = None
@@ -486,11 +503,13 @@ def main(a):
             if not cfg.anchor_b2d:
                 an &= ~S.is_b2d[r]
             sm = rng.random((nB, len(PA.SIDE_CAMS))) >= cfg.cam_drop if use_side else None
+            if use_mem:
+                sm = mrng.random((nB, 1)) >= MEM_DROP                           # True = memory present
             return r, an, sm
 
         def fetch(dr):
             r = dr[0]
-            return dr, S.front[r], (S.side[r] if use_side else None)
+            return dr, S.front[r], (S.side[r] if use_side else (S.mem[r] if use_mem else None))
         from concurrent.futures import ThreadPoolExecutor
         pre = ThreadPoolExecutor(2)
         nxt = pre.submit(fetch, draw())
@@ -500,7 +519,7 @@ def main(a):
                 nxt = pre.submit(fetch, draw())
             rows = torch.as_tensor(rows_np, device=dev)
             anchor = torch.as_tensor(an_np, device=dev)
-            smask = torch.as_tensor(sm_np, device=dev) if use_side else None
+            smask = torch.as_tensor(sm_np, device=dev) if (use_side or use_mem) else None
             frac = step / cfg.steps
             for g in opt.param_groups:
                 g["lr"] = g["base"] * min(1.0, (step + 1) / cfg.warmup) * 0.5 * (1 + np.cos(np.pi * frac))
@@ -590,4 +609,5 @@ if __name__ == "__main__":
     ap.add_argument("--act-lab", default="", choices=["", "plan", "log", "logwin"], help="train action[0] on this label (joint action arms)")
     ap.add_argument("--act-lam", type=float, default=3.0)
     ap.add_argument("--ego-lat-drop", type=float, default=0.0, help="fraction of rows with vy / ay of the ego input zeroed")
+    ap.add_argument("--mem", default="", choices=["", "wa_cf", "vj21"], help="front-token memory for arm P2 (representation fix; runs/op_parity/mem)")
     main(ap.parse_args())

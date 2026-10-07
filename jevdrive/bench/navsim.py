@@ -4,6 +4,7 @@ Pipeline per model (every step is the code the lanes used, wrapped):
   prep     parity models only, when the pp_prep token cache of the frame protocol is missing: experiments/op_parity/scripts/pp_prep.py
   plans    the model's 33-step plan at t0 of every token, op_lb plan format (names, plan_pos / vel / yaw, plan_mu / std):
            parity: the torch port on the cached tokens (pp_train.PModel, fp16, batch 128: pp_eval.py plans, one model);
+           memory arms (pp_train --mem) also read their front-token bank (runs/op_parity/mem/<kind>/<data>.npy; :noside masks it);
            UF-* arms: pp_unfreeze.py plans (pixels); onnx: scripts/op_lb.py run (TensorRT, envs/openpilot; an existing op_lb
            plan file of the same stem is reused)
   export   experiments/op_openloop/lib/op_interp.py nav-export, adapter `base` (CAM_F0 lever arm to the rear axle, linear
@@ -156,6 +157,8 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
     mt = json.loads((data_dir() / "runs" / "op_lb" / data / "meta.json").read_text())
     assert names.tolist() == mt["names"], "pp_prep cache rows differ from op_lb meta"
     model = T.load_pmodel(m.name, dev) if not m.ckpt else _load_ckpt(T, m.ckpt, dev)
+    mem = getattr(model, "mem", None)                        # front-token memory arms (pp_train --mem): bank in tab order; :noside masks it
+    M = T.Tokens([T.MEM_ROOT / mem / f"{data}.npy"], dev) if mem else None
     sl = model.net.slices
     pi = np.arange(sl["plan"].start, sl["plan"].start + 495)
     ps = np.arange(sl["plan"].start + 495, sl["plan"].start + 990)
@@ -166,8 +169,9 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
     with torch.no_grad():
         for i in range(0, S.n, batch):
             r = torch.arange(i, min(i + batch, S.n), device=dev)
-            mask = torch.zeros(len(r), 3, dtype=torch.bool, device=dev) if m.opt == "noside" else None
-            o = model(S.front[r], S.ego[r], S.tc[r], S.side[r] if side_ok else None, mask).float().cpu().numpy()
+            mask = torch.zeros(len(r), 1 if M is not None else 3, dtype=torch.bool, device=dev) if m.opt == "noside" else None
+            side = M[r] if M is not None else (S.side[r] if side_ok else None)
+            o = model(S.front[r], S.ego[r], S.tc[r], side, mask).float().cpu().numpy()
             mu[i:i + len(r)] = o[:, pi].reshape(-1, 33, 15)
             sd[i:i + len(r)] = np.exp(np.minimum(o[:, ps], 11)).reshape(-1, 33, 15)
             if has_lead:
