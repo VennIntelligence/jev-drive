@@ -1,0 +1,36 @@
+{
+ "R": {
+  "turn_dac_fail_drop_pp": 4.153455928979074,
+  "ci_pp": [
+   2.9165213648215755,
+   5.32175676172052
+  ],
+  "score_diff": 0.3577716144735186,
+  "score_ci": [
+   -0.1371617959055834,
+   0.8645718575506759
+  ],
+  "dac_pass": true,
+  "score_pass": true,
+  "pass": true
+ },
+ "RM": {
+  "turn_dac_fail_drop_pp": 4.629042485732404,
+  "ci_pp": [
+   3.4446627684226727,
+   5.8561276616006435
+  ],
+  "score_diff": 0.48261556960453805,
+  "score_ci": [
+   -0.026499455771719676,
+   1.014997889228512
+  ],
+  "dac_pass": true,
+  "score_pass": true,
+  "pass": true
+ },
+ "winner": "RM",
+ "verdict": "pilot",
+ "n_tokens": 12146,
+ "n_turn": 3154
+}

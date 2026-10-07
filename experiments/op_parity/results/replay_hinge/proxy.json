@@ -1,0 +1,72 @@
+{
+ "gate300": {
+  "n": 300,
+  "n_dac_fail": 19,
+  "tab": {
+   "corner_p95": 0.010193992042006553,
+   "corner_p99": 0.012007795669179977,
+   "corner_max": 0.013106330966104926,
+   "corner_median": 0.004701176654100966,
+   "dac_agree": 1.0
+  },
+  "mcin": {
+   "corner_p95": 0.010193992042006553,
+   "corner_p99": 0.012007795669179977,
+   "corner_max": 0.013106330966104926,
+   "corner_median": 0.004701176654100966,
+   "dac_agree": 1.0
+  },
+  "devkit_polygon_vs_official_agree": 1.0,
+  "v0_abs_diff_max": 0.0,
+  "a0_abs_diff_max": 0.0,
+  "steer0_abs_max": 0.0
+ },
+ "all": {
+  "n": 12146,
+  "n_dac_fail": 469,
+  "tab": {
+   "corner_p95": 0.010239599344492251,
+   "corner_p99": 0.012676598983338576,
+   "corner_max": 0.032727522642085206,
+   "corner_median": 0.004501352443745764,
+   "dac_agree": 1.0
+  },
+  "mcin": {
+   "corner_p95": 0.010239599344492251,
+   "corner_p99": 0.012676598983338576,
+   "corner_max": 0.032727522642085206,
+   "corner_median": 0.004501352443745764,
+   "dac_agree": 1.0
+  },
+  "devkit_polygon_vs_official_agree": 1.0,
+  "v0_abs_diff_max": 0.0,
+  "a0_abs_diff_max": 0.0,
+  "steer0_abs_max": 0.0
+ },
+ "dac_fail": {
+  "n": 469,
+  "n_dac_fail": 469,
+  "tab": {
+   "corner_p95": 0.008628270129194275,
+   "corner_p99": 0.010537159285704294,
+   "corner_max": 0.012329847681758904,
+   "corner_median": 0.0034613014729655204,
+   "dac_agree": 1.0
+  },
+  "mcin": {
+   "corner_p95": 0.008628270129194275,
+   "corner_p99": 0.010537159285704294,
+   "corner_max": 0.012329847681758904,
+   "corner_median": 0.0034613014729655204,
+   "dac_agree": 1.0
+  },
+  "devkit_polygon_vs_official_agree": 1.0,
+  "v0_abs_diff_max": 0.0,
+  "a0_abs_diff_max": 0.0,
+  "steer0_abs_max": 0.0
+ },
+ "verdict": {
+  "rule": "gate300, tab inputs: corner p95 <= 0.1 m and DAC agreement >= 99%",
+  "pass_": true
+ }
+}

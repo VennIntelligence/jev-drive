@@ -79,6 +79,8 @@ class Cfg:
     hinge_margin: float = 0.3
     hinge_labels: tuple = ("runs/op_probe/labels/navtrain_all.npz",)   # one label file per source (first file that labels a row wins)
     hinge_footprint: tuple = ("pacifica",)                                # footprint of each label file: pacifica (NAVSIM) | mkz (B2D)
+    hinge_replay: bool = False            # hinge on the devkit LQR replay of the plan (lib/replay_hinge.py, plans/2026-10-07-replay-hinge-prereg.md)
+    hinge_front_turn_margin: float = 0.0  # replay hinge: front-corner margin on rows with logged |heading change| > 20 deg (RM); 0 = off
     agent_lam: float = 0.0                # agent-box hinge on the plan (lib/agent_hinge.py, plans/2026-10-07-agent-hinge-prereg.md), imitation rows; 0 = off
     agent_margin: float = 0.5
     agent_side_margin: float = -1.0       # margin for objects outside the ego's lateral corridor; < 0 = agent_margin
@@ -413,6 +415,7 @@ def main(a):
     cfg = Cfg(arm=a.arm, seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data), split=a.split, frames=a.frames, host=a.host,
               warmup=a.warmup, eval_every=a.eval_every,
               hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, hinge_labels=tuple(a.hinge_labels), hinge_footprint=tuple(a.hinge_footprint),
+              hinge_replay=a.hinge_replay, hinge_front_turn_margin=a.hinge_front_turn_margin,
               b2d_split=a.b2d_split, b2d_mass=a.b2d_mass, anchor_b2d=not a.no_anchor_b2d,
               turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
               act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop, mem=a.mem,
@@ -437,8 +440,13 @@ def main(a):
     tstd = S.t_out[torch.as_tensor(tr_rows, device=dev)].float().std(0).clamp_min(1e-3)
     hinge = None
     if cfg.hinge_lam > 0:
-        from drivable_hinge import Hinge
-        hinge = Hinge([data_dir() / f for f in cfg.hinge_labels], S.tab["names"], dev, cfg.hinge_margin, list(cfg.hinge_footprint))
+        if cfg.hinge_replay:
+            from replay_hinge import ReplayHinge
+            hinge = ReplayHinge([data_dir() / f for f in cfg.hinge_labels], S.tab, dev, cfg.hinge_margin, list(cfg.hinge_footprint),
+                                cfg.hinge_front_turn_margin)
+        else:
+            from drivable_hinge import Hinge
+            hinge = Hinge([data_dir() / f for f in cfg.hinge_labels], S.tab["names"], dev, cfg.hinge_margin, list(cfg.hinge_footprint))
         print(f"hinge lambda {cfg.hinge_lam}, margin {cfg.hinge_margin}: labels cover {hinge.coverage:.4f} of {S.n} rows", flush=True)
     agent = None
     if cfg.agent_lam > 0:
@@ -595,6 +603,8 @@ if __name__ == "__main__":
     ap.add_argument("--hinge-lam", type=float, default=0.0, help="weight of the footprint drivable-area SDF hinge on the plan (0 = off)")
     ap.add_argument("--hinge-margin", type=float, default=0.3)
     ap.add_argument("--hinge-labels", nargs="+", default=list(Cfg.hinge_labels), help="hinge label file(s) under $DATA_DIR (the first that labels a row wins)")
+    ap.add_argument("--hinge-replay", action="store_true", help="hinge on the devkit LQR replay of the plan (lib/replay_hinge.py)")
+    ap.add_argument("--hinge-front-turn-margin", type=float, default=0.0, help="replay hinge: front-corner margin on turning rows (0 = off)")
     ap.add_argument("--hinge-footprint", nargs="+", default=list(Cfg.hinge_footprint), help="footprint of each --hinge-labels file: pacifica | mkz")
     ap.add_argument("--agent-lam", type=float, default=0.0, help="weight of the agent-box hinge on the plan (lib/agent_hinge.py; 0 = off)")
     ap.add_argument("--agent-margin", type=float, default=0.5)
