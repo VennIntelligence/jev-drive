@@ -372,7 +372,7 @@ def cmd_replay(a):
 
 # ---------------------------------------------------------------- analyze (.venv)
 def path_geom(P):
-    """P (n, 8, 3) poses at 0.5 .. 4 s in the t0 frame (NaN rows allowed) -> dict of arrays: dpsi (deg, 4 s), R_min (m), path length (m)."""
+    """P (n, 8, 3) poses at 0.5 .. 4 s in the t0 frame -> dpsi (deg, 4 s), R_min (m, min over 1 s windows with arc >= 2 m), path length (m)."""
     n = len(P)
     Q = np.concatenate([np.zeros((n, 1, 3)), P], 1)
     h = np.unwrap(Q[:, :, 2], axis=1)
@@ -397,7 +397,8 @@ def buckets(g):
     out["wide_turn"] = out.wide & (a >= 20)
     out["sharp45"] = a > 45
     out["bin"] = pd.cut(a, [-1, 5, 20, 45, 1e9], labels=["<5", "5-20", "20-45", ">45"]).astype(str)
-    out["rbin"] = pd.cut(g.R_min.where(turn, np.inf), [0, 8, 15, 30, 60, np.inf], labels=["<8", "8-15", "15-30", "30-60", ">60/straight"], right=False).astype(str)
+    out["rbin"] = pd.cut(g.R_min.where(turn, np.inf), [0, 8, 15, 30, 60, np.inf], labels=["<8", "8-15", "15-30", "30-60", "not turning or >60"],
+                         right=False).astype(str)
     return out
 
 
@@ -411,39 +412,23 @@ class NavhardAgg:
     """The devkit's calculate_individual_mapping_scores in numpy: per scene-mapping group, (stage-1 weighted mean x stage-2 weighted mean)
     averaged over the group's two sub-groups; weights are the arm's own (stage-2 weights come from the arm's stage-1 replay)."""
 
-    def __init__(self, tokens, groups_log):
+    def __init__(self, tokens, tok_log):
         mp = json.load(open(OUT / "mapping_navhard.json"))
         pos = {t: i for i, t in enumerate(tokens)}
-        self.sub = []                                                    # (group, stage1 idx list, stage2 idx list)
-        for gi, ((orig, prev), pairs) in enumerate(mp):
-            first = [pos[p[0]] for p in pairs if len(p) > 0 and p[0] in pos]
-            second = [pos[p[1]] for p in pairs if len(p) > 1 and p[1] in pos]
-            self.sub.append((gi, [pos[orig]], first))
-            self.sub.append((gi, [pos[prev]], second))
-        self.ng = len(mp)
-        self.log = np.array([groups_log[orig] for (orig, prev), _ in mp])
+        self.sub = []
+        for (orig, prev), pairs in mp:
+            self.sub.append(([pos[orig]], [pos[p[0]] for p in pairs if len(p) > 0 and p[0] in pos]))
+            self.sub.append(([pos[prev]], [pos[p[1]] for p in pairs if len(p) > 1 and p[1] in pos]))
+        self.log = np.array([tok_log[orig] for (orig, prev), _ in mp])     # cluster of a group = log of its stage-1 token
 
     def groups(self, s, w):
-        """token scores s (n,), weights w (n,) -> per-group combined (ng,), per-subgroup stage1 / stage2 (2 ng,)."""
+        """token scores s (n,), weights w (n,) -> per-group combined (ng,), per-subgroup stage 1 / stage 2 (2 ng,)."""
         def wavg(ix):
             ww = w[ix]
             return float((s[ix] * ww).sum() / ww.sum()) if len(ix) and ww.sum() > 0 else np.nan
-        s1 = np.array([wavg(a) for _, a, _ in self.sub])
-        s2 = np.array([wavg(b) for _, _, b in self.sub])
-        comb = (s1 * s2).reshape(-1, 2).mean(1)
-        return comb, s1, s2
-
-
-def cmd_analyze(a):
-    import pandas as pd
-    from jevdrive import stats
-    from pp_gap_tables import shapley
-    RES.mkdir(parents=True, exist_ok=True)
-    summary = {}
-    for bench in ("navtest", "navhard"):
-        summary[bench] = analyze_bench(bench, pd, stats, shapley)
-    json.dump(summary, open(RES / "nav_summary.json", "w"), indent=1, default=float)
-    print(json.dumps(summary, indent=1, default=float)[:20000])
+        s1 = np.array([wavg(a) for a, _ in self.sub])
+        s2 = np.array([wavg(b) for _, b in self.sub])
+        return (s1 * s2).reshape(-1, 2).mean(1), s1, s2
 
 
 def _load(bench, pd):
@@ -454,304 +439,283 @@ def _load(bench, pd):
         tab = np.load(D / "runs/op_parity/cache/lb_navtest/tab.npz")
         ix = {t: i for i, t in enumerate(tab["names"].tolist())}
         sel = np.array([ix[t] for t in toks])
-        geo = pd.DataFrame(path_geom(tab["fut"][sel].astype(np.float64)), index=toks)
-        geo["v0"], geo["log"] = tab["speed"][sel], tab["log"][sel]
-        geo["path_src"] = "logged"
         fut = tab["fut"][sel].astype(np.float64)
+        geo = pd.DataFrame(path_geom(fut), index=toks)
+        geo["v0"], geo["log"] = tab["speed"][sel], tab["log"][sel]
     else:
         z = np.load(OUT / "refpath_navhard.npz")
         ix = {t: i for i, t in enumerate(z["tokens"].tolist())}
         sel = np.array([ix[t] for t in toks])
-        rp = z["path"][sel].astype(np.float64)[:, 5::5]                     # 0.5 .. 4 s
-        geo = pd.DataFrame(path_geom(rp), index=toks)
+        fut = z["path"][sel].astype(np.float64)[:, 5::5]                     # PDM-Closed reference at 0.5 .. 4 s
+        geo = pd.DataFrame(path_geom(fut), index=toks)
         geo["v0"] = z["v0"][sel]
         tab = np.load(D / "runs/op_parity/cache/lb_navhard/tab.npz")
         li = {t: i for i, t in enumerate(tab["names"].tolist())}
         geo["log"] = [tab["log"][li[t]] for t in toks]
-        geo["path_src"] = "pdm_ref"
-        fut = rp
-        for k in tabs:
-            tabs[k] = tabs[k].loc[toks]
+    for k in tabs:
+        tabs[k] = tabs[k].loc[toks]
     geo = pd.concat([geo, buckets(geo)], axis=1)
     return tabs, rep, toks, geo, fut
+
+
+BUCKETS = {
+    "D1 sharp (R<15 m) DAC": lambda f, g: f.dac & g.sharp,
+    "D1' sharp (|dpsi|>45) DAC": lambda f, g: f.dac & g.sharp45,
+    "D2 wide (R>=15 m) DAC": lambda f, g: f.dac & g.wide,
+    "D2a wide curve 8-20 deg DAC": lambda f, g: f.dac & g.wide_curve,
+    "D2b wide turn >=20 deg DAC": lambda f, g: f.dac & g.wide_turn,
+    "context: straight DAC": lambda f, g: f.dac & ~g.turning,
+    "context: all DAC": lambda f, g: f.dac,
+    "D3 collision (NC or TTC)": lambda f, g: f.col,
+    "D3 on turning tokens": lambda f, g: f.col & g.turning,
+    "D1 + D2 + D3 union": lambda f, g: (f.dac & g.turning) | f.col,
+}
 
 
 def analyze_bench(bench, pd, stats, shapley):
     tabs, rep, toks, geo, fut = _load(bench, pd)
     n = len(toks)
-    X = {k: tabs[k].loc[toks, COLS].to_numpy(float) for k in tabs}
     arms = ["P2Hs0", "P2Hs1"]
+    X = {k: tabs[k][COLS].to_numpy(float) for k in tabs}
     rp = {k: rep[rep.key == k].set_index("token") for k in rep.key.unique()}
-    # reference sub-scores on the replayed tokens (navtest: logged human; navhard: PDM-Closed from the loss-budget prep)
-    if bench == "navtest":
-        R = pd.DataFrame(index=toks, columns=SUBS, dtype=float)
-        h = rp["HUM"]
-        R.loc[h.index, SUBS] = h[SUBS].to_numpy()
+    if bench == "navtest":                       # reference: the logged human trajectory, replayed in-process (no official v2 human run)
+        R = pd.DataFrame(np.nan, index=toks, columns=SUBS)
+        R.loc[rp["HUM"].index, SUBS] = rp["HUM"][SUBS].to_numpy()
         grp = geo.log.to_numpy()
         stage = np.ones(n, int)
-    else:
+    else:                                        # reference: PDM-Closed, the loss-budget prep's in-process rows
         prep = pickle.load(open(D / "runs/leaderboard_audit/loss_budget/prep_navhard.pkl", "rb"))
-        R = pd.DataFrame([{**{m: float(prep[t]["rows"]["ref"][m].iloc[0]) for m in SUBS}} for t in toks], index=toks)
+        R = pd.DataFrame([{m: float(prep[t]["rows"]["ref"][m].iloc[0]) for m in SUBS} for t in toks], index=toks)
         stage = tabs["WA"].stage.to_numpy()
-        lg = dict(zip(toks, geo.log))
-        agg = NavhardAgg(toks, lg)
-        grp_g = agg.log
+        agg = NavhardAgg(toks, dict(zip(toks, geo.log)))
+        grp = agg.log[tabs["WA"].group.to_numpy()]                          # token -> stage-1 log of its group
     Rx = R[SUBS[:7]].to_numpy(float)
+    F = {}
+    for k, t in tabs.items():
+        F[k] = pd.DataFrame(dict(dac=t.drivable_area_compliance < 1, nc=t.no_at_fault_collisions < 1,
+                                 col=(t.no_at_fault_collisions < 1) | (t.time_to_collision_within_bound < 1)), index=toks)
+    W = {k: (tabs[k].weight.to_numpy(float) if bench == "navhard" else None) for k in tabs}
 
-    def flags(k):
-        t = tabs[k].loc[toks]
-        f = pd.DataFrame(index=toks)
-        f["dac"] = t.drivable_area_compliance < 1
-        f["col"] = (t.no_at_fault_collisions < 1) | (t.time_to_collision_within_bound < 1)
-        f["nc"] = t.no_at_fault_collisions < 1
-        return f
-    F = {k: flags(k) for k in tabs}
-    bucket_defs = {
-        "D1 sharp (R<15 m) DAC": lambda f: f.dac & geo.sharp,
-        "D1' sharp (|dpsi|>45) DAC": lambda f: f.dac & geo.sharp45,
-        "D2 wide (R>=15 m) DAC": lambda f: f.dac & geo.wide,
-        "D2a wide curve 8-20 DAC": lambda f: f.dac & geo.wide_curve,
-        "D2b wide turn >=20 DAC": lambda f: f.dac & geo.wide_turn,
-        "straight DAC (context)": lambda f: f.dac & ~geo.turning,
-        "all DAC (context)": lambda f: f.dac,
-        "D3 collision (NC or TTC)": lambda f: f.col,
-        "D3 on turning tokens": lambda f: f.col & geo.turning,
-        "D1+D2+D3 union": lambda f: (f.dac & geo.turning) | f.col,
-    }
-
-    def board(Xa, w=None):
-        """per-unit contributions: navtest token scores (n,), navhard per-group combined (ng,) + subgroup stage1 / stage2."""
+    def board(Xa, w):
         s = score9(Xa)
-        if bench == "navtest":
-            return s, None, None
-        return agg.groups(s, w)
+        return (s, None, None) if bench == "navtest" else agg.groups(s, w)
 
-    def substitute(Xa, mask, how):
+    def substitute(Xa, m, how):
         Y = Xa.copy()
-        m = mask.to_numpy() if hasattr(mask, "to_numpy") else mask
         if how == "WA":
             Y[m] = X["WA"][m]
-        else:                                                               # reference trajectory terms, comfort stays the arm's own; clip
+        else:                                    # reference trajectory terms (NC .. LK), comfort stays the arm's own; never-worse clip
             C = Y.copy()
             C[m, :7] = Rx[m]
             ok = m & np.isfinite(Rx).all(1) & (score9(C) > score9(Y))
             Y[ok] = C[ok]
         return Y
 
-    rows, shap_rows = [], []
-    W = {k: (tabs[k].weight.to_numpy(float) if bench == "navhard" else None) for k in tabs}
     base = {k: board(X[k], W[k]) for k in arms + ["WA"]}
-    for name, fn in bucket_defs.items():
+    out = dict(n=n, base={k: 100 * float(np.nanmean(v[0])) for k, v in base.items()})
+    if bench == "navhard":
+        out["base_s12"] = {k: [100 * float(np.nanmean(v[1])), 100 * float(np.nanmean(v[2]))] for k, v in base.items()}
+        out["harness_check"] = {k: json.load(open(NH_HARNESS[k] / "harness_summary.json"))["combined"] for k in NH_HARNESS}
+    else:
+        out["csv_check"] = {k: float(np.abs(score9(X[k]) - tabs[k].score.to_numpy()).max()) for k in tabs}
+    phi = {k: shapley(X[k], X["WA"]) for k in arms}                        # gap WA - arm per token, additive over terms
+    rows, shap_rows = [], []
+    ug = grp if bench == "navtest" else agg.log
+    for name, fn in BUCKETS.items():
         for how in ("WA", "ref"):
-            d_unit, d1, d2, cnt = [], [], [], []
+            du, d1, d2, cnt = [], [], [], []
             for k in arms:
-                m = fn(F[k])
+                m = fn(F[k], geo).to_numpy()
                 cnt.append(int(m.sum()))
                 b = board(substitute(X[k], m, how), W[k])
-                d_unit.append(b[0] - base[k][0])
+                du.append(b[0] - base[k][0])
                 if bench == "navhard":
                     d1.append(b[1] - base[k][1])
                     d2.append(b[2] - base[k][2])
-            du = np.mean(d_unit, 0)
-            r = stats.bootstrap(du, grp if bench == "navtest" else grp_g)
-            row = dict(bench=bench, bucket=name, oracle=how, n_fail_s0=cnt[0], n_fail_s1=cnt[1], gain=100 * r["mean"], lo=100 * r["lo"], hi=100 * r["hi"])
+            r = stats.bootstrap(np.mean(du, 0), ug)
+            row = dict(bench=bench, bucket=name, oracle=how, n_s0=cnt[0], n_s1=cnt[1], gain=100 * r["mean"], lo=100 * r["lo"], hi=100 * r["hi"])
             if bench == "navhard":
-                lg2 = np.repeat(grp_g, 2)
-                for st, dd in (("s1", d1), ("s2", d2)):
-                    q = stats.bootstrap(np.nanmean(dd, 0), lg2)
-                    row.update({f"gain_{st}": 100 * q["mean"], f"lo_{st}": 100 * q["lo"], f"hi_{st}": 100 * q["hi"]})
+                for st, dd in (("stage1", d1), ("stage2", d2)):
+                    q = stats.bootstrap(np.mean(dd, 0), np.repeat(agg.log, 2))
+                    row.update({st: 100 * q["mean"], f"{st}_lo": 100 * q["lo"], f"{st}_hi": 100 * q["hi"]})
             rows.append(row)
-        # (c) Shapley of the WA - P2H gap, restricted to the bucket's tokens failing for P2H (seed) or WA; per term, in board points
-        phis = []
-        for k in arms:
-            phi = shapley(X[k], X["WA"])
-            m = (fn(F[k]) | fn(F["WA"])).to_numpy()
-            phis.append(np.where(m[:, None], phi, 0.0))
-        if bench == "navtest":
-            ph = np.mean(phis, 0)
-            row = dict(bench=bench, bucket=name, n_tokens=int(((fn(F["P2Hs0"]) | fn(F["WA"])).sum())))
-            tot = stats.bootstrap(ph.sum(1), grp)
-            row.update(total=100 * tot["mean"], total_lo=100 * tot["lo"], total_hi=100 * tot["hi"])
+        # (c) Shapley split of the WA - P2H gap on the bucket's tokens that fail for P2H (that seed) or for WA; points of the board mean
+        ph = np.mean([np.where((fn(F[k], geo) | fn(F["WA"], geo)).to_numpy()[:, None], phi[k], 0.0) for k in arms], 0)
+        for st in ((0,) if bench == "navtest" else (1, 2)):
+            ms = np.ones(n, bool) if st == 0 else stage == st
+            row = dict(bench=bench, bucket=name, stage=st or "all", n_tokens_s0=int(((fn(F["P2Hs0"], geo) | fn(F["WA"], geo)).to_numpy() & ms).sum()))
+            q = stats.bootstrap(ph[ms].sum(1), grp[ms])
+            row.update(total=100 * q["mean"], total_lo=100 * q["lo"], total_hi=100 * q["hi"])
             for j, t in enumerate(TERMS):
-                q = stats.bootstrap(ph[:, j], grp)
+                q = stats.bootstrap(ph[ms, j], grp[ms])
                 row.update({t: 100 * q["mean"], f"{t}_lo": 100 * q["lo"], f"{t}_hi": 100 * q["hi"]})
             shap_rows.append(row)
-        else:                                                               # per stage, unweighted token means (as pp_gap_tables)
-            ph = np.mean(phis, 0)
-            for st in (1, 2):
-                ms = stage == st
-                g = tabs["WA"].group.to_numpy()[ms]
-                row = dict(bench=bench, bucket=name, stage=st, n_tokens=int(((fn(F["P2Hs0"]) | fn(F["WA"])).to_numpy() & ms).sum()))
-                tot = stats.bootstrap(ph[ms].sum(1), g)
-                row.update(total=100 * tot["mean"], total_lo=100 * tot["lo"], total_hi=100 * tot["hi"])
-                for j, t in enumerate(TERMS):
-                    q = stats.bootstrap(ph[ms, j], g)
-                    row.update({t: 100 * q["mean"], f"{t}_lo": 100 * q["lo"], f"{t}_hi": 100 * q["hi"]})
-                shap_rows.append(row)
-    pd.DataFrame(rows).to_csv(RES / f"nav_oracle_{bench}.csv", index=False)
-    pd.DataFrame(shap_rows).to_csv(RES / f"nav_shapley_{bench}.csv", index=False)
-    # overlaps between the three directions (seed 0)
-    f0 = F["P2Hs0"]
-    sets = {"D1": f0.dac & geo.sharp, "D2": f0.dac & geo.wide, "D3": f0.col}
-    ov = {f"{x}&{y}": int((sets[x] & sets[y]).sum()) for i, x in enumerate(sets) for y in list(sets)[i + 1:]}
-    # base scores (sanity)
-    out = dict(n=n, base={k: 100 * float(np.mean(base[k][0])) for k in base}, overlap_s0=ov,
-               counts={k: {"turning": int(geo.turning.sum()), "sharp": int(geo.sharp.sum()), "wide": int(geo.wide.sum()),
-                           "sharp45": int(geo.sharp45.sum())} for k in ["geometry"]})
-    if bench == "navhard":
-        for k in base:
-            out.setdefault("base_s12", {})[k] = (100 * float(np.nanmean(base[k][1])), 100 * float(np.nanmean(base[k][2])))
-    # rates by geometry bin, with CI (failure rate per arm; seeds averaged)
+    pd.DataFrame(rows).to_csv(RES / f"nav_oracle_{bench}.csv", index=False, float_format="%.4f")
+    pd.DataFrame(shap_rows).to_csv(RES / f"nav_shapley_{bench}.csv", index=False, float_format="%.4f")
+    if bench == "navhard":                       # official gap per stage for context (unweighted token Shapley sums to the unweighted gap)
+        out["gap_unweighted_stage"] = {st: 100 * float((score9(X["WA"]) - np.mean([score9(X[k]) for k in arms], 0))[stage == st].mean()) for st in (1, 2)}
+    else:
+        out["gap"] = 100 * float((score9(X["WA"]) - np.mean([score9(X[k]) for k in arms], 0)).mean())
+    sets = {d: [BUCKETS[b](F[k], geo) for k in arms] for d, b in (("D1", "D1 sharp (R<15 m) DAC"), ("D2", "D2 wide (R>=15 m) DAC"),
+                                                                 ("D3", "D3 collision (NC or TTC)"))}
+    out["overlap"] = {f"{x}&{y}": float(np.mean([(sets[x][i] & sets[y][i]).sum() for i in (0, 1)])) for x, y in (("D1", "D2"), ("D1", "D3"), ("D2", "D3"))}
+    out["geometry_counts"] = {c: int(geo[c].sum()) for c in ("turning", "sharp", "wide", "wide_curve", "wide_turn", "sharp45")}
+    out["bucket_sizes"] = {d: float(np.mean([s.sum() for s in v])) for d, v in sets.items()}
     rate_rows = []
     for col in ("bin", "rbin"):
         for b in sorted(geo[col].unique()):
             m = (geo[col] == b).to_numpy()
-            if m.sum() < 20:
-                continue
             for metric in ("dac", "col"):
                 for arm, ks in (("P2H", arms), ("WA", ["WA"])):
-                    v = np.mean([F[k][metric].to_numpy(float) for k in ks], 0)[m]
-                    g = (grp if bench == "navtest" else geo.log.to_numpy())[m]
-                    q = stats.bootstrap(v, g)
-                    rate_rows.append(dict(bench=bench, by=col, bin=b, metric=metric, arm=arm, n=int(m.sum()), rate=100 * q["mean"],
-                                          lo=100 * q["lo"], hi=100 * q["hi"]))
-    pd.DataFrame(rate_rows).to_csv(RES / f"nav_rates_{bench}.csv", index=False)
-    out["mechanism"] = mechanism(bench, pd, stats, tabs, rp, geo, fut, F, toks, grp if bench == "navtest" else geo.log.to_numpy())
+                    q = stats.bootstrap(np.mean([F[k][metric].to_numpy(float) for k in ks], 0)[m], grp[m])
+                    rate_rows.append(dict(bench=bench, by=col, bin=b, metric=metric, arm=arm, n=int(m.sum()), rate=100 * q["mean"], lo=100 * q["lo"], hi=100 * q["hi"]))
+    pd.DataFrame(rate_rows).to_csv(RES / f"nav_rates_{bench}.csv", index=False, float_format="%.4f")
+    out["mechanism"] = mechanism(bench, pd, stats, tabs, rp, geo, fut, F, toks, grp)
     return out
 
 
 def _share(stats, x, g):
-    q = stats.bootstrap(np.asarray(x, float), g)
+    x = np.asarray(x, float)
+    q = stats.bootstrap(x, np.asarray(g))
     return dict(share=100 * q["mean"], lo=100 * q["lo"], hi=100 * q["hi"], n=q["n"])
 
 
-def plan_kin(P, fut):
-    """Plan vs logged / reference path: heading gain at 4 s, lateral offset at 1 s / 2 s (toward the inside of the turn = +),
-    speed ratio over 4 s."""
+def _arc(P):
     n = len(P)
+    return np.concatenate([np.zeros((n, 1)), np.cumsum(np.linalg.norm(np.diff(np.concatenate([np.zeros((n, 1, 2)), P[:, :, :2]], 1), axis=1), axis=2), 1)], 1)
+
+
+def plan_kin(P, fut):
+    """Plan vs logged / reference path: heading gain at 4 s (plan dpsi / path dpsi), lateral offset at 1 / 2 / 4 s along the path's normal
+    (toward the inside of the turn = +), speed ratio over 4 s (plan arc / path arc)."""
     sgn = np.sign(fut[:, -1, 2])
-    gain = np.unwrap(np.concatenate([np.zeros((n, 1)), P[:, :, 2]], 1), axis=1)[:, -1] / np.where(np.abs(fut[:, -1, 2]) > 1e-3, fut[:, -1, 2], np.nan)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        gain = np.unwrap(np.concatenate([np.zeros((len(P), 1)), P[:, :, 2]], 1), axis=1)[:, -1] / np.where(np.abs(fut[:, -1, 2]) > 0.05, fut[:, -1, 2], np.nan)
     out = dict(gain=gain)
     for t, i in (("1", 1), ("2", 3), ("4", 7)):
         h = fut[:, i, 2]
-        nrm = np.stack([-np.sin(h), np.cos(h)], 1)
-        out[f"lat{t}"] = sgn * ((P[:, i, :2] - fut[:, i, :2]) * nrm).sum(1)
-    L = lambda Q: np.linalg.norm(np.diff(np.concatenate([np.zeros((n, 1, 2)), Q[:, :, :2]], 1), axis=1), axis=2).sum(1)  # noqa: E731
-    out["speed_ratio"] = L(P) / np.maximum(L(fut), 0.5)
+        out[f"lat{t}"] = sgn * ((P[:, i, :2] - fut[:, i, :2]) * np.stack([-np.sin(h), np.cos(h)], 1)).sum(1)
+    out["speed_ratio"] = _arc(P)[:, -1] / np.maximum(_arc(fut)[:, -1], 0.5)
     return out
 
 
 def ctype_class(r):
-    """Collision type from the instrumented event (rules in the module docstring)."""
-    pre = "col" if isinstance(r.get("col_t"), float) and np.isfinite(r.get("col_t")) else "ttc"
-    if not (isinstance(r.get(f"{pre}_t"), float) and np.isfinite(r.get(f"{pre}_t"))):
+    """Collision type of one failing token from the instrumented events (rules in the module docstring)."""
+    f = lambda k: r.get(k) if r.get(k) is not None and not (isinstance(r.get(k), float) and np.isnan(r.get(k))) else None  # noqa: E731
+    pre = "col" if f("col_t") is not None else "ttc" if f("ttc_t") is not None else None
+    if pre is None:
         return "unresolved"
-    typ, ct, dh = r.get(f"{pre}_type"), r.get(f"{pre}_ctype"), abs(r.get(f"{pre}_dh", np.nan))
-    dy0 = abs(r.get(f"{pre}_dy0", np.nan)) if r.get(f"{pre}_dy0") is not None else np.nan
-    if not r.get(f"{pre}_agent", True):
+    dh = abs(f(f"{pre}_dh") or 0.0)
+    dy0 = f(f"{pre}_dy0")
+    if not f(f"{pre}_agent"):
         return "static object"
-    if typ in ("PEDESTRIAN", "BICYCLE"):
+    if f(f"{pre}_type") in ("PEDESTRIAN", "BICYCLE"):
         return "VRU"
-    if pre == "col" and ct == "STOPPED_TRACK_COLLISION":
+    ct = f(f"{pre}_ctype")
+    if ct == "STOPPED_TRACK_COLLISION" or (pre == "ttc" and (f("ttc_obj_v") or 0) < 0.5 and dh < 30):
         return "stopped vehicle ahead"
-    if pre == "col" and ct == "ACTIVE_LATERAL_COLLISION":
+    if ct == "ACTIVE_LATERAL_COLLISION":
         return "sideswipe (ego across lanes)"
-    if pre == "ttc":
-        v = r.get("ttc_obj_v", np.nan)
-        if np.isfinite(v) and v < 0.5 and dh < 30:
-            return "stopped vehicle ahead"
     if dh > 150:
         return "oncoming"
     if dh >= 30:
         return "crossing / turn conflict"
-    if np.isfinite(dy0) and dy0 > 1.5 and dh < 45:
+    if dy0 is not None and abs(dy0) > 1.5 and dh < 45:
         return "cut-in"
     return "lead vehicle"
 
 
 def mechanism(bench, pd, stats, tabs, rp, geo, fut, F, toks, g):
-    """Per direction and arm: DAC side (inside / outside), raw vs LQR-only, graze, speed at t0, heading gain, turn-in offsets; collision types,
-    plan speed vs path, WA overlap, decision-147 split (navtest eval tokens only)."""
+    """Per direction and arm: DAC side (inside / outside), raw vs LQR-only, graze, t0 speed, heading gain, turn-in offsets, decision-147 split
+    (navtest eval tokens); collision types, plan vs path speed, WA overlap. Per-token rows -> nav_tokens_<bench>.csv."""
     pos = {t: i for i, t in enumerate(toks)}
     P = {k: np.stack([plans_cache(bench)[k][t] for t in toks]) for k in ("P2Hs0", "P2Hs1", "WA")}
     kin = {k: plan_kin(P[k], fut) for k in P}
+    farc = _arc(fut)
     res, case_rows = {}, []
     dec = None
     if bench == "navtest":
         d = pd.read_parquet(D / "runs/op_probe/joint/decoders.parquet")
-        d = d[d.obj == "hinge10"].pivot_table(index="token", columns="stage", values="DAC")
-        dec = d
+        dec = d[d.obj == "hinge10"].pivot_table(index="token", columns="stage", values="DAC")
+    dsets = {"D1 sharp": geo.sharp, "D1' >45": geo.sharp45, "D2 wide": geo.wide, "D2a curve": geo.wide_curve, "D2b wide turn": geo.wide_turn,
+             "straight": ~geo.turning}
     for arm, ks in (("P2H", ["P2Hs0", "P2Hs1"]), ("WA", ["WA"])):
-        for dname, gm in (("D1 sharp", geo.sharp), ("D1' >45", geo.sharp45), ("D2 wide", geo.wide), ("D2a curve", geo.wide_curve),
-                          ("D2b wide turn", geo.wide_turn), ("straight", ~geo.turning)):
+        for dname, gm in dsets.items():
             recs = []
             for k in ks:
-                m = (F[k].dac & gm)
-                q = rp[k].reindex(m.index[m])
-                ii = np.array([pos[t] for t in q.index])
+                q = rp[k].reindex((F[k].dac & gm).pipe(lambda m: m.index[m]))
+                ii = np.array([pos[t] for t in q.index], int)
                 sgn = np.sign(geo.dpsi.to_numpy()[ii])
-                side = q.lqr_side.to_numpy(float)
-                recs.append(pd.DataFrame(dict(token=q.index, log=g[ii], key=k, inside=(side == sgn).astype(float),
-                                              raw=q.raw_out.astype(float).to_numpy(), lqr_only=(~q.raw_out.astype(bool) & q.lqr_out.astype(bool)).astype(float).to_numpy(),
-                                              graze=(q.lqr_depth < 0.3).astype(float).to_numpy(), depth=q.lqr_depth.to_numpy(float), t_first=q.lqr_t.to_numpy(float),
-                                              v0=geo.v0.to_numpy()[ii], gain=kin[k]["gain"][ii], lat1=kin[k]["lat1"][ii], lat2=kin[k]["lat2"][ii],
-                                              lat4=kin[k]["lat4"][ii], spd=kin[k]["speed_ratio"][ii], ep=tabs[k].loc[q.index, "ego_progress"].to_numpy(float),
-                                              wa_fail=F["WA"].dac.to_numpy()[ii].astype(float), hum_ok=np.nan)))
-            r = pd.concat(recs)
-            if not len(r):
+                kk = {c: v[ii] for c, v in kin[k].items()}
+                recs.append(pd.DataFrame(dict(
+                    token=q.index, log=g[ii], key=k, dpsi=geo.dpsi.to_numpy()[ii], R_min=geo.R_min.to_numpy()[ii],
+                    inside=(q.lqr_side.to_numpy(float) == sgn).astype(float), raw=q.raw_out.astype(float).to_numpy(),
+                    lqr_only=(~q.raw_out.astype(bool) & q.lqr_out.astype(bool)).astype(float).to_numpy(),
+                    graze=(q.lqr_depth < 0.3).astype(float).to_numpy(), depth=q.lqr_depth.to_numpy(float), t_first=q.lqr_t.to_numpy(float),
+                    front=q.lqr_corner.isin([0, 3]).astype(float).to_numpy(), v0=geo.v0.to_numpy()[ii], ep=tabs[k].loc[q.index, "ego_progress"].to_numpy(float),
+                    wa_fail=F["WA"].dac.to_numpy()[ii].astype(float), **kk)))
+            r = pd.concat(recs, ignore_index=True)
+            if len(r) < 3:
                 continue
             e = dict(n=len(r) / len(ks))
-            for c in ("inside", "raw", "lqr_only", "graze", "wa_fail"):
+            for c in ("inside", "raw", "lqr_only", "graze", "wa_fail", "front"):
                 e[c] = _share(stats, r[c], r.log)
-            for c in ("depth", "v0", "gain", "lat1", "lat2", "lat4", "spd", "t_first", "ep"):
+            for c in ("depth", "v0", "gain", "lat1", "lat2", "lat4", "speed_ratio", "t_first", "ep"):
                 e[c + "_med"] = float(np.nanmedian(r[c]))
-            # undershoot: plan heading change < 0.9 x path (gain < 0.9) among turning failures
             if dname != "straight":
-                e["undershoot"] = _share(stats, (r.gain < 0.9).astype(float).where(np.isfinite(r.gain)), r.log)
-                e["outside_and_undershoot"] = _share(stats, ((r.inside == 0) & (r.gain < 0.9)).astype(float).where(np.isfinite(r.gain)), r.log)
-                e["inside_and_overshoot_or_early"] = _share(stats, ((r.inside == 1) & ((r.gain > 1.1) | (r.lat2 > 0.3))).astype(float), r.log)
-                # same geometry, passing tokens: gain / lat for contrast
+                fin = np.isfinite(r.gain)
+                e["undershoot"] = _share(stats, (r.gain < 0.9)[fin], r.log[fin])
+                e["overshoot"] = _share(stats, (r.gain > 1.1)[fin], r.log[fin])
+                e["outside_undershoot"] = _share(stats, ((r.inside == 0) & (r.gain < 0.9))[fin], r.log[fin])
+                e["inside_early_or_over"] = _share(stats, (r.inside == 1) & ((r.gain > 1.1) | (r.lat2 > 0.3)), r.log)
                 ok = []
                 for k in ks:
                     mm = (~F[k].dac & gm).to_numpy()
                     ok.append(pd.DataFrame(dict(gain=kin[k]["gain"][mm], lat2=kin[k]["lat2"][mm], v0=geo.v0.to_numpy()[mm])))
                 ok = pd.concat(ok)
-                e["pass_gain_med"], e["pass_lat2_med"], e["pass_v0_med"] = float(np.nanmedian(ok.gain)), float(np.nanmedian(ok.lat2)), float(np.nanmedian(ok.v0))
+                e.update(pass_gain_med=float(np.nanmedian(ok.gain)), pass_lat2_med=float(np.nanmedian(ok.lat2)), pass_v0_med=float(np.nanmedian(ok.v0)),
+                         pass_undershoot=float(np.nanmean((ok.gain < 0.9)[np.isfinite(ok.gain)])))
             if dec is not None and arm == "P2H":
                 q = r[r.token.isin(dec.index)]
                 if len(q) >= 5:
                     dv = dec.loc[q.token]
                     e["d147_n"] = len(q)
-                    e["d147_encoder_fails"] = _share(stats, (dv["P2-V"].to_numpy() < 1).astype(float), q.log)
-                    e["d147_head_fails"] = _share(stats, (dv["P2-H"].to_numpy() < 1).astype(float), q.log)
-                    e["d147_WAenc_passes"] = _share(stats, (dv["WA-Cf"].to_numpy() >= 1).astype(float), q.log)
+                    e["d147_encoder_fails"] = _share(stats, dv["P2-V"].to_numpy() < 1, q.log)
+                    e["d147_head_fails"] = _share(stats, dv["P2-H"].to_numpy() < 1, q.log)
+                    e["d147_WAenc_passes"] = _share(stats, dv["WA-Cf"].to_numpy() >= 1, q.log)
             res[f"{arm}|{dname}"] = e
             r["bucket"], r["arm"] = dname, arm
             case_rows.append(r)
-        # collisions
         recs = []
         for k in ks:
-            m = F[k].col
-            q = rp[k].reindex(m.index[m])
-            ii = np.array([pos[t] for t in q.index])
-            cls = [ctype_class(rr) for rr in q.reset_index().to_dict("records")]
-            tc = np.where(np.isfinite(q.col_t.to_numpy(float)) if "col_t" in q else False, q.col_t if "col_t" in q else np.nan, q.ttc_t if "ttc_t" in q else np.nan)
-            recs.append(pd.DataFrame(dict(token=q.index, log=g[ii], key=k, cls=cls, nc=(tabs[k].loc[q.index, "no_at_fault_collisions"] < 1).to_numpy(),
-                                          turning=geo.turning.to_numpy()[ii], spd=kin[k]["speed_ratio"][ii], v0=geo.v0.to_numpy()[ii],
-                                          wa_fail=F["WA"].col.to_numpy()[ii], t=np.asarray(tc, float),
-                                          ego_v=np.where(np.isfinite(q.get("col_t", pd.Series(np.nan, q.index)).to_numpy(float)),
-                                                         q.get("col_ego_v", pd.Series(np.nan, q.index)), q.get("ttc_ego_v", pd.Series(np.nan, q.index))))))
-        r = pd.concat(recs)
-        e = dict(n=len(r) / len(ks), nc_share=_share(stats, r.nc.astype(float), r.log), turning=_share(stats, r.turning.astype(float), r.log),
-                 wa_fail=_share(stats, r.wa_fail.astype(float), r.log), faster=_share(stats, (r.spd > 1.1).astype(float), r.log),
-                 slower=_share(stats, (r.spd < 0.9).astype(float), r.log), spd_med=float(np.nanmedian(r.spd)))
-        e["types"] = {c: _share(stats, (r.cls == c).astype(float), r.log) for c in sorted(r.cls.unique())}
-        e["types_spd_med"] = {c: float(np.nanmedian(r.spd[r.cls == c])) for c in sorted(r.cls.unique())}
-        e["types_wa_fail"] = {c: float(r.wa_fail[r.cls == c].mean()) for c in sorted(r.cls.unique())}
+            q = rp[k].reindex(F[k].col.pipe(lambda m: m.index[m]))
+            ii = np.array([pos[t] for t in q.index], int)
+            col_t = q["col_t"] if "col_t" in q else pd.Series(np.nan, q.index)
+            ttc_t = q["ttc_t"] if "ttc_t" in q else pd.Series(np.nan, q.index)
+            t_ev = col_t.fillna(ttc_t).to_numpy(float)
+            pre = np.where(col_t.notna(), "col", "ttc")
+            get = lambda c: np.array([q[f"{p}_{c}"].iloc[j] if f"{p}_{c}" in q else np.nan for j, p in enumerate(pre)], float)  # noqa: E731
+            # plan progress vs path progress at the event time (plan poses interpolated in time)
+            tt = np.r_[0, T_POSE]
+            pa, fa = _arc(P[k][ii]), farc[ii]
+            prog = np.array([np.interp(t, tt, a) / max(np.interp(t, tt, b), 0.5) if np.isfinite(t) else np.nan for t, a, b in zip(t_ev, pa, fa)])
+            recs.append(pd.DataFrame(dict(
+                token=q.index, log=g[ii], key=k, cls=[ctype_class(x) for x in q.to_dict("records")], src=pre,
+                nc=(tabs[k].loc[q.index, "no_at_fault_collisions"] < 1).to_numpy(), turning=geo.turning.to_numpy()[ii], dpsi=geo.dpsi.to_numpy()[ii],
+                spd=kin[k]["speed_ratio"][ii], prog_at_event=prog, v0=geo.v0.to_numpy()[ii], wa_fail=F["WA"].col.to_numpy()[ii], t=t_ev,
+                ego_v=get("ego_v"), obj_v=get("obj_v"), dh=get("dh"), dx=get("dx"), dy=get("dy"), dy0=get("dy0"))))
+        r = pd.concat(recs, ignore_index=True)
+        e = dict(n=len(r) / len(ks), nc_share=_share(stats, r.nc, r.log), turning=_share(stats, r.turning, r.log), wa_fail=_share(stats, r.wa_fail, r.log),
+                 faster=_share(stats, r.spd > 1.1, r.log), slower=_share(stats, r.spd < 0.9, r.log), spd_med=float(np.nanmedian(r.spd)),
+                 prog_med=float(np.nanmedian(r.prog_at_event)), ahead_at_event=_share(stats, (r.prog_at_event > 1.1)[np.isfinite(r.prog_at_event)],
+                                                                                         r.log[np.isfinite(r.prog_at_event)]))
+        e["types"] = {c: dict(**_share(stats, r.cls == c, r.log), spd_med=float(np.nanmedian(r.spd[r.cls == c])),
+                              prog_med=float(np.nanmedian(r.prog_at_event[r.cls == c])), wa_fail=float(r.wa_fail[r.cls == c].mean()),
+                              turning=float(r.turning[r.cls == c].mean())) for c in sorted(r.cls.unique())}
         res[f"{arm}|D3 collision"] = e
         r["bucket"], r["arm"] = "D3 collision", arm
         case_rows.append(r)
-    pd.concat(case_rows).to_csv(RES / f"nav_tokens_{bench}.csv", index=False)
+    pd.concat(case_rows, ignore_index=True).to_csv(RES / f"nav_tokens_{bench}.csv", index=False, float_format="%.4f")
     return res
 
 
@@ -764,6 +728,187 @@ def plans_cache(bench):
     return _PC[bench]
 
 
+def cmd_analyze(a):
+    import pandas as pd
+    from jevdrive import stats
+    from pp_gap_tables import shapley
+    RES.mkdir(parents=True, exist_ok=True)
+    summary = {b: analyze_bench(b, pd, stats, shapley) for b in a.bench}
+    old = json.load(open(RES / "nav_summary.json")) if (RES / "nav_summary.json").exists() else {}
+    json.dump(old | summary, open(RES / "nav_summary.json", "w"), indent=1, default=float)
+    print(json.dumps({b: {k: v for k, v in s.items() if k != "mechanism"} for b, s in summary.items()}, indent=1, default=float))
+
+
+# ---------------------------------------------------------------- cases (navsim2) and figures (.venv)
+def pick_cases(pd):
+    """Typical cases (rule fixed before drawing): navtest, P2H seed 0. D1 / D2: failing tokens of the bucket with v0 > 2 m/s whose side is
+    the bucket's majority side (D1 outside, D2 by majority), the token at the median LQR depth. D3: tokens of the most frequent collision type,
+    the one at the median ego speed at the event."""
+    t = pd.read_csv(RES / "nav_tokens_navtest.csv")
+    t = t[(t.arm == "P2H") & (t.key == "P2Hs0")]
+    picks = []
+    for b in ("D1 sharp", "D2 wide"):
+        q = t[(t.bucket == b) & (t.v0 > 2)]
+        side = 0.0 if b == "D1 sharp" else float(q.inside.mode().iloc[0])
+        q = q[q.inside == side].sort_values("depth")
+        picks.append(dict(bucket=b, token=q.token.iloc[len(q) // 2], key="P2Hs0"))
+    q = t[t.bucket == "D3 collision"]
+    q = q[q.cls == q.cls.mode().iloc[0]].sort_values("ego_v")
+    picks.append(dict(bucket="D3 collision", token=q.token.iloc[len(q) // 2], key="P2Hs0", cls=q.cls.iloc[len(q) // 2]))
+    return picks
+
+
+def cmd_cases(a):
+    import pandas as pd
+    from shapely.geometry import box
+    from nuplan.common.maps.maps_datatypes import SemanticMapLayer as L
+    picks = pick_cases(pd)
+    rep = pd.read_parquet(OUT / "replay_navtest.parquet")
+    S = np.load(OUT / "replay_navtest_states.npz", allow_pickle=True)
+    srow = {(k, t): i for i, (k, t) in enumerate(zip(S["key"], S["token"]))}
+    P = plans("navtest")
+    cp = {Path(p).parent.name: p for p in glob.glob(str(MC["navtest"] / "*/*/*/metric_cache.pkl"))}
+    out = []
+    for p in picks:
+        tok = p["token"]
+        with lzma.open(cp[tok], "rb") as f:
+            mc = pickle.load(f)
+        o = np.array(mc.ego_state.rear_axle.serialize())
+        c, s = np.cos(o[2]), np.sin(o[2])
+        to_ego = lambda xy: np.stack([c * (xy[:, 0] - o[0]) + s * (xy[:, 1] - o[1]), -s * (xy[:, 0] - o[0]) + c * (xy[:, 1] - o[1])], 1)  # noqa: E731
+        am = mc.drivable_area_map
+        idc = am.get_indices_of_map_type([L.ROADBLOCK, L.INTERSECTION, L.DRIVABLE_AREA, L.CARPARK_AREA])
+        win = box(o[0] - 60, o[1] - 60, o[0] + 60, o[1] + 60)
+        polys = []
+        for k in idc:
+            gg = am._geometries[k].intersection(win)
+            for q in getattr(gg, "geoms", [gg]):
+                if q.geom_type == "Polygon" and not q.is_empty:
+                    polys.append(to_ego(np.asarray(q.exterior.coords)))
+        r = rep[(rep.key == p["key"]) & (rep.token == tok)].iloc[0].to_dict()
+        fin = lambda v: v is not None and v == v  # noqa: E731
+        tev = next((r[k] for k in ("col_t", "ttc_t", "lqr_t") if fin(r.get(k))), 2.0)
+        ti = int(round(10 * tev))
+        agents = []
+        ob = mc.observation[ti]
+        for tk in ob.tokens:
+            q = ob[tk]
+            if q.distance(win.centroid) < 60:
+                agents.append(to_ego(np.asarray(q.exterior.coords)))
+        out.append(dict(p, polys=polys, agents=agents, t_draw=0.1 * ti, plan=P[p["key"]][tok], wa=P["WA"][tok], hum=P["HUM"][tok],
+                        lqr=S["states"][srow[(p["key"], tok)]], lqr_wa=S["states"][srow[("WA", tok)]] if ("WA", tok) in srow else None,
+                        row={k: v for k, v in r.items() if isinstance(v, (int, float, str, bool)) or v is None}))
+        print("case", p, flush=True)
+    pickle.dump(out, open(OUT / "cases_navtest.pkl", "wb"))
+
+
+def cmd_figs(a):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    figs = RES / "figs"
+    figs.mkdir(parents=True, exist_ok=True)
+    C = {"P2H": "#c0504d", "WA": "#4f81bd"}
+    # 1. DAC and collision failure rate by logged radius and heading bin
+    fig, ax = plt.subplots(2, 2, figsize=(11, 7))
+    for j, bench in enumerate(("navtest", "navhard")):
+        r = pd.read_csv(RES / f"nav_rates_{bench}.csv")
+        for i, (by, order) in enumerate((("rbin", ["<8", "8-15", "15-30", "30-60", "not turning or >60"]), ("bin", ["<5", "5-20", "20-45", ">45"]))):
+            a_ = ax[i, j]
+            for o_, (arm, mk) in enumerate((("P2H", "o"), ("WA", "s"))):
+                for metric, ls in (("dac", "-"), ("col", ":")):
+                    q = r[(r.by == by) & (r.arm == arm) & (r.metric == metric)].set_index("bin").reindex(order)
+                    x = np.arange(len(order)) + (o_ - 0.5) * 0.12 + (0.06 if metric == "col" else 0)
+                    a_.errorbar(x, q.rate, yerr=[q.rate - q.lo, q.hi - q.rate], color=C[arm], ls=ls, marker=mk, ms=4, capsize=2,
+                                label=f"{arm} {'DAC fail' if metric == 'dac' else 'NC/TTC fail'}")
+            a_.set_xticks(range(len(order)))
+            a_.set_xticklabels([f"{b}\n(n {int(r[(r.by == by) & (r.bin == b)].n.iloc[0])})" if (r.by == by).any() and b in set(r[r.by == by].bin) else b for b in order], fontsize=7)
+            a_.set_xlabel("min path radius over 4 s (m)" if by == "rbin" else "|heading change| over 4 s (deg)")
+            a_.set_ylabel("failure rate (%)")
+            a_.set_title(f"{bench} ({'logged path' if bench == 'navtest' else 'PDM reference path'})", fontsize=9)
+            a_.grid(alpha=0.3)
+    ax[0, 0].legend(fontsize=7)
+    fig.tight_layout()
+    fig.savefig(figs / "nav_rates.png", dpi=130)
+    plt.close(fig)
+    # 2. DAC failure anatomy per bucket: inside / outside x raw-plan / LQR-only, for P2H and WA
+    sm = json.load(open(RES / "nav_summary.json"))
+    fig, ax = plt.subplots(1, 2, figsize=(11, 3.8))
+    for j, bench in enumerate(("navtest", "navhard")):
+        m = sm[bench]["mechanism"]
+        labels, vals = [], []
+        for b in ("D1 sharp", "D2a curve", "D2b wide turn", "straight"):
+            for arm in ("P2H", "WA"):
+                e = m.get(f"{arm}|{b}")
+                if not e:
+                    continue
+                labels.append(f"{arm}\n{b}\n(n {e['n']:.0f})")
+                vals.append([e["inside"]["share"], e["raw"]["share"], e["graze"]["share"], e.get("undershoot", {}).get("share", np.nan)])
+        V = np.array(vals)
+        x = np.arange(len(labels))
+        for k, (nm, col) in enumerate((("inside of the turn", "#9bbb59"), ("raw plan leaves (not LQR-only)", "#8064a2"), ("graze < 0.3 m", "#f79646"),
+                                       ("heading gain < 0.9", "#4bacc6"))):
+            ax[j].bar(x + (k - 1.5) * 0.2, V[:, k], 0.2, color=col, label=nm)
+        ax[j].set_xticks(x)
+        ax[j].set_xticklabels(labels, fontsize=6)
+        ax[j].set_ylabel("share of DAC failures (%)")
+        ax[j].set_title(bench, fontsize=9)
+        ax[j].set_ylim(0, 100)
+        ax[j].grid(axis="y", alpha=0.3)
+    ax[0].legend(fontsize=7, loc="upper right")
+    fig.tight_layout()
+    fig.savefig(figs / "nav_dac_anatomy.png", dpi=130)
+    plt.close(fig)
+    # 3. collision types
+    fig, ax = plt.subplots(1, 2, figsize=(11, 3.8))
+    for j, bench in enumerate(("navtest", "navhard")):
+        m = sm[bench]["mechanism"]
+        types = sorted(set(m["P2H|D3 collision"]["types"]) | set(m["WA|D3 collision"]["types"]))
+        for o_, arm in enumerate(("P2H", "WA")):
+            e = m[f"{arm}|D3 collision"]
+            v = np.array([e["types"].get(t, {}).get("share", 0) * e["n"] / 100 for t in types])
+            ax[j].barh(np.arange(len(types)) + (o_ - 0.5) * 0.4, v, 0.4, color=C[arm], label=f"{arm} (n {e['n']:.0f})")
+        ax[j].set_yticks(range(len(types)))
+        ax[j].set_yticklabels(types, fontsize=7)
+        ax[j].set_xlabel("failing tokens (NC < 1 or TTC < 1; P2H seed mean)")
+        ax[j].set_title(bench, fontsize=9)
+        ax[j].legend(fontsize=7)
+        ax[j].grid(axis="x", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(figs / "nav_collision_types.png", dpi=130)
+    plt.close(fig)
+    # 4. typical BEV cases
+    cp = OUT / "cases_navtest.pkl"
+    if cp.exists():
+        cases = pickle.load(open(cp, "rb"))
+        fig, ax = plt.subplots(1, len(cases), figsize=(5 * len(cases), 5))
+        for a_, c in zip(np.atleast_1d(ax), cases):
+            for p in c["polys"]:
+                a_.fill(p[:, 1], p[:, 0], color="#dddddd", ec="#aaaaaa", lw=0.5)
+            for p in c["agents"]:
+                a_.fill(p[:, 1], p[:, 0], color="#999999", ec="k", lw=0.6, alpha=0.8)
+            for nm, tr, col, ls in (("logged", c["hum"], "k", "--"), ("P2H plan", c["plan"], C["P2H"], "-"), ("WA-JEPA plan", c["wa"], C["WA"], "-")):
+                q = np.vstack([[0, 0, 0], tr])
+                a_.plot(q[:, 1], q[:, 0], ls, color=col, lw=1.5, marker=".", label=nm)
+            a_.plot(c["lqr"][:, 1], c["lqr"][:, 0], ":", color=C["P2H"], lw=1.5, label="P2H LQR replay")
+            r = c["row"]
+            ext = np.abs(np.vstack([c["hum"][:, :2], c["plan"][:, :2]])).max() + 8
+            a_.set_xlim(ext, -ext)
+            a_.set_ylim(-8, 2 * ext - 8)
+            a_.set_aspect("equal")
+            ttl = f"{c['bucket']}: {c['token']}\nDAC {r['drivable_area_compliance']:.0f} NC {r['no_at_fault_collisions']:.1f} TTC {r['time_to_collision_within_bound']:.0f}"
+            if c["bucket"].startswith("D3"):
+                ttl += f", {c.get('cls')}; agents at t = {c['t_draw']:.1f} s"
+            else:
+                ttl += f", depth {r.get('lqr_depth', 0):.2f} m at t = {r.get('lqr_t', 0):.1f} s"
+            a_.set_title(ttl, fontsize=8)
+            a_.legend(fontsize=6, loc="lower left")
+        fig.tight_layout()
+        fig.savefig(figs / "nav_cases.png", dpi=130)
+        plt.close(fig)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -771,6 +916,9 @@ if __name__ == "__main__":
     p.add_argument("--bench", choices=["navtest", "navhard"], required=True)
     p.add_argument("--procs", type=int, default=32)
     p.add_argument("--limit", type=int, default=0)
-    sp.add_parser("analyze")
+    p = sp.add_parser("analyze")
+    p.add_argument("--bench", nargs="+", default=["navtest", "navhard"])
+    sp.add_parser("cases")
+    sp.add_parser("figs")
     a = ap.parse_args()
-    {"replay": cmd_replay, "analyze": cmd_analyze}[a.cmd](a)
+    {"replay": cmd_replay, "analyze": cmd_analyze, "cases": cmd_cases, "figs": cmd_figs}[a.cmd](a)
