@@ -121,6 +121,7 @@ class PModel(nn.Module):
     def __init__(self, arm: str, dtype=torch.float16, pol: bool = True, act: bool = False):
         super().__init__()
         self.arm = arm
+        self.gate, self.bias_sub = 0.0, None        # serving side only (op_parity stop-gate-xboard), off by default: bias = 0 where the fed speed < gate m/s; bias_sub (32, 512) is subtracted
         tr = (L.pol_weights() if pol else []) + (act_weights() if act else [])
         self.net = A.load("cinque", dtype, trainable=tr)
         k = ARMS.get(arm, dict(ego=False, side=False))
@@ -140,7 +141,15 @@ class PModel(nn.Module):
         if self.mem and side is not None and side.dim() == 3:
             side = side[:, None, None]                                  # memory (B, 32, 512) -> side channel (B, 1 cam, 1 time, 32, 512)
         if self.adapter is not None and inputs_on:
-            H = self.adapter.apply(H, ego, side if self.adapter.use_side else None, side_mask)
+            if self.gate > 0 or self.bias_sub is not None:
+                b = self.adapter(ego, side if self.adapter.use_side else None, side_mask)
+                if self.bias_sub is not None:
+                    b = b - self.bias_sub.to(b)
+                if self.gate > 0:
+                    b = b * (ego[:, 4:5] * 10.0 >= self.gate).to(b.dtype)[:, :, None]
+                H = H + b[:, None].to(H.dtype)
+            else:
+                H = self.adapter.apply(H, ego, side if self.adapter.use_side else None, side_mask)
         H = H * valid[:, :, None, None].to(H.dtype)
         o = self.net.run_batched(A.policy_feeds(self.net, H, AT, tc.to(self.net.dtype)), ["outputs"])
         return o["outputs"].reshape(B, -1)

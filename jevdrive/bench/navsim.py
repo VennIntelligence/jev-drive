@@ -157,6 +157,12 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
     mt = json.loads((data_dir() / "runs" / "op_lb" / data / "meta.json").read_text())
     assert names.tolist() == mt["names"], "pp_prep cache rows differ from op_lb meta"
     model = T.load_pmodel(m.name, dev) if not m.ckpt else _load_ckpt(T, m.ckpt, dev)
+    if m.opt in ("sg", "dn"):                                # serving-side variants of the adapter bias (experiments/op_parity/results/stop_gate_xboard.md)
+        assert model.adapter is not None and not model.adapter.use_side, f"{m.spec}: sg / dn are defined for ego-only adapters"
+        if m.opt == "sg":
+            model.gate = SG_THRESHOLD                        # bias = 0 where the fed speed (ego vx) < 0.5 m/s, fixed
+        else:
+            model.bias_sub = nav_mean_bias(model, S, m.name, dev)
     mem = getattr(model, "mem", None)                        # front-token memory arms (pp_train --mem): bank in tab order; :noside masks it
     M = T.Tokens([T.MEM_ROOT / mem / f"{data}.npy"], dev) if mem else None
     sl = model.net.slices
@@ -182,6 +188,25 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
     _save_plans(out, names=names, plan_pos=mu[:, :, 0:3], plan_vel=mu[:, :, 3:6], plan_yaw=mu[:, :, 11], plan_mu=mu, plan_std=sd,
                 lead_prob=lp, lead_x=lx, lead_v=lv,
                 steps=31, info=json.dumps({"model": f"op_parity {m.spec}", "source": "jevdrive.bench.navsim.parity_plans", "frames": m.frames}))
+
+
+SG_THRESHOLD = 0.5
+
+
+def nav_mean_bias(model, S, tag: str, dev, save: bool = True):
+    """(32, 512) fp32 mean adapter bias over all rows of the store (navtest, decision 162 `biasdenav`); saved for the HUGSIM client
+    as $DATA_DIR/runs/bench/sg/meanbias-<tag>.npy."""
+    import torch
+    acc = torch.zeros(32, 512, dtype=torch.float64, device=dev)
+    with torch.no_grad():
+        for i in range(0, S.n, 512):
+            acc += model.adapter(S.ego[i:i + 512], None, None).double().sum(0)
+    mb = (acc / S.n).float()
+    if save:
+        f = data_dir() / "runs" / "bench" / "sg" / f"meanbias-{tag}.npy"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        np.save(f, mb.cpu().numpy())
+    return mb
 
 
 def _load_ckpt(T, ckpt: str, dev):

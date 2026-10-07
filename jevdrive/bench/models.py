@@ -45,7 +45,7 @@ class Model:
     name: str                       # registry name (P2-F-s0, cinque, fw-S3, WA-JEPA)
     family: str                     # onnx | parity | wajepa
     frames: str = ""                # navsim front protocol (default per family / tag)
-    opt: str = ""                   # parity: noside | lm
+    opt: str = ""                   # parity: noside | lm | sg (stop gate, serving) | dn (navtest-mean bias subtracted, serving)
     base: str = "cinque"            # openpilot base model (onnx family; parity arms are Cinque)
     onnx: str = ""                  # onnx family: serving ONNX ("" = the shipped file)
     ckpt: str = ""                  # parity: checkpoint (.pt); "" for P0 / *-init
@@ -154,8 +154,8 @@ def resolve(spec: str, check: bool = False) -> Model:
     if frames:
         m = replace(m, frames=frames)
     if opt:
-        if m.family != "parity" or opt not in ("noside", "lm"):
-            raise ValueError(f"{spec}: option {opt!r} is only defined for parity models (noside, lm)")
+        if m.family != "parity" or opt not in ("noside", "lm", "sg", "dn"):
+            raise ValueError(f"{spec}: option {opt!r} is only defined for parity models (noside, lm, sg, dn)")
         m = replace(m, opt=opt)
     if check:
         if m.ckpt and not Path(m.ckpt).exists():

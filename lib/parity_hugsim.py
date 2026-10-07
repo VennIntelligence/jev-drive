@@ -86,6 +86,9 @@ class ParityInputs:
         self.clock = self.cfg.get("clock", "model")
         self.zero_acc = bool(self.cfg.get("zero_acc", False))
         self.scale = float(dilation) if self.clock == "model" else 1.0
+        self.stop_gate = float(self.cfg.get("stop_gate", 0.0))       # serving-side stop gate (default off): bias = 0 while the fed speed (ego vx, model clock) < this, m/s
+        sb = self.cfg.get("sub_bias")                                # path of a (32, 512) .npy subtracted from every bias (navtest-mean bias, decision 162 `biasdenav`)
+        self.sub_bias = None if not sb else np.load(sb).astype(np.float32)
         self.back = key_steps(self.scale)
         self.sock = wire.connect_retry(self.cfg["socket"])
         wire.send(self.sock, {"cmd": "reset"}, {})
@@ -106,7 +109,7 @@ class ParityInputs:
         return {k: float((idx[k] >= 0).mean()) for k in ("road", "wide")}
 
     def describe(self) -> dict:
-        return {"server": self.server, "clock": self.clock, "zero_acc": self.zero_acc, "scale": self.scale, "key_steps_back": self.back.tolist(),
+        return {"server": self.server, "clock": self.clock, "zero_acc": self.zero_acc, "stop_gate": self.stop_gate, "sub_bias": self.sub_bias is not None, "scale": self.scale, "key_steps_back": self.back.tolist(),
                 "side_cams": list(self.yaw), "mount_yaw_deg": {c: round(y, 2) for c, y in self.yaw.items()}, "coverage": self.coverage}
 
     def bias(self, rgb: dict, info: dict, hist) -> tuple[np.ndarray, dict]:
@@ -122,6 +125,9 @@ class ParityInputs:
         wire.send(self.sock, {"cmd": "bias"}, arrays)
         meta, out = wire.recv(self.sock)
         b = out["bias"]
-        rec = {"ego": np.round(ego, 4).tolist(), "ax_raw": round(float(np.ravel(info.get("accelerate", 0.0))[0]), 4), "bias_rms": round(float(np.sqrt(np.mean(np.square(b.astype(np.float32))))), 5),
+        gated = bool(self.stop_gate > 0 and ego[4] * 10.0 < self.stop_gate)
+        if self.sub_bias is not None or gated:
+            b = np.zeros_like(b) if gated else (b.astype(np.float32) - self.sub_bias).astype(b.dtype)
+        rec = {"ego": np.round(ego, 4).tolist(), "gated": gated, "ax_raw": round(float(np.ravel(info.get("accelerate", 0.0))[0]), 4), "bias_rms": round(float(np.sqrt(np.mean(np.square(b.astype(np.float32))))), 5),
                "prep_ms": round(1e3 * (t1 - t0), 1), "rtt_ms": round(1e3 * (time.perf_counter() - t1), 1)}
         return b, rec
