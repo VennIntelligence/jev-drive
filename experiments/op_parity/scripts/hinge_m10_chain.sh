@@ -49,7 +49,7 @@ for s in 0 1; do
   sub m10-geom-s$s $L/geom-s$s --vram 0.5 --cpu 48 --ram 64 -- $NAV $S/rh.py proxy --name SH30M10-F-s$s --plans $PL --procs 48
 done
 waitdirs $L/replay $L/geom-s0 $L/geom-s1
-sub m10-report $L/report --vram 0.5 --cpu 8 --ram 32 -- $PY $S/turn_oracle.py report --name m10 --seeds 0 1 --replays s0 b0 sh sw m10 \
+sub m10-report $L/report --vram 0.5 --cpu 8 --ram 32 -- $PY $S/turn_oracle.py report --name m10 --seeds 0 1 --replays s0 b0 sh m10 \
     --arms P2H10 SH30 SH30M10 --refs SH30 P2H10 --bev SH30 SH30M10
 waitdirs $L/report
 
