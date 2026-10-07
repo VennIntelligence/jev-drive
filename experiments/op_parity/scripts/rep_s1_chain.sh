@@ -49,7 +49,7 @@ status "memory banks: ${ARMS[*]}"
 for arm in "${ARMS[@]}"; do
   k=${MEM[$arm]}
   if [[ ! -f $DATA_DIR/runs/op_parity/mem/$k/lb_navtest.npy ]]; then
-    sub rep-mem-$k $L/mem-$k --vram 0 --cpu 4 --ram 48 -- $PY $S/rep.py mem --kind $k >/dev/null; waitdirs $L/mem-$k
+    sub rep-mem-$k $L/mem-$k --vram 0.5 --cpu 4 --ram 48 -- $PY $S/rep.py mem --kind $k >/dev/null; waitdirs $L/mem-$k
   fi
 done
 

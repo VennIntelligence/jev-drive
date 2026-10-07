@@ -33,11 +33,11 @@ waitdirs $L/decode
 
 status "scoring (opb_score.py, devkit pdm_score)"
 P=$O/decoder_poses.npz
-sub rep-score-t20 $L/score-t20 --vram 0 --cpu 40 --ram 64 -- $NAV2 experiments/op_probe/scripts/opb_score.py --poses $P \
+sub rep-score-t20 $L/score-t20 --vram 0.5 --cpu 40 --ram 64 -- $NAV2 experiments/op_probe/scripts/opb_score.py --poses $P \
     --keys E V WA V+WA VJ21 V+VJ21 X4 --tokens $O/tokens_t20.txt --out $O/score_t20.csv --procs 40 >/dev/null
-sub rep-score-ev $L/score-ev --vram 0 --cpu 16 --ram 32 -- $NAV2 experiments/op_probe/scripts/opb_score.py --poses $P \
+sub rep-score-ev $L/score-ev --vram 0.5 --cpu 16 --ram 32 -- $NAV2 experiments/op_probe/scripts/opb_score.py --poses $P \
     --keys V WA V+VJ21 --tokens $O/tokens_rest_eval.txt --out $O/score_rest_eval.csv --procs 16 >/dev/null
-sub rep-score-s5 $L/score-s5 --vram 0 --cpu 24 --ram 48 -- $NAV2 experiments/op_probe/scripts/opb_score.py --poses $P \
+sub rep-score-s5 $L/score-s5 --vram 0.5 --cpu 24 --ram 48 -- $NAV2 experiments/op_probe/scripts/opb_score.py --poses $P \
     --keys V V+VJ21 --tokens $O/tokens_rest_s5.txt --out $O/score_rest_s5.csv --procs 24 >/dev/null
 waitdirs $L/score-t20 $L/score-ev $L/score-s5
 
