@@ -1,0 +1,11 @@
+scenario,runs,conv_primary,conv_secondary,base_all_clear,clear_base,clear_rule,trig_frac,scen_primary,scen_secondary
+scene-0138-extreme-00,3,0.0,1.0,0.0,0.583,0.8329999999999999,1.0,False,True
+scene-0254-extreme-00,6,0.0,1.0,0.0,0.41650000000000004,0.7776666666666667,1.0,False,True
+scene-0254-hard-00,6,0.0,1.0,0.0,0.5835,0.625,0.9165,False,True
+scene-032-medium-00,6,0.0,1.0,0.0,0.5555,0.8053333333333333,1.0,False,True
+scene-032-medium-02,6,0.0,1.0,0.0,0.347,0.7085,1.0,False,True
+scene-0411-medium-00,6,0.0,1.0,0.0,0.5,0.8329999999999999,1.0,False,True
+scene-0528-medium-00,6,0.0,1.0,0.0,0.5,0.6670000000000001,0.375,False,True
+scene-1290_1490-medium-01,5,0.0,1.0,0.0,0.43360000000000004,0.7834,1.0,False,True
+scene-2510_2710-hard-00,6,0.0,1.0,0.0,0.5,0.5,1.0,False,True
+scene-3000_3200-medium-00,6,0.5,1.0,0.5,0.9165,0.9165,0.75,True,True

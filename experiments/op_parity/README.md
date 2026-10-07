@@ -68,6 +68,11 @@ oncoming actors WA-JEPA hits too; reachable part the stopped lead, 3.8), navtest
 ~half decided at the frozen encoder), HUGSIM sharp-turn failures are 3-5x too fast junction entries; no night units on this tier. Ranked fixes with draft
 pre-registrations (agent hinge, replay hinge, lead margin): [results/four_dirs.md](results/four_dirs.md).
 
+**Lead standstill margin (2026-10-07, pre-registered, stopped at the offline gate).** Execution-layer rule (`jevdrive/openpilot/lead_margin.py`, HUGSIM opt
+`lead_margin`, NAVSIM bench option `:lm`): stored D3b HUGSIM plans converted to avoiding in 1 / 10 scenarios (gate 7; the lead head reads +4.4 m too far in
+the last 0.5 s, or tracks another object), navtest -0.75 [-0.96, -0.55] with NC + TTC failures 531 -> 565; no closed-loop run:
+[results/lead_margin.md](results/lead_margin.md), plan [plans/2026-10-07-lead-margin-prereg.md](plans/2026-10-07-lead-margin-prereg.md), `scripts/lm_offline.py`.
+
 **WOD-E2E val, P2H vs shipped (2026-10-07, measurement only).** Same harness as decision 34 (shipped RFS 8.005 reproduced), real 10 Hz frames, intent -> command, past states -> ego features: P2H10-F seed mean RFS 7.708 vs 8.005 (-0.297 [-0.501, -0.094]; s0 -0.287, s1 -0.306), ADE@3s +0.284 m, ADE@5s +0.551 m; day RFS -0.36 [-0.61, -0.12], night -0.21 [-0.72, +0.33] (n.s.). With the bias zeroed P2H weights read -0.02: the loss is the ego-state bias, not the weights: [results/wod_p2h.md](results/wod_p2h.md), `scripts/pp_wod.py`.
 
 **Representation fix design (2026-10-07, design only, not launched).** Fix 4 of four_dirs compared (encoder unfreeze + dense SDF head, JEPA front tokens as adapter

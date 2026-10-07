@@ -1,0 +1,68 @@
+{
+ "d3b_runs": 56,
+ "d3b_scenarios": 10,
+ "scen_converted_primary": 1,
+ "scen_converted_secondary": 10,
+ "runs_converted_primary": 3,
+ "runs_converted_secondary": 56,
+ "runs_base_all_clear": 3,
+ "step_clear_base": 0.533,
+ "step_clear_rule": 0.74,
+ "complete_runs": 150,
+ "complete_scenarios": 27,
+ "complete_steps": 16570,
+ "complete_trigger": 0.3876,
+ "complete_changed": 0.0471,
+ "complete_made_stop": 0.0002,
+ "complete_changed_scen_max": 0.659,
+ "complete_changed_scen_median": 0.0,
+ "gate_d3b": false,
+ "gate_complete": true,
+ "fail_why": {
+  "under_corrected (in-lane, bias > table)": 100,
+  "offset_actor (|lateral| >= 1 m)": 51,
+  "not_triggered": 24
+ },
+ "fail_why_last2": {
+  "under_corrected (in-lane, bias > table)": 72,
+  "offset_actor (|lateral| >= 1 m)": 24,
+  "not_triggered": 6
+ },
+ "clear_rule_by_k": {
+  "-12": 0.946,
+  "-11": 0.982,
+  "-10": 1.0,
+  "-9": 1.0,
+  "-8": 0.839,
+  "-7": 0.893,
+  "-6": 0.732,
+  "-5": 0.893,
+  "-4": 0.75,
+  "-3": 0.661,
+  "-2": 0.071,
+  "-1": 0.107
+ },
+ "clear_base_by_k": {
+  "-12": 0.893,
+  "-11": 0.893,
+  "-10": 0.946,
+  "-9": 0.946,
+  "-8": 0.839,
+  "-7": 0.714,
+  "-6": 0.429,
+  "-5": 0.339,
+  "-4": 0.179,
+  "-3": 0.107,
+  "-2": 0.054,
+  "-1": 0.054
+ },
+ "err_last2_inlane_triggered_median": 4.36,
+ "err_last2_offset_triggered_median": 4.92,
+ "scen_offset_actor": [
+  "scene-0254-hard-00",
+  "scene-0528-medium-00",
+  "scene-2510_2710-hard-00",
+  "scene-3000_3200-medium-00"
+ ],
+ "true_gap_last2_median": 2.07
+}
