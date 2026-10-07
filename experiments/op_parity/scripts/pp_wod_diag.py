@@ -211,7 +211,7 @@ def cmd_report(a):
             k = base.replace("-sX", "-sm")
             rfs[k], ade3[k], ade5[k] = ((d[a0] + d[a1]) / 2 for d in (rfs, ade3, ade5))
             return k
-        return a0 if a0 in rfs else None
+        return a0 if a0 in rfs else a1 if a1 in rfs else None
     bases = sorted({t.replace("-s0", "-sX").replace("-s1", "-sX") for t in list(rfs) if t not in ("shipped",) and not t.startswith("stored")})
     sm = [k for k in (seedmean(b) for b in bases) if k]
     codes_r, ur = pd.factorize(pd.Series(seq[:nr]))
