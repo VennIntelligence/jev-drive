@@ -346,6 +346,39 @@ def cmd_gate_ng(a):
     _sys.exit(0 if out["pass"] else 3)
 
 
+def cmd_ng_diag(a):
+    """Why the trained-in gate fails on navtest: on the tokens the gate touches (fed vx < 0.5 m/s), the plan's 4 s displacement and EPDMS of the gated
+    arm, the ungated reference and shipped (P0, W frames) against the logged 4 s distance, launch and stay tokens apart; and how close the gated arm's
+    plan is to shipped's there (the anchor rows train "adapter off -> shipped") -> <name>_ng_diag.{csv,md}"""
+    from jevdrive import stats
+    N = Nav()
+    t = N.toks
+    fed = np.load(D / "op_parity/cache/lb_navtest/tab.npz", allow_pickle=True)["ego"][:, 4] * 10.0
+
+    def plan(tag):
+        from jevdrive.bench.models import resolve
+        f = D / "bench/ol/lb_navtest/plans" / f"{resolve(tag).key('navtest')}.npz"
+        z = np.load(f if f.exists() else D / f"op_lb/lb_navtest/plans/warp@cinque_PP{tag}.npz", allow_pickle=True)
+        assert z["names"].tolist() == t.index.tolist(), tag
+        return z["plan_pos"][:, :, :2].astype(np.float64)
+    g = {"gated": a.arm, "ungated": a.ref, "shipped": "P0"}
+    P = {k: plan(v) for k, v in g.items()}
+    N.load({k: [v] for k, v in g.items()})
+    d4 = {k: np.linalg.norm(p[:, 20], axis=-1) for k, p in P.items()}                       # plan index 20 = 3.9 s
+    rows = []
+    for nm, m in (("gate touched (fed vx < 0.5)", fed < V_STOP), ("  launch (logged 4 s > 5 m)", (fed < V_STOP) & (t.path_len > 5).to_numpy()),
+                  ("  stay (logged 4 s <= 5 m)", (fed < V_STOP) & (t.path_len <= 5).to_numpy()), ("not touched", fed >= V_STOP)):
+        r = {"tokens": nm, "n": int(m.sum()), "logged 4 s distance, mean (m)": float(t.path_len.to_numpy()[m].mean())}
+        for k in g:
+            r |= {f"{k} d4 mean (m)": float(d4[k][m].mean()), f"{k} d4 median": float(np.median(d4[k][m])), f"{k} share d4 < 0.5 m": float((d4[k][m] < 0.5).mean()),
+                  f"{k} EPDMS": float(np.nanmean(N.col(k)[m])), f"{k} EP": float(np.nanmean(N.col(k, "EP")[m])), f"{k} EC": float(np.nanmean(N.col(k, "EC")[m]))}
+        for k in ("gated", "ungated"):
+            r[f"{k} vs shipped plan xy, mean (m)"] = float(np.linalg.norm(P[k][m] - P["shipped"][m], axis=-1).mean())
+        rows.append(r)
+    stats.write_table(rows, OUT / f"{a.name}_ng_diag")
+    print(open(OUT / f"{a.name}_ng_diag.md").read())
+
+
 def cmd_report(a):
     import pandas as pd
     from jevdrive import stats
@@ -409,6 +442,10 @@ if __name__ == "__main__":
     p.add_argument("--name", default="pilot_ng")
     p.add_argument("--arm", required=True)
     p.add_argument("--ref", default="RH0-F-s0")
+    p = sp.add_parser("ng-diag")
+    p.add_argument("--name", default="pilot")
+    p.add_argument("--arm", default="P2HG-P-s0:sg")
+    p.add_argument("--ref", default="RH0-F-s0")
     p = sp.add_parser("report")
     p.add_argument("--name", required=True)
     p.add_argument("--arms", nargs="+", required=True, help="GROUP=tag[+tag] (the per-unit seed mean); `shipped` = stored shipped Cinque (navtest: P0 under W)")
@@ -419,4 +456,4 @@ if __name__ == "__main__":
     p.add_argument("--nav-extra", nargs="*", default=[], help="extra navtest groups (e.g. MXdn=MX-F-s0:dn+MX-F-s1:dn)")
     p.add_argument("--hugsim-extra", nargs="*", default=[])
     a = ap.parse_args()
-    {"teacher8": cmd_teacher8, "bias": cmd_bias, "gate": cmd_gate, "gate-ng": cmd_gate_ng, "report": cmd_report}[a.cmd](a)
+    {"teacher8": cmd_teacher8, "bias": cmd_bias, "gate": cmd_gate, "gate-ng": cmd_gate_ng, "ng-diag": cmd_ng_diag, "report": cmd_report}[a.cmd](a)
