@@ -21,7 +21,7 @@ import s2_thinhead as T  # noqa: E402
 
 FT = T.RUNS / "ft"
 CUT, RANK, ALPHA, MH, TAU, KEEP = 14, 16, 32, 32, 0.5, T.G.KEEP * 4
-N_PRE, N_DEV, BATCH, FOLDS, EPOCHS = 6000, 600, 4, 5, 5
+N_PRE, N_DEV, BATCH, FOLDS, EPOCHS = 3000, 400, 4, 5, 5
 
 
 def lora_cls():
