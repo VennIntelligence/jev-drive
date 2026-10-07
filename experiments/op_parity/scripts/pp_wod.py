@@ -65,10 +65,15 @@ def cmd_bias(a):
     out.mkdir(parents=True, exist_ok=True)
     import pp_hugsim as H
     for tag0 in a.tags:
-        tag, _, var = tag0.partition(":")                          # variants (diagnostics): ":nobias" zero bias, ":nocmd" command one-hot zeroed
+        tag, _, var = tag0.partition(":")                          # variants (diagnostics): ":nobias" zero bias, ":nocmd" command one-hot zeroed, ":noacc" / ":kinacc" acceleration inputs
         e = ego.copy()
         if var == "nocmd":
             e[:, 1:4] = 0
+        if var == "noacc":                                         # ax = ay = 0
+            e[:, 6:8] = 0
+        if var == "kinacc":                                        # ax from the position-derived acceleration (past_kinematics "a"), ay = 0
+            from jevdrive import waymo as W
+            e[:, 6], e[:, 7] = W.past_kinematics(past)["a"] / 3.0, 0
         if H.is_shipped(tag) or var == "nobias":
             bias = np.zeros((len(names), 32, 512), np.float16)
         else:
