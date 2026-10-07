@@ -63,7 +63,9 @@ $VPY $S/rh.py pilot --name full_seedpaired --arms RMH10-F-s0 --refs P2H10-F-s0 |
 $VPY $S/rh.py pilot --name full_seedpaired_s1 --arms RMH10-F-s1 --refs P2H10-F-s1 || die "full readout s1"
 O=experiments/op_parity/results/replay_hinge
 "${B[@]}" report --bench navtest --arms RMH=RMH10-F-s0+RMH10-F-s1 --vs P2H=P2H10-F-s0+P2H10-F-s1 WA-JEPA --out $O || die "report navtest"
+# the P2H10 navhard (G) results live in the hinge lane's harness dirs; link them where jevdrive.bench looks for stored G harnesses
+for s in 0 1; do h=$DATA_DIR/runs/op_parity/navhard_gimm/harness/P2H10-F-s$s; [[ -e $h ]] || ln -s $DATA_DIR/runs/op_parity/hinge/harness/P2H10-F-s$s $h; done
 "${B[@]}" report --bench navhard --arms RMH=RMH10-F-s0@gimm+RMH10-F-s1@gimm --vs P2H=P2H10-F-s0@gimm+P2H10-F-s1@gimm WA-JEPA --out $O || die "report navhard"
-"${B[@]}" report --bench hugsim --preset spec_plan_smooth --arms RMH=RMH10-F-s0+RMH10-F-s1 --vs P2H=P2H10-F-s0+P2H10-F-s1 WA-JEPA --scenarios all64 --out $O \
+"${B[@]}" report --bench hugsim --preset spec_plan_smooth --arms RMH=RMH10-F-s0+RMH10-F-s1 --vs P2H=P2H10-F-s0+P2H10-F-s1 --scenarios all64 --out $O \
   || die "report hugsim"
 status "done"; touch "$D/DONE"

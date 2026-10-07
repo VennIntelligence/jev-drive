@@ -47,3 +47,8 @@ devkit 跟踪器是 scorer 的一部分，降低「仅回放」擦边是让 plan
 3. **转弯 token** = 日志 4 s 航向变化 |Δψ| > 20°（RM 训练掩码与闸门分层同一定义）。
 4. **闸门读法**：DAC 降幅按 paired 差（臂 − 对照，转弯 token，log 聚类 bootstrap B 10 000）的点估计 ≥ 0.4 pp，CI 只报告；「整体 per-token 分数不降」= 全 navtest paired 分数差（opb_score 的 per-token EPDMS 去掉 EC，reactive 交通）95% CI 上界 ≥ 0（即不显著下降）。R 与 RM 都过时，胜者 = 转弯 DAC 降幅大者。评测集 = 全 navtest 12 146 token。
 5. 后续若进 HUGSIM：除登记的 64 场景外，按第 149 条加评 `spec_plan_smooth`；B2D 不在范围内。
+
+## 执行结果（2026-10-07）
+
+代理验证过（p95 1.0 cm，DAC 一致 100%）→ 离线闸门过（RM 转弯 DAC 失败 −4.63 pp，胜者 RM）→ pilot 过（RMP-F-s0 对 HP-F-s0：DAC 失败 −0.40 pp，EPDMS +0.43）→ 全量 RMH10-F 两 seed 已跑（navtest +0.52、navhard +0.25 n.s.、HUGSIM `spec_plan_smooth` +0.002 n.s.）。结果页 [results/replay_hinge.md](../results/replay_hinge.md)。
+过程性偏差（不改判据）：decoder 打分因池 CPU 预算拆成 4 个 token 分片；navhard 报告时把 hinge lane 的 P2H10 harness 目录软链到 bench 查找的 `navhard_gimm/harness/`；HUGSIM 报告不含 WA-JEPA（它没有 `spec_plan_smooth` 运行，四方向页的 0.451 来自其自身 client）。

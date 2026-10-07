@@ -75,6 +75,12 @@ the last 0.5 s, or tracks another object), navtest -0.75 [-0.96, -0.55] with NC 
 
 **WOD-E2E val, P2H vs shipped (2026-10-07, measurement only).** Same harness as decision 34 (shipped RFS 8.005 reproduced), real 10 Hz frames, intent -> command, past states -> ego features: P2H10-F seed mean RFS 7.708 vs 8.005 (-0.297 [-0.501, -0.094]; s0 -0.287, s1 -0.306), ADE@3s +0.284 m, ADE@5s +0.551 m; day RFS -0.36 [-0.61, -0.12], night -0.21 [-0.72, +0.33] (n.s.). With the bias zeroed P2H weights read -0.02: the loss is the ego-state bias, not the weights: [results/wod_p2h.md](results/wod_p2h.md), `scripts/pp_wod.py`.
 
+**Replay hinge (2026-10-07, pre-registered, all gates passed).** Drivable hinge on a differentiable torch proxy of the devkit's LQR replay (`lib/lqr_proxy.py`,
+1 cm p95 / 100% DAC agreement with the devkit) + 0.5 m front-corner margin on turns: thin-decoder gate turning DAC failures -4.6 pp, pilot RMP-F-s0 vs HP-F-s0
+EPDMS +0.43 / DAC failures -0.40 pp, full RMH10-F x 2 seeds navtest **89.19 vs P2H 88.67 (+0.52 [+0.38, +0.67])**, navhard +0.25 (n.s.), HUGSIM 64
+`spec_plan_smooth` +0.002 (n.s.). The gain is all replay-only departures; raw-plan departures rise (the plan pre-compensates the devkit tracker):
+[results/replay_hinge.md](results/replay_hinge.md), plan [plans/2026-10-07-replay-hinge-prereg.md](plans/2026-10-07-replay-hinge-prereg.md), `scripts/rh.py`, `scripts/rh_chain.sh`.
+
 **Representation fix design (2026-10-07, design only, not launched).** Fix 4 of four_dirs compared (encoder unfreeze + dense SDF head, JEPA front tokens as adapter
 memory, distillation, Cinque pre-head features); recommendation: WA-Cf (ceiling, already cached) and frozen V-JEPA 2.1 front tokens as P2H adapter memory, offline decoder
 gate on the 3 154 navtest > 20 deg tokens first: [plans/2026-10-07-representation-design.md](plans/2026-10-07-representation-design.md).
