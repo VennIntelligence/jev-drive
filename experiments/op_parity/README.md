@@ -81,6 +81,13 @@ ADE@3s 0.574 vs 1.041 m (-0.47); the inputs-zeroed control WP1 is shipped (+0.00
 0.23 (dd +0.27 [-0.16, +0.74], n.s.), night ADE@3s -0.81 m; RFS bounded by the log's own 8.13: [results/wod_parity.md](results/wod_parity.md), plan
 [plans/2026-10-07-wod-parity-prereg.md](plans/2026-10-07-wod-parity-prereg.md), `scripts/wod_parity.py`.
 
+**WOD-E2E val, where WP2 loses RFS (2026-10-07, pre-registered, offline).** Gap to the top-rated rater trajectory 1.476 (log 1.456, shipped 1.582): 45 % of
+frames lose nothing, 9 % are floored and carry 34 %; WP2's path at the top-rated speed profile recovers +0.72 [+0.52, +0.93] (49 %), the top-rated path at
+WP2's speed +0.30 (20 %). WP2 equals the log only in total: -0.76 [-1.21, -0.34] at standstill, +0.47 [+0.13, +0.82] at 5-12 m/s. Where the log is rated
+low the raters' first choice goes further (52 % of the log's gap), not slower. Nothing is recoverable offline: seed ensemble -0.009, arc-length scaling
+out-of-fold +0.014 (global) / +0.018 / +0.072 (stratified; in-sample +0.11 / +0.20), all CIs contain 0:
+[results/wod_gap.md](results/wod_gap.md), plan [plans/2026-10-07-wod-gap-prereg.md](plans/2026-10-07-wod-gap-prereg.md), `scripts/wod_gap.py`.
+
 **Why P2H loses on WOD (2026-10-07, inference only).** The input-independent part of the adapter bias carries it: P2H with the bias minus its mean scores +0.097 [+0.009, +0.194] vs shipped (main -0.297), the constant alone -1.11; no ego-mapping intervention moves RFS (acceleration, speed source, yaw, pose history, all within 0.07); hinge irrelevant (P2-F -0.33), P1 +0.01. The loss is the speed profile (P2H path at shipped speed +0.06): rolling from standstill (stopped frames -0.69, +0.94 m at 3 s) and shorter at speed; under warp-synthesised WOD frames P2H is level with shipped (+0.05, interaction +0.35 [+0.13, +0.57]). Serving fix without WOD data: subtract the navtest-mean bias, +0.091 [+0.000, +0.188] (NAVSIM effect untested): [results/wod_p2h_diag.md](results/wod_p2h_diag.md), `scripts/pp_wod_diag.py`.
 
 **Replay hinge (2026-10-07, pre-registered, all gates passed).** Drivable hinge on a differentiable torch proxy of the devkit's LQR replay (`lib/lqr_proxy.py`,
