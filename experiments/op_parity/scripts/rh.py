@@ -335,6 +335,44 @@ def cmd_report(a):
     print(json.dumps(gate, indent=1))
 
 
+# ---------------------------------------------------------------- pilot / full-stage readout (bench navtest per-token scores)
+def cmd_pilot(a):
+    """Arm vs reference on navtest from the bench's per-token scores (W frames): DAC failure and EPDMS, paired, log-clustered."""
+    import pandas as pd
+    from jevdrive import stats
+    rd = lambda m: pd.read_csv(D / "runs/bench/navtest" / f"{m}@warp" / "scores.csv").set_index("token")  # noqa: E731
+    arms = {m: rd(m) for m in a.arms + a.refs}
+    toks = sorted(set.intersection(*[set(d.index) for d in arms.values()]))
+    tab = np.load(TAB)
+    tp = {t: i for i, t in enumerate(tab["names"].tolist())}
+    rows = np.array([tp[t] for t in toks])
+    logs = tab["log"][rows]
+    d = np.abs(np.degrees(np.arctan2(np.sin(tab["fut"][rows, 7, 2]), np.cos(tab["fut"][rows, 7, 2]))))
+    strata = [("all", np.ones(len(toks), bool)), ("turn > 20 deg", d > TURN_DEG), ("< 5 deg", d < 5), ("5-20 deg", (d >= 5) & (d <= 20)),
+              ("20-45 deg", (d > 20) & (d <= 45)), ("> 45 deg", d > 45)]
+    mets = [("EPDMS", lambda x: x["score"].to_numpy() * 100), ("DAC fail pp", lambda x: (x["drivable_area_compliance"].to_numpy() < 1) * 100.0),
+            ("NC fail pp", lambda x: (x["no_at_fault_collisions"].to_numpy() < 1) * 100.0), ("EP x100", lambda x: x["ego_progress"].to_numpy() * 100),
+            ("LK x100", lambda x: x["lane_keeping"].to_numpy() * 100), ("TTC fail pp", lambda x: (x["time_to_collision_within_bound"].to_numpy() < 1) * 100.0)]
+    out, verdict = [], {}
+    for m in a.arms:
+        for r in a.refs:
+            for sname, k in strata:
+                for met, f in mets:
+                    x = stats.paired(f(arms[m].loc[toks])[k], f(arms[r].loc[toks])[k], groups=logs[k])
+                    out.append(dict(contrast=f"{m} - {r}", stratum=sname, metric=met, n=int(k.sum()), arm=x["mean_a"], ref=x["mean_b"],
+                                    diff=x["mean"], lo=x["lo"], hi=x["hi"], logs=x["units"]))
+            g = {o["metric"]: o for o in out if o["contrast"] == f"{m} - {r}" and o["stratum"] == "all"}
+            verdict[f"{m} - {r}"] = dict(dac_fail_drop_pp=-g["DAC fail pp"]["diff"], epdms_diff=g["EPDMS"]["diff"],
+                                         epdms_ci=[g["EPDMS"]["lo"], g["EPDMS"]["hi"]], dac_ci=[-g["DAC fail pp"]["hi"], -g["DAC fail pp"]["lo"]],
+                                         pass_=bool(-g["DAC fail pp"]["diff"] >= a.dac_pp and g["EPDMS"]["diff"] >= a.epdms))
+    RES.mkdir(parents=True, exist_ok=True)
+    stats.write_table(out, RES / f"{a.name}_paired", floatfmt=".3f", note="paired arm - ref, navtest W frames, cluster bootstrap over logs, B 10 000")
+    (RES / f"{a.name}.json").write_text(json.dumps(verdict, indent=1))
+    print(json.dumps(verdict, indent=1))
+    if a.gate and not all(v["pass_"] for v in verdict.values()):
+        sys.exit(3)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -350,6 +388,13 @@ if __name__ == "__main__":
     p.add_argument("--stop-after", type=int, default=0, help="debug: stop each arm after N steps (schedule still over --steps)")
     p.add_argument("--debug", action="store_true")
     p = sp.add_parser("merge")
+    p = sp.add_parser("pilot")
+    p.add_argument("--arms", nargs="+", required=True)
+    p.add_argument("--refs", nargs="+", required=True)
+    p.add_argument("--name", default="pilot")
+    p.add_argument("--dac-pp", type=float, default=0.3)
+    p.add_argument("--epdms", type=float, default=0.2)
+    p.add_argument("--gate", action="store_true", help="exit 3 unless every arm - ref contrast passes")
     p = sp.add_parser("report")
     a = ap.parse_args()
-    {"proxy": cmd_proxy, "train": cmd_train, "merge": cmd_merge, "report": cmd_report}[a.cmd](a)
+    {"proxy": cmd_proxy, "train": cmd_train, "merge": cmd_merge, "report": cmd_report, "pilot": cmd_pilot}[a.cmd](a)
