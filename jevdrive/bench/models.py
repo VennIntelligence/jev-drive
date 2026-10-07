@@ -6,7 +6,9 @@ Name syntax: `<name>[@<frames>][:<opt>]`
   frames  NAVSIM front protocol of the open-loop readouts (docs/bench.md "Frame protocols"): gimm (G, GIMM-synthesised 0.2 s
           pairs), warp (W, CPU ego-motion warp), keys (N, the 2 Hz keyframes only), real (lb_hq_navtestX only), vh140 (1.40 m
           virtual camera). HUGSIM / CARLA render their own frames, so the key of a closed-loop run ignores it.
-  opt     parity models: `noside` masks every side / rear camera at test time (navsim plans only).
+  opt     parity models: `noside` masks every side / rear camera at test time (navsim plans only); `lm` exports the plan through
+          the lead standstill margin (jevdrive/openpilot/lead_margin.py, op_interp adapter `lm`; navsim only, HUGSIM takes it as
+          the agent option `{"lead_margin": {}}`).
 
 Families
   onnx            shipped openpilot models (cinque, lebowski, small) and op_guard candidates (an adapted ONNX without a
@@ -43,7 +45,7 @@ class Model:
     name: str                       # registry name (P2-F-s0, cinque, fw-S3, WA-JEPA)
     family: str                     # onnx | parity | wajepa
     frames: str = ""                # navsim front protocol (default per family / tag)
-    opt: str = ""                   # parity: noside
+    opt: str = ""                   # parity: noside | lm
     base: str = "cinque"            # openpilot base model (onnx family; parity arms are Cinque)
     onnx: str = ""                  # onnx family: serving ONNX ("" = the shipped file)
     ckpt: str = ""                  # parity: checkpoint (.pt); "" for P0 / *-init
@@ -152,8 +154,8 @@ def resolve(spec: str, check: bool = False) -> Model:
     if frames:
         m = replace(m, frames=frames)
     if opt:
-        if m.family != "parity" or opt != "noside":
-            raise ValueError(f"{spec}: option {opt!r} is only defined for parity models (noside)")
+        if m.family != "parity" or opt not in ("noside", "lm"):
+            raise ValueError(f"{spec}: option {opt!r} is only defined for parity models (noside, lm)")
         m = replace(m, opt=opt)
     if check:
         if m.ckpt and not Path(m.ckpt).exists():

@@ -36,7 +36,7 @@ Keys (values in SPEC):
                                   gt-latch (nored) is forbidden
   inputs.extra          ()        model inputs besides the road / wide frames, desire and traffic convention (modeld feeds none):
                                   ego-status (speed / acceleration), pose-history, side-cams (experiments/op_parity)
-  tricks                ()        harness post-processing outside openpilot (forward_only, coast_v, x1.06, selector, ...)
+  tricks                ()        harness post-processing outside openpilot (forward_only, coast_v, x1.06, selector, lead_margin, ...)
 """
 import json
 import os
@@ -85,7 +85,9 @@ DECLARED = {
         "lateral.exec": ("LB", "scorer LQR + bicycle, not ours to change", "d112"),
         "lon.source": ("LB", "plan speed profile replayed by the scorer", "d97"),
         "command.channel": ("LB", "driving-command one-hot only in the lc@-1.0 desire arm (not the headline)", "d66, d92"),
-        "tricks": ("semi", "lever (rear-axle pose) and retime adapters; selector sel-rot0-r0.6 when named", "d94, d107"),
+        "tricks": ("semi", "lever (rear-axle pose) and retime adapters; selector sel-rot0-r0.6 when named; lead_margin (export "
+                           "adapter lm: the plan's speed profile capped short of the model's own bias-corrected lead distance, "
+                           "jevdrive/openpilot/lead_margin.py)", "d94, d107, op_parity lead_margin"),
     },
     "wod": {
         "rig.height_m": ("LB", "front camera z 1.8065 m (true ~1.86 m); virtual heights hX.XX are an offline arm", "d108"),
@@ -125,7 +127,9 @@ DECLARED = {
                                      "side / rear camera renders, through lib/parity_adapter.py's bias (WA-JEPA's inputs)",
                          "op_parity"),
         "tricks": ("semi", "forward_only / straight_stop plan post-processing; simulator initial speed 1.0 m/s; optional "
-                           "derot / selector / launch_stab / launch_long arms", "d90, d96"),
+                           "derot / selector / launch_stab / launch_long arms; lead_margin (the plan's speed profile capped short of "
+                           "the model's own bias-corrected lead distance, jevdrive/openpilot/lead_margin.py)",
+                   "d90, d96, op_parity lead_margin"),
     },
     "b2d": {
         "rig.height_m": ("LB", "spec camera aligned with the open-loop boards' viewpoint (mean of NAVSIM CAM_F0 and WOD front, "
@@ -215,10 +219,11 @@ def write(run_dir, rec, name="interface.json"):
 
 
 # ------------------------------------------------------------------------------------------------ board resolvers
-def resolve_navsim(vcam=None, frames="gimm", schedule="none", adapter="lever", selector=None):
-    """scripts/op_lb.py run / op_interp export: vcam None = CAM_F0 at its true height (1.87 m); vcam H = a virtual camera."""
+def resolve_navsim(vcam=None, frames="gimm", schedule="none", adapter="lever", selector=None, lead_margin=False):
+    """scripts/op_lb.py run / op_interp export: vcam None = CAM_F0 at its true height (1.87 m); vcam H = a virtual camera.
+    lead_margin: the export adapter `lm` (jevdrive/openpilot/lead_margin.py on the plan before the lever arm)."""
     h = 1.87 if vcam in (None, 0, 0.0) else float(vcam)
-    tricks = [adapter] + (["selector:%s" % selector] if selector else [])
+    tricks = [adapter] + (["selector:%s" % selector] if selector else []) + (["lead_margin"] if lead_margin else [])
     return {"rig.height_m": h, "rig.wide": "crop1", "history.frames": "synth-" + frames, "history.rate_hz": 5.0,
             "history.clock": "synth", "history.warmup": "cold", "lateral.source": "plan", "lateral.exec": "scorer-lqr",
             "lon.source": "plan-scorer", "command.channel": "none" if schedule == "none" else "desire-schedule:" + schedule,
@@ -265,6 +270,7 @@ def resolve_hugsim(opts, controller, dataset="nuscenes", op_ctrl_env=None):
     dil = 1.0 if hold else float(o.get("dilation", 1.25))
     tricks = [k for k in ("forward_only", "straight_stop") if o.get(k, True)] + ["init_speed_1.0"]
     tricks += [k for k in ("derot_below", "derot_sel", "lstab", "launch_long", "engage_s") if o.get(k)]
+    tricks += ["lead_margin"] if o.get("lead_margin") is not None else []
     vals = {"rig.height_m": HUGSIM_HEIGHT.get(dataset, 1.5), "rig.level": dataset != "kitti360", "rig.wide": "stitched3",
             "history.frames": "render", "history.rate_hz": 4.0, "history.clock": "hold" if hold else "dilate",
             "history.warmup": "static" if warm > 0 else "cold",

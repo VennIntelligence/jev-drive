@@ -59,8 +59,13 @@ def plan_file(m: Model, bench: str) -> Path:
     return data_dir() / "runs" / OL_REL / NAVSIM[bench]["data"] / "plans" / f"{stem(m)}.npz"
 
 
+def adapter(m: Model) -> str:
+    """op_interp nav-export adapter: `base` (lever arm), `lm` for the `:lm` option (base + jevdrive/openpilot/lead_margin.py)."""
+    return "lm" if m.opt == "lm" else "base"
+
+
 def pred_file(m: Model, bench: str) -> Path:
-    return data_dir() / "runs" / OL_REL / NAVSIM[bench]["data"] / "preds" / f"{stem(m).replace('@', '-')}__base.npz"
+    return data_dir() / "runs" / OL_REL / NAVSIM[bench]["data"] / "preds" / f"{stem(m).replace('@', '-')}__{adapter(m)}.npz"
 
 
 def cache_dir(data: str, frames: str) -> Path:
@@ -96,7 +101,7 @@ def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "
         S.append(R.Stage("plans", R.stage_cmd("jev", "onnx-plans", m.spec, bench, pf), done=str(pf), vram=24, cpu=16, ram=32, tries=2))
     pr = pred_file(m, bench)
     S.append(R.Stage("export", [R.py("jev"), str(REPO / "experiments/op_openloop/lib/op_interp.py"), "nav-export", "--data", data,
-                                "--adapters", "base", "--plans", stem(m)],
+                                "--adapters", adapter(m), "--plans", stem(m)],
                      done=str(pr), env={"OPI_ROOT": OL_REL}, vram=0.5, cpu=2, ram=8, after=["plans"]))
     if bench == "navtest":
         k = shards or default_shards()
@@ -155,6 +160,9 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
     pi = np.arange(sl["plan"].start, sl["plan"].start + 495)
     ps = np.arange(sl["plan"].start + 495, sl["plan"].start + 990)
     mu, sd = np.zeros((S.n, 33, 15), np.float32), np.zeros((S.n, 33, 15), np.float32)
+    # lead head as the HUGSIM server decodes it (jevdrive.openpilot.model.decode; hugsim_zs_server.lead_xv): selection 0 at t = 0
+    lp, lx, lv = (np.full(S.n, np.nan, np.float32) for _ in range(3))
+    has_lead = "lead" in sl and "lead_prob" in sl
     with torch.no_grad():
         for i in range(0, S.n, batch):
             r = torch.arange(i, min(i + batch, S.n), device=dev)
@@ -162,7 +170,13 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
             o = model(S.front[r], S.ego[r], S.tc[r], S.side[r] if side_ok else None, mask).float().cpu().numpy()
             mu[i:i + len(r)] = o[:, pi].reshape(-1, 33, 15)
             sd[i:i + len(r)] = np.exp(np.minimum(o[:, ps], 11)).reshape(-1, 33, 15)
+            if has_lead:
+                ld = o[:, sl["lead"]]
+                ld = ld[:, : ld.shape[1] // 2].reshape(-1, 3, 6, 4)
+                lp[i:i + len(r)] = 1 / (1 + np.exp(-np.clip(o[:, sl["lead_prob"]][:, 0], -11, None)))
+                lx[i:i + len(r)], lv[i:i + len(r)] = ld[:, 0, 0, 0], ld[:, 0, 0, 2]
     _save_plans(out, names=names, plan_pos=mu[:, :, 0:3], plan_vel=mu[:, :, 3:6], plan_yaw=mu[:, :, 11], plan_mu=mu, plan_std=sd,
+                lead_prob=lp, lead_x=lx, lead_v=lv,
                 steps=31, info=json.dumps({"model": f"op_parity {m.spec}", "source": "jevdrive.bench.navsim.parity_plans", "frames": m.frames}))
 
 

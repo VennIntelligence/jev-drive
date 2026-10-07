@@ -52,6 +52,11 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      (interface lon.resume = rule). After forward_only / straight_stop, while the rule is launching, the plan is
                      re-timed along its own path to max(its own arc, the rule's launch profile); lateral untouched (op_ctrl);
                      inputs: simulator time and speed, the model's lead head, the plan's 1 s distance
+                     lead_margin (openpilot, dict of jevdrive/openpilot/lead_margin.py keys, {} = the pre-registered values, default
+                     off; experiments/op_parity/plans/2026-10-07-lead-margin-prereg.md): after forward_only and before straight_stop,
+                     when the model's lead head reports a lead (prob > 0.5) the plan's speed profile is capped along its own path so
+                     that it stops d_min short of the bias-corrected lead distance (lead_v converted to simulator m/s by the
+                     dilation); lateral untouched (op_ctrl curvature comes from the model)
                      parity (openpilot, dict, default off; experiments/op_parity, lib/parity_hugsim.py): {"socket": the parity bias
                      server, "clock": "model" | "sim"}; every step the agent sends the ego status, 4-pose history, route command
                      (and, for an arm that reads them, the side / rear camera key frames) to that server and passes the returned
@@ -85,6 +90,7 @@ import zeroshot_wire as wire  # noqa: E402
 from jevdrive import hugsim_zs as Z  # noqa: E402
 from jevdrive.openpilot import interface as IF  # noqa: E402
 from jevdrive.openpilot import resume as RR  # noqa: E402
+from jevdrive.openpilot import lead_margin as LM  # noqa: E402
 sys.path.insert(0, str(ROOT / "lib"))
 import launch_stab as LS  # noqa: E402
 import launch_long as LL  # noqa: E402
@@ -310,6 +316,17 @@ class Agent:
                 if not np.allclose(fwd, plan):
                     rec["raw_plan"] = np.round(plan, 3).tolist()
                 plan = fwd
+            if self.opts.get("lead_margin") is not None and self.model != "alpamayo":
+                if not hasattr(self, "lm"):
+                    self.lm = LM.LeadMargin(self.opts["lead_margin"])
+                dil = 1.0 if self.opts.get("op_clock", "dilate") == "hold" else float(self.opts.get("dilation", 1.25))
+                lv = rec.get("lead_v")
+                xy, _, info = self.lm(np.r_[[[0.0, 0.0]], plan], np.r_[0.0, Z.plan_times()], rec.get("lead_prob"),
+                                      rec.get("lead_x"), None if lv is None else lv / dil)   # lead_v: model m/s -> simulator m/s
+                rec["lm"] = info
+                if info["changed"]:
+                    rec["plan_before_lm"] = np.round(plan, 3).tolist()
+                    plan = xy[1:]
             if self.opts.get("straight_stop", True):
                 st = Z.straight_stop(plan)
                 if not np.array_equal(st, plan):

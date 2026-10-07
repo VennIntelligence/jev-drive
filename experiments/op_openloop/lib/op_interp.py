@@ -273,15 +273,21 @@ def _step_times(times, cr):
 # ---------------------------------------------------------------- readouts
 
 ADAPTERS = {"base": dict(mode="lever"), "retime": dict(mode="lever", retime=True), "nolever": dict(mode="none"),
-            "shift": dict(mode="shift"), "cubic": dict(mode="lever", interp="cubic")}
+            "shift": dict(mode="shift"), "cubic": dict(mode="lever", interp="cubic"),
+            "lm": dict(mode="lever", lead_margin=True)}     # base + jevdrive/openpilot/lead_margin.py (needs the plan file's lead_* columns)
 
 
-def adapt(z, i, mt, t_out, mode="lever", retime=False, interp="linear"):
+def adapt(z, i, mt, t_out, mode="lever", retime=False, interp="linear", lead_margin=False):
     T_IDXS = I.T_IDXS
     pos, yaw = z["plan_pos"][i], z["plan_yaw"][i]
     r = 1.0
     if retime:
         pos, yaw, r = I.retime(pos, yaw, z["plan_vel"][i], T_IDXS, float(mt["speed"][i]))
+    if lead_margin:            # camera-frame plan, model time = real time on NAVSIM; the shared rule of the HUGSIM client
+        from jevdrive.openpilot import lead_margin as LM
+        xy, (yaw, zc), _ = LM.apply(pos[:, :2], T_IDXS, float(z["lead_prob"][i]), float(z["lead_x"][i]), float(z["lead_v"][i]),
+                                    extra=(yaw, pos[:, 2]))
+        pos = np.c_[xy, zc]
     return I.to_rear(pos, yaw, T_IDXS, mt["cam"][i][:2], t_out, mode, interp), r
 
 
