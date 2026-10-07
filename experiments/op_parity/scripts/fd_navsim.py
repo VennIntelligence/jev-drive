@@ -761,6 +761,19 @@ def cmd_analyze(a):
     summary = {b: analyze_bench(b, pd, stats, shapley) for b in a.bench}
     old = json.load(open(RES / "nav_summary.json")) if (RES / "nav_summary.json").exists() else {}
     json.dump(old | summary, open(RES / "nav_summary.json", "w"), indent=1, default=float)
+    rows = []                                    # flat mechanism table: one row per (bench, arm | bucket, quantity)
+    for b, sm in (old | summary).items():
+        for key, e in sm["mechanism"].items():
+            arm, bucket = key.split("|")
+            for c, v in e.items():
+                if isinstance(v, dict) and "share" in v:
+                    rows.append(dict(bench=b, arm=arm, bucket=bucket, quantity=c, value=v["share"], lo=v["lo"], hi=v["hi"], n=v["n"]))
+                elif c == "types":
+                    rows += [dict(bench=b, arm=arm, bucket=bucket, quantity=f"type: {t}", value=x["share"], lo=x["lo"], hi=x["hi"], n=x["n"],
+                                  note=f"spd_med {x['spd_med']:.2f}, wa_fail {x['wa_fail']:.2f}, turning {x['turning']:.2f}") for t, x in v.items()]
+                elif isinstance(v, (int, float)):
+                    rows.append(dict(bench=b, arm=arm, bucket=bucket, quantity=c, value=v))
+    pd.DataFrame(rows).to_csv(RES / "nav_mechanism.csv", index=False, float_format="%.4f")
     print(json.dumps({b: {k: v for k, v in s.items() if k != "mechanism"} for b, s in summary.items()}, indent=1, default=float))
 
 
