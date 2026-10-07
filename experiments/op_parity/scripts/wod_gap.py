@@ -75,7 +75,9 @@ def main(a):
         S = Z.load_sets()
         r, x = S["rater"], S["extra"]
         n = len(r["name"])
-        assert set(r["sequence"].astype(str)) == set(val.members) and len(set(r["sequence"])) == n, "rater frames != wod/val sequences"
+        assert set(r["sequence"].astype(str)) <= set(val.members), "rater frames outside wod/val"
+        scode, su = pd.factorize(pd.Series(r["sequence"].astype(str)))            # 479 rater frames in 478 sequences: resample and fold by sequence
+        ns = len(su)
         names = np.concatenate([r["name"], x["name"]]).astype(str)
         seq = np.concatenate([r["sequence"], x["sequence"]]).astype(str)
         fut = np.concatenate([r["future"], x["future"]])[..., :2].astype(np.float64)
@@ -99,7 +101,7 @@ def main(a):
             m = M if rows is None else M * np.asarray(rows, float)[:, None]
             cnt = m.sum(0)
             return float(((m * f[:, None]).sum(0)[cnt > 0] / cnt[cnt > 0]).mean())
-        K = np.stack([np.bincount(d, minlength=n) for d in np.random.default_rng(0).integers(n, size=(B, n))]).astype(float)  # one frame per sequence
+        K = np.stack([np.bincount(d, minlength=ns) for d in np.random.default_rng(0).integers(ns, size=(B, ns))]).astype(float)[:, scode]  # draws of sequences
 
         def ci(d, rows=None):
             """Cluster-mean of the per-frame difference d on `rows`: point, lo, hi (paired bootstrap over sequences)."""
@@ -355,7 +357,7 @@ def main(a):
         def oof(SKm, cell):
             acc, picks = np.zeros(n), []
             for rep in range(REPEATS):
-                fold = np.random.default_rng(rep).permutation(n) % FOLDS
+                fold = (np.random.default_rng(rep).permutation(ns) % FOLDS)[scode]
                 for f in range(FOLDS):
                     ks = fit(SKm, cell, fold != f)
                     te = fold == f
@@ -407,7 +409,7 @@ def main(a):
                          "w_gap": (w * gapw)[f]})
         stats.write_table(figs, OUT / "figures")
         run.info("figures:\n%s", pd.DataFrame(figs).to_string(float_format=lambda v: f"{v:.3f}"))
-        meta = dict(n=n, B=B, clusters=dict(zip(cu, np.bincount(ccode).tolist())), split=val.id, retime_self_err=self_err, grid=GRID.tolist(), folds=FOLDS,
+        meta = dict(n=n, n_sequences=ns, B=B, clusters=dict(zip(cu, np.bincount(ccode).tolist())), split=val.id, retime_self_err=self_err, grid=GRID.tolist(), folds=FOLDS,
                     repeats=REPEATS, reproduce={k: cm(sco[k]) for k in ("shipped", "WP2", "WP1", "log", "top", "second", "worst")},
                     wp2_minus_shipped=ci(sco["WP2"] - sco["shipped"]), per_seed={f"WP2-s{s}": cm(Pp["WP2"][s]["score"]) for s in (0, 1)},
                     strata_n={k: int(np.asarray(v).sum()) for k, v in st.items()})
