@@ -150,6 +150,25 @@ worker job (6 slots) had its servers up in ~45 s and ran 58 of the 64 scenarios 
 first worker started, with no retry and no server restart. navtest: plans + export ~1 min, one 4 000-token scoring shard ~3 min
 on 24 threads, so ~5 min on an idle 75-core box (here 22 min, waiting for CPU behind the other lane).
 
+## Migration acceptance (2026-10-07)
+
+Batches 1 and 2 are implemented and verified. Mac / box regression coverage includes run identity, parameter transport,
+gate verdicts, bench-first result readers, legacy publishing, trace resolution, independent repeats, leased execution,
+completeness failures and deadline cancellation. The Linux watchdog also passes on the box.
+
+- Legacy navtest reader against bench: all 12,146 P2-F-s0 tokens and nine sub-scores have max absolute difference 0.
+- Legacy navhard reader against bench: all 225 P0 GIMM groups' combined / stage-1 / stage-2 scores have max difference 0.
+- GPU smoke: 18 independent configurations on `scene-0013-medium-00`, all complete without missing scenarios. Covered
+  fixed / fixed2 / ideal / official / fixedc / lowspeed / lowsel / opctrl_long trees, launch / derotation / resume rules,
+  cold / hold / smooth / MPC presets, H checkpoint export, custom ONNX and WA-JEPA. These are execution checks, not
+  replacement full-exam scientific results. Each resumes with every stage already finished.
+- `H-it_dw3-s0` no-adapter export: both 134-frame streams have max plan xy difference 0.125 m, below the 0.5 m gate.
+- Legacy CSV export preserves all 18 actual trace paths (all have `infos.pkl`; the 17 openpilot runs also have
+  `zs_steps.jsonl`; the shipped WA-JEPA client does not emit that file).
+
+Box manifest: `$DATA_DIR/runs/bench/migration-smoke.json`; independent runs use repeat `migration-smoke`. Small compatibility
+exports live in `$DATA_DIR/runs/bench/migration-legacy`. Existing scientific result directories were not overwritten.
+
 ## Adding things
 
 - A model: add a `Model` to `STATIC` in `models.py` (or a family branch in `resolve`), its plans function in `navsim.py`, its
@@ -193,7 +212,7 @@ outside a job that already reserves GPU resources. Do not replace a leased worke
 
 The first batch is these **eight entries' standard evaluation sections**, plus the readers they feed. It does not require
 another scheduler or changes to model training. `pp_eval.py`'s standard plans / v2 scoring and generic arm / paired tables,
-`pp_full_report.py`, and the generic parts of `pp_navhard.py` / `pp_hugsim_report.py` can delegate to bench. Custom extraction,
+`pp_full_report.py`, and the generic parts of `pp_navhard.py` / `pp_hugsim_report.py` now use the shared execution / readers. Custom extraction,
 pixel equivalence, gate calculations, plots and timeline diagnostics stay in their topics and consume bench outputs.
 
 ### Shared HUGSIM extensions completed (batch 2)
@@ -209,10 +228,8 @@ CARLA branches, route adapters, custom NAVSIM metrics/predictions and WA-JEPA NA
 | Existing family / entries | Missing piece before migration | Size |
 |---|---|---|
 | `op_guard/scripts/{navlib,line_navtest,line_navhard}.py` | Guard navtest is **v1 PDMS**, bench navtest is **v2 EPDMS**. Add an explicit metric/version identity, v1 collector and score columns. Keep frozen subset membership, force/provenance rules, early-turn readout and the original gate / CI semantics. Navhard full mode also cross-checks the devkit script against the harness. | Medium |
-| `op_guard/scripts/{cllib,line_hugsim,guard_hugsim}.py/.sh` | Plain ONNX `spec` serving is covered. Adapt guard completion/provenance/cache readers and retain its spin gate. Candidates with command / route adapters are explicitly rejected by `models.resolve`; they need adapter-aware plan and server stages. | Small for plain ONNX; medium for adapters |
-| `hugsim/scripts/{derot_chain,derot_sel,launch_long_chain,lowspeed_chain,opctrl_chain,opctrl_long_chain,spin_closed_loop}.sh`; `op_adapt_h/scripts/{h_hugsim,h_onedriver_hugsim,h_x64_chain}.sh` | Add agent opts, controller-tree/env configuration and ONNX build/equivalence stages where needed. Preserve fixed/fixed2/ideal/lowspeed/lowsel/opctrl_long distinctions. Ordinary opctrl's default lateral arm maps to `spec`, but arbitrary `OP_CTRL` overrides do not. Register H checkpoints beyond those already in `op_guard/candidates.json`. | Medium; one shared extension serves many wrappers |
-| `op_resume/scripts/{or_hugsim.sh,or_submit.py}` | Forward `{"resume": {}}` as agent opts, retain batch preflight and completeness checks, and distinguish rule vs baseline in run identity. Its CARLA branch additionally needs the resident policy-server lifecycle. | Medium |
-| `leaderboard_audit/scripts/unified_hugsim_chain.sh`; smooth / MPC parity presets | Expose interface presets `spec_cold`, `spec_hold`, `spec_plan_smooth`, `spec_plan_mpc`; canonicalise `opctrl_d118` to `spec`. Add repeat identity for its repeat runs, and preserve resolved warm-up / clock / delay in provenance. | Small interface addition; medium with repeats and readers |
+| `op_guard/scripts/{cllib,line_hugsim,guard_hugsim}.py/.sh` | Plain ONNX HUGSIM is migrated, including force / provenance / completeness and the existing spin gate. Remaining: adapter-aware plan and server stages for command / route candidates. | Medium for adapters |
+| `op_resume/scripts/{or_hugsim.sh,or_submit.py}` | HUGSIM is migrated, including rule identity, preflight and completeness. Its CARLA branch still needs the resident policy-server lifecycle. | Medium for CARLA |
 | `op_parity/scripts/{pp_stageB_submit,pp_unfreeze_chain}.sh` | Standard full-navtest evaluation is covered. Stage B also uses the separate real-history dataset `lb_hq_navtestX`, which `--subset` of `lb_navtest` cannot reproduce. Unfreeze needs its pixel-path equivalence gate and readers of the original plan/pred files; keep P0 / P2 pixel control generation for that check. | Partial migration |
 | `op_adapt_h/scripts/{h_onedriver_nav,h_od2_ratio}.sh`; `skill_pack/scripts/{hist_align_chain,hist_align_chain2,hq_chain,edge_chain,edge_vcam_chain,trk_chain,trk_chain2}.sh` | Add scoring of supplied predictions, v1 / navtrain calibration, alternate frame/rig protocols and selector/compensation identities. Bench currently generates `base` exports from registered models; it cannot directly score these transformed pose files. | Medium to large |
 | `op_parity/scripts/pp_navhard_wajepa.sh`; WA-JEPA NAVSIM runners in `top10/` | Add request building, shipped inference, shard merge, pose conversion and request-path equivalence as stages; current NAVSIM support only loads stored WA-JEPA references. | Medium |

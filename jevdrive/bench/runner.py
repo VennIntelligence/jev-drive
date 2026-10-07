@@ -162,7 +162,8 @@ def wait(run_dirs: list, poll_s: float = 30.0, quiet: bool = False, timeout_s: f
                 atomic_write(Path(d) / "WAIT_TIMEOUT", "wait deadline exceeded; cancellation requested\n")
                 atomic_write(Path(d) / "ERROR", "wait deadline exceeded; cancellation requested\n")
             return False
-        time.sleep(poll_s)
+        remaining = max(0, timeout_s - (time.monotonic() - started)) if timeout_s else poll_s
+        time.sleep(min(poll_s, remaining))
 
 
 def stage_cmd(env: str, fn: str, *args) -> list:

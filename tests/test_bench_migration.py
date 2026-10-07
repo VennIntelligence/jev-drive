@@ -215,6 +215,16 @@ class Migration(unittest.TestCase):
         self.assertEqual([c.args[0] for c in cancel.call_args_list], ["ours", "after-ours"])
         self.assertTrue((d / "WAIT_TIMEOUT").exists())
 
+    def test_deadline_does_not_wait_for_the_next_long_poll(self):
+        d = self.d / "run"
+        d.mkdir()
+        (d / "jobs.json").write_text('{"w0":"ours"}')
+        with mock.patch.object(R, "state", return_value=dict(w0="running")), \
+                mock.patch.object(R.time, "monotonic", side_effect=[0, 0, 0.5, 1]), \
+                mock.patch.object(R.time, "sleep") as sleep, mock.patch("jevdrive.cl.pool.cancel"):
+            self.assertFalse(R.wait([d], poll_s=30, timeout_s=1, quiet=True))
+        sleep.assert_called_once_with(0.5)
+
     def test_shell_adapter_parameter_transport(self):
         fake = self.d / "fake.py"
         fake.write_text('import json,sys\nprint(json.dumps(sys.argv[1:]))\n')

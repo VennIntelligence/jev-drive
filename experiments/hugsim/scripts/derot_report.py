@@ -13,15 +13,15 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from jevdrive.bench.compat import trace_dir
+from jevdrive.bench.compat import read_rows, trace_dir
 from spin_analysis import analyse, load_run  # noqa: E402
 
-SPIN10 = [Path(x).stem for x in open(Path(__file__).resolve().parent / "derot_spin10.txt").read().split()]
+SPIN10 = [Path(x).stem for x in (Path(__file__).resolve().parent / "derot_spin10.txt").read_text().split()]
 
 
 def runs(results, root, tag_filter):
     out = {}
-    for r in csv.DictReader(open(results)):
+    for r in read_rows(results):
         if r["tag"] not in tag_filter or r["end"] == "crash":
             continue
         d = trace_dir(r, root)
