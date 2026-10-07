@@ -15,6 +15,7 @@ import sys as _sys, pathlib as _pl  # noqa: E401,E402
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "scripts"), str(_R / "experiments/op_adapt_r2/lib"), str(_pl.Path(__file__).parent)]
 import argparse, json, time  # noqa: E401,E402
+from types import SimpleNamespace  # noqa: E402
 
 import numpy as np  # noqa: E402
 
@@ -290,6 +291,17 @@ def cmd_fit(a):
         n = len(_D["va_names"])
         arms = {k: v for k, v in (ARMS | SENS).items() if all(f"va_{s}" in _D for s in v)}
         run.info("arms: %s", list(arms))
+        if a.part == "mlp":
+            import torch
+            dev, minfo, out = torch.device("cuda"), {}, {}
+            for arm in ARMS:
+                if arm in arms:
+                    o, minfo[arm] = mlp_arm(arm, arms[arm], dev, run)
+                    out |= {f"{arm}|{sup}|M": d for sup, d in o.items()}
+            np.savez(T.RUNS / "heads_M.npz", **{k: np.asarray(v, np.float32) for k, v in out.items()})
+            (T.RUNS / "heads_M.json").write_text(json.dumps(minfo, indent=1, default=float))
+            run.summary.update(arms=len(minfo))
+            return
         units = [("const", "const", None, r, {}) for r in range(REPS)]
         for arm, st in arms.items():
             units += [("oof", arm, st, r, {}) for r in range(REPS)] + [("ins", arm, st, 0, {})]
@@ -361,17 +373,9 @@ def cmd_fit(a):
             out[f"{arm}|c|L|ins"] = unit(("ins", arm, st + ["alog"], 0, {}))[1]
             run.info("L head %s: a %+.3f (dev nll %.3f acc %.3f, prior %.3f / %.3f), b %+.3f, c %+.3f", arm, out[f"{arm}|a|L"].mean(), nll, acc,
                      ainfo["prior"]["dev_nll"], ainfo["prior"]["dev_acc"], out[f"{arm}|b|L"].mean(), acc_d.mean())
-        # ---- M heads
-        dev, minfo = torch.device("cuda" if torch.cuda.is_available() else "cpu"), {}
-        for arm in ARMS:
-            if arm not in arms:
-                continue
-            o, minfo[arm] = mlp_arm(arm, arms[arm], dev, run)
-            for sup, d in o.items():
-                out[f"{arm}|{sup}|M"] = d
         np.savez(T.RUNS / "heads.npz", **{k: np.asarray(v, np.float32) for k, v in out.items()}, **{f"perm:{k}": np.stack(v) for k, v in perm.items()},
                  **{f"picks:{k}": v for k, v in picks.items()})
-        (T.RUNS / "heads.json").write_text(json.dumps({"hp": {k: [list(map(float, x)) for x in v] for k, v in hp.items()}, "a": ainfo, "M": minfo, "arms": arms}, indent=1,
+        (T.RUNS / "heads.json").write_text(json.dumps({"hp": {k: [list(map(float, x)) for x in v] for k, v in hp.items()}, "a": ainfo, "arms": arms}, indent=1,
                                                       default=float))
         run.summary.update(arms=len(arms), units=len(units), **{k: float(np.mean(out[f"{k}|b|L"])) for k in arms})
 
@@ -386,7 +390,12 @@ def cmd_report(a):
         run.use_split(splits.load("wod/val"))
         Bd = T.board()
         C = Bd.C
-        z, info = np.load(T.RUNS / "heads.npz"), json.loads((T.RUNS / "heads.json").read_text())
+        z, info = dict(np.load(T.RUNS / "heads.npz")), json.loads((T.RUNS / "heads.json").read_text())
+        if (T.RUNS / "heads_M.npz").exists():
+            z |= dict(np.load(T.RUNS / "heads_M.npz"))
+            info["M"] = json.loads((T.RUNS / "heads_M.json").read_text())
+        z = SimpleNamespace(files=list(z), **{"d": z})
+        z = type("Z", (), {"files": z.files, "__getitem__": lambda self, k, _d=z.d: _d[k]})()
         assert (np.load(T.RUNS / "data.npz")["va_names"].astype(str) == Bd.names).all()
         orc = Bd.best - Bd.base
         main = ("all", "stopped", "moving", "turn")
@@ -471,7 +480,7 @@ def cmd_report(a):
         stats.write_table(sorted(crow, key=lambda r: (r["features"], r["training fraction"])), OUT / "learning_curve")
         pd.DataFrame({"name": Bd.names, "cluster": Bd.cluster, "v0": Bd.v0, "rfs_WP2": Bd.base, "rfs_oracle": Bd.best}
                      | {f"d {k}": z[k] for k in keys if k.count("|") == 2}).to_csv(OUT / "frames.csv", index=False, float_format="%.4f")
-        (OUT / "heads_info.json").write_text(json.dumps({"a": info["a"], "M": info["M"]}, indent=1))
+        (OUT / "heads_info.json").write_text(json.dumps({"a": info["a"], "M": info.get("M", {})}, indent=1))
         # ---- verdict
         g = lambda k: df[(df.features == k.split("|")[0]) & (df.supervision == "b") & (df["head"] == "L") & (df.variant == "oof")].set_index("stratum")  # noqa: E731
         pm = {r["features"]: r for r in prow if r["permuted"] == "all"}
@@ -497,7 +506,8 @@ if __name__ == "__main__":
     sp_ = ap.add_subparsers(dest="cmd", required=True)
     p = sp_.add_parser("fit")
     p.add_argument("--perms", type=int, default=N_PERM)
-    p.add_argument("--workers", type=int, default=32)
+    p.add_argument("--workers", type=int, default=24)
+    p.add_argument("--part", default="ridge", choices=("ridge", "mlp"))
     sp_.add_parser("report")
     a = ap.parse_args()
     {"fit": cmd_fit, "report": cmd_report}[a.cmd](a)
