@@ -9,6 +9,9 @@ pathway. Privileged inputs are an oracle probe only, never a method. Training is
   replay  (navsim2, CPU, pool)   four_dirs' instrumented devkit replay (fd_navsim._init / work, unchanged) of every listed model on its own
                                  navtest DAC-failure tokens: side / depth / time of the first footprint departure -> .../replay_<name>.parquet
   gate    (op-train, CPU)        seed-0 early stop of the prereg: exit 2 = clear negative
+  decode  (op-train, GPU, pool)  step 2 stage A, the fresh-head ceiling: decision 147 / 160's thin decoder (rep.py decode's net and hinge loop,
+                                 unchanged) on [V, E], [V, true 1 m SDF, E], [V, shuffled SDF, E], [true SDF, E] -> decode/poses.npz (navtest T20)
+  areport (op-train, CPU)        stage A table from `replay --poses` (+ the bench score-poses CSV as the DAC check) -> report-decode/
   report  (op-train, CPU)        tables, verdict, figures -> $DATA_DIR/runs/op_parity/turn_oracle/report[-<name>]/
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
@@ -30,6 +33,7 @@ CLIP, SCALE, ONES = 6.0, 3.0, slice(384, 448)              # value = clip(sdf, +
 FOLDS = 5
 # arm -> checkpoint stem (tag = <stem>-F-s<seed>); H0 / MW are the decision-160 stage-1 runs, reused
 STEM = {"H0": "RH0", "OS": "TOS", "OG": "TOG", "PW": "TOW", "PV": "TOV", "MW": "RMW"}
+STEM |= {"OS9": "TOS9", "OG9": "TOG9", "OSh": "TOSH", "OGh": "TOGH"}      # step 2 stage B: 9 000 steps / hinge lambda 30, margin 0.5
 KIND = {"OS": "sdf_shuf", "OG": "sdf_gt", "PW": "sdf_wa", "PV": "sdf_v"}
 LABEL = {"H0": "H0: P2H pilot (no memory)", "OS": "OS: shuffled SDF (matched control)", "OG": "OG: true SDF (oracle)",
          "PW": "PW: SDF read out of WA-Cf", "PV": "PV: SDF read out of Cinque", "MW": "MW: WA-Cf tokens (decision 160)",
@@ -39,7 +43,7 @@ NB = 4000
 
 def spec(arm, seed):
     """'OG' / 'OG off' / '<stem>' (step-2 arms pass their own stem) -> bench model spec."""
-    off = arm.endswith(" off")
+    off = arm.endswith((" off", ":off"))                                     # ':off' = the shell-safe spelling
     a = arm[:-4] if off else arm
     return f"{STEM.get(a, a)}-F-s{seed}" + (":noside" if off else "")
 
@@ -185,6 +189,12 @@ def cmd_replay(a):
     OUT.mkdir(parents=True, exist_ok=True)
     out = OUT / f"replay_{a.name}.parquet"
     P, want = {}, {}
+    if a.poses:                                                               # every key of a pose file on all of its tokens (stage A)
+        z = np.load(a.poses)
+        for k in z.files:
+            if k != "tokens":
+                P[k] = dict(zip(z["tokens"].tolist(), z[k].astype(np.float64)))
+        want = {t: list(P) for t in z["tokens"].tolist()}
     for sp in a.models:
         u = BT.load("navtest", sp)[0]
         assert u is not None, f"no navtest result for {sp}"
@@ -206,11 +216,161 @@ def cmd_replay(a):
                 if (i + 1) % 250 == 0:
                     run.status(f"{i + 1}/{len(todo)} tokens")
         df = pd.DataFrame(rows)
-        bad = int((df.drivable_area_compliance >= 1).sum())                   # every replayed (model, token) is a bench DAC failure
+        bad = 0 if a.poses else int((df.drivable_area_compliance >= 1).sum())   # every replayed (model, token) is a bench DAC failure
         run.info(f"{len(df)} (model, token) rows on {len(todo)} tokens; replay DAC disagrees with bench on {bad}; no LQR departure found on "
-                 f"{int((~df.lqr_out.astype(bool)).sum())}")
+                 f"{int(((df.drivable_area_compliance < 1) & ~df.lqr_out.astype(bool)).sum())} DAC failures")
         df.to_parquet(out)
         run.summary.update(rows=len(df), tokens=len(todo), dac_disagree=bad, out=str(out))
+
+
+# ---------------------------------------------------------------- step 2 stage A: fresh-head ceiling
+DEC = {"V": ("V",), "V+G": ("V", "G"), "V+S": ("V", "S"), "G": ("G",)}
+
+
+def cmd_decode(a):
+    import time
+    import torch
+    import torch.nn as nn
+    import opb_probe as P
+    import rep as REP
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    dev = torch.device("cuda")
+    out = OUT / "decode"
+    out.mkdir(parents=True, exist_ok=True)
+    with Run("op_parity", "turn-oracle-decode", seed=0, config=vars(a)) as run:
+        toks, datas, is_dev, dvs = P.train_tokens(False)
+        run.use_split(dvs), run.use_split(splits.load("navsim/navtrain")), run.use_split(splits.load("navsim/navtest"))
+        lab_pos, LZ = P.labels("navtrain_s23456")
+        li = np.array([lab_pos[t] for t in toks])
+        tabs = {d: np.load(CR / d / "tab.npz") for d in TRAIN}
+        fut = np.concatenate([tabs[d]["fut"] for d in TRAIN])
+        ego = np.concatenate([tabs[d]["ego"] for d in TRAIN]).astype(np.float32)
+        log = np.concatenate([tabs[d]["log"] for d in TRAIN])
+        use = LZ["ok"][li] & ~np.isnan(fut[:, 0, 0]) & ~is_dev                 # rep.py decode's train rows
+        sdf05 = LZ["sdf"][li[use]]
+        sdf = torch.as_tensor(sdf05, device=dev)[:, None]
+        Y = torch.as_tensor(fut[use], device=dev).float()
+        ttab = np.load(CR / TEST / "tab.npz")
+        ev = np.abs(np.degrees(ttab["fut"][:, -1, 2])) > 20                     # navtest T20
+        tt, e_ego = ttab["names"][ev], ttab["ego"][ev].astype(np.float32)
+        tpos, TZ = P.labels("navtest")
+        tsdf = TZ["sdf"][[tpos[t] for t in tt]]
+        rng = np.random.default_rng(1)
+        G = {"tr": P.raster1m(sdf05).reshape(int(use.sum()), -1), "te": P.raster1m(tsdf).reshape(len(tt), -1)}
+        Sh = {"tr": G["tr"][derange(log[use], rng)], "te": G["te"][derange(ttab["log"][ev], rng)]}
+        trt, trd, ttd = toks[use], datas[use], np.array([TEST] * len(tt))
+        Mi = torch.as_tensor(P._interp_matrix(), device=dev, dtype=torch.float32)
+        C = torch.as_tensor(P.CORNERS, device=dev, dtype=torch.float32)
+        part = lambda k, w: (REP.source("V", trt, trd) if w == "tr" else REP.source("V", tt, ttd)) if k == "V" else (G if k == "G" else Sh)[w]  # noqa: E731
+        res, rows = {"tokens": tt}, []
+        for name, src in DEC.items():
+            Xa = torch.as_tensor(np.concatenate([part(k, "tr") for k in src] + [ego[use]], 1), device=dev)
+            mu, sd = Xa.mean(0), Xa.std(0).clamp_min(1e-6)
+            Xa = (Xa - mu) / sd
+            Xe = (torch.as_tensor(np.concatenate([part(k, "te") for k in src] + [e_ego], 1), device=dev) - mu) / sd
+            torch.manual_seed(0)
+            net = nn.Sequential(nn.Dropout(0.1), nn.Linear(Xa.shape[1], 1024), nn.GELU(), nn.Linear(1024, 1024), nn.GELU(), nn.Linear(1024, 24)).to(dev)
+            opt = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-2)
+            wu = max(1, a.steps // 20)
+            sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda k: min(1.0, (k + 1) / wu) * 0.5 * (1 + np.cos(np.pi * min(k, a.steps) / a.steps)))
+            g = torch.Generator(device=dev).manual_seed(0)
+            t1 = time.time()
+            for _ in range(a.steps):                                            # rep.py cmd_decode's loop, unchanged
+                b = torch.randint(0, len(Xa), (a.batch,), device=dev, generator=g)
+                Pp = net(Xa[b]).view(-1, 8, 3)
+                li_ = nn.functional.huber_loss(Pp[..., :2], Y[b, :, :2], delta=1.0) + 3.0 * nn.functional.huber_loss(Pp[..., 2], Y[b, :, 2], delta=0.1)
+                v = P.sdf_at(sdf[b].float(), P.corners_torch(Pp, Mi, C))
+                hl = torch.relu(a.hinge_margin - v).mean()
+                loss = li_ + a.lam_hinge * hl
+                opt.zero_grad(set_to_none=True)
+                loss.backward()
+                opt.step()
+                sched.step()
+            net.eval()
+            with torch.no_grad():
+                Pe = torch.cat([net(Xe[i:i + 2048]).view(-1, 8, 3) for i in range(0, len(Xe), 2048)])
+                hv = P.sdf_at(torch.as_tensor(tsdf, device=dev)[:, None].float(), P.corners_torch(Pe, Mi, C))
+            res[name] = Pe.cpu().numpy().astype(np.float32)
+            rows.append(dict(arm=name, dim=int(Xa.shape[1]), imit=float(li_), hinge=float(hl), train_s=time.time() - t1,
+                             navtest_T20_raw_footprint_out=float((hv.min(1).values < 0).float().mean())))
+            run.info(json.dumps(rows[-1]))
+            del Xa, Xe, net, opt
+            torch.cuda.empty_cache()
+        np.savez(out / "poses.npz", **res)
+        (out / "tokens.txt").write_text("\n".join(tt) + "\n")
+        (out / "fits.json").write_text(json.dumps(rows, indent=1))
+        run.summary.update(n_eval=len(tt), out=str(out / "poses.npz"))
+
+
+def cmd_areport(a):
+    import pandas as pd
+    import fd_navsim as FD
+    import turn_probe as TP
+    from jevdrive import stats
+    out = OUT / "report-decode"
+    out.mkdir(parents=True, exist_ok=True)
+    z = np.load(OUT / "decode" / "poses.npz")
+    tk = z["tokens"]
+    tab = np.load(CR / TEST / "tab.npz")
+    pos = {t: i for i, t in enumerate(tab["names"].tolist())}
+    ix = np.array([pos[t] for t in tk])
+    fut, log = tab["fut"][ix].astype(np.float64), tab["log"][ix]
+    dpsi = FD.path_geom(fut)["dpsi"]
+    sets = {"T20 (> 20 deg)": np.ones(len(tk), bool), "T45 (> 45 deg)": np.abs(dpsi) > 45}
+    R = pd.read_parquet(OUT / "replay_decode.parquet")
+    sc = pd.read_csv(a.score) if a.score else None
+    F, chk = {}, {}
+    for k in DEC:
+        q = R[R.key == k].set_index("token").reindex(tk)
+        assert q.drivable_area_compliance.notna().all(), k
+        dac = (q.drivable_area_compliance < 1).to_numpy()
+        if sc is not None:
+            o = sc[sc.key == k].set_index("token").reindex(tk)
+            chk[k] = dict(score_poses_dac_fail=int((o.drivable_area_compliance < 1).sum()), replay_dac_fail=int(dac.sum()),
+                          disagree=int(((o.drivable_area_compliance < 1).to_numpy() != dac).sum()))
+        inside = dac & (q.lqr_side.to_numpy(float) == np.sign(dpsi))
+        with np.errstate(invalid="ignore"):
+            under = FD.plan_kin(z[k].astype(np.float64), fut)["gain"] < 0.9
+        F[k] = pd.DataFrame({"DAC fail %": dac, "inside-cut %": inside, "cannot-make-turn %": dac & ~inside & under,
+                             "raw-plan departure %": dac & q.raw_out.fillna(False).astype(bool).to_numpy(),
+                             "EPDMS (no EC)": q.score_noec.to_numpy()}).astype(float) * 100
+    rows = []
+    for k in DEC:
+        for sn, m in sets.items():
+            for col in F[k].columns:
+                r = dict(arm=k, metric=col, stratum=sn, n=int(m.sum()), value=float(F[k][col].to_numpy()[m].mean()))
+                for ref in ("V+S", "V"):
+                    if ref != k:
+                        p = stats.paired(F[k][col].to_numpy()[m], F[ref][col].to_numpy()[m], groups=log[m], n_boot=NB)
+                        r |= {f"diff_vs_{ref}": p["mean"], f"lo_vs_{ref}": p["lo"], f"hi_vs_{ref}": p["hi"]}
+                rows.append(r)
+    T = pd.DataFrame(rows)
+    T.to_csv(out / "arms.csv", index=False)
+    m = sets["T45 (> 45 deg)"]
+    B = TP.Boot(log, m, B=NB)
+    cl = {}
+    for col in ("inside-cut %", "DAC fail %"):
+        (c, rc), (o, ro) = B.mean(F["V+S"][col].to_numpy(), m), B.mean(F["V+G"][col].to_numpy(), m)
+        cl[col] = TP.ci(1 - o / c, 1 - ro / rc)
+    d = T[(T.arm == "V+G") & (T.metric == "inside-cut %") & (T.stratum == "T45 (> 45 deg)")].iloc[0]
+    c = cl["inside-cut %"]["mean"]
+    excl = d["hi_vs_V+S"] < 0
+    vd = dict(closure_T45=cl, diff_inside_cut_T45=[d["diff_vs_V+S"], d["lo_vs_V+S"], d["hi_vs_V+S"]],
+              reading=("usable by a fresh head" if c >= 0.5 and excl else "not usable even by a fresh head" if c < 0.25 else "partly usable"),
+              dac_check=chk, fits=json.loads((OUT / "decode" / "fits.json").read_text()))
+    (out / "verdict.json").write_text(json.dumps(vd, indent=1, default=float))
+    L = ["thin decoder (fresh head), navtest T20 tokens; diff vs V+S with 95% CI (log-cluster paired bootstrap)\n",
+         "| metric | stratum | n | " + " | ".join(DEC) + " |", "|:--|:--|--:|" + ":--|" * len(DEC)]
+    for sn in sets:
+        for col in F["V"].columns:
+            q = T[(T.metric == col) & (T.stratum == sn)].set_index("arm")
+            L.append(f"| {col} | {sn} | {q.n.iloc[0]} | " + " | ".join(
+                f"{q.loc[k, 'value']:.2f}" + ("" if k == "V+S" else f" ({q.loc[k, 'diff_vs_V+S']:+.2f} [{q.loc[k, 'lo_vs_V+S']:+.2f}, {q.loc[k, 'hi_vs_V+S']:+.2f}])")
+                for k in DEC) + " |")
+    L.append("\n```json\n" + json.dumps(vd, indent=1, default=float) + "\n```")
+    (out / "tables.md").write_text("\n".join(L) + "\n")
+    print("\n".join(L))
 
 
 # ---------------------------------------------------------------- frames (report / gate)
@@ -320,6 +480,27 @@ def cmd_gate(a):
     raise SystemExit(2 if neg else 0)
 
 
+def cmd_bgate(a):
+    """Step 2 stage B selection (prereg addendum): the pair with the largest seed-0 T45 inside-cut closure, if it is >= 0.25 and its T20 DAC
+    failure drop is >= 0.4 pp. Prints '<control> <oracle>'; exit 2 if no pair qualifies."""
+    Dt = Data(a.replays)
+    res, best = {}, None
+    for ctrl, orc in (("OS9", "OG9"), ("OSh", "OGh")):
+        F = {k: Dt.arm(k, [0]) for k in (ctrl, orc)}
+        c = closure(Dt, F[ctrl], F[orc], PRIMARY[0], Dt.sets[PRIMARY[1]])
+        t20 = paired(F[orc], F[ctrl], "DAC fail %", Dt.sets["T20 (> 20 deg)"], Dt.log)
+        ok = bool(c["mean"] >= 0.25 and -t20["diff"] >= 0.4)
+        res[f"{orc} vs {ctrl}"] = dict(closure=c, T20_DAC_fail=t20, qualifies=ok)
+        if ok and (best is None or c["mean"] > best[0]):
+            best = (c["mean"], ctrl, orc)
+    res["best"] = list(best[1:]) if best else None
+    (OUT / "gate-b.json").write_text(json.dumps(res, indent=1, default=float))
+    print(json.dumps(res, indent=1, default=float), file=_sys.stderr)
+    if not best:
+        raise SystemExit(2)
+    print(best[1], best[2])
+
+
 def cmd_report(a):
     import pandas as pd
     from jevdrive.run import Run
@@ -344,7 +525,7 @@ def cmd_report(a):
         if "OS" in F and "OG" in F:
             vd = verdict(Dt, F, a.seeds)
             m = Dt.sets[PRIMARY[1]]
-            vd["survival"] = {k: closure(Dt, F["OS"], F["OG"], PRIMARY[0], m, F[k]) for k in a.arms if k in ("PW", "PV", "MW", "H0", "OG off")}
+            vd["survival"] = {k: closure(Dt, F["OS"], F["OG"], PRIMARY[0], m, F[k]) for k in a.arms if k in ("PW", "PV", "MW", "H0", "OG off", "OG:off")}
             vd["closure_other"] = {f"{col} | {sn}": closure(Dt, F["OS"], F["OG"], col, Dt.sets[sn])
                                    for col, sn in (("DAC fail %", "T45 (> 45 deg)"), ("DAC fail %", "T20 (> 20 deg)"), ("inside-cut %", "sharp R < 15 m"),
                                                    ("inside-cut %", "T20 (> 20 deg)"), ("DAC fail %", "all"))}
@@ -448,10 +629,20 @@ if __name__ == "__main__":
     sp.add_parser("bank")
     p = sp.add_parser("replay")
     p.add_argument("--name", required=True)
-    p.add_argument("--models", nargs="+", required=True, help="bench model specs (e.g. TOG-F-s0 TOG-F-s0:noside)")
+    p.add_argument("--models", nargs="*", default=[], help="bench model specs (e.g. TOG-F-s0 TOG-F-s0:noside)")
+    p.add_argument("--poses", default="", help="npz with `tokens` and (N, 8, 3) pose arrays: replay every key on every token")
+    p = sp.add_parser("decode")
+    p.add_argument("--steps", type=int, default=4000)
+    p.add_argument("--batch", type=int, default=512)
+    p.add_argument("--lam-hinge", type=float, default=10.0)
+    p.add_argument("--hinge-margin", type=float, default=0.3)
+    p = sp.add_parser("areport")
+    p.add_argument("--score", default="", help="bench score-poses CSV of decode/poses.npz (DAC check)")
     p.add_argument("--procs", type=int, default=0)
     p = sp.add_parser("gate")
     p.add_argument("--replay", default="s0")
+    p = sp.add_parser("bgate")
+    p.add_argument("--replays", nargs="+", default=["b0"])
     p = sp.add_parser("report")
     p.add_argument("--name", default="")
     p.add_argument("--arms", nargs="+", default=["H0", "OS", "OG", "PW", "PV", "MW", "OG off"])
@@ -461,4 +652,5 @@ if __name__ == "__main__":
     p.add_argument("--bev", nargs="+", default=["H0", "OS", "OG"])
     p.add_argument("--pairs", nargs=2, action="append", default=[], metavar=("CTRL", "ARM"))
     a = ap.parse_args()
-    {"bank": cmd_bank, "replay": cmd_replay, "gate": cmd_gate, "report": cmd_report}[a.cmd](a)
+    {"bank": cmd_bank, "replay": cmd_replay, "gate": cmd_gate, "report": cmd_report, "decode": cmd_decode, "areport": cmd_areport,
+     "bgate": cmd_bgate}[a.cmd](a)
