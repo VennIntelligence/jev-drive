@@ -107,6 +107,49 @@ def cmd_label(a):
         run.info("counts: %s", {q: df[q].value_counts().to_dict() for q in QS})
 
 
+def cmd_label2(a):
+    """Post hoc (added after the hand check: the ego's own stop sign is outside the FRONT crop on most stop-controlled junctions): one
+    question on the FRONT + FRONT_RIGHT pair -> results/wod_launch/context_extra.csv (column stop_ctrl)."""
+    import glob
+    import pandas as pd
+    import torch
+    from PIL import Image
+    from transformers import AutoModelForImageTextToText, AutoProcessor
+    from jevdrive import wod_zeroshot as Z
+    from jevdrive.run import Run
+    opts = ["stop_controlled", "not_stop_controlled"]
+    text = ("The two images were taken at the same instant by a car (the ego vehicle): image 1 is its front camera, image 2 its front-right camera.\n"
+            "Is the ego vehicle at, or just before, a junction where a stop sign controls the ego's direction? Evidence: a stop sign facing the ego "
+            "(usually on the right kerb, image 2), a painted STOP on the ego lane, or the backs of stop signs for the other directions at an all-way "
+            "stop. A junction with traffic lights is not stop-controlled. Options:\n"
+            "  stop_controlled: a stop sign controls the ego's direction at the junction just ahead\n"
+            "  not_stop_controlled: no stop sign controls the ego here\n" + TAIL % ", ".join(opts))
+    with Run("op_parity", "wod-launch-label2", config=vars(a)) as run:
+        p = glob.glob(str(data_dir() / "cache/huggingface/hub/models--Qwen--Qwen3-VL-4B-Instruct/snapshots/*"))[0]
+        proc = AutoProcessor.from_pretrained(p)
+        m = AutoModelForImageTextToText.from_pretrained(p, dtype=torch.bfloat16).to("cuda").eval()
+        tok = proc.tokenizer
+        pre = tok("ANSWER:", add_special_tokens=False).input_ids
+        first = [tok("ANSWER: " + o, add_special_tokens=False).input_ids[len(pre)] for o in opts]
+        assert len(set(first)) == 2, first
+        names = Z.load_sets()["rater"]["name"].astype(str)[: a.limit or None]
+        t2 = Z.root("t2_jpg")
+        rows = []
+        with torch.no_grad():
+            for i, n in enumerate(names):
+                ims = [Image.open(t2 / n / f"{c}.jpg").convert("RGB") for c in (1, 3)]
+                msgs = [{"role": "user", "content": [{"type": "image", "image": im} for im in ims] + [{"type": "text", "text": text}]}]
+                x = proc.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False) + "ANSWER:"
+                x = proc(text=[x], images=ims, return_tensors="pt").to("cuda")
+                pr = torch.softmax(m(**x, use_cache=False).logits[0, -1].float()[first], -1).cpu().numpy()
+                rows.append({"name": n, "stop_ctrl": opts[int(pr.argmax())], "stop_ctrl_p": round(float(pr[0]), 4)})
+                if (i + 1) % 100 == 0:
+                    run.info(f"[{i + 1}/{len(names)}]")
+        df = pd.DataFrame(rows)
+        df.to_csv(OUT / ("context_extra.csv" if not a.limit else f"context_extra_first{a.limit}.csv"), index=False)
+        run.info("counts: %s", df.stop_ctrl.value_counts().to_dict())
+
+
 # ---------------------------------------------------------------- bias (ego-channel interventions on WP2)
 def edit(e, var):
     """Main-mapping ego features (n, 20) -> the variant's (layout: pp_wod_diag; 4 = vx / 10, 6:8 = ax, ay / 3, 8:20 = 4 poses x / 10, y / 10, yaw)."""
@@ -294,10 +337,12 @@ if __name__ == "__main__":
     sp_ = ap.add_subparsers(dest="cmd", required=True)
     p = sp_.add_parser("label")
     p.add_argument("--limit", type=int, default=0)
+    p = sp_.add_parser("label2")
+    p.add_argument("--limit", type=int, default=0)
     p = sp_.add_parser("bias")
     p.add_argument("--tags", nargs="+", required=True)
     p.add_argument("--vars", nargs="+", default=list(VARS))
     p = sp_.add_parser("tok")
     p.add_argument("--limit", type=int, default=0)
     a = ap.parse_args()
-    {"label": cmd_label, "bias": cmd_bias, "tok": cmd_tok}[a.cmd](a)
+    {"label": cmd_label, "label2": cmd_label2, "bias": cmd_bias, "tok": cmd_tok}[a.cmd](a)
