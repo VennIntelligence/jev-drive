@@ -1,0 +1,9 @@
+panel,frame,cluster,v0,head pick,oracle pick,RFS WP2,RFS head,RFS oracle,rater scores
+gain 1,774c537b284a58c77de4106b1c190117-148,Special Vehicles,0.38,keep / hold,keep / hold,4.00,10.00,10.00,10 6 5
+gain 2,c81e3bed93363d5449da909ca4c46ca5-148,Single-Lane Maneuvers,3.10,nudge_right / creep,nudge_right / creep,4.00,10.00,10.00,10 8 6
+gain 3,cab6d3c2e5e831fa07c7ff1724bb72aa-148,Interections,2.09,nudge_right / creep,nudge_right / creep,4.00,10.00,10.00,10 9 8
+gain 4,eec5ca1a6526cc8e9c1a035fff8c0194-148,Interections,3.07,nudge_right / creep,nudge_right / creep,4.00,10.00,10.00,10 7 5
+loss 1,e3934bcfef01b4f0ca46fc265b5f6f08-149,Interections,2.69,keep / go,keep / follow,10.00,4.00,10.00,10 8 6
+loss 2,7331710f59abdde8b10bce1c48d49b3f-147,Interections,7.58,keep / go,keep / follow,10.00,4.00,10.00,10 9 7
+loss 3,53ce363ce589d19f746a296cd8d81dff-149,Single-Lane Maneuvers,4.19,nudge_left / follow,keep / follow,10.00,4.00,10.00,10 9 8
+loss 4,2e031f165cb7b252dd42a7b60e730bd9-149,Interections,4.23,keep / hold,keep / follow,10.00,4.64,10.00,10 8 6
