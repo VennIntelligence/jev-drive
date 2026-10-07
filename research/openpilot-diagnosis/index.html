@@ -22,10 +22,10 @@ ul{padding-left:20px}li{margin-bottom:6px}
 
 <div class="v">
 <b>核心结论（接口归因与跨榜定性）：</b><br>
-<b>1. 正常与异常的分界线不在输入几何，而在执行与评测接口：</b>出厂 openpilot Cinque 在真实车辆、WOD-E2E（RFS 8.005）与补帧后的 navtest（PDMS 88.21）表现正常，但在 navhard（33.54）、HUGSIM 闭环（出厂 HD 0.263–0.294）与 B2D（DS 30.4）严重失常。相机高度/尺度（世界读成约 0.7）、地平线、视场、渲染画面与历史帧质量均非区分因素（全部排除）；区分正常与否的关键在于：车端执行的是 action 期望曲率（等效增益 c 0.013，闭环稳定），而早期 HUGSIM 与基准 harness 跟踪 plan 轨迹位置（iLQR c 0.127），起步瞬时偏航被闭环正反馈放大导致 100% 打转（决策 118）。换回车端横向路径（<code>op-path</code> = action 曲率 + 限幅 + 延迟）后，HUGSIM 打转由 10/64 降为 0/64（决策 118、124）。<br>
-<b>2. 评测接口缺陷占 navhard 丢分半数：</b>navhard EPDMS 亏损（33.34 对比 SOTA 35–58 分）约 80% 落在可行驶区 DAC 项；但 DAC 失败中多边形漏掉真实铺装占 26–29%、LQR 跟踪器滞后占 21%、第二阶段挪偏起点占 20%，仅约 30% 属于模型计划错误（上限约 4.7 分，决策 112）。不再盲目追求 navhard DAC 打分。<br>
-<b>3. 真正的三大跨榜能力缺口与定性修复：</b>(i) <b>急弯欠转</b>：action 幅度仅达所需 0.3–0.5 倍（comma1M 真车 0.65，决策 130），其中 40% 归因于训练目标定义错误（已由瞬时曲率目标修正），其余由表征升级与急弯加权解决；(ii) <b>借道与绕障</b>：规则放宽会导致侧撞同涨，需由外部多模态模块（Qwen3-VL 仲裁）决策；(iii) <b>该走不走（起步与自停）</b>：仿真器低速阻尼与停车锁存放大了模型的低速停顿，出厂模型在无灯无车场景频发幽灵停车。<br>
-<b>4. 闭环基线统一与最新进展：</b>横向固定为 <code>spec_plan_smooth</code> / <code>op-path</code>，基准统一为 P2H（输入对齐 + 可行驶区 SDF hinge），navtest 达 88.67 分（距 WA-JEPA 仅差 3.04 分），HUGSIM 全量 HD 达 43.2（直道 47.8 领先 WA-JEPA 2.2 分，决策 148、149）。
+<b>1. 正常与异常的分界线不在输入几何，而在执行与评测接口：</b>出厂 openpilot Cinque 在真实车辆、WOD-E2E（RFS 8.005）与补帧后的 navtest（PDMS 83.97，微调 P2 达 88.21 EPDMS）表现正常，但在 navhard（33.54）、HUGSIM 闭环（出厂 HD 0.263–0.294）与 B2D（脱离路线接管时 choice 走对 0/13、forced 仅 1/12，决策 127）严重失常。相机高度/尺度（世界读成约 0.7）、地平线、视场、渲染画面与历史帧质量均非区分因素（全部排除）；区分正常与否的关键在于：车端执行的是 action 期望曲率（等效增益 c 0.013，闭环稳定），而早期 HUGSIM 与基准 harness 跟踪 plan 轨迹位置（iLQR c 0.127），起步瞬时偏航被闭环正反馈放大导致打转（exam 预设下 10/64，决策 118）。换回车端横向路径（<code>op-path</code> = action 曲率 + 限幅 + 延迟）后，HUGSIM 打转由 10/64 降为 0/64（决策 118、124）。<br>
+<b>2. 评测接口缺陷占 navhard 丢分半数：</b>navhard EPDMS 亏损（33.54 对比 SOTA 35–58 分）在全项置换增益（+11.5 分）中约 68%（+7.8 分）落在可行驶区 DAC 项；但 DAC 失败中多边形漏掉真实铺装占 26–29%、LQR 跟踪器滞后占 21%、第二阶段挪偏起点占 19.6–20.8%（其中 56–66% 无可行解），仅约 30% 属于模型计划错误（上限约 4.7 分，决策 112）。不再盲目追求 navhard DAC 打分。<br>
+<b>3. 真正的三大跨榜能力缺口与定性修复：</b>(i) <b>急弯欠转</b>：action 幅度仅达所需 0.3–0.5 倍（comma1M 真车 0.65，决策 130），部分归因于微调训练目标定义错误（rc-* 曾将 action 目标误缩至约一半，已由瞬时曲率目标修正），其余由表征升级与急弯加权解决；(ii) <b>借道与绕障</b>：规则放宽会导致侧撞同涨，需由外部多模态模块（Qwen3-VL 仲裁）决策；(iii) <b>该走不走（起步与自停）</b>：仿真器低速阻尼与停车锁存放大了模型的低速停顿，出厂模型在无灯无车场景频发幽灵停车。<br>
+<b>4. 闭环基线统一与最新进展：</b>横向固定为 <code>spec_plan_smooth</code> / <code>op-path</code>，基准统一为 P2H（输入对齐 + 可行驶区 SDF hinge），navtest 达 88.67 分（距 WA-JEPA 仅差 3.04 分），HUGSIM 全量 HD 达 43.2（直道 P2+hinge 达 47.8 领先 WA-JEPA 2.2 分，决策 149、153）。
 </div>
 
 <div class="subpage">
@@ -67,7 +67,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 openpilot 在学术界与自动驾驶竞赛中具有极其特殊的地位：
 </p>
 <ul>
-<li><b>公开学术榜零提交记录</b>：截至 2026 年底，openpilot 在 CARLA Leaderboard、Bench2Drive、NAVSIM v1/v2、nuPlan、WOD-E2E 与 HUGSIM 等学术榜单上此前<b>没有任何标准提交记录</b>。唯一公开评测为 OpenDriveLab 2022 年的 OP-Deepdive（arXiv:2206.08176），其在 nuScenes 上直接评测原版 supercombo 遭遇严重失败（0–10 m 误差 1.96 m，远距离 11.36 m），主因在于 nuScenes 仅有 2 Hz 离散关键帧（与 openpilot 连续视频要求冲突）且缺乏导航路线输入。</li>
+<li><b>公开学术榜零提交记录</b>：截至 2026 年 10 月初，openpilot 在 CARLA Leaderboard、Bench2Drive、NAVSIM v1/v2、nuPlan、WOD-E2E 与 HUGSIM 等学术榜单上此前<b>没有任何标准提交记录</b>。唯一公开评测为 OpenDriveLab 2022 年的 OP-Deepdive（arXiv:2206.08176），其在 nuScenes 上直接评测原版 supercombo 遭遇严重失败（0–10 m 误差 1.96 m，远距离 11.36 m），作者把失败归因于 nuScenes 非 30 FPS 高帧率连续视频，反映了数据域、帧率与相机参数的不匹配。</li>
 <li><b>十年五代训练范式演进</b>：
   <ul>
     <li>第 1 代（2016–2019，v0.1–v0.6）：前视感知检测车道线/前车 + 手写 MPC 控制。</li>
@@ -95,18 +95,18 @@ openpilot 在学术界与自动驾驶竞赛中具有极其特殊的地位：
 <tr><td><b>历史帧输入</b></td><td>2 Hz 关键帧 → GIMM-VFI 插至 10 Hz (d116)</td><td>同左；合成历史含转向致反向 yaw 外推 (d88)</td><td>真实 10 Hz 视频，每帧喂入两次，10 s 预热</td><td>4 Hz 仿真渲染，dilate 为 5 Hz 喂入</td><td>CARLA 真实 20 Hz 连续视频帧</td></tr>
 <tr><td><b>路线导航指令</b></td><td>headline 评测无指令；desire 提前 1 s +0.72 (d66)</td><td>无指令；desire 臂 −0.28 (d66)</td><td>无指令；意图仅进 L 适配器 (d78)</td><td>仿真环境 command 映射至 desire (d90；证实无用)</td><td>desire 证实非导航信号 (d121)；zones 半特权兜底；rc-* 路线折线 (d128)</td></tr>
 <tr><td><b>打分轨迹来源</b></td><td>plan + lever 杠杆臂 + retime (d37, d107)</td><td>同左</td><td>原生 plan（后轴中心）</td><td>仿真器闭环执行回放轨迹 (HD-Score)</td><td>CARLA 闭环驾驶评测 (Driving Score)</td></tr>
-<tr><td><b>声明偏离 (DECLARED)</b></td><td>LB：单图裁 wide、GIMM 合成历史、LQR 执行；semi：lever、retime</td><td>同左（阶段 2 增加 3DGS 视角合成）</td><td>LB：三摄拼 wide、帧重复、开环评测；semi：×1.06 标量</td><td>LB：渲染画面、dilate、5 s 静止预热；semi：初速与后处理</td><td>LB：spec 相机标定；semi：纵向调度器、zones 几何；priv：vmerge2 诊断</td></tr>
+<tr><td><b>声明偏离 (DECLARED)</b></td><td>LB：单图裁 wide、GIMM 合成历史、LQR 执行；semi：lever、retime</td><td>同左（阶段 2 增加 3DGS 视角合成）</td><td>LB：三摄拼 wide、帧重复、开环评测；semi：×1.06 标量</td><td>LB：渲染画面、dilate、5 s 静止预热；semi：初速与后处理</td><td>LB：spec 相机标定；semi：纵向调度器、zones 几何；priv：vmerge2 诊断、nored 特权放行 (d81, d126)</td></tr>
 </table>
 <div class="cite">数据来源：jevdrive/openpilot/interface.py、docs/openpilot-interface.md、experiments/leaderboard_audit/results/unified_interface.md、决策 88–135。</div>
 
 <div class="v">
-<b>标定链审计（CARLA Rig 与 liveCalibration 的数学等价性，决策 36、57，闭环集成文档第 10 节）：</b><br>
+<b>标定链审计（CARLA Rig 与 liveCalibration 审计，决策 36、57，闭环集成文档第 10 节）：</b><br>
 真车上 openpilot 运行 <code>calibrationd</code> 在线学习相机姿态欧拉角（rpy），用以吸收装配偏差；但在 CARLA 仿真中，车辆传感器具有确切的真值外参。源码审计（对照 commaai/openpilot master <code>calibrationd.py</code>、<code>modeld.py</code> 与 <code>transformations/camera.py</code>）表明：
 <ul>
-<li><b>我们直接输入真值标定，无需任何预热</b>：modeld 仅消费 <code>rpyCalib</code>（由真值旋转角直接构造，强制设定 roll=0，与模型训练契约严格一致）。</li>
+<li><b>我们直接输入收敛标定，无需任何预热</b>：modeld 仅消费 <code>rpyCalib</code>（因 CARLA 相机水平放置，直接喂入收敛标定值 <code>rpy = np.zeros(3)</code>，与模型训练契约严格一致）。</li>
 <li><b>模型输入不含高度</b>：<code>wideFromDeviceEuler</code>、<code>height</code>（初始值 1.22 m）与 <code>calStatus</code> 均<b>不参与图像 warp，也不进入任何模型输入特征</b>。</li>
 <li><b>输出转换不含高度</b>：下游模块没有任何一处使用相机高度进行空间坐标换算；plan 坐标系以相机光心为原点，相机高度完全由模型基于视觉透视自身隐式推断。</li>
-<li>因此，B2D 统一采用 <code>spec</code> 标定（x 1.59 m, z 1.86 m）直接对齐开环基准，在数学与工程上完全等价于「完美收敛后的 liveCalibration」，没有任何未声明的信息泄露。</li>
+<li><b>视角基准统一</b>：在 1.433 m 旧 rig 审计中确认高度并非模型输入（决策 36、57）；B2D 现统一采用 <code>spec</code> 标定（x 1.59 m, z 1.86 m）直接对齐开环基准视角。</li>
 </ul>
 </div>
 
@@ -122,30 +122,30 @@ openpilot 在学术界与自动驾驶竞赛中具有极其特殊的地位：
 
 <table>
 <tr><th>排查对象</th><th>最初怀疑</th><th>实验结论</th><th>排除证据与决策</th></tr>
-<tr><td><b>相机安装高度 / 尺度</b></td><td>仿真相机偏高致使模型误判距离与速度尺度</td><td><b>排除</b>：模型确实把世界尺度读成约 0.7，但在 WOD-E2E 和真车上完全相同；人工降高至 1.22 m 反而恶化 NAVSIM（−1.97）与 WOD（−0.49 RFS）</td><td>决策 104、108、127；B2D 1.22 m 下转弯 5/7 是剧烈晃动甩出出口，非真正受控</td></tr>
+<tr><td><b>相机安装高度 / 尺度</b></td><td>仿真相机偏高致使模型误判距离与速度尺度</td><td><b>排除</b>：模型确实把世界尺度读成约 0.7，但在 WOD-E2E 和真车上完全相同；人工降高至 1.22 m 反而恶化 NAVSIM（−1.97）与 WOD（−0.49 RFS）</td><td>决策 104、108、127；B2D 1.22 m 下走对 5/10（choice）与 3/9（forced），但 90% choice 转弯出车道，实为甩出出口而非真正受控</td></tr>
 <tr><td><b>地平线与广角视场</b></td><td>图像裁剪导致路口盲区无法观察转弯出口</td><td><b>排除</b>：五大基准地平线行均在 151.8 附近；加宽 wide 视场（90°/116°）在真实急弯上 action 曲率增量 ≤ 0，改动 road 焦距破坏透视尺度</td><td>决策 104.10、108、135；冻结 wide 画面时转向 action 仅变 −0.035，表明转向决策主要源自 road 相机</td></tr>
 <tr><td><b>仿真图像渲染风格</b></td><td>CARLA / 3DGS 风格迁移导致特征崩溃</td><td><b>排除</b>：逐帧图像重建误差极小；起步增益异常（+43%）仅在 nuScenes 出现，WOD/HUGSIM/CARLA 均不复现渲染域差异</td><td>决策 109；图像差异无法解释闭环发散</td></tr>
-<tr><td><b>历史帧补帧质量</b></td><td>2 Hz GIMM 插帧带来运动模糊与时间抖动</td><td><b>排除</b>：真实 10 Hz 视频对比 GIMM 插帧，模型 RFS 仅高出 +0.51 [−0.51, +1.54]，统计不显著</td><td>决策 116；GIMM 已收回真实 10 Hz 历史 89% 的信息量</td></tr>
+<tr><td><b>历史帧补帧质量</b></td><td>2 Hz GIMM 插帧带来运动模糊与时间抖动</td><td><b>排除</b>：真实 10 Hz 视频对比 GIMM 插帧，模型 RFS 仅高出 +0.51 [−0.51, +1.54]，统计不显著</td><td>决策 116；GIMM 已收回 NAVSIM hold→real 差距的 98%（WOD 上收回 89%，决策 37）</td></tr>
 <tr><td><b>评测场景类型特征</b></td><td>打转发生于特定的复杂十字路口或障碍场景</td><td><b>排除</b>：打转与否仅取决于车辆静止起步瞬间 plan 的随机微小偏角；对 36 个场景元特征进行回归，均无统计区分度</td><td>决策 110；发散源于状态反馈闭环，而非外部场景</td></tr>
 <tr><td><b>控制器增益差异</b></td><td>真车执行器等效增益 c 极小，吸收了震荡</td><td><b>排除</b>：comma1M 真车结合驾驶员的等效 c 并不小；openpilot 自身曲率限幅与横向加速度上限同样宽松</td><td>决策 113、115；均匀低通滤波在 B2D 上反而导致 DS 下降 4.1 分</td></tr>
 </table>
 
 <figure>
-<img src="figs/spin-attribution.png" alt="HUGSIM 打转归因与执行器对比">
-<figcaption>图二：HUGSIM 闭环打转归因与横向执行层对比。左图展示旧 exam 预设（iLQR 跟踪 plan 轨迹坐标）下车辆在静止起步瞬间因微小航向偏角激发正反馈，环路增益 > 1 导致车辆在原地转圈失控；右图展示采用车端标准横向路径（spec: op-path，直接执行 action 期望曲率并限幅）后，模型对起步微小偏角不产生剧烈反应，打转现象由 10/64 彻底消除至 0/64（决策 110、118、124）。</figcaption>
+<img src="figs/spin-attribution.png" alt="HUGSIM 打转归因：特征 AUC 与模型间 Jaccard 相似度">
+<figcaption>图二：HUGSIM 打转归因分析（决策 110）。左图展示 36 个场景特征中距离 0.5 最远的 top-12 特征对打转的 AUC 及 95% 分层 bootstrap 置信区间（Cinque 为蓝色，Lebowski 为红色），仅起步偏角读数（phi1、lean）置信区间明显脱离 0.5，其余场景特征均无统计区分度；右图展示六个模型臂（Cinque 及其适配变体，以及 Lebowski）之间打转场景集合的 Jaccard 相似度矩阵，表明打转场景由模型与场景共同决定，而非固定的外部场景类别。</figcaption>
 </figure>
 
 <h2>五、评测接口缺陷拆解：navhard DAC 亏损分析</h2>
 <p>
-openpilot Cinque 在 navhard 综合得分仅 33.34 分（阶段 1 为 71.79，阶段 2 为 47.08），较公开榜首（DriveZero 56.8，ZTRS 48.1）存在巨大差距。逐 token 交叉换项诊断表明：
+openpilot Cinque 在 navhard 综合得分仅 33.54 分（阶段 1 为 71.79，阶段 2 为 47.08），较公开榜前列（EABOT 58.6 榜首，对比 DriveZero 56.8、ZTRS 48.1）存在巨大差距。逐 token 交叉换项诊断表明：
 </p>
 <ul>
-<li><b>亏损绝大部分集中在可行驶区遵从性（DAC）</b>：将 ZTRS 的 DAC 得分单独置换给 Cinque，其综合得分直接暴涨 <b>+7.8 分</b>；而将碰撞（NC）、TTC、进度（EP）等其他 8 项全部置换，增益仅在 −0.35 到 +0.1 之间。Cinque 在非故障碰撞（NC 98.0 / 90.9）与行车速度（EP 75.0 / 66.1）上与顶级模型平齐甚至略优，短板纯粹在于判定出界。</li>
+<li><b>亏损绝大部分集中在可行驶区遵从性（DAC）</b>：在置换全部 9 项带来的 +11.5 分中，仅置换 DAC 就贡献了 <b>+7.8 分</b>（约 68%）；而碰撞（NC）、TTC、进度（EP）、TLC 与 HC 等项置换增益仅在 −0.35 到 +0.1 之间（DDC 为 +1.2，EC 为 +1.1）。Cinque 在非故障碰撞（NC 98.0 / 90.9）与行车速度（EP 75.0 / 66.1）上与顶级模型平齐甚至略优，短板纯粹在于判定出界。</li>
 <li><b>评分器侧伪影占 DAC 失败的一半以上（决策 112）</b>：
   <ul>
     <li><b>可行驶区多边形缺失</b>：官方地图矢量多边形在路口边缘漏掉了 26–29% 的真实硬化铺装，车轮越界中位数仅 3.5 cm，人工目检 75% 仍处在合理路面内。</li>
     <li><b>评分器 LQR 跟踪滞后</b>：官方 LQR 回放控制器存在相位延迟，贡献了 21% 的 DAC 越界扣分。</li>
-    <li><b>阶段 2 偏离起点无解</b>：3DGS 合成的偏离起点中约 20% 被平移至路沿死角，物理上不存在不擦边即可回到主路的几何平滑轨迹。</li>
+    <li><b>阶段 2 偏离起点无解</b>：在 DAC 失败中，3DGS 挪偏起点占 19.6–20.8%，其中 56–66% 物理上不存在不擦边即可回到主路的可行圆弧轨迹（决策 112）。</li>
   </ul>
 </li>
 <li><b>模型自身规划缺陷上限约为 4.7 分</b>：真正源于模型预测偏航的 DAC 损失仅占约 30%。因此，停止在没有真实地图投影的前提下强行优化 navhard DAC 指标。</li>
@@ -160,17 +160,17 @@ openpilot Cinque 在 navhard 综合得分仅 33.34 分（阶段 1 为 71.79，�
 <tr><th>能力项</th><th>NAVSIM navtest</th><th>navhard 两阶段</th><th>WOD-E2E</th><th>HUGSIM 64</th><th>Bench2Drive (B2D)</th><th>实车 / 其他基准证据</th></tr>
 <tr><td><b>路口出口选择</b></td><td>未测（无量具）</td><td>较小：缺路线约值 3 分 (d103)</td><td>未测</td><td>未测</td><td><b>缺</b>：nz choice 走对 0/13 (d127)；desire 仅 2/38 (d121)；rc-* 闭环无增益 (d128)</td><td>CARLA 开环 shipped 0.16 → rc-* 0.58 (d128.4)</td></tr>
 <tr><td><b>急弯 / 慢速转向幅度</b></td><td>未测</td><td>早转子集设为护栏 (d110)</td><td>好（plan 不欠转，d130）</td><td><b>缺</b>：入弯过快 9.8 m/s，曲率仅达 0.51 倍</td><td><b>缺</b>：forced 走对 1/12，action 曲率仅达所需 0.3 倍 (d127)</td><td>comma1M 慢速急弯 action 仅 0.65 (d130)</td></tr>
-<tr><td><b>入弯时机</b></td><td>未测</td><td>未测</td><td>未测</td><td>未测</td><td><b>缺</b>：微调模型多在弯前 6–9 m 选得太晚 (d128)；提前监督闭环 0–1/25 (d129)</td><td>近距低速样本 pilot 闭环 0/9 失败 (d134)</td></tr>
+<tr><td><b>入弯时机</b></td><td>未测</td><td>未测</td><td>未测</td><td>未测</td><td><b>缺</b>：微调模型多在过了转弯起点才转向（每臂 6–9 个转弯选得太晚，d128）；提前监督闭环 0–1/25 (d129)</td><td>近距低速样本 pilot 闭环 0/9 失败 (d134)</td></tr>
 <tr><td><b>起步 / 该走不走</b></td><td>未测</td><td>未测</td><td>缺：原生 plan 漏起步/起转 30–70% (d77)</td><td><b>缺</b>：action 纵向 20 场景从未起步 (d119)；spec 卡死 6/11</td><td><b>缺</b>：plan_vmin=0 时停车比例达 0.93–0.98 (d128.7)</td><td>真车 1.8 秒内平稳离开 0–3 m/s (d115)</td></tr>
 <tr><td><b>行驶中幽灵停车</b></td><td>未测</td><td>未测</td><td>未测</td><td>停滞在静态停车计划中 (d118)</td><td><b>缺</b>：转弯窗口 40% 停车，70–90% 为 plan 自身停滞，25–30% 无车无灯 (d128.7)</td><td>低速阻尼结合锁存状态机造成卡死</td></tr>
-<tr><td><b>历史过度外推</b></td><td>有轻度漂移 (d92)</td><td><b>缺</b>：合成历史致反向 yaw (d88)</td><td>真实起步增益 9.34 (d111)</td><td><b>缺</b>：跟踪 plan 放大为 100% 打转 (d96)</td><td>有轻度摆动 (d92)</td><td>第 3 层历史适配开环降幅 71–78% (d98)</td></tr>
+<tr><td><b>历史过度外推</b></td><td>有轻度漂移 (d92)</td><td><b>缺</b>：合成历史致反向 yaw (d88)</td><td>真实起步增益 9.34 (d111)</td><td><b>缺</b>：跟踪 plan 放大起步打转 (10/64 场景打转，低速去旋转可降至 3，d96)</td><td>有轻度摆动 (d92)</td><td>第 3 层历史适配开环降幅 71–78% (d98)</td></tr>
 <tr><td><b>打转 (Spinning)</b></td><td>n/a</td><td>n/a</td><td>n/a</td><td>exam 10/64 → spec 0/64 (d118, d124)</td><td>curv 无打转；P7/hyb 起步 20 s 内失控 12–16/20 (d133)</td><td>横向切换至 action 曲率彻底解决</td></tr>
-<tr><td><b>偏离修回能力</b></td><td>未测</td><td>挪偏起点约 20% 无解 (d112)</td><td>重投影 S10 保持比 0.93 → dg1 0.24 (d132)</td><td>dg1 消除打转但引发抖动 8/11 (d132)</td><td>转弯失败后出车道率 78–100% (d127)</td><td>依赖重投影 DAgger 训练恢复</td></tr>
+<tr><td><b>偏离修回能力</b></td><td>未测</td><td>阶段 2 挪偏起点占 DAC 失败约 20%（其中 56–66% 无可行弧，d112）</td><td>重投影 S10 保持比 0.93 → dg1 0.24 (d132)</td><td>dg1 消除打转但引发抖动 8/11 (d132)</td><td>转弯失败后出车道率 78–100% (d127)</td><td>依赖重投影 DAgger 训练恢复</td></tr>
 <tr><td><b>借道与动态绕障</b></td><td>未测</td><td>未测</td><td>未测</td><td>未测</td><td><b>缺</b>：非特权绕障 DS +12.9；规则放宽致侧撞同涨 (d105)</td><td>实车用户反映存在逆向借道倾向</td></tr>
-<tr><td><b>交通红绿灯</b></td><td>未单列</td><td>未单列</td><td>n/a</td><td>基本无红绿灯</td><td><b>缺</b>：外部 Qwen3-VL 使闯灯由 13 降至 6 (d86)；去除 nored 闯灯回弹 (d126)</td><td>视觉特征可判别灯存在（AUC 0.98），但难判停止线距离 (d89)</td></tr>
-<tr><td><b>横穿车与让行</b></td><td>碰撞率平稳</td><td>碰撞为主要失分块 (d103)</td><td>未测</td><td>未单列</td><td><b>缺</b>：路口被横穿直行车撞击 2–3 次，属纵向让行缺失 (d127)</td><td>对向车碰撞多属仿真生成激进</td></tr>
+<tr><td><b>交通红绿灯</b></td><td>未单列</td><td>未单列</td><td>n/a</td><td>基本无红绿灯</td><td><b>缺</b>：外部 Qwen3-VL 使闯灯由 13 降至 6 (d86)；去除 nored 闯灯回弹 (d126)</td><td>视觉特征可判别灯/stop sign存在（AUC 0.91–0.98），但难判停止线距离 (d89)</td></tr>
+<tr><td><b>横穿车与让行</b></td><td>碰撞未降 (3.2分，d103)</td><td>碰撞未降 (2.7分，非主要失分块，d103)</td><td>未测</td><td>未单列</td><td><b>缺</b>：路口被横穿直行车撞击 2–3 次，属纵向让行缺失 (d127)</td><td>对向车碰撞多属仿真生成激进</td></tr>
 <tr><td><b>近距行人检测</b></td><td>未测</td><td>未测</td><td>未测</td><td>未测</td><td><b>缺</b>：CARLA 行人在模型各层无法读出，AUC 仅 0.51–0.53 (d62)</td><td>nuScenes 车道内行人检测 AUC 达 0.83</td></tr>
-<tr><td><b>夜间 / 低光照</b></td><td>无纯夜间样本 (d153)</td><td>无纯夜间样本 (d153)</td><td><b>缺</b>：夜间 ADE@3s 劣化 +0.43 m (d131)</td><td>无纯夜间场景</td><td>路灯修复后未显著掉分 (d60)</td><td>nuScenes 夜间表现稳定（光照较亮）</td></tr>
+<tr><td><b>夜间 / 低光照</b></td><td>无纯夜间样本 (d153)</td><td>无纯夜间样本 (d153)</td><td><b>缺</b>：夜间 ADE@3s 劣化 +0.43 m (d131)</td><td>无纯夜间场景</td><td>未测（仅排查修复路灯渲染 bug，d60）</td><td>nuScenes 夜间表现稳定（光照较亮）</td></tr>
 </table>
 
 <h2>七、表三：缺口分类与已定修复方案</h2>
@@ -214,12 +214,12 @@ openpilot Cinque 在 navhard 综合得分仅 33.34 分（阶段 1 为 71.79，�
 
 <h2>九、B2D 路口候选方案对比：A–F 开环回放与闭环真相</h2>
 <p>
-在 Bench2Drive 路口区域（转向前后 20 米区间），原先采用稠密路线几何（zones）作为半特权兜底。针对「摆脱特权接管、实现真车级导航转向」的目标，在 38 个 ≥ 25° 的路口（36 条路线）上对比了候选方案 A–F（基于单车运动学模型，同一入口位姿）：
+在 Bench2Drive 路口区域（转弯前 15 米至转弯后 5 米的 20 米区间），原先采用稠密路线几何（zones）作为半特权兜底。针对「摆脱特权接管、实现真车级导航转向」的目标，在 38 个 ≥ 25° 的路口（36 条路线）上对比了候选方案 A–F（基于单车运动学模型，仿真起始于转弯前 25 米）：
 </p>
 
 <figure>
 <img src="figs/junction_options_summary.png" alt="B2D 路口候选方案 A-F 误差与出界率对比">
-<figcaption>图三：B2D 路口 38 个转弯候选方案 A–F 的峰值横向误差（左，中位数与 95% 路线 bootstrap 置信区间，虚线为半车道 1.75 m 边界）与出车道率（右）。深色为 5 m/s，浅色为 3 m/s。A（稠密路线跟踪）误差 0.52 m 且零出界；B（50 m 稀疏路线）出界率 97%；C（10 m 导航折线 + 1 m 噪声）误差 1.66 m，出界率 45%；D–F（action 头回放、乘以 1.95、plan 推导曲率）出界率均在 68–97% 之间（决策 120、121，tmp/keep/2026-10-05-junction-options.md）。</figcaption>
+<figcaption>图三：B2D 路口 38 个转弯候选方案 A–F 的峰值横向误差（左，中位数与 95% 路线 bootstrap 置信区间，虚线为半车道 1.75 m 边界）与出车道率（右）。深色为 5 m/s，浅色为 3 m/s。A（稠密路线跟踪）误差 0.52 m 且零出界；B（50 m 稀疏路线）出界率 97%；C（10 m 导航折线 + 1 m 噪声）误差 1.66 m，出界率 45%；D–F（action 头回放、乘以 1.95、plan 推导曲率）出界率均在 68–97% 之间（决策 120、121）。</figcaption>
 </figure>
 
 <table>
@@ -246,8 +246,8 @@ openpilot Cinque 在 navhard 综合得分仅 33.34 分（阶段 1 为 71.79，�
 </p>
 <ul>
 <li><b>基线模型对齐（P2 / P2H）</b>：以 openpilot Cinque 为骨干，采用统一的 1.86 m 视角输入与 GIMM 插帧，在 navtrain 上进行对齐微调（P2），并引入可行驶区域 SDF 铰链损失（P2H，权重 λ=10，决策 148）。</li>
-<li><b>执行层平滑协议（<code>spec_plan_smooth</code>）</b>：HUGSIM 闭环执行层确立为模型 plan 在 0.5–1.5 s 时间窗内的平滑曲率，直道得分达到 47.8 分（领先开源 SOTA WA-JEPA 2.2 分），全量 64 场景 HD 达到 43.2 分，与 WA-JEPA（45.1）的差距缩窄至无统计显著性（+1.9 [−5.4, +9.8]，决策 149）。</li>
-<li><b>最新四方向定性状态</b>：自车历史匀速探针（决策 156）、前车制动余量规则（决策 157）、智能体铰链损失 pilot（决策 158）与 HUGSIM ax=0 闭环探针（决策 159）均已关停或证伪；急弯未减速根因聚焦于视觉预判，撞车缺陷彻底聚焦至表征升级（视觉解冻与近距 SDF 头，阶段 0/1 运行中）。详见子页面 <a href="../four-directions/index.html">four-directions</a>。</li>
+<li><b>执行层平滑协议（<code>spec_plan_smooth</code>）</b>：HUGSIM 闭环执行层确立为模型 plan 在 0.5–1.5 s 时间窗内的平滑曲率，直道得分达到 47.8 分（P2+hinge，领先开源 SOTA WA-JEPA 2.2 分），全量 64 场景 HD 达到 43.2 分，与 WA-JEPA（45.1）的差距缩窄至无统计显著性（+1.9 [−5.4, +9.8]，决策 149、153）。</li>
+<li><b>最新四方向定性状态</b>：自车历史匀速探针（决策 156）、前车制动余量规则（决策 157）、智能体铰链损失 pilot（决策 158）与 HUGSIM ax=0 闭环探针（决策 159）均已关停或证伪；急弯未减速根因聚焦于视觉预判，撞车缺陷聚焦至后续表征升级方案（视觉解冻与近距 SDF 头，目前处于设计阶段，尚未启动运行）。详见子页面 <a href="../four-directions/index.html">four-directions</a>。</li>
 </ul>
 
 <h3>原始数据与实验代码目录指针</h3>
@@ -255,7 +255,7 @@ openpilot Cinque 在 navhard 综合得分仅 33.34 分（阶段 1 为 71.79，�
 <li>跨榜接口与声明偏离定义：<a href="../../jevdrive/openpilot/interface.py"><code>jevdrive/openpilot/interface.py</code></a>、<a href="../../docs/openpilot-interface.md"><code>docs/openpilot-interface.md</code></a></li>
 <li>统一接口与基准审计实验：<a href="../../experiments/leaderboard_audit/results/unified_interface.md"><code>experiments/leaderboard_audit/results/unified_interface.md</code></a></li>
 <li>开环接入与插帧验证：<a href="../../experiments/op_openloop/results/op-interp/"><code>experiments/op_openloop/results/op-interp/</code></a>、<a href="../../experiments/op_openloop/results/navhard-deficit/"><code>experiments/op_openloop/results/navhard-deficit/</code></a></li>
-<li>HUGSIM 闭环与打转归因：<a href="../../experiments/hugsim/results/spin_attribution.md"><code>experiments/hugsim/results/spin_attribution.md</code></a>、<a href="../../experiments/hugsim/results/spec_plan_smooth.md"><code>experiments/hugsim/results/spec_plan_smooth.md</code></a></li>
+<li>HUGSIM 闭环与打转归因：<a href="../../experiments/hugsim/results/spin_attribution.md"><code>experiments/hugsim/results/spin_attribution.md</code></a>、<a href="../../experiments/op_parity/results/hugsim_specplan.md"><code>experiments/op_parity/results/hugsim_specplan.md</code></a></li>
 <li>路线导航微调与执行层对比：<a href="../../experiments/op_route_ft/plans/2026-10-05-route-ft-prereg.md"><code>experiments/op_route_ft/plans/2026-10-05-route-ft-prereg.md</code></a>、<a href="../../experiments/op_route_ft/results/plan_track.md"><code>experiments/op_route_ft/results/plan_track.md</code></a></li>
 <li>重投影 DAgger 偏离修回：<a href="../../experiments/op_dagger/results/pilot.md"><code>experiments/op_dagger/results/pilot.md</code></a></li>
 <li>视场与焦距排查：<a href="../../experiments/op_fov/results/pilot.md"><code>experiments/op_fov/results/pilot.md</code></a></li>
