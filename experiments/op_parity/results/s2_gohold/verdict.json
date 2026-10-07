@@ -1,0 +1,47 @@
+{
+ "oracle V2 gate has value (stopped CI lower bound > 0)": false,
+ "oracle V2 gate d stopped": [
+  0.20637267930290965,
+  -0.08450979670115316,
+  0.5054817362203782
+ ],
+ "primary d stopped (standstill-only)": [
+  0.12327192461151018,
+  -0.2737659388418519,
+  0.5147874250432305
+ ],
+ "primary d moving (scope all)": [
+  -0.22991704521241005,
+  -0.3740540032443323,
+  -0.09803502909524929
+ ],
+ "standstill criterion": false,
+ "moving criterion (scope all)": false,
+ "System 2 delivers": "weak / undecided",
+ "B: oracle F20 U WP2 d all": [
+  1.0678815111702824,
+  0.8913394775723039,
+  1.255594589387474
+ ],
+ "B: Qwen3 joint selection d all": [
+  -0.7404255947017335,
+  -0.9954566513297693,
+  -0.48857830499683746
+ ],
+ "B: selector delivers": "harmful",
+ "prototype self-consistency (share of decoded prototypes that fall in their own class)": {
+  "2": 0.8152400835073068,
+  "3": 0.8768267223382046,
+  "5": 0.9215031315240083
+ },
+ "decomposed answers identical to wod-launch labels": {
+  "light": 1.0,
+  "stop_ctrl": 1.0,
+  "lead": 1.0,
+  "cross": 1.0
+ },
+ "n": 479,
+ "B": 4000,
+ "split": "wod/val@v1:47e870db5269",
+ "codebook split": "wod/r2-train@v1:b6bac6fd6c73"
+}
