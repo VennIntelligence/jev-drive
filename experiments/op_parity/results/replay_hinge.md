@@ -111,7 +111,7 @@ navtest gains by stratum (seed means): < 5 deg +0.21, 5-20 deg +0.63, 20-45 deg 
 +0.71; launch -0.09. NC / TTC failures also fall slightly (TTC -0.14 pp s0), LK unchanged (-0.07 / -0.03). The navtest gap to WA-JEPA closes by 0.52 of 3.04
 (17%), about 40% of the ~1.3-point ceiling four_dirs put on inside cuts plus replay-only grazes; the gap on > 45 deg tokens stays 7.9 points.
 
-Departure anatomy, seed 0 ([geom_full.md](replay_hinge/geom_full.md), seed 1 in the same table):
+Departure anatomy, seed 0 ([geom_full.md](replay_hinge/geom_full.md); seed 1 replicates: replay-only -0.49 [-0.64, -0.36] pp, raw plan out +0.28 [+0.11, +0.47]):
 
 | RMH10 - P2H10, s0 (pp) | replay out (= DAC failure) | raw plan out | replay only | raw only |
 |:--|:--|:--|:--|:--|
