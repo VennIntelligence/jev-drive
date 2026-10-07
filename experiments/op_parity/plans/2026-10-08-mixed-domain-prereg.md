@@ -62,3 +62,9 @@ P2HG：pilot 训练约 7 min + navtest（CPU）；全量 2 × 约 22 min（独�
 ## 限定（预先写明）
 
 WOD 开环；HUGSIM 一个 preset、每场景一次；阈值 0.5 m/s 固定；P2HG 的 pilot 只读 navtest；MX 的 batch 是单域配方的两倍；MX 在 WOD / HUGSIM 的 serving 用 9 个真实 slot 而训练是 8 + 零（P2H10 同此）；画面本身带域信息（warp 合成帧对真实帧），「按画面」与「按域外观」在这套实验里分不开，HUGSIM 是唯一不在两个训练域里的读数。val 的 rater 标签只用于评测；不提交 WOD test。
+
+## 补记 1（2026-10-08，teacher8 的 1 024 行 smoke 之后、任何臂训练与打分之前）
+
+smoke（`mixed_domain.py teacher8 --limit 1024`，wod_pilot）：同一路径 9 个 slot 复现存档教师到 1.4e-5 m；把最老 slot 置零后 shipped 的 plan 平均移动 1.16 m（4 s 处 1.26 m，p99 5.7 m）。slot 数对底模是强输入，不是可以忽略的协议细节：(1) 8 + 零 训练、9 个真实 slot serving（P2H10 在 WOD / HUGSIM 上一直如此，MX 主臂在 WOD 上也会如此）本身是一项 train / serve 不一致，可能是第 162 条常数项的一部分来源，报告里用 teacher8 对 teacher 的位移（停车 / 行进分开）量出来；(2) MX 主臂（WOD 行 8 + 零）在 WOD 上要付这个不一致的代价。
+
+**全量臂的 slot 规则（写定）**：全量 MX 用 `--wod-slots 8`，除非 pilot 上 MX-P 的 WOD val RFS 比 MX9-P 低超过 0.10；那样全量 MX 改用 WOD 行 9 个真实 slot（与 WOD serving 一致），并把「slot 数是域标记」写进限定。navtest 一侧不参与这条规则。

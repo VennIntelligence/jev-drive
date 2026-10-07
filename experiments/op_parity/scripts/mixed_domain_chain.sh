@@ -103,10 +103,15 @@ if [[ $STAGE == mx ]]; then
       --refs WODP NAVP shipped MX || die "pilot report"
   if (( rc == 3 )); then status "STOP: pilot gate G-MX failed (results/mixed_domain/pilot_mx_gate.json)"; touch "$D/GATE_STOP"; date > "$D/DONE"; exit 0; fi
   (( rc == 0 )) || die "gate"
-  status "pilot gate G-MX passed; full MX x 2 seeds"
+  # prereg addendum 1: the full arm keeps 8 + zero slots on WOD rows unless that costs the pilot more than 0.10 RFS on WOD val against 9 real slots
+  SL=$($VPY -c "
+import json; r = lambda n: json.load(open('experiments/op_parity/results/mixed_domain/%s_gate.json' % n))['RFS']['MX']
+print('--wod-slots 8' if r('pilot_mx') >= r('pilot_mx9') - 0.10 else '')") || die "slot rule"
+  echo "${SL:-9 real WOD slots}" > "$D/SLOTS"
+  status "pilot gate G-MX passed; full MX x 2 seeds (WOD slots: ${SL:-9 real})"
   for s in 0 1; do
     sub mxd-t-MX-F-s$s $L/t-MX-F-s$s --train --vram 52 --cpu 8 --ram 64 -- $PY $S/pp_train.py --arm P2 --seed $s --frames warp --host \
-        --data $FULL wod_r2 --split navsim/op-parity-full --steps 10000 --batch 256 --warmup 300 --eval-every 1000 $HF $M --wod-slots 8 --tag MX-F-s$s
+        --data $FULL wod_r2 --split navsim/op-parity-full --steps 10000 --batch 256 --warmup 300 --eval-every 1000 $HF $M $SL --tag MX-F-s$s
   done
   waitdirs $L/t-MX-F-s0 $L/t-MX-F-s1
   for s in 0 1; do $PY $S/pp_full_check.py train --tag MX-F-s$s || die "training sanity MX-F-s$s"; done
