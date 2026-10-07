@@ -40,3 +40,10 @@ so rent further boxes in West-E too. autodl-fs is not turned on (`/root/autodl-f
 `/autodl-pub/data` in West-E carries the same datasets (nuScenes, KITTI, ...).
 
 Last verified: 2026-09-20
+
+## Cleanup candidates (scan 2026-10-06, nothing deleted)
+
+Disk 5.0T, 4.6T used. Largest removable items from concluded lines, all regenerable: `runs/openpilot_rigs/frames` 141G
+(model_smoke), `datasets/nuscenes/sweeps` 123G (no repo ref; re-extract from `/autodl-pub`), `runs/cosmos_full` 100G
+(cosmos no-go, d56/d63). Live but regenerable (ask first): `runs/op_adapt_H/{fixbank,bank}` 151G + 122G,
+`processed/op_adapt` 224G, `runs/op_route_cmd/carla_pairs_s10000` 65G. Re-scan before deleting anything.
