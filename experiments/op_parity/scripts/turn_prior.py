@@ -242,6 +242,95 @@ def cmd_desc(a):
         run.info("\noracle:\n%s", pd.DataFrame(orows).T.to_string(float_format=lambda v: f"{v:+.3f}"))
 
 
+# ---------------------------------------------------------------- Step 2
+_W = {}                                                         # arrays shared with forked workers
+N_PERM, PERM_REPS = 200, 3
+
+
+def perm_unit(a):
+    """One permuted-input control: the rows of the (fit and apply) inputs moved between frames (same permutation for both seeds), PERM_REPS fold repeats."""
+    arm, i = a
+    Xf, Jf, Xa, Ja, fold = (_W[arm][k] for k in ("Xf", "Jf", "Xa", "Ja", "fold"))
+    pi = np.random.default_rng(5000 + i).permutation(Xf.shape[1])
+    g = [oof(Xf[:, pi], Jf, Xa[:, pi], Ja, fold(r), r)[0] for r in range(PERM_REPS)]
+    return arm, i, np.mean(g, 0)
+
+
+def cmd_stack(a):
+    import multiprocessing as mp
+    import pandas as pd
+    from jevdrive import par, stats
+    from jevdrive.run import Run
+    with Run("op_parity", "turn-prior-stack", seed=0, config=vars(a) | dict(n_perm=N_PERM, perm_reps=PERM_REPS)) as run:
+        C, z = ctx()
+        d_ = load_sets(C, z)
+        OUT.mkdir(parents=True, exist_ok=True)
+        n, ego, st = C.n, z["va_ego"], strata(C)
+        fr = pd.read_csv(_R / "experiments/op_parity/results/wod_pref/frames.csv")
+        assert (fr["name"].to_numpy() == C.names[:n]).all()
+        pfold, cl = fr["fold"].to_numpy(), fr["cluster"].to_numpy().astype(str)
+        for c in sorted(set(cl)):
+            st[f"cluster {c}"] = cl == c
+        X = {k: X_of(d_[f"pd_{k}"], ego) for k in SETS}
+        J = {k: d_[f"J_{k}"] for k in SETS}
+        base = {k: J[k][:, KEEP].mean(0) for k in SETS} | {"shipped": d_["J_shipped"]}
+        tf = lambda r: H.folds(r)                                                    # noqa: E731  decision-173 folds (random per repeat)
+        pf = lambda r: pfold                                                         # noqa: E731  wod_pref outer folds (fixed; the repeat only moves the inner folds)
+        # arms: name -> (fit set, apply set, fold function, base plan set)
+        spec = {"WLG+floor (173 folds)": ("wlg", "wlg", tf, "wlg"), "WLG+floor (pref folds)": ("wlg", "wlg", pf, "wlg"),
+                "pref-top+floor (nested)": ("wlg", "top", pf, "top"), "pref-f20+floor (nested)": ("wlg", "f20", pf, "f20"),
+                "pref-top+floor (head on pref plans, not nested)": ("top", "top", pf, "top"), "pref-f20+floor (head on pref plans, not nested)": ("f20", "f20", pf, "f20")}
+        gain, lams, picks = {}, {}, {}
+        for nm, (fs, as_, fo, _) in spec.items():
+            runs = [oof(X[fs], J[fs], X[as_], J[as_], fo(r), r) for r in range(REPS)]
+            gain[nm], picks[nm] = np.mean([r[0] for r in runs], 0), np.stack([r[1] for r in runs])
+            lams[nm] = [x for r in runs for x in r[2]]
+            run.info("%s: %s over its base plan", nm, pair(C, gain[nm]))
+        # permutation controls (the three arms that are read as 'delivers' candidates)
+        perm_arms = {"WLG+floor (173 folds)": ("wlg", "wlg", tf), "pref-top+floor (nested)": ("wlg", "top", pf), "pref-f20+floor (nested)": ("wlg", "f20", pf)}
+        for nm, (fs, as_, fo) in perm_arms.items():
+            _W[nm] = dict(Xf=X[fs], Jf=J[fs], Xa=X[as_], Ja=J[as_], fold=fo)
+        t0 = time.time()
+        res = par.pmap(perm_unit, [(nm, i) for nm in perm_arms for i in range(N_PERM)], workers=min(a.workers, 64), run=run, desc="permutations", mp_context=mp.get_context("fork"))
+        res.raise_if_failed()
+        run.info("permutations: %d units in %.0f s", len(res.values), time.time() - t0)
+        perm = {nm: np.stack([g for arm, i, g in res.values if arm == nm]) for nm in perm_arms}                    # (N_PERM, n)
+        # ---- tables
+        arms = {"shipped": base["shipped"], "WP2": base["wp2"], "WLG": base["wlg"], "pref-top (oof)": base["top"], "pref-f20 (oof)": base["f20"]}
+        arms |= {nm: base[spec[nm][3]] + g for nm, g in gain.items()}
+        floor_of = {nm: spec[nm][3] for nm in spec}
+        main, srows, prows = [], [], []
+        for nm, v in arms.items():
+            r = {"arm": nm, "RFS": C.cm(v)}
+            for ref, rv in (("WLG", arms["WLG"]), ("shipped", arms["shipped"])):
+                c = C.ci(v - rv)
+                r |= {f"d vs {ref}": c[0], f"{ref} lo": c[1], f"{ref} hi": c[2]}
+            if nm in spec:
+                bs = arms[{"wlg": "WLG", "top": "pref-top (oof)", "f20": "pref-f20 (oof)"}[floor_of[nm]]]
+                c = C.ci(v - bs)
+                r |= {"d vs its base": c[0], "base lo": c[1], "base hi": c[2]}
+            if nm in perm_arms:
+                pm = np.array([C.cm(g) for g in perm[nm]])
+                act = C.cm(gain[nm])
+                r |= {"perm null mean": float(pm.mean()), "perm null lo": float(np.percentile(pm, 2.5)), "perm null hi": float(np.percentile(pm, 97.5)),
+                      "perm p": float((1 + (pm >= act).sum()) / (1 + len(pm)))}
+            main.append(r)
+            for sn, m in st.items():
+                c = C.ci(v - arms["WLG"], m)
+                cs = C.ci(v - arms["shipped"], m)
+                srows.append({"arm": nm, "stratum": sn, "n": int(m.sum()), "RFS": C.cm(v, m), "d vs WLG": c[0], "lo": c[1], "hi": c[2], "d vs shipped": cs[0], "s lo": cs[1], "s hi": cs[2]})
+        stats.write_table(main, OUT / "stack_arms")
+        stats.write_table(srows, OUT / "stack_strata")
+        pd.DataFrame({"name": C.names[:n], "fold": pfold, "v0": C.v0, "intent": C.intent} | {f"rfs {k}": v for k, v in arms.items()}).to_csv(OUT / "stack_frames.csv", index=False,
+                                                                                                                                          float_format="%.4f")
+        np.savez(RUNS / "stack.npz", **{f"gain|{k}": v for k, v in gain.items()}, **{f"perm|{k}": v for k, v in perm.items()}, **{f"picks|{k}": v for k, v in picks.items()})
+        pd.DataFrame([{"arm": k, "lams": " ".join(f"{x:g}" for x in v)} for k, v in lams.items()]).to_csv(OUT / "stack_lams.csv", index=False)
+        pd.set_option("display.width", 250, "display.max_columns", 99)
+        run.info("\n%s", pd.DataFrame(main).to_string(float_format=lambda v: f"{v:+.3f}"))
+        sd = pd.DataFrame(srows)
+        run.info("\n%s", sd[sd.stratum.isin(["all", "turn-intent", "straight", "turn v0<0.5", "turn 0.5<=v0<3", "turn v0>=3"])].to_string(float_format=lambda v: f"{v:+.3f}"))
+
+
 def main():
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
