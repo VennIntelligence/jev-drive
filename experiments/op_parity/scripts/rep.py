@@ -465,9 +465,25 @@ def cmd_report(a):
     gates["x4"] = {"closure": cx, "verdict": "(c2) / stage-4 (a) viable" if cx >= 0.5 else ("(a) needs the whole encoder" if cx < 0.2 else "between: describe only")}
     gates["repro_pass"] = all(v["pass"] for v in out["repro"].values())
     out["gates"] = gates
+    # secondary (report only, deviation 8): failure share of each arm on the T20 tokens where P2H10 (either seed) fails DAC; selection-biased
+    try:
+        from jevdrive.bench import tables as BT
+        p2h = [BT.load("navtest", f"P2H10-F-s{k}")[0] for k in (0, 1)]
+        tk = S["tokens"][S["T20"]]
+        fset = np.zeros(len(tk), bool)
+        for u in p2h:
+            fset |= (u.reindex(tk).DAC < 1).to_numpy()
+        f = fail.reindex(tk[fset])
+        out["p2h_t20_fail_set"] = {"n_tokens": int(fset.sum()), "n_logs": int(len(set(S["log"][S["T20"]][fset]))),
+                                   "share_failing_pct": {k: 100 * float(f[k].mean()) for k in keys}}
+    except Exception as e:                                           # report-only: never blocks the gates
+        out["p2h_t20_fail_set"] = {"error": repr(e)}
+    jf = OUT / "junction_probe.csv"
+    if jf.exists():
+        out["junction_probe"] = pd.read_csv(jf).to_dict("records")
     (RES / "stage0.json").write_text(json.dumps(out | {"table": tabrows}, indent=1, default=float))
     print(tb.to_string(float_format=lambda x: f"{x:.3f}"))
-    print(json.dumps({"repro": out["repro"], "gates": gates}, indent=1, default=float))
+    print(json.dumps({k: out[k] for k in ("repro", "gates", "p2h_t20_fail_set", "junction_probe") if k in out}, indent=1, default=float))
 
 
 # ---------------------------------------------------------------- stage 1 (CPU): early stop on seed 0, gates on the 2-seed means
