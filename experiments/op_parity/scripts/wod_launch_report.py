@@ -630,6 +630,48 @@ def cmd_full(a):
         run.info("%s\n%s", json.dumps(v, default=float), pd.DataFrame(rows).iloc[:, :12].to_string(float_format=lambda x: f"{x:.3f}"))
 
 
+def cmd_turn(a):
+    """Turn-intent frames by v0 (< 0.5, 0.5-3, >= 3 m/s): RFS and the signed inward lateral miss at 5 s against the top-rated path (convention of
+    wod_gap_turn_side.py: e_lat in the top-rated trajectory's frame, + = toward the turn side), per arm and seed -> turn_v0.{csv,md}."""
+    from jevdrive import stats
+    C = Ctx()
+    n = C.n
+    ii, top = np.arange(n), C.sc.argmax(1)
+    turn = C.intent >= 2
+    sign = np.where(C.intent == 2, 1.0, -1.0)
+    arms = {"shipped": ["shipped"], "WP2": ["WP2-full-s0", "WP2-full-s1"], "WP1": ["WP1-full-s0", "WP1-full-s1"]}
+    P = {k: [C.preds(t) for t in v] for k, v in arms.items()}
+    P["log"] = [C.fut[:n]]
+    if all((C.Z.root("preds", f"op_cinque_lx-WP2-full-s{s}_zero") / f"{C.names[0]}.npz").exists() for s in (0, 1)):
+        g = (C.vkin < GATE_V)[:, None, None]
+        P["WP2 + serving gate"] = [np.where(g, C.preds(f"lx-WP2-full-s{s}_zero"), C.preds(f"lx-WP2-full-s{s}_main")) for s in (0, 1)]
+    if a.arm and all((C.Z.root("preds", f"op_cinque_{a.arm}-full-s{s}") / f"{C.names[0]}.npz").exists() for s in (0, 1)):
+        P[a.arm] = [C.preds(f"{a.arm}-full-s{s}") for s in (0, 1)]
+    geo = {k: [C.parts(p, C.traj, C.sc, C.v0) for p in v] for k, v in P.items()}
+    sco = {k: np.mean([q["score"] for q in v], 0) for k, v in geo.items()}
+    bins = [("turn, v0 < 0.5", turn & (C.v0 < 0.5)), ("turn, v0 0.5-3", turn & (C.v0 >= 0.5) & (C.v0 < 3)), ("turn, v0 >= 3", turn & (C.v0 >= 3)), ("turn, all", turn)]
+    rows = []
+    for nm, m in bins:
+        for k in P:
+            lat = [q["e_lat"][ii, top, 1] * sign for q in geo[k]]
+            lon = [q["e_lon"][ii, top, 1] for q in geo[k]]
+            lm, lo_ = np.mean(lat, 0), np.mean(lon, 0)
+            near = np.abs(lo_) < 3.0
+            row = {"bin": nm, "n": int(m.sum()), "arm": k, "RFS (frame mean)": float(sco[k][m].mean()), "inward miss 5 s median (m)": float(np.median(lm[m])),
+                   "inward miss mean (m)": float(lm[m].mean()), "per seed median": " / ".join(f"{np.median(x[m]):+.2f}" for x in lat),
+                   "inside > 1 m": int((lm[m] > 1).sum()), "wide > 1 m": int((lm[m] < -1).sum()), "lon miss median (m)": float(np.median(lo_[m])),
+                   "n |lon| < 3 m": int((m & near).sum()), "inward median there": float(np.median(lm[m & near])) if (m & near).any() else np.nan}
+            for ref in ("shipped", "WP2"):
+                if k != ref:
+                    c = C.ci_mean(sco[k] - sco[ref], m)
+                    row[f"RFS - {ref}"], row[f"vs {ref} lo"], row[f"vs {ref} hi"] = c
+                    c = C.ci_mean(lm - np.mean([q["e_lat"][ii, top, 1] * sign for q in geo[ref]], 0), m)
+                    row[f"inward miss - {ref} (mean, m)"], row[f"miss vs {ref} lo"], row[f"miss vs {ref} hi"] = c
+            rows.append(row)
+    df = stats.write_table(rows, OUT / "turn_v0")
+    print(df.iloc[:, :12].to_string(float_format=lambda v: f"{v:.2f}"))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp_ = ap.add_subparsers(dest="cmd", required=True)
@@ -639,5 +681,7 @@ if __name__ == "__main__":
     p.add_argument("--ref", default="WP2-pilot-s0")
     p = sp_.add_parser("full")
     p.add_argument("--arm", required=True)
+    p = sp_.add_parser("turn")
+    p.add_argument("--arm", default="WLG")
     a = ap.parse_args()
-    {"diag": cmd_diag, "gate": cmd_gate, "full": cmd_full}[a.cmd](a)
+    {"diag": cmd_diag, "gate": cmd_gate, "full": cmd_full, "turn": cmd_turn}[a.cmd](a)
