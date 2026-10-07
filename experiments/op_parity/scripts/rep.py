@@ -90,8 +90,12 @@ def cmd_vj21(a):
             return np.concatenate(out)
 
         def front_paths(data, rows):
-            z = OW.requests(data, rows)
-            return z["keys"], z["img"][:, [1, 5, 9, 13]]                    # time-major x [L0, F0, R0, B0] -> the 4 CAM_F0 frames
+            lg = np.load(CR / data / "tab.npz")["log"][rows]
+            o = np.argsort(lg, kind="stable")                                # requests() keeps one log pickle in memory: visit rows log by log
+            z = OW.requests(data, rows[o])
+            inv = np.empty_like(o)
+            inv[o] = np.arange(len(o))
+            return z["keys"][inv], z["img"][inv][:, [1, 5, 9, 13]]          # time-major x [L0, F0, R0, B0] -> the 4 CAM_F0 frames
 
         # 1. equivalence: WA weights, front path vs the cached WA-Cf (batched bf16 full-model forward)
         n_all = len(np.load(CR / TEST / "tab.npz")["names"])
