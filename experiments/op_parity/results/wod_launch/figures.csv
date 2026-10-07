@@ -1,0 +1,9 @@
+figure,frame,context,why,v0,light,scores,top d5,log d5,RFS log,RFS shipped,RFS WP2,RFS WLG,d5 shipped,d5 WP2,d5 WLG
+00_red_max_loss_774c537b.png,774c537b284a58c77de4106b1c190117-148,red,max loss,0.38,red_or_yellow_for_ego,10 6 5,0.04,1.29,8.00,6.00,4.00,6.00,5.95,4.02,5.86
+01_green_max_loss_c5cee37f.png,c5cee37fd206963ab9ac2215fdd3f788-149,green,max loss,0.00,green_for_ego,10 9 8,25.57,15.44,4.08,4.08,4.00,4.09,15.52,15.82,15.75
+02_green_median_loss_15fd1819.png,15fd18190eab4e2b20c45153a7781017-150,green,median loss,0.00,green_for_ego,10 8 5,18.26,11.80,8.00,8.00,8.00,8.00,13.47,13.76,13.43
+03_stop_sign_max_loss_f13fbfd6.png,f13fbfd6a820bc93fba9fd494307a062-148,stop_sign,max loss,0.07,no_light_for_ego,10 5 3,18.66,6.34,3.00,4.00,3.50,4.00,9.16,6.87,9.23
+04_stop_sign_median_loss_4b390f75.png,4b390f75983c892cbb4144d5af260054-148,stop_sign,median loss,0.07,no_light_for_ego,8 6 5,16.21,18.03,8.00,5.53,4.07,5.54,7.58,5.98,7.49
+05_lead_max_loss_f4195a30.png,f4195a302974d6ba61a3daa811136c6f-148,lead,max loss,0.16,no_light_for_ego,10 9 8,22.11,10.16,4.61,4.00,4.00,4.00,8.81,10.58,8.86
+06_open_max_loss_74cf0a3e.png,74cf0a3e1a537277b1258a683de98b4f-149,open,max loss,0.06,no_light_for_ego,10 9 8,16.68,18.16,5.58,8.00,4.51,8.00,1.59,9.92,1.80
+07_lead_log_stays_fa998930.png,fa998930ae33848319509f75e88f20b2-149,lead,"log stays, largest WP2 - shipped deficit",0.00,no_light_for_ego,10 9 6,0.03,0.00,10.00,10.00,4.00,10.00,1.59,4.21,1.76
