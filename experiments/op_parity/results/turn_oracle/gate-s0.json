@@ -1,0 +1,32 @@
+{
+ "rule": "clear negative iff seed-0 T45 inside-cut closure (OG vs OS) < 0.25 and T20 DAC failure drop < 0.4 pp",
+ "closure": {
+  "mean": -0.07812500000000022,
+  "lo": -0.18644067796610164,
+  "hi": 0.020844414893617096
+ },
+ "T20_DAC_fail": {
+  "arm": 9.765377298668358,
+  "ref": 9.48002536461636,
+  "diff": 0.2853519340519975,
+  "lo": -0.0861444551861599,
+  "hi": 0.7071755038803056
+ },
+ "Q_OS": 4.218852999340804,
+ "Q_OG": 4.548450889914305,
+ "clear_negative": true,
+ "checks": {
+  "TOS-F-s0": {
+   "dac_fail": 500,
+   "replayed": 500,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "TOG-F-s0": {
+   "dac_fail": 507,
+   "replayed": 507,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  }
+ }
+}

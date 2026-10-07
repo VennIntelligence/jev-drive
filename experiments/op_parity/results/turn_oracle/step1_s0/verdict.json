@@ -1,0 +1,157 @@
+{
+ "verdict": "plan head is the bottleneck",
+ "seeds": [
+  0
+ ],
+ "Q_control": 4.218852999340804,
+ "Q_oracle": 4.548450889914305,
+ "diff": {
+  "arm": 4.548450889914305,
+  "ref": 4.218852999340804,
+  "diff": 0.3295978905735003,
+  "lo": -0.071284772499372,
+  "hi": 0.7994670219853431
+ },
+ "closure": {
+  "mean": -0.07812500000000022,
+  "lo": -0.18644067796610164,
+  "hi": 0.020844414893617096
+ },
+ "control_fail_token_seeds": 64.0,
+ "control_minus_H0_EPDMS": {
+  "arm": 87.80079366667654,
+  "ref": 87.93027262631301,
+  "diff": -0.12947895963648254,
+  "lo": -0.31261150331385057,
+  "hi": 0.046551243759630594
+ },
+ "ci_excludes_0": false,
+ "survival": {
+  "H0": {
+   "mean": -0.5999999999999973,
+   "lo": -5.000000000000018,
+   "hi": NaN
+  },
+  "PW": {
+   "mean": 0.8,
+   "lo": -8.00000000000002,
+   "hi": 5.999999999999966
+  },
+  "PV": {
+   "mean": 0.4,
+   "lo": -3.0000000000000084,
+   "hi": 3.0000000000000138
+  },
+  "MW": {
+   "mean": 2.799999999999997,
+   "lo": NaN,
+   "hi": 14.999999999999948
+  },
+  "OG off": {
+   "mean": 0.4,
+   "lo": -3.0,
+   "hi": NaN
+  }
+ },
+ "closure_other": {
+  "DAC fail % | T45 (> 45 deg)": {
+   "mean": -0.05769230769230771,
+   "lo": -0.11267605633802824,
+   "hi": -0.005648924014473485
+  },
+  "DAC fail % | T20 (> 20 deg)": {
+   "mean": -0.030100334448160737,
+   "lo": -0.07819035021415971,
+   "hi": 0.009678990364474319
+  },
+  "inside-cut % | sharp R < 15 m": {
+   "mean": 0.0,
+   "lo": -0.08602614015572851,
+   "hi": 0.06999999999999995
+  },
+  "inside-cut % | T20 (> 20 deg)": {
+   "mean": -0.006451612903225934,
+   "lo": -0.07463619402985074,
+   "hi": 0.04545973432959754
+  },
+  "DAC fail % | all": {
+   "mean": -0.014000000000000012,
+   "lo": -0.048999822372825796,
+   "hi": 0.017817482193653793
+  }
+ },
+ "checks": {
+  "RH0-F-s0": {
+   "dac_fail": 509,
+   "replayed": 509,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "TOS-F-s0": {
+   "dac_fail": 500,
+   "replayed": 500,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "TOG-F-s0": {
+   "dac_fail": 507,
+   "replayed": 507,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "TOW-F-s0": {
+   "dac_fail": 516,
+   "replayed": 516,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "TOV-F-s0": {
+   "dac_fail": 508,
+   "replayed": 508,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "RMW-F-s0": {
+   "dac_fail": 455,
+   "replayed": 455,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "TOG-F-s0:noside": {
+   "dac_fail": 496,
+   "replayed": 496,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  }
+ },
+ "bank": {
+  "encoding": {
+   "tokens": 32,
+   "dims": 512,
+   "rows_per_token": 4,
+   "clip_m": 6.0,
+   "scale": 3.0,
+   "ones": [
+    384,
+    448
+   ]
+  },
+  "label_coverage/navtrain_full.s2of12": 1.0,
+  "label_coverage/navtrain_full.s3of12": 1.0,
+  "label_coverage/navtrain_full.s4of12": 1.0,
+  "label_coverage/lb_navtest": 1.0,
+  "rms/navtrain_full.s2of12": 1.3578903675079346,
+  "shuf_band_mae_vs_true/navtrain_full.s2of12": 4.175676193682919,
+  "rms/navtrain_full.s3of12": 1.357505202293396,
+  "shuf_band_mae_vs_true/navtrain_full.s3of12": 4.21195002754457,
+  "rms/navtrain_full.s4of12": 1.361538052558899,
+  "shuf_band_mae_vs_true/navtrain_full.s4of12": 4.1576185135771775,
+  "rms/lb_navtest": 1.3560330867767334,
+  "shuf_band_mae_vs_true/lb_navtest": 3.948558039293486,
+  "resolution_band_mae/navtest": 0.028713546797570724,
+  "sdf_wa/navtrain_oof_band_mae": 0.5933958444061849,
+  "sdf_wa/navtest_band_mae": 0.7525255888977809,
+  "sdf_v/navtrain_oof_band_mae": 0.8423588119696326,
+  "sdf_v/navtest_band_mae": 1.0172159317174092
+ }
+}

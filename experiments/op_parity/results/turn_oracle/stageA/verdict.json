@@ -1,0 +1,76 @@
+{
+ "closure_T45": {
+  "inside-cut %": {
+   "mean": 0.207920792079208,
+   "lo": 0.027018018018018078,
+   "hi": 0.3688544485118574
+  },
+  "DAC fail %": {
+   "mean": 0.2222222222222222,
+   "lo": 0.12352336825141016,
+   "hi": 0.3146220078163167
+  }
+ },
+ "diff_inside_cut_T45": [
+  -1.3843111404087014,
+  -2.6182473382473384,
+  -0.14242745930644013
+ ],
+ "reading": "not usable even by a fresh head",
+ "dac_check": {
+  "V": {
+   "score_poses_dac_fail": 334,
+   "replay_dac_fail": 334,
+   "disagree": 0
+  },
+  "V+G": {
+   "score_poses_dac_fail": 261,
+   "replay_dac_fail": 261,
+   "disagree": 0
+  },
+  "V+S": {
+   "score_poses_dac_fail": 359,
+   "replay_dac_fail": 359,
+   "disagree": 0
+  },
+  "G": {
+   "score_poses_dac_fail": 215,
+   "replay_dac_fail": 215,
+   "disagree": 0
+  }
+ },
+ "fits": [
+  {
+   "arm": "V",
+   "dim": 16404,
+   "imit": 0.01091860607266426,
+   "hinge": 0.000131179069285281,
+   "train_s": 12.76337480545044,
+   "navtest_T20_raw_footprint_out": 0.0881420448422432
+  },
+  {
+   "arm": "V+G",
+   "dim": 19476,
+   "imit": 0.011180677451193333,
+   "hinge": 0.00013678509276360273,
+   "train_s": 14.561134099960327,
+   "navtest_T20_raw_footprint_out": 0.07609385251998901
+  },
+  {
+   "arm": "V+S",
+   "dim": 19476,
+   "imit": 0.012017940171062946,
+   "hinge": 0.0001374204584863037,
+   "train_s": 14.596712827682495,
+   "navtest_T20_raw_footprint_out": 0.09828788787126541
+  },
+  {
+   "arm": "G",
+   "dim": 3092,
+   "imit": 0.29270967841148376,
+   "hinge": 0.00026661306037567556,
+   "train_s": 9.649751424789429,
+   "navtest_T20_raw_footprint_out": 0.047558657824993134
+  }
+ ]
+}
