@@ -400,7 +400,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <h2>七、下一步与开放问题（修复项排序与当前状态）</h2>
 
 <div class="running">
-<b>状态通报（2026-10-08 早）：</b>夜间一轮 12 条决策（165–176）已写完，汇总在第八节。slot 协议核查已否定（决策 176：训练 8 + 零 slot 与 WOD serving 9 个真实 slot 的不匹配不是 P2H10 在 WOD 掉分的原因）。在跑的只剩 hinge λ 30 / margin 1.0 的确认。下表是 2026-10-07 收口时的修复项排序，其中第 2 项（replay hinge）已被强 hinge SH30 取代为 navtrain 档现役配方（决策 170）。
+<b>状态通报（2026-10-08 早）：</b>夜间一轮 12 条决策（165–176）已写完，汇总在第八节。slot 协议核查已否定（决策 176：训练 8 + 零 slot 与 WOD serving 9 个真实 slot 的不匹配不是 P2H10 在 WOD 掉分的原因）。hinge λ 30 / margin 1.0 全量确认不替换 SH30（navtest +0.02 [−0.36, +0.41]，直行 EPDMS −0.54 [−0.96, −0.18]）。没有在跑的 lane。下表是 2026-10-07 收口时的修复项排序，其中第 2 项（replay hinge）已被强 hinge SH30 取代为 navtrain 档现役配方（决策 170）。
 </div>
 
 <table>
@@ -448,7 +448,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <tr><td>165</td><td>冻结 Cinque 读不读得出路沿几何</td><td>navtest &gt; 45° 边界 MAE 1.21 m 对 WA-Cf 0.86 m（+0.35 [0.32, 0.39]），直行也差 +0.24</td><td>表征较粗，但不是转弯特有</td></tr>
 <tr><td>166</td><td>真值可行驶边界喂给 plan 头，切内角降不降</td><td>P2 通路 closure −0.08 [−0.19, +0.02]</td><td>切内角不是视觉问题，杠杆在 hinge</td></tr>
 <tr><td>170</td><td>强 hinge 全量</td><td>见上表；原始 plan 出界 −1.14 / −1.28 pp，replay-only 几乎不动；直行与 EP 无代价；&gt; 45° 转不过弯 −0.13 [−0.42, +0.15]</td><td>成立，真的路径收益；大角度弯转不过去没动</td></tr>
-<tr><td>172</td><td>hinge 的 λ × margin 扫描；SH30 上 WOD</td><td>8 个点无一按规则赢过 λ 30 / 0.5；SH30 在 WOD val 7.734（对 P2H10 +0.026 [−0.027, +0.078]）</td><td>强度已近饱和；不带来跨域转弯收益</td></tr>
+<tr><td>172</td><td>hinge 的 λ × margin 扫描；SH30 上 WOD</td><td>8 个点无一按规则赢过 λ 30 / 0.5；λ 30 / 1.0 全量对 SH30 +0.02 [−0.36, +0.41]、直行 −0.54；SH30 在 WOD val 7.734（对 P2H10 +0.026 [−0.027, +0.078]）</td><td>强度已近饱和；不带来跨域转弯收益</td></tr>
 <tr><td>169</td><td>WOD 停车起步的原因与修法</td><td>停车帧缺口 0.762 = 底模 0.406 + adapter 静止偏移 0.384；WLG 停车帧 +0.393 [+0.096, +0.745]；红灯停车各臂持平，最大一块是 stop sign 路口</td><td>修掉 adapter 那一半</td></tr>
 <tr><td>167、174</td><td>停车规则搬到 navtrain 配方；navtrain + WOD 混合臂 MX</td><td>serving 端门 navtest −1.50、HUGSIM 卡死 0 → 11.5；训进去（P2HGA）navtest −0.21 [−0.34, −0.08]、HUGSIM −0.020；MX navtest +0.12、WOD −0.008（均含 0），HUGSIM −0.096 [−0.158, −0.040]</td><td>不搬；各榜各自配方</td></tr>
 <tr><td>168</td><td>系统二选 1 / 20 候选的特权上限</td><td>+1.068 [+0.891, +1.256]；只选速度 +0.856，只选路径 +0.367；二元 go / hold 含 0；zero-shot Qwen3 −0.740</td><td>空间在，主要是速度选择</td></tr>
