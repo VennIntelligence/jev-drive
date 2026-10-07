@@ -1,0 +1,7 @@
+question,n,agreement,confusion (hand -> VLM: count)
+light,40,0.925,green_for_ego -> green_for_ego: 4; green_for_ego -> no_light_for_ego: 2; no_light_for_ego -> no_light_for_ego: 24; red_or_yellow_for_ego -> no_light_for_ego: 1; red_or_yellow_for_ego -> red_or_yellow_for_ego: 9
+stop_sign,40,0.875,no_stop_sign -> no_stop_sign: 35; no_stop_sign -> stop_sign_for_ego: 4; stop_sign_for_ego -> no_stop_sign: 1
+lead,40,0.525,moving_lead -> moving_lead: 1; none_ahead -> moving_lead: 13; none_ahead -> none_ahead: 19; none_ahead -> stopped_lead: 2; stopped_lead -> moving_lead: 3; stopped_lead -> none_ahead: 1; stopped_lead -> stopped_lead: 1
+cross,40,0.8,clear -> clear: 28; clear -> crossing: 1; crossing -> clear: 7; crossing -> crossing: 4
+"stop_ctrl (post hoc, right camera; hand = inferred from the front image, 'unk' dropped)",35,0.8571428571428571,no -> not_stop_controlled: 17; no -> stop_controlled: 5; yes -> stop_controlled: 13
+"lead_head (post hoc: shipped lead head, prob > 0.5 and < 20 m; hand = any lead)",40,0.925,False -> lead: 2; False -> none: 32; True -> lead: 5; True -> none: 1
