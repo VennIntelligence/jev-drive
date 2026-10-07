@@ -31,9 +31,9 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <b>写作原则：</b>整篇论文由图表驱动，每个实验必须挂在明确的图或表上，挂不上则坚决不做；已有证据严格锚定决策编号，缺口证据逐项标出优先级。<br>
 <b>三节现状与定性裁决：</b>
 <ul>
-<li><b>§1 接口归因（trick）</b>：<b>证据完备已闭环</b>。各榜异常的核心分界线在执行层（车端 action vs 仿真跟踪 plan）与评分器缺陷（navhard DAC 占半数），彻底否定了输入几何/相机高度作为主因的假说，手工规则全军覆没。</li>
+<li><b>§1 接口归因（trick）</b>：<b>执行层与评分器归因确立，证据状态待定（中）</b>。各榜异常分界线在执行层（车端 action vs 仿真跟踪 plan）与评分器缺陷（navhard DAC 占半数，决策 112 单人 40 样本抽样）；决策 108 确立异常榜共性为合成画面（3DGS/CARLA）加闭环，非相机高度；d118 非打转 HD（−0.009）未过「不伤」线，手工规则全军覆没。</li>
 <li><b>§2 轻度微调（trade）</b>：<b>核心证据成立，全量多榜护栏待补</b>。P2/P2H 追平直道，急弯与选路机制明确（comma1M 真实增益 0.65，输入对齐缩窄差距至 3.55 分）；尚缺统一合并模型在共同护栏集（op_guard）上的全量多 seed 读数（任务 A）及留一消融矩阵。</li>
-<li><b>§3 世界模型训练场（方法）</b>：<b>降级为负结果反思与讨论</b>。现有世界模型（WL-2 / comma worldmodel-4B）在起步与小偏航响应上低估达 5 倍，被短时几何重投影彻底击败；factor_wm on-policy 闸门叫停。论文方法贡献正式收窄至 §1 + §2。</li>
+<li><b>§3 世界模型训练场（方法）</b>：<b>降级为反思与讨论</b>。现有世界模型 WL-2 在起步与小偏航响应上低估达 5 倍（决策 123）；comma worldmodel-4B 强依赖未来帧无法零样本充当策略（决策 139）；几何重投影在静止起步与急弯存在失真；factor_wm on-policy 闸门停机（决策 143、146）。论文方法贡献收窄至 §1 + §2。</li>
 </ul>
 </div>
 
@@ -50,7 +50,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 
 <h2>一、论文整体结构与论证主线</h2>
 <p>
-学术界端到端自动驾驶（E2E-AD）通常假定每个基准榜单需单独从头设计策略或端到端微调，各榜高分模型难以直接互换。本论文以开源商业量产系统 openpilot（Cinque 架构，382M 参数）为研究对象，系统性回答：<b>学术榜单的高分究竟是真实的泛化驾驶能力，还是各榜特定的接口技巧与人工修补？</b>
+学术界端到端自动驾驶（E2E-AD）通常假定每个基准榜单需单独从头设计策略或端到端微调，各榜高分模型难以直接互换。本论文以开源商业量产系统 openpilot（Cinque 架构）为研究对象，系统性回答：<b>学术榜单的高分究竟是真实的泛化驾驶能力，还是各榜特定的接口技巧与人工修补？</b>
 </p>
 <p>
 论文由三大部分构成：
@@ -72,24 +72,24 @@ ul{padding-left:20px}li{margin-bottom:6px}
 </p>
 <table>
 <tr><th>基准榜单</th><th>执行层通道（Execution）</th><th>起步机制（Launch）</th><th>相机视角与几何</th><th>导航与路线输入</th><th>红绿灯处理</th><th>评分规则与特权等级</th></tr>
-<tr><td><b>WOD-E2E</b></td><td>开环回放（无闭环执行器）</td><td>真实运动日志</td><td>CAM_F 1.86 m（模型内参）</td><td>无地图（纯自车历史）</td><td>无判罚</td><td>轨迹位移误差（真车等价，开环）</td></tr>
+<tr><td><b>WOD-E2E</b></td><td>开环回放（无闭环执行器）</td><td>真实运动日志</td><td>CAM_F 离地约 1.81 m（原点推断约 1.86 m，z=1.8065 m；模型内参）</td><td>无地图（纯自车历史）</td><td>无判罚</td><td>轨迹位移误差（真车等价，开环）</td></tr>
 <tr><td><b>NAVSIM (navtest)</b></td><td>官方 LQR + 自行车模型回放</td><td>真实运动日志</td><td>CAM_F0 1.87 m（模型内参）</td><td>无地图（仅自车历史）</td><td>无判罚</td><td>EPDMS（真车等价，开环）</td></tr>
 <tr><td><b>NAVSIM (navhard)</b></td><td>官方 LQR（滞后约 21%）</td><td>第一阶段真帧 / 第二阶段挪偏起点</td><td>CAM_F0 1.87 m（高度致缩尺 0.7）</td><td>无地图</td><td>无判罚</td><td>DAC 评分多边形过窄，半特权偏差</td></tr>
-<tr><td><b>HUGSIM (64 场景)</b></td><td>早期 exam: iLQR 跟踪 plan 位置；<br>spec: 车端 action 曲率 + 延迟</td><td>早期无预热（起不来）；<br>spec: 5 s 静止预热 + dilate</td><td>多传感器混合（1.19–1.79 m）</td><td>无导航指令（直道+弯道混合）</td><td>无判罚</td><td>HD 进度与碰撞率（exam 误判，spec 合格）</td></tr>
-<tr><td><b>Bench2Drive (B2D)</b></td><td>早期 drive: 裸 curv + 稠密路线接管；<br>spec: action 曲率 + 延迟</td><td>静态原地启动（低速阻尼）</td><td>早期 1.433 m；<br>spec: 1.86 m 对齐开环</td><td>半特权：路口内稠密路线（A 臂）vs 榜原生 50 m 稀疏点（B 臂）</td><td>真值判罚（需外挂 VLM / 规则）</td><td>DS 驾驶分数（半特权路线注入严重）</td></tr>
+<tr><td><b>HUGSIM (64 场景)</b></td><td>早期 exam: iLQR 跟踪 plan 位置；<br>spec: 车端 action 曲率 + 延迟</td><td>早期无预热（起不来）；<br>spec: 5 s 静止预热 + dilate</td><td>多传感器混合（1.2–1.8 m）</td><td>无导航指令（直道+弯道混合）</td><td>无判罚</td><td>HD 进度与碰撞率（exam 误判，spec 合格）</td></tr>
+<tr><td><b>Bench2Drive (B2D)</b></td><td>早期 drive: 裸 curv + 稠密路线接管；<br>spec: action 曲率 + 延迟</td><td>timer resume + coast_v 2.5 调度</td><td>早期 1.433 m；<br>spec: 1.86 m 对齐开环</td><td>半特权：路口内稠密路线（A 臂）vs 榜原生 50 m 稀疏点（B 臂）</td><td>真值判罚（需外挂 VLM / 规则）</td><td>DS 驾驶分数（半特权路线注入严重）</td></tr>
 </table>
 <div class="cite">状态：<span class="tag-done">已具备</span>（台账与代码定义完全锁定）。</div>
 
 <h3>图 1：同一模型在各榜的模型视角（地平线、视场与尺度）</h3>
 <p>
 <b>关键证据（决策 104、108）：</b>
-NAVSIM CAM_F0 离地 1.87 m（openpilot 标定高度约 1.22 m），导致车道宽读数为地图的 0.67–0.70，产生缩尺现象（决策 104）。然而跨榜审计发现，WOD-E2E 相机同样离地约 1.86 m，模型路面 z 值在两者上完全一致（NAVSIM 1.343 [1.339, 1.348] vs WOD-E2E 1.343 [1.328, 1.351]），且地平线行号（road 47.6 行、wide 151.8 行）与广角 58.7° 在五个榜上均严格对齐（决策 108）。openpilot 在 WOD 表现优异（RFS 8.005），排除相机高度尺度是导致闭环失常的核心原因。
+NAVSIM CAM_F0 离地 1.87 m（openpilot 标定高度约 1.22 m），导致车道宽读数为地图的 0.67–0.70，产生缩尺现象（决策 104）。然而跨榜审计发现，WOD-E2E 相机同样离地约 1.86 m（z=1.8065 m 为原点推断，docs 记 1.81 m），模型路面 z 值在两者上完全一致（NAVSIM 1.343 [1.339, 1.348] vs WOD-E2E 1.343 [1.328, 1.351]），直路上远处路面均落在名义行附近（road 约 10 px、wide 约 3 px），广角 58.7° 张角一致（决策 108）。openpilot 在 WOD 表现优异（RFS 8.005），排除相机高度尺度是导致闭环失常的核心原因；决策 108 确立异常榜单的共同点是<b>合成画面（3DGS / CARLA 渲染）加闭环或伪闭环</b>。
 </p>
 <figure>
 <img src="figs/fig1_board_views.png" alt="多榜视角与地平线对齐">
-<figcaption>图 1：五个评测基准输入帧与 openpilot 标定画面的统一对齐。各榜地平线与视场几何均满足契约，相机高度带来的尺度收缩普适存在于开环与闭环榜单，并非闭环失败的区分因子（决策 104、108；源自 experiments/leaderboard_audit/figs/board_views.png）。</figcaption>
+<figcaption>图 1：五个评测基准输入帧与 openpilot 标定画面的统一对齐。展示 NAVSIM、WOD、HUGSIM、Bench2Drive 与 openpilot 参考画面的 road 与 wide 相机视角，直路上远处路面落在名义行（road 47.6 行、wide 151.8 行）附近（road 约 10 px、wide 约 3 px）。尺度收缩在开环 WOD 与 NAVSIM 均存在，异常榜的共同点为合成画面与闭环（决策 104、108；源自 experiments/leaderboard_audit/figs/board_views.png）。</figcaption>
 </figure>
-<div class="cite">状态：<span class="tag-done">已具备</span>。</div>
+<div class="cite">状态：尺度一致性<span class="tag-done">结论</span>，HUGSIM 拆分<span class="tag-partial">待定（弱）</span>（决策 108）。</div>
 
 <h3>图 2：HUGSIM 起步打转归因：跟踪 plan vs 执行 action 的环路增益</h3>
 <p>
@@ -98,19 +98,19 @@ NAVSIM CAM_F0 离地 1.87 m（openpilot 标定高度约 1.22 m），导致车道
 </p>
 <ul>
 <li><b>增益普适存在：</b>起步第 1 步模型侧偏航扰动放大在打转与不打转场景中均存在，真实 WOD 起步步 1 局部增益达 9.34 [9.12, 9.59]，证明敏感性是模型内生特性而非渲染伪影（决策 111）。</li>
-<li><b>执行通道失配：</b>HUGSIM exam 强制使用 iLQR 跟踪 plan 位置坐标，闭环传递系数 c=0.127–0.19（临界值仅约 0.02–0.03），引发正反馈发散；而真车控制栈实际执行的是 <b>action 期望曲率</b>（叠加限幅与延迟）。换回车端横向路径（<code>op-path</code>）后，闭环等效 c 骤降至 0.013 [0.001, 0.024]，HUGSIM 打转由 10/64 彻底降为 <b>0/64</b>（决策 118、124）。</li>
+<li><b>执行通道失配：</b>HUGSIM exam 强制使用 iLQR 跟踪 plan 位置坐标，闭环传递系数 c=0.127–0.19（临界值仅约 0.02–0.03），引发正反馈发散；而真车控制栈实际执行的是 <b>action 期望曲率</b>（叠加限幅与延迟）。换回车端横向路径（<code>op-path</code>）后，开环回放合并等效 c 降至 0.013 [0.001, 0.024]（iLQR 为 0.127），闭环实测 c 为 0.033 / 0.066 / 0.146（约 iLQR 的一半），HUGSIM 打转由 10/64 彻底降为 <b>0/64</b>；但非打转 HD −0.009 [−0.058, +0.042] 未过「不伤」线，代价来自停车计划卡死（决策 118、124）。</li>
 </ul>
 <div class="grid2">
 <figure>
 <img src="figs/fig2_spin_attribution.png" alt="HUGSIM 打转特征归因">
-<figcaption>图 2a：HUGSIM 打转场景特征区分度（AUC）。36 个物理与场景特征中，仅起步前 1–4 步的微小扰动（AUC 0.75）触发发散，场景类型与道路几何均无法区分（决策 110）。</figcaption>
+<figcaption>图 2a：HUGSIM 打转特征区分度与臂间相似度。（a）左图显示 Cinque 与 Lebowski 两模型区分打转与否的 top-12 特征 AUC（Cinque 起步偏航角 phi1 AUC 约 0.75，Lebowski phi1 仅约 0.21）；（b）右图显示 6 个臂之间打转场景集的 Jaccard 相似度矩阵（决策 110；源自 experiments/hugsim/figs/spin-attribution.png）。</figcaption>
 </figure>
 <figure>
 <img src="figs/fig2_wod_launch_gain.png" alt="WOD 真实起步环路增益">
-<figcaption>图 2b：WOD 真实起步上的局部偏航增益。模型自身在真帧上的偏航放大率（步 1 9.34）甚至超过仿真器，控制器的闭环增益 c 决定了是否发散（决策 111）。</figcaption>
+<figcaption>图 2b：WOD 真实起步偏航增益与环路增长。（a）各 step 偏航增益（WOD 真实起步步 1 增益达 9.34，高于仿真器）；（b）起步偏向角 ECDF 分布；（c）各步闭环环路增长曲线（决策 111；源自 experiments/hugsim/figs/wod-launch-gain.png）。</figcaption>
 </figure>
 </div>
-<div class="cite">状态：<span class="tag-done">已具备</span>。</div>
+<div class="cite">状态：<span class="tag-partial">待定（中）</span>（决策 110、111、118 均为待定；d118 非打转 HD −0.009 未过「不伤」线）。</div>
 
 <h3>图 3：navhard 可行驶区（DAC）失败拆分：评分器侧缺陷占半数</h3>
 <p>
@@ -118,16 +118,16 @@ NAVSIM CAM_F0 离地 1.87 m（openpilot 标定高度约 1.22 m），导致车道
 出厂模型在 navhard 上的核心丢分项为可行驶区（DAC 丢失 13 分）。深入归因表明：
 </p>
 <ul>
-<li><b>评分器地图缺陷（M 类）：</b>多边形未覆盖真实铺装路面（中线空隙、导流区等）占 DAC 失败的 26.3% [21.0, 31.6]，单人目测 72.5% [57.2, 83.9] 确为真实可行驶铺装；</li>
+<li><b>评分器地图缺陷（M 类）：</b>多边形未覆盖真实铺装路面（中线空隙、导流区等）占 DAC 失败的 26.3% [21.0, 31.6]，经单人目测 40 样本抽样（72.5% [57.2, 83.9] 确为真实可行驶铺装，限制：单人标注、仅 40 样本）；</li>
 <li><b>评分器跟踪器滞后（L 类）：</b>计划本身在区内、但官方 LQR 跟踪回放滞后出界的占 20.6%；两者合计评分器侧缺陷达 <b>46.9% [42.2, 51.4]</b>；</li>
-<li><b>起点不可行（E 类）：</b>第二阶段人为挪偏起点、1.5 秒内无任何等曲率弧可解的占 19.6–20.8%；</li>
+<li><b>起点不可行（E 类）：</b>第二阶段人为挪偏起点、1.5 秒内越界的占 19.6–20.8%（上限约 2.2 分）；其中 56% / 66% 从同一起点没有任何等曲率弧能留在区内（决策 112）；</li>
 <li><b>真正模型规划错误仅占约 30%</b>，改进上限仅约 4.7 分（决策 112）。后续 P2 架构下 DAC 失败 2/3 锁定为冻结视觉特征、1/3 为 head 目标（决策 147）。</li>
 </ul>
 <figure>
 <img src="figs/fig3_navhard_dac_review.jpg" alt="navhard DAC 失败分类审阅">
-<figcaption>图 3：navhard DAC 失败切片分类与现场审阅。半数左右的越界由地图边界不全与官方评测跟踪器滞后导致，不可行驶区硬性扣分被过度归因为模型缺陷（决策 112；源自 experiments/leaderboard_audit/figs/navhard_dac_review.jpg）。</figcaption>
+<figcaption>图 3：navhard DAC 失败切片分类与现场审阅。展示 M 类（地图缺口，占 26.3%）、L 类（LQR 跟踪滞后，占 20.6%）、E 类（挪偏起点不可行，占 19.6–20.8%）等切片样本审阅。半数左右越界由评分多边形不全（单人 40 样本抽样）与评测跟踪器滞后导致（决策 112；源自 experiments/leaderboard_audit/figs/navhard_dac_review.jpg）。</figcaption>
 </figure>
-<div class="cite">状态：<span class="tag-done">已具备</span>。</div>
+<div class="cite">状态：<span class="tag-partial">待定（中）</span>（决策 112 证据待定，M 类目测受限于单人 40 样本抽样）。</div>
 
 <h3>图 4：Bench2Drive 路口转弯：稠密路线特权 vs openpilot 自主转向</h3>
 <p>
@@ -135,15 +135,15 @@ NAVSIM CAM_F0 离地 1.87 m（openpilot 标定高度约 1.22 m），导致车道
 B2D 基准模型普遍依赖路口内稠密路径或 50 m 目标点导航。实测显示：
 </p>
 <ul>
-<li>在 B2D 38 个路口转弯中，依赖半特权稠密路线接管（A 方案）走对 35/38（92%）；而闭环下完全依靠 openpilot action 头自主转向（D 方案）仅走对 <b>2/38（5%）</b>，即便开启原生 turn desire 依然直行穿过路口（DS −26.6 [−35.6, −17.7]，决策 121）；</li>
-<li>路口内将 action 曲率强制放大 1.95 倍（E 方案）仅提升至 4/38，车辆后半段剧烈过冲甩动（决策 121）；</li>
-<li>在相机对齐 1.86 m 后复测，自主 action 转向在自主选择岔路（choice）走对 <b>0/13</b>、强制单路口（forced）走对 <b>1/12</b>，期望曲率中位仅为所需的 0.30 倍（决策 127）。证明问题是<b>缺乏导航选路信号</b>，而非单纯转向增益不足。</li>
+<li>在旧相机高度（1.433 m）下 38 个路口转弯中，依赖半特权稠密路线接管（A 方案）走对 35/38（92%）；而闭环下完全依靠 openpilot action 头自主转向（D 方案）仅走对 <b>2/38（5%）</b>，即便开启原生 turn desire 依然直行穿过路口（DS −26.6 [−35.6, −17.7]，决策 121）；</li>
+<li>路口内将 action 曲率强制放大 1.95 倍（E 方案）仅提升至 4/38，少数转过去的 D/E 弯道仍出车道（峰值 4.0 / 1.9 m，样本过少，决策 121）；</li>
+<li>在相机对齐 1.86 m 后复测 25 转弯（决策 127），稠密路线接管走对 20/25（choice 12/13、forced 8/12），而自主 action 转向在自主选择岔路（choice）走对 <b>0/13</b>、强制单路口（forced）走对 <b>1/12</b>（合计 1/25），期望曲率中位仅为所需的 0.30 倍。证明问题是<b>缺乏导航选路信号</b>，而非单纯转向增益不足。</li>
 </ul>
 <figure>
 <img src="figs/fig4_junction_panels.png" alt="B2D 路口转弯多方案轨迹面板">
-<figcaption>图 4：B2D 对齐相机下路口转弯轨迹面板（choice 0/13，forced 1/12）。openpilot 自身作为车道保持系统，无外生导航路径时倾向直行，简单增益放大无法恢复正确轨迹（决策 121、127；源自 experiments/op_closed_loop/figs/junction_rig122_panels.png）。</figcaption>
+<figcaption>图 4：B2D 路口转弯轨迹面板。展示 4 条代表性路线（2 条 choice、2 条 forced）在五种相机高度与路线配置下的轨迹：D（drive 1.433 m 稠密路线）、143nz（1.433 m 关路线）、122nz（1.22 m 关路线）、ol 与 olnz（1.59 m / 1.86 m 对齐相机，分别对应路线开与关）。面板中 122nz 与 ol 完成了部分转弯，而无路线引导时自主转向普遍出车道或直行（决策 121、127；源自 experiments/op_closed_loop/figs/junction_rig122_panels.png）。</figcaption>
 </figure>
-<div class="cite">状态：<span class="tag-done">已具备</span>。</div>
+<div class="cite">状态：d121 <span class="tag-done">强（已确认）</span>，d127 <span class="tag-partial">待定（中）</span>。</div>
 
 <h3>表 2：人工启发式规则修补全部不过线（负结果清单）</h3>
 <p>
@@ -153,12 +153,12 @@ B2D 基准模型普遍依赖路口内稠密路径或 50 m 目标点导航。实�
 <tr><th>规则方案</th><th>作用机制与目标</th><th>实测表现与核心读数</th><th>否定裁决与机制归因</th></tr>
 <tr><td><b>全量去历史转动</b>（决策 094）</td><td>抑制历史外推导致的偏航抖动</td><td>navtest 骤降 −8 分；仅在事后按不确定度筛选时伪提升</td><td><span class="tag-nogo">否决</span>：直接破坏正常弯道的历史感知延续性。</td></tr>
 <tr><td><b>跟踪器滞后预补偿</b>（决策 097）</td><td>补偿 NAVSIM LQR 滞后以提高 DAC</td><td>计划被精确跟踪后，真实场景表现反而全面恶化</td><td><span class="tag-nogo">否决</span>：跟踪器滞后本质上是有益的低通平滑，强行补偿放大高频扰动。</td></tr>
-<tr><td><b>非特权 Bypass 避障规则</b>（决策 105）</td><td>规则放行绕行以提升 B2D DS</td><td>障碍路线 +12.9（未达目标 +20.7），密集车流中严重保守拒绝通行，碰撞率反弹</td><td><span class="tag-nogo">否决</span>：几何规则无法处理交互博弈，避障必须依赖高阶表征或多模态仲裁。</td></tr>
+<tr><td><b>非特权 Bypass 避障规则</b>（决策 105）</td><td>规则放行绕行以提升 B2D DS</td><td>障碍路线 +12.9（未达目标 +20.7 线，未通过），保守 gap 规则在密集车流很少放行；碰撞回到 drive 水平（0.158，通过碰撞线）</td><td><span class="tag-partial">待定（弱）</span>：单靠 gap 旋钮无法兼顾增益与安全（放宽 gap 侧撞反弹），规则难解交互博弈，待高阶表征或侧向感知。</td></tr>
 <tr><td><b>控制器低速低通滤波</b>（决策 113）</td><td>滤除起步瞬时偏航以消除 HUGSIM 打转</td><td>打转 10 → 1，但非打转 HD −0.028 掉分；B2D 补跑 DS −4.11（无打转可压、净损耗）</td><td><span class="tag-nogo">否决</span>：钝化车辆响应，转弯场景无法及时转向。</td></tr>
 <tr><td><b>低速死区截断（2°–4°）</b>（决策 114）</td><td>强制忽略小偏航角</td><td>HD 不伤，但打转仅 10 → 6；剩余场景在 1–3 步内迅速突破 4° 死区阈值</td><td><span class="tag-nogo">否决</span>：发散过程跨过阈值速度极快，死区无法阻断正反馈。</td></tr>
 <tr><td><b>纵向起步对齐真车剖面</b>（决策 117）</td><td>缩短低速逗留时间以规避打转</td><td>低于 3 m/s 时间由 6.4 s 缩短至 3.9 s，但打转仍达 11 次（基线 10 次）</td><td><span class="tag-nogo">否决</span>：「真车逗留短故不打转」假说在闭环中不成立，环路核心在横向。</td></tr>
 </table>
-<div class="cite">状态：<span class="tag-done">已具备</span>（完整的规则失败负结果链条，反衬 §2 端到端微调的必要性）。</div>
+<div class="cite">状态：<span class="tag-partial">负结果清单待定（弱/中）</span>（决策 094、097、105、113、114、117；规则均未过线或被否，反衬 §2 端到端微调的必要性）。</div>
 
 <h2>三、§2 轻度微调（trade）：冻结表征、补齐缺口</h2>
 <p>
@@ -170,32 +170,32 @@ B2D 基准模型普遍依赖路口内稠密路径或 50 m 目标点导航。实�
 <tr><th>能力缺口维度</th><th>问题现象与基准表现</th><th>根因定位与定性结论</th><th>对应微调/架构修复方案</th><th>证据决策</th></tr>
 <tr><td><b>路口选路（Choice）</b></td><td>B2D 25 路口 choice 走对 0/13；原车 turn desire 开着仍直行</td><td>车道保持先验阻碍转向；模型未见过折线导航目标</td><td>增加折线导航指令通路（op_route_cmd）或图像级路口条件</td><td>决策 121、127、128</td></tr>
 <tr><td><b>急弯幅度（Sharp Turn）</b></td><td>HUGSIM 入弯过快（9.8 对 2.7 m/s）；navtest 54% 切内角、26% 欠转</td><td>comma1M 真车增益为 0.65；rc-* 目标缩半；入弯减速缺少视觉预判</td><td>瞬时曲率目标重标定（决策 130）+ 可行驶区 SDF hinge 约束</td><td>决策 122、130、148、153</td></tr>
-<tr><td><b>起步与自停（Launch）</b></td><td>仿真中静止状态频发幽灵停车（HUGSIM 停滞 24 场景）；起步失败</td><td>离散输入时钟下缺少连续真车蠕行动力学，历史帧全零锁死</td><td>显式自车运动输入（ego warp 对齐）使卡死清零（24 → 0）</td><td>决策 119、142、144</td></tr>
+<tr><td><b>起步与自停（Launch）</b></td><td>仿真中静止状态频发幽灵停车（HUGSIM 停滞 24 场景）；起步失败</td><td>停车时间的 70–90% 是模型自身 plan 要停（决策 119、128 第 7 点；停的理由不全在输出里，决策 140）</td><td>显式自车运动输入（ego warp 对齐）使卡死清零（24 → 0）</td><td>决策 119、124、128、140、142、144</td></tr>
 <tr><td><b>借道与绕障（Bypass）</b></td><td>B2D 遇障碍车停死；简单规则放宽导致侧面碰撞率反弹</td><td>端到端轻量 head 无法稳定建模多车博弈与对向车流缝隙</td><td>定性为架构外能力，声明外挂 Qwen3-VL 仲裁模块负责放行</td><td>决策 084–086、105</td></tr>
 </table>
-<div class="cite">状态：<span class="tag-done">已具备</span>。</div>
+<div class="cite">状态：<span class="tag-partial">待定（中/弱）</span>（各缺口定位与机制分析待统一验证）。</div>
 
 <h3>表 4：合并微调版本 vs 出厂模型 vs 逐榜最优臂对比（跨榜共同护栏集）</h3>
 <p>
 展示轻度微调在多榜通用护栏指标上的表现（EPDMS、RFS、HD、DS 综合矩阵）。
 </p>
 <table>
-<tr><th>模型版本</th><th>训练与配置策略</th><th>navtest (EPDMS)</th><th>navhard (综合 EPDMS)</th><th>HUGSIM 64 (HD×100)</th><th>WOD val (RFS)</th><th>B2D (25-turn 走对率)</th></tr>
-<tr><td><b>出厂 shipped (P0)</b></td><td>工业原始权重，无学术榜适配</td><td>80.51</td><td>33.54</td><td>29.4 (spec) / 26.3 (exam)</td><td><b>8.005</b></td><td>2/38 (5%)</td></tr>
-<tr><td><b>P2 (输入对齐)</b></td><td>ego 历史对齐 + warp 预处理</td><td>88.21</td><td>30.34</td><td>39.3 (spec) / 39.6 (exam)</td><td>—</td><td>4–7/25 (rc 臂)</td></tr>
-<tr><td><b>P2H (基线+SDF hinge)</b></td><td>P2 + 可行驶区足迹铰链约束</td><td><b>88.67</b> [88.58, 88.77]</td><td>31.84 [31.40, 32.28]</td><td><b>43.2 (smooth)</b> (直道 47.8)</td><td>7.708 (中性，受输入偏差影响)</td><td>—</td></tr>
+<tr><th>模型版本</th><th>训练与配置策略</th><th>navtest (EPDMS)</th><th>navhard (综合 EPDMS)</th><th>HUGSIM 64 (HD×100)</th><th>WOD val (RFS)</th><th>B2D 走对率</th></tr>
+<tr><td><b>出厂 shipped (P0)</b></td><td>工业原始权重，无学术榜适配</td><td>80.51</td><td>33.54</td><td>29.4 (spec) / 26.3 (exam)</td><td><b>8.005</b></td><td>1/25 (4%，1.86 m 对齐相机；旧 1.433 m 为 2/38，决策 121、127)</td></tr>
+<tr><td><b>P2 (输入对齐)</b></td><td>ego 历史对齐 + warp 预处理</td><td>88.21</td><td>30.34</td><td>39.3 (spec) / 39.6 (exam)</td><td>—</td><td>4–7/25 (1.86 m rc 臂，决策 128)</td></tr>
+<tr><td><b>P2H (基线+SDF hinge)</b></td><td>P2 + 可行驶区足迹铰链约束</td><td><b>88.67</b> [88.58, 88.77]</td><td>31.84 [31.40, 32.28]</td><td>43.2 (spec)（smooth 4 臂均值 42.8，直道 48.2）</td><td>7.708 (中性，受输入偏差影响)</td><td>—</td></tr>
 <tr><td><b>WA-JEPA (开源 SOTA)</b></td><td>nuPlan+V-JEPA 2 全量微调</td><td>91.71</td><td>35.41</td><td>45.1 (直道 45.6)</td><td>—</td><td>—</td></tr>
-<tr><td><b>逐榜最优技巧臂</b></td><td>包含特权路线/人工选择器等</td><td>88.73</td><td>35.76 (带地图 oracle)</td><td>45.0 (含死区/预补偿)</td><td>8.005</td><td>35/38 (92%，稠密路线接管)</td></tr>
+<tr><td><b>逐榜最优技巧臂</b></td><td>包含特权路线/人工选择器等（it_dw3 + 选择器，决策 101）</td><td>84.70</td><td>35.76</td><td>34.5</td><td>8.005</td><td>20/25 (80%，1.86 m 稠密路线；旧 1.433 m 为 35/38，决策 121、127)</td></tr>
 <tr><td><b>合并微调版 (Merged P2H-A)</b></td><td>统一输入 + 导航指令 + 共同护栏</td><td><span class="tag-missing">待填（任务 A）</span></td><td><span class="tag-missing">待填（任务 A）</span></td><td><span class="tag-missing">待填（任务 A）</span></td><td><span class="tag-missing">待填（任务 A）</span></td><td><span class="tag-missing">待填（任务 A）</span></td></tr>
 </table>
 <div class="cite">状态：<span class="tag-partial">部分具备</span>（出厂、P2、P2H 读数已锁定；全量合并模型跨榜统一读数处于 <span class="tag-missing">待补（任务 A）</span>）。</div>
 
-<h3>图 5：路口选路信号接入前后对比：B2D 25 转弯走对率与入弯时机</h3>
+<h3>图 5：路口选路微调对比：B2D 25 转弯走对率与入弯时机</h3>
 <p>
-<b>关键证据（决策 128、129、134）：</b>
-针对路口自主选路，开环指令学习已实现转向与指令的高相关性（corr 0.96，决策 129）。微调 4 臂将走对率由 0 提升至 4–7/25（决策 128）；但闭环中入弯提前转向时机与低速状态严重失配（开环训练在 ≥4 m/s，闭环实际入弯仅 1–3 m/s，决策 129、134）。
+<b>关键证据（决策 127、128、129、134）：</b>
+在 1.86 m 对齐相机下出厂基线走对 1/25（choice 0/13、forced 1/12，决策 127）。路线微调 4 臂将走对率提升至 4–7/25（决策 128），但增益来自微调本身（rc-bear − rc-ctl 为 −0.08 [−0.28, +0.15]），adapter 选路信号无额外贡献；开环指令学习虽达成高相关（corr 0.96），但闭环中提前转向时机与低速状态严重失配（开环训练在 ≥4 m/s，闭环实际入弯仅 1–3 m/s，决策 128、129）。该方向已有闭环结果为负或零增益：决策 129 入弯前提前转向监督闭环仅 0/25 与 1/25；决策 134 近距离低速样本闭环仅 0/9。
 </p>
-<div class="cite">状态：<span class="tag-missing">缺失（待闭环验证）</span>。需要任务 1（入弯前速度与曲率联合监督）产出高质量闭环轨迹对比图（图 5）。</div>
+<div class="cite">状态：<span class="tag-partial">待定（中偏弱，已有闭环结果为负/零增益）</span>（决策 128、129、134 闭环证据已具备且为负/零收益，选路信号未解闭环入弯）。</div>
 
 <h3>图 6：留一消融与训练目标冲突矩阵（Leave-One-Out Ablation）</h3>
 <p>
@@ -206,9 +206,9 @@ B2D 基准模型普遍依赖路口内稠密路径或 50 m 目标点导航。实�
 <h3>表 5：跨榜不迁移的反例（逐榜技巧的局限性）</h3>
 <p>
 <b>关键证据（决策 101、107）：</b>
-展示「逐榜调参」为何不是真正的自动驾驶泛化。在 NAVSIM 上针对渲染跳变设计的 <code>it_dw3</code> 历史平滑与选择器，曾取得 navhard +2.43、navtest +0.52 的优异成绩；然而原样部署到其他基准时，在 Bench2Drive 闭环上出现断崖式掉分（<b>DS 显著下降 −5.18 [−10.20, −0.46]</b>），在真实开环 WOD 上表现完全中性（−0.026 n.s.）。证明迎合单个基准渲染缺陷的小技巧具有负迁移风险，必须坚持规范的通用接口。
+展示「逐榜调参」为何不是真正的自动驾驶泛化。在 NAVSIM 上针对渲染跳变设计的 <code>it_dw3 + 选择器</code> 组合臂，曾取得 navhard +2.43、navtest +0.52 的成绩（决策 101）；然而原样部署到其他基准时，在 Bench2Drive 闭环上 <code>it_dw3 + 选择器</code> 出现断崖式掉分（<b>DS 显著下降 −5.18 [−10.20, −0.46]</b>；<code>it_dw3</code> 单独掉 −3.34 [−7.74, +0.47] 在噪声内，决策 107），在真实开环 WOD 上表现完全中性（−0.026 n.s.）。证明迎合单个基准渲染缺陷的小技巧具有负迁移风险，必须坚持规范的通用接口。
 </p>
-<div class="cite">状态：<span class="tag-done">已具备</span>。</div>
+<div class="cite">状态：<span class="tag-partial">待定（弱）</span>（决策 101、107）。</div>
 
 <h2>四、§3 世界模型训练场（方法探讨与降级裁决）</h2>
 <p>
@@ -218,17 +218,17 @@ B2D 基准模型普遍依赖路口内稠密路径或 50 m 目标点导航。实�
 <h3>图 7：几何重投影 vs 世界模型 vs 真实日志帧（保真度与增益对比）</h3>
 <p>
 <b>关键证据（决策 123）：</b>
-在 WOD 真实数据 15 个 anchor 上对比平面几何重投影（R）与 CARLA 训练的 WL-2 世界模型（W）：
+在 WOD 真实数据 10 个片段 15 个 anchor（起步 6、巡航 3、弯道 1、自然偏离 5，无预登记）上对比平面几何重投影（R）与 CARLA 训练的 WL-2 世界模型（W）：
 </p>
 <ul>
-<li><b>真实运动追踪：</b>几何重投影在 1–2 s 短程内的规划方向误差仅为 0.2°–0.5°，显著优于帧重复（hold）；WL-2 latent 距离始终处于 persistence 水平，无法维持精细道路拓扑；</li>
-<li><b>闭环扰动偏航增益：</b>给定位姿扰动下，几何重投影输出的步 1 偏航增益为 7.4 [3.2, 15.3] °/°，与真实闭环起步增益同量级；而 WL-2 经探针测得的增益仅为 <b>1.2</b>，低估真实模型偏航响应达 <b>5 倍</b>；横向 ±0.5 m 偏离下两者在 2 s 内均无法产生自发恢复响应。</li>
+<li><b>真实运动追踪：</b>几何重投影在 1–2 s 短程内规划方向误差为 0.2°–0.5°，优于帧重复（hold）；WL-2 latent 距离始终处于 persistence 水平，无法维持精细道路拓扑。但重投影亦有明确失真：静止起步 6 个里有 4 个误差达 0.8°–2.5°，1 s 内 24° 急弯越出源图视野，广角边缘畸变；</li>
+<li><b>闭环扰动偏航增益：</b>给定位姿扰动下，几何重投影输出的步 1 偏航增益为 7.4 [3.2, 15.3] °/°，与真实闭环起步增益同量级；而 WL-2 经探针测得增益仅为 <b>1.2</b>，低估真实模型偏航响应达 <b>5 倍</b>；横向 ±0.5 m 偏离下两者在 2 s 内均无法产生自发恢复响应。</li>
 </ul>
 <figure>
 <img src="figs/fig7_wm_vs_reproj_gain.png" alt="重投影与世界模型偏航增益对比">
-<figcaption>图 7：自车微小偏航扰动下，几何重投影与现有世界模型（WL-2）对 openpilot 反应灵敏度的预测对比。现有世界模型将关键偏航响应低估约 5 倍，严重失真；平面重投影在 1–2 秒短程内表现稳健（决策 123；源自 experiments/world_model/figs/wm-vs-reproj-gain.png）。</figcaption>
+<figcaption>图 7：自车微小偏航扰动下，平面几何重投影与现有世界模型（WL-2）对 openpilot 反应灵敏度的预测对比。展示平面重投影与 WL-2 在各 anchor 上的步 1 偏航增益（WL-2 仅 1.2 °/°，低估约 5 倍）；重投影在短程追踪较优，但在静止起步（4/6 误差 0.8–2.5°）与急弯（出源图）存在明显失真（决策 123；源自 experiments/world_model/figs/wm-vs-reproj-gain.png）。</figcaption>
 </figure>
-<div class="cite">状态：<span class="tag-done">已具备</span>（负结果确立：重投影击败世界模型）。</div>
+<div class="cite">状态：<span class="tag-partial">待定（中偏弱）</span>（决策 123 无预登记，仅 15 个 anchor 且仅 1 个弯道 anchor；重投影起步与急弯存在失真）。</div>
 
 <h3>图 8：重投影 Rollout 上的 DAgger 微调试验（偏离修回与过校正）</h3>
 <p>
@@ -237,28 +237,30 @@ B2D 基准模型普遍依赖路口内稠密路径或 50 m 目标点导航。实�
 </p>
 <ul>
 <li>偏离修回指标 S10 从 0.93 改善至 <b>0.24</b>（通过门禁），起步增益压制至 0.63 倍；</li>
-<li>但 action 曲率增益符号发生反转，导致 HUGSIM 出现 8/11 剧烈抖动与 4 例早期碰撞，发生过度校正。</li>
+<li>但 action 曲率增益符号发生反转，导致 HUGSIM 出现 8/11 场景曲率抖动高于出厂模型，且出现 4 例早期碰撞（出厂 2 例），发生过度校正（属于文本记录结论，未反映在下方曲线图中）。</li>
 </ul>
 <figure>
 <img src="figs/fig8_dagger_pilot.png" alt="重投影 DAgger pilot 恢复增益与抖动">
-<figcaption>图 8：重投影短程 rollout 上的首轮 DAgger 微调 pilot 读数。偏离修回显著增强，但伴随高频抖动与过校正副作用，尚需多轮阻尼约束迭代（决策 132；源自 experiments/op_dagger/figs/dagger-pilot.png）。</figcaption>
+<figcaption>图 8：重投影短程 rollout 上的首轮 DAgger 微调 pilot 读数。展示 shipped、dg1、st1、dg2 四个臂的开环偏航增益（起步与行驶）及闭环 2° kick 与 0.5 m swerve 恢复曲线（决策 132；源自 experiments/op_dagger/figs/dagger-pilot.png）。注：HUGSIM 8/11 抖动与 4 对 2 早期碰撞属于 d132 文本结论，未体现在本图中。</figcaption>
 </figure>
-<div class="cite">状态：<span class="tag-partial">初步具备（pilot）</span>（全量稳定化迭代仍待完善）。</div>
+<div class="cite">状态：<span class="tag-partial">待定（中偏弱，pilot）</span>（决策 132；单 seed，单轮）。</div>
 
-<h3>图 9：真实工业世界模型在起步/急弯上胜过重投影（假说检验）</h3>
+<h3>图 9：真实数据世界模型在起步/急弯上胜过重投影（假说检验，未决）</h3>
 <p>
 <b>关键证据（决策 139、141、143、146）：</b>
-探索工业规模生成式世界模型作为策略训练场：
+探索生成式世界模型与 on-policy 闭环训练场：
 </p>
 <ul>
-<li>comma 发布的 worldmodel-4B 强依赖未来锚点画面（0.2–9.8 s），去条件后退化，本质是逆动力学模型，<b>无法零样本充当自回归交互策略</b>（决策 139）；</li>
-<li>自研 factor_wm G0 扰动失败率达 0.52（决策 141）；G1 on-policy 闭环训练导致 HUGSIM 起步停滞场景由 18 激增至 48，HD 从 0.286 暴跌至 0.182（决策 143、146），触发闸门停机。</li>
+<li>comma 发布的 worldmodel-4B 强依赖未来锚点画面（0.2–9.8 s），去条件后退化，本质是逆动力学模型，<b>无法零样本充当自回归交互策略</b>（决策 139，代码与论文核对，未跑 GPU）；</li>
+<li>在 factor_wm 探索中，阶段 1 G0 评测的是出厂 shipped Cinque 在真实日志平面重投影引擎里的表现，扰动失败率达 0.52（起步停滞 0.17、欠转 0.17、出车道 0.18），证明失败源自模型且可训，引擎定为 plane（决策 141）；</li>
+<li>基于重投影引擎的 on-policy 训练中：G1（S3）因恢复标签带 bug 导致 HUGSIM 起步停滞 18 → 48、HD 0.286 → 0.182（决策 143）；修正标签后从 P2 起步（X 臂），HUGSIM-12 起步停滞 1 → 9、HD 0.414 → 0.313（spec），navhard +2.58 n.s.，在早停闸门停机（决策 146）；</li>
+<li>决策 146 裁定该失败源于引擎训练分布中「静止画面」与「该停」混在一起的数据采样问题，而非 on-policy 训练本身（状态待定）。骨架指示本图缺失、G 未定，并未否定「真实数据训练的世界模型胜过重投影」。</li>
 </ul>
-<div class="cite">状态：<span class="tag-nogo">No-Go / 假说被否定</span>。</div>
+<div class="cite">状态：<span class="tag-missing">缺失（G 未定，待定）</span>（决策 143、146；factor_wm 闸门停机，真实数据世界模型训练场尚未实施）。</div>
 
 <div class="running">
 <b>§3 章节降级裁决（Section 3 Decision）：</b><br>
-鉴于生成式世界模型在自回归交互训练中全面受挫（严重低估动态偏航响应且 on-policy 训练发散），世界模型无法作为支撑论文核心性能提升的方法论支柱。本节正式由原定的「核心创新方法」降级为<b>探讨与反思节（Discussion & Analysis）</b>：论证「在 1–2 秒短时交互范围内，严格的几何重投影在偏航增益保真度上显著优于现有神经世界模型；当前生成世界模型离端到端策略训练场仍有显著差距」。论文主贡献明确聚焦于 <b>§1 接口归因（trick）</b> 与 <b>§2 轻度微调（trade）</b>。
+鉴于生成式世界模型无法零样本充当交互策略（worldmodel-4B 需未来锚点，决策 139），且重投影引擎上 on-policy 闭环训练因数据采样问题触发闸门停机（决策 146），目前尚无充分证据支撑世界模型作为独立有效训练场。本节由原定「核心创新方法」降级为<b>探讨与反思节（Discussion & Analysis）</b>：论证在 1–2 秒短时交互范围内平面几何重投影对偏航增益的预测优于现有世界模型 WL-2，但重投影自身在起步与急弯存在局限，当前真实数据世界模型训练场仍待探索（G 未定）。论文主贡献明确聚焦于 <b>§1 接口归因（trick）</b> 与 <b>§2 轻度微调（trade）</b>。
 </div>
 
 <h2>五、论文局限性（Limitations / 必须明确披露）</h2>
@@ -266,9 +268,9 @@ B2D 基准模型普遍依赖路口内稠密路径或 50 m 目标点导航。实�
 为确保学术诚信与结论严谨，论文必须在正文中完整披露以下局限与未解问题：
 </p>
 <ol>
-<li><b>单 Seed 闭环波动：</b>由于 CARLA（Bench2Drive）与 HUGSIM 闭环评测计算资源极其高昂，部分消融实验仅在单个 seed 上运行，闭环非逐位确定性可能存在约 3–5 分的随机波动；</li>
+<li><b>单 Seed 评测与闭环重复噪声：</b>由于评测计算资源限制，部分实验仅运行单 seed。HUGSIM 实质上是确定性的（repeats 仅因 GPU/服务器时序有微小差别，各场景 sd 中位数为 0.000，源自 experiments/op_parity/results/hugsim_specplan.md:73）；而 Bench2Drive 闭环的重复运行噪声约为 3.4 DS（决策 107、118 第 5 点）；</li>
 <li><b>路口转弯评测集规模有限：</b>Bench2Drive 上的路口精细诊断集目前为 25 个转弯切片（13 个选择岔路 choice + 12 个强制转向 forced），大样本统计置信区间较宽；</li>
-<li><b>静止起步纵向尚未完全端到端：</b>在缺少真实路面震动与连续蠕行激励的仿真环境中，openpilot 静止状态下时常因历史帧冻结而不肯起步（决策 119、124），目前必须保留 5 秒静止预热或显式解除停车限制；</li>
+<li><b>静止起步纵向尚未完全端到端：</b>在仿真环境中，openpilot 静止状态下模型 plan 自身常输出停车意图导致无法自行起步（停车时间 70–90% 是模型自身 plan 要停，决策 119、128 第 7 点；决策 140 说明停的理由不全在输出中）；若去掉 5 秒静止预热，车辆在 HUGSIM 中几乎无法起步（HD 0.358 对 0.544，决策 124），目前必须保留 5 秒静止预热或声明的启停规则；</li>
 <li><b>借道避障与红绿灯判罚依赖外挂模块：</b>复杂路口红绿灯识别与超车借道避障（bypass）目前超出单个轻量驾驶头的安全边界，评测中作为已声明的外挂模块处理（Qwen3-VL 仲裁，决策 084–086、105），未计入端到端策略主体贡献。</li>
 </ol>
 
@@ -278,25 +280,25 @@ B2D 基准模型普遍依赖路口内稠密路径或 50 m 目标点导航。实�
 <table>
 <tr><th>论文图表编号</th><th>核心论述主张</th><th>对应支撑决策（Decisions）</th><th>支撑数据与图表文件路径</th><th>当前证据状态</th></tr>
 <tr><td><b>表 1</b></td><td>五个基准榜单 × 接口组件与信息特权等级</td><td>台账、docs/openpilot-interface.md</td><td><code>jevdrive/openpilot/interface.py</code></td><td><span class="tag-done">已具备</span></td></tr>
-<tr><td><b>图 1</b></td><td>同一模型在各榜的模型视角（地平线/视场/尺度）</td><td>决策 104、108</td><td><code>figs/fig1_board_views.png</code></td><td><span class="tag-done">已具备</span></td></tr>
-<tr><td><b>图 2</b></td><td>HUGSIM 打转：跟踪 plan vs action，换执行层 10→0</td><td>决策 110、111、118、124</td><td><code>figs/fig2_spin_attribution.png</code>、<code>figs/fig2_wod_launch_gain.png</code></td><td><span class="tag-done">已具备</span></td></tr>
-<tr><td><b>图 3</b></td><td>navhard DAC 失败拆分：评分器侧缺陷约占一半</td><td>决策 103、112、147</td><td><code>figs/fig3_navhard_dac_review.jpg</code></td><td><span class="tag-done">已具备</span></td></tr>
-<tr><td><b>图 4</b></td><td>B2D 路口：稠密路线 35/38 vs openpilot 自己 0/13</td><td>决策 120、121、127</td><td><code>figs/fig4_junction_panels.png</code></td><td><span class="tag-done">已具备</span></td></tr>
-<tr><td><b>表 2</b></td><td>人工规则修补全部不过线（低通/死区/选择器/预补偿）</td><td>决策 094、097、105、113、114、117</td><td>各决策记录表与离线回放日志</td><td><span class="tag-done">已具备</span></td></tr>
-<tr><td><b>表 3</b></td><td>能力缺口清单（选路/急弯/起步/借道）与定位</td><td>决策 119、121、122、127、128、130、142、144、148、153</td><td>诊断实验报告与参数对齐记录</td><td><span class="tag-done">已具备</span></td></tr>
-<tr><td><b>表 4</b></td><td>合并版本 vs shipped vs 最优臂跨榜护栏对比</td><td>决策 144、148、任务 A</td><td>op_guard 跨榜全量汇总表</td><td><span class="tag-partial">部分具备（待任务 A 全量）</span></td></tr>
-<tr><td><b>图 5</b></td><td>路口选路信号接入前后 B2D 走对率与入弯时机</td><td>决策 128、129、134、任务 1</td><td>任务 1 闭环评测轨迹</td><td><span class="tag-missing">缺失（待任务 1 闭环）</span></td></tr>
+<tr><td><b>图 1</b></td><td>同一模型在各榜的模型视角（地平线/视场/尺度，异常榜共性为合成画面加闭环）</td><td>决策 104、108</td><td><code>figs/fig1_board_views.png</code></td><td>尺度一致性<span class="tag-done">结论</span>，拆分<span class="tag-partial">待定（弱）</span></td></tr>
+<tr><td><b>图 2</b></td><td>HUGSIM 打转：跟踪 plan vs action，换执行层 10→0（非打转未过不伤线）</td><td>决策 110、111、118、124</td><td><code>figs/fig2_spin_attribution.png</code>、<code>figs/fig2_wod_launch_gain.png</code></td><td><span class="tag-partial">待定（中）</span></td></tr>
+<tr><td><b>图 3</b></td><td>navhard DAC 失败拆分：评分器侧缺陷约占一半（M 类目测受限）</td><td>决策 103、112、147</td><td><code>figs/fig3_navhard_dac_review.jpg</code></td><td><span class="tag-partial">待定（中）</span></td></tr>
+<tr><td><b>图 4</b></td><td>B2D 路口：稠密路线接管（1.86 m 下 20/25，1.433 m 下 35/38）vs openpilot 自主 action（1.86 m choice 0/13、forced 1/12；旧 1.433 m 下 2/38）</td><td>决策 120、121、127</td><td><code>figs/fig4_junction_panels.png</code></td><td>d121 <span class="tag-done">强</span>，d127 <span class="tag-partial">待定（中）</span></td></tr>
+<tr><td><b>表 2</b></td><td>人工规则修补全部不过线（低通/死区/选择器/预补偿/bypass）</td><td>决策 094、097、105、113、114、117</td><td>各决策记录表与离线回放日志</td><td><span class="tag-partial">负结果清单待定（弱/中）</span></td></tr>
+<tr><td><b>表 3</b></td><td>能力缺口清单（选路/急弯/起步/借道）与定位</td><td>决策 119、121、122、127、128、130、140、142、144、148、153</td><td>诊断实验报告与参数对齐记录</td><td><span class="tag-partial">待定（弱/中）</span></td></tr>
+<tr><td><b>表 4</b></td><td>合并版本 vs shipped vs 最优技巧臂跨榜护栏对比</td><td>决策 101、144、148、任务 A</td><td>op_guard 跨榜全量汇总表</td><td><span class="tag-partial">部分具备（待任务 A 全量）</span></td></tr>
+<tr><td><b>图 5</b></td><td>路口选路微调对比与入弯时机（闭环结果已具备且为负/零增益）</td><td>决策 127、128、129、134</td><td><code>experiments/op_route_ft/results/</code></td><td><span class="tag-partial">待定（中偏弱，已有闭环为负/零增益）</span></td></tr>
 <tr><td><b>图 6</b></td><td>训练目标留一消融与冲突矩阵</td><td>决策 144、148、150、154、155</td><td>多目标联合消融实验</td><td><span class="tag-missing">缺失（待 A 之后）</span></td></tr>
-<tr><td><b>表 5</b></td><td>跨榜不迁移反例：it_dw3 在 B2D 掉分 −5.18</td><td>决策 101、107</td><td>experiments/leaderboard_audit/results/</td><td><span class="tag-done">已具备</span></td></tr>
-<tr><td><b>图 7</b></td><td>几何重投影 vs 世界模型偏航增益（低估 5 倍）</td><td>决策 123</td><td><code>figs/fig7_wm_vs_reproj_gain.png</code></td><td><span class="tag-done">已具备</span></td></tr>
-<tr><td><b>图 8</b></td><td>重投影 rollout 上的 DAgger 微调 pilot 读数</td><td>决策 132</td><td><code>figs/fig8_dagger_pilot.png</code></td><td><span class="tag-partial">初步具备（pilot）</span></td></tr>
-<tr><td><b>图 9</b></td><td>世界模型在起步/急弯胜过重投影（No-Go）</td><td>决策 139、141、143、146</td><td>factor_wm 闸门停机日志</td><td><span class="tag-nogo">No-Go（转为反思）</span></td></tr>
+<tr><td><b>表 5</b></td><td>跨榜不迁移反例：it_dw3 + 选择器在 B2D 掉分 −5.18（it_dw3 单独 −3.34 噪声内）</td><td>决策 101、107</td><td><code>experiments/op_adapt_h/results/one_driver.md</code></td><td><span class="tag-partial">待定（弱）</span></td></tr>
+<tr><td><b>图 7</b></td><td>几何重投影 vs 世界模型偏航增益（低估 5 倍，但重投影起步急弯失真）</td><td>决策 123</td><td><code>figs/fig7_wm_vs_reproj_gain.png</code></td><td><span class="tag-partial">待定（中偏弱）</span></td></tr>
+<tr><td><b>图 8</b></td><td>重投影 rollout 上的 DAgger 微调 pilot 读数（修回改善但伴随抖动过校正）</td><td>决策 132</td><td><code>figs/fig8_dagger_pilot.png</code></td><td><span class="tag-partial">待定（中偏弱，pilot）</span></td></tr>
+<tr><td><b>图 9</b></td><td>真实数据世界模型在起步/急弯胜过重投影（假说检验，G 未定）</td><td>决策 139、141、143、146</td><td>factor_wm 闸门停机日志</td><td><span class="tag-missing">缺失（G 未定，待定）</span></td></tr>
 </table>
 
 <h3>行动阶梯与优先执行次序（Priority Ladder）</h3>
 <ol>
-<li><b>优先级 1（P1：任务 1 闭环验证）</b>：完成入弯前监督与选路信号的闭环评测，产出图 5 所需轨迹，打通 B2D 路口自主选路。</li>
-<li><b>优先级 2（P2：任务 A 合并版本全量评测）</b>：产出表 4（跨榜护栏总表）与图 6（留一消融冲突矩阵），固化 §2 的完整实验说服力。</li>
+<li><b>优先级 1（P1：任务 A 合并版本全量评测）</b>：鉴于任务 1 提前转向与低速样本闭环已有结果均为负或零增益（决策 129、134），重点移向产出表 4（跨榜护栏总表）与图 6（留一消融冲突矩阵），固化 §2 端到端微调。</li>
+<li><b>优先级 2（P2：表征与损失修复）</b>：针对急弯内切角（决策 153）与前车停车余量，尝试 agent hinge（决策 158）与表征解冻。</li>
 <li><b>优先级 3（P3：论文主干收拢）</b>：正式将 §3 按「重投影实用性与世界模型负结果反思」撰写，论文主贡献锚定在 §1（接口揭秘）+ §2（轻量微调），准备投稿初稿。</li>
 </ol>
 
@@ -305,6 +307,7 @@ B2D 基准模型普遍依赖路口内稠密路径或 50 m 目标点导航。实�
 <li><b>核心决策（Decisions）：</b>
   <code>research/decisions/094.md</code>（历史对齐）、
   <code>research/decisions/097.md</code>（跟踪器滞后）、
+  <code>research/decisions/101.md</code>（一个 driver 与选择器）、
   <code>research/decisions/104.md</code>（相机高度与尺度）、
   <code>research/decisions/105.md</code>（B2D bypass 规则）、
   <code>research/decisions/107.md</code>（选择器 B2D 掉分）、
@@ -316,21 +319,31 @@ B2D 基准模型普遍依赖路口内稠密路径或 50 m 目标点导航。实�
   <code>research/decisions/114.md</code>（死区规则）、
   <code>research/decisions/117.md</code>（纵向加速剖面）、
   <code>research/decisions/118.md</code>（车端 action 横向路径打转清零）、
+  <code>research/decisions/119.md</code>（纵向 action 卡死与停车意图）、
   <code>research/decisions/121.md</code>（B2D 闭环自主转向仅 2/38）、
-  <code>research/decisions/123.md</code>（重投影击败世界模型 WL-2）、
+  <code>research/decisions/123.md</code>（重投影与世界模型 WL-2）、
   <code>research/decisions/124.md</code>（HUGSIM spec 统一接口）、
   <code>research/decisions/127.md</code>（对齐相机 B2D choice 0/13）、
-  <code>research/decisions/128.md</code>（路线微调 4 臂）、
+  <code>research/decisions/128.md</code>（路线微调 4 臂与停车 plan）、
+  <code>research/decisions/129.md</code>（入弯前提前转向监督）、
   <code>research/decisions/130.md</code>（action 目标误差解析）、
   <code>research/decisions/132.md</code>（重投影 DAgger pilot）、
   <code>research/decisions/133.md</code>（B2D plan 跟踪 20 秒失控）、
+  <code>research/decisions/134.md</code>（近距离低速 CARLA 样本）、
   <code>research/decisions/139.md</code>（worldmodel-4B 无法作为策略）、
+  <code>research/decisions/140.md</code>（启停规则与模型停的理由）、
+  <code>research/decisions/141.md</code>（factor_wm G0 扰动评测）、
+  <code>research/decisions/143.md</code>（factor_wm G1 评测与标签 bug）、
   <code>research/decisions/144.md</code>（输入对齐全量微调）、
+  <code>research/decisions/146.md</code>（factor_wm on-policy P2 起步闸门停）、
   <code>research/decisions/148.md</code>（SDF hinge 铰链约束）、
+  <code>research/decisions/149.md</code>（HUGSIM 平滑规划）、
   <code>research/decisions/153.md</code>（四个方向诊断）。
 </li>
 <li><b>实验目录与核心报告：</b>
   <code>experiments/leaderboard_audit/</code>（榜单接口与视角审计）、
+  <code>experiments/op_adapt_h/</code>（it_dw3 与跨榜适配）、
+  <code>experiments/op_route_cmd/</code>（折线导航指令通路与数据集）、
   <code>experiments/op_closed_loop/</code>（B2D 闭环路口诊断）、
   <code>experiments/hugsim/</code>（HUGSIM 闭环打转与起步分析）、
   <code>experiments/op_route_ft/</code>（路线选路与入弯微调）、
