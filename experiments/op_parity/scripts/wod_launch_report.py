@@ -253,7 +253,7 @@ def cmd_diag(a):
         # ---- (c) protocol: token path vs harness; anticipation
         fv = ldir() / "tok_val.npz"
         if fv.exists():
-            z = np.load(fv)
+            z = np.load(fv, allow_pickle=True)
             pos = {nm: i for i, nm in enumerate(z["names"].astype(str))}
             cov = np.array([nm in pos for nm in C.names[:n]])
             ti = np.array([pos[nm] for nm in C.names[:n][cov]])
@@ -283,7 +283,7 @@ def cmd_diag(a):
             anticipation(z, "val", run)
             fd = ldir() / "tok_dev.npz"
             if fd.exists():
-                anticipation(np.load(fd), "dev", run)
+                anticipation(np.load(fd, allow_pickle=True), "dev", run)
                 verdict["d"] = targets(C, run)
 
         # ---- (a) context
@@ -338,7 +338,7 @@ def targets(C, run):
     from sklearn.preprocessing import StandardScaler
     from jevdrive import stats
     from jevdrive import waymo as W
-    zd, zt, zv = (np.load(ldir() / f"tok_{k}.npz") for k in ("dev", "train_stop", "val"))
+    zd, zt, zv = (np.load(ldir() / f"tok_{k}.npz", allow_pickle=True) for k in ("dev", "train_stop", "val"))
     out = {}
 
     def prep(z):
