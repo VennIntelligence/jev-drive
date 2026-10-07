@@ -4,7 +4,12 @@ Written 2026-10-07. Driver **P2H** = op_parity P2 + drivable SDF hinge (P2H10-F-
 (decision 149); navtest W frames, navhard two-stage G frames. Reference WA-JEPA (navtest 91.71, navhard 35.41, HUGSIM 64 exam 0.451). CPU only,
 stored runs, no new driving. Per-board details: [four_dirs/hugsim.md](four_dirs/hugsim.md) (+ [hugsim_tables.md](four_dirs/hugsim_tables.md)),
 [four_dirs/navsim.md](four_dirs/navsim.md), [four_dirs/night.md](four_dirs/night.md); the sharp-turn training pilot: [turn_train.md](turn_train.md).
-Code `scripts/fd_hugsim.py`, `fd_navsim.py`, `fd_night.py`; bucket rules were fixed before any score was read and are stated in each per-board doc.
+**Scope: diagnosis only, no training.** This lane trained nothing and ran no HUGSIM. The turn-train pre-registration was not launched by this lane:
+its 8 pilot checkpoints (HP / T1P / T2P / T3P x 2 seeds) had already been trained on 2026-10-06 21:08-21:20 by the earlier turn-train chain, which
+stopped before scoring; this lane only resumed that chain at its navtest scoring stage (CPU devkit jobs through the pool, 0 GB VRAM, finished
+10:58), the pre-registered gate failed, so its HUGSIM stage never ran. Nothing was left to cancel; that read is reported in
+[turn_train.md](turn_train.md) and turn training stays a proposal in the fix list below.
+Code `scripts/fd_hugsim.py`, `fd_navsim.py`, `fd_night.py`, `fd_entry.py`; bucket rules were fixed before any score was read and are stated in each per-board doc.
 
 **Sizes.** Replacement oracles, one bucket at a time, recomputed for P2H: **(a)** the bucket's failing units take WA-JEPA's score (navtest / navhard
 token scores, HUGSIM scenario HD; one-sided), **(b)** they take the reference (navtest human, navhard PDM-Closed, never-worse clip as
@@ -121,9 +126,10 @@ Gains are estimates bounded by the oracles above; the prior for a loss-side fix 
 | 2 | **Replay-aware drivable hinge with a front-corner turn margin** (hinge on a differentiable tracker proxy of the devkit LQR footprint, densified poses, margin 0.5 m on front corners when the logged turn > 20 deg) | training loss (+ execution / scorer geometry) | navtest inside corner cuts (D1 0.60, D2 0.62) and replay-only grazes (0.38): ceiling ~1.3 | navtest +0.2 to +0.35; HUGSIM ~0 (its D1 is speed, D2 two scenarios) | tracker proxy ~0.5 day CPU; offline decoder gate CPU; then 2 x pilot training | [plans/2026-10-07-replay-hinge-prereg.md](../plans/2026-10-07-replay-hinge-prereg.md): offline thin-decoder gate first (turning-token DAC failures -0.4 pp vs the current hinge), then a pilot |
 | 3 | **Lead standstill margin** in the plan's speed profile: when the lead head sees a vehicle (lead_prob > 0.5), cap plan speed so the stop point is >= 2.5 m short of lead_x - 2 m (the measured near-range bias); one rule on both boards | execution layer (plan post-processing) | HUGSIM D3b (3.5-3.8); navtest stopped vehicle ahead (0.50) | HUGSIM about +2; navtest unknown, may cost EP | CPU replay; then 5 HUGSIM scenarios + navtest bench (GPU, review first) | [plans/2026-10-07-lead-margin-prereg.md](../plans/2026-10-07-lead-margin-prereg.md): CPU replay on the stored D3b traces, gate >= 3 of 5 contacts gone without new stuck runs, navtest EPDMS >= -0.2 |
 | 4 | **Representation for corners and near-range agents**: encoder unfreeze with a dense drivable-SDF auxiliary head, or V-JEPA / WA-JEPA front tokens as adapter memory (the trade test of decision 147) | representation | the ~46-58% of D1 / D2 navtest failures decided at the frozen encoder (ceiling ~1.1), the HUGSIM junction anticipation, the lead distance bias | navtest +0.3 to +0.6 | days | encoder-level decoder failure rate on sharp turns must move toward WA's level in a 17 k-token pilot before any closed-loop read; not drafted here (needs a design review) |
+| 4b | **Turn training at full scale** (turn-balanced sampling / anchor off on turns, plans/2026-10-06-turn-train-prereg.md), proposal only | training data | navtest > 20 deg DAC gap | low: the existing pilot checkpoints read closure 0.01-0.02 of the > 20 deg gap ([turn_train.md](turn_train.md)) | full fine-tune 2 x 30-60 min | not proposed for launch unless fix 2 or 4 changes the picture |
 | 5 | navhard stage-2 start states (on-policy / recovery data, factor_wm) | data | navhard D1-D3, shared with WA (65-81%) | not P2H-specific | existing factor_wm lane | decision 145 / 146 lane, not this one |
 
-Dropped, with the reason: turn-balanced sampling / anchor off / late-lateral weight (turn-train: closure 0.01-0.02); a turning-gain or lateral
+Dropped, with the reason: a turning-gain or lateral
 conversion fix (D1 "not around" 0.23 navtest; HUGSIM request follows the plan); a corner-speed (lateral-acceleration) loss (P2H already plans the
 logged speed into sharp turns on navtest; the HUGSIM fast entry is a missing cue, not a learned over-speed; revisit only if fix 4 or a command-timing
 check says otherwise); HUGSIM wide-turn and smoothing-window changes (2 scenarios, turn-in late not early); HUGSIM oncoming actors (first a CPU
