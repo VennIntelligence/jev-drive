@@ -3,7 +3,7 @@
 status: live
 decisions: (pending) (inputs: 92, 96, 104, 111, 118, 128, 135, 136, 137, 138, 139)
 index: Cinque + ego / pose / cmd / side cams vs WA-JEPA, equal inputs and data
-key: experiments/op_parity/plans/2026-10-06-parity-prereg.md, lib/parity_adapter.py, experiments/op_parity/scripts/pp_prep.py, experiments/op_parity/scripts/pp_train.py, experiments/op_parity/scripts/pp_eval.py, experiments/op_parity/scripts/pp_unfreeze.py, experiments/op_parity/scripts/pp_navhard.py, jevdrive/navsim_zs.py, experiments/hugsim/results/wajepa_ref.md
+key: experiments/op_parity/plans/2026-10-06-parity-prereg.md, lib/parity_adapter.py, experiments/op_parity/scripts/pp_prep.py, experiments/op_parity/scripts/pp_train.py, experiments/op_parity/scripts/pp_eval.py, experiments/op_parity/scripts/pp_unfreeze.py, experiments/op_parity/scripts/pp_navhard.py, jevdrive/navsim_zs.py, experiments/hugsim/results/wajepa_ref.md, lib/agent_hinge.py
 
 **Question.** With no input disadvantage relative to WA-JEPA (command, ego velocity / acceleration, 4-pose history, side and rear cameras)
 and the same fine-tuning data (navtrain), how much of WA-JEPA's lead over openpilot Cinque (HUGSIM 0.451 vs 0.278, navtest EPDMS 91.71)
@@ -80,6 +80,12 @@ memory, distillation, Cinque pre-head features); recommendation: WA-Cf (ceiling,
 gate on the 3 154 navtest > 20 deg tokens first: [plans/2026-10-07-representation-design.md](plans/2026-10-07-representation-design.md).
 
 **Ego-history probe (2026-10-07, inference only).** P2H / WA-JEPA plans on navtest with the ego history (velocity, acceleration, poses) replaced by a constant-velocity one, on sharp-turn approach tokens (T 368), pre-flip tokens (P 129) and matched straights: planned 4 s distance on T +0.13 m [-0.35, +0.56] (P2H), +0.04 [-0.23, +0.28] (WA-JEPA); the effect rides on the t0 acceleration input, P2H is 1.4-2.1 x as history-sensitive as WA-JEPA but equally on straights: the "slows before turns because the history shows it" hypothesis is not supported: [results/ego_history_probe.md](results/ego_history_probe.md).
+
+**Agent hinge pilot (2026-10-07, pre-registered, gate stop).** Pilot P2H recipe + hinge of the plan footprint against the logged boxes of the agents
+ahead (lambda_a 10, margin 0.5 m; K 32 and no side margin outside the lateral corridor after the pre-training geometry check, declared before training):
+navtest NC + TTC failures 2.44% -> 2.27% (-0.16 pp [-0.26, -0.08], gate -0.3), EPDMS +0.18 [+0.05, +0.31] (gate +0.2), EP -0.10; gains on stopped-lead and
+over-speed tokens (EPDMS +2.3), but 73% of the remaining NC failures still overlap a labelled box. Full stage not run:
+[results/agent_hinge.md](results/agent_hinge.md), plan [plans/2026-10-07-agent-hinge-prereg.md](plans/2026-10-07-agent-hinge-prereg.md).
 
 **Next.** Decision entries by main (navhard, unfreeze, turn training, four directions); review of the three 2026-10-07 drafts.
 

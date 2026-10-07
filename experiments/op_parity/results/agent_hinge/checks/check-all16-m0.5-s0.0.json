@@ -1,0 +1,37 @@
+{
+ "labels": "navtest-all16",
+ "coverage": 1.0,
+ "margin": 0.5,
+ "side_margin": 0.0,
+ "human": {
+  "n": 300,
+  "viol": 0.0033333333333333335,
+  "viol_after_t0": 0.0033333333333333335,
+  "overlap": 0.0,
+  "all_n": 12146,
+  "all_viol": 0.0007409846863164828,
+  "all_viol_after_t0": 0.0005763214226905978,
+  "all_overlap": 0.00016466326362588507
+ },
+ "P2H10-F-s0": {
+  "src": "stored /root/autodl-tmp/ujs/runs/navsim/eval/v2_navtest_opi_lb_navtest_warp-cinque_PPP2H10-F-s0__base/2026.10.06.16.02.46/2026.10.06.16.08.18.csv",
+  "n_nc_fail": 188,
+  "nc_fail_hinge_pos": 0.648936170212766,
+  "nc_fail_overlap": 0.6170212765957447,
+  "n_ncttc_fail": 274,
+  "ncttc_fail_hinge_pos": 0.4744525547445255,
+  "pass_hinge_pos": 0.005053908355795148,
+  "all_hinge_pos": 0.01564301004445908
+ },
+ "HP-F-s0": {
+  "src": "bench /root/autodl-tmp/ujs/runs/bench/navtest/HP-F-s0@warp",
+  "n_nc_fail": 201,
+  "nc_fail_hinge_pos": 0.681592039800995,
+  "nc_fail_overlap": 0.6517412935323383,
+  "n_ncttc_fail": 296,
+  "ncttc_fail_hinge_pos": 0.4966216216216216,
+  "pass_hinge_pos": 0.006244725738396625,
+  "all_hinge_pos": 0.0181952906306603
+ },
+ "pass": false
+}
