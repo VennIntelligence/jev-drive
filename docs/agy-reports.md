@@ -20,7 +20,9 @@ Every page meant for people (research synthesis, diagnosis, round report) is one
 2. Each task gets a fresh agy in its own tmux window, so it starts with a clean context (never append a new task to an
    old agy session): `tmux new-window -d -t jev -n agy-<topic> -c <repo>`, then send
    `agy --model gemini-3.8-flash-high --dangerously-skip-permissions -i "Read tmp/<topic>-brief.md and do it."`.
-   Corrections for the same page go to that window. Keep the current model and config ("Out of credits" in the
+   Independent pages run in parallel, one window each, as a pipeline: check each page as it lands. Parallel windows
+   commit only their own paths (`git commit -- <paths>`, `git pull --rebase` before push) and leave shared files
+   (indexes, shared figures) to one final pass. Corrections for the same page go to that window. Keep the current model and config ("Out of credits" in the
    footer is not a blocker). Close the window when the page is accepted, or leave it.
 3. Main checks every number and claim on the page against the sources and sends corrections to the same pane.
 4. Delete the brief once the page is committed. tmp/ never keeps reports.
