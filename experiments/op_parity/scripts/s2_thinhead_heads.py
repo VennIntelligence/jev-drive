@@ -480,6 +480,18 @@ def cmd_report(a):
         stats.write_table(sorted(crow, key=lambda r: (r["features"], r["training fraction"])), OUT / "learning_curve")
         pd.DataFrame({"name": Bd.names, "cluster": Bd.cluster, "v0": Bd.v0, "rfs_WP2": Bd.base, "rfs_oracle": Bd.best}
                      | {f"d {k}": z[k] for k in keys if k.count("|") == 2}).to_csv(OUT / "frames.csv", index=False, float_format="%.4f")
+        zz, ii, prow2 = np.load(T.RUNS / "heads.npz"), np.arange(Bd.n), []                # what the heads pick (repeat 0 of the folds; a: the single fit)
+        for k in [k for k in zz.files if k.startswith("picks:")]:
+            pk = zz[k]
+            for sn in main:
+                m = Bd.st[sn]
+                prow2.append({"arm": k[6:], "stratum": sn, "n": int(m.sum()), "frames changed": float((pk != KEEP)[:, m].mean()),
+                              "pick reaches the oracle best": float(np.mean([(Bd.J[s][pk[s], ii] >= Bd.J[s].max(0) - 1e-9)[m].mean() for s in range(S)])),
+                              "WP2 reaches it": float(np.mean([(Bd.J[s][KEEP] >= Bd.J[s].max(0) - 1e-9)[m].mean() for s in range(S)])),
+                              "better / worse than WP2": " / ".join(f"{np.mean([(sg * (Bd.J[s][pk[s], ii] - Bd.J[s][KEEP]) > 1e-9)[m].mean() for s in range(S)]):.3f}" for sg in (1, -1)),
+                              "paths A/B/C/D/E (seed 0)": " / ".join(str(int(((pk[0] // 4)[m] == j).sum())) for j in range(5)),
+                              "speeds follow/hold/creep/go (seed 0)": " / ".join(str(int(((pk[0] % 4)[m] == j).sum())) for j in range(4))})
+        stats.write_table(prow2, OUT / "picks")
         (OUT / "heads_info.json").write_text(json.dumps({"a": info["a"], "M": info.get("M", {})}, indent=1))
         # ---- verdict
         g = lambda k: df[(df.features == k.split("|")[0]) & (df.supervision == "b") & (df["head"] == "L") & (df.variant == "oof")].set_index("stratum")  # noqa: E731
