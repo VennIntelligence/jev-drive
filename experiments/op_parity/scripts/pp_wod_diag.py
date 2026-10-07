@@ -284,7 +284,8 @@ def cmd_report(a):
         logd = np.linalg.norm(fr[:, -1], axis=-1)
         intent = r["intent"]
         disp = lambda p, j: np.linalg.norm(p[:, j], axis=-1)       # noqa: E731
-        st = {"all": np.ones(nr, bool), "stopped v<0.5": v0 < 0.5, "launch v<2 & log5s>5m": (v0 < 2) & (logd > 5),
+        st = {"all": np.ones(nr, bool), "stopped v<0.5": v0 < 0.5, "stopped, log stays (<1 m @5s)": (v0 < 0.5) & (logd < 1),
+              "stopped, log moves (>=1 m @5s)": (v0 < 0.5) & (logd >= 1), "launch v<2 & log5s>5m": (v0 < 2) & (logd > 5),
               "slow 0.5-5": (v0 >= 0.5) & (v0 < 5), "mid 5-12": (v0 >= 5) & (v0 < 12), "fast >=12": v0 >= 12,
               "turn intent L/R": intent >= 2, "straight intent": intent == 1, "lead_prob>0.5 (shipped)": lead > 0.5,
               "lead_prob<=0.5": lead <= 0.5}
