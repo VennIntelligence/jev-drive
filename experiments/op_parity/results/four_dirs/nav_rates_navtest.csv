@@ -1,0 +1,41 @@
+bench,by,bin,metric,arm,n,rate,lo,hi
+navtest,bin,20-45,dac,P2H,1637,7.5137,5.4592,9.5353
+navtest,bin,20-45,dac,WA,1637,2.8711,1.8438,4.0239
+navtest,bin,20-45,col,P2H,1637,3.0238,2.0408,4.1385
+navtest,bin,20-45,col,WA,1637,1.4661,0.8645,2.2711
+navtest,bin,5-20,dac,P2H,2592,3.7616,2.7248,5.0648
+navtest,bin,5-20,dac,WA,2592,2.1605,1.4079,2.9586
+navtest,bin,5-20,col,P2H,2592,2.3727,1.5382,3.3597
+navtest,bin,5-20,col,WA,2592,1.4660,0.8729,2.2053
+navtest,bin,<5,dac,P2H,6400,1.4062,0.9168,1.9903
+navtest,bin,<5,dac,WA,6400,1.0469,0.6648,1.5066
+navtest,bin,<5,col,P2H,6400,1.7656,1.1989,2.3368
+navtest,bin,<5,col,WA,6400,0.9531,0.5974,1.3179
+navtest,bin,>45,dac,P2H,1517,10.1846,8.0318,12.4910
+navtest,bin,>45,dac,WA,1517,3.2301,2.1225,4.5008
+navtest,bin,>45,col,P2H,1517,2.7357,1.5152,4.0498
+navtest,bin,>45,col,WA,1517,1.2525,0.5622,2.0274
+navtest,rbin,15-30,dac,P2H,1476,7.4864,5.4527,9.4619
+navtest,rbin,15-30,dac,WA,1476,3.6585,2.1329,5.1923
+navtest,rbin,15-30,col,P2H,1476,3.2859,2.1034,4.6355
+navtest,rbin,15-30,col,WA,1476,1.8293,1.0135,2.8364
+navtest,rbin,30-60,dac,P2H,884,3.1109,1.8556,4.7315
+navtest,rbin,30-60,dac,WA,884,1.5837,0.7384,2.6667
+navtest,rbin,30-60,col,P2H,884,2.5452,1.3809,4.1290
+navtest,rbin,30-60,col,WA,884,1.0181,0.3405,1.9337
+navtest,rbin,8-15,dac,P2H,1415,9.4346,7.1706,12.0873
+navtest,rbin,8-15,dac,WA,1415,3.0389,1.7754,4.6730
+navtest,rbin,8-15,col,P2H,1415,3.0742,1.7714,4.5484
+navtest,rbin,8-15,col,WA,1415,1.6961,0.8371,2.7674
+navtest,rbin,<8,dac,P2H,238,16.3866,9.8765,23.1061
+navtest,rbin,<8,dac,WA,238,4.6218,1.9011,8.5000
+navtest,rbin,<8,col,P2H,238,0.4202,0.0000,1.5306
+navtest,rbin,<8,col,WA,238,0.0000,0.0000,0.0000
+navtest,rbin,no path,dac,P2H,7358,1.8076,1.1819,2.5604
+navtest,rbin,no path,dac,WA,7358,1.1960,0.7782,1.7063
+navtest,rbin,no path,col,P2H,7358,1.9163,1.3757,2.4434
+navtest,rbin,no path,col,WA,7358,1.0465,0.7007,1.3920
+navtest,rbin,not turning or >60,dac,P2H,775,2.7742,1.0764,5.1547
+navtest,rbin,not turning or >60,dac,WA,775,1.1613,0.2667,2.1529
+navtest,rbin,not turning or >60,col,P2H,775,1.1613,0.3436,2.3591
+navtest,rbin,not turning or >60,col,WA,775,0.6452,0.0000,1.9356

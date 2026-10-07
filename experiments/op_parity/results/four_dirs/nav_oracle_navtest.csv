@@ -1,0 +1,51 @@
+bench,bucket,oracle,n_s0,n_s1,gain,lo,hi
+navtest,D1 sharp (R<15 m) DAC,WA,172,173,1.0395,0.7309,1.3694
+navtest,D1 sharp (R<15 m) DAC,ref,172,173,1.2757,0.9204,1.6629
+navtest,D1' sharp (|dpsi|>45) DAC,WA,155,154,0.9057,0.6598,1.1529
+navtest,D1' sharp (|dpsi|>45) DAC,ref,155,154,1.1463,0.8369,1.4690
+navtest,D2 wide (R>=15 m) DAC,WA,170,162,1.0003,0.7322,1.2990
+navtest,D2 wide (R>=15 m) DAC,ref,170,162,1.2652,0.9558,1.5995
+navtest,D2a wide curve 8-20 deg DAC,WA,58,52,0.3497,0.2218,0.5076
+navtest,D2a wide curve 8-20 deg DAC,ref,58,52,0.4285,0.2879,0.5971
+navtest,D2b wide turn >=20 deg DAC,WA,112,110,0.6505,0.4383,0.8816
+navtest,D2b wide turn >=20 deg DAC,ref,112,110,0.8367,0.5916,1.1012
+navtest,context: straight DAC,WA,127,126,0.7450,0.4382,1.1256
+navtest,context: straight DAC,ref,127,126,0.9900,0.6320,1.4199
+navtest,context: all DAC,WA,469,461,2.7848,2.2193,3.4040
+navtest,context: all DAC,ref,469,461,3.5308,2.8769,4.2354
+navtest,D3 collision (NC or TTC),WA,274,257,1.1647,0.8771,1.4447
+navtest,D3 collision (NC or TTC),ref,274,257,1.6760,1.2693,2.0892
+navtest,D3 on turning tokens,WA,135,130,0.5274,0.3770,0.6811
+navtest,D3 on turning tokens,ref,135,130,0.7501,0.5563,0.9440
+navtest,D1 + D2 + D3 union,WA,582,561,3.0400,2.5527,3.5130
+navtest,D1 + D2 + D3 union,ref,582,561,3.9715,3.3564,4.5619
+navtest,"D1u sharp, outside + heading gain < 0.9 (not around)",WA,45,43,0.2334,0.1393,0.3319
+navtest,"D1u sharp, outside + heading gain < 0.9 (not around)",ref,45,43,0.3298,0.2103,0.4589
+navtest,"D1i sharp, inside (cuts the corner)",WA,90,95,0.5991,0.3615,0.8860
+navtest,"D1i sharp, inside (cuts the corner)",ref,90,95,0.6763,0.4322,0.9670
+navtest,"D1o sharp, outside, gain >= 0.9",WA,37,35,0.2070,0.0996,0.3187
+navtest,"D1o sharp, outside, gain >= 0.9",ref,37,35,0.2695,0.1521,0.3915
+navtest,"D2i wide, inside",WA,91,86,0.6154,0.4030,0.8504
+navtest,"D2i wide, inside",ref,91,86,0.6722,0.4299,0.9426
+navtest,"D2o wide, outside",WA,79,76,0.3848,0.2527,0.5446
+navtest,"D2o wide, outside",ref,79,76,0.5930,0.4311,0.7754
+navtest,"D2g wide, graze < 0.3 m",WA,107,99,0.6026,0.4428,0.7793
+navtest,"D2g wide, graze < 0.3 m",ref,107,99,0.7872,0.6046,0.9821
+navtest,"D2d wide, departure >= 0.3 m",WA,63,63,0.3977,0.2516,0.5628
+navtest,"D2d wide, departure >= 0.3 m",ref,63,63,0.4779,0.3117,0.6599
+navtest,"D2l wide, LQR replay only",WA,71,69,0.3834,0.2667,0.5159
+navtest,"D2l wide, LQR replay only",ref,71,69,0.5310,0.3892,0.6849
+navtest,D3s stopped vehicle ahead,WA,99,94,0.4951,0.3353,0.6590
+navtest,D3s stopped vehicle ahead,ref,99,94,0.6169,0.4252,0.8166
+navtest,D3o static object,WA,48,41,0.1836,0.1014,0.2830
+navtest,D3o static object,ref,48,41,0.2399,0.1359,0.3637
+navtest,D3l lead vehicle,WA,39,36,0.2140,0.1160,0.3279
+navtest,D3l lead vehicle,ref,39,36,0.2921,0.1617,0.4392
+navtest,D3c cut-in,WA,31,30,0.0816,0.0285,0.1433
+navtest,D3c cut-in,ref,31,30,0.1893,0.0830,0.3129
+navtest,D3x crossing / oncoming,WA,38,35,0.1113,0.0104,0.2371
+navtest,D3x crossing / oncoming,ref,38,35,0.2201,0.0502,0.4452
+navtest,D3v VRU,WA,14,16,0.0386,0.0104,0.0702
+navtest,D3v VRU,ref,14,16,0.0771,0.0229,0.1422
+navtest,D3f plan > 1.1 x path speed,WA,136,126,0.6149,0.3970,0.8235
+navtest,D3f plan > 1.1 x path speed,ref,136,126,0.9380,0.6241,1.2516

@@ -1,0 +1,41 @@
+bench,by,bin,metric,arm,n,rate,lo,hi
+navhard,bin,20-45,dac,P2H,1076,34.8978,29.1518,40.8291
+navhard,bin,20-45,dac,WA,1076,30.7621,25.3673,35.8671
+navhard,bin,20-45,col,P2H,1076,16.7751,11.3400,23.3372
+navhard,bin,20-45,col,WA,1076,16.4498,11.6343,22.6221
+navhard,bin,5-20,dac,P2H,2211,25.7576,22.3841,28.8299
+navhard,bin,5-20,dac,WA,2211,20.4885,16.8178,24.1772
+navhard,bin,5-20,col,P2H,2211,17.7974,13.9319,21.9546
+navhard,bin,5-20,col,WA,2211,17.0511,13.4046,20.8658
+navhard,bin,<5,dac,P2H,1600,11.9688,8.8168,15.3486
+navhard,bin,<5,dac,WA,1600,11.6250,7.7731,15.8199
+navhard,bin,<5,col,P2H,1600,14.6250,10.6171,19.2697
+navhard,bin,<5,col,WA,1600,14.5625,10.2562,19.5864
+navhard,bin,>45,dac,P2H,1025,35.6585,28.2416,42.5076
+navhard,bin,>45,dac,WA,1025,30.3415,22.5303,37.2920
+navhard,bin,>45,col,P2H,1025,8.3415,5.1967,11.6655
+navhard,bin,>45,col,WA,1025,8.9756,5.5779,12.5960
+navhard,rbin,15-30,dac,P2H,805,32.2981,27.1392,37.2730
+navhard,rbin,15-30,dac,WA,805,25.2174,19.4174,30.7117
+navhard,rbin,15-30,col,P2H,805,19.9379,14.5958,26.4652
+navhard,rbin,15-30,col,WA,805,18.6335,14.0024,24.4168
+navhard,rbin,30-60,dac,P2H,518,31.1776,23.2454,39.1961
+navhard,rbin,30-60,dac,WA,518,27.4131,18.5444,35.9291
+navhard,rbin,30-60,col,P2H,518,8.4942,4.9372,13.2353
+navhard,rbin,30-60,col,WA,518,10.6178,6.0714,16.3017
+navhard,rbin,8-15,dac,P2H,1127,32.6087,26.5491,38.7493
+navhard,rbin,8-15,dac,WA,1127,26.3531,20.4104,32.2926
+navhard,rbin,8-15,col,P2H,1127,17.2138,12.8859,22.1809
+navhard,rbin,8-15,col,WA,1127,16.1491,12.2034,20.6500
+navhard,rbin,<8,dac,P2H,692,42.6301,34.3565,50.0540
+navhard,rbin,<8,dac,WA,692,38.7283,30.0324,46.2501
+navhard,rbin,<8,col,P2H,692,10.4769,5.6603,15.5203
+navhard,rbin,<8,col,WA,692,10.1156,6.0240,14.6747
+navhard,rbin,no path,dac,P2H,2399,14.6519,11.6987,17.8713
+navhard,rbin,no path,dac,WA,2399,13.2972,10.1512,16.8303
+navhard,rbin,no path,col,P2H,2399,16.5069,12.6991,20.5498
+navhard,rbin,no path,col,WA,2399,16.3401,12.4202,20.6403
+navhard,rbin,not turning or >60,dac,P2H,371,17.9245,12.5994,23.6246
+navhard,rbin,not turning or >60,dac,WA,371,14.0162,8.8414,19.9508
+navhard,rbin,not turning or >60,col,P2H,371,7.1429,3.1937,12.6778
+navhard,rbin,not turning or >60,col,WA,371,8.0863,3.2184,14.6199
