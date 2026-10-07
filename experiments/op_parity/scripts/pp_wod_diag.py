@@ -288,6 +288,8 @@ def cmd_report(a):
               "slow 0.5-5": (v0 >= 0.5) & (v0 < 5), "mid 5-12": (v0 >= 5) & (v0 < 12), "fast >=12": v0 >= 12,
               "turn intent L/R": intent >= 2, "straight intent": intent == 1, "lead_prob>0.5 (shipped)": lead > 0.5,
               "lead_prob<=0.5": lead <= 0.5}
+        lum = pd.read_csv(_R / "experiments/leaderboard_audit/results/night_gap/seq_lum.csv").set_index("sequence").l.reindex(seq[:nr]).to_numpy()
+        st["night (luma < 50)"], st["day (luma >= 120)"] = lum < 50, lum >= 120
         for c in cu:
             st["cluster " + c] = cl == c
         srows = []
@@ -300,9 +302,11 @@ def cmd_report(a):
             row = {"stratum": nm, "n": len(i), "RFS shipped": rfs_agg(rfs["shipped"], i), "RFS P2H": rfs_agg(rfs[km], i)}
             row["dRFS"] = row["RFS P2H"] - row["RFS shipped"]
             row["dRFS_lo"], row["dRFS_hi"] = ci_rfs(rfs[km], rfs["shipped"], msk)
-            for o in ("dx-P2H10-F-sm_O1",):
-                if o in rfs:
-                    row["dRFS O1 (P2H path, shipped speed)"] = rfs_agg(rfs[o], i) - row["RFS shipped"]
+            for o in ("O1", "zero", "biasresid", "biasmean", "biasdenav"):
+                if f"dx-P2H10-F-sm_{o}" in rfs:
+                    row[f"dRFS {o}"] = rfs_agg(rfs[f"dx-P2H10-F-sm_{o}"], i) - row["RFS shipped"]
+            if "dx-P2H10-F-sm_main_W" in rfs and "dx-shipped_zero_W" in rfs:
+                row["dRFS @W (vs shipped@W)"] = rfs_agg(rfs["dx-P2H10-F-sm_main_W"], i) - rfs_agg(rfs["dx-shipped_zero_W"], i)
             # longitudinal / lateral difference of the P2H plan (seed mean of the two) from shipped at 3 s, in shipped's heading frame
             for j, tt in ((11, "3s"), (19, "5s")):
                 dp = (p0[i, j] + p1[i, j]) / 2 - ps[i, j]
