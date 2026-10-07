@@ -207,7 +207,7 @@ def mlp_arm(arm, streams, dev, run):
         m = BMLP(dims, len(WDS), dev)
         wd = torch.tensor(WDS, device=dev)
         opt = torch.optim.Adam(m.p, lr=3e-3)
-        tr_i = torch.flatnonzero(~dv_)
+        tr_i = torch.nonzero(~dv_).squeeze(1)
         g = torch.Generator(device=dev).manual_seed(0)
         for step in range(600):
             b = tr_i[torch.randint(len(tr_i), (4096,), device=dev, generator=g)]
