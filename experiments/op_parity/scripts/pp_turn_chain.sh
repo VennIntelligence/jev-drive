@@ -56,10 +56,14 @@ PYEOF
 if [[ -n $PASS ]]; then
   status "HUGSIM for HP $PASS"
   MODELS=$(for a in HP $PASS; do for s in 0 1; do echo "$a-F-s$s"; done; done)
-  "${B[@]}" run --model $MODELS --bench hugsim --preset exam spec --scenarios all64 --wait || die "bench hugsim"
+  # deviation (declared in results/turn_train.md): spec_plan_smooth (decision 149) runs next to exam / spec
+  "${B[@]}" run --model $MODELS --bench hugsim --preset exam spec spec_plan_smooth --scenarios all64 --wait || die "bench hugsim"
   export FULL_TAGS="P0,$(for a in HP $PASS; do echo -n "$a-F-s0,$a-F-s1,"; done | sed 's/,$//')" FULL_OUT=$PWD/experiments/op_parity/results/hugsim_turn
   $HPY $S/pp_hugsim_report.py extract full || die "hugsim extract"
   $PY $S/pp_turn_report.py report --arms $T_ARMS || die "report with hugsim"
+  for pr in exam spec spec_plan_smooth; do for sc in all64 turn23; do
+    "${B[@]}" report --bench hugsim --preset $pr --scenarios $sc --arms $(for a in $PASS; do echo -n "$a=$a-F-s0+$a-F-s1 "; done) \
+        --vs H=HP-F-s0+HP-F-s1 WA-JEPA --out experiments/op_parity/results/turn_train/$sc || echo "WARN bench report $pr $sc failed"; done; done
 else
   status "no arm passes the gate (guard + closure >= half): no HUGSIM"
 fi
