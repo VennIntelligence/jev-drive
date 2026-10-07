@@ -56,7 +56,7 @@ def nav_frame(opt):
         for s in SEEDS:
             if arm == "BASE":
                 t = nav_base(s)
-                t = pd.DataFrame({"score": t["score"], **{k: t[v] for k, v in SUBS.items()}})
+                t = t[["score", *SUBS]]
             else:
                 t = nav_arm(s, arm)[["score", *SUBS]]
             fr.append(t.reindex(toks.index))
