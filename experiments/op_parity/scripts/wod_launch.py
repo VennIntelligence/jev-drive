@@ -206,6 +206,29 @@ def cmd_bias(a):
         print(json.dumps(st["standstill"]), flush=True)
 
 
+def cmd_gbias(a):
+    """Serving bias of a --stop-gate arm (rater + extra frames): pp_wod.py bias with the rows fed a speed below the run's gate zeroed, as in
+    training -> $DATA_DIR/runs/op_parity/wod/bias-<tag>.npz (the file wod_parity_chain's serve step looks for)."""
+    import torch
+    import pp_hugsim as H
+    import pp_train as T
+    from jevdrive import wod_zeroshot as Z
+    from pp_wod import wod_ego
+    S = Z.load_sets()
+    names = np.concatenate([S[k]["name"].astype(str) for k in ("rater", "extra")])
+    ego, _ = wod_ego(np.concatenate([S[k]["past"] for k in ("rater", "extra")]), np.concatenate([S[k]["intent"] for k in ("rater", "extra")]))
+    for tag in a.tags:
+        gate = float(torch.load(T.proot("runs", tag) / "ckpt-final.pt", map_location="cpu", weights_only=False)["cfg"]["stop_gate"])
+        assert gate > 0, f"{tag} was not trained with --stop-gate"
+        m = H.pmodel(tag, torch.device("cpu"))
+        with torch.no_grad():
+            b = np.concatenate([m.adapter(torch.from_numpy(ego[i:i + 256]), None, None).to(torch.float16).numpy() for i in range(0, len(ego), 256)])
+        off = ego[:, 4] * 10.0 < gate
+        b[off] = 0
+        np.savez(data_dir() / "runs/op_parity/wod" / f"bias-{tag}.npz", names=names, bias=b, ego=ego, gated=off)
+        print(f"{tag}: gate {gate} m/s, {int(off.sum())} of {len(off)} frames gated off, bias rms {float(np.sqrt(np.mean(b.astype(np.float32) ** 2))):.4f}", flush=True)
+
+
 # ---------------------------------------------------------------- tok (training-protocol token path)
 def to_wod(plan, dev_xy):
     """(n, 33, 15) plan means, (n, 2) camera x, y on the vehicle -> (n, 20, 2) WOD rear-axle waypoints at 0.25 .. 5 s (jevdrive.wod_zeroshot.openpilot_to_wod)."""
@@ -342,7 +365,9 @@ if __name__ == "__main__":
     p = sp_.add_parser("bias")
     p.add_argument("--tags", nargs="+", required=True)
     p.add_argument("--vars", nargs="+", default=list(VARS))
+    p = sp_.add_parser("gbias")
+    p.add_argument("--tags", nargs="+", required=True)
     p = sp_.add_parser("tok")
     p.add_argument("--limit", type=int, default=0)
     a = ap.parse_args()
-    {"label": cmd_label, "label2": cmd_label2, "bias": cmd_bias, "tok": cmd_tok}[a.cmd](a)
+    {"label": cmd_label, "label2": cmd_label2, "bias": cmd_bias, "gbias": cmd_gbias, "tok": cmd_tok}[a.cmd](a)

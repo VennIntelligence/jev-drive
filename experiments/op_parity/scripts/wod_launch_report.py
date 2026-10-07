@@ -21,8 +21,9 @@ B = 4000
 OUT = _R / "experiments/op_parity/results/wod_launch"
 VARS = ("main", "zero", "biasmean", "biasresid", "cmd0", "acc0", "vx1", "vx3", "cv1", "cv3")
 V_STOP = 0.5
-CTX_ORDER = ("red", "green", "stop_sign", "lead_moving", "lead_stopped", "cross", "open")
-CUE_VISIBLE = ("green", "lead_moving", "open")
+CTX_ORDER = ("red", "green", "stop_sign", "lead", "cross", "open")
+CUE_VISIBLE = ("green", "open")                 # lead: the moving / stopped split is not available (VLM lead question unreliable), counted on neither side
+GATE_V = 0.5
 
 
 def ldir():
@@ -46,6 +47,10 @@ class Ctx:
         self.traj, self.sc = r["traj"].astype(np.float64), r["scores"].astype(np.float64)
         self.v0 = W.init_speed(r["past"]).astype(np.float64)
         self.intent = r["intent"]
+        self.vkin = W.past_kinematics(r["past"])["v"].astype(np.float64)          # the speed the adapter is fed (pp_wod.wod_ego)
+        lead = [np.load(Z.root("preds", "op_cinque") / f"{nm}.npz") for nm in r["name"].astype(str)]
+        self.lead_prob = np.array([float(np.asarray(z["lead_prob"]).reshape(-1)[0]) for z in lead])
+        self.lead_x = np.array([float(np.asarray(z["lead"]).reshape(-1)[0]) for z in lead])
         cl = r["cluster"].astype(str)
         ccode, cu = pd.factorize(pd.Series(cl))
         self.M = np.eye(len(cu))[ccode]
@@ -250,6 +255,54 @@ def cmd_diag(a):
                     verdict[f"b_stats_{t}"] = json.loads(f.read_text())["standstill"]
             run.info("(b) %s", json.dumps({k: v for k, v in verdict.items() if k.startswith("b_") and "stats" not in k}))
 
+        # ---- (e2, post hoc) what differs between WP2 and shipped at standstill: path / speed swaps and the 5 s distance distribution
+        from pp_wod_diag import retime
+        o1 = np.mean([C.rfs(retime(p, P["shipped"][0])) for p in P["WP2"]], 0)
+        o2 = np.mean([C.rfs(retime(P["shipped"][0], p)) for p in P["WP2"]], 0)
+        rows = []
+        for nm in ("stopped", "SL (stopped, log moves)", "SS (stopped, log stays)", "moving (v>=0.5)"):
+            m = st[nm]
+            row = {"stratum": nm, "n": int(m.sum())}
+            for lab_, dd in (("WP2 - shipped", sco["WP2"] - sco["shipped"]), ("WP2 path at shipped speed - shipped", o1 - sco["shipped"]),
+                             ("shipped path at WP2 speed - shipped", o2 - sco["shipped"])):
+                c = C.ci(dd, m)
+                row[lab_], row[lab_ + " lo"], row[lab_ + " hi"] = c
+            for k in ("top", "log", "shipped", "WP2"):
+                row[f"d5 p10/p25/p50/p75/p90 {k}"] = " / ".join(f"{q:.1f}" for q in np.percentile(d_[k][5][m], [10, 25, 50, 75, 90]))
+                row[f"share d5 < 1 m {k}"] = float((d_[k][5][m] < 1).mean())
+                row[f"mean |y| at 5 s {k}"] = float(np.mean([np.abs(p[:, 19, 1])[m].mean() for p in P[k]]))
+                row[f"floored {k}"] = float(np.mean([(C.rfs(p)[m] <= 4 + 1e-9).mean() for p in P[k]]))
+            rows.append(row)
+        stats.write_table(rows, OUT / "place_swaps")
+
+        # ---- (b2, post hoc) serving-time gate: bias off when the fed speed < GATE_V, WP2's bias otherwise; the on / off choice by 5-fold over sequences
+        if "zero" in bias:
+            g = C.vkin < GATE_V
+            comp = np.where(g, bias["zero"][1], bias["main"][1])
+            scode = pd.factorize(pd.Series(C.seq[:n]))[0]
+            rng, oof, pick = np.random.default_rng(0), np.zeros(n), []
+            for _ in range(20):
+                fold = rng.permutation(scode.max() + 1)[scode] % 5
+                for f in range(5):
+                    on = C.cm(bias["zero"][1] - bias["main"][1], g & (fold != f)) > 0
+                    pick.append(on)
+                    te = fold == f
+                    oof[te] += np.where(g[te] & on, bias["zero"][1][te], bias["main"][1][te]) / 20
+            rows = []
+            for nm in ("all", "stopped", "SL (stopped, log moves)", "SS (stopped, log stays)", "moving (v>=0.5)"):
+                m = st[nm]
+                row = {"stratum": nm, "n": int(m.sum()), "RFS WP2": C.cm(bias["main"][1], m), "RFS WP2 + gate": C.cm(comp, m)}
+                for lab_, dd in (("gate - WP2 (in sample)", comp - bias["main"][1]), ("gate - WP2 (out of fold)", oof - bias["main"][1]), ("gate - shipped", comp - sco["shipped"]),
+                                 ("gate - log", comp - sco["log"])):
+                    c = C.ci(dd, m)
+                    row[lab_], row[lab_ + " lo"], row[lab_ + " hi"] = c
+                rows.append(row)
+            stats.write_table(rows, OUT / "gate_composite")
+            verdict["b2_gate_composite"] = {"gated frames": int(g.sum()), "gated and v0 >= 0.5": int((g & ~stopped).sum()), "stopped not gated": int((~g & stopped).sum()),
+                                            "folds choosing the gate": float(np.mean(pick)), "all in-sample": list(C.ci(comp - bias["main"][1])),
+                                            "all out-of-fold": list(C.ci(oof - bias["main"][1])), "all vs shipped": list(C.ci(comp - sco["shipped"]))}
+            run.info("(b2) %s", json.dumps(verdict["b2_gate_composite"], default=float))
+
         # ---- (c) protocol: token path vs harness; anticipation
         fv = ldir() / "tok_val.npz"
         if fv.exists():
@@ -441,8 +494,17 @@ def context(C, sco, d_, run):
             for q in ha.columns.intersection(use.columns):
                 use.loc[ha.index, q] = ha[q]
     stop_sign = (use.stop_sign == "stop_sign_for_ego") | (use.get("stop_ctrl", pd.Series("", index=use.index)) == "stop_controlled")
+    # lead: the VLM lead question agrees with the hand labels on 52 % only -> shipped's lead head (prob > 0.5 and distance < 20 m; rule set on the 40 hand frames)
+    use["lead_head"] = np.where((C.lead_prob > 0.5) & (C.lead_x < 20), "lead", "none")
+    if fh.exists():
+        hl = (h.lead != "none_ahead").to_numpy()
+        ag.append({"question": "lead_head (post hoc: shipped lead head, prob > 0.5 and < 20 m; hand = any lead)", "n": len(h),
+                   "agreement": float(((use.loc[h.index, "lead_head"] == "lead").to_numpy() == hl).mean()),
+                   "confusion (hand -> VLM: count)": "; ".join(f"{x} -> {y}: {c}" for (x, y), c in pd.crosstab(hl, use.loc[h.index, "lead_head"].to_numpy()).stack().items() if c)})
+        stats.write_table(ag, OUT / "context_agreement")
+        out["agreement"] = {r["question"].split(" ")[0]: r["agreement"] for r in ag}
     ctx = np.where(use.light == "red_or_yellow_for_ego", "red", np.where(use.light == "green_for_ego", "green", np.where(stop_sign, "stop_sign", np.where(
-        use.lead == "moving_lead", "lead_moving", np.where(use.lead == "stopped_lead", "lead_stopped", np.where(use.cross == "crossing", "cross", "open"))))))
+        use.lead_head == "lead", "lead", np.where(use.cross == "crossing", "cross", "open")))))
     lost = C.w * (sco["top"] - sco["WP2"])
     stp = C.st["stopped"]
     rows = []
@@ -486,7 +548,7 @@ def context(C, sco, d_, run):
             rows.append(row)
     stats.write_table(rows, OUT / "context_lights")
     pd.DataFrame({"name": C.names[:n], "v0": C.v0, "log_d5": C.logd, "stopped": stp, "context": ctx, **{q: use[q].to_numpy() for q in use.columns},
-                  **{f"vlm_{q}_p": v[[c for c in v.columns if c.startswith(q + "_p_")]].max(1).to_numpy() for q in ("light", "stop_sign", "lead", "cross")},
+                  **{f"vlm_{q}_p": v[[c for c in v.columns if c.startswith(q + "_p_")]].max(axis=1).to_numpy() for q in ("light", "stop_sign", "lead", "cross")},
                   "rfs_top": sco["top"], "rfs_log": sco["log"], "rfs_shipped": sco["shipped"], "rfs_WP1": sco["WP1"], "rfs_WP2": sco["WP2"],
                   "d5_top": d_["top"][5], "d5_log": d_["log"][5], "d5_shipped": d_["shipped"][5], "d5_WP2": d_["WP2"][5]}).to_csv(OUT / "frames.csv", index=False, float_format="%.4f")
     run.info("(a) %s", json.dumps(out, default=float))
@@ -499,7 +561,7 @@ def cmd_gate(a):
     s_a, s_r, s_s = C.rfs(C.preds(a.arm)), C.rfs(C.preds(a.ref)), C.rfs(C.preds("shipped"))
     arm = a.arm.split("-pilot")[0]
     ref_gap = C.cm(s_r - s_s, C.st["stopped"])
-    thr = 0.10 if ref_gap < -0.10 else 0.0                              # prereg: weak gate when the pilot-scale WP2 shows no standstill shortfall
+    thr = 0.10 if ref_gap < -0.10 else -0.05                            # prereg addendum: harm-only gate when the pilot-scale WP2 shows no standstill shortfall
     g = {"arm": a.arm, "ref": a.ref, "stopped": C.ci(s_a - s_r, C.st["stopped"]), "moving": C.ci(s_a - s_r, C.st["moving (v>=0.5)"]), "all": C.ci(s_a - s_r),
          "SL": C.ci(s_a - s_r, C.st["SL (stopped, log moves)"]), "SS": C.ci(s_a - s_r, C.st["SS (stopped, log stays)"]),
          "ref - shipped stopped": ref_gap, "threshold_stopped": thr, "RFS arm": C.cm(s_a), "RFS ref": C.cm(s_r),

@@ -97,6 +97,7 @@ class Cfg:
     act_lab: str = ""                     # action[0] label: "" distilled to shipped (P2 recipe) | plan | log | logwin (module docstring)
     act_lam: float = 3.0
     ego_lat_drop: float = 0.0             # fraction of rows with vy / ay of the ego input zeroed (own rng stream; row order unchanged)
+    stop_gate: float = 0.0                # wod-launch (plans/2026-10-08-wod-launch-prereg.md addendum): adapter off (present = 0) on rows fed a speed below this (m/s); 0 = off
     mem: str = ""                         # front-token memory (wa_cf | vj21; arm P2+<mem>), dropped per row with MEM_DROP (own rng stream)
 
 
@@ -422,7 +423,7 @@ def main(a):
               hinge_replay=a.hinge_replay, hinge_front_turn_margin=a.hinge_front_turn_margin,
               b2d_split=a.b2d_split, b2d_mass=a.b2d_mass, anchor_b2d=not a.no_anchor_b2d,
               turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
-              act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop, mem=a.mem,
+              act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop, mem=a.mem, stop_gate=a.stop_gate,
               agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
@@ -436,6 +437,8 @@ def main(a):
         cfg.arm = f"P2+{cfg.mem}"
     S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames, host=cfg.host, mem=cfg.mem or None)
     model = PModel(cfg.arm, act=bool(cfg.act_lab)).to(dev)
+    if cfg.stop_gate > 0:                                           # the whole ego row is zeroed (present = 0 -> bias exactly 0) in training and dev eval
+        S.ego = S.ego * (S.ego[:, 4:5] * 10.0 >= cfg.stop_gate).float()
     if cfg.act_lab in ("log", "logwin"):
         S.act_labels(cfg.act_lab)
     lrng = np.random.default_rng([cfg.seed, rank, 7])                       # ego_lat_drop: own stream, the row stream is unchanged
@@ -623,5 +626,6 @@ if __name__ == "__main__":
     ap.add_argument("--act-lab", default="", choices=["", "plan", "log", "logwin"], help="train action[0] on this label (joint action arms)")
     ap.add_argument("--act-lam", type=float, default=3.0)
     ap.add_argument("--ego-lat-drop", type=float, default=0.0, help="fraction of rows with vy / ay of the ego input zeroed")
+    ap.add_argument("--stop-gate", type=float, default=0.0, help="adapter off on rows whose fed speed (ego vx) is below this, m/s (wod-launch); 0 = off")
     ap.add_argument("--mem", default="", choices=["", *MEM_KINDS], help="32-token memory for arm P2 (representation fix / turn-oracle; runs/op_parity/mem)")
     main(ap.parse_args())

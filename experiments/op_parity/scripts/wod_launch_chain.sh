@@ -48,7 +48,7 @@ if [[ $STAGE == fix ]]; then
                 --split wod/r2 --tag $tag $FLAGS "$@" >/dev/null; }
   serve() { local tag=$1
             [[ -f $ONNX/pp-$tag.onnx ]] || $PY $S/pp_hugsim.py onnx --tag $tag --out $ONNX/pp-$tag.onnx >/dev/null || die "onnx $tag"
-            [[ -f $BIAS/bias-$tag.npz ]] || $PY $S/pp_wod.py bias --tags $tag || die "bias $tag"
+            [[ -f $BIAS/bias-$tag.npz ]] || { if [[ "$FLAGS" == *--stop-gate* ]]; then $PY $S/wod_launch.py gbias --tags $tag; else $PY $S/pp_wod.py bias --tags $tag; fi; } || die "bias $tag"
             sub wodl-e-$tag $L/e-$tag --vram 8 --cpu 14 --ram 40 -- $OP scripts/wod_zeroshot_openpilot.py --set rater extra --workers 12 \
                 --onnx $ONNX/pp-$tag.onnx --tag $tag --bias $BIAS/bias-$tag.npz >/dev/null; }
   status "fix $ARM: pilot train ($FLAGS)"
@@ -64,6 +64,7 @@ if [[ $STAGE == fix ]]; then
   for s in 0 1; do train $ARM-full-s$s $s wod_r2 --steps 10000 --batch 128 --warmup 300 --eval-every 1000; done
   for s in 0 1; do waitdirs $L/t-$ARM-full-s$s; serve $ARM-full-s$s; done
   waitdirs $L/e-$ARM-full-s0 $L/e-$ARM-full-s1
+  $J $S/wod_launch_report.py full --arm $ARM || die "full report"
   status "fix $ARM: done"; touch "$D/DONE-fix"; exit 0
 fi
 die "unknown stage $STAGE"
