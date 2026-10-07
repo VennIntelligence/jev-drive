@@ -112,6 +112,7 @@ class Scene:
         from scipy.spatial import cKDTree
         g = ply(d / "ground.ply")
         s = ply(d / "scene.ply")
+        g, s = g[np.isfinite(g).all(1)], s[np.isfinite(s).all(1)]
         self.gxy = np.stack([g[:, 2], -g[:, 0]], 1)
         self.sxy, self.sy = np.stack([s[:, 2], -s[:, 0]], 1), s[:, 1]   # camera y (down)
         self.gt, self.st = cKDTree(self.gxy), cKDTree(self.sxy)
@@ -403,6 +404,8 @@ def run_list():
 def _work(job):
     sc, items, routes = job
     scenes, evs, trs = {}, [], {}
+    import warnings
+    warnings.filterwarnings("ignore", category=RuntimeWarning)
     for a, p, rep, r in items:
         d = Path(r["run_dir"])
         if not (d / "infos.pkl").exists():
