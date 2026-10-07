@@ -26,3 +26,5 @@ Every page meant for people (research synthesis, diagnosis, round report) is one
    footer is not a blocker). Close the window when the page is accepted, or leave it.
 3. Main checks every number and claim on the page against the sources and sends corrections to the same pane.
 4. Delete the brief once the page is committed. tmp/ never keeps reports.
+
+Fallback: while agy has no credits, the same brief goes to a Sonnet subagent (Agent tool, model sonnet); steps 3-4 unchanged.
