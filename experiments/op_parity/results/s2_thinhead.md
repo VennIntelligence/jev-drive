@@ -53,8 +53,8 @@ left / right intent (52), `straight` (427). The script reproduces WP2 8.111 and 
    fold (keep WP2 unless the predicted gain exceeds m) does not change the mean (-0.005 [-0.030, +0.016]) and removes the moving-frame doubt
    (+0.078 [+0.008, +0.147]). The same recipe on shipped as System 1: +0.047 [-0.046, +0.147] retrained, +0.065 [+0.016, +0.124] with the WP2-fitted
    head and the margin rule; shipped + selector stays below WP2 + selector (-0.193 [-0.335, -0.062]).
-5. **Q3, joint fine-tune pilot** (LoRA on decoder layers 15-18 + the same multi-stream head, multi-frame input, a then b): FT_PENDING
-6. **Latency** of the head path: LAT_PENDING
+5. **Q3, joint fine-tune pilot** (LoRA on decoder layers 15-18 + the same multi-stream head, multi-frame input, a then b): **no gain from fine-tuning.** LoRA + head +0.055 [-0.022, +0.139] against the frozen feature with the same head +0.050 [-0.056, +0.166]; FT - FZ **+0.005 [-0.080, +0.086]**. On the data-rich hindsight task the LoRA pre-training (3 000 train rows) does not improve the held-out NLL (1.286 -> 1.299 on the same 400 r2-dev rows, accuracy 59.5 % -> 59.0 %).
+6. **Latency** of the head path: batch 1, JPEG bytes to the selected candidate, on a card that was idle at the start: Qwen3 one frame x 3 cameras 107 ms preprocessing + 215 ms model (to layer 18, 3 060 tokens); 4 frames x 3 cameras 386 + 443 ms (6 120 tokens); the linear head 0.014 ms. The floor head needs none of it: its inputs are System 1's own (0.014 ms).
 
 **What this says about the design.** On this board the information a selector can use out of fold with 479 labelled frames is System 1's own
 state (command, speed, the plan it produced). Frozen Qwen3-VL-4B features, pooled, single- or multi-frame, do not carry a learnable signal for
@@ -183,11 +183,55 @@ share one scale); the F20 / argmax row reproduces Q1 (+0.154 against +0.148).
 
 ## Q3: joint fine-tune pilot (`ft.md`, `ft_info.json`)
 
-FT_SECTION_PENDING
+Run as planned (the frozen read shows nothing from Qwen3 beyond ego + Cinque, but the diagnostics do not say fine-tuning could not change it: the
+frozen feature fails on the data-rich hindsight task too, which points at the feature, and the learning curves still rise). Pilot scale.
+
+Recipe: Qwen3-VL-4B on the `QV` input (3 cameras x 4 frames at 0.2 s, video path, decoder cut at layer 18), LoRA rank 16 on the attention q / v
+projections of decoder layers 15-18 (the last fusion blocks of the truncated model; 8 adapted matrices), the pooled image-token mean -> the `M`
+head with its three streams (vision 2 560 standardised, ego, plan). `FZ` = the same head on the cached frozen feature. Both: supervision a first
+(FZ head: all 89 792 r2-train rows from the cache; FT: starts from FZ's head and a zero LoRA, then 3 000 r2-train rows online, 750 steps of 4),
+then b by sequence 5-fold (the folds of repeat 0, 3 epochs, batch 4, no inner selection), from the layer-14 hidden states cached for the 478
+rater frames with a clip. One permutation run (rater targets of another frame, same folds).
+
+| arm | all | stopped | moving | turn | train folds (in-sample) |
+|:--|:--|:--|:--|:--|--:|
+| FZ: frozen feature + head, a then b | +0.050 [-0.056, +0.166] | +0.261 [-0.017, +0.567] | -0.048 [-0.133, +0.030] | +0.579 [+0.071, +1.224] | +0.152 |
+| **FT: LoRA + head, a then b** | **+0.055 [-0.022, +0.139]** | +0.112 [-0.115, +0.353] | +0.025 [-0.016, +0.069] | +0.638 [+0.303, +1.162] | +0.053 |
+| **FT - FZ** | **+0.005 [-0.080, +0.086]** | -0.148 [-0.359, +0.042] | +0.073 [+0.001, +0.153] | +0.059 [-0.436, +0.544] | |
+| a only (no rater labels): FZ / FT | +0.042 [-0.032, +0.130] / +0.028 [-0.033, +0.100] | +0.110 / +0.094 | 0.000 / 0.000 | +0.322 / +0.317 | |
+| FT - FZ, a only | -0.015 [-0.064, +0.019] | | | | |
+| permuted targets: FZ / FT | -0.105 [-0.218, -0.002] / -0.013 [-0.057, +0.023] | | | +0.058 / +0.084 | -0.061 / -0.019 |
+| FT - FT permuted | +0.069 [+0.005, +0.147] | +0.204 [+0.015, +0.432] | +0.006 [-0.032, +0.047] | +0.554 [+0.207, +1.075] | |
+
+Hindsight class on r2-dev (the data-rich read): FZ head on all 4 746 rows NLL 1.324, accuracy 57.8 %; on the 400 rows used online, frozen 1.286 /
+59.5 %, after the LoRA pre-training 1.299 / 59.0 %. The training loss did not move (1.26 .. 1.40 per 100 steps).
+
+- Fine-tuning the last fusion blocks changes nothing measurable: FT - FZ +0.005 with a CI of +/-0.08, and no improvement of the hindsight class
+  with 3 000 rows. Neither arm's CI excludes 0 on all frames; both sit below the vision-free ridge floor (+0.148), and like it they have their
+  whole gain on the turn frames (+0.58 / +0.64). The one stratum where the CI of FT - FZ excludes 0 is `moving` (+0.073 [+0.001, +0.153]),
+  where FZ loses and FT is at +0.025: fewer harmful changes, not a gain over WP2.
+- No overfit signature in FT (train folds +0.053, out of fold +0.055; permuted -0.013): three epochs at these learning rates barely move the
+  head. FZ shows it (train folds +0.152, out of fold +0.050, permuted targets -0.105).
+- Checks: the split forward (frozen to layer 14, then layers 15-18) reproduces the cached `L18_mean` to a relative L2 of 0.005 (median; max
+  0.031: batch 2 against the cache's batch 8); the online feature with the LoRA at zero matches the cache to 0.005 (median).
+- Cost: cache 15 min, pre-training 41 min (0.67 s per row on a shared card), k-fold with the permutation run 34 min: about 1.5 card-hours.
+- Not tried: LoRA on the vision tower or on more layers, a token-grid read-out, more pre-training rows, a longer schedule. With this result the
+  next step is not a longer run of the same recipe (see caveats).
 
 ## Latency (`latency.md`)
 
-LAT_SECTION_PENDING
+Batch 1, the rater frames, 40 frames after 5 warm-up; JPEG bytes -> processor -> Qwen3-VL-4B to layer 18 -> pooled feature (host sync) -> head.
+The card was at 0 % utilisation and 1.9 GB at the start (`latency_cards.txt`); bf16, no compilation.
+
+| path | LLM tokens | preprocessing ms (read + decode + processor) | model ms median / p95 | peak VRAM |
+|:--|--:|--:|:--|--:|
+| `Q1`: 3 cameras, 1 frame | 3 060 | 107 | 215 / 216 | 8.3 GB |
+| `QV` / `QL`: 3 cameras x 4 frames, video path | 6 120 | 386 | 443 / 523 | 13.3 GB |
+| head: linear, PCA folded into the weights (CPU) | | | 0.014 | |
+| Cinque `temporal` (already computed by System 1; from the feature set's meta, shared card) | | | 5-20 | |
+
+A feature-plus-head System 2 on Qwen3 is 0.32 s per decision with one frame and 0.83 s with four at native resolution (decision 85's
+resolution lever, 559-1 153 tokens, was not applied); zero-shot prompting was 3-4 s (decision 168). The head that delivers here costs 0.014 ms.
 
 ## Figures
 
@@ -217,10 +261,15 @@ LAT_SECTION_PENDING
 - The `straight` stratum, the turn-only reading, the intent-conditional constant and the `E` arm's verdict are *post hoc* (the pre-registered
   family held the four visual arms only).
 - The permutation control compares 3-repeat statistics; the MLP head has no permutation control (its b arm is 0).
-- Q3: FT_DEV_PENDING
+- Q3 is a pilot: 3 000 pre-training rows (planned as "a train subset"; 6 000 was the first sizing, halved after the measured 0.7-0.8 s per row), 3
+  epochs per fold (5 planned before timing), one repeat of the folds, fixed hyper-parameters, the head is the `M` head with a 2 560-wide vision
+  encoder instead of 64 PCs. One permutation run, not a null distribution.
+- The MLP head's tie rule (largest weight decay on ties) makes its b arm collapse to "keep"; reported as is.
 
 ## Caveats
 
+- The fine-tune pilot does not settle whether Qwen3 can be made to carry the signal: it adapts 4 decoder layers on a pooled read-out with 3 000
+  hindsight rows and 383 rater frames per fold. It does say that this cheap recipe gives nothing.
 - 479 frames, 52 of them with a turn intent: the one positive result rests on those 52 (CI [+0.64, +1.79] there, robust across arms and heads,
   but one board and one System 1). Cluster rows are in `arms.md`, descriptive only.
 - Open loop; the candidates of a standstill plan drive straight ahead (decision 168's caveat).

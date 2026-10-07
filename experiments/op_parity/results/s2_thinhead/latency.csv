@@ -1,0 +1,4 @@
+path,n,LLM tokens,preprocess ms (median),model ms (median),model ms (p95),peak VRAM GB
+"Q1: 3 cameras, 1 frame",40,3060.0,106.70052107889205,215.18837905023247,216.06116244802251,8.319928169250488
+QV / QL: 3 cameras x 4 frames (video path),40,6120.0,385.735526913777,443.30513838212937,522.683225676883,13.291557312011719
+"head (linear, PCA folded into the weights; CPU, numpy)",1000,,,0.014072712045162916,,

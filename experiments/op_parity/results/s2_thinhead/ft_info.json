@@ -1,0 +1,29 @@
+{
+ "FZ train-fold gain": 0.1519084930419922,
+ "FT train-fold gain": 0.05324637182056904,
+ "FZ perm train-fold gain": -0.06131075769662857,
+ "FT perm train-fold gain": -0.018587993830442427,
+ "pretrain": {
+  "dev rows": 4746,
+  "dev_nll": 1.3241146802902222,
+  "dev_acc": 0.5781710743904114,
+  "online, LoRA at zero (= FZ, same rows)": {
+   "dev rows": 400,
+   "dev_nll": 1.28600672185421,
+   "dev_acc": 0.595
+  },
+  "online vs cached feature, relative L2 (median, max)": [
+   0.005126240663230419,
+   0.033767782151699066
+  ],
+  "pretrain": {
+   "rows": 3000,
+   "s_per_row": 0.6675108527342478
+  },
+  "online, after the LoRA pre-training (FT)": {
+   "dev rows": 400,
+   "dev_nll": 1.2986197873950005,
+   "dev_acc": 0.59
+  }
+ }
+}
