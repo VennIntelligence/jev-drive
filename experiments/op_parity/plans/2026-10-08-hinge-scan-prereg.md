@@ -13,7 +13,7 @@ lambda 和 margin 同时变了。本线：(1) 在 pilot 规模上把 lambda 和 
 - 网格 lambda in {10, 30, 100} x margin in {0.25, 0.5, 1.0}（m），已知点 (30, 0.5) = `SHP-F-s0` 复用，不重训。其余 8 臂：`SC-L<lam>M<margin x 100>-F-s0`
   （L10M25, L10M50, L10M100, L30M25, L30M100, L100M25, L100M50, L100M100）。
 - 种子噪声参照：`SHP-F-s1`（同配方 seed 1），只用来给「胜出」设一个高于种子散布的门槛，不是网格点。
-- 参照臂：`SHP-F-s0`（所有差值都对它做配对）；`RH0-F-s0`（10 / 0.3）只作 lambda / margin 主效应的背景行。
+- 参照臂：`SHP-F-s0`（所有差值都对它做配对）。
 - 打分只走 `jevdrive.bench`（navtest 12 146 token，frames warp）；inside-cut / cannot-make-turn 用 `turn_oracle.py replay` + `Data`（four_dirs 口径，DAC 失败 token 上的 devkit replay）；
   raw plan 出界用 `rh.py proxy --name`（全 token 的 devkit replay 出界 vs raw 8 点 footprint 出界）。
 
