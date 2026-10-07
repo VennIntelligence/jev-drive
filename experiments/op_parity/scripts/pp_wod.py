@@ -113,7 +113,7 @@ def cmd_report(a):
     lab_all = np.where(lum.reindex(seq_all).to_numpy() < 50, "night", np.where(lum.reindex(seq_all).to_numpy() < 120, "dusk", "day"))
     nr = len(r["name"])
     lab_r = lab_all[:nr]
-    tags = ["shipped"] + a.tags
+    tags = ["shipped"] + a.tags + a.diag
     P = {t: load_preds(t, names_all) for t in tags}
     rfs = {t: np.asarray(W.rater_feedback_score(P[t][:nr], r["traj"].astype(np.float64), r["scores"].astype(np.float64), W.init_speed(r["past"])), float)
            for t in tags}
@@ -208,6 +208,7 @@ if __name__ == "__main__":
     p = sp_.add_parser("bias")
     p.add_argument("--tags", nargs="+", required=True)
     p = sp_.add_parser("report")
-    p.add_argument("--tags", nargs="+", required=True)
+    p.add_argument("--tags", nargs="+", required=True, help="the two seeds (seed mean over these)")
+    p.add_argument("--diag", nargs="*", default=[], help="diagnostic arms (preds tag), reported against shipped, not in the seed mean")
     a = ap.parse_args()
     {"bias": cmd_bias, "report": cmd_report}[a.cmd](a)
