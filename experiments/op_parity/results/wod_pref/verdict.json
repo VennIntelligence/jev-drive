@@ -1,0 +1,97 @@
+{
+ "WLG token path": 8.187664525458683,
+ "WLG harness": 8.186895299476479,
+ "gates": {
+  "P0": {
+   "n": 245,
+   "plan_mean_m": 0.0042186594623484204,
+   "plan_max_m": 0.023555557393766337,
+   "token_max_abs": 0.06298828125,
+   "passed": true
+  },
+  "P1": {
+   "plan_mean_m": 0.011146568545078077,
+   "rfs_token": 8.188000887154192,
+   "rfs_harness": 8.186895299476479,
+   "rfs_frame_abs_diff_mean": 0.006024225778867453,
+   "plan_p99_m": 0.03822885690942786,
+   "passed": true
+  }
+ },
+ "ceiling F20 on WLG (token path)": [
+  1.0101035750813947,
+  0.829361781493872,
+  1.20002256325538
+ ],
+ "ceiling decision 168 (on WP2)": 1.068,
+ "expected": 0.08,
+ "objectives": {
+  "top": {
+   "d oof": [
+    0.09146028637186965,
+    0.012483314390969046,
+    0.16989743579369362
+   ],
+   "d in-sample": [
+    0.35206794342752146,
+    0.25410773690009897,
+    0.45306324066400616
+   ],
+   "delivers": false,
+   "strata with CI below 0": [
+    "cluster Single-Lane Maneuvers"
+   ],
+   "frame-specific (s0 oof - perm lo > 0)": true,
+   "final steps (median of the selected steps)": 112
+  },
+  "rank": {
+   "d oof": [
+    0.0448213689481329,
+    -0.008523614919156377,
+    0.10322085651078354
+   ],
+   "d in-sample": [
+    0.34475074369490594,
+    0.2506981410117268,
+    0.4530379761874967
+   ],
+   "delivers": false,
+   "strata with CI below 0": [],
+   "frame-specific (s0 oof - perm lo > 0)": true,
+   "final steps (median of the selected steps)": 137
+  },
+  "hinge": {
+   "d oof": [
+    0.005050728195615648,
+    -0.022588392654838668,
+    0.03500190882734196
+   ],
+   "d in-sample": [
+    0.2506913627922926,
+    0.17304449674325456,
+    0.3409648602830708
+   ],
+   "delivers": false,
+   "strata with CI below 0": [],
+   "frame-specific (s0 oof - perm lo > 0)": false,
+   "final steps (median of the selected steps)": 237
+  },
+  "f20": {
+   "d oof": [
+    0.0891727119747706,
+    0.018395338764709713,
+    0.1564542305951309
+   ],
+   "d in-sample": [
+    0.28207827984475,
+    0.17925524895190273,
+    0.38965268414488047
+   ],
+   "delivers": true,
+   "strata with CI below 0": [],
+   "frame-specific (s0 oof - perm lo > 0)": false,
+   "final steps (median of the selected steps)": 87
+  }
+ },
+ "null on every objective": false
+}

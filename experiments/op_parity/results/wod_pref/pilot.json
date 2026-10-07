@@ -1,0 +1,1 @@
+{"lr": 1e-05, "lr_new": 0.0001, "rule": "max inner-fold frame-mean RFS at the early-stopping step"}
