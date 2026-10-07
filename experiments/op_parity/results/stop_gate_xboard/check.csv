@@ -1,0 +1,5 @@
+seed,arm,tokens differing,differing among untouched,max |dxy| untouched (m),mean |dxy| touched (m),touched
+0,sg,852,0,0.0,19.34920310974121,852
+0,dn,12146,11294,74.40625,18.8995418548584,852
+1,sg,852,0,0.0,18.7325382232666,852
+1,dn,12146,11294,67.859375,18.6635684967041,852
