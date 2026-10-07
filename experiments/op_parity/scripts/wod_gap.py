@@ -128,11 +128,15 @@ def main(a):
         logd, intent = np.linalg.norm(fut[:n, -1], axis=-1), r["intent"]
         lum = pd.read_csv(_R / "experiments/leaderboard_audit/results/night_gap/seq_lum.csv").set_index("sequence").l.reindex(seq[:n]).to_numpy()
         vbin = np.where(v0 < 0.5, "stopped", np.where(v0 < 5, "slow", np.where(v0 < 12, "mid", "fast")))
+        tstep = np.linalg.norm(np.diff(np.concatenate([np.zeros((n, 1, 2)), traj[ii, top]], 1), axis=1), axis=-1) * W.RFS_FREQ    # top-rated step speeds
+        nmov = (tstep > 1e-6).cumsum(1).argmax(1)                                 # last moving step
+        padded = (nmov < 19) & (tstep[ii, nmov] > 1.0)                            # post hoc: ends while still moving -> the metric pads it with the last waypoint
         st = {"all": np.ones(n, bool), "stopped v<0.5": v0 < 0.5, "stopped, log stays (<1 m @5s)": (v0 < 0.5) & (logd < 1),
               "stopped, log moves (>=1 m @5s)": (v0 < 0.5) & (logd >= 1), "launch v<2 & log5s>5m": (v0 < 2) & (logd > 5),
               "slow 0.5-5": vbin == "slow", "mid 5-12": vbin == "mid", "fast >=12": vbin == "fast", "turn intent L/R": intent >= 2,
               "straight intent": intent == 1, "lead_prob>0.5 (shipped)": lead > 0.5, "lead_prob<=0.5": lead <= 0.5,
-              "night (luma < 50)": lum < 50, "day (luma >= 120)": lum >= 120} | {"cluster " + c: cl == c for c in cu}
+              "night (luma < 50)": lum < 50, "day (luma >= 120)": lum >= 120} | {"cluster " + c: cl == c for c in cu} | {
+                  "top-rated trajectory truncated (post hoc)": padded, "top-rated trajectory full length (post hoc)": ~padded}
 
         # ---- swaps: O1 = A's path at R's arc length, O2 = R's path at A's arc length
         def swap(A, R):
@@ -241,7 +245,9 @@ def main(a):
             row |= {"WP2 pts lost": ws(uw, "gap"), "WP2 share of gap": ws(uw, "gap") / ws(U["WP2"], "gap"), "log pts lost": ws(ul, "gap"),
                     "shipped pts lost": ws(us, "gap")}
             for nm2, d in (("WP2 - log", sco["WP2"] - sco["log"]), ("WP2 - shipped", sco["WP2"] - sco["shipped"]), ("log - top", sco["log"] - sco["top"]),
-                           ("WP2 - top", sco["WP2"] - sco["top"])):
+                           ("WP2 - top", sco["WP2"] - sco["top"]), ("WP2 s0 - shipped", Pp["WP2"][0]["score"] - sco["shipped"]),
+                           ("WP2 s1 - shipped", Pp["WP2"][1]["score"] - sco["shipped"]), ("WP2 s0 - log", Pp["WP2"][0]["score"] - sco["log"]),
+                           ("WP2 s1 - log", Pp["WP2"][1]["score"] - sco["log"]), ("shipped - log", sco["shipped"] - sco["log"])):
                 c = ci(d, msk)
                 row |= {nm2: c[0], nm2 + " lo": c[1], nm2 + " hi": c[2]}
             row |= {"WP2 floored frac": float(uw.floored.mean()), "log floored frac": float(ul.floored.mean()), "shipped floored frac": float(us.floored.mean()),
@@ -266,7 +272,7 @@ def main(a):
                              "len1_top": at[:, 3], "len1_log": al[:, 3], "len3_top": at[:, 11], "len3_log": al[:, 11],
                              "acc_top": 2 * (at[:, -1] - v0 * 5) / 25, "acc_log": 2 * (al[:, -1] - v0 * 5) / 25,
                              "top_score": sc.max(1), "near_is_top": near == top, "near_score": sc[ii, near],
-                             "near_ade": np.linalg.norm(traj[ii, near] - lg, axis=-1).mean(-1), "cluster": cl, "floored": ul.floored})
+                             "near_ade": np.linalg.norm(traj[ii, near] - lg, axis=-1).mean(-1), "cluster": cl, "floored": ul.floored, "padded": padded})
         prows = []
         for key, d in [(("all frames", ""), pref), (("log outside top region", ""), pref[pref.type != "inside"]), (("log gap > 0", ""), pref[pref.gap > 1e-9])] + \
                 [((t, c), pref[(pref.type == t) & (pref.ctx == c) & (pref.gap > 1e-9)]) for t in TYPES for c in ("stopped", "moving")] + \
@@ -285,7 +291,7 @@ def main(a):
                           "mean accel top - log (m/s2)": float((d.acc_top - d.acc_log).mean()), "mean accel log (m/s2)": float(d.acc_log.mean()),
                           "mean accel top (m/s2)": float(d.acc_top.mean()),
                           "log-nearest rater is top frac": float(d.near_is_top.mean()), "log-nearest rater score": float(d.near_score.mean()),
-                          "top score": float(d.top_score.mean())})
+                          "top score": float(d.top_score.mean()), "top-rated truncated frac (post hoc)": float(d.padded.mean())})
         stats.write_table(prows, OUT / "rater_pref")
         run.info("rater preference:\n%s", pd.DataFrame(prows).T.to_string(float_format=lambda v: f"{v:.3f}"))
 
@@ -299,7 +305,7 @@ def main(a):
                            "type_log": ul.type, "label_WP2_s0": u0.label, "label_log": ul.label, "label_shipped": us.label,
                            "e_lon5_WP2_s0": u0.e_lon5, "e_lat5_WP2_s0": u0.e_lat5, "e_lon5_log": ul.e_lon5, "e_lat5_log": ul.e_lat5,
                            "e_lon5_shipped": us.e_lon5, "e_lat5_shipped": us.e_lat5,
-                           "rfs_WP2_top_speed": np.mean(o1w, 0), "rfs_WP2_top_path": np.mean(o2w, 0), "log_nearest_rater_score": sc[ii, near]})
+                           "rfs_WP2_top_speed": np.mean(o1w, 0), "rfs_WP2_top_path": np.mean(o2w, 0), "log_nearest_rater_score": sc[ii, near], "top_truncated": padded})
         fr.to_csv(OUT / "frames.csv", index=False, float_format="%.4f")
 
         # ---- B. ensembles
@@ -354,7 +360,10 @@ def main(a):
                     ks[c] = best[np.abs(GRID[best] - 1).argmin()]
             return ks
 
-        def oof(SKm, cell):
+        def fit_arm(SKm, cell, rows):                                             # post hoc C3: per cell the best of a few stored arms, ties to the first
+            return np.array([(SKm[:, rows & (cell == c)] * w[rows & (cell == c)]).sum(1).argmax() for c in range(cell.max() + 1)])
+
+        def oof(SKm, cell, fit=fit):
             acc, picks = np.zeros(n), []
             for rep in range(REPEATS):
                 fold = (np.random.default_rng(rep).permutation(ns) % FOLDS)[scode]
@@ -362,7 +371,7 @@ def main(a):
                     ks = fit(SKm, cell, fold != f)
                     te = fold == f
                     acc[te] += SKm[ks[cell[te]], np.flatnonzero(te)]
-                    picks.append(GRID[ks])
+                    picks.append(ks)
             return acc / REPEATS, np.array(picks)
         crows = []
         for arm, SKm, base in (("WP2", SK, sco["WP2"]), ("shipped", SKs, sco["shipped"]), ("log", SKl, sco["log"])):
@@ -370,6 +379,7 @@ def main(a):
                 ks = fit(SKm, cell, np.ones(n, bool))
                 ins = SKm[ks[cell], ii]
                 oo, picks = oof(SKm, cell)
+                picks = GRID[picks]
                 cname = (["all"] if nm == "C1 global" else list(pd.factorize(vbin)[1]) if nm == "C2a speed bin"
                          else list(pd.factorize(pd.Series(vbin) + np.where(lead > 0.5, "+lead", ""))[1]))
                 ci_in, ci_oo = ci(ins - base), ci(oo - base)
@@ -384,6 +394,22 @@ def main(a):
                     row |= {"oof vs shipped": c[0], "oof_vs_shipped_lo": c[1], "oof_vs_shipped_hi": c[2]}
                     sco[f"{nm} oof"] = oo
                 crows.append(row)
+        cand = ("WP2", "shipped", "ENS3")                                         # post hoc C3: choose the arm per cell (no trajectory is modified)
+        SC = np.stack([sco[k] for k in cand])
+        turn = np.where(intent >= 2, "turn", "straight")
+        for nm, lab in (("C3a arm per speed bin (post hoc)", vbin), ("C3b arm per stopped/moving x turn/straight (post hoc)",
+                                                                      pd.Series(np.where(v0 < 0.5, "stopped", "moving")) + "+" + turn)):
+            cell, cname = pd.factorize(lab)
+            ks = fit_arm(SC, cell, np.ones(n, bool))
+            ins = SC[ks[cell], ii]
+            oo, picks = oof(SC, cell, fit_arm)
+            ci_in, ci_oo, c = ci(ins - sco["WP2"]), ci(oo - sco["WP2"]), ci(oo - sco["shipped"])
+            crows.append({"arm": "WP2", "variant": nm, "RFS base": cm(sco["WP2"]), "k in-sample": ", ".join(f"{c_}={cand[k]}" for c_, k in zip(cname, ks)),
+                          "RFS in-sample": cm(ins), "d in-sample": ci_in[0], "d_in_lo": ci_in[1], "d_in_hi": ci_in[2], "RFS out-of-fold": cm(oo),
+                          "d out-of-fold": ci_oo[0], "d_oof_lo": ci_oo[1], "d_oof_hi": ci_oo[2], "optimism": ci_in[0] - ci_oo[0],
+                          "k over folds (median [min, max])": ", ".join(f"{c_}: " + "/".join(f"{cand[k]} {np.mean(picks[:, j] == k):.2f}" for k in range(len(cand)))
+                                                                        for j, c_ in enumerate(cname)),
+                          "recoverable": bool(ci_oo[1] > 0), "oof vs shipped": c[0], "oof_vs_shipped_lo": c[1], "oof_vs_shipped_hi": c[2]})
         stats.write_table(crows, OUT / "scale")
         run.info("scale:\n%s", pd.DataFrame(crows).T.to_string(float_format=lambda v: f"{v:.3f}"))
 
