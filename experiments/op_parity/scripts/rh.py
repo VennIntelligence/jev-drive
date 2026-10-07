@@ -249,8 +249,13 @@ def cmd_train(a):
                 loss = li_ + LAM * lh
                 opt.zero_grad(set_to_none=True)
                 loss.backward()
+                if a.debug and step % 25 == 0:
+                    gn = torch.sqrt(sum((q.grad.double() ** 2).sum() for q in net.parameters()))
+                    run.info(f"dbg {arm} {step} imit {float(li_):.4f} hinge {float(lh):.5f} gradnorm {float(gn):.3g}")
                 opt.step()
                 sched.step()
+                if a.stop_after and step + 1 >= a.stop_after:
+                    break
                 if step % 500 == 0:
                     run.status(f"{arm} step {step} loss {float(loss):.4f} imit {float(li_):.4f} hinge {float(lh):.4f} {time.time() - t1:.0f} s")
             net.eval()
@@ -327,6 +332,8 @@ if __name__ == "__main__":
     p.add_argument("--device", default="cpu")
     p.add_argument("--arms", nargs="+", default=list(ARMS))
     p.add_argument("--out", default="decoder_poses.npz")
+    p.add_argument("--stop-after", type=int, default=0, help="debug: stop each arm after N steps (schedule still over --steps)")
+    p.add_argument("--debug", action="store_true")
     p = sp.add_parser("report")
     a = ap.parse_args()
     {"proxy": cmd_proxy, "train": cmd_train, "report": cmd_report}[a.cmd](a)

@@ -303,27 +303,49 @@ def cmd_report(a):
                 continue
             for k in ("D2", "D4", "v13"):
                 eff[(mo, v, k)] = P[(mo, v)][k] - P[(mo, "orig")][k]
-    for (mo, v, k), e in eff.items():
-        for s, ix in sets.items():
-            m, b = Boot(lg[ix]).mean(e[ix])
-            rows.append({"model": mo, "variant": v, "metric": k, "set": s, "n": len(ix), "mean": m, "lo": np.percentile(b, 2.5), "hi": np.percentile(b, 97.5)})
+    dv = sel.dv_hist.values
+    # strata: all tokens of a set (pre-registered), and two post-hoc cuts (v0 > 6 m/s as in four_dirs.md; history slowing dv_hist > 1 m/s) applied to every set alike
+    strata = {"all": np.ones(len(sel), bool), "v0>6": v0 > 6, "dv_hist>1": dv > 1}
+    rows, crow = [], []
+    for st, cond in strata.items():
+        S = {s_: ix[cond[ix]] for s_, ix in sets.items()}
+        for (mo, v, k), e in eff.items():
+            for s_, ix in S.items():
+                if len(ix) < 5:
+                    continue
+                m, b = Boot(lg[ix]).mean(e[ix])
+                rows.append({"stratum": st, "model": mo, "variant": v, "metric": k, "set": s_, "n": len(ix), "mean": m, "lo": np.percentile(b, 2.5), "hi": np.percentile(b, 97.5)})
+            if mo.startswith("P2H-"):
+                continue
+            for sa, sb in [("T", "CT"), ("P", "CP")]:
+                if min(len(S[sa]), len(S[sb])) < 5:
+                    continue
+                m, b = contrast(e[S[sa]], lg[S[sa]], e[S[sb]], lg[S[sb]])
+                crow.append({"stratum": st, "contrast": f"{sa} - {sb}", "model": mo, "variant": v, "metric": k, "mean": m, "lo": np.percentile(b, 2.5), "hi": np.percentile(b, 97.5)})
+            if mo == "P2H" and ("WA-JEPA", v, k) in eff:
+                for s_, ix in S.items():
+                    if len(ix) < 5:
+                        continue
+                    m, b = contrast(e[ix], lg[ix], eff[("WA-JEPA", v, k)][ix], lg[ix], paired=True)
+                    crow.append({"stratum": st, "contrast": f"P2H - WA-JEPA on {s_}", "model": "-", "variant": v, "metric": k, "mean": m, "lo": np.percentile(b, 2.5), "hi": np.percentile(b, 97.5)})
     E = pd.DataFrame(rows)
     E.round(3).to_csv(RES / "ehp_effects.csv", index=False)
-    crow = []
-    for (mo, v, k), e in eff.items():
-        if mo.startswith("P2H-"):
-            continue
-        for sa, sb in [("T", "CT"), ("P", "CP")]:
-            m, b = contrast(e[sets[sa]], lg[sets[sa]], e[sets[sb]], lg[sets[sb]])
-            crow.append({"contrast": f"{sa} - {sb}", "model": mo, "variant": v, "metric": k, "mean": m, "lo": np.percentile(b, 2.5), "hi": np.percentile(b, 97.5)})
-        if mo == "P2H":
-            for s, ix in sets.items():
-                if ("WA-JEPA", v, k) not in eff:
-                    continue
-                m, b = contrast(e[ix], lg[ix], eff[("WA-JEPA", v, k)][ix], lg[ix], paired=True)
-                crow.append({"contrast": f"P2H - WA-JEPA on {s}", "model": "-", "variant": v, "metric": k, "mean": m, "lo": np.percentile(b, 2.5), "hi": np.percentile(b, 97.5)})
     C = pd.DataFrame(crow)
     C.round(3).to_csv(RES / "ehp_contrasts.csv", index=False)
+    # planned D4 relative to constant speed (ratio of sums), logged / orig / cv
+    rat = []
+    for st, cond in strata.items():
+        for s_, ix0 in sets.items():
+            ix = ix0[cond[ix0]]
+            if len(ix) < 5:
+                continue
+            B = Boot(lg[ix])
+            cs, _ = B.sums(v0[ix] * 4)
+            for lab, x in [("logged", logd4[ix])] + [(f"{mo} {v}", P[(mo, v)]["D4"][ix]) for mo in ["P2H", "WA-JEPA"] for v in WA_VARIANTS]:
+                xs, _ = B.sums(x)
+                b = xs[B.idx].sum(1) / cs[B.idx].sum(1)
+                rat.append({"stratum": st, "set": s_, "n": len(ix), "plan": lab, "D4 / (v0 x 4 s)": xs.sum() / cs.sum(), "lo": np.percentile(b, 2.5), "hi": np.percentile(b, 97.5)})
+    pd.DataFrame(rat).round(3).to_csv(RES / "ehp_ratio.csv", index=False)
     # closure: share of the gap to constant speed that cv closes, ratio of sums
     clo = []
     for mo in ["P2H", "WA-JEPA"]:
@@ -362,6 +384,7 @@ def cmd_report(a):
     print(pd.DataFrame(ctx).round(2).to_string(index=False))
     print(E[(E.metric == "D4") & (E.variant == "cv")].round(2).to_string(index=False))
     print(C[(C.metric == "D4") & (C.variant == "cv")].round(2).to_string(index=False))
+    print(pd.DataFrame(rat).round(3).to_string(index=False))
     print(pd.DataFrame(clo).round(3).to_string(index=False))
     print(pd.DataFrame(dose).round(3).to_string(index=False))
 
