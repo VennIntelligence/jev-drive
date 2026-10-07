@@ -20,7 +20,7 @@ import numpy as np  # noqa: E402
 # ego feature layout (parity_adapter.ego_features): 0 present, 1:4 cmd [L, S, R], 4 vx/10, 5 vy/10, 6 ax/3, 7 ay/3, 8:20 poses 4 x (x/10, y/10, yaw)
 PX, PY, PYAW = slice(8, 20, 3), slice(9, 20, 3), slice(10, 20, 3)
 T_HIST = np.array([-1.5, -1.0, -0.5, 0.0])
-VARS = ("main", "zero", "cmd0", "acc0", "accnav", "velgiven", "vx110", "yaw0", "yawvel", "posecv", "cv", "biasmean", "biasresid", "biasnav")
+VARS = ("main", "zero", "cmd0", "acc0", "accnav", "velgiven", "vx110", "yaw0", "yawvel", "posecv", "cv", "biasmean", "biasresid", "biasnav", "biasdenav")   # biasdenav: post hoc (added after the first read)
 B = 2000
 
 
@@ -114,6 +114,8 @@ def cmd_bias(a):
                 b = main - main.mean(0)
             elif var == "biasnav":
                 b = np.broadcast_to(run(nav).mean(0), main.shape)
+            elif var == "biasdenav":                               # main minus the navtest-mean bias: a fix that needs no WOD statistics
+                b = main - run(nav).mean(0)
             else:
                 b = run(e)
             b = np.ascontiguousarray(b).astype(np.float16)
