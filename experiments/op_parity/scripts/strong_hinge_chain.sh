@@ -78,9 +78,9 @@ for s in 0 1; do
   sub sh-geom-s$s $L/geom-s$s --vram 0.5 --cpu 48 --ram 64 -- $NAV $S/rh.py proxy --name SH30-F-s$s --plans $PL --procs 48
 done
 waitdirs $L/geom-s0 $L/geom-s1
-sub sh-report $L/report --vram 0.5 --cpu 8 --ram 32 -- $PY $S/turn_oracle.py report --name sh --seeds 0 1 --replays s0 b0 shp sh \
+sub sh-report $L/report --vram 0.5 --cpu 8 --ram 32 -- $PY $S/turn_oracle.py report --name sh --seeds 0 1 --replays s0 b0 sh \
     --arms P2H10 RMH10 SH30 --refs P2H10 RMH10 --bev P2H10 SH30
-sub sh-report-pilot $L/report-pilot --vram 0.5 --cpu 8 --ram 32 -- $PY $S/turn_oracle.py report --name sh_pilot --seeds 0 --replays s0 b0 shp sh \
+sub sh-report-pilot $L/report-pilot --vram 0.5 --cpu 8 --ram 32 -- $PY $S/turn_oracle.py report --name sh_pilot --seeds 0 --replays s0 b0 sh \
     --arms H0 OS OSh SHP --refs H0 --bev H0 SHP
 waitdirs $L/report $L/report-pilot
 
