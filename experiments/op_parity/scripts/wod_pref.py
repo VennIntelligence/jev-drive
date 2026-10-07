@@ -598,7 +598,7 @@ def cmd_figs(a):
         rows.append({"name": tb["names"][i], "cluster": fr.cluster[i], "v0": fr.v0[i], "scores": " ".join(f"{x:.0f}" for x in tb["scores"][i]), "RFS WLG": fr.rfs_WLG[i],
                      f"RFS {o} oof": fr[f"rfs_{o}_oof"][i], "d": d[i], "RFS log": fr.rfs_log[i]})
     fig.suptitle(f"Objective {o}: the 4 largest out-of-fold RFS gains (top) and the 4 largest losses (bottom) vs WLG; BEV in the rear-axle frame, x forward up", fontsize=10)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.985))
     fig.savefig(FIG / "frames.png", dpi=110)
     plt.close(fig)
     pd.DataFrame(rows).to_csv(OUT / "figure_frames.csv", index=False)
