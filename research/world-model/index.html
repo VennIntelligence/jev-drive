@@ -22,60 +22,60 @@ ul{padding-left:20px}li{margin-bottom:6px}
 
 <div class="v">
 <b>核心结论（反事实配对与世界模型闭环归宿）：</b><br>
-<b>1. 配对差分反应头走出仿真即有害：</b>在 CARLA P5 考卷上激发的双流反应头（Qwen ⊕ openpilot）能将行人翻转率拉至 43.3%（决策 42），但零样本迁移至真实数据（WOD RFS −1.02，NAVSIM PDMS −8.2）证实显著有害（决策 44）。真实数据门控（g2/g3）只能等比缩减残差而无法消除系统偏置，叠加至榜单最优 Hydra 头导致 PDMS 掉 5–8 分（决策 53），“能力包”假设彻底破灭。<br>
-<b>2. 生成式编辑与特征适配全面受阻：</b>3DGS 插入/删除路线（P3）因供体滑行、背景光晕与删车涂抹被用户终止（决策 44）；Cosmos-Transfer2.5 / ControlNet 因删人不干净（红色鬼影）整体暂停（决策 59）；CARLA 行人在 openpilot 各层池化特征 AUC 仅 0.51–0.53，重画未带来任何信息增益，主导变量为像素尺寸（< 500 px 仅 0.57，决策 62、63）；CARLA 就地回退（rewind）分支因无法恢复传动系与轮胎物理被证实不等价于从头生成（决策 65）。<br>
-<b>3. WL-2 隐空间世界模型正式判定 no-go：</b>在新留出分叉（210 点）严格预登记判格下，C2 碰撞 AUC（0.860）达标，但 C3a 决策挽回率 H 仅 0.380 [0.115, 0.600]（未达 0.50 且下界低于 0.25），C1c 横向被占可分性仅 0.674（未达 0.75）。按登记规则直接裁定 no-go，否定基于潜在空间世界模型想象决策的可行性（决策 76）。<br>
-<b>4. 几何重投影全面压制世界模型：</b>在自车偏离扰动下，现有世界模型 WL-2 偏航响应仅 1.2 °/°，比真实几何重投影（7.4 °/°）低估约 5 倍（决策 123）。工业级 comma worldmodel-4B 强制依赖未来 5 个 anchor 画面，本质是逆动力学仿真器，无法直接零样本当策略主干（决策 139）。<br>
-<b>5. 分解式世界模型（factor_wm）架构与闭环教训：</b>唯一幸存的设计原则为“自车精确解析几何、外生复用工业预训练、反应残差仅学干预数据”（决策 141）。但在第 1 阶段（G0/G1）闭环验证中，引擎内虽将起步停滞由 0.18 压至 0.02，迁至 HUGSIM 却反弹至 48/64（决策 143）；开环虽在 navhard 取得 +2.58 分，闭环起步再次受阻（决策 146），揭示出“画面运动与起步决策”在数据层面的深层解耦难题。
+<b>1. 配对差分反应头走出仿真即有害：</b>在 CARLA P5 考卷上激发的双流反应头（Qwen ⊕ openpilot）能将行人翻转率拉至 43.3%（决策 42，状态：待定），但零样本迁移至真实数据（WOD RFS −1.02，NAVSIM PDMS −8.2）证实有害（决策 44，状态：待定）。真实数据门控（g2/g3）只能等比缩减残差而无法消除系统偏置；将初始反应头叠加至榜单最优 Hydra 头导致 PDMS 掉 5–8 分，能力包假设按初始判格不成立（决策 53，状态：待定；后续 Q4a 真实帧零约束变体下 navtest PDMS 损失接近 0，但 Cinque 随 seed 变、Lebowski 不成立）。<br>
+<b>2. 生成式编辑与特征适配受阻：</b>3DGS 插入/删除路线（P3）因供体滑行、背景光晕与删车涂抹被用户终止（决策 44，状态：待定）；真实片段 ControlNet Edge-Distilled 因删人不干净暂停（决策 59，状态：已确认暂停，非 no-go；Cosmos G4 在 CARLA 配对上已通过并生成 2004 对训练数据，决策 56，状态：待定）；CARLA 行人在 P5 评测集各层池化特征 AUC 仅 0.51–0.53（决策 62，状态：待定，已被决策 63 收窄：在 75 对集合上 CARLA 行人 stage 3 达 0.815，主导变量为像素尺寸，< 500 px 仅 0.57，决策 63，状态：待定）；CARLA 就地回退（rewind）分支因无法恢复传动系与轮胎物理被证实不等价于从头生成（决策 65，状态：已确认）。<br>
+<b>3. WL-2 隐空间世界模型按登记读法判定 no-go：</b>在新留出分叉（210 点）预登记判格下，C2 碰撞 AUC（0.860）达标，但 C3a 决策挽回率 H 仅 0.380 [0.115, 0.600]（未达 0.50 且下界低于 0.25），C1c 横向被占可分性仅 0.674（未达 0.75）。按登记读法裁定 no-go（决策 76，状态：待定：一次读数、5 seed、单一 backbone，保留推翻条件）。<br>
+<b>4. 几何重投影与世界模型扰动推演对比：</b>在自车偏离扰动下，现有世界模型 WL-2 偏航响应仅 1.2 °/°，比几何重投影（7.4 °/°）低估约 5 倍（决策 123，状态：待定，证据：中偏弱；重投影仅适用于 1–2 s 短程 rollout，且存在静止起步误差与急弯出画，横向扰动下两者均无恢复响应）。工业级 comma worldmodel-4B 强制依赖未来 5 个 anchor 画面，本质是逆动力学仿真器，不能零样本当作策略主干直接运行（决策 139，状态：结论）。<br>
+<b>5. 分解式世界模型（factor_wm）架构与闭环教训：</b>架构原则为“自车精确解析几何、外生复用工业预训练、反应残差仅学干预数据”（决策 141，状态：待定）。但在第 1 阶段闭环验证中：G0 真实日志重投影显示起步停滞等缺陷（决策 141，状态：待定，是否部分属于产品设计待定；深度不比平面好故定 plane）；G1 引擎内起步虽降至 0.02，迁至 HUGSIM 却反弹至 48/64（决策 143，状态：待定；S3 恢复标签存在 bug，且 HUGSIM 卡死直接原因为 plan 速度下降 1.47 m/s）；P2 on-policy 修复标签后开环 navhard +2.58 分（n.s.，navtest −0.29），闭环 HUGSIM-12 起步停滞恶化至 9/12 触发早停（决策 146，状态：待定；探针显示静态画面并非主因，差异在于闭环前几步动态，起因于引擎训练数据分布）。
 </div>
 
-<h2>一、反事实配对监督与反应头迁移的失败（决策 42, 44, 48, 53）</h2>
+<h2>一、反事实配对监督与反应头迁移的检验（决策 42, 44, 48, 53，状态：待定）</h2>
 <p>
 为解决端到端模型对弱势交通参与者（行人/骑车人）以及紧急切入（cut-in）的反应迟钝问题，项目早期探索了基于反事实对的差分监督机制。核心构想是：固定自车状态，对比“有危险物”与“无危险物”的一对仿真场景，训练一个轻量反应头（reaction head）输出残差修正量 Δ。
 </p>
 
-<h3>1. CARLA P5 考卷上的成功</h3>
+<h3>1. CARLA P5 考卷上的表现</h3>
 <p>
-在 CARLA P5 v1 BehaviorAgent（BA）评测集（101 条路线、406 个行人反应帧）上，基于 Qwen <code>L18_last</code> ⊕ openpilot <code>temporal</code> 的双流线性反应头（M-C）取得了显著增益（决策 42）：
+在 CARLA P5 v1 BehaviorAgent（BA）评测集（101 条路线、406 个行人反应帧）上，基于 Qwen <code>L18_last</code> ⊕ openpilot <code>temporal</code> 的双流线性反应头（M-C）取得了显著增益（决策 42，状态：待定）：
 </p>
 <ul>
-  <li><b>行人翻转率</b>：Cinque 达 <b>43.3% [35.0, 50.7]</b>，Lebowski 达 <b>41.6% [32.4, 50.0]</b>（对比出厂模型翻转率为 0%，硬样本重加权与均匀模仿仅 0–3%）。</li>
+  <li><b>行人翻转率</b>：Cinque 达 <b>43.3% [35.0, 50.7]</b>，Lebowski 达 <b>41.6% [32.4, 50.0]</b>（对比 <code>ridge_late</code> 均匀模仿 prior 翻转率为 0%，硬样本重加权与均匀模仿仅 0–3%）。</li>
   <li><b>切入翻转率</b>：相对 prior 分别提升 +3.1 pp 与 +6.7 pp（CI 不跨零），样本外空翻率稳定在 5.0%–5.1%。</li>
   <li><b>20 Hz 学生模型（E5）</b>：使用 openpilot <code>temporal</code> ⊕ YOLO26x-seg 走廊检测嵌入经轻量 MLP（端到端延迟仅 30 ms），在 CARLA 内取得 51%–57% 的行人翻转率。</li>
 </ul>
 
-<h3>2. 走出 CARLA：零样本迁移到真实数据全面有害</h3>
+<h3>2. 走出 CARLA：零样本迁移到真实数据的危害</h3>
 <p>
-然而，当将该反应头直接迁移到真实数据（Waymo Open Dataset 与 NAVSIM）时，所有评估指标均显著恶化（决策 44）：
+然而，当将该反应头直接迁移到真实数据（Waymo Open Dataset 与 NAVSIM）时，双流反应头出现全面显著恶化，而快通道学生模型的危害主要集中在 NAVSIM navtest PDMS 上（决策 44，状态：待定）：
 </p>
 
 <table>
-<tr><th>模型与评测项</th><th>WOD 全部帧 RFS Δ [95% CI]</th><th>WOD 行人子集 RFS Δ</th><th>NAVSIM navtest PDMS Δ</th><th>NAVSIM 行人/骑车人 PDMS Δ</th><th>直行误激活率</th></tr>
+<tr><th>模型与评测项</th><th>WOD 全部帧 RFS Δ [95% CI]</th><th>WOD 行人子集 RFS Δ</th><th>NAVSIM navtest PDMS Δ</th><th>NAVSIM 行人/骑车人 PDMS Δ</th><th>直行误激活率（WOD / NAVSIM）</th></tr>
 <tr><td><b>Cinque M-C 双流（E1）</b></td><td><b>−1.02 [−1.21, −0.82]</b></td><td>−1.19（CI 全 < 0）</td><td><b>−8.2 [−8.9, −7.5]</b></td><td>−6.0</td><td>16.7% / 14.1%</td></tr>
-<tr><td><b>Lebowski M-C 双流（E1）</b></td><td><b>−1.52 [−1.74, −1.30]</b></td><td>−1.35</td><td><b>−11.2</b></td><td>−11.2</td><td>40.7% / 60.0%</td></tr>
+<tr><td><b>Lebowski M-C 双流（E1）</b></td><td><b>−1.52 [−1.74, −1.30]</b></td><td>−1.35</td><td><b>−11</b>（EPDMS −16）</td><td>—</td><td>40.7% / 60%（NAVSIM 全局）</td></tr>
 <tr><td><b>Cinque Student A（G0，无 Qwen）</b></td><td><b>−0.11 [−0.20, −0.03]</b></td><td>−0.17 [−0.51, +0.12]</td><td><b>−1.30 [−1.55, −1.04]</b></td><td>−1.30 [−2.17, −0.49]</td><td>4.2% / 1.4%</td></tr>
 <tr><td><b>Lebowski Student A（G0）</b></td><td>−0.05 [−0.12, +0.01]</td><td>+0.10 [−0.05, +0.32]</td><td><b>−2.00 [CI 全 < 0]</b></td><td>−1.70</td><td>2.8% / 2.9%</td></tr>
 </table>
-<div class="cite">数据来源：research/decisions/044.md、experiments/elicitation/results/、experiments/real_transfer/results/g0/。</div>
+<div class="cite">数据来源：research/decisions/044.md、experiments/elicitation/results/、experiments/real_transfer/results/g0/。注：Lebowski Student A 在 WOD 全部帧及行人帧上 CI 均跨零，害主要来自 NAVSIM PDMS。</div>
 
 <p>
 诊断表明：CARLA 配对激发的 Δ 在真实特征分布上表现为一个强烈的非零系统偏置，在直行安全帧上的误激活率与危险帧无异。换用 WOD 训练统计量做跨域标准化仅能将损害减半。
 </p>
 
-<h3>3. 真实门控（Gate）与能力包假设破灭</h3>
+<h3>3. 真实门控（Gate）与能力包假设检验（决策 44, 53，状态：待定）</h3>
 <p>
-进一步尝试引入在真实数据上拟合的门控机制（g2 目标检测概率门、g3 前车 TTC 门）来抑制误激活（决策 44、53）：
+进一步尝试引入在真实数据上拟合的门控机制（g2 目标检测概率门、g3 前车 TTC 门）来抑制误激活（决策 44、53，状态：待定）：
 </p>
 <ul>
   <li><b>门控仅能等比缩放</b>：g2 将残差整体压缩至约 1/6，虽然消除了 WOD 整体损失（Δ −0.03），但在行人帧上完全不为正（+0.09 [−0.04, +0.23]）；在 NAVSIM 上仍产生 −1.61 分的净损失。</li>
   <li><b>前车常数刹车等价性</b>：g3 × Δ 在 NAVSIM 上产生的少量正向收益（PDMS +0.46），完全等价于一个与场景无关的常数减速（g3 × 常数刹车达 +0.53，配对差异表明 M-C 差于常数刹车，决策 44 G1c）。该增益来自前车减速规则，与反事实配对学习无关。</li>
-  <li><b>能力包（Skill-Pack）破裂</b>：将带门控的反应头（g2 · Δ）叠加至 NAVSIM 榜单最优打分头（Hydra，基线 84 PDMS）上，NAVSIM PDMS 净跌 <b>−5.14 分（Cinque）与 −8.33 分（Lebowski）</b>（决策 53）。“独立研发通用反应能力包并无损外挂”的工程设想被彻底否定。</li>
-  <li><b>真实日志对与抹人编辑的失败</b>：从真实日志中按自车状态挖出的未来分叉对（E3，4 万对），分叉原因多为道路几何与变道，无行人避让信息；基于 SAM + LaMa 的真实帧反事实抠图编辑（E2，911 对）信噪比极低，Qwen 特征位移仅比安慰剂大 21%，拟合的反应头在 WOD 上净损失 −2.16 分（决策 44）。</li>
+  <li><b>能力包（Skill-Pack）检验</b>：将带门控的反应头（g2 · Δ）叠加至 NAVSIM 榜单最优打分头（Hydra，基线 84 PDMS）上，NAVSIM PDMS 净跌 <b>−5.14 分（Cinque）与 −8.33 分（Lebowski）</b>，能力包假设按初始判格不成立（决策 53，状态：待定）。而在 2026-09-27 Q4a 真实帧零约束变体下，navtest PDMS 配对 Δ 损失压缩至接近 0（Cinque +0.02 / −0.01 / −0.09，Lebowski −0.23 / −0.12 / −0.20），行人翻转判格为 Cinque 随 seed 变（seed 0、2 成立，seed 1 不成立），仅 Lebowski 判定能力包不成立。</li>
+  <li><b>真实日志对与抹人编辑路线</b>：从真实日志中按自车状态挖出的未来分叉对（E3，4 万对），分叉原因多为道路几何与变道，无行人避让信息；基于 SAM + LaMa 的真实帧反事实抠图编辑（E2，911 对），在 Qwen 汇聚（pooled）特征上位移虽仅比安慰剂大 21%（导致拟合的双流反应头在 WOD 上净损失 −2.16 分），但后续 G3a 诊断纠正了“编辑质量差”的解读：在检测 embedding 上抹人位移达到安慰剂的 152 倍 [116, 246]，位移比值低是全图池化特征对局部单行人的固有灵敏度限制，而非编辑质量问题；瓶颈在于即便换用检测 embedding，student 读出的修正量依然极小（无害但无用），且 WOD 独立事件极度匮乏（决策 44，状态：待定）。</li>
 </ul>
 
 <h2>二、生成式编辑与特征适配路线的瓶颈（决策 44, 56, 59, 62, 63, 65）</h2>
 
-<h3>1. 3DGS 插入与删除路线的终止（P3）</h3>
+<h3>1. 3DGS 插入与删除路线的终止（P3，决策 44，状态：待定）</h3>
 <p>
 利用 3D Gaussian Splatting（OmniRe / drivestudio）在 WOD 真实重建场景中进行动态物体插入与删除的尝试遭遇严重画质缺陷，于 2026-09-28 经人审被整体叫停（决策 44）：
 </p>
@@ -85,46 +85,46 @@ ul{padding-left:20px}li{margin-bottom:6px}
   <li><b>有效题量匮乏</b>：严格限定“车道内、4 秒内接近、连续可见”的考核帧在 10 个场景中为 0 道题；扩至 60 场景删除考卷工程不可达。</li>
 </ul>
 
-<h3>2. 扩散模型 ControlNet 配对的搁置（Cosmos Edge）</h3>
+<h3>2. 扩散模型 ControlNet 配对的暂停（Cosmos Edge，决策 59，状态：已确认暂停；决策 56，状态：待定）</h3>
 <p>
 使用 Cosmos-Transfer2.5 Edge Distilled 结合 Canny 边缘控制在真实 WOD 片段上构建成对视频（19 个场景，决策 59）：
 </p>
 <ul>
-  <li><b>删人不干净</b>：x⁻ 分支无法彻底消除目标行人，原位置频发红色“鬼影”人形或比人体更大的矩形涂抹块。</li>
-  <li><b>插入逼真度不足</b>：步态循环插入偏假，且存在色彩漂移与画幅底部黑色伪影。整条生成式配对线确认无限期搁置。</li>
+  <li><b>删人不干净</b>：x⁻ 分支无法稳定消除目标行人；未补边的 Ed 变体在原位置长出偏红的“鬼影”人形，补边（E）虽有所缓解但未彻底解决；在凸包帧较多的场景（p3_001、p3_006、p3_017）中移除区域呈现为比人体更大的方框涂抹块。</li>
+  <li><b>用户裁决暂停（非 no-go）</b>：用户看片后判定删人不干净、步态循环插入偏假但可接受，整条真实片段 ControlNet 试点暂停（决策 59，状态：已确认暂停，不是 no-go；“路线本身做不出干净删人”仅为推测，因仅测了 Edge Distilled 一档，且 BV/BVI base 仅测了 1 个场景）。与此同时，Cosmos G4 管线在 CARLA 配对上通过了用户审查（决策 56，状态：待定），并于 2026-09-30 成功生成 2004 对视频作为 op-adapt B 训练数据，因此 Cosmos 技术路线整体并未被否定。</li>
 </ul>
 
-<h3>3. 特征适配（Feature-Adapter）的理论边界</h3>
+<h3>3. 特征适配（Feature-Adapter）的理论边界（决策 62、63，状态：待定）</h3>
 <p>
-既然像素生成不可行，特征层是否可以直接对齐 CARLA 与真实数据？逐层线性探测实验（E0 / E1）给出了否定裁决（决策 62、63）：
+逐层线性探测实验（E0 / E1）检验了特征对齐的可行性。注意 P5 评测集与 Cosmos 75 对评测集的分布不同，需分别考察（决策 62、63，状态：待定）：
 </p>
 
 <table>
-<tr><th>网络深度 / 探测层</th><th>CARLA 行人 AUC [95% CI]</th><th>真实 nuScenes 走廊行人 AUC [95% CI]</th><th>Cosmos 重绘 CARLA 行人 AUC</th></tr>
-<tr><td><b>stage 1</b></td><td>0.526 [0.508, 0.556]</td><td>0.715 [0.628, 0.799]</td><td>0.725</td></tr>
-<tr><td><b>stage 2</b></td><td>0.523 [0.504, 0.548]</td><td>0.740 [0.644, 0.821]</td><td>0.743</td></tr>
-<tr><td><b>stage 3 (trunk)</b></td><td><b>0.523 [0.507, 0.544]</b></td><td><b>0.831 [0.758, 0.895]</b></td><td><b>0.746 [0.712, 0.782]</b></td></tr>
-<tr><td><b>stage 4</b></td><td>0.522 [0.502, 0.546]</td><td>0.748 [0.666, 0.813]</td><td>—</td></tr>
-<tr><td><b>vision (pooled)</b></td><td>0.509 [0.499, 0.520]</td><td>0.702 [0.599, 0.785]</td><td>—</td></tr>
-<tr><td><b>temporal</b></td><td>0.506 [0.499, 0.515]</td><td>0.709 [0.598, 0.799]</td><td>0.680</td></tr>
+<tr><th>网络深度 / 探测层</th><th>P5 评测集 CARLA 行人 AUC [95% CI]（决策 62）</th><th>真实 nuScenes 走廊行人 AUC [95% CI]（决策 62）</th><th>75 对集 CARLA 原图 AUC（决策 63）</th><th>75 对集 Cosmos 重绘 AUC [95% CI]（决策 63）</th></tr>
+<tr><td><b>stage 1</b></td><td>0.526 [0.508, 0.556]</td><td>0.715 [0.628, 0.799]</td><td>0.727</td><td>0.725</td></tr>
+<tr><td><b>stage 2</b></td><td>0.523 [0.504, 0.548]</td><td>0.740 [0.644, 0.821]</td><td>0.767</td><td>0.743</td></tr>
+<tr><td><b>stage 3 (trunk)</b></td><td><b>0.523 [0.507, 0.544]</b></td><td><b>0.831 [0.758, 0.895]</b></td><td><b>0.815 [0.780, 0.848]</b></td><td><b>0.746 [0.712, 0.782]</b></td></tr>
+<tr><td><b>stage 4</b></td><td>0.522 [0.502, 0.546]</td><td>0.748 [0.666, 0.813]</td><td>—</td><td>—</td></tr>
+<tr><td><b>vision (pooled)</b></td><td>0.509 [0.499, 0.520]</td><td>0.702 [0.599, 0.785]</td><td>—</td><td>—</td></tr>
+<tr><td><b>temporal</b></td><td>0.506 [0.499, 0.515]</td><td>0.709 [0.598, 0.799]</td><td>0.704</td><td>0.680</td></tr>
 </table>
-<div class="cite">数据来源：research/decisions/062.md、research/decisions/063.md、experiments/feature_adapter/results/。</div>
+<div class="cite">数据来源：research/decisions/062.md、research/decisions/063.md、experiments/feature_adapter/results/。注：Cosmos 75 对评测集上 CARLA 原图自身可读性即达到 0.815，两组数据不可直接混同对比。</div>
 
 <p>
 <b>关键发现：</b><br>
-(1) <b>判格 G-none</b>：在 CARLA P5 帧中，行人特征在 stage 1–4 各层池化特征上全部平躺在 0.51–0.53，毫无上升趋势；特征适配器无处安放（决策 62）。<br>
-(2) <b>尺寸决定论</b>：Cosmos 像素重绘未能恢复可读性（AUC 0.746 对比原图 0.815 反而略降）。决定可读性的核心变量是行人像素数：< 500 px 的目标在两类画面中 AUC 均为 0.57，≥ 1500 px 时升至 0.83–0.92（决策 63）。问题本质是远距离分辨率瓶颈，而非图像生成风格域差。<br>
-(3) <b>CARLA 就地回退（rewind）分支不等价</b>：在 Bench2Drive 中尝试以回退状态代替从头生成的测试表明（决策 65）：虽然节省约 3 倍时间，但传动系、轮胎动力学与 Traffic Manager 状态无法通过 API 还原（cut-in 车位置误差达 0.39 m，碰撞标签一致率超标），正式定为不可等价替代。
+(1) <b>判格 G-none（已被决策 63 收窄，状态：待定）</b>：在 CARLA P5 评测帧中，行人特征在 stage 1–4 各层池化特征上全部平躺在 0.51–0.53，毫无上升趋势；特征适配器无处安放（决策 62）。但决策 63 表明 CARLA 行人并非一般性地读不出（在 75 对样本中 stage 3 AUC 达 0.815，框内 cell 池化达 0.95），G-none 仅适用于 P5 评测批次，且池化特征读不出不等于特征图里没有表示。<br>
+(2) <b>尺寸为主导变量（75 对集）</b>：在 75 对评测集上，Cosmos 像素重绘未能带来额外信息增益（stage 3 AUC 0.746 对比 CARLA 原图 0.815 略降）。主导可读性的核心变量是行人像素数：< 500 px 的目标在两类画面中 stage 3 AUC 均为 0.57（Cosmos 0.577 对 CARLA 0.569），500–1500 px 为 0.63 / 0.60，≥ 1500 px 升至 0.92 / 0.83（决策 63，状态：待定）。小目标瓶颈主要在于远距离分辨率限制而非图像生成风格域差。<br>
+(3) <b>CARLA 就地回退（rewind）分支不等价（决策 65，状态：已确认）</b>：在 Bench2Drive 中尝试以回退状态代替从头生成的测试表明：虽然节省约 3 倍时间，但传动系、轮胎动力学与 Traffic Manager 状态无法通过 API 还原（cut-in 车位置误差达 0.39 m，碰撞标签一致率超标），正式定为不可等价替代。
 </p>
 
-<h2>三、世界模型 WL-2 判格（C1–C4）与 No-Go 裁定（决策 76, 123）</h2>
+<h2>三、世界模型 WL-2 判格（C1–C4）与按登记读法 No-Go 裁定（决策 76, 123，状态：待定）</h2>
 <p>
-为检验隐空间世界模型是否具备“想象推演并选出正确反事实策略”的能力，项目开展了第二轮预登记前置检查（WL-2，决策 76）。主评测集包含 40 条评测基准路线在新世界随机种子下的 210 个留出分叉点。
+为检验隐空间世界模型是否具备“想象推演并选出正确反事实策略”的能力，项目开展了第二轮预登记前置检查（WL-2，决策 76，状态：待定）。主评测集包含 40 条评测基准路线在新世界随机种子下的 210 个留出分叉点。
 </p>
 
 <figure>
 <img src="figs/world-model-gates.png" alt="世界模型因果效应闸门对比图">
-<figcaption>图 1：世界模型因果效应检验闸门对比（源自 research/figs/roadmap/world-model-gates.png）。看点：左图纵向因果效应检验（刹车 vs 保持），干预对监督（Interventions）达到 90.5%，突破 85% 闸门，而仅靠日志训练（Logged actions）仅 10.3%（反向）；右图横向被占走廊可分性检验，干预对训练仅达 61.7%，完全未达到 75% 闸门，且与仅靠日志训练（61.7%）完全不可分，说明横向空间语义无法被潜在世界模型解析。</figcaption>
+<figcaption>图 1：世界模型因果效应检验闸门对比（源自 research/figs/roadmap/world-model-gates.png）。看点：本图展示早期探索性 WL-1 实验读数（左图纵向因果刹车 vs 保持，干预对 90.5% 突破 85% 闸门，日志训练 10.3% 反向；右图横向被占走廊可分性，干预对仅 61.7% 未达 75% 闸门，与日志训练 61.7% 不可分）。正式 WL-2 预登记读数见下表（主判臂 B 纵向 C1a 为 88.7%，worig 为 12.5%；横向 C1c AUC B 为 0.674，worig 为 0.588，差值 +0.086 [−0.054, +0.218] CI 跨零）。</figcaption>
 </figure>
 
 <h3>1. WL-2 C1–C4 判格总表</h3>
@@ -142,59 +142,59 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <tr><td><b>C4 (行人)</b></td><td>连续风险评分翻转率，要求 CI 下界高于样本外 null 误翻 + 10 pp</td><td>阈值 17.6%（null 7.6%）</td><td>54.7% [40.7, 66.7]（阳性对照 worig 同为 54.7%）</td><td><b>过（但不具模型特异性）</b></td></tr>
 <tr><td><b>C4 (cut-in)</b></td><td>连续风险评分翻转率，高于 null 误翻 + 10 pp</td><td>阈值 17.0%（null 7.0%）</td><td>54.3% [29.1, 77.2]</td><td><b>过</b></td></tr>
 </table>
-<div class="cite">数据来源：research/wl2-results.md、research/decisions/076.md、experiments/world_model/results/wl2/results/results.json。</div>
+<div class="cite">数据来源：research/decisions/076.md（源码记录参见 git show 53b03769:research/wl2-results.md）、experiments/world_model/results/wl2/results/results.json。</div>
 
 <div class="grid2">
 <figure>
 <img src="figs/wl2-c1c.png" alt="WL-2 C1c 与 C1a 读数柱状图">
-<figcaption>图 2：WL-2 C1 动作因果检验（源自 experiments/world_model/figs/wl2-c1c.png）。看点：(a) 各模型在被占子集上对“仍被占 / 已离开”的探测 AUC，虚线为 0.75 判格线，所有模型（v1-rep, A, B, B-same, T）均在 0.67–0.69 徘徊，空间 token 臂 T 甚至跌至 0.473；(b) 刹车推演距离正确率，干预训练臂均达到约 88.7%，原版日志模型 worig 仅 12.5%（反向）。</figcaption>
+<figcaption>图 2：WL-2 C1 动作因果检验（源自 experiments/world_model/figs/wl2-c1c.png）。看点：(a) 各模型在被占子集上对“仍被占 / 已离开”的探测 AUC，虚线为 0.75 判格线，带或不带自车通道的预测器（v1-rep 0.668, A 0.694, B 0.674, B-same 0.681）均在 0.67–0.69 徘徊，worig 为 0.588，空间 token 臂 T 跌至 0.473；(b) 刹车推演距离正确率，干预训练臂达到 82.5%–90.8%（主判臂 B 为 88.7%），原版日志模型 worig 仅 12.5%（反向）。</figcaption>
 </figure>
 <figure>
 <img src="figs/wl2-c2-c3.png" alt="WL-2 C2 与 C3 检验柱状图">
-<figcaption>图 3：WL-2 C2 碰撞预测与 C3 决策挽回率检验（源自 experiments/world_model/figs/wl2-c2-c3.png）。看点：(a) 各臂碰撞 AUC 均在线 0.85 附近且彼此不可分；(b) 决策挽回率 H，虚线为 0.50，点线为 0.25（CI 下界要求）。主判臂 B 的 H 仅 0.380，下界仅 0.115，所有臂点估计与区间均未达到预登记标准。</figcaption>
+<figcaption>图 3：WL-2 C2 碰撞预测与 C3 决策挽回率检验（源自 experiments/world_model/figs/wl2-c2-c3.png）。看点：(a) 各臂碰撞 AUC 中多数臂在线 0.85 附近（A 0.869, B 0.860, B-same 0.868, T 0.857），而 v1-rep 臂为 0.801（CI 上界约 0.84），位于 0.85 线下方；(b) 决策挽回率 H，虚线为 0.50，点线为 0.25（CI 下界要求）。主判臂 B 的 H 仅 0.380，下界仅 0.115，所有臂点估计与区间均未达到预登记标准。</figcaption>
 </figure>
 </div>
 
-<h3>2. 失败深层归因与 No-Go 裁定</h3>
+<h3>2. 失败深层归因与按登记读法 No-Go 裁定（决策 76，状态：待定）</h3>
 <p>
-依据预登记裁决树，<b>C2 过但 C3a 不过 → 判定为 no-go</b>：
+依据预登记裁决树，<b>C2 过但 C3a 不过 → 按登记读法判定为 no-go（状态：待定，一次读数、5 seed、单一 backbone）</b>：
 </p>
 <ul>
-  <li><b>规则挽回效率低且附带高伤害</b>：在 79 个可解分叉点上，规则虽挽回了 44 个（56%），但在 121 个原先安全的分叉点上产生了 14 个误伤害（11.6%）。净收益被稀释，H 点估计仅 0.380，CI 下界 0.115 远低于 0.25 门槛。</li>
-  <li><b>空间可分性缺失（C1c 不通过）</b>：虽然显式自车横向通道能精确预测自车位置（ê_y 误差仅 0.25–0.36 m），但潜在空间占用探针在推演特征上完全分不清障碍物“仍在走廊”还是“已被避让”（AUC 仅 0.674，与无自车通道的 A 臂差异 −0.021，CI 跨零）。引入 2D 空间 Token（T 臂）亦未能改善（AUC 仅 0.473）。</li>
+  <li><b>规则挽回效率低且附带伤害</b>：在 79 个可解分叉点上，规则虽挽回了 44 个（56%），但在 121 个原先安全的分叉点上产生了 14 个伤害（11.6%）。净收益被稀释，H 点估计仅 0.380，CI 下界 0.115 远低于 0.25 门槛。</li>
+  <li><b>空间可分性缺失（C1c 不通过）</b>：虽然显式自车横向通道能精确预测自车位置（ê_y 误差仅 0.25–0.36 m），但潜在空间占用探针在推演特征上分不清障碍物“仍在走廊”还是“已被避让”（AUC 仅 0.674，与无自车通道的 A 臂差异 −0.021，CI 跨零）。引入 2D 空间 Token（T 臂）亦未能改善（AUC 仅 0.473）。</li>
   <li><b>无单一固定动作可平衡进度与安全</b>：无脑急刹虽能拿到 H = 0.89，但进度仅剩 25%（严重违反 C3b）。</li>
-  <li><b>裁定后果</b>：潜在空间世界模型在离线数据中无法学得足够的空间因果分辨力，基于此进行“闭环反事实想象强化学习”丧失了可信度基础，整条线正式停工。</li>
+  <li><b>裁定后果与推翻条件</b>：潜在空间世界模型在离线数据中无法学得足够的空间因果分辨力，基于此进行“闭环反事实想象强化学习”缺乏依据，当前判定为 no-go（状态：待定）。若后续规则或候选集改动（另行登记）使 C3a 在同一批分叉上过，或证明 C3b 与 H 的冲突来自选择规则而非 critic，可推翻本条判定。</li>
 </ul>
 
-<h3>3. 几何重投影对世界模型的降维打击（决策 123）</h3>
+<h3>3. 自车扰动推演：几何重投影与 WL-2 比较（决策 123，状态：待定）</h3>
 <p>
-在对自车运动偏离后画面推演的直接对照实验中（WOD 真实路测片段，决策 123），隐空间世界模型被最朴素的几何重投影（Reprojection）彻底击败：
+在对自车运动偏离后画面推演的直接对照实验中（WOD 真实路测片段，决策 123，状态：待定，证据：中偏弱；无预登记，10 段 15 个 anchor，弯道仅 1 个）：
 </p>
 
 <figure>
 <img src="figs/wm-vs-reproj-gain.png" alt="自车扰动响应对比曲线">
-<figcaption>图 4：自车姿态扰动响应曲线对比（源自 experiments/world_model/figs/wm-vs-reproj-gain.png）。看点：在真实偏航角扰动输入下，R（几何重投影，橙色）在第 1 步产生 7.4 °/° 的偏航补偿增益，真实反映出开环闭环增益；而 W（WL-2 世界模型，绿/紫色）经探针解码仅产生 1.2 °/° 的响应，低估约 5 倍，且从第 3 步起与扰动失去相关性。</figcaption>
+<figcaption>图 4：自车姿态扰动响应曲线对比（源自 experiments/world_model/figs/wm-vs-reproj-gain.png）。看点：在真实偏航角扰动输入下，R（几何重投影，橙色）在第 1 步产生 7.4 [3.2, 15.3] °/° 的偏航补偿增益，真实反映出开环闭环增益；而 W（WL-2 世界模型，绿/紫色）经探针解码仅产生 1.2 °/° 的响应，低估约 5 倍，且从第 3 步起与扰动失去相关性。</figcaption>
 </figure>
 
 <ul>
-  <li><b>真实运动还原</b>：平面几何重投影（R）在 2 秒内的轨迹预测误差仅 0.2°–0.5°，曲率误差仅 1.3e-3 1/m；而世界模型 WL-2 的隐空间距离始终停留在持续不变基线水平。</li>
-  <li><b>偏航增益低估 5 倍</b>：对初始扰动偏航角，重投影产生 7.4 [3.2, 15.3] °/° 的补偿响应（与真车起步反馈同阶），而 WL-2 解码出的偏航响应仅 <b>1.2 °/°（仅为重投影的约 0.2 倍）</b>。世界模型严重迟钝，无法支持闭环偏离恢复训练。</li>
+  <li><b>短程运动推演与局限</b>：路面平面几何重投影（R）在 2 秒内的轨迹预测误差为 0.2°–0.5°，曲率误差约 1.3e-3 1/m，适合支持 1–2 s 的短程 rollout；而世界模型 WL-2 的隐空间距离只在持续不变基线水平（0.6 s 时 0.44 对 0.50）。但重投影同样存在局限：在 6 个静止起步 anchor 中有 4 个误差在 0.8–2.5°，1 s 内 24° 的急弯会越出源图视野，且广角边缘存在失真。在横向 ±0.5 m 扰动下，重投影与世界模型在 2 s 内均未展现出恢复响应。</li>
+  <li><b>偏航增益低估约 5 倍</b>：对初始偏航角扰动，重投影产生 7.4 [3.2, 15.3] °/° 的补偿响应，而 WL-2 解码出的偏航响应仅 <b>1.2 °/°（仅为重投影的约 0.2 倍）</b>。现有世界模型在闭环偏离恢复所必需的增益上严重低估（部分损失可能源于 CARLA → WOD 的域偏移；probe 下限约 1°）。</li>
 </ul>
 
 <h2>四、工业模型审计与分解世界模型（factor_wm）设计（决策 139, 141, 143, 146）</h2>
 
-<h3>1. comma worldmodel-4B 工业模型属性审计</h3>
+<h3>1. comma worldmodel-4B 工业模型属性审计（决策 139，状态：结论）</h3>
 <p>
-为评估 comma.ai 最新发布的 4B 级别视频世界模型（arXiv:2504.19077）能否作为主干策略使用，对其推理机制进行了源码与论文审计（决策 139）：
+为评估 comma.ai 发布的 4B 级别视频世界模型（arXiv:2504.19077）能否作为主干策略使用，对其推理机制进行了源码与论文审计（决策 139，状态：结论，代码层面，未跑 GPU）：
 </p>
 <ul>
-  <li><b>未来锚定本质（Future-Anchored）</b>：该模型输入固定包含 15 个槽位（5 个未来 anchor 帧 + 9 帧历史 + 1 个加噪目标帧），时间跨度 0.2–9.8 s。其 plan head 实质上是一个<b>在看过未来画面之后进行轨迹逆推的逆动力学专家（Inverse Dynamics）</b>。</li>
-  <li><b>无条件分支缺陷</b>：CFG 的无条件分支仅将自车位姿清零，并不遮挡未来视频画面。模型在“只给历史”的场景下处于完全的分布外（OOD）；若遮挡未来帧，预测直接塌缩。因此，该模型是给定终点目标的生成仿真器，<b>绝对无法零样本当作自驾驾驶策略直接运行</b>。</li>
+  <li><b>未来锚定本质（Future-Anchored）</b>：该模型输入固定包含 15 个槽位（5 个未来 anchor 帧 + 9 帧历史 + 1 个加噪目标帧），时间跨度 0.2–9.8 s。其 plan head 实质上是在看过未来画面之后进行轨迹逆推的逆动力学专家（Inverse Dynamics）。</li>
+  <li><b>无条件分支缺陷与策略适用性</b>：CFG 的无条件分支仅将自车位姿清零，并不遮挡未来视频画面。模型在“只给历史”的场景下处于分布外（OOD）；去掉未来的各种读法（如噪声、置零、复制最后一帧）均会破坏分布（复制最后一帧等同于告知模型车辆静止）。因此，该模型是给定终点目标的生成仿真器，不能零样本当作自驾驾驶策略主干直接运行（若要当主干需进行 anchor dropout 微调，且不排除 comma 内部训练曾使用 anchor dropout）。</li>
 </ul>
 
 <h3>2. 分解式世界模型（Factorized World Model）构想</h3>
 <p>
-吸取前期全面挫败的教训，项目提出了分解式世界模型的核心架构原则（<code>factor_wm</code>，2026-10-05 查新）：
+吸取前期实验教训，项目提出了分解式世界模型的核心架构原则（<code>factor_wm</code>，2026-10-05 查新）：
 </p>
 <ul>
   <li><b>自车运动不学（Analytic Ego）</b>：自车动作对自车视角与画面的影响由运动学与路面平面几何重投影精确计算，严禁神经网络拟合自车几何变换。</li>
@@ -216,34 +216,34 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <tr><td><b>RoXDrive / OmniDreams</b></td><td>工业规模冻结世界模型内做 RL，依赖后验过滤</td><td>保真度通过物理/几何显式解耦构造保证，而非暴力过滤或无底线扩大参数</td></tr>
 </table>
 
-<h3>4. 阶段 1（G0 / G1）实验进展与闭环反思</h3>
+<h3>4. 阶段 1（G0 / G1）实验进展与闭环反思（决策 141, 143, 146，状态：待定）</h3>
 <p>
 针对“自车开不起来、低速停滞与急弯失控”的第一阶段验证展现了开环与闭环迁移之间的复杂张力：
 </p>
 <ul>
-  <li><b>G0 引擎验证（决策 141）</b>：shipped Cinque 在真实日志重投影引擎中，施加扰动后闭环失败率高达 0.52（起步停滞 0.17、航向偏离 0.17、出车道 0.18）。证实起步缺陷源自模型自身（真实帧起步 t0 加速度中位 −0.09 m/s²，急弯曲率仅为日志的 0.63 倍）。同时证实平面重投影优于深度重投影（误差比 0.99 对 0.85），确定以平面重投影为引擎基底。</li>
-  <li><b>G1 闭环挫折（决策 143）</b>：在精确自车引擎内进行 8 s on-policy 策略微调（S3），引擎内起步停滞由 0.18 剧降至 0.02；但迁移至 HUGSIM 64 闭环评测时，起步停滞反而由 18 飙升至 <b>48 个场景</b>，HD 得分跌至 0.182（基线 0.286）。诊断证实：时间同步源帧导致模型学成了“画面动才起步”的错误相关性（静止预热画面下 shouldStop 达 0.98），再次上演“修好停滞却换来碰撞”的分布偏移。</li>
-  <li><b>P2 on-policy 闸门早停（决策 146）</b>：采用修正标签（消除 5 cm 震荡）后，开环评测虽展现正向增益（navhard +2.58 分），但在 HUGSIM-12 闸门场景中起步停滞由 1 恶化至 9，HD 由 0.414 跌至 0.313，触发预登记早停。数据中“静止”与“停车”的语义重叠，构成了端到端策略自适应的核心难题。</li>
+  <li><b>G0 引擎验证（决策 141，状态：待定）</b>：shipped Cinque 在真实日志重投影引擎中，施加扰动后闭环失败率高达 0.52（起步停滞 0.17、航向偏离 0.17、出车道 0.18）。起步与急弯缺陷在真实帧上即已存在（真实帧起步 t0 加速度中位 −0.09 m/s²，急弯 action 曲率仅为日志的 0.63 倍）；但起步停滞是否部分属于 openpilot 产品设计（停稳后需驾驶员 resume）仍属待定。同时，深度重投影相比平面重投影计划误差比为起步 0.99 [0.78, 1.07]、急弯 0.85 [0.67, 0.99]，未能达到 0.7 阈值线（深度不比平面显著好），因此选定以实现更为紧凑的平面重投影作为引擎基底。</li>
+  <li><b>G1 闭环挫折与机制归因（决策 143，状态：待定）</b>：在精确自车引擎内进行 8 s on-policy 策略微调（S3），引擎内起步停滞由 0.18 剧降至 0.02；但迁移至 HUGSIM 64 闭环评测时，起步停滞反而由 18 飙升至 <b>48 个场景</b>，HD 得分跌至 0.182（基线 0.286）。诊断揭示出双重机制：H1（时间同步源帧在自车落后时仍取自前进中的日志车，模型学成“画面在动才起步”，在静止预热下 shouldStop 达 0.98）；H2（HUGSIM 纵向跟 plan 速度而非 action[1]，S3 在 HUGSIM 起步窗口中 plan 速度下降 1.47 [−2.15, −0.84] m/s，是卡死的直接原因）。此外，更正发现 G1 训练所用恢复标签存在 bug（静止抖动导致 9.9% 训练状态存在 2 倍横向跳变），对 S3 的否定因此有所减弱。</li>
+  <li><b>P2 on-policy 闸门早停（决策 146，状态：待定）</b>：采用修正标签（消除 5 cm 静止抖动）后，开环评测虽在 navhard 取得 +2.58 分（但 [−0.62, +5.97] 不显著 n.s.，且 navtest 为 −0.29），在 HUGSIM-12 闸门场景中起步停滞由 1 恶化至 9，HD 由 0.414 跌至 0.313，触发预登记早停。随后的静止历史探针否定了“静态画面教成不走”的单因素假说（真实与静态画面在 t0 探针下无法解释 X 与 C 的停滞差），差异源于闭环前几步的动态，根源在于引擎训练数据分布中“静止”与“停车”的语义重叠。</li>
 </ul>
 
 <h2>五、数据源、代码与决策归档索引</h2>
 
 <table>
 <tr><th>研究主题 / 结论</th><th>关联决策条目</th><th>关键结果文件与测试报告</th><th>代码与复现脚本路径</th></tr>
-<tr><td>CARLA 反应头激发与 P5 评测</td><td>决策 42</td><td><code>experiments/reactivity/results/reactivity/</code></td><td><code>experiments/reactivity/scripts/</code></td></tr>
-<tr><td>反应头真实迁移全面有害性</td><td>决策 44</td><td><code>experiments/real_transfer/results/g0/</code>, <code>g1/</code>, <code>g2/</code></td><td><code>experiments/real_transfer/scripts/</code></td></tr>
-<tr><td>Hydra 头叠加能力包破裂</td><td>决策 53</td><td><code>experiments/night_queue_2/results/N3/</code></td><td><code>experiments/night_queue_2/scripts/</code></td></tr>
-<tr><td>ControlNet / Cosmos 生成搁置</td><td>决策 59</td><td><code>research/controlnet-pair-pilot.md</code></td><td><code>experiments/controlnet/</code></td></tr>
-<tr><td>CARLA 特征适配器不可行性</td><td>决策 62、63</td><td><code>experiments/feature_adapter/results/e0-layer/</code></td><td><code>experiments/feature_adapter/scripts/</code></td></tr>
-<tr><td>CARLA 回退分支不等价定性</td><td>决策 65</td><td><code>experiments/carla_rewind/results/</code></td><td><code>experiments/carla_rewind/scripts/</code></td></tr>
-<tr><td>WL-2 C1–C4 判格与 No-Go</td><td>决策 76</td><td><code>experiments/world_model/results/wl2/results/results.json</code></td><td><code>experiments/world_model/archive/make_wl2_figs.py</code></td></tr>
-<tr><td>自车偏离扰动：重投影压制 WL-2</td><td>决策 123</td><td><code>experiments/world_model/results/wm_vs_reproj.md</code></td><td><code>experiments/world_model/scripts/</code></td></tr>
-<tr><td>comma worldmodel-4B 审计</td><td>决策 139</td><td><code>experiments/wm_policy/results/step0.md</code></td><td><code>experiments/wm_policy/</code></td></tr>
-<tr><td>分解世界模型 G0 / G1 阶段验证</td><td>决策 141、143、146</td><td><code>experiments/factor_wm/results/g0-verdict.md</code>, <code>g1.md</code>, <code>p2-onpolicy.md</code></td><td><code>experiments/factor_wm/plans/2026-10-05-stage1-prereg.md</code></td></tr>
+<tr><td>CARLA 反应头激发与 P5 评测</td><td>决策 42（待定）</td><td><code>experiments/reactivity/results/reactivity/</code></td><td><code>experiments/reactivity/archive/</code></td></tr>
+<tr><td>反应头真实迁移全面有害性</td><td>决策 44（待定）</td><td><code>experiments/real_transfer/results/g0/</code>, <code>g1/</code>, <code>g2/</code></td><td><code>experiments/real_transfer/archive/</code></td></tr>
+<tr><td>Hydra 头叠加能力包检验</td><td>决策 53（待定）</td><td><code>experiments/night_queue_2/results/N3/</code></td><td><code>experiments/night_queue_2/archive/</code></td></tr>
+<tr><td>ControlNet / Cosmos 生成搁置</td><td>决策 59（已确认暂停）</td><td><code>research/decisions/059.md</code>（历史记录参见 git show ff29e5a4^:research/controlnet-pair-pilot.md）</td><td><code>experiments/controlnet_pair/archive/</code></td></tr>
+<tr><td>CARLA 特征适配器探测</td><td>决策 62、63（待定）</td><td><code>experiments/feature_adapter/results/e0-layer/</code>, <code>results/e1-cosmos/</code></td><td><code>experiments/feature_adapter/archive/</code></td></tr>
+<tr><td>CARLA 回退分支不等价定性</td><td>决策 65（已确认）</td><td><code>experiments/carla_rewind/results/</code></td><td><code>experiments/carla_rewind/archive/</code></td></tr>
+<tr><td>WL-2 C1–C4 判格与 No-Go</td><td>决策 76（待定）</td><td><code>experiments/world_model/results/wl2/results/results.json</code></td><td><code>experiments/world_model/archive/make_wl2_figs.py</code></td></tr>
+<tr><td>自车偏离扰动：重投影与 WL-2</td><td>决策 123（待定）</td><td><code>experiments/world_model/results/wm_vs_reproj.md</code></td><td><code>experiments/world_model/scripts/</code></td></tr>
+<tr><td>comma worldmodel-4B 审计</td><td>决策 139（结论）</td><td><code>experiments/wm_policy/results/step0.md</code></td><td><code>experiments/wm_policy/</code></td></tr>
+<tr><td>分解世界模型 G0 / G1 阶段验证</td><td>决策 141、143、146（待定）</td><td><code>experiments/factor_wm/results/g0-verdict.md</code>, <code>g1.md</code>, <code>p2-onpolicy.md</code></td><td><code>experiments/factor_wm/plans/2026-10-05-stage1-prereg.md</code></td></tr>
 </table>
 
 <div class="cite">
-报告生成规范：jevdrive/CLAUDE.md、docs/agy-reports.md。数据全部基于实测结果文件与决策日志核验，禁止脑补填空。
+报告生成规范：CLAUDE.md、docs/agy-reports.md。数据全部基于实测结果文件与决策日志核验，禁止脑补填空。
 </div>
 
 </body></html>
