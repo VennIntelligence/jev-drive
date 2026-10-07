@@ -30,7 +30,26 @@ OUT = _R / "experiments/op_parity/results/four_dirs"
 HUG = data_dir() / "runs/bench/hugsim"
 HR = _R / "experiments/hugsim/results"
 CITY = {"us-ma-boston": "Boston", "us-nv-las-vegas-strip": "Las Vegas", "us-pa-pittsburgh-hazelwood": "Pittsburgh", "sg-one-north": "Singapore"}
+LATLON = {"Boston": (42.36, -71.06), "Las Vegas": (36.17, -115.14), "Pittsburgh": (40.44, -80.00), "Singapore": (1.30, 103.79)}
 HUG_CROP = (800, 1600, 0, 450)          # front third (x0, x1, y0, y1) of the 2400 x 900 video; the three cameras sit in the top 450 rows
+
+
+def sun_elevation(log: str, city: str) -> float:
+    """Solar elevation (deg, NOAA low-precision formulas) at the city centre for a nuPlan log name '<yyyy.mm.dd.HH.MM.SS>_<veh>_<first>_<last>'
+    (start time in UTC; the snippet starts first / 20 s later: lidar frame index at 20 Hz). Independent time-of-day label for navtest / navhard."""
+    import datetime as dt
+    t0 = dt.datetime.strptime(log.split("_")[0], "%Y.%m.%d.%H.%M.%S")
+    t = t0 + dt.timedelta(seconds=int(log.split("_")[2]) / 20.0)
+    lat, lon = LATLON[city]
+    n = t.timetuple().tm_yday
+    h = t.hour + t.minute / 60 + t.second / 3600
+    g = 2 * np.pi / 365 * (n - 1 + (h - 12) / 24)
+    eqt = 229.18 * (0.000075 + 0.001868 * np.cos(g) - 0.032077 * np.sin(g) - 0.014615 * np.cos(2 * g) - 0.040849 * np.sin(2 * g))
+    dec = 0.006918 - 0.399912 * np.cos(g) + 0.070257 * np.sin(g) - 0.006758 * np.cos(2 * g) + 0.000907 * np.sin(2 * g) - 0.002697 * np.cos(3 * g) + 0.00148 * np.sin(3 * g)
+    tst = h * 60 + eqt + 4 * lon                                  # true solar time, minutes (UTC clock + longitude)
+    ha = np.radians(tst / 4 - 180)
+    la = np.radians(lat)
+    return float(np.degrees(np.arcsin(np.sin(la) * np.sin(dec) + np.cos(la) * np.cos(dec) * np.cos(ha))))
 
 
 def workers():
@@ -136,11 +155,11 @@ def hugsim_scores():
 
 
 # ---------------------------------------------------------------- analysis
-def gap_table(d, cut, B=10000, seed=0):
+def gap_table(d, cut, B=10000, seed=0, lab_fn=None):
     """d: columns cluster, luma_c (cluster luma), p2h, wa. Cluster bootstrap (resample clusters, ratio of sums, as jevdrive.stats).
     Returns one dict: shares, bucket means, gaps (WA - P2H), size."""
     d = d[np.isfinite(d.p2h) & np.isfinite(d.wa)]
-    lab = label(d.luma_c.to_numpy(float), cut)
+    lab = label(d.luma_c.to_numpy(float), cut) if lab_fn is None else lab_fn(d)
     codes, uniq = pd.factorize(d.cluster)
     K = len(uniq)
     cl = pd.Series(lab).groupby(codes).first().to_numpy()
@@ -216,6 +235,7 @@ def cmd_report(a):
     s = navtest_scores()
     s = s.merge(nt[["token", "luma", "luma_c", "city"]], on="token")
     s["cluster"] = s["log"]
+    s["sun"] = [sun_elevation(l, c) for l, c in zip(s["log"], s.city)]
     boards["navtest"] = s.assign(unit=s.token)
     # --- navhard: units = groups (225), cluster = stage-1 log; luma_c = median over the log's stage-1 tokens (stage 1 only)
     nh = L[L.board == "navhard_two_stage"].copy()
@@ -227,6 +247,7 @@ def cmd_report(a):
     g["luma_c"] = g["log"].map(lg1)
     g["luma_s2"] = g["log"].map(lg2)
     g["cluster"] = g["log"]
+    g["sun"] = [sun_elevation(l, c) for l, c in zip(g["log"], g.city)]
     g["unit"] = g.group.astype(str)
     nhc = g.assign(p2h=g.p2h_combined, wa=g.wa_combined)
     boards["navhard"] = nhc
@@ -255,11 +276,38 @@ def cmd_report(a):
         stg.append(r)
     ST = pd.DataFrame(stg)
 
+    # low-light proxy: darkest 10% of clusters per board vs the rest (NOT night: the absolute rule finds none on the NAVSIM boards)
+    def dim(d, q=0.10):
+        cl = d.drop_duplicates("cluster")
+        thr = np.quantile(cl.luma_c, q)
+        return np.where(d.luma_c.to_numpy(float) <= thr, "night", "day")
+    PX = []
+    for b, d in boards.items():
+        for q in (0.10, 0.25):
+            r = gap_table(d, CUT, lab_fn=lambda x, q=q: dim(x, q))
+            r["board"], r["q"] = b, q
+            r["thr"] = float(np.quantile(d.drop_duplicates("cluster").luma_c, q))
+            PX.append(r)
+    PX = pd.DataFrame(PX)
+    PX.to_csv(out / "lowlight_proxy.csv", index=False)
+
+    # sun elevation (independent time-of-day check) on the NAVSIM boards: logs below the horizon / civil twilight
+    sunrows = []
+    for b in ("navtest", "navhard"):
+        d = boards[b].drop_duplicates("cluster")
+        for c, gg in d.groupby("city"):
+            sunrows.append({"board": b, "city": c, "logs": len(gg), "sun_min": gg["sun"].min(), "sun_median": gg["sun"].median(), "logs_sun<0": int((gg["sun"] < 0).sum()),
+                            "logs_sun<10": int((gg["sun"] < 10).sum()), "luma_median": gg.luma_c.median(), "luma_min": gg.luma_c.min()})
+    SUN = pd.DataFrame(sunrows)
+    dd = boards["navtest"].drop_duplicates("cluster")
+    cons_sun = float(np.corrcoef(dd["sun"], dd.luma_c)[0, 1])
+    lowsun = dd.sort_values("sun").head(8)[["cluster", "city", "sun", "luma_c"]]
+
     # units csv
     rows = []
     for b, d in boards.items():
         rows.append(pd.DataFrame({"unit": d.unit, "board": b, "luma": d.luma_c.round(1), "label": label(d.luma_c.to_numpy(float)), "unit_luma": d.luma.round(1),
-                                  "cluster": d.cluster, "city_or_dataset": d.city}))
+                                  "cluster": d.cluster, "city_or_dataset": d.city, "sun_elev_deg": d["sun"].round(1) if "sun" in d else np.nan}))
     U = pd.concat(rows)
     U.to_csv(out / "night_units.csv", index=False)
 
@@ -276,6 +324,7 @@ def cmd_report(a):
     # token-level vs log-level label agreement (navtest)
     agree = float((label(nt.luma.to_numpy()) == label(nt.luma_c.to_numpy())).mean())
     cons["navtest token label == log label"] = agree
+    cons["navtest log luma vs sun elevation: corr"] = cons_sun
 
     # ---- figure
     import matplotlib
@@ -317,7 +366,10 @@ def cmd_report(a):
                          for r in R[R.cut == CUT].to_dict("records")],
                         columns=["board", "units n / dusk / d", "P2H n / dusk / d", "WA-JEPA n / dusk / d", "gap night", "gap dusk", "gap day", "gap all"])
     parts = {"main": mdt(main), "full": mdt(full), "sens": mdt(sens), "navhard_stages": mdt(stt), "city_navtest": mdt(nts, ".1f"), "city_navhard": mdt(nhs, ".1f"),
-             "hugsim_ds": mdt(hs, ".1f"), "cons": "\n".join(f"- {k}: {v:.3f}" for k, v in cons.items())}
+             "hugsim_ds": mdt(hs, ".1f"), "sun": mdt(SUN, ".1f"), "lowsun": mdt(lowsun, ".1f"),
+             "proxy": mdt(pd.DataFrame([[r["board"], r["q"], r["thr"], r["units"], f"{r['n_night']:.0f}", f"{r['share_night']:.1f}", f"{r['p2h_night']:.2f} / {r['p2h_day']:.2f}", f"{r['wa_night']:.2f} / {r['wa_day']:.2f}",
+                                           f"{r['gap_night']:.2f} / {r['gap_day']:.2f}", ci(r, "gap_diff"), ci(r, "size_replace"), ci(r, "size_excess")] for r in PX.to_dict("records")],
+                                         columns=["board", "bottom q", "luma thr", "units", "dim units", "share %", "P2H dim / rest", "WA dim / rest", "gap dim / rest", "gap diff", "size replace", "size excess"])), "cons": "\n".join(f"- {k}: {v:.3f}" for k, v in cons.items())}
     (out / "_tables.json").write_text(json.dumps(parts, indent=1))
     for k, v in parts.items():
         print(f"\n== {k}\n{v}")
@@ -337,13 +389,12 @@ def cmd_sheet(a):
     rows = []
     for b in ("navtest", "navhard", "hugsim"):
         u = U[U.board == b]
-        for lab in ("night", "dusk", "day"):
-            cand = u[u.label == lab]
+        for lab in ("night", "darkest", "day"):
+            # one frame per cluster (distinct logs / scenarios); night and day random, darkest = the NC lowest-luma clusters that are not night
+            cand = u[u.label == lab].drop_duplicates("cluster") if lab != "darkest" else u[u.label != "night"].drop_duplicates("cluster").sort_values("luma")
             if not len(cand):
                 continue
-            # one frame per cluster (distinct logs / scenarios), random
-            cand = cand.drop_duplicates("cluster")
-            pick = cand.iloc[rng.permutation(len(cand))[:NC]]
+            pick = cand.iloc[rng.permutation(len(cand))[:NC]] if lab != "darkest" else cand.iloc[:NC]
             ims = []
             for r in pick.itertuples():
                 if b == "hugsim":
