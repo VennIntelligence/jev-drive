@@ -10,7 +10,7 @@
 # State: $DATA_DIR/runs/op_parity/mixed/chain-<stage>/{STATUS, DONE, ERROR, GATE_STOP, log.txt, jobs.txt}.
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
-STAGE=${1:?stage: ng | mx | report}
+STAGE=${1:?stage: ng | nga | mx | report}
 O=$DATA_DIR/runs/op_parity/mixed
 D=$O/chain-$STAGE; mkdir -p "$D"; rm -f "$D/DONE" "$D/ERROR" "$D/GATE_STOP"
 exec > >(tee -a "$D/log.txt") 2>&1
@@ -44,34 +44,35 @@ serve() { local tag=$1 kind=${2:-plain}; shift; shift || true
           sub mxd-e-$tag $L/e-$tag --vram 8 --cpu 14 --ram 40 -- $OP scripts/wod_zeroshot_openpilot.py --set rater extra --workers 12 \
               --onnx $ONNX/pp-$tag.onnx --tag $tags --bias $bs; }
 
-if [[ $STAGE == ng ]]; then
-  G="--stop-gate 0.5"
-  smoke="$PY $S/pp_train.py --arm P2 --frames warp --host --data navtrain_full.s2of12 --split navsim/op-parity-s234 --steps 3 --batch 16 --eval-every 3 $HF $G --tag smoke-ng"
-  status "pilot: train P2HG-P-s0"
-  sub mxd-t-P2HG-P-s0 $L/t-P2HG-P-s0 --train --vram 24 --cpu 6 --ram 40 --preflight "$smoke" -- $PY $S/pp_train.py --arm P2 --seed 0 --frames warp --host \
-      --data navtrain_full.s2of12 navtrain_full.s3of12 navtrain_full.s4of12 --split navsim/op-parity-s234 --steps 3000 --batch 64 --warmup 100 --eval-every 1000 $HF $G --tag P2HG-P-s0
-  waitdirs $L/t-P2HG-P-s0
+if [[ $STAGE == ng || $STAGE == nga ]]; then
+  # nga (prereg addendum 2): the same chain with no anchor rows on the gated rows, tags P2HGA-*
+  G="--stop-gate 0.5"; A=P2HG; [[ $STAGE == nga ]] && { G="$G --stop-gate-free"; A=P2HGA; }
+  smoke="$PY $S/pp_train.py --arm P2 --frames warp --host --data navtrain_full.s2of12 --split navsim/op-parity-s234 --steps 3 --batch 16 --eval-every 3 $HF $G --tag smoke-$STAGE"
+  status "pilot: train $A-P-s0"
+  sub mxd-t-$A-P-s0 $L/t-$A-P-s0 --train --vram 24 --cpu 6 --ram 40 --preflight "$smoke" -- $PY $S/pp_train.py --arm P2 --seed 0 --frames warp --host \
+      --data navtrain_full.s2of12 navtrain_full.s3of12 navtrain_full.s4of12 --split navsim/op-parity-s234 --steps 3000 --batch 64 --warmup 100 --eval-every 1000 $HF $G --tag $A-P-s0
+  waitdirs $L/t-$A-P-s0
   status "pilot: navtest (:sg)"
-  "${B[@]}" run --model P2HG-P-s0:sg --bench navtest --wait || die "bench navtest P2HG-P-s0"
-  $VPY $S/mixed_domain.py gate-ng --name pilot_ng --arm P2HG-P-s0:sg --ref RH0-F-s0; rc=$?
-  if (( rc == 3 )); then status "STOP: pilot gate G-NG failed (results/mixed_domain/pilot_ng_gate.json)"; touch "$D/GATE_STOP"; date > "$D/DONE"; exit 0; fi
+  "${B[@]}" run --model $A-P-s0:sg --bench navtest --wait || die "bench navtest $A-P-s0"
+  $VPY $S/mixed_domain.py gate-ng --name pilot_$STAGE --arm $A-P-s0:sg --ref RH0-F-s0; rc=$?
+  if (( rc == 3 )); then status "STOP: pilot gate G-NG failed (results/mixed_domain/pilot_${STAGE}_gate.json)"; touch "$D/GATE_STOP"; date > "$D/DONE"; exit 0; fi
   (( rc == 0 )) || die "gate-ng"
   status "pilot gate G-NG passed; full P2HG x 2 seeds"
   for s in 0 1; do
-    sub mxd-t-P2HG-F-s$s $L/t-P2HG-F-s$s --train --vram 40 --cpu 6 --ram 40 -- $PY $S/pp_train.py --arm P2 --seed $s --frames warp --host \
-        --data $FULL --split navsim/op-parity-full --steps 10000 --batch 128 --warmup 300 --eval-every 1000 $HF $G --tag P2HG-F-s$s
+    sub mxd-t-$A-F-s$s $L/t-$A-F-s$s --train --vram 40 --cpu 6 --ram 40 -- $PY $S/pp_train.py --arm P2 --seed $s --frames warp --host \
+        --data $FULL --split navsim/op-parity-full --steps 10000 --batch 128 --warmup 300 --eval-every 1000 $HF $G --tag $A-F-s$s
   done
-  waitdirs $L/t-P2HG-F-s0 $L/t-P2HG-F-s1
-  for s in 0 1; do $PY $S/pp_full_check.py train --tag P2HG-F-s$s || die "training sanity P2HG-F-s$s"; done
+  waitdirs $L/t-$A-F-s0 $L/t-$A-F-s1
+  for s in 0 1; do $PY $S/pp_full_check.py train --tag $A-F-s$s || die "training sanity $A-F-s$s"; done
   status "full: navtest (:sg), HUGSIM 64 (stop_gate), WOD val (gated bias), navhard (G, :sg)"
-  "${B[@]}" run --model P2HG-F-s0:sg P2HG-F-s1:sg --bench navtest || die "bench navtest"
-  "${B[@]}" run --model P2HG-F-s0 P2HG-F-s1 --bench hugsim --preset spec_plan_smooth --opts "$SG" --scenarios "$LIST" || die "bench hugsim"
-  for s in 0 1; do serve P2HG-F-s$s gbias; done
-  "${B[@]}" run --model P2HG-F-s0@gimm:sg P2HG-F-s1@gimm:sg --bench navhard || status "navhard submit failed (optional read)"
-  "${B[@]}" status --model P2HG-F-s0:sg P2HG-F-s1:sg --bench navtest --wait || die "navtest"
-  waitdirs $L/e-P2HG-F-s0 $L/e-P2HG-F-s1
-  "${B[@]}" status --model P2HG-F-s0 P2HG-F-s1 --bench hugsim --preset spec_plan_smooth --opts "$SG" --wait || die "hugsim"
-  "${B[@]}" status --model P2HG-F-s0@gimm:sg P2HG-F-s1@gimm:sg --bench navhard --wait || status "navhard failed (optional read)"
+  "${B[@]}" run --model $A-F-s0:sg $A-F-s1:sg --bench navtest || die "bench navtest"
+  "${B[@]}" run --model $A-F-s0 $A-F-s1 --bench hugsim --preset spec_plan_smooth --opts "$SG" --scenarios "$LIST" || die "bench hugsim"
+  for s in 0 1; do serve $A-F-s$s gbias; done
+  "${B[@]}" run --model $A-F-s0@gimm:sg $A-F-s1@gimm:sg --bench navhard || status "navhard submit failed (optional read)"
+  "${B[@]}" status --model $A-F-s0:sg $A-F-s1:sg --bench navtest --wait || die "navtest"
+  waitdirs $L/e-$A-F-s0 $L/e-$A-F-s1
+  "${B[@]}" status --model $A-F-s0 $A-F-s1 --bench hugsim --preset spec_plan_smooth --opts "$SG" --wait || die "hugsim"
+  "${B[@]}" status --model $A-F-s0@gimm:sg $A-F-s1@gimm:sg --bench navhard --wait || status "navhard failed (optional read)"
   status "done"; date > "$D/DONE"; exit 0
 fi
 

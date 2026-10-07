@@ -105,6 +105,7 @@ class Cfg:
     ego_lat_drop: float = 0.0             # fraction of rows with vy / ay of the ego input zeroed (own rng stream; row order unchanged)
     stop_gate: float = 0.0                # wod-launch (plans/2026-10-08-wod-launch-prereg.md addendum): adapter off (present = 0) on rows fed a speed below this (m/s); 0 = off
     mem: str = ""                         # front-token memory (wa_cf | vj21; arm P2+<mem>), dropped per row with MEM_DROP (own rng stream)
+    stop_gate_free: bool = False          # mixed-domain addendum 2: no anchor rows on the gated rows (every gated row with a log is an imitation row)
     wod_split: str = "wod/r2"             # mixed-domain: sequence split of the wod_* data dirs when --split is a NAVSIM token split (<ref>-train / -dev)
     wod_mass: float = 0.0                 # mixed-domain: exact share of every batch drawn from the wod_* rows (0 = natural mix)
     wod_slots: int = 0                    # mixed-domain: real policy slots kept on wod_* rows (8 = oldest slot zeroed, as NAVSIM rows; 0 = all cached)
@@ -462,7 +463,7 @@ def main(a):
               b2d_split=a.b2d_split, b2d_mass=a.b2d_mass, anchor_b2d=not a.no_anchor_b2d,
               turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
               act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop, mem=a.mem, stop_gate=a.stop_gate,
-              wod_split=a.wod_split, wod_mass=a.wod_mass, wod_slots=a.wod_slots,
+              wod_split=a.wod_split, wod_mass=a.wod_mass, wod_slots=a.wod_slots, stop_gate_free=a.stop_gate_free,
               agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
@@ -550,6 +551,9 @@ def main(a):
                 run.info(f"turn-balanced sampling: natural mass {np.round(nat, 3).tolist()}, target {tgt.tolist()}, per-token weights {np.round(w / w[0], 3).tolist()} "
                          f"(relative to the < 5 deg bin); anchor off on turning tokens: {cfg.anchor_off_turn} ({turn[tr_rows].mean():.3f} of train rows)")
 
+        gated = S.tb["ego"][:, 4] * 10.0 < cfg.stop_gate if (cfg.stop_gate > 0 and cfg.stop_gate_free) else None
+        if gated is not None and run:
+            run.info(f"stop gate {cfg.stop_gate} m/s, no anchors on gated rows: {int(gated[tr_rows].sum())} of {len(tr_rows)} train rows gated")
         if cfg.wod_mass > 0:                                                    # mixed-domain: an exact share of every batch from the wod_* rows
             assert pw is None, "--wod-mass does not combine with --b2d-mass / --turn-bal"
             w_tr, o_tr = tr_rows[S.is_wod[tr_rows]], tr_rows[~S.is_wod[tr_rows]]
@@ -569,6 +573,8 @@ def main(a):
                 an &= ~turn[r]
             if not cfg.anchor_b2d:
                 an &= ~S.is_b2d[r]
+            if gated is not None:
+                an &= ~gated[r]
             sm = rng.random((nB, len(PA.SIDE_CAMS))) >= cfg.cam_drop if use_side else None
             if use_mem:
                 sm = mrng.random((nB, 1)) >= MEM_DROP                           # True = memory present
@@ -683,6 +689,7 @@ if __name__ == "__main__":
     ap.add_argument("--act-lam", type=float, default=3.0)
     ap.add_argument("--ego-lat-drop", type=float, default=0.0, help="fraction of rows with vy / ay of the ego input zeroed")
     ap.add_argument("--stop-gate", type=float, default=0.0, help="adapter off on rows whose fed speed (ego vx) is below this, m/s (wod-launch); 0 = off")
+    ap.add_argument("--stop-gate-free", action="store_true", help="with --stop-gate: no anchor rows on the gated rows")
     ap.add_argument("--wod-split", default=Cfg.wod_split, help="mixed-domain: sequence split of the wod_* dirs when --split is a NAVSIM split")
     ap.add_argument("--wod-mass", type=float, default=0.0, help="mixed-domain: exact share of every batch drawn from the wod_* rows (0 = natural mix)")
     ap.add_argument("--wod-slots", type=int, default=0, choices=[0, 8], help="mixed-domain: 8 = oldest WOD slot zeroed (teacher8.npz); 0 = all 9")
