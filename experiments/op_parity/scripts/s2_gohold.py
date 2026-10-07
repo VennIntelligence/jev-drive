@@ -824,10 +824,10 @@ def cmd_figs(a):
                f"right of way: {r.row} ({r['row_p_' + r.row]:.2f})", f"lead: {r['lead']} ({r['lead_p_' + r['lead']]:.2f})", f"crossing: {r.cross} ({r['cross_p_' + r.cross]:.2f})",
                f"lane obstruction: {r.block} ({r['block_p_' + r.block]:.2f})", "",
                f"A  go / hold (D-decomp): {r.decomp.upper()} (p go {r.decomp_p_go:.2f})", f"   D-direct: {r.direct} (p go {r.direct_p_go:.2f}); 3-way: {d3}",
-               f"   oracle V2 (privileged): {'GO' if do[i] else 'HOLD'}; WP2 own: {'go' if pf.WP2_s0_V2.iloc[i] else 'hold'}; log: {'go' if pf.log_V2.iloc[i] else 'hold'}", "",
+               f"   oracle V2 (privileged): {'GO' if do[i] else 'HOLD'}", f"   WP2 own: {'go' if pf.WP2_s0_V2.iloc[i] else 'hold'}; log: {'go' if pf.log_V2.iloc[i] else 'hold'}", "",
                f"B  path: {r.path} = {PATHS[pi[i]][1]} ({r['path_p_' + r.path]:.2f})", f"   speed: {r.speed4} ({r['speed4_p_' + r.speed4]:.2f})",
-               f"   oracle best of F20 (privileged): {PATHS[jb[i] // 4][0]} = {PATHS[jb[i] // 4][1]} / {SPEEDS[jb[i] % 4]}", "", f"{c}; cluster {pf.cluster.iloc[i]}"]
-        ax.text(0.0, 0.98, "\n".join(txt), va="top", ha="left", fontsize=8.6, family="monospace", transform=ax.transAxes)
+               "   oracle best of F20 (privileged):", f"   {PATHS[jb[i] // 4][0]} = {PATHS[jb[i] // 4][1]} / {SPEEDS[jb[i] % 4]}", "", f"{c}", f"cluster {pf.cluster.iloc[i]}"]
+        ax.text(0.0, 0.98, "\n".join(txt), va="top", ha="left", fontsize=8.2, family="monospace", transform=ax.transAxes)
         for m_, lab in ((0, "road frame fed to openpilot (t0)"), (1, "wide frame fed to openpilot (t0)")):
             ax = fig.add_subplot(gs[1, m_])
             ax.imshow(rgb(frames[-1, m_]))
