@@ -46,19 +46,19 @@ if has figs; then PYTHONPATH=. $J $S/s2_thinhead_heads.py figs || die figs; fi
 if has ft; then                                                              # Q3: the joint fine-tune pilot (chained in the pool)
     F="env PYTHONPATH=. $J $S/s2_thinhead_ft.py"
     status "ft: cache + smoke"
-    sub s2th-ft-cache $L/ft-cache --vram 16 --cpu 8 --ram 40 -- $F cache
+    sub s2th-ft-cache $L/ft-cache --vram 16 --cpu 8 --ram 20 -- $F cache
     waitdirs $L/ft-cache
-    sub s2th-ft-smoke $L/ft-smoke --train --vram 30 --cpu 10 --ram 40 -- bash -c "$F pretrain --n-pre 32 --n-dev 16 --tag _smoke && $F kfold --tag _smoke"
+    sub s2th-ft-smoke $L/ft-smoke --train --vram 30 --cpu 10 --ram 24 -- bash -c "$F pretrain --n-pre 32 --n-dev 16 --tag _smoke && $F kfold --tag _smoke"
     waitdirs $L/ft-smoke
     status "ft: pretrain + kfold"
-    sub s2th-ft-pre $L/ft-pre --train --vram 30 --cpu 10 --ram 40 -- $F pretrain
+    sub s2th-ft-pre $L/ft-pre --train --vram 30 --cpu 10 --ram 24 -- $F pretrain
     waitdirs $L/ft-pre
-    sub s2th-ft-kfold $L/ft-kfold --train --vram 30 --cpu 6 --ram 40 -- $F kfold
+    sub s2th-ft-kfold $L/ft-kfold --train --vram 30 --cpu 6 --ram 24 -- $F kfold
     waitdirs $L/ft-kfold
     PYTHONPATH=. $J $S/s2_thinhead_ft.py report || die "ft report"
 fi
 if has latency; then
-    sub s2th-latency $L/latency --vram 14 --cpu 4 --ram 16 -- env PYTHONPATH=. $J $S/s2_thinhead.py latency
+    sub s2th-latency $L/latency --vram 14 --cpu 4 --ram 12 -- env PYTHONPATH=. $J $S/s2_thinhead.py latency
     waitdirs $L/latency
 fi
 status "done ($STAGES)"; touch "$DONE"
