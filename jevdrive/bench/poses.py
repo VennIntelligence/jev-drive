@@ -7,7 +7,9 @@ tokens with the v2 navtest metric cache and run_pdm_score.py's simulator / score
 the v2 sub-scores, `score` = the per-token EPDMS without extended comfort (EC needs the neighbouring frame), `raw_out` / `raw_depth`
 (the raw plan, linearly interpolated to 0.1 s with the ego footprint, leaves the scorer's drivable polygons: no tracker) and
 `lqr_out` / `out_depth` (the same on the LQR-simulated states; depth = largest distance of a footprint corner outside, m).
-This is experiments/op_probe/scripts/opb_score.py moved here unchanged in its arithmetic (that script is now a thin wrapper).
+This is experiments/op_probe/scripts/opb_score.py moved here unchanged in its arithmetic (that script is now a thin wrapper),
+plus two exact savings: the reactive (IDM) traffic simulation of the human trajectory, identical for every key of a token, runs
+once per token (MemoPolicy; IDM is ~97 % of the cost), and the drivable-area union is built only when a corner is outside.
 
 No sub-score needs a neighbouring frame, so the unit is the token: the run is a claim queue of token chunks
 (<run>/claims, O_EXCL files, mtime heartbeat, stale after 300 s) pulled by K concurrent pool jobs of C cores each. K and C come
@@ -116,6 +118,29 @@ def _out_depth(mc, cor, idc, area):
     return True, float(shapely.distance(area(), pts).max())
 
 
+class MemoPolicy:
+    """The reactive traffic policy with its output memoised per token by the simulated ego states (bytes). pdm_score calls it
+    twice per key: on the plan, and on the human trajectory (the human-penalty filter), whose states are the same for every key
+    of a token; IDM is ~97 % of a pdm_score call (cProfile, 2026-10-07), so the k-key cost drops from 2k to k + 1 IDM runs.
+    Exact: simulate_environment deep-copies its observation (no state carried between calls) and the scorer only reads the
+    returned tracks; the calls to the scorer, and their order, are unchanged."""
+
+    def __init__(self, policy):
+        self.policy, self.memo, self.hits = policy, {}, 0
+
+    def simulate_environment(self, simulated_ego_states, metric_cache):
+        import numpy as np
+        k = np.ascontiguousarray(simulated_ego_states).tobytes()
+        if k in self.memo:
+            self.hits += 1
+        else:
+            self.memo[k] = self.policy.simulate_environment(simulated_ego_states, metric_cache)
+        return self.memo[k]
+
+    def __getattr__(self, name):
+        return getattr(self.policy, name)
+
+
 def work_prof(token):
     """(rows of every key for one token, cost: load / pdm / diag / union seconds, worker max RSS GB)."""
     import resource
@@ -139,6 +164,7 @@ def work_prof(token):
             memo.append(unary_union([am._geometries[k] for k in idc]))
             prof["union"] += time.perf_counter() - u0
         return memo[0]
+    policy = MemoPolicy(W["policy"])
     o = np.array(mc.ego_state.rear_axle.serialize())
     c, s = np.cos(o[2]), np.sin(o[2])
     out = []
@@ -146,7 +172,7 @@ def work_prof(token):
         p8 = np.asarray(P[W["row"][token]], np.float64)
         t1 = time.perf_counter()
         row, st = pdm_score(metric_cache=mc, model_trajectory=Trajectory(p8), future_sampling=W["samp"], simulator=W["sim"],
-                            scorer=W["scorer"], traffic_agents_policy=W["policy"])
+                            scorer=W["scorer"], traffic_agents_policy=policy)
         t2 = time.perf_counter()
         r = row.iloc[0] if hasattr(row, "iloc") else row
         res = {"key": k, "token": token, **{m: float(r[m]) for m in SUBS}}
@@ -162,6 +188,7 @@ def work_prof(token):
         prof["pdm"] += t2 - t1
         prof["diag"] += time.perf_counter() - t2
     prof["diag"] -= prof["union"]
+    prof["idm_hits"] = policy.hits
     prof["rss_gb"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2 ** 20
     return out, prof
 
@@ -239,7 +266,7 @@ def cost_summary(costs) -> dict:
         return {}
     n = len(costs)
     s = {f"{k}_s_per_token": sum(c[k] for c in costs) / n for k in ("load", "pdm", "diag", "union")}
-    return s | dict(n_tokens=n, union_frac=sum(c["union"] > 0 for c in costs) / n, worker_rss_gb_max=max(c["rss_gb"] for c in costs))
+    return s | dict(n_tokens=n, idm_hits_per_token=sum(c.get("idm_hits", 0) for c in costs) / n, union_frac=sum(c["union"] > 0 for c in costs) / n, worker_rss_gb_max=max(c["rss_gb"] for c in costs))
 
 
 # ---------------------------------------------------------------- validation (any env with numpy)

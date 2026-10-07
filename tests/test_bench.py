@@ -258,6 +258,14 @@ class TestPoses(TmpData):
         with self.assertRaisesRegex(ValueError, "duplicate tokens in the poses"):
             PS.check_inputs(dup, mcache=False)
 
+    def test_memo_policy(self):
+        calls = []
+        pol = mock.Mock(simulate_environment=lambda st, mc: calls.append(st.sum()) or [st.sum()], name_attr="x")
+        m = self.PS.MemoPolicy(pol)
+        a, b = np.zeros((41, 11)), np.ones((41, 11))
+        self.assertEqual([m.simulate_environment(x, None) for x in (a, b, a, b)], [[0.0], [41 * 11.0], [0.0], [41 * 11.0]])
+        self.assertEqual((len(calls), m.hits, m.name_attr), (2, 2, "x"))
+
     def test_plan_jobs(self):
         PS = self.PS
         self.assertEqual(PS.plan_jobs(12146, budget=75), (6, 12))       # 75-core quota: 6 jobs x 12 cores
