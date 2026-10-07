@@ -393,6 +393,33 @@ def cmd_pilot(a):
         sys.exit(3)
 
 
+def cmd_geomtab(a):
+    """Departure anatomy of navtest plans (geom_<model>.parquet): devkit-replay departure (= DAC failure), raw-plan departure, replay-only
+    (replay leaves, raw plan inside), raw-only (raw plan leaves, replay inside); arm - ref paired, log-clustered."""
+    import pandas as pd
+    from jevdrive import stats
+    tab = np.load(TAB)
+    tp = {t: i for i, t in enumerate(tab["names"].tolist())}
+    G = {m: pd.read_parquet(OUT / f"geom_{m}.parquet").set_index("token") for m in {x for pr in a.pairs for x in pr.split(":")}}
+    toks = sorted(set.intersection(*[set(g.index) for g in G.values()]))
+    rows = np.array([tp[t] for t in toks])
+    logs = tab["log"][rows]
+    d = np.abs(np.degrees(np.arctan2(np.sin(tab["fut"][rows, 7, 2]), np.cos(tab["fut"][rows, 7, 2]))))
+    ms = {"replay out (DAC fail)": lambda g: g.dev_out, "raw plan out": lambda g: g.raw_out, "replay only": lambda g: g.dev_out & ~g.raw_out,
+          "raw only": lambda g: g.raw_out & ~g.dev_out}
+    out = []
+    for pr in a.pairs:
+        m, r = pr.split(":")
+        for sname, k in (("all", d >= 0), ("turn > 20 deg", d > TURN_DEG), ("> 45 deg", d > 45)):
+            for met, f in ms.items():
+                x = stats.paired(f(G[m].loc[toks]).to_numpy()[k] * 100.0, f(G[r].loc[toks]).to_numpy()[k] * 100.0, groups=logs[k])
+                out.append(dict(contrast=f"{m} - {r}", stratum=sname, metric=f"{met} %", n=int(k.sum()), arm=x["mean_a"], ref=x["mean_b"],
+                                diff=x["mean"], lo=x["lo"], hi=x["hi"]))
+    stats.write_table(out, RES / a.out, floatfmt=".2f", note="footprint departures from the scorer's drivable polygons, devkit replay vs raw plan; "
+                      "paired, cluster bootstrap over navtest logs, B 10 000")
+    print((RES / f"{a.out}.md").read_text())
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -418,5 +445,8 @@ if __name__ == "__main__":
     p.add_argument("--epdms", type=float, default=0.2)
     p.add_argument("--gate", action="store_true", help="exit 3 unless every arm - ref contrast passes")
     p = sp.add_parser("report")
+    p = sp.add_parser("geomtab")
+    p.add_argument("--pairs", nargs="+", required=True, help="arm:ref model names with geom_<name>.parquet")
+    p.add_argument("--out", default="geom")
     a = ap.parse_args()
-    {"proxy": cmd_proxy, "train": cmd_train, "merge": cmd_merge, "report": cmd_report, "pilot": cmd_pilot}[a.cmd](a)
+    {"proxy": cmd_proxy, "train": cmd_train, "merge": cmd_merge, "report": cmd_report, "pilot": cmd_pilot, "geomtab": cmd_geomtab}[a.cmd](a)
