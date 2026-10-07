@@ -104,7 +104,7 @@ def actor_at(objs, i, k, n):
     return o
 
 
-def clear(xy, t, yaw0, act, objs, i, k, n):
+def clear(xy, yaw0, objs, i, k, n):
     """Ego box at the plan points 0.5 / 1.0 / 1.5 s (xy includes the origin) vs the actor at k + 2 / 4 / 6."""
     q = LM.arclen(xy)[1:4]
     hd = path_heading(xy, q, yaw0)
@@ -147,7 +147,7 @@ def cmd_hugsim(a):
     key = lambda r: f"{r.arm}|{r.preset}|{r.rep}|{r.scenario}"  # noqa: E731
     # D3b runs
     d3 = sm[(sm.cell == "D3b") & (sm.end == "fg_collision") & sm.fg_type.isin(["lead_stopped", "lead_moving"])]
-    rows = []
+    rows, steps = [], []
     for r in d3.itertuples():
         tr = T[key(r)]
         n = len(tr["plans"])
@@ -158,10 +158,18 @@ def cmd_hugsim(a):
                 continue
             for nm, rl in (("base", False), ("rule", True)):
                 xy, info = rule_plan(tr, k, rl)
-                st[nm].append(clear(xy, T_PLAN, tr["YAW"][k], None, tr["objs"], i, k, n))
+                st[nm].append(clear(xy, tr["YAW"][k], tr["objs"], i, k, n))
                 if rl:
                     st["trig"].append(info["trig"])
                     st["ds"].append(info["ds_max"])
+            # why a rule plan still touches (diagnosis, after the gate): true gap (camera to the actor's near end), lead head
+            o = np.asarray(tr["objs"][k][i], float)
+            c, s_ = np.cos(tr["YAW"][k]), np.sin(tr["YAW"][k])
+            q = o[:2] - [tr["X"][k], tr["Y"][k]]
+            lp, lx, lv = tr["lead"][k]
+            steps.append(dict(arm=r.arm, rep=r.rep, scenario=r.scenario, k=k - n, clear_base=st["base"][-1], clear_rule=st["rule"][-1],
+                              lead_prob=lp, lead_x=lx, lead_v=lv, true_gap=q[0] * c + q[1] * s_ - o[3] / 2, lat=-q[0] * s_ + q[1] * c,
+                              v=tr["V"][k], s_end=info["s_end"], s_end_rule=info.get("s_end_new", info["s_end"])))
         nb, nr = np.mean(st["base"]) if st["base"] else np.nan, np.mean(st["rule"]) if st["rule"] else np.nan
         lp_last = tr["lead"][n - 1][0] if tr.get("lead") else None
         rows.append(dict(arm=r.arm, rep=r.rep, scenario=r.scenario, fg_type=r.fg_type, steps=len(st["rule"]),
@@ -171,6 +179,11 @@ def cmd_hugsim(a):
                          lead_prob_m1=lp_last))
     R = pd.DataFrame(rows)
     R.to_csv(OUT / "offline_d3b_runs.csv", index=False)
+    ST = pd.DataFrame(steps)
+    ST["err"] = ST.lead_x - ST.true_gap
+    ST["why"] = np.where(ST.clear_rule, "clear", np.where(ST.lead_prob <= 0.5, "not_triggered",
+                         np.where(ST.err > 4.0, "lead_far (> 4 m: another object)", "under_corrected (bias > table)")))
+    ST.to_csv(OUT / "offline_d3b_steps.csv", index=False, float_format="%.3f")
     S = R.groupby("scenario").agg(runs=("arm", "size"), conv_primary=("conv_primary", "mean"), conv_secondary=("conv_secondary", "mean"),
                                   base_all_clear=("base_all_clear", "mean"), clear_base=("clear_base", "mean"), clear_rule=("clear_rule", "mean"),
                                   trig_frac=("trig_frac", "mean")).reset_index()
@@ -201,10 +214,16 @@ def cmd_hugsim(a):
                 complete_trigger=round(float(C.trig.mean()), 4), complete_changed=round(float(C.changed.mean()), 4),
                 complete_made_stop=round(float(C.made_stop.mean()), 4),
                 complete_changed_scen_max=round(float(by.changed.max()), 3), complete_changed_scen_median=round(float(by.changed.median()), 3),
-                gate_d3b=bool(S.scen_primary.sum() >= 7), gate_complete=bool(C.changed.mean() < 0.05))
+                gate_d3b=bool(S.scen_primary.sum() >= 7), gate_complete=bool(C.changed.mean() < 0.05),
+                fail_why=ST[~ST.clear_rule].why.value_counts().to_dict(),
+                fail_why_last2=ST[~ST.clear_rule & (ST.k >= -2)].why.value_counts().to_dict(),
+                clear_rule_by_k=ST.groupby("k").clear_rule.mean().round(3).to_dict(),
+                clear_base_by_k=ST.groupby("k").clear_base.mean().round(3).to_dict(),
+                err_last2_triggered_median=round(float(ST[(ST.k >= -2) & (ST.lead_prob > 0.5) & (ST.err <= 4)].err.median()), 2),
+                true_gap_last2_median=round(float(ST[ST.k >= -2].true_gap.median()), 2))
     by.round(4).to_csv(OUT / "offline_complete.csv")
-    (OUT / "offline.json").write_text(json.dumps(summ, indent=1) + "\n")
-    print(json.dumps(summ, indent=1))
+    (OUT / "offline.json").write_text(json.dumps(summ, indent=1, default=str) + "\n")
+    print(json.dumps(summ, indent=1, default=str))
     print(S.to_string(index=False))
 
 
