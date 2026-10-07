@@ -396,9 +396,9 @@ def buckets(g):
     out["wide_curve"] = out.wide & (a < 20)
     out["wide_turn"] = out.wide & (a >= 20)
     out["sharp45"] = a > 45
-    out["bin"] = pd.cut(a, [-1, 5, 20, 45, 1e9], labels=["<5", "5-20", "20-45", ">45"]).astype(str)
+    out["bin"] = pd.cut(a, [-1, 5, 20, 45, 1e9], labels=["<5", "5-20", "20-45", ">45"]).astype(object).fillna("no path").astype(str)
     out["rbin"] = pd.cut(g.R_min.where(turn, np.inf), [0, 8, 15, 30, 60, np.inf], labels=["<8", "8-15", "15-30", "30-60", "not turning or >60"],
-                         right=False).astype(str)
+                         right=False).astype(object).fillna("no path").astype(str)
     return out
 
 
