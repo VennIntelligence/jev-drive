@@ -61,12 +61,12 @@ def cmd_teacher8(a):
         out, plan = np.zeros((n, len(di)), np.float32), np.zeros((n, 33, 15), np.float32)
         d9, tc = [], torch.tensor([[1.0, 0.0]], device=dev)
         with torch.no_grad():
-            for i in range(0, n, 512):
-                f = torch.from_numpy(np.ascontiguousarray(mm[np.arange(i, min(i + 512, n))])).to(dev)
+            for i in range(0, n, 128):
+                f = torch.from_numpy(np.ascontiguousarray(mm[np.arange(i, min(i + 128, n))])).to(dev)
                 ego = torch.zeros(len(f), 20, device=dev)
                 o = m(f[:, 1:], ego, tc.expand(len(f), 2), inputs_on=False).float()
                 out[i:i + len(f)], plan[i:i + len(f)] = o[:, di].cpu().numpy(), o[:, pi].view(-1, 33, 15).cpu().numpy()
-                if i % (512 * 16) == 0:                                       # the same path on all 9 slots must reproduce the stored teacher
+                if i % (128 * 32) == 0:                                       # the same path on all 9 slots must reproduce the stored teacher
                     o9 = m(f, ego, tc.expand(len(f), 2), inputs_on=False).float()[:, pi].view(-1, 33, 15).cpu().numpy()
                     d9.append(np.linalg.norm(o9[..., :2] - z["plan"][i:i + len(f), :, :2], axis=-1).mean(1))
         e = np.linalg.norm(plan[..., :2] - z["plan"][:n, :, :2], axis=-1)

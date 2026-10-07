@@ -79,7 +79,7 @@ if [[ $STAGE == mx ]]; then
   M="--wod-mass 0.5"
   PIL="lb_navtrain lb_h1train wod_pilot"
   status "teacher8 (shipped on 8 slots of the WOD rows)"
-  sub mxd-teacher8 $L/teacher8 --vram 12 --cpu 8 --ram 48 -- $PY $S/mixed_domain.py teacher8
+  sub mxd-teacher8 $L/teacher8 --vram 24 --cpu 8 --ram 48 -- $PY $S/mixed_domain.py teacher8
   # cross reads of the single-domain pilots (inference only)
   "${B[@]}" run --model WP2-pilot-s0 --bench navtest || die "bench navtest WP2-pilot-s0"
   serve P2-W-s0
