@@ -30,8 +30,19 @@ def arm(s):
     return lab, specs
 
 
+def _load(bench, s):
+    u = T.load(bench, s)[0]
+    if u is None and bench == "navhard":                           # the hinge lane's navhard harness dirs (P2H10, protocol G)
+        h = data_dir() / "runs/op_parity/hinge/harness" / s.split("@")[0]
+        if (h / "harness_groups.csv").exists():
+            g = pd.read_csv(h / "harness_groups.csv")
+            lg = T.tokens_meta("navhard")
+            u = g.assign(log=[lg.get(o, "?") for o in g.orig]).set_index("group")
+    return u
+
+
 def nav_units(specs, bench="navtest"):
-    us = [T.load(bench, s)[0] for s in specs]
+    us = [_load(bench, s) for s in specs]
     if any(u is None for u in us):
         raise SystemExit(f"{bench}: missing result for one of {specs}")
     return us
@@ -155,7 +166,7 @@ def cmd_navhard(a):
     def sm(specs):
         us = nav_units(specs, "navhard")
         common = sorted(set.intersection(*[set(u.index) for u in us]))
-        return sum(u.loc[common, ["combined", "stage1", "stage2"]].astype(float) for u in us) * 100 / len(us), us[0].loc[common, "log"]
+        return sum(u.loc[common, ["combined", "stage1", "stage2"]].astype(float) for u in us) / len(us), us[0].loc[common, "log"]   # already x 100
     A, logs = sm(sa)
     B, _ = sm(sr)
     W, _ = sm(["WA-JEPA"])
