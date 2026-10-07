@@ -398,7 +398,7 @@ def figures(out, Dt, F, T, a):
     for ax, sn in zip(axs, ("T45 (> 45 deg)", "T20 (> 20 deg)")):
         bot = np.zeros(len(a.arms))
         for c, cc, lb in parts:
-            v = np.array([T[(T.arm == k) & (T.metric == c) & (T.stratum == sn)].value.iloc[0] for k in a.arms])
+            v = np.array([F[k][c].to_numpy()[Dt.sets[sn]].mean() for k in a.arms])
             ax.bar(range(len(a.arms)), v, 0.7, bottom=bot, color=cc, label=lb)
             bot += v
         ax.set_xticks(range(len(a.arms)), a.arms, rotation=30, ha="right")
