@@ -18,11 +18,11 @@ ul{padding-left:20px}li{margin-bottom:6px}
 
 <div class="v">
 <b>核心结论（截至 2026-09 文献基线）：</b><br>
-<b>1. 预训练表征包含大量几何与运动先验，但可读性、可执行性与追加计算需求互不相属：</b>冻结视觉编码器接简单回归头（FROST-Drive）在 Waymo E2E 官方测试集上达 RFS 7.856 进入微调 VLM 中游，但其 ADE@5s 为 3.565 m（全场垫底）；人类偏好打分（RFS）高不代表几何精度高，开环拟合好更不保证闭环可纠错。<br>
+<b>1. 预训练表征包含大量几何与运动先验，但可读性、可执行性与追加计算需求互不相属：</b>冻结 InternVL3 视觉编码器接时序 adapter 与 GRU 轨迹头（FROST-Drive）在 Waymo E2E 官方测试集上达 RFS 7.856 进入微调 VLM 中游，但其 ADE@5s 为 3.565 m（全场垫底）；人类偏好打分（RFS）高不代表几何精度高，开环拟合好更不保证闭环可纠错。<br>
 <b>2. 领域演化方向是「重新分配在线与离线计算」，而非单向删除生成：</b>生成式预训练负责注入时空与几何先验；推理时通过连续 flow 动作专家（Alpamayo-R1，5 步 flow 延迟仅 99 ms）或提取早期去噪步特征（DriveLaW，t=1 特征 PDMS 89.1 vs t=10 23.2）即可省去昂贵的像素与自回归解码。文本轨迹序列化是自回归延迟主因，提速无需牺牲慢思考（reasoning）。<br>
-<b>3. 反事实配对测试暴露端到端规划器的普遍因果混淆：</b>Beyond the Leaderboard（2609.22582）对 246 个正前方行人在规划路径上的场景进行抹除，仅 1.9% 的公开模型呈现真实避让；无关光度扰动导致的轨迹偏离比真实因果干预高 2–4 倍。目前文献仅覆盖图像编辑造对，仿真物理重渲染、逐帧对齐且带特权专家两侧真值的配对训练仍属空白。<br>
-<b>4. 视频生成模型表征擅长点追踪与低层几何，直觉物理处于随机水平：</b>WAN-14B 点追踪（TAP-Vid 51.2）领先判别模型（DINOv3 41.1、V-JEPA2 33.8），但在直觉物理推理（IntPhys2）上 LTX-Video 仅 48.4（VideoMAE 73.9、V-JEPA2 66.0）；画面逼真度与物理一致性呈负相关（r = -0.46）。生成式先验是局部几何运动补丁，不能作为可靠物理动力学底座。<br>
-<b>5. 分解世界模型（Factorized WM）的新意边界明确：</b>解析自车运动学重投影（comma 2504.19077）与世界模型自车动作低估（低估 50–190 倍）已有先例；新意集中于仅学 glue 与反应残差、反应残差仅由仿真 fork 对监督、外生由工业基座微调且严禁承担自车效应、并用干预真值归因日志混淆。
+<b>3. 反事实配对测试暴露端到端规划器的普遍因果混淆：</b>Beyond the Leaderboard（2609.22582）对 246 个正前方行人在规划路径上的场景进行抹除，测试 6 个公开 checkpoint 仅 1.9% 的响应算真实主动避让；无关光度扰动导致的轨迹偏离比真实因果干预高 2–4 倍。目前文献仅覆盖图像编辑造对，仿真物理重渲染、逐帧对齐且带特权专家两侧真值的配对训练仍属空白。<br>
+<b>4. 视频生成模型表征擅长点追踪与低层几何，直觉物理处于随机水平：</b>WAN-14B 点追踪（TAP-Vid 51.2）领先判别模型（DINOv3 41.1、V-JEPA2 33.8），但在直觉物理推理（IntPhys2）上 LTX-Video 仅 48.4（VideoMAE 73.9、V-JEPA2 66.0）；画面逼真度与物理一致性呈负相关但统计上不显著（r = -0.46，p = .249）。生成式先验是局部几何运动补丁，不能作为可靠物理动力学底座。<br>
+<b>5. 分解世界模型（Factorized WM）的新意边界明确：</b>解析自车运动学重投影（comma 2504.19077）与世界模型自车动作低估（驾驶侧仅恢复 0.23–0.45 / 0.44 真实响应，非驾驶精确 fork 下响应弱 50–190 倍）已有先例；新意集中于仅学 glue 与反应残差、反应残差仅由仿真 fork 对监督、外生由工业基座微调且严禁承担自车效应、并用干预真值归因日志混淆。
 </div>
 
 <div class="subpage">
@@ -58,7 +58,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <tr><th>消融环节</th><th>实际省去了什么</th><th>不能推导出的结论</th><th>代表文献与证据</th></tr>
 <tr><td>RGB decoding</td><td>不将预测的未来 latent 还原为像素</td><td>未来预测/世界模型无用</td><td>LAW（2406.08481）辅助未来预测使 PDMS 77.5 → 84.6；DriveLaW（2512.23421）部署只缓存特征不解码</td></tr>
 <tr><td>Textual trajectory</td><td>不用自回归逐 token 输出坐标字符</td><td>推理（reasoning）无用</td><td>Alpamayo-R1（2511.00088）将自回归轨迹换成 5 步 flow 降耗 213 ms，同时保留 reasoning</td></tr>
-<tr><td>Explicit CoT</td><td>不逐步生成自然语言推理文本</td><td>长尾困难场景能力不变</td><td>AutoVLA（2506.13757）低数据量下 CoT 有益；Alpamayo-R1 reasoning 版本在困难场景提升 12%</td></tr>
+<tr><td>Explicit CoT</td><td>不逐步生成自然语言推理文本</td><td>长尾困难场景能力不变</td><td>AutoVLA（2506.13757）低数据量下 reasoning 未必有益、数据增加后带 CoT 训练策略更优（RFT 学习何时省略慢思考）；Alpamayo-R1 reasoning 版本在困难场景提升 12%</td></tr>
 <tr><td>Latent rollout</td><td>不显式单步推演未来中间环境状态</td><td>行动后果（Action Consequences）信息仍在</td><td>World4Drive（2507.00603）推理期对多意图做 rollout 打分；NTR（2605.31116）仅在训练期做 token 重建</td></tr>
 </table>
 
@@ -90,7 +90,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <tr><td>Fast-dDrive（2605.23163）</td><td>均值 1919 ms；SGLang 优化 665 ms</td><td>H100，batch=1；prefix 缓存复用</td><td>离散扩散自回归依然偏慢</td></tr>
 <tr><td>DiffAdapterVLA（2609.15322）</td><td>80.4 ms / 样本（batch wall-time 643 ms）</td><td>多 GPU 并行，<b>batch=8 均摊</b></td><td>批均摊非单请求实时延迟</td></tr>
 <tr><td>WoTE（2504.01941）</td><td>18.7 ms（K=256 词表打分）</td><td>L20；BEV 特征 + 轨迹词表打分与精修</td><td>轻量词表推理速度极快</td></tr>
-<tr><td>DiffusionDrive（2411.15139）</td><td>45 FPS（全链路 ~22 ms；去噪 7.6 ms）</td><td>RTX 4090；20 anchor + 2 步截断扩散</td><td>轻量 backbone + 截断扩散</td></tr>
+<tr><td>DiffusionDrive（2411.15139）</td><td>45 FPS；去噪 7.6 ms</td><td>RTX 4090；20 anchor + 2 步截断扩散</td><td>7.6 ms 非全流程；轻量 backbone + 截断扩散</td></tr>
 <tr><td>冻结主干极薄线性/MLP Head</td><td><b>无</b>同输入、同硬件公开数字</td><td>缺失全链路端到端测量</td><td>只测 head 会严重忽略视觉与前缀开销</td></tr>
 </table>
 
@@ -105,7 +105,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <ul>
 <li><b>Drive-JEPA（2601.22032）</b>：在相同规划器下，ImageNet ResNet-34（76.0）与 DINOv2 ViT-L（76.1）得分几乎相同；转向视频预测时空的 V-JEPA 2 ViT-L 跃升至 86.1 PDMS，专为驾驶适配的 driving JEPA 达 89.0 PDMS。视频级时空表征对轨迹预测带来质的跨越。</li>
 <li><b>DriveLaW（2512.23421）</b>：在相同 Action DiT 下，早期去噪步特征效果最好（t=1 达 89.1 PDMS，t=5 达 86.9 PDMS），而在接近最终图像的 t=10 步发生严重坍塌（23.2 PDMS）。证明宏观运动先验存在于早期高噪声状态，后期视觉细节去噪挤占或混淆了控制决策信息。</li>
-<li><b>FROST-Drive（2601.03460）</b>：冻结 InternVL3 vision encoder 在自定义验证集上达 RFS 8.17，大幅高于冻结 ImageNet ViT（7.39）；表明视觉编码器本身已具备强先验，无需 LLM 参与即可支撑高打分。</li>
+<li><b>FROST-Drive（2601.03460）</b>：冻结 InternVL3 vision encoder 接轻量 temporal adapter + GRU 轨迹头，在自定义验证集上达 RFS 8.17，大幅高于冻结 ImageNet ViT（7.39）；表明视觉编码器本身已具备强先验，无需 LLM 参与即可支撑高打分。</li>
 </ul>
 
 <h3>2. 探针七大先例与边界检查</h3>
@@ -167,7 +167,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 
 <figure>
 <img src="figs/f5_waymo_leaderboard.png" alt="Waymo E2E 榜单格局">
-<figcaption>图三：Waymo E2E 官方测试集格局（f5）。纵轴 RFS（7.5–8.05），横轴 ADE@5s（2.65–3.6 m）。FROST-Drive 凭借完全冻结的视觉编码器取得 7.856 RFS 挤入中游，但 ADE 为全场最差（3.565 m）；全模型解冻微调的紧凑模型 RAP（DINOv3-H+ 0.88B）综合表现最优；单前视视频生成器 SUV 达 7.94。</figcaption>
+<figcaption>图五：Waymo E2E 官方测试集格局（f5）。纵轴 RFS（7.5–8.05），横轴 ADE@5s（2.65–3.6 m）。FROST-Drive 凭借完全冻结的视觉编码器取得 7.856 RFS 挤入中游，但 ADE 为全场最差（3.565 m）；全模型解冻微调的紧凑模型 RAP（DINOv3-H+ 0.88B）综合表现最优；单前视视频生成器 SUV 达 7.94。</figcaption>
 </figure>
 
 <h3>2. 可核实官方测试集代表成绩</h3>
@@ -196,7 +196,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 
 <figure>
 <img src="figs/f9_evidence_ladder.png" alt="证据层级梯子">
-<figcaption>图五：自动驾驶评测证据梯子（f9）。从左至右验证难度与外部效度递增。每向右跨越一步，均须排除上一层特有的作弊或捷径机制（nuScenes 的自车历史捷径、Waymo 的 RFS 偏好平滑代理、NAVSIM 的静态地图与非交互盲区），最终到达真实闭环与扰动鲁棒性检验。</figcaption>
+<figcaption>图六：自动驾驶评测证据梯子（f9）。从左至右验证难度与外部效度递增。每向右跨越一步，均须排除上一层特有的作弊或捷径机制（nuScenes 的自车历史捷径、Waymo 的 RFS 偏好平滑代理、NAVSIM 的静态地图与非交互盲区），最终到达真实闭环与扰动鲁棒性检验。</figcaption>
 </figure>
 
 <h3>1. 基准评测梯度与可利用缺陷</h3>
@@ -237,7 +237,7 @@ Driving on Memory（2026-08）构建了一个完全不看当前相机画面的�
 <table>
 <tr><th>类型</th><th>代表工作</th><th>核心机制与数据</th><th>对自车状态的处理</th><th>真值动作标签来源</th><th>用于训练</th></tr>
 <tr><td rowspan="3">图像编辑造对</td><td>Who Make Drivers Stop（2003.02425）</td><td>删目标 tracklet + 部分卷积修复</td><td>严格一致</td><td>有（Stop/Go 分类）</td><td>否</td></tr>
-<tr><td>CoLT-Drive（2609.00242）</td><td>Gemini-3-Pro 插入罕见物体（3536 对）</td><td>严格一致</td><td>3 名标注员人工仲裁</td><td>否（明确禁止）</td></tr>
+<tr><td>CoLT-Drive（2609.00242）</td><td>Gemini-3-Pro-Image 插入罕见物体（29 个基场景 3,536 样本；配对指 v_full vs v_clean 剥离交通上下文，非事实/反事实）</td><td>严格一致</td><td>3 名标注员人工仲裁</td><td>否（明确禁止）</td></tr>
 <tr><td>Beyond the Leaderboard（2609.22582）</td><td>SAM + LaMa 删行人 + LiDAR 擦除</td><td>严格一致</td><td>无（仅测自身策略漂移）</td><td>否</td></tr>
 <tr><td rowspan="3">仿真环境配对</td><td>Fail2Drive（2604.08535）</td><td>CARLA 100 对路线，17 类 targeted shift</td><td><b>不一致</b>（闭环各自分散）</td><td>特权专家检查可解性</td><td>否（Rule 1 明确禁止）</td></tr>
 <tr><td>ICR-Drive（2604.05378）</td><td>固定 seed/天气/交通，仅改指令文本</td><td>严格一致（重放）</td><td>无</td><td>否</td></tr>
@@ -265,7 +265,7 @@ Driving on Memory（2026-08）构建了一个完全不看当前相机画面的�
 <ul>
 <li><b>DriveLaW（2512.23421）</b>：LTX-Video DiT 特征接入规划 DiT，NAVSIM navtest 取得 <b>89.1 PDMS</b>，高于 VLM 隐状态（86.5）与传统 BEV 表征（84.1）。但其 Video DiT 与 Planner 共同更新，非完全冻结；全流程耗时 0.71 秒。</li>
 <li><b>DriveWAM（2605.28544）</b>：基于 Wan2.2-TI2V-5B 全量微调，NAVSIM 达 90.1 PDMS，展现数据扩展潜力，但缺乏与 DINOv2 / SigLIP 的等参数量对照。</li>
-<li><b>DriveVA（2604.04198）</b>：唯一公开把视频生成先验推向 Bench2Drive 闭环的工作（PDMS 90.9），但基座模型未公开且缺乏判别式编码器对照。</li>
+<li><b>DriveVA（2604.04198）</b>：唯一公开把视频生成先验推向 Bench2Drive 闭环的工作（Bench2Drive 报告 L2/碰撞指标下降 52.5%/52.4%，NAVSIM 取得 90.9 PDMS），但基座模型在摘要中未点名、是否冻结未说明，且缺乏判别式编码器对照。</li>
 <li><b>完全冻结通用视频生成模型 + 薄 head</b> 在主流驾驶基准上的严格并排依然空缺。</li>
 </ul>
 
@@ -275,7 +275,7 @@ Driving on Memory（2026-08）构建了一个完全不看当前相机画面的�
 <tr><td>低层几何与稠密点追踪</td><td>DiTracker（2507.13942）点追踪评估：WAN-14B 51.2 > DINOv3-B 41.1 > DINOv2-B 40.0 > V-JEPA2 33.8（TAP-Vid 数据集）；DIFT（63.5）显著领先 DINO（45.0）</td><td><b>生成式表征显著胜出</b></td></tr>
 <tr><td>高层目标与语义理解</td><td>REPA（2410.06940）指出扩散模型线性探针远逊于 DINOv2；2502.07001 证实 1.9B 视频扩散模型的语义仍输给 300M DINOv2</td><td><b>判别式表征占优</b></td></tr>
 <tr><td>直觉物理推理（Intuitive Physics）</td><td>2606.09646 冻结探测：在 IntPhys2 基准上，VideoMAE 73.9 > V-JEPA2 66.0 > <b>LTX-Video 48.4（等同随机猜测）</b></td><td><b>生成式表征极弱甚至失效</b></td></tr>
-<tr><td>画面真实感与物理一致性</td><td>Physics-IQ（2501.09038）证实画质真实度与物理得分呈负相关（r = -0.46，Sora 物理得分为 10/100）；PhyGenBench 证实画质增强模型并不提升物理合理性</td><td><b>真实度蕴含物理动力学已被证伪</b></td></tr>
+<tr><td>画面真实感与物理一致性</td><td>Physics-IQ（2501.09038）证实画质真实度与物理得分呈负相关但统计上不显著（r = -0.46，p = .249，Sora 物理得分仅 10/100）；PhyGenBench 证实画质增强模型并不提升物理合理性</td><td><b>真实度蕴含物理动力学已被证伪</b></td></tr>
 </table>
 
 <h3>3. MiniMax H3 事实审计（2026-08 开源）</h3>
@@ -291,7 +291,7 @@ Driving on Memory（2026-08）构建了一个完全不看当前相机画面的�
 <table>
 <tr><th>机制组件</th><th>已被占领的先例与证据</th><th>大概率属于空白的新意空间</th></tr>
 <tr><td>自车效应处理（Ego Motion）</td><td>解析运动学重投影训策略（comma 2504.19077、VISTA 2.0 2111.12083、RAD 2502.13144）；几何渲染 + 生成补全（GeoDrive 2505.22421、2608.11601）</td><td><b>外生先验采用工业基础模型微调，严禁其承担自车效应；自车与外生严格正交解耦</b></td></tr>
-<tr><td>世界模型对自车动作的响应不足</td><td>comma 自述偏离 &lt;4m 仅部分复现；2608.11601 仅恢复 0.23–0.45 响应；2606.12987 仅 0.44；JEPA 动作评估（2610.02860）响应弱 50–190 倍</td><td><b>利用干预真值，将工业世界模型的低响应严格归因于日志中的 action–scene 统计混淆而非容量不足</b></td></tr>
+<tr><td>世界模型对自车动作的响应不足</td><td>comma（2504.19077，重投影模拟器自述限平移 &lt;4 m，未来锚定世界模型臂对 ±0.5 m 偏离仅部分复现）；驾驶世界模型仅恢复 0.23–0.45（2608.11601）与 0.44（2606.12987）真实响应；非驾驶 JEPA 动作评估（2610.02860）响应弱 50–190 倍</td><td><b>利用干预真值，将工业世界模型的低响应严格归因于日志中的 action–scene 统计混淆而非容量不足</b></td></tr>
 <tr><td>他车外生反应建模（Exogenous Reaction）</td><td>从日志学反应（Copilot4D、CausalDrive 2606.15341）；规则交通或简单脚本（HUGSIM、RAD）</td><td><b>学习部件仅限于 glue 与反应残差，且反应残差仅由仿真 fork 对监督</b></td></tr>
 <tr><td>闭环策略训练环境</td><td>在非分解世界模型中 RL（RoXDrive 2609.36851、OmniDreams 2606.03159）；comma 重投影模拟器</td><td><b>工业量产级端到端策略（openpilot）在分解模拟器中实现策略闭环在线训练</b></td></tr>
 </table>
