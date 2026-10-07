@@ -67,6 +67,15 @@ def _to_global(o, S):
     return g
 
 
+def LPd(p8):
+    """Raw plan, linear interpolation of [origin, 8 poses] to 0.1 s (unwrapped heading), as the hinge and opb_score's raw_out."""
+    P = np.vstack([[0, 0, 0], p8])
+    t = np.r_[0, np.arange(1, 9) * 0.5]
+    td = np.arange(0, 41) * 0.1
+    h = np.unwrap(P[:, 2])
+    return np.stack([np.interp(td, t, P[:, 0]), np.interp(td, t, P[:, 1]), np.interp(td, t, h)], -1)
+
+
 def _work_proxy(token):
     import lzma
     import pickle
@@ -89,6 +98,9 @@ def _work_proxy(token):
                steer0_mc=float(es.tire_steering_angle))
     cd = state_array_to_coords_array(dev[None], vp)[0][:, :4]                                  # (41, 4, 2)
     out["dev_out"] = not am.points_in_polygons(cd[None])[idc].any(0)[0].all()
+    raw = LPd(p8)
+    cr = state_array_to_coords_array(_to_global(o, raw)[None], vp)[0][:, :4]
+    out["raw_out"] = not am.points_in_polygons(cr[None])[idc].any(0)[0].all()
     for k in ("tab", "mcin"):
         g = _to_global(o, W[k][token])
         cp = state_array_to_coords_array(g[None], vp)[0][:, :4]
@@ -106,7 +118,7 @@ def cmd_proxy(a):
     import lqr_proxy as LP
     from jevdrive.run import Run
     with Run("op_parity", "replay_hinge-proxy", seed=0, config=vars(a)) as run:
-        z = np.load(P2H)
+        z = np.load(a.plans or P2H)
         cp = {Path(p).parent.name: str(Path(p).relative_to(MC)) for p in glob.glob(str(MC / "*/*/*/metric_cache.pkl"))}
         tab = np.load(TAB)
         tp = {t: i for i, t in enumerate(tab["names"].tolist())}
@@ -143,8 +155,12 @@ def cmd_proxy(a):
         df["v0_tab"], df["a0_tab"] = v0.numpy(), a0.numpy()
         off = pd.read_csv(sorted(P2H_CSV.glob("*/*.csv"))[-1])
         off = off[~off.token.astype(str).str.startswith(("average", "extended"))].set_index("token")
-        df["dac_official"] = off.loc[df.token, "drivable_area_compliance"].to_numpy()
         OUT.mkdir(parents=True, exist_ok=True)
+        if a.name:                                                                   # geometry pass on another model's plans: no gate
+            df.to_parquet(OUT / f"geom_{a.name}.parquet")
+            run.info(df[["dev_out", "raw_out", "tab_out"]].mean().to_string())
+            return
+        df["dac_official"] = off.loc[df.token, "drivable_area_compliance"].to_numpy()
         df.to_parquet(OUT / "proxy.parquet")
         rng = np.random.default_rng(0)
         gate = np.zeros(len(df), bool)
@@ -170,7 +186,7 @@ def cmd_proxy(a):
         (RES / "proxy.json").write_text(json.dumps(summ, indent=1))
         run.summary.update(summ)
         run.info(json.dumps(summ, indent=1))
-    if not summ["verdict"]["pass_"]:
+    if not a.name and not summ["verdict"]["pass_"]:
         sys.exit("proxy validation failed: the prereg stops here")
 
 
@@ -381,6 +397,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("proxy")
+    p.add_argument("--plans", default="", help="plans npz (tokens, poses); default P2H10-F-s0 navtest")
+    p.add_argument("--name", default="", help="geometry pass only: write geom_<name>.parquet, no validation summary")
     p.add_argument("--procs", type=int, default=48)
     p.add_argument("--limit", type=int, default=0)
     p = sp.add_parser("train")
