@@ -125,9 +125,8 @@ def cmd_report(a):
     idx_r = [np.flatnonzero(codes_r == k) for k in range(len(ur))]
     idx_a = [np.flatnonzero(codes_a == k) for k in range(len(ua))]
     rng = np.random.default_rng(0)
-    draws = [rng.integers(len(ur), size=len(ur)) for _ in range(B)]                 # both sets cover the same 479 sequences
-    assert set(ur) == set(ua)
-    pos = {u: k for k, u in enumerate(ua)}
+    draws = [rng.integers(len(ur), size=len(ur)) for _ in range(B)]                 # RFS: the rater sequences
+    draws_a = [rng.integers(len(ua), size=len(ua)) for _ in range(B)]               # ADE: every sequence of rater + extra frames
     rfs_f = lambda f, i: W.rfs_by_cluster(f[i], cl[i])[0]                          # noqa: E731
 
     def boot_rfs(fa, fb, mask=None):
@@ -141,8 +140,8 @@ def cmd_report(a):
 
     def boot_mean(da, db, mask=None):
         out = []
-        for d in draws:
-            i = np.concatenate([idx_a[pos[ur[k]]] for k in d])
+        for d in draws_a:
+            i = np.concatenate([idx_a[k] for k in d])
             if mask is not None:
                 i = i[mask[i]]
             out.append(da[i].mean() - db[i].mean())
