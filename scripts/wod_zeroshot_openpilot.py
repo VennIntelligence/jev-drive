@@ -101,6 +101,8 @@ def main():
     ap.add_argument("--workers", type=int, default=12)
     ap.add_argument("--onnx", default="", help="serving ONNX of an adapted Cinque (op_l_onnx.py); runs only it, preds/op_cinque_<tag>/")
     ap.add_argument("--tag", default="", help="with --onnx: the prediction directory suffix and TensorRT cache key")
+    ap.add_argument("--bias", default="", help="with --onnx: npz {names, bias (n, 32, 512) fp16} of the `intent_bias` input per target frame "
+                    "(op_parity P2H: experiments/op_parity/scripts/pp_wod.py bias); held for every step of that target")
     a = ap.parse_args()
     from jevdrive.openpilot.model import T_IDXS, OPModel, decode
     from jevdrive.common import data_dir
@@ -123,6 +125,12 @@ def main():
         models = {a.models[0]: OPModel(a.onnx, MODELS["cinque"], cache=data_dir() / "runs" / "op_interp" / "trt_cache" / f"cinque-{a.tag}-trt")}
     else:
         models = {k: OPModel(k, MODELS[k], context_rate=(k == "lebowski")) for k in a.models}
+    bias = None
+    if a.bias:
+        assert a.onnx, "--bias needs --onnx"
+        z = np.load(a.bias)
+        bias = dict(zip(z["names"].astype(str).tolist(), z["bias"]))
+        assert all(n in bias for n in todo), "bias file misses targets"
     log.info(f"{len(todo)} targets, models {list(models)}, {a.workers} decode workers")
     t0, tm, n = time.time(), {k: 0.0 for k in models}, 0
     shard_dir = data_dir() / "datasets" / "waymo_e2e" / "front3"
@@ -131,6 +139,8 @@ def main():
             seq = name.rsplit("-", 1)[0]
             dev = np.array(op_calib[seq]["1"]["extrinsic"]).reshape(4, 4)[:2, 3]
             for k, m in models.items():
+                if bias is not None:
+                    m.extra["intent_bias"] = bias[name][None].astype(np.float16)
                 t = time.perf_counter()
                 wod, d = run_one(m, name, names, frames, dev, T_IDXS, decode)
                 tm[k] += time.perf_counter() - t
