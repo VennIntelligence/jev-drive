@@ -102,3 +102,10 @@ Under the `spec` preset (decision 118's lateral path) on the 10 + 19 decision-11
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded
 experiment, `results/` small result files, `figs/` figures, `plans/` live plan notes. Refresh the file list and
 INDEX.md with `python tools/topic_index.py`.
+
+**Representation fix (2026-10-07, pre-registered, stage 0 + stage 1; stage 2 needs review).** Offline thin decoders on all 3 154 navtest turns > 20 deg:
+WA-JEPA's NAVSIM-fine-tuned front tokens (WA-Cf, a diagnostic upper bound, not a method) added to Cinque's cut DAC failures 10.59% -> 6.37%; the
+original frozen V-JEPA 2.1 ViT-L closes only 0.35 of that (gate 0.5, fails; alone it is no better than Cinque), Cinque's own pre-head map 0.14.
+Policy pilot (s2-s4, 2 seeds): P2H + WA-Cf as adapter memory passes every criterion: navtest EPDMS +0.95 [+0.47, +1.37], turn DAC failures
+-1.33 pp, NC + TTC -0.63 pp. Reading: the gain needs a NAVSIM-supervised encoder; next is distillation into Cinque's whole encoder with WA-Cf as the
+teacher. [results/representation.md](results/representation.md), plan [plans/2026-10-07-representation-design.md](plans/2026-10-07-representation-design.md).

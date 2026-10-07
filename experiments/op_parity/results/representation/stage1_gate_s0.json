@@ -1,0 +1,25 @@
+{
+ "MW": {
+  "T20 DAC fail %": {
+   "arm": 8.465440710209258,
+   "ref": 9.543436905516804,
+   "diff": -1.0779961953075459,
+   "lo": -2.1502103245035182,
+   "hi": 0.106193285143792,
+   "n": 3154
+  },
+  "EPDMS": {
+   "arm": 88.91008356390329,
+   "ref": 87.93027262631301,
+   "diff": 0.9798109375902518,
+   "lo": 0.4945684789645953,
+   "hi": 1.403608457746721,
+   "n": 12146
+  },
+  "continue": true
+ },
+ "rule": "stop an arm if its seed-0 T20 DAC failure drop vs H0-s0 < 0.4 pp or its navtest EPDMS diff < 0; stop the line if no arm continues",
+ "continue": [
+  "MW"
+ ]
+}
