@@ -1,0 +1,81 @@
+{
+ "seed_spread_epdms": 0.055149130296085855,
+ "seed_diff_epdms": 0.055149130296085855,
+ "winners": [],
+ "best": null,
+ "arms": {
+  "SC-L10M25-F-s0": {
+   "lam": 10,
+   "margin": 0.25,
+   "W1": false,
+   "W2": true,
+   "W3": false,
+   "win": false,
+   "epdms_diff": -0.5076275188400091
+  },
+  "SC-L10M50-F-s0": {
+   "lam": 10,
+   "margin": 0.5,
+   "W1": false,
+   "W2": false,
+   "W3": false,
+   "win": false,
+   "epdms_diff": -0.444951384687708
+  },
+  "SC-L10M100-F-s0": {
+   "lam": 10,
+   "margin": 1.0,
+   "W1": false,
+   "W2": false,
+   "W3": false,
+   "win": false,
+   "epdms_diff": 0.04694528305525637
+  },
+  "SC-L30M25-F-s0": {
+   "lam": 30,
+   "margin": 0.25,
+   "W1": false,
+   "W2": true,
+   "W3": false,
+   "win": false,
+   "epdms_diff": -0.335292112909448
+  },
+  "SC-L30M100-F-s0": {
+   "lam": 30,
+   "margin": 1.0,
+   "W1": false,
+   "W2": false,
+   "W3": true,
+   "win": false,
+   "epdms_diff": 0.3241640896509484
+  },
+  "SC-L100M25-F-s0": {
+   "lam": 100,
+   "margin": 0.25,
+   "W1": false,
+   "W2": false,
+   "W3": true,
+   "win": false,
+   "epdms_diff": -0.026943702488051488
+  },
+  "SC-L100M50-F-s0": {
+   "lam": 100,
+   "margin": 0.5,
+   "W1": false,
+   "W2": false,
+   "W3": true,
+   "win": false,
+   "epdms_diff": 0.146840995900169
+  },
+  "SC-L100M100-F-s0": {
+   "lam": 100,
+   "margin": 1.0,
+   "W1": false,
+   "W2": false,
+   "W3": true,
+   "win": false,
+   "epdms_diff": -0.7058816344026296
+  }
+ },
+ "rule": "W1 99.38% lower > 0 and diff >= |SHP s1 - s0|; W2 straight EPDMS & EP diff >= -0.2 and 95% hi >= 0; W3 raw-plan out all diff <= 0"
+}

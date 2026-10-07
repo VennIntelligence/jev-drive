@@ -1,0 +1,111 @@
+arm,metric,n,value
+SC-L10M25-F-s0,EPDMS all,12146,87.9474
+SC-L10M25-F-s0,EPDMS straight (< 5 deg),6400,92.5964
+SC-L10M25-F-s0,EP all,12146,87.0140
+SC-L10M25-F-s0,EP straight,6400,88.7155
+SC-L10M25-F-s0,raw-plan out % (all),12146,4.0178
+SC-L10M25-F-s0,replay out % (all),12146,4.2401
+SC-L10M25-F-s0,DAC fail % (all),12146,4.2401
+SC-L10M25-F-s0,raw-plan out % (> 20 deg),3154,8.9727
+SC-L10M25-F-s0,inside-cut % (> 45 deg),1517,4.0870
+SC-L10M25-F-s0,cannot-make-turn % (> 45 deg),1517,4.6144
+SC-L10M25-F-s0,inside-cut % (> 20 deg),3154,5.0095
+SC-L10M50-F-s0,EPDMS all,12146,88.0101
+SC-L10M50-F-s0,EPDMS straight (< 5 deg),6400,92.5465
+SC-L10M50-F-s0,EP all,12146,87.0127
+SC-L10M50-F-s0,EP straight,6400,88.7218
+SC-L10M50-F-s0,raw-plan out % (all),12146,3.5979
+SC-L10M50-F-s0,replay out % (all),12146,4.1166
+SC-L10M50-F-s0,DAC fail % (all),12146,4.1166
+SC-L10M50-F-s0,raw-plan out % (> 20 deg),3154,7.9581
+SC-L10M50-F-s0,inside-cut % (> 45 deg),1517,3.8893
+SC-L10M50-F-s0,cannot-make-turn % (> 45 deg),1517,5.0758
+SC-L10M50-F-s0,inside-cut % (> 20 deg),3154,4.7559
+SC-L10M100-F-s0,EPDMS all,12146,88.5020
+SC-L10M100-F-s0,EPDMS straight (< 5 deg),6400,92.5859
+SC-L10M100-F-s0,EP all,12146,87.0156
+SC-L10M100-F-s0,EP straight,6400,88.7150
+SC-L10M100-F-s0,raw-plan out % (all),12146,3.0874
+SC-L10M100-F-s0,replay out % (all),12146,3.5650
+SC-L10M100-F-s0,DAC fail % (all),12146,3.5650
+SC-L10M100-F-s0,raw-plan out % (> 20 deg),3154,6.5314
+SC-L10M100-F-s0,inside-cut % (> 45 deg),1517,3.9552
+SC-L10M100-F-s0,cannot-make-turn % (> 45 deg),1517,4.6144
+SC-L10M100-F-s0,inside-cut % (> 20 deg),3154,4.0583
+SC-L30M25-F-s0,EPDMS all,12146,88.1197
+SC-L30M25-F-s0,EPDMS straight (< 5 deg),6400,92.5683
+SC-L30M25-F-s0,EP all,12146,86.9632
+SC-L30M25-F-s0,EP straight,6400,88.7198
+SC-L30M25-F-s0,raw-plan out % (all),12146,3.4415
+SC-L30M25-F-s0,replay out % (all),12146,3.8861
+SC-L30M25-F-s0,DAC fail % (all),12146,3.8861
+SC-L30M25-F-s0,raw-plan out % (> 20 deg),3154,7.4826
+SC-L30M25-F-s0,inside-cut % (> 45 deg),1517,4.0211
+SC-L30M25-F-s0,cannot-make-turn % (> 45 deg),1517,4.5485
+SC-L30M25-F-s0,inside-cut % (> 20 deg),3154,4.5973
+SHP-F-s0,EPDMS all,12146,88.4550
+SHP-F-s0,EPDMS straight (< 5 deg),6400,92.7280
+SHP-F-s0,EP all,12146,86.9732
+SHP-F-s0,EP straight,6400,88.7042
+SHP-F-s0,raw-plan out % (all),12146,2.9639
+SHP-F-s0,replay out % (all),12146,3.6802
+SHP-F-s0,DAC fail % (all),12146,3.6802
+SHP-F-s0,raw-plan out % (> 20 deg),3154,6.2777
+SHP-F-s0,inside-cut % (> 45 deg),1517,3.9552
+SHP-F-s0,cannot-make-turn % (> 45 deg),1517,4.2848
+SHP-F-s0,inside-cut % (> 20 deg),3154,4.3437
+SC-L30M100-F-s0,EPDMS all,12146,88.7792
+SC-L30M100-F-s0,EPDMS straight (< 5 deg),6400,92.4204
+SC-L30M100-F-s0,EP all,12146,86.8725
+SC-L30M100-F-s0,EP straight,6400,88.5818
+SC-L30M100-F-s0,raw-plan out % (all),12146,2.4041
+SC-L30M100-F-s0,replay out % (all),12146,2.9063
+SC-L30M100-F-s0,DAC fail % (all),12146,2.9063
+SC-L30M100-F-s0,raw-plan out % (> 20 deg),3154,5.0412
+SC-L30M100-F-s0,inside-cut % (> 45 deg),1517,3.8233
+SC-L30M100-F-s0,cannot-make-turn % (> 45 deg),1517,3.8893
+SC-L30M100-F-s0,inside-cut % (> 20 deg),3154,3.5510
+SC-L100M25-F-s0,EPDMS all,12146,88.4281
+SC-L100M25-F-s0,EPDMS straight (< 5 deg),6400,92.6960
+SC-L100M25-F-s0,EP all,12146,86.7826
+SC-L100M25-F-s0,EP straight,6400,88.6043
+SC-L100M25-F-s0,raw-plan out % (all),12146,2.8569
+SC-L100M25-F-s0,replay out % (all),12146,3.4909
+SC-L100M25-F-s0,DAC fail % (all),12146,3.4909
+SC-L100M25-F-s0,raw-plan out % (> 20 deg),3154,5.9924
+SC-L100M25-F-s0,inside-cut % (> 45 deg),1517,3.7574
+SC-L100M25-F-s0,cannot-make-turn % (> 45 deg),1517,4.0870
+SC-L100M25-F-s0,inside-cut % (> 20 deg),3154,4.1535
+SC-L100M50-F-s0,EPDMS all,12146,88.6019
+SC-L100M50-F-s0,EPDMS straight (< 5 deg),6400,92.4189
+SC-L100M50-F-s0,EP all,12146,86.7237
+SC-L100M50-F-s0,EP straight,6400,88.4627
+SC-L100M50-F-s0,raw-plan out % (all),12146,2.6099
+SC-L100M50-F-s0,replay out % (all),12146,3.1533
+SC-L100M50-F-s0,DAC fail % (all),12146,3.1533
+SC-L100M50-F-s0,raw-plan out % (> 20 deg),3154,5.2632
+SC-L100M50-F-s0,inside-cut % (> 45 deg),1517,3.7574
+SC-L100M50-F-s0,cannot-make-turn % (> 45 deg),1517,3.8233
+SC-L100M50-F-s0,inside-cut % (> 20 deg),3154,3.7413
+SC-L100M100-F-s0,EPDMS all,12146,87.7491
+SC-L100M100-F-s0,EPDMS straight (< 5 deg),6400,90.5949
+SC-L100M100-F-s0,EP all,12146,86.6983
+SC-L100M100-F-s0,EP straight,6400,88.6080
+SC-L100M100-F-s0,raw-plan out % (all),12146,2.3053
+SC-L100M100-F-s0,replay out % (all),12146,2.4452
+SC-L100M100-F-s0,DAC fail % (all),12146,2.4452
+SC-L100M100-F-s0,raw-plan out % (> 20 deg),3154,4.3120
+SC-L100M100-F-s0,inside-cut % (> 45 deg),1517,3.1641
+SC-L100M100-F-s0,cannot-make-turn % (> 45 deg),1517,3.7574
+SC-L100M100-F-s0,inside-cut % (> 20 deg),3154,3.1072
+SHP-F-s1,EPDMS all,12146,88.5102
+SHP-F-s1,EPDMS straight (< 5 deg),6400,92.7001
+SHP-F-s1,EP all,12146,87.0191
+SHP-F-s1,EP straight,6400,88.7199
+SHP-F-s1,raw-plan out % (all),12146,2.9722
+SHP-F-s1,replay out % (all),12146,3.6308
+SHP-F-s1,DAC fail % (all),12146,3.6308
+SHP-F-s1,raw-plan out % (> 20 deg),3154,6.2777
+SHP-F-s1,inside-cut % (> 45 deg),1517,4.2848
+SHP-F-s1,cannot-make-turn % (> 45 deg),1517,4.0870
+SHP-F-s1,inside-cut % (> 20 deg),3154,4.2486
