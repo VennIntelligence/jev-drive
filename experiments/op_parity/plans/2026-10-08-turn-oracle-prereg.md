@@ -72,3 +72,37 @@ EPDMS；DAC 失败率（全体 / T20 / T45）；**T45 切内角率** = T45 token
 
 视觉分支 = 解冻后段视觉 + 可行驶边界辅助 loss 的 pilot；plan-head 分支 = 先便宜诊断（decoder 的 anchor / 低曲率先验、0.25 anchor 蒸馏行、时域权重、假设选择），再对最优候选做一个 pilot；
 「两者」= 先视觉 pilot，再最便宜的 plan-head 干预。结果指向别处则停下报告。
+
+---
+
+## Step 2 补充登记：plan-head 分支（2026-10-08，Step 1 读完之后、Step 2 任何读数之前写定）
+
+**Step 1 结果**（seed 0）：OG 对 OS 的 T45 切内角闭合 −0.08 [−0.19, +0.02]，T20 DAC 失败 +0.29 pp，按闸门为明确阴性，规则判「plan head」。
+但 OG 屏蔽 memory 后读数不变（EPDMS +0.02），dev ADE OG / OS / PW / PV 都是 0.61（H0 0.62，MW 0.42）：plan 通路根本没去读 SDF token。
+所以 Step 1 没有分开「给了好几何也不用」和「这种编码经 adapter 在 3 000 步内学不会」。Step 2 先把这个分开，再做 pilot。
+
+**已定论、不重测的 head 侧项**：转弯 token 关 anchor 行（第 154 条 T2）、后段横向加权（154 T3）、转弯平衡采样（154 T1）、曲率 / 航向增益封顶（第 148 条第 5 点：斜率 0.94、不封顶）。
+「假设选择」不适用：Cinque 的 plan 输出是单假设（495 个均值 + 495 个方差）。因此本分支剩下的问题是 plan 通路**能不能、在什么条件下**用上正确几何。
+
+### Stage A：fresh head 上限（离线，不动 P2）
+
+第 147 / 160 条的 thin decoder（`rep.py decode` 的同一网络、同一 hinge 循环、4 000 步、λ 10、margin 0.3、seed 0），输入 z-score 后拼接：
+`V` = [Cinque view_39, E]（复现第 160 条 Stage 0 的 T20 DAC 失败 10.59%，作为实现校验，差 > 0.5 pp 则先查错）；`V+G` = [V, 真值 1 m SDF raster（3 072 维）, E]；
+`V+S` = [V, 置换到别的 log 的 SDF raster, E]（匹配对照）；`G` = [真值 SDF raster, E]（只有几何）。
+读数：navtest 全部 T20 token（3 154 个）的 DAC 失败率、T45 切内角率、转不过去率；DAC 用 `jevdrive.bench score-poses`（官方路径）并与 four_dirs 回放核对，侧别来自回放。
+**判读**：c_A = 1 − Q(V+G) / Q(V+S)（T45 切内角率）。c_A ≥ 0.5 且差的 CI 不含 0 → 真值几何对一个新 head 是可用的，Step 1 的阴性落在 P2 通路 / 注入方式上（「没读进去」）；
+c_A < 0.25 → 新 head 拿到真值几何 + hinge 也避不开切内角，问题在目标 / 输出参数化（8 个原始位姿的 hinge、模仿目标本身），与视觉、与 P2 head 的先验都无关；其间 → 部分。
+
+### Stage B：P2 通路上的便宜干预（seed 0，各自带匹配的置换对照，读数与 Step 1 相同）
+
+| 对 | 改动（其余同 Step 1 的 OG / OS） | 检验的解释 |
+|:--|:--|:--|
+| B1 `OG9 / OS9` | 9 000 步（3 倍） | 学得慢：adapter 输出零初始化 + 几何带来的模仿梯度弱，3 000 步不够 |
+| B2 `OGh / OSh` | hinge λ 30、margin 0.5 | 目标不要求：λ 10 / 0.3 m 的 hinge 项只有模仿项的 ~5%，head 没有理由去读几何 |
+
+各对的读数：T45 切内角闭合（OG? 对 OS?）、T20 DAC 失败差、S5 EPDMS、memory-off 读数（通道是否被用）。
+**选优与 pilot**：闭合点估计最大、且 ≥ 0.25、且 T20 DAC 失败下降 ≥ 0.4 pp 的那一对为最优候选，补 seed 1（唯一的一个 pilot），按 2-seed 均值用 Step 1 的阈值判
+（≥ 0.5 且 CI 不含 0 = 「给对条件，plan 通路能用真值几何消掉一半以上切内角」；< 0.25 = 不能）。两对都不到 0.25 → 不做 pilot，停下报告：
+在 adapter memory 通道上，P2 plan 通路在这些便宜变化下都不用真值几何；Stage A 说明信息本身可不可用。
+不在本分支内、不做：新的注入结构（卷积编码器、把几何接进 ego MLP）、解冻视觉、全量训练、HUGSIM。结果若指向这些，停下报告。
+预算：Stage A 约 0.1 卡时 + CPU 打分；Stage B 约 0.6 卡时 + 4–6 次 navtest；pilot 约 0.3 卡时。
