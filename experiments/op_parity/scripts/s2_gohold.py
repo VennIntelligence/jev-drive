@@ -518,14 +518,17 @@ def cmd_report(a):
                         "joint share": row["d needs joint"] / row["d joint"] if row["d joint"] > 1e-9 else np.nan,
                         "share of gap to top-rated closed": row["d joint"] / (row["RFS top-rated"] - row["RFS WP2"])}
                 brow.append(row)
-        o1w, o2w = (np.mean([C.rfs(along(p, arc(top))) for p in P["WP2"]], 0), np.mean([C.rfs(along(top, arc(p))) for p in P["WP2"]], 0))
+        o1s, o2s = [C.rfs(along(p, arc(top))) for p in P["WP2"]], [C.rfs(along(top, arc(p))) for p in P["WP2"]]
+        o1w, o2w = np.mean(o1s, 0), np.mean(o2s, 0)
+        eith = np.mean([np.maximum(np.maximum(o1s[s_], o2s[s_]), bw[s_]) for s_ in (0, 1)], 0)       # the better of the two swaps or the plan, per frame
         for sn, m in BST.items():                                                 # continuous references (decision 164): top-rated speed / path / trajectory
             row = {"set": "reference: top-rated trajectory (continuous, privileged)", "M": np.nan, "stratum": sn, "n": int(m.sum()), "RFS WP2": C.cm(base["WP2"], m),
                    "RFS top-rated": C.cm(s_top, m), "RFS best of set alone": C.cm(s_top, m), "RFS best of set U WP2": C.cm(s_top, m)}
-            for k, d in (("joint", s_top - base["WP2"]), ("lon only", o1w - base["WP2"]), ("lat only", o2w - base["WP2"])):
+            for k, d in (("joint", s_top - base["WP2"]), ("lon only", o1w - base["WP2"]), ("lat only", o2w - base["WP2"]), ("either", eith - base["WP2"]),
+                         ("needs joint", s_top - eith)):
                 c = C.ci(d, m)
                 row |= {f"d {k}": c[0], f"d {k} lo": c[1], f"d {k} hi": c[2]}
-            row |= {"lon share": row["d lon only"] / row["d joint"], "lat share": row["d lat only"] / row["d joint"]}
+            row |= {"lon share": row["d lon only"] / row["d joint"], "lat share": row["d lat only"] / row["d joint"], "joint share": row["d needs joint"] / row["d joint"]}
             brow.append(row)
         stats.write_table(brow, OUT / "select_oracle")
         bd = pd.DataFrame(brow)
