@@ -278,7 +278,32 @@ HUGSIM 上没有设成功判据：64 个场景的 CI 半宽约 ±0.08，统计�
 
 ### 6.4 结果
 
-（空）
+（空；结果见 [results/representation.md](../results/representation.md)）
+
+### 6.5 声明的偏离（2026-10-07 执行时写入，stage 0 打分之前；阈值一律不变）
+
+代码：`scripts/rep.py`（vj21 / x4 / decode / mem / report）、`scripts/rep_chain.sh`（stage 0 链）。
+
+1. **VJ21 权重来源。** 直链 `dl.fbaipublicfiles.com/vjepa2/vjepa2_1_vitl_dist_vitG_384.pt` 实为 5.15 GB（稿里估 1.2 GB，含 predictor / opt）。
+   用 WA-JEPA 自己的 loader（`_select_checkpoint_state` 的键序 target_encoder → ema_encoder → encoder）载入，实际取 `ema_encoder`；
+   302 个 encoder 张量全部来自该文件（loaded_numel_ratio 1.0000，没有一个保留 WA 的值）。冒烟时已验证。
+2. **等价检查的精度。** 前视路径与缓存的 WA-Cf 都在 bf16 autocast 下（缓存就是 bf16 批量前向）；12 帧 clip（未来帧置零）+ predict_trajectory 的
+   history-token mask，单视角送进 encoder（视角间本来没有 attention）。行取 `lb_navtest.s0of3` 缓存分片的前 200 行。64 行冒烟：cos 均值 0.99990。
+3. **S5 护栏的读法。** 「S5 上失败率」按总体率读：V 与 V+VJ21 在全部 6 400 个 < 5° token 上打分（与 T20 同一做法），不用分层估计。
+4. **打分分三批。** T20（3 154）× {E, V, WA, V+WA, VJ21, V+VJ21, X4}；eval_tokens 中不在 T20 的 × {V, WA, V+VJ21}（复现检查用）；
+   S5 中其余 token × {V, V+VJ21}。可选臂 VJ21 原始 1024 维照样训练、出 poses，但不打分（省约 3 k 次 pdm_score）；Drive-JEPA 臂不做（未下载）。
+5. **复现检查的 T20 分层估计**按第 1 节的权重：eval_tokens ∩ T20，PP 行权重 n_PP / n_PP 已打分（11 494 / 1 500），F / R / FF 权重 1。
+6. **X4 的布局。** `conv2d_36` 的 t0 槽（W 协议，pp_unfreeze 的渲染路径，只算 t0 那一对图）存为 (2048, 4, 8)，进 decoder 前转成 32 格 × 2048 再展平；
+   等价检查：冻结的 stage 4 + head 作用在它上面，与 W front 缓存的 t0 槽 `view_39` 比，平均绝对差 ≤ 2% RMS（冒烟：0.0009 对 RMS 1.7）。
+7. **路口前瞻探针的配方**（稿里只说 logistic）：[X, E] 在每折训练行上 z-score，全批 AdamW 400 步（lr 1e-2），L2 罚 1e-3·|w|²，固定不调；
+   按 log 5 折（随机种子 0）；AUC 的 CI 用 log 聚类 bootstrap（B 2000）。只报告，臂为 E / V / WA / VJ21 / X4。
+8. **P2H D1 ∪ D2 失败集上的份额**（只报告）：four_dirs 的 D1 / D2 含 < 20° 的弯道 token，而 stage 0 只在 T20 上给每个臂打分；
+   这里改读「P2H10 两个 seed 任一在 T20 上 DAC 失败的 token」上各臂的失败份额，注明选择偏差。
+9. **Stage 1 的 memory 实现。** `pp_train.py --mem wa_cf|vj21`（新加的参数，不改其他 lane 的参数）：臂名记为 `P2+wa_cf` / `P2+vj21`，
+   adapter 的 side 通道 n_cam = n_t = 1；每行 p = 0.25 丢 memory 的随机数走独立的 rng 流，所以 H0 / MW / MV 的行序、anchor 行完全相同。
+   memory bank 按 tab 的 names 对齐成 `runs/op_parity/mem/<kind>/<data>.npy`。navtest 打分走 `jevdrive.bench`（plans 阶段把 memory 传进去）；
+   「测试时 memory 置零」用 bench 已有的 `:noside` 选项（对 memory 臂就是把 memory 整个 mask 掉）。split 注册为
+   `navsim/op-parity-s234-train@v1:08fc1d5edd65`（25 415）与 `navsim/op-parity-s234-dev@v1:542e3107daf9`（408）。
 
 ## 7. 限定与未决问题
 

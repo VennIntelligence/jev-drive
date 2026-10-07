@@ -1,0 +1,15 @@
+{
+ "dataset": "navsim",
+ "name": "op-parity-s234-train",
+ "version": 1,
+ "unit": "token",
+ "n": 25415,
+ "sha256": "08fc1d5edd6565311ca6a790b64ce26d957a7a098011fc5be15e77cec01b5a55",
+ "origin": "navtrain_full shards s2-s4 of 12 (runs/op_parity/cache/navtrain_full.s{2,3,4}of12/tab.npz names) minus navsim/op-parity-full-dev@v1:5bc2ea279171; = opb_probe.train_tokens(False) train rows",
+ "used_by": [
+  "experiments/op_parity/plans/2026-10-07-representation-design.md (stage 1)"
+ ],
+ "status": "frozen",
+ "notes": "representation-fix stage 1 pilot (H0 / MW / MV): the token set the stage-0 decoders and the cached WA-Cf cover",
+ "members_file": "op-parity-s234-train.v1.txt.gz"
+}
