@@ -650,8 +650,8 @@ def cmd_figs(a):
     feats = [f for f in ARMS if f in set(df.features)]
     col = {"a": "#7f7f7f", "b": "#1f77b4", "c": "#d62728"}
     # ---- 1. out-of-fold gain per arm (ridge head), in-sample next to it
-    fig, axs = plt.subplots(1, 3, figsize=(15, 4.6), sharey=True)
-    for ax, sn in zip(axs, ("all", "stopped", "moving")):
+    fig, axs = plt.subplots(1, 5, figsize=(24, 4.6), sharey=True)
+    for ax, sn in zip(axs, ("all", "stopped", "moving", "turn", "straight")):
         g = df[(df.stratum == sn) & (df["head"] == "L")]
         for i, f in enumerate(feats):
             for j, sup in enumerate("abc"):
@@ -667,7 +667,7 @@ def cmd_figs(a):
         ax.axhline(o, color="g", ls="--", lw=1)
         ax.text(len(feats) - 0.5, o, f"F20 oracle {o:+.2f}", color="g", ha="right", va="bottom", fontsize=8)
         ax.set_xticks(range(len(feats)), feats, rotation=30, ha="right", fontsize=8)
-        ax.set_title(f"{sn} (n {int(g.n.iloc[0])})", fontsize=10)
+        ax.set_title(f"{sn} (n {int(g.n.iloc[0])})" + {"turn": ": left / right intent", "straight": ": straight intent"}.get(sn, ""), fontsize=10)
         ax.grid(alpha=0.3, axis="y")
     axs[0].set_ylabel("RFS of the selected candidate - WP2")
     h = [plt.Line2D([], [], marker="o", ls="", color=col[k]) for k in "abc"] + [plt.Line2D([], [], marker="x", ls="", color="0.4")]
@@ -710,7 +710,7 @@ def cmd_figs(a):
     sel = [(int(i), "gain") for i in o[:4]] + [(int(i), "loss") for i in o[::-1][:4]]
     jb = T.first(Bd.J[0])
     t2, C = Z.root("t2_jpg"), Bd.C
-    fig, axs = plt.subplots(4, 4, figsize=(17, 17), gridspec_kw={"width_ratios": [1, 1.25, 1, 1.25]})
+    fig, axs = plt.subplots(4, 4, figsize=(17, 19), gridspec_kw={"width_ratios": [1, 1.25, 1, 1.25], "hspace": 0.42})
     rows = []
     for q, (i, why) in enumerate(sel):
         r, c = q % 4, (q // 4) * 2
@@ -738,11 +738,11 @@ def cmd_figs(a):
         ax.set_ylim(-0.05 * max(3.0, allp[:, 0].max()), 1.1 * max(3.0, allp[:, 0].max()))
         ax.plot(0, 0, "k*", ms=9)
         ax.grid(alpha=0.3)
-        ax.legend(fontsize=6.5, loc="upper center", bbox_to_anchor=(0.5, -0.06), frameon=False, ncol=2)
+        ax.legend(fontsize=6.5, loc="upper center", bbox_to_anchor=(0.5, -0.08), frameon=False, ncol=2)
         rows.append({"panel": f"{why} {q % 4 + 1}", "frame": Bd.names[i], "cluster": Bd.cluster[i], "v0": Bd.v0[i], "head pick": name(picks[i]), "oracle pick": name(jb[i]),
                      "RFS WP2": Bd.J[0][KEEP, i], "RFS head": Bd.J[0][picks[i], i], "RFS oracle": Bd.J[0][jb[i], i], "rater scores": " ".join(f"{x:.0f}" for x in C.sc[i][order])})
     fig.suptitle(f"Arm {arm}, supervision b, ridge head (out-of-fold picks of repeat 0, WP2 seed 0): left block = 4 largest gains, right block = 4 largest losses.\n"
-                 "FRONT camera at t0; BEV: ego at the star heading up, lateral axis stretched, grey = the 20 candidates, markers at 3 s and 5 s", fontsize=10, y=0.9)
+                 "FRONT camera at t0; BEV: ego at the star heading up, lateral axis stretched, grey = the 20 candidates, markers at 3 s and 5 s", fontsize=10, y=0.925)
     fig.savefig(T.FIG / "03_frames.png", dpi=95, bbox_inches="tight")
     plt.close(fig)
     pd.DataFrame(rows).to_csv(OUT / "figure_frames.csv", index=False, float_format="%.2f")
