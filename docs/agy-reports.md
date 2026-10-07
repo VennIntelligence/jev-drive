@@ -17,10 +17,10 @@ Every page meant for people (research synthesis, diagnosis, round report) is one
 1. Main session writes a brief to `tmp/<topic>-brief.md`: goal, audience, source files, page structure,
    constraints (above), done criteria (README link; commit only the page, its figures, the figure script; push;
    print a 5-line summary and stop). Numbers only from source files; missing or contradicting sources are stated.
-2. agy runs in tmux `jev:report`. If the pane is idle at the agy prompt, send the task there:
-   `tmux send-keys -t jev:report -l "Read tmp/<topic>-brief.md and do it." && tmux send-keys -t jev:report Enter`.
-   Otherwise start it in that window:
-   `agy --model gemini-3.8-flash-high --dangerously-skip-permissions -i "Read tmp/<topic>-brief.md and do it."`
-   from the repo root. Keep the current model and config.
+2. Each task gets a fresh agy in its own tmux window, so it starts with a clean context (never append a new task to an
+   old agy session): `tmux new-window -d -t jev -n agy-<topic> -c <repo>`, then send
+   `agy --model gemini-3.8-flash-high --dangerously-skip-permissions -i "Read tmp/<topic>-brief.md and do it."`.
+   Corrections for the same page go to that window. Keep the current model and config ("Out of credits" in the
+   footer is not a blocker). Close the window when the page is accepted, or leave it.
 3. Main checks every number and claim on the page against the sources and sends corrections to the same pane.
 4. Delete the brief once the page is committed. tmp/ never keeps reports.
