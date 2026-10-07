@@ -160,6 +160,88 @@ def strata(C):
     return st
 
 
+# ---------------------------------------------------------------- Step 1
+def cand_geo(F):
+    """F (S, n, 20, 20, 2) -> 5 s arc length (S, n, 20) and 5 s lateral position (S, n, 20) of every candidate."""
+    s5 = np.stack([G.arc(f.reshape(-1, 20, 2).astype(np.float64))[:, -1].reshape(f.shape[:2]) for f in F])
+    return s5, F[..., -1, 1].astype(np.float64)
+
+
+def summarise(C, d, rows, picks, geo, side):
+    """One row of the pick table for the frames `rows`: picks (R, S, n) over the repeats, geo = (s5, y5)."""
+    s5, y5 = geo
+    ii = np.flatnonzero(rows)
+    pk = picks[:, :, ii]                                                    # (R, S, m)
+    sx = lambda a: np.take_along_axis(np.broadcast_to(a[None, :, ii], (len(picks), *a[:, ii].shape)), pk[..., None], 3)[..., 0]   # noqa: E731
+    d5, dk5 = s5[:, ii, KEEP][None], sx(s5)
+    ratio = np.where(d5 > 0.5, dk5 / np.maximum(d5, 1e-9), np.nan)
+    inward = (side[ii][None, None] * (sx(y5) - y5[:, ii, KEEP][None]))
+    changed = pk != KEEP
+    r = {"n": len(ii), "picks keep/follow": float((pk == KEEP).mean())}
+    for j, nm in enumerate(G.SPEEDS):
+        r[f"speed {nm}"] = float((pk % 4 == j).mean())
+    for j, nm in enumerate("ABCDE"):
+        r[f"path {nm}"] = float((pk // 4 == j).mean())
+    r |= {"plan 5 s displacement (m)": float(d5.mean()), "pick 5 s displacement (m)": float(dk5.mean()), "median pick / plan displacement (plan > 0.5 m)": float(np.nanmedian(ratio)),
+          "mean pick / plan displacement (plan > 0.5 m)": float(np.nanmean(ratio)), "inward shift of the pick at 5 s (m, + = towards the turn)": float(inward.mean()),
+          "inward shift among changed-path picks": float(inward[changed & (pk // 4 != 2)].mean()) if (changed & (pk // 4 != 2)).any() else np.nan}
+    return r
+
+
+def cmd_desc(a):
+    import pandas as pd
+    from jevdrive import stats
+    from jevdrive.run import Run
+    with Run("op_parity", "turn-prior-desc", seed=0, config=vars(a)) as run:
+        C, z = ctx()
+        d_ = load_sets(C, z)
+        OUT.mkdir(parents=True, exist_ok=True)
+        st, n = strata(C), C.n
+        ego = z["va_ego"]
+        res = {}
+        for k in ("wp2", "wlg"):
+            X, J = X_of(d_[f"pd_{k}"], ego), d_[f"J_{k}"]
+            runs = [oof(X, J, X, J, H.folds(r), r) for r in range(REPS)]
+            res[k] = dict(gain=np.mean([r[0] for r in runs], 0), picks=np.stack([r[1] for r in runs]), lams=[r[2] for r in runs])
+            run.info("%s: floor head OOF %s over keep (10 reps)", k, pair(C, res[k]["gain"]))
+        ref = np.load(T.RUNS / "heads.npz")["E|b|L"]
+        run.info("reproduction of decision 173 E|b|L: ours %s, stored %s, max frame |diff| %.4f", pair(C, res["wp2"]["gain"]), pair(C, ref), np.abs(res["wp2"]["gain"] - ref).max())
+        base = {k: d_[f"J_{k}"][:, KEEP].mean(0) for k in ("wp2", "wlg")}
+        ship = d_["J_shipped"]
+        side = np.where(C.intent == 2, 1.0, np.where(C.intent == 3, -1.0, 0.0))
+        geo = {k: cand_geo(d_[f"F_{k}"]) for k in ("wp2", "wlg")}
+        rows = []
+        for sn, m in st.items():
+            for k in ("wp2", "wlg"):
+                g = res[k]["gain"]
+                c = C.ci(g, m)
+                r = {"plans": k.upper(), "stratum": sn, "n": int(m.sum()), "RFS plan": C.cm(base[k], m), "floor head OOF d": c[0], "lo": c[1], "hi": c[2],
+                     "oracle F20 d": C.cm(d_[f"J_{k}"].max(1).mean(0) - base[k], m)}
+                if k == "wp2":
+                    r["WLG - WP2"] = pair(C, base["wlg"] - base["wp2"], m)
+                    r["shipped - WP2"] = pair(C, ship - base["wp2"], m)
+                rows.append(r | summarise(C, g, m, res[k]["picks"], geo[k], side))
+        df = pd.DataFrame(rows)
+        stats.write_table(rows, OUT / "desc_picks")
+        # the oracle's choice on the same groups (privileged) for reference
+        orows = []
+        for sn in ("turn-intent", "left", "right", "turn v0<0.5", "turn 0.5<=v0<3", "turn v0>=3"):
+            m = st[sn]
+            for k in ("wp2", "wlg"):
+                J = d_[f"J_{k}"]
+                pk = np.stack([T.first(J[s]) for s in range(S)])[None]
+                orows.append({"plans": k.upper(), "stratum": sn} | summarise(C, None, m, pk, geo[k], side))
+        stats.write_table(orows, OUT / "desc_oracle")
+        # per-frame table
+        sh = lambda k, f: np.array([np.bincount(res[k]["picks"][:, :, i].ravel() % 4 if f == "speed" else res[k]["picks"][:, :, i].ravel() // 4, minlength=5).argmax() for i in range(n)])  # noqa: E731
+        pd.DataFrame({"name": C.names[:n], "intent": C.intent, "v0": C.v0, "rfs_WP2": base["wp2"], "rfs_WLG": base["wlg"], "rfs_shipped": ship, "d_floor_wp2": res["wp2"]["gain"],
+                      "d_floor_wlg": res["wlg"]["gain"], "mode_speed_wp2": sh("wp2", "speed"), "mode_path_wp2": sh("wp2", "path"),
+                      "plan_s5_wp2": geo["wp2"][0][0, :, KEEP]}).to_csv(OUT / "desc_frames.csv", index=False, float_format="%.4f")
+        pd.set_option("display.width", 250, "display.max_columns", 99)
+        run.info("\n%s", df[df.stratum.str.startswith(("turn", "left", "right", "all", "straight"))].T.to_string(float_format=lambda v: f"{v:+.3f}"))
+        run.info("\noracle:\n%s", pd.DataFrame(orows).T.to_string(float_format=lambda v: f"{v:+.3f}"))
+
+
 def main():
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
