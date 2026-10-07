@@ -289,7 +289,7 @@ def cmd_merge(a):
 def cmd_report(a):
     import pandas as pd
     from jevdrive import stats
-    df = pd.read_csv(OUT / "score.csv")
+    df = pd.concat([pd.read_csv(f) for f in sorted(OUT.glob("score*.csv"))]).drop_duplicates(["key", "token"])
     tab = np.load(TAB)
     tp = {t: i for i, t in enumerate(tab["names"].tolist())}
     dpsi = np.degrees(np.arctan2(np.sin(tab["fut"][:, 7, 2]), np.cos(tab["fut"][:, 7, 2])))
