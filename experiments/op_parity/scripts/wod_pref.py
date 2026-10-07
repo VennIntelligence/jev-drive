@@ -96,7 +96,9 @@ def cmd_prep(a):
         spans, _ = Z.load_spans()
         cal = json.loads((Z.root() / "op_calib.json").read_text())
         streams = [[f"{s}-{int(nm.rsplit('-', 1)[1]) - 2 * j:03d}" for j in range(9, -1, -1)] for nm, s in zip(names, seq)]
-        assert all(x in spans for st in streams for x in st), "a history frame is missing from the slim shards"
+        have = np.array([[x in spans for x in st] for st in streams])     # a frame missing from the shards = a stream that starts late (zero image / zero hidden state)
+        assert have[:, -1].all(), "a target frame is missing from the slim shards"
+        run.info(f"{int((~have.all(1)).sum())} of {n} rater frames have holes in their 1.8 s history: {names[~have.all(1)].tolist()}")
         out = cdir() if not a.limit else cdir().with_name(f"wod_rater-first{a.limit}")
         out.mkdir(parents=True, exist_ok=True)
         front = np.lib.format.open_memmap(out / "front.npy", "w+", np.float16, (n, WP.NCTX, 32, 512))
@@ -106,10 +108,13 @@ def cmd_prep(a):
             list(ex.map(int, range(a.workers)))                           # fork the render workers before CUDA exists in this process
             net = A.load("cinque", torch.float16).cuda().eval()
             with torch.no_grad():
-                for i, fr in enumerate(ex.map(_render, streams, chunksize=4)):
+                for i, got in enumerate(ex.map(_render, [[x for x, h in zip(st, hv) if h] for st, hv in zip(streams, have)], chunksize=4)):
+                    fr = np.zeros((10, 2, 6, 128, 256), np.uint8)
+                    fr[have[i]] = got
                     x = torch.as_tensor(fr).cuda()                         # (10, 2, 6, 128, 256): pair (f - 2, f) = (x[j - 1], x[j]), j = 1 .. 9
                     tr = net.run_batched(A.vision_feeds(x[:-1], x[1:]), [A.TRUNK_OUT])[A.TRUNK_OUT][:, 0].to(torch.float16)
                     tk = net.run_batched({A.TRUNK_OUT: tr[:, None].to(net.dtype)}, ["view_39"])["view_39"].reshape(-1, *A.H_SHAPE)
+                    tk = tk * torch.as_tensor(have[i, 1:], device=tk.device)[:, None, None].to(tk.dtype)
                     front[i], f0[i] = tk.cpu().numpy(), fr[-1]
                     if (i + 1) % 100 == 0 or i + 1 == n:
                         run.info(f"[{i + 1}/{n}] streams, {time.time() - t0:.0f} s")
@@ -119,7 +124,7 @@ def cmd_prep(a):
         ego, pose = PW.wod_ego(past, intent)
         cam = np.array([np.array(cal[s]["1"]["extrinsic"]).reshape(4, 4)[:3, 3] for s in seq], np.float32)
         tab = dict(names=names, log=seq, ego=ego, pose=pose.astype(np.float32), intent=intent, fut=WP.fut_targets(r["future"][:n]), cam=cam,
-                   lht=np.zeros(n, bool), speed=W.past_kinematics(past)["v"].astype(np.float32), v0=W.init_speed(past).astype(np.float32),
+                   lht=np.zeros(n, bool), n_real=have[:, 1:].sum(1), speed=W.past_kinematics(past)["v"].astype(np.float32), v0=W.init_speed(past).astype(np.float32),
                    future=r["future"][:n, :, :2].astype(np.float32), traj=r["traj"][:n].astype(np.float32), scores=r["scores"][:n],
                    cluster=r["cluster"][:n].astype(str), fold=fold)
         np.savez(out / "tab.npz", **tab)
