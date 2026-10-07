@@ -359,7 +359,10 @@ def cmd_pilot(a):
     from jevdrive.bench import compat
 
     def rd(m):
-        d = pd.read_csv(compat.navtest_csv(m))
+        f = compat.navtest_csv(m)
+        if f is None:                                                            # pre-bench op_parity arms: the official devkit run's CSV
+            f = sorted((D / "runs/navsim/eval" / f"v2_navtest_opi_lb_navtest_warp-cinque_PP{m}__base").glob("*/*.csv"))[-1]
+        d = pd.read_csv(f)
         return d[~d.token.astype(str).str.startswith(("average", "extended"))].set_index("token")
     arms = {m: rd(m) for m in a.arms + a.refs}
     toks = sorted(set.intersection(*[set(d.index) for d in arms.values()]))
