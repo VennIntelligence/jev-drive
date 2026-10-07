@@ -38,3 +38,21 @@ P2H10 配方（12 分片，10 000 步 × batch 128，warmup 300）+ agent hinge�
 ## 限定
 
 日志车辆不反应，hinge 学到的是「别撞非反应式日志车」，与 scorer 同口径，但 HUGSIM 的脚本车（D3a 对向车）不在其覆盖内；超速可能部分是视觉（近距离测距，HUGSIM lead 头 < 3 m 偏远 +1.95 m），hinge 只改 plan 目标；pilot 规模的效应在全量可能不同。
+
+## 执行补记与声明的偏离（2026-10-07，执行者；写于任何 HA 臂训练和打分之前）
+
+用户已批准本登记。下面是执行中遇到的含糊处与不可行处，按「最接近原意」取读法，全部在训练 / 打分前写定。
+
+1. **hinge 的归约**（原文 mean(relu(margin − d)) 未说对谁取均值）：每 (行, 0.1 s 步) 取被计入物体中 relu(m − d) 的最大值（= 对最近物体的 hinge，没有物体为 0），再对模仿行 × 41 步取均值。与 drivable hinge 的「每行每步」口径一致，不随 K 稀释。
+2. **「前半平面」的参照点**：ego 在该插值步位姿下、未外扩足迹的中心（后轴前 1.461 m）；横向 < 3 m 也相对这个中心量。
+3. **几何校验第一轮不过，按登记「先修再训」**（`lib/agent_hinge.py check`，结果 `$DATA_DIR/runs/op_parity/agent_labels/check*.json`）：
+   - 字面版（K 16、四类、前沿外扩 0.5 m、四周 relu(0.5 − d)）：人类日志 300 token 违反率 **1.33%**（4 / 300；全 navtest 0.92%），**不过**；P2H10-F-s0 的 NC 失败 token 中 hinge > 0 74%、HP-F-s0 78%（过）。
+   - 违反的人类 token 全是**侧向近距会车**：相邻车道的车在 ego 中心前 1.5–7 m、横向 2.5–2.9 m，箱间侧隙 0.1–0.5 m（没有一例是前方间距）。3 m 横向窗口本意是收进路径上的物体，0.5 m 侧向余量罚的是相邻车道正常会车，不是 NC 的 at-fault 碰撞。
+   - 只把「走廊外」物体（物体框与 ego 横向范围 |y| < 1.1485 m 不相交）的余量设 0（只罚真实接触），走廊内保持字面（前沿外扩 0.5 + relu(0.5 − d)）：人类 0.33%（全 navtest 0.07%），过；但 P2H10 NC 覆盖降到 **67.0%**（HP 72.1%），P2H10 不过。
+   - 覆盖不足来自 K：92% 的 token K = 16 被占满（行人多），远一点的前车被挤掉。K = 32（同一「t0 最近」规则）：P2H10 76.6%、HP 81.6%，人类 0.33% / 0.11%，**两项都过**。加入锥桶 / 隔离栏 / 施工牌（登记未列的类）还能到 79% / 83%，但登记写定了类别，不加。
+   - **采用**：K = 32；走廊内余量 0.5 m（前沿外扩 0.5 m 不变），走廊外余量 0（`--agent-side-margin 0`）；类别仍为 vehicle / generic_object / pedestrian / bicycle。标签 `runs/op_parity/agent_labels/navtrain_all-k32.npz`、`navtest-k32.npz`。λ_a、margin、闸门数值都不动。
+4. **NC + TTC 失败** = token 的 NC < 1 或 TTC < 1（four_dirs D3 的定义），百分比 = 失败 token 占比；EP = devkit ego_progress × 100 的 token 均值。
+5. **闸门的空档**：NC + TTC 降 ≥ 0.3 pp、EP ≥ −0.2 但 EPDMS < +0.2 不在三条规则里；读作「未过」→ 停（λ 3 只为 EP 掉线而设）。λ 3 若开，用同一规则判；过则全量用 λ 3。小读参照是单 seed 的 HP-F-s0（同 row stream）。
+6. **D3 子类分层**：four_dirs 已存的 P2H10（s0 或 s1）D3 失败 token 集合与其子类（`results/four_dirs/nav_tokens_navtest.csv`，打分前固定），报新臂与参照在这些 token 上的 NC + TTC 失败率与 EPDMS；「超速子集」= 该文件 spd > 1.1（plan 比日志快 10% 以上）。另报全体 token 按转弯分桶（bench 的 turn bins）。
+7. **全量**：tag `P2HA<λ>-F-s0 / s1`，P2H10 配方原样（12 分片、10 000 步 × 128、warmup 300、drivable hinge λ 10）+ agent hinge。navhard 用 G 帧（`@gimm`，与 hinge 车道同）。HUGSIM 64 只跑 `spec_plan_smooth`（登记所列，也是第 149 条的横向路径）；P2H10 参照用已存的 `spec_plan_smooth` 运行（seed 均值，有 r0 / r1 / r2 三次重复则取三次均值），WA-JEPA 只有 exam 口径。D3b 10 场景、fg 31 场景按 `four_dirs/hugsim_fg_events.csv` 中 P2H10 的事件定（打分前固定）。
+8. **全量判据的读法**：navtest「CI 在 0 之上」= 对 P2H10 的 seed 均值配对差 95% CI 下限 > 0，「NC + TTC 失败降」= 点估计 < 0；navhard「不掉超 −1」与 HUGSIM「全 64 差 ≥ −0.02」都按点估计。

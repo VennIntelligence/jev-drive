@@ -77,6 +77,7 @@ class Cfg:
     hinge_footprint: tuple = ("pacifica",)                                # footprint of each label file: pacifica (NAVSIM) | mkz (B2D)
     agent_lam: float = 0.0                # agent-box hinge on the plan (lib/agent_hinge.py, plans/2026-10-07-agent-hinge-prereg.md), imitation rows; 0 = off
     agent_margin: float = 0.5
+    agent_side_margin: float = -1.0       # margin for objects outside the ego's lateral corridor; < 0 = agent_margin
     agent_labels: str = "runs/op_parity/agent_labels/navtrain_all.npz"
     b2d_split: str = "b2d/b2dc-v2"                                        # route split of the b2d_* data dirs: <ref>-train / <ref>-val
     anchor_b2d: bool = True               # anchor rows may fall on b2d_* rows (False: anchors only on the other sources, B2D rows are imitation only)
@@ -403,7 +404,7 @@ def main(a):
               b2d_split=a.b2d_split, b2d_mass=a.b2d_mass, anchor_b2d=not a.no_anchor_b2d,
               turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
               act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop,
-              agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_labels=a.agent_labels)
+              agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
@@ -426,8 +427,9 @@ def main(a):
     agent = None
     if cfg.agent_lam > 0:
         from agent_hinge import AgentHinge
-        agent = AgentHinge(data_dir() / cfg.agent_labels, S.tab["names"], dev, cfg.agent_margin)
-        print(f"agent hinge lambda {cfg.agent_lam}, margin {cfg.agent_margin}: labels cover {agent.coverage:.4f} of {S.n} rows", flush=True)
+        agent = AgentHinge(data_dir() / cfg.agent_labels, S.tab["names"], dev, cfg.agent_margin,
+                           None if cfg.agent_side_margin < 0 else cfg.agent_side_margin)
+        print(f"agent hinge lambda {cfg.agent_lam}, margin {cfg.agent_margin} / side {agent.side_margin}: labels cover {agent.coverage:.4f} of {S.n} rows", flush=True)
     LS = Losses(model.net, cfg, tstd, S.di, S.pi, dev, hinge, agent)
     opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}] + ([{"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}] if new else []),
                             weight_decay=cfg.wd)
@@ -577,6 +579,7 @@ if __name__ == "__main__":
     ap.add_argument("--hinge-footprint", nargs="+", default=list(Cfg.hinge_footprint), help="footprint of each --hinge-labels file: pacifica | mkz")
     ap.add_argument("--agent-lam", type=float, default=0.0, help="weight of the agent-box hinge on the plan (lib/agent_hinge.py; 0 = off)")
     ap.add_argument("--agent-margin", type=float, default=0.5)
+    ap.add_argument("--agent-side-margin", type=float, default=-1.0, help="margin outside the ego's lateral corridor (< 0: = --agent-margin)")
     ap.add_argument("--agent-labels", default=Cfg.agent_labels, help="agent label file under $DATA_DIR")
     ap.add_argument("--no-anchor-b2d", action="store_true", help="no anchor rows on b2d_* rows (imitation only there)")
     ap.add_argument("--b2d-split", default=Cfg.b2d_split)
