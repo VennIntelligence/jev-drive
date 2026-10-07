@@ -12,10 +12,12 @@
 [nohack-mechanisms.md](nohack-mechanisms.md)、[ablation-matrix-inventory.md](ablation-matrix-inventory.md)、
 [midterm-inventory.md](midterm-inventory.md)、[midterm-gaps.md](midterm-gaps.md)、
 [openpilot-cross-board-synthesis.md](openpilot-cross-board-synthesis.md)（第 88–119 条跨榜诊断综合）、
+[transfuser-series-and-tfv6.md](transfuser-series-and-tfv6.md)（TransFuser 六代演进与 TFv6 闭环实测剖析）、
 [2026-10-06-d125-d135-review.md](2026-10-06-d125-d135-review.md)（第 125–135 条实验逐条复核：图、动图、数字、核对出的不一致）；
 [factorized-world-model.md](factorized-world-model.md)（分解世界模型文献查新：ego 精确、外生预训练）；
 [turn-gain/index.html](turn-gain/index.html)（转弯增益诊断：P2 急转弯失败是轻微比例缩小，不是封顶，控制链路不裁剪）；
 [hugsim-specplan/index.html](hugsim-specplan/index.html)（用模型自己的 plan 转向：单点曲率更差（转弯 HD 0.17 对 0.28），0.5 到 1.5 秒平均曲率更好（0.333），旧版横向 MPC 持平）；
+[four-directions.html](four-directions.html)（四个方向综合诊断：急弯内侧切角与入弯速度、宽弯擦边余量、前车近距测距偏差与夜间归属）；
 `articles/`（深度长文）、`roadmap/`、`lit/`（不进 git）只在这台 Mac 上。
 
 ## 写作惯例
