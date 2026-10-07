@@ -8,7 +8,7 @@ index: smoke: openpilot 1-3 ms/step; 2 deg yaw gives 4.6x lateral error
 
 **Conclusion.** Smoke only: openpilot 0.99-3.33 ms/step; Alpamayo minADE_6 0.74 m; 2 deg yaw lateral x4.6, 2 Hz axis x9 (decisions 36). B2D n=5: Alpamayo DS 60.8, openpilot 2.7 void (decisions 33).
 
-**Read more.** research/openpilot-and-open-driving-models.md, docs/zeroshot-adapters.md
+**Read more.** research/openpilot-diagnosis/index.html, docs/zeroshot-adapters.md
 
 <!-- files:begin -->
 ## Files

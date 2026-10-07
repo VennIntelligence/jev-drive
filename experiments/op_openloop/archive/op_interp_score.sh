@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Official NAVSIM PDMS (v1) / EPDMS (v2) for every pose file of an op_interp NAVSIM run dir that has no score yet
-# (research/openpilot-openloop-integration.md). Scores only the run's tokens (TOKENS_FILE) with the exam's scorer.
+# (research/openpilot-diagnosis/index.html). Scores only the run's tokens (TOKENS_FILE) with the exam's scorer.
 #   experiments/op_openloop/archive/op_interp_score.sh [cpus] [data] [ver] [split]
 #   e.g. experiments/op_openloop/archive/op_interp_score.sh 170-171,174-177,190-199                       # nav, v1, navtest (default: unchanged)
 #        experiments/op_openloop/archive/op_interp_score.sh 170-199 navfull v1 navtest                    # full navtest

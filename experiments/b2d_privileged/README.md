@@ -10,7 +10,7 @@ index: Red light + green release DS 75.0 to 95.0
 
 **Next.** Validate red-light rule on all dev routes, then skills one scene type at a time.
 
-**Read more.** research/openpilot-closedloop-integration.md, plans/2026-10-01-b2d-privileged-ceiling.md
+**Read more.** research/openpilot-diagnosis/index.html, plans/2026-10-01-b2d-privileged-ceiling.md
 
 <!-- files:begin -->
 ## Files

@@ -18,7 +18,7 @@ index: Navtest PDMS 84.2 to 91.59 (N3), flat at N4
 
 **History-frame quality (2026-10-04, lane C).** Real nuPlan 10 Hz CAM_F0 history vs the shipped GIMM history on 1 499 navtest tokens: +0.51 [-0.51, +1.54] PDMS (EP +3.0, DAC -1.7: faster plans, more off-road); GIMM recovers 98% of the hold -> real gap, warp 87%. Mid-speed history-yaw gain 6.2 deg (GIMM) vs 4.4 (real). No deployable interpolator screened (gate not met). [results/history_quality.md](results/history_quality.md), plan [plans/2026-10-04-history-quality-prereg.md](plans/2026-10-04-history-quality-prereg.md).
 
-**Read more.** research/leaderboard-skill-pack.md, research/navhard-deficit-breakdown.md
+**Read more.** research/openpilot-diagnosis/index.html
 
 <!-- files:begin -->
 ## Files

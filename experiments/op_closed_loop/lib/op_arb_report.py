@@ -1,5 +1,5 @@
 """op-arb readouts: openpilot closed-loop diagnosis (phase 1) and the arbitration arms (phase 2).
-Plan: fc65452:todos/2026-09-28-op-closedloop.md; write-up: research/openpilot-closedloop-integration.md.
+Plan: fc65452:todos/2026-09-28-op-closedloop.md; write-up: research/openpilot-diagnosis/index.html.
 
 Reads runs/op_arb/arms/p<k>-<arm>/ (b2d_run --out dirs of experiments/op_closed_loop/archive/op_arb.sh; per finished attempt results.json,
 plans.jsonl with one record per openpilot step, ticks.jsonl) and writes small CSV / Markdown tables:

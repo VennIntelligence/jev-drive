@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-shot chain for research/openpilot-openloop-integration.md: WOD ceiling study, then the NAVSIM subset.
+# One-shot chain for research/openpilot-diagnosis/index.html: WOD ceiling study, then the NAVSIM subset.
 # Each step is skipped when its output exists, so a re-run resumes. STATUS / DONE / ERROR in $DATA_DIR/runs/op_interp.
 #   scripts/tmux_run.sh opi experiments/op_openloop/archive/op_interp_lane.sh [wod|nav|all]
 set -uo pipefail

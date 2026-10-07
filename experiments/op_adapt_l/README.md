@@ -10,7 +10,7 @@ index: Stop capture 0.252 to 0.559 open loop; B2D no gain
 
 **Next.** HUGSIM closed loop; CARLA-frame capture (decisions 81).
 
-**Read more.** research/openpilot-closedloop-integration.md, plans/2026-10-01-op-adapt-L-prereg.md
+**Read more.** research/openpilot-diagnosis/index.html, plans/2026-10-01-op-adapt-L-prereg.md
 
 <!-- files:begin -->
 ## Files

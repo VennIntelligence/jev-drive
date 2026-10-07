@@ -8,7 +8,7 @@ index: WOD RFS Cinque 8.005, Alpamayo 8.034, above cv 7.103
 
 **Conclusion.** WOD RFS: Cinque 8.005, Alpamayo 8.034, Lebowski 7.886, cv 7.103 (decisions 34); NAVSIM PDMS 44-52 vs cv 20.7, navhard EPDMS 9-11 (decisions 37); nuScenes L2 worse than cv (decisions 39).
 
-**Read more.** research/openpilot-openloop-standing.md, research/openpilot-openloop-integration.md, docs/navsim.md
+**Read more.** research/openpilot-diagnosis/index.html, docs/navsim.md
 
 <!-- files:begin -->
 ## Files

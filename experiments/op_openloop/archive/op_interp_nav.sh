@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NAVSIM stage of research/openpilot-openloop-integration.md, trimmed after the WOD pass (op_interp_lane.sh holds the
+# NAVSIM stage of research/openpilot-diagnosis/index.html, trimmed after the WOD pass (op_interp_lane.sh holds the
 # full list): the Cinque ladder, small / Lebowski on hold and RIFE, export, official scoring, report. Resumable.
 #   scripts/tmux_run.sh opi-nav experiments/op_openloop/archive/op_interp_nav.sh
 set -uo pipefail

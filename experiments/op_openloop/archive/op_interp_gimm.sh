@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # GIMM-VFI on the context-rate grid only (t0 - 0.2 k): equivalence check on WOD against the full 10 Hz GIMM feed, then
-# the NAVSIM subset (research/openpilot-openloop-integration.md). Resumable; GPU 6, batch 4 (~6 GB).
+# the NAVSIM subset (research/openpilot-diagnosis/index.html). Resumable; GPU 6, batch 4 (~6 GB).
 set -uo pipefail
 repo=$(cd "$(dirname "$0")/../../.." && pwd); cd "$repo"
 R=$DATA_DIR/runs/op_interp; CPUS=${CPUS:-110-117,184-189}; export CUDA_VISIBLE_DEVICES=${GPU:-6}

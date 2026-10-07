@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Figures of research/openpilot-openloop-standing.md from experiments/op_openloop/results/openpilot-openloop/*.csv (Mac, project venv).
+"""Figures of research/openpilot-diagnosis/index.html from experiments/op_openloop/results/openpilot-openloop/*.csv (Mac, project venv).
 
   openloop-wod-rfs        WOD-E2E val rater frames: RFS (cluster mean, 95% CI) per row, test-split leaderboard as lines
   openloop-wod-timeline   openpilot's native plan under the exam's input vs NAVSIM's 1.5 s / 2 Hz timeline

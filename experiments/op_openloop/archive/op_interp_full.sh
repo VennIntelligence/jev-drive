@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full-benchmark run of the default op_interp pipeline (research/openpilot-openloop-integration.md section 9):
+# Full-benchmark run of the default op_interp pipeline (research/openpilot-diagnosis/index.html):
 # Cinque native plan, base adapter (lever arm + linear resample, no retime -- user decision 2026-09-28), two
 # interpolators (ego-motion warp on CPU, GIMM-VFI context-rate grid on GPU). Resumable: every step is skipped once
 # its output exists. STATUS / DONE / ERROR in $DATA_DIR/runs/op_interp/<out>.

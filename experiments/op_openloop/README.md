@@ -8,7 +8,7 @@ index: NAVSIM score is input protocol: interpolation 52.1 to 84.2
 
 **Conclusion.** WOD RFS 8.005 vs cv 7.10 (decisions 34). Interpolation lifts navtest PDMS 52.1 -> 84.2, navhard 9.3 -> 33.3 (decisions 36, 37); laneChange +0.72 (66, 73).
 
-**Read more.** research/openpilot-openloop-standing.md, research/openpilot-openloop-integration.md, research/navhard-deficit-breakdown.md
+**Read more.** research/openpilot-diagnosis/index.html
 
 <!-- files:begin -->
 ## Files

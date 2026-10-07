@@ -138,7 +138,7 @@ wide补充了road的路口几何视野，不能据此判普遍缺相机输入。
 
 ## 原预登记（保留）
 
-原状态：debug-v4与profile完成，696次正式评测于2026-10-01 15:05 UTC+8启动，后因检查失败停批。本文原预登记在本任务任何闭环运行或新结果之前提交并push；仅查了XML（路线与场景类型配置格式）场景类型与资源元数据，没有查看这些新路线的旧成绩。任务来自[main提示词](https://github.com/VennIntelligence/jev-drive/blob/fc65452/tmp/2026-10-01-b2d-privileged-ceiling-prompt.md)。背景已读decisions第47/49/52/57/61/74/76/81条、[op-drive](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-op-drive.md)、[适配闭环登记](../../op_adapt_l/plans/2026-10-01-op-adapt-L-b2d-prereg.md)、[量具](../../../research/behavior-layer-instruments.md)及[录像诊断](../../../research/openpilot-seed0-video-diagnosis.md)；decisions只读，由main维护。
+原状态：debug-v4与profile完成，696次正式评测于2026-10-01 15:05 UTC+8启动，后因检查失败停批。本文原预登记在本任务任何闭环运行或新结果之前提交并push；仅查了XML（路线与场景类型配置格式）场景类型与资源元数据，没有查看这些新路线的旧成绩。任务来自[main提示词](https://github.com/VennIntelligence/jev-drive/blob/fc65452/tmp/2026-10-01-b2d-privileged-ceiling-prompt.md)。背景已读decisions第47/49/52/57/61/74/76/81条、[op-drive](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-09-29-op-drive.md)、[适配闭环登记](../../op_adapt_l/plans/2026-10-01-op-adapt-L-b2d-prereg.md)、[量具](../../../research/decisions/047.md)及[录像诊断](../../../research/openpilot-diagnosis/index.html)；decisions只读，由main维护。
 
 ## 问题、共用管线与臂
 

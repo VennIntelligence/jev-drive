@@ -1,4 +1,4 @@
-"""Figures for research/openpilot-closedloop-integration.md (op-arb). Reads a copy of runs/op_arb/arms (plans.jsonl and
+"""Figures for research/openpilot-diagnosis/index.html (op-arb). Reads a copy of runs/op_arb/arms (plans.jsonl and
 results.json per finished attempt) and writes research/figs/op_arb_*.png / .pdf through research/plot_style.
 
     .venv/bin/python -m experiments.op_closed_loop.archive.op_arb_figs p1 <runs/op_arb dir>      # phase-1 diagnosis panels

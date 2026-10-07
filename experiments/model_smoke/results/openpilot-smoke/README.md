@@ -1,6 +1,6 @@
 # 2026-09-24 openpilot 最新驾驶模型 smoke run
 
-目标：把 comma.ai openpilot 能下载到的三个驾驶模型在 GPU box 上跑起来，把推理配置推到能到的最快，确认优化后的路径和朴素参考数值等价，再在真实 comma 视频上检查输出是否合理。这是一次 characterization，不是打榜。模型背景（接口、参数量、来源）见 [openpilot_latest_model.md](../../../../research/lit/research_notes/开源驾驶模型与OpenPilot打榜现状/openpilot_latest_model.md) 和 [openpilot-and-open-driving-models.md](../../../../research/openpilot-and-open-driving-models.md) 的"追问"一节。
+目标：把 comma.ai openpilot 能下载到的三个驾驶模型在 GPU box 上跑起来，把推理配置推到能到的最快，确认优化后的路径和朴素参考数值等价，再在真实 comma 视频上检查输出是否合理。这是一次 characterization，不是打榜。模型背景（接口、参数量、来源）见 [openpilot_latest_model.md](../../../../research/lit/research_notes/开源驾驶模型与OpenPilot打榜现状/openpilot_latest_model.md) 和 [openpilot 诊断](../../../../research/openpilot-diagnosis/index.html) 的"定位"一节。
 
 ## 结论先行
 

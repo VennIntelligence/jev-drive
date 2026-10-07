@@ -150,7 +150,7 @@ NAV_PAIRS = [("heads_ridge_late_cinque_temporal", "heads_ridge_ego"), ("heads_cl
              ("cinque_none", "alpamayo_nav"), ("lebowski_none", "alpamayo_nav"), ("heads_cls_ego_K1024", "alpamayo_nav"),
              ("heads_cls_late_cinque_temporal", "alpamayo_nav"), ("heads_cls_late_lebowski_temporal", "alpamayo_nav")]
 # published navtest / navhard numbers (not pairable): NAVSIM v1 paper arXiv 2406.15349 Table 2 (PDMS), SimWAM arXiv
-# 2608.07468 Tables 2 / 3 (EPDMS, navhard two-stage) as collected in research/openpilot-and-open-driving-models.md
+# 2608.07468 Tables 2 / 3 (EPDMS, navhard two-stage) as collected in research/openpilot-diagnosis/index.html
 NAV_BOARD = [("Ego Status MLP (blind, navtrain)", 65.6, None, None), ("TransFuser", 84.0, 84.0, 23.1),
              ("DiffusionDrive", 88.1, 88.2, 27.5), ("DiffusionDriveV2", 91.2, None, None), ("ReCogDrive (VLM)", 90.8, 83.6, 25.7),
              ("SimWAM", 91.5, 90.2, 37.6)]

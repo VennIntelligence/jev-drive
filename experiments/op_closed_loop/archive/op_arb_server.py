@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""openpilot policy server for the closed-loop integration study (research/openpilot-closedloop-integration.md,
+"""openpilot policy server for the closed-loop integration study (research/openpilot-diagnosis/index.html,
 fc65452:todos/2026-09-28-op-closedloop.md). envs/openpilot. Agent side: lib/op_arb_agent.py.
 
 Same model path as scripts/zeroshot_policy_server.py (Cinque at 20 Hz, road + wide warped as modeld, desire as a

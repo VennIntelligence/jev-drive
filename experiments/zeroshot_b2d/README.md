@@ -8,7 +8,7 @@ index: n=5 smoke: Alpamayo DS 60.8, SR 2/5; openpilot DS 2.7 voided
 
 **Conclusion.** n=5: Alpamayo DS 60.8, RC 70.1, SR 2/5; openpilot DS 2.7 voided as adapter bug (decisions 33). Alpamayo stalls = Zoo PID reverse-plan bug; F1 fix run paused at 17/220.
 
-**Read more.** research/openpilot-and-open-driving-models.md, `git show bcbdde4:todos/2026-09-24-zeroshot-exam/bench2drive.md`
+**Read more.** research/openpilot-diagnosis/index.html, `git show bcbdde4:todos/2026-09-24-zeroshot-exam/bench2drive.md`
 
 <!-- files:begin -->
 ## Files

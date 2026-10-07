@@ -12,7 +12,7 @@ index: Native never starts (6/6); arbitration +9.7 DS is slowness
 
 **Action-head curvature scale (2026-10-05).** [results/action_scale.md](results/action_scale.md): `decode()` = modeld exactly and the car-side controllers have gain 1; on the native comma rig the head matches the driven curvature (g_cal 0.97-1.04 above 8 m/s) except slow sharp turns (0.65, plan 0.98). rft.py's 0.45 = 1 s pure-pursuit target + board camera scale (v_model / v)^2, not the head. Figure `figs/action_scale.png`.
 
-**Read more.** research/openpilot-closedloop-integration.md, research/openpilot-seed0-video-diagnosis.md
+**Read more.** research/openpilot-diagnosis/index.html
 
 <!-- files:begin -->
 ## Files

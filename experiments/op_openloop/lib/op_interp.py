@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""openpilot on a 2 Hz benchmark history: frame synthesis and contract fixes (research/openpilot-openloop-integration.md).
+"""openpilot on a 2 Hz benchmark history: frame synthesis and contract fixes (research/openpilot-diagnosis/index.html).
 Run dir: $DATA_DIR/runs/op_interp/{wod,nav}/.
 
   wod-cache   (envs/openpilot) the 479 WOD-E2E val rater frames: the 16 real 10 Hz frames t = -1.5 ... 0 rendered as the

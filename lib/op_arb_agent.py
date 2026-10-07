@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Bench2Drive agent for the openpilot closed-loop integration study: a small route follower (the "base") and openpilot
 Cinque as a modifier, with several arbitration modes. Plan and registration: fc65452:todos/2026-09-28-op-closedloop.md;
-write-up: research/openpilot-closedloop-integration.md. Python 3.8, route process env (envs/carla or b2d-tcp).
+write-up: research/openpilot-diagnosis/index.html. Python 3.8, route process env (envs/carla or b2d-tcp).
 
 It is scripts/b2d_zeroshot_agent.py (the CL2 openpilot path: native road + wide rig rendered every tick, 5 s warm-up,
 rear-axle plan transform, route turn / lane-change desire, P7 controller fed at 5 Hz) with `_plan` replaced. Every

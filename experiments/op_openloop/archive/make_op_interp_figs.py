@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Figures of research/openpilot-openloop-integration.md from experiments/op_openloop/results/op-interp/*.csv (Mac, project venv).
+"""Figures of research/openpilot-diagnosis/index.html from experiments/op_openloop/results/op-interp/*.csv (Mac, project venv).
 
   op-interp-wod     WOD-E2E rater frames: openpilot RFS per 2 Hz feed (hold / blend / warp / RIFE / GIMM / real 10 Hz),
                     plan as is vs re-timed to the measured speed; and synthesized-frame PSNR vs the RFS gap recovered

@@ -8,7 +8,7 @@ index: openpilot temporal -0.294 vs V-JEPA 2 -0.030, WOD pre-onset
 
 **Conclusion.** openpilot `temporal` better: -0.294 [-0.424, -0.168] vs V-JEPA 2 -0.030, replicates on nuScenes; Alpamayo mid-layer different, not better (decisions 40).
 
-**Read more.** research/openpilot-openloop-standing.md, research/feature-adapter-domain-shift.md, `git show bcbdde4:todos/2026-09-24-driving-backbones/README.md`
+**Read more.** research/openpilot-diagnosis/index.html, research/decisions/055.md, `git show bcbdde4:todos/2026-09-24-driving-backbones/README.md`
 
 <!-- files:begin -->
 ## Files

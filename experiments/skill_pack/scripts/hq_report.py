@@ -207,7 +207,7 @@ def main():
         bt = boot(d, cl)
         res["paired"][f"{a}-{b}"] = dict(delta=bt[0], ci_token=bt[1:3], ci_log=bt[3:5],
                                          subs={k[:3]: round(100 * float((S[a].loc[toks, k] - S[b].loc[toks, k]).mean()), 2) for k in SUBS})
-    # recovery of the hold -> real gap, as the WOD table of research/openpilot-openloop-integration.md
+    # recovery of the hold -> real gap, as the WOD table of research/openpilot-diagnosis/index.html
     gap = res["pdms"]["real"]["PDMS"] - res["pdms"]["hold"]["PDMS"]
     res["recovered"] = {a: round((res["pdms"][a]["PDMS"] - res["pdms"]["hold"]["PDMS"]) / gap, 3) for a in ("warp", "gimm")}
     # by speed / command (real - gimm)

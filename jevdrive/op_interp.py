@@ -1,4 +1,4 @@
-"""Feeding openpilot a benchmark's low-rate camera history (research/openpilot-openloop-integration.md).
+"""Feeding openpilot a benchmark's low-rate camera history (research/openpilot-diagnosis/index.html).
 
 openpilot's driving models step a 20 Hz clock and read ego motion from frames 0.2 s apart; NAVSIM gives an agent four
 frames at 2 Hz. This module turns the four keyframes (t = -1.5, -1.0, -0.5, 0 s) into a 10 Hz history (the exam's

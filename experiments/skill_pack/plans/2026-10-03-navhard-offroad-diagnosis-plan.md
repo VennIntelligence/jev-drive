@@ -1,7 +1,7 @@
 # navhard stage 2: why does the open-loop model leave the drivable area (offline diagnosis plan)
 
 Written 2026-10-03, before any full-set number of this diagnosis was read. What had been read before: the aggregate tables of
-`research/navhard-deficit-breakdown.md`, the seven example scenes of `tmp/2026-10-02-openloop-review.html`, and the code path
+`research/openpilot-diagnosis/index.html`, the seven example scenes of `tmp/2026-10-02-openloop-review.html`, and the code path
 (`scripts/op_lb.py`, `jevdrive/op_interp.py`, `jevdrive/openpilot/model.py`, the devkit scorer). No retraining, no submission.
 Models: native = frozen openpilot Cinque, GIMM frames, desire schedule `none` (`runs/op_lb/lb_navhard/plans/gimm@cinque.npz`,
 pose file `preds/gimm-cinque__base.npz`); N4 = `runs/skill_pack/raise/n4/navhard_n4.npz`.

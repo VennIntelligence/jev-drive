@@ -8,7 +8,7 @@ index: Stage 1 failed: drift 0.397 m (line 0.10)
 
 **Conclusion.** Stage 1 stopped: drift 0.397 m, slow rate +11.7 pp, no full batch (decisions 67). Superseded by op_adapt_l; method not refuted.
 
-**Read more.** research/navhard-deficit-breakdown.md, `git show bcbdde4:todos/2026-09-29-op-adapt-r2-prereg.md`
+**Read more.** research/openpilot-diagnosis/index.html, `git show bcbdde4:todos/2026-09-29-op-adapt-r2-prereg.md`
 
 <!-- files:begin -->
 ## Files
