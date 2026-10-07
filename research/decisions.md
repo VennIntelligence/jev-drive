@@ -155,3 +155,4 @@
 | 158 | agent hinge pilot 闸门停：NC + TTC −0.16 pp（线 −0.3）、EPDMS +0.18（线 +0.2）；方向对、只有一半，前方静止车 token +2.26；agent loss 不降，冻结特征上学不成约束 | 中 | 待定 |
 | 159 | HUGSIM 快速入弯不是 ax 正反馈：ax 置零急弯入弯只降 −1.09 m/s、仍 6.4–10.4（WA 2.6–2.8）、照样失败，直路降得一样多且一个场景塌；剩下的是视觉预判，归表征 | 弱 | 待定 |
 | 160 | 表征线：冻结原版 V-JEPA 2.1 不比 Cinque 好（闭合 0.35）；只有 WA-JEPA 在 navtrain 上微调过的 encoder 作 memory 时 pilot 全过（navtest +0.95，> 20° DAC −1.33 pp，NC + TTC −0.63 pp）；要「NAVSIM 监督过的 encoder」，WA-Cf 是诊断上限不是方法 | 中 | 待定 |
+| 161 | replay hinge 全量 navtest +0.52（89.19，距 WA 2.52），但增益全在「只在回放里出界」、原始 plan 出界反升：plan 学会预补偿 devkit 跟踪器（按榜调整，需声明）；navhard / HUGSIM 不显著 | 中 | 待定 |
