@@ -4,6 +4,9 @@ Every page meant for people (research synthesis, diagnosis, round report) is one
 (Google Antigravity CLI), not by a Claude subagent. Agent-facing records stay Markdown: `research/decisions.md`,
 `research/decisions/`, topic READMEs, `research/lit/`.
 
+Scope: agy is for a new page or a wide rewrite. A small update to an existing page (one section, new numbers from a
+new decision) is edited by the main session directly, in the page's house style, numbers from the source files.
+
 ## Layout
 - `research/<topic>/index.html` + `research/<topic>/figs/`; a link line in `research/README.md`.
 - Pure Chinese text (headings, tables, captions); code, figure scripts, commits English.
