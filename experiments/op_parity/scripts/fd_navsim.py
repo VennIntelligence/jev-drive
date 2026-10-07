@@ -199,7 +199,9 @@ def _init(bench, keys_file):
     sim, scorer = instantiate(cfg.simulator), instantiate(cfg.scorer)
     _hook(scorer)
     P = pickle.load(open(keys_file, "rb"))
-    _W.update(cap={}, sim=sim, scorer=scorer, policy=instantiate(cfg.traffic_agents_policy.reactive, sim.proposal_sampling), samp=sim.proposal_sampling,
+    # navtest: the official run's traffic (non_reactive, as the stored CSVs); navhard: the harness that produced the stored navhard results (reactive)
+    pol = cfg.traffic_agents_policy.non_reactive if bench == "navtest" else cfg.traffic_agents_policy.reactive
+    _W.update(cap={}, sim=sim, scorer=scorer, policy=instantiate(pol, sim.proposal_sampling), samp=sim.proposal_sampling,
               P=P["plans"], want=P["want"], bench=bench, cp={Path(p).parent.name: p for p in glob.glob(str(MC[bench] / "*/*/*/metric_cache.pkl"))})
 
 
@@ -364,7 +366,7 @@ def cmd_replay(a):
             if len(q):
                 o = tabs[k].loc[q.index]
                 chk[k] = {m: float(np.abs(q[m] - o[m]).max()) for m in SUBS}
-        run.summary.update(n=len(todo), rows=len(df), wall_s=time.time() - t0, max_abs_diff_vs_official=chk)
+        run.summary.update(n=len(todo), rows=len(df), wall_s_scoring=time.time() - t0, max_abs_diff_vs_official=chk)
         run.info(json.dumps(run.summary, indent=1))
 
 
