@@ -502,6 +502,129 @@ def cmd_report(a):
 OUT = T.OUT
 
 
+# ---------------------------------------------------------------- Q2: candidate set, conservative rule, shipped as System 1
+MARGINS = (0.0, 0.1, 0.25, 0.5, 1.0)
+_T = {}                                                                     # task -> dict(J, keep, pri, X {k: (S, n, d)}, margins, Xa, Ja)
+
+
+def gains2(pred, J, keep, pri, idx, margin=0.0):
+    out, changed = 0.0, 0.0
+    for s in range(len(J)):
+        p = pred[s].copy()
+        p[:, keep] = margin
+        pk = T.first(p.T, pri)
+        out, changed = out + J[s][pk, idx] - J[s][keep, idx], changed + (pk != keep)
+    return out / len(J), changed / len(J)
+
+
+def unit2(a):
+    """Ridge on the candidates' gain over keep, (k, lambda, margin) by inner CV, one repeat of the sequence k-fold -> gain (n,), share changed, margins."""
+    task, rep = a
+    t = _T[task]
+    J, keep, pri, Xk, mg = t["J"], t["keep"], t["pri"], t["X"], t["margins"]
+    Y = (J - J[:, keep:keep + 1]).transpose(0, 2, 1)
+    Sn, n, K = Y.shape
+    Xa, Ja = t.get("Xa", Xk), t.get("Ja", J)
+    f, d, ch, hp = folds(rep), np.zeros(n), np.zeros(n), []
+    for j in range(FOLDS):
+        te, tr = np.flatnonzero(f == j), np.flatnonzero(f != j)
+        inner = folds(rep * 10 + j, INNER, 1000)
+        best, arg = -np.inf, None
+        for k, X in Xk.items():
+            acc, dd = np.zeros((len(LAMS), len(mg))), X.shape[2]
+            for g in range(INNER):
+                a_, b_ = tr[inner[tr] != g], tr[inner[tr] == g]
+                P = ridge_fit(X[:, a_].reshape(-1, dd), Y[:, a_].reshape(-1, K))
+                for li, lam in enumerate(LAMS):
+                    pr = P(X[:, b_].reshape(-1, dd), lam).reshape(Sn, len(b_), K)
+                    for mi, m in enumerate(mg):
+                        acc[li, mi] += gains2(pr, J, keep, pri, b_, m)[0].sum()
+            for li in reversed(range(len(LAMS))):
+                for mi in reversed(range(len(mg))):
+                    if acc[li, mi] > best + 1e-9:
+                        best, arg = acc[li, mi], (k, LAMS[li], mg[mi])
+        k, lam, m = arg
+        X, XA = Xk[k], Xa[k]
+        P = ridge_fit(X[:, tr].reshape(-1, X.shape[2]), Y[:, tr].reshape(-1, K))
+        d[te], ch[te] = gains2(P(XA[:, te].reshape(-1, XA.shape[2]), lam).reshape(len(XA), len(te), K), Ja, keep, pri, te, m)
+        hp.append(arg)
+    return task, d, ch, hp
+
+
+def cmd_q2(a):
+    import multiprocessing as mp
+    import pandas as pd
+    from jevdrive import par, stats
+    from jevdrive.common import n_cpus
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    with Run("op_parity", "s2-thinhead-q2", seed=0, config=vars(a) | dict(margins=MARGINS, reps=REPS)) as run:
+        run.use_split(splits.load("wod/val"))
+        Bd = T.board()
+        C, n, cb = Bd.C, Bd.n, Bd.cb
+        z = np.load(T.RUNS / "data.npz")
+        _D.update({k: z[k] for k in z.files})
+        _D["scode"] = pd.factorize(pd.Series(_D["va_seq"].astype(str)))[0]
+        ship = C.preds("shipped")
+        Fs = T.G.factored(ship, Bd.v0, 3, cb)
+        Js = np.stack([C.rfs(np.ascontiguousarray(Fs[:, m])) for m in range(20)])[None]
+        F30 = [T.G.factored(p, Bd.v0, 5, cb) for p in Bd.P]
+        J30 = np.stack([np.stack([C.rfs(np.ascontiguousarray(f[:, m])) for m in range(30)]) for f in F30])
+        raw = np.stack([T.plan_desc(p, Bd.v0, cb) for p in Bd.P + [ship]])                    # plan stream standardised on the val frames (no labels)
+        pd_ = (raw - raw[0].mean(0)) / (raw[0].std(0) + 1e-6)
+        ego = _D["va_ego"].astype(np.float64)
+
+        def X(desc, vis=None):
+            return {k: np.stack([np.concatenate(([_D[f"va_{vis}"][:, :k]] if vis else []) + [ego, d_], 1) for d_ in desc]) for k in (KS if vis else KS[:1])}
+        J20, pri5 = Bd.J, np.array([2, 1, 3, 0, 4])
+        sets = {"F20": (J20, KEEP, T.PRI), "F30": (J30, T.G.KEEP * 6, np.array([p_ * 6 + s_ for p_ in pri5 for s_ in range(6)])),
+                "speed only (4)": (J20[:, KEEP:KEEP + 4], 0, np.arange(4)), "path only (5)": (J20[:, ::4], 2, pri5)}
+        base = {"WP2": Bd.base, "shipped": Js[0, KEEP]}
+        tasks = {}
+        for arm, vis in (("E", None), ("Q1+E", "Q1"), ("C+E", "C")):
+            for nm, (J, keep, pri) in sets.items():
+                tasks[f"WP2|{nm}|{arm}|argmax"] = dict(J=J, keep=keep, pri=pri, X=X(pd_[:2], vis), margins=(0.0,))
+                tasks[f"WP2|{nm}|{arm}|margin"] = dict(J=J, keep=keep, pri=pri, X=X(pd_[:2], vis), margins=MARGINS)
+            for rule, mg in (("argmax", (0.0,)), ("margin", MARGINS)):
+                tasks[f"shipped|F20|{arm}|{rule}"] = dict(J=Js, keep=KEEP, pri=T.PRI, X=X(pd_[2:], vis), margins=mg)
+                tasks[f"shipped|F20, selector fitted on WP2|{arm}|{rule}"] = dict(J=J20, keep=KEEP, pri=T.PRI, X=X(pd_[:2], vis), margins=mg, Xa=X(pd_[2:], vis), Ja=Js)
+        _T.update(tasks)
+        res = par.pmap(unit2, [(t, r) for t in tasks for r in range(REPS)], workers=min(n_cpus(), a.workers), run=run, desc="q2 units", mp_context=mp.get_context("fork"))
+        res.raise_if_failed()
+        d, ch, hp = {}, {}, {}
+        for t, d_, c_, h_ in res.values:
+            d[t], ch[t] = d.get(t, 0) + d_ / REPS, ch.get(t, 0) + c_ / REPS
+            hp.setdefault(t, []).extend(h_)
+        rows = []
+        for t in tasks:
+            s1, nm, arm, rule = t.split("|")
+            Jo = tasks[t].get("Ja", tasks[t]["J"])
+            orc = Jo.max(1).mean(0) - Jo[:, tasks[t]["keep"]].mean(0)
+            r = {"System 1": s1, "candidate set": nm, "K": Jo.shape[1], "features": arm, "rule": rule, "RFS System 1": C.cm(base[s1])}
+            for sn in ("all", "stopped", "moving", "turn"):
+                c = T.ci(C, d[t], Bd.st[sn])
+                r |= {f"d {sn}": c[0], f"{sn} lo": c[1], f"{sn} hi": c[2]}
+            r |= {"oracle d": C.cm(orc), "share of oracle": r["d all"] / C.cm(orc), "frames changed": float(ch[t].mean()),
+                  "margin (median over fits)": float(np.median([h[2] for h in hp[t]])), "lambda (median)": float(np.median([h[1] for h in hp[t]]))}
+            rows.append(r)
+        stats.write_table(rows, OUT / "q2")
+        con = []
+        for arm in ("E", "Q1+E", "C+E"):
+            for nm, ka, kb in (("margin - argmax (F20)", f"WP2|F20|{arm}|margin", f"WP2|F20|{arm}|argmax"), ("F30 - F20", f"WP2|F30|{arm}|argmax", f"WP2|F20|{arm}|argmax"),
+                               ("speed only - F20", f"WP2|speed only (4)|{arm}|argmax", f"WP2|F20|{arm}|argmax"),
+                               ("path only - F20", f"WP2|path only (5)|{arm}|argmax", f"WP2|F20|{arm}|argmax"),
+                               ("shipped: transferred - retrained", f"shipped|F20, selector fitted on WP2|{arm}|argmax", f"shipped|F20|{arm}|argmax")):
+                c = T.ci(C, d[ka] - d[kb])
+                con.append({"features": arm, "contrast": nm, "d": c[0], "lo": c[1], "hi": c[2]})
+        for nm, ka, kb in (("Q1+E - E (F20, margin)", "WP2|F20|Q1+E|margin", "WP2|F20|E|margin"), ("C+E - E (F20, margin)", "WP2|F20|C+E|margin", "WP2|F20|E|margin"),
+                           ("selected shipped vs selected WP2 (absolute RFS, E, margin)", None, None)):
+            c = T.ci(C, d[ka] - d[kb]) if ka else T.ci(C, base["shipped"] + d["shipped|F20|E|margin"] - base["WP2"] - d["WP2|F20|E|margin"])
+            con.append({"features": "", "contrast": nm, "d": c[0], "lo": c[1], "hi": c[2]})
+        stats.write_table(con, OUT / "q2_contrasts")
+        np.savez(T.RUNS / "q2.npz", **{t.replace("|", "__"): v.astype(np.float32) for t, v in d.items()})
+        run.info("Q2:\n%s\n%s", pd.DataFrame(rows).to_string(float_format=lambda v: f"{v:+.3f}"), pd.DataFrame(con).to_string(float_format=lambda v: f"{v:+.3f}"))
+
+
 # ---------------------------------------------------------------- figures
 def cmd_figs(a):
     import matplotlib
@@ -623,5 +746,7 @@ if __name__ == "__main__":
     p.add_argument("--part", default="ridge", choices=("ridge", "mlp"))
     sp_.add_parser("report")
     sp_.add_parser("figs")
+    p = sp_.add_parser("q2")
+    p.add_argument("--workers", type=int, default=24)
     a = ap.parse_args()
-    {"fit": cmd_fit, "report": cmd_report, "figs": cmd_figs}[a.cmd](a)
+    {"fit": cmd_fit, "report": cmd_report, "figs": cmd_figs, "q2": cmd_q2}[a.cmd](a)

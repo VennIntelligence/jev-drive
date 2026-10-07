@@ -41,6 +41,8 @@ if has heads; then
     waitdirs $L/mlp
     PYTHONPATH=. $J $S/s2_thinhead_heads.py report || die report
 fi
+if has q2 && [[ ! -f $D/q2.done ]]; then status "q2"; PYTHONPATH=. $J $S/s2_thinhead_heads.py q2 || die q2; touch "$D/q2.done"; fi
+if has figs; then PYTHONPATH=. $J $S/s2_thinhead_heads.py figs || die figs; fi
 if has ft; then                                                              # Q3: the joint fine-tune pilot (chained in the pool)
     F="env PYTHONPATH=. $J $S/s2_thinhead_ft.py"
     status "ft: cache + smoke"
