@@ -114,7 +114,8 @@ def figure(G, verdict):
             for j, m in enumerate(MARGINS):
                 t = GRID[(lam, m)]
                 mark = "ref" if t == REF else ("W" if verdict[t]["win"] else "")
-                ax.text(j, i, f"{g[i, j]:+.2f}" + (f"\n{mark}" if mark else ""), ha="center", va="center", fontsize=8)
+                ax.text(j, i, f"{g[i, j]:+.2f}" + (f"\n{mark}" if mark else ""), ha="center", va="center", fontsize=8,
+                        color="white" if abs(g[i, j]) > 0.6 * v else "black")
         ax.set_xticks(range(3), [f"{m}" for m in MARGINS]), ax.set_yticks(range(3), [f"{l}" for l in LAMS])
         ax.set_xlabel("margin (m)"), ax.set_ylabel("lambda"), ax.set_title(title, fontsize=7.5), ax.grid(False)
     fig.savefig(FIG / "grid_heatmap.png", dpi=300)
