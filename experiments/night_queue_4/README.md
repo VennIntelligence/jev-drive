@@ -8,7 +8,7 @@ index: No position memory in TFv6/BridgeDrive/BLUE/SimLingo (ghost 5-13%)
 
 **Conclusion.** G: ghost rate 5.0-13.3%, no shift/swap collapse; BridgeDrive 0.2% is replay shift (decisions 58). K: P5 pedestrian flips 0.49-0.99% across the ladder, pack criterion fails (35).
 
-**Read more.** research/leaderboard-vs-ability.md, experiments/night_queue_4/results/g/final/g.md, `git show bcbdde4:todos/2026-09-26-night-queue-4.md`
+**Read more.** research/benchmarks/index.html, experiments/night_queue_4/results/g/final/g.md, `git show bcbdde4:todos/2026-09-26-night-queue-4.md`
 
 <!-- files:begin -->
 ## Files

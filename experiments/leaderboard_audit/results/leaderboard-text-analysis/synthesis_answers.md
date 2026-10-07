@@ -1,6 +1,6 @@
 # 对 `questions_for_synthesis.md` 45 项的逐条回应
 
-状态: 综合稿（2026-09-24）。这是 [leaderboard-vs-ability.md](../../../../research/leaderboard-vs-ability.md) 的附录：第二轮留下的 45 个问题（W1 12、W2 8、W3 8、W4 9、W5 8 组）逐条给判断、理由和引用；判不了的写明缺什么。
+状态: 综合稿（2026-09-24）。这是 [benchmarks/index.html](../../../../research/benchmarks/index.html) 的附录：第二轮留下的 45 个问题（W1 12、W2 8、W3 8、W4 9、W5 8 组）逐条给判断、理由和引用；判不了的写明缺什么。
 所有数字来自 `w1_ablation_ledger.csv`、`w2_cross_board.csv`、`w3_issues.csv`、`w5_paper_only.csv`、`w4/*.md` 和第一轮 `findings.jsonl`，没有运行任何模型或评测。**结论**是表能直接支持的；**推测**是我们外推的，并给出验证方法。
 引用格式：账本行写 `method / component / board / split / metric / baseline→variant (Δ) / source`；issue 写 `repo#编号`；论文披露写 `W5-编号`；第一轮机制写 finding id（如 `NAV2-TOAD-001`）。
 证据等级（W1 部分）：**A** 同权重且有 seed 或样本数；**B** retrained 但多 seed；**C** 单次；**D** 混 checkpoint、图读数或多因素同变。

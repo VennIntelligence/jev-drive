@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>基准、榜单与评测陷阱：四大基准地形、分数成分解构与榜单完整性</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:980px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px;line-height:1.3}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:6px;font-size:20px}h3{margin-top:24px;font-size:16px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+.running{background:#eef7ff;border-left:5px solid #0072b2;padding:12px 16px;margin:16px 0}
+.subpage{background:#f5f5f7;border-left:5px solid #34c759;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:13px;width:100%}th,td{border:1px solid #ccc;padding:5px 8px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f3f3f3}
+figure{margin:20px 0}img{max-width:100%;height:auto;border-radius:2px}figcaption{font-size:13.5px;color:#444;margin-top:6px}
+a{color:#0066cc;text-decoration:none}a:hover{text-decoration:underline}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;background:#f0f0f2;padding:2px 4px;border-radius:3px}
+.cite{font-size:12.5px;color:#666;margin-top:4px;margin-bottom:12px}
+ul{padding-left:20px}li{margin-bottom:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}.running{background:#1a2733}.subpage{background:#1e2820}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}code{background:#28282c;color:#e8e8ea}.cite{color:#999}a{color:#4da3ff}}
+</style></head><body>
+
+<h1>基准、榜单与评测陷阱：四大基准地形、分数成分解构与榜单完整性</h1>
+
+<div class="v">
+<b>核心结论（基准地形、归因与完整性）：</b><br>
+<b>1. 四大基准各有结构性盲区，HUGSIM 是隔离混杂的必要控制列：</b>WOD-E2E（真实开环，ADE 饱和，空间全在 RFS；test 仅打分不重跑）；NAVSIM（大规模非反应式回放 v1 与扰动合成伪闭环 v2，顶部被 learned scorer 占领，且不测真实脱困）；Bench2Drive（CARLA 合成闭环，220 条路线顶部饱和且单次噪声大）；HUGSIM（3DGS 重建真实场景闭环，HD 指标），它将「闭环本身难」与「合成图像难」两个混杂变量彻底分开（决策 19）。<br>
+<b>2. 榜单分数中属于突发反应（E 层）的成分极少，高分主要由常规路径（R 层）配方与指标针对性机制构成：</b>W1 账本（1,121 行）显示，nuScenes 由 ego-state prior 独占（速度 ×0.5 影响是图像全黑的 35 倍，但闭环反跌 −3.95 DS）；NAVSIM v2 顶部被 EPDMS 代理评分器垄断（五个基座加 TOAD 全部收敛到 49–56，配方项占 10–15 分）；Bench2Drive 依赖控制接口与规则（TFv6 相同 checkpoint 走 route + target speed 比自己 waypoint 高 14.3 DS [5.1, 25.9]，决策 31；前几名差距全在评测噪声内，决策 38）。W1 账本中能确证属于 E 层的增益全表仅 4 条（RAM 同权重推理 +2.72 DS / +4.85 SR、RoG-DAgger SR +7.15、LiDAR SR +6.1、RAP 恢复数据 +4.4，决策 35）。<br>
+<b>3. 跨榜排序一致性极低，前 10 族交集由训练数据生态决定而非能力信号：</b>CARLA 闭环族与真实数据开环族的多榜前 10 交集几乎为空（决策 46）。跨榜相关性仅在同代码族内 scaling（TFv6 6 变体 B2D↔Longest6 ρ=0.87）和代际分层（TransFuser vs scorer 族）显著；排除后 B2D↔Longest6 独立方法 n=5 ρ=0.05，NAVSIM v1↔v2 顶部 11 方法 ρ=0.21。开环 L2 与闭环 DS 无关（ρ=−0.16），与 Efficiency 反向同向。<br>
+<b>4. 纯上传轨迹榜单无法核实来源，人类基准普遍失真：</b>WOD-E2E 与 NAVSIM 私有 test 只接收轨迹坐标，服务器不重跑模型，离线手标或模型拼接在结构上无法区分；WOD-E2E 没有真实人类上限（logged future val RFS 8.13 为自动与人工混采，出厂 openpilot Cinque test RFS 7.921 居 19/115 名）；NAVSIM human 94.8 是过滤后高分并带违规豁免；CARLA / B2D 全行业尚无官方 DS 下真实人类闭环基线（决策 2、文献调研）。<br>
+<b>5. 评测底层依赖与算力陷阱已全量排查：</b>NAVSIM 的 numpy 1.23.4 在 Sapphire Rapids 上因 OpenBLAS 自动选 Cooperlake 导致静默求逆错误；经系统审计，09-28 之后所有 85 个 eval run 与 metric cache 均强制锁定 <code>OPENBLAS_CORETYPE=Haswell</code>，重算逐位一致，零历史分数受影响（决策 73）。
+</div>
+
+<div class="subpage">
+<b>相关诊断页面导航：</b>
+<ul>
+<li><a href="../openpilot-diagnosis/index.html">openpilot 适配与跨榜诊断（openpilot-diagnosis）</a>：接口归因、输入契约对齐、三大能力缺口与接入矩阵。</li>
+<li><a href="../four-directions/index.html">四个方向诊断（four-directions）</a>：急弯切内角与入弯速度、宽弯擦边余量、前车测距偏差与夜间归属。</li>
+<li><a href="../turn-gain/index.html">转弯增益与尺度校准（turn-gain）</a>：action 目标推导、comma1M 真车增益核算与解码器标定。</li>
+<li><a href="../hugsim-specplan/index.html">HUGSIM 平滑规划（hugsim-specplan）</a>：<code>spec_plan_smooth</code> 窗口曲率平滑方案与 64 场景闭环验证。</li>
+</ul>
+</div>
+
+<h2>一、四大基准地形图与评测契约</h2>
+<p>
+自动驾驶端到端决策规划面对四个主要的评测基准，它们在数据源、开闭环机制、评测敏感度与结构性盲区上截然不同。
+</p>
+
+<table>
+<tr><th>基准</th><th>评测形态与数据源</th><th>主指标与核心公式</th><th>测到常规路径（R 层）什么</th><th>测到突发反应（E 层）什么</th><th>结构性盲区与漏洞</th></tr>
+<tr>
+<td><b>WOD-E2E</b></td>
+<td>真实道路开环，8 路相机 + 自车历史（10 Hz），1,505 test 帧</td>
+<td><b>RFS</b>（0–10，截断下限 4.0）+ ADE@5s</td>
+<td>5 s 内与人工 rater 建议几何的一致性、道路拓扑选择</td>
+<td>意图级：3 s 与 5 s 处是否落在 rater 偏好的信任域内（无物理后果）</td>
+<td>仅考 3 s 与 5 s 两点，中间 18 点不计；两点可匹配不同 rater；无碰撞交互；上传轨迹只打分不验模型真伪</td>
+</tr>
+<tr>
+<td><b>NAVSIM (v1 / v2)</b></td>
+<td>nuPlan 大规模开环（v1 navtest）与 3DGS 合成扰动续开伪闭环（v2 navhard）</td>
+<td>v1: <b>PDMS</b><br>v2: <b>EPDMS</b>（含加权惩罚乘子与续开打分）</td>
+<td>4 s 沿路行驶、可行驶区（DAC）、车道保持（LK）、红灯停（TLC）</td>
+<td>弱：仅检查是否撞入回放车辆既定未来；v2 包含扰动后恢复</td>
+<td>v1 逆行不扣分，低速（&lt;0.005 m/s）TTC 免罚；v2 续开场景预生成，不随 agent 动作重仿；顶部全靠 proxy 评分器重排</td>
+</tr>
+<tr>
+<td><b>Bench2Drive (B2D)</b></td>
+<td>CARLA 0.9.15 闭环仿真，220 条短路线（各嵌入 1 个 scenario）</td>
+<td><b>DS</b> = RC × ∏ 违规因子<br><b>SR</b>（成功率，通过为 1）</td>
+<td>沿 route 导航行驶、路口转弯、红绿灯识别、起步响应</td>
+<td>主要：突发障碍（鬼探头、切入、急刹）避碰与违规扣分</td>
+<td>最低速度项 <code>unused</code>（停着不动不扣分）；无舒适度扣分；前几名总分差在噪声内；依赖手写规则与特定接口</td>
+</tr>
+<tr>
+<td><b>HUGSIM</b></td>
+<td>3DGS 重建真实场景闭环（KITTI-360 / Waymo / nuScenes），436 场景</td>
+<td><b>HD-Score</b> = 单帧平均 × min(max RC, 1)</td>
+<td>真实几何道路居中、转弯跟踪、路面可行驶区</td>
+<td>针对 <code>car</code> 类别的边界框避碰</td>
+<td>仅对汽车做框检测（行人/骑行者漏检）；失败制动回退可继续计分；EP 权重注释掉不进单帧</td>
+</tr>
+</table>
+<div class="cite">数据来源：research/benchmarks-and-evaluation.md、research/leaderboard-vs-ability.md 表 2、decisions 019、035。</div>
+
+<h3>HUGSIM 作为控制列的核心价值（决策 19）</h3>
+<p>
+在基准体系中，若只有 <b>NAVSIM（开环真实外观）</b> 与 <b>Bench2Drive（闭环合成外观）</b> 两列，任何模型在 B2D 上的掉分都会被审稿人解释为「闭环本来就更难」，而无法区分到底是「闭环控制/反应难」还是「合成图像 domain shift 导致表征崩溃」。
+<b>HUGSIM 填补了这一空白</b>：它是闭环评测，但画面由 3DGS 光栅化真实街景重建。它彻底将「闭环属性」与「图像仿真鸿沟」解耦。WA-JEPA 在 HUGSIM 上拿到 0.4462 HD，证明真实视频自监督表征能直接零样本迁移至闭环控制。
+</p>
+
+<h2>二、指标冲突与读数陷阱</h2>
+
+<h3>1. ADE 与 Trust-region (RFS) 的优化目标冲突</h3>
+<p>
+在同一特征与模型结构下，轨迹回归（Regression）与模式分类（Classification）在两个指标上表现出系统性冲突：
+</p>
+<ul>
+<li><b>回归赢 ADE，输信任域（RFS）</b>：ADE 惩罚 L2 均方误差，鼓励输出条件均值。面对分支路口，回归会输出一条「既不像直行又不像左转」的折中均值轨迹，导致 3 s 和 5 s 预测点同时跌出所有 rater 的信任域，被截断至下限 4.0 分。</li>
+<li><b>分类赢信任域，输 ADE</b>：分类器（从离散轨迹词表中 argmax 抽样）输出的是物理上真实存在的单一 mode，能稳稳命中某一 rater 的信任域，但其平均横向位移可能比平滑均值高 0.512 m。</li>
+<li><b>Waymo 饱和度实测</b>：官方 test ADE 已饱和（最好 RAP 2.6457 m，而 logged future 自身为 2.699 m，模型已超越历史预测极限），所有性能区分空间全在 RFS 上，因此纯回归架构在 WOD-E2E 上存在结构性劣势。</li>
+<li><b>词表大小 K 的读数陷阱</b>：按 ADE 口径，K=64 词表的 oracle minADE 已达 0.39 m（nuScenes）与 1.115 m（Waymo），看似充裕；但按 Trust-region 口径，K=64 时 Waymo 上有 <b>9.6% (8/83)</b> 的帧无论如何选择均无法命中任何 rater 信任域而被罚到底线；词表必须扩大至 <b>K ≥ 1024</b>，信任域盲区才收敛至 0%。</li>
+</ul>
+
+<h3>2. Logged Future 陷阱与 RFS 机制底线</h3>
+<p>
+RFS 机制不仅惩罚模型，对真实驾驶轨迹同样苛刻：
+在完整验证集（479 个 rater 帧）上，车端实际行驶出来的真实轨迹（<b>logged future</b>）自身也有 <b>9.4%</b> 的概率落在所有人工 rater 信任域之外被惩罚；在车辆自身先验差异最大的第十十分位（s_ego 最高 10% 帧），logged future 的 RFS 仅有 <b>5.92 分</b>，其中 <b>41.7%</b> 被强制截断到底线。
+当前学出来的模型在底线截断率上为 23.6%–25.6%，仅略好于零参数匀速直线模型（CV，27.1%）。
+</p>
+
+<h3>3. 代理评分器跨协议失效陷阱</h3>
+<figure>
+<img src="figs/score-vs-transfer.png" alt="评分器策略在 navtest 与 navhard 上的迁移对比">
+<figcaption>图一：代理评分器（Trajectory selection recipe）在 navtest 与 navhard 上的表现反差。左图（navtest PDMS）：从 Native（84.17）到线性评分器（87.32）、非线性评分器（90.60）乃至追加数据（91.59），分数向 logged human（94.55）持续逼近；右图（navhard 官方 EPDMS）：同套配方从 Native（33.33）跌至 30.24、31.29、33.28，完全无法迁移。指标过拟合机制只在原协议公式下生效，换到严格评测反向拉低性能。</figcaption>
+</figure>
+
+<h3>4. 仿真器耗时测量陷阱：Server FPS ≠ 闭环 tick</h3>
+<p>
+CARLA 评测常引用无阻塞渲染极限（如 <code>carla_bench.py</code> 测出的 86.5 FPS），但这不能作为闭环成本外推依据。在真实闭环 tick（单相机 92.4 ms，3 相机 1600×900 达 158 ms）中，<b>128 ms（79%）为阻塞等待相机帧</b>。针对 Python RPC 的微小优化对端到端 Wall-clock 收益几乎为零，真正的加速杠杆在于让 CARLA 直出模型所需分辨率（800×450）以及跳帧 decimate 渲染（决策 17、83）。
+</p>
+
+<h2>三、榜单高分的真实构成：消融账本与机制解构</h2>
+<p>
+通过对 7 榜 36 个方法、1,121 行论文单项消融的系统审计（W1 账本，决策 35），各大榜单的高分成分展现出清晰的规律：
+</p>
+
+<figure>
+<img src="figs/lb-ability-gain-ledger.png" alt="各榜单增益构成与自车先验符号反转">
+<figcaption>图二：各榜单主要增益成分与 ego prior 符号反转。(a) Bench2Drive 高分含能力与架构，NAVSIM v2 顶部全为 metric-specific 代理评分器，nuScenes 全为 ego prior，WOD 由领域预训练数据主导；(b) 同一自车状态先验（ego prior）在 nuScenes 3 s 开环解释 64% 分数，在 NAVSIM 4 s 仅值 2%，而在 Bench2Drive 闭环上为负分（FIVE-VLA 使 DS −3.95、SR −8.64）。</figcaption>
+</figure>
+
+<h3>1. 三类榜单的三种增益构成</h3>
+<ul>
+<li><b>nuScenes 开环</b>：Top-3 增益全部来自 ego-state prior（自车历史速度、加速度输入），视觉感知几乎不参与决策。VAD-Base 探针测试表明，将自车速度输入 ×0.5 造成的 L2 误差上升（+2.82 m）是<b>整幅图像完全置黑</b>（+0.09 m）的 <b>35 倍</b>。</li>
+<li><b>NAVSIM v2 (navhard)</b>：Top-2 全部是 EPDMS 代理评分器（TOAD、GTRS）。同一套 TOAD CEM 搜索加载在 6 个基座上，5 个基座分数瞬间收敛至 49–56 分（iPad 从 34.7 暴涨至 49.8，净涨 +15.1 分）；其中单换 DrivoR 评分器而不搜索即带来 +10.9 分。<b>榜单前排分数中 10–15 分纯粹是评分器与 EPDMS 公式的贴合度，与视觉表征和规划能力无关</b>。</li>
+<li><b>Bench2Drive (B2D)</b>：包含真实能力（RAM 记忆、DAgger 恢复、LiDAR 测距），但受未消融的控制接口与启发式规则严重放大。</li>
+<li><b>WOD-E2E</b>：95% 的分数由大规模领域数据预训练决定（Poutine 领域预训练 5.59 → 7.95，+2.36 分），而直接针对 RFS 奖励的强化学习（RL）仅增加 +0.08–0.09 分，且在难例场景上反而出现负迁移（spotlight 难例 −0.102）。</li>
+</ul>
+
+<h3>2. 控制接口选择的巨大收益（决策 31）</h3>
+<p>
+TFv6 论文报告的 95.2 DS 在第三方重测中仅为 89.6（决策 38）。我们对 TFv6 官方冻结 checkpoint 进行了严格配对实验（48 对路線，cluster bootstrap）：
+仅改变控制接口，<b>使用 route + target speed 输入驱动控制器比使用模型自身预测的 waypoint 高出整整 14.3 DS [5.1, 25.9]，成功率 SR 提升 29 个百分点</b>。这解释了 TFv6 为何在实车控制中必须抛弃自身的 waypoint 通道。而 SimLingo 系方法原生即采用 path + speed 解耦接口，B2D 头部方法若存在差距，主要对应测距传感器（TFv6 纯相机 91.6，加装 LiDAR 升至 94.7，+3.1 DS，决策 35）。
+</p>
+
+<h3>3. 属于突发反应（E 层）的证据极度稀缺</h3>
+<p>
+在跨 31 篇论文的 1,121 行消融账本中，<b>能够确证属于突发事件反应（E 层）的增益全表仅有 4 条</b>：
+</p>
+<ol>
+<li><b>FIVE-VLA RAM（动作记忆机制）</b>：同权重推理 bypass → accumulation 带来 +2.72 DS / +4.85 SR，Emergency_Brake 子项 +6.1（论文报的 Give_Way 76.67 超出该项 50% 上限，已就地降级，决策 35）。</li>
+<li><b>RoG-DAgger 离线 DAgger 数据</b>：同 backbone 带来 +3.75 DS、<b>SR +7.15</b>（收益集中在状态恢复）。</li>
+<li><b>TFv6 LiDAR / 雷达测距</b>：+3.1 DS、<b>SR +6.1</b>（为密集碰撞场景提供测距保障）。</li>
+<li><b>RAP 恢复扰动数据</b>：在开环 v1 上增益为 0.0，但在伪闭环 v2 上带来 <b>+4.4 EPDMS</b>（证明纯开环协议完全不奖励恢复能力）。</li>
+</ol>
+
+<h2>四、跨榜一致性与排名的虚妄</h2>
+
+<figure>
+<img src="figs/lb-ability-cross-board.png" alt="跨榜一致性散点图">
+<figcaption>图三：跨榜评测一致性散点。(a) NAVSIM v1 PDMS 对 v2 EPDMS（n=20，ρ=+0.63），但相关性来自低端代际分层，顶部 11 个方法在 v1 挤在 4.3 分内、在 v2 离散达 21.6 分，相关度骤降至 ρ=+0.21；(b) Bench2Drive DS 对 Longest6 v2 DS（n=13，ρ=+0.93），全靠 TFv6 同论文 6 个变体和特权 expert 支撑，去除后独立方法仅 n=5，ρ=+0.05；(c) Bench2Drive 开环平均 L2 误差对闭环 DS（n=9，ρ=−0.16），两者完全不相关甚至反向。</figcaption>
+</figure>
+
+<h3>1. 跨榜一致性拆解（决策 35、46）</h3>
+<table>
+<tr><th>对比榜单配对</th><th>全样本相关性</th><th>排除同族/同论文后</th><th>机制判读</th></tr>
+<tr>
+<td>Bench2Drive DS ↔ Longest6 DS</td>
+<td>n=13, ρ = +0.93</td>
+<td><b>n=5, ρ = +0.05</b>（TFv6 6 变体内部 ρ = +0.87）</td>
+<td>相关性来自同一代码库内部的 scaling，而非短路线预测长路线。独立方法 B2D 83.5–90.3 对应 Longest6 7–44，HiP-AD 在 B2D 获 86.8 分，Longest6 仅 7 分。</td>
+</tr>
+<tr>
+<td>NAVSIM v1 PDMS ↔ v2 EPDMS</td>
+<td>n=20, ρ = +0.63</td>
+<td><b>顶部 11 个方法：ρ = +0.21</b>（底部 9 个方法：ρ = +0.67）</td>
+<td>全样本相关仅代表代际分层（TransFuser 一代双榜垫底）；v1 榜首 11 个方法聚集在 4.3 分内，v2 离散达 22 分，v1 排序对 v2 无预测力。</td>
+</tr>
+<tr>
+<td>B2D 开环 L2 ↔ 闭环 DS / SR</td>
+<td>n=9, ρ = −0.16</td>
+<td>L2 ↔ SR: −0.05<br><b>L2 ↔ Efficiency: −0.69</b></td>
+<td>开环 L2 与 Efficiency 同向，均鼓励 continuation（顺延开）；闭环 DS 与 Comfortness 反向（−0.75，惩罚急刹）。开环拟合最好的模型闭环常因不敢动作而垫底。</td>
+</tr>
+</table>
+
+<h3>2. 多榜前 10 交集为空（决策 46）</h3>
+<p>
+对 8 类榜单 12 张子榜的前 10 名方法归族审计表明：<b>没有一个方法族能够同时在真实数据开环榜（NAVSIM、WOD）与 CARLA 闭环榜（B2D、LB2）上进入前 10</b>。
+</p>
+<ul>
+<li>CARLA 闭环榜前 10 被 TransFuser-LEAD 族与 SimLingo 族垄断；真实数据榜被 DrivoR 族与 AFARI（WA-JEPA）族占据；nuScenes 前 10 全为自车先验模型。</li>
+<li>交集本质上是由<b>训练数据所属生态与输入接口契约</b>决定的，不能作为通用驾驶能力的信号。</li>
+<li>在实际配对考卷上（T1–T3 实验，决策 46），NAVSIM 训练的 scorer 族模型在脱离原生态后，零样本测试性能甚至低于无参数匀速外推（CV）；其在真实外观车辆上的反应强度不足 openpilot 线性读出的三分之二。</li>
+</ul>
+
+<h3>3. 单次评测噪声抹平名次差异（决策 38）</h3>
+<p>
+在 Bench2Drive 209 条有效路线上，同一 checkpoint 的重复评测标准差 SD 达 0.80（BLUE 6 次评测），两次单独评测之差的 95% 置信带达 <b>±2.3 DS、±5.0 SR</b>。
+BLUE 6 次评测总分仅差 0.8，但有 58 / 206 条路线的成败发生翻转（总分稳定靠路线间正负抵消）。
+<b>B2D 榜单第 2–6 名（91.01 到 90.34）的总分差距不足 0.7，完全淹没在训练 run 间约 1.5 DS 的噪声之中</b>。头部方法在 5 个突发 hazard 场景上已近乎饱和（多达 100%），拉开分差的实质是保护性转弯（unprotected turn）与规划避障路线。
+</p>
+
+<h2>五、榜单完整性、人类基线与评测审计</h2>
+
+<figure>
+<img src="figs/f5_waymo_leaderboard.png" alt="Waymo E2E 榜单分布与架构对比">
+<figcaption>图四：Waymo Open Dataset E2E 榜单分布（RFS 对比 ADE@5s）。散点按架构类型分类：全解冻小模型 RAP 居首，冻结视觉特征的系统 FROST-Drive 获得中游 RFS（7.856）但 ADE 垫底；视频生成路线 SUV 仅凭单前视相机达到 7.94。出厂未微调 openpilot Cinque 在官方 test 上取得 RFS 7.921，排名前 19/115。整个榜单 RFS 极度密集在 7.5–8.05 分之间。</figcaption>
+</figure>
+
+<h3>1. 上传式只打分榜单的完整性漏洞</h3>
+<p>
+WOD-E2E 与 NAVSIM 私有 test 采用<b>离线推理、上传轨迹 pickle/protobuf</b> 机制，服务器只计算几何误差，并不实际重跑模型。
+在这种机制下，无法在技术上排除参赛者离线手工标注或使用大语言模型（LLM）前向生成轨迹的可能（按每帧 1 分钟计算，WOD 1,505 帧仅需 25 人时即可全人工绘制）。
+对于纯上传榜单，<b>最坚实的信誉防线不是排名，而是开源端到端推理代码、冻结权重与提交包 SHA-256 哈希</b>，实现逐字节可重现（决策 2、文献调研）。
+</p>
+
+<h3>2. 人类基准的真实状态调查</h3>
+<ul>
+<li><b>WOD-E2E 无人类上限</b>：论文中 3 条 rater 参考轨迹并非人类驾驶产生，而是由 Wayformer 采样 64 条候选后经人工筛选打分；官方 logged future 在验证集上 RFS 为 8.13，且源自「自动驾驶与人工混合采集」，不能作为纯人类基准。</li>
+<li><b>NAVSIM Human 分数构造虚高</b>：v1 在筛选 navtest 时直接剔除了 human PDMS &lt; 0.8 的场景；v2 的 EPDMS 引入了人类违规豁免机制（human 犯规项 agent 自动免罚），使 human 在惩罚项上结构性拿满。模型在 EP（进度）上超越 human 仅代表其更激进地贴近特权规划器上限，不代表超越人类。</li>
+<li><b>CARLA / B2D 人类基准空白</b>：文献检索证实，全行业尚无任何在 Bench2Drive 或 CARLA Leaderboard 官方路线及 DS 规则下对人类手柄/方向盘驾驶打分的基准记录。</li>
+</ul>
+
+<h3>3. 环境计算陷阱审计：NAVSIM OpenBLAS Bug（决策 73）</h3>
+<p>
+在硬件平台迁移中发现：<code>numpy 1.23.4</code> 绑定的 OpenBLAS 在 Intel Sapphire Rapids 架构上会自动选择 Cooperlake 内核，导致矩阵求逆（<code>inv</code> / <code>pinv</code> / <code>SVD</code>）出现严重静默数值错误（<code>pinv</code> 相对真实最小二乘解误差达 3.5），直接使无参数 constant velocity 模型在 NAVSIM 上刷出 64 EPDMS 的虚高分数。
+通过对 09-28 之后全部 85 个评测 run 与全部 metric cache 进行全量扫描与逐位比对：
+所有评估运行均显式声明并注入了 <code>OPENBLAS_CORETYPE=Haswell</code> 环境变量，缓存参考轨迹最大速度均在正常范围（15–19 m/s），四组代表性配置在全量 12,146 与 5,912 token 上重测结果逐位完全一致。<b>确认没有任何一个已归档 NAVSIM 分数受到该 bug 污染</b>。
+</p>
+
+<h2>六、原始数据与实验索引</h2>
+<ul>
+<li><b>决策记录</b>：<a href="../decisions/019.md">决策 19（HUGSIM 控制列定义）</a>、<a href="../decisions/031.md">决策 31（TFv6 接口 +14.3 DS）</a>、<a href="../decisions/035.md">决策 35（榜单分数审计与 E 层稀缺）</a>、<a href="../decisions/037.md">决策 37（Zero-shot 开环下限）</a>、<a href="../decisions/038.md">决策 38（B2D 噪声与 hazard 拆解）</a>、<a href="../decisions/046.md">决策 46（多榜前 10 交集与跨卷评测）</a>、<a href="../decisions/073.md">决策 73（OpenBLAS 审计）</a>。</li>
+<li><b>实验仓库与原始报表</b>：
+  <ul>
+    <li><code>experiments/leaderboard_audit/</code>：包含 35 项机制审计矩阵、W1–W5 增益账本、跨榜相关性复算脚本。</li>
+    <li><code>experiments/top10/</code>：多榜前 10 族定义、环境封装、T1（SparseDriveV2 + ZTRS）、T2（DrivoR + WA-JEPA）、T3（BridgeDrive + BLUE）配对考卷结果。</li>
+    <li><code>experiments/tfv6_rules/</code>：TFv6 规则 × 控制接口 220 路线闭环与开环配对考卷。</li>
+  </ul>
+</li>
+<li><b>工程与运行文档</b>：<a href="../../docs/navsim.md">docs/navsim.md</a>、<a href="../../docs/bench.md">docs/bench.md</a>、<a href="../../docs/closed-loop-runbook.md">docs/closed-loop-runbook.md</a>。</li>
+</ul>
+
+</body></html>

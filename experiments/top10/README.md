@@ -8,7 +8,7 @@ index: no top-10 family on all boards except SparseDrive
 
 **Conclusion.** No family intersects except SparseDrive (B2D #10) (decisions 46). I3 flips 23.6-66.1% vs null 5-6%; BridgeDrive 0.2% is shift; none memorises positions (decisions 58).
 
-**Read more.** research/leaderboard-vs-ability.md, `git show bcbdde4:todos/2026-09-26-top10-intersection.md`
+**Read more.** research/benchmarks/index.html, `git show bcbdde4:todos/2026-09-26-top10-intersection.md`
 
 <!-- files:begin -->
 ## Files

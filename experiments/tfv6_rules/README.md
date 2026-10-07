@@ -8,7 +8,7 @@ index: public B2D noise: single-eval DS SD 0.80; rules x interface not run
 
 **Conclusion.** Only public per-route data (209 routes) has results: DS SD 0.80, top-5 within noise (decisions 38). Rules x interface runs stopped 2026-09-25 with no results.
 
-**Read more.** research/leaderboard-vs-ability.md, `git show bcbdde4:todos/2026-09-25-tfv6-rules-interface/README.md`
+**Read more.** research/benchmarks/index.html, `git show bcbdde4:todos/2026-09-25-tfv6-rules-interface/README.md`
 
 <!-- files:begin -->
 ## Files

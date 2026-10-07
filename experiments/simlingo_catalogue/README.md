@@ -8,7 +8,7 @@ index: no result: 220-route x 2-arm batch never recorded
 
 **Conclusion.** No result: code diff and smoke done, but the 220-route x 2-arm batch has no results or entry; SimLingo/BLUE scores not re-based.
 
-**Read more.** research/leaderboard-vs-ability.md, `git show bcbdde4:todos/2026-09-25-simlingo-catalogue/README.md`
+**Read more.** research/benchmarks/index.html, `git show bcbdde4:todos/2026-09-25-simlingo-catalogue/README.md`
 
 <!-- files:begin -->
 ## Files
