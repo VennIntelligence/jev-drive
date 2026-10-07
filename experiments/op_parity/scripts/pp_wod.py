@@ -74,11 +74,11 @@ def cmd_bias(a):
         if var == "kinacc":                                        # ax from the position-derived acceleration (past_kinematics "a"), ay = 0
             from jevdrive import waymo as W
             e[:, 6], e[:, 7] = W.past_kinematics(past)["a"] / 3.0, 0
-        if H.is_shipped(tag) or var == "nobias":
+        m = None if (H.is_shipped(tag) or var == "nobias") else H.pmodel(tag, torch.device("cpu"))
+        if m is None or m.adapter is None:                         # shipped, ":nobias", or an arm without adapter (P1: inputs zeroed)
             bias = np.zeros((len(names), 32, 512), np.float16)
         else:
-            m = H.pmodel(tag, torch.device("cpu"))
-            assert m.adapter is not None and not m.adapter.use_side, tag
+            assert not m.adapter.use_side, tag
             with torch.no_grad():
                 bias = np.concatenate([m.adapter(torch.from_numpy(e[i:i + 256]), None, None).to(torch.float16).numpy()
                                        for i in range(0, len(ego), 256)])
