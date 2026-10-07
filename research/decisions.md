@@ -168,3 +168,4 @@
 | 171 | WLG 上用 rater 帧做偏好微调（k-fold）out-of-fold 约 +0.09 RFS（top +0.091 [+0.012, +0.170]，f20 +0.089 [+0.018, +0.156]），in-sample 是 3–4 倍；standstill 不动 | 弱 | 待定 |
 | 172 | hinge 的 λ × margin 扫描没有点赢过 λ 30 / margin 0.5，两者是同一条强度轴且已近饱和，SH30 保留；SH30 上 WOD val 7.734，对 P2H10 +0.026 [−0.027, +0.078]，无跨域转弯收益 | 中 | 成立 |
 | 173 | 薄 head 选 F20 候选 out-of-fold +0.148 [+0.062, +0.248]，但只靠 ego + 指令 + plan，Cinque / 冻结 Qwen3（单帧、多帧）都不加分；增益全在转弯意图帧；LoRA pilot 无差；日志事后标签做监督为负 | 中 | 待定 |
+| 174 | 停车门训进 navtrain 配方不赚（P2HGA navtest −0.21，HUGSIM −0.020；起步先验只是搬进 plan 权重）；navtrain + WOD 混合臂 MX 开环两榜持平、HUGSIM −0.096：各榜各自配方，不做一套权重 | 中 | 成立 |
