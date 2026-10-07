@@ -75,6 +75,9 @@ class Cfg:
     hinge_margin: float = 0.3
     hinge_labels: tuple = ("runs/op_probe/labels/navtrain_all.npz",)   # one label file per source (first file that labels a row wins)
     hinge_footprint: tuple = ("pacifica",)                                # footprint of each label file: pacifica (NAVSIM) | mkz (B2D)
+    agent_lam: float = 0.0                # agent-box hinge on the plan (lib/agent_hinge.py, plans/2026-10-07-agent-hinge-prereg.md), imitation rows; 0 = off
+    agent_margin: float = 0.5
+    agent_labels: str = "runs/op_parity/agent_labels/navtrain_all.npz"
     b2d_split: str = "b2d/b2dc-v2"                                        # route split of the b2d_* data dirs: <ref>-train / <ref>-val
     anchor_b2d: bool = True               # anchor rows may fall on b2d_* rows (False: anchors only on the other sources, B2D rows are imitation only)
     b2d_mass: float = 0.0                                                 # share of the imitation batch rows drawn from the b2d_* rows (0 = natural mix)
@@ -278,8 +281,8 @@ def split_rows(tab, split_ref, b2d_split=None) -> tuple:
 
 # ---------------------------------------------------------------- losses
 class Losses:
-    def __init__(self, net, cfg: Cfg, tstd: torch.Tensor, di, pi, dev, hinge=None):
-        self.cfg, self.hinge = cfg, hinge
+    def __init__(self, net, cfg: Cfg, tstd: torch.Tensor, di, pi, dev, hinge=None, agent=None):
+        self.cfg, self.hinge, self.agent = cfg, hinge, agent
         self.W = torch.as_tensor(R2.t_weights(T8), device=dev)
         self.s = [torch.as_tensor(x, dtype=torch.float32, device=dev) for x in (SIG_X, SIG_Y, SIG_PSI)]
         self.di = torch.as_tensor(di, device=dev)
@@ -312,6 +315,8 @@ class Losses:
             Ls["imit"] = self.dist(plan[imit], S.cam_x[rows][imit], f[..., 0], f[..., 1], f[..., 2], wl).mean()
             if self.hinge is not None:
                 Ls["hinge"] = self.hinge(*rear(plan[imit], S.cam_x[rows][imit], self.W), rows[imit])
+            if self.agent is not None:
+                Ls["agent"] = self.agent(*rear(plan[imit], S.cam_x[rows][imit], self.W), rows[imit])
         if anchor.any():
             tx, ty, tpsi = rear(S.t_plan[rows][anchor], S.cam_x[rows][anchor], self.W)
             Ls["cons"] = self.dist(plan[anchor], S.cam_x[rows][anchor], tx, ty, tpsi).mean()
@@ -321,6 +326,8 @@ class Losses:
         total = c.lam_i * Ls.get("imit", 0.0) + c.lam_c * Ls.get("cons", 0.0) + c.lam_d * Ls["distill"]
         if "hinge" in Ls:
             total = total + c.hinge_lam * Ls["hinge"]
+        if "agent" in Ls:
+            total = total + c.agent_lam * Ls["agent"]
         if c.act_lab:
             if c.act_lab == "plan":
                 k, ok = plan_curv(plan.detach(), self.Wk), torch.ones(len(rows), dtype=torch.bool, device=out.device)
@@ -395,7 +402,8 @@ def main(a):
               hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, hinge_labels=tuple(a.hinge_labels), hinge_footprint=tuple(a.hinge_footprint),
               b2d_split=a.b2d_split, b2d_mass=a.b2d_mass, anchor_b2d=not a.no_anchor_b2d,
               turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
-              act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop)
+              act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop,
+              agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_labels=a.agent_labels)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
@@ -415,7 +423,12 @@ def main(a):
         from drivable_hinge import Hinge
         hinge = Hinge([data_dir() / f for f in cfg.hinge_labels], S.tab["names"], dev, cfg.hinge_margin, list(cfg.hinge_footprint))
         print(f"hinge lambda {cfg.hinge_lam}, margin {cfg.hinge_margin}: labels cover {hinge.coverage:.4f} of {S.n} rows", flush=True)
-    LS = Losses(model.net, cfg, tstd, S.di, S.pi, dev, hinge)
+    agent = None
+    if cfg.agent_lam > 0:
+        from agent_hinge import AgentHinge
+        agent = AgentHinge(data_dir() / cfg.agent_labels, S.tab["names"], dev, cfg.agent_margin)
+        print(f"agent hinge lambda {cfg.agent_lam}, margin {cfg.agent_margin}: labels cover {agent.coverage:.4f} of {S.n} rows", flush=True)
+    LS = Losses(model.net, cfg, tstd, S.di, S.pi, dev, hinge, agent)
     opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}] + ([{"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}] if new else []),
                             weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
@@ -562,6 +575,9 @@ if __name__ == "__main__":
     ap.add_argument("--hinge-margin", type=float, default=0.3)
     ap.add_argument("--hinge-labels", nargs="+", default=list(Cfg.hinge_labels), help="hinge label file(s) under $DATA_DIR (the first that labels a row wins)")
     ap.add_argument("--hinge-footprint", nargs="+", default=list(Cfg.hinge_footprint), help="footprint of each --hinge-labels file: pacifica | mkz")
+    ap.add_argument("--agent-lam", type=float, default=0.0, help="weight of the agent-box hinge on the plan (lib/agent_hinge.py; 0 = off)")
+    ap.add_argument("--agent-margin", type=float, default=0.5)
+    ap.add_argument("--agent-labels", default=Cfg.agent_labels, help="agent label file under $DATA_DIR")
     ap.add_argument("--no-anchor-b2d", action="store_true", help="no anchor rows on b2d_* rows (imitation only there)")
     ap.add_argument("--b2d-split", default=Cfg.b2d_split)
     ap.add_argument("--b2d-mass", type=float, default=0.0, help="share of imitation draws from the b2d_* rows (turn balancing then acts inside them)")
