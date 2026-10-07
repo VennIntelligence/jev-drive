@@ -170,10 +170,11 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
         S.append(R.Stage("onnx", R.stage_cmd("jev", "hugsim-onnx", m.spec), done=str(onnx_path(m)), vram=10, cpu=4, ram=24))
     per = 12.5 if m.family == "wajepa" else 8.5
     base = 6 if m.family == "wajepa" else 8
+    ram = (6 if m.family == "wajepa" else 4) * w + 8     # openpilot workers measured 22 GB at w = 6 (2026-10-08)
     if todo:
         for i in range(k):
             S.append(R.Stage(f"w{i}", R.stage_cmd("jev", "hugsim-worker", run_dir, i), done=str(run_dir / "workers" / f"w{i}.DONE"),
-                             vram=round(base + per * w, 1), cpu=2 * w + 3, ram=6 * w + 8, after=[s.name for s in S if s.name == "onnx"],
+                             vram=round(base + per * w, 1), cpu=2 * w + 3, ram=ram, after=[s.name for s in S if s.name == "onnx"],
                              tries=2))
     S.append(R.Stage("collect", R.stage_cmd("hugsim", "hugsim-collect", run_dir), done=str(run_dir / "DONE"), vram=0.5, cpu=4, ram=16,
                      after=[s.name for s in S if s.name.startswith("w")]))
