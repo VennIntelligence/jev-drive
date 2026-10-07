@@ -19,83 +19,84 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 # Fig 1: Current Position across Benchmarks
 # -------------------------------------------------------------
 def make_fig1():
-    fig, axes = plt.subplots(1, 3, figsize=(plot_style.DOUBLE_COLUMN_IN, 2.5), constrained_layout=True)
-    
+    fig, axes = plt.subplots(1, 3, figsize=(plot_style.DOUBLE_COLUMN_IN, 2.6), constrained_layout=True)
+
     # Colors
     c_shipped = '#888888'
     c_p2h = plot_style.PALETTE['blue']
+    c_rmh = plot_style.PALETTE['green']
     c_wajepa = plot_style.PALETTE['vermillion']
-    
-    # Panel 1: navtest EPDMS
+
+    # Panel 1: navtest EPDMS (experiments/op_parity/results/replay_hinge/navtest_arms.md for RMH10)
     ax = axes[0]
     plot_style.panel(ax, "a  navtest (12,146 tokens)")
-    models = ['Shipped\n(P0)', 'P2H\n(Ours)', 'WA-JEPA\n(SOTA)']
-    scores = [80.51, 88.67, 91.71]
-    yerr = [[0, 0], [0.35, 0.35], [0, 0]] # P2H CI roughly +-0.35
-    colors = [c_shipped, c_p2h, c_wajepa]
-    bars = ax.bar(models, scores, color=colors, width=0.55, edgecolor='none', zorder=3)
+    models = ['Shipped\n(P0)', 'P2H10', 'RMH10\n(replay\nhinge)', 'WA-JEPA\n(SOTA)']
+    scores = [80.51, 88.67, 89.19, 91.71]
+    colors = [c_shipped, c_p2h, c_rmh, c_wajepa]
+    bars = ax.bar(models, scores, color=colors, width=0.6, edgecolor='none', zorder=3)
     ax.set_ylabel("EPDMS Score")
     ax.set_ylim(70, 95)
+    ax.tick_params(axis='x', labelsize=7)
     for bar, score in zip(bars, scores):
-        ax.text(bar.get_x() + bar.get_width()/2, score + 0.6, f"{score:.1f}", ha='center', va='bottom', fontsize=7.5)
+        ax.text(bar.get_x() + bar.get_width()/2, score + 0.6, f"{score:.2f}", ha='center', va='bottom', fontsize=7)
     ax.grid(axis='x', visible=False)
-    
-    # Panel 2: navhard EPDMS (Combined & Stage 1/2)
+
+    # Panel 2: navhard EPDMS (Combined & Stage 1/2); RMH10 from replay_hinge/navhard_arms.md
     ax = axes[1]
     plot_style.panel(ax, "b  navhard (225 groups)")
     x = np.arange(3)
-    width = 0.26
-    
-    # Combined, Stage 1, Stage 2
+    width = 0.2
+
     shipped_vals = [33.54, 71.79, 47.08]
     p2h_vals = [31.84, 74.73, 43.04]
+    rmh_vals = [32.09, 74.52, 44.02]
     wa_vals = [35.41, 81.90, 43.53]
-    
-    ax.bar(x - width, shipped_vals, width, label='Shipped', color=c_shipped, zorder=3)
-    ax.bar(x, p2h_vals, width, label='P2H', color=c_p2h, zorder=3)
-    ax.bar(x + width, wa_vals, width, label='WA-JEPA', color=c_wajepa, zorder=3)
-    
+
+    ax.bar(x - 1.5*width, shipped_vals, width, label='Shipped', color=c_shipped, zorder=3)
+    ax.bar(x - 0.5*width, p2h_vals, width, label='P2H10', color=c_p2h, zorder=3)
+    ax.bar(x + 0.5*width, rmh_vals, width, label='RMH10', color=c_rmh, zorder=3)
+    ax.bar(x + 1.5*width, wa_vals, width, label='WA-JEPA', color=c_wajepa, zorder=3)
+
     ax.set_xticks(x)
     ax.set_xticklabels(['Combined', 'Stage 1', 'Stage 2'])
     ax.set_ylabel("EPDMS Score")
-    ax.set_ylim(0, 92)
-    ax.legend(loc='upper left', fontsize=7)
+    ax.set_ylim(0, 100)
+    ax.legend(loc='upper left', fontsize=6.5, ncol=2)
     ax.grid(axis='x', visible=False)
-    
+
     # Panel 3: HUGSIM 64 (HD x 100)
     ax = axes[2]
     plot_style.panel(ax, "c  HUGSIM 64 (HD × 100)")
     x = np.arange(3)
-    width = 0.26
-    
+
     # All 64, Turn 23, Straight 41
-    # Shipped P0: 29.4 spec / 26.3 exam on All 64 (hugsim_full.md line 12); n/a on Turn 23 and Straight 41
-    # P2H under spec_plan_smooth: 43.2 on All 64, 35.0 on Turn 23, 47.8 on Straight 41 (four_dirs/hugsim.md)
-    # WA-JEPA: 45.1 on All 64, 44.2 on Turn 23, 45.6 on Straight 41
-    shipped_hd = [29.4, 0, 0]
+    # Shipped P0: 29.4 spec on All 64 (hugsim_full.md line 12); n/a on Turn 23 and Straight 41
+    # P2H under spec_plan_smooth: 43.2 / 35.0 / 47.8 (four_dirs/hugsim.md)
+    # RMH10 (2 seeds, spec_plan_smooth): 43.5 / 33.6 / 49.0 (replay_hinge/hugsim_spec_plan_smooth_strata.md)
+    # WA-JEPA: 45.1 / 44.2 / 45.6
     p2h_hd = [43.2, 35.0, 47.8]
+    rmh_hd = [43.5, 33.6, 49.0]
     wa_hd = [45.1, 44.2, 45.6]
-    
-    b1 = ax.bar(x - width, shipped_hd, width, label='Shipped P0 (spec)', color=c_shipped, zorder=3)
-    b2 = ax.bar(x, p2h_hd, width, label='P2H (smooth)', color=c_p2h, zorder=3)
-    b3 = ax.bar(x + width, wa_hd, width, label='WA-JEPA', color=c_wajepa, zorder=3)
-    
-    ax.text(x[0] - width, 29.4 + 1, "29.4", ha='center', va='bottom', fontsize=7.5, color='#444444')
-    ax.text(x[1] - width, 1.5, "n/a", ha='center', va='bottom', fontsize=7.5, color='#888888')
-    ax.text(x[2] - width, 1.5, "n/a", ha='center', va='bottom', fontsize=7.5, color='#888888')
-    
-    for xi, val in zip(x, p2h_hd):
-        ax.text(xi, val + 1, f"{val:.1f}", ha='center', va='bottom', fontsize=7.5, color=c_p2h)
-    for xi, val in zip(x, wa_hd):
-        ax.text(xi + width, val + 1, f"{val:.1f}", ha='center', va='bottom', fontsize=7.5, color=c_wajepa)
-    
+
+    ax.bar(x[0] - 1.5*width, 29.4, width, label='Shipped P0 (spec)', color=c_shipped, zorder=3)
+    ax.bar(x - 0.5*width, p2h_hd, width, label='P2H10 (smooth)', color=c_p2h, zorder=3)
+    ax.bar(x + 0.5*width, rmh_hd, width, label='RMH10 (smooth)', color=c_rmh, zorder=3)
+    ax.bar(x + 1.5*width, wa_hd, width, label='WA-JEPA', color=c_wajepa, zorder=3)
+
+    ax.text(x[0] - 1.5*width, 29.4 + 1, "29.4", ha='center', va='bottom', fontsize=6.5, color='#444444')
+    for xi in x[1:]:
+        ax.text(xi - 1.5*width, 1.5, "n/a", ha='center', va='bottom', fontsize=6.5, color='#888888', rotation=90)
+    for series, off, col in ((p2h_hd, -0.5, c_p2h), (rmh_hd, 0.5, c_rmh), (wa_hd, 1.5, c_wajepa)):
+        for xi, val in zip(x, series):
+            ax.text(xi + off*width, val + 1, f"{val:.1f}", ha='center', va='bottom', fontsize=6, color=col, rotation=90)
+
     ax.set_xticks(x)
     ax.set_xticklabels(['All 64', 'Turn 23', 'Straight 41'])
     ax.set_ylabel("HD Score (× 100)")
-    ax.set_ylim(0, 56)
-    ax.legend(loc='upper left', fontsize=7)
+    ax.set_ylim(0, 70)
+    ax.legend(loc='upper left', fontsize=6.5, ncol=2)
     ax.grid(axis='x', visible=False)
-    
+
     stem = OUT_DIR / "fig1_current_position"
     plot_style.save(fig, stem)
     plt.close(fig)
