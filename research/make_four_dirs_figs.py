@@ -283,6 +283,8 @@ def copy_and_extract_assets():
             im.seek(min(f_idx, im.n_frames - 1))
             im.convert("RGB").save(OUT_DIR / png_name)
             print(f"Extracted frame {f_idx} from {gif_name} -> {png_name}")
+            shutil.copy2(gif_path, OUT_DIR / gif_name)
+            print(f"Copied {gif_name} to {OUT_DIR / gif_name}")
 
 if __name__ == "__main__":
     make_fig1()

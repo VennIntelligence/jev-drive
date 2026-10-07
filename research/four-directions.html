@@ -61,18 +61,23 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 <h3>1. 典型失败案例与现场</h3>
 <p>
 用户观察到的直觉现象是「车转不过弯，冲出道路」。
-在 HUGSIM 中，该现象完全真实存在，典型案例为 <code>scene-570_770-easy-00</code>（KITTI-360 丁字路口）：P2H 以 12–13 m/s 的高速直冲路口，模型规划的 plan 一直保持笔直，直到距路沿仅剩 1 秒时才急剧打方向，导致车辆以近 10 m/s 冲上对角路沿；exam 预设直接跟踪相同迟钝的 plan 也同样撞上路沿；而 WA-JEPA 面对相同指令与自车历史，在弯前 26 米处即表现出减速至 2.7 m/s，平顺转过路口（推测其视觉特征能更早感知路口拓扑）。<a href="../experiments/op_parity/results/gap/clips/570_770-easy-00.gif" target="_blank">[查看完整闭环 GIF: 570_770-easy-00.gif]</a>。
-然而在真实日志开环评测 navtest 上，失败形式截然相反：车辆不是「转不过去」，而是<b>切内角</b>出界。<a href="../experiments/op_parity/results/gap/clips/dac-45935e.gif" target="_blank">[查看 navtest 切内角典型 GIF: dac-45935e.gif]</a>。
+在 HUGSIM 中，该现象完全真实存在，典型案例为 <code>scene-570_770-easy-00</code>（KITTI-360 丁字路口）：P2H 以 12–13 m/s 的高速直冲路口，模型规划的 plan 一直保持笔直，直到距路沿仅剩 1 秒时才急剧打方向，导致车辆以近 10 m/s 冲上对角路沿；exam 预设直接跟踪相同迟钝的 plan 也同样撞上路沿；而 WA-JEPA 面对相同指令与自车历史，在弯前 26 米处即表现出减速至 2.7 m/s，平顺转过路口（推测其视觉特征能更早感知路口拓扑）。
+然而在真实日志开环评测 navtest 上，失败形式截然相反：车辆不是「转不过去」，而是<b>切内角</b>出界（典型案例 <code>dac-45935e</code>）。
 </p>
 
-<div class="grid2">
 <figure>
 <img src="figs/four-directions/hugsim_bev_d1.png" alt="HUGSIM 急弯鸟瞰轨迹">
 <figcaption>图三：HUGSIM scene-570_770-easy-00 轨迹。红线为 P2H 轨迹与 plan，车辆高速直插路口，终点前 1 秒才转向并撞上对角路沿；蓝线为 WA-JEPA，早早在路口前减速并紧贴车道内完成转向。</figcaption>
 </figure>
+
+<div class="grid2">
 <figure>
-<img src="figs/four-directions/frame_570_770_d1.png" alt="HUGSIM 急弯碰撞瞬间">
-<figcaption>图四：scene-570_770-easy-00 撞击瞬间视频帧。P2H 保持高车速径直冲撞路口对侧人行道路沿，plan 的横向曲率输出严重滞后。</figcaption>
+<img src="figs/four-directions/570_770-easy-00.gif" alt="HUGSIM 急弯冲出路口闭环动图" loading="lazy">
+<figcaption>图四：HUGSIM scene-570_770-easy-00 闭环动图。P2H 保持高车速径直冲撞路口对侧人行道路沿，plan 的横向曲率输出严重滞后。</figcaption>
+</figure>
+<figure>
+<img src="figs/four-directions/dac-45935e.gif" alt="navtest 急弯切内角开环动图" loading="lazy">
+<figcaption>图五：navtest 开环急弯切内角典型动图（dac-45935e）。车辆并非转向不足，而是前角在 3.4 s 处切入弯道内侧路沿边界导致 DAC 失败。</figcaption>
 </figure>
 </div>
 
@@ -97,7 +102,7 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 
 <figure>
 <img src="figs/four-directions/fig3_mechanisms.png" alt="核心失败机制剖析">
-<figcaption>图五：核心失败机制细分统计。（a）D1 急弯在 navtest 上内侧切角占 54%，转不过去仅 26%；（b）D2 宽弯在 navtest 上 62% 为小于 0.3 m 浅擦边，42% 仅在 devkit LQR 回放时出界；（c）D3 车辆碰撞在 navtest 上 36% 撞前方静止车，49% 的碰撞 plan 速度超过日志 10% 以上。</figcaption>
+<figcaption>图六：核心失败机制细分统计。（a）D1 急弯在 navtest 上内侧切角占 54%，转不过去仅 26%；（b）D2 宽弯在 navtest 上 62% 为小于 0.3 m 浅擦边，42% 仅在 devkit LQR 回放时出界；（c）D3 车辆碰撞在 navtest 上 36% 撞前方静止车，49% 的碰撞 plan 速度超过日志 10% 以上。</figcaption>
 </figure>
 
 <h3>4. 修复方案、决定性实验与成本</h3>
@@ -110,17 +115,17 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 
 <h3>1. 典型失败案例与现场</h3>
 <p>
-宽弯与缓弯（曲率半径 R ≥ 15 m）的失败绝大多数发生在 navtest 开环上，表现为车身边缘以极浅的深度越过可行驶区域边界（图六）。在 HUGSIM 闭环中，该类场景仅有 2 例（例如 <code>scene-090-hard-01</code>），且全为晚打方向擦碰道路外侧，车辆入弯速度正常（3.7 m/s），转向响应较路线晚 0.75 秒。事先怀疑的「平滑时间窗口（0.5–1.5 s）过大导致提前切入内侧」假说被实际数据<b>完全否定</b>。<a href="../experiments/op_parity/results/gap/clips/dac-56706b.gif" target="_blank">[查看 navtest 宽弯浅擦边典型 GIF: dac-56706b.gif]</a>。
+宽弯与缓弯（曲率半径 R ≥ 15 m）的失败绝大多数发生在 navtest 开环上，表现为车身边缘以极浅的深度越过可行驶区域边界（图七与图八）。在 HUGSIM 闭环中，该类场景仅有 2 例（例如 <code>scene-090-hard-01</code>），且全为晚打方向擦碰道路外侧，车辆入弯速度正常（3.7 m/s），转向响应较路线晚 0.75 秒。事先怀疑的「平滑时间窗口（0.5–1.5 s）过大导致提前切入内侧」假说被实际数据<b>完全否定</b>。
 </p>
 
 <div class="grid2">
 <figure>
 <img src="figs/four-directions/nav_dac_anatomy.png" alt="navtest 与 navhard DAC 几何解剖">
-<figcaption>图六：navtest 与 navhard 各分桶的出界几何解剖。在 navtest 宽弯（wide）中，仅在 LQR 回放时出界（LQR-only）占 42%，深度小于 0.3 m 擦边（graze）占 62%，内侧出界占 53%（WA-JEPA 仅 28%）。</figcaption>
+<figcaption>图七：navtest 与 navhard 各分桶的出界几何解剖。在 navtest 宽弯（wide）中，仅在 LQR 回放时出界（LQR-only）占 42%，深度小于 0.3 m 擦边（graze）占 62%，内侧出界占 53%（WA-JEPA 仅 28%）。</figcaption>
 </figure>
 <figure>
-<img src="figs/four-directions/frame_dac_56706b_d2.png" alt="navtest 浅擦边视频帧">
-<figcaption>图七：navtest 宽弯浅擦边抽帧（dac-56706b）。车辆 plan 航向与车道线高度平行，但右前角在 LQR 跟踪回放时擦出路沿不足 0.2 m。</figcaption>
+<img src="figs/four-directions/dac-56706b.gif" alt="navtest 宽弯浅擦边动图" loading="lazy">
+<figcaption>图八：navtest 宽弯浅擦边典型动图（dac-56706b）。车辆 plan 航向与车道线高度平行，但右前角在 LQR 跟踪回放时擦出路沿不足 0.2 m。</figcaption>
 </figure>
 </div>
 
@@ -152,19 +157,29 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 <p>
 碰撞是 HUGSIM 闭环丢分的最主要来源（丢掉 57 分中的 43 分），但需要严格区分两类性质完全不同的场景：<br>
 （1）<b>不可避免的脚本对向车（D3a）：</b>典型如 <code>scene-2510_2710-extreme-00</code>，对向脚本车辆以 2–4 m/s 迎面驶来，P2H 减速不及迎头相撞；WA-JEPA 提前 3 米完全停住，但对向车依然直撞上来导致碰撞。此类场景非反应式对向车属于仿真脚本设定，仅靠停车策略无法规避。<br>
-（2）<b>前方静止/慢速前车（D3b）：</b>典型如 <code>scene-0254-extreme-00</code>，前方存在一辆完全静止的障碍车，P2H 的 plan 终点直接生成在静止车体内；在 navtest 上，典型如前方静止车追尾。<a href="../experiments/op_parity/results/gap/clips/nc-248801.gif" target="_blank">[查看 navtest 车辆碰撞 GIF: nc-248801.gif]</a>、<a href="../experiments/op_parity/results/gap/clips/ttc-3f265d.gif" target="_blank">[查看 navtest TTC 冲突 GIF: ttc-3f265d.gif]</a>。
+（2）<b>前方静止/慢速前车（D3b）：</b>典型如 <code>scene-0254-extreme-00</code>，前方存在一辆完全静止的障碍车，P2H 的 plan 终点直接生成在静止车体内；在 navtest 上，典型如前方静止车追尾（<code>nc-248801</code>）与跟车紧急制动/TTC 冲突（<code>ttc-3f265d</code>）。
 </p>
+
+<figure>
+<img src="figs/four-directions/hugsim_bev_d3.png" alt="HUGSIM 车辆碰撞轨迹">
+<figcaption>图九：HUGSIM 碰撞案例。（左/中）scene-2510_2710-extreme-00 对向车，P2H 径直撞上，WA-JEPA 停住亦被撞；（右）scene-0254-extreme-00 静止车，P2H plan 的终点直接扎入静止车框内。</figcaption>
+</figure>
 
 <div class="grid2">
 <figure>
-<img src="figs/four-directions/hugsim_bev_d3.png" alt="HUGSIM 车辆碰撞轨迹">
-<figcaption>图八：HUGSIM 碰撞案例。（左/中）scene-2510_2710-extreme-00 对向车，P2H 径直撞上，WA-JEPA 停住亦被撞；（右）scene-0254-extreme-00 静止车，P2H plan 的终点直接扎入静止车框内。</figcaption>
+<img src="figs/four-directions/nc-248801.gif" alt="navtest 前方静止车碰撞动图" loading="lazy">
+<figcaption>图十：navtest 车辆碰撞典型动图（nc-248801）。前方存在慢速/静止障碍车，P2H 减速不足径直发生前向碰撞（NC 失败）。</figcaption>
 </figure>
 <figure>
-<img src="figs/four-directions/nav_collision_types.png" alt="navtest 与 navhard 碰撞类型">
-<figcaption>图九：navtest 与 navhard 碰撞类型分布。navtest 上前方静止车（stopped）占绝对多数（36%），其次为静态物体与移动前车；navhard 则以前车与切入车为主。</figcaption>
+<img src="figs/four-directions/ttc-3f265d.gif" alt="navtest 前车 TTC 冲突动图" loading="lazy">
+<figcaption>图十一：navtest TTC 严重冲突典型动图（ttc-3f265d）。跟车间距骤缩，TTC 突破安全红线。</figcaption>
 </figure>
 </div>
+
+<figure>
+<img src="figs/four-directions/nav_collision_types.png" alt="navtest 与 navhard 碰撞类型">
+<figcaption>图十二：navtest 与 navhard 碰撞类型分布。navtest 上前方静止车（stopped）占绝对多数（36%），其次为静态物体与移动前车；navhard 则以前车与切入车为主。</figcaption>
+</figure>
 
 <h3>2. 损失体量</h3>
 <table>
@@ -198,13 +213,13 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 <h3>1. 诊断结果与数据分布</h3>
 <p>
 依据决策 131 规则（前视相机平均亮度 luma 中位数 &lt; 50 为夜间，≥ 120 为白天）：
-在当前 HUGSIM + NAVSIM 档的全部三个基准评测集中，<b>夜间单元数量全部为 0</b>（表四）。navtest 最暗 log 亮度为 56.7，navhard 最暗为 55.8，HUGSIM 64 最暗场景为 65.0。目检各评测集最暗的片段（图十），全部为白天的阴天、建筑物阴影或树荫，不存在真实的夜间行车数据。
+在当前 HUGSIM + NAVSIM 档的全部三个基准评测集中，<b>夜间单元数量全部为 0</b>（表四）。navtest 最暗 log 亮度为 56.7，navhard 最暗为 55.8，HUGSIM 64 最暗场景为 65.0。目检各评测集最暗的片段（图十三），全部为白天的阴天、建筑物阴影或树荫，不存在真实的夜间行车数据。
 </p>
 
 <div class="grid2">
 <figure>
 <img src="figs/four-directions/night_luma.png" alt="各基准亮度分布">
-<figcaption>图十：navtest、navhard 与 HUGSIM 64 前视相机亮度（luma）直方图。所有评测单元的中位亮度均高于 50，没有真实夜间数据落在夜间阈值（红虚线）以内。</figcaption>
+<figcaption>图十三：navtest、navhard 与 HUGSIM 64 前视相机亮度（luma）直方图。所有评测单元的中位亮度均高于 50，没有真实夜间数据落在夜间阈值（红虚线）以内。</figcaption>
 </figure>
 <div style="font-size:13.5px;padding-top:10px">
 <p><b>低光敏感性探针分析：</b></p>
@@ -249,7 +264,7 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 
 <figure>
 <img src="figs/four-directions/fig4_wod_comparison.png" alt="WOD val 评测结果">
-<figcaption>图十一：WOD val 上 P2H 与出厂模型的开环表现。（a）RFS 评分上，P2H 在全部样本上显著低于出厂模型（7.708 对 8.005），且损失主要发生在白天（7.740 对 8.100），夜间两模型差异不显著；（b）ADE@3s 表现一致，白天误差增大 0.42 m，夜间完全持平（1.312 对 1.308 m）。当将 bias 输入置零时，P2H 权重自身表现与出厂模型几乎完全一致（RFS 7.984）。</figcaption>
+<figcaption>图十四：WOD val 上 P2H 与出厂模型的开环表现。（a）RFS 评分上，P2H 在全部样本上显著低于出厂模型（7.708 对 8.005），且损失主要发生在白天（7.740 对 8.100），夜间两模型差异不显著；（b）ADE@3s 表现一致，白天误差增大 0.42 m，夜间完全持平（1.312 对 1.308 m）。当将 bias 输入置零时，P2H 权重自身表现与出厂模型几乎完全一致（RFS 7.984）。</figcaption>
 </figure>
 
 <h3>2. 事后探针与机理解析</h3>
