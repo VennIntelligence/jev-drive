@@ -22,36 +22,20 @@ ul{padding-left:20px}li{margin-bottom:6px}
 
 <div class="v">
 <b>核心结论（B2D 闭环与控制定性）：</b><br>
-<b>1. 高分来自「表征解耦」，而非控制器优劣（决策 31、32）：</b>TFv6（LEAD，95.28 DS）的高分本质来自其「空间路径（Route Checkpoint）+ 离散目标速度（Target Speed）」的解耦输出接口。在同模型同环境配对实验（W2b）中，改用模型自预测时序航点控车得分立刻暴跌 <b>−14.31 DS</b>（[+5.10, +25.89]，成功率下降 29.2%）；而改用工业级高精度后轴追踪与补偿控制器（C 臂），相对原作者简易 PID 仅变动 <b>+0.99 DS</b>（[−12.23, +15.44]，跨越零轴无显著效应）。<br>
-<b>2. 端到端模型内部存在严重的「认知分裂」（决策 32、35）：</b>在严格的反事实配对考卷（P5）中，真正执行控车的 Target Speed 分类头面对前方突发横穿危险时，减速反应翻转率仅为 <b>0.0%–2.0%</b>（表现为盲目定速巡航）；而弃置不用的时序航点通道却有 <b>30.4%–39.4%</b>（按对计算 73%）的剧烈避碰几何收缩。高分全靠空旷路况的定速巡航与车距自然逼近支撑。<br>
-<b>3. 控制器转弯误差源于对仿真车辆物理的「两处模型错配」（决策 30、41）：</b>Pure Pursuit 将速度向量默认对准车身朝向，忽视了 PhysX 后轴侧偏角 $\beta_r = \arctan(k \cdot v \cdot \omega)$（在急弯中贡献 5° 航向偏差与 0.37 m 横向外抛）；同时转向映射忽略了阿克曼几何差动（内轮实际曲率仅为名义的 0.886 倍）。修正后急右弯 CTE 由 0.392 m 降至 0.089 m，但更激进的转向修正放大了角速度抖动，未能转化为闭环总分提升。<br>
-<b>4. 闭环评测成本与世界回退极限（决策 17、65、83）：</b>全量 220 条路线经优化可在 3.11 小时内完成（8 worker，按模型尺寸直出与 sensor_tick 白名单修复）；CARLA 世界回退（rewind）就地复用虽能节约 85.1% 算力（170.5 降至 25.4 worker·h），但官方 replayer 存在刚体速度清零的动力学断层，不可作为完全等价替代。<br>
-<b>5. openpilot 在 B2D 的表现与主线暂停（决策 57、82、95）：</b>openpilot 原生在 B2D 起步即停（6/6，静止先验），做纵向 modifier 仅有 +9.7 DS（实际来自开得慢），横向直接驾驶严重外抛（DS 降至 8–26 分）。鉴于 B2D 顶榜分数高度饱和且充满模拟器特定规则（creeping/stop sign），主线研发已全面收敛至真实的真实感闭环（HUGSIM）与开环基线（NAVSIM/WOD），B2D 闭环作为基准线正式暂停。
+<b>1. 高分来自「表征解耦」，而非控制器优劣（决策 31、32）：</b>TFv6（LEAD，Bench2Drive 约 95 DS）的高分本质来自其「空间路径（Route Checkpoint）+ 离散目标速度（Target Speed）」的解耦输出接口。在同模型同环境配对实验（W2b）中，解耦输出相对时序航点控车（Arm A − Arm B）主效应为 <b>+14.31 DS</b>（95% CI [+5.10, +25.89]，零违规完成率 SR 提升 29.2 个百分点，CI [+10.4, +50.0] 个百分点）；而改用工业级高精度后轴追踪与补偿控制器（Arm C），相对原作者简易 PID 仅变动 <b>+0.99 DS</b>（[−12.23, +15.44]，跨越零轴无显著效应）。<br>
+<b>2. 端到端模型内部存在严重的「认知分裂」（决策 32、35）：</b>在严格的反事实配对考卷（P5）中，真正执行控车的 Target Speed 分类头面对前方突发危险时，定向减速翻转率每帧仅为 <b>2.0%</b>（95% CI [0.0, 6.5]，按对计算 4.0%，低于天气变化对照的 7.1% 测量地板）；而弃置不用的时序航点通道却有 <b>39.4%</b>（95% CI [28.5, 50.1]，按对计算 73%）的剧烈避碰几何收缩。高分依靠空旷路况的定速巡航与车距自然逼近支撑。<br>
+<b>3. 控制律转弯误差与仿真动力学分析（决策 30、31、32）：</b>Pure Pursuit 将速度向量默认对准车身朝向，忽视了 PhysX 后轴侧偏角 $\beta_r = \arctan(k \cdot v \cdot \omega)$（急弯 26966 中均值 +2.16°，P95 达 4.9°）；转向映射亦未考虑阿克曼差动。在基准弯道修正后 CTE 由 0.392 m 降至 0.089 m，但更激进的转向修正放大了角速度抖动，未通过动作平顺性门禁（决策 30）。在全量闭环航线上叠加侧偏与阿克曼补偿（D 相对 C）仅变动 +0.45 DS（[−2.74, +3.48]，决策 31）；90 度急弯外抛主要源于进弯车速过高与横向打盘不足，动力学错配仅能解释一小部分转向缺口（决策 32）。<br>
+<b>4. 闭环评测成本与世界回退极限（决策 17、65、83）：</b>闭环评测中预处理占端到端延迟的 70%，按模型输入尺寸直出渲染大幅省去 resize 耗时；优化后 8 worker 实测 3.11 小时完成 209/220 条路线（11 条因 CARLA sensor-dormancy segfault 崩溃，且 56% 路线撞满 4000 tick 上限，为较差策略的上界；决策 17）。线程池经调优由原生每 worker 约 561 线程精简至 169 线程（决策 83）。CARLA 就地世界回退（rewind）提案实测加速约 3.0 倍而非预估的 6.7 倍，且因无法恢复悬挂、轮速与控制器状态，各方案均未通过动力学一致性门禁，世界模型分支最终采用从头生成 + zygote（决策 65）。<br>
+<b>5. openpilot 在 B2D 闭环的局限与暂停（决策 57、82、95）：</b>openpilot 原生在 B2D 起步即停（6/6，静止先验），做纵向 modifier 相对路线 base 仅变动 +9.7 DS（95% CI [−5.5, +27.0]，不显著，且同均速对照表明可由开得慢解释），横向全权驾驶发生严重偏离（DS 降至 8.5–26.1 分，决策 57）。特权规则与多模态仲裁未能突破根本瓶颈，B2D 闭环研发线正式暂停。
 </div>
 
-<h2>一、TransFuser 六代技术演进与 TFv6 / LEAD 核心设计</h2>
+<h2>一、TFv6 / LEAD 核心设计与接口机制</h2>
 <p>
-TransFuser（TF）系列是 CARLA 闭环驾驶的奠基性基准。2026 年 TFv6（LEAD，CVPR 2026）在 Bench2Drive 取得 95.28 DS 的顶尖成绩。其演进脉络与代际变革如下：
+TFv6（LEAD，CVPR 2026，arXiv:2512.20563）在 Bench2Drive 取得了约 95 DS 的顶尖成绩（官方自报 95.2 DS，第三方单 checkpoint 重跑 89.6 DS，决策 38）。其核心设计在于消除专家示范与车载感知在视野、不确定性与意图上的不对称，并放弃了易累积航向发散误差的自回归 GRU 轨迹解码器，采用非自回归 Query 并行解码。
 </p>
-
-<table>
-<tr><th>代际</th><th>核心论文 / 竞赛</th><th>输入传感器</th><th>骨干与融合</th><th>解码器架构</th><th>关键机制与突破</th><th>典型基准得分</th></tr>
-<tr><td><b>TFv1</b></td><td>CVPR 2021</td><td>单前摄 60° + 32线 LiDAR</td><td>ResNet-34 双流，多尺度 Transformer 交叉注意力</td><td>MLP 航点回归</td><td>首创透视图像与点云 BEV 多分辨率特征交叉注意力融合</td><td>CARLA LB1.0 优胜</td></tr>
-<tr><td><b>TFv2</b></td><td>TPAMI 2022</td><td>单前摄 + 宽视场 LiDAR</td><td>ResNet-34，加深 Transformer</td><td>MLP 航点回归</td><td>对比学习损失，扩展城镇长路线泛化测试</td><td>Town05 Long 稳定巡航</td></tr>
-<tr><td><b>TFv3</b></td><td>NeurIPS 2022 (InterFuser)</td><td>多视角相机 + LiDAR</td><td>Token 化特征交互</td><td>Transformer 解码器</td><td>可解释中间感知 Token 与安全控制器（Safety Controller）</td><td>CARLA LB1.0 #1</td></tr>
-<tr><td><b>TFv4</b></td><td>CARLA Challenge 2023</td><td>环视相机 + 密集点云</td><td>多视锥统一投影至 BEV</td><td>GRU 时序解码</td><td>扩大感知视场，消除侧向切入盲区；显式深度预测辅助任务</td><td>LB2.0 测试前身</td></tr>
-<tr><td><b>TFv5</b></td><td>CVPR 2023 (TF++)</td><td>环视相机 + 64线 LiDAR</td><td>RegNetY-032 / ResNet-34 + BEV 编码器</td><td><b>自回归 GRU</b> 逐点生成航点</td><td><b>密集多任务辅助头</b>（3D检测、BEV分割、红绿灯）；1.5 km 早停规避惩罚</td><td>CARLA LB2.0 官方冠军 (5.56 DS)</td></tr>
-<tr><td><b>TFv6</b></td><td>CVPR 2026 (LEAD)</td><td>140° 三摄拼接 + LiDAR + 4 毫米波雷达</td><td>RegNetY-032 骨干 + Transformer 融合</td><td><b>非自回归 Transformer Query</b></td><td><b>消除专家-学生三类不对称</b>；彻底抛弃 GRU；<b>输出解耦（路径 + 目标速度）</b>；3 目标点预瞄</td><td><b>Bench2Drive 95.28 DS</b><br>Longest6 v2 62.92 DS</td></tr>
-</table>
-<div class="cite">数据来源：research/transfuser-series-and-tfv6.md、w1_ablation_ledger.csv、LEAD 原论文 (arXiv:2512.20563)。</div>
-
-<h3>TFv6 (LEAD) 消除专家-学生三大不对称性</h3>
-<ul>
-<li><b>视野不对称（Visibility Asymmetry）</b>：特权专家拥有穿透遮挡的上帝视角，导致提前制动示范具有非因果性；LEAD 在采集期加入视锥掩码与遮挡剔除，专家仅基于理论可见信息决策。</li>
-<li><b>不确定性不对称（Uncertainty Asymmetry）</b>：特权专家拥有零噪声动力学真值，敢于微距抢行；LEAD 在专家中注入安全缓冲余量（Safety Margins），生成符合安全冗余的轨迹。</li>
-<li><b>意图不对称（Intent Asymmetry）</b>：废除单一目标点，改用 <b>3 显式目标点 Token 预瞄</b> 并提前 5–8 米切换，为复杂路口转向提供超前意图引导。</li>
-<li><b>解码器去 GRU 化</b>：彻底移除自回归 GRU，消除闭环推理中航向误差（Heading drift）的指数级累积发散，改用非自回归 Query 并行解码。</li>
-</ul>
+<p>
+在输出接口上，LEAD 实现了<b>表示解耦</b>：模型同时输出空间路径点（Route Checkpoint）与离散目标速度（Target Speed）用于真实控车，同时副产 8 点时序航点（Temporal Waypoints）。这一解耦设计直接构成了后续闭环与因果审计的核心研究对象。
+</p>
 
 <h2>二、TFv6 闭环实测与因果审计：表示压倒控制与认知分裂</h2>
 
@@ -61,26 +45,31 @@ TransFuser（TF）系列是 CARLA 闭环驾驶的奠基性基准。2026 年 TFv6
 </p>
 <ul>
 <li><b>Arm A（作者原版解耦接口）</b>：空间路径点（Route Checkpoint）控方向盘，离散目标速度（Target Speed）控油门刹车。</li>
-<li><b>Arm B（作者原版航点接口）</b>：作者自带 PID 跟踪其预测的 8 点时序 Waypoint。</li>
-<li><b>Arm C（生产级控制器）</b>：严格后轴 Pure Pursuit + 前馈控制器跟踪 8 点 Waypoint。</li>
+<li><b>Arm B（作者原版航点接口）</b>：作者自带 PID 跟踪其预测的 8 点时序航点。</li>
+<li><b>Arm C（生产级控制器）</b>：严格后轴 Pure Pursuit 跟踪 8 点航点。</li>
 <li><b>Arm D（生产级动力学补偿）</b>：在 C 臂基础上叠加阿克曼反解与轮胎侧偏补偿。</li>
 </ul>
 
 <figure>
 <img src="figs/paired-ds.png" alt="W2b 各路线配对 DS 差">
-<figcaption>图一：W2b 闭环实验各路线配对 Driving Score 差异（整组 Bootstrap 95% 置信区间）。表示主效应 A − B 显著为正（+14.31 DS），而控制器主效应 C − B 区间跨越零轴（+0.99 DS），证明闭环得分决定于输出表示形式而非底层控制器精度（决策 31）。</figcaption>
+<figcaption>图一：W2b 闭环实验各路线配对 Driving Score 差异（展示各路线 C−B、A−B、D−C 的 seed 均值与路线内 seed 重抽区间，竖线为零）。路线间异质性明显，合并的整组 cluster bootstrap 结果见下表（report-w2b.md，决策 31）。</figcaption>
 </figure>
 
 <table>
-<tr><th>对比项</th><th>配对公式</th><th>DS 差值 [95% CI]</th><th>成功率（SR）差值</th><th>核心定性结论</th></tr>
-<tr><td><b>表示主效应</b></td><td><b>Arm A − Arm B</b></td><td><b>+14.31 [+5.10, +25.89]</b></td><td><b>+29.2%</b></td><td><b>显著为正</b>。同模型换用时序航点控车，分数立刻从 95 跌至 82 分。</td></tr>
-<tr><td><b>控制器主效应</b></td><td><b>Arm C − Arm B</b></td><td><b>+0.99 [−12.23, +15.44]</b></td><td><b>+0.9%</b></td><td><b>无统计显著性</b>。工业级高精轨迹跟踪器在闭环总分上无法战胜简易 PID。</td></tr>
+<tr><th>对比项</th><th>配对公式</th><th>DS 差值 [95% CI]</th><th>成功率（SR）差值 [95% CI]</th><th>核心定性结论</th></tr>
+<tr><td><b>表示主效应</b></td><td><b>Arm A − Arm B</b></td><td><b>+14.31 [+5.10, +25.89]</b></td><td><b>+29.2 个百分点 [+10.4, +50.0]</b></td><td><b>显著为正</b>。同模型解耦输出接口相对时序航点控车平均高出 +14.31 DS。</td></tr>
+<tr><td><b>控制器主效应</b></td><td><b>Arm C − Arm B</b></td><td><b>+0.99 [−12.23, +15.44]</b></td><td><b>+6.3 个百分点 [−18.8, +31.3]</b></td><td><b>无统计显著性</b>。工业级高精轨迹跟踪器在闭环总分上无法战胜简易 PID。</td></tr>
 </table>
 
 <div class="v">
 <b>切线奇异性病理（Tangent Pathology 陷阱）：</b><br>
-在早期的 W2 实验中，C 臂在静止起步时曾发生奇异暴冲。根本原因在于协议规定「原点到首个航点方向定切线」；车辆静止时毫米级浮动震颤导致切向被误算为 90°，向后轴投影时凭空造出虚假假目标点（Phantom Tick）。W2b 引入近端弧长阈值门禁（> 0.1 m）后该问题彻底消除。
+在早期的 W2 实验中，C 臂在静止起步时曾发生奇异暴冲。根本原因在于原协议规定首个航点切向取原点到航点方向；车辆静止时几厘米横向抖动导致切向被误判为接近 90°，向后轴投影时凭空造出虚假目标点（Phantom Tick）。W2b 修正为从原点起算弧长不足 $L = 1.389\text{ m}$ 时切向直接取车头方向，修正后 Phantom Tick 降为 0（report-w2b.md，决策 31）。
 </div>
+
+<figure>
+<img src="figs/cd-change.png" alt="W2b 相对 W2 的 C/D 路线 DS 变化">
+<figcaption>图二：W2b 相对 W2 各路线 C 臂与 D 臂的 Driving Score 变化（各路线 3 个 seed 的均值与极差）。修正静止切线后 3514、28154 等路线显著恢复，但 2084、2091 等路线仍存在偏离与超时（report-w2b.md，决策 31）。</figcaption>
+</figure>
 
 <h3>2. P5 因果配对考卷：双通道认知分裂（决策 32、35）</h3>
 <p>
@@ -89,130 +78,112 @@ TransFuser（TF）系列是 CARLA 闭环驾驶的奠基性基准。2026 年 TFv6
 
 <figure>
 <img src="figs/lb-ability-tfv6-two-channels.png" alt="TFv6 两通道反应性对比">
-<figcaption>图二：TFv6 真实控车通道（Route + Target Speed）与未控车通道（Temporal Waypoints）在因果配对测试中的反应翻转率对比。控车所用的目标速度头几乎不减速（翻转率 0~2%），而弃置不用的航点却表现出 30~39% 的剧烈避碰几何收缩（决策 32）。</figcaption>
+<figcaption>图三：(a) TFv6 在 Bench2Drive 上的配对 $\Delta$DS 差值（解耦接口相对时序航点 +14.3，启发式开关标注无 CI，生产控制器相对作者 PID +1.0；决策 31、35）；(b) P5 配对考卷中的定向反应翻转率对比（TFv6 真实控车的目标速度头每帧仅 2.0% [0.0, 6.5]、按对 4.0%，低于天气 null 地板 7.1%；未控车的航点通道每帧达 39.4% [28.5, 50.1]、按对 73.3%；薄 head ridge_late 为 0%；决策 32）。</figcaption>
 </figure>
 
 <ul>
-<li><b>Target Speed 分类头（用于真实控车）</b>：突发危险定向翻转率仅 <b>0.0%–2.0%</b>（误翻率 4.7%）。面对横穿行人或加塞前车，目标速度指令不发生下调，实车完全表现为盲目定速巡航，全靠自然接近后的急刹规则保命。</li>
-<li><b>Temporal Waypoints（默认弃置不控车）</b>：突发危险定向翻转率达 <b>30.4%–39.4%</b>（按对计算 73%，误翻率 5.5%）。模型多模态表征其实已经清晰识别了危险，未来 2 秒轨迹点大幅向自车紧缩。</li>
-<li><b>幽灵测试（T3 0.2% 伪影，决策 58）</b>：在空旷无障碍场景下，航点通道出现偶发减速收缩（0.2% 概率），经归因证实该现象为无前车长直道场景的训练分布偏移，而非模型具有对抗脆弱性。</li>
+<li><b>Target Speed 分类头（用于真实控车）</b>：突发危险定向翻转率仅 <b>2.0% [0.0, 6.5]</b>（按对计算 4.0%）。面对横穿行人或加塞前车，目标速度指令几乎不发生下调，实车表现为定速巡航，靠自然接近后的急刹规则保命。</li>
+<li><b>Temporal Waypoints（默认弃置不控车）</b>：突发危险定向翻转率达 <b>39.4% [28.5, 50.1]</b>（按对计算 73%，样本外 weather null 测量地板 7.1%）。模型多模态表征已识别危险，未来轨迹点大幅向自车紧缩。</li>
+<li><b>开环与闭环归因（决策 46、58）</b>：BridgeDrive 在开环 T3 考卷中控车通道翻转率亦仅 0.2%（waypoint 通道为 27.2%，决策 46）；闭环 ghost test（将 hazard 隐藏）中 TFv6（幽灵反应率 5.0%）与 BridgeDrive 均未测出位置记忆，0.2% 归因于开环回放输入偏离训练分布，而非背下具体位置（决策 58）。</li>
 </ul>
-
-<figure>
-<img src="figs/cd-change.png" alt="通道距离变化与分布对比">
-<figcaption>图三：因果干预前后模型各层特征与输出通道的距离变化（CD-Change）。感知表征层发生显著位移，但纵向控制决策层高度钝化，证实了表征与执行的解耦断层。</figcaption>
-</figure>
 
 <h3>3. 危害族谱能力分布与测试时启发式规则（决策 38）</h3>
 
 <figure>
 <img src="figs/b2d-family-sr.png" alt="Bench2Drive 10 大危害场景族谱成功率对比">
-<figcaption>图四：Bench2Drive 10 大危害场景类别下代表性算法的成功率分布。TFv6 的断层优势完全集中在常规规划类（无保护转弯 82% 对基线 43–57%，绕障 89%），而在突发制动类（前车急刹、加塞）上并无优势（决策 38）。</figcaption>
+<figcaption>图四：Bench2Drive 10 大危害场景类别下代表性算法的成功率分布。TFv6 的优势集中在常规规划类（无保护转弯 82% 对基线 43–57%）；在突发制动类上，BLUE（带 gate）突发 hazard SR 比 TFv6 高 10.9 个百分点 [−21.9, 0.0]（决策 38）。</figcaption>
 </figure>
 
 <ul>
-<li><b>常规规划类（优势领域）</b>：无保护转弯（Unprotected Turn）成功率达 82%（其他基线仅 43–57%），障碍物绕行（Overtaking/Bypass）达 90.5%。这完全得益于 3 目标点预瞄和雷达密集几何建图。</li>
-<li><b>突发反应类（无优势）</b>：在前车急刹（Lead Hard Brake）与切入（Cut-in）上各模型得分趋于饱和重合，TFv6 甚至略逊于带语言反应门控的模型。</li>
-<li><b>评测期测试时规则（Heuristics）审计</b>：TFv6 官方评测强依赖三项规则后处理：(i) <b>防卡死蠕行（Creeping）</b>：静止 > 55 秒强制下发 0.4 油门规避 CARLA 60 秒违规死锁；(ii) <b>停车牌检测制动（Stop-Sign Override）</b>：强制置零油门打死刹车规避 0.8 折扣罚分；(iii) 卡尔曼滤波平滑。关闭此三项后，分数由 95.28 降至约 94.0 DS。</li>
+<li><b>常规规划类（优势领域）</b>：无保护转弯（Unprotected Turn）成功率达 82%（其他基线仅 43–57%），障碍物绕行和常规控制表现突出。</li>
+<li><b>突发反应类</b>：在前车急刹（Lead Hard Brake）与切入（Cut-in）上各模型得分趋于饱和重合，TFv6 在突发 hazard 综合 SR 上较 BLUE 低 10.9 个百分点 [−21.9, 0.0]（决策 38）。</li>
+<li><b>测试时规则（Heuristics）审计</b>：TFv6 官方评测依赖防卡死蠕行（Creeping）与停车牌检测制动等规则，规则总体贡献估计约 1 DS 且各家均有使用，规则完全关闭实验未单独执行（决策 35）。</li>
 </ul>
 
 <h2>三、转弯控制的物理力学根因与两处模型错配</h2>
 
-<h3>1. 过于陡的 90 度急转弯：推头外抛的动力学真相</h3>
+<h3>1. 90 度急转弯：外抛偏离的动力学诊断（决策 30、32）</h3>
 <p>
 在 Town12（2084）与 Town04（27529）等 90 度直角弯上，生产级后轴几何控制器（Arm C）频繁发生推头外抛（Route Deviation），而 TFv6 原生 PID（Arm B）顺畅通过。逐帧动力学遥测揭示了两大机制：
 </p>
 
 <figure>
 <img src="figs/schematic_90deg_turn.png" alt="90度直角转弯运动学与动力学示意图">
-<figcaption>图五：90 度急转弯力学机制对比。TFv6 原生策略（蓝）通过航点紧缩提前减速至 2.2 m/s，并依靠 20 帧历史积分项暴力打盘（steer ≥ 0.45）切内弯；生产控制器（橙）以 5.7 m/s 高速冲入弯道，纯几何转向饱和（steer = 0.218），轮胎抓地力饱和严重推头外抛出界（决策 30）。</figcaption>
+<figcaption>图五：90 度急转弯动力学示意对比。TFv6 原生 PID（蓝）进弯前车速较低（约 0.9–3.3 m/s），并依赖 20 帧历史积分项强力打盘切内弯；生产控制器 C（橙）进弯前车速较高（约 3.6–5.7 m/s），纯后轴几何转向不足（steer 输出仅 0.218），导致推头外抛出界（diagnosis-d3.md，diagnosis-steer.md）。</figcaption>
 </figure>
 
 <figure>
 <img src="figs/d3b-factorial-outcomes.png" alt="D3b 因子实验终态矩阵">
-<figcaption>图六：保留集与起步停滞集全量因子拆解矩阵（横向与纵向交叉互换）。Arm E（C横向 + B纵向）依然发生偏离，而 Arm F（B横向 + C纵向）全部顺利通过，证实横向打盘不足是出界的独立核心致因。</figcaption>
+<figcaption>图六：保留集（2084、27529）与起步停滞集（2091）闭环因子拆解矩阵（横向与纵向交叉互换，E = C横向 + B纵向，F = B横向 + C纵向）。F 臂在 2084 和 27529 上未重现官方路线偏离，但仍出现阻塞（2084 s0 DS 22.8）、短暂离线低分（2084 s2 DS 4.9，27529 s0 DS 30.9）以及 2091 超时；E 臂在 27529 s1/s2 和 2091 各 seed 亦均顺利完成，表明失败模式受横纵向与闭环环境复杂耦合影响（diagnosis-d3.md，决策 32）。</figcaption>
 </figure>
 
 <ul>
-<li><b>进弯前纵向车速差距达 2.5 倍</b>：TFv6 原生在弯心前 5–10 米处将车速压至 <b>0.88–2.20 m/s</b>（3–7 km/h 蠕行进弯）；生产控制器 C 进弯前车速仍高达 <b>3.66–5.68 m/s</b>（超 20 km/h）。向心加速度 $a_y = v^2/R \approx (5.68)^2 / 8 \approx 4.03\text{ m/s}^2$，导致轮胎侧向力直接饱和侧滑。</li>
-<li><b>转向打盘缺口达 0.114</b>：作者 PID 采用 20 帧历史滑动积分，在直角弯积分项补打力度极大，实测平均打盘 <b>0.401 以上（峰值达 0.8）</b>；而纯后轴几何律受限于曲率计算，转向仅输出 <b>0.218</b>，产生严重机械转向不足。</li>
+<li><b>进弯前纵向车速差距</b>：在急转弯前 10 米处，TFv6 原生车速为 <b>0.88–3.31 m/s</b>；生产控制器 C 进弯前车速高达 <b>3.56–5.69 m/s</b>。过高进弯速度加剧了轮胎侧滑风险（diagnosis-steer.md）。</li>
+<li><b>转向打盘缺口</b>：在直角弯关键帧上，作者 PID 实测打盘达 <b>0.401</b>，而纯后轴几何律仅输出 <b>0.218</b>（单帧缺口 0.183；在 $|\kappa| \ge 0.12\text{ m}^{-1}$ 处平均缺口为 0.114）。作者 PID 依靠 20 帧历史滑动积分大幅补强打盘，而纯几何律产生明显机械转向不足（diagnosis-steer.md）。</li>
 </ul>
 
-<h3>2. 控制律对 CARLA PhysX 的两处模型错配（决策 30）</h3>
+<h3>2. 控制律对 CARLA PhysX 的两处模型错配（决策 30、31、32）</h3>
 <p>
 逐帧恒等式表明：$\text{真实 CTE} = \text{控制器可见 CTE} + \text{定位误差法向分量}$。在急弯中控制器对自己 rejoin 路径的跟踪误差仅 1–6 cm，外抛源于控制律预设的运动学模型与物理引擎错配：
 </p>
 
 <figure>
 <img src="figs/fig5_lateral_physics.png" alt="PhysX 后轴侧偏与误差分解">
-<figcaption>图七：CARLA PhysX 轮胎侧偏与横向误差分解。（a）8 个窗口全部帧的后轴侧滑速度对 $v^2\omega$ 呈严格线性，拟合系数 $k = 0.0107$；（b）加 $k$ 修正后急右弯误差中定位分量仅占 0–0.2 m，控制器可见误差占绝大部分（决策 30）。</figcaption>
+<figcaption>图七：CARLA PhysX 轮胎侧偏与横向误差分解。（a）后轴侧滑速度对 $v^2\omega$ 呈严格线性，拟合参数 $c \approx 11/\text{rad}$（$k = 0.0107$）；（b）急右弯误差中定位误差分量仅占 0.101 m，控制器可见误差占 0.361 m（决策 30）。</figcaption>
 </figure>
 
 <ul>
 <li><b>错配一：转向映射忽略阿克曼差动（Ackermann Mismatch）</b>：控制器令名义转向角 $\delta = \arctan(L\kappa)$，但 PhysX 将该角直接作用于内轮，实际中心线曲率 $\kappa_{\text{act}} = \frac{\kappa}{1 + w\kappa/2}$，实测 $\kappa_{\text{act}} / \kappa_{\text{nom}} = 0.886$（缩水 11.4%）。正确映射应反解 $\cot \delta_{\text{inner}} = \frac{1}{L\kappa} - \frac{w}{2L}$。</li>
-<li><b>错配二：Pure Pursuit 速度参考系偏角（Slip-frame Mismatch）</b>：Pure Pursuit 默认后轴沿车身朝向运动，但 PhysX 线性轮胎在向心力下后轴实际运动方向偏外 $\beta_r = \arctan(k \cdot v \cdot \omega)$（急弯处达 5°，缺曲率 $2\sin\beta/\ell \approx 0.044\text{ m}^{-1}$，占参考曲率的 30%）。正确映射应将瞄准点转换至后轴实际速度参考系。</li>
+<li><b>错配二：Pure Pursuit 速度参考系偏角（Slip-frame Mismatch）</b>：Pure Pursuit 默认后轴沿车身朝向运动，但 PhysX 线性轮胎在向心力下后轴实际运动方向偏外 $\beta_r = \arctan(k \cdot v \cdot \omega)$（急弯 26966 实测 $\beta_r$ 均值 +2.16°，P95 达 4.9°）。正确映射应将瞄准点转换至后轴实际速度参考系。</li>
+<li><b>闭环局限与归因</b>：尽管两处错配在基准弯道上得到验证，但在 TFv6 全量闭环航线上叠加阿克曼与侧偏补偿（Arm D 相对 Arm C）仅带来 <b>+0.45 DS</b>（[−2.74, +3.48]，决策 31）；plant 错配仅能解释 C 臂转向缺口的 24%（出事子集仅 6%，决策 32）。</li>
 </ul>
 
-<h3>3. Lateral v2 实验：高精度跟踪的动作代价（决策 30、41）</h3>
+<h3>3. Lateral v2 实验：高精度跟踪的动作代价（决策 30）</h3>
 <p>
-在引入 slip-frame 与阿克曼反解后（lateral v2，预注册协议 6 臂 × 12 窗口 × 10 种子），跟踪误差实现断崖式下降：
+在引入 slip-frame 与阿克曼反解后（lateral v2，预注册协议 6 臂 × 11 窗口 × 10 种子），基准跟踪误差显著下降：
 </p>
 
 <figure>
 <img src="figs/fig4_lateral_v2.png" alt="Lateral v2 跟踪误差与动作保护对比">
-<figcaption>图八：Lateral v2 在各窗口的 CTE RMS（左，急右弯 26966 由 0.392 骤降至 0.089 m，truth pose 下达 0.046 m）与动作保护超标统计（右）。转向变化率（steer-rate）在多个窗口突破 +20% 门槛，未能通过动作平顺性准入（决策 30）。</figcaption>
+<figcaption>图八：Lateral v2 在各窗口的 CTE RMS（左，急右弯 26966 由 0.392 降至 0.089 m，truth pose 下达 0.046 m）与动作保护超标统计（右）。转向变化率（steer-rate）在 7 个窗口超过 +20% 上限，未能通过动作平顺性准入（决策 30）。</figcaption>
 </figure>
 
 <ul>
-<li><b>跟踪精度极大提升</b>：急右弯 26966 候选中位数 CTE RMS 由 0.392 m 降至 <b>0.089 m</b>（配对差 −0.314 m [−0.347, −0.276]），7 个 held-out 弯道上 CTE 下降 0.05–0.32 m。</li>
-<li><b>动作平顺性门禁未通过</b>：阿克曼反解将名义角放大了 10–15%，叠加后轴速度角将 gyro 动态直接叠入瞄准方向，导致转向变化率（steer-rate）在 7 个 held-out 中的 6 个越过 +20% 保护上限；且高精度跟踪贴紧弯道迫使横向加速度增大。高精控制器被拒绝合入默认配置。</li>
+<li><b>基准跟踪误差显著下降</b>：急右弯 26966 候选中位数 CTE RMS 由 0.392 m 降至 <b>0.089 m</b>（配对差 −0.314 m [−0.347, −0.276]），7 个 held-out 弯道上 CTE 下降 0.05–0.32 m。</li>
+<li><b>动作平顺性门禁未通过</b>：转向变化率（steer-rate）P95 在 7 个窗口（含 6 个 held-out 弯道）相对增幅超过 +20%，横向加速度 P95 在 4 个窗口超过 +10%，高精控制器因未通过动作平顺性准入被拒绝合入默认配置（决策 30）。</li>
 </ul>
-
-<h3>4. 障碍物借道绕行机制（Obstacle Bypass）</h3>
-
-<figure>
-<img src="figs/schematic_obstacle_bypass.png" alt="障碍物借道绕行走廊示意图">
-<figcaption>图九：TFv6 障碍物借道绕行动态走廊示意图。前方故障车辆阻断车道中心线，LEAD 跨模态视锥注意力在前方 15 米完成轮廓识别并生成向左凸出 $\Delta y = 3.4\text{ m}$ 的平滑 S 形走廊，维持 $\ge 1.2\text{ m}$ 安全缓冲，越障后在纵向 $\ge 5.0\text{ m}$ 切回原车道。配合 55 秒蠕行机制实现 89.36% 的极高绕障成功率。</figcaption>
-</figure>
 
 <h2>四、闭环评测成本剖析与 CARLA 世界回退（Rewind）</h2>
 
 <h3>1. 全量 220 条评测成本与瓶颈分解（决策 17、83）</h3>
-
-<figure>
-<img src="figs/fig3_score_vs_driving.png" alt="DS 分数构成与单次碰撞影响">
-<figcaption>图十：闭环评测 Driving Score 来源拆解。逐路线逐 seed 配对差表明，20 对测试中 16 对 DS 完全相同；分数差异几乎完全来自单一路线上的一次偶发碰撞（如 25381 的惩罚差异），与控制器底层跟踪质量完全无关甚至方向相反（决策 17）。</figcaption>
-</figure>
-
 <ul>
-<li><b>全量 220 路线 3.11 小时（8 worker）</b>：通过修复 `AgentWrapper` 丢弃 `sensor_tick` 的白名单缺陷（使 5 Hz 相机不再被强行按 20 Hz 渲染出图）、按模型尺寸直出渲染（免去客户端 resize 开销，省去 70% 预处理时间），全量 220 条耗时压缩至 3.11 小时（决策 17）。</li>
-<li><b>成本分布极度不均</b>：Town12 与 Town13 占全部路线的 69%、占总墙钟耗时的 <b>83%</b>（每 tick 耗时达 106–157 ms）；且 11 条路线在未修改官方代码下稳定触发 sensor-dormancy segfault。</li>
-<li><b>线程精简优化（决策 83）</b>：CARLA 原生启动分配 24 线程，经 profile 优化限制为单实例 7 线程，吞吐不仅无损反而消除调度抖动，线程占用压缩 3.3 倍。</li>
+<li><b>评测时长与上界性质</b>：通过修复 <code>AgentWrapper</code> 丢弃 <code>sensor_tick</code> 的白名单缺陷（使 5 Hz 相机不再被强行按 20 Hz 渲染出图）、按模型输入尺寸直出渲染（免去客户端 resize 开销，预处理占闭环延迟的 70%），全量评测耗时 3.11 小时（8 worker）。但该测试仅完成 209/220 条路线（11 条在 Town12/Town13 遭遇官方 sensor-dormancy segfault），且因 stand-in 策略较差导致 56% 路线撞满 4000 tick 上限，3.11 小时应视为「较差策略的上界」（决策 17）。</li>
+<li><b>成本分布极度不均</b>：Town12 与 Town13 占全部路线的 69%、占总墙钟耗时的 <b>83%</b>（每 tick 耗时达 106–157 ms，决策 17）。</li>
+<li><b>线程精简优化（决策 83）</b>：CARLA 原生启动分配 3 个线程池各 68 线程加客户端默认线程（每 worker 约 561 线程）；精简配置将每池设为 4 线程、客户端 8 线程、数值线程 2（每 worker 约 169 线程，压缩 3.3 倍），在 PDM-Lite 上吞吐等价（59.1 vs 59.8 tick/s）。</li>
 </ul>
 
-<h3>2. CARLA 世界回退（Rewind POC）：85% 算力节约与动力学断层（决策 65）</h3>
+<h3>2. CARLA 世界回退（Rewind）：加速瓶颈与动力学断层（决策 65）</h3>
 <ul>
-<li><b>痛点</b>：在因果配对测试中，每个分支从起点 tick 0 开到分叉点耗费 > 83% 的无效前置巡航时间（402 个分叉点累计消耗 170.5 worker·h）。</li>
-<li><b>内存快照与动量注入方案</b>：在到达分叉点时保存 Actor 刚体状态元组 $(\mathbf{x}, \mathbf{R}, \mathbf{v}, \boldsymbol{\omega})$，分支执行后执行内存恢复与速度注入，单次恢复仅需 <b>59 ms</b>，402 个分叉点总计算量由 170.5 降至 <b>25.4 worker·h（节省 85.1%，吞吐提升 6.71 倍）</b>。</li>
-<li><b>官方 Replayer 的致命断层（不可用）</b>：CARLA 原生 `client.replay_file()` 依赖运动学关键帧插值，在接管瞬间<b>刚体速度被直接清空至 0（63.6 km/h 瞬间跌至 3.5 km/h）</b>，悬挂与轮速动力学彻底破坏，无法承接高速紧急避障动作（决策 65）。</li>
+<li><b>提案预估与实测差距</b>：外部提案预估通过内存快照与速度注入可节约 85.1% 算力（170.5 → 25.4 worker·h，6.71 倍加速，59 ms 恢复）。实测表明前缀耗时约 23 s、装图约 66 s、续跑约 60 s，单次回退耗时 ~24 ms 另需 40 tick 重放预热（~9 s），实测加速约为 <b>3.0 倍</b>（283 s 对从头 855 s），6.7 倍预估并不成立（决策 65）。</li>
+<li><b>动力学不等价导致回退被否决</b>：因 API 无法完全恢复车辆传动系、轮胎和 Traffic Manager 状态，所有回退方法均未能全部通过 R1–R3 门禁（最优方案 <code>tree+w40f</code> 仍超出 ego 速度与 cut-in 车辆误差阈值）。世界模型分支（WL-2）最终定案采用从头生成 + zygote 预热，放弃世界回退（决策 65）。</li>
 </ul>
 
-<h2>五、openpilot 进 B2D 现状与该线正式暂停</h2>
+<h2>五、openpilot 进 B2D 现状与该线暂停（决策 57、82、95）</h2>
 <p>
 项目在 2026-09 至 2026-10 期间曾尝试将开源量产模型 openpilot Cinque 适配至 Bench2Drive 闭环：
 </p>
 <ul>
-<li><b>静止先验与不转弯（决策 57）</b>：原生模型 6/6 条完全不动（静止时无驾驶员按 resume，plan 判定踩刹车）；仅当下发 base 速度拉动后才开始加速。转弯前 0–20 米带 turn desire 的 plan 完全不响应路线偏航；让 openpilot 全权掌舵横向，DS 暴跌至 <b>8.5–26.1 分</b>（对 base 路线亏损 −30 到 −48 分）。</li>
-<li><b>特权规则天花板（决策 82）</b>：在 7 条低分线路上注入 CARLA 真值红绿灯状态与放行逻辑，DS 仅由 75.0 提升至 95.0（+20 DS），但叠加其他规则后碰撞反而激增至 17 次。</li>
-<li><b>多模态仲裁器 vmerge2（决策 95）</b>：引入 Qwen3-VL 进行红绿灯与停车仲裁，结合 zones 半特权路线，在 dev 10 获得 DS 81.3（较原生 +13.2 分），但未解决根本的端到端视觉驾驶问题。</li>
-<li><b>战略收敛与暂停决定</b>：B2D 属于合成渲染且规则高度人工化（4000 tick 超时、卡死蠕行扣分等），难以反映真实自动驾驶策略泛化能力。研发重心已全面转向真实外观物理闭环（HUGSIM 64）与高精开环榜单（NAVSIM/WOD），B2D 闭环研发正式定案暂停。</li>
+<li><b>静止先验与横向偏离（决策 57）</b>：openpilot 原生模型起步即停（6/6 条完全不动，缺乏真车 resume 信号）；转弯前 0–20 米带 turn desire 的 plan 在 15 米处仅响应路线横移的 −5%（进弯后跟 100%）。只做纵向 modifier 相对路线 base 仅变动 +9.7 DS（95% CI [−5.5, +27.0]，不显著，且同均速慢开对照表明主要由低车速解释）；若交由其全权横向驾驶，DS 暴跌至 8.5–26.1 分（亏损 −30 到 −48 分）。</li>
+<li><b>特权规则天花板（决策 82）</b>：特权红灯 + 绿灯放行（<code>pred</code>）在 3 条红绿灯违规路线上将 DS 由 75.0 提升至 95.0（+20.0 [+15, +30]）；但在 7 条低分路线上三项规则叠加（<code>pall</code>）时，DS 仅为 51.8 → 50.2（碰撞 5 → 17 次，且含绕行规则投影截断 bug，降级为线索）。</li>
+<li><b>多模态仲裁器增益有限（决策 95）</b>：合并臂 vmerge（19 条路线，2 seeds）获得 DS 79.1（较 drive +13.2 [+1.0, +27.0]），但增益几乎全部来自时间型 bypass 绕障（障碍路线 +57）；4 seeds 的 vmerge2 增益降为 +9.2 [−0.2, +19.8]（CI 含 0），且 bypass 的相邻车道几何仍依赖特权输入。</li>
+<li><b>暂停决定</b>：openpilot 进 B2D 闭环存在难以克服的交互与控制瓶颈，相关集成设计搁置（决策 57），B2D 闭环研发线正式暂停。</li>
 </ul>
 
 <h2>六、原始数据与实验代码目录指针</h2>
 <ul>
 <li>TFv6 闭环控制器实验与报告：<a href="../../experiments/b2d_tfv6/results/tfv6-controller/report-w2b.md"><code>experiments/b2d_tfv6/results/tfv6-controller/report-w2b.md</code></a>、<a href="../../experiments/b2d_tfv6/results/tfv6-controller/diagnosis-d3.md"><code>experiments/b2d_tfv6/results/tfv6-controller/diagnosis-d3.md</code></a></li>
-<li>控制器 v1–v4、lateral v2 与物理推导：<a href="../../experiments/b2d_controller/results/report_v4.md"><code>experiments/b2d_controller/results/report_v4.md</code></a>、<a href="../../experiments/b2d_controller/lib/b2d_controller.py"><code>experiments/b2d_controller/lib/b2d_controller.py</code></a></li>
-<li>特权规则天花板实验：<a href="../../experiments/b2d_privileged/README.md"><code>experiments/b2d_privileged/README.md</code></a>、<a href="../../experiments/b2d_privileged/results/focus_report.md"><code>experiments/b2d_privileged/results/focus_report.md</code></a></li>
+<li>控制器实验与物理推导：<a href="../../experiments/b2d_controller/results/b2d-controller/final-report.md"><code>experiments/b2d_controller/results/b2d-controller/final-report.md</code></a>、<a href="../../experiments/b2d_controller/lib/b2d_controller_campaign.py"><code>experiments/b2d_controller/lib/b2d_controller_campaign.py</code></a></li>
+<li>特权规则天花板实验：<a href="../../experiments/b2d_privileged/README.md"><code>experiments/b2d_privileged/README.md</code></a>、<a href="../../experiments/b2d_privileged/results/README.md"><code>experiments/b2d_privileged/results/README.md</code></a></li>
 <li>CARLA 世界回退就地分叉 POC：<a href="../../experiments/carla_rewind/archive/poc_carla_rewind.py"><code>experiments/carla_rewind/archive/poc_carla_rewind.py</code></a></li>
 <li>闭环性能调优与评测手册：<a href="../../docs/closed-loop-runbook.md"><code>docs/closed-loop-runbook.md</code></a>、<a href="../../docs/bench2drive-cost.md"><code>docs/bench2drive-cost.md</code></a></li>
 <li>相关决策条目：<a href="../decisions.md"><code>research/decisions.md</code></a>（决策 17、30、31、32、35、38、41、57、58、65、82、83、95）</li>
