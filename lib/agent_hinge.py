@@ -33,6 +33,7 @@ D = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 OUT = D / "runs" / "op_parity" / "agent_labels"
 LOGDIR = {"navtest": "test", "navtrain": "trainval"}
 KEEP = ("vehicle", "generic_object", "pedestrian", "bicycle")
+ALL = KEEP + ("traffic_cone", "barrier", "czone_sign")      # every annotated class (diagnostic label variants only)
 K, NT = 16, 9                                      # objects per token; annotated times t0 + 0, 0.5 .. 4 s
 FRONT, REAR, HALF_W = 4.049, -1.127, 1.1485        # nuPlan Pacifica about the rear axle
 LAT_MAX = 3.0
@@ -57,7 +58,7 @@ def _to_t0(b, pose_j, pose_0):
 
 
 def work(job):
-    split, log, toks = job
+    split, log, toks, keep_cls, K = job
     fr = pickle.load(open(D / "datasets" / "navsim" / "navsim_logs" / LOGDIR[split] / f"{log}.pkl", "rb"))
     fr = sorted(fr, key=lambda f: f["timestamp"])
     at = {f["token"]: i for i, f in enumerate(fr)}
@@ -72,12 +73,12 @@ def work(job):
         p0 = _pose(f0)
         a = f0["anns"]
         names = np.asarray(a["gt_names"])
-        keep = np.flatnonzero(np.isin(names, KEEP))
+        keep = np.flatnonzero(np.isin(names, keep_cls))
         b0 = np.asarray(a["gt_boxes"], np.float64)[keep]
         if len(keep):
             sel = keep[np.argsort(np.hypot(b0[:, 0], b0[:, 1]), kind="stable")[:K]]
             trk = np.asarray(a["track_tokens"])[sel]
-            cls[:len(sel)] = [KEEP.index(n) for n in names[sel]]
+            cls[:len(sel)] = [keep_cls.index(n) for n in names[sel]]
             for j in range(NT):
                 if i + j >= len(fr) or abs((fr[i + j]["timestamp"] - f0["timestamp"]) / 1e6 - 0.5 * j) > 0.1:
                     break
@@ -113,7 +114,8 @@ def cmd_build(a):
     from jevdrive import par
     from jevdrive.data import splits
     from jevdrive.run import Run
-    tag = "navtest" if a.split == "navtest" else "navtrain_all"
+    tag = ("navtest" if a.split == "navtest" else "navtrain_all") + a.suffix
+    keep_cls = ALL if a.classes == "all" else KEEP
     with Run("op_parity", f"agent-labels-{tag}", config=vars(a)) as run:
         run.use_split(splits.load(f"navsim/{a.split}"))
         toks, logs = tokens_of(a.split)
@@ -124,7 +126,7 @@ def cmd_build(a):
             jobs.setdefault(lg, []).append(t)
         run.info(f"{tag}: {len(toks)} tokens in {len(jobs)} logs, {a.workers} workers")
         t0 = time.time()
-        res = par.pmap(work, [(a.split, lg, ts) for lg, ts in jobs.items()], run=run, workers=a.workers)
+        res = par.pmap(work, [(a.split, lg, ts, keep_cls, a.k) for lg, ts in jobs.items()], run=run, workers=a.workers)
         res.raise_if_failed()
         R = {r[0]: r for part in res.values for r in part}
         box = np.stack([R[t][1] for t in toks])
@@ -134,12 +136,12 @@ def cmd_build(a):
         OUT.mkdir(parents=True, exist_ok=True)
         f = OUT / f"{tag}{'-lim' if a.limit else ''}.npz"
         tmp = f.with_name(f".{f.stem}.{os.getpid()}.npz")
-        np.savez(tmp, tokens=toks, log=logs, box=box, valid=val, cls=cls, ok=ok, classes=np.array(KEEP))
+        np.savez(tmp, tokens=toks, log=logs, box=box, valid=val, cls=cls, ok=ok, classes=np.array(keep_cls))
         os.replace(tmp, f)
         n_obj = (cls >= 0).sum(1)
         run.summary.update(n=len(toks), ok=int(ok.sum()), compute_s=time.time() - t0, out=str(f), objs_mean=float(n_obj.mean()),
-                           objs_full=float((n_obj == K).mean()), valid_t4=float(val[:, -1].sum(1).mean()))
-        run.info(f"ok {ok.sum()}/{len(toks)} in {time.time() - t0:.0f} s -> {f}; {n_obj.mean():.1f} objects / token, K full on {(n_obj == K).mean():.3f}")
+                           objs_full=float((n_obj == a.k).mean()), valid_t4=float(val[:, -1].sum(1).mean()))
+        run.info(f"ok {ok.sum()}/{len(toks)} in {time.time() - t0:.0f} s -> {f}; {n_obj.mean():.1f} objects / token, K full on {(n_obj == a.k).mean():.3f}")
 
 
 # ---------------------------------------------------------------- loss
@@ -172,9 +174,9 @@ class AgentHinge:
         pos = {t: i for i, t in enumerate(z["tokens"].tolist())}
         idx = np.array([pos.get(t, -1) for t in np.asarray(tokens).tolist()])
         ok = (idx >= 0) & z["ok"][np.maximum(idx, 0)]
-        n = len(idx)
-        self.box = torch.zeros((n, NT, K, 5), dtype=torch.float32, device=dev)
-        self.val = torch.zeros((n, NT, K), dtype=torch.bool, device=dev)
+        n, k = len(idx), z["valid"].shape[2]
+        self.box = torch.zeros((n, NT, k, 5), dtype=torch.float32, device=dev)
+        self.val = torch.zeros((n, NT, k), dtype=torch.bool, device=dev)
         rows = np.flatnonzero(ok)
         box, val = z["box"], z["valid"]
         for i in range(0, len(rows), 8192):
@@ -259,11 +261,11 @@ def cmd_check(a):
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tab = np.load(D / "runs/op_parity/cache/lb_navtest/tab.npz")
     toks = tab["names"]
-    H = AgentHinge(OUT / "navtest.npz", toks, dev, a.margin, a.side_margin)
+    H = AgentHinge(OUT / f"navtest{a.labels}.npz", toks, dev, a.margin, a.side_margin)
     rng = np.random.default_rng(0)
     has = ~np.isnan(tab["fut"][:, 0, 0]) & H.ok.cpu().numpy()
     with Run("op_parity", "agent-labels-check", config=vars(a)) as run:
-        res = {"coverage": H.coverage, "margin": a.margin, "side_margin": H.side_margin}
+        res = {"labels": f"navtest{a.labels}", "coverage": H.coverage, "margin": a.margin, "side_margin": H.side_margin}
         pick = rng.choice(np.flatnonzero(has), a.n, replace=False)
         hv = token_hinge(H, tab["fut"][pick].astype(np.float32), pick)
         allr = np.flatnonzero(has)
@@ -293,7 +295,7 @@ def cmd_check(a):
                       "pass_hinge_pos": f([t for t in ok_all if t not in set(nt)]), "all_hinge_pos": f(ok_all)}
         res["pass"] = bool(res["human"]["viol"] < 0.01 and all(res[m]["nc_fail_hinge_pos"] >= 0.70 for m in a.models))
         run.summary.update(res)
-        (OUT / f"check-m{a.margin}-s{H.side_margin}.json").write_text(json.dumps(res, indent=1))
+        (OUT / f"check{a.labels}-m{a.margin}-s{H.side_margin}.json").write_text(json.dumps(res, indent=1))
         print(json.dumps(res, indent=1))
 
 
@@ -304,10 +306,14 @@ if __name__ == "__main__":
     p.add_argument("--split", choices=["navtest", "navtrain"], required=True)
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--workers", type=int, default=64)
+    p.add_argument("--classes", choices=["keep", "all"], default="keep", help="keep = the registered classes; all = + cones / barriers / signs (diagnostic)")
+    p.add_argument("--k", type=int, default=K)
+    p.add_argument("--suffix", default="")
     p = sp.add_parser("check")
     p.add_argument("--n", type=int, default=300)
     p.add_argument("--margin", type=float, default=0.5)
     p.add_argument("--side-margin", type=float, default=None)
+    p.add_argument("--labels", default="", help="label file suffix (navtest<suffix>.npz)")
     p.add_argument("--models", nargs="+", default=["P2H10-F-s0", "HP-F-s0"])
     a = ap.parse_args()
     {"build": cmd_build, "check": cmd_check}[a.cmd](a)
