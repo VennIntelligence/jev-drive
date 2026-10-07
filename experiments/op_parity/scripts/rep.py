@@ -470,6 +470,115 @@ def cmd_report(a):
     print(json.dumps({"repro": out["repro"], "gates": gates}, indent=1, default=float))
 
 
+# ---------------------------------------------------------------- stage 1 (CPU): early stop on seed 0, gates on the 2-seed means
+S1_ARMS = {"H0": "RH0", "MW": "RMW", "MV": "RMV"}
+S1 = D / "runs" / "op_parity" / "rep" / "s1"
+
+
+def s1_units(spec):
+    from jevdrive.bench import tables as BT
+    u = BT.load("navtest", spec)[0]
+    if u is None:
+        raise SystemExit(f"navtest: no result for {spec}")
+    return u
+
+
+def s1_frame(specs, S):
+    """Per-token metrics (x 100) averaged over the seeds of one arm: EPDMS, DAC / NC+TTC fail, EP, in tab order of navtest."""
+    import pandas as pd
+    us = [s1_units(x).reindex(S["tokens"]) for x in specs]
+    assert all(not u.score.isna().any() for u in us), f"missing navtest tokens in {specs}"
+    f = lambda u: pd.DataFrame({"EPDMS": 100 * u.score, "DAC fail %": 100.0 * (u.DAC < 1), "NC+TTC fail %": 100.0 * ((u.NC < 1) | (u.TTC < 1)),  # noqa: E731
+                                "EP": 100 * u.EP})
+    return sum(f(u) for u in us) / len(us)
+
+
+def s1_paired(A, Bm, mask, S, col, nb=4000):
+    from jevdrive import stats
+    r = stats.paired(A[col].to_numpy()[mask], Bm[col].to_numpy()[mask], groups=S["log"][mask], n_boot=nb)
+    return {"arm": r["mean_a"], "ref": r["mean_b"], "diff": r["mean"], "lo": r["lo"], "hi": r["hi"], "n": int(mask.sum())}
+
+
+def speed_ratio(spec):
+    from jevdrive.bench.compat import pred_file
+    z = np.load(pred_file(spec))
+    fz = np.load(D / "runs/navsim_zs/index/navtest_future.npz")
+    fut = dict(zip(fz["tokens"].tolist(), fz["poses"]))
+    F = np.stack([fut[k] for k in z["tokens"]])
+    plen = lambda P: np.linalg.norm(np.diff(np.concatenate([np.zeros_like(P[:, :1, :2]), P[:, :, :2]], 1), axis=-1), axis=-1).sum(1)  # noqa: E731
+    mv = plen(F) > 2.0
+    return float(np.median(plen(z["poses"])[mv] / plen(F)[mv]))
+
+
+def drift_off(tag):
+    import glob
+    fs = sorted(glob.glob(str(D / "runs" / "op_parity" / f"train-{tag}" / "*" / "DONE")))
+    return json.loads(open(fs[-1]).read()).get("dev_drift_off", np.nan) if fs else np.nan
+
+
+def cmd_s1gate(a):
+    """Seed-0 early stop (prereg 6.2): an arm continues iff its T20 DAC failure rate drops >= 0.4 pp vs H0-s0 and navtest EPDMS diff >= 0.
+    Prints the continuing arms; exit 0 if any continues, 2 if the line stops."""
+    S = sets()
+    H = s1_frame([f"{S1_ARMS['H0']}-F-s0"], S)
+    res, keep = {}, []
+    for arm in a.arms:
+        A = s1_frame([f"{S1_ARMS[arm]}-F-s0"], S)
+        t20 = s1_paired(A, H, S["T20"], S, "DAC fail %", a.nb)
+        ep = s1_paired(A, H, np.ones(len(S["tokens"]), bool), S, "EPDMS", a.nb)
+        ok = (-t20["diff"] >= 0.4) and (ep["diff"] >= 0)
+        res[arm] = {"T20 DAC fail %": t20, "EPDMS": ep, "continue": bool(ok)}
+        keep += [arm] if ok else []
+    res["rule"] = "stop an arm if its seed-0 T20 DAC failure drop vs H0-s0 < 0.4 pp or its navtest EPDMS diff < 0; stop the line if no arm continues"
+    res["continue"] = keep
+    S1.mkdir(parents=True, exist_ok=True)
+    (S1 / "gate-s0.json").write_text(json.dumps(res, indent=1, default=float))
+    print(json.dumps(res, indent=1, default=float), file=_sys.stderr)
+    print(" ".join(keep))
+    raise SystemExit(0 if keep else 2)
+
+
+def cmd_s1report(a):
+    """Stage-1 tables on the seed means (prereg 6.2): EPDMS, T20 / T45 DAC, S5 EPDMS, EP, NC+TTC, speed ratio, drift_off, memory-off reads."""
+    import pandas as pd
+    S = sets()
+    allm = np.ones(len(S["tokens"]), bool)
+    seeds = a.seeds
+    H = s1_frame([f"{S1_ARMS['H0']}-F-s{k}" for k in seeds], S)
+    sr_h = np.mean([speed_ratio(f"{S1_ARMS['H0']}-F-s{k}") for k in seeds])
+    rows, gates = [], {}
+    for arm in ["H0"] + a.arms:
+        for off in ([False] if arm == "H0" else [False, True]):
+            specs = [f"{S1_ARMS[arm]}-F-s{k}" + (":noside" if off else "") for k in seeds]
+            A = s1_frame(specs, S)
+            lab = arm + (" memory off" if off else "")
+            r = {"arm": lab, "seeds": len(seeds)}
+            for nm, m, col in (("EPDMS", allm, "EPDMS"), ("T20 DAC fail %", S["T20"], "DAC fail %"), ("T45 DAC fail %", S["T45"], "DAC fail %"),
+                               ("S5 EPDMS", S["S5"], "EPDMS"), ("EP", allm, "EP"), ("NC+TTC fail %", allm, "NC+TTC fail %"), ("DAC fail %", allm, "DAC fail %")):
+                p = s1_paired(A, H, m, S, col, a.nb)
+                r[nm] = p["arm"]
+                if arm != "H0":
+                    r[f"{nm} diff"], r[f"{nm} lo"], r[f"{nm} hi"] = p["diff"], p["lo"], p["hi"]
+            sr = np.mean([speed_ratio(x) for x in specs])
+            r["speed ratio"], r["speed ratio / H0"] = sr, sr / sr_h
+            r["drift_off m"] = np.mean([drift_off(f"{S1_ARMS[arm]}-F-s{k}") for k in seeds]) if not off else np.nan
+            rows.append(r)
+            if arm != "H0" and not off:
+                g = {"EPDMS": r["EPDMS diff"] >= 0.30 and r["EPDMS lo"] > 0, "T20": r["T20 DAC fail % diff"] <= -1.0 and r["T20 DAC fail % hi"] < 0,
+                     "EP": r["EP diff"] >= -0.2, "NC+TTC": r["NC+TTC fail % diff"] <= 0.2, "S5": r["S5 EPDMS diff"] >= -0.2,
+                     "speed": abs(r["speed ratio / H0"] - 1) <= 0.05, "drift_off": r["drift_off m"] <= 0.10}
+                gates[arm] = {k: bool(v) for k, v in g.items()} | {"pass": bool(all(g.values()))}
+    if "MW" in a.arms and "MV" in a.arms:
+        ew, ev = (next(r["EPDMS diff"] for r in rows if r["arm"] == k) for k in ("MW", "MV"))
+        gates["attribution (MV - H0) / (MW - H0), EPDMS"] = ev / ew if abs(ew) > 1e-9 else np.nan
+    RES.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame(rows)
+    df.to_csv(RES / f"{a.out}.csv", index=False)
+    (RES / f"{a.out}.json").write_text(json.dumps({"seeds": seeds, "gates": gates, "rows": rows}, indent=1, default=float))
+    print(df.to_string(float_format=lambda x: f"{x:.3f}"))
+    print(json.dumps(gates, indent=1, default=float))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -496,5 +605,14 @@ if __name__ == "__main__":
     p.add_argument("--kind", required=True, choices=["wa_cf", "vj21"])
     p.add_argument("--datas", nargs="+", default=[*TRAIN, TEST])
     p = sp.add_parser("report")
+    p = sp.add_parser("s1gate")
+    p.add_argument("--arms", nargs="+", default=["MW", "MV"])
+    p.add_argument("--nb", type=int, default=4000)
+    p = sp.add_parser("s1report")
+    p.add_argument("--arms", nargs="+", default=["MW", "MV"])
+    p.add_argument("--seeds", nargs="+", type=int, default=[0, 1])
+    p.add_argument("--out", default="stage1")
+    p.add_argument("--nb", type=int, default=4000)
     a = ap.parse_args()
-    {"vj21": cmd_vj21, "x4": cmd_x4, "decode": cmd_decode, "mem": cmd_mem, "report": cmd_report}[a.cmd](a)
+    {"vj21": cmd_vj21, "x4": cmd_x4, "decode": cmd_decode, "mem": cmd_mem, "report": cmd_report, "s1gate": cmd_s1gate,
+     "s1report": cmd_s1report}[a.cmd](a)
