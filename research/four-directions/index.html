@@ -30,7 +30,8 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <b>方向 2 细节：</b>navtest 替换上限 1.00 分（Shapley 0.66），62% 为 &lt; 0.3 m 浅擦边，42% 仅在 devkit LQR 回放时出界；HUGSIM 2 场景为晚打方向擦外侧（平滑窗口提前抄内角假设被否定）。<br>
 <b>方向 3 细节：</b>navtest 替换上限 1.16 分（Shapley 0.87），36% 为前方静止车，49% 碰撞 plan 速度超日志 ≥ 10%；HUGSIM 车辆碰撞占丢失 HD 的 42.8 分（75%），其中 21 场景为脚本对向车（不可规避），可修的前方静止/慢车（D3b，10 场景）上限 3.8 分，近距 lead 测距在接触前非线性偏远（接触处中位偏远 +4.4 m，4/10 场景目标侧偏）。lead margin：HUGSIM D3b 避开 0/10 实质转换，navtest −0.75 [−0.96, −0.55]。agent hinge：NC+TTC 失败 −0.16 pp [−0.26, −0.08]（线 −0.3），EPDMS +0.18（线 +0.2），EP −0.10 通过，在 pilot 规模关停；73% 残余 NC 失败仍与覆盖框重叠，与表征解释一致，但该实验未测。<br>
 <b>方向 4 细节：</b>navtest、navhard、HUGSIM 64 前摄中位亮度低于 50 的单元均为 0（最暗 55.8–65.0，目检均为白天阴影与阴天）；openpilot 夜间 ADE@3s +0.43 m（决策 131）在 WOD 档处理。<br>
-<b>WOD 档：</b>navtrain 上训练的 P2H 直接搬到 WOD val，RFS 7.708 对出厂 8.005（−0.30）。原因已定位（决策 162）：adapter bias 里与输入无关的常数项（navtrain 速度先验），不是 ego 输入映射；只留随 ego 变化的部分 RFS 8.102（+0.097 [+0.009, +0.194]），只留常数项 −1.11，损失全在速度剖面。在 WOD train 上用同一配方重训的 WP2（决策 163）RFS 8.111（+0.106 [−0.060, +0.279]，按预登记不算胜），ADE@3s 1.041 → 0.574 m（−45%）；日志未来本身 RFS 8.13，总分已到日志水平；距 top-rated rater 轨迹还有 1.476 分，约一半是速度剖面，不训练拿不回（决策 164）。
+<b>WOD 档：</b>navtrain 上训练的 P2H 直接搬到 WOD val，RFS 7.708 对出厂 8.005（−0.30）。原因已定位（决策 162）：adapter bias 里与输入无关的常数项（navtrain 速度先验），不是 ego 输入映射；只留随 ego 变化的部分 RFS 8.102（+0.097 [+0.009, +0.194]），只留常数项 −1.11，损失全在速度剖面。在 WOD train 上用同一配方重训的 WP2（决策 163）RFS 8.111（+0.106 [−0.060, +0.279]，按预登记不算胜），ADE@3s 1.041 → 0.574 m（−45%）；日志未来本身 RFS 8.13，总分已到日志水平；距 top-rated rater 轨迹还有 1.476 分，约一半是速度剖面，不训练拿不回（决策 164）。<br>
+<b>2026-10-08 一轮（决策 165–175，详见第八节）：</b>急弯切内角是目标侧问题，不是视觉问题（决策 166）；强 hinge（λ 30，margin 0.5 m，记 SH30）全量成立且是真的路径收益：navtest 89.55（对 P2H10 +0.87 [+0.64, +1.15]），navhard +1.83 [+0.42, +3.37]，HUGSIM 64 持平，原始 plan 出界 −1.2 pp（决策 170），hinge 强度已近饱和（决策 172）；&gt; 45° 转不过弯没动。WOD 档：速度 &lt; 0.5 m/s 时关 adapter（WLG）val RFS 8.187，对出厂 +0.182 [+0.049, +0.327]（决策 169）；这条规则搬到 navtrain 配方不赚，混合域一套权重在 HUGSIM 输 0.096（决策 167、174）：各榜各自配方。系统二「从候选里选一条」的特权上限 +1.068（决策 168），但 479 帧标签下可学到的只有 +0.15，且不来自视觉，Cinque 与冻结 Qwen3（单帧、多帧、LoRA pilot）都不加分（决策 173）；rater 偏好微调 +0.09（弱，决策 171）；三者吃同一小块、互不可加（决策 175）。
 </div>
 
 <h2>一、当前基线位置（HUGSIM 64、navtest、navhard）</h2>
@@ -399,7 +400,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <h2>七、下一步与开放问题（修复项排序与当前状态）</h2>
 
 <div class="running">
-<b>状态通报（2026-10-07 本轮收口）：</b>没有运行中的 lane。replay hinge 完成，门禁全过，navtest +0.52（评分器相关）；表征线完成 Stage 0 / 1，被用户暂停；lead margin、agent hinge、自车历史探针、HUGSIM ax=0 闭环探针均已关停或否定；全量转弯重采样训练已排除。待用户定的三项见下表之后。
+<b>状态通报（2026-10-08 早）：</b>夜间一轮 11 条决策（165–175）已写完，汇总在第八节。在跑的只剩一项核查：navtrain 臂训练用 8 + 零 slot、WOD harness 喂 9 个真实 slot，这个不匹配是否是 P2H10 在 WOD 掉分的一部分。下表是 2026-10-07 收口时的修复项排序，其中第 2 项（replay hinge）已被强 hinge SH30 取代为 navtrain 档现役配方（决策 170）。
 </div>
 
 <table>
@@ -426,6 +427,50 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <li><b>测距偏差与表征瓶颈：</b>在近距离（&lt; 3 m）时 lead 头测距偏远，且在接触前扩大至中位 +4.4 m。执行层 lead margin 规则与训练 loss 层 agent hinge 均未达门禁已关停（agent hinge 在 pilot 规模下 73% 的残余碰撞仍与覆盖框重叠，表明冻结特征下 head 难以将约束泛化），与表征解释一致（该拆分未直接测）；WA-Cf memory 诊断使 NC+TTC 失败 −0.63 pp，但表征线已暂停。</li>
 <li><b>HUGSIM 急弯快速入弯机制：</b>自车历史匀速探针（navtest 上历史位姿线索未获支持）与 ax=0 闭环探针（中位仅降 1.09 m/s，5 场景全失败，判弱）相继未能支持开环位姿与闭环加速度正反馈假说。目前 HUGSIM 急弯入弯超速的主要候选机制为视觉预判（WA-JEPA 在弯前 26 米即感知路口并主动减速），决策 159 归表征线，该线已暂停；指令时序（plan 加速到转弯前 2.5–6.6 m 指令才切换）未排除。</li>
 <li><b>开环指标与真实闭环控制器的动态脱节：</b>navtest 上约 42% 的宽弯擦边仅存在于 devkit 的离散 LQR 跟踪器回放中。Replay hinge 实测印证：navtest +0.52 全部来自仅回放出界，HUGSIM 的 iLQR 跟踪器上 +0.002（不显著）。</li>
+</ul>
+
+
+<h2>八、2026-10-08 夜间一轮：转弯、停车起步与系统二（决策 164–175）</h2>
+
+<h3>1. 各档现役配方与分数</h3>
+<table>
+<tr><th>档</th><th>现役配方</th><th>分数</th><th>对上一版 [95% CI]</th><th>决策</th></tr>
+<tr><td>navtest EPDMS</td><td>SH30（P2H10 配方，hinge λ 30 / margin 0.5 m）</td><td>89.55</td><td>对 P2H10 +0.87 [+0.64, +1.15]；对 RMH10 +0.35 [+0.14, +0.60]</td><td>170</td></tr>
+<tr><td>navhard</td><td>SH30</td><td>33.67</td><td>对 P2H10 +1.83 [+0.42, +3.37]</td><td>170</td></tr>
+<tr><td>HUGSIM 64 HD</td><td>SH30</td><td>0.439</td><td>对 P2H10 +0.006 [−0.015, +0.031]（持平）</td><td>170</td></tr>
+<tr><td>WOD val RFS</td><td>WLG（WP2 + 速度 &lt; 0.5 m/s 关 adapter）</td><td>8.187</td><td>对出厂 +0.182 [+0.049, +0.327]；对 WP2 +0.076 [−0.016, +0.180]</td><td>169</td></tr>
+</table>
+<div class="cite">数据来源：experiments/op_parity/results/strong_hinge.md、wod_launch.md；research/decisions/169.md、170.md。数字来自执行者报告，main 未复算。WOD 为开环 val，未提交 test。</div>
+
+<h3>2. 逐条结果</h3>
+<table>
+<tr><th>决策</th><th>问题</th><th>结果</th><th>判定</th></tr>
+<tr><td>165</td><td>冻结 Cinque 读不读得出路沿几何</td><td>navtest &gt; 45° 边界 MAE 1.21 m 对 WA-Cf 0.86 m（+0.35 [0.32, 0.39]），直行也差 +0.24</td><td>表征较粗，但不是转弯特有</td></tr>
+<tr><td>166</td><td>真值可行驶边界喂给 plan 头，切内角降不降</td><td>P2 通路 closure −0.08 [−0.19, +0.02]</td><td>切内角不是视觉问题，杠杆在 hinge</td></tr>
+<tr><td>170</td><td>强 hinge 全量</td><td>见上表；原始 plan 出界 −1.14 / −1.28 pp，replay-only 几乎不动；直行与 EP 无代价；&gt; 45° 转不过弯 −0.13 [−0.42, +0.15]</td><td>成立，真的路径收益；大角度弯转不过去没动</td></tr>
+<tr><td>172</td><td>hinge 的 λ × margin 扫描；SH30 上 WOD</td><td>8 个点无一按规则赢过 λ 30 / 0.5；SH30 在 WOD val 7.734（对 P2H10 +0.026 [−0.027, +0.078]）</td><td>强度已近饱和；不带来跨域转弯收益</td></tr>
+<tr><td>169</td><td>WOD 停车起步的原因与修法</td><td>停车帧缺口 0.762 = 底模 0.406 + adapter 静止偏移 0.384；WLG 停车帧 +0.393 [+0.096, +0.745]；红灯停车各臂持平，最大一块是 stop sign 路口</td><td>修掉 adapter 那一半</td></tr>
+<tr><td>167、174</td><td>停车规则搬到 navtrain 配方；navtrain + WOD 混合臂 MX</td><td>serving 端门 navtest −1.50、HUGSIM 卡死 0 → 11.5；训进去（P2HGA）navtest −0.21 [−0.34, −0.08]、HUGSIM −0.020；MX navtest +0.12、WOD −0.008（均含 0），HUGSIM −0.096 [−0.158, −0.040]</td><td>不搬；各榜各自配方</td></tr>
+<tr><td>168</td><td>系统二选 1 / 20 候选的特权上限</td><td>+1.068 [+0.891, +1.256]；只选速度 +0.856，只选路径 +0.367；二元 go / hold 含 0；zero-shot Qwen3 −0.740</td><td>空间在，主要是速度选择</td></tr>
+<tr><td>173</td><td>薄 head 选择器（Cinque、冻结 Qwen3 单帧 / 多帧、LoRA pilot）</td><td>只 ego + 指令 + plan 的 floor +0.148 [+0.062, +0.248]；加任何视觉流不加分（−0.04 到 −0.08）；LoRA 对冻结 +0.005 [−0.080, +0.086]</td><td>479 帧标签撑不起从画面学选择</td></tr>
+<tr><td>171</td><td>rater 偏好微调系统一</td><td>out-of-fold top +0.091 [+0.012, +0.170]、f20 +0.089 [+0.018, +0.156]；in-sample 3–4 倍；standstill 不动</td><td>有效应但小（弱）</td></tr>
+<tr><td>175</td><td>三者是否可加</td><td>WLG + 选择 head +0.054 [−0.023, +0.136]；偏好微调 + head 对其底约 0；日志导出的转弯速度先验是恒等</td><td>不可加；WOD 档定 WLG</td></tr>
+</table>
+<div class="cite">数据来源：experiments/op_parity/results/ 下 turn_probe.md、turn_oracle.md、strong_hinge.md、hinge_scan.md、wod_launch.md、stop_gate_xboard.md、mixed_domain.md、s2_gohold.md、s2_thinhead.md、wod_pref.md、turn_prior.md；research/decisions/165–175.md。</div>
+
+<figure><img src="../../experiments/op_parity/figs/hinge_scan/grid_heatmap.png" alt="hinge 的 λ × margin 网格">
+<figcaption>hinge 的 λ × margin 网格（决策 172）：对 λ 30 / margin 0.5 的 EPDMS 差与原始 plan 出界差。看出界随强度单调变好，而 EPDMS 在中间见顶。</figcaption></figure>
+<figure><img src="../../experiments/op_parity/figs/s2_thinhead/01_arms_oof.png" alt="薄 head 各输入流">
+<figcaption>薄 head 选择器各输入流的 out-of-fold 增益（决策 173）：看只有 ego + 指令 + plan 的一臂（E）最高，加视觉流都没有更高；增益集中在转弯意图帧那一格。</figcaption></figure>
+<figure><img src="../../experiments/op_parity/figs/wod_pref/curves.png" alt="偏好微调学习曲线">
+<figcaption>rater 偏好微调的学习曲线（决策 171）：红色是拟合折，蓝色是 out-of-fold；看两者的差距，479 帧过拟合很快。</figcaption></figure>
+
+<h3>3. 能力边界的读法</h3>
+<ul>
+<li><b>转弯分两件事：</b>切内角是模仿贴路沿的日志造成的，加重可行驶区域约束能拿回（SH30）；&gt; 45° 转不过去不在这条轴上，hinge 强度、真值边界输入都不动它，对 WA-JEPA 在这一档的 7.9 分差仍在。</li>
+<li><b>起步分两件事：</b>只读 ego 的 adapter 在静止时不带信息，它的常数项是按训练域学到的起步先验：WOD 上关掉是收益，navtrain 档里它有用。「看画面决定何时起步」冻结视觉 + 模仿的配方在三个档都学不到（WOD 上起步行只走日志距离的 55–69%；navtrain 上日志不动的 token 照走 5.0 m）。</li>
+<li><b>系统二在 WOD val 上定不了：</b>选择的上限很大（+1.07），但 rater 标签只有 479 帧，日志事后标签与 RFS 不同向（−0.060），能学到的是一条不看画面的小规则。Qwen3 作特征源是否有用，要到有语义需求且标签够的档上看（navhard / HUGSIM 的障碍绕行与时机）。</li>
+<li><b>没验证：</b>所有 WOD 数字是开环 val，未提交 test；WLG 在 0.5 m/s 处的阶跃没在闭环里测；hinge 网格每点 1 个 seed；LoRA 只是一个便宜配方的 pilot。</li>
 </ul>
 
 </body></html>
