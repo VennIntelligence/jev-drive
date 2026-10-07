@@ -116,7 +116,7 @@ def _event(sc, p, t, token, prefix, ctype=None):
     obj = obs.unique_objects[token]
     xy, v = _obj_state(obs, token, t)
     xy0, _ = _obj_state(obs, token, 0)
-    e = {f"{prefix}_t": 0.1 * t, f"{prefix}_type": str(obj.tracked_object_type.name), f"{prefix}_agent": obj.tracked_object_type in AGENT_TYPES,
+    e = {f"{prefix}_t": 0.1 * t, f"{prefix}_token": token, f"{prefix}_type": str(obj.tracked_object_type.name), f"{prefix}_agent": obj.tracked_object_type in AGENT_TYPES,
          f"{prefix}_ctype": None if ctype is None else str(ctype.name), f"{prefix}_ego_v": float(np.hypot(st[t, 3], st[t, 4])),
          f"{prefix}_obj_v": v, f"{prefix}_dh": float(np.degrees(np.angle(np.exp(1j * (obj.box.center.heading - st[t, 2]))))),
          f"{prefix}_multi": bool(sc._ego_areas[p, t, EA.MULTIPLE_LANES] or sc._ego_areas[p, t, EA.NON_DRIVABLE_AREA])}
@@ -469,6 +469,21 @@ BUCKETS = {
     "D3 collision (NC or TTC)": lambda f, g: f.col,
     "D3 on turning tokens": lambda f, g: f.col & g.turning,
     "D1 + D2 + D3 union": lambda f, g: (f.dac & g.turning) | f.col,
+    "D1u sharp, outside + heading gain < 0.9 (not around)": lambda f, g: f.dac & g.sharp & ~f.inside & f.under,
+    "D1i sharp, inside (cuts the corner)": lambda f, g: f.dac & g.sharp & f.inside,
+    "D1o sharp, outside, gain >= 0.9": lambda f, g: f.dac & g.sharp & ~f.inside & ~f.under,
+    "D2i wide, inside": lambda f, g: f.dac & g.wide & f.inside,
+    "D2o wide, outside": lambda f, g: f.dac & g.wide & ~f.inside,
+    "D2g wide, graze < 0.3 m": lambda f, g: f.dac & g.wide & f.graze,
+    "D2d wide, departure >= 0.3 m": lambda f, g: f.dac & g.wide & ~f.graze,
+    "D2l wide, LQR replay only": lambda f, g: f.dac & g.wide & f.lqr_only,
+    "D3s stopped vehicle ahead": lambda f, g: f.col & (f.cls == "stopped vehicle ahead"),
+    "D3o static object": lambda f, g: f.col & (f.cls == "static object"),
+    "D3l lead vehicle": lambda f, g: f.col & (f.cls == "lead vehicle"),
+    "D3c cut-in": lambda f, g: f.col & (f.cls == "cut-in"),
+    "D3x crossing / oncoming": lambda f, g: f.col & f.cls.isin(["crossing / turn conflict", "oncoming"]),
+    "D3v VRU": lambda f, g: f.col & (f.cls == "VRU"),
+    "D3f plan > 1.1 x path speed": lambda f, g: f.col & f.faster,
 }
 
 
@@ -494,6 +509,15 @@ def analyze_bench(bench, pd, stats, shapley):
     for k, t in tabs.items():
         F[k] = pd.DataFrame(dict(dac=t.drivable_area_compliance < 1, nc=t.no_at_fault_collisions < 1,
                                  col=(t.no_at_fault_collisions < 1) | (t.time_to_collision_within_bound < 1)), index=toks)
+        # replay features of the failing tokens (sub-buckets): DAC side / raw vs LQR-only / depth, heading gain, collision type, plan speed
+        q = rp[k].reindex(toks)
+        kin = plan_kin(np.stack([plans_cache(bench)[k].get(x, np.full((8, 3), np.nan)) for x in toks]), fut)
+        F[k]["inside"] = (q.lqr_side.to_numpy(float) == np.sign(geo.dpsi.to_numpy()))
+        F[k]["lqr_only"] = (q.lqr_out.fillna(False).astype(bool) & ~q.raw_out.fillna(False).astype(bool)).to_numpy()
+        F[k]["graze"] = (q.lqr_depth < 0.3).to_numpy()
+        F[k]["under"] = kin["gain"] < 0.9
+        F[k]["faster"] = kin["speed_ratio"] > 1.1
+        F[k]["cls"] = [ctype_class(x) if c else "" for x, c in zip(q.to_dict("records"), F[k].col)]
     W = {k: (tabs[k].weight.to_numpy(float) if bench == "navhard" else None) for k in tabs}
 
     def board(Xa, w):
@@ -790,13 +814,22 @@ def cmd_cases(a):
         fin = lambda v: v is not None and v == v  # noqa: E731
         tev = next((r[k] for k in ("col_t", "ttc_t", "lqr_t") if fin(r.get(k))), 2.0)
         ti = int(round(10 * tev))
-        agents = []
+        if not _W:
+            _init("navtest", OUT / "keys_navtest.pkl")
+        ev = next(x for x in work(tok)["rows"] if x["key"] == p["key"])         # re-run the instrumented score for the event's object token
+        hit = ev.get("col_token") or ev.get("ttc_token")
+        agents, hit_poly = [], None
         ob = mc.observation[ti]
         for tk in ob.tokens:
             q = ob[tk]
-            if q.distance(win.centroid) < 60:
-                agents.append(to_ego(np.asarray(q.exterior.coords)))
-        out.append(dict(p, polys=polys, agents=agents, t_draw=0.1 * ti, plan=P[p["key"]][tok], wa=P["WA"][tok], hum=P["HUM"][tok],
+            if mc.observation.red_light_token in tk or q.distance(win.centroid) > 60:
+                continue
+            poly = to_ego(np.asarray(q.exterior.coords))
+            if tk == hit:
+                hit_poly = poly
+            else:
+                agents.append(poly)
+        out.append(dict(p, polys=polys, agents=agents, hit=hit_poly, t_draw=0.1 * ti, plan=P[p["key"]][tok], wa=P["WA"][tok], hum=P["HUM"][tok],
                         lqr=S["states"][srow[(p["key"], tok)]], lqr_wa=S["states"][srow[("WA", tok)]] if ("WA", tok) in srow else None,
                         row={k: v for k, v in r.items() if isinstance(v, (int, float, str, bool)) or v is None}))
         print("case", p, flush=True)
@@ -894,9 +927,20 @@ def cmd_figs(a):
                 a_.plot(q[:, 1], q[:, 0], ls, color=col, lw=1.5, marker=".", label=nm)
             a_.plot(c["lqr"][:, 1], c["lqr"][:, 0], ":", color=C["P2H"], lw=1.5, label="P2H LQR replay")
             r = c["row"]
-            ext = np.abs(np.vstack([c["hum"][:, :2], c["plan"][:, :2]])).max() + 8
-            a_.set_xlim(ext, -ext)
-            a_.set_ylim(-8, 2 * ext - 8)
+            if c.get("hit") is not None:
+                a_.fill(c["hit"][:, 1], c["hit"][:, 0], color="#f79646", ec="k", lw=0.8, label="collided object")
+            ti = int(round(10 * c["t_draw"]))
+            x, y, h = c["lqr"][ti, :3]
+            cor = np.array([[4.049, 1.1485], [4.049, -1.1485], [-1.127, -1.1485], [-1.127, 1.1485], [4.049, 1.1485]])
+            bx = np.stack([x + np.cos(h) * cor[:, 0] - np.sin(h) * cor[:, 1], y + np.sin(h) * cor[:, 0] + np.cos(h) * cor[:, 1]], 1)
+            a_.plot(bx[:, 1], bx[:, 0], "-", color=C["P2H"], lw=1.0, label=f"P2H footprint at {c['t_draw']:.1f} s (replay)")
+            if r.get("lqr_out"):
+                a_.plot(r["lqr_y"], r["lqr_x"], "x", color="k", ms=9, mew=2, label="first departure")
+            pts = np.vstack([[0, 0], c["hum"][:, :2], c["plan"][:, :2]])
+            cx, cy = pts.mean(0)
+            ext = max(np.ptp(pts[:, 0]), np.ptp(pts[:, 1])) / 2 + 6
+            a_.set_xlim(cy + ext, cy - ext)
+            a_.set_ylim(cx - ext, cx + ext)
             a_.set_aspect("equal")
             ttl = f"{c['bucket']}: {c['token']}\nDAC {r['drivable_area_compliance']:.0f} NC {r['no_at_fault_collisions']:.1f} TTC {r['time_to_collision_within_bound']:.0f}"
             if c["bucket"].startswith("D3"):
