@@ -22,7 +22,7 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <div class="v">
 <b>结论（四个方向一览与定性定位）：</b><br>
 WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3.57 [−0.21, +7.57] 分，HUGSIM 64 为 +1.9 HD×100 [−5.4, +9.8]（不显著）。三个驾驶方向占 navtest 差距的 2.27 [1.76, 2.77] 分（Shapley 份额）。<br>
-<b>1. 急弯（R &lt; 15 m）：</b>navtest 替换上限 1.04 分（Shapley 0.87），54% 为内侧切角（前角在 3.4 s 切入 0.40 m，原始 plan 66% 已出界），用户直觉的「转不过去」仅占 26%（0.23 分）；HUGSIM 占 2.7 HD 分（5 场景），80% 是入弯过快（中位 9.8 对 WA 2.7 m/s），曲率仅达所需 0.51 倍；根因约 58% 在冻结视觉、40% 在 head 目标，HUGSIM 缺少人类在弯前先减速的自车历史；修复在 replay hinge 与表征提升；下一步为离线薄解码器验证与自车历史匀速探针（全量转弯训练已因 pilot 闭合仅 0.01–0.02 排除）。<br>
+<b>1. 急弯（R &lt; 15 m）：</b>navtest 替换上限 1.04 分（Shapley 0.87），54% 为内侧切角（前角在 3.4 s 切入 0.40 m，原始 plan 66% 已出界），用户直觉的「转不过去」仅占 26%（0.23 分）；HUGSIM 占 2.7 HD 分（5 场景），80% 是入弯过快（中位 9.8 对 WA 2.7 m/s），曲率仅达所需 0.51 倍；推测 HUGSIM 快速入弯源于自车历史中缺少人类弯前减速信号（假说，检验运行中）；根因约 58% 在冻结视觉、40% 在 head 目标；修复在 replay hinge 与表征提升；下一步为离线薄解码器验证与自车历史匀速探针（全量转弯训练已因 pilot 闭合仅 0.01–0.02 排除）。<br>
 <b>2. 宽弯擦边（R ≥ 15 m）：</b>navtest 替换上限 1.00 分（Shapley 0.66），62% 为 &lt; 0.3 m 浅擦边，42% 仅在 devkit LQR 回放时出界；HUGSIM 仅 2 场景且为晚打方向擦外侧（平滑窗口提前抄内角假设被否定）；修复在跟踪器几何前角余量 hinge（replay hinge）；下一步为离线薄解码器门禁。<br>
 <b>3. 撞车：</b>navtest 替换上限 1.16 分（Shapley 0.87），36% 为前方静止车（其中 64% 在转弯 token），49% 碰撞 plan 速度超日志 ≥ 10%；HUGSIM 车辆碰撞（fg）占全部丢失 HD 的 42.8 分（75%），其中 21 场景为脚本对向车（不可规避，停下亦被撞），可修的前方静止/慢车（D3b，10 场景）上限 3.8 分，根因为近距离 lead 测距严重偏远（&lt; 3 m 时多读 +1.95 m）；修复在训练 loss 增加 agent hinge 与执行层 lead 停车余量规则；下一步为 agent hinge pilot 训练与 lead margin 离线 trace 回放。<br>
 <b>4. 夜间 / 低光：</b>navtest、navhard、HUGSIM 64 前摄中位亮度低于 50 的单元均为 0（最暗 55.8–65.0，目检均为白天阴影与阴天），本档损失为 0.00 分；夜间缺陷移至 WOD 档独立处理（openpilot 夜间 ADE@3s +0.43 m）。<br>
@@ -40,15 +40,15 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 <tr><td>navhard 综合（225 组，G 帧）</td><td>33.54</td><td>30.34</td><td><b>31.84</b> (31.40 / 32.28)</td><td><b>35.41</b></td><td>+3.57 [−0.21, +7.57]</td></tr>
 <tr><td>- navhard 阶段 1（开环日志）</td><td>71.79</td><td>73.13</td><td>74.73</td><td>81.90</td><td>+7.17 [+2.54, +12.27]</td></tr>
 <tr><td>- navhard 阶段 2（偏移起点）</td><td>47.08</td><td>42.44</td><td>43.04</td><td>43.53</td><td>+0.49 [−0.86, +1.84]</td></tr>
-<tr><td>HUGSIM 64 全部（HD × 100，两 seed 均值）</td><td>39.4 (spec) / 39.8 (exam)</td><td>42.5 (smooth)</td><td><b>43.2</b> (43.12 / 43.17)</td><td><b>45.1</b> (45.06)</td><td>+1.9 [−5.4, +9.8]（不显著）</td></tr>
-<tr><td>- HUGSIM 转弯路线（turn23，23 场景）</td><td>27.9 (spec) / 31.2 (exam)</td><td>33.3 (smooth)</td><td>35.0 (35.01)</td><td><b>44.2</b> (44.17)</td><td>+9.2 [−2.1, +20.5]</td></tr>
-<tr><td>- HUGSIM 直行路线（straight41，41 场景）</td><td>45.9 (spec) / 44.6 (exam)</td><td>48.2 (smooth)</td><td><b>47.8</b> (47.75)</td><td>45.6 (45.56)</td><td><b>−2.2</b>（P2H 领先 2.2 分）</td></tr>
+<tr><td>HUGSIM 64 全部（HD × 100）</td><td>26.3 (exam) / 29.4 (spec)</td><td>39.6 (exam) / 39.3 (spec)</td><td><b>43.2 (smooth)</b> (40.0 exam / 39.5 spec)</td><td><b>45.1</b> (45.06)</td><td>+1.9 [−5.4, +9.8]（不显著）</td></tr>
+<tr><td>- HUGSIM 转弯路线（turn23，23 场景）</td><td>n/a</td><td>n/a</td><td><b>35.0 (smooth)</b> (27.8 spec)</td><td><b>44.2</b> (44.17)</td><td>+9.2 [−2.1, +20.5]</td></tr>
+<tr><td>- HUGSIM 直行路线（straight41，41 场景）</td><td>n/a</td><td>n/a</td><td><b>47.8 (smooth)</b> (46.1 spec)</td><td>45.6 (45.56)</td><td><b>−2.2</b>（P2H 领先 2.2 分）</td></tr>
 </table>
-<div class="cite">数据来源：experiments/op_parity/results/four_dirs.md、hinge.md、hugsim_specplan.md、four_dirs/hugsim_tables.md。注：HUGSIM 64 出厂 shipped 早期零输入 exam 读数为 26.3，全量 spec/exam 基线读数为 39.4/39.8。</div>
+<div class="cite">数据来源：experiments/op_parity/results/four_dirs.md、hugsim_full.md（出厂 P0 见第 12 行：exam 0.263 / spec 0.294；P2 见第 14 行：exam 0.396 / spec 0.393）、hinge.md、hugsim_specplan.md（4 臂均值：全量 0.428 smooth / 0.394 spec / 0.398 exam；turn23 0.333 smooth / 0.279 spec / 0.312 exam；straight41 0.482 smooth / 0.459 spec / 0.446 exam；注：4 臂均值为 P2+P2H 跨臂均值，非出厂亦非 P2 单臂）、four_dirs/hugsim_tables.md。出厂 P0 与 P2 单臂未在任何报告文件中评测 turn23 与 straight41 切片，按规则记为 n/a。</div>
 
 <figure>
 <img src="figs/four-directions/fig1_current_position.png" alt="当前位置基准对比">
-<figcaption>图一：P2H、WA-JEPA 与出厂模型在各基准上的得分对比。（a）navtest 上 P2H 达 88.67 分，比出厂提升 8.16 分，距 WA-JEPA 差 3.04 分；（b）navhard 上 P2H 综合为 31.84 分，阶段 2 与 WA-JEPA 持平（43.04 对 43.53），差距集中在阶段 1；（c）HUGSIM 64 闭环中，P2H 在平滑转换下全量得分 43.2，与 WA-JEPA（45.1）无统计显著差距，且在 41 条直行路线上以 47.8 超过 WA-JEPA（45.6），短板集中在 23 条转弯路线（35.0 对 44.2）。</figcaption>
+<figcaption>图一：P2H、WA-JEPA 与出厂模型在各基准上的得分对比。（a）navtest 上 P2H 达 88.67 分，比出厂提升 8.16 分，距 WA-JEPA 差 3.04 分；（b）navhard 上 P2H 综合为 31.84 分，阶段 2 与 WA-JEPA 持平（43.04 对 43.53），差距集中在阶段 1；（c）HUGSIM 64 闭环中，出厂模型 P0 全量 HD 为 29.4（spec，exam 为 26.3，turn23 与 straight41 无数据记为 n/a），P2H 在平滑转换下全量得分 43.2，与 WA-JEPA（45.1）无统计显著差距，且在 41 条直行路线上以 47.8 超过 WA-JEPA（45.6），短板集中在 23 条转弯路线（35.0 对 44.2）。</figcaption>
 </figure>
 
 <figure>
@@ -61,7 +61,7 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 <h3>1. 典型失败案例与现场</h3>
 <p>
 用户观察到的直觉现象是「车转不过弯，冲出道路」。
-在 HUGSIM 中，该现象完全真实存在，典型案例为 <code>scene-570_770-easy-00</code>（KITTI-360 丁字路口）：P2H 以 12–13 m/s 的高速直冲路口，模型规划的 plan 一直保持笔直，直到距路沿仅剩 1 秒时才急剧打方向，导致车辆以近 10 m/s 冲上对角路沿；exam 预设直接跟踪相同迟钝的 plan 也同样撞上路沿；而 WA-JEPA 在弯前 26 米处就主动将车速减缓至 2.7 m/s，平顺转过路口。<a href="../experiments/op_parity/results/gap/clips/570_770-easy-00.gif" target="_blank">[查看完整闭环 GIF: 570_770-easy-00.gif]</a>。
+在 HUGSIM 中，该现象完全真实存在，典型案例为 <code>scene-570_770-easy-00</code>（KITTI-360 丁字路口）：P2H 以 12–13 m/s 的高速直冲路口，模型规划的 plan 一直保持笔直，直到距路沿仅剩 1 秒时才急剧打方向，导致车辆以近 10 m/s 冲上对角路沿；exam 预设直接跟踪相同迟钝的 plan 也同样撞上路沿；而 WA-JEPA 面对相同指令与自车历史，在弯前 26 米处即表现出减速至 2.7 m/s，平顺转过路口（推测其视觉特征能更早感知路口拓扑）。<a href="../experiments/op_parity/results/gap/clips/570_770-easy-00.gif" target="_blank">[查看完整闭环 GIF: 570_770-easy-00.gif]</a>。
 然而在真实日志开环评测 navtest 上，失败形式截然相反：车辆不是「转不过去」，而是<b>切内角</b>出界。<a href="../experiments/op_parity/results/gap/clips/dac-45935e.gif" target="_blank">[查看 navtest 切内角典型 GIF: dac-45935e.gif]</a>。
 </p>
 
@@ -90,7 +90,7 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 <li><b>navtest 上并非「转不过去」，而是切内角：</b>在 D1 的 DAC 失败 token 中，<b>内侧切角占 54% [42, 65]%</b>（前保险杠角在 3.4 s 处切入路沿平均 0.40 m；在原始 plan 未经跟踪器回放时已有 66% [56, 75]% 出界）。真正属于「转不过去」（外侧出界且 4 秒航向增益 &lt; 0.9）的仅占 <b>26% [18, 34]%</b>，换算总分仅 0.23 分。失败 plan 的 4 秒航向增益为 1.04，速度与日志完全一致（1.01 倍），终点平均偏向弯道内侧 0.17 m。</li>
 <li><b>表征与解码层拆分：</b>在冻结的 comma 视觉 token 上直接接入薄解码器（决策 147），已有 58% [51, 65]% 的失败 token 无法挽回（WA-JEPA 同位置解码器通过率为 65%）。即约 58% 的内侧切角是由当前冻结的视觉特征决定的，剩余约 40% 源于现有仅约束 8 个稀疏点位姿的铰链损失未对前角切入施加足够惩罚。</li>
 <li><b>HUGSIM 闭环失败是入弯过快，非横向执行层缺陷：</b>5 个失败场景中，<b>入弯过快占 80% [40, 100]%</b>（中位入弯速度达 9.8 m/s 进入 R 8.9 m 的急弯，物理上需要 9.8 m/s² 向心加速度，显然无法完成）。此时 plan 输出的峰值曲率仅有所需曲率的 0.51 倍，80% 的 plan 本身就已经出界。执行层对 plan 的跟随是忠实的（请求曲率 0.030 对 plan 0.027 1/m），clip 限制仅在超速出界时被动触发。因此问题在 plan 自身缺乏弯前降速，而非横向控制器或单点/平滑换算。</li>
-<li><b>navtest 不超速 vs HUGSIM 超速的根因定位：</b>navtest 上人类驾驶员在弯前早早减速（中位进弯初速 7.1 m/s），转向指令切换非常迟（中位 0 s，p90 仅弯前 1.0 s / 7 m），P2H 是通过输入的自车速度/加速度历史感知减速的；但在 HUGSIM 仿真中，车辆由直道加速启动（12–13 m/s），自车历史中没有前序人类踩刹车的信号，P2H 直到指令跳变为转弯（弯前 2.5–6.6 m）才开始减速；而 WA-JEPA 面对相同的指令和速度，在弯前 26 米处纯靠视觉感知就主动完成了减速。</li>
+<li><b>navtest 不超速 vs HUGSIM 超速的推测假说与探针检验：</b>navtest 上人类驾驶员在弯前早已主动减速（中位进弯初速 7.1 m/s），且导航指令跳变极晚（37 次跳变事件中位为 0 s，p90 仅弯前 1.0 s / 7 m），navtest 上 P2H 输出的急弯入弯速度与人类日志高度一致（2 s / 4 s 距离比为 0.997 / 0.986）。据此，<code>four_dirs.md</code> 提出了一个尚未经验证的推测假说（见开放问题）：P2H 在真实日志中的弯前减速可能主要借助自车历史（速度、加速度与位姿历史）中已有人类踩刹车的先验信息，而非纯靠视觉感知；而在 HUGSIM 仿真中，自车由直道正常行驶起步，自车历史中没有人类预先减速的线索，P2H 直到路口指令跳变为转弯（弯前 2.5–6.6 m）才开始减速；相比之下，WA-JEPA 在面对相同指令与自车历史输入时，在弯前 26 米处即表现出显著减速（推测其端到端视觉表征能更早识别路口几何）。<b>目前该假说尚未实测证实，正在运行自车历史匀速探针（ego-history constant-velocity probe，见 <code>experiments/op_parity/results/ego_history_probe.md</code>，通过将弯前自车历史置换为匀速历史对比 P2H 与 WA-JEPA 的计划位移）以给出决定性检验。</b></li>
 <li><b>排除项：全量转弯训练无实质收益：</b>pilot 规模的转弯平衡重采样、转弯关 anchor 及后段权重（<code>turn_train.md</code>）在 &gt; 20° 弯道上对 WA-JEPA 差距闭合仅 0.01–0.02（CI 均包含 0）；在 &gt; 45° 弯道上得分虽微涨 +0.97，但 DAC 失败率未变（−0.03 pp [−0.86, +0.91]），反而在直道与缓弯上付出代价值（缓弯 −0.75 分，全量 DAC 失败增加 +0.29 到 +0.36 pp）。</li>
 </ul>
 
@@ -254,7 +254,7 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 <table>
 <tr><th>诊断探针臂（基于 seed 0 权重）</th><th>RFS 得分</th><th>d RFS vs shipped [95% CI]</th><th>ADE@3s (m)</th><th>d ADE@3s [95% CI]</th><th>核心读法与推论</th></tr>
 <tr><td>主线 P2H-s0（全输入）</td><td>7.718</td><td>−0.287 [−0.496, −0.085]</td><td>1.312</td><td>+0.271</td><td>基线读数</td></tr>
-<tr><td><b>bias = 0（P2H 权重，输入偏置置零）</b></td><td><b>7.984</b></td><td><b>−0.021 [−0.056, +0.014]</b></td><td><b>1.098</b></td><td><b>+0.058 [+0.049, +0.066]</b></td><td><b>P2H 微调后的主干权重在 WOD 上完全中性，损失 100% 来自 ego-state bias 输入通道！</b></td></tr>
+<tr><td><b>bias = 0（P2H 权重，输入偏置置零）</b></td><td><b>7.984</b></td><td><b>−0.021 [−0.056, +0.014]</b></td><td><b>1.098</b></td><td><b>+0.058 [+0.049, +0.066]</b></td><td><b>P2H 微调后的 plan 权重在 WOD 上表现中性，损失主要源自自车状态 bias 输入通道（特征分布偏移与帧源差异尚未完全隔离）</b></td></tr>
 <tr><td>指令置零（全部设为 UNKNOWN）</td><td>7.625</td><td>−0.380 [−0.605, −0.164]</td><td>1.300</td><td>+0.259</td><td>指令通道非退化原因（置零后甚至略降）</td></tr>
 <tr><td>加速度 ax = ay = 0</td><td>7.731</td><td>−0.274 [−0.486, −0.070]</td><td>1.425</td><td>+0.385</td><td>加速度设为 0 显著拉大 ADE，但不改变 RFS</td></tr>
 <tr><td>从位置反推加速度 ax，ay = 0</td><td>7.732</td><td>−0.273 [−0.469, −0.086]</td><td>1.171</td><td>+0.131 [+0.077, +0.185]</td><td>位置推导加速度将 ADE 显著拉回 0.14 m，但 RFS 仍差 −0.27</td></tr>
@@ -264,7 +264,7 @@ WA-JEPA 对 P2H 的总差距：navtest 为 3.04 [2.32, 3.74] 分，navhard 为 3
 <h3>3. 对 WOD 档的战略含义</h3>
 <ul>
 <li><b>微调权重本身具备良好的跨域通用性：</b>当把适配器 bias 设为 0 时，P2H 在 WOD 上的 RFS 差距仅为 −0.02（CI 包含 0），ADE 仅微增 0.06 m。这证明在 NAVSIM 上针对 plan 头微调的轨迹几何先验没有破坏模型的通用驾驶能力。</li>
-<li><b>损失完全来自自车状态特征分布偏移：</b>WOD 的传感器分布与 NAVSIM 存在明显差异：WOD 实测加速度的离散度极小（ax/3 标准差仅 0.089，而 NAVSIM 为 0.253，相差近 3 倍；ay/3 标准差仅 0.034 对 0.225，相差近 7 倍）；此外 WOD 缺乏真值朝向角（需用弦向推导），输入适配器在输入了分布偏移的 ego 特征后，输出的 plan 速度整体变慢了 4%（5 秒位移比 0.916 对出厂 0.959）。</li>
+<li><b>损失主要来自自车状态特征输入通道适配偏差：</b>WOD 的传感器分布与 NAVSIM 存在明显差异：WOD 实测加速度的离散度极小（ax/3 标准差仅 0.089，而 NAVSIM 为 0.253，相差近 3 倍；ay/3 标准差仅 0.034 对 0.225，相差近 7 倍）；此外 WOD 缺乏真值朝向角（需用弦向推导），输入适配器在输入了分布偏移的 ego 特征后，输出的 plan 速度整体变慢了 4%（5 秒位移比 0.916 对出厂 0.959）。</li>
 <li><b>独立分档决策完全正确：</b>在 NAVSIM 上训练的自车状态适配器无法零样本迁移至 WOD。WOD 档必须作为一个独立层级，在 WOD 训练集上重新拟合 P2 适配器，或彻底隔离其自车输入接口。HUGSIM + NAVSIM 档无需受 WOD 牵制。</li>
 </ul>
 

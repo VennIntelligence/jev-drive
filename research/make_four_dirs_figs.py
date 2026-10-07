@@ -69,20 +69,31 @@ def make_fig1():
     width = 0.26
     
     # All 64, Turn 23, Straight 41
-    # P2H under spec_plan_smooth
-    shipped_hd = [39.4, 27.9, 45.9] # spec
+    # Shipped P0: 29.4 spec / 26.3 exam on All 64 (hugsim_full.md line 12); n/a on Turn 23 and Straight 41
+    # P2H under spec_plan_smooth: 43.2 on All 64, 35.0 on Turn 23, 47.8 on Straight 41 (four_dirs/hugsim.md)
+    # WA-JEPA: 45.1 on All 64, 44.2 on Turn 23, 45.6 on Straight 41
+    shipped_hd = [29.4, 0, 0]
     p2h_hd = [43.2, 35.0, 47.8]
     wa_hd = [45.1, 44.2, 45.6]
     
-    b1 = ax.bar(x - width, shipped_hd, width, label='Shipped (spec)', color=c_shipped, zorder=3)
+    b1 = ax.bar(x - width, shipped_hd, width, label='Shipped P0 (spec)', color=c_shipped, zorder=3)
     b2 = ax.bar(x, p2h_hd, width, label='P2H (smooth)', color=c_p2h, zorder=3)
     b3 = ax.bar(x + width, wa_hd, width, label='WA-JEPA', color=c_wajepa, zorder=3)
+    
+    ax.text(x[0] - width, 29.4 + 1, "29.4", ha='center', va='bottom', fontsize=7.5, color='#444444')
+    ax.text(x[1] - width, 1.5, "n/a", ha='center', va='bottom', fontsize=7.5, color='#888888')
+    ax.text(x[2] - width, 1.5, "n/a", ha='center', va='bottom', fontsize=7.5, color='#888888')
+    
+    for xi, val in zip(x, p2h_hd):
+        ax.text(xi, val + 1, f"{val:.1f}", ha='center', va='bottom', fontsize=7.5, color=c_p2h)
+    for xi, val in zip(x, wa_hd):
+        ax.text(xi + width, val + 1, f"{val:.1f}", ha='center', va='bottom', fontsize=7.5, color=c_wajepa)
     
     ax.set_xticks(x)
     ax.set_xticklabels(['All 64', 'Turn 23', 'Straight 41'])
     ax.set_ylabel("HD Score (× 100)")
     ax.set_ylim(0, 56)
-    ax.legend(loc='lower left', fontsize=7)
+    ax.legend(loc='upper left', fontsize=7)
     ax.grid(axis='x', visible=False)
     
     stem = OUT_DIR / "fig1_current_position"
