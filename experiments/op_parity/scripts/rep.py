@@ -482,6 +482,12 @@ def cmd_report(a):
     if jf.exists():
         out["junction_probe"] = pd.read_csv(jf).to_dict("records")
     (RES / "stage0.json").write_text(json.dumps(out | {"table": tabrows}, indent=1, default=float))
+    md = ["| stratum | arm | n | DAC fail % [95% CI] | f(V) - f(arm), pp | closure c(arm) |", "|:--|:--|--:|:--|:--|:--|"]
+    for r in tabrows:
+        dd = f"{r['V_minus_arm_pp']:+.2f} [{r['d_lo']:+.2f}, {r['d_hi']:+.2f}]" if "V_minus_arm_pp" in r else ""
+        cc = f"{r['closure']:.2f} [{r['c_lo']:.2f}, {r['c_hi']:.2f}]" if "closure" in r else ""
+        md.append(f"| {r['stratum']} | {r['arm']} | {r['n']} | {r['fail_pct']:.2f} [{r['lo']:.2f}, {r['hi']:.2f}] | {dd} | {cc} |")
+    (RES / "stage0.md").write_text("\n".join(md) + "\n")
     print(tb.to_string(float_format=lambda x: f"{x:.3f}"))
     print(json.dumps({k: out[k] for k in ("repro", "gates", "p2h_t20_fail_set", "junction_probe") if k in out}, indent=1, default=float))
 
