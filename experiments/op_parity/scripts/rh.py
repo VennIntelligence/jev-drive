@@ -11,7 +11,7 @@ plus a 0.5 m front-corner margin on turning tokens (RM), against the current 8-r
   report (.venv)              gate tables (log-cluster paired bootstrap) -> results/replay_hinge/gate*.csv|md, gate.json
 
   $DATA_DIR/envs/navsim2/bin/python experiments/op_parity/scripts/rh.py proxy --procs 64
-  $DATA_DIR/envs/op-train/bin/python experiments/op_parity/scripts/rh.py train
+  $DATA_DIR/envs/op-train/bin/python experiments/op_parity/scripts/rh.py train --arms ctrl | R | RM   (one process per arm), then merge
   $DATA_DIR/envs/navsim2/bin/python experiments/op_probe/scripts/opb_score.py --poses $OUT/decoder_poses.npz --out $OUT/score.csv
   .venv/bin/python experiments/op_parity/scripts/rh.py report
 """
@@ -264,10 +264,23 @@ def cmd_train(a):
             res[arm] = Pe.astype(np.float32)
             rows.append(dict(arm=arm, final_loss=float(loss), imit=float(li_), hinge=float(lh), train_s=time.time() - t1))
             run.info(json.dumps(rows[-1]))
-        np.savez(OUT / a.out, **res)
+        out = a.out or f"decoder_{'-'.join(a.arms)}.npz"
+        np.savez(OUT / out, **res)
         import pandas as pd
-        pd.DataFrame(rows).to_csv(OUT / "fits.csv", index=False)
-        run.summary["out"] = str(OUT / a.out)
+        pd.DataFrame(rows).to_csv(OUT / f"fits_{'-'.join(a.arms)}.csv", index=False)
+        run.summary["out"] = str(OUT / out)
+
+
+def cmd_merge(a):
+    """decoder_<arm>.npz of the parallel per-arm runs -> decoder_poses.npz (one file, every arm a key) for opb_score.py."""
+    res = {}
+    for arm in ARMS:
+        z = np.load(OUT / f"decoder_{arm}.npz")
+        if "tokens" in res:
+            assert (res["tokens"] == z["tokens"]).all()
+        res["tokens"], res[arm] = z["tokens"], z[arm]
+    np.savez(OUT / "decoder_poses.npz", **res)
+    print({k: v.shape for k, v in res.items()})
 
 
 # ---------------------------------------------------------------- gate report
@@ -331,9 +344,10 @@ if __name__ == "__main__":
     p.add_argument("--batch", type=int, default=512)
     p.add_argument("--device", default="cpu")
     p.add_argument("--arms", nargs="+", default=list(ARMS))
-    p.add_argument("--out", default="decoder_poses.npz")
+    p.add_argument("--out", default="")
     p.add_argument("--stop-after", type=int, default=0, help="debug: stop each arm after N steps (schedule still over --steps)")
     p.add_argument("--debug", action="store_true")
+    p = sp.add_parser("merge")
     p = sp.add_parser("report")
     a = ap.parse_args()
-    {"proxy": cmd_proxy, "train": cmd_train, "report": cmd_report}[a.cmd](a)
+    {"proxy": cmd_proxy, "train": cmd_train, "merge": cmd_merge, "report": cmd_report}[a.cmd](a)
