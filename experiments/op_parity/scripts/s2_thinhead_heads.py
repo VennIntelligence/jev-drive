@@ -619,8 +619,35 @@ def cmd_q2(a):
             r |= {"oracle d": C.cm(orc), "share of oracle": r["d all"] / C.cm(orc), "frames changed": float(ch[t].mean()),
                   "margin (median over fits)": float(np.median([h[2] for h in hp[t]])), "lambda (median)": float(np.median([h[1] for h in hp[t]]))}
             rows.append(r)
+        Yg = (J20 - J20[:, KEEP:KEEP + 1]).mean(0)                                        # (20, n) seed-mean gain: group-conditional constant candidates
+        stop = Bd.st["stopped"]
+        for nm, key in (("constant per intent (straight / left / right)", C.intent), ("constant per intent x standstill", C.intent * 2 + stop),
+                        ("constant on turn-intent frames only", (C.intent >= 2).astype(int))):
+            dg, chg = np.zeros(n), np.zeros(n)
+            for r_ in range(REPS):
+                f = folds(r_)
+                for j in range(FOLDS):
+                    for g in np.unique(key):
+                        if nm.endswith("only") and g == 0:
+                            continue
+                        tr, te = (f != j) & (key == g), np.flatnonzero((f == j) & (key == g))
+                        if tr.sum() < 5 or not len(te):
+                            continue
+                        pk = T.first(Yg[:, tr].mean(1, keepdims=True))[0]
+                        dg[te] += Yg[pk, te] / REPS
+                        chg[te] += (pk != KEEP) / REPS
+            r = {"System 1": "WP2", "candidate set": "F20", "K": 20, "features": nm, "rule": "group constant, out-of-fold", "RFS System 1": C.cm(Bd.base)}
+            for sn in ("all", "stopped", "moving", "turn"):
+                c = T.ci(C, dg, Bd.st[sn])
+                r |= {f"d {sn}": c[0], f"{sn} lo": c[1], f"{sn} hi": c[2]}
+            r |= {"oracle d": C.cm(Bd.best - Bd.base), "share of oracle": r["d all"] / C.cm(Bd.best - Bd.base), "frames changed": float(chg.mean())}
+            rows.append(r)
+            d[f"rule|{nm}"] = dg
         stats.write_table(rows, OUT / "q2")
         con = []
+        for nm in ("constant per intent (straight / left / right)", "constant on turn-intent frames only"):
+            c = T.ci(C, d["WP2|F20|E|argmax"] - d[f"rule|{nm}"])
+            con.append({"features": "E", "contrast": f"ridge head (F20) - {nm}", "d": c[0], "lo": c[1], "hi": c[2]})
         for arm in ("E", "Q1+E", "C+E"):
             for nm, ka, kb in (("margin - argmax (F20)", f"WP2|F20|{arm}|margin", f"WP2|F20|{arm}|argmax"), ("F30 - F20", f"WP2|F30|{arm}|argmax", f"WP2|F20|{arm}|argmax"),
                                ("speed only - F20", f"WP2|speed only (4)|{arm}|argmax", f"WP2|F20|{arm}|argmax"),
