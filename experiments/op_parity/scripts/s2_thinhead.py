@@ -46,7 +46,7 @@ def board():
     J = np.stack([np.stack([C.rfs(np.ascontiguousarray(f[:, m])) for m in range(20)]) for f in F])
     assert np.abs(J[0, G.KEEP * 4] - C.rfs(P[0])).max() < 1e-9
     cluster = Z.load_sets()["rater"]["cluster"].astype(str)
-    st = {"all": C.st["all"], "stopped": C.st["stopped"], "moving": C.st["moving (v>=0.5)"], "turn": C.intent >= 2}
+    st = {"all": C.st["all"], "stopped": C.st["stopped"], "moving": C.st["moving (v>=0.5)"], "turn": C.intent >= 2, "straight": C.intent < 2}
     st |= {f"cluster {c}": cluster == c for c in sorted(set(cluster))}
     return SimpleNamespace(C=C, cb=cb, P=P, F=F, J=J, n=C.n, names=C.names[: C.n], v0=C.v0, st=st, cluster=cluster, base=J[:, G.KEEP * 4].mean(0),
                            best=J.max(1).mean(0), log=C.fut[: C.n])

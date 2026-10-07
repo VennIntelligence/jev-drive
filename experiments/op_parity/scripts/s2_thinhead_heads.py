@@ -398,7 +398,7 @@ def cmd_report(a):
         z = type("Z", (), {"files": z.files, "__getitem__": lambda self, k, _d=z.d: _d[k]})()
         assert (np.load(T.RUNS / "data.npz")["va_names"].astype(str) == Bd.names).all()
         orc = Bd.best - Bd.base
-        main = ("all", "stopped", "moving", "turn")
+        main = ("all", "stopped", "moving", "turn", "straight")
         keys = [k for k in z.files if ":" not in k]
         rows, summ = [], []
         for k in keys:
