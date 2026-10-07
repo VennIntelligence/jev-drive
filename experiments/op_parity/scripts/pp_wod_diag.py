@@ -84,7 +84,9 @@ def cmd_bias(a):
     ego, _ = wod_ego(past, intent)
     from jevdrive.common import data_dir
     nav = np.load(data_dir() / "runs/op_parity/cache/lb_navtest/tab.npz")["ego"].astype(np.float32)
-    stats = {"wod_mean": ego.mean(0).round(4).tolist(), "wod_std": ego.std(0).round(4).tolist(),
+    sf = ddir() / "bias_stats.json"
+    stats = json.loads(sf.read_text()) if sf.exists() else {}
+    stats |= {"wod_mean": ego.mean(0).round(4).tolist(), "wod_std": ego.std(0).round(4).tolist(),
              "nav_mean": nav.mean(0).round(4).tolist(), "nav_std": nav.std(0).round(4).tolist()}
     for arm in a.arms:
         if arm.startswith("P1"):
@@ -120,7 +122,7 @@ def cmd_bias(a):
             np.savez(ddir() / f"bias-{arm}_{var}.npz", names=names, bias=b, ego=e)
             stats[f"{arm}_{var}"] = {"rms": rms, "rms_diff_main": dm}
             print(f"{arm}_{var}: rms {rms:.4f}, rms diff to main {dm:.4f}", flush=True)
-    (ddir() / "bias_stats.json").write_text(json.dumps(stats, indent=1))
+    sf.write_text(json.dumps(stats, indent=1))
 
 
 # ---------------------------------------------------------------- report
