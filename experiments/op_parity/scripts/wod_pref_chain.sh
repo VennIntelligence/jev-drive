@@ -25,7 +25,7 @@ sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && { echo done; return; }
         [[ -n $live ]] && { echo "$live"; return; }; rm -f "$ld/ERROR"
         local id; id=$($CL submit --owner op_parity --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; echo "$id"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 20; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; }
-train() { local name=$1; shift; sub wpf-$name $L/$name --train --vram 16 --cpu 3 --ram 24 -- $PY $S/wod_pref.py train "$@" >/dev/null; }
+train() { local name=$1; shift; sub wpf-$name $L/$name --train --vram 18 --cpu 3 --ram 16 -- $PY $S/wod_pref.py train "$@" >/dev/null; }
 
 prep() {
   status "prep: rater token cache"
