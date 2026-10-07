@@ -144,7 +144,7 @@ def flips(run, scen_dir):
     g = np.array(g, int)
     fl = np.flatnonzero(np.diff(g) != 0)
     win = max([int(((fl >= i) & (fl < i + 20)).sum()) for i in range(0, max(len(g) - 1, 1))] or [0])
-    return dict(steps=len(g), gated_steps=int(g.sum()), flips=len(fl), max_flips_20=win, v_min=float(np.min(v)) if len(v) else np.nan), np.array(v), g
+    return dict(first_gate=int(np.argmax(g)) if g.any() else -1, steps=len(g), gated_steps=int(g.sum()), flips=len(fl), max_flips_20=win, v_min=float(np.min(v)) if len(v) else np.nan), np.array(v), g
 
 
 def hugsim(a):
@@ -160,7 +160,7 @@ def hugsim(a):
     rows = []
     for arm in ("sg", "dn"):
         d = paired(arm_mean(arm), arm_mean("base"))
-        rows.append({"contrast": f"{arm.upper()} - BASE (seed mean, 64 scenarios)", "HD BASE": round(d["mean_b"], 3), f"HD {arm.upper()}": round(d["mean_a"], 3), "diff [95% CI]": f3(d, p=3),
+        rows.append({"contrast": f"{arm.upper()} - BASE (seed mean, 64 scenarios)", "HD BASE": round(d["mean_b"], 3), "HD SG": round(float(arm_mean("sg").mean()), 3), "HD DN": round(float(arm_mean("dn").mean()), 3), "diff [95% CI]": f3(d, p=3),
                      "s0": f"{np.mean(hd(arm, 0) - hd('base', 0)):+.3f}", "s1": f"{np.mean(hd(arm, 1) - hd('base', 1)):+.3f}",
                      "wins / losses / ties (|d| < 0.02)": f"{int((arm_mean(arm) - arm_mean('base') > .02).sum())} / {int((arm_mean(arm) - arm_mean('base') < -.02).sum())} / {int((abs(arm_mean(arm) - arm_mean('base')) <= .02).sum())}"})
     md(pd.DataFrame(rows), "hugsim_hd", f"Noise reference: stored BASE rr1 vs rr2, mean per-scenario HD difference per seed: s0 {np.mean(sc['base'][0][0].reindex(idx).hdscore - sc['base'][0][1].reindex(idx).hdscore):+.4f} s1 {np.mean(sc['base'][1][0].reindex(idx).hdscore - sc['base'][1][1].reindex(idx).hdscore):+.4f}; mean |d| per scenario s0 {np.mean(abs(sc['base'][0][0].reindex(idx).hdscore - sc['base'][0][1].reindex(idx).hdscore)):.3f}.")
@@ -195,6 +195,19 @@ def hugsim(a):
                           "scenarios with >= 1 flip": int((fl[fl.seed == s].flips > 0).sum()), "max flips in a scenario": int(fl[fl.seed == s].flips.max()),
                           "oscillating scenarios (>= 6 flips or >= 3 in 20 steps)": int(fl[fl.seed == s].oscillates.sum())} for s in SEEDS])
     md(summ, "hugsim_gate_summary")
+    fl["end SG"] = [sc["sg"][r.seed].loc[r.scenario, "cls"] for r in fl.itertuples()]
+    fl["end BASE (rr1)"] = [sc["base"][r.seed][0].loc[r.scenario, "cls"] for r in fl.itertuples()]
+    g = fl[fl.gated_steps > 0]
+    lat = pd.DataFrame([{"quantity": "scenario-runs with any gated step", "n": len(g)},
+                        {"quantity": "  gate never switched off again (1 flip, on at first_gate, gated to the end)", "n": int(((g.flips == 1) & (g.first_gate + g.gated_steps == g.steps)).sum())},
+                        {"quantity": "  SG run ends stuck (max_steps) among them", "n": int((g["end SG"] == "stuck").sum())},
+                        {"quantity": "  BASE (rr1) ends stuck among them", "n": int((g["end BASE (rr1)"] == "stuck").sum())},
+                        {"quantity": "  mean HD change among them (SG - BASE)", "n": round(float(g.dHD.mean()), 3)},
+                        {"quantity": "scenario-runs without a gated step: mean HD change", "n": round(float(fl[fl.gated_steps == 0].dHD.mean()), 3)},
+                        {"quantity": "  and how many of those have HD change beyond +-0.1 (chaotic divergence)", "n": int((fl[fl.gated_steps == 0].dHD.abs() > .1).sum())},
+                        {"quantity": "median first gated step", "n": float(g.first_gate.median())}])
+    md(lat, "hugsim_gate_latch")
+    fl.to_csv(OUT / "hugsim_gate_flips.csv", index=False)
     top = fl.sort_values(["flips", "gated_steps"], ascending=False).head(12)
     md(top, "hugsim_gate_top", "Scenarios with the most gate flips (both seeds).")
     # figure: speed traces
