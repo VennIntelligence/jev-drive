@@ -237,7 +237,20 @@ def cmd_desc(a):
         pd.DataFrame({"name": C.names[:n], "intent": C.intent, "v0": C.v0, "rfs_WP2": base["wp2"], "rfs_WLG": base["wlg"], "rfs_shipped": ship, "d_floor_wp2": res["wp2"]["gain"],
                       "d_floor_wlg": res["wlg"]["gain"], "mode_speed_wp2": sh("wp2", "speed"), "mode_path_wp2": sh("wp2", "path"),
                       "plan_s5_wp2": geo["wp2"][0][0, :, KEEP]}).to_csv(OUT / "desc_frames.csv", index=False, float_format="%.4f")
+        drows = []
+        for k in ("wp2", "wlg"):
+            J, pk = d_[f"J_{k}"], res[k]["picks"]
+            jj = np.arange(n)
+            part = {"speed part (pick's speed, keep path)": lambda s, r: J[s][KEEP + pk[r, s] % 4, jj], "path part (pick's path, follow)": lambda s, r: J[s][(pk[r, s] // 4) * 4, jj],
+                    "the pick": lambda s, r: J[s][pk[r, s], jj]}
+            for nm, f in part.items():
+                g = np.mean([f(s, r) - J[s][KEEP] for s in range(S) for r in range(REPS)], 0)
+                for sn in ("all", "turn-intent", "turn v0<0.5", "turn 0.5<=v0<3", "turn v0>=3", "straight"):
+                    c = C.ci(g, st[sn])
+                    drows.append({"plans": k.upper(), "part": nm, "stratum": sn, "n": int(st[sn].sum()), "d": c[0], "lo": c[1], "hi": c[2]})
+        stats.write_table(drows, OUT / "desc_decomp")
         pd.set_option("display.width", 250, "display.max_columns", 99)
+        run.info("\n%s", pd.DataFrame(drows).to_string(float_format=lambda v: f"{v:+.3f}"))
         run.info("\n%s", df[df.stratum.str.startswith(("turn", "left", "right", "all", "straight"))].T.to_string(float_format=lambda v: f"{v:+.3f}"))
         run.info("\noracle:\n%s", pd.DataFrame(orows).T.to_string(float_format=lambda v: f"{v:+.3f}"))
 
@@ -296,9 +309,14 @@ def cmd_stack(a):
         run.info("permutations: %d units in %.0f s", len(res.values), time.time() - t0)
         perm = {nm: np.stack([g for arm, i, g in res.values if arm == nm]) for nm in perm_arms}                    # (N_PERM, n)
         # ---- tables
+        floor_of = {nm: spec[nm][3] for nm in spec}
         arms = {"shipped": base["shipped"], "WP2": base["wp2"], "WLG": base["wlg"], "pref-top (oof)": base["top"], "pref-f20 (oof)": base["f20"]}
         arms |= {nm: base[spec[nm][3]] + g for nm, g in gain.items()}
-        floor_of = {nm: spec[nm][3] for nm in spec}
+        gated = {"WLG+floor (173 folds)": "WLG+floor, turn-gated (post hoc)", "pref-top+floor (nested)": "pref-top+floor, turn-gated (post hoc)",
+                 "pref-f20+floor (nested)": "pref-f20+floor, turn-gated (post hoc)"}
+        for nm, gn in gated.items():                                                  # the head's pick is used only where the command says left / right
+            arms[gn] = base[spec[nm][3]] + gain[nm] * (C.intent >= 2)
+            spec[gn], floor_of[gn] = spec[nm], spec[nm][3]
         main, srows, prows = [], [], []
         for nm, v in arms.items():
             r = {"arm": nm, "RFS": C.cm(v)}
@@ -329,6 +347,116 @@ def cmd_stack(a):
         run.info("\n%s", pd.DataFrame(main).to_string(float_format=lambda v: f"{v:+.3f}"))
         sd = pd.DataFrame(srows)
         run.info("\n%s", sd[sd.stratum.isin(["all", "turn-intent", "straight", "turn v0<0.5", "turn 0.5<=v0<3", "turn v0>=3"])].to_string(float_format=lambda v: f"{v:+.3f}"))
+
+
+# ---------------------------------------------------------------- Step 3: the rule family R(alpha, nudge, v-range)
+ALPHAS, NUDGES, VRANGES = (1.0, 0.85, 0.7, 0.5), (0.0, 1.2), ((0.5, 3.0), (0.5, 1e9), (0.0, 1e9))
+CONFIGS = [(a_, d_, v_) for v_ in VRANGES for d_ in NUDGES for a_ in ALPHAS]
+CONFIGS = sorted(CONFIGS, key=lambda c: (c[1] != 0 or c[0] != 1.0, c[1] != 0, 1 - c[0], VRANGES.index(c[2])))          # identity first, then the smaller change
+IDENT = CONFIGS[0]
+assert IDENT[0] == 1.0 and IDENT[1] == 0.0
+
+
+def apply_rule(plan, v0, intent, cfg):
+    """Plan (n, 20, 2) -> plan with the rule applied on the frames it is eligible for (turn-intent, v0 inside the range)."""
+    al, dy, (lo, hi) = cfg
+    out = plan.copy()
+    for side, code in ((1.0, 2), (-1.0, 3)):
+        m = np.flatnonzero((intent == code) & (v0 >= lo) & (v0 < hi))
+        if len(m) == 0 or (al == 1.0 and dy == 0):
+            continue
+        p = plan[m]
+        out[m] = G.offset_path(p, v0[m], al * G.arc(p), -side * dy, 10.0, 2.0) if dy else G.along(p, al * G.arc(p))
+    return out
+
+
+def rule_scores(C, P):
+    """RFS of every config on every frame: (len(CONFIGS), S, n)."""
+    return np.stack([np.stack([C.rfs(apply_rule(p, C.v0, C.intent, c)) for p in P]) for c in CONFIGS])
+
+
+def log_alpha(C):
+    """3a-log: median of (logged 5 s displacement / plan 5 s displacement) on the r2-dev turn-intent rows with 0.5 <= v0 < 3 (WP2 token-path plans; out of sample)."""
+    from jevdrive import waymo as W
+    d = np.load(data_dir() / "runs/op_parity/wod/launch/tok_dev.npz")
+    v0 = W.init_speed(d["past"]).astype(np.float64)
+    m = (d["intent"] >= 2) & (v0 >= 0.5) & (v0 < 3.0)
+    rr = {}
+    for t in ("WP2-full-s0", "WP2-full-s1"):
+        s_log, s_plan = G.arc(d["fut"][m][..., :2].astype(np.float64))[:, -1], G.arc(d[f"plan_{t}"][m].astype(np.float64))[:, -1]
+        rr[t] = float(np.median(s_log / np.maximum(s_plan, 0.5)))
+    return float(np.mean(list(rr.values()))), int(m.sum()), rr
+
+
+def cmd_rule(a):
+    import pandas as pd
+    from jevdrive import stats
+    from jevdrive.run import Run
+    with Run("op_parity", "turn-prior-rule", seed=0, config=vars(a) | dict(configs=[list(map(str, c)) for c in CONFIGS])) as run:
+        C, z = ctx()
+        d_ = load_sets(C, z)
+        n, st = C.n, strata(C)
+        fr = pd.read_csv(_R / "experiments/op_parity/results/wod_pref/frames.csv")
+        pfold, cl = fr["fold"].to_numpy(), fr["cluster"].to_numpy().astype(str)
+        for c in sorted(set(cl)):
+            st[f"cluster {c}"] = cl == c
+        P = {k: plans_of(C, k) for k in ("wlg", "top", "f20")}
+        R = {k: rule_scores(C, P[k]).mean(1) for k in P}                                        # (configs, n): seed-mean RFS
+        base = {k: R[k][0] for k in P}
+        assert all(np.abs(base[k] - d_[f"J_{k}"][:, KEEP].mean(0)).max() < 1e-9 for k in P)
+        ship = d_["J_shipped"]
+        turn = C.intent >= 2
+        al, n_log, rr = log_alpha(C)
+        run.info("alpha from the r2-dev logs: %.3f (%d turn rows, per seed %s)", al, n_log, rr)
+        # ---- in-sample grid (descriptive, fitted and scored on the same frames)
+        grid = []
+        for ci_, c in enumerate(CONFIGS):
+            g = R["wlg"][ci_] - base["wlg"]
+            cs, ct = C.ci(g), C.ci(g, turn)
+            grid.append({"alpha": c[0], "nudge m": c[1], "v-range": f"[{c[2][0]:g}, {c[2][1]:g})", "d vs WLG (all, in-sample)": cs[0], "lo": cs[1], "hi": cs[2], "d on turn-intent": ct[0], "turn lo": ct[1],
+                         "turn hi": ct[2]})
+        stats.write_table(grid, OUT / "rule_grid_insample")
+        # ---- 3a-oof: parameters from the 4 other pref folds' turn-intent frames (WLG plans), applied to the held-out fold
+        chosen, params = np.zeros(n, int), []
+        for j in range(K := pfold.max() + 1):
+            tr = (pfold != j) & turn
+            gains = (R["wlg"][:, tr] - base["wlg"][tr]).mean(1)
+            best = int(np.flatnonzero(gains >= gains.max() - 1e-9)[0])                           # CONFIGS is ordered identity first, then the smaller change
+            chosen[pfold == j] = best
+            params.append({"fold": j, "alpha": CONFIGS[best][0], "nudge m": CONFIGS[best][1], "v-range": f"[{CONFIGS[best][2][0]:g}, {CONFIGS[best][2][1]:g})",
+                           "train turn frames": int(tr.sum()), "train gain": float(gains[best]), "n eligible train": int(((pfold != j) & turn & (C.v0 >= CONFIGS[best][2][0]) & (C.v0 < CONFIGS[best][2][1])).sum())})
+        stats.write_table(params, OUT / "rule_params")
+        ii = np.arange(n)
+        cfg_log = (al, 0.0, (0.5, 3.0))
+        Rlog = {k: np.mean([C.rfs(apply_rule(p, C.v0, C.intent, cfg_log)) for p in P[k]], 0) for k in P}
+        arms = {"shipped": ship, "WLG": base["wlg"], "pref-top (oof)": base["top"], "pref-f20 (oof)": base["f20"]}
+        bmap = {}
+        for k, lab in (("wlg", "WLG"), ("top", "pref-top"), ("f20", "pref-f20")):
+            arms[f"{lab}+rule (oof params)"] = R[k][chosen, ii]
+            arms[f"{lab}+rule (log alpha %.2f)" % al] = Rlog[k]
+            bmap[f"{lab}+rule (oof params)"] = bmap[f"{lab}+rule (log alpha %.2f)" % al] = {"wlg": "WLG", "top": "pref-top (oof)", "f20": "pref-f20 (oof)"}[k]
+        main, srows = [], []
+        for nm, v in arms.items():
+            r = {"arm": nm, "RFS": C.cm(v)}
+            for ref, rv in (("WLG", arms["WLG"]), ("shipped", arms["shipped"])):
+                c = C.ci(v - rv)
+                r |= {f"d vs {ref}": c[0], f"{ref} lo": c[1], f"{ref} hi": c[2]}
+            if nm in bmap:
+                c = C.ci(v - arms[bmap[nm]])
+                r |= {"d vs its base": c[0], "base lo": c[1], "base hi": c[2]}
+            main.append(r)
+            for sn, m in st.items():
+                c, cs = C.ci(v - arms["WLG"], m), C.ci(v - arms["shipped"], m)
+                srows.append({"arm": nm, "stratum": sn, "n": int(m.sum()), "RFS": C.cm(v, m), "d vs WLG": c[0], "lo": c[1], "hi": c[2], "d vs shipped": cs[0], "s lo": cs[1], "s hi": cs[2]})
+        stats.write_table(main, OUT / "rule_arms")
+        stats.write_table(srows, OUT / "rule_strata")
+        pd.DataFrame({"name": C.names[:n], "fold": pfold, "chosen": chosen} | {f"rfs {k}": v for k, v in arms.items()}).to_csv(OUT / "rule_frames.csv", index=False, float_format="%.4f")
+        (OUT / "rule_info.json").write_text(json.dumps({"alpha_log": al, "alpha_log_rows": n_log, "alpha_log_per_seed": rr, "configs": [[c[0], c[1], list(c[2])] for c in CONFIGS]}, indent=1))
+        pd.set_option("display.width", 250, "display.max_columns", 99)
+        run.info("\ngrid (in-sample):\n%s\nparams:\n%s\n%s", pd.DataFrame(grid).to_string(float_format=lambda v: f"{v:+.3f}"), pd.DataFrame(params).to_string(),
+                 pd.DataFrame(main).to_string(float_format=lambda v: f"{v:+.3f}"))
+        sd = pd.DataFrame(srows)
+        run.info("\n%s", sd[sd.stratum.isin(["all", "turn-intent", "straight", "turn v0<0.5", "turn 0.5<=v0<3", "turn v0>=3"]) & sd.arm.str.contains("rule")].to_string(float_format=lambda v: f"{v:+.3f}"))
 
 
 def main():
