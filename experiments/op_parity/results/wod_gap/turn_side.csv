@@ -1,0 +1,4 @@
+arm,n,median_inward_m,inside_gt1m,wide_gt1m,median_lon_m,n_near,near_median_inward_m,near_inside_gt1m,near_wide_gt1m
+WP2 (seed 0),52,1.4,28,6,0.68,26,0.59,12,3
+shipped,52,0.63,23,6,-0.98,19,0.06,4,2
+log,52,1.02,27,2,0.75,36,1.03,19,0

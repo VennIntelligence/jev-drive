@@ -219,3 +219,28 @@ at 3 s and 5 s; dots = each trajectory at 3 s and 5 s; the lateral axis is stret
   the lead head, launch detection) were not tried and would need the stored auxiliary outputs or new serving.
 - The truncated-label finding, the nearest-rater column, per-seed stratum columns and C3 were added after the first read (*post hoc*).
 - Val rater labels were used for analysis and the k-fold fits only; no test-set submission.
+
+## Post hoc (main session, 2026-10-07): which side of the top-rated path on turn frames
+
+Question: figure 00 shows WP2 turning 2.8 m wider than the 10-rated path; is "wide" the typical turn failure on WOD, or the navtest one (inside-corner
+cut, decision 153)? Read from `wod_gap/frames.csv`, 52 turn-intent frames (23 left, 29 right; median v0 1.2 m/s, logged 5 s distance 11.9 m), lateral
+miss at 5 s in the top-rated trajectory's frame, signed toward the turn side. Code: `scripts/wod_gap_turn_side.py`; table `wod_gap/turn_side.csv`.
+
+![turn side](../figs/wod_gap/10_turn_side.png)
+
+Look at: the dashed median and the filled dots (|longitudinal miss| < 3 m, where the lateral sign is not an along-path shortfall).
+
+| arm | median inward miss (m) | inside > 1 m / wide > 1 m (of 52) | frames with lon miss < 3 m | median inward there (m) | inside / wide there |
+|:--|--:|:--|--:|--:|:--|
+| WP2 (seed 0) | +1.40 | 28 / 6 | 26 | +0.59 | 12 / 3 |
+| shipped | +0.63 | 23 / 6 | 19 | +0.06 | 4 / 2 |
+| log | +1.02 | 27 / 2 | 36 | +1.03 | 19 / 0 |
+
+- WP2 ends on the **inside** of the top-rated path, not wide: figure 00 is the exception. WP2 is about 0.5 m further inside than shipped (paired median of
+  the difference +0.56 m; with the longitudinal miss small, +0.59 vs +0.06). Same direction as the navtest inside-corner cut.
+- The log itself sits about 1 m inside the top-rated path on turns, 19 / 0 when its longitudinal miss is small, and the offset does not grow with the
+  distance driven (terciles of logged distance: +0.93 / +1.33 / +0.88 m). Either raters rank a wider line first, or the rater trajectories and the logged
+  states differ by a reference offset (on straight moving frames the log is +0.50 m longitudinal, 0.00 lateral against the top-rated). Not resolved here;
+  the WP2-vs-shipped comparison does not depend on it.
+- Caveats: one seed of WP2 (the table stores s0 geometry only), 52 frames, no CIs; a trajectory short on the same arc reads as "inside" in this frame, hence
+  the lon-miss filter.
