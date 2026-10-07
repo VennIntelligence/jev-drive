@@ -12,6 +12,7 @@ $B run --model P2-F-s0 --bench hugsim --preset exam spec --scenarios all64     #
 $B status                                   # live runs: stage states + one STATUS line each (--wait blocks)
 $B report --bench navtest --arms P0 P2=P2-F-s0+P2-F-s1 --vs WA-JEPA --out experiments/<topic>/results/x
 $B report --bench hugsim --preset spec --arms P2=P2-F-s0+P2-F-s1 --vs P0 WA-JEPA --scenarios turn23
+$B score-poses --poses f.npz [--keys a b] [--tokens t.txt] --out o.csv --wait   # devkit scores of your own pose arrays
 ```
 
 `run` submits every stage of every requested (model, bench, preset) to the GPU pool at once, chained with `after`, and returns;
@@ -105,6 +106,67 @@ selector orchestration preserves its `STOP_AT` cutoff; invoke it outside a GPU l
 paths and HUGSIM rows, with historical fallback. Experiment-specific gates, bootstrap methods and training remain in their
 original topics.
 
+## Pose scoring (`score-poses`, `poses.py`)
+
+Per-token devkit scores of arbitrary pose arrays: decoder outputs, ablations, replays. Use it instead of hand-sharding
+`experiments/op_probe/scripts/opb_score.py` (that script is now a thin wrapper over the same code).
+
+```bash
+$B score-poses --poses f.npz [--keys a b] [--tokens t.txt] --out o.csv [--cpu C] [--jobs K] [--priority P] [--wait] [--dry]
+```
+
+- Input: `f.npz` with `tokens` (N,) and (N, 8, 3) pose arrays (rear axle at t0, 0.5 .. 4 s). It scores every key (by default
+  every (N, 8, 3) array) on the selected tokens: v2 navtest metric cache, run_pdm_score.py's simulator / scorer / reactive IDM
+  traffic. The command fails before submitting when a key is not an (N, 8, 3) array, a token is duplicated (in the poses
+  file or in `--tokens`), or a token is missing from the poses file or the metric cache.
+- Output: the CSV opb_score.py writes (`key, token`, the 8 v2 sub-scores, `score` = per-token EPDMS without EC,
+  `raw_out, raw_depth, lqr_out, out_depth`), rows in token-then-key order. Collect fails if any (key, token) is missing
+  or appears twice.
+- Execution: no sub-score needs a neighbouring frame (EC is not computed), so the unit is the token. The tokens form a
+  claim queue of 24-token chunks. K CPU pool jobs of C cores each pull from it: C = 12, and K = the pool's CPU budget
+  (the cgroup quota, 75 cores, not the 208 host CPUs) // C, fewer for small sets (>= 16 tokens per worker). On a busy box
+  the pool admits some jobs late, and those find less work: the run degrades to fewer jobs and never waits for a full
+  allocation. Each job builds the devkit objects once, forks one worker per granted core (`sched_getaffinity`, i.e. the
+  pool's taskset) and forces one BLAS / OpenMP thread per worker. Re-running the command resumes: finished chunks stay;
+  the poses file's sha256 is part of the run identity and is checked by every job.
+- Run dir `$DATA_DIR/runs/bench/poses/<poses stem>-<hash>/`: `config.json`, `tokens.txt`, `chunks/`, `claims/`,
+  `workers/w<i>.DONE` (wall time, workers, init time), `score.csv`, `summary.json` (per-key means; per-token cost split
+  load / pdm / diag / union; max worker RSS), `STATUS`, `DONE`. `$B status` does not list it; read `STATUS`, or pass `--wait`.
+- Inside a job that already holds a pool lease, call the wrapper instead (in-process, `--procs` defaults to the granted
+  cores): `$DATA_DIR/envs/navsim2/bin/python experiments/op_probe/scripts/opb_score.py --poses f.npz --out o.csv`.
+  Python: `bench.score_poses("f.npz", "o.csv", keys=["a"])` returns the run dir.
+
+Profile (2026-10-07, one 12-core job, 480 tokens x 8 keys; cProfile on 8 tokens x 4 keys): pdm_score is 99 % of the
+cost, and the reactive IDM traffic simulation is 97 % of pdm_score. Metric-cache load is 0.11 s per token, the DAC
+diagnostics 0.04 s, worker init 4 s per job, worker RSS <= 0.6 GB. pdm_score runs IDM twice per call: on the plan and on
+the human trajectory (the human-penalty filter). The human run is identical for every key of a token, so `MemoPolicy`
+memoises the policy output per token by the ego-state bytes, and a k-key token costs k + 1 IDM runs instead of 2k. This
+is exact: the policy deep-copies its observation and the scorer only reads the tracks. The drivable-area union is built
+only when a corner is outside (18-25 % of tokens).
+
+Before / after (2026-10-07, box quota 75 cores, shared with the replay-hinge lane; inputs in
+`$DATA_DIR/runs/bench/poses_check/`). Before is opb_score.py as lanes ran it: one pool job with the default `--procs 48`.
+
+| Full navtest pose scoring | Before | After (`score-poses`, default sizing) |
+|---|---|---|
+| 12 146 tokens x 1 key | 11.2 min from command to CSV (one 48-core job; scoring 664 s) | 7.2 min from command to CSV (6 jobs x 12 cores, all admitted at once; 387 s from first job start to last job end), 1.6x |
+| 12 146 tokens x 8 keys | ~75 min, extrapolated: 17.8 core-s per token, measured on 480 random navtest tokens x the same 8 keys (12 workers, 710 s) | 42.7 min from command to CSV on the shared box (behind the lane's navtest / HUGSIM jobs: 3 jobs for 11 min, then 5; 36.7 min from first job start to last job end), 1.8x; ~26 min with all 72 cores (9.3 core-s per token), ~2.9x |
+| Cost per token | 1 key 2.62 core-s (48 workers), 8 keys 17.8 core-s | 1 key 2.21 core-s, 8 keys 9.30 core-s (7.0 memo hits per token) |
+
+With one key, the gain comes from right-sizing: 72 cores of concurrent jobs instead of 48, one thread per worker (the old
+script kept an inherited `OMP_NUM_THREADS=75`), and init built once per job. With 8 keys, the IDM memo also halves the
+work. The 5 jobs of the 8-key run ended within 20 s of each other, and the job admitted last found no work and exited.
+
+Equivalence: the new path was checked against the pre-move opb_score.py (`git show 34921896~1:experiments/op_probe/scripts/opb_score.py`),
+run with one OpenMP thread. Every CSV row is textually identical: all 12 146 navtest tokens x 1 key (P2-F-s0's plans),
+and 480 random tokens x the 8 op_parity representation decoder keys (3 840 rows, with and without the IDM memo).
+Every column of every key matches. P2-F-s0 scored alone and as the 7th of 8 keys gives identical rows, so the memo and the
+key order carry no state between keys. One caveat: opb_score.py only *defaulted* BLAS / OpenMP to one thread. Under the pool's
+inherited `OMP_NUM_THREADS=75`, the old script's LQR replay differs in the last bits. That affected 38 of 12 146 rows
+(1 key) and 20 of 3 840 rows (8 keys), at most 3e-11 in ego_progress / score / out_depth, with no sub-score flips.
+`score-poses` forces one thread. The opb_score.py wrapper keeps the caller's thread env, so old commands reproduce their
+old outputs. With one thread, the old script also ran faster: 561 s instead of 664 s at 48 workers.
+
 ## Reports (`tables.py`)
 
 `report` writes `<out>/<bench>[_<preset>]_{arms,paired,shapley,strata}.{md,csv}` through `jevdrive.stats`:
@@ -175,7 +237,8 @@ exports live in `$DATA_DIR/runs/bench/migration-legacy`. Existing scientific res
   servers in `hugsim.Servers`; a test in `tests/test_bench.py`.
 - A benchmark: a module with `stages(model, ..., run_dir) -> [runner.Stage]` and a `collect` that writes `units.csv`,
   `summary.json`, `DONE`; register the stage functions in `stage.py` and the loader in `tables.load`.
-- Tests: `python -m unittest tests.test_bench tests.test_bench_migration -v` (no GPU; the watchdog test needs Linux). GPU smoke through the pool:
+- Tests: `python -m unittest tests.test_bench tests.test_bench_migration -v` (no GPU; the watchdog test needs Linux; pose
+  scoring is tested without the devkit). GPU smoke through the pool:
   `$B run --model P0 --bench hugsim --scenarios scene-0013-medium-00 --wait` (one scenario, ~3 min).
 
 Not wrapped yet: WA-JEPA re-runs on NAVSIM (its runner is experiments/top10; the bench reads its stored runs), op_guard

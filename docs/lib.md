@@ -6,6 +6,8 @@ network). A complete example in 40 lines: [scripts/lib_demo.py](../scripts/lib_d
 
 **Benchmarks.** Running a model on navtest / navhard / HUGSIM / Bench2Drive and reporting it (arms, paired CIs, Shapley,
 strata) is `jevdrive.bench` ([bench.md](bench.md)): one command, all GPUs through the pool; do not write a lane runner.
+Scoring your own (N, 8, 3) navtest pose arrays with the devkit (per-token sub-scores + DAC diagnostics) is
+`python -m jevdrive.bench score-poses` ([bench.md](bench.md#pose-scoring-score-poses-posespy)): the whole box, no hand-picked `--cpu`.
 
 **Rule.** Every new experiment runs inside `jevdrive.run.Run` and reads its train / val / test membership from
 `jevdrive.data.splits` (and calls `run.use_split` for each). `cache`, `par` and `stats` are the recommended defaults;
