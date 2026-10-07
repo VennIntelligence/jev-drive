@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Figures of research/wl2-results.md from experiments/world_model/results/wl2/results/*.csv (Mac, project venv).
+"""Figures of research/world-model/index.html from experiments/world_model/results/wl2/results/*.csv (Mac, project venv).
 
   wl2-c1c        C1c AUC on the occupied subset per arm, and the brake-vs-hold direction
   wl2-c2-c3      C2 AUC (cg) and C3a H per arm
