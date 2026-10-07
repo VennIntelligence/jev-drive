@@ -81,6 +81,8 @@ gate on the 3 154 navtest > 20 deg tokens first: [plans/2026-10-07-representatio
 
 **Ego-history probe (2026-10-07, inference only).** P2H / WA-JEPA plans on navtest with the ego history (velocity, acceleration, poses) replaced by a constant-velocity one, on sharp-turn approach tokens (T 368), pre-flip tokens (P 129) and matched straights: planned 4 s distance on T +0.13 m [-0.35, +0.56] (P2H), +0.04 [-0.23, +0.28] (WA-JEPA); the effect rides on the t0 acceleration input, P2H is 1.4-2.1 x as history-sensitive as WA-JEPA but equally on straights: the "slows before turns because the history shows it" hypothesis is not supported: [results/ego_history_probe.md](results/ego_history_probe.md).
 
+**HUGSIM ax probe (2026-10-07).** P2H10-F-s0 / s1 `spec_plan_smooth` with the sim acceleration fed as ax (unmodified) vs ax = ay = 0 at the model input (`parity.zero_acc`, default off), 5 sharp-turn + 5 fast straight scenarios by a pre-written rule: entry speed at the turn changes by a median -1.09 m/s (3 / 5 scenarios below -1; stays 6-10 m/s, every sharp scenario still fails the same way), the straights slow by 1.0-1.6 m/s too (one collapses at 4.4 m/s): the ax feedback is not the main cause of the fast entries: [results/hugsim_ax_probe.md](results/hugsim_ax_probe.md).
+
 **Agent hinge pilot (2026-10-07, pre-registered, gate stop).** Pilot P2H recipe + hinge of the plan footprint against the logged boxes of the agents
 ahead (lambda_a 10, margin 0.5 m; K 32 and no side margin outside the lateral corridor after the pre-training geometry check, declared before training):
 navtest NC + TTC failures 2.44% -> 2.27% (-0.16 pp [-0.26, -0.08], gate -0.3), EPDMS +0.18 [+0.05, +0.31] (gate +0.2), EP -0.10; gains on stopped-lead and
