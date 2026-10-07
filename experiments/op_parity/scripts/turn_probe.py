@@ -358,7 +358,7 @@ def figures(out, z, M, S, Ed, sets, strata, test):
             ax.bar(x, q["mean"], 0.17, color=col[arm], label=lab[arm], yerr=[q["mean"] - q.lo, q.hi - q["mean"]], error_kw=dict(lw=0.6, capsize=1.5))
         ax.set_xticks(np.arange(len(names)), ["< 5", "5-20", "20-45", "> 45"])
         ax.set_xlabel("logged heading change in 4 s (deg)"), ax.set_ylabel(yl), ps.bars(ax)
-    axs[0].legend(loc="upper left")
+    fig.legend(*axs[0].get_legend_handles_labels(), loc="outside upper center", ncol=4)
     fig.savefig(out / "strata.png", dpi=300)
     # 2. distance to the turn entry
     fig, ax = plt.subplots(figsize=(ps.SINGLE_COLUMN_IN, 2.4), constrained_layout=True)
@@ -384,7 +384,7 @@ def figures(out, z, M, S, Ed, sets, strata, test):
         f = np.vstack([[0, 0, 0], z["fut"][i]])
         ax.plot(f[:, 1], f[:, 0], color=ps.PALETTE["green"], marker=".", ms=2.5, lw=0.8)
         ax.set_xlim(20, -20), ax.set_ylim(-4, 36), ax.set_aspect("equal"), ax.grid(False)
-        ax.set_title(f"{'inside-cut fail' if i in rows[:3] else 'pass'} {tk[i]}: band MAE V {M['V/mlp']['band'][i]:.2f} / WA {M['WA/mlp']['band'][i]:.2f} m", fontsize=7)
+        ax.set_title(f"P2H {'inside-cut fail' if i in rows[:3] else 'pass'}, {tk[i][:8]}\nband MAE: Cinque {M['V/mlp']['band'][i]:.2f} m, WA-Cf {M['WA/mlp']['band'][i]:.2f} m", fontsize=7)
     h = [plt.Line2D([], [], color=c, lw=1) for c in ("k", col["V"], col["WA"], ps.PALETTE["green"])]
     fig.legend(h, ["true drivable boundary", "read out of Cinque tokens", "read out of WA-Cf", "logged future (4 s)"], loc="outside lower center", ncol=4)
     fig.savefig(out / "bev.png", dpi=300)
