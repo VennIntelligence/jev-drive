@@ -291,6 +291,15 @@ def cmd_report(a):
     PX = pd.DataFrame(PX)
     PX.to_csv(out / "lowlight_proxy.csv", index=False)
 
+    # independent label: solar elevation < 0 at the log's time and city (twilight or darker), NAVSIM boards only
+    SG = []
+    for b in ("navtest", "navhard"):
+        r = gap_table(boards[b], CUT, lab_fn=lambda x: np.where(x["sun"].to_numpy(float) < 0, "night", "day"))
+        r["board"] = b
+        SG.append(r)
+    SG = pd.DataFrame(SG)
+    SG.to_csv(out / "sun_label_gap.csv", index=False)
+
     # sun elevation (independent time-of-day check) on the NAVSIM boards: logs below the horizon / civil twilight
     sunrows = []
     for b in ("navtest", "navhard"):
@@ -367,6 +376,9 @@ def cmd_report(a):
                         columns=["board", "units n / dusk / d", "P2H n / dusk / d", "WA-JEPA n / dusk / d", "gap night", "gap dusk", "gap day", "gap all"])
     parts = {"main": mdt(main), "full": mdt(full), "sens": mdt(sens), "navhard_stages": mdt(stt), "city_navtest": mdt(nts, ".1f"), "city_navhard": mdt(nhs, ".1f"),
              "hugsim_ds": mdt(hs, ".1f"), "sun": mdt(SUN, ".1f"), "lowsun": mdt(lowsun, ".1f"),
+             "sunlab": mdt(pd.DataFrame([[r["board"], f"{r['n_night']:.0f} ({r['share_night']:.2f}%)", r["night_clusters"], f"{r['p2h_night']:.2f} / {r['p2h_day']:.2f}", f"{r['wa_night']:.2f} / {r['wa_day']:.2f}",
+                                           f"{r['gap_night']:.2f} / {r['gap_day']:.2f}", ci(r, "gap_diff"), ci(r, "size_replace")] for r in SG.to_dict("records")],
+                                         columns=["board", "sun<0 units", "logs", "P2H sun<0 / rest", "WA sun<0 / rest", "gap", "gap diff", "size replace"])),
              "proxy": mdt(pd.DataFrame([[r["board"], r["q"], r["thr"], r["units"], f"{r['n_night']:.0f}", f"{r['share_night']:.1f}", f"{r['p2h_night']:.2f} / {r['p2h_day']:.2f}", f"{r['wa_night']:.2f} / {r['wa_day']:.2f}",
                                            f"{r['gap_night']:.2f} / {r['gap_day']:.2f}", ci(r, "gap_diff"), ci(r, "size_replace"), ci(r, "size_excess")] for r in PX.to_dict("records")],
                                          columns=["board", "bottom q", "luma thr", "units", "dim units", "share %", "P2H dim / rest", "WA dim / rest", "gap dim / rest", "gap diff", "size replace", "size excess"])), "cons": "\n".join(f"- {k}: {v:.3f}" for k, v in cons.items())}
