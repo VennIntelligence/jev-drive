@@ -226,7 +226,7 @@ def cmd_report(a):
     out = _pl.Path(a.out)
     (out / "figs").mkdir(parents=True, exist_ok=True)
     L = pd.read_parquet(WORK / "luma_navsim.parquet")
-    L["city"] = L.map.map(CITY).fillna(L.map)
+    L["city"] = L["map"].map(CITY).fillna(L["map"])
     H = pd.read_parquet(WORK / "luma_hugsim.parquet")
     boards = {}
     # --- navtest: units = tokens, cluster = log, label = median luma of the log's tokens
