@@ -165,7 +165,7 @@ def _corners(cx, cy, yaw, hl, hw):
 class AgentHinge:
     """Labels aligned to a row order (tokens), on `dev`; __call__(x, y, psi, rows) -> the mean agent hinge over the rows with a label."""
 
-    def __init__(self, label_file, tokens, dev, margin: float = 0.5):
+    def __init__(self, label_file, tokens, dev, margin: float = 0.5, side_margin=None):
         import torch
         from drivable_hinge import interp_matrix
         z = np.load(label_file)
@@ -187,13 +187,15 @@ class AgentHinge:
         self.M = torch.as_tensor(M, dtype=torch.float32, device=dev)
         self.Mv = torch.as_tensor(M > 0, dtype=torch.float32, device=dev)
         self.margin = margin
+        self.side_margin = margin if side_margin is None else side_margin    # margin for objects outside the ego's lateral corridor
         self.coverage = float(ok.mean())
         f = FRONT + margin
         self.e_off, self.e_hl, self.e_hw = (f + REAR) / 2, (f - REAR) / 2, HALF_W
         self.c_off = (FRONT + REAR) / 2                       # centre of the unextended box: the front half plane is taken about it
 
     def distances(self, x, y, psi, rows):
-        """x, y, psi (B, 8) plan poses -> signed distance (B, 41, K) of the extended ego box to each object box, counted mask (B, 41, K)."""
+        """x, y, psi (B, 8) plan poses -> signed distance (B, 41, K) of the extended ego box to each object box, counted mask (B, 41, K),
+        in-corridor mask (B, 41, K): the object box overlaps the ego's lateral extent |y| < half width in the ego frame of that step."""
         import torch
         P = torch.stack([x, y, psi], -1)
         d = torch.einsum("kj,bjc->bkc", self.M, torch.cat([torch.zeros_like(P[:, :1]), P], 1))      # (B, 41, 3)
@@ -213,12 +215,16 @@ class AgentHinge:
         rx, ry = ox - (ex + c * self.c_off), oy - (ey + s * self.c_off)
         lon, lat = c * rx + s * ry, -s * rx + c * ry
         counted = valid & (lon > 0) & ((lat.abs() < LAT_MAX) | (dist < 0))
-        return dist, counted
+        lc = -s[..., None] * (px - ex[..., None]) + c[..., None] * (py - ey[..., None])
+        corridor = (lc.amax(-1) > -HALF_W) & (lc.amin(-1) < HALF_W)
+        return dist, counted, corridor
 
     def per_step(self, x, y, psi, rows):
-        """(B, 41) relu(margin - nearest counted distance)."""
-        dist, counted = self.distances(x, y, psi, rows)
-        return (self.margin - dist).clamp_min(0).masked_fill(~counted, 0.0).amax(-1)
+        import torch
+        """(B, 41) max over counted objects of relu(m - distance), m = margin in the corridor, side_margin outside it."""
+        dist, counted, corridor = self.distances(x, y, psi, rows)
+        m = torch.where(corridor, self.margin, self.side_margin) if self.side_margin != self.margin else self.margin
+        return (m - dist).clamp_min(0).masked_fill(~counted, 0.0).amax(-1)
 
     def __call__(self, x, y, psi, rows):
         ok = self.ok[rows]
@@ -237,7 +243,7 @@ def token_hinge(H, poses, rows, bs=2048):
             r = torch.as_tensor(rows[i:i + bs], device=H.box.device)
             P = torch.as_tensor(poses[i:i + bs], dtype=torch.float32, device=H.box.device)
             v = H.per_step(P[..., 0], P[..., 1], P[..., 2], r)
-            dist, cnt = H.distances(P[..., 0], P[..., 1], P[..., 2], r)
+            dist, cnt, _ = H.distances(P[..., 0], P[..., 1], P[..., 2], r)
             dmin = dist.masked_fill(~cnt, 1e3).amin((1, 2))
             out.append(torch.stack([v.amax(1), v[:, 1:].amax(1), dmin], 1).cpu().numpy())
     return np.concatenate(out)
@@ -253,11 +259,11 @@ def cmd_check(a):
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tab = np.load(D / "runs/op_parity/cache/lb_navtest/tab.npz")
     toks = tab["names"]
-    H = AgentHinge(OUT / "navtest.npz", toks, dev, a.margin)
+    H = AgentHinge(OUT / "navtest.npz", toks, dev, a.margin, a.side_margin)
     rng = np.random.default_rng(0)
     has = ~np.isnan(tab["fut"][:, 0, 0]) & H.ok.cpu().numpy()
     with Run("op_parity", "agent-labels-check", config=vars(a)) as run:
-        res = {"coverage": H.coverage, "margin": a.margin}
+        res = {"coverage": H.coverage, "margin": a.margin, "side_margin": H.side_margin}
         pick = rng.choice(np.flatnonzero(has), a.n, replace=False)
         hv = token_hinge(H, tab["fut"][pick].astype(np.float32), pick)
         allr = np.flatnonzero(has)
@@ -287,7 +293,7 @@ def cmd_check(a):
                       "pass_hinge_pos": f([t for t in ok_all if t not in set(nt)]), "all_hinge_pos": f(ok_all)}
         res["pass"] = bool(res["human"]["viol"] < 0.01 and all(res[m]["nc_fail_hinge_pos"] >= 0.70 for m in a.models))
         run.summary.update(res)
-        (OUT / f"check-m{a.margin}.json").write_text(json.dumps(res, indent=1))
+        (OUT / f"check-m{a.margin}-s{H.side_margin}.json").write_text(json.dumps(res, indent=1))
         print(json.dumps(res, indent=1))
 
 
@@ -301,6 +307,7 @@ if __name__ == "__main__":
     p = sp.add_parser("check")
     p.add_argument("--n", type=int, default=300)
     p.add_argument("--margin", type=float, default=0.5)
+    p.add_argument("--side-margin", type=float, default=None)
     p.add_argument("--models", nargs="+", default=["P2H10-F-s0", "HP-F-s0"])
     a = ap.parse_args()
     {"build": cmd_build, "check": cmd_check}[a.cmd](a)
