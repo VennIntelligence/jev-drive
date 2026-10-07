@@ -177,7 +177,7 @@ def cmd_p2h(a):
                 ego = ego0 if v == "orig" else torch.as_tensor(features(t, v), device=dev)
                 mu = mu_all[row] if v == "orig" else plan(row, ego)
                 out[v] = adapt_poses(mu, row, mt)
-            np.savez(OUT / f"p2h_{arm}.npz", tokens=np.array(sel.token), **out)
+            np.savez(OUT / f"p2h_{arm}.npz", tokens=np.array(sel.token, dtype=str), **out)
         (OUT / "equivalence.json").write_text(json.dumps(eq, indent=1))
 
 
@@ -276,7 +276,7 @@ def cmd_report(a):
     P = {}
     for v in VARIANTS:
         for arm in ARMS:
-            z = np.load(OUT / f"p2h_{arm}.npz")
+            z = np.load(OUT / f"p2h_{arm}.npz", allow_pickle=True)
             assert z["tokens"].tolist() == sel.token.tolist()
             P[("P2H-" + arm[-2:], v)] = metrics(z[v])
         P[("P2H", v)] = {k: (P[("P2H-s0", v)][k] + P[("P2H-s1", v)][k]) / 2 for k in ("D2", "D4", "v13")}
