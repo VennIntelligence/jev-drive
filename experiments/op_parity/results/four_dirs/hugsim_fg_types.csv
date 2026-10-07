@@ -1,0 +1,5 @@
+set,runs,scenarios,oncoming,crossing,lead_stopped,lead_moving,cut_in,side,rear_ended,ego_stopped_at_contact,t_end_median_s,turning_route
+P2H smooth (6 runs / sc),180,31,105,12,45,11,0,1,6,3,4.375,60
+WA-JEPA,26,26,19,2,1,0,0,3,1,6,5.625,10
+P2H spec r0,54,28,33,2,14,3,0,0,2,2,5.0,20
+P2H exam r0,57,30,38,2,10,4,0,1,2,2,4.5,19
