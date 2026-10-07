@@ -15,7 +15,7 @@
 [factorized-world-model.md](factorized-world-model.md)（分解世界模型文献查新：ego 精确、外生预训练）；
 [turn-gain/index.html](turn-gain/index.html)（转弯增益诊断：P2 急转弯失败是轻微比例缩小，不是封顶，控制链路不裁剪）；
 [hugsim-specplan/index.html](hugsim-specplan/index.html)（用模型自己的 plan 转向：单点曲率更差（转弯 HD 0.17 对 0.28），0.5 到 1.5 秒平均曲率更好（0.333），旧版横向 MPC 持平）；
-[four-directions.html](four-directions.html)（四个方向综合诊断：急弯内侧切角与入弯速度、宽弯擦边余量、前车近距测距偏差与夜间归属）；
+[four-directions/index.html](four-directions/index.html)（四个方向综合诊断：急弯内侧切角与入弯速度、宽弯擦边余量、前车近距测距偏差与夜间归属）；
 `articles/`（深度长文）、`roadmap/`、`lit/`（不进 git）只在这台 Mac 上。
 
 ## 写作惯例
