@@ -130,3 +130,5 @@ original frozen V-JEPA 2.1 ViT-L closes only 0.35 of that (gate 0.5, fails; alon
 Policy pilot (s2-s4, 2 seeds): P2H + WA-Cf as adapter memory passes every criterion: navtest EPDMS +0.95 [+0.47, +1.37], turn DAC failures
 -1.33 pp, NC + TTC -0.63 pp. Reading: the gain needs a NAVSIM-supervised encoder; next is distillation into Cinque's whole encoder with WA-Cf as the
 teacher. [results/representation.md](results/representation.md), plan [plans/2026-10-07-representation-design.md](plans/2026-10-07-representation-design.md).
+
+**Turn probe (2026-10-07, pre-registered, read-out probes only).** Drivable-boundary read-out from frozen tokens, navtest > 45 deg: Cinque 1.21 m vs WA-Cf 0.86 m (+0.35 [0.32, 0.39]), turn-vs-straight degradation larger for Cinque by 0.11 [0.07, 0.15]: rule verdict "representation lacks it (turn-specific)", but two thirds of the gap is already there on straight tokens and frozen V-JEPA 2.1 reads the boundary as well as WA-Cf without the driving gain of decision 160. [results/turn_probe.md](results/turn_probe.md), plan [plans/2026-10-07-turn-probe-prereg.md](plans/2026-10-07-turn-probe-prereg.md), `scripts/turn_probe.py`.

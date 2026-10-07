@@ -1,0 +1,34 @@
+[
+ {
+  "arm": "E",
+  "dim": 20,
+  "lam_raster": 0.0001,
+  "inner_r2_raster": 0.2011562730485566,
+  "lam_corr": 0.0001,
+  "inner_r2_corr": 0.07720468361781847
+ },
+ {
+  "arm": "V",
+  "dim": 16404,
+  "lam_raster": 0.3,
+  "inner_r2_raster": 0.7647085246072521,
+  "lam_corr": 0.3,
+  "inner_r2_corr": 0.6826091902986149
+ },
+ {
+  "arm": "WA",
+  "dim": 16404,
+  "lam_raster": 0.3,
+  "inner_r2_raster": 0.8672382990439937,
+  "lam_corr": 0.3,
+  "inner_r2_corr": 0.7861503935048726
+ },
+ {
+  "arm": "VJ21",
+  "dim": 16404,
+  "lam_raster": 0.3,
+  "inner_r2_raster": 0.8588510473423447,
+  "lam_corr": 0.3,
+  "inner_r2_corr": 0.7707555094744509
+ }
+]
