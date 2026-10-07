@@ -267,11 +267,13 @@ def cmd_train(a):
         @torch.no_grad()
         def eval_all():
             model.eval()
-            p = torch.cat([plans_of(torch.arange(i, min(i + 160, n), device=dev))[1] for i in range(0, n, 160)]).double().cpu().numpy()
-            r = torch.as_tensor(dv_rows, device=dev)
-            pl = model(S.front[r], S.ego[r], S.tc[r]).float()[:, pi].view(-1, 33, 15)
-            x, y, _ = T.rear(pl, S.cam_x[r], LS.W)
-            ade = float(torch.hypot(x - S.fut[r][..., 0], y - S.fut[r][..., 1]).mean())
+            p = torch.cat([plans_of(torch.arange(i, min(i + 128, n), device=dev))[1] for i in range(0, n, 128)]).double().cpu().numpy()
+            ade = []
+            for i in range(0, len(dv_rows), 128):
+                r = torch.as_tensor(dv_rows[i:i + 128], device=dev)
+                x, y, _ = T.rear(model(S.front[r], S.ego[r], S.tc[r]).float()[:, pi].view(-1, 33, 15), S.cam_x[r], LS.W)
+                ade.append(torch.hypot(x - S.fut[r][..., 0], y - S.fut[r][..., 1]).mean(1))
+            ade = float(torch.cat(ade).mean())
             model.train()
             return p, ade
 
@@ -355,7 +357,7 @@ def cmd_train(a):
                 torch.nn.utils.clip_grad_norm_(base + new, 1.0)
                 scaler.step(opt)
                 scaler.update()
-                hist.append({k_: float(v) for k_, v in Ls.items()})
+                hist.append({k_: float(v.detach()) for k_, v in Ls.items()})
                 if (step + 1) % a.eval_every == 0 or step + 1 == a.steps:
                     snap(step + 1)
                     run.status(f"{tag} fold {fk} step {step + 1}/{a.steps}")
