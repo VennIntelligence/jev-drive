@@ -1,0 +1,85 @@
+stratum,set,n,plan,D4 / (v0 x 4 s),lo,hi
+all,T,368,logged,0.959,0.925,0.997
+all,T,368,P2H orig,0.95,0.919,0.983
+all,T,368,P2H cv,0.956,0.943,0.97
+all,T,368,P2H cvlong,0.957,0.944,0.972
+all,T,368,WA-JEPA orig,0.97,0.938,1.003
+all,T,368,WA-JEPA cv,0.971,0.949,0.995
+all,T,368,WA-JEPA cvlong,0.973,0.95,0.997
+all,CT,367,logged,0.858,0.811,0.906
+all,CT,367,P2H orig,0.864,0.817,0.911
+all,CT,367,P2H cv,0.843,0.817,0.867
+all,CT,367,P2H cvlong,0.843,0.817,0.867
+all,CT,367,WA-JEPA orig,0.853,0.805,0.902
+all,CT,367,WA-JEPA cv,0.837,0.802,0.871
+all,CT,367,WA-JEPA cvlong,0.837,0.803,0.872
+all,P,129,logged,0.808,0.783,0.837
+all,P,129,P2H orig,0.804,0.779,0.833
+all,P,129,P2H cv,0.869,0.856,0.884
+all,P,129,P2H cvlong,0.866,0.853,0.881
+all,P,129,WA-JEPA orig,0.81,0.786,0.84
+all,P,129,WA-JEPA cv,0.841,0.821,0.865
+all,P,129,WA-JEPA cvlong,0.841,0.821,0.865
+all,CP,129,logged,0.778,0.751,0.805
+all,CP,129,P2H orig,0.774,0.75,0.799
+all,CP,129,P2H cv,0.825,0.807,0.843
+all,CP,129,P2H cvlong,0.825,0.806,0.844
+all,CP,129,WA-JEPA orig,0.771,0.745,0.797
+all,CP,129,WA-JEPA cv,0.806,0.784,0.828
+all,CP,129,WA-JEPA cvlong,0.807,0.785,0.828
+v0>6,T,113,logged,0.855,0.821,0.89
+v0>6,T,113,P2H orig,0.846,0.818,0.877
+v0>6,T,113,P2H cv,0.898,0.885,0.913
+v0>6,T,113,P2H cvlong,0.899,0.885,0.915
+v0>6,T,113,WA-JEPA orig,0.86,0.828,0.895
+v0>6,T,113,WA-JEPA cv,0.891,0.865,0.917
+v0>6,T,113,WA-JEPA cvlong,0.892,0.866,0.918
+v0>6,CT,118,logged,0.767,0.727,0.811
+v0>6,CT,118,P2H orig,0.758,0.723,0.797
+v0>6,CT,118,P2H cv,0.798,0.778,0.82
+v0>6,CT,118,P2H cvlong,0.798,0.777,0.82
+v0>6,CT,118,WA-JEPA orig,0.753,0.714,0.796
+v0>6,CT,118,WA-JEPA cv,0.78,0.752,0.812
+v0>6,CT,118,WA-JEPA cvlong,0.78,0.752,0.812
+v0>6,P,117,logged,0.803,0.778,0.832
+v0>6,P,117,P2H orig,0.802,0.776,0.831
+v0>6,P,117,P2H cv,0.868,0.854,0.882
+v0>6,P,117,P2H cvlong,0.865,0.851,0.88
+v0>6,P,117,WA-JEPA orig,0.806,0.782,0.836
+v0>6,P,117,WA-JEPA cv,0.837,0.817,0.861
+v0>6,P,117,WA-JEPA cvlong,0.837,0.817,0.861
+v0>6,CP,117,logged,0.779,0.75,0.808
+v0>6,CP,117,P2H orig,0.775,0.749,0.802
+v0>6,CP,117,P2H cv,0.827,0.807,0.847
+v0>6,CP,117,P2H cvlong,0.827,0.807,0.848
+v0>6,CP,117,WA-JEPA orig,0.773,0.745,0.801
+v0>6,CP,117,WA-JEPA cv,0.81,0.786,0.834
+v0>6,CP,117,WA-JEPA cvlong,0.81,0.786,0.834
+dv_hist>1,T,92,logged,0.801,0.775,0.835
+dv_hist>1,T,92,P2H orig,0.789,0.767,0.813
+dv_hist>1,T,92,P2H cv,0.907,0.888,0.927
+dv_hist>1,T,92,P2H cvlong,0.907,0.887,0.927
+dv_hist>1,T,92,WA-JEPA orig,0.827,0.792,0.864
+dv_hist>1,T,92,WA-JEPA cv,0.893,0.859,0.93
+dv_hist>1,T,92,WA-JEPA cvlong,0.895,0.86,0.932
+dv_hist>1,CT,89,logged,0.598,0.57,0.624
+dv_hist>1,CT,89,P2H orig,0.587,0.562,0.61
+dv_hist>1,CT,89,P2H cv,0.695,0.673,0.715
+dv_hist>1,CT,89,P2H cvlong,0.693,0.672,0.713
+dv_hist>1,CT,89,WA-JEPA orig,0.577,0.549,0.602
+dv_hist>1,CT,89,WA-JEPA cv,0.647,0.619,0.673
+dv_hist>1,CT,89,WA-JEPA cvlong,0.647,0.619,0.673
+dv_hist>1,P,36,logged,0.75,0.728,0.774
+dv_hist>1,P,36,P2H orig,0.727,0.714,0.743
+dv_hist>1,P,36,P2H cv,0.84,0.83,0.852
+dv_hist>1,P,36,P2H cvlong,0.835,0.825,0.847
+dv_hist>1,P,36,WA-JEPA orig,0.746,0.731,0.76
+dv_hist>1,P,36,WA-JEPA cv,0.795,0.779,0.809
+dv_hist>1,P,36,WA-JEPA cvlong,0.795,0.779,0.809
+dv_hist>1,CP,36,logged,0.691,0.665,0.714
+dv_hist>1,CP,36,P2H orig,0.691,0.668,0.71
+dv_hist>1,CP,36,P2H cv,0.772,0.754,0.79
+dv_hist>1,CP,36,P2H cvlong,0.768,0.75,0.788
+dv_hist>1,CP,36,WA-JEPA orig,0.69,0.664,0.713
+dv_hist>1,CP,36,WA-JEPA cv,0.751,0.727,0.775
+dv_hist>1,CP,36,WA-JEPA cvlong,0.751,0.727,0.775

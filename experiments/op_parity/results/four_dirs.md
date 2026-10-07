@@ -140,10 +140,10 @@ night (no night units; WOD tier).
 
 - HUGSIM D1 rests on 5 scenarios (4 KITTI-360 junctions + 1 nuScenes) and D2 on 2; per-scenario differences below ~0.2 HD are not evidence, and the
   (b) oracle picks the best arm per scenario after the fact (timing-sensitive collisions make several D3 (b) values optimistic).
-- HUGSIM D1 hypothesis (P2H's junction slowing rides on the logged ego history, not on vision) is not tested. Cheapest deciding check, GPU
-  inference only (~15 min, needs review): P2H and WA-JEPA plans on navtest tokens 1-4 s before a straight -> turn command switch with the ego
-  history replaced by a constant-speed one; if P2H's planned 4 s distance rises toward constant speed and WA-JEPA's does not, the fix is fix 4
-  (or ego-history dropout in training), not a speed loss.
+- HUGSIM D1 hypothesis (P2H's junction slowing rides on the logged ego history, not on vision): tested on navtest in
+  [ego_history_probe.md](ego_history_probe.md) (2026-10-07), **not supported**: replacing the ego history with a constant-speed one does not raise P2H's planned
+  4 s distance on sharp-turn approach tokens (+0.13 m [-0.35, +0.56]; WA-JEPA +0.04) and P2H's history sensitivity (through the t0 acceleration input, 1.4-2.1 x
+  WA-JEPA's) is the same on matched straights. The HUGSIM half (closed-loop ax feed) stays untested.
 - The decision-147 split uses op_probe decoders trained on P2, not P2H, features (identical frozen vision tokens).
 - navhard "sharp / wide" geometry is the PDM-Closed path from the displaced stage-2 start.
 - WA-JEPA: one HUGSIM run per scenario, its own client; its plan readings use HUGSIM's stored 0.5-2.5 s plan.

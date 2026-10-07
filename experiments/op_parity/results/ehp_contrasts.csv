@@ -1,0 +1,181 @@
+stratum,contrast,model,variant,metric,mean,lo,hi
+all,T - CT,P2H,cv,D2,0.086,-0.172,0.335
+all,P - CP,P2H,cv,D2,0.105,-0.142,0.349
+all,P2H - WA-JEPA on T,-,cv,D2,0.043,-0.017,0.101
+all,P2H - WA-JEPA on CT,-,cv,D2,-0.041,-0.091,0.005
+all,P2H - WA-JEPA on P,-,cv,D2,0.319,0.215,0.419
+all,P2H - WA-JEPA on CP,-,cv,D2,0.089,0.051,0.13
+all,T - CT,P2H,cv,D4,0.581,-0.129,1.261
+all,P - CP,P2H,cv,D4,0.447,-0.191,1.074
+all,P2H - WA-JEPA on T,-,cv,D4,0.093,-0.127,0.301
+all,P2H - WA-JEPA on CT,-,cv,D4,-0.108,-0.315,0.089
+all,P2H - WA-JEPA on P,-,cv,D4,1.093,0.74,1.436
+all,P2H - WA-JEPA on CP,-,cv,D4,0.483,0.35,0.634
+all,T - CT,P2H,cv,v13,0.156,-0.037,0.342
+all,P - CP,P2H,cv,v13,0.116,-0.062,0.292
+all,P2H - WA-JEPA on T,-,cv,v13,0.046,-0.011,0.1
+all,P2H - WA-JEPA on CT,-,cv,v13,-0.035,-0.088,0.014
+all,P2H - WA-JEPA on P,-,cv,v13,0.29,0.193,0.384
+all,P2H - WA-JEPA on CP,-,cv,v13,0.11,0.077,0.148
+all,T - CT,P2H,cvlong,D2,0.108,-0.148,0.357
+all,P - CP,P2H,cvlong,D2,0.067,-0.168,0.298
+all,P2H - WA-JEPA on T,-,cvlong,D2,0.049,-0.009,0.103
+all,P2H - WA-JEPA on CT,-,cvlong,D2,-0.043,-0.094,0.005
+all,P2H - WA-JEPA on P,-,cvlong,D2,0.28,0.186,0.373
+all,P2H - WA-JEPA on CP,-,cvlong,D2,0.091,0.064,0.126
+all,T - CT,P2H,cvlong,D4,0.61,-0.099,1.293
+all,P - CP,P2H,cvlong,D4,0.332,-0.273,0.922
+all,P2H - WA-JEPA on T,-,cvlong,D4,0.088,-0.124,0.289
+all,P2H - WA-JEPA on CT,-,cvlong,D4,-0.112,-0.322,0.09
+all,P2H - WA-JEPA on P,-,cvlong,D4,0.981,0.652,1.298
+all,P2H - WA-JEPA on CP,-,cvlong,D4,0.488,0.385,0.626
+all,T - CT,P2H,cvlong,v13,0.162,-0.03,0.349
+all,P - CP,P2H,cvlong,v13,0.085,-0.083,0.25
+all,P2H - WA-JEPA on T,-,cvlong,v13,0.042,-0.012,0.094
+all,P2H - WA-JEPA on CT,-,cvlong,v13,-0.036,-0.091,0.015
+all,P2H - WA-JEPA on P,-,cvlong,v13,0.258,0.168,0.345
+all,P2H - WA-JEPA on CP,-,cvlong,v13,0.111,0.085,0.146
+all,T - CT,P2H,acc0,D2,0.074,-0.19,0.331
+all,P - CP,P2H,acc0,D2,0.066,-0.168,0.298
+all,T - CT,P2H,acc0,D4,0.523,-0.197,1.225
+all,P - CP,P2H,acc0,D4,0.332,-0.269,0.919
+all,T - CT,P2H,acc0,v13,0.14,-0.056,0.331
+all,P - CP,P2H,acc0,v13,0.085,-0.083,0.249
+all,T - CT,P2H,pose,D2,0.01,0.004,0.016
+all,P - CP,P2H,pose,D2,-0.001,-0.005,0.003
+all,T - CT,P2H,pose,D4,0.028,0.015,0.041
+all,P - CP,P2H,pose,D4,-0.002,-0.007,0.004
+all,T - CT,P2H,pose,v13,0.008,0.004,0.011
+all,P - CP,P2H,pose,v13,-0.0,-0.002,0.001
+all,T - CT,WA-JEPA,cv,D2,0.001,-0.191,0.182
+all,P - CP,WA-JEPA,cv,D2,-0.124,-0.278,0.028
+all,T - CT,WA-JEPA,cv,D4,0.379,-0.06,0.8
+all,P - CP,WA-JEPA,cv,D4,-0.164,-0.48,0.146
+all,T - CT,WA-JEPA,cv,v13,0.075,-0.05,0.194
+all,P - CP,WA-JEPA,cv,v13,-0.063,-0.155,0.027
+all,T - CT,WA-JEPA,cvlong,D2,0.016,-0.176,0.196
+all,P - CP,WA-JEPA,cvlong,D2,-0.122,-0.277,0.03
+all,T - CT,WA-JEPA,cvlong,D4,0.41,-0.029,0.829
+all,P - CP,WA-JEPA,cvlong,D4,-0.161,-0.478,0.148
+all,T - CT,WA-JEPA,cvlong,v13,0.083,-0.041,0.202
+all,P - CP,WA-JEPA,cvlong,v13,-0.061,-0.155,0.029
+v0>6,T - CT,P2H,cv,D2,0.007,-0.282,0.296
+v0>6,P - CP,P2H,cv,D2,0.111,-0.142,0.357
+v0>6,P2H - WA-JEPA on T,-,cv,D2,0.159,0.072,0.251
+v0>6,P2H - WA-JEPA on CT,-,cv,D2,0.053,0.001,0.101
+v0>6,P2H - WA-JEPA on P,-,cv,D2,0.337,0.226,0.446
+v0>6,P2H - WA-JEPA on CP,-,cv,D2,0.094,0.051,0.136
+v0>6,T - CT,P2H,cv,D4,0.346,-0.423,1.117
+v0>6,P - CP,P2H,cv,D4,0.466,-0.201,1.106
+v0>6,P2H - WA-JEPA on T,-,cv,D4,0.599,0.293,0.918
+v0>6,P2H - WA-JEPA on CT,-,cv,D4,0.35,0.133,0.553
+v0>6,P2H - WA-JEPA on P,-,cv,D4,1.156,0.775,1.522
+v0>6,P2H - WA-JEPA on CP,-,cv,D4,0.505,0.357,0.664
+v0>6,T - CT,P2H,cv,v13,0.078,-0.134,0.291
+v0>6,P - CP,P2H,cv,v13,0.122,-0.063,0.3
+v0>6,P2H - WA-JEPA on T,-,cv,v13,0.178,0.093,0.267
+v0>6,P2H - WA-JEPA on CT,-,cv,v13,0.077,0.021,0.128
+v0>6,P2H - WA-JEPA on P,-,cv,v13,0.306,0.201,0.407
+v0>6,P2H - WA-JEPA on CP,-,cv,v13,0.115,0.078,0.155
+v0>6,T - CT,P2H,cvlong,D2,0.029,-0.253,0.308
+v0>6,P - CP,P2H,cvlong,D2,0.075,-0.161,0.307
+v0>6,P2H - WA-JEPA on T,-,cvlong,D2,0.163,0.083,0.241
+v0>6,P2H - WA-JEPA on CT,-,cvlong,D2,0.046,-0.008,0.095
+v0>6,P2H - WA-JEPA on P,-,cvlong,D2,0.301,0.2,0.399
+v0>6,P2H - WA-JEPA on CP,-,cvlong,D2,0.094,0.063,0.13
+v0>6,T - CT,P2H,cvlong,D4,0.372,-0.378,1.125
+v0>6,P - CP,P2H,cvlong,D4,0.361,-0.257,0.956
+v0>6,P2H - WA-JEPA on T,-,cvlong,D4,0.589,0.311,0.878
+v0>6,P2H - WA-JEPA on CT,-,cvlong,D4,0.338,0.11,0.551
+v0>6,P2H - WA-JEPA on P,-,cvlong,D4,1.051,0.704,1.391
+v0>6,P2H - WA-JEPA on CP,-,cvlong,D4,0.507,0.389,0.652
+v0>6,T - CT,P2H,cvlong,v13,0.084,-0.122,0.291
+v0>6,P - CP,P2H,cvlong,v13,0.093,-0.079,0.26
+v0>6,P2H - WA-JEPA on T,-,cvlong,v13,0.172,0.095,0.252
+v0>6,P2H - WA-JEPA on CT,-,cvlong,v13,0.073,0.015,0.127
+v0>6,P2H - WA-JEPA on P,-,cvlong,v13,0.276,0.182,0.37
+v0>6,P2H - WA-JEPA on CP,-,cvlong,v13,0.115,0.085,0.152
+v0>6,T - CT,P2H,acc0,D2,0.005,-0.287,0.297
+v0>6,P - CP,P2H,acc0,D2,0.074,-0.162,0.307
+v0>6,T - CT,P2H,acc0,D4,0.319,-0.461,1.094
+v0>6,P - CP,P2H,acc0,D4,0.359,-0.256,0.954
+v0>6,T - CT,P2H,acc0,v13,0.071,-0.143,0.284
+v0>6,P - CP,P2H,acc0,v13,0.093,-0.078,0.258
+v0>6,T - CT,P2H,pose,D2,0.0,-0.006,0.007
+v0>6,P - CP,P2H,pose,D2,-0.001,-0.004,0.003
+v0>6,T - CT,P2H,pose,D4,-0.0,-0.012,0.012
+v0>6,P - CP,P2H,pose,D4,-0.001,-0.007,0.004
+v0>6,T - CT,P2H,pose,v13,-0.0,-0.003,0.003
+v0>6,P - CP,P2H,pose,v13,-0.0,-0.002,0.001
+v0>6,T - CT,WA-JEPA,cv,D2,-0.1,-0.307,0.108
+v0>6,P - CP,WA-JEPA,cv,D2,-0.133,-0.289,0.018
+v0>6,T - CT,WA-JEPA,cv,D4,0.097,-0.369,0.561
+v0>6,P - CP,WA-JEPA,cv,D4,-0.185,-0.503,0.121
+v0>6,T - CT,WA-JEPA,cv,v13,-0.023,-0.154,0.108
+v0>6,P - CP,WA-JEPA,cv,v13,-0.07,-0.162,0.019
+v0>6,T - CT,WA-JEPA,cvlong,D2,-0.087,-0.295,0.121
+v0>6,P - CP,WA-JEPA,cvlong,D2,-0.132,-0.288,0.02
+v0>6,T - CT,WA-JEPA,cvlong,D4,0.122,-0.341,0.583
+v0>6,P - CP,WA-JEPA,cvlong,D4,-0.184,-0.504,0.123
+v0>6,T - CT,WA-JEPA,cvlong,v13,-0.015,-0.146,0.116
+v0>6,P - CP,WA-JEPA,cvlong,v13,-0.068,-0.162,0.021
+dv_hist>1,T - CT,P2H,cv,D2,-0.117,-0.274,0.019
+dv_hist>1,P - CP,P2H,cv,D2,0.263,0.044,0.443
+dv_hist>1,P2H - WA-JEPA on T,-,cv,D2,0.368,0.294,0.438
+dv_hist>1,P2H - WA-JEPA on CT,-,cv,D2,0.186,0.132,0.245
+dv_hist>1,P2H - WA-JEPA on P,-,cv,D2,0.658,0.573,0.766
+dv_hist>1,P2H - WA-JEPA on CP,-,cv,D2,0.165,0.122,0.232
+dv_hist>1,T - CT,P2H,cv,D4,0.248,-0.153,0.593
+dv_hist>1,P - CP,P2H,cv,D4,1.097,0.535,1.61
+dv_hist>1,P2H - WA-JEPA on T,-,cv,D4,1.199,0.971,1.397
+dv_hist>1,P2H - WA-JEPA on CT,-,cv,D4,0.866,0.632,1.104
+dv_hist>1,P2H - WA-JEPA on P,-,cv,D4,2.233,1.936,2.59
+dv_hist>1,P2H - WA-JEPA on CP,-,cv,D4,0.709,0.593,0.888
+dv_hist>1,T - CT,P2H,cv,v13,0.028,-0.082,0.122
+dv_hist>1,P - CP,P2H,cv,v13,0.287,0.133,0.422
+dv_hist>1,P2H - WA-JEPA on T,-,cv,v13,0.345,0.279,0.402
+dv_hist>1,P2H - WA-JEPA on CT,-,cv,v13,0.216,0.156,0.28
+dv_hist>1,P2H - WA-JEPA on P,-,cv,v13,0.608,0.536,0.7
+dv_hist>1,P2H - WA-JEPA on CP,-,cv,v13,0.164,0.134,0.217
+dv_hist>1,T - CT,P2H,cvlong,D2,-0.092,-0.244,0.04
+dv_hist>1,P - CP,P2H,cvlong,D2,0.245,0.026,0.426
+dv_hist>1,P2H - WA-JEPA on T,-,cvlong,D2,0.355,0.29,0.417
+dv_hist>1,P2H - WA-JEPA on CT,-,cvlong,D2,0.167,0.113,0.226
+dv_hist>1,P2H - WA-JEPA on P,-,cvlong,D2,0.595,0.518,0.698
+dv_hist>1,P2H - WA-JEPA on CP,-,cvlong,D2,0.117,0.077,0.188
+dv_hist>1,T - CT,P2H,cvlong,D4,0.275,-0.105,0.606
+dv_hist>1,P - CP,P2H,cvlong,D4,1.033,0.47,1.54
+dv_hist>1,P2H - WA-JEPA on T,-,cvlong,D4,1.149,0.948,1.327
+dv_hist>1,P2H - WA-JEPA on CT,-,cvlong,D4,0.821,0.581,1.063
+dv_hist>1,P2H - WA-JEPA on P,-,cvlong,D4,2.05,1.784,2.391
+dv_hist>1,P2H - WA-JEPA on CP,-,cvlong,D4,0.588,0.486,0.768
+dv_hist>1,T - CT,P2H,cvlong,v13,0.034,-0.071,0.125
+dv_hist>1,P - CP,P2H,cvlong,v13,0.271,0.117,0.407
+dv_hist>1,P2H - WA-JEPA on T,-,cvlong,v13,0.329,0.272,0.38
+dv_hist>1,P2H - WA-JEPA on CT,-,cvlong,v13,0.204,0.142,0.268
+dv_hist>1,P2H - WA-JEPA on P,-,cvlong,v13,0.556,0.491,0.646
+dv_hist>1,P2H - WA-JEPA on CP,-,cvlong,v13,0.13,0.103,0.184
+dv_hist>1,T - CT,P2H,acc0,D2,-0.094,-0.252,0.041
+dv_hist>1,P - CP,P2H,acc0,D2,0.241,0.021,0.423
+dv_hist>1,T - CT,P2H,acc0,D4,0.287,-0.102,0.623
+dv_hist>1,P - CP,P2H,acc0,D4,1.023,0.459,1.528
+dv_hist>1,T - CT,P2H,acc0,v13,0.038,-0.07,0.131
+dv_hist>1,P - CP,P2H,acc0,v13,0.267,0.114,0.403
+dv_hist>1,T - CT,P2H,pose,D2,-0.009,-0.014,-0.003
+dv_hist>1,P - CP,P2H,pose,D2,-0.003,-0.007,0.002
+dv_hist>1,T - CT,P2H,pose,D4,-0.034,-0.046,-0.022
+dv_hist>1,P - CP,P2H,pose,D4,-0.006,-0.013,0.002
+dv_hist>1,T - CT,P2H,pose,v13,-0.009,-0.012,-0.006
+dv_hist>1,P - CP,P2H,pose,v13,-0.001,-0.003,0.001
+dv_hist>1,T - CT,WA-JEPA,cv,D2,-0.299,-0.398,-0.209
+dv_hist>1,P - CP,WA-JEPA,cv,D2,-0.23,-0.39,-0.099
+dv_hist>1,T - CT,WA-JEPA,cv,D4,-0.085,-0.342,0.158
+dv_hist>1,P - CP,WA-JEPA,cv,D4,-0.427,-0.827,-0.108
+dv_hist>1,T - CT,WA-JEPA,cv,v13,-0.101,-0.166,-0.039
+dv_hist>1,P - CP,WA-JEPA,cv,v13,-0.157,-0.262,-0.074
+dv_hist>1,T - CT,WA-JEPA,cvlong,D2,-0.28,-0.38,-0.19
+dv_hist>1,P - CP,WA-JEPA,cvlong,D2,-0.232,-0.392,-0.102
+dv_hist>1,T - CT,WA-JEPA,cvlong,D4,-0.053,-0.31,0.193
+dv_hist>1,P - CP,WA-JEPA,cvlong,D4,-0.429,-0.827,-0.111
+dv_hist>1,T - CT,WA-JEPA,cvlong,v13,-0.091,-0.156,-0.029
+dv_hist>1,P - CP,WA-JEPA,cvlong,v13,-0.155,-0.26,-0.071

@@ -74,6 +74,8 @@ pre-registrations (agent hinge, replay hinge, lead margin): [results/four_dirs.m
 memory, distillation, Cinque pre-head features); recommendation: WA-Cf (ceiling, already cached) and frozen V-JEPA 2.1 front tokens as P2H adapter memory, offline decoder
 gate on the 3 154 navtest > 20 deg tokens first: [plans/2026-10-07-representation-design.md](plans/2026-10-07-representation-design.md).
 
+**Ego-history probe (2026-10-07, inference only).** P2H / WA-JEPA plans on navtest with the ego history (velocity, acceleration, poses) replaced by a constant-velocity one, on sharp-turn approach tokens (T 368), pre-flip tokens (P 129) and matched straights: planned 4 s distance on T +0.13 m [-0.35, +0.56] (P2H), +0.04 [-0.23, +0.28] (WA-JEPA); the effect rides on the t0 acceleration input, P2H is 1.4-2.1 x as history-sensitive as WA-JEPA but equally on straights: the "slows before turns because the history shows it" hypothesis is not supported: [results/ego_history_probe.md](results/ego_history_probe.md).
+
 **Next.** Decision entries by main (navhard, unfreeze, turn training, four directions); review of the three 2026-10-07 drafts.
 
 **HUGSIM.** Serving path and equivalence tests: [results/hugsim_harness.md](results/hugsim_harness.md). Pilot arms on the 10 spinner

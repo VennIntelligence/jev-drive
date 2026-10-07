@@ -1,0 +1,13 @@
+{
+ "ego_orig_vs_cache_max_abs": 0.0,
+ "P2H10-F-s0": {
+  "stored_plan_file": "/root/autodl-tmp/ujs/runs/op_lb/lb_navtest/plans/warp@cinque_PPP2H10-F-s0.npz",
+  "orig_vs_stored_pose_max_abs_m": 0.0,
+  "n_tokens": 993
+ },
+ "P2H10-F-s1": {
+  "stored_plan_file": "/root/autodl-tmp/ujs/runs/op_lb/lb_navtest/plans/warp@cinque_PPP2H10-F-s1.npz",
+  "orig_vs_stored_pose_max_abs_m": 0.0,
+  "n_tokens": 993
+ }
+}
