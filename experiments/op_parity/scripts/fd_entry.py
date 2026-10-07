@@ -88,8 +88,8 @@ def cmd_command(_):
 
 def cmd_turncoll(_):
     rng = np.random.default_rng(0)
-    t = pd.read_csv(TURN).set_index("token")
-    turn = t.L_yaw4.abs() > 20
+    t = pd.read_parquet(ddir() / "runs/op_probe/joint/navtest_tokens.parquet").set_index("token")
+    turn = t.dyaw.abs() > 20
 
     def fail(m):
         x = [pd.read_csv(ddir() / f"runs/bench/navtest/{m}-F-s{s}@warp/units.csv").set_index("token") for s in (0, 1)]
