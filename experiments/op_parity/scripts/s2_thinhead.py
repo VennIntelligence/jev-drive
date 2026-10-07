@@ -371,6 +371,57 @@ def cmd_prep(a):
         run.summary.update(n_train=meta["n_train"], n_dev=meta["n_dev"])
 
 
+# ---------------------------------------------------------------- latency of the head path
+def cmd_latency(a):
+    """Batch 1, JPEG bytes -> selected candidate: preprocessing (read + decode + processor), Qwen3-VL-4B to layer 18, the head."""
+    import subprocess
+    import torch
+    from jevdrive import features as Fx
+    from jevdrive import stats
+    from jevdrive import waymo as W
+    from jevdrive import waymo_qwenvid as QV
+    from jevdrive import wod_zeroshot as Z
+    from jevdrive.run import Run
+    with Run("op_parity", "s2-thinhead-latency", config=vars(a)) as run:
+        df = W.load_index()
+        key = dict(zip(W.frame_names(df), range(len(df))))
+        rows = np.array([key[x] for x in Z.load_sets()["rater"]["name"].astype(str)[: a.n + 5]])
+        smi = subprocess.run(["nvidia-smi", "--query-gpu=index,utilization.gpu,memory.used", "--format=csv,noheader"], capture_output=True, text=True).stdout.strip()
+        run.info("cards at start (index, util, memory): %s; CUDA_VISIBLE_DEVICES=%s", smi.replace("\n", " | "), __import__("os").environ.get("CUDA_VISIBLE_DEVICES"))
+        out = []
+        for nm, frames, stride in (("Q1: 3 cameras, 1 frame", 1, 1), ("QV / QL: 3 cameras x 4 frames (video path)", 4, 2)):
+            if frames == 1:
+                fx = Fx.QwenFeatures(n_images=len(W.CAMS), layers=[QV.LAYER], compile=False)
+                fx.model.language_model.layers = fx.model.language_model.layers[: QV.LAYER]
+            else:
+                fx = QV.make_fx()
+            items, _, _ = W.multicam_clip_items(df, rows, frames - 1, stride, W.CAMS)
+            ds = W.Shards(items, fx.transform)
+            pre, fwd = [], []
+            for i in range(len(items)):
+                t0 = time.perf_counter()
+                b = fx.collate([ds[i]])
+                t1 = time.perf_counter()
+                o = fx(b)
+                float(o[f"L{QV.LAYER:02d}_mean"].float().sum())                     # host sync
+                t2 = time.perf_counter()
+                pre.append(1e3 * (t1 - t0))
+                fwd.append(1e3 * (t2 - t1))
+            pre, fwd = np.array(pre[5:]), np.array(fwd[5:])
+            out.append({"path": nm, "n": len(pre), "LLM tokens": int(fx.n_image_tokens), "preprocess ms (median)": float(np.median(pre)), "model ms (median)": float(np.median(fwd)),
+                        "model ms (p95)": float(np.percentile(fwd, 95)), "peak VRAM GB": torch.cuda.max_memory_allocated() / 2 ** 30})
+            del fx
+            torch.cuda.empty_cache()
+        x, Wm = np.random.default_rng(0).normal(size=(1, 2560)).astype(np.float32), np.random.default_rng(1).normal(size=(2560 + 35, 20)).astype(np.float32)
+        t0 = time.perf_counter()
+        for _ in range(1000):
+            int((np.concatenate([x, np.zeros((1, 35), np.float32)], 1) @ Wm).argmax())
+        out.append({"path": "head (linear, PCA folded into the weights; CPU, numpy)", "n": 1000, "model ms (median)": 1e3 * (time.perf_counter() - t0) / 1000})
+        stats.write_table(out, OUT / "latency")
+        (OUT / "latency_cards.txt").write_text(smi + "\n")
+        run.info("latency: %s", out)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp_ = ap.add_subparsers(dest="cmd", required=True)
@@ -379,5 +430,7 @@ if __name__ == "__main__":
         p = sp_.add_parser(c)
         p.add_argument("--limit", type=int, default=0)
     sp_.add_parser("prep")
+    p = sp_.add_parser("latency")
+    p.add_argument("--n", type=int, default=40)
     a = ap.parse_args()
-    {"q0": cmd_q0, "plans": cmd_plans, "extract": cmd_extract, "prep": cmd_prep}[a.cmd](a)
+    {"q0": cmd_q0, "plans": cmd_plans, "extract": cmd_extract, "prep": cmd_prep, "latency": cmd_latency}[a.cmd](a)
