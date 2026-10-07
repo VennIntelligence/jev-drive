@@ -41,6 +41,12 @@ LABEL = {"H0": "H0: P2H pilot (no memory)", "OS": "OS: shuffled SDF (matched con
 NB = 4000
 
 
+def pf(sp):
+    """navtest plan file of a bench spec; pre-bench arms (P2H10) live under op_lb as warp-cinque_PP<tag>__base.npz."""
+    from jevdrive.bench.compat import pred_file
+    return pred_file(sp, legacy=D / "runs/op_lb/lb_navtest/preds" / f"warp-cinque_PP{sp.split('@')[0].split(':')[0]}__base.npz")
+
+
 def spec(arm, seed):
     """'OG' / 'OG off' / '<stem>' (step-2 arms pass their own stem) -> bench model spec."""
     off = arm.endswith((" off", ":off"))                                     # ':off' = the shell-safe spelling
@@ -184,7 +190,6 @@ def cmd_replay(a):
     import pandas as pd
     import fd_navsim as FD
     from jevdrive.bench import tables as BT
-    from jevdrive.bench.compat import pred_file
     from jevdrive.run import Run
     OUT.mkdir(parents=True, exist_ok=True)
     out = OUT / f"replay_{a.name}.parquet"
@@ -198,7 +203,7 @@ def cmd_replay(a):
     for sp in a.models:
         u = BT.load("navtest", sp)[0]
         assert u is not None, f"no navtest result for {sp}"
-        z = np.load(pred_file(sp))
+        z = np.load(pf(sp))
         P[sp] = dict(zip(z["tokens"].tolist(), z["poses"].astype(np.float64)))
         for t in u.index[u.DAC < 1]:
             want.setdefault(t, []).append(sp)
@@ -392,13 +397,12 @@ class Data:
     def one(self, sp):
         """Per-token read-outs (x 100) of one model spec, navtest tab order."""
         from jevdrive.bench import tables as BT
-        from jevdrive.bench.compat import pred_file
         pd = self.pd
         u = BT.load("navtest", sp)[0]
         assert u is not None, f"no navtest result for {sp}"
         u = u.reindex(self.tok)
         assert not u.score.isna().any(), f"missing navtest tokens in {sp}"
-        z = np.load(pred_file(sp))
+        z = np.load(pf(sp))
         pos = {t: i for i, t in enumerate(z["tokens"].tolist())}
         Pp = z["poses"][[pos[t] for t in self.tok]].astype(np.float64)
         q = self.rep[self.rep.key == sp].set_index("token").reindex(self.tok)
