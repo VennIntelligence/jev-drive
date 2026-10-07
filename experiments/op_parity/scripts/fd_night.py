@@ -387,6 +387,31 @@ def cmd_report(a):
         print(f"\n== {k}\n{v}")
 
 
+# ---------------------------------------------------------------- calibration: can the luma rule see night on nuPlan cameras at all?
+def cmd_calib(a):
+    """navtrain (not a board of this study) logs by solar elevation: luma of one mid-log token for the 12 lowest-sun logs and 12 random high-sun logs."""
+    from jevdrive import navsim_zs as Z
+    ix = Z.load_index("navtrain", slim=True)
+    lg = {}
+    for e in ix:
+        lg.setdefault(e["log_name"], []).append(e)
+    rows = []
+    for l, es in lg.items():
+        c = CITY.get(es[0]["map"])
+        if c is None:
+            continue
+        e = es[len(es) // 2]
+        rows.append((l, c, sun_elevation(l, c), e["cams"][-1]["CAM_F0"]["path"]))
+    df = pd.DataFrame(rows, columns=["log", "city", "sun", "path"]).sort_values("sun")
+    pick = pd.concat([df.head(12), df.iloc[np.random.default_rng(0).permutation(len(df))[:12]]])
+    pick["luma"] = [_luma_jpg(p) for p in pick.path]
+    pick["group"] = ["lowest sun"] * 12 + ["random"] * 12
+    WORK.mkdir(parents=True, exist_ok=True)
+    pick.drop(columns="path").to_csv(WORK / "calib_navtrain.csv", index=False)
+    print(len(df), "navtrain logs;", int((df.sun < -6).sum()), "with sun < -6;", int((df.sun < 0).sum()), "with sun < 0")
+    print(pick.drop(columns="path").round(1).to_string())
+
+
 # ---------------------------------------------------------------- contact sheet
 def cmd_sheet(a):
     from PIL import Image, ImageDraw
@@ -436,7 +461,7 @@ def cmd_sheet(a):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["luma", "hugsim", "report", "sheet"])
+    ap.add_argument("cmd", choices=["luma", "hugsim", "report", "sheet", "calib"])
     ap.add_argument("--out", default=str(WORK / "out"))
     a = ap.parse_args()
-    {"luma": cmd_luma, "hugsim": cmd_hugsim, "report": cmd_report, "sheet": cmd_sheet}[a.cmd](a)
+    {"luma": cmd_luma, "hugsim": cmd_hugsim, "report": cmd_report, "sheet": cmd_sheet, "calib": cmd_calib}[a.cmd](a)
