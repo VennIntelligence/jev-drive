@@ -336,7 +336,8 @@ def cmd_stack(a):
             for sn, m in st.items():
                 c = C.ci(v - arms["WLG"], m)
                 cs = C.ci(v - arms["shipped"], m)
-                srows.append({"arm": nm, "stratum": sn, "n": int(m.sum()), "RFS": C.cm(v, m), "d vs WLG": c[0], "lo": c[1], "hi": c[2], "d vs shipped": cs[0], "s lo": cs[1], "s hi": cs[2]})
+                srows.append({"arm": nm, "stratum": sn, "n": int(m.sum()), "RFS": C.cm(v, m), "d vs WLG": c[0], "lo": c[1], "hi": c[2], "d vs shipped": cs[0], "s lo": cs[1], "s hi": cs[2],
+                                 "d vs WLG (frame mean)": float((v - arms["WLG"])[m].mean())})
         stats.write_table(main, OUT / "stack_arms")
         stats.write_table(srows, OUT / "stack_strata")
         pd.DataFrame({"name": C.names[:n], "fold": pfold, "v0": C.v0, "intent": C.intent} | {f"rfs {k}": v for k, v in arms.items()}).to_csv(OUT / "stack_frames.csv", index=False,
@@ -447,7 +448,8 @@ def cmd_rule(a):
             main.append(r)
             for sn, m in st.items():
                 c, cs = C.ci(v - arms["WLG"], m), C.ci(v - arms["shipped"], m)
-                srows.append({"arm": nm, "stratum": sn, "n": int(m.sum()), "RFS": C.cm(v, m), "d vs WLG": c[0], "lo": c[1], "hi": c[2], "d vs shipped": cs[0], "s lo": cs[1], "s hi": cs[2]})
+                srows.append({"arm": nm, "stratum": sn, "n": int(m.sum()), "RFS": C.cm(v, m), "d vs WLG": c[0], "lo": c[1], "hi": c[2], "d vs shipped": cs[0], "s lo": cs[1], "s hi": cs[2],
+                                 "d vs WLG (frame mean)": float((v - arms["WLG"])[m].mean())})
         stats.write_table(main, OUT / "rule_arms")
         stats.write_table(srows, OUT / "rule_strata")
         pd.DataFrame({"name": C.names[:n], "fold": pfold, "chosen": chosen} | {f"rfs {k}": v for k, v in arms.items()}).to_csv(OUT / "rule_frames.csv", index=False, float_format="%.4f")
@@ -457,6 +459,50 @@ def cmd_rule(a):
                  pd.DataFrame(main).to_string(float_format=lambda v: f"{v:+.3f}"))
         sd = pd.DataFrame(srows)
         run.info("\n%s", sd[sd.stratum.isin(["all", "turn-intent", "straight", "turn v0<0.5", "turn 0.5<=v0<3", "turn v0>=3"]) & sd.arm.str.contains("rule")].to_string(float_format=lambda v: f"{v:+.3f}"))
+
+
+def cmd_figs(a):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    FIG.mkdir(parents=True, exist_ok=True)
+    plt.rcParams.update({"font.size": 9, "axes.spines.top": False, "axes.spines.right": False, "figure.dpi": 150})
+    blue, orange, grey = "#0072B2", "#D55E00", "#888888"
+    # ---- figure 1: the floor head's gain on the turn-intent frames by v0 stratum, on WP2 and on WLG plans, split into its speed and path parts
+    dc = pd.read_csv(OUT / "desc_decomp.csv")
+    strata_ = ["turn-intent", "turn v0<0.5", "turn 0.5<=v0<3", "turn v0>=3", "straight"]
+    fig, axs = plt.subplots(1, 3, figsize=(10.5, 3.3), sharey=True)
+    for ax, part in zip(axs, ("the pick", "speed part (pick's speed, keep path)", "path part (pick's path, follow)")):
+        for off, (pl, col) in zip((-0.18, 0.18), (("WP2", grey), ("WLG", blue))):
+            d = dc[(dc.plans == pl) & (dc.part == part)].set_index("stratum").loc[strata_]
+            y = np.arange(len(strata_)) + off
+            ax.errorbar(d["d"], y, xerr=[d["d"] - d["lo"], d["hi"] - d["d"]], fmt="o", color=col, ms=4, capsize=2, label=f"on {pl} plans")
+        ax.axvline(0, color="k", lw=0.6)
+        ax.set_title({"the pick": "whole pick", "speed part (pick's speed, keep path)": "speed part only", "path part (pick's path, follow)": "path part only"}[part], fontsize=9)
+        ax.set_yticks(range(len(strata_)), [f"{s} (n={int(dc[dc.stratum == s].n.iloc[0])})" for s in strata_])
+        ax.set_xlabel("out-of-fold gain over the plan (RFS)")
+    axs[0].invert_yaxis()
+    axs[0].legend(frameon=False, loc="lower right")
+    fig.tight_layout()
+    fig.savefig(FIG / "floor_head_parts.png")
+    # ---- figure 2: forest plot of every arm against WLG
+    A = pd.concat([pd.read_csv(OUT / "stack_arms.csv"), pd.read_csv(OUT / "rule_arms.csv")]).drop_duplicates("arm")
+    order = ["shipped", "WP2", "pref-top (oof)", "pref-f20 (oof)", "WLG+floor (173 folds)", "WLG+floor, turn-gated (post hoc)", "pref-top+floor (nested)", "pref-f20+floor (nested)",
+             "pref-top+floor, turn-gated (post hoc)", "pref-f20+floor, turn-gated (post hoc)", "WLG+rule (oof params)", "pref-top+rule (oof params)", "pref-f20+rule (oof params)",
+             [x for x in A.arm if "log alpha" in x and x.startswith("WLG")][0]]
+    A = A.set_index("arm").loc[order]
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+    y = np.arange(len(order))
+    col = [grey if o in ("shipped", "WP2") else orange if "post hoc" in o else blue for o in order]
+    for yi, (o, r), c in zip(y, A.iterrows(), col):
+        ax.errorbar(r["d vs WLG"], yi, xerr=[[r["d vs WLG"] - r["WLG lo"]], [r["WLG hi"] - r["d vs WLG"]]], fmt="o", color=c, ms=4, capsize=2)
+    ax.axvline(0, color="k", lw=0.6)
+    ax.set_yticks(y, order)
+    ax.invert_yaxis()
+    ax.set_xlabel("RFS difference to WLG (cluster mean, paired bootstrap over sequences)")
+    fig.tight_layout()
+    fig.savefig(FIG / "arms_vs_wlg.png")
 
 
 def main():
