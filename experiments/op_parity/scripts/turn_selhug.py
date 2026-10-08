@@ -263,7 +263,8 @@ def cmd_pilot(a):
     chk["gate_fire_turn"], chk["gate_fire_straight"] = gt / max(nt, 1), gs / max(ns, 1)
     chk["gate_ok"] = bool(gt > 0 and chk["gate_fire_straight"] < 0.10)
     rtt = np.concatenate([sb[s]["rtt_ms"] for s in names])
-    chk["rtt_p95_ms"] = float(np.percentile(rtt, 95))
+    chk["rtt_p95_ms"] = float(np.percentile(rtt, 95))                  # includes queueing: 6 scenario slots share one bias server
+    chk["wall_median_tsB_over_ts0"] = float(ub.wall_s.median() / u0.wall_s.median())
     ad = np.concatenate([sb[s]["absdk"] for s in names] + [np.zeros(1)])
     chk["max_abs_dk"] = float(ad.max())
     chk["every_step_logged"] = bool(all(sb[s]["n_sel"] == sb[s]["n"] for s in names))
@@ -271,7 +272,7 @@ def cmd_pilot(a):
     def bad(u):
         return int(((u.cls == "spin") | (u.end == "max_steps") | u.launch_stall.astype(bool)).sum())
     chk["unstable_tsB"], chk["unstable_ts0"] = bad(ub), bad(u0)
-    chk["ok"] = bool(chk["all_completed"] and chk["gate_ok"] and chk["rtt_p95_ms"] < 100 and chk["max_abs_dk"] < 0.1 and chk["every_step_logged"]
+    chk["ok"] = bool(chk["all_completed"] and chk["gate_ok"] and chk["wall_median_tsB_over_ts0"] <= 1.3 and chk["max_abs_dk"] < 0.1 and chk["every_step_logged"]
                      and chk["unstable_tsB"] <= chk["unstable_ts0"])
     chk["hd"] = {sc: (float(ub.hdscore[sc]), float(u0.hdscore[sc])) for sc in names}
     f = TB_OUTB() / f"gate_pilot_s{a.seed}.json"
