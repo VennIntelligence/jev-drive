@@ -386,7 +386,8 @@ def cmd_probe(a):
         run.info("\n" + "\n".join(L))
         run.summary |= {t: res[t]["slope"] for t in res}
         if a.min_slope is not None:
-            assert all(res[t]["slope"]["yaw_4s"] >= a.min_slope for t in res), f"plan response to the yaw offset below {a.min_slope} (sign / geometry gate)"
+            assert all(min(res[t]["slope"]["yaw_4s"], res[t]["slope"]["dy_4s"]) >= a.min_slope for t in res), \
+                f"plan response to the yaw or the lateral offset at 4 s below {a.min_slope} (sign / geometry gate)"
 
 
 # ---------------------------------------------------------------- benchmark reads (through jevdrive.bench's stored units)

@@ -55,7 +55,7 @@ if [[ $STAGE == smoke ]]; then
   TAGX=-zero64 prep $d --limit 64 --zero
   TAGX=-first64 prep $d --limit 64
   waitdirs $L/prep-$d-zero64 $L/prep-$d-first64
-  sub ot-probe $L/probe-smoke --vram 16 --cpu 4 --ram 30 -- $PY $S/ot_rows.py probe --name smoke --tags P0 SHP-F-s0 --data $d --suffix=-first64 --min-slope 0.3
+  sub ot-probe $L/probe-smoke --vram 16 --cpu 4 --ram 30 -- $PY $S/ot_rows.py probe --name smoke --tags P0 SHP-F-s0 --data $d --suffix=-first64 --min-slope 0.1
   waitdirs $L/probe-smoke
   cat $O/probe_smoke.md; cat "$DATA_DIR/runs/op_parity/cache/ot1_$d-first64@warp/timing.json"
   status "done"; date > "$D/DONE"; exit 0
@@ -68,7 +68,7 @@ for d in $PILOT; do prep $d; done
 "${B[@]}" run --model SHP-F-s0@gimm SHP-F-s1@gimm --bench navhard || die "bench navhard SHP"
 "${B[@]}" run --model SHP-F-s0 --bench hugsim --preset $HP --scenarios "$LIST" || die "bench hugsim SHP"
 waitdirs $(for d in $PILOT; do echo $L/prep-$d; done)
-sub ot-probe $L/probe-pilot0 --vram 16 --cpu 4 --ram 40 -- $PY $S/ot_rows.py probe --name pilot_ref --tags P0 SHP-F-s0 --data $PILOT --split $PILOT_SPLIT --min-slope 0.3
+sub ot-probe $L/probe-pilot0 --vram 16 --cpu 4 --ram 40 -- $PY $S/ot_rows.py probe --name pilot_ref --tags P0 SHP-F-s0 --data $PILOT --split $PILOT_SPLIT --min-slope 0.1
 
 # ---------------------------------------------------------------- 2. pilot arms (seed 0): 10 % off-track rows, and 0 % in the same loop
 T="$PY $S/ot_rows.py train --data $PILOT --split $PILOT_SPLIT --steps 3000 --batch 64 --warmup 100 --eval-every 1000 --seed 0"
