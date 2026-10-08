@@ -26,11 +26,22 @@ if ! command -v cargo >/dev/null; then
     > "$CARGO_HOME/config.toml"
 fi
 
-echo protos > "$OUT/STATUS"
-(cd "$SRC/src/grpc" && proxy $UVSYNC && uv run --no-sync compile-protos)
-
+# Their route is `uv sync --extra all --extra mtgs` (Dockerfile). That resolves the whole workspace, including the
+# in-repo drivers' GitHub sources (vam, alpamayo, a lightning archive) the box cannot fetch reliably, and the root
+# pyproject's `exclude-newer` needs upload dates the Aliyun mirror does not serve. So the members the nuPlan/MTGS
+# track starts are installed editable into the same .venv, without the root [tool.uv] settings (--no-config); the
+# repo has no uv.lock, so versions float either way. torch < 2.10 keeps the cu128 build that matches the box's
+# nvcc 12.8, which gsplat's first-use kernel build needs.
 echo sync > "$OUT/STATUS"
-(cd "$SRC" && proxy $UVSYNC $ALPASIM_EXTRAS)
+cd "$SRC"
+[[ -x .venv/bin/python ]] || uv venv --python 3.12 .venv
+printf 'setuptools<82\ntorch<2.10\n' > "$OUT/constraints.txt"   # the first is the root pyproject's constraint
+uv pip install --no-config --python .venv/bin/python --default-index https://mirrors.aliyun.com/pypi/simple \
+  -c "$OUT/constraints.txt" $(printf -- '-e %s ' $ALPASIM_MEMBERS)
+
+echo protos > "$OUT/STATUS"
+(cd src/grpc && UV_NO_SYNC=1 uv run compile-protos)
+uv pip freeze --python .venv/bin/python > "$OUT/freeze.txt"
 "$SRC/.venv/bin/python" - <<'PY' | tee "$OUT/versions.txt"
 import torch, gsplat, numpy, grpc
 print("torch", torch.__version__, "cuda", torch.version.cuda, "archs", torch.cuda.get_arch_list())
