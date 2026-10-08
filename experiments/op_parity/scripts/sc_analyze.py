@@ -337,8 +337,34 @@ def cmd_eval(a):
         run.summary.update(n_rows=len(df))
 
 
+def cmd_figs(a):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    d = pd.read_csv(OUT / "metrics.csv")
+    d = d[(d.target == "dac") & (d.family == "P2H10+SH30")]
+    fig, ax = plt.subplots(1, 2, figsize=(11, 4))
+    bks = [">20", "20-45", ">45", ">20 left", ">20 right"]
+    vs = [("map", "map SDF margin (hinge's)"), ("raw", "own edge, raw"), ("cal", "own edge, navtrain-calibrated"), ("shuf", "own edge, shuffled control"), ("plan_yaw", "plan-only: |end heading|")]
+    for k, (v, lab) in enumerate(vs):
+        r = d[d.variant == v].set_index("bucket").loc[bks]
+        x = np.arange(len(bks)) + (k - 2) * 0.16
+        ax[0].bar(x, r.auc, 0.16, yerr=[r.auc - r.auc_lo, r.auc_hi - r.auc], label=lab, capsize=2)
+    for y in (0.65, 0.75):
+        ax[0].axhline(y, color="k", ls=":", lw=1)
+    ax[0].set_xticks(range(len(bks)), bks); ax[0].set_ylim(0.4, 1); ax[0].set_ylabel("AUC for DAC failure"); ax[0].legend(fontsize=7, loc="upper right")
+    ax[0].set_title("P2H10 + SH30 (4 plans), navtest, 95% log-cluster CI")
+    z = np.load(OUT / "calib_pairs.npz"); c = json.loads((OUT / "calibration.json").read_text())["P2H10-F-s0"]
+    ye, ym, sg = z["P2H10-F-s0_ye"], z["P2H10-F-s0_ym"], z["P2H10-F-s0_side"]
+    ax[1].scatter(sg * ye, sg * ym, s=2, alpha=0.15)
+    xx = np.array([0, 12]); ax[1].plot(xx, xx, "k--", lw=1, label="y = x"); ax[1].plot(xx, c["s"] * xx + c["b"], "r", label=f"fit s {c['s']:.2f}, b {c['b']:.2f}")
+    ax[1].set_xlim(0, 12); ax[1].set_ylim(0, 12); ax[1].set_xlabel("model edge, distance from centre line (m)"); ax[1].set_ylabel("map drivable boundary (m)"); ax[1].legend(); ax[1].set_title("navtrain calibration set, x = 5..30 m")
+    FIG.mkdir(parents=True, exist_ok=True)
+    fig.tight_layout(); fig.savefig(FIG / "self_consist_auc.png", dpi=130)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["calib", "eval", "figs"])
     a = ap.parse_args()
-    {"calib": cmd_calib, "eval": cmd_eval}[a.cmd](a)
+    {"calib": cmd_calib, "eval": cmd_eval, "figs": cmd_figs}[a.cmd](a)
