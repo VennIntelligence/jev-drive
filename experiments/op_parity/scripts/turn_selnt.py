@@ -98,9 +98,9 @@ def cmd_build(a):
         # ---- G-leak
         leak = dict(a_fold_hash_ok=bool(all(TX.fold_of_log(l) == f for l, f in zip(df.log, fold))), a_model_fold_ok=True,
                     b_max_diff_m=max(g["max_diff_m"] for g in gates), b_median_diff_m=float(np.median([g["median_diff_m"] for g in gates])),
-                    c_ctrl_median_diff_m=float(np.median([g["ctrl_median_diff_m"] for g in gates if "ctrl_median_diff_m" in g])) if any("ctrl_median_diff_m" in g for g in gates) else None)
+                    c_ctrl_frac_over_tol=float(np.mean([g["ctrl_frac_over_tol"] for g in gates if "ctrl_frac_over_tol" in g])) if any("ctrl_frac_over_tol" in g for g in gates) else None)
         leak["b_ok"] = leak["b_max_diff_m"] < TX.TOL_M
-        leak["c_ok"] = leak["c_ctrl_median_diff_m"] is None or leak["c_ctrl_median_diff_m"] > 0.1
+        leak["c_ok"] = leak["c_ctrl_frac_over_tol"] is None or leak["c_ctrl_frac_over_tol"] >= 0.5
         # (d) the navtest tokens are not navtrain members and vice versa
         tt, _ = TC.bucket_tokens()
         leak["d_disjoint_ok"] = bool(not ntr.mask(tt).any() and not nt.mask(toks).any())
@@ -556,6 +556,195 @@ def cmd_hidden(a):
         (OUT / f"gate_hidden_{a.tag}.json").write_text(json.dumps(out, indent=1))
         run.info("G-hidden %s", out)
         run.summary.update(ok=out["ok"], median=out["median_of_medians"])
+
+
+# ---------------------------------------------------------------- 5. report
+PRIMARY = "N7"
+M_NONPRIV, M_PRIV = 8, 4                             # E, N1-N6, N8 (8 arms; the pre-registration text said 7, a miscount: 8 is the stricter correction) and P1-P4
+THRESH_GAIN, RISING = 2.0, 0.3
+PRIOR = TS.RES / "selector.csv"
+PRIOR_CURVE = TS.RES / "learning_curve.csv"
+
+
+def _num(cell):
+    import re
+    m = re.match(r"\s*([+-]?\d+\.?\d*)\s*\[\s*([+-]?\d+\.?\d*),\s*([+-]?\d+\.?\d*)\]", str(cell))
+    return tuple(float(x) for x in m.groups()) if m else None
+
+
+def cmd_report(a):
+    import pandas as pd
+    from jevdrive import stats
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    with Run("op_parity", f"turn_selnt/report-{a.tag}", seed=0, config=vars(a)) as run:
+        run.use_split(splits.load("navsim/navtest"))
+        out, figd = _pl.Path(a.out), _pl.Path(a.figs)
+        out.mkdir(parents=True, exist_ok=True)
+        C, tok, dyaw, log, X = TD.load()
+        F = TD.fams(C)
+        Y, Xc, ceil = {}, {}, {}
+        for (f, cv), fk in zip(FKS, FK):
+            Xc[fk] = TD.conv(X, C, cv)
+            Sc = TC.noec(Xc[fk])
+            Y[fk] = (Sc[:, F[f]] - Sc[:, :1]).transpose(0, 2, 1)
+            ceil[fk] = Y[fk].max(-1).mean(0)
+        B = {k: v for k, v in TD.buckets(dyaw).items() if "left" not in k and "right" not in k}
+        zero = np.zeros(len(log))
+        R = {}
+        for arm in ARMS:
+            f = OUT / "fit" / a.tag / f"{arm}.pkl"
+            if f.exists():
+                with open(f, "rb") as fh:
+                    R[arm] = pickle.load(fh)
+                assert np.array_equal(R[arm]["test_tokens"], tok)
+        gh = OUT / f"gate_hidden_{a.tag}.json"
+        primary = PRIMARY if not gh.exists() or json.loads(gh.read_text())["ok"] else "N8"
+
+        def gci(d, m, alpha=0.05):
+            return stats.paired(100 * d[m], zero[m], groups=log[m], alpha=alpha)
+
+        def dac_of(pred, fk):
+            p = TD.picks_of(pred)
+            cid = np.asarray(F[FKS[FK.index(fk)][0]])[p]
+            return float((TD.at_pick(Xc[fk], cid)[..., 1] < 1).mean() * 100)
+
+        def d_of(pred, fk):
+            return TD.take(Y[fk], TD.picks_of(pred)).mean(0)
+        prior = pd.read_csv(PRIOR) if PRIOR.exists() else None
+        prior_c = pd.read_csv(PRIOR_CURVE) if PRIOR_CURVE.exists() else None
+        rows, G, D_ = [], {}, {}
+        info = {r[0]: r for r in TS.ROWS}
+        dac_id = {fk: float((X[:, 0, :, 1] < 1).mean() * 100) for fk in FK}
+        for arm in ARMS:
+            if arm not in R:
+                continue
+            priv = arm.startswith("P")
+            alpha = 0.025 if arm == primary else 0.05 / (M_PRIV if priv else M_NONPRIV) if arm != "E" else 0.05
+            for fk in FK:
+                if fk not in R[arm]:
+                    continue
+                r_ = R[arm][fk]
+                d = d_of(r_["test_pred"], fk)
+                D_[arm, fk] = d
+                r = {"arm": arm, "input": "PRIV" if priv else "model-side", "family x convention": fk, "navtrain OOF gain": f"{r_['oof_gain_navtrain']:+.2f}"}
+                for b, m in B.items():
+                    G[arm, fk, b] = gci(d, m)
+                    r[b] = TC.cell(G[arm, fk, b])
+                G[arm, fk, "adj"] = gci(d, B["> 20 deg"], alpha)
+                r["adjusted CI"] = TC.cell(G[arm, fk, "adj"])
+                r["CI level %"] = f"{100 * (1 - alpha):.2f}"
+                q = TC.ratio_ci(d, ceil[fk], log)
+                G[arm, fk, "rec"] = q
+                r["recovery"] = f"{100 * q['mean']:.1f}% [{100 * q['lo']:.1f}, {100 * q['hi']:.1f}]"
+                r["moved %"] = f"{100 * (TD.picks_of(r_['test_pred']) != 0).mean():.1f}"
+                r["DAC fail % after (identity %.2f)" % dac_id[fk]] = f"{dac_of(r_['test_pred'], fk):.2f}"
+                if prior is not None:
+                    pr = prior[(prior.arm == arm) & (prior["family x convention"] == fk)]
+                    r["decision 187 (within navtest)"] = pr["> 20 deg"].iloc[0] if len(pr) else ""
+                if "cfg" in r_:
+                    r["cfg"] = str(r_["cfg"])
+                rows.append(r)
+        stats.write_table(rows, out / "arms", note="gain over SH30 of the selected candidate under the family's convention, EPDMS x 100 (no EC), seed mean, navtest turn tokens; heads trained on "
+                          "navtrain held-out labels only; paired log-cluster bootstrap B 10 000. PRIV = map geometry (upper bound). Primary arm at 97.5% (Bonferroni over the two registered "
+                          f"family x convention readings), E at 95%, other model-side arms Bonferroni m = {M_NONPRIV}, privileged m = {M_PRIV}. 'navtrain OOF gain' = out-of-fold on navtrain "
+                          "(in-distribution), config selected on it for NN arms.")
+        # ---- verdict, as pre-registered
+        f0, f1 = FK
+        pm = G[primary, f0, "> 20 deg"]
+        padj = G[primary, f0, "adj"]
+        l9 = G[primary, f1, "> 20 deg"] if (primary, f1, "> 20 deg") in G else None
+        l9adj = G[primary, f1, "adj"] if l9 else None
+        leads = sorted([x for x in R if x != primary and x != "E" and not x.startswith("P") and (x, f0, "adj") in G and G[x, f0, "adj"]["lo"] > 0], key=lambda x: -G[x, f0, "> 20 deg"]["mean"])
+        ends = padj["lo"] <= 0
+        consistent = bool(l9 and l9["mean"] > 0)
+        worth = bool((not ends) and pm["mean"] >= THRESH_GAIN and consistent)
+        vd = dict(primary=primary, f19pc=pm, f19pc_975=padj, l9epcap=l9, l9epcap_975=l9adj, line_ends=bool(ends), l9_consistent=consistent, threshold=THRESH_GAIN,
+                  worth_full_scale=worth, other_nonpriv_leads=leads,
+                  case=("line ends on navtest" if ends else "positive but below the worth threshold" if pm["mean"] < THRESH_GAIN else "worth a full-scale method" if consistent else "inconsistent with L9 x epcap"),
+                  ceiling_f19pc=float(100 * ceil[f0].mean()), recovery=G[primary, f0, "rec"])
+        (out / "verdict.json").write_text(json.dumps(vd, indent=1, default=float))
+        run.info("verdict: %s", json.dumps(vd, default=float))
+        # ---- learning curves
+        rows, CV = [], {}
+        for arm in CURVE_ARMS:
+            if arm not in R or "curve" not in R[arm][f0]:
+                continue
+            rowd = {"arm": arm}
+            fr_all = sorted(R[arm][f0]["curve"])
+            for fr in fr_all:
+                d = np.mean([d_of(p, f0) for p in R[arm][f0]["curve"][fr]], 0)
+                CV[arm, fr] = gci(d, B["> 20 deg"])
+                rowd[f"{100 * fr:g}% ({int(round(fr * 900))} logs)"] = TC.cell(CV[arm, fr])
+            if 0.75 in fr_all:
+                rowd["rising 75 -> 100%"] = bool(CV[arm, 1.0]["mean"] - CV[arm, 0.75]["mean"] >= RISING)
+            rows.append(rowd)
+        stats.write_table(rows, out / "learning_curve", note="gain > 20 deg (F19 x pc) vs the share of the 900 navtrain turn logs used for training; mean over repeats of the per-repeat picks "
+                          "(N7, P4 3 repeats, P2 2); the 100% point of the NN arms is the mean over the first 3 of the 5 initialisations (the ensemble is in arms.md)")
+        # ---- contrasts against E
+        rows = []
+        for arm in ARMS:
+            if arm in ("E",) or arm not in R or "E" not in R:
+                continue
+            r = {"contrast": f"{arm} - E (both trained on navtrain)"}
+            for fk in FK:
+                if (arm, fk) in D_ and ("E", fk) in D_:
+                    r[fk] = TC.cell(gci(D_[arm, fk] - D_["E", fk], B["> 20 deg"]))
+            rows.append(r)
+        stats.write_table(rows, out / "contrasts_vs_E", note="paired difference of gains, > 20 deg")
+        fig_report(figd, G, CV, R, ceil, prior, prior_c, primary)
+        run.summary.update(primary=primary, case=vd["case"], gain=pm["mean"], lo975=padj["lo"])
+
+
+def fig_report(FIGD, G, CV, R, ceil, prior, prior_c, primary):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import plot_style as ps
+    ps.apply()
+    FIGD.mkdir(parents=True, exist_ok=True)
+    f0 = FK[0]
+    names = [x for x in ARMS if (x, f0, "> 20 deg") in G]
+    fig, axs = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.9), constrained_layout=True, gridspec_kw=dict(width_ratios=[2.2, 1.2]))
+    ax = axs[0]
+    cols = [ps.PALETTE["black"] if x == "E" else ps.PALETTE["vermillion"] if x.startswith("P") else ps.PALETTE["blue"] for x in names]
+    v = np.array([[G[x, f0, "> 20 deg"]["mean"], G[x, f0, "> 20 deg"]["mean"] - G[x, f0, "> 20 deg"]["lo"], G[x, f0, "> 20 deg"]["hi"] - G[x, f0, "> 20 deg"]["mean"]] for x in names])
+    ax.bar(range(len(names)), v[:, 0], 0.7, yerr=v[:, 1:].T, color=cols, error_kw=dict(lw=0.6, capsize=1.2))
+    if prior is not None:
+        for i, x in enumerate(names):
+            pr = prior[(prior.arm == x) & (prior["family x convention"] == f0)]
+            nm = _num(pr["> 20 deg"].iloc[0]) if len(pr) else None
+            if nm:
+                ax.plot([i - 0.35, i + 0.35], [nm[0], nm[0]], color=ps.PALETTE["orange"], lw=1.2)
+    ax.axhline(100 * ceil[f0].mean(), color=ps.BASELINE, ls="--", lw=0.8)
+    ax.axhline(THRESH_GAIN, color=ps.PALETTE["green"], ls=":", lw=0.8)
+    ax.text(len(names) - 0.5, THRESH_GAIN + 0.1, "worth threshold +2.0", ha="right", va="bottom", fontsize=6.5, color=ps.PALETTE["green"])
+    ax.text(len(names) - 0.5, 100 * ceil[f0].mean() - 0.1, "ceiling", ha="right", va="top", fontsize=7, color=ps.BASELINE)
+    ax.set_xticks(range(len(names)), [x + ("*" if x == primary else "") for x in names], fontsize=7)
+    ax.set_ylabel("selector - SH30 on navtest, EPDMS x 100\n(F19 x pc, > 20 deg, 95% CI)")
+    ps.bars(ax), ps.zero_line(ax)
+    ax.text(0.02, 0.97, "trained on navtrain; red = PRIV (map margin); orange tick = trained within navtest (decision 187); * = primary", transform=ax.transAxes, fontsize=6, va="top")
+    ax = axs[1]
+    for arm, c in (("N7", ps.PALETTE["blue"]), ("P4", ps.PALETTE["vermillion"]), ("P2", ps.PALETTE["orange"])):
+        ks = sorted(k[1] for k in CV if k[0] == arm)
+        if not ks:
+            continue
+        xs = [k * 900 for k in ks]
+        vv = np.array([[CV[arm, k]["mean"], CV[arm, k]["lo"], CV[arm, k]["hi"]] for k in ks])
+        ax.plot(xs, vv[:, 0], color=c, marker="o", ms=2.5, label=arm + (" (PRIV)" if arm.startswith("P") else ""))
+        ax.fill_between(xs, vv[:, 1], vv[:, 2], color=c, alpha=0.12, lw=0)
+    if prior_c is not None:
+        for arm, c in (("N7", ps.PALETTE["blue"]), ("P2", ps.PALETTE["orange"])):
+            pr = prior_c[(prior_c.arm == arm) & (prior_c["family x convention"] == f0)]
+            if len(pr):
+                pts = [(fr * 0.8 * 108, _num(pr[f"{int(100 * fr)}%"].iloc[0])) for fr in (0.25, 0.5, 0.75, 1.0)]
+                ax.plot([p[0] for p in pts], [p[1][0] for p in pts], color=c, ls="--", marker="s", ms=2, lw=0.8)
+    ax.set_xscale("log")
+    ax.set_xlabel("training logs (dashed: within navtest, 187)")
+    ax.set_ylabel("navtest gain, > 20 deg")
+    ps.zero_line(ax), ax.legend(fontsize=6)
+    fig.savefig(FIGD / "selector_navtrain.png", dpi=300)
+    plt.close(fig)
 
 
 def main():

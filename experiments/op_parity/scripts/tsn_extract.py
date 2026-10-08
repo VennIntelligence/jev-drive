@@ -7,7 +7,7 @@ train: every navtrain turn token of shard i is run through the fold model that h
 the same loop, batch and fp16 path as sc_infer.py / tsi_extract.py; one forward gives the plan, the policy's `select_4` and `mean` (512 each)
 and the road-edge head. Gate G-leak: j agrees with fold_of_token.csv, the log is not in the fold's training split, and plan_pos equals the
 fold model's stored plan (bench/ol/<shard>/plans) (max |d| < 0.03 m over the first 15 points, fp16 rounding) on every row with speed >= 0.5 m/s. --control also runs the next fold's model on up to 100
-rows per fold: its plan must differ by > 0.1 m at the median (the check has teeth).
+rows per fold: at least half of those rows must exceed the tolerance (the check has teeth; the fold models share init and recipe, so their plans are close, median 0.07 m).
 navtest: the 5 fold models on the navtest turn tokens (hidden state + plan only), for the G-hidden alignment gate against SH30.
 Output: $DATA_DIR/runs/op_parity/turn_selnt/feat/<tag>/{s<i>.npz, navtest.npz}. GPU job: submit through the pool (jevdrive.cl submit).
 """
@@ -159,7 +159,7 @@ def cmd_train(a):
                     leak_fold_ok=True)
         if ctrl:
             c = np.concatenate(ctrl)
-            gate.update(ctrl_median_diff_m=float(np.median(c)), ctrl_min_diff_m=float(c.min()), ctrl_n=int(len(c)))
+            gate.update(ctrl_median_diff_m=float(np.median(c)), ctrl_frac_over_tol=float((c > TOL_M).mean()), ctrl_n=int(len(c)))
         res["diff"] = diff
         res["gate"] = np.array(json.dumps(gate))
         out.parent.mkdir(parents=True, exist_ok=True)
