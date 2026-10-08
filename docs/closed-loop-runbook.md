@@ -118,8 +118,12 @@ $P dispatch                                   # once per box: scripts/tmux_run.s
 $P submit --name dg-train --vram 35 --cpu 12 --train --log-dir $DATA_DIR/runs/x/train -- \
     $DATA_DIR/envs/op-train/bin/python experiments/x/train.py --steps 4000          # prints the job id
 $P submit --name dg-eval --vram 12 --cpu 8 --after <id> -- "bash experiments/x/eval.sh {gpu}"
+$P fanout --name wax --arms V1,V2,V3 --vram 7 --cpu 4 --collect "python collect.py {arms}" -- \
+    python run.py --arm {arm}                 # one job per arm (wax-V1 ...) + wax-collect after all of them
 $P queue            # running / queued jobs, the card, and why a job waits
-$P top              # per card: util, VRAM booked by the pool / used outside it / free, CARLA servers, jobs
+$P top              # per card: util, VRAM booked / used outside the pool / free, jobs; then idle capacity next to
+                    # queued demand, and an UNDER-USED line when a card idles
+$P usage --hours 24 # card-hours and core-hours used, idle card-hours split by cause
 $P show <id>        # spec, state, log tail       $P cancel <id> [--drain]
 $P retarget <id>... --gpus 0,2   # change the allowed cards of queued jobs; ids and --after chains stay
 ```
@@ -132,6 +136,12 @@ one broken script costs one 20 s smoke, not N launches. Smoke runs see `CL_PREFL
 From Python (chains, guards): `from jevdrive.cl import pool as P; jid = P.submit(cmd, name=..., vram_gb=..., carla=...,
 cpu=..., after=[...]); P.wait([jid])`. A CARLA job: `P.submit(P.b2d_cmd(out, route_ids, agent=..., agent_config=...),
 name=..., carla=6, cpu=12)` (6 servers, 9 GB each unless `vram_gb` says otherwise).
+
+**N independent runs are N jobs.** Seeds, arms, variants and shards that do not need each other go in as one job each
+(`fanout`, or `P.fanout(cmd, arms, name, collect=..., vram_gb=..., cpu=...)` from Python: `{arm}` in the command, env
+values and `log_dir`; returns `{"arms": {arm: id}, "collect": id}`), never as one job that loops over them: that job
+holds one card while the others idle (2026-10-08: five 22-minute inference runs in one job took 91 min on one card
+with two cards at 0 %). `submit` prints a note when a GPU job's shell command chains several runs.
 
 **What a job declares.** `vram_gb` = its peak VRAM on the card (required; default 9 per CARLA server), `carla` = CARLA
 servers it starts, `cpu` = cores (> 0 pins it with `taskset` to free physical cores, NUMA-local first), `train` (at
@@ -152,24 +162,40 @@ command when rc alone is not enough.
 
 | Resource | Rule |
 |---|---|
-| VRAM | total - 4 GB headroom - (VRAM of processes outside the pool, at least what holds declare) - sum over the card's pool jobs of max(declared, measured) >= `vram_gb`. Declared VRAM stays booked for the job's life, so a job that has not reached its peak is never overbooked. |
+| VRAM | total - 4 GB headroom - (VRAM of processes outside the pool, at least what holds declare) - sum over the card's pool jobs of max(measured now, booked) >= the job's need. A declaration is an upper bound: with >= 3 finished runs under the job's history key, need and booked are min(declared, 1.2 x their max peak + 1 GB); without history a job books its declaration for 10 min, then min(declared, 1.2 x its own peak + 1 GB). CARLA and `exclusive` jobs always book the declaration. `top` shows used / booked per job. |
 | CARLA | servers of pool jobs + servers outside the pool + `carla` <= 6 per card; one CARLA job starts per card per round (staggered starts) |
 | ports | a free block of 2 x `carla` server indices in 160-494 whose RPC and TM port blocks (index i: RPC 2000 + 50i, TM = RPC block of i + 120) miss every pool job, every hold and every LISTENING TCP port on the box; freed only when the job's whole process tree has exited |
-| CPU | charged cores of pool jobs + holds <= cgroup quota x `cpu_overcommit` (1.0). Charge = declared `cpu` while the job is younger than 5 min (or unmeasured), then max(1, 1.2 x its peak measured cores over the last 5 min) (utime + stime of its process tree, every round); holds keep declared cores. `queue` shows `cpu m/d` = measured peak / declared, `top` the charged total. |
-| PIDs / RAM | pids.current + threads of jobs younger than 5 min + the job's estimate (thread model) <= 0.80 pids.max; cgroup memory without page cache (`memory.stat` anon + shmem + kernel) + young `ram_gb` <= 0.85 memory.max |
+| CPU | charged cores of pool jobs + holds <= cgroup quota x `cpu_overcommit` (1.0). Charge = declared `cpu` while the job is younger than 5 min (or unmeasured), then max(1, 1.2 x its peak measured cores over the last 5 min) (utime + stime of its process tree, every round); holds keep declared cores. `queue` shows `cpu m/d` = measured peak / declared, `top` the charged total. With >= 3 finished runs in history a young or queued job is charged min(declared, 1.2 x their max peak cores). |
+| PIDs / RAM | pids.current + threads of jobs younger than 5 min + the job's estimate (thread model) <= 0.80 pids.max; cgroup memory without page cache (`memory.stat` anon + shmem + kernel) + what jobs younger than 5 min have not allocated yet (`ram_gb` - their tree's RSS, tapering to 0 at 5 min) + the job's `ram_gb` <= 0.85 memory.max; `ram_gb` counts as at most 1.2 x history's max RSS + 1 GB. (Until 2026-10-08 the whole `ram_gb` of every young job was added on top of the measured memory: half of that day's GPU-job queueing.) |
 | idle card (work conservation) | A card with no pool job, no whole hold and <= 1 GB used outside the pool for >= `idle_s` (120 s, config) takes the highest-priority queued job with `vram_gb` > 1 that is blocked **only** by the CPU budget or the PID plan cap (event `admit_idle`). VRAM, RAM, CARLA and ports are never relaxed; CPU-only jobs (`vram_gb` <= 1) never use the rule. |
 | pinning watchdog | A queued job restricted by `gpus` whose allowed cards are busy gets an idle card (>= `idle_s`) outside `gpus` added to its `gpus` and starts there (event `auto_retarget`). `submit --pin-strict` opts out. |
-| order | priority, then submit order; jobs that fit start out of order (backfill), but a head job blocked > 15 min reserves the card closest to fitting it |
+| order | priority, then submit order; jobs that fit start out of order (backfill), but a head job blocked > 15 min by a card-level reason (VRAM, CARLA, training cap) reserves the card closest to fitting it |
 
-Among the cards that fit, the least loaded (pool jobs + foreign GPU processes) wins, VRAM best-fit breaks ties: spreading
+Among the cards that fit, the least loaded (GPU jobs of the pool + foreign GPU processes; CPU-only jobs with `vram_gb` <= 1
+do not count and do not make a card busy) wins, VRAM best-fit breaks ties: spreading
 keeps every card computing (one serial chain per card left cards at 0-20% util with one CARLA server where six
 fit, 2026-10-05); best-fit plus the head-job reservation keeps room for a large job.
 
-**History defaults.** When a job ends `done` (>= 60 s), the dispatcher appends its peak VRAM and peak cores to
-`runs/pool/history.json` under its name prefix (lower case, trailing `-s3`, `-k2`, `_t0`, `-007`, `-pf`, digits stripped
+**History.** When a job ends `done` (>= 60 s), the dispatcher appends its peak VRAM, peak cores and peak RSS to
+`runs/pool/history.json` under its history key: env `CL_HIST_KEY` when the submitter sets one (`jevdrive.bench` sets
+`bn-<stage kind>@<vram>gb`, so a new model's first run is already known), else its name; then the prefix (lower case, trailing `-s3`, `-k2`, `_t0`, `-007`, `-pf`, digits stripped
 repeatedly: `op-eval-s3-pf` and `op-eval-k2` are `op-eval`; last 20 kept). `submit` without `--vram` / `--cpu` then
-defaults to p95 x 1.2 of that history and prints the choice on stderr; explicit values win. Dispatcher config keys:
-`idle_s`, `idle_vram_gb` (trivial foreign VRAM), `cpu_overcommit`, `cpu_budget`.
+defaults to p95 x 1.2 of that history and prints the choice on stderr. An explicit value is kept in the spec, but the
+dispatcher books min(declared, measured) as in the table (`submit` says so when a declaration is far above history);
+`"trust_measured": false` in the config books declarations only, as before 2026-10-08. Dispatcher config keys:
+`idle_s`, `idle_vram_gb` (trivial foreign VRAM), `cpu_overcommit`, `cpu_budget`, `trust_measured`.
+
+**Reading under-use.** `top` ends with two lines: `idle now` (cards without a GPU job and for how long; cores measured
+/ charged / budget) and `queued` (ready GPU jobs and ready CPU-only jobs by what they wait on: vram, ram, cpu, train,
+carla, ports, reserved, ...; and jobs waiting on `--after` or a gate), then `UNDER-USED` when a card idles: either the
+pool has no work for it (nobody submitted any: submit the next stage with `--after` instead of waiting for a poll),
+or a GPU job older than 30 min runs next to it with nothing ready (several runs in one job: fan out), or ready jobs
+wait on the named cause. `usage --hours H` gives the same split over time from `runs/pool/usage.jsonl` (one line a
+minute: per card util, booked VRAM, GPU jobs; cores; the queue by cause): `computing`, `job, GPU idle` (a GPU job on
+the card at < 10 % util), `queued: <cause>`, `serial`, `no work queued`, `held`. Each job keeps
+`waited = {cause: seconds}` in `state.json` (`show ID`) and in its `launch` event, so a wait can be explained afterwards.
+One day's record replayed through old and new accounting: `experiments/cl_infra/scripts/pool_usage.py`
+([results](../experiments/cl_infra/results/pool-fix/README.md)).
 
 **Process safety.** Each job runs in its own session; its tree is recorded by (pid, start time) plus a `CL_TOKEN` env
 entry (`jevdrive.cl.procs`). When the root exits, members still alive (orphan CARLA servers, setsid children) are
@@ -186,7 +212,7 @@ With `--pid` the hold ends by itself when that process exits; `holds` lists, `un
 `headroom_gb` (4), `cpu_overcommit` (1.0) or `cpu_budget`, `max_starts` per round (4), `hold_s` (900), `cards` (all),
 `poll_s` (20). The box runs `cpu_overcommit` 1.4 since 2026-10-08: charges are declared or 1.2 x peak cores, the measured
 mean was about 40 busy cores at 68 charged of a 75-core quota, and CPU contention only slows jobs (RAM and VRAM are never
-overcommitted). Spool layout: `inbox/`, `cancel/`, `holds.json`, `state.json`, `status.json`, `events.jsonl`, `jobs/<id>/`.
+overcommitted). Spool layout: `inbox/`, `cancel/`, `holds.json`, `state.json`, `status.json`, `events.jsonl`, `usage.jsonl`, `history.json`, `jobs/<id>/`.
 
 **Chains.** A multi-stage chain is either all stages submitted at once with `after=`, or a small driver that submits a
 stage, `P.wait`s, checks its outputs and submits the next. Keep the driver itself off the GPU (it can run in tmux or

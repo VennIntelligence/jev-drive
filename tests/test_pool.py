@@ -170,6 +170,13 @@ class BookedByMeasurement(unittest.TestCase):
         known = P.known_caps(hist, "x-s4")
         self.assertEqual(known, dict(vram_gb=15.4, cpu=3.6, ram_gb=11.8))
         self.assertEqual(P.known_caps({"x": dict(vram=[10, 12], cores=[])}, "x-s4"), {})      # < 3 runs: not trusted
+        keyed = dict(name="bn-navtest-NEWMODEL-s0@warp-plans", env={"CL_HIST_KEY": "X"})             # a submitter's own history key
+        self.assertEqual((P.hist_key(keyed), P.known_caps(hist, keyed)), ("x", known))
+        self.assertEqual(P.known_caps(hist, dict(name="bn-navtest-NEWMODEL-s0@warp-plans")), {})
+        from jevdrive.bench import runner
+        self.assertEqual(runner.hist_key(runner.stage_cmd("jev", "hugsim-worker", "/r", 3), 59.0), "bn-hugsim-worker@59gb")
+        self.assertEqual(P.hist_prefix("bn-hugsim-worker@59gb"), "bn-hugsim-worker@59gb")
+        self.assertEqual(runner.hist_key("python x.py && touch y", 59.0), "")
         spec = dict(vram_gb=24.0)
         self.assertEqual(P.vram_need(spec, known), 15.4)
         self.assertEqual(P.vram_need(spec, known, trust=False), 24.0)
@@ -193,7 +200,9 @@ class BookedByMeasurement(unittest.TestCase):
     def test_ram_reserve_and_cpu_known(self):
         now = time.time()
         j = dict(spec=dict(ram_gb=44, cpu=14), t0=now - 60, rss_now=30.0)
-        self.assertEqual(P.ram_reserve(j, now), 14.0)                # only what the young job has not allocated yet
+        self.assertAlmostEqual(P.ram_reserve(j, now), 14.0 * 0.8)    # what it has not allocated yet, tapering over 5 min
+        self.assertAlmostEqual(P.ram_reserve(j, now, known=35.0), 5.0 * 0.8)
+        self.assertEqual(P.ram_reserve(dict(j, t0=now), now), 14.0)
         self.assertEqual(P.ram_reserve(dict(j, rss_now=80.0), now), 0.0)
         self.assertEqual(P.ram_reserve(dict(j, t0=now - 1000), now), 0.0)
         self.assertEqual(P.cpu_charge(j, now), 14)

@@ -41,7 +41,8 @@ English version in `docs/` or code. `tmp/` is gitignored scratch.
 - Read docs/closed-loop-runbook.md first. Every GPU job (CARLA, training, inference) is submitted to the GPU pool
   (`python -m jevdrive.cl submit`, dispatcher in tmux `jev:pool`); whichever card has room takes it, and the pool
   allocates cards, cores and CARLA ports. Nobody picks a card or port by hand; no other scheduler. Chain stages with
-  `--after`. Thread flags / env live only in `jevdrive/cl/profiles.py`.
+  `--after`; N independent runs are N jobs (`cl fanout`), never one looping job; `cl top` / `cl usage` show idle
+  cards against queued work. Thread flags / env live only in `jevdrive/cl/profiles.py`.
 
 ## Results and research notes
 - Results land in research/decisions.md as they arrive; a wrong entry is corrected in place (say what it claimed

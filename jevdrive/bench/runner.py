@@ -97,8 +97,9 @@ def submit(run_dir: Path, name: str, stages: list, owner: str = "bench", dry: bo
         if len(job_name) > 60:
             suffix = f"-{hashlib.sha256(name.encode()).hexdigest()[:8]}-{s.name}"
             job_name = name[:60 - len(suffix)] + suffix
+        key = hist_key(s.cmd, max(s.vram, 0.5))
         kw = dict(name=job_name, owner=owner, vram_gb=max(s.vram, 0.5), cpu=s.cpu, ram_gb=s.ram, after=after,
-                  env=dict(s.env), tries=s.tries, carla=s.carla, timeout_h=s.timeout_h, log_dir=str(log_dir), cwd=str(REPO), priority=priority)
+                  env=dict({"CL_HIST_KEY": key} if key else {}, **s.env), tries=s.tries, carla=s.carla, timeout_h=s.timeout_h, log_dir=str(log_dir), cwd=str(REPO), priority=priority)
         if gpus:
             kw["gpus"] = list(gpus)
         if dry:
@@ -164,6 +165,15 @@ def wait(run_dirs: list, poll_s: float = 30.0, quiet: bool = False, timeout_s: f
             return False
         remaining = max(0, timeout_s - (time.monotonic() - started)) if timeout_s else poll_s
         time.sleep(min(poll_s, remaining))
+
+
+def hist_key(cmd, vram: float) -> str:
+    """Pool history key of a stage: its kind and declared VRAM, not the run name. Run names carry the model, so every
+    new model would start without history and be booked at its declarations; one kind of stage at one size uses the
+    same resources whatever the model. '' when the command is not a stage_cmd."""
+    if isinstance(cmd, (list, tuple)) and len(cmd) > 3 and list(cmd[1:3]) == ["-m", "jevdrive.bench.stage"]:
+        return "bn-%s@%ggb" % (cmd[3], vram)
+    return ""
 
 
 def stage_cmd(env: str, fn: str, *args) -> list:

@@ -43,7 +43,8 @@ card when (all measured live, nvidia-smi cached <= 15 s):
             With >= 3 finished runs in history a young or queued job is charged min(declared, 1.2 x their max).
   PIDs/RAM  pids.current + threads of jobs younger than 5 min + the job's estimate <= 0.80 pids.max; cgroup memory
             without page cache (anon + shmem + kernel) + what young jobs have not allocated yet (ram_gb - their
-            tree's RSS) + ram_gb <= 0.85 memory.max (ram_gb at most 1.2 x history's max RSS + 1).
+            tree's RSS, tapering to 0 at 5 min) + ram_gb <= 0.85 memory.max (ram_gb at most 1.2 x history's max
+            RSS + 1).
 Among the cards that fit, the least loaded (fewest GPU jobs of the pool + foreign GPU processes; CPU-only jobs with
 vram_gb <= 1 do not count and do not make a card busy) wins and VRAM best-fit breaks ties:
 spreading keeps every card computing, best-fit keeps room for a large job. A job blocked > hold_s (15 min) at the head
@@ -60,7 +61,7 @@ at most idle_vram_gb (1 GB) used outside the pool, for >= idle_s (120 s, config)
                  and would fit it, gets that card added to its gpus and starts there (logged `auto_retarget`).
                  `submit --pin-strict` opts out.
 History: when a job ends done (>= 60 s), its peak VRAM (measured) and peak cores are appended to history.json under
-its name prefix (hist_prefix: lower case, trailing -s3 / -k2 / _t0 / -007 / -pf / trailing digits stripped repeatedly,
+its history key (env CL_HIST_KEY if the submitter set one, else its name; then hist_prefix: lower case, trailing -s3 / -k2 / _t0 / -007 / -pf / trailing digits stripped repeatedly,
 so `op-eval-s3-pf` and `op-eval-k2` are `op-eval`), last 20 kept. `submit` without --vram / --cpu defaults to p95 x 1.2
 of that history and says so on stderr; explicit values win.
 
@@ -163,11 +164,11 @@ def is_gpu(spec: dict) -> bool:
     return bool(float(spec.get("vram_gb") or 0) > 1 or spec.get("carla") or spec.get("exclusive"))
 
 
-def known_caps(hist: dict, name: str) -> dict:
-    """{vram_gb, cpu, ram_gb}: what finished runs of this name prefix needed at most, with margin; only the keys with
-    at least HIST_MIN_N samples. The dispatcher books a job at min(declared, this): a declaration is an upper bound,
+def known_caps(hist: dict, job) -> dict:
+    """{vram_gb, cpu, ram_gb}: what finished runs under this job's history key (hist_key; `job` is a spec dict or a
+    name) needed at most, with margin; only the keys with at least HIST_MIN_N samples. The dispatcher books a job at min(declared, this): a declaration is an upper bound,
     the record of what the same job used is the estimate."""
-    e = (hist or {}).get(hist_prefix(name)) or {}
+    e = (hist or {}).get(hist_key(job)) or {}
     out = {}
     for key, src, scale, pad in (("vram_gb", "vram", VRAM_MARGIN, VRAM_PAD_GB), ("cpu", "cores", CPU_MARGIN, 0.0),
                                  ("ram_gb", "ram", 1.2, 1.0)):
@@ -203,12 +204,17 @@ def vram_charge(j: dict, now: float, known: dict = None, trust: bool = True) -> 
     return min(declared, own)
 
 
-def ram_reserve(j: dict, now: float) -> float:
-    """GB of host RAM still to come from a young job: declared minus what its tree already holds (that part is in the
-    cgroup's measured memory). Adding the whole declaration on top of the measurement counted young jobs twice."""
-    if now - j.get("t0", 0) >= YOUNG_S:
+def ram_reserve(j: dict, now: float, known: float = None) -> float:
+    """GB of host RAM still to come from a young job: what it is expected to need (declared, at most `known` from
+    history) minus what its tree already holds (that part is in the cgroup's measured memory; adding the whole
+    declaration on top counted young jobs twice), tapering linearly to 0 at YOUNG_S (the old rule held the full
+    declaration until YOUNG_S and nothing after)."""
+    age = now - j.get("t0", 0)
+    if age >= YOUNG_S:
         return 0.0
-    return max(0.0, float(j["spec"].get("ram_gb") or 0) - float(j.get("rss_now") or 0))
+    need = float(j["spec"].get("ram_gb") or 0)
+    need = need if known is None else min(need, known)
+    return max(0.0, need - float(j.get("rss_now") or 0)) * (1.0 - max(age, 0.0) / YOUNG_S)
 
 
 CAUSES = (("after ", "after"), ("waiting for ", "gate"), ("start limit", "start_limit"), ("CPU ", "cpu"), ("PIDs ", "pids"),
@@ -233,10 +239,19 @@ def hist_prefix(name: str) -> str:
     return _SUFFIX.sub("", n) or n
 
 
-def hist_record(pool: Path, name: str, vram_gb: float, cores: float, ram_gb: float = 0.0) -> None:
+def hist_key(job) -> str:
+    """History key of a job (a spec dict, or just a name): env CL_HIST_KEY when the submitter sets one, else the name;
+    hist_prefix of that. CL_HIST_KEY is for jobs whose names differ per model or run while their resource use does
+    not (jevdrive.bench sets it per stage kind), so a new model's first run already has history."""
+    if isinstance(job, str):
+        return hist_prefix(job)
+    return hist_prefix((job.get("env") or {}).get("CL_HIST_KEY") or job["name"])
+
+
+def hist_record(pool: Path, job, vram_gb: float, cores: float, ram_gb: float = 0.0) -> None:
     pool = Path(pool)
     h = _read_json(pool / "history.json", {}) or {}
-    e = h.setdefault(hist_prefix(name), dict(vram=[], cores=[]))
+    e = h.setdefault(hist_key(job), dict(vram=[], cores=[]))
     for k, v in (("vram", vram_gb), ("cores", cores), ("ram", ram_gb)):
         if v > 0:
             e[k] = (e.get(k, []) + [round(v, 2)])[-HIST_KEEP:]
@@ -641,7 +656,7 @@ class Dispatcher:
                 j["id"], state, why, rc, j["tries"], time.strftime("%F %T"), tail))
         if state == "done" and info["wall_s"] >= HIST_MIN_WALL_S and not j["spec"].get("env", {}).get("CL_PREFLIGHT"):
             try:
-                hist_record(self.pool, j["spec"]["name"], float(j.get("vram_peak") or 0), float(j.get("cores_max") or 0),
+                hist_record(self.pool, j["spec"], float(j.get("vram_peak") or 0), float(j.get("cores_max") or 0),
                             float(j.get("rss_peak") or 0))
             except OSError:
                 pass
@@ -722,7 +737,7 @@ class Dispatcher:
             act = sum(v for (cg, p), v in per_pid.items() if cg == g and p in mem)
             j["vram_now"] = round(act, 1)
             j["vram_peak"] = max(float(j.get("vram_peak") or 0), round(act, 1))
-            j["vram_booked"] = round(max(act, vram_charge(j, now, known_caps(self.hist, s["name"]), cfg["trust_measured"])), 1)
+            j["vram_booked"] = round(max(act, vram_charge(j, now, known_caps(self.hist, s), cfg["trust_measured"])), 1)
             a.pool_gb += j["vram_booked"]
             a.foreign_gb -= act                                # foreign = used - pool actual (used added below)
             a.exclusive = a.exclusive or bool(s.get("exclusive"))
@@ -813,10 +828,11 @@ class Dispatcher:
             if j.get("span"):
                 used_blocks |= blocks_of(range(j["idx"], j["idx"] + j["span"]))
             taken_cpu |= set(parse_cpus(j.get("cpus") or ""))
-            cpu_used += cpu_charge(j, now, known_caps(self.hist, j["spec"]["name"]).get("cpu") if trust else None)
+            known = known_caps(self.hist, j["spec"]) if trust else {}
+            cpu_used += cpu_charge(j, now, known.get("cpu"))
             if now - j.get("t0", 0) < YOUNG_S:
                 young_threads += Spec(**j["spec"]).est_threads(box.host_cpus)
-                young_ram += ram_reserve(j, now) if trust else float(j["spec"].get("ram_gb") or 0)
+                young_ram += ram_reserve(j, now, known.get("ram_gb")) if trust else float(j["spec"].get("ram_gb") or 0)
         budget = box.cores * cfg["cpu_overcommit"] if not cfg.get("cpu_budget") else cfg["cpu_budget"]
         self.cpu_info = dict(charged=round(cpu_used, 1), budget=round(budget, 1))
         adm = capacity.Admission.from_box(box)
@@ -841,7 +857,7 @@ class Dispatcher:
                 self.set_why(j, why)
                 continue
             # What the job is booked at: its declaration, or less when finished runs of the name prefix say so.
-            known = known_caps(self.hist, s.name) if trust else {}
+            known = known_caps(self.hist, j["spec"]) if trust else {}
             n_cpu = max(1, math.ceil(min(max(s.cpu, 1), known.get("cpu", max(s.cpu, 1)))))
             ram_need = min(s.ram_gb, known.get("ram_gb", s.ram_gb))
             v_need = vram_need(j["spec"], known, trust)

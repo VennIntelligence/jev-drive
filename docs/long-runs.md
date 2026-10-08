@@ -102,6 +102,19 @@ When more than one agent (or person) runs jobs on the box at the same time:
   thread-cap limit (pids.max 20480, ~650 threads per worker) no longer binds with reduced thread pools
   (docs/carla.md, "Budget with the reduced pools"); docs/bench2drive-cost.md has the 2026-09-25 measurements from the previous
   instance.
+- **Fan-out rule.** Work that splits into independent runs (seeds, arms, variants, checkpoints, shards) is submitted
+  as one pool job per run, all at once, with the next stage chained by `--after`:
+  `python -m jevdrive.cl fanout --name N --arms a,b,c --vram GB --cpu N [--collect "cmd {arms}"] -- cmd ... {arm}`
+  (Python: `P.fanout`). Never one job that loops over the runs, and never "submit seed 1 when seed 0 is done": the
+  pool can only fill cards with jobs it has. A lane's whole remaining chain belongs in the queue, gated by `--after`
+  / `--when-exists`, not in an agent that submits the next piece when it next looks.
+- **Declare what the job uses.** `--vram`, `--cpu`, `--ram` are upper bounds, not safety margins on top of safety
+  margins: the pool books a job at what finished runs of the same name measured once it has three of them, and a new
+  name is booked at its declaration, so a first run declared at 24 GB that peaks at 6 keeps three more jobs off its
+  card for ten minutes. Keep job names stable across reruns (`<what>-<arm>-s<seed>`) so history applies.
+- **Look before you wait.** `python -m jevdrive.cl top` ends with the idle cards, the queued demand and an
+  `UNDER-USED` line; `python -m jevdrive.cl usage --hours 24` splits the idle card-hours by cause. An idle card with
+  work pending anywhere in a lane is a bug in how that lane submitted, or in the pool: fix it or report it.
 - `$DATA_DIR/runs/zeroshot-exam/gpu-plan.md` is the append-only log (`>>` only, never rewrite).
 - `scripts/boxwatch.sh` is the box-wide 5 s memory/process sampler (one per box, `$DATA_DIR/runs/boxwatch/`); read it
   for a job that died by a signal. Unexplained SIGKILLs: experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md.
