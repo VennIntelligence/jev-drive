@@ -61,9 +61,9 @@ def analyze(C, tags, label, out, base_mode="tapped"):
     base = A.per_frame(lambda d: d["R10"][:, 0])
     arch = A.per_frame(lambda d: d["arch"])
     dd = base - arch
-    gid = dict(rfs_ts0=C.cm(base), rfs_archived=C.cm(arch), diff=C.cm(dd), frac_frames_within_0p01=float((np.abs(dd) <= 0.01).mean()), max_abs_frame_diff=float(np.abs(dd).max()),
+    gid = dict(rfs_ts0=C.cm(base), rfs_archived=C.cm(arch), diff=C.cm(dd), frac_frames_within_0p01=float((np.abs(dd) <= 0.01).mean()), frac_frames_within_0p05=float((np.abs(dd) <= 0.05).mean()), max_abs_frame_diff=float(np.abs(dd).max()),
                plan=[d["info"] for d in A.S])
-    gid["ok"] = bool(abs(gid["diff"]) <= 0.002 and gid["frac_frames_within_0p01"] >= 0.99)
+    gid["ok"] = bool(abs(gid["diff"]) <= 0.01 and gid["frac_frames_within_0p05"] >= 0.95)          # prereg: cluster-mean <= 0.01, >= 95% of frames within 0.05
     # G-feat at the waypoint level (the tolerance of the prereg): tapped run vs archived run of the same weights, and vs the other seed's archived run (control)
     gf = []
     for d, t in zip(A.S, tags):
