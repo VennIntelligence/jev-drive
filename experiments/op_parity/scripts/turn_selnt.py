@@ -73,7 +73,7 @@ def cmd_build(a):
         nt, ntr = splits.load("navsim/navtest"), splits.load("navsim/navtrain")
         run.use_split(nt), run.use_split(ntr)
         df = TX.tokens_of(a.tag)
-        toks, n = df.token.to_numpy(), len(df)
+        toks, n = df.token.to_numpy().astype(str), len(df)
         pos = {t: i for i, t in enumerate(toks.tolist())}
         # ---- extraction outputs, in token order
         Z = {k: None for k in ("select_4", "mean", "road_edges", "plan_pos", "model_fold", "diff")}
@@ -83,7 +83,7 @@ def cmd_build(a):
             f = TX.out_dir(a.tag) / f"s{i}.npz"
             if not f.exists():
                 continue
-            z = np.load(f)
+            z = np.load(f, allow_pickle=True)
             ix = np.array([pos[t] for t in z["tokens"].tolist()], int)
             for k in Z:
                 if Z[k] is None:
@@ -170,7 +170,7 @@ def cmd_build(a):
         H = np.concatenate([Z["select_4"], Z["mean"]], 1)
         plan = TD.plan_desc(P0)
         OUT.mkdir(parents=True, exist_ok=True)
-        np.savez(OUT / f"train_{a.tag}.npz", tokens=toks, log=df.log.to_numpy(), fold=fold, ego=ego, plan=plan, H=H, M=M.astype(np.float32), C=Cm.astype(np.float32),
+        np.savez(OUT / f"train_{a.tag}.npz", tokens=toks, log=df.log.to_numpy().astype(str), fold=fold, ego=ego, plan=plan, H=H, M=M.astype(np.float32), C=Cm.astype(np.float32),
                  plan_pos=Z["plan_pos"], speed=speed, **{f"Y|{fk}": Y[fk].astype(np.float32) for fk in FK})
         np.save(OUT / f"train_V3_{a.tag}.npy", V3)
         gate = dict(leak=leak, margin=gm, n=n, n_logs=int(df.log.nunique()), ok=bool(leak["b_ok"] and leak["c_ok"] and leak["d_disjoint_ok"] and leak["e_ok"] and leak["a_fold_hash_ok"] and gm["map_ok"]))

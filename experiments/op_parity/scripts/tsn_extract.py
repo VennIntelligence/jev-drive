@@ -128,7 +128,7 @@ def cmd_train(a):
             m = fold == j
             assert not trs[j].mask(logs[m]).any(), f"fold {j}: a held-out log is in the training split"
         n = len(rows_all)
-        res = dict(tokens=sel.token.to_numpy(), fold=fold, row=rows_all, select_4=np.zeros((n, 512), np.float16), mean=np.zeros((n, 512), np.float16),
+        res = dict(tokens=sel.token.to_numpy().astype(str), fold=fold, row=rows_all, select_4=np.zeros((n, 512), np.float16), mean=np.zeros((n, 512), np.float16),
                    road_edges=np.zeros((n, 2, 33, 2), np.float32), plan_pos=np.zeros((n, 33, 3), np.float32), model_fold=np.full(n, -1))
         diff, ctrl = np.zeros(n), []
         speed = S.tb["speed"][rows_all]
