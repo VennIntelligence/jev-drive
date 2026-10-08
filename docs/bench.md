@@ -31,6 +31,8 @@ Name syntax `<name>[@<frames>][:<opt>]`, e.g. `P0@gimm`, `P3-F-s0:noside`.
 | adapt_h | `H-<tag>` (checkpoint in `runs/op_adapt_H/runs/<tag>`) | HUGSIM only | no-adapter ONNX export, training-port stream equivalence gate (plan xy <= 0.5 m), then the shared policy server |
 | wajepa | `WA-JEPA` | stored references (its navtest CSV, navhard harness dir) | its shipped client (`zs_run --agent wajepa`), exam preset only |
 
+`SH30-F-s{0,1}:tsA|tsB|ts0` also run on `--bench hugsim` (preset `spec_plan_smooth`, run dir `<name>-<tsX>_<preset>`): the policy ONNX is served with `--taps view_39,select_4,mean`, the bias server answers `select` requests (`experiments/op_parity/scripts/turn_selhug.py`), and the agent swaps in the picked plan; `ts0` runs everything but changes nothing (decision 194).
+
 Frame protocols (navsim only; closed loop renders its own frames): `gimm` (G, GIMM-synthesised 0.2 s pairs; shipped models and
 `P0@gimm`), `warp` (W, CPU ego-motion warp; the default of every full-run parity checkpoint and of `P0`), `keys` (N, 2 Hz keys),
 `vh140` (1.40 m virtual camera, UF-V). A parity tag defaults to the protocol it was trained on. A missing token cache for a
