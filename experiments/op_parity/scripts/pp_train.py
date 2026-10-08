@@ -55,7 +55,9 @@ ARMS = {"P1": dict(ego=False, side=False), "P2": dict(ego=True, side=False), "P3
 # representation fix (plans/2026-10-07-representation-design.md, --mem): P2 + 32 front JEPA tokens as adapter memory (side channel, n_cam = n_t = 1)
 # turn-oracle (plans/2026-10-08-turn-oracle-prereg.md): drivable-SDF banks in the same 32 x 512 slot (scripts/turn_oracle.py bank): sdf_gt = true
 # geometry (privileged, an oracle probe only), sdf_shuf = the same rows permuted across logs (matched control), sdf_wa / sdf_v = probe read-outs
-MEM_KINDS = ("wa_cf", "vj21", "sdf_gt", "sdf_shuf", "sdf_wa", "sdf_v")
+# geo-oracle (plans/2026-10-09-geo-oracle-prereg.md, scripts/geo_oracle.py tok): tokenizer outputs of the true drivable SDF (geo_s), true agent
+# occupancy (geo_a), both (geo_b) and geo_b permuted across logs (geo_x); privileged, oracle probes only
+MEM_KINDS = ("wa_cf", "vj21", "sdf_gt", "sdf_shuf", "sdf_wa", "sdf_v", "geo_s", "geo_a", "geo_b", "geo_x")
 ARMS |= {f"P2+{k}": dict(ego=True, side=False, mem=k) for k in MEM_KINDS}
 MEM_ROOT = data_dir() / "runs" / "op_parity" / "mem"          # <kind>/<data>.npy (N, 32, 512) fp16 in tab order (scripts/rep.py mem)
 MEM_DROP = 0.25                                                 # rows whose memory is masked in training ("memory off" in distribution)
