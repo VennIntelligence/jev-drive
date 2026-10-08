@@ -112,10 +112,67 @@ route (first waypoint >= 5 m away: y > 2 m left, < -2 m right) and take velocity
 A go-straight host baseline sits at rank 6 of 30, above the released DiffusionDrive and GTRS samples: the private
 suite rewards not failing (hard zeros) far more than progress. PAI track: 27 teams, top 2237, host 2000.
 
-## Running it on our box
+## Running it on our box (measured 2026-10-08, decision 184)
 
-Pending (experiments/alpasim). Known on 2026-10-08: the box has no Docker and we have no root, and AlpaSim ships a
-Docker Compose deployment; the public navtest MTGS assets are 15 shards, 458 GiB compressed (plus the 2 GiB trajdata
-cache), against 206 GB free on the data disk.
+The box has no Docker and no root, so AlpaSim runs natively: the wizard runs as shipped with `wizard.run_method=NONE`
+(it writes the compose file and every service config), and `experiments/alpasim/scripts/run_native.py` starts each
+compose service command as a host process on the card the pool hands out, container mount paths replaced by host
+paths; the run ends when the runtime exits. Their source is untouched, at the deployed commit 0bb4c4b
+(`~/data/third_party/alpasim`).
+
+```bash
+scripts/tmux_run.sh alpasim-env   experiments/alpasim/scripts/setup_env.sh   # uv env, rust, gsplat toolchain
+scripts/tmux_run.sh alpasim-fetch experiments/alpasim/scripts/fetch_data.sh  # nuplan_test + configs + part001
+scripts/tmux_run.sh alpasim-ltf   experiments/alpasim/scripts/setup_ltf.sh   # shipped LTF sample, own venv
+R=$DATA_DIR/runs/alpasim; D=$R/<name>/<ts>
+.venv/bin/python -m jevdrive.cl submit --name alpasim-<name> --vram 40 --cpu 16 --log-dir $D/pool -- \
+  bash experiments/alpasim/scripts/run.sh $D ltf --scene-list $R/scenes_navtest_full_part001_48.txt \
+  +e2e_challenge_nuplan=full runtime.nr_workers=2 runtime.endpoints.renderer.n_concurrent_rollouts=8 \
+  runtime.endpoints.driver.n_concurrent_rollouts=8 runtime.endpoints.controller.n_concurrent_rollouts=8 \
+  defines.nre_cache_size=9
+```
+
+`run.sh <dir> starter|ltf [--tap] [--scene-list F] <wizard overrides>`; `--tap` puts `driver_tap.py` (a logging gRPC
+proxy) between runtime and driver. Each run dir has `native_summary.json`, `usage.jsonl` (1 Hz), `native-logs/`,
+`aggregate/results-summary.json`.
+
+Deviations from the shipped environment: no containers (no read-only root, no cpu / memory limits); workspace members
+installed editable instead of `uv sync --extra all --extra mtgs` (GitHub sources of the in-repo drivers timed out, so
+those drivers and physics are not installed; `exclude-newer` not applied); torch 2.9.1+cu128 (their image: CUDA 12.4,
+which has no sm_120), gsplat 1.5.3 JIT-built with their `TORCH_CUDA_ARCH_LIST` (196 s once, cached); LTF venv with
+torch 2.8.0 instead of the pinned 2.6.0; ffmpeg from imageio-ffmpeg. Full list: `~/data/runs/alpasim/setup/freeze.txt`.
+
+| Measured (LTF sample, part001 scenes, one card) | Value |
+|---|---|
+| Sequential | ~20 s per scene (session ~10 s for 5 sim s; rest eval + video) |
+| 8 concurrent rollouts | 2.96 s per scene; 16 concurrent 2.93 (one renderer process is the bottleneck) |
+| VRAM | renderer 5 GB (1 scene), 12.5 GB (8 concurrent), 17.6 GB (16); LTF driver 1 GB |
+| CPU / RAM at 8 concurrent | ~4.5 cores; runtime 14 GB RSS |
+| Disk | env 8.9 G, LTF env 6.6 G; trajdata cache 4.4 G; assets 0.38 G per scene (part001: 100 scenes, 38 G); output 27 MB per scene |
+| LTF `Drive` call | 37-41 ms |
+| LTF score | 48 scenes: mean scene score 0.8735, 43 pass; zeros: 4 `left_corridor_laterally`, 1 `offroad` |
+
+Full public suite (1 485 scenes), extrapolated, not run: one stack per card at 8 concurrent, ~25 min wall on 3 cards,
+~1.25 card-hours, ~40 GB output. The cost is the data: 458 GiB of tarballs, ~565 G extracted, 20 h or more to
+download through the mirror (it throttles long connections; `fetch_data.sh` reconnects every 90 s), against 434 G
+free on 2026-10-08.
+
+What a nuPlan-track driver actually receives (tap logs, `dev_ltf/20261008-121717/driver_tap.jsonl`):
+
+- A scene is **5.5 s: 10 `drive` calls** at 2 Hz (`time_now` 0.017, 0.517, ... 4.517 s; query = now + 0.5 s), one
+  `start_session`, 10 egomotion, 10 route, 88 images (8 cameras x 11 instants). **No history before t = 0**: the
+  first `drive` has one frame per camera and two poses (t = 0 and 0.017 s).
+- Within a step the 8 images, the egomotion and the route arrive concurrently in no fixed order, then `drive`; align
+  by timestamp. No RPC deadline.
+- CAM_F0: fx 1573.5, fy 1496.3, cx 960, cy 560; `rig_to_camera` translation (1.786, -0.026, 1.523) m. Ego box
+  5.176 x 2.297 x 1.777 m.
+- Egomotion: local->rig poses (local origin = first pose) with rig-frame velocity / acceleration; the first sample's
+  velocity looked unrotated ((0.14, 11.47) m/s), guard against it.
+- Route: 20 waypoints in the rig frame, ~4.2 m apart, 40-80 m ahead; about half are NaN padding.
+- Response: the samples return 10 Hz poses in the local frame with absolute timestamps (starter 51 poses / 5 s; LTF
+  resamples its 8 x 0.5 s plan).
+
+Not verified: numerical agreement with the official Docker environment (no nuPlan reference scores exist), several
+renderer replicas per card, three stacks at once, scenes outside part001, the `ec2` preset, controller gain overrides.
 
 Last verified: 2026-10-08

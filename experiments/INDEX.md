@@ -21,7 +21,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [op_wide_ft](op_wide_ft/README.md) (wide FOV fine-tune, W116): concluded; Fine-tune with 116 deg wide: B2D small set 0/9 both arms, ol exit -0.002; gate stop [d(pending)]
 - [alpamayo_turns](alpamayo_turns/README.md) (Alpamayo side cameras, multi-view turns): concluded; Cross cams off: dA_H +0.01 [-0.15,0.14] (nav); tele-slot drop -0.39 [d(pending)]
 - [vlm_arb](vlm_arb/README.md) (vlm-arb, vlm_arb): live; Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privileged 5), DS +5.0; fixed bypass pbyp2, stop-line R2 vred2, yellow rule vred3 [d84-87,89,91,95]
-- [alpasim](alpasim/README.md) (AlpaSim challenge, nuPlan track): live; nuPlan track, 2 Hz cameras, NMPC tracks our plan; off-road is a hard zero [d(pending)]
+- [alpasim](alpasim/README.md) (AlpaSim challenge, nuPlan track): live; runs natively on the box, 2.96 s / scene; LTF sample 0.8735 on 48 scenes [d184]
 
 **openpilot adaptation**
 
