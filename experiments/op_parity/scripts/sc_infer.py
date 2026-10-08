@@ -72,11 +72,12 @@ def main():
             dl = np.nanmax(np.abs(z["lead_x"][rows][ok] - lx[ok]))
             run.summary.update(ref_max_plan_diff_m=float(d), ref_max_lead_x_diff=float(dl), ref_rows=int(ok.sum()))
             run.info(f"vs stored plans: max |dplan_pos| {d:.4g} m, max |dlead_x| {dl:.4g} over {int(ok.sum())} rows")
-            assert d < 0.05, f"re-run plan differs from the stored plan by {d} m"
         out.parent.mkdir(parents=True, exist_ok=True)
         np.savez(out.with_suffix(".tmp.npz"), **res)
         out.with_suffix(".tmp.npz").rename(out)
         run.summary.update(out=str(out), n=int(n))
+        if a.ref:
+            assert d < 0.05, f"re-run plan differs from the stored plan by {d} m"
 
 
 if __name__ == "__main__":
