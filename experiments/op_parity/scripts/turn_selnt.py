@@ -32,7 +32,7 @@ FK = TS.FK                                             # ["F19 x pc", "L9 x epca
 FKS = TS.FKS
 NCAND = 19                                             # F19 = c00..c18 are the scored candidates
 CFG = [(64, 0.1, 0.05), (128, 0.2, 0.05), (128, 0.3, 0.3), (256, 0.3, 0.3)]
-FRACS = (0.05, 0.1, 0.25, 0.5)
+FRACS = (0.05, 0.1, 0.25, 0.5, 0.75)
 STREAMS = {"E": ["ego", "plan"], "N1": ["ego", "plan", "Cflat"], "N4": ["H", "ego", "plan"], "P1": ["ego", "plan", "Mflat"]}
 MARG = {"N2": "C", "N3": "C", "P2": "M", "P3": "M"}
 NN_SPEC = {"N5": dict(tok=1), "N6": dict(h=1), "N7": dict(tok=1, h=1, c="C"), "N8": dict(tok=1, c="C"), "P4": dict(c="M")}
@@ -97,10 +97,10 @@ def cmd_build(a):
         assert (Z["model_fold"] == fold).all()
         # ---- G-leak
         leak = dict(a_fold_hash_ok=bool(all(TX.fold_of_log(l) == f for l, f in zip(df.log, fold))), a_model_fold_ok=True,
-                    b_max_diff_m=max(g["max_diff_m"] for g in gates), b_median_diff_m=float(np.median([g["median_diff_m"] for g in gates])),
-                    c_ctrl_median_diff_m=float(np.median([g["ctrl_median_diff_m"] for g in gates if "ctrl_median_diff_m" in g])) if any("ctrl_median_diff_m" in g for g in gates) else None)
-        leak["b_ok"] = leak["b_max_diff_m"] < 0.05
-        leak["c_ok"] = leak["c_ctrl_median_diff_m"] is None or leak["c_ctrl_median_diff_m"] > 10 * max(leak["b_median_diff_m"], 1e-3)
+                    b_max_ratio=max(g["max_ratio"] for g in gates), b_median_ratio=float(np.median([g["median_ratio"] for g in gates])),
+                    c_ctrl_median_ratio=float(np.median([g["ctrl_median_ratio"] for g in gates if "ctrl_median_ratio" in g])) if any("ctrl_median_ratio" in g for g in gates) else None)
+        leak["b_ok"] = leak["b_max_ratio"] <= 1.0
+        leak["c_ok"] = leak["c_ctrl_median_ratio"] is None or leak["c_ctrl_median_ratio"] > 5.0
         # (d) the navtest tokens are not navtrain members and vice versa
         tt, _ = TC.bucket_tokens()
         leak["d_disjoint_ok"] = bool(not ntr.mask(tt).any() and not nt.mask(toks).any())
