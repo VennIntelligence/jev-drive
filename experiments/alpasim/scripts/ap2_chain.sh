@@ -4,6 +4,7 @@
 #   ap2_chain.sh pilot            routes + cold / backwarp tokens (navtest, shards 2-4) -> pilot arms N0 / A / AR / AB -> navtest offline read
 #   ap2_chain.sh full <arm args>  routes + cold tokens of the other 9 shards -> AP2-<name>-s0 (SH30 recipe) -> navtest offline read
 #                                 e.g. full A            (4-way route command, rule zero)   |   full AR --route   |   full AB --cold backwarp
+#   ap2_chain.sh prepfull         routes + cold / backwarp tokens of the other 9 shards (can run while the pilot is read)
 #   ap2_chain.sh loop <tag>       AlpaSim closed loop with the AP2 driver, tapped: 1 scene -> 3 -> 48 (8 concurrent), driver sanity after
 #                                 each, route rebuild check, frame / BEV figures, per-scene table next to SH30 and LTF
 # State: $DATA_DIR/runs/alpasim/ap2/chain-<stage>/{STATUS, DONE, ERROR, log.txt, jobs.txt}; pool logs under .../ap2/pool/.
@@ -55,6 +56,11 @@ if [[ $STAGE == pilot ]]; then
   waitdirs $L/t-N0 $L/t-A $L/t-AR $L/t-AB
   status "offline read on navtest"
   offline pilot SHP SH30=SH30-F-s0 SHP=SHP-F-s0 N0=AP2P-N0-s0 A=AP2P-A-s0 AR=AP2P-AR-s0 AB=AP2P-AB-s0
+elif [[ $STAGE == prepfull ]]; then   # the other 9 shards ahead of the arm choice: routes, cold and backwarp tokens (either rule can train on them)
+  REST=$(for i in 0 1 5 6 7 8 9 10 11; do echo -n "navtrain_full.s${i}of$K "; done)
+  status "routes and tokens of 9 shards"
+  for d in $REST; do route $d hash; prep $d --bw; done
+  waitdirs $(for d in $REST; do echo $L/route-$d $L/prep-$d; done)
 elif [[ $STAGE == full ]]; then
   NAME=$1; shift
   REST=$(for i in 0 1 5 6 7 8 9 10 11; do echo -n "navtrain_full.s${i}of$K "; done)
