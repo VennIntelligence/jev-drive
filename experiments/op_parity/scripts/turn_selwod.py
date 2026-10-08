@@ -294,6 +294,7 @@ def main():
     p = sp.add_parser("report")
     p.add_argument("--tags", nargs="+", default=["SH30-F-s0", "SH30-F-s1"])
     p.add_argument("--name", default="turn_selector_wod")
+    p.add_argument("--base", default="tapped", choices=["tapped", "archived"], help="archived: prereg addendum only (G-id failed by engine noise)")
     a = ap.parse_args()
     if a.cmd == "report":
         return __import__("turn_selwod_report").report(a)

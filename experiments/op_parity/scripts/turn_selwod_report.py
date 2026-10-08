@@ -25,7 +25,7 @@ def f3(t):
 class Arm:
     """One model family (tags = its two seeds): per-seed candidate RFS tables and the picks."""
 
-    def __init__(self, C, tags, order):
+    def __init__(self, C, tags, base="tapped"):
         self.C, self.tags = C, tags
         self.S = []
         for t in tags:
@@ -34,6 +34,9 @@ class Arm:
             assert sorted(names.tolist()) == sorted(C.names[: C.n].tolist())
             idx = np.array([{k: i for i, k in enumerate(names)}[k] for k in C.names[: C.n]])
             d = {k: z[k][idx] for k in ("pred", "pick_free", "dyaw", "W10", "W4", "wod", "arch_wod")}
+            if base == "archived":                                  # prereg addendum only: archived waypoints + the candidate's change
+                for k in ("W10", "W4"):
+                    d[k] = d["arch_wod"][:, None] + (d[k] - d["wod"][:, None])
             d["info"] = json.loads(str(z["info"]))
             d["R10"] = np.stack([C.rfs(d["W10"][:, c].astype(np.float64)) for c in range(d["W10"].shape[1])], 1)      # (n, 19)
             d["R4"] = np.stack([C.rfs(d["W4"][:, c].astype(np.float64)) for c in range(d["W4"].shape[1])], 1)
@@ -49,8 +52,8 @@ class Arm:
         return self.per_frame(lambda d: d[key][np.arange(self.C.n), d["pk_B"] if gate == "B" else d["pick_free"] if gate == "A" else 0 * d["pk_B"]])
 
 
-def run(C, tags, label, out):
-    A = Arm(C, tags, None)
+def run(C, tags, label, out, base_mode="tapped"):
+    A = Arm(C, tags, base_mode)
     n = C.n
     ii = np.arange(n)
     res = {"label": label, "tags": tags}
@@ -61,7 +64,23 @@ def run(C, tags, label, out):
     gid = dict(rfs_ts0=C.cm(base), rfs_archived=C.cm(arch), diff=C.cm(dd), frac_frames_within_0p01=float((np.abs(dd) <= 0.01).mean()), max_abs_frame_diff=float(np.abs(dd).max()),
                plan=[d["info"] for d in A.S])
     gid["ok"] = bool(abs(gid["diff"]) <= 0.002 and gid["frac_frames_within_0p01"] >= 0.99)
+    # G-feat at the waypoint level (the tolerance of the prereg): tapped run vs archived run of the same weights, and vs the other seed's archived run (control)
+    gf = []
+    for d, t in zip(A.S, tags):
+        dw = np.abs(d["arch_wod"].astype(np.float64) - d["wod"]).max((1, 2))
+        gf.append(dict(tag=t, rows_over_0p25=float((dw > 0.25).mean()), median=float(np.median(dw)), max=float(dw.max())))
+    for i, d in enumerate(A.S):
+        dc = np.abs(A.S[1 - i]["arch_wod"].astype(np.float64) - d["wod"]).max((1, 2))
+        gf[i].update(control_rows_over_0p25=float((dc > 0.25).mean()), control_median=float(np.median(dc)))
+    gid["g_feat"] = gf
+    gid["g_feat_ok"] = bool(all(g["rows_over_0p25"] <= 0.02 and g["control_rows_over_0p25"] > 0.5 for g in gf))
+    gid["g_eqv"] = [d["info"]["g_eqv_pick_agreement"] for d in A.S]
+    gid["g_gen"] = [d["info"]["g_gen_max_abs"] for d in A.S]
+    gid["g_map"] = [d["info"]["g_map_max_abs_m"] for d in A.S]
     res["gid"] = gid
+    out.joinpath(f"{label}_gates.json").write_text(json.dumps(gid, indent=1))
+    if not (gid["ok"] and gid["g_feat_ok"]) and base_mode == "tapped" and label == "SH30":
+        raise SystemExit(f"gate failed, stop and report: {json.dumps({k: v for k, v in gid.items() if k != 'plan'})}")
     print(label, "G-id", {k: v for k, v in gid.items() if k != "plan"}, flush=True)
     # ---- masks
     intent = np.asarray(C.intent)
@@ -204,7 +223,7 @@ def report(a):
         for lab, tags in groups.items():
             if not all(TW.sel_file(t).exists() for t in tags):
                 continue
-            res[lab] = run(C, tags, lab, out)
+            res[lab] = run(C, tags, lab, out, a.base)
         run.summary.update({k: dict(verdict=v[0]["verdict"], d=v[0]["primary"]["d"], lo=v[0]["primary"]["lo"], hi=v[0]["primary"]["hi"]) for k, v in res.items()})
         figs(res, C)
 
