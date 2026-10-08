@@ -397,6 +397,171 @@ def cmd_nn(a):
         run.summary.update(n_units=len(units))
 
 
+# ---------------------------------------------------------------- 4. report
+ROWS = [("E", "L", "E: ego + plan (control, = decision 186)", ""), ("P1", "L", "P1: E + per-candidate map margin (ridge)", "PRIV"),
+        ("P2", "G", "P2: E + map margin (trees on candidate rows)", "PRIV"), ("P3", "R", "P3: map-margin rule, 1 parameter", "PRIV"),
+        ("N1", "L", "N1: E + own-edge margin (ridge)", ""), ("N2", "G", "N2: E + own-edge margin (trees)", ""), ("N3", "R", "N3: own-edge margin rule, 1 parameter", ""),
+        ("N4", "L", "N4: E + SH30 hidden state (PCA, ridge)", ""), ("N5", "NN", "N5: E + unpooled vision tokens (attention head)", ""),
+        ("N6", "NN", "N6: E + SH30 hidden state (MLP)", ""), ("N7", "NN", "N7: tokens + hidden + own-edge margins + E (all non-privileged)", "")]
+NP, NN_ = 3, 7                                             # multiplicity: privileged arms, non-privileged arms
+THRESH = dict(large=0.40, little=0.20, rising=0.3)
+
+
+def cmd_report(a):
+    from jevdrive import stats
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    from scipy.stats import rankdata
+    with Run("op_parity", "turn_selinput/report", seed=0, config=vars(a)) as run:
+        run.use_split(splits.load("navsim/navtest"))
+        out, figd = _pl.Path(a.out), _pl.Path(a.figs)
+        out.mkdir(parents=True, exist_ok=True)
+        C, tok, dyaw, log, X, F = prepare()
+        R = {}
+        for f in ("select2.pkl", "nn.pkl"):
+            with open(OUT / f, "rb") as fh:
+                R.update(pickle.load(fh)["res"])
+        B = {k: v for k, v in TD.buckets(dyaw).items() if "left" not in k and "right" not in k}
+        ceil = {fk: _D["Y", fk].max(-1).mean(0) for fk in FK}
+        zero = np.zeros(len(log))
+
+        def mean_of(kind, arm, fk, opt=1.0, key="d"):
+            v = [r[key] for k, r in R.items() if k[:3] == (kind, arm, fk) and k[4] == opt and key in r]
+            return np.mean(v, 0), len(v)
+
+        def gci(d, m, alpha=0.05):
+            return stats.paired(100 * d[m], zero[m], groups=log[m], alpha=alpha)
+        G, rows, verdict = {}, [], {}
+        for arm, head, lab, priv in ROWS:
+            alpha = 0.05 / NP if priv else (0.05 / NN_ if arm != "E" else 0.05)
+            for fk in FK:
+                d, nrep = mean_of("oof", arm, fk)
+                r = {"arm": arm, "head": head, "description": lab, "input": priv or "model-side", "family x convention": fk, "repeats": nrep}
+                for b, m in B.items():
+                    G[arm, fk, b] = gci(d, m)
+                    r[b] = TC.cell(G[arm, fk, b])
+                G[arm, fk, "adj"] = gci(d, B["> 20 deg"], alpha)
+                r[f"adj. CI ({100 * (1 - alpha):.2f}%)"] = TC.cell(G[arm, fk, "adj"])
+                q = TC.ratio_ci(d, ceil[fk], log)
+                G[arm, fk, "rec"] = q
+                r["recovery of the ceiling"] = f"{100 * q['mean']:.1f}% [{100 * q['lo']:.1f}, {100 * q['hi']:.1f}]"
+                pk = np.stack([x["picks"] for k, x in R.items() if k[:3] == ("oof", arm, fk) and k[4] == 1.0])
+                r["moved %"] = f"{100 * (pk != 0).mean():.1f}"
+                rows.append(r)
+        stats.write_table(rows, out / "selector", note="out-of-fold gain over SH30 of the selected candidate under the family's convention, EPDMS x 100 (no EC), seed mean, "
+                          "mean over repeats of 5 folds by log; paired log-cluster bootstrap, B 10 000. PRIV = uses map geometry (upper bound, not a method). "
+                          f"adj. CI = Bonferroni over {NP} privileged / {NN_} non-privileged arms.")
+        # ---- verdict, as pre-registered
+        f0, f1 = FK
+        priv = {x: dict(lo=G[x, f0, "adj"]["lo"], gain=G[x, f0, "> 20 deg"]["mean"], rec=G[x, f0, "rec"]["mean"]) for x in ("P1", "P2", "P3")}
+        nonp = {x: dict(lo=G[x, f0, "adj"]["lo"], lo95=G[x, f0, "> 20 deg"]["lo"], gain=G[x, f0, "> 20 deg"]["mean"], gain_l9=G[x, f1, "> 20 deg"]["mean"],
+                        rec=G[x, f0, "rec"]["mean"]) for x in ("N1", "N2", "N3", "N4", "N5", "N6", "N7")}
+        p_large = any(v["lo"] > 0 and v["rec"] >= THRESH["large"] for v in priv.values())
+        p_little = all(v["rec"] < THRESH["little"] or (v["lo"] <= 0 and v["rec"] < THRESH["large"]) for v in priv.values())
+        n_pos = sorted([k for k, v in nonp.items() if v["lo"] > 0 and v["gain_l9"] > 0], key=lambda k: -nonp[k]["gain"])
+        n_hint = [k for k, v in nonp.items() if v["lo95"] > 0 and k not in n_pos]
+        case = "iii" if n_pos else "i" if p_large else "ii" if p_little else "partial"
+        verdict = dict(case=case, privileged_large=p_large, privileged_little=p_little, nonpriv_positive=n_pos, nonpriv_hint_unadjusted=n_hint, priv=priv, nonpriv=nonp,
+                       ceiling_f0=float(100 * ceil[f0].mean()), thresholds=THRESH)
+        (out / "verdict.json").write_text(json.dumps(verdict, indent=1, default=float))
+        run.info("verdict: %s", json.dumps(verdict, default=float))
+        # ---- learning curves
+        rows, CV = [], {}
+        fr_all = (*CURVE, 1.0)
+        for arm, head, lab, priv_ in ROWS:
+            for fk in FK:
+                r = {"arm": arm, "family x convention": fk}
+                for fr in fr_all:
+                    d, _ = mean_of("oof", arm, fk) if fr == 1.0 else mean_of("curve", arm, fk, fr)
+                    CV[arm, fk, fr] = gci(d, B["> 20 deg"])
+                    r[f"{int(100 * fr)}%"] = TC.cell(CV[arm, fk, fr])
+                r["rising 75 -> 100%"] = bool(CV[arm, fk, 1.0]["mean"] - CV[arm, fk, 0.75]["mean"] >= THRESH["rising"])
+                rows.append(r)
+        stats.write_table(rows, out / "learning_curve", note="gain > 20 deg vs the share of training logs; trees 2 repeats and neural heads 3 repeats at <100%")
+        # ---- AUC: "a repair exists" (F19 x pc gain > 0)
+        y = _D["Y", f0][:, :, 1:].max(-1) > 1e-9                                      # (S, n)
+        lc = _D["lcode"]
+        rng = np.random.default_rng(0)
+        idx = [np.flatnonzero(lc == g) for g in range(lc.max() + 1)]
+        boot = [np.concatenate([idx[g] for g in rng.integers(0, len(idx), len(idx))]) for _ in range(1000)]
+
+        def auc_ci(sc):
+            q = [_auc(sc[:, bi], y[:, bi]) for bi in boot]
+            return f"{_auc(sc, y):.3f} [{np.quantile(q, 0.025):.3f}, {np.quantile(q, 0.975):.3f}]"
+        f = TD.folds(0)
+        Mz = np.load(OUT / "margins.npz")
+        rows = [{"score": "base rate % of token-seeds", "AUC": f"{100 * y.mean():.1f}"},
+                {"score": "- identity map margin (4 s), PRIV", "AUC": auc_ci(-Mz["M"][:, 0, :, 3])},
+                {"score": "- identity own-edge margin (4 s)", "AUC": auc_ci(-Mz["C"][:, 0, :, 3])}]
+        for lab, streams in (("ridge on the 0 / 1 label: E", ["ego", "plan"]), ("... E + map margins, PRIV", ["ego", "plan", "Mflat"]), ("... E + own-edge margins", ["ego", "plan", "Cflat"]),
+                             ("... E + hidden state (32 PCs)", ["H", "ego", "plan"])):
+            Xa, sc = xof(streams, 32, f0), np.zeros(y.shape)
+            for j in range(TD.FOLDS):
+                P = TD.ridge_fit(Xa[:, f != j].reshape(-1, Xa.shape[-1]), y[:, f != j].reshape(-1, 1).astype(float))
+                sc[:, f == j] = P(Xa[:, f == j].reshape(-1, Xa.shape[-1]), 100.0).reshape(S, -1)
+            rows.append({"score": lab, "AUC": auc_ci(sc)})
+        for arm, head, lab, priv_ in ROWS:
+            if arm == "E":
+                continue
+            sc, _ = mean_of("oof", arm, f0, key="sc")
+            rows.append({"score": f"{arm} head: max predicted gain" if head != "R" else f"{arm} rule: - identity margin", "AUC": auc_ci(sc)})
+        stats.write_table(rows, out / "auc_repair_exists", floatfmt=".1f", note="out-of-fold AUC of 'F19 x pc has a candidate with gain > 0' per (token, seed), > 20 deg; log-cluster bootstrap B 1000. "
+                          "Decision 186 main arm E: 0.692 [0.660, 0.720].")
+        # ---- contrasts against E
+        rows = []
+        for arm, head, lab, priv_ in ROWS[1:]:
+            r = {"contrast": f"{arm} - E"}
+            for fk in FK:
+                dd = mean_of("oof", arm, fk)[0] - mean_of("oof", "E", fk)[0]
+                r[fk] = TC.cell(gci(dd, B["> 20 deg"]))
+            rows.append(r)
+        stats.write_table(rows, out / "contrasts_vs_E", note="paired difference of out-of-fold gains, > 20 deg, same folds")
+        # ---- what the privileged rule picks and a descriptive coverage reading
+        Mf, Y = _D[f"M|{f0}"], _D["Y", f0]
+        rep_ex = Y[:, :, 1:].max(-1) > 1e-9
+        rows = [{"reading": "repair exists (F19 x pc), % of token-seeds", "value": 100 * rep_ex.mean()},
+                {"reading": "... of which a candidate with 4 s map margin > 0 exists, %", "value": 100 * ((Mf[..., 1:, 3] > 0).any(-1) & rep_ex).sum() / rep_ex.sum()},
+                {"reading": "identity 4 s map margin < 0 (would be DAC-risky), % of token-seeds", "value": 100 * (Mf[..., 0, 3] < 0).mean()},
+                {"reading": "identity own-edge margin < 0, % of token-seeds", "value": 100 * (_D[f"C|{f0}"][..., 0, 3] < 0).mean()}]
+        stats.write_table(rows, out / "descriptive", floatfmt=".1f")
+        fig_report(figd, G, CV, ceil, verdict)
+        run.summary.update(case=case, nonpriv_positive=",".join(n_pos))
+
+
+def fig_report(FIGD, G, CV, ceil, vd):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import plot_style as ps
+    ps.apply()
+    FIGD.mkdir(parents=True, exist_ok=True)
+    f0, f1 = FK
+    fig, axs = plt.subplots(1, 3, figsize=(ps.DOUBLE_COLUMN_IN, 2.9), constrained_layout=True, gridspec_kw=dict(width_ratios=[2.4, 1, 1]))
+    names = [r[0] for r in ROWS]
+    cols = [ps.PALETTE["black"] if r[3] == "" and r[0] == "E" else ps.PALETTE["vermillion"] if r[3] else ps.PALETTE["blue"] for r in ROWS]
+    for ax, fk in ((axs[0], f0),):
+        v = np.array([[G[x, fk, "> 20 deg"]["mean"], G[x, fk, "> 20 deg"]["mean"] - G[x, fk, "> 20 deg"]["lo"], G[x, fk, "> 20 deg"]["hi"] - G[x, fk, "> 20 deg"]["mean"]] for x in names])
+        ax.bar(range(len(names)), v[:, 0], 0.7, yerr=v[:, 1:].T, color=cols, error_kw=dict(lw=0.6, capsize=1.2))
+        ax.axhline(100 * ceil[fk].mean(), color=ps.BASELINE, ls="--", lw=0.8)
+        ax.text(len(names) - 0.5, 100 * ceil[fk].mean(), "ceiling", ha="right", va="bottom", fontsize=7, color=ps.BASELINE)
+        ax.set_xticks(range(len(names)), names, fontsize=7)
+        ax.set_ylabel("selector - SH30, out of fold, EPDMS x 100\n(F19 x pc, > 20 deg, 95% CI)")
+        ps.bars(ax), ps.zero_line(ax)
+        ax.text(0.02, 0.97, "red = PRIVILEGED (map margin); blue = model-side; black = control", transform=ax.transAxes, fontsize=6.5, va="top")
+    best_p = max(("P1", "P2", "P3"), key=lambda k: vd["priv"][k]["gain"])
+    best_n = max(("N1", "N2", "N3", "N4", "N5", "N6", "N7"), key=lambda k: vd["nonpriv"][k]["gain"])
+    xs = (*CURVE, 1.0)
+    for ax, fk in ((axs[1], f0), (axs[2], f1)):
+        for arm, c in (("E", ps.PALETTE["black"]), (best_p, ps.PALETTE["vermillion"]), (best_n, ps.PALETTE["blue"])):
+            v = np.array([[CV[arm, fk, x]["mean"], CV[arm, fk, x]["lo"], CV[arm, fk, x]["hi"]] for x in xs])
+            ax.plot(xs, v[:, 0], color=c, marker="o", ms=2.5, label=arm + (" (PRIV)" if arm == best_p else ""))
+            ax.fill_between(xs, v[:, 1], v[:, 2], color=c, alpha=0.12, lw=0)
+        ax.set_xticks(xs, [f"{int(100 * x)}%" for x in xs], fontsize=7)
+        ax.set_xlabel("share of training logs"), ax.set_title(fk, fontsize=8), ps.zero_line(ax), ax.legend(fontsize=6)
+    fig.savefig(FIGD / "selector_inputs.png", dpi=300)
+    plt.close(fig)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sp = ap.add_subparsers(dest="cmd", required=True)
