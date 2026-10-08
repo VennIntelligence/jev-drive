@@ -1,527 +1,471 @@
-"""Generate figures for leaderboard-recipes report.
+"""Generate figures for the leaderboard-recipes report.
 
-All plotted numbers are hard-coded with citations to primary lit notes and tables.
-Style matches research/plot_style.py (serif, STIXGeneral, Okabe-Ito, single/double col).
+Every plotted number is hard-coded next to a comment naming its source note
+(research/lit/2026-10-08-*.md; VER = the verification note, which re-read the
+primary tables). Protocols that are not comparable never share an axis:
+navhard pre-fix vs post-fix, PDMS vs EPDMS, navval vs navtest, WOD val vs test.
+Style: research/plot_style.py.
 """
 import sys
 from pathlib import Path
-import numpy as np
+
 import matplotlib
+import numpy as np
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
-# Add repo root to import research.plot_style
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 import research.plot_style as ps
 
 OUT_DIR = Path(__file__).resolve().parent
+P = ps.PALETTE
+LEG = dict(fontsize=5.6, frameon=True, facecolor='white', edgecolor='none', framealpha=0.9, handlelength=1.6)
 
-def setup():
-    ps.apply()
+
+def _vals(ax, xs, tops, labels, dy, fs=5.6):
+    for x, t, s in zip(xs, tops, labels):
+        ax.text(x, t + dy, s, ha='center', va='bottom', fontsize=fs, color='#333333')
+
 
 # -----------------------------------------------------------------------------
-# Figure 1: Score Decomposition Ladders across 3 Benchmarks
-# Sources:
-# WOD-E2E: lit 1 §1, §3, §4; decisions 180 (WLG test 8.099)
-# NAVSIM v1: lit 2 §2, §3, §7.2; decisions 170 (SH30 navtest 89.55)
-# NAVSIM navhard (post-fix): lit 2 §2, §7.2; lit 5 §4.1; decisions 148, 170 (SH30 ~33.7)
+# Figure 1: cross-paper score ladders, one panel per board.
+# (a) WOD note Q2: only 7.41 is a measured entry (Poutine ego-status MLP); the
+#     other steps are mid-range picks of cross-paper ranges, not additive.
+# (b) NAVSIM note 7.2 + 7.4; DrivoR / DriveZero papers; decision 170 (SH30).
+# (c) navhard two-stage EPDMS, post-fix only: NAVSIM note 7.4; DrivoR 48.3 and
+#     +134k SimScale 54.6; TOAD 56.3 (VER #13, #14); decision 170 (SH30 33.67).
 # -----------------------------------------------------------------------------
 def make_fig1():
-    fig, axes = plt.subplots(1, 3, figsize=(ps.DOUBLE_COLUMN_IN, 2.7))
-    fig.subplots_adjust(left=0.07, right=0.98, top=0.88, bottom=0.24, wspace=0.38)
+    fig, axes = plt.subplots(1, 3, figsize=(ps.DOUBLE_COLUMN_IN, 3.7))
+    fig.subplots_adjust(left=0.07, right=0.985, top=0.92, bottom=0.46, wspace=0.36)
+    x = np.arange(5)
+    below = dict(loc='upper center', bbox_to_anchor=(0.5, -0.52), **LEG)
 
-    # Panel (a): WOD-E2E test RFS
     ax = axes[0]
     ps.bars(ax)
-    ps.panel(ax, '(a) WOD-E2E (test RFS)')
-    steps_a = ['Ego-MLP', '+In-Domain', '+Extra Data', '+Metric RL', '+Ensemble']
-    base_a = [0, 7.41, 7.87, 7.99, 8.10]
-    deltas_a = [7.41, 0.46, 0.12, 0.11, 0.05]
-    colors_a = [ps.BASELINE, ps.PALETTE['sky_blue'], ps.PALETTE['blue'], ps.PALETTE['orange'], ps.PALETTE['green']]
-    
-    x = np.arange(len(steps_a))
-    ax.bar(x, deltas_a, bottom=base_a, color=colors_a, width=0.55, edgecolor='none')
-    
-    ax.axhline(8.13, color=ps.PALETTE['vermillion'], linestyle='--', linewidth=0.8, label='Human log (8.13)')
-    ax.axhline(8.099, color=ps.PALETTE['purple'], linestyle=':', linewidth=0.8, label='Ours WLG (8.099)')
-    ax.axhline(8.167, color='#333333', linestyle='-.', linewidth=0.6, label='Top ZSD-Titan (8.17)')
-    
+    ps.panel(ax, '(a) WOD-E2E, test RFS')
+    steps = ['Ego-MLP 7.41\n(measured)', '+in-domain SFT\n(+0.35 to +0.5)', '+extra driving data\n(+0.1 to +0.15)',
+             '+RL on val labels\n(+0.07 to +0.17)', '+ensemble\n(about +0.05)']
+    base, delta = [0, 7.41, 7.87, 7.99, 8.10], [7.41, 0.46, 0.12, 0.11, 0.05]
+    ax.bar(x, delta, bottom=base, width=0.55, edgecolor='none',
+           color=[ps.BASELINE, P['sky_blue'], P['blue'], P['orange'], P['green']])
+    ax.text(0, 7.43, '7.41', ha='center', va='bottom', fontsize=5.8)
+    ax.axhline(8.099, color=P['purple'], ls=':', lw=0.9, label='Ours WLG 8.099')
+    ax.axhline(8.167, color='#333333', ls='-.', lw=0.7, label='Top: ZSD-Titan 8.167')
     ax.set_ylim(7.0, 8.3)
     ax.set_xticks(x)
-    ax.set_xticklabels(steps_a, rotation=35, ha='right', fontsize=6.5)
-    ax.set_ylabel('RFS')
-    ax.legend(loc='lower right', fontsize=6.0, frameon=False, handlelength=1.5)
+    ax.set_xticklabels(steps, rotation=38, ha='right', fontsize=5.4)
+    ax.set_ylabel('RFS (test)')
+    ax.legend(**below)
 
-    # Panel (b): NAVSIM v1 (navtest PDMS)
     ax = axes[1]
     ps.bars(ax)
-    ps.panel(ax, '(b) NAVSIM v1 (PDMS)')
-    steps_b = ['Ego-MLP', '+Base Vis.', '+Video-SSL', '+Scorer/RL', '+Sim/Search']
-    base_b = [0, 65.6, 84.0, 90.0, 93.7]
-    deltas_b = [65.6, 18.4, 6.0, 3.7, 1.6]
-    colors_b = [ps.BASELINE, ps.PALETTE['sky_blue'], ps.PALETTE['blue'], ps.PALETTE['orange'], ps.PALETTE['green']]
-    
-    ax.bar(x, deltas_b, bottom=base_b, color=colors_b, width=0.55, edgecolor='none')
-    ax.axhline(94.8, color=ps.PALETTE['vermillion'], linestyle='--', linewidth=0.8, label='Human log (94.8)')
-    ax.axhline(89.55, color=ps.PALETTE['purple'], linestyle=':', linewidth=0.8, label='Ours SH30 (89.6)')
-    ax.axhline(91.1, color='#666666', linestyle='-.', linewidth=0.6, label='Memory-only (91.1)')
-    
+    ps.panel(ax, '(b) NAVSIM v1, navtest PDMS')
+    steps = ['Ego-MLP', 'TransFuser (IL)', '+head, scorer / RL', 'DrivoR (trainval)', 'DriveZero-Scale']
+    base, delta = [0, 65.6, 84.0, 90.0, 93.7], [65.6, 18.4, 6.0, 3.7, 1.6]
+    ax.bar(x, delta, bottom=base, width=0.55, edgecolor='none',
+           color=[ps.BASELINE, P['sky_blue'], P['orange'], P['orange'], P['green']])
+    _vals(ax, x, [65.6, 84.0, 90.0, 93.7, 95.3], ['65.6', '84.0', '90-92', '93.7', '95.3'], 0.4)
+    ax.axhline(94.8, color=P['vermillion'], ls='--', lw=0.8, label='Human log 94.8')
+    ax.axhline(91.1, color='#666666', ls='-.', lw=0.7, label='MemoryDrivoR, no current cameras 91.1')
+    ax.axhline(89.55, color=P['purple'], ls=':', lw=0.9, label='Ours SH30 89.55')
     ax.set_ylim(55.0, 100.0)
     ax.set_xticks(x)
-    ax.set_xticklabels(steps_b, rotation=35, ha='right', fontsize=6.5)
-    ax.set_ylabel('PDMS')
-    ax.legend(loc='lower right', fontsize=6.0, frameon=False, handlelength=1.5)
+    ax.set_xticklabels(steps, rotation=38, ha='right', fontsize=5.6)
+    ax.set_ylabel('PDMS (navtest)')
+    ax.legend(**below)
 
-    # Panel (c): NAVSIM navhard (two-stage EPDMS, post-fix)
     ax = axes[2]
     ps.bars(ax)
-    ps.panel(ax, '(c) navhard (EPDMS post-fix)')
-    steps_c = ['Ego-MLP', '+Base Vis.', '+Scorer', '+SimScale', '+Search']
-    base_c = [0, 14.1, 25.1, 36.7, 48.3]
-    deltas_c = [14.1, 11.0, 11.6, 11.6, 8.2]
-    colors_c = [ps.BASELINE, ps.PALETTE['sky_blue'], ps.PALETTE['orange'], ps.PALETTE['blue'], ps.PALETTE['green']]
-    
-    ax.bar(x, deltas_c, bottom=base_c, color=colors_c, width=0.55, edgecolor='none')
-    ax.axhline(56.6, color=ps.PALETTE['vermillion'], linestyle='--', linewidth=0.8, label='PDM-Closed (56.6)')
-    ax.axhline(33.7, color=ps.PALETTE['purple'], linestyle=':', linewidth=0.8, label='Ours SH30 (~33.7)')
-    ax.axhline(61.02, color='#333333', linestyle='-.', linewidth=0.6, label='Top RoboTruck (61.0)')
-    
-    ax.set_ylim(0.0, 68.0)
+    ps.panel(ax, '(c) navhard, EPDMS (post-fix)')
+    steps = ['Ego-MLP', 'LTF (IL)', 'DrivoR\n(proposals+scorer)', '+SimScale 134k', '+TOAD search']
+    base, delta = [0, 14.1, 25.1, 48.3, 54.6], [14.1, 11.0, 23.2, 6.3, 1.7]
+    ax.bar(x, delta, bottom=base, width=0.55, edgecolor='none',
+           color=[ps.BASELINE, P['sky_blue'], P['orange'], P['blue'], P['green']])
+    _vals(ax, x, [14.1, 25.1, 48.3, 54.6, 56.3], ['14.1', '25.1', '48.3', '54.6', '56.3'], 0.5)
+    ax.axhline(61.02, color='#333333', ls='-.', lw=0.7, label='Top: RoboTruck 61.02')
+    ax.axhline(56.6, color=P['vermillion'], ls='--', lw=0.8, label='PDM-Closed (privileged) 56.6')
+    ax.axhline(33.67, color=P['purple'], ls=':', lw=0.9, label='Ours SH30 33.67')
+    ax.set_ylim(0.0, 72.0)
     ax.set_xticks(x)
-    ax.set_xticklabels(steps_c, rotation=35, ha='right', fontsize=6.5)
-    ax.set_ylabel('EPDMS')
-    ax.legend(loc='lower right', fontsize=6.0, frameon=False, handlelength=1.5)
+    ax.set_xticklabels(steps, rotation=38, ha='right', fontsize=5.6)
+    ax.set_ylabel('EPDMS (navhard two-stage, post-fix)')
+    ax.legend(**below)
 
     ps.save(fig, OUT_DIR / 'fig1_score_decomposition')
     plt.close(fig)
 
+
 # -----------------------------------------------------------------------------
-# Figure 2: World Model Gain Collapse Scatter
-# Sources: lit 4 §5a, §5b; lit 2 §4.1, §4.2
+# Figure 2: gain from a world-model / future objective vs the baseline it was
+# added to. One point per paper, within-paper with / without, single runs.
+# Sources: NAVSIM note section 1 item 2 and world-model tables; VER #4, #6-#11.
+# (x, y, name, metric, short_schedule)
 # -----------------------------------------------------------------------------
 def make_fig2():
-    fig, ax = plt.subplots(figsize=(ps.SINGLE_COLUMN_IN, 2.55))
-    fig.subplots_adjust(left=0.15, right=0.95, top=0.88, bottom=0.18)
-    ps.panel(ax, 'World-Model Gain Collapse on Strong Baselines')
-
     pts = [
-        (68.7, 12.0, 'DriveVLA-W0 (VQ)'),
-        (70.3, 13.6, 'DriveVLA-W0 (ViT)'),
-        (77.5, 7.1, 'LAW'),
-        (78.1, 8.1, 'Epona'),
-        (83.1, 4.6, 'SV-WAM'),
-        (85.5, 4.6, 'GraphWorld'),
-        (83.2, 2.4, 'WoTE'),
-        (84.4, 2.5, 'EponaV2'),
-        (83.6, 0.9, 'DriveX'),
-        (86.9, 0.6, 'PerceptDrive'),
-        (87.0, 1.1, 'WorldDrive'),
-        (87.3, 0.8, 'PWM'),
-        (87.7, 0.35, 'Latent-WAM'),
-        (87.9, 1.0, 'SeerDrive'),
-        (88.0, 1.2, 'DriveDreamer'),
-        (88.9, 0.7, 'ForeDrive'),
-        (88.9, 0.1, 'Metis'),
-        (90.84, 0.21, 'EditWM'),
-        (91.1, 0.6, 'WA-JEPA'),
-        (93.31, 0.37, 'DA-WAM'),
+        (68.7, 12.0, 'DriveVLA-W0 (VQ)', 'PDMS', False),
+        (70.3, 13.6, 'DriveVLA-W0 (ViT)', 'PDMS', False),
+        (77.5, 7.1, 'LAW', 'PDMS', False),
+        (78.1, 8.1, 'Epona', 'PDMS', False),
+        (83.1, 4.6, 'SV-WAM', 'EPDMS', False),
+        (83.2, 2.4, 'WoTE (rollout scoring)', 'PDMS', True),      # 20-epoch ablation, not the 88.3 headline
+        (83.6, 0.9, 'DriveX', 'PDMS', False),
+        (84.4, 2.5, 'EponaV2 2B', 'PDMS', False),
+        (86.9, 0.6, 'PerceptDrive', 'PDMS', False),
+        (87.0, 1.1, 'WorldDrive', 'PDMS', False),
+        (87.3, 0.8, 'PWM', 'PDMS', False),
+        (87.7, 0.3, 'Latent-WAM', 'EPDMS', False),               # source values +0.3 / +0.4
+        (87.9, 1.0, 'SeerDrive', 'PDMS', False),
+        (88.0, 1.2, 'DriveDreamer-Policy', 'PDMS', False),
+        (88.9, 0.7, 'ForeDrive', 'PDMS', False),
+        (88.9, 0.1, 'Metis (video at inf.)', 'PDMS', False),
+        (90.84, 0.21, 'EditWM', 'EPDMS', False),
+        (90.84, -0.33, 'EditWM, plain rollout', 'EPDMS', False),
+        (91.1, 0.6, 'WA-JEPA (flow match.)', 'EPDMS', False),
+        (93.31, 0.37, 'DA-WAM (+hard neg.)', 'PDMS', True),  # 20 epochs, single seed
+        (93.31, -0.50, 'DA-WAM, shared future', 'PDMS', True),
     ]
-
-    x_vals = np.array([p[0] for p in pts])
-    y_vals = np.array([p[1] for p in pts])
-
-    # Fit exponential curve
-    poly = np.polyfit(x_vals, np.log(y_vals + 0.1), 1)
-    x_curve = np.linspace(67, 95, 100)
-    y_curve = np.exp(np.polyval(poly, x_curve)) - 0.1
-
-    ax.plot(x_curve, y_curve, color='#888888', linestyle='--', linewidth=0.8, zorder=1, label='Exponential decay')
-    
-    colors = [ps.PALETTE['vermillion'] if x < 80 else ps.PALETTE['blue'] for x in x_vals]
-    ax.scatter(x_vals, y_vals, color=colors, s=26, zorder=2, edgecolors='none')
-
-    # Selective annotations, positioned inside visible area
-    annots = {
-        'DriveVLA-W0 (ViT)': (1.5, 0.3),
-        'LAW': (-6.0, 0.8),
-        'Epona': (1.5, 0.8),
-        'SV-WAM': (1.5, 0.8),
-        'WoTE': (-5.5, 1.2),
-        'ForeDrive': (-3.0, 1.6),
-        'WA-JEPA': (1.0, 1.5),
-        'DA-WAM': (-6.0, 1.2),
-    }
-    for p in pts:
-        name = p[2]
-        if name in annots:
-            dx, dy = annots[name]
-            ax.annotate(name, (p[0], p[1]), xytext=(p[0]+dx, p[1]+dy),
-                        fontsize=5.8, color='#333333',
-                        arrowprops=dict(arrowstyle='->', color='#999999', lw=0.4))
-
-    ax.axhline(0, color='#999999', linewidth=0.5, zorder=0)
+    fig = plt.figure(figsize=(ps.DOUBLE_COLUMN_IN, 3.1))
+    ax = fig.add_axes([0.075, 0.15, 0.50, 0.75])
+    ps.panel(ax, 'Gain from a world-model / future objective vs. baseline score')
+    for i, (x, y, _, metric, short) in enumerate(pts, 1):
+        color = P['vermillion'] if x < 80 else P['blue']
+        ax.scatter([x], [y], s=30, zorder=2, marker='o' if metric == 'PDMS' else 's',
+                   facecolors='none' if short else color, edgecolors=color, linewidths=0.9)
+        ax.annotate(str(i), (x, y), xytext=(3.2, 2.6), textcoords='offset points', fontsize=5.4, color='#222222')
+    ax.axhline(0, color='#999999', lw=0.5, zorder=0)
+    ax.axvline(84.0, color='#bbbbbb', lw=0.5, ls=':', zorder=0)
+    ax.text(84.2, 11.5, 'TransFuser 84.0', fontsize=5.4, color='#777777')
     ax.set_xlim(65, 96)
-    ax.set_ylim(-0.5, 16.5)
-    ax.set_xlabel('Baseline Score (PDMS / EPDMS)')
-    ax.set_ylabel('Net Gain from WM / Future Objective')
-
+    ax.set_ylim(-1.5, 16.5)
+    ax.set_xlabel('score of the baseline without the WM / future objective (PDMS or EPDMS, see marker)')
+    ax.set_ylabel('gain in the same metric')
+    handles = [Line2D([], [], marker='o', ls='', color=P['blue'], markersize=4.5, label='PDMS (v1 navtest)'),
+               Line2D([], [], marker='s', ls='', color=P['blue'], markersize=4.5, label='EPDMS (v2 navtest)'),
+               Line2D([], [], marker='o', ls='', markerfacecolor='none', color=P['blue'], markersize=4.5,
+                      label='short-schedule ablation')]
+    ax.legend(handles=handles, loc='upper right', **LEG)
+    half = (len(pts) + 1) // 2
+    for col, chunk in enumerate((list(enumerate(pts, 1))[:half], list(enumerate(pts, 1))[half:])):
+        txt = '\n'.join(f'{i:>2}  {p[2]}  ({p[1]:+g})' for i, p in chunk)
+        fig.text(0.60 + 0.20 * col, 0.88, txt, fontsize=5.0, va='top', ha='left', linespacing=1.55, color='#222222')
     ps.save(fig, OUT_DIR / 'fig2_wm_gain_vs_baseline')
     plt.close(fig)
 
+
 # -----------------------------------------------------------------------------
-# Figure 3: Language at Inference (With vs Without CoT/Language)
-# Sources: lit 4 §Q3; lit 5; lit 6
+# Figure 3: language at inference, on minus off, within one paper. Three panels
+# because the metrics differ (RFS / PDMS / Bench2Drive DS and SR).
+# Sources: mechanisms note Q3; WOD note (Poutine Table 3, AutoVLA Table S4);
+# VER #1, #3, #26, #30 (BLUE on NAVSIM is a head switch, not a CoT switch).
 # -----------------------------------------------------------------------------
 def make_fig3():
-    fig, ax = plt.subplots(figsize=(ps.SINGLE_COLUMN_IN, 2.7))
-    fig.subplots_adjust(left=0.15, right=0.95, top=0.88, bottom=0.34)
+    fig, axes = plt.subplots(1, 3, figsize=(ps.DOUBLE_COLUMN_IN, 2.9),
+                             gridspec_kw=dict(width_ratios=[2, 5, 3]))
+    fig.subplots_adjust(left=0.085, right=0.985, top=0.84, bottom=0.30, wspace=0.36)
+    fig.suptitle('Language at inference: within noise unless gated', fontsize=8.5, y=0.975)
+    c_on, c_neg, c_gate = P['sky_blue'], P['vermillion'], P['green']
+
+    def bar(ax, x, v, gated=False, w=0.36):
+        ax.bar(x, v, width=w, color=c_gate if gated else (c_neg if v < 0 else c_on))
+        ax.text(x, v + (0.02 if v >= 0 else -0.02) * (ax.get_ylim()[1] - ax.get_ylim()[0]), f'{v:+.2f}'.rstrip('0').rstrip('.'),
+                ha='center', va='bottom' if v >= 0 else 'top', fontsize=5.6)
+
+    ax = axes[0]
     ps.bars(ax)
-    ps.panel(ax, 'Language / CoT at Inference: Minimal or Negative Impact')
+    ps.panel(ax, '(a) WOD-E2E')
+    ax.set_ylim(-0.12, 0.12)
+    bar(ax, 0, -0.04)     # Poutine: CoT at inference 8.08 vs 8.12, val, 479 frames
+    bar(ax, 1, +0.041)    # AutoVLA: 7.406 -> 7.447, test (CoT also in training for that row)
+    ax.axhline(0, color='#666666', lw=0.5)
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(['Poutine\n(val)', 'AutoVLA\n(test)'], fontsize=5.8)
+    ax.set_ylabel(r'$\Delta$ RFS')
 
-    labels = [
-        'Poutine\n(WOD RFS)',
-        'AutoVLA\n(WOD RFS)',
-        'SimLingo\n(B2D DS)',
-        'ReCogDrive\n(navtest)',
-        'BLUE/SimL\n(B2D SR%)',
-        'BLUE/ReCog\n(navtest)',
-        'AdaThink\n(navtest)',
-        'nuPlan LoRA\n(Score@3s)',
-    ]
-    deltas_always = np.array([-0.04, +0.041, +0.40, -0.10, -2.64, -1.85, +0.60, -0.02])
-    deltas_gated = np.array([np.nan, np.nan, np.nan, np.nan, +6.63, +1.02, +2.00, np.nan])
+    ax = axes[1]
+    ps.bars(ax)
+    ps.panel(ax, '(b) NAVSIM navtest')
+    ax.set_ylim(-2.8, 2.8)
+    bar(ax, 0, -0.10)                       # ReCogDrive: with CoT 90.7 vs trajectory-only 90.8
+    bar(ax, 0.82, +0.60)                    # AdaThinkDrive: always 88.9 vs never 88.3
+    bar(ax, 1.18, +2.00, gated=True)        # AdaThinkDrive: adaptive 90.3
+    bar(ax, 1.82, -1.85)                    # BLUE on ReCogDrive: 84.13 vs 85.98 (text-trajectory head vs IL head)
+    bar(ax, 2.18, +1.02, gated=True)        # gated 87.00
+    ax.axhline(0, color='#666666', lw=0.5)
+    ax.set_xticks([0, 1, 2])
+    ax.set_xticklabels(['ReCogDrive', 'AdaThinkDrive', 'BLUE/ReCogDrive\n(text-traj head vs IL head)'], fontsize=5.8)
+    ax.set_ylabel(r'$\Delta$ PDMS')
 
-    x = np.arange(len(labels))
-    w = 0.38
+    ax = axes[2]
+    ps.bars(ax)
+    ps.panel(ax, '(c) Bench2Drive')
+    ax.set_ylim(-4.0, 8.5)
+    bar(ax, 0, +0.66)                       # SimLingo: 85.07 +/- 0.95 vs 84.41 +/- 1.76 DS, not significant
+    bar(ax, 0.82, -2.64)                    # BLUE on SimLingo SR: always 66.91 vs never 69.55
+    bar(ax, 1.18, +6.63, gated=True)        # learned gate 76.18
+    ax.axhline(0, color='#666666', lw=0.5)
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(['SimLingo\n(DS)', 'BLUE/SimLingo\n(SR)'], fontsize=5.8)
+    ax.set_ylabel(r'$\Delta$ DS or SR (points)')
 
-    c_always = [ps.PALETTE['vermillion'] if d < 0 else ps.PALETTE['sky_blue'] for d in deltas_always]
-    ax.bar(x - w/2, deltas_always, width=w, color=c_always, label='Always CoT / Lang.')
-    
-    has_gated = ~np.isnan(deltas_gated)
-    ax.bar(x[has_gated] + w/2, deltas_gated[has_gated], width=w, color=ps.PALETTE['green'], label='Learned / Adaptive Gate')
-
-    ax.axhline(0, color='#666666', linewidth=0.5)
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=40, ha='right', fontsize=5.8)
-    ax.set_ylabel(r'$\Delta$ Metric (vs. No-Language Baseline)')
-    ax.set_ylim(-3.5, 8.5)
-    ax.legend(loc='upper left', fontsize=5.8, frameon=False)
-
+    handles = [plt.Rectangle((0, 0), 1, 1, color=c_on, label='always on, positive'),
+               plt.Rectangle((0, 0), 1, 1, color=c_neg, label='always on, negative'),
+               plt.Rectangle((0, 0), 1, 1, color=c_gate, label='learned / adaptive gate')]
+    fig.legend(handles=handles, loc='lower center', ncol=3, fontsize=6.0, frameon=False, bbox_to_anchor=(0.5, 0.0))
     ps.save(fig, OUT_DIR / 'fig3_language_inference_effect')
     plt.close(fig)
 
+
 # -----------------------------------------------------------------------------
-# Figure 4: Encoder Pretraining Comparison (image-SSL / VL vs video-SSL)
-# Sources: lit 4 §Q6; lit 2 §3, §4; lit 5 §5
+# Figure 4: within-paper encoder swaps. Three separate metrics / splits.
+# (a) WA-JEPA Tab. 4a, NAVSIM-v2 navtest EPDMS (VER #9).
+# (b) Drive-JEPA perception-free table, navtest PDMS (NAVSIM note calls it
+#     Table 7, the deep-read note Tab. 5; unresolved, not in VER).
+# (c) DrivoR Tab. 4a, navval PDMS, ViT-S, 10 epochs (VER #14).
 # -----------------------------------------------------------------------------
 def make_fig4():
-    fig, axes = plt.subplots(1, 3, figsize=(ps.DOUBLE_COLUMN_IN, 2.5))
-    fig.subplots_adjust(left=0.08, right=0.98, top=0.88, bottom=0.30, wspace=0.35)
+    fig, axes = plt.subplots(1, 3, figsize=(ps.DOUBLE_COLUMN_IN, 2.8))
+    fig.subplots_adjust(left=0.07, right=0.985, top=0.90, bottom=0.32, wspace=0.34)
 
-    # Panel (a): WA-JEPA (NAVSIM-v2 navtest EPDMS, Tab. 4a)
-    ax = axes[0]
-    ps.bars(ax)
-    ps.panel(ax, '(a) WA-JEPA (navtest EPDMS)')
-    encoders_a = ['MAE\n(image)', 'SigLIP2\n(VLM)', 'DINOv3\n(image)', 'V-JEPA 2\n(video)']
-    scores_a = [83.8, 83.1, 83.8, 89.5]
-    colors_a = [ps.BASELINE, ps.PALETTE['sky_blue'], ps.BASELINE, ps.PALETTE['blue']]
-    x_a = np.arange(len(scores_a))
-    ax.bar(x_a, scores_a, color=colors_a, width=0.55)
-    ax.set_ylim(80.0, 92.5)
-    ax.set_xticks(x_a)
-    ax.set_xticklabels(encoders_a, fontsize=6.2)
-    ax.set_ylabel('EPDMS')
-    ax.annotate('+5.7 pp', xy=(3, 89.5), xytext=(2.0, 90.7),
-                fontsize=6.2, weight='bold', color=ps.PALETTE['blue'],
-                arrowprops=dict(arrowstyle='->', color=ps.PALETTE['blue'], lw=0.6))
+    def draw(ax, title, names, scores, colors, ylim, ylabel, arrow, fs=5.8, rot=0):
+        ps.bars(ax)
+        ps.panel(ax, title)
+        x = np.arange(len(scores))
+        ax.bar(x, scores, color=colors, width=0.55)
+        ax.set_ylim(*ylim)
+        _vals(ax, x, scores, [f'{s:g}' for s in scores], (ylim[1] - ylim[0]) * 0.012)
+        ax.set_xticks(x)
+        ax.set_xticklabels(names, fontsize=fs, rotation=rot, ha='right' if rot else 'center')
+        ax.set_ylabel(ylabel)
+        i0, i1, label = arrow
+        y = max(scores[i0], scores[i1]) + (ylim[1] - ylim[0]) * 0.12
+        ax.annotate('', xy=(i1, y), xytext=(i0, y), arrowprops=dict(arrowstyle='<->', color=P['blue'], lw=0.7))
+        ax.text((i0 + i1) / 2, y + (ylim[1] - ylim[0]) * 0.015, label, ha='center', fontsize=6.0, color=P['blue'], weight='bold')
 
-    # Panel (b): Drive-JEPA (NAVSIM v1 navtest PDMS, Tab. 5)
-    ax = axes[1]
-    ps.bars(ax)
-    ps.panel(ax, '(b) Drive-JEPA (navtest PDMS)')
-    encoders_b = ['ResNet34\n(Superv.)', 'DINOv2-L\n(image)', 'SigLIP-L\n(VLM)', 'V-JEPA 2\n(video)', '+Driving\nVideo SSL']
-    scores_b = [76.0, 76.1, 83.4, 86.1, 89.0]
-    colors_b = [ps.BASELINE, ps.BASELINE, ps.PALETTE['sky_blue'], ps.PALETTE['blue'], ps.PALETTE['green']]
-    x_b = np.arange(len(scores_b))
-    ax.bar(x_b, scores_b, color=colors_b, width=0.55)
-    ax.set_ylim(70.0, 92.5)
-    ax.set_xticks(x_b)
-    ax.set_xticklabels(encoders_b, rotation=25, ha='right', fontsize=5.8)
-    ax.set_ylabel('PDMS (Perception-Free)')
-    ax.annotate('+10.0 pp', xy=(3, 86.1), xytext=(1.7, 88.0),
-                fontsize=6.0, weight='bold', color=ps.PALETTE['blue'],
-                arrowprops=dict(arrowstyle='->', color=ps.PALETTE['blue'], lw=0.6))
-
-    # Panel (c): DrivoR (NAVSIM navval PDMS, Tab. 4a, ViT-S)
-    ax = axes[2]
-    ps.bars(ax)
-    ps.panel(ax, '(c) DrivoR (navval PDMS)')
-    encoders_c = ['Random\nInit', 'ImageNet-21k\n(Superv.)', 'DINOv2-S\n(image-SSL)']
-    scores_c = [70.1, 87.5, 90.0]
-    colors_c = [ps.BASELINE, ps.PALETTE['sky_blue'], ps.PALETTE['blue']]
-    x_c = np.arange(len(scores_c))
-    ax.bar(x_c, scores_c, color=colors_c, width=0.55)
-    ax.set_ylim(65.0, 93.5)
-    ax.set_xticks(x_c)
-    ax.set_xticklabels(encoders_c, fontsize=6.2)
-    ax.set_ylabel('PDMS')
-    ax.annotate('+19.9 pp', xy=(2, 90.0), xytext=(0.8, 91.0),
-                fontsize=6.2, weight='bold', color=ps.PALETTE['blue'],
-                arrowprops=dict(arrowstyle='->', color=ps.PALETTE['blue'], lw=0.6))
-
+    draw(axes[0], '(a) WA-JEPA, navtest EPDMS',
+         ['MAE\n(image)', 'SigLIP2\n(VL)', 'DINOv3\n(image)', 'V-JEPA 2\n(video)'],
+         [83.8, 83.1, 83.8, 89.5], [ps.BASELINE, P['sky_blue'], ps.BASELINE, P['blue']], (80.0, 93.0), 'EPDMS (v2 navtest)',
+         (2, 3, '+5.7'))
+    draw(axes[1], '(b) Drive-JEPA, navtest PDMS',
+         ['ImageNet\nResNet34', 'DINOv2\nViT-L', 'SigLIP\nViT-L', 'V-JEPA 2\nViT-L', '+driving\nvideo\npretrain'],
+         [76.0, 76.1, 83.4, 86.1, 89.0], [ps.BASELINE, ps.BASELINE, P['sky_blue'], P['blue'], P['green']], (70.0, 94.0),
+         'PDMS (navtest, perception-free)', (1, 3, '+10.0'), fs=5.2)
+    draw(axes[2], '(c) DrivoR, navval PDMS (ViT-S)',
+         ['random\ninit', 'ImageNet-21k\n(supervised)', 'DINOv2\n(image-SSL)'],
+         [70.1, 87.5, 90.0], [ps.BASELINE, P['sky_blue'], P['blue']], (65.0, 97.0), 'PDMS (navval)', (0, 2, '+19.9'))
     ps.save(fig, OUT_DIR / 'fig4_encoder_pretrain_comparison')
     plt.close(fig)
 
+
 # -----------------------------------------------------------------------------
-# Figure 5: Post-RL Sub-score Shifts (EP Up, NC / TTC Down)
-# Sources: lit 4 §Q4; lit 6 §1 #21
+# Figure 5: sub-score change after RL on the board metric, within paper.
+# ReflectDrive-2 (navtest): EP 82.2 -> 89.3, NC 97.8 -> 96.3, TTC 93.6 -> 88.9 (VER #21).
+# IRL-VLA (navhard Stage-1 sub-metrics): EP 83.9 -> 96.2, NC 98.3 -> 96.9,
+#   DAC 92.4 -> 91.3, EC 76.0 -> 72.4 (VER #21).
+# ReCogDrive (navtest): EP 80.9 -> 87.3, NC 98.1 -> 97.9, DAC 94.7 -> 97.3 (mechanisms note Q4).
 # -----------------------------------------------------------------------------
 def make_fig5():
-    fig, ax = plt.subplots(figsize=(ps.SINGLE_COLUMN_IN, 2.6))
-    fig.subplots_adjust(left=0.15, right=0.95, top=0.88, bottom=0.30)
+    groups = [('ReflectDrive-2\n(navtest)', [('EP', +7.1), ('NC', -1.5), ('TTC', -4.7)]),
+              ('IRL-VLA\n(navhard Stage 1)', [('EP', +12.3), ('NC', -1.4), ('DAC', -1.1), ('EC', -3.6)]),
+              ('ReCogDrive\n(navtest)', [('EP', +6.4), ('NC', -0.2), ('DAC', +2.6)])]
+    fig, ax = plt.subplots(figsize=(ps.SINGLE_COLUMN_IN * 1.25, 2.7))
+    fig.subplots_adjust(left=0.13, right=0.98, top=0.88, bottom=0.20)
     ps.bars(ax)
-    ps.panel(ax, 'Post-RL Shifts: Progress (EP) vs. Safety (NC/TTC)')
-
-    methods = [
-        'ReflectDrive-2\n(navtest)',
-        'IRL-VLA\n(navhard S1)',
-        'ReCogDrive\n(navtest)',
-        'PaIR-Drive\n(navtest)',
-        'Plan-R1\n(nuPlan CLS)'
-    ]
-    ep_deltas = np.array([+7.1, +12.3, +6.4, +3.9, +7.2])
-    safety_deltas = np.array([-4.7, -1.4, -0.2, -13.5, -0.96])
-
-    x = np.arange(len(methods))
-    w = 0.35
-
-    ax.bar(x - w/2, ep_deltas, width=w, color=ps.PALETTE['orange'], label=r'$\Delta$ Progress (EP / Progress)')
-    ax.bar(x + w/2, safety_deltas, width=w, color=ps.PALETTE['vermillion'], label=r'$\Delta$ Safety / Comfort (Worst Drop)')
-
-    ax.axhline(0, color='#666666', linewidth=0.5)
-    ax.set_xticks(x)
-    ax.set_xticklabels(methods, rotation=25, ha='right', fontsize=6.0)
-    ax.set_ylabel(r'$\Delta$ Sub-score (percentage points)')
-    ax.set_ylim(-15.0, 15.0)
-    ax.legend(loc='lower left', fontsize=5.8, frameon=False)
-
+    ps.panel(ax, 'After RL on the metric: EP up, NC / TTC / EC flat or down')
+    x, centers = 0.0, []
+    for name, bars in groups:
+        xs = x + np.arange(len(bars)) * 0.6
+        for xi, (k, v) in zip(xs, bars):
+            ax.bar(xi, v, width=0.5, color=P['orange'] if k == 'EP' else (P['vermillion'] if v < 0 else P['sky_blue']))
+            ax.text(xi, v + (0.3 if v >= 0 else -0.3), f'{k}\n{v:+.1f}', ha='center', va='bottom' if v >= 0 else 'top', fontsize=5.6)
+        centers.append(xs.mean())
+        x = xs[-1] + 1.2
+    ax.axhline(0, color='#666666', lw=0.5)
+    ax.set_xticks(centers)
+    ax.set_xticklabels([g[0] for g in groups], fontsize=6.2)
+    ax.set_ylabel(r'$\Delta$ sub-score after RL (points), within paper')
+    ax.set_ylim(-8.5, 15.5)
     ps.save(fig, OUT_DIR / 'fig5_rl_subscore_tradeoff')
     plt.close(fig)
 
+
 # -----------------------------------------------------------------------------
-# Figure 6: Val vs Test Transfer of RL on WOD-E2E
-# Sources: lit 1 §3.3, §4; lit 6 §1 #22, #23, #26, #28
+# Figure 6: WOD-E2E gain of the post-training step on val (in-sample: the step
+# was trained on val labels) vs test (held out).
+# Qwen-Drive 7.95 -> 8.45 val, 7.78 -> 7.91 test (VER #22); MindVLA-U1 7.83 ->
+# 8.20, 7.77 -> 7.87 (VER #23); SimWAM 7.99 -> 8.29, 7.77 -> 7.84 (WOD note);
+# Poutine test 7.909 -> 7.986 (board), no val number (val is its RL set);
+# DiffusionLTF adds val logs to SUPERVISED training: val 7.86 -> 8.20,
+# test 7.54 -> 7.49 (VER #28).
 # -----------------------------------------------------------------------------
 def make_fig6():
-    fig, ax = plt.subplots(figsize=(ps.SINGLE_COLUMN_IN, 2.6))
-    fig.subplots_adjust(left=0.15, right=0.95, top=0.88, bottom=0.30)
+    models = ['Qwen-Drive-1.0\n(RFS + 2xADE reward)', 'MindVLA-U1\n(GRPO)', 'SimWAM\n(LoRA-GRPO)', 'Poutine\n(GRPO)',
+              'DiffusionLTF\n(supervised on val logs,\nnot RL)']
+    val = [0.50, 0.37, 0.30, np.nan, 0.34]
+    test = [0.13, 0.10, 0.07, 0.077, -0.05]
+    fig, ax = plt.subplots(figsize=(ps.SINGLE_COLUMN_IN * 1.3, 2.9))
+    fig.subplots_adjust(left=0.12, right=0.98, top=0.88, bottom=0.32)
     ps.bars(ax)
-    ps.panel(ax, 'WOD-E2E: RL Gain on Val vs. Held-Out Test')
-
-    models = [
-        'Qwen-Drive-1.0\n(RFS reward)',
-        'MindVLA-U1\n(GRPO)',
-        'SimWAM\n(LoRA-GRPO)',
-        'DiffLTF\n(+val train)',
-        'Poutine\n(GRPO)'
-    ]
-    val_gains = np.array([+0.50, +0.37, +0.30, +0.34, 0.20])
-    test_gains = np.array([+0.13, +0.10, +0.07, -0.05, +0.077])
-
-    x = np.arange(len(models))
+    ps.panel(ax, 'WOD-E2E: gain on val (in-sample) vs. test (held-out)')
     w = 0.35
-
-    ax.bar(x - w/2, val_gains, width=w, color=ps.PALETTE['vermillion'], label='Val Gain (In-Sample Target)')
-    ax.bar(x + w/2, test_gains, width=w, color=ps.PALETTE['blue'], label='Test Gain (Held-Out Benchmark)')
-
-    ax.axhline(0, color='#666666', linewidth=0.5)
-    ax.set_xticks(x)
-    ax.set_xticklabels(models, rotation=25, ha='right', fontsize=6.0)
-    ax.set_ylabel(r'$\Delta$ RFS')
-    ax.set_ylim(-0.10, 0.60)
-    ax.legend(loc='upper right', fontsize=5.8, frameon=False)
-
-    for i in range(3):
-        ax.annotate(f'~25%\nkept', xy=(x[i]+w/2, test_gains[i]), xytext=(x[i]+w/2, test_gains[i]+0.06),
-                    fontsize=5.6, color='#333333', ha='center')
-    ax.annotate('−0.05\n(drop)', xy=(x[3]+w/2, test_gains[3]), xytext=(x[3]+w/2, test_gains[3]-0.08),
-                fontsize=5.6, color=ps.PALETTE['vermillion'], ha='center')
-
+    for i, (v, t) in enumerate(zip(val, test)):
+        hatch = '///' if i == 4 else None
+        if not np.isnan(v):
+            ax.bar(i - w / 2, v, width=w, color=P['vermillion'], hatch=hatch, edgecolor='white', lw=0)
+            ax.text(i - w / 2, v + 0.008, f'{v:+.2f}', ha='center', fontsize=5.6)
+        else:
+            ax.text(i, 0.125, 'val = RL training set,\nno val number', ha='center', va='bottom', fontsize=4.8, color='#666666')
+        ax.bar(i + w / 2, t, width=w, color=P['blue'], hatch=hatch, edgecolor='white', lw=0)
+        ax.text(i + w / 2, t + (0.008 if t >= 0 else -0.008), (f'{t:+.3f}' if i == 3 else f'{t:+.2f}'), ha='center', va='bottom' if t >= 0 else 'top', fontsize=5.6)
+    ax.axvline(3.5, color='#bbbbbb', lw=0.5, ls=':')
+    ax.axhline(0, color='#666666', lw=0.5)
+    ax.set_xticks(range(len(models)))
+    ax.set_xticklabels(models, rotation=25, ha='right', fontsize=5.6)
+    ax.set_ylabel(r'$\Delta$ RFS from the post-training step')
+    ax.set_ylim(-0.12, 0.62)
+    handles = [plt.Rectangle((0, 0), 1, 1, color=P['vermillion'], label='val (in-sample)'),
+               plt.Rectangle((0, 0), 1, 1, color=P['blue'], label='test (held-out)')]
+    ax.legend(handles=handles, loc='upper right', **LEG)
     ps.save(fig, OUT_DIR / 'fig6_wod_rl_val_vs_test')
     plt.close(fig)
 
+
 # -----------------------------------------------------------------------------
-# Figure 7: Navhard vs Navtest Gain from Scorer & Synthetic Data
-# Sources: lit 2 §3.1, §4.1; lit 5 §4.1, §4.2; lit 6 #13, #16, #17
+# Figure 7: navhard gain vs navtest gain, with minus without, same paper.
+# Deltas only: pairs mix navhard pre-fix / post-fix and PDMS / EPDMS.
+# SimScale Table 1 / 2 (VER #16); RAP Table 6 (VER #17); DrivoR +134k SimScale
+# 48.3 -> 54.6, 93.7 -> 94.6 (VER #14); TOAD iPad 34.7 -> 49.8, 91.7 -> 93.4,
+# DrivoR-Scale 54.6 -> 56.3, 94.6 -> 94.7 (VER #13).
 # -----------------------------------------------------------------------------
 def make_fig7():
-    fig, ax = plt.subplots(figsize=(ps.SINGLE_COLUMN_IN, 2.6))
-    fig.subplots_adjust(left=0.15, right=0.95, top=0.88, bottom=0.30)
+    entries = ['SimScale on GTRS-Dense R34\n(navhard pre-fix / navtest EPDMS)', 'SimScale on LTF\n(navhard pre-fix / navtest EPDMS)',
+               'RAP pose jitter 8.5k\n(navhard pre-fix / navtest PDMS)', 'DrivoR +134k SimScale\n(post-fix / PDMS)',
+               'TOAD on iPad (DrivoR scorer)\n(post-fix / PDMS)', 'TOAD on DrivoR-Scale\n(post-fix / PDMS)']
+    hard = [8.6, 5.8, 4.4, 6.3, 15.1, 1.7]
+    test = [2.3, 2.9, 0.0, 0.9, 1.7, 0.1]
+    fig, ax = plt.subplots(figsize=(ps.DOUBLE_COLUMN_IN, 3.0))
+    fig.subplots_adjust(left=0.10, right=0.985, top=0.90, bottom=0.36)
     ps.bars(ax)
-    ps.panel(ax, 'navhard vs. navtest Gain from Scorer & Recovery Data')
-
-    entries = [
-        'SimScale\n(GTRS R34)',
-        'SimScale\n(LTF)',
-        'RAP\n(Jitter)',
-        'DrivoR\n(+SimScale)',
-        'TOAD\n(iPad w/ DrivoR)',
-        'TOAD\n(DrivoR)'
-    ]
-    navhard_gains = np.array([+8.6, +5.8, +4.4, +6.3, +15.1, +1.7])
-    navtest_gains = np.array([+2.3, +2.9, 0.0, +0.9, +1.7, +0.1])
-
-    x = np.arange(len(entries))
-    w = 0.35
-
-    ax.bar(x - w/2, navhard_gains, width=w, color=ps.PALETTE['orange'], label='navhard Gain (EPDMS)')
-    ax.bar(x + w/2, navtest_gains, width=w, color=ps.PALETTE['sky_blue'], label='navtest Gain (PDMS/EPDMS)')
-
-    ax.axhline(0, color='#666666', linewidth=0.5)
+    ps.panel(ax, 'Gain on navhard vs. navtest from recovery data and scorer search (within paper)')
+    x, w = np.arange(len(entries)), 0.35
+    ax.bar(x - w / 2, hard, width=w, color=P['orange'], label='navhard gain')
+    ax.bar(x + w / 2, test, width=w, color=P['sky_blue'], label='navtest gain')
+    _vals(ax, x - w / 2, hard, [f'+{v:g}' for v in hard], 0.2)
+    _vals(ax, x + w / 2, test, [f'+{v:g}' if v else '0.0' for v in test], 0.2)
+    ax.text(4 + 0.02, 11.6, 'scorer swap\nalone +10.9', ha='left', fontsize=5.4, color='#444444')
+    ax.axhline(0, color='#666666', lw=0.5)
     ax.set_xticks(x)
-    ax.set_xticklabels(entries, rotation=25, ha='right', fontsize=5.8)
-    ax.set_ylabel(r'$\Delta$ Metric Score')
-    ax.set_ylim(-0.5, 17.0)
-    ax.legend(loc='upper right', fontsize=5.8, frameon=False)
-
+    ax.set_xticklabels(entries, rotation=22, ha='right', fontsize=5.6)
+    ax.set_ylabel('gain in the board metric,\nwith minus without (same paper)')
+    ax.set_ylim(-0.5, 17.5)
+    ax.legend(loc='upper left', **LEG)
     ps.save(fig, OUT_DIR / 'fig7_navhard_vs_navtest_gain')
     plt.close(fig)
 
+
 # -----------------------------------------------------------------------------
-# Figure 8: Parameter Count vs Score (Deployable Entries Only)
-# Sources: lit 1 §1.1, §1.2; lit 2 §2, §3; decisions 180
+# Figure 8: parameter count vs score, board reads + paper-reported sizes,
+# cross-system. (a) WOD-E2E test RFS (board JSON 2026-10-08; decision 180 for
+# ours). SUV plotted at 6B (board says 5B), RAP at 888M (board says 1B).
+# (b) NAVSIM v1 navtest PDMS (HF board + papers).
+# kind: 'p' paper, single model; 'e' ensemble; 'n' no public material;
+#       'o' ours (not on the public board, 2-seed trajectory mean);
+#       't' trainval or +SimScale variant.
 # -----------------------------------------------------------------------------
 def make_fig8():
-    fig, axes = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.6))
-    fig.subplots_adjust(left=0.08, right=0.98, top=0.88, bottom=0.20, wspace=0.30)
+    fig, axes = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 3.1))
+    fig.subplots_adjust(left=0.07, right=0.985, top=0.90, bottom=0.25, wspace=0.22)
+    mk = {'p': 'o', 'e': 'D', 'n': 'x', 'o': '*', 't': '^'}
 
-    # Panel (a): WOD-E2E test RFS vs Parameters
+    def scatter(ax, pts):
+        for x, y, _, kind in pts:
+            color = P['purple'] if kind == 'o' else ('#555555' if kind == 'n' else (P['blue'] if x < 500 else P['orange']))
+            ax.scatter([x], [y], marker=mk[kind], s=70 if kind == 'o' else 22, color=color, zorder=3 if kind == 'o' else 2,
+                       linewidths=0.9 if kind == 'n' else 0.3)
+
+    def note(ax, text, xy, xytext, color='#333333'):
+        ax.annotate(text, xy=xy, xytext=xytext, fontsize=5.4, color=color,
+                    arrowprops=dict(arrowstyle='-', color='#999999', lw=0.4))
+
     ax = axes[0]
-    ps.panel(ax, '(a) WOD-E2E (test RFS vs. Parameters)')
-    
-    wod_pts = [
-        (1, 7.866, 'BBC (1M)'),
-        (7.5, 7.849, 'ViT-Adapter'),
-        (12, 7.711, 'E2EDriver'),
-        (36, 7.765, 'TrajScorer'),
-        (36, 7.543, 'Swin-Traj'),
-        (44, 7.982, 'NTR (44M)'),
-        (60, 7.780, 'UniPlan'),
-        (70, 7.717, 'DiffusionLTF'),
-        (86, 7.834, 'Traj-Refine'),
-        (105, 7.856, 'FROST-Drive'),
-        (382, 8.099, 'Ours WLG (382M)'),
-        (888, 8.043, 'RAP-DINO'),
-        (888, 8.046, 'NTR (888M)'),
-        (2000, 8.060, 'DriveMA-2B'),
-        (2200, 8.043, 'TTVLM-2B'),
-        (3000, 7.909, 'Poutine-Base'),
-        (3000, 7.986, 'Poutine'),
-        (3100, 7.924, 'ReflexVLA'),
-        (4000, 8.079, 'VMA-plus (4B)'),
-        (4000, 8.167, 'ZSD-Titan (4B)*'),
-        (5000, 7.910, 'Qwen-Drive (5B)'),
-        (6000, 7.943, 'SUV (6B)')
+    ps.panel(ax, '(a) WOD-E2E, test RFS vs. parameters')
+    wod = [
+        (1, 7.866, 'BBC', 'n'), (7.5, 7.849, 'ViT-Adapter-GRU', 'p'), (12, 7.711, 'E2EDriver', 'n'),
+        (36, 7.765, 'TrajScorer', 'n'), (36, 7.543, 'Swin-Trajectory', 'p'), (44, 7.982, 'NTR 44M', 'p'),
+        (60, 7.780, 'UniPlan', 'p'), (70, 7.717, 'DiffusionLTF', 'p'), (86, 7.834, 'Traj-Refine', 'n'),
+        (105, 7.856, 'FROST-Drive', 'p'), (382, 8.099, 'Ours WLG', 'o'), (888, 8.043, 'RAP', 'e'),
+        (888, 8.046, 'NTR 888M', 'e'), (915, 8.025, 'QIRL-E2E', 'n'), (2000, 8.060, 'VMA (2B)', 'p'),
+        (2000, 8.075, 'DriveMA-2B', 'p'), (2000, 8.090, 'ZSD (2B)', 'n'), (2000, 8.087, 'PlusAI-WorldVLA-2B', 'n'),
+        (2000, 8.048, 'Zero-1', 'n'), (2200, 8.071, 'PWVLA-2B', 'n'), (2200, 8.043, 'TTVLM-2B', 'p'),
+        (3000, 7.909, 'Poutine-Base', 'p'), (3000, 7.986, 'Poutine', 'p'), (3100, 7.924, 'ReflexVLA-DTS', 'n'),
+        (4000, 8.079, 'VMA-plus (4B)', 'p'), (4000, 8.167, 'ZSD-Titan (4B)', 'n'), (5000, 7.910, 'Qwen-Drive', 'p'),
+        (6000, 7.943, 'SUV', 'p'), (10000, 8.082, 'VAIL+', 'n'), (10000, 8.061, 'VAIL', 'n'),
     ]
-    p_x = [p[0] for p in wod_pts]
-    p_y = [p[1] for p in wod_pts]
-    
-    colors_wod = [ps.PALETTE['purple'] if 'Ours' in p[2] else (ps.PALETTE['vermillion'] if 'ZSD' in p[2] else (ps.PALETTE['blue'] if p[0] < 500 else ps.PALETTE['orange'])) for p in wod_pts]
-    ax.scatter(p_x, p_y, color=colors_wod, s=22, zorder=2)
+    scatter(ax, wod)
     ax.set_xscale('log')
-    ax.set_xlim(0.7, 9000)
-    ax.set_ylim(7.4, 8.35)
-    ax.set_xlabel('Parameter Count (M, log scale)')
+    ax.set_xlim(0.6, 20000)
+    ax.set_ylim(7.45, 8.26)
+    ax.set_xlabel('parameters (M, log scale)')
     ax.set_ylabel('test RFS')
-    
-    ax.annotate('Ours WLG (8.099)', xy=(382, 8.099), xytext=(80, 8.20),
-                fontsize=6.0, weight='bold', color=ps.PALETTE['purple'],
-                arrowprops=dict(arrowstyle='->', color=ps.PALETTE['purple'], lw=0.6))
-    ax.annotate('BBC (1M: 7.87)', xy=(1, 7.866), xytext=(1.2, 7.62),
-                fontsize=5.6, color='#444444',
-                arrowprops=dict(arrowstyle='->', color='#888888', lw=0.5))
-    ax.annotate('NTR (44M: 7.98)', xy=(44, 7.982), xytext=(12, 8.06),
-                fontsize=5.6, color=ps.PALETTE['blue'],
-                arrowprops=dict(arrowstyle='->', color=ps.PALETTE['blue'], lw=0.5))
-    ax.annotate('ZSD-Titan (8.17)*\n(no paper)', xy=(4000, 8.167), xytext=(1500, 8.24),
-                fontsize=5.6, color=ps.PALETTE['vermillion'], ha='center')
+    note(ax, 'Ours WLG 8.099 (382M)', (382, 8.099), (40, 8.19), P['purple'])
+    note(ax, 'BBC 1M 7.866', (1, 7.866), (1.1, 7.67))
+    note(ax, 'NTR 44M 7.982', (44, 7.982), (6, 8.06))
+    note(ax, 'ZSD-Titan 8.167', (4000, 8.167), (520, 8.215))
+    note(ax, 'NTR 888M / RAP\n8.046 / 8.043', (888, 8.045), (95, 7.93))
+    note(ax, 'VAIL+ 8.082', (10000, 8.082), (5200, 8.20))
+    note(ax, 'Qwen-Drive 7.91', (5000, 7.910), (4200, 7.74))
+    note(ax, 'Swin-Trajectory 7.543', (36, 7.543), (60, 7.50))
 
-    ax.axhline(8.13, color=ps.PALETTE['vermillion'], linestyle='--', linewidth=0.6, label='Human log (8.13)')
-    ax.legend(loc='lower right', fontsize=6.0, frameon=False)
-
-    # Panel (b): NAVSIM v1 PDMS vs Parameters
     ax = axes[1]
-    ps.panel(ax, '(b) NAVSIM v1 (PDMS vs. Parameters)')
-    nav_pts = [
-        (21.8, 91.72, 'iPad (22M)'),
-        (21.8, 92.10, 'SparseDriveV2'),
-        (41, 94.59, 'DrivoR (41M)'),
-        (54.6, 89.0, 'MeanFuser'),
-        (60, 88.02, 'DiffusionDrive'),
-        (61, 89.9, 'DriveSuprim-R34'),
-        (66, 88.9, 'SeerDrive'),
-        (68, 88.8, 'ResAD'),
-        (74.8, 89.4, 'DiffRefiner'),
-        (104, 89.3, 'Latent-WAM'),
-        (110, 92.1, 'DriveSuprim-V2'),
-        (118, 89.9, 'ForeDrive'),
-        (338, 95.31, 'DriveZero-Scale'),
-        (345, 93.5, 'DriveSuprim-ViTL'),
-        (480, 91.8, 'WA-JEPA'),
-        (888, 93.8, 'RAP-DINO'),
-        (2000, 90.8, 'ReCogDrive-2B'),
-        (2000, 94.85, 'ChainFlow-VLA'),
-        (2500, 86.2, 'Epona (2.5B)'),
-        (3000, 89.11, 'AutoVLA (3B)'),
-        (5000, 90.2, 'SV-WAM (5B)'),
-        (8000, 90.4, 'ReCogDrive-8B'),
-        (16000, 92.02, 'DriveReferee (16B)')
+    ps.panel(ax, '(b) NAVSIM v1, navtest PDMS vs. parameters')
+    nav = [
+        (21.8, 92.10, 'SparseDriveV2', 'p'), (41, 94.59, 'DrivoR +SimScale', 't'), (54.6, 89.0, 'MeanFuser', 'p'),
+        (60, 88.02, 'DiffusionDrive', 'p'), (61, 89.9, 'DriveSuprim R34', 'p'), (66, 88.9, 'SeerDrive', 'p'),
+        (68, 88.8, 'ResAD', 'p'), (74.8, 89.4, 'DiffRefiner', 'p'), (110, 92.1, 'DriveSuprim V2-99', 'p'),
+        (118, 89.9, 'ForeDrive', 'p'), (338, 95.31, 'DriveZero-Scale', 't'), (345, 93.5, 'DriveSuprim ViT-L', 'p'),
+        (888, 93.8, 'RAP-DINO', 'p'), (2000, 90.8, 'ReCogDrive-2B', 'p'), (2000, 94.85, 'ChainFlow-VLA', 't'),
+        (2500, 86.2, 'Epona', 'p'), (3000, 89.11, 'AutoVLA', 'p'), (5000, 90.2, 'SV-WAM', 'p'),
+        (8000, 90.4, 'ReCogDrive-8B', 'p'), (16000, 92.02, 'DriveReferee', 'p'),
     ]
-    n_x = [p[0] for p in nav_pts]
-    n_y = [p[1] for p in nav_pts]
-    colors_nav = [ps.PALETTE['blue'] if p[0] < 500 else ps.PALETTE['orange'] for p in nav_pts]
-    ax.scatter(n_x, n_y, color=colors_nav, s=22, zorder=2)
+    scatter(ax, nav)
+    ax.axhline(94.8, color=P['vermillion'], ls='--', lw=0.6)
+    ax.text(75, 94.95, 'Human log 94.8', fontsize=5.4, color=P['vermillion'])
     ax.set_xscale('log')
-    ax.set_xlim(15, 25000)
-    ax.set_ylim(84.0, 97.5)
-    ax.set_xlabel('Parameter Count (M, log scale)')
-    ax.set_ylabel('PDMS')
+    ax.set_xlim(15, 30000)
+    ax.set_ylim(85.0, 97.0)
+    ax.set_xlabel('parameters (M, log scale)')
+    ax.set_ylabel('navtest PDMS')
+    note(ax, 'DrivoR 41M 94.59\n(+SimScale)', (41, 94.59), (18, 96.0))
+    note(ax, 'DriveZero-Scale 338M 95.31', (338, 95.31), (150, 96.4))
+    note(ax, 'ChainFlow-VLA 2B 94.85\n(trainval)', (2000, 94.85), (2600, 95.9))
+    note(ax, 'RAP-DINO 888M 93.8', (888, 93.8), (1100, 92.9))
+    note(ax, 'SparseDriveV2 22M 92.1', (21.8, 92.10), (17, 90.9))
+    note(ax, 'DriveReferee 16B 92.02', (16000, 92.02), (3200, 91.4))
+    note(ax, 'ReCogDrive 2B / 8B\n90.8 / 90.4', (8000, 90.4), (3800, 88.6))
+    note(ax, 'Epona 2.5B 86.2', (2500, 86.2), (500, 85.6))
+    note(ax, 'AutoVLA 3B 89.11', (3000, 89.11), (300, 87.6))
 
-    ax.annotate('DrivoR (41M: 94.6)', xy=(41, 94.59), xytext=(25, 96.2),
-                fontsize=5.8, weight='bold', color=ps.PALETTE['blue'],
-                arrowprops=dict(arrowstyle='->', color=ps.PALETTE['blue'], lw=0.6))
-    ax.annotate('DriveZero-Scale\n(338M: 95.3)', xy=(338, 95.31), xytext=(220, 96.5),
-                fontsize=5.6, color=ps.PALETTE['blue'], ha='center')
-    ax.annotate('DriveReferee\n(16B: 92.0)', xy=(16000, 92.02), xytext=(7000, 89.2),
-                fontsize=5.6, color=ps.PALETTE['orange'],
-                arrowprops=dict(arrowstyle='->', color=ps.PALETTE['orange'], lw=0.5))
-
-    ax.axhline(94.8, color=ps.PALETTE['vermillion'], linestyle='--', linewidth=0.6, label='Human log (94.8)')
-    ax.legend(loc='lower right', fontsize=6.0, frameon=False)
-
+    handles = [Line2D([], [], marker='o', ls='', color=P['blue'], markersize=4, label='paper, < 500M'),
+               Line2D([], [], marker='o', ls='', color=P['orange'], markersize=4, label='paper, >= 500M'),
+               Line2D([], [], marker='D', ls='', color=P['orange'], markersize=4, label='ensemble'),
+               Line2D([], [], marker='^', ls='', color=P['blue'], markersize=4.5, label='trainval or +SimScale variant'),
+               Line2D([], [], marker='x', ls='', color='#555555', markersize=4.5, label='no public material'),
+               Line2D([], [], marker='*', ls='', color=P['purple'], markersize=7, label='ours (not on the public board)')]
+    fig.legend(handles=handles, loc='lower center', ncol=6, fontsize=5.6, frameon=False, bbox_to_anchor=(0.5, 0.0))
     ps.save(fig, OUT_DIR / 'fig8_params_vs_score')
     plt.close(fig)
 
+
 def main():
-    setup()
-    print("Generating Figure 1...")
-    make_fig1()
-    print("Generating Figure 2...")
-    make_fig2()
-    print("Generating Figure 3...")
-    make_fig3()
-    print("Generating Figure 4...")
-    make_fig4()
-    print("Generating Figure 5...")
-    make_fig5()
-    print("Generating Figure 6...")
-    make_fig6()
-    print("Generating Figure 7...")
-    make_fig7()
-    print("Generating Figure 8...")
-    make_fig8()
-    print("All 8 figures generated successfully.")
+    ps.apply()
+    for i, f in enumerate((make_fig1, make_fig2, make_fig3, make_fig4, make_fig5, make_fig6, make_fig7, make_fig8), 1):
+        f()
+        print(f'figure {i} done')
+
 
 if __name__ == '__main__':
     main()
