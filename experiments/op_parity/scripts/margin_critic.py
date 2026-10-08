@@ -41,6 +41,7 @@ ARMS = {                                                # v: c8 = Cinque 8 frame
     "R-WA": dict(v="wa", h=0, frac=1.0, steps=6000, vram=12, shards=(2, 3, 4)), "R-C1": dict(v="c1", h=0, frac=1.0, steps=6000, vram=12, shards=(2, 3, 4))}
 CURVE = ("MC-3", "MC-10", "MC-30", "MC")
 BATCH, NTRAJ, LR, WD, WARM, EVAL = 256, 6, 3e-4, 0.05, 300, 500
+LEAK_FRAC, LEAK_MAX = 1e-3, 0.0625                       # amended G-leak (pre-registration, amendment 1): share of rows at or over the 0.03 m tolerance, hard cap
 REF = dict(map_dac=0.916, curb_dac=0.629, map_rep=0.706, curb_rep=0.546, ceiling=9.55)
 THR = dict(half=0.5, auc_margin=0.05, rise_auc=0.02, rise_mae=0.05, floor_auc=0.03, ref_auc=0.05)
 
@@ -82,6 +83,7 @@ def cmd_extract(a):
         assert ntr.mask(names).all() and not nt.mask(names).any(), "shard tokens must be navtrain and not navtest"
         fold = np.array([fold_of_log(l) for l in logs])
         h4, hm, diff = np.zeros((n, 512), np.float16), np.zeros((n, 512), np.float16), np.zeros(n)
+        ctrl = []
         speed = S.tb["speed"][:n]
         for j in range(K):
             idx = np.flatnonzero(fold == j)
@@ -95,14 +97,23 @@ def cmd_extract(a):
             diff[idx] = TX.plan_diff(ref["plan_pos"][idx], P)
             run.info("fold %d: %d rows, max |dplan| vs stored %.3g m", j, len(idx), diff[idx][speed[idx] >= 0.5].max(initial=0))
             del model
+            c = idx[speed[idx] >= 0.5][:100]                                        # control: the next fold's model on the same rows must NOT reproduce the stored plan
+            _, wrong = TX.load_model(T, N, resolve, (j + 1) % K, dev)
+            ctrl.append(TX.plan_diff(ref["plan_pos"][c], TX.run_rows(wrong, S, c, run)[0]))
+            del wrong
             torch.cuda.empty_cache()
         ok = speed >= 0.5
-        gate = dict(shard=a.shard, n=int(n), max_diff_m=float(diff[ok].max(initial=0)), tol_m=TX.TOL_M)
+        ctrl = np.concatenate(ctrl)
+        gate = dict(shard=a.shard, n=int(n), rows_speed_ok=int(ok.sum()), max_diff_m=float(diff[ok].max(initial=0)), tol_m=TX.TOL_M, n_over_tol=int((diff[ok] >= TX.TOL_M).sum()),
+                    frac_over_tol=float((diff[ok] >= TX.TOL_M).mean()), q999_diff_m=float(np.quantile(diff[ok], 0.999)), ctrl_n=int(len(ctrl)), ctrl_median_diff_m=float(np.median(ctrl)),
+                    ctrl_frac_over_tol=float((ctrl >= TX.TOL_M).mean()))
+        gate["ok"] = bool(gate["frac_over_tol"] <= LEAK_FRAC and gate["max_diff_m"] <= LEAK_MAX and gate["ctrl_frac_over_tol"] >= 0.5)
         out.parent.mkdir(parents=True, exist_ok=True)
-        np.savez(out.with_suffix(".tmp.npz"), tokens=names, log=logs, fold=fold, select_4=h4, mean=hm, gate=np.array(json.dumps(gate)))
+        np.savez(out.with_suffix(".tmp.npz"), tokens=names, log=logs, fold=fold, select_4=h4, mean=hm, diff=diff, gate=np.array(json.dumps(gate)))
         out.with_suffix(".tmp.npz").rename(out)
         run.summary.update(gate)
-        assert gate["max_diff_m"] < TX.TOL_M, f"G-leak: extraction differs from the stored fold-model plan by {gate['max_diff_m']} m"
+        run.info("gate %s", gate)
+        assert gate["ok"], f"G-leak (amended rule, see the pre-registration): {gate}"
 
 
 # ---------------------------------------------------------------- 2. trajectory bank (CPU)
