@@ -87,3 +87,16 @@ oracle 逐 seed 取族内最高分（并列取编号最小的候选：恒等优�
 `scripts/turn_ceiling_chain.sh`（tmux `jev:turn-ceiling`，一条自推进链，`$DATA_DIR/runs/op_parity/turn_ceiling/chain/{STATUS, DONE, ERROR}`）。
 分阶段 24 → 300 → 3 154。并行只有 score-poses 自己的 claim 队列，本线没有自己的并行循环，所以不用 `jevdrive.par`；poses 文件走 `jevdrive.cache`。
 预算：stage 1 约 1 h 墙钟（估 66 key × ~1.03 core-s × 3 154 ≈ 60 core-h，72 核约 50 min）。
+
+---
+
+## 补记 A：stage 0a 闸门不过，修工具（2026-10-08，除恒等候选外任何分数读出之前写定）
+
+24 token 的恒等闸门不过：两个 seed 都是 NC / DAC / DDC / TLC / TTC / LK / HC 全等，EP 在同样 2 个 token 上不等（存档 0.61 / 0.95，score-poses 1.0）。
+按规则停下，只读了恒等行（外加只打恒等 key 的两次 24 token 复查）。原因：bench navtest 走 devkit 默认的 `traffic_agents: non_reactive`（log replay），
+`score-poses` 写死 reactive IDM；EP 用 PDM 参考轨迹归一化，参考轨迹在 reactive 交通下撞了就不归一，所以两条路径本来不是同一个 metric。
+存档的 89.55 / 91.71 与分桶表都是 non-reactive。
+
+改动：`jevdrive/bench/poses.py` 加 `--traffic {reactive, non_reactive}`（默认 reactive，旧 run 目录的 identity 不变；non_reactive 进 identity），
+本线全程用 `--traffic non_reactive`，与存档同一口径。其余（族、闸门容差、削减阶梯、判线 +4.0、分支规则）一字不改，stage 0 从 24 token 重新走。
+reactive 那次 24 token 的 CSV 里非恒等行没有读过，也不会用。成本估计作废（IDM 占 reactive 成本的 97%，non-reactive 会便宜很多），以 300 token 实测为准。

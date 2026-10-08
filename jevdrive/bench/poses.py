@@ -3,7 +3,9 @@
     python -m jevdrive.bench score-poses --poses f.npz [--keys a b] [--tokens t.txt] --out o.csv [--wait]
 
 f.npz: `tokens` (N,) and one or more (N, 8, 3) pose arrays (rear axle at t0, 0.5 .. 4 s); every key is scored on the selected
-tokens with the v2 navtest metric cache and run_pdm_score.py's simulator / scorer / reactive (IDM) traffic. Per (key, token):
+tokens with the v2 navtest metric cache and run_pdm_score.py's simulator / scorer / reactive (IDM) traffic (the default; bench
+navtest itself scores with the devkit default, non-reactive log replay: pass --traffic non_reactive to reproduce its per-token
+sub-scores, e.g. EP, whose normalisation depends on whether the PDM reference collides with the traffic). Per (key, token):
 the v2 sub-scores, `score` = the per-token EPDMS without extended comfort (EC needs the neighbouring frame), `raw_out` / `raw_depth`
 (the raw plan, linearly interpolated to 0.1 s with the ego footprint, leaves the scorer's drivable polygons: no tracker) and
 `lqr_out` / `out_depth` (the same on the LQR-simulated states; depth = largest distance of a footprint corner outside, m).
@@ -44,6 +46,7 @@ CHUNK = 24                            # tokens per claim
 MIN_TOKENS_PER_WORKER = 16            # fewer jobs for small token sets
 RAM_BASE_GB, RAM_PER_WORKER_GB = 2.0, 0.75     # measured: worker max RSS 0.59 GB (forked, partly shared), init 4 s
 STALE_S = 300.0
+TRAFFIC = ("reactive", "non_reactive")  # devkit traffic_agents_policy: IDM agents (the default here), or the log replay of bench navtest
 _W = {}
 
 
@@ -78,8 +81,10 @@ def file_sha(path) -> str:
 
 
 # ---------------------------------------------------------------- devkit scoring (envs/navsim2)
-def init(poses_file, keys) -> None:
+def init(poses_file, keys, traffic: str = "reactive") -> None:
     """Devkit objects + poses + metric-cache index into _W, once per process (worker pools fork after this)."""
+    if traffic not in TRAFFIC:
+        raise ValueError(f"traffic {traffic!r} is not one of {TRAFFIC}")
     from hydra import compose, initialize_config_module
     from hydra.core.global_hydra import GlobalHydra
     from hydra.utils import instantiate
@@ -90,7 +95,7 @@ def init(poses_file, keys) -> None:
                                                           "experiment_name=op_probe"])
     sim, scorer = instantiate(cfg.simulator), instantiate(cfg.scorer)
     z = np.load(poses_file)
-    _W.update(sim=sim, scorer=scorer, policy=instantiate(cfg.traffic_agents_policy.reactive, sim.proposal_sampling),
+    _W.update(sim=sim, scorer=scorer, policy=instantiate(cfg.traffic_agents_policy[traffic], sim.proposal_sampling),
               samp=sim.proposal_sampling, P={k: z[k] for k in keys}, row={t: i for i, t in enumerate(z["tokens"].tolist())},
               cp={Path(p).parent.name: p for p in glob.glob(str(mcache_dir() / "*/*/*/metric_cache.pkl"))})
 
@@ -244,11 +249,11 @@ def write_csv(df, out) -> None:
     os.replace(tmp, out)
 
 
-def score_local(poses, keys, tokens, out, procs: int = 0, status=print):
+def score_local(poses, keys, tokens, out, procs: int = 0, status=print, traffic: str = "reactive"):
     """In-process scoring on this process's cores (opb_score.py; a leased pool job). Returns (DataFrame, cost summary)."""
     procs = procs or granted_cores()
     t0 = time.time()
-    init(poses, keys)
+    init(poses, keys, traffic)
     t_init = time.time() - t0
     rows, costs = [], []
     for n, (_, r, p) in enumerate(score_iter(tokens, procs), 1):
@@ -308,8 +313,9 @@ def check_inputs(poses, keys=(), tokens=None, mcache=True) -> tuple:
 
 
 # ---------------------------------------------------------------- the pool run
-def run_key(poses, keys, tokens) -> str:
-    h = hashlib.sha256(json.dumps([file_sha(poses), keys, tokens]).encode()).hexdigest()[:12]
+def run_key(poses, keys, tokens, traffic: str = "reactive") -> str:
+    ident = [file_sha(poses), keys, tokens] + ([traffic] if traffic != "reactive" else [])     # reactive keeps the earlier run dirs
+    h = hashlib.sha256(json.dumps(ident).encode()).hexdigest()[:12]
     return f"{Path(poses).stem}-{h}"
 
 
@@ -338,11 +344,14 @@ def R_cores() -> float:
     return rc()
 
 
-def stages(poses, out, keys=(), tokens=None, cpu: int = 0, jobs: int = 0, chunk: int = CHUNK, root: Path = None) -> tuple:
+def stages(poses, out, keys=(), tokens=None, cpu: int = 0, jobs: int = 0, chunk: int = CHUNK, root: Path = None,
+           traffic: str = "reactive") -> tuple:
     """(run dir, stages): K worker jobs on the shared chunk queue, then collect. Writes config.json / tokens.txt."""
     poses = str(Path(poses).resolve())
     keys, tokens = check_inputs(poses, keys, tokens)
-    d = (root or R.bench_root("poses")) / run_key(poses, keys, tokens)
+    if traffic not in TRAFFIC:
+        raise ValueError(f"traffic {traffic!r} is not one of {TRAFFIC}")
+    d = (root or R.bench_root("poses")) / run_key(poses, keys, tokens, traffic)
     d.mkdir(parents=True, exist_ok=True)
     n_chunks = -(-len(tokens) // chunk)
     k, c = plan_jobs(len(tokens), cpu, jobs)
@@ -352,7 +361,7 @@ def stages(poses, out, keys=(), tokens=None, cpu: int = 0, jobs: int = 0, chunk:
         chunk, n_chunks = old["chunk"], old["n_chunks"]             # resume: keep the chunking of the existing chunk files
     outs = list(dict.fromkeys(old.get("outs", []) + [str(Path(out).resolve())]))
     cfg = dict(poses=poses, poses_sha=file_sha(poses), keys=keys, n=len(tokens), chunk=chunk, n_chunks=n_chunks, jobs=k, cpu=c,
-               outs=outs, t_submit=time.strftime("%F %T"))
+               traffic=traffic, outs=outs, t_submit=time.strftime("%F %T"))
     if not (d / "tokens.txt").exists():
         R.atomic_write(d / "tokens.txt", "\n".join(tokens) + "\n")
     R.atomic_write(cf, json.dumps(cfg, indent=1))
@@ -377,13 +386,13 @@ def stages(poses, out, keys=(), tokens=None, cpu: int = 0, jobs: int = 0, chunk:
 
 
 def submit(poses, out, keys=(), tokens=None, cpu: int = 0, jobs: int = 0, priority: float = 0.0, dry: bool = False,
-           owner: str = "bench") -> Path:
+           owner: str = "bench", traffic: str = "reactive") -> Path:
     """Queue a pose-scoring run (idempotent: finished chunks are kept, live jobs reused); returns the run dir."""
-    d, S = stages(poses, out, keys, tokens, cpu, jobs)
+    d, S = stages(poses, out, keys, tokens, cpu, jobs, traffic=traffic)
     R.submit(d, f"bn-poses-{d.name}", S, owner=owner, dry=dry, priority=priority)
     if not dry:
         cfg = json.loads((d / "config.json").read_text())
-        R.status(d, f"submitted {cfg['n']} tokens x {len(cfg['keys'])} keys: {sum(s.name.startswith('w') for s in S)} jobs x "
+        R.status(d, f"submitted {cfg['n']} tokens x {len(cfg['keys'])} keys ({traffic} traffic): {sum(s.name.startswith('w') for s in S)} jobs x "
                     f"{cfg['cpu']} cores, {cfg['n_chunks']} chunks of {cfg['chunk']}")
     return d
 
@@ -466,7 +475,7 @@ def worker(run_dir, i) -> None:
     if first is not None:
         if file_sha(cfg["poses"]) != cfg["poses_sha"]:
             raise RuntimeError(f"{cfg['poses']} changed after submission (sha differs); resubmit to score the new file")
-        init(cfg["poses"], cfg["keys"])
+        init(cfg["poses"], cfg["keys"], cfg.get("traffic", "reactive"))
         stats["init_s"] = round(time.time() - t0, 2)
         ch = cfg["chunk"]
         tok_chunk, acc = {}, {}
@@ -537,7 +546,7 @@ def collect(run_dir) -> None:
     t_first = min((w["t0"] for w in busy), default=0)
     t_last = max((w["t0"] + w["wall_s"] for w in busy), default=0)
     g = df.groupby("key")[["drivable_area_compliance", "score", "raw_out", "lqr_out"]].mean()
-    summ = dict(n=len(tokens), keys=cfg["keys"], outs=cfg["outs"], jobs_used=len(busy), jobs=cfg["jobs"], cpu=cfg["cpu"],
+    summ = dict(n=len(tokens), keys=cfg["keys"], traffic=cfg.get("traffic", "reactive"), outs=cfg["outs"], jobs_used=len(busy), jobs=cfg["jobs"], cpu=cfg["cpu"],
                 wall_s_first_to_last=round(t_last - t_first, 1), init_s=[w.get("init_s") for w in busy],
                 cost=cost_summary(costs), means=g.to_dict())
     R.atomic_write(run_dir / "summary.json", json.dumps(summ, indent=1))

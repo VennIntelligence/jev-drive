@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # op_parity turn-ceiling (plans/2026-10-08-turn-ceiling-prereg.md): privileged best-of-K ceiling of a small trajectory family around SH30's plan
-# on the navtest > 20 deg tokens. CPU only; scoring is `python -m jevdrive.bench score-poses` on the pool.
+# on the navtest > 20 deg tokens. CPU only; scoring is `python -m jevdrive.bench score-poses --traffic non_reactive` on the pool (the
+# traffic policy of bench navtest, so the identity candidate reproduces SH30's archived sub-scores).
 # One self-advancing chain in tmux jev (scripts/tmux_run.sh turn-ceiling experiments/op_parity/scripts/turn_ceiling_chain.sh):
 #   family -> 24 tokens (identity gate) -> 300 tokens (identity gate, measured cost, stage-1 key set) -> all 3 154 tokens -> report -> navtrain counts.
 # A failed identity gate stops the chain before any other score is read. STOP_AFTER=t300 ends after stage 0.
@@ -18,7 +19,8 @@ status() { echo "$(date '+%F %T') op_parity turn-ceiling: $*" | tee "$D/STATUS";
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 score() {   # score <stage> <keys ...> -> $O/score_<stage>.csv
   local st=$1; shift
-  "${B[@]}" score-poses --poses "$O/poses.npz" --keys "$@" --tokens "$O/tokens_$st.txt" --out "$O/score_$st.csv" --owner op_parity --wait \
+  "${B[@]}" score-poses --poses "$O/poses.npz" --keys "$@" --tokens "$O/tokens_$st.txt" --out "$O/score_$st.csv" --traffic non_reactive \
+      --owner op_parity --wait \
       || die "score-poses $st"
   [[ -f $O/score_$st.csv ]] || die "score-poses $st wrote no CSV"
 }

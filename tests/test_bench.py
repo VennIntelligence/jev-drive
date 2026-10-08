@@ -320,6 +320,12 @@ class TestPoses(TmpData):
         self.assertEqual(PS.read_tokens(d / "tokens.txt"), self.toks)
         d2, _ = PS.stages(self.npz, out, keys=["b"], chunk=10)
         self.assertNotEqual(d, d2)                                      # keys are part of the run identity
+        d3, _ = PS.stages(self.npz, self.D / "nr.csv", keys=["a"], chunk=10, traffic="non_reactive")
+        self.assertNotEqual(d, d3)                                      # so is the traffic policy; the reactive default keeps its key
+        self.assertEqual(json.loads((d3 / "config.json").read_text())["traffic"], "non_reactive")
+        self.assertEqual(d.name, PS.run_key(str(self.npz.resolve()), ["a"], self.toks))
+        with self.assertRaisesRegex(ValueError, "traffic"):
+            PS.stages(self.npz, out, keys=["a"], traffic="idm")
         for j in range(5):                                              # every chunk finished: collect only
             PS._atomic_pickle(d / "chunks" / f"c{j:05d}.pkl", {})
         _, st = PS.stages(self.npz, self.D / "o2.csv", keys=["a"], chunk=10)

@@ -112,8 +112,16 @@ Per-token devkit scores of arbitrary pose arrays: decoder outputs, ablations, re
 `experiments/op_probe/scripts/opb_score.py` (that script is now a thin wrapper over the same code).
 
 ```bash
-$B score-poses --poses f.npz [--keys a b] [--tokens t.txt] --out o.csv [--cpu C] [--jobs K] [--priority P] [--wait] [--dry]
+$B score-poses --poses f.npz [--keys a b] [--tokens t.txt] --out o.csv [--traffic non_reactive] [--cpu C] [--jobs K] [--priority P] [--wait] [--dry]
 ```
+
+- **Traffic policy (found 2026-10-08, op_parity turn-ceiling).** `score-poses` defaults to the devkit's reactive IDM traffic. `navtest`
+  (run_pdm_score_one_stage.py with the devkit default `traffic_agents: non_reactive`) scores against the log replay, so every stored
+  navtest EPDMS (ours and WA-JEPA's 91.71) is non-reactive. The two differ per token: on 24 turn tokens the 7 other sub-scores of
+  SH30's own poses were equal and EP differed on 2 (0.61 / 0.95 vs 1.0; EP is normalised by the PDM reference unless that reference
+  collides). Pass `--traffic non_reactive` to reproduce the per-token sub-scores of a `navtest` run; it is part of the run identity
+  (the reactive default keeps the earlier run dirs). Earlier lanes that quote a no-EC EPDMS from `score-poses` (turn_oracle stage A,
+  the representation decoders) used reactive traffic; their DAC read-outs do not depend on it.
 
 - Input: `f.npz` with `tokens` (N,) and (N, 8, 3) pose arrays (rear axle at t0, 0.5 .. 4 s). It scores every key (by default
   every (N, 8, 3) array) on the selected tokens: v2 navtest metric cache, run_pdm_score.py's simulator / scorer / reactive IDM

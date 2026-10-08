@@ -235,7 +235,7 @@ def cmd_gate(a):
         res["pass"] = bool(ok)
         if a.stage == "t300":
             from jevdrive.bench import runner as BR
-            rd = BR.bench_root("poses") / BP.run_key(str(OUT / "poses.npz"), (OUT / "keys_F33.txt").read_text().split(), tok)
+            rd = BR.bench_root("poses") / BP.run_key(str(OUT / "poses.npz"), (OUT / "keys_F33.txt").read_text().split(), tok, "non_reactive")
             sm = json.loads((rd / "summary.json").read_text())
             c, nk, n_all = sm["cost"], len(sm["keys"]), len(BP.read_tokens(OUT / "tokens_all.txt"))
             cores = int(BP.pool_budget() // BP.CORES_PER_JOB) * BP.CORES_PER_JOB
