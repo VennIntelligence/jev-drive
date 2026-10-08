@@ -545,7 +545,7 @@ def cmd_report(a):
 
         def spear(q):
             """Mean over seeds of the per-token Spearman of Q vs M (4 s) across the F19 candidates; NaN where the map margins span < 0.2 m."""
-            a_, b_ = q[:, f19, :, 3], M[:, f19, :, 3]
+            a_, b_ = q[:, f19][..., 3], M[:, f19][..., 3]                                  # (S, 19, n); q[:, f19, :, 3] would put the candidate axis first
             ra, rb = rankdata(a_, axis=1), rankdata(b_, axis=1)
             ra, rb = ra - ra.mean(1, keepdims=True), rb - rb.mean(1, keepdims=True)
             with np.errstate(invalid="ignore", divide="ignore"):
@@ -570,7 +570,7 @@ def cmd_report(a):
                          "identity margin < 0, %": 100 * (q[:, 0, :, 3] < 0).mean()})
         stats.write_table(rows, out / "margin_quality", note=f"navtest > 20 deg, {len(tok)} tokens x 2 SH30 seeds; MAE against the map margin (both clipped to [-2, 4] m), per-token mean then log-cluster bootstrap "
                           f"(B 10 000); AUC CIs log-cluster bootstrap B 1 000; DAC failure base rate {100 * dac_fail.mean():.2f}%, repair base rate {100 * rep_ex.mean():.1f}%; "
-                          f"within-token Spearman over the 19 F19 candidates on token-seeds whose map margins span >= 0.2 m ({100 * (np.ptp(M[:, f19, :, 3], axis=1) >= 0.2).mean():.1f}%).")
+                          f"within-token Spearman over the 19 F19 candidates on token-seeds whose map margins span >= 0.2 m ({100 * (np.ptp(M[:, f19][..., 3], axis=1) >= 0.2).mean():.1f}%).")
         # ---- reading 2: selection
         B = {k: v for k, v in TD.buckets(dyaw).items() if "left" not in k and "right" not in k}
         HEADS = {"1": "ridge (E + all candidates' margins)", "2": "trees (candidate rows)", "3": "1-parameter rule (margin only)"}
