@@ -52,7 +52,7 @@ class Arm:
         return self.per_frame(lambda d: d[key][np.arange(self.C.n), d["pk_B"] if gate == "B" else d["pick_free"] if gate == "A" else 0 * d["pk_B"]])
 
 
-def run(C, tags, label, out, base_mode="tapped"):
+def analyze(C, tags, label, out, base_mode="tapped"):
     A = Arm(C, tags, base_mode)
     n = C.n
     ii = np.arange(n)
@@ -223,7 +223,7 @@ def report(a):
         for lab, tags in groups.items():
             if not all(TW.sel_file(t).exists() for t in tags):
                 continue
-            res[lab] = run(C, tags, lab, out, a.base)
+            res[lab] = analyze(C, tags, lab, out, a.base)
         run.summary.update({k: dict(verdict=v[0]["verdict"], d=v[0]["primary"]["d"], lo=v[0]["primary"]["lo"], hi=v[0]["primary"]["hi"]) for k, v in res.items()})
         figs(res, C)
 
