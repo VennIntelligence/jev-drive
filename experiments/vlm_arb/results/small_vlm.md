@@ -47,3 +47,24 @@ forward-only column (124 ms) matches d85. Latency was measured on 100 frames, ba
 
 Peak VRAM `nan` = not recorded (job cancelled before the cfg ended, answers kept). Gemma 4 E2B `fwd_r1153` used 1044 visual tokens (soft-token budget 560 per image), Gemma `fwd_r4573`
 2184. `gen_native` for Qwen3-VL-4B is d85's generate row (reproduced exactly).
+
+## Follow-up: native-style reading (no forced `ANSWER:` prefix, one-word prompt)
+
+Prompt: the two-camera sentence + "Is the traffic light that controls the ego vehicle's lane ahead red or yellow, green, or is there none (no light, or a light for another lane)? Reply with one word: red, green or none."
+`short_logit` = one forward, argmax over the first token of `red` / `green` / `none` at the generation position (Qwen3.5 with thinking off); `short_gen` = greedy generate, 8 new tokens.
+Same 233 frames, ~1150 visual tokens. Four jobs ran at the same time on the box, so the latency column (forward / generate only, no decode) is rough.
+
+| model | config | ego red: red | ego red: green | ego green: green | no light: red | red precision | unparsed | ms p50 |
+|:--|:--|:--|:--|:--|:--|:--|--:|--:|
+| Qwen3-VL-4B (control) | short_logit | 75.3% [55.9, 91.6] (64/85) | 19 | 89.7% [83.8, 96.8] (61/68) | 0/80 | 91% | 0 | 151 |
+| Qwen3-VL-4B (control) | short_gen | 74.1% [53.7, 91.3] (63/85) | 14 | 89.7% (61/68) | 0/80 | 91% | 6 | 156 |
+| Qwen3.5-2B | short_logit | 0.0% (0/85) | 0 | 52.9% [30.0, 76.7] (36/68) | 0/80 | n/a | 0 | 141 |
+| Qwen3.5-2B | short_gen | 0.0% (0/85) | 0 | 42.6% [21.3, 66.0] (29/68) | 0/80 | n/a | 10 | 153 |
+| Qwen3.5-4B | short_logit | 41.2% [23.3, 56.1] (35/85) | 2 | 54.4% [34.7, 75.3] (37/68) | 0/80 | 100% | 0 | 352 |
+| Qwen3.5-4B | short_gen | 41.2% [23.3, 56.1] (35/85) | 2 | 48.5% [26.0, 72.1] (33/68) | 0/80 | 100% | 0 | 465 |
+| Gemma 4 E2B | short_logit | 64.7% [44.1, 82.0] (55/85) | 5 | 77.9% [60.0, 91.3] (53/68) | 1/80 | 93% | 0 | 112 |
+| Gemma 4 E2B | short_gen | 64.7% [44.1, 82.0] (55/85) | 5 | 77.9% [60.0, 91.3] (53/68) | 1/80 | 93% | 3 | 151 |
+
+Reading: the shorter, native-style prompt does not rescue the new models (Qwen3.5-2B never says red, Qwen3.5-4B 41%, Gemma 65%, all at or below the forced-option read), and it also hurts the
+control (91% to 75%, with 14-19 red frames read as green), so the d85 option-scoring prompt is not what holds the new models back. Where the red misses go differs: Qwen3.5 answers "none" for red
+lights (red to green only 0-2 frames), Gemma and the control confuse red with green.
