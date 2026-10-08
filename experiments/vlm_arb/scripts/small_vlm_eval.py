@@ -22,7 +22,7 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from vlm_thin_common import FOUR_PROMPT, LIGHTS, RED, SCORE_PREFIX, light_masks, log, parse_option  # noqa: E402
+from vlm_thin_common import FOUR_PROMPT, LIGHTS, RED, SCORE_PREFIX, log, parse_option  # noqa: E402
 from vlm_arb_common import DATA, REPO  # noqa: E402
 
 sys.path.insert(0, str(REPO))
@@ -51,7 +51,11 @@ def model_path(name):
 
 def sweep_frames():
     df = pd.read_csv(THIN_RUN / "frames.csv", dtype={"route": str})
-    return df[df["sweep"]].reset_index(drop=True)
+    df = df[df["sweep"]].reset_index(drop=True)
+    sw = pd.read_csv(DATA / "runs/vlm_arb/results/lightsweep/frames.csv", usecols=["id", "truth"])   # the sweep's own labels (d85 table)
+    df = df.merge(sw, on="id", how="left")
+    assert df.truth.notna().all() and len(df) == 233, len(df)
+    return df
 
 
 class Reader:
@@ -191,7 +195,7 @@ def cell(r):
 
 def metrics(df, ans):
     """Per-cfg metrics: red recall / red-as-green / green recall / no-light FP (route-cluster CI via jevdrive.stats) and red precision."""
-    m = light_masks(df)
+    m = dict(red=df.truth == "red", green=df.truth == "green", nolight=df.truth == "none")
     out = {}
     for k, (mk, hit) in dict(red_recall=("red", ans == RED), red_as_green=("red", ans == "green_for_ego"),
                              green_recall=("green", ans == "green_for_ego"), nolight_fp=("nolight", ans == RED)).items():
