@@ -123,3 +123,9 @@ GPU：预训练约 3 分钟 + 8 个训练 × 约 7 分钟 + 15 次 plan 导出 �
 - JP 泄漏标签，只说明装置能否吸收一个 raster 信号以及通道对路径信息的反应，不是任何意义上的方法或上限。
 - 上限针对这条 memory 通道（32 token、2 层 decoder、零初始化输出）与 pilot 配方。
 - GB / GX 的 seed 1 在 d197 的闸门下未打分；本线把它作为参照行打分，不改 d197 按 seed 0 作出的登记判定，只在 d197 的状态行里补记。
+
+## 开跑前的声明（2026-10-09，任何分数读数之前）
+
+- smoke（pool，30 步 × batch 64，b / x / p 三种 kind 各一个）通过：loss 有限，dev 诊断与 navtest bank 导出都跑通，bank (12 146, 32, 512)，token RMS 0.48。
+  30 步时 on / 屏蔽 / 错配的 dev ADE 相同（1.46 m），符合零初始化输出层的预期。smoke 不产生 navtest 分数；它的 bank 已删。
+- VRAM 实测：smoke 含 dev eval 与 navtest 导出的峰值 19.9 GB（b）/ 18.2 GB（p）。d197 的冻结臂 30 步 11.9 GB、3 000 步 17.4 GB，全程会再涨，训练 job 按 26 GB 申报；RAM 40 GB、6 核（同 d197）。

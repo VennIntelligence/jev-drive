@@ -26,7 +26,8 @@ DATA="navtrain_full.s2of12 navtrain_full.s3of12 navtrain_full.s4of12"
 SPLIT=navsim/op-parity-s234
 HF="--hinge-lam 30 --hinge-margin 0.5"
 INIT=$O/tok_b_init.pt
-VRAM=${GE_VRAM:-22}          # measured peak of a 64-row joint training + the navtest export (see the prereg), GB
+VRAM=${GE_VRAM:-26}          # GB. Measured: 30-step, 64-row smoke incl. dev eval + navtest export peaks at 19.9 (b) / 18.2 (p);
+                             # the frozen-bank arms grew from 11.9 (30 steps) to 17.4 over 3 000 steps, so the full run is booked at 26
 declare -A TAG=([JB]=GEB [JX]=GEX [JW]=GEW [JP]=GEP) KIND=([JB]=b [JX]=x [JW]=b [JP]=p)
 ARMS=(JB JX JW JP)
 status() { echo "$(date '+%F %T') op_parity geo-e2e: $*" | tee "$D/STATUS"; }
