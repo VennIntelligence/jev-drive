@@ -426,8 +426,14 @@ def cmd_select(a):
         workers = max(1, min(n_cpus() // 2, a.workers))
         run.info("%d units on %d workers; streams %s; PCA fitted on %d non-turn navtest tokens", len(units), workers,
                  {k: list(v.shape) for k, v in feats.items()}, finfo["n_fit"])
-        res = par.pmap(unit, units, workers=workers, run=run, desc="selector units", mp_context=mp.get_context("fork"))
+        # ridge units fork (numpy only); the boosted trees run in this process on an OpenMP pool: forked workers each opened a full-size
+        # OpenMP pool and oversubscribed the box
+        ridge, trees = [u for u in units if u[0] != "hgb"], [u for u in units if u[0] == "hgb"]
+        res = par.pmap(unit, ridge, workers=workers, run=run, desc="ridge units", mp_context=mp.get_context("fork"))
         res.raise_if_failed()
+        from threadpoolctl import threadpool_limits
+        with threadpool_limits(limits=min(workers, 24), user_api="openmp"):
+            res.values += [unit(u) for u in run.tqdm(trees, desc="tree units")]
         OUT.mkdir(parents=True, exist_ok=True)
         with open(OUT / ("select_smoke.pkl" if a.smoke else "select.pkl"), "wb") as fh:
             pickle.dump(dict(res=dict(res.values), tok=tok, dyaw=dyaw, log=log, ceil=ceil, fks=fks, finfo=finfo,
