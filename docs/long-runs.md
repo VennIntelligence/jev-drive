@@ -79,6 +79,12 @@ as they ship: measure them, do not rewrite them.
   run 1 unit, inspect it; then ~10 units (routes, worlds, folds, shards), inspect them against a written sanity
   checklist (completion / blocked / crash rates, value ranges against a known reference, outputs non-degenerate);
   only then the full batch. A pilot that fails the checklist stops the batch; never find out after the full run.
+- Equality gates on fp16 plan points (identity, leakage, "same model through another path"): compare only the points
+  inside the horizon the experiment uses (<= 4 s, the first ~15 plan points), and judge by the share of rows over the
+  tolerance plus a wrong-model control, not by the maximum over all rows and points. The far points reach ~190 m,
+  where one fp16 ulp is 0.125 m, so a max-over-everything rule fails on rounding once the run is large; three
+  op_parity lanes amended a registered gate for this on 2026-10-08 (margin-critic, turn-selnt, turn-selhug; values
+  in `experiments/op_parity/scripts/tsn_extract.py`: 0.03 m = two ulps at 32 m, wrong-fold median difference 0.07 m).
 - While a long job runs cleanly, report every 3-5 hours, not per file or step. Report at once only for an error,
   a stall, a decision, or completion.
 - The box is elastic: cards, cgroup CPU quota, RAM and pids.max change between instances (7 cards / 175 cores /
