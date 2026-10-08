@@ -107,3 +107,9 @@ CPU：16 次 navtest 打分（每次约 10 分钟、72 核，与 N1 / R1 共享 
 - tokenizer 见过 navtrain 其余 shard 的日志未来（模仿项），所以 token 里除几何外还带「这种几何下人怎么开」的先验；这与 WA-Cf 同性质，也是支路训练后会有的形态，但它使本线量的是「几何 + 规划监督的 tokenizer」的上限，不是原始几何数值的上限。
 - 上限针对这条 memory 通道与 pilot 配方；通道容量（32 token、2 层 decoder、零初始化的 bias）本身是上限的一部分。
 - WA-Cf 的 +0.95 是在 P2H（λ 10）基线上量的，本线基线更强（λ 30），两个增量不是同一基线上的数。
+
+## 开跑后的声明（2026-10-09，任何分数读数之前）
+
+- **seed 1 的训练提前排队。** 协调方要求在会话暂停期间保持卡不空：五个臂的 seed-1 训练已用 `--when-exists <seed-0 训练的 DONE>`、低优先级排进 pool（job 名与 log dir 同链内的 `train`，链不会重复提交）。
+  这只是训练，不读分数；seed-0 闸门不变：明确阴性时 seed 1 不打分、不进判定，按 seed 0 报告。多出的 GPU 约 0.5 卡时，仍在预算内。
+- tokenizer 的 fit 行已注册：`navsim/op-parity-geotok-train@v1:905892337c03`，76 084 token。
