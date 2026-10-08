@@ -8,8 +8,7 @@ OUT=$DATA_DIR/runs/alpasim/fetch; TMP=$OUT/_probe; T=${T:-90}; mkdir -p "$TMP"
 REL=datasets/OpenDriveLab/AlpasimChallenge2026_nuplan_track/resolve/main/MTGS_asset/navtest/assets/part015.tar.gz
 probe() {  # <route> <streams>
   local route=$1 s=$2 url px=() i
-  if [[ $route == hf ]]; then url=https://huggingface.co/$REL; type proxy_on &>/dev/null && proxy_on >/dev/null 2>&1
-    px=(-x "${https_proxy:-${HTTPS_PROXY:-}}"); [[ -n ${px[1]} ]] || { echo "$route: no proxy"; return; }
+  if [[ $route == hf ]]; then url=https://huggingface.co/$REL; px=(-x "${https_proxy:-http://127.0.0.1:7890}")   # clash, docs/network-proxy.md
   else url=https://hf-mirror.com/$REL; px=(--noproxy '*'); fi
   rm -f "$TMP"/*
   for i in $(seq 0 $((s - 1))); do
@@ -18,6 +17,6 @@ probe() {  # <route> <streams>
   wait
   printf '%s\tstreams %s\t%s MB/s\n' "$route" "$s" "$(du -sb "$TMP" | awk -v t="$T" '{printf "%.1f", $1 / 1e6 / t}')" | tee -a "$OUT/net_probe.tsv"
 }
-date | tee -a "$OUT/net_probe.tsv"
-for s in "${@:-8 16 32 64}"; do for r in mirror hf; do probe $r "$s"; done; done
+rm -f "$OUT/net_probe.DONE"; date | tee -a "$OUT/net_probe.tsv"
+for s in "${@:-8 16 32 64}"; do for r in ${ROUTES:-mirror hf}; do probe $r "$s"; done; done
 rm -rf "$TMP"; date > "$OUT/net_probe.DONE"
