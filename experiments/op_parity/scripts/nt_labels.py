@@ -168,6 +168,15 @@ def cmd_score(a):
 
 
 def cmd_table(a):
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    tr = splits.load("navsim/op-parity-full-train")             # what SH30 was trained on; the rest of navtrain (log-disjoint dev) is held out
+    with Run("op_parity", "nt_labels/table", config=vars(a)) as run:
+        run.use_split(tr)
+        _table(tr)
+
+
+def _table(tr):
     import numpy as np
     import pandas as pd
     from jevdrive.bench import tables as T
@@ -187,10 +196,13 @@ def cmd_table(a):
         for n, f, v in zip(tab["names"], tab["fut"], tab["speed"]):
             z[n] = T.motion(np.asarray(f, float), float(v))[0]
     df.insert(0, "dyaw", [z[t] for t in toks])
-    df.to_csv(L() / "labels_turn.csv.gz", float_format="%.6g")
     big = np.abs(df.dyaw.to_numpy()) >= 45
+    seen = tr.mask(np.array(toks))
+    df.insert(1, "sh30_train", seen)
+    df.to_csv(L() / "labels_turn.csv.gz", float_format="%.6g")
     rows = []
-    for name, m in (("turn >= 20 deg", np.ones(len(df), bool)), ("20-45 deg", ~big), (">= 45 deg", big)):
+    for name, m in (("turn >= 20 deg", np.ones(len(df), bool)), ("20-45 deg", ~big), (">= 45 deg", big),
+                    ("in SH30 training split", seen), ("held out (log-disjoint dev)", ~seen)):
         for sd in (0, 1):
             i0 = lambda c: df[f"s{sd}_id_{c}"].to_numpy()[m]
             r = dict(bucket=name, seed=sd, n=int(m.sum()), score_id=100 * i0("score").mean(), DAC_fail=(i0("DAC") == 0).mean(),
