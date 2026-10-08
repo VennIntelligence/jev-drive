@@ -1,7 +1,7 @@
 # alpasim: AlpaSim E2E Closed Loop Challenge feasibility
 
 status: live
-decisions: 184, 185, 188, 189 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
+decisions: 184, 185, 188, 189, 199 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
 index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
 key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
@@ -35,6 +35,8 @@ definitions): `AP2-AB-s0`. Offline on navtest under AlpaSim inputs vs SH30 as se
 0.9465 (35, 2): not separable. Inputs used / not usable / substituted, ruled-out options (zero-slot cold start, route waypoints into the
 adapter) and mismatches: [results/ap2_smoke.md](results/ap2_smoke.md) (`figs/ap2_frames_right_turn.jpg`, `figs/ap2_bev_first8.jpg`), plan
 [plans/2026-10-08-alpasim-aligned-prereg.md](plans/2026-10-08-alpasim-aligned-prereg.md). Run: `run.sh <dir> ap2`.
+
+**C0: 400 landed public scenes (2026-10-09, decision 199).** SH30 0.9306, AP2-AB-s0 0.9335, 15 at-fault events each; a second AP2 run is scene-for-scene identical (deterministic sim); per-scene best-of-two 0.9627 (+0.0292 over the best single driver, C2 line met as an upper bound). Part007 landed later and is uncovered. [results/c0_public400.md](results/c0_public400.md).
 
 **Next.** The at-fault collisions of SH30 and AP2 case by case (zeros decide this board); WA-JEPA latency on an idle card; the full public suite once the remaining 14 asset shards are on disk (`fetch_data.sh all`, running 2026-10-08); the two
 collisions and the 11 slow scenes; step latency under 0.1 s (warp on the GPU or cross-session batching); a Docker host for the
