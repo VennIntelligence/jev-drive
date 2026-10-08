@@ -132,7 +132,7 @@ def analyze(C, tags, label, out, base_mode="tapped"):
         for variant, G in (("10", G10), ("4", G4)):
             idx = F[fam]
             best = G[:, idx].max(1)
-            ceil[(fam, variant)] = dict(all=C.ci(best), gated=C.ci(np.where(gate_m, best, 0.0)), gated_only_rows=C.ci(best, gate_m), intent=C.ci(best, strata["turn intent (left / right)"]))
+            ceil[f"{fam}_{variant}"] = dict(all=C.ci(best), gated=C.ci(np.where(gate_m, best, 0.0)), gated_only_rows=C.ci(best, gate_m), intent=C.ci(best, strata["turn intent (left / right)"]))
     ctx["ceiling"] = ceil
     # privileged-by-seed ceiling: best per frame inside each seed, then average (the seed-mean plan is not one plan)
     best_seed = A.per_frame(lambda d: (d["R10"] - d["R10"][:, [0]])[:, F["F19"]].max(1))
