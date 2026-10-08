@@ -13,7 +13,7 @@ trap 'echo "failed at line $LINENO" > "$OUT/ERROR"' ERR
 sz() { stat -c%s "$1" 2>/dev/null || echo 0; }
 
 fetch() {  # <path in the dataset repo>
-  local rel=$1 tag size chunk t0=$SECONDS i
+  local rel=$1 tag size chunk t0=$SECONDS i pids=()
   tag=$(tr / _ <<<"$rel")
   [[ -e $ROOT/.done.$tag ]] && { echo "skip $rel"; return; }
   size=$(curl -sIL --retry 5 "$EP/$rel" | tr -d '\r' | awk 'tolower($1)=="content-length:"{s=$2} END{print s}')
@@ -27,8 +27,9 @@ fetch() {  # <path in the dataset repo>
         curl -sL --retry 3 --speed-limit 20000 --speed-time 60 -r $((a + $(sz "$f")))-$b "$EP/$rel" >> "$f" || sleep 5
       done
     ) &
+    pids+=($!)
   done
-  wait
+  wait "${pids[@]}"   # a bare `wait` would also wait for the tee of the log redirect
   local dl=$((SECONDS - t0)); t0=$SECONDS
   echo "extract $rel" > "$OUT/STATUS"
   for i in $(seq 0 $((N - 1))); do cat "$DL/$tag.$i"; done | pigz -dc | tar -x -C "$ROOT"

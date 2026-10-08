@@ -9,7 +9,10 @@ OUT=$DATA_DIR/runs/alpasim/setup; mkdir -p "$OUT"; rm -f "$OUT/DONE" "$OUT/ERROR
 exec > >(tee -a "$OUT/log.txt") 2>&1
 trap 'echo "failed at line $LINENO" > "$OUT/ERROR"' ERR
 source "$(dirname "$0")/env.sh"
-proxy() { env http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890 "$@"; }  # Clash, docs/network-proxy.md
+# GitHub (clone, uv git / archive sources) goes through Clash, PyPI direct from the Aliyun mirror (docs/network-proxy.md).
+clash-start >/dev/null
+proxy() { env http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890 \
+  no_proxy=localhost,127.0.0.1,.aliyun.com,.aliyuncs.com,.rsproxy.cn "$@"; }
 
 echo clone > "$OUT/STATUS"
 [[ -d $SRC/.git ]] || proxy git clone --branch e2e_challenge https://github.com/NVlabs/alpasim "$SRC"
@@ -24,10 +27,10 @@ if ! command -v cargo >/dev/null; then
 fi
 
 echo protos > "$OUT/STATUS"
-(cd "$SRC/src/grpc" && $UVSYNC && uv run --no-sync compile-protos)
+(cd "$SRC/src/grpc" && proxy $UVSYNC && uv run --no-sync compile-protos)
 
 echo sync > "$OUT/STATUS"
-(cd "$SRC" && $UVSYNC $ALPASIM_EXTRAS)
+(cd "$SRC" && proxy $UVSYNC $ALPASIM_EXTRAS)
 "$SRC/.venv/bin/python" - <<'PY' | tee "$OUT/versions.txt"
 import torch, gsplat, numpy, grpc
 print("torch", torch.__version__, "cuda", torch.version.cuda, "archs", torch.cuda.get_arch_list())
