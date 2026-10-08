@@ -69,7 +69,7 @@ def main():
             rows = np.array([idx[t] for t in names[:n]])
             ok = S.tb["speed"][:n] >= 0.5
             d = np.abs(z["plan_pos"][rows][ok] - mu[:, :, 0:3][ok]).max()
-            dl = np.nanmax(np.abs(z["lead_x"][rows][ok] - lx[ok]))
+            dl = np.nanmax(np.abs(z["lead_x"][rows][ok] - lx[ok])) if "lead_x" in z.files else float("nan")
             run.summary.update(ref_max_plan_diff_m=float(d), ref_max_lead_x_diff=float(dl), ref_rows=int(ok.sum()))
             run.info(f"vs stored plans: max |dplan_pos| {d:.4g} m, max |dlead_x| {dl:.4g} over {int(ok.sum())} rows")
         out.parent.mkdir(parents=True, exist_ok=True)
