@@ -186,6 +186,11 @@ def main() -> int:
                 raise RuntimeError(f"service {dead} died while the runtime was running")
             time.sleep(1)
         times["runtime_s"] = time.time() - times["t_runtime"]
+        # The runtime exits 0 with failed rollouts (allow_aggregation_with_failed_rollouts): count them here.
+        rows = json.load(open(out / "aggregate" / "results-summary.json"))["rollouts"]
+        times["rollouts"], times["rollouts_failed"] = len(rows), sum(bool(r.get("failure_reason")) for r in rows)
+        if rc == 0 and rows and times["rollouts_failed"] == len(rows):
+            raise RuntimeError("every rollout failed: " + str(rows[0]["failure_reason"])[:300])
     except Exception as e:
         print(f"[native] ERROR {e}", flush=True)
         times["error"], rc = str(e), rc or 1

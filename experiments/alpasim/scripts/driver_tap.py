@@ -70,16 +70,17 @@ def main() -> None:
                                 response_deserializer=resp_cls.FromString)
 
         def fn(req, ctx):
-            t0, resp, err = time.time(), None, None
+            t0, resp, err, left = time.time(), None, None, ctx.time_remaining()
             try:
-                resp = call(req, timeout=ctx.time_remaining())
+                resp = call(req)  # the caller's deadline is logged, not forwarded
                 return resp
             except grpc.RpcError as e:
                 err = f"{e.code().name}: {e.details()}"
                 ctx.abort(e.code(), e.details())
             finally:
                 rec = {"t": t0, "method": m.name, "session": getattr(req, "session_uuid", None),
-                       "ms": round((time.time() - t0) * 1e3, 3), "error": err, "req_bytes": req.ByteSize()}
+                       "ms": round((time.time() - t0) * 1e3, 3), "error": err, "req_bytes": req.ByteSize(),
+                       "deadline_s": left}
                 try:
                     rec.update(facts(m.name, req, resp))
                 except Exception as e:
