@@ -30,7 +30,6 @@ def cmd_plans(a):
     import torch
     import ap2_core as AC
     import ap2_inputs as AI
-    import pp_train as T
     from jevdrive import navsim_zs as Z
     from jevdrive import op_interp as I
     from jevdrive.data import splits
@@ -50,9 +49,8 @@ def cmd_plans(a):
         for spec in a.models:
             label, tag = spec.split("=", 1)
             tag, _, rule = tag.partition(":")
-            model, route = AC.load_model(tag, dev)
-            ck = T.proot("runs", tag) / "ckpt-final.pt"
-            rule = rule or (torch.load(ck, map_location="cpu", weights_only=False).get("ap2", {}).get("cold") if ck.exists() else None) or "backwarp"
+            model, route, trained = AC.load_model(tag, dev)
+            rule = rule or trained
             ego = {m: AC.ego_table(tab, rz["wp"], route)[:, m - 1] for m in (1, 2, 3, 4)}
             if not route:
                 ego["nav"] = tab["ego"]

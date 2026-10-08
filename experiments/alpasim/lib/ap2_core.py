@@ -1,7 +1,9 @@
 """AP2: openpilot Cinque + the op_parity ego adapter + drivable hinge, trained for the inputs AlpaSim hands a nuPlan-track driver
 (experiments/alpasim/lib/ap2_inputs.py; trainer scripts/ap2_train.py). Same network and serving path as SH30 (sh30_core.py); what differs:
 
-  cold start  rule `zero`, the one the model was trained with: slots older than the first keyframe are invalid, no fabricated frames
+  cold start  the rule the checkpoint was trained with, on decisions drawn with a rollout's own mix of m = 1..4 keyframes: `backwarp`
+              (arm AB, chosen by the pilot: the missing slots are the first keyframe re-projected to back-extrapolated poses) or `zero`
+              (arm A: slots older than the first keyframe are invalid)
   ego state   as AlpaSim's DynamicState defines it per decision (the driver passes it through; training built the same per m)
   command     the shipped samples' route rule, computed in training from AlpaSim's own route generator on navtrain; arm R (`route` in the
               checkpoint) also feeds the 20 route waypoints to the adapter's ego MLP (ap2_inputs.route_feat)
@@ -48,29 +50,33 @@ def widen(model, route: bool):
 
 
 def load_model(tag: str, dev):
-    """An op_parity / AP2 run tag -> (PModel in eval mode, route flag)."""
+    """An op_parity / AP2 run tag -> (PModel in eval mode, route flag, the cold-start rule it was trained with; op_parity tags, trained
+    on full history only: `backwarp`, what the SH30 driver serves them with)."""
     import torch
     import pp_train as T
     f = T.proot("runs", tag) / "ckpt-final.pt"
-    ck = torch.load(f, map_location="cpu", weights_only=False) if f.exists() else None
-    route = bool(ck and ck.get("ap2", {}).get("route"))
-    if not route:
-        return T.load_pmodel(tag, dev), False
+    ap = (torch.load(f, map_location="cpu", weights_only=False).get("ap2") or {}) if f.exists() else {}
+    cold = ap.get("cold", "backwarp") if ap.get("std", "navsim") == "alpasim" else "backwarp"
+    if not ap.get("route"):
+        return T.load_pmodel(tag, dev), False, cold
+    ck = torch.load(f, map_location="cpu", weights_only=False)
     m = widen(T.PModel(ck["model"]["arm"]), True).to(dev).eval()
     m.load_state(ck["model"])
-    return m, True
+    return m, True, cold
 
 
 class Core(C.Core):
-    def __init__(self, tag: str, dev: str = "cuda", cold: str = "zero"):
+    def __init__(self, tag: str, dev: str = "cuda", cold: str = ""):
+        """cold: "" = the rule the checkpoint was trained with."""
         import cv2
         import torch
         from jevdrive import op_adapt as A
         cv2.setNumThreads(1)
-        assert cold in C.COLD, cold
-        self.torch, self.A, self.tag, self.cold = torch, A, tag, cold
+        self.torch, self.A, self.tag = torch, A, tag
         self.dev = torch.device(dev)
-        self.model, self.route = load_model(tag, self.dev)
+        self.model, self.route, trained = load_model(tag, self.dev)
+        self.cold = cold or trained
+        assert self.cold in C.COLD, self.cold
         assert self.model.arm == "P2" and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"
         s = self.model.net.slices["plan"].start
         self.pi = slice(s, s + 33 * 15)

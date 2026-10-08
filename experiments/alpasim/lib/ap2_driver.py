@@ -2,13 +2,15 @@
 no-fallback rule: every `drive` is a real inference or a gRPC error) around ap2_core.Core, the model trained for AlpaSim's inputs.
 
 Differences from the SH30 driver, all on the input side (experiments/alpasim/lib/ap2_inputs.py):
-  history   decisions with fewer than 4 keyframes use rule `zero` (only the real slots; trained), not fabricated back-warped frames
+  history   decisions with fewer than 4 keyframes use the cold-start rule the checkpoint was TRAINED with (ap2_core; AP2-AB: back-warped
+            first frame, the SH30 driver's patch, now in the training distribution)
   ego       DynamicState as delivered: the model was trained on its per-decision definitions. The states of the rollout's start (time <=
             the first `drive`) arrive rotated by -yaw; they are rotated back when the pose difference says so (sh30_driver's test) and, when
             that test cannot tell (below 1 m/s), by the rule read from AlpaSim's source (event_loop._initialize_ego_trajectories), counted
   command   the shipped route rule (as SH30); the 20 route waypoints go to the model as well when the checkpoint is a route arm
 
-Environment: as sh30_driver.py, with AP2_TAG (run tag under $DATA_DIR/runs/op_parity/runs, required) and AP2_COLD (zero | backwarp).
+Environment: as sh30_driver.py, with AP2_TAG (run tag under $DATA_DIR/runs/op_parity/runs, required) and AP2_COLD (zero | backwarp;
+unset = the trained rule).
 Run with envs/op-train:  AP2_TAG=AP2-A-s0 python experiments/alpasim/lib/ap2_driver.py
 """
 from __future__ import annotations
@@ -107,7 +109,7 @@ def main() -> None:
     host, port = os.environ.get("ALPASIM_DRIVER_HOST", "0.0.0.0"), int(os.environ.get("ALPASIM_DRIVER_PORT", "6789"))
     log_dir = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/tmp/alpasim-driver"))
     t0 = time.time()
-    core = AC.Core(os.environ["AP2_TAG"], os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("AP2_COLD", "zero"))
+    core = AC.Core(os.environ["AP2_TAG"], os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("AP2_COLD", ""))
     z = np.zeros(AC.C.FRAME, np.uint8)
     for m in (1, 2, 3, 4, 4):                           # warm-up: every slot count compiled before the port opens
         core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])
