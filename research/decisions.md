@@ -174,4 +174,4 @@
 | 177 | 论文主线：世界模型训练场废弃；做方法型不做检验型；候选主线是冻结工业表征上从后果 / 评价信号（而非日志模仿）学驾驶价值，以跨榜迁移判定是否 trick；现有迁移证据为负，未定稿 | 方向决定 | 待定 |
 | 178 | SH30 plan 附近小轨迹族（偏移 / 曲率 / 速度）在 navtest > 20° 上 best-of-19 特权上限 +12.20 [+10.57, +13.76]（线 +4.0，对 WA-JEPA 的差 6.52）；任何固定变换都不加分，没有全局欠转，增益是逐 token 的小余量修复，三轴互为替代；score-poses 原为 reactive 口径，已加 non_reactive；navtrain > 20° 28 323 token，无 v2 metric cache | 中 | 待定 |
 | 179 | 模型自己的路沿输出对「plan 会不会出界」的预测力不够：navtest > 20° 上校准后自路沿 margin 对 DAC 失败 AUC 0.641 [0.590, 0.695]（线 0.65，想法结束），地图 SDF margin 0.921，plan 只看末端转角 0.650；lead 间距对 NC / TTC 失败无预测力（AUC 0.52）；label-free 约束这条路不走 | 中 | 成立 |
-| 180 | WLG（两 seed 轨迹均值）WOD-E2E 官方 test RFS 8.099（val 8.178）；val → test 的差几乎全在 val 没有的 Spotlight cluster（7.34），去掉后 8.174；高于文档记录的 RAP 8.043（榜单现状未核对） | 中 | 成立 |
+| 180 | WLG（两 seed 轨迹均值）WOD-E2E 官方 test RFS 8.099（val 8.178）；val → test 的差几乎全在 val 没有的 Spotlight cluster（7.34），去掉后 8.174；按 2026-10-08 榜单排第 2（榜首 ZSD-Titan 8.167，差 0.068；第 2–9 名相差 < 0.03），输在 Others / Pedestrian / Single-Lane / Intersection | 中 | 成立 |
