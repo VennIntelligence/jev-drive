@@ -1,0 +1,137 @@
+{
+ "stage": "t300",
+ "n_tokens": 300,
+ "sane_ranges": true,
+ "seeds": {
+  "0": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/SH30-F-s0@warp",
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 2.220446049250313e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  },
+  "1": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/SH30-F-s1@warp",
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 3.3306690738754696e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  }
+ },
+ "pass": true,
+ "cost": {
+  "measured": {
+   "load_s_per_token": 0.08693011422719185,
+   "pdm_s_per_token": 4.312888659479407,
+   "diag_s_per_token": 0.34194255330987894,
+   "union_s_per_token": 0.001744402478604267,
+   "n_tokens": 300,
+   "idm_hits_per_token": 62.943333333333335,
+   "union_frac": 0.82,
+   "worker_rss_gb_max": 0.3921661376953125
+  },
+  "n_keys": 66,
+  "core_s_per_token": 4.743505729495083,
+  "core_s_per_key": 0.07187129893174368,
+  "wall_s_first_to_last": 67.8,
+  "run_dir": "/root/autodl-tmp/ujs/runs/bench/poses/poses-25b2d0a02a0f",
+  "pool_cores": 96,
+  "options": [
+   {
+    "option": "F33, 2 seeds",
+    "n_keys": 66,
+    "core_s_per_token": 4.743505729495082,
+    "core_h": 4.155838075229858,
+    "wall_h": 0.09328997995031102
+   },
+   {
+    "option": "F27, 2 seeds",
+    "n_keys": 54,
+    "core_s_per_token": 3.9088766858114923,
+    "core_h": 3.424610296402624,
+    "wall_h": 0.08567302392086068
+   },
+   {
+    "option": "F33, seed 0",
+    "n_keys": 33,
+    "core_s_per_token": 2.448275859365211,
+    "core_h": 2.1449616834549654,
+    "wall_h": 0.07234335086932256
+   },
+   {
+    "option": "F27, seed 0",
+    "n_keys": 27,
+    "core_s_per_token": 2.0309613375234163,
+    "core_h": 1.7793477940413487,
+    "wall_h": 0.06853487285459739
+   }
+  ],
+  "chosen": "F33, 2 seeds"
+ }
+}

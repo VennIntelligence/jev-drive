@@ -1,0 +1,88 @@
+{
+ "stage": "t24",
+ "n_tokens": 24,
+ "sane_ranges": true,
+ "seeds": {
+  "0": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/SH30-F-s0@warp",
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 1.1102230246251565e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  },
+  "1": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/SH30-F-s1@warp",
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 2.220446049250313e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  }
+ },
+ "pass": true
+}

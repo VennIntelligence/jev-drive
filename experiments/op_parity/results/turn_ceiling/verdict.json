@@ -1,0 +1,74 @@
+{
+ "line": 4.0,
+ "family": "F19",
+ "bucket": "> 20 deg",
+ "gain": {
+  "n": 3154,
+  "units": 108,
+  "mean": 12.199930735413306,
+  "lo": 10.57375170195294,
+  "hi": 13.756666315465369,
+  "n_boot": 10000,
+  "seed": 0,
+  "alpha": 0.05,
+  "mean_a": 95.93736588172794,
+  "mean_b": 83.73743514631464
+ },
+ "ends_line": false,
+ "navtest_equivalent": 3.1680044079938714,
+ "single_axis": {
+  "O3": {
+   "n": 3154,
+   "units": 108,
+   "mean": 5.945708777156141,
+   "lo": 5.096927250842969,
+   "hi": 6.736797232716702,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 89.68314392347078,
+   "mean_b": 83.73743514631464
+  },
+  "K3": {
+   "n": 3154,
+   "units": 108,
+   "mean": 7.79031786547982,
+   "lo": 6.62121056513999,
+   "hi": 8.972239532335534,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 91.52775301179445,
+   "mean_b": 83.73743514631464
+  },
+  "V3": {
+   "n": 3154,
+   "units": 108,
+   "mean": 7.720776422552574,
+   "lo": 6.6877451137159385,
+   "hi": 8.751803190959983,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 91.4582115688672,
+   "mean_b": 83.73743514631464
+  }
+ },
+ "identity_check_max_abs": {
+  "0": 0.0,
+  "1": 0.0
+ },
+ "seeds": [
+  0,
+  1
+ ],
+ "n_keys": 66,
+ "sources": {
+  "wa": "stored /root/autodl-tmp/ujs/runs/top10_t2/navsim/wajepa/20260926-122804/v2/2026.09.26.16.32.53.csv",
+  "sh": [
+   "bench /root/autodl-tmp/ujs/runs/bench/navtest/SH30-F-s0@warp",
+   "bench /root/autodl-tmp/ujs/runs/bench/navtest/SH30-F-s1@warp"
+  ]
+ },
+ "branch": "b: curvature gain"
+}

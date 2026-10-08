@@ -1,0 +1,43 @@
+{
+ "split": "navsim/navtrain@v1:5614a8a32a70",
+ "split_n": 103288,
+ "cached_tokens": 103288,
+ "unique": 103288,
+ "in_split": 103288,
+ "nan_future": 0,
+ "turn_20": 28323,
+ "turn_20_45": 17550,
+ "turn_45": 10773,
+ "metric_caches": {
+  "v1_e6sub": {
+   "n": 20000,
+   "navtrain_cached": 20000,
+   "navtrain_turn20": 5533
+  },
+  "v1_navtest": {
+   "n": 12146,
+   "navtrain_cached": 0,
+   "navtrain_turn20": 0
+  },
+  "v1_navtrain": {
+   "n": 106630,
+   "navtrain_cached": 103288,
+   "navtrain_turn20": 28323
+  },
+  "v1_navtrain_oplb": {
+   "n": 3000,
+   "navtrain_cached": 3000,
+   "navtrain_turn20": 1427
+  },
+  "v2_navhard_two_stage": {
+   "n": 5912,
+   "navtrain_cached": 0,
+   "navtrain_turn20": 0
+  },
+  "v2_navtest": {
+   "n": 12146,
+   "navtrain_cached": 0,
+   "navtrain_turn20": 0
+  }
+ }
+}
