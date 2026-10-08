@@ -66,8 +66,9 @@ python3 -c "import sys; sys.exit(0 if 10000/$its/60 <= 70 else 1)" || die "fold 
 # ---------------------------------------------------------------- 2. folds 1-4, per-fold post-processing
 status "folds 1-4 submitted; post-processing per fold"
 for j in 1 2 3 4; do train $j; done
-for j in 0 1 2 3 4; do [[ -f $D/post.$j.ok ]] || { rm -f "$D/post.$j.fail"; post $j & }; done
-wait
+pids=()   # wait on these PIDs only: a bare `wait` also waits for the tee of `exec > >(tee ...)` and never returns
+for j in 0 1 2 3 4; do [[ -f $D/post.$j.ok ]] || { rm -f "$D/post.$j.fail"; post $j & pids+=($!); }; done
+(( ${#pids[@]} )) && wait "${pids[@]}"
 [[ -f $D/ERROR ]] && exit 1
 for j in 0 1 2 3 4; do [[ -f $D/post.$j.fail ]] && die "post-processing fold $j: $(cat $D/post.$j.fail)"; [[ -f $D/post.$j.ok ]] || die "post-processing fold $j did not finish"; done
 "${B[@]}" status --model CF${K}f0-F-s0 CF${K}f1-F-s0 CF${K}f2-F-s0 CF${K}f3-F-s0 CF${K}f4-F-s0 --bench navtest --wait || die "navtest status"
