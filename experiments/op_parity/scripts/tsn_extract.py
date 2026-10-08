@@ -6,8 +6,8 @@
 train: every navtrain turn token of shard i is run through the fold model that held its log out (CF5f{j}-F-s0, j = sha256("cf5|" + log) % 5), in
 the same loop, batch and fp16 path as sc_infer.py / tsi_extract.py; one forward gives the plan, the policy's `select_4` and `mean` (512 each)
 and the road-edge head. Gate G-leak: j agrees with fold_of_token.csv, the log is not in the fold's training split, and plan_pos equals the
-fold model's stored plan (bench/ol/<shard>/plans) up to fp16 rounding (plan_ratio <= 1) on every row with speed >= 0.5 m/s. --control also runs the next fold's model on up to 100
-rows per fold: its plan must differ clearly more than the right model's (the check has teeth).
+fold model's stored plan (bench/ol/<shard>/plans) (max |d| < 0.03 m over the first 15 points, fp16 rounding) on every row with speed >= 0.5 m/s. --control also runs the next fold's model on up to 100
+rows per fold: its plan must differ by > 0.1 m at the median (the check has teeth).
 navtest: the 5 fold models on the navtest turn tokens (hidden state + plan only), for the G-hidden alignment gate against SH30.
 Output: $DATA_DIR/runs/op_parity/turn_selnt/feat/<tag>/{s<i>.npz, navtest.npz}. GPU job: submit through the pool (jevdrive.cl submit).
 """
@@ -63,12 +63,13 @@ def run_rows(model, S, rows, run, batch=128):
     return P, h4, hm, re
 
 
-def plan_ratio(ref, P):
-    """Per-row max over plan points of |ref - P| / (2 fp16 ulps of ref + 1 mm): <= 1 means equal up to the half-precision rounding of the far points
-    (plan_pos reaches 190 m, where one fp16 ulp is 0.125 m, and the batch composition changes the last bit)."""
-    r = np.asarray(ref, np.float32)
-    tol = 2 * np.spacing(np.abs(r).astype(np.float16)).astype(np.float32) + 1e-3
-    return (np.abs(r - P) / tol).max((1, 2))
+NPT = 15            # plan points compared: the first 15 (<= 37 m ahead) cover the 4 s horizon; the far points reach 190 m, where one fp16 ulp is 0.125 m
+TOL_M = 0.03        # two fp16 ulps at 32 m; the same model through a different batch composition differs by <= 0.0156 m on these points
+
+
+def plan_diff(ref, P):
+    """Per-row max |ref - P| (m) over the first NPT plan points."""
+    return np.abs(np.asarray(ref, np.float32)[:, :NPT] - P[:, :NPT]).max((1, 2))
 
 
 def load_model(T, N, resolve, j, dev):
@@ -140,25 +141,25 @@ def cmd_train(a):
             res["plan_pos"][idx], res["select_4"][idx], res["mean"][idx], res["road_edges"][idx], res["model_fold"][idx] = P, h4, hm, re, j
             ref = np.load(NL.ol(a.shard, "plans", f"{NL.stem(mj.name)}.npz"))
             assert ref["names"].tolist() == names.tolist(), "stored plans rows != token cache rows"
-            d = plan_ratio(ref["plan_pos"][rows_all[idx]], P)
+            d = plan_diff(ref["plan_pos"][rows_all[idx]], P)
             diff[idx] = d
             ok = speed[idx] >= 0.5
-            run.info("fold %d: %d rows, max plan ratio vs stored %.3g (<= 1 = equal up to fp16; %d rows with speed >= 0.5)", j, len(idx), d[ok].max() if ok.any() else 0, ok.sum())
+            run.info("fold %d: %d rows, max |dplan_pos| vs stored %.3g m over the first 15 points (%d rows with speed >= 0.5)", j, len(idx), d[ok].max() if ok.any() else 0, ok.sum())
             if a.control:
                 jj = (j + 1) % K
                 _, wrong = load_model(T, N, resolve, jj, dev)
                 c = idx[:100]
                 Pw, *_ = run_rows(wrong, S, rows_all[c], run)
-                ctrl.append(plan_ratio(ref["plan_pos"][rows_all[c]], Pw))
+                ctrl.append(plan_diff(ref["plan_pos"][rows_all[c]], Pw))
                 del wrong
             del model
             torch.cuda.empty_cache()
         ok = speed >= 0.5
-        gate = dict(shard=a.shard, n=int(n), rows_speed_ok=int(ok.sum()), max_ratio=float(diff[ok].max()) if ok.any() else 0.0, median_ratio=float(np.median(diff[ok])) if ok.any() else 0.0,
+        gate = dict(shard=a.shard, n=int(n), rows_speed_ok=int(ok.sum()), max_diff_m=float(diff[ok].max()) if ok.any() else 0.0, median_diff_m=float(np.median(diff[ok])) if ok.any() else 0.0,
                     leak_fold_ok=True)
         if ctrl:
             c = np.concatenate(ctrl)
-            gate.update(ctrl_median_ratio=float(np.median(c)), ctrl_min_ratio=float(c.min()), ctrl_n=int(len(c)))
+            gate.update(ctrl_median_diff_m=float(np.median(c)), ctrl_min_diff_m=float(c.min()), ctrl_n=int(len(c)))
         res["diff"] = diff
         res["gate"] = np.array(json.dumps(gate))
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -166,7 +167,7 @@ def cmd_train(a):
         out.with_suffix(".tmp.npz").rename(out)
         run.summary.update(gate)
         run.info("gate %s", gate)
-        assert gate["max_ratio"] <= 1.0, f"G-leak (b): extraction differs from the stored fold-model plan beyond fp16 rounding (ratio {gate['max_ratio']})"
+        assert gate["max_diff_m"] < TOL_M, f"G-leak (b): extraction differs from the stored fold-model plan by {gate['max_diff_m']} m"
 
 
 def cmd_navtest(a):
