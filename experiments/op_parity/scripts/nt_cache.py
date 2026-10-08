@@ -33,7 +33,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from jevdrive.common import data_dir, n_cpus
 
 STALE_S = 300.0
-SHARD_TOKENS = 600                      # target tokens per shard (about 24 turn logs / 9 rest logs)
+SHARD_TOKENS = 600                      # turn: target tokens per shard (about 21 logs)
+REST_PIECE, REST_SHARD_TOKENS = 64, 1500   # rest: log piece size, tokens per shard (about 40 pieces for 12 cores)
 C_JOB = 12                              # cores of one pool job (as the navtest scoring shards)
 SPLIT_NAVTRAIN, SPLIT_TURN_DEG = "navsim/navtrain", 20.0
 
@@ -82,24 +83,41 @@ def cmd_plan(a):
         out = O() / "plan"
         res = {}
         for stage, m in (("turn", turn), ("rest", ~turn)):
+            if a.stages and stage not in a.stages:
+                continue
             toks = sorted(names[m].tolist())
             by_log = {}
             for t in toks:
                 by_log.setdefault(tlog[t], []).append(t)
-            shards, cur, n = [], [], 0
-            for lg in sorted(by_log):
-                cur.append(lg)
-                n += len(by_log[lg])
-                if n >= SHARD_TOKENS:
+            if stage == "turn":
+                # whole logs in date order; the devkit parallelises over logs, and turn logs are small (31 tokens on average)
+                shards, cur, n = [], [], 0
+                for lg in sorted(by_log):
+                    cur.append(lg)
+                    n += len(by_log[lg])
+                    if n >= SHARD_TOKENS:
+                        shards.append(cur)
+                        cur, n = [], 0
+                if cur:
                     shards.append(cur)
-                    cur, n = [], 0
-            if cur:
-                shards.append(cur)
-            S = [dict(name=f"{stage}-{i:04d}", logs=ls, tokens=[t for lg in ls for t in by_log[lg]]) for i, ls in enumerate(shards)]
+                S = [dict(name=f"{stage}-{i:04d}", logs=ls, tokens=[t for lg in ls for t in by_log[lg]]) for i, ls in enumerate(shards)]
+            else:
+                # rest logs hold up to 549 tokens and one log is one serial unit of the devkit: cut logs into pieces of <= REST_PIECE
+                # tokens and deal them (largest first) to the shard with the fewest tokens, never two pieces of a log to one shard
+                units = [(lg, ts[i:i + REST_PIECE]) for lg, ts in by_log.items() for i in range(0, len(ts), REST_PIECE)]
+                units.sort(key=lambda u: (-len(u[1]), u[0]))
+                k = -(-len(toks) // REST_SHARD_TOKENS)
+                bins = [dict(name=f"{stage}-{i:04d}", logs=set(), tokens=[]) for i in range(k)]
+                for lg, ts in units:
+                    b = min((b for b in bins if lg not in b["logs"]), key=lambda b: len(b["tokens"]))
+                    b["logs"].add(lg)
+                    b["tokens"] += ts
+                S = [dict(name=b["name"], logs=sorted(b["logs"]), tokens=sorted(b["tokens"])) for b in bins]
             write(out / f"tokens_{stage}.txt", "\n".join(toks) + "\n")
             write(out / f"shards_{stage}.json", json.dumps(S))
-            res[stage] = dict(tokens=len(toks), logs=len(by_log), shards=len(S))
-        write(out / "token_log.json", json.dumps({t: tlog[t] for t in names.tolist()}))
+            res[stage] = dict(tokens=len(toks), logs=len(by_log), shards=len(S), logs_per_shard=round(sum(len(x["logs"]) for x in S) / len(S), 1))
+        if not a.stages:
+            write(out / "token_log.json", json.dumps({t: tlog[t] for t in names.tolist()}))
         run.summary.update(res)
         run.info("plan: %s", json.dumps(res))
 
@@ -344,7 +362,8 @@ def cmd_compare(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sp = ap.add_subparsers(dest="cmd", required=True)
-    sp.add_parser("plan")
+    p = sp.add_parser("plan")
+    p.add_argument("--stages", nargs="*", default=[], help="re-plan only these stages (default: both)")
     p = sp.add_parser("run")
     p.add_argument("--stage", required=True, choices=["turn", "rest"])
     p.add_argument("--limit", type=int, default=0, help="pilot: this many shards spread over the logs (0 = all)")
