@@ -1,0 +1,15 @@
+{
+ "dataset": "navsim",
+ "name": "op-parity-geotok-train",
+ "version": 1,
+ "unit": "token",
+ "n": 76084,
+ "sha256": "905892337c03fa773324fed3988bee7162cccc2fbf74abc984ceaff366cf4fd7",
+ "origin": "navtrain shards 0, 1, 5-11 of 12 (pp_prep caches) with drivable + agent labels and a logged future, logs of navsim/op-parity-full-dev removed; token-disjoint from navsim/op-parity-s234-{train,dev}",
+ "used_by": [
+  "experiments/op_parity"
+ ],
+ "status": "frozen",
+ "notes": "geo-oracle tokenizer fit rows (decision 197)",
+ "members_file": "op-parity-geotok-train.v1.txt.gz"
+}
