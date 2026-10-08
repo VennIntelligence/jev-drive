@@ -23,8 +23,10 @@ fetch() {  # <path in the dataset repo>
     (
       a=$((i * chunk)); b=$((a + chunk - 1)); ((b >= size)) && b=$((size - 1))
       f=$DL/$tag.$i; want=$((b - a + 1))
+      # hf-mirror throttles a connection after its first minute or two (7.6 MB/s fresh vs 2 MB/s after 30 min,
+      # 2026-10-08), so every connection is cut after CONN_S seconds and resumed from the bytes on disk.
       until (( $(sz "$f") == want )); do
-        curl -sL --retry 3 --speed-limit 20000 --speed-time 60 -r $((a + $(sz "$f")))-$b "$EP/$rel" >> "$f" || sleep 5
+        curl -sL --retry 3 --speed-limit 20000 --speed-time 60 --max-time "${CONN_S:-90}" -r $((a + $(sz "$f")))-$b "$EP/$rel" >> "$f" || sleep 1
       done
     ) &
     pids+=($!)
