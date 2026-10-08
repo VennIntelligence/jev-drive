@@ -38,7 +38,8 @@ sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
         rm -f "$ld/ERROR"
         local id; id=$($CL submit --owner op_parity-r1 --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 20; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; return 0; }
-prep() { local d=$1; shift; sub ot-prep $L/prep-$d${TAGX:-} --vram 12 --cpu 20 --ram 60 -- $PY $S/ot_rows.py prep --data $d --workers 18 "$@"; }
+# VRAM declarations are measured peaks plus margin: ot-prep 29-42 GB (encoder batch 128; a 12 GB declaration let the pool overpack a card, OOM 2026-10-09 00:28)
+prep() { local d=$1; shift; sub ot-prep $L/prep-$d${TAGX:-} --vram 44 --cpu 20 --ram 40 -- $PY $S/ot_rows.py prep --data $d --workers 18 "$@"; }
 offline() {  # name ref keys-regex models... : AlpaSim-standard plans on navtest (m = 1..4), devkit scores of the 2 000-token subset, report
   local name=$1 ref=$2 kre=$3; shift 3
   sub ot-ap2-offline $L/offline-$name --vram 20 --cpu 8 --ram 60 -- $PY $SA/ap2_offline.py plans --name $name --scenes $SCENES --models "$@"
@@ -109,9 +110,9 @@ status "pilot gate passed; full scale"
 for d in $REST; do prep $d; done
 waitdirs $(for d in $REST; do echo $L/prep-$d; done)
 TF="$PY $S/ot_rows.py train --data $ALL --split $FULL_SPLIT --batch 128 --warmup 300 --eval-every 1000 --ot-mass 0.1"
-sub ot-t-smoke $L/t-smoke-full --train --vram 40 --cpu 6 --ram 80 -- $TF --steps 20 --eval-every 20 --seed 0 --tag smoke-ot30
+sub ot-t-smoke $L/t-smoke-full --train --vram 48 --cpu 6 --ram 80 -- $TF --steps 20 --eval-every 20 --seed 0 --tag smoke-ot30
 waitdirs $L/t-smoke-full
-for s in 0 1; do sub ot-t-full $L/t-OT30-s$s --train --vram 40 --cpu 8 --ram 80 -- $TF --steps 10000 --seed $s --tag OT30-F-s$s; done
+for s in 0 1; do sub ot-t-full $L/t-OT30-s$s --train --vram 48 --cpu 8 --ram 80 -- $TF --steps 10000 --seed $s --tag OT30-F-s$s; done
 pilot_reports
 waitdirs $L/t-OT30-s0 $L/t-OT30-s1
 for s in 0 1; do $PY $S/pp_full_check.py train --tag OT30-F-s$s || die "training sanity OT30-F-s$s"; done
