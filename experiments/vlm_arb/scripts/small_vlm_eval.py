@@ -22,7 +22,7 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from vlm_thin_common import FOUR_PROMPT, LIGHTS, RED, SCORE_PREFIX, log, parse_option  # noqa: E402
+from vlm_thin_common import CAMS2, FOUR_PROMPT, LIGHTS, RED, SCORE_PREFIX, log, parse_option  # noqa: E402
 from vlm_arb_common import DATA, REPO  # noqa: E402
 
 sys.path.insert(0, str(REPO))
@@ -40,6 +40,10 @@ CFGS = ["fwd_r4573", "fwd_r1153", "fwd_r559", "gen_native"]      # cheap forward
 QWEN_PX = {"r4573": 16777216, "r1153": 600000, "r559": 300000}          # max_pixels, as vlm_thin RES
 GEMMA_TOK = {"r4573": 1120, "r1153": 560, "r559": 280}                  # soft tokens per image
 N_BENCH, N_WARM = 100, 5
+SHORT_CFGS = ["short_logit", "short_gen"]                  # d182 follow-up: native-style reading, no forced `ANSWER:` prefix
+SHORT_PROMPT = ("%s\nIs the traffic light that controls the ego vehicle's lane ahead red or yellow, green, or is there none "
+                "(no light, or a light for another lane)? Reply with one word: red, green or none." % CAMS2)
+SHORT_WORDS = {"red": RED, "green": "green_for_ego", "none": "no_light"}
 
 
 def model_path(name):
@@ -76,18 +80,20 @@ class Reader:
             first.append(full[len(pre)])
         assert len(set(first)) == 4, first
         self.opt_ids = first
+        self.short_ids = [self.tok(w, add_special_tokens=False).input_ids[0] for w in SHORT_WORDS]
+        assert len(set(self.short_ids)) == 3, self.short_ids
 
-    def text(self, prefix=""):
-        msgs = [{"role": "user", "content": [{"type": "image"}, {"type": "image"}, {"type": "text", "text": FOUR_PROMPT}]}]
+    def text(self, prefix="", prompt=FOUR_PROMPT):
+        msgs = [{"role": "user", "content": [{"type": "image"}, {"type": "image"}, {"type": "text", "text": prompt}]}]
         kw = dict(enable_thinking=False) if self.fam == "qwen" and self.name != "q3vl4b" else {}
         return self.proc.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True, **kw) + prefix
 
-    def prep(self, imgs, res, prefix=""):
+    def prep(self, imgs, res, prefix="", prompt=FOUR_PROMPT):
         if self.fam == "qwen":
             kw = dict(size={"shortest_edge": 65536, "longest_edge": QWEN_PX[res]})
         else:
             kw = dict(max_soft_tokens=GEMMA_TOK[res])
-        x = self.proc(text=[self.text(prefix)], images=imgs, return_tensors="pt", **kw)
+        x = self.proc(text=[self.text(prefix, prompt)], images=imgs, return_tensors="pt", **kw)
         return x.to(self.dev)
 
     def n_vis(self, x):
@@ -99,8 +105,12 @@ class Reader:
         out = self.m(**x, use_cache=False, logits_to_keep=1)
         return out.logits[0, -1, self.opt_ids].float().cpu().numpy()
 
-    def generate(self, x):
-        y = self.m.generate(**x, max_new_tokens=512, do_sample=False)
+    def score_short(self, x):
+        out = self.m(**x, use_cache=False, logits_to_keep=1)
+        return out.logits[0, -1, self.short_ids].float().cpu().numpy()
+
+    def generate(self, x, n=512):
+        y = self.m.generate(**x, max_new_tokens=n, do_sample=False)
         return self.proc.batch_decode(y[:, x["input_ids"].shape[1]:], skip_special_tokens=True)[0]
 
 
@@ -143,7 +153,20 @@ def _run(a, d):
                 if (cfg, r.id) in have:
                     continue
                 imgs = load_imgs(r)
-                if cfg == "gen_native":
+                if cfg in SHORT_CFGS:
+                    x = rd.prep(imgs, "r1153", prompt=SHORT_PROMPT)
+                    torch.cuda.synchronize()
+                    t0 = time.perf_counter()
+                    if cfg == "short_logit":
+                        lg = rd.score_short(x)
+                        row = dict(ans=list(SHORT_WORDS.values())[int(lg.argmax())], logits=[round(float(v), 3) for v in lg])
+                    else:
+                        txt = rd.generate(x, 8)
+                        w = txt.strip().lower().strip(".*`'\" ")
+                        row = dict(raw=txt, ans=SHORT_WORDS.get(w, ""))
+                    torch.cuda.synchronize()
+                    row["fwd_ms"] = 1e3 * (time.perf_counter() - t0)
+                elif cfg == "gen_native":
                     x = rd.prep(imgs, "r4573")
                     txt = rd.generate(x)
                     row = dict(raw=txt, ans=parse_option(txt, LIGHTS))
@@ -158,6 +181,10 @@ def _run(a, d):
                 if k % 40 == 0:
                     (d / "STATUS").write_text("%s %s %d/%d %s\n" % (a.model, cfg, k, len(df), time.strftime("%T")))
             meta["peak_gb"][cfg] = torch.cuda.max_memory_allocated() / 2 ** 30
+    if a.cfgs and all(c in SHORT_CFGS for c in a.cfgs.split(",")):
+        (d / "meta.json").write_text(json.dumps(meta, indent=1))
+        (d / "STATUS").write_text("short done %s\n" % time.strftime("%T"))
+        return
     # latency bench at r1153 on N_BENCH evenly spaced frames, batch 1, files already decoded from disk each time
     if "lat" not in meta or a.limit:
         torch.cuda.reset_peak_memory_stats()
