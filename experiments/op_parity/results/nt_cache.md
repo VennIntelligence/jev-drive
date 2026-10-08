@@ -1,7 +1,7 @@
 # op_parity nt-cache: v2 metric cache of navtrain and simulator labels for SH30's turn plans
 
 Written 2026-10-08. Code: `scripts/nt_cache.py` (cache builder), `scripts/nt_labels.py` (plans, candidates, scoring, table). Operating notes and
-resume commands: [docs/bench.md](../../../docs/bench.md#v2-navtrain-metric-cache-and-turn-labels-nt-cache). CPU only for the cache; one short
+resume commands: [docs/bench.md](../../../docs/bench.md#v2-navtrain-metric-cache-and-turn-labels-op_parity-nt-cache-2026-10-08). CPU only for the cache; one short
 GPU pass (about 20 card-minutes) for SH30's navtrain plans. No model is trained.
 
 ## Answer
@@ -14,7 +14,7 @@ GPU pass (about 20 card-minutes) for SH30's navtrain plans. No model is trained.
    Same devkit and settings as v2_navtest: control gate below.
 3. **The rest of navtrain is not built (stop rule).** Measured on 4 497 rest tokens (3 shards, 437-476 KB per token): 456 KB per token, 2.83 core-s per token.
    The rest (74 965 tokens) extrapolates to 34 GB, the whole navtrain cache to 45 GB, above the 40 GB limit; the disk has 491 GB free of which 458 GB are
-   reserved for AlpaSim. 5 480 rest tokens (4 497 + 983 from an earlier shard plan, 35 in both, so 948 outside the finished shards) are in the cache as a by-product.
+   reserved for AlpaSim. 5 445 rest tokens (4 497 from the finished shards + 948 from an earlier shard plan; 35 of its 983 tokens are in both) are in the cache as a by-product.
    Finishing the rest would add about 32 GB and about 57 core-h (about 70 min on 4 x 12 cores).
 4. **Labels** (SH30-F-s0 / s1 on the 28 323 turn tokens, `score-poses --traffic non_reactive`, turn-ceiling's path): per-token sub-scores of the identity
    plan and of speed x 0.8 / x 0.6, `labels/labels_turn.csv.gz` (keyed by token). Base rates below.
