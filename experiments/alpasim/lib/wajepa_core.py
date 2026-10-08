@@ -63,21 +63,21 @@ def back_extrapolate(pose, vel, yaw_rate: float, cold: str):
 
 
 class Core:
-    def __init__(self, dev: str = "cuda", cold: str = "repeat"):
+    def __init__(self, dev: str = "cuda", cold: str = "repeat", amp: bool = False):
         assert cold in COLD, cold
         if str(REPO) not in sys.path:
             sys.path.insert(0, str(REPO))
         import torch
         from eval.navsim_agent import WorldModelNavsimAgent
         from navsim.common.dataclasses import AgentInput, Camera, Cameras, EgoStatus
-        self.torch, self.cold, self.dev = torch, cold, torch.device(dev)
+        self.torch, self.cold, self.dev, self.amp = torch, cold, torch.device(dev), amp
         self.AgentInput, self.Camera, self.Cameras, self.EgoStatus = AgentInput, Camera, Cameras, EgoStatus
         self.agent = WorldModelNavsimAgent(config_path=str(CFG), checkpoint_path=str(CKPT), device=dev, config_overrides=OVERRIDES)
         self.agent.initialize()
         names = [c.upper() for c in self.agent._camera_names]
         assert tuple(names) == CAMS, f"config camera_names {names} != {CAMS}"
         assert tuple(self.agent._resize_to) == HW and self.agent._num_history_image_frames == 4, (self.agent._resize_to,)
-        self.tag = f"WA-JEPA-{CKPT.stem}-{CFG.stem}"
+        self.tag = f"WA-JEPA-{CKPT.stem}-{CFG.stem}-{'bf16' if amp else 'fp32'}"
 
     def agent_input(self, frames, pose, vel, acc, cmd, yaw_rate: float = 0.0):
         """frames: m <= 4 dicts CAM -> RGB (oldest first, the last at t0); pose (m, 3) in the t0 frame; vel (m, 2) body velocities;
@@ -98,7 +98,8 @@ class Core:
         t0 = time.perf_counter()
         ai, P = self.agent_input(frames, pose, vel, acc, cmd, yaw_rate)
         t1 = time.perf_counter()
-        poses = np.asarray(self.agent.compute_trajectory(ai).poses, np.float64)
+        with self.torch.autocast(self.dev.type, dtype=self.torch.bfloat16, enabled=self.amp):
+            poses = np.asarray(self.agent.compute_trajectory(ai).poses, np.float64)
         if self.dev.type == "cuda":
             self.torch.cuda.synchronize(self.dev)
         t2 = time.perf_counter()

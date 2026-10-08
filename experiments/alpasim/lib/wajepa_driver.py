@@ -11,7 +11,7 @@ What the simulator gives -> what WA-JEPA is fed:
   output    their 8 rear-axle poses at 0.5 s -> local frame at the t0 pose -> 10 Hz trajectory with the LTF sample's functions
   cold      WAJ_COLD=repeat (default; WA-JEPA's own closed-loop padding) or cv (see wajepa_core)
 
-Environment: ALPASIM_DRIVER_HOST / _PORT, ALPASIM_SRC, ALPASIM_DRIVER_LOG_DIR (drive.jsonl, images.jsonl), WAJ_COLD, WAJ_DEVICE,
+Environment: ALPASIM_DRIVER_HOST / _PORT, ALPASIM_SRC, ALPASIM_DRIVER_LOG_DIR (drive.jsonl, images.jsonl), WAJ_COLD, WAJ_AMP (1 = bf16 autocast), WAJ_DEVICE,
 WAJ_DUMP (number of sessions whose fed frames are saved to <log dir>/dump: decision 3 of each, all decisions of the first 3), WAJ_REPO / WAJ_CKPT / WAJ_CFG (wajepa_core).
 Run with envs/wajepa, cwd = the WA-JEPA checkout, PYTHONPATH=<wajepa>:<navsim>:  python experiments/alpasim/lib/wajepa_driver.py
 """
@@ -227,7 +227,7 @@ def main() -> None:
     host, port = os.environ.get("ALPASIM_DRIVER_HOST", "0.0.0.0"), int(os.environ.get("ALPASIM_DRIVER_PORT", "6789"))
     log_dir = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/tmp/alpasim-driver"))
     t0 = time.time()
-    core = C.Core(os.environ.get("WAJ_DEVICE", "cuda"), os.environ.get("WAJ_COLD", "repeat"))
+    core = C.Core(os.environ.get("WAJ_DEVICE", "cuda"), os.environ.get("WAJ_COLD", "repeat"), os.environ.get("WAJ_AMP", "0") == "1")
     z = {c: np.zeros(C.HW + (3,), np.uint8) for c in C.CAMS}
     for m in (1, 4):                                    # warm-up before the port opens
         core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]))

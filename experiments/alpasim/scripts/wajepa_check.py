@@ -43,7 +43,7 @@ def main(a):
         cores[c].agent = cores[C.COLD[0]].agent                        # one copy of the weights
     root, logs = D / "datasets/navsim/sensor_blobs/test", {}
     ade = lambda x, y: float(np.linalg.norm(x[:, :2] - y[:, :2], axis=1).mean())  # noqa: E731
-    rows, ms, dec, plans = [], [], [], {}
+    rows, ms, dec, plans, frames_of = [], [], [], {}, []
     for n, t in enumerate(toks):
         r = row[t]
         lg = str(tab["log"][r])
@@ -62,6 +62,7 @@ def main(a):
             frames.append(d)
         pose, vel = tab["pose"][r].astype(np.float64), tab["vel"][r].astype(np.float64)
         acc, cmd = tab["acc"][r][-1], tab["cmd"][r][-1]
+        frames_of.append(frames) if n < a.amp else None
         full = cores["repeat"].plan(frames, pose, vel, acc, cmd)
         ms.append(full["ms"])
         plans[t] = full["poses"]
@@ -81,6 +82,14 @@ def main(a):
         rows.append(rec)
         if n % 25 == 0:
             print(n, json.dumps({k: (round(v, 4) if isinstance(v, float) else v) for k, v in rec.items()}), flush=True)
+    amp = []
+    if a.amp:                                                           # bf16 autocast vs fp32 on the same inputs
+        ca = C.Core("cuda", amp=True)
+        ca.agent = cores["repeat"].agent
+        for t, f in zip(toks[: a.amp], frames_of):
+            r = row[t]
+            o = ca.plan(f, tab["pose"][r].astype(np.float64), tab["vel"][r].astype(np.float64), tab["acc"][r][-1], tab["cmd"][r][-1])
+            amp.append({"token": t, "ade_vs_fp32": ade(o["poses"], plans[t]), "ms": o["ms"]["infer"]})
     direct = []
     if a.direct:
         from hydra.utils import instantiate
@@ -107,6 +116,9 @@ def main(a):
          "ms_warm": {k: float(np.median([x[k] for x in ms[5:]])) for k in ms[0]},
          "direct": {"n": len(direct), "core_vs_direct_max_m": max((d["core_vs_direct_max"] for d in direct), default=None),
                     "stored_vs_direct_ade_mean": float(np.mean([d["stored_vs_direct_ade"] for d in direct])) if direct else None},
+         "amp": {"n": len(amp), "ade_vs_fp32": float(np.mean([x["ade_vs_fp32"] for x in amp])) if amp else None,
+                "infer_ms_median": float(np.median([x["ms"] for x in amp[3:]])) if len(amp) > 3 else None,
+                "fp32_infer_ms_median": float(np.median([x["infer"] for x in ms[3: a.amp]])) if a.amp > 6 else None},
          "decode_1080p_ms": {"median": float(np.median(dec)), "p95": float(np.quantile(dec, 0.95)), "max": float(np.max(dec))}}
     (out / "check.json").write_text(json.dumps({"summary": S, "rows": rows, "direct": direct}, indent=1))
     print(json.dumps(S, indent=1))
@@ -118,5 +130,6 @@ if __name__ == "__main__":
     ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=300)
     ap.add_argument("--direct", type=int, default=0)
+    ap.add_argument("--amp", type=int, default=0, help="also run the first N tokens under bf16 autocast")
     ap.add_argument("--scenes", default="")
     main(ap.parse_args())
