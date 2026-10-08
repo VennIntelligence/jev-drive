@@ -8,6 +8,7 @@ weights or features anywhere. Training is pp_train.py --mem geo_*; navtest score
                                 write runs/op_parity/mem/geo_<kind>/<data>.npy (N, 32, 512) fp16 for s2-s4 and navtest. kind b also writes
                                 geo_x: the geo_b rows permuted inside each data dir, always to another log (the shuffled control).
                                 Pre-registered checks (exit 1): dev ADE with true tokens <= 0.9 x with shuffled tokens; bank RMS within 25%.
+                                --weights F: save the tokenizer weights to F and stop before the banks (the warm start of geo_e2e.py).
   split  (op-train, CPU)        register the tokenizer's fit rows as navsim/op-parity-geotok-train (run once, before the tok jobs)
   gate   (venv, CPU)            seed-0 clear-negative gate: GB - H0 EPDMS < +0.3 and CI high < +0.7 -> exit 2
   report (op-train, CPU, pool)  tables, channel-read evidence, the registered verdict -> $DATA_DIR/runs/op_parity/geo_oracle/report[-<name>]/
@@ -241,6 +242,13 @@ def cmd_tok(a):
             tokenize(S, sets["dev"][:64]), tokenize(T, np.arange(64))
             run.info("smoke: tokenizer, losses and eval run; no bank written")
             return
+        if a.weights:                                                             # geo-e2e warm start (geo_e2e.py): weights + stats only, no bank is touched
+            assert ratio <= 0.9, f"tokenizer {k}: dev ADE true / shuffled {ratio:.3f} > 0.9"
+            _pl.Path(a.weights).parent.mkdir(parents=True, exist_ok=True)
+            torch.save(net.state_dict(), a.weights)
+            _pl.Path(a.weights).with_suffix(".json").write_text(json.dumps(st, indent=1))
+            run.summary.update(weights=a.weights, dev_ade=st["head"]["dev"]["ade"], dev_ade_shuffled=st["head"]["dev_shuffled_tokens"]["ade"])
+            return
         # ---- banks (tab order of each data dir; rows without labels are tokenized from an all-zero SDF / an empty agent set)
         rms = {}
         for d in (*PILOT, TEST):
@@ -427,6 +435,7 @@ if __name__ == "__main__":
     p.add_argument("--steps", type=int, default=6000)
     p.add_argument("--batch", type=int, default=256)
     p.add_argument("--smoke", action="store_true", help="30 steps, the evals and a 64-row tokenize; no bank, no stats file")
+    p.add_argument("--weights", default="", help="save the trained tokenizer's state dict here (+ .json stats) and stop: no bank is written")
     sp.add_parser("gate")
     sp.add_parser("split")
     p = sp.add_parser("report")

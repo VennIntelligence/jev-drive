@@ -61,6 +61,14 @@ MEM_KINDS = ("wa_cf", "vj21", "sdf_gt", "sdf_shuf", "sdf_wa", "sdf_v", "geo_s", 
 ARMS |= {f"P2+{k}": dict(ego=True, side=False, mem=k) for k in MEM_KINDS}
 MEM_ROOT = data_dir() / "runs" / "op_parity" / "mem"          # <kind>/<data>.npy (N, 32, 512) fp16 in tab order (scripts/rep.py mem)
 MEM_DROP = 0.25                                                 # rows whose memory is masked in training ("memory off" in distribution)
+# geo-e2e (plans/2026-10-09-geo-e2e-prereg.md, scripts/geo_e2e.py, --mem-e2e): the memory tokens come from a tokenizer trained jointly with the
+# adapter; arm "P2+ge_<tag>", its navtest bank is written to mem/ge_<tag>/ after training. Privileged rasters, oracle probes only.
+
+
+def arm_kw(arm: str) -> dict:
+    return ARMS.get(arm) or (dict(ego=True, side=False, mem=arm[3:]) if arm.startswith("P2+ge_") else dict(ego=False, side=False))
+
+
 ACT_COL = 2062                                    # raw output column of action[0] mu (lateral; openpilot sign, + = right turn)
 ACT_T, ACT_WIN = 0.275, (0.5, 1.5)                # lateral action time; the spec_plan_smooth window (jevdrive/openpilot/model.py)
 EGO_LAT = [5, 7]                                  # vy / 10, ay / 3 in parity_adapter.ego_features
@@ -107,6 +115,8 @@ class Cfg:
     ego_lat_drop: float = 0.0             # fraction of rows with vy / ay of the ego input zeroed (own rng stream; row order unchanged)
     stop_gate: float = 0.0                # wod-launch (plans/2026-10-08-wod-launch-prereg.md addendum): adapter off (present = 0) on rows fed a speed below this (m/s); 0 = off
     mem: str = ""                         # front-token memory (wa_cf | vj21; arm P2+<mem>), dropped per row with MEM_DROP (own rng stream)
+    mem_e2e: str = ""                     # geo-e2e: memory tokens from a jointly trained tokenizer over b | x | p rasters (geo_e2e.py); mem becomes ge_<tag>
+    mem_init: str = ""                    # geo-e2e: tokenizer state dict to start from ("" = random init)
     stop_gate_free: bool = False          # mixed-domain addendum 2: no anchor rows on the gated rows (every gated row with a log is an imitation row)
     wod_split: str = "wod/r2"             # mixed-domain: sequence split of the wod_* data dirs when --split is a NAVSIM token split (<ref>-train / -dev)
     wod_mass: float = 0.0                 # mixed-domain: exact share of every batch drawn from the wod_* rows (0 = natural mix)
@@ -136,7 +146,7 @@ class PModel(nn.Module):
         self.gate, self.bias_sub = 0.0, None        # serving side only (op_parity stop-gate-xboard), off by default: bias = 0 where the fed speed < gate m/s; bias_sub (32, 512) is subtracted
         tr = (L.pol_weights() if pol else []) + (act_weights() if act else [])
         self.net = A.load("cinque", dtype, trainable=tr)
-        k = ARMS.get(arm, dict(ego=False, side=False))
+        k = arm_kw(arm)
         self.mem = k.get("mem")
         if self.mem:
             self.adapter = PA.ParityAdapter(use_ego=True, use_side=True, n_cam=1, n_t=1)
@@ -468,7 +478,8 @@ def main(a):
               turn_bal=a.turn_bal, anchor_off_turn=a.anchor_off_turn, late_lat_w=a.late_lat_w,
               act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop, mem=a.mem, stop_gate=a.stop_gate,
               wod_split=a.wod_split, wod_mass=a.wod_mass, wod_slots=a.wod_slots, stop_gate_free=a.stop_gate_free,
-              agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels)
+              agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels,
+              mem_e2e=a.mem_e2e, mem_init=a.mem_init)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
@@ -477,10 +488,14 @@ def main(a):
                 is_b2d=np.concatenate([np.full(len(z["names"]), d.startswith("b2d_")) for d, z in zip(cfg.data, tz)]),
                 is_wod=np.concatenate([np.full(len(z["names"]), d.startswith("wod_")) for d, z in zip(cfg.data, tz)]))
     tr_rows, dv_rows, sp = split_rows(tabs, cfg.split, cfg.b2d_split, cfg.wod_split)
+    if cfg.mem_e2e:
+        assert not cfg.mem and a.tag and world == 1 and cfg.hinge_lam > 0 and not cfg.hinge_replay, "--mem-e2e: P2 + hinge, a --tag, one GPU, no --mem"
+        cfg.mem = f"ge_{tag}"
     if cfg.mem:
         assert cfg.arm == "P2", "--mem extends arm P2"
         cfg.arm = f"P2+{cfg.mem}"
-    S = Store(cfg.data, dev, need_side=ARMS[cfg.arm]["side"], frames=cfg.frames, host=cfg.host, mem=cfg.mem or None, wod_slots=cfg.wod_slots)
+    S = Store(cfg.data, dev, need_side=arm_kw(cfg.arm)["side"], frames=cfg.frames, host=cfg.host, mem=None if cfg.mem_e2e else (cfg.mem or None),
+              wod_slots=cfg.wod_slots)
     model = PModel(cfg.arm, act=bool(cfg.act_lab)).to(dev)
     if cfg.stop_gate > 0:                                           # the whole ego row is zeroed (present = 0 -> bias exactly 0) in training and dev eval
         S.ego = S.ego * (S.ego[:, 4:5] * 10.0 >= cfg.stop_gate).float()
@@ -507,8 +522,12 @@ def main(a):
                            None if cfg.agent_side_margin < 0 else cfg.agent_side_margin)
         print(f"agent hinge lambda {cfg.agent_lam}, margin {cfg.agent_margin} / side {agent.side_margin}: labels cover {agent.coverage:.4f} of {S.n} rows", flush=True)
     LS = Losses(model.net, cfg, tstd, S.di, S.pi, dev, hinge, agent)
-    opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}] + ([{"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}] if new else []),
-                            weight_decay=cfg.wd)
+    om = None
+    if cfg.mem_e2e:                                                 # built after the model: the adapter's init draws are those of the frozen-bank arms
+        import geo_e2e as GE
+        om = S.mem = GE.attach(cfg, S, hinge, dev)                  # S.mem[rows] -> tokens (dev_eval reads it like a bank)
+    opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}] + ([{"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}] if new else []) +
+                            ([{"params": om.params, "lr": cfg.lr_new, "base": cfg.lr_new}] if om else []), weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
     d = proot("runs", tag)
     ctx = Run("op_parity", f"train-{tag}", seed=cfg.seed, config=asdict(cfg)) if rank == 0 else None
@@ -521,7 +540,7 @@ def main(a):
                      f"adapter {sum(p.numel() for p in new) / 1e6:.2f}M, world {world}")
         t0, hist = time.time(), []
         nB = cfg.batch
-        use_side = ARMS[cfg.arm]["side"]
+        use_side = arm_kw(cfg.arm)["side"]
         use_mem = bool(cfg.mem)
 
         turn = np.zeros(S.n, bool)
@@ -586,7 +605,7 @@ def main(a):
 
         def fetch(dr):
             r = dr[0]
-            return dr, S.front[r], (S.side[r] if use_side else (S.mem[r] if use_mem else None))
+            return dr, S.front[r], (S.side[r] if use_side else (S.mem[r] if (use_mem and om is None) else None))
         from concurrent.futures import ThreadPoolExecutor
         pre = ThreadPoolExecutor(2)
         nxt = pre.submit(fetch, draw())
@@ -604,6 +623,8 @@ def main(a):
             if cfg.ego_lat_drop > 0:
                 dm = torch.as_tensor(lrng.random(nB) < cfg.ego_lat_drop, device=dev)
                 ego[:, EGO_LAT] = ego[:, EGO_LAT] * (~dm)[:, None].float()
+            if om is not None:
+                side = om[rows]                                                      # tokens of this step's tokenizer: the losses reach its weights
             out = model(front_b, ego, S.tc[rows], side, smask, nv=None if S.nv is None else S.nv[rows])
             total, Ls = LS(out, S, rows, anchor)
             if not torch.isfinite(total):
@@ -617,6 +638,8 @@ def main(a):
                         p.grad /= world
             scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(base + new, 1.0)
+            if om is not None:                                                       # clipped on its own: the policy's clip is that of the other arms
+                tok_gn = float(torch.nn.utils.clip_grad_norm_(om.params, 1.0))
             scaler.step(opt)
             scaler.update()
             hist.append({k: float(v) for k, v in Ls.items()})
@@ -626,6 +649,8 @@ def main(a):
                 run.scalars({f"loss/{k}": v for k, v in m.items()}, step + 1)
                 el = time.time() - t0
                 run.scalars({"throughput/steps_per_s": (step + 1) / el, "gpu/peak_gb": torch.cuda.max_memory_reserved() / 2 ** 30}, step + 1)
+                if om is not None:
+                    run.scalars({"geotok/grad_norm": tok_gn}, step + 1)
                 if (step + 1) % 100 == 0 or step + 1 == cfg.steps:
                     run.info(f"step {step + 1}: " + ", ".join(f"{k} {v:.4f}" for k, v in m.items()) +
                              f"; {(step + 1) / el:.2f} it/s, {torch.cuda.max_memory_reserved() / 2 ** 30:.1f} GB")
@@ -648,6 +673,9 @@ def main(a):
             if model.adapter is not None:
                 torch.save(model.adapter.state_dict(), d / "adapter.pt")
             run.summary.update(steps=cfg.steps, train_s=time.time() - t0, ckpt=str(d / "ckpt-final.pt"))
+            if om is not None:
+                GE.finish(om, model, S, dv_rows, LS.W, rear, hinge, run, tag, d)
+                run.summary.update(gpu_peak_gb=torch.cuda.max_memory_reserved() / 2 ** 30)
     except BaseException as e:
         if ctx:
             ctx.__exit__(type(e), e, e.__traceback__)
@@ -698,4 +726,7 @@ if __name__ == "__main__":
     ap.add_argument("--wod-mass", type=float, default=0.0, help="mixed-domain: exact share of every batch drawn from the wod_* rows (0 = natural mix)")
     ap.add_argument("--wod-slots", type=int, default=0, choices=[0, 8], help="mixed-domain: 8 = oldest WOD slot zeroed (teacher8.npz); 0 = all 9")
     ap.add_argument("--mem", default="", choices=["", *MEM_KINDS], help="32-token memory for arm P2 (representation fix / turn-oracle; runs/op_parity/mem)")
+    ap.add_argument("--mem-e2e", default="", choices=["", "b", "x", "p"], help="geo-e2e: jointly trained tokenizer over true SDF + agents (b), the same "
+                    "shuffled across logs (x), the logged-path field (p); privileged, oracle probes only (scripts/geo_e2e.py)")
+    ap.add_argument("--mem-init", default="", help="geo-e2e: tokenizer state dict to start from (geo_oracle.py tok --weights)")
     main(ap.parse_args())
