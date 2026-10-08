@@ -46,6 +46,30 @@ def sel_file(tag, tag_out=""):
     return OUT / "sel" / f"{tag}{tag_out}.npz"
 
 
+def load_spans():
+    """Slim-shard JPEG spans of every val frame of the rater sequences. processed/wod_zeroshot/sets.json (the harness's source) was missing on the box at run time,
+    so the same table is rebuilt from the index (wod_zeroshot.build_sets code path, rater sequences only) into this lane's own directory; shared files are untouched."""
+    from jevdrive import wod_zeroshot as Z
+    if (Z.root() / "sets.json").exists():
+        return Z.load_spans()[0]
+    f = OUT / "spans_rater.json"
+    if f.exists():
+        return json.loads(f.read_text())
+    from jevdrive import waymo as W
+    df = W.load_index()
+    names = W.frame_names(df)
+    S = Z.load_sets()["rater"]
+    need = set(S["sequence"].astype(str))
+    seq = df.sequence.astype(str).to_numpy()
+    m = (df.split.astype(str).to_numpy() == "val") & np.isin(seq, list(need))
+    spans = {n: [str(df.shard.iloc[i])] + [int(df[f"{c}_{s}"].iloc[i]) for c in W.CAMS for s in ("off", "len")] for n, i in zip(names[m], np.flatnonzero(m))}
+    f.parent.mkdir(parents=True, exist_ok=True)
+    tmp = f.with_name(f".{f.name}.{os.getpid()}")
+    tmp.write_text(json.dumps(spans))
+    os.replace(tmp, f)
+    return spans
+
+
 def rater_names():
     from jevdrive import wod_zeroshot as Z
     S = Z.load_sets()
@@ -66,7 +90,7 @@ def cmd_extract(a):
         out = feat_file(a.tag, a.suffix)
         names = rater_names()[: a.limit or None]
         sets = Z.load_sets()
-        spans, _ = Z.load_spans()
+        spans = load_spans()
         op_calib = json.loads((Z.root() / "op_calib.json").read_text())
         z = np.load(BIAS / f"bias-{a.tag}.npz")
         bias = dict(zip(z["names"].astype(str).tolist(), z["bias"]))
