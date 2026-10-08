@@ -1,0 +1,9 @@
+variant,step,n,delta
+B,"1 pc no-EC (candidate table, 191 convention)",3154,"+2.80 [+1.63, +3.85]"
+B,"2 raw no-EC (candidate table, same picks)",3154,"+2.93 [+1.74, +4.00]"
+B,3 bench no-EC (bench sub-scores),3154,"+2.93 [+1.74, +4.00]"
+B,4 bench official (with EC),3154,"+2.07 [+0.94, +3.09]"
+A,"1 pc no-EC (candidate table, 191 convention)",3154,"+2.75 [+1.55, +3.82]"
+A,"2 raw no-EC (candidate table, same picks)",3154,"+2.91 [+1.69, +3.99]"
+A,3 bench no-EC (bench sub-scores),3154,"+2.91 [+1.69, +3.99]"
+A,4 bench official (with EC),3154,"+2.04 [+0.88, +3.10]"
