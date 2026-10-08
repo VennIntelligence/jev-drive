@@ -638,7 +638,7 @@ def cmd_report(a):
                 G[arm, fk, "rec"] = q
                 r["recovery"] = f"{100 * q['mean']:.1f}% [{100 * q['lo']:.1f}, {100 * q['hi']:.1f}]"
                 r["moved %"] = f"{100 * (TD.picks_of(r_['test_pred']) != 0).mean():.1f}"
-                r["DAC fail % after (identity %.2f)" % dac_id[fk]] = f"{dac_of(r_['test_pred'], fk):.2f}"
+                r["DAC fail % after selection"] = f"{dac_of(r_['test_pred'], fk):.2f}"
                 if prior is not None:
                     pr = prior[(prior.arm == arm) & (prior["family x convention"] == fk)]
                     r["decision 187 (within navtest)"] = pr["> 20 deg"].iloc[0] if len(pr) else ""
@@ -648,7 +648,7 @@ def cmd_report(a):
         stats.write_table(rows, out / "arms", note="gain over SH30 of the selected candidate under the family's convention, EPDMS x 100 (no EC), seed mean, navtest turn tokens; heads trained on "
                           "navtrain held-out labels only; paired log-cluster bootstrap B 10 000. PRIV = map geometry (upper bound). Primary arm at 97.5% (Bonferroni over the two registered "
                           f"family x convention readings), E at 95%, other model-side arms Bonferroni m = {M_NONPRIV}, privileged m = {M_PRIV}. 'navtrain OOF gain' = out-of-fold on navtrain "
-                          "(in-distribution), config selected on it for NN arms.")
+                          f"(in-distribution), config selected on it for NN arms. SH30 identity DAC failure on these tokens: {dac_id[FK[0]]:.2f}%.")
         # ---- verdict, as pre-registered
         f0, f1 = FK
         pm = G[primary, f0, "> 20 deg"]
