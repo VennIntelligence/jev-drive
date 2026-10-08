@@ -29,6 +29,7 @@ import threading
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from jevdrive.common import data_dir, n_cpus
 
 STALE_S = 300.0
