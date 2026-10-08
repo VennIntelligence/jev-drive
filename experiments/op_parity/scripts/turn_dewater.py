@@ -7,6 +7,7 @@ is an artefact of the 4 s horizon and of EP farming, and is the per-token pick l
   select     cross-fitted selectors (folds by log): ridge / ridge + margin / boosted trees on ego, plan, seed disagreement, shipped-teacher and frozen
              vision streams; constant, permutation, in-sample and learning-curve controls -> $OUT/select.pkl
   selreport  tables and figures of `select` -> <out>/, figs
+  posthoc    not pre-registered: the raw-trained selector valued under the de-watered conventions; out-of-fold detection of repairable token-seeds
 """
 import os
 for _k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
@@ -565,10 +566,71 @@ def fig_select(FIGD, GN, CV, ceil, fks, log):
     plt.close(fig)
 
 
+# ---------------------------------------------------------------- post hoc (not pre-registered; written after the selector tables were read)
+def cmd_posthoc(a):
+    """(1) the raw-trained selector's picks valued under the de-watered conventions: how much of its gain is water; (2) is "this token-seed has
+    a repair in the family" (pc ceiling gain > 0) detectable out of fold from the same inputs: ridge on the 0 / 1 label, fixed lambda and k, AUC."""
+    import pandas as pd
+    from scipy.stats import rankdata
+    from jevdrive import stats
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    with Run("op_parity", "turn_dewater/posthoc", seed=0, config=vars(a)) as run:
+        nt = splits.load("navsim/navtest")
+        run.use_split(nt)
+        out = _pl.Path(a.out)
+        C, tok, dyaw, log, X = load(a.score)
+        F, B = fams(C), {k: v for k, v in buckets(dyaw).items() if "left" not in k and "right" not in k}
+        with open(OUT / "select.pkl", "rb") as fh:
+            R = pickle.load(fh)["res"]
+        Sc = {cv: TC.noec(conv(X, C, cv)) for cv in CONVS}
+        Yf = {cv: (Sc[cv][:, F["F19"]] - Sc[cv][:, :1]).transpose(0, 2, 1) for cv in CONVS}        # (S, n, 19)
+        zero, rows = np.zeros(len(tok)), []
+        for head, kind, arms in (("L", "oof", ARMS), ("G", "hgb", ("E", "V+E"))):
+            for arm in arms:
+                pk = [R[kind, arm, fkey("F19", "raw"), r, 1.0]["picks"] for r in range(REPS)]
+                r = dict(head=head, arm=arm)
+                for cv in ("raw", "epcap", "pc"):
+                    d = np.mean([take(Yf[cv], p).mean(0) for p in pk], 0)
+                    r[f"valued {cv}"] = TC.cell(TC.ci(d, zero, log))
+                rows.append(r)
+        stats.write_table(rows, out / "posthoc_crossvalued", note="post hoc: selectors trained on F19 x raw, their out-of-fold picks valued under each "
+                          "convention, > 20 deg, EPDMS x 100 minus SH30")
+        feats, _ = features(tok)
+        _D.update(feats)
+        lc = pd.factorize(log)[0]
+        _D["lcode"] = lc
+        f, rng = folds(0), np.random.default_rng(0)
+        idx = [np.flatnonzero(lc == g) for g in range(lc.max() + 1)]
+        boot = [np.concatenate([idx[g] for g in rng.integers(0, len(idx), len(idx))]) for _ in range(1000)]
+
+        def auc(sc, y):
+            n1 = y.sum()
+            return (rankdata(sc)[y].sum() - n1 * (n1 + 1) / 2) / (n1 * (len(y) - n1))
+        rows = []
+        labels = {"repair exists (F19 x pc gain > 0)": Yf["pc"].max(-1) > 1e-9, "SH30 fails a gate (NC / DAC / DDC / TLC < 1)": (X[:, 0, :, :4] < 1).any(-1)}
+        for lab, y in labels.items():
+            for arm, streams in ARMS.items():
+                Xa, sc = X_of(streams, GK), np.zeros(y.shape)
+                for j in range(FOLDS):
+                    P = ridge_fit(Xa[:, f != j].reshape(-1, Xa.shape[-1]), y[:, f != j].reshape(-1, 1).astype(float))
+                    sc[:, f == j] = P(Xa[:, f == j].reshape(-1, Xa.shape[-1]), 100.0).reshape(S, -1)
+                r = dict(label=lab, arm=arm, **{"base rate %": 100 * y.mean()})
+                for b, m in B.items():
+                    q = [auc(sc[:, bi[m[bi]]].ravel(), y[:, bi[m[bi]]].ravel()) for bi in boot]
+                    r[b] = f"{auc(sc[:, m].ravel(), y[:, m].ravel()):.3f} [{np.quantile(q, 0.025):.3f}, {np.quantile(q, 0.975):.3f}]"
+                top = sc.ravel() >= np.quantile(sc.ravel(), 1 - y.mean())
+                r["precision at the base rate %"] = 100 * y.ravel()[top].mean()
+                rows.append(r)
+        stats.write_table(rows, out / "posthoc_detect", floatfmt=".1f", note="post hoc: out-of-fold AUC (5 folds by log, ridge on the 0 / 1 label, lambda 100, "
+                          "32 PCs per T / V stream, no tuning) per (token, seed); CI = log-cluster bootstrap (B 1000)")
+        run.summary.update(n=len(tok))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sp = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("ceiling", "select", "selreport"):
+    for name in ("ceiling", "select", "selreport", "posthoc"):
         p = sp.add_parser(name)
         p.add_argument("--score", default=str(SCORE))
         p.add_argument("--out", default=str(RES))
