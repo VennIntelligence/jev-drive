@@ -5,7 +5,7 @@
   status  [--model M ... --bench B --preset P]      (no args: every run dir with a live job)
   report  --bench B --arms A [A ...] [--vs REF ...] [--preset P] [--out DIR] [--scenarios SET]
           arm = label=spec+spec (seeds) or one spec; e.g. --arms P2=P2-F-s0+P2-F-s1 P0 --vs WA-JEPA
-  score-poses --poses f.npz [--keys K ...] [--tokens t.txt] --out o.csv [--traffic non_reactive] [--cpu C] [--jobs K] [--wait] [--dry]
+  score-poses --poses f.npz [--keys K ...] [--tokens t.txt] --out o.csv [--traffic non_reactive] [--mcache v2_navtrain] [--cpu C] [--jobs K] [--wait] [--dry]
 """
 from __future__ import annotations
 
@@ -75,6 +75,7 @@ def main(argv=None) -> int:
     q.add_argument("--owner", default="bench")
     q.add_argument("--traffic", default="reactive", choices=["reactive", "non_reactive"],
                    help="devkit traffic policy: reactive IDM (default), or non_reactive log replay as bench navtest scores")
+    q.add_argument("--mcache", default="v2_navtest", help="v2 metric cache under runs/navsim/metric_cache (e.g. v2_navtrain: op_parity nt-cache)")
     q.add_argument("--wait", action="store_true")
     q.add_argument("--dry", action="store_true")
     a = ap.parse_args(argv)
@@ -84,7 +85,7 @@ def main(argv=None) -> int:
         from . import poses
         from .poses import read_tokens
         d = poses.submit(a.poses, a.out, a.keys, read_tokens(a.tokens) if a.tokens else None, cpu=a.cpu, jobs=a.jobs,
-                         priority=a.priority, dry=a.dry, owner=a.owner, traffic=a.traffic)
+                         priority=a.priority, dry=a.dry, owner=a.owner, traffic=a.traffic, mcache=a.mcache)
         print(d)
         return 0 if not a.wait or a.dry or RN.wait([d]) else 1
     if a.cmd == "models":

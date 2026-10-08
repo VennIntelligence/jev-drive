@@ -50,8 +50,15 @@ TRAFFIC = ("reactive", "non_reactive")  # devkit traffic_agents_policy: IDM agen
 _W = {}
 
 
+MCACHE = ["v2_navtest"]                 # name of the v2 metric cache under runs/navsim/metric_cache (use_mcache: e.g. v2_navtrain)
+
+
+def use_mcache(name: str = "v2_navtest") -> None:
+    MCACHE[0] = name or "v2_navtest"
+
+
 def mcache_dir() -> Path:
-    return data_dir() / "runs/navsim/metric_cache/v2_navtest"
+    return data_dir() / "runs/navsim/metric_cache" / MCACHE[0]
 
 
 def devkit_env(force_threads: bool = False) -> dict:
@@ -308,13 +315,13 @@ def check_inputs(poses, keys=(), tokens=None, mcache=True) -> tuple:
         mc = {Path(p).parent.name for p in glob.glob(str(mcache_dir() / "*/*/*/metric_cache.pkl"))}
         miss = [t for t in tokens if t not in mc]
         if miss:
-            raise ValueError(f"{len(miss)} tokens have no v2 navtest metric cache ({mcache_dir()}), e.g. {miss[:3]}")
+            raise ValueError(f"{len(miss)} tokens have no v2 metric cache in {mcache_dir()}, e.g. {miss[:3]}")
     return keys, tokens
 
 
 # ---------------------------------------------------------------- the pool run
-def run_key(poses, keys, tokens, traffic: str = "reactive") -> str:
-    ident = [file_sha(poses), keys, tokens] + ([traffic] if traffic != "reactive" else [])     # reactive keeps the earlier run dirs
+def run_key(poses, keys, tokens, traffic: str = "reactive", mcache: str = "v2_navtest") -> str:
+    ident = [file_sha(poses), keys, tokens] + ([traffic] if traffic != "reactive" else []) + ([mcache] if mcache != "v2_navtest" else [])  # defaults keep the earlier run dirs
     h = hashlib.sha256(json.dumps(ident).encode()).hexdigest()[:12]
     return f"{Path(poses).stem}-{h}"
 
@@ -345,13 +352,14 @@ def R_cores() -> float:
 
 
 def stages(poses, out, keys=(), tokens=None, cpu: int = 0, jobs: int = 0, chunk: int = CHUNK, root: Path = None,
-           traffic: str = "reactive") -> tuple:
+           traffic: str = "reactive", mcache: str = "v2_navtest") -> tuple:
     """(run dir, stages): K worker jobs on the shared chunk queue, then collect. Writes config.json / tokens.txt."""
     poses = str(Path(poses).resolve())
+    use_mcache(mcache)
     keys, tokens = check_inputs(poses, keys, tokens)
     if traffic not in TRAFFIC:
         raise ValueError(f"traffic {traffic!r} is not one of {TRAFFIC}")
-    d = (root or R.bench_root("poses")) / run_key(poses, keys, tokens, traffic)
+    d = (root or R.bench_root("poses")) / run_key(poses, keys, tokens, traffic, mcache)
     d.mkdir(parents=True, exist_ok=True)
     n_chunks = -(-len(tokens) // chunk)
     k, c = plan_jobs(len(tokens), cpu, jobs)
@@ -361,7 +369,7 @@ def stages(poses, out, keys=(), tokens=None, cpu: int = 0, jobs: int = 0, chunk:
         chunk, n_chunks = old["chunk"], old["n_chunks"]             # resume: keep the chunking of the existing chunk files
     outs = list(dict.fromkeys(old.get("outs", []) + [str(Path(out).resolve())]))
     cfg = dict(poses=poses, poses_sha=file_sha(poses), keys=keys, n=len(tokens), chunk=chunk, n_chunks=n_chunks, jobs=k, cpu=c,
-               traffic=traffic, outs=outs, t_submit=time.strftime("%F %T"))
+               traffic=traffic, mcache=mcache, outs=outs, t_submit=time.strftime("%F %T"))
     if not (d / "tokens.txt").exists():
         R.atomic_write(d / "tokens.txt", "\n".join(tokens) + "\n")
     R.atomic_write(cf, json.dumps(cfg, indent=1))
@@ -386,13 +394,13 @@ def stages(poses, out, keys=(), tokens=None, cpu: int = 0, jobs: int = 0, chunk:
 
 
 def submit(poses, out, keys=(), tokens=None, cpu: int = 0, jobs: int = 0, priority: float = 0.0, dry: bool = False,
-           owner: str = "bench", traffic: str = "reactive") -> Path:
+           owner: str = "bench", traffic: str = "reactive", mcache: str = "v2_navtest") -> Path:
     """Queue a pose-scoring run (idempotent: finished chunks are kept, live jobs reused); returns the run dir."""
-    d, S = stages(poses, out, keys, tokens, cpu, jobs, traffic=traffic)
+    d, S = stages(poses, out, keys, tokens, cpu, jobs, traffic=traffic, mcache=mcache)
     R.submit(d, f"bn-poses-{d.name}", S, owner=owner, dry=dry, priority=priority)
     if not dry:
         cfg = json.loads((d / "config.json").read_text())
-        R.status(d, f"submitted {cfg['n']} tokens x {len(cfg['keys'])} keys ({traffic} traffic): {sum(s.name.startswith('w') for s in S)} jobs x "
+        R.status(d, f"submitted {cfg['n']} tokens x {len(cfg['keys'])} keys ({traffic} traffic, {mcache}): {sum(s.name.startswith('w') for s in S)} jobs x "
                     f"{cfg['cpu']} cores, {cfg['n_chunks']} chunks of {cfg['chunk']}")
     return d
 
@@ -466,6 +474,7 @@ def worker(run_dir, i) -> None:
     """Pool job: claim chunks, score their tokens on every granted core, write each finished chunk atomically."""
     run_dir, i = Path(run_dir), int(i)
     cfg = json.loads((run_dir / "config.json").read_text())
+    use_mcache(cfg.get("mcache", "v2_navtest"))
     tokens = read_tokens(run_dir / "tokens.txt")
     q = Chunks(run_dir, cfg["n_chunks"], i)
     wdone = run_dir / "workers" / f"w{i}.DONE"
