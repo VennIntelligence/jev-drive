@@ -228,7 +228,7 @@ def cmd_gate(a):
         print(pd.DataFrame(rows).to_string(index=False))
         print(json.dumps(res))
         run.summary.update(res)
-        raise SystemExit(0 if ok else 2)
+    raise SystemExit(0 if ok else 2)
 
 
 # ---------------------------------------------------------------- diagnostic
@@ -419,6 +419,50 @@ def cmd_cscore(a):
     score_poses(L() / "poses_f33.npz", L() / f"cscore_{a.stage}_{a.family}.csv", keys, toks)
 
 
+def cmd_cgate(a):
+    """Stage-0 gate of step 4: sane ranges, c00 rows equal to the held-out `h` rows on the 300 tokens, measured cost, family chosen by the pre-registered ladder."""
+    import pandas as pd
+    from jevdrive.bench import poses as BP, runner as BR
+    from jevdrive.bench.navsim import SUBS
+    from jevdrive.run import Run
+    import turn_ceiling as TC
+    with Run("op_parity", "sh30_crossfit/cgate", config=vars(a)) as run:
+        df = pd.read_csv(L() / "cscore_t300_F33.csv")
+        cols = [SUBS[k] for k in TC.SUB8] + ["score"]
+        num = df[cols].to_numpy(float)
+        sane = bool(np.isfinite(num).all() and (num >= 0).all() and (num <= 1 + 1e-9).all())
+        tok = BP.read_tokens(L() / "tokens_t300.txt")
+        ref = pd.read_csv(L() / "score.csv")
+        ref = ref[ref.key == "h"].set_index("token").loc[tok]
+        g = df[df.key == "c00"].set_index("token").loc[tok]
+        res = dict(n_tokens=len(tok), sane_ranges=sane)
+        for c in cols:
+            d = np.abs(g[c].to_numpy(float) - ref[c].to_numpy(float))
+            res[c] = dict(max_abs=float(d.max()), n_diff=int((d > (TC.EP_TOL if c in (SUBS["EP"], "score") else 0)).sum()))
+        ok = sane and all(v["n_diff"] == 0 for v in res.values() if isinstance(v, dict))
+        keys = [f"c{i:02d}" for i in range(33)]
+        rd = BR.bench_root("poses") / BP.run_key(str(L() / "poses_f33.npz"), keys, tok, "non_reactive", "v2_navtrain")
+        sm = json.loads((rd / "summary.json").read_text())
+        c, nk, n_all = sm["cost"], len(sm["keys"]), len((L() / "tokens.txt").read_text().split())
+        opts = []
+        for fam in ("F33", "F27", "F19"):
+            nkf = len(fam_keys(fam))
+            cs = c["load_s_per_token"] + c["union_s_per_token"] + c["diag_s_per_token"] * nkf / nk + c["pdm_s_per_token"] * (nkf + 1) / (nk + 1)
+            opts.append(dict(family=fam, n_keys=nkf, core_s_per_token=cs, core_h=cs * n_all / 3600))
+        rem = a.budget_core_h - a.spent_core_h
+        pick = next((o for o in opts if o["core_h"] <= rem), None) or (opts[-1] if opts[-1]["core_h"] <= 1.5 * rem else None)
+        res.update(cost=c, options=opts, budget_core_h=a.budget_core_h, spent_core_h_estimate=a.spent_core_h, remaining=rem,
+                   chosen=None if pick is None else pick["family"], run_dir=str(rd))
+        res["pass"] = bool(ok and pick is not None)
+        (L() / "cgate.json").write_text(json.dumps(res, indent=1, default=float))
+        if pick is not None:
+            atomic(L() / "family_chosen.txt", pick["family"] + "\n")
+        run.summary.update(gate=res["pass"], chosen=res["chosen"])
+        print(json.dumps({k: v for k, v in res.items() if k != "cost"}, indent=1, default=float))
+        if not res["pass"]:
+            raise SystemExit("step-4 stage-0 gate FAILED (identity mismatch or no family fits the budget): see " + str(L() / "cgate.json"))
+
+
 # ---------------------------------------------------------------- ceiling table
 def cmd_ceiling(a):
     import pandas as pd
@@ -547,10 +591,13 @@ def main():
     p = sp.add_parser("cscore")
     p.add_argument("--stage", choices=["t300", "all"], required=True)
     p.add_argument("--family", choices=["F19", "F27", "F33"], default="F33")
+    p = sp.add_parser("cgate")
+    p.add_argument("--spent-core-h", type=float, required=True)
+    p.add_argument("--budget-core-h", type=float, default=40.0)
     sp.add_parser("ceiling").add_argument("--family", choices=["F19", "F27", "F33"], default="F33")
     a = ap.parse_args()
     {"folds": cmd_folds, "plans": cmd_plans, "plans-shard": cmd_plans_shard, "assemble": cmd_assemble, "score": cmd_score, "gate": cmd_gate,
-     "diag": cmd_diag, "cands": cmd_cands, "cscore": cmd_cscore, "ceiling": cmd_ceiling}[a.cmd](a)
+     "diag": cmd_diag, "cands": cmd_cands, "cscore": cmd_cscore, "cgate": cmd_cgate, "ceiling": cmd_ceiling}[a.cmd](a)
 
 
 if __name__ == "__main__":
