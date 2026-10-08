@@ -36,7 +36,7 @@ MODELS = {                                                  # name -> (path or H
     "q35_4b": ("models/Qwen3.5-4B", "qwen"),
     "gemma4_e2b": ("models/gemma-4-E2B-it", "gemma"),
 }
-CFGS = ["gen_native", "fwd_r4573", "fwd_r1153", "fwd_r559"]
+CFGS = ["fwd_r4573", "fwd_r1153", "fwd_r559", "gen_native"]      # cheap forwards first, the slow generate last
 QWEN_PX = {"r4573": 16777216, "r1153": 600000, "r559": 300000}          # max_pixels, as vlm_thin RES
 GEMMA_TOK = {"r4573": 1120, "r1153": 560, "r559": 280}                  # soft tokens per image
 N_BENCH, N_WARM = 100, 5
