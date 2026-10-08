@@ -1,0 +1,98 @@
+set,big,cls,turn,speed,n_s0,n_s1,n,wa_pass,rec 0.7-1.1 (main)
+NC,A,A1 stopped vehicle ahead,20-45,2-5,8,8,8.0,100.0,81.25
+NC,A,A1 stopped vehicle ahead,20-45,5-10,3,2,2.5,60.0,60.0
+NC,A,A1 stopped vehicle ahead,5-20,2-5,4,5,4.5,100.0,55.55555555555556
+NC,A,A1 stopped vehicle ahead,5-20,5-10,0,2,1.0,100.0,100.0
+NC,A,A1 stopped vehicle ahead,5-20,<2,5,4,4.5,55.55555555555556,66.66666666666666
+NC,A,A1 stopped vehicle ahead,<5,2-5,4,4,4.0,25.0,50.0
+NC,A,A1 stopped vehicle ahead,<5,5-10,7,6,6.5,100.0,76.92307692307693
+NC,A,A1 stopped vehicle ahead,<5,<2,14,11,12.5,100.0,44.0
+NC,A,A1 stopped vehicle ahead,>45,2-5,12,12,12.0,58.333333333333336,79.16666666666666
+NC,A,A1 stopped vehicle ahead,>45,5-10,1,1,1.0,100.0,100.0
+NC,A,A1 stopped vehicle ahead,>45,<2,2,2,2.0,100.0,100.0
+NC,A,A2 lead vehicle (moving),5-20,5-10,2,2,2.0,50.0,100.0
+NC,A,A2 lead vehicle (moving),<5,2-5,8,7,7.5,73.33333333333333,86.66666666666667
+NC,A,A2 lead vehicle (moving),<5,5-10,17,17,17.0,76.47058823529412,100.0
+NC,A,A2 lead vehicle (moving),<5,<2,8,9,8.5,76.47058823529412,82.35294117647058
+NC,B,B cut-in,20-45,2-5,1,1,1.0,100.0,100.0
+NC,B,B cut-in,5-20,2-5,7,7,7.0,85.71428571428571,85.71428571428571
+NC,B,B cut-in,5-20,5-10,3,2,2.5,20.0,100.0
+NC,B,B cut-in,5-20,<2,1,1,1.0,0.0,50.0
+NC,B,B cut-in,<5,2-5,7,7,7.0,42.857142857142854,92.85714285714286
+NC,B,B cut-in,<5,5-10,4,3,3.5,71.42857142857143,100.0
+NC,B,B cut-in,<5,<2,1,1,1.0,100.0,100.0
+NC,C,C crossing / turn conflict,20-45,2-5,1,1,1.0,100.0,100.0
+NC,C,C crossing / turn conflict,20-45,5-10,1,1,1.0,100.0,100.0
+NC,C,C crossing / turn conflict,5-20,2-5,2,2,2.0,0.0,25.0
+NC,C,C crossing / turn conflict,<5,2-5,5,6,5.5,63.63636363636363,27.27272727272727
+NC,C,C crossing / turn conflict,<5,5-10,1,1,1.0,0.0,100.0
+NC,C,C crossing / turn conflict,<5,<2,3,1,2.0,75.0,100.0
+NC,C,C crossing / turn conflict,>45,5-10,1,1,1.0,100.0,100.0
+NC,D,D side contact,20-45,2-5,0,1,0.5,100.0,100.0
+NC,D,D side contact,20-45,5-10,0,1,0.5,100.0,100.0
+NC,D,D side contact,5-20,2-5,2,1,1.5,100.0,33.33333333333333
+NC,D,D side contact,5-20,5-10,2,1,1.5,100.0,66.66666666666666
+NC,D,D side contact,<5,5-10,4,3,3.5,85.71428571428571,42.857142857142854
+NC,D,D side contact,<5,>=10,3,3,3.0,100.0,66.66666666666666
+NC,D,D side contact,>45,2-5,3,3,3.0,100.0,100.0
+NC,D,D side contact,>45,5-10,3,3,3.0,100.0,100.0
+NC,E,E VRU,5-20,2-5,1,1,1.0,100.0,100.0
+NC,E,E VRU,5-20,5-10,2,2,2.0,0.0,50.0
+NC,E,E VRU,<5,2-5,1,1,1.0,0.0,0.0
+NC,E,E VRU,<5,5-10,1,1,1.0,0.0,0.0
+NC,E,E VRU,<5,<2,2,2,2.0,50.0,50.0
+NC,E,E oncoming,20-45,5-10,2,2,2.0,100.0,75.0
+NC,E,E oncoming,5-20,5-10,1,1,1.0,100.0,100.0
+NC,E,E oncoming,<5,2-5,3,4,3.5,42.857142857142854,28.57142857142857
+NC,E,E oncoming,>45,2-5,1,1,1.0,100.0,50.0
+NC,E,E oncoming,>45,<2,1,1,1.0,100.0,100.0
+NC,E,E static object,20-45,2-5,2,2,2.0,100.0,50.0
+NC,E,E static object,5-20,2-5,1,1,1.0,100.0,100.0
+NC,E,E static object,<5,5-10,9,9,9.0,100.0,61.111111111111114
+NC,E,E static object,>45,2-5,2,2,2.0,100.0,100.0
+NC,E,E static object,>45,5-10,1,0,0.5,100.0,100.0
+TTC-only,A,A1 stopped vehicle ahead,20-45,2-5,4,3,3.5,71.42857142857143,71.42857142857143
+TTC-only,A,A1 stopped vehicle ahead,20-45,5-10,4,3,3.5,57.14285714285714,57.14285714285714
+TTC-only,A,A1 stopped vehicle ahead,5-20,2-5,3,3,3.0,50.0,66.66666666666666
+TTC-only,A,A1 stopped vehicle ahead,5-20,5-10,4,3,3.5,71.42857142857143,85.71428571428571
+TTC-only,A,A1 stopped vehicle ahead,<5,2-5,2,4,3.0,100.0,100.0
+TTC-only,A,A1 stopped vehicle ahead,<5,5-10,2,4,3.0,100.0,100.0
+TTC-only,A,A1 stopped vehicle ahead,>45,5-10,0,1,0.5,100.0,100.0
+TTC-only,A,A2 lead vehicle (moving),<5,5-10,2,3,2.5,80.0,100.0
+TTC-only,A,A2 lead vehicle (moving),>45,5-10,1,1,1.0,100.0,100.0
+TTC-only,B,B cut-in,20-45,2-5,3,3,3.0,66.66666666666666,100.0
+TTC-only,B,B cut-in,5-20,5-10,1,0,0.5,100.0,100.0
+TTC-only,B,B cut-in,5-20,<2,2,2,2.0,0.0,0.0
+TTC-only,B,B cut-in,<5,2-5,1,1,1.0,0.0,0.0
+TTC-only,B,B cut-in,<5,<2,1,1,1.0,0.0,0.0
+TTC-only,B,B cut-in,<5,>=10,2,1,1.5,33.33333333333333,33.33333333333333
+TTC-only,B,B cut-in,>45,2-5,1,2,1.5,0.0,100.0
+TTC-only,C,C crossing / turn conflict,20-45,5-10,1,1,1.0,100.0,0.0
+TTC-only,C,C crossing / turn conflict,5-20,5-10,1,2,1.5,33.33333333333333,100.0
+TTC-only,C,C crossing / turn conflict,>45,2-5,1,1,1.0,100.0,100.0
+TTC-only,C,C crossing / turn conflict,>45,5-10,2,2,2.0,100.0,100.0
+TTC-only,C,C crossing / turn conflict,>45,<2,1,1,1.0,0.0,100.0
+TTC-only,D,D side contact,20-45,2-5,1,1,1.0,100.0,100.0
+TTC-only,D,D side contact,20-45,5-10,1,1,1.0,100.0,100.0
+TTC-only,D,D side contact,5-20,2-5,1,2,1.5,100.0,100.0
+TTC-only,D,D side contact,5-20,5-10,0,1,0.5,100.0,100.0
+TTC-only,D,D side contact,>45,2-5,1,1,1.0,100.0,100.0
+TTC-only,E,E VRU,20-45,2-5,4,4,4.0,75.0,87.5
+TTC-only,E,E VRU,20-45,5-10,1,1,1.0,100.0,100.0
+TTC-only,E,E VRU,<5,2-5,1,1,1.0,100.0,100.0
+TTC-only,E,E VRU,<5,<2,2,2,2.0,50.0,50.0
+TTC-only,E,E VRU,>45,2-5,1,2,1.5,66.66666666666666,100.0
+TTC-only,E,E oncoming,20-45,5-10,1,1,1.0,0.0,100.0
+TTC-only,E,E oncoming,5-20,2-5,1,1,1.0,100.0,0.0
+TTC-only,E,E oncoming,5-20,5-10,6,6,6.0,16.666666666666664,16.666666666666664
+TTC-only,E,E oncoming,<5,2-5,2,1,1.5,0.0,100.0
+TTC-only,E,E oncoming,<5,5-10,2,1,1.5,0.0,66.66666666666666
+TTC-only,E,E oncoming,>45,5-10,1,0,0.5,100.0,100.0
+TTC-only,E,E static object,20-45,2-5,6,5,5.5,72.72727272727273,90.9090909090909
+TTC-only,E,E static object,20-45,5-10,2,2,2.0,100.0,100.0
+TTC-only,E,E static object,5-20,2-5,3,2,2.5,100.0,100.0
+TTC-only,E,E static object,5-20,5-10,5,3,4.0,100.0,75.0
+TTC-only,E,E static object,<5,5-10,3,2,2.5,60.0,40.0
+TTC-only,E,E static object,>45,2-5,2,3,2.5,0.0,0.0
+TTC-only,E,E static object,>45,5-10,1,1,1.0,100.0,100.0
+TTC-only,E,E static object,>45,<2,1,1,1.0,0.0,100.0

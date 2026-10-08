@@ -1,0 +1,6 @@
+cls,n_s0,n_s1,n,WA-JEPA passes %
+A1 stopped vehicle ahead,5,7,6.0,58.333333333333336
+B cut-in,1,1,1.0,100.0
+D side contact,1,0,0.5,100.0
+E VRU,2,2,2.0,0.0
+E oncoming,4,4,4.0,100.0
