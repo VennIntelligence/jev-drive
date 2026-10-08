@@ -47,6 +47,7 @@ Seeds 0 and 1, DS (paired, route-cluster CI): vmerge3 68.3, vm3priv 75.4, vm3nor
 **Next.** Replace the CARLA-map inputs (junction entrance, stop line) by the official route commands; shorten the green-release delay; a gap policy for the bypass.
 
 **Read more.** [plans/2026-10-02-vlm-arb.md](plans/2026-10-02-vlm-arb.md), [results/report.md](results/report.md), [results/phase_a.md](results/phase_a.md), [results/lightsweep.md](results/lightsweep.md), [plans/2026-10-02-vlm-thin.md](plans/2026-10-02-vlm-thin.md) + [results/vlm_thin.md](results/vlm_thin.md) (offline: one-pass scoring, resolution and a cut language model with a thin head for Qwen3-VL-4B's light reading; speed and accuracy), [research/decisions/082.md](../../research/decisions/082.md).
+- Small-VLM first look (d182): Qwen3.5-2B/4B and Gemma 4 E2B vs Qwen3-VL-4B on the d85 light reading, none better at equal latency: [results/small_vlm.md](results/small_vlm.md).
 
 <!-- files:begin -->
 ## Files

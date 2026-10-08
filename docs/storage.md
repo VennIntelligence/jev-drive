@@ -18,6 +18,12 @@ Read this when you need to decide where a model, dataset, checkpoint or output g
 HF models live in the HF cache, so `from_pretrained("Qwen/Qwen3-VL-4B-Instruct")` works without a path.
 Add new models to `scripts/download_models.sh`.
 
+Small-VLM first look (2026-10-08, d182): `models/Qwen3.5-2B` 4.5 GB, `models/Qwen3.5-4B` 9.2 GB, `models/gemma-4-E2B-it` 9.9 GB (all
+ModelScope copies, bf16 safetensors); `envs/svlm-extra` is a `--target` dir with flash-linear-attention / fla-core / einops
+that the Qwen3.5 runs put on `PYTHONPATH` (the shared `.venv` is untouched). hf-mirror gave ~1 MB/s in total, ModelScope caps
+one connection at ~0.6 MB/s but scales with connections: `experiments/vlm_arb/scripts/small_vlm_pdl.py` (16 MB ranges, 64
+streams) reached 14-15 MB/s.
+
 ## Tiers
 
 - Re-downloadable (HF models, public datasets): not precious. The repo keeps the ids and download scripts.
