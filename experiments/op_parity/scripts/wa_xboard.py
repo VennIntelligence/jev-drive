@@ -323,8 +323,8 @@ def cmd_montage(a):
     import cv2
     d = work_dir()
     z = np.load(d / f"req_V1{a.suffix}.npz")
-    pa = {v: np.load(d / v / "paths.npy") for v in ("V1", "V2")}
-    mm = {v: np.load(d / v / "cache.npy", mmap_mode="r") for v in ("V1", "V2")}
+    pa = {v: np.load(d / f"{v}{a.suffix}" / "paths.npy") for v in ("V1", "V2")}
+    mm = {v: np.load(d / f"{v}{a.suffix}" / "cache.npy", mmap_mode="r") for v in ("V1", "V2")}
     rows = []
     for i in np.linspace(0, len(z["keys"]) - 1, a.n).astype(int):
         tiles = []
