@@ -1,0 +1,6 @@
+bucket,DAC_fail_identity,DAC_fail_oracle,NC_fail_identity,NC_fail_oracle,EPDMS_identity,EPDMS_oracle,family
+turn >= 20,5.13,0.16,1.24,0.11,87.92,97.12,F19
+20-45,4.23,0.15,1.24,0.15,89.23,97.23,F19
+>= 45,6.58,0.18,1.23,0.04,85.77,96.94,F19
+left,3.79,0.14,1.43,0.13,89.57,97.69,F19
+right,8.17,0.20,0.79,0.06,84.15,95.81,F19

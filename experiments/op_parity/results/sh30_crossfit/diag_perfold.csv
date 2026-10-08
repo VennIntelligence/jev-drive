@@ -1,0 +1,6 @@
+fold,n_turn,DAC_fail_heldout,DAC_fail_insample_SH30,DAC_fail_model_on_navtest,EPDMS_heldout,EPDMS_insample_SH30,EPDMS_model_on_navtest
+0,5696,5.00,4.35,7.64,87.89,88.69,83.49
+1,5580,5.82,4.98,7.17,86.35,87.47,83.87
+2,5532,5.46,4.85,7.48,87.76,88.38,83.55
+3,5594,4.17,3.87,7.23,89.47,89.95,83.86
+4,5921,5.18,4.53,7.39,88.10,88.88,83.62

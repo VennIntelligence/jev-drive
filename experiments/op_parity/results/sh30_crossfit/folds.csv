@@ -1,0 +1,6 @@
+fold,logs_dev,logs_train,tokens_train,tokens_dev,turn_dev,train_ids,dev_ids
+0,245,924,80481,21438,5696,navsim/op-parity-cf5f0-train@v1:a5f6671e059d,navsim/op-parity-cf5f0-dev@v1:7bfecf0d6a06
+1,221,944,82493,19304,5580,navsim/op-parity-cf5f1-train@v1:47a790ee10f0,navsim/op-parity-cf5f1-dev@v1:528f8fe5d9a6
+2,238,926,82513,19095,5532,navsim/op-parity-cf5f2-train@v1:36d0544688d0,navsim/op-parity-cf5f2-dev@v1:6dbcd24ffe4a
+3,243,926,80946,21168,5594,navsim/op-parity-cf5f3-train@v1:cc197a7ab2e6,navsim/op-parity-cf5f3-dev@v1:345b6575765a
+4,245,920,79563,22283,5921,navsim/op-parity-cf5f4-train@v1:0db03e81137e,navsim/op-parity-cf5f4-dev@v1:0a1a2ebd81ad
