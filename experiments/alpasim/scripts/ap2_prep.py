@@ -115,7 +115,7 @@ def main(a):
     N = len(names)
     tag = a.data + (f"-first{a.limit}" if a.limit else "")
     pose, vel, cam = tab["pose"][:N].astype(float), tab["vel"][:N].astype(float), tab["cam"][:N].astype(float)
-    _, W = AI.track_rates(tab["pose"][:N], tab["fut"][:N])
+    W = AI.yaw_rates(tab["pose"][:N], tab["fut"][:N])
     with Run("alpasim", f"ap2-prep-{tag}", config=vars(a)) as run:
         run.use_split(splits.load("navsim/navtest" if a.data == "lb_navtest" else "navsim/navtrain"))
         _, enc = PP.encoder(torch.device("cuda"))

@@ -24,7 +24,7 @@ SH30（Cinque 冻结视觉 + op_parity P2 adapter + drivable hinge）已能当 A
 
 1. **决策序号混合**：每行抽 m ∈ {1, 2, 3, 4}，概率 0.1 / 0.1 / 0.1 / 0.7（一个 rollout 10 次决策的真实占比）。navtrain token 当作「起点在它之前 k 帧的那个 scene 的第 k 次决策」，k = 0, 1, 2（m = 1, 2, 3）或 3 + crc32(token) % 7（m = 4）。
 2. **历史截断（serving 规则写死）**：m 个 keyframe 时，只有不早于最老 keyframe 的 policy slot 是真的（1 / 3 / 6 / 8 个），更老的 slot 置零且 invalid；最老真 slot 的图像对从零图开始（与 pp_prep 对 m = 4 最老 slot 的约定同一条规则）；缺的历史位姿 = 最老已知状态按恒定体速度与偏航率倒推（`sh30_core.fill_history`，偏航率用日志偏航样条导数，对应 AlpaSim 的 angular_velocity）。m < 4 的 slot token 用 serving 的同一个函数（`sh30_core.lattice`，cold = zero）在 navtrain 上重算并缓存（`ap2_prep.py`），m = 4 用已有 W 缓存。
-3. **ego 状态按 AlpaSim 的定义**：m = 1 用录制值；m = 2：vy = 0、ax = 轨迹 d|v|/dt、ay = vx·ω；m ≥ 3：vy = 0、ay = 0、ax = 轨迹 d|v|/dt（日志轨迹代替闭环里车辆模型的 dvx/dt）。
+3. **ego 状态按 AlpaSim 的定义**：m = 1 用录制值；m = 2：vy = 0、ay = vx·ω；m ≥ 3：vy = 0、ay = 0。ax 在所有 m 上都用录制值：AlpaSim 的 ax 是轨迹 d|v|/dt（k = 1）与车辆模型 dvx/dt（k ≥ 2，闭环里是模型自己上一步计划的后果），在日志上能拿到的最近估计就是录制 ax（对录制速度中心差分差 0.11 m/s²；用 2 Hz 位姿做样条二阶导 / 弦长差分分别差 0.14 / 0.17，训练前在 navtest 上测过，所以不用）。
 4. **指令**：用 AlpaSim 自己的路线生成器在 navtrain 上重建路线（`ap2_route.py`），再套 shipped sample 的 4 向规则（首个 ≥ 5 m 的 waypoint，y > 2 m 左、< −2 m 右）；取代 NAVSIM `driving_command`。
 5. driver 侧 k = 0 的速度 / 加速度旋回沿用 SH30 driver 的数据驱动判别（不写死旋转，官方环境若修了这个 bug 也不坏）。
 

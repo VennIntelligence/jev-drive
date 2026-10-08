@@ -27,11 +27,11 @@ from jevdrive import op_interp as I  # noqa: E402
 def ego_table(tab: dict, wp: np.ndarray, route: bool = False) -> np.ndarray:
     """Tokens of an op_parity tab (pose, vel, acc, fut) with their rebuilt AlpaSim routes wp (N, 4, 20, 2) (scripts/ap2_route.py) ->
     (N, 4, 20 [+ 60]) adapter ego features for a decision with m = 1..4 keyframes under the AlpaSim input standard."""
-    ax, w = AI.track_rates(tab["pose"], tab["fut"])
+    w = AI.yaw_rates(tab["pose"], tab["fut"])
     out = []
     for m in (1, 2, 3, 4):
         P, V = AI.fill_history(tab["pose"], tab["vel"], w, m)
-        v, a = AI.sim_state(tab["vel"][:, -1], tab["acc"][:, -1], ax, w[:, 3], m)
+        v, a = AI.sim_state(tab["vel"][:, -1], tab["acc"][:, -1], w[:, 3], m)
         V[:, -1] = v
         e = PA.ego_features(P, V, np.repeat(a[:, None], 4, 1), AI.route_cmd(wp[:, m - 1]))
         out.append(np.concatenate([e, AI.route_feat(wp[:, m - 1])], -1) if route else e)

@@ -9,6 +9,8 @@ A rollout is 10 decisions at 2 Hz with no history before t = 0 (docs/alpasim.md)
              k = 0   the recorded nuPlan velocity / acceleration (= NAVSIM's), delivered rotated by -yaw (the driver rotates it back)
              k = 1   vy = 0, ax = d speed / dt of the track, ay = vx * yaw rate (the controller's state coerced from the recording)
              k >= 2  vy = 0, ax = d vx / dt of the vehicle model, ay = 0
+           Training rows take ax from the recording at every k: on logs it is the closest available estimate of the track's d speed / dt
+           (0.11 m/s^2 from the central difference of the recorded speeds; a spline or chord through the 2 Hz poses is 0.14 / 0.17 off)
   command  the shipped samples' rule on the route AlpaSim sends (`route_cmd`), or the route itself (`route_feat`, arm R)
 """
 from __future__ import annotations
@@ -48,31 +50,24 @@ def route_feat(wp) -> np.ndarray:
     return f.reshape(wp.shape[:-2] + (ROUTE_DIM,)).astype(np.float32)
 
 
-def track_rates(pose, fut):
-    """pose (N, 4, 3) history and fut (N, 8, 3) future rear-axle poses (x, y, yaw in the t0 frame, 0.5 s apart) -> the track's own
-    d speed / dt at t0 (N,), and its yaw rate at each history key (N, 4): cubic splines through the 12 poses (arc length, unwrapped yaw).
-    Rows without a logged future (NaN) get the backward differences of the history."""
+def yaw_rates(pose, fut) -> np.ndarray:
+    """pose (N, 4, 3) history and fut (N, 8, 3) future rear-axle poses (x, y, yaw in the t0 frame, 0.5 s apart) -> the track's yaw rate at
+    each history key (N, 4): a cubic spline through the 12 unwrapped yaws (AlpaSim reports the recording's yaw rate at k = 0 / 1 to
+    0.003 / 0.001 rad/s of the log's central difference). Rows without a logged future (NaN) use the history alone."""
     from scipy.interpolate import CubicSpline
     pose, fut = np.asarray(pose, np.float64), np.asarray(fut, np.float64)
     has = ~np.isnan(fut).any((1, 2))
-    P = np.concatenate([pose, np.nan_to_num(fut)], 1)
-    s = np.concatenate([np.zeros((len(P), 1)), np.cumsum(np.linalg.norm(np.diff(P[..., :2], axis=1), axis=-1), 1)], 1)
-    psi = np.unwrap(P[..., 2], axis=1)
-    ax, w = CubicSpline(T12, s, axis=1)(0.0, 2), CubicSpline(T12, psi, axis=1)(T_KEY, 1)
-    sh, ph = s[:, :4], psi[:, :4]
-    axb = ((sh[:, 3] - sh[:, 2]) - (sh[:, 2] - sh[:, 1])) / 0.25
-    wb = np.gradient(ph, 0.5, axis=1)
-    return np.where(has, ax, axb).astype(np.float32), np.where(has[:, None], w, wb).astype(np.float32)
+    psi = np.unwrap(np.concatenate([pose[..., 2], np.nan_to_num(fut[..., 2])], 1), axis=1)
+    return np.where(has[:, None], CubicSpline(T12, psi, axis=1)(T_KEY, 1), np.gradient(psi[:, :4], 0.5, axis=1)).astype(np.float32)
 
 
-def sim_state(vel, acc, ax_track, w0, m: int):
+def sim_state(vel, acc, w0, m: int):
     """The (vx, vy), (ax, ay) AlpaSim reports at a decision with m keyframes, from a logged token: vel / acc (N, 2) recorded body-frame
-    state at t0, ax_track (N,) and w0 (N,) the track's d speed / dt and yaw rate at t0 (module docstring)."""
+    state at t0, w0 (N,) the track's yaw rate at t0 (module docstring). ax stays the recorded one for every m."""
     vel, acc = np.asarray(vel, np.float32).copy(), np.asarray(acc, np.float32).copy()
     if m == 1:
         return vel, acc
     vel[:, 1] = 0.0
-    acc[:, 0] = ax_track
     acc[:, 1] = vel[:, 0] * w0 if m == 2 else 0.0
     return vel, acc
 
