@@ -35,9 +35,9 @@ offline() {  # name ref models... : plans on navtest, devkit scores of the subse
   local name=$1 ref=$2; shift 2
   sub ap2-offline $L/offline-$name --vram 20 --cpu 8 --ram 60 -- $PY $S/ap2_offline.py plans --name $name --scenes $SCENES --models "$@"
   waitdirs $L/offline-$name
-  local keys; keys=$($VPY -c "import numpy as np, sys; print(' '.join(k for k in np.load(sys.argv[1]).files if k.endswith(('_nav', '_m4', '_m1'))))" $A/offline/$name/poses.npz)
+  local keys; keys=${KEYS:-$($VPY -c "import numpy as np, sys; print(' '.join(k for k in np.load(sys.argv[1]).files if k.endswith(('_nav', '_m4', '_m1'))))" $A/offline/$name/poses.npz)}
   [[ -f $A/offline/$name/scores.csv ]] || $VPY -m jevdrive.bench score-poses --poses $A/offline/$name/poses.npz --keys $keys --tokens $A/offline/$name/subset.txt \
-      --out $A/offline/$name/scores.csv --traffic non_reactive --wait || die "score-poses $name"   # m = 2, 3 are read by ADE only (3.2 core-s per token and key)
+      --out $A/offline/$name/scores.csv --traffic non_reactive --priority 5 --wait || die "score-poses $name"   # 3.2 core-s per token and key: KEYS=... narrows the scored keys
   $PY $S/ap2_offline.py report --name $name --ref $ref --scores $A/offline/$name/scores.csv || die "report $name"
 }
 
