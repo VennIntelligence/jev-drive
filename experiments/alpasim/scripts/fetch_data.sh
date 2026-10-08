@@ -61,7 +61,7 @@ shards=("${@:-part001}"); [[ ${shards[0]} == all ]] && shards=($(printf 'part%03
 echo "shards ${shards[*]}: $PAR at once, $N ranges each" > "$OUT/STATUS"
 pids=()
 for s in "${shards[@]}"; do
-  while (( $(jobs -rp | wc -l) >= PAR + 1 )); do sleep 5; done   # + 1: the tee of the log redirect is a job too
+  while (( $(jobs -rp | wc -l) >= PAR )); do sleep 5; done
   ( fetch "MTGS_asset/navtest/assets/$s.tar.gz" ) & pids+=($!)
 done
 rc=0; for p in "${pids[@]}"; do wait "$p" || rc=1; done
