@@ -320,17 +320,19 @@ class Store:
 
 def split_rows(tab, split_ref, b2d_split=None, wod_split=None) -> tuple:
     """Train / dev rows: NAVSIM rows by token (<split_ref>-train / -dev), b2d_* rows (tab["is_b2d"]) by route (tab["log"]; <b2d_split>-train / -val).
-    A split whose unit is `sequence` (WOD, e.g. wod/r2) selects rows by tab["log"] (= the WOD sequence of the row; scripts/wod_parity.py)."""
+    A split whose unit is `sequence` (WOD, e.g. wod/r2) or `log` (NAVSIM cross-fit folds, sh30_crossfit.py) selects rows by tab["log"]
+    (the WOD sequence / the NAVSIM log of the row; scripts/wod_parity.py)."""
     from jevdrive.data import splits
     tr, dv = splits.load(f"{split_ref}-train"), splits.load(f"{split_ref}-dev")
-    toks = tab["log"] if tr.unit == "sequence" else tab["names"]
+    by_log = tr.unit in ("sequence", "log")
+    toks = tab["log"] if by_log else tab["names"]
     trm, dvm, sp = tr.mask(toks), dv.mask(toks), [tr, dv]
     if b2d_split and tab.get("is_b2d") is not None and tab["is_b2d"].any():
         bt, bv = splits.load(f"{b2d_split}-train"), splits.load(f"{b2d_split}-val")
         trm |= tab["is_b2d"] & bt.mask(tab["log"])
         dvm |= tab["is_b2d"] & bv.mask(tab["log"])
         sp += [bt, bv]
-    if wod_split and tr.unit != "sequence" and tab.get("is_wod") is not None and tab["is_wod"].any():   # mixed-domain: wod_* rows by sequence
+    if wod_split and not by_log and tab.get("is_wod") is not None and tab["is_wod"].any():   # mixed-domain: wod_* rows by sequence
         wt, wv = splits.load(f"{wod_split}-train"), splits.load(f"{wod_split}-dev")
         trm |= tab["is_wod"] & wt.mask(tab["log"])
         dvm |= tab["is_wod"] & wv.mask(tab["log"])
