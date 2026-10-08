@@ -1,8 +1,8 @@
 # alpasim: AlpaSim E2E Closed Loop Challenge feasibility
 
 status: live
-decisions: 184, 185 (inputs: 104, 116, 133, 149, 169, 170, 174, 177)
-index: SH30 driver runs: 0.9465 on 48 public scenes (LTF 0.8735), 105 ms / step
+decisions: 184, 185, 188, 189 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
+index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
 key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
 **Question.** Can SH30 (openpilot Cinque + adapter + drivable hinge, navtest EPDMS 89.55) enter the nuPlan track of the AlpaSim E2E
@@ -22,7 +22,21 @@ evidence only: one run, one seed, 48 scenes of one drive. Cold start = constant-
 (`figs/sh30_frames_right_turn.jpg`: the frames the model saw with its plan; `figs/sh30_bev_first8.jpg`: plans against the driven track).
 Run: `run.sh <dir> sh30 ...` in place of `ltf`.
 
-**Next.** The full public suite once the remaining 14 asset shards are on disk (`fetch_data.sh all`, running 2026-10-08); the two
+**WA-JEPA driver (2026-10-08, decision 188).** The released WA-JEPA through its shipped NAVSIM agent, unmodified, behind the driver API
+(`lib/wajepa_core.py`, `lib/wajepa_driver.py`, `run.sh <dir> wajepa`): 480 / 480 real inferences, mean scene score 0.9777 fp32 / 0.9792 bf16, one
+zero (offroad, cause open). Inference 1.3 s (fp32) / 0.37 s (bf16) per `drive` against the 0.1 s target; cold start (oldest frame repeated,
+its own client's rule) shifts the first plan by 3.4 m offline. Execution evidence only: [results/wajepa_smoke.md](results/wajepa_smoke.md)
+(`figs/wajepa_frames_right_turn.jpg`, `figs/wajepa_bev_first8.jpg`).
+
+**AP2: openpilot aligned to AlpaSim's inputs (2026-10-08, decision 189, pre-registered).** SH30's recipe retrained on navtrain with rows built as
+AlpaSim delivers a decision (1-4 keyframes with the served `backwarp` rule, AlpaSim's own route generator -> 4-way command, the simulator's ego
+definitions): `AP2-AB-s0`. Offline on navtest under AlpaSim inputs vs SH30 as served: ADE at 1 keyframe 0.992 -> 0.666 m, EPDMS +3.19
+[+2.07, +4.37]; with full history level (+0.14 [-0.38, +0.66]). Closed loop, 48 scenes: 0.9320 (41 at score 1, 3 at-fault collisions) vs SH30
+0.9465 (35, 2): not separable. Inputs used / not usable / substituted, ruled-out options (zero-slot cold start, route waypoints into the
+adapter) and mismatches: [results/ap2_smoke.md](results/ap2_smoke.md) (`figs/ap2_frames_right_turn.jpg`, `figs/ap2_bev_first8.jpg`), plan
+[plans/2026-10-08-alpasim-aligned-prereg.md](plans/2026-10-08-alpasim-aligned-prereg.md). Run: `run.sh <dir> ap2`.
+
+**Next.** The at-fault collisions of SH30 and AP2 case by case (zeros decide this board); WA-JEPA latency on an idle card; the full public suite once the remaining 14 asset shards are on disk (`fetch_data.sh all`, running 2026-10-08); the two
 collisions and the 11 slow scenes; step latency under 0.1 s (warp on the GPU or cross-session batching); a Docker host for the
 submission image and a read-only-root test; seed 1.
 
