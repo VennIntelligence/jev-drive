@@ -12,7 +12,7 @@
 - [benchmarks/](benchmarks/index.html)：四大基准地形、分数成分解构与榜单完整性（哪些分数能信）。
 - [world-model/](world-model/index.html)：世界模型与反事实配对：因果效应闸门、WL-2 判格、no-go 汇总，以及分解世界模型（ego 精确、外生预训练）的设计与查新。
 - [literature/](literature/index.html)：文献现状：薄 head、反事实与视频生成。
-- [paper-outline/](paper-outline/index.html)：论文骨架 trick or trade：工业模型跨榜泛化与逐榜技巧归因。
+- [paper-outline/](paper-outline/index.html)：论文骨架 trick or trade：工业模型跨榜泛化与逐榜技巧归因。2026-10-08 起世界模型训练场一节废弃，候选主线见页首（决策 177）。
 - [turn-gain/](turn-gain/index.html)：P2 急转弯失败是轻微比例缩小，不是封顶，控制链路不裁剪。
 - [hugsim-specplan/](hugsim-specplan/index.html)：用模型自己的 plan 转向：单点曲率更差，0.5 到 1.5 秒平均曲率更好。
 
