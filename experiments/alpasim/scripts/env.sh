@@ -8,3 +8,6 @@ export UV_LINK_MODE=copy UV_PYTHON=3.12
 export ALPASIM_MEMBERS="src/grpc src/utils src/utils_rs src/runtime src/eval src/wizard src/controller src/plugins src/trajdata plugins/mtgs[server]"
 # gsplat compiles its CUDA kernels on first use (Dockerfile: gcc-11, ninja, MAX_JOBS=4); keep the build off the system disk.
 export MAX_JOBS=4 TORCH_EXTENSIONS_DIR=$DATA_DIR/cache/torch_extensions/alpasim
+# The eval video writer (matplotlib) needs an `ffmpeg` on PATH; the image apt-installs one, here the binary that
+# imageio-ffmpeg ships in the env is linked into $DATA_DIR/tools/alpasim-bin by setup_env.sh.
+export PATH=$DATA_DIR/tools/alpasim-bin:$PATH

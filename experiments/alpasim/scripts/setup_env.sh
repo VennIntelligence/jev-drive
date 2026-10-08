@@ -41,6 +41,8 @@ uv pip install --no-config --python .venv/bin/python --default-index https://mir
 
 echo protos > "$OUT/STATUS"
 (cd src/grpc && UV_NO_SYNC=1 uv run compile-protos)
+mkdir -p "$DATA_DIR/tools/alpasim-bin"
+ln -sf "$(.venv/bin/python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$DATA_DIR/tools/alpasim-bin/ffmpeg"
 uv pip freeze --python .venv/bin/python > "$OUT/freeze.txt"
 "$SRC/.venv/bin/python" - <<'PY' | tee "$OUT/versions.txt"
 import torch, gsplat, numpy, grpc

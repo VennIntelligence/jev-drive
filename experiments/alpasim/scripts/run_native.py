@@ -137,6 +137,7 @@ def main() -> int:
     ap.add_argument("--driver-cwd")
     ap.add_argument("--driver-port", type=int, help="port of an already running driver (no --driver)")
     ap.add_argument("--tap", action="store_true", help="log every driver RPC to driver_tap.jsonl")
+    ap.add_argument("--scene-list", help="file with one scene id per line; overrides the preset's scenes.scene_ids")
     ap.add_argument("--ready-timeout", type=float, default=900)
     ap.add_argument("overrides", nargs="+", help="wizard arguments, e.g. +e2e_challenge_nuplan=dev scenes.limit_to_first_n=1")
     a = ap.parse_args()
@@ -159,6 +160,9 @@ def main() -> int:
             procs.wait_port("tap", port, 120)
 
         # The wizard hands out the first free ports at or above baseport; start from a random one per run.
+        if a.scene_list:
+            ids = ",".join(f'"{x}"' for x in Path(a.scene_list).read_text().split())
+            a.overrides += [f"scenes.scene_ids=[{ids}]", "scenes.limit_to_first_n=0"]
         wiz = ["uv", "run", "alpasim_wizard", *a.overrides, "wizard.run_method=NONE", f"wizard.log_dir={out}",
                f"wizard.baseport={random.randrange(20000, 30000)}"]
         t0 = time.time()
