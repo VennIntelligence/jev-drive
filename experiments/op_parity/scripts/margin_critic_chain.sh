@@ -18,7 +18,7 @@ die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return; rm -f "$ld/ERROR"
         local id; id=$($CL submit --owner op_parity --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 20; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; return 0; }
-if [[ $TAG == smoke ]]; then SH="0"; LIM="--limit 600"; ARMS=${ARMS:-"MC MC-E R-WA"}; else SH=$(seq 0 11); LIM=""; ARMS=${ARMS:-"MC MC-30 MC-10 MC-3 MC-V MC-E R-WA R-C1"}; fi
+if [[ $TAG == smoke ]]; then SH="2"; LIM="--limit 600"; ARMS=${ARMS:-"MC MC-E R-WA"}; else SH=$(seq 0 11); LIM=""; ARMS=${ARMS:-"MC MC-30 MC-10 MC-3 MC-V MC-E R-WA R-C1"}; fi
 
 status "hidden gate"
 $PY $S hidden --tag $TAG || die hidden

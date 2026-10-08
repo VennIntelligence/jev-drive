@@ -28,6 +28,7 @@ RES = _R / "experiments/op_parity/results/margin_critic"
 FIG = _R / "experiments/op_parity/figs/margin_critic"
 CR = D / "runs/op_parity/cache"
 NSH, K = 12, 5
+SMOKE_SHARD = 2                                         # a shard that also has WA-Cf features (reference arm)
 TIDX = [10, 20, 30, 40]                                 # 1 / 2 / 3 / 4 s on the 0.1 s grid
 CLIP, PCLIP = (-2.0, 4.0), (-3.0, 6.0)                  # margin clip (= decision 187), point SDF clip of the training target
 NB, NF33, NPLAN = 48, 33, 41                            # bank: c00-c32 = F33 on the held-out plan, 33-40 random on the plan, 41-47 random on the logged future
@@ -154,7 +155,7 @@ def cmd_bank(a):
     from jevdrive.run import Run
     with Run("op_parity", f"margin_critic/bank-{a.tag}", seed=0, config=vars(a)) as run:
         run.use_split(splits.load("navsim/navtrain"))
-        units = [(i, a.tag, a.limit) for i in ([0] if a.tag == "smoke" else range(NSH))]
+        units = [(i, a.tag, a.limit) for i in ([SMOKE_SHARD] if a.tag == "smoke" else range(NSH))]
         r = par.pmap(_bank, units, workers=max(1, min(n_cpus() // 2, len(units))), run=run, desc="bank shards", mp_context=mp.get_context("fork"),
                      skip=lambda u: tdir(u[1], "bank", f"s{u[0]}.npz").exists() and not a.force)
         r.raise_if_failed()
@@ -277,7 +278,7 @@ def cmd_train(a):
         zs = np.load(D / "runs/op_probe/labels/navtrain_all.npz")
         sidx = {t: i for i, t in enumerate(zs["tokens"].tolist())}
         sdf_all, ok_all = zs["sdf"], zs["ok"]
-        shards = [0] if smoke else list(spec.get("shards", range(NSH)))
+        shards = [SMOKE_SHARD] if smoke else list(spec.get("shards", range(NSH)))
         B = [np.load(tdir(a.tag, "bank", f"s{i}.npz")) for i in shards]
         tok, log = np.concatenate([b["tokens"] for b in B]), np.concatenate([b["log"] for b in B])
         assert s_ntr.mask(tok).all() and not s_nt.mask(tok).any()
