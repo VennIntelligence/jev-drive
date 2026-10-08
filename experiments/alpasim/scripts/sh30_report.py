@@ -31,10 +31,11 @@ def drive_log(run: Path):
 
 
 def why(r) -> str:
-    if r.get("failure_reason"):
-        return "ROLLOUT FAILED: " + str(r["failure_reason"])[:60]
     m = r["score_metrics"]
-    return ", ".join(k for k in FAIL if m.get(k)) or ("" if r["score"] >= 1 else f"progress {m['progress_clipped_rel']:.2f}")
+    bad = ", ".join(k for k in FAIL if m.get(k))
+    if r.get("failure_reason") and not bad:
+        return "no score: " + str(r["failure_reason"])[:60]
+    return bad or ("" if r["score"] >= 1 else f"progress {m['progress_clipped_rel']:.2f}")
 
 
 def cmd_table(a):
@@ -42,11 +43,11 @@ def cmd_table(a):
     R = {k: rollouts(p) for k, p in runs.items()}
     scenes = sorted(set.intersection(*(set(r) for r in R.values())))
     L = [f"Scenes: {len(scenes)} common to all runs. Score = AlpaSim scene score (0 on collision_at_fault / offroad / left_corridor_laterally, "
-         "else min(progress / 0.8, 1)).", "", "| run | scenes | mean scene score | pass (score 1) | zeros | failed rollouts | mean progress_clipped_rel | mean lateral dist to GT (m) |",
+         "else min(progress / 0.8, 1)).", "", "| run | scenes | mean scene score | score 1 | score 0 | zeros by reason | mean progress_clipped_rel | mean lateral dist to GT (m) |",
          "|:--|--:|--:|--:|--:|--:|--:|--:|"]
     for k, r in R.items():
         s = np.array([r[x]["score"] for x in scenes])
-        L.append(f"| {k} | {len(scenes)} | {s.mean():.4f} | {(s >= 1).sum()} | {(s == 0).sum()} | {sum(bool(r[x].get('failure_reason')) for x in scenes)} | "
+        L.append(f"| {k} | {len(scenes)} | {s.mean():.4f} | {(s >= 1).sum()} | {(s == 0).sum()} | {', '.join(f"{n} {k}" for k in FAIL if (n := sum(bool(r[x]['score_metrics'].get(k)) for x in scenes))) or '-'} | "
                  f"{np.mean([r[x]['score_metrics']['progress_clipped_rel'] for x in scenes]):.3f} | "
                  f"{np.mean([r[x]['score_metrics']['lateral_dist_to_gt_trajectory'] for x in scenes]):.3f} |")
     L += ["", "| scene | " + " | ".join(f"{k} score | {k} progress | {k} why not 1" for k in R) + " |", "|:--|" + "--:|--:|:--|" * len(R)]
