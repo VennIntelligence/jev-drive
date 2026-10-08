@@ -8,6 +8,7 @@ command from the rebuilt route, DynamicState definitions, truncated history) and
           the scene tokens of --scenes, for `python -m jevdrive.bench score-poses --traffic non_reactive`)
   report  ADE / 4 s longitudinal error vs the log per label and m, paired differences vs --ref (bootstrap over logs), EPDMS of the scored
           subset when --scores CSV is given -> <out>.md / .json
+  closed  --runs name=<AlpaSim run dir> ...   driver logs of closed-loop runs against the logs (plan at decision 3 vs the logged future, ...)
 
   $DATA_DIR/envs/op-train/bin/python experiments/alpasim/scripts/ap2_offline.py plans --name pilot --models SH30=SH30-F-s0 A=AP2P-A-s0
 """
@@ -138,6 +139,32 @@ def cmd_report(a):
     print("\n".join(L))
 
 
+def cmd_closed(a):
+    """Closed-loop runs against the logs: per run, the 8-pose plan of decision 3 (= the scene token's t0) vs the logged future, the fed
+    command vs NAVSIM's `driving_command`, the fed ego state vs the recorded one, planned 4 s travel per decision, extra driver counters."""
+    tab = np.load(data_dir() / "runs/op_parity/cache" / DATA / "tab.npz")
+    row = {t: i for i, t in enumerate(tab["names"].tolist())}
+    L = ["| run | scenes | plan at decision 3 vs logged future (m) | command = NAVSIM command at decision 3 | fed vx / ax minus recorded at decision 3 (mean abs) | "
+         "planned x at 4 s, decisions 0 / 1 / 2 / 3 / 6 / 9 (m, mean) | logged x at 4 s from decision 3 (m) | extra counters |", "|:--|--:|--:|--:|:--|:--|--:|:--|"]
+    for spec in a.runs:
+        name, run = spec.split("=", 1)
+        rows = [json.loads(x) for x in open(_pl.Path(run) / "driver-logs/drive.jsonl")]
+        dr, cl = [r for r in rows if r["kind"] == "drive"], [r for r in rows if r["kind"] == "close"]
+        d3 = [(r, row[r["scene"].rsplit("-", 1)[1]]) for r in dr if r["k"] == 3 and r["scene"].rsplit("-", 1)[1] in row]
+        ade = [float(np.linalg.norm(np.array(r["poses"])[:, :2] - tab["fut"][i][:, :2], axis=1).mean()) for r, i in d3]
+        agree = sum(r["cmd"] == int(np.argmax(tab["cmd"][i, -1])) for r, i in d3)
+        dv = np.mean([abs(10 * r["ego"][4] - tab["vel"][i, -1, 0]) for r, i in d3])
+        da = np.mean([abs(3 * r["ego"][6] - tab["acc"][i, -1, 0]) for r, i in d3])
+        x4 = [np.mean([r["poses"][-1][0] for r in dr if r["k"] == k]) for k in (0, 1, 2, 3, 6, 9)]
+        extra = {k: sum(c.get(k, 0) for c in cl) for k in ("state_rotated", "state_rotated_slow", "cmd_rule_diff", "cold")}
+        L.append(f"| {name} | {len(cl)} | {np.nanmean(ade):.2f} | {agree} / {len(d3)} | {dv:.2f} m/s / {da:.2f} m/s^2 | " + " / ".join(f"{v:.1f}" for v in x4) +
+                 f" | {np.nanmean([tab['fut'][i][-1, 0] for _, i in d3]):.1f} | {json.dumps(extra)} |")
+    out = "\n".join(L) + "\n"
+    if a.out:
+        _pl.Path(a.out).write_text(out)
+    print(out)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -151,5 +178,8 @@ if __name__ == "__main__":
     r.add_argument("--ref", required=True)
     r.add_argument("--scores", default="")
     r.add_argument("--out", default="")
+    c = sub.add_parser("closed")
+    c.add_argument("--runs", nargs="+", required=True, help="name=<run dir> ...")
+    c.add_argument("--out", default="")
     a = ap.parse_args()
-    {"plans": cmd_plans, "report": cmd_report}[a.cmd](a)
+    {"plans": cmd_plans, "report": cmd_report, "closed": cmd_closed}[a.cmd](a)
