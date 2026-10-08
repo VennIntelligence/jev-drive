@@ -3,7 +3,10 @@
 GPU pool (jevdrive/cl/pool.py): agents submit jobs, the dispatcher (tmux jev:pool) runs each on a card with room.
   submit --name N --vram GB [--carla N] [--cpu N] [--train] [--priority P] [--after ID,..] [...] -- CMD ...
                                        queue a job; prints its id (one shell string or an argv after --)
+  fanout --name N --arms a,b,c [--collect CMD] [submit flags] -- CMD with {arm}
+                                       one job per arm (N-a, N-b, ...) + a collect job after all of them
   queue [--all] | show ID | cancel ID.. [--drain] | top
+  usage [--hours H]                    card-hours and core-hours used, idle time split by cause
   hold --card G (--whole | --vram GB [--carla N]) [--idx a-b] [--cpus ..] [--pid PID] --note TEXT | holds | unhold HID
                                        resources used outside the pool (ends by itself when --pid exits)
   dispatch [--once]                    the dispatcher (run it once, in tmux jev:pool)
@@ -86,7 +89,21 @@ def _warn_dispatcher(age):
                   "ever" if age == float("inf") else "%.0f s" % age), file=sys.stderr)
 
 
-def cmd_submit(a):
+def _advise(a, cmd, fanned: bool = False):
+    """Submit-time hints on stderr (never a refusal): several runs chained in one GPU job, and declarations far above
+    what finished runs of the same name prefix used (the dispatcher books the measured figure anyway)."""
+    hint = "" if fanned else P.serial_hint(cmd)
+    if hint and (a.vram > 1 or a.carla or a.exclusive):
+        print("NOTE: %s: this job holds one card for all of them while other cards may idle. Independent runs go in "
+              "as one job each: `cl fanout --arms ...` (docs/long-runs.md, fan-out rule)." % hint, file=sys.stderr)
+    known = P.known_caps(P._read_json(P.pool_dir() / "history.json", {}) or {}, a.name)
+    for flag, val, key, unit in (("--vram", a.vram, "vram_gb", "GB"), ("--cpu", a.cpu, "cpu", "cores"), ("--ram", a.ram, "ram_gb", "GB")):
+        if key in known and val > max(1.5 * known[key], known[key] + 4):
+            print("NOTE: %s %g %s, but finished '%s' jobs needed at most %g (with margin); the pool books %g."
+                  % (flag, val, unit, P.hist_prefix(a.name), known[key], known[key]), file=sys.stderr)
+
+
+def cmd_submit(a, arms=None):
     cmd = a.argv[1:] if a.argv[:1] == ["--"] else a.argv
     if not cmd:
         sys.exit("no command (put it after --)")
@@ -94,11 +111,13 @@ def cmd_submit(a):
     env = dict(os.environ) if a.copy_env else {}
     env.update(dict(kv.split("=", 1) for kv in a.env))
     cwd = a.cwd or os.getcwd()
+    name1 = a.name if arms is None else "%s-%s" % (a.name, arms[0])
     if not a.no_check:
-        bad = P.static_check(cmd, cwd) + (P.static_check(a.preflight, cwd) if a.preflight else [])
+        bad = P.static_check(cmd if arms is None else P.fanout_fill(cmd, arms[0], arms), cwd) \
+            + (P.static_check(a.preflight, cwd) if a.preflight else [])
         if bad:
             sys.exit("not submitted (--no-check to override): " + "; ".join(bad))
-    hist = P.history_defaults(a.name)
+    hist = P.history_defaults(name1)
     if a.vram <= 0 and not a.exclusive and "vram_gb" in hist:
         a.vram = hist["vram_gb"]
         print("vram %.1f GB from history of '%s' (p95 x 1.2); pass --vram to override" % (a.vram, P.hist_prefix(a.name)),
@@ -112,14 +131,46 @@ def cmd_submit(a):
                gpus=[int(g) for g in a.gpus.split(",") if g] if a.gpus else [], pin_strict=a.pin_strict, max_rss_gb=a.max_rss,
                profile=a.profile or "")
     after = a.after.split(",") if a.after else []
+    _advise(a, cmd, fanned=arms is not None)
     if a.preflight:
         pf = P.preflight(a.preflight, a.name, timeout_min=a.preflight_min, **res)
         print("preflight", pf, file=sys.stderr)
         after.append(pf)
-    jid = P.submit(cmd, name=a.name, priority=a.priority, after=after, when_exists=a.when_exists, tries=a.tries,
-                   timeout_h=a.timeout_h, **res)
-    print(jid)
+    kw = dict(priority=a.priority, after=after, when_exists=a.when_exists, tries=a.tries, timeout_h=a.timeout_h, **res)
+    if arms is None:
+        print(P.submit(cmd, name=a.name, **kw))
+    else:
+        out = P.fanout(cmd, arms, a.name, collect=a.collect or None, **kw)
+        for arm, jid in out["arms"].items():
+            print(jid, "%s-%s" % (a.name, arm))
+        if out["collect"]:
+            print(out["collect"], "%s-collect" % a.name)
     _warn_dispatcher(P.snapshot()[3])
+    return 0
+
+
+def cmd_fanout(a):
+    arms = [x for x in a.arms.split(",") if x]
+    if not arms:
+        sys.exit("--arms a,b,c")
+    return cmd_submit(a, arms)
+
+
+def cmd_usage(a):
+    u = P.usage_report(a.hours)
+    if not u["samples"]:
+        print("no usage samples in the last %g h (the dispatcher writes runs/pool/usage.jsonl once a minute)" % a.hours)
+        return 0
+    pct = lambda x, y: 100 * x / max(y, 1e-9)  # noqa: E731
+    print("last %.1f h recorded (%d samples): %.1f card-hours, GPU util-weighted %.1f (%.0f %%); cores: quota %.0f core-hours, "
+          "measured %.0f (%.0f %%), charged %.0f" % (u["hours"], u["samples"], u["card_h"], u["util_h"], pct(u["util_h"], u["card_h"]),
+                                                   u["core_h"], u["core_used_h"], pct(u["core_used_h"], u["core_h"]), u["core_charged_h"]))
+    print("\n| card state | card-hours | share |\n|:--|--:|--:|")
+    for k, v in sorted(u["cards"].items(), key=lambda kv: -kv[1]):
+        print("| %s | %.2f | %.0f %% |" % (k, v, pct(v, u["card_h"])))
+    print("\ncomputing = GPU job on the card, util >= 10 %%; job, GPU idle = a GPU job that is not using the card; queued: X = "
+          "card without a GPU job while ready GPU jobs wait on X; serial = idle next to a GPU job older than %d min with "
+          "nothing ready (fan it out); no work queued = nothing submitted for it." % (P.SERIAL_HINT_S / 60))
     return 0
 
 
@@ -195,8 +246,10 @@ def cmd_top(a):
     for c in box.cards:
         x = acct.get(c.index, {})
         jobs = ", ".join("%s %s (%.0f/%.0f GB, cpu %s)" % (j["id"], j["spec"]["name"][:18], j.get("vram_now", 0),
-                                                         j["spec"]["vram_gb"], _cpu(j))
-                         for j in run if j.get("gpu") == c.index)
+                                                         j.get("vram_booked", j["spec"]["vram_gb"]), _cpu(j))
+                         for j in run if j.get("gpu") == c.index and P.is_gpu(j["spec"]))
+        ncpu = sum(1 for j in run if j.get("gpu") == c.index and not P.is_gpu(j["spec"]))
+        jobs = ", ".join(x for x in (jobs, "%d CPU-only" % ncpu if ncpu else "") if x)
         free = x.get("total_gb", 0) - hd - x.get("foreign_gb", 0) - x.get("pool_gb", 0)
         print("| %d | %d | %.0f / %.0f | %.0f | %.0f | %s | %s / %s | %s | %s |" % (
             c.index, c.util, c.mem_used_mib / 1024, c.mem_total_mib / 1024, x.get("pool_gb", 0), x.get("foreign_gb", 0),
@@ -206,8 +259,41 @@ def cmd_top(a):
         print("cpu charged %(charged)s / budget %(budget)s cores (measured peak x 1.2 after 5 min, else declared)" % status["cpu"])
     for h in status.get("holds", []):
         print("hold %s card %d: %s" % (h["id"], h["card"], h.get("note")))
+    # Idle capacity next to queued demand: the lines that show under-use.
+    now, idle = time.time(), {int(g): s for g, s in (status.get("idle") or {}).items()}
+    gpu_run = [j for j in run if P.is_gpu(j["spec"])]
+    free = [g for g in sorted(idle) if not any(j.get("gpu") == g for j in gpu_run)]
+    cpu = status.get("cpu") or {}
+    print("\nidle now: %s; cores %.0f measured / %s charged / %s budget" % (
+        ", ".join("card %d (%s)" % (g, _dur(idle[g])) for g in free) or "no card",
+        sum(float(j.get("cores_now") or 0) for j in run), cpu.get("charged", "?"), cpu.get("budget", "?")))
+    ready, blocked = {True: {}, False: {}}, 0
+    for j in q:
+        c = j.get("cause") or "new"
+        if c in P.NOT_READY:
+            blocked += 1
+        else:
+            d = ready[P.is_gpu(j["spec"])]
+            d[c] = d.get(c, 0) + 1
+    fmt = lambda d: "%d (%s)" % (sum(d.values()), ", ".join("%s %d" % kv for kv in sorted(d.items()))) if d else "0"  # noqa: E731
+    print("queued:   GPU jobs ready %s, CPU-only ready %s, waiting on --after / gates %d" % (fmt(ready[True]), fmt(ready[False]), blocked))
+    if free and not ready[True]:
+        old = [j for j in gpu_run if now - j.get("t0", now) >= P.SERIAL_HINT_S]
+        if old:
+            print("UNDER-USED: card(s) %s idle with no GPU job ready while %s has run %s on card %s. If it does several "
+                  "runs in a row, fan them out (cl fanout; docs/long-runs.md)." % (
+                      ",".join(map(str, free)), old[0]["spec"]["name"], _dur(now - old[0]["t0"]), old[0].get("gpu")))
+        else:
+            print("UNDER-USED: card(s) %s idle and no GPU job is ready: the pool has no work for them." % ",".join(map(str, free)))
+    elif free:
+        print("UNDER-USED: card(s) %s idle while GPU jobs wait on %s (`queue` shows each job's reason)." % (
+            ",".join(map(str, free)), ", ".join(sorted(ready[True]))))
     _warn_dispatcher(age)
     return 0
+
+
+def _dur(s):
+    return "%d s" % s if s < 120 else "%d min" % (s / 60) if s < 7200 else "%.1f h" % (s / 3600)
 
 
 def cmd_hold(a):
@@ -238,26 +324,8 @@ def cmd_retarget(a):
 def cmd_dispatch(a):
     return P.Dispatcher().run(once=a.once)
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(prog="python -m jevdrive.cl", description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    sub = ap.add_subparsers(dest="cmd", required=True)
-    s = sub.add_parser("probe")
-    s.add_argument("--json", action="store_true")
 
-    def knobs(p):
-        p.add_argument("--profile", default=None, choices=sorted(profiles.PROFILES))
-        p.add_argument("--num-threads", type=int, default=None, help="OMP/MKL/OPENBLAS/NUMBA threads; 0 = leave unset")
-        p.add_argument("--client-threads", type=int, default=None, help="carla.Client worker threads; 0 = CARLA default")
-        p.add_argument("--pool-threads", type=int, default=None, help="CARLA RPC / streaming / secondary pool size")
-        p.add_argument("--workers-per-card", type=int, default=None)
-        p.add_argument("--gpus", default=None)
-    s = sub.add_parser("plan")
-    knobs(s)
-    s.add_argument("--cores-per-card", type=float, default=None)
-    s.add_argument("--agent-threads", type=int, default=capacity.AGENT_THREADS)
-    sub.add_parser("profiles")
-    s = sub.add_parser("submit")
+def _submit_flags(s):
     s.add_argument("--name", required=True)
     s.add_argument("--owner", default="", help="who to ask about it (default: $CL_OWNER, the submitting pool job, $USER)")
     s.add_argument("--vram", type=float, default=0.0, help="peak VRAM GB on the card (default: p95 x 1.2 of "
@@ -290,6 +358,37 @@ def main(argv=None):
     s.add_argument("--preflight-min", type=float, default=15.0, help="timeout of the smoke run, minutes")
     s.add_argument("--no-check", action="store_true", help="skip the static check (script paths exist, .py compiles)")
     s.add_argument("argv", nargs=argparse.REMAINDER, metavar="CMD")
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="python -m jevdrive.cl", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    s = sub.add_parser("probe")
+    s.add_argument("--json", action="store_true")
+
+    def knobs(p):
+        p.add_argument("--profile", default=None, choices=sorted(profiles.PROFILES))
+        p.add_argument("--num-threads", type=int, default=None, help="OMP/MKL/OPENBLAS/NUMBA threads; 0 = leave unset")
+        p.add_argument("--client-threads", type=int, default=None, help="carla.Client worker threads; 0 = CARLA default")
+        p.add_argument("--pool-threads", type=int, default=None, help="CARLA RPC / streaming / secondary pool size")
+        p.add_argument("--workers-per-card", type=int, default=None)
+        p.add_argument("--gpus", default=None)
+    s = sub.add_parser("plan")
+    knobs(s)
+    s.add_argument("--cores-per-card", type=float, default=None)
+    s.add_argument("--agent-threads", type=int, default=capacity.AGENT_THREADS)
+    sub.add_parser("profiles")
+    s = sub.add_parser("usage")
+    s.add_argument("--hours", type=float, default=24.0)
+    for verb in ("fanout", "submit"):
+        s = sub.add_parser(verb)
+        if verb == "fanout":
+            s.add_argument("--arms", required=True, help="comma-separated arm names; {arm} in CMD, --env values and "
+                           "--log-dir is replaced by each (jobs are named NAME-ARM)")
+            s.add_argument("--collect", default="", help="one shell string run once after every arm is done "
+                           "({arms} = all arm names); a CPU job (vram 0.5, cpu 2)")
+        _submit_flags(s)
     s = sub.add_parser("queue")
     s.add_argument("--all", action="store_true")
     sub.add_parser("show").add_argument("id")
