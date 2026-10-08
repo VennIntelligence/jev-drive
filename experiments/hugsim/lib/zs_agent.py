@@ -274,6 +274,8 @@ class Agent:
         elif self.par is not None:                        # op_parity: the bias of this step rides with the frame
             bias, rec["parity"] = self.par.bias(obs["rgb"], info, self.hist)
             r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2, "intent_bias": bias})
+            if self.opts["parity"].get("select"):         # op_parity turn selector: replace the plan (and its smooth curvature) by the picked candidate
+                out, r, rec["sel"] = self.par.select(out, r, self.par.last_ego)
         else:
             r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2})
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)

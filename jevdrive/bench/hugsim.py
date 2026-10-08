@@ -38,7 +38,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from . import runner as R
-from .models import REPO, Model, data_dir, resolve
+from .models import REPO, TS_OPTS, Model, data_dir, resolve
 
 ZS_RUN = REPO / "experiments/hugsim/archive/zs_run.py"
 SERVER = REPO / "experiments/hugsim/archive/hugsim_zs_server.py"
@@ -305,14 +305,15 @@ class Servers:
         if m.family == "parity":
             self.bias_sock = str(tmp / "bias.sock")
             tag = "P3-init" if m.name == "P0" else m.name          # P0: shipped weights + an untrained P3 adapter (bias exactly 0)
+            ts = m.opt[2:] if m.opt in TS_OPTS else ""                # turn selector (op_parity turn_selhug.py): gate A | B | 0
             self.list.append(Server("bias", [R.py("op-train"), "-u", str(PPH), "serve", "--tag", tag, "--socket", self.bias_sock,
-                                             "--ready-file", str(d / f"w{i}-bias.ready")], self.bias_sock, d / f"w{i}-bias.ready",
+                                             "--ready-file", str(d / f"w{i}-bias.ready")] + (["--select", ts] if ts else []), self.bias_sock, d / f"w{i}-bias.ready",
                                     d / f"w{i}-bias.log", env))
         if m.family in ("parity", "onnx", "adapt_h"):
             self.op_sock = str(tmp / "op.sock")
             onnx = str(onnx_path(m)) if m.family in ("parity", "adapt_h") else m.onnx
             self.list.append(Server("policy", [R.py("openpilot"), "-u", str(SERVER), m.base] + (["--onnx", onnx] if onnx else [])
-                                    + ["--socket", self.op_sock, "--ready-file", str(d / f"w{i}-op.ready")], self.op_sock,
+                                    + (["--taps", "view_39,select_4,mean"] if m.opt in TS_OPTS else []) + ["--socket", self.op_sock, "--ready-file", str(d / f"w{i}-op.ready")], self.op_sock,
                                     d / f"w{i}-op.ready", d / f"w{i}-op.log", env))
 
     def start(self) -> None:
@@ -416,7 +417,7 @@ def run_one(cfg: dict, run_dir: Path, scen: str, srv: Servers, gpu: str, log: Pa
     from ..cl import procs
     opts = dict(cfg.get("opts", {}))
     if srv.bias_sock:
-        opts["parity"] = dict(opts.get("parity", {}), socket=srv.bias_sock)
+        opts["parity"] = dict(opts.get("parity", {}), socket=srv.bias_sock, **({"select": True} if srv.m.opt in TS_OPTS else {}))
     cmd = [R.py("hugsim"), str(ZS_RUN), "run", "--out", str(run_dir), "--agent", cfg["agent"],
            *preset_args(cfg["preset"], cfg.get("controller", "")), "--controller-env", json.dumps(cfg.get("controller_env", {})),
            "--gpu", gpu, "--workers", "1", "--scenarios", scen, "--tag", TAG, "--timeout", str(cfg["timeout_s"]), "--retries", "0",

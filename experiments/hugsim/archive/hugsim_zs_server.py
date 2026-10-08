@@ -167,6 +167,10 @@ class Openpilot(S.OpenpilotModel):
                 **lead_xv(d.get("lead"))}
         out = {"pos": d["plan_pos"].astype(np.float32), "vel": d["plan_vel"][:, 0].astype(np.float32),
                "yaw": d["plan_yaw"].astype(np.float32), "yaw_rate": d["plan_yaw_rate"].astype(np.float32), "t": self.t_idxs}
+        if getattr(m, "taps", None):                       # tapped ONNX (turn selector, op_parity): current-frame tokens, policy hidden states, road-edge mu
+            half = (m.slices["road_edges"].stop - m.slices["road_edges"].start) // 2
+            out["road_edges"] = raw[m.slices["road_edges"]][:half].reshape(2, 33, 2).astype(np.float32)
+            out.update({"tap_" + k: np.asarray(v, np.float16) for k, v in m.tap_values.items()})
         if sraw is not None:
             ds = self.decode(sraw, sm.slices, float(meta.get("speed", 0.0)))
             out.update(stab_pos=ds["plan_pos"].astype(np.float32), stab_yaw=ds["plan_yaw"].astype(np.float32))

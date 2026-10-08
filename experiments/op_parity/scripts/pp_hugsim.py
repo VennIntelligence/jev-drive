@@ -88,6 +88,12 @@ def serve(a):
     info = {"tag": a.tag, "arm": m.arm, "use_ego": bool(ad is not None and ad.use_ego), "use_side": bool(ad is not None and ad.use_side),
             "adapter_params": int(sum(p.numel() for p in ad.parameters())) if ad is not None else 0}
     gpu = threading.Lock()
+    selector = None
+    if a.select:                                            # turn selector (turn_selhug.py): the same server answers `select` requests
+        import re as _re
+        import turn_selhug as TSH
+        selector = TSH.Selector(int(_re.fullmatch(r"SH30-F-s(\d+)", a.tag).group(1)), a.select)
+        info["select"] = a.select
 
     @torch.no_grad()
     def bias(arrays):
@@ -108,6 +114,13 @@ def serve(a):
                     wire.send(conn, {"ok": True, "server": info}, {})
                     continue
                 t = time.perf_counter()
+                if meta["cmd"] == "select":
+                    with gpu:
+                        o = selector.run(arrays["ego"], arrays["pos"], arrays["yaw"], arrays["road_edges"], arrays["view_39"], arrays["select_4"],
+                                         arrays["mean"], arrays["cam"])
+                    rec = {k: o[k] for k in ("pick", "pick_free", "allowed", "dyaw", "gain", "applied", "dk", "margin_id")}
+                    wire.send(conn, dict(rec, ms=1e3 * (time.perf_counter() - t)), {"pos": np.asarray(o["pos"], np.float32), "yaw": np.asarray(o["yaw"], np.float32)})
+                    continue
                 with gpu:
                     b = bias(arrays)
                 wire.send(conn, {"ms": 1e3 * (time.perf_counter() - t)}, {"bias": b})
@@ -352,6 +365,7 @@ if __name__ == "__main__":
     s.add_argument("--tag", required=True)
     s.add_argument("--socket", required=True)
     s.add_argument("--ready-file", default="")
+    s.add_argument("--select", default="", choices=["", "A", "B", "0"], help="turn selector gate (SH30-F-s* only)")
     y = sp.add_parser("synth")
     y.add_argument("--out", required=True)
     y.add_argument("--std", type=float, default=0.01)

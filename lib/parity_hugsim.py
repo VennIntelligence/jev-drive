@@ -112,10 +112,28 @@ class ParityInputs:
         return {"server": self.server, "clock": self.clock, "zero_acc": self.zero_acc, "stop_gate": self.stop_gate, "sub_bias": self.sub_bias is not None, "scale": self.scale, "key_steps_back": self.back.tolist(),
                 "side_cams": list(self.yaw), "mount_yaw_deg": {c: round(y, 2) for c, y in self.yaw.items()}, "coverage": self.coverage}
 
+    def select(self, out: dict, r: dict, ego: np.ndarray) -> tuple[dict, dict, dict]:
+        """Turn selector (opt `select`, op_parity/scripts/turn_selhug.py): the policy reply `out` (plan, road edges, tapped tokens) -> (out with the
+        selected plan, r with the recomputed `curvature_smooth`, log record). Gate 0 and unselected steps return the reply untouched."""
+        t0 = time.perf_counter()
+        keys = ("view_39", "select_4", "mean")
+        arrays = {"ego": np.asarray(ego, np.float32), "pos": np.asarray(out["pos"], np.float32), "yaw": np.asarray(out["yaw"], np.float32),
+                  "road_edges": np.asarray(out["road_edges"], np.float32), "cam": np.array([self.d, 0.0], np.float32),
+                  **{k: np.asarray(out["tap_" + k], np.float16) for k in keys}}
+        wire.send(self.sock, {"cmd": "select"}, arrays)
+        meta, got = wire.recv(self.sock)
+        rec = {k: meta[k] for k in ("pick", "pick_free", "allowed", "dyaw", "gain", "applied", "dk", "margin_id")}
+        rec["rtt_ms"] = round(1e3 * (time.perf_counter() - t0), 1)
+        if meta["applied"]:
+            out = dict(out, pos=np.asarray(got["pos"], np.float32), yaw=np.asarray(got["yaw"], np.float32))
+            r = dict(r, curvature_smooth=float(r["curvature_smooth"]) + float(meta["dk"]))
+        return out, r, rec
+
     def bias(self, rgb: dict, info: dict, hist) -> tuple[np.ndarray, dict]:
         """(32, 512) fp16 bias for this step and a log record."""
         t0 = time.perf_counter()
         ego, pose = ego_inputs(hist, info, self.d, self.scale, self.zero_acc)
+        self.last_ego = ego                                         # full precision, for the turn selector
         arrays = {"ego": ego}
         if self.use_side:
             self.frames.append(np.stack([fr.pack(rgb, idx) for fr, idx in (self.packers[c] for c in SIDE)]))   # (3, 2, 6, 128, 256)

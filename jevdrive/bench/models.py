@@ -66,7 +66,7 @@ class Model:
     def key(self, bench: str) -> str:
         """Run-dir name of this model on a benchmark (closed loop ignores frames / opt)."""
         if bench in ("hugsim", "b2d"):
-            return self.name
+            return self.name + (f"-{self.opt}" if self.opt in TS_OPTS else "")     # turn selector: its own run dir (served by the same ONNX)
         return self.spec.replace(":", "_")
 
     @property
@@ -162,7 +162,7 @@ def resolve(spec: str, check: bool = False) -> Model:
             raise ValueError(f"{spec}: option {opt!r} is only defined for parity models (noside, lm, sg, dn, tsA, tsB, ts0)")
         if opt in TS_OPTS and not re.fullmatch(r"SH30-F-s\d+", m.name):
             raise ValueError(f"{spec}: the turn selector options are defined for SH30-F-s* only")
-        m = replace(m, opt=opt, benches=("navtest", "navhard")) if opt in TS_OPTS else replace(m, opt=opt)
+        m = replace(m, opt=opt, benches=("navtest", "navhard", "hugsim")) if opt in TS_OPTS else replace(m, opt=opt)
     if check:
         if m.ckpt and not Path(m.ckpt).exists():
             raise FileNotFoundError(f"{spec}: checkpoint {m.ckpt} missing")
