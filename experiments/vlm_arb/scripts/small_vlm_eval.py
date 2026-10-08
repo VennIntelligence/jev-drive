@@ -114,7 +114,7 @@ def run(a):
     d = OUT / a.model
     d.mkdir(parents=True, exist_ok=True)
     (d / "ERROR").unlink(missing_ok=True)
-    if (d / "DONE").exists() and not a.limit:
+    if (d / "DONE").exists() and not a.limit and not a.cfgs:
         return
     (d / "STATUS").write_text("start %s\n" % time.strftime("%FT%T"))
     try:
@@ -135,8 +135,9 @@ def _run(a, d):
     have = {(j["cfg"], j["id"]) for j in map(json.loads, open(out))} if out.exists() else set()
     meta = json.loads((d / "meta.json").read_text()) if (d / "meta.json").exists() and not a.limit else {}
     meta.setdefault("peak_gb", {}), meta.setdefault("n_vis", {})
+    todo = a.cfgs.split(",") if a.cfgs else CFGS
     with open(out, "a") as f:
-        for cfg in CFGS:
+        for cfg in (a.cfgs.split(",") if a.cfgs else CFGS):
             torch.cuda.reset_peak_memory_stats()
             for k, r in enumerate(df.itertuples()):
                 if (cfg, r.id) in have:
@@ -178,7 +179,8 @@ def _run(a, d):
     meta["params_b"] = sum(p.numel() for p in rd.m.parameters()) / 1e9
     if not a.limit:
         (d / "meta.json").write_text(json.dumps(meta, indent=1))
-        (d / "DONE").write_text(time.strftime("%FT%T\n"))
+        if sum(1 for _ in open(out)) >= len(CFGS) * len(df):
+            (d / "DONE").write_text(time.strftime("%FT%T\n"))
     (d / "STATUS").write_text("done %s\n" % time.strftime("%T"))
     log("done %s %s" % (a.model, json.dumps(meta)))
 
@@ -269,6 +271,7 @@ if __name__ == "__main__":
     r = sub.add_parser("run")
     r.add_argument("--model", required=True, choices=list(MODELS))
     r.add_argument("--limit", type=int, default=0)
+    r.add_argument("--cfgs", default="", help="comma list of configs (default all); gen_native is the slow one")
     q = sub.add_parser("report")
     q.add_argument("--out", default=str(DATA / "runs/small_vlm/eval/report_body.md"))
     a = ap.parse_args()
