@@ -172,7 +172,7 @@
 | 175 | 选择 head 的转弯增益是低速转弯帧砍速度，静止起步部分 WLG 已吃掉；叠在 WLG 上 +0.054 [−0.023, +0.136]，叠在偏好微调上约 0；写不成固定规则，日志先验是恒等：WOD 档定 WLG | 中 | 成立 |
 | 176 | 训练 8 + 零 slot 与 WOD serving 9 个真实 slot 的不匹配不是 P2H10 在 WOD 掉分的原因：改成 8 + 零后 P2H10 更差（−0.208 [−0.328, −0.085]） | 中 | 成立 |
 | 177 | 论文主线：世界模型训练场废弃；做方法型不做检验型；候选主线是冻结工业表征上从后果 / 评价信号（而非日志模仿）学驾驶价值，以跨榜迁移判定是否 trick；现有迁移证据为负，未定稿 | 方向决定 | 待定 |
-| 178 | SH30 plan 附近小轨迹族（偏移 / 曲率 / 速度）在 navtest > 20° 上 best-of-19 特权上限 +12.20 [+10.57, +13.76]（线 +4.0，对 WA-JEPA 的差 6.52）；任何固定变换都不加分，没有全局欠转，增益是逐 token 的小余量修复，三轴互为替代；score-poses 原为 reactive 口径，已加 non_reactive；navtrain > 20° 28 323 token，无 v2 metric cache | 中 | 待定 |
+| 178 | SH30 plan 附近小轨迹族（偏移 / 曲率 / 速度）在 navtest > 20° 上 best-of-19 特权上限 +12.20 [+10.57, +13.76]（线 +4.0，对 WA-JEPA 的差 6.52）；任何固定变换都不加分，没有全局欠转，增益是逐 token 的小余量修复，三轴互为替代；score-poses 原为 reactive 口径，已加 non_reactive；navtrain > 20° 28 323 token，无 v2 metric cache；去水分后 +9.55，可学性见第 186 条 | 中 | 待定 |
 | 179 | 模型自己的路沿输出对「plan 会不会出界」的预测力不够：navtest > 20° 上校准后自路沿 margin 对 DAC 失败 AUC 0.641 [0.590, 0.695]（线 0.65，想法结束），地图 SDF margin 0.921，plan 只看末端转角 0.650；lead 间距对 NC / TTC 失败无预测力（AUC 0.52）；label-free 约束这条路不走 | 中 | 成立 |
 | 180 | WLG（两 seed 轨迹均值）WOD-E2E 官方 test RFS 8.099（val 8.178）；val → test 的差几乎全在 val 没有的 Spotlight cluster（7.34），去掉后 8.174；按 2026-10-08 榜单排第 2（榜首 ZSD-Titan 8.167，差 0.068；第 2–9 名相差 < 0.03），输在 Others / Pedestrian / Single-Lane / Intersection | 中 | 成立 |
 | 181 | GPU box 闲置归因（2026-10-08 00:00–11:07，3 卡）：33.4 card-hours 用了 18.8；闲置 14.6 里 54% 是三张卡都没有任何 lane 提交、19% 是一个 job 串行跑 5 个独立 run、11% 是有 ready GPU job 却排队；ready GPU job 共排队 17.4 job-hours，50% 来自 RAM gate 把 young job 的 declared RAM 叠加在实测内存上，33% 来自 VRAM over-declare；按实测记账后 replay 排队 −33% | 中 | 已确认 |
@@ -180,3 +180,4 @@
 | 183 | NAVSIM 专家 WA-JEPA 在 WOD-E2E val 上零样本输给 shipped openpilot：RFS 7.587 对 8.005，−0.418 [−0.679, −0.170]（V1 重投影）；三种图像映射（7.587 / 7.478 / 7.332）对 shipped、WP2、WLG、日志全为负；图像贡献 +2.78，ego + 指令 + 历史 +1.55；输入映射是主要混杂 | 中 | 待定 |
 | 184 | AlpaSim nuPlan track 在 box 上不用 Docker 原样可跑：单卡 8 并发 2.96 s / scene，官方 LTF sample 48 个 public scene mean scene score 0.8735（43 / 48）；全量 1 485 scene 约 1.25 card-hour，代价在 458 GiB 数据；每 scene 5.5 s、10 次决策、t = 0 前无历史 | 中 | 成立 |
 | 185 | SH30 作为 AlpaSim nuPlan track driver 能跑：48 个 public scene 480 次决策全部真实推理，mean scene score 0.9465（零分 2，at-fault 碰撞），同批官方 LTF sample 0.8735；冷启动用恒速倒推 + 首帧回 warp（置零 slot 首步 plan 偏 5.4 m）；单步 105 ms，不到 0.1 s 目标；同一天同一车的 48 scene，不是榜单分 | 弱 | 待定 |
+| 186 | 第 178 条的转弯上限去水分后 +9.55 [+8.14, +10.94]（原 +12.20，线 +4.0）：EP 增益不计、放慢不许修地图类子分；水分 2.65 里 EP 占 2.34，只动横向就有 +9.20，oracle 在 85% 的 token-seed 上不动；按 log cross-fit 的 selector 用 ego + 指令 + plan 在去水分族上 −0.27 [−0.52, −0.06]（不可学），raw 口径的 +1.51（回收 12.3%）是在学放慢，按去水分口径值 −3.25；加 shipped 输出 + 冻结视觉 +0.53 [−0.28, +1.28]；stage 2 不按原样跑，先在 navtest 标签上找到 out-of-fold 为正的输入 | 中 | 待定 |
