@@ -490,7 +490,7 @@ def cmd_fit(a):
                         oof[:, f5 == j] = fit_nn(tr, arm, fk, allx[f5 != j], 10 + j, cfg)(tr, allx[f5 == j])
                     oofs.append(oof)
                     scores.append(gain(tr, fk, allx, oof))
-                    run.info("%s %s cfg %s: navtrain OOF gain %+.4f", arm, fk, cfg, 100 * scores[-1])
+                    run.info("%s %s cfg %s: navtrain OOF gain %+.4f (elapsed %.0f s)", arm, fk, cfg, 100 * scores[-1], time.time() - t0)
                 bi = int(np.argmax(np.array(scores) + 1e-9 * -np.arange(len(cfgs))))                  # ties: earlier = smaller
                 cfg, oof = cfgs[bi], oofs[bi]
                 r.update(cfg=cfg, cfg_scores=dict(zip(map(str, cfgs), scores)))
