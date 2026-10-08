@@ -108,12 +108,16 @@ def cmd_prep(a):
     tag = f"{OT}_{a.data}" + ("-zero" if a.zero else "") + (f"-first{a.limit}" if a.limit else "")
     with Run("op_parity", f"otprep-{tag}", config=vars(a)) as run:
         run.use_split(splits.load("navsim/navtrain"))
-        mt, _, ents = PP.full_meta(a.data)
-        base = dict(np.load(CR / a.data / "tab.npz"))
-        assert base["names"].tolist() == list(mt["names"]), "shard meta and its op_parity tab disagree on the token order"
+        base = dict(np.load(CR / a.data / "tab.npz"))               # per-row metadata from the shard's tab (the navsim_zs navtrain index is gone)
         sel = np.flatnonzero((base["speed"] > VMIN) & ~np.isnan(base["fut"]).any((1, 2)))
         sel = sel[: a.limit] if a.limit else sel
         n, T = len(sel), t_all()
+        _sys.path[:0] = [str(_R / "experiments/alpasim/scripts"), str(_R / "experiments/alpasim/lib")]
+        import ap2_prep as AP                                        # CAM_F0 paths + calibration of the 4 keys, read from the NAVSIM logs
+        ents = AP.entries(base["names"][sel].tolist(), base["log"][sel].tolist(), run)
+        mpose, mvel, mcam = (base[q][sel].astype(np.float64) for q in ("pose", "vel", "cam"))
+        dcam = np.abs(np.array([e["cams"][-1]["CAM_F0"]["t"] for e in ents[:64]]) - mcam[:64]).max()
+        assert dcam < 1e-4, f"camera position of the logs and of the op_parity tab differ by {dcam} m"
         shard = int(a.data.split(".s", 1)[1].split("of")[0])
         dy, dp = sample(base["speed"][sel].astype(np.float64), np.random.default_rng([1, shard]))
         if a.zero:
@@ -148,7 +152,7 @@ def cmd_prep(a):
             pool = ProcessPoolExecutor(W)
 
             def load(rows):
-                fr = np.stack(list(pool.map(_job, [(ents[sel[i]], mt["pose"][sel[i]], mt["vel"][sel[i]], mt["cam"][sel[i]], T, ys[i], ps[i])
+                fr = np.stack(list(pool.map(_job, [(ents[i], mpose[i], mvel[i], mcam[i], T, ys[i], ps[i])
                                                    for i in rows])))
                 img = lambda j, s: fr[j][at(s)] if s >= 0 else np.zeros(FRAME, np.uint8)  # noqa: E731
                 cur = np.stack([[img(j, s) for s in PP.STEPS] for j in range(len(rows))])
