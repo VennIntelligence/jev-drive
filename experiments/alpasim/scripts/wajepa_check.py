@@ -3,6 +3,8 @@
   parity  the core fed a token's real CAM_L0 / F0 / R0 / B0 JPEGs (4 history frames) and index ego states must reproduce the stored plans of the
           run that scored navtest EPDMS 91.71 (runs/top10_t2/navsim/wajepa/20260926-122804/trajectory_cache/done_union.pkl: the shipped agent
           through the NAVSIM devkit, fp32, flow seed 1)
+  direct  with --direct K: the first K tokens also through NAVSIM's own SceneLoader -> agent.compute_trajectory in the same process: bit-level
+          check of the AgentInput assembly (any remaining difference to the stored plans is the run, not the assembly)
   cold    the same tokens with only the m = 1, 2, 3 newest keyframes and states under each cold rule: distance of the 8 poses to the
           full-history plan and to the logged future (AlpaSim scenes start without history: decisions 0-2 of 10 have m = 1 / 2 / 3)
 
@@ -41,7 +43,7 @@ def main(a):
         cores[c].agent = cores[C.COLD[0]].agent                        # one copy of the weights
     root, logs = D / "datasets/navsim/sensor_blobs/test", {}
     ade = lambda x, y: float(np.linalg.norm(x[:, :2] - y[:, :2], axis=1).mean())  # noqa: E731
-    rows, ms, dec = [], [], []
+    rows, ms, dec, plans = [], [], [], {}
     for n, t in enumerate(toks):
         r = row[t]
         lg = str(tab["log"][r])
@@ -62,6 +64,7 @@ def main(a):
         acc, cmd = tab["acc"][r][-1], tab["cmd"][r][-1]
         full = cores["repeat"].plan(frames, pose, vel, acc, cmd)
         ms.append(full["ms"])
+        plans[t] = full["poses"]
         st, fut = np.asarray(stored[t], np.float64), tab["fut"][r]
         have_fut = not np.isnan(fut).any()
         rec = {"token": t, "v0": float(np.linalg.norm(vel[-1])), "cmd": int(np.argmax(cmd)), "cmd_zero": bool(cmd.sum() == 0),
@@ -78,6 +81,20 @@ def main(a):
         rows.append(rec)
         if n % 25 == 0:
             print(n, json.dumps({k: (round(v, 4) if isinstance(v, float) else v) for k, v in rec.items()}), flush=True)
+    direct = []
+    if a.direct:
+        from hydra.utils import instantiate
+        from omegaconf import OmegaConf
+        from navsim.common.dataloader import SceneLoader
+        sf = instantiate(OmegaConf.load(D / "third_party/navsim/navsim/planning/script/config/common/train_test_split/scene_filter/navtest.yaml"))
+        dt = toks[: a.direct]
+        sf.tokens, sf.log_names = dt, sorted({str(tab["log"][row[t]]) for t in dt})
+        od = D / "datasets/navsim"
+        loader = SceneLoader(original_sensor_path=od / "sensor_blobs/test", data_path=od / "navsim_logs/test", scene_filter=sf,
+                             sensor_config=cores["repeat"].agent.get_sensor_config())
+        for t in dt:
+            ref = np.asarray(cores["repeat"].agent.compute_trajectory(loader.get_agent_input_from_token(t)).poses, np.float64)
+            direct.append({"token": t, "core_vs_direct_max": float(np.abs(plans[t] - ref).max()), "stored_vs_direct_ade": ade(np.asarray(stored[t], np.float64), ref)})
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     mean = lambda k: float(np.mean([r[k] for r in rows if r[k] is not None]))  # noqa: E731
@@ -88,8 +105,10 @@ def main(a):
          "cold": {f"{c}{m}": {"ade_vs_full": mean(f"{c}{m}_full"), "p90_vs_full": q(f"{c}{m}_full", 0.9), "ade_vs_log": mean(f"{c}{m}_fut"),
                               "dx4_mean": mean(f"{c}{m}_x4")} for c in C.COLD for m in (1, 2, 3)},
          "ms_warm": {k: float(np.median([x[k] for x in ms[5:]])) for k in ms[0]},
+         "direct": {"n": len(direct), "core_vs_direct_max_m": max((d["core_vs_direct_max"] for d in direct), default=None),
+                    "stored_vs_direct_ade_mean": float(np.mean([d["stored_vs_direct_ade"] for d in direct])) if direct else None},
          "decode_1080p_ms": {"median": float(np.median(dec)), "p95": float(np.quantile(dec, 0.95)), "max": float(np.max(dec))}}
-    (out / "check.json").write_text(json.dumps({"summary": S, "rows": rows}, indent=1))
+    (out / "check.json").write_text(json.dumps({"summary": S, "rows": rows, "direct": direct}, indent=1))
     print(json.dumps(S, indent=1))
     (out / "DONE").write_text(time.strftime("%F %T") + "\n")
 
@@ -98,5 +117,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=300)
+    ap.add_argument("--direct", type=int, default=0)
     ap.add_argument("--scenes", default="")
     main(ap.parse_args())

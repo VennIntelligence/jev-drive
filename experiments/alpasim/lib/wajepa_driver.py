@@ -12,7 +12,7 @@ What the simulator gives -> what WA-JEPA is fed:
   cold      WAJ_COLD=repeat (default; WA-JEPA's own closed-loop padding) or cv (see wajepa_core)
 
 Environment: ALPASIM_DRIVER_HOST / _PORT, ALPASIM_SRC, ALPASIM_DRIVER_LOG_DIR (drive.jsonl, images.jsonl), WAJ_COLD, WAJ_DEVICE,
-WAJ_DUMP (sessions whose fed frames are saved to <log dir>/dump), WAJ_REPO / WAJ_CKPT / WAJ_CFG (wajepa_core).
+WAJ_DUMP (number of sessions whose fed frames are saved to <log dir>/dump: decision 3 of each, all decisions of the first 3), WAJ_REPO / WAJ_CKPT / WAJ_CFG (wajepa_core).
 Run with envs/wajepa, cwd = the WA-JEPA checkout, PYTHONPATH=<wajepa>:<navsim>:  python experiments/alpasim/lib/wajepa_driver.py
 """
 from __future__ import annotations
@@ -211,8 +211,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                "ms": {**{k: round(x, 2) for k, x in o["ms"].items()}, "prep": round(1e3 * (t_q - t_in), 2), "wait": round(1e3 * (t_g - t_q), 2),
                       "total": round(1e3 * (t_out - t_in), 2)}}
         self.out.write(json.dumps(rec) + "\n")
-        if s.n < self.dump:
-            np.savez_compressed(self.dir / "dump" / f"s{s.n:02d}_k{rec['k']}.npz", poses=o["poses"], hist=o["hist"], scene=s.scene,
+        if s.n < self.dump and (rec["k"] == 3 or s.n < 3):      # decision 3 = a NAVSIM token's t0; every decision of the first 3 sessions
+            np.savez(self.dir / "dump" / f"s{s.n:02d}_k{rec['k']}.npz", poses=o["poses"], hist=o["hist"], scene=s.scene,
                                 **{f"{c}_{j}": f[c] for j, f in enumerate(frames) for c in C.CAMS})
         return egodriver_pb2.DriveResponse(trajectory=traj)
 

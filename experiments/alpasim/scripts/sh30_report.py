@@ -68,15 +68,18 @@ def cmd_table(a):
               (f", torch max allocated {json.loads(vf.read_text())['max_allocated_gib']:.2f} GiB" if vf.exists() else "") +
               f"; runtime {ns['times'].get('runtime_s', float('nan')):.0f} s for {ns['times'].get('rollouts')} rollouts.", "",
               "| stage (ms per `drive`) | median | p95 | max |", "|:--|--:|--:|--:|"]
-        for st in ("frames", "encode", "policy", "export", "prep", "wait", "total"):
+        sh = "frames" in dr[0]["ms"]                              # SH30 stage names; the WA-JEPA driver logs prep_in / infer
+        for st in ("frames", "encode", "policy", "export", "prep", "wait", "total") if sh else ("prep_in", "infer", "prep", "wait", "total"):
             v = np.array([x["ms"][st] for x in dr])
             L.append(f"| {st} | {np.median(v):.1f} | {np.quantile(v, .95):.1f} | {v.max():.1f} |")
         im = p / "driver-logs/images.jsonl"
         if im.exists():
             v = np.array([json.loads(x)["pack_ms"] for x in im.read_text().splitlines()])
-            L.append(f"| CAM_F0 JPEG decode + pack (in `submit_image_observation`) | {np.median(v):.1f} | {np.quantile(v, .95):.1f} | {v.max():.1f} |")
+            L.append(f"| {'CAM_F0 JPEG decode + pack' if sh else 'one-camera JPEG decode + resize'} (in `submit_image_observation`) | {np.median(v):.1f} | {np.quantile(v, .95):.1f} | {v.max():.1f} |")
         L += ["", "frames = CPU ego-motion warp of the slot frames; encode = vision encoder on the image pairs; policy = adapter + policy; "
-              "export = lever arm + resampling; prep = session bookkeeping; wait = queueing for the single inference lock; total = inside `drive`."]
+              "export = lever arm + resampling; prep = session bookkeeping; wait = queueing for the single inference lock; total = inside `drive`."
+              if sh else "prep_in = AgentInput assembly; infer = the shipped agent's compute_trajectory (feature builder + 4-step flow sampling, fp32) "
+              "incl. CUDA sync; prep = session bookkeeping; wait = queueing for the single inference lock; total = inside `drive`."]
         if a.navsim:
             L += navsim_check(dr, a.tag)
     out = "\n".join(L) + "\n"
