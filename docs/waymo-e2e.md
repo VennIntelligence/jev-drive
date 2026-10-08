@@ -640,6 +640,16 @@ uses it. The archive still contains serialized submission protos, not model weig
 
 The test quota is 6 submissions per 30 days, so nothing here ever uploads: it only writes the file.
 
+**Anonymous WLG package** (`experiments/op_parity/scripts/wod_submit.py`, rule in `plans/2026-10-08-wod-submit-rule.md`). Rebuild:
+`wod_submit_chain.sh` on the box (stop-gated bias of the 1 505 submission frames, WLG-full-s0 / s1 served through the pool with `--set test`, then
+`predict`: seed-mean trajectory, val check, test / val statistics, BEV thumbnails -> `$DATA_DIR/runs/op_parity/wod/submit/`). Copy `traj.npz` and
+`params.json` to the Mac and run `wod_submit.py package --traj ... --out tmp/wod_submit/lpa-v1.tar.gz --reference <accepted tar.gz>` with the
+compiled proto (`WAYMO_PROTO_GEN`) and a `DATA_DIR` that holds `datasets/waymo_e2e/front3/test_sequence_frames_for_submission.json`. Identity comes only
+from arguments (`--name`, default `LPA-v1`; the account from `--account`, `$WOD_ACCOUNT_NAME`, the gitignored `.env`, or `--account-from-reference`);
+authors / affiliation are "Anonymous". The account name is never printed or committed; the package stays under `tmp/`. The old
+`experiments/zeroshot_openloop/archive/wod_test_submission.py` still hardcodes a personal identity in `COMMON_META` (and sets
+`uses_public_model_pretraining=False`); do not reuse it.
+
 ### Checks
 
 `scripts/waymo_prepare.sh check` runs on whatever shards are on disk and asserts that records re-read from
