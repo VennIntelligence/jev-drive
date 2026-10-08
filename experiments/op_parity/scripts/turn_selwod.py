@@ -134,7 +134,7 @@ def cmd_extract(a):
         out.parent.mkdir(parents=True, exist_ok=True)
         np.savez(out.with_suffix(".tmp.npz"), **R)
         out.with_suffix(".tmp.npz").rename(out)
-        run.summary.update(n=n, wall_s=time.time() - t0)
+        run.summary.update(n=n, extract_s=time.time() - t0)
 
 
 # ---------------------------------------------------------------- geometry
