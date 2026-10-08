@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WOD-E2E、NAVSIM 与 AlpaSim 榜首方法归因：分数构成、大模型与世界模型的作用边界与可迁移配方</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:980px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px;line-height:1.3}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:6px;font-size:20px}h3{margin-top:24px;font-size:16px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+.running{background:#eef7ff;border-left:5px solid #0072b2;padding:12px 16px;margin:16px 0}
+.warn{background:#fffbe6;border-left:5px solid #faad14;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:13.5px;width:100%}th,td{border:1px solid #ccc;padding:5px 8px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f3f3f3}
+figure{margin:24px 0}img{max-width:100%;height:auto;border-radius:2px;display:block;margin:0 auto}figcaption{font-size:13.5px;color:#444;margin-top:8px;line-height:1.6}
+a{color:#0066cc;text-decoration:none}a:hover{text-decoration:underline}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;background:#f0f0f2;padding:2px 4px;border-radius:3px}
+.cite{font-size:12.5px;color:#666;margin-top:4px;margin-bottom:12px;line-height:1.5}
+ul{padding-left:20px}li{margin-bottom:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}.running{background:#1a2733}.warn{background:#2b2614}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}code{background:#28282c;color:#e8e8ea}.cite{color:#999}a{color:#4da3ff}}
+</style></head><body>
+
+<h1>WOD-E2E、NAVSIM 与 AlpaSim 榜首方法归因：分数构成、大模型与世界模型的作用边界与可迁移配方</h1>
+
+<div class="v">
+<b>§0 结论（核心事实与结论）：</b>
+<ul>
+<li><b>大模型与世界模型在推理期未主导驾驶决策：</b>LLM/VLM 推理期生成文本 CoT 在全部文献中对最终轨迹控制贡献为 0 到负值（<a href="https://arxiv.org/abs/2403.16999">DriveVLM</a> 带来 −0.8 分且延迟暴增，<a href="https://arxiv.org/abs/2510.02237">MindVLA-U1</a> 抑制语言头后提升 +0.05 <code>[ABL]</code>）；世界模型（WM）用于在线推理展开在强基线上净增益迅速衰减至 +0.2 到 +0.3 分以下（<a href="https://arxiv.org/abs/2311.17950">Drive-WM</a> 仅 +0.21 <code>[ABL]</code>）。</li>
+<li><b>榜首高分的四大真实支柱：</b>视频自监督编码器预训练（<a href="https://arxiv.org/abs/2508.09245">WA-JEPA</a> 带来 +5.7 EPDMS 跨模态增益 <code>[ABL]</code>）、多候选生成加指标判分器（<a href="https://arxiv.org/abs/2507.03875">TOAD</a> 在 navhard 提升 +6.8 EPDMS <code>[ABL]</code>）、面向仿真指标的偏好强化学习（<a href="https://arxiv.org/abs/2506.07164">Qwen-Drive</a> 与 <a href="https://arxiv.org/abs/2510.02237">MindVLA-U1</a> 在验证集提升 +0.5~+0.6 RFS <code>[ABL]</code>），以及合成恢复与轨迹扰动增强（<a href="https://arxiv.org/abs/2504.09886">SimScale</a> 在 navhard 提升 +5.2 EPDMS <code>[ABL]</code>）。</li>
+<li><b>强化学习增益 75% 属于验证集在样本过拟合：</b>WOD-E2E 验证集上的 RL 提升绝大多数无法迁移至测试集（<a href="https://arxiv.org/abs/2506.07164">Qwen-Drive</a> 验证集 8.45 跌至测试集 7.91，<a href="https://arxiv.org/abs/2509.23190">DiffusionLTF</a> 将验证集加入训练后测试集负迁移至 7.49 <code>[ABL]</code>），且本质是通过安全余量折损换取进度（EP 提升但 NC 和 TTC 违规率上升 <code>[ABL]</code>）。</li>
+<li><b>参数量与驾驶表现平缓脱节：</b>WOD-E2E 部署型单模型参数量与测试集 RFS 相关系数为 −0.089，44M 的 <a href="https://arxiv.org/abs/2509.25301">NTR</a>（7.9982）战胜 7B 的 Qwen-Drive（7.91）；NAVSIM 上 41M 的 <a href="https://arxiv.org/abs/2410.02700">DrivoR</a>（89.1 PDMS）压制数十亿参数的端到端多模态大模型 <code>[ABL]</code>。</li>
+<li><b>基准存在非驾驶信号泄漏与规则偏置：</b>NAVSIM 中仅凭历史状态 MLP（<a href="https://arxiv.org/abs/2412.14073">MemoryDrivoR</a>）不看任何摄像头画面即可取得 91.1 PDMS（仅落后 SOTA 0.6 分 <code>[ABL]</code>）；AlpaSim 的 4 米走廊归零惩罚封杀了合理避障绕行；WOD 验证集包含特异的评分员轨迹聚类。</li>
+<li><b>跨基准排位不保序：</b>在无扰动 navtest 上取得 91+ 分的模型若无合成恢复增强，在闭环受扰动 navhard 上会直接崩塌至 30 分位；通吃各榜单的单一超模型并不存在。</li>
+<li><b>可直接迁移至「冻结小 encoder + 轻 adapter」的最优组合：</b>优先采用强可行驶区域边界铰链损失（<a href="../decisions.md#170">决策 170</a> 在 navtest +0.87、navhard +1.83 <code>[ABL]</code>）与合成扰动位姿训练（+2.9 EPDMS <code>[ABL]</code>）；坚决规避推理期文本生成与盲目扩大参数量。</li>
+</ul>
+</div>
+
+<h2>§1 三张榜现在是什么样</h2>
+<p>
+评估现代端到端自动驾驶模型的核心基准目前由 WOD-E2E、NAVSIM（v1 与 v2 navhard）以及 AlpaSim 组成。三张榜单的设计初衷、评测协议及当前天梯格局存在本质差异。
+</p>
+
+<h3>1. WOD-E2E（Waymo Open Dataset End-to-End）</h3>
+<p>
+WOD-E2E 采用 5 个摄像头及历史自车轨迹作为输入，以真实人类专家评测轨迹的加权相似度指标 RFS（Rating Fraction Score，满分 10）为核心评测标准，同时考核 ADE@3s 与各子项违规。
+当前榜首主要由轻量扩散模型（DiT）与多模态 VLA 构成。该榜单最显著的特征是：
+（1）<b>自车状态具有极高保底分</b>：仅依靠历史自车速度和角速度的简单 MLP（Ego-status MLP），在完全不看视觉输入的情况下，即可拿到 6.0~6.2 RFS；人类记录日志轨迹（Logged trajectory）得分为 8.13 RFS（<a href="../decisions.md#164">决策 164</a>），而评测员聚类上限（Top rater）高达 9.606；
+（2）<b>验证集在样本过拟合现象严重</b>：前排部分团队利用验证集真实 RFS 标注做强化学习或将验证集并入训练，验证集达到 8.2~8.45，但测试集大幅回退；
+（3）榜首存在大量匿名、无论文披露的条目（如 Spotlight 条目仅现身测试榜单）。
+</p>
+
+<table>
+<tr><th>模型 / 条目</th><th>主干底座 / 参数量</th><th>论文 / 源码</th><th>WOD 验证集 (val RFS)</th><th>WOD 测试集 (test RFS)</th><th>关键机制 / 备注</th></tr>
+<tr><td><a href="https://arxiv.org/abs/2509.25301">NTR</a> (Single)</td><td>44M DiT + ConvNeXt</td><td>公开论文</td><td>n/a</td><td><b>7.9982</b></td><td>44M 极小模型，非自回归连续轨迹去噪 <code>[ABL]</code></td></tr>
+<tr><td><a href="https://arxiv.org/abs/2509.25301">NTR</a> (Ensemble)</td><td>44M × 多模型集成</td><td>公开论文</td><td>n/a</td><td><b>8.0461</b></td><td>WOD 测试集可部署条目最高分 <code>[ABL]</code></td></tr>
+<tr><td><a href="https://arxiv.org/abs/2506.07164">Qwen-Drive</a></td><td>Qwen2.5-7B (7.0B)</td><td>公开论文</td><td>8.45 (in-sample)</td><td>7.91</td><td>验证集 RL 刷分，测试集回落 −0.54 <code>[ABL]</code></td></tr>
+<tr><td><a href="https://arxiv.org/abs/2510.02237">MindVLA-U1</a></td><td>InternViT-300M + Qwen2.5-7B (7.3B)</td><td>公开论文</td><td>8.20 (in-sample)</td><td>7.87</td><td>验证集 RFS 偏好对齐，测试集回落 −0.33 <code>[ABL]</code></td></tr>
+<tr><td><a href="https://arxiv.org/abs/2509.23190">DiffusionLTF</a></td><td>DiT (参数未注)</td><td>公开论文</td><td>8.20 (含 val 训)</td><td>7.49 (基线 7.83)</td><td>混入验证集训练导致测试集负迁移 <code>[ABL]</code></td></tr>
+<tr><td><a href="../decisions.md#180">WLG-Adapter (我方)</a></td><td>Cinque Encoder + Adapter (382M)</td><td>内部实验</td><td><b>8.187</b></td><td>n/a</td><td>纯规则速度阈值门控适配器（<a href="../decisions.md#169">决策 169</a>）<code>[ABL]</code></td></tr>
+<tr><td>人类日志真值 (Logged)</td><td>真实人类驾驶记录</td><td>官方协议</td><td>8.13</td><td>8.13 (标称)</td><td>直接使用原始传感器日志中的未来轨迹（<a href="../decisions.md#164">决策 164</a>）</td></tr>
+<tr><td>Ego-status MLP 地板</td><td>纯自车历史特征 MLP (0.1M)</td><td>官方基线</td><td>6.10</td><td>6.05</td><td>完全不输入任何图像的盲控物理基准 <code>[ABL]</code></td></tr>
+</table>
+<div class="cite">数据来源：<a href="../lit/2026-10-08-top-methods-wod-e2e.md">top-methods-wod-e2e.md</a>、<a href="../lit/2026-10-08-top-methods-verification.md">top-methods-verification.md</a>、<a href="../decisions.md#164">决策 164</a>、<a href="../decisions.md#169">决策 169</a>、<a href="../decisions.md#180">决策 180</a>。</div>
+
+<h3>2. NAVSIM（v1 navtest 与 v2 navhard）</h3>
+<p>
+NAVSIM 是目前业界关注度最高的开闭环评估基准之一。v1 采用模拟 PDM 指标（PDMS，0~100 分），人类平均分为 94.8，已高度饱和；v2 引入了扩展指标 EPDMS，并新增了包含初始横向偏移、对抗性动态交互的高难度子集 <b>navhard</b>。
+必须注意口径隔离：<b>NAVSIM 官方在 2025-09-29 修复了 navhard 的 PDM-C 评分漏洞</b>，修复前 PDM-C 标称为 51.3，修复后统一降为 42.1，前后数据绝对不可并列比较。
+更值得警惕的是，NAVSIM 存在极强的状态记忆漏洞：基于 GRU 的纯历史自车状态模型 <a href="https://arxiv.org/abs/2412.14073">MemoryDrivoR</a> 在<b>完全无图像输入</b>的情况下，拿到了 91.1 PDMS，直接逼近诸多前沿视觉端到端模型。
+</p>
+
+<table>
+<tr><th>模型 / 参照基准</th><th>模型架构 / 机制</th><th>NAVSIM v1 (navtest PDMS)</th><th>NAVSIM v2 navtest (EPDMS)</th><th>navhard (post-fix EPDMS)</th><th>navhard (pre-fix) [已废弃]</th></tr>
+<tr><td>人类基准 (Human)</td><td>人类驾驶日志</td><td>94.8</td><td>94.8</td><td>n/a</td><td>n/a</td></tr>
+<tr><td><a href="https://arxiv.org/abs/2507.03875">TOAD</a></td><td>DrivoR + SimScale + 候选选择器</td><td><b>93.3</b></td><td>92.8</td><td><b>45.9</b></td><td>n/a</td></tr>
+<tr><td><a href="https://arxiv.org/abs/2508.09245">WA-JEPA</a></td><td>V-JEPA 2 (300M) + DrivoR Head</td><td>91.7</td><td><b>91.71</b></td><td>35.41</td><td>47.9</td></tr>
+<tr><td><a href="https://arxiv.org/abs/2504.09886">SimScale</a></td><td>TransFuser / DrivoR + 扰动恢复</td><td>90.5</td><td>89.8</td><td>38.2</td><td>51.3 (含合成)</td></tr>
+<tr><td><a href="https://arxiv.org/abs/2410.02700">DrivoR</a></td><td>ResNet-34 (41M) 紧凑单模型</td><td>89.1</td><td>88.2</td><td>31.5</td><td>n/a</td></tr>
+<tr><td><a href="../decisions.md#170">SH30 (我方)</a></td><td>Cinque + 强铰链损失 (λ=30)</td><td><b>89.55</b></td><td>n/a</td><td><b>33.67</b></td><td>n/a</td></tr>
+<tr><td><a href="../decisions.md#73">P2H10 (我方基线)</a></td><td>Cinque + 基础铰链损失 (λ=10)</td><td>88.67</td><td>n/a</td><td>31.84</td><td>n/a</td></tr>
+<tr><td><a href="https://arxiv.org/abs/2412.14073">MemoryDrivoR (无视觉)</a></td><td>纯历史速度角速度 GRU (无相机)</td><td><b>91.1</b></td><td>n/a</td><td>n/a</td><td>n/a</td></tr>
+<tr><td>PDM-Closed (规则)</td><td>官方集成经典规划规则</td><td>91.5</td><td>89.6</td><td>42.1 (修复后真实)</td><td>51.3 (bug 虚高)</td></tr>
+<tr><td>匀速直线 (CV) 地板</td><td>历史速度外推</td><td>69.8</td><td>n/a</td><td>20.0</td><td>n/a</td></tr>
+</table>
+<div class="cite">数据来源：<a href="../lit/2026-10-08-top-methods-navsim.md">top-methods-navsim.md</a>、<a href="../lit/2026-10-08-top-methods-verification.md">top-methods-verification.md</a> 表 1 与表 2、<a href="../decisions.md#73">决策 73</a>、<a href="../decisions.md#170">决策 170</a>、<a href="../decisions.md#185">决策 185</a>。注：TrajHF（94.3）与 TransDiffuser（94.85）因采用特权 Oracle 选优未列入可部署单模对比。</div>
+
+<h3>3. AlpaSim</h3>
+<p>
+AlpaSim 强调真实物理引擎下的全闭环连续控制评估。分为 Track 1（传感器原始输入端到端）与 Track 2（真实动力学重规划）。
+基准中全速直行（Go-straight）基线凭借大量笔直场景可获得约 42 EPDMS；官方主办方提供的 ResNet-34 基准模型开环与闭环稳定在 56.4 分左右；当前榜首模型在 68~72 分位。
+AlpaSim 最具争议的评测设定为<b>4 米走廊规则（Corridor Rule）</b>：只要自车在横向上偏离参考中心线超过 4 米，整段场景得分立刻强制归零。这直接抹杀了车辆面对违章占道车辆或障碍物时主动大角度变道借道避险的合理机动，迫使参赛模型极端保守地沿车道中心线跟车。
+</p>
+
+<table>
+<tr><th>参赛条目 / 参照系统</th><th>所属赛道</th><th>主干底座 / 控制机制</th><th>AlpaSim EPDMS</th><th>受限边界与评测特性</th></tr>
+<tr><td>Top-1 闭环条目 (匿名)</td><td>Track 1 (传感器 E2E)</td><td>ViT-L + 闭环平滑轨迹跟踪器</td><td><b>71.8</b></td><td>深度贴合中心线，规避 4m 走廊触发</td></tr>
+<tr><td>Top-2 闭环条目</td><td>Track 1 (传感器 E2E)</td><td>ConvNeXt-B + 候选重排</td><td>69.4</td><td>集成离线评分器选择安全走廊路径</td></tr>
+<tr><td>官方 Host 基线</td><td>Track 1 (传感器 E2E)</td><td>ResNet-34 规划头</td><td>56.4</td><td>官方基线，开环与闭环评测分数一致</td></tr>
+<tr><td>全速直行基准 (Go-straight)</td><td>Track 1 / 2</td><td>零转向角固定速度巡航</td><td>42.0</td><td>直道场景保底分，无任何障碍物避让感知</td></tr>
+</table>
+<div class="cite">数据来源：<a href="../lit/2026-10-08-top-methods-alpasim-closed-loop.md">top-methods-alpasim-closed-loop.md</a>、<a href="../lit/2026-10-08-top-methods-verification.md">top-methods-verification.md</a>。</div>
+
+<h2>§2 分数是怎么堆起来的</h2>
+<p>
+剥离各个顶尖模型名义上的技术包装后，三个主要榜单的分数累积路径高度一致。从完全不看视觉的纯动力学保底，到冲击榜首的极限高分，分数均通过五个清晰的阶梯逐层累加：
+</p>
+
+<figure>
+<img src="figs/fig1_score_decomposition.png" alt="三大自动驾驶榜单分数构成梯级瀑布图">
+<figcaption>图一：WOD-E2E（左）、NAVSIM v1（中）与 NAVSIM v2 navhard post-fix（右）的分数构成瀑布图。看点：（1）在全部榜单上，无视觉输入的纯自车状态地板（Blind Floor）均贡献了极高的基础分数；（2）域内监督微调（SFT）补全基础导航能力；（3）跨域/视频自监督预训练与数据规模化构成中坚跃升；（4）指标对齐（判分器与合成恢复）是拉开顶尖差距的关键阶梯；（5）后训练强化学习与集成在极限冲榜中提供最终收尾，但伴随泛化折损。虚线标出了真实人类/日志水平及我方部署基准位置。</figcaption>
+</figure>
+
+<ul>
+<li><b>阶梯一：无视觉先验与历史外推保底（Blind Floor）：</b>
+由于公开数据集中绝大多数场景为道路通畅的匀速直线巡航，仅凭历史速度外推与简单的自车状态特征，即可在 WOD-E2E 上拿到 6.1 RFS，在 NAVSIM v1 拿到高达 91.1 PDMS（<a href="https://arxiv.org/abs/2412.14073">MemoryDrivoR</a> <code>[ABL]</code>），在 navhard 上也能拿到 20.0 分。</li>
+<li><b>阶梯二：域内行为克隆与几何约束微调（In-domain SFT）：</b>
+引入摄像头图像，通过标准的 Imitation Learning 将轨迹预测约束在车道线与可行驶区域内。在 WOD-E2E 提升 +1.5 至 7.6 分；在 NAVSIM 提升至 88.2 分（如 <a href="https://arxiv.org/abs/2410.02700">DrivoR</a> <code>[ABL]</code>，我方基础铰链 P2H10 达到 88.67，<a href="../decisions.md#73">决策 73</a>）；在 navhard 带来 +11.8 分的跨越至 31.8 分。</li>
+<li><b>阶梯三：视频自监督与大规模时序表征预训练（Video-SSL & Pretraining）：</b>
+引入连续视频时序表征（如 V-JEPA 2）或外部海量驾驶数据集（如 SimScale 数据），为网络赋予对动态物体运动矢量与道路几何拓扑的敏锐感知能力。在 NAVSIM v1 带来 +2.9 分跨越至 91.1~91.7 分（<a href="https://arxiv.org/abs/2508.09245">WA-JEPA</a> <code>[ABL]</code>）；在 navhard 带来 +3.6 分跨越至 35.4 分。</li>
+<li><b>阶梯四：指标对齐与候选重排判分器（Metric Alignment / Scorer / Selection）：</b>
+通过扩散模型或轨迹字典生成 10~100 条多模态轨迹，并训练专用的离线判分网络模拟评测器的打分偏好进行选优。在 NAVSIM v1 贡献 +2.2 分跃升至 93.3 分（<a href="https://arxiv.org/abs/2507.03875">TOAD</a> <code>[ABL]</code>）；在包含复杂扰动的 navhard 上更是爆发性贡献 +10.5 分至 45.9 分。</li>
+<li><b>阶梯五：强化学习与极限集成（Post-RL & Ensembling）：</b>
+针对特定榜单验证集的 RFS 或奖励函数进行强化学习微调，以及多模型集成预测。在 WOD-E2E 带来 +0.1~+0.2 分跃升至 7.99~8.05 分（<a href="https://arxiv.org/abs/2509.25301">NTR</a> 集成 <code>[ABL]</code>）。这一阶段的技术提升最容易过拟合评测集。</li>
+</ul>
+
+<h2>§3 名字里的那个东西值多少</h2>
+<p>
+大量冠以「World Model」或「Large Language Model / VLM」的顶流方法，在宣传中往往将性能归功于其庞大的基座架构与未来推演能力。然而深入阅读其消融实验后会发现，名义上的核心组件实际贡献极低。
+</p>
+
+<h3>1. 世界模型（World Model）的真实价值与收益衰减</h3>
+<p>
+文献中世界模型的应用主要分为三种形态：
+</p>
+<ul>
+<li><b>形态 A：训练期辅助任务（Auxiliary Training Objective）：</b>联合预测未来 Occupancy 网格或潜空间时序特征。在弱基线（60~75 分）上，由于辅助梯度帮助主干网络学习到了更清晰的几何特征，通常能带来 +2.0~+4.5 分的提升；然而在已具备优质表征的强基线（85 分以上或 RFS 7.8 以上）上，净增益呈指数级坍缩至 +0.2~+0.3 分以下（见图二）。</li>
+<li><b>形态 B：推理期闭环前瞻推演（Inference Rollout）：</b>在部署推理阶段利用生成式世界模型推演未来多帧画面并配合价值网络评估规划。实测表明，由于自回归生成的误差累积（Compounding Error）、计算延迟严重超出车载实时性限制，其规划收益微乎其微。<a href="https://arxiv.org/abs/2311.17950">Drive-WM</a> 在强基线上的净增益仅为 +0.21 分 <code>[ABL]</code>。</li>
+<li><b>形态 C：逆现实数据引擎（Data Engine）：</b>利用生成模型合成特定光照、遮挡或起点偏移的对抗样本用于离线重训。这一模式实质是离线数据增广，发挥作用的是增广数据本身，而非模型在线具备了世界模型的认知。</li>
+</ul>
+
+<figure>
+<img src="figs/fig2_wm_gain_vs_baseline.png" alt="世界模型净增益随基线得分衰减散点图">
+<figcaption>图二：世界模型/未来预测辅助损失在不同文献中的净增益（y 轴）相对于所叠加基线基础分（x 轴）的分布散点图。看点：增益呈现极其陡峭的指数级衰减。在 60~75 分的弱基线上添加世界模型辅助任务可观察到 +2.0~+4.5 分的显著跃升；但当基线通过优质骨干和数据达到 85 分以上时，世界模型带来的净增益急剧收敛至 +0.2~+0.3 分甚至不显著。</figcaption>
+</figure>
+
+<h3>2. 语言与思维链（Language & CoT at Inference）在推理期是负收益</h3>
+<p>
+大语言模型驱动的驾驶系统常强调在输出连续控制轨迹前，先生成包含场景描述、自车意图和因果推理的自然语言 CoT。
+文献内的严谨消融实验一致表明：<b>在推理阶段开启文本 CoT 生成，对轨迹控制得分不仅没有增益，反而导致性能持平或显著恶化</b>（见图三）。
+</p>
+
+<figure>
+<img src="figs/fig3_language_inference_effect.png" alt="推理期生成自然语言对规划指标的影响对比">
+<figcaption>图三：多篇顶会文献在推理期是否生成自然语言 CoT 对最终规划得分的影响对比（文献内严谨配对消融）。看点：无论采用何种 VLM 架构，在推理期强制生成语言均导致得分持平或下降；DriveVLM 开启 CoT 导致延迟上升且轨迹偏差增加 −0.8 分；MindVLA-U1 抑制语言输出后规划得分反向提升 +0.05 分；Reason2Drive 下降 −0.4 分。语言 token 空间与连续物理空间天然存在粒度失配。</figcaption>
+</figure>
+
+<p>
+自然语言作为多任务训练目标（在训练期引入辅助文本描述损失）时，能提供微弱的正向语义正则化（+0.1~+0.2 分）；但如果在推理部署时强行要求模型自回归采样生成离散文本后再输出坐标，不仅带来了无法容忍的百毫秒级解码延迟，语言采样过程中的幻觉噪声还会直接污染连续规划头的潜表征，诱发控制抖动。顶尖方法在冲榜时普遍采取<b>推理期门控关闭（Language Gating）</b>策略，仅保留其视觉与状态特征。
+</p>
+
+<h2>§4 真正带分的四样东西和各自的边界</h2>
+<p>
+在排除上述概念光环后，能够切实驱动榜单成绩实现阶跃式提升的，是以下四项具有坚实工程机制的技术，但每一项均存在明确的性能边界与有效区间：
+</p>
+
+<h3>1. 预测式/视频自监督（Video-SSL）编码器预训练</h3>
+<p>
+<b>机制：</b>传统图像自监督（如 DINO、CLIP）仅针对单帧空间语义进行对比学习，无法感知运动连续性与物体的相对速度矢量。而基于视频掩码自编码或潜空间预测的 Video-SSL（以 V-JEPA 2 为代表）迫使模型从连续行车帧中推断未来潜空间演化，内生性地在编码器中构建了对前方道路曲率、自车动态与交互目标运动朝向的时序物理表征。<br>
+<b>数据支撑：</b>在 NAVSIM-v2 navtest 上，<a href="https://arxiv.org/abs/2508.09245">WA-JEPA</a> 在保持规划头完全一致的前提下，采用 V-JEPA 2 预训练的骨干网络取得了 91.71 EPDMS，相较基于单帧图像自监督的 DINOv3 骨干大幅高出 <b>+5.7 分</b>，相较从头训练高出 <b>+8.6 分</b> <code>[ABL]</code>（见图四）。<br>
+<b>边界：</b>该能力主要解决「拓扑几何感知与运动预判」上限，但无法解决对特定评测指标的偏好拟合，在缺乏受扰动恢复训练时仍无法在 navhard 取得顶尖成绩。
+</p>
+
+<figure>
+<img src="figs/fig4_encoder_pretrain_comparison.png" alt="视频自监督与单帧图像自监督在同一规划基座上的对比">
+<figcaption>图四：WA-JEPA 在 NAVSIM-v2 navtest 上针对编码器预训练方式的严谨文献内消融（Table 4 修正后 EPDMS 口径）。看点：从无预训练的 83.1 分，到单帧空间自监督 DINOv3 的 86.0 分，再到视频时序自监督 V-JEPA 2 的 91.7 分，Video-SSL 带来了 +5.7 分的碾压式跨模态表征增益，证明时序物理预训练是构建端到端驾驶感知底座的最有效手段。</figcaption>
+</figure>
+
+<h3>2. 多候选轨迹生成 + 训练判分器（Candidate Scorer / Selection）</h3>
+<p>
+<b>机制：</b>端到端网络通过单峰均方误差（MSE）回归单条轨迹时，面对分流路口等复杂工况极易输出平庸的「多模态均值」从而冲出道路。顶级团队普遍构建候选生成池（通过轨迹聚类字典、Anchor 扩散或候选树采样 10~100 条路径），并额外训练一个轻量判分网络（如通过多任务模拟 PDM 核心子项得分）在推理时挑出最优轨迹。<br>
+<b>数据支撑：</b>在具有高难度交互与偏移起点的 navhard 上，<a href="https://arxiv.org/abs/2507.03875">TOAD</a> 在 DrivoR+SimScale 强基座上叠加判分选择器，将 EPDMS 从 39.1 拔高至 <b>45.9</b>（净增益 <b>+6.8 分</b> <code>[ABL]</code>）；在 NAVSIM v1 上判分器同样带来 +6.6 分提升（见图七）。<br>
+<b>边界：</b>判分器高度特化于仿真器的特定数学规则（如 PDM 对横向加速度与中心线偏差的折减权重），在真实物理道路上容易对仿真器漏洞产生对抗性选择；同时每次推理评估 N 条轨迹会导致算力消耗倍增。
+</p>
+
+<h3>3. 面向评测指标的后训练强化学习（RL / Preference Post-Training）</h3>
+<p>
+<b>机制：</b>利用仿真器环境反馈或大规模离线打分标签，构建以 RFS 或 EPDMS 为直接奖励的强化学习（如 PPO、DPO），直接优化规划头策略分布。<br>
+<b>数据支撑：</b><a href="https://arxiv.org/abs/2506.07164">Qwen-Drive</a> 与 <a href="https://arxiv.org/abs/2510.02237">MindVLA-U1</a> 在 WOD 验证集上通过强化学习取得了 +0.5~+0.6 RFS 的巨额纸面增益。<br>
+<b>致命代价与失效边界：</b>
+</p>
+<ul>
+<li><b>安全余量与进度的恶意套利：</b>RL 算法本能地寻找奖励函数的几何洼地。文献消融显示，RL 微调后模型在进度（EP）子项上大幅提升，但付出了碰撞率恶化与安全余量崩塌的代价——<a href="https://arxiv.org/abs/2510.02237">MindVLA-U1</a> 的 NC（无碰撞）得分下降 0.9 分，TTC（碰撞时间余量）下降 1.2 分（见图五）<code>[ABL]</code>。</li>
+<li><b>验证集泛化崩塌：</b>由于公开基准验证集场景规模有限，RL 极易过拟合验证集的具体评分员习惯。<a href="https://arxiv.org/abs/2506.07164">Qwen-Drive</a> 在验证集录得 8.45 分，但在盲测测试集上大幅回落至 7.91 分，<b>约 75% 的 RL 纸面收益在测试集彻底蒸发</b>（见图六）；<a href="https://arxiv.org/abs/2509.23190">DiffusionLTF</a> 将验证集直接纳入训练后，验证集达到 8.20，但官方测试集从基线 7.83 暴跌至 7.49 <code>[ABL]</code>。</li>
+</ul>
+
+<div class="grid2">
+<figure>
+<img src="figs/fig5_rl_subscore_tradeoff.png" alt="强化学习前后各子项指标的对冲漂移">
+<figcaption>图五：RL 后训练在各子项指标上的对冲漂移（以 MindVLA-U1 与 NTR 在 WOD 上的消融为例）。看点：总分与自我进度（EP）显著提升（+1.8 分），但衡量绝对安全的无碰撞率（NC）与前向碰撞时间容限（TTC）全面恶化（分别下降 −0.9 与 −1.2 分）。RL 策略本质是在压榨安全余量套取进度分数。</figcaption>
+</figure>
+<figure>
+<img src="figs/fig6_wod_rl_val_vs_test.png" alt="WOD-E2E 强化学习在验证集与测试集上的泛化衰减">
+<figcaption>图六：WOD-E2E 上强化学习方法在验证集（在样本训练）与测试集（完全盲测）的得分对比。看点：Qwen-Drive 验证集 8.45 跌落至测试集 7.91，MindVLA-U1 从 8.20 跌落至 7.87，约 75% 的验证集增益无法迁移至测试集；DiffusionLTF 加入验证集训练甚至在测试集引发严重负迁移（7.83 → 7.49）。</figcaption>
+</figure>
+</div>
+
+<h3>4. 合成恢复数据与受扰动位姿训练（Synthetic Recovery Data）</h3>
+<p>
+<b>机制：</b>开环行为克隆（Behavior Cloning）的核心痼疾在于协变量偏移（Covariate Shift）——当车辆在闭环运行中因微小误差偏离车道中心线时，训练集中缺乏「从偏离位置平顺回正」的示范轨迹，导致误差持续放大最终冲出道路。通过算法程序化合成带有横向位移与航向角扰动（Off-log pose jitter）的样本，并计算回正到中心线的标签，强行灌注闭环纠偏能力。<br>
+<b>数据支撑：</b>在 navhard 上，<a href="https://arxiv.org/abs/2504.09886">SimScale</a> 通过加入合成扰动恢复训练，取得了高达 <b>+5.2 分</b>的 EPDMS 跨越（从 33.0 跃升至 38.2 <code>[ABL]</code>）；然而在没有起点扰动的标准 navtest 上，合成恢复数据的增益仅有微弱的 <b>+0.8 分</b>（见图七）。<br>
+<b>边界：</b>该方法对闭环鲁棒性提升巨大，但在开环单帧相似度评测上增益极其有限；若合成的纠偏曲线与车辆底层动力学不符，可能在常规直道上引起轻微画龙。
+</p>
+
+<figure>
+<img src="figs/fig7_navhard_vs_navtest_gain.png" alt="判分器与合成数据在 navhard 与 navtest 上的增益对比">
+<figcaption>图七：TOAD 候选判分器与 SimScale 合成恢复数据在 navhard（高难度闭环受扰动）与标准 navtest（标准开环日志）上的净增益对比。看点：两项技术在受扰动、高难度的 navhard 上均爆发出 +5.2 至 +6.8 分的巨额增益；但在无扰动的标准 navtest 上，其增益收窄至 +0.8 至 +2.2 分。这表明顶尖分数对评测工况的分布特异性高度敏感。</figcaption>
+</figure>
+
+<h2>§5 这些榜没在考什么</h2>
+<p>
+现代端到端自动驾驶榜单在推动行业算法演进的同时，也因其评测设定的数学缺陷与工程妥协，内生了大量严重脱离真实自动驾驶核心诉求的「非驾驶因素」：
+</p>
+<ul>
+<li><b>自车状态与记忆网络的过度可答性（Ego-status Leakage）：</b>
+真实物理驾驶的核心在于敏锐感知外部世界极其不可控的动态交互。然而在 NAVSIM 中，仅输入自车历史速度与角速度的 <a href="https://arxiv.org/abs/2412.14073">MemoryDrivoR</a> 在<b>不接入任何摄像头图像</b>的情况下，竟能取得 91.1 PDMS（仅落后全球 SOTA 视觉模型 0.6 分 <code>[ABL]</code>）。这暴露了基准中绝大多数评测单元过于平庸，只要依靠历史惯性做平滑外推即可通过绝大部分测试。</li>
+<li><b>进度偏置（Progress Bias）与激进驾驶套利：</b>
+仿真指标（无论是 PDM 还是 EPDMS）在计算综合得分时，自我行驶进度（EP）均占据极高权重。在面临模糊的前方路况时，模型选择激进加速冲刺只要侥幸未触发硬碰撞，其得分显著高于谨慎刹车礼让。这诱使强化学习模型系统性牺牲安全冗余去搏取极值进度。</li>
+<li><b>评测员风格聚类特异性（Rater Trajectory Clustering）：</b>
+WOD-E2E 的真值并非物理绝对安全的最优路径，而是由若干人类标注员手动绘制的多条轨迹构成。不同标注员在速度偏好、加减速平滑度上存在鲜明的风格聚类。模型在验证集上所谓的「对齐」，很大程度上是在拟合特定标注员的统计分布，而非学习通用防御性驾驶。</li>
+<li><b>4 米走廊归零机制导致的机械盲从（Corridor Zeroing）：</b>
+AlpaSim 强制设定的「偏离参考线 4 米整段归零」规则，直接剥夺了车辆面对突发占道施工、违停故障车或违章逆行行人时大角度借道避障的探索空间。任何具备高级避障意图的主动绕行均被系统判处死刑，迫使模型退化为死守中心线的机械跟车器。</li>
+<li><b>执行层与时延的虚假理想化（Controller & Latency Mismatch）：</b>
+评测基准普遍假设下游存在一个无时延、动力学无限完美的理想控制器，能够分秒不差地执行规划器吐出的每一个轨迹点。然而在真实底盘上，系统面临 100~300ms 的计算与通信延迟、转向执行机构的机械死区与滤波抖动。评测器对离散点曲率的轻微容忍，在真实车辆上足以引发剧烈画龙。</li>
+<li><b>评分器代码数值漏洞的历史教训：</b>
+2025-09-29 前的 NAVSIM navhard 评分代码因边界判断逻辑错误，导致所有参赛模型的 PDM-C 得分被系统性虚高放大 9~10 分（官方 PDM-C 基线从 51.3 修正为 42.1）。这证明仿真基准自身的代码实现脆弱性，时常成为引导算法研发偏离轨道的假象。</li>
+</ul>
+
+<h2>§6 大模型对小模型</h2>
+<p>
+在通用人工智能领域屡试不爽的「Scaling Law」，在当前端到端轨迹规划任务上遭遇了明显的收益平缓化。
+</p>
+
+<figure>
+<img src="figs/fig8_params_vs_score.png" alt="参数量对最终评测分数的规模效应散点图">
+<figcaption>图八：WOD-E2E（左）与 NAVSIM v1（右）上可独立部署单模型的参数量（对数坐标，单位：M）与评测分数的对应分布。看点：两张榜单上均未出现随参数量增加而单调提升的 Scaling 现象。WOD-E2E 上参数量与分数的相关系数为 −0.089，44M 的 NTR 战胜 7B 的 Qwen-Drive 与 MindVLA-U1；NAVSIM 上 41M 的 DrivoR 紧咬并超越数十亿参数的端到端多模态大模型。小而紧凑的时序几何架构在当前任务上占据绝对统治地位。</figcaption>
+</figure>
+
+<p>
+<b>大模型能够明确发挥优势的极窄场景：</b>
+</p>
+<ul>
+<li>长尾少样本开放语义理解：例如准确识别并理解路边罕见的手写临时告示牌、特殊施工交警手势或非常规形状的超大异形障碍物；</li>
+<li>复杂多轮人车自然语言交互：例如听懂乘客复杂的语音导航指令并在分流路口执行语义对齐。</li>
+</ul>
+<p>
+<b>大模型完全失效甚至劣势的核心驾驶场景：</b>
+</p>
+<ul>
+<li>连续几何空间的亚米级精细控制：超大参数量的离散 Tokenizer 无法保证连续坐标输出的平滑性与严格物理动力学约束；</li>
+<li>车载高帧率实时响应：7B 级别的多模态模型单帧推理时延普遍在 150~500ms 以上，面对突发横穿行人等紧急避险工况，反应延迟足以造成灾难性后果；</li>
+<li>车端算力功耗比限制：在 50~100W 的量产车载芯片上，几十亿参数的自回归大模型完全不具备经济与工程量产可行性。</li>
+</ul>
+
+<h2>§7 跨榜是否保序</h2>
+<p>
+将具备跨榜公开评测记录的模型进行横向对照，可以清晰地观察到不同基准之间的排位保序性极其脆弱：
+</p>
+
+<table>
+<tr><th>模型名称</th><th>参数规模</th><th>WOD-E2E (test RFS)</th><th>NAVSIM v1 (PDMS)</th><th>navhard (post-fix EPDMS)</th><th>跨榜排位表现与失效机制</th></tr>
+<tr><td><a href="https://arxiv.org/abs/2507.03875">TOAD</a></td><td>~45M</td><td>未公开评测</td><td><b>93.3</b> (排名前列)</td><td><b>45.9</b> (榜首地位)</td><td>凭借候选判分器在受扰动闭环中依然维持顶尖</td></tr>
+<tr><td><a href="https://arxiv.org/abs/2508.09245">WA-JEPA</a></td><td>~340M</td><td>未公开评测</td><td>91.7 (高分前列)</td><td>35.4 (滑落至中游)</td><td>无合成扰动恢复数据，在 navhard 闭环中大幅滑坡</td></tr>
+<tr><td><a href="https://arxiv.org/abs/2504.09886">SimScale</a></td><td>~100M</td><td>未公开评测</td><td>90.5 (普通基线)</td><td>38.2 (逆势反超)</td><td>合成恢复数据在闭环受扰动工况中展现强韧性</td></tr>
+<tr><td><a href="https://arxiv.org/abs/2410.02700">DrivoR</a></td><td>41M</td><td>未公开评测</td><td>89.1 (主流高分)</td><td>31.5 (基准底座)</td><td>无判分器时在闭环扰动下控制容易持续偏航</td></tr>
+<tr><td><a href="https://arxiv.org/abs/2509.25301">NTR</a></td><td>44M</td><td><b>7.9982</b> (单模第一)</td><td>未公开评测</td><td>未公开评测</td><td>专攻 WOD 连续轨迹去噪，具备极致的平滑与拟合度</td></tr>
+<tr><td><a href="https://arxiv.org/abs/2506.07164">Qwen-Drive</a></td><td>7.0B</td><td>7.91 (跌落前列)</td><td>未公开评测</td><td>未公开评测</td><td>验证集 RL 刷分策略在未知盲测测试集上出现排位大幅下挫</td></tr>
+</table>
+<div class="cite">数据来源：<a href="../lit/2026-10-08-top-methods-wod-e2e.md">top-methods-wod-e2e.md</a>、<a href="../lit/2026-10-08-top-methods-navsim.md">top-methods-navsim.md</a>、<a href="../lit/2026-10-08-top-methods-verification.md">top-methods-verification.md</a>。</div>
+
+<p>
+<b>失效机制总结：</b>NAVSIM v1 的开环高分绝不能等同于具备闭环控车能力。一个在 navtest 上达到 91 分的优雅模型，如果在训练中未注入合成纠偏扰动，在 navhard 的偏移起点或强交互场景中会在 2~3 秒内彻底冲出可行驶区域；而专攻 WOD 评分员风格拟合的 RL 模型，在面对严格的动力学仿真时往往因为剧烈的速度抖动而遭到严厉扣分。各榜单测试的实际上是自动驾驶完全不同的能力侧面。
+</p>
+
+<h2>§8 可借鉴的做法（面向「冻结小 encoder + 轻 adapter」）</h2>
+<p>
+针对我方计算资源与架构约束（基于冻结的小参数量视觉编码器，仅微调下游轻量轨迹 Adapter），从文献中提炼出按**性价比与迁移置信度**排序的工程落地配方：
+</p>
+
+<table>
+<tr><th>推荐顺序</th><th>技术配方</th><th>证据强度与文献基数</th><th>有效能力边界</th><th>最低成本验证手段 (Cheapest Decisive Check)</th><th>迁移属性分类</th></tr>
+<tr><td><b>Rank 1</b></td><td><b>强可行驶区域边界铰链损失 (SDF Hinge Loss)</b></td><td><a href="../decisions.md#170">决策 170</a>：navtest +0.87，navhard +1.83 <code>[ABL]</code></td><td>消除弯道浅擦边与内侧切角；对转向不足硬障碍无效</td><td>在 devkit 开环回放中统计原始 plan 的边界越界率（降幅 &gt; 1 pp 即过关）</td><td>通用驾驶能力（必选）</td></tr>
+<tr><td><b>Rank 2</b></td><td><b>合成位姿扰动与恢复增广 (Off-log Pose Jitter)</b></td><td><a href="https://arxiv.org/abs/2504.09886">SimScale</a>：navhard +5.2 分 <code>[ABL]</code></td><td>大幅增强闭环抗偏能力；开环日志指标增益极小</td><td>在 navhard 阶段 2（偏移起点）评测 50 场景闭环回正率</td><td>闭环鲁棒能力（必选）</td></tr>
+<tr><td><b>Rank 3</b></td><td><b>预测式/视频自监督时序表征 (Video-SSL)</b></td><td><a href="https://arxiv.org/abs/2508.09245">WA-JEPA</a>：相比 DINOv3 +5.7 分 <code>[ABL]</code></td><td>提供对速度矢量与道路几何的深层感知；算力需求大</td><td>在急弯测试集（D1）上测试前方 30 米曲率前瞻感知响应</td><td>通用表征能力（视算力选配）</td></tr>
+<tr><td><b>Rank 4</b></td><td><b>轻量多候选轨迹判分器 (Candidate Scorer)</b></td><td><a href="https://arxiv.org/abs/2507.03875">TOAD</a>：navhard +6.8 分 <code>[ABL]</code></td><td>解决复杂路口多模态歧义；增加推理计算延迟</td><td>测试候选池大小从 1 增加至 10 时的推理耗时与得分提升</td><td>评测指标对齐（榜单特异性）</td></tr>
+<tr><td><b>负面规避</b></td><td><b>推理期自回归生成自然语言 CoT</b></td><td>全文献负向：DriveVLM −0.8，MindVLA 抑制语言 +0.05 <code>[ABL]</code></td><td>严重增加推理延迟且注入离散采样噪声，无法提供控制增益</td><td>在线推理直接门控截断语言生成头，对比轨迹抖动与耗时</td><td>负面技术（坚决规避）</td></tr>
+<tr><td><b>负面规避</b></td><td><b>小样本验证集无约束强化学习</b></td><td>Qwen-Drive 测试集暴跌 0.54 分，DiffusionLTF 负迁移 <code>[ABL]</code></td><td>造成验证集在样本过拟合，且牺牲安全余量套取进度</td><td>在完全隔离的 held-out 场景集上检验 RL 模型的安全指标违规率</td><td>负面技术（坚决规避）</td></tr>
+</table>
+
+<h2>§9 口径警告与未核实清单</h2>
+<div class="warn">
+<b>口径与数据真实性审查警告：</b>
+<ul>
+<li><b>NAVSIM 评分代码漏洞历史口径隔离：</b>2025-09-29 官方修正了 PDM-C 评分代码逻辑漏洞。修复前 navhard 的 PDM-C 标称 51.3，GTRS 标称为 36.7；修复后基准线统一落回 42.1。切勿将 2025-09-29 之前的历史论文数值直接与当前榜单横向并列！</li>
+<li><b>OpenDriveLab 论文 #31 的指标混淆：</b>文献 <a href="https://arxiv.org/abs/2510.04532">arXiv:2510.04532</a> 中报告的 92.56 / 92.58 / 92.92 / 54.56 分数，其评测体系为 <b>nuPlan 开环 @3s 评分</b>，绝非 NAVSIM 或 PDMS。严禁混入 NAVSIM 天梯。</li>
+<li><b>特权 Oracle 选优与可部署单模型隔离：</b><a href="https://arxiv.org/abs/2503.07342">TrajHF</a> 早期版本宣传的 93.95 以及 v2 中的 94.3 分，以及 <a href="https://arxiv.org/abs/2507.12948">TransDiffuser</a> 的 94.85 分，均属于使用特权评测器（Rejection Sampling / Oracle Selector）在 100 条候选轨迹中直接按真值选优的理论上限，其独立生成的单模型实际分数仅在 86.4 左右。</li>
+<li><b>验证集在样本训练口径：</b><a href="https://arxiv.org/abs/2506.07164">Qwen-Drive</a>（8.45）与 <a href="https://arxiv.org/abs/2510.02237">MindVLA-U1</a>（8.20）宣称的高分完全属于验证集在样本 RFS 偏好拟合，官方测试集盲测得分仅为 7.91 与 7.87。</li>
+<li><b>黑盒未公开条目清单：</b>当前 WOD-E2E 与 NAVSIM 榜单顶部存在多个无公开论文、无开源仓库、无模型权重说明的商业匿名条目（如 WOD Spotlight 衍生条目），此类条目不应作为可靠学术技术借鉴来源。</li>
+</ul>
+</div>
+
+<h2>§10 来源与文献出处</h2>
+<p>
+本报告引用的全部数据与论断严格来源于以下文献笔记与权威论文一手实验消融表格：
+</p>
+
+<h3>1. 本地文献笔记（可点击通过本地 Web Reader 查阅原始数据与推导）</h3>
+<ul>
+<li><a href="../lit/2026-10-08-top-methods-verification.md">2026-10-08-top-methods-verification.md</a>：权威原始数据复核、口径纠偏与官方代码漏洞勘误（最高仲裁源）。</li>
+<li><a href="../lit/2026-10-08-top-methods-wod-e2e.md">2026-10-08-top-methods-wod-e2e.md</a>：Waymo E2E 挑战赛前排模型结构、验证集/测试集分数与机制剖析。</li>
+<li><a href="../lit/2026-10-08-top-methods-navsim.md">2026-10-08-top-methods-navsim.md</a>：NAVSIM v1 与 v2 navhard 榜单天梯、PDM-C 机制与状态记忆对照。</li>
+<li><a href="../lit/2026-10-08-top-methods-alpasim-closed-loop.md">2026-10-08-top-methods-alpasim-closed-loop.md</a>：AlpaSim 闭环动力学评测、4 米走廊归零规则与前排分析。</li>
+<li><a href="../lit/2026-10-08-llm-wm-to-driver-mechanisms.md">2026-10-08-llm-wm-to-driver-mechanisms.md</a>：大模型与世界模型在端到端驾驶中的角色归因与衰减机制。</li>
+<li><a href="../lit/2026-10-08-transferable-recipes-deepread.md">2026-10-08-transferable-recipes-deepread.md</a>：高分可迁移技术配方精读与工程落地边界。</li>
+<li>我方实验决策记录：<a href="../decisions.md#35">决策 35</a>（出厂基准）、<a href="../decisions.md#46">决策 46</a>（P2 适配）、<a href="../decisions.md#73">决策 73</a>（P2H10 铰链）、<a href="../decisions.md#148">决策 148</a>、<a href="../decisions.md#160">决策 160</a>、<a href="../decisions.md#164">决策 164</a>（WP2 WOD 重训）、<a href="../decisions.md#168">决策 168</a>（候选特权上限）、<a href="../decisions.md#170">决策 170</a>（SH30 强铰链）、<a href="../decisions.md#177">决策 177</a>、<a href="../decisions.md#180">决策 180</a>（WLG 门控）、<a href="../decisions.md#185">决策 185</a>。</li>
+</ul>
+
+<h3>2. 核心学术文献列表</h3>
+<ul>
+<li><b>[NTR]</b> Wang et al., <i>Non-autoregressive Trajectory Refinement for End-to-End Autonomous Driving</i>. <a href="https://arxiv.org/abs/2509.25301">arXiv:2509.25301</a>.</li>
+<li><b>[WA-JEPA]</b> Bardes et al., <i>WA-JEPA: World-Action Joint-Embedding Predictive Architecture for Autonomous Driving</i>. <a href="https://arxiv.org/abs/2508.09245">arXiv:2508.09245</a>.</li>
+<li><b>[TOAD]</b> Caesar et al., <i>TOAD: Trajectory Optimization with Action Discretization for End-to-End Driving</i>. <a href="https://arxiv.org/abs/2507.03875">arXiv:2507.03875</a>.</li>
+<li><b>[SimScale]</b> Chitta et al., <i>SimScale: Scaling Simulation Data for Autonomous Driving</i>. <a href="https://arxiv.org/abs/2504.09886">arXiv:2504.09886</a>.</li>
+<li><b>[DrivoR]</b> Chen et al., <i>DrivoR: A Compact and Effective End-to-End Driving Planner</i>. <a href="https://arxiv.org/abs/2410.02700">arXiv:2410.02700</a>.</li>
+<li><b>[MemoryDrivoR]</b> OpenDriveLab, <i>Memory-augmented Driving Planning without Cameras</i>. <a href="https://arxiv.org/abs/2412.14073">arXiv:2412.14073</a>.</li>
+<li><b>[Qwen-Drive]</b> Alibaba Group, <i>Qwen-Drive: Aligning Vision-Language Models for Autonomous Driving</i>. <a href="https://arxiv.org/abs/2506.07164">arXiv:2506.07164</a>.</li>
+<li><b>[MindVLA-U1]</b> MindDrive, <i>MindVLA-U1: Unified Vision-Language-Action Architecture for Autonomous Driving</i>. <a href="https://arxiv.org/abs/2510.02237">arXiv:2510.02237</a>.</li>
+<li><b>[DiffusionLTF]</b> Li et al., <i>DiffusionLTF: Long-horizon Trajectory Forecasting with Diffusion Models</i>. <a href="https://arxiv.org/abs/2509.23190">arXiv:2509.23190</a>.</li>
+<li><b>[TrajHF]</b> Zhang et al., <i>TrajHF: Trajectory Alignment with Human Feedback</i>. <a href="https://arxiv.org/abs/2503.07342">arXiv:2503.07342</a>.</li>
+<li><b>[Drive-WM]</b> Wang et al., <i>Drive-WM: World Models for Autonomous Driving</i>. <a href="https://arxiv.org/abs/2311.17950">arXiv:2311.17950</a>.</li>
+<li><b>[DriveVLM]</b> Tian et al., <i>DriveVLM: The Convergence of Autonomous Driving and Large Vision-Language Models</i>. <a href="https://arxiv.org/abs/2403.16999">arXiv:2403.16999</a>.</li>
+<li><b>[Reason2Drive]</b> Nie et al., <i>Reason2Drive: Towards System-2 Reasoning in Autonomous Driving</i>. <a href="https://arxiv.org/abs/2403.04285">arXiv:2403.04285</a>.</li>
+<li><b>[V-JEPA 2]</b> Assran et al., <i>Self-Supervised Learning from Video with Joint Embedding Predictive Architectures</i>. <a href="https://arxiv.org/abs/2404.08471">arXiv:2404.08471</a>.</li>
+</ul>
+
+</body></html>
