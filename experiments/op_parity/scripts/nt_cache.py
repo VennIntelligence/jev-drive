@@ -302,32 +302,43 @@ def cmd_status(a):
 
 # ---------------------------------------------------------------- control: same pipeline on navtest tokens vs the existing v2_navtest cache
 def cmd_control(a):
+    import random
+    old = final_dir("v2_navtest")
+    toks = sorted(Path(p).parent.name for p in glob.glob(str(old / "*/*/*/metric_cache.pkl")))
+    toks = random.Random(0).sample(toks, a.n)
+    lg = {t: Path(glob.glob(str(old / f"*/*/{t}"))[0]).parent.parent.name for t in toks}
+    new = O() / "control"
+    shutil.rmtree(new, ignore_errors=True)
+    rec = build_shard("navtest", "ctl", sorted(set(lg.values())), toks, len(os.sched_getaffinity(0)), new / "stage", new / "cache")
+    write(new / "tokens.txt", "\n".join(toks) + "\n")
+    r = subprocess.run([str(data_dir() / "envs/navsim2/bin/python"), str(Path(__file__).resolve()), "compare"], env=devkit_env())
+    res = json.loads((O() / "control.json").read_text())
+    res.update(missing=rec["missing"], build_wall_s=rec["wall_s"], build_cores=rec["cores"])
+    write(O() / "control.json", json.dumps(res, indent=1) + "\n")
+    print(json.dumps(res))
+    sys.exit(1 if r.returncode or res["field_mismatches"] or rec["missing"] else 0)
+
+
+def cmd_compare(a):
+    """navsim2 env: every field but file_path of the rebuilt caches equals the existing v2_navtest cache (re-pickled bytes)."""
     import lzma
     import pickle
     sys.path.insert(0, str(data_dir() / "third_party/navsim"))
-    old = final_dir("v2_navtest")
-    toks = sorted(Path(p).parent.name for p in glob.glob(str(old / "*/*/*/metric_cache.pkl")))
-    import random
-    toks = random.Random(0).sample(toks, a.n)
-    lg = {t: Path(glob.glob(str(old / f"*/*/{t}"))[0]).parent.parent.name for t in toks}
-    logs = sorted(set(lg.values()))
-    new = O() / "control"
-    shutil.rmtree(new, ignore_errors=True)
-    rec = build_shard("navtest", "ctl", logs, toks, len(os.sched_getaffinity(0)), new / "stage", new / "cache")
-    bad = []
+    old, new = final_dir("v2_navtest"), O() / "control"
+    toks = (new / "tokens.txt").read_text().split()
+    ld = lambda root, t: pickle.loads(lzma.decompress(open(glob.glob(str(root / f"*/*/{t}/metric_cache.pkl"))[0], "rb").read()))
+    bad, fields = [], 0
     for t in toks:
-        a_ = pickle.loads(lzma.decompress(open(glob.glob(str(old / f"*/*/{t}/metric_cache.pkl"))[0], "rb").read()))
-        b_ = pickle.loads(lzma.decompress(open(glob.glob(str(new / f"cache/*/*/{t}/metric_cache.pkl"))[0], "rb").read()))
-        for k in sorted(vars(a_)):
-            if k == "file_path":
-                continue
-            if pickle.dumps(getattr(a_, k)) != pickle.dumps(getattr(b_, k)):
-                bad.append((t, k))
-    res = dict(tokens=len(toks), cached=rec["cached"], field_mismatches=len(bad), first=bad[:5], bytes_new=rec["bytes"],
-               bytes_old=sum(f.stat().st_size for t in toks for f in Path(glob.glob(str(old / f"*/*/{t}"))[0]).iterdir()))
-    write(O() / "control.json", json.dumps(res, indent=1) + "\n")
-    print(json.dumps(res))
-    sys.exit(1 if bad or rec["missing"] else 0)
+        x, y = ld(old, t), ld(new / "cache", t)
+        for k in sorted(vars(x)):
+            if k != "file_path":
+                fields += 1
+                if pickle.dumps(getattr(x, k)) != pickle.dumps(getattr(y, k)):
+                    bad.append((t, k))
+        assert sorted(vars(x)) == sorted(vars(y))
+    sz = lambda root: sum(f.stat().st_size for t in toks for f in Path(glob.glob(str(root / f"*/*/{t}"))[0]).iterdir())
+    write(O() / "control.json", json.dumps(dict(tokens=len(toks), fields_compared=fields, field_mismatches=len(bad), first=bad[:5],
+                                                bytes_new=sz(new / "cache"), bytes_old=sz(old)), indent=1) + "\n")
 
 
 def main():
@@ -348,6 +359,7 @@ def main():
     sp.add_parser("status")
     p = sp.add_parser("control")
     p.add_argument("--n", type=int, default=10)
+    sp.add_parser("compare")
     a = ap.parse_args()
     globals()[f"cmd_{a.cmd}"](a)
 
