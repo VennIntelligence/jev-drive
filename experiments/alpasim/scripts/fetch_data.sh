@@ -6,7 +6,8 @@
 set -euo pipefail
 ROOT=${ALPASIM_NUPLAN_ROOT:-$DATA_DIR/datasets/alpasim_nuplan}
 OUT=$DATA_DIR/runs/alpasim/fetch; DL=$ROOT/_dl; N=${JOBS:-8}
-EP=https://hf-mirror.com/datasets/OpenDriveLab/AlpasimChallenge2026_nuplan_track/resolve/main
+REPO=datasets/OpenDriveLab/AlpasimChallenge2026_nuplan_track
+EP=https://hf-mirror.com/$REPO/resolve/main; API=https://hf-mirror.com/api/$REPO/tree/main
 mkdir -p "$ROOT" "$DL" "$OUT"; rm -f "$OUT/DONE" "$OUT/ERROR"
 exec > >(tee -a "$OUT/log.txt") 2>&1
 trap 'echo "failed at line $LINENO" > "$OUT/ERROR"' ERR
@@ -25,16 +26,22 @@ fetch() {  # <path in the dataset repo>
       f=$DL/$tag.$i; want=$((b - a + 1))
       # hf-mirror throttles a connection after its first minute or two (7.6 MB/s fresh vs 2 MB/s after 30 min,
       # 2026-10-08), so every connection is cut after CONN_S seconds and resumed from the bytes on disk.
+      # No curl --retry: a retried transfer restarts at the same offset and would append the bytes twice.
       until (( $(sz "$f") == want )); do
-        curl -sL --retry 3 --speed-limit 20000 --speed-time 60 --max-time "${CONN_S:-90}" -r $((a + $(sz "$f")))-$b "$EP/$rel" >> "$f" || sleep 1
+        curl -sL --speed-limit 20000 --speed-time 60 --max-time "${CONN_S:-90}" -r $((a + $(sz "$f")))-$b "$EP/$rel" >> "$f" || sleep 1
       done
     ) &
     pids+=($!)
   done
   wait "${pids[@]}"   # a bare `wait` would also wait for the tee of the log redirect
   local dl=$((SECONDS - t0)); t0=$SECONDS
-  echo "extract $rel" > "$OUT/STATUS"
-  for i in $(seq 0 $((N - 1))); do cat "$DL/$tag.$i"; done | pigz -dc | tar -x -C "$ROOT"
+  echo "verify + extract $rel" > "$OUT/STATUS"
+  parts() { for i in $(seq 0 $((N - 1))); do cat "$DL/$tag.$i"; done; }
+  local want_sha got_sha
+  want_sha=$(curl -s --retry 5 "$API/$(dirname "$rel")" | python3 -c "import json,sys; print(next(f['lfs']['oid'] for f in json.load(sys.stdin) if f['path']==sys.argv[1]))" "$rel")
+  got_sha=$(parts | sha256sum | cut -d' ' -f1)
+  [[ $got_sha == "$want_sha" ]] || { echo "sha256 mismatch for $rel: $got_sha != $want_sha (chunks kept in $DL)"; return 1; }
+  parts | pigz -dc | tar -x -C "$ROOT"
   rm -f "$DL/$tag".*; touch "$ROOT/.done.$tag"
   printf '%s\t%s bytes\tdownload %ss (%s MB/s)\textract %ss\n' "$rel" "$size" "$dl" \
     $((size / 1000000 / (dl > 0 ? dl : 1))) $((SECONDS - t0)) | tee -a "$OUT/sizes.tsv"
