@@ -220,7 +220,8 @@ def scen_stats(units):
 
 
 def cmd_idcheck(a):
-    """G-id (prereg): ts0 vs archived SH30 on the 11 scenarios."""
+    """G-id (prereg, criterion iv amended): ts0 vs archived SH30 on the 11 scenarios. model_pos holds plan points 4, 8, 12, 16, 20, 24, 32; only the first five
+    (<= 3.9 model seconds, the span the selector and the HUGSIM plan use) are compared."""
     names = [_pl.Path(x).stem for x in S11.read_text().split()]
     new, old = load_units(f"SH30-F-s{a.seed}:ts0").loc[names], load_units(f"SH30-F-s{a.seed}").loc[names]
     d = (new.hdscore - old.hdscore).abs()
@@ -230,7 +231,7 @@ def cmd_idcheck(a):
         if same_end[sc]:
             A, B = steps_of(new.run_dir[sc]), steps_of(old.run_dir[sc])
             n = min(5, len(A), len(B))
-            dpos.append(max(np.abs(np.array(A[i]["model_pos"]) - np.array(B[i]["model_pos"])).max() for i in range(n)))
+            dpos.append(max(np.abs(np.array(A[i]["model_pos"])[:5] - np.array(B[i]["model_pos"])[:5]).max() for i in range(n)))
     out = dict(n=len(names), same_end=int(same_end.sum()), hd_within_0p05=int((d < 0.05).sum()), mean_abs_dhd=float(d.mean()), max_abs_dhd=float(d.max()),
                first5_plan_maxdiff_m=float(max(dpos)) if dpos else None, per_scenario={sc: dict(new=float(new.hdscore[sc]), old=float(old.hdscore[sc]), end_new=new.end[sc],
                                                                                                   end_old=old.end[sc]) for sc in names})
