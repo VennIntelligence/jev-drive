@@ -37,9 +37,16 @@ def work_dir():
     return d
 
 
-def hist_names(name):
+def hist_names(name, have=None):
+    """The 4 history frames, oldest first. A slot whose frame does not exist (clip start; one rater target, 2dd9daa2...-147) repeats the next newer slot's frame
+    (last-frame padding, as jevdrive.waymo.history_rows); `have` = the set of frame names on disk."""
     seq, f = name.rsplit("-", 1)
-    return [f"{seq}-{int(f) - STRIDE * k:03d}" for k in range(NHIST - 1, -1, -1)]               # oldest first
+    out = [f"{seq}-{int(f) - STRIDE * k:03d}" for k in range(NHIST - 1, -1, -1)]
+    if have is not None:
+        for i in range(NHIST - 2, -1, -1):
+            if out[i] not in have:
+                out[i] = out[i + 1]
+    return out
 
 
 def targets():
@@ -141,11 +148,11 @@ def render_unit(unit):
     return out
 
 
-def frame_list(limit=0):
+def frame_list(limit=0, have=None):
     S, names = targets()
     if limit:
         names = names[:limit]
-    fr = sorted({h for n in names for h in hist_names(n)})
+    fr = sorted({h for n in names for h in hist_names(n, have)})
     return names, fr
 
 
@@ -155,8 +162,7 @@ def cmd_render(a):
     from jevdrive.run import Run
     spans, _ = Z.load_spans()
     calib = json.loads((Z.root() / "op_calib.json").read_text())
-    names, fr = frame_list(a.limit)
-    assert all(f in spans for f in fr), [f for f in fr if f not in spans][:5]
+    names, fr = frame_list(a.limit, set(spans))
     d = work_dir() / (a.variant + (f"_n{a.limit}" if a.limit else ""))
     d.mkdir(exist_ok=True)
     with Run("op_parity", f"wa_xboard_render_{a.variant}", config=vars(a)) as run:
@@ -200,7 +206,9 @@ def cmd_req(a):
     cmd = np.full(len(names), 3, np.int64)
     for i, c in ((1, 1), (2, 0), (3, 2)):                                           # WOD intent -> NAVSIM [left, straight, right, unknown]
         cmd[intent == i] = c
-    hn = [hist_names(n) for n in names]
+    from jevdrive import wod_zeroshot as Z
+    have = set(Z.load_spans()[0])
+    hn = [hist_names(n, have) for n in names]
     base = {"keys": np.array(names), "hist": pose.astype(np.float32), "ego": ego, "cmd": cmd}
 
     def img(cams):                                                                  # (n, 16): frame-major, [L0, F0, R0, B0]

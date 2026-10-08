@@ -68,3 +68,8 @@ WA-JEPA 各变体对 shipped、WP2、WLG、P2H10、log 的 ΔRFS / ΔADE@3s / Δ
 ## 不验证的东西（预先说明）
 
 单 split、开环、无视差纯旋转重投影、无后视、侧视覆盖不全、noise seed 为 repo 默认（另在 V1 上做一个 noise seed 的灵敏度，不并入主表）。
+
+## 补记（2026-10-08，全量推理之前，未读任何预测）
+
+- 479 个 rater 帧中有 1 个（`2dd9daa2312e66da3c0ea477145b70b8-147`）所在序列最早的帧就是 147，没有 f−5 / f−10 / f−15。该目标的缺失历史槽位用下一个更新的槽位的图重复填充（last-frame padding，`jevdrive.waymo.history_rows` 同法），位姿历史仍用真实 past_states。1 帧，影响可忽略，报告里注明。
+- `xca` 直接复用 `wod_launch_report.xca`（匀加速，不额外限制速度非负），上文「速度不为负」作废。
