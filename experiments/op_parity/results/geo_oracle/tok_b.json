@@ -1,0 +1,52 @@
+{
+ "kind": "b",
+ "channels": 4,
+ "params_enc": 1111840,
+ "fit_rows": 76084,
+ "split": "navsim/op-parity-geotok-train@v1:905892337c03",
+ "train_s": 144.06384110450745,
+ "steps": 6000,
+ "head": {
+  "tok_train": {
+   "ade": 0.6372902393341064,
+   "footprint_out": 0.0037453186232596636,
+   "agent_overlap": 0.0004993758047930896,
+   "n": 4005
+  },
+  "pilot_train": {
+   "ade": 0.939366340637207,
+   "footprint_out": 0.007554296404123306,
+   "agent_overlap": 0.004013219848275185,
+   "n": 4236
+  },
+  "dev": {
+   "ade": 1.2655014991760254,
+   "footprint_out": 0.0024509804788976908,
+   "agent_overlap": 0.007352941669523716,
+   "n": 408
+  },
+  "dev_shuffled_tokens": {
+   "ade": 4.572488307952881,
+   "footprint_out": 0.32598039507865906,
+   "agent_overlap": 0.20098039507865906,
+   "n": 408
+  }
+ },
+ "check_dev_ade_ratio_true_over_shuffled": 0.2767642941754388,
+ "label_coverage/navtrain_full.s2of12": 1.0,
+ "shuffle_token_l2_ratio/navtrain_full.s2of12": 1.3687396049499512,
+ "label_coverage/navtrain_full.s3of12": 1.0,
+ "shuffle_token_l2_ratio/navtrain_full.s3of12": 1.3688812255859375,
+ "label_coverage/navtrain_full.s4of12": 1.0,
+ "shuffle_token_l2_ratio/navtrain_full.s4of12": 1.371487021446228,
+ "label_coverage/lb_navtest": 1.0,
+ "shuffle_token_l2_ratio/lb_navtest": 1.369693398475647,
+ "bank_rms": {
+  "navtrain_full.s2of12": 0.04018909111618996,
+  "navtrain_full.s3of12": 0.040348026901483536,
+  "navtrain_full.s4of12": 0.040205810219049454,
+  "lb_navtest": 0.0407656691968441
+ },
+ "check_bank_rms_spread": 0.014346631502245577,
+ "checks_pass": true
+}

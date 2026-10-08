@@ -1,0 +1,286 @@
+{
+ "registered_lines": "combined arm (GB) navtest >= +0.7 and CI low > +0.3: geometry is enough; < +0.3: negative, not geometry; between: partial",
+ "verdict": "negative, but the channel was not read (decision 166's state; not a ceiling of geometry)",
+ "seeds": [
+  0
+ ],
+ "GB_minus_H0_EPDMS": [
+  0.09817696626844837,
+  -0.14268330416789507,
+  0.33880773123548164
+ ],
+ "channel_read": false,
+ "channel_evidence": {
+  "GB_minus_GX_EPDMS": [
+   0.18330786690863035,
+   -0.055060805841097606,
+   0.42311813516675345
+  ],
+  "GBoff_minus_GB_EPDMS": [
+   -0.15205565849755134,
+   -0.36156615750399307,
+   0.04795002968542625
+  ],
+  "GB_minus_GX_T20_DAC_fail": [
+   0.12682308180088775,
+   -0.3927536963063646,
+   0.6315260567503841
+  ],
+  "GSoff_minus_GS_EPDMS": [
+   -0.15723459060690928,
+   -0.4145347622277174,
+   0.09790628695721834
+  ],
+  "GAoff_minus_GA_EPDMS": [
+   -0.06821188418967629,
+   -0.1915763441789809,
+   0.06370306804860497
+  ],
+  "dev_ade_m": {
+   "H0": [
+    0.6319880485534668
+   ],
+   "GS": [
+    0.619322657585144
+   ],
+   "GA": [
+    0.6364926099777222
+   ],
+   "GB": [
+    0.6279594898223877
+   ],
+   "GX": [
+    0.6266815662384033
+   ]
+  }
+ },
+ "per_seed_EPDMS": {
+  "H0": [
+   88.45502243686083
+  ],
+  "GS": [
+   88.63990095929117
+  ],
+  "GA": [
+   88.52160740701278
+  ],
+  "GB": [
+   88.55319940312927
+  ],
+  "GX": [
+   88.36989153622065
+  ],
+  "GS:off": [
+   88.48266636868425
+  ],
+  "GA:off": [
+   88.45339552282312
+  ],
+  "GB:off": [
+   88.40114374463172
+  ]
+ },
+ "reference": {
+  "d160_MW_minus_H0": "+0.95 [+0.47, +1.37] (P2H lambda-10 baseline, WA-Cf tokens; not rerun)"
+ },
+ "tokenizer": {
+  "s": {
+   "kind": "s",
+   "channels": 1,
+   "params_enc": 1110976,
+   "fit_rows": 76084,
+   "split": "navsim/op-parity-geotok-train@v1:905892337c03",
+   "train_s": 82.34005975723267,
+   "steps": 6000,
+   "head": {
+    "tok_train": {
+     "ade": 1.022038221359253,
+     "footprint_out": 0.004244694486260414,
+     "agent_overlap": 0.015480649657547474,
+     "n": 4005
+    },
+    "pilot_train": {
+     "ade": 1.1052008867263794,
+     "footprint_out": 0.007082153111696243,
+     "agent_overlap": 0.02289896085858345,
+     "n": 4236
+    },
+    "dev": {
+     "ade": 1.0164659023284912,
+     "footprint_out": 0.0049019609577953815,
+     "agent_overlap": 0.01715686358511448,
+     "n": 408
+    },
+    "dev_shuffled_tokens": {
+     "ade": 2.3396661281585693,
+     "footprint_out": 0.3063725531101227,
+     "agent_overlap": 0.14460784196853638,
+     "n": 408
+    }
+   },
+   "check_dev_ade_ratio_true_over_shuffled": 0.4344491250674724,
+   "label_coverage/navtrain_full.s2of12": 1.0,
+   "label_coverage/navtrain_full.s3of12": 1.0,
+   "label_coverage/navtrain_full.s4of12": 1.0,
+   "label_coverage/lb_navtest": 1.0,
+   "bank_rms": {
+    "navtrain_full.s2of12": 0.017960987985134125,
+    "navtrain_full.s3of12": 0.017881041392683983,
+    "navtrain_full.s4of12": 0.017862502485513687,
+    "lb_navtest": 0.01838374137878418
+   },
+   "check_bank_rms_spread": 0.02918061977560038,
+   "checks_pass": true
+  },
+  "a": {
+   "kind": "a",
+   "channels": 3,
+   "params_enc": 1111552,
+   "fit_rows": 76084,
+   "split": "navsim/op-parity-geotok-train@v1:905892337c03",
+   "train_s": 154.52553963661194,
+   "steps": 6000,
+   "head": {
+    "tok_train": {
+     "ade": 0.9293282628059387,
+     "footprint_out": 0.11011236160993576,
+     "agent_overlap": 0.0017478152876719832,
+     "n": 4005
+    },
+    "pilot_train": {
+     "ade": 1.0982154607772827,
+     "footprint_out": 0.12204910069704056,
+     "agent_overlap": 0.006137865595519543,
+     "n": 4236
+    },
+    "dev": {
+     "ade": 1.25654137134552,
+     "footprint_out": 0.09313725680112839,
+     "agent_overlap": 0.014705883339047432,
+     "n": 408
+    },
+    "dev_shuffled_tokens": {
+     "ade": 2.54679012298584,
+     "footprint_out": 0.18872550129890442,
+     "agent_overlap": 0.10539215803146362,
+     "n": 408
+    }
+   },
+   "check_dev_ade_ratio_true_over_shuffled": 0.49338237964907733,
+   "label_coverage/navtrain_full.s2of12": 1.0,
+   "label_coverage/navtrain_full.s3of12": 1.0,
+   "label_coverage/navtrain_full.s4of12": 1.0,
+   "label_coverage/lb_navtest": 1.0,
+   "bank_rms": {
+    "navtrain_full.s2of12": 0.018919246271252632,
+    "navtrain_full.s3of12": 0.019110364839434624,
+    "navtrain_full.s4of12": 0.018923766911029816,
+    "lb_navtest": 0.01946382410824299
+   },
+   "check_bank_rms_spread": 0.028784330473980324,
+   "checks_pass": true
+  },
+  "b": {
+   "kind": "b",
+   "channels": 4,
+   "params_enc": 1111840,
+   "fit_rows": 76084,
+   "split": "navsim/op-parity-geotok-train@v1:905892337c03",
+   "train_s": 144.06384110450745,
+   "steps": 6000,
+   "head": {
+    "tok_train": {
+     "ade": 0.6372902393341064,
+     "footprint_out": 0.0037453186232596636,
+     "agent_overlap": 0.0004993758047930896,
+     "n": 4005
+    },
+    "pilot_train": {
+     "ade": 0.939366340637207,
+     "footprint_out": 0.007554296404123306,
+     "agent_overlap": 0.004013219848275185,
+     "n": 4236
+    },
+    "dev": {
+     "ade": 1.2655014991760254,
+     "footprint_out": 0.0024509804788976908,
+     "agent_overlap": 0.007352941669523716,
+     "n": 408
+    },
+    "dev_shuffled_tokens": {
+     "ade": 4.572488307952881,
+     "footprint_out": 0.32598039507865906,
+     "agent_overlap": 0.20098039507865906,
+     "n": 408
+    }
+   },
+   "check_dev_ade_ratio_true_over_shuffled": 0.2767642941754388,
+   "label_coverage/navtrain_full.s2of12": 1.0,
+   "shuffle_token_l2_ratio/navtrain_full.s2of12": 1.3687396049499512,
+   "label_coverage/navtrain_full.s3of12": 1.0,
+   "shuffle_token_l2_ratio/navtrain_full.s3of12": 1.3688812255859375,
+   "label_coverage/navtrain_full.s4of12": 1.0,
+   "shuffle_token_l2_ratio/navtrain_full.s4of12": 1.371487021446228,
+   "label_coverage/lb_navtest": 1.0,
+   "shuffle_token_l2_ratio/lb_navtest": 1.369693398475647,
+   "bank_rms": {
+    "navtrain_full.s2of12": 0.04018909111618996,
+    "navtrain_full.s3of12": 0.040348026901483536,
+    "navtrain_full.s4of12": 0.040205810219049454,
+    "lb_navtest": 0.0407656691968441
+   },
+   "check_bank_rms_spread": 0.014346631502245577,
+   "checks_pass": true
+  }
+ },
+ "replay_checks": {
+  "GH0-F-s0": {
+   "dac_fail": 447,
+   "replayed": 447,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOS-F-s0": {
+   "dac_fail": 403,
+   "replayed": 403,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOA-F-s0": {
+   "dac_fail": 434,
+   "replayed": 434,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOB-F-s0": {
+   "dac_fail": 424,
+   "replayed": 424,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOX-F-s0": {
+   "dac_fail": 447,
+   "replayed": 447,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOS-F-s0:noside": {
+   "dac_fail": 448,
+   "replayed": 448,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOA-F-s0:noside": {
+   "dac_fail": 434,
+   "replayed": 434,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOB-F-s0:noside": {
+   "dac_fail": 451,
+   "replayed": 451,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  }
+ }
+}

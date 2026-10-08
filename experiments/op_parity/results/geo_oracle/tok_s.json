@@ -1,0 +1,48 @@
+{
+ "kind": "s",
+ "channels": 1,
+ "params_enc": 1110976,
+ "fit_rows": 76084,
+ "split": "navsim/op-parity-geotok-train@v1:905892337c03",
+ "train_s": 82.34005975723267,
+ "steps": 6000,
+ "head": {
+  "tok_train": {
+   "ade": 1.022038221359253,
+   "footprint_out": 0.004244694486260414,
+   "agent_overlap": 0.015480649657547474,
+   "n": 4005
+  },
+  "pilot_train": {
+   "ade": 1.1052008867263794,
+   "footprint_out": 0.007082153111696243,
+   "agent_overlap": 0.02289896085858345,
+   "n": 4236
+  },
+  "dev": {
+   "ade": 1.0164659023284912,
+   "footprint_out": 0.0049019609577953815,
+   "agent_overlap": 0.01715686358511448,
+   "n": 408
+  },
+  "dev_shuffled_tokens": {
+   "ade": 2.3396661281585693,
+   "footprint_out": 0.3063725531101227,
+   "agent_overlap": 0.14460784196853638,
+   "n": 408
+  }
+ },
+ "check_dev_ade_ratio_true_over_shuffled": 0.4344491250674724,
+ "label_coverage/navtrain_full.s2of12": 1.0,
+ "label_coverage/navtrain_full.s3of12": 1.0,
+ "label_coverage/navtrain_full.s4of12": 1.0,
+ "label_coverage/lb_navtest": 1.0,
+ "bank_rms": {
+  "navtrain_full.s2of12": 0.017960987985134125,
+  "navtrain_full.s3of12": 0.017881041392683983,
+  "navtrain_full.s4of12": 0.017862502485513687,
+  "lb_navtest": 0.01838374137878418
+ },
+ "check_bank_rms_spread": 0.02918061977560038,
+ "checks_pass": true
+}

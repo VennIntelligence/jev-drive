@@ -1,0 +1,11 @@
+{
+ "rule": "clear negative iff seed-0 GB - H0 navtest EPDMS < +0.3 and CI high < +0.7",
+ "GB_minus_H0": {
+  "arm": 88.55319940312927,
+  "ref": 88.45502243686083,
+  "diff": 0.09817696626844839,
+  "lo": -0.14268330416789507,
+  "hi": 0.33880773123548164
+ },
+ "clear_negative": true
+}
