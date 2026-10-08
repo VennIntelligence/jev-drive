@@ -1,0 +1,13 @@
+contrast,F19 x pc,L9 x epcap
+N1 - E (both trained on navtrain),"+0.72 [+0.01, +1.42]","+0.95 [+0.21, +1.66]"
+N2 - E (both trained on navtrain),"-0.08 [-0.78, +0.66]","+0.25 [-0.56, +1.13]"
+N3 - E (both trained on navtrain),"-4.43 [-6.10, -2.82]","-4.05 [-5.76, -2.39]"
+N4 - E (both trained on navtrain),"+1.51 [+0.66, +2.42]","+2.11 [+1.24, +3.06]"
+N5 - E (both trained on navtrain),"+3.01 [+2.11, +3.90]",
+N6 - E (both trained on navtrain),"+3.20 [+2.16, +4.24]",
+N7 - E (both trained on navtrain),"+2.77 [+1.75, +3.74]","+3.20 [+2.15, +4.28]"
+N8 - E (both trained on navtrain),"+3.22 [+2.27, +4.12]",
+P1 - E (both trained on navtrain),"+3.92 [+2.85, +4.96]","+4.39 [+3.31, +5.50]"
+P2 - E (both trained on navtrain),"+4.33 [+3.32, +5.37]","+5.21 [+4.08, +6.44]"
+P3 - E (both trained on navtrain),"+3.43 [+2.27, +4.60]","+4.01 [+2.93, +5.16]"
+P4 - E (both trained on navtrain),"+6.14 [+4.93, +7.36]","+6.50 [+5.17, +7.86]"

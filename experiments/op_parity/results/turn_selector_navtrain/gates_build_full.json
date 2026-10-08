@@ -1,0 +1,24 @@
+{
+ "leak": {
+  "a_fold_hash_ok": true,
+  "a_model_fold_ok": true,
+  "b_max_diff_m": 0.0234375,
+  "b_median_diff_m": 0.0,
+  "c_ctrl_frac_over_tol": 0.9101666666666667,
+  "b_ok": true,
+  "c_ok": true,
+  "d_disjoint_ok": true,
+  "e_c00_eq_h_max_abs": 0.0,
+  "e_ok": true
+ },
+ "margin": {
+  "map_auc": 0.9280273940189496,
+  "curb_auc": 0.6286264478803072,
+  "dac_fail_rate": 0.05126575574621332,
+  "map_ok": true,
+  "curb_in_range": true
+ },
+ "n": 28323,
+ "n_logs": 900,
+ "ok": true
+}
