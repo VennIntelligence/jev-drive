@@ -129,7 +129,7 @@ def cmd_replay(a):
         df = pd.DataFrame(rows)
         df.to_parquet(OUT / f"replay_{a.bench}.parquet")
         np.savez_compressed(OUT / f"replay_{a.bench}_states.npz", key=df.key.to_numpy(str), token=df.token.to_numpy(str), states=S)
-        run.summary.update(bench=a.bench, tokens=len(todo), rows=len(df), wall_s=time.time() - t0)
+        run.summary.update(bench=a.bench, tokens=len(todo), rows=len(df), replay_s=time.time() - t0)
 
 
 # ---------------------------------------------------------------- family / gate
