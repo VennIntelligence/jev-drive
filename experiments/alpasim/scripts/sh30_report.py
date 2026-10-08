@@ -47,7 +47,8 @@ def cmd_table(a):
          "|:--|--:|--:|--:|--:|--:|--:|--:|"]
     for k, r in R.items():
         s = np.array([r[x]["score"] for x in scenes])
-        L.append(f"| {k} | {len(scenes)} | {s.mean():.4f} | {(s >= 1).sum()} | {(s == 0).sum()} | {', '.join(f"{n} {k}" for k in FAIL if (n := sum(bool(r[x]['score_metrics'].get(k)) for x in scenes))) or '-'} | "
+        z = ", ".join("%d %s" % (n, f) for f in FAIL if (n := sum(bool(r[x]["score_metrics"].get(f)) for x in scenes))) or "-"
+        L.append(f"| {k} | {len(scenes)} | {s.mean():.4f} | {(s >= 1).sum()} | {(s == 0).sum()} | {z} | "
                  f"{np.mean([r[x]['score_metrics']['progress_clipped_rel'] for x in scenes]):.3f} | "
                  f"{np.mean([r[x]['score_metrics']['lateral_dist_to_gt_trajectory'] for x in scenes]):.3f} |")
     L += ["", "| scene | " + " | ".join(f"{k} score | {k} progress | {k} why not 1" for k in R) + " |", "|:--|" + "--:|--:|:--|" * len(R)]
