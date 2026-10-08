@@ -1,0 +1,5 @@
+reading,value
+"repair exists (F19 x pc), % of token-seeds",15.34559289790742
+"... of which a candidate with 4 s map margin > 0 exists, %",99.27685950413223
+"identity 4 s map margin < 0 (would be DAC-risky), % of token-seeds",4.977805960684845
+"identity own-edge margin < 0, % of token-seeds",55.0570703868104
