@@ -23,6 +23,7 @@ with "Last verified: <date>"; one topic per file, keep it short.
 | [zeroshot-adapters.md](zeroshot-adapters.md) | you score an external driving model in closed loop |
 | [driving-runtime.md](driving-runtime.md), [tokyo-python-optimization.md](tokyo-python-optimization.md) | you need frame / preview helpers or the TCP Python speed-ups |
 | [waymo-e2e.md](waymo-e2e.md), [navsim.md](navsim.md), [hugsim.md](hugsim.md) | you need WOD-E2E, NAVSIM / OpenScene or HUGSIM data and setup |
+| [alpasim.md](alpasim.md) | you work on the AlpaSim E2E Closed Loop Challenge 2026: rules, driver container contract, scoring, running AlpaSim on the box |
 | [baselines.md](baselines.md) | you need a baseline model's latency on our card |
 
 Old paths from before the 2026-10 restructure: [path-map.tsv](path-map.tsv).

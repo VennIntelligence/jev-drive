@@ -26,7 +26,7 @@ AREAS = [  # INDEX.md order; live topics come first
     ("closed-loop harness and controllers", ["b2d_privileged", "cl_infra", "b2d_controller", "b2d_controller_eval", "b2d_tcp",
                                              "b2d_tfv6", "tfv6_rules", "simlingo_catalogue", "carla_rewind"]),
     ("zero-shot exams and leaderboards", ["zeroshot_openloop", "zeroshot_b2d", "model_smoke", "hugsim", "leaderboard_audit",
-                                          "top10", "baselines_latency"]),
+                                          "top10", "baselines_latency", "alpasim"]),
     ("frozen features and the reaction line", ["probe_planner_v0", "prediag", "driving_backbones", "reactivity", "fusion_diag",
                                                "fastperc", "elicitation", "real_transfer", "statepol"]),
     ("night queues", ["night_queue_2", "night_queue_3", "night_queue_4"]),
