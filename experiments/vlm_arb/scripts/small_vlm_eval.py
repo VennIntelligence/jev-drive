@@ -1,5 +1,5 @@
 """small_vlm: zero-shot ego-light reading of small VLMs on the d85 sweep frames (233 frames, 21 routes), same prompt and scoring
-as vlm_thin (`FOUR_PROMPT`, `ANSWER:`-forced option scoring, free `generate`), one generic HF path for every model so the
+as vlm_thin (`FOUR_PROMPT`, `ANSWER:`-forced option scoring, free `generate` with 512 new tokens: the new models reason aloud before the ANSWER line), one generic HF path for every model so the
 Qwen3-VL-4B control and the new models share a harness.
 
   small_vlm_eval.py run  --model q3vl4b|q35_2b|q35_4b|gemma4_e2b [--limit K]   answers + latency (restartable, jsonl append)
@@ -96,7 +96,7 @@ class Reader:
         return out.logits[0, -1, self.opt_ids].float().cpu().numpy()
 
     def generate(self, x):
-        y = self.m.generate(**x, max_new_tokens=160, do_sample=False)
+        y = self.m.generate(**x, max_new_tokens=512, do_sample=False)
         return self.proc.batch_decode(y[:, x["input_ids"].shape[1]:], skip_special_tokens=True)[0]
 
 
