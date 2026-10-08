@@ -23,7 +23,9 @@ SCENES=$DATA_DIR/runs/alpasim/scenes_navtest_full_part001_48.txt
 K=12
 status() { echo "$(date '+%F %T') ap2 $STAGE: $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
-sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return; rm -f "$ld/ERROR"
+sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
+        $CL queue 2>/dev/null | awk -v p="$ld/log.txt" '($2 == "queued" || $2 == "running") && index($0, p) {f = 1} END {exit !f}' && return   # still live from an earlier start
+        rm -f "$ld/ERROR"
         local id; id=$($CL submit --owner alpasim --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 20; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; return 0; }
 route() { sub ap2-route $L/route-$1 --vram 0.5 --cpu 18 --ram 40 -- $PYA $S/ap2_route.py build --data $1 --k4 $2 --workers 18; }
@@ -32,8 +34,9 @@ offline() {  # name ref models... : plans on navtest, devkit scores of the subse
   local name=$1 ref=$2; shift 2
   sub ap2-offline $L/offline-$name --vram 20 --cpu 8 --ram 60 -- $PY $S/ap2_offline.py plans --name $name --scenes $SCENES --models "$@"
   waitdirs $L/offline-$name
-  [[ -f $A/offline/$name/scores.csv ]] || $VPY -m jevdrive.bench score-poses --poses $A/offline/$name/poses.npz --tokens $A/offline/$name/subset.txt \
-      --out $A/offline/$name/scores.csv --traffic non_reactive --wait || die "score-poses $name"
+  local keys; keys=$($VPY -c "import numpy as np, sys; print(' '.join(k for k in np.load(sys.argv[1]).files if k.endswith(('_nav', '_m4', '_m1'))))" $A/offline/$name/poses.npz)
+  [[ -f $A/offline/$name/scores.csv ]] || $VPY -m jevdrive.bench score-poses --poses $A/offline/$name/poses.npz --keys $keys --tokens $A/offline/$name/subset.txt \
+      --out $A/offline/$name/scores.csv --traffic non_reactive --wait || die "score-poses $name"   # m = 2, 3 are read by ADE only (3.2 core-s per token and key)
   $PY $S/ap2_offline.py report --name $name --ref $ref --scores $A/offline/$name/scores.csv || die "report $name"
 }
 
