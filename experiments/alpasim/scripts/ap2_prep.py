@@ -118,7 +118,8 @@ def main(a):
     W = AI.yaw_rates(tab["pose"][:N], tab["fut"][:N])
     with Run("alpasim", f"ap2-prep-{tag}", config=vars(a)) as run:
         run.use_split(splits.load("navsim/navtest" if a.data == "lb_navtest" else "navsim/navtrain"))
-        _, enc = PP.encoder(torch.device("cuda"))
+        _, enc0 = PP.encoder(torch.device("cuda"))
+        enc = lambda prev, cur: enc0(prev, cur, bs=a.bs)  # noqa: E731
         kbase = dict(data=a.data, n=N, names_sha=cache.key(params=dict(n=names)), v="ap2-1")
         root = aroot(tag)
         root.mkdir(parents=True, exist_ok=True)
@@ -165,5 +166,6 @@ if __name__ == "__main__":
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=0)
     ap.add_argument("--bw", action="store_true", help="also the backwarp tokens (SH30 as served; arm AB)")
+    ap.add_argument("--bs", type=int, default=128, help="encoder batch (image pairs): 29 GB of VRAM at 128, about a quarter at 32")
     cli_args(ap)
     main(ap.parse_args())
