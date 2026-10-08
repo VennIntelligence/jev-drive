@@ -750,11 +750,11 @@ def fig_report(FIGD, G, CV, R, ceil, prior, prior_c, primary):
     ax.axhline(100 * ceil[f0].mean(), color=ps.BASELINE, ls="--", lw=0.8)
     ax.axhline(THRESH_GAIN, color=ps.PALETTE["green"], ls=":", lw=0.8)
     ax.text(len(names) - 0.5, THRESH_GAIN + 0.1, "worth threshold +2.0", ha="right", va="bottom", fontsize=6.5, color=ps.PALETTE["green"])
-    ax.text(len(names) - 0.5, 100 * ceil[f0].mean() - 0.1, "ceiling", ha="right", va="top", fontsize=7, color=ps.BASELINE)
+    ax.text(-0.4, 100 * ceil[f0].mean() + 0.1, "ceiling", ha="left", va="bottom", fontsize=7, color=ps.BASELINE)
     ax.set_xticks(range(len(names)), [x + ("*" if x == primary else "") for x in names], fontsize=7)
     ax.set_ylabel("selector - SH30 on navtest, EPDMS x 100\n(F19 x pc, > 20 deg, 95% CI)")
     ps.bars(ax), ps.zero_line(ax)
-    ax.text(0.02, 0.97, "trained on navtrain; red = PRIV (map margin); orange tick = trained within navtest (decision 187); * = primary", transform=ax.transAxes, fontsize=6, va="top")
+    ax.set_xlabel("trained on navtrain; red = PRIV (map margin); orange tick = trained within navtest (187); * = primary", fontsize=6.5)
     ax = axs[1]
     for arm, c in (("N7", ps.PALETTE["blue"]), ("P4", ps.PALETTE["vermillion"]), ("P2", ps.PALETTE["orange"])):
         ks = sorted(k[1] for k in CV if k[0] == arm)
@@ -771,7 +771,7 @@ def fig_report(FIGD, G, CV, R, ceil, prior, prior_c, primary):
                 pts = [(fr * 0.8 * 108, _num(pr[f"{int(100 * fr)}%"].iloc[0])) for fr in (0.25, 0.5, 0.75, 1.0)]
                 ax.plot([p[0] for p in pts], [p[1][0] for p in pts], color=c, ls="--", marker="s", ms=2, lw=0.8)
     ax.set_xscale("log")
-    ax.set_xlabel("training logs (dashed: within navtest, 187)")
+    ax.set_xlabel("training logs (dashed: 187)")
     ax.set_ylabel("navtest gain, > 20 deg")
     ps.zero_line(ax), ax.legend(fontsize=6)
     fig.savefig(FIGD / "selector_navtrain.png", dpi=300)
