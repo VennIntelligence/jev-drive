@@ -6,7 +6,22 @@ Pre-registration (written before any AP2 score): [../plans/2026-10-08-alpasim-al
 Store / PModel / Losses unchanged), `scripts/ap2_offline.py` (navtest read, closed-loop cross-check), `scripts/ap2_chain.sh` (stages), `scripts/drivers/ap2.sh`
 (`run.sh <dir> ap2`). Execution evidence, not a score claim: 48 public navtest scenes of one Las Vegas drive, one run, one seed; nothing was tuned on them.
 
-@@RESULT@@
+## Result
+
+Model `AP2-AB-s0`: frozen Cinque vision + op_parity P2 adapter + drivable hinge (lambda 30 / 0.5 m), the SH30 recipe on all 12 navtrain shards (99 679 rows with a
+rebuilt route, 10 000 steps x 128, seed 0), training rows built as AlpaSim delivers a decision, cold-start rule `backwarp` trained in. Checkpoint
+`$DATA_DIR/runs/op_parity/runs/AP2-AB-s0/ckpt-final.pt` (public data and weights only: navtrain, comma's released Cinque).
+
+| run | scenes | mean scene score | score 1 | score 0 | zeros by reason | mean progress |
+|:--|--:|--:|--:|--:|:--|--:|
+| **AP2-AB-s0** (`ap2_full48/20261008-181317`) | 48 | 0.9320 | 41 | 3 | 3 collision_at_fault | 0.947 |
+| SH30-F-s0, served with patches (`sh30_full48_c8/20261008-125144`) | 48 | 0.9465 | 35 | 2 | 2 collision_at_fault | 0.914 |
+| shipped LTF sample (`ltf_full48_c8/20261008-121920`) | 48 | 0.8735 | 34 | 5 | 1 offroad, 4 left_corridor_laterally | 0.898 |
+
+480 `drive` calls, 480 inferences, 0 inference errors, 0 input errors; no fallback path exists. AP2 drives further (41 scenes at score 1 vs 35, progress 0.947 vs
+0.914) and has one more at-fault collision (scenes `...368cb65e8fef57b7` and `...8e9f743d92c05d10` are new, `...9215555823945665` is shared with SH30,
+SH30's `...6fed9368351f54d5` is 1.0 here); one zero is 0.021 of the mean, so the two drivers are not separated by this run. Offline, where it can be measured
+(below), AP2 equals SH30 with full history and is clearly better on the three decisions without it.
 
 ## What AlpaSim hands a driver, and what AP2 does with it
 
@@ -72,6 +87,82 @@ Pre-registered rules, applied:
   (SHP 0.630 -> 0.634 m, EPDMS 89.25 -> 89.26; SH30 0.570 -> 0.585 m, 90.43 -> 90.14), although the route rule disagrees with NAVSIM's command on 30 % of
   tokens. The measurable gap is the cold start (decisions 0-2 of 10): SHP as served plans 0.80 m short at 4 s with one keyframe (SH30: 1.10 m), AB 0.38 m.
 
-@@FULL@@
+## Full scale (gate passed)
 
-@@LOOP@@
+`ap2_chain.sh full AB --cold backwarp`: routes and cold-start tokens for the other 9 shards, a 20-step smoke, then 10 000 steps (26 min on a shared card,
+6.4 it/s). Dev ADE (1 767 rows) m = 4 / 3 / 2 / 1: 0.573 / 0.566 / 0.580 / 0.658 m; drift to shipped with inputs off 0.044 m. Navtest, same read as the pilot,
+reference SH30-F-s0 as the SH30 driver feeds it ([ap2/offline_full.md](ap2/offline_full.md)):
+
+| arm | inputs | ADE vs log (m) | vs SH30 [95% CI] | x error at 4 s (m) | EPDMS subset | vs SH30 [95% CI] |
+|:--|:--|--:|:--|--:|--:|:--|
+| SH30 | NAVSIM standard, m = 4 | 0.570 | | -0.03 | 90.43 | |
+| SH30 as served | AlpaSim, m = 4 | 0.585 | | -0.10 | 90.14 | |
+| SH30 as served | AlpaSim, m = 3 / 2 | 0.601 / 0.677 | | -0.04 / -0.48 | | |
+| SH30 as served | AlpaSim, m = 1 | 0.992 | | -1.10 | 85.14 | |
+| **AP2** | AlpaSim, m = 4 | 0.583 | -0.002 [-0.008, +0.003] | -0.01 | 90.28 | +0.14 [-0.38, +0.66] |
+| **AP2** | AlpaSim, m = 3 / 2 | 0.586 / 0.600 | -0.015 [-0.022, -0.008] / -0.077 [-0.091, -0.065] | +0.01 / +0.04 | | |
+| **AP2** | AlpaSim, m = 1 | 0.666 | -0.326 [-0.366, -0.292] | -0.14 | 88.33 | +3.19 [+2.07, +4.37] |
+| AP2 | NAVSIM standard, m = 4 (not its training inputs) | 0.585 | +0.014 [+0.010, +0.019] | +0.02 | 89.98 | -0.45 [-0.91, -0.02] |
+
+Gate (the pilot's G1 / G2 against SH30): m = 1 lower with the CI away from 0, m = 2 / 3 lower, m = 4 ADE -0.002 m and EPDMS +0.14: **pass**, so AP2-AB-s0 is
+the served model. Weighted by a rollout's decisions (1 / 1 / 1 / 7 of 10) the ADE goes from 0.637 to 0.593 m.
+
+## Closed loop (`ap2_chain.sh loop AP2-AB-s0`: 1 scene -> 3 -> 48, every run behind the tap, driver sanity after each)
+
+Per-scene table, driver counters and stage latencies: [ap2/full48_table.md](ap2/full48_table.md); cross-check against the logs: [ap2/full48_closed.md](ap2/full48_closed.md).
+
+| | AP2-AB-s0 | SH30-F-s0 |
+|:--|--:|--:|
+| 1 scene / 3 scenes | 1.0 / 1.0, 1.0, 1.0 | 1.0 / 3 of 3 |
+| keyframes at decisions 0 / 1 / 2 / 3+, slots fed | 1 / 2 / 3 / 4, 8 | same |
+| start states rotated back (of 48) | 46 (41 by the pose test, 5 by the source's rule below 1 m/s) | 41 |
+| route rule in the driver vs `ap2_inputs.route_cmd` | 0 of 480 differ | |
+| command at decision 3 = NAVSIM `driving_command` | 40 / 48 | 40 / 48 |
+| plan at decision 3 vs the logged future (8 poses) | 1.73 m | 1.82 m |
+| planned x at 4 s, decisions 0 / 1 / 2 / 3 / 6 / 9 (mean; the log from decision 3: 24.3 m) | 23.2 / 24.2 / 23.6 / 23.2 / 22.9 / 21.4 m | 21.1 / 23.6 / 23.2 / 22.6 / 20.8 / 18.3 m |
+| `drive` total, median / p95 / max | 100.2 / 156.1 / 299.1 ms | 105.3 / 166.4 / 292.5 ms |
+| frames (CPU warp) / encode / policy, median | 57.8 / 18.8 / 16.7 ms | 59.5 / 20.1 / 17.4 ms |
+| CAM_F0 decode + pack (in `submit_image_observation`) | 43.1 ms | 47.9 ms |
+| driver VRAM peak (nvidia-smi) / torch max allocated | 3.52 / 2.77 GiB | 3.52 / 2.77 GiB |
+| 48 rollouts, 8 concurrent | 203 s | 203 s |
+
+The first plan of a rollout is no longer short (23.2 m at 4 s against 21.1 m; the log 24.3 m), which is the offline m = 1 result showing in the loop. The route
+rebuild at the tapped poses of this run: 0.2 mm mean, 6 mm max, command 480 / 480 (`$DATA_DIR/runs/alpasim/ap2/route_check_ap2/route_check.json`). Driver regression before any AP2 weight:
+`ap2_driver.py` with `AP2_TAG=SH30-F-s0 AP2_COLD=backwarp` reproduces the SH30 driver's 10 plans of scene `...0c318d7923d15b78` to the logged 4 decimals and
+its scene metrics (`ap2_regress_s1/20261008-163035`).
+
+## Figures
+
+![frames](../figs/ap2_frames_right_turn.jpg)
+
+*What to look at:* scene `...644b16fd65f956b8` (right turn, 3-scene run), decisions 0, 1, 2, 3, 6, 9. Column 1 the JPEG as received, columns 2-6 the road model
+frame of five of the eight slots, last column the wide frame with the plan on the road. In rows 0-2 the slots older than the first keyframe are that frame
+re-projected backwards (grey fill, the lead car does not shrink): the same construction the model was trained on. The plan bends right from decision 0 on and
+stays on the lane; from decision 6 it follows the lead car.
+
+![bev](../figs/ap2_bev_first8.jpg)
+
+*What to look at:* first 8 sessions of the 48-scene run. Black = driven rear-axle path, one dot per decision; coloured = each decision's 4 s plan (dark first,
+yellow last). The plans continue the driven path with no lateral or heading offset, and the darkest plan (decision 0, one keyframe) is as long as the next ones.
+
+## Remaining mismatches
+
+- **Rendered images.** Trained on real nuPlan frames, served MTGS renders; the online plan at decision 3 is 1.73 m from the logged future against 0.58 m offline
+  (navtest mean, real frame and logged state). Not decomposed (render vs closed-loop state).
+- **Closed-loop ego state.** From decision 2 on, ax / vx are the vehicle model following the driver's own previous plan (fed minus recorded at decision 3:
+  0.41 m/s, 0.54 m/s^2); training rows carry the log's. The planned 4 s travel still decays over a rollout (23.2 -> 21.4 m; SH30 23.6 -> 18.3 m); in the two scenes
+  looked at (frame dumps) the car closes on a lead vehicle, so this is not shown to be a feedback loop.
+- **Route.** The command at the log pose stops matching the served one as the car leaves the log (100 % at decisions 0-2, 67 % at decision 9 in this run);
+  beyond the 5.5 s recording the route is the straightest lane continuation, so the command is weak evidence of a turn. Rows whose route could not be rebuilt (2 %)
+  are not trained on.
+- **History states at m = 4.** The cached W tokens of full-history rows were warped along the recorded (vx, vy); AlpaSim's states have vy = 0. Not rebuilt.
+- **Latency.** 100 ms median, 156 ms p95 per `drive`: the CPU warp (58 ms) is unchanged from SH30; the "0.1 s of model work" target is still missed.
+- **Seeds and scenes.** One training seed, one closed-loop run, 48 scenes of one drive.
+
+## Cost and reproduction
+
+About 4.3 card-hours of pool job time on shared cards, estimated from job wall times (13 token-prep jobs ~2.8, which are CPU-bound and only hold the encoder; pilot trainings 0.5; full
+training 0.45; offline reads 0.2; AlpaSim runs 0.35), 3.3 h wall. Disk: `$DATA_DIR/runs/alpasim/ap2/cache` 120 GiB (navtrain cold 34 GB and backwarp 81 GB, navtest 13 GB),
+routes 0.2 GB. `ap2_chain.sh pilot`, `prepfull`, `full AB --cold backwarp`, `loop AP2-AB-s0`. Found on the way: `$DATA_DIR/runs/navsim_zs/index/*.pkl` and the
+`openpilot/*/frames.npy` caches were removed on 2026-10-08 12:58, so `pp_prep.py` on `navtrain_full.*` / `lb_*` and `sh30_check.py` no longer run until the index
+is rebuilt (`ap2_prep.py` reads camera paths and calibration from the NAVSIM logs instead; its W tokens equal the cached ones, relative error 0.00000 on 32 rows).
