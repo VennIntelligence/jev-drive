@@ -61,7 +61,7 @@ def cmd_refit(a):
         tmp = BUNDLE.with_suffix(".tmp")
         torch.save(dict(models=models, fk=FK0, cfg=cfg, n_train=tr["n"], seeds=list(range(SEED0, SEED0 + NINIT))), tmp)
         tmp.rename(BUNDLE)
-        run.summary.update(cfg=str(cfg), wall_s=time.time() - t0, n_train=tr["n"])
+        run.summary.update(cfg=str(cfg), fit_wall_s=time.time() - t0, n_train=tr["n"])
 
 
 def infer(bundle, e, h, c, V3, dev=None, bs=2048):
