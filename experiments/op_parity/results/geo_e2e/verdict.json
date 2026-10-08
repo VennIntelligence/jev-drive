@@ -1,0 +1,406 @@
+{
+ "registered_lines": "combined arm (JB) navtest >= +0.7 and CI low > +0.3: geometry is enough; < +0.3: negative, not geometry; between: partial. Channel read iff JB - JX EPDMS CI above 0 AND JB memory-masked - JB EPDMS CI below 0. Set-up absorbs iff JP - H0 EPDMS CI above 0 and JP dev ADE <= 0.8 x H0's",
+ "verdict": "negative, the channel was not read and the set-up was not shown to absorb anything: ceiling unmeasured",
+ "seeds": [
+  0,
+  1
+ ],
+ "JB": {
+  "minus_H0_EPDMS": [
+   -0.11627228935078837,
+   -0.2867920790042976,
+   0.041152408518464745
+  ],
+  "line": "negative",
+  "minus_JX_EPDMS": [
+   0.005770899237868054,
+   -0.14486648667895266,
+   0.16023564835559556
+  ],
+  "masked_minus_on_EPDMS": [
+   -0.06237853055350507,
+   -0.1573054417812073,
+   0.028425562920767918
+  ],
+  "channel_read": false,
+  "per_seed_minus_H0": [
+   -0.09243324641295203,
+   -0.14011133228864026
+  ],
+  "per_seed_minus_JX": [
+   0.011388302773099213,
+   0.00015349570263367696
+  ]
+ },
+ "JW_variant": {
+  "minus_H0_EPDMS": [
+   0.13451951744038632,
+   -0.038638062464828635,
+   0.2927208589526889
+  ],
+  "line": "negative",
+  "minus_JX_EPDMS": [
+   0.25656270602904274,
+   0.09052549504275473,
+   0.41622088973872023
+  ],
+  "masked_minus_on_EPDMS": [
+   -0.2765732505655594,
+   -0.4359802764326315,
+   -0.12018784734561064
+  ],
+  "channel_read": true,
+  "per_seed_minus_H0": [
+   0.19310705132626538,
+   0.07593198355449715
+  ],
+  "per_seed_minus_JX": [
+   0.2969286005123166,
+   0.21619681154577108
+  ]
+ },
+ "JP_positive_control": {
+  "minus_H0_EPDMS": [
+   0.6268310314726214,
+   0.3975838761573295,
+   0.8275868951108678
+  ],
+  "dev_ade": [
+   0.6277428865432739,
+   0.386974960565567
+  ],
+  "absorbs": false
+ },
+ "frozen_reference": {
+  "GB_minus_H0_EPDMS": [
+   0.11119122351618058,
+   -0.1010569205100261,
+   0.31192532926863686
+  ],
+  "GB_minus_GX_EPDMS": [
+   0.19912115470187353,
+   0.012224642253348345,
+   0.38323721125933863
+  ],
+  "JB_minus_GB_EPDMS": [
+   -0.22746351286696895,
+   -0.406079315378887,
+   -0.048788860431572156
+  ],
+  "JW_minus_GB_EPDMS": [
+   0.02332829392420572,
+   -0.1420379917748521,
+   0.18973695131493973
+  ]
+ },
+ "dev_ade_m": {
+  "H0": [
+   0.6319880485534668,
+   0.6287752389907837
+  ],
+  "JB": [
+   0.6272901892662048,
+   0.6279043555259705
+  ],
+  "JX": [
+   0.6257967948913574,
+   0.627640962600708
+  ],
+  "JW": [
+   0.6235596537590027,
+   0.6320067048072815
+  ],
+  "JP": [
+   0.6277428865432739,
+   0.386974960565567
+  ],
+  "GB": [
+   0.6279594898223877,
+   0.6308637261390686
+  ],
+  "GX": [
+   0.6266815662384033,
+   0.6356916427612305
+  ]
+ },
+ "per_seed_EPDMS": {
+  "H0": [
+   88.45502243686083,
+   88.51017156715692
+  ],
+  "JB": [
+   88.36258919044788,
+   88.37006023486828
+  ],
+  "JX": [
+   88.35120088767478,
+   88.36990673916564
+  ],
+  "JW": [
+   88.6481294881871,
+   88.58610355071141
+  ],
+  "JP": [
+   88.46946947094636,
+   89.74938659601662
+  ],
+  "JB:off": [
+   88.28954610244081,
+   88.31834626176833
+  ],
+  "JW:off": [
+   88.42155900618256,
+   88.25952753158482
+  ],
+  "GB": [
+   88.55319940312927,
+   88.63437704792082
+  ],
+  "GX": [
+   88.36989153622065,
+   88.41944260542571
+  ]
+ },
+ "e2e_dev": {
+  "JB": [
+   {
+    "e2e_dev_ade_on": 0.6272901892662048,
+    "e2e_dev_out_on": 0.01715686358511448,
+    "e2e_token_rms": 0.7622097134590149,
+    "e2e_dev_ade_masked": 0.6304320096969604,
+    "e2e_dev_out_masked": 0.01715686358511448,
+    "e2e_dev_ade_mismatched": 0.6358152031898499,
+    "e2e_dev_out_mismatched": 0.01715686358511448,
+    "e2e_dev_ade_fp16": 0.6274242401123047,
+    "e2e_dev_out_fp16": 0.01715686358511448,
+    "e2e_bank_rms": 0.7487305402755737
+   },
+   {
+    "e2e_dev_ade_on": 0.6279043555259705,
+    "e2e_dev_out_on": 0.022058824077248573,
+    "e2e_token_rms": 0.6532851457595825,
+    "e2e_dev_ade_masked": 0.6323538422584534,
+    "e2e_dev_out_masked": 0.022058824077248573,
+    "e2e_dev_ade_mismatched": 0.6361543536186218,
+    "e2e_dev_out_mismatched": 0.02450980432331562,
+    "e2e_dev_ade_fp16": 0.6279060244560242,
+    "e2e_dev_out_fp16": 0.022058824077248573,
+    "e2e_bank_rms": 0.6457163095474243
+   }
+  ],
+  "JX": [
+   {
+    "e2e_dev_ade_on": 0.6257967948913574,
+    "e2e_dev_out_on": 0.01715686358511448,
+    "e2e_token_rms": 0.6903113126754761,
+    "e2e_dev_ade_masked": 0.6256539225578308,
+    "e2e_dev_out_masked": 0.01715686358511448,
+    "e2e_dev_ade_mismatched": 0.6261036992073059,
+    "e2e_dev_out_mismatched": 0.01715686358511448,
+    "e2e_dev_ade_fp16": 0.6256417036056519,
+    "e2e_dev_out_fp16": 0.01715686358511448,
+    "e2e_bank_rms": 0.6925526857376099
+   },
+   {
+    "e2e_dev_ade_on": 0.627640962600708,
+    "e2e_dev_out_on": 0.022058824077248573,
+    "e2e_token_rms": 0.6882014870643616,
+    "e2e_dev_ade_masked": 0.6278060674667358,
+    "e2e_dev_out_masked": 0.022058824077248573,
+    "e2e_dev_ade_mismatched": 0.6276384592056274,
+    "e2e_dev_out_mismatched": 0.022058824077248573,
+    "e2e_dev_ade_fp16": 0.62754225730896,
+    "e2e_dev_out_fp16": 0.022058824077248573,
+    "e2e_bank_rms": 0.6917323470115662
+   }
+  ],
+  "JW": [
+   {
+    "e2e_dev_ade_on": 0.6235596537590027,
+    "e2e_dev_out_on": 0.019607843831181526,
+    "e2e_token_rms": 0.09812630712985992,
+    "e2e_dev_ade_masked": 0.636142373085022,
+    "e2e_dev_out_masked": 0.022058824077248573,
+    "e2e_dev_ade_mismatched": 0.6610318422317505,
+    "e2e_dev_out_mismatched": 0.01715686358511448,
+    "e2e_dev_ade_fp16": 0.6237443685531616,
+    "e2e_dev_out_fp16": 0.01715686358511448,
+    "e2e_bank_rms": 0.0960632711648941
+   },
+   {
+    "e2e_dev_ade_on": 0.6320067048072815,
+    "e2e_dev_out_on": 0.01715686358511448,
+    "e2e_token_rms": 0.10283143073320389,
+    "e2e_dev_ade_masked": 0.6426753997802734,
+    "e2e_dev_out_masked": 0.022058824077248573,
+    "e2e_dev_ade_mismatched": 0.6892481446266174,
+    "e2e_dev_out_mismatched": 0.02450980432331562,
+    "e2e_dev_ade_fp16": 0.632095217704773,
+    "e2e_dev_out_fp16": 0.01715686358511448,
+    "e2e_bank_rms": 0.10333766043186188
+   }
+  ],
+  "JP": [
+   {
+    "e2e_dev_ade_on": 0.6277428865432739,
+    "e2e_dev_out_on": 0.01715686358511448,
+    "e2e_token_rms": 0.5643138885498047,
+    "e2e_dev_ade_masked": 0.6307485699653625,
+    "e2e_dev_out_masked": 0.01715686358511448,
+    "e2e_dev_ade_mismatched": 0.6309710144996643,
+    "e2e_dev_out_mismatched": 0.01715686358511448,
+    "e2e_dev_ade_fp16": 0.627390444278717,
+    "e2e_dev_out_fp16": 0.01715686358511448,
+    "e2e_bank_rms": 0.5602051019668579
+   },
+   {
+    "e2e_dev_ade_on": 0.386974960565567,
+    "e2e_dev_out_on": 0.009803921915590763,
+    "e2e_token_rms": 0.5282414555549622,
+    "e2e_dev_ade_masked": 0.6597400903701782,
+    "e2e_dev_out_masked": 0.02450980432331562,
+    "e2e_dev_ade_mismatched": 2.725719690322876,
+    "e2e_dev_out_mismatched": 0.08578431606292725,
+    "e2e_dev_ade_fp16": 0.3869694769382477,
+    "e2e_dev_out_fp16": 0.009803921915590763,
+    "e2e_bank_rms": 0.5284690856933594
+   }
+  ]
+ },
+ "warm_start_tokenizer": {
+  "tok_train": {
+   "ade": 0.6372902393341064,
+   "footprint_out": 0.0037453186232596636,
+   "agent_overlap": 0.0004993758047930896,
+   "n": 4005
+  },
+  "pilot_train": {
+   "ade": 0.939366340637207,
+   "footprint_out": 0.007554296404123306,
+   "agent_overlap": 0.004013219848275185,
+   "n": 4236
+  },
+  "dev": {
+   "ade": 1.2655014991760254,
+   "footprint_out": 0.0024509804788976908,
+   "agent_overlap": 0.007352941669523716,
+   "n": 408
+  },
+  "dev_shuffled_tokens": {
+   "ade": 4.572488307952881,
+   "footprint_out": 0.32598039507865906,
+   "agent_overlap": 0.20098039507865906,
+   "n": 408
+  }
+ },
+ "replay_checks": {
+  "GH0-F-s0": {
+   "dac_fail": 447,
+   "replayed": 447,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GH0-F-s1": {
+   "dac_fail": 441,
+   "replayed": 441,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEB-F-s0": {
+   "dac_fail": 430,
+   "replayed": 430,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEB-F-s1": {
+   "dac_fail": 444,
+   "replayed": 444,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEX-F-s0": {
+   "dac_fail": 435,
+   "replayed": 435,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEX-F-s1": {
+   "dac_fail": 443,
+   "replayed": 443,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEW-F-s0": {
+   "dac_fail": 425,
+   "replayed": 425,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEW-F-s1": {
+   "dac_fail": 431,
+   "replayed": 431,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEP-F-s0": {
+   "dac_fail": 435,
+   "replayed": 435,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEP-F-s1": {
+   "dac_fail": 406,
+   "replayed": 406,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEB-F-s0:noside": {
+   "dac_fail": 446,
+   "replayed": 446,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEB-F-s1:noside": {
+   "dac_fail": 451,
+   "replayed": 451,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEW-F-s0:noside": {
+   "dac_fail": 446,
+   "replayed": 446,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GEW-F-s1:noside": {
+   "dac_fail": 460,
+   "replayed": 460,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOB-F-s0": {
+   "dac_fail": 424,
+   "replayed": 424,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOB-F-s1": {
+   "dac_fail": 420,
+   "replayed": 420,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOX-F-s0": {
+   "dac_fail": 447,
+   "replayed": 447,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  },
+  "GOX-F-s1": {
+   "dac_fail": 446,
+   "replayed": 446,
+   "no_side": 0,
+   "replay_dac_disagree": 0
+  }
+ }
+}
