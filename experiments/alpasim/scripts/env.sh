@@ -7,3 +7,5 @@ export UV_LINK_MODE=copy UV_PYTHON=3.12
 # in-repo drivers (vam, alpamayo) and physics, which this track never starts.
 export ALPASIM_EXTRAS="--extra wizard --extra runtime --extra controller --extra eval --extra grpc --extra utils --extra plugins --extra mtgs"
 export UVSYNC="uv sync --default-index https://mirrors.aliyun.com/pypi/simple"
+# gsplat compiles its CUDA kernels on first use (Dockerfile: gcc-11, ninja, MAX_JOBS=4); keep the build off the system disk.
+export MAX_JOBS=4 TORCH_EXTENSIONS_DIR=$DATA_DIR/cache/torch_extensions/alpasim
