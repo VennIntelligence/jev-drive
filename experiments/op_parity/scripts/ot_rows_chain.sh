@@ -55,7 +55,7 @@ if [[ $STAGE == smoke ]]; then
   TAGX=-zero64 prep $d --limit 64 --zero
   TAGX=-first64 prep $d --limit 64
   waitdirs $L/prep-$d-zero64 $L/prep-$d-first64
-  sub ot-probe $L/probe-smoke --vram 16 --cpu 4 --ram 30 -- $PY $S/ot_rows.py probe --name smoke --tags P0 SHP-F-s0 --data $d --suffix -first64 --min-slope 0.3
+  sub ot-probe $L/probe-smoke --vram 16 --cpu 4 --ram 30 -- $PY $S/ot_rows.py probe --name smoke --tags P0 SHP-F-s0 --data $d --suffix=-first64 --min-slope 0.3
   waitdirs $L/probe-smoke
   cat $O/probe_smoke.md; cat "$DATA_DIR/runs/op_parity/cache/ot1_$d-first64@warp/timing.json"
   status "done"; date > "$D/DONE"; exit 0
