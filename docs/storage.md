@@ -41,9 +41,20 @@ so rent further boxes in West-E too. autodl-fs is not turned on (`/root/autodl-f
 
 Last verified: 2026-09-20
 
-## Cleanup candidates (scan 2026-10-06, nothing deleted)
+## Cleanup candidates (scan 2026-10-08)
 
-Disk 5.0T, 4.6T used. Largest removable items from concluded lines, all regenerable: `runs/openpilot_rigs/frames` 141G
-(model_smoke), `datasets/nuscenes/sweeps` 123G (no repo ref; re-extract from `/autodl-pub`), `runs/cosmos_full` 100G
-(cosmos no-go, d56/d63). Live but regenerable (ask first): `runs/op_adapt_H/{fixbank,bank}` 151G + 122G,
-`processed/op_adapt` 224G, `runs/op_route_cmd/carla_pairs_s10000` 65G. Re-scan before deleting anything.
+Disk 5.0T, 4.5T used, 529G free after the 2026-10-08 cleanup (user-approved, script and log in `tmp/cleanup_1008.*` on
+the data disk), which removed about 339G and kept small samples:
+
+| Removed | Kept |
+|---|---|
+| `runs/cosmos_full/{pairs,gen,clips,stage10}` (cosmos no-go, d56/d63) | `pairs_sample/` (20 pair dirs), `stage1/`, logs |
+| `runs/cosmos/{out,clips,gen}` | `anchor/`, `gen-cabincam/`, small dirs |
+| `models/cosmos` (Cosmos-Reason1-7B, siglip2 naflex, Predict2.5), `envs/cosmos-transfer` | nothing; `vlm_arb_models.py`'s `cosmos-reason1-7b` arm needs a re-download |
+| `datasets/nuscenes/sweeps` camera and lidar dirs (re-extract from `/autodl-pub`) | `CAM_BACK` (0.3G), radar |
+| `runs/factor_wm/clips/{g0a,g0b,g1s,train}`, `runs/factor_wm/p2op/{logged,roll}` (line dropped, d177) | json indexes, reports, `onnx/`, `runs/` |
+
+Still removable from concluded lines: `runs/openpilot_rigs/frames` 141G (model_smoke). Live but regenerable (ask first):
+`runs/op_adapt_H/{fixbank,bank}` 151G + 122G, `processed/op_adapt` 224G, `runs/op_route_cmd/carla_pairs_s10000` 65G.
+Bench2Drive / CARLA data is about 580G in total (`runs/{op_route_cmd,op_route_ft,b2d_collect,p5v1,p6,nq4}`,
+`processed/carla_*`, `third_party/carla`, the four leaderboard-model envs); untouched. Re-scan before deleting anything.
