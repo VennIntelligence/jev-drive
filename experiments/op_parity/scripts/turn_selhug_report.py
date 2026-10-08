@@ -89,9 +89,8 @@ def report(a):
     ps.zero_line(ax[0])
     ax[0].set_xlabel("scenario (sorted)")
     ax[0].set_ylabel("HD tsB - SH30 (seed mean)")
-    ax[0].bar([], [], color=ps.PALETTE["vermillion"], label="turning route")
-    ax[0].bar([], [], color=ps.PALETTE["sky_blue"], label="straight route")
-    ax[0].legend(loc="upper left")
+    from matplotlib.patches import Patch
+    ax[0].legend(handles=[Patch(color=ps.PALETTE["vermillion"], label="turning route"), Patch(color=ps.PALETTE["sky_blue"], label="straight route")], loc="lower right")
     ps.panel(ax[0], "(a)")
     gf = {s: sum(x["n_allowed"] for x in (st["tsB"][0][s], st["tsB"][1][s])) / sum(x["n"] for x in (st["tsB"][0][s], st["tsB"][1][s])) for s in all64}
     ax[1].scatter([gf[s] for s in all64], d[all64].to_numpy(), s=9, c=[ps.PALETTE["vermillion"] if s in set(turn) else ps.PALETTE["sky_blue"] for s in all64])
