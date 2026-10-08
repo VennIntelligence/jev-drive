@@ -1,9 +1,9 @@
 # alpasim: AlpaSim E2E Closed Loop Challenge feasibility
 
 status: live
-decisions: 184 (inputs: 104, 116, 133, 149, 169, 170, 174, 177)
-index: runs natively on the box, 2.96 s / scene; LTF sample 0.8735 on 48 scenes
-key: docs/alpasim.md, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
+decisions: 184, 185 (inputs: 104, 116, 133, 149, 169, 170, 174, 177)
+index: SH30 driver runs: 0.9465 on 48 public scenes (LTF 0.8735), 105 ms / step
+key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
 **Question.** Can SH30 (openpilot Cinque + adapter + drivable hinge, navtest EPDMS 89.55) enter the nuPlan track of the AlpaSim E2E
 Closed Loop Challenge 2026 by 2026-10-31, and what does the public 1 485-scene closed-loop suite cost on our box.
@@ -15,8 +15,16 @@ concurrent rollouts on one card; the shipped LTF sample scores 0.8735 mean scene
 **How to run.** [docs/alpasim.md](../../docs/alpasim.md#running-it-on-our-box-measured-2026-10-08-decision-184): `scripts/setup_env.sh`,
 `fetch_data.sh`, `setup_ltf.sh`, then `run.sh` as a pool job.
 
-**Next.** SH30 as a driver: causal W-protocol frames from 2 Hz CAM_F0, cold-start rule for the first 1.5 s, command from the route,
-3-scene smoke; a Docker host for building the submission image; the remaining 14 asset shards need a disk decision.
+**SH30 smoke (2026-10-08, decision 185).** SH30-F-s0 serves the driver API with real inference on all 480 decisions of 48 public
+scenes: mean scene score 0.9465, two zeros (at-fault collisions); the LTF sample on the same scenes 0.8735, five zeros. Execution
+evidence only: one run, one seed, 48 scenes of one drive. Cold start = constant-velocity back-extrapolation + back-warped first frame.
+105 ms median per `drive` (target 0.1 s), 3.5 GiB. Table, mismatches and figures: [results/sh30_smoke.md](results/sh30_smoke.md)
+(`figs/sh30_frames_right_turn.jpg`: the frames the model saw with its plan; `figs/sh30_bev_first8.jpg`: plans against the driven track).
+Run: `run.sh <dir> sh30 ...` in place of `ltf`.
+
+**Next.** The full public suite once the remaining 14 asset shards are on disk (`fetch_data.sh all`, running 2026-10-08); the two
+collisions and the 11 slow scenes; step latency under 0.1 s (warp on the GPU or cross-session batching); a Docker host for the
+submission image and a read-only-root test; seed 1.
 
 **Read more.** [docs/alpasim.md](../../docs/alpasim.md).
 

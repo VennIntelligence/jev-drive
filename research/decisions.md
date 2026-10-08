@@ -179,3 +179,4 @@
 | 182 | 新一代小模型直接读红绿灯不如 Qwen3-VL-4B：一次前向 1150 token 下 ego 红灯召回 Qwen3.5-2B 12%、Qwen3.5-4B 53%、Gemma 4 E2B 67%，对 91%；延迟相当（118–124 ms）或更快（2B 73 ms）但没有同等延迟下更好的；generate 路径 2B/4B 81–82% 仍低且慢；233 帧首看，提示未针对新模型调 | 弱 | 待定 |
 | 183 | NAVSIM 专家 WA-JEPA 在 WOD-E2E val 上零样本输给 shipped openpilot：RFS 7.587 对 8.005，−0.418 [−0.679, −0.170]（V1 重投影）；三种图像映射（7.587 / 7.478 / 7.332）对 shipped、WP2、WLG、日志全为负；图像贡献 +2.78，ego + 指令 + 历史 +1.55；输入映射是主要混杂 | 中 | 待定 |
 | 184 | AlpaSim nuPlan track 在 box 上不用 Docker 原样可跑：单卡 8 并发 2.96 s / scene，官方 LTF sample 48 个 public scene mean scene score 0.8735（43 / 48）；全量 1 485 scene 约 1.25 card-hour，代价在 458 GiB 数据；每 scene 5.5 s、10 次决策、t = 0 前无历史 | 中 | 成立 |
+| 185 | SH30 作为 AlpaSim nuPlan track driver 能跑：48 个 public scene 480 次决策全部真实推理，mean scene score 0.9465（零分 2，at-fault 碰撞），同批官方 LTF sample 0.8735；冷启动用恒速倒推 + 首帧回 warp（置零 slot 首步 plan 偏 5.4 m）；单步 105 ms，不到 0.1 s 目标；同一天同一车的 48 scene，不是榜单分 | 弱 | 待定 |
