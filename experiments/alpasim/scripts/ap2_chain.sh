@@ -4,6 +4,8 @@
 #   ap2_chain.sh pilot            routes + cold / backwarp tokens (navtest, shards 2-4) -> pilot arms N0 / A / AR / AB -> navtest offline read
 #   ap2_chain.sh full <arm args>  routes + cold tokens of the other 9 shards -> AP2-<name>-s0 (SH30 recipe) -> navtest offline read
 #                                 e.g. full A            (4-way route command, rule zero)   |   full AR --route   |   full AB --cold backwarp
+#   ap2_chain.sh loop <tag>       AlpaSim closed loop with the AP2 driver, tapped: 1 scene -> 3 -> 48 (8 concurrent), driver sanity after
+#                                 each, route rebuild check, frame / BEV figures, per-scene table next to SH30 and LTF
 # State: $DATA_DIR/runs/alpasim/ap2/chain-<stage>/{STATUS, DONE, ERROR, log.txt, jobs.txt}; pool logs under .../ap2/pool/.
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
@@ -69,6 +71,30 @@ elif [[ $STAGE == full ]]; then
   waitdirs $L/t-full-$NAME
   status "offline read on navtest"
   offline full-$NAME SH30 SH30=SH30-F-s0 AP2=AP2-$NAME-s0 P=AP2P-$NAME-s0
+elif [[ $STAGE == loop ]]; then
+  TAG=$1; R=$DATA_DIR/runs/alpasim; TS=$(cat "$D/ts" 2>/dev/null || date +%Y%m%d-%H%M%S | tee "$D/ts")
+  OV8="runtime.nr_workers=2 runtime.endpoints.renderer.n_concurrent_rollouts=8 runtime.endpoints.driver.n_concurrent_rollouts=8 runtime.endpoints.controller.n_concurrent_rollouts=8 defines.nre_cache_size=9"
+  loop() {  # name scene-list dump overrides... : one tapped closed-loop run, then the driver-side sanity gate
+    local n=$1 list=$2 dump=$3; shift 3; local o=$R/ap2_$n/$TS
+    sub alpasim-ap2-$n $o/pool --vram 40 --cpu 16 -- env AP2_TAG=$TAG SH30_DUMP=$dump bash $S/run.sh $o ap2 --tap --scene-list $list +e2e_challenge_nuplan=full "$@"
+    waitdirs $o/pool
+    $VPY - "$o" <<'PYEOF' || die "driver sanity $n"
+import json, sys
+rows = [json.loads(x) for x in open(sys.argv[1] + "/driver-logs/drive.jsonl")]
+dr, cl = [r for r in rows if r["kind"] == "drive"], [r for r in rows if r["kind"] == "close"]
+res = json.load(open(sys.argv[1] + "/aggregate/results-summary.json"))["rollouts"]
+bad = [c for c in cl if c["drive"] != 10 or c["inference"] != 10 or c["inference_error"] or c["input_error"]]
+keys = sorted({(r["k"], r["n_keys"], r["n_slots"]) for r in dr if r["k"] < 4})
+print(f"sessions {len(cl)}, drive records {len(dr)}, scored rollouts {len(res)}, mean score {sum(r['score'] for r in res) / max(len(res), 1):.4f}, (k, keys, slots) {keys}, bad sessions {len(bad)}")
+sys.exit(1 if bad or len(dr) != 10 * len(cl) or len(res) != len(cl) else 0)
+PYEOF
+  }
+  status "closed loop: 1 scene"; loop s1 $R/scenes_sh30_1.txt 1
+  status "closed loop: 3 scenes"; loop s3 $R/scenes_sh30_3.txt 3
+  status "closed loop: 48 scenes"; loop full48 $SCENES 8 $OV8
+  $PYA $S/ap2_route.py check --run $R/ap2_full48/$TS --out $A/route_check_ap2 > "$D/route_check.txt" 2>&1 || die "route check"
+  for n in s3 full48; do $PY $S/sh30_report.py frames --run $R/ap2_$n/$TS --out $R/ap2_$n/$TS/$n --session ${SESSION:-2} || die "frames $n"; done
+  $VPY $S/sh30_report.py table --runs ap2=$R/ap2_full48/$TS sh30=$(ls -d $R/sh30_full48_c8/20261008-125144) ltf=$(ls -d $R/ltf_full48_c8/20261008-121920) --out $R/ap2_full48/$TS/table.md > /dev/null || die "table"
 else
   die "unknown stage $STAGE"
 fi
