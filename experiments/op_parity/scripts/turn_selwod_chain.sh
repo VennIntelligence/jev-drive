@@ -23,6 +23,8 @@ sub() { local n=$1; shift; local ld=$L/$n; [[ -f $ld/DONE ]] && return
         $CL submit --owner op_parity --name "tsw-$n" --log-dir "$ld" "$@" || die "submit $n"; }
 waitdirs() { for n in "$@"; do until [[ -f $L/$n/DONE || -f $L/$n/ERROR ]]; do sleep 30; done; [[ -f $L/$n/ERROR ]] && die "job failed: $L/$n/ERROR"; done; return 0; }
 
+sub spans --vram 0.5 --cpu 2 --ram 16 -- $VPY $S/turn_selwod.py spans
+waitdirs spans
 status "smoke: extract 6 frames of SH30-F-s0 (builds the tapped TensorRT engine)"
 sub x-smoke --vram 8 --cpu 8 --ram 32 -- $OP $S/turn_selwod.py extract --tag SH30-F-s0 --suffix _smoke --limit 6 --workers 6
 waitdirs x-smoke

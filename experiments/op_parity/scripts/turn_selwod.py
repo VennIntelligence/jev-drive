@@ -53,9 +53,14 @@ def load_spans():
     if (Z.root() / "sets.json").exists():
         return Z.load_spans()[0]
     f = OUT / "spans_rater.json"
-    if f.exists():
-        return json.loads(f.read_text())
+    return json.loads(f.read_text())
+
+
+def cmd_spans(a):
+    """(repo venv, CPU) writes OUT/spans_rater.json; the openpilot env has no pandas."""
+    from jevdrive import wod_zeroshot as Z
     from jevdrive import waymo as W
+    f = OUT / "spans_rater.json"
     df = W.load_index()
     names = W.frame_names(df)
     S = Z.load_sets()["rater"]
@@ -67,7 +72,7 @@ def load_spans():
     tmp = f.with_name(f".{f.name}.{os.getpid()}")
     tmp.write_text(json.dumps(spans))
     os.replace(tmp, f)
-    return spans
+    print(len(spans), "spans ->", f)
 
 
 def rater_names():
@@ -273,6 +278,7 @@ def cmd_select(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sp = ap.add_subparsers(dest="cmd", required=True)
+    sp.add_parser("spans")
     for nm in ("extract", "select"):
         p = sp.add_parser(nm)
         p.add_argument("--tag", required=True, help="SH30-F-s0 | SH30-F-s1 | WLG-full-s0 | ...")
@@ -286,7 +292,7 @@ def main():
     a = ap.parse_args()
     if a.cmd == "report":
         return __import__("turn_selwod_report").report(a)
-    {"extract": cmd_extract, "select": cmd_select}[a.cmd](a)
+    {"extract": cmd_extract, "select": cmd_select, "spans": cmd_spans}[a.cmd](a)
 
 
 if __name__ == "__main__":
