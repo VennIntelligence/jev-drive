@@ -5,6 +5,7 @@
   nt_cache.py run --stage turn|rest [--limit N]     submit worker jobs to the pool, wait, collect          (.venv; re-run = resume)
   nt_cache.py control                               rebuild 10 navtest tokens with this pipeline, compare with v2_navtest
   nt_cache.py status                                shards done / left, bytes and core-s per token so far
+  nt_cache.py verify                                filesystem check of the finished shards (run it after a reboot)
 
 Cache: $DATA_DIR/runs/navsim/metric_cache/v2_navtrain/<log>/<scene type>/<token>/metric_cache.pkl (the devkit layout, so the
 v2 scorer reads it like v2_navtest). Same devkit (`third_party/navsim` = navsim main @0a380a9, env navsim2, OPENBLAS_CORETYPE=Haswell)
@@ -318,6 +319,25 @@ def cmd_status(a):
         print(stage, json.dumps(s))
 
 
+def cmd_verify(a):
+    """Filesystem check of the finished shards: every cached token has its metric_cache.pkl in the final cache; stray dirs are listed."""
+    have = {Path(p).parent.name: Path(p).parent.parent.parent.name for p in glob.glob(str(final_dir() / "*/*/*/metric_cache.pkl"))}
+    tlog = json.loads((O() / "plan/token_log.json").read_text())
+    out, want = {}, set()
+    for stage in ("turn", "rest"):
+        sel = load_shards(stage)
+        recs = records(sel)
+        exp = {t for r, s in zip([done_file(x["name"]).exists() for x in sel], sel) if r for t in s["tokens"]}
+        miss = sorted(t for t in exp if t not in have)
+        wrong = sorted(t for t in exp if t in have and have[t] != tlog[t])
+        out[stage] = dict(shards_done=len(recs), shards=len(sel), tokens_done=len(exp), pkl_missing=len(miss), wrong_log=len(wrong))
+        want |= exp
+    out["pkl_total"], out["pkl_outside_done_shards"] = len(have), len(set(have) - want)
+    out["dirs_in_stage"] = sorted(os.listdir(O() / "stage")) if (O() / "stage").exists() else []
+    print(json.dumps(out, indent=1))
+    sys.exit(1 if out["turn"]["pkl_missing"] or out["rest"]["pkl_missing"] or out["turn"]["wrong_log"] else 0)
+
+
 # ---------------------------------------------------------------- control: same pipeline on navtest tokens vs the existing v2_navtest cache
 def cmd_control(a):
     import random
@@ -376,6 +396,7 @@ def main():
     p.add_argument("--sel", required=True)
     p.add_argument("--out", required=True)
     sp.add_parser("status")
+    sp.add_parser("verify")
     p = sp.add_parser("control")
     p.add_argument("--n", type=int, default=10)
     sp.add_parser("compare")
