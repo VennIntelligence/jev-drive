@@ -441,7 +441,8 @@ def cmd_report(a):
                     G[arm, fk, b] = gci(d, m)
                     r[b] = TC.cell(G[arm, fk, b])
                 G[arm, fk, "adj"] = gci(d, B["> 20 deg"], alpha)
-                r[f"adj. CI ({100 * (1 - alpha):.2f}%)"] = TC.cell(G[arm, fk, "adj"])
+                r["Bonferroni CI"] = TC.cell(G[arm, fk, "adj"]) if arm != "E" else ""
+                r["CI level %"] = f"{100 * (1 - alpha):.2f}" if arm != "E" else "95.00"
                 q = TC.ratio_ci(d, ceil[fk], log)
                 G[arm, fk, "rec"] = q
                 r["recovery of the ceiling"] = f"{100 * q['mean']:.1f}% [{100 * q['lo']:.1f}, {100 * q['hi']:.1f}]"
