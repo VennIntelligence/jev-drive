@@ -254,6 +254,11 @@ def cmd_select(a):
         # the WOD waypoints of the plan are the lever-arm map of the plan at T_FUT; the dense plan at 0.5 s spacing must agree with them (map consistency)
         chk = np.abs(np.stack([to_rear(f["plan_pos"][i], f["plan_yaw"][i], f["dev_xy"][i], T_FUT)[:, :2] for i in range(n)]) - f["wod"]).max()
         info = dict(n=n, g_gen_max_abs=gen, g_map_max_abs_m=float(chk), gate_B_share=float((dyaw >= TB.TURN_DEG).mean()), moved_free_share=float((pick_free != 0).mean()))
+        # G-eqv: the per-step Selector of the closed-loop lane (turn_selhug.Selector.run) picks the same candidate from the same per-frame inputs
+        import turn_selhug as TSH
+        S1 = TSH.Selector(cal_seed, "A")
+        pk1 = np.array([S1.run(f["ego"][i], f["plan_pos"][i], f["plan_yaw"][i], f["re"][i], f["v3"][i], f["h4"][i], f["hm"][i], f["dev_xy"][i])["pick_free"] for i in range(n)])
+        info["g_eqv_pick_agreement"] = float((pk1 == pick_free).mean())
         # plan-level identity gate against the archived run of the same weights (+ wrong-seed control)
         arch = np.stack([np.load(Z.root("preds", f"op_cinque_{a.tag}") / f"{k}.npz")["plan_pos"] for k in names])
         over, mx = plan_gate(arch, f["plan_pos"])
