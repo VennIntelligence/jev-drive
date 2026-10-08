@@ -4,7 +4,7 @@
            5 initialisations, seeds 200..204) and save the weights -> $DATA_DIR/runs/op_parity/turn_selbench/n7_f19_bundle.pt   (191 did not keep weights)
   repro    (op-train, GPU) G-repro: the bundle on 191's stored navtest turn-token features, gain read from the candidate score table (must be +2.75 +- 0.30)
   select   called by the bench stage `ts-select` (jevdrive.bench.navsim.select_stage): features of a bench from the base SH30 model, 19 candidates around its
-           exported poses, own-edge margins, N7 picks, gate A / B / 0 -> the model's pred file (+ <run>/select.npz)
+           exported poses, own-edge margins, N7 picks, gate A / B / 0 -> the model's pred file (+ turn_selbench/select/<spec>__<bench>.npz: picks, gate, margins, predicted gains)
   report   (jev venv or op-train) pooled official readout of the bench runs: gate coverage, strata, decomposition, sub-scores, navhard -> results/turn_selector_bench/
 
 Gates: A = every token, B = tokens whose own exported 4 s heading change is >= 20 deg (primary), 0 = forced identity (identity gate).
@@ -30,6 +30,7 @@ BUNDLE = OUTB / "n7_f19_bundle.pt"
 FK0 = TN.FK[0]                                           # "F19 x pc"
 NINIT, SEED0 = 5, 200
 TURN_DEG = 20.0                                          # gate B: the model-side analogue of the |dyaw| >= 20 deg bucket
+SELD = OUTB / "select"
 RES = _R / "experiments/op_parity/results/turn_selector_bench"
 FIG = _R / "experiments/op_parity/figs/turn_selector_bench"
 
@@ -130,6 +131,10 @@ def cmd_repro(a):
 
 
 # ---------------------------------------------------------------- select stage
+def select_file(m, bench):
+    return SELD / f"{m.spec.replace(':', '_')}__{bench}.npz"
+
+
 def seed_of(name):
     m = re.fullmatch(r"SH30-F-s(\d+)", name)
     return int(m.group(1))
@@ -219,12 +224,13 @@ def select(spec, bench, run_dir):
         for k in z.files:                                # any per-token array of the base file follows the new token order
             if k not in ("tokens", "poses") and getattr(z[k], "shape", ())[:1] == (len(z["tokens"]),):
                 arrs[k] = z[k][[row[t] for t in f["names"].tolist()]]
+        SELD.mkdir(parents=True, exist_ok=True)
+        np.savez(select_file(m, bench), tokens=f["names"], picks=pk, gate=allowed, dyaw_model=dyaw, pred=pred.astype(np.float32), C=C.astype(np.float32),
+                 pred_each=each.astype(np.float32))
         out.parent.mkdir(parents=True, exist_ok=True)
         tmp = out.with_name(f".{out.stem}.{os.getpid()}.npz")
         np.savez(tmp, **arrs)
         os.replace(tmp, out)
-        np.savez(run_dir / "select.npz", tokens=f["names"], picks=pk, gate=allowed, dyaw_model=dyaw, pred=pred.astype(np.float32), C=C.astype(np.float32),
-                 pred_each=each.astype(np.float32))
         info = dict(spec=m.spec, bench=bench, n=n, gate_share=float(allowed.mean()), moved_share=float((pk != 0).mean()),
                     moved_of_gated=float((pk[allowed] != 0).mean()) if allowed.any() else 0.0)
         run.summary.update(info)

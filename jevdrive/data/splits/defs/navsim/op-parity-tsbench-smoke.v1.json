@@ -1,0 +1,22 @@
+{
+ "dataset": "navsim",
+ "name": "op-parity-tsbench-smoke",
+ "version": 1,
+ "unit": "log",
+ "n": 6,
+ "sha256": "63e4155525991101ad53f4626e7477cbf09d3efa5cd50299ec46ce57095afb2f",
+ "origin": "6 navtest logs (474 tokens, 80 with logged |dyaw| >= 20 deg): default_rng(0).permutation(sorted navtest logs) until >= 350 tokens; whole logs so the devkit's EC pairing is intact",
+ "used_by": [
+  "experiments/op_parity (turn selector bench smoke, identity gate)"
+ ],
+ "status": "frozen",
+ "notes": "smoke only, no result is read from it",
+ "members": [
+  "2021.08.30.13.45.25_veh-40_01116_01336",
+  "2021.09.09.17.18.51_veh-48_01248_01450",
+  "2021.09.16.14.39.34_veh-42_01111_01448",
+  "2021.09.16.19.12.04_veh-42_00289_00398",
+  "2021.09.29.14.44.26_veh-28_01509_01628",
+  "2021.09.29.15.23.04_veh-28_00814_01101"
+ ]
+}
