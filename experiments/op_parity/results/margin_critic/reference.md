@@ -1,0 +1,9 @@
+| contrast R-WA - R-C1   | value                   |
+|:-----------------------|:------------------------|
+| MAE F19 4 s (m)        | -0.219 [-0.239, -0.199] |
+| AUC DAC failure        | +0.092 [+0.058, +0.123] |
+| Q1 gain, F19 x pc      | +2.16 [+1.24, +3.03]    |
+| Q2 gain, F19 x pc      | +1.63 [+0.86, +2.40]    |
+| Q3 gain, F19 x pc      | +1.78 [+0.98, +2.60]    |
+
+same head, same navtrain tokens (shards 2-4), one frame of 32 x 512 tokens + ego: WA-Cf (NAVSIM-trained encoder, in-sample on navtrain) minus frozen Cinque
