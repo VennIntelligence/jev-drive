@@ -25,12 +25,12 @@ K=12
 status() { echo "$(date '+%F %T') ap2 $STAGE: $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
-        $CL queue 2>/dev/null | awk -v p="$ld/log.txt" '($2 == "queued" || $2 == "running") && index($0, p) {f = 1} END {exit !f}' && return   # still live from an earlier start
+        $CL queue 2>/dev/null | awk -v p="$ld/log.txt" '($2 == "queued" || $2 == "running" || $2 == "inbox") && index($0, p) {f = 1} END {exit !f}' && return   # still live from an earlier start
         rm -f "$ld/ERROR"
         local id; id=$($CL submit --owner alpasim --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 20; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; return 0; }
 route() { sub ap2-route $L/route-$1 --vram 0.5 --cpu 18 --ram 40 -- $PYA $S/ap2_route.py build --data $1 --k4 $2 --workers 18; }
-prep() { local d=$1; shift; sub ap2-prep $L/prep-$d --vram 12 --cpu 20 --ram 60 -- $PY $S/ap2_prep.py --data $d --workers 18 "$@"; }
+prep() { local d=$1; shift; sub ap2-prep $L/prep-$d --vram 30 --cpu 20 --ram 60 -- $PY $S/ap2_prep.py --data $d --workers 18 "$@"; }   # encoder at batch 128: 29 GB measured
 offline() {  # name ref models... : plans on navtest, devkit scores of the subset, report
   local name=$1 ref=$2; shift 2
   sub ap2-offline $L/offline-$name --vram 20 --cpu 8 --ram 60 -- $PY $S/ap2_offline.py plans --name $name --scenes $SCENES --models "$@"
