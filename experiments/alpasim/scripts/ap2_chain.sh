@@ -83,9 +83,9 @@ elif [[ $STAGE == full ]]; then
 elif [[ $STAGE == loop ]]; then
   TAG=$1; R=$DATA_DIR/runs/alpasim; TS=$(cat "$D/ts" 2>/dev/null || date +%Y%m%d-%H%M%S | tee "$D/ts")
   OV8="runtime.nr_workers=2 runtime.endpoints.renderer.n_concurrent_rollouts=8 runtime.endpoints.driver.n_concurrent_rollouts=8 runtime.endpoints.controller.n_concurrent_rollouts=8 defines.nre_cache_size=9"
-  loop() {  # name scene-list dump overrides... : one tapped closed-loop run, then the driver-side sanity gate
-    local n=$1 list=$2 dump=$3; shift 3; local o=$R/ap2_$n/$TS
-    sub alpasim-ap2-$n $o/pool --vram 40 --cpu 16 -- env AP2_TAG=$TAG SH30_DUMP=$dump bash $S/run.sh $o ap2 --tap --scene-list $list +e2e_challenge_nuplan=full "$@"
+  loop() {  # name scene-list dump vram overrides... : one tapped closed-loop run, then the driver-side sanity gate
+    local n=$1 list=$2 dump=$3 vram=$4; shift 4; local o=$R/ap2_$n/$TS
+    sub alpasim-ap2-$n $o/pool --priority 5 --vram $vram --cpu 16 -- env AP2_TAG=$TAG SH30_DUMP=$dump bash $S/run.sh $o ap2 --tap --scene-list $list +e2e_challenge_nuplan=full "$@"
     waitdirs $o/pool
     $VPY - "$o" <<'PYEOF' || die "driver sanity $n"
 import json, sys
@@ -98,9 +98,9 @@ print(f"sessions {len(cl)}, drive records {len(dr)}, scored rollouts {len(res)},
 sys.exit(1 if bad or len(dr) != 10 * len(cl) or len(res) != len(cl) else 0)
 PYEOF
   }
-  status "closed loop: 1 scene"; loop s1 $R/scenes_sh30_1.txt 1
-  status "closed loop: 3 scenes"; loop s3 $R/scenes_sh30_3.txt 3
-  status "closed loop: 48 scenes"; loop full48 $SCENES 8 $OV8
+  status "closed loop: 1 scene"; loop s1 $R/scenes_sh30_1.txt 1 12             # renderer 5 GB (1 scene) / 12.5 GB (8 concurrent) + driver 3.5 GB
+  status "closed loop: 3 scenes"; loop s3 $R/scenes_sh30_3.txt 3 16
+  status "closed loop: 48 scenes"; loop full48 $SCENES 8 24 $OV8
   $PYA $S/ap2_route.py check --run $R/ap2_full48/$TS --out $A/route_check_ap2 > "$D/route_check.txt" 2>&1 || die "route check"
   for n in s3 full48; do $PY $S/sh30_report.py frames --run $R/ap2_$n/$TS --out $R/ap2_$n/$TS/$n --session ${SESSION:-2} || die "frames $n"; done
   $VPY $S/sh30_report.py table --runs ap2=$R/ap2_full48/$TS sh30=$(ls -d $R/sh30_full48_c8/20261008-125144) ltf=$(ls -d $R/ltf_full48_c8/20261008-121920) --out $R/ap2_full48/$TS/table.md > /dev/null || die "table"
