@@ -39,7 +39,7 @@ def work_dir():
 
 def hist_names(name):
     seq, f = name.rsplit("-", 1)
-    return [f"{seq}-{int(f) - STRIDE * k}" for k in range(NHIST - 1, -1, -1)]               # oldest first
+    return [f"{seq}-{int(f) - STRIDE * k:03d}" for k in range(NHIST - 1, -1, -1)]               # oldest first
 
 
 def targets():
