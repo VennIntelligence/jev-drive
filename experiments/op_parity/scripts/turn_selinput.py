@@ -39,8 +39,7 @@ CURVE = TD.CURVE
 PCA_STREAMS = ("T", "V", "H")
 _D = TD._D
 LAB = D / "runs/op_probe/labels/navtest.npz"
-HID = OUT / "hidden/SH30-F-s{}-warp__lb_navtest.npz"
-INF = D / "runs/op_parity/self_consist/infer/SH30-F-s{}-warp__lb_navtest.npz"
+HID = str(OUT / "hidden/SH30-F-s{}-warp__lb_navtest.npz")
 CAL = _R / "experiments/op_parity/results/self_consist/calibration.json"
 
 
