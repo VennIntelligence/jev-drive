@@ -6,7 +6,10 @@ Name syntax: `<name>[@<frames>][:<opt>]`
   frames  NAVSIM front protocol of the open-loop readouts (docs/bench.md "Frame protocols"): gimm (G, GIMM-synthesised 0.2 s
           pairs), warp (W, CPU ego-motion warp), keys (N, the 2 Hz keyframes only), real (lb_hq_navtestX only), vh140 (1.40 m
           virtual camera). HUGSIM / CARLA render their own frames, so the key of a closed-loop run ignores it.
-  opt     parity models: `noside` masks every side / rear camera at test time (navsim plans only); `lm` exports the plan through
+  opt     parity models: `tsA` / `tsB` / `ts0` put the decision-191 turn selector (N7, 19 candidates around the SH30 plan) behind the
+          export (navsim only): A every token, B only where the model's own 4 s heading change is >= 20 deg, 0 forced identity
+          (experiments/op_parity/plans/2026-10-08-turn-selector-bench-prereg.md; SH30-F-s* only);
+          `noside` masks every side / rear camera at test time (navsim plans only); `lm` exports the plan through
           the lead standstill margin (jevdrive/openpilot/lead_margin.py, op_interp adapter `lm`; navsim only, HUGSIM takes it as
           the agent option `{"lead_margin": {}}`).
 
@@ -34,6 +37,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 FRAMES = ("gimm", "warp", "keys", "real", "vh140")
+TS_OPTS = ("tsA", "tsB", "ts0")                     # turn selector gates (decision 191 N7 on SH30), see navsim.select_stage
 
 
 def data_dir() -> Path:
@@ -45,7 +49,7 @@ class Model:
     name: str                       # registry name (P2-F-s0, cinque, fw-S3, WA-JEPA)
     family: str                     # onnx | parity | wajepa
     frames: str = ""                # navsim front protocol (default per family / tag)
-    opt: str = ""                   # parity: noside | lm | sg (stop gate, serving) | dn (navtest-mean bias subtracted, serving)
+    opt: str = ""                   # parity: noside | lm | sg (stop gate, serving) | dn (navtest-mean bias subtracted, serving) | tsA | tsB | ts0 (turn selector)
     base: str = "cinque"            # openpilot base model (onnx family; parity arms are Cinque)
     onnx: str = ""                  # onnx family: serving ONNX ("" = the shipped file)
     ckpt: str = ""                  # parity: checkpoint (.pt); "" for P0 / *-init
@@ -154,9 +158,11 @@ def resolve(spec: str, check: bool = False) -> Model:
     if frames:
         m = replace(m, frames=frames)
     if opt:
-        if m.family != "parity" or opt not in ("noside", "lm", "sg", "dn"):
-            raise ValueError(f"{spec}: option {opt!r} is only defined for parity models (noside, lm, sg, dn)")
-        m = replace(m, opt=opt)
+        if m.family != "parity" or opt not in ("noside", "lm", "sg", "dn") + TS_OPTS:
+            raise ValueError(f"{spec}: option {opt!r} is only defined for parity models (noside, lm, sg, dn, tsA, tsB, ts0)")
+        if opt in TS_OPTS and not re.fullmatch(r"SH30-F-s\d+", m.name):
+            raise ValueError(f"{spec}: the turn selector options are defined for SH30-F-s* only")
+        m = replace(m, opt=opt, benches=("navtest", "navhard")) if opt in TS_OPTS else replace(m, opt=opt)
     if check:
         if m.ckpt and not Path(m.ckpt).exists():
             raise FileNotFoundError(f"{spec}: checkpoint {m.ckpt} missing")

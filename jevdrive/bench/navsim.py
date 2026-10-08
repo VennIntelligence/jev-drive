@@ -26,12 +26,13 @@ import shutil
 import subprocess
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
 
 from . import runner as R
-from .models import REPO, Model, data_dir, resolve
+from .models import REPO, TS_OPTS, Model, data_dir, resolve
 from .sets import NAVSIM, log_shards, navsim_tokens
 
 OL_REL = "bench/ol"                          # OPI_ROOT (relative to $DATA_DIR/runs)
@@ -79,16 +80,25 @@ def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "
     data = NAVSIM[bench]["data"]
     ol_root(data)                                            # plans/ and the meta.json link that op_interp reads
     S = []
+    ts = m.opt in TS_OPTS
+    if ts:                                                    # turn selector: the base model's plans / export (shared, usually finished), then `select`
+        S = [s for s in stages(replace(m, opt=""), bench, run_dir, shards, subset, procs) if s.name in ("prep", "plans", "export")]
+        S.append(R.Stage("select", R.stage_cmd("op-train", "ts-select", m.spec, bench, run_dir), done=str(pred_file(m, bench)), vram=24, cpu=4, ram=40,
+                         after=["export"], tries=2))
     if m.family == "wajepa":
         raise SystemExit(f"{m.name} on {bench}: stored reference only ({m.stored.get(bench)}); its runner is experiments/top10 "
                          "(navhard: experiments/op_parity/scripts/pp_navhard_wajepa.sh)")
     pf = plan_file(m, bench)
-    if m.family == "parity" and not pf.exists():
+    if ts:
+        pass
+    elif m.family == "parity" and not pf.exists():
         old_stem = f"{m.frames}@cinque_PP{m.name}" + (f"_{m.opt}" if m.opt else "")
         old = data_dir() / "runs/op_lb" / data / "plans" / f"{old_stem}.npz"
         if old.exists():
             _copy_into(old, pf)
-    if m.family == "parity" and not m.unfreeze:
+    if ts:
+        pass
+    elif m.family == "parity" and not m.unfreeze:
         need = [cache_dir(data, "gimm") / "tab.npz", cache_dir(data, m.frames) / "front.npy"]
         if not all(p.exists() for p in need):
             fr = [] if m.frames == "gimm" else ["--frames", m.frames]
@@ -101,21 +111,23 @@ def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "
     else:
         S.append(R.Stage("plans", R.stage_cmd("jev", "onnx-plans", m.spec, bench, pf), done=str(pf), vram=24, cpu=16, ram=32, tries=2))
     pr = pred_file(m, bench)
-    S.append(R.Stage("export", [R.py("jev"), str(REPO / "experiments/op_openloop/lib/op_interp.py"), "nav-export", "--data", data,
-                                "--adapters", adapter(m), "--plans", stem(m)],
-                     done=str(pr), env={"OPI_ROOT": OL_REL}, vram=0.5, cpu=2, ram=8, after=["plans"]))
+    if not ts:
+        S.append(R.Stage("export", [R.py("jev"), str(REPO / "experiments/op_openloop/lib/op_interp.py"), "nav-export", "--data", data,
+                                    "--adapters", adapter(m), "--plans", stem(m)],
+                         done=str(pr), env={"OPI_ROOT": OL_REL}, vram=0.5, cpu=2, ram=8, after=["plans"]))
+    last = "select" if ts else "export"
     if bench == "navtest":
         k = shards or default_shards()
         thr = max(4, min(16, int(R_cores() // max(k, 1)) - 1))
         for i in range(k):
             S.append(R.Stage(f"score{i}of{k}", R.stage_cmd("jev", "navsim-score", m.spec, bench, run_dir, i, k, subset),
                              done=str(run_dir / "score" / f"s{i}of{k}.csv"), vram=0.5, cpu=thr + 1, ram=24,
-                             env={"NAVSIM_THREADS": str(thr)}, after=["export"], tries=2))
+                             env={"NAVSIM_THREADS": str(thr)}, after=[last], tries=2))
         sc = [s.name for s in S if s.name.startswith("score")]
     else:
         n = procs or max(8, min(16, int(R_cores()) - 2))
         S.append(R.Stage("harness", [R.py("navsim2"), str(HARNESS), "--poses", str(pr), "--out", str(run_dir / "harness"), "--procs", str(n)],
-                         done=str(run_dir / "harness" / "harness_summary.json"), vram=0.5, cpu=n, ram=32, after=["export"], tries=2))
+                         done=str(run_dir / "harness" / "harness_summary.json"), vram=0.5, cpu=n, ram=32, after=[last], tries=2))
         sc = ["harness"]
     S.append(R.Stage("collect", R.stage_cmd("jev", "navsim-collect", m.spec, bench, run_dir, subset), done=str(run_dir / "DONE"),
                      vram=0.5, cpu=2, ram=8, after=sc))
@@ -137,6 +149,13 @@ def default_shards() -> int:
 
 
 # ---------------------------------------------------------------- plans
+def select_stage(spec: str, bench: str, run_dir: str) -> None:
+    """Turn selector (decision 191 N7) on the exported poses of the base SH30 model; writes this model's pred file."""
+    _pp_path()
+    import turn_selbench as TB
+    TB.select(spec, bench, run_dir)
+
+
 def _pp_path():
     for p in (REPO, REPO / "lib", REPO / "scripts", REPO / "experiments/op_adapt_r2/lib", PP):
         if str(p) not in sys.path:

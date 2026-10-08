@@ -348,6 +348,36 @@ def fit_R(tr_side, arm, fk, tr, salt):
     return pred
 
 
+def make_head(spec, dims, w, p_drop, K):
+    """The N-arm head (decision 191): dims = last-axis size of the input streams present among e / h / c; K candidates (K - 1 outputs)."""
+    import torch
+    import torch.nn as nn
+
+    class Head(nn.Module):
+        def __init__(s):
+            super().__init__()
+            if spec.get("tok"):
+                s.ln, s.proj, s.q = nn.LayerNorm(512), nn.Linear(512, 64), nn.Parameter(torch.randn(4, 64) * 0.1)
+            s.e = nn.Sequential(nn.Linear(dims["e"], w), nn.GELU())
+            s.h = nn.Sequential(nn.Linear(dims["h"], w), nn.GELU()) if "h" in dims else None
+            s.c = nn.Sequential(nn.Linear(dims["c"], w), nn.GELU()) if "c" in dims else None
+            d = w * (1 + ("h" in dims) + ("c" in dims)) + (256 if spec.get("tok") else 0)
+            s.out = nn.Sequential(nn.Linear(d, 2 * w), nn.GELU(), nn.Dropout(p_drop), nn.Linear(2 * w, K - 1))
+
+        def forward(s, tk, e, h, c):
+            z = [s.e(e)]
+            if spec.get("tok"):
+                x = s.proj(s.ln(tk.float()))
+                att = torch.softmax(torch.einsum("qd,bnd->bqn", s.q, x) / 8.0, -1)
+                z.append(torch.einsum("bqn,bnd->bqd", att, x).flatten(1))
+            if s.h is not None:
+                z.append(s.h(h))
+            if s.c is not None:
+                z.append(s.c(c))
+            return s.out(torch.cat(z, -1))
+    return Head()
+
+
 _TORCH = {}
 
 
@@ -377,29 +407,7 @@ def fit_nn(tr_side, arm, fk, tr, seed, cfg, dev_cache=_TORCH):
     Yt = T(Y[0, :, 1:] / ysd)
     torch.manual_seed(seed)
 
-    class Head(nn.Module):
-        def __init__(s):
-            super().__init__()
-            if spec.get("tok"):
-                s.ln, s.proj, s.q = nn.LayerNorm(512), nn.Linear(512, 64), nn.Parameter(torch.randn(4, 64) * 0.1)
-            s.e = nn.Sequential(nn.Linear(Z["e"].shape[-1], w), nn.GELU())
-            s.h = nn.Sequential(nn.Linear(Z["h"].shape[-1], w), nn.GELU()) if "h" in Z else None
-            s.c = nn.Sequential(nn.Linear(Z["c"].shape[-1], w), nn.GELU()) if "c" in Z else None
-            d = w * (1 + ("h" in Z) + ("c" in Z)) + (256 if spec.get("tok") else 0)
-            s.out = nn.Sequential(nn.Linear(d, 2 * w), nn.GELU(), nn.Dropout(p_drop), nn.Linear(2 * w, K - 1))
-
-        def forward(s, tk, e, h, c):
-            z = [s.e(e)]
-            if spec.get("tok"):
-                x = s.proj(s.ln(tk.float()))
-                att = torch.softmax(torch.einsum("qd,bnd->bqn", s.q, x) / 8.0, -1)
-                z.append(torch.einsum("bqn,bnd->bqd", att, x).flatten(1))
-            if s.h is not None:
-                z.append(s.h(h))
-            if s.c is not None:
-                z.append(s.c(c))
-            return s.out(torch.cat(z, -1))
-    net = Head().to(dev)
+    net = make_head(spec, {k: v.shape[-1] for k, v in Z.items()}, w, p_drop, K).to(dev)
     opt = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=wd)
 
     def batch(Zs, V, ti):
@@ -436,6 +444,7 @@ def fit_nn(tr_side, arm, fk, tr, seed, cfg, dev_cache=_TORCH):
             out.append(predict_z(Zs, Vs, idx))
         return np.concatenate([np.zeros((side["S"], len(idx), 1)), np.stack(out)], -1)
     pred.info = dict(val_gain=float(best_g), cfg=cfg)
+    pred.bundle = dict(state={k: v.cpu() for k, v in best.items()}, mu=mu, cfg=cfg, spec=spec, K=K, dims={k: v.shape[-1] for k, v in Z.items()})
     return pred
 
 
