@@ -12,7 +12,7 @@ $B run --model P2-F-s0 --bench hugsim --preset exam spec --scenarios all64     #
 $B status                                   # live runs: stage states + one STATUS line each (--wait blocks)
 $B report --bench navtest --arms P0 P2=P2-F-s0+P2-F-s1 --vs WA-JEPA --out experiments/<topic>/results/x
 $B report --bench hugsim --preset spec --arms P2=P2-F-s0+P2-F-s1 --vs P0 WA-JEPA --scenarios turn23
-$B score-poses --poses f.npz [--keys a b] [--tokens t.txt] --out o.csv --wait   # devkit scores of your own pose arrays
+$B score-poses --poses f.npz [--keys a b] [--tokens t.txt] --out o.csv --wait   # devkit scores of your own pose arrays (navtest; --mcache v2_navtrain: navtrain turn tokens)
 ```
 
 `run` submits every stage of every requested (model, bench, preset) to the GPU pool at once, chained with `after`, and returns;
@@ -174,6 +174,29 @@ inherited `OMP_NUM_THREADS=75`, the old script's LQR replay differs in the last 
 (1 key) and 20 of 3 840 rows (8 keys), at most 3e-11 in ego_progress / score / out_depth, with no sub-score flips.
 `score-poses` forces one thread. The opb_score.py wrapper keeps the caller's thread env, so old commands reproduce their
 old outputs. With one thread, the old script also ran faster: 561 s instead of 664 s at 48 workers.
+
+## v2 navtrain metric cache and turn labels (op_parity nt-cache, 2026-10-08)
+
+`score-poses --mcache v2_navtrain` scores poses against `$DATA_DIR/runs/navsim/metric_cache/v2_navtrain/` instead of the v2 navtest cache (default
+`v2_navtest`; the run identity of existing runs does not change). The v1 navtrain cache cannot be used: it lacks the human trajectory, future tracked
+objects and map parameters that the v2 scorer reads. Results, costs and base rates: [experiments/op_parity/results/nt_cache.md](../experiments/op_parity/results/nt_cache.md).
+
+- **What is in it.** All 28 323 navtrain tokens with |dyaw| >= 20 deg (the turn subset of `navsim/navtrain`), plus 5 480 other navtrain tokens from pilots. The
+  rest of navtrain is not built: 456 KB per token measured, so the full cache would be about 45 GB (limit 40 GB). Built by `experiments/op_parity/scripts/nt_cache.py`:
+  the v2 devkit as shipped (`third_party/navsim`, env navsim2, `run_metric_caching.py` defaults, `OPENBLAS_CORETYPE=Haswell`), `train_test_split=navtrain` with the
+  token filter. Rebuilding 10 v2_navtest tokens with the same command gives byte-identical fields (`nt_cache.py control`).
+- **How it is built.** `nt_cache.py plan` (token lists and shards: turn = whole logs of about 600 tokens; rest = pieces of at most 64 tokens of a log dealt to 1 500-token
+  shards, because the devkit parallelises per log) then `nt_cache.py run --stage turn|rest [--limit N pilot shards] [--jobs K]`: K pool jobs of 12 cores (half the pool's CPU
+  budget by default) claim shards from a queue, run the devkit into `$DATA_DIR/runs/op_parity/nt_cache/stage/<shard>/`, and only when it exits 0 move each token dir into
+  the cache and write `nt_cache/done/<shard>.json` (cost, bytes, missing tokens). Cost: 3.2 core-s and 394 KB per turn token.
+- **Resume after a reboot or a crash** (nothing depends on tmux or a live dispatcher for correctness): `cd ~/data/jev-drive && git pull`, start the pool dispatcher (docs/closed-loop-runbook.md)
+  if it is down, `.venv/bin/python experiments/op_parity/scripts/nt_cache.py verify` (filesystem check of the finished shards), then re-run the same `run` command:
+  finished shards are skipped, a shard without its `done` file is rebuilt from scratch, claims without a heartbeat for 300 s are taken over. Without a dispatcher a worker can be
+  started by hand, pinned to free cores: `taskset -c <12 cores> .venv/bin/python experiments/op_parity/scripts/nt_cache.py worker --sel $DATA_DIR/runs/op_parity/nt_cache/runs/<tag>/sel.json --i 0 --done /tmp/w0.DONE`
+  (not exercised). The remaining rest tokens would add about 32 GB and 57 core-h: `nt_cache.py run --stage rest`.
+- **Turn labels.** `experiments/op_parity/scripts/nt_labels.py run` (restartable): SH30-F-s0 / s1 plans of the 12 `navtrain_full` shards through `bench.navsim.parity_plans` and
+  `op_interp nav-export` (adapter base), the turn tokens with speed x 1.0 / 0.8 / 0.6 (`turn_ceiling.transform`), `score-poses --traffic non_reactive --mcache v2_navtrain`, and the table
+  `$DATA_DIR/runs/op_parity/nt_cache/labels/labels_turn.csv.gz` (token, dyaw, whether SH30 trained on it, 8 sub-scores + EPDMS per seed and variant). SH30 is trained on 27 892 of these 28 323 tokens, so its plans are in-sample there.
 
 ## Reports (`tables.py`)
 
