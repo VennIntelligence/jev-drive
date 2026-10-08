@@ -78,7 +78,7 @@ def cmd_table(a):
             L.append(f"| {'CAM_F0 JPEG decode + pack' if sh else 'one-camera JPEG decode + resize'} (in `submit_image_observation`) | {np.median(v):.1f} | {np.quantile(v, .95):.1f} | {v.max():.1f} |")
         L += ["", "frames = CPU ego-motion warp of the slot frames; encode = vision encoder on the image pairs; policy = adapter + policy; "
               "export = lever arm + resampling; prep = session bookkeeping; wait = queueing for the single inference lock; total = inside `drive`."
-              if sh else "prep_in = AgentInput assembly; infer = the shipped agent's compute_trajectory (feature builder + 4-step flow sampling, fp32) "
+              if sh else "prep_in = AgentInput assembly; infer = the shipped agent's compute_trajectory (feature builder + 4-step flow sampling; fp32, or bf16 autocast when WAJ_AMP=1) "
               "incl. CUDA sync; prep = session bookkeeping; wait = queueing for the single inference lock; total = inside `drive`."]
         if a.navsim:
             L += navsim_check(dr, a.tag)

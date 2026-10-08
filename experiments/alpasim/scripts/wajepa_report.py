@@ -103,7 +103,7 @@ def cmd_figs(a):
     for x in dr:
         sess.setdefault(x["session"], []).append(x)
     S = list(sess.values())[: a.bev]
-    fig, ax = plt.subplots(2, (len(S) + 1) // 2, figsize=(3.4 * ((len(S) + 1) // 2), 7), squeeze=False)
+    fig, ax = plt.subplots(2, (len(S) + 1) // 2, figsize=(3.4 * ((len(S) + 1) // 2), 8), squeeze=False)
     for x, s in zip(ax.ravel(), S):
         an = np.array([r["anchor"] for r in s])
         Rm = I.rot2(-an[0, 2] + np.pi / 2)                      # start heading up
@@ -112,10 +112,11 @@ def cmd_figs(a):
             x.plot(p[:, 0], p[:, 1], "-", color=plt.cm.viridis(r["k"] / 9), lw=0.9, alpha=0.9)
         d = (an[:, :2] - an[0, :2]) @ Rm.T
         x.plot(d[:, 0], d[:, 1], "k.-", lw=1.6, ms=5)
-        x.set_aspect("equal"), x.set_title(s[0]["scene"][-16:] + f"  cmd {[r['cmd'] for r in s]}", fontsize=6), x.tick_params(labelsize=6)
+        x.set_xlim(d[:, 0].mean() - 12, d[:, 0].mean() + 12), x.set_aspect("equal")
+        x.set_title(s[0]["scene"][-16:] + f"  cmd {[r['cmd'] for r in s]}", fontsize=6), x.tick_params(labelsize=6)
     for x in ax.ravel()[len(S):]:
         x.axis("off")
-    fig.suptitle("driven rear-axle path (black, one dot per decision) and each decision's 4 s plan (dark = first, yellow = last); metres, start heading up", fontsize=8)
+    fig.suptitle("driven rear-axle path (black, one dot per decision) and each decision's 4 s plan (dark = first, yellow = last); metres, start heading up, x window 24 m", fontsize=8)
     fig.tight_layout()
     fig.savefig(f"{a.out}_bev.jpg", dpi=110)
 
