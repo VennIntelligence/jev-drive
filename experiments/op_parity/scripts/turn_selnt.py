@@ -513,7 +513,7 @@ def cmd_fit(a):
         (OUT / "fit" / a.tag).mkdir(parents=True, exist_ok=True)
         with open(OUT / "fit" / a.tag / f"{arm}.pkl", "wb") as fh:
             pickle.dump(res, fh)
-        run.summary.update(arm=arm, wall_s=res["wall_s"], **{f"oof_{fk}": res[fk]["oof_gain_navtrain"] for fk in fks})
+        run.summary.update(arm=arm, fit_wall_s=res["wall_s"], **{f"oof_{fk}": res[fk]["oof_gain_navtrain"] for fk in fks})
 
 
 # ---------------------------------------------------------------- 4. gates on the navtest side
