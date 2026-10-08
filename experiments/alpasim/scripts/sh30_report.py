@@ -176,6 +176,8 @@ def cmd_frames(a):
         d = (an[:, :2] - an[0, :2]) @ R.T
         x.plot(d[:, 0], d[:, 1], "k.-", lw=1.6, ms=5)
         x.set_aspect("equal"), x.set_title(s[0]["scene"][-16:] + f"  cmd {[r['cmd'] for r in s]}", fontsize=6), x.tick_params(labelsize=6)
+    for x in ax.ravel()[len(S):]:
+        x.axis("off")
     fig.suptitle("driven rear-axle path (black, one dot per decision) and each decision's 4 s plan (dark = first, yellow = last); metres, start heading up", fontsize=8)
     fig.tight_layout()
     fig.savefig(f"{a.out}_bev.jpg", dpi=110)

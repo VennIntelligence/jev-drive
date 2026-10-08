@@ -22,6 +22,7 @@ import io
 import pathlib
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
@@ -69,22 +70,30 @@ def fill_history(pose, vel, yaw_rate: float):
     return P, V
 
 
+_POOL = None
+
+
 def lattice(keys: np.ndarray, e: int, track, cam_t, cold: str):
-    """keys (4, 2, 6, 128, 256) at op_interp.T_KEY, real from index e on -> the slot frames (8, 2, 6, 128, 256) and their validity."""
-    valid = SLOT_T >= I.T_KEY[e] - 1e-9
+    """keys (4, 2, 6, 128, 256) at op_interp.T_KEY, real from index e on -> the slot frames (8, 2, 6, 128, 256) and their validity.
+    One thread per warped slot (27 ms each on one core, numpy + cv2 outside the GIL); the frames are those of a serial synth_cpu call."""
+    global _POOL
+    _POOL = _POOL or ThreadPoolExecutor(len(SLOT_T))
+    real = SLOT_T >= I.T_KEY[e] - 1e-9
+    valid = real | (cold == "backwarp")
+    one = lambda j: (I.synth_cpu(keys, "warp", SLOT_T[j:j + 1], track, cam_t)[0] if real[j] else  # noqa: E731
+                     I.warp_frame(keys[e], cam_t, track(SLOT_T[j]), track(I.T_KEY[e])))
     cur = np.zeros((len(SLOT_T),) + FRAME, np.uint8)
-    cur[valid] = I.synth_cpu(keys, "warp", SLOT_T[valid], track, cam_t)
-    if cold == "backwarp":
-        for j in np.flatnonzero(~valid):
-            cur[j] = I.warp_frame(keys[e], cam_t, track(SLOT_T[j]), track(I.T_KEY[e]))
-        valid = np.ones_like(valid)
+    idx = np.flatnonzero(valid)
+    cur[idx] = list(_POOL.map(one, idx))
     return cur, valid
 
 
 class Core:
     def __init__(self, tag: str = "SH30-F-s0", dev: str = "cuda", cold: str = "backwarp"):
+        import cv2
         import torch
         import pp_train as T
+        cv2.setNumThreads(1)                              # the slot warps are threaded here; cv2's own pool would oversubscribe
         from jevdrive import op_adapt as A
         assert cold in COLD, cold
         self.torch, self.A, self.tag, self.cold = torch, A, tag, cold
