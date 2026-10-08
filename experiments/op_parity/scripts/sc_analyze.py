@@ -184,21 +184,20 @@ def cmd_calib(a):
 
 
 # ---------------------------------------------------------------- metrics
-def _prep(score, y, w_tok):
+def prep(score, y):
+    """Sort order and tie groups of one (score, label) set; reused over every bootstrap weight vector."""
     o = np.argsort(score, kind="stable")
     sc = score[o]
-    gid = np.concatenate([[0], np.cumsum(sc[1:] != sc[:-1])])
-    return o, gid
+    return o, np.concatenate([[0], np.cumsum(sc[1:] != sc[:-1])]), y[o]
 
 
-def auc_tpr(score, y, w, fpr=0.10):
-    """Weighted AUC (ties 1/2) and recall at the threshold that lets `fpr` of the negatives through (score high = risky)."""
-    wp, wn = w * (y == 1), w * (y == 0)
+def auc_tpr(P, w, fpr=0.10):
+    """Weighted AUC (ties 1/2) and recall at the threshold that lets `fpr` of the negatives through (score high = risky); P = prep(...)."""
+    o, gid, ys = P
+    wo = w[o]
+    wp, wn = wo * (ys == 1), wo * (ys == 0)
     if wp.sum() == 0 or wn.sum() == 0:
         return np.nan, np.nan
-    o = np.argsort(score, kind="stable")
-    sc, wp, wn = score[o], wp[o], wn[o]
-    gid = np.concatenate([[0], np.cumsum(sc[1:] != sc[:-1])])
     Wn, Wp = np.bincount(gid, wn), np.bincount(gid, wp)
     auc = float((Wp * (np.cumsum(Wn) - Wn + 0.5 * Wn)).sum() / (Wp.sum() * Wn.sum()))
     cum_wn_hi = np.cumsum(wn[::-1])                                                  # negatives at or above each position, from the top
@@ -218,12 +217,12 @@ class Boot:
         """scores / ys: lists (one per arm of a family); metric = mean over the arms. -> dict auc, tpr, lo/hi."""
         m = np.flatnonzero(mask)
         inv = self.inv[m]
-        pt = np.array([auc_tpr(s[m], y[m], np.ones(len(m))) for s, y in zip(scores, ys)])
-        pt = np.nanmean(pt, 0)
+        Ps = [prep(s[m], y[m]) for s, y in zip(scores, ys)]
+        pt = np.nanmean([auc_tpr(P, np.ones(len(m))) for P in Ps], 0)
         bs = np.empty((len(self.W), 2))
         for b in range(len(self.W)):
             w = self.W[b][inv]
-            bs[b] = np.nanmean([auc_tpr(s[m], y[m], w) for s, y in zip(scores, ys)], 0)
+            bs[b] = np.nanmean([auc_tpr(P, w) for P in Ps], 0)
         q = np.nanpercentile(bs, [2.5, 97.5], axis=0)
         return dict(auc=pt[0], auc_lo=q[0, 0], auc_hi=q[1, 0], tpr10=pt[1], tpr_lo=q[0, 1], tpr_hi=q[1, 1])
 
