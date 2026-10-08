@@ -24,8 +24,8 @@ WJ() { echo "cd $DATA_DIR/third_party/wajepa && PYTHONPATH=$DATA_DIR/third_party
 stage() {
   local suf=$1 lim=$2 L=$D/pool$1
   status "stage ${suf:-full}: render V1 / V2 (limit $lim)"
-  for v in V1 V2; do sub wax-render-$v$suf $L/render-$v --cpu 48 --ram 64 -- $J $S/wa_xboard.py render --variant $v --limit $lim; done
-  sub wax-req$suf $L/req --cpu 2 --ram 8 -- $J $S/wa_xboard.py req --limit $lim --suffix "$suf"
+  for v in V1 V2; do sub wax-render-$v$suf $L/render-$v --vram 1 --cpu 48 --ram 64 -- $J $S/wa_xboard.py render --variant $v --limit $lim; done
+  sub wax-req$suf $L/req --vram 1 --cpu 2 --ram 8 -- $J $S/wa_xboard.py req --limit $lim --suffix "$suf"
   waitdirs $L/render-V1 $L/render-V2 $L/req
   status "stage ${suf:-full}: WA-JEPA inference"
   local c1=V1$suf c2=V2$suf
@@ -35,7 +35,7 @@ stage() {
 }
 
 case $STAGE in
-  g0)   sub wax-g0 $D/pool_g0 --cpu 4 --ram 16 -- $J $S/wa_xboard.py g0; waitdirs $D/pool_g0 ;;
+  g0)   sub wax-g0 $D/pool_g0 --vram 1 --cpu 4 --ram 16 -- $J $S/wa_xboard.py g0; waitdirs $D/pool_g0 ;;
   n1)   stage _n1 1 ;;
   n10)  stage _n10 10 ;;
   full) stage "" 0 ;;
