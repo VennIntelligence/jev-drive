@@ -692,6 +692,37 @@ def cmd_report(a):
                     r[fk] = TC.cell(gci(D_[arm, fk] - D_["E", fk], B["> 20 deg"]))
             rows.append(r)
         stats.write_table(rows, out / "contrasts_vs_E", note="paired difference of gains, > 20 deg")
+        # ---- per-initialisation gains of the NN arms (spread behind the ensemble) and the token-permutation null
+        rows = []
+        ax3 = np.array([c[1:] for c in C])
+        rng = np.random.default_rng(0)
+        nperm = 200
+        for arm in ARMS:
+            if arm not in R:
+                continue
+            for fk in FK:
+                if fk not in R[arm]:
+                    continue
+                r_ = R[arm][fk]
+                pred = r_["test_pred"]
+                pk = TD.picks_of(pred)
+                row = {"arm": arm, "family x convention": fk}
+                if "test_pred_each" in r_:
+                    each = [100 * d_of(p, fk).mean() for p in r_["test_pred_each"]]
+                    row["single-init gains"] = ", ".join(f"{x:+.2f}" for x in each)
+                    row["ensemble"] = f"{100 * D_[arm, fk].mean():+.2f}"
+                obs = 100 * D_[arm, fk].mean()
+                null = np.array([100 * TD.take(Y[fk], pk[:, rng.permutation(pk.shape[1])]).mean() for _ in range(nperm)])
+                row["token-permuted picks: mean [min, max]"] = f"{null.mean():+.2f} [{null.min():+.2f}, {null.max():+.2f}]"
+                row["permutation p"] = f"{(1 + (null >= obs).sum()) / (1 + nperm):.3f}"
+                if fk == f0:
+                    cand = ax3[np.asarray(F["F19"])[pk]]                                  # (S, n, 3): offset, curvature gain, speed
+                    row.update({"offset moved %": 100 * (cand[..., 0] != 0).mean(), "curvature moved %": 100 * (cand[..., 1] != 1).mean(),
+                                "speed < 1 %": 100 * (cand[..., 2] < 1).mean(), "speed > 1 %": 100 * (cand[..., 2] > 1).mean()})
+                rows.append(row)
+        stats.write_table(rows, out / "spread_null_axes", floatfmt=".1f", note="single-init = gain of each of the 5 initialisations alone (NN arms); permutation = each token's pick applied to a random "
+                          "other token (200 permutations over all 3 154 tokens, seeds kept), p = share of permutations at least as good as the observed gain; axes = what the selector moves "
+                          "(F19 x pc picks, % of token-seeds)")
         fig_report(figd, G, CV, R, ceil, prior, prior_c, primary)
         run.summary.update(primary=primary, case=vd["case"], gain=pm["mean"], lo975=padj["lo"])
 
