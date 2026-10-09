@@ -112,3 +112,12 @@ mean(T) ≤ 0（定时点平均不在内侧）时 ρ 无定义，几何一条记
 与 `pt_swap_chain.sh`（tmux `jev:pt-swap`，DONE / ERROR / STATUS；阶段：build → stage 0 少量 token 的恒等闸门 → 全量打分 + 闸门 → DAC 失败行重放 → report）。
 打分并发 JOBS=3，不写死核数。输出 `runs/op_parity/pt_swap/`，完成后删掉 poses 与逐行中间件，只留小表。结果 `experiments/op_parity/results/path_timing_swap.md` 与
 `results/pt_swap/`，图 `figs/pt_swap/`，决策第 207 条。
+
+## 补记 A（2026-10-09，第一次 build 报错之后、任何 swap 轨迹的分数或几何读数之前）
+
+第一次 build 在读 P2-F-s1 的导出位姿时报错退出，没有写出任何轨迹或几何量。写代码时定下、正文没有写到的三点：
+
+1. **P2 只有 seed 0**：`P2-F-s1` 的 navtest 导出位姿没有存档（只有分数），P2 一行用单 seed。
+2. **样条护栏**：样条与同一组顶点的折线在任一处偏离 > 0.3 m 时，该曲线退回折线（低速时很短的相邻弦方向有噪声，样条会鼓包）。退回的曲线数随 build 的校验一起报。
+3. **E1 的残差比**：只用运动中的 token（s_plan(4 s) ≥ 2 m 且 s_log(4 s) ≥ 2 m），r 截到 [1/3, 3] 后取 200 个等间隔分位点再除以均值；预测只在这些 token 上算。
+   不截断时起步 / 停车 token 的 r 可到几十，日志曲线按恒曲率延伸几百米会绕圈，平均点没有意义。截断使 E1 不再是严格上界，是「运动 token、去掉极端尾部」口径下的量级估计，报告里照此表述。

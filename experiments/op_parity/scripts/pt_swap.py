@@ -42,7 +42,7 @@ RES = OUT / "report"
 TAB = D / "runs/op_parity/cache/lb_navtest/tab.npz"
 # family -> (members: key prefix -> bench model spec or innov member)
 FAM = {"SH30": {"sh0": "SH30-F-s0", "sh1": "SH30-F-s1"}, "RMH10": {"rm0": "RMH10-F-s0", "rm1": "RMH10-F-s1"},
-       "P2": {"p20": "P2-F-s0", "p21": "P2-F-s1"}, "OT30": {"ot0": "OT30-F-s0", "ot1": "OT30-F-s1"}, "WA-JEPA": {"wa": "WA-JEPA"}}
+       "P2": {"p20": "P2-F-s0"}, "OT30": {"ot0": "OT30-F-s0", "ot1": "OT30-F-s1"}, "WA-JEPA": {"wa": "WA-JEPA"}}
 MEM = {k: v for f in FAM.values() for k, v in f.items()}
 CELLS = ("pp", "pl", "lp")
 XCELLS = ("plx", "lpx")                                  # ext-line sensitivity, SH30 only
@@ -207,7 +207,7 @@ def cmd_build(a):
             if xl:
                 turn, spd = st.turn.to_numpy(str), st.speed.to_numpy(str)
                 Xh = np.full((n, 8), np.nan)
-                base = s_plan[:, -1] >= 2.0
+                base = (s_plan[:, -1] >= 2.0) & (s_log[:, -1] >= 2.0)        # amendment A: moving tokens, ratio clipped to [1/3, 3]
                 q = (np.arange(NQ) + 0.5) / NQ
                 for tb in TURNS[2:]:
                     for sb in np.unique(spd):
@@ -216,9 +216,9 @@ def cmd_build(a):
                             use = cell & base & (s_plan[:, k + 1] >= 0.5)
                             if use.sum() < 30:
                                 continue
-                            r = np.quantile(s_log[use, k + 1] / s_plan[use, k + 1], q)
+                            r = np.quantile(np.clip(s_log[use, k + 1] / s_plan[use, k + 1], 1 / 3, 3.0), q)
                             r = r / r.mean()
-                            for i in np.flatnonzero(cell):
+                            for i in np.flatnonzero(cell & base):
                                 lc = LC[i]
                                 pts = lc.at(s_log[i, k + 1] * r)[:, :2].mean(0, keepdims=True)
                                 Xh[i, k] = sgn[i] * signed_dist(pts, lc.dense(s_log[i, k + 1] * r.max() + 1.0))[0]
