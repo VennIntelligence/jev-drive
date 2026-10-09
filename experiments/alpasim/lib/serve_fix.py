@@ -111,11 +111,12 @@ class LongMpc:
     """openpilot's lead MPC (long_mpc.py gen_long_ocp) in the 12 jerks: the same least-squares cost; the three limits that carry the slack
     weight 1e6 there (v >= 0, ACCEL_MIN <= a <= ACCEL_MAX) are linear in the jerks and enter as constraints of scipy's SLSQP (the
     danger-zone slack, weight 100, stays a one-sided penalty). Warm-started from the previous tick; 8 iterations reproduce the
-    converged acceleration to 0.1 m/s^2 on hard-braking cases at 0.6 ms per tick."""
+    converged closed-loop gap to a few 0.1 m on the toy cases at 0.4-1 ms per tick; when the limits cannot all hold from the current state
+    (standing with a braking command) the solve is repeated with v >= 0 as the slack penalty."""
 
     def __init__(self, dt: float = DT_MDL, iters: int = 8):
         from scipy.optimize import minimize
-        self.dt, self.iters, self._min = dt, iters, minimize
+        self.dt, self.iters, self.ftol, self._min = dt, iters, 1e-6, minimize
         self.reset()
 
     def reset(self):
@@ -154,7 +155,7 @@ class LongMpc:
         wa = _SQ_A * float(prev_accel_constraint)
         nv = N - 1
         b = np.concatenate([-(v + a * T_MPC[1:-1]), np.full(nv, ACCEL_MIN - a), np.full(nv, a - ACCEL_MAX)])
-        opt = {"maxiter": self.iters, "ftol": 1e-9}
+        opt = {"maxiter": self.iters, "ftol": self.ftol}
         res = self._min(self.cost, self.j, args=(v, a, xo, wa), jac=True, method="SLSQP", options=opt,
                         constraints=[{"type": "ineq", "fun": lambda j: _C @ j - b, "jac": lambda j: _C}])
         j = res.x
@@ -269,6 +270,8 @@ class Serve:
 
 VCONT, LEAD = float(os.environ.get("JEV_VCONT", "0") or 0), os.environ.get("JEV_LEAD", "0") == "1"
 ON = VCONT > 0 or LEAD
+if LEAD:
+    import scipy.optimize  # noqa: F401  (paid at start-up, not inside the first decision)
 SUFFIX = (f"-vc{VCONT:g}" if VCONT > 0 else "") + ("-lead" if LEAD else "")
 
 
