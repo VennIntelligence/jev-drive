@@ -117,7 +117,7 @@ def main() -> None:
         core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])
     LOG.info("%s (%s, route arm %s) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, core.route, time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
     drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1", os.environ.get("SH30_MOTION_GATE", ""))
-    server = D.grpc.server(ThreadPoolExecutor(max_workers=int(os.environ.get("ALPASIM_DRIVER_GRPC_WORKERS", "8"))))
+    server = D.grpc.server(D.warm_workers(lambda: core.plan([z] * 4, np.zeros((4, 3)), np.zeros((4, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])))
     D.egodriver_pb2_grpc.add_EgodriverServiceServicer_to_server(drv, server)
     if server.add_insecure_port(f"{host}:{port}") == 0:
         raise RuntimeError(f"failed to bind {host}:{port}")

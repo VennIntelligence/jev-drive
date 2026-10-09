@@ -1,0 +1,12 @@
+# Driver image packages = the box's serving env (envs/op-train, 2026-10-09) for the modules the drivers import. torch: the same release
+# built for CUDA 12.6 (the env has +cu130); it lives on download.pytorch.org/whl/cu126, everything else on PyPI. requirements.lock is
+# compiled from this file (wheels.py says how) and is what the image installs, with hashes.
+torch==2.14.0+cu126
+numpy==2.4.6
+scipy==1.17.1
+opencv-python-headless==4.11.0.86
+pillow==12.3.0
+onnx==1.23.0
+pandas==3.0.5
+grpcio==1.84.0
+protobuf==7.36.2

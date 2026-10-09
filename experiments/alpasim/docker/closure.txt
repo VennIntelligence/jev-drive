@@ -1,0 +1,20 @@
+# Repo files the drivers import (sys.modules of sh30_driver + ap2_driver + ens_driver on the box, 2026-10-09). build.sh copies exactly
+# these into the image; verify.py fails the build when an import needs a file that is not listed.
+jevdrive/__init__.py
+jevdrive/common.py
+jevdrive/navsim_zs.py
+jevdrive/op_adapt.py
+jevdrive/op_interp.py
+jevdrive/op_torch.py
+jevdrive/openpilot/__init__.py
+jevdrive/openpilot/frames.py
+lib/parity_adapter.py
+experiments/op_adapt_l/lib/op_adapt_l.py
+experiments/op_adapt_r2/lib/op_adapt_r2.py
+experiments/op_parity/scripts/pp_train.py
+experiments/alpasim/lib/sh30_core.py
+experiments/alpasim/lib/sh30_driver.py
+experiments/alpasim/lib/ap2_core.py
+experiments/alpasim/lib/ap2_driver.py
+experiments/alpasim/lib/ap2_inputs.py
+experiments/alpasim/lib/ens_driver.py

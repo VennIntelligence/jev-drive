@@ -268,6 +268,23 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                                     grpc_api_version=API)
 
 
+def warm_workers(fn) -> ThreadPoolExecutor:
+    """The gRPC worker pool (ALPASIM_DRIVER_GRPC_WORKERS threads) with `fn` (one inference) already run in every thread: the CUDA libraries
+    initialise per thread, which costs the first `drive` a thread serves 1.35 s in the submission image (torch +cu126, RTX 3090;
+    results/tokyo_image_smoke.md), paid here before the port opens instead of inside the first rollouts."""
+    n = int(os.environ.get("ALPASIM_DRIVER_GRPC_WORKERS", "8"))
+    pool, bar, lock = ThreadPoolExecutor(max_workers=n), threading.Barrier(n), threading.Lock()
+
+    def one(_):
+        bar.wait()                                       # every worker thread exists before any of them returns to the pool
+        with lock:
+            fn()
+    t0 = time.time()
+    list(pool.map(one, range(n)))
+    LOG.info("%d worker threads warmed in %.1f s", n, time.time() - t0)
+    return pool
+
+
 def main() -> None:
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     import torch
@@ -281,7 +298,7 @@ def main() -> None:
         core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])
     LOG.info("%s (%s, motion %.2f, synth %s) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, core.motion, core.synth, time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
     drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1", os.environ.get("SH30_MOTION_GATE", ""))
-    server = grpc.server(ThreadPoolExecutor(max_workers=int(os.environ.get("ALPASIM_DRIVER_GRPC_WORKERS", "8"))))
+    server = grpc.server(warm_workers(lambda: core.plan([z] * 4, np.zeros((4, 3)), np.zeros((4, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])))
     egodriver_pb2_grpc.add_EgodriverServiceServicer_to_server(drv, server)
     if server.add_insecure_port(f"{host}:{port}") == 0:
         raise RuntimeError(f"failed to bind {host}:{port}")
