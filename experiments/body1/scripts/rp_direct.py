@@ -28,10 +28,32 @@ LISTS = B.RA / "c0b/lists"
 TIMEOUT_S = 3600
 
 
+ACTIVE = []
+
+
+def free_cores(n):
+    """The n highest cores that no running pool job and no job of this chain is pinned to (a pool job runs under taskset; an unpinned AlpaSim
+    stack sizes its thread pools from all 208 host threads and exhausts the container's pid limit: pilot of 2026-10-10)."""
+    used = set()
+    try:
+        for j in json.loads((B.DATA / "runs/pool/state.json").read_text())["jobs"].values():
+            if j.get("state") == "running":
+                for part in filter(None, str(j.get("cpus") or "").split(",")):
+                    a, _, b = part.partition("-")
+                    used |= set(range(int(a), int(b or a) + 1))
+    except Exception as e:
+        B.log(f"pool state unreadable ({e!r}): cores chosen without it")
+    for j in ACTIVE:
+        if j.state == "active":
+            used |= set(j.cpus)
+    return sorted(sorted(set(os.sched_getaffinity(0)) - used)[-n:])
+
+
 class Job:
     def __init__(self, label, name, drv, env, scenes):
         self.label, self.name, self.drv, self.env, self.scenes = label, name, drv, env, scenes
         self.n, self.state, self.tries, self.dirs, self.p, self.D = len(scenes.read_text().split()), "new", 0, [], None, None
+        self.cpus = []
 
     def start(self):
         self.tries += 1
@@ -41,10 +63,11 @@ class Job:
         self.D = B.O / "runs" / self.name / time.strftime("%Y%m%d-%H%M%S")
         (self.D / "pool").mkdir(parents=True)
         env = dict(os.environ, CUDA_VISIBLE_DEVICES=CARD, **self.env)
-        self.p = subprocess.Popen(["bash", "experiments/alpasim/scripts/run.sh", str(self.D), self.drv, "--scene-list", str(self.scenes), *B.OVERRIDES], cwd=REPO, env=env,
+        self.cpus = free_cores(8)
+        self.p = subprocess.Popen(["taskset", "-c", ",".join(map(str, self.cpus)), "bash", "experiments/alpasim/scripts/run.sh", str(self.D), self.drv, "--scene-list", str(self.scenes), *B.OVERRIDES], cwd=REPO, env=env,
                                   stdout=open(self.D / "pool/log.txt", "w"), stderr=subprocess.STDOUT, start_new_session=True)
         self.state, self.t0 = "active", time.time()
-        B.log(f"{self.name}: started pid {self.p.pid} on card {CARD} try {self.tries} -> {self.D}")
+        B.log(f"{self.name}: started pid {self.p.pid} on card {CARD} cores {self.cpus[0]}-{self.cpus[-1]} try {self.tries} -> {self.D}")
 
     def n_done(self):
         return sum(1 for _ in glob.iglob(str(self.D / "rollouts/*/*/_complete"))) if self.D else 0
@@ -66,6 +89,14 @@ class Job:
             B.log(f"{self.name}: rc {rc}, no results-summary ({e!r})")
             self.start()
             return False
+        bad = [sid for sid, r in R.items() if (r.get("score_metrics") or {}).get("progress_clipped_rel") is None and "Evaluation failed" in (r.get("failure_reason") or "")]
+        if bad:                                                        # the scorer died (not a driving failure): the scene is run again, this run dir is not kept for it
+            B.log(f"{self.name}: {len(bad)} rollouts without an evaluation, treated as missing")
+            d = json.loads((self.D / "aggregate/results-summary.json").read_text())
+            (self.D / "aggregate/results-summary.with-failed-eval.json").write_text(json.dumps(d))
+            d["rollouts"] = [r for r in d["rollouts"] if r["clipgt_id"] not in bad]
+            (self.D / "aggregate/results-summary.json").write_text(json.dumps(d))
+            R = {k: v for k, v in R.items() if k not in bad}
         missing = sorted(set(self.scenes.read_text().split()) - set(R))
         if not KEEP:
             for sid, r in R.items():
@@ -106,6 +137,7 @@ def main():
             continue
         for part in (["chunk0", "chunk1", "chunk2"] if lst in ("", "chunks") else [lst]):
             jobs.append(Job(label, f"{label}-{part}", drv, dict(e.split("=", 1) for e in env.split(",") if e), LISTS / f"{part}.txt"))
+    ACTIVE.extend(jobs)
     while True:
         for j in jobs:
             if j.state == "new" and sum(x.state == "active" for x in jobs) < MAXA:
