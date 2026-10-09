@@ -119,7 +119,7 @@ def render(case, o, recs, rd, out, max_mb):
         ax.add_patch(MP(tf(np.array(L.box(*pe).exterior.coords)), fc=RED if hit else BLUE, ec="k", lw=0.6, alpha=0.9, zorder=6))
         ax.set_xlim(-W, W), ax.set_ylim(-W, W), ax.set_aspect("equal"), ax.set_xticks([]), ax.set_yticks([])
         ax.set_title(f"{case['id']}  {case['set']}  t = {t * 1e-6:.2f} s" + ("   CONTACT" if hit else ""), fontsize=9, color=RED if hit else "k", loc="left")
-        ax.text(0.02, 0.02, "blue ego / green plan / dashed log / orange traced object", transform=ax.transAxes, fontsize=7, color="#333")
+        ax.text(0.02, 0.02, "blue ego / green plan / dashed log / orange traced object", transform=ax.transAxes, fontsize=7, color="#333", bbox=dict(fc="white", ec="none", alpha=0.7, pad=1), zorder=9)
         fr = recs[k].get("frame")
         for j, name in enumerate(("road frame (model input)", "wide frame (model input)")):
             a2 = fig.add_subplot(gs[j, 3:6])
@@ -150,7 +150,7 @@ def render(case, o, recs, rd, out, max_mb):
             if t_ev is not None:
                 a3.axvline(t_ev * 1e-6, color=RED, lw=1.2)
             a3.set_xlim(0, t_end * 1e-6), a3.set_ylabel(yl, fontsize=8, labelpad=1), a3.tick_params(labelsize=7, pad=1)
-            a3.set_xlabel("s", fontsize=7, labelpad=0), a3.legend(fontsize=6, loc="upper left", frameon=False, handlelength=1.2)
+            a3.set_xlabel("s", fontsize=7, labelpad=0), a3.legend(fontsize=6, loc="lower left" if j == 2 else "upper left", frameon=False, handlelength=1.2)
         b = io.BytesIO()
         fig.savefig(b, format="png")
         plt.close(fig)
@@ -160,9 +160,13 @@ def render(case, o, recs, rd, out, max_mb):
     dur[-1] = 1500
     if t_ev is not None:                                    # hold the first contact frame
         dur[int(np.argmax(ts >= t_ev))] = 1200
-    for scale, ncol in ((1.0, 96), (0.9, 64), (0.8, 64), (0.7, 48), (0.6, 32)):
+    for scale, ncol in ((1.0, 128), (1.0, 96), (0.9, 64), (0.8, 64), (0.7, 48), (0.6, 32)):
         fs = [x.resize((int(x.width * scale), int(x.height * scale)), Image.LANCZOS) if scale < 1 else x for x in frames]
-        pal = fs[len(fs) // 2].quantize(ncol, method=Image.MEDIANCUT, dither=Image.Dither.NONE)
+        pick = sorted({0, len(fs) // 3, 2 * len(fs) // 3, len(fs) - 1})        # one palette for the clip, from frames before and after the contact
+        mos = Image.new("RGB", (fs[0].width, fs[0].height * len(pick)))
+        for i, j in enumerate(pick):
+            mos.paste(fs[j], (0, i * fs[0].height))
+        pal = mos.quantize(ncol, method=Image.MEDIANCUT, dither=Image.Dither.NONE)
         q = [x.quantize(palette=pal, dither=Image.Dither.NONE) for x in fs]
         q[0].save(f, save_all=True, append_images=q[1:], duration=dur, loop=0, optimize=False, disposal=1)
         if f.stat().st_size <= max_mb * 2**20:

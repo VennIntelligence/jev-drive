@@ -268,12 +268,12 @@ def cmd_tax(a):
     for k, name in (("ego_v", "median ego speed at impact m/s"), ("lat_off", "median signed lateral offset m"), ("vis_to_impact_s", "median s from first visible to impact"),
                     ("t_event", "median impact time s"), ("log_min_gap", "median closest approach of the logged human to the object m")):
         md.append(f"| {name} | " + " | ".join(med(g, k) if k != "lat_off" else (lambda v: f"{np.median(np.abs(v)):.2f} (abs)")([r[k] for r in g]) for _, g in groups) + " |")
-    md += ["", "## Kind x drift, P2H10-F both seeds", "", "| kind | n | off path >= 0.5 m | clear on logged path | WA-JEPA passes | other seed passes | median ego m/s | static object |", "|:--|--:|--:|--:|--:|--:|--:|--:|"]
+    md += ["", "## Kind x drift, P2H10-F both seeds", "", "| kind | n | distinct scenes | off path >= 0.5 m | clear on logged path | WA-JEPA passes | other seed passes | median ego m/s | static object |", "|:--|--:|--:|--:|--:|--:|--:|--:|--:|"]
     g0 = groups[0][1]
     for kd in KINDS:
         g = [r for r in g0 if r["kind"] == kd]
         if g:
-            md.append(f"| {kd} | {len(g)} | {sum(not r['on_path'] for r in g)} | {sum(r['clear_on_log_path'] for r in g)} | "
+            md.append(f"| {kd} | {len(g)} | {len({r['scene'] for r in g})} | {sum(not r['on_path'] for r in g)} | {sum(r['clear_on_log_path'] for r in g)} | "
                       f"{sum(bool(tests[19][1](r)) for r in g)} | {sum(bool(tests[21][1](r)) for r in g)} | {np.median([r['ego_v'] for r in g]):.1f} | {sum(r['obj_static'] for r in g)} |")
     sc = Counter(r["scene"] for r in g0)
     md += ["", f"P2H10-F: {len(g0)} collision rollouts in {len(sc)} distinct scenes ({sum(v == 2 for v in sc.values())} scenes collide in both seeds), "
