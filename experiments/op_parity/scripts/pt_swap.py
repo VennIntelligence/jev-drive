@@ -649,6 +649,49 @@ def cmd_report(a):
         P("\nz = (logged |heading change| / logged arc) x ds^2 / 2 with ds = logged minus planned 4 s arc length: the inside offset a time-aligned comparison shows "
           "when two trajectories share a path and differ only in how far they got. (T - C) on z is the check of that identity.")
 
+        # ---- post hoc (not registered): lateral dispersion, failure kind x curve offset, direction split of the 2 x 2
+        P("\n## 9. Post hoc (not registered)\n")
+        rows = []
+        for fam in FAM:
+            k = len(FAM[fam])
+            c2 = CB(tl(logs, k))
+            ok = np.concatenate([G[f"{m}_ok"] for m in FAM[fam]])
+            C4 = np.concatenate([G[f"{m}_C"][:, -1] for m in FAM[fam]])
+            for b in ("<5", "5-20", "20-45", ">45", ">20"):
+                mm = tl(BK[b], k) & ok
+                rows.append(dict(model=fam, bucket=b, **{"mean |C(4 s)| (m) [95% CI]": pc(c2.mean(np.abs(C4), mm), "{:.3f}"), "median |C(4 s)|": float(np.median(np.abs(C4[mm]))),
+                                 "P90 |C(4 s)|": float(np.quantile(np.abs(C4[mm]), 0.9)), "sd C(4 s)": float(C4[mm].std())}))
+                summ[f"absC|{fam}|{b}"] = c2.mean(np.abs(C4), mm)
+        t = pd.DataFrame(rows)
+        t.to_csv(RES / "dispersion.csv", index=False)
+        P("### Size of the curve offset at equal arc length, |C(4 s)| (m)\n\n" + md(t, 3))
+        k = len(FAM["SH30"])
+        KD = [np.concatenate([kinds(f"{m}_pp")[j] for m in FAM["SH30"]]) for j in range(4)]
+        Cm = np.concatenate([G[f"{m}_C"] for m in FAM["SH30"]])
+        rows = []
+        for b in (">20", ">45"):
+            for nm, m_ in (("DAC pass", ~KD[0]), ("inside-cut", KD[1]), ("cannot-make-turn", KD[2]), ("other DAC fail", KD[3])):
+                mm = tl(BK[b], k) & m_
+                rows.append(dict(bucket=b, **{"stored plan": nm, "token-seeds": int(mm.sum()), "mean C(4 s)": float(Cm[mm, -1].mean()), "mean peak inside (max_k C)": float(Cm[mm].max(1).mean()),
+                                 "mean peak outside (min_k C)": float(Cm[mm].min(1).mean()), "C(4 s) > +0.3 m %": 100 * float((Cm[mm, -1] > 0.3).mean()),
+                                 "C(4 s) < -0.3 m %": 100 * float((Cm[mm, -1] < -0.3).mean()), "mean ds (m)": float(ds[mm].mean())}))
+        t = pd.DataFrame(rows)
+        t.to_csv(RES / "kind_offset.csv", index=False)
+        P("\n### SH30: curve offset by the stored plan's DAC outcome (inside positive)\n\n" + md(t))
+        rows = []
+        for fam in ("SH30", "WA-JEPA"):
+            for b in (">20 left", ">20 right", ">45 left", ">45 right"):
+                r = dict(model=fam, bucket=b, n=int(GB[b].sum()))
+                for cell in CELLS:
+                    r[f"{cell.upper()} EPDMS"] = 100 * np.nanmean(fam_mean(fam, cell, lambda k_: S[k_]["score"])[GB[b]])
+                    r[f"{cell.upper()} DAC fail %"] = 100 * np.nanmean(fam_mean(fam, cell, lambda k_: S[k_]["DAC"] < 1)[GB[b]])
+                for cell in ("pl", "lp"):
+                    r[f"{cell.upper()} DAC gross removed % [95% CI]"] = pc(removal(fam, cell, fDAC, GB[b])["gross"], "{:.1f}", 100)
+                rows.append(r)
+        t = pd.DataFrame(rows)
+        t.to_csv(RES / "direction.csv", index=False)
+        P("\n### The 2 x 2 by turn direction\n\n" + md(t))
+
         # ---- verdict against the registered lines
         key = summ["SH30|DAC|>20|pl"]
         rho = GEO[("SH30", ">20", "mean k")]
