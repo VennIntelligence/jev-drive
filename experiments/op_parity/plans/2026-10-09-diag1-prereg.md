@@ -97,3 +97,43 @@ prior. If the audit finds a frames / units / ego-feature-scaling fault instead, 
 
 Budget: <= 10 card-hours, ~6 h wall, <= 8 jobs at a time, lane cores <= 100; all GPU work through the pool; board scores only through
 `jevdrive.bench` / the `wod_slot` (`mixed_domain.Wod`) path.
+
+## Amendment 1 (2026-10-10, before any read of it): the training-free arms and the audit probes on the WOD-trained checkpoints
+
+Question (coordinator, for the user): can the mechanism of decision 218 lift the WOD-trained checkpoint above its current best? Read before anything is
+trained. Stored predictions only (decision 155 harness; `preds/op_cinque_{WP2,WLG}-full-s{0,1}`, the wod-launch lane's stored variants
+`lx-WP2-full-s{0,1}_{acc0,zero,biasmean,biasresid}`); no GPU job, no training, nothing submitted to the WOD leaderboard.
+
+Checkpoints: WP2 (decision 163; per-frame mean of the two seeds' scores), WLG (decision 169; same), WLGm = the 2-seed trajectory mean of WLG (the submitted
+form, decision 180; one trajectory per frame). G0: the unmodified rows reproduce 8.111 / 8.187 / 8.178.
+
+Arms, each against the unmodified checkpoint, WOD val, RFS on the 479 rater frames (cluster mean) and ADE@3s on 1 437 frames, paired percentile bootstrap over
+sequences (B 4 000), exactly as job 1:
+1. (a) speed-continuous re-timing (tau 1.0 s, v0 = fed speed);
+2. (b) FIX1's lead cap (`serve_fix.LeadPlanner` as in job 1: shipped lead outputs of the same frames, one reset tick);
+3. (a) + (b);
+4. AS: the checkpoint's path with the shipped (base) model's speed profile on all frames (`pp_wod_diag.retime`);
+5. AS on moving frames (v0 >= 0.5 m/s), the checkpoint's own trajectory at standstill;
+6. per-frame best of {own, AS}: a privileged ceiling, not an arm (no label).
+Lines for arms 1 - 5, per checkpoint: "helps" = RFS difference > 0 with the CI excluding 0; "hurts" = < 0 with the CI excluding 0; else "no measurable
+change". Primary checkpoint: WLG (the two-seed score mean); WP2 and WLGm are reported with the same labels but are secondary. Five arms on one checkpoint:
+a single CI excluding 0 by a small margin is weak.
+Power and selection, stated now: val has 479 rater frames, the detectable size is about 0.05 - 0.08 RFS; decision 171 showed that in-sample preference
+gains on these frames shrink 3 - 4x out of fold. So an arm that reads "helps" here is a candidate only: it is called a gain after a held-out confirmation
+(the val-half split `wod/val-half{0,1}-s0`: sign and size on each half are reported here as a first check; a real confirmation is a WOD test read, which
+this lane does not make). Strata (secondary, no label): standstill / moving, lead / no lead, standstill + lead, speed bins.
+
+Audit probes on WP2 / WLG (measurement, no lines; definitions D1 - D5 above, same code):
+- acceleration continuation: slope of (first-segment speed with the fed ax) minus (first-segment speed with ax := 0, stored variant `acc0`) on the fed ax,
+  frames with v0 >= 2 m/s; WP2 from `lx-WP2-*_acc0`, and the same estimator on P2H10 from the stored `dx-P2H10-*_acc0` as the reference. WLG has no stored
+  acc0 variant: not served for this read (WLG = WP2 above 0.5 m/s to 0.001 RFS, decision 169), stated instead of run.
+- switches on WP2 from the stored variants: `nobias` (zero), `const` (biasmean), `resid` (biasresid): share of the WP2 - shipped difference kept (D5).
+- braking onset: D3 on closing-lead frames, and its split by fed ax >= -0.3 m/s^2 ("not yet braking"); the number of frames is reported (expected: a few
+  tens; no statement below 30 frames beyond the counts).
+- launch behind a stopped lead: D4 (share of standstill frames with a stopped lead whose plan moves > 0.5 m in 2 s), shipped / WP2 / WLG / log.
+- path / longitudinal split of WLG's remaining gap to the top-rated rater trajectory, decision 164's construction reused (`pp_wod_diag.retime`): WLG path
+  with the top-rated trajectory's speed profile, top-rated path with WLG's speed profile; shares of the gap (top-rated minus WLG) with paired CIs; the same
+  for WP2 as the reproduction check of decision 164 (+0.722 / +0.296 of 1.476).
+
+Deliverable: one table and a plain answer to "is there headroom for a lead-aware / base-speed longitudinal mechanism on top of WLG, how much, in which
+strata", appended to results/diag1_longitudinal.md and as an amendment inside decision 218.
