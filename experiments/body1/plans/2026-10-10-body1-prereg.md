@@ -358,11 +358,15 @@ through either trigger's boundary side" means 2 of the 3 created contacts are bo
 held card outside the pool (its other cards were full of another lane's queue). Results:
 [results/replan_closed_loop.md](../results/replan_closed_loop.md).
 
-## DRAFT Amendment 4 (2026-10-10; NOT IN FORCE: a proposal for the main session, nothing below has been run or is registered)
+## Amendment 4 (2026-10-10, in force; accepted by the main session before any training of this arm)
 
 The loss arm 4.3, shaped by [results/zeros_diagnosis.md](../results/zeros_diagnosis.md). Read so far: everything of Amendments 1 to 3 and their
 status, decisions 223 to 226, and that diagnosis (all 49 baseline zeros of both seeds, replayed with the head and scored against the
-simulator's objects and map). No checkpoint of this arm exists.
+simulator's objects and map). No checkpoint of this arm exists and no row, raster or cache of it has been built.
+Accepted by the main session with four changes to the draft (commit a09f16a8), all written here before any training: L1 is not loosened
+(item 6), item C is disclosed as a per-board ingredient (item 3 C), per-term and per-family logging from the first step (item 5), and an
+ablation plan that runs only after G3 passes (item 11). Any further change found necessary while implementing is added below, dated, before
+the number it affects exists, and tightens only.
 
 1. **Why this arm and not the others.** Every zero is in a served plan before it happens (49 of 49; 20 at decision 0) and the controller follows
    the plan to 0.35 m, so the lesson has to be in the plan. Ranked below it, with the evidence:
@@ -393,8 +397,11 @@ simulator's objects and map). No checkpoint of this arm exists.
      same frame wrapper for `AgentHinge` (does not exist; about 30 lines), both inside `pp_train.py`'s loss.
    - **C. The drivable label on the scorer's layers.** 7 of the 20 offroad zeros leave AlpaSim's road area onto a surface the NAVSIM raster calls
      drivable. A second raster for navtrain from the nuPlan map with road areas and lanes only (`opb_labels.py` with the layer list changed; CPU)
-     is used by the drivable hinge on the hinge-only rows; the on-log hinge keeps the current label, so P2H10's own term is untouched. Built
-     from navtrain maps, not from AlpaSim scenes.
+     is used by the drivable hinge on the hinge-only rows; the on-log hinge keeps the current label, so P2H10's own term is untouched.
+     **Disclosure: C is a board prior, a per-board ingredient.** The layer list was chosen after looking at the zeros of AlpaSim public
+     scenes (the 7 definition cases of the diagnosis), so it is fitted to this board's scorer and is reported as such wherever the arm is
+     reported; A and B are not board-specific. The raster itself is built from navtrain's nuPlan maps only: no AlpaSim scene, navtest log or
+     scorer output enters it.
    - Not in the first run, kept as the second variant if A + B + C pass the offline gate without moving the collisions: **D, the S0 head as a
      frozen critic** (its agent logit on the student's plan as an extra loss, weight chosen on validation logs) and the head's branch through
      the memory channel (decision 204's condition is met: pre-trained with its own head, and it carries what the policy lacks, AUC 0.885
@@ -413,12 +420,23 @@ simulator's objects and map). No checkpoint of this arm exists.
      `turn_oracle.py`).
    Pilot first (2 shards, 3 000 steps, 1 seed): the agent hinge term on own-plan positives must fall by 30 % from its value at step 300 and (a)
    must point the right way; otherwise the arm ends there (decision 158's outcome again).
+   **Logged from the first step, in the pilot and in the full runs, so that a failed G3 says which of A / B / C did not work** (nothing
+   extra is trained for this): every log interval the trainer writes, separately, the imitation loss, the anchor loss, P2H10's on-log
+   drivable hinge, the agent hinge on imitation rows (A, on-log), and per hinge-only row family (ot1 / yr1 / `bd4`) the agent hinge (A on
+   B) and the scorer-layer drivable hinge (B + C), each as mean loss over the family's rows, share of rows with a non-zero hinge, and mean
+   loss on those rows. G3 (a) and (b) are reported per state family (on-log / ot1 / yr1 / `bd4`), per user class and for the > 45 deg
+   bucket, the agent rate and the boundary rate separately, and the boundary rate under both labels (the NAVSIM raster, which carries the
+   line through `lib/sweep.py`, and the scorer-layer raster, reported). Reading if G3 fails: A = the agent rate, B = the off-track
+   families against on-log states, C = the scorer-layer boundary rate against the NAVSIM-raster one.
 6. **Closed-loop read** (4.4, as Amendment 3 item 8). Development: chunk0 x s0 and chunk1 x s0 (both were run with a BODY1 switch). Staged:
    `pilot8`, then chunk1 x s0 against this checklist: 233 / 233 rollouts; taught-class zeros (collision + offroad) not above the baseline's;
    heading sd at decision 9 on decision 205's log-straight set <= 1.25 x base; no scene of the chunk's baseline-clean set turning into an
    offroad or collision zero more often than zeros are removed. Then the other five chunk jobs. Lines on (A) all 700 x 2 and (B) the part that is not development for this arm: chunk2 x
-   s0 and all of seed 1 (933 (seed, scene) pairs; chunk0 x s0 and chunk1 x s0 were switched on before); the stricter decides. L1: collision + offroad zeros go down in total and in neither seed up (corridor
-   zeros are reported, not taught). L2: mean per-scene difference >= 0 with the log-clustered lower bound > -0.005. L3: slow scenes <= 1.1 x
+   s0 and all of seed 1 (933 (seed, scene) pairs; chunk0 x s0 and chunk1 x s0 were switched on before); the stricter decides. **L1 has two
+   forms and both must hold** (the original L1 of Amendment 3 item 8 is not loosened): L1a, taught-class zeros as written there (at-fault
+   collision + offroad + left corridor, first failing flag) go down in the two-seed total and in neither seed up; L1b, collision + offroad
+   zeros go down in the two-seed total and in neither seed up. Corridor zeros are expected not to move (item 9: route failures), so L1a
+   passes only if the arm also does not add corridor zeros beyond what it removes elsewhere; they are listed per scene. L2: mean per-scene difference >= 0 with the log-clustered lower bound > -0.005. L3: slow scenes <= 1.1 x
    base. The > 45 deg bucket separately at every read. It is a regression check.
 7. **Guardrails.** navtest as 5 (d). comma1M straight-road ADE (decision 137): the Cinque encoder stays frozen; the plan pathway (16.2 M base
    weights) is trained as in P2H10, and op_parity replaced the comma1M reading by the anchor rows plus `dev_drift_off <= 0.30`
@@ -450,3 +468,9 @@ simulator's objects and map). No checkpoint of this arm exists.
     generator states captured in draw order under the prefetcher (40 to 60 lines plus a bit-identity gate), and a full run is 22 to 45 min:
     after a SIGKILL the pool's free retry restarts it for less than the change costs. It becomes necessary only if D's variant with the
     branch pushes a run past about 2 h.
+    Budget set by the main session for this arm: 8 card-hours, about 10 h wall, 25 GB on the box (>= 150 GB kept free; before the `bd4`
+    cache is built, free disk is checked and a smaller cache carrying the same cells is preferred; GB actually used are reported).
+11. **Ablations: only after the full A + B + C passes G3; nothing extra before.** If it passes, the drop-one runs (A + B without C: the
+    hinge-only rows on the NAVSIM raster; B + C without A: no agent hinge; A on on-log rows only, without B and C) are trained at full scale,
+    one seed each, read on G3 (a) to (d) only, and reported next to the full arm; they do not change which checkpoint goes to closed loop.
+    If G3 fails, no ablation is trained: the per-term losses and per-family rates of item 5 are the read.
