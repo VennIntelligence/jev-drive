@@ -35,11 +35,13 @@ seeds() { case $1 in QF|QFC|QFL) echo 0 1 2;; *) echo 0 1;; esac; }
 status() { echo "$(date '+%F %T') op_parity path-req: $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
-        local live; live=$($CL queue 2>/dev/null | awk -v n="$n" '$4 == n && ($2 == "queued" || $2 == "running") {print $1; exit}')
+        local live; live=$($CL queue 2>/dev/null | awk -v n="$n" '($2 == "queued" || $2 == "running") && ($3 == n || $4 == n) {print $1; exit}')   # a queued row has no card column
         [[ -n $live ]] && return; rm -f "$ld/ERROR"
         local id; id=$($CL submit --owner op_parity --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 20; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; return 0; }
-tok() {  # kind: the tokenizer of the kind, pre-trained with its own thin head
+declare -A TOKD
+tok() {  # kind: the tokenizer of the kind, pre-trained with its own thin head (one job per kind)
+  [[ -n ${TOKD[$1]:-} || -f $O/tok/$1.pt ]] && return; TOKD[$1]=1
   sub pr-tok-$1 $L/tok-$1 --vram 3 --cpu 2 --ram 16 -- $PY $S/path_req.py tok --kind $1
 }
 train() {  # arm seed
