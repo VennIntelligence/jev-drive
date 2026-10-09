@@ -505,3 +505,8 @@ each fixes something the items above left open, none loosens a line).**
   paired interval of the difference excluding 0. At pilot scale "points the right way" = both pooled rates lower than P2H10-F-s0's (point
   estimates). The pilot's "agent hinge term on own-plan positives" = the mean agent hinge over the rows with a non-zero agent hinge, hinge-only
   and imitation rows pooled, mean of steps 2 701-3 000 against steps 201-400 (a window, since single log intervals hold a handful of rows).
+- (viii) **Hold logs stay clean for A as well** (tightening of item 4): the agent hinge on imitation rows acts only on rows whose log is in
+  `navsim/body1-train-logs`; imitation rows of hold logs keep P2H10's terms alone.
+- (ix) **Pilot reference** (tightening of (vii)): the pilot (shards s2, s3, split `navsim/op-parity-full`, 3 000 steps, batch 128, warmup 300,
+  seed 0) is read against a switch-off run of the same trainer, data, steps and seed (`P2H10-P-s0`, the P2H10 recipe at pilot scale) and
+  against P2H10-F-s0; "points the right way" needs both pooled rates of G3 (a) below both references.
