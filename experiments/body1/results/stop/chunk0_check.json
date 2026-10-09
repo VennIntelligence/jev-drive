@@ -1,0 +1,129 @@
+{
+ "flags": {
+  "decisions": 2340,
+  "with_body": 2340,
+  "flags": 86,
+  "flag_rate": 0.03675213675213675,
+  "scenes": 234,
+  "scenes_flagged": 36,
+  "by_k": [
+   8,
+   9,
+   6,
+   4,
+   8,
+   9,
+   12,
+   14,
+   9,
+   7
+  ],
+  "removes_speed": 85,
+  "at_cap": 11,
+  "d_median": 5.552,
+  "d_under_half": 14,
+  "a_median": 1.0,
+  "cut_median": 1.084,
+  "v0_median": 3.589,
+  "standing": 8,
+  "hook_ms_p50": 9.405000000000001,
+  "hook_ms_p90": 20.301,
+  "total_ms_p50": 29.42,
+  "total_ms_p90": 47.79999999999999,
+  "total_ms_p99": 69.91030000000002,
+  "total_ms_max": 125.98
+ },
+ "base": {
+  "decisions": 2340,
+  "with_body": 0,
+  "flags": 0,
+  "flag_rate": 0.0,
+  "scenes": 234,
+  "scenes_flagged": 0,
+  "by_k": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "removes_speed": 0,
+  "at_cap": 0,
+  "d_median": NaN,
+  "d_under_half": 0,
+  "a_median": NaN,
+  "cut_median": NaN,
+  "v0_median": NaN,
+  "standing": 0,
+  "hook_ms_p50": NaN,
+  "hook_ms_p90": NaN,
+  "total_ms_p50": 21.545,
+  "total_ms_p90": 34.541,
+  "total_ms_p99": 51.033700000000024,
+  "total_ms_max": 72.39
+ },
+ "checks": [
+  [
+   "rollouts complete",
+   "234 / 234; sessions 234, drive calls 2340, inference errors 0, input errors 0",
+   true
+  ],
+  [
+   "`drive` total ms p50 / p90 (target <= 100)",
+   "29.4 / 47.8 (p99 69.9, max 126); baseline run 21.5 / 34.5; hook alone 9.4 / 20.3",
+   true
+  ],
+  [
+   "flag rate per decision (1-5 %, expected 2-2.6 %)",
+   "86 / 2340 = 3.68 %; scenes with a flag 36 / 234; `body` on 2340 decisions; by decision index [8, 9, 6, 4, 8, 9, 12, 14, 9, 7]",
+   true
+  ],
+  [
+   "ego slower 0.5 s after a flagged decision that removes speed (>= 80 %)",
+   "57 / 78 = 73 %; median speed change -0.27 m/s for a median commanded 1.00 m/s^2",
+   false
+  ],
+  [
+   "acceleration command after a flagged decision never under -8.5 m/s^2",
+   "min -8.53 in the 0.5 s after a flag; min -8.53 anywhere in flagged scenes",
+   0.0
+  ],
+  [
+   "steering reversals in flagged scenes (switch on / same scenes of the baseline run)",
+   "sum 3 / 2; max per scene 1 / 1",
+   null
+  ]
+ ],
+ "run": {
+  "n": 234,
+  "mean": 0.9450944955553381,
+  "ones": 179,
+  "zeros": 5,
+  "collision": 2,
+  "offroad": 2,
+  "corridor": 1,
+  "other": 0,
+  "slow": 50
+ },
+ "base_scores": {
+  "n": 234,
+  "mean": 0.9518420419503604,
+  "ones": 184,
+  "zeros": 7,
+  "collision": 4,
+  "offroad": 2,
+  "corridor": 1,
+  "other": 0,
+  "slow": 43
+ },
+ "traces": [
+  "2021.09.09.17.18.51_veh-48_01248_01450-794b439e9922527b",
+  "2021.06.28.20.24.43_veh-38_03385_04952-d8338aefbb73570f",
+  "2021.09.09.14.18.22_veh-48_00322_00895-994ab680895a55d2"
+ ]
+}

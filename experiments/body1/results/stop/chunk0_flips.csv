@@ -1,0 +1,5 @@
+arm,seed,scene,log,turn4s_deg,base_score,base_zero,arm_score,arm_zero,change,flags,flag_k,base_flags_n,min_d,max_a,v0_first,cut_sum,base_progress,arm_progress,arm_collision_rear,arm_collision_front,arm_collision_lateral,arm_dist_m,base_dist_m,base_min_obstacle_m,arm_min_obstacle_m
+stop2,0,2021.09.09.14.18.22_veh-48_00322_00895-994ab680895a55d2,2021.09.09.14.18.22_veh-48,-8.2,0.0,collision,0.6077,,removed,2,56,0,0.0,6.0,4.081,5.33,0.592,0.486,1.0,0.0,0.0,16.6,20.3,0.0,0.0
+stop2,0,2021.09.09.14.18.22_veh-48_01503_01761-a7fa8bccce9253cb,2021.09.09.14.18.22_veh-48,-61.4,0.0,collision,0.0,collision,same,3,456,0,8.352,1.0,4.911,3.4,0.979,0.853,0.0,1.0,0.0,22.5,25.6,0.0,0.0
+stop2,0,2021.09.09.17.18.51_veh-48_01248_01450-583e9cc4115258e4,2021.09.09.17.18.51_veh-48,-56.0,0.0,collision,0.6905,,removed,6,123456,0,5.031,1.864,5.012,5.4,0.702,0.552,1.0,0.0,0.0,13.4,16.6,0.0,0.0
+stop2,0,2021.09.09.18.04.06_veh-40_00555_00731-80f6c94fed0c5519,2021.09.09.18.04.06_veh-40,-1.5,0.0,collision,0.0,collision,same,1,1,0,13.84,3.682,10.096,6.8,0.602,0.648,0.0,0.0,1.0,32.3,29.9,0.0,0.0

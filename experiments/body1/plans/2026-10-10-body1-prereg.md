@@ -234,3 +234,23 @@ Code: `lib/serve_body.py` (its docstring is the specification), hooked into `exp
      chunk jobs, then the secondary.
    - It is a regression check: all public scenes took part in selecting P2H10 before. Open-loop plans are untouched (the
      switch acts on the trajectory handed to AlpaSim's tracker), so navtest is stated unchanged and not scored.
+9. **PAI track, secondary read (added 2026-10-10 on the main session's instruction, before any PAI run or score with the
+   switch).** Descriptive, no pass line; same threshold and stop rule, nothing tuned on PAI. Run only after the nuPlan
+   700-scene read is complete and written up: 60 scenes (`experiments/alpasim/results/pai/chunks/`, the chunks of PAI2's
+   baselines) x P2H10-F-s0 / -s1 with `JEV_STOP=2`, `JEV_VCONT` / `JEV_LEAD` off, paired per scene with PAI2's baselines without
+   serving fixes on the same chunk files (0.1734 / 0.2565); reported: mean difference with a scene-bootstrap CI, zeros by
+   class, flag rate. Input compatibility (read from `lib/pai_core.py` / `pai_driver.py`, nothing run): the PAI driver builds the
+   same 8 slots at 0.2 s, the same `view_39` tokens, the same 20-dim ego vector and the same 8 poses at 0.5 s, so the head can be
+   fed without new training. What differs from what the head was trained and gated on: the slots are real 10 Hz frames of an
+   f-theta camera resampled to the openpilot views (training: 2 Hz keyframes with warped in-between slots on the nuPlan rig); a
+   decision every 0.1 s instead of 0.5 s, so a rule without a latch is asked five times as often per second; another ego
+   footprint than the 5.176 x 2.297 m box of the labels; speeds up to 35 m/s (hold flags: 3-13 m/s). Missing code, not
+   written yet: `pai_core.plan` must return `tokens` / `valid`, `pai_driver.py` needs the three hook lines of
+   `sh30_driver.py`, `scripts/drivers/pai.sh` must pass `JEV_STOP` through. Command per chunk once that exists:
+   `cl submit --no-check --name pai-stop2-<chunk>-s<i> --owner body1 --vram 24 --cpu 6 --ram 40 --log-dir $R/pool -- env CONC=4
+   SH30_TAG=P2H10-F-s<i> JEV_STOP=2 bash experiments/alpasim/scripts/pai_native.sh $R <chunk file>`.
+
+**Status after stage (b) (2026-10-10 03:50, added after the read; nothing above was changed).** Stage (a) passed. Stage (b)
+failed two items of the checklist (ego slower after a flag 73 % < 80 %; one acceleration command of -8.53 < -8.5 m/s^2), so
+by item 8 the arm stopped there: the other five chunk jobs, the secondary m = 1 and the PAI read were not run.
+Results: [results/stop_closed_loop.md](../results/stop_closed_loop.md).

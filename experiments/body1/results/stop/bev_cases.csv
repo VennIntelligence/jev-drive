@@ -1,0 +1,8 @@
+id,kind,scene,on,off,look
+saved_1,collision avoided,2021.09.09.14.18.22_veh-48_00322_00895-994ab680895a55d2,/root/autodl-tmp/ujs/runs/body1/cl/strips/run,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk0/20261010-012222,
+saved_2,collision avoided,2021.09.09.17.18.51_veh-48_01248_01450-583e9cc4115258e4,/root/autodl-tmp/ujs/runs/body1/cl/strips/run,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk0/20261010-012222,
+false_1,false stop,2021.09.09.17.18.51_veh-48_01248_01450-794b439e9922527b,/root/autodl-tmp/ujs/runs/body1/cl/strips/run,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk0/20261010-012222,
+false_2,false stop,2021.05.25.14.24.08_veh-25_04059_04203-4314c162a57f568e,/root/autodl-tmp/ujs/runs/body1/cl/strips/run,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk0/20261010-012222,
+false_3,false stop,2021.09.09.18.29.25_veh-39_00969_01184-8317ed430d8e50c3,/root/autodl-tmp/ujs/runs/body1/cl/strips/run,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk0/20261010-012222,
+miss_1,flagged and still a collision,2021.09.09.14.18.22_veh-48_01503_01761-a7fa8bccce9253cb,/root/autodl-tmp/ujs/runs/body1/cl/b0/runs/stop2-s0-chunk0/20261010-033450,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk0/20261010-012222,
+miss_2,flagged once and still a collision,2021.09.09.18.04.06_veh-40_00555_00731-80f6c94fed0c5519,/root/autodl-tmp/ujs/runs/body1/cl/b0/runs/stop2-s0-chunk0/20261010-033450,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk0/20261010-012222,
