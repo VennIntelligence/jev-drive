@@ -135,7 +135,8 @@ def _own(R, T):
     Y = C.targets(R)
     n = len(R["gi"])
     speed = np.concatenate([np.load(B.cache_root() / d / "tab.npz")["speed"][m] for d, m, _ in R["src"]])
-    std = np.concatenate([np.load(C.sroot() / "std" / f"{d}.npz")["std"][:, m] for d, m, _ in R["src"]], 1)          # (2 models, n, 2)
+    sf = lambda d, m: np.load(C.sroot() / "std" / f"{d}.npz")["std"][:, m] if (C.sroot() / "std" / f"{d}.npz").exists() else np.full((2, len(m), 2), np.nan, np.float32)  # noqa: E731
+    std = np.concatenate([sf(d, m) for d, m, _ in R["src"]], 1)                                                      # (2 models, n, 2); hold states only
     d = SW.dense(R["q"][:, list(C.OWN)])
     arc = SW.arc(d)[..., -1]
     rep = lambda x: np.repeat(x, 2)  # noqa: E731
