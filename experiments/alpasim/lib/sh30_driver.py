@@ -20,7 +20,7 @@ default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route m
 
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
 (op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (gpu, the default: slot warp on the card + fast frame packing, same
-frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), JEV_REPLAN (lateral re-plan out of a predicted contact, same module; off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -63,8 +63,8 @@ from navsim_transfuser_challenge.trajectory import build_trajectory_from_plan, m
 import serve_fix as FX  # noqa: E402
 import sh30_core as C  # noqa: E402
 
-BD = None                                            # BODY1 stop switch (experiments/body1/lib/serve_body.py); not imported unless JEV_STOP > 0
-if float(os.environ.get("JEV_STOP", "0") or 0) > 0:
+BD = None                                            # BODY1 switches (experiments/body1/lib/serve_body.py); not imported unless JEV_STOP > 0 or JEV_REPLAN
+if float(os.environ.get("JEV_STOP", "0") or 0) > 0 or os.environ.get("JEV_REPLAN", "0") not in ("", "0"):
     sys.path.append(str(Path(__file__).resolve().parents[2] / "body1" / "lib"))
     import serve_body as BD  # noqa: E402
 
@@ -259,7 +259,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             ctx.abort(grpc.StatusCode.INTERNAL, f"SH30 inference failed: {e!r}")
         s.count["inference"] += 1
         fx = FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0)
-        bd = BD.apply(self.gpu, o, float(np.hypot(*dyn[-1][0]))) if BD else None
+        bd = BD.apply(self.gpu, o, float(np.hypot(*dyn[-1][0])), s, s.count["drive"] - 1) if BD else None
         plan = make_cached_plan(t0, anchor, o["poses"])
         traj = build_trajectory_from_plan(plan, anchor, now, tq)
         t_out = time.perf_counter()
@@ -345,7 +345,7 @@ def main() -> None:
     one = lambda: core.plan([z] * 4, np.zeros((4, 3)), np.zeros((4, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731
     if BD:
         BD.load(core.dev)
-        LOG.info("serving: JEV_STOP %g (contact head, threshold logit %.3f)", BD.M, BD.THR)
+        LOG.info("serving: JEV_STOP %g, JEV_REPLAN %d (contact head; stop threshold logit %.3f, re-plan thresholds %s)", BD.M, BD.RP, BD.THR, BD.THR_RP)
     server = grpc.server(warm_workers((lambda: BD.warm(one())) if BD else one))
     egodriver_pb2_grpc.add_EgodriverServiceServicer_to_server(drv, server)
     if server.add_insecure_port(f"{host}:{port}") == 0:

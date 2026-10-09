@@ -120,8 +120,8 @@ def cmd_replay(a):
             D.BD.load("cuda")
             apply0 = D.BD.apply
 
-            def apply(lock, o, v0):
-                info = apply0(lock, o, v0)
+            def apply(lock, o, v0, *x):
+                info = apply0(lock, o, v0, *x)
                 caught.append((info, np.asarray(o.get("poses_plan", o["poses"])).copy(), np.asarray(o["poses"]).copy(), float(v0)))
                 return info
             D.BD.apply = apply
