@@ -115,8 +115,8 @@ def main() -> None:
     t0 = time.time()
     core = AC.Core(os.environ["AP2_TAG"], os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("AP2_COLD", ""), float(os.environ.get("SH30_MOTION", "1")),
                    os.environ.get("SH30_SYNTH", "gpu"))
-    core.lead_out = D.FX.LEAD
-    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d", D.FX.VCONT, D.FX.LEAD)
+    core.lead_out, core.base_out = D.FX.NEED_LEAD, D.FX.BASE > 0
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d", D.FX.VCONT, D.FX.LEAD, D.FX.BASE)
     z = np.zeros(AC.C.FRAME, np.uint8)
     # warm-up: every slot count compiled before the port opens
     decode = D.tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 2, 3, 4, 4)])

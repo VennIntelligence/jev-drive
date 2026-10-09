@@ -205,6 +205,7 @@ def nvjpeg(dev):
 class Core:
     sync = True                                           # CUDA sync at every stage boundary, for the stage times
     lead_out = False                                      # also return the raw lead / lead_prob outputs (serve_fix.py, JEV_LEAD)
+    base_out = False                                      # also return the plan without the adapter bias (serve_fix.py, JEV_BASE)
     _enc = _pol = None                                    # compiled encoder / policy passes (compile())
 
     def compile(self, graph: bool = False):
@@ -235,6 +236,14 @@ class Core:
         sl = self.model.net.slices
         return {k: out[0, sl[k]].cpu().numpy() for k in ("lead", "lead_prob")} if self.lead_out else {}
 
+    def base(self, H, ego, tc, cam_t) -> dict:
+        """The same policy pass without the adapter bias (decision 218: that is the shipped model's plan) -> {"poses_base": (8, 3)}, or {}
+        unless base_out. One more policy forward on the tokens already encoded."""
+        if not self.base_out:
+            return {}
+        mu = self.model(H, ego, tc, inputs_on=False).float()[0, self.pi].reshape(33, 15).cpu().numpy()
+        return {"poses_base": I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")}
+
     def _sync(self) -> float:
         if self.dev.type == "cuda" and self.sync:
             self.torch.cuda.synchronize(self.dev)
@@ -264,9 +273,10 @@ class Core:
             H = H.reshape(1, int(valid.sum()), *A.H_SHAPE)
             t2 = self._sync()
             tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=self.dev)
-            out = (self._pol or self.model)(H, torch.from_numpy(ego[None]).to(self.dev), tc).float()
+            ego_t = torch.from_numpy(ego[None]).to(self.dev)
+            out = (self._pol or self.model)(H, ego_t, tc).float()
             t3 = self._sync()
-            mu, ld = out[0, self.pi].reshape(33, 15).cpu().numpy(), self.leads(out)
+            mu, ld = out[0, self.pi].reshape(33, 15).cpu().numpy(), {**self.leads(out), **self.base(H, ego_t, tc, cam_t)}
             cur = cur.cpu().numpy() if gpu else cur
         poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
         t4 = time.perf_counter()

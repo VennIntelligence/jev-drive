@@ -25,7 +25,7 @@ sys.path[:0] = [str(HERE), str(HERE.parent / "lib")]
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 LD = DATA / "runs/alpasim/col1/lead"
 O = DATA / "runs/alpasim/fix1/replay"
-ARMS = {"a": (1.0, False), "b": (0.0, True), "ab": (1.0, True)}
+ARMS = {"a": (1.0, False, 0), "b": (0.0, True, 0), "ab": (1.0, True, 0), "c1": (0.0, False, 1), "c2": (0.0, False, 2), "c1b": (0.0, True, 1), "c2b": (0.0, True, 2)}
 
 
 class Ctx:
@@ -37,10 +37,10 @@ class Tap:
     """Stands in for a session's Serve: runs the three arms on the model output and leaves the returned poses alone."""
 
     def __init__(self, FX, front):
-        self.arms, self.rows, self.front = {k: FX.Serve(v, l, front) for k, (v, l) in ARMS.items()}, [], front
+        self.arms, self.rows, self.front = {k: FX.Serve(v, l, front, b) for k, (v, l, b) in ARMS.items()}, [], front
 
     def __call__(self, o, v0, a0, t_us):
-        r = dict(t_us=t_us, v0=v0, a0=a0, poses=o["poses"].copy(), vm=float(o["mu"][0, 3]), lead=o["lead"][:72].copy(), lead_prob=o["lead_prob"].copy())
+        r = dict(t_us=t_us, v0=v0, a0=a0, poses=o["poses"].copy(), poses_base=o["poses_base"].copy(), vm=float(o["mu"][0, 3]), lead=o["lead"][:72].copy(), lead_prob=o["lead_prob"].copy())
         for k, f in self.arms.items():
             t = time.perf_counter()
             p, info = f(dict(o), v0, a0, t_us)
@@ -67,7 +67,7 @@ def cmd_replay(a):
             import ap2_driver as AD
             core = AD.AC.Core(sp["tag"], "cuda", "")
             drv = AD.Driver(core, Path(tempfile.mkdtemp()), 0, False)
-        core.lead_out = True
+        core.lead_out = core.base_out = True
         ref = pickle.load(open(LD / "replay" / f"{g}.pkl", "rb"))
         out, err = {}, 0.0
         for i, scene in enumerate(sp["scenes"][:a.limit]):
@@ -116,6 +116,8 @@ def cmd_read(a):
                     q, info = r[arm]["poses"], r[arm]["info"]
                     s = np.concatenate([[0.0], np.hypot(*np.diff(np.concatenate([np.zeros((1, 2)), q[:, :2]]), axis=0).T)]).cumsum()
                     row[f"s2_{arm}"], row[f"ms_{arm}"] = s[4], r[arm]["ms"]
+                    if "vb0" in info:
+                        row.update(vb0=info["vb0"], **{f"base_{arm}": info["base"], f"held_{arm}": info["held"]})
                     if "lead" in info:
                         li = info["lead"]
                         row.update({f"p_{arm}": li["p"][0], f"d_{arm}": li["d"] if li["d"] is not None else np.nan, f"vl_{arm}": li["vl"] if li["vl"] is not None else np.nan,
@@ -141,6 +143,14 @@ def cmd_read(a):
             q = vp / np.maximum(v0, 0.1)
             md.append(f"| {lo}-{hi} | {len(rs)} | {np.median(q):.2f} | {np.percentile(q, 10):.2f} | {np.percentile(q, 90):.2f} | {np.median(vp - v0):+.2f} | {np.median(vm - v0):+.2f} | "
                       f"{np.median(d2):+.2f} | {np.percentile(d2, 10):+.2f} | {np.percentile(d2, 90):+.2f} |")
+    md += ["", "## (c) the base model's speed profile on the adapter's path (control rollouts)", "",
+           "| ego speed m/s | decisions | median base first-segment speed / v0 | p10 | p90 | median 2 s arc: adapter m | c1 m | c2 m | c2 serves the base profile | c2 holds at standstill (lead inside the following distance) |", "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for lo, hi in ((0, 0.5), (0.5, 2), (2, 5), (5, 10), (10, 16), (16, 40)):
+        rs = [r for r in ctrl if lo <= r["v0"] < hi and "vb0" in r]
+        if rs:
+            q = A(rs, "vb0") / np.maximum(A(rs, "v0"), 0.1)
+            md.append(f"| {lo}-{hi} | {len(rs)} | {np.median(q):.2f} | {np.percentile(q, 10):.2f} | {np.percentile(q, 90):.2f} | {np.median(A(rs, 's2')):.2f} | {np.median(A(rs, 's2_c1')):.2f} | "
+                      f"{np.median(A(rs, 's2_c2')):.2f} | {int(sum(r['base_c2'] for r in rs))} | {int(sum(r['held_c2'] for r in rs))} |")
     md += ["", "## (b) the lead limit on control rollouts (no collision flag)", "",
            "A decision is *cut* when the limit removes at least 0.5 m from the first 2 s of the served arc. False = the label has no object in the corridor or a_need <= 0.5 m/s^2.", "",
            "| arm | decisions | lead present | limit is the lower candidate | cut >= 0.5 m | of them false | scenes with >= 2 consecutive cut decisions | of them all false | median cut m (cut decisions) |", "|:--|--:|--:|--:|--:|--:|--:|--:|--:|"]

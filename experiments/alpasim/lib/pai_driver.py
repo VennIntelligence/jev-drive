@@ -252,8 +252,8 @@ def main() -> None:
     log_dir = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/tmp/alpasim-driver"))
     t0 = time.time()
     core = C.Core(os.environ.get("SH30_TAG", "P2H10-F-s0"), os.environ.get("SH30_DEVICE", "cuda"))
-    core.lead_out = FX.LEAD
-    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d", FX.VCONT, FX.LEAD)
+    core.lead_out, core.base_out = FX.NEED_LEAD, FX.BASE > 0
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d", FX.VCONT, FX.LEAD, FX.BASE)
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros
     warm = lambda: PC.plan(core, z, np.ones(8, bool), e((4, 3)), e((4, 2)), e(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731
     warm(), warm()

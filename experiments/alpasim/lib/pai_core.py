@@ -131,10 +131,14 @@ def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t
         H = core.model.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(1, int(valid.sum()), *A.H_SHAPE)
         t1 = core._sync()
         tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=core.dev)
-        out = core.model(H, torch.from_numpy(ego[None]).to(core.dev), tc).float()
+        ego_t = torch.from_numpy(ego[None]).to(core.dev)
+        out = core.model(H, ego_t, tc).float()
         mu = out[0, core.pi].reshape(33, 15).cpu().numpy()
         sl = core.model.net.slices                          # the lead outputs of the same pass, for serve_fix.py (JEV_LEAD)
         ld = {k: out[0, sl[k]].cpu().numpy() for k in ("lead", "lead_prob")} if getattr(core, "lead_out", False) else {}
+        if getattr(core, "base_out", False):                # the plan without the adapter bias, for serve_fix.py (JEV_BASE)
+            mb = core.model(H, ego_t, tc, inputs_on=False).float()[0, core.pi].reshape(33, 15).cpu().numpy()
+            ld["poses_base"] = I.to_rear(mb[:, 0:3], mb[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
         t2 = time.perf_counter()
     poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
     return {"poses": poses, "mu": mu, "ego": ego, **ld,

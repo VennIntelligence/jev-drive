@@ -291,6 +291,35 @@ $C status <submission_id>; $C submissions --track nuplan-warmup
 $C submit --track nuplan "$URI"             # official; add --controller-gains gains.json to change the MPC gains
 ```
 
+## Serving switches: the speed profile of the returned trajectory (2026-10-10, decision FIX1_DECISION)
+
+Read this before you change what the drivers return, or build an image with a switch on. Code: `experiments/alpasim/lib/serve_fix.py`
+(its docstring is the specification), hooked into `sh30_driver.py`, `ap2_driver.py` and `pai_driver.py`. Results:
+[experiments/alpasim/results/fix1_serving.md](../experiments/alpasim/results/fix1_serving.md).
+
+**What the controller reads** (`src/controller/alpasim_controller`, 0bb4c4b, run as shipped). The nonlinear MPC has a 20 x 0.1 s horizon,
+is re-solved every 0.1 s on the same reference, and costs the reference only from horizon index `idx_start_penalty` = 10: positions and
+heading 1.0-2.0 s ahead of the vehicle's clock, weights 2 (longitudinal) / 1 (lateral) / 1 (heading) against 0.1 on acceleration and 5 / 1
+on command changes; acceleration command in [-9, 6] m/s^2, steering in +-0.785 rad. Nothing in the first second of the returned trajectory
+is tracked, and no speed is: a reference whose positions at 1-2 s are not reachable at the current speed is met with whatever
+acceleration closes the position gap.
+
+| Switch | Default | What it does |
+|---|---|---|
+| `JEV_VCONT=<s>` | off (0) | The plan's path, re-timed: the speed profile starts at the ego's speed and blends linearly into the plan's own 0.5 s segment speeds over `<s>` seconds. `1.0` = the controller's untracked second. Without it the trajectory starts at the plan's mean speed over 0.5 s whatever the ego's speed is |
+| `JEV_LEAD=1` | off | openpilot's lead path (ec95db3f: radard's probability filter and vision lead, the lead MPC of `long_mpc.py`, the planner's min of candidates) on the checkpoint's own `lead` / `lead_prob` outputs of the same forward pass; the served speed profile is the pointwise minimum of the profile above and the MPC's speed solution. Only removes speed, no latch. Needs scipy (in the image) |
+
+Both are read once at driver start; `get_version` carries them (`-vc1-lead`), so all replicas of an image must agree. With both off the
+drivers return what they returned before, bit for bit (checked against COL1's replay: 2 600 decisions, difference 0.0 m). Every `drive`
+record in `drive.jsonl` then has `fix` (ego speed, plan first-segment speed, lead probability / distance / speed, the MPC's and the
+plan's acceleration, metres removed in the first 2 s, serving ms) and `poses_model` (the plan before re-timing).
+
+- nuPlan runs: `env JEV_VCONT=1.0 JEV_LEAD=1 bash experiments/alpasim/scripts/run.sh ...` (the environment reaches the driver), or
+  `ENV=VALUE` in an `ot2_loop.py` job spec. PAI: `DRV_ENV="-e JEV_VCONT=1.0 -e JEV_LEAD=1" pai_run.sh ...` (it mounts `serve_fix.py`).
+- Image: `VCONT=1.0 LEAD=1 experiments/alpasim/docker/new_tag.sh <tag>` bakes them in as the image's defaults (tag suffix `-vc1.0-lead`).
+- AlpaSim-only: the switches act on the trajectory handed to AlpaSim's tracker. `jevdrive.bench` (navtest, navhard, HUGSIM) never
+  goes through these drivers.
+
 ## PAI track on the Tokyo box (measured 2026-10-09)
 
 Read this when you run the Physical AI AV track locally. Its renderer (NRE) ships only as a container, so it runs on the

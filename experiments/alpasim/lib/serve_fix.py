@@ -1,5 +1,5 @@
 """Serving-side speed profile of the trajectory an AlpaSim driver returns (lane FIX1, plans/2026-10-09-fix1-prereg.md). The path of the
-model's plan is never changed; only where along it the returned poses sit. Two independent switches, both off by default:
+model's plan is never changed; only where along it the returned poses sit. Three independent switches, all off by default:
 
   JEV_VCONT=<s>  (a) speed-continuous serving. Unset / 0 = off. The drivers return the plan's 0.5 s points resampled linearly, so the
                  returned trajectory starts at the plan's mean speed over its first 0.5 s whatever the ego's speed is. With the switch
@@ -35,6 +35,14 @@ model's plan is never changed; only where along it the returned poses sit. Two i
                  Not emulated: radar tracks, the cruise candidate, FCW, LongControl's stopping state (the position tracker holds a
                  reference that does not move).
 
+  JEV_BASE=1|2   (c) the adapter's path with the frozen base model's speed profile (added after decision 218: the adapter's speed behaviour is a
+                 function of the ego state only and replaces the base model's lead-triggered braking and standstill hold). The same policy
+                 pass is run once more without the adapter bias (that plan is the shipped model's); the adapter's path is then sampled at
+                 the base plan's arc lengths. 1 = on every decision. 2 = while moving (ego speed >= 0.5 m/s, decision 218's split); at
+                 standstill the adapter's own profile (its launch) is kept unless the lead output reports a lead inside openpilot's
+                 following distance (filtered probability > 0.5 and dRel + v_lead^2 / 5 < d(v_ego)), where the base profile is served.
+                 Composes with the other two: (a) blends from the ego speed into whichever profile was chosen, (b) limits it.
+
 No learned component, no simulator ground truth: inputs are the plan, the checkpoint's own lead / lead_prob outputs of the same forward
 pass, the ego speed / acceleration the simulator reports and the session's camera and ego box (camera to front bumper).
 """
@@ -64,6 +72,7 @@ LEAD_DANGER_FACTOR, COMFORT_BRAKE, STOP_DISTANCE, MIN_X_LEAD_FACTOR, T_FOLLOW = 
 V_DESIRED_RC = 2.0
 ACTION_T, MIN_STABLE_DELAY = 0.15 + DT_MDL, 0.3           # longitudinalActuatorDelay + DT_MDL
 V_STANDSTILL = 0.1
+V_MOVING = 0.5                                            # JEV_BASE=2: decision 218's moving / standstill split
 
 
 def _maps():
@@ -191,6 +200,14 @@ class LeadPlanner:
         self.prob, self.t_us = [0.0, 0.0], None
         self.v_des = self.a_out = 0.0
 
+    def inside(self, v_ego: float, lead, lead_prob, model_v_ego: float) -> bool:
+        """A lead inside openpilot's following distance now (one filter step on this output; used without the MPC by JEV_BASE=2)."""
+        mu, p = np.asarray(lead, np.float64)[:72].reshape(3, 6, 4), 1 / (1 + np.exp(-float(lead_prob[0])))
+        alpha = DT_MDL / (LEAD_PROB_RC + DT_MDL)
+        self.prob0 = p if p > getattr(self, "prob0", 0.0) else (1 - alpha) * self.prob0 + alpha * p
+        vl = max(v_ego + mu[0, 0, 2] - model_v_ego, 0.0)
+        return bool(self.prob0 > LEAD_PRESENT and mu[0, 0, 0] - self.front + vl * vl / (2 * COMFORT_BRAKE) < safe_distance(v_ego))
+
     def update(self, t_us: int, v_ego: float, a_ego: float, lead, lead_prob, model_v_ego: float, a_e2e: float):
         """lead (144,) raw lead output (mean 3 x 6 x 4 then log std), lead_prob (3,) logits, model_v_ego the plan's own speed at t = 0
         -> (t, v) of the lead MPC's speed solution after this call's ticks, info."""
@@ -245,15 +262,22 @@ def join(vp, v0: float, tau: float):
 class Serve:
     """One per session. __call__(plan output, ego speed, ego acceleration, decision time) -> the poses to return and a log record."""
 
-    def __init__(self, vcont: float = 0.0, lead: bool = False, cam_to_front: float = 2.26):
-        self.vcont, self.lead = float(vcont), LeadPlanner(cam_to_front) if lead else None
+    def __init__(self, vcont: float = 0.0, lead: bool = False, cam_to_front: float = 2.26, base: int = 0):
+        self.vcont, self.lead, self.base = float(vcont), LeadPlanner(cam_to_front) if lead else None, int(base)
+        self.gate = LeadPlanner(cam_to_front) if base == 2 else None      # its probability filter only
 
     def __call__(self, o: dict, v0: float, a0: float, t_us: int):
         t = time.perf_counter()
         v0 = max(float(v0), 0.0)
         p, ds, vp = path(o["poses"])
-        v = join(vp, v0, self.vcont) if self.vcont > 0 else vp
         info = {"v0": round(v0, 3), "vp0": round(float(vp[0]), 3)}
+        if self.base:
+            vb = path(o["poses_base"])[2]
+            held = self.base == 2 and v0 < V_MOVING and self.gate.inside(v0, o["lead"], o["lead_prob"], float(o["mu"][0, 3]))
+            use = self.base == 1 or v0 >= V_MOVING or held
+            info.update(vb0=round(float(vb[0]), 3), base=bool(use), held=bool(held))
+            vp = vb if use else vp
+        v = join(vp, v0, self.vcont) if self.vcont > 0 else vp
         if self.lead is not None:
             a_e2e = (float(np.interp(T_TRACK, TG, v)) - v0) / T_TRACK
             vs, li = self.lead.update(t_us, v0, float(a0), o["lead"], o["lead_prob"], float(o["mu"][0, 3]), a_e2e)
@@ -262,17 +286,21 @@ class Serve:
             li["vm"] = round(float(o["mu"][0, 3]), 3)
             v = np.minimum(v, cap)
             info["lead"] = li
-        if self.vcont <= 0 and self.lead is None:
+        if self.vcont <= 0 and self.lead is None and not self.base:
             return o["poses"], info
         info["ms"] = round(1e3 * (time.perf_counter() - t), 3)
         return place(p, ds, v), info
 
 
 VCONT, LEAD = float(os.environ.get("JEV_VCONT", "0") or 0), os.environ.get("JEV_LEAD", "0") == "1"
-ON = VCONT > 0 or LEAD
+BASE = int(os.environ.get("JEV_BASE", "0") or 0)
+NEED_LEAD = LEAD or BASE == 2
+ON = VCONT > 0 or LEAD or BASE > 0
 if LEAD:
     import scipy.optimize  # noqa: F401  (paid at start-up, not inside the first decision)
-SUFFIX = (f"-vc{VCONT:g}" if VCONT > 0 else "") + ("-lead" if LEAD else "")
+
+
+SUFFIX = (f"-vc{VCONT:g}" if VCONT > 0 else "") + ("-lead" if LEAD else "") + (f"-base{BASE}" if BASE else "")
 
 
 def cam_to_front(vehicle, cam_x: float) -> float:
@@ -282,7 +310,7 @@ def cam_to_front(vehicle, cam_x: float) -> float:
 
 def new(vehicle, cam_x: float):
     """The session's Serve, or None when both switches are off (the driver then returns the plan as before, bit for bit)."""
-    return Serve(VCONT, LEAD, cam_to_front(vehicle, cam_x)) if ON else None
+    return Serve(VCONT, LEAD, cam_to_front(vehicle, cam_x), BASE) if ON else None
 
 
 def apply(fix, o: dict, v0: float, a0: float, t_us: int):
