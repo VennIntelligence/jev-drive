@@ -8,8 +8,8 @@
 # The wizard overrides are those of the native reference runs (docs/alpasim.md), so the scene list and concurrency match.
 #   experiments/alpasim/docker/smoke.sh <image:version> <out dir> [JEV_TAG] [reference results-summary.json]
 # Env: DATA_DIR, ALPASIM_SRC, NUPLAN_ROOT, SCENES (scene list file), BASE (trusted image), DGPU (driver card, default 1; the stack's
-# 1gpu topology renders on card 0), WIZ_EXTRA (more wizard overrides). Writes <out>/{STATUS, DONE | ERROR, log.txt, smoke.json, compare.md, drive.jsonl, driver.log} and the
-# run itself under <out>/run (aggregate/results-summary.json, rollouts/, txt-logs/).
+# 1gpu topology renders on card 0), WIZ_EXTRA (more wizard overrides), DRV_ENV ("K=V ..." for the driver, e.g. SH30_DUMP=16). Writes <out>/{STATUS, DONE | ERROR, log.txt, smoke.json, compare.md, drive.jsonl, driver.log} and the
+# run itself under <out>/run (aggregate/results-summary.json, rollouts/, txt-logs/), the driver's own logs under <out>/driver-logs.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 IMG=$1 OUT=$(mkdir -p "$2" && cd "$2" && pwd) TAG=${3:-} REF=${4:-}
@@ -32,6 +32,7 @@ run=(docker run -d --name "$N" --init --cap-drop ALL --security-opt no-new-privi
      --tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777 --tmpfs /run:rw,nosuid,nodev,size=64m,mode=0755 --network $NET --gpus "device=$DGPU"
      -e ALPASIM_CONTESTANT_REPLICA_INDEX=0 -e ALPASIM_CONTESTANT_REPLICAS=1)
 [[ -n $TAG ]] && run+=(-e "JEV_TAG=$TAG")
+for kv in ${DRV_ENV:-}; do run+=(-e "$kv"); done
 printf '%q ' "${run[@]}" "$IMG" > "$OUT/cmd.txt"; echo >> "$OUT/cmd.txt"
 t0=$(date +%s); "${run[@]}" "$IMG" >/dev/null || die "docker run"
 until docker logs "$N" 2>&1 | grep -q "listening on"; do
@@ -65,7 +66,8 @@ st "docker compose up"
 t1=$(date +%s)
 (cd "$R" && docker compose -f docker-compose.yaml up --remove-orphans --exit-code-from runtime-0) > "$OUT/compose.log" 2>&1; rc=$?
 wall=$(( $(date +%s) - t1 ))
-docker exec "$N" cat /tmp/alpasim-driver/drive.jsonl > "$OUT/drive.jsonl" 2>/dev/null
+docker exec "$N" tar -C /tmp/alpasim-driver -c . 2>/dev/null | { mkdir -p "$OUT/driver-logs"; tar -x -C "$OUT/driver-logs"; }   # /tmp is a tmpfs: no docker cp
+cp "$OUT/driver-logs/drive.jsonl" "$OUT/drive.jsonl" 2>/dev/null
 read -r peak tmp < "$OUT/.peak"; stop_all; wait "$sampler"; rm -f "$OUT"/.stop "$OUT"/.peak
 (( rc == 0 )) || die "compose exited with $rc after $wall s, see compose.log"
 [[ -f $R/aggregate/results-summary.json ]] || die "no results-summary.json"
