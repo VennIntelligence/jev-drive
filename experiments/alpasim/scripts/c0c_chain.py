@@ -34,7 +34,7 @@ def main():
     prev = C.RA / "c0c" / "scored_scenes.txt"
     old_tsv = C.RA / "c0c/shards.tsv" if (C.RA / "c0c/shards.tsv").exists() else C.RA / "c0b/lists/shards.tsv"
     old_shard = dict(l.split("\t") for l in old_tsv.read_text().split("\n") if l)
-    scored = set(prev.read_text().split()) if prev.exists() else set(old_shard)
+    scored = set(prev.read_text().split()) if prev.exists() else set(l.split("\t")[0] for l in (C.RA / "c0b/lists/shards.tsv").read_text().split("\n") if l)
     L = O / "lists"
     L.mkdir(exist_ok=True)
     marks = sorted(Path(p).name.split(".")[-3].split("_")[-1] for p in C.glob.glob(str(C.ROOT / ".done.MTGS_asset_navtest_assets_part*.tar.gz")))
@@ -46,7 +46,6 @@ def main():
     fresh = [m for m in marks if m not in set(old_shard.values())]
     shard = {**old_shard, **{s: fresh[i // 100] for i, s in enumerate(new) if i // 100 < len(fresh)}}
     (L / "shards.tsv").write_text("".join(f"{s}\t{shard[s]}\n" for s in scenes))
-    shutil.copy(L / "shards.tsv", C.RA / "c0c/shards.tsv")
     C.status(f"batch {batch}: {len(scenes)} scenes from shards {marks}; {len(new)} new")
     if not new:
         C.fail("no new scenes")
@@ -83,6 +82,7 @@ def main():
     for key, pre in (("SH30-F-s0", "sh30"), ("AP2-AB-s0", "ap2"), ("WA-JEPA (reference)", "wajepa"), ("OT30-F-s0", "ot0"), ("OT30-F-s1", "ot1")):
         man[key] = man[key] + G(pre)
     cum.write_text(json.dumps(man, indent=1))
+    shutil.copy(L / "shards.tsv", C.RA / "c0c/shards.tsv")
     (C.RA / "c0c/scored_scenes.txt").write_text("\n".join(scenes) + "\n")
     r = subprocess.run([sys.executable, str(C.REPO / "experiments/alpasim/scripts/c0b_report.py"), "--manifest", str(cum), "--shards",
                         str(L / "shards.tsv"), "--out", str(O / "report")], cwd=C.REPO, capture_output=True, text=True)
