@@ -297,8 +297,8 @@ def cmd_check(a):
                               "ours_only": int((hit & ~(dist < 0) & vq).sum()), "hinge_only": int((~hit & (dist < 0) & vq).sum())}
         # 2. swv1_lib.Rollout.sweep (shapely polygons; objects annotated at all 9 times, tracks interpolated by col1_lib.interp)
         full = valid.all(1) & (cls >= 0)
-        n_obj = n_first = n_hit = n_hit_agree = 0
-        dmax = 0.0
+        C = {g: dict(object_sweeps=0, first_contact_index_agree=0, contacts_swv1=0, contacts_ours=0, contacts_both=0, max_abs_min_clearance_diff_m=0.0)
+             for g in ("all", "constant_size")}             # swv1 gives an object one size; the nuPlan labels may change it between annotated times
         for i in range(min(S, a.n_shapely)):
             ks = np.flatnonzero(full[i])
             r = object.__new__(SV.Rollout)
@@ -306,17 +306,20 @@ def cmd_check(a):
             r.off, r.Le, r.We, r.ids, r._obj = SW.C_OFF, 2 * SW.HALF_L, 2 * SW.HALF_W, [int(k) for k in ks], {}
             r.now, r.plan = np.zeros(Q), d[i].astype(np.float64)
             for j in range(Q):
-                sw = r.sweep(j)
-                for k, (dm, f) in sw.items():
-                    mine_first = int(hit[i, j, :, k].argmax()) if hit[i, j, :, k].any() else -1
-                    n_obj += 1
-                    n_first += mine_first == f
-                    n_hit += f >= 0
-                    n_hit_agree += (f >= 0) and mine_first >= 0
-                    if 0 < dm < 5 and mine_first < 0:
-                        dmax = max(dmax, abs(dm - float(clr[i, j, :, k].min())))
-        res["swv1_sweep"] = {"states": min(S, a.n_shapely), "object_sweeps": n_obj, "first_contact_index_agree": n_first / max(n_obj, 1), "contacts_swv1": n_hit,
-                             "contacts_both": n_hit_agree, "max_abs_min_clearance_diff_m": dmax, "shapely": shapely.__version__}
+                for k, (dm, f) in r.sweep(j).items():
+                    mine = int(hit[i, j, :, k].argmax()) if hit[i, j, :, k].any() else -1
+                    for g in ("all",) + (("constant_size",) if np.ptp(box[i, :, k, 3:5], 0).max() < 1e-3 else ()):
+                        c = C[g]
+                        c["object_sweeps"] += 1
+                        c["first_contact_index_agree"] += mine == f
+                        c["contacts_swv1"] += f >= 0
+                        c["contacts_ours"] += mine >= 0
+                        c["contacts_both"] += (f >= 0) and mine >= 0
+                        if 0 < dm < 5 and mine < 0:
+                            c["max_abs_min_clearance_diff_m"] = max(c["max_abs_min_clearance_diff_m"], abs(dm - float(clr[i, j, :, k].min())))
+        for c in C.values():
+            c["first_contact_index_agree"] /= max(c["object_sweeps"], 1)
+        res["swv1_sweep"] = {"states": min(S, a.n_shapely), "shapely": shapely.__version__, **{g: {q: float(x) for q, x in c.items()} for g, c in C.items()}}
         # 3. drivable_hinge.Hinge.margins (torch grid_sample on the same raster)
         Hd = Hinge(B.data_dir() / "runs/op_probe/labels/navtrain_all.npz", z["names"][pick], torch.device("cpu"))
         m, ins = SW.corner_margins(d, sdf)
