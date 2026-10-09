@@ -254,3 +254,98 @@ Code: `lib/serve_body.py` (its docstring is the specification), hooked into `exp
 failed two items of the checklist (ego slower after a flag 73 % < 80 %; one acceleration command of -8.53 < -8.5 m/s^2), so
 by item 8 the arm stopped there: the other five chunk jobs, the secondary m = 1 and the PAI read were not run.
 Results: [results/stop_closed_loop.md](../results/stop_closed_loop.md).
+
+## Amendment 3 (2026-10-10, the re-plan arm 4.2: fixed after the stop arm's one-chunk read and before any closed-loop run with `JEV_REPLAN`)
+
+Read so far: everything of Amendment 2 and its status (decision 224: chunk0 x P2H10-F-s0 with `JEV_STOP=2`); the hold-log gate of this
+amendment (`scripts/bd1_replan.py cand | gate`, own-plan decisions of `body1-hold-logs` only); the replay plumbing check (`bd1_replan.py
+replay`, item 6). No closed-loop run with `JEV_REPLAN` exists and no closed-loop score of it has been read.
+Code: `lib/serve_body.py` (its docstring is the specification), hooked into `experiments/alpasim/lib/sh30_driver.py`.
+
+1. **Switch.** `JEV_REPLAN=1`, read once at driver start, carried in `get_version` (`-rp1`), never together with `JEV_STOP`. Unset or 0 (and
+   `JEV_STOP` unset): the module is not imported. On: at every `drive` call, after `serve_fix.apply`, the plan and its candidates are scored
+   in one batched pass by the two full-scale `step` checkpoints of Amendment 2 item 1 (gate input standard); scores = two-seed mean logits of
+   agent contact `za` and boundary contact `zb`.
+2. **Candidates.** The row generator's `lat` family, the code path checked equal to `bd1_rows.perturb` (1e-14 m): offset
+   a x s(t) / s(4 s) along the path normal, yaw + atan(a / s(4 s)), a in +-{0.3, 0.6, 0.9, 1.2, 1.5} m at 4 s (+ = left); the timing along
+   the path is the plan's. A candidate exists only while |a| <= 0.10 x the plan's 4 s arc (the generator trained up to 0.25): the ramp is a
+   constant heading offset of at most 5.7 deg (1.5 m at 10 m/s is 2.1 deg, the size of the closed loop's own heading error at decision 9,
+   decision 205), and a slow or standing ego has few candidates or none. Reason for the shape: the controller tracks positions and heading
+   1.0-2.0 s ahead, so within the 0.5 s a decision is in force it sees 0.25-0.6 of `a`; the plan continues the yaw rate it sees (decision
+   205) and every decision re-plans from the state reached, so a ramp is the path the loop would follow anyway, and it is the family the head
+   was trained and is scored on.
+3. **Rule.** Flagged = `za`(plan) >= FA or `zb`(plan) >= FB. A candidate is clear when `za` < CA and `zb` < CB. Flagged and at least one
+   eligible clear candidate: the clear candidate of the smallest |a| is served; of the two sides of one size the one with the lower
+   max(`za` - CA, `zb` - CB). Not flagged: the plan. **Flagged and none clear: the plan, unchanged. There is no stop** (decision 224: the
+   memoryless stop lost more on false stops than it saved; a persistent-flag stop would need a release rule that can only be tuned on
+   closed-loop outcomes; hold logs, descriptive: of 739 agent-flagged decisions without a clear candidate 238 are true agent contacts).
+   **Boundary flags trigger on their own**: on the hold logs the boundary-only true contacts are 1 033 of 1 944, the rule resolves 363 of
+   them against 185 agent contacts, and of the 3 harms 2 came through either trigger's boundary side (below); the baseline has 18 offroad +
+   corridor zeros against 8 collisions.
+   **Cold start**: decision 0 of a session (one real frame) is never re-planned and does not touch the memory. **Memory** (per session): the
+   side of the last served shift; while fewer than 2 decisions have been served unchanged since, only candidates of that side are eligible
+   (no side change from one decision to the next; the other side opens after 1 s of unchanged plans). Sizes are not carried. Nothing is
+   latched: an unflagged plan is served as it is.
+   Every decision is logged (`body` in `drive.jsonl`: `za` / `zb` of the plan and every candidate, which exist, flag kind, served `a`, reason
+   `cold | clean | replan | none_clear`, memory side, ego speed, hook ms; when re-planned the plan before the shift).
+4. **Thresholds** (hold logs only; `results/replan/hold_grid.csv`, all 48 settings; selection rule written in `bd1_replan.py` and pushed
+   (10808c37) before the grid was computed: among the settings meeting line (b) the largest resolved - 5 x harm). Percentiles of the plan's
+   logit over the 49 232 clean own-plan decisions: **FA = 0.3999 (98th), FB = 1.8308 (98th), CA = -1.7170 (95th), CB = -0.5145 (95th)**.
+   The selected setting is the loosest corner of the grid (most flags, loosest clear); the grid was not extended.
+5. **Offline gate** (own-plan decisions of the hold logs, on-log + `ot1` + `yr1` states, both student seeds: 51 316; one decision at a time,
+   no memory; truth by `lib/sweep.py` on the served candidate: agent = any box contact including the rear-end cases the label excludes,
+   boundary = margin < -0.20 m; `results/replan/hold_chosen.json`, `hold_by_subset.csv`, `hold_shift.csv`):
+
+   | Set | clean decisions | re-planned | harm (served makes a contact) | true contacts | flagged | resolved (served has none) | resolve rate |
+   |---|--:|--:|--:|--:|--:|--:|--:|
+   | pooled | 49 232 | 1 213 (2.46 %) | **3 (0.006 %)**: 1 agent, 2 boundary; 2 logs | 1 944 | 1 176 | **548** (72 logs): 185 agent, 363 boundary | 0.466 (0.282 of all) |
+   | class 1 / 2 / 3 / other | 8 978 / 6 190 / 23 564 / 10 500 | 221 / 179 / 610 / 203 | 0 / 1 / 0 / 2 | 361 / 500 / 775 / 308 | 186 / 277 / 531 / 182 | 67 / 128 / 282 / 71 | 0.36 / 0.46 / 0.53 / 0.39 |
+   | > 45 deg | 5 173 | 141 | 0 | 385 | 187 | 75 | 0.40 |
+   | on-log / `ot1` / `yr1` states | 21 536 / 14 216 / 13 480 | 128 (0.59 %) / 401 (2.8 %) / 684 (5.1 %) | 0 / 0 / 3 | 300 / 486 / 1 158 | 115 / 272 / 789 | 42 / 141 / 365 | 0.37 / 0.52 / 0.46 |
+
+   Line (b), fixed before the grid: harm <= 0.2 % of the clean decisions and 5 x harm <= resolved: **met** (0.006 %; 3 against 548). With
+   the boundary judged at margin < 0 instead of -0.20 m: 4 of the 755 re-planned decisions whose plan has margin >= 0. Served |a| on clean
+   decisions (c): none 97.54 %, 0.3 / 0.6 / 0.9 / 1.2 / 1.5 m: 0.49 / 0.86 / 0.53 / 0.39 / 0.20 % (mean 0.77 m when shifted; 796 left,
+   1 128 right over all decisions). Among the flagged true contacts 503 have no clear candidate (served unchanged) and 125 are re-planned
+   into a candidate that still has a contact; 768 true contacts are not flagged. By ego speed the rule is nearly silent under 3 m/s
+   (19 re-plans in 7 016 clean decisions, 5 of 91 true contacts resolved).
+   What the gate does not measure: the loop. A hold decision stands alone; whether a served ramp starts a drift is read by the checklist.
+6. **What was looked at on the navtest replay (plumbing only; nothing chosen there).** Switch off (both variables unset) after the hook edit:
+   2 220 decisions, 0.0 m from SWV1's stored plans (`results/replan/replay_off.json`). Switch on (`replay_on.json`): the plan before the
+   shift 0.0 m from the stored one; the hook's plan logits against the gate's stored predictions max 0.078, mean 0.010; every served
+   trajectory equals `ramps(plan)[choice]`, is clear by the logged scores, the smallest eligible, never at decision 0, never a side change
+   within 2 decisions (0 failed of 2 220); hook 11.6 ms median, 14.8 p90. The replay also printed, with the constants above already
+   committed (4375a44d): re-plans on 23 of 2 000 control decisions (1.15 %; 12 of 200 scenes) and on 17 of 220 decisions of the collision
+   rollouts (9 of 22 rollouts), where 48 of the 64 agent-flagged decisions after decision 0 have no clear candidate. So the expectation
+   before the run: the rule acts in under half of the baseline's collisions. Nothing was changed after seeing it.
+7. **Status of chunk0 x P2H10-F-s0.** It was run and read with `JEV_STOP=2` (decision 224), so it is development for whatever this arm
+   inherits from that read. Inherited, as facts of decision 224 only: (i) decision 0 is not acted on (8 of the 36 flagged scenes were
+   flagged there, the most expensive false alarms); (ii) no stop as fallback; (iii) the cost picture (a false stop about -0.4, a saved
+   collision about +0.65) that makes the lateral action the one to try. Thresholds, candidates and the memory rule come from the hold logs
+   and the mechanism; no scene of chunk0 was looked at for this amendment.
+8. **Read (section 4.4, tightened).** Scenes: the 700 of `c0b/lists/chunk{0,1,2}.txt`, P2H10-F-s0 and -s1 with `JEV_REPLAN=1` (`JEV_VCONT`,
+   `JEV_LEAD`, `JEV_STOP` off), through `ot2_loop.py` / `run.sh`. Baseline: TR1's runs of Amendment 2 item 8 (the driver closure is
+   unchanged since except `sh30_driver.py`, whose switch-off path is the identity of item 6). Two readings, **the stricter decides** (an
+   arm passes only if all three lines are met on both): (A) all 700 x 2 seeds; (B) the part never run with a BODY1 switch: chunks 1-2 of
+   seed 0 and all chunks of seed 1 (1 166 (seed, scene) pairs; per scene the mean over the seeds in the reading).
+   - L1: taught-class zeros (at-fault collision + offroad + left corridor, first failing flag) go down in total, and in neither seed up.
+   - L2: mean per-scene difference >= 0 and the log-clustered 95 % lower bound > -0.005 (`jevdrive.stats.paired(groups=log)`).
+   - L3: slow scenes (0 < score < 1) <= 1.1 x base.
+   - Reported without a line: zeros by class, every scene whose zero state changes with its served shifts, share of decisions and scenes
+     re-planned, flags by kind, latency, the scenes whose logged 4 s future (of the scene's navtest token; bench `TURN_BINS`, the stop
+     arm's scene-level definition) turns > 45 deg.
+   - Staged. (a) `pilot8.txt`, P2H10-F-s0: switch off twice and on once: off identical twice (else that difference is the repeatability),
+     on complete with a re-plan record on every decision. (b) **chunk1 of P2H10-F-s0** with the switch against TR1's run of it, checklist:
+     1. 233 / 233 rollouts, no driver error, a re-plan record on every decision;
+     2. `drive` total p50 and p90 <= 100 ms (the candidates ride in the plan's head pass);
+     3. share of decisions re-planned between 0.4 % and 5 % (hold logs: 0.59 % on-log states, 5.1 % yaw-rate states; replay 1.15 %);
+     4. no side change within 2 decisions in any scene;
+     5. new zeros in re-planned scenes <= zeros removed in the chunk;
+     6. no re-planned scene with 3 or more steering reversals more than the same scene of the baseline run; the lateral offset, heading
+        difference and steering traces of the 3 scenes with the largest summed shift are drawn;
+     7. heading error against the log at decision 9 on decision 205's set (log-straight scenes of the 400 diagnosis scenes, start speed
+        > 2 m/s) within the chunk, `ot3_heading.py`'s statistic: sd of the switch-on run <= 1.25 x the baseline run's (OT3's ratio).
+     A failed item stops the arm before the rest runs. (c) the remaining five chunk jobs.
+   - It is a regression check (all public scenes took part in selecting P2H10). Serving-only: navtest is unchanged and not scored.
+9. **PAI secondary read**: as Amendment 2 item 9 with `JEV_REPLAN=1` in place of `JEV_STOP=2`, only if the nuPlan read passes its lines on
+   both readings; descriptive, nothing tuned on PAI.
