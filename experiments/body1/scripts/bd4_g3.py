@@ -2,6 +2,8 @@
 against a reference checkpoint on the same states, truth by lib/sweep.py. Open loop, no simulator.
 
   hold     states of navsim/body1-hold-logs in the families log / ot1 / yr1 / bd4 (the logs no new term was trained on)
+  val      the same on navsim/body1-val-logs (Amendment 5 item 3: the part of the train logs kept out of the hinge-only rows; the weight of
+           the hinge-only rows is selected here and hold logs are not opened by this set)
   navtest  on-log navtest tokens (lb_navtest; agent labels navtest-k32, NAVSIM raster navtest; the scorer-layer raster if it was built)
 Rates per state: agent = counted contact of the 4 s sweep (rear-end contacts by a faster object excluded, as the row labels);
 boundary = minimum footprint margin < -0.20 m with no contact at t = 0, on the NAVSIM raster (carries the line) and on the scorer-layer raster
@@ -57,8 +59,8 @@ def main(a):
     dev = torch.device("cuda")
     tags = [a.new] + a.ref
     with Run("body1", f"g3-{a.name}", config=vars(a)) as run:
-        if a.set == "hold":
-            hold = splits.load(B.HOLD)
+        if a.set in ("hold", "val"):
+            hold = splits.load(B.HOLD if a.set == "hold" else B.VAL)
             run.use_split(hold)
             L = B.labels()
             road = np.load(data_dir() / "runs/body1/labels_road/navtrain_s01234567891011.npz", mmap_mode=None)["sdf"]
@@ -117,7 +119,7 @@ def main(a):
         D.to_csv(OUT / f"g3_{a.name}.csv", index=False, float_format="%.5f")
         pooled = {ref: {q: D[(D.ref == ref) & (D.subset == "pooled") & (D.rate == q)].iloc[0].to_dict() for q in R[a.new]} for ref in a.ref}
         verdict = {ref: dict(agent_lower=bool(p["agent"]["new"] < p["agent"]["base"]), bnd_lower=bool(p["bnd"]["new"] < p["bnd"]["base"]),
-                             agent_30=bool(p["agent"]["rel_fall"] >= 0.30 and p["agent"]["hi"] < 0), bnd_30=bool(p["bnd"]["rel_fall"] >= 0.30 and p["bnd"]["hi"] < 0),
+                             agent_30=bool(p["agent"]["rel_fall"] >= 0.30 and p["agent"]["hi"] < 0), bnd_25=bool(p["bnd"]["rel_fall"] >= 0.25 and p["bnd"]["hi"] < 0), bnd_30=bool(p["bnd"]["rel_fall"] >= 0.30 and p["bnd"]["hi"] < 0),
                              no_rise_sum_falls=bool(p["agent"]["diff"] <= 0 and p["bnd"]["diff"] <= 0 and p["sum"]["diff"] < 0)) for ref, p in pooled.items()}
         (OUT / f"g3_{a.name}.json").write_text(json.dumps(dict(new=a.new, refs=a.ref, set=a.set, fams=a.fams, shards=a.shards, n=len(M), pooled=pooled, verdict=verdict),
                                                           indent=1, default=float) + "\n")
@@ -131,7 +133,7 @@ if __name__ == "__main__":
     ap.add_argument("--name", required=True)
     ap.add_argument("--new", required=True)
     ap.add_argument("--ref", nargs="+", required=True)
-    ap.add_argument("--set", default="hold", choices=["hold", "navtest"])
+    ap.add_argument("--set", default="hold", choices=["hold", "val", "navtest"])
     ap.add_argument("--fams", nargs="+", default=["log", "ot1", "yr1", "bd4"])
     ap.add_argument("--shards", type=int, nargs="+", default=list(range(B.NSH)))
     main(ap.parse_args())

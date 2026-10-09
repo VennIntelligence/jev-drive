@@ -51,7 +51,7 @@ def main(a):
             (e, ne), (l, nl) = window(E, col, 200, 400), window(E, col, a.steps - 300, a.steps)
             gate[col.removeprefix("loss/")] = dict(early=e, early_steps=ne, late=l, late_steps=nl, fall=(e - l) / e if e > 0 else float("nan"))
         g = gate.get("agent_posmean", {})
-        res = dict(tag=a.tag, windows=[[201, 400], [a.steps - 299, a.steps]], terms=gate, gate_term="agent_posmean", fall=g.get("fall"), passed=bool(g.get("fall", 0) >= 0.30),
+        res = dict(tag=a.tag, gate_of="Amendment 4 item 5, loss half (Amendment 5 replaces it by hold-log rates: bd4_g3.py)", windows=[[201, 400], [a.steps - 299, a.steps]], terms=gate, gate_term="agent_posmean", fall=g.get("fall"), passed=bool(g.get("fall", 0) >= 0.30),
                    dev={c.removeprefix("dev/"): float(E[c].dropna().iloc[-1]) for c in E.columns if c.startswith("dev/")})
         (OUT / f"pilot_gate_{a.tag}.json").write_text(json.dumps(res, indent=1) + "\n")
         run.info("\n" + T.to_string(float_format=lambda x: f"{x:.5f}"))

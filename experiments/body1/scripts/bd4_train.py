@@ -4,6 +4,8 @@ lib/loss43.Losses43. With --ho "" and --agent-lam 0 the row stream, the losses a
 
 Batch = (batch - k) rows drawn as pp_train draws them (imitation / anchor) + k hinge-only rows, --ho "ot1:4,yr1:4,bd4:5" per batch, drawn
 uniformly from each family's rows on navsim/body1-train-logs (own rng stream: the normal row stream does not depend on the families).
+Prereg Amendment 5: --ho-w multiplies both hinge terms of the hinge-only rows; --ho-excl navsim/body1-val-logs keeps the validation part of
+the train logs out of the hinge-only rows (the weight is selected there).
 
   train  --tag P2H10B-P-s0 --data navtrain_full.s2of12 navtrain_full.s3of12 --steps 3000 --ho ot1:4,yr1:4,bd4:5 --agent-lam 10
   ident  --a <run dir of pp_train.py> --b <run dir of bd4_train.py with the switches off>     losses and weights equal bit for bit -> json
@@ -58,7 +60,9 @@ def cmd_train(a):
     assert not is_ho[tr_rows].any() and not is_ho[dv_rows].any()
     trl = splits.load(B.TRAIN)
     in_tr = trl.mask(logs)
-    pools = [np.flatnonzero((fam == j) & in_tr) for j in range(len(fams))]
+    excl = splits.load(a.ho_excl) if a.ho_excl else None            # Amendment 5: logs kept out of the hinge-only rows
+    in_ho = in_tr & ~excl.mask(logs) if excl is not None else in_tr
+    pools = [np.flatnonzero((fam == j) & in_ho) for j in range(len(fams))]
     kk = [k for _, k in ho]
     k = sum(kk)
     nB = cfg.batch
@@ -88,15 +92,16 @@ def cmd_train(a):
         n_fb = int(len(fb))
         fb_fam = np.bincount(fam[fb.cpu().numpy()], minlength=len(fams)).tolist()
     LS = Losses43(model.net, cfg, tstd, S.di, S.pi, dev, hinge, None,
-                  ho=torch.as_tensor(is_ho, device=dev) if k else None, fam=torch.as_tensor(fam, device=dev), fams=fams, agent2=agent2, road=road, road_lam=a.road_lam)
+                  ho=torch.as_tensor(is_ho, device=dev) if k else None, fam=torch.as_tensor(fam, device=dev), fams=fams, agent2=agent2, road=road, road_lam=a.road_lam, ho_w=a.ho_w)
     opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}, {"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}], weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
     d = T.proot("runs", a.tag)
     with Run("op_parity", f"train-{a.tag}", seed=cfg.seed, config=asdict(cfg) | {"body1": vars(a)}) as run:
-        for x in sp + ((trl,) if k or agent2 is not None else ()):
+        for x in sp + ((trl,) if k or agent2 is not None else ()) + ((excl,) if excl is not None else ()):
             run.use_split(x)
         run.info(f"{a.tag}: train {len(tr_rows)} normal rows, dev {len(dv_rows)}; hinge-only per batch of {nB}: "
                  + (", ".join(f"{f} {q} of {len(p)}" for (f, q), p in zip(ho, pools)) or "none")
+                 + f" (weight {a.ho_w}, excluded logs {a.ho_excl or 'none'}: {int((is_ho & in_tr & ~in_ho).sum())} rows)"
                  + f"; hinge {cfg.hinge_lam} / {cfg.hinge_margin} m coverage {hinge.coverage if hinge else 0:.4f}; agent {cfg.agent_lam} / {cfg.agent_margin} m / side "
                  f"{cfg.agent_side_margin} rows {int(agent2.ok.sum()) if agent2 is not None else 0} (moved {agent2.moved if agent2 is not None else 0}); "
                  f"road {a.road_lam if road is not None else 0} / {a.road_margin} m rows {int(road.ok.sum()) if road is not None else 0} ({a.road_labels}); "
@@ -199,6 +204,8 @@ if __name__ == "__main__":
     p.add_argument("--hinge-lam", type=float, default=10.0, help="P2H10's on-log drivable hinge (NAVSIM raster)")
     p.add_argument("--hinge-margin", type=float, default=0.3)
     p.add_argument("--ho", default="", help='hinge-only rows per batch by family, e.g. "ot1:4,yr1:4,bd4:5"; "" = none')
+    p.add_argument("--ho-w", type=float, default=1.0, help="Amendment 5: multiplier on the agent and road hinge of the hinge-only rows")
+    p.add_argument("--ho-excl", default="", help='Amendment 5: split whose logs give no hinge-only row, e.g. navsim/body1-val-logs; "" = none')
     p.add_argument("--agent-lam", type=float, default=0.0, help="A: agent hinge on imitation rows (train logs) and hinge-only rows; 0 = off")
     p.add_argument("--agent-margin", type=float, default=0.3)
     p.add_argument("--agent-side-margin", type=float, default=0.0)

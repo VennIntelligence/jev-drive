@@ -6,10 +6,12 @@ pp_train.Losses is subclassed, not edited. With no hinge-only row in the batch a
 (the same tensor operations in the same order).
 
 Per-row weight: a hinge-only row counts like an on-log imitation row: its hinges are summed over the hinge-only rows and divided by the number
-of imitation rows of the batch (x agent_lam / road_lam).
+of imitation rows of the batch (x agent_lam / road_lam), times ho_w (prereg Amendment 5 item 3: the weight of both hinge terms of the
+hinge-only rows; 1 = Amendment 4).
 Logged per step (floats in the returned dict; `fam/<f>/...` per hinge-only family f, `imit/...` for the imitation rows):
   <term>_mean  mean loss over the rows;  <term>_pos  share of rows with a non-zero hinge;  <term>_posmean  mean loss on those rows (absent if none)
-with <term> in {agent, road} for the families and {agent, hinge} for the imitation rows.
+with <term> in {agent, road} for the families and {agent, hinge} for the imitation rows. Unconditional rates of the batch: `agent_pos` (share
+of the imitation + hinge-only rows whose plan has a non-zero agent hinge), `agent_ho_pos` / `road_ho_pos` (the same over the hinge-only rows).
 """
 import numpy as np
 import torch
@@ -53,9 +55,9 @@ class Losses43(T.Losses):
     """T.Losses + hinge-only rows. ho (n_store,) bool marks hinge-only Store rows, fam (n_store,) int their family index (-1 on normal rows);
     agent2 = OffAgentHinge over all rows (or None), road = ot_rows.off_hinge on the scorer-layer raster for the hinge-only rows (or None)."""
 
-    def __init__(self, *a, ho=None, fam=None, fams=(), agent2=None, road=None, road_lam=10.0, **k):
+    def __init__(self, *a, ho=None, fam=None, fams=(), agent2=None, road=None, road_lam=10.0, ho_w=1.0, **k):
         super().__init__(*a, **k)
-        self.ho, self.fam, self.fams, self.agent2, self.road, self.road_lam = ho, fam, fams, agent2, road, road_lam
+        self.ho, self.fam, self.fams, self.agent2, self.road, self.road_lam, self.ho_w = ho, fam, fams, agent2, road, road_lam, ho_w
 
     def __call__(self, out, S, rows, anchor):
         c = self.cfg
@@ -86,8 +88,10 @@ class Losses43(T.Losses):
             Ls |= row_stats(av[mi], "imit/agent")
             if h.any():
                 Ls["agent_ho"] = av[h].sum() / n_imit
-                total = total + c.agent_lam * Ls["agent_ho"]
+                total = total + self.ho_w * c.agent_lam * Ls["agent_ho"]
+                Ls["agent_ho_pos"] = (av[h] > 0).float().mean()
             allpos = av[(imit | h)]
+            Ls["agent_pos"] = (allpos > 0).float().mean() if len(allpos) else av.sum() * 0.0
             if (allpos > 0).any():
                 Ls["agent_posmean"] = allpos[allpos > 0].mean().detach()                 # the pilot gate's number
         if h.any():
@@ -102,7 +106,8 @@ class Losses43(T.Losses):
                 if m.any():
                     rv[m] = torch.relu(self.road.margin - self.road.margins(x[m], y[m], psi[m], rows[m])).mean(1)
                 Ls["road_ho"] = rv[h].sum() / n_imit
-                total = total + self.road_lam * Ls["road_ho"]
+                total = total + self.ho_w * self.road_lam * Ls["road_ho"]
+                Ls["road_ho_pos"] = (rv[h] > 0).float().mean()
             f = self.fam[rows]
             for j, name in enumerate(self.fams):
                 m = h & (f == j)

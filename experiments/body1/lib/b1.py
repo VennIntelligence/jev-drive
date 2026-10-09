@@ -25,6 +25,7 @@ MAN = ("launch", "stop", "turn 20-45", "turn >45", "go-around", "straight", "unk
 HAZ = ("in-path", "side", "boundary", "none")
 CLS = ("other", "1 obstacle ahead", "2 turn", "3 leaving the road")
 HOLD, TRAIN = "navsim/body1-hold-logs", "navsim/body1-train-logs"
+VAL = "navsim/body1-val-logs"                       # prereg Amendment 5: the validation part of the train logs (is_val)
 
 
 def root() -> Path:
@@ -42,6 +43,11 @@ def cdir(fam: str, k: int) -> str:
 def is_hold(log: str) -> bool:
     """body1-hold-logs: sha256(log) % 10 == 0 (a superset of op-parity-full-dev's % 50 == 0)."""
     return int(hashlib.sha256(log.encode()).hexdigest(), 16) % 10 == 0
+
+
+def is_val(log: str) -> bool:
+    """body1-val-logs: sha256(log) % 10 == 1, a part of body1-train-logs (prereg Amendment 5 item 3)."""
+    return int(hashlib.sha256(log.encode()).hexdigest(), 16) % 10 == 1
 
 
 def tab(fam: str, k: int) -> dict:
