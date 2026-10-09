@@ -37,8 +37,10 @@ sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
         local id; id=$($CL submit --owner alpasim-ot2 --priority 12 --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 20; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; return 0; }
 # Declarations are measured peaks plus margin (pool history 2026-10-09): ot-prep 29-42 GB VRAM / 29 GB RAM / 19 cores; ap2-t-full 35.7 GB / 96 GB RAM
-# (host token stores in the page cache); the off-track rows add their hinge rasters on the card.
-TR="--train --vram 48 --cpu 6 --ram 110"
+# RSS, of which the memory-mapped host token stores (front / backwarp / off-track tokens, shared page cache, reclaimable) are the bulk; the pool
+# admits on non-reclaimable memory (anon + shmem + kernel), so --ram declares that part: ot-t-full's whole RSS was 41.6 GB with 26 GB of
+# mapped front tokens. The off-track rows add their hinge rasters on the card.
+TR="--train --vram 48 --cpu 6 --ram 40"
 TF="--data $ALL --split $SPLIT --batch 128 --warmup 300 --eval-every 1000 --cold backwarp"
 
 if [[ $STAGE == train ]]; then
