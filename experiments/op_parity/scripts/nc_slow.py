@@ -847,6 +847,71 @@ def cmd_report(a):
         run.info("\n".join(L))
 
 
+def cmd_posthoc(a):
+    """Not registered, descriptive (written after the stage-1 read): (1) where the gain of the registered operating point comes from (tokens whose DAC
+    changes vs the rest); (2) the operating point with the EP loss capped at the registered 0.3: threshold picked on navtrain OOF under that cap
+    (honest), and the best navtest threshold under the cap (optimistic bound for the arm)."""
+    import pandas as pd
+    from jevdrive import stats
+    from jevdrive.run import Run
+    with Run("op_parity", "nc_slow/posthoc", config=vars(a)) as run:
+        tr, y = np.load(OUT / "tab_train.npz"), np.load(OUT / "y_test.npz")
+        logs, SC, SUB, n = y["log"], y["score"], y["sub"], len(y["tokens"])
+        Gtr, EPtr, wtr = tr["score"][:, list(SLOW)] - tr["score"][:, [ID]], tr["sub"][:, list(SLOW), 4] - tr["sub"][:, [ID], 4], tr["w"]
+        Gte, EPte = SC[:, :, list(SLOW)] - SC[:, :, [ID]], SUB[:, :, list(SLOW), 4] - SUB[:, :, [ID], 4]
+        rows = []
+        for arm in ARMS:
+            z = np.load(OUT / "fit" / f"{arm}.npz")
+            kind = str(z["chosen"])
+            pred, oof, tau, afix = z[f"{kind}_test"], z[f"{kind}_oof"], float(z[f"{kind}_tau"]), int(z[f"{kind}_afix"])
+            _, sidx = policy(kind, pred.reshape((-1,) + pred.shape[2:]), tau, afix)
+            sidx = sidx.reshape(len(SEEDS), n)
+            tk = lambda X: np.take_along_axis(X, sidx[:, :, None], 2)[:, :, 0]                  # noqa: E731
+            d = tk(SC) - SC[:, :, ID]
+            dac = tk(SUB[..., 1]) != SUB[:, :, ID, 1]
+            col = tk(SUB[..., 0]) != SUB[:, :, ID, 0]
+            ttc = (tk(SUB[..., 5]) != SUB[:, :, ID, 5]) & ~col
+            r = {"arm": arm, "learner": kind, "gain": fmt(stats.bootstrap(100 * d.mean(0), groups=logs), 3),
+                 "from tokens whose DAC changes": fmt(stats.bootstrap(100 * (d * dac).mean(0), groups=logs), 3),
+                 "from tokens whose NC changes (DAC same)": fmt(stats.bootstrap(100 * (d * (col & ~dac)).mean(0), groups=logs), 3),
+                 "from tokens whose TTC changes (NC, DAC same)": fmt(stats.bootstrap(100 * (d * (ttc & ~dac)).mean(0), groups=logs), 3),
+                 "rest (EP cost of moved tokens)": fmt(stats.bootstrap(100 * (d * ~(dac | col | ttc)).mean(0), groups=logs), 3)}
+            # EP-capped operating points (T / M: argmax scale above a threshold; C: fixed scale)
+            if kind == "C":
+                m_tr, g_tr, e_tr, m_te, g_te, e_te = oof, Gtr[:, afix], EPtr[:, afix], pred, Gte[:, :, afix], EPte[:, :, afix]
+            else:
+                ia, it = oof.argmax(1), pred.argmax(2)
+                m_tr, g_tr, e_tr = oof.max(1), Gtr[np.arange(len(oof)), ia], EPtr[np.arange(len(oof)), ia]
+                m_te, g_te, e_te = pred.max(2), np.take_along_axis(Gte, it[..., None], 2)[..., 0], np.take_along_axis(EPte, it[..., None], 2)[..., 0]
+            best = (np.inf, 0.0)
+            for t in np.unique(np.quantile(m_tr, np.linspace(0, 1, 2001))):
+                s_ = m_tr > t
+                if -100 * (wtr * e_tr * s_).sum() / wtr.sum() <= LINE_EP:
+                    g = 100 * (wtr * g_tr * s_).sum() / wtr.sum()
+                    if g > best[1]:
+                        best = (float(t), float(g))
+            mv = m_te > best[0]
+            r.update({"EP-capped tau (navtrain OOF)": best[0], "OOF gain at the cap": best[1], "navtest moved %": 100 * float(mv.mean()),
+                      "navtest gain at the cap": fmt(stats.bootstrap(100 * (g_te * mv).mean(0), groups=logs), 3),
+                      "navtest EP at the cap": fmt(stats.bootstrap(100 * (e_te * mv).mean(0), groups=logs), 2),
+                      "share of +1.13 %": 100 * float((g_te * mv).mean()) / ORACLE_N1})
+            opt = (0.0, 0.0)
+            for t in np.unique(np.quantile(m_te, np.linspace(0, 1, 2001))):
+                s_ = m_te > t
+                if -100 * (e_te * s_).mean() <= LINE_EP and 100 * (g_te * s_).mean() > opt[0]:
+                    opt = (100 * float((g_te * s_).mean()), 100 * float(s_.mean()))
+            r.update({"navtest-tuned bound under the cap (gain; moved %)": f"{opt[0]:+.3f}; {opt[1]:.1f}"})
+            rows.append(r)
+        T = pd.DataFrame(rows)
+        (OUT / "report").mkdir(exist_ok=True)
+        T.to_csv(OUT / "report/posthoc.csv", index=False)
+        c1 = list(T.columns[:7])
+        txt = ("## Post hoc (not registered): where the registered operating point's gain comes from\n\n" + md(T[c1]) +
+               "\n\n## Post hoc (not registered): operating point with the EP loss capped at 0.3\n\n" + md(T[["arm", "learner"] + list(T.columns[7:])]) + "\n")
+        (OUT / "report/posthoc.md").write_text(txt)
+        run.info(txt)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -865,5 +930,6 @@ if __name__ == "__main__":
         p = sp.add_parser(c)
         p.add_argument("--arm", required=True, choices=list(ARMS))
     sp.add_parser("report")
+    sp.add_parser("posthoc")
     a = ap.parse_args()
-    {"extract": cmd_extract, "family": cmd_family, "gate": cmd_gate, "build": cmd_build, "fit": cmd_fit, "xfit": cmd_xfit, "report": cmd_report}[a.cmd](a)
+    {"extract": cmd_extract, "family": cmd_family, "gate": cmd_gate, "build": cmd_build, "fit": cmd_fit, "xfit": cmd_xfit, "report": cmd_report, "posthoc": cmd_posthoc}[a.cmd](a)
