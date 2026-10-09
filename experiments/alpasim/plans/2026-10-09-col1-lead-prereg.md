@@ -94,7 +94,7 @@ of these scenes gave the same 8 zero scenes), so single-scene changes other than
 
 ## Amendment 2 (2026-10-09, after arm `v1` on the 10 `a10_c4` scenes was read, before any further `v1` run)
 
-Read so far (10 scenes): mean scene score 0.154 -> 0.333; zeros 8 -> 5; 4f779a92 no longer spins. The arm is extended, unchanged, to the
+Read so far (10 scenes): mean scene score 0.154 -> 0.333; zeros 8 -> 6 (this line first said 5: a miscount, corrected the same evening before any further `v1` result was read); 4f779a92 no longer spins. The arm is extended, unchanged, to the
 other 30 scenes of `pai_scenes_40.tsv`, each list with the chunking of its baseline run (`b1`, `b2a`, `b2b`). Still a diagnostic of the
 serving-side defect, not a candidate and not a line. Reported on all 40 scenes: mean scene score and zeros by flag, baseline against `v1`,
 the paired per-scene difference with a scene-bootstrap 95 % interval (10 000 draws, seed 0), and the hand-over steering / braking of every
