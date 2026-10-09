@@ -51,7 +51,9 @@ def main():
     if not new:
         C.fail("no new scenes")
     k = max(1, math.ceil(len(new) / CHUNK))
-    w = lambda n, xs: (L / n).write_text("\n".join(xs) + "\n") or L / n
+    def w(n, xs):
+        (L / n).write_text("\n".join(xs) + "\n")
+        return L / n
     jobs = [C.Job("sh30", "sh30", {"SH30_TAG": "SH30-F-s0"}, w("all.txt", new), 15),
             C.Job("ap2", "ap2", {"AP2_TAG": "AP2-AB-s0"}, L / "all.txt", 15)]
     for name, drv, env, prio, vram in (("wajepa", "wajepa", {"WAJ_AMP": 0}, 10, 26), ("ot0", "sh30", {"SH30_TAG": "OT30-F-s0"}, 5, 24),
