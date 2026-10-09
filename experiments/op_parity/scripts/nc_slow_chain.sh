@@ -22,7 +22,7 @@ KEYS="a070 a080 a090 a100 a110"
 status() { echo "$(date '+%F %T') op_parity nc-slow: $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 sub() { local n=$1; shift; local ld=$L/$n; [[ -f $ld/DONE ]] && return
-        local live; live=$($CL queue 2>/dev/null | awk -v n="ncs-$n" '$4 == n && ($2 == "queued" || $2 == "running") {print $1; exit}')
+        local live; live=$($CL queue 2>/dev/null | awk -v n="ncs-$n" '($3 == n || $4 == n) && ($2 == "queued" || $2 == "running") {print $1; exit}')   # a queued row has no card column
         [[ -n $live ]] && return; rm -rf "$ld"
         $CL submit --owner op_parity --name "ncs-$n" --log-dir "$ld" "$@" || die "submit $n"; }
 waitdirs() { for n in "$@"; do until [[ -f $L/$n/DONE || -f $L/$n/ERROR ]]; do sleep 30; done; [[ -f $L/$n/ERROR ]] && die "job failed: $L/$n/ERROR"; done; return 0; }
@@ -34,8 +34,8 @@ score() {   # score <suffix>
 
 if [[ ${SMOKE:-} == 1 ]]; then
   status "smoke: extraction (64 rows)"
-  sub smoke-ext-0 --vram 16 --cpu 3 --ram 24 -- $X extract --shard 0 --limit 64
-  sub smoke-ext-nt --vram 16 --cpu 3 --ram 24 -- $X extract --seed 0 --limit 64
+  sub smoke-ext-0 --vram 10 --cpu 3 --ram 6 -- $X extract --shard 0 --limit 64
+  sub smoke-ext-nt --vram 10 --cpu 3 --ram 6 -- $X extract --seed 0 --limit 64
   waitdirs smoke-ext-0 smoke-ext-nt
   status "smoke: family + scoring (240 tokens)"
   $X family --limit 120 || die "family smoke"
@@ -45,8 +45,8 @@ if [[ ${SMOKE:-} == 1 ]]; then
 fi
 
 status "extraction: 12 shards + navtest x 2 (pool); rest metric cache"
-for i in $(seq 0 11); do sub ext-$i --vram 16 --cpu 3 --ram 24 -- $X extract --shard $i; done
-for s in 0 1; do sub ext-nt$s --vram 16 --cpu 3 --ram 24 -- $X extract --seed $s; done
+for i in $(seq 0 11); do sub ext-$i --vram 10 --cpu 3 --ram 6 -- $X extract --shard $i; done
+for s in 0 1; do sub ext-nt$s --vram 10 --cpu 3 --ram 6 -- $X extract --seed $s; done
 "$VPY" $S/nt_cache.py run --stage rest --limit 17 --jobs "$JOBS" || die "nt_cache rest"
 waitdirs $(for i in $(seq 0 11); do echo ext-$i; done) ext-nt0 ext-nt1
 
