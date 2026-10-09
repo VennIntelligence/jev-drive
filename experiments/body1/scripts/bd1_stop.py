@@ -172,7 +172,7 @@ def cmd_replay(a):
                 got = np.array([c[0]["z"] for c in C_])
                 flag, ref_flag = np.array([c[0]["flag"] for c in C_]), ref.mean(1) >= D.BD.THR
                 ms = np.array([c[0]["ms"] for c in C_])
-                bad, cuts, acc = 0, [], []
+                bad, cuts, acc, why = 0, [], [], np.zeros(4, int)                               # why: off the path, ahead of the plan, past D, backwards
                 for info, pl, sv, v0 in C_:
                     if not info["flag"]:
                         bad += int(not np.array_equal(pl, sv))
@@ -183,10 +183,12 @@ def cmd_replay(a):
                     seg = P[1:] - P[:-1]
                     t = np.clip(np.einsum("nsc,sc->ns", sv[:, None, :2] - P[None, :-1], seg) / np.maximum((seg ** 2).sum(1), 1e-12), 0, 1)
                     off = np.linalg.norm(sv[:, None, :2] - (P[None, :-1] + t[..., None] * seg[None]), axis=-1).min(1).max()
-                    bad += int(off > 1e-6 or (sa > pa + 1e-6).any() or sa[-1] > info["D"] + 1e-6 or (np.diff(sa) < -1e-9).any())
+                    fails = [off > 1e-6, bool((sa > pa + 1e-6).any()), sa[-1] > info["D"] + 1e-3, bool((np.diff(sa) < -1e-9).any())]
+                    why += np.array(fails, int)
+                    bad += int(any(fails))
                     cuts.append(info["cut"]), acc.append(info["a"])
                 r.update(logit_max_abs_diff=float(np.abs(got - ref).max()), logit_mean_abs_diff=float(np.abs(got - ref).mean()), flags=int(flag.sum()),
-                         flags_stored=int(ref_flag.sum()), flag_disagree=int((flag != ref_flag).sum()), flag_rate=float(flag.mean()), trajectory_checks_failed=bad,
+                         flags_stored=int(ref_flag.sum()), flag_disagree=int((flag != ref_flag).sum()), flag_rate=float(flag.mean()), trajectory_checks_failed=bad, trajectory_checks_why=why.tolist(),
                          hook_ms_p50=float(np.median(ms)), hook_ms_p90=float(np.quantile(ms, 0.9)), hook_ms_max=float(ms.max()),
                          flagged_cut_median_m=float(np.median(cuts)) if cuts else None, flagged_a_median=float(np.median(acc)) if acc else None,
                          slots_min=int(min(int(np.asarray(z["valid"][i]).sum()) for i in idx[:50])))

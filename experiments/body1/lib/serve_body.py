@@ -22,7 +22,7 @@ The rule (every constant fixed in Amendment 2 from hold logs / the controller, b
   at standstill  no minimum speed: a flagged plan of a standing ego is held at min(plan, envelope), i.e. the ego stays or creeps to d.
   no latch       each decision stands alone. When the flag clears the plan is served unchanged from that decision on.
 
-Every decision is logged by the driver as `body` in drive.jsonl: p, the two logits, flag, ms; when flagged also s_reg, s_step, d, D, a, v0,
+Every decision is logged by the driver as `body` in drive.jsonl: p, the two logits, flag, v0, ms; when flagged also s_reg, s_step, d, D, a,
 cut (metres removed from the first 2 s) and plan (the poses before re-timing).
 No simulator state, no boxes, no map: inputs are the vision tokens, the ego vector and the plan of the same forward pass.
 """
@@ -128,12 +128,12 @@ def apply(lock, o: dict, v0: float):
     with lock:
         out, step = BODY.score(o["tokens"], o["valid"], o["ego"], o["poses"])
     z = float(out[:, 0].mean())
-    info = {"p": round(1 / (1 + np.exp(-z)), 4), "z": [round(float(x), 3) for x in out[:, 0]], "flag": bool(z >= THR)}
+    info = {"p": round(1 / (1 + np.exp(-z)), 4), "z": [round(float(x), 3) for x in out[:, 0]], "flag": bool(z >= THR), "v0": round(float(v0), 3)}
     if info["flag"]:
         s_reg, s_step, d = stop_point(out, step, o["poses"], M)
         poses, a, D, cut = retime(o["poses"], v0, d)
-        info.update(s_reg=round(s_reg, 2), s_step=None if not np.isfinite(s_step) else round(s_step, 2), d=round(d, 2), D=round(D, 2), a=round(a, 3),
-                    v0=round(float(v0), 3), cut=round(cut, 3), plan=np.asarray(o["poses"]).round(4).tolist())
+        info.update(s_reg=round(s_reg, 2), s_step=None if not np.isfinite(s_step) else round(s_step, 2), d=round(d, 3), D=round(D, 3), a=round(a, 3),
+                    cut=round(cut, 3), plan=np.asarray(o["poses"]).round(4).tolist())
         o["poses_plan"], o["poses"] = o["poses"], poses
     info["ms"] = round(1e3 * (time.perf_counter() - t), 2)
     return info

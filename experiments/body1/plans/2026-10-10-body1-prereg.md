@@ -164,3 +164,73 @@ Read so far: label-side counts only ([results/taxonomy.md](../results/taxonomy.m
 5. G2 harness: the replay reproduces SWV1's served plans bit for bit (2 220 decisions) and its reader reproduces
    `plan_std2_FT` 0.786 [0.738, 0.865] and the road-edge margin 0.718 [0.643, 0.822] (`lib/g2.py`). The policy sees 8 token
    slots per decision.
+
+## Amendment 2 (2026-10-10, the stop arm 4.1: fixed after S0 passed G1 / G2 and before any closed-loop run with the switch)
+
+Read so far: [results/s0_gate.md](../results/s0_gate.md) (hold logs and the G2 decisions, as reported there); the hold-log rule
+table of this amendment (`scripts/bd1_stop.py hold`, own-plan decisions of `body1-hold-logs` only); the replay plumbing check
+(`bd1_stop.py replay`, item 7). No closed-loop run with the switch exists and no closed-loop score of it has been read.
+Code: `lib/serve_body.py` (its docstring is the specification), hooked into `experiments/alpasim/lib/sh30_driver.py`.
+
+1. **Switch.** `JEV_STOP=<m>` (metres), read once at driver start, carried in `get_version` (`-stop<m>`). Unset or 0: the
+   module is not imported and the driver returns what it returned before. On: at every `drive` call, after `serve_fix.apply`,
+   the served plan (8 poses) is scored by the two full-scale `step` checkpoints (seed 0 `full-step/20261010-024906`, seed 1
+   `full-step/20261010-024909`) with the gate's input standard (fp16 tokens of the valid slots, slot mask, standardised ego
+   vector); score = mean of the two agent-contact logits. The boundary outputs are not used (4.2).
+2. **Threshold.** Flag = score >= 0.4080 (p = 0.60): the 98th percentile of the 50 265 clean own-plan decisions of the hold logs
+   (`results/s0/stop.json`). Hold recall 0.51; by ego speed the head is nearly silent at standstill (0-1 m/s: flag rate 0.13 %
+   of 2 981 clean decisions, recall 3 of 22; 3-10 m/s: 2.2 %, recall 0.50), which is where the hold logs have few positives.
+3. **Contact arc length.** s_c = min(regressed first-contact arc length, arc length at the start of the first 0.5 s interval of
+   the plan whose predicted clearance is under 0.25 m), two-seed means. Reason (463 flagged true positives of the hold logs): the
+   regression is unbiased overall (median signed error 0.00 m, |error| median 1.83 m) but over-estimates near contacts (true arc
+   0-3 m: median +1.42 m, n 63; 20 m and more: -1.74 m), and a stop placed behind the contact is no stop. Share of the true
+   positives whose stop point lies before the true contact, m = 2 m: regression alone 0.747; with intervals under 0 / 0.25 /
+   0.5 m: 0.790 / 0.875 / 0.914; mean speed removed by one false flag: 0.89 / 0.92 / 1.02 / 1.19 m/s. 0.25 m is kept: the
+   0.5 m variant buys 0.04 more for 17 % more false-flag cost and puts 10 % of the false flags' stop points within 0.5 m of the ego.
+4. **m = 2 m** (primary, the registered configuration; the lines apply to it alone). On the hold logs, open loop, one decision
+   at a time, with the rule of item 5: the ego stands still before the true first contact in 355 of 463 flagged positives
+   (0.767) with m = 2 against 322 (0.695) with m = 1; a false flag removes 1.02 against 0.91 m/s. The arc-length error (median
+   1.8 m) is larger than 1 m. **Secondary, labelled: m = 1 m**, same rule, run after the primary's one-chunk check, reported
+   next to it, never substituted for it.
+5. **Speed profile of a flagged plan.** The path is unchanged; d = max(s_c - m, 0). Served speed v(t) = min(plan's own speed,
+   sqrt(2 a (D - s(t)))) with D = max(d, v0^2 / 12) and a = clip(v0^2 / (2 D), 1, 6) m/s^2 (v0 = the ego speed the simulator
+   reports). Reasons, from the controller (docs/alpasim.md, "Serving switches"), not from scores: the MPC tracks positions
+   1.0-2.0 s ahead and no speed, so a stop reference must be reachable from the ego's own speed: a constant deceleration
+   from v0 to a standstill at d is the reference it meets with that deceleration (FIX1's speed-continuous serving, applied to
+   a stop). Cap 6 m/s^2: two thirds of the controller's limit (-9); the organisers report zig-zag steering for braking
+   references the vehicle cannot follow; when d needs more, the reference brakes at 6 m/s^2 and stands past d (7 % of the
+   false flags and 18 % of the flagged positives on hold logs). Floor 1 m/s^2: when d is far the plan is followed until the
+   1 m/s^2 envelope reaches it, so a slow or standing ego may still roll up to the stop point (24 % of the false flags remove
+   no speed at the flagged decision). Speed is only removed.
+6. **What else the rule does.** No minimum speed: a flagged plan of a standing ego is served under the same envelope (it
+   stays, or creeps to d). No latch and no filter: each decision stands alone; when the flag clears, the plan is served
+   unchanged from that decision on (the launch is the adapter's own). A latch would need a release rule, which could only be
+   tuned on closed-loop outcomes. Every decision is logged (`body` in `drive.jsonl`: p, both logits, flag, ego speed, hook ms;
+   when flagged: both arc estimates, d, D, a, metres removed in the first 2 s, the plan before re-timing).
+7. **What was looked at on the navtest replay (plumbing only; nothing chosen there).** Switch off: the driver's plans against
+   SWV1's stored replay of the same messages, bit for bit. Switch on: the hook's two logits against the gate's stored
+   predictions for the same decisions (max |difference| 0.06 on the collision groups, flags identical: 34 / 34 and 31 / 31),
+   the plan before the stop against the stored replay (0.0 m), geometry checks of the stop trajectories (on the path, never
+   ahead of the plan, never past D) and the hook's latency (9.5 ms median). The replay also printed the median deceleration
+   and metres removed of the flagged decisions of the collision groups (1.84 m/s^2, 2.1 to 2.4 m); every constant above was
+   already committed (33badb5a) and none changed afterwards.
+8. **Read (section 4.4, tightened).** Scenes: `c0b/lists/chunk{0,1,2}.txt` (700), P2H10-F-s0 and -s1 with `JEV_STOP=2`, through
+   `ot2_loop.py` / `run.sh` / the pool. Baseline: TR1's P2H10-F-s0 / -s1 runs on the same chunks (2026-10-10 01:22, box HEAD
+   894bf6e0); the files the driver imports (`experiments/alpasim/docker/closure.txt`) are unchanged between that commit and
+   this one except `sh30_driver.py`, whose switch-off path is the identity of item 7. Recipe = per-scene mean of the two seeds.
+   - L1: at-fault collision zeros (first failing flag of the scene) go down in the two-seed mean, and in neither seed up.
+   - L2: mean per-scene difference >= 0 and the log-clustered 95 % lower bound > -0.005 (`jevdrive.stats.paired(groups=log)`).
+   - L3: slow scenes (0 < score < 1), two-seed mean count, <= 1.1 x base.
+   - Reported without a line: zeros by class, every scene whose zero / non-zero state changes with the reason seen in the logs,
+     flag rate per decision and per scene, driver latency, the scenes whose logged path turns > 45 deg (count, mean, zeros;
+     logged heading change over the scene), the secondary m = 1.
+   - Staged. (a) `pilot8.txt`, P2H10-F-s0: switch off twice and switch on once. Off must give the same per-scene scores twice
+     (or the difference is the repeatability every later comparison is read against); on must complete with a `body`
+     record on every decision. (b) chunk0 of P2H10-F-s0 with the switch, against this checklist: 234 / 234 rollouts and no
+     driver error; `drive` total p50 and p90 <= 100 ms; flags on 1-5 % of the decisions (expected 2-2.6 %); the ego is slower
+     0.5 s after a flagged decision that removes speed in >= 80 % of them; the controller's acceleration command never under
+     -8.5 m/s^2 after a flagged decision and no steering reversal train in the steering / acceleration traces of 3 flagged
+     scenes (drawn; a zig-zag fails the check). A failed check stops the arm before the rest runs. (c) the remaining five
+     chunk jobs, then the secondary.
+   - It is a regression check: all public scenes took part in selecting P2H10 before. Open-loop plans are untouched (the
+     switch acts on the trajectory handed to AlpaSim's tracker), so navtest is stated unchanged and not scored.
