@@ -1,0 +1,6 @@
+id,kind,scene,on,off,look
+bev_removed_1,corridor zero removed,2021.06.28.21.16.05_veh-14_00957_01198-a04628cdd3f25947,/root/autodl-tmp/ujs/runs/body1/cl/rp-strips/runs/rp-s0-scenes/20261010-050401,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk1/20261010-012222,
+bev_new_1,new offroad zero,2021.09.16.13.53.10_veh-42_00180_00342-592f536375e755b6,/root/autodl-tmp/ujs/runs/body1/cl/rp-strips/runs/rp-s0-scenes/20261010-050401,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk1/20261010-012222,
+bev_new_2,new offroad zero,2021.09.16.14.39.34_veh-42_00032_00186-4972962184a75fa7,/root/autodl-tmp/ujs/runs/body1/cl/rp-strips/runs/rp-s0-scenes/20261010-050401,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk1/20261010-012222,
+bev_needless_1,needless shift,2021.06.03.17.06.58_veh-35_02943_03220-0393e11b085a5cc2,/root/autodl-tmp/ujs/runs/body1/cl/rp-strips/runs/rp-s0-scenes/20261010-050401,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk1/20261010-012222,
+bev_needless_2,needless shift,2021.09.16.15.12.03_veh-42_01037_01434-a8fb178e35d25d73,/root/autodl-tmp/ujs/runs/body1/cl/rp-strips/runs/rp-s0-scenes/20261010-050401,/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk1/20261010-012222,

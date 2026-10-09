@@ -1,0 +1,67 @@
+{
+ "scenes": 233,
+ "logs": 27,
+ "diff_log": {
+  "n": 233,
+  "units": 27,
+  "mean": -0.004313628684218692,
+  "lo": -0.01723575021058711,
+  "hi": 0.01117518737158474,
+  "n_boot": 10000,
+  "seed": 0,
+  "alpha": 0.05,
+  "mean_a": 0.9368092297215234,
+  "mean_b": 0.9411228584057421
+ },
+ "diff_scene": {
+  "n": 233,
+  "units": 233,
+  "mean": -0.004313628684218692,
+  "lo": -0.02145922746781116,
+  "hi": 0.00858139609905656,
+  "n_boot": 10000,
+  "seed": 0,
+  "alpha": 0.05,
+  "mean_a": 0.9368092297215234,
+  "mean_b": 0.9411228584057421
+ },
+ "mean_arm": 0.9368092297215234,
+ "mean_base": 0.9411228584057421,
+ "slow_arm": 37,
+ "slow_base": 37,
+ "zeros_arm": {
+  "collision": 2,
+  "offroad": 7,
+  "corridor": 2
+ },
+ "zeros_base": {
+  "collision": 2,
+  "offroad": 5,
+  "corridor": 3
+ },
+ "replanned_scenes": 19,
+ "replanned_diff_sum": -1.0050754834229552,
+ "replanned_better": 1,
+ "replanned_worse": 4,
+ "replanned_same": 14,
+ "gt45": {
+  "n": 18,
+  "mean_arm": 0.8853517998578708,
+  "mean_base": 0.8297962443023152,
+  "zeros_arm": 2,
+  "zeros_base": 3,
+  "replanned": 4,
+  "diff": {
+   "n": 18,
+   "units": 14,
+   "mean": 0.05555555555555555,
+   "lo": 0.0,
+   "hi": 0.1875,
+   "n_boot": 10000,
+   "seed": 0,
+   "alpha": 0.05,
+   "mean_a": 0.8853517998578708,
+   "mean_b": 0.8297962443023152
+  }
+ }
+}

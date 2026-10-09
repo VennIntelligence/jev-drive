@@ -349,3 +349,11 @@ Code: `lib/serve_body.py` (its docstring is the specification), hooked into `exp
    - It is a regression check (all public scenes took part in selecting P2H10). Serving-only: navtest is unchanged and not scored.
 9. **PAI secondary read**: as Amendment 2 item 9 with `JEV_REPLAN=1` in place of `JEV_STOP=2`, only if the nuPlan read passes its lines on
    both readings; descriptive, nothing tuned on PAI.
+
+**Status after stage (b) (2026-10-10 05:10 box time, added after the read; nothing above was changed).** Stage (a) passed. Stage (b),
+chunk1 of P2H10-F-s0, failed item 5 of the checklist (new zeros in re-planned scenes 2, both offroad, against 1 zero removed); items 1-4, 6
+and 7 passed (re-plans on 0.82 % of the decisions, `drive` 35 / 55 ms, heading ratio 0.98). By item 8 the arm stopped there: the other five
+chunk jobs and the PAI read were not run, and neither reading has a registered value. Clarification of item 3: "of the 3 harms 2 came
+through either trigger's boundary side" means 2 of the 3 created contacts are boundary contacts. The closed-loop jobs ran on the lane's
+held card outside the pool (its other cards were full of another lane's queue). Results:
+[results/replan_closed_loop.md](../results/replan_closed_loop.md).
