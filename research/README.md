@@ -2,7 +2,7 @@
 
 叙事层：长期主题、综述和跨实验的分析，用中文写。单个实验的问题、结论和文件在
 [experiments/INDEX.md](../experiments/INDEX.md) 对应的主题 README 里。
-面向人的页面一律是 `research/<slug>/index.html`，按 [docs/agy-reports.md](../docs/agy-reports.md) 写成。
+面向人的页面一律是 `research/<slug>/index.html`，按 [docs/html-reports.md](../docs/html-reports.md) 写成。
 结论稳定后在 `docs/` 或代码里写英文正式版。
 
 ## 主题页
@@ -19,6 +19,8 @@
 
 ## 记录与工具
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。
+- [next-round/plan.md](next-round/plan.md)：下一轮方向与计划（2026-10-09 改写）：论文线与比赛线分开，后果监督的轻量表征支路，判定线、日历。
+- [next-round/overnight.md](next-round/overnight.md)：2026-10-09 夜的执行任务书：NC 失败分类、真值几何 oracle、离轨 warp 行。
 - `lit/`：文献长报告，只在这台 Mac 上，不进 git。
 - [plot_style.py](plot_style.py)：所有图共用的 plot style 模块。
 

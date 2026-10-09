@@ -20,8 +20,8 @@ English version in `docs/` or code. `tmp/` is gitignored scratch.
 - The box runs experiments only. Notes, figures and literature live on this Mac; never copy them to the box.
 - Tokyo box (`ssh ujs@100.108.238.8`, one RTX 3090) is for looking at CARLA: [docs/tokyo-box.md](docs/tokyo-box.md).
 - Data, checkpoints and envs stay on the box data disk. Never commit secrets (passwords, keys, proxy configs, URLs).
-- No Artifact web pages. Human-readable reports are agy-written Chinese HTML in `research/<topic>/`
-  ([docs/agy-reports.md](docs/agy-reports.md)); agent-facing records stay Markdown. tmp/ keeps no reports. Showing
+- No Artifact web pages. Human-readable reports are Chinese HTML in `research/<topic>/`, written by Claude
+  ([docs/html-reports.md](docs/html-reports.md)); agent-facing records stay Markdown. tmp/ keeps no reports. Showing
   docs without a push: [docs/web-reader.md](docs/web-reader.md).
 - Jobs over ~1 min run in tmux `jev` via `scripts/tmux_run.sh` with log.txt / events.jsonl / tb/; before a job over
   ~1 h follow [docs/long-runs.md](docs/long-runs.md) (estimate, profile >3 h, staged 1 -> ~10 -> all launch).
