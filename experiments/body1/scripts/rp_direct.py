@@ -5,7 +5,7 @@ and state files as experiments/alpasim/scripts/ot2_loop.py; the jobs are started
 
   scripts/tmux_run.sh body1-<stage> env RP_CARD=2 python3 experiments/body1/scripts/rp_direct.py <stage> <job> [<job> ...]     (box; stdlib only)
 
-job = label:driver:ENV=VALUE[,ENV=VALUE...]::list      (list = chunks | a list name under c0b/lists, as ot2_loop.py; no checkpoint waiting)
+job = label:driver:ENV=VALUE[,ENV=VALUE...]::list      (list = chunks | a list name under c0b/lists, as ot2_loop.py | an absolute path; no checkpoint waiting)
 Env: RP_CARD (card index, default 2), RP_MAX (jobs at once, default 2: two stacks of <= 32 GB on an 84 GB card), RP_KEEP=1 (keep every
 rollout.asl: review strips), OT_OUT (state root, default $DATA_DIR/runs/body1/cl).
 State in <OT_OUT>/<stage>/: STATUS, DONE, ERROR, log.txt, manifest.json {label: [run dirs]}, runs/. Before every start the page cache is trimmed to
@@ -136,7 +136,7 @@ def main():
             B.log(f"{label}: already in the manifest, skipped")
             continue
         for part in (["chunk0", "chunk1", "chunk2"] if lst in ("", "chunks") else [lst]):
-            jobs.append(Job(label, f"{label}-{part}", drv, dict(e.split("=", 1) for e in env.split(",") if e), LISTS / f"{part}.txt"))
+            jobs.append(Job(label, f"{label}-{Path(part).stem}", drv, dict(e.split("=", 1) for e in env.split(",") if e), Path(part) if part.startswith("/") else LISTS / f"{part}.txt"))
     ACTIVE.extend(jobs)
     while True:
         for j in jobs:
