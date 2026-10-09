@@ -474,3 +474,34 @@ the number it affects exists, and tightens only.
     hinge-only rows on the NAVSIM raster; B + C without A: no agent hinge; A on on-log rows only, without B and C) are trained at full scale,
     one seed each, read on G3 (a) to (d) only, and reported next to the full arm; they do not change which checkpoint goes to closed loop.
     If G3 fails, no ablation is trained: the per-term losses and per-family rates of item 5 are the read.
+
+**Implementation notes to Amendment 4 (2026-10-10, written with the code and before any cache, raster, pilot step or number of this arm exists;
+each fixes something the items above left open, none loosens a line).**
+- (i) **Trainer.** `pp_train.py` itself is not edited: `scripts/bd4_train.py` runs pp_train's `Store` / `PModel` / `Losses` with the row stream and
+  loop of `ot_rows.py train` (decision 198: bit-identical to pp_train with no off-track rows) and a subclass of `Losses` (`lib/loss43.py`). With
+  every new switch off it must reproduce the unmodified `pp_train.py` (losses of N steps and the final weights, bit for bit).
+- (ii) **Batch.** 128 rows = 115 rows drawn as P2H10 draws its 128 (imitation / anchor at 0.25) + 13 hinge-only rows: 4 ot1, 4 yr1, 5 `bd4`,
+  uniformly from the family's rows on `navsim/body1-train-logs`. Hinge-only rows are never anchor rows; their non-plan heads are distilled to
+  shipped Cinque on the same (perturbed) tokens as every row's are (the off-track lanes' rule); their plan has no distillation and no
+  imitation target.
+- (iii) **Weights.** P2H10's terms are unchanged (imitation 1, anchor 3, distillation 30, on-log drivable hinge 10 x its mean over the labelled
+  imitation rows). A on imitation rows: 10 x `AgentHinge`'s mean over the labelled imitation rows, margin 0.3 m in the ego's corridor and 0 m
+  outside it (decision 158's pre-training deviation: with a side margin the logged human trajectories violate the hinge at passing vehicles),
+  labels `navtrain_all-k32.npz`. On hinge-only rows each row carries the per-row weight of an on-log imitation row, not more (decision 205: the
+  strong hinge is the drift trigger): the agent hinge and the scorer-layer drivable hinge (margin 0.3 m) of the 13 rows are each summed and
+  divided by the number of imitation rows of the batch, x 10.
+- (iv) **Frames.** Off-track rows give their plan in their own frame; the agent boxes of such a row are moved once into that frame (rigid, so
+  identical to mapping the plan back), the drivable hinge uses `ot_rows.off_hinge`.
+- (v) **`bd4`.** |heading offset| ~ U(2, 8) deg with random sign, lateral offset U(-0.5, 0.5) m at t0, logged future present, no speed cut.
+  History as ot1 (`op_adapt_h.drift`: the heading error ramps from 0 at -1.6 s) for v0 >= 1 m/s, redrawn while the pose at -1.5 s is more
+  than 1.5 m off the logged path (fast rows therefore carry the smaller headings); for v0 < 1 m/s the offset is constant over the history (a
+  standing car shows no yaw rate). Subset, by token hash, to fit the 25 GB budget: half of the tokens at <= 3 m/s, a quarter of the faster
+  ones, every token whose logged 4 s heading change exceeds 45 deg (about 40 k states). If the preview shows the low-speed reprojection
+  broken, the family is restricted and that is written here before any number.
+- (vi) **Scorer-layer raster.** nuPlan layers ROADBLOCK, ROADBLOCK_CONNECTOR, INTERSECTION, LANE, LANE_CONNECTOR (NAVSIM's raster: ROADBLOCK,
+  INTERSECTION, CARPARK_AREA), same grid and SDF construction (`opb_labels.py`, layer list from the environment), all 12 navtrain shards.
+- (vii) **G3 reader** (`scripts/bd4_g3.py`): the new checkpoint and P2H10-F of the same seed forward on the same hold-log states; rate
+  difference with `jevdrive.stats.paired(groups=log)`; "falls by 30 % relative" = (base - new) / base >= 0.30 on the pooled states with the
+  paired interval of the difference excluding 0. At pilot scale "points the right way" = both pooled rates lower than P2H10-F-s0's (point
+  estimates). The pilot's "agent hinge term on own-plan positives" = the mean agent hinge over the rows with a non-zero agent hinge, hinge-only
+  and imitation rows pooled, mean of steps 2 701-3 000 against steps 201-400 (a window, since single log intervals hold a handful of rows).

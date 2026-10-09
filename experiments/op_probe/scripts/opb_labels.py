@@ -37,6 +37,9 @@ NX, NY = int((NH * RES + 2 * PAD) / FINE), int((NW * RES + 2 * PAD) / FINE)
 LAYERS = ("ROADBLOCK", "INTERSECTION", "CARPARK_AREA")      # the scorer's drivable_area_idcs (roadblock connectors only enter as lane connectors, not drivable)
 RADIUS = 80.0
 OUT = D / "runs" / "op_probe" / "labels"
+if os.environ.get("OPB_LAYERS"):                            # another layer list into another directory (experiments/body1, Amendment 4 item C); read
+    LAYERS = tuple(os.environ["OPB_LAYERS"].split(","))     # from the environment so that worker processes of any start method see it
+    OUT = Path(os.environ["OPB_OUT"])
 LOGDIR = {"navtest": "test", "navtrain": "trainval"}
 _maps = {}
 

@@ -36,6 +36,7 @@ OT = "ot1"                                       # cache prefix = version of the
 DY, DPSI, YMAX, VMIN = 0.5, np.radians(2.0), 1.0, 3.0
 FRAME = (2, 6, 128, 256)
 PROFILE, KEY_EXTRA = None, {}                    # hook for another perturbation family (experiments/alpasim/scripts/ot3_rows.py); off = this recipe
+SELECT = None                                    # hook: (tab, rows) -> rows, a family's own row subset (experiments/body1/scripts/bd4_prep.py); off = every row
 CR = data_dir() / "runs" / "op_parity" / "cache"
 OUT = data_dir() / "runs" / "op_parity" / "ot_rows"
 
@@ -111,6 +112,8 @@ def cmd_prep(a):
         run.use_split(splits.load("navsim/navtrain"))
         base = dict(np.load(CR / a.data / "tab.npz"))               # per-row metadata from the shard's tab (the navsim_zs navtrain index is gone)
         sel = np.flatnonzero((base["speed"] > VMIN) & ~np.isnan(base["fut"]).any((1, 2)))
+        if SELECT is not None:
+            sel = SELECT(base, sel)
         sel = sel[: a.limit] if a.limit else sel
         n, T = len(sel), t_all()
         _sys.path[:0] = [str(_R / "experiments/alpasim/scripts"), str(_R / "experiments/alpasim/lib")]
