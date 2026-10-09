@@ -1,0 +1,397 @@
+dom,set,scene,log,grp,cls,arm,trig,loss,loss_m,v_end,lose10,contact,hit_standing,deferred,avoided,stopped
+pai,pai-base,071d15c4,071d15c4,C,i,lat-acc cap 1.0,False,0.0,0.0,9.79,False,True,False,False,False,False
+pai,pai-base,071d15c4,071d15c4,C,i,lat-acc cap 1.5,False,0.0,0.0,9.79,False,True,False,False,False,False
+pai,pai-base,071d15c4,071d15c4,C,i,lat-acc cap 1.7,False,0.0,0.0,9.79,False,True,False,False,False,False
+pai,pai-base,071d15c4,071d15c4,C,i,lat-acc cap 2.0,False,0.0,0.0,9.79,False,True,False,False,False,False
+pai,pai-base,071d15c4,071d15c4,C,i,lat-acc cap 2.5,False,0.0,0.0,9.79,False,True,False,False,False,False
+pai,pai-base,071d15c4,071d15c4,C,i,lat-acc cap 3.0,False,0.0,0.0,9.79,False,True,False,False,False,False
+pai,pai-base,071d15c4,071d15c4,C,i,lat-acc cap 4.0,False,0.0,0.0,9.79,False,True,False,False,False,False
+pai,pai-base,071d15c4,071d15c4,C,i,lead-sweep stop (P0),True,0.877,156.258,0.0,True,True,False,False,False,True
+pai,pai-base,071d15c4,071d15c4,C,i,lead-sweep stop (FT),True,0.855,152.434,0.0,True,True,False,False,False,True
+pai,pai-base,071d15c4,071d15c4,C,i,"lead-sweep stop (P0), 2 m margin",True,0.885,157.81,0.0,True,False,False,False,True,True
+pai,pai-base,071d15c4,071d15c4,C,i,footprint stop (privileged ceiling),True,0.916,163.337,0.0,True,False,False,False,True,True
+pai,pai-base,071d15c4,071d15c4,C,i,"footprint stop (privileged ceiling), 2 m margin",True,0.926,164.973,0.0,True,False,False,False,True,True
+pai,pai-base,13fb89b9,13fb89b9,C,ii,lat-acc cap 1.0,False,0.001,0.201,3.749,False,True,False,False,False,False
+pai,pai-base,13fb89b9,13fb89b9,C,ii,lat-acc cap 1.5,False,0.001,0.201,3.749,False,True,False,False,False,False
+pai,pai-base,13fb89b9,13fb89b9,C,ii,lat-acc cap 1.7,False,0.001,0.201,3.749,False,True,False,False,False,False
+pai,pai-base,13fb89b9,13fb89b9,C,ii,lat-acc cap 2.0,False,0.001,0.201,3.749,False,True,False,False,False,False
+pai,pai-base,13fb89b9,13fb89b9,C,ii,lat-acc cap 2.5,False,0.001,0.201,3.749,False,True,False,False,False,False
+pai,pai-base,13fb89b9,13fb89b9,C,ii,lat-acc cap 3.0,False,0.001,0.201,3.749,False,True,False,False,False,False
+pai,pai-base,13fb89b9,13fb89b9,C,ii,lat-acc cap 4.0,False,0.001,0.201,3.749,False,True,False,False,False,False
+pai,pai-base,13fb89b9,13fb89b9,C,ii,lead-sweep stop (P0),False,0.002,0.503,3.558,False,True,False,False,False,False
+pai,pai-base,13fb89b9,13fb89b9,C,ii,lead-sweep stop (FT),False,0.002,0.503,3.558,False,True,False,False,False,False
+pai,pai-base,13fb89b9,13fb89b9,C,ii,"lead-sweep stop (P0), 2 m margin",False,0.002,0.503,3.558,False,True,False,False,False,False
+pai,pai-base,13fb89b9,13fb89b9,C,ii,footprint stop (privileged ceiling),True,0.725,176.007,0.0,True,False,False,False,True,True
+pai,pai-base,13fb89b9,13fb89b9,C,ii,"footprint stop (privileged ceiling), 2 m margin",True,0.731,177.454,0.0,True,False,False,False,True,True
+pai,pai-base,213dfdac,213dfdac,N,,lat-acc cap 1.0,True,0.0,0.0,4.948,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,lat-acc cap 1.5,True,0.001,0.068,3.113,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,lat-acc cap 1.7,False,0.001,0.055,3.113,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,lat-acc cap 2.0,False,0.001,0.055,3.113,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,lat-acc cap 2.5,False,0.001,0.055,3.113,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,lat-acc cap 3.0,False,0.001,0.055,3.113,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,lat-acc cap 4.0,False,0.001,0.055,3.113,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,lead-sweep stop (P0),False,0.001,0.103,3.113,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,lead-sweep stop (FT),False,0.001,0.103,3.113,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,"lead-sweep stop (P0), 2 m margin",False,0.001,0.103,3.113,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,footprint stop (privileged ceiling),False,0.001,0.103,3.113,False,,,,,
+pai,pai-base,213dfdac,213dfdac,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.0,0.029,2.82,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,lat-acc cap 1.0,True,0.004,0.435,1.159,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,lat-acc cap 1.5,True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,lat-acc cap 1.7,True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,lat-acc cap 2.0,True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,lat-acc cap 2.5,True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,lat-acc cap 3.0,True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,lat-acc cap 4.0,True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,lead-sweep stop (P0),True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,lead-sweep stop (FT),True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,"lead-sweep stop (P0), 2 m margin",True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,footprint stop (privileged ceiling),True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,4f779a92,4f779a92,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.0,0.045,1.139,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,lat-acc cap 1.0,True,0.001,0.19,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,lat-acc cap 1.5,True,0.0,0.013,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,lat-acc cap 1.7,True,0.0,0.014,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,lat-acc cap 2.0,False,0.0,0.014,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,lat-acc cap 2.5,False,0.0,0.014,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,lat-acc cap 3.0,False,0.0,0.014,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,lat-acc cap 4.0,False,0.0,0.014,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,lead-sweep stop (P0),False,0.0,0.013,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,lead-sweep stop (FT),False,0.0,0.013,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.013,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,footprint stop (privileged ceiling),False,0.0,0.013,9.345,False,,,,,
+pai,pai-base,5d794411,5d794411,N,,"footprint stop (privileged ceiling), 2 m margin",False,0.0,0.013,9.345,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,lat-acc cap 1.0,True,0.044,6.333,3.351,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,lat-acc cap 1.5,True,0.014,2.068,3.058,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,lat-acc cap 1.7,True,0.004,0.642,2.708,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,lat-acc cap 2.0,True,0.001,0.167,2.461,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,lat-acc cap 2.5,True,0.001,0.089,2.461,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,lat-acc cap 3.0,True,0.001,0.108,2.461,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,lat-acc cap 4.0,True,0.001,0.095,2.461,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,lead-sweep stop (P0),False,0.001,0.122,2.461,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,lead-sweep stop (FT),True,0.001,0.122,2.461,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,"lead-sweep stop (P0), 2 m margin",False,0.001,0.122,2.461,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,footprint stop (privileged ceiling),True,0.001,0.122,2.461,False,,,,,
+pai,pai-base,7a824ffa,7a824ffa,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.001,0.122,2.461,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,lat-acc cap 1.0,True,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,lat-acc cap 1.5,False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,lat-acc cap 1.7,False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,lat-acc cap 2.0,False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,lat-acc cap 2.5,False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,lat-acc cap 3.0,False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,lat-acc cap 4.0,False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,lead-sweep stop (P0),False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,lead-sweep stop (FT),False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,footprint stop (privileged ceiling),False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,94877a4a,94877a4a,N,,"footprint stop (privileged ceiling), 2 m margin",False,0.0,0.025,0.856,False,,,,,
+pai,pai-base,9ea70552,9ea70552,C,i,lat-acc cap 1.0,True,0.003,0.541,6.24,False,True,False,False,False,False
+pai,pai-base,9ea70552,9ea70552,C,i,lat-acc cap 1.5,False,0.0,0.028,6.223,False,True,False,False,False,False
+pai,pai-base,9ea70552,9ea70552,C,i,lat-acc cap 1.7,False,0.0,0.028,6.223,False,True,False,False,False,False
+pai,pai-base,9ea70552,9ea70552,C,i,lat-acc cap 2.0,False,0.0,0.028,6.223,False,True,False,False,False,False
+pai,pai-base,9ea70552,9ea70552,C,i,lat-acc cap 2.5,False,0.0,0.028,6.223,False,True,False,False,False,False
+pai,pai-base,9ea70552,9ea70552,C,i,lat-acc cap 3.0,False,0.0,0.028,6.223,False,True,False,False,False,False
+pai,pai-base,9ea70552,9ea70552,C,i,lat-acc cap 4.0,False,0.0,0.028,6.223,False,True,False,False,False,False
+pai,pai-base,9ea70552,9ea70552,C,i,lead-sweep stop (P0),True,0.14,28.832,0.0,True,True,False,False,False,True
+pai,pai-base,9ea70552,9ea70552,C,i,lead-sweep stop (FT),True,0.11,22.585,0.0,True,True,False,False,False,True
+pai,pai-base,9ea70552,9ea70552,C,i,"lead-sweep stop (P0), 2 m margin",True,0.148,30.342,0.0,True,True,False,False,False,True
+pai,pai-base,9ea70552,9ea70552,C,i,footprint stop (privileged ceiling),True,0.252,51.732,0.0,True,True,False,False,False,True
+pai,pai-base,9ea70552,9ea70552,C,i,"footprint stop (privileged ceiling), 2 m margin",True,0.259,53.252,0.0,True,True,True,False,False,True
+pai,pai-base,a28b6685,a28b6685,C,ii,lat-acc cap 1.0,True,0.0,0.0,8.564,False,True,False,False,False,False
+pai,pai-base,a28b6685,a28b6685,C,ii,lat-acc cap 1.5,True,0.0,0.0,8.564,False,True,False,False,False,False
+pai,pai-base,a28b6685,a28b6685,C,ii,lat-acc cap 1.7,True,0.0,0.0,8.564,False,True,False,False,False,False
+pai,pai-base,a28b6685,a28b6685,C,ii,lat-acc cap 2.0,False,0.0,0.0,8.564,False,True,False,False,False,False
+pai,pai-base,a28b6685,a28b6685,C,ii,lat-acc cap 2.5,False,0.0,0.0,8.564,False,True,False,False,False,False
+pai,pai-base,a28b6685,a28b6685,C,ii,lat-acc cap 3.0,False,0.0,0.0,8.564,False,True,False,False,False,False
+pai,pai-base,a28b6685,a28b6685,C,ii,lat-acc cap 4.0,False,0.0,0.0,8.564,False,True,False,False,False,False
+pai,pai-base,a28b6685,a28b6685,C,ii,lead-sweep stop (P0),False,0.013,1.025,8.203,False,True,False,False,False,False
+pai,pai-base,a28b6685,a28b6685,C,ii,lead-sweep stop (FT),False,0.013,1.025,8.203,False,True,False,False,False,False
+pai,pai-base,a28b6685,a28b6685,C,ii,"lead-sweep stop (P0), 2 m margin",False,0.013,1.025,8.203,False,True,False,False,False,False
+pai,pai-base,a28b6685,a28b6685,C,ii,footprint stop (privileged ceiling),True,0.972,77.434,0.0,True,True,False,False,False,True
+pai,pai-base,a28b6685,a28b6685,C,ii,"footprint stop (privileged ceiling), 2 m margin",True,0.991,78.933,0.0,True,False,False,False,True,True
+pai,pai-base,1d6e30bc,1d6e30bc,N,,lat-acc cap 1.0,True,0.001,0.139,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,lat-acc cap 1.5,True,0.0,0.043,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,lat-acc cap 1.7,True,0.0,0.043,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,lat-acc cap 2.0,True,0.0,0.043,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,lat-acc cap 2.5,True,0.0,0.043,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,lat-acc cap 3.0,True,0.0,0.043,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,lat-acc cap 4.0,False,0.0,0.043,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,lead-sweep stop (P0),False,0.0,0.043,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,lead-sweep stop (FT),False,0.0,0.043,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.043,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,footprint stop (privileged ceiling),False,0.0,0.043,1.631,False,,,,,
+pai,pai-base,1d6e30bc,1d6e30bc,N,,"footprint stop (privileged ceiling), 2 m margin",False,0.0,0.043,1.631,False,,,,,
+pai,pai-base,24a50fcc,24a50fcc,C,i,lat-acc cap 1.0,False,0.0,0.078,0.004,False,True,False,False,False,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,lat-acc cap 1.5,False,0.0,0.078,0.004,False,True,False,False,False,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,lat-acc cap 1.7,False,0.0,0.078,0.004,False,True,False,False,False,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,lat-acc cap 2.0,False,0.0,0.078,0.004,False,True,False,False,False,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,lat-acc cap 2.5,False,0.0,0.078,0.004,False,True,False,False,False,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,lat-acc cap 3.0,False,0.0,0.078,0.004,False,True,False,False,False,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,lat-acc cap 4.0,False,0.0,0.078,0.004,False,True,False,False,False,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,lead-sweep stop (P0),True,0.323,68.064,0.0,True,False,False,False,True,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,lead-sweep stop (FT),True,0.312,65.627,0.0,True,True,False,False,False,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,"lead-sweep stop (P0), 2 m margin",True,0.33,69.55,0.0,True,False,False,False,True,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,footprint stop (privileged ceiling),True,0.429,90.352,0.0,True,False,False,False,True,True
+pai,pai-base,24a50fcc,24a50fcc,C,i,"footprint stop (privileged ceiling), 2 m margin",True,0.436,91.87,0.0,True,False,False,False,True,True
+pai,pai-base,2e76251a,2e76251a,N,,lat-acc cap 1.0,False,0.0,0.03,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,lat-acc cap 1.5,False,0.0,0.03,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,lat-acc cap 1.7,False,0.0,0.03,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,lat-acc cap 2.0,False,0.0,0.03,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,lat-acc cap 2.5,False,0.0,0.03,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,lat-acc cap 3.0,False,0.0,0.03,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,lat-acc cap 4.0,False,0.0,0.03,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,lead-sweep stop (P0),False,0.004,0.433,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,lead-sweep stop (FT),False,0.004,0.433,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,"lead-sweep stop (P0), 2 m margin",False,0.004,0.433,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,footprint stop (privileged ceiling),False,0.004,0.433,0.693,False,,,,,
+pai,pai-base,2e76251a,2e76251a,N,,"footprint stop (privileged ceiling), 2 m margin",False,0.004,0.433,0.693,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,lat-acc cap 1.0,True,0.0,0.0,5.172,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,lat-acc cap 1.5,True,0.0,0.0,4.953,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,lat-acc cap 1.7,True,0.0,0.0,3.743,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,lat-acc cap 2.0,True,0.0,0.009,2.865,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,lat-acc cap 2.5,False,0.0,0.075,2.865,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,lat-acc cap 3.0,False,0.0,0.075,2.865,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,lat-acc cap 4.0,False,0.0,0.075,2.865,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,lead-sweep stop (P0),False,0.0,0.113,2.865,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,lead-sweep stop (FT),False,0.0,0.113,2.865,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.113,2.865,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,footprint stop (privileged ceiling),False,0.0,0.113,2.865,False,,,,,
+pai,pai-base,3a48e906,3a48e906,N,,"footprint stop (privileged ceiling), 2 m margin",False,0.0,0.113,2.865,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,lat-acc cap 1.0,True,0.018,2.997,3.805,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,lat-acc cap 1.5,True,0.005,0.772,4.943,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,lat-acc cap 1.7,True,0.004,0.631,4.979,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,lat-acc cap 2.0,True,0.002,0.274,5.552,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,lat-acc cap 2.5,True,0.001,0.124,5.51,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,lat-acc cap 3.0,True,0.0,0.036,5.463,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,lat-acc cap 4.0,True,0.0,0.039,5.463,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,lead-sweep stop (P0),False,0.0,0.039,5.463,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,lead-sweep stop (FT),False,0.0,0.039,5.463,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.039,5.463,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,footprint stop (privileged ceiling),False,0.0,0.039,5.463,False,,,,,
+pai,pai-base,59e085d7,59e085d7,N,,"footprint stop (privileged ceiling), 2 m margin",False,0.0,0.039,5.463,False,,,,,
+pai,pai-base,605bf77a,605bf77a,C,iv,lat-acc cap 1.0,False,0.001,0.157,2.958,False,True,False,False,False,False
+pai,pai-base,605bf77a,605bf77a,C,iv,lat-acc cap 1.5,False,0.001,0.157,2.958,False,True,False,False,False,False
+pai,pai-base,605bf77a,605bf77a,C,iv,lat-acc cap 1.7,False,0.001,0.157,2.958,False,True,False,False,False,False
+pai,pai-base,605bf77a,605bf77a,C,iv,lat-acc cap 2.0,False,0.001,0.157,2.958,False,True,False,False,False,False
+pai,pai-base,605bf77a,605bf77a,C,iv,lat-acc cap 2.5,False,0.001,0.157,2.958,False,True,False,False,False,False
+pai,pai-base,605bf77a,605bf77a,C,iv,lat-acc cap 3.0,False,0.001,0.157,2.958,False,True,False,False,False,False
+pai,pai-base,605bf77a,605bf77a,C,iv,lat-acc cap 4.0,False,0.001,0.157,2.958,False,True,False,False,False,False
+pai,pai-base,605bf77a,605bf77a,C,iv,lead-sweep stop (P0),True,0.209,39.797,0.0,True,True,False,False,False,True
+pai,pai-base,605bf77a,605bf77a,C,iv,lead-sweep stop (FT),True,0.202,38.329,0.0,True,True,False,False,False,True
+pai,pai-base,605bf77a,605bf77a,C,iv,"lead-sweep stop (P0), 2 m margin",True,0.217,41.308,0.0,True,True,False,False,False,True
+pai,pai-base,605bf77a,605bf77a,C,iv,footprint stop (privileged ceiling),True,0.256,48.69,0.0,True,True,False,False,False,True
+pai,pai-base,605bf77a,605bf77a,C,iv,"footprint stop (privileged ceiling), 2 m margin",True,0.264,50.211,0.0,True,True,False,False,False,True
+pai,pai-base,a45776a3,a45776a3,N,,lat-acc cap 1.0,True,0.042,7.399,5.148,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,lat-acc cap 1.5,True,0.018,3.159,3.018,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,lat-acc cap 1.7,True,0.013,2.261,3.238,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,lat-acc cap 2.0,True,0.006,1.115,3.443,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,lat-acc cap 2.5,True,0.0,0.057,3.907,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,lat-acc cap 3.0,True,0.0,0.0,3.994,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,lat-acc cap 4.0,True,0.0,0.0,3.994,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,lead-sweep stop (P0),False,0.001,0.125,3.994,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,lead-sweep stop (FT),False,0.001,0.125,3.994,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,"lead-sweep stop (P0), 2 m margin",False,0.001,0.125,3.994,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,footprint stop (privileged ceiling),False,0.001,0.125,3.994,False,,,,,
+pai,pai-base,a45776a3,a45776a3,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.002,0.298,3.01,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,lat-acc cap 1.0,True,0.003,0.616,3.67,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,lat-acc cap 1.5,True,0.0,0.011,2.343,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,lat-acc cap 1.7,True,0.0,0.011,2.343,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,lat-acc cap 2.0,True,0.0,0.011,2.343,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,lat-acc cap 2.5,True,0.0,0.011,2.343,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,lat-acc cap 3.0,True,0.0,0.016,2.343,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,lat-acc cap 4.0,True,0.0,0.062,2.343,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,lead-sweep stop (P0),False,0.003,0.642,2.404,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,lead-sweep stop (FT),False,0.003,0.642,2.404,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,"lead-sweep stop (P0), 2 m margin",False,0.003,0.642,2.404,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,footprint stop (privileged ceiling),True,0.005,0.955,2.466,False,,,,,
+pai,pai-base,b45734f4,b45734f4,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.007,1.387,2.529,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,lat-acc cap 1.0,True,0.001,0.121,3.348,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,lat-acc cap 1.5,True,0.001,0.121,3.348,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,lat-acc cap 1.7,True,0.001,0.121,3.348,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,lat-acc cap 2.0,True,0.001,0.121,3.348,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,lat-acc cap 2.5,True,0.001,0.121,3.348,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,lat-acc cap 3.0,True,0.001,0.121,3.348,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,lat-acc cap 4.0,True,0.001,0.121,3.348,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,lead-sweep stop (P0),True,0.002,0.404,3.436,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,lead-sweep stop (FT),True,0.002,0.404,3.436,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,"lead-sweep stop (P0), 2 m margin",True,0.002,0.404,3.436,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,footprint stop (privileged ceiling),True,0.013,2.939,4.995,False,,,,,
+pai,pai-base,05f35348,05f35348,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.016,3.654,5.402,False,,,,,
+pai,pai-base,0ee89cab,0ee89cab,C,ii,lat-acc cap 1.0,True,0.0,0.062,3.873,False,True,False,False,False,False
+pai,pai-base,0ee89cab,0ee89cab,C,ii,lat-acc cap 1.5,False,0.0,0.062,3.873,False,True,False,False,False,False
+pai,pai-base,0ee89cab,0ee89cab,C,ii,lat-acc cap 1.7,False,0.0,0.062,3.873,False,True,False,False,False,False
+pai,pai-base,0ee89cab,0ee89cab,C,ii,lat-acc cap 2.0,False,0.0,0.062,3.873,False,True,False,False,False,False
+pai,pai-base,0ee89cab,0ee89cab,C,ii,lat-acc cap 2.5,False,0.0,0.062,3.873,False,True,False,False,False,False
+pai,pai-base,0ee89cab,0ee89cab,C,ii,lat-acc cap 3.0,False,0.0,0.062,3.873,False,True,False,False,False,False
+pai,pai-base,0ee89cab,0ee89cab,C,ii,lat-acc cap 4.0,False,0.0,0.062,3.873,False,True,False,False,False,False
+pai,pai-base,0ee89cab,0ee89cab,C,ii,lead-sweep stop (P0),True,0.566,72.621,0.0,True,True,False,False,False,True
+pai,pai-base,0ee89cab,0ee89cab,C,ii,lead-sweep stop (FT),True,0.508,65.18,0.0,True,True,False,False,False,True
+pai,pai-base,0ee89cab,0ee89cab,C,ii,"lead-sweep stop (P0), 2 m margin",True,0.578,74.129,0.0,True,True,False,False,False,True
+pai,pai-base,0ee89cab,0ee89cab,C,ii,footprint stop (privileged ceiling),True,0.687,88.11,0.0,True,True,False,False,False,True
+pai,pai-base,0ee89cab,0ee89cab,C,ii,"footprint stop (privileged ceiling), 2 m margin",True,0.699,89.639,0.0,True,False,False,False,True,True
+pai,pai-base,1fcacc17,1fcacc17,N,,lat-acc cap 1.0,True,0.163,37.692,6.655,True,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,lat-acc cap 1.5,True,0.073,16.783,10.117,False,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,lat-acc cap 1.7,True,0.045,10.285,10.777,False,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,lat-acc cap 2.0,True,0.03,6.913,9.837,False,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,lat-acc cap 2.5,True,0.009,1.968,8.78,False,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,lat-acc cap 3.0,True,0.001,0.129,8.326,False,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,lat-acc cap 4.0,True,0.0,0.0,5.105,False,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,lead-sweep stop (P0),False,0.0,0.0,6.526,False,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,lead-sweep stop (FT),True,0.0,0.0,6.526,False,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.0,6.526,False,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,footprint stop (privileged ceiling),True,0.003,0.602,6.595,False,,,,,
+pai,pai-base,1fcacc17,1fcacc17,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.003,0.601,7.126,False,,,,,
+pai,pai-base,21626256,21626256,N,,lat-acc cap 1.0,True,0.0,0.0,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,lat-acc cap 1.5,True,0.0,0.0,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,lat-acc cap 1.7,True,0.0,0.0,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,lat-acc cap 2.0,False,0.0,0.0,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,lat-acc cap 2.5,False,0.0,0.0,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,lat-acc cap 3.0,False,0.0,0.0,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,lat-acc cap 4.0,False,0.0,0.0,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,lead-sweep stop (P0),False,0.0,0.0,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,lead-sweep stop (FT),False,0.0,0.0,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.0,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,footprint stop (privileged ceiling),True,0.002,0.378,1.609,False,,,,,
+pai,pai-base,21626256,21626256,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.003,0.456,1.609,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,lat-acc cap 1.0,False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,lat-acc cap 1.5,False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,lat-acc cap 1.7,False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,lat-acc cap 2.0,False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,lat-acc cap 2.5,False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,lat-acc cap 3.0,False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,lat-acc cap 4.0,False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,lead-sweep stop (P0),False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,lead-sweep stop (FT),False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,footprint stop (privileged ceiling),False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,75c23f07,75c23f07,N,,"footprint stop (privileged ceiling), 2 m margin",False,0.0,0.05,13.035,False,,,,,
+pai,pai-base,8a365ac2,8a365ac2,C,ii,lat-acc cap 1.0,True,0.0,0.0,1.206,False,True,False,False,False,False
+pai,pai-base,8a365ac2,8a365ac2,C,ii,lat-acc cap 1.5,True,0.0,0.0,1.206,False,True,False,False,False,False
+pai,pai-base,8a365ac2,8a365ac2,C,ii,lat-acc cap 1.7,True,0.0,0.0,1.206,False,True,False,False,False,False
+pai,pai-base,8a365ac2,8a365ac2,C,ii,lat-acc cap 2.0,True,0.0,0.0,1.206,False,True,False,False,False,False
+pai,pai-base,8a365ac2,8a365ac2,C,ii,lat-acc cap 2.5,True,0.0,0.0,1.206,False,True,False,False,False,False
+pai,pai-base,8a365ac2,8a365ac2,C,ii,lat-acc cap 3.0,True,0.0,0.0,1.206,False,True,False,False,False,False
+pai,pai-base,8a365ac2,8a365ac2,C,ii,lat-acc cap 4.0,False,0.0,0.0,1.206,False,True,False,False,False,False
+pai,pai-base,8a365ac2,8a365ac2,C,ii,lead-sweep stop (P0),False,0.0,0.0,1.206,False,True,False,False,False,False
+pai,pai-base,8a365ac2,8a365ac2,C,ii,lead-sweep stop (FT),False,0.0,0.0,1.206,False,True,False,False,False,False
+pai,pai-base,8a365ac2,8a365ac2,C,ii,"lead-sweep stop (P0), 2 m margin",False,0.0,0.0,1.206,False,True,False,False,False,False
+pai,pai-base,8a365ac2,8a365ac2,C,ii,footprint stop (privileged ceiling),True,0.906,76.269,0.0,True,True,False,False,False,True
+pai,pai-base,8a365ac2,8a365ac2,C,ii,"footprint stop (privileged ceiling), 2 m margin",True,0.922,77.662,0.0,True,True,False,False,False,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,lat-acc cap 1.0,True,0.0,0.046,0.062,False,True,False,False,False,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,lat-acc cap 1.5,False,0.0,0.046,0.062,False,True,False,False,False,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,lat-acc cap 1.7,False,0.0,0.046,0.062,False,True,False,False,False,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,lat-acc cap 2.0,False,0.0,0.046,0.062,False,True,False,False,False,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,lat-acc cap 2.5,False,0.0,0.046,0.062,False,True,False,False,False,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,lat-acc cap 3.0,False,0.0,0.046,0.062,False,True,False,False,False,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,lat-acc cap 4.0,False,0.0,0.046,0.062,False,True,False,False,False,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,lead-sweep stop (P0),True,0.193,26.816,0.0,True,True,False,False,False,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,lead-sweep stop (FT),True,0.221,30.654,0.0,True,False,False,False,True,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,"lead-sweep stop (P0), 2 m margin",True,0.203,28.182,0.0,True,True,False,False,False,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,footprint stop (privileged ceiling),True,0.212,29.504,0.0,True,False,False,False,True,True
+pai,pai-base,8ecf02e3,8ecf02e3,C,i,"footprint stop (privileged ceiling), 2 m margin",True,0.223,31.025,0.0,True,False,False,False,True,True
+pai,pai-base,96da4f1a,96da4f1a,N,,lat-acc cap 1.0,True,0.036,6.967,10.513,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,lat-acc cap 1.5,True,0.0,0.0,4.352,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,lat-acc cap 1.7,True,0.0,0.0,4.352,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,lat-acc cap 2.0,True,0.0,0.0,4.352,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,lat-acc cap 2.5,True,0.0,0.0,4.352,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,lat-acc cap 3.0,True,0.0,0.0,4.352,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,lat-acc cap 4.0,True,0.0,0.0,4.352,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,lead-sweep stop (P0),False,0.0,0.0,4.352,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,lead-sweep stop (FT),False,0.0,0.0,4.352,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.0,4.352,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,footprint stop (privileged ceiling),True,0.009,1.737,4.352,False,,,,,
+pai,pai-base,96da4f1a,96da4f1a,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.013,2.53,4.352,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,lat-acc cap 1.0,True,0.057,16.029,7.623,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,lat-acc cap 1.5,True,0.0,0.044,4.252,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,lat-acc cap 1.7,True,0.001,0.413,4.564,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,lat-acc cap 2.0,True,0.006,1.6,4.923,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,lat-acc cap 2.5,True,0.003,0.82,4.78,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,lat-acc cap 3.0,True,0.0,0.04,4.286,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,lat-acc cap 4.0,True,0.0,0.04,4.286,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,lead-sweep stop (P0),False,0.002,0.457,4.491,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,lead-sweep stop (FT),False,0.002,0.457,4.491,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,"lead-sweep stop (P0), 2 m margin",False,0.002,0.457,4.491,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,footprint stop (privileged ceiling),True,0.009,2.412,4.84,False,,,,,
+pai,pai-base,d7328fed,d7328fed,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.017,4.668,4.286,False,,,,,
+pai,pai-base,0e3771c0,0e3771c0,C,i,lat-acc cap 1.0,False,0.001,0.049,5.932,False,True,False,False,False,False
+pai,pai-base,0e3771c0,0e3771c0,C,i,lat-acc cap 1.5,False,0.001,0.049,5.932,False,True,False,False,False,False
+pai,pai-base,0e3771c0,0e3771c0,C,i,lat-acc cap 1.7,False,0.001,0.049,5.932,False,True,False,False,False,False
+pai,pai-base,0e3771c0,0e3771c0,C,i,lat-acc cap 2.0,False,0.001,0.049,5.932,False,True,False,False,False,False
+pai,pai-base,0e3771c0,0e3771c0,C,i,lat-acc cap 2.5,False,0.001,0.049,5.932,False,True,False,False,False,False
+pai,pai-base,0e3771c0,0e3771c0,C,i,lat-acc cap 3.0,False,0.001,0.049,5.932,False,True,False,False,False,False
+pai,pai-base,0e3771c0,0e3771c0,C,i,lat-acc cap 4.0,False,0.001,0.049,5.932,False,True,False,False,False,False
+pai,pai-base,0e3771c0,0e3771c0,C,i,lead-sweep stop (P0),True,0.855,55.33,0.0,True,True,False,False,False,True
+pai,pai-base,0e3771c0,0e3771c0,C,i,lead-sweep stop (FT),True,0.825,53.376,0.0,True,True,False,False,False,True
+pai,pai-base,0e3771c0,0e3771c0,C,i,"lead-sweep stop (P0), 2 m margin",True,0.879,56.875,0.0,True,True,False,False,False,True
+pai,pai-base,0e3771c0,0e3771c0,C,i,footprint stop (privileged ceiling),True,0.915,59.208,0.0,True,False,False,False,True,True
+pai,pai-base,0e3771c0,0e3771c0,C,i,"footprint stop (privileged ceiling), 2 m margin",True,0.938,60.726,0.0,True,False,False,False,True,True
+pai,pai-base,44fdaa0f,44fdaa0f,N,,lat-acc cap 1.0,True,0.14,36.264,9.013,True,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,lat-acc cap 1.5,True,0.05,13.01,14.015,False,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,lat-acc cap 1.7,True,0.025,6.469,15.17,False,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,lat-acc cap 2.0,True,0.029,7.516,14.699,False,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,lat-acc cap 2.5,True,0.019,4.83,14.998,False,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,lat-acc cap 3.0,True,0.0,0.0,16.881,False,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,lat-acc cap 4.0,True,0.0,0.0,16.881,False,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,lead-sweep stop (P0),False,0.0,0.0,16.881,False,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,lead-sweep stop (FT),False,0.0,0.0,16.881,False,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.0,16.881,False,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,footprint stop (privileged ceiling),True,0.025,6.472,14.576,False,,,,,
+pai,pai-base,44fdaa0f,44fdaa0f,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.025,6.472,14.576,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,lat-acc cap 1.0,True,0.005,0.884,7.087,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,lat-acc cap 1.5,True,0.0,0.06,3.099,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,lat-acc cap 1.7,True,0.0,0.051,3.175,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,lat-acc cap 2.0,False,0.0,0.051,3.175,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,lat-acc cap 2.5,False,0.0,0.051,3.175,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,lat-acc cap 3.0,False,0.0,0.051,3.175,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,lat-acc cap 4.0,False,0.0,0.051,3.175,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,lead-sweep stop (P0),True,0.016,3.041,5.146,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,lead-sweep stop (FT),True,0.019,3.613,5.504,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,"lead-sweep stop (P0), 2 m margin",True,0.017,3.229,5.264,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,footprint stop (privileged ceiling),True,0.001,0.181,2.996,False,,,,,
+pai,pai-base,5a38c811,5a38c811,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.001,0.181,2.996,False,,,,,
+pai,pai-base,8f3902f9,8f3902f9,C,i,lat-acc cap 1.0,False,0.0,0.036,6.769,False,True,False,False,False,False
+pai,pai-base,8f3902f9,8f3902f9,C,i,lat-acc cap 1.5,False,0.0,0.036,6.769,False,True,False,False,False,False
+pai,pai-base,8f3902f9,8f3902f9,C,i,lat-acc cap 1.7,False,0.0,0.036,6.769,False,True,False,False,False,False
+pai,pai-base,8f3902f9,8f3902f9,C,i,lat-acc cap 2.0,False,0.0,0.036,6.769,False,True,False,False,False,False
+pai,pai-base,8f3902f9,8f3902f9,C,i,lat-acc cap 2.5,False,0.0,0.036,6.769,False,True,False,False,False,False
+pai,pai-base,8f3902f9,8f3902f9,C,i,lat-acc cap 3.0,False,0.0,0.036,6.769,False,True,False,False,False,False
+pai,pai-base,8f3902f9,8f3902f9,C,i,lat-acc cap 4.0,False,0.0,0.036,6.769,False,True,False,False,False,False
+pai,pai-base,8f3902f9,8f3902f9,C,i,lead-sweep stop (P0),False,0.0,0.036,6.769,False,True,False,False,False,False
+pai,pai-base,8f3902f9,8f3902f9,C,i,lead-sweep stop (FT),False,0.0,0.036,6.769,False,True,False,False,False,False
+pai,pai-base,8f3902f9,8f3902f9,C,i,"lead-sweep stop (P0), 2 m margin",False,0.0,0.036,6.769,False,True,False,False,False,False
+pai,pai-base,8f3902f9,8f3902f9,C,i,footprint stop (privileged ceiling),True,0.38,30.477,0.0,True,True,True,False,False,True
+pai,pai-base,8f3902f9,8f3902f9,C,i,"footprint stop (privileged ceiling), 2 m margin",True,0.399,31.97,0.0,True,False,False,False,True,True
+pai,pai-base,c6c01d25,c6c01d25,C,ii,lat-acc cap 1.0,True,0.0,0.0,6.641,False,True,False,False,False,False
+pai,pai-base,c6c01d25,c6c01d25,C,ii,lat-acc cap 1.5,True,0.0,0.0,6.641,False,True,False,False,False,False
+pai,pai-base,c6c01d25,c6c01d25,C,ii,lat-acc cap 1.7,True,0.0,0.0,6.641,False,True,False,False,False,False
+pai,pai-base,c6c01d25,c6c01d25,C,ii,lat-acc cap 2.0,True,0.0,0.0,6.641,False,True,False,False,False,False
+pai,pai-base,c6c01d25,c6c01d25,C,ii,lat-acc cap 2.5,False,0.0,0.0,6.641,False,True,False,False,False,False
+pai,pai-base,c6c01d25,c6c01d25,C,ii,lat-acc cap 3.0,False,0.0,0.0,6.641,False,True,False,False,False,False
+pai,pai-base,c6c01d25,c6c01d25,C,ii,lat-acc cap 4.0,False,0.0,0.0,6.641,False,True,False,False,False,False
+pai,pai-base,c6c01d25,c6c01d25,C,ii,lead-sweep stop (P0),False,0.024,1.835,6.641,False,True,False,False,False,False
+pai,pai-base,c6c01d25,c6c01d25,C,ii,lead-sweep stop (FT),False,0.024,1.835,6.641,False,True,False,False,False,False
+pai,pai-base,c6c01d25,c6c01d25,C,ii,"lead-sweep stop (P0), 2 m margin",False,0.024,1.835,6.641,False,True,False,False,False,False
+pai,pai-base,c6c01d25,c6c01d25,C,ii,footprint stop (privileged ceiling),True,0.718,55.909,0.0,True,True,False,False,False,True
+pai,pai-base,c6c01d25,c6c01d25,C,ii,"footprint stop (privileged ceiling), 2 m margin",True,0.723,56.29,0.0,True,True,False,False,False,True
+pai,pai-base,dfb0277e,dfb0277e,N,,lat-acc cap 1.0,True,0.019,7.269,21.143,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,lat-acc cap 1.5,True,0.001,0.323,21.147,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,lat-acc cap 1.7,True,0.0,0.006,21.143,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,lat-acc cap 2.0,True,0.0,0.006,21.143,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,lat-acc cap 2.5,True,0.0,0.006,21.143,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,lat-acc cap 3.0,True,0.0,0.006,21.143,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,lat-acc cap 4.0,True,0.0,0.006,21.143,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,lead-sweep stop (P0),False,0.0,0.006,21.143,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,lead-sweep stop (FT),False,0.0,0.006,21.143,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.006,21.143,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,footprint stop (privileged ceiling),True,0.0,0.006,21.143,False,,,,,
+pai,pai-base,dfb0277e,dfb0277e,N,,"footprint stop (privileged ceiling), 2 m margin",True,0.0,0.006,21.143,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,lat-acc cap 1.0,False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,lat-acc cap 1.5,False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,lat-acc cap 1.7,False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,lat-acc cap 2.0,False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,lat-acc cap 2.5,False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,lat-acc cap 3.0,False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,lat-acc cap 4.0,False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,lead-sweep stop (P0),False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,lead-sweep stop (FT),False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,"lead-sweep stop (P0), 2 m margin",False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,footprint stop (privileged ceiling),False,0.0,0.048,11.238,False,,,,,
+pai,pai-base,fdfb5073,fdfb5073,N,,"footprint stop (privileged ceiling), 2 m margin",False,0.0,0.048,11.238,False,,,,,

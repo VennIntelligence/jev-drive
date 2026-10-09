@@ -1,0 +1,24 @@
+dom,group,read,signal,auc,lo,hi,thr10,n_pos,n_neg,line,flagged_1p5,rollouts,lead_med
+pai,P2H10-F-s0,primary,lead_sweep_P0,0.8762,0.7352,0.9752,-20.0,322,1857,usable,9,12,6.1
+pai,P2H10-F-s0,primary,lead_sweep_FT,0.8593,0.716,0.972,-20.0,322,1857,usable,9,12,6.2
+pai,P2H10-F-s0,primary,lead_need_P0,0.8458,0.7142,0.9621,0.1484,322,1857,usable,9,12,5.65
+pai,P2H10-F-s0,primary,lead_p_P0,0.8504,0.7198,0.9535,0.8899,322,1857,usable,8,12,6.25
+pai,P2H10-F-s0,primary,lead_near_P0,0.8382,0.6863,0.9596,-53.4898,322,1857,usable,9,12,6.2
+pai,P2H10-F-s0,primary,base_gap,0.7087,0.5375,0.8362,3.8106,322,1857,no,6,12,1.35
+pai,P2H10-F-s0,primary,base_len,0.7409,0.6095,0.8651,2.4011,322,1857,no,4,12,0.4
+pai,P2H10-F-s0,primary,v_e,0.4691,0.3799,0.5119,17.2296,322,1857,no,0,12,0.0
+pai,P2H10-F-s0,primary,alat,0.4965,0.285,0.6639,2.4873,322,1857,no,1,12,0.0
+pai,P2H10-F-s0,primary,abs_dpsi4,0.5322,0.3461,0.6851,44.4916,322,1857,no,3,12,0.0
+pai,P2H10-F-s0,primary,combo,0.8678,0.6455,0.9761,1.1883,322,1857,no,9,12,3.05
+pai,P2H10-F-s0,primary,frozen_ref,0.8686,0.7331,0.9672,-0.0,322,1857,privileged reference,0,12,0.0
+pai,P2H10-F-s0,secondary,lead_sweep_P0,0.7524,0.6304,0.8588,-2.3505,473,2498,,,,
+pai,P2H10-F-s0,secondary,lead_sweep_FT,0.7433,0.6125,0.8548,-2.6313,473,2498,,,,
+pai,P2H10-F-s0,secondary,lead_need_P0,0.7294,0.6182,0.8383,0.3646,473,2498,,,,
+pai,P2H10-F-s0,secondary,lead_p_P0,0.6471,0.5482,0.7309,1.0,473,2498,,,,
+pai,P2H10-F-s0,secondary,lead_near_P0,0.6803,0.5798,0.7862,-4.7301,473,2498,,,,
+pai,P2H10-F-s0,secondary,base_gap,0.6848,0.5681,0.7777,3.6191,473,2498,,,,
+pai,P2H10-F-s0,secondary,base_len,0.6748,0.5459,0.7806,2.0472,473,2498,,,,
+pai,P2H10-F-s0,secondary,v_e,0.4818,0.4479,0.5133,16.2455,473,2498,,,,
+pai,P2H10-F-s0,secondary,alat,0.5843,0.4567,0.6803,2.1625,473,2498,,,,
+pai,P2H10-F-s0,secondary,abs_dpsi4,0.6103,0.4941,0.6981,41.8705,473,2498,,,,
+pai,P2H10-F-s0,secondary,frozen_ref,0.7305,0.6231,0.8345,-0.0,473,2498,,,,

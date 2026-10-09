@@ -16,7 +16,7 @@
 - [turn-gain/](turn-gain/index.html)：P2 急转弯失败是轻微比例缩小，不是封顶，控制链路不裁剪。
 - [hugsim-specplan/](hugsim-specplan/index.html)：用模型自己的 plan 转向：单点曲率更差，0.5 到 1.5 秒平均曲率更好。
 - [leaderboard-recipes/](leaderboard-recipes/index.html)：WOD-E2E、NAVSIM 与 AlpaSim 榜首方法归因：分数构成、大模型与世界模型的作用边界与可迁移配方。
-- [alpasim-collisions/](alpasim-collisions/index.html)：AlpaSim 里的 at-fault 碰撞：nuPlan 公开集上是横向漂移，PAI 上是纵向且 lead 头提前看到了前车；PAI 的轨迹速度接口缺陷与诊断臂；31 个片段。
+- [alpasim-collisions/](alpasim-collisions/index.html)：AlpaSim 里的 at-fault 碰撞：nuPlan 公开集上是横向漂移，PAI 上是纵向且 lead 头提前看到了前车；PAI 的轨迹速度接口缺陷与诊断臂；31 个片段；第八节（SWV1，决策 220）：按 plan 自身扫掠足迹的碰撞分类与净空反事实。
 
 ## 记录与工具
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。

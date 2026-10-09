@@ -263,6 +263,78 @@ ul{padding-left:20px}li{margin-bottom:6px}
 <li>command 的结论来自开环回放，一次只强制一次决策的 command。</li>
 </ul>
 
+<h2>八、绕行与转弯：plan 知不知道自己的车身会扫到哪里（SWV1，决策 220）</h2>
+<p>2026-10-10 追加。问题来自读片：除了直撞前车，车在绕行或急转弯时不减速，转向路径也没有让开物体。这一节不跑闭环、不训练，只读已有 rollout：每次决策把 driver 交出去的 4 s 轨迹上的 simulator ego 框（nuPlan 5.18 × 2.30 m）与同一时刻的物体框求交，看 plan 自己的「扫掠足迹」有没有碰到被撞物体。预登记在读数之前 push。simulator 的框、日志路径和物体的已记录运动只作标签。</p>
+<div class="v">
+<b>结论：</b><br>
+<b>1. 每一次碰撞都已经写在 plan 里。</b>读到的 66 个 at-fault 碰撞 rollout（nuPlan P2H10-F 22、APY10m10-AB 24，PAI 基线 12、re-timed 臂 8）全部在撞前 3 s 内有 plan 的扫掠足迹穿过被撞物体，首个这样的 plan 中位提前 3.0 s（nuPlan）/ 3.3 s（PAI）。「plan 清空、执行没清空」一类是 0。MPC 照 plan 走：横向跟踪误差 p95 逐 rollout 中位 0.02–0.04 m。<br>
+<b>2. 读片的第 2 类成立，是 plan 的净空估计失败。</b>nuPlan P2H10-F 22 次：直撞前车 4、转弯 / 绕行 6、漂移 10、其他 2；PAI 12 次：直撞 6、转弯 / 绕行 5、漂移 1。plan 横向差的距离中位 0.85 m（nuPlan，转弯 scene 1.0–2.6 m）、1.6 m（PAI）。<br>
+<b>3. 不是弯道车速。</b>碰撞 rollout 里 plan 的横向加速度最大 2.8–3.3 m/s²，中位 0.4（nuPlan）/ 1.4（PAI）m/s²。按横向加速度上限限速，从 4.0 到 1.0 m/s² 每一档都避开 0 次（openpilot 自己的 3.0 m/s² 是对曲率指令的裁剪，不是限速）。<br>
+<b>4. 缺的那条信息上限很大，但现有输出里没有。</b>用 simulator 的框在 plan 首个相交点前刹停（特权上限）：留 2 m 余量时 nuPlan 20 / 22、PAI 8 / 12，干净 rollout 代价 1% / 0%。同一规则换成模型自己的 lead 输出：0 / 22、1 / 12。nuPlan 上底模被丢弃的几何输出都分不开「扫掠会碰到」与否（lead 0.49、路沿 0.72、车道线 0.46），只有 plan 自己的横向 std 过线（0.79，换配方后 0.70）。<br>
+<b>5. 没有可以直接上环的 serving 开关。</b>要修的是训练侧：监督 adapter 自己 plan 的扫掠后果（与 agent 框、道路边界是否相交，首次接触的时间和位置），并且需要 on-policy 的行和近距对象信号。
+</div>
+
+<h3>8.1 分类</h3>
+<table>
+<tr><th>集合</th><th>n</th><th>(i) 直撞本车道前方物体</th><th>(ii) 转弯 / 绕行，plan 扫掠已相交</th><th>(iii) plan 清空、执行没清空</th><th>(iv) 无机动意图的漂移</th><th>(v) 其他</th><th>撞前 3 s 内 plan 扫掠相交</th><th>首个相交 plan 提前量中位</th><th>横向缺口中位</th></tr>
+<tr><td>nuPlan，P2H10-F s0 + s1</td><td>22</td><td>4（18%）</td><td>6（27%）</td><td>0</td><td>10（45%）</td><td>2（9%）</td><td>22 / 22</td><td>3.0 s</td><td>0.85 m</td></tr>
+<tr><td>nuPlan，APY10m10-AB s0 + s1</td><td>24</td><td>9（38%）</td><td>8（33%）</td><td>0</td><td>6（25%）</td><td>1（4%）</td><td>24 / 24</td><td>3.0 s</td><td>2.00 m</td></tr>
+<tr><td>PAI，P2H10-F-s0 基线</td><td>12</td><td>6（50%）</td><td>5（42%）</td><td>0</td><td>1（8%）</td><td>0</td><td>12 / 12</td><td>3.3 s</td><td>1.60 m</td></tr>
+<tr><td>PAI，re-timed 臂 v1</td><td>8</td><td>5（62%）</td><td>2（25%）</td><td>0</td><td>1（12%）</td><td>0</td><td>8 / 8</td><td>3.5 s</td><td>1.70 m</td></tr>
+</table>
+<div class="cite">来源：experiments/alpasim/results/swerve/classes.md、classes.csv。分类以日志路径为车道参照；转弯以日志转过 ≥ 20° 为准，直路上 plan 自己拐 ≥ 20° 归漂移。</div>
+<table>
+<tr><th>片段对照</th><th>(i)</th><th>(ii)</th><th>(iv)</th><th>(v)</th></tr>
+<tr><td>nuPlan P2H10-F</td><td>n01、n02</td><td>n05、n07、n11（三个转弯 scene 共 5 次）、n04（绕行，一个 seed）</td><td>n03、n06、n08、n09、n12（及 n04 的另一个 seed）</td><td>n10</td></tr>
+<tr><td>PAI 基线</td><td>p01、p03、p05、p09、p10、p11</td><td>p02（绕行）、p04（贴着停放车起步）、p07、p08、p12（转弯）</td><td>p06</td><td></td></tr>
+</table>
+<div class="cite">来源：同上，片段编号是第七节之前各节使用的 31 个 GIF。</div>
+<figure><img src="../../experiments/alpasim/figs/swerve/fig1_classes.png" alt="碰撞分类占比">
+<figcaption>图 4：四个集合的分类占比。看点：绿色的 (iii) 一格不存在；nuPlan 上黄色（漂移）最大，PAI 上蓝色（直撞）与橙色（转弯 / 绕行）各占一半左右。</figcaption></figure>
+
+<h3>8.2 例子：plan 的扫掠足迹</h3>
+<p>下面每张图是同一次碰撞前约 3 s、2 s、1 s 的三次决策，ego 朝上。蓝色带是这次 plan 在 4 s 内 ego 车身扫过的区域，红框是第一个与被撞物体相交的计划位姿，橙色实心是被撞物体当前位置，绿线是 shipped 权重在同一批 token 上的 plan，虚线是日志路径，黑线是实际走出的路径。</p>
+<figure><img src="../../experiments/alpasim/figs/swerve/ex_n07_turn_ii.png" alt="n07 转弯" loading="lazy">
+<figcaption>图 5：n07（nuPlan，右转 62°，类 ii）。看点：撞前 3 s 蓝色带已经压在对侧站着的车上，缺口 2.8 m，之后两次决策缺口仍有 2.2 m、1.9 m；计划横向加速度只有 1.3–1.5 m/s²，车速 3–5 m/s。绿线（底模 plan）走的是同一条偏宽的弧。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/swerve/ex_p07_goaround_ii.png" alt="p07 离开车道" loading="lazy">
+<figcaption>图 6：p07（PAI，类 ii）。看点：车速从 6.6 升到 11.9 m/s，ego 偏离日志路径（虚线）向左，撞前 2 s 起 plan 直接穿过邻道站着的车，缺口约 2 m，直到撞上没有一次 plan 让开或减速。</figcaption></figure>
+<div class="grid2">
+<figure><img src="../../experiments/alpasim/figs/swerve/ex_n06_drift_iv.png" alt="n06 漂移" loading="lazy"><figcaption>图 7：n06（nuPlan，漂移，类 iv）。10 m/s 直路，plan 向右偏，扫掠压到路径旁站着的车。漂移类的 plan 同样没有净空项。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/swerve/ex_p04_tightpass_ii.png" alt="p04 贴车起步" loading="lazy"><figcaption>图 8：p04（PAI，类 ii）。从路边起步绕过 2 m 外的停放车，日志以 0.36 m 擦过，plan 的扫掠差 0.3 m。</figcaption></figure>
+</div>
+<div class="grid2">
+<figure><img src="../../experiments/alpasim/figs/swerve/ex_n05_turn_ii.png" alt="n05 转弯" loading="lazy"><figcaption>图 9：n05（nuPlan，左转 30°，类 ii）。转弯偏宽，扫掠压到弯外侧的静止车，缺口 1.0 m，计划横向加速度 0.45 m/s²。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/swerve/ex_n01_lead_i.png" alt="n01 直撞" loading="lazy"><figcaption>图 10：n01（nuPlan，类 i，对照）。静止起步，每次 plan 都从前车身上穿过去；这一类由 FIX1 / TR1 处理。</figcaption></figure>
+</div>
+
+<h3>8.3 反事实与信号</h3>
+<table>
+<tr><th>做法（沿实际走出的路径重新定时，物体按记录运动）</th><th>nuPlan P2H10-F 避开 / 22</th><th>其中类 ii</th><th>PAI 基线避开 / 12</th><th>其中类 ii</th><th>干净 rollout 掉 &gt; 10% progress（nuPlan 198 / PAI 21）</th></tr>
+<tr><td>横向加速度上限 3.0 m/s²（openpilot 的值，主工作点）</td><td>0</td><td>0 / 6</td><td>0</td><td>0 / 5</td><td>0% / 0%</td></tr>
+<tr><td>横向加速度上限 1.0 m/s²</td><td>0</td><td>0 / 6</td><td>0</td><td>0 / 5</td><td>6.1% / 9.5%</td></tr>
+<tr><td>plan 扫掠对模型自己 lead 输出的框，相交则刹停（非特权）</td><td>0</td><td>0 / 6</td><td>1</td><td>0 / 5</td><td>0% / 0%</td></tr>
+<tr><td>plan 扫掠对 simulator 的框，相交点前 0.5 m 刹停（特权上限）</td><td>11</td><td>1 / 6</td><td>5</td><td>1 / 5</td><td>1.0% / 0%</td></tr>
+<tr><td>同上，留 2 m（特权上限）</td><td>20</td><td>6 / 6</td><td>8</td><td>3 / 5</td><td>1.0% / 0%</td></tr>
+<tr><td>shipped 权重的 plan：撞前 3 s 内没有一次相交</td><td>2</td><td>0 / 6</td><td>1</td><td>0 / 5</td><td>开环，无代价读数</td></tr>
+<tr><td>日志人类路径（按实际车速）</td><td>20</td><td>4 / 6</td><td>8</td><td>3 / 5</td><td>特权</td></tr>
+</table>
+<div class="cite">来源：experiments/alpasim/results/swerve/bc_nuplan.md、bc_pai.md、cf_nuplan.csv、cf_pai.csv；人类路径一行来自 collisions/nuplan_cases.csv 与 pai_cases.csv。登记线（非特权做法避开 ≥ 30% 的类 ii + iii 且代价 ≤ 5%）没有任何做法达到；该类每域不足 8 次，按登记只作描述。</div>
+<figure><img src="../../experiments/alpasim/figs/swerve/fig2_ceiling_signals.png" alt="反事实上限与非特权信号">
+<figcaption>图 11：左，各做法避开的碰撞比例（虚线 30%）。看点：三个非特权做法贴着 0，特权刹停到 50%–90%。右，各非特权信号区分「碰撞 rollout 里扫掠相交的决策」与「干净决策」的 AUC（按 log 的 95% 区间，虚线 0.65 / 0.75）。看点：nuPlan（蓝）上 lead、车道线、meta 在 0.5 附近，路沿 0.72，只有 plan 自己的 std 越过 0.75；PAI（橙）上 lead 类信号都在 0.85 左右。</figcaption></figure>
+<ul>
+<li><b>限速为什么没用。</b>碰撞发生在 2–7 m/s（nuPlan 中位 2.5 m/s）；路径本身穿过静止物体时，减速只是晚一点撞。</li>
+<li><b>lead 输出为什么不够。</b>它只报本车道前车；贴近时把间距读远（n01 里真实间距 1.5 → 0.3 m，读数 4–10 m），刹停点跟着 ego 往前退。PAI 上 lead 的横向位置相对 lead 概率不增加区分度（0.876 对 0.850）。</li>
+<li><b>plan 的 std。</b>P2H10-F 上 0.786 [0.738, 0.865]，APY10m10 上 0.697，「全部决策相交对不相交」上 0.651；撞前 ≥ 1.5 s 标出 22 个里的 10 个。它标出的是转弯和漂移的 rollout，不给出接触位置，同路径减速又避不开，不建议上环。</li>
+<li><b>训练侧标签。</b>adapter 自己 plan 的扫掠足迹与日志 agent 框（同一时刻、带运动）和道路边界的相交、首次接触的时间与位置、横向缺口。碰撞发生在日志不会到的状态（偏离 0.5–2.4 m，PAI 上超前日志 13–39 m），干净决策里约 7% 会短暂相交随后移开，所以需要 on-policy 的行。从现有冻结输出学不出来：nuPlan 上连 simulator 的当前框（不带未来运动）也只有 0.73。</li>
+</ul>
+<h3>8.4 限定</h3>
+<ul>
+<li>反事实是运动学、开环的：路径和决策都是已记录的，模型看不到改变后的状态，交通回放；特权刹停是上界。</li>
+<li>nuPlan scene 只有 5 s（约 10 次决策），记录之外物体按匀速外推，提前量封顶在 5 s；22 次碰撞来自 12 个 scene、9 个 log，类 ii 是 4 个 scene。PAI 12 次、单 seed，PAI 上没有读车道线 / 路沿 / meta / std。</li>
+<li>分类规则在第一张表之后改过三处（转弯以日志为准；绕行对象须 4 s 内可达；贴着日志路径擦到旁边静止物体算机动），列在结果文档第 2 节。</li>
+<li>记录：<code>experiments/alpasim/results/swerve_clearance.md</code>，表 <code>results/swerve/</code>，图 <code>experiments/alpasim/figs/swerve/</code>，预登记 <code>experiments/alpasim/plans/2026-10-10-swv1-prereg.md</code>，决策 <code>research/decisions/220.md</code>。</li>
+</ul>
+
 <h2>数据与代码</h2>
 <ul>
 <li>记录：<code>experiments/alpasim/results/collisions.md</code>，表在 <code>experiments/alpasim/results/collisions/</code>，决策 <code>research/decisions/219.md</code>，预登记 <code>experiments/alpasim/plans/2026-10-09-col1-lead-prereg.md</code>。</li>
