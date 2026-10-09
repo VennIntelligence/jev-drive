@@ -16,6 +16,9 @@ simulator (c1_replay.py's harness). Results: experiments/alpasim/results/lat1_fr
   lat1_check.py nvjpeg --msgs <dir> --out <json> [--n N]
       a measurement, not a served path: the CAM_F0 JPEG decoded by nvJPEG on the card (torchvision.io.decode_jpeg, RGB -> YCbCr)
       instead of libjpeg: decode time, pixel difference of the model frames, plan difference on the logged inputs
+  lat1_check.py runs --msgs <closed-loop run dir A> --out <run dir B>                    (no GPU)
+      two closed-loop runs of one scene list: scene scores, and every decision's ego pose and plan (driver-logs/drive.jsonl) one
+      against the other; the stage latency of both
   lat1_check.py same --msgs <load json of one run> --out <load json of another>
       the plans of two load runs, decision by decision
 """
@@ -258,6 +261,31 @@ def cmd_load(a):
     Path(a.out).write_text(json.dumps(dict(s, plans=plans)))
 
 
+def cmd_runs(a):
+    out = {}
+    for name, run in (("a", Path(a.msgs)), ("b", Path(a.out))):
+        rows = [json.loads(x) for x in open(run / "driver-logs/drive.jsonl")]
+        dr = {(r["scene"], r["k"]): r for r in rows if r["kind"] == "drive"}
+        sc = {r["clipgt_id"]: r["score"] for r in json.loads((run / "aggregate/results-summary.json").read_text())["rollouts"]}
+        ns, im = json.loads((run / "native_summary.json").read_text()), [json.loads(x)["pack_ms"] for x in open(run / "driver-logs/images.jsonl")]
+        out[name] = dict(run=str(run), scenes=len(sc), mean_score=float(np.mean(list(sc.values()))), zeros=int(sum(v == 0 for v in sc.values())),
+                         decisions=len(dr), runtime_s=ns["times"]["runtime_s"], driver_gpu_mib=ns["peak"]["driver"]["gpu_mib"],
+                         driver_cpu_s=ns["peak"]["driver"]["cpu_s"], driver_rss_gib=ns["peak"]["driver"]["rss_gib"],
+                         ms={k: pct([r["ms"][k] for r in dr.values()]) for k in ("frames", "encode", "policy", "export", "prep", "wait", "total")},
+                         pack_ms=pct(im))
+        out[name + "_"] = dr, sc
+    (da, sa), (db, sb) = out.pop("a_"), out.pop("b_")
+    common = sorted(set(da) & set(db))
+    dev = np.array([max(np.abs(np.array(da[k]["anchor"]) - np.array(db[k]["anchor"])).max(), np.abs(np.array(da[k]["poses"]) - np.array(db[k]["poses"])).max())
+                    for k in common])
+    ss = sorted(set(sa) & set(sb))
+    out["cmp"] = dict(scenes_common=len(ss), scores_differing=int(sum(sa[x] != sb[x] for x in ss)), score_max_abs=float(max(abs(sa[x] - sb[x]) for x in ss)),
+                      decisions_common=len(common), decisions_only_a=len(set(da) - set(db)), decisions_only_b=len(set(db) - set(da)),
+                      decisions_differing=int((dev > 0).sum()), max_abs=float(dev.max()),
+                      scenes_with_a_differing_decision=len({k[0] for k, d in zip(common, dev) if d > 0}))
+    print(json.dumps(out, indent=1), flush=True)
+
+
 def cmd_same(a):
     A, B = (json.loads(Path(f).read_text())["plans"] for f in (a.msgs, a.out))
     d = np.array([np.abs(np.array(A[k]) - np.array(B[k])).max() for k in A if k in B])
@@ -266,10 +294,10 @@ def cmd_same(a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same", "nvjpeg"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
+    ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same", "nvjpeg", "runs"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=0), ap.add_argument("--synth", default="gpu"), ap.add_argument("--streams", type=int, default=8)
     a = ap.parse_args()
-    {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same, "nvjpeg": cmd_nvjpeg}[a.cmd](a)
+    {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same, "nvjpeg": cmd_nvjpeg, "runs": cmd_runs}[a.cmd](a)
 
 
 if __name__ == "__main__":
