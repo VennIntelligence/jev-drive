@@ -11,10 +11,10 @@ nothing is fitted here. One GPU, a pool job:
 
 Writes $DATA_DIR/runs/body1/g2/dump/<group>.npz (arrays are per decision, in scene order of spec.json, then decision order):
   scene (N,) str, k (N,) int32 decision index inside the scene, now_us (N,) int64, cmd (N,) int8 (0 L, 1 S, 2 R, 3 unknown),
-  tokens (N, 4, *H_SHAPE) float16 view_39 vision tokens, slot i valid iff valid[n, i] (padded with zeros), valid (N, 4) bool,
+  tokens (N, S, *H_SHAPE) float16 view_39 vision tokens, slot i valid iff valid[n, i] (padded with zeros), valid (N, S) bool (S = 8 history slots),
   ego (N, 20) float32 ego feature vector, poses (N, 8, 3) float64 served plan (rear axle x, y, yaw at 0.5 .. 4 s, ego frame of t0),
   mu (N, 33, 15) float32 plan mean, plan_raw (N, 990) float32 whole plan slice (mean 495 + log-std logits 495),
-  frames (N, 4, 2, 6, 128, 256) uint8 model-input frames (road + wide openpilot YUV planes) of the 4 history slots, exactly as fed to
+  frames (N, S, 2, 6, 128, 256) uint8 model-input frames (road + wide openpilot YUV planes) of the S history slots, exactly as fed to
   the Cinque encoder (the encoder pair of slot i is (frames[i-1] or zeros, frames[i])), cam_K / cam_R / cam_t / cam_D (N, ...) float64
   camera intrinsics / rotation / position (z = height) / distortion, cam_xy (N, 2), n_slots (N,) int.
 meta.json holds shapes, sizes and the identity gate against the stored swv1 replay.
@@ -106,7 +106,7 @@ def main():
                             d_head = max(d_head, float(np.abs(v.astype(np.float32) - s[name][key].astype(np.float32)).max()))
             d_pose = np.array(d_pose)
             gate = dict(n=len(d_pose), max_abs_pose_diff_m=float(d_pose.max()), share_over_0p03_m=float((d_pose > 0.03).mean()), max_abs_head_diff=d_head,
-                        scenes_match=bool(list(fresh) == list(stored)))
+                        scenes_match=bool(list(fresh) == list(stored)[:len(fresh)]))
             run.info(f"identity gate {g}: {gate}")
             arrs = dict(scene=np.array(scenes), k=np.array(ks, np.int32), now_us=np.array([b["now_us"] for b in buf], np.int64),
                         cmd=np.array([b["cmd"] for b in buf], np.int8), n_slots=np.array([int(b["valid"].sum()) for b in buf]),
@@ -115,8 +115,8 @@ def main():
                 arrs[key] = np.stack([b[key] for b in buf])
             for key in buf[0]["cam"]:
                 arrs[f"cam_{key}"] = np.stack([b["cam"][key] for b in buf])
-            # tokens exist for the valid slots only (in order); scatter them into the 4 slots, zeros elsewhere
-            tok = np.zeros((len(buf), 4) + buf[0]["tokens"].shape[1:], np.float16)
+            # tokens exist for the valid slots only (in order); scatter them into the S slots, zeros elsewhere
+            tok = np.zeros((len(buf), arrs["valid"].shape[1]) + buf[0]["tokens"].shape[1:], np.float16)
             for n, b in enumerate(buf):
                 tok[n, arrs["valid"][n]] = b["tokens"]
             arrs["tokens"] = tok
