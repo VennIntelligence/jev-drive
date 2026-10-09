@@ -45,3 +45,13 @@ Stored P2H10 (7.708) and SH30 (7.734) scores reproduce within 0.002 through the 
 ## Out of scope
 
 No training, no new runner, no WA-JEPA, no change to the serving harness. Does not touch AlpaSim or closed-loop numbers.
+
+## Amendment 1 (2026-10-09, before any new-arm score was read)
+
+Scope trim from the user (over-search concern). No RFS / ADE of any new arm (P2-F, OT10a05-F, YR10m10-F, YR10m25-F) had been read when this was written; the only
+comparison done so far is a bit-identity check of the re-served P2H10-F-s0 predictions against the stored ones (max abs diff 0.0).
+- Primary comparisons are exactly two: YR10m10 vs P2H10 and SH30 vs P2H10 (read by the lines above, 2 contrasts). Every other arm (P2, OT10a05, YR10m25) is a secondary row and gets no label.
+- No further eval is launched for P2-F or YR10m25-F beyond what had already been launched: P2-F s0 / s1 had finished and YR10m25-F s0 / s1 were already running when the trim arrived; they finish and are reported as secondary rows only.
+- The "yaw-rate prediction" check by YR10m10 and YR10m25 together in the section above is demoted: YR10m25 is a secondary row, not a second primary.
+- Concurrency lifted by the coordinator to up to 8 eval jobs (lane cores <= 110); wave 2 and 3 ran 6 jobs together. Rule kept: on any rc 137, save the boxwatch rows and drop to 3.
+- AP2H10-AB stays skipped (needs new input-mapping code).
