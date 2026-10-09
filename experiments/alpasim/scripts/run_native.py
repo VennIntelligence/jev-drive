@@ -233,7 +233,8 @@ def main() -> int:
         times["runtime_s"] = time.time() - times["t_runtime"]
         # The runtime exits 0 with failed rollouts (allow_aggregation_with_failed_rollouts): count them here.
         rows = json.load(open(out / "aggregate" / "results-summary.json"))["rollouts"]
-        times["rollouts"], times["rollouts_failed"] = len(rows), sum(bool(r.get("failure_reason")) for r in rows)
+        # a row with a failure_reason AND metrics is a scored zero (offroad, collision, ...); without metrics the rollout itself failed
+        times["rollouts"], times["rollouts_failed"] = len(rows), sum(bool(r.get("failure_reason")) and not r.get("metrics") for r in rows)
         if rc == 0 and rows and times["rollouts_failed"] == len(rows):
             raise RuntimeError("every rollout failed: " + str(rows[0]["failure_reason"])[:300])
     except Exception as e:
