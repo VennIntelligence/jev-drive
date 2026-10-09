@@ -1,0 +1,61 @@
+{
+ "rc": 0,
+ "times": {
+  "t_start": 1791567585.91474,
+  "driver_ready_s": 7.503629207611084,
+  "wizard_s": 1.9774088859558105,
+  "controller-0_ready_s": 3.0025150775909424,
+  "physics-0_ready_s": 3.502124071121216,
+  "renderer-0_ready_s": 12.007043600082397,
+  "services_ready_s": 20.507524967193604,
+  "t_runtime": 1791567613.9276502,
+  "runtime_s": 728.2475383281708,
+  "rollouts": 10,
+  "rollouts_failed": 0,
+  "total_s": 757.0681993961334
+ },
+ "peak": {
+  "driver": {
+   "gpu_mib": 1996.0,
+   "cpu_s": 230.2,
+   "rss_gib": 2.5043411254882812
+  },
+  "controller-0": {
+   "gpu_mib": 0.0,
+   "cpu_s": 71.55000000000001,
+   "rss_gib": 0.8023300170898438
+  },
+  "physics-0": {
+   "gpu_mib": 1326.0,
+   "cpu_s": 19.71,
+   "rss_gib": 1.1623611450195312
+  },
+  "renderer-0": {
+   "gpu_mib": 19576.0,
+   "cpu_s": 547.79,
+   "rss_gib": 12.007247924804688
+  },
+  "runtime-0": {
+   "gpu_mib": 0.0,
+   "cpu_s": 1252.89,
+   "rss_gib": 11.340373992919922
+  }
+ },
+ "overrides": [
+  "+e2e_challenge=dev",
+  "scenes.scene_cache=/root/autodl-tmp/ujs/datasets/nurec",
+  "scenes.scenes_csv=[/root/autodl-tmp/ujs/third_party/alpasim/data/scenes/sim_scenes.csv,/root/autodl-tmp/ujs/third_party/alpasim/data/scenes/sim_scenes_2604.csv]",
+  "services.renderer.gpus=[0]",
+  "services.physics.gpus=[0]",
+  "runtime.endpoints.renderer.n_concurrent_rollouts=4",
+  "runtime.endpoints.driver.n_concurrent_rollouts=4",
+  "runtime.endpoints.physics.n_concurrent_rollouts=4",
+  "runtime.endpoints.controller.n_concurrent_rollouts=4",
+  "defines.nre_cache_size=5",
+  "scenes.scene_ids=[\"clipgt-7a824ffa-5404-478b-8f20-667d342cbc69\",\"clipgt-9ea70552-6dcb-4ee8-a368-9a906a333f6e\",\"clipgt-213dfdac-3596-472d-8dc9-aaef6d0a7b92\",\"clipgt-94877a4a-cbf1-4353-ae4a-f4453def52cc\",\"clipgt-a28b6685-a2c7-4c9a-a257-3d992516a2f7\",\"clipgt-5d794411-c055-43a0-8f33-0118cbb902e5\",\"clipgt-4f779a92-af3f-4951-a09e-18fa15cbbf97\",\"clipgt-13fb89b9-2196-4545-abb4-c3029d89fcbe\",\"clipgt-49597f01-1461-4084-9447-95741690d9d8\",\"clipgt-071d15c4-a179-4311-b724-f7de1d45ab65\"]",
+  "scenes.limit_to_first_n=0"
+ ],
+ "driver": "exec env ALPASIM_SRC=/root/autodl-tmp/ujs/third_party/alpasim TMPDIR=/root/autodl-tmp/ujs/runs/alpasim/pai2/base_a10_s1/driver-tmp TORCHINDUCTOR_CACHE_DIR=/root/autodl-tmp/ujs/cache/torchinductor ALPASIM_DRIVER_LOG_DIR=/root/autodl-tmp/ujs/runs/alpasim/pai2/base_a10_s1/driver-logs ALPASIM_DRIVER_GRPC_WORKERS=8 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 SH30_TAG=P2H10-F-s1 PAI_DUMP=0       /root/autodl-tmp/ujs/envs/op-train/bin/python /home/ujs/data/jev-drive/experiments/alpasim/scripts/../lib/pai_driver.py",
+ "tap": false,
+ "cuda_visible_devices": "5"
+}

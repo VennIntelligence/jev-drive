@@ -322,8 +322,9 @@ plan's acceleration, metres removed in the first 2 s, serving ms) and `poses_mod
 
 ## PAI track on the Tokyo box (measured 2026-10-09)
 
-Read this when you run the Physical AI AV track locally. Its renderer (NRE) ships only as a container, so it runs on the
-Tokyo box ([tokyo-box.md](tokyo-box.md)), not on the GPU box. Results:
+Read this when you run the Physical AI AV track locally. Its renderer (NRE) ships only as a container; this section is the
+containerised stack on the Tokyo box ([tokyo-box.md](tokyo-box.md)). The GPU box runs the same renderer without Docker, see
+"PAI on the GPU box" below, and agrees with it on 39 of 40 scenes. Results:
 [experiments/alpasim/results/pai_smoke.md](../experiments/alpasim/results/pai_smoke.md).
 
 - Renderer image `nvcr.io/nvidia/nre/nre-ga:26.04`: pulled anonymously (no NGC login), 13.3 GB compressed, 27.8 GB on disk.
@@ -365,3 +366,61 @@ Four concurrent rollouts with the driver on the same card use about 23 of 24 GiB
 With `HARMONIZER=1` the same 10 scenes took 4 436 s (7.1x slower); the score did not move (0.1539 vs 0.1538).
 
 Last verified: 2026-10-09
+
+## PAI on the GPU box (measured 2026-10-10, lane PAI2)
+
+Read this to run PAI-track scenes through the pool. Parity and baseline tables:
+[experiments/alpasim/results/pai2_box.md](../experiments/alpasim/results/pai2_box.md). No Docker, no root: the renderer is the
+`nvcr.io/nvidia/nre/nre-ga:26.04` image unpacked into a directory and started by `run_native.py` like every other service; the wizard
+writes the same `+e2e_challenge=dev` preset as on Tokyo (harmonizer flag dropped, as `pai_run.sh` does). Physics (`physics_server`) is the
+shipped one, installed into the shared AlpaSim venv with `uv pip install --no-deps warp-lang -e src/physics`.
+
+One-time setup (done on the box, `$DATA_DIR/tools/nre-rootfs` 27 GB, scenes in `$DATA_DIR/datasets/nurec`):
+
+```bash
+scripts/tmux_run.sh pai2-nre env DATA_DIR=$DATA_DIR bash experiments/alpasim/scripts/pai_nre_pull.sh          # image -> tools/nre-rootfs
+scripts/tmux_run.sh pai2-scenes env HFROOT=https://hf-mirror.com bash experiments/alpasim/scripts/pai_fetch.sh <scenes.tsv> <max stage> 4
+```
+
+- `nvcr.io` through Clash runs at 0.1 MB/s; DaoCloud's mirror `nvcr.m.daocloud.io` (anonymous, direct) gave 1.4-3 MB/s, so
+  `pai_nre_pull.sh` uses it (13.6 GB compressed, 100 min). Scenes come from `hf-mirror.com` (needs the HF token in
+  `~/.cache/huggingface/token`, direct, 8 ranged streams per scene, 4 scenes at a time: 4-13 MB/s, 1.6-2.0 GB per scene). Both go through
+  `ranged_get.sh` (resume, one writer per file, bytes appended only on HTTP 206). The 10 first scenes have the same sha256 as on Tokyo.
+- GitHub can be unreachable from the box (name resolution); `git fetch` retries, or copy the file from the Mac.
+
+Run a scene list (the card is whatever the pool gives; the run sees it as device 0):
+
+```bash
+R=$DATA_DIR/runs/alpasim/pai2/<name>; mkdir -p $R/pool
+.venv/bin/python -m jevdrive.cl submit --no-check --name pai-<tag> --vram 24 --cpu 6 --ram 40 --log-dir $R/pool -- \
+  env CONC=4 SH30_TAG=<checkpoint tag> bash experiments/alpasim/scripts/pai_native.sh $R <scenes.tsv (STAGE=n) | file of scene ids>
+python3 experiments/alpasim/scripts/pai2_report.py baseline --runs s0=$R [--ref <ref dir>] --out table.md   # or: parity --ref tokyo=<run>
+```
+
+`pai_native.sh` = `run.sh <dir> pai` (driver `scripts/drivers/pai.sh`: `pai_driver.py`, so `JEV_VCONT`, `JEV_LEAD`, `PAI_*`, `DRV_PY` pass
+through as in `pai_run.sh`) + `run_native.py --sub` (rewrite `/app` to the unpacked image, drop `--enable-harmonizer`, per-run renderer
+cache) + `--rewrite-configs` (the generated runtime config names `/mnt/nre-data/...`). The result is `$R/aggregate/results-summary.json`.
+A scene list is one simulator launch: the simulator reproduces only for an identical list, so reuse the chunk files in
+`experiments/alpasim/results/pai/chunks/` (`a10`, `b1`, `b2a`, `b2b` = Tokyo's chunks of the 40; `e1`..`e6` = the extension).
+
+Scenes: the curated validation split has 441 scenes (the challenge's local evaluation set; `sim_suites_curated.csv`, the train split has 1 761
+more, 2 202 in the public catalogue). `pai_scenes.py` takes N scenes, one per quantile bin of the organisers' reference difficulty (mean of
+8 subjects x 3 rollouts), seed 0: `pai_scenes_40.tsv` is `--n 40`; `pai_scenes_ext120.tsv` is `--n 120 --exclude pai_scenes_40.tsv --shuffle`
+over the other 401 (stage 1 = a nested 60, shuffled, so any prefix is a random sample of the difficulty range).
+
+| Measured, one stack (CONC 4, 10 scenes per launch, 12 runs) | Value |
+|---|---|
+| VRAM | renderer 16-21 GiB, driver 1.9, physics 1.3-1.8: 20-25 GiB per stack (pool: `--vram 24`) |
+| Host RAM (sum of process RSS peaks) | 23-28 GiB (runtime 11, renderer 12, driver 2.5, physics 1, controller 0.8; pool: `--ram 40`) |
+| Cores | 2.5-2.8 on average (pool: `--cpu 6`), box load 30-50 from other lanes at the time |
+| Wall | 64-78 s per scene (Tokyo's 3090: 57-62); 10 scenes in 643-801 s plus about 25 s start-up; one scene alone 219 s |
+| Output | about 0.45 GB per scene (video, `rollout.asl`) |
+
+Agreement with Tokyo (P2H10-F-s0, the 40 scenes, Tokyo's chunk lists): mean 0.1505 against 0.1694, 37 of 40 scene classes equal, 39 of 40
+scores equal to 0.01; the first 10 scenes are identical (0.1539 against 0.1538), twice on the box. The one real flip (b988494a, 0.752 on
+Tokyo, 0 here) is the cm-level numerics of decision 215. Baseline of P2H10-F-s0 / -s1 on 60 scenes and the organisers' reference rows:
+[pai2_box.md](../experiments/alpasim/results/pai2_box.md). `run_native.py` ends a run with rc 1 only when no rollout produced metrics, a scored
+zero is a finished rollout.
+
+Last verified: 2026-10-10
+
