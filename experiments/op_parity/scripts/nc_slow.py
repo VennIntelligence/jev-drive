@@ -878,6 +878,7 @@ def cmd_posthoc(a):
                  "rest (EP cost of moved tokens)": fmt(stats.bootstrap(100 * (d * ~(dac | col | ttc)).mean(0), groups=logs), 3)}
             # EP-capped operating points (T / M: argmax scale above a threshold; C: fixed scale)
             if kind == "C":
+                it = np.zeros(pred.shape, int)
                 m_tr, g_tr, e_tr, m_te, g_te, e_te = oof, Gtr[:, afix], EPtr[:, afix], pred, Gte[:, :, afix], EPte[:, :, afix]
             else:
                 ia, it = oof.argmax(1), pred.argmax(2)
@@ -894,13 +895,24 @@ def cmd_posthoc(a):
             r.update({"EP-capped tau (navtrain OOF)": best[0], "OOF gain at the cap": best[1], "navtest moved %": 100 * float(mv.mean()),
                       "navtest gain at the cap": fmt(stats.bootstrap(100 * (g_te * mv).mean(0), groups=logs), 3),
                       "navtest EP at the cap": fmt(stats.bootstrap(100 * (e_te * mv).mean(0), groups=logs), 2),
-                      "share of +1.13 %": 100 * float((g_te * mv).mean()) / ORACLE_N1})
+                      "share of +1.13 %": 100 * 100 * float((g_te * mv).mean()) / ORACLE_N1})
             opt = (0.0, 0.0)
             for t in np.unique(np.quantile(m_te, np.linspace(0, 1, 2001))):
                 s_ = m_te > t
                 if -100 * (e_te * s_).mean() <= LINE_EP and 100 * (g_te * s_).mean() > opt[0]:
                     opt = (100 * float((g_te * s_).mean()), 100 * float(s_.mean()))
             r.update({"navtest-tuned bound under the cap (gain; moved %)": f"{opt[0]:+.3f}; {opt[1]:.1f}"})
+            # the capped point's effect on the collision gates
+            sx = np.where(mv, (np.full_like(it, afix) if kind == "C" else it), -1)
+            pick = np.where(sx >= 0, np.asarray(SLOW)[np.maximum(sx, 0)], ID)
+            nc1 = np.take_along_axis(SUB[..., 0], pick[:, :, None], 2)[:, :, 0]
+            tt1 = np.take_along_axis(SUB[..., 5], pick[:, :, None], 2)[:, :, 0]
+            da1 = np.take_along_axis(SUB[..., 1], pick[:, :, None], 2)[:, :, 0]
+            nc0, tt0 = SUB[:, :, ID, 0], SUB[:, :, ID, 5]
+            f0, f1 = (nc0 < 1) | (tt0 < 1), (nc1 < 1) | (tt1 < 1)
+            r.update({"capped: NC failures fixed / new": f"{((nc1 == 1) & (nc0 < 1)).sum(1).mean():.1f} / {((nc1 < 1) & (nc0 == 1)).sum(1).mean():.1f}",
+                      "capped: NC or TTC failing tokens, pp": fmt(stats.bootstrap(100 * (f1.astype(float) - f0).mean(0), groups=logs)),
+                      "capped: gain from tokens whose DAC changes": fmt(stats.bootstrap(100 * (g_te * mv * (da1 != SUB[:, :, ID, 1])).mean(0), groups=logs), 3)})
             rows.append(r)
         T = pd.DataFrame(rows)
         (OUT / "report").mkdir(exist_ok=True)
