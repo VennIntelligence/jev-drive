@@ -63,16 +63,18 @@ def pack(jpeg, cam: dict) -> np.ndarray:
 _IDX = {}
 
 
-def pack_gpu(jpeg, cam: dict, dev):
+def pack_gpu(jpeg, cam: dict, dev, decode=None):
     """pack with the model-frame sampling on the GPU -> uint8 tensor (2, 6, 128, 256) on dev, bit-identical to pack: the JPEG is decoded
-    on the CPU as there (libjpeg's own YCbCr), OpenpilotMaps.__call__'s nearest sampling and 2x2 chroma mean run on the card."""
+    on the CPU as there (libjpeg's own YCbCr), OpenpilotMaps.__call__'s nearest sampling and 2x2 chroma mean run on the card.
+    decode: another decoder, bytes -> (1080, 1920, 3) uint8 YCbCr tensor on dev (lat1_check.py nvjpeg; not bit-identical)."""
     import torch
     k = Z.calib_key({"CAM_F0": cam})
     m = _MAPS.get(k) or _MAPS.setdefault(k, Z.OpenpilotMaps(cam))
     if (k, dev) not in _IDX:
         _IDX[k, dev] = torch.from_numpy(np.stack(m.idx)).to(dev)
-    ycc = torch.from_numpy(np.array(m.decode(io.BytesIO(jpeg) if isinstance(jpeg, (bytes, bytearray, memoryview)) else jpeg))).to(dev)
-    p = ycc.view(-1, 3)[_IDX[k, dev]].view(2, 256, 512, 3)
+    src = io.BytesIO(jpeg) if isinstance(jpeg, (bytes, bytearray, memoryview)) else jpeg
+    ycc = decode(jpeg) if decode else torch.from_numpy(np.array(m.decode(src))).to(dev)
+    p = ycc.reshape(-1, 3)[_IDX[k, dev]].view(2, 256, 512, 3)
     Y, uv = p[..., 0], p[..., 1:].float().reshape(2, 128, 2, 256, 2, 2).mean((2, 4)).round().to(torch.uint8)
     return torch.stack([Y[:, 0::2, 0::2], Y[:, 1::2, 0::2], Y[:, 0::2, 1::2], Y[:, 1::2, 1::2], uv[..., 0], uv[..., 1]], 1)
 

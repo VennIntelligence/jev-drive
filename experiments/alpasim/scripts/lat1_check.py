@@ -13,6 +13,9 @@ simulator (c1_replay.py's harness). Results: experiments/alpasim/results/lat1_fr
   lat1_check.py load --msgs <dir> --out <json> --synth cpu|gpu [--streams 8] [--n N]
       N scenes replayed as `streams` concurrent sessions through one driver (one inference lock, as served): stage times per `drive`
       and per image, from the driver's own drive.jsonl / images.jsonl, and every plan
+  lat1_check.py nvjpeg --msgs <dir> --out <json> [--n N]
+      a measurement, not a served path: the CAM_F0 JPEG decoded by nvJPEG on the card (torchvision.io.decode_jpeg, RGB -> YCbCr)
+      instead of libjpeg: decode time, pixel difference of the model frames, plan difference on the logged inputs
   lat1_check.py same --msgs <load json of one run> --out <load json of another>
       the plans of two load runs, decision by decision
 """
@@ -181,6 +184,46 @@ def cmd_prof(a):
     print(json.dumps(out, indent=1), flush=True)
 
 
+def cmd_nvjpeg(a):
+    import torch
+    import torchvision.io as tio
+    import sh30_driver as D
+    dev = torch.device("cuda")
+    core = D.C.Core(TAG, "cuda", synth="gpu")
+    drv, last, pack, t_nv, t_cpu, px = D.Driver(core, Path(tempfile.mkdtemp())), {}, D.C.pack_gpu, [], [], [0, 0, 0.0, 0]
+    orig = core.plan
+    core.plan = lambda *x, **k: last.update(o=orig(*x, **k)) or last["o"]
+    M = torch.tensor([[0.299, 0.587, 0.114], [-0.168736, -0.331264, 0.5], [0.5, -0.418688, -0.081312]], device=dev)
+
+    def nv(jpeg):
+        rgb = tio.decode_jpeg(torch.frombuffer(bytearray(jpeg), dtype=torch.uint8), device=dev).permute(1, 2, 0).float()
+        return (rgb @ M.T + torch.tensor([0.0, 128.0, 128.0], device=dev)).round().clamp(0, 255).to(torch.uint8)
+
+    def timed(jpeg, cam, dev_):
+        t0 = time.perf_counter()
+        ref = pack(jpeg, cam, dev_)
+        torch.cuda.synchronize()
+        t1 = time.perf_counter()
+        got = pack(jpeg, cam, dev_, nv)
+        torch.cuda.synchronize()
+        t_cpu.append(1e3 * (t1 - t0)), t_nv.append(1e3 * (time.perf_counter() - t1))
+        d = (ref.int() - got.int()).abs()
+        px[:] = [px[0] + d.numel(), px[1] + int((d > 0).sum()), px[2] + float(d.sum()), max(px[3], int(d.max()))]
+        return got if mode["nv"] else ref
+    D.C.pack_gpu, mode, plans = timed, {"nv": False}, {False: [], True: []}
+    for f in scenes(a):
+        for nvm in (False, True):
+            mode["nv"] = nvm
+            feed(drv, D.egodriver_pb2, pickle.load(open(f, "rb")), Ctx(), lambda: plans[mode["nv"]].append(last["o"]["poses"].copy()))
+    A, B = np.array(plans[False]), np.array(plans[True])
+    end, yaw = np.hypot(*(A[:, -1, :2] - B[:, -1, :2]).T), np.abs(np.degrees(A[:, 0, 2] - B[:, 0, 2]))
+    s = dict(tag=TAG, scenes=len(scenes(a)), decisions=len(A), images=len(t_nv) // 2, pack_ms_libjpeg=pct(t_cpu[2:]), pack_ms_nvjpeg=pct(t_nv[2:]),
+             px_differing_share=px[1] / px[0], px_mean_abs=px[2] / px[0], px_max=px[3], end_4s_m=pct(end) + [float(end.mean())],
+             yaw_05s_deg=pct(yaw) + [float(yaw.mean())], note="percentiles 50 / 95 / 100, then the mean")
+    Path(a.out).write_text(json.dumps(s))
+    print(json.dumps(s, indent=1), flush=True)
+
+
 def cmd_load(a):
     import torch
     import sh30_driver as D
@@ -223,10 +266,10 @@ def cmd_same(a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
+    ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same", "nvjpeg"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=0), ap.add_argument("--synth", default="gpu"), ap.add_argument("--streams", type=int, default=8)
     a = ap.parse_args()
-    {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same}[a.cmd](a)
+    {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same, "nvjpeg": cmd_nvjpeg}[a.cmd](a)
 
 
 if __name__ == "__main__":
