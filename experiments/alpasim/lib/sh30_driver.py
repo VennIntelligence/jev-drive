@@ -20,7 +20,7 @@ default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route m
 
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
 (op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (gpu, the default: slot warp on the card + fast frame packing, same
-frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -62,6 +62,11 @@ from navsim_transfuser_challenge.trajectory import build_trajectory_from_plan, m
 
 import serve_fix as FX  # noqa: E402
 import sh30_core as C  # noqa: E402
+
+BD = None                                            # BODY1 stop switch (experiments/body1/lib/serve_body.py); not imported unless JEV_STOP > 0
+if float(os.environ.get("JEV_STOP", "0") or 0) > 0:
+    sys.path.append(str(Path(__file__).resolve().parents[2] / "body1" / "lib"))
+    import serve_body as BD  # noqa: E402
 
 LOG = logging.getLogger("sh30")
 CAM, STEP_US, TOL_US = "CAM_F0", 500_000, 2_000
@@ -254,6 +259,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             ctx.abort(grpc.StatusCode.INTERNAL, f"SH30 inference failed: {e!r}")
         s.count["inference"] += 1
         fx = FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0)
+        bd = BD.apply(self.gpu, o, float(np.hypot(*dyn[-1][0]))) if BD else None
         plan = make_cached_plan(t0, anchor, o["poses"])
         traj = build_trajectory_from_plan(plan, anchor, now, tq)
         t_out = time.perf_counter()
@@ -266,6 +272,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                       "total": round(1e3 * (t_out - t_in), 2)}}
         if fx is not None:
             rec.update(fix=fx, poses_model=o["poses_model"].round(4).tolist())
+        if bd is not None:
+            rec.update(body=bd)
         self.out.write(json.dumps(rec) + "\n")
         if s.n < self.dump:
             np.savez_compressed(self.dir / "dump" / f"s{s.n:02d}_k{rec['k']}.npz", cur=o["cur"], valid=o["valid"], mu=o["mu"], poses=o["poses"],
@@ -273,7 +281,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}{BD.SUFFIX if BD else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=API)
 
 
@@ -334,7 +342,11 @@ def main() -> None:
              core._pol is not None, "nvjpeg" if decode else "libjpeg", time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
     drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1", os.environ.get("SH30_MOTION_GATE", ""))
     drv.decode = decode
-    server = grpc.server(warm_workers(lambda: core.plan([z] * 4, np.zeros((4, 3)), np.zeros((4, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])))
+    one = lambda: core.plan([z] * 4, np.zeros((4, 3)), np.zeros((4, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731
+    if BD:
+        BD.load(core.dev)
+        LOG.info("serving: JEV_STOP %g (contact head, threshold logit %.3f)", BD.M, BD.THR)
+    server = grpc.server(warm_workers((lambda: BD.warm(one())) if BD else one))
     egodriver_pb2_grpc.add_EgodriverServiceServicer_to_server(drv, server)
     if server.add_insecure_port(f"{host}:{port}") == 0:
         raise RuntimeError(f"failed to bind {host}:{port}")

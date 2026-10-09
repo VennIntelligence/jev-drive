@@ -13,7 +13,9 @@ job = label:driver:ENV=VALUE[,ENV=VALUE...][:checkpoint tag[+tag...]][:list]
 State in $DATA_DIR/runs/alpasim/ot2/<stage>/: STATUS, DONE, ERROR, log.txt, manifest.json {label: [run dirs]}, runs/. At most OT2_MAX_ACTIVE
 (3) of this chain's jobs are in the pool at a time (nine AlpaSim stacks at once exhausted host memory on 2026-10-09); declarations are the
 measured peaks of the c0b / m1 runs (VRAM 32 GB, RAM 42 GB, 8 cores). Another lane reuses the chain with OT_LANE=<dir under runs/alpasim>
-(default ot2; also the pool owner `alpasim-<lane>`) and OT_PRIO (pool priority, default 12).
+(default ot2; also the pool owner `alpasim-<lane>`) and OT_PRIO (pool priority, default 12). A lane of another topic also sets OT_OUT (the state
+directory that replaces $DATA_DIR/runs/alpasim/<lane>), OT_OWNER (the pool owner) and OT_RAM (declared host RAM per job in GiB, instead of
+14 + 0.12 per scene).
 """
 import glob
 import json
@@ -48,8 +50,8 @@ class Job(B.Job):
             B.fail(f"{self.name}: {B.MAX_TRIES} tries exhausted")
         self.D = B.O / "runs" / self.name / time.strftime("%Y%m%d-%H%M%S")
         self.D.mkdir(parents=True)
-        cmd = B.PY + ["submit", "--owner", f"alpasim-{LANE}", "--name", f"alpasim-{LANE}-{self.drv}", "--vram", str(self.vram), "--cpu", "8",
-                      "--ram", str(int(14 + 0.12 * self.n)), "--timeout-h", "3", "--tries", "1", "--priority", str(self.prio), "--log-dir", str(self.D / "pool"),
+        cmd = B.PY + ["submit", "--owner", os.environ.get("OT_OWNER") or f"alpasim-{LANE}", "--name", f"alpasim-{LANE}-{self.drv}", "--vram", str(self.vram), "--cpu", "8",
+                      "--ram", os.environ.get("OT_RAM") or str(int(14 + 0.12 * self.n)), "--timeout-h", "3", "--tries", "1", "--priority", str(self.prio), "--log-dir", str(self.D / "pool"),
                       "--", "env", *[f"{k}={v}" for k, v in self.env.items()], "bash", "experiments/alpasim/scripts/run.sh", str(self.D), self.drv,
                       "--scene-list", str(self.scenes), *B.OVERRIDES]
         out = subprocess.run(cmd, cwd=B.REPO, capture_output=True, text=True)
@@ -91,7 +93,7 @@ class Job(B.Job):
 
 def main():
     stage, specs = sys.argv[1], sys.argv[2:]
-    B.O = B.RA / LANE / stage
+    B.O = (Path(os.environ["OT_OUT"]) if os.environ.get("OT_OUT") else B.RA / LANE) / stage
     (B.O / "lists").mkdir(parents=True, exist_ok=True)
     for f in ("DONE", "ERROR"):
         (B.O / f).unlink(missing_ok=True)
