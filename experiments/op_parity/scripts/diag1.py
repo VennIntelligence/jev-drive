@@ -1020,7 +1020,9 @@ def cmd_wod_follow(a):
         stats.write_table(gp, OUT / "wodft_gap_top")
         # ---- acceleration continuation: first-segment speed with the fed ax minus with ax := 0, against the fed ax
         ego = np.load(DATA / "runs/op_parity/wod/bias-P2H10-F-s0.npz")["ego"]
-        ax, mv = ego[:, 6].astype(np.float64) * 3.0, C.vfed >= 2
+        ax, mv = ego[:, 6].astype(np.float64) * 3.0, (C.vfed >= 2) & (np.arange(N) < n)      # the lx-* variants exist on the rater frames only
+        _full = C.preds
+        C.preds = lambda tag, all_frames=False: (np.concatenate([_full(tag, False), np.zeros((N - n, 20, 2))]) if tag.startswith("lx-") else _full(tag, all_frames))
         fs = lambda p: np.linalg.norm(p[:, 0], axis=-1) / 0.25  # noqa: E731
         a4 = lambda p: arc_at(p, 0.25, np.array([4.0]))[:, 0]  # noqa: E731
         acode = np.unique(C.seq, return_inverse=True)[1]
@@ -1038,6 +1040,22 @@ def cmd_wod_follow(a):
                 ar.append({"checkpoint": nm, "quantity": lab, "n (v0 >= 2)": int(mv.sum()), "fed ax std (m/s^2)": float(ax[mv].std()), "slope": float(sl), "lo": float(np.percentile(bs, 2.5)),
                            "hi": float(np.percentile(bs, 97.5)), "corr": float(np.corrcoef(ax[mv], y[mv])[0, 1])})
         stats.write_table(ar, OUT / "wodft_ax_slope")
+        # ---- switches on WP2 (stored lx-* variants, rater frames): share of the WP2 - shipped difference kept
+        rm, sw = np.arange(N) < n, []
+        mvr, ssr = rm & (C.vfed >= 2), rm & (C.vfed < 0.5)
+        def meas(tagf):
+            A = np.mean([arc_at(C.preds(tagf(i), True), 0.25) for i in (0, 1)], 0)
+            return np.array([q_r0(A, C.vfed)[mvr].mean(), A[mvr, 3].sum(), A[mvr, 4].sum(), A[ssr, 3].mean()])
+        m_s = np.array([q_r0(arc_at(S, 0.25), C.vfed)[mvr].mean(), arc_at(S, 0.25)[mvr, 3].sum(), arc_at(S, 0.25)[mvr, 4].sum(), arc_at(S, 0.25)[ssr, 3].mean()])
+        m_a = meas(lambda i: f"WP2-full-s{i}")
+        cols = ["first-segment ratio - 1 (v0 >= 2)", "arc 2 s (sum, v0 >= 2)", "arc 4 s (sum, v0 >= 2)", "standstill arc 2 s (m)"]
+        sw.append({"variant": "shipped"} | dict(zip(cols, m_s)))
+        sw.append({"variant": "WP2 main"} | dict(zip(cols, m_a)))
+        for var, dv in (("nobias", "zero"), ("const", "biasmean"), ("resid", "biasresid"), ("acc0", "acc0")):
+            mvv = meas(lambda i, dv=dv: f"lx-WP2-full-s{i}_{dv}")
+            sw.append({"variant": var} | dict(zip(cols, mvv)) | {f"share kept: {c}": float((x - y0) / (y1 - y0)) for c, x, y0, y1 in zip(cols, mvv, m_s, m_a)})
+        stats.write_table(sw, OUT / "wodft_switches")
+        C.preds = _full
         # ---- braking onset on closing-lead frames, split by whether the ego is already braking
         t = load_tab(WD / "tab_wod.npz")
         v0 = t["v0"].astype(np.float64)
