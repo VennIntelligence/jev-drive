@@ -544,6 +544,9 @@ def cmd_fit(a):
     from jevdrive.run import Run
     streams = ARMS[a.arm].split()
     with Run("op_parity", f"nc_slow/fit-{a.arm}", seed=0, config=vars(a) | dict(hgb=HGB, m=M_CFG)) as run:
+        if (OUT / "fit" / f"{a.arm}.npz").exists():
+            run.info("exists: %s", a.arm)
+            return
         run.use_split(splits.load("navsim/navtrain")), run.use_split(splits.load("navsim/navtest"))
         tr, te = dict(np.load(OUT / "tab_train.npz")), dict(np.load(OUT / "tab_test.npz"))      # tab_test holds no score
         hv = "h" in streams or "v" in streams
@@ -589,7 +592,7 @@ def cmd_fit(a):
         res["chosen"] = max(kinds, key=lambda k: res[k]["oof_gain"])
         flat = {f"{k}_{q}": v for k in kinds for q, v in res[k].items()}
         save(OUT / "fit" / f"{a.arm}.npz", chosen=np.array(res["chosen"]), kinds=np.array(kinds), **flat)
-        run.summary.update(arm=a.arm, chosen=res["chosen"], **{f"oof_gain_{k}": res[k]["oof_gain"] for k in kinds}, wall_s=time.time() - t0)
+        run.summary.update(arm=a.arm, chosen=res["chosen"], **{f"oof_gain_{k}": res[k]["oof_gain"] for k in kinds}, fit_s=time.time() - t0)
         run.info(json.dumps(run.summary))
 
 
