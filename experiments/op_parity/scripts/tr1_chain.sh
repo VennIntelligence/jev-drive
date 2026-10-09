@@ -51,13 +51,15 @@ die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
         $CL queue 2>/dev/null | awk -v p="$ld/log.txt" '($2 == "queued" || $2 == "running" || $2 == "inbox") && index($0, p) {f = 1} END {exit !f}' && return
         rm -f "$ld/ERROR"
-        local id; id=$($CL submit --owner op_parity-tr1 --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n $ld" >> "$D/jobs.txt"; }
+        local id; id=$($CL submit --owner op_parity-tr1 --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n $ld" >> "$D/jobs.txt"; SUBID=$(echo "$id" | tail -1 | awk "{print \$NF}"); }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 20; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; return 0; }
 serve() { local tag=$1                                   # WOD val, decision 155 harness (wod1_recipes_chain.sh)
           [[ -f $ONNX/pp-$tag.onnx ]] || $PY $S/pp_hugsim.py onnx --tag $tag --out $ONNX/pp-$tag.onnx >/dev/null || die "onnx $tag"
           [[ -f $BIAS/bias-$tag.npz ]] || $PY $S/pp_wod.py bias --tags $tag || die "bias $tag"
-          sub tr1-wod $L/wod-$tag --vram 8 --cpu 14 --ram 40 --tries 3 -- $OP scripts/wod_zeroshot_openpilot.py --set rater extra --workers 12 \
-              --onnx $ONNX/pp-$tag.onnx --tag $tag --bias $BIAS/bias-$tag.npz; }
+          local af=(); [[ -n ${W2:-} ]] && af=(--after $W2)   # two streams: fast anon growth against a full page cache gets jobs SIGKILLed (docs/remote-box.md)
+          SUBID=""; W2=${W1:-}
+          sub tr1-wod $L/wod-$tag --vram 8 --cpu 14 --ram 40 --tries 5 "${af[@]}" -- $OP scripts/wod_zeroshot_openpilot.py --set rater extra --workers 12 \
+              --onnx $ONNX/pp-$tag.onnx --tag $tag --bias $BIAS/bias-$tag.npz; W1=${SUBID:-$W2}; }
 TV="--train --vram 24 --cpu 4 --ram 40"
 
 if [[ $STAGE == check ]]; then
@@ -97,7 +99,7 @@ elif [[ $STAGE == s0 || $STAGE == s1 ]]; then
   status "trainings: ${RUNS[*]} x seeds $SEEDS"
   TAGS=""
   for arm in "${RUNS[@]}"; do f=$(flags $arm $SC) || die "unknown arm $arm"; for s in $SEEDS; do t=T1$arm-$SC-s$s; TAGS+="$t "
-    sub tr1-t-$SC $L/t-$t $TV -- $PY $S/pp_train.py $f --seed $s $TA --tag $t; done; done
+    sub tr1-t-$SC $L/t-$t $TV --tries 3 -- $PY $S/pp_train.py $f --seed $s $TA --tag $t; done; done
   waitdirs $(for t in $TAGS; do echo $L/t-$t; done)
   for t in $TAGS; do [[ -f $CK/$t/ckpt-final.pt ]] || die "no checkpoint $t"; done
   grep -h "dev @ [13]0*00:" $L/t-T1*-$SC-s*/log.txt | sed 's/.*INFO//' | cut -c1-300
