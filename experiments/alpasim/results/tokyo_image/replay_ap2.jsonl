@@ -1,0 +1,9 @@
+{"dump": "s00_k0.npz", "pack_pixels_differ": 128, "mu_max_abs": 0.0625, "plan_xy_max_m": 0.0625, "pose_xy_max_m": 0.003333568572998047, "pose_yaw_max_rad": 2.1816231310367584e-05}
+{"dump": "s00_k9.npz", "pack_pixels_differ": 113, "mu_max_abs": 0.0625, "plan_xy_max_m": 0.0625, "pose_xy_max_m": 0.0239410400390625, "pose_yaw_max_rad": 6.103515625e-05}
+{"dump": "s01_k0.npz", "pack_pixels_differ": 145, "mu_max_abs": 0.0078125, "plan_xy_max_m": 0.0029296875, "pose_xy_max_m": 0.0013758540153503418, "pose_yaw_max_rad": 4.2203813791275024e-05}
+{"dump": "s01_k9.npz", "pack_pixels_differ": 121, "mu_max_abs": 0.0625, "plan_xy_max_m": 0.0625, "pose_xy_max_m": 0.0029973983764648438, "pose_yaw_max_rad": 5.888938903808594e-05}
+{"dump": "s02_k0.npz", "pack_pixels_differ": 162, "mu_max_abs": 0.03125, "plan_xy_max_m": 0.03125, "pose_xy_max_m": 0.011960983276367188, "pose_yaw_max_rad": 0.00017141923308372498}
+{"dump": "s02_k9.npz", "pack_pixels_differ": 138, "mu_max_abs": 0.03125, "plan_xy_max_m": 0.03125, "pose_xy_max_m": 0.0040721893310546875, "pose_yaw_max_rad": 0.00010354816913604736}
+{"dump": "s03_k0.npz", "pack_pixels_differ": 102, "mu_max_abs": 0.03125, "plan_xy_max_m": 0.03125, "pose_xy_max_m": 0.015625, "pose_yaw_max_rad": 1.6003090422600508e-05}
+{"dump": "s03_k9.npz", "pack_pixels_differ": 89, "mu_max_abs": 0.03125, "plan_xy_max_m": 0.03125, "pose_xy_max_m": 0.011561393737792969, "pose_yaw_max_rad": 6.103515625e-05}
+{"n": 8, "tag": "AP2-AB-s0", "torch": "2.14.0+cu126", "gpu": "NVIDIA GeForce RTX 3090", "pack_identical": 0, "pose_xy_max_m": 0.0239410400390625, "pose_xy_median_m": 0.007816791534423828, "mu_max_abs": 0.0625}

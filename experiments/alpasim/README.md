@@ -1,7 +1,7 @@
 # alpasim: AlpaSim E2E Closed Loop Challenge feasibility
 
 status: live
-decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
+decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 215 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
 index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
 key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
@@ -50,9 +50,10 @@ adapter) and mismatches: [results/ap2_smoke.md](results/ap2_smoke.md) (`figs/ap2
 
 **OT2-B: off-track rows under the AlpaSim input standard (2026-10-09, decision 210, pre-registered, trimmed after decision 205).** `APO-a05m10` (AP2 + 10 % of +-0.5 m rows, `scripts/ap2_ot.py`) 0.9409 on the 700 scenes, +0.0177 [+0.0077, +0.0277] over AP2 (two seeds each), at-fault events 32 -> 16.5: a candidate by the registered lines, no guardrail run, below the lambda-10 P2H10 (0.948 / 0.950). 25 % is worse than 10 % (-0.0286 [-0.0412, -0.0177]). The +-1.5 m trainings were cut; the `ot2` row caches are kept for lane OT3 ([results/ot2/ot2_cache_keys.md](results/ot2/ot2_cache_keys.md)). Second baseline seeds: SH30-F-s1 0.9219, AP2-AB-s1 0.9240. [results/ot2_b_dose.md](results/ot2_b_dose.md), plan [plans/2026-10-09-ot2-dose-prereg.md](plans/2026-10-09-ot2-dose-prereg.md).
 
+**Submission image (2026-10-09, decision 215).** One checkpoint-agnostic driver image (`docker/`, 7.48 GiB; `JEV_TAG` picks the checkpoint, the family follows from it) passes the organisers' container limits on the Tokyo box (read-only root, no network, 3.04 of 16 GiB VRAM, `/tmp` 0.8 MiB of 2 GiB, cold start 19 s, `drive` p50 86 ms with 2 concurrent rollouts on an RTX 3090) and drives the 48 public scenes inside the official containerised stack: P2H10-F-s0 0.9839 (native 0.9840), AP2-AB-s0 0.9521 (native 0.9320; 43 of 48 scenes identical, one at-fault collision became 0.97). Not bit-identical: same first rendered frame, first plans up to 1.6 cm apart from GPU / CPU numerics, amplified by the loop. A new tag goes from checkpoint to tested image in one command, 355 s (`docker/new_tag.sh`). Nothing pushed or submitted. [results/tokyo_image_smoke.md](results/tokyo_image_smoke.md), how to run and the user's submission commands: [docs/alpasim.md](../../docs/alpasim.md#submission-image-measured-2026-10-09-decision-215).
+
 **Next.** A lambda-10 checkpoint with off-track rows, and closed-loop recovery rows with a yaw rate (decision 205); P2H10's remaining zeros (turns, 7 of 16 held out); the at-fault collisions of SH30 and AP2 case by case (zeros decide this board); WA-JEPA latency on an idle card; the full public suite once the remaining 14 asset shards are on disk (`fetch_data.sh all`, running 2026-10-08); the two
-collisions and the 11 slow scenes; step latency under 0.1 s (warp on the GPU or cross-session batching); a Docker host for the
-submission image and a read-only-root test; seed 1.
+collisions and the 11 slow scenes; step latency under 0.1 s (warp on the GPU or cross-session batching); seed 1; the user's warm-up submission of the image (decision 215).
 
 **Read more.** [docs/alpasim.md](../../docs/alpasim.md).
 

@@ -1,0 +1,35 @@
+0B	CMD ["python" "/app/serve.py"]
+0B	USER 10001:10001
+0B	STOPSIGNAL SIGTERM
+0B	EXPOSE map[6789/tcp:{}]
+0B	ENV JEV_TAG=P2H10-F-s0 JEV_DRIVER=auto SH30_GIT_HASH=6f3d05d1
+0B	ARG GIT_HASH=6f3d05d1
+0B	ARG DRIVER=auto
+0B	ARG TAG=P2H10-F-s0
+46B	RUN |2 CUDA=cu126 UV_SRC=--no-index --find-links /wheels /bin/sh -c python /app/verify.py # buildkit
+0B	COPY ckpt-extra /app/data/runs/op_parity/runs # buildkit
+150MB	COPY ckpt /app/data/runs/op_parity/runs # buildkit
+4.37kB	RUN |2 CUDA=cu126 UV_SRC=--no-index --find-links /wheels /bin/sh -c groupadd --gid 10001 alpasim     && useradd --uid 10001 --gid 10001 --no-create-home --home-dir /app --shell /usr/sbin/nologin alpasim # buildkit
+9.5kB	COPY serve.py probe.py verify.py /app/ # buildkit
+278kB	COPY jev-drive /app/jev-drive # buildkit
+11.3kB	COPY alpasim/LICENSE /app/alpasim/LICENSE # buildkit
+8.74kB	COPY alpasim/e2e_challenge /app/alpasim/e2e_challenge # buildkit
+766MB	COPY models /app/data/models # buildkit
+246kB	RUN |2 CUDA=cu126 UV_SRC=--no-index --find-links /wheels /bin/sh -c uv pip install --system --no-cache --no-deps /tmp/whl/*.whl && rm -rf /tmp/whl     && python -c "import alpasim_grpc, torch; assert alpasim_grpc._
+60.7kB	COPY /whl /tmp/whl # buildkit
+6.97GB	RUN |2 CUDA=cu126 UV_SRC=--no-index --find-links /wheels /bin/sh -c UV_CACHE_DIR=/root/.cache/uv UV_LINK_MODE=copy uv pip install --system --require-hashes ${UV_SRC:---extra-index-url https://download.pytorch.org/
+28.5kB	COPY requirements.lock /app/requirements.lock # buildkit
+0B	WORKDIR /app
+0B	ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HOME=/app TMPDIR=/tmp XDG_CACHE_HOME=/tmp/.cache TORCH_HOME=/tmp/torch TORCH_EXTENSIONS_DIR=/tmp/torch_extensions HF_HOME=/tmp/huggingface HF_HUB_OFFLINE=1 MPLCONFIGDIR
+0B	ARG UV_SRC=--no-index --find-links /wheels
+0B	ARG CUDA=cu126
+0B	CMD ["python3"]
+36B	RUN /bin/sh -c set -eux;  for src in idle3 pip3 pydoc3 python3 python3-config; do   dst="$(echo "$src" | tr -d 3)";   [ -s "/usr/local/bin/$src" ];   [ ! -e "/usr/local/bin/$dst" ];   ln -svT "$src" "/usr/local/bin/$
+53.2MB	RUN /bin/sh -c set -eux;   savedAptMark="$(apt-mark showmanual)";  apt-get update;  apt-get install -y --no-install-recommends   dpkg-dev   g++   gcc   gnupg   libbluetooth-dev   libbz2-dev   libc6-dev   libdb-dev
+0B	ENV PYTHON_SHA256=bfb74ad39efae27cda510f134ab408e00f9992c56851cfc0b1cdb5646da11599
+0B	ENV PYTHON_VERSION=3.11.17
+0B	ENV GPG_KEY=A035C8C19219BA821ECEA86B64E628F8D684696D
+8.53MB	RUN /bin/sh -c set -eux;  apt-get update;  apt-get install -y --no-install-recommends   ca-certificates   netbase   tzdata  ;  rm -rf /var/lib/apt/lists/* # buildkit
+0B	ENV LANG=C.UTF-8
+0B	ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+74.9MB	# debian.sh --arch 'amd64' out/ 'bookworm' '@1791158400'
