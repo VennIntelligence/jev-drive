@@ -301,6 +301,15 @@ def cmd_wod_tab(a):
                     arcs[f"{k}:{var}"] = arc_at(p, 0.25)
                     if var == "nobias":                               # gate = adapter off below 0.5 m/s fed speed (bias held per target: exact composition)
                         arcs[f"{k}:gate"] = arc_at(np.where((C.vfed < 0.5)[:, None, None], p, main), 0.25)
+    for fam in ("WP2", "WLG"):                                         # WOD-trained checkpoints (amendment 1); WP2 variants from the wod-launch lane (lx-*)
+        for s in (0, 1):
+            tag, k = f"{fam}-full-s{s}", f"{fam}-s{s}"
+            main = C.preds(tag, True)
+            arcs[k] = arc_at(main, 0.25)
+            for var, dv in vmap.items():
+                d = Z.root("preds", f"op_cinque_lx-{tag}_{dv}")
+                if d.exists() and len(list(d.glob("*.npz"))) >= len(C.names):
+                    arcs[f"{k}:{var}"] = arc_at(C.preds(f"lx-{tag}_{dv}", True), 0.25)
     ego = np.load(DATA / "runs/op_parity/wod/bias-P2H10-F-s0.npz")
     assert ego["names"].astype(str).tolist() == C.names.tolist()
     rater = np.arange(len(C.names)) < C.n
@@ -935,6 +944,118 @@ def cmd_cap_report(a):
                             | {"share of tokens changed": float((np.abs(dd[m]) > 1e-9).mean())})
     stats.write_table(rows, OUT / "nav_fix_b")
 
+def _follow_mods(p):
+    import diag1_lead as DL
+    C = _MODS
+    return {"b": DL.wod_cap(C, p, 0.0, 0), "ab": DL.wod_cap(C, p, TAU, 0)}
+
+
+def cmd_wod_follow(a):
+    """Amendment 1: the training-free arms and the audit probes on the WOD-trained checkpoints (WP2, WLG, WLGm = submitted 2-seed trajectory mean)."""
+    from concurrent.futures import ProcessPoolExecutor
+    from jevdrive import stats
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    from pp_wod_diag import retime
+    global _MODS
+    with Run("op_parity", "diag1/wod-follow", seed=0, config=vars(a)) as run:
+        run.use_split(splits.load("wod/val"))
+        C = wod_ctx()
+        n, N = C.n, len(C.names)
+        S = C.preds("shipped", True)
+        P = {"WP2": [C.preds(f"WP2-full-s{i}", True) for i in (0, 1)], "WLG": [C.preds(f"WLG-full-s{i}", True) for i in (0, 1)]}
+        P["WLGm"] = [np.mean(P["WLG"], 0)]
+        flat = [(k, p) for k, ps in P.items() for p in ps]
+        _MODS = C
+        with ProcessPoolExecutor(len(flat)) as ex:
+            caps = list(ex.map(_follow_mods, [p for _, p in flat]))
+        ss = C.v_init < 0.5
+        M = {k: [] for k in P}
+        for (k, p), cp in zip(flat, caps):
+            AS = retime(p, S)
+            M[k].append({"own": p, "a": np.stack([retime_xy(p[i], C.vfed[i])[0] for i in range(N)]), "b": cp["b"], "ab": cp["ab"], "AS": AS,
+                         "AS_moving": np.where(ss[:, None, None], p, AS)})
+        h0 = splits.load("wod/val-half0-s0").mask(C.seq[:n])
+        lead, st = C.lp[:n, 0] > 0.5, C.st
+        strata = {"all": st["all"], "val half 0": h0, "val half 1": ~h0, "standstill (v0 < 0.5)": st["stopped"], "moving (v0 >= 0.5)": st["moving (v>=0.5)"], "lead present": lead,
+                  "no lead": ~lead, "standstill, lead": st["stopped"] & lead, "standstill, no lead": st["stopped"] & ~lead, "moving, lead": st["moving (v>=0.5)"] & lead,
+                  "0.5-5 m/s": st["slow 0.5-5"], "5-12 m/s": st["mid 5-12"], ">= 12 m/s": st["fast >=12"]}
+        names = {"a": "1 (a) re-timing", "b": "2 (b) lead cap", "ab": "3 (a) + (b)", "AS": "4 own path + base speed, all frames", "AS_moving": "5 base speed when moving, own at standstill",
+                 "best": "6 per-frame best of {own, AS} (privileged ceiling)"}
+        rows, ade, gate = [], [], {}
+        for k in P:
+            sc = {m: [C.rfs(x[m]) for x in M[k]] for m in M[k][0]}
+            sc["best"] = [np.maximum(o, s2) for o, s2 in zip(sc["own"], sc["AS"])]
+            own = np.mean(sc["own"], 0)
+            gate[k] = C.cm(own)
+            e0 = np.mean([np.linalg.norm(x["own"] - C.fut, axis=-1)[:, :12].mean(1) for x in M[k]], 0)
+            for m, nm in names.items():
+                d = np.mean(sc[m], 0) - own
+                for snm, msk in strata.items():
+                    p, lo, hi = C.ci(d, msk)
+                    lab = ("helps" if lo > 0 else "hurts" if hi < 0 else "no measurable change") if (snm == "all" and m != "best") else ""
+                    rows.append({"checkpoint": k, "arm": nm, "stratum": snm, "n": int(msk.sum()), "RFS": C.cm(own, msk), "RFS arm": C.cm(np.mean(sc[m], 0), msk), "dRFS": p, "lo": lo, "hi": hi,
+                                 "seeds": "/".join(f"{C.cm(x - o, msk):+.3f}" for x, o in zip(sc[m], sc["own"])) if len(sc[m]) > 1 else "", "label": lab})
+                if m != "best":
+                    e = np.mean([np.linalg.norm(x[m] - C.fut, axis=-1)[:, :12].mean(1) for x in M[k]], 0)
+                    b = (C.Ka @ (e - e0)) / C.Ka.sum(1)
+                    ade.append({"checkpoint": k, "arm": nm, "ADE@3s": float(e0.mean()), "ADE@3s arm": float(e.mean()), "d (m)": float((e - e0).mean()), "lo": float(np.percentile(b, 2.5)),
+                                "hi": float(np.percentile(b, 97.5))})
+        stats.write_table(rows, OUT / "wodft_arms")
+        stats.write_table(ade, OUT / "wodft_ade")
+        # ---- gap to the top-rated rater trajectory (decision 164's construction)
+        top = C.top
+        ft = C.rfs(top)
+        gp = []
+        allm = np.ones(n, bool)
+        for k in ("WP2", "WLG", "WLGm"):
+            own = np.mean([C.rfs(p) for p in P[k]], 0)
+            ps = np.mean([C.rfs(retime(p[:n], top)) for p in P[k]], 0)        # own path, top-rated speed profile
+            tp = np.mean([C.rfs(retime(top, p[:n])) for p in P[k]], 0)        # top-rated path, own speed profile
+            for snm, msk in (("all", allm), ("standstill (v0 < 0.5)", st["stopped"]), ("moving (v0 >= 0.5)", st["moving (v>=0.5)"]), ("lead present", lead), ("no lead", ~lead)):
+                g = C.ci(ft - own, msk)
+                x, y = C.ci(ps - own, msk), C.ci(tp - own, msk)
+                gp.append({"checkpoint": k, "stratum": snm, "n": int(msk.sum()), "RFS": C.cm(own, msk), "top-rated": C.cm(ft, msk), "gap": g[0], "own path + top speed - own": x[0], "s lo": x[1], "s hi": x[2],
+                           "top path + own speed - own": y[0], "p lo": y[1], "p hi": y[2], "speed share of gap": x[0] / g[0] if g[0] else np.nan, "path share of gap": y[0] / g[0] if g[0] else np.nan})
+        stats.write_table(gp, OUT / "wodft_gap_top")
+        # ---- acceleration continuation: first-segment speed with the fed ax minus with ax := 0, against the fed ax
+        ego = np.load(DATA / "runs/op_parity/wod/bias-P2H10-F-s0.npz")["ego"]
+        ax, mv = ego[:, 6].astype(np.float64) * 3.0, C.vfed >= 2
+        fs = lambda p: np.linalg.norm(p[:, 0], axis=-1) / 0.25  # noqa: E731
+        a4 = lambda p: arc_at(p, 0.25, np.array([4.0]))[:, 0]  # noqa: E731
+        acode = np.unique(C.seq, return_inverse=True)[1]
+        rng = np.random.default_rng(0)
+        ar = []
+        for nm, tags, pre in (("WP2", ["WP2-full-s0", "WP2-full-s1"], "lx-"), ("P2H10 (reference)", ["P2H10-F-s0", "P2H10-F-s1"], "dx-")):
+            d1 = np.mean([fs(C.preds(t, True)) - fs(C.preds(f"{pre}{t}_acc0", True)) for t in tags], 0)
+            d4 = np.mean([a4(C.preds(t, True)) - a4(C.preds(f"{pre}{t}_acc0", True)) for t in tags], 0)
+            for lab, y in (("first-segment speed (m/s) per m/s^2 of fed ax", d1), ("4 s arc (m) per m/s^2 of fed ax", d4)):
+                sl = np.polyfit(ax[mv], y[mv], 1)[0]
+                bs = []
+                for _ in range(1000):
+                    w = np.bincount(rng.integers(acode.max() + 1, size=acode.max() + 1), minlength=acode.max() + 1)[acode] * mv
+                    bs.append(np.polyfit(ax, y, 1, w=np.sqrt(w))[0])
+                ar.append({"checkpoint": nm, "quantity": lab, "n (v0 >= 2)": int(mv.sum()), "fed ax std (m/s^2)": float(ax[mv].std()), "slope": float(sl), "lo": float(np.percentile(bs, 2.5)),
+                           "hi": float(np.percentile(bs, 97.5)), "corr": float(np.corrcoef(ax[mv], y[mv])[0, 1])})
+        stats.write_table(ar, OUT / "wodft_ax_slope")
+        # ---- braking onset on closing-lead frames, split by whether the ego is already braking
+        t = load_tab(WD / "tab_wod.npz")
+        v0 = t["v0"].astype(np.float64)
+        d, c = t["lead_x"] - t["c2f"], v0 - t["lead_v"]
+        cl = (t["lp"] > 0.5) & (v0 >= 2) & (c >= 1) & (d / np.maximum(c, 0.1) <= 8)
+        aS, aL = q_acc(t["arc"]["shipped"], v0), q_acc(t["log_arc"].astype(np.float64), v0)
+        bo = []
+        for snm, m in (("closing lead, all", cl), ("closing lead, ego not yet braking (fed ax >= -0.3)", cl & (ax >= -0.3)), ("closing lead, ego already braking (fed ax < -0.3)", cl & (ax < -0.3))):
+            r = {"frames": snm, "n": int(m.sum()), "sequences": len(set(t["unit"][m])), "shipped slows": float((aS[m] <= -0.3).mean()), "a shipped": float(aS[m].mean()),
+                 "log slows": float((aL[m] <= -0.3).mean()), "a log": float(aL[m].mean())}
+            for fm, ks in fams(t).items():
+                r[f"{fm} slows"] = float(np.mean([(q_acc(t["arc"][k], v0)[m] <= -0.3).mean() for k in ks]))
+                r[f"a {fm}"] = float(np.mean([q_acc(t["arc"][k], v0)[m].mean() for k in ks]))
+            bo.append(r)
+        stats.write_table(bo, OUT / "wodft_brake_onset")
+        (OUT / "wodft_gate.json").write_text(json.dumps(gate, indent=1))
+        run.info("G0 %s", gate)
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -944,11 +1065,11 @@ def main():
     w.add_argument("--suffix", default="")
     x = sp.add_parser("nav-extract")
     x.add_argument("--limit", type=int, default=0)
-    for c in ("wod-tab", "nav-tab", "alp-tab", "tables", "nav-swap", "swap-report", "nav-acc", "acc-report", "nav-cap", "cap-report"):
+    for c in ("wod-tab", "nav-tab", "alp-tab", "tables", "nav-swap", "swap-report", "nav-acc", "acc-report", "nav-cap", "cap-report", "wod-follow"):
         sp.add_parser(c)
     a = ap.parse_args()
     {"wod-fix": cmd_wod_fix, "nav-extract": cmd_nav_extract, "wod-tab": cmd_wod_tab, "nav-tab": cmd_nav_tab, "alp-tab": cmd_alp_tab, "tables": cmd_tables,
-     "nav-swap": cmd_nav_swap, "swap-report": lambda a: cmd_swap_report(a), "nav-acc": cmd_nav_acc, "acc-report": cmd_acc_report, "nav-cap": cmd_nav_cap, "cap-report": cmd_cap_report}[a.cmd](a)
+     "nav-swap": cmd_nav_swap, "swap-report": lambda a: cmd_swap_report(a), "nav-acc": cmd_nav_acc, "acc-report": cmd_acc_report, "nav-cap": cmd_nav_cap, "cap-report": cmd_cap_report, "wod-follow": cmd_wod_follow}[a.cmd](a)
 
 
 if __name__ == "__main__":
