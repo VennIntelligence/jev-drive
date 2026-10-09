@@ -2,7 +2,7 @@
 """Lane COL1 clips, nuPlan scenes: one GIF per case of a case list, on the box with AlpaSim's venv (reads only what col1_nuplan.py /
 col1_lead.py left under $DATA_DIR/runs/alpasim/col1/: cases.pkl, lead/spec.json, lead/replay/<set>.pkl with model frames, ctrl/ runs).
 
-  col1_clip.py --cases experiments/alpasim/results/collisions/nuplan_clip_cases.csv --out <dir> [--only id,id] [--max-mb 1.5]
+  col1_clip.py --cases experiments/alpasim/results/collisions/nuplan_clip_cases.csv --out <dir> [--only id,id] [--max-mb 1.4 (MiB, under 1.5 MB)]
 
 Case list columns: id, set (a replay set of col1_lead.py: a driver tag for a collision rollout, `extra` for a control rollout of the
 P2H10-F-s0 re-run), scene, obj (actor id whose gap is traced; empty = the nearest object in the straight-ahead corridor), kind, origin, look.
@@ -176,7 +176,7 @@ def render(case, o, recs, rd, out, max_mb):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cases", required=True), ap.add_argument("--out", required=True), ap.add_argument("--only", default=""), ap.add_argument("--max-mb", type=float, default=1.5)
+    ap.add_argument("--cases", required=True), ap.add_argument("--out", required=True), ap.add_argument("--only", default=""), ap.add_argument("--max-mb", type=float, default=1.4)
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     spec, cases = json.loads((LD / "spec.json").read_text()), pickle.load(open(O / "cases.pkl", "rb"))
