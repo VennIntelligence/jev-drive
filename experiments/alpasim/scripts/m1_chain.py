@@ -6,7 +6,7 @@
 job = name:driver:scene list:ENV=VALUE[,ENV=VALUE...][:wizard override[,override...]]
   e.g.  w0:sh30:s1:SH30_TAG=SH30-F-s0,SH30_MOTION=0   g19:sh30:s1:SH30_TAG=SH30-F-s0:controller.gains.idx_start_penalty=19
 scene list = a file name under $DATA_DIR/runs/alpasim/m1/lists (without .txt). Runs land in m1/runs/<stage>-<name>/<timestamp>; the stage
-writes m1/<stage>.DONE or m1/<stage>.ERROR and keeps m1/STATUS current. rollout.asl is kept for failed rollouts and for the scenes of
+writes m1/<stage>.DONE or m1/<stage>.ERROR and keeps m1/STATUS current; at most M1_MAX_ACTIVE (3) jobs are in the pool at a time. rollout.asl is kept for failed rollouts and for the scenes of
 m1/lists/keep.txt (the showcase scenes); the rest is pruned.
 """
 import glob
@@ -87,10 +87,18 @@ def main():
         name, drv, lst, env, *ex = sp.split(":")
         jobs.append(Job(stage, name, drv, dict(e.split("=", 1) for e in env.split(",") if e), O / "lists" / f"{lst}.txt",
                         [x for x in ",".join(ex).split(",") if x]))
+    cap = int(os.environ.get("M1_MAX_ACTIVE", 3))   # nine stacks at once ran the box out of host memory on 10-09: renderers were killed, runs hung
     try:
-        for j in jobs:
-            j.submit()
-        B.wait_all(jobs, stage)
+        while True:
+            for j in jobs:
+                if j.state == "new" and sum(x.state == "active" for x in jobs) < cap:
+                    j.submit()
+            done = [j.poll() for j in jobs]
+            B.status(f"{stage}: " + ", ".join(f"{j.name} {j.n_done() if j.state == 'active' and j.D else (j.n if j.state == 'done' else 0)}/{j.n}"
+                                              + (" ok" if j.state == "done" else "") + (f" t{j.tries}" if j.tries > 1 else "") for j in jobs))
+            if all(done):
+                break
+            time.sleep(B.POLL_S)
     except SystemExit:
         (O / f"{stage}.ERROR").write_text((O / "ERROR").read_text() if (O / "ERROR").exists() else "failed\n")
         raise
