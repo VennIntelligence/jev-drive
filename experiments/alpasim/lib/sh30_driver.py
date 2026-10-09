@@ -20,7 +20,7 @@ default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route m
 
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
 (op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (gpu, the default: slot warp on the card + fast frame packing, same
-frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -60,6 +60,7 @@ from alpasim_grpc.v0 import common_pb2, egodriver_pb2, egodriver_pb2_grpc  # noq
 from navsim_transfuser_challenge.navigation import command_from_route  # noqa: E402
 from navsim_transfuser_challenge.trajectory import build_trajectory_from_plan, make_cached_plan, yaw_from_quat  # noqa: E402
 
+import serve_fix as FX  # noqa: E402
 import sh30_core as C  # noqa: E402
 
 LOG = logging.getLogger("sh30")
@@ -109,6 +110,7 @@ class Session:
         self.cam = C.camera([[p.focal_length_x, 0, p.principal_point_x], [0, p.focal_length_y, p.principal_point_y], [0, 0, 1]],
                             quat_R(c.rig_to_camera.quat), [t.x, t.y, t.z], [k[0], k[1], tg[0], tg[1], k[2]])
         self.n, self.scene = n, req.debug_info.scene_id if req.HasField("debug_info") else ""
+        self.fix = FX.new(req.rollout_spec.vehicle, t.x)
         self.frames, self.jpeg, self.poses, self.states = {}, {}, {}, {}
         self.cmd = np.array([0, 0, 0, 1], np.float32)
         self.lock = threading.Lock()
@@ -251,6 +253,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
             ctx.abort(grpc.StatusCode.INTERNAL, f"SH30 inference failed: {e!r}")
         s.count["inference"] += 1
+        fx = FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0)
         plan = make_cached_plan(t0, anchor, o["poses"])
         traj = build_trajectory_from_plan(plan, anchor, now, tq)
         t_out = time.perf_counter()
@@ -261,6 +264,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                "anchor": [anchor.pose.vec.x, anchor.pose.vec.y, yaw0], "poses": o["poses"].round(4).tolist(), "n_out": len(traj.poses),
                "ms": {**{k: round(v, 2) for k, v in o["ms"].items()}, "prep": round(1e3 * (t_q - t_in), 2), "wait": round(1e3 * (t_g - t_q), 2),
                       "total": round(1e3 * (t_out - t_in), 2)}}
+        if fx is not None:
+            rec.update(fix=fx, poses_model=o["poses_model"].round(4).tolist())
         self.out.write(json.dumps(rec) + "\n")
         if s.n < self.dump:
             np.savez_compressed(self.dir / "dump" / f"s{s.n:02d}_k{rec['k']}.npz", cur=o["cur"], valid=o["valid"], mu=o["mu"], poses=o["poses"],
@@ -268,7 +273,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=API)
 
 
@@ -320,9 +325,11 @@ def main() -> None:
     t0 = time.time()
     core = C.Core(os.environ.get("SH30_TAG", "SH30-F-s0"), os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("SH30_COLD", "backwarp"),
                   float(os.environ.get("SH30_MOTION", "1")), os.environ.get("SH30_SYNTH", "gpu"))
+    core.lead_out = FX.LEAD
     z = np.zeros(C.FRAME, np.uint8)
     # warm-up: both slot counts compiled before the port opens
     decode = tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 4, 4)])
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d", FX.VCONT, FX.LEAD)
     LOG.info("%s (%s, motion %.2f, synth %s, compiled %s, jpeg %s) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, core.motion, core.synth,
              core._pol is not None, "nvjpeg" if decode else "libjpeg", time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
     drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1", os.environ.get("SH30_MOTION_GATE", ""))

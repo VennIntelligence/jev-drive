@@ -105,9 +105,9 @@ class Core(C.Core):
             tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=self.dev)
             out = (self._pol or self.model)(H, torch.from_numpy(ego[None]).to(self.dev), tc).float()
             t3 = self._sync()
-            mu = out[0, self.pi].reshape(33, 15).cpu().numpy()
+            mu, ld = out[0, self.pi].reshape(33, 15).cpu().numpy(), self.leads(out)
             cur = cur.cpu().numpy() if gpu else cur
         poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
         t4 = time.perf_counter()
-        return {"poses": poses, "mu": mu, "ego": ego, "hist": P, "cur": cur, "valid": valid, "tokens": H[0],
+        return {"poses": poses, "mu": mu, "ego": ego, "hist": P, "cur": cur, "valid": valid, "tokens": H[0], **ld,
                 "ms": {"frames": 1e3 * (t1 - t0), "encode": 1e3 * (t2 - t1), "policy": 1e3 * (t3 - t2), "export": 1e3 * (t4 - t3)}}

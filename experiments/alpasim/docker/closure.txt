@@ -12,6 +12,7 @@ lib/parity_adapter.py
 experiments/op_adapt_l/lib/op_adapt_l.py
 experiments/op_adapt_r2/lib/op_adapt_r2.py
 experiments/op_parity/scripts/pp_train.py
+experiments/alpasim/lib/serve_fix.py
 experiments/alpasim/lib/sh30_core.py
 experiments/alpasim/lib/sh30_driver.py
 experiments/alpasim/lib/ap2_core.py

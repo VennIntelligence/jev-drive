@@ -204,6 +204,7 @@ def nvjpeg(dev):
 
 class Core:
     sync = True                                           # CUDA sync at every stage boundary, for the stage times
+    lead_out = False                                      # also return the raw lead / lead_prob outputs (serve_fix.py, JEV_LEAD)
     _enc = _pol = None                                    # compiled encoder / policy passes (compile())
 
     def compile(self, graph: bool = False):
@@ -228,6 +229,11 @@ class Core:
         assert self.model.arm == "P2" and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"
         s = self.model.net.slices["plan"].start
         self.pi = slice(s, s + 33 * 15)
+
+    def leads(self, out) -> dict:
+        """The checkpoint's own lead (144,) and lead_prob (3,) outputs of a policy output (1, n), or {} unless lead_out."""
+        sl = self.model.net.slices
+        return {k: out[0, sl[k]].cpu().numpy() for k in ("lead", "lead_prob")} if self.lead_out else {}
 
     def _sync(self) -> float:
         if self.dev.type == "cuda" and self.sync:
@@ -260,9 +266,9 @@ class Core:
             tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=self.dev)
             out = (self._pol or self.model)(H, torch.from_numpy(ego[None]).to(self.dev), tc).float()
             t3 = self._sync()
-            mu = out[0, self.pi].reshape(33, 15).cpu().numpy()
+            mu, ld = out[0, self.pi].reshape(33, 15).cpu().numpy(), self.leads(out)
             cur = cur.cpu().numpy() if gpu else cur
         poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
         t4 = time.perf_counter()
-        return {"poses": poses, "mu": mu, "ego": ego, "hist": P, "cur": cur, "valid": valid, "tokens": H[0],
+        return {"poses": poses, "mu": mu, "ego": ego, "hist": P, "cur": cur, "valid": valid, "tokens": H[0], **ld,
                 "ms": {"frames": 1e3 * (t1 - t0), "encode": 1e3 * (t2 - t1), "policy": 1e3 * (t3 - t2), "export": 1e3 * (t4 - t3)}}

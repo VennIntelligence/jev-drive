@@ -16,7 +16,7 @@ adaptation of the nuPlan-track checkpoints (sh30_driver.py), no training. What t
 A `drive` whose inputs are incomplete or whose inference raises is aborted with a gRPC error and counted (no straight-line fallback).
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, SH30_TAG (op_parity run tag), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl:
 one record per call; start.jsonl: the full rollout spec of every session), PAI_DUMP (number of sessions whose model frames and source
-JPEG are saved once per second to <log dir>/dump).
+JPEG are saved once per second to <log dir>/dump), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
 from __future__ import annotations
@@ -68,6 +68,7 @@ class Session:
         t = c.rig_to_camera.vec
         self.spec, self.R, self.cam_t = camera_spec(c.intrinsics), S.quat_R(c.rig_to_camera.quat), [t.x, t.y, t.z]
         self.n, self.scene = n, req.debug_info.scene_id if req.HasField("debug_info") else ""
+        self.fix = S.FX.new(req.rollout_spec.vehicle, t.x)
         self.maps, self.frames, self.jpeg, self.poses, self.states = None, {}, {}, {}, {}
         self.cmd, self.route0, self.plan, self.anchor = np.array([0, 0, 0, 1], np.float32), None, None, None
         self.lock = threading.Lock()
@@ -214,6 +215,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 ctx.abort(grpc.StatusCode.INTERNAL, f"inference failed: {e!r}")
             s.count["inference"] += 1
             s.count["cold"] += int(not real.all())
+            fx = S.FX.apply(s.fix, o, float(np.hypot(*V[-1])), float(dyn[-1][1][0]), t0)
             near = s.poses[min(s.poses, key=lambda t: abs(t - t0))]      # the anchor: the interpolated pose of t0 as a PoseAtTime
             s.anchor = common_pb2.PoseAtTime(timestamp_us=t0, pose=common_pb2.Pose(
                 vec=common_pb2.Vec3(x=float(p0[0]), y=float(p0[1]), z=near.pose.vec.z),
@@ -228,6 +230,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                        ego=o["ego"].round(5).tolist(), hist=P.round(4).tolist(), anchor=p0.round(4).tolist(), poses=o["poses"].round(4).tolist(),
                        ms={**{a: round(b, 2) for a, b in o["ms"].items()}, "prep": round(1e3 * (t_f - t_in), 2),
                            "slots": round(1e3 * (t_q - t_f), 2), "wait": round(1e3 * (t_g - t_q), 2)})
+            if fx is not None:
+                rec.update(fix=fx, poses_model=o["poses_model"].round(4).tolist())
             if s.n < self.dump and k % 10 == 0:
                 np.savez_compressed(self.dir / "dump" / f"s{s.n:02d}_k{k:03d}.npz", cur=cur, valid=valid, real=real, mu=o["mu"],
                                     poses=o["poses"], ego=o["ego"], cam_t=s.cam_t, scene=s.scene, now=now, t0=t0,
@@ -236,7 +240,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{S.FX.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 
@@ -247,6 +251,8 @@ def main() -> None:
     log_dir = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/tmp/alpasim-driver"))
     t0 = time.time()
     core = C.Core(os.environ.get("SH30_TAG", "P2H10-F-s0"), os.environ.get("SH30_DEVICE", "cuda"))
+    core.lead_out = S.FX.LEAD
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d", S.FX.VCONT, S.FX.LEAD)
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros
     warm = lambda: PC.plan(core, z, np.ones(8, bool), e((4, 3)), e((4, 2)), e(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731
     warm(), warm()

@@ -87,6 +87,7 @@ class Driver(D.Driver):
             LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
             ctx.abort(D.grpc.StatusCode.INTERNAL, f"AP2 inference failed: {e!r}")
         s.count["inference"] += 1
+        fx = D.FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0)
         plan = D.make_cached_plan(t0, anchor, o["poses"])
         traj = D.build_trajectory_from_plan(plan, anchor, now, tq)
         t_out = time.perf_counter()
@@ -97,6 +98,8 @@ class Driver(D.Driver):
                "poses": o["poses"].round(4).tolist(), "n_out": len(traj.poses),
                "ms": {**{k: round(v, 2) for k, v in o["ms"].items()}, "prep": round(1e3 * (t_q - t_in), 2), "wait": round(1e3 * (t_g - t_q), 2),
                       "total": round(1e3 * (t_out - t_in), 2)}}
+        if fx is not None:
+            rec.update(fix=fx, poses_model=o["poses_model"].round(4).tolist())
         self.out.write(json.dumps(rec) + "\n")
         if s.n < self.dump:
             np.savez_compressed(self.dir / "dump" / f"s{s.n:02d}_k{rec['k']}.npz", cur=o["cur"], valid=o["valid"], mu=o["mu"], poses=o["poses"],
@@ -112,6 +115,8 @@ def main() -> None:
     t0 = time.time()
     core = AC.Core(os.environ["AP2_TAG"], os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("AP2_COLD", ""), float(os.environ.get("SH30_MOTION", "1")),
                    os.environ.get("SH30_SYNTH", "gpu"))
+    core.lead_out = D.FX.LEAD
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d", D.FX.VCONT, D.FX.LEAD)
     z = np.zeros(AC.C.FRAME, np.uint8)
     # warm-up: every slot count compiled before the port opens
     decode = D.tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 2, 3, 4, 4)])
