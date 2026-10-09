@@ -14,7 +14,7 @@ VPY=$PWD/.venv/bin/python
 status() { echo "$(date '+%F %T') fix1: $*" | tee "$O/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$O/ERROR"; exit 1; }
 flags() { case $1 in *-ab) echo "JEV_VCONT=1.0,JEV_LEAD=1" ;; *-a) echo "JEV_VCONT=1.0" ;; *-b) echo "JEV_LEAD=1" ;; *-c1) echo "JEV_BASE=1" ;; *-c2) echo "JEV_BASE=2" ;;
-                       *-c1b) echo "JEV_BASE=1,JEV_LEAD=1" ;; *-c2b) echo "JEV_BASE=2,JEV_LEAD=1" ;; *) echo "" ;; esac; }
+                       *-c1a) echo "JEV_BASE=1,JEV_VCONT=1.0" ;; *-c2a) echo "JEV_BASE=2,JEV_VCONT=1.0" ;; *-c1b) echo "JEV_BASE=1,JEV_LEAD=1" ;; *-c2b) echo "JEV_BASE=2,JEV_LEAD=1" ;; *) echo "" ;; esac; }
 # Amendment 1: FIX1_ARMS="c1 c2 c1b c2b" FIX1_S1=s1c adds arms on the 700 scenes against the base of the first start (s1) and reads all arms.
 ARMS=${FIX1_ARMS:-base a b ab}; S1=${FIX1_S1:-s1}; N7=fix1_700${FIX1_S1:+_$FIX1_S1}
 export OT_LANE=fix1 OT_PRIO=13 OT2_MAX_ACTIVE=${FIX1_STACKS:-6}
@@ -23,8 +23,8 @@ status "stage 1 ($S1), code $(cat COMMIT 2>/dev/null || git rev-parse --short HE
 J=()
 for arm in $ARMS; do f=$(flags "x-$arm"); J+=("P2H10-$arm:sh30:SH30_TAG=$T${f:+,$f}:$T"); done
 python3 $S/ot2_loop.py $S1 "${J[@]}" || die "ot2_loop $S1 rc $? (see $O/$S1/ERROR)"
-M1=("$O/s1/manifest.json"); [[ $S1 != s1 ]] && M1+=("$O/$S1/manifest.json")
-$VPY $S/fix1_report.py --manifest "${M1[@]}" --base P2H10-base --arms P2H10-a P2H10-b P2H10-ab P2H10-c1 P2H10-c2 P2H10-c1b P2H10-c2b --pair P2H10-ab:P2H10-a --pair P2H10-ab:P2H10-b \
+M1=("$O/s1/manifest.json"); for x in s1c $S1; do [[ $x != s1 && -f $O/$x/manifest.json && " ${M1[*]} " != *" $O/$x/manifest.json "* ]] && M1+=("$O/$x/manifest.json"); done
+$VPY $S/fix1_report.py --manifest "${M1[@]}" --base P2H10-base --arms P2H10-a P2H10-b P2H10-ab P2H10-c1 P2H10-c2 P2H10-c1b P2H10-c2b P2H10-c1a P2H10-c2a --pair P2H10-ab:P2H10-a --pair P2H10-ab:P2H10-b \
     --pair P2H10-c1b:P2H10-c1 --pair P2H10-c2b:P2H10-c2 --pair P2H10-c2:P2H10-c1 \
     --ref "OT3 run=$RA/ot3/a/manifest.json:$T" --lists all --out "$O/results" --name $N7 --winner > "$O/report_700.log" 2>&1 || die "report 700 failed (see $O/report_700.log)"
 W=$(cat "$O/results/WINNER"); status "stage 1 done, winning configuration: $W"

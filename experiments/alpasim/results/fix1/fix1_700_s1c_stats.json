@@ -1,0 +1,507 @@
+{
+ "n": 700,
+ "logs": 27,
+ "runs": {
+  "P2H10-base": {
+   "mean": [
+    0.9467559588628941,
+    0.925220885141017,
+    0.9652441266710929
+   ],
+   "zeros": 26,
+   "slow": 112,
+   "events": 18.0,
+   "collision_at_fault": 8,
+   "offroad": 10,
+   "left_corridor_laterally": 8,
+   "other": 0,
+   "cut_decisions": 0,
+   "cut_scenes": 0,
+   "serve_ms": [
+    0.0,
+    0.0
+   ],
+   "drive_ms": [
+    17.77,
+    30.601000000000006,
+    47.082300000000046
+   ]
+  },
+  "P2H10-a": {
+   "mean": [
+    0.9401657550271739,
+    0.9206598796259705,
+    0.9604936793018438
+   ],
+   "zeros": 32,
+   "slow": 68,
+   "events": 22.0,
+   "collision_at_fault": 8,
+   "offroad": 14,
+   "left_corridor_laterally": 10,
+   "other": 0,
+   "cut_decisions": 0,
+   "cut_scenes": 0,
+   "serve_ms": [
+    0.053,
+    0.12301000000000022
+   ],
+   "drive_ms": [
+    17.905,
+    30.07,
+    46.40160000000003
+   ]
+  },
+  "P2H10-b": {
+   "mean": [
+    0.8609078283696902,
+    0.8298585903149532,
+    0.89499494974506
+   ],
+   "zeros": 24,
+   "slow": 271,
+   "events": 17.0,
+   "collision_at_fault": 7,
+   "offroad": 10,
+   "left_corridor_laterally": 7,
+   "other": 0,
+   "cut_decisions": 884,
+   "cut_scenes": 304,
+   "serve_ms": [
+    16.4175,
+    47.049350000000004
+   ],
+   "drive_ms": [
+    34.6,
+    59.35,
+    93.64330000000007
+   ]
+  },
+  "P2H10-ab": {
+   "mean": [
+    0.8755890925744996,
+    0.8447659476931232,
+    0.9092151598695519
+   ],
+   "zeros": 28,
+   "slow": 207,
+   "events": 19.0,
+   "collision_at_fault": 6,
+   "offroad": 13,
+   "left_corridor_laterally": 9,
+   "other": 0,
+   "cut_decisions": 846,
+   "cut_scenes": 296,
+   "serve_ms": [
+    15.4255,
+    40.85309000000002
+   ],
+   "drive_ms": [
+    32.91,
+    51.533000000000015,
+    77.74270000000006
+   ]
+  },
+  "P2H10-c1": {
+   "mean": [
+    0.8146222317667736,
+    0.7809221515397399,
+    0.8463690248683545
+   ],
+   "zeros": 34,
+   "slow": 245,
+   "events": 23.0,
+   "collision_at_fault": 9,
+   "offroad": 14,
+   "left_corridor_laterally": 11,
+   "other": 0,
+   "cut_decisions": 0,
+   "cut_scenes": 0,
+   "serve_ms": [
+    0.064,
+    0.1
+   ],
+   "drive_ms": [
+    32.62,
+    51.683000000000014,
+    72.72280000000006
+   ]
+  },
+  "P2H10-c2": {
+   "mean": [
+    0.8494767810435341,
+    0.8210274353747428,
+    0.8788299510906726
+   ],
+   "zeros": 34,
+   "slow": 233,
+   "events": 23.0,
+   "collision_at_fault": 9,
+   "offroad": 14,
+   "left_corridor_laterally": 11,
+   "other": 0,
+   "cut_decisions": 0,
+   "cut_scenes": 0,
+   "serve_ms": [
+    0.064,
+    0.10502000000000043
+   ],
+   "drive_ms": [
+    32.6,
+    51.59,
+    75.65040000000002
+   ]
+  },
+  "P2H10-c1b": {
+   "mean": [
+    0.794626153858948,
+    0.7563242609260314,
+    0.8330165415140725
+   ],
+   "zeros": 38,
+   "slow": 299,
+   "events": 27.0,
+   "collision_at_fault": 13,
+   "offroad": 14,
+   "left_corridor_laterally": 11,
+   "other": 0,
+   "cut_decisions": 1014,
+   "cut_scenes": 286,
+   "serve_ms": [
+    15.73,
+    43.945790000000045
+   ],
+   "drive_ms": [
+    52.555,
+    80.83500000000002,
+    122.67750000000017
+   ]
+  },
+  "P2H10-c2b": {
+   "mean": [
+    0.8268342590576713,
+    0.7912543730216033,
+    0.8639880529820537
+   ],
+   "zeros": 37,
+   "slow": 288,
+   "events": 27.0,
+   "collision_at_fault": 13,
+   "offroad": 14,
+   "left_corridor_laterally": 10,
+   "other": 0,
+   "cut_decisions": 1084,
+   "cut_scenes": 320,
+   "serve_ms": [
+    16.4165,
+    47.39259000000001
+   ],
+   "drive_ms": [
+    48.99,
+    77.811,
+    122.80530000000012
+   ]
+  },
+  "OT3 run": {
+   "mean": [
+    0.9483382059270895,
+    0.9284635003429944,
+    0.9656557677738462
+   ],
+   "zeros": 25,
+   "slow": 110,
+   "events": 17.0,
+   "collision_at_fault": 7,
+   "offroad": 10,
+   "left_corridor_laterally": 8,
+   "other": 0,
+   "cut_decisions": 0,
+   "cut_scenes": 0,
+   "serve_ms": [
+    0.0,
+    0.0
+   ],
+   "drive_ms": [
+    85.31,
+    127.7,
+    211.39340000000007
+   ]
+  }
+ },
+ "diffs": {
+  "P2H10-a - P2H10-base": {
+   "mean": -0.0065902038357203525,
+   "scene": [
+    -0.017890133774788777,
+    0.0046210538660792526
+   ],
+   "log": [
+    -0.027150213226379227,
+    0.011225641933035895
+   ],
+   "fixed": 5,
+   "broke": 11,
+   "kept": false,
+   "gain": false,
+   "lines": [
+    false,
+    false,
+    false,
+    true
+   ]
+  },
+  "P2H10-b - P2H10-base": {
+   "mean": -0.08584813049320401,
+   "scene": [
+    -0.10140272126332352,
+    -0.07001349685030714
+   ],
+   "log": [
+    -0.11299993692247758,
+    -0.0568177930936164
+   ],
+   "fixed": 4,
+   "broke": 2,
+   "kept": false,
+   "gain": false,
+   "lines": [
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  "P2H10-ab - P2H10-base": {
+   "mean": -0.07116686628839465,
+   "scene": [
+    -0.08899952458145521,
+    -0.05302914430664271
+   ],
+   "log": [
+    -0.10442252492424636,
+    -0.03759725608746908
+   ],
+   "fixed": 8,
+   "broke": 10,
+   "kept": false,
+   "gain": false,
+   "lines": [
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  "P2H10-c1 - P2H10-base": {
+   "mean": -0.13213372709612048,
+   "scene": [
+    -0.15719798979162156,
+    -0.10671493810918749
+   ],
+   "log": [
+    -0.16651390033297764,
+    -0.09971737293494802
+   ],
+   "fixed": 11,
+   "broke": 19,
+   "kept": false,
+   "gain": false,
+   "lines": [
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  "P2H10-c2 - P2H10-base": {
+   "mean": -0.09727917781936023,
+   "scene": [
+    -0.11869742922405858,
+    -0.07576714231251759
+   ],
+   "log": [
+    -0.1251618204283684,
+    -0.06920045228646016
+   ],
+   "fixed": 11,
+   "broke": 19,
+   "kept": false,
+   "gain": false,
+   "lines": [
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  "P2H10-c1b - P2H10-base": {
+   "mean": -0.15212980500394624,
+   "scene": [
+    -0.17781099132133552,
+    -0.12669144265036061
+   ],
+   "log": [
+    -0.18948191603146342,
+    -0.116520043416805
+   ],
+   "fixed": 10,
+   "broke": 22,
+   "kept": false,
+   "gain": false,
+   "lines": [
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  "P2H10-c2b - P2H10-base": {
+   "mean": -0.11992169980522294,
+   "scene": [
+    -0.14233341237790914,
+    -0.0978422453622016
+   ],
+   "log": [
+    -0.15208875768223146,
+    -0.08630989461410181
+   ],
+   "fixed": 10,
+   "broke": 21,
+   "kept": false,
+   "gain": false,
+   "lines": [
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  "P2H10-ab - P2H10-a": {
+   "mean": -0.06457666245267431,
+   "scene": [
+    -0.0792889887798522,
+    -0.04950546600159786
+   ],
+   "log": [
+    -0.08727923799322153,
+    -0.04264221891262963
+   ],
+   "fixed": 6,
+   "broke": 2
+  },
+  "P2H10-ab - P2H10-b": {
+   "mean": 0.01468126420480936,
+   "scene": [
+    0.004161156859984006,
+    0.02490296823961423
+   ],
+   "log": [
+    0.0011106643519232262,
+    0.028699316699896893
+   ],
+   "fixed": 5,
+   "broke": 9
+  },
+  "P2H10-c1b - P2H10-c1": {
+   "mean": -0.019996077907825788,
+   "scene": [
+    -0.02905331319753104,
+    -0.011340254369516646
+   ],
+   "log": [
+    -0.030886066191593575,
+    -0.009607164800129313
+   ],
+   "fixed": 3,
+   "broke": 7
+  },
+  "P2H10-c2b - P2H10-c2": {
+   "mean": -0.0226425219858627,
+   "scene": [
+    -0.03137275865857254,
+    -0.014171304895055687
+   ],
+   "log": [
+    -0.03357690020008049,
+    -0.012178230205970753
+   ],
+   "fixed": 3,
+   "broke": 6
+  },
+  "P2H10-c2 - P2H10-c1": {
+   "mean": 0.03485454927676023,
+   "scene": [
+    0.024525335522947,
+    0.04616834457816845
+   ],
+   "log": [
+    0.024598280567348644,
+    0.04763292463390327
+   ],
+   "fixed": 0,
+   "broke": 0
+  },
+  "OT3 run - P2H10-base": {
+   "mean": 0.0015822470641953963,
+   "scene": [
+    8.111010856667968e-05,
+    0.0045018167542530685
+   ],
+   "log": [
+    6.533073614443736e-05,
+    0.004868447972708507
+   ],
+   "fixed": 1,
+   "broke": 0
+  }
+ },
+ "dirs": {
+  "P2H10-base": [
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-base-chunk0/20261009-231848",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-base-chunk1/20261009-231848",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-base-chunk2/20261009-231848"
+  ],
+  "P2H10-a": [
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-a-chunk0/20261009-231848",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-a-chunk1/20261009-231848",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-a-chunk2/20261009-231848"
+  ],
+  "P2H10-b": [
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-b-chunk0/20261009-233349",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-b-chunk1/20261009-233349",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-b-chunk2/20261009-233350"
+  ],
+  "P2H10-ab": [
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-ab-chunk0/20261009-233350",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-ab-chunk1/20261009-233350",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1/runs/P2H10-ab-chunk2/20261009-233450"
+  ],
+  "P2H10-c1": [
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c1-chunk0/20261009-235641",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c1-chunk1/20261009-235641",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c1-chunk2/20261009-235641"
+  ],
+  "P2H10-c2": [
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c2-chunk0/20261009-235641",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c2-chunk1/20261009-235641",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c2-chunk2/20261009-235641"
+  ],
+  "P2H10-c1b": [
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c1b-chunk0/20261010-002146",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c1b-chunk1/20261010-002146",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c1b-chunk2/20261010-001145"
+  ],
+  "P2H10-c2b": [
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c2b-chunk0/20261010-001145",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c2b-chunk1/20261010-001145",
+   "/root/autodl-tmp/ujs/runs/alpasim/fix1/s1c/runs/P2H10-c2b-chunk2/20261010-001145"
+  ],
+  "OT3 run": [
+   "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/P2H10-F-s0-chunk0/20261009-125421",
+   "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/P2H10-F-s0-chunk1/20261009-125421",
+   "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/P2H10-F-s0-chunk2/20261009-125421",
+   "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/P2H10-F-s0@new-ot3new/20261009-181257"
+  ]
+ },
+ "winner": "none"
+}
