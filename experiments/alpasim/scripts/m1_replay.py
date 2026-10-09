@@ -16,6 +16,7 @@ session state must evolve as in the run); variants per chosen decision:
                frames as run
   strW         the reverse: frames warped along the straightened history, ego features as run
   str          both
+  w50          frames warped along the history halfway between the driven and the straightened one, ego features as run
   arcL / arcR  strF plus a synthetic constant yaw rate of +/- ARC_W rad/s in the history poses (features only): the plan's response to
                "the ego has been turning", with nothing else changed
   hv0          strF with the history kept but the newest 0.5 s straightened only (pose of t0 - 0.5 s put on the heading of t0)
@@ -170,6 +171,8 @@ def main():
                     if len(last["x"][0]) == 4:
                         ps, vs = straight(np.array(last["x"][1], float), np.array(last["x"][2], float))
                         P["strW"], P["str"] = again(pose=ps, vel=vs, fn=asrun), again(pose=ps, vel=vs)
+                        p0, v0 = np.array(last["x"][1], float), np.array(last["x"][2], float)
+                        P["w50"] = again(pose=0.5 * (p0 + ps), vel=0.5 * (v0 + vs), fn=asrun)
 
                         def hv0(p, v):
                             p = p.copy()
