@@ -83,6 +83,9 @@ def pathlib_write(p, d):
 def cmd_report(a):
     from mixed_domain import Wod, groups
     from jevdrive import stats
+    global OUT
+    if a.out:
+        OUT = _R / a.out
     g = groups(a.arms)
     W = Wod()
     W.load(g)
@@ -137,6 +140,7 @@ def main():
     r.add_argument("--arms", nargs="+", required=True)
     r.add_argument("--pairs", nargs="+", required=True)
     r.add_argument("--shift", nargs="*", default=[])
+    r.add_argument("--out", default="", help="output dir relative to the repo root (default results/wod_slot)")
     a = ap.parse_args()
     {"onnx": cmd_onnx, "check": cmd_check, "report": cmd_report}[a.cmd](a)
 
