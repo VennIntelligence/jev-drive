@@ -1,0 +1,80 @@
+{
+ "rule": "seed reads iff dev ADE <= 0.8 x 0.6305 m and dev ADE with another log's field >= 1.5 x its own",
+ "arms": {
+  "QF": [
+   {
+    "on": 0.36547067761421204,
+    "masked": 0.6713429093360901,
+    "mismatched": 2.20546555519104,
+    "read": true,
+    "seed": 0
+   },
+   {
+    "on": 0.3667754828929901,
+    "masked": 0.6711421608924866,
+    "mismatched": 2.106391191482544,
+    "read": true,
+    "seed": 1
+   },
+   {
+    "on": 0.37775152921676636,
+    "masked": 0.6799180507659912,
+    "mismatched": 2.1526200771331787,
+    "read": true,
+    "seed": 2
+   }
+  ],
+  "QFC": [
+   {
+    "on": 0.421797513961792,
+    "masked": 0.6535106897354126,
+    "mismatched": 1.931771159172058,
+    "read": true,
+    "seed": 0
+   },
+   {
+    "on": 0.6253752708435059,
+    "masked": 0.625927209854126,
+    "mismatched": 0.6256960034370422,
+    "read": false,
+    "seed": 1
+   },
+   {
+    "on": 0.514065682888031,
+    "masked": 0.6362379789352417,
+    "mismatched": 1.0170100927352905,
+    "read": false,
+    "seed": 2
+   }
+  ],
+  "QFL": [
+   {
+    "on": 0.6323385834693909,
+    "masked": 0.6324328184127808,
+    "mismatched": 0.6326870918273926,
+    "read": false,
+    "seed": 0
+   },
+   {
+    "on": 0.6120079755783081,
+    "masked": 0.6375327110290527,
+    "mismatched": 0.6907555460929871,
+    "read": false,
+    "seed": 1
+   },
+   {
+    "on": 0.5927701592445374,
+    "masked": 0.6428832411766052,
+    "mismatched": 0.7446083426475525,
+    "read": false,
+    "seed": 2
+   }
+  ]
+ },
+ "reads": {
+  "QF": "3 / 3",
+  "QFC": "1 / 3",
+  "QFL": "0 / 3"
+ },
+ "gate_met": true
+}

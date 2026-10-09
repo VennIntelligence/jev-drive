@@ -686,8 +686,8 @@ def cmd_fig(a):
     cc = [col["vermillion"] if p["arm"] == "QH" else PS.BASELINE if p["arm"] == "QX" else col["blue"] for p in e]
     axs[3].bar(xs, y, color=cc, width=0.62)
     axs[3].errorbar(xs, y, yerr=[y - lo, hi - y], color=col["black"], ls="none", capsize=2, lw=0.7)
-    axs[3].set_xticks(xs, [str(p["level"]).replace(" + ", "\n+ ").replace(" at ", "\nat ").replace("path shape", "path\nshape").replace("speed profile", "speed\nprofile")
-                           .replace("exit class", "exit\nclass") for p in e], fontsize=6.5)
+    short = {"QF": "path +\ntiming", "QS": "shape", "QV": "speed", "QCH": "heading\nat 4 s", "QC7": "exit\nclass", "QH": "thin\nhead", "QX": "shuf-\nfled"}
+    axs[3].set_xticks(xs, [short[p["arm"]] for p in e], fontsize=6.5)
     PS.bars(axs[3])
     for i, ax in enumerate(axs):
         for line in vd["lines"]:
