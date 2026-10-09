@@ -1,0 +1,85 @@
+{
+ "G0_rfs": {
+  "shipped": 8.00484140734384,
+  "P2H10": 7.708217237680017,
+  "SH30": 7.733732453228614
+ },
+ "G1_registered_v0_eq_first_segment_max_m": {
+  "shipped": 0.3949242173007521,
+  "P2H10": 0.32044046447049546,
+  "SH30": 0.2923268613114951
+ },
+ "G1_operator_identity_tau0_max_m": {
+  "shipped": 1.7053025658242404e-13,
+  "P2H10": 1.7053025658242404e-13,
+  "SH30": 1.5631940186722204e-13
+ },
+ "lead_cap": {
+  "shipped": {
+   "b": {
+    "share of frames with > 0.1 m removed": 0.1649269311064718,
+    "mean m removed on those": 1.7529541475164967,
+    "share lead MPC below plan accel": 0.09394572025052192
+   },
+   "ab": {
+    "share of frames with > 0.1 m removed": 0.15866388308977036,
+    "mean m removed on those": 1.7777029716414616,
+    "share lead MPC below plan accel": 0.09324982602644398
+   },
+   "ab_t2": {
+    "share of frames with > 0.1 m removed": 0.14335421016005567,
+    "mean m removed on those": 1.8076739719774055,
+    "share lead MPC below plan accel": 0.09324982602644398
+   },
+   "ab_t20": {
+    "share of frames with > 0.1 m removed": 0.12874043145441894,
+    "mean m removed on those": 1.7606157535055937,
+    "share lead MPC below plan accel": 0.08211551844119694
+   }
+  },
+  "P2H10": {
+   "b": {
+    "share of frames with > 0.1 m removed": 0.15970772442588727,
+    "mean m removed on those": 2.2289743673327207,
+    "share lead MPC below plan accel": 0.12804453723034098
+   },
+   "ab": {
+    "share of frames with > 0.1 m removed": 0.14405010438413363,
+    "mean m removed on those": 2.418098722682295,
+    "share lead MPC below plan accel": 0.12839248434237996
+   },
+   "ab_t2": {
+    "share of frames with > 0.1 m removed": 0.13743910925539318,
+    "mean m removed on those": 2.4370701383795055,
+    "share lead MPC below plan accel": 0.11377870563674322
+   },
+   "ab_t20": {
+    "share of frames with > 0.1 m removed": 0.12700069589422408,
+    "mean m removed on those": 2.3417798638798866,
+    "share lead MPC below plan accel": 0.10160055671537926
+   }
+  },
+  "SH30": {
+   "b": {
+    "share of frames with > 0.1 m removed": 0.16353514265831592,
+    "mean m removed on those": 2.244351943914875,
+    "share lead MPC below plan accel": 0.1350034794711204
+   },
+   "ab": {
+    "share of frames with > 0.1 m removed": 0.14544189283228948,
+    "mean m removed on those": 2.463338906181835,
+    "share lead MPC below plan accel": 0.1346555323590814
+   },
+   "ab_t2": {
+    "share of frames with > 0.1 m removed": 0.13778705636743216,
+    "mean m removed on those": 2.4982690462864108,
+    "share lead MPC below plan accel": 0.11969380654140571
+   },
+   "ab_t20": {
+    "share of frames with > 0.1 m removed": 0.13082811412665274,
+    "mean m removed on those": 2.391189150708647,
+    "share lead MPC below plan accel": 0.1082115518441197
+   }
+  }
+ }
+}

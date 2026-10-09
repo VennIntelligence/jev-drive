@@ -341,10 +341,12 @@ def cmd_alp_tab(a):
         z = np.load(f, allow_pickle=True)
         grp, tag = z["group"].astype(str), z["tag"].astype(str)
         fam = np.array([t.split("-s")[0].replace("-F", "").replace("-AB", "") for t in tag])
-        kind = np.array(["ctrl" if g in ("ctrl", "extra") else g if track == "pai" else "coll" for g in grp])
+        kind = np.array(["ctrl" if g in ("ctrl", "extra") else "base" if track == "pai" else "coll" for g in grp])
+        if "n_slots" in z.files:                                       # PAI cold start: the first 7 decisions of a rollout have fewer than 8 real slots (and zero ego input at k = 0)
+            kind = np.where(z["n_slots"] >= 8, kind, "cold")
         ld = z["lead_p0"][:, :72].reshape(-1, 3, 6, 4)
         front = (NAV_FRONT - NAV_CAM_X) if "c2f" not in z.files else z["c2f"]
-        for kd in np.unique(kind):
+        for kd in [k for k in np.unique(kind) if k != "cold"]:
             for fm in np.unique(fam[kind == kd]):
                 m = (kind == kd) & (fam == fm)
                 arcs = {"shipped": arc_at(z["plan_p0"][m][..., :2].astype(np.float64), 0.5), f"{fm}-s0": arc_at(z["plan_ft"][m][..., :2].astype(np.float64), 0.5)}
@@ -815,6 +817,54 @@ def cmd_acc_report(a):
                 sl = np.polyfit(zz["noise"][mv], ((ar[:, 0] - base[:, 0]) / 0.5)[mv], 1)[0]
                 rows.append({"arm": tag, "acceleration input": "slope: first-segment speed (m/s) per m/s^2 of injected ax", "v0 bin": ">=2", "n": int(mv.sum()), "mean r0 - 1": float(sl)})
     stats.write_table(rows, OUT / "acc_probe_nav")
+    # lead response with the acceleration input removed: does the adapted plan slow for a closing lead by itself, or by reading the ego's own deceleration?
+    lr = []
+    t = load_tab(WD / "tab_nav.npz")
+    d, c = t["lead_x"] - t["c2f"], v0 - t["lead_v"]
+    cl = (t["lp"] > 0.5) & (v0 >= 2) & (c >= 1) & (d / np.maximum(c, 0.1) <= 8)
+    need = np.clip(c ** 2 / (2 * np.maximum(d - 2, 0.5)), 0, 8)
+    axn = z["ego"][:, 6].astype(np.float64) * 3.0
+    sl = lambda y, m: float(np.polyfit(need[m], y[m], 1)[0])  # noqa: E731
+    for nm, m in (("closing lead, all", cl), ("closing lead, time to contact < 4 s", cl & (d / np.maximum(c, 0.1) < 4)), ("closing lead, fed ax >= -0.3", cl & (axn >= -0.3)),
+                  ("closing lead, fed ax < -0.3", cl & (axn < -0.3)), ("not closing, v0 >= 2", ~cl & (v0 >= 2))):
+        r = {"domain": "nav", "frames": nm, "n": int(m.sum()), "mean fed ax": float(axn[m].mean()), "share fed ax < -0.3": float((axn[m] < -0.3).mean()), "a shipped": float(q_acc(aS, v0)[m].mean()),
+             "a log": float(q_acc(t["log_arc"].astype(np.float64), v0)[m].mean()), "slope shipped": sl(q_acc(aS, v0), m), "shipped slows": float((q_acc(aS, v0)[m] <= -0.3).mean())}
+        for tag in ("P2H10-F-s0", "SH30-F-s0"):
+            for var in ("main", "acc0"):
+                ar = arc_at((z[f"pose_{tag}_main"] if var == "main" else zz[f"pose_{tag}_{var}"])[..., :2].astype(np.float64), 0.5)
+                r |= {f"a {tag} {var}": float(q_acc(ar, v0)[m].mean()), f"slope {tag} {var}": sl(q_acc(ar, v0), m), f"slows {tag} {var}": float((q_acc(ar, v0)[m] <= -0.3).mean())}
+        lr.append(r)
+    for g in sorted(WD.glob("tab_alp_*.npz")):
+        t = load_tab(g)
+        if "ego" not in t:
+            continue
+        v = t["v0"].astype(np.float64)
+        d, c = t["lead_x"] - t["c2f"], v - t["lead_v"]
+        cl = (t["lp"] > 0.5) & (v >= 2) & (c >= 1) & (d / np.maximum(c, 0.1) <= 8)
+        ax = t["ego"][:, 6].astype(np.float64) * 3.0
+        need = np.clip(c ** 2 / (2 * np.maximum(d - 2, 0.5)), 0, 8)
+        fam = [k for k in t["arc"] if k != "shipped" and ":" not in k][0]
+        for nm, m in (("closing lead, all", cl), ("closing lead, fed ax >= -0.3", cl & (ax >= -0.3)), ("closing lead, fed ax < -0.3", cl & (ax < -0.3)), ("not closing, v0 >= 2", ~cl & (v >= 2))):
+            if m.sum() >= 10:
+                aS2, aA2 = q_acc(t["arc"]["shipped"], v), q_acc(t["arc"][fam], v)
+                lr.append({"domain": t["dom"], "frames": nm, "n": int(m.sum()), "mean fed ax": float(ax[m].mean()), "share fed ax < -0.3": float((ax[m] < -0.3).mean()), "a shipped": float(aS2[m].mean()),
+                           "slope shipped": float(np.polyfit(need[m], aS2[m], 1)[0]), "shipped slows": float((aS2[m] <= -0.3).mean()),
+                           f"a {fam} main": float(aA2[m].mean()), f"slope {fam} main": float(np.polyfit(need[m], aA2[m], 1)[0]), f"slows {fam} main": float((aA2[m] <= -0.3).mean())})
+    stats.write_table(lr, OUT / "acc_probe_lead")
+    if (WD / "acc_score.csv").exists():                               # what the acceleration input is worth on the nuPlan board (score-poses, no-EC EPDMS)
+        import pandas as pd
+        df = pd.read_csv(WD / "acc_score.csv").rename(columns={"no_at_fault_collisions": "NC", "ego_progress": "EP", "time_to_collision_within_bound": "TTC", "drivable_area_compliance": "DAC"})
+        tok = z["tokens"].astype(str)
+        P = {k: g.set_index("token").reindex(tok) for k, g in df.groupby("key")}
+        sr = []
+        for i, tag in ((0, "P2H10-F-s0"), (2, "SH30-F-s0")):
+            for var in ("acc0", "accx3", "accn"):
+                dd = P[f"{var}_{i}"]["score"].to_numpy(float) - P[f"A{i}"]["score"].to_numpy(float)
+                for snm, m in (("all", np.ones(len(tok), bool)), ("standstill (v0 < 0.5)", v0 < 0.5), ("moving (v0 >= 0.5)", v0 >= 0.5)):
+                    r = stats.bootstrap(dd[m], groups=logs[m], n_boot=4000)
+                    sr.append({"arm": tag, "acceleration input": var, "stratum": snm, "n": int(m.sum()), "d no-EC EPDMS": 100 * r["mean"], "lo": 100 * r["lo"], "hi": 100 * r["hi"]}
+                              | {c2 + " d": 100 * float((P[f"{var}_{i}"][c2].to_numpy(float) - P[f"A{i}"][c2].to_numpy(float))[m].mean()) for c2 in ("NC", "TTC", "EP", "DAC")})
+        stats.write_table(sr, OUT / "acc_probe_nav_score")
     f = WD / "alp" / "pai.npz"
     if f.exists():
         p = np.load(f, allow_pickle=True)
@@ -836,6 +886,55 @@ def cmd_acc_report(a):
                                 "adapted - shipped": b["mean"], "lo": b["lo"], "hi": b["hi"], "mean v0": float(v[m].mean())})
         stats.write_table(out, OUT / "acc_probe_pai")
 
+def _cap_one(x):
+    import serve_fix as F
+    poses, lead, lp, pv, v0, a0, c2f = x
+    out = []
+    for vc in (0.0, TAU):
+        sv = F.Serve(vc, True, c2f)
+        out.append(sv({"poses": poses, "lead": lead, "lead_prob": lp, "mu": np.array([[0, 0, 0, pv]])}, v0, a0, 0)[0])
+    return out
+
+
+def cmd_nav_cap(a):
+    """FIX1's switches (serve_fix.Serve, as committed; first decision of a session) on the navtest plans of P2H10-F-s0 / SH30-F-s0 with the
+    checkpoint's own lead outputs -> diag1/cap_poses.npz keys Ab<i> (JEV_LEAD), Aab<i> (JEV_VCONT=1 + JEV_LEAD) for score-poses. Post hoc: what
+    the lead limit costs on the nuPlan board."""
+    from concurrent.futures import ProcessPoolExecutor
+    _sys.path.insert(0, str(_R / "experiments/alpasim/lib"))
+    z = np.load(WD / "nav.npz")
+    K = {}
+    for i, tag in ((0, "P2H10-F-s0"), (2, "SH30-F-s0")):
+        P = z[f"pose_{tag}_main"].astype(np.float64)
+        args = [(P[j], z[f"lead_{tag}"][j], z[f"lp_{tag}"][j], float(z[f"pvel0_{tag}"][j]), float(z["speed"][j]), float(z["acc"][j, 0]), float(NAV_FRONT - z["cam"][j, 0])) for j in range(len(P))]
+        with ProcessPoolExecutor(12) as ex:
+            r = list(ex.map(_cap_one, args, chunksize=64))
+        K[f"Ab{i}"], K[f"Aab{i}"] = np.stack([x[0] for x in r]).astype(np.float32), np.stack([x[1] for x in r]).astype(np.float32)
+        K[f"A{i}"] = P.astype(np.float32)
+        print(tag, "mean arc change at 4 s (m):", float((arc_at(K[f"Ab{i}"][..., :2].astype(np.float64), 0.5)[:, 4] - arc_at(P[..., :2], 0.5)[:, 4]).mean()), flush=True)
+    np.savez(WD / "cap_poses.npz", tokens=z["tokens"], **K)
+
+
+def cmd_cap_report(a):
+    import pandas as pd
+    from jevdrive import stats
+    z, t = np.load(WD / "nav.npz"), load_tab(WD / "tab_nav.npz")
+    tok, logs, v0 = z["tokens"].astype(str), z["log"].astype(str), z["speed"].astype(np.float64)
+    df = pd.read_csv(WD / "cap_score.csv").rename(columns={"no_at_fault_collisions": "NC", "ego_progress": "EP", "time_to_collision_within_bound": "TTC", "drivable_area_compliance": "DAC"})
+    P = {k: g.set_index("token").reindex(tok) for k, g in df.groupby("key")}
+    lead = t["lp"] > 0.5
+    st = {"all": np.ones(len(tok), bool), "standstill (v0 < 0.5)": v0 < 0.5, "moving (v0 >= 0.5)": v0 >= 0.5, "lead present": lead, "no lead": ~lead, "standstill, lead": (v0 < 0.5) & lead}
+    rows = []
+    for i, tag in ((0, "P2H10-F-s0"), (2, "SH30-F-s0")):
+        for key, nm in ((f"Ab{i}", "(b)"), (f"Aab{i}", "(a) + (b)")):
+            dd = P[key]["score"].to_numpy(float) - P[f"A{i}"]["score"].to_numpy(float)
+            for snm, m in st.items():
+                r = stats.bootstrap(dd[m], groups=logs[m], n_boot=4000)
+                rows.append({"arm": tag, "fix": nm, "stratum": snm, "n": int(m.sum()), "no-EC EPDMS": 100 * float(P[f"A{i}"]["score"].to_numpy(float)[m].mean()), "d": 100 * r["mean"], "lo": 100 * r["lo"], "hi": 100 * r["hi"]}
+                            | {c + " d": 100 * float((P[key][c].to_numpy(float) - P[f"A{i}"][c].to_numpy(float))[m].mean()) for c in ("NC", "TTC", "EP", "DAC")}
+                            | {"share of tokens changed": float((np.abs(dd[m]) > 1e-9).mean())})
+    stats.write_table(rows, OUT / "nav_fix_b")
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -845,11 +944,11 @@ def main():
     w.add_argument("--suffix", default="")
     x = sp.add_parser("nav-extract")
     x.add_argument("--limit", type=int, default=0)
-    for c in ("wod-tab", "nav-tab", "alp-tab", "tables", "nav-swap", "swap-report", "nav-acc", "acc-report"):
+    for c in ("wod-tab", "nav-tab", "alp-tab", "tables", "nav-swap", "swap-report", "nav-acc", "acc-report", "nav-cap", "cap-report"):
         sp.add_parser(c)
     a = ap.parse_args()
     {"wod-fix": cmd_wod_fix, "nav-extract": cmd_nav_extract, "wod-tab": cmd_wod_tab, "nav-tab": cmd_nav_tab, "alp-tab": cmd_alp_tab, "tables": cmd_tables,
-     "nav-swap": cmd_nav_swap, "swap-report": lambda a: cmd_swap_report(a), "nav-acc": cmd_nav_acc, "acc-report": cmd_acc_report}[a.cmd](a)
+     "nav-swap": cmd_nav_swap, "swap-report": lambda a: cmd_swap_report(a), "nav-acc": cmd_nav_acc, "acc-report": cmd_acc_report, "nav-cap": cmd_nav_cap, "cap-report": cmd_cap_report}[a.cmd](a)
 
 
 if __name__ == "__main__":

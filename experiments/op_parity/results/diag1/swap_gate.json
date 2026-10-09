@@ -1,5 +1,48 @@
 {
- "navtest_gate_error": "AssertionError('no navtest result for P2H10-F-s0@warp')",
+ "P2H10-F-s0": {
+  "NC": 0.0,
+  "DAC": 0.0,
+  "DDC": 0.0,
+  "TLC": 0.0,
+  "EP": 0.0,
+  "TTC": 0.0,
+  "LK": 0.0,
+  "HC": 0.0,
+  "tokens with any sub-score differing": 0
+ },
+ "P2H10-F-s1": {
+  "NC": 0.0,
+  "DAC": 0.0,
+  "DDC": 0.0,
+  "TLC": 0.0,
+  "EP": 0.0,
+  "TTC": 0.0,
+  "LK": 0.0,
+  "HC": 0.0,
+  "tokens with any sub-score differing": 0
+ },
+ "SH30-F-s0": {
+  "NC": 0.0,
+  "DAC": 0.0,
+  "DDC": 0.0,
+  "TLC": 0.0,
+  "EP": 0.0,
+  "TTC": 0.0,
+  "LK": 0.0,
+  "HC": 0.0,
+  "tokens with any sub-score differing": 0
+ },
+ "SH30-F-s1": {
+  "NC": 0.0,
+  "DAC": 0.0,
+  "DDC": 0.0,
+  "TLC": 0.0,
+  "EP": 0.0,
+  "TTC": 0.0,
+  "LK": 0.0,
+  "HC": 0.0,
+  "tokens with any sub-score differing": 0
+ },
  "wod_retime_self_max_m": 0.0,
  "wod_d162_reference": "P2H10: AS - S +0.062, SA - S -0.464 (decision 162)"
 }
