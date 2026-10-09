@@ -3,7 +3,8 @@
 
   pilot   --man <pilot manifest> [--base-man <tr1 manifest>]      pilot8: off twice, on once -> per-scene table, body-record coverage
   check   --run <dir>[,<dir>] --base <dir>[,<dir>] --out DIR      the one-chunk checklist of Amendment 2 item 8 (b) + trace figure
-  report  --base-man M --man M [M ...] --arm stop2 [--arm stop1] --out DIR      the full read: lines L1-L3, zeros by class, flips, flags,
+  report  --base-man M --man M [M ...] --arm stop2 [--arm stop1] [--base L+L] --out DIR      (--arm NAME=label[+label] and --base label for a
+          single-seed or partial read: the scenes are those common to all named runs)      the full read: lines L1-L3, zeros by class, flips, flags,
           latency, the > 45 deg scenes -> report.md, per_scene.csv, flips.csv, flags.csv, stats.json
 Manifests are ot2_loop.py's {label: [run dirs]}; arm X uses the labels X-s0 / X-s1, the baseline P2H10-F-s0 / P2H10-F-s1.
 Box, envs/op-train python (numpy, pandas, matplotlib). Scores come from aggregate/results-summary.json; flags from the driver's drive.jsonl
@@ -214,7 +215,8 @@ def cmd_report(a):
     for m in a.man:                                                     # a label run in several stages (chunk0 first, then the rest) keeps all its run dirs
         for k, v in json.loads(Path(m).read_text()).items():
             man[k] = (man[k] if k in man and k not in BASE else []) + v
-    arms = {"base": list(BASE)} | {x: [f"{x}-s0", f"{x}-s1"] for x in a.arm}
+    arms = {"base": a.base.split("+")} | {x.split("=")[0]: (x.split("=")[1].split("+") if "=" in x else [f"{x}-s0", f"{x}-s1"]) for x in a.arm}
+    a.arm = [x.split("=")[0] for x in a.arm]
     names = [k for v in arms.values() for k in v]
     Rs = {k: R.load_driver(man[k])[0] for k in names}
     Dd = {k: drives(man[k]) for k in names}
@@ -253,8 +255,8 @@ def cmd_report(a):
         l2 = p_log["mean"] >= 0 and p_log["lo"] > -0.005
         l3 = gm(g, "slow") <= 1.1 * gm("base", "slow")
         st["lines"][g] = dict(L1=bool(l1), collisions_arm=c_arm, collisions_base=c_base, L2=bool(l2), diff_log=p_log, diff_scene=p_sc, L3=bool(l3), slow_arm=gm(g, "slow"), slow_base=gm("base", "slow"),
-                              per_seed={f"s{i}": stats.paired(sc[v[i]], sc[b[i]], groups=logs) for i in range(2)})
-        L.append(f"| {g} | {np.mean(c_arm):g} ({c_arm[0]} / {c_arm[1]}) vs {np.mean(c_base):g} ({c_base[0]} / {c_base[1]}) | {'met' if l1 else 'not met'} | {p_log['mean']:+.4f} [{p_log['lo']:+.4f}, {p_log['hi']:+.4f}] | "
+                              per_seed={f"s{i}": stats.paired(sc[v[i]], sc[b[i]], groups=logs) for i in range(len(v))})
+        L.append(f"| {g} | {np.mean(c_arm):g} ({' / '.join(map(str, c_arm))}) vs {np.mean(c_base):g} ({' / '.join(map(str, c_base))}) | {'met' if l1 else 'not met'} | {p_log['mean']:+.4f} [{p_log['lo']:+.4f}, {p_log['hi']:+.4f}] | "
                  f"[{p_sc['lo']:+.4f}, {p_sc['hi']:+.4f}] | {'met' if l2 else 'not met'} | {gm(g, 'slow'):g} vs {1.1 * gm('base', 'slow'):.1f} (base {gm('base', 'slow'):g}) | {'met' if l3 else 'not met'} | **{'yes' if l1 and l2 and l3 else 'no'}** |")
     L += ["", "Per seed (arm seed i against baseline seed i, paired by scene, CI by log): " + "; ".join(
         f"{g} s{i} {r['mean']:+.4f} [{r['lo']:+.4f}, {r['hi']:+.4f}]" for g in a.arm for i, r in enumerate(st["lines"][g]["per_seed"].values())) + "."]
@@ -263,7 +265,7 @@ def cmd_report(a):
     L += ["", "## Zero / non-zero changes per seed", "", "| arm | seed | base zeros removed (collision / offroad / corridor) | new zeros (collision / offroad / corridor) | new zeros in scenes with a flag | base at-fault collisions: "
           "passed / still collision / other zero | of them with >= 1 flag |", "|:--|:--|:--|:--|--:|:--|:--|"]
     for g in a.arm:
-        for i in range(2):
+        for i in range(len(arms[g])):
             k, b = arms[g][i], arms["base"][i]
             rem, new = (sc[b] == 0) & (sc[k] > 0), (sc[b] > 0) & (sc[k] == 0)
             bc = zc[b] == "collision_at_fault"
@@ -296,7 +298,7 @@ def cmd_report(a):
     L += ["", "| arm, seed | scenes with a flag: n, mean score arm / base, difference | scenes without a flag: n, mean arm / base, difference | flagged scenes 1.0 -> slow | unflagged 1.0 -> slow | slow -> 1.0 (all) | "
               "mean progress change in flagged scenes |", "|:--|:--|:--|--:|--:|--:|--:|"]
     for g in a.arm:
-        for i in range(2):
+        for i in range(len(arms[g])):
             k, b = arms[g][i], arms["base"][i]
             f = nfl[k] > 0
             slow = lambda x: (x > 0) & (x < 1)  # noqa: E731
@@ -347,6 +349,7 @@ def main():
     p.add_argument("--run", required=True), p.add_argument("--base", required=True), p.add_argument("--out", required=True), p.add_argument("--scenes")
     p = sub.add_parser("report")
     p.add_argument("--base-man", required=True), p.add_argument("--man", nargs="+", required=True), p.add_argument("--arm", action="append", required=True), p.add_argument("--out", required=True)
+    p.add_argument("--base", default="+".join(BASE), help="baseline labels, seed order (one label = a single-seed read)")
     a = ap.parse_args()
     {"pilot": cmd_pilot, "check": cmd_check, "report": cmd_report}[a.cmd](a)
 
