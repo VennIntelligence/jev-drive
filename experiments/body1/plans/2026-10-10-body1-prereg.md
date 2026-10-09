@@ -416,9 +416,8 @@ simulator's objects and map). No checkpoint of this arm exists.
 6. **Closed-loop read** (4.4, as Amendment 3 item 8). Development: chunk0 x s0 and chunk1 x s0 (both were run with a BODY1 switch). Staged:
    `pilot8`, then chunk1 x s0 against this checklist: 233 / 233 rollouts; taught-class zeros (collision + offroad) not above the baseline's;
    heading sd at decision 9 on decision 205's log-straight set <= 1.25 x base; no scene of the chunk's baseline-clean set turning into an
-   offroad or collision zero more often than zeros are removed. Then the other five chunk jobs. Lines on (A) all 700 x 2 and (B) the 1 166 pairs
-   never run with a switch minus nothing (chunk1 x s0 is development for this arm: (B) = chunks 0 and 2 of seed 0 without chunk0, i.e. chunk2 x
-   s0 and all of seed 1, 933 pairs); the stricter decides. L1: collision + offroad zeros go down in total and in neither seed up (corridor
+   offroad or collision zero more often than zeros are removed. Then the other five chunk jobs. Lines on (A) all 700 x 2 and (B) the part that is not development for this arm: chunk2 x
+   s0 and all of seed 1 (933 (seed, scene) pairs; chunk0 x s0 and chunk1 x s0 were switched on before); the stricter decides. L1: collision + offroad zeros go down in total and in neither seed up (corridor
    zeros are reported, not taught). L2: mean per-scene difference >= 0 with the log-clustered lower bound > -0.005. L3: slow scenes <= 1.1 x
    base. The > 45 deg bucket separately at every read. It is a regression check.
 7. **Guardrails.** navtest as 5 (d). comma1M straight-road ADE (decision 137): the Cinque encoder stays frozen; the plan pathway (16.2 M base
