@@ -1,0 +1,17 @@
+cls_s,c1,c2,c3,split,n
+3 leaving the road,False,False,True,train,33963
+1 obstacle ahead,True,False,False,hold,1723
+other,False,False,False,train,27691
+2 turn,False,True,False,train,11465
+3 leaving the road,False,False,True,hold,4124
+1 obstacle ahead,True,False,False,train,14724
+1 obstacle ahead,True,True,False,hold,211
+2 turn,False,True,False,hold,1368
+1 obstacle ahead,True,True,False,train,2033
+1 obstacle ahead,True,False,True,train,2305
+2 turn,False,True,True,train,142
+other,False,False,False,hold,3278
+1 obstacle ahead,True,True,True,train,39
+1 obstacle ahead,True,False,True,hold,199
+2 turn,False,True,True,hold,19
+1 obstacle ahead,True,True,True,hold,4

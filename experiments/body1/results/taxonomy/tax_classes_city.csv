@@ -1,0 +1,33 @@
+cls_s,city,split,n
+3 leaving the road,Singapore,train,5412
+3 leaving the road,Boston,train,3924
+1 obstacle ahead,Las Vegas,hold,1541
+other,Las Vegas,train,20243
+3 leaving the road,Pittsburgh,train,4118
+2 turn,Las Vegas,train,6006
+3 leaving the road,Las Vegas,train,20509
+3 leaving the road,Las Vegas,hold,2287
+other,Boston,train,3440
+1 obstacle ahead,Las Vegas,train,14230
+1 obstacle ahead,Boston,train,2985
+1 obstacle ahead,Singapore,train,395
+other,Pittsburgh,train,1923
+3 leaving the road,Pittsburgh,hold,629
+other,Singapore,train,2085
+2 turn,Singapore,train,2388
+2 turn,Las Vegas,hold,672
+2 turn,Pittsburgh,train,1544
+2 turn,Boston,train,1669
+1 obstacle ahead,Boston,hold,188
+1 obstacle ahead,Pittsburgh,hold,338
+1 obstacle ahead,Pittsburgh,train,1491
+other,Pittsburgh,hold,470
+2 turn,Pittsburgh,hold,308
+other,Las Vegas,hold,2195
+other,Singapore,hold,350
+3 leaving the road,Singapore,hold,825
+3 leaving the road,Boston,hold,383
+other,Boston,hold,263
+2 turn,Singapore,hold,305
+1 obstacle ahead,Singapore,hold,70
+2 turn,Boston,hold,102

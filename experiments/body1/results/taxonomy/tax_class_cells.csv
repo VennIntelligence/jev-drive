@@ -1,0 +1,31 @@
+cls_s,man_s,haz_s,n
+3 leaving the road,straight,boundary,11022
+3 leaving the road,straight,none,23765
+1 obstacle ahead,straight,in-path,9796
+other,turn 20-45,none,9672
+3 leaving the road,straight,side,1451
+2 turn,turn >45,none,6294
+other,launch,none,4289
+1 obstacle ahead,launch,in-path,4866
+other,stop,none,5710
+1 obstacle ahead,go-around,none,893
+1 obstacle ahead,go-around,side,682
+1 obstacle ahead,turn 20-45,in-path,2273
+other,straight,side,5993
+other,stop,side,2532
+2 turn,turn 20-45,boundary,1937
+1 obstacle ahead,turn >45,in-path,1424
+1 obstacle ahead,stop,in-path,566
+2 turn,turn >45,side,776
+3 leaving the road,launch,boundary,1478
+2 turn,turn 20-45,side,1921
+2 turn,turn >45,boundary,1510
+2 turn,launch,boundary,105
+other,stop,boundary,1292
+other,launch,side,1481
+2 turn,launch,side,119
+1 obstacle ahead,go-around,boundary,265
+1 obstacle ahead,go-around,in-path,473
+2 turn,launch,none,324
+3 leaving the road,launch,side,371
+2 turn,stop,none,8

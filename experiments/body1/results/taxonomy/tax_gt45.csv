@@ -1,0 +1,58 @@
+gt45,man_s,haz_s,f_in,f_side,f_bnd,n
+False,straight,boundary,False,False,True,11022
+False,straight,none,False,False,False,23765
+False,straight,in-path,True,False,False,6484
+False,turn 20-45,none,False,False,False,9672
+False,straight,side,False,True,True,1451
+True,turn >45,none,False,False,False,6294
+False,launch,none,False,False,False,4289
+False,launch,in-path,True,False,False,2693
+False,stop,none,False,False,False,5710
+False,go-around,none,False,False,False,893
+False,go-around,side,False,True,False,490
+False,turn 20-45,in-path,True,True,False,283
+False,straight,side,False,True,False,5993
+False,stop,side,False,True,False,2225
+False,turn 20-45,boundary,False,False,True,1937
+False,turn 20-45,in-path,True,False,False,1623
+True,turn >45,in-path,True,False,False,1082
+False,stop,in-path,True,False,False,355
+True,turn >45,side,False,True,True,279
+False,launch,boundary,False,False,True,1478
+False,turn 20-45,side,False,True,False,1475
+False,straight,in-path,True,False,True,1334
+False,launch,in-path,True,True,False,1122
+True,turn >45,boundary,False,False,True,1510
+True,launch,boundary,False,False,True,105
+False,straight,in-path,True,True,False,1646
+True,launch,in-path,True,False,False,135
+False,turn 20-45,in-path,True,False,True,266
+False,stop,side,False,True,True,307
+True,turn >45,in-path,True,True,True,51
+False,stop,boundary,False,False,True,1292
+False,launch,in-path,True,True,True,209
+False,launch,side,False,True,False,1481
+True,launch,side,False,True,False,63
+True,launch,in-path,True,False,True,26
+True,turn >45,side,False,True,False,497
+True,launch,side,False,True,True,56
+False,launch,in-path,True,False,True,629
+False,go-around,boundary,False,False,True,265
+False,go-around,in-path,True,False,False,239
+False,straight,in-path,True,True,True,332
+True,launch,none,False,False,False,324
+False,turn 20-45,side,False,True,True,446
+False,launch,side,False,True,True,371
+False,go-around,side,False,True,True,192
+False,go-around,in-path,True,False,True,43
+True,turn >45,in-path,True,False,True,204
+True,turn >45,in-path,True,True,False,87
+False,turn 20-45,in-path,True,True,True,101
+False,stop,in-path,True,True,False,139
+False,go-around,in-path,True,True,False,161
+False,stop,in-path,True,False,True,61
+False,go-around,in-path,True,True,True,30
+True,launch,in-path,True,True,False,35
+False,stop,in-path,True,True,True,11
+True,launch,in-path,True,True,True,17
+True,stop,none,False,False,False,8

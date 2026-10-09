@@ -1,0 +1,25 @@
+man_s,haz_s,n
+straight,boundary,11022
+straight,none,23765
+straight,in-path,9796
+turn 20-45,none,9672
+straight,side,7444
+turn >45,none,6294
+launch,none,4613
+launch,in-path,4866
+stop,none,5718
+go-around,none,893
+go-around,side,682
+turn 20-45,in-path,2273
+stop,side,2532
+turn 20-45,boundary,1937
+turn >45,in-path,1424
+stop,in-path,566
+turn >45,side,776
+launch,boundary,1583
+turn 20-45,side,1921
+turn >45,boundary,1510
+stop,boundary,1292
+launch,side,1971
+go-around,boundary,265
+go-around,in-path,473

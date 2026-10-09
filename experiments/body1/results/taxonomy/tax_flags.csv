@@ -1,0 +1,78 @@
+man_s,f_in,f_side,f_bnd,f_ga,n
+straight,False,False,True,False,11022
+straight,False,False,False,False,23765
+straight,True,False,False,False,6484
+turn 20-45,False,False,False,False,8866
+straight,False,True,True,False,1451
+turn >45,False,False,False,False,5909
+launch,False,False,False,True,60
+launch,True,False,False,False,2807
+stop,False,False,False,False,5715
+go-around,False,False,False,True,893
+go-around,False,True,False,True,490
+turn 20-45,True,True,False,False,225
+straight,False,True,False,False,5993
+stop,False,True,False,False,2203
+launch,False,False,False,False,4553
+turn 20-45,False,False,True,False,1745
+turn 20-45,True,False,False,True,183
+turn >45,True,False,False,False,1017
+stop,True,False,False,False,353
+turn >45,False,True,True,False,253
+launch,False,False,True,False,1564
+turn 20-45,False,True,False,False,1261
+straight,True,False,True,False,1334
+launch,True,True,False,False,1122
+turn >45,False,False,True,True,110
+straight,True,True,False,False,1646
+turn 20-45,False,False,True,True,192
+turn 20-45,True,False,True,False,238
+stop,False,True,True,False,303
+turn >45,True,True,True,False,46
+stop,False,False,True,False,1292
+turn >45,False,False,False,True,385
+turn 20-45,True,False,False,False,1440
+launch,True,True,True,False,222
+turn >45,False,False,True,False,1400
+launch,False,True,False,False,1465
+launch,True,False,True,False,652
+turn 20-45,False,False,False,True,806
+turn >45,False,True,False,False,428
+launch,False,True,True,False,402
+stop,False,True,False,True,22
+go-around,False,False,True,True,265
+turn 20-45,True,False,True,True,28
+go-around,True,False,False,True,239
+straight,True,True,True,False,332
+turn 20-45,False,True,True,False,313
+go-around,False,True,True,True,192
+launch,False,False,True,True,19
+go-around,True,False,True,True,43
+turn 20-45,False,True,True,True,133
+turn >45,True,False,True,False,191
+turn >45,True,False,False,True,65
+turn 20-45,False,True,False,True,214
+turn >45,True,True,False,False,75
+turn 20-45,True,True,True,False,83
+stop,True,True,False,False,136
+launch,True,False,False,True,21
+launch,False,True,False,True,79
+turn >45,False,True,False,True,69
+go-around,True,True,False,True,161
+stop,True,False,True,False,61
+turn >45,True,False,True,True,13
+turn >45,True,True,False,True,12
+turn 20-45,True,True,False,True,58
+launch,True,True,False,True,35
+turn >45,False,True,True,True,26
+go-around,True,True,True,True,30
+turn 20-45,True,True,True,True,18
+launch,False,True,True,True,25
+launch,True,False,True,True,3
+stop,True,True,True,False,11
+stop,False,True,True,True,4
+stop,True,True,False,True,3
+launch,True,True,True,True,4
+stop,False,False,False,True,3
+turn >45,True,True,True,True,5
+stop,True,False,False,True,2

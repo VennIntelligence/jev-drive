@@ -1,0 +1,41 @@
+{
+ "states": 300,
+ "queries": 7200,
+ "pairs_valid": 7016592,
+ "agent_hinge": {
+  "max_abs_diff_separated_m": 2.288818359375e-05,
+  "mean_abs_diff_separated_m": 6.545450901285221e-07,
+  "contact_agree": 1.0,
+  "contact_ours": 5294,
+  "contact_hinge": 5294,
+  "ours_only": 0,
+  "hinge_only": 0
+ },
+ "swv1_sweep": {
+  "states": 100,
+  "shapely": "2.0.7",
+  "interpolated_size": {
+   "object_sweeps": 12219.0,
+   "first_contact_index_agree": 0.9981176855716507,
+   "contacts_swv1": 155.0,
+   "contacts_ours": 156.0,
+   "contacts_both": 153.0,
+   "max_abs_min_clearance_diff_m": 0.34448335978596134
+  },
+  "t0_size": {
+   "object_sweeps": 12219.0,
+   "first_contact_index_agree": 1.0,
+   "contacts_swv1": 155.0,
+   "contacts_ours": 155.0,
+   "contacts_both": 155.0,
+   "max_abs_min_clearance_diff_m": 6.743830435418374e-06
+  }
+ },
+ "drivable_hinge": {
+  "corner_samples": 1180800,
+  "max_abs_diff_m": 8.106231689453125e-06,
+  "mean_abs_diff_m": 4.2218826479256677e-07,
+  "sign_agree": 1.0,
+  "inside_raster": 0.9996358401084011
+ }
+}

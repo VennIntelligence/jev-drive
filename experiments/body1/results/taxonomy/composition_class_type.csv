@@ -1,0 +1,33 @@
+cls_s,type_s,split,n
+1 obstacle ahead,agent,hold,6839
+1 obstacle ahead,agent,train,72760
+1 obstacle ahead,boundary,hold,7833
+1 obstacle ahead,boundary,train,79137
+1 obstacle ahead,excluded,hold,5341
+1 obstacle ahead,excluded,train,52445
+1 obstacle ahead,none,hold,92331
+1 obstacle ahead,none,train,825474
+2 turn,agent,hold,3296
+2 turn,agent,train,27117
+2 turn,boundary,hold,13508
+2 turn,boundary,train,115000
+2 turn,excluded,hold,1569
+2 turn,excluded,train,13560
+2 turn,none,hold,61955
+2 turn,none,train,522539
+3 leaving the road,agent,hold,6070
+3 leaving the road,agent,train,49350
+3 leaving the road,boundary,hold,33131
+3 leaving the road,boundary,train,303530
+3 leaving the road,excluded,hold,6538
+3 leaving the road,excluded,train,46060
+3 leaving the road,none,hold,204149
+3 leaving the road,none,train,1645404
+other,agent,hold,9743
+other,agent,train,82153
+other,boundary,hold,11400
+other,boundary,train,96065
+other,excluded,hold,4475
+other,excluded,train,35433
+other,none,hold,147614
+other,none,train,1236549

@@ -1,0 +1,96 @@
+man_s,haz_s,city,n
+straight,boundary,Singapore,2351
+straight,none,Boston,3036
+straight,in-path,Las Vegas,7535
+turn 20-45,none,Las Vegas,6703
+straight,side,Pittsburgh,898
+turn >45,none,Las Vegas,3048
+straight,none,Las Vegas,14455
+straight,boundary,Las Vegas,6119
+launch,none,Boston,903
+launch,in-path,Las Vegas,3868
+stop,none,Las Vegas,4633
+go-around,none,Boston,306
+stop,none,Boston,633
+straight,none,Pittsburgh,2715
+go-around,side,Singapore,44
+stop,none,Pittsburgh,363
+straight,none,Singapore,3559
+turn 20-45,in-path,Las Vegas,1984
+straight,boundary,Boston,900
+stop,side,Las Vegas,1993
+straight,side,Las Vegas,5114
+launch,none,Las Vegas,2767
+turn 20-45,none,Singapore,1630
+turn 20-45,boundary,Singapore,696
+turn >45,in-path,Boston,302
+stop,in-path,Las Vegas,463
+turn >45,side,Pittsburgh,189
+turn >45,none,Boston,1108
+launch,boundary,Las Vegas,1161
+turn >45,side,Las Vegas,355
+turn 20-45,side,Las Vegas,1538
+turn >45,boundary,Las Vegas,508
+straight,in-path,Boston,1354
+straight,boundary,Pittsburgh,1652
+turn 20-45,boundary,Las Vegas,1003
+launch,none,Pittsburgh,571
+launch,in-path,Pittsburgh,348
+launch,in-path,Singapore,87
+turn >45,in-path,Las Vegas,961
+straight,in-path,Pittsburgh,750
+turn 20-45,boundary,Boston,71
+turn >45,none,Singapore,1208
+launch,in-path,Boston,563
+turn >45,in-path,Pittsburgh,123
+turn >45,none,Pittsburgh,930
+stop,boundary,Las Vegas,1005
+go-around,side,Pittsburgh,172
+launch,none,Singapore,372
+launch,boundary,Singapore,168
+go-around,none,Las Vegas,366
+stop,boundary,Singapore,95
+turn 20-45,side,Boston,126
+go-around,side,Las Vegas,281
+launch,side,Las Vegas,1510
+stop,none,Singapore,89
+turn >45,boundary,Singapore,479
+straight,side,Singapore,419
+stop,side,Boston,337
+launch,side,Boston,199
+turn >45,boundary,Pittsburgh,356
+turn 20-45,none,Boston,888
+launch,side,Pittsburgh,220
+stop,boundary,Boston,126
+straight,side,Boston,1013
+turn 20-45,none,Pittsburgh,451
+go-around,boundary,Las Vegas,125
+stop,side,Pittsburgh,172
+stop,in-path,Boston,89
+go-around,in-path,Las Vegas,188
+go-around,boundary,Pittsburgh,81
+turn >45,boundary,Boston,167
+stop,boundary,Pittsburgh,66
+turn >45,side,Boston,161
+go-around,in-path,Boston,151
+go-around,side,Boston,185
+go-around,none,Pittsburgh,160
+turn 20-45,in-path,Boston,180
+turn 20-45,side,Singapore,156
+straight,in-path,Singapore,157
+turn 20-45,in-path,Singapore,55
+turn 20-45,boundary,Pittsburgh,167
+turn 20-45,side,Pittsburgh,101
+turn >45,in-path,Singapore,38
+turn 20-45,in-path,Pittsburgh,54
+launch,boundary,Pittsburgh,141
+go-around,in-path,Pittsburgh,127
+go-around,boundary,Singapore,16
+turn >45,side,Singapore,71
+launch,boundary,Boston,113
+go-around,none,Singapore,61
+stop,side,Singapore,30
+go-around,boundary,Boston,43
+stop,in-path,Pittsburgh,14
+launch,side,Singapore,42
+go-around,in-path,Singapore,7

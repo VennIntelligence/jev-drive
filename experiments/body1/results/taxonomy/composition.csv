@@ -1,0 +1,833 @@
+cls_s,type_s,qfam,sfam,split,n
+1 obstacle ahead,agent,arc,log,hold,389
+1 obstacle ahead,agent,arc,log,train,4115
+1 obstacle ahead,agent,arc,ot1,hold,425
+1 obstacle ahead,agent,arc,ot1,train,4516
+1 obstacle ahead,agent,arc,yr1,hold,548
+1 obstacle ahead,agent,arc,yr1,train,5622
+1 obstacle ahead,agent,gain,log,hold,282
+1 obstacle ahead,agent,gain,log,train,2732
+1 obstacle ahead,agent,gain,ot1,hold,264
+1 obstacle ahead,agent,gain,ot1,train,3077
+1 obstacle ahead,agent,gain,yr1,hold,428
+1 obstacle ahead,agent,gain,yr1,train,4368
+1 obstacle ahead,agent,head,log,hold,343
+1 obstacle ahead,agent,head,log,train,3779
+1 obstacle ahead,agent,head,ot1,hold,292
+1 obstacle ahead,agent,head,ot1,train,3659
+1 obstacle ahead,agent,head,yr1,hold,405
+1 obstacle ahead,agent,head,yr1,train,4929
+1 obstacle ahead,agent,lat,log,hold,1447
+1 obstacle ahead,agent,lat,log,train,13158
+1 obstacle ahead,agent,lat,ot1,hold,648
+1 obstacle ahead,agent,lat,ot1,train,6939
+1 obstacle ahead,agent,lat,yr1,hold,687
+1 obstacle ahead,agent,lat,yr1,train,7642
+1 obstacle ahead,agent,log,log,hold,1
+1 obstacle ahead,agent,log,log,train,16
+1 obstacle ahead,agent,log,ot1,hold,3
+1 obstacle ahead,agent,log,ot1,train,20
+1 obstacle ahead,agent,log,yr1,hold,5
+1 obstacle ahead,agent,log,yr1,train,57
+1 obstacle ahead,agent,own0,log,hold,31
+1 obstacle ahead,agent,own0,log,train,319
+1 obstacle ahead,agent,own0,ot1,hold,29
+1 obstacle ahead,agent,own0,ot1,train,469
+1 obstacle ahead,agent,own0,yr1,hold,67
+1 obstacle ahead,agent,own0,yr1,train,804
+1 obstacle ahead,agent,own1,log,hold,25
+1 obstacle ahead,agent,own1,log,train,311
+1 obstacle ahead,agent,own1,ot1,hold,25
+1 obstacle ahead,agent,own1,ot1,train,442
+1 obstacle ahead,agent,own1,yr1,hold,61
+1 obstacle ahead,agent,own1,yr1,train,795
+1 obstacle ahead,agent,ship,log,hold,50
+1 obstacle ahead,agent,ship,log,train,588
+1 obstacle ahead,agent,ship,ot1,hold,71
+1 obstacle ahead,agent,ship,ot1,train,715
+1 obstacle ahead,agent,ship,yr1,hold,105
+1 obstacle ahead,agent,ship,yr1,train,1091
+1 obstacle ahead,agent,stop,log,hold,37
+1 obstacle ahead,agent,stop,log,train,441
+1 obstacle ahead,agent,stop,ot1,hold,50
+1 obstacle ahead,agent,stop,ot1,train,640
+1 obstacle ahead,agent,stop,yr1,hold,121
+1 obstacle ahead,agent,stop,yr1,train,1516
+1 obstacle ahead,boundary,arc,log,hold,189
+1 obstacle ahead,boundary,arc,log,train,1785
+1 obstacle ahead,boundary,arc,ot1,hold,207
+1 obstacle ahead,boundary,arc,ot1,train,2345
+1 obstacle ahead,boundary,arc,yr1,hold,380
+1 obstacle ahead,boundary,arc,yr1,train,3636
+1 obstacle ahead,boundary,gain,log,hold,499
+1 obstacle ahead,boundary,gain,log,train,4632
+1 obstacle ahead,boundary,gain,ot1,hold,460
+1 obstacle ahead,boundary,gain,ot1,train,4898
+1 obstacle ahead,boundary,gain,yr1,hold,612
+1 obstacle ahead,boundary,gain,yr1,train,5849
+1 obstacle ahead,boundary,head,log,hold,655
+1 obstacle ahead,boundary,head,log,train,6824
+1 obstacle ahead,boundary,head,ot1,hold,502
+1 obstacle ahead,boundary,head,ot1,train,5238
+1 obstacle ahead,boundary,head,yr1,hold,662
+1 obstacle ahead,boundary,head,yr1,train,5965
+1 obstacle ahead,boundary,lat,log,hold,1017
+1 obstacle ahead,boundary,lat,log,train,10918
+1 obstacle ahead,boundary,lat,ot1,hold,657
+1 obstacle ahead,boundary,lat,ot1,train,7232
+1 obstacle ahead,boundary,lat,yr1,hold,753
+1 obstacle ahead,boundary,lat,yr1,train,7755
+1 obstacle ahead,boundary,log,log,hold,31
+1 obstacle ahead,boundary,log,log,train,238
+1 obstacle ahead,boundary,log,ot1,hold,30
+1 obstacle ahead,boundary,log,ot1,train,293
+1 obstacle ahead,boundary,log,yr1,hold,52
+1 obstacle ahead,boundary,log,yr1,train,456
+1 obstacle ahead,boundary,own0,log,hold,40
+1 obstacle ahead,boundary,own0,log,train,358
+1 obstacle ahead,boundary,own0,ot1,hold,45
+1 obstacle ahead,boundary,own0,ot1,train,555
+1 obstacle ahead,boundary,own0,yr1,hold,95
+1 obstacle ahead,boundary,own0,yr1,train,913
+1 obstacle ahead,boundary,own1,log,hold,43
+1 obstacle ahead,boundary,own1,log,train,359
+1 obstacle ahead,boundary,own1,ot1,hold,44
+1 obstacle ahead,boundary,own1,ot1,train,560
+1 obstacle ahead,boundary,own1,yr1,hold,97
+1 obstacle ahead,boundary,own1,yr1,train,912
+1 obstacle ahead,boundary,ship,log,hold,103
+1 obstacle ahead,boundary,ship,log,train,796
+1 obstacle ahead,boundary,ship,ot1,hold,100
+1 obstacle ahead,boundary,ship,ot1,train,844
+1 obstacle ahead,boundary,ship,yr1,hold,117
+1 obstacle ahead,boundary,ship,yr1,train,1065
+1 obstacle ahead,boundary,stop,log,hold,75
+1 obstacle ahead,boundary,stop,log,train,625
+1 obstacle ahead,boundary,stop,ot1,hold,106
+1 obstacle ahead,boundary,stop,ot1,train,1445
+1 obstacle ahead,boundary,stop,yr1,hold,262
+1 obstacle ahead,boundary,stop,yr1,train,2641
+1 obstacle ahead,excluded,arc,log,hold,230
+1 obstacle ahead,excluded,arc,log,train,2236
+1 obstacle ahead,excluded,arc,ot1,hold,218
+1 obstacle ahead,excluded,arc,ot1,train,1965
+1 obstacle ahead,excluded,arc,yr1,hold,205
+1 obstacle ahead,excluded,arc,yr1,train,2195
+1 obstacle ahead,excluded,gain,log,hold,3
+1 obstacle ahead,excluded,gain,log,train,72
+1 obstacle ahead,excluded,gain,ot1,hold,17
+1 obstacle ahead,excluded,gain,ot1,train,204
+1 obstacle ahead,excluded,gain,yr1,hold,41
+1 obstacle ahead,excluded,gain,yr1,train,557
+1 obstacle ahead,excluded,head,log,hold,19
+1 obstacle ahead,excluded,head,log,train,226
+1 obstacle ahead,excluded,head,ot1,hold,23
+1 obstacle ahead,excluded,head,ot1,train,335
+1 obstacle ahead,excluded,head,yr1,hold,42
+1 obstacle ahead,excluded,head,yr1,train,657
+1 obstacle ahead,excluded,lat,log,hold,147
+1 obstacle ahead,excluded,lat,log,train,1422
+1 obstacle ahead,excluded,lat,ot1,hold,98
+1 obstacle ahead,excluded,lat,ot1,train,1109
+1 obstacle ahead,excluded,lat,yr1,hold,84
+1 obstacle ahead,excluded,lat,yr1,train,1152
+1 obstacle ahead,excluded,log,yr1,train,4
+1 obstacle ahead,excluded,own0,log,train,12
+1 obstacle ahead,excluded,own0,ot1,hold,2
+1 obstacle ahead,excluded,own0,ot1,train,49
+1 obstacle ahead,excluded,own0,yr1,hold,9
+1 obstacle ahead,excluded,own0,yr1,train,136
+1 obstacle ahead,excluded,own1,log,train,9
+1 obstacle ahead,excluded,own1,ot1,hold,3
+1 obstacle ahead,excluded,own1,ot1,train,43
+1 obstacle ahead,excluded,own1,yr1,hold,9
+1 obstacle ahead,excluded,own1,yr1,train,132
+1 obstacle ahead,excluded,ship,log,hold,79
+1 obstacle ahead,excluded,ship,log,train,778
+1 obstacle ahead,excluded,ship,ot1,hold,19
+1 obstacle ahead,excluded,ship,ot1,train,205
+1 obstacle ahead,excluded,ship,yr1,hold,30
+1 obstacle ahead,excluded,ship,yr1,train,233
+1 obstacle ahead,excluded,stop,log,hold,1650
+1 obstacle ahead,excluded,stop,log,train,15828
+1 obstacle ahead,excluded,stop,ot1,hold,1226
+1 obstacle ahead,excluded,stop,ot1,train,11567
+1 obstacle ahead,excluded,stop,yr1,hold,1187
+1 obstacle ahead,excluded,stop,yr1,train,11319
+1 obstacle ahead,none,arc,log,hold,7740
+1 obstacle ahead,none,arc,log,train,68268
+1 obstacle ahead,none,arc,ot1,hold,4238
+1 obstacle ahead,none,arc,ot1,train,38790
+1 obstacle ahead,none,arc,yr1,hold,3955
+1 obstacle ahead,none,arc,yr1,train,36163
+1 obstacle ahead,none,gain,log,hold,7764
+1 obstacle ahead,none,gain,log,train,68968
+1 obstacle ahead,none,gain,ot1,hold,4347
+1 obstacle ahead,none,gain,ot1,train,39437
+1 obstacle ahead,none,gain,yr1,hold,4007
+1 obstacle ahead,none,gain,yr1,train,36842
+1 obstacle ahead,none,head,log,hold,7531
+1 obstacle ahead,none,head,log,train,65575
+1 obstacle ahead,none,head,ot1,hold,4271
+1 obstacle ahead,none,head,ot1,train,38384
+1 obstacle ahead,none,head,yr1,hold,3979
+1 obstacle ahead,none,head,yr1,train,36065
+1 obstacle ahead,none,lat,log,hold,5937
+1 obstacle ahead,none,lat,log,train,50906
+1 obstacle ahead,none,lat,ot1,hold,3685
+1 obstacle ahead,none,lat,ot1,train,32336
+1 obstacle ahead,none,lat,yr1,hold,3564
+1 obstacle ahead,none,lat,yr1,train,31067
+1 obstacle ahead,none,log,log,hold,2105
+1 obstacle ahead,none,log,log,train,18847
+1 obstacle ahead,none,log,ot1,hold,1239
+1 obstacle ahead,none,log,ot1,train,11591
+1 obstacle ahead,none,log,yr1,hold,1215
+1 obstacle ahead,none,log,yr1,train,11387
+1 obstacle ahead,none,own0,log,hold,2066
+1 obstacle ahead,none,own0,log,train,18412
+1 obstacle ahead,none,own0,ot1,hold,1196
+1 obstacle ahead,none,own0,ot1,train,10831
+1 obstacle ahead,none,own0,yr1,hold,1101
+1 obstacle ahead,none,own0,yr1,train,10051
+1 obstacle ahead,none,own1,log,hold,2069
+1 obstacle ahead,none,own1,log,train,18422
+1 obstacle ahead,none,own1,ot1,hold,1200
+1 obstacle ahead,none,own1,ot1,train,10859
+1 obstacle ahead,none,own1,yr1,hold,1105
+1 obstacle ahead,none,own1,yr1,train,10065
+1 obstacle ahead,none,ship,log,hold,1905
+1 obstacle ahead,none,ship,log,train,16939
+1 obstacle ahead,none,ship,ot1,hold,1082
+1 obstacle ahead,none,ship,ot1,train,10140
+1 obstacle ahead,none,ship,yr1,hold,1020
+1 obstacle ahead,none,ship,yr1,train,9515
+1 obstacle ahead,none,stop,log,hold,6786
+1 obstacle ahead,none,stop,log,train,59510
+1 obstacle ahead,none,stop,ot1,hold,3706
+1 obstacle ahead,none,stop,ot1,train,33964
+1 obstacle ahead,none,stop,yr1,hold,3518
+1 obstacle ahead,none,stop,yr1,train,32140
+2 turn,agent,arc,log,hold,119
+2 turn,agent,arc,log,train,914
+2 turn,agent,arc,ot1,hold,86
+2 turn,agent,arc,ot1,train,858
+2 turn,agent,arc,yr1,hold,185
+2 turn,agent,arc,yr1,train,1420
+2 turn,agent,gain,log,hold,364
+2 turn,agent,gain,log,train,3398
+2 turn,agent,gain,ot1,hold,342
+2 turn,agent,gain,ot1,train,2802
+2 turn,agent,gain,yr1,hold,356
+2 turn,agent,gain,yr1,train,3203
+2 turn,agent,head,log,hold,120
+2 turn,agent,head,log,train,710
+2 turn,agent,head,ot1,hold,110
+2 turn,agent,head,ot1,train,776
+2 turn,agent,head,yr1,hold,179
+2 turn,agent,head,yr1,train,1351
+2 turn,agent,lat,log,hold,351
+2 turn,agent,lat,log,train,2921
+2 turn,agent,lat,ot1,hold,273
+2 turn,agent,lat,ot1,train,2188
+2 turn,agent,lat,yr1,hold,298
+2 turn,agent,lat,yr1,train,2554
+2 turn,agent,log,log,train,2
+2 turn,agent,log,ot1,train,4
+2 turn,agent,log,yr1,hold,3
+2 turn,agent,log,yr1,train,27
+2 turn,agent,own0,log,hold,16
+2 turn,agent,own0,log,train,114
+2 turn,agent,own0,ot1,hold,18
+2 turn,agent,own0,ot1,train,121
+2 turn,agent,own0,yr1,hold,36
+2 turn,agent,own0,yr1,train,282
+2 turn,agent,own1,log,hold,15
+2 turn,agent,own1,log,train,120
+2 turn,agent,own1,ot1,hold,18
+2 turn,agent,own1,ot1,train,124
+2 turn,agent,own1,yr1,hold,35
+2 turn,agent,own1,yr1,train,284
+2 turn,agent,ship,log,hold,83
+2 turn,agent,ship,log,train,631
+2 turn,agent,ship,ot1,hold,80
+2 turn,agent,ship,ot1,train,584
+2 turn,agent,ship,yr1,hold,84
+2 turn,agent,ship,yr1,train,730
+2 turn,agent,stop,log,hold,36
+2 turn,agent,stop,log,train,250
+2 turn,agent,stop,ot1,hold,33
+2 turn,agent,stop,ot1,train,228
+2 turn,agent,stop,yr1,hold,56
+2 turn,agent,stop,yr1,train,521
+2 turn,boundary,arc,log,hold,501
+2 turn,boundary,arc,log,train,4175
+2 turn,boundary,arc,ot1,hold,509
+2 turn,boundary,arc,ot1,train,4469
+2 turn,boundary,arc,yr1,hold,729
+2 turn,boundary,arc,yr1,train,6318
+2 turn,boundary,gain,log,hold,1618
+2 turn,boundary,gain,log,train,13124
+2 turn,boundary,gain,ot1,hold,1349
+2 turn,boundary,gain,ot1,train,10913
+2 turn,boundary,gain,yr1,hold,1448
+2 turn,boundary,gain,yr1,train,11392
+2 turn,boundary,head,log,hold,534
+2 turn,boundary,head,log,train,4776
+2 turn,boundary,head,ot1,hold,557
+2 turn,boundary,head,ot1,train,4920
+2 turn,boundary,head,yr1,hold,739
+2 turn,boundary,head,yr1,train,6592
+2 turn,boundary,lat,log,hold,1164
+2 turn,boundary,lat,log,train,10602
+2 turn,boundary,lat,ot1,hold,933
+2 turn,boundary,lat,ot1,train,7979
+2 turn,boundary,lat,yr1,hold,1022
+2 turn,boundary,lat,yr1,train,8859
+2 turn,boundary,log,log,hold,25
+2 turn,boundary,log,log,train,251
+2 turn,boundary,log,ot1,hold,39
+2 turn,boundary,log,ot1,train,288
+2 turn,boundary,log,yr1,hold,62
+2 turn,boundary,log,yr1,train,489
+2 turn,boundary,own0,log,hold,81
+2 turn,boundary,own0,log,train,746
+2 turn,boundary,own0,ot1,hold,98
+2 turn,boundary,own0,ot1,train,936
+2 turn,boundary,own0,yr1,hold,167
+2 turn,boundary,own0,yr1,train,1447
+2 turn,boundary,own1,log,hold,82
+2 turn,boundary,own1,log,train,760
+2 turn,boundary,own1,ot1,hold,105
+2 turn,boundary,own1,ot1,train,939
+2 turn,boundary,own1,yr1,hold,166
+2 turn,boundary,own1,yr1,train,1454
+2 turn,boundary,ship,log,hold,306
+2 turn,boundary,ship,log,train,2910
+2 turn,boundary,ship,ot1,hold,273
+2 turn,boundary,ship,ot1,train,2452
+2 turn,boundary,ship,yr1,hold,302
+2 turn,boundary,ship,yr1,train,2545
+2 turn,boundary,stop,log,hold,86
+2 turn,boundary,stop,log,train,817
+2 turn,boundary,stop,ot1,hold,197
+2 turn,boundary,stop,ot1,train,1690
+2 turn,boundary,stop,yr1,hold,416
+2 turn,boundary,stop,yr1,train,3157
+2 turn,excluded,arc,log,hold,85
+2 turn,excluded,arc,log,train,619
+2 turn,excluded,arc,ot1,hold,47
+2 turn,excluded,arc,ot1,train,499
+2 turn,excluded,arc,yr1,hold,59
+2 turn,excluded,arc,yr1,train,488
+2 turn,excluded,gain,log,hold,1
+2 turn,excluded,gain,log,train,25
+2 turn,excluded,gain,ot1,train,18
+2 turn,excluded,gain,yr1,hold,11
+2 turn,excluded,gain,yr1,train,28
+2 turn,excluded,head,log,train,5
+2 turn,excluded,head,ot1,train,6
+2 turn,excluded,head,yr1,hold,9
+2 turn,excluded,head,yr1,train,18
+2 turn,excluded,lat,log,hold,3
+2 turn,excluded,lat,log,train,16
+2 turn,excluded,lat,ot1,hold,3
+2 turn,excluded,lat,ot1,train,21
+2 turn,excluded,lat,yr1,hold,10
+2 turn,excluded,lat,yr1,train,31
+2 turn,excluded,own0,log,train,1
+2 turn,excluded,own0,ot1,train,1
+2 turn,excluded,own0,yr1,hold,2
+2 turn,excluded,own0,yr1,train,5
+2 turn,excluded,own1,log,train,1
+2 turn,excluded,own1,ot1,train,1
+2 turn,excluded,own1,yr1,hold,2
+2 turn,excluded,own1,yr1,train,5
+2 turn,excluded,ship,log,hold,6
+2 turn,excluded,ship,log,train,84
+2 turn,excluded,ship,ot1,hold,3
+2 turn,excluded,ship,ot1,train,28
+2 turn,excluded,ship,yr1,hold,4
+2 turn,excluded,ship,yr1,train,25
+2 turn,excluded,stop,log,hold,508
+2 turn,excluded,stop,log,train,4695
+2 turn,excluded,stop,ot1,hold,410
+2 turn,excluded,stop,ot1,train,3536
+2 turn,excluded,stop,yr1,hold,406
+2 turn,excluded,stop,yr1,train,3404
+2 turn,none,arc,log,hold,4843
+2 turn,none,arc,log,train,40720
+2 turn,none,arc,ot1,hold,3278
+2 turn,none,arc,ot1,train,27478
+2 turn,none,arc,yr1,hold,2947
+2 turn,none,arc,yr1,train,25078
+2 turn,none,gain,log,hold,3565
+2 turn,none,gain,log,train,29881
+2 turn,none,gain,ot1,hold,2229
+2 turn,none,gain,ot1,train,19571
+2 turn,none,gain,yr1,hold,2105
+2 turn,none,gain,yr1,train,18681
+2 turn,none,head,log,hold,4894
+2 turn,none,head,log,train,40937
+2 turn,none,head,ot1,hold,3253
+2 turn,none,head,ot1,train,27602
+2 turn,none,head,yr1,hold,2993
+2 turn,none,head,yr1,train,25343
+2 turn,none,lat,log,hold,4030
+2 turn,none,lat,log,train,32889
+2 turn,none,lat,ot1,hold,2711
+2 turn,none,lat,ot1,train,23116
+2 turn,none,lat,yr1,hold,2590
+2 turn,none,lat,yr1,train,21860
+2 turn,none,log,log,hold,1362
+2 turn,none,log,log,train,11354
+2 turn,none,log,ot1,hold,941
+2 turn,none,log,ot1,train,8034
+2 turn,none,log,yr1,hold,915
+2 turn,none,log,yr1,train,7810
+2 turn,none,own0,log,hold,1290
+2 turn,none,own0,log,train,10746
+2 turn,none,own0,ot1,hold,864
+2 turn,none,own0,ot1,train,7268
+2 turn,none,own0,yr1,hold,775
+2 turn,none,own0,yr1,train,6592
+2 turn,none,own1,log,hold,1290
+2 turn,none,own1,log,train,10726
+2 turn,none,own1,ot1,hold,857
+2 turn,none,own1,ot1,train,7262
+2 turn,none,own1,yr1,hold,777
+2 turn,none,own1,yr1,train,6583
+2 turn,none,ship,log,hold,992
+2 turn,none,ship,log,train,7982
+2 turn,none,ship,ot1,hold,624
+2 turn,none,ship,ot1,train,5262
+2 turn,none,ship,yr1,hold,590
+2 turn,none,ship,yr1,train,5026
+2 turn,none,stop,log,hold,4918
+2 turn,none,stop,log,train,40666
+2 turn,none,stop,ot1,hold,3280
+2 turn,none,stop,ot1,train,27850
+2 turn,none,stop,yr1,hold,3042
+2 turn,none,stop,yr1,train,26222
+3 leaving the road,agent,arc,log,hold,233
+3 leaving the road,agent,arc,log,train,1894
+3 leaving the road,agent,arc,ot1,hold,321
+3 leaving the road,agent,arc,ot1,train,2408
+3 leaving the road,agent,arc,yr1,hold,449
+3 leaving the road,agent,arc,yr1,train,3935
+3 leaving the road,agent,gain,log,hold,72
+3 leaving the road,agent,gain,log,train,591
+3 leaving the road,agent,gain,ot1,hold,148
+3 leaving the road,agent,gain,ot1,train,968
+3 leaving the road,agent,gain,yr1,hold,320
+3 leaving the road,agent,gain,yr1,train,2571
+3 leaving the road,agent,head,log,hold,236
+3 leaving the road,agent,head,log,train,2155
+3 leaving the road,agent,head,ot1,hold,276
+3 leaving the road,agent,head,ot1,train,2299
+3 leaving the road,agent,head,yr1,hold,439
+3 leaving the road,agent,head,yr1,train,3771
+3 leaving the road,agent,lat,log,hold,1169
+3 leaving the road,agent,lat,log,train,9767
+3 leaving the road,agent,lat,ot1,hold,872
+3 leaving the road,agent,lat,ot1,train,6708
+3 leaving the road,agent,lat,yr1,hold,952
+3 leaving the road,agent,lat,yr1,train,7498
+3 leaving the road,agent,log,log,train,1
+3 leaving the road,agent,log,ot1,train,3
+3 leaving the road,agent,log,yr1,hold,2
+3 leaving the road,agent,log,yr1,train,34
+3 leaving the road,agent,own0,log,hold,5
+3 leaving the road,agent,own0,log,train,85
+3 leaving the road,agent,own0,ot1,hold,26
+3 leaving the road,agent,own0,ot1,train,157
+3 leaving the road,agent,own0,yr1,hold,67
+3 leaving the road,agent,own0,yr1,train,541
+3 leaving the road,agent,own1,log,hold,6
+3 leaving the road,agent,own1,log,train,75
+3 leaving the road,agent,own1,ot1,hold,26
+3 leaving the road,agent,own1,ot1,train,164
+3 leaving the road,agent,own1,yr1,hold,70
+3 leaving the road,agent,own1,yr1,train,551
+3 leaving the road,agent,ship,log,hold,17
+3 leaving the road,agent,ship,log,train,187
+3 leaving the road,agent,ship,ot1,hold,44
+3 leaving the road,agent,ship,ot1,train,345
+3 leaving the road,agent,ship,yr1,hold,80
+3 leaving the road,agent,ship,yr1,train,734
+3 leaving the road,agent,stop,log,hold,19
+3 leaving the road,agent,stop,log,train,189
+3 leaving the road,agent,stop,ot1,hold,60
+3 leaving the road,agent,stop,ot1,train,393
+3 leaving the road,agent,stop,yr1,hold,161
+3 leaving the road,agent,stop,yr1,train,1326
+3 leaving the road,boundary,arc,log,hold,538
+3 leaving the road,boundary,arc,log,train,5342
+3 leaving the road,boundary,arc,ot1,hold,1078
+3 leaving the road,boundary,arc,ot1,train,10118
+3 leaving the road,boundary,arc,yr1,hold,1627
+3 leaving the road,boundary,arc,yr1,train,15152
+3 leaving the road,boundary,gain,log,hold,1231
+3 leaving the road,boundary,gain,log,train,11772
+3 leaving the road,boundary,gain,ot1,hold,1704
+3 leaving the road,boundary,gain,ot1,train,15635
+3 leaving the road,boundary,gain,yr1,hold,2139
+3 leaving the road,boundary,gain,yr1,train,19911
+3 leaving the road,boundary,head,log,hold,2913
+3 leaving the road,boundary,head,log,train,26326
+3 leaving the road,boundary,head,ot1,hold,2688
+3 leaving the road,boundary,head,ot1,train,24425
+3 leaving the road,boundary,head,yr1,hold,2937
+3 leaving the road,boundary,head,yr1,train,26753
+3 leaving the road,boundary,lat,log,hold,4426
+3 leaving the road,boundary,lat,log,train,38742
+3 leaving the road,boundary,lat,ot1,hold,3347
+3 leaving the road,boundary,lat,ot1,train,29768
+3 leaving the road,boundary,lat,yr1,hold,3561
+3 leaving the road,boundary,lat,yr1,train,31048
+3 leaving the road,boundary,log,log,hold,125
+3 leaving the road,boundary,log,log,train,1254
+3 leaving the road,boundary,log,ot1,hold,161
+3 leaving the road,boundary,log,ot1,train,1608
+3 leaving the road,boundary,log,yr1,hold,233
+3 leaving the road,boundary,log,yr1,train,2260
+3 leaving the road,boundary,own0,log,hold,93
+3 leaving the road,boundary,own0,log,train,1019
+3 leaving the road,boundary,own0,ot1,hold,228
+3 leaving the road,boundary,own0,ot1,train,2359
+3 leaving the road,boundary,own0,yr1,hold,375
+3 leaving the road,boundary,own0,yr1,train,3653
+3 leaving the road,boundary,own1,log,hold,92
+3 leaving the road,boundary,own1,log,train,1001
+3 leaving the road,boundary,own1,ot1,hold,233
+3 leaving the road,boundary,own1,ot1,train,2341
+3 leaving the road,boundary,own1,yr1,hold,369
+3 leaving the road,boundary,own1,yr1,train,3671
+3 leaving the road,boundary,ship,log,hold,210
+3 leaving the road,boundary,ship,log,train,1913
+3 leaving the road,boundary,ship,ot1,hold,303
+3 leaving the road,boundary,ship,ot1,train,2874
+3 leaving the road,boundary,ship,yr1,hold,418
+3 leaving the road,boundary,ship,yr1,train,3886
+3 leaving the road,boundary,stop,log,hold,225
+3 leaving the road,boundary,stop,log,train,2669
+3 leaving the road,boundary,stop,ot1,hold,724
+3 leaving the road,boundary,stop,ot1,train,6913
+3 leaving the road,boundary,stop,yr1,hold,1153
+3 leaving the road,boundary,stop,yr1,train,11117
+3 leaving the road,excluded,arc,log,hold,289
+3 leaving the road,excluded,arc,log,train,1828
+3 leaving the road,excluded,arc,ot1,hold,272
+3 leaving the road,excluded,arc,ot1,train,1676
+3 leaving the road,excluded,arc,yr1,hold,308
+3 leaving the road,excluded,arc,yr1,train,1905
+3 leaving the road,excluded,gain,log,hold,2
+3 leaving the road,excluded,gain,log,train,48
+3 leaving the road,excluded,gain,ot1,hold,22
+3 leaving the road,excluded,gain,ot1,train,232
+3 leaving the road,excluded,gain,yr1,hold,61
+3 leaving the road,excluded,gain,yr1,train,642
+3 leaving the road,excluded,head,log,hold,36
+3 leaving the road,excluded,head,log,train,331
+3 leaving the road,excluded,head,ot1,hold,59
+3 leaving the road,excluded,head,ot1,train,491
+3 leaving the road,excluded,head,yr1,hold,87
+3 leaving the road,excluded,head,yr1,train,885
+3 leaving the road,excluded,lat,log,hold,148
+3 leaving the road,excluded,lat,log,train,1308
+3 leaving the road,excluded,lat,ot1,hold,127
+3 leaving the road,excluded,lat,ot1,train,1280
+3 leaving the road,excluded,lat,yr1,hold,132
+3 leaving the road,excluded,lat,yr1,train,1370
+3 leaving the road,excluded,own0,log,train,9
+3 leaving the road,excluded,own0,ot1,hold,5
+3 leaving the road,excluded,own0,ot1,train,53
+3 leaving the road,excluded,own0,yr1,hold,16
+3 leaving the road,excluded,own0,yr1,train,154
+3 leaving the road,excluded,own1,log,hold,1
+3 leaving the road,excluded,own1,log,train,10
+3 leaving the road,excluded,own1,ot1,hold,7
+3 leaving the road,excluded,own1,ot1,train,55
+3 leaving the road,excluded,own1,yr1,hold,15
+3 leaving the road,excluded,own1,yr1,train,158
+3 leaving the road,excluded,ship,log,hold,17
+3 leaving the road,excluded,ship,log,train,121
+3 leaving the road,excluded,ship,ot1,hold,3
+3 leaving the road,excluded,ship,ot1,train,63
+3 leaving the road,excluded,ship,yr1,hold,15
+3 leaving the road,excluded,ship,yr1,train,117
+3 leaving the road,excluded,stop,log,hold,1887
+3 leaving the road,excluded,stop,log,train,12504
+3 leaving the road,excluded,stop,ot1,hold,1533
+3 leaving the road,excluded,stop,ot1,train,10369
+3 leaving the road,excluded,stop,yr1,hold,1496
+3 leaving the road,excluded,stop,yr1,train,10451
+3 leaving the road,none,arc,log,hold,15436
+3 leaving the road,none,arc,log,train,126788
+3 leaving the road,none,arc,ot1,hold,10905
+3 leaving the road,none,arc,ot1,train,88234
+3 leaving the road,none,arc,yr1,hold,10192
+3 leaving the road,none,arc,yr1,train,81444
+3 leaving the road,none,gain,log,hold,15191
+3 leaving the road,none,gain,log,train,123441
+3 leaving the road,none,gain,ot1,hold,10702
+3 leaving the road,none,gain,ot1,train,85601
+3 leaving the road,none,gain,yr1,hold,10056
+3 leaving the road,none,gain,yr1,train,79312
+3 leaving the road,none,head,log,hold,13311
+3 leaving the road,none,head,log,train,107040
+3 leaving the road,none,head,ot1,hold,9553
+3 leaving the road,none,head,ot1,train,75221
+3 leaving the road,none,head,yr1,hold,9113
+3 leaving the road,none,head,yr1,train,71027
+3 leaving the road,none,lat,log,hold,10753
+3 leaving the road,none,lat,log,train,86035
+3 leaving the road,none,lat,ot1,hold,8230
+3 leaving the road,none,lat,ot1,train,64680
+3 leaving the road,none,lat,yr1,hold,7931
+3 leaving the road,none,lat,yr1,train,62520
+3 leaving the road,none,log,log,hold,3999
+3 leaving the road,none,log,log,train,32708
+3 leaving the road,none,log,ot1,hold,2983
+3 leaving the road,none,log,ot1,train,23998
+3 leaving the road,none,log,yr1,hold,2909
+3 leaving the road,none,log,yr1,train,23315
+3 leaving the road,none,own0,log,hold,4026
+3 leaving the road,none,own0,log,train,32850
+3 leaving the road,none,own0,ot1,hold,2885
+3 leaving the road,none,own0,ot1,train,23040
+3 leaving the road,none,own0,yr1,hold,2686
+3 leaving the road,none,own0,yr1,train,21261
+3 leaving the road,none,own1,log,hold,4025
+3 leaving the road,none,own1,log,train,32877
+3 leaving the road,none,own1,ot1,hold,2878
+3 leaving the road,none,own1,ot1,train,23049
+3 leaving the road,none,own1,yr1,hold,2690
+3 leaving the road,none,own1,yr1,train,21229
+3 leaving the road,none,ship,log,hold,3880
+3 leaving the road,none,ship,log,train,31742
+3 leaving the road,none,ship,ot1,hold,2794
+3 leaving the road,none,ship,ot1,train,22327
+3 leaving the road,none,ship,yr1,hold,2631
+3 leaving the road,none,ship,yr1,train,20872
+3 leaving the road,none,stop,log,hold,14365
+3 leaving the road,none,stop,log,train,120490
+3 leaving the road,none,stop,ot1,hold,10259
+3 leaving the road,none,stop,ot1,train,84761
+3 leaving the road,none,stop,yr1,hold,9766
+3 leaving the road,none,stop,yr1,train,79542
+other,agent,arc,log,hold,310
+other,agent,arc,log,train,2959
+other,agent,arc,ot1,hold,333
+other,agent,arc,ot1,train,2886
+other,agent,arc,yr1,hold,545
+other,agent,arc,yr1,train,5051
+other,agent,gain,log,hold,240
+other,agent,gain,log,train,2370
+other,agent,gain,ot1,hold,322
+other,agent,gain,ot1,train,2552
+other,agent,gain,yr1,hold,579
+other,agent,gain,yr1,train,4846
+other,agent,head,log,hold,340
+other,agent,head,log,train,3051
+other,agent,head,ot1,hold,394
+other,agent,head,ot1,train,3031
+other,agent,head,yr1,hold,585
+other,agent,head,yr1,train,4946
+other,agent,lat,log,hold,2449
+other,agent,lat,log,train,20259
+other,agent,lat,ot1,hold,1308
+other,agent,lat,ot1,train,10489
+other,agent,lat,yr1,hold,1380
+other,agent,lat,yr1,train,11116
+other,agent,log,log,hold,3
+other,agent,log,log,train,29
+other,agent,log,ot1,hold,4
+other,agent,log,ot1,train,28
+other,agent,log,yr1,hold,16
+other,agent,log,yr1,train,121
+other,agent,own0,log,hold,20
+other,agent,own0,log,train,252
+other,agent,own0,ot1,hold,42
+other,agent,own0,ot1,train,332
+other,agent,own0,yr1,hold,105
+other,agent,own0,yr1,train,875
+other,agent,own1,log,hold,19
+other,agent,own1,log,train,244
+other,agent,own1,ot1,hold,43
+other,agent,own1,ot1,train,327
+other,agent,own1,yr1,hold,106
+other,agent,own1,yr1,train,882
+other,agent,ship,log,hold,69
+other,agent,ship,log,train,680
+other,agent,ship,ot1,hold,83
+other,agent,ship,ot1,train,664
+other,agent,ship,yr1,hold,124
+other,agent,ship,yr1,train,1188
+other,agent,stop,log,hold,36
+other,agent,stop,log,train,425
+other,agent,stop,ot1,hold,76
+other,agent,stop,ot1,train,621
+other,agent,stop,yr1,hold,212
+other,agent,stop,yr1,train,1929
+other,boundary,arc,log,hold,259
+other,boundary,arc,log,train,1906
+other,boundary,arc,ot1,hold,379
+other,boundary,arc,ot1,train,2699
+other,boundary,arc,yr1,hold,579
+other,boundary,arc,yr1,train,4649
+other,boundary,gain,log,hold,916
+other,boundary,gain,log,train,7288
+other,boundary,gain,ot1,hold,958
+other,boundary,gain,ot1,train,7402
+other,boundary,gain,yr1,hold,1108
+other,boundary,gain,yr1,train,8698
+other,boundary,head,log,hold,575
+other,boundary,head,log,train,5078
+other,boundary,head,ot1,hold,575
+other,boundary,head,ot1,train,4705
+other,boundary,head,yr1,hold,773
+other,boundary,head,yr1,train,6162
+other,boundary,lat,log,hold,1576
+other,boundary,lat,log,train,14716
+other,boundary,lat,ot1,hold,1086
+other,boundary,lat,ot1,train,9493
+other,boundary,lat,yr1,hold,1185
+other,boundary,lat,yr1,train,10334
+other,boundary,log,log,hold,9
+other,boundary,log,log,train,140
+other,boundary,log,ot1,hold,22
+other,boundary,log,ot1,train,253
+other,boundary,log,yr1,hold,48
+other,boundary,log,yr1,train,490
+other,boundary,own0,log,hold,26
+other,boundary,own0,log,train,277
+other,boundary,own0,ot1,hold,63
+other,boundary,own0,ot1,train,533
+other,boundary,own0,yr1,hold,131
+other,boundary,own0,yr1,train,1033
+other,boundary,own1,log,hold,24
+other,boundary,own1,log,train,267
+other,boundary,own1,ot1,hold,62
+other,boundary,own1,ot1,train,532
+other,boundary,own1,yr1,hold,128
+other,boundary,own1,yr1,train,1055
+other,boundary,ship,log,hold,118
+other,boundary,ship,log,train,1129
+other,boundary,ship,ot1,hold,146
+other,boundary,ship,ot1,train,1275
+other,boundary,ship,yr1,hold,185
+other,boundary,ship,yr1,train,1636
+other,boundary,stop,log,hold,25
+other,boundary,stop,log,train,399
+other,boundary,stop,ot1,hold,129
+other,boundary,stop,ot1,train,1169
+other,boundary,stop,yr1,hold,315
+other,boundary,stop,yr1,train,2747
+other,excluded,arc,log,hold,137
+other,excluded,arc,log,train,1149
+other,excluded,arc,ot1,hold,148
+other,excluded,arc,ot1,train,1030
+other,excluded,arc,yr1,hold,144
+other,excluded,arc,yr1,train,1331
+other,excluded,gain,log,hold,26
+other,excluded,gain,log,train,74
+other,excluded,gain,ot1,hold,31
+other,excluded,gain,ot1,train,237
+other,excluded,gain,yr1,hold,82
+other,excluded,gain,yr1,train,623
+other,excluded,head,log,hold,49
+other,excluded,head,log,train,226
+other,excluded,head,ot1,hold,50
+other,excluded,head,ot1,train,378
+other,excluded,head,yr1,hold,101
+other,excluded,head,yr1,train,683
+other,excluded,lat,log,hold,281
+other,excluded,lat,log,train,1784
+other,excluded,lat,ot1,hold,205
+other,excluded,lat,ot1,train,1343
+other,excluded,lat,yr1,hold,210
+other,excluded,lat,yr1,train,1398
+other,excluded,log,log,hold,6
+other,excluded,log,log,train,8
+other,excluded,log,ot1,train,2
+other,excluded,log,yr1,hold,1
+other,excluded,log,yr1,train,6
+other,excluded,own0,log,hold,6
+other,excluded,own0,log,train,11
+other,excluded,own0,ot1,hold,7
+other,excluded,own0,ot1,train,53
+other,excluded,own0,yr1,hold,21
+other,excluded,own0,yr1,train,149
+other,excluded,own1,log,hold,7
+other,excluded,own1,log,train,13
+other,excluded,own1,ot1,hold,6
+other,excluded,own1,ot1,train,55
+other,excluded,own1,yr1,hold,20
+other,excluded,own1,yr1,train,154
+other,excluded,ship,log,hold,22
+other,excluded,ship,log,train,278
+other,excluded,ship,ot1,hold,3
+other,excluded,ship,ot1,train,60
+other,excluded,ship,yr1,hold,20
+other,excluded,ship,yr1,train,158
+other,excluded,stop,log,hold,1148
+other,excluded,stop,log,train,9633
+other,excluded,stop,ot1,hold,844
+other,excluded,stop,ot1,train,7286
+other,excluded,stop,yr1,hold,900
+other,excluded,stop,yr1,train,7311
+other,none,arc,log,hold,12406
+other,none,arc,log,train,104750
+other,none,arc,ot1,hold,7020
+other,none,arc,ot1,train,58853
+other,none,arc,yr1,hold,6612
+other,none,arc,yr1,train,54437
+other,none,gain,log,hold,11930
+other,none,gain,log,train,101032
+other,none,gain,ot1,hold,6569
+other,none,gain,ot1,train,55277
+other,none,gain,yr1,hold,6111
+other,none,gain,yr1,train,51301
+other,none,head,log,hold,12148
+other,none,head,log,train,102409
+other,none,head,ot1,hold,6861
+other,none,head,ot1,train,57354
+other,none,head,yr1,hold,6421
+other,none,head,yr1,train,53677
+other,none,lat,log,hold,8806
+other,none,lat,log,train,74005
+other,none,lat,ot1,hold,5281
+other,none,lat,ot1,train,44143
+other,none,lat,yr1,hold,5105
+other,none,lat,yr1,train,42620
+other,none,log,log,hold,3260
+other,none,log,log,train,27514
+other,none,log,ot1,hold,1944
+other,none,log,ot1,train,16084
+other,none,log,yr1,hold,1905
+other,none,log,yr1,train,15750
+other,none,own0,log,hold,3226
+other,none,own0,log,train,27151
+other,none,own0,ot1,hold,1858
+other,none,own0,ot1,train,15449
+other,none,own0,yr1,hold,1713
+other,none,own0,yr1,train,14310
+other,none,own1,log,hold,3228
+other,none,own1,log,train,27167
+other,none,own1,ot1,hold,1859
+other,none,own1,ot1,train,15453
+other,none,own1,yr1,hold,1716
+other,none,own1,yr1,train,14276
+other,none,ship,log,hold,3069
+other,none,ship,log,train,25604
+other,none,ship,ot1,hold,1738
+other,none,ship,ot1,train,14368
+other,none,ship,yr1,hold,1641
+other,none,ship,yr1,train,13385
+other,none,stop,log,hold,11903
+other,none,stop,log,train,100307
+other,none,stop,ot1,hold,6831
+other,none,stop,ot1,train,56392
+other,none,stop,yr1,hold,6453
+other,none,stop,yr1,train,53481

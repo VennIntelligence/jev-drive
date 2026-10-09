@@ -1,0 +1,49 @@
+man_s,haz_s,split,n
+straight,boundary,train,9882
+straight,none,train,21098
+straight,in-path,hold,953
+turn 20-45,none,train,8709
+straight,side,train,6637
+turn >45,none,train,5599
+straight,boundary,hold,1140
+launch,none,train,4111
+launch,in-path,train,4323
+stop,none,train,5100
+straight,none,hold,2667
+launch,in-path,hold,543
+go-around,none,train,796
+go-around,side,train,603
+turn 20-45,in-path,hold,218
+stop,side,train,2246
+turn 20-45,boundary,train,1741
+turn >45,none,hold,695
+turn >45,in-path,train,1289
+stop,in-path,train,539
+turn >45,side,train,679
+launch,boundary,train,1423
+turn 20-45,side,train,1752
+straight,in-path,train,8843
+turn >45,boundary,train,1343
+straight,side,hold,807
+stop,none,hold,618
+stop,boundary,train,1196
+go-around,none,hold,97
+stop,boundary,hold,96
+turn 20-45,in-path,train,2055
+launch,side,train,1745
+turn 20-45,boundary,hold,196
+launch,side,hold,226
+turn >45,side,hold,97
+turn 20-45,none,hold,963
+go-around,boundary,train,235
+launch,none,hold,502
+go-around,in-path,train,418
+stop,side,hold,286
+go-around,boundary,hold,30
+launch,boundary,hold,160
+turn >45,boundary,hold,167
+go-around,side,hold,79
+go-around,in-path,hold,55
+turn 20-45,side,hold,169
+turn >45,in-path,hold,135
+stop,in-path,hold,27
