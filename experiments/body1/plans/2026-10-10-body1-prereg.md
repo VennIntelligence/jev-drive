@@ -510,3 +510,9 @@ each fixes something the items above left open, none loosens a line).**
 - (ix) **Pilot reference** (tightening of (vii)): the pilot (shards s2, s3, split `navsim/op-parity-full`, 3 000 steps, batch 128, warmup 300,
   seed 0) is read against a switch-off run of the same trainer, data, steps and seed (`P2H10-P-s0`, the P2H10 recipe at pilot scale) and
   against P2H10-F-s0; "points the right way" needs both pooled rates of G3 (a) below both references.
+- (x) **C only where the state starts on the scorer-layer road** (seen in the `bd4` preview, labels only, before any loss value): launches
+  from car parks and pick-up bays sit up to metres outside the scorer-layer raster at t0, where a hinge on it would be a large constant pull
+  that no plan can satisfy. A hinge-only row whose own t0 footprint has a corner at scorer-layer SDF < 0 keeps the NAVSIM raster for its
+  drivable hinge (as P2H10's on-log hinge would see it); the count per family is logged. The preview otherwise shows the low-speed rows
+  sound (static offset, standing objects ahead displaced consistently, an edge-padding band of up to a tenth of the frame width on one
+  side at 7 deg): the family is not restricted.

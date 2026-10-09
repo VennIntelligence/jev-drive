@@ -73,6 +73,20 @@ def cmd_train(a):
                                None if cfg.agent_side_margin < 0 else cfg.agent_side_margin)
     if k and a.road_lam > 0:                                         # C: the scorer-layer raster (or, --road-labels, another one) on the hinge-only rows
         road = OR.off_hinge(replace(cfg, hinge_labels=(a.road_labels,), hinge_margin=a.road_margin), np.where(is_ho, names, ""), off, dev)
+    n_fb = 0
+    if road is not None and hinge is not None:                       # note (x): a row that does not start on the scorer-layer road keeps the NAVSIM raster
+        hr = torch.nonzero(torch.as_tensor(is_ho, device=dev) & road.ok)[:, 0]
+        fb = []
+        with torch.no_grad():
+            for i in range(0, len(hr), 4096):
+                r = hr[i:i + 4096]
+                z = torch.zeros(len(r), 8, device=dev)
+                fb.append(r[road.margins(z, z, z, r).amin(1) < 0])
+        fb = torch.cat(fb)
+        road.sdf[fb] = hinge.sdf[fb]
+        road.ok[fb] = hinge.ok[fb]
+        n_fb = int(len(fb))
+        fb_fam = np.bincount(fam[fb.cpu().numpy()], minlength=len(fams)).tolist()
     LS = Losses43(model.net, cfg, tstd, S.di, S.pi, dev, hinge, None,
                   ho=torch.as_tensor(is_ho, device=dev) if k else None, fam=torch.as_tensor(fam, device=dev), fams=fams, agent2=agent2, road=road, road_lam=a.road_lam)
     opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}, {"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}], weight_decay=cfg.wd)
@@ -85,7 +99,8 @@ def cmd_train(a):
                  + (", ".join(f"{f} {q} of {len(p)}" for (f, q), p in zip(ho, pools)) or "none")
                  + f"; hinge {cfg.hinge_lam} / {cfg.hinge_margin} m coverage {hinge.coverage if hinge else 0:.4f}; agent {cfg.agent_lam} / {cfg.agent_margin} m / side "
                  f"{cfg.agent_side_margin} rows {int(agent2.ok.sum()) if agent2 is not None else 0} (moved {agent2.moved if agent2 is not None else 0}); "
-                 f"road {a.road_lam if road is not None else 0} / {a.road_margin} m rows {int(road.ok.sum()) if road is not None else 0} ({a.road_labels})")
+                 f"road {a.road_lam if road is not None else 0} / {a.road_margin} m rows {int(road.ok.sum()) if road is not None else 0} ({a.road_labels}); "
+                 f"hinge-only rows not on the scorer-layer road at t0 (NAVSIM raster kept): {n_fb} {dict(zip(fams, fb_fam)) if n_fb else ''}")
 
         def draw():                                                   # pp_train's draw on the normal rows, then the hinge-only rows
             r = rng.choice(tr_rows, nB - k, replace=len(tr_rows) < nB - k)
