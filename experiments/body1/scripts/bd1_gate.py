@@ -116,9 +116,9 @@ def cmd_predict(a):
                 arr[f"hold_out_slots{k}"] = C.predict(net, V, st(R["ego"]), Qp, slots=k)[0][:, list(C.OWN)].astype(np.float32)
             for g, z in G2.items():
                 o, _ = C.predict(net, z["V"] if vis else None, st(z["ego"]), z["q"], valid=z["valid"])
-                arr[f"g2_{g}"] = o[:, 0].astype(np.float32)
+                arr[f"g2_{g}"] = o[:, 0].astype(np.float32)                 # (N, len(OUT)): the served plan is the only query
             if DRY:
-                arr |= {f"g2_{g}": np.zeros(len(np.load(B.root() / "g2" / "dump" / f"{g}.npz")["k"]), np.float32) for g in G2_SETS}
+                arr |= {f"g2_{g}": np.zeros((len(np.load(B.root() / "g2" / "dump" / f"{g}.npz")["k"]), len(C.OUT)), np.float32) for g in G2_SETS}
             np.savez(base() / "pred" / f"{name}.npz", **arr)
             with open(base() / "reads.jsonl", "a") as f:
                 f.write(json.dumps(dict(t=time.strftime("%Y-%m-%d %H:%M:%S"), name=name, ckpt=str(d), read="hold rows (G1) + G2 decisions", config=ck["config"], val=ck["val"])) + "\n")
@@ -229,7 +229,7 @@ def cmd_report(a):
         key = lambda d: (d["set"], d["scene"], int(d["k"]))  # noqa: E731
         dump = {g: np.load(B.root() / "g2" / "dump" / f"{g}.npz") for g in G2_SETS}
         ids = [(g, str(s), int(k)) for g in G2_SETS for s, k in zip(dump[g]["scene"], dump[g]["k"])]
-        g2s = {nm: np.concatenate([pr[nm][f"g2_{g}"] for g in G2_SETS]).astype(float) for nm in names}
+        g2s = {nm: np.concatenate([pr[nm][f"g2_{g}"][:, 0] for g in G2_SETS]).astype(float) for nm in names}       # the agent logit
         g2s = {"S0 (mean of seeds)": np.mean([g2s[nm] for nm in a.final], 0)} | g2s
         rows = []
         for nm, s in g2s.items():
