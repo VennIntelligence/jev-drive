@@ -42,10 +42,14 @@ def catalog(src: Path, suite: str = "nurec_curated_val") -> dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", required=True), ap.add_argument("--ref", required=True), ap.add_argument("--out", required=True)
+    ap.add_argument("--exclude", help="a scene list (tsv of this script) whose scenes are removed from the pool before binning: the extension of an earlier sample")
     ap.add_argument("--n", type=int, default=40), ap.add_argument("--first", type=int, default=10), ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
     R, cat = ref_scores(Path(a.ref)), catalog(Path(a.src))
     mean = {s: sum(R[k][s] for k in R) / len(R) for s in cat if all(s in R[k] for k in R)}
+    if a.exclude:
+        drop = {r["scene_id"] for r in csv.DictReader(open(a.exclude), delimiter="\t")}
+        mean = {s: v for s, v in mean.items() if s not in drop}
     order = sorted(mean, key=lambda s: (mean[s], s))
     rng, pick = random.Random(a.seed), []
     for b in range(a.n):
