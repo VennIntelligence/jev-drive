@@ -74,7 +74,7 @@ BODY = None
 # arm 4.2 (module docstring; thresholds = two-seed mean logits, fixed on body1-hold-logs in Amendment 3: results/replan/hold_*.csv)
 A_RP = np.array([s_ * a_ for a_ in (0.3, 0.6, 0.9, 1.2, 1.5) for s_ in (1.0, -1.0)])      # m at 4 s, + = left
 R_CAP, IDLE = 0.10, 2
-THR_RP = None                                                                              # (FA, FB, CA, CB); set by Amendment 3
+THR_RP = (0.3999, 1.8308, -1.7170, -0.5145)             # (FA, FB, CA, CB): 98th / 98th / 95th / 95th percentile of the clean own-plan hold decisions
 
 
 def ramps(P, A=A_RP):
