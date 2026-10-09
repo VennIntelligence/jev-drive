@@ -154,8 +154,8 @@ def build(arch: str = "step", d: int = 256, enc: int = 3, dec: int = 3, drop: fl
         def forward(s, x, mem, pad, T):
             b, n, _ = x.shape
             if T > 1:                                                           # attention inside one query's step tokens
-                y = s.n0(x).view(b * n // T, T, d)
-                x = x + s.sa(y, y, y, need_weights=False)[0].view(b, n, d)
+                y = s.n0(x).reshape(b * n // T, T, d)
+                x = x + s.sa(y, y, y, need_weights=False)[0].reshape(b, n, d)
             x = x + s.ca(s.n1(x), mem, mem, key_padding_mask=pad, need_weights=False)[0]
             return x + s.ff(s.n2(x))
 
@@ -203,7 +203,7 @@ def build(arch: str = "step", d: int = 256, enc: int = 3, dec: int = 3, drop: fl
             x = x.flatten(1, 2)
             for l in s.dec:
                 x = l(x, mem, pad, s.T)
-            x = x.view(B_, Q, s.T, -1)
+            x = x.reshape(B_, Q, s.T, -1)
             return s.out(torch.cat([x.mean(2), x.amax(2)], -1)).float(), (s.so(x).float() if s.T > 1 else None)
     return Head()
 
