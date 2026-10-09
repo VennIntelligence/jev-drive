@@ -195,7 +195,7 @@ def one_scene(st, kind, row, o, mp, Z, tok):
         trk = float(np.hypot(*(anchor[:2] - r.plan[k - 1][5, :2]))) if k else np.nan
         D.append(dict(set=st, seed=int(st[-1]), kind=kind, reason=why, scene=scene, k=k, t=round((now - r.T0) * 1e-6, 3), t_ev=None if t_ev is None else round((t_ev - r.T0) * 1e-6, 3),
                       pre=int(t_ev is None or now < t_ev), v0=round(float(r.ego_v(now)[0]), 3), lat_off=round(lat, 3), head_err_deg=round(float(np.degrees(herr)), 2),
-                      ahead_m=round(s_arc - r.lat(gt_now[None, :2])[0, 1], 2), plan_arc=round(s4, 2), n_slots=int(Z["n_slots"][m][order][k]), cmd=int(Z["cmd"][m][order][k]),
+                      ahead_m=round(s_arc - r.lat(gt_now[None, :2])[0, 1], 2), plan_arc=round(s4, 2), plan_turn_deg=round(float(np.degrees(P8[k][-1, 2])), 1), plan_y4=round(float(P8[k][-1, 1]), 2), n_slots=int(Z["n_slots"][m][order][k]), cmd=int(Z["cmd"][m][order][k]),
                       za=round(float(za[k, 0]), 3), zb=round(float(zb[k, 0]), 3), flag_a=int(za[k, 0] >= FA), flag_b=int(zb[k, 0] >= FB),
                       a_hit=int(a_hit[0]), a_first_s=round(0.1 * a_first[0], 1) if a_hit[0] else "", a_clr=round(float(a_clr[0]), 2), a_obj=a_obj[0],
                       hit_struck=int(hit_st[0]), struck_first_s=round(0.1 * st_first[0], 1) if hit_st[0] else "",

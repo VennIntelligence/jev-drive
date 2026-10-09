@@ -9,6 +9,7 @@ Class of a zero (pre = decisions before the first failing sample; "in plan" = th
   iv   in plan, but the first contact point is outside the front camera's view at every in-plan decision
   F    in plan and flagged by the head (agent logit for collisions, boundary logit otherwise) at an in-plan decision after decision 0
   i    in plan, deep, in view, never flagged at an in-plan decision after decision 0
+Precedence: F, then ii, iii, iv, i; `def_gap` and `in_view` are also stored on their own, so a flagged zero can still be a definition case.
 """
 import csv
 import json
@@ -56,23 +57,21 @@ def classify(sc, P):
              n_inplan_flag=sum(flagged(d) for d in acted), lead_flag=max((d["t_ev"] - d["t"] for d in acted if flagged(d)), default=np.nan),
              flag_other=sum(bool(d["flag_b"] > 0) if why == "collision" else bool(d["flag_a"] > 0) for d in P if d["k"] >= 1),
              track_err_max=np.nanmax([d["track_err"] for d in P] + [np.nan]) if len(P) > 1 else np.nan)
+    f["def_gap"] = f["in_view"] = ""
     if why == "corridor":
-        phys = num(sc["ex_depth_at_ev"], 0) > 0 or num(sc["ex_min_obst"], 9) <= 0
-        f.update(plan_b_out=sum(d["b_out"] > 0 for d in P), plan_a_hit=sum(d["a_hit"] > 0 for d in P))
-        return ("body" if phys else "iii"), f
+        phys = num(sc["ex_depth_at_ev"], 0) > T.BAND or num(sc["ex_min_obst"], 9) <= 0
+        f.update(plan_b_out=sum(d["b_out"] > 0 for d in P), plan_b_deep=sum(d["b_depth"] > T.BAND for d in P), plan_a_hit=sum(d["a_hit"] > 0 for d in P), def_gap=int(not phys))
+        return ("F" if f["n_inplan_flag"] else "ii" if not ip else "iii" if not phys else "i"), f
     if not ip:
         return "ii", f
     if why == "offroad":
         f["depth_max"] = max(d["b_depth"] for d in ip)
         rm = [d["r_margin_at_exit"] for d in ip if np.isfinite(d["r_margin_at_exit"])]
         f["raster_at_exit_min"] = min(rm) if rm else np.nan
-        if f["depth_max"] <= T.BAND or (rm and min(rm) >= -T.BAND):
-            return "iii", f
+        f["def_gap"] = int(f["depth_max"] <= T.BAND or bool(rm and min(rm) >= -T.BAND))
     vis = [d["struck_vis" if why == "collision" else "b_vis"] > 0 for d in ip]
-    f["n_vis"] = sum(vis)
-    if not any(vis):
-        return "iv", f
-    return ("F" if f["n_inplan_flag"] else "i"), f
+    f["n_vis"], f["in_view"] = sum(vis), int(any(vis))
+    return ("F" if f["n_inplan_flag"] else "iii" if f["def_gap"] == 1 else "iv" if not any(vis) else "i"), f
 
 
 def boot_auc(y, s, g):
@@ -122,7 +121,8 @@ def cmd_tables(a, run):
                       v_start=float(sc["v_start"]), **f, any_clear_lead=max((d["t_ev"] - d["t"] for d in anyc), default=np.nan), **ceil,
                       head_clear_at_flag=sum(d["head_clear"] > 0 for d in P if flagged(d) and d["k"] >= 1), ex_depth_at_ev=num(sc["ex_depth_at_ev"]), ex_raster_at_ev=num(sc["ex_raster_at_ev"]),
                       ex_lat_max=float(sc["ex_lat_max"]), ex_min_obst=float(sc["ex_min_obst"]), v_first=fi["v0"], lat_first=fi["lat_off"], head_first=fi["head_err_deg"], ahead_first=fi["ahead_m"],
-                      v_last=st0["v0"], lat_last=st0["lat_off"], head_last=st0["head_err_deg"], struck_v=fi["struck_v"], full=sc["scene"]))
+                      v_last=st0["v0"], lat_last=st0["lat_off"], head_last=st0["head_err_deg"], cmd=int(fi["cmd"]), plan_turn_first=fi["plan_turn_deg"], plan_turn_last=st0["plan_turn_deg"],
+                      side=("" if abs(turn) <= 20 else "inside" if np.sign(st0["lat_off"]) == np.sign(num(sc["tok_turn_deg"])) else "outside"), struck_v=fi["struck_v"], full=sc["scene"]))
     write("zeros.csv", Z)
     cnt = {}
     for z in Z:
