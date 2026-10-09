@@ -2,7 +2,8 @@
 
 **Summary.** Tokyo box = the machine with a monitor, for looking at CARLA (window, manual drive, screenshot,
 recording): `ssh ujs@100.108.238.8` (only user `ujs`; physically in Shanghai, clock JST). Ryzen 9 9950X, 60 GB,
-one RTX 3090 24 GB at CUDA index 0 / PCI 02:00.0; use CUDA index 0 directly and CARLA `-graphicsadapter=0`.
+two RTX 3090 24 GB (since 2026-10-09; index 0 PCI 01:00.0, index 1 PCI 03:00.0). Docker 28.3.3 with the `nvidia` runtime
+(2026-10-09); also the AlpaSim submission-image host: [AlpaSim data and links](#alpasim-host-setup-2026-10-09).
 Stock CARLA at `/data/third_party/carla/CARLA_0.9.15`, Bench2Drive branch 0.0.4 at `/data/third_party/Bench2Drive`,
 Python 3.8 env `/data/envs/carla`; DISPLAY=:0 needs XAUTHORITY from the Xwayland `-auth` arg. Network is Clash global
 mode (port 7890): git over SSH works only with the selector on DIRECT, pip via official PyPI through the proxy.
@@ -11,7 +12,8 @@ windowed timings must not be mixed with off-screen ones.
 
 **Sections.**
 - What it is - login, hardware table, paths
-- GPU selection (measured 2026-09-23) - one 3090, graphicsadapter mapping, UUID recheck
+- GPU selection (2026-09-23 one card; 2026-10-09 two) - UUIDs, graphicsadapter mapping, UUID recheck
+- AlpaSim host setup (2026-10-09) - files under /data, link speeds, node table
 - Looking at CARLA - windowed launch, screenshots, recording
 - Everything long runs in tmux - tmux sessions jev and dl
 - Network: Clash in global mode, and nodes that decay - selector, node benchmarks, git/pip routing
@@ -40,13 +42,18 @@ from GPU-box model experiments ([remote-box.md](remote-box.md)).
 |---|---|
 | OS / kernel | Ubuntu 24.04.3, currently booted on 7.0.0-31-generic |
 | CPU / RAM | Ryzen 9 9950X, 16 cores / 32 threads; 60 GB |
-| GPU | One RTX 3090 24 GB, driver 580.173.02, PCI `02:00.0` |
+| Docker | 28.3.3, `ujs` in group `docker`; nvidia-container-toolkit 1.20.1, `runtimes.nvidia` in `/etc/docker/daemon.json` next to the Clash `proxies` (backup `daemon.json.bak-20261009`); `docker run --gpus all` sees both cards (installed 2026-10-09) |
+| GPU | Two RTX 3090 24 GB, driver 580.173.02, PCI `01:00.0` (index 0) and `03:00.0` (index 1) |
 | Disks | `/` 1.8 TB (1.4 TB free), `/data` 3.6 TB (nearly empty) |
 | Desktop | GNOME Wayland + Xwayland on `:0`, seat0, 3840x2160 |
 | Code | `~/mycode/jev-drive` (clean clone, `origin` is plain `github.com`) |
 | Data | `/data` — treat it as `DATA_DIR`, same layout as the GPU box |
 
-## GPU selection (measured 2026-09-23)
+## GPU selection (measured 2026-09-23, two cards since 2026-10-09)
+
+**2026-10-09: two cards.** `nvidia-smi`: index 0 `GPU-0866641f-3b04-bd10-d640-21afd1f9845e` PCI `00000000:01:00.0`; index 1
+`GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1` PCI `00000000:03:00.0` (the former single card's UUID, now at index 1). The CARLA
+`-graphicsadapter` mapping below was measured with one card and is not rechecked for two.
 
 `nvidia-smi` reports exactly one NVIDIA GeForce RTX 3090 at index 0, UUID
 `GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1`, PCI `0000:02:00.0`. PyTorch reports one device,
@@ -71,6 +78,43 @@ The former two-card notes described the removed 580.159.03 setup. They no longer
 The running kernel module and userspace both report 580.173.02; ordinary `nvidia-smi` and PyTorch
 work. The old private userspace directory is retained for its historical evidence only and must not
 be sourced by current launch scripts. See [the recovery record](../experiments/b2d_controller/results/lateral-followup/diagnostics/driver-recovery/README.md).
+
+## AlpaSim host setup (2026-10-09)
+
+Tokyo hosts the submission image build and smoke test for the AlpaSim E2E challenge (nuPlan track; [alpasim.md](alpasim.md)).
+Files live under `/data` with the GPU box's relative paths (`/data` = `DATA_DIR`); `/data/runs/alpasim/tokyo_setup/` holds
+`MANIFEST.md` (item, path, bytes, sha256 / file count, source, seconds), `STATUS`, `log.txt` and one `DONE_<item>` marker per item.
+
+| Item | Size | Source | Check |
+|---|---|---|---|
+| `third_party/alpasim` at 0bb4c4b | 32 MB | `git clone` NVlabs/alpasim via the proxy | HEAD equals the box's |
+| `models/openpilot/cinque.ort.onnx` | 766 MB | box (already on Tokyo; rsync matched it) | sha256 equals the box's |
+| `runs/op_parity/runs/{P2H10-F-s0,P2H10-F-s1,AP2-AB-s0}/ckpt-final.pt` | 75 MB each | box | sha256 equals the box's |
+| `datasets/alpasim_nuplan/nuplan_test` | 4.4 GB, 85 035 files | Hugging Face tarball | tarball sha256 from the tree API; file count equals the box's |
+| `datasets/alpasim_nuplan/navtest/configs` | 1 MB, 1 491 files | Hugging Face tarball | tarball sha256 |
+| `datasets/alpasim_nuplan/navtest/assets/<48 scenes>` | 19.9 GB (0.41 GB per scene), 240 files | part001 tarball from HF (34 GB, extracted for the 48) plus box rsync | `rsync -anc` against the box: 0 differences |
+| `runs/alpasim/scenes_navtest_full_part001_48.txt`, `runs/alpasim/native_ref/` | 7 MB | box | native results of SH30-F-s0 and AP2-AB-s0 on the 48 scenes, P2H10 runs on the m1 scene sets (no 48-scene P2H10 run exists) |
+
+A driver start opens only `cinque.ort.onnx` and `ckpt-final.pt` of its tag (strace of `sh30_driver.py` / `ap2_driver.py` on the box, CPU
+device); `adapter.pt` is not read. `jevdrive/op_adapt.py` looks for the model at `~/data/models/openpilot` (home, not `DATA_DIR`).
+`SH30-F-s0` and `OT30-F-s0/s1` were not copied; `experiments/alpasim/scripts/tokyo_pull.sh ckpt <tag>` pulls one on demand
+(run on Tokyo with the Mac's key forwarded: `ssh-add ~/.ssh/id_ed25519; ssh -A ujs@100.108.238.8 'bash ~/mycode/jev-drive/experiments/alpasim/scripts/tokyo_pull.sh ckpt <tag>'`, with `BOX_HOST`, `BOX_PORT`, `BOX_USER` exported).
+
+### Network facts measured today
+
+- The box's ssh port is closed by most Clash nodes (`Connection closed by 198.18.x.x`); DIRECT passes. `tokyo_pull.sh` rotates to a node that passes
+  (DIRECT last) and restores the selector when it ends.
+- Link speeds (MB/s, sustained over hundreds of MB): box -> Tokyo about 3.4, whatever the stream count (1 ssh stream 2.9; 8 streams 3.5; 4 streams
+  DIRECT 3.4), so the box is the cap; Hugging Face -> Tokyo 7-9 with 8-16 ranged streams (one stream 4.5-8); Docker: `nvcr.io/nvidia/cuda:12.4.1-runtime`
+  (2.3 GB, shares layers with a local image) 20 s, Docker Hub `pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime` (6.1 GB) 1 539 s with node changes and
+  other pulls running; Mac -> Tokyo over Tailscale 6.9; Tokyo -> Mac 0.33 (400 MB, contended); Tokyo upload through the proxy 4.2 (60 MB POST to
+  speed.cloudflare.com).
+- At 16:20-16:44 JST, old subscription, 20 s per host, MB/s: Singapore 01 3.7-9.5 on all of download.pytorch.org (9.5), download-r2.pytorch.org (5.7),
+  files.pythonhosted.org (7.8), pypi.nvidia.com (3.7), github release (7.4) / codeload (7.3), huggingface (7.1); Hong Kong 01 0.0 on pypi.nvidia.com;
+  Singapore 02 0.0-0.1 on download.pytorch.org / pythonhosted; Taiwan 04 and Japan 01 poor (0-5); DIRECT 9.3 / 6.6 / 8.5 / 5.0 / 3.1 / 5.3 and 0.0 on
+  Hugging Face. Node ranking changes within minutes and a host can read 0 on a node that is fast elsewhere. `tokyo_nodebench.sh screen|full` repeats it.
+- The subscription was replaced at 17:14 JST (new node names, e.g. `AWS日本01`); the table above is for the old list. The current node read 0.7-2.8 MB/s
+  per host while another pull ran. Global mode was kept, no Clash rule or config change was made today.
 
 ## Looking at CARLA
 
