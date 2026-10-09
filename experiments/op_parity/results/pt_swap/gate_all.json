@@ -1,0 +1,335 @@
+{
+ "stage": "all",
+ "n_tokens": 12146,
+ "members": {
+  "sh0": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/SH30-F-s0@warp",
+   "tokens": 12146,
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 3.3306690738754696e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  },
+  "sh1": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/SH30-F-s1@warp",
+   "tokens": 12146,
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 3.3306690738754696e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  },
+  "rm0": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/RMH10-F-s0@warp",
+   "tokens": 12146,
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 3.3306690738754696e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  },
+  "rm1": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/RMH10-F-s1@warp",
+   "tokens": 12146,
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 3.3306690738754696e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  },
+  "p20": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/P2-F-s0@warp",
+   "tokens": 12146,
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 3.3306690738754696e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  },
+  "ot0": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/OT30-F-s0@warp",
+   "tokens": 12146,
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 3.3306690738754696e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  },
+  "ot1": {
+   "source": "bench /root/autodl-tmp/ujs/runs/bench/navtest/OT30-F-s1@warp",
+   "tokens": 12146,
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 3.3306690738754696e-16,
+    "n_diff": 0
+   },
+   "pass": true
+  },
+  "wa": {
+   "source": "stored /root/autodl-tmp/ujs/runs/top10_t2/navsim/wajepa/20260926-122804/v2/2026.09.26.16.32.53.csv",
+   "tokens": 12027,
+   "NC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DAC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "DDC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "TLC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "EP": {
+    "max_abs": 3.434341699914967e-11,
+    "n_diff": 0
+   },
+   "TTC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "LK": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "HC": {
+    "max_abs": 0.0,
+    "n_diff": 0
+   },
+   "score_noec": {
+    "max_abs": 1.2265410909151342e-11,
+    "n_diff": 0
+   },
+   "pass": true
+  }
+ },
+ "pass": true
+}
