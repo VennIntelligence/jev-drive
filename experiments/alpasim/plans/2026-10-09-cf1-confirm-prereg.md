@@ -60,3 +60,21 @@ One chained script `scripts/cf1_chain.sh` in tmux `jev` (STATUS / DONE / ERROR u
 other lanes leave room (this lane at most 3, box total <= 6), runs `scripts/ot2_loop.py` with `OT_LANE=cf1` (GPU pool, watchdog, fill-in of missing
 scenes), then the report. Declared VRAM 32 GB per stack (`cl vram` measured 29-32 GB). A worker death (runner exits rc 1) -> the boxwatch rows of the two
 minutes before it are saved to the results folder, the chunk is rerun, and the report says so.
+
+## Amendment 1 (2026-10-09, written and pushed before any AP2H10 score on the fresh scenes is read)
+
+Question: is APY10m10's gain the AlpaSim input standard alone, or do the yaw-rate rows add anything on top of it? This is the last read: **after it no untouched
+scenes remain** (every one of the 1491 public scenes will have been scored for the recipes of this family; any later read is a repeat).
+
+Runs: AP2H10-AB-s0 and AP2H10-AB-s1 (lambda-10 hinge, AlpaSim input standard, no yaw-rate rows; OT3 checkpoints; OT3 already has them on the first 700 scenes) on the 791
+fresh scenes with the lists and chunking used there for the other recipes: `cf1fresh` (391, one job per checkpoint) and `ot3new` (400, one job per checkpoint). Same driver checkout
+as the CF1 runs (c9d2e07b; `git diff c9d2e07b HEAD` over `experiments/alpasim/lib`, `scripts` and `jevdrive` is empty at launch). Box checkout hash is recorded per run (`checkout.txt` in
+each run dir, plus the chain log). Pool jobs, at most 3 of this lane's stacks, nothing submitted to AlpaSim.
+
+Lines (as given):
+- (a) APY10m10 minus AP2H10 (2-seed means, 791 fresh scenes, log-clustered 95 % CI): the rows add on top of the input standard if >= +0.005 with lower bound > 0; no added
+  value if the point estimate is < +0.005 or the CI includes 0.
+- (b) AP2H10 minus P2H10 on the 791 and on all 1491: the input standard helps if >= +0.005 with lower bound > 0.
+
+Report: the same per-recipe table (mean, zeros split, slow, at-fault events, per-seed), the 4-recipe table on all 1491 scenes with all pairwise differences, and the statement that no
+untouched scenes remain. Outcome goes into decision 216 as an amendment (no new decision unless it flips 216).

@@ -18,7 +18,7 @@ import c0b_report as R  # noqa: E402
 from ot3_report import ci2, f2  # noqa: E402
 
 RA = Path(__import__("os").environ.get("DATA_DIR", "/root/autodl-tmp/ujs")) / "runs/alpasim"
-RECIPES = {"P2H10": "P2H10-F", "YR10m10": "YR10m10-F", "APY10m10": "APY10m10-AB"}
+RECIPES = {"P2H10": "P2H10-F", "YR10m10": "YR10m10-F", "APY10m10": "APY10m10-AB", "AP2H10": "AP2H10-AB"}
 
 
 def main():
@@ -26,7 +26,10 @@ def main():
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     o3 = json.loads((RA / "ot3/a/manifest.json").read_text())
-    cf = json.loads((RA / "cf1/a/manifest.json").read_text()) if (RA / "cf1/a/manifest.json").exists() else {}
+    cf = {}
+    for st_ in ("a", "b"):
+        if (RA / f"cf1/{st_}/manifest.json").exists():
+            cf |= json.loads((RA / f"cf1/{st_}/manifest.json").read_text())
     L5 = RA / "c0b/lists"
     A = set((L5 / "cf1fresh.txt").read_text().split())
     Bn = set((L5 / "ot3new.txt").read_text().split())
@@ -69,7 +72,7 @@ def main():
             L.append(f"| {t} | {' / '.join(f'{sc[x][h].mean():.4f}' for x in v)} | {R.fmt(mean)} | [{c2[0]:.4f}, {c2[1]:.4f}] | {zeros:g} | {z('collision_at_fault'):g} | "
                      f"{z('offroad'):g} | {z('left_corridor_laterally'):g} | {slow:g} | {evs:g} |")
         L += ["", "| difference | point | 95% CI scenes | 95% CI logs (decides) | seed 0 / seed 1 differences |", "|:--|--:|:--|:--|:--|"]
-        for x, y in (("YR10m10", "P2H10"), ("APY10m10", "P2H10"), ("APY10m10", "YR10m10")):
+        for x, y in (("YR10m10", "P2H10"), ("APY10m10", "P2H10"), ("APY10m10", "YR10m10"), ("AP2H10", "P2H10"), ("APY10m10", "AP2H10"), ("AP2H10", "YR10m10")):
             d = ci2(gs[x][have] - gs[y][have], cl[have])
             sd = [float((sc[rec[x][i]][have] - sc[rec[y][i]][have]).mean()) for i in (0, 1)]
             st[n]["diffs"][f"{x} - {y}"] = dict(**d, per_seed=sd)
@@ -84,6 +87,13 @@ def main():
               "(confirmed: >= +0.005 and lower bound > 0; refuted: <= 0; else inconclusive).",
               f"- Secondary, APY10m10 - YR10m10 on the 791 fresh scenes: {sa['mean']:+.4f}, log-clustered CI [{sa['log'][0]:+.4f}, {sa['log'][1]:+.4f}] -> "
               f"APY10m10 is {'a candidate' if cand else 'not a candidate'}.", ""]
+    ua, ub = st["Fresh (791)"]["diffs"]["APY10m10 - AP2H10"], st["Fresh (791)"]["diffs"]["AP2H10 - P2H10"]
+    ub2 = st["All (1491)"]["diffs"]["AP2H10 - P2H10"]
+    ok = lambda d: d["mean"] >= 0.005 and d["log"][0] > 0  # noqa: E731
+    L[2:2] = ["## Amendment 1 verdicts", "",
+              f"- (a) APY10m10 - AP2H10 on 791: {ua['mean']:+.4f} [{ua['log'][0]:+.4f}, {ua['log'][1]:+.4f}] -> the yaw-rate rows {'add on top of the input standard' if ok(ua) else 'add no value (point < +0.005 or CI includes 0)'}.",
+              f"- (b) AP2H10 - P2H10 on 791: {ub['mean']:+.4f} [{ub['log'][0]:+.4f}, {ub['log'][1]:+.4f}] -> {'helps' if ok(ub) else 'does not clear the line'}; "
+              f"on 1491: {ub2['mean']:+.4f} [{ub2['log'][0]:+.4f}, {ub2['log'][1]:+.4f}] -> {'helps' if ok(ub2) else 'does not clear the line'}.", ""]
     L += [f"## Route-fold scenes (zero, no decision, for every driver that ran there): {len(fold)}", ""] + [f"- {scenes[i]}" for i in fold]
     st["verdict"], st["apy_candidate"], st["fold"] = ver, bool(cand), [scenes[i] for i in fold]
     out = Path(a.out)
