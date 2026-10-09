@@ -293,6 +293,22 @@ class Board:
         k = {"lat": 0, "lon": 1, "psi": 2}[axis]
         return self.x[mode, h][k], self.y[mode, h][mem][k]
 
+    def arc_matched(self, fams, mode="cc"):
+        """Lateral gain with log and plan compared at the same arc length s* = min(L_log, L_plan) (s* >= 2 m): fam -> [(gain, boot), (top-decile gain, boot)]."""
+        kap = self.ext[mode][0]
+        cumL, _ = arclen(self.fut)
+        res = {}
+        for fam in fams:
+            per = []
+            for q_ in self.fam[fam]:
+                Pm = np.nan_to_num(self.P[q_])
+                s_ = np.minimum(cumL[:, -1], arclen(Pm)[0][:, -1])
+                mm = self.common & (s_ >= 2.0)
+                xa, ya = frenet_d(at_arc(self.fut, s_), kap), frenet_d(at_arc(Pm, s_), kap)
+                per.append((reg(self.bt, xa, ya, mm, 0.5), reg(self.bt, xa, ya, mm & (deciles(xa, mm) == 9), 0.5)))
+            res[fam] = [(float(np.mean([p_[i]["slope"][0] for p_ in per])), np.mean([p_[i]["slope"][1] for p_ in per], 0)) for i in (0, 1)]
+        return res
+
     def gains(self, m, mode="cc", h=7, axis="lat", fams=None, extra=None):
         """Gain rows of every family (member mean) with CIs, and the paired difference WA-JEPA - family."""
         x = self.x[mode, h][{"lat": 0, "lon": 1, "psi": 2}[axis]]
@@ -597,20 +613,11 @@ def cmd_report(a):
         for r in rows:
             srow.append({"read-out": "heading innovation (deg)", "model": r["model"], "gain": f"{r['slope']:.3f} [{r['slope_lo']:.3f}, {r['slope_hi']:.3f}]", "top-decile gain": f"{r['top_slope']:.3f} [{r['top_slope_lo']:.3f}, {r['top_slope_hi']:.3f}]",
                          "WA-JEPA - model (top)": f"{r.get('wa_minus_top', 0):+.3f} [{r.get('wa_minus_top_lo', 0):+.3f}, {r.get('wa_minus_top_hi', 0):+.3f}]"})
-        cumL, _ = arclen(Bd.fut)
-        res = {}
-        for fam in ("SH30", WA):
-            per = []
-            for q_ in Bd.fam[fam]:
-                Pm = np.nan_to_num(Bd.P[q_])
-                s_ = np.minimum(cumL[:, -1], arclen(Pm)[0][:, -1])
-                mm = Bd.common & (s_ >= 2.0)
-                xa, ya = frenet_d(at_arc(Bd.fut, s_), kap), frenet_d(at_arc(Pm, s_), kap)
-                per.append((reg(bt, xa, ya, mm, 0.5), reg(bt, xa, ya, mm & (deciles(xa, mm) == 9), 0.5)))
-            res[fam] = [(float(np.mean([p_[i]["slope"][0] for p_ in per])), np.mean([p_[i]["slope"][1] for p_ in per], 0)) for i in (0, 1)]
+        am = [f for f in ("cinque (shipped, G frames)", "P2 (no hinge)", "SH30", "OT30 (off-track rows)", "AP2 (AlpaSim inputs, m 4)", WA) if f in Bd.fam]
+        res = Bd.arc_matched(am)
+        for fam in am:
             srow.append({"read-out": "lateral at matched arc length (m)", "model": fam, "gain": pc(*res[fam][0], "{:.3f}"), "top-decile gain": pc(*res[fam][1], "{:.3f}"),
-                         "WA-JEPA - model (top)": pc(res[WA][1][0] - res[fam][1][0], res[WA][1][1] - res[fam][1][1]) if fam != WA and WA in res else ""})
-        srow[-2]["WA-JEPA - model (top)"] = pc(res[WA][1][0] - res["SH30"][1][0], res[WA][1][1] - res["SH30"][1][1])
+                         "WA-JEPA - model (top)": pc(res[WA][1][0] - res[fam][1][0], res[WA][1][1] - res[fam][1][1]) if fam != WA else ""})
         summ["arc_matched_lat_top_D"] = [float(res[WA][1][0] - res["SH30"][1][0]), *ci(res[WA][1][1] - res["SH30"][1][1])]
         for ax in ("lat", "lon"):
             x_ = Bd.x["cc", 7][0 if ax == "lat" else 1]
@@ -653,6 +660,10 @@ def cmd_report(a):
             rows, _ = Bh.gains(Bh.common, axis=ax)
             pd.DataFrame(rows).to_csv(RES / f"navhard_gain_{ax}.csv", index=False)
             txt.append(f"\n**{'Lateral' if ax == 'lat' else 'Longitudinal'}** ({int(Bh.common.sum())} tokens, {Bh.bt.G} logs)\n\n" + gain_md(rows))
+        resh = Bh.arc_matched([f for f in NAVHARD if f in Bh.fam])
+        txt.append("\n**Lateral at matched arc length** (navhard stage 1)\n\n" + md([{"model": f, "gain": pc(*r_[0], "{:.3f}"), "top-decile gain": pc(*r_[1], "{:.3f}"),
+                   "WA-JEPA - model": pc(resh[WA][0][0] - r_[0][0], resh[WA][0][1] - r_[0][1]), "WA-JEPA - model (top)": pc(resh[WA][1][0] - r_[1][0], resh[WA][1][1] - r_[1][1])} for f, r_ in resh.items()]))
+        summ["navhard_arc_matched_lat_D"] = [float(resh[WA][0][0] - resh["SH30"][0][0]), *ci(resh[WA][0][1] - resh["SH30"][0][1])]
 
         # ---- verdict
         vd = {}
