@@ -553,3 +553,41 @@ A disclosed second and last attempt at the loss arm 4.3. It is written after a n
    from Amendment 4 item 5 on, unchanged (G3 (a)-(d) at full scale, the staged closed loop, readings (A) and (B), L1 in both forms, L2, L3,
    guardrails, kill criteria, PAI only on a pass).
 6. **Cost.** Two pilots and their reads about 0.5 card-h; the rest as Amendment 4 item 10 (the full `bd4` cache is 10.1 GB, not 18).
+
+**Notes to Amendment 5 (2026-10-10 06:20 box time; written while the two pilots train and before any number of them, on validation or hold
+logs, has been read; nothing above is changed).**
+- (a) **Implementation.** `bd4_train.py --ho-w W --ho-excl navsim/body1-val-logs` (`lib/loss43.py`: W multiplies the agent hinge and the road
+  hinge of the hinge-only rows, nothing else). The validation part is registered as `navsim/body1-val-logs@v1` (123 of the 1 071 train logs).
+  Imitation rows of those logs keep term A, as item 3 leaves it ("term A on imitation rows ... as in the Amendment 4 pilot"); only the
+  hinge-only rows leave them. Selection reads `bd4_g3.py --set val` (on-log + ot1 + yr1 + `bd4` states of those logs in shards s2 + s3)
+  against `P2H10-P-s0`. Switch-off identity repeated with the edited code: 60 steps against the unedited `pp_train.py`, 18 scalars and every
+  weight equal bit for bit (`results/loss/ident_a5.json`). Pilot tags `P2H10B-Pw3-s0`, `P2H10B-Pw10-s0`. New logged scalars: `agent_pos`
+  (share of imitation + hinge-only rows with a non-zero agent hinge), `agent_ho_pos`, `road_ho_pos` (the same over the hinge-only rows).
+- (b) **Item C's layer list is not the scorer's road area (correction of Amendment 4 note vi and of deviation 4 of `results/loss_pilot.md`).**
+  AlpaSim's offroad scorer (`src/eval/src/eval/scorers/offroad.py`) calls the ego on the road when one lane polygon, or the union of the lanes
+  within 6 m, contains its box, and otherwise, on nuPlan maps, when the union of the RoadArea elements covers it. trajdata's nuPlan conversion
+  builds RoadArea from the devkit's `drivable_area` = `road_segments` + `intersections` + `generic_drivable_areas` + `carpark_areas`, and the
+  shipped maps of 52 public scenes agree: all 2 203 road-area polygons match a polygon of exactly these four gpkg layers by area and vertex
+  count (area shares 0.52 / 0.28 / 0.12 / 0.08; `scripts/bd4_layers.py`, `results/loss/scorer_layers.json`; map polygons only). The raster
+  built for C (ROADBLOCK, ROADBLOCK_CONNECTOR, INTERSECTION, LANE, LANE_CONNECTOR) therefore leaves out two surfaces the scorer counts as road
+  (car parks, generic drivable areas) and uses lane groups where the scorer uses road segments. It is a stricter road-and-lane label, not the
+  scorer's; the sentence of the diagnosis that NAVSIM's raster is wider "because it includes car parks" does not hold as an explanation
+  (the scorer includes them too), and whether C covers the 7 definition cases is not established. Consequences, fixed now: (1) Amendment 5
+  item 3 fixes C "as in the Amendment 4 pilot", so the pilots and a full run keep this raster; it is reported as "road-and-lane raster (item
+  C)", never as the scorer's label, and the disclosure of item 3 C (a per-board ingredient chosen after looking at this board's zeros)
+  stands; (2) every line stays on the NAVSIM raster, as written; (3) the `road` column of the G3 tables is a reported number under that
+  name; (4) note (x) (rows that start off C's raster keep the NAVSIM raster) already bounds the cost on car-park launches; (5) if the closed
+  loop is reached, new offroad zeros are checked per scene for a start or path on a car park / generic drivable area. No raster is rebuilt.
+- (c) **User classes of the G3 tables.** `bd4_g3.py` read the taxonomy file's `pc` column, which predates Amendment 1 item 1 (class 3 also
+  holds straight / launch tokens with only a side hazard). From this note on the reader uses `contact_head.classes` (the Amendment 1
+  membership the G1 read used). No line is per class; the per-class rows of the Amendment 4 pilot table (`g3_pilot.csv`) carry the old
+  membership and are not re-read.
+- (d) **The fifth `bd4` preview** (`figs/loss/bd4_preview_class3.png`, six class-3 states at 5.7 to 13.7 m/s, heading offsets -7.2 to +7.6
+  deg) was inspected before any full cache: the reprojected frame shifts opposite to the heading offset with the padding band on the side
+  the camera turned to (left for positive offsets, right for negative) in all six; the agent label fires where the 2 s / 4 s ego box
+  overlaps a drawn agent box (2 of 6) and the boundary margin is negative where the swept box crosses the raster edge (-0.76 m, -3.22 m);
+  the two rasters agree in these six panels. Labels and reprojection are right; the family is not restricted.
+- (e) **Reading the gate of item 4.** "Falls by >= X % relative, interval excluding 0" as note (vii) of Amendment 4: (ref - new) / ref on the
+  pooled hold-log states of shards s2 + s3 with the paired, log-clustered interval of the difference below 0. The continuation slope is
+  `alpha_05` of `ot3_rows.py probe` (shards s2 + s3), selected pilot against `P2H10-P-s0`. Selection (item 3) is written and pushed before
+  `bd4_g3.py --set hold` or the probe is run for any Amendment 5 checkpoint.

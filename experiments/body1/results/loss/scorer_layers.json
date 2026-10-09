@@ -1,0 +1,32 @@
+{
+ "sets": [
+  "zero-s0",
+  "clean-s0"
+ ],
+ "scenes": 52,
+ "road_areas": 2203,
+ "matched_by_layer": {
+  "road_segments": 802,
+  "intersections": 551,
+  "generic_drivable_areas": 370,
+  "carpark_areas": 499,
+  "lane_groups_polygons": 495,
+  "lane_group_connectors": 1,
+  "lanes_polygons": 201,
+  "gen_lane_connectors_scaled_width_polygons": 0,
+  "none": 0
+ },
+ "area_share_by_layer": {
+  "road_segments": 0.5186773025111512,
+  "intersections": 0.2834787378922113,
+  "generic_drivable_areas": 0.11920179293108184,
+  "carpark_areas": 0.0818719861366496,
+  "lane_groups_polygons": 0.25046635833851794,
+  "lane_group_connectors": 2.3849852179819666e-05,
+  "lanes_polygons": 0.043728019540909546,
+  "gen_lane_connectors_scaled_width_polygons": 0.0,
+  "none": 0.0
+ },
+ "tol": 0.0002,
+ "code": "trajdata nuplan_utils.populate_vector_map: RoadArea <- NuPlanMap._vector_map['drivable_area'] = road_segments + intersections + generic_drivable_areas + carpark_areas (devkit _initialize_drivable_area)"
+}

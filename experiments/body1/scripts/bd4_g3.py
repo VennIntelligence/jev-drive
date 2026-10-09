@@ -6,9 +6,9 @@ against a reference checkpoint on the same states, truth by lib/sweep.py. Open l
            the hinge-only rows is selected here and hold logs are not opened by this set)
   navtest  on-log navtest tokens (lb_navtest; agent labels navtest-k32, NAVSIM raster navtest; the scorer-layer raster if it was built)
 Rates per state: agent = counted contact of the 4 s sweep (rear-end contacts by a faster object excluded, as the row labels);
-boundary = minimum footprint margin < -0.20 m with no contact at t = 0, on the NAVSIM raster (carries the line) and on the scorer-layer raster
-(reported). Difference new - ref with jevdrive.stats.paired(groups=log); relative fall = (ref - new) / ref. Tables per state family, user class
-(taxonomy `pc`), the > 45 deg bucket (|logged 4 s heading change|) and speed bin -> results/loss/g3_<name>.{csv,json}.
+boundary = minimum footprint margin < -0.20 m with no contact at t = 0, on the NAVSIM raster (carries the line) and on item C's raster (`road`,
+reported; a road-and-lane raster without car parks, not the scorer's road area: Amendment 5 note of 2026-10-10). Difference new - ref with jevdrive.stats.paired(groups=log); relative fall = (ref - new) / ref. Tables per state family, user class
+(taxonomy classes with Amendment 1 item 1, contact_head.classes), the > 45 deg bucket (|logged 4 s heading change|) and speed bin -> results/loss/g3_<name>.{csv,json}.
 
   $DATA_DIR/envs/op-train/bin/python experiments/body1/scripts/bd4_g3.py --name pilot --new P2H10B-P-s0 --ref P2H10-P-s0 P2H10-F-s0 --shards 2 3
 """
@@ -76,7 +76,8 @@ def main(a):
             M = pd.concat(meta, ignore_index=True)
             g = M.grow.to_numpy()
             box, val, cls, sdf, sdf_r = L["box"][g], L["valid"][g], L["cls"][g], L["sdf"][g], road[g]
-            M["cls"], M["dyaw"] = np.array(B.CLS)[tax["pc"][g]], np.abs(tax["dyaw"][g])
+            from contact_head import classes                                        # user class with Amendment 1 item 1 (the tax file's `pc` predates it)
+            M["cls"], M["dyaw"] = np.array(B.CLS)[classes(tax)[0][g]], np.abs(tax["dyaw"][g])
         else:
             run.use_split(splits.load("navsim/navtest"))
             t = dict(np.load(B.cache_root() / "lb_navtest" / "tab.npz"))
