@@ -59,10 +59,13 @@ ARG GIT_HASH=local
 # The served speed profile (lib/serve_fix.py): VCONT = seconds of the speed-continuous blend (0 = off), LEAD = 1 for the openpilot lead limit.
 ARG VCONT=0
 ARG LEAD=0
-# torch.compile (SH30_COMPILE=1, the drivers' default since LAT1) caches its kernels through triton, whose default directory is $HOME/.triton:
-# read-only here. Set in this last layer so that the package layers above stay cached.
+# torch.compile (SH30_COMPILE=1, the drivers' default on the box since LAT1) cannot run in this image: triton's default cache is
+# $HOME/.triton (read-only here; pointed at /tmp below) and inductor needs a C compiler, which python:slim does not have. The driver
+# then falls back to the interpreted passes with a logged traceback, which test.sh counts as a failure. SH30_COMPILE=0 makes the
+# image serve the interpreted passes on purpose (what every image so far has served; the box's compiled passes differ at fp16
+# rounding level, results/lat1_frame_synthesis.md). Set in this last layer so that the package layers above stay cached.
 ENV JEV_TAG=${TAG} JEV_DRIVER=${DRIVER} SH30_GIT_HASH=${GIT_HASH} JEV_VCONT=${VCONT} JEV_LEAD=${LEAD} \
-    TRITON_CACHE_DIR=/tmp/triton TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor
+    SH30_COMPILE=0 TRITON_CACHE_DIR=/tmp/triton TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor
 EXPOSE 6789
 STOPSIGNAL SIGTERM
 USER 10001:10001
