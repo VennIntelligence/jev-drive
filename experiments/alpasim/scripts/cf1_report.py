@@ -26,7 +26,7 @@ def main():
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     o3 = json.loads((RA / "ot3/a/manifest.json").read_text())
-    cf = json.loads((RA / "cf1/a/manifest.json").read_text())
+    cf = json.loads((RA / "cf1/a/manifest.json").read_text()) if (RA / "cf1/a/manifest.json").exists() else {}
     L5 = RA / "c0b/lists"
     A = set((L5 / "cf1fresh.txt").read_text().split())
     Bn = set((L5 / "ot3new.txt").read_text().split())

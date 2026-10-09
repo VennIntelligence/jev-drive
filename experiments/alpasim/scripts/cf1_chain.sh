@@ -20,5 +20,5 @@ for r in P2H10-F YR10m10-F; do for s in 0 1; do J+=("$r-s$s@fresh:sh30:SH30_TAG=
 for s in 0 1; do J+=("APY10m10-AB-s$s@fresh:ap2:AP2_TAG=APY10m10-AB-s$s:APY10m10-AB-s$s:cf1fresh"); done
 OT_LANE=cf1 OT_PRIO=13 OT2_MAX_ACTIVE=3 python3 experiments/alpasim/scripts/ot2_loop.py a "${J[@]}" || die "ot2_loop rc $? (see $RA/cf1/a/ERROR)"
 status "loop done; report"
-python3 experiments/alpasim/scripts/cf1_report.py --out "$O/results" > "$O/report.log" 2>&1 || die "report failed (see $O/report.log)"
+$VPY experiments/alpasim/scripts/cf1_report.py --out "$O/results" > "$O/report.log" 2>&1 || die "report failed (see $O/report.log)"
 date '+%F %T' > "$O/DONE"; status "all done"
