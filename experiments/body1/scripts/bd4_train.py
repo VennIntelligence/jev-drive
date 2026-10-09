@@ -170,7 +170,9 @@ def cmd_ident(a):
     ea, eb = ev(a.a), ev(a.b)
     common = sorted(set(ea) & set(eb), key=str)
     dl = max((abs(ea[q] - eb[q]) for q in common), default=float("nan"))
-    ca, cb = (torch.load(json.load(open(_pl.Path(x) / "summary.json"))["ckpt"], map_location="cpu", weights_only=False)["model"] for x in (a.a, a.b))
+    import pp_train as T
+    ck = lambda x: T.proot("runs", _pl.Path(x).parent.name.removeprefix("train-")) / "ckpt-final.pt"  # noqa: E731  run dir = .../train-<tag>/<stamp>
+    ca, cb = (torch.load(ck(x), map_location="cpu", weights_only=False)["model"] for x in (a.a, a.b))
     dw = max(float((ca["net"][q].float() - cb["net"][q].float()).abs().max()) for q in ca["net"])
     dp = max(float((ca["parity"][q].float() - cb["parity"][q].float()).abs().max()) for q in ca["parity"])
     res = dict(a=a.a, b=a.b, scalars_compared=len(common), only_a=len(set(ea) - set(eb)), only_b=len(set(eb) - set(ea)), max_abs_scalar_diff=dl,
