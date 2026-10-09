@@ -526,3 +526,30 @@ The other half holds: on the hold-log states of the two shards (5 062 states, 11
 0.0261 (switch-off pilot; -0.0067 [-0.0101, -0.0035], 26 % relative) and 0.0237 (P2H10-F-s0), the boundary rate 0.0227 against 0.0275 (-0.0047
 [-0.0074, -0.0022], 17 %) and 0.0259 (`results/loss/g3_pilot.csv`). By item 5 the arm ends here: no full run, no G3 at full scale, no closed
 loop, no ablation, variant D not opened. What the registered number measures and what it does not is in the lane's report to the main session.
+
+## Amendment 5 (2026-10-10, in force; written by the main session after the pilot read of Amendment 4 and before any further training)
+
+A disclosed second and last attempt at the loss arm 4.3. It is written after a number was read, so it is stated as such everywhere it is reported.
+
+1. **Status of Amendment 4.** Its pilot gate failed by the letter (agent hinge on own-plan positives -9.5 % against the 30 % line): [results/loss_pilot.md](../results/loss_pilot.md).
+   That read stands and is not re-read. No full run, G3, or closed loop exists for it.
+2. **Why one more pilot is not a re-reading.** (i) The registered loss number is a mean over the rows still in contact; a row whose plan stops
+   touching leaves the mean, so the number cannot see the effect the arm is for. (ii) Implementation note iii of Amendment 4 gave a hinge-only
+   row the weight of an imitation row; with 13 of 128 rows and rare positives the new terms were about 0.5 % of the total loss (agent 0.001,
+   road 0.003, times 10, against imitation 0.7). (iii) The outcome quantities, the ones G3 measures, moved at pilot scale at no cost to the
+   recipe: own-plan agent contact -26 % [CI excluding 0], boundary -17 %, dev ADE 0.591 against 0.590 m. Hold logs have therefore been read
+   once for this arm, at pilot scale; this is a limit of every later hold-log number of the arm.
+3. **The one change: the weight of the hinge terms on hinge-only rows.** Candidates fixed now: w in {3, 10} (multiplier on both hinge terms of
+   hinge-only rows; term A on imitation rows, the row shares 4 / 4 / 5, lambda 10, margins, C's raster and everything else as in the Amendment 4
+   pilot). Selection never touches hold logs: a validation part of the train logs (`sha256(log) % 10 == 1` within `navsim/body1-train-logs`) is
+   excluded from the hinge-only rows of both pilots and of the full run; the w with the larger relative fall of (agent rate + boundary rate) of
+   the own plan on that part is taken, subject to dev ADE <= switch-off pilot + 0.01 m and `dev_drift_off` <= 0.30. If neither w meets the
+   constraints the arm ends.
+4. **Pilot gate (replaces both halves of Amendment 4's; one read on hold logs, the selected w only), against the switch-off pilot
+   `P2H10-P-s0`, cluster bootstrap by log:** own-plan agent-contact rate falls by >= 30 % relative and boundary rate (NAVSIM raster, margin
+   < -0.20 m) by >= 25 % relative, both intervals excluding 0; dev ADE <= switch-off pilot + 0.01 m; decision 205's continuation slope on
+   synthetic yaw-rate slots <= the switch-off pilot's + 0.05. The > 45 deg bucket and the launch rows (v < 1 m/s) are reported.
+5. **Then.** Gate missed: the arm 4.3 ends; no third weight, no variant D. Gate met: the full run of 2 seeds with the selected w and everything
+   from Amendment 4 item 5 on, unchanged (G3 (a)-(d) at full scale, the staged closed loop, readings (A) and (B), L1 in both forms, L2, L3,
+   guardrails, kill criteria, PAI only on a pass).
+6. **Cost.** Two pilots and their reads about 0.5 card-h; the rest as Amendment 4 item 10 (the full `bd4` cache is 10.1 GB, not 18).
