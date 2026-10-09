@@ -65,3 +65,5 @@ collisions and the 11 slow scenes; `--compile` trainers through navtest and clos
 
 <!-- files:begin -->
 <!-- files:end -->
+
+**CF1: confirmation read on untouched scenes (2026-10-09, decision 216, pre-registered).** YR10m10 minus P2H10 on part012-015 (391 scenes, 6 logs): -0.0069 [-0.0110, -0.0016], refuted; 791 fresh scenes +0.0043 [-0.0031, +0.0148], all 1491 +0.0052; the +0.0153 of decision 213 was a high draw. Exploratory APY10m10-AB minus YR10m10 on the 791 fresh scenes +0.0146 [+0.0006, +0.0266] (marginal candidate; all of it on part012-015, none on OT3's 400); all 1491: P2H10 0.9196, YR10m10 0.9248, APY10m10 0.9335. [results/cf1_confirm.md](results/cf1_confirm.md), plan [plans/2026-10-09-cf1-confirm-prereg.md](plans/2026-10-09-cf1-confirm-prereg.md). Code `scripts/cf1_chain.sh`, `scripts/cf1_report.py`.
