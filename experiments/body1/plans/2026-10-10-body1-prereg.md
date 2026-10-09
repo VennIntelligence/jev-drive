@@ -598,3 +598,10 @@ eligible); pushed (b83a28bb) before the hold-log read. **Pilot gate of item 4, w
 (-47.7 %, [-0.0163, -0.0088]), boundary rate 0.0172 against 0.0275 (-37.4 %, [-0.0146, -0.0063]), dev ADE 0.5899 m against 0.5913 m,
 continuation slope 0.93 against 1.08 (`results/loss_pilot.md` A5.1, A5.2). The arm goes on to the full run of 2 seeds with w = 3.
 
+
+**Status after G3 at full scale (2026-10-10 07:30 box time, added after the reads; nothing above was changed).** `P2H10B-F-s{0,1}` (w = 3) against
+P2H10-F of the same seed: (a) hold logs agent -48.6 % / -48.3 %, boundary -53.5 % / -53.2 %, intervals excluding 0; (b) navtest on-log neither rate up,
+sum -12.6 % / -15.9 % with intervals excluding 0; (c) continuation slope 0.833 / 0.827 against 1.028 / 1.037; (d) navtest 89.19 against 88.67
+(+0.52 [+0.35, +0.70]), > 45 deg bucket +0.93 [+0.28, +1.62], cannot-make-turn 2.70 against 2.60 %, `dev_drift_off` 0.045 / 0.045. **G3 met.** The
+numbers are those of a second attempt made after one pilot read of hold logs. Reading (d) used a fresh bench run of P2H10-F at this checkout.
+Next: the closed loop of item 6 (pilot8, chunk1 x s0 checklist, five chunk jobs). Details: [results/loss_g3.md](../results/loss_g3.md).
