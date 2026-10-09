@@ -161,6 +161,9 @@ def main() -> int:
     ap.add_argument("--sub", action="append", default=[], metavar="OLD=NEW",
                     help="replace OLD by NEW in every service command after the mount rewrite (repeatable; NEW may be empty). PAI track: "
                          "--sub /app=<unpacked renderer image>/app --sub ' --enable-harmonizer=' --sub /tmp/nre-cache-dir=<run dir>/nre-cache")
+    ap.add_argument("--rewrite-configs", action="store_true",
+                    help="also replace the container mount points by their host paths inside the generated config yaml files "
+                         "(PAI track: the runtime config names data_dir /mnt/nre-data/...; the nuPlan track needs none)")
     ap.add_argument("--ready-timeout", type=float, default=900)
     ap.add_argument("overrides", nargs="+", help="wizard arguments, e.g. +e2e_challenge_nuplan=dev scenes.limit_to_first_n=1")
     a = ap.parse_args()
@@ -198,6 +201,16 @@ def main() -> int:
         times["wizard_s"] = time.time() - t0
 
         services = yaml.safe_load(open(out / "docker-compose.yaml"))["services"]
+        if a.rewrite_configs:
+            mounts = {}
+            for svc in services.values():
+                mounts.update(dict(reversed(v.rsplit(":", 1)) for v in svc.get("volumes", [])))
+            for f in out.glob("*.yaml"):
+                if f.name != "docker-compose.yaml":
+                    txt = f.read_text()
+                    for cont in sorted(mounts, key=len, reverse=True):
+                        txt = txt.replace(cont, mounts[cont])
+                    f.write_text(txt)
         runtime = [n for n in services if n.startswith("runtime")]
         for name in [n for n in services if n not in runtime] + runtime:
             svc = services[name]

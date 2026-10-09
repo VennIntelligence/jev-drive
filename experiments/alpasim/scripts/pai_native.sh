@@ -14,7 +14,7 @@ SRC=${ALPASIM_SRC:-$DATA_DIR/third_party/alpasim}; NUREC=${NUREC:-$DATA_DIR/data
 mkdir -p "$OUT"
 if head -1 "$LIST" | grep -q '^scene_id'; then ids=$(awk -F'\t' -v s="${STAGE:-1}" 'NR > 1 && $8 <= s {print $1}' "$LIST"); else ids=$(grep . "$LIST"); fi
 echo "$ids" > "$OUT/scene_ids.txt"
-exec bash "$here/run.sh" "$OUT" pai --scene-list "$OUT/scene_ids.txt" \
+exec bash "$here/run.sh" "$OUT" pai --scene-list "$OUT/scene_ids.txt" --rewrite-configs \
   --sub "/app=$ROOT/app" --sub " --enable-harmonizer=" --sub "/tmp/nre-cache-dir=$OUT/nre-cache" \
   +e2e_challenge=dev scenes.scene_cache="$NUREC" "scenes.scenes_csv=[$SRC/data/scenes/sim_scenes.csv,$SRC/data/scenes/sim_scenes_2604.csv]" \
   "services.renderer.gpus=[0]" "services.physics.gpus=[0]" \
