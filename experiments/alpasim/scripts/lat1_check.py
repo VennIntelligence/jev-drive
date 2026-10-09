@@ -2,7 +2,7 @@
 latency of both. The logged driver-side messages of a finished run (c1_extract.py msgs) go back through the real driver class, no
 simulator (c1_replay.py's harness). Results: experiments/alpasim/results/lat1_frame_synthesis.md.
 
-  lat1_check.py equiv --msgs <dir> --out <json> [--n N]              (box, envs/op-train, one GPU; SH30_TAG as served)
+  lat1_check.py equiv --msgs <dir> --out <json> [--n N] [--driver ap2]    (box, envs/op-train, one GPU; SH30_TAG / AP2_TAG as served)
       every decision is planned by the CPU core as run, then again by the CPU core (repeatability floor) and by the GPU core on the
       same inputs: differing pixels of the slot frames, 4 s endpoint distance, plan yaw at 0.5 s, stage times of a lone stream
   lat1_check.py remap --msgs <dir> --out <json> [--n N]
@@ -82,8 +82,16 @@ def pct(x):
 
 def cmd_equiv(a):
     import sh30_driver as D
-    cpu, gpu = D.C.Core(TAG, "cuda", synth="cpu"), D.C.Core(TAG, "cuda", synth="gpu")
-    drv, last, rows = D.Driver(cpu, Path(tempfile.mkdtemp())), {}, []
+    if a.driver == "ap2":
+        import ap2_driver as AD
+        tag = os.environ.get("AP2_TAG", "AP2-AB-s0")
+        cpu, gpu = AD.AC.Core(tag, "cuda", "", synth="cpu"), AD.AC.Core(tag, "cuda", "", synth="gpu")
+        drv = AD.Driver(cpu, Path(tempfile.mkdtemp()))
+    else:
+        tag = TAG
+        cpu, gpu = D.C.Core(TAG, "cuda", synth="cpu"), D.C.Core(TAG, "cuda", synth="gpu")
+        drv = D.Driver(cpu, Path(tempfile.mkdtemp()))
+    last, rows = {}, []
     orig = cpu.plan
 
     def plan(*x, **k):
@@ -114,7 +122,7 @@ def cmd_equiv(a):
             print(i, scene, len(rows), sum(r["px_diff"] for r in rows), flush=True)
     R = lambda k: np.array([r[k] for r in rows])                                           # noqa: E731
     import torch
-    s = dict(tag=TAG, scenes=len({r["scene"] for r in rows}), decisions=len(rows), cold=int((R("n_keys") < 4).sum()),
+    s = dict(tag=tag, scenes=len({r["scene"] for r in rows}), decisions=len(rows), cold=int((R("n_keys") < 4).sum()),
              px=int(R("px").sum()), px_diff=int(R("px_diff").sum()), px_max=int(R("px_max").max()), decisions_with_diff=int((R("px_diff") > 0).sum()),
              frames_diff=int(R("frames_diff").sum()),
              **{k: dict(max=float(R(k).max()), mean=float(R(k).mean()), nonzero=int((R(k) > 0).sum())) for k in
@@ -363,7 +371,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same", "nvjpeg", "runs", "model"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=0), ap.add_argument("--synth", default="gpu"), ap.add_argument("--streams", type=int, default=8)
-    ap.add_argument("--nosync", action="store_true"), ap.add_argument("--pack", default="fast")
+    ap.add_argument("--nosync", action="store_true"), ap.add_argument("--pack", default="fast"), ap.add_argument("--driver", default="sh30")
     a = ap.parse_args()
     {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same, "nvjpeg": cmd_nvjpeg, "runs": cmd_runs, "model": cmd_model}[a.cmd](a)
 
