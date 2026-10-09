@@ -156,6 +156,7 @@ def scene_rows(o, rp, ref):
     bump = off + Le / 2 - cam_x
     D = dict(t=(t0 - T0) * 1e-6, ve=ve, lat=lat[:, 0], cmd=rp["cmd"], arc_ft=arc(rp["ft"]), arc_ftS=arc(rp["ftS"]), arc_p0=arc(rp["p0"]),
              y4_ft=rp["ft"][:, -1, 1], y4_ftS=rp["ftS"][:, -1, 1], y4_p0=rp["p0"][:, -1, 1])
+    D["x_ft"], D["x_p0"] = rp["ft"][:, :, 0], rp["p0"][:, :, 0]                  # plan x at 0.5 .. 4 s in the rig frame of t0
     for n in ("ft", "p0"):
         ld = rp[f"lead_{n}"][:, :72].reshape(-1, 3, 6, 4)
         D[f"p_{n}"], D[f"d_{n}"], D[f"vl_{n}"], D[f"y_{n}"] = sig(rp[f"lp_{n}"][:, 0]), ld[:, 0, 0, 0] - bump, ld[:, 0, 0, 2], ld[:, 0, 0, 1]
@@ -191,6 +192,13 @@ def scene_rows(o, rp, ref):
              for t in gt[::2, 0] if o["actors"][k][0, 0] <= t <= o["actors"][k][-1, 0])
     ca, cb = counterfactual(o, off, gt_rig, te)
     front = m["collision_front"] > 0
+    # does a plan reach the object within 4 s if the object keeps its speed (plan x minus the object's travel against the gap)
+    th = np.arange(1, 9) * 0.5
+    for n in ("ft", "p0"):
+        D[f"thru_{n}"] = ((D[f"x_{n}"] - np.maximum(ve - r[:, 3], 0)[:, None] * th) >= r[:, 0][:, None]).any(1)
+    w4 = slice(max(ie - 40, 0), ie)
+    row.update(thru_ft_last4s=float(D["thru_ft"][w4].mean()) if ie else np.nan, thru_p0_last4s=float(D["thru_p0"][w4].mean()) if ie else np.nan,
+               arc_p0_over_ft_last4s=float(np.median(D["arc_p0"][w4] / np.maximum(D["arc_ft"][w4], 0.5))) if ie else np.nan)
     row.update(t_evt=(te - T0) * 1e-6, obj=k, obj_label=lab, cls=cls, contact="front" if front else "lateral", v_ego_evt=float(ve[ie]), v_obj_evt=vo,
                obj_lat_to_log_path=ylog, obj_moved=moved, driven_to_evt=float(np.hypot(*np.diff(ego[ego[:, 0] <= te, 1:3], axis=0).T).sum()),
                ego_lat_evt=float(lat[ie, 0]), ego_ahead_of_log=float(lat[ie, 1] - L.lat_to_path(gt_rig[:, 1:3], glog[ie:ie + 1, :2])[0, 1]),
@@ -281,12 +289,13 @@ def main():
       f"(max {max(D['replay_err'].max() for D in Ds.values()):.3f} m).\n")
     P("## At-fault collisions, one row per rollout\n")
     P("| scene | class | contact | t s | driven m | ego m/s | object m/s | ego off the logged path m | ego ahead of the log m | first visible: s before / gap m / TTC s | "
-      "plan 4 s arc / (4 v): min, last 1 s | plan / log 4 s | log's own min distance m | clear on the logged path | clear at the log's position | alpamayo1 | start m/s |")
-    P("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|---|--:|--:|")
+      "plan 4 s arc / (4 v): min, last 1 s | plan / log 4 s | last 4 s: served plan reaches the object / shipped plan reaches it / shipped arc over served | log's own min distance m | clear on the logged path | clear at the log's position | alpamayo1 | start m/s |")
+    P("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|---|--:|--:|")
     for r in col:
         P(f"| {r['scene']} | {r['cls']} | {r['contact']} | {r['t_evt']:.1f} | {r['driven_to_evt']:.0f} | {r['v_ego_evt']:.1f} | {r['v_obj_evt']:.1f} | "
           f"{r['ego_lat_evt']:+.2f} | {r['ego_ahead_of_log']:+.1f} | {r['t_visible_before']:.1f} / {r['gap_first_visible']:.1f} / {r['ttc_first_visible']:.1f} | "
-          f"{r['plan_ratio_min']:.2f}, {r['plan_ratio_last1s']:.2f} | {r['plan_arc_vs_log_4s']:.2f} | {r['human_min_dist']:.2f} | "
+          f"{r['plan_ratio_min']:.2f}, {r['plan_ratio_last1s']:.2f} | {r['plan_arc_vs_log_4s']:.2f} | "
+          f"{r['thru_ft_last4s']:.0%} / {r['thru_p0_last4s']:.0%} / {r['arc_p0_over_ft_last4s']:.2f} | {r['human_min_dist']:.2f} | "
           f"{'yes' if r['clear_on_log_path'] else 'no'} | {'yes' if r['clear_at_log_position'] else 'no'} | "
           f"{'' if r['ref_alpamayo1'] is None else format(r['ref_alpamayo1'], '.2f')} | {r['v0']:.1f} |")
     P("\n## Class counts\n\n| class | n | share | ego off the logged path > 1 m | ego ahead of the log > 2 m | clear at the log's position | alpamayo1 mean |\n|---|--:|--:|--:|--:|--:|--:|")

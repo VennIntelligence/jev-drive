@@ -7,7 +7,7 @@
 # Env: DATA_DIR (/data), ALPASIM_SRC, NUREC (scene cache with all-usdzs/, pai_fetch.sh), IMG (driver image), BASE (trusted image),
 #   GPU (card of renderer + physics, default 1), DGPU (driver card, default $GPU), STAGE (rows of the tsv with stage <= this, default 1),
 #   CONC (concurrent rollouts, default 1), TAG (checkpoint, default P2H10-F-s0), DRV_ENV (extra `-e K=V` for the driver, space
-#   separated), PAI_BASEPORT (default 6400), HARMONIZER (0 = the renderer of the public leaderboard: the dev preset's
+#   separated), DRV_PY (a driver variant in lib/ run instead of pai_driver.py, e.g. col1_pai_driver.py), PAI_BASEPORT (default 6400), HARMONIZER (0 = the renderer of the public leaderboard: the dev preset's
 #   `--enable-harmonizer` removed, as the ec2 preset does; 1 = the dev preset as shipped, which is how the bundled reference runs were
 #   made; the weights are then mounted from $NUREC/harmonizer because the renderer cannot fetch them from inside the container).
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, usage.jsonl (2 s: per-process VRAM, per-container RAM / CPU), driver/ (drive.jsonl,
@@ -36,8 +36,9 @@ lib=$here/../lib
 docker run -d --name "$N" --init --cap-drop ALL --security-opt no-new-privileges:true --read-only --pids-limit 1024 --memory 32g --cpus 8 \
   --tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777 --tmpfs /run:rw,nosuid,nodev,size=64m,mode=0755 --network $NET --gpus "device=$DGPU" \
   -v "$lib/pai_core.py:/app/jev-drive/experiments/alpasim/lib/pai_core.py:ro" -v "$lib/pai_driver.py:/app/jev-drive/experiments/alpasim/lib/pai_driver.py:ro" \
+  ${DRV_PY:+-v "$lib/$DRV_PY:/app/jev-drive/experiments/alpasim/lib/$DRV_PY:ro"} \
   -v "$OUT/driver:/logs" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "SH30_TAG=$TAG" ${DRV_ENV:-} \
-  "$IMG" python /app/jev-drive/experiments/alpasim/lib/pai_driver.py >/dev/null || die "docker run"
+  "$IMG" python "/app/jev-drive/experiments/alpasim/lib/${DRV_PY:-pai_driver.py}" >/dev/null || die "docker run"
 t0=$(date +%s)
 until docker logs "$N" 2>&1 | grep -q "listening on"; do
   [[ $(docker inspect -f '{{.State.Running}}' "$N") == true ]] || die "driver exited before listening"; (( $(date +%s) - t0 > 600 )) && die "driver not listening"; sleep 0.5

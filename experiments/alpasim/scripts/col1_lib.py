@@ -6,14 +6,19 @@ import sys
 
 import numpy as np
 
-if not hasattr(np, "_core"):                                    # pickles written under numpy 2, read under numpy 1
-    import numpy.core as _c
-    for _n in ("numpy._core", "numpy._core.multiarray", "numpy._core.numeric"):
-        sys.modules.setdefault(_n, getattr(_c, _n.split(".")[-1], _c))
-
-
 def load(f):
-    return pickle.load(open(f, "rb"))
+    """A pickle written under numpy 2, also under numpy 1 (the module alias exists only during the load: shapely checks for it)."""
+    if hasattr(np, "_core"):
+        return pickle.load(open(f, "rb"))
+    import numpy.core as _c
+    names = ("numpy._core", "numpy._core.multiarray", "numpy._core.numeric")
+    for n in names:
+        sys.modules[n] = getattr(_c, n.split(".")[-1], _c)
+    try:
+        return pickle.load(open(f, "rb"))
+    finally:
+        for n in names:
+            sys.modules.pop(n, None)
 
 
 def rot(a):

@@ -74,3 +74,20 @@ Offline read on rollouts whose traffic does not react (nuPlan) or replays the lo
 contact (not at fault) or lost progress, neither is estimated beyond the false-alarm counts. On nuPlan six of the eight slots per decision
 are synthesised frames (decision 205), and decision 202 found no class-A collision among SH30 / AP2 zeros on 400 scenes, so C_A may be
 small there. PAI: one checkpoint, one rollout per scene, at most 40 scenes.
+
+## Amendment 1 (2026-10-09, before the run it describes): PAI diagnostic arm for a serving-side defect
+
+Found while checking the PAI inputs (description of existing runs, 20 scenes): the trajectory the driver returns is a linear
+resampling of the plan's 0.5 s points, so its first segment has the plan's mean speed whatever the ego's speed is. At the hand-over
+(1.7 s) that speed is 6-7 % below the ego's in the two scenes above 23 m/s, and in both the nonlinear MPC's first commands are
+saturated braking (-9 m/s^2) and steering (0.66 / 0.73 rad): both rollouts spin and are scored offroad. The four scenes between 16 and
+23 m/s (-3 to -11 %) show braking to -4.6 m/s^2 without the steering. At 5-12 m/s the served plan's first segment is 5-28 % above the
+ego's speed (the shipped policy on the same tokens: -7 to +5 % in 7 of 8), and the ego accelerates at 1.5-3.8 m/s^2 after the hand-over.
+
+Arm `v1`: `lib/col1_pai_driver.py`, PAI_VCONT = 1.0 s (the plan's path re-timed to start at the ego's speed and join the plan's speed
+profile after 1 s), P2H10-F-s0, the 10 scenes and chunking of `a10_c4` (4 concurrent), Harmonizer off. Nothing else changes.
+No line; it is a diagnostic, not a candidate. Reported: zeros by flag against `a10_c4`, per-scene score and flag, and for the two
+scenes above 23 m/s the largest steering and braking command in the 1.2 s after the hand-over. Stated in advance: if the defect is the
+cause, those two rollouts no longer spin (|steer| < 0.1 rad in that window); nothing is expected or claimed for the collisions, whose
+approach speeds the arm lowers only through the 1 s ramp. The simulator's repeatability on this track is not known (pai1's three runs
+of these scenes gave the same 8 zero scenes), so single-scene changes other than the two spins are not interpreted.
