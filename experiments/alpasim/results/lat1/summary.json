@@ -1,0 +1,1417 @@
+{
+ "equiv": {
+  "tag": "P2H10-F-s0",
+  "scenes": 400,
+  "decisions": 4000,
+  "cold": 1200,
+  "px": 12582912000,
+  "px_diff": 0,
+  "px_max": 0,
+  "decisions_with_diff": 0,
+  "frames_diff": 0,
+  "end_gpu": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "yaw_gpu": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "mu_gpu": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "end_rep": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "yaw_rep": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "mu_rep": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "ms": {
+   "cpu": {
+    "frames": [
+     66.338,
+     79.346,
+     97.76
+    ],
+    "encode": [
+     14.727,
+     21.894,
+     28.201
+    ],
+    "policy": [
+     20.068,
+     27.842,
+     172.11
+    ],
+    "export": [
+     0.249,
+     0.368,
+     0.756
+    ]
+   },
+   "gpu": {
+    "frames": [
+     9.438,
+     11.711,
+     37.643
+    ],
+    "encode": [
+     16.971,
+     21.82,
+     30.036
+    ],
+    "policy": [
+     19.986,
+     27.026,
+     36.011
+    ],
+    "export": [
+     0.559,
+     0.729,
+     1.261
+    ]
+   }
+  },
+  "ms_total": {
+   "cpu": [
+    100.874,
+    119.969,
+    257.897
+   ],
+   "gpu": [
+    45.056,
+    61.235,
+    94.376
+   ]
+  },
+  "vram_gib_two_cores": 3.470487594604492
+ },
+ "equiv_ap2": {
+  "tag": "AP2-AB-s0",
+  "scenes": 60,
+  "decisions": 600,
+  "cold": 180,
+  "px": 1887436800,
+  "px_diff": 0,
+  "px_max": 0,
+  "decisions_with_diff": 0,
+  "frames_diff": 0,
+  "end_gpu": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "yaw_gpu": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "mu_gpu": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "end_rep": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "yaw_rep": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "mu_rep": {
+   "max": 0.0,
+   "mean": 0.0,
+   "nonzero": 0
+  },
+  "ms": {
+   "cpu": {
+    "frames": [
+     72.509,
+     84.695,
+     96.303
+    ],
+    "encode": [
+     12.655,
+     15.591,
+     20.179
+    ],
+    "policy": [
+     14.007,
+     18.661,
+     23.662
+    ],
+    "export": [
+     0.218,
+     0.259,
+     0.839
+    ]
+   },
+   "gpu": {
+    "frames": [
+     3.793,
+     12.168,
+     26.893
+    ],
+    "encode": [
+     10.552,
+     14.152,
+     22.747
+    ],
+    "policy": [
+     13.646,
+     17.774,
+     23.145
+    ],
+    "export": [
+     0.495,
+     0.551,
+     1.711
+    ]
+   }
+  },
+  "ms_total": {
+   "cpu": [
+    100.298,
+    113.557,
+    125.476
+   ],
+   "gpu": [
+    28.83,
+    40.047,
+    57.152
+   ]
+  },
+  "vram_gib_two_cores": 3.470487594604492
+ },
+ "load_cpu_s2": {
+  "tag": "P2H10-F-s0",
+  "synth": "cpu",
+  "sync": true,
+  "pack": "pack",
+  "streams": 2,
+  "scenes": 64,
+  "drives": 640,
+  "wall_s": 56.4,
+  "cpus": 8,
+  "ms": {
+   "frames": [
+    54.37,
+    67.464,
+    82.71
+   ],
+   "encode": [
+    14.45,
+    22.58,
+    31.69
+   ],
+   "policy": [
+    15.975,
+    21.082,
+    28.59
+   ],
+   "wait": [
+    57.62,
+    72.393,
+    88.72
+   ],
+   "total": [
+    144.255,
+    168.257,
+    195.06
+   ]
+  },
+  "pack_ms": [
+   26.45,
+   56.816,
+   83.56
+  ],
+  "vram_gib": 3.1477794647216797,
+  "vram_reserved_gib": 3.22265625
+ },
+ "load_cpu_s8": {
+  "tag": "P2H10-F-s0",
+  "synth": "cpu",
+  "sync": true,
+  "pack": "pack",
+  "streams": 8,
+  "scenes": 64,
+  "drives": 640,
+  "wall_s": 57.7,
+  "cpus": 8,
+  "ms": {
+   "frames": [
+    53.755,
+    66.08,
+    104.95
+   ],
+   "encode": [
+    15.015,
+    29.043,
+    38.8
+   ],
+   "policy": [
+    15.905,
+    22.641,
+    32.91
+   ],
+   "wait": [
+    582.985,
+    657.939,
+    731.16
+   ],
+   "total": [
+    670.475,
+    757.575,
+    823.56
+   ]
+  },
+  "pack_ms": [
+   26.02,
+   55.578,
+   148.66
+  ],
+  "vram_gib": 8.92725658416748,
+  "vram_reserved_gib": 9.17578125
+ },
+ "load_gpu_nosync_s2": {
+  "tag": "P2H10-F-s0",
+  "synth": "gpu",
+  "sync": false,
+  "pack": "fast",
+  "streams": 2,
+  "scenes": 64,
+  "drives": 640,
+  "wall_s": 27.0,
+  "cpus": 8,
+  "ms": {
+   "frames": [
+    5.82,
+    16.38,
+    32.99
+   ],
+   "encode": [
+    15.18,
+    17.77,
+    23.38
+   ],
+   "policy": [
+    16.15,
+    20.252,
+    25.75
+   ],
+   "wait": [
+    21.855,
+    30.39,
+    52.55
+   ],
+   "total": [
+    61.4,
+    73.567,
+    91.63
+   ]
+  },
+  "pack_ms": [
+   15.11,
+   48.87,
+   84.78
+  ],
+  "vram_gib": 4.328465461730957,
+  "vram_reserved_gib": 4.44140625
+ },
+ "load_gpu_nosync_s8": {
+  "tag": "P2H10-F-s0",
+  "synth": "gpu",
+  "sync": false,
+  "pack": "fast",
+  "streams": 8,
+  "scenes": 64,
+  "drives": 640,
+  "wall_s": 26.6,
+  "cpus": 8,
+  "ms": {
+   "frames": [
+    5.935,
+    18.284,
+    37.27
+   ],
+   "encode": [
+    14.52,
+    22.962,
+    41.79
+   ],
+   "policy": [
+    14.605,
+    22.482,
+    32.0
+   ],
+   "wait": [
+    255.635,
+    305.394,
+    394.18
+   ],
+   "total": [
+    295.65,
+    350.422,
+    441.45
+   ]
+  },
+  "pack_ms": [
+   16.135,
+   53.402,
+   101.83
+  ],
+  "vram_gib": 14.722037315368652,
+  "vram_reserved_gib": 15.1484375
+ },
+ "load_gpu_packgpu_s8": {
+  "tag": "P2H10-F-s0",
+  "synth": "gpu",
+  "sync": true,
+  "pack": "gpu",
+  "streams": 8,
+  "scenes": 64,
+  "drives": 640,
+  "wall_s": 34.8,
+  "cpus": 8,
+  "ms": {
+   "frames": [
+    5.49,
+    20.602,
+    78.22
+   ],
+   "encode": [
+    21.305,
+    31.312,
+    48.08
+   ],
+   "policy": [
+    22.775,
+    27.911,
+    32.94
+   ],
+   "wait": [
+    350.615,
+    388.495,
+    437.45
+   ],
+   "total": [
+    403.33,
+    446.202,
+    515.05
+   ]
+  },
+  "pack_ms": [
+   16.31,
+   47.57,
+   123.81
+  ],
+  "vram_gib": 13.340182304382324,
+  "vram_reserved_gib": 13.7734375
+ },
+ "load_gpu_s2": {
+  "tag": "P2H10-F-s0",
+  "synth": "gpu",
+  "sync": true,
+  "pack": "fast",
+  "streams": 2,
+  "scenes": 64,
+  "drives": 640,
+  "wall_s": 24.8,
+  "cpus": 8,
+  "ms": {
+   "frames": [
+    5.645,
+    15.043,
+    26.25
+   ],
+   "encode": [
+    13.59,
+    16.371,
+    21.83
+   ],
+   "policy": [
+    14.31,
+    18.87,
+    25.43
+   ],
+   "wait": [
+    17.775,
+    26.28,
+    38.19
+   ],
+   "total": [
+    53.715,
+    65.385,
+    82.68
+   ]
+  },
+  "pack_ms": [
+   15.495,
+   51.318,
+   80.42
+  ],
+  "vram_gib": 4.328464031219482,
+  "vram_reserved_gib": 4.439453125
+ },
+ "load_gpu_s8": {
+  "tag": "P2H10-F-s0",
+  "synth": "gpu",
+  "sync": true,
+  "pack": "fast",
+  "streams": 8,
+  "scenes": 64,
+  "drives": 640,
+  "wall_s": 27.6,
+  "cpus": 8,
+  "ms": {
+   "frames": [
+    5.99,
+    18.775,
+    42.31
+   ],
+   "encode": [
+    14.235,
+    24.221,
+    42.8
+   ],
+   "policy": [
+    15.02,
+    25.094,
+    33.2
+   ],
+   "wait": [
+    265.615,
+    313.43,
+    360.37
+   ],
+   "total": [
+    309.015,
+    358.034,
+    402.06
+   ]
+  },
+  "pack_ms": [
+   15.065,
+   50.617,
+   109.49
+  ],
+  "vram_gib": 14.663654804229736,
+  "vram_reserved_gib": 15.02734375
+ },
+ "load_same": [
+  {
+   "decisions_a": 640,
+   "decisions_b": 640,
+   "common": 640,
+   "differing": 0,
+   "max_abs": 0.0
+  },
+  {
+   "decisions_a": 640,
+   "decisions_b": 640,
+   "common": 640,
+   "differing": 0,
+   "max_abs": 0.0
+  }
+ ],
+ "model": {
+  "encode x1": {
+   "host_enqueue_ms": [
+    9.884,
+    11.254,
+    11.477
+   ],
+   "until_done_ms": [
+    10.238,
+    15.582,
+    19.715
+   ],
+   "aten_calls": 2829,
+   "top": [
+    [
+     "aten::to",
+     321
+    ],
+    [
+     "aten::view",
+     270
+    ],
+    [
+     "aten::reshape",
+     268
+    ],
+    [
+     "aten::copy_",
+     169
+    ],
+    [
+     "aten::_to_copy",
+     165
+    ],
+    [
+     "aten::empty_strided",
+     165
+    ],
+    [
+     "aten::matmul",
+     144
+    ],
+    [
+     "aten::mm",
+     144
+    ]
+   ]
+  },
+  "encode x2": {
+   "host_enqueue_ms": [
+    10.623,
+    12.226,
+    13.74
+   ],
+   "until_done_ms": [
+    13.28,
+    21.714,
+    22.261
+   ]
+  },
+  "encode x4": {
+   "host_enqueue_ms": [
+    11.146,
+    12.023,
+    12.371
+   ],
+   "until_done_ms": [
+    25.805,
+    43.64,
+    58.806
+   ]
+  },
+  "policy x1": {
+   "host_enqueue_ms": [
+    14.287,
+    15.145,
+    16.26
+   ],
+   "until_done_ms": [
+    14.516,
+    15.331,
+    16.327
+   ],
+   "aten_calls": 3910,
+   "top": [
+    [
+     "aten::view",
+     407
+    ],
+    [
+     "aten::to",
+     402
+    ],
+    [
+     "aten::as_strided",
+     342
+    ],
+    [
+     "aten::copy_",
+     251
+    ],
+    [
+     "aten::reshape",
+     234
+    ],
+    [
+     "aten::empty",
+     226
+    ],
+    [
+     "aten::empty_strided",
+     220
+    ],
+    [
+     "aten::_to_copy",
+     218
+    ]
+   ]
+  },
+  "policy x2": {
+   "host_enqueue_ms": [
+    13.888,
+    15.928,
+    19.113
+   ],
+   "until_done_ms": [
+    14.087,
+    16.155,
+    19.208
+   ]
+  },
+  "policy x4": {
+   "host_enqueue_ms": [
+    14.492,
+    16.429,
+    16.707
+   ],
+   "until_done_ms": [
+    14.623,
+    16.94,
+    17.66
+   ]
+  },
+  "graph_nodes": {
+   "encode": 423,
+   "total": 837,
+   "dtype": "torch.float16"
+  },
+  "cpus": 3
+ },
+ "nvjpeg": {
+  "tag": "P2H10-F-s0",
+  "scenes": 14,
+  "decisions": 140,
+  "images": 154,
+  "pack_ms_libjpeg": [
+   16.468,
+   30.46,
+   68.007
+  ],
+  "pack_ms_nvjpeg": [
+   2.003,
+   9.522,
+   9.931
+  ],
+  "px_differing_share": 0.013639673010095374,
+  "px_mean_abs": 0.014727885588939055,
+  "px_max": 10,
+  "end_4s_m": [
+   0.012,
+   0.075,
+   0.272,
+   0.022710025310516357
+  ],
+  "yaw_05s_deg": [
+   0.001,
+   0.007,
+   0.01,
+   0.0017201014561578631
+  ],
+  "note": "percentiles 50 / 95 / 100, then the mean"
+ },
+ "prof": {
+  "cpus": 4,
+  "jpeg_bytes": 337420,
+  "ms_median_p95_max": {
+   "track: build": [
+    0.235,
+    0.261,
+    0.296
+   ],
+   "track: 12 poses": [
+    0.159,
+    0.165,
+    0.19
+   ],
+   "lattice cpu (8 threads)": [
+    78.012,
+    98.706,
+    105.572
+   ],
+   "lattice gpu + sync": [
+    7.398,
+    9.785,
+    9.813
+   ],
+   "warp_gpu + sync (6 frames)": [
+    3.013,
+    7.464,
+    7.505
+   ],
+   "keys -> device": [
+    0.145,
+    0.158,
+    0.198
+   ],
+   "jpeg decode (PIL, YCbCr)": [
+    11.87,
+    13.236,
+    13.947
+   ],
+   "model-frame packing (numpy)": [
+    11.39,
+    12.507,
+    12.93
+   ],
+   "model-frame packing (gpu) + sync": [
+    23.411,
+    30.024,
+    31.75
+   ]
+  }
+ },
+ "prof2": {
+  "cpus": 3,
+  "jpeg_bytes": 313298,
+  "ms_median_p95_max": {
+   "track: build": [
+    0.233,
+    0.289,
+    0.357
+   ],
+   "track: 12 poses": [
+    0.158,
+    0.178,
+    0.239
+   ],
+   "lattice cpu (8 threads)": [
+    108.673,
+    132.534,
+    162.387
+   ],
+   "lattice gpu + sync": [
+    2.937,
+    4.178,
+    8.597
+   ],
+   "warp_gpu + sync (6 frames)": [
+    1.68,
+    6.167,
+    7.761
+   ],
+   "keys -> device": [
+    0.139,
+    0.153,
+    0.172
+   ],
+   "jpeg decode (PIL, YCbCr)": [
+    12.712,
+    17.94,
+    18.804
+   ],
+   "model-frame packing (numpy)": [
+    14.461,
+    19.524,
+    20.243
+   ],
+   "jpeg decode + packing: pack": [
+    31.857,
+    36.635,
+    38.167
+   ],
+   "jpeg decode + packing: pack_fast": [
+    19.752,
+    23.378,
+    25.27
+   ],
+   "jpeg decode + packing: pack_gpu + sync": [
+    20.326,
+    23.63,
+    30.763
+   ]
+  }
+ },
+ "remap_final": {
+  "scenes": 100,
+  "px": 39321600,
+  "px_diff": 0,
+  "px_max": 0,
+  "pack_px": 865075200,
+  "pack_px_diff": 0,
+  "pack_px_max": 0,
+  "grid_sample_px_diff": 1624214,
+  "grid_sample_px_max": 4,
+  "cv2": "4.11.0"
+ },
+ "runs_cpu_vs_gpu": {
+  "a": {
+   "run": "/root/autodl-tmp/ujs/runs/alpasim/lat1/runs/s1-cpu/20261009-162527",
+   "scenes": 126,
+   "mean_score": 0.9390043987598367,
+   "zeros": 6,
+   "decisions": 1260,
+   "runtime_s": 453.1423773765564,
+   "driver_gpu_mib": 3606.0,
+   "driver_cpu_s": 349.2,
+   "driver_rss_gib": 2.724395751953125,
+   "ms": {
+    "frames": [
+     60.41,
+     97.791,
+     149.97
+    ],
+    "encode": [
+     13.47,
+     20.372,
+     41.6
+    ],
+    "policy": [
+     14.995,
+     21.33,
+     46.07
+    ],
+    "export": [
+     0.23,
+     0.26,
+     3.98
+    ],
+    "prep": [
+     0.22,
+     0.58,
+     2.61
+    ],
+    "wait": [
+     0.0,
+     53.77,
+     253.09
+    ],
+    "total": [
+     94.52,
+     156.304,
+     341.63
+    ]
+   },
+   "pack_ms": [
+    27.285,
+    57.852,
+    132.01
+   ],
+   "rpc_mean_ms": {
+    "start_session": 4.85,
+    "submit_image_observation": 12.65,
+    "submit_egomotion_observation": 8.7,
+    "submit_route": 8.95,
+    "drive": 109.2,
+    "close_session": 6.32
+   }
+  },
+  "b": {
+   "run": "/root/autodl-tmp/ujs/runs/alpasim/lat1/runs/s1-gpu/20261009-162527",
+   "scenes": 126,
+   "mean_score": 0.9390043987598367,
+   "zeros": 6,
+   "decisions": 1260,
+   "runtime_s": 449.12992548942566,
+   "driver_gpu_mib": 3808.0,
+   "driver_cpu_s": 96.22,
+   "driver_rss_gib": 3.3677291870117188,
+   "ms": {
+    "frames": [
+     5.14,
+     13.663,
+     42.37
+    ],
+    "encode": [
+     11.03,
+     24.794,
+     37.37
+    ],
+    "policy": [
+     13.97,
+     23.117,
+     47.97
+    ],
+    "export": [
+     0.5,
+     1.36,
+     6.95
+    ],
+    "prep": [
+     0.21,
+     0.49,
+     2.03
+    ],
+    "wait": [
+     0.0,
+     7.824,
+     86.73
+    ],
+    "total": [
+     34.72,
+     65.562,
+     135.98
+    ]
+   },
+   "pack_ms": [
+    16.405,
+    47.847,
+    85.81
+   ],
+   "rpc_mean_ms": {
+    "start_session": 5.71,
+    "submit_image_observation": 11.35,
+    "submit_egomotion_observation": 9.22,
+    "submit_route": 10.03,
+    "drive": 43.33,
+    "close_session": 4.61
+   }
+  },
+  "cmp": {
+   "scenes_common": 126,
+   "scores_differing": 0,
+   "score_max_abs": 0.0,
+   "decisions_common": 1260,
+   "decisions_only_a": 0,
+   "decisions_only_b": 0,
+   "decisions_differing": 9,
+   "max_abs": 0.4677009582519531,
+   "scenes_with_a_differing_decision": 1
+  }
+ },
+ "runs_ref_vs_cpu": {
+  "a": {
+   "run": "/root/autodl-tmp/ujs/runs/alpasim/m1/runs/s1-p2h10/20261009-101036",
+   "scenes": 126,
+   "mean_score": 0.9390043987598367,
+   "zeros": 6,
+   "decisions": 1260,
+   "runtime_s": 526.0682008266449,
+   "driver_gpu_mib": 3606.0,
+   "driver_cpu_s": 374.05,
+   "driver_rss_gib": 2.7081680297851562,
+   "ms": {
+    "frames": [
+     63.94,
+     97.623,
+     171.28
+    ],
+    "encode": [
+     13.76,
+     21.844,
+     36.9
+    ],
+    "policy": [
+     16.22,
+     26.733,
+     47.17
+    ],
+    "export": [
+     0.26,
+     0.34,
+     5.35
+    ],
+    "prep": [
+     0.24,
+     0.61,
+     18.56
+    ],
+    "wait": [
+     0.0,
+     47.304,
+     317.97
+    ],
+    "total": [
+     99.325,
+     162.774,
+     435.72
+    ]
+   },
+   "pack_ms": [
+    29.96,
+    61.305,
+    103.18
+   ],
+   "rpc_mean_ms": {
+    "start_session": 5.3,
+    "submit_image_observation": 13.31,
+    "submit_egomotion_observation": 10.42,
+    "submit_route": 10.81,
+    "drive": 113.29,
+    "close_session": 4.11
+   }
+  },
+  "b": {
+   "run": "/root/autodl-tmp/ujs/runs/alpasim/lat1/runs/s1-cpu/20261009-162527",
+   "scenes": 126,
+   "mean_score": 0.9390043987598367,
+   "zeros": 6,
+   "decisions": 1260,
+   "runtime_s": 453.1423773765564,
+   "driver_gpu_mib": 3606.0,
+   "driver_cpu_s": 349.2,
+   "driver_rss_gib": 2.724395751953125,
+   "ms": {
+    "frames": [
+     60.41,
+     97.791,
+     149.97
+    ],
+    "encode": [
+     13.47,
+     20.372,
+     41.6
+    ],
+    "policy": [
+     14.995,
+     21.33,
+     46.07
+    ],
+    "export": [
+     0.23,
+     0.26,
+     3.98
+    ],
+    "prep": [
+     0.22,
+     0.58,
+     2.61
+    ],
+    "wait": [
+     0.0,
+     53.77,
+     253.09
+    ],
+    "total": [
+     94.52,
+     156.304,
+     341.63
+    ]
+   },
+   "pack_ms": [
+    27.285,
+    57.852,
+    132.01
+   ],
+   "rpc_mean_ms": {
+    "start_session": 4.85,
+    "submit_image_observation": 12.65,
+    "submit_egomotion_observation": 8.7,
+    "submit_route": 8.95,
+    "drive": 109.2,
+    "close_session": 6.32
+   }
+  },
+  "cmp": {
+   "scenes_common": 126,
+   "scores_differing": 0,
+   "score_max_abs": 0.0,
+   "decisions_common": 1260,
+   "decisions_only_a": 0,
+   "decisions_only_b": 0,
+   "decisions_differing": 9,
+   "max_abs": 0.4677009582519531,
+   "scenes_with_a_differing_decision": 1
+  }
+ },
+ "runs_ref_vs_gpu": {
+  "a": {
+   "run": "/root/autodl-tmp/ujs/runs/alpasim/m1/runs/s1-p2h10/20261009-101036",
+   "scenes": 126,
+   "mean_score": 0.9390043987598367,
+   "zeros": 6,
+   "decisions": 1260,
+   "runtime_s": 526.0682008266449,
+   "driver_gpu_mib": 3606.0,
+   "driver_cpu_s": 374.05,
+   "driver_rss_gib": 2.7081680297851562,
+   "ms": {
+    "frames": [
+     63.94,
+     97.623,
+     171.28
+    ],
+    "encode": [
+     13.76,
+     21.844,
+     36.9
+    ],
+    "policy": [
+     16.22,
+     26.733,
+     47.17
+    ],
+    "export": [
+     0.26,
+     0.34,
+     5.35
+    ],
+    "prep": [
+     0.24,
+     0.61,
+     18.56
+    ],
+    "wait": [
+     0.0,
+     47.304,
+     317.97
+    ],
+    "total": [
+     99.325,
+     162.774,
+     435.72
+    ]
+   },
+   "pack_ms": [
+    29.96,
+    61.305,
+    103.18
+   ],
+   "rpc_mean_ms": {
+    "start_session": 5.3,
+    "submit_image_observation": 13.31,
+    "submit_egomotion_observation": 10.42,
+    "submit_route": 10.81,
+    "drive": 113.29,
+    "close_session": 4.11
+   }
+  },
+  "b": {
+   "run": "/root/autodl-tmp/ujs/runs/alpasim/lat1/runs/s1-gpu/20261009-162527",
+   "scenes": 126,
+   "mean_score": 0.9390043987598367,
+   "zeros": 6,
+   "decisions": 1260,
+   "runtime_s": 449.12992548942566,
+   "driver_gpu_mib": 3808.0,
+   "driver_cpu_s": 96.22,
+   "driver_rss_gib": 3.3677291870117188,
+   "ms": {
+    "frames": [
+     5.14,
+     13.663,
+     42.37
+    ],
+    "encode": [
+     11.03,
+     24.794,
+     37.37
+    ],
+    "policy": [
+     13.97,
+     23.117,
+     47.97
+    ],
+    "export": [
+     0.5,
+     1.36,
+     6.95
+    ],
+    "prep": [
+     0.21,
+     0.49,
+     2.03
+    ],
+    "wait": [
+     0.0,
+     7.824,
+     86.73
+    ],
+    "total": [
+     34.72,
+     65.562,
+     135.98
+    ]
+   },
+   "pack_ms": [
+    16.405,
+    47.847,
+    85.81
+   ],
+   "rpc_mean_ms": {
+    "start_session": 5.71,
+    "submit_image_observation": 11.35,
+    "submit_egomotion_observation": 9.22,
+    "submit_route": 10.03,
+    "drive": 43.33,
+    "close_session": 4.61
+   }
+  },
+  "cmp": {
+   "scenes_common": 126,
+   "scores_differing": 0,
+   "score_max_abs": 0.0,
+   "decisions_common": 1260,
+   "decisions_only_a": 0,
+   "decisions_only_b": 0,
+   "decisions_differing": 0,
+   "max_abs": 0.0,
+   "scenes_with_a_differing_decision": 0
+  }
+ },
+ "trace_try": {
+  "encode": {
+   "interpreted_ms": 9.95,
+   "jit.trace": {
+    "error": "RuntimeError('Unsupported value kind: Tensor')"
+   },
+   "compile aot_eager": {
+    "ms": 8.31,
+    "first_calls_s": 5.3,
+    "max_abs_diff": 0.0,
+    "identical": true
+   },
+   "compile inductor": {
+    "ms": 6.59,
+    "first_calls_s": 23.9,
+    "max_abs_diff": 0.0234375,
+    "identical": false
+   }
+  },
+  "policy": {
+   "interpreted_ms": 13.85,
+   "jit.trace": {
+    "error": "RuntimeError('Cannot insert a Tensor that requires grad as a constant. Consider making it a parameter or input, or detaching the gradient\\nTensor:\\nColumns 1 to 100.01 *\\n 2.7733  4.1586 -1.2168 -3.3182 -0.6735  0.4157  0.0071 -2.2981 -1.6168 -2.3313\\n -3.8046 -3.2175  1.9331  0.1678  2.7069  2.2302"
+   },
+   "compile aot_eager": {
+    "ms": 12.08,
+    "first_calls_s": 6.5,
+    "max_abs_diff": 0.0,
+    "identical": true
+   },
+   "compile inductor": {
+    "ms": 3.01,
+    "first_calls_s": 22.7,
+    "max_abs_diff": 0.046875,
+    "identical": false
+   }
+  }
+ },
+ "runs_gpu_vs_w32": {
+  "a": {
+   "run": "/root/autodl-tmp/ujs/runs/alpasim/lat1/runs/s1-gpu/20261009-162527",
+   "scenes": 126,
+   "mean_score": 0.9390043987598367,
+   "zeros": 6,
+   "decisions": 1260,
+   "runtime_s": 449.12992548942566,
+   "driver_gpu_mib": 3808.0,
+   "driver_cpu_s": 96.22,
+   "driver_rss_gib": 3.3677291870117188,
+   "ms": {
+    "frames": [
+     5.14,
+     13.663,
+     42.37
+    ],
+    "encode": [
+     11.03,
+     24.794,
+     37.37
+    ],
+    "policy": [
+     13.97,
+     23.117,
+     47.97
+    ],
+    "export": [
+     0.5,
+     1.36,
+     6.95
+    ],
+    "prep": [
+     0.21,
+     0.49,
+     2.03
+    ],
+    "wait": [
+     0.0,
+     7.824,
+     86.73
+    ],
+    "total": [
+     34.72,
+     65.562,
+     135.98
+    ]
+   },
+   "pack_ms": [
+    16.405,
+    47.847,
+    85.81
+   ],
+   "rpc_mean_ms": {
+    "start_session": 5.71,
+    "submit_image_observation": 11.35,
+    "submit_egomotion_observation": 9.22,
+    "submit_route": 10.03,
+    "drive": 43.33,
+    "close_session": 4.61
+   }
+  },
+  "b": {
+   "run": "/root/autodl-tmp/ujs/runs/alpasim/lat1/runs/s1-gpu-w32/20261009-163659",
+   "scenes": 126,
+   "mean_score": 0.9390043987598367,
+   "zeros": 6,
+   "decisions": 1260,
+   "runtime_s": 435.1245799064636,
+   "driver_gpu_mib": 4980.0,
+   "driver_cpu_s": 98.94,
+   "driver_rss_gib": 4.070796966552734,
+   "ms": {
+    "frames": [
+     5.41,
+     12.631,
+     34.75
+    ],
+    "encode": [
+     11.16,
+     24.953,
+     44.08
+    ],
+    "policy": [
+     14.09,
+     22.491,
+     44.65
+    ],
+    "export": [
+     0.51,
+     2.21,
+     6.72
+    ],
+    "prep": [
+     0.22,
+     0.46,
+     0.91
+    ],
+    "wait": [
+     0.0,
+     17.339,
+     68.53
+    ],
+    "total": [
+     35.26,
+     63.403,
+     105.68
+    ]
+   },
+   "pack_ms": [
+    17.09,
+    48.748,
+    85.63
+   ],
+   "rpc_mean_ms": {
+    "start_session": 4.45,
+    "submit_image_observation": 11.88,
+    "submit_egomotion_observation": 10.01,
+    "submit_route": 10.45,
+    "drive": 44.53,
+    "close_session": 9.78
+   }
+  },
+  "cmp": {
+   "scenes_common": 126,
+   "scores_differing": 0,
+   "score_max_abs": 0.0,
+   "decisions_common": 1260,
+   "decisions_only_a": 0,
+   "decisions_only_b": 0,
+   "decisions_differing": 0,
+   "max_abs": 0.0,
+   "scenes_with_a_differing_decision": 0
+  }
+ }
+}

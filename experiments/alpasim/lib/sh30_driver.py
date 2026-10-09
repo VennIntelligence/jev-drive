@@ -19,8 +19,8 @@ default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route m
 (`route_line`: the road ahead is straight, so any turning is the ego's own); elsewhere the model sees all of it.
 
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
-(op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (cpu | gpu: slot warp on the card + fast frame packing,
-sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+(op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (gpu, the default: slot warp on the card + fast frame packing, same
+frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -293,7 +293,7 @@ def main() -> None:
     log_dir = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/tmp/alpasim-driver"))
     t0 = time.time()
     core = C.Core(os.environ.get("SH30_TAG", "SH30-F-s0"), os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("SH30_COLD", "backwarp"),
-                  float(os.environ.get("SH30_MOTION", "1")), os.environ.get("SH30_SYNTH", "cpu"))
+                  float(os.environ.get("SH30_MOTION", "1")), os.environ.get("SH30_SYNTH", "gpu"))
     core.sync = os.environ.get("SH30_STAGE_SYNC", "1") == "1"
     z = np.zeros(C.FRAME, np.uint8)
     for m in (1, 4, 4):                                 # warm-up: both slot counts compiled before the port opens

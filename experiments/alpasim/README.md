@@ -3,7 +3,7 @@
 status: live
 decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 215 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
 index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
-key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
+key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/results/lat1_frame_synthesis.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
 **Question.** Can SH30 (openpilot Cinque + adapter + drivable hinge, navtest EPDMS 89.55) enter the nuPlan track of the AlpaSim E2E
 Closed Loop Challenge 2026 by 2026-10-31, and what does the public 1 485-scene closed-loop suite cost on our box.
@@ -52,8 +52,10 @@ adapter) and mismatches: [results/ap2_smoke.md](results/ap2_smoke.md) (`figs/ap2
 
 **Submission image (2026-10-09, decision 215).** One checkpoint-agnostic driver image (`docker/`, 7.48 GiB; `JEV_TAG` picks the checkpoint, the family follows from it) passes the organisers' container limits on the Tokyo box (read-only root, no network, 3.04 of 16 GiB VRAM, `/tmp` 0.8 MiB of 2 GiB, cold start 19 s, `drive` p50 86 ms with 2 concurrent rollouts on an RTX 3090) and drives the 48 public scenes inside the official containerised stack: P2H10-F-s0 0.9839 (native 0.9840), AP2-AB-s0 0.9521 (native 0.9320; 43 of 48 scenes identical, one at-fault collision became 0.97). Not bit-identical: same first rendered frame, first plans up to 1.6 cm apart from GPU / CPU numerics, amplified by the loop. A new tag goes from checkpoint to tested image in one command, 355 s (`docker/new_tag.sh`). Nothing pushed or submitted. [results/tokyo_image_smoke.md](results/tokyo_image_smoke.md), how to run and the user's submission commands: [docs/alpasim.md](../../docs/alpasim.md#submission-image-measured-2026-10-09-decision-215).
 
+**LAT1: frame synthesis on the GPU (2026-10-09, decision pending).** The slot warp as one batched GPU call in `cv2.remap`'s own fixed point (`jevdrive/op_interp.py` `warp_gpu`) plus an integer frame packing (`lib/sh30_core.py` `pack_fast`) reproduce the CPU frames bit for bit: 0 differing pixels in 12.58 G over 4 000 logged decisions, identical plans, and a closed-loop run on 126 scenes that repeats every score, ego pose and plan of M1's `s1-p2h10`. `drive` 99 -> 35 ms median, 163 -> 66 ms p95 at 8 concurrent rollouts; the drivers default to it (`SH30_SYNTH=gpu`, `cpu` = the unchanged reference). What is left is 25 ms of Python dispatch in the ONNX interpreter, with the other waste found in the shared baseline listed on the page. [results/lat1_frame_synthesis.md](results/lat1_frame_synthesis.md), numbers `results/lat1/summary.json`. Run: `scripts/lat1_chain.sh`, checks `scripts/lat1_check.py`.
+
 **Next.** A lambda-10 checkpoint with off-track rows, and closed-loop recovery rows with a yaw rate (decision 205); P2H10's remaining zeros (turns, 7 of 16 held out); the at-fault collisions of SH30 and AP2 case by case (zeros decide this board); WA-JEPA latency on an idle card; the full public suite once the remaining 14 asset shards are on disk (`fetch_data.sh all`, running 2026-10-08); the two
-collisions and the 11 slow scenes; step latency under 0.1 s (warp on the GPU or cross-session batching); seed 1; the user's warm-up submission of the image (decision 215).
+collisions and the 11 slow scenes; the model runner's Python overhead (25 of 35 ms per step, LAT1); seed 1; the user's warm-up submission of the image (decision 215).
 
 **Read more.** [docs/alpasim.md](../../docs/alpasim.md).
 
