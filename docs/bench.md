@@ -183,7 +183,7 @@ old outputs. With one thread, the old script also ran faster: 561 s instead of 6
 `v2_navtest`; the run identity of existing runs does not change). The v1 navtrain cache cannot be used: it lacks the human trajectory, future tracked
 objects and map parameters that the v2 scorer reads. Results, costs and base rates: [experiments/op_parity/results/nt_cache.md](../experiments/op_parity/results/nt_cache.md).
 
-- **What is in it.** All 28 323 navtrain tokens with |dyaw| >= 20 deg (the turn subset of `navsim/navtrain`), plus 5 445 other navtrain tokens from pilots. The
+- **What is in it.** All 28 323 navtrain tokens with |dyaw| >= 20 deg (the turn subset of `navsim/navtrain`), plus 29 055 other navtrain tokens (19 of the 50 `rest` shards, spread over the logs; 16 of them built 2026-10-09 for op_parity nc-slow; the cache is 24 GB). The
   rest of navtrain is not built: 456 KB per token measured, so the full cache would be about 45 GB (limit 40 GB). Built by `experiments/op_parity/scripts/nt_cache.py`:
   the v2 devkit as shipped (`third_party/navsim`, env navsim2, `run_metric_caching.py` defaults, `OPENBLAS_CORETYPE=Haswell`), `train_test_split=navtrain` with the
   token filter. Rebuilding 10 v2_navtest tokens with the same command gives byte-identical fields (`nt_cache.py control`).

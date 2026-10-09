@@ -1,0 +1,97 @@
+arm,by,cell,n,recall_pct
+E,cls,A1 stopped vehicle ahead,58.5,26.495726495726498
+E,cls,A2 lead vehicle (moving),35.0,24.285714285714285
+E,cls,B cut-in,23.0,19.565217391304348
+E,cls,C crossing / turn conflict,13.5,14.814814814814813
+E,cls,D side contact,16.5,36.36363636363637
+E,cls,E VRU,7.0,21.428571428571427
+E,cls,E oncoming,8.5,5.88235294117647
+E,cls,E static object,14.5,17.24137931034483
+E,speed,2-5,76.0,27.631578947368425
+E,speed,5-10,63.0,22.22222222222222
+E,speed,<2,34.5,14.492753623188406
+E,speed,>=10,3.0,33.33333333333333
+H,cls,A1 stopped vehicle ahead,58.5,29.059829059829063
+H,cls,A2 lead vehicle (moving),35.0,37.142857142857146
+H,cls,B cut-in,23.0,17.391304347826086
+H,cls,C crossing / turn conflict,13.5,18.51851851851852
+H,cls,D side contact,16.5,27.27272727272727
+H,cls,E VRU,7.0,7.142857142857142
+H,cls,E oncoming,8.5,11.76470588235294
+H,cls,E static object,14.5,34.48275862068966
+H,speed,2-5,76.0,34.868421052631575
+H,speed,5-10,63.0,24.6031746031746
+H,speed,<2,34.5,14.492753623188406
+H,speed,>=10,3.0,16.666666666666664
+V,cls,A1 stopped vehicle ahead,58.5,25.64102564102564
+V,cls,A2 lead vehicle (moving),35.0,34.285714285714285
+V,cls,B cut-in,23.0,17.391304347826086
+V,cls,C crossing / turn conflict,13.5,18.51851851851852
+V,cls,D side contact,16.5,36.36363636363637
+V,cls,E VRU,7.0,0.0
+V,cls,E oncoming,8.5,11.76470588235294
+V,cls,E static object,14.5,24.137931034482758
+V,speed,2-5,76.0,33.55263157894737
+V,speed,5-10,63.0,24.6031746031746
+V,speed,<2,34.5,8.695652173913043
+V,speed,>=10,3.0,0.0
+N,cls,A1 stopped vehicle ahead,58.5,29.059829059829063
+N,cls,A2 lead vehicle (moving),35.0,40.0
+N,cls,B cut-in,23.0,19.565217391304348
+N,cls,C crossing / turn conflict,13.5,25.925925925925924
+N,cls,D side contact,16.5,36.36363636363637
+N,cls,E VRU,7.0,7.142857142857142
+N,cls,E oncoming,8.5,11.76470588235294
+N,cls,E static object,14.5,17.24137931034483
+N,speed,2-5,76.0,35.526315789473685
+N,speed,5-10,63.0,26.190476190476193
+N,speed,<2,34.5,15.942028985507244
+N,speed,>=10,3.0,0.0
+OP,cls,A1 stopped vehicle ahead,58.5,24.786324786324787
+OP,cls,A2 lead vehicle (moving),35.0,57.14285714285714
+OP,cls,B cut-in,23.0,23.91304347826087
+OP,cls,C crossing / turn conflict,13.5,11.11111111111111
+OP,cls,D side contact,16.5,30.303030303030305
+OP,cls,E VRU,7.0,7.142857142857142
+OP,cls,E oncoming,8.5,5.88235294117647
+OP,cls,E static object,14.5,27.586206896551722
+OP,speed,2-5,76.0,30.263157894736842
+OP,speed,5-10,63.0,35.714285714285715
+OP,speed,<2,34.5,17.391304347826086
+OP,speed,>=10,3.0,0.0
+OPH,cls,A1 stopped vehicle ahead,58.5,26.495726495726498
+OPH,cls,A2 lead vehicle (moving),35.0,20.0
+OPH,cls,B cut-in,23.0,13.043478260869565
+OPH,cls,C crossing / turn conflict,13.5,11.11111111111111
+OPH,cls,D side contact,16.5,33.33333333333333
+OPH,cls,E VRU,7.0,7.142857142857142
+OPH,cls,E oncoming,8.5,5.88235294117647
+OPH,cls,E static object,14.5,27.586206896551722
+OPH,speed,2-5,76.0,32.23684210526316
+OPH,speed,5-10,63.0,18.253968253968253
+OPH,speed,<2,34.5,4.3478260869565215
+OPH,speed,>=10,3.0,0.0
+G0,cls,A1 stopped vehicle ahead,58.5,47.008547008547005
+G0,cls,A2 lead vehicle (moving),35.0,60.0
+G0,cls,B cut-in,23.0,52.17391304347826
+G0,cls,C crossing / turn conflict,13.5,22.22222222222222
+G0,cls,D side contact,16.5,39.39393939393939
+G0,cls,E VRU,7.0,0.0
+G0,cls,E oncoming,8.5,17.647058823529413
+G0,cls,E static object,14.5,17.24137931034483
+G0,speed,2-5,76.0,46.05263157894737
+G0,speed,5-10,63.0,41.269841269841265
+G0,speed,<2,34.5,37.68115942028986
+G0,speed,>=10,3.0,0.0
+G1,cls,A1 stopped vehicle ahead,58.5,46.15384615384615
+G1,cls,A2 lead vehicle (moving),35.0,74.28571428571429
+G1,cls,B cut-in,23.0,78.26086956521739
+G1,cls,C crossing / turn conflict,13.5,37.03703703703704
+G1,cls,D side contact,16.5,54.54545454545454
+G1,cls,E VRU,7.0,14.285714285714285
+G1,cls,E oncoming,8.5,47.05882352941176
+G1,cls,E static object,14.5,17.24137931034483
+G1,speed,2-5,76.0,54.60526315789473
+G1,speed,5-10,63.0,47.61904761904761
+G1,speed,<2,34.5,57.971014492753625
+G1,speed,>=10,3.0,33.33333333333333
