@@ -87,3 +87,56 @@ column, not checked for Amendment 1's class-3 change; the on-log subset has too 
 
 Not run, with the commands ready: the other ten `bd4` shards (`bd4_prep.py prep --data navtrain_full.s<k>of12`) and the full runs
 (`bd4_train.py train --seed <i> --data navtrain_full.s{0..11}of12 --steps 10000 --ho ot1:4,yr1:4,bd4:5 --agent-lam 10 --tag P2H10B-F-s<i>`).
+
+---
+
+# Amendment 5: second attempt (weight of the hinge terms on hinge-only rows)
+
+2026-10-10. Amendment 5 of the prereg and its notes (a) to (e). **This is a second attempt, registered after one pilot read of hold logs
+(the Amendment 4 table above); every number below carries that limit.** The one change against the Amendment 4 pilot: the agent hinge and
+the road hinge of the hinge-only rows are multiplied by w, and the validation part of the train logs (`navsim/body1-val-logs`, 123 of 1 071
+train logs, `sha256(log) % 10 == 1`) gives no hinge-only row.
+
+## A5.1 Selection of w (validation part only; written and pushed before any hold-log read of an Amendment 5 checkpoint)
+
+**Selected: w = 3** (`P2H10B-Pw3-s0`). w = 10 has the larger fall but fails the dev ADE constraint (0.6069 m against the limit 0.6013 m =
+switch-off pilot 0.5913 + 0.01), so by item 3 it is not eligible. `loss/a5_selection.json`.
+
+Own-plan rates on the validation part (4 019 states of shards s2 + s3, 120 logs: on-log 1 463, ot1 996, yr1 996, `bd4` 564), against the
+switch-off pilot `P2H10-P-s0`, paired by log:
+
+| | w = 3 | w = 10 | switch-off pilot |
+|---|--:|--:|--:|
+| agent contact rate | 0.0236 (-34 %) | 0.0194 (-46 %) | 0.0358 |
+| boundary rate (NAVSIM raster) | 0.0239 (-40 %) | 0.0204 (-49 %) | 0.0398 |
+| **agent + boundary, relative fall (the selection quantity)** | **37.2 %** | 47.4 % | |
+| agent + boundary, difference [95 %] | -0.0281 [-0.0354, -0.0212] | -0.0358 [-0.0443, -0.0280] | |
+| dev ADE at step 3 000 (limit 0.6013 m) | **0.5899, met** | 0.6069, **not met** | 0.5913 |
+| `dev_drift_off` (limit 0.30) | 0.050 | 0.058 | 0.042 |
+| eligible | yes | no | |
+
+By state family (relative fall of agent / boundary, w = 3): on-log 25 % / 23 % (intervals touch 0), ot1 26 % / 37 %, yr1 35 % / 53 %, `bd4`
+41 % / 35 %. > 45 deg (490 states): 42 % / 34 %. Launch, v < 1 m/s (275 states, 7 and 3 reference positives): 43 % / 33 %, intervals touch 0.
+Tables: `loss/g3_a5_val_w{3,10}.csv`. The validation logs are not clean of term A: their imitation rows carry the agent hinge (item 3 leaves
+term A as in the Amendment 4 pilot); only the hinge-only rows leave them.
+
+Per-term log at steps 300 / 1 000 / 2 000 / 3 000 (means of the 100 steps ending there; `loss/pilot_terms_P2H10B-Pw{3,10}-s0.csv`):
+
+| Term | w = 3 | w = 10 | Amendment 4 pilot (w = 1) |
+|---|---|---|---|
+| imitation | 1.242 / 0.872 / 0.775 / 0.729 | 1.326 / 0.947 / 0.824 / 0.779 | 1.209 / 0.852 / 0.757 / 0.715 |
+| A on `bd4`: share of rows positive | 0.102 / 0.076 / 0.070 / 0.054 | 0.096 / 0.070 / 0.052 / 0.032 | 0.132 / 0.064 / 0.088 / 0.092 |
+| A on `bd4`: mean on positives | 0.173 / 0.142 / 0.114 / 0.112 | 0.148 / 0.129 / 0.117 / 0.088 | 0.171 / 0.165 / 0.167 / 0.158 |
+| road hinge on `bd4`: share / mean on positives at 3 000 | 0.258 / 0.055 | 0.228 / 0.045 | 0.284 / 0.115 |
+| road hinge on yr1: share / mean on positives at 3 000 | 0.200 / 0.050 | 0.195 / 0.041 | 0.225 / 0.058 |
+| road hinge on ot1: share / mean on positives at 3 000 | 0.195 / 0.029 | 0.183 / 0.027 | 0.203 / 0.062 |
+| A on imitation rows: share positive | 0.0169 / 0.0126 / 0.0115 / 0.0110 | 0.0171 / 0.0117 / 0.0113 / 0.0108 | 0.0167 / 0.0125 / 0.0128 / 0.0121 |
+| unconditional: share of hinge-only rows with an agent hinge | 0.059 / 0.046 / 0.038 / 0.032 | 0.055 / 0.042 / 0.028 / 0.019 | not logged |
+| unconditional: share of hinge-only rows with a road hinge | 0.248 / 0.242 / 0.217 / 0.221 | 0.239 / 0.229 / 0.205 / 0.204 | not logged |
+| unconditional: share of all hinged rows (imitation + hinge-only) with an agent hinge | 0.0211 / 0.0159 / 0.0141 / 0.0128 | 0.0207 / 0.0146 / 0.0126 / 0.0110 | not logged |
+
+Hinge-only pools after the exclusion: ot1 9 368, yr1 9 368, `bd4` 5 616 rows (2 556 rows of the validation logs left out); 1 101 rows keep
+the NAVSIM raster (note x). Switch-off identity with the edited code: 60 steps, 18 scalars and every weight bit-identical to the unedited
+`pp_train.py` (`loss/ident_a5.json`). Correction to the Amendment 4 section above: the switch-off pilot's dev ADE is 0.5913 m (the pilot's
+0.5915 m), not 0.590.
+

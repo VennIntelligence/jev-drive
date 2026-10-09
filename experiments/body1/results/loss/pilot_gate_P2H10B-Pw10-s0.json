@@ -1,0 +1,87 @@
+{
+ "tag": "P2H10B-Pw10-s0",
+ "gate_of": "Amendment 4 item 5, loss half (Amendment 5 replaces it by hold-log rates: bd4_g3.py)",
+ "windows": [
+  [
+   201,
+   400
+  ],
+  [
+   2701,
+   3000
+  ]
+ ],
+ "terms": {
+  "agent_posmean": {
+   "early": 0.10610735288954697,
+   "early_steps": 170,
+   "late": 0.09334476193273077,
+   "late_steps": 200,
+   "fall": 0.12027998634648335
+  },
+  "fam/bd4/agent_posmean": {
+   "early": 0.1534651212494022,
+   "early_steps": 70,
+   "late": 0.11457533612425824,
+   "late_steps": 58,
+   "fall": 0.25341122991681375
+  },
+  "fam/bd4/road_posmean": {
+   "early": 0.09822339027024177,
+   "early_steps": 166,
+   "late": 0.04721012920381957,
+   "late_steps": 231,
+   "fall": 0.5193596039198967
+  },
+  "fam/ot1/agent_posmean": {
+   "early": 0.13550604642231895,
+   "early_steps": 17,
+   "late": 0.12821485208890712,
+   "late_steps": 12,
+   "fall": 0.05380715123728167
+  },
+  "fam/ot1/road_posmean": {
+   "early": 0.03853399075747451,
+   "early_steps": 114,
+   "late": 0.029649019360118885,
+   "late_steps": 155,
+   "fall": 0.2305749086118777
+  },
+  "fam/yr1/agent_posmean": {
+   "early": 0.08283653830488523,
+   "early_steps": 30,
+   "late": 0.12184695708565414,
+   "late_steps": 20,
+   "fall": -0.47093250851681595
+  },
+  "fam/yr1/road_posmean": {
+   "early": 0.06503928453281839,
+   "early_steps": 122,
+   "late": 0.049158094163683726,
+   "late_steps": 180,
+   "fall": 0.2441784297476569
+  },
+  "imit/agent_posmean": {
+   "early": 0.09025705869021455,
+   "early_steps": 141,
+   "late": 0.08305690131441133,
+   "late_steps": 159,
+   "fall": 0.07977389780134553
+  },
+  "imit/hinge_posmean": {
+   "early": 0.030771619906299747,
+   "early_steps": 200,
+   "late": 0.026195255292889973,
+   "late_steps": 300,
+   "fall": 0.1487203022572391
+  }
+ },
+ "gate_term": "agent_posmean",
+ "fall": 0.12027998634648335,
+ "passed": false,
+ "dev": {
+  "ade": 0.6068748831748962,
+  "drift_off": 0.05834606662392616,
+  "drift_on": 1.4514180421829224
+ }
+}
