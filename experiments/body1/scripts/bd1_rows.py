@@ -298,7 +298,10 @@ def cmd_check(a):
         # 2. swv1_lib.Rollout.sweep (shapely polygons; objects annotated at all 9 times, tracks interpolated by col1_lib.interp)
         full = valid.all(1) & (cls >= 0)
         C = {g: dict(object_sweeps=0, first_contact_index_agree=0, contacts_swv1=0, contacts_ours=0, contacts_both=0, max_abs_min_clearance_diff_m=0.0)
-             for g in ("all", "constant_size")}             # swv1 gives an object one size; the nuPlan labels may change it between annotated times
+             for g in ("interpolated_size", "t0_size")}     # swv1 gives an object one size; the nuPlan labels change it between annotated times
+        bz = b.copy()
+        bz[..., 3:5] = box[:, :1, :, 3:5]                   # our sweep with every object held at its t0 size: swv1's convention
+        clr0, hit0 = SW.clearance(ex[..., None], ey[..., None], d[..., 2:3], bz[:, None, ..., 0], bz[:, None, ..., 1], bz[:, None, ..., 2], bz[:, None, ..., 3] / 2, bz[:, None, ..., 4] / 2)
         for i in range(min(S, a.n_shapely)):
             ks = np.flatnonzero(full[i])
             r = object.__new__(SV.Rollout)
@@ -307,8 +310,8 @@ def cmd_check(a):
             r.now, r.plan = np.zeros(Q), d[i].astype(np.float64)
             for j in range(Q):
                 for k, (dm, f) in r.sweep(j).items():
-                    mine = int(hit[i, j, :, k].argmax()) if hit[i, j, :, k].any() else -1
-                    for g in ("all",) + (("constant_size",) if np.ptp(box[i, :, k, 3:5], 0).max() < 1e-3 else ()):
+                    for g, hh, cc in (("interpolated_size", hit, clr), ("t0_size", hit0, clr0)):
+                        mine = int(hh[i, j, :, k].argmax()) if hh[i, j, :, k].any() else -1
                         c = C[g]
                         c["object_sweeps"] += 1
                         c["first_contact_index_agree"] += mine == f
@@ -316,7 +319,7 @@ def cmd_check(a):
                         c["contacts_ours"] += mine >= 0
                         c["contacts_both"] += (f >= 0) and mine >= 0
                         if 0 < dm < 5 and mine < 0:
-                            c["max_abs_min_clearance_diff_m"] = max(c["max_abs_min_clearance_diff_m"], abs(dm - float(clr[i, j, :, k].min())))
+                            c["max_abs_min_clearance_diff_m"] = max(c["max_abs_min_clearance_diff_m"], abs(dm - float(cc[i, j, :, k].min())))
         for c in C.values():
             c["first_contact_index_agree"] /= max(c["object_sweeps"], 1)
         res["swv1_sweep"] = {"states": min(S, a.n_shapely), "shapely": shapely.__version__, **{g: {q: float(x) for q, x in c.items()} for g, c in C.items()}}
