@@ -82,7 +82,10 @@ def cmd_bias(a):
             lead = None
             if getattr(m.adapter, "use_lead", False):              # lane TR1, arm P2L: the base model's lead outputs = the stored shipped run's
                 import parity_adapter as PA
-                zs = [np.load(Z.root("preds", "op_cinque") / f"{nm}.npz") for nm in names]
+                zs = []
+                for nm in names:
+                    with np.load(Z.root("preds", "op_cinque") / f"{nm}.npz") as z:
+                        zs.append({k: np.asarray(z[k]) for k in ("lead_prob", "lead")})
                 pr = np.clip(np.stack([np.asarray(z["lead_prob"], np.float64).reshape(-1) for z in zs]), 1e-5, 1 - 1e-5)
                 xva = np.stack([np.asarray(z["lead"], np.float64).reshape(3, 6, 4)[0, 0, list(PA.LEAD_AT)] for z in zs])
                 lead = PA.lead_features(torch.from_numpy(xva), torch.from_numpy(np.log(pr / (1 - pr))), torch.from_numpy(e[:, 4]))

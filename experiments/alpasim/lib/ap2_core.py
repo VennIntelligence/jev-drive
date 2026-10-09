@@ -78,7 +78,7 @@ class Core(C.Core):
         self.model, self.route, trained = load_model(tag, self.dev)
         self.cold = cold or trained
         assert self.cold in C.COLD, self.cold
-        assert self.model.arm == "P2" and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"
+        assert self.model.arm in ("P2", "P2L") and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"
         s = self.model.net.slices["plan"].start
         self.pi = slice(s, s + 33 * 15)
 

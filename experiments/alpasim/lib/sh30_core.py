@@ -227,7 +227,7 @@ class Core:
         self.torch, self.A, self.tag, self.cold, self.motion, self.synth = torch, A, tag, cold, float(motion), synth
         self.dev = torch.device(dev)
         self.model = T.load_pmodel(tag, self.dev)
-        assert self.model.arm == "P2" and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"
+        assert self.model.arm in ("P2", "P2L") and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"
         s = self.model.net.slices["plan"].start
         self.pi = slice(s, s + 33 * 15)
 

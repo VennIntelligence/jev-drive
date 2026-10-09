@@ -6,6 +6,7 @@
 #                20-step smoke of every arm
 #   s0           pilot scale (navsim/op-parity-s234, 3 000 steps x 64, 1 seed): lead-token pre-training -> the reference and the arms ->
 #                navtest, the DIAG1 probes, WOD val -> tables and the stage gate
+#   cl <name> <group=tag+tag ...>   AlpaSim nuPlan public 700 scenes (ot2_loop.py, OT_LANE=tr1) for the tags and P2H10-F at this checkout
 #   s1 <arm...>  full scale (navsim/op-parity-full, 10 000 steps x 128, seeds 0 / 1) of the named arms: navtest, navhard, probes, WOD val
 # State: $DATA_DIR/runs/op_parity/tr1/chain-<stage>/{STATUS, DONE, ERROR, log.txt, jobs.txt}; pool logs under .../tr1/pool/.
 set -uo pipefail
@@ -123,6 +124,18 @@ elif [[ $STAGE == s0 || $STAGE == s1 ]]; then
     $J $S/wod_slot.py report --out $RES/wod-s1 --arms shipped P2H10=P2H10-F-s0+P2H10-F-s1 WLG=WLG-full-s0+WLG-full-s1 $AR \
         --pairs $(for a in "${RUNS[@]}"; do echo -n "$a:P2H10 $a:shipped "; done) P2H10:shipped || die "wod report"
   fi
+elif [[ $STAGE == cl ]]; then                              # cl <name> <group=tag+tag ...>: AlpaSim nuPlan public, the 700 scenes with OT3's chunk lists
+  NAME=$1; shift
+  RA=$DATA_DIR/runs/alpasim; AS=experiments/alpasim/scripts
+  J=(); GR=()
+  for t in P2H10-F-s0 P2H10-F-s1; do J+=("$t:sh30:SH30_TAG=$t:$t"); done            # the baseline at this checkout
+  for g in "$@"; do GR+=(--group "$g"); for t in ${g#*=}; do :; done; IFS=+ read -ra TS <<< "${g#*=}"; for t in "${TS[@]}"; do J+=("$t:sh30:SH30_TAG=$t:$t"); done; done
+  status "closed loop $NAME, code $(git rev-parse --short HEAD): ${J[*]}"
+  OT_LANE=tr1 OT_PRIO=13 OT2_MAX_ACTIVE=${TR1_STACKS:-6} python3 $AS/ot2_loop.py $NAME "${J[@]}" || die "ot2_loop rc $? (see $RA/tr1/$NAME/ERROR)"
+  mkdir -p $RES
+  $VPY $AS/ot3_report.py --manifest $RA/tr1/$NAME/manifest.json --shards $RA/c0b/lists/shards.tsv --out $RA/tr1/results --name $NAME \
+      --base P2H10=P2H10-F-s0+P2H10-F-s1 "${GR[@]}" > $D/report.log 2>&1 || die "report (see $D/report.log)"
+  cp $RA/tr1/results/${NAME}_report.md $RES/alpasim_$NAME.md; cp $RA/tr1/results/${NAME}_stats.json $RES/alpasim_${NAME}_stats.json
 else
   die "unknown stage $STAGE"
 fi
