@@ -23,7 +23,7 @@ ov="+e2e_challenge_nuplan=full runtime.nr_workers=2 runtime.endpoints.renderer.n
 runtime.endpoints.controller.n_concurrent_rollouts=8 defines.nre_cache_size=9"
 prev=""; for k in gpu cpu; do
   D=$L/runs/s1-$k/$(date +%Y%m%d-%H%M%S); mkdir -p "$D"
-  prev=$(sub "loop-$k" ${prev:+--after "$prev"} --vram 32 --cpu 8 --ram 25 --timeout-h 3 --tries 2 -- bash -c \
+  prev=$(sub "loop-$k" ${prev:+--after "$prev"} --vram 32 --cpu 8 --ram 25 --timeout-h 3 -- bash -c \
 "env SH30_TAG=$tag SH30_SYNTH=$k bash experiments/alpasim/scripts/run.sh $D sh30 --scene-list $R/m1/lists/s1.txt $ov && touch $L/loop-$k.DONE")
 done
 echo "msgs $m equiv $e load $l loop(cpu) $prev -> $L" | tee "$L/CHAIN"
