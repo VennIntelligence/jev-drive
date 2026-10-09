@@ -7,7 +7,8 @@
 # State: $DATA_DIR/runs/alpasim/ot2/chain-c-<label>/{STATUS, DONE, ERROR, log.txt}; runs under .../ot2/c-<label>{,-pilot}/.
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
-LABEL=$1 TAGS=$2 REF=$3
+LABEL=$1 TAGS=$2 REF=$3 REFDIR=${4:-}   # REFDIR: a run of the single driver on the SAME pilot list (scores reproduce exactly only for the same scene list:
+# the c0b pilot and chunk runs of OT30-F-s0 differ on 1 of 8 scenes by 0.0065, plans by 1.5 cm from decision 0 on with identical ego inputs)
 O=$DATA_DIR/runs/alpasim/ot2
 D=$O/chain-c-$LABEL; mkdir -p "$D"; rm -f "$D/DONE" "$D/ERROR"
 exec > >(tee -a "$D/log.txt") 2>&1
@@ -20,12 +21,14 @@ LB=$D/bench
 [[ -f $LB/DONE ]] || $VPY -m jevdrive.cl submit --owner alpasim-ot2 --priority 12 --name ot2-ens-bench --vram 8 --cpu 10 --ram 12 --log-dir "$LB" -- \
     "$DATA_DIR/envs/op-train/bin/python" experiments/alpasim/lib/ens_driver.py bench "$TAGS" 100 > /dev/null || die "submit bench"
 python3 $S/ot2_loop.py "c-$LABEL-pilot" "ONE:ens:ENS_TAGS=${TAGS%%+*}::pilot8" "$LABEL:ens:ENS_TAGS=$TAGS::pilot8" || die "pilot"
-$VPY - "$O/c-$LABEL-pilot/manifest.json" "$REF" "$O" <<'PYEOF' || die "identity gate: the one-member ensemble does not reproduce its single driver"
+$VPY - "$O/c-$LABEL-pilot/manifest.json" "$REF" "$O" "$REFDIR" <<'PYEOF' || die "identity gate: the one-member ensemble does not reproduce its single driver"
 import json, sys
 from pathlib import Path
 man, ref, O = json.load(open(sys.argv[1])), sys.argv[2], Path(sys.argv[3])
 single = {}
-for f in (O.parent / "c0b/manifest.json", O / "b/manifest.json"):
+if sys.argv[4]:
+    single = {r["clipgt_id"]: r["score"] for r in json.load(open(Path(sys.argv[4]) / "aggregate/results-summary.json"))["rollouts"]}
+for f in () if single else (O.parent / "c0b/manifest.json", O / "b/manifest.json"):
     if f.exists():
         for d in json.load(open(f)).get(ref, []):
             single |= {r["clipgt_id"]: r["score"] for r in json.load(open(Path(d) / "aggregate/results-summary.json"))["rollouts"]}
