@@ -7,7 +7,8 @@
 #   EXTRA="OT10a05-F-s0" TAG=OT10a05-F-s0 .../build.sh                # a new checkpoint: one thin layer on top of the cached ones
 # Env: TAGS (stable checkpoint layer), EXTRA (thin layer), TAG (served by default; several joined by + = ensemble), DRIVER (auto | sh30 |
 # ap2 | ens), IMAGE (repository, default jev-alpasim), VERSION (image tag, default <TAG>-<git short hash>),
-# WHEELS (dir of pre-fetched wheels, see wheels.sh: the build then installs offline from it), PROXY (http proxy for the build's
+# WHEELS (dir of pre-fetched wheels, see wheels.py: the build then installs offline from it; default $DATA_DIR/cache/jev_wheels when it
+# exists, WHEELS= forces the indexes, whose triton wheel does not match requirements.lock as of 2026-10-09), PROXY (http proxy for the build's
 # downloads, e.g. http://127.0.0.1:7890; uses the host network), DATA_DIR, ALPASIM_SRC.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd); repo=$(cd "$here/../../.." && pwd)
@@ -37,6 +38,7 @@ echo "context: $(du -sh "$ctx" | cut -f1), $(wc -l < "$ctx/MANIFEST.sha256") fil
 
 args=(--build-arg "TAG=$TAG" --build-arg "DRIVER=${DRIVER:-auto}" --build-arg "GIT_HASH=$git_hash"
       --build-arg "CUDA=${CUDA:-cu126}")
+[[ -z ${WHEELS+x} && -d ${DATA_DIR:-}/cache/jev_wheels ]] && WHEELS=$DATA_DIR/cache/jev_wheels
 if [[ -n ${WHEELS:-} ]]; then args+=(--build-context "wheels=$WHEELS" --build-arg "UV_SRC=--no-index --find-links /wheels")
 else mkdir "$ctx/.nowheels"; args+=(--build-context "wheels=$ctx/.nowheels"); fi
 [[ -n ${PROXY:-} ]] && args+=(--network host --build-arg "HTTP_PROXY=$PROXY" --build-arg "HTTPS_PROXY=$PROXY" --build-arg "NO_PROXY=localhost,127.0.0.1")
