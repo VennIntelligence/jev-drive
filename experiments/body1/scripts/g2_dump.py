@@ -30,7 +30,7 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 ALP = HERE.parents[1] / "alpasim"
-sys.path[:0] = [str(ALP / "scripts"), str(ALP / "lib")]
+sys.path[:0] = [str(ALP / "scripts"), str(ALP / "lib"), str(HERE.parents[2])]
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 OUT = DATA / "runs/body1/g2"
 STORED = DATA / "runs/alpasim/swv1/replay"
