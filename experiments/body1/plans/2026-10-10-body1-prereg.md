@@ -591,3 +591,10 @@ logs, has been read; nothing above is changed).**
   pooled hold-log states of shards s2 + s3 with the paired, log-clustered interval of the difference below 0. The continuation slope is
   `alpha_05` of `ot3_rows.py probe` (shards s2 + s3), selected pilot against `P2H10-P-s0`. Selection (item 3) is written and pushed before
   `bd4_g3.py --set hold` or the probe is run for any Amendment 5 checkpoint.
+
+**Status after the Amendment 5 pilots (2026-10-10 06:30 box time, added after the reads; nothing above was changed).** Selection on the
+validation part: w = 3 (fall of agent + boundary rate 37.2 %; w = 10: 47.4 % but dev ADE 0.6069 m against the limit 0.6013 m, not
+eligible); pushed (b83a28bb) before the hold-log read. **Pilot gate of item 4, w = 3, read once: met.** Agent rate 0.0136 against 0.0261
+(-47.7 %, [-0.0163, -0.0088]), boundary rate 0.0172 against 0.0275 (-37.4 %, [-0.0146, -0.0063]), dev ADE 0.5899 m against 0.5913 m,
+continuation slope 0.93 against 1.08 (`results/loss_pilot.md` A5.1, A5.2). The arm goes on to the full run of 2 seeds with w = 3.
+

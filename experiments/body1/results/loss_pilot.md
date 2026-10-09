@@ -140,3 +140,66 @@ the NAVSIM raster (note x). Switch-off identity with the edited code: 60 steps, 
 `pp_train.py` (`loss/ident_a5.json`). Correction to the Amendment 4 section above: the switch-off pilot's dev ADE is 0.5913 m (the pilot's
 0.5915 m), not 0.590.
 
+## A5.2 Pilot gate, w = 3: met (the one read of hold logs for this attempt)
+
+`P2H10B-Pw3-s0` against the switch-off pilot `P2H10-P-s0` on the hold-log states of shards s2 + s3 (5 062 states, 118 logs; cluster bootstrap
+by log), read once, after A5.1 was pushed (commit b83a28bb). Hold logs had been read once before for this arm, at w = 1 (the table at the top).
+
+| Gate item (Amendment 5 item 4) | `P2H10B-Pw3-s0` | switch-off pilot | difference [95 %] | relative fall | line | |
+|---|--:|--:|---|--:|---|---|
+| own-plan agent-contact rate | 0.0136 | 0.0261 | -0.0125 [-0.0163, -0.0088] | 47.7 % | >= 30 %, interval excluding 0 | **met** |
+| own-plan boundary rate (NAVSIM raster, margin < -0.20 m) | 0.0172 | 0.0275 | -0.0103 [-0.0146, -0.0063] | 37.4 % | >= 25 %, interval excluding 0 | **met** |
+| dev ADE at step 3 000 | 0.5899 m | 0.5913 m | | | <= 0.6013 m | **met** |
+| continuation slope (`alpha_05`, 170 held-out yaw-rate rows) | 0.93 [0.81, 1.06] | 1.08 [0.95, 1.22] | | | <= 1.13 | **met** |
+
+Reported with the gate (no line): boundary rate on item C's road-and-lane raster 0.0166 against 0.0279 (-40 %); against P2H10-F-s0 (full-scale
+recipe, 0.0237 / 0.0259) agent -42.5 % [-0.0139, -0.0063], boundary -33.6 % [-0.0125, -0.0055]. `dev_drift_off` 0.050 (0.042). Probe: beta
+-0.13 for both, loop spectral radius 0.97 [0.90, 1.03] against 1.04 [0.98, 1.10], legitimate continuation on unperturbed tokens 1.01 / 1.08
+(all / turn) for both (`loss/yr_probe_a5_pilot.json`).
+
+| Subset (states) | agent: new / ref, relative fall | boundary: new / ref, relative fall | intervals |
+|---|---|---|---|
+| on-log (1 829) | 0.0033 / 0.0044, 25 % | 0.0055 / 0.0060, 9 % | both include 0 (6 to 11 positives) |
+| ot1 (1 248) | 0.0096 / 0.0120, 20 % | 0.0152 / 0.0216, 30 % | agent includes 0, boundary excludes 0 |
+| yr1 (1 248) | 0.0200 / 0.0393, 49 % | 0.0160 / 0.0296, 46 % | exclude 0 |
+| `bd4` (737) | 0.0353 / 0.0814, 57 % | 0.0516 / 0.0868, 41 % | exclude 0 |
+| **> 45 deg (686)** | 0.0175 / 0.0379, 54 % | 0.0335 / 0.0583, 43 % | exclude 0 |
+| **launch, v < 1 m/s (347)** | 0.0058 / 0.0086, 33 % | 0.0058 / 0.0086, 33 % | touch 0 (2 against 3 positives each) |
+| class 1 obstacle ahead (901) | 0.0111 / 0.0233, 52 % | 0.0111 / 0.0211, 47 % | exclude 0 |
+| class 2 turn (781) | 0.0256 / 0.0448, 43 % | 0.0371 / 0.0627, 41 % | exclude 0 |
+| class 3 leaving the road (2 350; Amendment 1 membership) | 0.0102 / 0.0217, 53 % | 0.0136 / 0.0204, 33 % | exclude 0 |
+| other (1 030) | 0.0146 / 0.0243, 40 % | 0.0155 / 0.0223, 30 % | exclude 0 |
+
+Full table (both references): `loss/g3_a5_hold_w3.csv`. What to read from it: the fall sits in the off-track families the hinge-only rows
+come from (yr1, `bd4`); on-log states, the population of the decision-0 zeros, move in the right direction with intervals that include 0, and
+the launch cell has 2 to 3 positives, so neither is shown by this table. By item 5 the arm goes on to the full run of 2 seeds
+(`P2H10B-F-s{0,1}`, w = 3) and Amendment 4 item 5 onward.
+
+## A5.3 Checks made before the full `bd4` cache (prereg notes (b) to (d) to Amendment 5, written before any pilot number)
+
+- **Fifth preview** (`figs/loss/bd4_preview_class3.png`): inspected; labels and reprojection are right (frame shift opposite to the heading
+  offset in all six states, padding band on the side the camera turned to, agent label where the 2 s / 4 s box overlaps an agent box, negative
+  margin where the swept box crosses the raster edge).
+
+  ![class3](../figs/loss/bd4_preview_class3.png)
+
+  Six class-3 states. Look at the sign of the heading offset in each title against the side of the padding band in the right frame, and at
+  the green boxes against the grey raster where the title gives a negative margin (rows 2 and 3).
+- **Item C's layer list is not the scorer's road area.** AlpaSim's offroad scorer accepts a box covered by a lane, by the union of nearby
+  lanes, or (nuPlan maps) by the union of RoadArea elements, which trajdata builds from `road_segments` + `intersections` +
+  `generic_drivable_areas` + `carpark_areas`; all 2 203 road-area polygons of 52 shipped public-scene maps match exactly these four layers
+  (`loss/scorer_layers.json`). The raster trained on (ROADBLOCK, ROADBLOCK_CONNECTOR, INTERSECTION, LANE, LANE_CONNECTOR) leaves out car
+  parks and generic drivable areas: it is a stricter road-and-lane label and is reported under that name. It was kept as trained
+  (Amendment 5 fixes C as in the Amendment 4 pilot); deviation 4 of the Amendment 4 section is hereby answered, and the diagnosis's
+  explanation of the 7 definition cases ("NAVSIM's raster is wider because it includes car parks") does not hold: the scorer includes them too.
+- **User classes of the G3 tables** did not carry Amendment 1's class-3 change (the taxonomy file's `pc` predates it); the reader now uses
+  `contact_head.classes`. The tables of A5.1 and A5.2 have the Amendment 1 membership; `g3_pilot.csv` (Amendment 4) has the old one.
+
+## A5.4 Costs and deviations so far
+
+Two pilots, identity pair, three G3 reads, probe: about 0.5 card-h, all through the pool. Deviation: the ten remaining `bd4` shard builds were
+first submitted as ten concurrent pool jobs declared at 30 GB each; each used about 27 GB of working set and about 2 000 threads, the box
+reached 18 247 of 20 480 pids and a 181 GiB memory margin, one of them died with rc 130, and the lane cancelled its other nine after about
+3 min (no other lane's job was running in the pool; none was killed). They were resubmitted as three sequential chains at 40 GB. The partial
+shard directories were this session's own and are overwritten by the rebuild.
+
