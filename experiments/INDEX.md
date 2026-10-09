@@ -5,6 +5,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 **live**
 
 - [b2d_privileged](b2d_privileged/README.md): live; Red light + green release DS 75.0 to 95.0 [d82]
+- [body1](body1/README.md) (self-model, body lesson, swept-footprint contact): live; Pre-registered 2026-10-10; no reads yet [d(inputs:,220)]
 - [op_adapt_h](op_adapt_h/README.md): live; Fake-yaw following -71..-78%, navtest +0.82; HUGSIM spins 8 to 6 only [d98,(inputs:,92,94,96)]
 - [op_adapt_l](op_adapt_l/README.md) (op-adapt L): live; Stop capture 0.252 to 0.559 open loop; B2D no gain [d77-81]
 - [op_common_cause](op_common_cause/README.md): live; Plan follows fake history yaw, 3-7x more at low speed, real and CARLA alike [d92-93]
