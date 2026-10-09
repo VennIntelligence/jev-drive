@@ -7,7 +7,8 @@ Per decision at t0, from the CAM_F0 keyframes at t0 - 1.5 / 1.0 / 0.5 / 0 s (as 
            along the ego track through the road plane (jevdrive.op_interp.synth_cpu `warp`); image pair of a slot = (slot - 0.2 s, slot),
            the pair of the oldest slot starts from a zero image (pp_prep: frames before the first slot are zero).
            synth = "cpu" (default, the reference every checkpoint was trained on) or "gpu": the same warp as one batched GPU call
-           (op_interp.warp_gpu), keyframes sampled on the card too (pack_gpu); results/lat1_frame_synthesis.md
+           (op_interp.warp_gpu); results/lat1_frame_synthesis.md. Core.sync = False drops the per-stage CUDA syncs (the stage times
+           then only split the host side; the card's time shows in `export`, where the plan is read back)
   tokens   Cinque's frozen vision encoder on the 8 pairs -> (8, 32, 512)
   policy   PModel: adapter bias from lib/parity_adapter.ego_features (command, vx, vy, ax, ay, 4 poses) + the trained plan pathway
   export   33 camera-frame plan points -> rear axle through the camera lever arm, linear resampling to 0.5 .. 4 s (8 poses)
@@ -63,10 +64,27 @@ def pack(jpeg, cam: dict) -> np.ndarray:
 _IDX = {}
 
 
+def pack_fast(jpeg, cam: dict) -> np.ndarray:
+    """pack, bit-identical (lat1_check.py remap) with the sampling about 10x faster: byte gathers from the flat image, and the 2x2 chroma
+    mean in integers, rounded half to even as np.rint of the float mean."""
+    k = Z.calib_key({"CAM_F0": cam})
+    m = _MAPS.get(k) or _MAPS.setdefault(k, Z.OpenpilotMaps(cam))
+    if k not in _IDX:
+        _IDX[k] = [(3 * np.stack(m.idx) + c).reshape(2, 256, 512) for c in range(3)]
+    f = m.decode(io.BytesIO(jpeg) if isinstance(jpeg, (bytes, bytearray, memoryview)) else jpeg).reshape(-1)
+    Y, U, V = (f.take(i) for i in _IDX[k])
+
+    def half(c):
+        c = c.astype(np.uint16)
+        s = c[:, 0::2, 0::2] + c[:, 1::2, 0::2] + c[:, 0::2, 1::2] + c[:, 1::2, 1::2]
+        return ((s + 1 + ((s >> 2) & 1)) >> 2).astype(np.uint8)
+    return np.stack([Y[:, 0::2, 0::2], Y[:, 1::2, 0::2], Y[:, 0::2, 1::2], Y[:, 1::2, 1::2], half(U), half(V)], 1)
+
+
 def pack_gpu(jpeg, cam: dict, dev, decode=None):
-    """pack with the model-frame sampling on the GPU -> uint8 tensor (2, 6, 128, 256) on dev, bit-identical to pack: the JPEG is decoded
-    on the CPU as there (libjpeg's own YCbCr), OpenpilotMaps.__call__'s nearest sampling and 2x2 chroma mean run on the card.
-    decode: another decoder, bytes -> (1080, 1920, 3) uint8 YCbCr tensor on dev (lat1_check.py nvjpeg; not bit-identical)."""
+    """pack with the model-frame sampling on the GPU -> uint8 tensor (2, 6, 128, 256) on dev, bit-identical to pack. Not served (one
+    blocking 6 MB upload per image; pack_fast costs the same without the card): kept for a decoder that already leaves the image there.
+    decode: bytes -> (1080, 1920, 3) uint8 YCbCr tensor on dev (lat1_check.py nvjpeg; not bit-identical)."""
     import torch
     k = Z.calib_key({"CAM_F0": cam})
     m = _MAPS.get(k) or _MAPS.setdefault(k, Z.OpenpilotMaps(cam))
@@ -80,7 +98,8 @@ def pack_gpu(jpeg, cam: dict, dev, decode=None):
 
 
 def stack_keys(keys):
-    """The m <= 4 newest keyframes (arrays from pack, or tensors from pack_gpu) -> (4, 2, 6, 128, 256) of the same kind, zeros first."""
+    """The m <= 4 newest keyframes (arrays from pack / pack_fast, or tensors from pack_gpu) -> (4, 2, 6, 128, 256) of the same kind,
+    zeros first."""
     if isinstance(keys[0], np.ndarray):
         K = np.zeros((4,) + FRAME, np.uint8)
         K[4 - len(keys):] = np.stack(keys)
@@ -159,6 +178,8 @@ SYNTH = ("cpu", "gpu")
 
 
 class Core:
+    sync = True                                           # CUDA sync at every stage boundary, for the stage times
+
     def __init__(self, tag: str = "SH30-F-s0", dev: str = "cuda", cold: str = "backwarp", motion: float = 1.0, synth: str = "cpu"):
         import cv2
         import torch
@@ -174,7 +195,7 @@ class Core:
         self.pi = slice(s, s + 33 * 15)
 
     def _sync(self) -> float:
-        if self.dev.type == "cuda":
+        if self.dev.type == "cuda" and self.sync:
             self.torch.cuda.synchronize(self.dev)
         return time.perf_counter()
 
