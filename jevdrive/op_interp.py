@@ -183,17 +183,35 @@ _GPU = {}
 
 
 def _remap_gpu(img, mx, my):
-    """cv2.remap(INTER_LINEAR, BORDER_REPLICATE) for uint8 (n, h, w) and float32 maps (n, h2, w2), in cv2's own fixed point: source
-    coordinates rounded to 1/32 px (half to even), integer weights (32 - fx)(32 - fy) ... of sum 1024, result rounded half up."""
+    """cv2.remap(INTER_LINEAR, BORDER_REPLICATE) for uint8 (..., h, w) and float32 maps (..., h2, w2) that broadcast over the leading
+    dims, in cv2's own fixed point: source coordinates rounded to 1/32 px (half to even), integer weights (32 - fx)(32 - fy) ... of
+    sum 1024, result rounded half up."""
     import torch
-    n, h, w = img.shape
+    h, w = img.shape[-2:]
     sx, sy = torch.round(mx * 32).to(torch.int32), torch.round(my * 32).to(torch.int32)
     fx, fy, ix, iy = sx & 31, sy & 31, sx >> 5, sy >> 5
     x0, x1, y0, y1 = ix.clamp(0, w - 1), (ix + 1).clamp(0, w - 1), iy.clamp(0, h - 1) * w, (iy + 1).clamp(0, h - 1) * w
-    flat = img.reshape(n, -1).to(torch.int32)
-    g = lambda i: flat.gather(1, i.reshape(n, -1).long()).view_as(sx)  # noqa: E731
+    flat, shape = img.flatten(-2).to(torch.int32), img.shape[:-2] + sx.shape[-2:]
+    g = lambda i: flat.gather(-1, i.long().expand(shape).flatten(-2)).view(shape)  # noqa: E731
     out = (32 - fy) * ((32 - fx) * g(y0 + x0) + fx * g(y0 + x1)) + fy * ((32 - fx) * g(y1 + x0) + fx * g(y1 + x1))
     return ((out + 512) >> 10).to(torch.uint8)
+
+
+def _plane_gpu(cam, dev):
+    """Per camera position and device, both views stacked (2, H, W) float64: warp_map's road-plane / far-sphere points P in the
+    vehicle frame at t_dst, the camera position, focal lengths and principal points (2, 1, 1)."""
+    import torch
+    key = (dev, tuple(float(x) for x in cam))
+    if key not in _GPU:
+        if len(_GPU) >= 32:
+            _GPU.clear()
+        t = lambda a: torch.from_numpy(np.ascontiguousarray(a, np.float64)).to(dev)  # noqa: E731
+        r = [_rays(v) for v in ("road", "wide")]
+        rx, ry, rz, far = (t(np.stack(a)) for a in zip(*[(q[..., 0], q[..., 1], q[..., 2], D_FAR / np.linalg.norm(q, axis=-1)) for q in r]))
+        c, K = [t(x) for x in key[1]], [t(np.array([OP_K[v][i] for v in ("road", "wide")]).reshape(2, 1, 1)) for i in ((0, 0), (0, 2), (1, 1), (1, 2))]
+        lam = torch.minimum(torch.where(-rz > 1e-6, c[2] / (-rz).clamp_min(1e-6), torch.inf), far)
+        _GPU[key] = c, (c[0] + lam * rx, c[1] + lam * ry, c[2] + lam * rz), K
+    return _GPU[key]
 
 
 def warp_gpu(src, cam, pose_dst, pose_src):
@@ -201,29 +219,18 @@ def warp_gpu(src, cam, pose_dst, pose_src):
     same device. warp_map's operations in float64 in the same order, then cv2.remap's arithmetic (_remap_gpu): the frames are
     warp_frame's, except where a last-bit difference of a map value crosses a 1/32 px rounding tie."""
     import torch
-    dev, f8 = src.device, torch.float64
-    c = [torch.tensor(float(x), dtype=f8, device=dev) for x in np.asarray(cam, float)]
+    c, (Px, Py, Pz), (kx, ox, ky, oy) = _plane_gpu(cam, src.device)
     pd, ps = np.asarray(pose_dst, float).reshape(-1, 3), np.asarray(pose_src, float).reshape(-1, 3)
     q = np.stack([pd[:, 0], pd[:, 1], np.cos(pd[:, 2]), np.sin(pd[:, 2]), ps[:, 0], ps[:, 1], np.cos(ps[:, 2]), np.sin(ps[:, 2])])
-    xd, yd, cd, sd, xs, ys, cs, ss = torch.from_numpy(q).to(dev)[:, :, None, None]
-    out = torch.empty_like(src)
-    for k, view in enumerate(("road", "wide")):
-        if (view, dev) not in _GPU:
-            r = _rays(view)
-            _GPU[view, dev] = [torch.from_numpy(np.ascontiguousarray(a)).to(dev) for a in
-                               (r[..., 0], r[..., 1], r[..., 2], -r[..., 2], D_FAR / np.linalg.norm(r, axis=-1))]
-        rx, ry, rz, down, far = _GPU[view, dev]
-        lam = torch.minimum(torch.where(down > 1e-6, c[2] / down.clamp_min(1e-6), torch.inf), far)
-        Px, Py, Pz = c[0] + lam * rx, c[1] + lam * ry, c[2] + lam * rz               # vehicle frame at t_dst
-        dx, dy = (Px * cd - Py * sd + xd) - xs, (Px * sd + Py * cd + yd) - ys        # world, relative to the source pose
-        ray = (dx * cs + dy * ss) - c[0], (dy * cs - dx * ss) - c[1], Pz - c[2]      # vehicle frame at t_src, from the camera
-        K, ok = OP_K[view].tolist(), ray[0] > 0.1                                    # opencv axes: x = -ray y, y = -ray z, z = ray x
-        mx = torch.where(ok, K[0][0] * -ray[1] / ray[0] + K[0][2], -1e4).float()
-        my = torch.where(ok, K[1][1] * -ray[2] / ray[0] + K[1][2], -1e4).float()
-        Y, U, V = unpack(src[:, k])
-        hx, hy = (mx[:, 0::2, 0::2] + mx[:, 1::2, 1::2]) / 4 - 0.25, (my[:, 0::2, 0::2] + my[:, 1::2, 1::2]) / 4 - 0.25
-        out[:, k] = pack(_remap_gpu(Y, mx, my), _remap_gpu(U, hx, hy), _remap_gpu(V, hx, hy))
-    return out
+    xd, yd, cd, sd, xs, ys, cs, ss = torch.from_numpy(q).to(src.device)[:, :, None, None, None]
+    dx, dy = (Px * cd - Py * sd + xd) - xs, (Px * sd + Py * cd + yd) - ys        # world, relative to the source pose: (n, 2, H, W)
+    rx, ry, rz = (dx * cs + dy * ss) - c[0], (dy * cs - dx * ss) - c[1], Pz - c[2]   # vehicle frame at t_src, from the camera
+    ok = rx > 0.1                                                                # opencv axes: x = -ry, y = -rz, z = rx
+    mx, my = torch.where(ok, kx * -ry / rx + ox, -1e4).float(), torch.where(ok, ky * -rz / rx + oy, -1e4).float()
+    hx, hy = (mx[..., 0::2, 0::2] + mx[..., 1::2, 1::2]) / 4 - 0.25, (my[..., 0::2, 0::2] + my[..., 1::2, 1::2]) / 4 - 0.25
+    Y, U, V = unpack(src)
+    UV = _remap_gpu(torch.stack([U, V], 2), hx[:, :, None], hy[:, :, None])
+    return pack(_remap_gpu(Y, mx, my), UV[:, :, 0], UV[:, :, 1])
 
 
 # ---------------------------------------------------------------- history synthesis

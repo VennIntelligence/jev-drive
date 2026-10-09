@@ -7,11 +7,14 @@ simulator (c1_replay.py's harness). Results: experiments/alpasim/results/lat1_fr
       same inputs: differing pixels of the slot frames, 4 s endpoint distance, plan yaw at 0.5 s, stage times of a lone stream
   lat1_check.py remap --msgs <dir> --out <json> [--n N]
       the resampler alone: cv2.remap vs op_interp._remap_gpu on the CPU path's own maps (must be 0 differing pixels)
+  lat1_check.py prof --msgs <dir> --out <json>
+      where a decision's input work goes, alone on the job's cores: track, CPU lattice, GPU lattice, JPEG decode, model-frame packing
   lat1_check.py load --msgs <dir> --out <json> --synth cpu|gpu [--streams 8] [--n N]
       N scenes replayed as `streams` concurrent sessions through one driver (one inference lock, as served): stage times per `drive`
       and per image, from the driver's own drive.jsonl / images.jsonl
 """
 import argparse
+import io
 import json
 import os
 import pickle
@@ -135,6 +138,43 @@ def cmd_remap(a):
     print(json.dumps(s), flush=True)
 
 
+def cmd_prof(a):
+    import torch
+    import sh30_driver as D
+    C, I, Z, pb = D.C, D.C.I, D.C.Z, D.egodriver_pb2
+    msgs = pickle.load(open(scenes(a)[0], "rb"))
+    s = D.Session(next(pb.DriveSessionRequest.FromString(raw) for kind, raw in msgs if kind == "driver_session_request"), 0)
+    jpg = [pb.RolloutCameraImage.FromString(raw).camera_image.image_bytes for kind, raw in msgs if kind == "driver_camera_image"][:4]
+    keys, cam_t, dev = np.stack([C.pack(j, s.cam) for j in jpg]), s.cam["t"].astype(np.float64), torch.device("cuda")
+    pose, vel = np.array([[-12.0, 0.9, -0.12], [-8.1, 0.4, -0.08], [-4.0, 0.1, -0.03], [0, 0, 0]]), np.tile([8.0, 0.0], (4, 1))
+    maps, out = C._MAPS[Z.calib_key({"CAM_F0": s.cam})], {}
+
+    def clock(name, fn, n=100):
+        fn()
+        t = []
+        for _ in range(n):
+            t0 = time.perf_counter()
+            fn()
+            t.append(1e3 * (time.perf_counter() - t0))
+        out[name] = pct(t)
+    track = I.track_navsim(pose, vel)
+    clock("track: build", lambda: I.track_navsim(pose, vel))
+    clock("track: 12 poses", lambda: [track(t) for t in C.SLOT_T[:6]] + [track(t) for t in I.T_KEY[[0, 1, 1, 2, 2, 3]]])
+    clock("lattice cpu (8 threads)", lambda: C.lattice(keys, 0, track, cam_t, "backwarp"), 30)
+    clock("lattice gpu + sync", lambda: (C.lattice_gpu(keys, 0, track, cam_t, "backwarp", dev), torch.cuda.synchronize()))
+    K, pd, ps = torch.from_numpy(keys).to(dev), np.stack([track(t) for t in C.SLOT_T[:6]]), np.stack([track(t) for t in I.T_KEY[[0, 1, 1, 2, 2, 3]]])
+    clock("warp_gpu + sync (6 frames)", lambda: (I.warp_gpu(K[[0, 1, 1, 2, 2, 3]], cam_t, pd, ps), torch.cuda.synchronize()))
+    clock("keys -> device", lambda: (torch.from_numpy(keys).to(dev), torch.cuda.synchronize()))
+    ycc = maps.decode(io.BytesIO(jpg[0]))
+    clock("jpeg decode (PIL, YCbCr)", lambda: maps.decode(io.BytesIO(jpg[0])), 50)
+    clock("model-frame packing (numpy)", lambda: maps(ycc), 50)
+    if hasattr(C, "pack_gpu"):
+        clock("model-frame packing (gpu) + sync", lambda: (C.pack_gpu(jpg[0], s.cam, dev), torch.cuda.synchronize()), 50)
+    out = dict(cpus=len(os.sched_getaffinity(0)), jpeg_bytes=len(jpg[0]), ms_median_p95_max=out)
+    Path(a.out).write_text(json.dumps(out))
+    print(json.dumps(out, indent=1), flush=True)
+
+
 def cmd_load(a):
     import torch
     import sh30_driver as D
@@ -170,10 +210,10 @@ def cmd_load(a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["equiv", "remap", "load"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
+    ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=0), ap.add_argument("--synth", default="gpu"), ap.add_argument("--streams", type=int, default=8)
     a = ap.parse_args()
-    {"equiv": cmd_equiv, "remap": cmd_remap, "load": cmd_load}[a.cmd](a)
+    {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load}[a.cmd](a)
 
 
 if __name__ == "__main__":
