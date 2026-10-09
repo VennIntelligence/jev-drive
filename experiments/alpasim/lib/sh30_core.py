@@ -206,9 +206,11 @@ class Core:
     sync = True                                           # CUDA sync at every stage boundary, for the stage times
     _enc = _pol = None                                    # compiled encoder / policy passes (compile())
 
-    def compile(self, graph: bool = True):
+    def compile(self, graph: bool = False):
         """Freeze the two model passes with torch.compile: op_torch interprets the ONNX graph node by node (6 739 aten calls per decision,
-        24 of 25 ms host-side dispatch). graph: the policy as a CUDA graph. Outputs differ from the interpreter at fp16 rounding level."""
+        24 of 25 ms host-side dispatch). Outputs differ from the interpreter at fp16 rounding level. graph: the policy as a CUDA graph
+        (1.9 instead of 3.7 ms); NOT safe while other threads use the card (nvJPEG in the gRPC threads): 1 NaN plan and one 5.8 m off in
+        640 decisions, results/lat1_frame_synthesis.md."""
         torch, net, A = self.torch, self.model.net, self.A
         self._enc = torch.compile(lambda p, c: net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"])
         self._pol = torch.compile(lambda H, ego, tc: self.model(H, ego, tc), mode="reduce-overhead" if graph else None)

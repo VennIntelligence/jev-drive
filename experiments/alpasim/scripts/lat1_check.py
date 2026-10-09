@@ -295,7 +295,7 @@ def cmd_load(a):
     core = D.C.Core(TAG, "cuda", synth=a.synth)
     core.sync = not a.nosync
     if a.compile:
-        core.compile(a.compile == "graph")
+        core.compile(a.compile == "graph")              # --compile graph: the CUDA-graph policy; --compile nograph (or bare): without
     if a.pack == "gpu":
         D.C.pack_fast = lambda jpeg, cam: D.C.pack_gpu(jpeg, cam, core.dev)
     z = np.zeros(D.C.FRAME, np.uint8)
@@ -380,7 +380,7 @@ def main():
     ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same", "nvjpeg", "runs", "model"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=0), ap.add_argument("--synth", default="gpu"), ap.add_argument("--streams", type=int, default=8)
     ap.add_argument("--nosync", action="store_true"), ap.add_argument("--pack", default="fast"), ap.add_argument("--driver", default="sh30")
-    ap.add_argument("--compile", nargs="?", const="graph", default=""), ap.add_argument("--nvjpeg", action="store_true")
+    ap.add_argument("--compile", nargs="?", const="nograph", default=""), ap.add_argument("--nvjpeg", action="store_true")
     a = ap.parse_args()
     {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same, "nvjpeg": cmd_nvjpeg, "runs": cmd_runs, "model": cmd_model}[a.cmd](a)
 
