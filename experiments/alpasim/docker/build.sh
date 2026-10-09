@@ -6,7 +6,8 @@
 #   TAG=AP2-AB-s0 experiments/alpasim/docker/build.sh                 # the one-line switch: same layers, another default
 #   EXTRA="OT10a05-F-s0" TAG=OT10a05-F-s0 .../build.sh                # a new checkpoint: one thin layer on top of the cached ones
 # Env: TAGS (stable checkpoint layer), EXTRA (thin layer), TAG (served by default; several joined by + = ensemble), DRIVER (auto | sh30 |
-# ap2 | ens), IMAGE (repository, default jev-alpasim), VERSION (image tag, default <TAG>-<git short hash>),
+# ap2 | ens), VCONT / LEAD (the serving switches baked in as JEV_VCONT / JEV_LEAD, lib/serve_fix.py; default 0 / 0 = off),
+# IMAGE (repository, default jev-alpasim), VERSION (image tag, default <TAG>-<git short hash>[-vc<VCONT>][-lead]),
 # WHEELS (dir of pre-fetched wheels, see wheels.py: the build then installs offline from it; default $DATA_DIR/cache/jev_wheels when it
 # exists, WHEELS= forces the indexes, whose triton wheel does not match requirements.lock as of 2026-10-09), PROXY (http proxy for the build's
 # downloads, e.g. http://127.0.0.1:7890; uses the host network), DATA_DIR, ALPASIM_SRC.
@@ -20,7 +21,9 @@ TAG=${TAG:-P2H10-F-s0}
 IMAGE=${IMAGE:-jev-alpasim}
 COMMIT=0bb4c4bfe10951ea5589aa8ea514e422cf3c3506                       # the challenge-deployed AlpaSim commit (docs/alpasim.md)
 git_hash=$(git -C "$repo" rev-parse --short HEAD)$(git -C "$repo" diff --quiet -- experiments/alpasim jevdrive lib experiments/op_parity experiments/op_adapt_l experiments/op_adapt_r2 || echo -dirty)
-VERSION=${VERSION:-$(echo "$TAG" | tr '+A-Z' '-a-z')-$git_hash}
+VCONT=${VCONT:-0}; LEAD=${LEAD:-0}
+sw=; [[ $VCONT != 0 ]] && sw+=-vc$VCONT; [[ $LEAD == 1 ]] && sw+=-lead
+VERSION=${VERSION:-$(echo "$TAG" | tr '+A-Z' '-a-z')-$git_hash$sw}
 [[ $(git -C "$SRC" rev-parse HEAD) == "$COMMIT" ]] || { echo "AlpaSim checkout $SRC is not at $COMMIT" >&2; exit 2; }
 
 ctx=$(mktemp -d "${TMPDIR:-/tmp}/jev-alpasim-ctx.XXXXXX"); trap 'rm -rf "$ctx"' EXIT
@@ -37,7 +40,7 @@ touch "$ctx/ckpt-extra/.keep"; chmod -R a+rX,go-w "$ctx"
 echo "context: $(du -sh "$ctx" | cut -f1), $(wc -l < "$ctx/MANIFEST.sha256") files; image $IMAGE:$VERSION (default $TAG, repo $git_hash)"
 
 args=(--build-arg "TAG=$TAG" --build-arg "DRIVER=${DRIVER:-auto}" --build-arg "GIT_HASH=$git_hash"
-      --build-arg "CUDA=${CUDA:-cu126}")
+      --build-arg "CUDA=${CUDA:-cu126}" --build-arg "VCONT=$VCONT" --build-arg "LEAD=$LEAD")
 [[ -z ${WHEELS+x} && -d ${DATA_DIR:-}/cache/jev_wheels ]] && WHEELS=$DATA_DIR/cache/jev_wheels
 if [[ -n ${WHEELS:-} ]]; then args+=(--build-context "wheels=$WHEELS" --build-arg "UV_SRC=--no-index --find-links /wheels")
 else mkdir "$ctx/.nowheels"; args+=(--build-context "wheels=$ctx/.nowheels"); fi

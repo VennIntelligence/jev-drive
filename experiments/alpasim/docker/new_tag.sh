@@ -5,7 +5,8 @@
 #   scripts/tmux_run.sh img-<tag> env DATA_DIR=/data experiments/alpasim/docker/new_tag.sh <tag> [native results-summary.json]
 # <tag> = a run tag under $DATA_DIR/runs/op_parity/runs (tagA+tagB = the ensemble). The driver family comes from the checkpoint
 # (serve.py); DRIVER=sh30|ap2|ens forces it. A tag outside build.sh's stable set goes into the thin extra layer, and the image's default
-# becomes <tag>: the image this prints is the one to push. Nothing here pushes, logs in or submits.
+# becomes <tag>: the image this prints is the one to push. Nothing here pushes, logs in or submits. VCONT / LEAD in the environment bake
+# the serving switches into the image (build.sh), e.g. `env DATA_DIR=/data VCONT=1.0 LEAD=1 .../new_tag.sh <tag>`.
 # State: $DATA_DIR/runs/alpasim/tokyo_image/<tag>-<ts>/{STATUS, DONE | ERROR, log.txt, report.md, IMAGE, build/, test/, smoke/}.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)

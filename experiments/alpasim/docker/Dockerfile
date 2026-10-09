@@ -56,7 +56,10 @@ RUN python /app/verify.py
 ARG TAG=P2H10-F-s0
 ARG DRIVER=auto
 ARG GIT_HASH=local
-ENV JEV_TAG=${TAG} JEV_DRIVER=${DRIVER} SH30_GIT_HASH=${GIT_HASH}
+# The served speed profile (lib/serve_fix.py): VCONT = seconds of the speed-continuous blend (0 = off), LEAD = 1 for the openpilot lead limit.
+ARG VCONT=0
+ARG LEAD=0
+ENV JEV_TAG=${TAG} JEV_DRIVER=${DRIVER} SH30_GIT_HASH=${GIT_HASH} JEV_VCONT=${VCONT} JEV_LEAD=${LEAD}
 EXPOSE 6789
 STOPSIGNAL SIGTERM
 USER 10001:10001
