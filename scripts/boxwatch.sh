@@ -7,7 +7,9 @@
 #
 #   every 5 s  one line in $DATA_DIR/runs/boxwatch/<YYYYmmdd>.tsv: time, memory.current, anon, file, the
 #              memory.events counters (high, max, oom_kill), memory.pressure "full" total (us), pids.current,
-#              and the three largest processes by RSS as pid:rss_kB:comm
+#              the three largest processes by RSS as pid:rss_kB:comm, and (since 2026-10-10) active_file and
+#              inactive_file: the platform kills the largest process when memory.current - inactive_file reaches
+#              98 % of memory.max (docs/remote-box.md, "Host memory"), so column 2 - column 12 is the number to read
 #   every 60 s a full `ps` (pid ppid pgid user etimes rss nlwp args) in ps/<HHMMSS>.txt, kept 3 h
 #
 # One instance per box (flock); started on demand, detached, by the box tooling.
@@ -24,12 +26,13 @@ kv() { awk -v k="$2" '$1 == k {print $2; exit}' "$cg/$1" 2>/dev/null; }
 n=0
 while :; do
     f=$W/$(date +%Y%m%d).tsv
-    [[ -s $f ]] || printf 't\tmem_current\tanon\tfile\tev_high\tev_max\tev_oom_kill\tpsi_full_us\tpids\ttop3_pid:rss_kB:comm\n' > "$f"
+    grep -q inactive_file "$f" 2>/dev/null || printf 't\tmem_current\tanon\tfile\tev_high\tev_max\tev_oom_kill\tpsi_full_us\tpids\ttop3_pid:rss_kB:comm\tactive_file\tinactive_file\n' >> "$f"
     top=$(ps -eo pid=,rss=,comm= --sort=-rss 2>/dev/null | head -3 | awk '{printf "%s:%s:%s ", $1, $2, $3}')
     psi=$(awk '/^full/ {sub("total=", "", $5); print $5}' "$cg/memory.pressure" 2>/dev/null)
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date +%T)" "$(cat $cg/memory.current 2>/dev/null)" \
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date +%T)" "$(cat $cg/memory.current 2>/dev/null)" \
         "$(kv memory.stat anon)" "$(kv memory.stat file)" "$(kv memory.events high)" "$(kv memory.events max)" \
-        "$(kv memory.events oom_kill)" "$psi" "$(cat $cg/pids.current 2>/dev/null)" "$top" >> "$f"
+        "$(kv memory.events oom_kill)" "$psi" "$(cat $cg/pids.current 2>/dev/null)" "$top" \
+        "$(kv memory.stat active_file)" "$(kv memory.stat inactive_file)" >> "$f"
     if (( n++ % 12 == 0 )); then
         ps -eo pid,ppid,pgid,user,etimes,rss,nlwp,args --sort=-rss 2>/dev/null | cut -c1-240 > "$W/ps/$(date +%H%M%S).txt"
         find "$W/ps" -name '*.txt' -mmin +180 -delete

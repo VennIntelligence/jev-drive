@@ -393,6 +393,56 @@ class Dispatch(unittest.TestCase):
     def events(self, kind):
         return [e for e in (json.loads(l) for l in (self.tmp / "events.jsonl").read_text().splitlines()) if e["kind"] == kind]
 
+    def test_sigkill_is_retried_without_counting_and_counted_per_day(self):
+        mark = self.tmp / "second"
+        a = P.submit("if [ -e %s ]; then exit 0; fi; touch %s; kill -9 $$" % (mark, mark), name="wod-s0", pool=self.tmp, vram_gb=1)
+        b = P.submit("kill -9 $$", name="always", pool=self.tmp, vram_gb=1, tries=2)
+        c = P.submit("exit 9", name="plain", pool=self.tmp, vram_gb=1)
+        d = self.disp(kill_retries=2)
+        self.until(d, lambda: all(j["state"] in P.FINAL for j in d.st["jobs"].values()))
+        j = d.st["jobs"]
+        self.assertEqual((j[a]["state"], j[a]["tries"], j[a]["kill_tries"]), ("done", 2, 1))    # tries = 1, retried anyway
+        self.assertEqual((j[b]["state"], j[b]["tries"], j[b]["rc"]), ("failed", 4, 137))        # 2 free + 2 own tries
+        self.assertIn("SIGKILL", j[b]["why"])
+        self.assertEqual((j[c]["state"], j[c]["tries"]), ("failed", 1))
+        ev = self.events("kill")
+        self.assertEqual(sorted(e["id"] for e in ev), sorted([a] + [b] * 4))
+        self.assertEqual(len(ev[0]["mem"]), 6)                # anon, current, high, high events, working set, kill line
+        rep = P.kill_report(1, self.tmp)
+        self.assertEqual([(v["n"], v["jobs"]) for v in rep.values()], [(5, 2)])                 # each kill once
+        self.assertIn("always", list(rep.values())[0]["last"] + " always")
+
+    def test_kill_report_counts_events_from_before_the_kill_event(self):
+        day = time.strftime("%F")
+        lines = [dict(t=day + " 00:19:29", kind="end", id="a", state="failed", rc=137, why="rc 137"),
+                 dict(t=day + " 00:35:54", kind="retry", id="b", rc=137, tries=1),
+                 dict(t=day + " 00:36:00", kind="end", id="c", state="failed", rc=1, why="rc 1"),
+                 dict(t=day + " 00:37:00", kind="kill", id="d", name="x", rc=137),
+                 dict(t=day + " 00:37:01", kind="end", id="d", state="failed", rc=137, why="rc 137 (SIGKILL)"),
+                 dict(t=day + " 00:38:00", kind="retry", id="e", rc=137, tries=1, sigkill=True)]
+        (self.tmp / "events.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines))
+        self.assertEqual(P.kill_report(1, self.tmp), {day: dict(n=3, jobs=3, last="00:37:00 x")})
+
+    def test_working_set_rule_holds_a_start_below_the_kill_line(self):
+        import dataclasses
+        self.box = dataclasses.replace(fake_box(), mem_max_gb=552.0, mem_used_gb=100.0, mem_ws_gb=500.0)   # line 541
+        d = self.disp()
+        a = P.submit("true", name="wod", pool=self.tmp, vram_gb=1, ram_gb=40)
+        b = P.submit("true", name="small", pool=self.tmp, vram_gb=1)                  # no declaration: 8 GB + 16 reserve
+        d.round()
+        ja, jb = d.st["jobs"][a], d.st["jobs"][b]
+        self.assertEqual((ja["state"], P.wait_cause(ja["why"])), ("queued", "ram"))
+        self.assertIn("working set 500 + 0 young + 40 GB + 16 reserve > kill line 541", ja["why"])
+        self.assertEqual(d.ws_want, 56.0)                     # what the trimmer is asked to free
+        self.assertIn(jb["state"], ("running", "done"))       # 500 + 8 + 16 <= 541
+        self.box = dataclasses.replace(self.box, mem_ws_gb=440.0)
+        self.until(d, lambda: ja["state"] == "done")
+        self.box = dataclasses.replace(self.box, mem_ws_gb=530.0)
+        c = P.submit("true", name="wod", pool=self.tmp, vram_gb=1, ram_gb=40)
+        d.cfg_over["ws_wait_s"] = 0.0                         # the cache could not be dropped: start anyway, and say so
+        self.until(d, lambda: d.st["jobs"][c]["state"] == "done")
+        self.assertEqual([e["id"] for e in self.events("ws_override")], [c])
+
     def test_cuda_oom_is_retried_once_beyond_tries(self):
         mark = self.tmp / "second"
         oom = "echo 'torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 GiB'"
@@ -608,6 +658,58 @@ class Dispatch(unittest.TestCase):
         self.assertNotIn("reserves", d.st["jobs"][big]["why"])
         self.assertIn(d.st["jobs"][small]["state"], ("running", "done"))
         self.cancel_all(d)
+
+
+class CacheTrim(unittest.TestCase):
+    def test_trim_drops_idle_files_oldest_first_until_the_margin_is_back(self):
+        from jevdrive.cl import cache
+        tmp = Path(tempfile.mkdtemp())
+        for i, name in enumerate(("new.npy", "old.npy", "open.npy", "small.npy")):
+            with (tmp / name).open("wb") as f:
+                f.truncate(cache.MIN_BYTES if name != "small.npy" else 1024)          # sparse
+            os.utime(tmp / name, (1000.0 * (10 - i if name != "old.npy" else 1), 0))
+        st = os.stat(tmp / "open.npy")
+        busy = {(os.major(st.st_dev), os.minor(st.st_dev), st.st_ino)}
+        files = cache.file_list([tmp], tmp / "list.json")
+        self.assertEqual(sorted(Path(f[0]).name for f in files), ["new.npy", "old.npy", "open.npy"])
+        self.assertEqual(cache.file_list([tmp], tmp / "list.json"), files)            # second call: the cached list
+        dropped, state = [], dict(m=10.0)
+
+        def drop(path):
+            dropped.append(Path(path).name)
+            state["m"] += 20.0
+            return True
+        r = cache.trim(45.0, [tmp], tmp / "list.json", margin_fn=lambda: state["m"], drop_fn=drop, busy=busy)
+        self.assertEqual(dropped, ["old.npy", "new.npy"])     # idle files, oldest access first; the open one is left
+        self.assertEqual((r["before"], r["after"], r["files"], r["busy"]), (10.0, 50.0, 2, 0))
+        dropped.clear()
+        r = cache.trim(45.0, [tmp], tmp / "list.json", margin_fn=lambda: state["m"], drop_fn=drop, busy=busy)
+        self.assertEqual((dropped, r["files"]), ([], 0))      # enough margin: nothing is dropped
+        state["m"] = 0.0
+        r = cache.trim(55.0, [tmp], tmp / "list.json", margin_fn=lambda: state["m"], drop_fn=drop, busy=busy)
+        self.assertEqual((dropped, r["busy"]), (["old.npy", "new.npy", "open.npy"], 1))      # open files last
+
+    @unittest.skipUnless(LINUX, "reads /proc and the page cache")
+    def test_in_use_sees_open_and_mapped_files_and_drop_empties_the_cache(self):
+        import mmap
+        from jevdrive.cl import cache
+        tmp = Path(tempfile.mkdtemp(dir=os.environ.get("DATA_DIR", None)))
+        p = tmp / "x.bin"
+        p.write_bytes(os.urandom(4 * 2 ** 20))
+        st = os.stat(p)
+        key = (os.major(st.st_dev), os.minor(st.st_dev), st.st_ino)
+        self.assertNotIn(key, cache.in_use())
+        with p.open("rb") as f:
+            self.assertIn(key, cache.in_use())
+            m = mmap.mmap(f.fileno(), 0, prot=mmap.PROT_READ)
+        self.assertIn(key, cache.in_use())                    # mapped, no descriptor
+        m.close()
+        os.sync()
+        self.assertTrue(cache.drop(str(p)))
+        self.assertFalse(cache.drop(str(tmp / "missing")))
+        if cache.mem():
+            self.assertGreater(cache.mem()["max"], cache.mem()["ws"])
+            self.assertEqual(cache.margin(), cache.margin(frac=cache.KILL_FRAC))
 
 
 if __name__ == "__main__":

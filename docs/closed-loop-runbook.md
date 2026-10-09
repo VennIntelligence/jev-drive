@@ -125,6 +125,7 @@ $P top              # per card: util, VRAM booked / used outside the pool / free
                     # queued demand, and an UNDER-USED line when a card idles
 $P usage --hours 24 # card-hours and core-hours used, idle card-hours split by cause
 $P vram             # declared against measured VRAM per name prefix, under-declared ones first
+$P trim --margin 120  # drop page cache until the working set is 120 GiB below the platform's kill line (--dry)
 $P show <id>        # spec, state, log tail       $P cancel <id> [--drain]
 $P retarget <id>... --gpus 0,2   # change the allowed cards of queued jobs; ids and --after chains stay
 ```
@@ -146,6 +147,27 @@ retried). Now:
 
 Declare the peak; the pool lowers the booking from history by itself, so a generous declaration costs nothing after
 three runs.
+
+**Memory: the kill line.** The platform SIGKILLs the largest process of the container while `memory.current` -
+`inactive_file` (the working set: application memory + page cache that was read twice) is at or above 98 % of
+`memory.max`; a warm page cache alone keeps the box 10-40 GiB under that line ([remote-box.md](remote-box.md), "Host
+memory"). On 2026-10-10 this killed 28 tries of 18 jobs in 90 min (one WOD eval needed 14 starts). The pool now:
+
+- **holds a start** while working set + RAM that jobs younger than 5 min have not allocated yet + the job's RAM
+  (`--ram`, at most 1.2 x history's max RSS + 1; undeclared: history, else `ram_default_gb` 8) + `ws_reserve_gb` (16)
+  would be above the line (`queue`: `memory working set ... > kill line`, cause `ram`). After `ws_wait_s` (10 min) of
+  that the job starts anyway, one per round (event `ws_override`): the cache could not be dropped.
+- **drops page cache** (`cl trim`, event `trim`; idle files first, oldest access first, then open files, whose mapped
+  pages stay) whenever the margin is under `ws_keep_gb` (80) + what young jobs still have to allocate, or under what
+  a held job needs. Files >= 16 MiB under `$DATA_DIR` (config `trim_roots`); the list is re-walked every 2 h.
+- **retries a SIGKILLed job** (root rc 137 without a pool stop; event `kill` with the memory picture) `kill_retries`
+  (3) times beyond `--tries`. `top` prints working set, line, margin and the kills of today and yesterday;
+  `usage --hours H` the kills per day.
+
+For lanes: declare `--ram` (the peak private memory of the job's process tree: WOD eval 40, `pp_train.py --host` 45,
+AlpaSim stack 52). The pool then spaces fast growers by itself; no cap on how many jobs of a kind may start together
+is needed beyond that, and four undeclared 30 GiB loaders started in one round are still the way to get killed.
+A killed training restarts from step 0: `pp_train.py` and `ap2_train.py` write no checkpoint before the end.
 
 **Restarting the dispatcher** (pool code only takes effect then). State is in `state.json` (saved every round),
 jobs run in their own sessions and are followed by pid + start time, exit codes land in `rc.<try>` files, so running
@@ -196,6 +218,7 @@ command when rc alone is not enough.
 | CARLA | servers of pool jobs + servers outside the pool + `carla` <= 6 per card; one CARLA job starts per card per round (staggered starts) |
 | ports | a free block of 2 x `carla` server indices in 160-494 whose RPC and TM port blocks (index i: RPC 2000 + 50i, TM = RPC block of i + 120) miss every pool job, every hold and every LISTENING TCP port on the box; freed only when the job's whole process tree has exited |
 | CPU | charged cores of pool jobs + holds <= cgroup quota x `cpu_overcommit` (1.0). Charge = declared `cpu` while the job is younger than 5 min (or unmeasured), then max(1, 1.2 x its peak measured cores over the last 5 min) (utime + stime of its process tree, every round); holds keep declared cores. `queue` shows `cpu m/d` = measured peak / declared, `top` the charged total. With >= 3 finished runs in history a young or queued job is charged min(declared, 1.2 x their max peak cores). |
+| kill line | working set (`memory.current` - `inactive_file`) + unallocated RAM of jobs younger than 5 min + the job's RAM + 16 GiB <= 0.98 x `memory.max`; see "Memory: the kill line" |
 | PIDs / RAM | pids.current + threads of jobs younger than 5 min + the job's estimate (thread model) <= 0.80 pids.max; cgroup memory without page cache (`memory.stat` anon + shmem + kernel) + what jobs younger than 5 min have not allocated yet (`ram_gb` - their tree's RSS, tapering to 0 at 5 min) + the job's `ram_gb` <= 0.85 memory.max; `ram_gb` counts as at most 1.2 x history's max RSS + 1 GB. (Until 2026-10-08 the whole `ram_gb` of every young job was added on top of the measured memory: half of that day's GPU-job queueing.) |
 | idle card (work conservation) | A card with no pool job, no whole hold and <= 1 GB used outside the pool for >= `idle_s` (120 s, config) takes the highest-priority queued job with `vram_gb` > 1 that is blocked **only** by the CPU budget or the PID plan cap (event `admit_idle`). VRAM, RAM, CARLA and ports are never relaxed; CPU-only jobs (`vram_gb` <= 1) never use the rule. |
 | pinning watchdog | A queued job restricted by `gpus` whose allowed cards are busy gets an idle card (>= `idle_s`) outside `gpus` added to its `gpus` and starts there (event `auto_retarget`). `submit --pin-strict` opts out. |
@@ -213,7 +236,8 @@ repeatedly: `op-eval-s3-pf` and `op-eval-k2` are `op-eval`; last 20 kept). `subm
 defaults to p95 x 1.2 of that history and prints the choice on stderr. An explicit value is kept in the spec, but the
 dispatcher books min(declared, measured) as in the table (`submit` says so when a declaration is far above history);
 `"trust_measured": false` in the config books declarations only, as before 2026-10-08. Dispatcher config keys:
-`idle_s`, `idle_vram_gb` (trivial foreign VRAM), `cpu_overcommit`, `cpu_budget`, `trust_measured`.
+`idle_s`, `idle_vram_gb` (trivial foreign VRAM), `cpu_overcommit`, `cpu_budget`, `trust_measured`, `ws_kill_frac`,
+`ws_reserve_gb`, `ws_keep_gb`, `ws_wait_s`, `ram_default_gb`, `kill_retries`, `trim`, `trim_roots`.
 
 **Reading under-use.** `top` ends with two lines: `idle now` (cards without a GPU job and for how long; cores measured
 / charged / budget) and `queued` (ready GPU jobs and ready CPU-only jobs by what they wait on: vram, ram, cpu, train,
@@ -275,8 +299,8 @@ as a `--vram 0.5` pool job). Resumable stages skip finished units, as before.
   identical runs. Compare arms against the spread of identical baselines, not against zero.
 - [ ] **A score over the routes that happened to finish is a score on a selected subset**: read `summary.json`
   (`routes_never_finished`, `restarts`) before quoting one.
-- [ ] **Memory.** Keep application memory under ~85% of `memory.max`; unexplained SIGKILLs come from the platform
-  (closed-loop-acceptance.md, "SIGKILL").
+- [ ] **Memory.** A SIGKILL (rc 137, `Killed` in the log, kernel oom_kill 0) is the platform's working-set rule
+  (remote-box.md, "Host memory"): declare `--ram`, read the margin in `cl top`; `cl trim --margin 150` makes room by hand.
 
 ## Where the detail lives
 
@@ -289,4 +313,4 @@ as a `--vram 0.5` pool job). Resumable stages skip finished units, as before.
 - [fc65452:todos/2026-10-01-cl-lib.md](https://github.com/VennIntelligence/jev-drive/blob/fc65452/todos/2026-10-01-cl-lib.md): the profile experiment's pre-registration, log and raw
   tables.
 
-Last verified: 2026-10-05
+Last verified: 2026-10-05 (CARLA); pool memory rule 2026-10-10

@@ -70,6 +70,14 @@ Under-declared VRAM (the dispatcher samples every job's VRAM each round, nvidia-
   vram_stop      such a job on a card with less than over_stop_free_gb (1 GB; 0 = never) free is stopped: the job
                  that broke its declaration goes, not a neighbour picked by allocation order. It is requeued once
                  (oom_retries) and waits for a card with room for what it measured.
+  kill           a job whose root dies of SIGKILL without a pool stop (rc 137: the platform kills the largest process
+                 when memory.current - inactive_file reaches 98 % of memory.max, docs/remote-box.md) is requeued
+                 kill_retries times (default 3) beyond `tries`; the event carries the memory picture. Starts are held
+                 while the working set + young jobs' RAM + the job's RAM (ram_gb, else history, else
+                 ram_default_gb) + ws_reserve_gb would cross that line, and the dispatcher drops page cache
+                 (jevdrive.cl.cache, event `trim`) to keep ws_keep_gb of margin plus what waiting jobs need. A job
+                 held by this rule for ws_wait_s (10 min: the cache could not be dropped) starts anyway, one per
+                 round (event `ws_override`).
   oom            a job that exits non-zero with a CUDA out-of-memory error in this try's part of log.txt is requeued
                  oom_retries times (default 1) beyond `tries`, whoever caused it; the event lists the card's jobs with
                  declared and measured VRAM. Exhausted: failed with "CUDA OOM" in the reason.
@@ -103,6 +111,7 @@ import secrets
 import shlex
 import signal
 import subprocess
+import sys
 import time
 import traceback
 from collections import deque
@@ -133,9 +142,16 @@ USAGE_EVERY_S = 60.0                  # one usage.jsonl line per this many secon
 SERIAL_HINT_S = 1800.0                # `top` flags a GPU job older than this while another card has been idle
 CLK_TCK = os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") else 100
 STALE_S = 120.0                       # status.json older than this: the dispatcher is not running
+KILL_RCS = (137, -9)                  # a root that died of SIGKILL (bash reports 128 + 9)
+TRIM_EVERY_S = 30.0                   # at most one page-cache trim per this many seconds
 DEFAULTS = dict(poll_s=20.0, headroom_gb=4.0, carla_per_card=capacity.GPU_KNEE, train_per_card=2, cpu_overcommit=1.0,
                 max_starts=4, hold_s=900.0, cards=None, smi_age_s=15.0, idle_s=120.0, idle_vram_gb=1.0,
-                trust_measured=True, over_stop_free_gb=1.0, oom_retries=1, boxwatch=True)
+                trust_measured=True, over_stop_free_gb=1.0, oom_retries=1, boxwatch=True,
+                # the platform's kill line (working set = memory.current - inactive_file >= ws_kill_frac x memory.max):
+                # a start needs its RAM + ws_reserve_gb of margin below it, the trimmer keeps ws_keep_gb free, a job
+                # without ram_gb counts as ram_default_gb, a SIGKILLed job is retried kill_retries times beyond tries
+                ws_kill_frac=0.98, ws_reserve_gb=16.0, ws_keep_gb=80.0, ram_default_gb=8.0, kill_retries=3, trim=True,
+                trim_roots=None, ws_wait_s=600.0)
 FINAL = ("done", "failed", "cancelled")
 
 
@@ -252,16 +268,20 @@ def vram_charge(j: dict, now: float, known: dict = None, trust: bool = True, see
     return min(declared, own)
 
 
-def ram_reserve(j: dict, now: float, known: float = None) -> float:
+def ram_reserve(j: dict, now: float, known: float = None, default: float = 0.0) -> float:
     """GB of host RAM still to come from a young job: what it is expected to need (declared, at most `known` from
     history) minus what its tree already holds (that part is in the cgroup's measured memory; adding the whole
     declaration on top counted young jobs twice), tapering linearly to 0 at YOUNG_S (the old rule held the full
-    declaration until YOUNG_S and nothing after)."""
+    declaration until YOUNG_S and nothing after). `default`: what a job without ram_gb and without history counts as
+    (the working-set rule; the 85 % rule keeps 0)."""
     age = now - j.get("t0", 0)
     if age >= YOUNG_S:
         return 0.0
     need = float(j["spec"].get("ram_gb") or 0)
-    need = need if known is None else min(need, known)
+    if need:
+        need = need if known is None else min(need, known)
+    elif default:
+        need = known if known is not None else default
     return max(0.0, need - float(j.get("rss_now") or 0)) * (1.0 - max(age, 0.0) / YOUNG_S)
 
 
@@ -619,6 +639,7 @@ class Dispatcher:
         self.cpu_info = {}
         self.hist = {}                                        # history.json, re-read every round
         self.usage_t = 0.0
+        self.ws_want = self.young_ws = self.trim_t = 0.0
 
     # -------------------------------------------------------------- helpers
     def cfg(self) -> dict:
@@ -782,20 +803,30 @@ class Dispatcher:
                 self.log("oom", id=jid, name=spec["name"], owner=spec.get("owner"), gpu=j.get("gpu"), rc=rc,
                          declared=spec.get("vram_gb"), peak=j.get("vram_peak"), stopped=vstop,
                          retry=int(j.get("oom_tries") or 0) < int(cfg["oom_retries"]), card_jobs=j.get("card_jobs"))
+            killed = rc in KILL_RCS and not j.get("stop") and not oom
+            if killed:                                 # SIGKILL from outside: the platform's working-set kill
+                again = int(j.get("kill_tries") or 0) < int(cfg["kill_retries"])
+                self.log("kill", id=jid, name=spec["name"], owner=spec.get("owner"), gpu=j.get("gpu"), rc=rc,
+                         age_s=round(time.time() - j.get("t0", time.time())), rss_peak=j.get("rss_peak"),
+                         ram_gb=spec.get("ram_gb"), retry=again, mem=self.mem_line(peek=True))
             if oom and int(j.get("oom_tries") or 0) < int(cfg["oom_retries"]):
                 j["oom_tries"] = int(j.get("oom_tries") or 0) + 1
                 why = j.pop("stop", None) or "CUDA OOM (rc %s)" % rc
                 j.update(state="queued", why="retry after " + why)
                 self.status_line(j, "queued: retry after " + why)
+            elif killed and again:
+                j["kill_tries"] = int(j.get("kill_tries") or 0) + 1
+                j.update(state="queued", why="retry after SIGKILL (rc %s), not counted" % rc)
+                self.status_line(j, "queued: " + j["why"])
             elif j.get("stop"):
                 self.finish(j, "cancelled" if j["stop"] == "cancelled" else "failed", rc, j.pop("stop"))
             elif rc == 0:
                 self.finish(j, "done", rc, "")
-            elif j["tries"] - int(j.get("oom_tries") or 0) < int(spec.get("tries") or 1):
+            elif j["tries"] - int(j.get("oom_tries") or 0) - int(j.get("kill_tries") or 0) < int(spec.get("tries") or 1):
                 j.update(state="queued", why="retry after rc %s" % rc)
-                self.log("retry", id=jid, rc=rc, tries=j["tries"])
+                self.log("retry", id=jid, rc=rc, tries=j["tries"], **({"sigkill": True} if killed else {}))
             else:
-                self.finish(j, "failed", rc, "rc %s%s" % (rc, " (CUDA OOM)" if oom else ""))
+                self.finish(j, "failed", rc, "rc %s%s" % (rc, " (CUDA OOM)" if oom else " (SIGKILL)" if killed else ""))
         return live
 
     # -------------------------------------------------------------- accounting
@@ -942,7 +973,9 @@ class Dispatcher:
         cpu_used = float(sum(int(h.get("cpu") or 0) for h in holds))
         now, trust = time.time(), cfg["trust_measured"]
         self.track_idle(cards, now, cfg)
-        young_threads = young_ram = 0
+        young_threads = young_ram = young_ws = 0
+        ws_line = cfg["ws_kill_frac"] * box.mem_max_gb if box.mem_max_gb and box.mem_ws_gb else 0.0
+        self.ws_want = 0.0                             # margin below the kill line that blocked jobs are waiting for
         for j in self.jobs("running"):
             if j.get("span"):
                 used_blocks |= blocks_of(range(j["idx"], j["idx"] + j["span"]))
@@ -952,6 +985,7 @@ class Dispatcher:
             if now - j.get("t0", 0) < YOUNG_S:
                 young_threads += Spec(**j["spec"]).est_threads(box.host_cpus)
                 young_ram += ram_reserve(j, now, known.get("ram_gb")) if trust else float(j["spec"].get("ram_gb") or 0)
+                young_ws += ram_reserve(j, now, known.get("ram_gb"), cfg["ram_default_gb"])
         budget = box.cores * cfg["cpu_overcommit"] if not cfg.get("cpu_budget") else cfg["cpu_budget"]
         self.cpu_info = dict(charged=round(cpu_used, 1), budget=round(budget, 1))
         adm = capacity.Admission.from_box(box)
@@ -979,6 +1013,7 @@ class Dispatcher:
             known = known_caps(self.hist, j["spec"]) if trust else {}
             n_cpu = max(1, math.ceil(min(max(s.cpu, 1), known.get("cpu", max(s.cpu, 1)))))
             ram_need = min(s.ram_gb, known.get("ram_gb", s.ram_gb))
+            ws_need = ram_need or known.get("ram_gb", cfg["ram_default_gb"])      # undeclared: history, else the default
             v_need = vram_need(j["spec"], known, trust, hist_max(self.hist, j["spec"]))
             eff = dataclasses.replace(s, vram_gb=v_need)
             pid_need = s.est_threads(box.host_cpus)
@@ -989,6 +1024,11 @@ class Dispatcher:
                 soft = "PIDs %d + %d + %d > %d" % (box.pids_current, young_threads, pid_need, adm.plan_cap)
             if box.mem_max_gb and box.mem_used_gb + young_ram + ram_need > 0.85 * box.mem_max_gb:
                 hard = "memory %.0f + %.0f GB > 85%% of %.0f" % (box.mem_used_gb + young_ram, ram_need, box.mem_max_gb)
+            elif ws_line and box.mem_ws_gb + young_ws + ws_need + cfg["ws_reserve_gb"] > ws_line and not (
+                    starts == 0 and now - j.setdefault("t_ws", now) >= cfg["ws_wait_s"]):
+                hard = "memory working set %.0f + %.0f young + %.0f GB + %.0f reserve > kill line %.0f (page cache; trimming)" % (
+                    box.mem_ws_gb, young_ws, ws_need, cfg["ws_reserve_gb"], ws_line)
+                self.ws_want = max(self.ws_want, young_ws + ws_need + cfg["ws_reserve_gb"])
             if hard or (soft and s.vram_gb <= 1):
                 self.set_why(j, hard or soft)
                 continue
@@ -1032,6 +1072,9 @@ class Dispatcher:
             if soft:
                 self.log("admit_idle", id=j["id"], name=s.name, card=a.index, blocked=soft,
                          idle_s=round(now - self.idle_since[a.index]))
+            if ws_line and j.pop("t_ws", None) and box.mem_ws_gb + young_ws + ws_need + cfg["ws_reserve_gb"] > ws_line:
+                self.log("ws_override", id=j["id"], name=s.name, ws=round(box.mem_ws_gb, 1), young=round(young_ws, 1),
+                         need=round(ws_need, 1), line=round(ws_line, 1))     # the trimmer could not make room in ws_wait_s
             j["vram_booked"] = round(v_need, 1)
             self.launch(j, s, a.index, i0, span if i0 is not None else 0, cpus, box, adm)
             starts += 1
@@ -1050,6 +1093,8 @@ class Dispatcher:
             cpu_used += n_cpu
             young_threads += pid_need
             young_ram += ram_need
+            young_ws += ws_need
+        self.young_ws = young_ws
         self.last = cards
 
     def note_wait(self, j: dict, cause: str = "") -> None:
@@ -1142,10 +1187,11 @@ class Dispatcher:
         with (self.pool / "usage.jsonl").open("a") as f:
             f.write(json.dumps(line) + "\n")
 
-    def mem_line(self, root: Path = Path("/sys/fs/cgroup")) -> list:
-        """[anon GB, memory.current GB, memory.high GB, memory.high events since the last call]: the container sits
-        at memory.high whenever page cache fills it, and jobs have been SIGKILLed (not by the kernel OOM killer)
-        while it was above it (docs/remote-box.md, "Host memory")."""
+    def mem_line(self, root: Path = Path("/sys/fs/cgroup"), peek: bool = False) -> list:
+        """[anon GB, memory.current GB, memory.high GB, memory.high events since the last call, working set GB
+        (current - inactive_file), kill line GB (ws_kill_frac x memory.max)]: the platform SIGKILLs the largest
+        process when the working set reaches the kill line (docs/remote-box.md, "Host memory"). `peek`: do not
+        move the memory.high event baseline."""
         def num(name, key=None):
             try:
                 txt = (root / name).read_text()
@@ -1153,9 +1199,32 @@ class Dispatcher:
             except (OSError, ValueError, KeyError):
                 return 0.0
         high, prev = num("memory.events", "high"), getattr(self, "mem_high_prev", None)
-        self.mem_high_prev = high
-        return [round(num("memory.stat", "anon") / 2 ** 30, 1), round(num("memory.current") / 2 ** 30, 1),
-                round(num("memory.high") / 2 ** 30, 1), int(high - prev) if prev is not None else 0]
+        if not peek:
+            self.mem_high_prev = high
+        cur = num("memory.current")
+        return [round(num("memory.stat", "anon") / 2 ** 30, 1), round(cur / 2 ** 30, 1),
+                round(num("memory.high") / 2 ** 30, 1), int(high - prev) if prev is not None else 0,
+                round((cur - num("memory.stat", "inactive_file")) / 2 ** 30, 1),
+                round(self.cfg()["ws_kill_frac"] * num("memory.max") / 2 ** 30, 1)]
+
+    def keep_margin(self, box, cfg: dict) -> None:
+        """Start a detached page-cache trim (jevdrive.cl.cache; it logs a `trim` event when it dropped something)
+        when the margin below the kill line is under ws_keep_gb + what young jobs have not allocated yet, or under
+        what a job blocked by the working-set rule waits for."""
+        if not cfg.get("trim") or self.probe_fn or not box.mem_max_gb or not box.mem_ws_gb:
+            return
+        have = cfg["ws_kill_frac"] * box.mem_max_gb - box.mem_ws_gb
+        need = max(cfg["ws_keep_gb"] + self.young_ws, self.ws_want + 0.25 * cfg["ws_keep_gb"])
+        now = time.time()
+        if have >= need or now - self.trim_t < TRIM_EVERY_S:
+            return
+        self.trim_t = now
+        cmd = [sys.executable, "-m", "jevdrive.cl", "trim", "--margin", "%.1f" % (need + 0.25 * cfg["ws_keep_gb"]), "--log"]
+        try:
+            subprocess.Popen(cmd, cwd=str(REPO), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+        except OSError as e:
+            self.log("trim_failed", err=str(e))
 
     def keep_boxwatch(self) -> None:
         """Start scripts/boxwatch.sh detached when it is not running (it takes its own lock and exits at once when
@@ -1202,6 +1271,7 @@ class Dispatcher:
         box = self.probe_fn(rows) if self.probe_fn else probe(rows=rows, query=lambda q: smi(q, cfg["smi_age_s"]))
         if not self.halt:
             self.admit(box, rows, live, holds, cfg)
+            self.keep_margin(box, cfg)
             self.usage(box)
             self.keep_boxwatch()
         self.save()
@@ -1211,7 +1281,8 @@ class Dispatcher:
             idle={g: round(time.time() - t) for g, t in self.idle_since.items()},
             counts={s: len(self.jobs(s)) for s in ("queued", "running", "done", "failed", "cancelled")},
             box=dict(cores=box.cores, pids=box.pids_current, pids_max=box.pids_max, mem_gb=round(box.mem_used_gb, 1),
-                     mem_max_gb=round(box.mem_max_gb, 1), load=box.load)))
+                     mem_max_gb=round(box.mem_max_gb, 1), load=box.load, ws_gb=round(box.mem_ws_gb, 1),
+                     ws_line_gb=round(cfg["ws_kill_frac"] * box.mem_max_gb, 1))))
 
     def run(self, once: bool = False) -> int:
         self.pool.mkdir(parents=True, exist_ok=True)
@@ -1296,6 +1367,57 @@ def usage_report(hours: float = 24.0, pool: Path = None, now: float = None) -> d
                 k = "serial" if others_old else "no work queued"
             out["cards"][k] = out["cards"].get(k, 0.0) + dt
     return out
+
+
+def kill_report(days: int = 7, pool: Path = None, now: float = None) -> dict:
+    """{YYYY-mm-dd: {"n": SIGKILLed tries, "jobs": distinct jobs, "last": "HH:MM:SS name"}} for the last `days` days,
+    from events.jsonl: `kill` events, and before they existed (2026-10-10) `end` / `retry` events with rc 137 / -9."""
+    first = time.strftime("%F", time.localtime((now or time.time()) - (days - 1) * 86400))
+    out = {}
+    names = {}
+    try:
+        with (Path(pool or pool_dir()) / "events.jsonl").open() as f:
+            for ln in f:
+                if '"submit"' in ln or '"launch"' in ln:
+                    if '"submit"' in ln and ln[7:17] >= first:
+                        try:
+                            e = json.loads(ln)
+                            names[e["id"]] = e.get("name")
+                        except ValueError:
+                            pass
+                    continue
+                if ln[7:17] < first or not ('"kill"' in ln or "137" in ln or "-9" in ln):
+                    continue
+                try:
+                    e = json.loads(ln)
+                except ValueError:
+                    continue
+                legacy = (e.get("kind") in ("end", "retry") and e.get("rc") in KILL_RCS and not e.get("sigkill")
+                          and "SIGKILL" not in str(e.get("why")))
+                if e.get("kind") != "kill" and not legacy:
+                    continue
+                d = out.setdefault(e["t"][:10], dict(n=0, ids=set(), last=""))
+                d["n"] += 1
+                d["ids"].add(e["id"])
+                d["last"] = "%s %s" % (e["t"][11:], e.get("name") or names.get(e["id"], e["id"]))
+    except OSError:
+        pass
+    return {k: dict(n=v["n"], jobs=len(v["ids"]), last=v["last"]) for k, v in sorted(out.items())}
+
+
+def trim_cache(need_gb: float, pool: Path = None, dry: bool = False, log: bool = False) -> dict:
+    """Drop page cache until the margin below the kill line is >= need_gb (jevdrive.cl.cache.trim over the config's
+    trim_roots, default $DATA_DIR). `log`: append a `trim` event when files were dropped."""
+    from . import cache
+    pool = Path(pool or pool_dir())
+    cfg = dict(DEFAULTS)
+    cfg.update(_read_json(pool / "config.json", {}) or {})
+    r = cache.trim(need_gb, cfg.get("trim_roots") or [data_dir()], cache_file=pool / "cachefiles.json",
+                   frac=cfg["ws_kill_frac"], dry=dry, lock=pool / "trim.lock")
+    if log and r.get("files") and not dry:
+        with (pool / "events.jsonl").open("a") as f:
+            f.write(json.dumps(dict(t=time.strftime("%F %T"), kind="trim", **r)) + "\n")
+    return r
 
 
 def vram_report(hours: float = 48.0, pool: Path = None, now: float = None) -> list:

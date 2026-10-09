@@ -8,6 +8,8 @@ GPU pool (jevdrive/cl/pool.py): agents submit jobs, the dispatcher (tmux jev:poo
   queue [--all] | show ID | cancel ID.. [--drain] | top
   usage [--hours H]                    card-hours and core-hours used, idle time split by cause
   vram [--hours H] [--all]             declared against measured VRAM per name prefix; under-declared ones first
+  trim [--margin GB] [--dry]           drop page cache until the working set is that far below the platform's kill
+                                       line (the dispatcher does it by itself; docs/remote-box.md, "Host memory")
   hold --card G (--whole | --vram GB [--carla N]) [--idx a-b] [--cpus ..] [--pid PID] --note TEXT | holds | unhold HID
                                        resources used outside the pool (ends by itself when --pid exits)
   dispatch [--once]                    the dispatcher (run it once, in tmux jev:pool)
@@ -21,6 +23,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
+import math
 import os
 import sys
 import time
@@ -50,9 +53,10 @@ def cmd_probe(a):
     print("host CPUs %d, cgroup quota %s cores, affinity %d CPUs, NUMA %s" % (
         box.host_cpus, box.quota_cores or "none", len(box.affinity),
         "; ".join("%d: %d CPUs" % (n, len(c)) for n, c in sorted(box.numa.items())) or "-"))
-    print("pids %d / %s, memory (no page cache) %.0f / %s GiB, load %s, ephemeral ports %d-%d" % (
-        box.pids_current, box.pids_max or "max", box.mem_used_gb, "%.0f" % box.mem_max_gb if box.mem_max_gb else "max",
-        " ".join(box.load), *box.ephemeral))
+    print("pids %d / %s, memory (no page cache) %.0f / %s GiB, working set (current - inactive page cache) %.0f GiB "
+          "against the platform's kill line %.0f, load %s, ephemeral ports %d-%d" % (
+              box.pids_current, box.pids_max or "max", box.mem_used_gb, "%.0f" % box.mem_max_gb if box.mem_max_gb else "max",
+              box.mem_ws_gb, P.DEFAULTS["ws_kill_frac"] * box.mem_max_gb, " ".join(box.load), *box.ephemeral))
     held = {}
     for j in st["jobs"].values():
         if j["state"] == "running":
@@ -169,9 +173,26 @@ def cmd_usage(a):
     print("\n| card state | card-hours | share |\n|:--|--:|--:|")
     for k, v in sorted(u["cards"].items(), key=lambda kv: -kv[1]):
         print("| %s | %.2f | %.0f %% |" % (k, v, pct(v, u["card_h"])))
+    kills = P.kill_report(max(1, math.ceil(a.hours / 24)))
+    print("\njobs SIGKILLed by the platform (working set at the kill line; retried without counting): "
+          + (", ".join("%s %d (%d jobs)" % (d, v["n"], v["jobs"]) for d, v in kills.items()) or "none"))
     print("\ncomputing = GPU job on the card, util >= 10 %%; job, GPU idle = a GPU job that is not using the card; queued: X = "
           "card without a GPU job while ready GPU jobs wait on X; serial = idle next to a GPU job older than %d min with "
           "nothing ready (fan it out); no work queued = nothing submitted for it." % (P.SERIAL_HINT_S / 60))
+    return 0
+
+
+def cmd_trim(a):
+    from . import cache
+    m = cache.mem()
+    if not m:
+        print("no cgroup memory limit: nothing to trim")
+        return 0
+    r = P.trim_cache(a.margin, dry=a.dry, log=a.log)
+    print("working set %.1f GiB of %.1f (kill line %.1f); margin %.1f -> %.1f GiB (wanted %.1f), %d files dropped (%d of them "
+          "open somewhere) in %.1f s%s" % (m["ws"] / 2 ** 30, m["max"] / 2 ** 30, cache.KILL_FRAC * m["max"] / 2 ** 30, r["before"],
+                                          r["after"], r["need"], r["files"], r["busy"], r["seconds"],
+                                          " [dry run]" if a.dry else " [another trim is running]" if r.get("skipped") else ""))
     return 0
 
 
@@ -255,6 +276,13 @@ def cmd_top(a):
     print("box: %s cores, pids %s / %s, memory %s / %s GiB, load %s; pool: %d running, %d queued, %d in inbox" % (
         b.get("cores"), b.get("pids"), b.get("pids_max"), b.get("mem_gb"), b.get("mem_max_gb"), " ".join(b.get("load", [])),
         len(run), len(q), len(inbox)))
+    if b.get("ws_gb"):
+        k = P.kill_report(2)
+        day = lambda t: k.get(time.strftime("%F", time.localtime(t)), dict(n=0, jobs=0, last=""))  # noqa: E731
+        today, yday = day(time.time()), day(time.time() - 86400)
+        print("memory working set (current - inactive page cache) %.0f GiB, platform kill line %.0f, margin %.0f; jobs SIGKILLed "
+              "today %d (%d jobs%s), yesterday %d" % (b["ws_gb"], b["ws_line_gb"], b["ws_line_gb"] - b["ws_gb"], today["n"],
+                                                     today["jobs"], ", last " + today["last"] if today["last"] else "", yday["n"]))
     print("\n| card | util % | VRAM used / total | pool booked | outside pool | free for pool | CARLA pool / other | train | jobs |")
     print("|--:|--:|--:|--:|--:|--:|--:|--:|:--|")
     hd = (status.get("cfg") or {}).get("headroom_gb", P.DEFAULTS["headroom_gb"])
@@ -417,6 +445,10 @@ def main(argv=None):
     s.add_argument("ids", nargs="+")
     s.add_argument("--gpus", default="", help="allowed cards, e.g. 0,2 (empty = any)")
     sub.add_parser("top")
+    s = sub.add_parser("trim", help="drop page cache until the working set is --margin GiB below the platform's kill line")
+    s.add_argument("--margin", type=float, default=P.DEFAULTS["ws_keep_gb"])
+    s.add_argument("--dry", action="store_true")
+    s.add_argument("--log", action="store_true", help="append a trim event to the pool's events.jsonl")
     s = sub.add_parser("hold")
     s.add_argument("--card", type=int, required=True)
     s.add_argument("--whole", action="store_true")

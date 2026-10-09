@@ -27,19 +27,35 @@ with a monitor, for looking at CARLA with your own eyes.
   25 cores per card so far (175 on the 7-card instance, 75 on the 3-card one; `/sys/fs/cgroup/cpu.max`), RAM from
   `memory.max`, pids.max 20480. `os.cpu_count()` reports the host count, so size thread and process pools with
   `jevdrive.common.n_cpus()`, not the host count. On 2026-10-01 card 0 sits on NUMA 0, cards 1-2 on NUMA 1.
-- **Host memory.** `memory.max` is 276 GiB on the 3-card instance and the platform sets `memory.high` 2 GiB below
-  it. Page cache is charged to the container, so `memory.current` sits at `memory.high` almost all the time
-  (2026-10-09: anon 84 GiB, file 190 GiB) and every new allocation is paid for by reclaiming cache. Single processes
-  are SIGKILLed from outside the kernel's OOM path (`memory.events` oom_kill stays 0; no dmesg, journal or audit in
-  the container, so the sender cannot be read). The one kill series the sampler recorded (10-08 05:37-05:40, six WOD
-  eval jobs): `memory.current` pinned at 274.0 GiB, `memory.high` events climbing, anon rising 20 GB / min while
-  cache shrank at the same rate, and after 60 s the largest process by RSS was killed, then the next largest 5 s
-  later, at anon 153 GiB (55 % of the limit). The level of application memory did not predict it; fast growth
-  against a full page cache did. `scripts/boxwatch.sh` writes that picture every 5 s to `$DATA_DIR/runs/boxwatch/`;
-  the pool dispatcher starts it when it is not running, and `usage.jsonl` carries
-  `mem = [anon, current, high, high events]` once a minute. RSS over-counts jobs that mmap their data (a training:
-  41 GB RSS, 14 GB proportional), so the pool's `rss_peak` is an upper bound, not the job's memory. History:
-  experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md.
+- **Host memory: the kill line.** The platform (an agent outside the container; `autopanel` and the other root
+  processes inside hold no cgroup or signal code) SIGKILLs the largest process by RSS, again every 2-5 s, while
+  **`memory.current` - `inactive_file` >= 98 % of `memory.max`** (541.0 of 552 GiB on the 6-card instance). It is not
+  the kernel OOM killer (`memory.events` oom_kill 0, host `/proc/vmstat` oom_kill 0). Established 2026-10-10 from 28
+  kills of pool jobs in 90 min and reproduced four times, twice with plain `malloc` canaries (kills at a working set
+  of 540.8-541.1 GiB): experiments/cl_infra/results/sigkill-trigger/README.md.
+  - Page cache that was read twice sits on the **active** file list and counts in full: 400-450 GiB of the 552 on a
+    working night, with application memory (anon) at 18-39 % of the limit at every kill. The kernel refills the
+    inactive list from the active one only when inactive is below about active / 64 (6-9 GiB here), and reclaims only
+    at `memory.high` (`memory.max` - 2 GiB = 550), which is **above** the kill line once inactive is under 9 GiB. So
+    a warm cache leaves no room for a job that allocates fast, kills arrive with or without `memory.high` events
+    (4 of 28 without), and a larger quota does not help: the cache fills any quota.
+  - What does not matter: anon level, `memory.current` at `memory.high` by itself (a 110 GiB canary sat there 40 s
+    with 197 k high events and lived, working set 536.6), PSI, summed RSS, host free memory (95 GiB at a kill),
+    `Committed_AS` (564 GiB against a 377 GiB CommitLimit, no kill), pids, GPU use.
+  - The pool keeps the margin: it starts no job whose RAM does not fit below the line, and drops page cache with
+    `posix_fadvise(DONTNEED)` (`python -m jevdrive.cl trim`, `jevdrive/cl/cache.py`: 2.4 GiB in 0.15 s, files nobody has
+    open first) to keep 80 GiB free below it; no `memory.reclaim` on this kernel (5.15), `/sys/fs/cgroup` is read-only
+    and `vm.drop_caches` needs root. A job killed this way is retried without counting against `--tries`; `cl top`
+    shows the working set, the line and the kills per day (closed-loop-runbook.md, "Memory: the kill line").
+  - **Rule for lanes:** declare `--ram` = the job's peak private memory (a WOD eval with a TensorRT / ORT model:
+    40; a `pp_train.py --host` training: 45; an AlpaSim stack: 52). An undeclared job counts as 8 GiB and is the one
+    that gets its neighbours killed. Jobs outside the pool: check `cl top` for the margin first.
+  - `/proc/meminfo` is the host's (754 GiB for all tenants; this container's limit is 73 % of it), not the container's.
+    `scripts/boxwatch.sh` writes memory, the two file lists and the three largest processes every 5 s to
+    `$DATA_DIR/runs/boxwatch/`; the dispatcher keeps it running and `usage.jsonl` carries
+    `mem = [anon, current, high, high events, working set, kill line]` once a minute. RSS over-counts jobs that mmap
+    their data (a training: 41 GB RSS, 14 GB proportional). History of the search:
+    experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md.
 - Speed: Qwen3-VL-4B features at 800 px ran at 21.1 ms/frame (8.8 GB peak VRAM) on the old RTX PRO 6000; the 4090 D did 30.8.
   Not re-measured on the 6000D; expect it to be slower by up to the matmul ratio above.
 - **Never shut the instance down to add cards.** On AutoDL a stopped instance releases its GPUs to the pool and
@@ -56,4 +72,4 @@ with a monitor, for looking at CARLA with your own eyes.
 - Python: use `uv`, and create venvs under `~/data`.
 - A re-created instance loses users, keys and packages, and the host and port change. Re-check this page then.
 
-Last verified: 2026-10-01 (remote box configuration); host memory 2026-10-09
+Last verified: 2026-10-01 (remote box configuration); host memory 2026-10-10
