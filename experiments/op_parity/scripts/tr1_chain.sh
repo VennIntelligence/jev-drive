@@ -69,7 +69,7 @@ if [[ $STAGE == check ]]; then
   sub tr1-par $L/par-new $TV -- $PY $S/pp_train.py $C20 --tag tr1-par-new
   sub tr1-tok $L/tok-smoke --vram 6 --cpu 2 --ram 24 -- $PY $S/tr1.py tok --name smoke --data $PD --steps 200
   waitdirs $L/par-old $L/par-new $L/tok-smoke
-  a=$(grep -h "step 20:\|dev @ 20" $L/par-old/log.txt | sed 's/.*INFO *//; s/; .*//'); b=$(grep -h "step 20:\|dev @ 20" $L/par-new/log.txt | sed 's/.*INFO *//; s/; .*//')
+  a=$(grep -h "step 20:\|dev @ 20" $L/par-old/log.txt | sed 's/.*\(step 20:\|dev @ 20:\)/\1/; s/; .*//'); b=$(grep -h "step 20:\|dev @ 20" $L/par-new/log.txt | sed 's/.*\(step 20:\|dev @ 20:\)/\1/; s/; .*//')
   echo "old: $a"; echo "new: $b"
   [[ -n $a && $a == "$b" ]] || die "parity: losses / dev differ"
   $PY - <<EOF || die "parity: checkpoints differ"
