@@ -43,6 +43,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", required=True), ap.add_argument("--ref", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--exclude", help="a scene list (tsv of this script) whose scenes are removed from the pool before binning: the extension of an earlier sample")
+    ap.add_argument("--shuffle", action="store_true", help="shuffle the rows inside each stage (seeded): any prefix of the list is a random sample of the difficulty range")
     ap.add_argument("--n", type=int, default=40), ap.add_argument("--first", type=int, default=10), ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
     R, cat = ref_scores(Path(a.ref)), catalog(Path(a.src))
@@ -57,6 +58,10 @@ def main():
     step = a.n // a.first
     first = pick[step // 2::step][:a.first]
     rows = [(s, 1) for s in first] + [(s, 2) for s in pick if s not in first]
+    if a.shuffle:
+        r1, r2 = [r for r in rows if r[1] == 1], [r for r in rows if r[1] == 2]
+        random.Random(a.seed + 1).shuffle(r1), random.Random(a.seed + 1).shuffle(r2)
+        rows = r1 + r2
     with open(a.out, "w") as f:
         f.write("scene_id\tuuid\tpath\trevision\tref_mean\talpamayo1\tvavam_nonlinear\tstage\n")
         for s, st in rows:
