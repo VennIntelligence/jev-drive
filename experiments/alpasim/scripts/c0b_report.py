@@ -92,7 +92,7 @@ def main():
     sc = {k: np.array([D[k][0][s]["score"] for s in scenes]) for k in names}
     zc = {k: [zclass(D[k][0][s]) for s in scenes] for k in names}
     ev = {k: np.array([float((D[k][0][s].get("metrics") or {}).get("offroad_or_collision_at_fault", 0) or 0) for s in scenes]) for k in names}
-    prog = {k: np.array([D[k][0][s]["score_metrics"].get("progress_clipped_rel") or 0 for s in scenes])   # null (no progress value) counts as 0 for k in names}
+    prog = {k: np.array([D[k][0][s]["score_metrics"].get("progress_clipped_rel") or 0 for s in scenes]) for k in names}   # a null progress value counts as 0
     nd = {k: np.array([D[k][3].get(s, 0) for s in scenes]) for k in names}
     first = {k: np.array([D[k][2].get(s, (np.nan, np.nan)) for s in scenes], float) for k in names}
     L = [f"Scenes common to all {len(names)} drivers: {len(scenes)} from {len(set(cl))} logs, {len(set(shard[s] for s in scenes))} shards. "
