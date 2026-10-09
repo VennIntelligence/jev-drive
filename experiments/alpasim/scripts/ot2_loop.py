@@ -12,7 +12,8 @@ job = label:driver:ENV=VALUE[,ENV=VALUE...][:checkpoint tag[+tag...]][:list]
   list         `chunks` (default: the three interleaved thirds of the 700 scenes, one pool job each) or a list name under c0b/lists (pilot8)
 State in $DATA_DIR/runs/alpasim/ot2/<stage>/: STATUS, DONE, ERROR, log.txt, manifest.json {label: [run dirs]}, runs/. At most OT2_MAX_ACTIVE
 (3) of this chain's jobs are in the pool at a time (nine AlpaSim stacks at once exhausted host memory on 2026-10-09); declarations are the
-measured peaks of the c0b / m1 runs (VRAM 32 GB, RAM 42 GB, 8 cores).
+measured peaks of the c0b / m1 runs (VRAM 32 GB, RAM 42 GB, 8 cores). Another lane reuses the chain with OT_LANE=<dir under runs/alpasim>
+(default ot2; also the pool owner `alpasim-<lane>`) and OT_PRIO (pool priority, default 12).
 """
 import glob
 import json
@@ -25,13 +26,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import c0b_chain as B  # noqa: E402
 
+LANE, PRIO = os.environ.get("OT_LANE", "ot2"), int(os.environ.get("OT_PRIO", 12))
 LISTS = B.RA / "c0b/lists"
 CK = B.DATA / "runs/op_parity/runs"
 
 
 class Job(B.Job):
     def __init__(self, label, name, drv, env, scenes, need):
-        super().__init__(name, drv, env, scenes, 12, 32)
+        super().__init__(name, drv, env, scenes, PRIO, 32)
         self.label, self.need, self.t0 = label, need, time.time()
 
     def ready(self):
@@ -46,7 +48,7 @@ class Job(B.Job):
             B.fail(f"{self.name}: {B.MAX_TRIES} tries exhausted")
         self.D = B.O / "runs" / self.name / time.strftime("%Y%m%d-%H%M%S")
         self.D.mkdir(parents=True)
-        cmd = B.PY + ["submit", "--owner", "alpasim-ot2", "--name", f"alpasim-ot2-{self.drv}", "--vram", str(self.vram), "--cpu", "8",
+        cmd = B.PY + ["submit", "--owner", f"alpasim-{LANE}", "--name", f"alpasim-{LANE}-{self.drv}", "--vram", str(self.vram), "--cpu", "8",
                       "--ram", str(int(14 + 0.12 * self.n)), "--timeout-h", "3", "--tries", "1", "--priority", str(self.prio), "--log-dir", str(self.D / "pool"),
                       "--", "env", *[f"{k}={v}" for k, v in self.env.items()], "bash", "experiments/alpasim/scripts/run.sh", str(self.D), self.drv,
                       "--scene-list", str(self.scenes), *B.OVERRIDES]
@@ -89,7 +91,7 @@ class Job(B.Job):
 
 def main():
     stage, specs = sys.argv[1], sys.argv[2:]
-    B.O = B.RA / "ot2" / stage
+    B.O = B.RA / LANE / stage
     (B.O / "lists").mkdir(parents=True, exist_ok=True)
     for f in ("DONE", "ERROR"):
         (B.O / f).unlink(missing_ok=True)

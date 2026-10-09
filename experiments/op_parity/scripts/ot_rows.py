@@ -246,7 +246,7 @@ def cmd_train(a):
     import pp_train as T
     from jevdrive.run import Run
     dev = torch.device("cuda")
-    ot = tuple(f"{OT}_{d}" for d in a.data) if a.ot_mass > 0 else ()
+    ot = tuple(f"{a.ot}_{d}" for d in a.data) if a.ot_mass > 0 else ()
     cfg = T.Cfg(arm="P2", seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data) + ot, split=a.split, frames="warp", host=True, warmup=a.warmup,
                 eval_every=a.eval_every, hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin)
     torch.manual_seed(cfg.seed)
@@ -465,6 +465,7 @@ if __name__ == "__main__":
     p.add_argument("--hinge-lam", type=float, default=30.0)
     p.add_argument("--hinge-margin", type=float, default=0.5)
     p.add_argument("--ot-mass", type=float, default=0.1, help="share of every batch drawn from the off-track rows (0 = the reference recipe)")
+    p.add_argument("--ot", default=OT, help="cache prefix of the off-track rows (ot1: +-0.5 m / 2 deg; ot2: +-1.5 m / 5 deg, ap2_ot.py; yr1: ot3_rows.py)")
     p = sub.add_parser("probe")
     p.add_argument("--name", required=True)
     p.add_argument("--tags", nargs="+", required=True)
