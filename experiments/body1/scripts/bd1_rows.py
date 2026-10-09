@@ -152,7 +152,7 @@ def cmd_gen(a):
         res.raise_if_failed()
         done = [r for r in res.values if r is not None]
         run.summary.update(units=len(units), computed=len(done), states=int(sum(r[2] for r in done)), rows=int(sum(r[2] for r in done)) * Q,
-                           wall_s=time.time() - t0, core_s=float(sum(r[3] for r in done)))
+                           compute_s=time.time() - t0, core_s=float(sum(r[3] for r in done)))
         run.info(str(run.summary))
 
 

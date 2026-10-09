@@ -61,7 +61,7 @@ def main(a):
             if (f, k) == units[0]:
                 ade = float(np.hypot(*(z["own"][0] - z["ship"])[..., :2].transpose(2, 0, 1)).mean())
                 run.info(f"{d}: {len(z['names'])} rows; own-vs-shipped mean pose distance {ade:.3f} m; own 4 s x mean {z['own'][0][:, -1, 0].mean():.2f} m")
-        run.summary.update(dirs=len(units), rows=n, wall_s=time.time() - t0, vram_gb=torch.cuda.max_memory_reserved() / 2 ** 30)
+        run.summary.update(dirs=len(units), rows=n, compute_s=time.time() - t0, vram_gb=torch.cuda.max_memory_reserved() / 2 ** 30)
 
 
 if __name__ == "__main__":
