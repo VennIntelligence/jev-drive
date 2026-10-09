@@ -260,7 +260,7 @@ def cmd_figs(a, run):
     ax.set_xlim(0, 14.5), ax.set_ylim(len(order), 0), ax.set_xticks(np.arange(10) + 0.47), ax.set_xticklabels([f"{0.5 * k:.1f}" for k in range(10)], fontsize=7)
     ax.set_yticks([]), ax.set_xlabel("decision time in the scene, s")
     ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=c) for c in cm.values()], labels=["plan clean, no flag", "failure in the plan, no flag", "in the plan and flagged", "flag, not in the plan", "after the failure"],
-              fontsize=6, loc="lower right", frameon=False)
+              fontsize=6, loc="upper center", bbox_to_anchor=(0.5, -0.05), ncol=5, frameon=False)
     ax.set_title("P2H10-F baseline zeros (2 seeds): the failure in the served plan against the head's flag; dot = a clear candidate exists", fontsize=8)
     fig.savefig(FIG / "decision_matrix.png", dpi=150, bbox_inches="tight"), plt.close(fig)
     # ---- 2. states
