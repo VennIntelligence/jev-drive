@@ -11,7 +11,7 @@ Working notes, pre-registrations and every table: [fc65452:todos/2026-09-25-clos
 | CARLA harness cost and layout | measured; GPU render binds first, **6 servers per GPU**, ~2.5 cores per worker; the container thread cap bound the five-card box of 2026-09-25 (no longer binds with reduced thread pools, see carla.md) | [bench2drive-cost.md](bench2drive-cost.md) "Harness cost and layout on the five-GPU box" |
 | B2D controllers (Zoo PID as used for Alpamayo / openpilot, fixed 20 Hz tracker, lateral fixes P1 / P2, P5, P6, P7) | **none passes**; P5 / P6 (time-indexed replay) are closest: lateral passes at 1 / 2 / 5 Hz, longitudinal still lags ~2.6 m (starts ~0.5 s late); P7's 2 m/s² launch cap doubles that lag; Zoo PID fails outright | below |
 | HUGSIM controllers | official **fail**, PR #57 **fail**, fixed2 **pass** | [hugsim.md](hugsim.md) "Controller acceptance" |
-| Unexplained SIGKILLs | not kernel OOM, not our code; most likely the platform's memory enforcement; forensics now armed | [long-runs.md](long-runs.md), todo `sigkill.md` |
+| SIGKILLs outside the kernel OOM killer | the platform kills the largest process when `memory.current` - `inactive_file` reaches 98 % of `memory.max` (measured and reproduced 2026-10-10); the pool keeps the margin and retries | [remote-box.md](remote-box.md) "Host memory", experiments/cl_infra/results/sigkill-trigger/README.md |
 
 ## Bench2Drive controller acceptance
 
@@ -140,6 +140,9 @@ see [closed-loop-runbook.md](closed-loop-runbook.md).)
   retry; report retries with every score.
 
 ## SIGKILL
+
+Settled 2026-10-10: the trigger is the container's working set at 98 % of `memory.max`
+([remote-box.md](remote-box.md), "Host memory"). The text below is the 2026-09-25 record.
 
 Two single-process SIGKILLs on 2026-09-25 (openpilot Cinque policy server ~02:20; nuScenes openpilot feature
 extraction 13:41) hit the largest anonymous-memory process in the container while memory sat at `memory.high`,

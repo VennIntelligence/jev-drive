@@ -144,6 +144,7 @@ CLK_TCK = os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") else 100
 STALE_S = 120.0                       # status.json older than this: the dispatcher is not running
 KILL_RCS = (137, -9)                  # a root that died of SIGKILL (bash reports 128 + 9)
 TRIM_EVERY_S = 30.0                   # at most one page-cache trim per this many seconds
+LIST_EVERY_S = 3600.0                 # how often the dispatcher has the trimmer's file list re-walked ahead of need
 DEFAULTS = dict(poll_s=20.0, headroom_gb=4.0, carla_per_card=capacity.GPU_KNEE, train_per_card=2, cpu_overcommit=1.0,
                 max_starts=4, hold_s=900.0, cards=None, smi_age_s=15.0, idle_s=120.0, idle_vram_gb=1.0,
                 trust_measured=True, over_stop_free_gb=1.0, oom_retries=1, boxwatch=True,
@@ -639,7 +640,7 @@ class Dispatcher:
         self.cpu_info = {}
         self.hist = {}                                        # history.json, re-read every round
         self.usage_t = 0.0
-        self.ws_want = self.young_ws = self.trim_t = 0.0
+        self.ws_want = self.young_ws = self.trim_t = self.list_t = 0.0
 
     # -------------------------------------------------------------- helpers
     def cfg(self) -> dict:
@@ -1216,10 +1217,16 @@ class Dispatcher:
         have = cfg["ws_kill_frac"] * box.mem_max_gb - box.mem_ws_gb
         need = max(cfg["ws_keep_gb"] + self.young_ws, self.ws_want + 0.25 * cfg["ws_keep_gb"])
         now = time.time()
-        if have >= need or now - self.trim_t < TRIM_EVERY_S:
-            return
-        self.trim_t = now
         cmd = [sys.executable, "-m", "jevdrive.cl", "trim", "--margin", "%.1f" % (need + 0.25 * cfg["ws_keep_gb"]), "--log"]
+        if have >= need:
+            if now - self.list_t < LIST_EVERY_S:
+                return
+            self.list_t = now                          # keep the file list fresh: the walk takes ~30 s, a trim 3 s
+            cmd = cmd[:4] + ["--refresh"]
+        elif now - self.trim_t < TRIM_EVERY_S:
+            return
+        else:
+            self.trim_t = now
         try:
             subprocess.Popen(cmd, cwd=str(REPO), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, start_new_session=True)
@@ -1405,13 +1412,16 @@ def kill_report(days: int = 7, pool: Path = None, now: float = None) -> dict:
     return {k: dict(n=v["n"], jobs=len(v["ids"]), last=v["last"]) for k, v in sorted(out.items())}
 
 
-def trim_cache(need_gb: float, pool: Path = None, dry: bool = False, log: bool = False) -> dict:
+def trim_cache(need_gb: float, pool: Path = None, dry: bool = False, log: bool = False, refresh: bool = False) -> dict:
     """Drop page cache until the margin below the kill line is >= need_gb (jevdrive.cl.cache.trim over the config's
-    trim_roots, default $DATA_DIR). `log`: append a `trim` event when files were dropped."""
+    trim_roots, default $DATA_DIR). `log`: append a `trim` event when files were dropped. `refresh`: only re-walk the
+    file list when it is older than LIST_EVERY_S."""
     from . import cache
     pool = Path(pool or pool_dir())
     cfg = dict(DEFAULTS)
     cfg.update(_read_json(pool / "config.json", {}) or {})
+    if refresh:
+        return dict(listed=len(cache.file_list(cfg.get("trim_roots") or [data_dir()], pool / "cachefiles.json", LIST_EVERY_S)))
     r = cache.trim(need_gb, cfg.get("trim_roots") or [data_dir()], cache_file=pool / "cachefiles.json",
                    frac=cfg["ws_kill_frac"], dry=dry, lock=pool / "trim.lock")
     if log and r.get("files") and not dry:

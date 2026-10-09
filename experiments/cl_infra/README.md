@@ -1,7 +1,7 @@
 # cl_infra: Closed-loop harness cost and worker profile
 
 status: concluded
-decisions: 16, 17, 83
+decisions: 16, 17, 83, 222
 index: 220 routes take a measured 3.11 h; reduced profile
 
 **Question.** Can CARLA closed loop run on the box, at what cost, with which worker profile?
@@ -13,6 +13,7 @@ index: 220 routes take a measured 3.11 h; reduced profile
 <!-- files:begin -->
 ## Files
 
+- [`sigkill_trigger.py`](scripts/sigkill_trigger.py) (scripts): The SIGKILLs of one night against the box sampler; with `memwatch.py` (1 s sampler), `canary.py`, `canary_fork.py` ([results](results/sigkill-trigger/README.md), decision 222)
 - [`pool_usage.py`](scripts/pool_usage.py) (scripts): One day of the GPU pool: idle card-hours by cause, why jobs waited, old vs new accounting replay ([results](results/pool-fix/README.md), decision 181)
 - `carla_parallel.sh` (archive): How many headless CARLA servers fit on …
 - `carla_threads.py` (archive): CARLA server thread census and a …

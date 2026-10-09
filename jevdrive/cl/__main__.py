@@ -188,6 +188,9 @@ def cmd_trim(a):
     if not m:
         print("no cgroup memory limit: nothing to trim")
         return 0
+    if a.refresh:
+        print("file list: %d files" % P.trim_cache(0.0, refresh=True)["listed"])
+        return 0
     r = P.trim_cache(a.margin, dry=a.dry, log=a.log)
     print("working set %.1f GiB of %.1f (kill line %.1f); margin %.1f -> %.1f GiB (wanted %.1f), %d files dropped (%d of them "
           "open somewhere) in %.1f s%s" % (m["ws"] / 2 ** 30, m["max"] / 2 ** 30, cache.KILL_FRAC * m["max"] / 2 ** 30, r["before"],
@@ -449,6 +452,7 @@ def main(argv=None):
     s.add_argument("--margin", type=float, default=P.DEFAULTS["ws_keep_gb"])
     s.add_argument("--dry", action="store_true")
     s.add_argument("--log", action="store_true", help="append a trim event to the pool's events.jsonl")
+    s.add_argument("--refresh", action="store_true", help="only re-walk the list of large files when it is over an hour old")
     s = sub.add_parser("hold")
     s.add_argument("--card", type=int, required=True)
     s.add_argument("--whole", action="store_true")

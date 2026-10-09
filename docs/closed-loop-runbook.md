@@ -159,7 +159,8 @@ memory"). On 2026-10-10 this killed 28 tries of 18 jobs in 90 min (one WOD eval 
   that the job starts anyway, one per round (event `ws_override`): the cache could not be dropped.
 - **drops page cache** (`cl trim`, event `trim`; idle files first, oldest access first, then open files, whose mapped
   pages stay) whenever the margin is under `ws_keep_gb` (80) + what young jobs still have to allocate, or under what
-  a held job needs. Files >= 16 MiB under `$DATA_DIR` (config `trim_roots`); the list is re-walked every 2 h.
+  a held job needs. Files >= 16 MiB under `$DATA_DIR` (config `trim_roots`); the dispatcher has the list re-walked every hour (30 s),
+  so a trim takes about 3 s.
 - **retries a SIGKILLed job** (root rc 137 without a pool stop; event `kill` with the memory picture) `kill_retries`
   (3) times beyond `--tries`. `top` prints working set, line, margin and the kills of today and yesterday;
   `usage --hours H` the kills per day.

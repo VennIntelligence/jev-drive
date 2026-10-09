@@ -1,6 +1,11 @@
 # 不明 SIGKILL 取证（2026-09-25）
 
-状态：来源**未能确证**。最可能的是平台在 kernel OOM 之外的内存执法（杀容器里最大的进程），证据是间接的；
+> **2026-10-10 更正（INFRA2）。** 触发条件已测定并复现：容器的 working set（`memory.current` − `inactive_file`）达到
+> `memory.max` 的 98% 时，平台从容器外杀掉 RSS 最大的进程，每 2–5 s 再杀一次。本文下面「anon 贴顶」的推论不成立（kill 时 anon
+> 只有上限的 18–39%），「受害者是最大进程」成立，`autopanel` 不是发送者（二进制里没有 cgroup / kill 相关字符串）。证据、复现和
+> pool 的修法见 [../sigkill-trigger/README.md](../sigkill-trigger/README.md)。下文保留为当时的排查记录。
+
+状态（2026-09-25）：来源**未能确证**。最可能的是平台在 kernel OOM 之外的内存执法（杀容器里最大的进程），证据是间接的；
 我们自己的代码和 Mac 上所有 agent 的命令都排除掉了。已加固两处能误杀别人进程的 reaper，已加取证采样，
 下一次 kill 能直接看到死前几秒的内存和最大进程。
 
