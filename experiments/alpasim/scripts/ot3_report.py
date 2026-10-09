@@ -62,7 +62,7 @@ def main():
     sc = {k: np.array([D[k][0][s]["score"] for s in scenes]) for k in names}
     zc = {k: np.array([R.zclass(D[k][0][s]) for s in scenes]) for k in names}
     ev = {k: np.array([float((D[k][0][s].get("metrics") or {}).get("offroad_or_collision_at_fault", 0) or 0) for s in scenes]) for k in names}
-    prog = {k: np.array([D[k][0][s]["score_metrics"].get("progress_clipped_rel", 0) for s in scenes]) for k in names}
+    prog = {k: np.array([(D[k][0][s].get("score_metrics") or {}).get("progress_clipped_rel") or 0.0 for s in scenes]) for k in names}
     L = [f"Scenes common to the {len(names)} drivers: {len(scenes)} from {len(set(cl))} logs, {len(set(shard.get(s, '?') for s in scenes))} shards. Bootstrap: {R.B} draws, "
          f"seed 0; `scenes` resamples scenes, `logs` resamples whole nuPlan logs (`date_vehicle`). Missing from the manifests: {miss or 'none'}.", ""]
     L += [f"- {k}: {len(D[k][0])} scored scenes, {len(man[k])} run dirs, disagreeing duplicate scenes {len(D[k][1])}" for k in names]
