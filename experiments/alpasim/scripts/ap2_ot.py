@@ -29,7 +29,8 @@ import numpy as np  # noqa: E402
 import ot_rows as OR  # noqa: E402
 
 # preset -> cache prefix, DY (m), DPSI (rad), YMAX (m: the drift history may start this far off the logged path)
-AMP = {"a05": ("ot1", 0.5, np.radians(2.0), 1.0), "a15": ("ot2", 1.5, np.radians(5.0), 3.0)}
+AMP = {"a05": ("ot1", 0.5, np.radians(2.0), 1.0), "a15": ("ot2", 1.5, np.radians(5.0), 3.0),
+       "yr1": ("yr1", 1.0, np.radians(7.5), 2.0)}                # the yaw-rate rows of ot3_rows.py (training only; their prep is ot3_rows.py prep)
 
 
 def use_amp(amp: str) -> str:

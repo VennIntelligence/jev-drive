@@ -44,7 +44,9 @@ peaks() { for ld in "$@"; do id=$(awk -v p="$ld" '$3 == p {i = $1} END {print i}
 # Declarations = measured peaks plus margin. Pool history 2026-10-09: ap2 / apo training 35.7-37.1 GB VRAM, 96 GB RSS of which the mapped
 # host token stores are reclaimable page cache (the pool admits on anon + shmem: 40 GB); ot_rows training 26.3 GB VRAM, 41.6 GB RSS;
 # off-track prep 29-42 GB VRAM / 29 GB RAM / 19 cores. The smokes below re-read them for the lambda-10 runs.
-TR="--train --vram 48 --cpu 6 --ram 45"
+# Smokes 2026-10-09 (lambda 10): ot_rows + ot1 / ot2 25.8 GB reserved; ap2_train 37.1 GB (OT2's APO runs, same loop).
+TR="--train --vram 42 --cpu 6 --ram 45"      # AlpaSim-standard trainer (ap2_train.py / ap2_ot.py)
+TRF="--train --vram 31 --cpu 6 --ram 45"     # NAVSIM-standard trainer (ot_rows.py)
 TF="--data $ALL --split $SPLIT --batch 128 --warmup 300 --eval-every 1000"
 
 if [[ $STAGE == train-a ]]; then
@@ -52,16 +54,16 @@ if [[ $STAGE == train-a ]]; then
   waitdirs $(for d in $ALL; do echo $L2/prep-a15-$d; done)
   status "20-step smokes: ap2_train lambda 10, ot_rows + ot1, ot_rows + ot2"
   sub ot3-smoke $L/smoke-ap2h10 $TR -- $PY $S/ap2_train.py $TF --cold backwarp $H10 --steps 20 --eval-every 20 --seed 0 --tag smoke-ot3-ap2h10
-  sub ot3-smoke $L/smoke-ot1    $TR -- $PY $SP/ot_rows.py train $TF $H10 --ot-mass 0.1 --ot ot1 --steps 20 --eval-every 20 --seed 0 --tag smoke-ot3-ot1
-  sub ot3-smoke $L/smoke-ot2    $TR -- $PY $SP/ot_rows.py train $TF $H10 --ot-mass 0.1 --ot ot2 --steps 20 --eval-every 20 --seed 0 --tag smoke-ot3-ot2
+  sub ot3-smoke $L/smoke-ot1    $TRF -- $PY $SP/ot_rows.py train $TF $H10 --ot-mass 0.1 --ot ot1 --steps 20 --eval-every 20 --seed 0 --tag smoke-ot3-ot1
+  sub ot3-smoke $L/smoke-ot2    $TRF -- $PY $SP/ot_rows.py train $TF $H10 --ot-mass 0.1 --ot ot2 --steps 20 --eval-every 20 --seed 0 --tag smoke-ot3-ot2
   waitdirs $L/smoke-ap2h10 $L/smoke-ot1 $L/smoke-ot2
   peaks $L/smoke-ap2h10 $L/smoke-ot1 $L/smoke-ot2
   grep -h "off-track rows\|train .* dev" $L/smoke-*/log.txt | sed 's/.*INFO *//' | cut -c1-300
   status "trainings: AP2H10-AB, OT10a05-F, OT10a15-F, seeds 0 / 1"
   for s in 0 1; do
     sub ot3-t $L/t-AP2H10-AB-s$s $TR -- $PY $S/ap2_train.py $TF --cold backwarp $H10 --steps 10000 --seed $s --tag AP2H10-AB-s$s
-    sub ot3-t $L/t-OT10a05-F-s$s $TR -- $PY $SP/ot_rows.py train $TF $H10 --ot-mass 0.1 --ot ot1 --steps 10000 --seed $s --tag OT10a05-F-s$s
-    sub ot3-t $L/t-OT10a15-F-s$s $TR -- $PY $SP/ot_rows.py train $TF $H10 --ot-mass 0.1 --ot ot2 --steps 10000 --seed $s --tag OT10a15-F-s$s
+    sub ot3-t $L/t-OT10a05-F-s$s $TRF -- $PY $SP/ot_rows.py train $TF $H10 --ot-mass 0.1 --ot ot1 --steps 10000 --seed $s --tag OT10a05-F-s$s
+    sub ot3-t $L/t-OT10a15-F-s$s $TRF -- $PY $SP/ot_rows.py train $TF $H10 --ot-mass 0.1 --ot ot2 --steps 10000 --seed $s --tag OT10a15-F-s$s
   done
   TAGS=$(for r in AP2H10-AB OT10a05-F OT10a15-F; do echo -n "$r-s0 $r-s1 "; done)
   waitdirs $(for t in $TAGS; do echo $L/t-$t; done)
@@ -83,6 +85,7 @@ elif [[ $STAGE == rows ]]; then
   waitdirs $(for d in $REST; do echo $L/prep-yr1-$d; done)
 elif [[ $STAGE == train-b ]]; then
   TAG=$1; shift
+  [[ " $* " == *" --std alpasim "* ]] || TR=$TRF
   status "$TAG: 20-step smoke"
   sub ot3-smoke $L/smoke-$TAG $TR -- $PY $S/ot3_rows.py train $TF "$@" --steps 20 --eval-every 20 --seed 0 --tag smoke-ot3-$TAG
   waitdirs $L/smoke-$TAG; peaks $L/smoke-$TAG

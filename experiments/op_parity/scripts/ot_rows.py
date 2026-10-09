@@ -35,6 +35,7 @@ from jevdrive.common import data_dir, n_cpus  # noqa: E402
 OT = "ot1"                                       # cache prefix = version of the perturbation recipe below
 DY, DPSI, YMAX, VMIN = 0.5, np.radians(2.0), 1.0, 3.0
 FRAME = (2, 6, 128, 256)
+PROFILE, KEY_EXTRA = None, {}                    # hook for another perturbation family (experiments/alpasim/scripts/ot3_rows.py); off = this recipe
 CR = data_dir() / "runs" / "op_parity" / "cache"
 OUT = data_dir() / "runs" / "op_parity" / "ot_rows"
 
@@ -119,13 +120,17 @@ def cmd_prep(a):
         dcam = np.abs(np.array([e["cams"][-1]["CAM_F0"]["t"] for e in ents[:64]]) - mcam[:64]).max()
         assert dcam < 1e-4, f"camera position of the logs and of the op_parity tab differ by {dcam} m"
         shard = int(a.data.split(".s", 1)[1].split("of")[0])
-        dy, dp = sample(base["speed"][sel].astype(np.float64), np.random.default_rng([1, shard]))
-        if a.zero:
-            dy, dp = np.zeros(n), np.zeros(n)
-        ys, ps = (np.stack(x) for x in zip(*[H.drift(T, dy[i], dp[i], float(base["speed"][r])) for i, r in enumerate(sel)]))   # (n, 10)
+        extra = {}
+        if PROFILE is not None:                                      # another perturbation family: its own (y, psi) history per row
+            dy, dp, ys, ps, extra = PROFILE(T, base["speed"][sel].astype(np.float64), np.random.default_rng([1, shard]), a.zero)
+        else:
+            dy, dp = sample(base["speed"][sel].astype(np.float64), np.random.default_rng([1, shard]))
+            if a.zero:
+                dy, dp = np.zeros(n), np.zeros(n)
+            ys, ps = (np.stack(x) for x in zip(*[H.drift(T, dy[i], dp[i], float(base["speed"][r])) for i, r in enumerate(sel)]))   # (n, 10)
         run.info(f"{tag}: {n} of {len(base['names'])} rows (speed > {VMIN} m/s, logged future); |dy| mean {np.abs(dy).mean():.3f} m, |dpsi| mean "
                  f"{np.degrees(np.abs(dp)).mean():.2f} deg, |y(-1.5 s)| max {np.abs(ys[:, 0]).max():.2f} m")
-        kbase = dict(data=a.data, sel=cache.key(params=dict(s=sel.tolist())), ot=OT, dy=DY, dpsi=float(DPSI), ymax=YMAX, vmin=VMIN, zero=a.zero)
+        kbase = dict(data=a.data, sel=cache.key(params=dict(s=sel.tolist())), ot=OT, dy=DY, dpsi=float(DPSI), ymax=YMAX, vmin=VMIN, zero=a.zero, **KEY_EXTRA)
         root, froot = CR / tag, CR / f"{tag}@warp"
         root.mkdir(parents=True, exist_ok=True), froot.mkdir(parents=True, exist_ok=True)
 
@@ -137,9 +142,10 @@ def cmd_prep(a):
             fut = to_frame(np.asarray(base["fut"][sel], np.float64), dy, dp).astype(np.float32)
             tab = {k: v[sel] for k, v in base.items()}
             tab |= dict(pose=pose, fut=fut, ego=PA.ego_features(pose, tab["vel"], tab["acc"], tab["cmd"][:, -1]),
-                        off=np.c_[dy, dp].astype(np.float32), src_row=sel)
+                        off=np.c_[dy, dp].astype(np.float32), src_row=sel, **extra)
             return tab
-        tab = cache.cached(root / "tab.npz", cache.key(params=kbase, code=[to_frame, sample, PA.ego_features]), make_tab, force=a.force)
+        tab = cache.cached(root / "tab.npz", cache.key(params=kbase, code=[to_frame, sample, PA.ego_features] + ([PROFILE] if PROFILE else [])), make_tab,
+                           force=a.force)
         assert np.abs(tab["pose"][:, 3]).max() < 1e-4, "the perturbed t0 pose must be the origin of its own frame"
 
         net, enc = PP.encoder(torch.device("cuda"))
