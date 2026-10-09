@@ -132,7 +132,9 @@ def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t
         t1 = core._sync()
         tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=core.dev)
         out = core.model(H, torch.from_numpy(ego[None]).to(core.dev), tc).float()
-        mu, ld = out[0, core.pi].reshape(33, 15).cpu().numpy(), core.leads(out)
+        mu = out[0, core.pi].reshape(33, 15).cpu().numpy()
+        sl = core.model.net.slices                          # the lead outputs of the same pass, for serve_fix.py (JEV_LEAD)
+        ld = {k: out[0, sl[k]].cpu().numpy() for k in ("lead", "lead_prob")} if getattr(core, "lead_out", False) else {}
         t2 = time.perf_counter()
     poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
     return {"poses": poses, "mu": mu, "ego": ego, **ld,

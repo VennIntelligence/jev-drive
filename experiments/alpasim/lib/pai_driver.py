@@ -35,6 +35,7 @@ import sh30_driver as S
 from sh30_driver import common_pb2, egodriver_pb2, egodriver_pb2_grpc, grpc
 
 import pai_core as PC
+import serve_fix as FX
 from pai_core import C, I
 
 LOG = logging.getLogger("pai")
@@ -68,7 +69,7 @@ class Session:
         t = c.rig_to_camera.vec
         self.spec, self.R, self.cam_t = camera_spec(c.intrinsics), S.quat_R(c.rig_to_camera.quat), [t.x, t.y, t.z]
         self.n, self.scene = n, req.debug_info.scene_id if req.HasField("debug_info") else ""
-        self.fix = S.FX.new(req.rollout_spec.vehicle, t.x)
+        self.fix = FX.new(req.rollout_spec.vehicle, t.x)
         self.maps, self.frames, self.jpeg, self.poses, self.states = None, {}, {}, {}, {}
         self.cmd, self.route0, self.plan, self.anchor = np.array([0, 0, 0, 1], np.float32), None, None, None
         self.lock = threading.Lock()
@@ -215,7 +216,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 ctx.abort(grpc.StatusCode.INTERNAL, f"inference failed: {e!r}")
             s.count["inference"] += 1
             s.count["cold"] += int(not real.all())
-            fx = S.FX.apply(s.fix, o, float(np.hypot(*V[-1])), float(dyn[-1][1][0]), t0)
+            fx = FX.apply(s.fix, o, float(np.hypot(*V[-1])), float(dyn[-1][1][0]), t0)
             near = s.poses[min(s.poses, key=lambda t: abs(t - t0))]      # the anchor: the interpolated pose of t0 as a PoseAtTime
             s.anchor = common_pb2.PoseAtTime(timestamp_us=t0, pose=common_pb2.Pose(
                 vec=common_pb2.Vec3(x=float(p0[0]), y=float(p0[1]), z=near.pose.vec.z),
@@ -240,7 +241,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{S.FX.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{FX.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 
@@ -251,8 +252,8 @@ def main() -> None:
     log_dir = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/tmp/alpasim-driver"))
     t0 = time.time()
     core = C.Core(os.environ.get("SH30_TAG", "P2H10-F-s0"), os.environ.get("SH30_DEVICE", "cuda"))
-    core.lead_out = S.FX.LEAD
-    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d", S.FX.VCONT, S.FX.LEAD)
+    core.lead_out = FX.LEAD
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d", FX.VCONT, FX.LEAD)
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros
     warm = lambda: PC.plan(core, z, np.ones(8, bool), e((4, 3)), e((4, 2)), e(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731
     warm(), warm()

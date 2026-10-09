@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # One PAI-track closed-loop run on the Tokyo box: the official containerised stack (`+e2e_challenge=dev`: NRE renderer, physics,
 # nonlinear MPC, runtime + eval; AlpaSim unmodified at the deployed commit) against our driver in the nuPlan submission image with
-# experiments/alpasim/lib/pai_{core,driver}.py mounted over it. Modelled on docker/smoke.sh; shares the box with it, so everything
+# experiments/alpasim/lib/pai_{core,driver}.py and serve_fix.py mounted over it. Modelled on docker/smoke.sh; shares the box with it, so everything
 # here has its own names: compose project pai-<name>, network pai-nonet, ports from PAI_BASEPORT, containers pai-*.
 #   pai_run.sh <out dir> <scenes.tsv | file of scene ids> [wizard overrides...]
 # Env: DATA_DIR (/data), ALPASIM_SRC, NUREC (scene cache with all-usdzs/, pai_fetch.sh), IMG (driver image), BASE (trusted image),
 #   GPU (card of renderer + physics, default 1), DGPU (driver card, default $GPU), STAGE (rows of the tsv with stage <= this, default 1),
 #   CONC (concurrent rollouts, default 1), TAG (checkpoint, default P2H10-F-s0), DRV_ENV (extra `-e K=V` for the driver, space
-#   separated), DRV_PY (a driver variant in lib/ run instead of pai_driver.py, e.g. col1_pai_driver.py), PAI_BASEPORT (default 6400), HARMONIZER (0 = the renderer of the public leaderboard: the dev preset's
+#   separated; the serving switches: `-e JEV_VCONT=1.0 -e JEV_LEAD=1`, lib/serve_fix.py), DRV_PY (a driver variant in lib/ run instead of pai_driver.py, e.g. col1_pai_driver.py), PAI_BASEPORT (default 6400), HARMONIZER (0 = the renderer of the public leaderboard: the dev preset's
 #   `--enable-harmonizer` removed, as the ec2 preset does; 1 = the dev preset as shipped, which is how the bundled reference runs were
 #   made; the weights are then mounted from $NUREC/harmonizer because the renderer cannot fetch them from inside the container).
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, usage.jsonl (2 s: per-process VRAM, per-container RAM / CPU), driver/ (drive.jsonl,
@@ -36,6 +36,7 @@ lib=$here/../lib
 docker run -d --name "$N" --init --cap-drop ALL --security-opt no-new-privileges:true --read-only --pids-limit 1024 --memory 32g --cpus 8 \
   --tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777 --tmpfs /run:rw,nosuid,nodev,size=64m,mode=0755 --network $NET --gpus "device=$DGPU" \
   -v "$lib/pai_core.py:/app/jev-drive/experiments/alpasim/lib/pai_core.py:ro" -v "$lib/pai_driver.py:/app/jev-drive/experiments/alpasim/lib/pai_driver.py:ro" \
+  -v "$lib/serve_fix.py:/app/jev-drive/experiments/alpasim/lib/serve_fix.py:ro" \
   ${DRV_PY:+-v "$lib/$DRV_PY:/app/jev-drive/experiments/alpasim/lib/$DRV_PY:ro"} \
   -v "$OUT/driver:/logs" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "SH30_TAG=$TAG" ${DRV_ENV:-} \
   "$IMG" python "/app/jev-drive/experiments/alpasim/lib/${DRV_PY:-pai_driver.py}" >/dev/null || die "docker run"
