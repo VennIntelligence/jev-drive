@@ -21,21 +21,41 @@ Bench scripts: `experiments/alpasim/archive/lat1_train_audit/` (`prep_bench.py`,
 
 | # | what | where | before (measured) | after | same bytes | status |
 |--:|:--|:--|:--|:--|:--|:--|
-| 1 | Slot warps of the cache builders on the card; workers return the 4 keyframes only | `ap2_prep.py`, `pp_prep.py` (`--frames warp`), `ot3_rows.py` -> `sh30_core.lattice_gpu` | `ap2_prep --bw`: 0.83-1.14 s of worker CPU per token (26 warps x 28.6 ms), 3.24 tokens/s on 3 workers; full navtrain as run 49.6 core-h, 2.76 card-h | measured 27.7 tokens/s on the same 3 workers; full navtrain about 62 min on 4 cores and one card | frames yes (0 of 642 M px); tokens equal at the same encoder batch | STATUS_1 |
-| 2 | Compiled training step (`torch.compile`, inductor) | `ap2_train.py`, `pp_train.py` | 137 ms per step at batch 128 (forward 52.5, backward 75.1) | measured 70.2 ms: 10 000 steps 23 -> 12 min; compile 57 s | no: gradient differs 1.7 % relative (cosine 0.99986) | STATUS_2 |
+| 1 | Slot warps of the cache builders on the card; workers return the 4 keyframes only | `ap2_prep.py`, `pp_prep.py` (`--frames warp`), `ot3_rows.py` -> `sh30_core.lattice_gpu` | `ap2_prep --bw`: 0.83-1.14 s of worker CPU per token (26 warps x 28.6 ms), 3.24 tokens/s on 3 workers; full navtrain as run 49.6 core-h, 2.76 card-h | measured 27.7 tokens/s on the same 3 workers; full navtrain about 62 min on 4 cores and one card | frames yes (0 of 642 M px); tokens equal at the same encoder batch | **done** for `ap2_prep.py` and `pp_prep.py --frames warp` (4a10739a, `--synth gpu` default): ap2 `--bw` 3.48 -> 27.4 tokens/s, pp warp 131 -> 836 image pairs/s on the same 3 workers and 4 cores; cache files identical to the CPU path and to the existing caches (`prep_check.py`, table below). `ot_rows.py` not converted (about 25 lines with `pp_prep.warp_keys`) |
+| 2 | Compiled training step (`torch.compile`, inductor) | `ap2_train.py`, `pp_train.py` | 137 ms per step at batch 128 (forward 52.5, backward 75.1) | measured 70.2 ms: 10 000 steps 23 -> 12 min; compile 57 s | no: gradient differs 1.7 % relative (cosine 0.99986) | **opt-in** (`--compile` in both trainers): 164 -> 76 ms per step on a quiet card (13.1 it/s), 1.9-2.15x on a shared one. Validation below: compiled vs eager is 1/3 to 1/5 of the seed spread on dev. Not the default: navtest and closed loop not run |
 | 3 | CPU admission by measured cores | pool `--cpu` declarations | trainers declare 6-8 cores and peak at 1.4-5.8; 10 076 queued job-minutes behind the CPU budget | estimated: most of the 4.5 h of blocking goes if trainers declare 2 and closed-loop jobs their measured peak | n/a | open: declarations live in each lane's chain scripts |
 | 4 | Free graph values after their last reader | `jevdrive/op_torch.py` `OnnxTorch.run` | encoder 27.6 GB above its inputs at batch 128 (ap2-prep declared 12 GB, peaked at 29.1, two runs died of OOM) | 1.2 GB at batch 128, same time | yes: outputs and all 155 gradients equal | **done** (7b503a73): batch 8 / 32 / 64 1.75 / 6.89 / 13.77 -> 0.08 / 0.30 / 0.61 GB; policy forward + backward at batch 16 2.42 -> 1.23 GB |
-| 5 | Dev-eval tokens on the card once | `ap2_train.py:dev_by_m` | 15 s per eval, 150 s of a 1 549 s run | estimated 4 s per eval, 1.9 GB | yes | STATUS_5 |
+| 5 | Dev-eval tokens on the card once | `ap2_train.py:dev_by_m` | 15 s per eval, 150 s of a 1 549 s run | estimated 4 s per eval, 1.9 GB | yes | **done**, default (`--dev-card-gb 4`): 19.5 -> 4.9 s per eval, dev numbers and checkpoint bit-identical |
 | 6 | Integer chroma mean and byte gathers in the NAVSIM key renderer | `jevdrive/navsim_zs.py` `OpenpilotMaps` | 94 ms per token for 4 keys (decode 11.5 + packing 12.1 ms each) | 55 ms per token | yes (0 of 7.9 M px old vs new, four map variants; `lat1_check.py remap` 865 M px for the same arithmetic) | **done** (7b503a73) |
-| 7 | Encode each real slot once | `ap2_prep.py:make` | 34 image pairs per token | 27 | frames yes; tokens differ 4.2e-4 relative (the encoder's batch-size noise is 7.1e-4) | STATUS_7 |
-| 8 | Batch fetch off the step's critical path | `pp_train.py:Tokens.__getitem__` | 25-73 ms per batch of 128 (12 memory maps, three copies, pageable upload); loop 158 ms per step against 140-147 for the step | estimated: prefetch depth 2-3 removes 11-18 ms; required once the step is compiled | yes | STATUS_8 |
+| 7 | Encode each real slot once | `ap2_prep.py:make` | 34 image pairs per token | 27 | frames yes; tokens differ 4.2e-4 relative (the encoder's batch-size noise is 7.1e-4) | partly: each lattice is warped once (26 -> 20 warps per token). The encoder still sees 34 pairs, because encoding 27 changes the batch composition and with it the tokens (up to 0.031 at batch 128) |
+| 8 | Batch fetch off the step's critical path | `pp_train.py:Tokens.__getitem__` | 25-73 ms per batch of 128 (12 memory maps, three copies, pageable upload); loop 158 ms per step against 140-147 for the step | estimated: prefetch depth 2-3 removes 11-18 ms; required once the step is compiled | yes | **done**, default (`--prefetch 4 --fetch-workers 2`, pinned buffers, non-blocking uploads, the rng stream stays in the main thread): loss curve and checkpoint bit-identical; worth only 4-5 % of a step (0 on a crowded card), the fetch did not become the limit under `--compile` |
 | 9 | Fewer fp16 / fp32 casts in the policy | `op_torch.py` LayerNormalization, Softmax | 772 `aten::to` per step, 31 % of GPU kernel time under the profiler | estimated 20-30 % of the card part | no | open (fp16 overflow is why they are fp32) |
 | 10 | One packed-key cache per JPEG for all prep families | five builders decode the same CAM_F0 JPEGs (each serves 2.82 navtrain tokens) | 0.094 s CPU per token per family | estimated 2.7 core-h per family | yes | open |
-| 11 | Incremental cache writes with a done mask | `ap2_prep.py`, `pp_prep.py` | 6.8 + 2.8 GB per shard held in RAM until the end, no resume | - | yes | STATUS_11 |
+| 11 | Incremental cache writes with a done mask | `ap2_prep.py`, `pp_prep.py` | 6.8 + 2.8 GB per shard held in RAM until the end, no resume | - | yes | **done** with item 1 (`pp_prep.Part`: `open_memmap` + done-rows mask; a build killed after 64 rows resumes to identical files) |
 
 Not worth doing: bigger training batches (332 / 613 / 728 / 872 rows/s at batch 16 / 32 / 64 / 128), bigger encoder batches (flat from
 32), constant folding (46 of 388 policy nodes), removing `vmap` (13.4 -> 10.5 ms host per pass, hidden at batch 128), thread-count
 tuning, pinned uploads in prep (0.24 ms per token).
+
+## Prep on the card: equality and declarations (`experiments/alpasim/scripts/prep_check.py`)
+
+Old = `--synth cpu`, new = `--synth gpu`, same encoder calls, pair counts and batch size on both sides; frames hashed at the encoder input.
+
+| builder | data | tokens | encoder batch | frames into the encoder | differing | tokens, cpu vs gpu | gpu vs the existing cache rows |
+|:--|:--|--:|--:|--:|--:|:--|:--|
+| ap2 `--bw` | `navtrain_full.s2of12` | 256 | 128 | 17 920 | 0 | identical | identical |
+| ap2 `--bw` | `navtrain_full.s9of12` | 256 | 32 | 17 920 | 0 | identical | identical |
+| pp warp | `lb_navtrain` | 256 | 128 | 4 096 | 0 | identical | identical |
+| pp full-navtrain job (functions only; the navtrain index is gone) | `s2of12`, 16 camera positions | 224 | - | 2 240 | 0 | frames only | - |
+
+Every ap2 token holds the cold-start lattices for 1, 2 and 3 keyframes. The cache keys are unchanged, so no existing cache is invalidated.
+On a card another job holds at 100 % the same build reads 14.7 tokens/s. The build is encoder-bound now (per chunk of 32 tokens: warps
+0.14-0.17 s, encoder 0.98 s); 2-3 workers feed it.
+
+Declarations: `--vram 8 --cpu 4 --ram 16 --workers 3` (peak 4.4 GB reserved, 7.6 GB RSS for the whole check chain; the old 29 GB was the
+interpreter's retained values). Pass `--workers` under the pool: `jevdrive.common.n_cpus()` reports the container (75), not the pinned
+cores, and the log-entry pool then forks 75 workers (94 GB RSS). `ap2_chain.sh` and `ot3_chain.sh` still declare `--cpu 20 --workers 18
+--ram 40/60`, VRAM 12 / 44: theirs to change.
 
 ## Prep, per token (one process, 4 pinned cores)
 
@@ -67,6 +87,39 @@ size at the 7e-4 level (up to 0.031 between batch 64 and 128), and the existing 
 | 128 | 51.5 (18.1) | 81.5 (30.0) | 146.9 | 872 | 23.2 |
 
 Real runs: 10 000 steps at batch 128 took 1 549 s alone on a card (6.5 it/s), 2 552-2 742 s with two trainers per card.
+
+## Trainer changes: identity and the compiled step
+
+Bit-identity of the new defaults (prefetch, pinned uploads, dev tokens on the card): a 10 000-step run with them repeats the 10-08
+`AP2-AB-s0` in every loss / dev scalar and in `ckpt-final.pt` (which also shows that the `op_torch` change 7b503a73 left training
+numerics alone); same for 600 steps of ap2 at batch 128 and of pp_train (P2 hinge) at batch 64. The trainer is run-to-run deterministic.
+
+Compiled step (`--compile`: `torch.compile(model, dynamic=False)` around the training step only; dev eval stays eager, so no
+recompiles), AP2-AB, 10 000 steps, dev 1 767 rows, at step 10 000:
+
+| run | ade | ade_m1 | ade_m2 | ade_m3 | drift_on | loss/imit |
+|:--|--:|--:|--:|--:|--:|--:|
+| eager s0 | 0.5728 | 0.6585 | 0.5801 | 0.5655 | 1.4602 | 0.7019 |
+| eager s1 | 0.5726 | 0.6533 | 0.5806 | 0.5665 | 1.4520 | 0.7095 |
+| compiled s0 | 0.5727 | 0.6551 | 0.5796 | 0.5647 | 1.4581 | 0.7008 |
+| compiled s1 | 0.5720 | 0.6518 | 0.5802 | 0.5662 | 1.4533 | 0.7091 |
+
+| mean abs difference over the 10 evals | ade | ade_m1 | drift_on | weights, relative L2 |
+|:--|--:|--:|--:|--:|
+| eager s1 - eager s0 (seed spread, two seeds only) | 0.0083 | 0.0124 | 0.0173 | 0.184 |
+| compiled s0 - eager s0 | 0.0017 | 0.0036 | 0.0034 | 0.032 |
+| compiled s1 - eager s1 | 0.0020 | 0.0034 | 0.0034 | 0.025 |
+
+Compiled runs repeat bit for bit among themselves. 10 000 steps: 1 549 s (eager, 10-08) against an estimated 800-830 s compiled at the
+same card load (measured today: 1 433 s each for two compiled runs sharing a card a third job filled). Checkpoints
+`LAT1DEV-v-c0`, `-c1` under `$DATA_DIR/runs/alpasim/lat1/train_dev/out/op_parity/runs/`; what would make `--compile` the default is
+`ap2_offline.py` (navtest) and a closed-loop run of them against `AP2-AB-s0` / `s1`.
+
+Declarations after 7b503a73 (the chains' 40-48 GB are stale): AP2-AB at batch 128 `--vram 22 --cpu 3` (compiled: 20), pp_train `--host`
+at batch 64 `--vram 10 --cpu 3`; every run averaged 1.1-1.4 cores. Not wired: `ap2_ot.py`, `ot_rows.py`, `fw_p2.py` have their own
+loops (three lines each: `tok.pin = True`, `T.Prefetch`, `T.card_rows`); `--compile` with DDP, `--mem-e2e`, P3 side, `--route` is
+untested; the inductor cache sits in `/tmp/torchinductor_ujs` (4 GB on a 30 GB root overlay: move `TORCHINDUCTOR_CACHE_DIR` to the data
+disk in `jevdrive/cl/profiles.py` before compiling routinely).
 
 ## Scheduling (pool samples of the last 24 h, 72 card-h)
 
