@@ -10,6 +10,8 @@ Run on the box with AlpaSim's own venv ($DATA_DIR/third_party/alpasim/.venv/bin/
             c1_extract.py map --run <run dir> --scenes <txt> --out <pkl>
   frames  CAM_F0 JPEGs the driver received (11 per scene), downscaled, for chosen scenes
             c1_extract.py frames --run <run dir> --scenes <txt> --out <pkl> [--width 960]
+  msgs    the serialized driver-side messages of chosen scenes, for the offline replay (c1_replay.py)
+            c1_extract.py msgs --run <run dir> --scenes <txt> --out <dir>
 """
 import argparse
 import asyncio
@@ -175,10 +177,33 @@ def cmd_frames(a):
     print("frames", len(out), "scenes ->", a.out, os.path.getsize(a.out) >> 20, "MB")
 
 
+def one_msgs(a) -> str:
+    run, scene, out = a
+    KIND = {"driver_session_request", "driver_camera_image", "driver_ego_trajectory", "route_request", "driver_request"}
+
+    async def go():
+        m_ = []
+        async for k, m in _read(asl_of(run, scene), KIND):
+            if k != "driver_camera_image" or m.camera_image.logical_id == "CAM_F0":
+                m_.append((k, m.SerializeToString()))
+        return m_
+    pickle.dump(asyncio.run(go()), open(f"{out}/{scene}.pkl", "wb"), protocol=4)
+    return scene
+
+
+def cmd_msgs(a):
+    """The driver-side messages of chosen scenes in arrival order (CAM_F0 images only), serialized, one pickle per scene: the input of
+    c1_replay.py. --out is a directory."""
+    os.makedirs(a.out, exist_ok=True)
+    with ProcessPoolExecutor(a.jobs) as ex:
+        n = len(list(ex.map(one_msgs, [(a.run, s, a.out) for s in Path(a.scenes).read_text().split()])))
+    print("msgs", n, "scenes ->", a.out)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for n, f in (("logs", cmd_logs), ("map", cmd_map), ("frames", cmd_frames)):
+    for n, f in (("logs", cmd_logs), ("map", cmd_map), ("frames", cmd_frames), ("msgs", cmd_msgs)):
         p = sub.add_parser(n)
         p.add_argument("--run", required=True), p.add_argument("--out", required=True), p.add_argument("--scenes")
         p.add_argument("--jobs", type=int, default=min(32, os.cpu_count() or 4)), p.add_argument("--radius", type=float, default=90.0)
