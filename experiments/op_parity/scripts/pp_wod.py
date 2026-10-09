@@ -79,8 +79,15 @@ def cmd_bias(a):
             bias = np.zeros((len(names), 32, 512), np.float16)
         else:
             assert not m.adapter.use_side, tag
+            lead = None
+            if getattr(m.adapter, "use_lead", False):              # lane TR1, arm P2L: the base model's lead outputs = the stored shipped run's
+                import parity_adapter as PA
+                zs = [np.load(Z.root("preds", "op_cinque") / f"{nm}.npz") for nm in names]
+                pr = np.clip(np.stack([np.asarray(z["lead_prob"], np.float64).reshape(-1) for z in zs]), 1e-5, 1 - 1e-5)
+                xva = np.stack([np.asarray(z["lead"], np.float64).reshape(3, 6, 4)[0, 0, list(PA.LEAD_AT)] for z in zs])
+                lead = PA.lead_features(torch.from_numpy(xva), torch.from_numpy(np.log(pr / (1 - pr))), torch.from_numpy(e[:, 4]))
             with torch.no_grad():
-                bias = np.concatenate([m.adapter(torch.from_numpy(e[i:i + 256]), None, None).to(torch.float16).numpy()
+                bias = np.concatenate([m.adapter(torch.from_numpy(e[i:i + 256]), None, None, **({} if lead is None else {"lead": lead[i:i + 256]})).to(torch.float16).numpy()
                                        for i in range(0, len(ego), 256)])
         rms = float(np.sqrt(np.mean(bias.astype(np.float32) ** 2)))
         np.savez(out / f"bias-{tag0.replace(':', '_')}.npz", names=names, bias=bias, ego=e)

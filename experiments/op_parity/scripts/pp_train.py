@@ -69,6 +69,13 @@ MEM_ROOT = data_dir() / "runs" / "op_parity" / "mem"          # <kind>/<data>.np
 MEM_DROP = 0.25                                                 # rows whose memory is masked in training ("memory off" in distribution)
 # geo-e2e (plans/2026-10-09-geo-e2e-prereg.md, scripts/geo_e2e.py, --mem-e2e): the memory tokens come from a tokenizer trained jointly with the
 # adapter; arm "P2+ge_<tag>", its navtest bank is written to mem/ge_<tag>/ after training. Privileged rasters, oracle probes only.
+# lane TR1 (plans/2026-10-10-tr1-prereg.md, results/tr1_speed_prior.md): the adapter without the speed prior it exports. Arm P2L = P2 + one memory
+# token of the frozen base model's lead outputs (parity_adapter.lead_features; training reads them from the teacher, serving from a first
+# policy pass without the bias); --ego-noax / --hist-cv reduce the ego row inside the adapter (parity_adapter.ego_transform, stored in the
+# checkpoint as model["tr1"], so every serving path applies them); --retime moves the imitation target along the LOGGED path to the arc lengths
+# of the base model's own plan (`moving`: rows fed >= 0.5 m/s; `lead`: those of them where the base model reports a lead, p > 0.5).
+ARMS["P2L"] = dict(ego=True, side=False, lead=True)
+RETIME_V = 0.5                                                  # m/s: below it the target keeps the logged timing (the launch)
 # path-req (plans/2026-10-09-path-req-prereg.md, scripts/path_req.py, --mem-e2e q<kind>): the same channel fed with degraded fields of the LOGGED
 # FUTURE path (label leak: oracle probes only); --mem-lr sets the tokenizer's own learning rate.
 
@@ -130,6 +137,10 @@ class Cfg:
     wod_split: str = "wod/r2"             # mixed-domain: sequence split of the wod_* data dirs when --split is a NAVSIM token split (<ref>-train / -dev)
     wod_mass: float = 0.0                 # mixed-domain: exact share of every batch drawn from the wod_* rows (0 = natural mix)
     wod_slots: int = 0                    # mixed-domain: real policy slots kept on wod_* rows (8 = oldest slot zeroed, as NAVSIM rows; 0 = all cached)
+    ego_noax: bool = False                # TR1: the fed longitudinal acceleration is zeroed inside the adapter (training and serving)
+    hist_cv: bool = False                 # TR1: history poses re-spaced along their own path at the current speed inside the adapter
+    lead_init: str = ""                   # TR1 (arm P2L): state dict of the lead-token MLP pre-trained with its own head (scripts/tr1.py tok)
+    retime: str = ""                      # TR1: imitation target on the logged path at the base plan's arc lengths: "" | moving | lead
 
 
 def proot(*p) -> _pl.Path:
@@ -157,12 +168,23 @@ class PModel(nn.Module):
         self.net = A.load("cinque", dtype, trainable=tr)
         k = arm_kw(arm)
         self.mem = k.get("mem")
+        self.tr1 = {}                                # TR1 ego-input reduction (set_tr1), saved with the weights
+        self.lead_cols = None
         if self.mem:
             self.adapter = PA.ParityAdapter(use_ego=True, use_side=True, n_cam=1, n_t=1)
+        elif k.get("lead"):
+            self.adapter = PA.ParityAdapter(use_ego=True, use_side=False, use_lead=True)
+            sl = self.net.slices
+            self.lead_cols = ([sl["lead"].start + i for i in PA.LEAD_AT], list(range(sl["lead_prob"].start, sl["lead_prob"].start + 3)))
         else:
             self.adapter = PA.ParityAdapter(use_ego=k["ego"], use_side=k["side"]) if (k["ego"] or k["side"]) else None
 
-    def forward(self, front, ego, tc, side=None, side_mask=None, inputs_on=True, nv=None):
+    def set_tr1(self, d: dict):
+        self.tr1 = {k: bool(v) for k, v in (d or {}).items() if v}
+        if self.adapter is not None:
+            self.adapter.in_tf = PA.ego_transform(self.tr1.get("noax", False), self.tr1.get("hist_cv", False))
+
+    def forward(self, front, ego, tc, side=None, side_mask=None, inputs_on=True, nv=None, lead=None):
         """front (B, n, 32, 512) cached hidden tokens of the n newest policy slots (n = 8: the 0.2 s protocols; 4: N, one slot per 2 Hz key)
         -> outputs (B, n_out). The 9 - n older slots are zero and invalid. inputs_on False / no adapter: the bias is not added.
         nv (B,) int, mixed-domain batches only: the number of real (newest) slots of each row; the older ones are invalid."""
@@ -174,7 +196,17 @@ class PModel(nn.Module):
             valid = valid & (torch.arange(A.CONTEXT, device=H.device)[None] >= (A.CONTEXT - nv)[:, None])
         if self.mem and side is not None and side.dim() == 3:
             side = side[:, None, None]                                  # memory (B, 32, 512) -> side channel (B, 1 cam, 1 time, 32, 512)
-        if self.adapter is not None and inputs_on:
+        if self.adapter is not None and inputs_on and self.lead_cols is not None:
+            if lead is None:                                            # serving: the base model's lead outputs = this model without the bias
+                with torch.no_grad():
+                    o0 = self.net.run_batched(A.policy_feeds(self.net, H * valid[:, :, None, None].to(H.dtype), AT, tc.to(self.net.dtype)), ["outputs"])
+                    o0 = o0["outputs"].reshape(B, -1)
+                    lead = PA.lead_features(o0[:, self.lead_cols[0]], o0[:, self.lead_cols[1]], ego[:, 4])
+            b = self.adapter(ego, None, None, lead=lead)
+            if self.gate > 0:
+                b = b * (ego[:, 4:5] * 10.0 >= self.gate).to(b.dtype)[:, :, None]
+            H = H + b[:, None].to(H.dtype)
+        elif self.adapter is not None and inputs_on:
             if self.gate > 0 or self.bias_sub is not None:
                 b = self.adapter(ego, side if self.adapter.use_side else None, side_mask)
                 if self.bias_sub is not None:
@@ -194,13 +226,14 @@ class PModel(nn.Module):
 
     def state(self) -> dict:
         return {"net": {k: p.detach().cpu() for k, p in self.net.params.items() if p.requires_grad}, "adapter": None,
-                "parity": self.adapter.state_dict() if self.adapter is not None else None, "arm": self.arm}
+                "parity": self.adapter.state_dict() if self.adapter is not None else None, "arm": self.arm} | ({"tr1": self.tr1} if self.tr1 else {})
 
     def load_state(self, st):
         for k, v in st["net"].items():
             self.net.params[k].data.copy_(v)
         if self.adapter is not None and st.get("parity") is not None:
             self.adapter.load_state_dict(st["parity"])
+        self.set_tr1(st.get("tr1"))
 
 
 def load_pmodel(tag: str, dev) -> PModel:
@@ -423,6 +456,14 @@ class Store:
         self.klab, self.klab_ok = (torch.from_numpy(x).to(self.ego.device) for x in (k, ok))
 
 
+def teacher_lead(S, sl) -> torch.Tensor:
+    """parity_adapter.lead_features of every row from the teacher's outputs (S.t_out at the columns S.di) and the fed speed."""
+    pos = {int(c): j for j, c in enumerate(np.asarray(S.di))}
+    xva = [pos[sl["lead"].start + i] for i in PA.LEAD_AT]
+    lp = [pos[c] for c in range(sl["lead_prob"].start, sl["lead_prob"].start + 3)]
+    return PA.lead_features(S.t_out[:, xva], S.t_out[:, lp], S.ego[:, 4])
+
+
 def split_rows(tab, split_ref, b2d_split=None, wod_split=None) -> tuple:
     """Train / dev rows: NAVSIM rows by token (<split_ref>-train / -dev), b2d_* rows (tab["is_b2d"]) by route (tab["log"]; <b2d_split>-train / -val).
     A split whose unit is `sequence` (WOD, e.g. wod/r2) or `log` (NAVSIM cross-fit folds, sh30_crossfit.py) selects rows by tab["log"]
@@ -475,6 +516,14 @@ class Losses:
         Ls = {}
         if imit.any():
             f = S.fut[rows][imit]
+            if c.retime:                                                # TR1: the logged path at the base plan's own arc lengths
+                tx, ty, _ = rear(S.t_plan[rows][imit], S.cam_x[rows][imit], self.W)
+                sT = torch.cat([torch.hypot(tx[:, :1], ty[:, :1]), torch.hypot(tx[:, 1:] - tx[:, :-1], ty[:, 1:] - ty[:, :-1])], 1).cumsum(1)
+                on = S.v0[rows][imit] >= RETIME_V
+                if c.retime == "lead":
+                    on = on & (S.leadf[rows][imit][:, 0] > 0.5)
+                f = torch.where(on[:, None, None], along(f, sT), f)
+                Ls["retimed"] = on.float().mean()
             wl = None
             if c.late_lat_w != 1.0:
                 wl = torch.where(torch.as_tensor(T8 >= 2.0, device=f.device), c.late_lat_w, 1.0).float()
@@ -505,6 +554,27 @@ class Losses:
             Ls["act"] = (w * F.huber_loss(z, torch.zeros_like(z), reduction="none", delta=1.0)).sum() / w.sum().clamp_min(1.0)
             total = total + c.act_lam * Ls["act"]
         return total, Ls
+
+
+def along(f: torch.Tensor, s: torch.Tensor) -> torch.Tensor:
+    """f (B, 8, 3) poses x, y, yaw of a path from the origin (heading 0), s (B, 8) arc lengths -> (B, 8, 3) the poses of that polyline at
+    arc length s; beyond its end the path continues straight along its last moving segment (its final yaw when it never moves)."""
+    B = f.shape[0]
+    P = torch.cat([f.new_zeros(B, 1, 3), f], 1)
+    d = P[:, 1:, :2] - P[:, :-1, :2]
+    L = d.norm(dim=-1)
+    c = torch.cat([L.new_zeros(B, 1), L.cumsum(1)], 1)
+    mv = L > 1e-3
+    j = torch.where(mv.any(1), L.shape[1] - 1 - torch.flip(mv, [1]).float().argmax(1), torch.zeros(B, dtype=torch.long, device=f.device))
+    r = torch.arange(B, device=f.device)
+    u = torch.where(mv.any(1)[:, None], d[r, j] / L[r, j].clamp_min(1e-3)[:, None], torch.stack([torch.cos(P[:, -1, 2]), torch.sin(P[:, -1, 2])], -1))
+    Pe = torch.cat([P, torch.cat([P[:, -1, :2] + 1000.0 * u, P[:, -1, 2:3]], -1)[:, None]], 1)
+    ce = torch.cat([c, c[:, -1:] + 1000.0], 1).contiguous()
+    i = (torch.searchsorted(ce, s.contiguous(), right=True) - 1).clamp(0, P.shape[1] - 1)
+    c0, c1 = ce.gather(1, i), ce.gather(1, i + 1)
+    w = ((s - c0) / (c1 - c0).clamp_min(1e-6)).clamp(0, 1)[..., None]
+    g = lambda q: Pe.gather(1, q[..., None].expand(-1, -1, 3))  # noqa: E731
+    return g(i) + w * (g(i + 1) - g(i))
 
 
 def plan_curv(plan: torch.Tensor, Wk: torch.Tensor) -> torch.Tensor:
@@ -572,7 +642,8 @@ def main(a):
               act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop, mem=a.mem, stop_gate=a.stop_gate,
               wod_split=a.wod_split, wod_mass=a.wod_mass, wod_slots=a.wod_slots, stop_gate_free=a.stop_gate_free,
               agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels,
-              mem_e2e=a.mem_e2e, mem_init=a.mem_init, mem_lr=a.mem_lr)
+              mem_e2e=a.mem_e2e, mem_init=a.mem_init, mem_lr=a.mem_lr,
+              ego_noax=a.ego_noax, hist_cv=a.hist_cv, lead_init=a.lead_init, retime=a.retime)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
@@ -590,6 +661,12 @@ def main(a):
     S = Store(cfg.data, dev, need_side=arm_kw(cfg.arm)["side"], frames=cfg.frames, host=cfg.host, mem=None if cfg.mem_e2e else (cfg.mem or None),
               wod_slots=cfg.wod_slots)
     model = PModel(cfg.arm, act=bool(cfg.act_lab)).to(dev)
+    model.set_tr1(dict(noax=cfg.ego_noax, hist_cv=cfg.hist_cv))
+    use_lead = model.lead_cols is not None
+    if use_lead or cfg.retime == "lead":                            # the base model's lead outputs of every row, from the teacher
+        S.leadf = teacher_lead(S, model.net.slices)
+    if use_lead and cfg.lead_init:
+        model.adapter.lead.load_state_dict(torch.load(cfg.lead_init, map_location="cpu")["lead"])
     if cfg.stop_gate > 0:                                           # the whole ego row is zeroed (present = 0 -> bias exactly 0) in training and dev eval
         S.ego = S.ego * (S.ego[:, 4:5] * 10.0 >= cfg.stop_gate).float()
     if cfg.act_lab in ("log", "logwin"):
@@ -726,7 +803,8 @@ def main(a):
                 ego[:, EGO_LAT] = ego[:, EGO_LAT] * (~dm)[:, None].float()
             if om is not None:
                 side = om[rows]                                                      # tokens of this step's tokenizer: the losses reach its weights
-            out = fwd(front_b, ego, S.tc[rows], side, smask, nv=None if S.nv is None else S.nv[rows])
+            lkw = {"lead": S.leadf[rows]} if use_lead else {}
+            out = fwd(front_b, ego, S.tc[rows], side, smask, nv=None if S.nv is None else S.nv[rows], **lkw)
             total, Ls = LS(out, S, rows, anchor)
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {k: float(v) for k, v in Ls.items()} }")
@@ -838,6 +916,10 @@ if __name__ == "__main__":
     ap.add_argument("--mem-e2e", default="", help="geo-e2e: jointly trained tokenizer over true SDF + agents (b), the same shuffled across logs (x), "
                     "the logged-path field (p); path-req: q<kind>, a degraded field of the logged future (scripts/path_req.py). Privileged, oracle probes only")
     ap.add_argument("--mem-init", default="", help="geo-e2e: tokenizer state dict to start from (geo_oracle.py tok --weights)")
+    ap.add_argument("--ego-noax", action="store_true", help="TR1: zero the fed longitudinal acceleration inside the adapter")
+    ap.add_argument("--hist-cv", action="store_true", help="TR1: history poses re-spaced along their own path at the current speed")
+    ap.add_argument("--lead-init", default="", help="TR1 (arm P2L): pre-trained lead-token MLP (scripts/tr1.py tok)")
+    ap.add_argument("--retime", default="", choices=["", "moving", "lead"], help="TR1: imitation target = the logged path at the base plan's arc lengths")
     ap.add_argument("--mem-lr", type=float, default=0.0, help="geo-e2e / path-req: learning rate of the tokenizer group (0 = the adapter's lr_new)")
     speed_args(ap)
     main(ap.parse_args())
