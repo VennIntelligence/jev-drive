@@ -3,6 +3,7 @@
 
   pilot   --man <pilot manifest> [--base-man <tr1 manifest>]      pilot8: off twice, on once -> per-scene table, body-record coverage
   check   --run <dir>[,<dir>] --base <dir>[,<dir>] --out DIR --expect LO,HI     the one-chunk checklist of Amendment 3 + the trace figure
+  chunk   --run <dir> --base <dir> --out DIR      one run against the baseline run of the same scenes, descriptive (one seed)
   report  --base-man M --man M [M ...] --out DIR [--arm rp] [--dev chunk0.txt:0]      the full read on both readings: all scenes x seeds, and
           the part never run with a BODY1 switch (everything except the scenes of --dev's list in that seed) -> report.md, per_scene.csv,
           flips.csv, replans.csv, stats.json
@@ -180,6 +181,51 @@ def cmd_check(a):
         raise SystemExit("checklist FAILED")
 
 
+def cmd_chunk(a):
+    """Descriptive read of one run against the baseline run of the same scenes (one seed): difference, > 45 deg, every flagged scene, every zero."""
+    from jevdrive import stats
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    Ra, Rb = R.load_driver(a.run.split(","))[0], R.load_driver(a.base.split(","))[0]
+    D, Db = SR.drives(a.run.split(","))[0], SR.drives(a.base.split(","))[0]
+    T = SR.turns()
+    scenes = sorted(set(Ra) & set(Rb))
+    logs = np.array([R.log_of(s) for s in scenes])
+    sa, sb = np.array([Ra[s]["score"] for s in scenes]), np.array([Rb[s]["score"] for s in scenes])
+    za, zb = np.array([SHORT[R.zclass(Ra[s])] for s in scenes]), np.array([SHORT[R.zclass(Rb[s])] for s in scenes])
+    pa, pb = (np.array([(r[s].get("score_metrics") or {}).get("progress_clipped_rel") or 0.0 for s in scenes]) for r in (Ra, Rb))
+    turn = np.array([T.get(s.rsplit("-", 1)[1], np.nan) for s in scenes])
+    g45 = np.abs(turn) > 45
+    p, ps = stats.paired(sa, sb, groups=logs), stats.paired(sa, sb)
+    rows, nrp = [], np.zeros(len(scenes), int)
+    for i, s in enumerate(scenes):
+        Bd = [body(x) or {} for x in D[s]]
+        nrp[i] = sum(bool(y.get("a")) for y in Bd)
+        if not any(y.get("flag") and y.get("reason") != "cold" for y in Bd) and sa[i] == sb[i] and sa[i] > 0:
+            continue
+        both = len(D[s]) > 9 and len(Db.get(s, [])) > 9
+        x, y0 = (D[s][9]["anchor"], Db[s][9]["anchor"]) if both else (None, None)
+        rows.append(dict(scene=s, log=logs[i], turn4s_deg=round(float(turn[i]), 1), base_score=round(float(sb[i]), 4), base_zero=zb[i], arm_score=round(float(sa[i]), 4), arm_zero=za[i],
+                         base_progress=round(float(pb[i]), 3), arm_progress=round(float(pa[i]), 3), replans=int(nrp[i]), served=" ".join(f"{y.get('a', 0):g}" for y in Bd),
+                         flags=" ".join(y.get("flag") or "-" for y in Bd), reasons=" ".join(y.get("reason", "?")[:2] for y in Bd), v0_first_replan=next((y["v0"] for y in Bd if y.get("a")), ""),
+                         heading_minus_base_k9_deg=round(float(np.degrees(R_wrap(x[2] - y0[2]))), 2) if both else "", dist_to_base_k9_m=round(float(np.hypot(x[0] - y0[0], x[1] - y0[1])), 2) if both else ""))
+    with (out / "flagged_scenes.csv").open("w", newline="") as fh:
+        w = csv.DictWriter(fh, list(rows[0]))
+        w.writeheader(), w.writerows(rows)
+    rp = nrp > 0
+    slow = lambda v: int(((v > 0) & (v < 1)).sum())  # noqa: E731
+    st = dict(scenes=len(scenes), logs=len(set(logs)), diff_log=p, diff_scene=ps, mean_arm=float(sa.mean()), mean_base=float(sb.mean()), slow_arm=slow(sa), slow_base=slow(sb),
+              zeros_arm={c: int((za == c).sum()) for c in TAUGHT}, zeros_base={c: int((zb == c).sum()) for c in TAUGHT}, replanned_scenes=int(rp.sum()),
+              replanned_diff_sum=float((sa - sb)[rp].sum()), replanned_better=int(((sa - sb)[rp] > 1e-9).sum()), replanned_worse=int(((sa - sb)[rp] < -1e-9).sum()), replanned_same=int((np.abs(sa - sb)[rp] <= 1e-9).sum()),
+              gt45=dict(n=int(g45.sum()), mean_arm=float(sa[g45].mean()), mean_base=float(sb[g45].mean()), zeros_arm=int((sa[g45] == 0).sum()), zeros_base=int((sb[g45] == 0).sum()), replanned=int((rp & g45).sum()),
+                        diff=stats.paired(sa[g45], sb[g45], groups=logs[g45])))
+    (out / "chunk_stats.json").write_text(json.dumps(st, indent=1, default=float))
+    print(json.dumps(st, default=float))
+    for r in rows:
+        if r["replans"] or r["base_score"] == 0 or r["arm_score"] == 0:
+            print(r["scene"][-16:], r["turn4s_deg"], r["base_score"], r["base_zero"], "->", r["arm_score"], r["arm_zero"], "|", r["served"], "|", r["flags"], "| v0", r["v0_first_replan"], "dyaw", r["heading_minus_base_k9_deg"], "d", r["dist_to_base_k9_m"])
+
+
 def R_wrap(a):
     return (a + np.pi) % (2 * np.pi) - np.pi
 
@@ -329,11 +375,13 @@ def main():
     p.add_argument("--man", required=True), p.add_argument("--base-man")
     p = sub.add_parser("check")
     p.add_argument("--run", required=True), p.add_argument("--base", required=True), p.add_argument("--out", required=True), p.add_argument("--scenes"), p.add_argument("--expect", required=True)
+    p = sub.add_parser("chunk")
+    p.add_argument("--run", required=True), p.add_argument("--base", required=True), p.add_argument("--out", required=True)
     p = sub.add_parser("report")
     p.add_argument("--base-man", required=True), p.add_argument("--man", nargs="+", required=True), p.add_argument("--arm", default="rp"), p.add_argument("--out", required=True)
     p.add_argument("--dev", required=True, help="<scene list>:<seed> = the part already read with a BODY1 switch (chunk0 x s0, decision 224)")
     a = ap.parse_args()
-    {"pilot": cmd_pilot, "check": cmd_check, "report": cmd_report}[a.cmd](a)
+    {"pilot": cmd_pilot, "check": cmd_check, "report": cmd_report, "chunk": cmd_chunk}[a.cmd](a)
 
 
 if __name__ == "__main__":
