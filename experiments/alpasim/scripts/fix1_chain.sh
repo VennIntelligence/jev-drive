@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Lane FIX1 (plans/2026-10-09-fix1-prereg.md): the serving switches of lib/serve_fix.py in the closed loop on the public nuPlan scenes, as
 # GPU-pool jobs through ot2_loop.py (OT_LANE=fix1). One self-advancing chain:
-#   scripts/tmux_run.sh fix1 bash experiments/alpasim/scripts/fix1_chain.sh        (box)
+#   scripts/tmux_run.sh fix1 bash experiments/alpasim/scripts/fix1_chain.sh        (box; from the repo, or from an exported tree with a COMMIT file)
 #   1  P2H10-F-s0 on the 700 scenes with OT3's chunk lists: base, +a, +b, +a+b at this checkout -> report, registered lines, WINNER
 #   2  (only when an arm is kept) base and the winning configuration on the other 791 scenes (ot3new, cf1fresh), and APY10m10-AB-s0
 #      base / winning configuration on all 1491
@@ -16,7 +16,7 @@ die() { status "ERROR $*"; echo "$*" > "$O/ERROR"; exit 1; }
 flags() { case $1 in *-ab) echo "JEV_VCONT=1.0,JEV_LEAD=1" ;; *-a) echo "JEV_VCONT=1.0" ;; *-b) echo "JEV_LEAD=1" ;; *) echo "" ;; esac; }
 export OT_LANE=fix1 OT_PRIO=13 OT2_MAX_ACTIVE=${FIX1_STACKS:-6}
 T=P2H10-F-s0; A=APY10m10-AB-s0
-status "stage 1, code $(git rev-parse --short HEAD): $T base / a / b / ab on the 700 scenes"
+status "stage 1, code $(cat COMMIT 2>/dev/null || git rev-parse --short HEAD): $T base / a / b / ab on the 700 scenes"
 J=()
 for arm in base a b ab; do f=$(flags "x-$arm"); J+=("P2H10-$arm:sh30:SH30_TAG=$T${f:+,$f}:$T"); done
 python3 $S/ot2_loop.py s1 "${J[@]}" || die "ot2_loop s1 rc $? (see $O/s1/ERROR)"
