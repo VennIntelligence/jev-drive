@@ -1,7 +1,7 @@
 # alpasim: AlpaSim E2E Closed Loop Challenge feasibility
 
 status: live
-decisions: 184, 185, 188, 189, 199, 201, 202, 211 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
+decisions: 184, 185, 188, 189, 199, 201, 202, 205, 211 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
 index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
 key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
@@ -44,7 +44,9 @@ adapter) and mismatches: [results/ap2_smoke.md](results/ap2_smoke.md) (`figs/ap2
 
 **OT2-C: adapter ensemble (2026-10-09, decision 211, pre-registered).** Averaging the plans of OT30-F-s0 + s1 on one shared encoder pass (`lib/ens_driver.py`, `run.sh <dir> ens`): 0.9312 on the 700 scenes, -0.0022 [-0.0097, +0.0045] against the better member (line +0.008: not met; stop rule applied). The seeds' 4 s endpoints differ by 0.05 m (median) on a shared state, fork decisions 0.4 %: the best-of-two ceiling (+0.0133) is the maximum of two noisy outcomes of one policy. One more member costs 20 ms (110 ms per step). The simulator is deterministic only for a fixed scene list. [results/ot2_c_ensemble.md](results/ot2_c_ensemble.md), plan [plans/2026-10-09-ot2-ensemble-prereg.md](plans/2026-10-09-ot2-ensemble-prereg.md).
 
-**Next.** The cause of the pre-turn shift (does it show in open loop on the same navtest tokens; does it need the braking);  The at-fault collisions of SH30 and AP2 case by case (zeros decide this board); WA-JEPA latency on an idle card; the full public suite once the remaining 14 asset shards are on disk (`fetch_data.sh all`, running 2026-10-08); the two
+**M1: cause and fix of the pre-turn shift (2026-10-09, decision 205, pre-registered).** The route does not bend in these scenes: the ego yaws about 5 deg on a straight road and the route's first waypoint, 42 m ahead, moves sideways in the rig frame. Trigger: the strong drivable hinge (lambda 30 / 0.5 m); amplifier: the plan continues the yaw rate shown in the synthesised slots (slope 0.93, as the logs do on navtest) and the MPC executes it, so heading error grows linearly. Serving the lambda-10 checkpoint `P2H10-F-s0` with the driver unchanged: held-out 300 scenes 0.9288 vs SH30 0.8919, +0.0369 [+0.0087, +0.0668], zeros 16 vs 27, M-class zeros 2 vs 8, all three registered lines met; 700 scenes 0.9484 vs 0.9140 (s1 0.9496). An input-side yaw damping (`SH30_MOTION`, off by default) removes the M zeros but breaks turns. Cost: the open-loop gain of the strong hinge (decision 170), a per-board recipe. [results/m1_preturn_shift.md](results/m1_preturn_shift.md) (before / after strips `figs/m1/pair_*.jpg`, `figs/m1/heading_growth.png`), plan [plans/2026-10-09-m1-yaw-damping-prereg.md](plans/2026-10-09-m1-yaw-damping-prereg.md). Run: `SH30_TAG=P2H10-F-s0 run.sh <dir> sh30`.
+
+**Next.** A lambda-10 checkpoint with off-track rows, and closed-loop recovery rows with a yaw rate (decision 205); P2H10's remaining zeros (turns, 7 of 16 held out); the at-fault collisions of SH30 and AP2 case by case (zeros decide this board); WA-JEPA latency on an idle card; the full public suite once the remaining 14 asset shards are on disk (`fetch_data.sh all`, running 2026-10-08); the two
 collisions and the 11 slow scenes; step latency under 0.1 s (warp on the GPU or cross-session batching); a Docker host for the
 submission image and a read-only-root test; seed 1.
 
