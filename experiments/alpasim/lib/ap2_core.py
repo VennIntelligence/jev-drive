@@ -66,13 +66,14 @@ def load_model(tag: str, dev):
 
 
 class Core(C.Core):
-    def __init__(self, tag: str, dev: str = "cuda", cold: str = "", motion: float = 1.0):
-        """cold: "" = the rule the checkpoint was trained with."""
+    def __init__(self, tag: str, dev: str = "cuda", cold: str = "", motion: float = 1.0, synth: str = "cpu"):
+        """cold: "" = the rule the checkpoint was trained with; synth as sh30_core.Core."""
         import cv2
         import torch
         from jevdrive import op_adapt as A
         cv2.setNumThreads(1)
-        self.torch, self.A, self.tag, self.motion = torch, A, tag, float(motion)
+        assert synth in C.SYNTH, synth
+        self.torch, self.A, self.tag, self.motion, self.synth = torch, A, tag, float(motion), synth
         self.dev = torch.device(dev)
         self.model, self.route, trained = load_model(tag, self.dev)
         self.cold = cold or trained
@@ -90,20 +91,22 @@ class Core(C.Core):
         K = np.zeros((4,) + C.FRAME, np.uint8)
         K[e:] = np.stack(keys)
         cam_t = np.asarray(cam_t, np.float64)
-        cur, valid = C.lattice(K, e, I.track_navsim(*C.damp_history(P, V, self.motion if motion is None else motion)), cam_t, self.cold)
-        prev = np.concatenate([np.zeros((1,) + C.FRAME, np.uint8), cur[:-1]])
+        track, gpu = I.track_navsim(*C.damp_history(P, V, self.motion if motion is None else motion)), self.synth == "gpu"
+        cur, valid = C.lattice_gpu(K, e, track, cam_t, self.cold, self.dev) if gpu else C.lattice(K, e, track, cam_t, self.cold)
+        prev = torch.cat([torch.zeros_like(cur[:1]), cur[:-1]]) if gpu else np.concatenate([np.zeros((1,) + C.FRAME, np.uint8), cur[:-1]])
         ego = PA.ego_features(P, V, np.tile(np.asarray(acc, np.float32), (4, 1)), np.asarray(cmd, np.float32))
         if self.route:
             ego = np.concatenate([ego, AI.route_feat(np.full((AI.N_WP, 2), np.nan) if wp is None else wp)])
-        t1 = time.perf_counter()
+        t1 = self._sync() if gpu else time.perf_counter()
         with torch.no_grad():
-            p, c = (torch.from_numpy(x[valid]).to(self.dev) for x in (prev, cur))
+            p, c = (x[np.flatnonzero(valid)] if gpu else torch.from_numpy(x[valid]).to(self.dev) for x in (prev, cur))
             H = self.model.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(1, int(valid.sum()), *A.H_SHAPE)
             t2 = self._sync()
             tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=self.dev)
             out = self.model(H, torch.from_numpy(ego[None]).to(self.dev), tc).float()
             t3 = self._sync()
             mu = out[0, self.pi].reshape(33, 15).cpu().numpy()
+            cur = cur.cpu().numpy() if gpu else cur
         poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
         t4 = time.perf_counter()
         return {"poses": poses, "mu": mu, "ego": ego, "hist": P, "cur": cur, "valid": valid, "tokens": H[0],

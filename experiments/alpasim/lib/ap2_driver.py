@@ -110,7 +110,8 @@ def main() -> None:
     host, port = os.environ.get("ALPASIM_DRIVER_HOST", "0.0.0.0"), int(os.environ.get("ALPASIM_DRIVER_PORT", "6789"))
     log_dir = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/tmp/alpasim-driver"))
     t0 = time.time()
-    core = AC.Core(os.environ["AP2_TAG"], os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("AP2_COLD", ""), float(os.environ.get("SH30_MOTION", "1")))
+    core = AC.Core(os.environ["AP2_TAG"], os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("AP2_COLD", ""), float(os.environ.get("SH30_MOTION", "1")),
+                   os.environ.get("SH30_SYNTH", "cpu"))
     z = np.zeros(AC.C.FRAME, np.uint8)
     for m in (1, 2, 3, 4, 4):                           # warm-up: every slot count compiled before the port opens
         core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])

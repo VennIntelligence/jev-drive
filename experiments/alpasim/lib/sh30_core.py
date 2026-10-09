@@ -5,7 +5,9 @@ dataset. Simulator independent; experiments/alpasim/lib/sh30_driver.py wraps it 
 Per decision at t0, from the CAM_F0 keyframes at t0 - 1.5 / 1.0 / 0.5 / 0 s (as many as exist) and the ego states at those times:
   frames   the 8 policy slots t0 - 1.4 .. t0 at 0.2 s: a keyframe where the slot is one (-1.0, 0), else the nearest keyframe re-projected
            along the ego track through the road plane (jevdrive.op_interp.synth_cpu `warp`); image pair of a slot = (slot - 0.2 s, slot),
-           the pair of the oldest slot starts from a zero image (pp_prep: frames before the first slot are zero)
+           the pair of the oldest slot starts from a zero image (pp_prep: frames before the first slot are zero).
+           synth = "cpu" (default, the reference every checkpoint was trained on) or "gpu": the same warp as one batched GPU call
+           (op_interp.warp_gpu, results/lat1_frame_synthesis.md)
   tokens   Cinque's frozen vision encoder on the 8 pairs -> (8, 32, 512)
   policy   PModel: adapter bias from lib/parity_adapter.ego_features (command, vx, vy, ax, ay, 4 poses) + the trained plan pathway
   export   33 camera-frame plan points -> rear axle through the camera lever arm, linear resampling to 0.5 .. 4 s (8 poses)
@@ -103,15 +105,39 @@ def lattice(keys: np.ndarray, e: int, track, cam_t, cold: str):
     return cur, valid
 
 
+def lattice_gpu(keys: np.ndarray, e: int, track, cam_t, cold: str, dev):
+    """lattice with the slot warps as one batched GPU call (op_interp.warp_gpu) -> uint8 tensor (8, 2, 6, 128, 256) on dev, validity.
+    Same source keyframe and poses per slot as lattice; pixel agreement with it: results/lat1_frame_synthesis.md."""
+    import torch
+    real = SLOT_T >= I.T_KEY[e] - 1e-9
+    valid = real | (cold == "backwarp")
+    K = torch.from_numpy(keys).to(dev)
+    cur = torch.zeros((len(SLOT_T),) + FRAME, dtype=torch.uint8, device=dev)
+    slot, src = [], []
+    for j in np.flatnonzero(valid):
+        k = np.flatnonzero(np.isclose(I.T_KEY, SLOT_T[j]))
+        if real[j] and len(k):
+            cur[j] = K[k[0]]
+            continue
+        i0, i1, s = I.neighbours(SLOT_T[j]) if real[j] else (e, e, 0.0)
+        slot.append(j), src.append(i0 if s <= 0.5 else i1)
+    if slot:
+        cur[slot] = I.warp_gpu(K[src], cam_t, np.stack([track(SLOT_T[j]) for j in slot]), np.stack([track(I.T_KEY[i]) for i in src]))
+    return cur, valid
+
+
+SYNTH = ("cpu", "gpu")
+
+
 class Core:
-    def __init__(self, tag: str = "SH30-F-s0", dev: str = "cuda", cold: str = "backwarp", motion: float = 1.0):
+    def __init__(self, tag: str = "SH30-F-s0", dev: str = "cuda", cold: str = "backwarp", motion: float = 1.0, synth: str = "cpu"):
         import cv2
         import torch
         import pp_train as T
         cv2.setNumThreads(1)                              # the slot warps are threaded here; cv2's own pool would oversubscribe
         from jevdrive import op_adapt as A
-        assert cold in COLD, cold
-        self.torch, self.A, self.tag, self.cold, self.motion = torch, A, tag, cold, float(motion)
+        assert cold in COLD and synth in SYNTH, (cold, synth)
+        self.torch, self.A, self.tag, self.cold, self.motion, self.synth = torch, A, tag, cold, float(motion), synth
         self.dev = torch.device(dev)
         self.model = T.load_pmodel(tag, self.dev)
         assert self.model.arm == "P2" and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"
@@ -137,18 +163,20 @@ class Core:
         K = np.zeros((4,) + FRAME, np.uint8)
         K[e:] = np.stack(keys)
         cam_t = np.asarray(cam_t, np.float64)
-        cur, valid = lattice(K, e, I.track_navsim(*damp_history(P, V, self.motion if motion is None else motion)), cam_t, self.cold)
-        prev = np.concatenate([np.zeros((1,) + FRAME, np.uint8), cur[:-1]])
+        track, gpu = I.track_navsim(*damp_history(P, V, self.motion if motion is None else motion)), self.synth == "gpu"
+        cur, valid = lattice_gpu(K, e, track, cam_t, self.cold, self.dev) if gpu else lattice(K, e, track, cam_t, self.cold)
+        prev = torch.cat([torch.zeros_like(cur[:1]), cur[:-1]]) if gpu else np.concatenate([np.zeros((1,) + FRAME, np.uint8), cur[:-1]])
         ego = PA.ego_features(P, V, np.tile(np.asarray(acc, np.float32), (4, 1)), np.asarray(cmd, np.float32))
-        t1 = time.perf_counter()
+        t1 = self._sync() if gpu else time.perf_counter()
         with torch.no_grad():
-            p, c = (torch.from_numpy(x[valid]).to(self.dev) for x in (prev, cur))
+            p, c = (x[np.flatnonzero(valid)] if gpu else torch.from_numpy(x[valid]).to(self.dev) for x in (prev, cur))
             H = self.model.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(1, int(valid.sum()), *A.H_SHAPE)
             t2 = self._sync()
             tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=self.dev)
             out = self.model(H, torch.from_numpy(ego[None]).to(self.dev), tc).float()
             t3 = self._sync()
             mu = out[0, self.pi].reshape(33, 15).cpu().numpy()
+            cur = cur.cpu().numpy() if gpu else cur
         poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
         t4 = time.perf_counter()
         return {"poses": poses, "mu": mu, "ego": ego, "hist": P, "cur": cur, "valid": valid, "tokens": H[0],

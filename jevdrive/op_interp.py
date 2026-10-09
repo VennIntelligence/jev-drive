@@ -179,6 +179,53 @@ def warp_frame(packed_src, cam, pose_dst, pose_src):
     return out
 
 
+_GPU = {}
+
+
+def _remap_gpu(img, mx, my):
+    """cv2.remap(INTER_LINEAR, BORDER_REPLICATE) for uint8 (n, h, w) and float32 maps (n, h2, w2), in cv2's own fixed point: source
+    coordinates rounded to 1/32 px (half to even), integer weights (32 - fx)(32 - fy) ... of sum 1024, result rounded half up."""
+    import torch
+    n, h, w = img.shape
+    sx, sy = torch.round(mx * 32).to(torch.int32), torch.round(my * 32).to(torch.int32)
+    fx, fy, ix, iy = sx & 31, sy & 31, sx >> 5, sy >> 5
+    x0, x1, y0, y1 = ix.clamp(0, w - 1), (ix + 1).clamp(0, w - 1), iy.clamp(0, h - 1) * w, (iy + 1).clamp(0, h - 1) * w
+    flat = img.reshape(n, -1).to(torch.int32)
+    g = lambda i: flat.gather(1, i.reshape(n, -1).long()).view_as(sx)  # noqa: E731
+    out = (32 - fy) * ((32 - fx) * g(y0 + x0) + fx * g(y0 + x1)) + fy * ((32 - fx) * g(y1 + x0) + fx * g(y1 + x1))
+    return ((out + 512) >> 10).to(torch.uint8)
+
+
+def warp_gpu(src, cam, pose_dst, pose_src):
+    """warp_frame for n frames in one batched GPU call: src (n, 2, 6, 128, 256) uint8 tensor, poses (n, 3) -> the same shape on the
+    same device. warp_map's operations in float64 in the same order, then cv2.remap's arithmetic (_remap_gpu): the frames are
+    warp_frame's, except where a last-bit difference of a map value crosses a 1/32 px rounding tie."""
+    import torch
+    dev, f8 = src.device, torch.float64
+    c = [torch.tensor(float(x), dtype=f8, device=dev) for x in np.asarray(cam, float)]
+    pd, ps = np.asarray(pose_dst, float).reshape(-1, 3), np.asarray(pose_src, float).reshape(-1, 3)
+    q = np.stack([pd[:, 0], pd[:, 1], np.cos(pd[:, 2]), np.sin(pd[:, 2]), ps[:, 0], ps[:, 1], np.cos(ps[:, 2]), np.sin(ps[:, 2])])
+    xd, yd, cd, sd, xs, ys, cs, ss = torch.from_numpy(q).to(dev)[:, :, None, None]
+    out = torch.empty_like(src)
+    for k, view in enumerate(("road", "wide")):
+        if (view, dev) not in _GPU:
+            r = _rays(view)
+            _GPU[view, dev] = [torch.from_numpy(np.ascontiguousarray(a)).to(dev) for a in
+                               (r[..., 0], r[..., 1], r[..., 2], -r[..., 2], D_FAR / np.linalg.norm(r, axis=-1))]
+        rx, ry, rz, down, far = _GPU[view, dev]
+        lam = torch.minimum(torch.where(down > 1e-6, c[2] / down.clamp_min(1e-6), torch.inf), far)
+        Px, Py, Pz = c[0] + lam * rx, c[1] + lam * ry, c[2] + lam * rz               # vehicle frame at t_dst
+        dx, dy = (Px * cd - Py * sd + xd) - xs, (Px * sd + Py * cd + yd) - ys        # world, relative to the source pose
+        ray = (dx * cs + dy * ss) - c[0], (dy * cs - dx * ss) - c[1], Pz - c[2]      # vehicle frame at t_src, from the camera
+        K, ok = OP_K[view].tolist(), ray[0] > 0.1                                    # opencv axes: x = -ray y, y = -ray z, z = ray x
+        mx = torch.where(ok, K[0][0] * -ray[1] / ray[0] + K[0][2], -1e4).float()
+        my = torch.where(ok, K[1][1] * -ray[2] / ray[0] + K[1][2], -1e4).float()
+        Y, U, V = unpack(src[:, k])
+        hx, hy = (mx[:, 0::2, 0::2] + mx[:, 1::2, 1::2]) / 4 - 0.25, (my[:, 0::2, 0::2] + my[:, 1::2, 1::2]) / 4 - 0.25
+        out[:, k] = pack(_remap_gpu(Y, mx, my), _remap_gpu(U, hx, hy), _remap_gpu(V, hx, hy))
+    return out
+
+
 # ---------------------------------------------------------------- history synthesis
 
 def neighbours(t: float):
