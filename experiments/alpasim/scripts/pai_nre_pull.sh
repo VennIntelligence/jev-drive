@@ -12,8 +12,8 @@ tok() { curl -sf -x "$PROXY" -m 30 "https://nvcr.io/proxy_auth?service=registry&
 # the token endpoint is flaky through the proxy and a token lives 10 min: a background loop keeps a fresh one in a file every connection reads
 TF=$OUT/token; until T=$(tok) && [[ -n $T ]]; do sleep 3; done; echo "$T" > "$TF"
 ( while sleep 200; do t=$(tok) && [[ -n $t ]] && echo "$t" > "$TF.new" && mv "$TF.new" "$TF"; done ) & TOKPID=$!; trap 'kill $TOKPID' EXIT
-curl -sf -x "$PROXY" -m 30 -H "Authorization: Bearer $T" -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-  "https://nvcr.io/v2/$IMG/manifests/$TAGV" -o "$OUT/manifest.json" || die manifest
+[[ -s $OUT/manifest.json ]] || until curl -sf -x "$PROXY" -m 30 -H "Authorization: Bearer $T" -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+  "https://nvcr.io/v2/$IMG/manifests/$TAGV" -o "$OUT/manifest.json"; do sleep 3; done
 mapfile -t L < <(python3 -c 'import json;[print(l["digest"],l["size"]) for l in json.load(open("'"$OUT"'/manifest.json"))["layers"]]')
 echo "${#L[@]} layers"; i=0
 for e in "${L[@]}"; do
