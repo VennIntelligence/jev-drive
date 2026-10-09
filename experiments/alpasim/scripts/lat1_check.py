@@ -7,7 +7,7 @@ simulator (c1_replay.py's harness). Results: experiments/alpasim/results/lat1_fr
       same inputs: differing pixels of the slot frames, 4 s endpoint distance, plan yaw at 0.5 s, stage times of a lone stream
   lat1_check.py remap --msgs <dir> --out <json> [--n N]
       the resampler alone: cv2.remap vs op_interp._remap_gpu on the CPU path's own maps, and sh30_core.pack vs pack_gpu on every
-      logged JPEG (both must be 0 differing pixels)
+      logged JPEG (both must be 0 differing pixels); for comparison the float sampler torch.nn.functional.grid_sample on the same maps
   lat1_check.py prof --msgs <dir> --out <json>
       where a decision's input work goes, alone on the job's cores: track, CPU lattice, GPU lattice, JPEG decode, model-frame packing
   lat1_check.py load --msgs <dir> --out <json> --synth cpu|gpu [--streams 8] [--n N]
@@ -125,7 +125,7 @@ def cmd_remap(a):
     import cv2
     import torch
     import sh30_driver as D
-    I, pb, n, bad, worst, pk = D.C.I, D.egodriver_pb2, 0, 0, 0, [0, 0, 0]
+    I, pb, n, bad, worst, pk, gs = D.C.I, D.egodriver_pb2, 0, 0, 0, [0, 0, 0], [0, 0]
     rng = np.random.default_rng(0)
     for f in scenes(a):
         ims = [pb.RolloutCameraImage.FromString(raw) for kind, raw in pickle.load(open(f, "rb")) if kind == "driver_camera_image"]
@@ -144,8 +144,14 @@ def cmd_remap(a):
                 ref = cv2.remap(img, x, y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
                 got = I._remap_gpu(*(torch.from_numpy(v[None]).cuda() for v in (img, x, y)))[0].cpu().numpy()
                 d = np.abs(ref.astype(int) - got)
+                h, w = img.shape
+                grid = torch.stack([torch.from_numpy(x).cuda() * (2 / (w - 1)) - 1, torch.from_numpy(y).cuda() * (2 / (h - 1)) - 1], -1)[None]
+                f = torch.nn.functional.grid_sample(torch.from_numpy(img)[None, None].cuda().float(), grid, mode="bilinear", padding_mode="border",
+                                                    align_corners=True)[0, 0].round().cpu().numpy()
+                gs = [gs[0] + int((f != ref).sum()), max(gs[1], int(np.abs(f - ref).max()))]
                 n, bad, worst = n + d.size, bad + int((d > 0).sum()), max(worst, int(d.max()))
-    s = dict(scenes=len(scenes(a)), px=n, px_diff=bad, px_max=worst, pack_px=pk[0], pack_px_diff=pk[1], pack_px_max=pk[2], cv2=cv2.__version__)
+    s = dict(scenes=len(scenes(a)), px=n, px_diff=bad, px_max=worst, pack_px=pk[0], pack_px_diff=pk[1], pack_px_max=pk[2],
+             grid_sample_px_diff=gs[0], grid_sample_px_max=gs[1], cv2=cv2.__version__)
     Path(a.out).write_text(json.dumps(s))
     print(json.dumps(s), flush=True)
 
