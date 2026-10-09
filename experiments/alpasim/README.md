@@ -1,7 +1,7 @@
 # alpasim: AlpaSim E2E Closed Loop Challenge feasibility
 
 status: live
-decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 212, 213, 215, 219 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
+decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 212, 213, 215, 219, 226 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
 index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
 key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/results/lat1_frame_synthesis.md, experiments/alpasim/results/lat1_train_audit.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
@@ -71,3 +71,5 @@ collisions and the 11 slow scenes; `--compile` trainers through navtest and clos
 <!-- files:end -->
 
 **CF1: confirmation read on untouched scenes (2026-10-09, decision 216, pre-registered).** YR10m10 minus P2H10 on part012-015 (391 scenes, 6 logs): -0.0069 [-0.0110, -0.0016], refuted; 791 fresh scenes +0.0043 [-0.0031, +0.0148], all 1491 +0.0052; the +0.0153 of decision 213 was a high draw. Exploratory APY10m10-AB minus YR10m10 on the 791 fresh scenes +0.0146 [+0.0006, +0.0266] (marginal candidate; all of it on part012-015, none on OT3's 400); all 1491: P2H10 0.9196, YR10m10 0.9248, APY10m10 0.9335. [results/cf1_confirm.md](results/cf1_confirm.md), plan [plans/2026-10-09-cf1-confirm-prereg.md](plans/2026-10-09-cf1-confirm-prereg.md). Code `scripts/cf1_chain.sh`, `scripts/cf1_report.py`. Amendment 1: AP2H10-AB (input standard, no rows) on the 791 fresh scenes: APY10m10 - AP2H10 +0.0081 [+0.0001, +0.0156] (rows add, marginally), AP2H10 - P2H10 +0.0108 [-0.0042, +0.0267] (791) / +0.0068 (1491), not past the line; the two fresh sets disagree on which part carries the gain; no untouched scenes remain.
+
+**FIX1: serving switches (2026-10-10, decision 226, pre-registered).** Three switches in `lib/serve_fix.py`, all off by default: (a) speed-continuous serving (`JEV_VCONT`), (b) openpilot's lead MPC as a speed limit (`JEV_LEAD`), (c) the base model's speed profile on the adapter's path (`JEV_BASE`). nuPlan, 700 scenes: every arm loses (+a -0.007, +b -0.086, +a+b -0.071, (c) -0.08 to -0.15), driver unchanged. PAI, 60 scenes x 2 seeds on the box: base 0.215, +a+b 0.363 (+0.148 [+0.061, +0.244]), +c2+b 0.368 (tie). Flags are per track; no PAI submission image exists yet. Results: [results/fix1_serving.md](results/fix1_serving.md), plan [plans/2026-10-09-fix1-prereg.md](plans/2026-10-09-fix1-prereg.md).

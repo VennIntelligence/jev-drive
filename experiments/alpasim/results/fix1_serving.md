@@ -11,7 +11,10 @@ Serving-side only: no training, no simulator ground truth in the driver, nothing
 
 - **nuPlan track: every switch loses; the driver stays as it is.** On the 700 public scenes (P2H10-F-s0, paired with a base re-run at the
   same checkout) none of nine arms passes the registered lines. (a) is the only one near zero: -0.0066 [-0.027, +0.011].
-- **PAI track: (a) + (b) is the best configuration measured**, and the gain is large against the baseline. BOX_SUMMARY
+- **PAI track: (a) + (b) is the best configuration measured**, and the gain is large against the baseline. On the box, 60 scenes x
+  two seeds (P2H10-F-s0 / -s1): base 0.215, +a+b 0.363 (+0.148 [+0.061, +0.244]), +c2+b 0.368 (+0.153 [+0.041, +0.273]); the two are
+  not separable. +a alone and (c) without (b) do not clear the interval. By the registered rule the winner is +c2+b by 0.006; +a+b costs
+  one policy pass less (46 against 63 ms median per call) and stands half as often.
 - The two tracks need different serving. One image with one default cannot serve both; the flags are per track.
 
 ## The switches
@@ -93,7 +96,50 @@ read when (a), (b) and (c) were fixed.
 - Tokyo's card 0 was power-throttled that night (225 MHz, runs 4x slower); the queue put all but five runs on card 1. Timing columns of
   runs on card 0 are not usable; scores do not depend on the card.
 
-BOX_SECTION
+## PAI: 60 scenes x 2 seeds on the GPU box (amendment 3)
+
+Lane PAI2's native PAI stack and chunk files (`a10`, `b1`, `b2a`, `b2b` = the Tokyo lists; `e1`, `e2` = 20 extension scenes), 84 pool
+stacks (7 arms x 2 seeds x 6 chunks), driver c3c1150b (box repo), base = PAI2's runs of the same driver path with the switches off.
+Full table, per-scene rows and driver counters: [fix1/fix1_pai_box.md](fix1/fix1_pai_box.md).
+
+Parity run first (+a+b, `b2a`, seed 0): 8 of 10 zero classes equal to Tokyo's run of the same list (96da4f1a 1.00 on Tokyo, left corridor
+on the box; 0ee89cab 0.55 against an at-fault collision). PAI2's base parity was 37 of 40. The grid went ahead.
+
+| Arm | seed 0 / seed 1 | two-seed mean | Difference to base [95% CI, scenes], all 60 | zeros s0 / s1 | at-fault collision | slow | Untouched 40 (b2a, b2b, e1, e2) | Extension 20 | Reading |
+|:--|:--|--:|:--|:--|:--|:--|:--|:--|:--|
+| base | 0.173 / 0.257 | 0.215 | | 46 / 39 | 14 / 11 | 7 / 12 | | | |
+| +a | 0.270 / 0.277 | 0.273 | +0.058 [-0.015, +0.136] | 40 / 38 | 10 / 9 | 8 / 12 | +0.061 [-0.035, +0.164] | -0.014 | interval includes 0 |
+| +b | 0.303 / 0.300 | 0.301 | +0.086 [+0.008, +0.172] | 36 / 34 | 5 / 4 | 11 / 14 | +0.052 [-0.040, +0.154] | -0.004 | helps |
+| **+a+b** | 0.359 / 0.366 | 0.363 | **+0.148 [+0.061, +0.244]** | 33 / 29 | 5 / 3 | 12 / 18 | +0.144 [+0.032, +0.265] | +0.038 | helps |
+| +c1 | 0.326 / 0.294 | 0.310 | +0.095 [-0.006, +0.204] | 24 / 27 | 5 / 4 | 27 / 24 | +0.079 [-0.053, +0.214] | +0.058 | interval includes 0 |
+| +c2 | 0.320 / 0.341 | 0.330 | +0.115 [-0.001, +0.239] | 30 / 28 | 5 / 2 | 21 / 21 | +0.093 [-0.045, +0.236] | +0.038 | interval includes 0 |
+| +c1+b | 0.326 / 0.350 | 0.338 | +0.123 [+0.023, +0.228] | 23 / 22 | 2 / 3 | 27 / 26 | +0.112 [-0.010, +0.240] | +0.070 | helps |
+| **+c2+b** | 0.347 / 0.389 | 0.368 | **+0.153 [+0.041, +0.273]** | 27 / 23 | 5 / 3 | 23 / 24 | +0.144 [+0.009, +0.285] | +0.075 | helps, largest |
+
+- Registered reading (two-seed difference on the 60 positive with the interval above 0, both seeds the same sign): +b, +a+b, +c1+b, +c2+b
+  help. The winning configuration by the rule is +c2+b, 0.006 ahead of +a+b: a tie. On the 40 untouched scenes they are +0.1436 and +0.1440.
+- They get there differently. (c) arms remove more zeros (23-30 per seed against 29-33) and leave about twice the slow scenes; with c1 the
+  car stands at 28 % of the decisions, with c2 9-12 %, with +a+b 7 %. (b) is what removes at-fault collisions (14 / 11 -> 5 / 3 or fewer in
+  every arm that has it); (a) alone and (c) alone do not clear the interval.
+- The extension scenes carry little of the gain (+a+b +0.038, +c2+b +0.075, intervals of +-0.15): the effect measured on the Tokyo lists
+  (+0.20 for +a+b) is larger than on fresh scenes. The 40 Tokyo-list scenes include the 20 that the lane's design started from.
+- The seed spread of the base (0.173 against 0.257) is not there in the fixed arms (+a+b 0.359 / 0.366).
+- Driver: no inference or input error in 840 sessions. `drive` median / p90: +a 43.7 / 80 ms, +a+b 46.4 / 86 ms, (c) arms 59-63 / 110-115 ms
+  (up to 15 stacks shared 5 cards; the second policy pass of (c) is the difference). Serving step 3.7 ms median with (b).
+- Disk: videos, renderer caches and all rollout logs deleted per stack as it ended, except the zero-score logs of the +a+b stacks
+  (keeping every zero-score log would have taken about 250 GB; 35 GB kept in `runs/alpasim/fix1`).
+- Tokyo's 40-scene table above is one of these seeds on another machine: same ordering of base < +a < +b < +a+b; (c) arms rank lower there.
+
+## What to build for a submission
+
+- **nuPlan track**: nothing changes. `new_tag.sh P2H10-F-s0` as before (the image now defaults to `SH30_COMPILE=0`).
+- **PAI track**: serve `JEV_VCONT=1.0 JEV_LEAD=1` (or `JEV_BASE=2 JEV_LEAD=1`, equal score here, one more policy pass). There is no PAI
+  submission image yet: `pai_driver.py` is mounted into the nuPlan image by `pai_run.sh` and started natively on the box. Building one
+  needs three additions that were not made in this lane: `pai_core.py` and `pai_driver.py` in `docker/closure.txt`, a `pai` family in
+  `docker/serve.py` (`JEV_DRIVER=pai` -> `SH30_TAG`), and a PAI-shaped probe for `docker/test.sh` (its synthetic rollouts are nuPlan's
+  cameras and cadence). The build line would then be `DRIVER=pai VCONT=1.0 LEAD=1 experiments/alpasim/docker/new_tag.sh P2H10-F-s0`
+  (`build.sh` already bakes `VCONT` / `LEAD`; a `BASE` build argument for (c) does not exist yet). APY10m10-AB cannot be served on PAI
+  without new code (`pai_core` builds NAVSIM-standard ego features and loads a plain P2 model).
 
 ## Guardrails
 
