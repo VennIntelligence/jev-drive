@@ -20,7 +20,7 @@ default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route m
 
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
 (op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (gpu, the default: slot warp on the card + fast frame packing, same
-frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), SH30_COMPILE (1 = compiled model passes), SH30_JPEG (nvjpeg | libjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (nvjpeg, the default | libjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -273,11 +273,12 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
 
 
 def tune(core, warm):
-    """The options that change numerics at rounding level, both off unless set (results/lat1_frame_synthesis.md): SH30_COMPILE=1 freezes the
-    model passes (Core.compile), SH30_JPEG=nvjpeg decodes CAM_F0 on the card. Either falls back with a warning when the build cannot do it.
+    """The options that change numerics at rounding level, both on by default (results/lat1_frame_synthesis.md: 700 scenes 0.9465 against
+    0.9484, one scene flips): SH30_COMPILE=1 freezes the model passes (Core.compile), SH30_JPEG=nvjpeg decodes CAM_F0 on the card. Either
+    falls back with a warning when the build cannot do it. SH30_COMPILE=0 SH30_JPEG=libjpeg is the path that repeats earlier runs bit for bit.
     warm() runs the warm-up decisions. -> the decoder for Driver.decode, or None."""
     core.sync = os.environ.get("SH30_STAGE_SYNC", "1") == "1"
-    if os.environ.get("SH30_COMPILE", "0") == "1":
+    if os.environ.get("SH30_COMPILE", "1") == "1":
         try:
             core.compile()
             warm()
@@ -285,7 +286,7 @@ def tune(core, warm):
             LOG.exception("torch.compile failed: the model stays interpreted")
             core._enc = core._pol = None
     warm()
-    if os.environ.get("SH30_JPEG", "libjpeg") == "nvjpeg" and core.synth == "gpu":
+    if os.environ.get("SH30_JPEG", "nvjpeg") == "nvjpeg" and core.synth == "gpu":
         try:
             return C.nvjpeg(core.dev)
         except Exception:
