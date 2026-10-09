@@ -1,0 +1,5 @@
+{
+ "navtest_gate_error": "AssertionError('no navtest result for P2H10-F-s0@warp')",
+ "wod_retime_self_max_m": 0.0,
+ "wod_d162_reference": "P2H10: AS - S +0.062, SA - S -0.464 (decision 162)"
+}
