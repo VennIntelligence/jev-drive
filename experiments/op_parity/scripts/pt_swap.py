@@ -650,7 +650,7 @@ def cmd_report(a):
           "when two trajectories share a path and differ only in how far they got. (T - C) on z is the check of that identity.")
 
         # ---- post hoc (not registered): lateral dispersion, failure kind x curve offset, direction split of the 2 x 2
-        P("\n## 9. Post hoc (not registered)\n")
+        P("\n## 8. Post hoc (not registered)\n")
         rows = []
         for fam in FAM:
             k = len(FAM[fam])
@@ -704,7 +704,7 @@ def cmd_report(a):
         v_x = band(kx["gross"][0], kx["gross"][1], rho["rho"][0] if tmean > 0 else None)
         summ["verdict"] = dict(gross=key["gross"], net=key["net"], rho=rho["rho"], T_mean=rho["T"], C_mean=rho["C"], by_gross=v_all, by_net=v_net,
                                ext_le_0p5=dict(gross=e05["gross"], verdict=v_e05), ext_line=dict(gross=kx["gross"], verdict=v_x))
-        P("\n## 8. Registered lines\n")
+        P("\n## 9. Registered lines\n")
         P(f"- (a) PL removes {pc(key['gross'], '{:.1f}', 100)} % of SH30's DAC failures on > 20 deg tokens (gross; net {pc(key['net'], '{:.1f}', 100)} %): band {v_all[1]} (net: {v_net[1]}).")
         P(f"- (b) rho = mean C / mean T on > 20 deg (k mean) = {pc(rho['rho'], '{:.2f}')}; mean T {pc(rho['T'], '{:+.3f}')} m, mean C {pc(rho['C'], '{:+.3f}')} m: band {v_all[2]}.")
         P(f"- verdict by the registered lines: **{v_all[0]}** (by net: {v_net[0]}; extension <= 0.5 m subset: {v_e05[0]}, gross {pc(e05['gross'], '{:.1f}', 100)} %; "
