@@ -88,8 +88,7 @@ class Core(C.Core):
         t0 = time.perf_counter()
         e = 4 - len(keys)
         P, V = C.fill_history(pose, vel, yaw_rate)
-        K = np.zeros((4,) + C.FRAME, np.uint8)
-        K[e:] = np.stack(keys)
+        K = C.stack_keys(keys)
         cam_t = np.asarray(cam_t, np.float64)
         track, gpu = I.track_navsim(*C.damp_history(P, V, self.motion if motion is None else motion)), self.synth == "gpu"
         cur, valid = C.lattice_gpu(K, e, track, cam_t, self.cold, self.dev) if gpu else C.lattice(K, e, track, cam_t, self.cold)

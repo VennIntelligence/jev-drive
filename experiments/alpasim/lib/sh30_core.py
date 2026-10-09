@@ -7,7 +7,7 @@ Per decision at t0, from the CAM_F0 keyframes at t0 - 1.5 / 1.0 / 0.5 / 0 s (as 
            along the ego track through the road plane (jevdrive.op_interp.synth_cpu `warp`); image pair of a slot = (slot - 0.2 s, slot),
            the pair of the oldest slot starts from a zero image (pp_prep: frames before the first slot are zero).
            synth = "cpu" (default, the reference every checkpoint was trained on) or "gpu": the same warp as one batched GPU call
-           (op_interp.warp_gpu, results/lat1_frame_synthesis.md)
+           (op_interp.warp_gpu), keyframes sampled on the card too (pack_gpu); results/lat1_frame_synthesis.md
   tokens   Cinque's frozen vision encoder on the 8 pairs -> (8, 32, 512)
   policy   PModel: adapter bias from lib/parity_adapter.ego_features (command, vx, vy, ax, ay, 4 poses) + the trained plan pathway
   export   33 camera-frame plan points -> rear axle through the camera lever arm, linear resampling to 0.5 .. 4 s (8 poses)
@@ -60,6 +60,33 @@ def pack(jpeg, cam: dict) -> np.ndarray:
     return m(m.decode(io.BytesIO(jpeg) if isinstance(jpeg, (bytes, bytearray, memoryview)) else jpeg))
 
 
+_IDX = {}
+
+
+def pack_gpu(jpeg, cam: dict, dev):
+    """pack with the model-frame sampling on the GPU -> uint8 tensor (2, 6, 128, 256) on dev, bit-identical to pack: the JPEG is decoded
+    on the CPU as there (libjpeg's own YCbCr), OpenpilotMaps.__call__'s nearest sampling and 2x2 chroma mean run on the card."""
+    import torch
+    k = Z.calib_key({"CAM_F0": cam})
+    m = _MAPS.get(k) or _MAPS.setdefault(k, Z.OpenpilotMaps(cam))
+    if (k, dev) not in _IDX:
+        _IDX[k, dev] = torch.from_numpy(np.stack(m.idx)).to(dev)
+    ycc = torch.from_numpy(np.array(m.decode(io.BytesIO(jpeg) if isinstance(jpeg, (bytes, bytearray, memoryview)) else jpeg))).to(dev)
+    p = ycc.view(-1, 3)[_IDX[k, dev]].view(2, 256, 512, 3)
+    Y, uv = p[..., 0], p[..., 1:].float().reshape(2, 128, 2, 256, 2, 2).mean((2, 4)).round().to(torch.uint8)
+    return torch.stack([Y[:, 0::2, 0::2], Y[:, 1::2, 0::2], Y[:, 0::2, 1::2], Y[:, 1::2, 1::2], uv[..., 0], uv[..., 1]], 1)
+
+
+def stack_keys(keys):
+    """The m <= 4 newest keyframes (arrays from pack, or tensors from pack_gpu) -> (4, 2, 6, 128, 256) of the same kind, zeros first."""
+    if isinstance(keys[0], np.ndarray):
+        K = np.zeros((4,) + FRAME, np.uint8)
+        K[4 - len(keys):] = np.stack(keys)
+        return K
+    import torch
+    return torch.cat([keys[0].new_zeros((4 - len(keys),) + FRAME), torch.stack(list(keys))])
+
+
 def fill_history(pose, vel, yaw_rate: float):
     """pose (m, 3) x, y, yaw in the t0 frame and body velocities (m, 2) of the m <= 4 newest history keys (oldest first) -> (4, 3), (4, 2):
     the missing older keys are the oldest known state run backwards at constant body velocity and yaw rate."""
@@ -105,13 +132,13 @@ def lattice(keys: np.ndarray, e: int, track, cam_t, cold: str):
     return cur, valid
 
 
-def lattice_gpu(keys: np.ndarray, e: int, track, cam_t, cold: str, dev):
+def lattice_gpu(keys, e: int, track, cam_t, cold: str, dev):
     """lattice with the slot warps as one batched GPU call (op_interp.warp_gpu) -> uint8 tensor (8, 2, 6, 128, 256) on dev, validity.
-    Same source keyframe and poses per slot as lattice; pixel agreement with it: results/lat1_frame_synthesis.md."""
+    keys: array or tensor. Same source keyframe and poses per slot as lattice; pixel agreement: results/lat1_frame_synthesis.md."""
     import torch
     real = SLOT_T >= I.T_KEY[e] - 1e-9
     valid = real | (cold == "backwarp")
-    K = torch.from_numpy(keys).to(dev)
+    K = torch.as_tensor(keys, device=dev)
     cur = torch.zeros((len(SLOT_T),) + FRAME, dtype=torch.uint8, device=dev)
     slot, src = [], []
     for j in np.flatnonzero(valid):
@@ -160,8 +187,7 @@ class Core:
         m = len(keys)
         e = 4 - m
         P, V = fill_history(pose, vel, yaw_rate)
-        K = np.zeros((4,) + FRAME, np.uint8)
-        K[e:] = np.stack(keys)
+        K = stack_keys(keys)
         cam_t = np.asarray(cam_t, np.float64)
         track, gpu = I.track_navsim(*damp_history(P, V, self.motion if motion is None else motion)), self.synth == "gpu"
         cur, valid = lattice_gpu(K, e, track, cam_t, self.cold, self.dev) if gpu else lattice(K, e, track, cam_t, self.cold)

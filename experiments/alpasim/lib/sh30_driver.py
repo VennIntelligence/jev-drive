@@ -173,7 +173,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             return common_pb2.Empty()
         t0 = time.perf_counter()
         try:
-            fr = C.pack(im.image_bytes, s.cam)
+            fr = C.pack_gpu(im.image_bytes, s.cam, self.core.dev) if self.core.synth == "gpu" else C.pack(im.image_bytes, s.cam)
         except Exception as e:
             ctx.abort(grpc.StatusCode.INVALID_ARGUMENT, f"{CAM} decode failed: {e!r}")
         ts = int(im.frame_end_us)

@@ -6,12 +6,15 @@ simulator (c1_replay.py's harness). Results: experiments/alpasim/results/lat1_fr
       every decision is planned by the CPU core as run, then again by the CPU core (repeatability floor) and by the GPU core on the
       same inputs: differing pixels of the slot frames, 4 s endpoint distance, plan yaw at 0.5 s, stage times of a lone stream
   lat1_check.py remap --msgs <dir> --out <json> [--n N]
-      the resampler alone: cv2.remap vs op_interp._remap_gpu on the CPU path's own maps (must be 0 differing pixels)
+      the resampler alone: cv2.remap vs op_interp._remap_gpu on the CPU path's own maps, and sh30_core.pack vs pack_gpu on every
+      logged JPEG (both must be 0 differing pixels)
   lat1_check.py prof --msgs <dir> --out <json>
       where a decision's input work goes, alone on the job's cores: track, CPU lattice, GPU lattice, JPEG decode, model-frame packing
   lat1_check.py load --msgs <dir> --out <json> --synth cpu|gpu [--streams 8] [--n N]
       N scenes replayed as `streams` concurrent sessions through one driver (one inference lock, as served): stage times per `drive`
-      and per image, from the driver's own drive.jsonl / images.jsonl
+      and per image, from the driver's own drive.jsonl / images.jsonl, and every plan
+  lat1_check.py same --msgs <load json of one run> --out <load json of another>
+      the plans of two load runs, decision by decision
 """
 import argparse
 import io
@@ -116,13 +119,16 @@ def cmd_remap(a):
     import cv2
     import torch
     import sh30_driver as D
-    I, pb, n, bad, worst = D.C.I, D.egodriver_pb2, 0, 0, 0
+    I, pb, n, bad, worst, pk = D.C.I, D.egodriver_pb2, 0, 0, 0, [0, 0, 0]
     rng = np.random.default_rng(0)
     for f in scenes(a):
         ims = [pb.RolloutCameraImage.FromString(raw) for kind, raw in pickle.load(open(f, "rb")) if kind == "driver_camera_image"]
         req = next(pb.DriveSessionRequest.FromString(raw) for kind, raw in pickle.load(open(f, "rb")) if kind == "driver_session_request")
         s = D.Session(req, 0)
         fr = D.C.pack(ims[len(ims) // 2].camera_image.image_bytes, s.cam)
+        for im in ims:
+            d = np.abs(D.C.pack(im.camera_image.image_bytes, s.cam).astype(int) - D.C.pack_gpu(im.camera_image.image_bytes, s.cam, torch.device("cuda")).cpu().numpy())
+            pk = [pk[0] + d.size, pk[1] + int((d > 0).sum()), max(pk[2], int(d.max()))]
         dst, src = np.r_[rng.uniform(-8, 8), rng.uniform(-1, 1), rng.uniform(-0.3, 0.3)], np.r_[rng.uniform(-1, 1, 2), rng.uniform(-0.1, 0.1)]
         for k, view in enumerate(("road", "wide")):
             mx, my = I.warp_map(view, s.cam["t"].astype(float), dst, src)
@@ -133,7 +139,7 @@ def cmd_remap(a):
                 got = I._remap_gpu(*(torch.from_numpy(v[None]).cuda() for v in (img, x, y)))[0].cpu().numpy()
                 d = np.abs(ref.astype(int) - got)
                 n, bad, worst = n + d.size, bad + int((d > 0).sum()), max(worst, int(d.max()))
-    s = dict(scenes=len(scenes(a)), px=n, px_diff=bad, px_max=worst, cv2=cv2.__version__)
+    s = dict(scenes=len(scenes(a)), px=n, px_diff=bad, px_max=worst, pack_px=pk[0], pack_px_diff=pk[1], pack_px_max=pk[2], cv2=cv2.__version__)
     Path(a.out).write_text(json.dumps(s))
     print(json.dumps(s), flush=True)
 
@@ -199,21 +205,28 @@ def cmd_load(a):
         list(ex.map(stream, range(a.streams)))
     wall = time.time() - t0
     dr = [json.loads(x) for x in open(log / "drive.jsonl")]
+    plans = {f"{r['scene']}/{r['k']}": r["poses"] for r in dr if r["kind"] == "drive"}
     dr = [r["ms"] for r in dr if r["kind"] == "drive"]
     im = [json.loads(x)["pack_ms"] for x in open(log / "images.jsonl")]
     s = dict(tag=TAG, synth=a.synth, streams=a.streams, scenes=len(scenes(a)), drives=len(dr), wall_s=round(wall, 1), cpus=len(os.sched_getaffinity(0)),
              ms={k: pct([r[k] for r in dr]) for k in ("frames", "encode", "policy", "wait", "total")}, pack_ms=pct(im),
              vram_gib=torch.cuda.max_memory_allocated() / 2**30, vram_reserved_gib=torch.cuda.max_memory_reserved() / 2**30)
-    Path(a.out).write_text(json.dumps(s))
     print(json.dumps(s, indent=1), flush=True)
+    Path(a.out).write_text(json.dumps(dict(s, plans=plans)))
+
+
+def cmd_same(a):
+    A, B = (json.loads(Path(f).read_text())["plans"] for f in (a.msgs, a.out))
+    d = np.array([np.abs(np.array(A[k]) - np.array(B[k])).max() for k in A if k in B])
+    print(json.dumps(dict(decisions_a=len(A), decisions_b=len(B), common=len(d), differing=int((d > 0).sum()), max_abs=float(d.max()))), flush=True)
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
+    ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=0), ap.add_argument("--synth", default="gpu"), ap.add_argument("--streams", type=int, default=8)
     a = ap.parse_args()
-    {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load}[a.cmd](a)
+    {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same}[a.cmd](a)
 
 
 if __name__ == "__main__":
