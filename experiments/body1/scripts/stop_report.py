@@ -211,8 +211,9 @@ def cmd_report(a):
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     man = json.loads(Path(a.base_man).read_text())
-    for m in a.man:
-        man |= json.loads(Path(m).read_text())
+    for m in a.man:                                                     # a label run in several stages (chunk0 first, then the rest) keeps all its run dirs
+        for k, v in json.loads(Path(m).read_text()).items():
+            man[k] = (man[k] if k in man and k not in BASE else []) + v
     arms = {"base": list(BASE)} | {x: [f"{x}-s0", f"{x}-s1"] for x in a.arm}
     names = [k for v in arms.values() for k in v]
     Rs = {k: R.load_driver(man[k])[0] for k in names}
