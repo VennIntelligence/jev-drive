@@ -1,0 +1,11 @@
+{
+ "a": "/root/autodl-tmp/ujs/runs/op_parity/train-B43-IDENT-A/20261010-055637",
+ "b": "/root/autodl-tmp/ujs/runs/op_parity/train-B43-IDENT-B/20261010-055637",
+ "scalars_compared": 18,
+ "only_a": 0,
+ "only_b": 0,
+ "max_abs_scalar_diff": 0.0,
+ "max_abs_net_weight_diff": 0.0,
+ "max_abs_adapter_weight_diff": 0.0,
+ "identical": true
+}

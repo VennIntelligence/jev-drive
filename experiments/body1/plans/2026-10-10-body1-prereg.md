@@ -516,3 +516,13 @@ each fixes something the items above left open, none loosens a line).**
   drivable hinge (as P2H10's on-log hinge would see it); the count per family is logged. The preview otherwise shows the low-speed rows
   sound (static offset, standing objects ahead displaced consistently, an edge-padding band of up to a tenth of the frame width on one
   side at 7 deg): the family is not restricted.
+
+**Status after the pilot (2026-10-10 06:10 box time, added after the read; nothing above was changed).** Switch-off identity: 60 steps of
+`bd4_train.py` without the new terms against the unedited `pp_train.py` (shard s2, P2H10 recipe): 18 logged scalars and every trained weight
+equal bit for bit (`results/loss/ident.json`). Pilot `P2H10B-P-s0` against the switch-off `P2H10-P-s0` (shards s2 + s3, 3 000 steps, seed 0).
+**The pilot gate is not met: its loss half fails.** The agent hinge on own-plan positives went from 0.1216 (steps 201-400, 178 steps with a
+positive row) to 0.1100 (steps 2 701-3 000, 233 steps): a fall of 9.5 % against the registered 30 % (`results/loss/pilot_gate_P2H10B-P-s0.json`).
+The other half holds: on the hold-log states of the two shards (5 062 states, 118 logs) the own-plan agent-contact rate is 0.0194 against
+0.0261 (switch-off pilot; -0.0067 [-0.0101, -0.0035], 26 % relative) and 0.0237 (P2H10-F-s0), the boundary rate 0.0227 against 0.0275 (-0.0047
+[-0.0074, -0.0022], 17 %) and 0.0259 (`results/loss/g3_pilot.csv`). By item 5 the arm ends here: no full run, no G3 at full scale, no closed
+loop, no ablation, variant D not opened. What the registered number measures and what it does not is in the lane's report to the main session.

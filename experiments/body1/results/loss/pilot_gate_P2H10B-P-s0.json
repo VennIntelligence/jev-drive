@@ -1,0 +1,86 @@
+{
+ "tag": "P2H10B-P-s0",
+ "windows": [
+  [
+   201,
+   400
+  ],
+  [
+   2701,
+   3000
+  ]
+ ],
+ "terms": {
+  "agent_posmean": {
+   "early": 0.12159708151195671,
+   "early_steps": 178,
+   "late": 0.11000333891067576,
+   "late_steps": 233,
+   "fall": 0.09534556633368645
+  },
+  "fam/bd4/agent_posmean": {
+   "early": 0.1679090888673818,
+   "early_steps": 100,
+   "late": 0.15647084121133736,
+   "late_steps": 99,
+   "fall": 0.06812167068024888
+  },
+  "fam/bd4/road_posmean": {
+   "early": 0.16456438412150562,
+   "early_steps": 166,
+   "late": 0.09306170604966907,
+   "late_steps": 233,
+   "fall": 0.43449667711236206
+  },
+  "fam/ot1/agent_posmean": {
+   "early": 0.10641722642772254,
+   "early_steps": 21,
+   "late": 0.13807261312225214,
+   "late_steps": 18,
+   "fall": -0.2974648725319824
+  },
+  "fam/ot1/road_posmean": {
+   "early": 0.04501656563751725,
+   "early_steps": 121,
+   "late": 0.04338536365478998,
+   "late_steps": 179,
+   "fall": 0.03623559371148044
+  },
+  "fam/yr1/agent_posmean": {
+   "early": 0.13542615487400828,
+   "early_steps": 29,
+   "late": 0.0969696967989545,
+   "late_steps": 44,
+   "fall": 0.2839662553428559
+  },
+  "fam/yr1/road_posmean": {
+   "early": 0.09343493507693691,
+   "early_steps": 131,
+   "late": 0.060935303599067084,
+   "late_steps": 200,
+   "fall": 0.34783169112397555
+  },
+  "imit/agent_posmean": {
+   "early": 0.09848045220006378,
+   "early_steps": 138,
+   "late": 0.07920757131077681,
+   "late_steps": 167,
+   "fall": 0.1957026034987529
+  },
+  "imit/hinge_posmean": {
+   "early": 0.03183149710996076,
+   "early_steps": 200,
+   "late": 0.027041584802015375,
+   "late_steps": 300,
+   "fall": 0.15047712934766494
+  }
+ },
+ "gate_term": "agent_posmean",
+ "fall": 0.09534556633368645,
+ "passed": false,
+ "dev": {
+  "ade": 0.5914707779884338,
+  "drift_off": 0.047423768788576126,
+  "drift_on": 1.4541301727294922
+ }
+}
