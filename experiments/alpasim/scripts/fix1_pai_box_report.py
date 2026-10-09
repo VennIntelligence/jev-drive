@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Lane FIX1, PAI track on the GPU box (prereg amendment 3).
-  prune <run dir>     delete videos, the renderer cache and the rollout.asl of every non-zero rollout (stdlib only)
+  prune <run dir>     delete videos, the renderer cache and every rollout.asl except those of zero-score rollouts of the +a+b stacks (84 stacks x 2.5 GB of zero-score logs would not fit the disk; stdlib only)
   table --base <PAI2 base dir: <chunk>_s<seed>/> --runs <dir: <arm>_<chunk>_s<seed>/> --chunks <dir of chunk lists> --out DIR   (numpy)
 Table: per arm and seed the mean scene score and zeros by flag; the two-seed per-scene mean against the base with a scene-resampled 95 %
 bootstrap interval (10 000 draws, seed 0); counts of zero <-> non-zero changes; the Tokyo lists (40) and the extension (20) separately.
@@ -29,7 +29,7 @@ def prune(d: Path):
         f.unlink()
     for f in d.glob("rollouts/*/*/rollout.asl"):
         r = R.get(f.parts[-3])
-        if r is not None and r["score"] > 0:
+        if r is not None and (r["score"] > 0 or not d.name.startswith("ab_")):      # disk: zero-score logs are kept for the +a+b stacks only
             f.unlink()
 
 
