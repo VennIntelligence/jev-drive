@@ -1,58 +1,58 @@
-Scenes common to all 5 drivers: 1000 from 35 logs, 10 shards. Scene score = AlpaSim scene score. CIs: 95% bootstrap resampling whole logs (nuPlan `date_vehicle`), 10 000 draws, seed 0.
+Scenes common to all 5 drivers: 1491 from 44 logs, 15 shards. Scene score = AlpaSim scene score. CIs: 95% bootstrap resampling whole logs (nuPlan `date_vehicle`), 10 000 draws, seed 0.
 
-- SH30-F-s0: 1000 scored scenes, 4 run dirs, disagreeing duplicate scenes: 0
-- AP2-AB-s0: 1000 scored scenes, 4 run dirs, disagreeing duplicate scenes: 0
-- OT30-F-s0: 1000 scored scenes, 6 run dirs, disagreeing duplicate scenes: 0
-- OT30-F-s1: 1000 scored scenes, 6 run dirs, disagreeing duplicate scenes: 0
-- WA-JEPA (reference): 1000 scored scenes, 6 run dirs, disagreeing duplicate scenes: 0
+- SH30-F-s0: 1491 scored scenes, 6 run dirs, disagreeing duplicate scenes: 0
+- AP2-AB-s0: 1491 scored scenes, 6 run dirs, disagreeing duplicate scenes: 0
+- OT30-F-s0: 1491 scored scenes, 11 run dirs, disagreeing duplicate scenes: 0
+- OT30-F-s1: 1491 scored scenes, 11 run dirs, disagreeing duplicate scenes: 0
+- WA-JEPA (reference): 1491 scored scenes, 11 run dirs, disagreeing duplicate scenes: 0
 
 ## Scores
 
 | driver | scenes | mean scene score [95% CI] | score 1 | score 0 | at-fault collision | offroad | left corridor | zero, other | slow (0 < score < 1) | at-fault events | mean progress |
 |:--|--:|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| SH30-F-s0 | 1000 | 0.8952 [0.8699, 0.9189] | 768 | 89 | 21 | 27 | 31 | 10 | 143 | 48 | 0.935 |
-| AP2-AB-s0 | 1000 | 0.9005 [0.8762, 0.9232] | 833 | 92 | 25 | 23 | 34 | 10 | 75 | 48 | 0.976 |
-| OT30-F-s0 | 1000 | 0.9066 [0.8851, 0.9272] | 784 | 78 | 14 | 22 | 32 | 10 | 138 | 36 | 0.936 |
-| OT30-F-s1 | 1000 | 0.9136 [0.8887, 0.9370] | 805 | 73 | 15 | 18 | 30 | 10 | 122 | 33 | 0.944 |
-| WA-JEPA (reference) | 1000 | 0.8844 [0.8472, 0.9198] | 819 | 108 | 4 | 55 | 39 | 10 | 73 | 59 | 0.920 |
+| SH30-F-s0 | 1491 | 0.8883 [0.8677, 0.9092] | 1103 | 139 | 32 | 44 | 51 | 12 | 249 | 76 | 0.922 |
+| AP2-AB-s0 | 1491 | 0.9038 [0.8835, 0.9232] | 1239 | 132 | 32 | 36 | 52 | 12 | 120 | 68 | 0.967 |
+| OT30-F-s0 | 1491 | 0.8978 [0.8793, 0.9183] | 1121 | 125 | 19 | 38 | 56 | 12 | 245 | 57 | 0.926 |
+| OT30-F-s1 | 1491 | 0.9127 [0.8947, 0.9312] | 1177 | 106 | 19 | 29 | 46 | 12 | 208 | 48 | 0.932 |
+| WA-JEPA (reference) | 1491 | 0.8947 [0.8660, 0.9218] | 1254 | 146 | 5 | 70 | 59 | 12 | 91 | 75 | 0.926 |
 
 ## Paired differences (per scene, log-clustered CI)
 
 | A - B | mean scene score difference [95% CI] | zeros A / B | at-fault collision zeros A / B |
 |:--|:--|--:|--:|
-| AP2-AB-s0 - SH30-F-s0 | +0.0053 [-0.0082, +0.0185] | 92 / 89 | 25 / 21 |
-| OT30-F-s0 - SH30-F-s0 | +0.0113 [-0.0030, +0.0241] | 78 / 89 | 14 / 21 |
-| OT30-F-s1 - SH30-F-s0 | +0.0184 [+0.0045, +0.0321] | 73 / 89 | 15 / 21 |
-| OT30 mean of 2 seeds - SH30-F-s0 | +0.0149 [+0.0018, +0.0274] | 75.5 / 89 | 14.5 / 21 |
-| SH30-F-s0 - WA-JEPA (reference) | +0.0109 [-0.0205, +0.0429] | 89 / 108 | 21 / 4 |
-| AP2-AB-s0 - WA-JEPA (reference) | +0.0161 [-0.0149, +0.0457] | 92 / 108 | 25 / 4 |
-| OT30-F-s0 - WA-JEPA (reference) | +0.0222 [-0.0090, +0.0541] | 78 / 108 | 14 / 4 |
-| OT30-F-s1 - WA-JEPA (reference) | +0.0293 [-0.0043, +0.0628] | 73 / 108 | 15 / 4 |
-| OT30 mean of 2 seeds - WA-JEPA (reference) | +0.0257 [-0.0062, +0.0582] | 75.5 / 108 | 14.5 / 4 |
+| AP2-AB-s0 - SH30-F-s0 | +0.0156 [+0.0012, +0.0310] | 132 / 139 | 32 / 32 |
+| OT30-F-s0 - SH30-F-s0 | +0.0095 [-0.0057, +0.0229] | 125 / 139 | 19 / 32 |
+| OT30-F-s1 - SH30-F-s0 | +0.0244 [+0.0102, +0.0377] | 106 / 139 | 19 / 32 |
+| OT30 mean of 2 seeds - SH30-F-s0 | +0.0170 [+0.0032, +0.0294] | 115.5 / 139 | 19 / 32 |
+| SH30-F-s0 - WA-JEPA (reference) | -0.0064 [-0.0312, +0.0203] | 139 / 146 | 32 / 5 |
+| AP2-AB-s0 - WA-JEPA (reference) | +0.0091 [-0.0125, +0.0312] | 132 / 146 | 32 / 5 |
+| OT30-F-s0 - WA-JEPA (reference) | +0.0031 [-0.0214, +0.0313] | 125 / 146 | 19 / 5 |
+| OT30-F-s1 - WA-JEPA (reference) | +0.0180 [-0.0064, +0.0443] | 106 / 146 | 19 / 5 |
+| OT30 mean of 2 seeds - WA-JEPA (reference) | +0.0105 [-0.0134, +0.0372] | 115.5 / 146 | 19 / 5 |
 
 ## OT30 line (pre-registered, plans/2026-10-09-ot30-closedloop-prereg.md)
 
-- mean of the two OT30 seeds minus SH30-F-s0: +0.0149 [+0.0018, +0.0274]; line: >= +0.010 and CI lower bound > 0 -> **met**
-- at-fault collision zeros, mean of the two seeds 14.5 vs SH30 21: line: not higher -> **met**
+- mean of the two OT30 seeds minus SH30-F-s0: +0.0170 [+0.0032, +0.0294]; line: >= +0.010 and CI lower bound > 0 -> **met**
+- at-fault collision zeros, mean of the two seeds 19 vs SH30 32: line: not higher -> **met**
 - verdict: **candidate**
-- each seed alone minus SH30: s0 +0.0113 [-0.0030, +0.0241], s1 +0.0184 [+0.0045, +0.0321]
-- offroad + left-corridor zeros: SH30 58, OT30 s0 54, s1 48
+- each seed alone minus SH30: s0 +0.0095 [-0.0057, +0.0229], s1 +0.0244 [+0.0102, +0.0377]
+- offroad + left-corridor zeros: SH30 95, OT30 s0 94, s1 75
 
 ## Best-of-k among our own drivers (per-scene maximum = an oracle selector, an upper bound)
 
 | set | oracle mean [95% CI] | best single in the set (mean) | oracle minus best single [95% CI] |
 |:--|:--|--:|:--|
-| SH30-F-s0 + AP2-AB-s0 | 0.9330 [0.9120, 0.9524] | AP2-AB-s0 0.9005 | +0.0325 [+0.0233, +0.0423] |
-| SH30-F-s0 + OT30-F-s0 | 0.9316 [0.9115, 0.9506] | OT30-F-s0 0.9066 | +0.0250 [+0.0186, +0.0318] |
-| SH30-F-s0 + OT30-F-s1 | 0.9325 [0.9087, 0.9550] | OT30-F-s1 0.9136 | +0.0188 [+0.0116, +0.0270] |
-| AP2-AB-s0 + OT30-F-s0 | 0.9423 [0.9226, 0.9604] | OT30-F-s0 0.9066 | +0.0358 [+0.0263, +0.0465] |
-| AP2-AB-s0 + OT30-F-s1 | 0.9442 [0.9226, 0.9636] | OT30-F-s1 0.9136 | +0.0305 [+0.0210, +0.0405] |
-| OT30-F-s0 + OT30-F-s1 | 0.9276 [0.9063, 0.9480] | OT30-F-s1 0.9136 | +0.0140 [+0.0076, +0.0203] |
-| SH30-F-s0 + AP2-AB-s0 + OT30-F-s0 | 0.9507 [0.9320, 0.9675] | OT30-F-s0 0.9066 | +0.0441 [+0.0341, +0.0563] |
-| SH30-F-s0 + AP2-AB-s0 + OT30-F-s1 | 0.9508 [0.9300, 0.9695] | OT30-F-s1 0.9136 | +0.0372 [+0.0262, +0.0497] |
-| SH30-F-s0 + OT30-F-s0 + OT30-F-s1 | 0.9406 [0.9209, 0.9594] | OT30-F-s1 0.9136 | +0.0269 [+0.0177, +0.0366] |
-| AP2-AB-s0 + OT30-F-s0 + OT30-F-s1 | 0.9499 [0.9311, 0.9668] | OT30-F-s1 0.9136 | +0.0363 [+0.0249, +0.0488] |
-| SH30-F-s0 + AP2-AB-s0 + OT30-F-s0 + OT30-F-s1 | 0.9551 [0.9363, 0.9717] | OT30-F-s1 0.9136 | +0.0415 [+0.0288, +0.0573] |
+| SH30-F-s0 + AP2-AB-s0 | 0.9354 [0.9168, 0.9520] | AP2-AB-s0 0.9038 | +0.0316 [+0.0244, +0.0390] |
+| SH30-F-s0 + OT30-F-s0 | 0.9281 [0.9130, 0.9442] | OT30-F-s0 0.8978 | +0.0304 [+0.0213, +0.0395] |
+| SH30-F-s0 + OT30-F-s1 | 0.9328 [0.9159, 0.9494] | OT30-F-s1 0.9127 | +0.0201 [+0.0133, +0.0268] |
+| AP2-AB-s0 + OT30-F-s0 | 0.9445 [0.9292, 0.9590] | AP2-AB-s0 0.9038 | +0.0407 [+0.0321, +0.0494] |
+| AP2-AB-s0 + OT30-F-s1 | 0.9491 [0.9332, 0.9630] | OT30-F-s1 0.9127 | +0.0365 [+0.0267, +0.0453] |
+| OT30-F-s0 + OT30-F-s1 | 0.9255 [0.9101, 0.9417] | OT30-F-s1 0.9127 | +0.0129 [+0.0082, +0.0176] |
+| SH30-F-s0 + AP2-AB-s0 + OT30-F-s0 | 0.9530 [0.9383, 0.9663] | AP2-AB-s0 0.9038 | +0.0491 [+0.0393, +0.0584] |
+| SH30-F-s0 + AP2-AB-s0 + OT30-F-s1 | 0.9550 [0.9392, 0.9687] | OT30-F-s1 0.9127 | +0.0424 [+0.0313, +0.0531] |
+| SH30-F-s0 + OT30-F-s0 + OT30-F-s1 | 0.9402 [0.9260, 0.9544] | OT30-F-s1 0.9127 | +0.0275 [+0.0194, +0.0351] |
+| AP2-AB-s0 + OT30-F-s0 + OT30-F-s1 | 0.9531 [0.9394, 0.9657] | OT30-F-s1 0.9127 | +0.0405 [+0.0301, +0.0503] |
+| SH30-F-s0 + AP2-AB-s0 + OT30-F-s0 + OT30-F-s1 | 0.9580 [0.9440, 0.9705] | OT30-F-s1 0.9127 | +0.0454 [+0.0335, +0.0575] |
 
 Reference for the selector rows: `OT30-F-s0 + OT30-F-s1` is two seeds of one recipe, i.e. what an oracle gains from training-seed noise alone.
 
@@ -63,6 +63,7 @@ Reference for the selector rows: `OT30-F-s0 + OT30-F-s1` is two seeds of one rec
 | part001 | 100 | 0.9169 / 7 | 0.9101 / 8 | 0.9334 / 5 | 0.9189 / 7 | 0.9777 / 2 |
 | part002 | 100 | 0.9250 / 6 | 0.9338 / 6 | 0.9338 / 5 | 0.9471 / 4 | 0.9758 / 2 |
 | part003 | 100 | 0.9471 / 4 | 0.9461 / 5 | 0.9495 / 4 | 0.9703 / 2 | 0.9398 / 5 |
+| part004 | 100 | 0.8988 / 8 | 0.9203 / 7 | 0.9607 / 2 | 0.9715 / 1 | 0.9504 / 3 |
 | part005 | 100 | 0.9333 / 6 | 0.9439 / 5 | 0.9428 / 5 | 0.9541 / 4 | 0.9305 / 6 |
 | part006 | 100 | 0.8639 / 11 | 0.8899 / 10 | 0.8373 / 14 | 0.8701 / 11 | 0.8489 / 15 |
 | part007 | 100 | 0.8267 / 14 | 0.8641 / 12 | 0.8750 / 9 | 0.8606 / 11 | 0.8941 / 9 |
@@ -70,20 +71,24 @@ Reference for the selector rows: `OT30-F-s0 + OT30-F-s1` is two seeds of one rec
 | part009 | 100 | 0.9444 / 5 | 0.9452 / 5 | 0.9366 / 6 | 0.9573 / 4 | 0.8307 / 16 |
 | part010 | 100 | 0.8475 / 14 | 0.8289 / 17 | 0.8732 / 11 | 0.8841 / 10 | 0.7816 / 21 |
 | part011 | 100 | 0.8432 / 14 | 0.8301 / 16 | 0.8748 / 11 | 0.8481 / 14 | 0.8357 / 16 |
+| part012 | 100 | 0.8773 / 9 | 0.9491 / 4 | 0.8874 / 8 | 0.9133 / 6 | 0.9754 / 2 |
+| part013 | 100 | 0.8582 / 11 | 0.9417 / 5 | 0.8614 / 10 | 0.8882 / 8 | 0.8910 / 10 |
+| part014 | 100 | 0.8868 / 10 | 0.8658 / 13 | 0.8481 / 14 | 0.8997 / 9 | 0.9197 / 8 |
+| part015 | 91 | 0.8465 / 12 | 0.8728 / 11 | 0.8381 / 13 | 0.8776 / 9 | 0.8347 / 15 |
 
 Part001 against the rest (mean scene score; difference with a log-clustered CI):
 
 | driver | part001 | other shards | part001 - others [95% CI] |
 |:--|--:|--:|:--|
-| SH30-F-s0 | 0.9169 | 0.8928 | +0.0241 [-0.0494, +0.0668] |
-| AP2-AB-s0 | 0.9101 | 0.8994 | +0.0106 [-0.0837, +0.0617] |
-| OT30-F-s0 | 0.9334 | 0.9036 | +0.0298 [-0.0567, +0.0706] |
-| OT30-F-s1 | 0.9189 | 0.9131 | +0.0058 [-0.0696, +0.0480] |
-| WA-JEPA (reference) | 0.9777 | 0.8740 | +0.1037 [+0.0628, +0.1455] |
+| SH30-F-s0 | 0.9169 | 0.8862 | +0.0307 [-0.0410, +0.0695] |
+| AP2-AB-s0 | 0.9101 | 0.9034 | +0.0067 [-0.0869, +0.0543] |
+| OT30-F-s0 | 0.9334 | 0.8952 | +0.0382 [-0.0476, +0.0768] |
+| OT30-F-s1 | 0.9189 | 0.9122 | +0.0066 [-0.0651, +0.0441] |
+| WA-JEPA (reference) | 0.9777 | 0.8887 | +0.0890 [+0.0561, +0.1217] |
 
 ## Where the zeros are
 
-WA-JEPA (reference) zeros: 108; of them also zero for SH30 38, AP2 37, OT30 s0 39, s1 35. Zero for none of our drivers but for WA-JEPA: 63; zero for all of our drivers: 39.
+WA-JEPA (reference) zeros: 146; of them also zero for SH30 51, AP2 49, OT30 s0 57, s1 50. Zero for none of our drivers but for WA-JEPA: 80; zero for all of our drivers: 54.
 
 | WA-JEPA zero scene | shard | class | SH30-F-s0 | AP2-AB-s0 | OT30-F-s0 | OT30-F-s1 |
 |:--|:--|:--|--|--|--|--|
@@ -96,6 +101,9 @@ WA-JEPA (reference) zeros: 108; of them also zero for SH30 38, AP2 37, OT30 s0 3
 | 2021.06.03.13.55.17_veh-35_02866_03582-c72c3c003bc95aab | part003 | offroad | 1.00 | 1.00 | 1.00 | 1.00 |
 | 2021.06.03.17.06.58_veh-35_02943_03220-f1b802f6e9a559af | part003 | offroad | offroad | offroad | offroad | offroad |
 | 2021.06.28.13.53.26_veh-26_00492_00696-b411a654aa215f1b | part003 | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally |
+| 2021.06.28.16.29.11_veh-38_01415_01821-c0ea178930145138 | part004 | collision_at_fault | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.06.28.18.03.27_veh-14_00620_01581-4d38d745131c5de1 | part004 | left_corridor_laterally | 1.00 | 1.00 | 0.98 | 1.00 |
+| 2021.06.28.18.03.27_veh-14_00620_01581-f8e2454674f75e0f | part004 | offroad | 0.82 | 0.70 | 0.98 | 0.99 |
 | 2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918 | part005 | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally |
 | 2021.06.28.20.24.43_veh-38_03385_04952-c0d4412fa9f15f5b | part005 | offroad | 1.00 | 1.00 | 1.00 | 1.00 |
 | 2021.08.16.14.23.37_veh-45_00015_00132-36a229f658875a2e | part005 | offroad | 1.00 | 1.00 | 1.00 | 1.00 |
@@ -195,6 +203,41 @@ WA-JEPA (reference) zeros: 108; of them also zero for SH30 38, AP2 37, OT30 s0 3
 | 2021.09.16.21.13.37_veh-42_00172_00347-a425dd8a1b5552db | part011 | offroad | 1.00 | 1.00 | 1.00 | 1.00 |
 | 2021.09.29.14.44.26_veh-28_00238_00320-cfb755b8d37458ac | part011 | left_corridor_laterally | 1.00 | left_corridor_laterally | 1.00 | 1.00 |
 | 2021.09.29.14.44.26_veh-28_01059_01191-dda361f4db52537a | part011 | left_corridor_laterally | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.09.29.15.23.04_veh-28_00601_00802-aec02ec2aec85c06 | part012 | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally |
+| 2021.09.29.19.02.14_veh-28_00273_00514-9897a102ee075dee | part012 | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally |
+| 2021.09.29.19.02.14_veh-28_00540_00917-5f09eaa4509f5997 | part013 | left_corridor_laterally | 1.00 | 1.00 | left_corridor_laterally | left_corridor_laterally |
+| 2021.09.29.19.02.14_veh-28_00540_00917-7e76a2b3918656f9 | part013 | left_corridor_laterally | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.09.29.19.02.14_veh-28_01717_01824-71729b03a1e95896 | part013 | offroad | offroad | offroad | offroad | offroad |
+| 2021.09.29.19.02.14_veh-28_03198_03360-7da6ba784b8b5ff0 | part013 | left_corridor_laterally | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.09.29.19.02.14_veh-28_03198_03360-8d06ea883e7853a9 | part013 | left_corridor_laterally | 0.82 | 0.94 | 0.80 | 0.78 |
+| 2021.09.29.19.02.14_veh-28_03198_03360-f1ceb70bd72a5048 | part013 | other | other | other | other | other |
+| 2021.10.06.07.26.10_veh-52_00006_00398-062a9e3dd60955ce | part013 | offroad | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.10.06.07.26.10_veh-52_00006_00398-38b01bebf6df5fb8 | part013 | left_corridor_laterally | 1.00 | 1.00 | left_corridor_laterally | left_corridor_laterally |
+| 2021.10.06.07.26.10_veh-52_00006_00398-cbadd750cbd6581b | part013 | offroad | 0.94 | 1.00 | 0.78 | 0.79 |
+| 2021.10.06.07.26.10_veh-52_00422_00728-3e42abec9c495419 | part013 | offroad | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.10.06.07.26.10_veh-52_00953_01126-62b0d1b0d5b35c44 | part014 | offroad | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.10.06.07.26.10_veh-52_01245_02064-115d3d7bdadf52f8 | part014 | offroad | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.10.06.07.26.10_veh-52_01245_02064-947b3794a3275a2c | part014 | left_corridor_laterally | 1.00 | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally |
+| 2021.10.06.07.26.10_veh-52_01245_02064-94c0ff5134d45dd1 | part014 | left_corridor_laterally | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.10.06.07.26.10_veh-52_01245_02064-a9956fd52aa15f39 | part014 | left_corridor_laterally | left_corridor_laterally | 1.00 | left_corridor_laterally | left_corridor_laterally |
+| 2021.10.06.07.26.10_veh-52_01245_02064-b031e4b0aea8528b | part014 | left_corridor_laterally | 1.00 | 0.98 | 1.00 | 1.00 |
+| 2021.10.06.08.16.17_veh-52_00032_00170-4faa4706a50958e2 | part014 | left_corridor_laterally | 1.00 | 1.00 | left_corridor_laterally | left_corridor_laterally |
+| 2021.10.06.08.16.17_veh-52_00181_00574-78c26c7e63c3534c | part014 | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally |
+| 2021.10.06.08.16.17_veh-52_00181_00574-ddc1271ea57154bc | part015 | offroad | 1.00 | 1.00 | 1.00 | offroad |
+| 2021.10.06.08.16.17_veh-52_00181_00574-f9ed38d9ddfa531e | part015 | offroad | offroad | 1.00 | offroad | 1.00 |
+| 2021.10.06.08.16.17_veh-52_00612_00782-409711b03072566a | part015 | offroad | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.10.06.08.16.17_veh-52_00922_01296-3502b30911d75ed8 | part015 | left_corridor_laterally | 1.00 | offroad | 1.00 | 0.98 |
+| 2021.10.06.08.16.17_veh-52_00922_01296-7ae0a03be0c357d2 | part015 | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | left_corridor_laterally | 0.81 |
+| 2021.10.06.08.16.17_veh-52_00922_01296-da6d3b6810995466 | part015 | offroad | offroad | 1.00 | 1.00 | 1.00 |
+| 2021.10.06.08.16.17_veh-52_00922_01296-da751fd130625cce | part015 | other | other | other | other | other |
+| 2021.10.06.08.16.17_veh-52_01430_01579-64a7186ab49b5cdc | part015 | offroad | offroad | offroad | offroad | offroad |
+| 2021.10.06.08.16.17_veh-52_01590_01725-078bc1027dde5d1a | part015 | left_corridor_laterally | 1.00 | 1.00 | offroad | 1.00 |
+| 2021.10.06.08.16.17_veh-52_01590_01725-9e522849163c53b8 | part015 | offroad | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.10.06.08.16.17_veh-52_01949_02501-3b4031def0f45d96 | part015 | left_corridor_laterally | offroad | offroad | offroad | offroad |
+| 2021.10.06.08.16.17_veh-52_01949_02501-5e02e80df7fe5f5b | part015 | offroad | 1.00 | 1.00 | left_corridor_laterally | 1.00 |
+| 2021.10.06.08.16.17_veh-52_01949_02501-9a3778686fd058d2 | part015 | offroad | offroad | offroad | offroad | offroad |
+| 2021.10.06.08.16.17_veh-52_01949_02501-e072351fbbfd5765 | part015 | left_corridor_laterally | 1.00 | 1.00 | 1.00 | 1.00 |
+| 2021.10.06.08.16.17_veh-52_01949_02501-ffe92084016a5795 | part015 | left_corridor_laterally | 1.00 | 1.00 | 1.00 | 1.00 |
 
 ## Cold start (decision 0: identical simulator state for every driver)
 
@@ -202,10 +245,10 @@ Plan endpoint (4 s, x forward / y left in the ego frame at decision 0). Differen
 
 | driver | mean x (m) | mean abs y (m) | scenes with abs y > 2 m | distance to SH30: mean / p90 / max (m) | scenes > 3 m from SH30 | zeros ending within 3 decisions |
 |:--|--:|--:|--:|:--|--:|--:|
-| SH30-F-s0 | 21.29 | 2.10 | 270 | - | - | 0 |
-| AP2-AB-s0 | 22.73 | 2.02 | 249 | 1.77 / 4.60 / 11.55 | 182 | 0 |
-| OT30-F-s0 | 21.32 | 2.14 | 275 | 0.42 / 0.79 / 4.21 | 1 | 0 |
-| OT30-F-s1 | 21.23 | 2.12 | 271 | 0.44 / 0.84 / 3.45 | 2 | 0 |
-| WA-JEPA (reference) | 19.79 | 1.23 | 187 | 2.92 / 5.78 / 11.81 | 389 | 0 |
+| SH30-F-s0 | 21.44 | 2.11 | 432 | - | - | 0 |
+| AP2-AB-s0 | 22.75 | 2.03 | 401 | 1.67 / 4.21 / 11.55 | 245 | 0 |
+| OT30-F-s0 | 21.49 | 2.14 | 434 | 0.43 / 0.80 / 4.65 | 4 | 0 |
+| OT30-F-s1 | 21.40 | 2.13 | 429 | 0.44 / 0.85 / 3.46 | 4 | 0 |
+| WA-JEPA (reference) | 19.76 | 1.19 | 268 | 3.04 / 5.80 / 11.81 | 648 | 0 |
 
-Scenes whose rollout has no driver-log decisions are not counted in the last column (nd = 0: SH30-F-s0 10, AP2-AB-s0 10, OT30-F-s0 10, OT30-F-s1 10, WA-JEPA (reference) 10).
+Scenes whose rollout has no driver-log decisions are not counted in the last column (nd = 0: SH30-F-s0 12, AP2-AB-s0 12, OT30-F-s0 12, OT30-F-s1 12, WA-JEPA (reference) 12).
