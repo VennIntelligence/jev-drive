@@ -9,6 +9,7 @@ prior (decision 218). The arms are options of pp_train.py (its TR1 block); this 
           +- 2 m/s^2 (DIAG1's acceleration probe), with ax +- 2 m/s^2 and the history poses made consistent with it (the ego was slower /
           faster before: the state a closed loop feeds after its own plan accelerated), and the base model (P0) with its lead outputs
           -> $DATA_DIR/runs/op_parity/tr1/probe-<name>.npz
+  wod-report  (jevdrive env, CPU) prereg amendment 1: WOD-recipe arms against WLG on WOD val -> results/tr1/<name>_{arms,contrasts}.{csv,md}
   report  (.venv, CPU) the probe table with diag1.py's definitions (closing-lead frames, "slows", standstill launch), the continuation
           slopes, and the registered stage gates against the base model and the reference arm -> results/tr1/probe_<name>.{csv,md}
 """
@@ -184,7 +185,7 @@ def cmd_report(a):
     nav = {}
     for t in tags:
         f = DATA / "runs/bench/navtest" / f"{t}@warp" / "summary.json"
-        nav[t] = json.loads(f.read_text()).get("score", np.nan) if f.exists() else np.nan
+        nav[t] = json.loads(f.read_text()).get("EPDMS", np.nan) if f.exists() else np.nan
     for r in rows[2:]:
         t = r["arm"]
         s = max(abs(r["slope ax (m/s per m/s^2)"]), abs(r["slope ax + history"]))
@@ -198,6 +199,51 @@ def cmd_report(a):
     OUT.mkdir(parents=True, exist_ok=True)
     stats.write_table(rows, OUT / f"probe_{a.name}")
     print((OUT / f"probe_{a.name}.md").read_text())
+
+
+def cmd_wod_report(a):
+    """Prereg amendment 1: WOD-recipe arms against WLG on WOD val. Recipe = the 2-seed trajectory mean (decision 180's submission form) and
+    the mean of the seeds' per-frame scores; paired bootstrap over sequences (diag1.wod_ctx: B 4 000); strata; the held-out part f3 + f4
+    of decision 171's sequence folds; ADE@3s on all frames."""
+    from jevdrive import stats
+    from wod_pref import folds_of
+    C = D.wod_ctx()
+    n = C.n
+    grp = lambda g: (g.split("=")[0], g.split("=")[1].split("+"))  # noqa: E731
+    G = dict([grp(a.ref)] + [grp(g) for g in a.arms])
+    ref = grp(a.ref)[0]
+    P = {k: [C.preds(t, True) for t in v] for k, v in G.items()}
+    traj = {k: C.rfs(np.mean(v, 0)) for k, v in P.items()}                     # RFS of the seed-mean trajectory
+    seed = {k: [C.rfs(p) for p in v] for k, v in P.items()}
+    err = lambda p: np.linalg.norm(p - C.fut, axis=-1)[:, :12].mean(1)  # noqa: E731
+    ade = {k: err(np.mean(v, 0)) for k, v in P.items()}
+    fold, _ = folds_of(C.seq[:n])
+    v0, lead = C.vfed[:n], C.lp[:n, 0] > 0.5
+    st = {"all": np.ones(n, bool), "held-out part (folds f3 + f4)": fold >= 3, "other part (folds f0 - f2)": fold < 3, "standstill (v0 < 0.5)": v0 < 0.5,
+          "moving": v0 >= 0.5, "lead (p > 0.5)": lead, "no lead": ~lead, "standstill, lead": (v0 < 0.5) & lead, "moving, lead": (v0 >= 0.5) & lead}
+    rows, arms = [], []
+    for k in G:
+        arms.append({"arm": k, "RFS (2-seed trajectory mean)": C.cm(traj[k]), "RFS (mean of seed scores)": C.cm(np.mean(seed[k], 0)),
+                     "seeds": " / ".join(f"{C.cm(x):.3f}" for x in seed[k]), "ADE@3s (m, trajectory mean, 1 437 frames)": float(ade[k].mean()),
+                     "RFS standstill": C.cm(traj[k], st["standstill (v0 < 0.5)"]), "RFS moving": C.cm(traj[k], st["moving"])})
+        if k == ref:
+            continue
+        for nm, m in st.items():
+            p, lo, hi = C.ci(traj[k] - traj[ref], m)
+            q, qlo, qhi = C.ci(np.mean(seed[k], 0) - np.mean(seed[ref], 0), m)
+            r = {"contrast": f"{k} - {ref}", "stratum": nm, "n": int(m.sum()), "dRFS (trajectory mean)": p, "lo": lo, "hi": hi, "dRFS (seed scores)": q, "s lo": qlo, "s hi": qhi,
+                 "per seed": " / ".join(f"{C.cm(x - y, m):+.3f}" for x, y in zip(seed[k], seed[ref]))}
+            if nm == "all":
+                dd = ade[k] - ade[ref]
+                bb = (C.Ka @ dd) / C.Ka.sum(1)
+                ho = C.cm(traj[k] - traj[ref], st["held-out part (folds f3 + f4)"])
+                r |= {"d ADE@3s (m)": float(dd.mean()), "a lo": float(np.percentile(bb, 2.5)), "a hi": float(np.percentile(bb, 97.5)),
+                      "label": "beats WLG" if (p >= 0.05 and lo > 0 and ho > 0) else "worse" if hi < 0 else "no measurable gain"}
+            rows.append(r)
+    OUT.mkdir(parents=True, exist_ok=True)
+    stats.write_table(arms, OUT / f"{a.name}_arms")
+    stats.write_table(rows, OUT / f"{a.name}_contrasts")
+    print((OUT / f"{a.name}_arms.md").read_text(), (OUT / f"{a.name}_contrasts.md").read_text())
 
 
 def main():
@@ -218,8 +264,12 @@ def main():
     p.add_argument("--name", required=True)
     p.add_argument("--ref", required=True, help="the reference arm (P2H10 recipe at the same scale)")
     p.add_argument("--tags", nargs="*", default=[])
+    p = sp.add_parser("wod-report")
+    p.add_argument("--name", required=True)
+    p.add_argument("--ref", required=True)
+    p.add_argument("--arms", nargs="+", required=True)
     a = ap.parse_args()
-    {"tok": cmd_tok, "probe": cmd_probe, "report": cmd_report}[a.cmd](a)
+    {"tok": cmd_tok, "probe": cmd_probe, "report": cmd_report, "wod-report": cmd_wod_report}[a.cmd](a)
 
 
 if __name__ == "__main__":

@@ -92,6 +92,11 @@ def cmd_bias(a):
             with torch.no_grad():
                 bias = np.concatenate([m.adapter(torch.from_numpy(e[i:i + 256]), None, None, **({} if lead is None else {"lead": lead[i:i + 256]})).to(torch.float16).numpy()
                                        for i in range(0, len(ego), 256)])
+        if a.gate and m is not None:                               # a --stop-gate run (wod_launch.py gbias): no bias on the rows fed a speed below its gate
+            import pp_train as T
+            g = float(torch.load(T.proot("runs", tag) / "ckpt-final.pt", map_location="cpu", weights_only=False)["cfg"]["stop_gate"])
+            assert g > 0, f"{tag} was not trained with --stop-gate"
+            bias[e[:, 4] * 10.0 < g] = 0
         rms = float(np.sqrt(np.mean(bias.astype(np.float32) ** 2)))
         np.savez(out / f"bias-{tag0.replace(':', '_')}.npz", names=names, bias=bias, ego=e)
         print(f"{tag0}: {len(names)} frames, bias rms {rms:.4f}, |max| {float(np.abs(bias).max()):.3f}", flush=True)
@@ -222,6 +227,7 @@ if __name__ == "__main__":
     sp_ = ap.add_subparsers(dest="cmd", required=True)
     p = sp_.add_parser("bias")
     p.add_argument("--tags", nargs="+", required=True)
+    p.add_argument("--gate", action="store_true", help="zero the bias below the run's --stop-gate speed (as trained)")
     p = sp_.add_parser("report")
     p.add_argument("--tags", nargs="+", required=True, help="the two seeds (seed mean over these)")
     p.add_argument("--diag", nargs="*", default=[], help="diagnostic arms (preds tag), reported against shipped, not in the seed mean")

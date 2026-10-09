@@ -56,7 +56,7 @@ waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do slee
 serve() { local tag=$1                                   # WOD val, decision 155 harness (wod1_recipes_chain.sh)
           [[ -f $ONNX/pp-$tag.onnx ]] || $PY $S/pp_hugsim.py onnx --tag $tag --out $ONNX/pp-$tag.onnx >/dev/null || die "onnx $tag"
           [[ -f $BIAS/bias-$tag.npz ]] || $PY $S/pp_wod.py bias --tags $tag || die "bias $tag"
-          sub tr1-wod $L/wod-$tag --vram 8 --cpu 14 --ram 40 -- $OP scripts/wod_zeroshot_openpilot.py --set rater extra --workers 12 \
+          sub tr1-wod $L/wod-$tag --vram 8 --cpu 14 --ram 40 --tries 3 -- $OP scripts/wod_zeroshot_openpilot.py --set rater extra --workers 12 \
               --onnx $ONNX/pp-$tag.onnx --tag $tag --bias $BIAS/bias-$tag.npz; }
 TV="--train --vram 24 --cpu 4 --ram 40"
 
@@ -136,6 +136,39 @@ elif [[ $STAGE == cl ]]; then                              # cl <name> <group=ta
   $VPY $AS/ot3_report.py --manifest $RA/tr1/$NAME/manifest.json --shards $RA/c0b/lists/shards.tsv --out $RA/tr1/results --name $NAME \
       --base P2H10=P2H10-F-s0+P2H10-F-s1 "${GR[@]}" > $D/report.log 2>&1 || die "report (see $D/report.log)"
   cp $RA/tr1/results/${NAME}_report.md $RES/alpasim_$NAME.md; cp $RA/tr1/results/${NAME}_stats.json $RES/alpasim_${NAME}_stats.json
+elif [[ $STAGE == wodpar ]]; then                          # 20-step parity of the trainer on the WOD recipe (prereg amendment 1)
+  W=$O/ref-$REF_SHA
+  WR="--host --data wod_r2 --split wod/r2 --stop-gate 0.5 --batch 128 --warmup 300"
+  sub tr1-par $L/wpar-old $TV -- $PY $W/$S/pp_train.py --arm P2 --seed 0 $WR --steps 20 --eval-every 20 --tag tr1-wpar-old
+  sub tr1-par $L/wpar-new $TV -- $PY $S/pp_train.py --arm P2 --seed 0 $WR --steps 20 --eval-every 20 --tag tr1-wpar-new
+  sub tr1-tok $L/tok-W --vram 8 --cpu 2 --ram 40 -- $PY $S/tr1.py tok --name W --data wod_r2 --split wod/r2
+  waitdirs $L/wpar-old $L/wpar-new $L/tok-W; cat $O/tok/W.json
+  $PY - <<EOF || die "WOD parity: checkpoints differ"
+import torch
+a, b = (torch.load("$CK/tr1-wpar-%s/ckpt-final.pt" % k, map_location="cpu", weights_only=False)["model"] for k in ("old", "new"))
+d = max(float((a["net"][k].float() - b["net"][k].float()).abs().max()) for k in a["net"])
+e = max(float((a["parity"][k].float() - b["parity"][k].float()).abs().max()) for k in a["parity"])
+print("WOD recipe: max |d| plan weights", d, "adapter", e)
+assert d == 0 and e == 0
+EOF
+  grep -h "dev @ 20" $L/wpar-old/log.txt $L/wpar-new/log.txt | sed 's/.*INFO *//' | cut -c1-200
+  rm -rf $CK/tr1-wpar-old $CK/tr1-wpar-new
+elif [[ $STAGE == wod ]]; then                             # wod <arm...>: the WLG recipe + the arm's flags, 2 seeds, WOD val through the harness
+  [[ -f $O/tok/W.pt ]] || die "run stage wodpar first"
+  WR="--host --data wod_r2 --split wod/r2 --stop-gate 0.5 --steps 10000 --batch 128 --warmup 300 --eval-every 1000"
+  TAGS=""
+  for arm in "$@"; do f=$(flags $arm W) || die "unknown arm $arm"; for s in 0 1; do t=W$arm-full-s$s; TAGS+="$t "
+    sub tr1-t-W $L/t-$t --train --vram 30 --cpu 6 --ram 40 -- $PY $S/pp_train.py $f --seed $s $WR --tag $t; done; done
+  status "WOD recipe trainings: $TAGS"
+  waitdirs $(for t in $TAGS; do echo $L/t-$t; done)
+  grep -h "dev @ 10000" $L/t-W*-full-s*/log.txt | sed 's/.*INFO//' | cut -c1-300
+  for t in $TAGS; do
+    [[ -f $ONNX/pp-$t.onnx ]] || $PY $S/pp_hugsim.py onnx --tag $t --out $ONNX/pp-$t.onnx >/dev/null || die "onnx $t"
+    [[ -f $BIAS/bias-$t.npz ]] || $PY $S/pp_wod.py bias --gate --tags $t || die "bias $t"
+    sub tr1-wod $L/wod-$t --vram 8 --cpu 14 --ram 40 --tries 3 -- $OP scripts/wod_zeroshot_openpilot.py --set rater extra --workers 12 \
+        --onnx $ONNX/pp-$t.onnx --tag $t --bias $BIAS/bias-$t.npz; done
+  waitdirs $(for t in $TAGS; do echo $L/wod-$t; done)
+  $J $S/tr1.py wod-report --name wodrec --ref WLG=WLG-full-s0+WLG-full-s1 --arms $(for arm in "$@"; do echo -n "WLG-$arm=W$arm-full-s0+W$arm-full-s1 "; done) || die "wod report"
 else
   die "unknown stage $STAGE"
 fi
