@@ -1,7 +1,7 @@
 # alpasim: AlpaSim E2E Closed Loop Challenge feasibility
 
 status: live
-decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 212, 213, 215 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
+decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 212, 213, 215, 219 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
 index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
 key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/results/lat1_frame_synthesis.md, experiments/alpasim/results/lat1_train_audit.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
@@ -62,6 +62,8 @@ adapter) and mismatches: [results/ap2_smoke.md](results/ap2_smoke.md) (`figs/ap2
 collisions and the 11 slow scenes; `--compile` trainers through navtest and closed loop, trainer core declarations (LAT1); seed 1; the user's warm-up submission of the image (decision 215).
 
 **Read more.** [docs/alpasim.md](../../docs/alpasim.md).
+
+**COL1: what the at-fault collisions are (2026-10-10, decision 219, lead read pre-registered).** Nothing of openpilot's longitudinal path is in the loop: the driver reads the plan's positions only, `lead` / `lead_prob` are computed and discarded. nuPlan public scenes: P2H10-F's 22 collision rollouts (12 scenes) are lateral drift (20 clear on the logged path, 4 stopped leads). PAI, 40 scenes (30 new, Tokyo): 0.169, 12 collisions, longitudinal (11 front, 9 ahead of the log); the frozen lead head reports the vehicle ahead 6-8 s before impact (class A 3 / 3) while the plan does not slow; lead-rule ceiling passes its line on PAI (7 / 12 turned, 0 / 21 false-alarm scenes), fails on nuPlan (6 / 22, 14 %). Serving-side defect on PAI: the returned trajectory does not start at the ego's speed (4 of 5 scenes above 23 m/s spin at the hand-over); diagnostic arm 0.169 -> 0.292 (+0.123 [-0.006, +0.253]). Record: [results/collisions.md](results/collisions.md), tables `results/collisions/`, 31 clips `figs/collisions/`, page [research/alpasim-collisions/](../../research/alpasim-collisions/index.html).
 
 <!-- files:begin -->
 <!-- files:end -->

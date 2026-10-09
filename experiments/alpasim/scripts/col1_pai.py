@@ -94,9 +94,9 @@ def classify(o, k, t_evt, off, gt_rig):
     lab = o["size"][k][2]
     if lab not in ("automobile", "heavy_truck", "bus", "trailer", "truck", "vehicle", "car", ""):
         cls = f"other ({lab})"
-    elif dh > np.radians(135):
+    elif dh > np.radians(135) and vo >= 1.0:
         cls = "oncoming"
-    elif dh > np.radians(45):
+    elif dh > np.radians(45) and vo >= 1.0:
         cls = "crossing"
     elif abs(ylog[1]) < 1.5 and abs(ylog[0]) >= 1.5 and moved:
         cls = "cut-in"
@@ -167,6 +167,10 @@ def scene_rows(o, rp, ref):
                collision_rear=m["collision_rear"], v0=float(ve[0]), log_turn_deg=float(np.degrees(np.unwrap(gt[:, 3])[-1] - gt[0, 3])),
                log_dist=m["gt_dist_traveled_m"], driven=m["dist_traveled_m"], ref_alpamayo1=ref.get("alpamayo1", {}).get(o["summary"]["clipgt_id"]),
                ref_mean=np.mean([v[o["summary"]["clipgt_id"]] for v in ref.values() if o["summary"]["clipgt_id"] in v]) if ref else None)
+    ho = (D["t"] > 1.45) & (D["t"] < 1.75)                        # forced-replay decisions with 8 real slots: the state is the log's
+    if ho.any():
+        row.update(v_handover=float(ve[ho].mean()), ft_v05=float(D["x_ft"][ho, 0].mean() / 0.5), p0_v05=float(D["x_p0"][ho, 0].mean() / 0.5),
+                   ft_v4=float(D["arc_ft"][ho].mean() / 4), p0_v4=float(D["arc_p0"][ho].mean() / 4))
     te = ev["collision_at_fault"]
     if te is None:
         g, c = lead_label(o, t0, off)
@@ -199,6 +203,11 @@ def scene_rows(o, rp, ref):
     w4 = slice(max(ie - 40, 0), ie)
     row.update(thru_ft_last4s=float(D["thru_ft"][w4].mean()) if ie else np.nan, thru_p0_last4s=float(D["thru_p0"][w4].mean()) if ie else np.nan,
                arc_p0_over_ft_last4s=float(np.median(D["arc_p0"][w4] / np.maximum(D["arc_ft"][w4], 0.5))) if ie else np.nan)
+    w8 = slice(max(ie - 80, 0), ie)
+    We = o["size"]["EGO"][1]
+    ahead = (r[w8, 0] > 0) & (r[w8, 1] < We / 2 + 0.25) & (r[w8, 2] > -We / 2 - 0.25)      # inside the ego's own straight-ahead corridor
+    hitp = (D["p_p0"][w8] >= 0.5) & (np.abs(D["d_p0"][w8] - r[w8, 0]) <= np.maximum(2.0, 0.3 * r[w8, 0]))
+    row.update(ahead_s=float(ahead.sum() * 0.1), ahead_hit_p0=float((hitp & ahead).sum() / max(ahead.sum(), 1)))
     row.update(t_evt=(te - T0) * 1e-6, obj=k, obj_label=lab, cls=cls, contact="front" if front else "lateral", v_ego_evt=float(ve[ie]), v_obj_evt=vo,
                obj_lat_to_log_path=ylog, obj_moved=moved, driven_to_evt=float(np.hypot(*np.diff(ego[ego[:, 0] <= te, 1:3], axis=0).T).sum()),
                ego_lat_evt=float(lat[ie, 0]), ego_ahead_of_log=float(lat[ie, 1] - L.lat_to_path(gt_rig[:, 1:3], glog[ie:ie + 1, :2])[0, 1]),
@@ -289,13 +298,13 @@ def main():
       f"(max {max(D['replay_err'].max() for D in Ds.values()):.3f} m).\n")
     P("## At-fault collisions, one row per rollout\n")
     P("| scene | class | contact | t s | driven m | ego m/s | object m/s | ego off the logged path m | ego ahead of the log m | first visible: s before / gap m / TTC s | "
-      "plan 4 s arc / (4 v): min, last 1 s | plan / log 4 s | last 4 s: served plan reaches the object / shipped plan reaches it / shipped arc over served | log's own min distance m | clear on the logged path | clear at the log's position | alpamayo1 | start m/s |")
-    P("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|---|--:|--:|")
+      "plan 4 s arc / (4 v): min, last 1 s | plan / log 4 s | last 4 s: served plan reaches the object / shipped plan reaches it / shipped arc over served | in the ego's own corridor ahead, s of the last 8 / shipped lead head on it then | log's own min distance m | clear on the logged path | clear at the log's position | alpamayo1 | start m/s |")
+    P("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|---|--:|--:|")
     for r in col:
         P(f"| {r['scene']} | {r['cls']} | {r['contact']} | {r['t_evt']:.1f} | {r['driven_to_evt']:.0f} | {r['v_ego_evt']:.1f} | {r['v_obj_evt']:.1f} | "
           f"{r['ego_lat_evt']:+.2f} | {r['ego_ahead_of_log']:+.1f} | {r['t_visible_before']:.1f} / {r['gap_first_visible']:.1f} / {r['ttc_first_visible']:.1f} | "
           f"{r['plan_ratio_min']:.2f}, {r['plan_ratio_last1s']:.2f} | {r['plan_arc_vs_log_4s']:.2f} | "
-          f"{r['thru_ft_last4s']:.0%} / {r['thru_p0_last4s']:.0%} / {r['arc_p0_over_ft_last4s']:.2f} | {r['human_min_dist']:.2f} | "
+          f"{r['thru_ft_last4s']:.0%} / {r['thru_p0_last4s']:.0%} / {r['arc_p0_over_ft_last4s']:.2f} | {r['ahead_s']:.1f} / {r['ahead_hit_p0']:.0%} | {r['human_min_dist']:.2f} | "
           f"{'yes' if r['clear_on_log_path'] else 'no'} | {'yes' if r['clear_at_log_position'] else 'no'} | "
           f"{'' if r['ref_alpamayo1'] is None else format(r['ref_alpamayo1'], '.2f')} | {r['v0']:.1f} |")
     P("\n## Class counts\n\n| class | n | share | ego off the logged path > 1 m | ego ahead of the log > 2 m | clear at the log's position | alpamayo1 mean |\n|---|--:|--:|--:|--:|--:|--:|")
@@ -334,18 +343,21 @@ def main():
             P(f"| {max(lo, 0)}-{hi} | {int(q.sum())} | {cell('p0')} | {cell('ft')} |")
     q = np.isnan(allD["g"])
     P(f"| no object in the corridor | {int(q.sum())} | {np.mean(allD['p_p0'][q] >= 0.5):.0%} | | | {np.mean(allD['p_ft'][q] >= 0.5):.0%} | | |")
-    P("\n### Quantity 2: guard ceiling G(p*, a*)\n\n| source | p* | a* | turned / C | turned among class A | too late (trigger, no stop possible) | no trigger | "
-      "false-alarm decisions | false-alarm scenes (>= 1.0 s) / N | supported triggers on controls (scenes) |\n|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
+    P("\n### Quantity 2: guard ceiling G(p*, a*)\n\n| source | p* | a* | turned / C | turned among class A | post hoc: turned with the lead head on the struck object | too late (trigger, no stop possible) | no trigger | "
+      "false-alarm decisions | false-alarm scenes (>= 1.0 s) / N | supported triggers on controls (scenes) |\n|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
+    notes = []
     for s in ("p0", "ft"):
         for ps in (0.3, 0.5, 0.7, 0.9):
             for a_s in (1.0, 1.5, 2.5):
-                turned, late, none, tA = [], 0, 0, 0
+                turned, late, none, tA, strict = [], 0, 0, 0, 0
                 for r in col:
                     D = Ds[r["scene"]]
                     ok = D["ok"]
                     tr = guard(D, s, ps, a_s)[ok]
                     an = a_need(D["g"][ok], D["c"][ok])
                     t = bool((tr & (an <= 4.0)).any())
+                    hit = np.abs(D[f"d_{s}"][ok] - D["g"][ok]) <= np.maximum(2.0, 0.3 * D["g"][ok])
+                    strict += bool((tr & hit & (an <= 4.0)).any())          # post hoc: the lead head is on the struck object at the trigger
                     turned.append(t)
                     tA += t and r["cls"] in ("lead stopped", "slow lead")
                     late += (not t) and bool(tr.any())
@@ -362,11 +374,15 @@ def main():
                     fa_s.append(run_len(false, 10))
                     sup += bool((tr & (an > 0.5)).any())
                 star = " **(primary)**" if (ps, a_s) == (0.5, 1.5) else ""
+                if star:
+                    notes.append(f"{s.upper()} primary point, turned: " + ", ".join(f"{r['scene']} ({r['cls']})" for r, t in zip(col, turned) if t)
+                                 + "; not turned: " + ", ".join(f"{r['scene']} ({r['cls']})" for r, t in zip(col, turned) if not t))
                 ci = boot(turned) if star else None
                 ci2 = boot(fa_s) if star else None
                 P(f"| {s.upper()}{star} | {ps} | {a_s} | {sum(turned)} / {len(col)}" + (f" [{ci[0]:.2f}, {ci[1]:.2f}]" if ci else "") +
-                  f" | {tA} / {len(CA)} | {late} | {none} | {fa_d} / {n_d} ({fa_d / max(n_d, 1):.1%}) | {sum(fa_s)} / {len(N)}"
+                  f" | {tA} / {len(CA)} | {strict} / {len(col)} | {late} | {none} | {fa_d} / {n_d} ({fa_d / max(n_d, 1):.1%}) | {sum(fa_s)} / {len(N)}"
                   + (f" [{ci2[0]:.2f}, {ci2[1]:.2f}]" if ci2 else "") + f" | {sup} |")
+    P("\n" + "\n\n".join(notes))
     P("\n## Command and shipped-plan sensitivity (offline replay, same tokens)\n")
     P("| scene | flag | plan 4 s end, fed command vs straight: median / p95 abs lateral m | 4 s arc, fed / straight (median ratio) | "
       "4 s arc, shipped P0 / served (median ratio) | served arc / (4 v) median | P0 arc / (4 v) median |\n|---|---|--:|--:|--:|--:|--:|")
@@ -379,6 +395,26 @@ def main():
         v4 = np.maximum(4 * D["ve"][ok], 1.0)
         P(f"| {r['scene']} | {r['flag']} | {np.median(dy):.2f} / {np.percentile(dy, 95):.2f} | {np.median(D['arc_ft'][ok] / np.maximum(D['arc_ftS'][ok], 0.5)):.2f} | "
           f"{np.median(D['arc_p0'][ok] / np.maximum(D['arc_ft'][ok], 0.5)):.2f} | {np.median(D['arc_ft'][ok] / v4):.2f} | {np.median(D['arc_p0'][ok] / v4):.2f} |")
+    P("\n## Plan speed against the ego's speed just before the hand-over (decisions at 1.45-1.75 s, the state is the log's)\n")
+    P("| scene | ego m/s | served: first 0.5 s, 4 s mean (m/s, % of ego) | shipped P0: first 0.5 s, 4 s mean | flag |\n|---|--:|--:|--:|---|")
+    pc = lambda v, r: f"{v:.1f} ({100 * (v / max(r, 0.5) - 1):+.0f}%)"  # noqa: E731
+    for r in sorted((r for r in rows if "v_handover" in r), key=lambda r: r["v_handover"]):
+        P(f"| {r['scene']} | {r['v_handover']:.1f} | {pc(r['ft_v05'], r['v_handover'])}, {pc(r['ft_v4'], r['v_handover'])} | "
+          f"{pc(r['p0_v05'], r['v_handover'])}, {pc(r['p0_v4'], r['v_handover'])} | {r['flag']} |")
+    for lo, hi in ((-1, 2), (2, 5), (5, 13), (13, 23), (23, 99)):
+        q = [r for r in rows if "v_handover" in r and lo <= r["v_handover"] < hi]
+        if q:
+            f = lambda k: np.median([r[k] / max(r["v_handover"], 0.5) - 1 for r in q])  # noqa: E731
+            P(f"\nego {max(lo, 0)}-{hi} m/s (n = {len(q)}): median first-0.5 s speed against the ego's, served {100 * f('ft_v05'):+.0f}%, shipped {100 * f('p0_v05'):+.0f}%; "
+              f"4 s mean, served {100 * f('ft_v4'):+.0f}%, shipped {100 * f('p0_v4'):+.0f}%.")
+    with open(out / "pai_lead_classA.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["scene", "cls", "t_to_impact", "ve", "gap", "closing", "p_p0", "d_p0", "vl_p0", "p_ft", "d_ft", "arc_ft", "arc_p0"])
+        for r in col:
+            D = Ds[r["scene"]]
+            for i in np.flatnonzero(D["ok"]):
+                w.writerow([r["scene"], r["cls"]] + [round(float(x), 3) for x in (D["t"][i] - r["t_evt"], D["ve"][i], D["g"][i], D["c"][i], D["p_p0"][i],
+                                                                               D["d_p0"][i], D["vl_p0"][i], D["p_ft"][i], D["d_ft"][i], D["arc_ft"][i], D["arc_p0"][i])])
     (out / "pai_tables.md").write_text("\n".join(md) + "\n")
     print("\n".join(md))
 

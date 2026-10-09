@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AlpaSim 里的 at-fault 碰撞：撞到了什么、lead 输出看没看到、PAI 上哪些是接口问题</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:980px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px;line-height:1.3}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:6px;font-size:20px}h3{margin-top:24px;font-size:16px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:13.5px;width:100%}th,td{border:1px solid #ccc;padding:5px 8px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f3f3f3}
+figure{margin:20px 0}img{max-width:100%;height:auto;border-radius:2px}figcaption{font-size:13.5px;color:#444;margin-top:6px}
+a{color:#0066cc;text-decoration:none}a:hover{text-decoration:underline}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;background:#f0f0f2;padding:2px 4px;border-radius:3px}
+.cite{font-size:12.5px;color:#666;margin-top:4px;margin-bottom:12px}
+ul{padding-left:20px}li{margin-bottom:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}code{background:#28282c;color:#e8e8ea}.cite{color:#999}a{color:#4da3ff}}
+</style></head><body>
+
+<h1>AlpaSim 里的 at-fault 碰撞：撞到了什么、lead 输出看没看到、PAI 上哪些是接口问题</h1>
+<p>2026-10-10，lane COL1，决策 219。对象是当前最好的 driver <code>P2H10-F</code>（openpilot Cinque 冻结 encoder + 输入对齐 adapter + λ 10 可行驶区域 hinge）。nuPlan 公开集 1491 个 scene 在 GPU box 上读已有 rollout；PAI（PhysicalAI-AV NuRec）40 个 scene 在 Tokyo box 上，其中 30 个是本轮新跑的。没有训练，没有向 AlpaSim 提交。simulator 的物体框、地图、日志轨迹只当标签用；WA-JEPA 和主办方的 PAI reference 只作参考行。</p>
+
+<div class="v">
+<b>结论：</b><br>
+<b>1. driver 里没有 openpilot 的纵向安全链路。</b>每次决策模型算出完整输出向量（plan、lead、lead_prob、meta、action 等），driver 只取 plan 的位置和 yaw，线性重采样成 10 Hz 位置轨迹交给 simulator 的 MPC；lead / lead_prob 同一次 forward 算出后丢弃，longitudinal MPC、跟车距离、起停逻辑都不在环里。<br>
+<b>2. nuPlan 公开集上的碰撞是横向问题，不是前车问题。</b>P2H10-F 两个 seed 共 22 次 at-fault 碰撞（12 个 scene）：16 次撞时偏离日志路径 ≥ 0.5 m，20 次只要留在日志路径上（速度不变）就不撞；前方静止车只有 4 次（2 个 scene，都是静止起步撞上 1.8–3.3 m 外的停车）。撞时车速中位 2.4 m/s。WA-JEPA（reference）在其中 17 次的 scene 上通过。<br>
+<b>3. PAI 上的碰撞是纵向问题。</b>40 个 scene 均分 0.169，零分 30 个，其中 at-fault 碰撞 12 个：11 个是正面接触，9 个撞时已超前日志 2 m 以上（6 个超前 13–39 m），车速中位 6.7 m/s。按 ego 自己的行驶走廊算，被撞物体在最后 8 s 里有 2 s 以上位于正前方的有 9 个。<br>
+<b>4. 冻结模型的 lead 头在 PAI 上及时看到了前车。</b>3 个 class A（本车道前车）碰撞全部提前 6.2–7.7 s 被 lead 头报出（概率 ≥ 0.5，距离误差在 max(2 m, 30%) 内）；按 ego 走廊算，12 个里有 5 个在接近过程 74–92% 的时间被 lead 头正确跟踪。plan 不减速：最后 4 s 里 served plan 在 12 个中的 10 个直接穿过物体，shipped 权重的 plan 在 7 个里也穿过。预登记的规则上限线在 PAI 上通过（最多翻 7 / 12 个碰撞零分，对照 scene 误报 0 / 21），在 nuPlan 上不通过（6 / 22，误报 14%）。<br>
+<b>5. PAI 上找到一个 serving 侧的接口缺陷。</b>返回的轨迹首段速度等于 plan 前 0.5 s 的平均速度，与当前车速不连续。车速 &gt; 23 m/s 的 5 个 scene 里 4 个首段比车速低 5–11%，MPC 在 hand-over 后立刻刹车饱和（−9 m/s²）并打 0.65–0.73 rad 方向，4 个全部 spin。把轨迹改成从当前车速起步的诊断臂（只改 serving，不是候选）：40 个 scene 均分 0.1694 → 0.2921（配对差 +0.1227 [−0.0055, +0.2531]），零分 30 → 25，4 个 spin 去掉 2 个，碰撞 12 → 8。缺陷是真的，但它不是撞车的原因：接近速度几乎没变。<br>
+<b>6. command 的 922 / 408 / 656 不是原因。</b>route 是地图生成的，40 个 scene 里 14 个偏离日志路径中位 1 m 以上；但把 command 强制成直行，plan 的 4 s 终点横向中位只动 0.02 m。速度、加速度、帧延迟、slot、相机几何都核对无误。
+</div>
+
+<h2>一、环里有 openpilot 的哪些部分</h2>
+<p>shipped openpilot 默认模式下的纵向不靠 plan：模型的 <code>lead</code> / <code>lead_prob</code> 输出经 radard 变成前车轨迹，由独立的 longitudinal planner 按跟车距离和前车速度算加速度。我们的 AlpaSim driver 是「adapter 的 plan 由 simulator 的控制器跟踪」。逐项核对代码后的对应关系如下。</p>
+<table>
+<tr><th>shipped openpilot 的部件</th><th>在我们的 AlpaSim driver 里</th></tr>
+<tr><td>视觉 encoder（冻结的 Cinque）</td><td>在，原样：8 个 policy slot → (8, 32, 512) token</td></tr>
+<tr><td>policy 网络</td><td>在；plan 通路权重经过微调，token 上加 adapter bias</td></tr>
+<tr><td>输出向量（plan 990、lead 144、lead_prob 3、meta 55、action 4 等，共 18 452 维）</td><td>每次决策全部算出</td></tr>
+<tr><td>driver 读取的部分</td><td>只有 plan 的 33 × 15 均值里的位置（0–2 列）和 yaw（第 11 列）</td></tr>
+<tr><td>plan 的速度 / 加速度列，action（期望加速度 / 曲率），meta（刹车预测）</td><td>不读</td></tr>
+<tr><td>lead / lead_prob</td><td>不读，算出后丢弃</td></tr>
+<tr><td>longitudinal planner（巡航与前车约束、跟车距离、起停）、FCW</td><td>没有</td></tr>
+<tr><td>交给 simulator 的内容</td><td>8 个 0.5 s 间隔的后轴位姿，线性重采样为 10 Hz 位置轨迹</td></tr>
+</table>
+<div class="cite">来源：experiments/alpasim/lib/sh30_core.py（<code>out[0, self.pi]</code>）、sh30_driver.py、pai_core.py、pai_driver.py，experiments/op_parity/scripts/pp_train.py（PModel）；汇总见 experiments/alpasim/results/collisions.md 第 2 节。</div>
+<p>所以唯一的纵向信号是 plan 位置点的间距，它来自在 NAVSIM 上模仿微调过、带 ego 状态 adapter 的 plan 通路，再由位置跟踪的 MPC 执行。</p>
+
+<h2>二、nuPlan 公开集（1491 个 scene，44 个 log）</h2>
+<table>
+<tr><th>driver</th><th>scene 数</th><th>零分</th><th>at-fault 碰撞 rollout</th></tr>
+<tr><td><b>P2H10-F-s0</b></td><td>1491</td><td>89</td><td><b>12</b></td></tr>
+<tr><td><b>P2H10-F-s1</b></td><td>1491</td><td>85</td><td><b>10</b></td></tr>
+<tr><td>APY10m10-AB-s0 / s1</td><td>1491</td><td>83 / 89</td><td>10 / 14</td></tr>
+<tr><td>AP2H10-AB-s0 / s1（只有前 700 个 scene）</td><td>700</td><td>28 / 31</td><td>7 / 9</td></tr>
+<tr><td>WA-JEPA（reference）</td><td>1491</td><td>146</td><td>5</td></tr>
+<tr><td>SH30-F-s0</td><td>1491</td><td>139</td><td>32</td></tr>
+</table>
+<div class="cite">来源：experiments/alpasim/results/collisions/nuplan_tables.md（Inventory）。六组 run 的碰撞 rollout 都保留了 rollout.asl，全部是原始 rollout。AP2H10 在后 791 个 scene 上的 run 当时还在 lane CF1 里跑，没有读。</div>
+<p>P2H10-F 的 22 次碰撞分布在 12 个 scene、9 个 log 上，其中 10 个 scene 两个 seed 都撞，所以是 12 种情形。</p>
+<table>
+<tr><th>被撞物体</th><th>P2H10-F rollout（scene）</th><th>占比</th><th>偏离日志路径 ≥ 0.5 m</th><th>留在日志路径上（速度不变）不撞</th><th>WA-JEPA（reference）通过</th><th>ego 车速中位 m/s</th><th>APY10m10-AB（n = 24）</th><th>AP2H10-AB（n = 16）</th></tr>
+<tr><td>前方静止车（本车道）</td><td>4 (2)</td><td>18%</td><td>0</td><td>4</td><td>4 / 4</td><td>2.0</td><td>7</td><td>4</td></tr>
+<tr><td>前方慢车</td><td>0</td><td>0%</td><td></td><td></td><td></td><td></td><td>3</td><td>3</td></tr>
+<tr><td>切入（邻道或后方来的更快车辆）</td><td>4 (2)</td><td>18%</td><td>2</td><td>4</td><td>4 / 4</td><td>3.8</td><td>3</td><td>4</td></tr>
+<tr><td>横穿</td><td>1 (1)</td><td>5%</td><td>1</td><td>1</td><td>0 / 1</td><td>2.1</td><td>3</td><td>1</td></tr>
+<tr><td>路径旁的停放 / 静态车</td><td>5 (3)</td><td>23%</td><td>5</td><td>5</td><td>5 / 5</td><td>1.6</td><td>3</td><td>0</td></tr>
+<tr><td>路径旁站住的邻道车</td><td>6 (3)</td><td>27%</td><td>6</td><td>6</td><td>4 / 6</td><td>3.9</td><td>3</td><td>4</td></tr>
+<tr><td>转弯时侧向接触</td><td>2 (1)</td><td>9%</td><td>2</td><td>0</td><td>0 / 2</td><td>4.3</td><td>0</td><td>0</td></tr>
+<tr><td>行驶中的邻道车侧向接触</td><td>0</td><td></td><td></td><td></td><td></td><td></td><td>2</td><td>0</td></tr>
+<tr><td><b>合计</b></td><td><b>22 (12)</b></td><td></td><td><b>16 (73%)</b></td><td><b>20 (91%)</b></td><td><b>17 (77%)</b></td><td><b>2.4</b></td><td>24</td><td>16</td></tr>
+</table>
+<div class="cite">来源：nuplan_tables.md（Struck object, by kind；Kind x drift；Circumstances），逐例 nuplan_cases.csv。对向车、其他类别为 0。</div>
+<ul>
+<li><b>横向而非纵向。</b>16 次撞时偏离日志路径 ≥ 0.5 m（中位 0.94 m），其中 15 次偏向被撞物体一侧；20 次留在日志路径上就不撞；按日志的纵向位置、保留实际横向偏移则只有 11 次不撞。两个反事实都救不了的只有 2 次（同一个 scene：起步左转横穿一辆 12 m/s 的车）。这是决策 205 的闭环航向漂移撞上车道旁的东西：停放车和站住的车占 22 次里的 11 次。</li>
+<li><b>低速。</b>撞时车速中位 2.4 m/s，14 次低于 3 m/s，6 次从静止起步；日志航向变化在 13 次里小于 5°。</li>
+<li><b>class A 份额小而且集中。</b>4 次、2 个 scene，都是静止起步撞上前方 1.8–3.3 m 的停车，在路径上（偏移 &lt; 0.25 m），plan 长度是当前速度的 1.2–2.7 倍。六组 run 全部在这两个 scene 上撞。按 AlpaSim 输入标准训练的配方 class A 更多（APY10m10 10 / 24，AP2H10 7 / 16）。</li>
+<li><b>看得到，人也贴得近。</b>16 次里物体在撞前至少 2 s 位于前摄视野、60 m 以内（4 次始终不在视野内：从后方来的车）；日志里的人类司机在 10 次里与同一物体的最近距离不到 1 m。</li>
+</ul>
+
+<figure><img src="figs/fig1_taxonomy.png" alt="两条赛道的碰撞分类">
+<figcaption>图 1：at-fault 碰撞按被撞物体分类，橙色是撞时已偏离日志路径的部分（nuPlan 阈值 0.5 m，PAI 阈值 1.0 m）。看点：nuPlan 上除前方静止车外几乎全是橙色；PAI 上前车类（lead stopped、slow lead）和横穿是灰色，邻道车全是橙色。</figcaption></figure>
+
+<h3>nuPlan 片段（15 个）</h3>
+<p>每个 GIF 左边是鸟瞰（蓝色 ego、绿色当前 plan、虚线日志路径、橙色被撞物体），右边是该次决策 adapter 实际收到的 road / wide 两帧，下面三条曲线是车速、simulator 间距与 lead 头距离、lead 概率；竖线是接触时刻。n01–n13 是原始 rollout，c01 / c02 来自保留日志的对照重跑（分数与原 run 逐 scene 相同）。</p>
+<div class="grid2">
+<figure><img src="../../experiments/alpasim/figs/collisions/n01.gif" alt="n01" loading="lazy"><figcaption>n01，前方静止车（P2H10-F-s0）。看车速曲线：从 0.3 m/s 升到 2 m/s，间距同时归零；road 帧被前车占满。lead 概率保持在 0.6 以上，但距离读成 5–10 m，实际不到 2 m。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n02.gif" alt="n02" loading="lazy"><figcaption>n02，前方静止车（P2H10-F-s1），六组 run 都撞的另一个 scene：停在 3.3 m 后起步撞上。这里 lead 头是对的（概率 1.0，前 2.5 s 距离误差 1 m 内）。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n03.gif" alt="n03" loading="lazy"><figcaption>n03，路径旁停放车。直路 7.7 m/s，ego 向右偏航 12°，一边刹车（plan 是当前速度的 0.24 倍）一边撞上车道旁的停放车。lead 概率低于 0.2：它不是前车。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n04.gif" alt="n04" loading="lazy"><figcaption>n04，路径旁停放车。2 m/s 蠕行，偏离日志路径 0.6 m 擦到停放车，日志自己从 0.5 m 处通过。lead 概率 1.0 指的是前面的排队车，不是被撞的那辆。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n05.gif" alt="n05" loading="lazy"><figcaption>n05，路径旁停放车。30° 左转走宽了 1.7 m，撞上弯外侧的静止车；seed 1 在同一 scene 得 0.94。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n06.gif" alt="n06" loading="lazy"><figcaption>n06，路径旁站住的邻道车。夜间 10 m/s，ego 向右漂 0.8 m 撞上邻道站住的大车，没有减速（plan 与当前速度之比 1.0）。日志从 0.56 m 处通过。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n07.gif" alt="n07" loading="lazy"><figcaption>n07，路径旁站住的邻道车。62° 右转走宽 2.4 m，撞上对侧站住的车；WA-JEPA（reference）在这个 scene 也是零分。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n08.gif" alt="n08" loading="lazy"><figcaption>n08，路径旁站住的邻道车。从 6.5 减到 2.5 m/s 的过程中向右漂 1.4 m、16°，撞上路径旁站住的车。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n09.gif" alt="n09" loading="lazy"><figcaption>n09，切入。7 m/s，ego 向左移 1 m，靠向左侧车道里以 8 m/s 超过它的车；这辆车接触前始终不在前摄视野里。注意右侧模型帧在偏离日志路径后已严重失真。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n10.gif" alt="n10" loading="lazy"><figcaption>n10，切入。ego 在空路上从 8.8 刹到不足 1 m/s（日志保持车速），被后方 10 m/s 的车追上，判为侧向接触。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n11.gif" alt="n11" loading="lazy"><figcaption>n11，转弯时侧向接触。起步进入 55° 左转，横在一辆 12 m/s 来车前；两个反事实都救不了（日志从该车后方 0.57 m 处通过），WA-JEPA 也是零分。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n12.gif" alt="n12" loading="lazy"><figcaption>n12，横穿。对低速横穿车先减到 1.5 m/s，再加速撞上，偏离日志路径 0.9 m；seed 1 通过。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/n13.gif" alt="n13" loading="lazy"><figcaption>n13，前方慢车（AP2H10-AB-s0，P2H10 没有这一类）。静止起步跟在缓行前车后，plan 是日志的 1.5 倍，吃掉 4 m 间距。lead 头全程概率 1.0、距离误差 1 m 内。与 c01 对照。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/c01.gif" alt="c01" loading="lazy"><figcaption>c01，对照：与 n13 同一 scene、同一辆前车，P2H10-F-s0 得 1.0。对比两者的车速曲线和间距曲线。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/c02.gif" alt="c02" loading="lazy"><figcaption>c02，对照：处理得好的接近。以 6.6 m/s 接近静止前车，在 8 m 外停住（0.99 分）；lead 概率全程 1.0。</figcaption></figure>
+</div>
+<div class="cite">片段清单与每条说明的英文原文：experiments/alpasim/results/collisions/nuplan_clip_cases.csv。n01、n03、n06–n10、c02 的说明对照画面核对过，其余按表格数字写。</div>
+
+<h2>三、PAI：接口问题与驾驶问题的划分（40 个 scene）</h2>
+<p>scene 是 pai1 抽的 <code>pai_scenes_40.tsv</code>（curated validation split，按 reference 难度分层）。pai1 跑了前 10 个，本轮用同一个 runner、同样设置（4 路并发、每次调用出一个 plan、Harmonizer 关）跑了其余 30 个。<b>P2H10-F-s0 在 40 个 scene 上均分 0.1694，零分 30 个：at-fault 碰撞 12、offroad 9、出 corridor 9。</b>同样 40 个 scene 上主办方的 Alpamayo 1 reference 均分 0.505，八个 reference 平均 0.196。</p>
+
+<h3>核对无误的部分</h3>
+<table>
+<tr><th>检查项</th><th>读数</th></tr>
+<tr><td>喂给 adapter 的速度 / 加速度对 simulator 的 ego</td><td>每个 scene 中位差 0.00 m/s；尾部的差来自 spin 的 rollout</td></tr>
+<tr><td>帧延迟（drive 时刻减所用最新帧）</td><td>每个 scene 0 ms</td></tr>
+<tr><td>slot</td><td>1.4 s 之后 8 个全是渲染帧；每个 scene 之前的 14 次决策都在 1.7 s 的强制日志回放内</td></tr>
+<tr><td>把记录的消息离线回放进 driver 类</td><td>7 947 次决策的 plan 100.0% 复现（4 s 终点最大差 0.000 m）</td></tr>
+<tr><td>决策后 0.5 s 的跟踪误差（不 spin 的 34 个 scene）</td><td>横向 p95 中位 0.04 m，29 个不超过 0.3 m，最大 0.84 m：车走到了 plan 指的地方</td></tr>
+<tr><td>相机几何</td><td>与 pai1 的结论一致：看过的 16 个片段里地平线、车道与投影 plan 都对得上</td></tr>
+</table>
+<div class="cite">来源：experiments/alpasim/results/collisions/pai_plumbing.md、pai_tables.md 首段。</div>
+
+<h3>command：分布反常，但不起作用</h3>
+<p>route 由地图生成（首个 waypoint 在前方 36–55 m），不是日志路径：40 个 scene 里 14 个的首个 waypoint 偏离日志路径中位 1 m 以上，有几个差一条车道（其中一部分是因为 ego 已经开过日志终点）。样例规则（首个 5 m 外的 waypoint，|y| &gt; 2 m 判转弯）在 40 个 scene 上给出左 / 直 / 右 = 2879 / 2539 / 2529；同一规则放到日志路径、日志位姿上是 912 / 3561 / 703。也就是 68% 的调用带转弯 command，日志口径是 31%。但 plan 几乎不读它：同一批 token 上把 command 强制成直行，4 s 终点横向中位只动 0.02 m（各 scene 中位 0.00–1.48 m，p95 超过 1 m 的 8 个 scene 都在路口），4 s 弧长之比 0.97–1.04。</p>
+<div class="cite">来源：pai_plumbing.md 末行；pai_tables.md「Command and shipped-plan sensitivity」。</div>
+
+<h3>接口缺陷：返回的轨迹不从当前车速起步</h3>
+<p>driver 把 plan 的 0.5 s 点线性重采样到 10 Hz（主办方 LTF 样例的函数），所以轨迹首段的速度等于 plan 前 0.5 s 的平均速度，与 ego 当前车速无关；simulator 的 nonlinear MPC 跟踪的是位置。hand-over 之前（1.45–1.75 s 的决策，此时状态仍是日志的）读数如下。</p>
+<table>
+<tr><th>hand-over 前车速</th><th>scene 数</th><th>served plan 首 0.5 s 速度对当前车速（中位）</th><th>同一 token 上 shipped 权重</th><th>4 s 平均，served / shipped</th></tr>
+<tr><td>0–2 m/s</td><td>7</td><td>（静止）</td><td>（静止）</td><td>+65% / −86%</td></tr>
+<tr><td>2–5 m/s</td><td>3</td><td>+3%</td><td>−15%</td><td>+3% / −4%</td></tr>
+<tr><td>5–13 m/s</td><td>19</td><td><b>+8%</b></td><td>−1%</td><td>+3% / −2%</td></tr>
+<tr><td>13–23 m/s</td><td>6</td><td>−6%</td><td>−4%</td><td>−10% / −10%</td></tr>
+<tr><td>&gt; 23 m/s</td><td>5</td><td><b>−6%</b></td><td>−6%</td><td>−6% / −4%</td></tr>
+</table>
+<div class="cite">来源：pai_tables.md 末节「Plan speed against the ego's speed just before the hand-over」。</div>
+<ul>
+<li><b>高于 23 m/s：spin。</b>5 个 scene 里 4 个（23.9、29.7、33.1、34.8 m/s）首段比车速低 5–11%，hand-over 后 1.2 s 内控制器指令是刹车饱和 −9.0 m/s² 加 0.65–0.73 rad 转向，4 个全部 spin（2 个记 offroad，2 个记出 corridor）。这几处 plan 本身是直的。第 5 个（29.8 m/s）首段只低 1%，最大转向指令 0.004 rad，hand-over 时不 spin。</li>
+<li><b>5–13 m/s：加速。</b>served plan 首段比车速高 8%（shipped −1%），MPC 追位置，下一次决策在新车速上重新锚定、再要更多。19 个 scene 里 15 个在 hand-over 后 1.2 s 内的最大加速度是 1.4–3.8 m/s²；到 12 s 时，31 个没有 offroad 的 rollout 里 15 个车速超过日志的 1.2 倍（中位 1.17 倍）。</li>
+<li><b>静止：起步。</b>4 个静止开局的 scene 里 served plan 的 4 s 平均速度是 0.6–1.7 m/s，shipped 不超过 0.1 m/s。这是决策 162 / 167 的 adapter 速度先验换了一个域；并行的决策 218（lane DIAG1，同一批 rollout）把 5–13 m/s 段的超速归到 adapter 对喂入加速度的续接，把起步归到 bias 常数项。</li>
+</ul>
+<figure><img src="figs/fig2_handover.png" alt="hand-over 前 plan 首段速度对当前车速">
+<figcaption>图 2：hand-over 前 plan 首 0.5 s 的速度相对当前车速的偏差（车速 ≥ 2 m/s 的 scene）。看点：5–13 m/s 段绿点（served）整体在蓝点（shipped）上方；23 m/s 以上两者都偏低 5–11%，橙圈的 4 个在 hand-over 时 spin，唯一不 spin 的是 −1% 的那个点。</figcaption></figure>
+
+<h3>诊断臂 v1：轨迹从当前车速起步</h3>
+<p>预登记补记 1、2。做法：plan 的路径不动，沿路径重新定时，速度从当前车速出发、1 s 后并入 plan 自己的速度剖面；其余不变。它是对接口缺陷的诊断，不是候选，没有判定线。前 10 个 scene 先读（0.1538 → 0.3332），再按补记 2 扩到全部 40 个。</p>
+<table>
+<tr><th>40 个 scene</th><th>均分</th><th>满分</th><th>零分</th><th>at-fault 碰撞</th><th>offroad</th><th>出 corridor</th></tr>
+<tr><td>基线</td><td>0.1694</td><td>4</td><td>30</td><td>12</td><td>9</td><td>9</td></tr>
+<tr><td>v1</td><td><b>0.2921</b></td><td>8</td><td>25</td><td>8</td><td>5</td><td>12</td></tr>
+</table>
+<div class="cite">来源：experiments/alpasim/results/collisions/pai_arm_v1.md。配对差 +0.1227 [−0.0055, +0.2531]（scene bootstrap，每臂只跑一次，不含 simulator 自身的重复差异）；10 个 scene 升、2 个降、28 个不变。</div>
+<ul>
+<li><b>hand-over 的 spin：4 个去掉 2 个。</b>4f779a92（23.9 m/s，最大转向指令 0.728 → 0.004 rad，刹车 −9.0 → −2.2 m/s²）和 dfb0277e（33.1 m/s，0.725 → 0.002 rad，0 分 → 1.00）不再 spin。05f35348（29.7 m/s，plan 短 11%）和 b45734f4（34.8 m/s，短 6%）仍然 spin（0.65 / 0.77 rad，−9.0 m/s²）：1 s 的过渡下参考轨迹仍要求 2–3 m/s² 的减速，MPC 在 30–35 m/s 上撑不住。补记 1 事先写的是当时已知的两个 &gt; 23 m/s 的 rollout 都不再 spin，结果一个成立、一个不成立。</li>
+<li><b>碰撞 12 → 8。</b>12 个里 2 个通过（071d15c4、0ee89cab，都是在车流后静止起步），3 个变成别的零分（2 个出 corridor、1 个 offroad），7 个照样撞；另有 1 个原来 offroad 的 scene 改成碰撞。接近速度几乎没变：12 s 时 35 个没有 offroad 的 rollout 里 18 个超过日志车速的 1.2 倍（基线 31 个里 15 个）。</li>
+</ul>
+<table>
+<tr><th>基线的 30 个零分</th><th>n</th><th>归属</th></tr>
+<tr><td>hand-over 时 spin（2 个 offroad、2 个出 corridor）</td><td>4</td><td><b>接口</b>：轨迹速度台阶 × nonlinear MPC，车速 &gt; 23 m/s（v1 里 1 个通过、1 个变成出 corridor、2 个仍 spin）</td></tr>
+<tr><td>at-fault 碰撞</td><td>12</td><td><b>驾驶</b>：车速高于日志（adapter 速度先验）且对前方车辆不减速，其中 7 个先离开了日志车道；位置追逐加重了起步类（v1 里 2 个通过）</td></tr>
+<tr><td>其余 offroad（7）和出 corridor（7）</td><td>14</td><td>驾驶，本轮没有逐例拆（pai1：转弯走宽、慢速机动里保持车速）；其中 4 个在 v1 里不再是零分，另有 2 个原本非零的 scene 变成零分</td></tr>
+</table>
+<div class="cite">来源：collisions.md 第 4.4 节，pai_arm_v1.md 的逐 scene 表。</div>
+<div class="grid2">
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_c2_spin_4f779a92.gif" alt="hand-over spin" loading="lazy"><figcaption>基线，4f779a92：23.9 m/s 的直路，1.7 s hand-over 后 0.5 s 内 spin。看左图：hand-over 前绿色 plan 是直的，之后黑色行驶轨迹打横，plan 跟着乱。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_c4_v1_no_spin_4f779a92.gif" alt="诊断臂不 spin" loading="lazy"><figcaption>诊断臂，同一 scene：hand-over 平稳通过，车速曲线从 23.9 m/s 缓慢下降。</figcaption></figure>
+</div>
+
+<h2>四、PAI 的 12 次 at-fault 碰撞</h2>
+<table>
+<tr><th>被撞物体</th><th>n</th><th>占比</th><th>scene</th><th>偏离日志路径 &gt; 1 m</th><th>超前日志 &gt; 2 m</th><th>Alpamayo 1（reference）通过</th></tr>
+<tr><td>邻道车（ego 离开了日志车道；2 辆行驶、2 辆静止或接近静止）</td><td>4</td><td>33%</td><td>13fb89b9、24a50fcc、0ee89cab、8ecf02e3</td><td>4</td><td>4</td><td>3 / 4</td></tr>
+<tr><td>停放 / 静态车</td><td>3</td><td>25%</td><td>a28b6685、605bf77a、c6c01d25</td><td>2</td><td>1</td><td>2 / 3</td></tr>
+<tr><td>前方静止车</td><td>2</td><td>17%</td><td>9ea70552、0e3771c0</td><td>0</td><td>2</td><td>1 / 2</td></tr>
+<tr><td>前方慢车</td><td>1</td><td>8%</td><td>071d15c4</td><td>0</td><td>1</td><td>1 / 1</td></tr>
+<tr><td>横穿</td><td>1</td><td>8%</td><td>8a365ac2</td><td>0</td><td>1</td><td>1 / 1</td></tr>
+<tr><td>行人</td><td>1</td><td>8%</td><td>8f3902f9</td><td>1</td><td>0</td><td>1 / 1</td></tr>
+<tr><td><b>合计</b></td><td><b>12</b></td><td></td><td></td><td><b>7</b></td><td><b>9</b></td><td><b>9 / 12</b></td></tr>
+</table>
+<div class="cite">来源：experiments/alpasim/results/collisions/pai_tables.md（At-fault collisions；Class counts）、pai_cases.csv。分类规则写在 collisions.md 第 5 节；12 个都看过片段。</div>
+<ul>
+<li><b>先是纵向。</b>11 个是正面接触；9 个撞时超前日志 2 m 以上（6 个超前 13–39 m）；撞时车速中位 6.7 m/s（低于 3 m/s 的 2 个）。按日志的纵向位置、保留实际横向偏移，9 个不撞；留在日志路径上、速度不变，8 个不撞。nuPlan 上同样两个反事实是 11 和 20（共 22）：那边是横向，这边是 ego 跑到日志前面撞上回放的车流，其中 7 个同时离开日志车道 1 m 以上。</li>
+<li><b>ego 正前方有什么。</b>按日志车道算 class A 只有 3 个。按 ego 自己的直行走廊算，被撞物体在最后 8 s 里有 2 s 以上位于正前方的有 9 个；其中 5 个（071d15c4、9ea70552、0e3771c0、24a50fcc、8ecf02e3）shipped lead 头在这段时间的 74–92% 里跟在它上面，2 个 41–44%，2 个 0–7%（路边停放车、行人）。</li>
+<li><b>plan 穿过物体。</b>最后 4 s 里，served plan 在其 4 s 视野内到达物体（物体按匀速）的决策占一半以上的有 10 个；同一 token 上 shipped 权重的 plan 是 7 个，其 4 s 弧长是 served 的 0.50–0.87 倍。shipped 的 plan 慢一些，但让 shipped openpilot 停下来的也不是它。</li>
+<li><b>起步。</b>5 个从不超过 1 m/s 起步。pai1 记录的「开出 3 m 就撞」是 a28b6685：夜间从路边驶出，前方 2 m 有一辆停放车，日志从 0.36 m 处绕过；最初几个 plan 是当前速度的 2.5 倍。</li>
+</ul>
+
+<h3>PAI 片段（16 个）</h3>
+<p>版式同上，但没有地图（PAI 不提供）；鸟瞰里绿色是 served plan，蓝色是同一 token 上 shipped 权重的 plan，红色是被撞物体；模型帧来自离线回放（回放逐决策复现原 plan）。p01–p12 是全部 12 次碰撞的原始 rollout。</p>
+<div class="grid2">
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p01_slow_lead_071d15c4.gif" alt="p01" loading="lazy"><figcaption>p01，前方慢车。红灯前停在前车后 4.4 m。lead 头从第一帧起概率 1.0、距离误差 1 m 内。served plan（绿）要在 4 s 内走 4–7 m，ego 蹭到 1 m；shipped plan（蓝）原地不动。绿灯后前车起步，ego 加速比它快，以 8 m/s 撞上，此时已超前日志 13 m。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p02_adjacent_13fb89b9.gif" alt="p02" loading="lazy"><figcaption>p02，邻道车。高速排队 8.6 m/s。看车速曲线：ego 升到 14 m/s，日志保持 9。3.4 s 起两条 plan 都向左绕前车 2 m，撞上邻道的车：被撞物体始终不在 ego 自己的走廊里，lead 头跟的是正前方那辆。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p03_lead_stopped_9ea70552.gif" alt="p03" loading="lazy"><figcaption>p03，前方静止车。灯前停着一辆车，59 m 外就可见。间距图里 lead 头从 60 m 一路贴着 simulator 间距下来，持续 6 s（概率约 0.95）。车速图里 ego 从 12.5 加速到 16 m/s，日志减到 9；两条 plan 都笔直穿过那辆车。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p04_parked_a28b6685.gif" alt="p04" loading="lazy"><figcaption>p04，停放车。夜间从路边驶出，前方 2 m 是停放车（日志从 0.36 m 处绕过）。最初的 plan 以当前速度的 2.5 倍直接向前；车离开画面中心后 lead 概率从 0.8 掉到 0.2。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p05_adjacent_24a50fcc.gif" alt="p05" loading="lazy"><figcaption>p05，邻道车。雨夜。日志沿车道向右并从 9.5 减到 7 m/s；ego 以 15 m/s 直行进入左侧车道，追尾那里的前车。lead 头整整 8 s 都跟着这辆车（间距图两条线从 25 m 起重合）。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p06_parked_605bf77a.gif" alt="p06" loading="lazy"><figcaption>p06，静态车。日志向左，ego 留在右边，偏离日志路径 3.6 m、超前 33 m，以 13.6 m/s 撞上静止车。lead 概率在 0.5–1 之间摆动，lead 距离只在最后 2.5 s 才贴上真实间距。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p07_adjacent_0ee89cab.gif" alt="p07" loading="lazy"><figcaption>p07，邻道车。排队中静止起步。ego 加到 13.4 m/s 而日志约 4 m/s，在日志右弯处向左偏出 3 m，撞上那里的静止车。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p08_crossing_8a365ac2.gif" alt="p08" loading="lazy"><figcaption>p08，横穿。T 形路口，面对围栏静止开局。日志等了约 5 s；ego 立即起步左转，被一辆 10 m/s 的横穿车撞到侧面。lead 概率一直低于 0.4：物体从未在 ego 正前方。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p09_adjacent_8ecf02e3.gif" alt="p09" loading="lazy"><figcaption>p09，邻道车。红灯前的排队。plan 确实减速了（当前速度的 0.3 倍），车速跟着日志走但晚约 1 s，以 5 m/s 碰到队尾。间距图里 lead 头从 45 m 到接触一直在那辆车上。归为邻道是因为 ego 在日志路径旁 2.4 m。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p10_lead_stopped_0e3771c0.gif" alt="p10" loading="lazy"><figcaption>p10，前方静止车。走走停停的排队，以 0.6–0.9 m/s 跟在 5 m 外的车后蠕行，lead 概率 1.0。5.5 s 时 plan 拉长到当前速度的 1.5 倍，ego 以 2.5 m/s 撞上停着的车。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p11_pedestrian_8f3902f9.gif" alt="p11" loading="lazy"><figcaption>p11，行人。夜间市区。ego 从 4.7 减到 1.3 m/s，偏离日志路径 1.7 m，碰到一个以 1.6 m/s 行走的行人。lead 概率约 0.1：lead 头不报行人。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_p12_parked_c6c01d25.gif" alt="p12" loading="lazy"><figcaption>p12，停放车。夜间左转。ego 偏离日志路径 2.2 m，刹车中（plan 是当前速度的 0.2–0.4 倍）撞上旁边的停放车。lead 概率 0。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_c1_handled_145bf9cc.gif" alt="c1" loading="lazy"><figcaption>c1，对照：处理得好。跟在减速的排队车后，ego 从 7 减到 3 m/s，间距保持 5 m 以上，lead 概率全程 1.0（1.0 分）。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_c2_spin_4f779a92.gif" alt="c2" loading="lazy"><figcaption>c2，接口缺陷（不是碰撞）：直的高速路，23.9 m/s，两条 plan 都是直的。hand-over（1.7 s）后 0.5 s 内车辆 spin；之后的画面已在重建范围之外。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_c3_v1_same_scene_passes_071d15c4.gif" alt="c3" loading="lazy"><figcaption>c3，对照：与 p01 同一 scene，诊断臂（轨迹从当前车速起步）。ego 仍向停车蹭过去但更慢，前车起步后以 3–5 m 间距跟着加速到 11 m/s（日志 6），11 s 时从旁边驶出。没有接触，得 1.0 分，但不是安全跟车距离：这一臂去掉的是接触，不是速度。</figcaption></figure>
+<figure><img src="../../experiments/alpasim/figs/collisions/pai_c4_v1_no_spin_4f779a92.gif" alt="c4" loading="lazy"><figcaption>c4，对照：与 c2 同一 scene，诊断臂。hand-over 时不 spin（最大转向指令 0.004 rad，原来 0.728）。</figcaption></figure>
+</div>
+<div class="cite">片段清单：experiments/alpasim/results/collisions/pai_clip_cases.csv。p01–p04、c2 来自 pai1 的 a10_c4，p05–p12、c1 来自本轮的 b1 / b2a / b2b，c3 / c4 来自本轮的诊断臂。</div>
+
+<h2>五、冻结模型的 lead 输出看到了没有（预登记读数）</h2>
+<p>信号取两路：P0 是同一批视觉 token 上不加 adapter bias 的 shipped policy 权重（主读数）；FT 是 served checkpoint 自己输出向量里的 lead 头。两者处处接近、判线结果相同，说明 lead 头在微调后的 checkpoint 里仍然完好，读它不需要额外的前向。</p>
+<table>
+<tr><th></th><th>nuPlan 公开集</th><th>PAI</th></tr>
+<tr><td>C：P2H10-F 的 at-fault 碰撞 rollout</td><td>22（s0 + s1）</td><td>12（s0）</td></tr>
+<tr><td>C_A：class A</td><td>4 个 rollout，2 个 scene</td><td>3</td></tr>
+<tr><td>对照 N（无任何碰撞标记）</td><td>198 个 rollout，1980 次决策</td><td>21 个 rollout，2192 次决策</td></tr>
+<tr><td><b>L1：S_time（P0）</b>，class A 中「及时看到」的比例</td><td>2 / 4 = 0.50 [0.00, 1.00]，提前 4.0、3.5 s</td><td>3 / 3 = 1.00，提前 7.7、6.2、6.5 s</td></tr>
+<tr><td>L1 读法</td><td>少于 8 个，只作描述</td><td>少于 8 个，只作描述</td></tr>
+<tr><td>其他配方（单列，不并入判线）</td><td>APY10m10-AB 8 / 10 = 0.80 [0.50, 1.00]；AP2H10-AB 4 / 7 = 0.57</td><td></td></tr>
+<tr><td><b>L2 主工作点</b>（p* 0.5，a* 1.5 m/s²）：可翻转 / C</td><td>6 / 22 = 0.27 [0.09, 0.45]</td><td>7 / 12 = 0.58 [0.33, 0.83]</td></tr>
+<tr><td>误报 scene / N</td><td>28 / 198 = 0.14 [0.10, 0.19]</td><td>0 / 21</td></tr>
+<tr><td>误报决策</td><td>132 / 1980 = 6.7%</td><td>15 / 2192 = 0.7%</td></tr>
+<tr><td>L2 判定（可翻转 ≥ 0.40 且误报 scene ≤ 0.15）</td><td><b>不通过</b></td><td><b>通过：值得做一次环内测试</b></td></tr>
+<tr><td>可翻转的构成</td><td>前方静止车 4 / 4；另有 2 次站住的邻道车来自同一个冷启动触发；切入、横穿、停放、转弯 0 / 12</td><td>class A 2 / 3；邻道车 3 / 4；停放车 2 / 3；横穿、行人 0 / 2</td></tr>
+<tr><td>事后口径：触发时 lead 头确实在被撞物体上</td><td></td><td>6 / 12</td></tr>
+</table>
+<div class="cite">来源：experiments/alpasim/results/collisions/nuplan_lead.md、pai_tables.md（Lead outputs）；预登记 experiments/alpasim/plans/2026-10-09-col1-lead-prereg.md。「及时看到」= 最后 8 s 内存在一次命中决策（概率 ≥ 0.5 且距离误差 ≤ max(2 m, 30%)），且此时 0.5 s 后开始以不超过 4 m/s² 减速还能停在 1 m 外。方括号是按 rollout 的 bootstrap 95% 区间。</div>
+<table>
+<tr><th>真实间距</th><th>nuPlan 对照（走廊里有物体）：概率 ≥ 0.5 的比例 / 距离误差中位</th><th>PAI 全部有标签的决策：概率 ≥ 0.5 的比例 / 误差中位</th></tr>
+<tr><td>0–5 m</td><td>93% / −0.7 m（class A 碰撞决策：93% / +1.2 m）</td><td>71% / +3.4 m</td></tr>
+<tr><td>5–10 m</td><td>90% / −1.1 m</td><td>63% / +0.5 m</td></tr>
+<tr><td>10–20 m</td><td>88% / −1.4 m</td><td>60% / −0.4 m</td></tr>
+<tr><td>20–40 m</td><td>77% / −1.8 m</td><td>62% / −1.0 m</td></tr>
+<tr><td>&gt; 40 m</td><td>57% / −3.6 m</td><td>38% / −15.1 m</td></tr>
+<tr><td>走廊里没有物体</td><td></td><td>17% 的决策概率 ≥ 0.5</td></tr>
+</table>
+<div class="cite">来源：同上两个文件的 gap 分桶表。PAI 一列里碰撞 rollout 的标签是被撞物体（不论是否在走廊内），所以近距离桶混入了侧方物体。</div>
+<figure><img src="figs/fig3_lead.png" alt="PAI 上 lead 头距离与真实间距">
+<figcaption>图 3：PAI 上被撞车辆位于 ego 正前方、且 lead 头在其上的 5 次碰撞（071d15c4 前方慢车，0e3771c0 与 9ea70552 前方静止车，24a50fcc 与 8ecf02e3 按日志车道归为邻道车）。橙线是 simulator 的间距，蓝点是 shipped lead 头的距离（概率 ≥ 0.5）。看点：两者从几十米到几米一直重合，接触前最后 2–5 m lead 头偏远（读 3–10 m）；这段时间 plan 没有减速（见 p03、p05 的车速曲线）。</figcaption></figure>
+<ul>
+<li><b>nuPlan：lead 输出不是修法。</b>22 次碰撞里只有 4 次有前车可看；规则只翻这 4 次，同时在 14% 的干净 scene 里误触发（日志自己也在等的静止排队）。两个 class A scene 里有一个 lead 头把不到 2 m 的间距读成 5–10 m（决策 157 的近距偏远）。</li>
+<li><b>PAI：及时看到了，覆盖正面的那一半。</b>3 个 class A 全部提前 6–8 s 看到；按 ego 走廊算 12 个里 5 个在接近过程的大部分时间被正确跟踪。L2 通过。对「7 个」有两点保留：登记的「可翻转」只要求在还能停住时有过触发，对侧方物体可能是别的前车触发的（事后口径 6 / 12）；规则没有翻 0e3771c0（排队里 0.6–0.9 m/s 蠕行：高于静止阈值，又慢到减速分支不触发）。</li>
+</ul>
+
+<h2>六、最便宜的环内用法与上限（本轮不实现）</h2>
+<p>两件 serving 侧的事，都只用同一次 forward 已经算出的量。</p>
+<ol>
+<li><b>返回从当前车速起步的轨迹</b>（第三节）。不是 lead 机制；去掉 spin 和位置追逐。已实测，见诊断臂。</li>
+<li><b>给 plan 加一个由 lead 决定的速度上限</b>：lead 概率 ≥ 0.5 且「在前车后 4 m 处把速度降到前车速度」所需减速度超过 1.5 m/s²，或 ego 静止且 lead 在 6 m 内时，把 plan 沿自己的路径按该减速度重新定时（静止则保持）。用 served checkpoint 自己的 lead 输出不需要额外前向。</li>
+</ol>
+<table>
+<tr><th></th><th>最多能翻的零分</th><th>对照里看到的代价</th></tr>
+<tr><td>PAI，40 个 scene</td><td>12 个碰撞零分里最多 7 个（lead 头确实在被撞物体上的 6 个）；即使每个都变成满分也只是 7 / 40 = +0.18 均分，progress 项不会给满</td><td>21 个对照 scene 里持续 1 s 的误触发 0 个；有标签支持的触发 3 个 scene</td></tr>
+<tr><td>nuPlan，1491 个 scene</td><td>22 个碰撞 rollout 里最多 6 个（每个 seed 约 3 个，占 scene 的 0.2%，均分 +0.002）</td><td>14% 的干净 scene 被减速 1 s 以上（28 / 198），每个都在 5 s 的 scene 里丢 progress</td></tr>
+</table>
+<div class="cite">来源：collisions.md 第 7 节；上限的前提是刹停不引发别的零分、交通不反应。</div>
+<p>所以这条规则在 PAI 上值得做一次环内测试，在 nuPlan 赛道上是净亏。与已有结论的区别：决策 157 是在存档 plan 上固定扣 2 m（HUGSIM / navtest 离线），决策 140 是用 lead 头给起步设闸（HUGSIM），决策 179 / 203 是 navtest 上对开环、non-reactive 4 s 标签的 token 级 AUC。它们都不是 20 s 闭环、跟在回放排队车后的减速度上限；决策 203 里「openpilot 原生 lead 输出是对同向前车类失败信息量最大的非特权输入」与这里方向一致。</p>
+<p>两件事都不碰的部分：PAI 碰撞的另一半成因，即车速高于日志（adapter 的速度先验）；ego 先离开车道再撞邻道车的情形；以及 nuPlan 上全部由漂移造成的碰撞。</p>
+
+<h2>七、限定</h2>
+<ul>
+<li>PAI：一个 checkpoint、一个 seed、每个 scene 一次 rollout、40 个 scene；12 次碰撞，class A 只有 3 次，L1 在两条赛道上都只是描述。simulator 在 PAI 上的重复性没有测，诊断臂的区间只是 scene bootstrap。</li>
+<li>「可翻转」按定义是上界；规则没有在环里跑过。在回放车流后刹停可能被追尾（不算 at-fault，但 rollout 到此结束）并损失 progress。</li>
+<li>「可见」指在相机视野内且 60 m 以内，没有遮挡判断。分类规则用日志车道，会把已离开日志车道的 ego 正前方的车归到邻道（第四节两种口径都给了）。</li>
+<li>nuPlan：AP2H10 在后 791 个 scene 上的 run 没有纳入；对照是对原来三个 700 scene chunk 的重跑里 part001 + part002 的部分（700 个分数与原 run 全部相同）。那里每次决策 8 个 slot 中 6 个是合成帧。</li>
+<li>command 的结论来自开环回放，一次只强制一次决策的 command。</li>
+</ul>
+
+<h2>数据与代码</h2>
+<ul>
+<li>记录：<code>experiments/alpasim/results/collisions.md</code>，表在 <code>experiments/alpasim/results/collisions/</code>，决策 <code>research/decisions/219.md</code>，预登记 <code>experiments/alpasim/plans/2026-10-09-col1-lead-prereg.md</code>。</li>
+<li>图：<code>research/alpasim-collisions/make_figs.py</code>（只读已提交的表）；片段：<code>experiments/alpasim/figs/collisions/</code>（31 个 GIF）。</li>
+<li>box 上的原始数据：GPU box <code>$DATA_DIR/runs/alpasim/col1/</code>（对照重跑与回放，19 GB）；Tokyo box <code>/data/runs/alpasim/col1/</code>（runs/ 为 b1、b2a、b2b 与诊断臂，x/ 为抽取与回放），pai1 的 run 在 <code>/data/runs/alpasim/pai1/</code>，未改动。</li>
+</ul>
+</body></html>
