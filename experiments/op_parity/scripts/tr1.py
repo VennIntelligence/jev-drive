@@ -246,6 +246,35 @@ def cmd_wod_report(a):
     print((OUT / f"{a.name}_arms.md").read_text(), (OUT / f"{a.name}_contrasts.md").read_text())
 
 
+def cmd_fig(a):
+    """figs/tr1/stage0_frontier.png from the committed stage-0 tables (probe_s0.csv, wod-s0/arms.csv)."""
+    import csv
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    pr = {r["arm"]: r for r in csv.DictReader(open(OUT / "probe_s0.csv"))}
+    wod = {r["arm"]: float(r["RFS"]) for r in csv.DictReader(open(OUT / "wod-s0/arms.csv")) if r["stratum"] == "all"}
+    fig, ax = plt.subplots(1, 2, figsize=(10.5, 4.2))
+    col = {"B0": "#444444", "NA": "#1f77b4", "NAH": "#17becf", "LD": "#2ca02c", "LG": "#ff7f0e", "PO": "#d62728"}
+    for k, c in col.items():
+        r = pr[f"T1{k}-P-s0"]
+        x, y = float(r["/ base model"]), float(r["navtest - ref"])
+        ax[0].scatter(x, y, s=70, color=c, zorder=3)
+        ax[0].annotate(k, (x, y), textcoords="offset points", xytext=(6, 5))
+        ax[1].scatter(wod[k] - wod["shipped"], y, s=70, color=c, zorder=3)
+        ax[1].annotate(k, (wod[k] - wod["shipped"], y), textcoords="offset points", xytext=(6, 5))
+    ax[0].axvline(GATE_ONSET, color="k", ls="--", lw=0.8), ax[0].axhline(-GATE_NAV, color="k", ls="--", lw=0.8)
+    ax[0].axvspan(GATE_ONSET, 1.06, ymin=0, ymax=1, color="#2ca02c", alpha=0.06)
+    ax[0].set_xlabel("brake-onset share / base model (closing lead, ego not yet braking; navtest)"), ax[0].set_ylabel("navtest EPDMS - B0 (pilot scale)")
+    ax[0].set_title("registered lines: onset >= 0.9 (right of the dashed line), navtest >= -0.5 (above)", fontsize=9)
+    ax[1].axhline(-GATE_NAV, color="k", ls="--", lw=0.8), ax[1].axvline(0, color="k", lw=0.6)
+    ax[1].set_xlabel("WOD val RFS - shipped (zero-shot, pilot scale)"), ax[1].set_title("transfer against the nuPlan-board cost", fontsize=9)
+    fig.tight_layout()
+    d = _R / "experiments/op_parity/figs/tr1"
+    d.mkdir(parents=True, exist_ok=True)
+    fig.savefig(d / "stage0_frontier.png", dpi=140)
+
+
 def main():
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -268,8 +297,9 @@ def main():
     p.add_argument("--name", required=True)
     p.add_argument("--ref", required=True)
     p.add_argument("--arms", nargs="+", required=True)
+    sp.add_parser("fig")
     a = ap.parse_args()
-    {"tok": cmd_tok, "probe": cmd_probe, "report": cmd_report, "wod-report": cmd_wod_report}[a.cmd](a)
+    {"fig": cmd_fig, "tok": cmd_tok, "probe": cmd_probe, "report": cmd_report, "wod-report": cmd_wod_report}[a.cmd](a)
 
 
 if __name__ == "__main__":
