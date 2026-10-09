@@ -18,7 +18,7 @@ Classes. N1 (decision 153, c1_review.collision): A1 stopped lead, A2 moving lead
              Object moving at impact, by N1 class: slow lead = A2; cut-in = B; crossing = C; oncoming = E; side contact while turning = D
              and |log turn| >= 20 deg; side contact (moving neighbour) = the remaining D
 Visibility: the first sim time (>= 0, 0.1 s grid) at which the object's centre is within 60 m of the CAM_F0 position and within the
-camera's horizontal field (atan(960 / fx) = 31.4 deg) of the simulated ego heading; no occlusion test. TTC there = range / closing range
+camera's horizontal field (atan(960 / fx) = 31.4 deg) of the simulated ego heading, while the object's track exists; no occlusion test. TTC there = range / closing range
 rate (inf when opening). Plan slowing: decision k's planned 4 s arc against 4 s at the speed the ego has at that decision.
 """
 import argparse
@@ -153,9 +153,9 @@ def measure(o, L, RV):
         rear = pe[:2] - L.CENTER * np.array([np.cos(pe[2]), np.sin(pe[2])])
         cam = rear + CAM_X * np.array([np.cos(pe[2]), np.sin(pe[2])])
         d = L.interp_pose(tr, x)[:2] - cam
-        rng.append((float(np.hypot(*d)), float(np.degrees(L.wrap(np.arctan2(d[1], d[0]) - pe[2])))))
+        rng.append((float(np.hypot(*d)), float(np.degrees(L.wrap(np.arctan2(d[1], d[0]) - pe[2]))), float(tr[0, 0] <= x <= tr[-1, 0])))
     rng = np.array(rng)
-    ok = (rng[:, 0] < 60) & (np.abs(rng[:, 1]) < HFOV)
+    ok = (rng[:, 0] < 60) & (np.abs(rng[:, 1]) < HFOV) & (rng[:, 2] > 0)                 # the object's track exists at that time
     if ok.any():
         i = int(np.argmax(ok))
         j = min(i + 5, len(grid) - 1)
