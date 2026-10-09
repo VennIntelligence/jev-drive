@@ -2,8 +2,8 @@
 
 status: live
 decisions: 223, 224, 225, 227 (inputs: 220, 219, 218, 212, 205, 204, 203, 200, 198, 197, 192, 170, 166, 160, 158)
-index: Contact head passes offline (AUC 0.905 / 0.885); stop and lateral re-plan in the driver both halted at one-chunk checks
-key: experiments/body1/plans/2026-10-10-body1-prereg.md, experiments/body1/results/taxonomy.md, experiments/body1/results/s0_gate.md, experiments/body1/results/stop_closed_loop.md, experiments/body1/results/replan_closed_loop.md, experiments/body1/results/zeros_diagnosis.md, experiments/body1/scripts/bd1_diag.py, experiments/body1/lib/serve_body.py, experiments/body1/lib/contact_head.py, experiments/body1/scripts/bd1_train.py, experiments/body1/scripts/bd1_gate.py, experiments/body1/lib/sweep.py, experiments/body1/scripts/bd1_rows.py, research/next-round/self-model.md, experiments/alpasim/results/swerve_clearance.md, experiments/alpasim/scripts/swv1_lib.py, experiments/op_parity/lib/agent_hinge.py, experiments/op_parity/lib/drivable_hinge.py, experiments/op_parity/scripts/ot_rows.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/lib/serve_fix.py
+index: Contact head passes offline (AUC 0.905 / 0.885); stop and lateral re-plan halted at one-chunk checks; loss arm 4.3 stopped at its pilot gate
+key: experiments/body1/plans/2026-10-10-body1-prereg.md, experiments/body1/results/taxonomy.md, experiments/body1/results/s0_gate.md, experiments/body1/results/stop_closed_loop.md, experiments/body1/results/replan_closed_loop.md, experiments/body1/results/zeros_diagnosis.md, experiments/body1/results/loss_pilot.md, experiments/body1/scripts/bd4_train.py, experiments/body1/lib/loss43.py, experiments/body1/scripts/bd1_diag.py, experiments/body1/lib/serve_body.py, experiments/body1/lib/contact_head.py, experiments/body1/scripts/bd1_train.py, experiments/body1/scripts/bd1_gate.py, experiments/body1/lib/sweep.py, experiments/body1/scripts/bd1_rows.py, research/next-round/self-model.md, experiments/alpasim/results/swerve_clearance.md, experiments/alpasim/scripts/swv1_lib.py, experiments/op_parity/lib/agent_hinge.py, experiments/op_parity/lib/drivable_hinge.py, experiments/op_parity/scripts/ot_rows.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/lib/serve_fix.py
 
 **Question.** Does a learned prediction of "the swept footprint of my own plan will touch an object or leave the road", read by a
 stop / re-plan in the driver, lower the zero-score scenes of P2H10 on the AlpaSim nuPlan track without costing progress?
@@ -19,8 +19,12 @@ of one seed the lateral shift removed 1 zero and created 2 (taught-class zeros 1
 redirects every later plan, and 5 of the 10 baseline zeros were never flagged: [results/replan_closed_loop.md](results/replan_closed_loop.md).
 Diagnosis of all 49 baseline zeros (2 seeds): every one is in a served plan before it happens, the head flags 29 of them a median 2.5 s
 ahead but a clear ramp exists at only a third of the flagged decisions; 15 are route failures and 7 a drivable-label gap:
-[results/zeros_diagnosis.md](results/zeros_diagnosis.md); DRAFT Amendment 4 (not in force) in the prereg. Open, for the main session: the loss arm 4.3 (the lesson in the plan itself, needs its own amendment and the navtest guardrail), or a
-serving action with a target that persists across decisions; the 700 x 2 reads and the PAI reads were not run for either arm.
+[results/zeros_diagnosis.md](results/zeros_diagnosis.md). The loss arm 4.3 (Amendment 4: agent hinge on the own plan, hinge-only off-track rows incl. the new `bd4`
+family, scorer-layer road label) stopped at its pilot gate: the agent hinge on own-plan positives fell 9.5 % against the registered 30 %,
+while the hold-log own-plan contact rates did fall (agent -26 %, boundary -17 % against a same-scale switch-off pilot); no full run and no
+closed loop: [results/loss_pilot.md](results/loss_pilot.md). The driver stays P2H10-F. Open, for the main session: whether a re-registered
+gate on hold-log rates (the quantity G3 reads) justifies a full run of 4.3, or a serving action with a target that persists across
+decisions; the 700 x 2 reads and the PAI reads were not run for any arm.
 
 **Read more.** [plans/2026-10-10-body1-prereg.md](plans/2026-10-10-body1-prereg.md); taxonomy and row set in [results/taxonomy.md](results/taxonomy.md); concept in
 [research/next-round/self-model.md](../../research/next-round/self-model.md).
