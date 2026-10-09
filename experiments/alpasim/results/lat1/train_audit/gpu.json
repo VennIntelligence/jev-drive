@@ -1,0 +1,165 @@
+{
+ "cpus": 4,
+ "n": 96,
+ "entries_s": 2.63,
+ "load1": 43.80419921875,
+ "gpu": "NVIDIA RTX 6000D",
+ "e2e_today": {
+  "workers": 3,
+  "tokens_per_s": 3.244,
+  "wall_s": 29.6,
+  "worker_s_per_token": {
+   "median": 0.828,
+   "p95": 0.896,
+   "mean": 0.834,
+   "n": 96
+  },
+  "worker_busy_share": 0.901,
+  "enc_s": 4.79,
+  "enc_share_of_wall": 0.162,
+  "stack_s": 0.98,
+  "pairs_per_token": 34,
+  "enc_pairs_per_s_while_running": 680.8
+ },
+ "encoder": {
+  "8": {
+   "host_enqueue_ms": 10.51,
+   "until_done_ms": 10.54,
+   "pairs_per_s": 758.9,
+   "peak_gb": 3.22
+  },
+  "32": {
+   "host_enqueue_ms": 9.88,
+   "until_done_ms": 23.97,
+   "pairs_per_s": 1334.8,
+   "peak_gb": 8.38
+  },
+  "64": {
+   "host_enqueue_ms": 10.23,
+   "until_done_ms": 48.94,
+   "pairs_per_s": 1307.8,
+   "peak_gb": 15.27
+  },
+  "128": {
+   "host_enqueue_ms": 17.64,
+   "until_done_ms": 97.58,
+   "pairs_per_s": 1311.7,
+   "peak_gb": 29.05
+  },
+  "192": {
+   "host_enqueue_ms": 10.87,
+   "until_done_ms": 146.8,
+   "pairs_per_s": 1307.9,
+   "peak_gb": 42.82
+  },
+  "wrapper_bs128_pairs_per_s": 1152.0,
+  "bs64_vs_bs128_max_abs_diff": 0.03125,
+  "bs64_vs_bs128_identical": false,
+  "bs128_profile": {
+   "aten_calls": 2830,
+   "cuda_kernel_ms": 194.7,
+   "top_cuda": [
+    [
+     "aten::mm",
+     49.8
+    ],
+    [
+     "void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_256x128_32x3_nn_align8>(cutlass_80_tensorop_f16_s16816gemm_relu_f16_256x128_32x3_nn_align8::Params)",
+     20.8
+    ],
+    [
+     "void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x128_64x3_nn_align8>(cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x128_64x3_nn_align8::Params)",
+     19.2
+    ],
+    [
+     "aten::add",
+     15.0
+    ],
+    [
+     "void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl_nocast<at::native::CUDAFunctor_add<c10::Half> >(at::TensorIteratorBase&, at::native::CUDAFunctor_add<c10::Half> const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::CUDAFunctor_add<c10::Half> >(at::TensorIteratorBase&, at::native::CUDAFunctor_add<c10::Half> const&)::{lambda(int)#1})",
+     15.0
+    ],
+    [
+     "aten::gelu",
+     8.8
+    ]
+   ]
+  }
+ },
+ "encoder_free_values": {
+  "today_bs32": {
+   "ms": 23.7,
+   "peak_gb_above_inputs": 6.89
+  },
+  "today_bs128": {
+   "ms": 97.9,
+   "peak_gb_above_inputs": 27.55
+  },
+  "free_after_last_use_bs32": {
+   "ms": 24.3,
+   "peak_gb_above_inputs": 0.31
+  },
+  "free_after_last_use_bs128": {
+   "ms": 97.9,
+   "peak_gb_above_inputs": 1.22
+  },
+  "identical_bs32": true,
+  "identical_bs128": true,
+  "free_after_last_use_bs512": {
+   "ms": 408.3,
+   "pairs_per_s": 1254.1,
+   "peak_gb": 6.39
+  }
+ },
+ "gpu_lattice": {
+  "tokens": 48,
+  "pixels": 641728512,
+  "differing_pixels": 0,
+  "ms_per_token_3_lattices": {
+   "median": 9.401,
+   "p95": 20.326,
+   "mean": 12.055,
+   "n": 46
+  },
+  "upload_ms": {
+   "median": 0.24,
+   "p95": 0.319,
+   "mean": 0.263,
+   "n": 46
+  },
+  "tokens_identical_to_cpu_path": false,
+  "tokens_max_abs_diff": 0.0390625
+ },
+ "e2e_gpu_lattice": {
+  "workers": 3,
+  "tokens_per_s": 27.742,
+  "wall_s": 3.46,
+  "key_s_per_token": {
+   "median": 0.091,
+   "p95": 0.119,
+   "mean": 0.094,
+   "n": 96
+  },
+  "main_gpu_s_per_token_mean": 0.0321,
+  "main_thread_share": 0.889,
+  "bw_tokens_differing_from_today": 0,
+  "cold_tokens_differing_from_today": 96,
+  "encoder_pairs_per_token": 27
+ },
+ "e2e_gpu_lattice_pack_fast": {
+  "workers": 3,
+  "tokens_per_s": 28.019,
+  "wall_s": 3.43,
+  "key_s_per_token": {
+   "median": 0.048,
+   "p95": 0.081,
+   "mean": 0.055,
+   "n": 96
+  },
+  "main_gpu_s_per_token_mean": 0.0327,
+  "main_thread_share": 0.916,
+  "bw_tokens_differing_from_today": 0,
+  "cold_tokens_differing_from_today": 96,
+  "encoder_pairs_per_token": 27
+ }
+}

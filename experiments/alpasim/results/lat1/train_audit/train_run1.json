@@ -1,0 +1,309 @@
+{
+ "cpus": 4,
+ "torch_threads": 75,
+ "omp": "4",
+ "load1": 63.7021484375,
+ "gpu": "NVIDIA RTX 6000D",
+ "torch": "2.14.0+cu130",
+ "startup_s": {
+  "store_s": 2.0,
+  "split_s": 0.17,
+  "routes_ego_s": 0.89,
+  "model_s": 4.05,
+  "hinge_s": 3.52
+ },
+ "rows": {
+  "train": 99679,
+  "dev": 1767,
+  "base_params_M": 16.21,
+  "adapter_params_M": 2.516,
+  "n_base_tensors": 109,
+  "dtype": "torch.float16"
+ },
+ "fetch_b128_ms": {
+  "front_gather": {
+   "first": 19.6,
+   "median": 17.68,
+   "p95": 28.3
+  },
+  "slots_total": {
+   "median": 28.28,
+   "p95": 44.6
+  },
+  "cold_gather_median": 8.95,
+  "bytes_per_batch_MB": 32.0
+ },
+ "step_ms": {
+  "16": {
+   "fwd_enqueue": 16.03,
+   "fwd": 16.32,
+   "loss": 3.32,
+   "bwd_enqueue": 18.31,
+   "bwd": 18.39,
+   "opt": 3.24,
+   "total": 44.81,
+   "peak_gb": 6.5,
+   "rows_per_s": 357.1
+  },
+  "32": {
+   "fwd_enqueue": 16.31,
+   "fwd": 16.41,
+   "loss": 2.81,
+   "bwd_enqueue": 18.45,
+   "bwd": 20.63,
+   "opt": 3.17,
+   "total": 45.1,
+   "peak_gb": 8.9,
+   "rows_per_s": 709.5
+  },
+  "64": {
+   "fwd_enqueue": 16.76,
+   "fwd": 25.73,
+   "loss": 2.88,
+   "bwd_enqueue": 18.47,
+   "bwd": 36.73,
+   "opt": 3.42,
+   "total": 70.0,
+   "peak_gb": 13.7,
+   "rows_per_s": 914.3
+  },
+  "128": {
+   "fwd_enqueue": 17.2,
+   "fwd": 49.95,
+   "loss": 3.23,
+   "bwd_enqueue": 20.24,
+   "bwd": 75.71,
+   "opt": 3.88,
+   "total": 145.42,
+   "peak_gb": 23.2,
+   "rows_per_s": 880.2
+  }
+ },
+ "loop_b128": {
+  "steps_per_s": 6.04,
+  "ms_per_step": 165.6,
+  "wait_for_fetch_ms_median": 0.02
+ },
+ "profile_b128": {
+  "wall_ms_under_profiler": 170.1,
+  "aten_calls": 10987,
+  "cuda_kernel_ms": 243.6,
+  "top_by_count": [
+   [
+    "cudaLaunchKernel",
+    1775
+   ],
+   [
+    "aten::as_strided",
+    1153
+   ],
+   [
+    "aten::view",
+    865
+   ],
+   [
+    "aten::to",
+    772
+   ],
+   [
+    "aten::reshape",
+    732
+   ],
+   [
+    "aten::empty",
+    608
+   ],
+   [
+    "aten::copy_",
+    602
+   ],
+   [
+    "aten::empty_strided",
+    568
+   ],
+   [
+    "aten::transpose",
+    433
+   ],
+   [
+    "aten::_to_copy",
+    397
+   ],
+   [
+    "aten::mm",
+    332
+   ],
+   [
+    "aten::item",
+    320
+   ]
+  ],
+  "top_by_cuda_ms": [
+   [
+    "aten::copy_",
+    30.4,
+    602
+   ],
+   [
+    "aten::mm",
+    18.2,
+    332
+   ],
+   [
+    "aten::mul",
+    11.7,
+    210
+   ],
+   [
+    "aten::bmm",
+    10.7,
+    66
+   ],
+   [
+    "aten::native_layer_norm_backward",
+    10.4,
+    51
+   ],
+   [
+    "void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>, 4, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >(int, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1>)",
+    10.3,
+    197
+   ],
+   [
+    "void at::native::vectorized_elementwise_kernel<4, at::native::float16_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda(float)#1}, std::array<char*, 2ul>, false>(int, at::native::float16_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda(float)#1}, std::array<char*, 2ul>)",
+    10.3,
+    171
+   ],
+   [
+    "aten::native_layer_norm",
+    8.3,
+    51
+   ],
+   [
+    "void at::native::(anonymous namespace)::vectorized_layer_norm_kernel<float, float, false>(int, float, float const*, float const*, float const*, float*, float*, float*)",
+    8.3,
+    51
+   ],
+   [
+    "void at::native::(anonymous namespace)::layer_norm_grad_input_kernel_vectorized<float, float, false>(float const*, float const*, float const*, float const*, float const*, float*, int)",
+    7.2,
+    51
+   ],
+   [
+    "aten::_softmax_backward_data",
+    6.7,
+    8
+   ],
+   [
+    "void (anonymous namespace)::softmax_warp_backward<float, float, float, 9, false, false, 32>(float*, float const*, float const*, int, int, int, bool const*)",
+    6.7,
+    8
+   ]
+  ],
+  "top_by_self_cpu_ms": [
+   [
+    "cudaDeviceSynchronize",
+    74.9,
+    8
+   ],
+   [
+    "cudaLaunchKernel",
+    9.1,
+    1775
+   ],
+   [
+    "aten::cat",
+    4.7,
+    24
+   ],
+   [
+    "aten::mm",
+    4.1,
+    332
+   ],
+   [
+    "aten::mul",
+    4.1,
+    210
+   ],
+   [
+    "Optimizer.step#AdamW.step",
+    3.2,
+    1
+   ],
+   [
+    "cudaStreamSynchronize",
+    3.2,
+    37
+   ],
+   [
+    "Activity Buffer Request",
+    2.5,
+    2
+   ],
+   [
+    "aten::empty_strided",
+    2.5,
+    568
+   ],
+   [
+    "aten::copy_",
+    2.3,
+    602
+   ],
+   [
+    "aten::empty",
+    2.2,
+    608
+   ],
+   [
+    "aten::bmm",
+    1.9,
+    66
+   ]
+  ]
+ },
+ "policy_graph": {
+  "nodes_total": 837,
+  "nodes_run": 388,
+  "by_op": {
+   "Add": 72,
+   "MatMul": 60,
+   "LayerNormalization": 44,
+   "Gemm": 37,
+   "Reshape": 28,
+   "Transpose": 26,
+   "Squeeze": 24,
+   "Gelu": 20,
+   "Mul": 18,
+   "Split": 8,
+   "Not": 8,
+   "Where": 8,
+   "Softmax": 8,
+   "Unsqueeze": 7,
+   "Gather": 7,
+   "Sigmoid": 6,
+   "Concat": 2,
+   "Expand": 2,
+   "ReduceMean": 1,
+   "GatherND": 1,
+   "Cast": 1
+  },
+  "constant_nodes": 29,
+  "constant_by_op": {
+   "Not": 8,
+   "Reshape": 4,
+   "Unsqueeze": 3,
+   "Gather": 3,
+   "MatMul": 2,
+   "Add": 2,
+   "Sigmoid": 2,
+   "Mul": 2,
+   "Gemm": 2,
+   "Expand": 1
+  },
+  "weight_only_nodes": 17,
+  "casts": 1,
+  "trainable_matmul_gemm_conv": 38
+ }
+}

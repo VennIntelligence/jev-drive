@@ -39,7 +39,8 @@ def main():
     L.mkdir(exist_ok=True)
     marks = sorted(Path(p).name.split(".")[-3].split("_")[-1] for p in C.glob.glob(str(C.ROOT / ".done.MTGS_asset_navtest_assets_part*.tar.gz")))
     scenes = sorted(p.name for p in (C.ROOT / "navtest/assets").iterdir() if p.is_dir())
-    if len(scenes) != 100 * len(marks):
+    fetch_done = (C.RA / "fetch/DONE").exists()   # the last shard (part015) has 91 scenes, so the 100-per-shard check only applies until the fetch finished
+    if len(scenes) != 100 * len(marks) and not (fetch_done and len(marks) == 15):
         C.fail(f"{len(scenes)} scene dirs for {len(marks)} .done shards {marks}: an extraction is in progress")
     # old scenes keep their labels; new scenes are labelled by contiguous 100-scene blocks over the newly landed shards (inferred)
     new = [s for s in scenes if s not in scored]
