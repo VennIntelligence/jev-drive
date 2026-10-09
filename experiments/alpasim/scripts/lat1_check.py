@@ -20,6 +20,10 @@ simulator (c1_replay.py's harness). Results: experiments/alpasim/results/lat1_fr
   lat1_check.py runs --msgs <closed-loop run dir A> --out <run dir B>                    (no GPU)
       two closed-loop runs of one scene list: scene scores, and every decision's ego pose and plan (driver-logs/drive.jsonl) one
       against the other; the stage latency of both
+  lat1_check.py model --msgs <dir> --out <json>
+      where the encoder and policy time goes (jevdrive.op_torch interprets the ONNX graph node by node under vmap): graph nodes and
+      aten calls per pass, host time to enqueue a pass against the time until the card has finished it, and the same for 2 and 4
+      decisions in one pass (what cross-session batching would cost)
   lat1_check.py same --msgs <load json of one run> --out <load json of another>
       the plans of two load runs, decision by decision
 """
@@ -237,6 +241,46 @@ def cmd_nvjpeg(a):
     print(json.dumps(s, indent=1), flush=True)
 
 
+def cmd_model(a):
+    import torch
+    import sh30_driver as D
+    core = D.C.Core(TAG, "cuda", synth="gpu")
+    A, net, dev, out = core.A, core.model.net, core.dev, {}
+    z = np.zeros(D.C.FRAME, np.uint8)
+    for m in (1, 4, 4):
+        o = core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])
+    ego = torch.from_numpy(o["ego"][None]).to(dev)
+
+    def enc(b):
+        x = torch.randint(0, 255, (8 * b,) + D.C.FRAME, dtype=torch.uint8, device=dev)
+        return lambda: net.run_batched(A.vision_feeds(x, x), ["view_39"])["view_39"]
+
+    def pol(b):
+        H, e, tc = o["tokens"][None].repeat(b, 1, 1, 1), ego.repeat(b, 1), torch.tensor([[1.0, 0.0]], device=dev).repeat(b, 1)
+        return lambda: core.model(H, e, tc)
+    with torch.no_grad():
+        for name, mk in (("encode", enc), ("policy", pol)):
+            for b in (1, 2, 4):
+                fn, enq, tot = mk(b), [], []
+                for i in range(33):
+                    torch.cuda.synchronize()
+                    t0 = time.perf_counter()
+                    fn()
+                    t1 = time.perf_counter()
+                    torch.cuda.synchronize()
+                    enq.append(1e3 * (t1 - t0)), tot.append(1e3 * (time.perf_counter() - t0))
+                out[f"{name} x{b}"] = dict(host_enqueue_ms=pct(enq[3:]), until_done_ms=pct(tot[3:]))
+            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                mk(1)()
+            ev = prof.key_averages()
+            out[f"{name} x1"].update(aten_calls=int(sum(e.count for e in ev if e.key.startswith("aten::"))),
+                                     top=[[e.key, e.count] for e in sorted(ev, key=lambda e: -e.count)[:8]])
+    out["graph_nodes"] = dict(encode=len(net.plan(tuple(sorted(A.VISION_IN)), ("view_39",))), total=len(net.nodes), dtype=str(net.dtype))
+    out["cpus"] = len(os.sched_getaffinity(0))
+    Path(a.out).write_text(json.dumps(out))
+    print(json.dumps(out, indent=1), flush=True)
+
+
 def cmd_load(a):
     import torch
     import sh30_driver as D
@@ -252,7 +296,8 @@ def cmd_load(a):
     torch.cuda.reset_peak_memory_stats()
 
     def stream(_):
-        core.plan([z] * 4, np.zeros((4, 3)), np.zeros((4, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])      # per-thread CUDA init
+        with drv.gpu:                                    # per-thread CUDA init, one thread at a time as every later inference
+            core.plan([z] * 4, np.zeros((4, 3)), np.zeros((4, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])
         while True:
             with lock:
                 if not todo:
@@ -307,11 +352,11 @@ def cmd_same(a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same", "nvjpeg", "runs"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
+    ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same", "nvjpeg", "runs", "model"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=0), ap.add_argument("--synth", default="gpu"), ap.add_argument("--streams", type=int, default=8)
     ap.add_argument("--nosync", action="store_true"), ap.add_argument("--pack", default="fast")
     a = ap.parse_args()
-    {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same, "nvjpeg": cmd_nvjpeg, "runs": cmd_runs}[a.cmd](a)
+    {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same, "nvjpeg": cmd_nvjpeg, "runs": cmd_runs, "model": cmd_model}[a.cmd](a)
 
 
 if __name__ == "__main__":
