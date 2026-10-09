@@ -21,7 +21,11 @@ import sys
 import time
 from pathlib import Path
 
-import numpy as np
+if hasattr(os, "sched_getaffinity"):                   # the pool pins the job (taskset): one OpenMP / BLAS thread per granted core, not the inherited count
+    for _k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+        os.environ[_k] = str(len(os.sched_getaffinity(0)))
+
+import numpy as np  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(REPO / "lib"), str(Path(__file__).parent)]

@@ -60,15 +60,15 @@ waitdirs build
 grep -q '"ok": true' "$O/build.json" || die "extract gates failed (build.json)"
 
 status "fits: 8 arms"
-for a in E OP G0 G1; do sub fit-$a --vram 0.5 --cpu 6 --ram 40 -- $X fit --arm $a; done
-for a in H V N OPH; do sub fit-$a --vram 8 --cpu 6 --ram 60 -- $X fit --arm $a; done
+for a in E OP G0 G1; do sub fit-$a --vram 0.5 --cpu 6 --ram 12 -- $X fit --arm $a; done
+for a in H V N OPH; do sub fit-$a --vram 8 --cpu 6 --ram 20 -- $X fit --arm $a; done
 waitdirs fit-E fit-OP fit-G0 fit-G1 fit-H fit-V fit-N fit-OPH
 
 status "secondary: navtest-internal cross-fit"
-for a in E H V N OP OPH G0 G1; do sub xfit-$a --vram 0.5 --cpu 6 --ram 40 -- $X xfit --arm $a; done
+for a in E H V N OP OPH G0 G1; do sub xfit-$a --vram 0.5 --cpu 6 --ram 12 -- $X xfit --arm $a; done
 waitdirs xfit-E xfit-H xfit-V xfit-N xfit-OP xfit-OPH xfit-G0 xfit-G1
 
 status "report"
-sub report --vram 0.5 --cpu 8 --ram 40 -- $X report
+sub report --vram 0.5 --cpu 8 --ram 16 -- $X report
 waitdirs report
 status "done"; date > "$D/DONE"
