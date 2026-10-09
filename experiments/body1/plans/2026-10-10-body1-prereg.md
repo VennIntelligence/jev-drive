@@ -139,3 +139,28 @@ Over budget: cut S1 or S2 and the re-plan arm, keep the navtrain S0 / best arm w
 card 2 (given to this lane by the user) is used through the pool's own mechanism; other lanes' jobs are never touched.
 Limits known in advance: logged agents are non-reactive; 2 Hz boxes interpolated; in-sample student plans on navtrain;
 plane reprojection distorts objects above the road at large offsets; the AlpaSim scenes are 5 s with 10 decisions.
+
+## Amendment 1 (2026-10-10, after the taxonomy and row set, before any predictor is trained or read)
+
+Read so far: label-side counts only ([results/taxonomy.md](../results/taxonomy.md)); no predictor exists.
+
+1. **Class 3 includes drift beside a standing object.** Section 2.1 mapped decision 220's class (iv) to "class 3 with a side
+   object", but the written class 3 needed the boundary flag, which left straight / launch tokens with only a side object
+   (7 474) in "other". Class 3 is now: straight / launch with a boundary or a side hazard, and straight with no hazard. The
+   G1 class-3 read uses this set. Training uses the `w4` weights (the remaining "other" tokens as a fourth class at equal
+   mass), so no generated row is unused; "other" is reported, without a line.
+2. **Boundary positive needs depth.** The logged future itself has a footprint corner at SDF < 0 on 2.0 % of tokens (median
+   depth 0.10 m, a quarter already at t = 0): raster resolution (0.5 m cells), not road departures. For the G1 boundary read
+   and the boundary logit, positive = minimum margin < -0.20 m with first contact after t = 0; rows between -0.20 and 0 m are
+   neither positive nor negative for the AUC; the margin itself is regressed. The agent label is unchanged, with rear-end
+   contacts by a faster object excluded as written.
+3. **Go-around tag.** It uses a constant-curvature continuation of the t0 motion as lane reference and has false positives on
+   curved lanes (seen in the BEV panels). It only enters the class-1 membership and the balance weights; no line depends on
+   it alone.
+4. G1 positives of the student's own plan on hold logs (on-log + off-track pooled): agents 127 / 70 / 98 for classes 1 / 2 / 3
+   (before item 1), boundary 133 / 297 / 433 after removing contacts at t = 0: every class is a gated read. Agent positives
+   sit in 19-39 logs per class, so the log-clustered intervals will be wide; the pooled read (462 positives, 64 logs) is
+   reported first.
+5. G2 harness: the replay reproduces SWV1's served plans bit for bit (2 220 decisions) and its reader reproduces
+   `plan_std2_FT` 0.786 [0.738, 0.865] and the road-edge margin 0.718 [0.643, 0.822] (`lib/g2.py`). The policy sees 8 token
+   slots per decision.
