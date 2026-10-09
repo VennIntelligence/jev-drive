@@ -135,7 +135,7 @@ class Procs:
                 time.sleep(0.2)
 
 
-def host_cmd(svc: dict, src: str) -> str:
+def host_cmd(svc: dict, src: str, subs: tuple = ()) -> str:
     """The compose command with container paths replaced by the host paths of its volume mounts."""
     cmd = svc["command"][-1].replace("umask 0000\n", "", 1).replace("$$", "$")
     mounts = dict(reversed(v.rsplit(":", 1)) for v in svc.get("volumes", []))  # container -> host
@@ -143,6 +143,8 @@ def host_cmd(svc: dict, src: str) -> str:
     for cont in sorted(mounts, key=len, reverse=True):
         if cont != mounts[cont]:
             cmd = cmd.replace(cont, mounts[cont])
+    for old, new in subs:
+        cmd = cmd.replace(old, new)
     return cmd
 
 
@@ -156,10 +158,14 @@ def main() -> int:
     ap.add_argument("--driver-port", type=int, help="port of an already running driver (no --driver)")
     ap.add_argument("--tap", action="store_true", help="log every driver RPC to driver_tap.jsonl")
     ap.add_argument("--scene-list", help="file with one scene id per line; overrides the preset's scenes.scene_ids")
+    ap.add_argument("--sub", action="append", default=[], metavar="OLD=NEW",
+                    help="replace OLD by NEW in every service command after the mount rewrite (repeatable; NEW may be empty). PAI track: "
+                         "--sub /app=<unpacked renderer image>/app --sub ' --enable-harmonizer=' --sub /tmp/nre-cache-dir=<run dir>/nre-cache")
     ap.add_argument("--ready-timeout", type=float, default=900)
     ap.add_argument("overrides", nargs="+", help="wizard arguments, e.g. +e2e_challenge_nuplan=dev scenes.limit_to_first_n=1")
     a = ap.parse_args()
     src, out = str(Path(a.src).resolve()), Path(a.log_dir).resolve()
+    subs = tuple(x.split("=", 1) for x in a.sub)
     out.mkdir(parents=True, exist_ok=True)
     base = dict(os.environ, UV_NO_SYNC="1", PYTHONUNBUFFERED="1", ALPASIM_NUPLAN_ROOT=a.nuplan_root)
     procs, times, rc = Procs(out), {"t_start": time.time()}, 1
@@ -199,7 +205,7 @@ def main() -> int:
             if name in runtime:
                 times["services_ready_s"] = time.time() - t0
                 times["t_runtime"] = time.time()
-            procs.start(name, host_cmd(svc, src), env, src)
+            procs.start(name, host_cmd(svc, src, subs), env, src)
             for p in svc.get("ports", []):
                 times[f"{name}_ready_s"] = procs.wait_port(name, int(str(p).split(":")[0]), a.ready_timeout)
         rt_log, rt_off = out / "native-logs" / f"{runtime[0]}.log", 0
