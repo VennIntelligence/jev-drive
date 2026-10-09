@@ -20,7 +20,7 @@ default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route m
 
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
 (op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (gpu, the default: slot warp on the card + fast frame packing, same
-frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), SH30_COMPILE (1 = compiled model passes), SH30_JPEG (nvjpeg | libjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -135,6 +135,8 @@ def _xy(p) -> np.ndarray:
 
 
 class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
+    decode = None                                        # a JPEG decoder on the card (sh30_core.nvjpeg), else libjpeg
+
     def __init__(self, core: C.Core, log_dir: Path, dump: int = 0, lht: bool = False, gate: str = ""):
         self.core, self.lht, self.dump, self.dir, self.gate = core, lht, dump, log_dir, gate
         self.sessions, self.lock, self.gpu, self.nsess = {}, threading.Lock(), threading.Lock(), 0
@@ -174,7 +176,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             return common_pb2.Empty()
         t0 = time.perf_counter()
         try:
-            fr = (C.pack_fast if self.core.synth == "gpu" else C.pack)(im.image_bytes, s.cam)
+            fr = (C.pack_gpu(im.image_bytes, s.cam, self.core.dev, self.decode) if self.decode else
+                  (C.pack_fast if self.core.synth == "gpu" else C.pack)(im.image_bytes, s.cam))
         except Exception as e:
             ctx.abort(grpc.StatusCode.INVALID_ARGUMENT, f"{CAM} decode failed: {e!r}")
         ts = int(im.frame_end_us)
@@ -269,6 +272,27 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                                     grpc_api_version=API)
 
 
+def tune(core, warm):
+    """The options that change numerics at rounding level, both off unless set (results/lat1_frame_synthesis.md): SH30_COMPILE=1 freezes the
+    model passes (Core.compile), SH30_JPEG=nvjpeg decodes CAM_F0 on the card. Either falls back with a warning when the build cannot do it.
+    warm() runs the warm-up decisions. -> the decoder for Driver.decode, or None."""
+    core.sync = os.environ.get("SH30_STAGE_SYNC", "1") == "1"
+    if os.environ.get("SH30_COMPILE", "0") == "1":
+        try:
+            core.compile()
+            warm()
+        except Exception:
+            LOG.exception("torch.compile failed: the model stays interpreted")
+            core._enc = core._pol = None
+    warm()
+    if os.environ.get("SH30_JPEG", "libjpeg") == "nvjpeg" and core.synth == "gpu":
+        try:
+            return C.nvjpeg(core.dev)
+        except Exception:
+            LOG.exception("no nvJPEG on this build: libjpeg decode")
+    return None
+
+
 def warm_workers(fn) -> ThreadPoolExecutor:
     """The gRPC worker pool (ALPASIM_DRIVER_GRPC_WORKERS threads) with `fn` (one inference) already run in every thread: the CUDA libraries
     initialise per thread, which costs the first `drive` a thread serves 1.35 s in the submission image (torch +cu126, RTX 3090;
@@ -294,12 +318,13 @@ def main() -> None:
     t0 = time.time()
     core = C.Core(os.environ.get("SH30_TAG", "SH30-F-s0"), os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("SH30_COLD", "backwarp"),
                   float(os.environ.get("SH30_MOTION", "1")), os.environ.get("SH30_SYNTH", "gpu"))
-    core.sync = os.environ.get("SH30_STAGE_SYNC", "1") == "1"
     z = np.zeros(C.FRAME, np.uint8)
-    for m in (1, 4, 4):                                 # warm-up: both slot counts compiled before the port opens
-        core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])
-    LOG.info("%s (%s, motion %.2f, synth %s) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, core.motion, core.synth, time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
+    # warm-up: both slot counts compiled before the port opens
+    decode = tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 4, 4)])
+    LOG.info("%s (%s, motion %.2f, synth %s, compiled %s, jpeg %s) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, core.motion, core.synth,
+             core._pol is not None, "nvjpeg" if decode else "libjpeg", time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
     drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1", os.environ.get("SH30_MOTION_GATE", ""))
+    drv.decode = decode
     server = grpc.server(warm_workers(lambda: core.plan([z] * 4, np.zeros((4, 3)), np.zeros((4, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])))
     egodriver_pb2_grpc.add_EgodriverServiceServicer_to_server(drv, server)
     if server.add_insecure_port(f"{host}:{port}") == 0:

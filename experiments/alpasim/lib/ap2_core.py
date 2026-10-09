@@ -99,10 +99,11 @@ class Core(C.Core):
         t1 = self._sync() if gpu else time.perf_counter()
         with torch.no_grad():
             p, c = (x[np.flatnonzero(valid)] if gpu else torch.from_numpy(x[valid]).to(self.dev) for x in (prev, cur))
-            H = self.model.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(1, int(valid.sum()), *A.H_SHAPE)
+            H = self._enc(p, c) if self._enc else self.model.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"]
+            H = H.reshape(1, int(valid.sum()), *A.H_SHAPE)
             t2 = self._sync()
             tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=self.dev)
-            out = self.model(H, torch.from_numpy(ego[None]).to(self.dev), tc).float()
+            out = (self._pol or self.model)(H, torch.from_numpy(ego[None]).to(self.dev), tc).float()
             t3 = self._sync()
             mu = out[0, self.pi].reshape(33, 15).cpu().numpy()
             cur = cur.cpu().numpy() if gpu else cur

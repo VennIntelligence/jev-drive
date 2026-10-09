@@ -180,8 +180,38 @@ def lattice_gpu(keys, e: int, track, cam_t, cold: str, dev):
 SYNTH = ("cpu", "gpu")
 
 
+def nvjpeg(dev):
+    """A JPEG decoder on the card for pack_gpu: bytes -> (h, w, 3) uint8 YCbCr tensor (nvJPEG's RGB put back into JPEG's BT.601 full
+    range). Not libjpeg's pixels: 1.4 % of the model-frame pixels differ, plans move by 1 cm (results/lat1_frame_synthesis.md).
+    Raises when torchvision has no nvJPEG on this build."""
+    import threading
+    import torch
+    import torchvision.io as tio
+    M = torch.tensor([[0.299, 0.587, 0.114], [-0.168736, -0.331264, 0.5], [0.5, -0.418688, -0.081312]], device=dev).T
+    off, lock = torch.tensor([0.0, 128.0, 128.0], device=dev), threading.Lock()
+
+    def decode(jpeg):
+        with lock:
+            rgb = tio.decode_jpeg(torch.frombuffer(bytearray(jpeg), dtype=torch.uint8), device=dev)
+        return (rgb.permute(1, 2, 0).float() @ M + off).round().clamp(0, 255).to(torch.uint8)
+    import io as _io
+    from PIL import Image
+    b = _io.BytesIO()
+    Image.new("RGB", (64, 64), (90, 120, 30)).save(b, "JPEG")
+    assert decode(b.getvalue()).shape == (64, 64, 3)
+    return decode
+
+
 class Core:
     sync = True                                           # CUDA sync at every stage boundary, for the stage times
+    _enc = _pol = None                                    # compiled encoder / policy passes (compile())
+
+    def compile(self):
+        """Freeze the two model passes with torch.compile: op_torch interprets the ONNX graph node by node (6 739 aten calls per decision,
+        24 of 25 ms host-side dispatch). The policy runs as a CUDA graph. Outputs differ from the interpreter at fp16 rounding level."""
+        torch, net, A = self.torch, self.model.net, self.A
+        self._enc = torch.compile(lambda p, c: net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"])
+        self._pol = torch.compile(lambda H, ego, tc: self.model(H, ego, tc), mode="reduce-overhead")
 
     def __init__(self, tag: str = "SH30-F-s0", dev: str = "cuda", cold: str = "backwarp", motion: float = 1.0, synth: str = "cpu"):
         import cv2
@@ -222,10 +252,11 @@ class Core:
         t1 = self._sync() if gpu else time.perf_counter()
         with torch.no_grad():
             p, c = (x[np.flatnonzero(valid)] if gpu else torch.from_numpy(x[valid]).to(self.dev) for x in (prev, cur))
-            H = self.model.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(1, int(valid.sum()), *A.H_SHAPE)
+            H = self._enc(p, c) if self._enc else self.model.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"]
+            H = H.reshape(1, int(valid.sum()), *A.H_SHAPE)
             t2 = self._sync()
             tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=self.dev)
-            out = self.model(H, torch.from_numpy(ego[None]).to(self.dev), tc).float()
+            out = (self._pol or self.model)(H, torch.from_numpy(ego[None]).to(self.dev), tc).float()
             t3 = self._sync()
             mu = out[0, self.pi].reshape(33, 15).cpu().numpy()
             cur = cur.cpu().numpy() if gpu else cur

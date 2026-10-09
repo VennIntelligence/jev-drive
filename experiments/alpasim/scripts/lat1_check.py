@@ -10,10 +10,10 @@ simulator (c1_replay.py's harness). Results: experiments/alpasim/results/lat1_fr
       on every logged JPEG (both must be 0 differing pixels); for comparison the float sampler torch.nn.functional.grid_sample on the same maps
   lat1_check.py prof --msgs <dir> --out <json>
       where a decision's input work goes, alone on the job's cores: track, CPU lattice, GPU lattice, JPEG decode, model-frame packing
-  lat1_check.py load --msgs <dir> --out <json> --synth cpu|gpu [--streams 8] [--n N] [--nosync] [--pack gpu]
+  lat1_check.py load --msgs <dir> --out <json> --synth cpu|gpu [--streams 8] [--n N] [--nosync] [--pack gpu] [--compile] [--nvjpeg]
       N scenes replayed as `streams` concurrent sessions through one driver (one inference lock, as served): stage times per `drive`
       and per image, from the driver's own drive.jsonl / images.jsonl, and every plan. --nosync: Core.sync off; --pack gpu: pack_gpu
-      in place of pack_fast
+      in place of pack_fast; --compile: Core.compile(); --nvjpeg: sh30_core.nvjpeg decode
   lat1_check.py nvjpeg --msgs <dir> --out <json> [--n N]
       a measurement, not a served path: the CAM_F0 JPEG decoded by nvJPEG on the card (torchvision.io.decode_jpeg, RGB -> YCbCr)
       instead of libjpeg: decode time, pixel difference of the model frames, plan difference on the logged inputs
@@ -294,6 +294,8 @@ def cmd_load(a):
     import sh30_driver as D
     core = D.C.Core(TAG, "cuda", synth=a.synth)
     core.sync = not a.nosync
+    if a.compile:
+        core.compile()
     if a.pack == "gpu":
         D.C.pack_fast = lambda jpeg, cam: D.C.pack_gpu(jpeg, cam, core.dev)
     z = np.zeros(D.C.FRAME, np.uint8)
@@ -301,6 +303,7 @@ def cmd_load(a):
         core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])
     log = Path(tempfile.mkdtemp())
     drv, todo, lock = D.Driver(core, log), [pickle.load(open(f, "rb")) for f in scenes(a)], threading.Lock()
+    drv.decode = D.C.nvjpeg(core.dev) if a.nvjpeg else None
     torch.cuda.reset_peak_memory_stats()
 
     def stream(_):
@@ -320,7 +323,7 @@ def cmd_load(a):
     plans = {f"{r['scene']}/{r['k']}": r["poses"] for r in dr if r["kind"] == "drive"}
     dr = [r["ms"] for r in dr if r["kind"] == "drive"]
     im = [json.loads(x)["pack_ms"] for x in open(log / "images.jsonl")]
-    s = dict(tag=TAG, synth=a.synth, sync=core.sync, pack=a.pack if a.synth == "gpu" else "pack", streams=a.streams, scenes=len(scenes(a)), drives=len(dr), wall_s=round(wall, 1), cpus=len(os.sched_getaffinity(0)),
+    s = dict(tag=TAG, synth=a.synth, compiled=a.compile, nvjpeg=a.nvjpeg, sync=core.sync, pack=a.pack if a.synth == "gpu" else "pack", streams=a.streams, scenes=len(scenes(a)), drives=len(dr), wall_s=round(wall, 1), cpus=len(os.sched_getaffinity(0)),
              ms={k: pct([r[k] for r in dr]) for k in ("frames", "encode", "policy", "wait", "total")}, pack_ms=pct(im),
              vram_gib=torch.cuda.max_memory_allocated() / 2**30, vram_reserved_gib=torch.cuda.max_memory_reserved() / 2**30)
     print(json.dumps(s, indent=1), flush=True)
@@ -363,8 +366,12 @@ def cmd_runs(a):
 
 def cmd_same(a):
     A, B = (json.loads(Path(f).read_text())["plans"] for f in (a.msgs, a.out))
-    d = np.array([np.abs(np.array(A[k]) - np.array(B[k])).max() for k in A if k in B])
-    print(json.dumps(dict(decisions_a=len(A), decisions_b=len(B), common=len(d), differing=int((d > 0).sum()), max_abs=float(d.max()))), flush=True)
+    ks = [k for k in A if k in B]
+    d = np.array([np.abs(np.array(A[k]) - np.array(B[k])).max() for k in ks])
+    end = np.array([np.hypot(*(np.array(A[k])[-1, :2] - np.array(B[k])[-1, :2])) for k in ks])
+    yaw = np.array([abs(np.degrees(A[k][0][2] - B[k][0][2])) for k in ks])
+    print(json.dumps(dict(decisions_a=len(A), decisions_b=len(B), common=len(d), differing=int((d > 0).sum()), max_abs=float(d.max()),
+                          end_4s_m=pct(end) + [float(end.mean())], yaw_05s_deg=pct(yaw) + [float(yaw.mean())])), flush=True)
 
 
 def main():
@@ -372,6 +379,7 @@ def main():
     ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same", "nvjpeg", "runs", "model"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=0), ap.add_argument("--synth", default="gpu"), ap.add_argument("--streams", type=int, default=8)
     ap.add_argument("--nosync", action="store_true"), ap.add_argument("--pack", default="fast"), ap.add_argument("--driver", default="sh30")
+    ap.add_argument("--compile", action="store_true"), ap.add_argument("--nvjpeg", action="store_true")
     a = ap.parse_args()
     {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same, "nvjpeg": cmd_nvjpeg, "runs": cmd_runs, "model": cmd_model}[a.cmd](a)
 
