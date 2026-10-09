@@ -5,6 +5,7 @@
   msgs    (AlpaSim venv) the logged driver-side messages of every collision case (cases.pkl of col1_nuplan.py) and of the control scenes
           (ctrl/manifest.json: P2H10-F-s0 re-run with logs kept; the scenes of the first two public shards) -> msgs/<group>/<scene>.pkl
           and spec.json {group: {driver, tag, scenes, frames}}; --frames F adds scenes (one `group scene` per line) whose model frames are kept
+  maps    (AlpaSim venv) privileged map polygons of the clip scenes -> maps.pkl (drawn in the clips only)
   replay  (envs/op-train, one GPU: a pool job) every decision of every scene again through the real driver class; per decision the plan,
           the served checkpoint's lead / lead_prob (FT) and the shipped policy's (P0 = load_pmodel("P0"), no adapter) on the same vision
           tokens; the model frames of the newest slot for the collision cases -> replay/<group>.pkl
@@ -65,15 +66,39 @@ def cmd_msgs(a):
                 spec["ctrl"]["scenes"].append(s)
                 spec["ctrl"]["runs"][s] = run
                 jobs.append((run, s, str(d)))
-    for line in (Path(a.frames).read_text().splitlines() if a.frames else []):
-        g, s = line.split()
-        if s not in spec[g]["frames"]:
-            spec[g]["frames"].append(s)
+    for line in (Path(a.frames).read_text().splitlines() if a.frames else []):    # extra scenes whose model frames the clips need
+        g, s = line.split()[:2]
+        if g == "extra":                                  # a control rollout of the P2H10-F-s0 re-run, any of its 700 scenes
+            run = next(r for r in ctrl if X.glob.glob(f"{r}/rollouts/{s}/*/rollout.asl"))
+            (LD / "msgs/extra").mkdir(parents=True, exist_ok=True)
+            spec.setdefault("extra", dict(driver="sh30", tag="P2H10-F-s0", scenes=[], frames=[], runs={}))
+            if s not in spec["extra"]["scenes"]:
+                spec["extra"]["scenes"].append(s), spec["extra"]["frames"].append(s)
+                spec["extra"]["runs"][s] = run
+                jobs.append((run, s, str(LD / "msgs/extra")))
     jobs = [j for j in jobs if not (Path(j[2]) / f"{j[1]}.pkl").exists()]
     with ProcessPoolExecutor(a.jobs) as ex:
         n = len(list(ex.map(X.one_msgs, jobs)))
     (LD / "spec.json").write_text(json.dumps(spec))
     print("msgs", n, "new;", {k: len(v["scenes"]) for k, v in spec.items()})
+
+
+def cmd_maps(a):
+    """Privileged map polygons (c1_extract map) of the clip scenes of --frames (`set scene` per line) -> lead/maps.pkl; clips only."""
+    import c1_extract as X
+    spec, C = json.loads((LD / "spec.json").read_text()), pickle.load(open(O / "cases.pkl", "rb"))
+    by, out = defaultdict(set), (pickle.load(open(LD / "maps.pkl", "rb")) if (LD / "maps.pkl").exists() else {})
+    for line in Path(a.frames).read_text().splitlines():
+        g, s = line.split()[:2]
+        if s not in out:
+            by[C[g, s]["run"] if (g, s) in C else spec[g]["runs"][s]].add(s)
+    for run, sc in by.items():
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "s.txt").write_text("\n".join(sorted(sc)))
+            X.cmd_map(argparse.Namespace(run=run, scenes=f"{d}/s.txt", out=f"{d}/m.pkl", radius=90.0))
+            out |= pickle.load(open(f"{d}/m.pkl", "rb"))
+    pickle.dump(out, open(LD / "maps.pkl", "wb"), protocol=4)
+    print("maps", len(out))
 
 
 # ---------------------------------------------------------------- replay (GPU)
@@ -231,6 +256,7 @@ def cmd_read(a):
         pickle.dump(N, open(cf, "wb"), protocol=4)
     N = pickle.load(open(cf, "rb"))
     rows, dropped, total = [], defaultdict(int), defaultdict(int)
+    spec.pop("extra", None)                               # clip-only rollouts
     for g, sp in spec.items():
         R = pickle.load(open(LD / "replay" / f"{g}.pkl", "rb"))
         for scene, recs in R.items():
@@ -367,7 +393,7 @@ def cmd_read(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for n, f in (("msgs", cmd_msgs), ("replay", cmd_replay), ("read", cmd_read)):
+    for n, f in (("msgs", cmd_msgs), ("maps", cmd_maps), ("replay", cmd_replay), ("read", cmd_read)):
         p = sub.add_parser(n)
         p.add_argument("--out"), p.add_argument("--frames"), p.add_argument("--jobs", type=int, default=16), p.add_argument("--force", action="store_true")
         p.set_defaults(fn=f)
