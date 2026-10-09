@@ -11,10 +11,13 @@ import argparse  # noqa: E402
 
 import numpy as np  # noqa: E402
 
+import logging  # noqa: E402
+
 import b1 as B  # noqa: E402
 import sweep as SW  # noqa: E402
 
 _sys.path.insert(0, str(B.REPO / "research"))
+logging.getLogger("fontTools").setLevel(logging.WARNING)
 OBJ_COL = ("sky_blue", "purple", "orange", "orange")       # vehicle, generic_object, pedestrian, bicycle
 CELLS = {1: [("in-path, static", lambda T: T["f_in"] & T["in_static"]), ("in-path, moving", lambda T: T["f_in"] & ~T["in_static"]), ("go-around", lambda T: T["man"] == 4)],
          2: [("turn 20-45, side", lambda T: (T["man"] == 2) & T["f_side"]), ("turn 20-45, boundary", lambda T: (T["man"] == 2) & T["f_bnd"]),
@@ -73,10 +76,8 @@ def panel(ax, P, T, i, cell, z, L, r):
         ax.plot(d[j, :f + 1, 0], d[j, :f + 1, 1], color=P.PALETTE["vermillion"], lw=0.9, zorder=7)
         poly(ax, ex[j, f], ey[j, f], d[j, f, 2], SW.HALF_L, SW.HALF_W, fc="none", ec=P.PALETTE["vermillion"], lw=0.6, zorder=7)
         ax.plot(ex[j, f], ey[j, f], marker="x", ms=3, mew=0.7, color=P.PALETTE["vermillion"], zorder=8)
-    span = max(18.0, float(np.abs(d[[0, 3], :, :2]).max()) + 8)
-    turn = abs(T["dyaw"][i]) > 20
-    ax.set_xlim(-8, min(span, 56))
-    ax.set_ylim((-24, 24) if turn else (-12, 12))
+    ax.set_xlim(-8, 44)
+    ax.set_ylim(-19.5, 19.5)
     ax.set_aspect("equal", adjustable="box")
     ax.grid(False)
     ax.set_xticks([]), ax.set_yticks([])
@@ -105,12 +106,12 @@ def cmd_bev(a):
         rows = []
         for c in (1, 2, 3):
             sel = pick(T, c, a.shard, 8, np.random.default_rng([a.seed, c]))
-            fig, axs = plt.subplots(2, 4, figsize=(P.DOUBLE_COLUMN_IN, 3.9))
+            fig, axs = plt.subplots(2, 4, figsize=(P.DOUBLE_COLUMN_IN, 3.25))
             for ax, (cell, i) in zip(axs.ravel(), sel):
                 rows.append(dict(cls=c, **panel(ax, P, T, i, cell, z, L, at[int(T["gi"][i])])))
             for ax in axs.ravel()[len(sel):]:
                 ax.axis("off")
-            fig.subplots_adjust(left=0.005, right=0.995, top=0.94, bottom=0.005, wspace=0.03, hspace=0.22)
+            fig.subplots_adjust(left=0.005, right=0.995, top=0.93, bottom=0.005, wspace=0.03, hspace=0.2)
             info = P.save(fig, out / f"bev_class{c}")
             plt.close(fig)
             run.info(f"class {c}: {len(sel)} tokens, png {info['png_bytes'] / 1024:.0f} KiB")
