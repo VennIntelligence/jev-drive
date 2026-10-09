@@ -1,0 +1,7 @@
+reason,subset,n,clear_lat,clear_lat_lead_med,clear_lat_elig,clear_lat_elig_lead_med,clear_slow,clear_slow_lead_med,clear_both,clear_both_lead_med,a_clear_lat,a_clear_lat_lead_med,a_clear_slow,a_clear_slow_lead_med,a_clear_both,a_clear_both_lead_med,any,any_lead_med,any_lead_ge1.5
+collision,all,14,11,4.5,10,4.5,12,4.25,12,4.25,14,4.0,12,4.25,14,4.0,12,4.25,12
+collision,> 45 deg,3,3,4.0,3,4.0,3,4.0,3,4.0,3,4.0,3,4.0,3,4.0,3,4.0,3
+offroad,all,20,17,4.0,17,4.0,16,4.0,18,4.0,20,4.0,20,4.0,20,4.0,18,4.0,18
+offroad,> 45 deg,10,9,4.0,9,4.0,10,4.0,10,4.0,10,4.0,10,4.0,10,4.0,10,4.0,10
+corridor,all,15,12,5.0,12,5.0,15,4.5,15,4.5,15,4.5,15,4.5,15,4.5,15,4.5,15
+corridor,> 45 deg,5,4,5.0,4,5.0,5,5.0,5,5.0,5,5.0,5,5.0,5,5.0,5,5.0,5

@@ -357,3 +357,97 @@ chunk jobs and the PAI read were not run, and neither reading has a registered v
 through either trigger's boundary side" means 2 of the 3 created contacts are boundary contacts. The closed-loop jobs ran on the lane's
 held card outside the pool (its other cards were full of another lane's queue). Results:
 [results/replan_closed_loop.md](../results/replan_closed_loop.md).
+
+## DRAFT Amendment 4 (2026-10-10; NOT IN FORCE: a proposal for the main session, nothing below has been run or is registered)
+
+The loss arm 4.3, shaped by [results/zeros_diagnosis.md](../results/zeros_diagnosis.md). Read so far: everything of Amendments 1 to 3 and their
+status, decisions 223 to 226, and that diagnosis (all 49 baseline zeros of both seeds, replayed with the head and scored against the
+simulator's objects and map). No checkpoint of this arm exists.
+
+1. **Why this arm and not the others.** Every zero is in a served plan before it happens (49 of 49; 20 at decision 0) and the controller follows
+   the plan to 0.35 m, so the lesson has to be in the plan. Ranked below it, with the evidence:
+   - a serving action with a persistent target: at the 101 flagged in-plan decisions a ramp of at most 1.5 m is truly clear in 34 and the head's
+     pick is truly clear in 13; the head flags a median 2.5 s ahead while clear candidates exist 4 s ahead. It stays a fallback if this arm fails
+     its offline gate;
+   - more rows for the head alone: raises recall at launch (2 of 22 in-plan decisions under 1 m/s flagged), but the stop that would use it is
+     closed (decisions 224, 226). The same rows are used here, for the plan;
+   - S1 / S2: the agent half transfers to the closed loop (0.905 -> 0.882); the boundary half loses 0.09, a reason to open them only if item 5's
+     critic term is what carries the gain;
+   - stage 2 first: 22 of the 49 zeros are outside any body lesson on navtrain (item 9), but 27 are inside, and stage 2 costs days.
+2. **What P2H10 already contains** (box `runs/op_parity/train-P2H10-F-s0/20261006-153853/meta.json`; `pp_train.py --arm P2 --frames warp --host
+   --data navtrain_full.s{0..11}of12 --split navsim/op-parity-full --steps 10000 --batch 128 --warmup 300 --hinge-lam 10`): imitation on 101 499
+   on-log rows, anchor rows at 0.25, fed acceleration, and one drivable hinge: lambda 10, margin 0.3 m, on the plan mean of on-log imitation
+   rows, labels `op_probe/labels/navtrain_all.npz`. **It has no agent hinge and no off-track row** (the task book's "agent / drivable hinge"
+   is the drivable one; the agent hinge exists only as the pilot HA-F-s0 of decision 158). Every one of these ingredients is kept unchanged.
+3. **What is added** (three terms, each new against a named decision):
+   - **A. Agent hinge on the student's own plan at on-log and off-track states.** `lib/agent_hinge.py` (boxes at matching times, K = 32, the four
+     classes), lambda 10, margin 0.3 m, on every imitation row and on the hinge-only rows of B. Decision 158 ran it on on-log rows of two shards,
+     where the own plan touches an object in 0.8 % of rows and the loss ended at 0.0012: there was nothing to learn from. On ot1 / yr1 states the
+     rate is 1.7 % / 4.0 % (taxonomy.md), and the launch rows of B add the cell the collisions live in.
+   - **B. Hinge-only rows: off-track states that carry the two hinges and no imitation target.** 13 of 128 rows per batch (the share of the OT
+     lanes) from the existing ot1 and yr1 caches plus a new family `bd4` built with `ot_rows.cmd_prep`: heading offsets of 2 to 8 deg (uniform),
+     lateral within 0.5 m, and no speed cut (the diagnosis: 16 to 24 % of the failing decisions are over 5 deg, a third of the collision
+     decisions under 3 m/s; ot1 stops at 2 deg and every cache at 3 m/s). Decisions 198 / 212 / 213 read off-track rows as imitation rows (a
+     target that pulls back to the log: neutral at 0.5 m, divergent at 1.5 m). Here such a row has gradient only where the student's plan from
+     that state touches an object or leaves the road, and none otherwise. Needs: the drivable hinge through `ot_rows.off_hinge` (exists) and the
+     same frame wrapper for `AgentHinge` (does not exist; about 30 lines), both inside `pp_train.py`'s loss.
+   - **C. The drivable label on the scorer's layers.** 7 of the 20 offroad zeros leave AlpaSim's road area onto a surface the NAVSIM raster calls
+     drivable. A second raster for navtrain from the nuPlan map with road areas and lanes only (`opb_labels.py` with the layer list changed; CPU)
+     is used by the drivable hinge on the hinge-only rows; the on-log hinge keeps the current label, so P2H10's own term is untouched. Built
+     from navtrain maps, not from AlpaSim scenes.
+   - Not in the first run, kept as the second variant if A + B + C pass the offline gate without moving the collisions: **D, the S0 head as a
+     frozen critic** (its agent logit on the student's plan as an extra loss, weight chosen on validation logs) and the head's branch through
+     the memory channel (decision 204's condition is met: pre-trained with its own head, and it carries what the policy lacks, AUC 0.885
+     against 0.655 without vision). D changes the model's inputs and doubles the surface, so it follows A + B + C, not together.
+4. **Splits.** Imitation rows as P2H10 (`navsim/op-parity-full`). Hinge-only rows and the agent hinge's off-track rows come from
+   `navsim/body1-train-logs` only, so `navsim/body1-hold-logs` stays a clean read of the new terms.
+5. **Offline gate G3 (before any closed loop; open loop, no simulator).** Truth by `lib/sweep.py` on the student's own plan, new checkpoint
+   against P2H10-F, both seeds, cluster bootstrap by log:
+   - (a) hold logs, on-log + ot1 + yr1 + `bd4` states: agent-contact rate and boundary rate (margin < -0.20 m) of the own plan each fall by at
+     least 30 % relative, interval excluding 0;
+   - (b) navtest on-log tokens (12 146, never trained on; the population the 20 decision-0 zeros come from): the same two rates do not rise,
+     and their sum falls;
+   - (c) heading: decision 205's continuation slope on synthetic yaw-rate slots not above P2H10-F's + 0.05 (the hinge must not re-open the drift
+     that lambda 30 opened);
+   - (d) navtest through `jevdrive.bench` >= base - 0.3, the > 45 deg bucket reported (EPDMS; inside cut % and cannot-make-turn % through
+     `turn_oracle.py`).
+   Pilot first (2 shards, 3 000 steps, 1 seed): the agent hinge term on own-plan positives must fall by 30 % from its value at step 300 and (a)
+   must point the right way; otherwise the arm ends there (decision 158's outcome again).
+6. **Closed-loop read** (4.4, as Amendment 3 item 8). Development: chunk0 x s0 and chunk1 x s0 (both were run with a BODY1 switch). Staged:
+   `pilot8`, then chunk1 x s0 against this checklist: 233 / 233 rollouts; taught-class zeros (collision + offroad) not above the baseline's;
+   heading sd at decision 9 on decision 205's log-straight set <= 1.25 x base; no scene of the chunk's baseline-clean set turning into an
+   offroad or collision zero more often than zeros are removed. Then the other five chunk jobs. Lines on (A) all 700 x 2 and (B) the 1 166 pairs
+   never run with a switch minus nothing (chunk1 x s0 is development for this arm: (B) = chunks 0 and 2 of seed 0 without chunk0, i.e. chunk2 x
+   s0 and all of seed 1, 933 pairs); the stricter decides. L1: collision + offroad zeros go down in total and in neither seed up (corridor
+   zeros are reported, not taught). L2: mean per-scene difference >= 0 with the log-clustered lower bound > -0.005. L3: slow scenes <= 1.1 x
+   base. The > 45 deg bucket separately at every read. It is a regression check.
+7. **Guardrails.** navtest as 5 (d). comma1M straight-road ADE (decision 137): the Cinque encoder stays frozen; the plan pathway (16.2 M base
+   weights) is trained as in P2H10, and op_parity replaced the comma1M reading by the anchor rows plus `dev_drift_off <= 0.30`
+   (`pp_full_check.py`; P2H10-F 0.041). The same guard is used and stated; a comma1M reading of P2H10 does not exist to compare with.
+8. **Kill criteria.** Pilot gate of item 5; G3 (a) or (d) missed at full scale; (c) missed; the one-chunk checklist. Each ends the arm; D is
+   opened only on "A + B + C pass G3, collisions unmoved in the one-chunk read".
+9. **What this arm cannot reach, and what stage 2 would have to supply.** 15 corridor zeros are route failures on the road (5 inside cuts over
+   45 deg, 10 plans that take another branch or drift 4 m on a straight) and 4 collisions have the object outside the camera. A body lesson
+   does not teach the route. Stage 2 (CARLA rows with our student in the loop) would have to supply, per class: junction approaches where the
+   student is 1 to 4 m and 5 to 30 deg off the route with the command naming the exit and a target that rejoins it (the corridor states of the
+   diagnosis: 40 % beyond 0.5 m, 45 % beyond 5 deg), and launch states behind a standing object. A first size: 200 junction routes x 3 towns
+   x 5 student rollouts with an expert relabel, about 300 k ticks, 2 CARLA servers for a day, about 35 GB; to be costed properly only if this
+   arm leaves the corridor class as the largest one.
+10. **Cost, before running.**
+
+    | Step | Card-hours | Wall | Disk | Notes |
+    |---|--:|--:|--:|---|
+    | code: `AgentHinge` frame wrapper, hinge-only rows in `pp_train.py`, layer raster, `bd4` prep | 0 | 3 to 4 h of work | 0 | switch-off path bit-identical to P2H10's loss on one batch |
+    | `bd4` cache (ot_rows prep, about 70 k states incl. under 3 m/s) | 0.3 | 30 min | 18 GB | the one large item; ot1 / yr1 caches exist |
+    | scorer-layer raster for navtrain | 0 (CPU, about 1 core-h) | 10 min | 2.6 GB | |
+    | pilot, 1 seed | 0.15 | 10 min | 0.1 GB | 3 000 steps |
+    | full, 2 seeds | 1.5 | 45 min | 0.2 GB | P2H10: 22 min idle, 26 to 45 min on a shared box; x 1.3 for the agent hinge |
+    | G3 (own-plan rates, navtest bench x 2, turn oracle) | 0.3 | 40 min | 0.1 GB | bench 5 min per checkpoint |
+    | closed loop: pilot8, chunk1 x s0, then five chunks | 1.5 | 45 min | 1.5 GB | 0.7 job-h per 700 scenes |
+    | total | about 3.8 | about 7 h incl. the code | about 22 GB | within the lane's 60 card-h and 60 GB |
+
+    Per training step 0.13 to 0.25 s at batch 128 (7.6 to 3.9 it/s measured on the P2H10 and OT runs), 24 GB VRAM, `--ram 40`.
+    **`--resume` is not added first.** `pp_train.py` writes only `ckpt-final.pt`; a resume needs optimiser, scaler, step and three numpy
+    generator states captured in draw order under the prefetcher (40 to 60 lines plus a bit-identity gate), and a full run is 22 to 45 min:
+    after a SIGKILL the pool's free retry restarts it for less than the change costs. It becomes necessary only if D's variant with the
+    branch pushes a run past about 2 h.

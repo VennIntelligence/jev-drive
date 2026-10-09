@@ -1,0 +1,86 @@
+{
+ "check": {
+  "off_agree": 1168,
+  "off_n": 1176,
+  "lat_err_max": 0.7501672873459375,
+  "replay_diff_max": 0.11034011840820312,
+  "reg_res": 98,
+  "reg_res_max": 3.384483539895508e-06,
+  "reg_t": [
+   1.5
+  ]
+ },
+ "classes": {
+  "offroad": {
+   "F": 11,
+   "iv": 2,
+   "iii": 4,
+   "i": 3
+  },
+  "collision": {
+   "F": 10,
+   "iv": 4
+  },
+  "corridor": {
+   "iii": 7,
+   "F": 8
+  },
+  "corridor > 45": {
+   "iii": 2,
+   "F": 3
+  },
+  "offroad > 45": {
+   "F": 7,
+   "i": 3
+  },
+  "collision > 45": {
+   "F": 3
+  }
+ },
+ "manoeuvre": {
+  "launch": {
+   "collision": 4,
+   "offroad": 1,
+   "corridor": 2
+  },
+  "straight": {
+   "collision": 6,
+   "offroad": 4,
+   "corridor": 8
+  },
+  "turn 20-45": {
+   "collision": 1,
+   "offroad": 6,
+   "corridor": 0
+  },
+  "turn > 45": {
+   "collision": 3,
+   "offroad": 9,
+   "corridor": 5
+  }
+ },
+ "map_vs_raster": {
+  "n": 980,
+  "map_out": 228,
+  "map_deep": 197,
+  "raster_pos": 218,
+  "map_deep_raster_not": 20,
+  "raster_pos_map_in": 35,
+  "map_shallow": 31
+ },
+ "clean_plans": {
+  "n": 490,
+  "a_hit": 17,
+  "road_out": 24,
+  "road_deep": 22,
+  "corridor": 27,
+  "flag_a": 27,
+  "flag_b": 10,
+  "n_k1": 441
+ },
+ "n": {
+  "decisions": 980,
+  "zero_scenes": 49,
+  "clean_scenes": 49
+ }
+}

@@ -1,0 +1,9 @@
+fig,seed,scene,reason,cls,decisions
+bev_corridor_iii.png,0,2021.06.28.13.53.26_veh-26_00492_00696-b411a654aa215f1b,corridor,iii,0 8 9
+bev_collision_F.png,0,2021.09.09.14.18.22_veh-48_01503_01761-a7fa8bccce9253cb,collision,F,0 1 9
+bev_offroad_i.png,0,2021.09.16.13.53.10_veh-42_00180_00342-fd001bff97c155b3,offroad,i,0 6 7
+bev_collision_iv.png,0,2021.09.09.17.18.51_veh-48_00098_00328-e133b313fabc56b4,collision,iv,0 4 9
+bev_offroad_iii.png,0,2021.09.09.17.18.51_veh-48_00657_00876-215c38293c335e25,offroad,iii,0 6 8 9
+bev_offroad_iv.png,0,2021.06.03.17.06.58_veh-35_02943_03220-f1b802f6e9a559af,offroad,iv,0 1 2
+bev_offroad_F.png,1,2021.05.25.14.24.08_veh-25_03764_04034-5e9e8c31277d5edc,offroad,F,0 2 9
+bev_corridor_F.png,1,2021.06.28.21.16.05_veh-14_00957_01198-a04628cdd3f25947,corridor,F,0 2 9

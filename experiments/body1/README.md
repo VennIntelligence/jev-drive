@@ -3,7 +3,7 @@
 status: live
 decisions: 223, 224, 225 (inputs: 220, 219, 218, 212, 205, 204, 203, 200, 198, 197, 192, 170, 166, 160, 158)
 index: Contact head passes offline (AUC 0.905 / 0.885); stop and lateral re-plan in the driver both halted at one-chunk checks
-key: experiments/body1/plans/2026-10-10-body1-prereg.md, experiments/body1/results/taxonomy.md, experiments/body1/results/s0_gate.md, experiments/body1/results/stop_closed_loop.md, experiments/body1/results/replan_closed_loop.md, experiments/body1/lib/serve_body.py, experiments/body1/lib/contact_head.py, experiments/body1/scripts/bd1_train.py, experiments/body1/scripts/bd1_gate.py, experiments/body1/lib/sweep.py, experiments/body1/scripts/bd1_rows.py, research/next-round/self-model.md, experiments/alpasim/results/swerve_clearance.md, experiments/alpasim/scripts/swv1_lib.py, experiments/op_parity/lib/agent_hinge.py, experiments/op_parity/lib/drivable_hinge.py, experiments/op_parity/scripts/ot_rows.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/lib/serve_fix.py
+key: experiments/body1/plans/2026-10-10-body1-prereg.md, experiments/body1/results/taxonomy.md, experiments/body1/results/s0_gate.md, experiments/body1/results/stop_closed_loop.md, experiments/body1/results/replan_closed_loop.md, experiments/body1/results/zeros_diagnosis.md, experiments/body1/scripts/bd1_diag.py, experiments/body1/lib/serve_body.py, experiments/body1/lib/contact_head.py, experiments/body1/scripts/bd1_train.py, experiments/body1/scripts/bd1_gate.py, experiments/body1/lib/sweep.py, experiments/body1/scripts/bd1_rows.py, research/next-round/self-model.md, experiments/alpasim/results/swerve_clearance.md, experiments/alpasim/scripts/swv1_lib.py, experiments/op_parity/lib/agent_hinge.py, experiments/op_parity/lib/drivable_hinge.py, experiments/op_parity/scripts/ot_rows.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/lib/serve_fix.py
 
 **Question.** Does a learned prediction of "the swept footprint of my own plan will touch an object or leave the road", read by a
 stop / re-plan in the driver, lower the zero-score scenes of P2H10 on the AlpaSim nuPlan track without costing progress?
@@ -17,7 +17,9 @@ but seven false stops cost more (-0.0067 [-0.0159, +0.0011], slow 43 -> 50): [re
 Re-plan (4.2, Amendment 3): the hold-log gate passed (3 contacts created on 49 232 clean decisions against 548 resolved), but on 233 scenes
 of one seed the lateral shift removed 1 zero and created 2 (taught-class zeros 10 -> 11, -0.0043 [-0.0172, +0.0112]); one shifted decision
 redirects every later plan, and 5 of the 10 baseline zeros were never flagged: [results/replan_closed_loop.md](results/replan_closed_loop.md).
-Open, for the main session: the loss arm 4.3 (the lesson in the plan itself, needs its own amendment and the navtest guardrail), or a
+Diagnosis of all 49 baseline zeros (2 seeds): every one is in a served plan before it happens, the head flags 29 of them a median 2.5 s
+ahead but a clear ramp exists at only a third of the flagged decisions; 15 are route failures and 7 a drivable-label gap:
+[results/zeros_diagnosis.md](results/zeros_diagnosis.md); DRAFT Amendment 4 (not in force) in the prereg. Open, for the main session: the loss arm 4.3 (the lesson in the plan itself, needs its own amendment and the navtest guardrail), or a
 serving action with a target that persists across decisions; the 700 x 2 reads and the PAI reads were not run for either arm.
 
 **Read more.** [plans/2026-10-10-body1-prereg.md](plans/2026-10-10-body1-prereg.md); taxonomy and row set in [results/taxonomy.md](results/taxonomy.md); concept in

@@ -1,0 +1,13 @@
+reason,state,in_plan_decisions,flagged,za_med,zb_med
+collision,all,76,41,0.598,-5.406
+collision,v0 < 3,34,11,-2.063,-6.098
+collision,"v0 >= 3, in ot1 envelope",16,11,1.012,-1.141
+collision,"v0 >= 3, outside",26,19,1.499,-4.38
+offroad,all,88,39,-6.922,0.786
+offroad,v0 < 3,2,0,-6.039,-0.628
+offroad,"v0 >= 3, in ot1 envelope",28,8,-6.804,0.346
+offroad,"v0 >= 3, outside",58,31,-7.047,2.242
+corridor,all,100,21,-5.485,-2.827
+corridor,v0 < 3,8,1,-5.484,-1.217
+corridor,"v0 >= 3, in ot1 envelope",10,4,-8.375,-3.235
+corridor,"v0 >= 3, outside",82,16,-5.461,-3.242
