@@ -6,6 +6,7 @@ Signals use only what a driver is sent (its own two plans, the other driver's tw
 scores enter as labels. Rules are fit on training folds and scored on held-out folds, folds split by log (scene-clustered).
 
   c1_arb.py [--out experiments/alpasim/results/c1/arb.json]      (Mac, repo .venv, pickles of c1_extract.py in tmp/c1/)
+  c1_arb.py heldout --sh30 <dir> --ap2 <dir> --exclude <the 400 scene list> --out <json>     the pre-registered held-out read
 """
 from __future__ import annotations
 
@@ -112,10 +113,42 @@ def cv_model(D, cols, k=5, reps=5):
     return out
 
 
+def heldout(a):
+    """The pre-registered read (plans/2026-10-09-c1-arbitration-prereg.md): the frozen standstill rule on scenes outside the 400.
+    --sh30 / --ap2: directories holding that run's results-summary.json and drive.jsonl (copied from aggregate/ and driver-logs/)."""
+    def load(d):
+        sc = {r["clipgt_id"]: r["score"] for r in json.loads((Path(d) / "results-summary.json").read_text())["rollouts"]}
+        v = {}
+        for line in open(Path(d) / "drive.jsonl"):
+            r = json.loads(line)
+            if r["kind"] == "drive" and r["k"] in (0, 1):
+                v[(r["scene"], r["k"])] = 10 * float(np.hypot(r["ego"][4], r["ego"][5]))
+        return sc, v
+    (sa, va), (sb, vb) = load(a.sh30), load(a.ap2)
+    seen = set(Path(a.exclude).read_text().split())
+    sc = sorted(s for s in set(sa) & set(sb) if s not in seen and (s, 1) in va)
+    x, y = np.array([sa[s] for s in sc]), np.array([sb[s] for s in sc])
+    logs = np.array([s.rsplit("-", 1)[0] for s in sc])
+    best = x if x.mean() >= y.mean() else y
+    out = dict(n=len(sc), logs=len(set(logs)), sh=float(x.mean()), ap=float(y.mean()), best="SH30" if best is x else "AP2", oracle=float(np.maximum(x, y).mean() - best.mean()), rules=[])
+    for name, k, t in (("registered: decision 1 speed < 1.0", 1, 1.0), ("decision 1 speed < 0.5", 1, 0.5), ("decision 1 speed < 2.0", 1, 2.0), ("decision 0 speed < 1.0", 0, 1.0)):
+        sw = np.array([va[(s, k)] < t for s in sc])
+        b = stats.paired(np.where(sw, x, y), best, groups=logs)
+        out["rules"].append(dict(rule=name, switched=int(sw.sum()), mean=float(np.where(sw, x, y).mean()), gain=b["mean"], lo=b["lo"], hi=b["hi"],
+                                 sh_zero=int((x[sw] == 0).sum()), ap_zero=int((y[sw] == 0).sum()), sh_slow=int(((x[sw] > 0) & (x[sw] < 1)).sum()),
+                                 ap_slow=int(((y[sw] > 0) & (y[sw] < 1)).sum())))
+    Path(a.out).write_text(json.dumps(out, indent=1))
+    print(json.dumps(out, indent=1))
+
+
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("cmd", nargs="?", default="offline", choices=["offline", "heldout"])
     ap.add_argument("--out", default=str(L.ROOT / "experiments/alpasim/results/c1/arb.json"))
+    ap.add_argument("--sh30"), ap.add_argument("--ap2"), ap.add_argument("--exclude", default=str(L.TMP / "all400.txt"))
     a = ap.parse_args()
+    if a.cmd == "heldout":
+        return heldout(a)
     D = table()
     d = (D.s_sh - D.s_ap).to_numpy()
     oracle = float(np.maximum(d, 0).mean())

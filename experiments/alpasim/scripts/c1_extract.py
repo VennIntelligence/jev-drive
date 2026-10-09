@@ -101,7 +101,7 @@ def one_log(a) -> tuple:
 def cmd_logs(a):
     run = a.run.rstrip("/")
     S = json.loads((Path(run) / "aggregate/results-summary.json").read_text())["rollouts"]
-    scenes = sorted(os.listdir(f"{run}/rollouts"))
+    scenes = sorted(s for s in os.listdir(f"{run}/rollouts") if glob.glob(f"{run}/rollouts/{s}/*/rollout.asl") and glob.glob(f"{run}/rollouts/{s}/*/metrics.parquet"))
     with ProcessPoolExecutor(a.jobs) as ex:
         out = dict(ex.map(one_log, [(run, s) for s in scenes], chunksize=4))
     rec = {}

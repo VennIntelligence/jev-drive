@@ -1,7 +1,7 @@
 # alpasim: AlpaSim E2E Closed Loop Challenge feasibility
 
 status: live
-decisions: 184, 185, 188, 189, 199 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
+decisions: 184, 185, 188, 189, 199, 202 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
 index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
 key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
@@ -38,7 +38,9 @@ adapter) and mismatches: [results/ap2_smoke.md](results/ap2_smoke.md) (`figs/ap2
 
 **C0: 400 landed public scenes (2026-10-09, decision 199).** SH30 0.9306, AP2-AB-s0 0.9335, 15 at-fault events each; a second AP2 run is scene-for-scene identical (deterministic sim); per-scene best-of-two 0.9627 (+0.0292 over the best single driver, C2 line met as an upper bound). Part007 landed later and is uncovered. [results/c0_public400.md](results/c0_public400.md).
 
-**Next.** The at-fault collisions of SH30 and AP2 case by case (zeros decide this board); WA-JEPA latency on an idle card; the full public suite once the remaining 14 asset shards are on disk (`fetch_data.sh all`, running 2026-10-08); the two
+**C1: zero-score review and arbitration (2026-10-09, decision 202).** No zero of SH30 (23) or AP2 (24) on the 400 scenes is a lead-vehicle collision: all 17 collisions are side / cut-in contacts after the ego left its lane. The main mechanism, shared by both drivers (12 / 13 zeros), is a 1-2 m sideways shift on a straight stretch away from the turn the route announces; an offline replay with the command forced rules out a late command, the cause is open. Plans leave on their own (tracking error <= 0.2 m), not a cold-start effect; slow scenes are a closed-loop drift to lower speed. Arbitration: disagreement gates are negative offline, the standstill gate reads +0.0024 [-0.0066, +0.0131] on 300 held-out scenes, line not met, dropped. [results/c1_zero_review.md](results/c1_zero_review.md) (case strips in `figs/c1/`), [results/c1_arbitration.md](results/c1_arbitration.md), plan [plans/2026-10-09-c1-arbitration-prereg.md](plans/2026-10-09-c1-arbitration-prereg.md).
+
+**Next.** The cause of the pre-turn shift (does it show in open loop on the same navtest tokens; does it need the braking);  The at-fault collisions of SH30 and AP2 case by case (zeros decide this board); WA-JEPA latency on an idle card; the full public suite once the remaining 14 asset shards are on disk (`fetch_data.sh all`, running 2026-10-08); the two
 collisions and the 11 slow scenes; step latency under 0.1 s (warp on the GPU or cross-session batching); a Docker host for the
 submission image and a read-only-root test; seed 1.
 
