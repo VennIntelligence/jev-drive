@@ -206,12 +206,12 @@ class Core:
     sync = True                                           # CUDA sync at every stage boundary, for the stage times
     _enc = _pol = None                                    # compiled encoder / policy passes (compile())
 
-    def compile(self):
+    def compile(self, graph: bool = True):
         """Freeze the two model passes with torch.compile: op_torch interprets the ONNX graph node by node (6 739 aten calls per decision,
-        24 of 25 ms host-side dispatch). The policy runs as a CUDA graph. Outputs differ from the interpreter at fp16 rounding level."""
+        24 of 25 ms host-side dispatch). graph: the policy as a CUDA graph. Outputs differ from the interpreter at fp16 rounding level."""
         torch, net, A = self.torch, self.model.net, self.A
         self._enc = torch.compile(lambda p, c: net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"])
-        self._pol = torch.compile(lambda H, ego, tc: self.model(H, ego, tc), mode="reduce-overhead")
+        self._pol = torch.compile(lambda H, ego, tc: self.model(H, ego, tc), mode="reduce-overhead" if graph else None)
 
     def __init__(self, tag: str = "SH30-F-s0", dev: str = "cuda", cold: str = "backwarp", motion: float = 1.0, synth: str = "cpu"):
         import cv2

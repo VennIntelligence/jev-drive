@@ -295,7 +295,7 @@ def cmd_load(a):
     core = D.C.Core(TAG, "cuda", synth=a.synth)
     core.sync = not a.nosync
     if a.compile:
-        core.compile()
+        core.compile(a.compile == "graph")
     if a.pack == "gpu":
         D.C.pack_fast = lambda jpeg, cam: D.C.pack_gpu(jpeg, cam, core.dev)
     z = np.zeros(D.C.FRAME, np.uint8)
@@ -366,11 +366,12 @@ def cmd_runs(a):
 
 def cmd_same(a):
     A, B = (json.loads(Path(f).read_text())["plans"] for f in (a.msgs, a.out))
-    ks = [k for k in A if k in B]
+    bad = [k for k in B if not np.isfinite(np.array(B[k], float)).all()]
+    ks = [k for k in A if k in B and k not in bad]
     d = np.array([np.abs(np.array(A[k]) - np.array(B[k])).max() for k in ks])
     end = np.array([np.hypot(*(np.array(A[k])[-1, :2] - np.array(B[k])[-1, :2])) for k in ks])
     yaw = np.array([abs(np.degrees(A[k][0][2] - B[k][0][2])) for k in ks])
-    print(json.dumps(dict(decisions_a=len(A), decisions_b=len(B), common=len(d), differing=int((d > 0).sum()), max_abs=float(d.max()),
+    print(json.dumps(dict(decisions_a=len(A), decisions_b=len(B), non_finite_b=len(bad), common=len(d), differing=int((d > 0).sum()), max_abs=float(d.max()),
                           end_4s_m=pct(end) + [float(end.mean())], yaw_05s_deg=pct(yaw) + [float(yaw.mean())])), flush=True)
 
 
@@ -379,7 +380,7 @@ def main():
     ap.add_argument("cmd", choices=["equiv", "remap", "prof", "load", "same", "nvjpeg", "runs", "model"]), ap.add_argument("--msgs", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=0), ap.add_argument("--synth", default="gpu"), ap.add_argument("--streams", type=int, default=8)
     ap.add_argument("--nosync", action="store_true"), ap.add_argument("--pack", default="fast"), ap.add_argument("--driver", default="sh30")
-    ap.add_argument("--compile", action="store_true"), ap.add_argument("--nvjpeg", action="store_true")
+    ap.add_argument("--compile", nargs="?", const="graph", default=""), ap.add_argument("--nvjpeg", action="store_true")
     a = ap.parse_args()
     {"equiv": cmd_equiv, "remap": cmd_remap, "prof": cmd_prof, "load": cmd_load, "same": cmd_same, "nvjpeg": cmd_nvjpeg, "runs": cmd_runs, "model": cmd_model}[a.cmd](a)
 
