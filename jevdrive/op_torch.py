@@ -70,7 +70,7 @@ class OnnxTorch(torch.nn.Module):
         self.in_shapes = {i.name: tuple(d.dim_value for d in i.type.tensor_type.shape.dim) for i in g.input}
         self.outputs = [o.name for o in g.output]
         self.producer = {o: k for k, n in enumerate(self.nodes) for o in n[2]}
-        self._plans = {}
+        self._plans, self._drops = {}, {}
         self.lora = torch.nn.ParameterDict()
         self.lora_scale = {}
         for w, r in (lora or {}).items():
@@ -109,6 +109,21 @@ class OnnxTorch(torch.nn.Module):
             self._plans[key] = ks
         return self._plans[key]
 
+    def _drop(self, key):
+        """Per node of plan(*key): the values no later node reads. run forgets them there, so a pass holds its live values only (the
+        encoder at batch 128 needs 1.2 GB instead of 29; autograd keeps what backward needs). Same outputs."""
+        if key not in self._drops:
+            last, want, d = {}, set(key[1]), {}
+            for k in self.plan(*key):
+                last.update(dict.fromkeys(self.nodes[k][1], k))
+                for o in self.nodes[k][2]:
+                    last.setdefault(o, k)
+            for v, k in last.items():
+                if v and v not in want:
+                    d.setdefault(k, []).append(v)
+            self._drops[key] = d
+        return self._drops[key]
+
     def _w(self, name):
         return self.params[_key(name)] if name in self.fnames else self._c(name)
 
@@ -117,14 +132,18 @@ class OnnxTorch(torch.nn.Module):
 
     def run(self, feeds: dict, want: list[str]) -> dict:
         """One sample: feeds {value name: tensor} -> {name: tensor} for the wanted values."""
-        env = dict(feeds)
-        for k in self.plan(tuple(sorted(feeds)), tuple(want)):
+        env, key = dict(feeds), (tuple(sorted(feeds)), tuple(want))
+        drop = self._drop(key)
+        for k in self.plan(*key):
             op, ins, outs, at = self.nodes[k]
             x = [env[i] if i in env else (self._w(i) if i else None) for i in ins]
             y = getattr(self, "op_" + op)(x, at, ins)
             if not isinstance(y, (list, tuple)):
                 y = [y]
             env.update(zip(outs, y))
+            del x, y
+            for v in drop.get(k, ()):
+                env.pop(v, None)
         return {w: env[w] for w in want}
 
     def run_batched(self, feeds: dict, want: list[str], in_dims=None) -> dict:

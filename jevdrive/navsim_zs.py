@@ -198,24 +198,25 @@ class OpenpilotMaps:
             yi = np.clip(np.rint(uv[..., 1]), 0, h - 1).astype(np.int64)
             self.idx.append((yi * w + xi).ravel())
             self.coverage.append(float(ok.mean()))
+        self._take = [(3 * np.stack(self.idx) + c).reshape(2, MODEL_H, MODEL_W) for c in range(3)]      # flat byte indices of Y, Cb, Cr
 
     @staticmethod
     def decode(path: str) -> np.ndarray:
         from PIL import Image
         im = Image.open(path)
         im.draft("YCbCr", im.size)          # libjpeg's own YCbCr (BT.601 full range)
-        return np.asarray(im.convert("YCbCr"))
+        return np.asarray(im if im.mode == "YCbCr" else im.convert("YCbCr"))
 
     def __call__(self, ycc: np.ndarray) -> np.ndarray:
         """Full-res YCbCr CAM_F0 (1080, 1920, 3) -> (2, 6, 128, 256) uint8 [road, wide], frames_to_tensor packing."""
-        cat = ycc.reshape(-1, 3)
-        out = np.empty((2, 6, 128, 256), np.uint8)
-        for k, idx in enumerate(self.idx):
-            p = cat[idx].reshape(256, 512, 3)
-            Y = p[..., 0]
-            uv = np.rint(p[..., 1:].reshape(128, 2, 256, 2, 2).astype(np.float32).mean((1, 3))).astype(np.uint8)
-            out[k] = np.stack([Y[0::2, 0::2], Y[1::2, 0::2], Y[0::2, 1::2], Y[1::2, 1::2], uv[..., 0], uv[..., 1]])
-        return out
+        f = np.ascontiguousarray(ycc).reshape(-1)
+        Y, U, V = (f.take(i) for i in self._take)
+
+        def half(c):                        # 2x2 mean rounded half to even, in integers (= np.rint of the float32 mean)
+            c = c.astype(np.uint16)
+            s = c[:, 0::2, 0::2] + c[:, 1::2, 0::2] + c[:, 0::2, 1::2] + c[:, 1::2, 1::2]
+            return ((s + 1 + ((s >> 2) & 1)) >> 2).astype(np.uint8)
+        return np.stack([Y[:, 0::2, 0::2], Y[:, 1::2, 0::2], Y[:, 0::2, 1::2], Y[:, 1::2, 1::2], half(U), half(V)], 1)
 
 
 # ---------------------------------------------------------------- history / output converters
