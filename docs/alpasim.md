@@ -291,4 +291,48 @@ $C status <submission_id>; $C submissions --track nuplan-warmup
 $C submit --track nuplan "$URI"             # official; add --controller-gains gains.json to change the MPC gains
 ```
 
+## PAI track on the Tokyo box (measured 2026-10-09)
+
+Read this when you run the Physical AI AV track locally. Its renderer (NRE) ships only as a container, so it runs on the
+Tokyo box ([tokyo-box.md](tokyo-box.md)), not on the GPU box. Results:
+[experiments/alpasim/results/pai_smoke.md](../experiments/alpasim/results/pai_smoke.md).
+
+- Renderer image `nvcr.io/nvidia/nre/nre-ga:26.04`: pulled anonymously (no NGC login), 13.3 GB compressed, 27.8 GB on disk.
+- Scenes: `nvidia/PhysicalAI-Autonomous-Vehicles-NuRec` (gated; the token on the box reads revisions `26.01` and `26.04`),
+  one `.usdz` of 1.5-2.0 GB per scene, into `/data/datasets/nurec/all-usdzs/<uuid>.usdz` (the wizard's cache layout);
+  5-8 MB/s through Clash at 4 streams.
+- The organisers' reference runs on the 441-scene curated validation split (`e2e_challenge/local_evaluation/data/pai`,
+  8 subjects x 3 rollouts) are git-lfs pointers in the checkout; the summaries are in `/data/runs/alpasim/pai1/ref/<subject>.json`
+  (from `media.githubusercontent.com/media/NVlabs/alpasim/0bb4c4b/<path>`, sha256 checked against the pointers).
+- The dev preset's renderer runs with `--enable-harmonizer` and fetches `nvidia/DiffusionHarmonizer` at start, which fails
+  inside the container. The public leaderboard evaluates the unharmonised renderer (`e2e_challenge/ec2.yaml`), so `pai_run.sh`
+  removes the flag by default; `HARMONIZER=1` keeps it and mounts the weights from `/data/datasets/nurec/harmonizer` (the
+  reference runs were rendered that way).
+
+```bash
+# on the Tokyo box, tmux `jev`, windows named pai-*; S = experiments/alpasim/scripts (a copy is in /data/runs/alpasim/pai1/code)
+P=/data/runs/alpasim/pai1
+python3 $S/pai_scenes.py --src /data/third_party/alpasim --ref $P/ref --n 40 --first 10 --out $P/pai_scenes_40.tsv
+bash $S/pai_fetch.sh $P/pai_scenes_40.tsv 1                      # stage 1 = the nested 10; 2 = all 40
+CONC=4 DRV_ENV="-e PAI_DUMP=10" bash $S/pai_run.sh $P/runs/<name> $P/pai_scenes_40.tsv
+python3 $S/pai_report.py table --runs <label>=$P/runs/<name> --ref $P/ref
+/data/envs/tfv6/bin/python $S/pai_report.py frames --run $P/runs/<name> --out $P/runs/<name>/fig     # needs matplotlib
+```
+
+`pai_run.sh` starts the driver (the nuPlan submission image with `lib/pai_core.py` and `lib/pai_driver.py` mounted), has the
+wizard write the compose file inside `alpasim-base` (`+e2e_challenge=dev`, `run_method=NONE`) and runs it under its own
+compose project (`pai-<name>`), network (`pai-nonet`) and ports (6400+). The nuPlan image smoke (`docker/smoke.sh`) uses
+compose project `run` with `--remove-orphans`: a PAI stack started from a directory named `run` would be taken down by it.
+
+| Measured, one RTX 3090 (24 GB), unharmonised renderer | Value |
+|---|---|
+| One scene, sequential | 147 s wall: about 45 s start-up, about 100 s for the 20 s rollout (200 steps, 6 cameras), eval and video |
+| 10 scenes, 4 concurrent rollouts | 621 s and 569 s: about 60 s per scene |
+| VRAM | renderer 4.6 GiB (1 scene), 18.1-18.7 GiB peak (4 concurrent); physics 0.3-1.1 GiB; our driver 3.0 GiB |
+| Host RAM, 4 concurrent | runtime 9.3 GiB, renderer 6.0 GiB, driver 2.0 GiB |
+| Output | 0.42-0.50 GB per scene (video and `rollout.asl`) |
+
+Four concurrent rollouts with the driver on the same card use about 23 of 24 GiB; more was not tried.
+With `HARMONIZER=1` the same 10 scenes took 4 436 s (7.1x slower); the score did not move (0.1539 vs 0.1538).
+
 Last verified: 2026-10-09
