@@ -26,7 +26,8 @@ MEM=$DATA_DIR/runs/op_parity/mem
 DATA="navtrain_full.s2of12 navtrain_full.s3of12 navtrain_full.s4of12"
 SPLIT=navsim/op-parity-s234
 HF="--hinge-lam 30 --hinge-margin 0.5"
-VRAM=${PR_VRAM:-22}          # GB, measured by the smoke (docs in the prereg's pre-launch note)
+VRAM=${PR_VRAM:-24}          # GB. Measured: the 30-step, 64-row smoke incl. dev eval + navtest export peaks at 18.5 (pool record); decision 200's
+                             # path-field arm peaked at 18.2 over 3 000 steps
 declare -A KIND=([QF]=qf [QFC]=qf [QFL]=qf [QX]=qx [QN025]=qn0.25 [QN050]=qn0.5 [QN100]=qn1.0 [QN200]=qn2.0 [QL075]=ql0.75 [QL150]=ql1.5 [QL300]=ql3.0
                  [QT1]=qt1 [QT2]=qt2 [QS]=qs [QV]=qv [QCH]=qch [QC7]=qc7 [QH]=qh)
 ST0=(QF QFC QFL QX); ST1=(QN025 QN050 QN100 QN200); ST2=(QL075 QL150 QL300 QT1 QT2 QS QV QCH QC7 QH)
@@ -39,7 +40,7 @@ sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
         local id; id=$($CL submit --owner op_parity --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 20; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; return 0; }
 tok() {  # kind: the tokenizer of the kind, pre-trained with its own thin head
-  sub pr-tok-$1 $L/tok-$1 --vram 6 --cpu 4 --ram 24 -- $PY $S/path_req.py tok --kind $1
+  sub pr-tok-$1 $L/tok-$1 --vram 3 --cpu 2 --ram 16 -- $PY $S/path_req.py tok --kind $1
 }
 train() {  # arm seed
   local arm=$1 t=$1-F-s$2 k=${KIND[$1]} extra=() gate=()
@@ -50,7 +51,7 @@ train() {  # arm seed
     *) tok $k; extra=(--mem-init $O/tok/$k.pt); gate=(--when-exists $O/tok/$k.pt);;
   esac
   [[ $arm == QH ]] && gate=(--when-exists $O/head/head.json)
-  sub pr-t-$t $L/t-$t --train --vram $VRAM --cpu 6 --ram 40 "${gate[@]}" -- $PY $S/pp_train.py --arm P2 --mem-e2e $k "${extra[@]}" --seed $2 \
+  sub pr-t-$t $L/t-$t --train --vram $VRAM --cpu 4 --ram 40 "${gate[@]}" -- $PY $S/pp_train.py --arm P2 --mem-e2e $k "${extra[@]}" --seed $2 \
       --frames warp --host --data $DATA --split $SPLIT --steps 3000 --batch 64 --warmup 100 --eval-every 1000 $HF --tag $t
 }
 launch() { for arm in "$@"; do for s in $(seeds $arm); do train $arm $s; done; done; }
@@ -106,7 +107,7 @@ cp -r $O/report $O/report-stage1
 drop_banks "${ST1[@]}"
 
 status "stage 2: thin head, along-track error, horizon, content"
-sub pr-head $L/head --vram 14 --cpu 6 --ram 48 -- $PY $S/path_req.py head
+sub pr-head $L/head --vram 12 --cpu 4 --ram 48 -- $PY $S/path_req.py head
 launch "${ST2[@]}"
 settle "${ST2[@]}"
 score pr2 $(specs "${ST2[@]}")
