@@ -28,11 +28,22 @@ QF = np.r_[0, 1, 2, 3, np.repeat(np.arange(4, 9), 4)]
 LINE = 0.80
 
 
+DRY = False                                      # --dry: plumbing check on the validation logs, zeros for G2; reads neither gate
+
+
+def base():
+    return C.sroot() / "dry" if DRY else C.sroot()
+
+
 def hold_rows(steps=False):
-    R = C.load_rows(FAMS, range(B.NSH), lambda log, hold: hold, steps=steps)
     from jevdrive.data import splits
     ho, tr = splits.load(B.HOLD), splits.load(B.TRAIN)
-    assert ho.mask(R["log"]).all() and not tr.mask(R["log"]).any()
+    if DRY:
+        R = C.load_rows(FAMS, range(B.NSH), lambda log, hold: ~hold & np.array([C.is_val(l) for l in log.tolist()]), steps=steps)
+        assert tr.mask(R["log"]).all()
+    else:
+        R = C.load_rows(FAMS, range(B.NSH), lambda log, hold: hold, steps=steps)
+        assert ho.mask(R["log"]).all() and not tr.mask(R["log"]).any()
     return R, (ho, tr)
 
 
@@ -86,10 +97,12 @@ def cmd_predict(a):
         G2 = {}
         for g in G2_SETS:
             z = np.load(B.root() / "g2" / "dump" / f"{g}.npz")
+            if DRY:
+                continue
             G2[g] = dict(scene=z["scene"], k=z["k"], V=torch.as_tensor(z["tokens"]).to(dev), valid=torch.as_tensor(z["valid"]).to(dev), ego=z["ego"].astype(np.float32),
                          q=torch.as_tensor(z["poses"].astype(np.float32)[:, None]).to(dev))
         run.info("hold: %d states, %d logs; G2: %s decisions", n, len(set(R["log"].tolist())), {g: len(v["k"]) for g, v in G2.items()})
-        (C.sroot() / "pred").mkdir(parents=True, exist_ok=True)
+        (base() / "pred").mkdir(parents=True, exist_ok=True)
         for spec in a.runs:
             name, d = spec.split("=")
             net, ck = C.load_ckpt(_pl.Path(d) / "ckpt.pt", dev)
@@ -104,8 +117,10 @@ def cmd_predict(a):
             for g, z in G2.items():
                 o, _ = C.predict(net, z["V"] if vis else None, st(z["ego"]), z["q"], valid=z["valid"])
                 arr[f"g2_{g}"] = o[:, 0].astype(np.float32)
-            np.savez(C.sroot() / "pred" / f"{name}.npz", **arr)
-            with open(C.sroot() / "reads.jsonl", "a") as f:
+            if DRY:
+                arr |= {f"g2_{g}": np.zeros(len(np.load(B.root() / "g2" / "dump" / f"{g}.npz")["k"]), np.float32) for g in G2_SETS}
+            np.savez(base() / "pred" / f"{name}.npz", **arr)
+            with open(base() / "reads.jsonl", "a") as f:
                 f.write(json.dumps(dict(t=time.strftime("%Y-%m-%d %H:%M:%S"), name=name, ckpt=str(d), read="hold rows (G1) + G2 decisions", config=ck["config"], val=ck["val"])) + "\n")
             run.info("%s: predicted (%s, val own agent %.3f boundary %.3f)", name, ck["config"]["arch"], ck["val"]["own_a"], ck["val"]["own_b"])
             del net
@@ -164,9 +179,9 @@ def cmd_report(a):
             run.use_split(s)
         T = dict(np.load(B.root() / "taxonomy" / "tax.npz"))
         D, Y = _own(R, T)
-        out = C.sroot() / "report"
+        out = base() / "report"
         out.mkdir(parents=True, exist_ok=True)
-        P = lambda nm: np.load(C.sroot() / "pred" / f"{nm}.npz")  # noqa: E731
+        P = lambda nm: np.load(base() / "pred" / f"{nm}.npz")  # noqa: E731
         lc = dict(x.split("=") for x in a.lc)
         names = list(dict.fromkeys(a.final + [a.blind] + list(lc.values()) + a.extra))
         pr = {nm: P(nm) for nm in names}
@@ -278,7 +293,7 @@ def cmd_figs(a):
     import bd1_fig as BF
     logging.getLogger("fontTools").setLevel(logging.WARNING)
     P.apply()
-    rep = C.sroot() / "report"
+    rep = base() / "report"
     out = rep / "figs"
     out.mkdir(parents=True, exist_ok=True)
     D, g1, lc = pd.read_parquet(rep / "own.parquet"), pd.read_csv(rep / "g1.csv"), pd.read_csv(rep / "lc.csv")
@@ -392,5 +407,7 @@ if __name__ == "__main__":
         p.add_argument("--lc", nargs="*", default=[], help="FRAC=NAME")
         p.add_argument("--extra", nargs="*", default=[])
         cli_args(p)
+    ap.add_argument("--dry", action="store_true", help="plumbing check on the validation logs (s0/dry/); no gate is read")
     a = ap.parse_args()
+    DRY = a.dry
     {"std": cmd_std, "predict": cmd_predict, "report": cmd_report, "figs": cmd_figs}[a.cmd](a)
