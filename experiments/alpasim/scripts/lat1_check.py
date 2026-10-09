@@ -19,7 +19,7 @@ simulator (c1_replay.py's harness). Results: experiments/alpasim/results/lat1_fr
       instead of libjpeg: decode time, pixel difference of the model frames, plan difference on the logged inputs
   lat1_check.py runs --msgs <closed-loop run dir A> --out <run dir B>                    (no GPU)
       two closed-loop runs of one scene list: scene scores, and every decision's ego pose and plan (driver-logs/drive.jsonl) one
-      against the other; the stage latency of both
+      against the other; the stage latency of both, and the runtime's own mean time per driver RPC (telemetry/metrics.prom)
   lat1_check.py model --msgs <dir> --out <json>
       where the encoder and policy time goes (jevdrive.op_torch interprets the ONNX graph node by node under vmap): graph nodes and
       aten calls per pass, host time to enqueue a pass against the time until the card has finished it, and the same for 2 and 4
@@ -319,6 +319,15 @@ def cmd_load(a):
     Path(a.out).write_text(json.dumps(dict(s, plans=plans)))
 
 
+def rpc_means(run: Path) -> dict:
+    """Runtime-side mean duration (ms) of every driver RPC, summed over the runtime workers."""
+    import re
+    acc = {}
+    for m in re.finditer(r'^rpc_duration_seconds_(count|sum)\{method="(\w+)",service="driver"[^}]*\} (\S+)$', (run / "telemetry/metrics.prom").read_text(), re.M):
+        acc.setdefault(m[2], {"count": 0.0, "sum": 0.0})[m[1]] += float(m[3])
+    return {k: round(1e3 * v["sum"] / v["count"], 2) for k, v in acc.items() if v["count"]}
+
+
 def cmd_runs(a):
     out = {}
     for name, run in (("a", Path(a.msgs)), ("b", Path(a.out))):
@@ -330,7 +339,7 @@ def cmd_runs(a):
                          decisions=len(dr), runtime_s=ns["times"]["runtime_s"], driver_gpu_mib=ns["peak"]["driver"]["gpu_mib"],
                          driver_cpu_s=ns["peak"]["driver"]["cpu_s"], driver_rss_gib=ns["peak"]["driver"]["rss_gib"],
                          ms={k: pct([r["ms"][k] for r in dr.values()]) for k in ("frames", "encode", "policy", "export", "prep", "wait", "total")},
-                         pack_ms=pct(im))
+                         pack_ms=pct(im), rpc_mean_ms=rpc_means(run))
         out[name + "_"] = dr, sc
     (da, sa), (db, sb) = out.pop("a_"), out.pop("b_")
     common = sorted(set(da) & set(db))
