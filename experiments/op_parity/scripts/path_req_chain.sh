@@ -62,7 +62,7 @@ settle() {  # arms: wait for their trainings, sanity-check them
     local t=$arm-F-s$s
     waitdirs $L/t-$t
     $PY $S/pp_full_check.py train --tag $t || die "training sanity $t"
-    [[ -f $MEM/ge_$t/lb_navtest.npy ]] || die "no navtest bank for $t"
+    [[ -f $MEM/ge_$t/lb_navtest.npy || -f $DATA_DIR/runs/bench/navtest/$t@warp/DONE || $arm == QFC || $arm == QFL ]] || die "no navtest bank for $t"   # banks of scored arms are dropped
   done; done
 }
 score() {  # replay-name spec ...: navtest through bench, then the four_dirs replay of the unmasked specs
