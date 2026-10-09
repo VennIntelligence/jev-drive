@@ -66,13 +66,13 @@ def load_model(tag: str, dev):
 
 
 class Core(C.Core):
-    def __init__(self, tag: str, dev: str = "cuda", cold: str = ""):
+    def __init__(self, tag: str, dev: str = "cuda", cold: str = "", motion: float = 1.0):
         """cold: "" = the rule the checkpoint was trained with."""
         import cv2
         import torch
         from jevdrive import op_adapt as A
         cv2.setNumThreads(1)
-        self.torch, self.A, self.tag = torch, A, tag
+        self.torch, self.A, self.tag, self.motion = torch, A, tag, float(motion)
         self.dev = torch.device(dev)
         self.model, self.route, trained = load_model(tag, self.dev)
         self.cold = cold or trained
@@ -81,7 +81,7 @@ class Core(C.Core):
         s = self.model.net.slices["plan"].start
         self.pi = slice(s, s + 33 * 15)
 
-    def plan(self, keys, pose, vel, acc, cmd, cam_t, yaw_rate: float = 0.0, lht: bool = False, wp=None) -> dict:
+    def plan(self, keys, pose, vel, acc, cmd, cam_t, yaw_rate: float = 0.0, lht: bool = False, wp=None, motion: float | None = None) -> dict:
         """sh30_core.Core.plan with the route: wp (20, 2) rig-frame waypoints (NaN = padding), read only by a route arm."""
         torch, A = self.torch, self.A
         t0 = time.perf_counter()
@@ -90,7 +90,7 @@ class Core(C.Core):
         K = np.zeros((4,) + C.FRAME, np.uint8)
         K[e:] = np.stack(keys)
         cam_t = np.asarray(cam_t, np.float64)
-        cur, valid = C.lattice(K, e, I.track_navsim(P, V), cam_t, self.cold)
+        cur, valid = C.lattice(K, e, I.track_navsim(*C.damp_history(P, V, self.motion if motion is None else motion)), cam_t, self.cold)
         prev = np.concatenate([np.zeros((1,) + C.FRAME, np.uint8), cur[:-1]])
         ego = PA.ego_features(P, V, np.tile(np.asarray(acc, np.float32), (4, 1)), np.asarray(cmd, np.float32))
         if self.route:

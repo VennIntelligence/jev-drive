@@ -14,6 +14,10 @@ What the simulator gives -> what the core is fed (docs/alpasim.md, "What a nuPla
             sample's own functions (navsim_transfuser_challenge.trajectory, imported unchanged; Apache-2.0, NVIDIA)
   traffic   right-hand convention unless SH30_LHT=1 (the driver is not told the map)
 
+Yaw damping (decision 205): SH30_MOTION = the share of the ego's own turning shown to the model in the synthesised slots (sh30_core.py;
+default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route message is a straight line that passes the ego
+(`route_line`: the road ahead is straight, so any turning is the ego's own); elsewhere the model sees all of it.
+
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
 (op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
@@ -68,6 +72,22 @@ def quat_R(q) -> np.ndarray:
                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
 
 
+def route_line(wp, tol: float = 0.5, reach: float = 2.5, max_deg: float = 20.0):
+    """Route waypoints (n, 2) in the rig frame (NaN = padding) -> (straight, direction rad, signed offset m of the ego from the line).
+    straight: at least 3 waypoints within `tol` m of their own least-squares line, that line passes within `reach` m of the ego and
+    points within `max_deg` of the ego heading. Uses the route's shape only, so the ego's own yaw does not change the answer."""
+    wp = np.asarray(wp, np.float64).reshape(-1, 2)
+    wp = wp[~np.isnan(wp).any(1)]
+    if len(wp) < 3:
+        return False, 0.0, 0.0
+    c = wp.mean(0)
+    u = np.linalg.svd(wp - c)[2][0]
+    u = u if u[0] >= 0 else -u
+    n = np.array([-u[1], u[0]])
+    dev, off, phi = float(np.abs((wp - c) @ n).max()), float(-c @ n), float(np.arctan2(u[1], u[0]))
+    return dev <= tol and abs(off) <= reach and abs(np.degrees(phi)) <= max_deg, phi, off
+
+
 def rot(a: float) -> np.ndarray:
     return np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]])
 
@@ -114,8 +134,8 @@ def _xy(p) -> np.ndarray:
 
 
 class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
-    def __init__(self, core: C.Core, log_dir: Path, dump: int = 0, lht: bool = False):
-        self.core, self.lht, self.dump, self.dir = core, lht, dump, log_dir
+    def __init__(self, core: C.Core, log_dir: Path, dump: int = 0, lht: bool = False, gate: str = ""):
+        self.core, self.lht, self.dump, self.dir, self.gate = core, lht, dump, log_dir, gate
         self.sessions, self.lock, self.gpu, self.nsess = {}, threading.Lock(), threading.Lock(), 0
         log_dir.mkdir(parents=True, exist_ok=True)
         self.out = open(log_dir / "drive.jsonl", "a", buffering=1)
@@ -183,11 +203,16 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         s = self._s(req.session_uuid, ctx)
         s.cmd = command_from_route(req.route)
         s.route0 = [req.route.waypoints[0].x, req.route.waypoints[0].y] if req.route.waypoints else None
+        s.line = route_line([[w.x, w.y] for w in req.route.waypoints])
         return common_pb2.Empty()
 
     def submit_recording_ground_truth(self, req, ctx):
         self._s(req.session_uuid, ctx)
         return common_pb2.Empty()
+
+    def motion(self, s) -> float:
+        """The share of the ego's turning shown to the model at this decision (module docstring)."""
+        return self.core.motion if self.gate != "route" or getattr(s, "line", (False,))[0] else 1.0
 
     def drive(self, req, ctx):
         s, now, tq = self._s(req.session_uuid, ctx), int(req.time_now_us), int(req.time_query_us)
@@ -215,7 +240,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         try:
             with self.gpu:
                 t_g = time.perf_counter()
-                o = self.core.plan(frames, pose, np.array([d[0] for d in dyn]), dyn[-1][1], cmd, s.cam["t"], yaw_rate=dyn[0][2], lht=self.lht)
+                mo = self.motion(s)
+                o = self.core.plan(frames, pose, np.array([d[0] for d in dyn]), dyn[-1][1], cmd, s.cam["t"], yaw_rate=dyn[0][2], lht=self.lht, motion=mo)
         except Exception as e:
             s.count["inference_error"] += 1
             LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
@@ -226,6 +252,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         t_out = time.perf_counter()
         rec = {"kind": "drive", "t": time.time(), "session": req.session_uuid, "scene": s.scene, "now": now, "t0": t0, "k": s.count["drive"] - 1,
                "n_keys": len(keys), "n_slots": int(o["valid"].sum()), "cmd": int(np.argmax(cmd)), "route0": getattr(s, "route0", None),
+               "motion": mo, "line": [bool(getattr(s, "line", (0, 0, 0))[0]), *np.round(getattr(s, "line", (0, 0.0, 0.0))[1:], 4).tolist()],
                "rotated": [bool(d[3]) for d in dyn], "ego": o["ego"].round(5).tolist(), "hist": o["hist"].round(4).tolist(),
                "anchor": [anchor.pose.vec.x, anchor.pose.vec.y, yaw0], "poses": o["poses"].round(4).tolist(), "n_out": len(traj.poses),
                "ms": {**{k: round(v, 2) for k, v in o["ms"].items()}, "prep": round(1e3 * (t_q - t_in), 2), "wait": round(1e3 * (t_g - t_q), 2),
@@ -247,12 +274,13 @@ def main() -> None:
     host, port = os.environ.get("ALPASIM_DRIVER_HOST", "0.0.0.0"), int(os.environ.get("ALPASIM_DRIVER_PORT", "6789"))
     log_dir = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/tmp/alpasim-driver"))
     t0 = time.time()
-    core = C.Core(os.environ.get("SH30_TAG", "SH30-F-s0"), os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("SH30_COLD", "backwarp"))
+    core = C.Core(os.environ.get("SH30_TAG", "SH30-F-s0"), os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("SH30_COLD", "backwarp"),
+                  float(os.environ.get("SH30_MOTION", "1")))
     z = np.zeros(C.FRAME, np.uint8)
     for m in (1, 4, 4):                                 # warm-up: both slot counts compiled before the port opens
         core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])
-    LOG.info("%s (%s) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
-    drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1")
+    LOG.info("%s (%s, motion %.2f) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, core.motion, time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
+    drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1", os.environ.get("SH30_MOTION_GATE", ""))
     server = grpc.server(ThreadPoolExecutor(max_workers=int(os.environ.get("ALPASIM_DRIVER_GRPC_WORKERS", "8"))))
     egodriver_pb2_grpc.add_EgodriverServiceServicer_to_server(drv, server)
     if server.add_insecure_port(f"{host}:{port}") == 0:

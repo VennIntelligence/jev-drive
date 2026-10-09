@@ -10,7 +10,7 @@ Differences from the SH30 driver, all on the input side (experiments/alpasim/lib
   command   the shipped route rule (as SH30); the 20 route waypoints go to the model as well when the checkpoint is a route arm
 
 Environment: as sh30_driver.py, with AP2_TAG (run tag under $DATA_DIR/runs/op_parity/runs, required) and AP2_COLD (zero | backwarp;
-unset = the trained rule).
+unset = the trained rule); SH30_MOTION / SH30_MOTION_GATE as in sh30_driver.py.
 Run with envs/op-train:  AP2_TAG=AP2-A-s0 python experiments/alpasim/lib/ap2_driver.py
 """
 from __future__ import annotations
@@ -40,7 +40,7 @@ class Driver(D.Driver):
         s = self._s(req.session_uuid, ctx)
         wp = np.array([[w.x, w.y] for w in req.route.waypoints], np.float32).reshape(-1, 2)
         with s.lock:
-            s.cmd, s.wp = D.command_from_route(req.route), wp
+            s.cmd, s.wp, s.line = D.command_from_route(req.route), wp, D.route_line(wp)
             s.route0 = wp[0].tolist() if len(wp) else None
             s.count["cmd_rule_diff"] = s.count.get("cmd_rule_diff", 0) + int(np.argmax(AI.route_cmd(wp)) != np.argmax(s.cmd))
         return D.common_pb2.Empty()
@@ -80,7 +80,8 @@ class Driver(D.Driver):
         try:
             with self.gpu:
                 t_g = time.perf_counter()
-                o = self.core.plan(frames, pose, np.array([d[0] for d in dyn]), dyn[-1][1], cmd, s.cam["t"], yaw_rate=dyn[0][2], lht=self.lht, wp=wp)
+                mo = self.motion(s)
+                o = self.core.plan(frames, pose, np.array([d[0] for d in dyn]), dyn[-1][1], cmd, s.cam["t"], yaw_rate=dyn[0][2], lht=self.lht, wp=wp, motion=mo)
         except Exception as e:
             s.count["inference_error"] += 1
             LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
@@ -90,7 +91,7 @@ class Driver(D.Driver):
         traj = D.build_trajectory_from_plan(plan, anchor, now, tq)
         t_out = time.perf_counter()
         rec = {"kind": "drive", "t": time.time(), "session": req.session_uuid, "scene": s.scene, "now": now, "t0": t0, "k": s.count["drive"] - 1,
-               "n_keys": len(keys), "n_slots": int(o["valid"].sum()), "cmd": int(np.argmax(cmd)), "route0": getattr(s, "route0", None),
+               "n_keys": len(keys), "n_slots": int(o["valid"].sum()), "cmd": int(np.argmax(cmd)), "route0": getattr(s, "route0", None), "motion": mo,
                "n_wp": None if wp is None else int((~np.isnan(wp[:, 0])).sum()), "rotated": [bool(d[3]) for d in dyn], "w": float(dyn[-1][2]),
                "ego": o["ego"][:20].round(5).tolist(), "hist": o["hist"].round(4).tolist(), "anchor": [anchor.pose.vec.x, anchor.pose.vec.y, yaw0],
                "poses": o["poses"].round(4).tolist(), "n_out": len(traj.poses),
@@ -109,12 +110,12 @@ def main() -> None:
     host, port = os.environ.get("ALPASIM_DRIVER_HOST", "0.0.0.0"), int(os.environ.get("ALPASIM_DRIVER_PORT", "6789"))
     log_dir = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/tmp/alpasim-driver"))
     t0 = time.time()
-    core = AC.Core(os.environ["AP2_TAG"], os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("AP2_COLD", ""))
+    core = AC.Core(os.environ["AP2_TAG"], os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("AP2_COLD", ""), float(os.environ.get("SH30_MOTION", "1")))
     z = np.zeros(AC.C.FRAME, np.uint8)
     for m in (1, 2, 3, 4, 4):                           # warm-up: every slot count compiled before the port opens
         core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])
     LOG.info("%s (%s, route arm %s) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, core.route, time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
-    drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1")
+    drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1", os.environ.get("SH30_MOTION_GATE", ""))
     server = D.grpc.server(ThreadPoolExecutor(max_workers=int(os.environ.get("ALPASIM_DRIVER_GRPC_WORKERS", "8"))))
     D.egodriver_pb2_grpc.add_EgodriverServiceServicer_to_server(drv, server)
     if server.add_insecure_port(f"{host}:{port}") == 0:

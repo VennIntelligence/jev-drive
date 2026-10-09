@@ -10,6 +10,10 @@ Per decision at t0, from the CAM_F0 keyframes at t0 - 1.5 / 1.0 / 0.5 / 0 s (as 
   policy   PModel: adapter bias from lib/parity_adapter.ego_features (command, vx, vy, ax, ay, 4 poses) + the trained plan pathway
   export   33 camera-frame plan points -> rear axle through the camera lever arm, linear resampling to 0.5 .. 4 s (8 poses)
 
+Closed-loop yaw damping (decision 205, off by default): the synthesised slots are the only place the model sees the ego's turning in the
+last 0.5 s (the newest image pair is one keyframe warped along the ego track), and its plan continues that yaw rate one to one, as the logs
+do. Behind a tracker that executes the plan this is an undamped loop. `motion` < 1 shows the model that share of the turning only.
+
 Cold start (fewer than 4 keyframes; NAVSIM always has 4, so no rule was trained):
   poses    the missing history poses are the oldest known state run backwards at constant body velocity and yaw rate (both rules)
   backwarp (default) the slots older than the oldest keyframe are that keyframe re-projected to the back-extrapolated poses (op_interp's
@@ -70,6 +74,17 @@ def fill_history(pose, vel, yaw_rate: float):
     return P, V
 
 
+def damp_history(P, V, gain: float):
+    """History (4, 3), (4, 2) with its turning scaled by `gain`: gain 1 = as driven, 0 = the same spacing on the x axis of t0 (yaw 0, no
+    lateral velocity). Only the warp track of the synthesised slots takes this (Core.motion); the ego features keep the driven history."""
+    if gain >= 1.0:
+        return P, V
+    d = np.r_[np.hypot(*np.diff(P[:, :2], axis=0).T), 0.0]
+    Ps = np.c_[-d[::-1].cumsum()[::-1], np.zeros(4), np.zeros(4)]
+    Vs = np.c_[np.copysign(np.hypot(V[:, 0], V[:, 1]), V[:, 0]), np.zeros(4)]
+    return gain * P + (1 - gain) * Ps, gain * V + (1 - gain) * Vs
+
+
 _POOL = None
 
 
@@ -89,14 +104,14 @@ def lattice(keys: np.ndarray, e: int, track, cam_t, cold: str):
 
 
 class Core:
-    def __init__(self, tag: str = "SH30-F-s0", dev: str = "cuda", cold: str = "backwarp"):
+    def __init__(self, tag: str = "SH30-F-s0", dev: str = "cuda", cold: str = "backwarp", motion: float = 1.0):
         import cv2
         import torch
         import pp_train as T
         cv2.setNumThreads(1)                              # the slot warps are threaded here; cv2's own pool would oversubscribe
         from jevdrive import op_adapt as A
         assert cold in COLD, cold
-        self.torch, self.A, self.tag, self.cold = torch, A, tag, cold
+        self.torch, self.A, self.tag, self.cold, self.motion = torch, A, tag, cold, float(motion)
         self.dev = torch.device(dev)
         self.model = T.load_pmodel(tag, self.dev)
         assert self.model.arm == "P2" and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"
@@ -108,10 +123,11 @@ class Core:
             self.torch.cuda.synchronize(self.dev)
         return time.perf_counter()
 
-    def plan(self, keys, pose, vel, acc, cmd, cam_t, yaw_rate: float = 0.0, lht: bool = False) -> dict:
+    def plan(self, keys, pose, vel, acc, cmd, cam_t, yaw_rate: float = 0.0, lht: bool = False, motion: float | None = None) -> dict:
         """One decision. keys: the m <= 4 newest keyframes (packed, 0.5 s apart, oldest first, the last at t0); pose (m, 3) x, y, yaw of
         the rear axle at those times in the t0 frame; vel (m, 2) body velocities; acc (2,) and cmd (4,) NAVSIM one-hot [L, S, R, unknown]
-        at t0; cam_t the camera position in the ego frame; yaw_rate of the oldest state (cold start only).
+        at t0; cam_t the camera position in the ego frame; yaw_rate of the oldest state (cold start only); motion: the share of the
+        history's turning shown in the synthesised slots (damp_history; default self.motion, 1 = all of it).
         -> poses (8, 3) rear-axle x, y, yaw at 0.5 .. 4 s in the t0 frame, mu (33, 15), ego (20,), frames, stage times (ms)."""
         torch, A = self.torch, self.A
         t0 = time.perf_counter()
@@ -121,7 +137,7 @@ class Core:
         K = np.zeros((4,) + FRAME, np.uint8)
         K[e:] = np.stack(keys)
         cam_t = np.asarray(cam_t, np.float64)
-        cur, valid = lattice(K, e, I.track_navsim(P, V), cam_t, self.cold)
+        cur, valid = lattice(K, e, I.track_navsim(*damp_history(P, V, self.motion if motion is None else motion)), cam_t, self.cold)
         prev = np.concatenate([np.zeros((1,) + FRAME, np.uint8), cur[:-1]])
         ego = PA.ego_features(P, V, np.tile(np.asarray(acc, np.float32), (4, 1)), np.asarray(cmd, np.float32))
         t1 = time.perf_counter()
