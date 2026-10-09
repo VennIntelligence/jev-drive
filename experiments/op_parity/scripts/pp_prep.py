@@ -18,12 +18,17 @@ $DATA_DIR/runs/op_parity/cache/<data>/:
 Rendering runs on a CPU process pool (all cores of the job), the encoder on one GPU, overlapped (rendered chunks stream into the GPU
 loop). Every file is a jevdrive.cache artifact (key: data dir, token list, code), so a rerun skips what is done.
 
+Protocol `warp`, --synth gpu (default): the workers only read the keys and compute the warp poses, the 6 lattice frames of a chunk are
+warped on the card (warp_keys: jevdrive.op_interp.warp_gpu, the bytes of the CPU warp) and go to the encoder in the batches of the CPU
+path, so front.npy is the same file (experiments/alpasim/scripts/prep_check.py); --synth cpu keeps the warps in the workers. The warp
+front is written row-wise (Part): a killed build continues from its last checkpoint.
+
   python experiments/op_parity/scripts/pp_prep.py --data lb_navtest [--limit 64] [--workers N]
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "scripts"), str(_R / "experiments/op_adapt_r2/lib")]
-import argparse, json, time  # noqa: E401,E402
+import argparse, json, os, time  # noqa: E401,E402
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
@@ -36,10 +41,13 @@ from jevdrive.run import Run, cli_args  # noqa: E402
 FRAME = (2, 6, 128, 256)
 STEPS = np.arange(2, 31, 4)                     # 2, 6, .., 30: the 8 valid context steps (oldest first), as nav_plans
 VERSION = "pp1"
+SYNTH = ("gpu", "cpu")                          # where the `warp` lattice frames are made: batched on the card, or in the CPU workers
+WARP_BS = 16                                    # frames per op_interp.warp_gpu call (float64 maps, ~30 MB of VRAM per frame; 16 is also the fastest)
+OUT = None                                      # --out: another cache root (checks and benchmarks next to the real cache)
 
 
 def croot(data, *p):
-    d = data_dir() / "runs" / "op_parity" / "cache" / data / _pl.Path(*p)
+    d = (OUT or data_dir() / "runs" / "op_parity" / "cache") / data / _pl.Path(*p)
     d.parent.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -94,6 +102,104 @@ def _warp_job(args):
     from jevdrive import op_interp as I
     kf, pose, vel, cam, times = args
     return I.synth_cpu(kf, "warp", times, I.track_navsim(pose, vel), cam)
+
+
+# ---------------------------------------------------------------- `warp` lattice frames on the card
+def warp_plan(pose, vel, times):
+    """_warp_job without the pixels (op_interp.synth_cpu `warp` at lattice times between the keys): per time its source key (n,) and
+    the destination / source pose (n, 2, 3)."""
+    from jevdrive import op_interp as I
+    times = np.asarray(times)
+    assert times.min() > I.T_KEY[0] and not np.isclose(times[:, None], I.T_KEY).any(), "lattice times between the keys only"
+    tr = I.track_navsim(pose, vel)
+    src = [i0 if s <= 0.5 else i1 for i0, i1, s in map(I.neighbours, times)]
+    return np.array(src), np.array([[tr(t), tr(I.T_KEY[k])] for t, k in zip(times, src)])
+
+
+def _key_job(args):
+    """_full_job without the pixels of the warps: the 4 keys and warp_plan's source keys and poses."""
+    import navsim_zs_openpilot as NZ
+    e, pose, vel, times = args
+    return (NZ.render_token(e),) + warp_plan(pose, vel, times)
+
+
+def warp_keys(K, row, key, cam, pose, bs: int = 0):
+    """n warps of a chunk on the card. K (b, 4, 2, 6, 128, 256) uint8 keyframes on the device; per warp its row and source key (n,) and
+    the destination / source pose (n, 2, 3); cam (b, 3) camera position per row -> (n, 2, 6, 128, 256) uint8, op_interp.warp_frame's
+    bytes. One op_interp.warp_gpu call per camera position and WARP_BS frames."""
+    import torch
+    from jevdrive import op_interp as I
+    row, key, cam, bs = np.asarray(row), torch.as_tensor(np.asarray(key), device=K.device), np.asarray(cam, np.float64), bs or WARP_BS
+    out = torch.empty((len(row),) + FRAME, dtype=torch.uint8, device=K.device)
+    cams, inv = np.unique(cam, axis=0, return_inverse=True)
+    inv = inv.reshape(-1)[row]
+    for c in range(len(cams)):
+        idx = np.flatnonzero(inv == c)
+        for i in range(0, len(idx), bs):
+            q = torch.as_tensor(idx[i:i + bs], device=K.device)
+            out[q] = I.warp_gpu(K[torch.as_tensor(row[idx[i:i + bs]], device=K.device), key[q]], cams[c], pose[idx[i:i + bs], 0], pose[idx[i:i + bs], 1])
+    return out
+
+
+def enc_dev(net, prev, cur, bs: int = 128) -> np.ndarray:
+    """encoder()'s enc for uint8 pairs (n, 2, 6, 128, 256) that are already on the card: the same batches, so the same tokens."""
+    import torch
+    from jevdrive import op_adapt as A
+    with torch.no_grad():
+        out = [net.run_batched(A.vision_feeds(prev[i:i + bs], cur[i:i + bs]), ["view_39"])["view_39"].reshape(-1, *A.H_SHAPE).cpu().numpy()
+               for i in range(0, len(cur), bs)]
+    return np.concatenate(out).astype(np.float16)
+
+
+class Part:
+    """Row-wise resumable .npy outputs of one cache artifact: <name>.part.npy memmaps and a done-rows mask (done.part.npy), bound to the
+    artifact's cache key (part.key). A killed build reopens them and skips the rows of its last checkpoint; another key, a missing part
+    or force starts over. commit() renames a part to its final path (as a jevdrive.cache writer)."""
+
+    def __init__(self, root, key: str, n: int, force: bool = False):
+        self.root, self.arr, self.todo, self.t = _pl.Path(root), {}, [], time.time()
+        kf, self.mask = self.root / "part.key", self.root / "done.part.npy"
+        self.resume = not force and self.mask.exists() and kf.exists() and kf.read_text() == key
+        self.done = np.load(self.mask) if self.resume else np.zeros(n, bool)
+        if len(self.done) != n:
+            self.resume, self.done = False, np.zeros(n, bool)
+        if not self.resume:
+            self.mask.unlink(missing_ok=True)
+            kf.write_text(key)
+
+    def open(self, name: str, shape, dtype=np.float16):
+        p = self.root / f"{name}.part.npy"
+        if self.resume and p.exists():
+            a = np.lib.format.open_memmap(p, mode="r+")
+            if a.shape == tuple(shape) and a.dtype == dtype:
+                self.arr[name] = a
+                return a
+            del a
+        self.done[:] = False
+        self.arr[name] = np.lib.format.open_memmap(p, mode="w+", dtype=dtype, shape=tuple(shape))
+        return self.arr[name]
+
+    def mark(self, rows, every: float = 60.0):
+        """rows are written; every `every` seconds the parts are flushed and the mask saved (the checkpoint a resume starts from)."""
+        self.todo.append(rows)
+        if time.time() - self.t >= every:
+            self.save()
+
+    def save(self):
+        for a in self.arr.values():
+            a.flush()
+        for r in self.todo:
+            self.done[r] = True
+        tmp = self.mask.with_name(".done.part.tmp.npy")
+        np.save(tmp, self.done)
+        os.replace(tmp, self.mask)
+        self.todo, self.t = [], time.time()
+
+    def commit(self, name: str, path):
+        self.arr[name].flush()
+        os.replace(self.root / f"{name}.part.npy", path)
+        if all(not (self.root / f"{k}.part.npy").exists() for k in self.arr):
+            self.mask.unlink(missing_ok=True), (self.root / "part.key").unlink(missing_ok=True)
 
 
 def render_side(cams4: list) -> np.ndarray:
@@ -168,11 +274,17 @@ def main(a):
         run.info(f"tab: {N} rows, future missing {int(np.isnan(tab['fut'][:, 0, 0]).sum())}")
 
         # ---- front hidden tokens, one frame protocol (prereg addendum 1)
+        fparams = kbase | dict(steps=STEPS.tolist()) if a.frames == "gimm" else kbase | dict(frames=a.frames, steps=STEPS.tolist(), v="pp2")
+        froot = root if a.frames == "gimm" else croot(f"{tag}@{a.frames}")
+        froot.mkdir(parents=True, exist_ok=True)
+        fkey, st = cache.key(params=fparams, code=[encoder]), {}
+
         def make_front():
             keys = OL.Keys(a.data) if ents is None else None
             _, src = OL._steps(0.0, False)
             t0 = time.time()
             pool = None
+            gpu = a.frames == "warp" and a.synth == "gpu"
             if a.frames == "keys":                                  # N: 4 slots at the 2 Hz keys, pairs (key k - 1, key k); key -1 is a zero image
                 def load(rows):
                     kf = keys[rows]                                 # (b, 4, 2, 6, 128, 256)
@@ -181,7 +293,25 @@ def main(a):
                 n_slot = 4
             else:                                                   # Q8: steps 2, 6, .., 30 of the op_lb rollout, keys + 6 lattice frames
                 syn = None if a.frames == "warp" else np.load(OL.root(a.data) / f"{a.frames}.npy", mmap_mode="r")
-                pool = ProcessPoolExecutor(a.workers or max(1, n_cpus() - 4)) if a.frames == "warp" else None
+                pool = ProcessPoolExecutor(a.workers or max(1, n_cpus() - 4)) if a.frames == "warp" and (ents is not None or not gpu) else None
+                if gpu:
+                    times, mcam = np.asarray(mt["syn_t"]), np.asarray(mt["cam"], np.float64)
+                    # cur then prev frame of the 8 steps, as indices into [4 keys, 6 lattice frames, a zero image]
+                    at = [int(src[s][1] if src[s][0] == "k" else 4 + src[s][1]) if s >= 0 else 10 for s in np.r_[STEPS, STEPS - 4]]
+
+                def load_keys(rows):                                # --synth gpu: the keys and the warp poses; the pixels are warped on the card
+                    if ents is not None:
+                        kf, sk, pp = (np.stack(x) for x in zip(*pool.map(_key_job, [(ents[i], mt["pose"][i], mt["vel"][i], times) for i in rows])))
+                    else:
+                        kf = np.array(keys[rows])                   # read here, off the encoder thread
+                        sk, pp = (np.stack(x) for x in zip(*[warp_plan(mt["pose"][i], mt["vel"][i], times) for i in rows]))
+                    return rows, kf, sk, pp
+
+                def pairs_dev(rows, kf, sk, pp):
+                    K, b = torch.from_numpy(kf).to(dev), len(rows)
+                    sf = warp_keys(K, np.repeat(np.arange(b), sk.shape[1]), sk.reshape(-1), mcam[rows], pp.reshape(-1, 2, 3))
+                    fr = torch.cat([K, sf.view(b, -1, *FRAME), K.new_zeros((b, 1) + FRAME)], 1)[:, at]
+                    return fr[:, 8:].flatten(0, 1), fr[:, :8].flatten(0, 1)
 
                 def load(rows):
                     if ents is not None:                            # full navtrain: render the 4 CAM_F0 keys and warp in one CPU job per token
@@ -199,19 +329,24 @@ def main(a):
                     prev = np.stack([[img(j, s - 4) for s in STEPS] for j in range(len(rows))])
                     return rows, prev.reshape(-1, *FRAME), cur.reshape(-1, *FRAME)
                 n_slot = 8
-            out = np.zeros((N, n_slot) + A.H_SHAPE, np.float16)
-            chunks = [np.arange(i, min(i + 32, N)) for i in range(0, N, 32)]
+            part = st["part"] = Part(froot, fkey, N, a.force) if a.frames == "warp" else None
+            out = part.open("front", (N, n_slot) + A.H_SHAPE) if part else np.zeros((N, n_slot) + A.H_SHAPE, np.float16)
+            chunks = [c for c in (np.arange(i, min(i + 32, N)) for i in range(0, N, 32)) if not (part and part.done[c].all())]
             with ThreadPoolExecutor(8) as ex:
-                for rows, prev, cur in run.tqdm(_bounded(ex, load, chunks, 16), total=len(chunks), desc=f"front {a.frames}"):
-                    out[rows] = enc(prev, cur).reshape(len(rows), n_slot, *A.H_SHAPE)
-            if a.frames == "warp":
+                for rows, *x in run.tqdm(_bounded(ex, load_keys if gpu else load, chunks, 16), total=len(chunks), desc=f"front {a.frames}"):
+                    out[rows] = (enc_dev(net, *pairs_dev(rows, *x)) if gpu else enc(*x)).reshape(len(rows), n_slot, *A.H_SHAPE)
+                    if part:
+                        part.mark(rows)
+            if pool:
                 pool.shutdown()
-            timing.update({f"front_{a.frames}_pairs_per_s": n_slot * N / (time.time() - t0)})
+            timing.update({f"front_{a.frames}_pairs_per_s": n_slot * sum(map(len, chunks)) / (time.time() - t0)})
+            if a.frames == "warp":
+                import resource
+                rss = sum(resource.getrusage(w).ru_maxrss for w in (resource.RUSAGE_SELF, resource.RUSAGE_CHILDREN)) / 2 ** 20
+                timing.update(synth=a.synth, vram_gb=torch.cuda.max_memory_reserved() / 2 ** 30, rss_main_plus_largest_worker_gb=rss)
             return out
-        fparams = kbase | dict(steps=STEPS.tolist()) if a.frames == "gimm" else kbase | dict(frames=a.frames, steps=STEPS.tolist(), v="pp2")
-        froot = root if a.frames == "gimm" else croot(f"{tag}@{a.frames}")
-        froot.mkdir(parents=True, exist_ok=True)
-        front = cache.cached(froot / "front.npy", cache.key(params=fparams, code=[encoder]), make_front, force=a.force)
+        front = cache.cached(froot / "front.npy", fkey, make_front, force=a.force,
+                             writer=(lambda p, o: st["part"].commit("front", p)) if a.frames == "warp" else None)
         if a.frames != "gimm" and ents is None:                    # tab / side / teacher live in the base dir (the G protocol's)
             run.summary |= {"n": N, "front_shape": list(front.shape), **timing}
             if timing:
@@ -278,5 +413,9 @@ if __name__ == "__main__":
                     help="front frame protocol: gimm / warp / real = 8 slots at 0.2 s with that lattice source (real: lb_hq_navtestX only), "
                          "keys = N, 4 slots at the 2 Hz keys; non-gimm fronts go to cache/<data>@<frames>/, tab and side stay in cache/<data>/")
     ap.add_argument("--no-side", action="store_true", help="skip the side / rear cameras (and the teacher): eval-only subsets")
+    ap.add_argument("--synth", default="gpu", choices=SYNTH, help="--frames warp: the lattice warps batched on the card (same bytes), or in the CPU workers")
+    ap.add_argument("--out", type=_pl.Path, default=None, help="cache root instead of $DATA_DIR/runs/op_parity/cache (checks)")
     cli_args(ap)
-    main(ap.parse_args())
+    a = ap.parse_args()
+    OUT = a.out
+    main(a)
