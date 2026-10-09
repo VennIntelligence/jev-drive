@@ -748,6 +748,94 @@ def cmd_swap_report(a):
     (OUT / "swap_gate.json").write_text(json.dumps(gate, indent=1))
     print(json.dumps(gate, indent=1))
 
+def cmd_nav_acc(a):
+    """Post-hoc input probe (not registered): the fed longitudinal acceleration on the AlpaSim PAI track has 5.7x the navtest spread
+    (ax / 3 std 1.44 vs 0.25). navtest tokens with the acceleration input replaced: acc0 (0), accx{k} (ax scaled by k), accn (ax + N(0, 4.3 m/s^2)),
+    accp2 / accm2 (ax + / - 2 m/s^2). Adapted arms only (shipped reads no ego input). -> diag1/nav_acc.npz"""
+    import torch
+    from jevdrive import op_interp as I
+    from jevdrive.bench import navsim as N
+    from jevdrive.bench.models import resolve
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    with Run("op_parity", "diag1/nav-acc", seed=0, config=vars(a)) as run:
+        run.use_split(splits.load("navsim/navtest"))
+        N._pp_path()
+        import pp_train as T
+        dev = torch.device("cuda")
+        S = T.Store(["lb_navtest"], dev, need_side=False, frames="warp")
+        tb, n = S.tb, S.n
+        g = torch.Generator(device="cpu").manual_seed(0)
+        noise = (torch.randn(n, generator=g) * 4.3 / 3.0).to(S.ego)
+        def ed(f):
+            e = S.ego.clone()
+            e[:, 6] = f(e[:, 6])
+            return e
+        V = {"acc0": ed(lambda x: x * 0), "accx3": ed(lambda x: x * 3), "accx57": ed(lambda x: x * 5.7), "accn": ed(lambda x: x + noise), "accp2": ed(lambda x: x + 2 / 3.0),
+             "accm2": ed(lambda x: x - 2 / 3.0)}
+        R = dict(tokens=tb["names"], noise=noise.cpu().numpy() * 3.0)
+        for tag in ("P2H10-F-s0", "SH30-F-s0"):
+            model = N._load_ckpt(T, resolve(f"{tag}@warp", check=True).ckpt, dev)
+            sl = model.net.slices
+            pi = np.arange(sl["plan"].start, sl["plan"].start + 495)
+            for var, ego in V.items():
+                mu = np.zeros((n, 33, 15), np.float32)
+                with torch.no_grad():
+                    for i in range(0, n, 128):
+                        r = torch.arange(i, min(i + 128, n), device=dev)
+                        mu[i:i + len(r)] = model(S.front[r], ego[r], S.tc[r], None, None).float().cpu().numpy()[:, pi].reshape(-1, 33, 15)
+                R[f"pose_{tag}_{var}"] = np.stack([I.to_rear(mu[i, :, 0:3], mu[i, :, 11], I.T_IDXS, tb["cam"][i, :2], T8, "lever") for i in range(n)])
+                run.info("%s %s", tag, var)
+            del model
+        np.savez(WD / "nav_acc.npz", **R)
+
+
+def cmd_acc_report(a):
+    """nav_acc.npz + the PAI table: first-segment ratio and arcs under the acceleration interventions; on PAI rows the adapted - shipped
+    first-segment gap against the fed acceleration."""
+    from jevdrive import stats
+    z, zz = np.load(WD / "nav.npz"), np.load(WD / "nav_acc.npz")
+    v0, logs = z["speed"].astype(np.float64), z["log"].astype(str)
+    aS = arc_at(z["pose_P0"][..., :2].astype(np.float64), 0.5)
+    rows = []
+    for tag in ("P2H10-F-s0", "SH30-F-s0"):
+        base = arc_at(z[f"pose_{tag}_main"][..., :2].astype(np.float64), 0.5)
+        for var in ("main", "acc0", "accx3", "accx57", "accn", "accp2", "accm2"):
+            ar = base if var == "main" else arc_at(zz[f"pose_{tag}_{var}"][..., :2].astype(np.float64), 0.5)
+            for nm, lo, hi in BINS[1:] + [(">=2", 2, 1e9)]:
+                m = (v0 >= lo) & (v0 < hi)
+                if m.sum() < 20:
+                    continue
+                p = stats.paired(q_r0(ar, v0)[m], q_r0(aS, v0)[m], groups=logs[m], n_boot=NB)
+                rows.append({"arm": tag, "acceleration input": var, "v0 bin": nm, "n": int(m.sum()), "mean r0 - 1": float(q_r0(ar, v0)[m].mean()), "r0 adapted - shipped": p["mean"], "lo": p["lo"],
+                             "hi": p["hi"], "arc 2 s / shipped": float(ar[m, 3].sum() / aS[m, 3].sum()), "arc 4 s / shipped": float(ar[m, 4].sum() / aS[m, 4].sum()),
+                             "share r0 > 1.05": float((q_r0(ar, v0)[m] > 0.05).mean())})
+            if var == "accn":                                          # dose: first-segment response per m/s^2 of injected acceleration error
+                mv = v0 >= 2
+                sl = np.polyfit(zz["noise"][mv], ((ar[:, 0] - base[:, 0]) / 0.5)[mv], 1)[0]
+                rows.append({"arm": tag, "acceleration input": "slope: first-segment speed (m/s) per m/s^2 of injected ax", "v0 bin": ">=2", "n": int(mv.sum()), "mean r0 - 1": float(sl)})
+    stats.write_table(rows, OUT / "acc_probe_nav")
+    f = WD / "alp" / "pai.npz"
+    if f.exists():
+        p = np.load(f, allow_pickle=True)
+        v = p["v0"].astype(np.float64)
+        ax = p["ego"][:, 6].astype(np.float64) * 3.0
+        rf, rp = q_r0(arc_at(p["plan_ft"][..., :2].astype(np.float64), 0.5), v), q_r0(arc_at(p["plan_p0"][..., :2].astype(np.float64), 0.5), v)
+        unit = np.char.add(p["group"].astype(str), p["scene"].astype(str))
+        out = []
+        for g in np.unique(p["group"].astype(str)):
+            gm = (p["group"].astype(str) == g) & (v >= 2) & (p["n_slots"] >= 8 if "n_slots" in p.files else True)
+            out.append({"group": g, "cell": "all v0 >= 2", "n": int(gm.sum()), "ax mean": float(ax[gm].mean()), "ax std": float(ax[gm].std()), "r0 - 1 adapted": float(rf[gm].mean()), "r0 - 1 shipped": float(rp[gm].mean()),
+                        "corr(ax, adapted - shipped r0)": float(np.corrcoef(ax[gm], (rf - rp)[gm])[0, 1]),
+                        "slope first-seg speed per m/s^2 ax": float(np.polyfit(ax[gm], ((rf - rp) * v)[gm], 1)[0])})
+            for nm, lo, hi in (("ax < -2", -1e9, -2), ("-2..-0.5", -2, -0.5), ("-0.5..0.5", -0.5, 0.5), ("0.5..2", 0.5, 2), ("ax > 2", 2, 1e9)):
+                m = gm & (ax >= lo) & (ax < hi)
+                if m.sum() >= 10:
+                    b = stats.paired(rf[m], rp[m], groups=unit[m], n_boot=NB)
+                    out.append({"group": g, "cell": nm, "n": int(m.sum()), "ax mean": float(ax[m].mean()), "r0 - 1 adapted": float(rf[m].mean()), "r0 - 1 shipped": float(rp[m].mean()),
+                                "adapted - shipped": b["mean"], "lo": b["lo"], "hi": b["hi"], "mean v0": float(v[m].mean())})
+        stats.write_table(out, OUT / "acc_probe_pai")
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -757,11 +845,11 @@ def main():
     w.add_argument("--suffix", default="")
     x = sp.add_parser("nav-extract")
     x.add_argument("--limit", type=int, default=0)
-    for c in ("wod-tab", "nav-tab", "alp-tab", "tables", "nav-swap", "swap-report"):
+    for c in ("wod-tab", "nav-tab", "alp-tab", "tables", "nav-swap", "swap-report", "nav-acc", "acc-report"):
         sp.add_parser(c)
     a = ap.parse_args()
     {"wod-fix": cmd_wod_fix, "nav-extract": cmd_nav_extract, "wod-tab": cmd_wod_tab, "nav-tab": cmd_nav_tab, "alp-tab": cmd_alp_tab, "tables": cmd_tables,
-     "nav-swap": cmd_nav_swap, "swap-report": lambda a: cmd_swap_report(a)}[a.cmd](a)
+     "nav-swap": cmd_nav_swap, "swap-report": lambda a: cmd_swap_report(a), "nav-acc": cmd_nav_acc, "acc-report": cmd_acc_report}[a.cmd](a)
 
 
 if __name__ == "__main__":
