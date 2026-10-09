@@ -59,7 +59,10 @@ ARG GIT_HASH=local
 # The served speed profile (lib/serve_fix.py): VCONT = seconds of the speed-continuous blend (0 = off), LEAD = 1 for the openpilot lead limit.
 ARG VCONT=0
 ARG LEAD=0
-ENV JEV_TAG=${TAG} JEV_DRIVER=${DRIVER} SH30_GIT_HASH=${GIT_HASH} JEV_VCONT=${VCONT} JEV_LEAD=${LEAD}
+# torch.compile (SH30_COMPILE=1, the drivers' default since LAT1) caches its kernels through triton, whose default directory is $HOME/.triton:
+# read-only here. Set in this last layer so that the package layers above stay cached.
+ENV JEV_TAG=${TAG} JEV_DRIVER=${DRIVER} SH30_GIT_HASH=${GIT_HASH} JEV_VCONT=${VCONT} JEV_LEAD=${LEAD} \
+    TRITON_CACHE_DIR=/tmp/triton TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor
 EXPOSE 6789
 STOPSIGNAL SIGTERM
 USER 10001:10001
