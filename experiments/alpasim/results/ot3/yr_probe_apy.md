@@ -1,0 +1,9 @@
+1137 held-out yaw-rate rows (navsim/op-parity-full-dev, cache `yr1`, 12 shards, 30 logs; 485 recent rows); injected yaw over the last 0.5 s sd 1.01 deg, heading offset sd 1.44 deg, correlation 0.71. Legitimate continuation on 1294 unperturbed held-out tokens (333 turn tokens); the logs' own slope there: 0.96 (all), 1.05 (turn). 95% CIs: cluster bootstrap over logs, B 10000.
+
+| model | inputs | alpha: plan yaw at 0.5 s per deg of injected yaw in the last 0.5 s (fixed pose offset) | beta: per deg of heading offset | net response on recent rows | loop spectral radius | alpha at 1.0 s | legit slope, all moving | legit slope, turn tokens | 4 s lateral return (lateral / yaw part) | ADE yaw-rate rows / logged pose (m) | turn tokens: 4 s lateral error (m) |
+|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|--:|
+| P2H10-F-s0 | navsim | 1.03 [0.98, 1.08] | -0.13 [-0.16, -0.09] | 0.92 [0.83, 1.01] | 1.01 [0.99, 1.04] | 1.83 [1.68, 1.98] | 0.96 [0.92, 0.99] | 1.04 [1.01, 1.07] | 0.09 / 0.07 | 0.918 / 0.568 | 1.060 |
+| AP2H10-AB-s0 | alpasim | 1.04 [0.99, 1.08] | -0.13 [-0.15, -0.10] | 0.94 [0.85, 1.02] | 1.02 [0.99, 1.04] | 1.87 [1.72, 2.02] | 0.96 [0.92, 0.99] | 1.04 [1.01, 1.07] | 0.03 / 0.04 | 0.941 / 0.584 | 1.096 |
+| YR10m10-F-s0 | navsim | 0.30 [0.19, 0.40] | -0.21 [-0.26, -0.17] | 0.11 [-0.01, 0.23] | 0.55 [0.53, 0.76] | 0.61 [0.42, 0.79] | 0.95 [0.91, 0.99] | 1.04 [1.01, 1.07] | 0.77 / 0.77 | 0.742 / 0.564 | 1.085 |
+| APY10m10-AB-s0 | alpasim | 0.30 [0.19, 0.39] | -0.20 [-0.24, -0.15] | 0.12 [0.00, 0.22] | 0.63 [0.54, 0.79] | 0.59 [0.41, 0.74] | 0.95 [0.91, 0.99] | 1.04 [1.01, 1.07] | 0.76 / 0.75 | 0.755 / 0.581 | 1.106 |
+| APY10m10-AB-s1 | alpasim | 0.30 [0.20, 0.40] | -0.20 [-0.25, -0.15] | 0.13 [0.01, 0.23] | 0.59 [0.54, 0.79] | 0.60 [0.42, 0.76] | 0.95 [0.91, 0.99] | 1.04 [1.01, 1.07] | 0.74 / 0.75 | 0.759 / 0.581 | 1.116 |
