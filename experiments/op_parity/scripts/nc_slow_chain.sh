@@ -50,13 +50,16 @@ for s in 0 1; do sub ext-nt$s --vram 17 --cpu 3 --ram 6 -- $X extract --seed $s;
 "$VPY" $S/nt_cache.py run --stage rest --limit 17 --jobs "$JOBS" || die "nt_cache rest"
 waitdirs $(for i in $(seq 0 11); do echo ext-$i; done) ext-nt0 ext-nt1
 
-status "family"; $X family || die "family"
-status "scoring the navtrain family"; score ""
-status "G-id"; $X gate || die "G-id"
+if [[ ! -f $O/gate_id.json ]]; then   # finished once: poses_nt.npz is not rewritten (its hash is the scoring run's identity)
+  status "family"; $X family || die "family"
+  status "scoring the navtrain family"; score ""
+  status "G-id"; $X gate || die "G-id"
+fi
 
 status "build"
+[[ -f $O/build.json ]] ||
 sub build --vram 0.5 --cpu 8 --ram 80 -- $X build
-waitdirs build
+[[ -f $O/build.json ]] || waitdirs build
 grep -q '"ok": true' "$O/build.json" || die "extract gates failed (build.json)"
 
 status "fits: 8 arms"
