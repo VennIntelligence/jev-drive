@@ -47,7 +47,7 @@ fi
 status "extraction: 12 shards + navtest x 2 (pool); rest metric cache"
 for i in $(seq 0 11); do sub ext-$i --vram 17 --cpu 3 --ram 6 -- $X extract --shard $i; done
 for s in 0 1; do sub ext-nt$s --vram 17 --cpu 3 --ram 6 -- $X extract --seed $s; done
-"$VPY" $S/nt_cache.py run --stage rest --limit 17 --jobs "$JOBS" || die "nt_cache rest"
+[[ -f $O/gate_id.json ]] || "$VPY" $S/nt_cache.py run --stage rest --limit 17 --jobs "$JOBS" || die "nt_cache rest"   # not needed once the family is scored
 waitdirs $(for i in $(seq 0 11); do echo ext-$i; done) ext-nt0 ext-nt1
 
 if [[ ! -f $O/gate_id.json ]]; then   # finished once: poses_nt.npz is not rewritten (its hash is the scoring run's identity)
