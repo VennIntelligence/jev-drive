@@ -26,10 +26,13 @@ serve() { local tag=$1
           [[ -f $BIAS/bias-$tag.npz ]] || $PY $S/pp_wod.py bias --tags $tag || die "bias $tag"
           sub wod1-e-$tag $L/e-$tag --vram 8 --cpu 14 --ram 40 -- $OP scripts/wod_zeroshot_openpilot.py --set rater extra --workers 12 \
               --onnx $ONNX/pp-$tag.onnx --tag $tag --bias $BIAS/bias-$tag.npz; }
+# restore check: sets.json was missing on the box and was rebuilt from the index; re-serve stored P2H10-F-s0 under tag chk-P2H10-F-s0, must equal the stored predictions
+serve_chk() { sub wod1-e-chk $L/e-chk --vram 8 --cpu 14 --ram 40 -- $OP scripts/wod_zeroshot_openpilot.py --set rater extra --workers 12 \
+              --onnx $ONNX/pp-P2H10-F-s0.onnx --tag chk-P2H10-F-s0 --bias $BIAS/bias-P2H10-F-s0.npz; }
 wave() { status "serving wave: $*"; for t in "$@"; do serve $t; done; waitdirs $(for t in "$@"; do echo $L/e-$t; done); }
-wave P2-F-s0 P2-F-s1 OT10a05-F-s0
-wave OT10a05-F-s1 YR10m10-F-s0 YR10m10-F-s1
-wave YR10m25-F-s0 YR10m25-F-s1
+serve_chk; serve P2-F-s0; serve P2-F-s1; waitdirs $L/e-chk $L/e-P2-F-s0 $L/e-P2-F-s1
+wave OT10a05-F-s0 OT10a05-F-s1 YR10m10-F-s0
+wave YR10m10-F-s1 YR10m25-F-s0 YR10m25-F-s1
 status "report"
 R=experiments/op_parity/results/wod1_recipes
 $J $S/wod_slot.py report --out $R --arms shipped P2H10=P2H10-F-s0+P2H10-F-s1 P2=P2-F-s0+P2-F-s1 SH30=SH30-F-s0+SH30-F-s1 \
