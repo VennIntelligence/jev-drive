@@ -234,3 +234,52 @@ the stored bench sub-scores on every token (0 tokens differ). WOD: RFS; the P2H1
   for part of the session (scp / fetch stalls); the AlpaSim PAI table was built on the Mac and uploaded in pieces (sha1 checked).
 - Cost: about 0.6 card-hours (navtest extraction 4 min, two WOD serving jobs 16 min each, one replay 8 min, one probe 2 min), about 12 core-hours of
   pose scoring; outputs 0.3 GB under `$DATA_DIR/runs/op_parity/diag1/` and `runs/bench/poses/{swap,cap,acc}_poses-*`.
+
+## Follow-up (amendment 1, 2026-10-10): the same mechanisms on the WOD-trained checkpoints
+
+Question: can a lead-aware / base-speed longitudinal mechanism lift the WOD-trained checkpoint above its current best? Pre-registered as amendment 1 of the
+prereg before the read. Stored predictions only (no GPU job, nothing submitted). WP2 = decision 163, WLG = decision 169 (per-frame mean of the two seeds'
+scores), WLGm = the submitted 2-seed trajectory mean (decision 180). G0: 8.111 / 8.187 / 8.178 reproduce. Tables: [diag1/wodft_arms.md](diag1/wodft_arms.md),
+[wodft_ade](diag1/wodft_ade.md), [wodft_gap_top](diag1/wodft_gap_top.md), [wodft_ax_slope](diag1/wodft_ax_slope.md), [wodft_switches](diag1/wodft_switches.md), [wodft_brake_onset](diag1/wodft_brake_onset.md).
+
+| arm (vs the unmodified checkpoint, RFS) | WLG (primary) | label | WLGm (submitted form) | WP2 | WLG val half 0 / half 1 | WLG d ADE@3s (m) |
+|:--|:--|:--|:--|:--|:--|:--|
+| 1 (a) re-timing | +0.017 [-0.004, +0.040] | no measurable change | +0.014 [-0.006, +0.037] | +0.014 [-0.002, +0.032] | +0.013 / +0.020 | +0.020 |
+| 2 (b) lead cap | +0.009 [-0.046, +0.066] | no measurable change | +0.014 [-0.040, +0.070] | +0.006 [-0.051, +0.063] | +0.049 / -0.034 | +0.011 |
+| 3 (a) + (b) | +0.023 [-0.036, +0.084] | no measurable change | +0.026 [-0.032, +0.086] | +0.018 [-0.041, +0.076] | +0.058 / -0.015 | +0.032 |
+| 4 own path + base speed profile, all frames | -0.128 [-0.254, -0.012] | hurts | -0.121 [-0.248, -0.003] (hurts) | -0.108 [-0.253, +0.037] | -0.075 / -0.182 | +0.451 |
+| 5 base speed when moving, own at standstill | -0.120 [-0.246, -0.004] | hurts | -0.114 [-0.241, +0.006] | -0.145 [-0.268, -0.030] (hurts) | -0.071 / -0.171 | +0.450 |
+| 6 per-frame best of {own, 4} (privileged ceiling, no label) | +0.187 [+0.121, +0.262] | | +0.189 [+0.121, +0.265] | +0.286 [+0.207, +0.378] | +0.257 / +0.116 | |
+
+Strata of WLG (d RFS; n): arm 3: standstill +0.008 (120), moving +0.024 (359), lead +0.020 (165), no lead +0.048 [+0.007, +0.114] (314), standstill + lead
++0.050 [-0.375, +0.260] (35). Arm 4: moving -0.176 [-0.362, +0.002], no lead -0.245 [-0.501, -0.037], >= 12 m/s -0.530 (38), lead +0.013. Ceiling 6: moving
++0.249 [+0.153, +0.358], 0.5 - 5 m/s +0.269, moving + lead +0.239 [+0.102, +0.422], standstill +0.014.
+
+Audit probes:
+- **Same ego-only construction, different content.** With the adapter off, WP2's plan is the shipped plan (share of the WP2 - shipped difference kept 0.01 on
+  every read, rater frames): WOD training also put the whole speed change into the ego bias. The acceleration dependence is stronger than in the navtrain
+  arm: first-segment speed moves 2.36 [2.20, 2.58] m/s per unit of the fed WOD `accel_x` against 0.42 [0.38, 0.46] for P2H10 by the same estimator (main
+  minus the stored `acc0` variant, 287 rater frames with v0 >= 2; ratio 5.6; corr with the fed ax 0.97). The absolute unit of WOD's `accel_x` was not verified
+  (its spread is 0.34 against navtest's 0.76 m/s^2), so only the ratio is a claim. WLG has no stored `acc0` variant (not served; equals WP2 above 0.5 m/s).
+- **No launch prior.** Behind a stopped lead (71 standstill frames) the plan moves > 0.5 m in 2 s in 23% (WLG) and 30% (WP2) of frames; log 23%, shipped 18%,
+  navtrain arms 55 - 65%. The stop gate removed what was left of it. There is nothing here for a cap to hold back, which is why (b) is +0.01.
+- **Braking onset.** 58 closing-lead frames (41 sequences), 39 of them with the ego not yet braking (29 sequences): slows in 0.87 (WP2) / 0.89 (WLG), shipped
+  0.92, log 0.87, navtrain arms 0.96 - 1.00; mean plan acceleration -0.69 (WP2 / WLG) vs shipped -0.87 and log -0.98. Too few frames for a statement; the
+  point estimate says the WOD-trained plans brake a little less than shipped and than the log on these frames.
+- **Remaining gap to the top-rated rater trajectory** (decision 164's construction; the WP2 row reproduces it: +0.722 / +0.296 of 1.476): WLG's gap is
+  1.400; its own path with the top-rated speed profile +0.657 [+0.475, +0.843] (47%), the top-rated path with its own speed +0.290 [+0.166, +0.432] (21%).
+  On lead frames the gap is 1.08 and 74% of it is speed (+0.80 [+0.49, +1.21]), path 7%; at standstill the gap is 1.67 with 36% speed, 5% path (the rest
+  needs both); moving 1.29 with 46% / 29%.
+
+**Answer.** On top of WLG there is no measurable headroom from the mechanisms of this lane. FIX1's re-timing and lead cap are null (+0.02, CI half-width
+0.06; the two val halves disagree in sign for the cap), because WLG neither starts its plans below the ego speed by much nor creeps behind a stopped lead.
+Replacing its speed profile with the base model's hurts (-0.12 to -0.13, all on moving frames without a lead and at speed): WOD training made the speed
+profile better than the base model's, the opposite of the navtrain arms. The only positive number is the privileged per-frame choice between its own and
+the base speed profile, +0.19 in sample (halves +0.26 / +0.12), located in moving frames below 5 m/s and moving frames with a lead and nil at standstill;
+decision 171's 3 - 4x out-of-fold shrink puts a learned selector at about +0.05, the detection limit of this set. The larger longitudinal headroom is the
+gap to the top-rated trajectories (0.66 of 1.40 is speed profile; 0.80 of 1.08 on lead frames), but that is a preference about how far to go given the
+scene (decision 164), which neither the base model's speed nor openpilot's follow law supplies: both were tried here and are null or negative. A mechanism
+that could reach it has to bring scene-conditioned longitudinal information the ego-only adapter does not have (it reads no image, and its speed still
+rides on the acceleration input); that is a training-side change and needs a held-out read, not a val-selected switch.
+Limits: open loop, 479 rater frames, detectable size 0.05 - 0.08; in-sample; (b) is a stateless single tick with the shipped model's lead outputs; the
+`lx-*` variants exist on rater frames only; no arm was selected for anything.
