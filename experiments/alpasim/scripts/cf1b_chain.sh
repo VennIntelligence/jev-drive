@@ -13,7 +13,7 @@ H=$(git rev-parse --short HEAD); status "checkout $H"
 J=()
 for s in 0 1; do J+=("AP2H10-AB-s$s@new:ap2:AP2_TAG=AP2H10-AB-s$s:AP2H10-AB-s$s:ot3new" "AP2H10-AB-s$s@fresh:ap2:AP2_TAG=AP2H10-AB-s$s:AP2H10-AB-s$s:cf1fresh"); done
 OT_LANE=cf1 OT_PRIO=13 OT2_MAX_ACTIVE=3 python3 experiments/alpasim/scripts/ot2_loop.py b "${J[@]}" || die "ot2_loop rc $?"
-for d in $(ls -d $RA/cf1/b/runs/*/*/ 2>/dev/null); do echo "$H" > "$d/checkout.txt"; done
+for d in $(ls -d $RA/cf1/b/runs/*/*/ 2>/dev/null); do [[ -f $d/checkout.txt ]] || echo "$H" > "$d/checkout.txt"; done
 for d in $(ls -d $RA/cf1/a/runs/*/*/ 2>/dev/null); do [[ -f $d/checkout.txt ]] || echo "c9d2e07b" > "$d/checkout.txt"; done
 status "loop done; report"
 $VPY experiments/alpasim/scripts/cf1_report.py --out "$RA/cf1/results" > "$O/report.log" 2>&1 || die "report failed"
