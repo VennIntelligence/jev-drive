@@ -59,3 +59,51 @@ not bit-identical (plans move 1 cm median), and that document's closed-loop chec
 - Two seeds, one simulation per checkpoint; local render, not the official environment.
 - The APY10m10 candidate verdict has a lower bound of +0.0006 on a difference that is heterogeneous across the two fresh sets (+0.0296 against -0.0001); it also costs -0.21 navtest / -1.31 navhard
   open loop (decision 212) and its two seeds differ by 0.024 on Fresh-B. Shard labels are inferred.
+
+## Amendment 1 (follow-up read: AP2H10-AB on the 791 fresh scenes; pre-registered in the CF1 prereg, pushed before any AP2H10 fresh-scene score was read)
+
+Question: is APY10m10's gain the AlpaSim input standard alone, or do the yaw-rate rows add anything on top? Runs: AP2H10-AB-s0 / s1 (lambda 10, AlpaSim input standard, no rows) on `cf1fresh` (391) and
+`ot3new` (400), same lists and chunking as the other recipes there; OT3 has them on the first 700. All four runs complete (391 / 400 rollouts each, driver errors 0, no worker death). **This was the last
+read: no untouched scenes remain.** Every one of the 1491 public scenes is now scored for all four recipes; any further read of these recipes on these scenes is a repeat, not a confirmation.
+
+Registered lines and outcomes (2-seed means, log-clustered 95 % CI):
+- (a) APY10m10 - AP2H10 on the 791: **+0.0081 [+0.0001, +0.0156]** (scene CI [-0.0041, +0.0210]); by the line (>= +0.005 and lower bound > 0) the rows add on top of the input standard, with a lower bound of +0.0001. Seeds: +0.0188 / -0.0026.
+- (b) AP2H10 - P2H10: 791 **+0.0108 [-0.0042, +0.0267]**, all 1491 **+0.0068 [-0.0048, +0.0185]**: the input standard alone does not clear the line (point estimate above +0.005, lower bound below 0).
+
+The two sets disagree: on part012-015 AP2H10 - P2H10 is +0.0208 [-0.0002, +0.0499] and APY10m10 - AP2H10 +0.0020 [-0.0120, +0.0117] (the input standard carries it, rows add nothing); on OT3's 400 AP2H10 - P2H10 is +0.0011
+and APY10m10 - AP2H10 +0.0141 [+0.0031, +0.0237] (the rows carry it, the standard adds nothing; seed 0 +0.0282, seed 1 +0.0000).
+
+Per recipe on the 791 (two-seed mean per-scene scores; zeros = seed means):
+
+| recipe | seeds | mean [CI logs] | CI scenes | zeros (collision / offroad / corridor) | slow | at-fault events |
+|:--|:--|:--|:--|:--|--:|--:|
+| P2H10 | 0.8933 / 0.8951 | 0.8942 [0.8746, 0.9169] | [0.8753, 0.9120] | 62.5 (4.5 / 34 / 12) | 155.5 | 38.5 |
+| YR10m10 | 0.8994 / 0.8977 | 0.8986 [0.8808, 0.9230] | [0.8805, 0.9158] | 60 (3 / 33 / 11.5) | 153 | 36 |
+| AP2H10 | 0.9001 / 0.9099 | 0.9050 [0.8799, 0.9308] | [0.8855, 0.9233] | 68 (6 / 28.5 / 21.5) | 71.5 | 34.5 |
+| APY10m10 | 0.9190 / 0.9073 | 0.9131 [0.8913, 0.9366] | [0.8952, 0.9302] | 61 (5.5 / 29 / 14.5) | 78.5 | 34.5 |
+
+All four recipes on all 1491 scenes (44 logs):
+
+| recipe | seeds | mean [CI logs] | CI scenes | zeros (collision / offroad / corridor) | slow | at-fault events |
+|:--|:--|:--|:--|:--|--:|--:|
+| P2H10 | 0.9192 / 0.9200 | 0.9196 [0.9024, 0.9387] | [0.9077, 0.9311] | 87 (11 / 44.5 / 19.5) | 262 | 55.5 |
+| YR10m10 | 0.9248 / 0.9249 | 0.9248 [0.9079, 0.9441] | [0.9135, 0.9354] | 78.5 (7 / 43 / 16) | 263 | 50 |
+| AP2H10 | 0.9246 / 0.9282 | 0.9264 [0.9093, 0.9431] | [0.9140, 0.9384] | 97.5 (14 / 37.5 / 34) | 126 | 51.5 |
+| APY10m10 | 0.9351 / 0.9320 | 0.9335 [0.9172, 0.9505] | [0.9226, 0.9448] | 86 (12 / 39.5 / 22.5) | 136 | 51.5 |
+
+Pairwise differences on all 1491 (row minus column; point, CI logs, CI scenes, seed 0 / seed 1):
+
+| difference | point | CI logs | CI scenes | seeds |
+|:--|--:|:--|:--|:--|
+| YR10m10 - P2H10 | +0.0052 | [-0.0006, +0.0120] | [-0.0028, +0.0129] | +0.0056 / +0.0048 |
+| AP2H10 - P2H10 | +0.0068 | [-0.0048, +0.0185] | [-0.0025, +0.0160] | +0.0055 / +0.0082 |
+| APY10m10 - P2H10 | +0.0139 | [+0.0048, +0.0227] | [+0.0040, +0.0238] | +0.0159 / +0.0120 |
+| AP2H10 - YR10m10 | +0.0016 | [-0.0098, +0.0132] | [-0.0088, +0.0119] | -0.0001 / +0.0033 |
+| APY10m10 - YR10m10 | +0.0087 | [-0.0004, +0.0173] | [+0.0000, +0.0177] | +0.0103 / +0.0071 |
+| APY10m10 - AP2H10 | +0.0071 | [+0.0010, +0.0128] | [-0.0008, +0.0154] | +0.0105 / +0.0038 |
+
+The AlpaSim input standard halves slow scenes (126 / 136 against 262 / 263) and pays for it in left-corridor zeros (34 / 22.5 against 16 / 19.5); the rows lower zeros relative to AP2H10 (86 against 97.5) and keep the slow-scene gain.
+APY10m10 is the best of the four on every pooled read and the only recipe whose gain over P2H10 has both CIs above 0 on the 791 and on all 1491.
+
+Checkout per run (`checkout.txt` in each run dir): AP2H10-AB-s0 (both lists) and s1 on ot3new c08f414a; s1 on cf1fresh d3441732 (relaunch after the 21:01 box restart killed the chain; the three finished runs
+were adopted into the manifest after checking them). `git diff c9d2e07b HEAD` over `experiments/alpasim/lib`, `jevdrive` and the driver scripts is empty for all of them, so the driver is the CF1 driver. The CF1 runs (a-stage) carry c9d2e07b.
