@@ -71,7 +71,10 @@ def pack_fast(jpeg, cam: dict) -> np.ndarray:
     m = _MAPS.get(k) or _MAPS.setdefault(k, Z.OpenpilotMaps(cam))
     if k not in _IDX:
         _IDX[k] = [(3 * np.stack(m.idx) + c).reshape(2, 256, 512) for c in range(3)]
-    f = m.decode(io.BytesIO(jpeg) if isinstance(jpeg, (bytes, bytearray, memoryview)) else jpeg).reshape(-1)
+    from PIL import Image
+    im = Image.open(io.BytesIO(jpeg) if isinstance(jpeg, (bytes, bytearray, memoryview)) else jpeg)
+    im.draft("YCbCr", im.size)                            # OpenpilotMaps.decode without its two image copies
+    f = np.frombuffer(im.tobytes(), np.uint8) if im.mode == "YCbCr" else np.asarray(im.convert("YCbCr")).reshape(-1)
     Y, U, V = (f.take(i) for i in _IDX[k])
 
     def half(c):
