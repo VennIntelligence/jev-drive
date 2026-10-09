@@ -172,6 +172,31 @@ What a nuPlan-track driver actually receives (tap logs, `dev_ltf/20261008-121717
 - Response: the samples return 10 Hz poses in the local frame with absolute timestamps (starter 51 poses / 5 s; LTF
   resamples its 8 x 0.5 s plan).
 
+### Killed workers and concurrency (2026-10-09)
+
+A runtime worker was SIGKILLed in four stacks: C0 SH30 (10-08 23:38:40, 3 stacks running), C0b `wajepa-c0` and
+`ot0-c0` (10-09 09:23:48 and 09:27:18, 9 stacks), M1 stage 2 (10-09 10:36, 9 stacks). Each time one process of about
+10 GB went (`Worker 1 died with exit code -9`, `Result pump failed`), the runtime stayed alive and never finished
+another rollout (2.6 h in C0).
+
+- It is the box, not AlpaSim: the same single-process SIGKILL hit openpilot servers on 2026-09-25 and six WOD eval
+  jobs on 10-08 05:38 (rc 137). What is known about it is in [remote-box.md](remote-box.md), "Host memory".
+  Not the kernel OOM killer (`memory.events` max 0, oom 0, oom_kill 0 since the container started on 10-08 12:34,
+  before all four kills; `/proc/vmstat` oom_kill 0), not `/dev/shm` (138 G, empty), not pids (`pids.events` max 0),
+  not the pool (no `stop` event for those jobs), not the runtime (its only signal is `terminate()`).
+- The box sampler that would show the seconds before each kill (`scripts/boxwatch.sh`) had died with the container
+  restart on 10-08 12:34 and was not running for any of the four. The dispatcher now keeps it alive.
+- `run_native.py` now ends the run with rc 1 as soon as the runtime logs a dead worker, so a kill costs the pool job
+  seconds instead of the 20-minute stall watchdog; the chains resubmit as for any failed job.
+- One stack (2 workers, 8 concurrent rollouts): host memory `11 GB + ~0.1 GB per scene` at the end of the run
+  (233 scenes 26-32 GB, ~350 scenes 40 GB, 400 scenes 52 GB RSS; proportional memory is 85 % of RSS), growing
+  ~2 GB / min; 5-7 cores measured (the pool charges that after 5 min, whatever `--cpu` says); VRAM peak 23-32 GB
+  (declare 32). Nine stacks grew 5.5 GB / min together and held 219 GB RSS at the first C0b kill.
+- Concurrency: VRAM allows two to three stacks per card, the 105-core budget carries about 15,
+  and neither was the limit in any kill. No memory figure separates the kills from the clean runs (C0 died with
+  three stacks and ~90 GB), so the working cap stays 3 stacks per lane until boxwatch has recorded a kill; the pool
+  does not enforce a stack count.
+
 Not verified: numerical agreement with the official Docker environment (no nuPlan reference scores exist), several
 renderer replicas per card, three stacks at once, scenes outside part001, the `ec2` preset, controller gain overrides.
 

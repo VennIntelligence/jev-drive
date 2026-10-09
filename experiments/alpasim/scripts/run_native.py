@@ -10,15 +10,33 @@ A driver command (`--driver`, a shell string that honours ALPASIM_DRIVER_HOST / 
 first on a free port; `--tap` puts driver_tap.py between runtime and driver. A sampler records per-service GPU
 memory, CPU seconds and RSS once a second into usage.jsonl; native_summary.json holds peaks and wall times.
 
+A runtime worker that dies (SIGKILLed from outside on this box, docs/alpasim.md "Killed workers") leaves the runtime
+alive but stuck: "Worker N died with exit code -9", "Result pump failed", then no rollout ever finishes. The launcher
+watches the runtime's log for those lines and ends the run with rc 1 at once, so the pool job fails in seconds.
+
 Run it as a GPU-pool job with the AlpaSim env's python (the pool sets CUDA_VISIBLE_DEVICES):
   python -m jevdrive.cl submit --name alpasim-dev --vram 30 --cpu 12 -- bash experiments/alpasim/scripts/run.sh ...
 """
-import argparse, json, os, random, shlex, signal, socket, subprocess, sys, threading, time
+import argparse, json, os, random, re, shlex, signal, socket, subprocess, sys, threading, time
 from pathlib import Path
 
 import yaml
 
 HERE = Path(__file__).resolve().parent
+WORKER_CRASH = re.compile(rb"Worker \d+ died with exit code[^\n]*|Result pump failed[^\n]*")
+
+
+def worker_crash(log: Path, off: int) -> tuple:
+    """(first crash line in the runtime log past byte `off` or "", new offset). Re-reads 200 bytes of overlap so a
+    line split across two reads is still matched."""
+    try:
+        with open(log, "rb") as f:
+            f.seek(max(0, off - 200))
+            data = f.read()
+            m = WORKER_CRASH.search(data)
+            return (m.group(0).decode(errors="replace").strip() if m else ""), f.tell()
+    except OSError:
+        return "", off
 
 
 def free_port() -> int:
@@ -184,10 +202,14 @@ def main() -> int:
             procs.start(name, host_cmd(svc, src), env, src)
             for p in svc.get("ports", []):
                 times[f"{name}_ready_s"] = procs.wait_port(name, int(str(p).split(":")[0]), a.ready_timeout)
+        rt_log, rt_off = out / "native-logs" / f"{runtime[0]}.log", 0
         while (rc := procs.p[runtime[0]].poll()) is None:
             dead = [n for n, p in procs.p.items() if n not in runtime and p.poll() is not None]
             if dead:
                 raise RuntimeError(f"service {dead} died while the runtime was running")
+            crash, rt_off = worker_crash(rt_log, rt_off)
+            if crash:
+                raise RuntimeError(f"runtime worker crashed and the runtime does not recover: {crash}")
             time.sleep(1)
         times["runtime_s"] = time.time() - times["t_runtime"]
         # The runtime exits 0 with failed rollouts (allow_aggregation_with_failed_rollouts): count them here.

@@ -27,6 +27,19 @@ with a monitor, for looking at CARLA with your own eyes.
   25 cores per card so far (175 on the 7-card instance, 75 on the 3-card one; `/sys/fs/cgroup/cpu.max`), RAM from
   `memory.max`, pids.max 20480. `os.cpu_count()` reports the host count, so size thread and process pools with
   `jevdrive.common.n_cpus()`, not the host count. On 2026-10-01 card 0 sits on NUMA 0, cards 1-2 on NUMA 1.
+- **Host memory.** `memory.max` is 276 GiB on the 3-card instance and the platform sets `memory.high` 2 GiB below
+  it. Page cache is charged to the container, so `memory.current` sits at `memory.high` almost all the time
+  (2026-10-09: anon 84 GiB, file 190 GiB) and every new allocation is paid for by reclaiming cache. Single processes
+  are SIGKILLed from outside the kernel's OOM path (`memory.events` oom_kill stays 0; no dmesg, journal or audit in
+  the container, so the sender cannot be read). The one kill series the sampler recorded (10-08 05:37-05:40, six WOD
+  eval jobs): `memory.current` pinned at 274.0 GiB, `memory.high` events climbing, anon rising 20 GB / min while
+  cache shrank at the same rate, and after 60 s the largest process by RSS was killed, then the next largest 5 s
+  later, at anon 153 GiB (55 % of the limit). The level of application memory did not predict it; fast growth
+  against a full page cache did. `scripts/boxwatch.sh` writes that picture every 5 s to `$DATA_DIR/runs/boxwatch/`;
+  the pool dispatcher starts it when it is not running, and `usage.jsonl` carries
+  `mem = [anon, current, high, high events]` once a minute. RSS over-counts jobs that mmap their data (a training:
+  41 GB RSS, 14 GB proportional), so the pool's `rss_peak` is an upper bound, not the job's memory. History:
+  experiments/cl_infra/results/closed-loop-infra-acceptance/sigkill.md.
 - Speed: Qwen3-VL-4B features at 800 px ran at 21.1 ms/frame (8.8 GB peak VRAM) on the old RTX PRO 6000; the 4090 D did 30.8.
   Not re-measured on the 6000D; expect it to be slower by up to the matmul ratio above.
 - **Never shut the instance down to add cards.** On AutoDL a stopped instance releases its GPUs to the pool and
@@ -43,4 +56,4 @@ with a monitor, for looking at CARLA with your own eyes.
 - Python: use `uv`, and create venvs under `~/data`.
 - A re-created instance loses users, keys and packages, and the host and port change. Re-check this page then.
 
-Last verified: 2026-10-01 (remote box configuration)
+Last verified: 2026-10-01 (remote box configuration); host memory 2026-10-09

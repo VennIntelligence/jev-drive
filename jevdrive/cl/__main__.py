@@ -7,6 +7,7 @@ GPU pool (jevdrive/cl/pool.py): agents submit jobs, the dispatcher (tmux jev:poo
                                        one job per arm (N-a, N-b, ...) + a collect job after all of them
   queue [--all] | show ID | cancel ID.. [--drain] | top
   usage [--hours H]                    card-hours and core-hours used, idle time split by cause
+  vram [--hours H] [--all]             declared against measured VRAM per name prefix; under-declared ones first
   hold --card G (--whole | --vram GB [--carla N]) [--idx a-b] [--cpus ..] [--pid PID] --note TEXT | holds | unhold HID
                                        resources used outside the pool (ends by itself when --pid exits)
   dispatch [--once]                    the dispatcher (run it once, in tmux jev:pool)
@@ -171,6 +172,20 @@ def cmd_usage(a):
     print("\ncomputing = GPU job on the card, util >= 10 %%; job, GPU idle = a GPU job that is not using the card; queued: X = "
           "card without a GPU job while ready GPU jobs wait on X; serial = idle next to a GPU job older than %d min with "
           "nothing ready (fan it out); no work queued = nothing submitted for it." % (P.SERIAL_HINT_S / 60))
+    return 0
+
+
+def cmd_vram(a):
+    rows = P.vram_report(a.hours)
+    bad = [r for r in rows if r["over"] or r["oom"]]
+    print("VRAM declared against measured, jobs started in the last %g h: %d name prefixes, %d under-declared or hit by "
+          "a CUDA OOM.\nover = runs measured above %.1f x declared + %.0f GB; books = what the pool books the next job of "
+          "the prefix at (a declaration that proved too low no longer caps it)." % (
+              a.hours, len(rows), len(bad), P.OVER_MARGIN, P.OVER_PAD_GB))
+    print("\n| name prefix | runs | declared GB | measured peak GB | over | OOM | pool books GB |\n|:--|--:|--:|--:|--:|--:|--:|")
+    for r in (rows if a.all else bad):
+        print("| %s | %d | %g | %.1f | %d | %d | %g |" % (r["key"], r["runs"], r["declared"], r["peak"], r["over"],
+                                                     r["oom"], r["books"]))
     return 0
 
 
@@ -381,6 +396,9 @@ def main(argv=None):
     sub.add_parser("profiles")
     s = sub.add_parser("usage")
     s.add_argument("--hours", type=float, default=24.0)
+    s = sub.add_parser("vram")
+    s.add_argument("--hours", type=float, default=48.0)
+    s.add_argument("--all", action="store_true", help="every name prefix, not only the under-declared ones")
     for verb in ("fanout", "submit"):
         s = sub.add_parser(verb)
         if verb == "fanout":

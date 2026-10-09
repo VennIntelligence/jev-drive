@@ -30,6 +30,9 @@ card when (all measured live, nvidia-smi cached <= 15 s):
             runs + 1 GB) once history has >= 3 of them; without history a job books its declaration for 10 min, then
             min(declared, 1.2 x own peak + 1 GB). CARLA and exclusive jobs always book the declaration, and
             config trust_measured = false restores that for every job.
+            A declaration that proved too low stops being a cap: a job whose own peak, or whose name prefix's
+            recorded peak (one run is enough, failed and cancelled runs count), is above 1.1 x declared + 1 GB
+            books 1.2 x its own peak + 1 GB, or the recorded peak + 1 GB, queued or running. See "Under-declared VRAM" below.
   CARLA     pool servers (max(declared, live)) + servers outside the pool + carla <= carla_per_card (default 6); at most
             one CARLA job starts per card per round (staggered server starts).
   training  train jobs on the card < train_per_card (default 2).
@@ -60,6 +63,20 @@ at most idle_vram_gb (1 GB) used outside the pool, for >= idle_s (120 s, config)
   auto_retarget  a queued job restricted by `gpus` whose allowed cards cannot take it, while a card outside `gpus` is idle
                  and would fit it, gets that card added to its gpus and starts there (logged `auto_retarget`).
                  `submit --pin-strict` opts out.
+Under-declared VRAM (the dispatcher samples every job's VRAM each round, nvidia-smi per pid):
+  vram_over      a running job measured above 1.1 x declared + 1 GB: logged once per 2 GB of growth with the card and
+                 its neighbours, written to the job's STATUS, booked at 1.2 x peak + 1 GB from then on, and its peak
+                 goes to history whatever its end state, so the next job of the prefix is placed by measurement.
+  vram_stop      such a job on a card with less than over_stop_free_gb (1 GB; 0 = never) free is stopped: the job
+                 that broke its declaration goes, not a neighbour picked by allocation order. It is requeued once
+                 (oom_retries) and waits for a card with room for what it measured.
+  oom            a job that exits non-zero with a CUDA out-of-memory error in this try's part of log.txt is requeued
+                 oom_retries times (default 1) beyond `tries`, whoever caused it; the event lists the card's jobs with
+                 declared and measured VRAM. Exhausted: failed with "CUDA OOM" in the reason.
+`cl vram` lists declared against measured per name prefix.
+Host memory: usage.jsonl carries mem = [anon GB, memory.current GB, memory.high GB, memory.high events since the
+last line]; the dispatcher keeps scripts/boxwatch.sh (5 s box sampler, SIGKILL forensics) alive.
+
 History: when a job ends done (>= 60 s), its peak VRAM (measured) and peak cores are appended to history.json under
 its history key (env CL_HIST_KEY if the submitter set one, else its name; then hist_prefix: lower case, trailing -s3 / -k2 / _t0 / -007 / -pf / trailing digits stripped repeatedly,
 so `op-eval-s3-pf` and `op-eval-k2` are `op-eval`), last 20 kept. `submit` without --vram / --cpu defaults to p95 x 1.2
@@ -106,13 +123,19 @@ HIST_MIN_WALL_S = 60.0
 HIST_MIN_N = 3                        # finished runs of a name prefix before its measured peaks replace a declaration
 VRAM_SETTLE_S = 600.0                 # without history: a job books its declared VRAM this long, then its own peak
 VRAM_MARGIN, VRAM_PAD_GB = 1.2, 1.0   # booked = margin x measured peak + pad, never above the declaration
+OVER_MARGIN, OVER_PAD_GB = 1.1, 1.0   # measured above margin x declared + pad: the declaration was too low
+OVER_STEP_GB = 2.0                    # a job's vram_over event repeats when its peak grew by this much
+OOM_RE = re.compile(rb"CUDA out of memory|OutOfMemoryError|CUDA error: out of memory|CUDA_ERROR_OUT_OF_MEMORY|"
+                    rb"CUBLAS_STATUS_ALLOC_FAILED|CUDNN_STATUS_ALLOC_FAILED")
+OOM_SCAN_BYTES = 1 << 20              # how much of a failed try's log is searched for OOM_RE (its tail)
+BOXWATCH_EVERY_S = 600.0              # how often the dispatcher makes sure scripts/boxwatch.sh is running
 USAGE_EVERY_S = 60.0                  # one usage.jsonl line per this many seconds
 SERIAL_HINT_S = 1800.0                # `top` flags a GPU job older than this while another card has been idle
 CLK_TCK = os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") else 100
 STALE_S = 120.0                       # status.json older than this: the dispatcher is not running
 DEFAULTS = dict(poll_s=20.0, headroom_gb=4.0, carla_per_card=capacity.GPU_KNEE, train_per_card=2, cpu_overcommit=1.0,
                 max_starts=4, hold_s=900.0, cards=None, smi_age_s=15.0, idle_s=120.0, idle_vram_gb=1.0,
-                trust_measured=True)
+                trust_measured=True, over_stop_free_gb=1.0, oom_retries=1, boxwatch=True)
 FINAL = ("done", "failed", "cancelled")
 
 
@@ -178,24 +201,49 @@ def known_caps(hist: dict, job) -> dict:
     return out
 
 
-def vram_need(spec: dict, known: dict, trust: bool = True) -> float:
-    """GB a queued job needs free on a card: its declaration, or less when history knows the name prefix."""
+def hist_max(hist: dict, job, key: str = "vram") -> float:
+    """Largest recorded value under the job's history key (0 without a record); one run is enough."""
+    return max(((hist or {}).get(hist_key(job)) or {}).get(key) or [0.0])
+
+
+def over_declared(spec: dict, measured: float) -> bool:
+    """Did `measured` GB break the job's VRAM declaration (by more than OVER_MARGIN and OVER_PAD_GB)?"""
+    return not spec.get("exclusive") and measured > OVER_MARGIN * float(spec.get("vram_gb") or 0) + OVER_PAD_GB
+
+
+def vram_raised(spec: dict, peak: float = 0.0, seen: float = 0.0) -> float:
+    """GB to book for a job that broke its declaration, 0 when it did not: 1.2 x its own `peak` + 1 GB (it may still
+    be growing), or `seen` + 1 GB (the largest finished-run peak of its history key is already a maximum)."""
+    return round(max(VRAM_MARGIN * peak + VRAM_PAD_GB if over_declared(spec, peak) else 0.0,
+                     seen + VRAM_PAD_GB if over_declared(spec, seen) else 0.0), 1)
+
+
+def vram_need(spec: dict, known: dict, trust: bool = True, seen: float = 0.0) -> float:
+    """GB a queued job needs free on a card: its declaration, or less when history knows the name prefix; more when
+    `seen` (hist_max of the prefix) broke the declaration, whatever `trust` says."""
     declared = float(spec.get("vram_gb") or 0)
+    up = vram_raised(spec, 0.0, seen)
+    if up:
+        return up
     if not trust or spec.get("carla") or spec.get("exclusive") or "vram_gb" not in (known or {}):
         return declared
     return min(declared, known["vram_gb"])
 
 
-def vram_charge(j: dict, now: float, known: dict = None, trust: bool = True) -> float:
+def vram_charge(j: dict, now: float, known: dict = None, trust: bool = True, seen: float = 0.0) -> float:
     """GB a running job books on its card besides what it uses right now (the caller takes the max with the live
     measurement). CARLA and exclusive jobs, and trust_measured = false: the declaration, for life. Otherwise the
     declaration until the job's own peak can be believed (history of the prefix, or VRAM_SETTLE_S of running), then
-    min(declared, max(history cap, 1.2 x own peak + 1 GB))."""
+    min(declared, max(history cap, 1.2 x own peak + 1 GB)). A job whose own peak, or whose prefix's recorded peak
+    `seen`, broke the declaration books vram_raised() for the rest of its life (a spike comes back)."""
     s = j["spec"]
     declared = float(s.get("vram_gb") or 0)
+    peak = float(j.get("vram_peak") or 0)
+    up = vram_raised(s, peak, seen)                    # the declaration proved too low: it no longer caps the booking
+    if up:
+        return up
     if not trust or s.get("carla") or s.get("exclusive"):
         return declared
-    peak = float(j.get("vram_peak") or 0)
     own = VRAM_MARGIN * peak + VRAM_PAD_GB
     if "vram_gb" in (known or {}):
         return min(declared, max(known["vram_gb"], own))
@@ -660,9 +708,33 @@ class Dispatcher:
                             float(j.get("rss_peak") or 0))
             except OSError:
                 pass
+        elif over_declared(j["spec"], float(j.get("vram_peak") or 0)):
+            self.note_over(j)                              # failed / cancelled / short: the measured peak still counts
         self.status_line(j, "%s%s" % (state, ": " + why if why else ""))
+        j.pop("card_jobs", None)
         self.log("end", id=j["id"], state=state, rc=rc, why=why, gpu=j.get("gpu"), wall_s=info["wall_s"],
                  vram_peak=j.get("vram_peak"), cores_max=j.get("cores_max"), rss_peak=j.get("rss_peak"))
+
+    def oom_in_log(self, j: dict) -> bool:
+        """Does this try's part of the job's log.txt (from the offset recorded at launch) hold a CUDA OOM error?"""
+        try:
+            with (self.logdir(j) / "log.txt").open("rb") as f:
+                size = f.seek(0, 2)
+                f.seek(max(min(int(j.get("log_off") or 0), size), size - OOM_SCAN_BYTES))
+                return bool(OOM_RE.search(f.read()))
+        except OSError:
+            return False
+
+    def note_over(self, j: dict) -> None:
+        """Put the VRAM peak of a job that broke its declaration into history (any end state, any wall time), so
+        the next job under its history key is booked by measurement (vram_need / vram_charge, `seen`)."""
+        peak = float(j.get("vram_peak") or 0)
+        if over_declared(j["spec"], peak) and j.get("over_rec") != peak:
+            try:
+                hist_record(self.pool, j["spec"], peak, 0.0)
+                j["over_rec"] = peak
+            except OSError:
+                pass
 
     def reap(self, rows: dict) -> dict:
         """Refresh running jobs; finish the ones whose tree is empty. Returns id -> live member pids."""
@@ -702,15 +774,28 @@ class Dispatcher:
                 rc = int((d / ("rc.%d" % j["tries"])).read_text().strip())
             except (OSError, ValueError):
                 rc = None
-            if j.get("stop"):
+            cfg = self.cfg()
+            vstop = str(j.get("stop") or "").startswith("VRAM ")
+            oom = vstop or (rc != 0 and not j.get("stop") and self.oom_in_log(j))
+            if oom:
+                self.note_over(j)
+                self.log("oom", id=jid, name=spec["name"], owner=spec.get("owner"), gpu=j.get("gpu"), rc=rc,
+                         declared=spec.get("vram_gb"), peak=j.get("vram_peak"), stopped=vstop,
+                         retry=int(j.get("oom_tries") or 0) < int(cfg["oom_retries"]), card_jobs=j.get("card_jobs"))
+            if oom and int(j.get("oom_tries") or 0) < int(cfg["oom_retries"]):
+                j["oom_tries"] = int(j.get("oom_tries") or 0) + 1
+                why = j.pop("stop", None) or "CUDA OOM (rc %s)" % rc
+                j.update(state="queued", why="retry after " + why)
+                self.status_line(j, "queued: retry after " + why)
+            elif j.get("stop"):
                 self.finish(j, "cancelled" if j["stop"] == "cancelled" else "failed", rc, j.pop("stop"))
             elif rc == 0:
                 self.finish(j, "done", rc, "")
-            elif j["tries"] < int(spec.get("tries") or 1):
+            elif j["tries"] - int(j.get("oom_tries") or 0) < int(spec.get("tries") or 1):
                 j.update(state="queued", why="retry after rc %s" % rc)
                 self.log("retry", id=jid, rc=rc, tries=j["tries"])
             else:
-                self.finish(j, "failed", rc, "rc %s" % rc)
+                self.finish(j, "failed", rc, "rc %s%s" % (rc, " (CUDA OOM)" if oom else ""))
         return live
 
     # -------------------------------------------------------------- accounting
@@ -724,7 +809,7 @@ class Dispatcher:
             f = [x.strip() for x in ln.split(",")]
             if len(f) == 3 and f[0] in uuid and f[1].isdigit():
                 per_pid[(uuid[f[0]], int(f[1]))] = float(f[2]) / 1024 if f[2].replace(".", "").isdigit() else 0.0
-        pool_pids, pool_carla = set(), {}
+        pool_pids, pool_carla, on_card = set(), {}, {}
         for j in self.jobs("running"):
             g, mem = j.get("gpu"), set(live.get(j["id"], []))
             pool_pids |= mem
@@ -737,8 +822,10 @@ class Dispatcher:
             act = sum(v for (cg, p), v in per_pid.items() if cg == g and p in mem)
             j["vram_now"] = round(act, 1)
             j["vram_peak"] = max(float(j.get("vram_peak") or 0), round(act, 1))
-            j["vram_booked"] = round(max(act, vram_charge(j, now, known_caps(self.hist, s), cfg["trust_measured"])), 1)
+            j["vram_booked"] = round(max(act, vram_charge(j, now, known_caps(self.hist, s), cfg["trust_measured"],
+                                                          hist_max(self.hist, s))), 1)
             a.pool_gb += j["vram_booked"]
+            on_card.setdefault(g, []).append(j)
             a.foreign_gb -= act                                # foreign = used - pool actual (used added below)
             a.exclusive = a.exclusive or bool(s.get("exclusive"))
             a.carla_pool += max(s.get("carla", 0), len(servers))
@@ -765,7 +852,39 @@ class Dispatcher:
         for g, a in cards.items():
             a.foreign_gb = max(a.foreign_gb, hold_gb.get(g, 0.0), 0.0)
             a.carla_foreign = max(a.carla_foreign, hold_carla.get(g, 0))
+        for g, js in on_card.items():
+            self.watch_over(cards[g], js, cfg)
         return cards
+
+    def watch_over(self, a: CardAcct, js: list, cfg: dict) -> None:
+        """Jobs on card `a` measured above their declaration: say so once per OVER_STEP_GB of growth (event, STATUS),
+        and when the card is about to run out, stop the one furthest above its declaration instead of letting the
+        next allocation pick a victim."""
+        brief = [dict(id=x["id"], name=x["spec"]["name"], owner=x["spec"].get("owner"),
+                      declared=x["spec"].get("vram_gb"), peak=x.get("vram_peak")) for x in js]
+        over = []
+        for j in js:
+            s, peak = j["spec"], float(j.get("vram_peak") or 0)
+            j["card_jobs"] = [b for b in brief if b["id"] != j["id"]]
+            if not over_declared(s, peak):
+                continue
+            over.append(j)
+            if peak >= float(j.get("vram_over") or 0) + OVER_STEP_GB:
+                j["vram_over"] = peak
+                self.log("vram_over", id=j["id"], name=s["name"], owner=s.get("owner"), gpu=a.index,
+                         declared=s.get("vram_gb"), peak=peak, booked=j.get("vram_booked"),
+                         card_free_gb=round(a.total_gb - a.used_gb, 1), card_jobs=j["card_jobs"])
+                self.status_line(j, "running on card %d: VRAM %.1f GB measured > %.1f GB declared; booked %.1f GB. "
+                                    "Declare what it uses (cl vram)." % (a.index, peak, float(s.get("vram_gb") or 0),
+                                                                         j["vram_booked"]))
+        free, floor = a.total_gb - a.used_gb, float(cfg.get("over_stop_free_gb") or 0)
+        over = [j for j in over if not j.get("stop")]
+        if over and floor > 0 and free < floor:
+            j = max(over, key=lambda x: float(x.get("vram_now") or 0) - float(x["spec"].get("vram_gb") or 0))
+            j["stop"] = "VRAM %.1f GB used > %.1f GB declared with %.1f GB free on card %d" % (
+                float(j.get("vram_now") or 0), float(j["spec"].get("vram_gb") or 0), max(free, 0.0), a.index)
+            self.log("vram_stop", id=j["id"], name=j["spec"]["name"], owner=j["spec"].get("owner"), gpu=a.index,
+                     why=j["stop"], card_jobs=j["card_jobs"])
 
     # -------------------------------------------------------------- measured CPU, idle cards
     def measure_cpu(self, live: dict, now: float) -> None:
@@ -860,7 +979,7 @@ class Dispatcher:
             known = known_caps(self.hist, j["spec"]) if trust else {}
             n_cpu = max(1, math.ceil(min(max(s.cpu, 1), known.get("cpu", max(s.cpu, 1)))))
             ram_need = min(s.ram_gb, known.get("ram_gb", s.ram_gb))
-            v_need = vram_need(j["spec"], known, trust)
+            v_need = vram_need(j["spec"], known, trust, hist_max(self.hist, j["spec"]))
             eff = dataclasses.replace(s, vram_gb=v_need)
             pid_need = s.est_threads(box.host_cpus)
             soft = hard = ""                           # soft: CPU / PID plan cap, relaxed on an idle card
@@ -980,6 +1099,7 @@ class Dispatcher:
         (d / ("rc.%d" % k)).unlink(missing_ok=True)
         (d / "DRAIN").unlink(missing_ok=True)
         with (ld / "log.txt").open("ab") as f:
+            j["log_off"] = f.tell()
             f.write(("\n==> %s try %d on card %d idx %s span %d cpus %s\n$ %s\n" % (
                 time.strftime("%F %T"), k, g, subs["idx"], span, cpus or "-", shlex.join(full))).encode())
             f.flush()
@@ -989,7 +1109,8 @@ class Dispatcher:
         self.children[jid] = p
         j.update(state="running", gpu=g, idx=idx, span=span, cpus=cpus, t0=time.time(), pid=p.pid, why="",
                  argv=full)
-        j.pop("t_blocked", None)
+        for key in ("t_blocked", "vram_over", "vram_peak", "vram_now", "card_jobs"):   # per try, per card
+            j.pop(key, None)
         self.note_wait(j)
         j.pop("t_cause", None)
         self.status_line(j, "running on card %d (try %d, pid %d%s)" % (g, k, p.pid, ", idx %s" % idx if span else ""))
@@ -1017,9 +1138,39 @@ class Dispatcher:
                     cpu=[round(sum(float(j.get("cores_now") or 0) for j in run), 1), self.cpu_info.get("charged"),
                          self.cpu_info.get("budget")], quota=box.cores, q_gpu=q_gpu, q_cpu=q_cpu, not_ready=blocked,
                     oldest={str(g): round(now - min((j["t0"] for j in run if j.get("gpu") == g and is_gpu(j["spec"])),
-                                                    default=now)) for g in self.last})
+                                                    default=now)) for g in self.last}, mem=self.mem_line())
         with (self.pool / "usage.jsonl").open("a") as f:
             f.write(json.dumps(line) + "\n")
+
+    def mem_line(self, root: Path = Path("/sys/fs/cgroup")) -> list:
+        """[anon GB, memory.current GB, memory.high GB, memory.high events since the last call]: the container sits
+        at memory.high whenever page cache fills it, and jobs have been SIGKILLed (not by the kernel OOM killer)
+        while it was above it (docs/remote-box.md, "Host memory")."""
+        def num(name, key=None):
+            try:
+                txt = (root / name).read_text()
+                return float(dict(l.split() for l in txt.splitlines() if l.count(" ") == 1)[key] if key else txt.strip())
+            except (OSError, ValueError, KeyError):
+                return 0.0
+        high, prev = num("memory.events", "high"), getattr(self, "mem_high_prev", None)
+        self.mem_high_prev = high
+        return [round(num("memory.stat", "anon") / 2 ** 30, 1), round(num("memory.current") / 2 ** 30, 1),
+                round(num("memory.high") / 2 ** 30, 1), int(high - prev) if prev is not None else 0]
+
+    def keep_boxwatch(self) -> None:
+        """Start scripts/boxwatch.sh detached when it is not running (it takes its own lock and exits at once when
+        another instance holds it). The sampler is the only record of what the box looked like before a SIGKILL and
+        it does not survive a container restart by itself."""
+        now = time.time()
+        if not self.cfg().get("boxwatch") or self.probe_fn or now - getattr(self, "boxwatch_t", 0.0) < BOXWATCH_EVERY_S:
+            return
+        self.boxwatch_t = now
+        try:
+            subprocess.Popen(["bash", str(REPO / "scripts" / "boxwatch.sh")], stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+                             env=dict(os.environ, DATA_DIR=str(data_dir())))
+        except OSError as e:
+            self.log("boxwatch_failed", err=str(e))
 
     def prune_holds(self, rows: dict) -> None:
         """Drop holds whose process has exited (logged once)."""
@@ -1052,6 +1203,7 @@ class Dispatcher:
         if not self.halt:
             self.admit(box, rows, live, holds, cfg)
             self.usage(box)
+            self.keep_boxwatch()
         self.save()
         procs.atomic_json(self.pool / "status.json", dict(
             t=time.time(), pid=os.getpid(), cfg=cfg, holds=holds,
@@ -1144,6 +1296,33 @@ def usage_report(hours: float = 24.0, pool: Path = None, now: float = None) -> d
                 k = "serial" if others_old else "no work queued"
             out["cards"][k] = out["cards"].get(k, 0.0) + dt
     return out
+
+
+def vram_report(hours: float = 48.0, pool: Path = None, now: float = None) -> list:
+    """Declared against measured VRAM per history key, for jobs started in the last `hours`: rows of dict(key, runs,
+    declared (lowest), peak (highest measured), over (runs above OVER_MARGIN x declared + OVER_PAD_GB), oom (runs
+    that ended or were retried on a CUDA OOM or a vram_stop), books (what the pool books the next such job at)),
+    under-declared keys first."""
+    pool, now = Path(pool or pool_dir()), now or time.time()
+    st = _read_json(pool / "state.json", {"jobs": {}}) or {"jobs": {}}
+    hist, rows = _read_json(pool / "history.json", {}) or {}, {}
+    for j in st["jobs"].values():
+        s = j["spec"]
+        if not j.get("t0") or j["t0"] < now - hours * 3600 or s.get("exclusive"):
+            continue
+        peak = float(j.get("vram_peak") or j.get("over_rec") or 0)
+        r = rows.setdefault(hist_key(s), dict(key=hist_key(s), runs=0, declared=float("inf"), peak=0.0, over=0, oom=0,
+                                              spec=s))
+        r["runs"] += 1
+        if float(s.get("vram_gb") or 0) <= r["declared"]:
+            r["declared"], r["spec"] = float(s.get("vram_gb") or 0), s
+        r["peak"] = max(r["peak"], peak)
+        r["over"] += over_declared(s, peak)
+        r["oom"] += bool(j.get("oom_tries")) or "CUDA OOM" in str(j.get("why")) or str(j.get("why")).startswith("VRAM ")
+    for r in rows.values():
+        s = r.pop("spec")
+        r["books"] = vram_need(s, known_caps(hist, s), True, hist_max(hist, s))
+    return sorted(rows.values(), key=lambda r: (-(r["over"] > 0 or r["oom"] > 0), r["declared"] - r["peak"]))
 
 
 def serial_hint(cmd) -> str:

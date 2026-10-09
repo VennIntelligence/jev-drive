@@ -114,7 +114,7 @@ takes the next one. Nobody picks a card, a core list or a CARLA port by hand.
 
 ```bash
 P=".venv/bin/python -m jevdrive.cl"
-$P dispatch                                   # once per box: scripts/tmux_run.sh pool $P dispatch (restart-safe)
+$P dispatch                                   # once per box: scripts/tmux_run.sh pool $P dispatch (restart: below)
 $P submit --name dg-train --vram 35 --cpu 12 --train --log-dir $DATA_DIR/runs/x/train -- \
     $DATA_DIR/envs/op-train/bin/python experiments/x/train.py --steps 4000          # prints the job id
 $P submit --name dg-eval --vram 12 --cpu 8 --after <id> -- "bash experiments/x/eval.sh {gpu}"
@@ -124,8 +124,38 @@ $P queue            # running / queued jobs, the card, and why a job waits
 $P top              # per card: util, VRAM booked / used outside the pool / free, jobs; then idle capacity next to
                     # queued demand, and an UNDER-USED line when a card idles
 $P usage --hours 24 # card-hours and core-hours used, idle card-hours split by cause
+$P vram             # declared against measured VRAM per name prefix, under-declared ones first
 $P show <id>        # spec, state, log tail       $P cancel <id> [--drain]
 $P retarget <id>... --gpus 0,2   # change the allowed cards of queued jobs; ids and --after chains stay
+```
+
+**Under-declared VRAM.** The pool places a job by the VRAM it declares and samples what every job really uses each
+round (nvidia-smi per pid). Until 2026-10-09 a declaration only ever capped the booking: a job declared at 12 GB that
+used 29-42 GB was booked at 12 whenever it was not allocating, its failed runs left no history, and nothing was
+logged (149 of 3 600 jobs ran above their declaration in four days; 9 failed with a CUDA OOM in their log, none was
+retried). Now:
+
+- A job measured above 1.1 x declared + 1 GB gets a `vram_over` event (events.jsonl, with the card's other jobs) and a
+  line in its STATUS, and is booked at 1.2 x its peak + 1 GB for the rest of its life.
+- Its peak goes to history whatever its end state, and one recorded peak above the declaration is enough: the next
+  job of the name prefix is booked at that peak + 1 GB, queued or running. `cl vram` shows the table.
+- Such a job on a card with under 1 GB free is stopped (`vram_stop`) before a neighbour's allocation fails, and
+  requeued once; it then waits for a card with room for what it measured.
+- A job that exits non-zero with a CUDA out-of-memory error in its log is requeued once beyond `--tries`
+  (`oom` event; config `oom_retries`), whoever caused the OOM.
+
+Declare the peak; the pool lowers the booking from history by itself, so a generous declaration costs nothing after
+three runs.
+
+**Restarting the dispatcher** (pool code only takes effect then). State is in `state.json` (saved every round),
+jobs run in their own sessions and are followed by pid + start time, exit codes land in `rc.<try>` files, so running
+and queued jobs survive. Stop it with SIGTERM to its pid only (`status.json` has it): the handler lets the round
+finish and save. Ctrl-C or SIGKILL can land between a launch and the save and start that job twice.
+
+```bash
+kill -TERM $(python3 -c "import json;print(json.load(open('$DATA_DIR/runs/pool/status.json'))['pid'])")
+tail -1 $DATA_DIR/runs/pool/events.jsonl      # wait for dispatcher_stop (up to one round)
+tmux send-keys -t jev:pool '.venv/bin/python -m jevdrive.cl dispatch' Enter
 ```
 
 **Fail fast.** `submit` refuses a command whose script paths are missing or whose `.py` files do not compile (`--no-check`

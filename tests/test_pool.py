@@ -188,7 +188,7 @@ class BookedByMeasurement(unittest.TestCase):
         j["vram_peak"] = 18.0
         self.assertAlmostEqual(P.vram_charge(j, now, known), 22.6)                            # own peak above history
         j["vram_peak"] = 40.0
-        self.assertEqual(P.vram_charge(j, now, known), 24.0)                                  # capped (the caller adds live use)
+        self.assertEqual(P.vram_charge(j, now, known), 49.0)                                  # broke the declaration: 1.2 x peak + 1
         j = dict(spec=spec, t0=now - 30, vram_peak=5.7)
         self.assertEqual(P.vram_charge(j, now, {}), 24.0)                                     # no history, young: declared
         j["t0"] = now - P.VRAM_SETTLE_S - 1
@@ -196,6 +196,39 @@ class BookedByMeasurement(unittest.TestCase):
         self.assertEqual(P.vram_charge(dict(j, vram_peak=0.0), now, {}), 24.0)                # never measured: declared
         self.assertEqual(P.vram_charge(j, now, {}, trust=False), 24.0)
         self.assertEqual(P.vram_charge(dict(j, spec=dict(vram_gb=24.0, exclusive=True)), now, {}), 24.0)
+
+    def test_under_declared_vram_books_by_measurement(self):
+        spec, now = dict(vram_gb=12.0, name="prep-s3"), time.time()
+        self.assertFalse(P.over_declared(spec, 14.0))                                         # within 1.1 x + 1 GB
+        self.assertTrue(P.over_declared(spec, 29.1))
+        self.assertFalse(P.over_declared(dict(spec, exclusive=True), 60.0))
+        hist = {"prep": dict(vram=[29.1], cores=[])}                                          # one run is enough
+        self.assertEqual(P.hist_max(hist, spec), 29.1)
+        self.assertEqual(P.hist_max(hist, dict(name="other")), 0.0)
+        self.assertAlmostEqual(P.vram_need(spec, {}, True, P.hist_max(hist, spec)), 30.1)     # queued: recorded peak + 1
+        self.assertAlmostEqual(P.vram_need(spec, {}, False, 29.1), 30.1)                      # whatever trust says
+        self.assertEqual(P.vram_need(dict(spec, vram_gb=30.0), {}, True, 29.1), 30.0)         # declaration fixed: back to it
+        j = dict(spec=spec, t0=now - 30, vram_peak=2.0)
+        self.assertEqual(P.vram_charge(j, now, {}), 12.0)
+        self.assertAlmostEqual(P.vram_charge(j, now, {}, True, 29.1), 30.1)                   # running, history says more
+        j["vram_peak"] = 41.8
+        self.assertAlmostEqual(P.vram_charge(j, now, {}, False), 51.2)                        # own peak, kept after it drops
+        self.assertAlmostEqual(P.vram_charge(dict(j, spec=dict(spec, carla=1)), now, {}), 51.2)
+
+    def test_vram_report(self):
+        tmp, now = Path(tempfile.mkdtemp()), time.time()
+        jobs = {"a": dict(id="a", spec=dict(name="prep-s0", vram_gb=12.0), t0=now - 60, vram_peak=29.1, state="done"),
+                "b": dict(id="b", spec=dict(name="prep-s1", vram_gb=12.0), t0=now - 50, vram_peak=0.0, state="failed",
+                          why="rc 1 (CUDA OOM)"),
+                "c": dict(id="c", spec=dict(name="ok-s0", vram_gb=20.0), t0=now - 50, vram_peak=15.0, state="done"),
+                "d": dict(id="d", spec=dict(name="old-s0", vram_gb=1.0), t0=now - 9e5, vram_peak=15.0, state="done")}
+        (tmp / "state.json").write_text(json.dumps(dict(jobs=jobs)))
+        (tmp / "history.json").write_text(json.dumps({"prep": dict(vram=[29.1])}))
+        rows = P.vram_report(48.0, tmp)
+        self.assertEqual([r["key"] for r in rows], ["prep", "ok"])
+        self.assertEqual({k: rows[0][k] for k in ("runs", "declared", "peak", "over", "oom", "books")},
+                         dict(runs=2, declared=12.0, peak=29.1, over=1, oom=1, books=30.1))
+        self.assertEqual((rows[1]["over"], rows[1]["books"]), (0, 20.0))
 
     def test_ram_reserve_and_cpu_known(self):
         now = time.time()
@@ -356,6 +389,52 @@ class Dispatch(unittest.TestCase):
         bad = d.st["jobs"][a]
         self.assertEqual((bad["tries"], bad["rc"]), (2, 3))
         self.assertIn("rc 3", (self.tmp / "jobs" / a / "ERROR").read_text())
+
+    def events(self, kind):
+        return [e for e in (json.loads(l) for l in (self.tmp / "events.jsonl").read_text().splitlines()) if e["kind"] == kind]
+
+    def test_cuda_oom_is_retried_once_beyond_tries(self):
+        mark = self.tmp / "second"
+        oom = "echo 'torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 GiB'"
+        a = P.submit("if [ -e %s ]; then exit 0; fi; touch %s; %s; exit 1" % (mark, mark, oom), name="victim", pool=self.tmp, vram_gb=1)
+        b = P.submit("%s; exit 1" % oom, name="always", pool=self.tmp, vram_gb=1)
+        c = P.submit("echo plain failure; exit 1", name="plain", pool=self.tmp, vram_gb=1)
+        d = self.disp()
+        self.until(d, lambda: all(j["state"] in P.FINAL for j in d.st["jobs"].values()))
+        j = d.st["jobs"]
+        self.assertEqual((j[a]["state"], j[a]["tries"], j[a]["oom_tries"]), ("done", 2, 1))    # tries = 1, retried anyway
+        self.assertEqual((j[b]["state"], j[b]["tries"]), ("failed", 2))
+        self.assertIn("CUDA OOM", j[b]["why"])
+        self.assertEqual((j[c]["state"], j[c]["tries"], j[c]["why"]), ("failed", 1, "rc 1"))    # not an OOM: no extra try
+        self.assertEqual(sorted(e["id"] for e in self.events("oom")), sorted([a, b, b]))
+
+    def test_over_declared_job_is_flagged_booked_and_stopped_when_the_card_is_full(self):
+        d = self.disp()
+        d.smi_fn = lambda q, age: ["GPU-1, %d, 30000" % j["pid"] for j in d.jobs("running") if j["spec"]["name"] == "prep-s0"]
+        a = P.submit("sleep 60", name="prep-s0", pool=self.tmp, vram_gb=12, gpus=[1])
+        d.round()                                             # launched
+        b = P.submit("sleep 60", name="big", pool=self.tmp, vram_gb=50, gpus=[1])
+        d.round()                                             # measured: 29.3 GB against 12 declared
+        ja, jb = d.st["jobs"][a], d.st["jobs"][b]
+        self.assertEqual((ja["vram_over"], ja["vram_booked"]), (29.3, 36.2))
+        self.assertEqual(jb["state"], "queued")               # 83.6 - 4 - 36.2 < 50; the old booking (29.3) let it in
+        self.assertIn("VRAM", jb["why"])
+        ev = self.events("vram_over")
+        self.assertEqual((len(ev), ev[0]["id"], ev[0]["declared"], ev[0]["peak"]), (1, a, 12, 29.3))
+        self.assertIn("29.3 GB measured > 12.0 GB declared", (self.tmp / "jobs" / a / "STATUS").read_text())
+        d.round()
+        self.assertEqual(len(self.events("vram_over")), 1)    # said once
+        self.box = fake_box(used_mib=85000)                   # the card is about to run out
+        self.until(d, lambda: ja["state"] == "queued")        # the job above its declaration is stopped and requeued
+        self.assertEqual((len(self.events("vram_stop")), ja["oom_tries"]), (1, 1))
+        self.assertIn("< 30.3", ja["why"])                    # and waits for room for what it measured
+        self.assertEqual(json.loads((self.tmp / "history.json").read_text())["prep"]["vram"], [29.3])
+        self.box = fake_box()
+        d.smi_fn = lambda q, age: []
+        P.cancel(b, pool=self.tmp)
+        self.until(d, lambda: ja["state"] == "running" and jb["state"] == "cancelled")
+        self.assertEqual(ja["vram_booked"], 30.3)             # relaunched, booked by what it measured before
+        self.cancel_all(d)
 
     def test_cancel_stops_whole_tree_and_orphans_are_reaped(self):
         marker = self.tmp / "child.pid"
