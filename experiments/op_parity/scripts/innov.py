@@ -712,7 +712,7 @@ def figures(G, SH, frows, extra):
         ax.grid(axis="y", visible=False)
     axs[0].plot([], [], "o", ms=3.2, color="#444444", label="all tokens")
     axs[0].plot([], [], "s", ms=3.0, mfc="white", color="#444444", label="top decile of logged |innovation|")
-    axs[0].legend(loc="lower right", fontsize=6.5)
+    axs[0].legend(loc="center left", fontsize=6.5)
     fig.tight_layout()
     ps.save(fig, fd / "gain_ladder")
     plt.close(fig)
@@ -736,7 +736,7 @@ def figures(G, SH, frows, extra):
     # 3. false innovation
     fig, axs = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 4.2), sharey=True)
     for ax, key, lab in zip(axs, ("lat", "lon"), ("|lateral plan innovation| >= 0.5 m", "|longitudinal plan innovation| >= 1 m")):
-        rr = [r for r in frows if r["axis"] == key and r["set"].startswith("log continues") and r["model"] != "LOG"]
+        rr = [r for r in frows if r["axis"] == key and r["set"].startswith("log continues") and r["model"] != "LOG" and not r["model"].startswith("CONST") and "SHUF" not in r["model"]]
         y = np.arange(len(rr))[::-1]
         ax.barh(y, [100 * r["share_ge_a"] for r in rr], 0.7, color=[col(r["model"]) for r in rr])
         ax.set_yticks(y)
