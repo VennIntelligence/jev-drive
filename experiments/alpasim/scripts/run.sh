@@ -21,7 +21,7 @@ ALPASIM_DRIVER_GRPC_WORKERS=4 LTF_CHECKPOINT_PATH=$DATA_DIR/models/alpasim_ltf/l
 LTF_MAX_BATCH_SIZE=${LTF_MAX_BATCH_SIZE:-2} LTF_BATCH_WINDOW_MS=2 $DATA_DIR/envs/alpasim-ltf/bin/python -m navsim_transfuser_challenge.driver" ;;
   sh30)
     cwd=$here/..
-    cmd="exec env ALPASIM_SRC=$SRC TMPDIR=$out/driver-tmp ALPASIM_DRIVER_LOG_DIR=$out/driver-logs ALPASIM_DRIVER_GRPC_WORKERS=${ALPASIM_DRIVER_GRPC_WORKERS:-8} \
+    cmd="exec env ALPASIM_SRC=$SRC TMPDIR=$out/driver-tmp TORCHINDUCTOR_CACHE_DIR=${TORCHINDUCTOR_CACHE_DIR:-$DATA_DIR/cache/torchinductor} ALPASIM_DRIVER_LOG_DIR=$out/driver-logs ALPASIM_DRIVER_GRPC_WORKERS=${ALPASIM_DRIVER_GRPC_WORKERS:-8} \
 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 SH30_TAG=${SH30_TAG:-SH30-F-s0} SH30_COLD=${SH30_COLD:-backwarp} \
 SH30_DUMP=${SH30_DUMP:-0} SH30_LHT=${SH30_LHT:-0} $DATA_DIR/envs/op-train/bin/python $here/../lib/sh30_driver.py" ;;
   *)       # any other driver: scripts/drivers/<name>.sh, sourced here, sets cwd and cmd (it sees $out $SRC $here $DATA_DIR)

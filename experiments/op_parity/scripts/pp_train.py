@@ -29,6 +29,12 @@ the wod_* rows. Each source keeps its own frames (NAVSIM: the --frames protocol,
 teacher; the hinge acts on the rows its label file covers (NAVSIM). --wod-slots 8 zeroes the oldest of the 9 WOD slots (teacher8.npz of
 scripts/mixed_domain.py teacher8), so the number of real slots is not a domain cue. Needs --host.
 
+Speed knobs (no recipe change; none is part of Cfg). On by default, same losses, dev numbers and checkpoint bit for bit as the loop without
+them (--prefetch 1 --dev-card-gb 0): --prefetch N fetches N batches ahead on worker threads through page-locked buffers (the draws stay on the
+main thread in step order: same row stream, same batches); --dev-card-gb G keeps the dev rows' tokens of a --host run on the card when they fit
+G GB. Opt-in: --compile runs the training step through torch.compile (inductor, about 2x the steps per second at batch 128; outputs equal to
+fp16 rounding only, so a compiled run reproduces another compiled run bit for bit but not an eager one; dev eval stays on the eager model).
+
   python experiments/op_parity/scripts/pp_train.py --arm P2 --steps 600 --data lb_navtrain lb_h1train [--tag pilot]
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
@@ -264,11 +270,40 @@ class Tokens:
                     self.t[i:i + len(x)] = x.to(dev)
                     i += len(x)
         self.device = dev
+        self.pin = False                                                        # host mode: gather through page-locked memory (_pinned)
+
+    def row_bytes(self) -> int:
+        return 2 * self.ns * int(np.prod(self.mms[0].shape[2:])) if self.host else 2 * int(np.prod(self.t.shape[1:]))
+
+    def _pinned(self, r):
+        """Host rows -> card with one host copy: the rows are read in file order straight into a page-locked buffer, uploaded without blocking
+        and put back into batch order on the card. Same values as the pageable path. (torch's pinned allocator reuses a buffer only after the
+        uploads issued from it have completed, so the buffer may be dropped at once.)"""
+        o = np.argsort(r, kind="stable")
+        rs = r[o]
+        buf = torch.empty((len(r), self.ns) + tuple(self.mms[0].shape[2:]), dtype=torch.float16, pin_memory=True)
+        if self.mixed:
+            buf.zero_()
+        b, cut = buf.numpy(), np.searchsorted(rs, self.off)
+        for s, m in enumerate(self.mms):
+            i, j = cut[s], cut[s + 1]
+            if i == j:
+                continue
+            if isinstance(m, np.ndarray) and not self.mixed:
+                np.take(m, rs[i:j] - self.off[s], axis=0, out=b[i:j], mode="clip")   # clip: no bounds-check copy (the rows are in range)
+            else:
+                g = m[rs[i:j] - self.off[s]]
+                b[i:j, self.ns - g.shape[1]:] = g                               # right-aligned: the missing older slots stay zero
+        inv = np.empty_like(o)
+        inv[o] = np.arange(len(o))
+        return buf.to(self.dev, non_blocking=True)[torch.from_numpy(inv).to(self.dev)]
 
     def __getitem__(self, rows):
         if not self.host:
             return self.t[rows]
         r = rows.cpu().numpy() if torch.is_tensor(rows) else np.asarray(rows)
+        if self.pin:
+            return self._pinned(r)
         out = (np.zeros if self.mixed else np.empty)((len(r), self.ns) + self.mms[0].shape[2:], np.float16)
         k = np.searchsorted(self.off, r, side="right") - 1
         for s in np.unique(k):
@@ -283,6 +318,61 @@ class Tokens:
             else:
                 out[m] = tmp
         return torch.from_numpy(out).to(self.dev, non_blocking=True)
+
+
+class RowCache:
+    """The rows `rows` of a host Tokens store held on the card; indexed by the store's row numbers like the store itself."""
+
+    def __init__(self, tok: Tokens, rows, chunk_mb=256):
+        self.dev = self.device = tok.dev
+        rows = np.unique(rows)
+        self.pos = torch.full((int(tok.off[-1]),), -1, dtype=torch.long, device=self.dev)
+        self.pos[torch.as_tensor(rows, device=self.dev)] = torch.arange(len(rows), device=self.dev)
+        n = max(1, (chunk_mb << 20) // tok.row_bytes())
+        self.t = torch.cat([tok[rows[i:i + n]] for i in range(0, len(rows), n)])
+
+    def __getitem__(self, rows):
+        return self.t[self.pos[torch.as_tensor(rows, device=self.dev)]]
+
+
+def card_rows(toks, rows, gb: float) -> list:
+    """Each host Tokens store of `toks` -> a RowCache of `rows`, if all of them fit `gb` GB together; anything else (None, a store already on the
+    card, a tokenizer) and every store when they do not fit is returned as it is."""
+    host = [t for t in toks if isinstance(t, Tokens) and t.host]
+    if not host or len(np.unique(rows)) * sum(t.row_bytes() for t in host) > gb * 2 ** 30:
+        return list(toks)
+    return [RowCache(t, rows) if isinstance(t, Tokens) and t.host else t for t in toks]
+
+
+def dev_store(S, rows, gb: float):
+    """S for dev eval: a shallow copy whose host token stores hold `rows` on the card (card_rows). Build it after the last change to S."""
+    import copy
+    D = copy.copy(S)
+    D.front, D.side, D.mem = card_rows([S.front, S.side, getattr(S, "mem", None)], rows, gb)
+    return D
+
+
+class Prefetch:
+    """Batches fetched ahead of the training loop. draw() runs on the caller's thread, once per batch and in step order (the rng streams
+    advance exactly as in a loop that draws one batch per step); fetch(draw()) runs on worker threads, up to `depth` batches ahead, and
+    get() hands the batches out in draw order."""
+
+    def __init__(self, draw, fetch, n: int, depth: int = 1, workers: int = 2):
+        from collections import deque
+        from concurrent.futures import ThreadPoolExecutor
+        self.draw, self.fetch, self.left, self.depth = draw, fetch, n, max(1, depth)
+        self.pool, self.q = ThreadPoolExecutor(max(1, workers)), deque()
+        self._fill()
+
+    def _fill(self):
+        while self.left > 0 and len(self.q) < self.depth:
+            self.q.append(self.pool.submit(self.fetch, self.draw()))
+            self.left -= 1
+
+    def get(self):
+        b = self.q.popleft().result()
+        self._fill()
+        return b
 
 
 class Store:
@@ -613,13 +703,17 @@ def main(a):
         def fetch(dr):
             r = dr[0]
             return dr, S.front[r], (S.side[r] if use_side else (S.mem[r] if (use_mem and om is None) else None))
-        from concurrent.futures import ThreadPoolExecutor
-        pre = ThreadPoolExecutor(2)
-        nxt = pre.submit(fetch, draw())
+        for tk in (S.front, S.side, S.mem if om is None else None):
+            if tk is not None:
+                tk.pin = a.prefetch > 1
+        Sd = dev_store(S, dv_rows, a.dev_card_gb if run else 0.0)               # after the last change to S (stop gate, labels, tokenizer)
+        fwd = torch.compile(model, dynamic=False) if a.compile else model       # the step only: one graph (fixed batch); eval stays eager
+        if run:
+            run.info(f"speed: prefetch {a.prefetch} batches on {a.fetch_workers} threads, pinned {a.prefetch > 1}; dev tokens on the card "
+                     f"{Sd.front is not S.front}; compiled step {a.compile}")
+        pre = Prefetch(draw, fetch, cfg.steps, a.prefetch, a.fetch_workers)
         for step in range(cfg.steps):
-            (rows_np, an_np, sm_np), front_b, side = nxt.result()
-            if step + 1 < cfg.steps:
-                nxt = pre.submit(fetch, draw())
+            (rows_np, an_np, sm_np), front_b, side = pre.get()
             rows = torch.as_tensor(rows_np, device=dev)
             anchor = torch.as_tensor(an_np, device=dev)
             smask = torch.as_tensor(sm_np, device=dev) if (use_side or use_mem) else None
@@ -632,7 +726,7 @@ def main(a):
                 ego[:, EGO_LAT] = ego[:, EGO_LAT] * (~dm)[:, None].float()
             if om is not None:
                 side = om[rows]                                                      # tokens of this step's tokenizer: the losses reach its weights
-            out = model(front_b, ego, S.tc[rows], side, smask, nv=None if S.nv is None else S.nv[rows])
+            out = fwd(front_b, ego, S.tc[rows], side, smask, nv=None if S.nv is None else S.nv[rows])
             total, Ls = LS(out, S, rows, anchor)
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {k: float(v) for k, v in Ls.items()} }")
@@ -663,14 +757,14 @@ def main(a):
                              f"; {(step + 1) / el:.2f} it/s, {torch.cuda.max_memory_reserved() / 2 ** 30:.1f} GB")
                     run.status(f"step {step + 1}/{cfg.steps}")
             if run and ((step + 1) % cfg.eval_every == 0 or step + 1 == cfg.steps):
-                ev = dev_eval(model.eval(), S, dv_rows, LS.W)
+                ev = dev_eval(model.eval(), Sd, dv_rows, LS.W)
                 dvb = dv_rows[S.is_b2d[dv_rows]]
                 if len(dvb) and len(dvb) < len(dv_rows):
-                    ev |= {"b2d_" + k: v for k, v in dev_eval(model, S, dvb, LS.W).items()}
+                    ev |= {"b2d_" + k: v for k, v in dev_eval(model, Sd, dvb, LS.W).items()}
                 dvw = dv_rows[S.is_wod[dv_rows]]
                 if len(dvw) and len(dvw) < len(dv_rows):                    # mixed-domain: each domain's dev rows
-                    ev |= {"wod_" + k: v for k, v in dev_eval(model, S, dvw, LS.W).items()}
-                    ev |= {"nav_" + k: v for k, v in dev_eval(model, S, dv_rows[~S.is_wod[dv_rows]], LS.W).items()}
+                    ev |= {"wod_" + k: v for k, v in dev_eval(model, Sd, dvw, LS.W).items()}
+                    ev |= {"nav_" + k: v for k, v in dev_eval(model, Sd, dv_rows[~S.is_wod[dv_rows]], LS.W).items()}
                 model.train()
                 run.scalars({f"dev/{k}": v for k, v in ev.items()}, step + 1)
                 run.info(f"dev @ {step + 1}: " + ", ".join(f"{k} {v:.3f}" for k, v in ev.items()))
@@ -693,6 +787,14 @@ def main(a):
             ctx.__exit__(None, None, None)
         if ddp:
             torch.distributed.destroy_process_group()
+
+
+def speed_args(ap):
+    """The speed knobs shared by the trainers built on this loop (module docstring); none changes the recipe."""
+    ap.add_argument("--prefetch", type=int, default=4, help="batches fetched ahead; > 1 also gathers through page-locked buffers (same batches)")
+    ap.add_argument("--fetch-workers", type=int, default=2, help="threads fetching the batches")
+    ap.add_argument("--dev-card-gb", type=float, default=4.0, help="--host runs: hold the dev rows' tokens on the card if they fit this many GB (0 = off)")
+    ap.add_argument("--compile", action="store_true", help="torch.compile (inductor) of the training step: faster, not bit-identical to eager")
 
 
 if __name__ == "__main__":
@@ -737,4 +839,5 @@ if __name__ == "__main__":
                     "the logged-path field (p); path-req: q<kind>, a degraded field of the logged future (scripts/path_req.py). Privileged, oracle probes only")
     ap.add_argument("--mem-init", default="", help="geo-e2e: tokenizer state dict to start from (geo_oracle.py tok --weights)")
     ap.add_argument("--mem-lr", type=float, default=0.0, help="geo-e2e / path-req: learning rate of the tokenizer group (0 = the adapter's lr_new)")
+    speed_args(ap)
     main(ap.parse_args())

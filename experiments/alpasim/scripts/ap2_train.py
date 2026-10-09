@@ -18,8 +18,7 @@ import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "scripts"), str(_R / "experiments/op_adapt_r2/lib"), str(_R / "experiments/op_parity/scripts"),
                  str(_R / "experiments/alpasim/lib")]
-import argparse, time  # noqa: E401,E402
-from concurrent.futures import ThreadPoolExecutor  # noqa: E402
+import argparse, copy, time  # noqa: E401,E402
 from dataclasses import asdict  # noqa: E402
 
 import numpy as np  # noqa: E402
@@ -128,18 +127,23 @@ def main(a):
 
         def fetch(dr):
             return dr, slots(S, cold, dr[0], dr[2], a.cold) if ap else (S.front[dr[0]], None)
-        pre = ThreadPoolExecutor(2)
-        nxt = pre.submit(fetch, draw())
+        for tk in (S.front, cold):                                   # pp_train's speed knobs (its module docstring)
+            if tk is not None:
+                tk.pin = a.prefetch > 1
+        Sd = copy.copy(S)                                            # dev eval reads the dev rows' tokens from the card when they fit
+        Sd.front, cold_d = T.card_rows([S.front, cold], dv_rows, a.dev_card_gb)
+        fwd = torch.compile(model, dynamic=False) if a.compile else model   # the step only: one graph (fixed batch); eval stays eager
+        run.info(f"speed: prefetch {a.prefetch} batches on {a.fetch_workers} threads, pinned {a.prefetch > 1}; dev tokens on the card "
+                 f"{Sd.front is not S.front}; compiled step {a.compile}")
+        pre = T.Prefetch(draw, fetch, cfg.steps, a.prefetch, a.fetch_workers)
         t0, hist = time.time(), []
         for step in range(cfg.steps):
-            (r, an, m), (front, nv) = nxt.result()
-            if step + 1 < cfg.steps:
-                nxt = pre.submit(fetch, draw())
+            (r, an, m), (front, nv) = pre.get()
             rows, anchor = torch.as_tensor(r, device=dev), torch.as_tensor(an, device=dev)
             for g in opt.param_groups:
                 g["lr"] = g["base"] * min(1.0, (step + 1) / cfg.warmup) * 0.5 * (1 + np.cos(np.pi * step / cfg.steps))
             ego = EGO[rows, torch.as_tensor(m - 1, device=dev)] * (~anchor)[:, None].float()
-            total, Ls = LS(model(front, ego, S.tc[rows], nv=nv), S, rows, anchor)
+            total, Ls = LS(fwd(front, ego, S.tc[rows], nv=nv), S, rows, anchor)
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {k: float(v) for k, v in Ls.items()} }")
             opt.zero_grad(set_to_none=True)
@@ -157,9 +161,9 @@ def main(a):
                          f"{torch.cuda.max_memory_reserved() / 2 ** 30:.1f} GB")
                 run.status(f"step {step + 1}/{cfg.steps}")
             if (step + 1) % cfg.eval_every == 0 or step + 1 == cfg.steps:
-                ev = T.dev_eval(model.eval(), S, dv_rows, LS.W)
+                ev = T.dev_eval(model.eval(), Sd, dv_rows, LS.W)
                 if ap:
-                    ev |= dev_by_m(model, S, cold, EGO, ok, dv_rows, LS.W, a.cold)
+                    ev |= dev_by_m(model, Sd, cold_d, EGO, ok, dv_rows, LS.W, a.cold)
                 model.train()
                 run.scalars({f"dev/{k}": v for k, v in ev.items()}, step + 1)
                 run.info(f"dev @ {step + 1}: " + ", ".join(f"{k} {v:.3f}" for k, v in ev.items()))
@@ -184,4 +188,5 @@ if __name__ == "__main__":
     ap.add_argument("--cold", default="zero", choices=["zero", "backwarp"], help="slot rule for decisions with fewer than 4 keyframes")
     ap.add_argument("--route", action="store_true", help="arm R: the route waypoints as adapter ego features")
     ap.add_argument("--mix", type=float, nargs=4, default=list(AI.MIX), help="share of training rows with m = 1, 2, 3, 4 keyframes")
+    T.speed_args(ap)
     main(ap.parse_args())
