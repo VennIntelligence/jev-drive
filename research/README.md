@@ -17,6 +17,7 @@
 - [hugsim-specplan/](hugsim-specplan/index.html)：用模型自己的 plan 转向：单点曲率更差，0.5 到 1.5 秒平均曲率更好。
 - [leaderboard-recipes/](leaderboard-recipes/index.html)：WOD-E2E、NAVSIM 与 AlpaSim 榜首方法归因：分数构成、大模型与世界模型的作用边界与可迁移配方。
 - [alpasim-collisions/](alpasim-collisions/index.html)：AlpaSim 里的 at-fault 碰撞：nuPlan 公开集上是横向漂移，PAI 上是纵向且 lead 头提前看到了前车；PAI 的轨迹速度接口缺陷与诊断臂；31 个片段；第八节（SWV1，决策 220）：按 plan 自身扫掠足迹的碰撞分类与净空反事实。
+- [body1/](body1/index.html)：BODY1 车身接触预测：冻结 token 上的 contact head 过离线闸门（AUC 0.905 / 0.978），刹停与单决策横向 re-plan 两个 serving 臂都在 one-chunk 检查处停，登记线无读数。
 
 ## 记录与工具
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。

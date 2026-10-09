@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BODY1 车身接触预测</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:980px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:4px}h3{margin-top:24px;font-size:17px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:14px}th,td{border:1px solid #ccc;padding:4px 10px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f3f3f3}
+figure{margin:20px 0}img{max-width:100%}figcaption{font-size:14px;color:#444}
+code{font-size:13px}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}}
+</style></head><body>
+<h1>BODY1：冻结 token 上的接触预测头过了离线闸门，两个 serving 臂都在 one-chunk 检查处停</h1>
+
+<div class="v"><b>结论。</b>冻结 Cinque token 上的 contact head（arm S0）在 navtrain hold logs 上对学生自己 plan 的 agent contact AUC 为 0.905 [0.868, 0.934]，boundary contact 为 0.978 [0.969, 0.985]；三个用户类均不低于 0.80，&gt; 45° 桶 agent 0.819 [0.716, 0.925]、boundary 0.941 [0.912, 0.964]。在决策 220 的 AlpaSim 决策上（G2）为 0.885 [0.774, 0.969]。两个在 driver 里读这个头的 serving 臂都在 one-chunk 检查处停，全量（700 scene × 2 seed）和 PAI 都没有跑，<b>登记的 L1 / L2 / L3 没有任何一条有读数</b>，下表只是单 chunk、单 seed 的描述性读数。
+<table>
+<tr><th>臂（chunk，P2H10-F-s0，单 seed）</th><th>n</th><th>均分 基线 → 开关</th><th>Δ [95% CI，按 log]</th><th>zeros</th><th>碰撞 / offroad / corridor</th><th>slow</th><th>&gt; 45° 均分，zeros</th></tr>
+<tr><td>4.1 无记忆刹停（chunk0）</td><td>234</td><td>0.9518 → 0.9451</td><td>−0.0067 [−0.0159, +0.0011]</td><td>7 → 5</td><td>4/2/1 → 2/2/1</td><td>43 → 50</td><td>0.7898 → 0.8186，4 → 3</td></tr>
+<tr><td>4.2 单决策横向 re-plan（chunk1）</td><td>233</td><td>0.9411 → 0.9368</td><td>−0.0043 [−0.0172, +0.0112]</td><td>10 → 11</td><td>2/5/3 → 2/7/2</td><td>37 → 37</td><td>0.8298 → 0.8854，3 → 2</td></tr>
+</table>
+刹停：碰撞 zero 4 → 2，7 次 false stop 共 −2.84 对 2 次救回 +1.30。re-plan：被 re-plan 的 19 个 scene 里去掉 1 个 zero、新造 2 个。两个 chunk 都是 regression check：公开 scene 都参与过 P2H10 的选择。
+</div>
+<p>来源：<code>experiments/body1/results/{taxonomy,s0_gate,stop_closed_loop,replan_closed_loop}.md</code>，预登记 <code>experiments/body1/plans/2026-10-10-body1-prereg.md</code>，决策 223、224、225。以下 L1 / L2 / L3 为登记线：L1 目标类 zeros 下降；L2 均分差 ≥ 0 且按 log 聚类的 95% 下界 &gt; −0.005；L3 slow scene ≤ 1.1 × 基线。</p>
+
+<h2>一、Scene taxonomy 与 row generator</h2>
+<p>navtrain 103 288 个 token、1 192 个 log，manoeuvre 互斥（launch、stop、turn 20-45、turn &gt; 45、go-around、straight），三个 hazard flag（in-path、side、boundary）分开存。用户类允许多 bit，row balance 用 primary class（1 &gt; 2 &gt; 3）。</p>
+<table><tr><th>类</th><th>token（bit / primary）</th><th>hold logs（primary）</th><th>train logs（primary）</th></tr>
+<tr><td>1 前方障碍（in-path 或 go-around）</td><td>21 238 / 21 238</td><td>2 137</td><td>19 101</td></tr>
+<tr><td>2 转弯（带 side / boundary flag 的 turn，或 &gt; 45°）</td><td>15 281 / 12 994</td><td>1 387</td><td>11 607</td></tr>
+<tr><td>3 离开路面（straight / launch 带 boundary flag，或 straight 无 flag）</td><td>40 795 / 38 087</td><td>4 124</td><td>33 963</td></tr>
+<tr><td>other</td><td>/ 30 969</td><td>3 278</td><td>27 691</td></tr>
+<tr><td>all</td><td>/ 103 288</td><td>10 926</td><td>92 362</td></tr></table>
+<p>&gt; 45° 桶 10 773 个 token（10 004 tagged turn &gt; 45，761 launch，8 stop），其中 1 173 个在 hold logs。Go-around 用常曲率延拓代替 lane，在弯道上有可见的 false positive（taxonomy.md 偏离 1）。</p>
+<p><b>Row generator。</b>行 = （状态，query 轨迹，标签）。状态 242 432 个：日志上 103 288、<code>ot1</code>（±0.5 m / ±2° 离轨）69 572、<code>yr1</code>（yaw-rate 离轨）69 572；每个状态 24 条 query（学生两个 seed 的 plan、shipped plan、日志未来，lat / head / gain / arc / stop 各 4 条），共 5 818 368 行。标签是 ego 框沿 query 的扫掠对同一时刻 agent 框与可行驶 raster 的接触 0 / 1、首次接触的时间与弧长、净空、横向缺口。agent 框、raster、日志未来只作标签。扫掠模块与 <code>AgentHinge</code> 的接触判定 100% 一致（7.0 M 个 valid pair），与 <code>Hinge.margins</code> 符号 100% 一致。加权按（类，接触类型）格等质量，rear-end-only 行和 class other 权重 0（<code>w3</code>）。</p>
+<table><tr><th>状态族</th><th>状态</th><th>行</th><th>hold-log 行</th></tr>
+<tr><td>log</td><td>103 288</td><td>2 478 912</td><td>262 224</td></tr>
+<tr><td>ot1</td><td>69 572</td><td>1 669 728</td><td>176 784</td></tr>
+<tr><td>yr1</td><td>69 572</td><td>1 669 728</td><td>176 784</td></tr></table>
+<p>学生自己的 plan 在 hold logs（121 个 log，25 658 个状态）上的 own-plan 正例：agent own0 / own1 为 462 / 449（64 / 63 个 log），boundary 1 494 / 1 495（95 / 95 个 log）；&gt; 45° 桶 agent 59 / 56，boundary 248 / 250。每类至少 30 个两种正例，G1 在三类上都是有闸门的读数。</p>
+<figure><img src="figs/rates.png" alt=""><figcaption>图一：各 query family 的首次接触率（左、中）与首次接触时间（右）。看日志未来是下限、学生 plan 居中、离轨状态把学生的接触率放大到约 2 至 4 倍；学生的 agent contact 堆在 3 至 4 s，lat ramp 则均匀铺开。</figcaption></figure>
+<p>扫掠对日志未来的 agent contact 率 0.05%（决策 158 预期约 0.3%）；日志未来的 boundary contact 2.0%，是浅接触（中位深度 0.10 m）。</p>
+
+<h2>二、离线闸门 G1 / G2</h2>
+<p>Head：输入只有 8 个 slot 的 <code>view_39</code> 视觉 token、20 维 ego 向量、一条 8 点 query 轨迹；4.4 M 参数，每个 sweep step 对 scene memory 做 cross-attention，输出 agent / boundary contact logit 与首次接触的弧长和时间。训练只用 navtrain（拟合 955 个 log，192 287 个状态），hold logs 从不加载；两个 seed。</p>
+<h3>G1：hold logs 上学生自己的 plan（51 316 行，按 log 整簇 bootstrap）</h3>
+<table><tr><th>子集</th><th>agent AUC</th><th>正例</th><th>boundary AUC</th><th>正例</th></tr>
+<tr><td><b>pooled</b></td><td><b>0.905 [0.868, 0.934]</b></td><td>911（64 log）</td><td><b>0.978 [0.969, 0.985]</b></td><td>1 090（82 log）</td></tr>
+<tr><td>class 1 前方障碍</td><td>0.835 [0.727, 0.924]</td><td>238（30 log）</td><td>0.977 [0.953, 0.994]</td><td>132</td></tr>
+<tr><td>class 2 转弯</td><td>0.836 [0.740, 0.904]</td><td>138（21 log）</td><td>0.950 [0.922, 0.970]</td><td>389</td></tr>
+<tr><td>class 3 离开路面</td><td>0.957 [0.938, 0.971]</td><td>394（53 log）</td><td>0.986 [0.979, 0.992]</td><td>398</td></tr>
+<tr><td>other（无线）</td><td>0.935 [0.890, 0.977]</td><td>141</td><td>0.980 [0.960, 0.994]</td><td>171</td></tr>
+<tr><td><b>&gt; 45°（无线）</b></td><td><b>0.819 [0.716, 0.925]</b></td><td>115（15 log）</td><td><b>0.941 [0.912, 0.964]</b></td><td>285（31 log）</td></tr>
+<tr><td>on-log 状态</td><td>0.852 [0.750, 0.929]</td><td>137</td><td>0.972 [0.956, 0.984]</td><td>165</td></tr>
+<tr><td>ot1 状态</td><td>0.902 [0.848, 0.939]</td><td>227</td><td>0.975 [0.961, 0.986]</td><td>268</td></tr>
+<tr><td>yr1 状态</td><td>0.903 [0.878, 0.925]</td><td>547</td><td>0.977 [0.967, 0.984]</td><td>657</td></tr></table>
+<p>线 0.80 在 pooled 与三个用户类上两种接触都过；class 1 与 2 的 agent 下界只有 0.73 / 0.74（正例分布在 30 / 21 个 log）。同样的行上，无视觉的同款 head 为 agent 0.770 / boundary 0.779（&gt; 45° 0.616 / 0.743）；plan 2 s 横向 std 为 0.749 / 0.809（&gt; 45° 0.708 / 0.597）；ego 速度 0.528 / 0.527。</p>
+<figure><img src="figs/roc.png" alt=""><figcaption>图二：hold logs 上两个 seed 平均分数按类的 ROC。看 class 1 与 &gt; 45° 的 agent 曲线右端：约 10% 的正例排在大多数负例之下，AUC 的损失在这条 confident-miss 尾部；class 3 没有；竖虚线是 2% 假阳性工作点。</figcaption></figure>
+
+<h3>G2：决策 220 的 nuPlan 决策（22 个碰撞 rollout 的 122 个相交决策对 1 827 个干净决策）</h3>
+<table><tr><th>分数</th><th>AUC</th><th>过线（≥ 0.80 且下界 &gt; 0.70）</th></tr>
+<tr><td><b>S0，两 seed 平均</b></td><td><b>0.885 [0.774, 0.969]</b></td><td>过</td></tr>
+<tr><td>S0 seed 0</td><td>0.883 [0.792, 0.959]</td><td>过</td></tr>
+<tr><td>S0 seed 1</td><td>0.830 [0.680, 0.959]</td><td>不过（下界）</td></tr>
+<tr><td>无视觉 head</td><td>0.655 [0.530, 0.767]</td><td>不过</td></tr>
+<tr><td>参考（决策 220）</td><td colspan="2" style="text-align:left">simulator 当前框 0.728，最好的冻结几何头 0.718，plan 横向 std 0.786 [0.738, 0.865]</td></tr></table>
+<p>G2 的过线依赖两 seed 平均（读数前写进脚本）；22 个 rollout 只在 9 个 log 里，不对 seed 稳健。学习曲线 25% / 50% / 100% 的 log：agent 0.857 → 0.870 → 0.898，boundary 0.926 → 0.963 → 0.971，agent 一半仍在涨。</p>
+<figure><img src="figs/lc.png" alt=""><figcaption>图三：G1 pooled AUC 对训练 log 比例（虚线为无视觉 head）。看 agent 曲线在 100% 处仍上升而 boundary 接近平：agent 一半受标签量限制。</figcaption></figure>
+
+<p><b>刹停工作点。</b>阈值在 hold logs 上取，使 50 265 个干净 own-plan 决策的 2% 被 flag（logit 0.408，p = 0.60）：agent contact 召回 0.508 [0.418, 0.588]（class 1 / 2 / 3：0.41 / 0.33 / 0.61），真阳性上首次接触弧长误差中位 1.83 m、p90 7.39 m。同一阈值搬到 G2：干净决策触发 2.6%，122 个正例召回 0.434，22 个碰撞 rollout 里 17 个至少触发一次。</p>
+
+<h2>三、刹停臂（4.1，决策 224）</h2>
+<p><b>规则（补记 2）。</b>served plan 的 agent logit ≥ 0.408 时，沿原路径重定时，在预测的首次接触弧长前 m = 2 m 停住（接触弧长取回归值与预测净空 &lt; 0.25 m 的第一个 0.5 s 区间起点的较小者）；每次决策独立，无 latch、无最低车速。开关关闭时 2 220 个 replay 决策逐位相同。</p>
+<p><b>one-chunk 检查（chunk0，234 scene，2 340 个 drive call）。</b>通过：rollout 完整，<code>drive</code> p50 / p90 29.4 / 47.8 ms（基线 21.5 / 34.5），flag 率 86 / 2 340 = 3.68%（36 个 scene，15.4%）。不过两项：flag 后 0.5 s 内变慢的比例 57 / 78 = 73%（线 80%；其中 43 个是远刹停点，按规则先跟 plan）；出现一次 −8.53 m/s² 的加速度指令（线 −8.5；该 scene 在 decision 0、1、2 连续被 flag（8 m/s、d = 0），每次重新锚定一个 6 m/s² 的停车，reference 的 6 m/s² 上限管不住 MPC 追位置差）。无 zig-zag。</p>
+<table><tr><th>Driver</th><th>n</th><th>均分 [95% CI，按 log]</th><th>score 1</th><th>zeros</th><th>碰撞</th><th>offroad</th><th>corridor</th><th>slow</th><th>progress</th></tr>
+<tr><td>P2H10-F-s0（TR1 run）</td><td>234</td><td>0.9518 [0.9165, 0.9773]</td><td>184</td><td>7</td><td>4</td><td>2</td><td>1</td><td>43</td><td>0.937</td></tr>
+<tr><td>+ <code>JEV_STOP=2</code></td><td>234</td><td>0.9451 [0.9135, 0.9691]</td><td>179</td><td>5</td><td>2</td><td>2</td><td>1</td><td>50</td><td>0.920</td></tr></table>
+<table><tr><th>登记线（仅此 chunk）</th><th>值</th><th>若按登记读</th></tr>
+<tr><td>L1 碰撞 zeros</td><td>2 对 4</td><td>满足</td></tr>
+<tr><td>L2</td><td>−0.0067 [−0.0159, +0.0011]（按 log），[−0.0191, +0.0059]（按 scene）</td><td>不满足</td></tr>
+<tr><td>L3 slow ≤ 1.1 × 基线</td><td>50 对 47.3（基线 43）</td><td>不满足</td></tr></table>
+<h3>False stop 与救回的账</h3>
+<table><tr><th></th><th>scene</th><th>分数变化</th></tr>
+<tr><td>救回的 at-fault 碰撞</td><td>2</td><td>0 → 0.61、0 → 0.69（均事后被追尾，<code>collision_rear</code> = 1，不算 at-fault）；合计 +1.30</td></tr>
+<tr><td>false stop（损失 &gt; 0.1 的 flagged scene）</td><td>7</td><td>−0.62、−0.60、−0.59、−0.37、−0.28、−0.22、−0.16；合计 −2.84</td></tr>
+<tr><td>其中另有 22 个 flagged scene</td><td>分数不变</td><td>progress 的 0.8 余量吸收了短刹车</td></tr>
+<tr><td>未触发的 scene</td><td>198</td><td>分数与基线相同（差 +0.0000）</td></tr></table>
+<p>flagged 的 36 个 scene 均分 0.7911 对基线 0.8349，progress −0.109；新 zero 为 0。剩下的 2 个碰撞都被触发过：一个按 1 m/s² 下限刹得太轻、flag 在 decision 7–9 消失后撞上排队车，一个只触发了一次。4 个基线碰撞全部被 flag 过。offroad 2、corridor 1 不变，且都没有被 flag。</p>
+<figure><img src="figs/chunk0_traces.png" alt=""><figcaption>图四：flag 后速度下降最大的三个 scene 的速度、加速度指令、转向指令（蓝为开关打开，灰为基线 run，竖线为 flag 决策）。看第一个 scene 加速度行的 −8.5 m/s² 尖峰，以及转向行没有反复反转。</figcaption></figure>
+<p><b>Review strips</b>（seed 0 chunk0，6 个 scene 带 rollout log 重跑，分数四位小数复现；两个 miss 用 chunk run 自己的 log；其他车灰，日志 ego 虚线，基线 ego 橙，开关打开的 ego 蓝，红叉为停止点）：</p>
+<figure><img src="figs/bev_saved_1.png" alt=""><figcaption>图五：碰撞避免，0 → 0.61。看 p 在 2.5 s 跳到 0.97 时基线 ego（橙）继续撞向右侧车辆，开关打开的 ego 以上限减速，3.7 s 停住。</figcaption></figure>
+<figure><img src="figs/bev_saved_2.png" alt=""><figcaption>图六：碰撞避免，0 → 0.69（&gt; 45° 转弯）。看从 0.5 s 起连续 6 个 flag，停止点叉在转弯出口的队列上，ego 被减到 2.2 m/s 通过弯道而不是停住。</figcaption></figure>
+<figure><img src="figs/bev_false_1.png" alt=""><figcaption>图七：false stop，1.0 → 0.38，即 −8.5 m/s² 的 scene。看前三个决策在 8 m/s 于一排停放车辆旁被 flag，停止点就在 ego 处（d = 0），空车道上 2.5 s 就全停，随后慢速重新起步。</figcaption></figure>
+<figure><img src="figs/bev_false_2.png" alt=""><figcaption>图八：false stop，0.92 → 0.33。看 7 次 flag 把 ego 压在近静止。</figcaption></figure>
+<figure><img src="figs/bev_false_3.png" alt=""><figcaption>图九：false stop，1.0 → 0.41。看约 1 m/s 下的三次 flag 吃掉了该 scene 大部分 progress。</figcaption></figure>
+<figure><img src="figs/bev_miss_1.png" alt=""><figcaption>图十：被 flag 仍碰撞。看 2.0 至 3.0 s 的 flag 把停止点叉在排队车上，但 1 m/s² 包络只减了 2 m/s，flag 在 3.5 s 消失，ego 在 5.0 s 撞入队列。</figcaption></figure>
+<figure><img src="figs/bev_miss_2.png" alt=""><figcaption>图十一：单次 flag 仍碰撞。看 0.5 s 在 10 m/s 的一次 flag，之后没有任何 flag。</figcaption></figure>
+<p>读法：predictor 在闭环里提前看到了真碰撞（4 / 4），丢分来自动作。一次 false stop 约 −0.4，一次救回约 +0.65，逐 scene 的 precision 而不是 recall 决定分数；剩下的 2 个碰撞需要 flag 持续并且停止点被相信。agent-only 的刹停碰不到 offroad / corridor 的 3 个 zero。k = 0 与近静止状态在 head 的训练分布边缘（离轨行只覆盖 &gt; 3 m/s），代价最高的误报出在那里。nuPlan 的碰撞是横向的（决策 219、220：横向缺口中位 0.85 m），所以转 4.2。</p>
+
+<h2>四、单决策横向 re-plan 臂（4.2，决策 225）</h2>
+<p><b>规则（补记 3）。</b>候选为 plan 的横向 ramp，±{0.3, 0.6, 0.9, 1.2, 1.5} m，且 |a| ≤ 0.10 × 4 s 弧长（航向偏移 ≤ 5.7°）。flag：plan 的 agent logit ≥ 0.3999 或 boundary logit ≥ 1.8308（干净决策的 98 分位），boundary 可单独触发；候选两个 logit 都低于干净决策 95 分位（agent &lt; −1.7170 且 boundary &lt; −0.5145）算 clear，取最小的 clear 偏移；k = 0 不动；没有 clear 候选时原样 serve，不刹停；上一次偏移的 side 锁定，直到连续 2 个决策原样 serve。</p>
+<h3>离线 gate（hold logs，51 316 个 own-plan 决策，一次一个决策）</h3>
+<table><tr><th>集合</th><th>干净决策</th><th>re-plan</th><th>harm（served 造出接触）</th><th>真接触</th><th>flagged</th><th>resolved</th><th>resolve 率</th></tr>
+<tr><td><b>pooled</b></td><td>49 232</td><td>1 213（2.46%）</td><td><b>3（0.006%）</b>：1 agent，2 boundary</td><td>1 944</td><td>1 176</td><td><b>548</b>（185 agent，363 boundary）</td><td><b>0.466</b>（占全部真接触 0.282）</td></tr>
+<tr><td>class 1</td><td>8 978</td><td>221</td><td>0</td><td>361</td><td>186</td><td>67</td><td>0.360</td></tr>
+<tr><td>class 2</td><td>6 190</td><td>179</td><td>1</td><td>500</td><td>277</td><td>128</td><td>0.462</td></tr>
+<tr><td>class 3</td><td>23 564</td><td>610</td><td>0</td><td>775</td><td>531</td><td>282</td><td>0.531</td></tr>
+<tr><td>other</td><td>10 500</td><td>203</td><td>2</td><td>308</td><td>182</td><td>71</td><td>0.390</td></tr>
+<tr><td><b>&gt; 45°</b></td><td>5 173</td><td>141</td><td>0</td><td>385</td><td>187</td><td>75</td><td>0.401</td></tr></table>
+<p>线（读数前写定）：harm ≤ 0.2%，且 5 × harm ≤ resolved；48 个 setting 全部过线，选 resolved − 5 × harm 最大的角（98 / 95 分位）。干净决策平均偏移 0.77 m。768 / 1 944 个真接触没被 flag，503 个被 flag 的没有 clear 候选，125 个被 re-plan 进仍有接触的候选。boundary-only flag 贡献了 548 个 resolved 中的 363 个。</p>
+<h3>chunk1（233 scene，2 330 个 drive call）检查表</h3>
+<p>7 项只有第 5 项不过：被 re-plan 的 scene 里新 zero 2 个（offroad、offroad）对去掉 1 个（corridor）。其余通过：re-plan 19 / 2 330 = 0.82%，分布在 19 个 scene（每个一次）；<code>drive</code> p50 / p90 35.4 / 55.1 ms；没有换边；转向反转 sums 10 对 2、每个 scene 最多 2；decision 9 处对日志的航向误差 sd 2.51° 对 2.56°（68 个 log-straight scene 上比值 0.98 [0.92, 1.00]）。after decision 0 共 91 个 flag 决策（45 个 scene），其中 72 个没有 clear 候选：flag 变成偏移 19 / 91。</p>
+<table><tr><th>Driver</th><th>n</th><th>均分</th><th>score 1</th><th>zeros</th><th>碰撞</th><th>offroad</th><th>corridor</th><th>slow</th></tr>
+<tr><td>P2H10-F-s0（TR1 run）</td><td>233</td><td>0.9411</td><td>186</td><td>10</td><td>2</td><td>5</td><td>3</td><td>37</td></tr>
+<tr><td>+ <code>JEV_REPLAN=1</code></td><td>233</td><td>0.9368</td><td>185</td><td>11</td><td>2</td><td>7</td><td>2</td><td>37</td></tr></table>
+<table><tr><th>登记线（仅此 chunk）</th><th>值</th><th>若按登记读</th></tr>
+<tr><td>L1 目标类 zeros 下降</td><td>11 对 10</td><td>不满足</td></tr>
+<tr><td>L2</td><td>−0.0043 [−0.0172, +0.0112]（按 log），[−0.0215, +0.0086]（按 scene）</td><td>不满足</td></tr>
+<tr><td>L3 slow</td><td>37 对 40.7（基线 37）</td><td>满足</td></tr></table>
+<p>未被 re-plan 的 214 个 scene 分数全部相同；变化全部来自 19 个被 re-plan 的 scene：1 升、4 降、14 不变，合计 −1.01（均分 0.7764 对 0.8293）。boundary-only 触发给出了去掉的那个 zero 和新增的两个；agent 触发的 9 个 scene 既没造出也没去掉 zero。</p>
+<h3>10 个基线 zero 的去向</h3>
+<table><tr><th>去向</th><th>个数</th><th>明细</th></tr>
+<tr><td>从未被 flag</td><td>5</td><td>1 个碰撞，4 个 offroad</td></tr>
+<tr><td>被 flag 但 1.5 m 内没有 clear 候选</td><td>2</td><td>1 个碰撞（decision 3–7 agent flag），1 个 corridor</td></tr>
+<tr><td>被 re-plan 一次后仍是 zero</td><td>2</td><td>1 个 offroad，1 个 corridor</td></tr>
+<tr><td>去掉</td><td>1</td><td>corridor，62° 弯，一次 −1.5 m 偏移（decision 6，boundary flag）</td></tr></table>
+<p>新增的两个 zero 都是 offroad，都在一次 boundary flag 触发的偏移后：+0.9 m（decision 2，3.4 m/s）和 +1.2 m（decision 6，8.2 m/s）。hold logs 上 boundary AUC 0.978 没有变成闭环 offroad scene 上的召回：5 个 offroad 里 4 个从未被 flag。</p>
+<h3>一次偏移，持续发散</h3>
+<p>19 个被 re-plan 的 scene 在 decision 9 的 heading 与基线 run 平均差 6.6°（sd 12.2，最大 43°），位置最多差 4.1 m，而偏移本身的 ramp 不超过 5.7°。之后每个决策原样 serve plan，但 plan 从偏移产生的新状态续下去，不回到原先那条线（决策 205 的回路）。offline gate 量的是一次 ramp 是否碰东西（3 / 49 232）；闭环里被驾驶的是之后 head 没打过分的 plan，每个被 re-plan 的 scene 造出的接触为 2 / 19，而离线是 3 / 1 213 个决策。</p>
+<figure><img src="figs/chunk1_traces.png" alt=""><figcaption>图十二：偏移最大的三个 scene 的 served 偏移、相对基线 run 的横向偏移与航向差、转向指令（蓝为开关打开，灰为基线）。看第二、三行：单次偏移之后，横向偏移与航向差在其余 scene 里在该 scene 的其余时间里持续增大，尽管后续每个决策都原样 serve。</figcaption></figure>
+<figure><img src="figs/heading_growth_chunk1.png" alt=""><figcaption>图十三：68 个 log-straight scene 上每个决策对日志的航向误差，灰为基线 run。看两条曲线重合：这个集合里被 re-plan 的 scene 很少，检查表第 7 项看不到图十二里的发散。</figcaption></figure>
+<p><b>Review strips</b>（chunk1，5 个 scene 带 rollout log 重跑，分数复现；chunk 里只有一个被去掉的 zero，所以只画一个）：</p>
+<figure><img src="figs/bev_removed_1.png" alt=""><figcaption>图十四：corridor zero 被去掉，0 → 1.0（62° 左转）。看基线 ego（橙）切进日志弧内 4 m；p(boundary) 从 2.0 s 起升高，3.0 s 的 −1.5 m 偏移把出口外推，ego 终点距日志路径 2.8 m 且在 corridor 内。</figcaption></figure>
+<figure><img src="figs/bev_new_1.png" alt=""><figcaption>图十五：新 offroad zero，1.0 → 0。看 1.0 s、3.4 m/s 的一次 +0.9 m 偏移之后 plan 自己向左转而日志直行，boundary flag 此后一直开着且无 clear 候选，ego 在距日志路径 7 m 处出界。</figcaption></figure>
+<figure><img src="figs/bev_new_2.png" alt=""><figcaption>图十六：新 offroad zero，1.0 → 0。看基线 ego 在日志右侧 0.5 m 通过，head 把它读成 boundary contact，3.0 s 的 +1.2 m 把 ego 送向左侧，4.5 s 出界时距日志路径只有 0.35 m：head 把路缘放在了错误的一侧。</figcaption></figure>
+<figure><img src="figs/bev_needless_1.png" alt=""><figcaption>图十七：无零分风险的偏移，0.813 → 0.809。看 22° 弯停放车辆旁 2.0 s 的 −1.2 m：基线 ego 最终偏离日志 3 m，偏移后的 ego 在 1 m 内，一次决策的偏移让终点位姿移动 1.3 m、14°。</figcaption></figure>
+<figure><img src="figs/bev_needless_2.png" alt=""><figcaption>图十八：无零分风险的偏移，1.0 → 1.0（80° 弯）。看 1.5 s 的一次 −1.5 m 偏移：两个 run 都得 1.0，但终点相差 3.1 m、19°。</figcaption></figure>
+
+<h2>五、解读与下一步</h2>
+<ul>
+<li>两个 serving 臂原因不同但同源：闭环里决定分数的是动作的逐 scene 代价，而单次动作没有跨决策的目标。刹停把碰撞换成 progress 损失（少撞、偏慢 scene 变多）；横移的单次偏移改变了之后所有 plan。</li>
+<li>chunk1 的 10 个基线 zero 里 5 个从未被 flag，其中 4 个是 offroad（chunk0 的 offroad 2 与 corridor 1 也都没被 flag）。plan 本身没有出界而是跟踪漂移、AlpaSim 的 offroad 与 drivable raster 的定义差、闭环状态在行集之外，三者哪个成立，数据还不能分开。</li>
+<li>下一步：先诊断基线全部 zero 上 head 为什么没有 flag（尤其 chunk1 里从未被 flag 的 5 个，其中 4 个 offroad），再定 4.3（课进到 plan 本身的 loss 臂，在 student-plan 行与离轨状态上训，需要自己的补记与 navtest guardrail）。另一条是目标跨决策保持的 serving 动作（held offset 或回线 ramp）。</li>
+<li>700 × 2 的全量和 PAI 对两个臂都没有跑；PAI hook 不存在。</li>
+</ul>
+
+<h2>六、限制</h2>
+<ul>
+<li>每个闭环读数都是一个 chunk、一个 seed：刹停 4 个基线碰撞、36 个 flagged scene；re-plan 2 个基线碰撞、19 个被 re-plan 的 scene，「2 对 1」的计数很小，L2 的 CI 含 0。基线是同一 checkpoint 的另一次 run，靠未触发 scene 的逐个相同（198 / 198、214 / 214）成立；「造出」「去掉」按对基线 run 的结果定，不是接触标签。</li>
+<li>这是 regression check：公开 scene 都参与过 P2H10 的选择。serving-only，navtest 不变也没有评。</li>
+<li>re-plan 的闭环没有走 pool：pool 的五张卡被别的 lane 的队列占满（15 个在跑、50–70 个排队），闭环 job 与两个 GPU 脚本直接跑在本 lane 持有的 card 2 上（<code>rp_direct.py</code>）。首次直跑三个未绑核的 stack 同时起，线程池撞上容器 pid 上限，五个 rollout 评分失败，后改为每个 stack 绑 8 核、最多 2 个并行、评分失败重跑；pilot 是重跑的结果。</li>
+<li>离线：navtrain 上学生的 plan 对 adapter 是 in-sample；agent 正例的 85% 来自离轨状态，离轨状态只覆盖 &gt; 3 m/s；G2 只有 22 个 rollout（9 个 log），seed 1 单独下界不过；学习曲线每点一个 seed；日志中的 agent 不反应。re-plan 的 gate 是单状态，没有对记忆规则和回路做离线 gate。</li>
+<li>&gt; 45° 桶的闭环读数（刹停 24 个 scene、re-plan 18 个 scene）样本很小，区间含 0 或贴 0，只作描述。</li>
+</ul>
+</body></html>
