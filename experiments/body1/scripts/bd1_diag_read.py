@@ -48,7 +48,7 @@ LAT, SLW, BOTH = slice(1, 11), slice(11, 13), slice(13, 33)
 def road_union(mp):
     P = [shapely.Polygon(a["ext"], [h for h in a["holes"] if len(h) >= 3]) for a in mp["areas"] if len(a["ext"]) >= 3]
     P += [shapely.Polygon(np.r_[ln["left"], ln["right"][::-1]]) for ln in mp["lanes"] if ln["left"] is not None and ln["right"] is not None and len(ln["left"]) + len(ln["right"]) >= 3]
-    U = shapely.unary_union(shapely.make_valid(np.array(P, object)))
+    U = shapely.unary_union(shapely.make_valid(np.array(P, object))).buffer(0.02)      # 2 cm: closes the slivers between adjacent map polygons
     shapely.prepare(U)
     return U
 
@@ -68,29 +68,24 @@ def road_depth(U, c, L, W):
     out = ~shapely.covers(U, poly)
     d = np.zeros(poly.shape)
     if out.any():
-        d[out] = np.maximum(shapely.distance(shapely.points(pts[out]), U).max(-1), 1e-3)
+        d[out] = np.maximum(shapely.distance(shapely.points(pts[out]), U).max(-1), 1e-4)
     return d
 
 
 class Corridor:
-    """The scorer's `_lateral_distance_to_gt` on the logged ego centre path."""
+    """The scorer's `_lateral_distance_to_gt` on the logged ego centre path: the distance to the path, and past its end the distance to its
+    straight continuation (the scorer measures the component perpendicular to the final heading there)."""
 
     def __init__(self, gt_c):
         xy = gt_c[:, 1:3]
-        self.ls, self.len = shapely.LineString(xy), float(np.hypot(*np.diff(xy, axis=0).T).sum())
         seg = np.diff(xy, axis=0)
         j = np.flatnonzero(np.hypot(*seg.T) > 1e-3)
-        self.end, self.dir = xy[-1], (seg[j[-1]] / np.hypot(*seg[j[-1]]) if len(j) else None)
+        self.len = float(np.hypot(*seg.T).sum())
+        ext = [xy[-1] + 80.0 * seg[j[-1]] / np.hypot(*seg[j[-1]])] if len(j) else []
+        self.ls = shapely.LineString(np.r_[xy, ext]) if len(j) else shapely.Point(xy[0])
 
     def __call__(self, xy):
-        xy = np.atleast_2d(xy)
-        p = shapely.points(xy)
-        d = shapely.distance(p, self.ls)
-        if self.dir is not None and self.len > 0:
-            past = shapely.line_locate_point(self.ls, p) >= self.len - 1e-9
-            off = xy - self.end
-            d = np.where(past, np.abs(off[:, 0] * self.dir[1] - off[:, 1] * self.dir[0]), d)
-        return d
+        return shapely.distance(shapely.points(np.atleast_2d(xy)), self.ls)
 
 
 def path_state(r, rig):
