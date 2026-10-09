@@ -63,6 +63,8 @@ MEM_ROOT = data_dir() / "runs" / "op_parity" / "mem"          # <kind>/<data>.np
 MEM_DROP = 0.25                                                 # rows whose memory is masked in training ("memory off" in distribution)
 # geo-e2e (plans/2026-10-09-geo-e2e-prereg.md, scripts/geo_e2e.py, --mem-e2e): the memory tokens come from a tokenizer trained jointly with the
 # adapter; arm "P2+ge_<tag>", its navtest bank is written to mem/ge_<tag>/ after training. Privileged rasters, oracle probes only.
+# path-req (plans/2026-10-09-path-req-prereg.md, scripts/path_req.py, --mem-e2e q<kind>): the same channel fed with degraded fields of the LOGGED
+# FUTURE path (label leak: oracle probes only); --mem-lr sets the tokenizer's own learning rate.
 
 
 def arm_kw(arm: str) -> dict:
@@ -117,6 +119,7 @@ class Cfg:
     mem: str = ""                         # front-token memory (wa_cf | vj21; arm P2+<mem>), dropped per row with MEM_DROP (own rng stream)
     mem_e2e: str = ""                     # geo-e2e: memory tokens from a jointly trained tokenizer over b | x | p rasters (geo_e2e.py); mem becomes ge_<tag>
     mem_init: str = ""                    # geo-e2e: tokenizer state dict to start from ("" = random init)
+    mem_lr: float = 0.0                   # geo-e2e / path-req: learning rate of the tokenizer group (0 = lr_new)
     stop_gate_free: bool = False          # mixed-domain addendum 2: no anchor rows on the gated rows (every gated row with a log is an imitation row)
     wod_split: str = "wod/r2"             # mixed-domain: sequence split of the wod_* data dirs when --split is a NAVSIM token split (<ref>-train / -dev)
     wod_mass: float = 0.0                 # mixed-domain: exact share of every batch drawn from the wod_* rows (0 = natural mix)
@@ -479,7 +482,7 @@ def main(a):
               act_lab=a.act_lab, act_lam=a.act_lam, ego_lat_drop=a.ego_lat_drop, mem=a.mem, stop_gate=a.stop_gate,
               wod_split=a.wod_split, wod_mass=a.wod_mass, wod_slots=a.wod_slots, stop_gate_free=a.stop_gate_free,
               agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels,
-              mem_e2e=a.mem_e2e, mem_init=a.mem_init)
+              mem_e2e=a.mem_e2e, mem_init=a.mem_init, mem_lr=a.mem_lr)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
@@ -524,10 +527,14 @@ def main(a):
     LS = Losses(model.net, cfg, tstd, S.di, S.pi, dev, hinge, agent)
     om = None
     if cfg.mem_e2e:                                                 # built after the model: the adapter's init draws are those of the frozen-bank arms
-        import geo_e2e as GE
+        assert cfg.mem_e2e in ("b", "x", "p") or cfg.mem_e2e.startswith("q"), f"unknown --mem-e2e kind {cfg.mem_e2e!r}"
+        if cfg.mem_e2e.startswith("q"):                             # path-req: degraded fields of the logged future path (scripts/path_req.py)
+            import path_req as GE
+        else:
+            import geo_e2e as GE
         om = S.mem = GE.attach(cfg, S, hinge, dev)                  # S.mem[rows] -> tokens (dev_eval reads it like a bank)
     opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}] + ([{"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}] if new else []) +
-                            ([{"params": om.params, "lr": cfg.lr_new, "base": cfg.lr_new}] if om else []), weight_decay=cfg.wd)
+                            ([{"params": om.params, "lr": cfg.mem_lr or cfg.lr_new, "base": cfg.mem_lr or cfg.lr_new}] if om else []), weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
     d = proot("runs", tag)
     ctx = Run("op_parity", f"train-{tag}", seed=cfg.seed, config=asdict(cfg)) if rank == 0 else None
@@ -726,7 +733,8 @@ if __name__ == "__main__":
     ap.add_argument("--wod-mass", type=float, default=0.0, help="mixed-domain: exact share of every batch drawn from the wod_* rows (0 = natural mix)")
     ap.add_argument("--wod-slots", type=int, default=0, choices=[0, 8], help="mixed-domain: 8 = oldest WOD slot zeroed (teacher8.npz); 0 = all 9")
     ap.add_argument("--mem", default="", choices=["", *MEM_KINDS], help="32-token memory for arm P2 (representation fix / turn-oracle; runs/op_parity/mem)")
-    ap.add_argument("--mem-e2e", default="", choices=["", "b", "x", "p"], help="geo-e2e: jointly trained tokenizer over true SDF + agents (b), the same "
-                    "shuffled across logs (x), the logged-path field (p); privileged, oracle probes only (scripts/geo_e2e.py)")
+    ap.add_argument("--mem-e2e", default="", help="geo-e2e: jointly trained tokenizer over true SDF + agents (b), the same shuffled across logs (x), "
+                    "the logged-path field (p); path-req: q<kind>, a degraded field of the logged future (scripts/path_req.py). Privileged, oracle probes only")
     ap.add_argument("--mem-init", default="", help="geo-e2e: tokenizer state dict to start from (geo_oracle.py tok --weights)")
+    ap.add_argument("--mem-lr", type=float, default=0.0, help="geo-e2e / path-req: learning rate of the tokenizer group (0 = the adapter's lr_new)")
     main(ap.parse_args())
