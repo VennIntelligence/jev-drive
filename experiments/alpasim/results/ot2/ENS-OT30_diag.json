@@ -1,0 +1,33 @@
+{
+ "scenes": 700,
+ "decisions": 7000,
+ "lat_median": 0.046199992299079895,
+ "lat_p90": 0.20581001639366153,
+ "lat_p99": 0.638245044350625,
+ "fork_decisions": 0.004,
+ "long_median": 0.17879891395568848,
+ "long_p90": 0.49801101684570315,
+ "fork_scenes": 22,
+ "ens_zero": 39,
+ "split": {
+  "n": 20,
+  "ens_zero": 9,
+  "fork": 2,
+  "ens_zero_fork": 1
+ },
+ "all_zero": {
+  "n": 30,
+  "ens_zero": 30,
+  "fork": 0
+ },
+ "none_zero": {
+  "n": 650,
+  "ens_zero": 0,
+  "fork": 20,
+  "ens_zero_fork": 0
+ },
+ "zero_fork": 1,
+ "nonzero_fork": 21,
+ "max_lat_zero_median": 0.3756999969482422,
+ "max_lat_nonzero_median": 0.17009999370202422
+}

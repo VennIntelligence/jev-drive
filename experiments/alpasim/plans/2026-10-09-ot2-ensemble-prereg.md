@@ -42,3 +42,7 @@ E1：pilot 8 scene + 700 scene ≈ 1 job-hour；E2 同量；bench 几分钟。�
 
 - 成员只有 2 个 seed；700 scene、27 个 log；本地渲染。
 - 平均两条 plan 假定它们在同一模态里；d199 / d201 的 oracle 增益若主要来自模态不同的 scene，平均没有理由拿到。
+
+## 修订 1（2026-10-09，pilot 之后、700 scene 分数读出之前）
+
+身份闸门的参照由「d201 的 `OT30-F-s0`」改为同一 8-scene 列表上的单 driver run（c0b 的 `pilot-ot0`）：c0b 自己的 pilot 与 chunk 两次运行在 1 个 scene 上就不同（0.9705 对 0.9771），仿真只对同一 scene 列表确定。判定线与停止规则不变。

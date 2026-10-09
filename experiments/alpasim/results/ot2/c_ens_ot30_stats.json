@@ -1,0 +1,82 @@
+{
+ "scenes": 700,
+ "stats": {
+  "SH30-F-s0": {
+   "mean": [
+    0.9139889216687948,
+    0.8845350808321816,
+    0.9365726650210292
+   ],
+   "n1": 555,
+   "zeros": 50,
+   "collision_at_fault": 19,
+   "offroad": 13,
+   "left_corridor_laterally": 18,
+   "other": 0,
+   "slow": 95,
+   "events": 32.0,
+   "progress": 0.9478983382726063
+  },
+  "ENS-OT30": {
+   "mean": [
+    0.9312066825694251,
+    0.901655165248327,
+    0.95317073335449
+   ],
+   "n1": 573,
+   "zeros": 39,
+   "collision_at_fault": 12,
+   "offroad": 11,
+   "left_corridor_laterally": 16,
+   "other": 0,
+   "slow": 88,
+   "events": 23.0,
+   "progress": 0.9546248800396889
+  },
+  "OT30-F-s0": {
+   "mean": [
+    0.9257601209626016,
+    0.9028644112136244,
+    0.9446813172907208
+   ],
+   "n1": 565,
+   "zeros": 42,
+   "collision_at_fault": 11,
+   "offroad": 12,
+   "left_corridor_laterally": 19,
+   "other": 0,
+   "slow": 93,
+   "events": 23.0,
+   "progress": 0.9496623962051235
+  },
+  "OT30-F-s1": {
+   "mean": [
+    0.9334504965827102,
+    0.9050079982733035,
+    0.9558261022518566
+   ],
+   "n1": 580,
+   "zeros": 38,
+   "collision_at_fault": 11,
+   "offroad": 10,
+   "left_corridor_laterally": 17,
+   "other": 0,
+   "slow": 82,
+   "events": 21.0,
+   "progress": 0.9585998329591214
+  }
+ },
+ "lines": {
+  "ENS-OT30 - OT30-F-s1": {
+   "diff": [
+    -0.0022438140132852334,
+    -0.00967484674327872,
+    0.004528846167259051
+   ],
+   "score": false,
+   "events": false,
+   "adopted": false
+  }
+ },
+ "missing": []
+}
