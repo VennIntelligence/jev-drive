@@ -1,0 +1,17 @@
+{
+ "P2H10-F-s0": {
+  "n": 120,
+  "max_abs_plan_diff_m": 0.0,
+  "n_nonzero": 0
+ },
+ "P2H10-F-s1": {
+  "n": 100,
+  "max_abs_plan_diff_m": 0.0,
+  "n_nonzero": 0
+ },
+ "ctrl": {
+  "n": 2000,
+  "max_abs_plan_diff_m": 0.0,
+  "n_nonzero": 0
+ }
+}
