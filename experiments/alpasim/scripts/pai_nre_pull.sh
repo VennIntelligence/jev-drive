@@ -17,7 +17,7 @@ echo "${#L[@]} layers"; i=0
 for e in "${L[@]}"; do
   d=${e% *}; sz=${e#* }; i=$((i + 1)); f=$DL/${d#sha256:}.tgz
   [[ -e $DL/${d#sha256:}.extracted ]] && continue
-  RG_PROXY=$PROXY ranged_get "https://nvcr.io/v2/$IMG/blobs/$d" "$f" "$sz" "$(( sz > 400000000 ? 12 : 2 ))" 'echo "Authorization: Bearer $(tok)"' || die "layer $i download"
+  RG_PROXY=$PROXY ranged_get "https://nvcr.io/v2/$IMG/blobs/$d" "$f" "$sz" "$(( sz > 2000000000 ? 24 : sz > 400000000 ? 16 : sz > 20000000 ? 8 : 1 ))" 'echo "Authorization: Bearer $(tok)"' || die "layer $i download"
   [[ $(sha256sum "$f" | cut -d' ' -f1) == "${d#sha256:}" ]] || { rm -f "$f"; die "layer $i sha256"; }
   # extract; whiteouts: .wh.<name> removes <name>, .wh..wh..opq clears the directory's older content
   tar -tzf "$f" 2>/dev/null | grep -E '(^|/)\.wh\.' | while read -r w; do
