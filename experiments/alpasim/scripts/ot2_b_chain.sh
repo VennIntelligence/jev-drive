@@ -87,6 +87,17 @@ PYEOF
   waitdirs $L/ladder-ot2 $L/t-AP2-AB-s1 $(for arm in $ARMS; do for s in 0 1; do echo $L/t-$arm-s$s; done; done)
   for t in AP2-AB-s1 $(for arm in $ARMS; do echo APO-$arm-s0 APO-$arm-s1; done); do [[ -f $DATA_DIR/runs/op_parity/runs/$t/ckpt-final.pt ]] || die "no checkpoint $t"; done
   grep -h "dev @ 10000" $L/t-*/log.txt | sed 's/.*INFO//' | cut -c1-400
+elif [[ $STAGE == ladder ]]; then   # prereg amendment 1: no +-1.5 m trainings; the +-1.5 m rows are finished and kept, the ladder probe (piece A) runs on both caches
+  status "waiting for the 12 +-1.5 m prep jobs"
+  waitdirs $(for d in $ALL; do echo $L/prep-a15-$d; done)
+  LT="P0 P2-F-s0 P2-F-s1 RMH10-F-s0 RMH10-F-s1 P2H10-F-s0 P2H10-F-s1 SH30-F-s0 SH30-F-s1 AP2-AB-s0 AP2-AB-s1 OT30-F-s0 OT30-F-s1 APO-a05m10-s0 APO-a05m10-s1 APO-a05m25-s0 APO-a05m25-s1"
+  LP="P2-F-s0:P0 P2H10-F-s0:P0 P2H10-F-s1:P0 SH30-F-s0:P0 SH30-F-s1:P0 AP2-AB-s0:P0 OT30-F-s0:P0 OT30-F-s0:SH30-F-s0 OT30-F-s1:SH30-F-s1 SH30-F-s0:P2H10-F-s0 APO-a05m10-s0:AP2-AB-s0 APO-a05m25-s0:AP2-AB-s0 APO-a05m25-s0:APO-a05m10-s0"
+  sub ot2-ladder $L/ladder-ot1-v2 --vram 32 --cpu 4 --ram 70 -- $PY $SP/ot_ladder.py --name ladder_ot1 --ot ot1 --split $SPLIT --tags $LT --pairs $LP
+  sub ot2-ladder $L/ladder-ot2 --vram 32 --cpu 4 --ram 70 -- $PY $SP/ot_ladder.py --name ladder_ot2 --ot ot2 --split $SPLIT --tags $LT --pairs $LP
+  waitdirs $L/ladder-ot1-v2 $L/ladder-ot2
+  cat $DATA_DIR/runs/op_parity/ot_rows/ladder_ladder_ot1.md $DATA_DIR/runs/op_parity/ot_rows/ladder_ladder_ot2.md
+  for d in $ALL; do ls -la $DATA_DIR/runs/op_parity/cache/ot2_$d/tab.npz $DATA_DIR/runs/op_parity/cache/ot2_$d@warp/front.npy $DATA_DIR/runs/op_parity/cache/ot2_$d@warp/teacher.npz | awk '{print $5, $NF}'
+    cat $DATA_DIR/runs/op_parity/cache/ot2_$d/tab.npz.key $DATA_DIR/runs/op_parity/cache/ot2_$d@warp/front.npy.key $DATA_DIR/runs/op_parity/cache/ot2_$d@warp/teacher.npz.key | tr '\n' ' '; echo; done
 elif [[ $STAGE == side ]]; then
   TAGS="AP2-AB-s0 AP2-AB-s1 $(for arm in $ARMS; do echo -n "APO-$arm-s0 APO-$arm-s1 "; done)"
   status "navtest / navhard through jevdrive.bench (low priority), AlpaSim-standard offline read"

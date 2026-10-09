@@ -75,3 +75,13 @@ HUGSIM 64（`spec_plan_smooth`，经 `jevdrive.bench`，每场景一次）对 AP
 - 本地渲染，未与官方环境对分；公开 700 scene 不是 private 评测集。
 - plane 引擎对路面以上物体的畸变随幅度变大，与「离轨状态本身」没有分开（d141、d198 同样的限定）。
 - 离轨行只在 m = 4；冷启动三步若已漂出，训练里没有对应行。
+
+## 修订 1（2026-10-09 12:50 box 时间；写于任何 APO / AP2-AB-s1 / SH30-F-s1 闭环分数读出之前）
+
+lane M1 的 decision 205（`experiments/alpasim/results/m1_preturn_shift.md`）：AlpaSim 零分的主机制是强 hinge（λ 30 / 0.5 m）触发的闭环朝向漂移，只把 checkpoint 换成 λ 10 配方，同样 700 scene 上 P2H10-F-s0 0.9484 对 SH30-F-s0 0.9140。本表的基底（AP2 = 强 hinge）正是引起漂移的配方，所以按协调者指示裁剪，不重来：
+
+- **保留并按原线判读**：已训完的 `APO-a05m10-s{0,1}`、`APO-a05m25-s{0,1}` 与基线第二个 seed（`AP2-AB-s1`、`SH30-F-s1`）的 700 scene 闭环。线 1–3 原样不动。P2H10-F-s0 / s1 作为 reference 行取自 M1 的表，不参与判线。
+- **砍掉**：`APO-a15m10`、`APO-a15m25` 四个 λ 30 的 ±1.5 m 训练（未提交，不训）；因此 2 × 2 剂量表只剩 ±0.5 m 一行，幅度主效应没有读数，占比效应只有 ±0.5 m 下的 10% 对 25%。HUGSIM 护栏、navtest / navhard 与 AlpaSim 标准离线旁读不跑（强 hinge 配方不再是候选基底，护栏只为定稿候选而设）。
+- **保留的数据**：±1.5 m 的 `ot2` 离轨 token 缓存 12 个 shard 跑完并留盘（与 hinge 无关），交给新 lane OT3 在 λ 10 配方上训练；±1.5 m 留出行上的 ladder 探针照跑（piece A）。
+- 写本修订时已读的东西：piece C 的 ENS-OT30 与成员（d201 已有）的分数、训练日志的 dev ADE、`ot2` shard 2 上的符号闸门探针。APO、AP2-AB-s1、SH30-F-s1 的闭环分数一个都没有读。
+
