@@ -403,10 +403,10 @@ class Lane:
         gn = [float(torch.nn.utils.clip_grad_norm_(ps, 1.0)) for ps in self.clip]
         self.scaler.step(self.opt)
         self.scaler.update()
-        Ls = {k: float(v) for k, v in Ls.items()} | {"total": float(total), "gn_policy": gn[0]}
+        Ls = {k: float(v.detach()) for k, v in Ls.items()} | {"total": float(total.detach()), "gn_policy": gn[0]}
         if self.k["vis"]:
             Ls["gn_vis"] = gn[1]
-        return Ls
+        return Ls | {"skipped": float(not np.isfinite(gn).all())}                # a non-finite fp16 gradient: GradScaler skips the step
 
     @torch.no_grad()
     def dev_eval(self, bs=128) -> dict:
@@ -520,8 +520,8 @@ def cmd_train(a):
             run.summary.update({f"dev_{n}": v for n, v in ev.items()})
             hist_ev.append({"step": step} | ev)
             (d / "evals.json").write_text(json.dumps(hist_ev))
-            if ade0 is None:
-                ade0 = ev["ade"]
+            if ade0 is None:                                                  # the starting point = SH30 itself (memory arms: memory masked)
+                ade0 = ev.get("ade_masked", ev["ade"])
             bad = bad + 1 if ev["ade"] > ade0 + 0.3 else 0
             if bad >= 2:                                                      # registered stop rule: this arm stops, the others go on
                 save(step, final=False, snapshot=False)
@@ -546,7 +546,7 @@ def cmd_train(a):
             hist.append(ln.step(pre.get(), step))
             n = step + 1
             if n % 25 == 0 or n == cfg.steps:
-                mean = {x: float(np.mean([h[x] for h in hist if x in h])) for x in hist[-1]}
+                mean = {x: float(np.nanmean([h[x] for h in hist if x in h])) for x in hist[-1]}
                 its = len(hist) / (time.time() - tw)
                 hist, tw = [], time.time()
                 run.scalars({f"loss/{x}": v for x, v in mean.items()} | {"throughput/steps_per_s": its, "throughput/samples_per_s": its * cfg.batch,
