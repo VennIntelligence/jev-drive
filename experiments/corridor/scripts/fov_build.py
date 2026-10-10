@@ -41,6 +41,7 @@ PT = D / "runs/op_parity/pt_swap"
 GEOM = D / "runs/corridor/geom.pkl"
 UNITS = {"sh0": "sh0_pp", "sh1": "sh1_pp", "wa": "wa_pp"}
 GROUND_Z = -0.35
+NEAR = 8.2              # m, ground nearer than this ahead of the camera is below the bottom row of the wide / road frames (camera 1.87 m high)
 EDGE_R = 10.0            # m, road edge within this radius of the departure point is "the edge the plan crossed"
 LAT_MAX = 12.0           # m, lateral search for the road edge beside the logged path
 HIST = (0, -1, -2, -3)   # keyframe offsets (frames at 2 Hz); 0 = t0
@@ -212,13 +213,19 @@ def work(token):
         p = pick_s(path, s, [a])
         row[f"brg_path_s{a}"] = float(bearing(p, base0)[0]) if np.isfinite(p).all() else np.nan
     # --- logged path visibility (fraction of arc length)
-    pv = vis_set(path, bases, None, wa_cams)
+    cam0 = np.array([cdx, cdy])
+    farm = np.hypot(*(path - cam0).T) >= NEAR        # points nearer than NEAR m ahead of the camera are below the wide frame at any heading
+    row["path_far_frac"] = float(farm.mean())
+    pv = vis_set(path[farm], bases, None, wa_cams) if farm.any() else {}
     for k, v in pv.items():
         row[f"path_{k}"] = float(v.mean())
     # --- road edges beside the logged path (inside / outside)
     ed = edge_points(path[::4], hd[::4], area_e, sgn)                     # every 1 m
     for nm, pts in ed.items():
         okp = np.isfinite(pts).all(1)
+        pts = np.where(okp[:, None], pts, np.nan)
+        okp &= np.hypot(*(np.nan_to_num(pts) - cam0).T) >= NEAR
+        pts = np.where(okp[:, None], pts, np.nan)
         row[f"edge_{nm}_n"] = int(okp.sum())
         row[f"edge_{nm}_dist_med"] = float(np.nanmedian(np.hypot(*(pts - path[::4]).T))) if okp.any() else np.nan
         for a in (10, 20, 30):
@@ -233,7 +240,7 @@ def work(token):
         for a in (10, 20, 30, 40):
             p = pick_s(Rp, sR, [a])
             row[f"brg_cl_s{a}"] = float(bearing(p, base0)[0]) if np.isfinite(p).all() else np.nan
-        m40 = sR <= 40
+        m40 = (sR <= 40) & (np.hypot(*(Rp - cam0).T) >= NEAR)
         for k, v in vis_set(Rp[m40], bases, None, wa_cams).items():
             row[f"cl_{k}"] = float(v.mean())
     # --- departures of the failing members

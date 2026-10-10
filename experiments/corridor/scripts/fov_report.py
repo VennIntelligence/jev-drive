@@ -43,6 +43,7 @@ def main():
     sc = pd.read_csv(PT / "score_all.csv", usecols=["key", "token", "drivable_area_compliance"])
     sc = sc[sc.key.isin(["sh0_pp", "sh1_pp", "wa_pp"]) & sc.token.isin(set(tok.token))]
     sc = sc[np.isfinite(sc.drivable_area_compliance)]
+    un = un.assign(unit=un.unit.str[:-3])
     M = sc.rename(columns={"key": "unit"}).assign(unit=lambda d: d.unit.str[:-3])
     M["fail"] = M.drivable_area_compliance < 1
     M = M.merge(tok, on="token").merge(un.drop(columns=["log", "sgn", "dpsi"]), on=["token", "unit"], how="left")
@@ -77,6 +78,10 @@ def main():
         x = M[col].to_numpy(float)
         t = cb.mean(x, m.to_numpy() & np.isfinite(x))
         return F(t) if scale else PS.pc(t)
+
+    def mean_c(col, m, inv=False):
+        x = 1 - M[col].to_numpy(float) if inv else M[col].to_numpy(float)
+        return F(cb.mean(x, m.to_numpy() & np.isfinite(x)))
 
     def nfin(col, m):
         return int((m & M[col].notna()).sum())
@@ -171,8 +176,9 @@ def main():
     for obj in ("logged path 4 s", "centreline 40 m", "inside edge", "outside edge"):
         P(f"**{obj}** (% of arc length / edge samples)\n")
         P(PS.md(df[["set", "n"] + [c for c in df.columns if c.startswith(obj + " ")]].rename(columns=lambda c: c.replace(obj + " ", "")), 1) + "\n")
-    P("Reading the 'image' columns: a ground point closer than 8.2 m ahead of the camera falls below the wide frame, so slow tokens (short 4 s "
-      "path) have a large part of the path out of the image at every heading; that is a near-field blind spot, not a side-view question.\n")
+    P("All fractions in this section are over points at least 8.2 m ahead of the camera: ground nearer than that falls below the bottom row of the "
+      "wide frame at any heading (near-field blind spot, not a side-view question). The share of the 4 s path that is nearer than that:\n")
+    P(PS.md(pd.DataFrame([{"set": nm, "path arc nearer than 8.2 m (mean share) %": mean_c("path_far_frac", m, True)} for nm, m in sets.items()]), 1) + "\n")
     # share of members with the whole path in FOV at t0
     rows = []
     for nm, m in sets.items():
