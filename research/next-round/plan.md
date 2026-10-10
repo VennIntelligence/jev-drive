@@ -1,7 +1,7 @@
 # 下一轮方向与计划
 
 2026-10-09 改写。合并并取代 10-08 的两份规划稿（原 `plan.md` 与 `fable_plan.md`，后者已删），按 10-09 与用户讨论后定下的方向重排。
-今晚的执行清单在 [overnight.md](overnight.md)。10-10 的候选核心概念与计划在 [self-model.md](self-model.md)。记号：d### 指 `research/decisions/###.md`；「推」是从已记录的数算出来的；「估」没有测量依据。
+今晚的执行清单在 [overnight.md](overnight.md)。记号：d### 指 `research/decisions/###.md`；「推」是从已记录的数算出来的；「估」没有测量依据。
 本稿没有提交 job、没有改代码。box 上只做了一件事：删掉 AlpaSim part004 校验失败的分片并排了重拉（第 2.2 节）。
 
 ## 0. 定下的方向

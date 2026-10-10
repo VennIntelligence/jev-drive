@@ -60,13 +60,7 @@ the data disk), which removed about 339G and kept small samples:
 | `datasets/nuscenes/sweeps` camera and lidar dirs (re-extract from `/autodl-pub`) | `CAM_BACK` (0.3G), radar |
 | `runs/factor_wm/clips/{g0a,g0b,g1s,train}`, `runs/factor_wm/p2op/{logged,roll}` (line dropped, d177) | json indexes, reports, `onnx/`, `runs/` |
 
-2026-10-09 cleanup (user-approved, script and log in `tmp/cleanup_1009.*` on the data disk): 473G -> 892G free.
-Removed `runs/openpilot_rigs/frames` (138G, model_smoke) and the per-episode `scene.ply` / `ground.ply` dumps under
-`runs/{bench/hugsim,op_parity/hugsim,op_adapt_H/hugsim,op_guard,hugsim-derot}` (11058 files, ~300G; scores, logs and
-videos untouched). `runs/hugsim-exam` keeps its ply (35G): `experiments/hugsim/scripts/` spin attribution and
-`export_review_cases.py` read them. HUGSIM writes two ply per episode (~27 MB each), so new bench runs refill this.
-
-Live but regenerable (ask first):
+Still removable from concluded lines: `runs/openpilot_rigs/frames` 141G (model_smoke). Live but regenerable (ask first):
 `runs/op_adapt_H/{fixbank,bank}` 151G + 122G, `processed/op_adapt` 224G, `runs/op_route_cmd/carla_pairs_s10000` 65G.
 Bench2Drive / CARLA data is about 580G in total (`runs/{op_route_cmd,op_route_ft,b2d_collect,p5v1,p6,nq4}`,
 `processed/carla_*`, `third_party/carla`, the four leaderboard-model envs); untouched. Re-scan before deleting anything.
