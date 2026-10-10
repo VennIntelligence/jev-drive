@@ -23,6 +23,9 @@ def main(argv: list) -> None:
     elif name == "thead-poses":
         from .navsim import thead_poses
         thead_poses(*args)
+    elif name == "vt-plans":
+        from .navsim import vt_plans
+        vt_plans(*args)
     elif name == "ts-select":
         from .navsim import select_stage
         select_stage(*args)

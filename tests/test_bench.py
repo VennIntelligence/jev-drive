@@ -136,6 +136,48 @@ class TestAlgebra(TmpData):
         self.assertEqual(RP.motion(np.full((8, 3), np.nan), 1.0)[1], "unknown")
 
 
+class TestVisTrain(TmpData):
+    def test_family_and_stages(self):
+        """VT-A0 / A / B / C tags (final and -k<NN> snapshots) are family vt: vt.py plans, then the parity tail. VT-F / F0 stay parity."""
+        from jevdrive.bench import navsim as NV
+        for v in ST.NAVSIM.values():
+            (self.D / "runs" / "op_lb" / v["data"]).mkdir(parents=True, exist_ok=True)
+            (self.D / "runs" / "op_lb" / v["data"] / "meta.json").write_text("{}")
+        for name in ("VT-A-s0", "VT-B-s1-k05", "VT-A0-s0-k10", "VT-C-s0"):
+            m = M.resolve(name)
+            self.assertEqual((m.family, m.frames, m.benches), ("vt", "warp", ("navtest", "navhard")))
+            self.assertTrue(m.ckpt.endswith(f"runs/op_parity/runs/{name}/ckpt-final.pt"))
+        for name in ("VT-F-s0", "VT-F0-s0-k10"):
+            self.assertEqual((M.resolve(name).family, M.resolve(name).frames), ("parity", "warp"))
+        n = M.resolve("VT-A-s0:mshuf")
+        self.assertEqual((n.opt, n.key("navtest")), ("mshuf", "VT-A-s0@warp_mshuf"))
+        self.assertEqual(M.resolve("VT-B-s1:noside").key("navtest"), "VT-B-s1@warp_noside")
+        for bad in ("VT-C-s0:noside", "VT-A-s0:lm", "VT-A-s0@gimm", "VT-F-s0:mshuf"):
+            with self.assertRaises(ValueError):
+                M.resolve(bad)
+        with self.assertRaises(FileNotFoundError):
+            M.resolve("VT-A-s0-k05", check=True)
+        for bench, spec, tail in (("navtest", "VT-A-s0-k05", "collect"), ("navhard", "VT-A-s0:mshuf", "harness")):
+            m = M.resolve(spec)
+            st = NV.stages(m, bench, self.D / "runs" / "bench" / bench / m.key(bench), shards=2)
+            names = [x.name for x in st]
+            self.assertEqual(names[:2], ["plans", "export"])
+            self.assertIn(tail, names)
+            self.assertNotIn("prep", names)
+            ps = st[0]
+            self.assertEqual(ps.cmd[2:5], ["jevdrive.bench.stage", "vt-plans", m.spec])
+            self.assertEqual(ps.done, str(NV.plan_file(m, bench)))
+            self.assertFalse(ps.after)
+            self.assertIn(NV.stem(m), " ".join(st[1].cmd))
+        with mock.patch("subprocess.run") as run:                          # the stage's command: vt.py plans with the memory option
+            (self.D / "runs" / "op_parity" / "runs" / "VT-A-s0").mkdir(parents=True)
+            (self.D / "runs" / "op_parity" / "runs" / "VT-A-s0" / "ckpt-final.pt").write_text("x")
+            NV.vt_plans("VT-A-s0:mshuf", "navtest", "/tmp/x.npz")
+            cmd = run.call_args[0][0]
+            self.assertTrue(cmd[1].endswith("experiments/vis_train/scripts/vt.py"))
+            self.assertEqual(cmd[2:], ["plans", "--tag", "VT-A-s0", "--data", "lb_navtest", "--out", "/tmp/x.npz", "--mem", "shuf"])
+
+
 class TestTrajHead(TmpData):
     def test_stages(self):
         """A parity checkpoint with thead.pt next to it gets `poses` in place of plans + export; without it the usual chain."""

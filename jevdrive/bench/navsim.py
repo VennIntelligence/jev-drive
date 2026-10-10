@@ -6,7 +6,7 @@ Pipeline per model (every step is the code the lanes used, wrapped):
            parity: the torch port on the cached tokens (pp_train.PModel, fp16, batch 128: pp_eval.py plans, one model);
            memory arms (pp_train --mem) also read their front-token bank (runs/op_parity/mem/<kind>/<data>.npy; :noside masks it);
            UF-* arms: pp_unfreeze.py plans (pixels); onnx: scripts/op_lb.py run (TensorRT, envs/openpilot; an existing op_lb
-           plan file of the same stem is reused)
+           plan file of the same stem is reused); vis_train arms (family vt): experiments/vis_train/scripts/vt.py plans
   poses    parity checkpoints with a trajectory head (Model.thead; lib/traj_head.py): the head's 8 rear-axle poses on the cached tokens,
            written directly as the prediction file; replaces plans + export
   export   experiments/op_openloop/lib/op_interp.py nav-export, adapter `base` (CAM_F0 lever arm to the rear axle, linear
@@ -81,6 +81,11 @@ def cache_dir(data: str, frames: str) -> Path:
 def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "", procs: int = 0) -> list:
     data = NAVSIM[bench]["data"]
     ol_root(data)                                            # plans/ and the meta.json link that op_interp reads
+    if m.family == "vt":                                      # vis_train: its own plans stage, then the parity tail (export, scoring, collect)
+        S = [s for s in stages(replace(m, family="parity"), bench, run_dir, shards, subset, procs) if s.name != "prep"]
+        S[[s.name for s in S].index("plans")] = R.Stage("plans", R.stage_cmd("jev", "vt-plans", m.spec, bench, plan_file(m, bench)),
+                                                        done=str(plan_file(m, bench)), vram=24, cpu=8, ram=32, tries=2)
+        return S
     S = []
     ts = m.opt in TS_OPTS
     if ts:                                                    # turn selector: the base model's plans / export (shared, usually finished), then `select`
@@ -300,6 +305,13 @@ def unfreeze_plans(spec: str, bench: str, out: str) -> None:
         subprocess.run([R.py("op-train"), str(PP / "pp_unfreeze.py"), "plans", "--data", data, "--frames", m.frames, "--models", m.name],
                        check=True, cwd=REPO)
     _copy_into(src, Path(out))
+
+
+def vt_plans(spec: str, bench: str, out: str) -> None:
+    """experiments/vis_train/scripts/vt.py plans: cached slot tokens + the pixel cache (memory branch / own encoder); :noside / :mshuf."""
+    m = resolve(spec, check=True)
+    subprocess.run([R.py("op-train"), str(REPO / "experiments/vis_train/scripts/vt.py"), "plans", "--tag", m.name, "--data", NAVSIM[bench]["data"],
+                    "--out", str(out), "--mem", {"": "on", "noside": "off", "mshuf": "shuf"}[m.opt]], check=True, cwd=REPO)
 
 
 # ---------------------------------------------------------------- scoring
