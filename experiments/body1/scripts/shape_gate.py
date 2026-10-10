@@ -21,6 +21,7 @@ import b1 as B  # noqa: E402
 
 OUT = B.REPO / "experiments/body1/results/shape"
 LOSS = B.REPO / "experiments/body1/results/loss"
+NAV = ""                                                               # --nav: suffix of the navtest dumps (`_w` = plans on warp frames, results/navtest_warp.md)
 ARM, REFP, CTRL, NOA, AON = "P2H10S-P-s0", "P2H10-P-s0", "P2H10B-Pw3-s0", "P2H10B-Pw3-noA-s0", "P2H10B-P-Aon-s0"
 G3P = {ARM: "a6_hold_S", CTRL: "a5_hold_w3", NOA: "a6_hold_noA", AON: "a6_hold_Aon"}
 FAMS = ("log", "ot1", "yr1", "bd4")
@@ -65,7 +66,7 @@ def cmd_pilot(a):
         tags = [ARM, CTRL, NOA, AON]
         g3 = {t: json.loads((LOSS / f"g3_{G3P[t]}.json").read_text())["pooled"][REFP] for t in tags}
         A = arcs("a6_pilot_hold", [(t, REFP) for t in tags], REFP)
-        N = arcs("a6_pilot_navtest", [(t, REFP) for t in tags], REFP)
+        N = arcs("a6_pilot_navtest" + NAV, [(t, REFP) for t in tags], REFP)
         yr = json.loads((data_dir() / "runs/alpasim/ot3/results/yr_probe_b43a6.json").read_text())["models"]
         dv = {t: dev_of(t) for t in tags + [REFP]}
         res = {}
@@ -110,10 +111,10 @@ def cmd_g3e(a):
     with Run("body1", "shape-gate-g3e", config=vars(a)) as run:
         sd = a.seeds                                                  # note (h): seeds 2, 3 are a supplementary read (groups still from P2H10-F-s0's plan)
         new, ref, old = tuple(f"P2H10S-F-s{i}" for i in sd), tuple(f"P2H10-F-s{i}" for i in sd), ("P2H10B-F-s0", "P2H10B-F-s1")
-        Nv = arcs(f"{a.name}_navtest", list(zip(new, ref)) + [(ref[1], ref[0])], "P2H10-F-s0")
+        Nv = arcs(f"{a.name}_navtest{NAV}", list(zip(new, ref)) + [(ref[1], ref[0])], "P2H10-F-s0")
         Hd = arcs(f"{a.name}_hold", list(zip(new, ref)) + [(ref[1], ref[0])], "P2H10-F-s0")
         r01 = ("P2H10-F-s0", "P2H10-F-s1")
-        No, Ho = arcs("navtest", list(zip(old, r01)), r01[0]), arcs("hold", list(zip(old, r01)), r01[0])
+        No, Ho = arcs("navtest" + NAV, list(zip(old, r01)), r01[0]), arcs("hold", list(zip(old, r01)), r01[0])
         spec = [("navtest on-log pooled >= 0.995", Nv, "all", 0.995, None), ("navtest on-log pooled, lower bound >= 0.990", Nv, "all", None, 0.990),
                 ("navtest open >= 0.995", Nv, "open", 0.995, None), ("navtest lead >= 0.990", Nv, "lead", 0.990, None), ("hold pooled >= 0.990", Hd, "all", 0.990, None)]
         spec += [(f"hold `{x}` >= 0.980", Hd, f"fam {x}", 0.980, None) for x in FAMS]
@@ -145,5 +146,10 @@ if __name__ == "__main__":
     ap.add_argument("--seeds", type=int, nargs=2, default=[0, 1])
     ap.add_argument("--name", default="a6_full", help="prog_ol.py file stem without the set")
     ap.add_argument("--outname", default="g3e")
+    ap.add_argument("--nav", default="", help="suffix of the navtest dump names (_w: the dumps on warp frames)")
+    ap.add_argument("--out", default="", help="table directory instead of results/shape")
     a = ap.parse_args()
+    NAV = a.nav
+    if a.out:
+        OUT = B.REPO / a.out
     {"pilot": cmd_pilot, "g3e": cmd_g3e}[a.cmd](a)

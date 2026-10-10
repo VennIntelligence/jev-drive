@@ -206,7 +206,7 @@ def main(a):
             L.append(f"- `{f['scene'][-16:]}` {f['change']}: {f['base_zeros']}/4 ({f['base_class'] or '-'}) -> {f['arm_zeros']}/4 ({f['arm_class'] or '-'}); turn {f['turn4s_deg']}; scores base {[f[k] for k in BASE]} arm {[f[k] for k in ARM]}")
     # --- lead / open split
     import prog_ol
-    T = pd.read_parquet(DATA / "runs/body1/prog/ol_navtest.parquet")
+    T = pd.read_parquet(DATA / f"runs/body1/prog/{a.ol}.parquet")
     T["grp"] = prog_ol.group(T)
     T = T.set_index("name")
     tok = [x.rsplit("-", 1)[1] for x in C.scenes]
@@ -266,4 +266,5 @@ if __name__ == "__main__":
     ap.add_argument("--arm-prefix", default="P2H10S-F")
     ap.add_argument("--other-prefix", default="P2H10B-F", help="an earlier arm shown next to the arm (labels <prefix>-s<k> in --loss-man)")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--ol", default="ol_navtest", help="prog_ol.py dump whose base plan gives the proximity groups (ol_navtest_w: plans on warp frames)")
     main(ap.parse_args())

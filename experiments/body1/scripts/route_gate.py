@@ -21,7 +21,8 @@ import numpy as np  # noqa: E402
 import b1 as B  # noqa: E402
 import shape_gate as SG  # noqa: E402
 
-OUT = B.REPO / "experiments/body1/results/route"
+OUT = SRC = B.REPO / "experiments/body1/results/route"                 # --out moves the tables; the hold-log inputs stay in SRC
+NAV = ""                                                               # --nav: suffix of the navtest dumps and tables (`_w` = warp frames, results/navtest_warp.md)
 LOSS = B.REPO / "experiments/body1/results/loss"
 REFP, CANDS = "P2H10-P-s0", {1.5: "P2H10R-Pb15-s0", 2.5: "P2H10R-Pb25-s0"}
 TOL = 5                                                                # rows / tokens at full scale (item 3)
@@ -45,7 +46,7 @@ def last_scalars(tag, keys, lo=2700, hi=3000):
 
 def corridor(name_nav, name_hold, new, ref, tol_log, tol_pool):
     """Corridor line of item 3 for one (new, ref) pair -> dict of counts and verdicts."""
-    N, H = J(OUT / f"ol_{name_nav}.json")["gate"], J(OUT / f"ol_{name_hold}.json")["gate"]
+    N, H = J(OUT / f"ol_{name_nav}{NAV}.json")["gate"], J(SRC / f"ol_{name_hold}.json")["gate"]
     b = "> 45 deg"
     q = dict(Ca=(N[new]["pooled"][b]["W2"], N[ref]["pooled"][b]["W2"], TOL), Cb=(H[new]["log"][b]["W2"], H[ref]["log"][b]["W2"], tol_log),
              Cc_navtest=(N[new]["pooled"][b]["L4"], N[ref]["pooled"][b]["L4"], TOL), Cc_hold=(H[new]["pooled"][b]["L4"], H[ref]["pooled"][b]["L4"], tol_pool))
@@ -108,7 +109,7 @@ def cmd_pilot(a):
         arm = a.arm
         g = J(LOSS / "g3_a7_hold_R.json")["pooled"][REFP]
         A = {k[1]: v for k, v in SG.arcs("a7_pilot_hold", [(arm, REFP)], REFP).items()}
-        Nv = {k[1]: v for k, v in SG.arcs("a7_pilot_navtest", [(arm, REFP)], REFP).items()}
+        Nv = {k[1]: v for k, v in SG.arcs("a7_pilot_navtest" + NAV, [(arm, REFP)], REFP).items()}
         yr = J(data_dir() / "runs/alpasim/ot3/results/yr_probe_b43a7.json")["models"]
         dv, dref = SG.dev_of(arm), SG.dev_of(REFP)
         L = lines_a6(g, dv, dref, yr[arm]["alpha_05"], yr[REFP]["alpha_05"], A)
@@ -195,5 +196,10 @@ if __name__ == "__main__":
     ap.add_argument("cmd", choices=["select", "pilot", "g3"])
     ap.add_argument("--arm", default="", help="pilot: the selected pilot tag")
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2, 3])
+    ap.add_argument("--nav", default="", help="suffix of the navtest dump / table names (_w: the dumps on warp frames)")
+    ap.add_argument("--out", default="", help="table directory instead of results/route (the navtest tables of route_ol.py are read from it)")
     a = ap.parse_args()
+    NAV = SG.NAV = a.nav
+    if a.out:
+        OUT = B.REPO / a.out
     {"select": cmd_select, "pilot": cmd_pilot, "g3": cmd_g3}[a.cmd](a)
