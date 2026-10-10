@@ -142,3 +142,20 @@ class PixelStore:
             return torch.from_numpy(idx[r]).to(rows.device), torch.from_numpy(ok[r]).to(rows.device)
         r = np.asarray(rows)
         return idx[r], ok[r]
+
+
+# ---------------------------------------------------------------- the encoder step
+def fast_encode(net, prev, cur, grad: bool = True, chunk: int = 0, compiled: bool = False):
+    """Image pairs (n, 2, 6, 128, 256) uint8 -> (n, 32, 512) vision tokens `view_39` of the port `net` (jevdrive.op_adapt.load).
+    grad True: one pass with autograd over the whole batch (no activation checkpointing); grad False: no autograd, in chunks of
+    `chunk` pairs (default 128). compiled: the pass runs through torch.compile (one graph per net and batch shape, built at first use)."""
+    import torch
+    from jevdrive import op_adapt as A
+    f = getattr(net, "_fast_enc", None) if compiled else None
+    if f is None:
+        f = lambda p, c: net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(len(c), *A.H_SHAPE)  # noqa: E731
+        if compiled:
+            f = net._fast_enc = torch.compile(f, dynamic=False)
+    n, k = len(cur), chunk or (len(cur) if grad else 128)
+    with torch.set_grad_enabled(grad):
+        return f(prev, cur) if k >= n else torch.cat([f(prev[i:i + k], cur[i:i + k]) for i in range(0, n, k)])
