@@ -28,18 +28,47 @@ def interp_matrix() -> np.ndarray:
     return M
 
 
+class RowBank:
+    """The rasters of a Hinge held once per distinct label instead of once per Store row: bank[rows] reads and bank[rows] = v writes like the
+    dense (n, 1, NH, NW) tensor it replaces (rows: a long tensor; a written row gets a slot of its own). Rows without a label read slot 0,
+    as arbitrary as the dense tensor's uninitialised rows. Same values, so the same hinge bit for bit; a full P2H10S run holds 281k rows
+    but 103k distinct rasters per label file (the hinge-only families repeat the base tokens): 13.8 GB of card memory -> 5.2 GB."""
+
+    def __init__(self, n, dev):
+        self.pos = torch.zeros(n, dtype=torch.long, device=dev)
+        self.t = torch.empty((0, 1, NH, NW), dtype=torch.float16, device=dev)
+
+    def _append(self, v):
+        self.t = torch.cat([self.t, v]) if len(self.t) else v
+        if self.t is not v and self.t.is_cuda:
+            torch.cuda.empty_cache()                                             # the replaced block goes back to the card, not to the allocator's cache
+
+    def add(self, rows, slot, rasters):
+        """rows (m,) take the slots `slot` (m,) of the new `rasters` (k, NH, NW) (numpy)."""
+        self.pos[torch.as_tensor(rows, device=self.t.device)] = torch.as_tensor(slot, device=self.t.device) + len(self.t)
+        self._append(torch.from_numpy(rasters).to(self.t.device)[:, None])
+
+    def __getitem__(self, rows):
+        return self.t[self.pos[rows]]
+
+    def __setitem__(self, rows, v):
+        self.pos[rows] = torch.arange(len(v), device=self.t.device) + len(self.t)
+        self._append(v.to(self.t))
+
+
 class Hinge:
     """Labels aligned to a row order (tokens), on `dev`; __call__(x, y, psi, rows) -> mean footprint-corner hinge over the rows with a label.
 
     label_file / footprint may be lists of equal length (one per label source, e.g. NAVSIM Pacifica + B2D MKZ): a row takes the first source that
-    labels it and uses that source's footprint ("pacifica" | "mkz"). The default (one file, "pacifica") is the original behaviour."""
+    labels it and uses that source's footprint ("pacifica" | "mkz"). The default (one file, "pacifica") is the original behaviour.
+    bank=True keeps the rasters in a RowBank (less card memory, same values); the default is the dense per-row tensor."""
 
-    def __init__(self, label_file, tokens, dev, margin: float = 0.3, footprint="pacifica"):
+    def __init__(self, label_file, tokens, dev, margin: float = 0.3, footprint="pacifica", bank: bool = False):
         files = label_file if isinstance(label_file, (list, tuple)) else [label_file]
         fps = footprint if isinstance(footprint, (list, tuple)) else [footprint] * len(files)
         assert len(files) == len(fps)
         n = len(tokens)
-        self.sdf = torch.empty((n, 1, NH, NW), dtype=torch.float16, device=dev)
+        self.sdf = RowBank(n, dev) if bank else torch.empty((n, 1, NH, NW), dtype=torch.float16, device=dev)
         ok_all, src = np.zeros(n, bool), np.zeros(n, np.int64)
         for s, f in enumerate(files):
             z = np.load(f)
@@ -48,6 +77,10 @@ class Hinge:
             ok = (idx >= 0) & z["ok"][np.maximum(idx, 0)] & ~ok_all
             sdf = z["sdf"]
             rows = np.flatnonzero(ok)
+            if bank:                                                             # every distinct label of this file once
+                u, inv = np.unique(idx[rows], return_inverse=True)
+                self.sdf.add(rows, inv, sdf[u])
+                rows = rows[:0]
             for i in range(0, len(rows), 8192):                                  # chunked: no second host copy of the full array
                 r = rows[i:i + 8192]
                 self.sdf[torch.as_tensor(r, device=dev), 0] = torch.from_numpy(sdf[idx[r]]).to(dev)
