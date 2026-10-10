@@ -107,7 +107,8 @@ def main(a):
         for k, f in binary.items():
             xv, xt = f(dv).to_numpy(float), f(dt).to_numpy(float)
             bs = xt[it].mean(1) - xv[iv].mean(1)
-            p = chi2_contingency([[xv.sum(), len(xv) - xv.sum()], [xt.sum(), len(xt) - xt.sum()]])[1]
+            tot = xv.sum() + xt.sum()
+            p = 1.0 if tot in (0, len(xv) + len(xt)) else chi2_contingency([[xv.sum(), len(xv) - xv.sum()], [xt.sum(), len(xt) - xt.sum()]])[1]
             rows.append({"covariate": k, "kind": "share", "val": xv.mean(), "test": xt.mean(), "test - val": xt.mean() - xv.mean(), "lo": np.percentile(bs, 2.5),
                          "hi": np.percentile(bs, 97.5), "p": p})
         for k in cont:
