@@ -12,7 +12,7 @@ for note (h). Reader: [scripts/shape_cl_report.py](../scripts/shape_cl_report.py
 CI by log): inside what two seeds of the same recipe differ by (the 12 base-seed pairs give -0.0052 to +0.0052). Zeros (collision + offroad
 + corridor) are 90 against 98 over the four pairs, and they moved in opposite directions by class: at-fault collisions 18 against 28 and
 offroad 35 against 42 (each beyond all 12 base-seed pairs), corridor 37 against 28 (also beyond all 12). The corridor zeros are the
-cost: all four new zeros by the flip rule are corridor zeros on 55 to 70 deg right turns, and the > 45 deg bucket has 43 zeros against 33
+cost: all four new zeros by the flip rule are corridor zeros on 48 to 70 deg right turns, and the > 45 deg bucket has 43 zeros against 33
 (mean -0.0326 [-0.0858, +0.0200]). Slow scenes 401 against 434 and mean progress +0.0091 (0.9467 against 0.9375): no sign of the progress
 loss of Amendment 5 (-0.0145, slow 277 against 217); in open scenes progress is +0.0078 above the base, beyond every base-seed pair. Read
 by the lane's four lines (arithmetic only): on seeds 0-1 against TR1's baseline L1b and L3 are met, L1a and L2 are not; on four seeds L1b, L2
@@ -137,7 +137,7 @@ green; bottom: lateral offset of both egos from the logged path (+ = left). Obje
 | ![n3](../figs/shape/shape_new_52d3f15d.png) | new corridor zero (0 to 4 of 4), 55 deg right turn | The plan turns, but later and less than the log; offset 5.1 m at 5 s against 2.9 m, event at 4.5 s. The baseline's box has turned further right than the blue one by panel 5. |
 
 The removed zeros are drifts toward objects or off a curve that the clearance lesson addresses (r1, r2) or an arc that stays inside the corridor (r3); the new zeros are
-three of four right turns of 55 to 70 deg where the plan under-turns, with no object involved: the same side effect as Amendment 5's new corridor zeros
+three of four right turns of 48 to 70 deg where the plan under-turns, with no object involved: the same side effect as Amendment 5's new corridor zeros
 (`loss_closed_loop.md` section 5, `78b4153a` appears in both), now without its progress loss.
 
 ## 8. Costs, deviations, limits
