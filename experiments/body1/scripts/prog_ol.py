@@ -83,7 +83,7 @@ def cmd_states(a):
     from jevdrive.common import data_dir
     from jevdrive.data import splits
     from jevdrive.run import Run
-    dev = torch.device("cuda")
+    dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tags = list(dict.fromkeys(NEW + REF))
     with Run("body1", f"prog-ol-{a.name}", config=vars(a)) as run:
         if a.set in ("hold", "val"):
@@ -117,7 +117,7 @@ def cmd_states(a):
             fut = np.nan_to_num(t["fut"][rr].astype(np.float64))
             M = pd.DataFrame(dict(fam="navtest", name=t["names"][rr], dy=0.0, dpsi=0.0, log=t["log"][rr], v0=t["speed"][rr], cls="all",
                                   dyaw=np.abs(np.degrees(np.unwrap(fut[:, :, 2], axis=1)[:, -1])), arc_log=knots_arc(fut)[:, -1]))
-        P = G.plans(dirs, rows_of, tags, dev)                                        # (tags, n, 8, 3)
+        P = G.plans(dirs, rows_of, tags, dev, a.bench_plans)                         # (tags, n, 8, 3)
         ix = tags.index
         off = M[["dy", "dpsi"]].to_numpy(np.float32)
         for m, tag in enumerate(tags):
@@ -208,6 +208,7 @@ if __name__ == "__main__":
     ap.add_argument("--ref", nargs="+", default=list(REF))
     ap.add_argument("--name", default="", help="file stem (default: the set)")
     ap.add_argument("--out", default="experiments/body1/results/prog", help="table directory, relative to the repo")
+    ap.add_argument("--bench-plans", action="store_true", help="navtest: plans from jevdrive.bench's archived plan files where they exist (bd4_g3.plans)")
     a = ap.parse_args()
     setup(a)
     {"states": cmd_states, "tables": cmd_tables}[a.cmd](a)

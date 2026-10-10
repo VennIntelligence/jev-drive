@@ -114,7 +114,8 @@ def verdict(rows, scale=1.0):
     return dict(effect=dict(diff=E["diff"], lo=E["lo"], hi=E["hi"], excludes_0=bool(E["lo"] > 0 or E["hi"] < 0)), arms=out)
 
 
-def cmd_report(_):
+def cmd_report(a):
+    global OUT
     import pandas as pd
     import prog_ol as PO
     import route as RT
@@ -122,6 +123,8 @@ def cmd_report(_):
     from jevdrive.bench import tables as BT
     groups = ("base", "S") + ARMS
     rows, V, J = [], {}, {}
+    OUT = B.REPO / a.out
+    dump = {"navtest": a.navtest_dump, "hold": "sdrop_hold"}
 
     def add(board, subset, metric, val, g, m=None, scale=1.0, line=False):
         rs = contrasts({k: [np.asarray(x, float) * scale for x in v] for k, v in val.items()}, g, m)
@@ -147,7 +150,7 @@ def cmd_report(_):
                         "not needed" if by[(a, "base")]["diff"] >= G2 / 2 and by[(a, "base")]["lo"] > 0 else "unresolved") for a in ARMS})
     J["navhard_combined_per_seed"] = {k: [float(u.loc[idx, "combined"].mean()) for u in v] for k, v in U.items()}
     N = {k: [BT.load("navtest", tag(k, s))[0] for s in SEEDS] for k in groups}
-    Mn = pd.read_parquet(B.root() / "prog" / "ol_sdrop_navtest.parquet")
+    Mn = pd.read_parquet(B.root() / "prog" / f"ol_{dump['navtest']}.parquet")
     tok = Mn.name.to_numpy()
     assert all(not u.reindex(tok).score.isna().any() for v in N.values() for u in v)
     gl, dy = Mn.log.to_numpy(), Mn.dyaw.to_numpy()
@@ -204,7 +207,7 @@ def cmd_report(_):
                                      met=bool(min(p["new"] / p["ref"] for p in ps) >= lim[(st, name)]) if (st, name) in lim else None))
         # widening (lib/route.py, as route_ol.py): signed lateral of the own plan against the logged path, + = outside of the logged turn
         tags = [c.split("|")[1] for c in M.columns if c.startswith("arc4|")]
-        Pl = np.load(B.root() / "prog" / f"ol_sdrop_{st}_plans.npy")
+        Pl = np.load(B.root() / "prog" / f"ol_{dump[st]}_plans.npy")
         ns = SimpleNamespace(set=st, fams=["log", "ot1", "yr1", "bd4"], shards=list(range(B.NSH)))
         F = RO.logged(M, ns, {"hold": B.HOLD, "navtest": "navsim/navtest"}[st])
         off = M[["dy", "dpsi"]].to_numpy(np.float64)
@@ -271,5 +274,7 @@ def cmd_report(_):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["smoke", "trained", "report"])
+    ap.add_argument("--navtest-dump", default="sdrop_navtest", help="report: prog_ol.py dump of the navtest states (sdrop_navtest_w = plans on warp frames)")
+    ap.add_argument("--out", default="experiments/body1/results/sdrop", help="report: table directory (also holds the d_* and g3_sdrop_* inputs)")
     a = ap.parse_args()
     {"smoke": cmd_smoke, "trained": cmd_trained, "report": cmd_report}[a.cmd](a)

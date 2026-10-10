@@ -4,7 +4,7 @@ against a reference checkpoint on the same states, truth by lib/sweep.py. Open l
   hold     states of navsim/body1-hold-logs in the families log / ot1 / yr1 / bd4 (the logs no new term was trained on)
   val      the same on navsim/body1-val-logs (Amendment 5 item 3: the part of the train logs kept out of the hinge-only rows; the weight of
            the hinge-only rows is selected here and hold logs are not opened by this set)
-  navtest  on-log navtest tokens (lb_navtest; agent labels navtest-k32, NAVSIM raster navtest; the scorer-layer raster if it was built)
+  navtest  on-log navtest tokens (lb_navtest, on the checkpoints' own front protocol; agent labels navtest-k32, NAVSIM raster navtest; the scorer-layer raster if it was built)
 Rates per state: agent = counted contact of the 4 s sweep (rear-end contacts by a faster object excluded, as the row labels);
 boundary = minimum footprint margin < -0.20 m with no contact at t = 0, on the NAVSIM raster (carries the line) and on item C's raster (`road`,
 reported; a road-and-lane raster without car parks, not the scorer's road area: Amendment 5 note of 2026-10-10). Difference new - ref with jevdrive.stats.paired(groups=log); relative fall = (ref - new) / ref. Tables per state family, user class
@@ -23,25 +23,45 @@ import b1 as B  # noqa: E402
 
 B.FAMS["bd4"] = "bd4_"
 
-def plans(dirs, rows_of, tags, dev):
-    """Own plans (len(tags), n, 8, 3) of the selected rows of each cache dir, in the state's own frame."""
+def plans(dirs, rows_of, tags, dev, bench=False):
+    """Own plans (len(tags), n, 8, 3) of the selected rows of each cache dir, in the state's own frame. Every dir is read on the front
+    protocol the checkpoints were trained on (jevdrive.bench's rule, `parity_frames`). Until 2026-10-10 the board dirs (lb_*) were read on
+    GIMM frames whatever the checkpoint: for warp-trained checkpoints the navtest plans of those dumps are off-protocol (ADE to the log
+    about 1.5 m against 0.57 m on warp; results/navtest_warp.md). bench=True: a tag whose plan file jevdrive.bench has archived for
+    lb_navtest takes those plans instead of a forward."""
     import torch
     import pp_train as T
     from experiments.op_adapt_r2.lib import op_adapt_r2 as R2
+    from jevdrive.bench.models import parity_frames
+    fr = {parity_frames(t) for t in tags}
+    assert len(fr) == 1, f"checkpoints of different front protocols in one call: {fr}"
+    fr = fr.pop()
     W = torch.as_tensor(R2.t_weights(T.T8), device=dev)
-    models = [T.load_pmodel(t, dev) for t in tags]
     out = []
     for d, rr in zip(dirs, rows_of):
-        S = T.Store([d], dev, need_side=False, frames="warp" if not d.startswith("lb_") else "gimm", host=True)
-        pi = torch.as_tensor(S.pi, device=dev)
-        o = np.zeros((len(tags), len(rr), 8, 3), np.float32)
-        with torch.no_grad():
-            for i in range(0, len(rr), 256):
-                r = torch.as_tensor(rr[i:i + 256], device=dev)
-                fr = S.front[r]
-                for m, model in enumerate(models):
-                    p = model(fr, S.ego[r], S.tc[r], None, None).float()[:, pi].view(-1, 33, 15)
-                    o[m, i:i + len(r)] = torch.stack(T.rear(p, S.cam_x[r], W), -1).cpu().numpy()
+        o, todo = np.zeros((len(tags), len(rr), 8, 3), np.float32), list(range(len(tags)))
+        if bench and d == "lb_navtest":
+            import turn_oracle as TO
+            names = np.load(B.cache_root() / d / "tab.npz")["names"][rr]
+            for m, t in enumerate(tags):
+                f = _pl.Path(TO.pf(f"{t}@{fr}"))
+                if f.exists():
+                    z = np.load(f)
+                    pos = {x: i for i, x in enumerate(z["tokens"].tolist())}
+                    o[m] = z["poses"][[pos[x] for x in names]]
+                    todo.remove(m)
+            print(f"{d}: bench plans for {len(tags) - len(todo)} tags, forward ({fr}) for {[tags[m] for m in todo]}", flush=True)
+        if todo:
+            models = {m: T.load_pmodel(tags[m], dev) for m in todo}
+            S = T.Store([d], dev, need_side=False, frames=fr, host=True)
+            pi = torch.as_tensor(S.pi, device=dev)
+            with torch.no_grad():
+                for i in range(0, len(rr), 256):
+                    r = torch.as_tensor(rr[i:i + 256], device=dev)
+                    f = S.front[r]
+                    for m, model in models.items():
+                        p = model(f, S.ego[r], S.tc[r], None, None).float()[:, pi].view(-1, 33, 15)
+                        o[m, i:i + len(r)] = torch.stack(T.rear(p, S.cam_x[r], W), -1).cpu().numpy()
         out.append(o)
     return np.concatenate(out, 1)
 
@@ -54,7 +74,7 @@ def main(a):
     from jevdrive.common import data_dir
     from jevdrive.data import splits
     from jevdrive.run import Run
-    dev = torch.device("cuda")
+    dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tags = [a.new] + a.ref
     with Run("body1", f"g3-{a.name}", config=vars(a)) as run:
         if a.set in ("hold", "val"):
@@ -90,7 +110,7 @@ def main(a):
             fut = np.nan_to_num(t["fut"][rr][:, :, 2].astype(np.float64))
             M = pd.DataFrame(dict(fam="navtest", dy=0.0, dpsi=0.0, log=t["log"][rr], v0=t["speed"][rr], cls="all",
                                   dyaw=np.abs(np.degrees(np.unwrap(fut, axis=1)[:, -1]))))
-        P = plans(dirs, rows_of, tags, dev)                                         # (tags, n, 8, 3)
+        P = plans(dirs, rows_of, tags, dev, a.bench_plans)                          # (tags, n, 8, 3)
         off = M[["dy", "dpsi"]].to_numpy(np.float32)
         R = {}
         for m, tag in enumerate(tags):
@@ -137,4 +157,5 @@ if __name__ == "__main__":
     ap.add_argument("--fams", nargs="+", default=["log", "ot1", "yr1", "bd4"])
     ap.add_argument("--shards", type=int, nargs="+", default=list(range(B.NSH)))
     ap.add_argument("--out", default="experiments/body1/results/loss", help="table directory, relative to the repo")
+    ap.add_argument("--bench-plans", action="store_true", help="navtest: plans from jevdrive.bench's archived plan files where they exist")
     main(ap.parse_args())
