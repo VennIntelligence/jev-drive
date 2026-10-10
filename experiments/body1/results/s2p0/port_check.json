@@ -1,0 +1,215 @@
+{
+ "base": "2b8a2b55",
+ "clips": 24,
+ "towns": [
+  "Town01",
+  "Town02",
+  "Town03",
+  "Town04",
+  "Town05",
+  "Town06",
+  "Town07",
+  "Town10HD",
+  "Town11",
+  "Town12",
+  "Town13",
+  "Town15"
+ ],
+ "turn_clips": 15,
+ "ticks_replayed": 19240,
+ "rows_compared": 6582,
+ "bit_identity": {
+  "passed": true,
+  "ticks": 19240,
+  "what": "parity_ego of the agent file at --base vs the working file with port = {}, np.array_equal over all ticks of all clips"
+ },
+ "i_noncmd": {
+  "max_abs": 5.245208740234375e-06,
+  "line": 0.001,
+  "passed": true,
+  "per_dim_max": {
+   "present": 0.0,
+   "cmd_L": 0.0,
+   "cmd_S": 0.0,
+   "cmd_R": 0.0,
+   "vx/10": 5.0067901611328125e-06,
+   "vy/10": 4.9985246732831e-06,
+   "ax/3": 5.0067901611328125e-06,
+   "ay/3": 5.0067901611328125e-06,
+   "x/10 t0": 5.245208740234375e-06,
+   "y/10 t0": 5.066394805908203e-06,
+   "yaw t0": 5.0067901611328125e-06,
+   "x/10 t1": 5.245208740234375e-06,
+   "y/10 t1": 5.0067901611328125e-06,
+   "yaw t1": 5.0067901611328125e-06,
+   "x/10 t2": 5.036592483520508e-06,
+   "y/10 t2": 4.999609700462315e-06,
+   "yaw t2": 5.0067901611328125e-06,
+   "x/10 t3": 0.0,
+   "y/10 t3": 0.0,
+   "yaw t3": 0.0
+  }
+ },
+ "i_cmd": {
+  "agree_L20": 1.0,
+  "line": 0.99,
+  "passed": true,
+  "disagreements": 0,
+  "rows": []
+ },
+ "i_material": {
+  "passed": true,
+  "turn_command_rows": 2854,
+  "command_switches": 17
+ },
+ "ii_convention": {
+  "navtrain": {
+   "rows": 5716,
+   "ay_slope": 1.028,
+   "ay_intercept": -0.007,
+   "ay_r": 0.957,
+   "vy_on_yawrate_slope_m": -0.115,
+   "vy_r": -0.143,
+   "ax_p5_p50_p95": [
+    -1.32,
+    -0.153,
+    0.999
+   ],
+   "ay_p5_p50_p95": [
+    -1.037,
+    0.058,
+    1.643
+   ],
+   "vy_p5_p50_p95": [
+    -0.216,
+    -0.085,
+    0.171
+   ],
+   "vx_p5_p50_p95": [
+    3.336,
+    5.934,
+    11.25
+   ],
+   "yawrate_abs_p95": 0.325
+  },
+  "replay_fixed": {
+   "rows": 3588,
+   "ay_slope": 0.833,
+   "ay_intercept": 0.044,
+   "ay_r": 0.713,
+   "vy_on_yawrate_slope_m": 0.762,
+   "vy_r": 0.776,
+   "ax_p5_p50_p95": [
+    -5.41,
+    0.108,
+    7.476
+   ],
+   "ay_p5_p50_p95": [
+    -0.16,
+    0.007,
+    1.331
+   ],
+   "vy_p5_p50_p95": [
+    -0.012,
+    0.0,
+    0.149
+   ],
+   "vx_p5_p50_p95": [
+    4.073,
+    9.793,
+    18.452
+   ],
+   "yawrate_abs_p95": 0.288
+  },
+  "replay_shipped": {
+   "rows": 3588,
+   "ay_slope": 0.0,
+   "ay_intercept": 0.0,
+   "ay_r": NaN,
+   "vy_on_yawrate_slope_m": 0.0,
+   "vy_r": NaN,
+   "ax_p5_p50_p95": [
+    -3.58,
+    0.064,
+    8.777
+   ],
+   "ay_p5_p50_p95": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "vy_p5_p50_p95": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "vx_p5_p50_p95": [
+    4.073,
+    9.8,
+    18.502
+   ],
+   "yawrate_abs_p95": 0.288
+  },
+  "b2d_cache_same_rows": {
+   "rows": 3588,
+   "ay_slope": 0.833,
+   "ay_intercept": 0.044,
+   "ay_r": 0.713,
+   "vy_on_yawrate_slope_m": 0.762,
+   "vy_r": 0.776,
+   "ax_p5_p50_p95": [
+    -5.41,
+    0.108,
+    7.476
+   ],
+   "ay_p5_p50_p95": [
+    -0.16,
+    0.007,
+    1.331
+   ],
+   "vy_p5_p50_p95": [
+    -0.012,
+    0.0,
+    0.15
+   ],
+   "vx_p5_p50_p95": [
+    4.073,
+    9.793,
+    18.452
+   ],
+   "yawrate_abs_p95": 0.288
+  },
+  "line": [
+   0.8,
+   1.2
+  ],
+  "passed": true
+ },
+ "shipped_vs_labels": {
+  "cmd_agree_L20": 0.9252506836827712,
+  "cmd_agree_L20_on_turn_rows": 0.8314646110721794,
+  "abs_err_p50_p95_max": {
+   "vx m/s": [
+    0.0003,
+    0.052,
+    4.2356
+   ],
+   "vy m/s": [
+    0.0012,
+    0.1196,
+    2.0745
+   ],
+   "ax m/s2": [
+    0.25,
+    8.7714,
+    27.5472
+   ],
+   "ay m/s2": [
+    0.0258,
+    0.7807,
+    16.7114
+   ]
+  }
+ },
+ "passed": true
+}
