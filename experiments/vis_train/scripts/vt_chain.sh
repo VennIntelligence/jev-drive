@@ -31,11 +31,11 @@ sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 30; done; [[ -f $ld/ERROR ]] && return 1; done; return 0; }
 
 case $ARM in
-  A|B) EVERY=5000 MEM=1 VRAM=${VT_VRAM:-44} CPU=${VT_CPU:-8} RAM=${VT_RAM:-64} SPEED=${VT_SPEED-} ;;
-  C)   EVERY=5000 MEM=0 VRAM=${VT_VRAM:-60} CPU=${VT_CPU:-12} RAM=${VT_RAM:-96} SPEED=${VT_SPEED-} ;;
-  F)   EVERY=5000 MEM=0 VRAM=${VT_VRAM:-12} CPU=${VT_CPU:-4} RAM=${VT_RAM:-48} SPEED= ;;
-  A0)  EVERY=10000 MEM=0 VRAM=${VT_VRAM:-12} CPU=${VT_CPU:-4} RAM=${VT_RAM:-48} SPEED= ;;
-  F0)  EVERY=10000 MEM=0 VRAM=${VT_VRAM:-12} CPU=${VT_CPU:-4} RAM=${VT_RAM:-48} SPEED= ;;
+  A|B) EVERY=5000 MEM=1 VRAM=${VT_VRAM:-32} CPU=${VT_CPU:-8} RAM=${VT_RAM:-64} SPEED=${VT_SPEED---enc-compile --compile} TRAIN=--train ;;   # measured 27 GB
+  C)   EVERY=5000 MEM=0 VRAM=${VT_VRAM:-36} CPU=${VT_CPU:-12} RAM=${VT_RAM:-96} SPEED=${VT_SPEED---enc-compile --compile} TRAIN=--train ;;  # measured 29 GB
+  F)   EVERY=5000 MEM=0 VRAM=${VT_VRAM:-14} CPU=${VT_CPU:-4} RAM=${VT_RAM:-48} SPEED= TRAIN= ;;      # light cached-token jobs: co-located, outside the per-card training cap
+  A0)  EVERY=10000 MEM=0 VRAM=${VT_VRAM:-14} CPU=${VT_CPU:-4} RAM=${VT_RAM:-48} SPEED= TRAIN= ;;
+  F0)  EVERY=10000 MEM=0 VRAM=${VT_VRAM:-14} CPU=${VT_CPU:-4} RAM=${VT_RAM:-48} SPEED= TRAIN= ;;
   *) echo "arm $ARM?"; exit 2 ;;
 esac
 (( STEPS % 5000 == 0 && STEPS >= 5000 )) || die "steps must be a multiple of 5000"
@@ -50,7 +50,7 @@ fi
 # ---------------------------------------------------------------- training
 smoke="$PY $S/vt.py train --arm $ARM --seed $SEED --steps 6 --eval-every 3 --snap-every 3 --tag smoke-vt-$ARM-s$SEED --scratch --data navtrain_full.s0of12 $SPEED"
 status "submit: train $STEPS steps, snapshot reads every $EVERY"
-sub "vt-t-$ARM-s$SEED" "$L/train" --train --vram "$VRAM" --cpu "$CPU" --ram "$RAM" --priority 10 --tries 4 --preflight "$smoke" -- \
+sub "vt-t-$ARM-s$SEED" "$L/train" $TRAIN --vram "$VRAM" --cpu "$CPU" --ram "$RAM" --priority 10 --tries 4 --preflight "$smoke" -- \
     $PY $S/vt.py train --arm "$ARM" --seed "$SEED" --steps "$STEPS" --resume $SPEED
 TID=$(jid "vt-t-$ARM-s$SEED")
 
