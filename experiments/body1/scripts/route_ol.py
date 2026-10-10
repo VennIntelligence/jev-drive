@@ -99,10 +99,18 @@ def main(a):
         D, R = pd.DataFrame(rows), pd.DataFrame(prs)
         D.to_csv(out / f"ol_{a.name}.csv", index=False, float_format="%.5f")
         R.to_csv(out / f"ol_{a.name}_pairs.csv", index=False, float_format="%.5f")
-        # the gate's number (Amendment 7 item 3): leave rate on the turn rows over 45 deg, each tag, and new - ref
-        gate = {t: {bn: {k: float(D[(D.fam == "pooled") & (D.bucket == bn) & (D.tag == t)][k].iloc[0]) for k in ("n", "leave_2", "leave_3", "leave_4", "wide_1", "wide_2", "wide_3", "wide_4", "dmax_mean", "out4_mean")}
-                    for bn in ("> 45 deg", "all")} for t in tags}
-        (out / f"ol_{a.name}.json").write_text(json.dumps(dict(name=a.name, set=a.set, tags=tags, new=new, ref=ref, n=len(M), gate=gate), indent=1) + "\n")
+        # the gate's numbers (Amendment 7 item 3), as counts: W2 = rows with a pose more than 2 m outside, L4 = rows leaving the 4 m tube
+        G = {}
+        for tag in tags:
+            for fn, fm in fams:
+                if fn not in ("pooled", "log"):
+                    continue
+                for bn, bm in buckets:
+                    if bn in ("> 45 deg", "all"):
+                        m = fm & bm & ok
+                        G.setdefault(tag, {}).setdefault(fn, {})[bn] = dict(n=int(m.sum()), W2=int(Q[tag]["wide_2"][m].sum()), L4=int(Q[tag]["leave_4"][m].sum()),
+                                                                           out4_mean=float(Q[tag]["out4"][m].mean()), dmax_mean=float(Q[tag]["dmax"][m].mean()))
+        (out / f"ol_{a.name}.json").write_text(json.dumps(dict(name=a.name, set=a.set, tags=tags, new=new, ref=ref, n=len(M), gate=G), indent=1) + "\n")
         pd.set_option("display.width", 250)
         show = D[D.bucket.isin(["all", "> 45 deg", "> 45 deg right", "> 45 deg left"])]
         run.info("\n" + show[["fam", "bucket", "tag", "n", "dmax_mean", "out4_mean", "leave_2", "leave_3", "leave_4", "wide_1", "wide_2", "wide_3", "wide_4", "cut_2", "cut_3", "exc_2", "exc_3"]].to_string(index=False, float_format=lambda v: f"{v:.4f}"))
