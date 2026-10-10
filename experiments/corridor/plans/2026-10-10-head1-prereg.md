@@ -100,3 +100,13 @@ A 的 fold 预测一齐就启动，不等 A 的 navtest 读数。配方 = 第 20
 
 ### 限定（开跑前已知）
 本轮是闸门未过之后的探索；候选配置只在 fold 0 的 89 个 val log 上选；navtest 的 head 仍是 fold 0 的模型；B / B2 / C 都是 pilot 规模、2 seed、开环；B2 的 λ 选择 run 的训练集比最终臂少约 10% 的 log；C 取决于离轨行的输入是否可得。
+
+### 补记 2026-10-10（HEAD1b A / A2 的实现细则；任何 A / A2 训练与读数之前提交并 push）
+补记正文没有写死、实现时必须定的几项（探索性，同上）：
+- **A 的「更便宜」**：按名义计算量 = 步数 × 每步读的视觉 token 数（256 或 128）排序，不用实测墙钟（卡上并发会改变它）；实测训练时长并列。
+- **A 的 ensemble 判据**：两 seed 在 fold 0 val 行上的预测（trainer 存下的 fp32 输出）在 CPU 上用同一加权 Huber 公式重算；seed 0 的值与均值的值用同一份重算结果比较（与 trainer 在 bf16 autocast 下记的 val loss 有末位差异，不混用）。
+- **A 的非选中候选**不在 navtest 上读；它们只列 val loss 与 held-out navtrain（H）读数。
+- **A2 的 thin head** = `path_req.py cmd_head` 的结构（slot 7 与 slot 0、LayerNorm + Linear(512, 64)、展平、拼 20 维 ego、2 × 1024 MLP、dropout 0.1），输出 22 × 2（L）或 8 × 3（P）；ego 用 HEAD1 trainer 的标准化输入，采样权重、lr 3e-4、wd 0.05、8 000 步、batch 256 同 stage 1（不是 QH 当时的 lr 1e-3 / wd 1e-2 / 均匀采样）。`P-full` = HEAD1 的 scene memory + 8 个 query × 3 输出。
+- **位姿目标的 loss** = `path_req._imit`（xy Huber δ 1.0 m + 3 × yaw Huber δ 0.1 rad）；step 选择用同一 loss 在 fold 0 val 行上的加权值（与 L 头同一批 val 行、同一权重）。
+- **位姿头的弧长读法**：8 个位姿经 `pt_swap.Curve` 成曲线，在 22 点网格上取 heading；policy plan 的 4 s 弧长超出该头自己的 4 s 弧长时，主读数沿末端 heading 直线延长（ext-line），并列 `pt_swap` 的常曲率延长（ext-arc）作敏感性，同时报需要延长的 token 比例。
+- **QH 原头**只在 navtest 上读（它的拟合行 `geotok-train` 与 fold 0 的 held-out log 重叠，H 上不是 held-out）。

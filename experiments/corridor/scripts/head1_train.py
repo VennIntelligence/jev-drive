@@ -10,6 +10,14 @@ Folds   decision 191's log-level folds: fits on navsim/op-parity-cf5f{J}-train (
         part (sha256("head1val|" + log) % 10 == 0, step selection only); predicts the fold's dev logs (held out) and navtest.
 Output  <run dir>/pred.npz: names_dev, dev (n, 22, 2), names_test, test (n, 22, 2) [channel 0 = L, 1 = M, rad], grid; ckpt.pt; curve.json.
         A pointer copy goes to $DATA_DIR/runs/corridor/head1/pred/<arm>-f<J>-p<frac%>-s<S>.npz (what head1_read.py reads).
+
+HEAD1b (EXPLORATORY second round past the missed G3 line; amendment at the end of the pre-registration):
+  step A   --steps / --drop / --wd / --tokdrop K (each training batch keeps K random vision tokens of the 256; inference reads all) and --tag
+           (appended to the run / prediction name). pred.npz also carries names_val / val, the predictions on the fold's validation rows
+           (the seed-ensemble rule is evaluated on them by head1b_read.py).
+  step A2  --arm P: decision 204's QH target and loss (8 timed poses x (x, y, yaw); Huber 1.0 m on xy + 3 x Huber 0.1 rad on yaw) on 8 queries;
+           --head thin: QH's thin head (path_req.py cmd_head: slots 7 and 0, LayerNorm + Linear(512, 64), flatten, + ego, 2 x 1024 MLP) with
+           this trainer's folds, sampling, schedule and standardised ego. Names: <arm>-f<J>-p<frac%>-s<S>[-thin][-<tag>].
 """
 import os
 for _k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
@@ -49,8 +57,8 @@ def frac_logs(logs, frac):
     return set(lg[: max(1, int(np.ceil(frac * len(lg))))])
 
 
-def pred_name(arm, fold, frac, seed):
-    return f"{arm}-f{fold}-p{int(round(frac * 1000)):04d}-s{seed}"
+def pred_name(arm, fold, frac, seed, head="full", tag=""):
+    return f"{arm}-f{fold}-p{int(round(frac * 1000)):04d}-s{seed}" + ("-thin" if head == "thin" else "") + (f"-{tag}" if tag else "")
 
 
 def load_tokens(src, n, dev, chunk=1024, threads=8):
@@ -69,9 +77,21 @@ def load_tokens(src, n, dev, chunk=1024, threads=8):
     return V
 
 
-def build(vision=True, d=256, enc=3, dec=2, drop=0.1):
+def build(vision=True, d=256, enc=3, dec=2, drop=0.1, nq=NG, nc=2, thin=False):
+    """Head: (V (B, 8, 32, 512) | None, E (B, 20), keep=None) -> (B, nq, nc) fp32. keep = indices of the vision tokens read (training-time drop)."""
     import torch
     import torch.nn as nn
+
+    class Thin(nn.Module):                         # path_req.py cmd_head's head with nq x nc outputs
+        def __init__(s):
+            super().__init__()
+            s.proj = nn.Sequential(nn.LayerNorm(512), nn.Linear(512, 64))
+            s.mlp = nn.Sequential(nn.Dropout(drop), nn.Linear(64 * 64 + 20, 1024), nn.GELU(), nn.Linear(1024, 1024), nn.GELU(), nn.Linear(1024, nq * nc))
+
+        def forward(s, V, E, keep=None):
+            return s.mlp(torch.cat([s.proj(V[:, [7, 0]].float()).flatten(1), E], 1)).view(-1, nq, nc).float()
+    if thin:
+        return Thin()
 
     class Dec(nn.Module):
         def __init__(s):
@@ -95,14 +115,21 @@ def build(vision=True, d=256, enc=3, dec=2, drop=0.1):
                 s.vln, s.vp = nn.LayerNorm(512), nn.Linear(512, d)
                 s.slot, s.pos = nn.Parameter(torch.randn(8, 1, d) * 0.02), nn.Parameter(torch.randn(1, 32, d) * 0.02)
             s.enc = nn.TransformerEncoder(nn.TransformerEncoderLayer(d, 4, 2 * d, drop, activation="gelu", batch_first=True, norm_first=True), enc, enable_nested_tensor=False)
-            s.q = nn.Parameter(torch.randn(NG, d) * 0.02)
+            s.q = nn.Parameter(torch.randn(nq, d) * 0.02)
             s.dec = nn.ModuleList([Dec() for _ in range(dec)])
-            s.out = nn.Sequential(nn.LayerNorm(d), nn.Linear(d, 2))
+            s.out = nn.Sequential(nn.LayerNorm(d), nn.Linear(d, nc))
 
-        def forward(s, V, E):
-            """V (B, 8, 32, 512) | None, E (B, 20) standardised -> (B, 22, 2) fp32: heading (rad) at the grid arc lengths, channels L, M."""
+        def forward(s, V, E, keep=None):
+            """V (B, 8, 32, 512) | None, E (B, 20) standardised -> (B, 22, 2) fp32: heading (rad) at the grid arc lengths, channels L, M
+            (arm P: (B, 8, 3) timed poses)."""
             e = s.ep(E)[:, None]
-            mem = s.enc(torch.cat([e, (s.vp(s.vln(V.float())) + s.slot + s.pos).flatten(1, 2)], 1) if s.vision else e)
+            if s.vision:
+                x, pe = V.flatten(1, 2), (s.slot + s.pos).flatten(0, 1)
+                if keep is not None:
+                    x, pe = x[:, keep], pe[keep]
+                mem = s.enc(torch.cat([e, s.vp(s.vln(x.float())) + pe], 1))
+            else:
+                mem = s.enc(e)
             x = s.q[None].expand(len(E), -1, -1)
             for l in s.dec:
                 x = l(x, mem)
@@ -128,8 +155,10 @@ def main(a):
     from jevdrive.data import splits
     from jevdrive.run import Run
     vision = a.arm != "blind"
-    ch = {"L": [0], "M": [1], "C": [0, 1], "blind": [0, 1]}[a.arm]
-    name = pred_name(a.arm, a.fold, a.frac, a.seed) + ("-smoke" if a.smoke else "")
+    pose = a.arm == "P"
+    ch = {"L": [0], "M": [1], "C": [0, 1], "blind": [0, 1], "P": [0, 1, 2]}[a.arm]
+    grp = [(slice(0, 2), 1.0, 1.0), (slice(2, 3), DELTA, 3.0)] if pose else [(slice(0, 2), DELTA, 1.0)]   # (channels, Huber delta, weight); P = path_req._imit
+    name = pred_name(a.arm, a.fold, a.frac, a.seed, a.head, a.tag) + ("-smoke" if a.smoke else "")
     with Run("corridor", f"head1/train-{name}", seed=a.seed, config=vars(a)) as run:
         dev = torch.device("cuda")
         s_tr, s_dv, s_nt = (splits.load(f"navsim/op-parity-cf5f{a.fold}-train"), splits.load(f"navsim/op-parity-cf5f{a.fold}-dev"), splits.load("navsim/navtest"))
@@ -137,7 +166,7 @@ def main(a):
             run.use_split(s)
         splits.check_disjoint(s_tr, s_dv)
         tabs = [np.load(CR / d / "tab.npz") for d in TRAIN_DIRS]
-        names, logs, ego = (np.concatenate([t[k] for t in tabs]) for k in ("names", "log", "ego"))
+        names, logs, ego, fut = (np.concatenate([t[k] for t in tabs]) for k in ("names", "log", "ego", "fut"))
         off = np.cumsum([0] + [len(t["names"]) for t in tabs])
         Lb = np.load(H1 / "labels/navtrain.npz")
         assert (Lb["names"] == names).all(), "labels are not in token-cache order"
@@ -171,8 +200,8 @@ def main(a):
         emu, esd = e_all[i_fit].mean(0), e_all[i_fit].std(0) + 1e-6
         G = lambda x: torch.as_tensor(np.ascontiguousarray(x), dtype=torch.float32, device=dev)  # noqa: E731
         E = G((e_all - emu) / esd)
-        Y = np.stack([Lb["L"][use], Lb["M"][use]], -1)                              # (n_tr, 22, 2), nan = no label
-        Y[..., [c for c in (0, 1) if c not in ch]] = np.nan
+        Y = fut[use].astype(np.float32) if pose else np.stack([Lb["L"][use], Lb["M"][use]], -1)   # (n_tr, 22, 2) | (n_tr, 8, 3), nan = no label
+        Y[..., [c for c in range(Y.shape[-1]) if c not in ch]] = np.nan
         Yt, ok = G(np.nan_to_num(Y)), G(np.isfinite(Y))
         w = 1 + np.minimum(np.abs(np.degrees(np.nan_to_num(Lb["dyaw4"][use]))), 90.0) / 30.0
         p = np.zeros(n_tr)
@@ -182,14 +211,13 @@ def main(a):
         gval = torch.as_tensor(i_val, device=dev)
 
         def loss_of(o, i, wt=None):
-            l = F.huber_loss(o, Yt[i], delta=DELTA, reduction="none") * ok[i]
-            if wt is not None:
-                l = l * wt[:, None, None]
-                return l.sum() / (ok[i] * wt[:, None, None]).sum().clamp_min(1e-6)
-            return l.sum() / ok[i].sum().clamp_min(1e-6)
+            y, m, tot = Yt[i], ok[i] * (1.0 if wt is None else wt[:, None, None]), 0.0
+            for c, dl, sc in grp:
+                tot = tot + sc * (F.huber_loss(o[..., c], y[..., c], delta=dl, reduction="none") * m[..., c]).sum() / m[..., c].sum().clamp_min(1e-6)
+            return tot
 
         torch.manual_seed(a.seed)
-        net = build(vision).to(dev)
+        net = build(vision, drop=a.drop, nq=Y.shape[1], nc=Y.shape[2], thin=a.head == "thin").to(dev)
         opt = torch.optim.AdamW(net.parameters(), lr=a.lr, weight_decay=a.wd)
         steps, warm, ev = (60, 10, 30) if a.smoke else (a.steps, a.warm, a.eval)
         gen = torch.Generator(device=dev).manual_seed(a.seed)
@@ -199,8 +227,9 @@ def main(a):
             for g in opt.param_groups:
                 g["lr"] = a.lr * min(1.0, (step + 1) / warm) * 0.5 * (1 + np.cos(np.pi * min(1.0, step / steps)))
             b = torch.searchsorted(cdf, torch.rand(a.batch, device=dev, generator=gen, dtype=cdf.dtype)).clamp_max(n_tr - 1)
+            keep = torch.randperm(256, device=dev, generator=gen)[:a.tokdrop] if a.tokdrop else None
             with torch.autocast("cuda", dtype=torch.bfloat16):
-                o = net(V[b] if vision else None, E[b])
+                o = net(V[b] if vision else None, E[b], keep)
             loss = loss_of(o, b)
             if not torch.isfinite(loss):
                 raise FloatingPointError(f"non-finite loss at step {step}")
@@ -228,11 +257,11 @@ def main(a):
         its = steps / max(time.time() - t1, 1e-6)
         net.load_state_dict(best)
         idv, ite = torch.as_tensor(i_dv, device=dev), torch.as_tensor(i_te, device=dev)
-        P_dv, P_te = predict(net, V, E, idv), predict(net, V, E, ite)
-        assert np.isfinite(P_dv).all() and np.isfinite(P_te).all()
+        P_dv, P_te, P_va = predict(net, V, E, idv), predict(net, V, E, ite), predict(net, V, E, gval)
+        assert np.isfinite(P_dv).all() and np.isfinite(P_te).all() and np.isfinite(P_va).all()
         f = run.path("pred.npz")
         np.savez(f.with_suffix(".tmp.npz"), names_dev=names[in_dv], dev=P_dv.astype(np.float32), names_test=tt["names"][:n_te], test=P_te.astype(np.float32), grid=Lb["grid"],
-                 arm=a.arm, fold=a.fold, frac=a.frac, seed=a.seed)
+                 names_val=names[val], val=P_va.astype(np.float32), arm=a.arm, fold=a.fold, frac=a.frac, seed=a.seed, head=a.head, tag=a.tag)
         f.with_suffix(".tmp.npz").rename(f)
         torch.save(dict(model=best, config=vars(a), emu=emu, esd=esd, curve=curve), run.path("ckpt.pt"))
         run.path("curve.json").write_text(json.dumps(curve, indent=1))
@@ -247,7 +276,11 @@ def main(a):
 if __name__ == "__main__":
     from jevdrive.run import cli_args
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--arm", required=True, choices=("L", "M", "C", "blind"))
+    ap.add_argument("--arm", required=True, choices=("L", "M", "C", "blind", "P"))
+    ap.add_argument("--head", default="full", choices=("full", "thin"))
+    ap.add_argument("--drop", type=float, default=0.1, help="dropout")
+    ap.add_argument("--tokdrop", type=int, default=0, help="vision tokens kept per training batch (0 = all 256)")
+    ap.add_argument("--tag", default="", help="candidate name, appended to the run / prediction name")
     ap.add_argument("--fold", type=int, default=0)
     ap.add_argument("--frac", type=float, default=1.0, help="share of the fit logs (learning curve)")
     ap.add_argument("--steps", type=int, default=8000)
