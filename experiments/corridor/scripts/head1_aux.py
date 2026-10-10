@@ -62,6 +62,13 @@ def reads(z, lab) -> dict:
     return out
 
 
+def plan_err(z):
+    """-> (plan 4 s heading error deg, |logged 4 s heading change| deg; nan without a logged future)."""
+    fut, P = z["fut"].astype(np.float64)[:, :, :3], z["poses"].astype(np.float64)
+    h4 = np.where(np.isfinite(fut).all((1, 2)), fut[:, 7, 2], np.nan)
+    return np.degrees(HR.wrap(np.unwrap(np.concatenate([np.zeros((len(P), 1)), P[:, :, 2]], 1), axis=1)[:, -1] - h4)), np.abs(np.degrees(HR.wrap(h4)))
+
+
 def cmd_ident(a):
     import torch
     A, B = (torch.load(RUNS / t / "ckpt-final.pt", map_location="cpu", weights_only=False)["model"] for t in (a.a, a.b))
@@ -85,7 +92,7 @@ def cmd_ident(a):
 def cmd_sel(a):
     import torch
     lab = np.load(HR.H1 / "labels/navtrain.npz")
-    R, names = {}, None
+    R, E, names = {}, {}, None
     for spec in a.tags:
         lam, tag = spec.split("=")
         z = np.load(RUNS / tag / "aux_eval.npz")
@@ -94,6 +101,10 @@ def cmd_sel(a):
         ck = torch.load(RUNS / tag / "ckpt-final.pt", map_location="cpu", weights_only=False)["cfg"]
         assert ck["holdout"] == "head1val" and float(ck["aux_lam"]) == float(lam), f"{tag}: not a selection run of lambda {lam}"
         R[float(lam)] = dict(tag=tag, **reads(z, lab))
+        E[float(lam)], dy = plan_err(z)
+    cb = HR.CB(z["log"].astype(str))
+    for l in R:                                                          # paired on the same rows, log-cluster bootstrap
+        R[l]["paired_vs_ref"] = {b: cb(HR.rms_diff, E[l], E[0.0], mask=dy > t) for b, t in ((">20", 20.0), (">45", 45.0))}
     assert 0.0 in R, "the lambda = 0 reference is missing"
     r0, a0 = R[0.0][">20"]["plan_rms"]["v"], R[0.0]["all"]["ade"]["v"]
     cand = [l for l in LAMS if l in R]
@@ -102,8 +113,8 @@ def cmd_sel(a):
     sel = dict(rule="lowest plan 4 s heading RMS (> 20 deg rows) among lambda with ADE <= 1.02 x lambda 0's; if none is below lambda 0, still the lowest",
                chosen=pick, ade_ok=okade, below_ref=bool(R[pick][">20"]["plan_rms"]["v"] < r0), any_ade_ok=bool(okade), ref_rms=r0, ref_ade=a0)
     rows = [{"lambda": l, "tag": r["tag"], "rows (> 20 deg)": f"{r['n']} ({r['>20']['n']})", "logs": r["logs"],
-             "plan 4 s heading RMS, > 20 deg (deg)": HR.fmt(r[">20"]["plan_rms"]), "vs lambda 0": f"{r['>20']['plan_rms']['v'] - r0:+.2f}",
-             "> 45 deg": HR.fmt(r[">45"]["plan_rms"]), "ADE (m)": HR.fmt(r["all"]["ade"], "{:.4f}"), "ADE / lambda 0": f"{r['all']['ade']['v'] / a0:.4f}",
+             "plan 4 s heading RMS, > 20 deg (deg)": HR.fmt(r[">20"]["plan_rms"]), "vs lambda 0 (paired)": HR.fmt(r["paired_vs_ref"][">20"], "{:+.2f}"),
+             "> 45 deg": HR.fmt(r[">45"]["plan_rms"]), "> 45 deg vs lambda 0 (paired)": HR.fmt(r["paired_vs_ref"][">45"], "{:+.2f}"), "ADE (m)": HR.fmt(r["all"]["ade"], "{:.4f}"), "ADE / lambda 0": f"{r['all']['ade']['v'] / a0:.4f}",
              "head RMS at the plan's arc, > 45 / all (deg)": f"{r['>45']['head_rms_plan_arc']['v']:.2f} / {r['all']['head_rms_plan_arc']['v']:.2f}",
              "chosen": "yes" if l == pick else ""} for l, r in sorted(R.items())]
     B2.mkdir(parents=True, exist_ok=True)
