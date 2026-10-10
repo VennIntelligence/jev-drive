@@ -68,7 +68,9 @@ def main(a):
         Q = {}
         for m, tag in enumerate(tags):
             d, lat = RT.path_dist_np(P[m], F, off)
-            Q[tag] = dict(dmax=d.max(1), out4=side * lat[:, -1], **{f"leave_{r:g}": (d.max(1) > r).astype(float) for r in RS},
+            so = side[:, None] * lat                                                 # signed lateral of every pose, + = outside of the logged turn
+            Q[tag] = dict(dmax=d.max(1), out4=so[:, -1], **{f"leave_{r:g}": (d.max(1) > r).astype(float) for r in RS},
+                          **{f"wide_{r:g}": (so.max(1) > r).astype(float) for r in (1.0,) + RS}, **{f"cut_{r:g}": (so.min(1) < -r).astype(float) for r in (1.0,) + RS},
                           **{f"exc_{b:g}": np.maximum(d - b, 0).mean(1) for b in BANDS}, **{f"pos_{b:g}": (d.max(1) > b).astype(float) for b in BANDS})
         at = np.abs(turn)
         buckets = [("all", np.ones(len(M), bool)), ("< 20 deg", at < 20), ("20-45 deg", (at >= 20) & (at <= 45)), ("> 45 deg", at > 45),
@@ -87,9 +89,9 @@ def main(a):
                     q = Q[tag]
                     rows.append(dict(fam=fn, bucket=bn, tag=tag, n=int(m.sum()), logs=int(len(np.unique(logs[m]))), dmax_mean=q["dmax"][m].mean(),
                                      dmax_p90=np.quantile(q["dmax"][m], 0.9), dmax_p99=np.quantile(q["dmax"][m], 0.99), out4_mean=q["out4"][m].mean(),
-                                     **{k: q[k][m].mean() for k in q if k[:3] in ("lea", "exc", "pos")}))
+                                     **{k: q[k][m].mean() for k in q if k[:3] in ("lea", "exc", "pos", "wid", "cut")}))
                 for x, y in zip(new, ref):
-                    for k in ("dmax", "out4", "leave_2", "leave_3", "leave_4", "exc_2"):
+                    for k in ("dmax", "out4", "leave_2", "leave_3", "leave_4", "wide_1", "wide_2", "wide_3", "wide_4", "cut_2", "exc_2", "exc_3"):
                         r = stats.paired(Q[x][k][m], Q[y][k][m], groups=logs[m])
                         prs.append(dict(fam=fn, bucket=bn, new=x, ref=y, stat=k, n=int(m.sum()), new_v=r["mean_a"], ref_v=r["mean_b"], diff=r["mean"], lo=r["lo"], hi=r["hi"]))
         out = B.REPO / a.out
@@ -98,13 +100,13 @@ def main(a):
         D.to_csv(out / f"ol_{a.name}.csv", index=False, float_format="%.5f")
         R.to_csv(out / f"ol_{a.name}_pairs.csv", index=False, float_format="%.5f")
         # the gate's number (Amendment 7 item 3): leave rate on the turn rows over 45 deg, each tag, and new - ref
-        gate = {t: {bn: {k: float(D[(D.fam == "pooled") & (D.bucket == bn) & (D.tag == t)][k].iloc[0]) for k in ("n", "leave_2", "leave_3", "leave_4", "dmax_mean", "out4_mean")}
+        gate = {t: {bn: {k: float(D[(D.fam == "pooled") & (D.bucket == bn) & (D.tag == t)][k].iloc[0]) for k in ("n", "leave_2", "leave_3", "leave_4", "wide_1", "wide_2", "wide_3", "wide_4", "dmax_mean", "out4_mean")}
                     for bn in ("> 45 deg", "all")} for t in tags}
         (out / f"ol_{a.name}.json").write_text(json.dumps(dict(name=a.name, set=a.set, tags=tags, new=new, ref=ref, n=len(M), gate=gate), indent=1) + "\n")
         pd.set_option("display.width", 250)
-        show = D[D.bucket.isin(["all", "> 45 deg", "> 45 deg right", "> 45 deg left", "20-45 deg"])]
-        run.info("\n" + show[["fam", "bucket", "tag", "n", "dmax_mean", "dmax_p90", "dmax_p99", "out4_mean", "leave_2", "leave_3", "leave_4", "exc_2", "exc_3", "pos_2", "pos_3"]].to_string(index=False, float_format=lambda v: f"{v:.4f}"))
-        run.info("\n" + R[R.bucket.isin(["> 45 deg", "> 45 deg right", "> 45 deg left"]) & R.stat.isin(["dmax", "out4", "leave_2", "leave_3"])].to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+        show = D[D.bucket.isin(["all", "> 45 deg", "> 45 deg right", "> 45 deg left"])]
+        run.info("\n" + show[["fam", "bucket", "tag", "n", "dmax_mean", "out4_mean", "leave_2", "leave_3", "leave_4", "wide_1", "wide_2", "wide_3", "wide_4", "cut_2", "cut_3", "exc_2", "exc_3"]].to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+        run.info("\n" + R[(R.bucket == "> 45 deg") & R.stat.isin(["out4", "leave_4", "wide_1", "wide_2", "wide_3", "wide_4"])].to_string(index=False, float_format=lambda v: f"{v:.4f}"))
         run.summary.update(n=len(M), tags=tags)
 
 
