@@ -44,7 +44,7 @@ def virtual(cam_t, yaw_deg, pose):
     cam_t, pose, a = np.asarray(cam_t, np.float64), np.asarray(pose, np.float64), np.radians(np.asarray(yaw_deg, np.float64))
     c, s = np.cos(a), np.sin(a)
     cam = np.stack([c * cam_t[..., 0] + s * cam_t[..., 1], -s * cam_t[..., 0] + c * cam_t[..., 1], cam_t[..., 2]], -1)
-    return cam, np.stack([pose[..., 0], pose[..., 1], pose[..., 2] + a], -1)
+    return cam, np.stack(np.broadcast_arrays(pose[..., 0], pose[..., 1], pose[..., 2] + a), -1)
 
 
 class SideStore:
