@@ -1,0 +1,6 @@
+end,A0,A0r,A1
+bg_collision,8,7,9
+complete,26,26,22
+fg_collision,29,29,24
+max_steps,0,0,5
+off_route,1,2,4

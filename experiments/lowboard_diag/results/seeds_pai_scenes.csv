@@ -1,0 +1,61 @@
+scene,0,1,2,3,modal_fine,n_same_fine,modal_coarse,n_same_coarse,n_zero
+05f35348,other: spin,other: spin,other: spin,other: spin,other: spin,4,other,4,4
+071d15c4,pass,progress loss,pass,progress loss,pass,2,pass,2,0
+0e3771c0,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+0ee89cab,longitudinal: L1 contact,progress loss,progress loss,other: driver exception,progress loss,2,progress loss,2,2
+0fd06bc3,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+13fb89b9,pass,route: straight drift,route: straight drift,pass,pass,2,pass,2,2
+145bf9cc,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+1c7e2423,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,4,longitudinal,4,4
+1d6e30bc,longitudinal: fast turn entry,longitudinal: fast turn entry,route,pass,longitudinal: fast turn entry,2,longitudinal,2,3
+1fcacc17,pass,pass,pass,pass,pass,4,pass,4,0
+213dfdac,route: turn made late,route: turn made late,route: turn made late,route: command inert,route: turn made late,3,route,4,4
+21626256,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,4,longitudinal,4,4
+24a50fcc,route: command inert,route: command inert,pass,route: command inert,route: command inert,3,route,3,3
+2e76251a,pass,pass,pass,pass,pass,4,pass,4,0
+38d78b19,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+3a48e906,longitudinal: fast turn entry,longitudinal: fast turn entry,longitudinal: fast turn entry,longitudinal: fast turn entry,longitudinal: fast turn entry,4,longitudinal,4,4
+41424eff,pass,pass,pass,pass,pass,4,pass,4,0
+44fdaa0f,pass,pass,pass,pass,pass,4,pass,4,0
+46d68e21,other: driver exception,other: spin,other: spin,other: spin,other: spin,3,other,4,4
+4726de45,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+48a3f74a,other: spin,other: spin,other: spin,other: spin,other: spin,4,other,4,4
+49597f01,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+4f779a92,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+51e7f59e,clearance,clearance,clearance,clearance,clearance,4,clearance,4,4
+59e085d7,longitudinal: fast turn entry,longitudinal: fast turn entry,longitudinal: fast turn entry,longitudinal: fast turn entry,longitudinal: fast turn entry,4,longitudinal,4,4
+5a38c811,pass,pass,pass,pass,pass,4,pass,4,0
+5d794411,pass,pass,pass,pass,pass,4,pass,4,0
+605bf77a,route: command inert,route: command inert,route: command inert,route: command inert,route: command inert,4,route,4,4
+69fc21e8,other: spin,other: spin,other: spin,other: spin,other: spin,4,other,4,4
+6b986b30,route: straight drift,route: straight drift,route: straight drift,route: straight drift,route: straight drift,4,route,4,4
+75c23f07,route: straight drift,route: straight drift,route: straight drift,route: straight drift,route: straight drift,4,route,4,4
+77fdd75c,pass,pass,route,clearance,pass,2,pass,2,2
+7a824ffa,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,4,longitudinal,4,4
+8457182d,route: straight drift,other: spin,other: spin,route: straight drift,other: spin,2,other,2,4
+8a365ac2,clearance,clearance,clearance,clearance,clearance,4,clearance,4,4
+8ecf02e3,pass,pass,pass,pass,pass,4,pass,4,0
+8f3902f9,clearance,clearance,clearance,clearance,clearance,4,clearance,4,4
+909a2801,pass,pass,pass,pass,pass,4,pass,4,0
+92163671,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+94877a4a,progress loss,clearance,progress loss,progress loss,progress loss,3,progress loss,3,1
+96cc7239,clearance,progress loss,progress loss,progress loss,progress loss,3,progress loss,3,1
+96da4f1a,longitudinal: fast turn entry,pass,pass,route: command inert,pass,2,pass,2,2
+9d735456,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+9e3fd12d,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,clearance,longitudinal: overran logged stop,3,longitudinal,3,4
+9ea70552,pass,pass,pass,pass,pass,4,pass,4,0
+a28b6685,longitudinal: L1 contact,progress loss,progress loss,clearance,progress loss,2,progress loss,2,2
+a45776a3,other: rear-ended,progress loss,other: rear-ended,other: rear-ended,other: rear-ended,3,other,3,3
+b0fa4732,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,longitudinal: overran logged stop,4,longitudinal,4,4
+b45734f4,other: spin,other: spin,other: spin,clearance,other: spin,3,other,3,4
+b988494a,route: straight drift,route: straight drift,route: straight drift,route: straight drift,route: straight drift,4,route,4,4
+bb9b4a37,clearance,clearance,clearance,clearance,clearance,4,clearance,4,4
+c028c8ce,pass,pass,pass,pass,pass,4,pass,4,0
+c5bc66c4,clearance,clearance,clearance,clearance,clearance,4,clearance,4,4
+c6c01d25,route: command inert,progress loss,route: command inert,route: command inert,route: command inert,3,route,3,3
+d7328fed,clearance,clearance,clearance,clearance,clearance,4,clearance,4,4
+dfb0277e,pass,progress loss,progress loss,pass,pass,2,pass,2,0
+e9fe4c3b,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+eea2fc6d,progress loss,progress loss,progress loss,progress loss,progress loss,4,progress loss,4,0
+fadc73da,route: straight drift,route: straight drift,route: straight drift,route: straight drift,route: straight drift,4,route,4,4
+fdfb5073,pass,pass,pass,pass,pass,4,pass,4,0
