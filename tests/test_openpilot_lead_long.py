@@ -55,12 +55,14 @@ class Plan(unittest.TestCase):
         pl = LD.PlanLead(1.5)
         th = np.linspace(0, 0.6, len(T))
         xy = np.stack([20 * (1 - np.cos(th)), 20 * np.sin(th)], -1)       # a right bend
-        for k in range(8):
-            out, info = pl(xy, T, 8.0, 0.2 * k, *lead(12.0, 0.0, 0.95), 8.0)
-        self.assertTrue(info["changed"])
         s = lambda a: np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(a, axis=0), axis=1))]  # noqa: E731
-        self.assertTrue(np.all(s(out) <= s(xy) + 1e-9))
-        self.assertTrue(np.all(np.abs(np.hypot(out[:, 0] - 20, out[:, 1]) - 20) < 0.03))   # on the chords of the 20 m arc (sagitta 0.025 m)
+        n = 0
+        for k in range(8):                                    # the unconverged 8-iteration solve differs in the last digits between BLAS builds:
+            out, info = pl(xy, T, 8.0, 0.2 * k, *lead(12.0, 0.0, 0.95), 8.0)   # assert the invariants, not the numbers
+            n += info["changed"]
+            self.assertTrue(np.all(s(out) <= s(xy) + 1e-9))
+            self.assertTrue(np.all(np.abs(np.hypot(out[:, 0] - 20, out[:, 1]) - 20) < 0.03))   # on the chords of the 20 m arc (sagitta 0.025 m)
+        self.assertGreaterEqual(n, 3)
 
     def test_stops_behind_a_standing_lead(self):
         gaps, vs = drive(LD.PlanLead(1.5), 8.0, 40.0, 0.0, 0.95, steps=120)
