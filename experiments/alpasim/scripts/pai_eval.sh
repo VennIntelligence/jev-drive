@@ -7,6 +7,8 @@
 # Env: CARDS ("0 1"), CONC (4 rollouts per card), NRE_CACHE (pai_run.sh), CHUNK (scenes per stack start, 48: a start costs ~2 min, a failed
 #   chunk is rerun once and loses at most its own scenes), SERVE (driver switches, default the served configuration
 #   "-e JEV_VCONT=1.0 -e JEV_LEAD=1"), IMG / DRV_PY / HARMONIZER as pai_run.sh. The checkpoint is mounted into the driver image.
+#   JOIN=1: these cards join a run that is already going on <out root> (same tag and lists): they take unclaimed chunks and leave STATUS,
+#   DONE / ERROR and eval.json to the first call. A card freed by another job is added this way.
 # State: <out>/{STATUS, DONE | ERROR, log.txt, eval.json (scenes, wall, scenes per hour)}, chunk lists in <out>/chunks/, one run per chunk in
 # <out>/runs/<lowercase tag>_<chunk> (finished chunks are skipped: rerunning resumes). Read with pai_eval_report.py.
 set -uo pipefail
@@ -14,8 +16,8 @@ here=$(cd "$(dirname "$0")" && pwd)
 O=$(mkdir -p "$1" && cd "$1" && pwd) T=$2; shift 2
 D=${DATA_DIR:-/data}; C=$D/runs/op_parity/runs/$T; L=${T,,}
 CARDS=${CARDS:-0 1}; CONC=${CONC:-4}; CHUNK=${CHUNK:-48}; SERVE=${SERVE--e JEV_VCONT=1.0 -e JEV_LEAD=1}
-mkdir -p "$O"/{chunks,runs}; rm -rf "$O"/{DONE,ERROR,claims}; mkdir "$O/claims"; exec > >(tee -a "$O/log.txt") 2>&1
-st() { echo "$(date '+%F %T') $T: $*" | tee "$O/STATUS"; }
+J=${JOIN:-0}; mkdir -p "$O"/{chunks,runs}; (( J )) || { rm -rf "$O"/{DONE,ERROR,claims}; mkdir "$O/claims"; }; exec > >(tee -a "$O/log.txt") 2>&1
+st() { echo "$(date '+%F %T') $T: $*" | if (( J )); then cat; else tee "$O/STATUS"; fi; }
 [[ -f $C/ckpt-final.pt ]] || { st "ERROR no checkpoint $C"; touch "$O/ERROR"; exit 1; }
 if ! ls "$O"/chunks/*.txt >/dev/null 2>&1; then           # written once: a resumed run keeps its chunks
   for f in "$@"; do if head -1 "$f" | grep -q '^scene_id'; then awk -F'\t' 'NR > 1 && $8 <= 1 {print $1}' "$f"; else grep . "$f"; fi; done \
@@ -40,6 +42,7 @@ worker() {  # card: takes chunks until none is left; a card that reads the 2026-
   done
 }
 for g in $CARDS; do worker "$g" & sleep 20; done; wait      # staggered: two stacks starting at once race for the wizard's docker network
+(( J )) && { st "joined cards $CARDS: no chunk left"; exit 0; }
 left=$(for f in "$O"/chunks/*.txt; do [[ -f $O/runs/${L}_$(basename "$f" .txt)/DONE ]] || echo "$f"; done | wc -l)
 (( left > 0 )) && ! [[ -f $O/ERROR ]] && echo "$left chunks unfinished" >> "$O/ERROR"
 w=$(( $(date +%s) - t0 ))
