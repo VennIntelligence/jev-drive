@@ -166,8 +166,9 @@ def cmd_ot(a):
             P, t = predict(d)
             ref = np.load((H1 / "final/prof" if a.match_final else H1B / "smoke/prof") / f"{d}.npy")
             Q["on_log_repredict_max_abs_diff_rad"][d] = float(np.abs(P - ref).max())
-            if a.match_final:                                                       # this script's inference path = the trainer's stored predictions
-                assert Q["on_log_repredict_max_abs_diff_rad"][d] < 5e-3, (d, Q["on_log_repredict_max_abs_diff_rad"][d])
+            Q.setdefault("on_log_repredict_mean_abs_diff_rad", {})[d] = float(np.abs(P - ref).mean())
+            if a.match_final:           # this script's inference path = the trainer's stored predictions, to the bf16 rounding of the head's output
+                assert Q["on_log_repredict_max_abs_diff_rad"][d] < 0.035 and Q["on_log_repredict_mean_abs_diff_rad"][d] < 2e-3, (d, Q["on_log_repredict_max_abs_diff_rad"][d])   # 2 bf16 steps at 2-4 rad
             base[d] = (ref.astype(np.float64) if a.match_final else P, t)
         deg = np.degrees
         rms = lambda x: float(np.sqrt(np.mean(np.square(x)))) if len(x) else None  # noqa: E731
