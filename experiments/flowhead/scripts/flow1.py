@@ -284,6 +284,29 @@ def cmd_report(a):
        f"Reference (decision 196, SH30): NC 176.5, A 93.5 (A1 58.5, A2 35), B 23, C 13.5, D 16.5, E 30. Replay check: max abs sub-score difference to the bench units {chk:.1e}.\n\n"
        + md(rows, 3) + "\n")
     summ["nc_replay_check"] = chk
+    # ---- descriptive flip table ("saved N, hurt M"): per seed pair, tokens the control fails and the arm passes (fixed) / the reverse (broken)
+    ind = {}                                                                    # failure class -> (mask, {arm: [0/1 per seed]})
+    for b in (">45", ">20"):
+        for c, lab in (("DAC fail %", "off-road (DAC)"), ("inside-cut %", "cut-inside"), ("cannot-make-turn %", "cannot-make-the-turn")):
+            ind[f"{lab}, {b} deg"] = (B[b], {k: [(f[c].to_numpy(float) > 50) for f in Fr[k]] for k in ARMS})
+    for c, lab in (("NC", "NC"), ("DAC", "DAC"), ("TTC", "TTC")):
+        ind[f"{lab}, whole board"] = (B["all"], {k: [(u[c].to_numpy(float) < 1) for u in U[k]] for k in ARMS})
+    for c in ["A", "A1 stopped vehicle ahead", "A2 lead vehicle (moving)", "B", "C", "D", "E"]:
+        ind[f"NC class {NT.BIG.get(c, c)}, whole board"] = (B["all"], {k: [i_[c] > 0.5 for i_ in ncx[k]] for k in ARMS})
+    rows = []
+    for nm, (m, f) in ind.items():
+        for x, y in PAIRS:                                                      # arm x against control y
+            fx = [int(((f[y][s] & ~f[x][s]) & m).sum()) for s in (0, 1)]
+            br = [int(((f[x][s] & ~f[y][s]) & m).sum()) for s in (0, 1)]
+            rows.append({"failure class": nm, "comparison": f"{x} - {y}", "control fails": [int((f[y][s] & m).sum()) for s in (0, 1)].__repr__(),
+                         "fixed s0 / s1": f"{fx[0]} / {fx[1]}", "broken s0 / s1": f"{br[0]} / {br[1]}", "net s0 / s1": f"{fx[0] - br[0]:+d} / {fx[1] - br[1]:+d}",
+                         "fixed sum": sum(fx), "broken sum": sum(br), "net sum": sum(fx) - sum(br)})
+            summ.setdefault("flips", {})[f"{nm} | {x} - {y}"] = dict(fixed=fx, broken=br)
+    P_("## 4c. Flip table (descriptive, not a verdict line): tokens saved / hurt per seed pair\n\nFor each comparison x - y and seed s, the member x-s is set against the member y-s "
+       "(the control) on the same token. Fixed = the control fails the class and the arm passes; broken = the reverse; net = fixed - broken. 'control fails' = the control's "
+       "failing tokens per seed. Cut-inside / cannot-make-the-turn are the DAC-failure split of decision 153 / 240 (a token failing DAC and neither is 'other'); NC classes are "
+       "decision 196's, from the event replay of the NC-failing tokens.\n\n" + md(rows) + "\n")
+
     Pz = {k: [np.load(TO.pf(s)) for s in v] for k, v in ARMS.items()}
     arcs = {}
     for k in ARMS:
