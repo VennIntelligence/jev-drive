@@ -34,7 +34,7 @@ Every cluster is one tenth of the score, so a cluster's points are (its gap) / 1
    re-timing its own path to the top-rated speed profile recovers two to thirty times what the top-rated path at its own speed does (except
    Single-Lane). What is being missed is how far to go given the scene, which is the known bottleneck (decisions 164, 168, 218 amendment).
 
-About 20 strata and three contrasts each were read; CIs with a bound near 0 are weak.
+26 strata and about three contrasts each were read; CIs with a bound near 0 are weak.
 
 ## Val against test, per cluster (descriptive; test has no CI)
 

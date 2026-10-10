@@ -30,9 +30,9 @@ question "what is in it" has no direct answer from data we hold; three indirect 
    correlation: Cut-in 0.36 [0.07, 0.60], Multi-Lane 0.34 [0.05, 0.60], FOD 0.32 [0.08, 0.56]; the other seven are at 0 (-0.10 to +0.11).
 4. **Usable val proxy, by the registered definition: `Multi-Lane Maneuvers`, `Cut_ins`, `Foreign Object Debris` (140 val frames).** All three
    criteria are met by these and by no other cluster. It is a proxy for the ordering of methods, not for the level, and a weak one (see limits).
-5. **Our plan against the rest.** WLG's Spotlight 7.342 is third of 55 and 0.16 above what its other ten clusters predict (0.76 residual sd). The two
-   clusters where WLG beats the leader on test are Multi-Lane (+0.244) and Cut-in (+0.116), and Spotlight is the third (+0.158): the same grouping
-   as point 3. On val Cut_ins is where the plan keeps going where the driver braked (WLG 8.31 against the log's 6.02; decision 164 for WP2).
+5. **Our plan against the rest.** WLG's Spotlight 7.342 is third of 55 and 0.16 above what its other ten clusters predict (0.76 residual sd). WLG is ahead of
+   the leader on four test clusters: Multi-Lane (+0.244), Spotlight (+0.158), Cut-in (+0.116) and Cyclist (+0.040); the first three are the
+   grouping of point 3. On val Cut_ins is where the plan keeps going where the driver braked (WLG 8.31 against the log's 6.02; decision 164 for WP2).
 
 ## A1. Covariate shift, val rater frames (479) against test submission frames (1 505)
 

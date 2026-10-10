@@ -8,7 +8,7 @@ through a page summariser and are marked STATED (relayed from the primary page),
 ## Answer
 
 1. **WOD-E2E carries exactly the 479 rated frames.** Every frame of every shard was scanned (725 799 frames, 622 shards): 30 field paths are
-   populated and none of them is an agent box, a map feature, a lidar return or a pose. Decision 236's sample of 450 frames per split holds on the
+   present (5 of them all zero: the timestamps and the per-image pose) and none of them is an agent box, a map feature, a lidar return or a pose. Decision 236's sample of 450 frames per split holds on the
    full set. Train has 0 rated frames in 415 663.
 2. **No link to WOD Perception or WOMD.** No shared id, the timestamps and poses that could align the data are zeroed, the camera rig is a different
    one, and Waymo states it does not release location for WOD-E2E. Boxes and maps exist inside Waymo (the raters saw them) and are not released.
@@ -116,7 +116,7 @@ reaction). Higher-scored trajectories have more jerk, which is mostly the 4 Hz s
 | link to WOD Perception / WOMD | no | 0 | closed |
 | computed rubric on nuPlan (map + boxes) | yes | 103 k frames, any number of candidates | available as a training signal; its agreement with raters is unmeasurable, and the one transfer test we have is null (decision 195) |
 | human preference on NAVSIM scenes (DriveCritic) | announced, not released | 5 730 pairs | the only candidate for an overlap; watch for the release |
-| map-free kinematic terms on WOD train (progress, comfort) | yes | 415 663 frames | computable, but they order rated pairs at 50-60 %: not a stand-in |
+| map-free kinematic terms on WOD train (progress, comfort) | yes | 415 663 frames | computable, but the best two order rated pairs at 56 % and 60 %, the rest are at chance or reversed: not a stand-in |
 | test server as a label source | 6 submissions per 30 days | 11 cluster means per submission | excluded by our own rule (decision 180) and too coarse |
 
 ## Limits

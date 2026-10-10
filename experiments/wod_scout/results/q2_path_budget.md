@@ -25,7 +25,8 @@ Gate G0 passed: WLG 8.187, gap to the top-rated trajectory 1.400, O1 +0.657, O2 
    speed-only +0.055; in stratum RFS +1.14 [+0.63, +1.78]) and their subset inside `Interections` (11 frames). Everything else is "speed" or undetermined.
    By speed at t = 0: 0.175 of the 0.290 sits at 0.5-5 m/s, 0.079 at 5-12 m/s, 0.025 at standstill.
 4. **What the top-rated path did that ours did not** (30 sheets, looked at by the lane agent, types fixed before looking): 14 frames / 0.149 points are
-   turn geometry, with our plan on the inside of the top-rated path by a median 1.9 m at 5 s (11 of the 14 start below 5 m/s, 6 are floored at 4.0);
+   turn geometry, with our plan on the inside of the top-rated path in 12 of them (median signed offset over the 14: 1.9 m at 5 s; 11 of the 14 start
+   below 5 m/s, 6 are floored at 4.0);
    5 frames / 0.043 are a different route (the top-rated trajectory turns or bears off and ours goes straight; 4 of the 5 carry the intent
    "straight"); 5 frames / 0.034 another lane; 4 frames / 0.054 an offset inside the lane; 2 frames other.
 5. **Not new money.** The total is decision 218 amendment's number for WLG and the same quantity as decision 164's +0.296 for WP2; the low-speed
@@ -82,7 +83,7 @@ manual labels `q2_path_budget/top30_manual.csv`.
 | P5 own drifts while the top-rated path is straight | 1 | 0.005 | 2 % | 0 | 1 | 0 | 0 |
 | P6 label artefact | 0 | 0 | | | | | |
 
-- **P3, half of the path budget.** In 12 of the 14 our plan ends on the inside of the top-rated path (median +1.9 m towards the turn side at 5 s):
+- **P3, half of the path budget.** In 12 of the 14 our plan ends on the inside of the top-rated path (median signed offset over the 14: +1.9 m towards the turn side at 5 s):
   it turns in earlier and tighter. All 52 turn-intent frames together hold 0.114 path-only points: 0.004 at standstill (the stop gate of WLG
   already fixed these, decision 169 point 5), 0.047 at 0.5-3 m/s, 0.046 at 3-5 m/s, 0.017 above. So the remaining block is turns entered at 0.5-5 m/s,
   28 frames, 0.093 points, 6.6 % of the gap.
