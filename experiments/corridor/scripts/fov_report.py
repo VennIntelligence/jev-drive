@@ -297,6 +297,28 @@ def main():
     rows.append({"model": "SH30 - WA-JEPA", "fail % < 80% in frame": "", "fail % >= 80% in frame": "",
                  "difference (pp)": PS.pc((100 * (dd["SH30"][1] - dd["WA-JEPA"][1]), 100 * lo, 100 * hi), "{:+.1f}")})
     P(PS.md(pd.DataFrame(rows), 1) + "\n")
+    P("The in-frame share is not independent of the turn: tighter turns put more of the path beyond the frame and are harder for any model. The same "
+      "comparison stratified by the logged 4 s heading change (45 - 70, 70 - 110, > 110 deg; strata weighted by their size), so the contrast is "
+      "within similar turn angles:\n")
+    strata = [(45, 70), (70, 110), (110, 400)]
+    w = np.array([((M.dpsi > lo_) & (M.dpsi <= hi_)).to_numpy()[sh.to_numpy() & (low | high)].sum() for lo_, hi_ in strata], float)
+    w /= w.sum()
+    dd = {}
+    rows = []
+    for lab, mk in (("SH30", sh), ("WA-JEPA", M.unit == "wa")):
+        tot = 0
+        for k, (lo_, hi_) in enumerate(strata):
+            sg = ((M.dpsi > lo_) & (M.dpsi <= hi_)).to_numpy()
+            bl, pl = rate(mk, low & sg)
+            bh, ph = rate(mk, high & sg)
+            tot = tot + w[k] * np.array([bl - bh, pl - ph], dtype=object)
+        dd[lab] = (tot[0].astype(float), float(tot[1]))
+        lo, hi = np.nanquantile(dd[lab][0], [0.025, 0.975])
+        rows.append({"model": lab, "stratified difference (pp)": PS.pc((100 * dd[lab][1], 100 * lo, 100 * hi), "{:+.1f}")})
+    b = dd["SH30"][0] - dd["WA-JEPA"][0]
+    lo, hi = np.nanquantile(b, [0.025, 0.975])
+    rows.append({"model": "SH30 - WA-JEPA", "stratified difference (pp)": PS.pc((100 * (dd["SH30"][1] - dd["WA-JEPA"][1]), 100 * lo, 100 * hi), "{:+.1f}")})
+    P(PS.md(pd.DataFrame(rows), 1) + "\n")
     P("WA-JEPA failure departure points in WA-JEPA's own cameras (share inside the union of its four native cameras, pinhole test):\n")
     rows = []
     for nm in ("WA-JEPA DAC fail", "SH30 DAC fail"):
