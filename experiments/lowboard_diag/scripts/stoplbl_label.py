@@ -60,13 +60,16 @@ def get_map(loc):
     return d
 
 
+from shapely.geometry import Point, MultiPoint
+
+
 def first_cross(line, poly):
     """arc distance along `line` of the first point inside/on `poly` (None if disjoint)."""
     x = line.intersection(poly)
     if x.is_empty:
         return None
-    ds = [line.project(p) for p in ([x] if x.geom_type == "Point" else [g for g in getattr(x, "geoms", [x])])
-          for p in ([p for p in [__import__("shapely.geometry", fromlist=["Point"]).Point(c) for c in g.coords]] if g.geom_type != "Point" else [g])]
+    import shapely
+    ds = [line.project(Point(c)) for c in shapely.get_coordinates(x)]
     return float(min(ds)) if ds else None
 
 
@@ -148,7 +151,7 @@ def label_log(job):
             for c in mp["cwtree"].query(line.buffer(1.0)):
                 d = first_cross(line, mp["cw"][c])
                 if d is not None and d > 0.5 and d <= 80 and len(peds) and mp["cw"][c].buffer(3.0).intersects(
-                        __import__("shapely.geometry", fromlist=["MultiPoint"]).MultiPoint([tuple(q) for q in peds])):
+                        MultiPoint([tuple(q) for q in peds])):
                     cwd = d if np.isnan(cwd) else min(cwd, d)
             r["cwped_d"] = cwd
             if not np.isnan(cwd):
