@@ -169,7 +169,7 @@ def cmd_check(a):
                 e = np.abs(h - x)
                 dm, mx, sq, n = dm + e.sum(), max(mx, float(e.max())), sq + (x ** 2).sum(), n + e.size
                 t0d = max(t0d, float(e[:, 7].max()))
-            res[d] = {"rows": int(len(rows)), "mean_abs": dm / n, "max_abs": mx, "max_abs_t0": t0d, "front_rms": float(np.sqrt(sq / n))}
+            res[d] = {"rows": int(len(rows)), "mean_abs": float(dm / n), "max_abs": mx, "max_abs_t0": t0d, "front_rms": float(np.sqrt(sq / n))}
             run.info(f"{d}: cached pixels -> encoder vs front.npy on {len(rows)} rows: mean |d| {dm / n:.2e}, max {mx:.4f}, rms {np.sqrt(sq / n):.3f}")
             PS.close()
         train = [d for d in a.datas if d.startswith("navtrain_full")]

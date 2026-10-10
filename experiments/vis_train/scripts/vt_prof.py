@@ -277,8 +277,11 @@ def cmd_equiv(a):
             cmp["wrong_model_cached"] = plans(lambda r: S.front[r], T.load_pmodel(a.wrong, dev))
         for k, p in cmp.items():
             d = torch.linalg.norm(p - ref, dim=-1)                                  # (n, points)
+            near = (ref.abs().amax(-1) < 32.0)                                      # points whose fp16 ulp is <= 0.0156 m
             res[k] = {"mean_m": float(d.mean()), "median_row_max_m": float(d.amax(1).median()), "max_m": float(d.max()),
-                      "rows_over_0.03m": float((d.amax(1) > 0.03).float().mean())}
+                      "rows_over_0.03m": float((d.amax(1) > 0.03).float().mean()), "rows_over_0.07m": float((d.amax(1) > 0.07).float().mean()),
+                      "rows_over_0.03m_points_within_32m": float(((d * near).amax(1) > 0.03).float().mean()),
+                      "rows_over_0.03m_first15": float((d[:, :15].amax(1) > 0.03).float().mean())}
             run.info(f"{a.model} on {a.data} first {len(rows)} rows, {k} vs cached tokens: {res[k]}")
         run.summary |= res
         OUT.mkdir(parents=True, exist_ok=True)
