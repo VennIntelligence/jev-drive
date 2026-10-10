@@ -8,6 +8,7 @@ runs/body1/s2p/arm, the same arm as A0 without the new logging: the spread of an
   stand        share of ticks with speed < 0.1 m/s (ticks.jsonl `v`, every tick of the attempt, the 5 s warm-up included)
   metres       path length of the simulator rear-axle pose (`truth`)
   plan_v1      the student's own plan speed at 1 s (plans.jsonl `vplan[1]`) on standing ticks after the warm-up: median, p90
+               (plan_d1, added after the A0 read as a second column: the plan's own displacement at 1 s, |op_xy[0]|, m, same ticks)
   excused      share of standing ticks with (light) the hero's own light red or yellow (`ctx.htl`, CARLA's hero.get_traffic_light_state()),
                (actor) a vehicle / walker / prop box within 12 m ahead of the front bumper and +-1.75 m of the heading line (`ctx.ahead`), (either)
   unexcused    standing ticks that are not excused / ALL ticks. The prereg line, read on arm A1: < 0.20 pooled over the six routes and < 0.30 on
@@ -44,9 +45,10 @@ def load(arm_dir, rid):
     t = np.array([r["t"] for r in T], float)
     xy = np.array([r.get("truth", [np.nan] * 3)[:2] for r in T], float)
     vp = np.array([P[r["frame"]]["vplan"][1] if r["frame"] in P else np.nan for r in T], float)
+    d1 = np.array([np.hypot(*P[r["frame"]]["op_xy"][0]) if r["frame"] in P else np.nan for r in T], float)
     warm = np.array([P[r["frame"]]["warm"] if r["frame"] in P else True for r in T], bool)
     pe = np.array([P[r["frame"]].get("pe", [np.nan] * 20) if r["frame"] in P else [np.nan] * 20 for r in T], float)
-    return dict(t=t - t[0], v=v, xy=xy, vp=vp, warm=warm, pe=pe, logged=any("htl" in x for x in c), err=np.array(["err" in x for x in c]),
+    return dict(t=t - t[0], v=v, xy=xy, vp=vp, d1=d1, warm=warm, pe=pe, logged=any("htl" in x for x in c), err=np.array(["err" in x for x in c]),
                 light=np.array([x.get("htl") in ("Red", "Yellow") for x in c]), actor=np.array(["ahead" in x for x in c]),
                 rlight=np.array([x.get("tl") in (1, 2) and x.get("tl_dist", 1e9) <= 40.0 for x in c]),
                 lead=np.array([x.get("lead_gap", 1e9) <= 12.0 or x.get("ped_gap", 1e9) <= 12.0 for x in c]),
@@ -56,7 +58,7 @@ def load(arm_dir, rid):
 def stats(parts):
     """One row from one route (or several pooled, tick-weighted)."""
     cat = lambda k: np.concatenate([p[k] for p in parts])  # noqa: E731
-    v, light, actor, rlight, lead, warm, vp = (cat(k) for k in ("v", "light", "actor", "rlight", "lead", "warm", "vp"))
+    v, light, actor, rlight, lead, warm, vp, d1 = (cat(k) for k in ("v", "light", "actor", "rlight", "lead", "warm", "vp", "d1"))
     logged = all(p["logged"] for p in parts)
     st = v < V_STAND
     n, ns = len(v), max(int(st.sum()), 1)
@@ -66,6 +68,7 @@ def stats(parts):
     r = dict(ticks=n, sim_s=round(n * 0.05, 1), stand=float(st.mean()),
              metres=float(sum(np.nansum(np.linalg.norm(np.diff(p["xy"], axis=0), axis=1)) for p in parts)),
              plan_v1_median=float(np.median(vp[w])) if w.any() else nan, plan_v1_p90=float(np.percentile(vp[w], 90)) if w.any() else nan,
+             plan_d1_median=float(np.median(d1[w])) if w.any() else nan, plan_d1_p90=float(np.percentile(d1[w], 90)) if w.any() else nan,
              excused_light=sh(light) if logged else nan, excused_actor=sh(actor) if logged else nan, excused_either=sh(light | actor) if logged else nan,
              unexcused=float((st & ~(light | actor)).sum() / n) if logged else nan,
              unexcused_nowarm=float((st & ~warm & ~(light | actor)).sum() / max(int((~warm).sum()), 1)) if logged else nan,
@@ -159,8 +162,8 @@ def main(a):
             w.writerows({c: (f"{v:.4g}" if isinstance(v, float) else v) for c, v in r.items()} for r in rows)
         figure(data, [x for x in a.arms], FIG / "probe_speed.png")
         for r in rows:
-            run.info("%-5s %-6s ticks %5d stand %.2f m %6.1f plan_v1 %.2f / %.2f excused l %.2f a %.2f e %.2f unexcused %.3f (nowarm %.3f, routelight+actor %.3f, routelight+lead %.3f) ms %.0f err %d",
-                     r["arm"], r["route"], r["ticks"], r["stand"], r["metres"], r["plan_v1_median"], r["plan_v1_p90"], r["excused_light"], r["excused_actor"],
+            run.info("%-5s %-6s ticks %5d stand %.2f m %6.1f plan_v1 %.2f / %.2f d1 %.2f / %.2f excused l %.2f a %.2f e %.2f unexcused %.3f (nowarm %.3f, routelight+actor %.3f, routelight+lead %.3f) ms %.0f err %d",
+                     r["arm"], r["route"], r["ticks"], r["stand"], r["metres"], r["plan_v1_median"], r["plan_v1_p90"], r["plan_d1_median"], r["plan_d1_p90"], r["excused_light"], r["excused_actor"],
                      r["excused_either"], r["unexcused"], r["unexcused_nowarm"], r["unexcused_routelight_actor"], r["unexcused_routelight_lead"], r["ms_tick"], r["ctx_err"])
         for k in res:
             if k != "verdict":
