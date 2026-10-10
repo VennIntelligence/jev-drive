@@ -4,7 +4,7 @@ Missing chunk stacks: none
 
 ## Serving (i) plain
 
-| tag | scenes | mean score | zeros | at-fault collision | offroad | corridor | other | slow (0 < score < 1) | mean progress (progress_clipped_rel) |
+| tag | scenes | mean score | zeros | at-fault collision | offroad (excl.) | corridor (excl.) | other (exception) | slow (0 < score < 1) | mean progress (progress_clipped_rel, all rollouts incl. failed) |
 |:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | P2H10-F-s0 | 60 | 0.1734 | 46 | 14 | 15 | 16 | 1 | 7 | 0.543 |
 | P2H10-F-s1 | 60 | 0.2565 | 39 | 11 | 12 | 16 | 0 | 12 | 0.541 |
@@ -18,9 +18,11 @@ Missing chunk stacks: none
 | P2H10S-F-s3 | 60 | 0.2977 | 35 | 12 | 7 | 15 | 1 | 15 | 0.594 |
 | alpamayo1 (organisers' reference, 441 scenes) | | 0.5033 | | | | | | | |
 
+Classes here are exclusive, priority collision > offroad > corridor (a scene with offroad and corridor counts as offroad); raw overlapping flag counts are in pai_decomposition.md.
+
 ## Serving (ii) VCONT=1.0 LEAD=1
 
-| tag | scenes | mean score | zeros | at-fault collision | offroad | corridor | other | slow (0 < score < 1) | mean progress (progress_clipped_rel) |
+| tag | scenes | mean score | zeros | at-fault collision | offroad (excl.) | corridor (excl.) | other (exception) | slow (0 < score < 1) | mean progress (progress_clipped_rel, all rollouts incl. failed) |
 |:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | P2H10-F-s0 | 60 | 0.3590 | 33 | 5 | 10 | 17 | 1 | 12 | 0.631 |
 | P2H10-F-s1 | 60 | 0.3661 | 29 | 3 | 10 | 16 | 0 | 18 | 0.590 |
@@ -33,6 +35,8 @@ Missing chunk stacks: none
 | P2H10S-F-s2 | 60 | 0.4524 | 26 | 3 | 10 | 13 | 0 | 14 | 0.651 |
 | P2H10S-F-s3 | 60 | 0.4183 | 28 | 3 | 9 | 16 | 0 | 14 | 0.629 |
 | alpamayo1 (organisers' reference, 441 scenes) | | 0.5033 | | | | | | | |
+
+Classes here are exclusive, priority collision > offroad > corridor (a scene with offroad and corridor counts as offroad); raw overlapping flag counts are in pai_decomposition.md.
 
 ## Paired differences, serving (i) plain
 

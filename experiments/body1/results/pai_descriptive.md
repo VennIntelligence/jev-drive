@@ -2,7 +2,9 @@
 
 **This is a descriptive read; the registered PAI read does not exist (no arm met the nuPlan lines) and this read replaces nothing; it cannot promote any arm, and the 60 PAI scenes are now development scenes for this lane.** In plain numbers (60 PAI scenes, one rollout per scene, tag and serving): under the plain driver the four-seed mean is 0.2026 for the base `P2H10-F`, 0.2780 for `P2H10S-F` (+0.0755 [+0.0216, +0.1363] paired by seed) and 0.2615 for `P2H10B-F` (two seeds, +0.0465 [-0.0256, +0.1249]); under decision 226's PAI serving (`JEV_VCONT=1.0 JEV_LEAD=1`) the base is 0.3545, `P2H10S-F` 0.4211 (+0.0667 [-0.0077, +0.1479]) and `P2H10B-F` 0.4291 (+0.0665 [-0.0108, +0.1509]). Against the base's own seed spread (largest base-pair difference 0.0957 plain, 0.0292 served) the plain-driver `P2H10S` difference is inside the spread and the served differences of both arms are outside it. The per-seed picture is mixed: plain `P2H10S` s1 and s2 are +0.03 / +0.02 with CIs including zero; served `P2H10B` s0 is +0.0086. The served `P2H10B-F-s1` (0.4904) is the single highest tag, 0.013 under alpamayo1's 0.5033 (a 441-scene reference, not comparable in sample). Nothing here is selected or promoted; the driver stays `P2H10-F`.
 
-Tables: [pai/pai_tables.md](pai/pai_tables.md) (all numbers below), `pai/pai_by_tag.csv`, `pai/pai_paired.csv`, `pai/pai_paired.json`; code `scripts/pai_report.py`, `scripts/pai_chain.sh`.
+**Correction (2026-10-10, per-scene recompute).** No headline mean is wrong: every mean, paired difference and CI above was recomputed from the per-scene rows and is unchanged. Decision 235 point 2 read the zeros-by-class table with the order reversed: in every row pair the first row is the base and the second the arm (the table lists base before arm), so the arm has fewer zeros in every class and more progress, and the "inconsistency" does not exist. What this report did get wrong or leave unclear: (1) the class columns are exclusive (priority collision > offroad > corridor, a scene with offroad and corridor counts as offroad), which understated corridor and made "corridor zeros fall by one to three" look like a corridor effect; on raw flags corridor moves by 0.5 (plain 19.0 -> 18.5, served 17.75 -> 17.25) and the fall is the offroad one; (2) the progress column averages all rollouts, failed ones included, so it is not the quantity the score uses; (3) driver exceptions are 9 of 1200 rollouts (plain 5, served 4), not 8 of 960, and they are not balanced (see Composition); (4) the sentence that arms gain "through offroad / corridor zeros and progress" is replaced by the decomposition below.
+
+Tables: [pai/pai_tables.md](pai/pai_tables.md) (all numbers below), `pai/pai_by_tag.csv`, `pai/pai_paired.csv`, `pai/pai_paired.json`, per-scene composition and decomposition [pai/pai_decomposition.md](pai/pai_decomposition.md) and `pai/pai_composition.csv`; code `scripts/pai_report.py`, `scripts/pai_chain.sh`.
 
 ## What was run
 
@@ -10,7 +12,7 @@ Tables: [pai/pai_tables.md](pai/pai_tables.md) (all numbers below), `pai/pai_by_
 
 ## Scores and zeros by class (mean over the seeds of a family; per-tag rows in pai_tables.md)
 
-| serving | family (seeds) | mean | zeros | at-fault collision | offroad | corridor | slow | progress |
+| serving | family (seeds) | mean | zeros | at-fault collision | offroad (excl.) | corridor (excl.) | slow | progress (all rollouts) |
 |:--|:--|--:|--:|--:|--:|--:|--:|--:|
 | plain | base (4) | 0.2026 | 43.25 | 12.50 | 14.50 | 16.00 | 9.50 | 0.54 |
 | plain | `P2H10S` (4) | 0.2780 | 36.75 | 12.50 | 8.75 | 14.75 | 13.75 | 0.58 |
@@ -22,7 +24,35 @@ Tables: [pai/pai_tables.md](pai/pai_tables.md) (all numbers below), `pai/pai_by_
 | served | `P2H10B` (2) | 0.4291 | 27.5 | 4.0 | 10.5 | 13.0 | 14.0 | 0.65 |
 | reference | alpamayo1 (441 scenes) | 0.5033 | | | | | | |
 
-Zeros "other" (not collision / offroad / corridor) are driver exceptions (`Expected all tensors to be on the same device`, 8 rollouts of 960 outside the reruns, one scene `77fdd7` three times including PAI2's base); progress = mean `progress_clipped_rel`. Reading: the zeros the arms remove are offroad zeros (plain 14.5 -> 8.75 for `P2H10S`), at-fault collision zeros do not move under either serving (12.5 -> 12.5 plain; 4.0 -> 3.75 / 4.0 served), corridor zeros fall by one to three. The served driver already removes most collision zeros of every tag (12.5 -> 4.0); the arms add on top of that through offroad / corridor zeros and progress (0.60 -> 0.64 / 0.65), not through collisions, the class the open-loop hinges target.
+In each row pair the first row is the base and the second the arm. Zeros "other" (no flag set) are driver exceptions (`Expected all tensors to be on the same device`, 9 of 1200 rollouts; scene `77fdd75` three times including PAI2's base); progress = mean `progress_clipped_rel`. Reading: the zeros the arms remove are offroad zeros (plain 14.5 -> 8.75 for `P2H10S`), at-fault collision zeros do not move under either serving (12.5 -> 12.5 plain; 4.0 -> 3.75 / 4.0 served), exclusive-class corridor zeros fall by one to two but raw corridor flags barely move (0.5), the difference being scenes that carry offroad and corridor together. The served driver already removes most collision zeros of every tag (12.5 -> 4.0); the arms add on top of that by turning zero scenes into non-zero ones (see the next section), mainly offroad-flagged ones, not through collisions, the class the open-loop hinges target.
+
+## Composition of the score and where the arm-minus-base difference comes from
+
+PAI scene score = 0 if any of at-fault collision / offroad / left-corridor is set, else `min(clamp(progress_clipped_rel, 0, 1) / 0.8, 1)`. Flags overlap (offroad + corridor: 52 of 1200 rollouts; collision + corridor: 1; collision + offroad: 0), so the score is a failure indicator times a progress term; the mean of 0.42 against 0.35 can only come from fewer zeros or higher non-zero scores. Progress of failed rollouts is recorded and enters the progress column but not the score.
+
+Seed means (full per-tag rows in pai/pai_decomposition.md):
+
+| serving | family | zeros | non-zero scenes | mean score of non-zero | progress, non-zero only | progress, all | exceptions |
+|:--|:--|--:|--:|--:|--:|--:|--:|
+| plain | base (4) | 43.25 | 16.75 | 0.724 | 0.666 | 0.54 | 0.25 |
+| plain | `P2H10S` (4) | 36.75 | 23.25 | 0.718 | 0.653 | 0.58 | 0.75 |
+| served | base (4) | 31.25 | 28.75 | 0.741 | 0.670 | 0.60 | 1.00 |
+| served | `P2H10S` (4) | 27.75 | 32.25 | 0.783 | 0.718 | 0.64 | 0.00 |
+
+Paired by seed index and scene, mean over the seed pairs (difference = gain + loss + change, each divided by 60 scenes):
+
+| serving | family (pairs) | diff | zero -> non-zero (n) | non-zero -> zero (n) | non-zero in both (n) | gain | loss | change in both |
+|:--|:--|--:|--:|--:|--:|--:|--:|--:|
+| plain | `P2H10S` (4) | +0.0755 | 7.75 | 1.25 | 15.50 | +0.0950 | -0.0188 | -0.0007 |
+| plain | `P2H10B` (2) | +0.0465 | 7.00 | 3.50 | 14.00 | +0.0979 | -0.0499 | -0.0015 |
+| served | `P2H10S` (4) | +0.0667 | 7.25 | 3.75 | 25.00 | +0.1071 | -0.0477 | +0.0073 |
+| served | `P2H10B` (2) | +0.0665 | 6.50 | 3.00 | 26.00 | +0.1020 | -0.0351 | -0.0004 |
+
+- The whole difference is a change in which scenes are zero: net 6.5 (plain) and 3.5 (served) fewer zero scenes per seed for `P2H10S`, with a rescued scene scoring about 0.74 (plain) and 0.89 (served) and a lost one about 0.90 and 0.76. Scenes that are non-zero in both change by -0.0007 (plain) and +0.0073 (served) in mean contribution: the arm does not drive better on scenes the base already passes.
+- The earlier reading that the arm "is not better in offroad, corridor and progress" was a table-order misreading; the arm has fewer offroad zeros (14.5 -> 8.75 plain, 10.0 -> 8.5 served), and its higher all-rollout progress comes from the rescued scenes, while progress on non-zero scenes is not higher in plain (0.666 -> 0.653).
+- Served has a driver-exception imbalance: the base carries 4 exception zeros over 4 seeds (s0 1, s2 2, s3 1) and `P2H10S` none. At a typical non-zero score of about 0.74 this is roughly 4 x 0.74 / 240 = +0.012 of the served +0.0667; in plain the imbalance runs the other way (base 1, `P2H10S` 3). The exceptions are device-mismatch crashes with no relation to the checkpoint; they stay in the numbers as scored.
+- Scenes that flip zero -> non-zero in at least 3 of 4 seeds: plain 4 (`94877a4`, `b988494` in 3 seeds; `a45776a`, `75c23f0` in 4), served 4 (`75c23f0`, `bb9b4a3`, `8457182`, `6b986b3`, all 4 seeds); the reverse in at least 3 seeds: served `94877a4` only (3 seeds). The base zero flag of the rescued scenes is offroad for 3 and corridor for 5 of the 8 listings (`75c23f0` appears in both servings). That is 7 distinct scenes in the 60 whose outcome moves systematically (consistent across seeds); the rest of the gain is seed-level movement, as in the base's own seed spread.
+- Exception list (tag, serving, scene) is in pai/pai_decomposition.md.
 
 ## Arm minus base, paired by seed index and scene (scene bootstrap, 10 000 draws)
 
