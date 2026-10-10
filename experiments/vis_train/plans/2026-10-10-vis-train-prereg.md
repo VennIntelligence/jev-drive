@@ -71,3 +71,28 @@ loss 非有限、分级启动检查不过、dev ADE 比起点差 > 0.3 m 持续�
 - **登记的比较**：W − A（或 W − B），> 45°：切内侧率与 DAC 失败率；全榜 EPDMS 与 < 5° 桶为护栏（线同上）。另读：> 45° 切内侧率按「被越过的内侧路沿 t0 时是否在常规视场内」分层（`$DATA_DIR/runs/corridor/fov/` 的 tok.parquet、unit.parquet）。
 - **线**：W − 对照的 > 45° 切内侧率 ≤ −1.0 pp 且 CI 上界 < 0 记「看到路沿有用」；|差| < 0.5 pp 且 CI 含 0、且测试时屏蔽侧视 token 掉分 < 0.2 记「没被用」；其余「未定」。
 - **次序**：不推迟、不重启第一波。W 只需 t0 的侧视帧（不要历史帧），只用空闲 CPU 建，且共享盘保持 ≥ 300 GB 余量；卡或卡的份额空出时由 pool 放置。步数与其对照臂相同；若时间不够，按相同步数处的 checkpoint 与对照比较。
+
+## 补记 1（2026-10-11 00:30 JST，builder；任何训练步与任何读数之前）
+
+实现时定下、预登记正文没有写明或需要偏离的几处：
+
+1. **恒等检查的容差**。A0（memory 屏蔽）对 `SH30-F-s{0,1}` 的缓存 token plan，前 2 048 个 navtest token、前 15 个 plan 点：超过 0.03 m 的行占 0.20% / 0.29%，登记线是 < 0.1%，按原文不过。这些行的最大差全部是 0.03125 m，即 32–64 m 处两个 fp16 ulp（0.03 m 这个数取自「32 m 处两个 ulp」，实际是 0.03125，略大于 0.03）；中位差 0.002–0.003 m；错模型对照（另一 seed）77% 的行超线、最大 0.31 m。来源是 adapter 多了被屏蔽的 memory token 后 attention 的 fp32 末位不同，再经 fp16 的 H 相加。判据改为「超过 0.032 m（两个 ulp 之上）的行 < 0.1%，且错模型对照 > 50%」，原线的读数照报（`ident/*.json` 的 `pass` 与 `pass_2ulp` 两栏）。F 逐位相同（0 行，最大 0）。A / B / C 的读数在像素缓存建好后补在 state.md。
+2. **navhard 用 W 帧**，所有臂（含 F、F0）一致。支路与 C 读像素缓存，缓存只有 W 协议；G 帧要另渲一套 GIMM 像素。SH30 的 navhard 参照行（`SH30-F-s{0,1}@gimm`）因此不能直接对比，读数阶段补跑 `SH30-F-s{0,1}`（W）作参照。
+3. **视觉组不加 weight decay**（policy、adapter、head、predictor 仍是 SH30 的 0.01）。lr 1e-5 × wd 0.01 × 3 万步会让权重整体收缩约 0.3%，与判定线里的位移阈值（0.5% / 1%）同量级；去掉后位移只来自梯度。
+4. **梯度裁剪分组**：policy + adapter 一组（与 F 相同，1.0），视觉一组（1.0），支路 head + predictor 一组（1.0）。C 也如此（U2 当时是合并裁剪）。
+5. **停止规则的「起点」**取 SH30 自身的 dev ADE（memory 臂：步 0 时屏蔽 memory 的 ADE）。memory 臂在步 0 打开 memory 时 dev ADE 约 1.08 m（`side_in` 与 embedding 新初始化，SH30 的 adapter 输出层非零），不是起点。
+6. **checkpoint 命名**：中间每 5 k 步一个 `VT-<臂>-s<seed>-k<NN>`，最后一步只写 `VT-<臂>-s<seed>`（不重复写一个 `-k<末>`）。
+7. **支路 head** 在所有有日志未来的行上训练（含锚行；锚行只是 policy 的 ego 置零），输入是真实 ego。A / B 的支路实现为 port 自身的视觉权重可训练、原版 Cinque 的 8 个 slot token 全部取自缓存（逐位不变）。
+8. **B 的 predictor**：32 个支路 token（逐通道标准化）+ 1 个 ego token，加 slot 与 horizon embedding，2 层 pre-norm transformer encoder（d 512，8 头），线性输出 32 × 512；两个 horizon 各前向一次。未来行按 log + 时间戳（± 0.1 s）在 12 个 shard 内查找。
+
+## 补记 2（2026-10-11 00:30 JST，用户改范围，经 main 转达；任何读数之前）
+
+这不只是转弯实验：任何方向的提升都算，靠降低别处换来转弯收益的臂不接受。读数与判定增加：
+
+1. **每个 checkpoint 的全分解**（navtest，对各自对照配对，按 log 的 CI）：EPDMS 的全部子项（NC、DAC、DDC、TLC、EP、TTC、LK、HC、EC）与四个转角桶（< 5°、5–20°、20–45°、> 45°），不只 > 20° DAC。
+2. **纵向读数**：NC 失败按第 196 条的类别拆分（尤其「本车道前方静止或慢车」，SH30 的 NC 失败里占 53%；复用该条的分类代码与 token 表），以及 plan 4 s 弧长对对照、对日志的比值。
+3. **末尾的板**（每臂最终 checkpoint，全部经 `jevdrive.bench`）：navhard two-stage（stage 1 / stage 2 分开报）、HUGSIM 64 闭环（与 SH30 参照行同协议，`spec_plan_smooth`）。F / F0 是普通 P2 checkpoint，链里直接排（等最后一个训练任务结束、核空出来之后）。A0 / A / B / C 的 HUGSIM 需要 serving 端新代码（bias server 里跑支路 encoder；C 要导出带训练后视觉权重的 ONNX），bench 目前不支持，读数阶段先核实 C 能否走现有 `pp_hugsim.py onnx`，不能的臂如实写「未跑」。WOD-E2E val 零样本：只在现有脚本能直接读 navtrain 训练的 checkpoint 时跑（F / F0 可能可以，memory / 支路臂需要新代码则跳过并写明）。
+4. **不退步规则**：一个臂只有在没有任何子项、任何桶、任何板相对其对照「CI 整体在 0 以下」时才是候选。退步与收益同等位置报告，每臂一张表：升了什么、降了什么、没动什么。
+5. 最终报告对每个臂写明收益（如有）来自哪个方向：转弯、纵向 / 前车、还是别处。
+
+原判定线（> 20° DAC 的「在收 / 平 / 没测到」）保留为转弯方向的读法；候选资格由第 4 点决定。

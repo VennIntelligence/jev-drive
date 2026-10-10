@@ -48,6 +48,7 @@ FULL = tuple(f"navtrain_full.s{i}of12" for i in range(12))
 RUNS = data_dir() / "runs" / "op_parity" / "runs"
 OUT = data_dir() / "runs" / "vis_train"
 NPT, TOL_M = 15, 0.03                          # identity gate: the plan points inside 4 s, two fp16 ulps at 32 m (docs/long-runs.md)
+ULP2_M = 0.0320                                # two fp16 ulps on the points at 32 .. 64 m are 0.03125 m, just over TOL_M (prereg amendment 1)
 
 
 @dataclass
@@ -137,13 +138,13 @@ class VT(nn.Module):
         self.adapter = PA.ParityAdapter(use_ego=True, use_side=mem, **(dict(n_cam=1, n_t=1) if mem else {}))
         self.head = Head() if mem else None
         self.pred = Predictor(n_h=2) if self.k["fut"] else None
-        self.enc_ckpt = 0                                                    # speed knob: activation checkpointing chunk of the grad pass
+        self.enc_ckpt, self.enc_compiled = 0, False                         # speed knobs: activation checkpointing chunk of the grad pass; compiled encoder
 
     def encode(self, prev, cur, grad=False, chunk=256):
         """(n, 2, 6, 128, 256) uint8 pairs -> (n, 32, 512) tokens of the vision part."""
         fe = getattr(PX, "fast_encode", None)
         if fe is not None and not self.enc_ckpt:
-            return fe(self.net, prev, cur, grad=grad)
+            return fe(self.net, prev, cur, grad=grad, compiled=self.enc_compiled and grad)
         from torch.utils.checkpoint import checkpoint
         f = lambda p, c: self.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(len(c), *A.H_SHAPE)  # noqa: E731
         with torch.set_grad_enabled(grad):
@@ -286,7 +287,7 @@ class Lane:
         self.PS = PX.PixelStore(list(cfg.data), dev, mode="all" if k["vis"] == "inplace" else "t0") if (k["vis"] or k["fut"]) else None
         assert self.PS is None or len(self.PS) == S.n
         self.model = m = VT(cfg.arm).to(dev)
-        m.enc_ckpt = a.enc_ckpt
+        m.enc_ckpt, m.enc_compiled = a.enc_ckpt, a.enc_compile
         m.load_state(torch.load(RUNS / cfg.init / "ckpt-final.pt", map_location="cpu", weights_only=False)["model"], init=True)
         from drivable_hinge import Hinge
         self.hinge = Hinge([data_dir() / cfg.hinge_labels], S.tab["names"], dev, cfg.hinge_margin, ["pacifica"])
@@ -492,7 +493,7 @@ def cmd_train(a):
     tag = a.tag or f"VT-{a.arm}-s{a.seed}"
     cfgd = json.loads(json.dumps(asdict(cfg)))
     d = claim(tag, cfgd, a)
-    with Run("vis_train", f"train-{tag}", seed=cfg.seed, config=cfgd | {"tag": tag, "speed": dict(prefetch=a.prefetch, enc_ckpt=a.enc_ckpt, compile=a.compile)}) as run:
+    with Run("vis_train", f"train-{tag}", seed=cfg.seed, config=cfgd | {"tag": tag, "speed": dict(prefetch=a.prefetch, enc_ckpt=a.enc_ckpt, compile=a.compile, enc_compile=a.enc_compile)}) as run:
         ln = Lane(cfg, dev, a)
         m = ln.model
         for x in ln.sp:
@@ -510,7 +511,7 @@ def cmd_train(a):
             run.info(f"{tag}: resumed at step {step0} from {rs}")
         run.info(f"{tag} (arm {cfg.arm}, from {cfg.init}): train {len(ln.tr_rows)} dev {len(ln.dv_rows)} rows; trainable " +
                  ", ".join(f"{n} {v / 1e6:.2f}M" for n, v in ln.n_par.items()) + f"; hinge labels cover {ln.hinge.coverage:.4f}; "
-                 f"speed: prefetch {a.prefetch} x {a.fetch_workers} threads, fast_encode {hasattr(PX, 'fast_encode')}, enc_ckpt {a.enc_ckpt}, compile {a.compile}")
+                 f"speed: prefetch {a.prefetch} x {a.fetch_workers} threads, fast_encode {hasattr(PX, 'fast_encode')}, enc_ckpt {a.enc_ckpt}, compiled policy {a.compile} / encoder {a.enc_compile}")
 
         def evaluate(step):
             nonlocal ade0, bad
@@ -690,18 +691,28 @@ def cmd_ident(a):
         dd = lambda x, y: np.abs(x[:, :NPT, :2] - y[:, :NPT, :2]).max((1, 2))  # noqa: E731
         for name in [n for n in P if n != "ref"]:
             e = dd(P[name], P["ref"])
-            res[f"{name}_vs_ref"] = dict(share_over_tol=float((e > TOL_M).mean()), max_m=float(e.max()), median_m=float(np.median(e)), mean_m=float(e.mean()))
+            res[f"{name}_vs_ref"] = dict(share_over_tol=float((e > TOL_M).mean()), share_over_2ulp=float((e > ULP2_M).mean()), max_m=float(e.max()),
+                                         median_m=float(np.median(e)), mean_m=float(e.mean()))
+        if k["mem"]:                                                          # the masked-memory bias against SH30's own adapter (fp32, before the fp16 sum)
+            ref = PA.ParityAdapter(use_ego=True, use_side=False).to(dev)
+            ref.load_state_dict(torch.load(RUNS / cfg.init / "ckpt-final.pt", map_location="cpu", weights_only=False)["model"]["parity"])
+            with torch.no_grad():
+                e, tk = I.S.ego[:N], I.mem(np.arange(min(N, 256)))
+                b0 = ref(e[:len(tk)])
+                b1 = m.adapter(e[:len(tk)], tk[:, None, None], torch.zeros(len(tk), 1, dtype=torch.bool, device=dev))
+            res["masked_bias_vs_ref"] = dict(max_abs=float((b1 - b0).abs().max()), ref_rms=float(b0.pow(2).mean().sqrt()))
         if k["vis"]:                                                          # the pixel cache reproduces the cached tokens (frozen weights)
             rn = np.arange(min(512, N))
             tk = (m.slots(*I.PS.all(rn))[:, -1] if k["vis"] == "inplace" else m.encode(*I.PS.t0(rn))).float()
             ref = t0_tok(I.S.front, rn).float()
             res["px_tokens_vs_cache"] = dict(max_abs=float((tk - ref).abs().max()), mean_abs=float((tk - ref).abs().mean()), ref_rms=float(ref.pow(2).mean().sqrt()))
-        res["pass"] = bool(res["arm_vs_ref"]["share_over_tol"] < 1e-3 and res["other_seed_vs_ref"]["share_over_tol"] > 0.5)
+        res["pass"] = bool(res["arm_vs_ref"]["share_over_tol"] < 1e-3 and res["other_seed_vs_ref"]["share_over_tol"] > 0.5)      # the registered line
+        res["pass_2ulp"] = bool(res["arm_vs_ref"]["share_over_2ulp"] < 1e-3 and res["other_seed_vs_ref"]["share_over_2ulp"] > 0.5)   # prereg amendment
         (OUT / "ident").mkdir(parents=True, exist_ok=True)
         (OUT / "ident" / f"{a.arm}-s{a.seed}.json").write_text(json.dumps(res, indent=1))
         run.info(json.dumps(res))
         run.summary.update(res)
-        if not res["pass"]:
+        if not res["pass_2ulp"]:
             raise SystemExit(f"identity gate failed: {res['arm_vs_ref']} (control {res['other_seed_vs_ref']})")
 
 
@@ -710,6 +721,7 @@ def speed_args(p):
     p.add_argument("--fetch-workers", type=int, default=3)
     p.add_argument("--enc-ckpt", type=int, default=0, help="activation checkpointing chunk of the encoder's grad pass (0 = off)")
     p.add_argument("--compile", action="store_true", help="torch.compile of the policy forward")
+    p.add_argument("--enc-compile", action="store_true", help="torch.compile of the encoder's grad pass (pixel_store.fast_encode)")
     p.add_argument("--data", nargs="+", default=list(FULL))
     p.add_argument("--split", default="navsim/op-parity-full")
 
