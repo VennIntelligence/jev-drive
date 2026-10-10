@@ -4,7 +4,8 @@ Pipeline per model (every step is the code the lanes used, wrapped):
   prep     parity models only, when the pp_prep token cache of the frame protocol is missing: experiments/op_parity/scripts/pp_prep.py
   plans    the model's 33-step plan at t0 of every token, op_lb plan format (names, plan_pos / vel / yaw, plan_mu / std):
            parity: the torch port on the cached tokens (pp_train.PModel, fp16, batch 128: pp_eval.py plans, one model);
-           memory arms (pp_train --mem) also read their front-token bank (runs/op_parity/mem/<kind>/<data>.npy; :noside masks it);
+           memory arms (pp_train --mem) also read their front-token bank (runs/op_parity/mem/<kind>/<data>.npy; :noside masks it,
+           :mshuf reads the bank row of a token of another log);
            UF-* arms: pp_unfreeze.py plans (pixels); onnx: scripts/op_lb.py run (TensorRT, envs/openpilot; an existing op_lb
            plan file of the same stem is reused); vis_train arms (family vt): experiments/vis_train/scripts/vt.py plans
   poses    parity checkpoints with a trajectory head (Model.thead; lib/traj_head.py): the head's 8 rear-axle poses on the cached tokens,
@@ -196,6 +197,8 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
             model.bias_sub = nav_mean_bias(model, S, m.name, dev)
     mem = getattr(model, "mem", None)                        # front-token memory arms (pp_train --mem): bank in tab order; :noside masks it
     M = T.Tokens([T.MEM_ROOT / mem / f"{data}.npy"], dev) if mem else None
+    assert m.opt != "mshuf" or M is not None, f"{m.spec}: :mshuf needs a memory arm (pp_train --mem)"
+    perm = torch.as_tensor(_derange(S.tab["log"]), device=dev) if m.opt == "mshuf" else None   # :mshuf: the bank row of a token of another log
     sl = model.net.slices
     pi = np.arange(sl["plan"].start, sl["plan"].start + 495)
     ps = np.arange(sl["plan"].start + 495, sl["plan"].start + 990)
@@ -207,7 +210,7 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
         for i in range(0, S.n, batch):
             r = torch.arange(i, min(i + batch, S.n), device=dev)
             mask = torch.zeros(len(r), 1 if M is not None else 3, dtype=torch.bool, device=dev) if m.opt == "noside" else None
-            side = M[r] if M is not None else (S.side[r] if side_ok else None)
+            side = M[r if perm is None else perm[r]] if M is not None else (S.side[r] if side_ok else None)
             o = model(S.front[r], S.ego[r], S.tc[r], side, mask).float().cpu().numpy()
             mu[i:i + len(r)] = o[:, pi].reshape(-1, 33, 15)
             sd[i:i + len(r)] = np.exp(np.minimum(o[:, ps], 11)).reshape(-1, 33, 15)
@@ -219,6 +222,20 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
     _save_plans(out, names=names, plan_pos=mu[:, :, 0:3], plan_vel=mu[:, :, 3:6], plan_yaw=mu[:, :, 11], plan_mu=mu, plan_std=sd,
                 lead_prob=lp, lead_x=lx, lead_v=lv,
                 steps=31, info=json.dumps({"model": f"op_parity {m.spec}", "source": "jevdrive.bench.navsim.parity_plans", "frames": m.frames}))
+
+
+def _derange(log, seed: int = 0):
+    """A permutation p with log[p[i]] != log[i] for every row (experiments/vis_train/scripts/vt.py derange, same draws: one shuffle per data dir)."""
+    rng = np.random.default_rng(seed)
+    p = rng.permutation(len(log))
+    for _ in range(1000):
+        bad = np.flatnonzero(log[p] == log)
+        if not len(bad):
+            return p
+        for i in bad:
+            j = int(rng.integers(len(log)))
+            p[i], p[j] = p[j], p[i]
+    raise RuntimeError("no derangement found")
 
 
 def thead_poses(spec: str, bench: str, out: str, batch: int = 128, data: str = "") -> None:

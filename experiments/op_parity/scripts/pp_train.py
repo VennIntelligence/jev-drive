@@ -89,8 +89,20 @@ RETIME_V = 0.5                                                  # m/s: below it 
 # FUTURE path (label leak: oracle probes only); --mem-lr sets the tokenizer's own learning rate.
 
 
+# vis_train arm R (experiments/vis_train/plans/2026-10-10-vis-train-prereg.md amendment 7, scripts/vt_r.py bank): --mem vtr_<name> reads a bank of
+# frozen tokens precomputed from a vis_train branch checkpoint (or Cinque's own t0 tokens, vtr_0); no privileged input.
+MEM_PREFIX = ("ge_", "vtr_")                                    # memory kinds named per run: arm "P2+<kind>", bank runs/op_parity/mem/<kind>/
+
+
 def arm_kw(arm: str) -> dict:
-    return ARMS.get(arm) or (dict(ego=True, side=False, mem=arm[3:]) if arm.startswith("P2+ge_") else dict(ego=False, side=False))
+    return ARMS.get(arm) or (dict(ego=True, side=False, mem=arm[3:]) if arm.startswith(tuple("P2+" + x for x in MEM_PREFIX)) else dict(ego=False, side=False))
+
+
+def mem_kind(s: str) -> str:
+    """argparse type of --mem: a fixed kind or a vis_train bank (vtr_<name>)."""
+    if s and s not in MEM_KINDS and not s.startswith("vtr_"):
+        raise argparse.ArgumentTypeError(f"--mem {s!r}: one of {MEM_KINDS} or vtr_<name>")
+    return s
 
 
 ACT_COL = 2062                                    # raw output column of action[0] mu (lateral; openpilot sign, + = right turn)
@@ -985,7 +997,7 @@ if __name__ == "__main__":
     ap.add_argument("--wod-split", default=Cfg.wod_split, help="mixed-domain: sequence split of the wod_* dirs when --split is a NAVSIM split")
     ap.add_argument("--wod-mass", type=float, default=0.0, help="mixed-domain: exact share of every batch drawn from the wod_* rows (0 = natural mix)")
     ap.add_argument("--wod-slots", type=int, default=0, choices=[0, 8], help="mixed-domain: 8 = oldest WOD slot zeroed (teacher8.npz); 0 = all 9")
-    ap.add_argument("--mem", default="", choices=["", *MEM_KINDS], help="32-token memory for arm P2 (representation fix / turn-oracle; runs/op_parity/mem)")
+    ap.add_argument("--mem", default="", type=mem_kind, help="32-token memory for arm P2 (representation fix / turn-oracle / vtr_<name>: a vis_train bank; runs/op_parity/mem)")
     ap.add_argument("--mem-e2e", default="", help="geo-e2e: jointly trained tokenizer over true SDF + agents (b), the same shuffled across logs (x), "
                     "the logged-path field (p); path-req: q<kind>, a degraded field of the logged future (scripts/path_req.py). Privileged, oracle probes only")
     ap.add_argument("--mem-init", default="", help="geo-e2e: tokenizer state dict to start from (geo_oracle.py tok --weights)")

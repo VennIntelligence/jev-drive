@@ -18,7 +18,9 @@ inference. Pixels come from the pre-rendered cache (lib/pixel_store.py); nothing
 
   train   --arm A --seed 0 --steps 30000 [--tag VT-A-s0] [--resume]   snapshots every --snap-every steps -> runs/op_parity/runs/<tag>-k<NN>/,
           the final weights -> <tag>/ckpt-final.pt. Refuses a tag that exists; --resume continues its own interrupted run from <tag>/resume.pt
-          (weights + optimizer of the last snapshot step; the row streams are replayed to that step).
+          (weights + optimizer of the last snapshot step; the row streams are replayed to that step). --init <a finished VT tag> with a
+          new --tag continues that run (prereg amendment 7): its weights, branch head and predictor, the row streams from its last step, a
+          fresh optimizer; the displacement stays relative to that run's starting point.
   plans   --tag T --data lb_navtest --out F [--mem on|off|shuf|sideoff]   op_lb plan file of a VT checkpoint (what jevdrive.bench exports);
           sideoff (W only) masks the two side views and keeps the F0 view
   ident   --arm A --seed 0                                              identity gate: the arm at SH30's weights (memory masked; C after
@@ -322,7 +324,12 @@ class Lane:
         assert self.SS is None or (self.SS.names == S.tab["names"]).all()
         self.model = m = VT(cfg.arm).to(dev)
         m.enc_ckpt, m.enc_compiled, m.enc_chunk = a.enc_ckpt, a.enc_compile, a.enc_chunk
-        m.load_state(torch.load(RUNS / cfg.init / "ckpt-final.pt", map_location="cpu", weights_only=False)["model"], init=True)
+        ck0 = torch.load(RUNS / cfg.init / "ckpt-final.pt", map_location="cpu", weights_only=False)
+        # --init of a finished VT run = a continuation under a new tag (prereg amendment 7): the model is first put at that run's own starting
+        # point (statistics and the displacement reference as in the first run), its weights are loaded after self.disp below
+        self.cont = ck0 if "vt" in ck0["model"] else None
+        base = ck0 if self.cont is None else torch.load(RUNS / ck0["cfg"]["init"] / "ckpt-final.pt", map_location="cpu", weights_only=False)
+        m.load_state(base["model"], init=True)
         from drivable_hinge import Hinge
         self.hinge = Hinge([data_dir() / cfg.hinge_labels], S.tab["names"], dev, cfg.hinge_margin, ["pacifica"])
         tstd = S.t_out[torch.as_tensor(self.tr_rows, device=dev)].float().std(0).clamp_min(1e-3)
@@ -345,6 +352,11 @@ class Lane:
                 m.pred.mu.copy_(x.mean((0, 1)))
                 m.pred.sd.copy_(x.std((0, 1)).clamp_min(1e-6))
         self.disp = Disp(m)
+        self.skip = 0                                                         # draws of the row streams already consumed by the run this one continues
+        if self.cont is not None:
+            assert "vt" not in base["model"] and ckpt_arm(ck0["model"]) == cfg.arm and ck0["cfg"]["seed"] == cfg.seed, f"{cfg.init}: not a run of arm {cfg.arm}, seed {cfg.seed}"
+            m.load_state(ck0["model"])                                        # weights, branch head and predictor; the optimizer starts fresh (warmup again)
+            self.skip = int(ck0["step"]) + int(ck0.get("skip", 0))
         pol, vis, ad, new = m.groups()
         self.clip = [pol + ad] + ([vis] if vis else []) + ([new] if new else [])     # each clipped on its own: the policy's clip is that of F
         g = [{"params": pol, "lr": cfg.lr, "base": cfg.lr, "weight_decay": cfg.wd}, {"params": ad, "lr": cfg.lr_new, "base": cfg.lr_new, "weight_decay": cfg.wd}]
@@ -542,6 +554,8 @@ def cmd_train(a):
             run.use_split(x)
         step0, ade0, bad, hist_ev = 0, None, 0, []
         rs = d / "resume.pt"
+        for _ in range(ln.skip):                                              # a continuation: the row streams go on where the first run stopped
+            ln.draw()
         if a.resume and rs.exists():
             st = torch.load(rs, map_location="cpu", weights_only=False)
             m.load_state(st["model"])
@@ -551,6 +565,8 @@ def cmd_train(a):
             for _ in range(step0):                                            # replay the row streams to the snapshot step
                 ln.draw()
             run.info(f"{tag}: resumed at step {step0} from {rs}")
+        if ln.skip:
+            run.info(f"{tag}: continues {cfg.init} (its step {ln.cont['step']}): row streams advanced by {ln.skip} draws, fresh optimizer")
         run.info(f"{tag} (arm {cfg.arm}, from {cfg.init}): train {len(ln.tr_rows)} dev {len(ln.dv_rows)} rows; trainable " +
                  ", ".join(f"{n} {v / 1e6:.2f}M" for n, v in ln.n_par.items()) + f"; hinge labels cover {ln.hinge.coverage:.4f}; "
                  f"speed: prefetch {a.prefetch} x {a.fetch_workers} threads, fast_encode {hasattr(PX, 'fast_encode')}, enc_ckpt {a.enc_ckpt}, enc_chunk {a.enc_chunk}, compiled policy {a.compile} / encoder {a.enc_compile}")
@@ -574,7 +590,7 @@ def cmd_train(a):
                 raise RuntimeError(f"stop rule: dev ADE {ev['ade']:.3f} vs start {ade0:.3f} at step {step}")
 
         def save(step, final, snapshot=True):
-            ck = {"model": m.state(), "cfg": cfgd, "step": step, "tag": tag}
+            ck = {"model": m.state(), "cfg": cfgd, "step": step, "tag": tag} | ({"skip": ln.skip} if ln.skip else {})
             if final:
                 _atomic_save(ck, d / "ckpt-final.pt")
                 rs.unlink(missing_ok=True)

@@ -9,7 +9,8 @@ Name syntax: `<name>[@<frames>][:<opt>]`
   opt     parity models: `tsA` / `tsB` / `ts0` put the decision-191 turn selector (N7, 19 candidates around the SH30 plan) behind the
           export (navsim only): A every token, B only where the model's own 4 s heading change is >= 20 deg, 0 forced identity
           (experiments/op_parity/plans/2026-10-08-turn-selector-bench-prereg.md; SH30-F-s* only);
-          `noside` masks every side / rear camera at test time (navsim plans only); `lm` exports the plan through
+          `noside` masks every side / rear camera (memory arms: the memory bank) at test time (navsim plans only); `mshuf` (memory arms
+          only) feeds each token the bank row of a token of another log; `lm` exports the plan through
           the lead standstill margin (jevdrive/openpilot/lead_margin.py, op_interp adapter `lm`; navsim only, HUGSIM takes it as
           the agent option `{"lead_margin": {}}`).
 
@@ -58,7 +59,7 @@ class Model:
     name: str                       # registry name (P2-F-s0, cinque, fw-S3, WA-JEPA)
     family: str                     # onnx | parity | wajepa
     frames: str = ""                # navsim front protocol (default per family / tag)
-    opt: str = ""                   # parity: noside | lm | sg (stop gate, serving) | dn (navtest-mean bias subtracted, serving) | tsA | tsB | ts0 (turn selector)
+    opt: str = ""                   # parity: noside | mshuf (memory arms) | lm | sg (stop gate, serving) | dn (navtest-mean bias subtracted, serving) | tsA | tsB | ts0 (turn selector)
     base: str = "cinque"            # openpilot base model (onnx family; parity arms are Cinque)
     onnx: str = ""                  # onnx family: serving ONNX ("" = the shipped file)
     ckpt: str = ""                  # parity: checkpoint (.pt); "" for P0 / *-init
@@ -162,7 +163,7 @@ def resolve(spec: str, check: bool = False) -> Model:
         if c.get("command_adapter") or c.get("route_adapter"):
             raise ValueError(f"{name}: op_guard candidate with a command / route adapter; jevdrive.bench serves plain ONNX candidates only")
         m = Model(name, "onnx", "gimm", base="cinque", onnx=expand(c["onnx"]), note=c.get("note", ""), inputs=OP_INPUTS)
-    elif re.fullmatch(r"VT-(A0|A|B|C|W)-s\d+(-k\d+)?", name):
+    elif re.fullmatch(r"VT-(A0|A2|B2|A|B|C|W)-s\d+(-k\d+)?", name):       # A2 / B2: A / B continued under a new tag (vis_train prereg amendment 7)
         m = Model(name, "vt", "warp", ckpt=str(parity_ckpt(name)), note="vis_train checkpoint (vt.py plans: memory branch / own encoder)",
                   inputs=OP_INPUTS + ("ego velocity / acceleration, 4-pose history (2 Hz), NAVSIM command",), benches=("navtest", "navhard"))
     else:
@@ -181,8 +182,8 @@ def resolve(spec: str, check: bool = False) -> Model:
             raise ValueError(f"{spec}: vis_train memory arms (A0 / A / B / W) take {VT_OPTS[:2]}, W also sideoff; C has no memory channel")
         m = replace(m, opt=opt)
     elif opt:
-        if m.family != "parity" or opt not in ("noside", "lm", "sg", "dn") + TS_OPTS:
-            raise ValueError(f"{spec}: option {opt!r} is only defined for parity models (noside, lm, sg, dn, tsA, tsB, ts0)")
+        if m.family != "parity" or opt not in ("noside", "mshuf", "lm", "sg", "dn") + TS_OPTS:
+            raise ValueError(f"{spec}: option {opt!r} is only defined for parity models (noside, mshuf, lm, sg, dn, tsA, tsB, ts0)")
         if opt in TS_OPTS and not re.fullmatch(r"SH30-F-s\d+", m.name):
             raise ValueError(f"{spec}: the turn selector options are defined for SH30-F-s* only")
         m = replace(m, opt=opt, benches=("navtest", "navhard", "hugsim")) if opt in TS_OPTS else replace(m, opt=opt)

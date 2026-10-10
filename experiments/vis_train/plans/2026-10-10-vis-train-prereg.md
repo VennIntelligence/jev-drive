@@ -128,3 +128,61 @@ F-s0 在 00:26 CST 结束，card 1 空出；F-s1、F0-s0、A0 两条约 01:20 CS
 - **C-s1**（40 000 步，每 5 k 一个 snapshot）与其对照 **F0-s1**（60 000 步，每 10 k），设置与 seed 0 完全相同（同一条链脚本，起点 `SH30-F-s1`）。理由：C 是唯一「原地训练 encoder」的臂，判定线里「两个 seed 方向相反降一档」对单 seed 的臂无从检查；加 seed 不改任何臂的定义、步数或读数。
 - 这不是按中途读数加码：决定时 C 没有任何 navtest 读数（C-s0 在步 5 000，首个 snapshot 的 bench 尚未出），依据只有空卡。
 - 读数：C、F0 的登记比较（C − F0、F0 − F）在 seed 1 上同样做，并报两个 seed 的均值；早上没跑完则在相同步数的 snapshot 上比较。HUGSIM 的 `VT_LAST` 门不变（`VT-C-s0`）。
+
+## 补记 7（2026-10-11 01:05 CST，R-builder；臂 R 与续跑的任何训练步、任何读数之前；用户 00:40 CST 批准）
+
+接第 145、160、204、244、245 条。今晚的 A / B 都是从 `SH30-F-s{0,1}` 以常数 lr 续训：可训练支路是在一个已经训好的 policy 之上训的，表征阶段排在 policy 阶段之后，两种剂量混在一起。约定的原则：最终权重来自**一次**联合的 policy 训练；开发分成「改表征」（慢，带自己的 head，用 probe 读）与「改 loss 集」（快，总是联合训练，10 k 步，2 seed）；serving 规则不进配方。臂 R（reverse order）把次序倒过来测一次。
+
+### 问题
+
+支路**冻结**时，用完整 SH30 配方**从头**训练、经 memory 通道读支路 token 的 policy，是否好于同样从头训练、memory 通道里是冻结的原版 Cinque t0 token 的 policy？
+
+### 臂（各 2 seed；tag 均为新 tag）
+
+| 臂 | tag | memory 通道里的 token（bank） | 说明 |
+|:--|:--|:--|:--|
+| R-0 | `VTR-0-s{0,1}` | `vtr_0`：冻结 Cinque 的 t0 token（A0 的输入，W 帧缓存 `front.npy[:, -1]`） | 对照 |
+| R-A | `VTR-A-s{0,1}` | `vtr_A-s<seed>`：`VT-A-s<seed>` 末尾 checkpoint 的支路 token | |
+| R-B | `VTR-B-s{0,1}` | `vtr_B-s<seed>`：`VT-B-s<seed>` 末尾 checkpoint 的支路 token | |
+| 参照 | `SH30-F-s{0,1}` | 无通道 | 已有 |
+
+比较：R-A − R-0、R-B − R-0、R-B − R-A，各自另报对 SH30；R-0 − SH30 是「加通道后从头训」本身的效应，作参照行，不下判词。
+
+### 闸门（在看到它的任何读数之前定下）
+
+只有当臂 A 的 memory 通道在其末尾 checkpoint 被读时才启动 R：登记的测试时屏蔽（navtest，`VT-A-s<seed>` 减 `VT-A-s<seed>:noside`）在 seed 均值上掉 ≥ 0.2 EPDMS（正文判定线里的数）。不过则 R 整体不跑（含 R-0），并在结果里写明：没人读的通道带不了训练过的支路（第 245 条）。闸门只看 A；R-B 随 A 的闸门放行。除了这个闸门与下面登记的续跑选臂，今晚 A / B 的读数不决定任何事。
+
+### 续跑（fallback；闸门不过时，或卡将空出时）
+
+用户的常设要求：六张卡不空，后续步数给趋势最好的臂，不重启在跑的臂。A / B 里较好者从其末尾 checkpoint 再训 30 000 步，用**新 tag** `VT-<X>2-s{0,1}`（链脚本按设计拒绝在旧 tag 上改步数，不绕过它）。选臂量：> 45° off-road（DAC 失败）率对 A0 的差，取该臂最后三个 snapshot（k40、k45、末尾）与两个 seed 的均值，低者；相等取 B。
+
+### 读数（全部经 `jevdrive.bench` 与 `vt_read.py`，不写新 runner）
+
+navtest 全分解（EPDMS 全部子项 × 四个转角桶）；> 45° 与 > 20° 的 off-road / 切内侧 / 转不过去率（第 240 条定义）；NC 类别（第 196 条）；弧长比；navhard two-stage（W 帧，补记 1 第 2 点；`SH30-F-s{0,1}` 的 W 行已有）；通道的测试时屏蔽（`:noside`）与跨 log 打乱（`:mshuf`）；按失败类别的翻转表（对照失败而本臂通过的 token 数，及其反向；每 seed 与两 seed 之和）。续跑的 snapshot（每 5 k）与末尾读数同第一波的 A / B，在读数里记为同一臂的第 55 k … 80 k 步。
+
+### 判定线（沿用正文与补记 2）
+
+主量 > 20° off-road 率，X − 对照：
+
+- **在收**：差 ≤ −0.5 pp 且 CI 上界 < 0。正文的趋势条件（后三个 snapshot 低于前三个）对 R 不适用：每臂只有一个 checkpoint。
+- **平**：|差| < 0.3 pp、CI 含 0，且 R 臂自己的通道被读（`VTR-X` 减 `VTR-X:noside` ≥ 0.2 EPDMS），且 bank 来源 checkpoint 的视觉位移 ≥ 1%。
+- **没测到**：来源位移 < 0.5%，或 R 臂的通道没被读（屏蔽掉分 < 0.2 且来源 checkpoint 的 Stage-0 probe 不动）。
+- 其余「未定」。护栏（全榜 EPDMS 与 < 5° 桶的 CI 下界 ≥ −0.3）、两个 seed 方向相反降一档、补记 2 的不退步规则（没有任何子项、桶、板的 CI 整体在 0 以下才是候选；这里的板 = navhard combined / stage 1 / stage 2）照旧。
+- 4 s heading 误差不作闸门（第 245 条）。
+- 续跑臂沿用正文对 A / B 的线，snapshot 序列接在原臂之后。
+
+### 实现时定下的事
+
+1. **「从头」= 从 shipped Cinque 权重出发**（SH30 的起点），trainer 是 `pp_train.py` 原样，配置逐项取自 `SH30-F-s<seed>/ckpt-final.pt` 里存的 cfg：arm P2、10 000 步 × batch 128、policy lr 3e-5 / adapter 3e-4、wd 0.01、warmup 300、cosine、25% 锚行、λ_c 3、λ_d 30、hinge 30 / 0.5、W 帧、split `navsim/op-parity-full`、12 个 shard、行流 `[seed, 0]`（与 SH30 同一批行）。唯一的差别是 `--mem vtr_*`（arm 记作 `P2+vtr_*`）：`ParityAdapter(use_side, n_cam = n_t = 1)`，训练时 25% 的行屏蔽 memory（`MEM_DROP`，独立流），锚行 bias 为 0。三个 R 臂在同一 seed 下模型结构与初始化抽样相同，只有 bank 不同；adapter 多了 memory 输入，初始化抽样与 SH30 不同。
+2. **R 里支路没有自己的 head，也没有未来特征损失**：支路冻结，token 是预先算好的常量，R-0 / R-A / R-B 的 loss 集与 SH30 完全相同。第 204 条的 head 要求针对在训的 tokenizer，A / B 的支路在第一波里已带 head 训过。
+3. **支路与 seed 成对**：`VTR-X-s<seed>` 读 `VT-X-s<seed>` 的支路，seed 间的差异含支路的差异（按任务书）。
+4. **bank**（`scripts/vt_r.py bank`）：来源 checkpoint 的支路 encoder 过 W 帧像素缓存的 t0 图像对，得 (N, 32, 512) fp16，navtrain 12 个 shard（103 288 行）、`lb_navtest`（12 146）、`lb_navhard`（5 912），存 `runs/op_parity/mem/<kind>/<data>.npy`，行序 = `tab.npz`，`bank.json` 记来源 tag 与其 step。每个 bank 3.98 GB，5 个共 20 GB（盘余约 810 GB，线 50 GB）。不用 `vt.py tokens`：它默认只出 navtest 与 3 个 shard，临时文件名不带 pid，而 Stage-0 probe 的任务会往同一目录写同名文件。
+5. **末尾 checkpoint 缺失时**：bank 任务等它（至多 120 min；出现 `STOP` 或该链的 `ERROR` 即止），之后取最近的 snapshot，step 记在 `bank.json`。闸门要求 A 的末尾读数，所以这一条实际只可能发生在 B 上。
+6. **`--compile`**（pp_train 的速度开关，不在 cfg 里）：SH30 当时是 eager。编译后的 step 与 eager 只在 fp16 舍入量级上不同（约 2 倍速）；三个 R 臂一致，对 SH30 的参照行含这一差别。若分级启动里编译路径失败则改 eager，并补记。
+7. **闸门的实现**（`scripts/vt_r.py gate`，一个 pool CPU 任务）：量 = 两个 seed 各自的 navtest EPDMS（× 100）差的均值，点估计 ≥ 0.2 即过；按 log 的 CI 只记录不参与。它只等别的链已经排好的读数，自己不提交 bench；读数 10 h 内没到齐则不放行。判词写进 `$DATA_DIR/runs/vis_train/chain/R/gate.json`，并写出 pool 任务所等的文件 `GATE_PASS` / `GATE_FAIL`；不过时取消全部 R 任务。
+8. **续跑的选臂**在同一个任务里算：> 45° 桶 = `jevdrive.bench.tables.navtest_strata`，A0 取最近的登记 snapshot（k40 → k40，k45 → k40，末尾 → 末尾，与 `vt_read.py` 的并列取早一致），6 个差（3 个 snapshot × 2 seed）取均值后四舍五入到 0.01 pp 再比较，相等取 B。写出 `FALLBACK_A` / `FALLBACK_B` 并取消另一臂的续跑任务。**放行时机**：选臂读数到齐即放，不等也不看 R 的闸门结果；续跑的 pool 优先级（4）低于 R（8–9），闸门过时 R 先占卡、续跑用剩下的，闸门不过时续跑立即开始。
+9. **续跑的实现**（`vt.py train --init VT-X-s<seed> --tag VT-X2-s<seed>`）：载入末尾 checkpoint 的 policy、adapter、支路、支路 head 与 predictor；optimizer 状态已不存在（`resume.pt` 在训练结束时删除），AdamW 从零开始并重新 warmup 300 步，之后同样是常数 lr；行流与 memory 屏蔽流接着原 run 的第 50 000 次抽样（不重放前 30 k 步的 batch）；权重位移仍相对原 run 的起点（SH30 / 原版 Cinque）；停止规则的起点 = 续跑第 0 步屏蔽 memory 的 dev ADE；snapshot `VT-X2-s<seed>-k05 … k25`，末尾 `VT-X2-s<seed>`。对照 A0 / F 没有续跑：读数取其最近的 snapshot（A0 k50、F k60），另报对该臂自己的 k50。`vt.py` 的这处改动只在 `--init` 指向 VT 格式 checkpoint 时生效，`Cfg` 不加字段，在跑的臂的行为与 `claim` 标记不变。
+10. **读数的路由**：`VTR-*` 是普通的 pp_train memory 臂，走 bench 的 parity 路径（bank 在 `runs/op_parity/mem/`）；`:noside` 已有，`:mshuf` 是新加的（parity memory 臂：每个 token 读另一 log 的某个 token 的 bank 行，置换与 `vt.py` 的 `derange`、rng 0 相同）。`VT-A2 / B2` 归入 bench 的 `vt` family。
+11. **不做**：HUGSIM 与 WOD（memory 臂没有 serving 路径，补记 2 第 3 点）；R 的 Stage-0 probe（bank 就是来源 checkpoint 的 token，`fin-AB` probe 已排）。
+12. **分级启动**（本补记 push 之后才提交）：先建 `vtr_0`，R-0 seed 0 在全量数据上跑 300 步（tag `smoke-vtr-0-s0`，warmup 100），再跑续跑路径 100 步（`smoke-vt-A2-s0`，自 `VT-A-s0-k15`）。检查清单：loss 全程有限；dev ADE 有限且在 100 / 200 / 300 步下降；memory 开 / 屏蔽 / 换成别的 log 三种 dev ADE 互不相同；bench 的 parity-plans 在 navtest 上对三种选项给出互不相同的 plan；续跑第 0 步的 dev ADE 与位移复现 `VT-A-s0` 的 `evals.json` 第 15 000 步（ADE 差 < 0.005 m，位移相对差 < 1%）；吞吐与显存用来定正式任务的预订。不过则不排正式任务。
+13. **资源**：R 的训练是缓存 token 的轻任务（SH30 当时 4.2 it/s、23.7 GB、40 min / 个），不占每卡的训练名额，预订 26 GB / 4 核 / 48 GB；bank 任务 16 GB；续跑与 A / B 相同（32 GB、8 核、`--train`）。全部经 pool，owner `vis_train-R`，一条自推进的链 `scripts/vt_r_chain.sh`。
