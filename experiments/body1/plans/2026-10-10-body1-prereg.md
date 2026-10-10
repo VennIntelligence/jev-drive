@@ -613,3 +613,76 @@ L3 slow 277 against 238.7 (base 217) not met; reading B (933 pairs) L1a 29 again
 150.7: same verdicts. > 45 deg bucket (61 scenes) 0.8136 against 0.8343. The stricter reading is not met on L2 and L3: the arm is not promoted, no
 PAI read was run, the servable checkpoint stays P2H10-F. A second attempt made after one pilot read of hold logs; a regression check.
 Details: [results/loss_closed_loop.md](../results/loss_closed_loop.md). Note (b) item 5 (car-park / generic-drivable check of the new offroad zeros) was not made per scene.
+
+## Amendment 6: DRAFT, NOT IN FORCE (2026-10-10; written by the diagnosis agent after decision 229; nothing below may be trained or read until the main session accepts it and removes this heading's qualifier)
+
+A third attempt at the loss arm 4.3, shaped by [results/progress_diagnosis.md](../results/progress_diagnosis.md). It is written after the closed-loop read
+of Amendment 5 and after a post hoc diagnosis on the same development scenes, and has to be reported as such everywhere.
+
+1. **What the diagnosis found (the reason for one more arm).** The removed collisions and the lost progress are different scenes (95.6 % of the progress
+   loss outside the 11 collision scenes; no removed collision paid with progress in its own scene). The loss is a shorter speed profile: own-plan 4 s arc
+   0.9905 x base on navtest, 0.990 / 0.978 / 0.939 on `ot1` / `yr1` / `bd4` hold states, served plans 0.976 in the loop and 0.944 behind a lead. The
+   backward pull comes from the agent hinge (96 % of its positive imitation rows, 84 to 88 % of its positive hinge-only rows are pulled backwards; 32 to 76 %
+   are zero at 0.75 of the arc), and on hinge-only rows no imitation target opposes it. The road hinges put 97 to 99.5 % of their gradient across the path.
+2. **The one change: the new hinge terms see the plan's shape, not its timing.** For term A (imitation rows and hinge-only rows) and for the road hinge of
+   the hinge-only rows, the poses given to the hinge are `p~_k = sg(p_k) + n_k n_k^T (p_k - sg(p_k))` for x, y, with `n_k` the unit normal of the plan's
+   own heading at pose k under stop-gradient, and the yaw passed unchanged: the hinge values are bit-identical to `P2H10B`'s, the gradient with respect to
+   every pose loses its along-heading component, so a hinge can move the path sideways and turn it but cannot pull a pose back along the path. The speed
+   profile stays under the imitation, anchor and distillation terms alone, as in P2H10. Everything else as `P2H10B-F` (rows 4 / 4 / 5, w = 3, lambda 10,
+   margins, item C's raster as trained, `--ho-excl`, P2H10's own on-log drivable hinge untouched). Tags `P2H10S-P-s0`, `P2H10S-F-s{0,1}`. Code:
+   one switch in `lib/loss43.py` (about 10 lines), switch-off identity against `P2H10B` on 60 steps (losses and weights bit for bit) and, since the values
+   are unchanged, the first step's loss scalars with the switch on equal `P2H10B`'s.
+3. **Other candidates, ranked by the evidence (not run; the first is the arm).**
+   - (1) shape-only gradient, above: removes exactly the component the diagnosis measures, no new hyper-parameter, keeps the side-clearance and
+     edge lessons that removed `39cbed62`, `a7fa8bcc`, `a04628cd`, `fcb45b2a`.
+   - (2) agent hinge only for objects outside the lane ahead (no hinge on a followed lead): aimed at the group with half of the loss (lead scenes
+     -0.030, 46 to 49 %), but needs a lane-membership rule in the labels and leaves the 1 to 6 % shortening of off-track states on other objects untouched.
+     A fallback if (1) meets the arc line and loses the collision gain.
+   - (3) an arc-length anchor on hinge-only rows (the plan's cumulative arc tied to P2H10-F's on the same tokens): addresses "no opposing term" directly,
+     but brings a weight to choose and a teacher into the loss. Ranked below (1) for that reason only.
+   - (4) hinge only above a speed: not supported; the shortening is present from 1 m/s to over 10 m/s (hold 0.970 to 0.985), launch states are the
+     least affected open loop (navtest 0.999 / 1.003).
+   - (5) dropping C or restoring car parks in its raster: rejected by the evidence; the same rows on the NAVSIM raster give the same gradient
+     (positives 29.5 % against 30.8 % on `bd4`), and on the 6 new offroad pairs the two rasters agree along both runs.
+   - Not addressed by any of these: the turn trade (new corridor zeros on 48 to 70 deg turns against removed inside cuts). (1) puts all hinge pressure into
+     shape and may enlarge it; line L1 and the bucket read below are where it would show.
+4. **What is new against settled reads.** Decision 221 changed the inputs or the imitation target to remove the speed prior and paid on navtest; here no
+   input and no target changes, the speed profile is left to P2H10's own terms and only the new hinges are kept off it. Decision 226 added a lead cap at
+   serving; this removes the training-side equivalent of that cap from the lesson. Decision 229 is the same recipe with the along-path gradient included;
+   its failure (L2, L3) is the motivation and its checkpoints are the comparison. Decisions 224 / 225 (stop, lateral re-plan at serving) are not touched.
+5. **Pilot gate (2 shards s2 + s3, 3 000 steps, seed 0; one read of hold logs; against the switch-off pilot `P2H10-P-s0`).** Amendment 5 item 4 unchanged:
+   own-plan agent-contact rate down >= 30 % relative, boundary rate (NAVSIM raster, margin < -0.20 m) down >= 25 %, both intervals excluding 0; dev ADE
+   <= switch-off + 0.01 m; continuation slope <= switch-off + 0.05. **New, the line that would have caught decision 229:** 4 s arc of the own plan
+   (`prog_ol.py`), arm / reference on the same states, >= 0.995 pooled over the hold states of the two shards and >= 0.995 on their open states
+   (`P2H10B-Pw3-s0` is read alongside as the positive control and is expected to fail it). Hold logs will then have been read at pilot scale by three arms of
+   this lane; that is stated with every later hold-log number.
+6. **G3 at full scale (2 seeds, against P2H10-F of the same seed).** (a) to (d) of Amendment 4 item 5 unchanged. **(e) arc line, new:** 4 s arc ratio of the
+   own plan, both seeds: navtest on-log pooled >= 0.995 with the log-clustered lower bound >= 0.990; navtest open states >= 0.995; navtest lead states >= 0.990;
+   hold states pooled >= 0.990 and each family (`log`, `ot1`, `yr1`, `bd4`) >= 0.980. Reference values of `P2H10B-F`: 0.9905 / 0.993 / 0.982 / 0.9835 /
+   `bd4` 0.939 (fails four of the five); seed floor of the base 0.999 to 1.001. The groups are those of `prog_ol.py`, frozen at this commit.
+7. **Closed loop: what it is and how strict it can still be.** All 700 x 2 public scenes of this track have now been read with a BODY1 checkpoint and were
+   used by the diagnosis that shaped this arm: there is no never-switched part left, reading B does not exist any more, and every further nuPlan read is a
+   regression check on development scenes. Kept as strict as it can be: the lines L1a, L1b, L2, L3 of Amendment 4 item 6 unchanged, on all 1 400 pairs and
+   on each seed for L1; both seeds; the staged order (pilot8, chunk1 x s0 checklist, then five chunks); **one read only** (no fourth attempt of 4.3
+   whatever the outcome; the next step after a miss is stage 2 or the end of the arm); the > 45 deg bucket and the lead group reported; additionally
+   reported, not lines: served-plan arc ratio and the "score 1 -> slow" count against Amendment 5's 0.976 and 78. **The PAI track (60 public scenes x 2
+   seeds, `P2H10-F` 0.173 / 0.257) is the only board not yet touched by this lane's checkpoints**: it is read only if the nuPlan lines pass, once, with the
+   line "mean difference >= 0, at-fault collision zeros not up", and it is the only number of this arm that is not a regression check.
+8. **Kill criteria.** Pilot: contact-rate lines missed with the arc line met = the offline clearance of Amendment 5 was bought with timing, the arm ends and
+   that is the result (clearance and progress are then one axis on this recipe, decision 221's picture); arc line missed = the shortening does not come
+   through the hinge gradient, the arm ends. G3 (a), (d) or (e) missed at full scale; (c) missed; the one-chunk checklist; any of L1a / L1b / L2 / L3
+   on the full read. Each ends 4.3 for good; candidates (2) and (3) are not opened after a closed-loop miss.
+9. **Cost, before running.**
+
+   | Step | Card-hours | Wall | Disk |
+   |---|--:|--:|--:|
+   | code + identity gate | 0.05 | 1 h of work | 0 |
+   | pilot + its read (G3 pilot, slope probe, `prog_ol.py`) | 0.25 | 20 min | 0.1 GB |
+   | full, 2 seeds | 0.8 | 30 min | 0.2 GB |
+   | G3 (a) to (e), bench, turn oracle | 1.3 | 45 min | 0.1 GB |
+   | closed loop: pilot8, chunk1 x s0, five chunks | 1.7 | 1.2 h | 1.0 GB |
+   | PAI, only on a pass (60 scenes x 2 seeds) | about 1 | 1 h | 0.5 GB |
+   | total | about 4.1 (5.1 with PAI) | about 4.5 h | about 2 GB |
+
+   Optional and separate (attribution only, no closed loop, do not gate this arm): the two informative drop-one runs of Amendment 4 item 11, "B + C
+   without A" and "A on on-log rows only", one seed each, read with G3 (a) and `prog_ol.py`: 0.9 card-h, 1 h wall, 0.2 GB together.

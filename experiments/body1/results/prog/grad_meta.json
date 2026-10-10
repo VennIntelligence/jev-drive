@@ -1,0 +1,21 @@
+{
+ "tags": [
+  "P2H10-F-s0",
+  "P2H10B-F-s0",
+  "P2H10-F-s1",
+  "P2H10B-F-s1"
+ ],
+ "shards": [
+  2,
+  3
+ ],
+ "n_imit_per_batch": 86.25,
+ "ho_w": 3.0,
+ "fallback_rows": 1101,
+ "rows": {
+  "imit": 8000,
+  "ot1": 3000,
+  "yr1": 3000,
+  "bd4": 3000
+ }
+}
