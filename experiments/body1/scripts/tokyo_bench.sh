@@ -5,7 +5,8 @@
 #   tmux new-window -d -t jev -n tb "bash experiments/body1/scripts/tokyo_bench.sh bank 0 --label-bank --steps 300"
 # Env: DATA_DIR (/data), PY ($DATA_DIR/envs/op-train/bin/python), OUT ($DATA_DIR/runs/tokyo_dual3090/train), DATA (the --data list; default
 #   navtrain_full.s2of12 twelve times: one pulled shard repeated to the row count of the full run, 281k Store rows, so the label and
-#   teacher tensors on the card have their full-run size), RECIPE (the P2H10S flags).
+#   teacher tensors on the card have their full-run size), RECIPE (the P2H10S flags), TAG (checkpoint tag, default TB-<name>; a kept
+#   run: TAG=P2H10S-F-T3090-s0 DATA="$(printf 'navtrain_full.s%sof12 ' {0..11})" ... <name> <card> --seed 0 --steps 10000 --label-bank --compile).
 # Writes $OUT/<name>/{STATUS, DONE | ERROR, log.txt, usage.tsv (t, card MiB, card util %, RSS MiB, page cache MiB), bench.json}.
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
@@ -16,7 +17,7 @@ RECIPE=${RECIPE:---ho ot1:4,yr1:4,bd4:5 --ho-w 3 --ho-excl navsim/body1-val-logs
 mkdir -p "$O"; rm -f "$O"/{DONE,ERROR}; st() { echo "$(date '+%F %T') $*" | tee "$O/STATUS"; }
 st "running on card $G"
 # shellcheck disable=SC2086
-CUDA_VISIBLE_DEVICES=$G "$PY" experiments/body1/scripts/bd4_train.py train --tag "TB-$N" --data $DATA $RECIPE "$@" > "$O/log.txt" 2>&1 & pid=$!
+CUDA_VISIBLE_DEVICES=$G "$PY" experiments/body1/scripts/bd4_train.py train --tag "${TAG:-TB-$N}" --data $DATA $RECIPE "$@" > "$O/log.txt" 2>&1 & pid=$!
 : > "$O/usage.tsv"
 while kill -0 $pid 2>/dev/null; do
   echo "$(date +%s) $(nvidia-smi -i "$G" --query-gpu=memory.used,utilization.gpu --format=csv,noheader,nounits | tr -d ,) $(awk '/VmRSS/ {r = int($2 / 1024)} END {print r + 0}' /proc/$pid/status 2>/dev/null || echo 0) $(awk '/^Cached:/ {print int($2 / 1024)}' /proc/meminfo)" >> "$O/usage.tsv"
