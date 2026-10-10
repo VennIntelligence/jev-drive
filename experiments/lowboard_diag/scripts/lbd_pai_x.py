@@ -90,7 +90,7 @@ def maps(run: str, scenes: list, logs: dict, radius: float) -> dict:
         edges = [np.asarray(e.polyline.points[:, :3], np.float32) for e in vm.get_road_edges_within(c, radius)]
         out[s] = dict(lanes=lanes, edges=edges)
         ds._map = None
-        loader._provider._cache.pop(s, None)
+        getattr(loader._provider, "_cache", {}).pop(s, None)               # the nuPlan provider caches scenes; the PAI one has no cache
     return out
 
 
