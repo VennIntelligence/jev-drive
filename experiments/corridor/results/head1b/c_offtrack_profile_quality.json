@@ -1,0 +1,138 @@
+{
+ "note": "EXPLORATORY (HEAD1b: second attempt after the missed registered gate G3, user-authorised; not a registered read)",
+ "checkpoints": {
+  "0": {
+   "ckpt": [
+    "/root/autodl-tmp/ujs/runs/corridor/head1/train-L-f0-p1000-s0-rt24/20261010-211244/ckpt.pt",
+    "/root/autodl-tmp/ujs/runs/corridor/head1/train-L-f0-p1000-s1-rt24/20261010-212636/ckpt.pt"
+   ],
+   "max_abs_diff_rad": 7.450580596923828e-09,
+   "navtest_max_abs_diff_rad": 0.0
+  },
+  "1": {
+   "ckpt": [
+    "/root/autodl-tmp/ujs/runs/corridor/head1/train-L-f1-p1000-s0-rt24/20261010-212636/ckpt.pt",
+    "/root/autodl-tmp/ujs/runs/corridor/head1/train-L-f1-p1000-s1-rt24/20261010-212656/ckpt.pt"
+   ],
+   "max_abs_diff_rad": 3.725290298461914e-09
+  },
+  "2": {
+   "ckpt": [
+    "/root/autodl-tmp/ujs/runs/corridor/head1/train-L-f2-p1000-s0-rt24/20261010-212635/ckpt.pt",
+    "/root/autodl-tmp/ujs/runs/corridor/head1/train-L-f2-p1000-s1-rt24/20261010-212717/ckpt.pt"
+   ],
+   "max_abs_diff_rad": 0.0
+  },
+  "3": {
+   "ckpt": [
+    "/root/autodl-tmp/ujs/runs/corridor/head1/train-L-f3-p1000-s0-rt24/20261010-212636/ckpt.pt",
+    "/root/autodl-tmp/ujs/runs/corridor/head1/train-L-f3-p1000-s1-rt24/20261010-212717/ckpt.pt"
+   ],
+   "max_abs_diff_rad": 0.0
+  },
+  "4": {
+   "ckpt": [
+    "/root/autodl-tmp/ujs/runs/corridor/head1/train-L-f4-p1000-s0-rt24/20261010-212656/ckpt.pt",
+    "/root/autodl-tmp/ujs/runs/corridor/head1/train-L-f4-p1000-s1-rt24/20261010-212717/ckpt.pt"
+   ],
+   "max_abs_diff_rad": 0.0
+  }
+ },
+ "on_log_repredict_max_abs_diff_rad": {
+  "navtrain_full.s2of12": 0.015625,
+  "navtrain_full.s3of12": 0.015625
+ },
+ "families": {
+  "ot1": {
+   "rows": 11612,
+   "rows_with_logged_future": 11612,
+   "abs_dpsi_deg_mean": 0.9930182483861094,
+   "abs_dy_m_mean": 0.25172872733001866,
+   "heading_err_at_logged_4s_arc_rms_deg": {
+    "all": {
+     "n": 11612,
+     "own_view": 3.67317802338955,
+     "on_log_twin": 3.5030471066810627
+    },
+    "> 20 deg": {
+     "n": 3548,
+     "own_view": 5.598955744341712,
+     "on_log_twin": 5.391395867798051
+    },
+    "> 45 deg": {
+     "n": 1275,
+     "own_view": 7.001076677863662,
+     "on_log_twin": 6.712834411576945
+    }
+   },
+   "slope_of_own_view_minus_on_log_profile_on_minus_dpsi": {
+    "at 0 m": 0.00033125231614048665,
+    "at 10 m": 0.18327495465367916,
+    "at the logged 4 s arc": 0.6540987775032928
+   },
+   "reading": "slope 1 = the head re-expresses the road ahead in the displaced frame (what the logged path does), 0 = it ignores the displacement"
+  },
+  "yr1": {
+   "rows": 11612,
+   "rows_with_logged_future": 11612,
+   "abs_dpsi_deg_mean": 1.1427378879860124,
+   "abs_dy_m_mean": 0.3586389081282911,
+   "heading_err_at_logged_4s_arc_rms_deg": {
+    "all": {
+     "n": 11612,
+     "own_view": 3.967627653957701,
+     "on_log_twin": 3.5030471066810627
+    },
+    "> 20 deg": {
+     "n": 3548,
+     "own_view": 5.71008489603718,
+     "on_log_twin": 5.391395867798051
+    },
+    "> 45 deg": {
+     "n": 1275,
+     "own_view": 6.772209768057391,
+     "on_log_twin": 6.712834411576945
+    }
+   },
+   "slope_of_own_view_minus_on_log_profile_on_minus_dpsi": {
+    "at 0 m": -0.004924444746073961,
+    "at 10 m": 0.037113307622778285,
+    "at the logged 4 s arc": 0.5289721006988103
+   },
+   "reading": "slope 1 = the head re-expresses the road ahead in the displaced frame (what the logged path does), 0 = it ignores the displacement"
+  },
+  "bd4": {
+   "rows": 6917,
+   "rows_with_logged_future": 6917,
+   "abs_dpsi_deg_mean": 4.977748125887916,
+   "abs_dy_m_mean": 0.25362177294610516,
+   "heading_err_at_logged_4s_arc_rms_deg": {
+    "all": {
+     "n": 6917,
+     "own_view": 8.302126834024962,
+     "on_log_twin": 5.472427048866709
+    },
+    "> 20 deg": {
+     "n": 2766,
+     "own_view": 10.51137441730233,
+     "on_log_twin": 7.935829721320156
+    },
+    "> 45 deg": {
+     "n": 1871,
+     "own_view": 11.363449554440825,
+     "on_log_twin": 8.627879350313684
+    }
+   },
+   "slope_of_own_view_minus_on_log_profile_on_minus_dpsi": {
+    "at 0 m": -0.0017858261472287714,
+    "at 10 m": 0.09655533012565372,
+    "at the logged 4 s arc": 0.34209332588611524
+   },
+   "reading": "slope 1 = the head re-expresses the road ahead in the displaced frame (what the logged path does), 0 = it ignores the displacement"
+  }
+ },
+ "on_log_repredict_mean_abs_diff_rad": {
+  "navtrain_full.s2of12": 3.790752481561074e-05,
+  "navtrain_full.s3of12": 3.616313317812226e-05
+ }
+}

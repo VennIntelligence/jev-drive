@@ -1,0 +1,42 @@
+{
+ "tag": "GH0-F-s0",
+ "side_branch_keys_at_init": [
+  "cam_emb",
+  "t_emb",
+  "s_emb",
+  "side_in.0.weight",
+  "side_in.0.bias",
+  "side_in.1.weight",
+  "side_in.1.bias"
+ ],
+ "sets": {
+  "dev": {
+   "rows": 408,
+   "max_abs_output_diff_masked": 0.15625,
+   "max_plan_xy_diff_masked_m": 0.03181765228509903,
+   "max_plan_xy_diff_memory_on_m": 9.725887298583984,
+   "mean_plan_xy_diff_masked_m": 0.002483778866007924,
+   "adapter_bias_max_abs_diff_masked": 1.430511474609375e-06,
+   "adapter_bias_max_abs": 4.968912124633789,
+   "reference_max_plan_xy_diff_m": 0.04477016255259514,
+   "reference_mean_plan_xy_diff_m": 0.002777389483526349
+  },
+  "navtest": {
+   "rows": 2025,
+   "max_abs_output_diff_masked": 0.3125,
+   "max_plan_xy_diff_masked_m": 0.05518341064453125,
+   "max_plan_xy_diff_memory_on_m": 9.877645492553711,
+   "mean_plan_xy_diff_masked_m": 0.0022720384877175093,
+   "adapter_bias_max_abs_diff_masked": 1.9073486328125e-06,
+   "adapter_bias_max_abs": 4.981206893920898,
+   "reference_max_plan_xy_diff_m": 0.05518341436982155,
+   "reference_mean_plan_xy_diff_m": 0.0026483286637812853
+  }
+ },
+ "bit_identical": false,
+ "line_1mm_met": false,
+ "bias_identical_to_fp32_rounding": true,
+ "plan_at_fp16_floor": true,
+ "identical": true,
+ "mask_matters": true
+}

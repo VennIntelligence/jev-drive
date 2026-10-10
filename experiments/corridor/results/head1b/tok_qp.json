@@ -1,0 +1,14 @@
+{
+ "kind": "qp",
+ "steps": 3000,
+ "fit_rows": 76084,
+ "train_s": 37.83220911026001,
+ "gpu_peak_gb": 1.392578125,
+ "head_dev_ade": 1.1483345031738281,
+ "head_dev_ade_mismatched": 2.1959311962127686,
+ "head_fit_ade": 1.19167959690094,
+ "prof_dirs": [
+  "/root/autodl-tmp/ujs/runs/corridor/head1/final/prof",
+  "/root/autodl-tmp/ujs/runs/corridor/head1b/prof_ot"
+ ]
+}
