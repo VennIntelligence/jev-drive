@@ -1,0 +1,15 @@
+{
+ "what": "lib/route.py on 4 000 synthetic rows (logged arcs, speed 0-12 m/s, curvature +-0.08 1/m; half of the rows with off-track offsets +-0.5 m / +-8 deg); float64",
+ "plan_on_logged_arc_speed_x0.6_max_d_m": 0.33975477973014373,
+ "plan_on_logged_arc_speed_x1.0_max_d_m": 0.0,
+ "plan_on_logged_arc_speed_x1.4_max_d_m": 0.3397547797301456,
+ "note_on_path": "0.34 m is the sagitta of a 0.5 s chord of the logged polyline on the tightest fastest arc; far inside both bands",
+ "straight_log_plan_shifted_-3.0_m_max_abs_err": 0.00010359344572785645,
+ "straight_log_plan_shifted_1.0_m_max_abs_err": 0.00010358884172734228,
+ "straight_log_plan_shifted_2.5_m_max_abs_err": 0.00010358711522773234,
+ "torch_minus_numpy_max_abs_m": 5.469315937645103e-09,
+ "band_1.5": {"share_poses_positive": 0.528, "grad_norm_on_positive_min": 0.9999999999997777, "grad_norm_on_positive_max": 1.0, "grad_norm_inside_band_max": 0.0,
+  "along_heading_switch_off_max": 0.9999998639282073, "along_heading_shape_only_max": 1.1102230246251565e-16, "cross_heading_on_minus_off_max": 2.220446049250313e-16},
+ "band_2.5": {"share_poses_positive": 0.328, "grad_norm_on_positive_min": 0.99999999999992, "grad_norm_on_positive_max": 1.0, "grad_norm_inside_band_max": 0.0,
+  "along_heading_switch_off_max": 0.9999998639282073, "along_heading_shape_only_max": 1.1102230246251565e-16, "cross_heading_on_minus_off_max": 2.220446049250313e-16}
+}

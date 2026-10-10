@@ -951,3 +951,16 @@ number of it has been read. Tags `P2H10R-*`.
    servable, named as the fourth variant, read on development scenes, the swap is the user's decision; (A3) / (A4) met with (A2) missed = the route and the
    clearance trade against each other in the closed loop as well; (A3) / (A4) missed = the open-loop corridor line does not predict the closed-loop corridor
    zeros, and the wide turns are a compounding effect the 4 s tube does not hold.
+
+**Status of Amendment 7 after the code checks and the selection (2026-10-10 12:25 box time, added after the validation-part reads and before any
+hold-log or navtest read of a `P2H10R` checkpoint; nothing above was changed).** Identity: the edited code with `--shape` and the route hinge off
+against the code before the edit, 60 steps of the `P2H10S` recipe on shard s2: 42 scalars and every weight bit for bit
+(`results/route/ident_a7_shape.json`); with every switch off against the unedited `pp_train.py`: 18 scalars and every weight bit for bit
+(`ident_a7_pp.json`). `lib/route.py` on synthetic rows: torch against numpy 5e-9 m, gradient of the hinge a unit vector outside the band and 0 inside,
+along-heading component 1e-16 after `shape_only` (`route_check.json`). **Selection (item 2): B = 2.5 m.** `P2H10R-Pb15-s0` (1.5 m) is not eligible: dev ADE
+0.6051 m against the limit 0.6013 m (switch-off 0.5913 m); its other lines hold (agent -31.2 %, boundary -37.5 % on the validation part, route hinge
+non-zero on 3.2 % of imitation rows and 9.7 % of hinge-only rows, W2 49 of 490 turn rows). `P2H10R-Pb25-s0` (2.5 m) is eligible: dev ADE 0.5949 m,
+`dev_drift_off` 0.052, agent -32.6 %, boundary -36.3 %, route hinge non-zero on 0.68 % / 3.4 % of the rows, W2 55 (switch-off pilot 66, `P2H10S-P-s0`
+65). Reported with it: on the validation part's turn rows the mean lateral at 4 s is +0.44 m for the 2.5 m pilot, +0.37 m for the 1.5 m pilot,
++0.44 m for `P2H10S-P-s0` and +0.26 m for the switch-off pilot, so the selected band trims the tail and leaves the mean shift where `P2H10S` has it.
+Table: `results/route/select.md`. Next: the pilot gate of item 3 for `P2H10R-Pb25-s0`, one read of hold logs and navtest.

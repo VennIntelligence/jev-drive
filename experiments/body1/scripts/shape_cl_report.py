@@ -121,6 +121,9 @@ def main(a):
     man = {}
     for m in [*a.base_man, a.arm_man, *([a.loss_man] if a.loss_man else [])]:
         man |= json.loads(Path(m).read_text())
+    global ARM, LOSS
+    ARM = [f"{a.arm_prefix}-s{i}" for i in range(4)]                  # Amendment 7: the same read for another arm (P2H10R-F), an earlier arm next to it
+    LOSS = [f"{a.other_prefix}-s{i}" for i in range(4)]
     loss = [k for k in LOSS if k in man]
     names = BASE + ARM + loss
     C = Ctx(man, names)
@@ -147,9 +150,9 @@ def main(a):
     # --- nulls and reads
     n1, n2 = nulls(C)
     st["null_n1"], st["null_n2"] = n1, n2
-    reads = {"S 2 seeds (s0-1) vs TR1 base s0-1": [(ARM[i], BASE[i]) for i in (0, 1)], "S 4 seeds paired by seed index": [(ARM[i], BASE[i]) for i in range(4)]}
-    if len(loss) == 2:
-        reads["B (loss arm, Amendment 5) 2 seeds, for comparison"] = [(LOSS[i], BASE[i]) for i in (0, 1)]
+    reads = {"arm 2 seeds (s0-1) vs TR1 base s0-1": [(ARM[i], BASE[i]) for i in (0, 1)], "arm 4 seeds paired by seed index": [(ARM[i], BASE[i]) for i in range(4)]}
+    if len(loss) >= 2:
+        reads[f"{a.other_prefix} {len(loss)} seeds, for comparison"] = [(LOSS[i], BASE[i]) for i in range(len(loss))]
     L += ["", "## 2. The four lines (descriptive; no promotion)", "",
           "| read | pairs | L1a zeros arm vs base (collision / offroad / corridor) | L1b | L2 mean difference [95 % CI by log] | L3 slow arm vs 1.1 x base | lines that would read as met |", "|:--|--:|:--|:--|:--|:--|:--|"]
     st["reads"], st["vs_null"] = {}, {}
@@ -184,7 +187,7 @@ def main(a):
         flips.append(dict(scene=C.scenes[j], log=C.logs[j], turn4s_deg=round(float(C.turn[j]), 1), change="removed" if rem[j] else "new" if new[j] else "zero in both",
                           base_zeros=int(nb[j]), arm_zeros=int(na[j]), base_class=mode(BASE, j) if nb[j] else "", arm_class=mode(ARM, j) if na[j] else "",
                           base_mean=round(float(np.mean([C.sc[k][j] for k in BASE])), 3), arm_mean=round(float(np.mean([C.sc[k][j] for k in ARM])), 3),
-                          **{f"{k}": round(float(C.sc[k][j]), 3) for k in BASE + ARM}))
+                          **{f"{k}": round(float(C.sc[k][j]), 3) for k in BASE + ARM + loss}))
     with (out / "flips.csv").open("w", newline="") as fh:
         w = csv.DictWriter(fh, list(flips[0]))
         w.writeheader(), w.writerows(flips)
@@ -211,7 +214,7 @@ def main(a):
     st["groups"] = {}
     L += ["", "## 5. Lead / open split (proximity group of the base plan at the scene's navtest token, decision 230)", "",
           "| group | scenes | base mean progress | arm mean progress | difference per pair [95 % CI by log] | slow base -> arm (sum of 4 pairs) | N1 progress range | N2 progress range | slow per pair N1 range | outside |", "|:--|--:|--:|--:|:--|:--|:--|:--|:--|:--|"]
-    pairs4 = reads["S 4 seeds paired by seed index"]
+    pairs4 = reads["arm 4 seeds paired by seed index"]
     for g in ("lead", "open", "contact", "near obj", "near edge"):
         m = grp == g
         if m.sum() < 5:
@@ -260,5 +263,7 @@ if __name__ == "__main__":
     ap.add_argument("--base-man", nargs="+", required=True)
     ap.add_argument("--arm-man", required=True)
     ap.add_argument("--loss-man", default="")
+    ap.add_argument("--arm-prefix", default="P2H10S-F")
+    ap.add_argument("--other-prefix", default="P2H10B-F", help="an earlier arm shown next to the arm (labels <prefix>-s<k> in --loss-man)")
     ap.add_argument("--out", required=True)
     main(ap.parse_args())
