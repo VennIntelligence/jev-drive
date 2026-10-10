@@ -76,7 +76,7 @@ sub sdrop-replay "$L/replay" --vram 0.5 --cpu 48 --ram 64 -- $NAV $SP/turn_oracl
 waitdirs "$L/replay" "$L/route-hold" "$L/route-navtest"
 
 status "stage 4: tables"
-arm() { echo "$1=P2H10${2}-F-s0$3+P2H10${2}-F-s1$3"; }
+arm() { echo "$1=P2H10${2}-F-s0${3:-}+P2H10${2}-F-s1${3:-}"; }
 "${BN[@]}" report --bench navtest --arms $(arm noA S-noA) $(arm noB S-noB) $(arm noC S-noC) --vs $(arm S S) $(arm base "") --out $R/bench || die "report navtest"
 "${BN[@]}" report --bench navhard --arms $(arm noA S-noA @gimm) $(arm noB S-noB @gimm) $(arm noC S-noC @gimm) --vs $(arm S S @gimm) $(arm base "" @gimm) --out $R/bench || die "report navhard"
 $PY $S/bd4_g3d.py --replay sdrop --new P2H10S-F --base P2H10-F --out $R/d_S_vs_base > "$D/g3d.txt" || die "g3d S"
