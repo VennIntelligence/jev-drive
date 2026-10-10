@@ -31,7 +31,18 @@ lane 的重读表一致（我逐项对过 232 / 234 / 244 的主要数字）。�
 - 232：**G3 (b) seed 0 翻转为过**（135 对 140，原 149 对 148）；seed 3 的 (e) 也过（1.0001，原 0.9949）；上一配方 navtest 弧长
   0.9985 / 0.9980（原 0.9905）。当时停臂所依据的读数是 reader 的错。是否补登记闭环由 main / 用户定。
 
-## 未完成（按优先级）
+## 2026-10-11 01:30 JST 更新：未完成项已做完
+
+下面「未完成」第 1 项里的文档都已原位更正并 push（两个 session 合起来）：`shape_pilot.md`、`loss_g3.md`（d3d307e6），
+`progress_diagnosis.md`、`shape_closed_loop.md`（41aa5c99；`loss_closed_loop.md` 里没有按 base plan 分组的表，不受影响），
+lane README、`experiments/INDEX.md` 的 body1 行、`research/body1/index.html`、`navtest_warp.md` 的「已更正页面」与「遗留问题」两节（1c04f85b），
+预登记的更正行与第 236 条（8d374db6），S-DROP 预登记末尾的更正行。第 3 项的 grep 残留只剩：标明「原 / first read / superseded」的旧数，
+`results/{shape,route,sdrop}/` 下保留为旧读数的生成表。没有重画的图：`figs/shape/shape_gate.png`、`figs/prog/ol_arc.png` 左图、
+`figs/prog/cl_progress.png` 的分组颜色（各页已注明）。
+遗留给 main 的两点：(1) 第 232 条的登记闭环读数是否补做；(2) `prog_cl.py` 的 decision-0 对齐检查在 warp 帧 plan 上是 0.909（原 1.010），
+即 AlpaSim 里第一个 served plan 比 bench 评分的 plan 短 9%，原因未查（`navtest_warp.md` 末节）。
+
+## 未完成（按优先级；写于 01:01，已由上面的更新取代）
 
 1. 其余引用旧 navtest own-plan 数字的文档还没有原位更正（只在 `navtest_warp.md` 里给了新数）：
    - `results/shape_pilot.md`（第 232 条的结果页：G3 (b)、(e) 的表与「(b) on seed 0 is the miss」一段、pilot 的 navtest 弧长行）

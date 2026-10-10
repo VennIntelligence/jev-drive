@@ -130,3 +130,11 @@ files and windows are not touched.
 - noB changes the batch composition (128 normal rows) as well as removing the rows; noB removes C with B.
 - The drop-ones are of the shape-only recipe; the pilot drop-ones (decision 232 point 3) were of the full-gradient recipe, so a
   disagreement with them can be scale or gradient form.
+
+**Correction, 2026-10-11 (added at the end; nothing above was changed).** The stored navtest numbers this pre-registration quotes for
+Question 2 (base W2 45 / 46 / 47 / 49, `P2H10S` 58 / 65 / 59 / 65, "the four base seeds differ by at most 4") were read on off-protocol plans:
+until e7747c0b the lane's reader opened `lb_navtest` on GIMM frames for these warp-trained checkpoints. On the plans the benchmark scores
+they are 84 / 79 / 87 / 91 and 116 / 118 / 119 / 126; the base seeds differ by up to 12 tokens, so the +5 tolerance is inside the base's
+seed spread. The registered verdicts of Question 2 are unchanged on the re-read (noA +27 / +35 and noC +13 / +19 wide, noB +1 / +3 not
+wide), but only excesses beyond 12 tokens are outside seed noise: noB's "not wide" and noC's seed-0 excess of +13 are at that edge.
+Re-read tables and the claim-by-claim verdicts: [results/navtest_warp.md](../results/navtest_warp.md), [results/sdrop.md](../results/sdrop.md).
