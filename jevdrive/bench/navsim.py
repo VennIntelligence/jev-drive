@@ -308,10 +308,10 @@ def unfreeze_plans(spec: str, bench: str, out: str) -> None:
 
 
 def vt_plans(spec: str, bench: str, out: str) -> None:
-    """experiments/vis_train/scripts/vt.py plans: cached slot tokens + the pixel cache (memory branch / own encoder); :noside / :mshuf."""
+    """experiments/vis_train/scripts/vt.py plans: cached slot tokens + the pixel cache (memory branch / own encoder); :noside / :mshuf / :sideoff."""
     m = resolve(spec, check=True)
     subprocess.run([R.py("op-train"), str(REPO / "experiments/vis_train/scripts/vt.py"), "plans", "--tag", m.name, "--data", NAVSIM[bench]["data"],
-                    "--out", str(out), "--mem", {"": "on", "noside": "off", "mshuf": "shuf"}[m.opt]], check=True, cwd=REPO)
+                    "--out", str(out), "--mem", {"": "on", "noside": "off", "mshuf": "shuf", "sideoff": "sideoff"}[m.opt]], check=True, cwd=REPO)
 
 
 # ---------------------------------------------------------------- scoring

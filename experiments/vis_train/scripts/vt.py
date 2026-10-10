@@ -10,13 +10,17 @@ with a constant learning rate after the warmup:
   C    no branch: the encoder itself trained in place (all 8 slots through the current encoder, gradient through the t0 pair), no anchor
        rows, no distillation of the non-plan heads
   F0   frozen, no anchor rows, no distillation: C's control
-A / B / A0 carry the branch's own head (the thin decoder of decisions 147 / 160 on [tokens, ego]; decision 204), trained jointly, unused at
+  W    A with three t0 views (second wave, prereg amendments 1 / 3 / 5): the shared-weight branch encodes [CAM_F0, CAM_L0, CAM_R0] (F0 from
+       the pixel cache, byte-identical to A's input; the side pairs from lib/side_store.py), 3 x 32 tokens through
+       ParityAdapter(n_cam = 3, n_t = 1); the branch head reads all three views; the training memory drop masks the three together
+A / B / A0 / W carry the branch's own head (the thin decoder of decisions 147 / 160 on [tokens, ego]; decision 204), trained jointly, unused at
 inference. Pixels come from the pre-rendered cache (lib/pixel_store.py); nothing is rendered online.
 
   train   --arm A --seed 0 --steps 30000 [--tag VT-A-s0] [--resume]   snapshots every --snap-every steps -> runs/op_parity/runs/<tag>-k<NN>/,
           the final weights -> <tag>/ckpt-final.pt. Refuses a tag that exists; --resume continues its own interrupted run from <tag>/resume.pt
           (weights + optimizer of the last snapshot step; the row streams are replayed to that step).
-  plans   --tag T --data lb_navtest --out F [--mem on|off|shuf]       op_lb plan file of a VT checkpoint (what jevdrive.bench exports)
+  plans   --tag T --data lb_navtest --out F [--mem on|off|shuf|sideoff]   op_lb plan file of a VT checkpoint (what jevdrive.bench exports);
+          sideoff (W only) masks the two side views and keeps the F0 view
   ident   --arm A --seed 0                                              identity gate: the arm at SH30's weights (memory masked; C after
           lr-0 steps) against SH30's cached-token plans on the first 2 048 navtest tokens, with the other SH30 seed as the wrong-model control
   tokens  --tag T --datas D ...                                         branch / encoder t0 tokens (N, 32, 512) fp16 -> runs/vis_train/tokens/<tag>/
@@ -34,6 +38,7 @@ import torch.nn.functional as F  # noqa: E402
 
 import parity_adapter as PA  # noqa: E402
 import pixel_store as PX  # noqa: E402
+import side_store as SD  # noqa: E402
 import pp_train as T  # noqa: E402
 import pp_unfreeze as U  # noqa: E402
 from jevdrive import op_adapt as A  # noqa: E402
@@ -43,7 +48,9 @@ from experiments.op_adapt_l.lib import op_adapt_l as L  # noqa: E402
 
 ARMS = {"F": dict(mem=False, vis="", fut=False, anchor=True), "A0": dict(mem=True, vis="", fut=False, anchor=True),
         "A": dict(mem=True, vis="branch", fut=False, anchor=True), "B": dict(mem=True, vis="branch", fut=True, anchor=True),
-        "C": dict(mem=False, vis="inplace", fut=False, anchor=False), "F0": dict(mem=False, vis="", fut=False, anchor=False)}
+        "C": dict(mem=False, vis="inplace", fut=False, anchor=False), "F0": dict(mem=False, vis="", fut=False, anchor=False),
+        "W": dict(mem=True, vis="branch", fut=False, anchor=True, views=3)}
+VIEWS = ("CAM_F0",) + SD.CAMS                  # W: the camera axis of the memory; test-time "side off" keeps only the first
 FULL = tuple(f"navtrain_full.s{i}of12" for i in range(12))
 RUNS = data_dir() / "runs" / "op_parity" / "runs"
 OUT = data_dir() / "runs" / "vis_train"
@@ -135,16 +142,18 @@ class VT(nn.Module):
         self.net = A.load("cinque", dtype, trainable=L.pol_weights() + self.vis)
         self.vkeys = {_key(w) for w in self.vis}
         mem = self.k["mem"]
-        self.adapter = PA.ParityAdapter(use_ego=True, use_side=mem, **(dict(n_cam=1, n_t=1) if mem else {}))
-        self.head = Head() if mem else None
+        self.nv = self.k.get("views", 1)                                    # views of the branch (W: 3)
+        self.adapter = PA.ParityAdapter(use_ego=True, use_side=mem, **(dict(n_cam=self.nv, n_t=1) if mem else {}))
+        self.head = Head(self.nv * 32 * 512 + PA.EGO_DIM) if mem else None
         self.pred = Predictor(n_h=2) if self.k["fut"] else None
         self.enc_ckpt, self.enc_compiled = 0, False                         # speed knobs: activation checkpointing chunk of the grad pass; compiled encoder
+        self.enc_chunk = 0                                                  # pairs per call of the fast grad pass (0 = the whole batch at once)
 
     def encode(self, prev, cur, grad=False, chunk=256):
         """(n, 2, 6, 128, 256) uint8 pairs -> (n, 32, 512) tokens of the vision part."""
         fe = getattr(PX, "fast_encode", None)
         if fe is not None and not self.enc_ckpt:
-            return fe(self.net, prev, cur, grad=grad, compiled=self.enc_compiled and grad)
+            return fe(self.net, prev, cur, grad=grad, chunk=self.enc_chunk if grad else 0, compiled=self.enc_compiled and grad)
         from torch.utils.checkpoint import checkpoint
         f = lambda p, c: self.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(len(c), *A.H_SHAPE)  # noqa: E731
         with torch.set_grad_enabled(grad):
@@ -153,6 +162,14 @@ class VT(nn.Module):
                 return torch.cat([checkpoint(f, prev[i:i + k], cur[i:i + k], use_reentrant=False) for i in range(0, len(cur), k)])
             return torch.cat([f(prev[i:i + chunk], cur[i:i + chunk]) for i in range(0, len(cur), chunk)])
 
+    def branch(self, px, sd=None, grad=False):
+        """The branch's memory tokens: (B, 32, 512) of the t0 pair px = (prev, cur); W (sd = the side stores' (prev, cur), each
+        (B, 2, 2, 6, 128, 256)): (B, 3, 32, 512) of VIEWS through the same weights. The pass is view-major: its first B pairs are arm A's batch."""
+        if sd is None:
+            return self.encode(*px, grad=grad)
+        p, c = (torch.cat([f[:, None], s], 1).transpose(0, 1).flatten(0, 1) for f, s in zip(px, sd))
+        return self.encode(p, c, grad=grad).reshape(self.nv, -1, *A.H_SHAPE).transpose(0, 1)
+
     def slots(self, prev, cur, grad=False):
         """C: (B, 8, 2, 6, 128, 256) pairs -> (B, 8, 32, 512); the 7 older slots through the same weights without autograd (as U2)."""
         B = cur.shape[0]
@@ -160,13 +177,14 @@ class VT(nn.Module):
         return torch.cat([hp, self.encode(prev[:, 7], cur[:, 7], grad=grad)[:, None]], 1)
 
     def policy(self, front, ego, tc, mem=None, mask=None, inputs_on=True):
-        """pp_train.PModel.forward: front (B, 8, 32, 512), mem (B, 32, 512) memory tokens, mask (B, 1) True = memory present -> outputs."""
+        """pp_train.PModel.forward: front (B, 8, 32, 512), mem (B, 32, 512) memory tokens (W: (B, 3, 32, 512)), mask (B, 1) True = memory
+        present (W: (B, 1) all views or (B, 3) per view) -> outputs."""
         B, n = front.shape[:2]
         H = torch.cat([front.new_zeros(B, A.CONTEXT - n, *front.shape[2:]), front], 1).to(self.net.dtype)
         valid = torch.zeros(B, A.CONTEXT, dtype=torch.bool, device=H.device)
         valid[:, A.CONTEXT - n:] = True
         if inputs_on:
-            H = self.adapter.apply(H, ego, mem[:, None, None] if mem is not None else None, mask)
+            H = self.adapter.apply(H, ego, side5(mem) if mem is not None else None, mask)
         H = H * valid[:, :, None, None].to(H.dtype)
         return self.net.run_batched(A.policy_feeds(self.net, H, T.AT, tc.to(self.net.dtype)), ["outputs"])["outputs"].reshape(B, -1)
 
@@ -195,6 +213,18 @@ class VT(nn.Module):
         for m, k in ((self.head, "head"), (self.pred, "pred")):
             if m is not None and not init:
                 m.load_state_dict(st["vt"][k])
+
+
+def side5(mem):
+    """Memory tokens (B, 32, 512) or (B, n_cam, 32, 512) -> the adapter's (B, n_cam, n_t = 1, 32, 512)."""
+    return mem[:, None, None] if mem.dim() == 3 else mem[:, :, None]
+
+
+def mem_mask(n: int, dev, mem: str):
+    """Test-time memory mask of n rows: off = everything masked, sideoff = the F0 view kept and the side views masked, else None."""
+    if mem == "off":
+        return torch.zeros(n, 1, dtype=torch.bool, device=dev)
+    return torch.tensor([v == VIEWS[0] for v in VIEWS], device=dev).expand(n, -1) if mem == "sideoff" else None
 
 
 def ckpt_arm(st: dict) -> str:
@@ -281,13 +311,17 @@ class Lane:
     def __init__(self, cfg: Cfg, dev, a):
         self.cfg, self.dev, self.k = cfg, dev, ARMS[cfg.arm]
         k = self.k
+        if a.vram_cap:
+            torch.cuda.set_per_process_memory_fraction(min(1.0, a.vram_cap * 2 ** 30 / torch.cuda.get_device_properties(dev).total_memory))
         torch.manual_seed(cfg.seed)
         self.S = S = T.Store(list(cfg.data), dev, need_side=False, frames="warp", host=True)
         self.tr_rows, self.dv_rows, self.sp = T.split_rows({"names": S.tab["names"]}, cfg.split)
         self.PS = PX.PixelStore(list(cfg.data), dev, mode="all" if k["vis"] == "inplace" else "t0") if (k["vis"] or k["fut"]) else None
         assert self.PS is None or len(self.PS) == S.n
+        self.SS = SD.SideStore(list(cfg.data), dev) if k.get("views", 1) > 1 else None
+        assert self.SS is None or (self.SS.names == S.tab["names"]).all()
         self.model = m = VT(cfg.arm).to(dev)
-        m.enc_ckpt, m.enc_compiled = a.enc_ckpt, a.enc_compile
+        m.enc_ckpt, m.enc_compiled, m.enc_chunk = a.enc_ckpt, a.enc_compile, a.enc_chunk
         m.load_state(torch.load(RUNS / cfg.init / "ckpt-final.pt", map_location="cpu", weights_only=False)["model"], init=True)
         from drivable_hinge import Hinge
         self.hinge = Hinge([data_dir() / cfg.hinge_labels], S.tab["names"], dev, cfg.hinge_margin, ["pacifica"])
@@ -296,11 +330,17 @@ class Lane:
                            tstd, S.di, S.pi, dev, self.hinge)
         srng = np.random.default_rng([cfg.seed, 0, 13])                       # normalisation statistics: a fixed sample of train rows
         if m.head is not None or m.pred is not None:
-            x = t0_tok(S.front, np.sort(srng.choice(self.tr_rows, 8192, replace=False))).float()
+            rs = np.sort(srng.choice(self.tr_rows, 8192, replace=False))
+            x = t0_tok(S.front, rs).float()
             if m.head is not None:
-                e = S.ego[torch.as_tensor(self.tr_rows, device=dev)]
-                m.head.mu.copy_(torch.cat([x.flatten(1).mean(0), e.mean(0)]))
-                m.head.sd.copy_(torch.cat([x.flatten(1).std(0), e.std(0)]).clamp_min(1e-6))
+                e, xh = S.ego[torch.as_tensor(self.tr_rows, device=dev)], x
+                if self.SS is not None:        # W: no cache holds frozen tokens of the protocol-W side pairs; the branch at its init is the frozen encoder
+                    xs = torch.cat([m.encode(*(v.flatten(0, 1) for v in self.SS.t0(rs[i:i + 128]))).reshape(-1, len(SD.CAMS), *A.H_SHAPE)
+                                    for i in range(0, len(rs), 128)])
+                    xh = torch.cat([x[:, None], xs.float()], 1)
+                m.head.mu.copy_(torch.cat([xh.flatten(1).mean(0), e.mean(0)]))
+                m.head.sd.copy_(torch.cat([xh.flatten(1).std(0), e.std(0)]).clamp_min(1e-6))
+                del xh
             if m.pred is not None:
                 m.pred.mu.copy_(x.mean((0, 1)))
                 m.pred.sd.copy_(x.std((0, 1)).clamp_min(1e-6))
@@ -339,6 +379,8 @@ class Lane:
             b["front"] = self.S.front[r]
         if k["vis"]:
             b["px"] = self.PS.all(r) if k["vis"] == "inplace" else self.PS.t0(r)
+        if self.SS is not None:
+            b["sd"] = self.SS.t0(r)
         if k["fut"]:
             b["fut"] = self.fut_targets(r)
         return dr, b
@@ -354,7 +396,7 @@ class Lane:
         else:
             front = b["front"]
             if k["mem"]:
-                mem = (m.encode(*b["px"], grad=grad) if k["vis"] else front[:, -1]).float()
+                mem = (m.branch(b["px"], b.get("sd"), grad=grad) if k["vis"] else front[:, -1]).float()
         out = (self.policy if grad else m.policy)(front, ego, S.tc[rows], mem, smask)
         total, Ls = self.LS(out, S, rows, anchor)
         if m.head is not None:
@@ -411,8 +453,8 @@ class Lane:
 
     @torch.no_grad()
     def dev_eval(self, bs=128) -> dict:
-        """dev rows: ADE to the log with the memory on / masked, drift to shipped with the inputs on / off, the branch head's loss and ADE,
-        B's future loss with its copy baseline."""
+        """dev rows: ADE to the log with the memory on / masked (W: also with only the side views masked), drift to shipped with the inputs
+        on / off, the branch head's loss and ADE, B's future loss with its copy baseline."""
         m, S, k, dev = self.model.eval(), self.S, self.k, self.dev
         pi = torch.as_tensor(S.pi, device=dev)
         acc = {}
@@ -426,17 +468,17 @@ class Lane:
             else:
                 front = S.front[rn]
                 if k["mem"]:
-                    mem = (m.encode(*self.PS.t0(rn)) if k["vis"] else front[:, -1]).float()
+                    mem = (m.branch(self.PS.t0(rn), self.SS.t0(rn) if self.SS else None) if k["vis"] else front[:, -1]).float()
             tx, ty, _ = T.rear(S.t_plan[r], S.cam_x[r], self.LS.W)
             ok = S.has_fut[r]
-            for name in ("on", "off") + (("masked",) if k["mem"] else ()):
-                mask = torch.zeros(len(r), 1, dtype=torch.bool, device=dev) if name == "masked" else None
+            for name in ("on", "off") + (("masked",) if k["mem"] else ()) + (("sideoff",) if self.SS else ()):
+                mask = mem_mask(len(r), dev, {"masked": "off", "sideoff": "sideoff"}.get(name, "on"))
                 p = m.policy(front, S.ego[r], S.tc[r], mem, mask, inputs_on=name != "off").float()[:, pi].view(-1, 33, 15)
                 x, y, _ = T.rear(p, S.cam_x[r], self.LS.W)
-                if name != "masked":
+                if name in ("on", "off"):
                     add(f"drift_{name}", torch.hypot(x - tx, y - ty).mean(1))
                 if name != "off":
-                    add("ade" if name == "on" else "ade_masked", torch.hypot(x - S.fut[r][..., 0], y - S.fut[r][..., 1]).mean(1)[ok])
+                    add("ade" if name == "on" else f"ade_{name}", torch.hypot(x - S.fut[r][..., 0], y - S.fut[r][..., 1]).mean(1)[ok])
             if m.head is not None:
                 li, lh, ade = self.head_loss(m.head(mem, S.ego[r]), r)
                 add("head", li), add("head_hinge", lh), add("head_ade", ade)
@@ -493,7 +535,7 @@ def cmd_train(a):
     tag = a.tag or f"VT-{a.arm}-s{a.seed}"
     cfgd = json.loads(json.dumps(asdict(cfg)))
     d = claim(tag, cfgd, a)
-    with Run("vis_train", f"train-{tag}", seed=cfg.seed, config=cfgd | {"tag": tag, "speed": dict(prefetch=a.prefetch, enc_ckpt=a.enc_ckpt, compile=a.compile, enc_compile=a.enc_compile)}) as run:
+    with Run("vis_train", f"train-{tag}", seed=cfg.seed, config=cfgd | {"tag": tag, "speed": dict(prefetch=a.prefetch, enc_ckpt=a.enc_ckpt, compile=a.compile, enc_compile=a.enc_compile) | ({"enc_chunk": a.enc_chunk} if a.enc_chunk else {})}) as run:
         ln = Lane(cfg, dev, a)
         m = ln.model
         for x in ln.sp:
@@ -511,7 +553,7 @@ def cmd_train(a):
             run.info(f"{tag}: resumed at step {step0} from {rs}")
         run.info(f"{tag} (arm {cfg.arm}, from {cfg.init}): train {len(ln.tr_rows)} dev {len(ln.dv_rows)} rows; trainable " +
                  ", ".join(f"{n} {v / 1e6:.2f}M" for n, v in ln.n_par.items()) + f"; hinge labels cover {ln.hinge.coverage:.4f}; "
-                 f"speed: prefetch {a.prefetch} x {a.fetch_workers} threads, fast_encode {hasattr(PX, 'fast_encode')}, enc_ckpt {a.enc_ckpt}, compiled policy {a.compile} / encoder {a.enc_compile}")
+                 f"speed: prefetch {a.prefetch} x {a.fetch_workers} threads, fast_encode {hasattr(PX, 'fast_encode')}, enc_ckpt {a.enc_ckpt}, enc_chunk {a.enc_chunk}, compiled policy {a.compile} / encoder {a.enc_compile}")
 
         def evaluate(step):
             nonlocal ade0, bad
@@ -578,19 +620,20 @@ class Infer:
         self.S = T.Store([data], dev, need_side=False, frames="warp", host=host)
         self.PS = PX.PixelStore([data], dev, mode="all" if self.k["vis"] == "inplace" else "t0") if self.k["vis"] else None
         assert self.PS is None or len(self.PS) == self.S.n
+        self.SS = SD.SideStore([data], dev) if model.nv > 1 else None
+        assert self.SS is None or (self.SS.names == self.S.tab["names"]).all()
 
     @torch.no_grad()
     def mem(self, rn):
-        return (self.m.encode(*self.PS.t0(rn)) if self.k["vis"] else t0_tok(self.S.front, rn)).float()
+        return (self.m.branch(self.PS.t0(rn), self.SS.t0(rn) if self.SS else None) if self.k["vis"] else t0_tok(self.S.front, rn)).float()
 
     @torch.no_grad()
     def out(self, rn, mem="on", perm=None):
-        """Raw outputs (n, n_out) fp32 of rows rn. mem: on | off (masked) | shuf (the memory of row perm[rn])."""
+        """Raw outputs (n, n_out) fp32 of rows rn. mem: on | off (masked) | shuf (the memory of row perm[rn]) | sideoff (W: side views masked)."""
         S, r = self.S, torch.as_tensor(rn, device=self.dev)
         front = self.m.slots(*self.PS.all(rn)) if self.k["vis"] == "inplace" else S.front[r]
         mm = self.mem(perm[rn] if mem == "shuf" else rn) if self.k["mem"] else None
-        mask = torch.zeros(len(r), 1, dtype=torch.bool, device=self.dev) if (mem == "off" and self.k["mem"]) else None
-        return self.m.policy(front, S.ego[r], S.tc[r], mm, mask).float()
+        return self.m.policy(front, S.ego[r], S.tc[r], mm, mem_mask(len(r), self.dev, mem) if self.k["mem"] else None).float()
 
 
 def plan_arrays(I: Infer, n: int, mem="on", perm=None, bs=0, tq=None):
@@ -615,6 +658,7 @@ def cmd_plans(a):
         run.use_split(splits.load(f"navsim/{mt['split']}"))
         m, ck = load_tag(a.tag, dev)
         assert a.mem == "on" or m.k["mem"], f"{a.tag} (arm {m.arm}) has no memory channel to mask or shuffle"
+        assert a.mem != "sideoff" or m.nv > 1, f"{a.tag} (arm {m.arm}) has no side views"
         I = Infer(m, a.data, dev)
         assert I.S.tab["names"].tolist() == mt["names"], "pp_prep cache rows differ from op_lb meta"
         perm = derange(I.S.tab["log"], np.random.default_rng(0)) if a.mem == "shuf" else None
@@ -643,7 +687,7 @@ def cmd_tokens(a):
             I = Infer(m, data, dev, host=True)
             od = OUT / "tokens" / a.tag
             od.mkdir(parents=True, exist_ok=True)
-            o = np.lib.format.open_memmap(od / f".{data}.npy", "w+", np.float16, (I.S.n, *A.H_SHAPE))
+            o = np.lib.format.open_memmap(od / f".{data}.npy", "w+", np.float16, (I.S.n, *I.mem(np.arange(1)).shape[1:]))   # W: (N, 3, 32, 512)
             for i in run.tqdm(range(0, I.S.n, 256), desc=data):
                 rn = np.arange(i, min(i + 256, I.S.n))
                 o[rn] = I.mem(rn).half().cpu().numpy()
@@ -683,6 +727,8 @@ def cmd_ident(a):
         P = {"arm": plan_arrays(I, N, "off")[0]}
         if k["mem"]:
             P["arm_mem_on"] = plan_arrays(I, N, "on")[0]
+        if m.nv > 1:
+            P["arm_side_off"] = plan_arrays(I, N, "sideoff")[0]
         for name, tag in (("ref", f"SH30-F-s{a.seed}"), ("other_seed", f"SH30-F-s{1 - a.seed}")):
             pm = T.load_pmodel(tag, dev)
             pi = np.arange(pm.net.slices["plan"].start, pm.net.slices["plan"].start + 495)
@@ -695,21 +741,32 @@ def cmd_ident(a):
             e = dd(P[name], P["ref"])
             res[f"{name}_vs_ref"] = dict(share_over_tol=float((e > TOL_M).mean()), share_over_2ulp=float((e > ULP2_M).mean()), max_m=float(e.max()),
                                          median_m=float(np.median(e)), mean_m=float(e.mean()))
+        if m.nv > 1:                                                          # W: the side views are read (masking them moves the plans)
+            e = dd(P["arm_side_off"], P["arm_mem_on"])
+            res["side_off_vs_mem_on"] = dict(share_over_tol=float((e > TOL_M).mean()), max_m=float(e.max()), median_m=float(np.median(e)), mean_m=float(e.mean()))
         if k["mem"]:                                                          # the masked-memory bias against SH30's own adapter (fp32, before the fp16 sum)
             ref = PA.ParityAdapter(use_ego=True, use_side=False).to(dev)
             ref.load_state_dict(torch.load(RUNS / cfg.init / "ckpt-final.pt", map_location="cpu", weights_only=False)["model"]["parity"])
             with torch.no_grad():
                 e, tk = I.S.ego[:N], I.mem(np.arange(min(N, 256)))
                 b0 = ref(e[:len(tk)])
-                b1 = m.adapter(e[:len(tk)], tk[:, None, None], torch.zeros(len(tk), 1, dtype=torch.bool, device=dev))
+                b1 = m.adapter(e[:len(tk)], side5(tk), torch.zeros(len(tk), 1, dtype=torch.bool, device=dev))
             res["masked_bias_vs_ref"] = dict(max_abs=float((b1 - b0).abs().max()), ref_rms=float(b0.pow(2).mean().sqrt()))
         if k["vis"]:                                                          # the pixel cache reproduces the cached tokens (frozen weights)
             rn = np.arange(min(512, N))
             tk = (m.slots(*I.PS.all(rn))[:, -1] if k["vis"] == "inplace" else m.encode(*I.PS.t0(rn))).float()
             ref = t0_tok(I.S.front, rn).float()
             res["px_tokens_vs_cache"] = dict(max_abs=float((tk - ref).abs().max()), mean_abs=float((tk - ref).abs().mean()), ref_rms=float(ref.pow(2).mean().sqrt()))
+            if m.nv > 1:                                                      # W's F0 view against arm A's branch tokens (tk: the F0 pairs alone), and the side views' scale
+                w = I.mem(rn)
+                res["f0_view_vs_arm_A"] = dict(max_abs=float((w[:, 0] - tk).abs().max()), mean_abs=float((w[:, 0] - tk).abs().mean()))
+                res["side_view_vs_f0"] = dict(mean_abs=float((w[:, 1:] - w[:, :1]).abs().mean()), rms=float(w[:, 1:].pow(2).mean().sqrt()))
+                res["head_norm"] = dict(mu_rms=[float(v.pow(2).mean().sqrt()) for v in m.head.mu[:-PA.EGO_DIM].view(m.nv, -1)],
+                                        sd_mean=[float(v.mean()) for v in m.head.sd[:-PA.EGO_DIM].view(m.nv, -1)])
         res["pass"] = bool(res["arm_vs_ref"]["share_over_tol"] < 1e-3 and res["other_seed_vs_ref"]["share_over_tol"] > 0.5)      # the registered line
         res["pass_2ulp"] = bool(res["arm_vs_ref"]["share_over_2ulp"] < 1e-3 and res["other_seed_vs_ref"]["share_over_2ulp"] > 0.5)   # prereg amendment
+        if m.nv > 1:
+            res["pass_2ulp"] &= res["side_off_vs_mem_on"]["share_over_tol"] > 0.5
         (OUT / "ident").mkdir(parents=True, exist_ok=True)
         (OUT / "ident" / f"{a.arm}-s{a.seed}.json").write_text(json.dumps(res, indent=1))
         run.info(json.dumps(res))
@@ -722,6 +779,8 @@ def speed_args(p):
     p.add_argument("--prefetch", type=int, default=4, help="batches fetched ahead on worker threads (page-locked gathers)")
     p.add_argument("--fetch-workers", type=int, default=3)
     p.add_argument("--enc-ckpt", type=int, default=0, help="activation checkpointing chunk of the encoder's grad pass (0 = off)")
+    p.add_argument("--enc-chunk", type=int, default=0, help="pairs per call of the encoder's fast grad pass (0 = the whole batch; W: 64 = one view per call)")
+    p.add_argument("--vram-cap", type=float, default=0, help="GB: hard cap of this process's CUDA allocator (0 = none), so a job cannot outgrow its pool booking")
     p.add_argument("--compile", action="store_true", help="torch.compile of the policy forward")
     p.add_argument("--enc-compile", action="store_true", help="torch.compile of the encoder's grad pass (pixel_store.fast_encode)")
     p.add_argument("--data", nargs="+", default=list(FULL))
@@ -746,7 +805,7 @@ if __name__ == "__main__":
     p.add_argument("--tag", required=True)
     p.add_argument("--data", default="lb_navtest")
     p.add_argument("--out", required=True)
-    p.add_argument("--mem", default="on", choices=["on", "off", "shuf"])
+    p.add_argument("--mem", default="on", choices=["on", "off", "shuf", "sideoff"])
     p = sp.add_parser("tokens")
     p.add_argument("--tag", required=True)
     p.add_argument("--datas", nargs="+", default=["lb_navtest", "navtrain_full.s2of12", "navtrain_full.s3of12", "navtrain_full.s4of12"])

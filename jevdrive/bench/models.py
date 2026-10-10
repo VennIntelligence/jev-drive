@@ -26,11 +26,12 @@ Families
                   plus the arm's bias server (pp_hugsim.py serve, envs/op-train) fed by lib/parity_hugsim.py.
                   A checkpoint with a trajectory head next to it (thead.pt, pp_train --thead, lib/traj_head.py) is served by that head
                   on navsim: its 8 rear-axle poses are written as the prediction file (stage `poses`, no export); not on HUGSIM
-  vt              vis_train arms with a memory branch or their own encoder (VT-A0 / A / B / C-s<seed>[-k<NN>]: checkpoints under
+  vt              vis_train arms with a memory branch or their own encoder (VT-A0 / A / B / C / W-s<seed>[-k<NN>]: checkpoints under
                   runs/op_parity/runs/ that carry memory tokens or trained vision weights): navsim plans by
                   experiments/vis_train/scripts/vt.py plans (cached slot tokens + the pre-rendered pixel cache, protocol W only);
-                  `:noside` masks the memory at test time, `:mshuf` feeds the memory of a token of another log. VT-F / VT-F0 are
-                  plain P2 checkpoints (family parity). Not on HUGSIM
+                  `:noside` masks the memory at test time, `:mshuf` feeds the memory of a token of another log, `:sideoff` (VT-W
+                  only: three-view branch, F0 from the pixel cache, CAM_L0 / CAM_R0 from lib/side_store.py) masks the two side
+                  views and keeps the F0 view. VT-F / VT-F0 are plain P2 checkpoints (family parity). Not on HUGSIM
   wajepa          WA-JEPA released checkpoint ($DATA_DIR/models/wajepa): stored navtest / navhard references (its own runner,
                   experiments/top10), HUGSIM through its shipped client (zs_run agent `wajepa`, exam preset)
 """
@@ -45,7 +46,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 FRAMES = ("gimm", "warp", "keys", "real", "vh140")
 TS_OPTS = ("tsA", "tsB", "ts0")                     # turn selector gates (decision 191 N7 on SH30), see navsim.select_stage
-VT_OPTS = ("noside", "mshuf")                       # vis_train memory arms: memory masked / taken from a token of another log
+VT_OPTS = ("noside", "mshuf", "sideoff")            # vis_train memory arms: memory masked / taken from a token of another log / (W) side views masked
 
 
 def data_dir() -> Path:
@@ -161,7 +162,7 @@ def resolve(spec: str, check: bool = False) -> Model:
         if c.get("command_adapter") or c.get("route_adapter"):
             raise ValueError(f"{name}: op_guard candidate with a command / route adapter; jevdrive.bench serves plain ONNX candidates only")
         m = Model(name, "onnx", "gimm", base="cinque", onnx=expand(c["onnx"]), note=c.get("note", ""), inputs=OP_INPUTS)
-    elif re.fullmatch(r"VT-(A0|A|B|C)-s\d+(-k\d+)?", name):
+    elif re.fullmatch(r"VT-(A0|A|B|C|W)-s\d+(-k\d+)?", name):
         m = Model(name, "vt", "warp", ckpt=str(parity_ckpt(name)), note="vis_train checkpoint (vt.py plans: memory branch / own encoder)",
                   inputs=OP_INPUTS + ("ego velocity / acceleration, 4-pose history (2 Hz), NAVSIM command",), benches=("navtest", "navhard"))
     else:
@@ -176,8 +177,8 @@ def resolve(spec: str, check: bool = False) -> Model:
             raise ValueError(f"{spec}: vis_train arms read the protocol-W pixel cache only")
         m = replace(m, frames=frames)
     if opt and m.family == "vt":
-        if opt not in VT_OPTS or (m.name.startswith("VT-C-") and opt):
-            raise ValueError(f"{spec}: vis_train memory arms (A0 / A / B) take {VT_OPTS}; C has no memory channel")
+        if opt not in VT_OPTS or m.name.startswith("VT-C-") or (opt == "sideoff" and not m.name.startswith("VT-W-")):
+            raise ValueError(f"{spec}: vis_train memory arms (A0 / A / B / W) take {VT_OPTS[:2]}, W also sideoff; C has no memory channel")
         m = replace(m, opt=opt)
     elif opt:
         if m.family != "parity" or opt not in ("noside", "lm", "sg", "dn") + TS_OPTS:

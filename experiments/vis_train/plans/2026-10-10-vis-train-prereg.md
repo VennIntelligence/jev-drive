@@ -109,3 +109,14 @@ loss 非有限、分级启动检查不过、dev ADE 比起点差 > 0.3 m 持续�
 ## 补记 4（2026-10-11 00:05 JST，接手的 lane agent；A / A0 / B 的任何训练步与任何读数之前）
 
 停止规则的计数从 warmup 结束（步 ≥ 300）之后的 eval 开始，步 0 的 eval 不计。原因：memory 臂在步 0 打开 memory 时 dev ADE 约 1.08–1.12 m（补记 1 第 5 点：`side_in` 与 embedding 新初始化，不是起点），比起点（屏蔽 memory 的 0.57 m）高 0.5 m，按原实现计作一次「差 > 0.3 m」。6 步的 preflight smoke（eval 在步 0 与步 3）因此连续两次超线、触发停止规则，A / A0 / B 六条链在 22:53 CST 全部以 preflight 失败结束（F、F0、C 没有 memory 通道，不受影响）。300 步分级启动里 memory-on ADE 在步 100 已降到 0.64 m、步 300 为 0.58 m，正式训练（eval 每 1 000 步）不会因此触发；改动只是不让步 0 的构造性差值占掉两次机会中的一次。规则本身（比起点差 > 0.3 m 持续两个 eval 即停）不变。
+
+## 补记 5（2026-10-11 00:35 JST，arm-W builder；W 的任何训练步与读数之前）
+
+W 的阶段 2（trainer、bench 路由、链）实现时定下、「补记 1（第二波臂 W）」与补记 3 没有写明的几处：
+
+1. **底与对照 = A**。建好时 A、B 都还没有任何读数，按原文不换底。步数 50 000（与 A 相同），每 5 000 步一个 snapshot（`VT-W-s<seed>[-k<NN>]`）；seed 0 先启动，seed 1 在 pool 有位置时提交。到早上没跑完则在相同步数的 snapshot 上与 A 比较（原文）。pool 优先级 5，低于第一波的 10；owner `vis_train-W`。
+2. **与 A 相同的部分**：行流、锚行、memory 屏蔽的 rng 流（同一个 (B, 1) 抽样，三路一起屏蔽）、lr、裁剪分组、视觉组无 weight decay、停止规则（补记 4）。新初始化的 `side_in` 在同一 seed 下与 A 逐位相同（创建在 `cam_emb` 之前）；`cam_emb`（3 路）、`t_emb`、`s_emb` 的初始抽样因 `cam_emb` 形状不同而与 A 不同（std 0.02 的 embedding）。
+3. **支路 head**：结构同 A，输入维 3 × 32 × 512 + 20（三路 token 按 [F0, L0, R0] 拼接 + ego）。**标准化统计**：F0 视图用 `front.npy` 缓存的冻结 token（与 A 相同的 rng、相同的 8 192 个训练行）；侧视图没有 W 配对下的冻结 token 缓存（P3 的 `side.npy` 是 0.5 s 配对，state.md 的等价表），取同一批 8 192 行的侧视图像对经初始化时的支路 encoder（此刻权重 = 冻结 Cinque）现算。统计存在 head 的 buffer 里，续训时随 `resume.pt` 载入。
+4. **测试时的屏蔽**：`:noside` 三路全屏蔽，`:sideoff` 只屏蔽 CAM_L0 / CAM_R0（F0 视图保留；`vt.py plans --mem sideoff`，仅 W），`:mshuf` 三路都换成另一 log 同一 token 的。W 的末尾读数：navtest、navhard，以及 navtest 上的 `:noside`、`:sideoff`、`:mshuf`。补记 1（W）判定线里的「屏蔽侧视 token 掉分」读 `:sideoff`。dev eval 多记一栏 `ade_sideoff`（诊断，不进停止规则）。
+5. **恒等**：memory 屏蔽对 `SH30-F-s<seed>`，判据同 A（`pass_2ulp`：> 0.032 m 的行 < 0.1%，错模型对照 > 50%）；另加一条：初始化时 `:sideoff` 对 memory 全开的 plan，差 > 0.03 m 的行 > 50%（侧视 token 确实进了 policy）。同时报告 W 的 F0 视图 token 对 A 的支路 token（同一批行）。
+6. **梯度 pass 的切法是速度选择，不是设计选择**：一步 192 个图像对（A 是 64）。一次过 192 对、每视图一次 64 对（`--enc-chunk 64`，其中 F0 那次就是 A 的那次调用）、或 activation checkpointing（`--enc-ckpt`）三者数学上相同，差别在 fp16 的 batch 组成量级；按实测的显存峰值与 it/s 取能被 pool 今晚放下的最快者，数字与选择写在 state.md「W 臂」。训练进程用 `--vram-cap` 把 CUDA 分配器卡在预订值以下，超了只会自己 OOM，不挤同卡的第一波任务。

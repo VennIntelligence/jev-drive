@@ -3,8 +3,8 @@
 #   scripts/tmux_run.sh vt-<arm>-s<seed> experiments/vis_train/scripts/vt_chain.sh <arm> <seed> <steps>
 # Everything it runs is a pool job, submitted at once: the training job (preflight smoke, resumable, --tries), one CPU job per snapshot that
 # waits for the snapshot's checkpoint (--when-exists) and starts its navtest read (`jevdrive.bench run`, which submits its own stages and
-# returns), and after training the final reads: navtest, navhard (protocol W: prereg amendment 2), for A / B the test-time masked and
-# shuffled memory, for the plain-P2 arms F / F0 HUGSIM 64 (spec_plan_smooth, the SH30 reference protocol) once the last arm (VT_LAST) is done.
+# returns), and after training the final reads: navtest, navhard (protocol W: prereg amendment 2), for A / B / W the test-time masked and
+# shuffled memory (W: also only the side views masked, :sideoff), for the plain-P2 arms F / F0 HUGSIM 64 (spec_plan_smooth, the SH30 reference protocol) once the last arm (VT_LAST) is done.
 # State: $DATA_DIR/runs/vis_train/chain/<arm>-s<seed>/{STATUS, DONE, ERROR, log.txt, jobs.txt, pool/}. Rerunning the same command resumes.
 # Speed flags of the training step: VT_SPEED (default from the throughput section of plans/state.md); sizes: VT_VRAM / VT_CPU / VT_RAM.
 set -uo pipefail
@@ -27,10 +27,14 @@ jid() { awk -v n="$1" '$2 == n {i = $1} END {print i}' "$D/jobs.txt" 2>/dev/null
 sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
         local live; live=$($CL queue 2>/dev/null | awk -v n="$n" '$4 == n && ($2 == "queued" || $2 == "running" || $2 == "inbox") {print $1; exit}')
         [[ -n $live ]] && return; rm -f "$ld/ERROR"
-        local id; id=$($CL submit --owner vis_train --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
+        local id; id=$($CL submit --owner "$OWNER" --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 30; done; [[ -f $ld/ERROR ]] && return 1; done; return 0; }
 
+OWNER=vis_train PRIO=10 MOPT=":noside :mshuf"
 case $ARM in
+  # W (second wave): three views = 192 pairs per step; sizes and speed flags from the measurement in plans/state.md ("W 臂"); below the first wave's priority
+  W)   EVERY=5000 MEM=1 VRAM=${VT_VRAM:-64} CPU=${VT_CPU:-10} RAM=${VT_RAM:-64} SPEED=${VT_SPEED---enc-compile --compile} TRAIN=--train
+       SPEED="$SPEED --vram-cap $((VRAM - 1))" OWNER=vis_train-W PRIO=5 MOPT=":noside :sideoff :mshuf" ;;   # the cap: W cannot outgrow its booking
   A|B) EVERY=5000 MEM=1 VRAM=${VT_VRAM:-32} CPU=${VT_CPU:-8} RAM=${VT_RAM:-64} SPEED=${VT_SPEED---enc-compile --compile} TRAIN=--train ;;   # measured 27 GB
   C)   EVERY=5000 MEM=0 VRAM=${VT_VRAM:-36} CPU=${VT_CPU:-12} RAM=${VT_RAM:-96} SPEED=${VT_SPEED---enc-compile --compile} TRAIN=--train ;;  # measured 29 GB
   F)   EVERY=5000 MEM=0 VRAM=${VT_VRAM:-14} CPU=${VT_CPU:-4} RAM=${VT_RAM:-48} SPEED= TRAIN= ;;      # light cached-token jobs: co-located, outside the per-card training cap
@@ -50,7 +54,7 @@ fi
 # ---------------------------------------------------------------- training
 smoke="$PY $S/vt.py train --arm $ARM --seed $SEED --steps 6 --eval-every 3 --snap-every 3 --tag smoke-vt-$ARM-s$SEED --scratch --data navtrain_full.s0of12 $SPEED"
 status "submit: train $STEPS steps, snapshot reads every $EVERY"
-sub "vt-t-$ARM-s$SEED" "$L/train" $TRAIN --vram "$VRAM" --cpu "$CPU" --ram "$RAM" --priority 10 --tries 4 --preflight "$smoke" -- \
+sub "vt-t-$ARM-s$SEED" "$L/train" $TRAIN --vram "$VRAM" --cpu "$CPU" --ram "$RAM" --priority "$PRIO" --tries 4 --preflight "$smoke" -- \
     $PY $S/vt.py train --arm "$ARM" --seed "$SEED" --steps "$STEPS" --resume $SPEED
 TID=$(jid "vt-t-$ARM-s$SEED")
 
@@ -63,7 +67,8 @@ for k in $(seq "$EVERY" "$EVERY" $((STEPS - 1))); do
   BJ+=("$TAG-k$kk")
 done
 fin="$B run --model $TAG --bench navtest navhard"
-(( MEM )) && fin="$fin && $B run --model $TAG:noside $TAG:mshuf --bench navtest"
+MM=(); for o in $MOPT; do MM+=("$TAG$o"); done
+(( MEM )) && fin="$fin && $B run --model ${MM[*]} --bench navtest"
 sub "vt-b-$ARM-s$SEED-final" "$L/b-final" --vram 0.5 --cpu 1 --ram 4 ${TID:+--after "$TID"} --when-exists "$R/$TAG/ckpt-final.pt" -- bash -c "$fin"
 if [[ $ARM == F || $ARM == F0 ]]; then           # closed loop for the plain P2 checkpoints, once the last training job has released its cores
   sub "vt-b-$ARM-s$SEED-hugsim" "$L/b-hugsim" --vram 0.5 --cpu 1 --ram 4 ${TID:+--after "$TID"} --when-exists "$R/${VT_LAST:-VT-C-s0}/ckpt-final.pt" -- \
@@ -81,5 +86,5 @@ waitdirs "$L/b-final" || die "final read starter failed: $L/b-final/ERROR"
 for k in "${BJ[@]}"; do until [[ -f $L/b-${k##*-}/DONE || -f $L/b-${k##*-}/ERROR ]]; do sleep 30; done; done
 $B status --model "${BJ[@]}" "$TAG" --bench navtest --wait || die "navtest reads"
 $B status --model "$TAG" --bench navhard --wait || die "navhard read"
-if (( MEM )); then $B status --model "$TAG:noside" "$TAG:mshuf" --bench navtest --wait || die "masked / shuffled reads"; fi
+if (( MEM )); then $B status --model "${MM[@]}" --bench navtest --wait || die "masked / shuffled reads"; fi
 status "done (HUGSIM of F / F0 runs on its own: $L/b-hugsim)"; date > "$D/DONE"

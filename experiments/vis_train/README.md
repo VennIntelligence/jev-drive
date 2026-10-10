@@ -21,8 +21,9 @@ and its amendments in `plans/`):
 | B | 0, 1 | A + prediction of the frozen tokens 1.0 s and 2.0 s ahead (weight 0.5) | A0, A |
 | C | 0 | the encoder itself trained in place, no anchor rows, no distillation of the non-plan heads | F0 |
 | F0 | 0 | frozen, no anchor rows, no distillation | F |
+| W (second wave) | 0, 1 | A with three t0 views: the shared-weight branch encodes CAM_F0 / CAM_L0 / CAM_R0 (at least +-82 deg together), 3 x 32 tokens through the memory channel; test-time `:sideoff` masks the two side views | A |
 
-A0 / A / B carry the branch's own head (thin decoder on [tokens, ego]; decision 204), trained jointly, unused at inference.
+A0 / A / B / W carry the branch's own head (thin decoder on [tokens, ego]; decision 204), trained jointly, unused at inference.
 
 **How it runs.** `scripts/vt_chain.sh <arm> <seed> <steps>` (one tmux window per arm and seed) puts the whole chain into the GPU pool:
 the training job (`scripts/vt.py train`, resumable from its last snapshot), a navtest read per snapshot (`VT-<arm>-s<seed>-k<NN>`) and the
