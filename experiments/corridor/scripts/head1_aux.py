@@ -133,7 +133,8 @@ def cmd_pred(a):
     with Run("corridor", f"head1/b2-pred-{a.tag}", config=vars(a)) as run:
         dev = torch.device("cuda")
         S = PT.Store(("lb_navtest",), dev, need_side=False, frames="warp", host=True)
-        pi = np.load(PT.data_dir() / "runs/op_parity/cache/navtrain_full.s2of12/teacher.npz")["pi"]
+        cr = PT.data_dir() / "runs/op_parity/cache"                         # plan columns: the training teacher's (pp_train.Store's lookup)
+        pi = np.load(next(f for f in (cr / "navtrain_full.s2of12@warp/teacher.npz", cr / "navtrain_full.s2of12/teacher.npz") if f.exists()))["pi"]
         model = PT.load_pmodel(a.tag, dev)
         aux = HX.HeadingAux(HR.H1 / "labels/navtest.npz", S.tab["names"], dev)
         aux.net.load_state_dict(torch.load(RUNS / a.tag / "aux.pt", map_location="cpu"))
