@@ -15,6 +15,9 @@ OUT = Path(sys.argv[1] if len(sys.argv) > 1 else D / "runs/lowboard_diag/stoplbl
 OUT.mkdir(parents=True, exist_ok=True)
 L = pd.read_parquet(D / "runs/lowboard_diag/stoplbl/navtrain_s300.parquet")
 L = L[L.full | (L.s_end >= 50)]
+have = set(os.listdir(D / "datasets/navsim/sensor_blobs/trainval"))
+L = L[L.log.isin(have)]
+print("frames with images:", len(L), "logs", L.log.nunique())
 rng = np.random.default_rng(1)
 
 
