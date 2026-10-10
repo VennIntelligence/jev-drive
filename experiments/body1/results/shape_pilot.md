@@ -165,11 +165,67 @@ Replay check: all 422 / 424 (new) and 469 / 461 (base) DAC-failing tokens replay
   question of the closed-loop read that the registered gate now does not allow.
 - The arc lines do what they were added for: every one of them separates this arm from Amendment 5's checkpoints at pilot scale and at full scale.
 
-## 5. Costs, deviations, limits
+## 5. Supplementary reads asked for by the main session (note (h); none of them changes the verdict)
 
-Costs: about 1.9 card-h of the 7 (check and two identity runs 3 min, three pilots of 7 min, nine pilot and G3 read jobs of 1 to 3 min, two full runs
+The request (parallel chain, a 4-seed closed-loop read of the arm, the base's seeds 2 and 3) reached the lane after section 3 was read and the chain
+had stopped. Per note (h), written before any of these runs existed: the base seeds are trained and run in the loop, the arm's seeds 2 and 3 are
+trained and read open loop only, and no `P2H10S` checkpoint is run in the closed loop.
+
+**Arm seeds 2 and 3, open loop** (`P2H10S-F-s{2,3}` against `P2H10-F-s{2,3}`, the base recipe retrained at today's checkout; proximity groups from
+`P2H10-F-s0`'s plan; `results/loss/g3_a6_full_{hold,navtest}_s{2,3}.*`, `results/shape/g3e_s23.md`):
+
+| Item | Seed 2 | Seed 3 | Line | |
+|:--|:--|:--|:--|:-:|
+| (a) hold, agent rate (positives of 30 083) | 516 against 832, -38.0 % [-0.0126, -0.0086] | 487 against 814, -40.2 % [-0.0130, -0.0088] | fall >= 30 % | met |
+| (a) hold, boundary rate | 519 against 1 014, -48.8 % | 503 against 1 012, -50.3 % | fall >= 30 % | met |
+| (b) navtest, agent rate (positives of 12 146) | 143 against 151, -0.00066 [-0.0023, +0.0007] | 147 against 151, -0.00033 [-0.0015, +0.0009] | does not rise | met |
+| (b) navtest, boundary rate / sum | -17.2 % / -14.3 % | -14.3 % / -11.4 % | no rise / falls | met |
+| (e) arc, navtest pooled | 1.0014 [1.0003, 1.0025] | 0.9952 [0.9942, 0.9962] | >= 0.995, lower bound >= 0.990 | met |
+| (e) arc, navtest open | 1.0007 | **0.9949 [0.9935, 0.9963]** | >= 0.995 | **seed 3 NOT met** |
+| (e) arc, navtest lead | 1.0041 | 0.9947 | >= 0.990 | met |
+| (e) arc, hold pooled; `log` / `ot1` / `yr1` / `bd4` | 1.0006; 1.0011 / 1.0009 / 0.9994 / 1.0014 | 0.9997; 1.0001 / 1.0004 / 0.9992 / 0.9984 | >= 0.990; each >= 0.980 | met |
+| `dev_drift_off`, dev ADE | 0.043, 0.546 (base 0.041, 0.541) | 0.043, 0.542 (base 0.041, 0.542) | <= 0.30 | met |
+
+Over four seeds the navtest agent rate is 149 / 138 / 143 / 147 positives against 148 / 144 / 151 / 151 for the base: a mean fall of 2.9 % that no
+single seed resolves, with the registered seed 0 on the wrong side by one token. The navtest arc ratio is 0.9996 / 0.9984 / 1.0014 / 0.9952 against a
+base seed-to-seed ratio of 0.9987 to 1.0003; seed 3 sits 0.0001 under the open-state line. So each of the two gate items closest to its line is
+missed by one of four seeds, by an amount inside the seed spread of the base. (c) and (d) were not run for seeds 2 and 3.
+
+**The base's own seed spread in the closed loop** (700 scenes, 27 logs; seeds 0 and 1 are TR1's runs, seeds 2 and 3 were trained and run here with
+the same loop script, chunk lists and overrides, owner `body1`; `results/shape/base_seeds.{md,json}`, reader `scripts/base_seeds.py`):
+
+| Driver | mean scene score [95 % CI, logs] | score 1 | zeros | at-fault collision | offroad | left corridor | slow | mean progress | > 45 deg mean (61 scenes) |
+|:--|:--|--:|--:|--:|--:|--:|--:|--:|--:|
+| P2H10-F-s0 | 0.9468 [0.9252, 0.9652] | 562 | 26 | 8 | 10 | 8 | 112 | 0.942 | 0.8143 |
+| P2H10-F-s1 | 0.9495 [0.9300, 0.9669] | 572 | 23 | 6 | 10 | 7 | 105 | 0.936 | 0.8544 |
+| P2H10-F-s2 | 0.9498 [0.9287, 0.9685] | 576 | 24 | 7 | 11 | 6 | 100 | 0.939 | 0.8682 |
+| P2H10-F-s3 | 0.9446 [0.9222, 0.9639] | 558 | 25 | 7 | 11 | 7 | 117 | 0.932 | 0.8443 |
+
+One seed read as if it were an arm against another (12 ordered pairs, same recipe on both sides):
+
+| Quantity | Over the 12 pairs |
+|:--|:--|
+| mean paired difference | -0.0052 to +0.0052; CI half-width 0.0078 on average (0.006 to 0.011) |
+| zeros (collision + offroad + corridor) | 23 to 26 per seed; 20 scenes are a zero in all four seeds, 31 in at least one; 6.3 zero flips per pair (removed + new) |
+| at-fault collision / offroad / corridor | 6 to 8 / 10 to 11 / 6 to 8 |
+| slow scenes | 100 to 117; score 1 -> slow 4 to 22 per pair (mean 14.2) |
+| L2 (mean >= 0 and lower bound > -0.005) would read as met | 4 of 12 |
+| L3 (slow <= 1.1 x base) would read as met | 9 of 12 |
+| L1a / L1b would read as met | 6 / 2 of 12 |
+| all four lines | 2 of 12 (seed 1 against seed 0, seed 1 against seed 3) |
+
+What this says about the lane's lines, with no arm involved: a second seed of the unchanged recipe passes L2 in a third of the pairings, because the
+lower bound of a 700-scene paired difference is about -0.008 when the true difference is zero; L3 fails in a quarter of them (117 against 100 and
+105 slow scenes); a difference of 3 zeros (26 against 23) and of 2 at-fault collisions is seed noise. Against this, Amendment 5's read stands as
+measured: slow 277 against 217 over two seeds and score 1 -> slow 78 are outside the spread (at most 22 per pair here), the progress loss -0.0145 is
+larger than any base seed difference in mean progress (0.010 at most), while its zero count (44 against 49) and its L2 point estimate (-0.0046) are
+inside what two base seeds differ by.
+
+## 6. Costs, deviations, limits
+
+Costs: primary chain about 1.9 card-h of the 7 (check and two identity runs 3 min, three pilots of 7 min, nine pilot and G3 read jobs of 1 to 3 min, two full runs
 of 23 min at 7.2 it/s, bench plans) plus one 48-core CPU job of 1 min and the bench's devkit shards; about 55 min wall; about 0.3 GB new on the box
-(five checkpoints, plan dumps under `runs/body1/prog/`); disk 351 GB free. No rollout was run, nothing to prune.
+(five checkpoints, plan dumps under `runs/body1/prog/`); disk 351 GB free. Supplementary (note (h)): four full trainings of 22 to 23 min, six chunk jobs of about 12 min each run together, six read jobs: about 3.0 card-h of the extra 5, 40 min wall, 1.3 GB (`$DATA_DIR/runs/body1/cl/base23`, rollout logs kept only for failed rollouts by the chain); disk 349 GB free. Lane total for this task about 4.9 card-h.
 
 Deviations:
 1. `shape_gate.py` (CPU, seconds) and `pp_full_check.py train`, `bd4_pilot_read.py`, `bench report`, `bd4_g3d.py` were run directly on the box, as the
@@ -179,8 +235,13 @@ Deviations:
 4. The navtest arc ratios of the four pilots were read as well (reported, no line): navtest is not part of the hold logs.
 5. The stop at (b) rests on note (d) and on the lane's instruction for this step ("any item missed: stop"). Amendment 4 item 8 and Amendment 6
    item 8 list (a), (c), (d), (e) as kill criteria and name (b) only as a gate item; note (d) took the stricter reading before any number existed.
-6. No closed loop was run, so no review strips, no lead / open split in the loop, no Chinese page section (docs/html-reports.md asks for one at a
+6. No closed loop of the arm was run, so no review strips, no lead / open split in the loop, no Chinese page section (docs/html-reports.md asks for one at a
    closed-loop read).
+7. Supplementary: the base closed loop of seeds 2 and 3 went straight to six concurrent chunk jobs (`OT2_MAX_ACTIVE=6`) with no pilot8 stage: the
+   driver, loop script and lists are those of TR1's baseline runs. `P2H10-F-s{2,3}` were trained with `pp_train.py` at today's checkout (P2H10-F's
+   arguments from its meta.json; seeds 0 and 1 date from 2026-10-06, and TR1 added options to the trainer since). `base_seeds.py` was run directly (CPU).
+8. Moving three untracked files of the stage-2 agent aside on the box (`results/s2p0/probe.{csv,json}`, `figs/s2p0/probe_speed.png`; identical to
+   the committed ones, kept under `$DATA_DIR/runs/body1/shape/pull-backup`) was needed for `git pull` there.
 
 Limits: third variant of the arm, designed after a closed-loop read and a diagnosis on the same development scenes; hold logs read at pilot scale by
 three arms, and the hinge-only rows come from the state families the hold read uses (disjoint logs, not disjoint distributions); all rates are open

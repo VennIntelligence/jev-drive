@@ -780,3 +780,10 @@ becomes, fixed now, before any of these runs exists:
   they do not change the verdict above whatever they read; in particular a met (b) on seeds 2 and 3 does not re-open the closed loop.
 - The 4-seed closed-loop read of the arm does not exist.
 
+**Status of note (h) (2026-10-10 09:55 box time, added after the reads; nothing above was changed).** Arm seeds 2 and 3, open loop only:
+(a) agent -38.0 % / -40.2 %, boundary -48.8 % / -50.3 %; (b) met on both (navtest agent 143 against 151, 147 against 151 tokens); (e) met on
+seed 2, on seed 3 the navtest open-state ratio is 0.9949 against the line 0.995 (pooled 0.9952, lead 0.9947). Base seeds in the closed loop
+(700 scenes): mean 0.9468 / 0.9495 / 0.9498 / 0.9446, zeros 26 / 23 / 24 / 25, at-fault collisions 8 / 6 / 7 / 7, slow 112 / 105 / 100 / 117;
+one base seed read against another passes L2 in 4 of 12 pairings, L3 in 9, all four lines in 2. Supplementary; the verdict above stands and no
+`P2H10S` checkpoint was run in the closed loop. [results/shape_pilot.md](../results/shape_pilot.md) section 5.
+
