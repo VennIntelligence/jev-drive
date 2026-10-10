@@ -1,0 +1,41 @@
+{
+ "checks": [
+  [
+   "rollouts complete",
+   "233 / 233",
+   true
+  ],
+  [
+   "taught-class zeros (collision + offroad) not above the baseline's",
+   "7 against 7",
+   true
+  ],
+  [
+   "baseline-clean scenes turning into a collision / offroad zero not more than zeros removed",
+   "new 1 against removed (collision / offroad) 1",
+   true
+  ]
+ ],
+ "run": {
+  "n": 233,
+  "mean": 0.9391319600551353,
+  "ones": 180,
+  "zeros": 9,
+  "collision": 1,
+  "offroad": 6,
+  "corridor": 2,
+  "other": 0,
+  "slow": 44
+ },
+ "base": {
+  "n": 233,
+  "mean": 0.9411228584057421,
+  "ones": 186,
+  "zeros": 10,
+  "collision": 2,
+  "offroad": 5,
+  "corridor": 3,
+  "other": 0,
+  "slow": 37
+ }
+}

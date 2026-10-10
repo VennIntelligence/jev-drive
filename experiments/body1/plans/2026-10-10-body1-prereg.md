@@ -605,3 +605,11 @@ sum -12.6 % / -15.9 % with intervals excluding 0; (c) continuation slope 0.833 /
 (+0.52 [+0.35, +0.70]), > 45 deg bucket +0.93 [+0.28, +1.62], cannot-make-turn 2.70 against 2.60 %, `dev_drift_off` 0.045 / 0.045. **G3 met.** The
 numbers are those of a second attempt made after one pilot read of hold logs. Reading (d) used a fresh bench run of P2H10-F at this checkout.
 Next: the closed loop of item 6 (pilot8, chunk1 x s0 checklist, five chunk jobs). Details: [results/loss_g3.md](../results/loss_g3.md).
+
+**Status after the closed loop (2026-10-10 08:40 box time, added after the reads; nothing above was changed).** Staged checks of item 6 passed
+(chunk1 x s0: 233 / 233, collision + offroad zeros 7 against 7, heading sd ratio 0.95, 1 new against 1 removed). Full read, 700 scenes x 2 seeds,
+`P2H10B-F-s{0,1}` against TR1's P2H10-F: reading A (1 400 pairs) L1a 44 against 49 met, L1b 30 against 34 met, L2 -0.0046 [-0.0131, +0.0052] not met,
+L3 slow 277 against 238.7 (base 217) not met; reading B (933 pairs) L1a 29 against 32, L1b 19 against 21, L2 -0.0058 [-0.0160, +0.0050], L3 182 against
+150.7: same verdicts. > 45 deg bucket (61 scenes) 0.8136 against 0.8343. The stricter reading is not met on L2 and L3: the arm is not promoted, no
+PAI read was run, the servable checkpoint stays P2H10-F. A second attempt made after one pilot read of hold logs; a regression check.
+Details: [results/loss_closed_loop.md](../results/loss_closed_loop.md). Note (b) item 5 (car-park / generic-drivable check of the new offroad zeros) was not made per scene.

@@ -10,7 +10,7 @@ figure{margin:20px 0}img{max-width:100%}figcaption{font-size:14px;color:#444}
 code{font-size:13px}
 @media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}}
 </style></head><body>
-<h1>BODY1：冻结 token 上的接触预测头过了离线闸门，两个 serving 臂都在 one-chunk 检查处停</h1>
+<h1>BODY1：接触预测头过了离线闸门，两个 serving 臂在 one-chunk 检查处停，loss 臂过了 G3 但闭环 L2 / L3 不过</h1>
 
 <div class="v"><b>结论。</b>冻结 Cinque token 上的 contact head（arm S0）在 navtrain hold logs 上对学生自己 plan 的 agent contact AUC 为 0.905 [0.868, 0.934]，boundary contact 为 0.978 [0.969, 0.985]；三个用户类均不低于 0.80，&gt; 45° 桶 agent 0.819 [0.716, 0.925]、boundary 0.941 [0.912, 0.964]。在决策 220 的 AlpaSim 决策上（G2）为 0.885 [0.774, 0.969]。两个在 driver 里读这个头的 serving 臂都在 one-chunk 检查处停，全量（700 scene × 2 seed）和 PAI 都没有跑，<b>登记的 L1 / L2 / L3 没有任何一条有读数</b>，下表只是单 chunk、单 seed 的描述性读数。
 <table>
@@ -135,20 +135,73 @@ code{font-size:13px}
 <figure><img src="figs/bev_needless_1.png" alt=""><figcaption>图十七：无零分风险的偏移，0.813 → 0.809。看 22° 弯停放车辆旁 2.0 s 的 −1.2 m：基线 ego 最终偏离日志 3 m，偏移后的 ego 在 1 m 内，一次决策的偏移让终点位姿移动 1.3 m、14°。</figcaption></figure>
 <figure><img src="figs/bev_needless_2.png" alt=""><figcaption>图十八：无零分风险的偏移，1.0 → 1.0（80° 弯）。看 1.5 s 的一次 −1.5 m 偏移：两个 run 都得 1.0，但终点相差 3.1 m、19°。</figcaption></figure>
 
-<h2>五、解读与下一步</h2>
+<h2>五、基线零分诊断（决策 227）</h2>
+<p>对象是 TR1 的 P2H10-F 两个 seed × 700 scene 的全部 49 个零分（at-fault 碰撞 14、offroad 20、left corridor 15），不训练、不拟合任何东西；simulator 的物体、地图和日志路径只作诊断真值。</p>
 <ul>
+<li><b>49 / 49 的失败在出事前就已经在 served plan 里</b>，其中 20 个在 decision 0；controller 跟踪误差不超过 0.35 m，「跟踪漂移」类为空。</li>
+<li>S0 头在失败前的决策上 flag 了 29 个（碰撞 10 / 14、offroad 11 / 20、corridor 8 / 15），首次 flag 的 lead 中位数 2.5 s；但在 101 个被 flag 的决策上，≤ 1.5 m 的横移真的清空的只有 34 个，头自己选的候选真的清空的只有 13 个。起步（&lt; 1 m/s）的 22 个 in-plan 碰撞决策只 flag 了 2 个。</li>
+<li>15 个 corridor zero 全部是路线问题：plan 走向另一个可行驶位置，不碰任何东西，其中 5 个 &gt; 45° 的全是切内角。offroad 20 个里 7 个是定义差：NAVSIM 栅格（头和 hinge 的标签）认为可行驶，AlpaSim 的 road area 在那里结束。</li>
+<li>闭环决策上头的 AUC：agent 0.882、road 0.890，对 hold logs 的 0.905 / 0.978，差在 boundary 一半。navtrain 上的车身课够得到 27 / 49（14 碰撞 + 13 offroad），其余 22 个需要路线或标签层面的东西。P2H10-F 的训练里没有 agent hinge，也没有离轨行。</li>
+</ul>
+<figure><img src="figs/decision_matrix.png" alt=""><figcaption>图十九：每行一个零分、每格一个决策。看橙色格在绿色格左边：失败在 plan 里待了 1 至 3 s 之后头才 flag，而「存在真正清空的候选」的点在格子变绿时已经稀疏。</figcaption></figure>
+
+<h2>六、loss 臂 4.3：两次 pilot（决策 228、补记 5）</h2>
+<p>补记 4 的 loss 臂把课放进 plan 本身：学生自己 plan 上的 agent hinge、离轨状态上的 hinge-only 行（新增 <code>bd4</code> 族：航向偏 2 至 8°、横向 0.5 m 内、不设速度下限）、道路 hinge 用 road-and-lane 栅格（项 C，是按本榜 scorer 零分挑的 per-board 成分，已披露）。注意项 C 的图层并不是 scorer 的 road area（scorer 还算 car park 与 generic drivable area），按保守的标签用，不称为 scorer 标签。</p>
+<table><tr><th>pilot</th><th>读数</th><th>结果</th></tr>
+<tr><td>补记 4（hinge-only 行与 imitation 行等权）</td><td>own-plan 正例上的 agent hinge 从 step 201–400 到 2 701–3 000</td><td>0.1216 → 0.1100，降 9.5%（线 30%）：<b>按登记口径不过</b>；留出 log 上 agent 接触率 −26%、出界率 −17%（CI 不含 0），dev ADE 0.591 对 0.590 m；新项只占总 loss 约 0.5%</td></tr>
+<tr><td>补记 5（公开的第二次尝试，只改 hinge-only 行的权重 w，gate 换成结果量且更严；<b>读过一次 hold logs 之后做的</b>）</td><td>w ∈ {3, 10} 在训练 log 的验证部分选；hold logs 上读一次</td><td>选 w = 3（验证部分 agent + boundary 率降 37.2%；w = 10 降 47.4% 但 dev ADE 0.6069 &gt; 0.6013，不合格）；hold logs：agent 0.0136 对 0.0261（−47.7%）、boundary 0.0172 对 0.0275（−37.4%），CI 均不含 0；dev ADE 0.5899 对 0.5913；续接斜率 0.93 对 1.08：<b>gate 过</b></td></tr></table>
+<figure><img src="figs/bd4_preview_class3.png" alt=""><figcaption>图二十：<code>bd4</code> 族 class 3 的六个状态（5.7 至 13.7 m/s，航向偏 −7.2 至 +7.6°）。看重投影后画面的偏移方向与航向偏移相反、padding 带在相机转向的一侧；负的 boundary margin 出现在扫过的车身越过栅格边缘处。</figcaption></figure>
+
+<h2>七、loss 臂的全量离线闸门与闭环读数</h2>
+<div class="v"><b>结论。</b>P2H10B-F（w = 3，两个 seed）过了 G3 全部四项，闭环里 L1a、L1b 过但 <b>L2、L3 在两种读法下都不过</b>：碰撞 zero 降了三分之一（14 → 9），offroad 没降（20 → 21），代价是变慢 —— slow scene 217 → 277，均分 −0.0046 [−0.0131, +0.0052]。按登记规则这个 checkpoint 不晋级，没有跑 PAI；可 serve 的仍是 P2H10-F。这是第二次尝试的数，读过一次 hold logs，且是 regression check（公开 scene 参与过 P2H10 的选择）。</div>
+<h3>G3（全量，对同 seed 的 P2H10-F）</h3>
+<table><tr><th>项</th><th>线</th><th>seed 0</th><th>seed 1</th><th>结果</th></tr>
+<tr><td>(a) hold logs agent 接触率（30 083 个状态，121 个 log）</td><td>降 ≥ 30%，CI 不含 0</td><td>0.01403 对 0.02729（−48.6%）</td><td>0.01380 对 0.02666（−48.3%）</td><td>过</td></tr>
+<tr><td>(a) hold logs boundary 率</td><td>降 ≥ 30%</td><td>0.01569 对 0.03377（−53.5%）</td><td>0.01582 对 0.03384（−53.2%）</td><td>过</td></tr>
+<tr><td>(b) navtest on-log（12 146 个 token）两率之和</td><td>两率不升，和降</td><td>0.04232 对 0.04841（−12.6%）</td><td>0.04084 对 0.04858（−15.9%）</td><td>过（agent 率只降 6–8%，不显著）</td></tr>
+<tr><td>(c) 续接斜率 alpha_05</td><td>≤ P2H10-F + 0.05</td><td>0.833 对 1.028</td><td>0.827 对 1.037</td><td>过</td></tr>
+<tr><td>(d) navtest EPDMS（两 seed 均值）</td><td>≥ base − 0.3</td><td colspan="2">89.19 对 88.67（+0.52 [+0.35, +0.70]）</td><td>过</td></tr>
+<tr><td>(d) &gt; 45° 桶 EPDMS</td><td>报告</td><td colspan="2">79.55 对 78.61（+0.93 [+0.28, +1.62]）；inside-cut 4.15% 对 4.78%；cannot-make-turn 2.70% 对 2.60%（不变）</td><td>报告</td></tr>
+<tr><td>dev_drift_off</td><td>≤ 0.30</td><td>0.0453</td><td>0.0446</td><td>过</td></tr></table>
+<p>按状态族看，hold logs 上降幅在 <code>bd4</code>（agent −56% / boundary −60%）、<code>yr1</code>（−47% / −57%）、<code>ot1</code>（−45% / −44%）大，on-log 状态只降约 24%；这决定了闭环里能期待多少。</p>
+<h3>闭环：700 scene × 2 seed，对 TR1 的 P2H10-F</h3>
+<p>分阶段检查（pilot8、chunk1 × s0 清单：233 / 233 rollout；碰撞 + offroad zero 7 对 7；decision 9 航向 sd 比 0.95；新增碰撞 / offroad zero 1 个对去掉 1 个）全过，随后跑了其余五个 chunk。</p>
+<table><tr><th>Driver</th><th>均分 [95% CI，按 log]</th><th>score 1</th><th>zeros</th><th>碰撞</th><th>offroad</th><th>corridor</th><th>slow</th><th>均 progress</th></tr>
+<tr><td>P2H10-F-s0</td><td>0.9468 [0.9252, 0.9652]</td><td>562</td><td>26</td><td>8</td><td>10</td><td>8</td><td>112</td><td>0.942</td></tr>
+<tr><td>P2H10B-F-s0</td><td>0.9441 [0.9238, 0.9617]</td><td>541</td><td>22</td><td>5</td><td>10</td><td>7</td><td>137</td><td>0.928</td></tr>
+<tr><td>P2H10-F-s1</td><td>0.9495 [0.9300, 0.9669]</td><td>572</td><td>23</td><td>6</td><td>10</td><td>7</td><td>105</td><td>0.936</td></tr>
+<tr><td>P2H10B-F-s1</td><td>0.9430 [0.9234, 0.9599]</td><td>538</td><td>22</td><td>4</td><td>11</td><td>7</td><td>140</td><td>0.921</td></tr></table>
+<table><tr><th>读法</th><th>(seed, scene) 对</th><th>L1a 碰撞 + offroad + corridor</th><th>L1b 碰撞 + offroad</th><th>L2 均差 [95% CI，按 log]</th><th>L3 slow（上限 1.1 × base）</th></tr>
+<tr><td>A：全部</td><td>1 400</td><td>44 对 49（9 / 21 / 14 对 14 / 20 / 15）：过</td><td>30 对 34：过</td><td>−0.0046 [−0.0131, +0.0052]：不过</td><td>277 对 238.7（base 217）：不过</td></tr>
+<tr><td>B：从未带 BODY1 开关跑过的对（chunk2 × s0 + 全部 s1）</td><td>933</td><td>29 对 32（6 / 13 / 10 对 8 / 13 / 11）：过</td><td>19 对 21：过</td><td>−0.0058 [−0.0160, +0.0050]：不过</td><td>182 对 150.7（base 137）：不过</td></tr></table>
+<p>zero 的变化逐个列在 <code>experiments/body1/results/loss/cl/flips.csv</code>：两个 seed 都出现的翻转有 12 个（去掉 8：碰撞 3、offroad 2、corridor 3；新增 4：offroad 2、corridor 2）。seed 0 去掉 11 / 新增 7，seed 1 去掉 10 / 新增 9。变慢是成本的主要来源：1.0 → slow 的 scene 30（s0）与 48（s1），反方向只有 7 与 16；&gt; 45° 的 61 个 scene 均分 0.8136 对 0.8343（−0.0207 [−0.0825, +0.0453]），zero 20 对 18（corridor 7 对 5）。</p>
+<h3>去掉与新增的 zero（seed 1，全是 fresh 的对）</h3>
+<figure><img src="figs/loss_removed_39cbed62.png" alt=""><figcaption>图二十一：碰撞 zero 被去掉（两个 seed），直路、两列停放车辆。看第 4 至 6 格基线（橙）向左漂 0.5 m 撞上前车，新 checkpoint 保持 0.2 m 偏移通过；下图的两条曲线就是全部差别。</figcaption></figure>
+<figure><img src="figs/loss_removed_a04628cd.png" alt=""><figcaption>图二十二：corridor zero 被去掉（两个 seed），62° 左转。看基线切进日志弧内 4.2 m，新 checkpoint 只偏 1.7 m：这是边界课瞄准的切内角。</figcaption></figure>
+<figure><img src="figs/loss_removed_fcb45b2a.png" alt=""><figcaption>图二十三：offroad zero 被去掉（两个 seed），41° 左转。看基线向弧内漂 1.0 m 后出界，新 checkpoint 只偏 0.4 m，机制同上一图，尺度更小。</figcaption></figure>
+<figure><img src="figs/loss_new_6d08dce7.png" alt=""><figcaption>图二十四：新 offroad zero（两个 seed），近直路。看下图蓝线先离开：新 checkpoint 3 s 已偏 1.0 m（基线 0.5 m），3.5 s 出界；基线 5 s 时偏到 2.4 m 但仍得 1.0。原因是漂移，不是物体。</figcaption></figure>
+<figure><img src="figs/loss_new_52d9d533.png" alt=""><figcaption>图二十五：新 offroad zero（两个 seed），40° 转弯。看 plan（绿）比日志（虚线）转得更狠，偏移到 5 s 为 2.4 m，基线只有 0.1 m。</figcaption></figure>
+<figure><img src="figs/loss_new_78b4153a.png" alt=""><figcaption>图二十六：新 corridor zero（两个 seed），48° 右转。看 3 s 偏 1.5 m、5 s 偏 5 m（基线 0.9 m）：plan 比右弯的日志路径更直，周围没有物体。</figcaption></figure>
+<p>去掉的 zero 正是课要解决的（向物体或弯内侧的漂移）；两 seed 都重现的 4 个新增 zero 里看过图的 3 个是偏移在转弯或直路上增长、与物体无关：这个臂把一部分漂移挪到了另一侧而不是消掉。</p>
+
+<h2>八、解读与下一步</h2>
+<ul>
+<li>loss 臂：离线上对自己 plan 的接触去了一半（hold logs agent −49%、boundary −53%），navtest +0.52；闭环里只有碰撞类降了三分之一，offroad + corridor 持平（35 对 35），且 slow scene 增加 60、progress 降 0.014 至 0.015。hold-log 上 on-log 状态的降幅只有 24%，闭环里的失败正是学生自己走到的 on-log 状态，这个落差是离线 gate 没有量到的东西。</li>
+<li>L1 的余量只有 3 至 5 个 zero，落在基线两个 seed 之间的差（26 对 23）之内；L2 的下界 −0.013 至 −0.016 远低于 −0.005。按登记线这个臂不晋级，也不跑 PAI。</li>
+<li>补记 4 第 11 项的 drop-one 消融（G3 过之后到期，每个一个 seed，只读 G3）没有在这次交接里训练，可以用来回答碰撞增益来自 A、B 还是 C，但不会改变上面的闭环结论。</li>
 <li>两个 serving 臂原因不同但同源：闭环里决定分数的是动作的逐 scene 代价，而单次动作没有跨决策的目标。刹停把碰撞换成 progress 损失（少撞、偏慢 scene 变多）；横移的单次偏移改变了之后所有 plan。</li>
 <li>chunk1 的 10 个基线 zero 里 5 个从未被 flag，其中 4 个是 offroad（chunk0 的 offroad 2 与 corridor 1 也都没被 flag）。plan 本身没有出界而是跟踪漂移、AlpaSim 的 offroad 与 drivable raster 的定义差、闭环状态在行集之外，三者哪个成立，数据还不能分开。</li>
-<li>下一步：先诊断基线全部 zero 上 head 为什么没有 flag（尤其 chunk1 里从未被 flag 的 5 个，其中 4 个 offroad），再定 4.3（课进到 plan 本身的 loss 臂，在 student-plan 行与离轨状态上训，需要自己的补记与 navtest guardrail）。另一条是目标跨决策保持的 serving 动作（held offset 或回线 ramp）。</li>
-<li>700 × 2 的全量和 PAI 对两个臂都没有跑；PAI hook 不存在。</li>
+<li>下一步（两个 serving 臂之后，已执行）：诊断基线全部 zero（第五节）与 loss 臂（第六、七节）。loss 臂闭环不过之后剩下的是：15 个 corridor 路线问题与 4 个物体在相机外的碰撞不在车身课范围内（需要 stage 2 的 CARLA 行），以及目标跨决策保持的 serving 动作。</li>
+<li>700 × 2 的全量和 PAI 对两个 serving 臂都没有跑；PAI hook 不存在。loss 臂跑了 700 × 2，未跑 PAI（nuPlan 线没过）。</li>
 </ul>
 
-<h2>六、限制</h2>
+<h2>九、限制</h2>
 <ul>
 <li>每个闭环读数都是一个 chunk、一个 seed：刹停 4 个基线碰撞、36 个 flagged scene；re-plan 2 个基线碰撞、19 个被 re-plan 的 scene，「2 对 1」的计数很小，L2 的 CI 含 0。基线是同一 checkpoint 的另一次 run，靠未触发 scene 的逐个相同（198 / 198、214 / 214）成立；「造出」「去掉」按对基线 run 的结果定，不是接触标签。</li>
 <li>这是 regression check：公开 scene 都参与过 P2H10 的选择。serving-only，navtest 不变也没有评。</li>
 <li>re-plan 的闭环没有走 pool：pool 的五张卡被别的 lane 的队列占满（15 个在跑、50–70 个排队），闭环 job 与两个 GPU 脚本直接跑在本 lane 持有的 card 2 上（<code>rp_direct.py</code>）。首次直跑三个未绑核的 stack 同时起，线程池撞上容器 pid 上限，五个 rollout 评分失败，后改为每个 stack 绑 8 核、最多 2 个并行、评分失败重跑；pilot 是重跑的结果。</li>
 <li>离线：navtrain 上学生的 plan 对 adapter 是 in-sample；agent 正例的 85% 来自离轨状态，离轨状态只覆盖 &gt; 3 m/s；G2 只有 22 个 rollout（9 个 log），seed 1 单独下界不过；学习曲线每点一个 seed；日志中的 agent 不反应。re-plan 的 gate 是单状态，没有对记忆规则和回路做离线 gate。</li>
+<li>loss 臂的闭环读数是 regression check，两个 seed，读法 B 只有 933 对与 61 个 &gt; 45° scene；w = 3 是读过一次 hold logs 之后定的；闭环 pilot8 起初漏设 lane 环境变量，跑在 <code>alpasim/ot2/loss-pilot</code> 下（已取消重复的 job，没有碰别的 lane 的 job）；补记 5 的 note (b)（新 offroad zero 对 car park / generic drivable area）没有逐个检查，项 C 不能排除是新 offroad zero 的成因之一；去掉 zero 的图是 seed 1 带日志的重跑（分数复现）。</li>
 <li>&gt; 45° 桶的闭环读数（刹停 24 个 scene、re-plan 18 个 scene）样本很小，区间含 0 或贴 0，只作描述。</li>
 </ul>
 </body></html>
