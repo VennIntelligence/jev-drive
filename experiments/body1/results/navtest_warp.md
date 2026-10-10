@@ -98,6 +98,28 @@ made, a descriptive four-seed closed loop exists (decision 233), and whether the
 | 233, closed-loop progress by group (`shape_cl/report.md`): lead / open | +0.0115 [+0.0038, +0.0203] / +0.0078 [+0.0032, +0.0126] | +0.0094 [+0.0021, +0.0170] / +0.0093 [+0.0046, +0.0144] | re-established |
 | 236, navhard and HUGSIM | | | not affected (bench) |
 
+## Result pages corrected in place
+
+[sdrop.md](sdrop.md), [route_pilot.md](route_pilot.md), [shape_pilot.md](shape_pilot.md) (G3 (b), the navtest arc rows of (e) and of the pilot
+table, seeds 2 and 3), [loss_g3.md](loss_g3.md) (G3 (b) of Amendment 5), [progress_diagnosis.md](progress_diagnosis.md) (open-loop navtest arcs,
+the group tables), [shape_closed_loop.md](shape_closed_loop.md) (lead / open split), the lane README and its `experiments/INDEX.md` line, the
+Chinese page `research/body1/index.html`, decisions 229, 230, 232, 233, 234, 244 and their lines in `research/decisions.md`. Each replaced
+passage names the first read's number. Figures were not redrawn: `figs/shape/shape_gate.png` (navtest points), `figs/prog/ol_arc.png` (left
+panel) and the group colours of `figs/prog/cl_progress.png` show the first read; their pages say so. Identity of the fixed reader over all
+12 146 tokens (8 poses): forward on warp frames against the bench's archived plans 0.004 m mean, 0.028 m at the 99th percentile, 0.07 m at most
+(four checkpoints); the first read's dumps against the same archived plans 1.34 to 1.45 m mean, 6 m at the 99th percentile.
+
+## Open after the re-read: the plan served at decision 0 in AlpaSim
+
+`prog_cl.py` checks its placement of closed-loop traces by comparing the 4 s arc of the plan served at decision 0 of each AlpaSim scene with the
+open-loop plan at the scene's navtest token (`cl_summary.json`, `k0_arc_vs_openloop`, the base runs of the 1 400 (seed, scene) pairs). Against the first read's
+off-protocol plans the ratio was 1.010 (r = 0.90); against the scored plans it is **0.909** (r = 0.92). So the plan the simulator serves first is
+about 9 % shorter than the plan `jevdrive.bench` scores at the same token, and about as long as the GIMM-frame plan (whose arc was 0.892 of the
+logged one; on warp frames the base is 0.997). Two readings, not separated here: the first decision in the simulator differs from the token for
+its own reasons (rendered frames, history at start, the driver's serving path), or the closed-loop driver gives these warp-trained checkpoints
+frames closer to GIMM than to warp. The second would concern every AlpaSim number of the `P2H10*` family, not this lane only. A check that
+separates them: forward the first frames the simulator rendered through the checkpoint on both front protocols and compare with the served plan.
+
 ## Other consumers checked
 
 | Consumer | reads | affected |
