@@ -68,7 +68,7 @@ for st in hold navtest; do
 done
 waitdirs "$L/dump-hold" "$L/dump-navtest" $(for a in "${ARMS[@]}"; do for s in 0 1; do echo "$L/g3-hold-$a-s$s $L/g3-navtest-$a-s$s"; done; done)
 for st in hold navtest; do
-  sub sdrop-route-$st "$L/route-$st" --vram 0 --cpu 8 --ram 16 -- $PY $S/route_ol.py --name sdrop_$st --set $st --new $NEW8 --ref $REF8 --out $R
+  sub sdrop-route-$st "$L/route-$st" --vram 0.5 --cpu 8 --ram 16 -- $PY $S/route_ol.py --name sdrop_$st --set $st --new $NEW8 --ref $REF8 --out $R
 done
 "${BN[@]}" status --model $NEW --bench navtest --wait || die "navtest"
 sub sdrop-replay "$L/replay" --vram 0.5 --cpu 48 --ram 64 -- $NAV $SP/turn_oracle.py replay --name sdrop --models $NEW P2H10S-F-s0 P2H10S-F-s1 P2H10-F-s0 P2H10-F-s1
@@ -84,7 +84,7 @@ for a in "${ARMS[@]}"; do
   $PY $S/bd4_g3d.py --replay sdrop --new P2H10S-$a-F --base P2H10-F --out $R/d_${a}_vs_base >> "$D/g3d.txt" || die "g3d $a base"
   $PY $S/bd4_g3d.py --replay sdrop --new P2H10S-$a-F --base P2H10S-F --out $R/d_${a}_vs_S >> "$D/g3d.txt" || die "g3d $a S"
 done
-sub sdrop-report "$L/report" --vram 0 --cpu 8 --ram 24 -- $PY $S/sdrop_report.py report
+sub sdrop-report "$L/report" --vram 0.5 --cpu 8 --ram 24 -- $PY $S/sdrop_report.py report
 waitdirs "$L/report"
 $CL usage --hours 6 > "$D/usage.txt" 2>&1 || true
 status "done"; date '+%F %T' > "$D/DONE"
