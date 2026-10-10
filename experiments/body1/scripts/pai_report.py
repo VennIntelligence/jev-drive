@@ -138,7 +138,7 @@ def main():
          "Missing chunk stacks: " + (", ".join(miss) or "none"), ""]
     rows = []
     for v, vn in SERV.items():
-        L += [f"## Serving ({v}) {vn}", "", "| tag | scenes | mean score | zeros | at-fault collision | offroad | corridor | other | slow (0 < score < 1) | mean progress (progress_clipped_rel) |",
+        L += [f"## Serving ({v}) {vn}", "", "| tag | scenes | mean score | zeros | at-fault collision | offroad (excl.) | corridor (excl.) | other (exception) | slow (0 < score < 1) | mean progress (progress_clipped_rel, all rollouts incl. failed) |",
               "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
         for (t, vv) in sorted(D):
             if vv != v:
@@ -151,7 +151,8 @@ def main():
             row = dict(tag=t, serving=v, n=int(ok.sum()), mean=float(x[ok].mean()), zeros=int((x[ok] == 0).sum()), **z, slow=int(((x[ok] > 0) & (x[ok] < 1)).sum()), progress=pr)
             rows.append(row)
             L.append(f"| {t} | {row['n']} | {row['mean']:.4f} | {row['zeros']} | {z['at-fault collision']} | {z['offroad']} | {z['corridor']} | {z['other']} | {row['slow']} | {pr:.3f} |")
-        L += [f"| alpamayo1 (organisers' reference, 441 scenes) | | {ALPAMAYO1} | | | | | | | |", ""]
+        L += [f"| alpamayo1 (organisers' reference, 441 scenes) | | {ALPAMAYO1} | | | | | | | |", "",
+              "Classes here are exclusive, priority collision > offroad > corridor (a scene with offroad and corridor counts as offroad); raw overlapping flag counts are in pai_decomposition.md.", ""]
     with (out / "pai_by_tag.csv").open("w") as f:
         w = csv.DictWriter(f, rows[0].keys())
         w.writeheader()
