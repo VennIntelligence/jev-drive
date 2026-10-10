@@ -70,7 +70,7 @@ def ramps(own):
     f = (np.arange(1, 9) / 8.0)[None, None, :]
     a = np.array(RAMPS, np.float32)[None, :, None] * f
     o = own[:, None]
-    return np.stack([o[..., 0] - a * np.sin(o[..., 2]), o[..., 1] + a * np.cos(o[..., 2]), np.broadcast_to(o[..., 2], a.shape[:2] + (8,)) + 0 * a], -1).astype(np.float32)
+    return np.stack([o[..., 0] - a * np.sin(o[..., 2]), o[..., 1] + a * np.cos(o[..., 2]), o[..., 2] + 0 * a], -1).astype(np.float32)
 
 
 # ---------------------------------------------------------------- forward
