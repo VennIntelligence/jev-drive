@@ -820,3 +820,8 @@ one base seed read against another passes L2 in 4 of 12 pairings, L3 in 9, all f
    mean progress; arm minus base paired by seed index and scene, scene-bootstrap CI, for (i) and (ii) separately; the same differences
    between base seeds as the null (an effect is "outside the base's seed spread" only beyond all base-pair differences; decision 226 found
    0.173 against 0.257 for two seeds); alpamayo1's 0.5033 as the reference row. No selection of a serving or seed after the read.
+
+**Status of note (i) (2026-10-10, lane agent, after the read; nothing above was changed).** The descriptive 4-seed read was made as written (`P2H10S-F-s{0..3}`, 700 scenes
+each, no serving switch, same loop script and chunk lists as the base; one addition: besides the 12 ordered pairs of base seeds (N1) the 12 disjoint 2-vs-2 splits (N2) serve as
+the null of statistics over sets of pairs, "outside the base's seed spread" requiring both). Result and tables: [results/shape_closed_loop.md](../results/shape_closed_loop.md). The arm is
+not promoted and no PAI read exists.
