@@ -28,7 +28,7 @@ Zero kinds are the scorer's flags on zero-score scenes; two flags can be set on 
 | s1 - s0 | 281 | +0.0208 | [-0.0098, +0.0516] | 38 / 50 / 193 |
 
 Bootstrap: 10 000 resamples of scenes, seed 0. The CI covers scene sampling only: there is one base seed, and decision 235 measured a
-base-to-base spread of up to 0.029 on 60 served scenes, so the base seed is an unmeasured term of these differences on this scene set.
+base-to-base spread of up to 0.029 on 60 served scenes; a second base seed was then run on 139 of the scenes (section below).
 
 Where the difference comes from (decomposition of the paired mean over the 281 scenes):
 
@@ -41,8 +41,34 @@ As in decision 235, the whole difference is zero-score scenes becoming scored on
 score is unchanged. All three zero kinds are lower in both seeds. The two seeds are not separable (CI includes 0); 99 scenes are zeros in both
 seeds, 93 of them also in base.
 
+## Base seed 1 on 139 of the scenes
+
+A second base seed, `P2H10-F-s1`, same served configuration, on the 139 scenes of `s_{b1a,b1b,b1c,q40}` (run in the idle window before the
+training data landed; not part of the plan of this read). Output: [pai281/baseseeds139.md](pai281/baseseeds139.md), per scene
+[pai281/baseseeds139_scenes.tsv](pai281/baseseeds139_scenes.tsv).
+
+| Row (139 scenes) | Mean | Zeros | at-fault collision | offroad | left corridor |
+|---|--:|--:|--:|--:|--:|
+| base s0 | 0.3245 | 79 | 12 | 21 | 47 |
+| base s1 | 0.3121 | 82 | 13 | 25 | 46 |
+| `P2H10S-F-s0` | 0.4086 | 69 | 12 | 19 | 40 |
+| `P2H10S-F-s1` | **0.4440** | **60** | 9 | 15 | 40 |
+
+| Paired difference (139 scenes) | Mean | Scene-bootstrap 95 % CI |
+|---|--:|---|
+| base s1 - base s0 | -0.0124 | [-0.0596, +0.0353] |
+| s0 - base s0 | +0.0841 | [+0.0193, +0.1503] |
+| s0 - base s1 | +0.0965 | [+0.0283, +0.1632] |
+| s1 - base s0 | +0.1195 | [+0.0544, +0.1873] |
+| s1 - base s1 | +0.1319 | [+0.0683, +0.1970] |
+| two-seed mean - two-seed base mean | +0.1080 | [+0.0528, +0.1646] |
+
+The two base seeds differ by 0.012 (CI includes 0), the two `P2H10S-F` seeds by 0.035 on these scenes; each of the four arm-against-base pairs
+is positive with a CI excluding 0, and the smallest of them (+0.084) is seven times the base-to-base difference. On these 139 scenes the at-fault
+collision zeros of `P2H10S-F-s0` equal base (12 against 12 / 13); only s1 has fewer (9).
+
 On the 139 scenes that had a base rollout before this run (the earlier subset read): base 0.3245, s0 0.4086 (+0.0841 [+0.0193, +0.1503]),
 s1 0.4440 (+0.1195 [+0.0544, +0.1873]), two-seed mean +0.1018 [+0.0419, +0.1646].
 
-Run dirs (Tokyo box, `/data/runs/alpasim/`): base `pai_full/runs/{full1_ab,base_q40_c1}` (139 scenes) and `pai_base/runs/*` (142); s0
+Run dirs (Tokyo box, `/data/runs/alpasim/`): base `pai_full/runs/{full1_ab,base_q40_c1}` (139 scenes) and `pai_base/runs/*` (142), base seed 1 `pai_base_s1/runs/*` (139); s0
 `pai_full/runs/p2h10s-f-s0_*`; s1 `pai2c/runs/s1_b1a_c4` (33) and `pai_s1/runs/*` (248).
