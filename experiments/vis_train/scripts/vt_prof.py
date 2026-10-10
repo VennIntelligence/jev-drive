@@ -12,7 +12,7 @@ pair. Results -> $DATA_DIR/runs/vis_train/prof/<tag>.json.
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "scripts"), str(_R / "experiments/op_adapt_r2/lib"), str(_R / "experiments/op_parity/scripts")]
-import argparse, json, time  # noqa: E401,E402
+import argparse, json, os, subprocess, time  # noqa: E401,E402
 
 import numpy as np  # noqa: E402
 
@@ -216,17 +216,16 @@ def cmd_step(a):
             t6 = sync()
             assert torch.isfinite(total), "non-finite loss"
             if step >= a.warm:
-                try:
-                    util.append(torch.cuda.utilization())
-                except Exception:  # noqa: BLE001  (no pynvml: utilisation is left out)
-                    pass
+                if step % 10 == 0:                                                  # nvidia-smi's utilisation of this job's card (~1% of the wall time)
+                    q = subprocess.run(["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits", "-i",
+                                        os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0]], capture_output=True, text=True).stdout.strip()
+                    util += [float(q)] if q.replace(".", "").isdigit() else []
                 for k, v in zip(seg, (t1 - t0, t2 - t1, t3 - t2, t4 - t3, t5 - t4, t6 - t5)):
                     seg[k].append(v)
             if step == 0:
                 run.info(f"first step {time.perf_counter() - t0:.1f} s (compile / cudnn search included)")
         el = sync() - t_all
         cpu = sum(resource.getrusage(w).ru_utime + resource.getrusage(w).ru_stime for w in (resource.RUSAGE_SELF, resource.RUSAGE_CHILDREN)) - cpu0
-        import subprocess
         r = {"shape": a.shape, "enc": a.enc, "batch": a.batch, "it_s": a.steps / el, "samples_s": a.steps * a.batch / el,
              "ms": {k: 1e3 * float(np.mean(v)) for k, v in seg.items()}, "read_ms_thread": 1e3 * float(np.mean(io["read"])),
              "upload_ms_thread": 1e3 * float(np.mean(io["up"])), "peak_alloc_gb": torch.cuda.max_memory_allocated() / 2 ** 30,
