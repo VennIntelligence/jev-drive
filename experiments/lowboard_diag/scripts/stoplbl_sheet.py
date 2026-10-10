@@ -15,6 +15,10 @@ OUT = Path(sys.argv[1] if len(sys.argv) > 1 else D / "runs/lowboard_diag/stoplbl
 OUT.mkdir(parents=True, exist_ok=True)
 L = pd.read_parquet(D / "runs/lowboard_diag/stoplbl/navtrain_s300.parquet")
 L = L[L.full | (L.s_end >= 50)]
+REPO = Path(__file__).resolve().parents[3]
+sys.path[:0] = [str(REPO)]
+from jevdrive.data import splits
+L = L[splits.load("navsim/navtrain").mask(L.token)]          # only navtrain tokens have images
 have = set(os.listdir(D / "datasets/navsim/sensor_blobs/trainval"))
 L = L[L.log.isin(have)]
 print("frames with images:", len(L), "logs", L.log.nunique())
