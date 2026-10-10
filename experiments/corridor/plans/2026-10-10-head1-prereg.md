@@ -59,3 +59,44 @@ stage 1：10 个 head run，每个约 10–15 分钟、约 34 GB VRAM（fold 的
 - G3 的规则是从第 204 条两类臂（独立噪声、QH）归纳的线性换算，只有这两类校准点。
 - L 标签把「另一条合法车道 / 另一种摆位」也算作误差（同第 207 条）；M 标签有 1–2% 的匹配失败，转弯 token 上更高。
 - navtrain (H) 上的 policy 是 fold 模型 `CF5f0-F-s0`（1 seed），navtest 上是 `SH30-F` 2 seed。
+
+## 补记 2026-10-10（HEAD1b）：越过 G3 的探索性第二轮（任何训练与读数之前提交并 push）
+
+**性质。** stage 1 按登记规则在 G3 上不过（R² 0.513 对 0.538，第 243 条）。用户在看到 stage-1 结果之后（2026-10-10）决定越过这条闸门继续，并要求六张空闲卡并行跑、不再串行设闸。本补记以下全部内容因此是**探索性的**：闸门未过之后的第二次尝试，不是登记读数；所有文档、表、决策条目都照此标注。下面的线与数字仍在任何训练 / 读数之前写死，用途是约束本轮自己的读法，不改变其探索性。约束不变：不解冻 encoder / 不加 LoRA，不做全量训练与闭环，不用 WA-JEPA 权重或特征，推理时无特权输入，navtest 不参与任何拟合与选择。所有 GPU job 走 pool，N 个独立 run = N 个 job。
+
+### A：把 head 训到收敛（arm L，输入不变）
+stage-1 的 L 头在 8 000 步时 train loss 0.0010、val 0.0036，val 的最低点在最后一步：欠的不只是步数，还有泛化差距。候选（fold 0、seed 0，其余超参同 stage 1）：
+`a16` 16 000 步；`a24` 24 000 步；`r16` 16 000 步 + dropout 0.2 + wd 0.1；`t16` 16 000 步 + 训练时每个 batch 随机只留一半视觉 token（256 → 128，推理用全部）；`rt24` 24 000 步 + 两者。
+- 选择只看 fold 0 的 val log（训练 fold 内 sha256("head1val|" + log) % 10 == 0 的 89 个 log，trainer 已有的加权 Huber val loss，取各自最优 step）：val loss 最低者胜；差距 < 1% 时取更便宜的。stage-1 的 `L-f0-s0`（8 000 步，val 0.003612）作参照列，不参与选择。
+- seed ensemble：选出的配置再训 seed 1；若 fold 0 val log 上两 seed 预测均值的 val loss 比 seed 0 低 ≥ 2%，最终 head = 两 seed 均值，否则 = seed 0。
+- 最终配置训 fold 0–4（ensemble 成立则每 fold 两 seed）。每个 navtrain 行的预测来自没见过它所在 log 的那个 fold 的模型（OOF，覆盖全部 navtrain 行，断言检查）；navtest 用 fold 0 的模型（与训练行同分布：80% log 上训的模型的 held-out 预测）。
+- 对最终 head 在 navtest 上把 G1 / G2 / G3 三条线各读**一次**，与 stage-1 的值并列（8.54° / −2.70；−6.59；R² 0.513）。blind floor 沿用 stage-1 的 blind（15.13°）。这是对收敛后的 head 的描述，不是新闸门；B、B2、C 不等它的结果。
+
+### A2：拆开「目标形态 / 标签量与 fold / 结构」（只训 head，与 A 并行）
+QH（第 204 条）= 8 个定时位姿目标 × 少量 log（非 log 级 held-out）× thin head（2 slot + MLP）；HEAD1 = 弧长 heading 曲线 × navtrain fold × 8 slot attention。补三个头，fold 0、stage-1 的 8 000 步与超参、seed 0 / 1：
+`P-full` = HEAD1 结构 + QH 的目标与 loss（8 位姿）；`L-thin` = QH 的 thin head + HEAD1 的目标（22 点曲线）；`P-thin` = QH 的 thin head + QH 的目标。三者都用 HEAD1 的 fold 与标签量；连同已有的 stage-1 `L`（L-full）与 QH 原头（旧标签量）构成 2 × 2 + 1。
+读数（held-out navtrain 与 navtest，stage-1 同口径）：> 45° 与全体的 heading 误差 RMS、对 `SH30-F` 的差（G1 口径）、对 `GH0-F` 的 R²（G3 口径）。位姿目标的头：由预测的 8 个位姿按 policy plan 同一套 feats 代码化成弧长 heading 曲线后在 plan 自己的 4 s 弧长处读，另列其定时 4 s yaw 的误差。读法：某因素的效应 = 沿该因素的两格之差（> 45° RMS 与 R²），两 seed 的范围并列；不设线。
+
+### B：memory 通道 pilot（carrier 1）
+A 的 fold 预测一齐就启动，不等 A 的 navtest 读数。配方 = 第 204 条：SH30 pilot（`navsim/op-parity-s234`，P2，hinge λ 30 / margin 0.5，3 000 步 × 64），基线 H0 = `GH0-F-s0/s1` 复用。
+- memory 输入 `qp`：最终 head 的 L 曲线在 0–40 m 网格上积分成的折线，之后沿 40 m 处的 heading 直线延长到 64 m；QS 的距离场编码，无时间通道。训练行、dev 行、tokenizer 预训练行都用 OOF 预测，navtest 用 fold 0 的模型。
+- tokenizer：先带自己的 thin plan head 在 `navsim/op-parity-geotok-train` 上以 `qp` 场预训练（第 204 条 `tok` 原样），再联合训练。
+- 臂：`HP`（预测，seed 0 / 1）、`HPX`（同一 tokenizer 初值，读另一个 log 的行的场，seed 0 / 1）、`HP:noside`（测试时屏蔽 memory，两 seed）。
+- fan-out 之前：一个 seed 的 smoke；恒等核对（memory 全屏蔽的 pilot 复现无 memory 基线，具体形式以实现时代码允许的最强形式为准，写进结果文档）。
+- 读数（navtest 12 146 token，逐 token seed 均值，by-log 配对 bootstrap）：EPDMS；< 5 / 5–20 / 20–45 / > 45° 桶；> 45° 切内角与转不过去率；直行桶；4 s 弧长比；dev ADE；plan 自己在 4 s 弧长处的 heading 误差（前 = H0，后 = 臂）。
+- 线（第 204 条惯例）：`HP − H0` ≥ +0.5 且 CI 下界 > 0 = 正；< +0.3 = 负，但只有「通道被读」成立才算（否则记「上限未量到」）；之间 = 部分。通道被读 = 第 204 条规则：每个 seed 的 dev 错配 ADE ≥ 1.05 × 自己的，或 `HP − HPX` 的 CI 下界 > 0。
+- R² 换算的第一次直接检验：实测增益对 stage-1 的预测 +0.48，以及对收敛 head 重算的 0.93 × R²。判法：预测值落在实测 95% CI 内记「成立」，否则「不成立」，并给点估计之比。
+
+### B2：辅助监督（carrier 2，与 B 并行）
+理由：stage 1 不过的是独立性（head 与 policy 错在同一批弯上），这限制「预测再喂回」，不限制直接进 policy 的监督。做法：在 policy 的 plan 通路 hidden state 上加一个小头，回归 arm L 的标签（22 点弧长 heading 曲线，Huber δ 0.1 rad，只算有标签的点），与 SH30 pilot 配方联合训练，loss 权重 λ；推理不变，辅助头丢弃，不读任何 memory。
+- λ ∈ {1, 3, 10}，另 λ = 0 作同一子集上的参照。选择只在训练 log 的验证部分上做：从 `s234-train` 中留出 sha256("head1val|" + log) % 10 == 0 的 log，四个选择 run（seed 0）只在其余 log 上训练，在留出 log 的行上读 plan 的 4 s heading 误差 RMS（> 20° 行）与 ADE；取 heading RMS 最低且 ADE 不比 λ = 0 差 2% 以上的 λ；若没有 λ 的 heading RMS 低于 λ = 0，仍取三者中最低者并照实写。
+- 最终臂 `HA`：选出的 λ，完整的 `s234-train`（与 H0 相同的行），seed 0 / 1。读数与线同 B（没有「通道被读」一项；< +0.3 直接记负）。守护线：直行桶（< 5°）EPDMS 差的 CI 不整体在 0 以下；4 s 弧长比与 H0 之差的绝对值 ≤ 0.01；报 dev ADE。
+
+### C：memory 信号放到 `P2H10S` pilot 配方上（与 B 并行，不再以 B 的结果为条件）
+第 244 条：`P2H10S` 的 navhard 增益与 > 45° 的外移都在 hinge-only 离轨行上，所以 heading 信号必须在这些行上也在场。臂：`P2H10S` pilot 配方 + `qp` memory（离轨行也算 head 预测），seed 0 / 1，对同配方无 memory 的 pilot 基线（已有则复用，否则补训）。读数：B 的 navtest 各项，加第 244 条的外移量（> 45° 上超出日志路径 2 m 以上的 token 数 W2、4 s 横向外移对 base）。**前提**：离轨行上的 head 输入（冻结视觉 token + ego）已缓存或便宜可得；若离轨行与 on-log 行共用同一帧的视觉 token 而只是位姿扰动，head 的输入与 on-log 行相同，则照此说明并注明其含义；若需要未缓存的特征，只估算成本并报告，不启动。
+
+### 预算与次序
+估计（按 job 墙钟求和）：A 约 4.7 卡时（5 个选择 run + 至多 9 个 fold run，每个 14–20 分钟），A2 约 0.6，B 约 0.8，B2 约 0.9，C 约 1：合计约 9 卡时；上限 20 卡时，预计超出即停下报告。先小后大：每类一个 smoke，再 fan-out；派出后核对卡在干活。
+
+### 限定（开跑前已知）
+本轮是闸门未过之后的探索；候选配置只在 fold 0 的 89 个 val log 上选；navtest 的 head 仍是 fold 0 的模型；B / B2 / C 都是 pilot 规模、2 seed、开环；B2 的 λ 选择 run 的训练集比最终臂少约 10% 的 log；C 取决于离轨行的输入是否可得。
