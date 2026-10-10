@@ -108,14 +108,16 @@ def cmd_pilot(a):
 def cmd_g3e(a):
     from jevdrive.run import Run
     with Run("body1", "shape-gate-g3e", config=vars(a)) as run:
-        new, ref, old = ("P2H10S-F-s0", "P2H10S-F-s1"), ("P2H10-F-s0", "P2H10-F-s1"), ("P2H10B-F-s0", "P2H10B-F-s1")
-        Nv = arcs("a6_full_navtest", list(zip(new, ref)) + [(ref[1], ref[0])], ref[0])
-        Hd = arcs("a6_full_hold", list(zip(new, ref)) + [(ref[1], ref[0])], ref[0])
-        No, Ho = arcs("navtest", list(zip(old, ref)), ref[0]), arcs("hold", list(zip(old, ref)), ref[0])
+        sd = a.seeds                                                  # note (h): seeds 2, 3 are a supplementary read (groups still from P2H10-F-s0's plan)
+        new, ref, old = tuple(f"P2H10S-F-s{i}" for i in sd), tuple(f"P2H10-F-s{i}" for i in sd), ("P2H10B-F-s0", "P2H10B-F-s1")
+        Nv = arcs(f"{a.name}_navtest", list(zip(new, ref)) + [(ref[1], ref[0])], "P2H10-F-s0")
+        Hd = arcs(f"{a.name}_hold", list(zip(new, ref)) + [(ref[1], ref[0])], "P2H10-F-s0")
+        r01 = ("P2H10-F-s0", "P2H10-F-s1")
+        No, Ho = arcs("navtest", list(zip(old, r01)), r01[0]), arcs("hold", list(zip(old, r01)), r01[0])
         spec = [("navtest on-log pooled >= 0.995", Nv, "all", 0.995, None), ("navtest on-log pooled, lower bound >= 0.990", Nv, "all", None, 0.990),
                 ("navtest open >= 0.995", Nv, "open", 0.995, None), ("navtest lead >= 0.990", Nv, "lead", 0.990, None), ("hold pooled >= 0.990", Hd, "all", 0.990, None)]
         spec += [(f"hold `{x}` >= 0.980", Hd, f"fam {x}", 0.980, None) for x in FAMS]
-        res, Lm = {}, ["| G3 (e) line | seed 0 | seed 1 | `P2H10B-F` seed 0 / 1 | base seed 1 / seed 0 | verdict |", "|:--|:--|:--|:--|:--|:-:|"]
+        res, Lm = {}, [f"| G3 (e) line | seed {sd[0]} | seed {sd[1]} | `P2H10B-F` seed 0 / 1 | base seed 1 / seed 0 | verdict |", "|:--|:--|:--|:--|:--|:-:|"]
         f = lambda v: f"{v[0]:.4f} [{v[1]:.4f}, {v[2]:.4f}]"  # noqa: E731
         for lab, T, sub, pt, lb in spec:
             v = [T[(t, sub)] for t in new]
@@ -131,8 +133,8 @@ def cmd_g3e(a):
                     Lm.append(f"| (reported) {nm}: {sub} | {f(T[(new[0], sub)])} | {f(T[(new[1], sub)])} | | {T[(ref[1], sub)][0]:.4f} | |")
         met = all(all(r["met"]) for r in res.values())
         OUT.mkdir(parents=True, exist_ok=True)
-        (OUT / "g3e.json").write_text(json.dumps(dict(lines=res, reported=extra, met=met), indent=1, default=float) + "\n")
-        (OUT / "g3e.md").write_text("\n".join(Lm) + f"\n\nG3 (e): {'met' if met else 'NOT met'}\n")
+        (OUT / f"{a.outname}.json").write_text(json.dumps(dict(lines=res, reported=extra, met=met), indent=1, default=float) + "\n")
+        (OUT / f"{a.outname}.md").write_text("\n".join(Lm) + f"\n\nG3 (e): {'met' if met else 'NOT met'}\n")
         run.info("\n" + "\n".join(Lm) + f"\nG3 (e): {'met' if met else 'NOT met'}")
         run.summary.update(g3e=met)
 
@@ -140,5 +142,8 @@ def cmd_g3e(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["pilot", "g3e"])
+    ap.add_argument("--seeds", type=int, nargs=2, default=[0, 1])
+    ap.add_argument("--name", default="a6_full", help="prog_ol.py file stem without the set")
+    ap.add_argument("--outname", default="g3e")
     a = ap.parse_args()
     {"pilot": cmd_pilot, "g3e": cmd_g3e}[a.cmd](a)
