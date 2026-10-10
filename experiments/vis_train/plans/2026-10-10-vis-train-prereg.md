@@ -105,3 +105,7 @@ loss 非有限、分级启动检查不过、dev ADE 比起点差 > 0.3 m 持续�
 2. **只存 t0 的一对**（每 token 2 相机 × 2 帧 × 0.39 MB = 1.57 MB；navtrain 151 GiB、navtest 18 GiB、navhard 9 GiB），`$DATA_DIR/runs/vis_train/px_side/<data>/side_t0.npy`，行序 = `tab.npz`。
 3. **盘余量线由 300 GB 改为 50 GB**（用户 2026-10-11 改，经 main 转达）。建完后预计剩约 290 GiB。`vt_side.py build` 在写每个文件前按「当前空闲 − 第一波像素缓存尚未写入的部分 − 本文件」核对，低于 50 GiB 即停。
 4. 视图顺序与 embedding：memory 的相机维为 [CAM_F0, CAM_L0, CAM_R0]；测试时「屏蔽侧视」= 只屏蔽后两路（`side_mask`），训练时的 memory 屏蔽（25% 行）三路同屏蔽。
+
+## 补记 4（2026-10-11 00:05 JST，接手的 lane agent；A / A0 / B 的任何训练步与任何读数之前）
+
+停止规则的计数从 warmup 结束（步 ≥ 300）之后的 eval 开始，步 0 的 eval 不计。原因：memory 臂在步 0 打开 memory 时 dev ADE 约 1.08–1.12 m（补记 1 第 5 点：`side_in` 与 embedding 新初始化，不是起点），比起点（屏蔽 memory 的 0.57 m）高 0.5 m，按原实现计作一次「差 > 0.3 m」。6 步的 preflight smoke（eval 在步 0 与步 3）因此连续两次超线、触发停止规则，A / A0 / B 六条链在 22:53 CST 全部以 preflight 失败结束（F、F0、C 没有 memory 通道，不受影响）。300 步分级启动里 memory-on ADE 在步 100 已降到 0.64 m、步 300 为 0.58 m，正式训练（eval 每 1 000 步）不会因此触发；改动只是不让步 0 的构造性差值占掉两次机会中的一次。规则本身（比起点差 > 0.3 m 持续两个 eval 即停）不变。

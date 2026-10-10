@@ -523,7 +523,9 @@ def cmd_train(a):
             (d / "evals.json").write_text(json.dumps(hist_ev))
             if ade0 is None:                                                  # the starting point = SH30 itself (memory arms: memory masked)
                 ade0 = ev.get("ade_masked", ev["ade"])
-            bad = bad + 1 if ev["ade"] > ade0 + 0.3 else 0
+            # armed after the warmup: on the memory arms the memory-on ADE of step 0 is ~0.5 m over the start by construction (fresh side_in,
+            # prereg amendment 1 point 5), which is not a regression (it tripped the 6-step preflight smoke: amendment 4)
+            bad = bad + 1 if (step >= cfg.warmup and ev["ade"] > ade0 + 0.3) else 0
             if bad >= 2:                                                      # registered stop rule: this arm stops, the others go on
                 save(step, final=False, snapshot=False)
                 (d / "STOP").write_text(f"dev ADE {ev['ade']:.3f} m > start {ade0:.3f} + 0.3 m at two consecutive evals (step {step})\n")
