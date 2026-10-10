@@ -41,7 +41,7 @@ def path_dist_np(P: np.ndarray, F: np.ndarray, off: np.ndarray):
     q0 = a0 + np.minimum(((p - a0) * u0).sum(-1), 0.0)[..., None] * u0
     q8 = a8 + np.maximum(((p - a8) * u8).sum(-1), 0.0)[..., None] * u8
     Q = np.concatenate([q, q0, q8], -2)                                                           # (n, K, 10, 2)
-    U = np.concatenate([u, np.broadcast_to(u0, q0.shape), np.broadcast_to(u8, q8.shape)], -2)
+    U = np.concatenate([np.broadcast_to(u, q.shape), np.broadcast_to(u0, q0.shape), np.broadcast_to(u8, q8.shape)], -2)
     r = p - Q
     d = np.hypot(r[..., 0], r[..., 1])
     j = d.argmin(-1)[..., None]
