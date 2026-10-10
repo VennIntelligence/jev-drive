@@ -1,7 +1,8 @@
 """Read-out of pai_eval.sh / pai_run.sh runs that are cut into chunks: every label is a set of run dirs (globs), merged by scene.
 
   pai_eval_report.py --rows s1='/data/runs/alpasim/pai_s1/runs/*' s0='/data/runs/alpasim/pai_full/runs/p2h10s-f-s0_*' [--pair s1-s0 ...]
-                     [--scenes tsv] [--out md]        (plain python3 + numpy, on the Tokyo box)
+                     [--mean both=s0,s1] [--scenes tsv] [--out md]        (plain python3 + numpy, on the Tokyo box)
+--mean adds a row whose scene score is the mean of the named rows (their common scenes; it has no zero kinds).
 Tables: mean scene score and zeros by kind per label on the scenes every label scored; per --pair the paired difference with a bootstrap
 95 % CI over scenes (10000 draws, seed 0); throughput of every run dir (scenes, CONC, card, wall, scenes per hour, render / drive share of
 the summed RPC time, per-container VRAM peaks, card peak). --scenes writes one row per scene (scores of every label).
@@ -50,20 +51,25 @@ def usage(d: Path) -> tuple:
 ap = argparse.ArgumentParser()
 ap.add_argument("--rows", nargs="+", required=True, help="label=glob[,glob...]")
 ap.add_argument("--pair", nargs="*", default=[], help="a-b: paired difference a minus b on their common scenes")
+ap.add_argument("--mean", nargs="*", default=[], help="label=a,b[,...]: the per-scene mean of rows a, b, ...")
 ap.add_argument("--scenes"), ap.add_argument("--out")
 a = ap.parse_args()
 D, R = {}, {}
 for x in a.rows:
     k, pat = x.split("=", 1)
     D[k], R[k] = load(pat)
+for x in a.mean:
+    k, ks = x.split("=", 1)
+    ks = ks.split(",")
+    R[k] = {q: {"score": float(np.mean([R[j][q]["score"] for j in ks])), "score_metrics": {}} for q in set.intersection(*(set(R[j]) for j in ks))}
 sc = sorted(set.intersection(*(set(v) for v in R.values())))
 L = [f"Scenes scored by every row: {len(sc)} (" + ", ".join(f"{k} {len(v)}" for k, v in R.items()) + ").", "",
      "| Row | Mean | Zeros | at-fault collision | offroad | left corridor | other zero |", "|---|--:|--:|--:|--:|--:|--:|"]
 for k, v in R.items():
     z = [x for x in sc if v[x]["score"] == 0]
     cnt = [sum(bool(v[x]["score_metrics"].get(f)) for x in z) for f in P.FAIL]
-    L.append(f"| {k} | {np.mean([v[x]['score'] for x in sc]):.4f} | {len(z)} | " + " | ".join(map(str, cnt))
-             + f" | {sum(not any(v[x]['score_metrics'].get(f) for f in P.FAIL) for x in z)} |")
+    kinds = " | ".join(map(str, cnt)) + f" | {sum(not any(v[x]['score_metrics'].get(f) for f in P.FAIL) for x in z)}" if k in D else " | | | "
+    L.append(f"| {k} | {np.mean([v[x]['score'] for x in sc]):.4f} | {len(z)} | {kinds} |")
 for pr in a.pair:
     ka, kb = pr.split("-", 1)
     s = sorted(set(R[ka]) & set(R[kb]))
