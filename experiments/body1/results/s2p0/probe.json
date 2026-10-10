@@ -1,0 +1,851 @@
+{
+ "probe": {
+  "pooled": {
+   "ticks": 17604,
+   "sim_s": 880.2,
+   "stand": 0.860770279481936,
+   "metres": 340.01926888063,
+   "plan_v1_median": -0.041,
+   "plan_v1_p90": 0.122,
+   "plan_d1_median": 0.07310950690573695,
+   "plan_d1_p90": 0.16100310556011024,
+   "excused_light": NaN,
+   "excused_actor": NaN,
+   "excused_either": NaN,
+   "unexcused": NaN,
+   "unexcused_nowarm": NaN,
+   "excused_routelight": 0.09529466112320993,
+   "unexcused_routelight_actor": NaN,
+   "unexcused_routelight_lead": 0.6465576005453306,
+   "ms_tick": 135.31208895705524,
+   "ms_agent": 116.92260406725744,
+   "ctx_err": 0
+  },
+  "routes": {
+   "10255": {
+    "ticks": 1588,
+    "sim_s": 79.4,
+    "stand": 0.8526448362720404,
+    "metres": 30.087190419003992,
+    "plan_v1_median": -0.055,
+    "plan_v1_p90": 0.05470000000000005,
+    "plan_d1_median": 0.09301343953957607,
+    "plan_d1_p90": 0.1411736519326464,
+    "excused_light": NaN,
+    "excused_actor": NaN,
+    "excused_either": NaN,
+    "unexcused": NaN,
+    "unexcused_nowarm": NaN,
+    "excused_routelight": 0.7688330871491876,
+    "unexcused_routelight_actor": NaN,
+    "unexcused_routelight_lead": 0.17443324937027707,
+    "ms_tick": 128.945,
+    "ms_agent": 101.71,
+    "ctx_err": 0
+   },
+   "5423": {
+    "ticks": 4000,
+    "sim_s": 200.0,
+    "stand": 0.956,
+    "metres": 31.398971240922492,
+    "plan_v1_median": -0.035,
+    "plan_v1_p90": 0.094,
+    "plan_d1_median": 0.07532595834106592,
+    "plan_d1_p90": 0.13141535349348768,
+    "excused_light": NaN,
+    "excused_actor": NaN,
+    "excused_either": NaN,
+    "unexcused": NaN,
+    "unexcused_nowarm": NaN,
+    "excused_routelight": 0.03765690376569038,
+    "unexcused_routelight_actor": NaN,
+    "unexcused_routelight_lead": 0.544,
+    "ms_tick": 192.295,
+    "ms_agent": 155.643,
+    "ctx_err": 0
+   },
+   "28008": {
+    "ticks": 4000,
+    "sim_s": 200.0,
+    "stand": 0.83225,
+    "metres": 97.18236261229866,
+    "plan_v1_median": 0.0,
+    "plan_v1_p90": 0.17520000000000027,
+    "plan_d1_median": 0.04825971404805462,
+    "plan_d1_p90": 0.12765331672838476,
+    "excused_light": NaN,
+    "excused_actor": NaN,
+    "excused_either": NaN,
+    "unexcused": NaN,
+    "unexcused_nowarm": NaN,
+    "excused_routelight": 0.0,
+    "unexcused_routelight_actor": NaN,
+    "unexcused_routelight_lead": 0.817,
+    "ms_tick": 124.535,
+    "ms_agent": 113.298,
+    "ctx_err": 0
+   },
+   "15102": {
+    "ticks": 1505,
+    "sim_s": 75.2,
+    "stand": 0.6551495016611296,
+    "metres": 79.14743404514574,
+    "plan_v1_median": 0.0015,
+    "plan_v1_p90": 0.311,
+    "plan_d1_median": 0.08802272433866154,
+    "plan_d1_p90": 0.30604931433626126,
+    "excused_light": NaN,
+    "excused_actor": NaN,
+    "excused_either": NaN,
+    "unexcused": NaN,
+    "unexcused_nowarm": NaN,
+    "excused_routelight": 0.11460446247464504,
+    "unexcused_routelight_actor": NaN,
+    "unexcused_routelight_lead": 0.5800664451827242,
+    "ms_tick": 161.59,
+    "ms_agent": 135.607,
+    "ctx_err": 0
+   },
+   "28147": {
+    "ticks": 2511,
+    "sim_s": 125.6,
+    "stand": 0.7594583831142971,
+    "metres": 67.40796658974398,
+    "plan_v1_median": -0.034,
+    "plan_v1_p90": 0.1698000000000002,
+    "plan_d1_median": 0.036687872655688285,
+    "plan_d1_p90": 0.12077191792863748,
+    "excused_light": NaN,
+    "excused_actor": NaN,
+    "excused_either": NaN,
+    "unexcused": NaN,
+    "unexcused_nowarm": NaN,
+    "excused_routelight": 0.0529627687467226,
+    "unexcused_routelight_actor": NaN,
+    "unexcused_routelight_lead": 0.4428514536041418,
+    "ms_tick": 130.764,
+    "ms_agent": 122.63699999999999,
+    "ctx_err": 0
+   },
+   "334": {
+    "ticks": 4000,
+    "sim_s": 200.0,
+    "stand": 0.93825,
+    "metres": 34.795343973515166,
+    "plan_v1_median": -0.104,
+    "plan_v1_p90": 0.057,
+    "plan_d1_median": 0.12700393694685216,
+    "plan_d1_p90": 0.17727154182330787,
+    "excused_light": NaN,
+    "excused_actor": NaN,
+    "excused_either": NaN,
+    "unexcused": NaN,
+    "unexcused_nowarm": NaN,
+    "excused_routelight": 0.011990407673860911,
+    "unexcused_routelight_actor": NaN,
+    "unexcused_routelight_lead": 0.919,
+    "ms_tick": 84.602,
+    "ms_agent": 77.249,
+    "ctx_err": 0
+   }
+  }
+ },
+ "A0": {
+  "pooled": {
+   "ticks": 18935,
+   "sim_s": 946.8,
+   "stand": 0.8627937681542118,
+   "metres": 361.8337275883374,
+   "plan_v1_median": -0.007,
+   "plan_v1_p90": 0.08739999999999963,
+   "plan_d1_median": 0.05503635162326805,
+   "plan_d1_p90": 0.13319909782666872,
+   "excused_light": 0.23290689845136806,
+   "excused_actor": 0.35098243251514966,
+   "excused_either": 0.5005202913631633,
+   "unexcused": 0.4309479799313441,
+   "unexcused_nowarm": 0.42072538860103625,
+   "excused_routelight": 0.0885107424863806,
+   "unexcused_routelight_actor": 0.5372062318457882,
+   "unexcused_routelight_lead": 0.4742012146818062,
+   "ms_tick": 133.77924003168735,
+   "ms_agent": 114.84576604172169,
+   "ctx_err": 0,
+   "fed": {
+    "ax_p5_p50_p95": [
+     -1.612,
+     -0.368,
+     1.716
+    ],
+    "ax_standing_p5_p50_p95": [
+     -1.22,
+     -0.388,
+     -0.1
+    ],
+    "ay_p5_p50_p95": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "vy_p5_p50_p95": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "cmd_left_straight_right": [
+     0.48,
+     0.238,
+     0.283
+    ]
+   }
+  },
+  "routes": {
+   "10255": {
+    "ticks": 1530,
+    "sim_s": 76.5,
+    "stand": 0.8869281045751634,
+    "metres": 30.441006345779794,
+    "plan_v1_median": -0.043,
+    "plan_v1_p90": 0.099,
+    "plan_d1_median": 0.08927485648266258,
+    "plan_d1_p90": 0.13916967188158266,
+    "excused_light": 0.25350036845983787,
+    "excused_actor": 0.8754605747973471,
+    "excused_either": 0.9042004421518055,
+    "unexcused": 0.08496732026143791,
+    "unexcused_nowarm": 0.04125874125874126,
+    "excused_routelight": 0.7693441414885778,
+    "unexcused_routelight_actor": 0.054901960784313725,
+    "unexcused_routelight_lead": 0.18104575163398692,
+    "ms_tick": 129.433,
+    "ms_agent": 101.898,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -1.005,
+      -0.336,
+      2.036
+     ],
+     "ax_standing_p5_p50_p95": [
+      -0.836,
+      -0.359,
+      -0.104
+     ],
+     "ay_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "vy_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "cmd_left_straight_right": [
+      0.0,
+      0.052,
+      0.948
+     ]
+    }
+   },
+   "5423": {
+    "ticks": 4000,
+    "sim_s": 200.0,
+    "stand": 0.95625,
+    "metres": 30.32417192755344,
+    "plan_v1_median": -0.02,
+    "plan_v1_p90": 0.148,
+    "plan_d1_median": 0.08598837130682264,
+    "plan_d1_p90": 0.16451443705644803,
+    "excused_light": 0.0,
+    "excused_actor": 0.32287581699346407,
+    "excused_either": 0.32287581699346407,
+    "unexcused": 0.6475,
+    "unexcused_nowarm": 0.6458974358974359,
+    "excused_routelight": 0.03738562091503268,
+    "unexcused_routelight_actor": 0.619,
+    "unexcused_routelight_lead": 0.54875,
+    "ms_tick": 203.011,
+    "ms_agent": 163.186,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -0.808,
+      -0.366,
+      -0.044
+     ],
+     "ax_standing_p5_p50_p95": [
+      -0.794,
+      -0.373,
+      -0.097
+     ],
+     "ay_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "vy_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "cmd_left_straight_right": [
+      0.0,
+      0.019,
+      0.981
+     ]
+    }
+   },
+   "28008": {
+    "ticks": 4000,
+    "sim_s": 200.0,
+    "stand": 0.8335,
+    "metres": 92.4604330001625,
+    "plan_v1_median": -0.024,
+    "plan_v1_p90": 0.06,
+    "plan_d1_median": 0.04401136216933077,
+    "plan_d1_p90": 0.10233029775534683,
+    "excused_light": 0.9484103179364127,
+    "excused_actor": 0.2495500899820036,
+    "excused_either": 0.9706058788242351,
+    "unexcused": 0.0245,
+    "unexcused_nowarm": 0.010256410256410256,
+    "excused_routelight": 0.0,
+    "unexcused_routelight_actor": 0.6255,
+    "unexcused_routelight_lead": 0.79525,
+    "ms_tick": 117.933,
+    "ms_agent": 106.328,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -1.939,
+      -0.358,
+      1.932
+     ],
+     "ax_standing_p5_p50_p95": [
+      -0.963,
+      -0.38,
+      -0.096
+     ],
+     "ay_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "vy_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "cmd_left_straight_right": [
+      0.881,
+      0.119,
+      0.0
+     ]
+    }
+   },
+   "15102": {
+    "ticks": 1490,
+    "sim_s": 74.5,
+    "stand": 0.6530201342281879,
+    "metres": 80.85920823925193,
+    "plan_v1_median": -0.017,
+    "plan_v1_p90": 0.29,
+    "plan_d1_median": 0.08814193099768122,
+    "plan_d1_p90": 0.2929784920242017,
+    "excused_light": 0.30729701952723537,
+    "excused_actor": 0.8221993833504625,
+    "excused_either": 0.8221993833504625,
+    "unexcused": 0.11610738255033556,
+    "unexcused_nowarm": 0.05251798561151079,
+    "excused_routelight": 0.11613566289825282,
+    "unexcused_routelight_actor": 0.040268456375838924,
+    "unexcused_routelight_lead": 0.5677852348993289,
+    "ms_tick": 161.378,
+    "ms_agent": 134.635,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -2.862,
+      -0.812,
+      3.108
+     ],
+     "ax_standing_p5_p50_p95": [
+      -2.925,
+      -1.123,
+      -0.26
+     ],
+     "ay_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "vy_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "cmd_left_straight_right": [
+      0.793,
+      0.207,
+      0.0
+     ]
+    }
+   },
+   "28147": {
+    "ticks": 3915,
+    "sim_s": 195.8,
+    "stand": 0.7844189016602809,
+    "metres": 88.52899631861564,
+    "plan_v1_median": -0.018,
+    "plan_v1_p90": 0.061,
+    "plan_d1_median": 0.0280178514522438,
+    "plan_d1_p90": 0.09044888059008802,
+    "excused_light": 0.0,
+    "excused_actor": 0.5291436014327581,
+    "excused_either": 0.5291436014327581,
+    "unexcused": 0.3693486590038314,
+    "unexcused_nowarm": 0.3598951507208388,
+    "excused_routelight": 0.032888309996743734,
+    "unexcused_routelight_actor": 0.3504469987228608,
+    "unexcused_routelight_lead": 0.5910600255427841,
+    "ms_tick": 127.48,
+    "ms_agent": 117.806,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -2.024,
+      -0.352,
+      2.253
+     ],
+     "ax_standing_p5_p50_p95": [
+      -1.097,
+      -0.385,
+      -0.094
+     ],
+     "ay_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "vy_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "cmd_left_straight_right": [
+      0.119,
+      0.881,
+      0.0
+     ]
+    }
+   },
+   "334": {
+    "ticks": 4000,
+    "sim_s": 200.0,
+    "stand": 0.94425,
+    "metres": 39.21991175697413,
+    "plan_v1_median": 0.017,
+    "plan_v1_p90": 0.064,
+    "plan_d1_median": 0.05015974481593781,
+    "plan_d1_p90": 0.09908077512817509,
+    "excused_light": 0.0,
+    "excused_actor": 0.014297061159650517,
+    "excused_either": 0.014297061159650517,
+    "unexcused": 0.93075,
+    "unexcused_nowarm": 0.9358974358974359,
+    "excused_routelight": 0.011914217633042097,
+    "unexcused_routelight_actor": 0.9195,
+    "unexcused_routelight_lead": 0.0415,
+    "ms_tick": 77.941,
+    "ms_agent": 69.707,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -0.837,
+      -0.367,
+      -0.027
+     ],
+     "ax_standing_p5_p50_p95": [
+      -0.817,
+      -0.374,
+      -0.102
+     ],
+     "ay_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "vy_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "cmd_left_straight_right": [
+      0.976,
+      0.024,
+      0.0
+     ]
+    }
+   }
+  },
+  "line": {
+   "pooled": 0.4309479799313441,
+   "pooled_ok": false,
+   "routes_below_30": 3,
+   "passed": false
+  }
+ },
+ "A1": {
+  "pooled": {
+   "ticks": 21453,
+   "sim_s": 1072.7,
+   "stand": 0.8655199738964248,
+   "metres": 325.13511493620393,
+   "plan_v1_median": 0.023,
+   "plan_v1_p90": 0.40830000000000105,
+   "plan_d1_median": 0.058240879114244144,
+   "plan_d1_p90": 0.3594022815731697,
+   "excused_light": 0.002154243860404998,
+   "excused_actor": 0.2812903920723826,
+   "excused_either": 0.2831214993537268,
+   "unexcused": 0.6204726611662704,
+   "unexcused_nowarm": 0.6169376108953148,
+   "excused_routelight": 0.07819905213270142,
+   "unexcused_routelight_actor": 0.5642101337808232,
+   "unexcused_routelight_lead": 0.7224630587796579,
+   "ms_tick": 136.78804288444508,
+   "ms_agent": 119.08542311098681,
+   "ctx_err": 0,
+   "fed": {
+    "ax_p5_p50_p95": [
+     -1.08,
+     0.0,
+     1.444
+    ],
+    "ax_standing_p5_p50_p95": [
+     -0.804,
+     0.0,
+     0.72
+    ],
+    "ay_p5_p50_p95": [
+     -0.426,
+     0.0,
+     0.543
+    ],
+    "vy_p5_p50_p95": [
+     -0.028,
+     0.0,
+     0.065
+    ],
+    "cmd_left_straight_right": [
+     0.391,
+     0.345,
+     0.264
+    ]
+   }
+  },
+  "routes": {
+   "10255": {
+    "ticks": 1852,
+    "sim_s": 92.6,
+    "stand": 0.7478401727861771,
+    "metres": 30.253462584109872,
+    "plan_v1_median": 0.094,
+    "plan_v1_p90": 0.28860000000000013,
+    "plan_d1_median": 0.046529560496527365,
+    "plan_d1_p90": 0.1697578758364419,
+    "excused_light": 0.001444043321299639,
+    "excused_actor": 0.1328519855595668,
+    "excused_either": 0.1328519855595668,
+    "unexcused": 0.6484881209503239,
+    "unexcused_nowarm": 0.6449771689497716,
+    "excused_routelight": 0.7740072202166065,
+    "unexcused_routelight_actor": 0.15334773218142547,
+    "unexcused_routelight_lead": 0.1495680345572354,
+    "ms_tick": 129.828,
+    "ms_agent": 104.068,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -1.11,
+      -0.0,
+      1.595
+     ],
+     "ax_standing_p5_p50_p95": [
+      -0.625,
+      -0.004,
+      0.594
+     ],
+     "ay_p5_p50_p95": [
+      -0.38,
+      -0.005,
+      0.333
+     ],
+     "vy_p5_p50_p95": [
+      -0.009,
+      0.004,
+      0.099
+     ],
+     "cmd_left_straight_right": [
+      0.0,
+      0.043,
+      0.957
+     ]
+    }
+   },
+   "5423": {
+    "ticks": 4000,
+    "sim_s": 200.0,
+    "stand": 0.93175,
+    "metres": 32.36351236472498,
+    "plan_v1_median": 0.276,
+    "plan_v1_p90": 0.8716000000000004,
+    "plan_d1_median": 0.24566033460858103,
+    "plan_d1_p90": 0.7375014792579873,
+    "excused_light": 0.0,
+    "excused_actor": 0.332707271263751,
+    "excused_either": 0.332707271263751,
+    "unexcused": 0.62175,
+    "unexcused_nowarm": 0.6194871794871795,
+    "excused_routelight": 0.031392540917628116,
+    "unexcused_routelight_actor": 0.59975,
+    "unexcused_routelight_lead": 0.541,
+    "ms_tick": 186.104,
+    "ms_agent": 152.605,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -1.401,
+      0.026,
+      1.467
+     ],
+     "ax_standing_p5_p50_p95": [
+      -1.403,
+      0.017,
+      1.31
+     ],
+     "ay_p5_p50_p95": [
+      -1.013,
+      -0.003,
+      0.854
+     ],
+     "vy_p5_p50_p95": [
+      -0.064,
+      -0.001,
+      0.047
+     ],
+     "cmd_left_straight_right": [
+      0.0,
+      0.02,
+      0.98
+     ]
+    }
+   },
+   "28008": {
+    "ticks": 4000,
+    "sim_s": 200.0,
+    "stand": 0.7105,
+    "metres": 129.39886419417482,
+    "plan_v1_median": 0.009,
+    "plan_v1_p90": 0.065,
+    "plan_d1_median": 0.04301162633521313,
+    "plan_d1_p90": 0.06476109943476871,
+    "excused_light": 0.013370865587614356,
+    "excused_actor": 0.04081632653061224,
+    "excused_either": 0.05277973258268825,
+    "unexcused": 0.673,
+    "unexcused_nowarm": 0.6753846153846154,
+    "excused_routelight": 0.0,
+    "unexcused_routelight_actor": 0.6815,
+    "unexcused_routelight_lead": 0.68875,
+    "ms_tick": 122.593,
+    "ms_agent": 114.102,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -1.216,
+      0.0,
+      2.039
+     ],
+     "ax_standing_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "ay_p5_p50_p95": [
+      -0.023,
+      0.0,
+      0.371
+     ],
+     "vy_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.135
+     ],
+     "cmd_left_straight_right": [
+      0.103,
+      0.897,
+      0.0
+     ]
+    }
+   },
+   "15102": {
+    "ticks": 3601,
+    "sim_s": 180.1,
+    "stand": 0.8725354068314357,
+    "metres": 61.12456940598198,
+    "plan_v1_median": -0.003,
+    "plan_v1_p90": 0.04,
+    "plan_d1_median": 0.02640075756488817,
+    "plan_d1_p90": 0.04922394004217818,
+    "excused_light": 0.0,
+    "excused_actor": 0.0,
+    "excused_either": 0.0,
+    "unexcused": 0.8725354068314357,
+    "unexcused_nowarm": 0.8688946015424165,
+    "excused_routelight": 0.03596435391470401,
+    "unexcused_routelight_actor": 0.8411552346570397,
+    "unexcused_routelight_lead": 0.8411552346570397,
+    "ms_tick": 167.628,
+    "ms_agent": 140.046,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -0.46,
+      0.0,
+      0.595
+     ],
+     "ax_standing_p5_p50_p95": [
+      -0.005,
+      -0.0,
+      0.0
+     ],
+     "ay_p5_p50_p95": [
+      -0.056,
+      0.0,
+      0.293
+     ],
+     "vy_p5_p50_p95": [
+      0.0,
+      0.0,
+      0.095
+     ],
+     "cmd_left_straight_right": [
+      0.056,
+      0.944,
+      0.0
+     ]
+    }
+   },
+   "28147": {
+    "ticks": 4000,
+    "sim_s": 200.0,
+    "stand": 0.92025,
+    "metres": 37.23117568706444,
+    "plan_v1_median": 0.081,
+    "plan_v1_p90": 0.289,
+    "plan_d1_median": 0.08500588214941364,
+    "plan_d1_p90": 0.262030532572065,
+    "excused_light": 0.0,
+    "excused_actor": 0.007334963325183374,
+    "excused_either": 0.007334963325183374,
+    "unexcused": 0.9135,
+    "unexcused_nowarm": 0.9182051282051282,
+    "excused_routelight": 0.02743819614235262,
+    "unexcused_routelight_actor": 0.895,
+    "unexcused_routelight_lead": 0.895,
+    "ms_tick": 122.939,
+    "ms_agent": 114.462,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -0.824,
+      0.002,
+      0.846
+     ],
+     "ax_standing_p5_p50_p95": [
+      -0.724,
+      0.001,
+      0.644
+     ],
+     "ay_p5_p50_p95": [
+      -0.325,
+      -0.002,
+      0.39
+     ],
+     "vy_p5_p50_p95": [
+      -0.016,
+      -0.0,
+      0.017
+     ],
+     "cmd_left_straight_right": [
+      0.985,
+      0.015,
+      0.0
+     ]
+    }
+   },
+   "334": {
+    "ticks": 4000,
+    "sim_s": 200.0,
+    "stand": 0.94775,
+    "metres": 34.76353070014785,
+    "plan_v1_median": -0.05,
+    "plan_v1_p90": 0.054,
+    "plan_d1_median": 0.07302739212103906,
+    "plan_d1_p90": 0.13701459776242822,
+    "excused_light": 0.0,
+    "excused_actor": 0.9643893431812187,
+    "excused_either": 0.9643893431812187,
+    "unexcused": 0.03375,
+    "unexcused_nowarm": 0.015897435897435898,
+    "excused_routelight": 0.01292534951200211,
+    "unexcused_routelight_actor": 0.0215,
+    "unexcused_routelight_lead": 0.9235,
+    "ms_tick": 90.975,
+    "ms_agent": 83.256,
+    "ctx_err": 0,
+    "fed": {
+     "ax_p5_p50_p95": [
+      -0.908,
+      0.0,
+      1.149
+     ],
+     "ax_standing_p5_p50_p95": [
+      -0.579,
+      0.0,
+      0.709
+     ],
+     "ay_p5_p50_p95": [
+      -0.07,
+      -0.0,
+      0.116
+     ],
+     "vy_p5_p50_p95": [
+      -0.001,
+      0.0,
+      0.009
+     ],
+     "cmd_left_straight_right": [
+      0.954,
+      0.046,
+      0.0
+     ]
+    }
+   }
+  },
+  "line": {
+   "pooled": 0.6204726611662704,
+   "pooled_ok": false,
+   "routes_below_30": 1,
+   "passed": false
+  }
+ },
+ "verdict": {
+  "line": "unexcused standing / all ticks < 0.20 pooled and < 0.30 on >= 5 of 6 routes, arm A1",
+  "passed": false,
+  "a0_minus_a1_points": -19.0,
+  "a2_a3_released": false
+ }
+}
