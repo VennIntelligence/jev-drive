@@ -787,3 +787,22 @@ seed 2, on seed 3 the navtest open-state ratio is 0.9949 against the line 0.995 
 one base seed read against another passes L2 in 4 of 12 pairings, L3 in 9, all four lines in 2. Supplementary; the verdict above stands and no
 `P2H10S` checkpoint was run in the closed loop. [results/shape_pilot.md](../results/shape_pilot.md) section 5.
 
+
+### Amendment 6, note (i) (2026-10-10, main session; written after the G3 read of `P2H10S` and before any closed-loop number of it exists)
+
+1. **The registered outcome stands.** `P2H10S` stopped at G3 (b): on seed 0 the navtest on-log agent rate is 149 against 148 tokens of 12 146
+   (+0.00008 [-0.00111, +0.00136]). By note (d) the arm is not promoted, the registered closed-loop read (item 6) and the PAI read do not exist
+   and are not replaced by anything below. No line is changed.
+2. **A descriptive closed-loop read is made all the same, labelled as such everywhere it appears.** Reason: the checkpoint is the lane's end
+   product, the miss is one token inside the base's own seed spread, four base seeds now exist with their closed loops, and the cards are idle
+   (user, 2026-10-10). It cannot promote the arm and is not a registered read; all 700 scenes are development scenes for this lane.
+3. **What is run:** `P2H10S-F-s{0,1,2,3}` on the 700 scenes with the unchanged nuPlan driver, same loop script and chunk lists as the base.
+4. **What is reported, fixed now:** per seed the table of the earlier arms (mean score, zeros by class, slow, mean progress); the four lines
+   L1a / L1b / L2 / L3 on seeds 0-1 against the TR1 baseline (the shape of the registered read) and on four seeds paired by seed index,
+   log-clustered CI; every statistic next to its null distribution from the 12 ordered pairs of base seeds (`results/shape/` base spread):
+   an effect is called "outside the base's seed spread" only if it is beyond all 12; the lead / open split of decision 230 (progress and
+   slow scenes); flips per scene against all four base seeds (a zero counts as removed only if it is a zero in at least 3 of 4 base seeds
+   and in at most 1 of 4 arm seeds; new likewise mirrored); the > 45 deg bucket separately. No PAI.
+5. **A finding of the supplementary read that binds later lanes' pre-registrations, not this one:** with two seeds and 700 scenes, a base seed
+   read against another base seed passes L2 in 4 of 12 ordered pairs and all four lines in 2 of 12 (CI half-width 0.0078 against the -0.005
+   line). The lane's L2 was underpowered as written; it is not rewritten here.

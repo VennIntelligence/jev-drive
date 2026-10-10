@@ -5,7 +5,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 **live**
 
 - [b2d_privileged](b2d_privileged/README.md): live; Red light + green release DS 75.0 to 95.0 [d82]
-- [body1](body1/README.md) (self-model, body lesson, swept-footprint contact): live; Contact head passes offline (AUC 0.905 / 0.885); stop and lateral re-plan halted at one-chunk checks; loss arm 4.3 missed its first pilot gate, second attempt (Amendment 5, w = 3) met its pilot gate and G3 at full scale, closed loop L1 met but L2 and L3 not met (not promoted); third variant (Amendment 6, shape-only hinge gradient) met its pilot gate and arc lines, missed G3 (b) on one seed by one navtest token, no closed loop [d223, d224, d225, d227, d228, d229, d230, d231]
+- [body1](body1/README.md) (self-model, body lesson, swept-footprint contact): live; Contact head passes offline (AUC 0.905 / 0.885); stop and lateral re-plan halted at one-chunk checks; loss arm 4.3 missed its first pilot gate, second attempt (Amendment 5, w = 3) met its pilot gate and G3 at full scale, closed loop L1 met but L2 and L3 not met (not promoted); third variant (Amendment 6, shape-only hinge gradient) met its pilot gate and arc lines, missed G3 (b) on one seed by one navtest token, no closed loop [d223, d224, d225, d227, d228, d229, d230, d231, d232]
 - [op_adapt_h](op_adapt_h/README.md): live; Fake-yaw following -71..-78%, navtest +0.82; HUGSIM spins 8 to 6 only [d98,(inputs:,92,94,96)]
 - [op_adapt_l](op_adapt_l/README.md) (op-adapt L): live; Stop capture 0.252 to 0.559 open loop; B2D no gain [d77-81]
 - [op_common_cause](op_common_cause/README.md): live; Plan follows fake history yaw, 3-7x more at low speed, real and CARLA alike [d92-93]
