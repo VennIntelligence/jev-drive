@@ -177,6 +177,7 @@ def cmd_step(a):
         torch.cuda.reset_peak_memory_stats()
         import resource
         t_all = cpu0 = None
+        util = []
         for step in range(a.warm + a.steps):
             if step == a.warm:
                 t_all, cpu0 = sync(), sum(resource.getrusage(w).ru_utime + resource.getrusage(w).ru_stime for w in (resource.RUSAGE_SELF, resource.RUSAGE_CHILDREN))
@@ -215,6 +216,10 @@ def cmd_step(a):
             t6 = sync()
             assert torch.isfinite(total), "non-finite loss"
             if step >= a.warm:
+                try:
+                    util.append(torch.cuda.utilization())
+                except Exception:  # noqa: BLE001  (no pynvml: utilisation is left out)
+                    pass
                 for k, v in zip(seg, (t1 - t0, t2 - t1, t3 - t2, t4 - t3, t5 - t4, t6 - t5)):
                     seg[k].append(v)
             if step == 0:
@@ -225,7 +230,7 @@ def cmd_step(a):
         r = {"shape": a.shape, "enc": a.enc, "batch": a.batch, "it_s": a.steps / el, "samples_s": a.steps * a.batch / el,
              "ms": {k: 1e3 * float(np.mean(v)) for k, v in seg.items()}, "read_ms_thread": 1e3 * float(np.mean(io["read"])),
              "upload_ms_thread": 1e3 * float(np.mean(io["up"])), "peak_alloc_gb": torch.cuda.max_memory_allocated() / 2 ** 30,
-             "peak_reserved_gb": torch.cuda.max_memory_reserved() / 2 ** 30, "cpu_cores_used": cpu / el, "rows": int(S.n), "datas": len(datas),
+             "peak_reserved_gb": torch.cuda.max_memory_reserved() / 2 ** 30, "cpu_cores_used": cpu / el, "gpu_util": float(np.mean(util)) if util else None, "rows": int(S.n), "datas": len(datas),
              "loss": float(total)}
         run.info(json.dumps(r))
         run.summary |= r
