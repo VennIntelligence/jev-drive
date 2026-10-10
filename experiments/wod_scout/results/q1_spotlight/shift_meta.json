@@ -1,0 +1,21 @@
+{
+ "n_val": 479,
+ "n_test": 1505,
+ "features": [
+  "v0",
+  "ax",
+  "ay",
+  "intent_left",
+  "intent_right",
+  "luma",
+  "lead_prob_0",
+  "lead_prob_1",
+  "lead_prob_2",
+  "plan_d5",
+  "plan_arc5",
+  "plan_abs_y5",
+  "plan_abs_heading",
+  "plan_seed_gap5"
+ ],
+ "B": 4000
+}

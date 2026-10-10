@@ -4,7 +4,6 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 **live**
 
-- [wod_scout](wod_scout/README.md) (WODSCOUT): live; scouting lane, pre-registered 2026-10-10, no result yet [d(inputs:,131,164,168,180,218,236)]
 - [lowboard_diag](lowboard_diag/README.md) (LOWDIAG, low-board failure taxonomy): live; PAI: longitudinal 43% of lost score, route 23%; corridor zeros are not missing route info; HUGSIM: three-way tie, route 1%; per-situation loss: turns above 45 deg cost on every board, red light / stop line almost nothing; openpilot lead path in the HUGSIM loop removes the lead collisions (9 / 9) but HD is flat (-0.005 [-0.068, +0.049]); LOWDIAG2: on 4 PAI seeds longitudinal stays largest, seed 0 was extreme on fast turn entry / L1 contact / longitudinal zeros, HLEAD repeats [d237, d238, d239, d241]
 - [b2d_privileged](b2d_privileged/README.md): live; Red light + green release DS 75.0 to 95.0 [d82]
 - [body1](body1/README.md) (self-model, body lesson, swept-footprint contact): live; Contact head passes offline (AUC 0.905 / 0.885); stop and lateral re-plan halted at one-chunk checks; loss arm 4.3 missed its first pilot gate, second attempt (Amendment 5, w = 3) met its pilot gate and G3 at full scale, closed loop L1 met but L2 and L3 not met (not promoted); third variant (Amendment 6, shape-only hinge gradient) met its pilot gate and arc lines, missed G3 (b) on one seed by one navtest token, no registered closed loop; descriptive 4-seed closed loop after the stop: mean +0.0040 [-0.0038, +0.0134] over the base, at-fault collision + offroad zeros 53 against 70 and corridor zeros 37 against 28 (each beyond the base's seed spread), slow 401 against 434, not promoted; fourth variant reopened by the user (Amendment 7, route hinge with a 2.5 m dead band) stopped at its pilot gate: corridor line missed (67 against 54 navtest turn tokens more than 2 m outside the logged path, limit +5) ; other boards (measurement only): navhard +1.91 [+0.13, +3.74] over the base, all in stage 2, HUGSIM 64 flat [d223, d224, d225, d227, d228, d229, d230, d231, d232, d233, d234, d235, d236]
@@ -49,6 +48,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 **zero-shot exams and leaderboards**
 
+- [wod_scout](wod_scout/README.md) (WODSCOUT): path-only +0.290 of the 1.400 val gap, in 30 frames; 479 rated frames is all the label supply [d242]
 - [zeroshot_openloop](zeroshot_openloop/README.md) (zero-shot): WOD RFS Cinque 8.005, Alpamayo 8.034, above cv 7.103 [d34,37,39]
 - [zeroshot_b2d](zeroshot_b2d/README.md) (zero-shot B2D): n=5 smoke: Alpamayo DS 60.8, SR 2/5; openpilot DS 2.7 voided [d33]
 - [model_smoke](model_smoke/README.md) (openpilot smoke, rigs): smoke: openpilot 1-3 ms/step; 2 deg yaw gives 4.6x lateral error [d33,36]
