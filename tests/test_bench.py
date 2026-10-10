@@ -136,6 +136,37 @@ class TestAlgebra(TmpData):
         self.assertEqual(RP.motion(np.full((8, 3), np.nan), 1.0)[1], "unknown")
 
 
+class TestTrajHead(TmpData):
+    def test_stages(self):
+        """A parity checkpoint with thead.pt next to it gets `poses` in place of plans + export; without it the usual chain."""
+        from jevdrive.bench import navsim as NV
+        d = self.D / "runs" / "op_parity" / "runs"
+        for tag in ("FMH-F-s0", "P2-F-s0"):
+            (d / tag).mkdir(parents=True)
+            (d / tag / "ckpt-final.pt").write_text("x")
+        (d / "FMH-F-s0" / "thead.pt").write_text("x")
+        for v in ST.NAVSIM.values():                                    # the op_lb meta that bench/ol links to
+            (self.D / "runs" / "op_lb" / v["data"]).mkdir(parents=True, exist_ok=True)
+            (self.D / "runs" / "op_lb" / v["data"] / "meta.json").write_text("{}")
+        self.assertTrue(M.resolve("FMH-F-s0").thead)
+        self.assertFalse(M.resolve("P2-F-s0").thead or M.resolve("P0").thead or M.resolve("cinque").thead)
+        for bench, spec, tail in (("navtest", "FMH-F-s0", "collect"), ("navhard", "FMH-F-s0@gimm", "harness")):
+            m = M.resolve(spec)
+            st = NV.stages(m, bench, self.D / "runs" / "bench" / bench / m.key(bench), shards=2)
+            names = [x.name for x in st]
+            self.assertIn("poses", names)
+            self.assertFalse({"plans", "export"} & set(names))
+            ps = st[names.index("poses")]
+            self.assertEqual(ps.done, str(NV.pred_file(m, bench)))
+            self.assertEqual(ps.cmd[2:5], ["jevdrive.bench.stage", "thead-poses", m.spec])
+            self.assertTrue(all(x.after == ["poses"] for x in st if x.name.startswith("score") or x.name == "harness"))
+            self.assertIn(tail, names)
+        names = [x.name for x in NV.stages(M.resolve("P2-F-s0"), "navtest", self.D / "runs" / "bench" / "navtest" / "P2", shards=2)]
+        self.assertTrue({"plans", "export"} <= set(names) and "poses" not in names)
+        with self.assertRaises(AssertionError):
+            NV.stages(M.resolve("FMH-F-s0:noside"), "navtest", self.D / "x", shards=2)
+
+
 class TestRunner(TmpData):
     def test_submit_graph(self):
         pool = self.D / "runs" / "pool"

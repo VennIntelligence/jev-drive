@@ -7,6 +7,8 @@ Pipeline per model (every step is the code the lanes used, wrapped):
            memory arms (pp_train --mem) also read their front-token bank (runs/op_parity/mem/<kind>/<data>.npy; :noside masks it);
            UF-* arms: pp_unfreeze.py plans (pixels); onnx: scripts/op_lb.py run (TensorRT, envs/openpilot; an existing op_lb
            plan file of the same stem is reused)
+  poses    parity checkpoints with a trajectory head (Model.thead; lib/traj_head.py): the head's 8 rear-axle poses on the cached tokens,
+           written directly as the prediction file; replaces plans + export
   export   experiments/op_openloop/lib/op_interp.py nav-export, adapter `base` (CAM_F0 lever arm to the rear axle, linear
            resampling to 0.5 .. 4 s) -> preds/<stem>__base.npz (tokens, poses (n, 8, 3))
   score    navtest: experiments/zeroshot_openloop/archive/navsim_zs_score.sh score v2 navtest (envs/navsim2, ray, OPENBLAS_CORETYPE
@@ -104,18 +106,23 @@ def stages(m: Model, bench: str, run_dir: Path, shards: int = 0, subset: str = "
             fr = [] if m.frames == "gimm" else ["--frames", m.frames]
             S.append(R.Stage("prep", [R.py("op-train"), str(PP / "pp_prep.py"), "--data", data, *fr, "--workers", "20"],
                              done=str(cache_dir(data, m.frames) / "front.npy"), vram=20, cpu=22, ram=40))
-        S.append(R.Stage("plans", R.stage_cmd("op-train", "parity-plans", m.spec, bench, pf), done=str(pf), vram=24, cpu=8, ram=24,
-                         after=[s.name for s in S], tries=2))
+        if m.thead:
+            assert not m.opt, f"{m.spec}: no option is defined for trajectory-head checkpoints"
+            S.append(R.Stage("poses", R.stage_cmd("op-train", "thead-poses", m.spec, bench, pred_file(m, bench)), done=str(pred_file(m, bench)),
+                             vram=24, cpu=8, ram=24, after=[s.name for s in S], tries=2))
+        else:
+            S.append(R.Stage("plans", R.stage_cmd("op-train", "parity-plans", m.spec, bench, pf), done=str(pf), vram=24, cpu=8, ram=24,
+                             after=[s.name for s in S], tries=2))
     elif m.unfreeze:
         S.append(R.Stage("plans", R.stage_cmd("jev", "unfreeze-plans", m.spec, bench, pf), done=str(pf), vram=60, cpu=20, ram=48, tries=2))
     else:
         S.append(R.Stage("plans", R.stage_cmd("jev", "onnx-plans", m.spec, bench, pf), done=str(pf), vram=24, cpu=16, ram=32, tries=2))
     pr = pred_file(m, bench)
-    if not ts:
+    if not ts and not m.thead:
         S.append(R.Stage("export", [R.py("jev"), str(REPO / "experiments/op_openloop/lib/op_interp.py"), "nav-export", "--data", data,
                                     "--adapters", adapter(m), "--plans", stem(m)],
                          done=str(pr), env={"OPI_ROOT": OL_REL}, vram=0.5, cpu=2, ram=8, after=["plans"]))
-    last = "select" if ts else "export"
+    last = "select" if ts else "poses" if m.thead else "export"
     if bench == "navtest":
         k = shards or default_shards()
         thr = max(4, min(16, int(R_cores() // max(k, 1)) - 1))
@@ -207,6 +214,25 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
     _save_plans(out, names=names, plan_pos=mu[:, :, 0:3], plan_vel=mu[:, :, 3:6], plan_yaw=mu[:, :, 11], plan_mu=mu, plan_std=sd,
                 lead_prob=lp, lead_x=lx, lead_v=lv,
                 steps=31, info=json.dumps({"model": f"op_parity {m.spec}", "source": "jevdrive.bench.navsim.parity_plans", "frames": m.frames}))
+
+
+def thead_poses(spec: str, bench: str, out: str, batch: int = 128, data: str = "") -> None:
+    """Prediction file (tokens, poses (n, 8, 3) rear axle) of a parity checkpoint with a trajectory head: the head's served plan
+    (lib/traj_head.serve: fixed noise row 0 for a flow head) on the pp_prep token cache, same loop and fp16 path as parity_plans."""
+    import torch
+    _pp_path()
+    import pp_train as T
+    import traj_head as TH
+    m = resolve(spec, check=True)
+    assert m.thead, f"{spec}: no thead.pt next to {m.ckpt}"
+    data = data or NAVSIM[bench]["data"]
+    dev = torch.device("cuda")
+    S = T.Store([data], dev, need_side=False, frames=m.frames)
+    mt = json.loads((data_dir() / "runs" / "op_lb" / data / "meta.json").read_text())
+    assert S.tab["names"].tolist() == mt["names"], "pp_prep cache rows differ from op_lb meta"
+    P = TH.serve(_load_ckpt(T, m.ckpt, dev), TH.load(Path(m.ckpt).with_name("thead.pt"), dev), S, batch=batch)[0]
+    assert np.isfinite(P).all()
+    _save_plans(out, tokens=S.tab["names"].astype(str), poses=P)
 
 
 SG_THRESHOLD = 0.5

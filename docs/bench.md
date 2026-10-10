@@ -33,6 +33,10 @@ Name syntax `<name>[@<frames>][:<opt>]`, e.g. `P0@gimm`, `P3-F-s0:noside`.
 
 `SH30-F-s{0,1}:tsA|tsB|ts0` also run on `--bench hugsim` (preset `spec_plan_smooth`, run dir `<name>-<tsX>_<preset>`): the policy ONNX is served with `--taps view_39,select_4,mean`, the bias server answers `select` requests (`experiments/op_parity/scripts/turn_selhug.py`), and the agent swaps in the picked plan; `ts0` runs everything but changes nothing (decision 194).
 
+A parity checkpoint with a trajectory head next to it (`thead.pt`, written by `pp_train.py --thead fm|rg`, `lib/traj_head.py`; experiments/flowhead)
+is served by that head on navtest / navhard: stage `poses` writes the head's 8 rear-axle poses as the prediction file and replaces `plans` + `export`
+(a flow head serves one sample from a fixed noise vector). No HUGSIM serving and no `:opt`.
+
 Frame protocols (navsim only; closed loop renders its own frames): `gimm` (G, GIMM-synthesised 0.2 s pairs; shipped models and
 `P0@gimm`), `warp` (W, CPU ego-motion warp; the default of every full-run parity checkpoint and of `P0`), `keys` (N, 2 Hz keys),
 `vh140` (1.40 m virtual camera, UF-V). A parity tag defaults to the protocol it was trained on. A missing token cache for a

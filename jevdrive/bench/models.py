@@ -23,7 +23,9 @@ Families
                   T1P-F-s0, PX-s0, UF-U2-s0 ...). navsim plans: torch port on the pp_prep token cache
                   (experiments/op_parity/scripts/pp_train.py PModel, fp16; UF-* arms from pixels via pp_unfreeze.py plans);
                   HUGSIM: the arm's ONNX (pp_hugsim.py onnx: trained initializers + `intent_bias` input) on the policy server
-                  plus the arm's bias server (pp_hugsim.py serve, envs/op-train) fed by lib/parity_hugsim.py
+                  plus the arm's bias server (pp_hugsim.py serve, envs/op-train) fed by lib/parity_hugsim.py.
+                  A checkpoint with a trajectory head next to it (thead.pt, pp_train --thead, lib/traj_head.py) is served by that head
+                  on navsim: its 8 rear-axle poses are written as the prediction file (stage `poses`, no export); not on HUGSIM
   wajepa          WA-JEPA released checkpoint ($DATA_DIR/models/wajepa): stored navtest / navhard references (its own runner,
                   experiments/top10), HUGSIM through its shipped client (zs_run agent `wajepa`, exam preset)
 """
@@ -76,6 +78,11 @@ class Model:
     @property
     def unfreeze(self) -> bool:
         return self.family == "parity" and self.name.startswith("UF-")
+
+    @property
+    def thead(self) -> bool:
+        """A parity checkpoint whose plan is its trajectory head (thead.pt next to ckpt-final.pt; lib/traj_head.py)."""
+        return self.family == "parity" and bool(self.ckpt) and Path(self.ckpt).with_name("thead.pt").exists()
 
 
 OP_INPUTS = ("road + wide camera frame pairs (12 x 128 x 256 YUV, 0.2 s context)", "desire (one-hot, none by default)",

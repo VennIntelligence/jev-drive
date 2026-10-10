@@ -1,6 +1,6 @@
 """Stage entry points run inside pool jobs: `python -m jevdrive.bench.stage <name> args...` (cwd = the repo).
 
-Each runs in the env its code needs (runner.stage_cmd picks it): parity-plans and ts-select in envs/op-train, hugsim-collect in envs/hugsim,
+Each runs in the env its code needs (runner.stage_cmd picks it): parity-plans, thead-poses and ts-select in envs/op-train, hugsim-collect in envs/hugsim,
 poses-score / poses-collect in envs/navsim2, the rest in the repo venv. Imports stay inside the functions so that every env can
 import this module.
 """
@@ -20,6 +20,9 @@ def main(argv: list) -> None:
     elif name == "unfreeze-plans":
         from .navsim import unfreeze_plans
         unfreeze_plans(*args)
+    elif name == "thead-poses":
+        from .navsim import thead_poses
+        thead_poses(*args)
     elif name == "ts-select":
         from .navsim import select_stage
         select_stage(*args)

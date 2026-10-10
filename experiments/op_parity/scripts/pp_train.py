@@ -81,6 +81,10 @@ RETIME_V = 0.5                                                  # m/s: below it 
 # (0 = a probe on the detached state: the policy is the plain recipe bit for bit). The head is not in the checkpoint (aux.pt next to it).
 # --holdout head1val keeps the validation logs (sha256("head1val|" + log) % 10 == 0) out of the train rows; aux_eval.npz holds the plans and
 # the head's profiles on them (without --holdout: on the dev rows).
+# FLOW1 (experiments/flowhead/plans/2026-10-10-flow-head-prereg.md, lib/traj_head.py): --thead fm | rg puts a trajectory head on select_4 in
+# place of the plan read-out: the imitation term and the hinge act on the head's 8 poses (fm: x-prediction flow matching, hinge on a 4-step
+# sample; rg: the same net as a regression), the head also follows the teacher on the anchor rows (weight lam_c), and the shipped plan
+# columns keep only their anchor / distillation terms. The head is saved next to the checkpoint as thead.pt; jevdrive.bench serves it.
 # path-req (plans/2026-10-09-path-req-prereg.md, scripts/path_req.py, --mem-e2e q<kind>): the same channel fed with degraded fields of the LOGGED
 # FUTURE path (label leak: oracle probes only); --mem-lr sets the tokenizer's own learning rate.
 
@@ -149,6 +153,7 @@ class Cfg:
     aux_lam: float = -1.0                 # HEAD1b B2: weight of the heading-profile auxiliary head (lib/heading_aux.py); < 0 = no head, 0 = detached probe
     aux_labels: str = "runs/corridor/head1/labels/navtrain.npz"
     holdout: str = ""                     # HEAD1b B2: salt of the log-level validation part removed from the train rows ("" = none; head1val)
+    thead: str = ""                       # FLOW1: trajectory head on select_4 in place of the plan read-out: "" | fm | rg | rh (lib/traj_head.py)
 
 
 def proot(*p) -> _pl.Path:
@@ -499,6 +504,7 @@ def split_rows(tab, split_ref, b2d_split=None, wod_split=None) -> tuple:
 class Losses:
     def __init__(self, net, cfg: Cfg, tstd: torch.Tensor, di, pi, dev, hinge=None, agent=None):
         self.cfg, self.hinge, self.agent = cfg, hinge, agent
+        self.thead = None                                                       # FLOW1: set by main (lib/traj_head.TrajHead)
         self.W = torch.as_tensor(R2.t_weights(T8), device=dev)
         self.s = [torch.as_tensor(x, dtype=torch.float32, device=dev) for x in (SIG_X, SIG_Y, SIG_PSI)]
         self.di = torch.as_tensor(di, device=dev)
@@ -518,8 +524,8 @@ class Losses:
         wl = 1.0 if wl is None else wl
         return (h((x - tx) / self.s[0]) + wl * (h((y - ty) / self.s[1]) + h((psi - tpsi) / self.s[2]))).mean(1)
 
-    def __call__(self, out, S: Store, rows, anchor):
-        c, out = self.cfg, out.float()
+    def __call__(self, out, S: Store, rows, anchor, hid=None):
+        c, out, th = self.cfg, out.float(), self.thead
         plan = out[:, self.pi].view(-1, 33, 15)
         imit = ~anchor & S.has_fut[rows]
         Ls = {}
@@ -536,18 +542,26 @@ class Losses:
             wl = None
             if c.late_lat_w != 1.0:
                 wl = torch.where(torch.as_tensor(T8 >= 2.0, device=f.device), c.late_lat_w, 1.0).float()
-            Ls["imit"] = self.dist(plan[imit], S.cam_x[rows][imit], f[..., 0], f[..., 1], f[..., 2], wl).mean()
-            if self.hinge is not None:
+            if th is not None:                                          # FLOW1: the head carries the imitation term and the hinge
+                li, tj = th.fit(hid[imit], f, traj=self.hinge is not None)
+                Ls["imit"] = li.mean()
+                if self.hinge is not None:
+                    Ls["hinge"] = self.hinge(tj[..., 0], tj[..., 1], tj[..., 2], rows[imit])
+            else:
+                Ls["imit"] = self.dist(plan[imit], S.cam_x[rows][imit], f[..., 0], f[..., 1], f[..., 2], wl).mean()
+            if self.hinge is not None and th is None:
                 Ls["hinge"] = self.hinge(*rear(plan[imit], S.cam_x[rows][imit], self.W), rows[imit])
             if self.agent is not None:
                 Ls["agent"] = self.agent(*rear(plan[imit], S.cam_x[rows][imit], self.W), rows[imit])
         if anchor.any():
             tx, ty, tpsi = rear(S.t_plan[rows][anchor], S.cam_x[rows][anchor], self.W)
             Ls["cons"] = self.dist(plan[anchor], S.cam_x[rows][anchor], tx, ty, tpsi).mean()
+            if th is not None:
+                Ls["tcons"] = th.fit(hid[anchor], torch.stack([tx, ty, tpsi], -1), traj=False)[0].mean()
         e = ((out[:, self.di] - S.t_out[rows]) / self.tstd).pow(2) * self.dmask
         num = e[:, ~self.plan_cols].sum(1) + (~imit).float() * e[:, self.plan_cols].sum(1)
         Ls["distill"] = (num / e.shape[1]).mean()
-        total = c.lam_i * Ls.get("imit", 0.0) + c.lam_c * Ls.get("cons", 0.0) + c.lam_d * Ls["distill"]
+        total = c.lam_i * Ls.get("imit", 0.0) + c.lam_c * (Ls.get("cons", 0.0) + Ls.get("tcons", 0.0)) + c.lam_d * Ls["distill"]
         if "hinge" in Ls:
             total = total + c.hinge_lam * Ls["hinge"]
         if "agent" in Ls:
@@ -653,7 +667,7 @@ def main(a):
               agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels,
               mem_e2e=a.mem_e2e, mem_init=a.mem_init, mem_lr=a.mem_lr,
               ego_noax=a.ego_noax, hist_cv=a.hist_cv, lead_init=a.lead_init, retime=a.retime,
-              aux_lam=a.aux_lam, aux_labels=a.aux_labels, holdout=a.holdout)
+              aux_lam=a.aux_lam, aux_labels=a.aux_labels, holdout=a.holdout, thead=a.thead)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
@@ -725,6 +739,15 @@ def main(a):
         aux = HX.HeadingAux(data_dir() / cfg.aux_labels, S.tab["names"], dev)
         opt.add_param_group({"params": list(aux.parameters()), "lr": cfg.lr_new, "base": cfg.lr_new})
         model.tap = HX.TAP
+    th = None
+    if cfg.thead:                                                   # FLOW1; built last: every other init draw is that of the plain recipe
+        import traj_head as TH
+        assert cfg.arm == "P2" and world == 1 and not a.compile and aux is None and agent is None and not (cfg.retime or cfg.act_lab) \
+            and cfg.late_lat_w == 1.0, "--thead: plain P2 (+ hinge), one GPU, eager step"
+        fz = S.fut[torch.as_tensor(tr_rows, device=dev)][S.has_fut[torch.as_tensor(tr_rows, device=dev)]]
+        th = LS.thead = TH.TrajHead(cfg.thead, fz.mean(0).cpu().numpy(), fz.std(0).cpu().numpy(), seed=cfg.seed).to(dev)
+        opt.add_param_group({"params": list(th.parameters()), "lr": cfg.lr_new, "base": cfg.lr_new})
+        model.tap = TH.TAP
     scaler = torch.amp.GradScaler()
     d = proot("runs", tag)
     ctx = Run("op_parity", f"train-{tag}", seed=cfg.seed, config=asdict(cfg)) if rank == 0 else None
@@ -736,6 +759,8 @@ def main(a):
             if aux is not None or len(ho_rows):
                 run.info(f"EXPLORATORY (HEAD1b B2): aux lambda {cfg.aux_lam} on {HX.TAP}, labels cover {aux.coverage if aux else float('nan'):.4f} of {S.n} rows; "
                          f"held-out validation rows {len(ho_rows)} ({len(set(tabs['log'][ho_rows].tolist()))} logs)")
+            if th is not None:
+                run.info(f"FLOW1: trajectory head `{cfg.thead}` on {TH.TAP}, {sum(p.numel() for p in th.parameters()) / 1e6:.2f}M parameters")
             run.info(f"{tag}: train {len(tr_rows)} dev {len(dv_rows)} rows, base {sum(p.numel() for p in base) / 1e6:.1f}M, "
                      f"adapter {sum(p.numel() for p in new) / 1e6:.2f}M, world {world}")
         t0, hist = time.time(), []
@@ -831,9 +856,10 @@ def main(a):
                 side = om[rows]                                                      # tokens of this step's tokenizer: the losses reach its weights
             lkw = {"lead": S.leadf[rows]} if use_lead else {}
             out = fwd(front_b, ego, S.tc[rows], side, smask, nv=None if S.nv is None else S.nv[rows], **lkw)
-            if aux is not None:
+            hid = None
+            if aux is not None or th is not None:
                 out, hid = out
-            total, Ls = LS(out, S, rows, anchor)
+            total, Ls = LS(out, S, rows, anchor, hid)
             if aux is not None:                                                      # imitation rows only; lambda 0: a probe on the detached state
                 Ls["aux"] = aux.loss(hid if cfg.aux_lam > 0 else hid.detach(), rows, ~anchor & S.has_fut[rows])
                 if run and cfg.aux_lam > 0 and (step + 1) % cfg.eval_every == 0:
@@ -854,6 +880,8 @@ def main(a):
                 tok_gn = float(torch.nn.utils.clip_grad_norm_(om.params, 1.0))
             if aux is not None:
                 torch.nn.utils.clip_grad_norm_(aux.parameters(), 1.0)
+            if th is not None:
+                torch.nn.utils.clip_grad_norm_(th.parameters(), 1.0)
             scaler.step(opt)
             scaler.update()
             hist.append({k: float(v) for k, v in Ls.items()})
@@ -879,8 +907,10 @@ def main(a):
                 if len(dvw) and len(dvw) < len(dv_rows):                    # mixed-domain: each domain's dev rows
                     ev |= {"wod_" + k: v for k, v in dev_eval(model, Sd, dvw, LS.W).items()}
                     ev |= {"nav_" + k: v for k, v in dev_eval(model, Sd, dv_rows[~S.is_wod[dv_rows]], LS.W).items()}
+                if th is not None:
+                    ev |= TH.dev_ade(model, th, Sd, dv_rows)
                 model.train()
-                model.tap = HX.TAP if aux is not None else None
+                model.tap = HX.TAP if aux is not None else (TH.TAP if th is not None else None)
                 run.scalars({f"dev/{k}": v for k, v in ev.items()}, step + 1)
                 run.info(f"dev @ {step + 1}: " + ", ".join(f"{k} {v:.3f}" for k, v in ev.items()))
                 run.summary.update({f"dev_{k}": v for k, v in ev.items()})
@@ -890,6 +920,8 @@ def main(a):
             if aux is not None:                                                      # the head and its read rows; neither is part of the checkpoint
                 torch.save(aux.net.state_dict(), d / "aux.pt")
                 aux.dump(model, S, ho_rows if len(ho_rows) else dv_rows, LS.W, rear, d / "aux_eval.npz")
+            if th is not None:
+                torch.save(th.pack(), d / "thead.pt")
             if model.adapter is not None:
                 torch.save(model.adapter.state_dict(), d / "adapter.pt")
             run.summary.update(steps=cfg.steps, train_s=time.time() - t0, ckpt=str(d / "ckpt-final.pt"))
@@ -965,5 +997,6 @@ if __name__ == "__main__":
     ap.add_argument("--aux-lam", type=float, default=-1.0, help="HEAD1b B2 (exploratory): weight of the heading-profile head on select_4; < 0 off, 0 detached probe")
     ap.add_argument("--aux-labels", default=Cfg.aux_labels, help="heading-profile label file under $DATA_DIR (head1_labels.py)")
     ap.add_argument("--holdout", default="", help="HEAD1b B2: salt of the validation logs removed from the train rows (head1val)")
+    ap.add_argument("--thead", default="", choices=["", "fm", "rg", "rh"], help="FLOW1: trajectory head on select_4 in place of the plan read-out (lib/traj_head.py)")
     speed_args(ap)
     main(ap.parse_args())
