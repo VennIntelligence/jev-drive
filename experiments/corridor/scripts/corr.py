@@ -7,6 +7,7 @@ driven lane sequence are privileged: every arm below is an analysis swap, not a 
                    equal-arc curve error; kp / ke the same on the logged path clamped into the corridor interior. feat.npz: the
                    along-track / cross-track fits (number 1) and the map heading errors (number 3). tokens_{s10,turn}.txt, keys.txt
   gate    (.venv)  identity gate: <seed>_pp rows of a score-poses CSV == the stored bench sub-scores, token by token
+  side    (envs/navsim2, post hoc)  side of the first corner outside on the arms' DAC-failing rows -> $OUT/side.parquet
   report  (.venv)  tables for the four numbers, read lines, figures -> $OUT/report/
 Scoring is `python -m jevdrive.bench score-poses --traffic non_reactive` (corr_chain.sh). Curves, extension rule, failure kinds and the
 log-cluster bootstrap are decision 207's (experiments/op_parity/scripts/pt_swap.py), imported, not re-implemented.
@@ -241,15 +242,46 @@ def cmd_gate(a):
             raise SystemExit("identity gate failed")
 
 
+# ---------------------------------------------------------------- side (post hoc; envs/navsim2)
+def cmd_side(a):
+    """Decision 153's instrumented replay on the DAC-failing rows of the swap arms: side of the first footprint corner outside."""
+    import multiprocessing as mp
+    import pandas as pd
+    import fd_navsim as FD
+    from jevdrive.common import n_cpus
+    from jevdrive.run import Run
+    with Run("corridor", "side", config=vars(a)) as run:
+        sc = pd.read_csv(a.score, usecols=["key", "token", "drivable_area_compliance"])
+        bad = sc[(sc.drivable_area_compliance < 1) & ~sc.key.str.endswith("_pp")]
+        Z = np.load(OUT / "poses.npz")
+        pos = {t: i for i, t in enumerate(Z["tokens"].astype(str))}
+        plans, want = {}, {}
+        for k, g in bad.groupby("key"):
+            A = Z[k]
+            plans[k] = {t: np.asarray(A[pos[t]], np.float64) for t in g.token}
+            for t in g.token:
+                want.setdefault(t, []).append(k)
+        kf = OUT / "side_keys.pkl"
+        pickle.dump({"plans": plans, "want": want}, open(kf, "wb"))
+        rows = []
+        with mp.get_context("fork").Pool(max(4, n_cpus() // 3), initializer=FD._init, initargs=("navtest", kf)) as pool:
+            for r in pool.imap_unordered(FD.work, sorted(want), chunksize=2):
+                rows.extend({k: v for k, v in x.items() if k != "_states"} for x in r["rows"])
+        df = pd.DataFrame(rows)
+        df[["key", "token", "drivable_area_compliance", "raw_out", "lqr_t", "lqr_side", "lqr_depth"]].to_parquet(OUT / "side.parquet")
+        run.summary.update(rows=len(df), tokens=len(want), agree=float((df.drivable_area_compliance < 1).mean()))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("poses"); p.add_argument("--geom", default="geom.pkl"); p.add_argument("--tag", default="")
     p = sub.add_parser("gate"); p.add_argument("--score", required=True); p.add_argument("--tag", default="")
+    p = sub.add_parser("side"); p.add_argument("--score", required=True)
     p = sub.add_parser("report"); p.add_argument("--score", required=True)
     a = ap.parse_args()
     if a.cmd == "report":
         import corr_report
         corr_report.main(a)
     else:
-        {"poses": cmd_poses, "gate": cmd_gate}[a.cmd](a)
+        {"poses": cmd_poses, "gate": cmd_gate, "side": cmd_side}[a.cmd](a)

@@ -186,6 +186,38 @@ def main(a):
         P(f"Without lane-change tokens (> 20 deg, {int(mk.sum())} tokens): CE vs PP {pc(t, '{:+.2f}')}, CP vs PP {pc(t2, '{:+.2f}')}.\n")
         summ["n2_no_lc"] = dict(ce=t, cp=t2)
 
+        # ---- 2b. post hoc: where the arms fail, where the log sits in the corridor
+        fs = OUT / "side.parquet"
+        if fs.exists():
+            sd = pd.read_parquet(fs).set_index(["key", "token"])
+            rows = []
+            for b in (">20", ">45"):
+                mk = BK[b] & ok
+                for arm in ("pp", "cp", "ce", "kp", "ke"):
+                    tot = ins = dep = raw = 0
+                    for m in SEEDS:
+                        q = (rp if arm == "pp" else sd).loc[f"{m}_{arm}"].reindex(names)
+                        f = (S[f"{m}_{arm}"]["DAC"] < 1) & mk
+                        tot += f.sum(); ins += (f & (q.lqr_side.to_numpy(float) == sgn)).sum()
+                        dep += np.nansum(q.lqr_depth.to_numpy(float)[f]); raw += np.nansum(q.raw_out.to_numpy(float)[f])
+                    rows.append({"bucket": b, "arm": ARM_NAME[arm], "DAC failures (seed mean)": tot / 2, "first corner out on the inside of the turn %": 100 * ins / tot,
+                                 "on the outside %": 100 * (1 - ins / tot), "raw poses already outside %": 100 * raw / tot, "mean depth m": dep / tot})
+            P("Post hoc (not registered): side of the first footprint corner outside the drivable area, devkit LQR replay (decision 153's hook):\n")
+            P(md(pd.DataFrame(rows)) + "\n")
+            pd.DataFrame(rows).to_csv(RES / "n2_side.csv", index=False)
+            summ["n2_side"] = rows
+        rows = []
+        for b in (">20", "20-45", ">45"):
+            mk = BK[b] & ok & ~F["lane_change"].astype(bool)
+            x = sgn * F["dR_log4"]
+            t = cb.mean(x, mk)
+            rows.append({"bucket": b, "n (no lane change)": int(mk.sum()), "log minus centreline at 4 s, inside + (m)": pc(t, "{:+.2f}"), "> 0.3 m inside %": 100 * float((x[mk] > 0.3).mean()),
+                         "> 0.3 m outside %": 100 * float((x[mk] < -0.3).mean()), "mean |offset| m": float(np.abs(x[mk]).mean()), "mean |d0| m": float(np.abs(F["d0"][mk]).mean())})
+            summ[f"log_offset/{b}"] = t
+        P("Post hoc: where the logged path sits relative to the corridor centreline (rear axle, tokens without a lane change):\n")
+        P(md(pd.DataFrame(rows)) + "\n")
+        pd.DataFrame(rows).to_csv(RES / "log_offset.csv", index=False)
+
         # ---- 3. map heading
         P("## 3. Is map + exit choice enough for the 4 s heading (error against the logged 4 s heading, deg)\n")
         deg = np.degrees
