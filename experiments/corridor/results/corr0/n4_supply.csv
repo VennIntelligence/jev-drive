@@ -1,0 +1,3 @@
+tokens,n,matched,driven path known,>= 2 paths,1 alt,2 alts,3+ alts,alt >= 20 deg,rows >= 20,alt >= 45 deg,rows >= 45,roadblock-level >= 20,roadblock-level >= 45,distinct branch nodes (>= 20)
+navtrain all,103288,102019,93922,41395 / 1029 logs,20841,7040,3029,18989 / 821 logs,26351,16197 / 749 logs,22165,35261 / 1103 logs,28763 / 1060 logs,491
+turn > 20 deg,28322,27403,22604,15963 / 792 logs,7846,2839,1421,7140 / 601 logs,10436,5978 / 556 logs,8698,8890 / 664 logs,6918 / 633 logs,285

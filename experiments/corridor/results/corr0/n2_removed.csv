@@ -1,0 +1,46 @@
+bucket,PP failures,arm,PP failures (seed mean),gross removed %,net removed %,arm DAC failures (seed mean)
+>20,DAC,CE corridor path + plan error,225.5,"25.3 [17.5, 32.8]","-125.1 [-172.2, -88.2]",507.5
+>20,DAC,CP corridor path (no error),225.5,"70.7 [59.1, 81.0]","-54.8 [-112.4, -8.4]",349.0
+>20,DAC,KE clamped log + plan error,225.5,"22.2 [15.9, 28.6]","-87.4 [-119.2, -63.8]",422.5
+>20,DAC,KP clamped log (no error),225.5,"73.4 [65.6, 80.6]","-67.0 [-113.3, -33.8]",376.5
+>20,DAC,"LP log path, plan timing (d207)",225.5,"94.5 [91.7, 97.1]","73.6 [61.1, 83.7]",59.5
+>20,inside-cut,CE corridor path + plan error,123.0,"35.4 [25.8, 44.9]",,
+>20,inside-cut,CP corridor path (no error),123.0,"85.0 [76.6, 91.7]",,
+>20,inside-cut,KE clamped log + plan error,123.0,"29.3 [22.4, 36.8]",,
+>20,inside-cut,KP clamped log (no error),123.0,"82.5 [75.6, 88.8]",,
+>20,inside-cut,"LP log path, plan timing (d207)",123.0,"95.1 [91.0, 98.6]",,
+>20,cannot-make-turn,CE corridor path + plan error,47.0,"8.5 [1.1, 18.6]",,
+>20,cannot-make-turn,CP corridor path (no error),47.0,"72.3 [55.9, 86.1]",,
+>20,cannot-make-turn,KE clamped log + plan error,47.0,"11.7 [3.6, 20.0]",,
+>20,cannot-make-turn,KP clamped log (no error),47.0,"72.3 [58.2, 85.1]",,
+>20,cannot-make-turn,"LP log path, plan timing (d207)",47.0,"95.7 [89.9, 100.0]",,
+20-45,DAC,CE corridor path + plan error,91.5,"23.0 [13.7, 31.9]","-172.7 [-272.0, -112.7]",249.5
+20-45,DAC,CP corridor path (no error),91.5,"73.2 [59.2, 84.2]","-95.6 [-219.8, -20.2]",179.0
+20-45,DAC,KE clamped log + plan error,91.5,"21.9 [13.4, 30.7]","-129.5 [-199.3, -84.3]",210.0
+20-45,DAC,KP clamped log (no error),91.5,"77.6 [68.9, 84.6]","-106.6 [-200.0, -50.0]",189.0
+20-45,DAC,"LP log path, plan timing (d207)",91.5,"95.1 [88.8, 99.4]","82.0 [68.1, 92.0]",16.5
+20-45,inside-cut,CE corridor path + plan error,59.0,"25.4 [13.9, 36.6]",,
+20-45,inside-cut,CP corridor path (no error),59.0,"84.7 [72.4, 93.5]",,
+20-45,inside-cut,KE clamped log + plan error,59.0,"28.0 [17.0, 39.2]",,
+20-45,inside-cut,KP clamped log (no error),59.0,"84.7 [76.1, 91.4]",,
+20-45,inside-cut,"LP log path, plan timing (d207)",59.0,"95.8 [88.6, 100.0]",,
+20-45,cannot-make-turn,CE corridor path + plan error,11.0,"13.6 [0.0, 34.6]",,
+20-45,cannot-make-turn,CP corridor path (no error),11.0,"63.6 [33.3, 89.5]",,
+20-45,cannot-make-turn,KE clamped log + plan error,11.0,"9.1 [0.0, 25.9]",,
+20-45,cannot-make-turn,KP clamped log (no error),11.0,"59.1 [33.3, 85.7]",,
+20-45,cannot-make-turn,"LP log path, plan timing (d207)",11.0,"95.5 [82.6, 100.0]",,
+>45,DAC,CE corridor path + plan error,134.0,"26.9 [17.1, 37.3]","-92.5 [-135.5, -56.9]",258.0
+>45,DAC,CP corridor path (no error),134.0,"69.0 [56.7, 81.5]","-26.9 [-72.0, 12.8]",170.0
+>45,DAC,KE clamped log + plan error,134.0,"22.4 [13.5, 32.6]","-58.6 [-87.5, -37.8]",212.5
+>45,DAC,KP clamped log (no error),134.0,"70.5 [61.4, 79.7]","-39.9 [-82.3, -10.0]",187.5
+>45,DAC,"LP log path, plan timing (d207)",134.0,"94.0 [90.0, 97.7]","67.9 [47.7, 82.4]",43.0
+>45,inside-cut,CE corridor path + plan error,64.0,"44.5 [30.6, 56.8]",,
+>45,inside-cut,CP corridor path (no error),64.0,"85.2 [74.3, 94.1]",,
+>45,inside-cut,KE clamped log + plan error,64.0,"30.5 [20.2, 41.7]",,
+>45,inside-cut,KP clamped log (no error),64.0,"80.5 [71.9, 88.6]",,
+>45,inside-cut,"LP log path, plan timing (d207)",64.0,"94.5 [88.0, 99.3]",,
+>45,cannot-make-turn,CE corridor path + plan error,36.0,"6.9 [0.0, 15.9]",,
+>45,cannot-make-turn,CP corridor path (no error),36.0,"75.0 [59.6, 88.0]",,
+>45,cannot-make-turn,KE clamped log + plan error,36.0,"12.5 [1.6, 25.4]",,
+>45,cannot-make-turn,KP clamped log (no error),36.0,"76.4 [61.4, 89.1]",,
+>45,cannot-make-turn,"LP log path, plan timing (d207)",36.0,"95.8 [88.6, 100.0]",,

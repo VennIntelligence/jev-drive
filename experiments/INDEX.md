@@ -82,3 +82,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [controlnet_pair](controlnet_pair/README.md) (cn_pair): Paused, not no-go: deletion unclean, insertion fake-ish on 19 scenes [d59]
 - [world_model](world_model/README.md) (W, WL, WL-2): W failed from action-scene confounding; WL-2 held-out no-go (H 0.38) [d54,60-61,65,76]
 - [wm_policy](wm_policy/README.md) (worldmodel-4B as policy, WM-uncond): Stopped at step 0: anchors are fixed future video, no history-only mode [d(pending)]
+
+**other**
+
+- [corridor](corridor/README.md) (CORR0, lane corridor label): Corridor centreline as target: -9.9 EPDMS on turns; wrong exit 2.6% of DAC fails [d240]
