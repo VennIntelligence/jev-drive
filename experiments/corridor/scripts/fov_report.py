@@ -20,7 +20,7 @@ FOV = D / "runs/corridor/fov"
 PT = D / "runs/op_parity/pt_swap"
 TAB = D / "runs/op_parity/cache/lb_navtest/tab.npz"
 LOGS = D / "datasets/navsim/navsim_logs/test"
-OUTMD = REPO / "experiments/corridor/results/fov.md"
+OUTMD = Path(os.environ.get("FOV_MD", REPO / "experiments/corridor/results/fov.md"))
 HALF = np.degrees(np.arctan(256 / 455))        # wide frame half angle, deg
 F = lambda t: PS.pc(t, "{:.1f}", 100)          # noqa: E731  percent with CI
 
