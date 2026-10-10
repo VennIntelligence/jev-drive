@@ -26,6 +26,7 @@ from jevdrive.run import Run, cli_args  # noqa: E402
 
 CR = data_dir() / "runs" / "op_parity" / "cache"
 VERSION = "px1"
+MIN_FREE_GB = 50                                # shared data disk: a build that would leave less free space does not start
 
 
 def pdir(data) -> _pl.Path:
@@ -117,6 +118,11 @@ def cmd_build(a):
         key = cache.key(params=kbase(d, names) | dict(limit=a.limit, src=[list(map(str, s)) for s in src]), code=[_job])
         W = a.workers or PX.cores()
         st = {}
+        import shutil
+        need, free = N * PX.NF * PX.FB / 2 ** 30, shutil.disk_usage(pdir(d)).free / 2 ** 30
+        run.info(f"{d}: {need:.1f} GB to write, {free:.0f} GB free on the data disk (floor {MIN_FREE_GB} GB)")
+        if not cache.valid(out, key) and free - need < MIN_FREE_GB:               # sparse part files: the other builds are not counted
+            raise RuntimeError(f"{d}: {free:.0f} GB free - {need:.1f} GB < {MIN_FREE_GB} GB floor; not written")
 
         def make():
             proot = pdir(d) / (".part" if not a.limit else f".part{a.limit}")
