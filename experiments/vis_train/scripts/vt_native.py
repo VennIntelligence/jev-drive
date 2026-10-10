@@ -14,6 +14,9 @@ axle (straight windows: a difference below the pose resolution). `shipped` = the
   run    (openpilot)  --tags T...  decode the windows once, replay every missing tag -> native/res/<tag>/<window>.npz (fov_replay layout, cached)
   table  (any, numpy) --tags T...  ADE5 per window x tag, ratio to shipped and paired difference to the control, by-segment cluster bootstrap
                                    -> native/table.csv, native/table.md   (vt_read.py `build` renders it into reads.md)
+  export (op-train)   --src VT-C-s0 --dst VTCP2-s0  the checkpoint of an in-place trained arm as a plain P2 checkpoint (adds `arm: P2`, drops
+                                   `vt`) under a new tag, so that jevdrive.bench serves it on HUGSIM through the parity path (ONNX with the trained
+                                   vision initializers + the ego-adapter bias server); loads it into pp_train.PModel("P2") on the CPU as the check
   submit (box, .venv) [--tags auto|T...]  the three stages as chained pool jobs (CPU / one GPU / CPU); `auto` = shipped, SH30-F-s0,
                                    and every existing VT-C-s0* / VT-F0-s0* checkpoint. Cached per tag: rerun after each new C snapshot.
 """
@@ -143,6 +146,24 @@ def cmd_run(a):
             print("replayed", tag, FR.wname(w), flush=True)
 
 
+# ---------------------------------------------------------------- export (op-train)
+def cmd_export(a):
+    import torch
+    import pp_train as T
+    src, dst = tag_ckpt(a.src), tag_ckpt(a.dst)
+    assert src.exists() and not dst.exists(), (src, dst)
+    ck = torch.load(src, map_location="cpu", weights_only=False)
+    st = ck["model"]
+    assert st.get("vt", {}).get("arm") in ("C", "F0", "F") or st.get("arm") == "P2", st.keys()
+    st = {k: v for k, v in st.items() if k != "vt"} | {"arm": "P2"}
+    m = T.PModel("P2")
+    m.load_state(st)                                                    # strict on the adapter; every net key must exist in the port
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    torch.save({"model": st, "cfg": ck.get("cfg"), "src": a.src}, dst.with_suffix(".tmp"))
+    os.replace(dst.with_suffix(".tmp"), dst)
+    print("wrote", dst, len(st["net"]), "trained tensors")
+
+
 # ---------------------------------------------------------------- table
 FINAL = {"VT-C": 40, "VT-F0": 60}                                 # thousand steps of the final checkpoints (vt_read.STEPS)
 
@@ -221,10 +242,13 @@ def cmd_submit(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
+    p = sp.add_parser("export")
+    p.add_argument("--src", required=True)
+    p.add_argument("--dst", required=True)
     for n in ("prep", "run", "table", "submit"):
         p = sp.add_parser(n)
         p.add_argument("--tags", nargs="+", default=["auto"] if n == "submit" else None, required=n != "submit")
         if n == "run":
             p.add_argument("--backend", default="cuda-iob")
     a = ap.parse_args()
-    {"prep": cmd_prep, "run": cmd_run, "table": cmd_table, "submit": cmd_submit}[a.cmd](a)
+    {"export": cmd_export, "prep": cmd_prep, "run": cmd_run, "table": cmd_table, "submit": cmd_submit}[a.cmd](a)
