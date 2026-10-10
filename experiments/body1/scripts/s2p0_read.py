@@ -131,10 +131,13 @@ def clip_boxes(cd, ticks):
         e = kd["extent"][:2]
         c = (CLS["bicycle"] if any(b in t for b in BIKES) else CLS["vehicle"]) if t.startswith("vehicle.") else CLS["pedestrian"] if t.startswith("walker.") \
             else CLS["generic_object"] if t.startswith("static.prop.") else -1
-        if c < 0 or not (0.05 <= e[0] <= 10 and 0.05 <= e[1] <= 10):
+        if c < 0 or "dirtdebris" in t or not (0.05 <= e[0] <= 10 and 0.05 <= e[1] <= 10):
             drop[t] = drop.get(t, 0) + 1
             continue
-        cl[i], ext[i], off[i], static[i] = c, e, kd["offset"][:2], t.startswith("static.")
+        o = kd["offset"][:2]
+        if t == "static.prop.mesh":                                             # parked cars of Town12 / 13: the actor's yaw axis is the car's long axis,
+            e, o = [max(e), min(e)], [0.0, 0.0]                                 # the logged extent has x / y swapped on half of them (checked against the road)
+        cl[i], ext[i], off[i], static[i] = c, e, o, t.startswith("static.")
     ii = np.searchsorted(ids, A["id"])
     yaw = np.radians(A["yaw"].astype(float))
     cx = A["xyz"][:, 0] + np.cos(yaw) * off[ii, 0] - np.sin(yaw) * off[ii, 1]
@@ -144,6 +147,15 @@ def clip_boxes(cd, ticks):
     pos[ii[ok], A["tick"][ok]] = np.stack([cx, -cy, -yaw], -1)[ok]
     for i in np.flatnonzero(static):                                            # static props are logged every prop_every ticks: one pose for the clip
         pos[i] = pos[i][np.isfinite(pos[i, :, 0])][0]
+    # an actor that the hero's own executed box overlaps at a logged tick is not solid for this clip (riders inside the hero, the struck actor of
+    # a collision clip, whose rows near the event the cache cut anyway): it would make the expert's own path a contact
+    hx, hy = xyw[:, 0] + (MKZ["front"] + MKZ["rear"]) / 2 * np.cos(hd), xyw[:, 1] + (MKZ["front"] + MKZ["rear"]) / 2 * np.sin(hd)
+    with np.errstate(invalid="ignore"):
+        thru = SW.sat(hx[None], hy[None], hd[None], (MKZ["front"] - MKZ["rear"]) / 2, MKZ["half_w"], pos[..., 0], pos[..., 1], pos[..., 2], ext[:, :1], ext[:, 1:]).any(1) & (cl >= 0)
+    for i in np.flatnonzero(thru):
+        k_ = "overlapped by the hero: " + kinds[str(ids[i])]["type_id"].rsplit(".", 1 if not kinds[str(ids[i])]["type_id"].startswith("static") else 0)[0]
+        drop[k_] = drop.get(k_, 0) + 1
+    cl[thru] = -1
     pos[cl < 0] = np.nan
     n = len(ticks)
     box, valid, cls = np.zeros((n, 9, K, 5), np.float32), np.zeros((n, 9, K), bool), np.full((n, K), -1, np.int8)
@@ -177,6 +189,9 @@ def clip_labels(job):
     sdf = S["sdf"][si].astype(np.float32)
     box, valid, cls, drop = clip_boxes(cd, ticks)
     o = dict(box=box.astype(np.float16), valid=valid, cls=cls)
+    with footprint(**MKZ):                                                      # sanity query: the expert's own executed future must not be a contact
+        o["exp_a_hit"] = np.concatenate([SW.labels(fut[c:c + 128][:, None], np.zeros((len(fut[c:c + 128]), 2), np.float32), box[c:c + 128], valid[c:c + 128], cls[c:c + 128],
+                                                   sdf[c:c + 128])["a_hit"][:, 0] for c in range(0, len(ticks), 128)])
     for fp, kw in (("pac", PAC), ("mkz", MKZ)):
         with footprint(**kw):
             for c in range(0, len(ticks), 128):
@@ -214,7 +229,7 @@ def labels(a, run):
         wx[g] = v[2]
     np.savez_compressed(out() / ("labels.npz" if not a.limit_clips else f"labels-first{a.limit_clips}.npz"), rows=rows, weather=wx, dropped=json.dumps(drop), **O)
     run.info(f"{len(rows)} rows of {len(routes)} clips; dropped kinds {drop}; rows with >= 1 valid object {float((O['cls'] >= 0).any(1).mean()):.3f}; "
-             f"own0 agent hit pac / mkz {O['pac_a_hit'][:, 0].mean():.4f} / {O['mkz_a_hit'][:, 0].mean():.4f}; "
+             f"expert-future agent hit (sanity, MKZ) {O['exp_a_hit'].mean():.4f}; own0 agent hit pac / mkz {O['pac_a_hit'][:, 0].mean():.4f} / {O['mkz_a_hit'][:, 0].mean():.4f}; "
              f"own0 boundary margin < -0.2 pac / mkz {(O['pac_b_margin'][:, 0] < -0.2).mean():.4f} / {(O['mkz_b_margin'][:, 0] < -0.2).mean():.4f}")
     run.summary.update(rows=len(rows), clips=len(routes))
 
