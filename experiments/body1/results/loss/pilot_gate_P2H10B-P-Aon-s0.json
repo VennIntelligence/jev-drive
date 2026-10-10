@@ -1,0 +1,45 @@
+{
+ "tag": "P2H10B-P-Aon-s0",
+ "gate_of": "Amendment 4 item 5, loss half (Amendment 5 replaces it by hold-log rates: bd4_g3.py)",
+ "windows": [
+  [
+   201,
+   400
+  ],
+  [
+   2701,
+   3000
+  ]
+ ],
+ "terms": {
+  "agent_posmean": {
+   "early": 0.08934911984740537,
+   "early_steps": 159,
+   "late": 0.07777363343942027,
+   "late_steps": 194,
+   "fall": 0.1295534463882158
+  },
+  "imit/agent_posmean": {
+   "early": 0.08934911984740537,
+   "early_steps": 159,
+   "late": 0.07777363343942027,
+   "late_steps": 194,
+   "fall": 0.1295534463882158
+  },
+  "imit/hinge_posmean": {
+   "early": 0.03131766527891159,
+   "early_steps": 200,
+   "late": 0.026692656404338776,
+   "late_steps": 300,
+   "fall": 0.14768051300705232
+  }
+ },
+ "gate_term": "agent_posmean",
+ "fall": 0.1295534463882158,
+ "passed": false,
+ "dev": {
+  "ade": 0.5926294326782227,
+  "drift_off": 0.043389156460762024,
+  "drift_on": 1.4599695205688477
+ }
+}

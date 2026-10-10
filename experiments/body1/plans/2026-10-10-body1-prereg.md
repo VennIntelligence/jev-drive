@@ -740,3 +740,16 @@ any number of it exists; each fixes something the items left open and takes the 
   over the 120 pairs >= 0 and at-fault collision zeros in the two-seed total not above the baseline's.
 - (g) **What the servable tag would be.** If all four nuPlan lines pass: `P2H10S-F-s{0,1}`, stated as the third variant, read on development
   scenes; the PAI read is reported next to it and does not change the nuPlan verdict.
+
+**Status after the code checks and the pilots (2026-10-10 08:40 box time, added after the reads; nothing above was changed).** Note (a):
+(i) 40 batches of the pilot's trainer at the `P2H10B-Pw3-s0` weights, 1 320 scalars and totals with the switch on equal to the switch off bit
+for bit, pose values unchanged (max difference 0); (ii) along-heading component of the new hinges' pose gradient 3.0e-9 with the switch on
+against 0.122 with it off, cross-heading component unchanged to 1.3e-8 (54 agent-positive and 117 road-positive rows; `results/shape/shape_check.json`);
+(iii) switch off, 60 steps against the unedited `pp_train.py`: 18 scalars and every weight bit for bit (`results/shape/ident_a6.json`).
+**Pilot gate of item 5, `P2H10S-P-s0` against `P2H10-P-s0`, read once: met.** Agent rate 0.0164 against 0.0261 (-37.1 %, [-0.0135, -0.0064]),
+boundary rate 0.0182 against 0.0275 (-33.8 %, [-0.0136, -0.0052]), dev ADE 0.5882 against 0.5913 m, continuation slope 0.914 against 1.079,
+4 s arc ratio pooled 0.9989 [0.9978, 1.0000] and on open states 1.0004 [0.9994, 1.0014] (line 0.995 each). Positive control `P2H10B-Pw3-s0`
+on the same states: 0.9863 / 0.9913, fails both arc lines as expected. Ablations (gate nothing): "B + C without A" agent -25.8 %, boundary
+-30.9 %, arc 0.9963 / 0.9985; "A on on-log rows only" agent -5.3 %, boundary -2.9 %, arc 0.9977 / 0.9983. Hold logs have now been read at
+pilot scale by three arms of this lane. The arm goes on to the full run of 2 seeds. Table: `results/shape/pilot_gate.md`.
+

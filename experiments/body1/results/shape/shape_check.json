@@ -1,0 +1,22 @@
+{
+ "weights": "P2H10B-Pw3-s0",
+ "batches": 40,
+ "scalars_compared": 1320,
+ "scalars_differ": [],
+ "rows": 5120,
+ "agent_pos_rows": 54,
+ "road_pos_rows": 117,
+ "max_abs_grad": 0.12195006012916565,
+ "max_abs_along_on": 3.030187656349881e-09,
+ "max_abs_along_off": 0.12194962000379646,
+ "max_abs_cross_on_minus_off": 1.2866378670817191e-08,
+ "max_abs_cross_off": 0.12195117425383326,
+ "max_abs_dout_on_minus_off": 0.01925976574420929,
+ "max_abs_dout_off": 0.13734403252601624,
+ "max_abs_pose_value_diff": 0.0,
+ "values_bit_identical": true,
+ "along_zero": true,
+ "cross_kept": true,
+ "switch_changes_gradient": true,
+ "pass": true
+}

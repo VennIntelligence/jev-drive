@@ -1,0 +1,87 @@
+{
+ "tag": "P2H10S-P-s0",
+ "gate_of": "Amendment 4 item 5, loss half (Amendment 5 replaces it by hold-log rates: bd4_g3.py)",
+ "windows": [
+  [
+   201,
+   400
+  ],
+  [
+   2701,
+   3000
+  ]
+ ],
+ "terms": {
+  "agent_posmean": {
+   "early": 0.11681737434333607,
+   "early_steps": 179,
+   "late": 0.09954877192113326,
+   "late_steps": 243,
+   "fall": 0.14782563398017265
+  },
+  "fam/bd4/agent_posmean": {
+   "early": 0.16425060727128601,
+   "early_steps": 83,
+   "late": 0.12478127704123332,
+   "late_steps": 94,
+   "fall": 0.24029944781185994
+  },
+  "fam/bd4/road_posmean": {
+   "early": 0.11643926024788182,
+   "early_steps": 176,
+   "late": 0.05727235390199875,
+   "late_steps": 243,
+   "fall": 0.5081353679156458
+  },
+  "fam/ot1/agent_posmean": {
+   "early": 0.15489027891798238,
+   "early_steps": 19,
+   "late": 0.15040403845099112,
+   "late_steps": 18,
+   "fall": 0.028963989853532456
+  },
+  "fam/ot1/road_posmean": {
+   "early": 0.04575345690920648,
+   "early_steps": 116,
+   "late": 0.033618331914180996,
+   "late_steps": 160,
+   "fall": 0.2652285928712779
+  },
+  "fam/yr1/agent_posmean": {
+   "early": 0.08489001298843388,
+   "early_steps": 31,
+   "late": 0.1284014688748302,
+   "late_steps": 33,
+   "fall": -0.5125627191543095
+  },
+  "fam/yr1/road_posmean": {
+   "early": 0.0738123239300201,
+   "early_steps": 124,
+   "late": 0.05906138540103225,
+   "late_steps": 187,
+   "fall": 0.19984384373228653
+  },
+  "imit/agent_posmean": {
+   "early": 0.10046773117617704,
+   "early_steps": 150,
+   "late": 0.08277321168931112,
+   "late_steps": 189,
+   "fall": 0.17612142007902382
+  },
+  "imit/hinge_posmean": {
+   "early": 0.03135607663309201,
+   "early_steps": 200,
+   "late": 0.026520396747315923,
+   "late_steps": 300,
+   "fall": 0.1542182697905738
+  }
+ },
+ "gate_term": "agent_posmean",
+ "fall": 0.14782563398017265,
+ "passed": false,
+ "dev": {
+  "ade": 0.5882218480110168,
+  "drift_off": 0.04840439185500145,
+  "drift_on": 1.4538547992706299
+ }
+}
