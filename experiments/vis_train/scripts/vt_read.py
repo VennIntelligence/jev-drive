@@ -771,15 +771,24 @@ def cmd_probe(a):
     datas = ["lb_navtest", "navtrain_full.s2of12", "navtrain_full.s3of12", "navtrain_full.s4of12"]
     assert all((RUNS / t / "ckpt-final.pt").exists() for t in a.tags), "a tag has no checkpoint"
 
+    jf = od / "jobs.json"
+    jobs = json.loads(jf.read_text()) if jf.exists() else {}
+    live = {ln.split()[0] for ln in subprocess.run([*cl[:3], "queue"], capture_output=True, text=True, cwd=REPO).stdout.splitlines()
+            if len(ln.split()) > 1 and ln.split()[1] in ("queued", "running", "inbox")}
+
     def sub(nm, done, after, *args):
         if done:
             return None
-        o = subprocess.run([*cl, "--name", nm, "--log-dir", str(od / "pool" / nm), *(["--after", *after] if after else []), *args], check=True, capture_output=True, text=True, cwd=REPO)
-        print(nm, o.stdout.strip())
-        return o.stdout.strip().split()[-1]
-    tj = [sub(f"vt-probe-tok-{t}", all((D / "runs/vis_train/tokens" / t / f"{d}.npy").exists() for d in datas), [], "--vram", "16", "--cpu", "4", "--ram", "48", "--",
+        if jobs.get(nm) in live:
+            return jobs[nm]
+        o = subprocess.run([*cl, "--name", nm, "--log-dir", str(od / "pool" / nm), *(["--after", ",".join(after)] if after else []), *args], check=True, capture_output=True, text=True, cwd=REPO)
+        jobs[nm] = o.stdout.strip().split()[-1]
+        jf.write_text(json.dumps(jobs))
+        print(nm, jobs[nm])
+        return jobs[nm]
+    tj = [sub(f"vt-probe-tok-{t}", all((D / "runs/vis_train/tokens" / t / f"{d}.npy").exists() for d in datas), [], "--vram", "16", "--cpu", "4", "--ram", "24", "--",
               str(py), f"{S}/vt.py", "tokens", "--tag", t) for t in a.tags]
-    dj = sub(f"vt-probe-dec-{a.name}", (od / "decoder_poses.npz").exists(), [j for j in tj if j], "--vram", "12", "--cpu", "4", "--ram", "64", "--",
+    dj = sub(f"vt-probe-dec-{a.name}", (od / "decoder_poses.npz").exists(), [j for j in tj if j], "--vram", "12", "--cpu", "4", "--ram", "48", "--",
              str(py), f"{S}/vt_read.py", "probe-decode", "--name", a.name, "--tags", *a.tags)
     sub(f"vt-probe-score-{a.name}", (od / "score_t20.csv").exists(), [dj] if dj else [], "--vram", "0.5", "--cpu", str(a.cpu), "--ram", "48", "--",
         str(D / "envs/navsim2/bin/python"), "experiments/op_probe/scripts/opb_score.py", "--poses", str(od / "decoder_poses.npz"), "--keys", "V", *a.tags,

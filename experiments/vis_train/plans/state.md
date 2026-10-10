@@ -140,3 +140,36 @@ A / A0 / B 六条链的 preflight（6 步 smoke，eval 在步 0 与步 3）真�
 | C（8 个 slot 全过 encoder） | 0.7 it/s | 1.08（71%） | 1.71（91%） | 1.92（89%） | 1.89 | 1.23（与 F0 同卡） |
 
 对 0.7 it/s：A / B 独占 7.5 倍、每卡合计 7.9 倍、单任务同卡时 3.9 倍；C 独占 2.7 倍。
+
+## 读数
+
+（reads builder 维护；其他人请勿改这一节。脚本 `scripts/vt_read.py`，产物 `results/`。）
+
+### 怎么重跑
+
+- Mac 上一条命令：`.venv/bin/python experiments/vis_train/scripts/vt_read.py sync`。它经 ssh 把 `vt_read.py box` 作为一个 pool CPU 任务提交（`vt-read`，owner `vis_train`，16 核，envs/navsim2），等它结束，再把 `$DATA_DIR/runs/vis_train/reads/out/` 的六个小文件拷回 `results/`（`reads.parquet`、`reads.md`、`disp.csv`、`probe.csv`、`trend.png`、`trend.pdf`）。任何时候都可以重跑，只处理新出现的 snapshot；之后按路径 `git add experiments/vis_train/results/...` 提交。`sync --no-replay` 只重建表，`sync --copy-only` 只拷上一次的结果。
+- 给报告用的首个 snapshot 短表：`.venv/bin/python experiments/vis_train/scripts/vt_read.py first`（读 `results/reads.parquet`，Mac 上即可）。
+- Stage-0 probe（第 160 条）：box 上 `.venv/bin/python experiments/vis_train/scripts/vt_read.py probe --name <名字> --tags VT-A-s0 VT-B-s0 ...`，提交三段 pool 任务（`vt.py tokens` 占一张卡 → `rep.py` 的 thin decoder 占一张卡 → `opb_score.py` 24 核打 3 154 个 > 20° token），结果 `$DATA_DIR/runs/vis_train/reads/probe/<名字>/score_t20.csv`，下一次 `sync` 自动读进 `reads.md` 与判定。同名重跑即续。
+- 自检：box 上 `$DATA_DIR/envs/navsim2/bin/python experiments/vis_train/scripts/vt_read.py check`（向量化 bootstrap 对 `jevdrive.stats.paired`，132 格最大差 2.2e-16）。
+
+### 缓存在哪
+
+- `$DATA_DIR/runs/vis_train/reads/tok/<模型>.parquet`：每个模型一张逐 token 表（bench 子分、plan 4 s 弧长、heading gain、LQR 回放首次出界的侧、NC 类别），`jevdrive.cache` 按 `units.csv` 与预测文件的 size / mtime 作键，bench 重跑后自动失效；改定义时改脚本里的 `VERSION`。回放只跑 DAC / NC / TTC 失败的 token（每模型约 650 个），8 个模型 16 核 84 s。
+- `$DATA_DIR/runs/vis_train/reads/out/`：每次 `box` 全量重建（bootstrap 是矩阵乘法，秒级）。run 目录在 `runs/vis_train/reads/<时间>/`，pool 日志在 `runs/vis_train/reads/pool/<时间>/`。
+
+### 定义的出处（全部复用，没有重推）
+
+转角桶 = `jevdrive.bench.tables.navtest_strata`；切内侧 / 转不过去 = `corr_report.py` 的 `inside` / `cannot`（`fd_navsim.work` 回放的 `lqr_side`、`plan_kin` 的 gain < 0.9）；NC 类别 = `nc_tax.classify`；FoV 分层 = `runs/corridor/fov/` 的 `tok.parquet` / `unit.parquet`。校验：SH30 的 NC 分类计数与第 196 条逐项相同（176.5 / A 93.5 / A1 58.5 / A2 35 / B 23 / C 13.5 / D 16.5 / E 30，TTC-only 87.5）；> 45° 切内侧 65、转不过去 37.5（corr0 在匹配上的 1 476 个 token 里是 64 / 36）；回放的 8 个子分与 bench 存档最大差 1.2e-12。
+
+### 对照取法与判定
+
+- 同 seed、同步数；对照在该步没有 snapshot 时取其最近的登记 snapshot（并列取早的），表里 `ctrl` 列标出。A / B 的 k05、k15… 对 A0 就是这种情况（A0 每 10 k）。A / B 的末尾（50 k）对 F 用 `VT-F-s*-k50`；C 的末尾对 `VT-F0-s0-k40`。navhard / HUGSIM 只有末尾 checkpoint 有，对照取其末尾（步数不同时 `ctrl step` 列可见）。
+- 判定线、护栏、不退步规则、seed 反向都在 `reads.md` 末尾按登记的阈值机械算出；输入缺失的线写 `pending`，末尾 checkpoint 之前写 provisional。「Stage-0 probe 不动」取为「支路 token 对同一次 decode 的 V 的配对 CI 含 0」（预登记没有给数，这是读数脚本的取法）。趋势 = 差值序列后三个 snapshot 的均值对前三个，少于 6 个 snapshot 时写 n/a。
+
+### 还缺什么
+
+- prereg 读数 5（C 的原生帧直路 ADE 对 shipped，第 137 条）不在脚本里。
+- A0 / A / B / C / W 的 HUGSIM：bench 没有支路 encoder 的 serving，只有 F / F0 在排。
+- `SH30-F-s{0,1}` 的 navhard（W 帧）参照行已于 2026-10-10 23:40 CST 经 `bench run` 提交，跑完后下一次 `sync` 进板表。
+- W 臂：`VT-W-*` 在 bench 里能 resolve 之后脚本自动纳入（登记 50 k、每 5 k、对照 A；步数不同时改脚本顶部的 `STEPS` / `EVERY` / `SEEDS`）；`:sideoff` 的读数名按 `VT-W-s<seed>:sideoff` 取。
+- 链目录里 `A / B` 的 `pool/b-k50`、`b-k55` 与 `A0` 的 `b-k50` 下的 `ERROR` 是 23:07 取消 60 k 提交时留下的（`cancelled while queued`），不是读数失败。
