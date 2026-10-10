@@ -104,7 +104,54 @@ navtrain 103 288 token 与 navtest + navhard 18 058 token，各 16 套标定；�
 
 - 22:41 CST：`lb_navtest` 侧视缓存完成，检查通过。
 - 22:50 CST 前后：navtrain 12 个 shard（103 288 行，151.3 GiB）与 `lb_navhard`（5 912 行，8.7 GiB）全部完成，`navtrain_full.s0of12` 检查通过（结果 `px_side/check-s0.json`、`check-navtest.json`）。阶段 1 结束；盘余 285 GiB。
-- 阶段 2（trainer 的 W 臂、`VT-W-*` 的 bench 路由、链）在第一波启动之后才动 `vt.py` / `vt_chain.sh` / bench 文件。
+- 阶段 2 已完成并启动，见下一小节。
+
+### 阶段 2：trainer、bench、链（2026-10-10 23:20–23:50 CST；登记：prereg 补记 5）
+
+**实现**（commit 180d2730、2a3bc178）。`vt.py` 的臂 `W` = A + `views=3`：`VT.branch` 把 F0 的 t0 对（`PixelStore.t0`，与 A 逐字节相同）与 L0 / R0 的 t0 对（`SideStore.t0`）按视图拼成 192 对过同一个支路 encoder，得 (B, 3, 32, 512)，经 `ParityAdapter(n_cam=3, n_t=1)`；支路 head 输入 3 × 32 × 512 + 20；训练时的 memory 屏蔽是同一个 (B, 1) 抽样（三路同屏蔽）。`Cfg` 没有加字段，F / A0 / A / B / C / F0 的行为与 checkpoint 格式不变：`VT-A-s0-k05` 在 navtest 12 146 行上，改动前（14052da3）与改动后的 `vt.py plans` 输出 `plan_mu` / `plan_std` **逐位相同**。
+
+**定下的三件事**
+
+1. 显存与梯度 pass 的切法（单 shard 200 步，各与一个 F / A0 轻任务同卡，`max_memory_reserved`）：
+
+| 配置 | it/s | 峰值 GB |
+|:--|--:|--:|
+| `--enc-compile --compile`（192 对一次过） | 1.50 | 42.9 |
+| `--enc-compile --compile --enc-chunk 64`（每视图一次） | 1.46 | 42.5 |
+| `--compile --enc-ckpt 64` | 1.06 | 20.3 |
+| `--compile --enc-ckpt 96` | 1.15 | 25.5 |
+
+   前两者在噪声内相同（不同卡、不同同卡任务），比 checkpointing 快 1.3–1.4 倍；42–45 GB 能放进有一个轻任务的卡（空余 52–66 GB）。取 **`--enc-chunk 64`**：F0 视图那次调用就是 A 的那次调用，且复用 64 对形状的编译图。全量数据上峰值 45.1 GB（nvidia-smi 46 GB），链里预订 `--vram 50`、`--vram-cap 49`（分配器硬上限，超了自己 OOM）、10 核、RAM 64 GB、`--train`、优先级 5。192 对的显存远小于 3 × A（A 的 25 GB 里 encoder 的图只占约 15 GB，且那是 reserved）。
+2. bench 选项 `:sideoff`（仅 `VT-W-*`）= `vt.py plans --mem sideoff`，mask (B, 3) = [F0 保留, L0 / R0 屏蔽]；`:noside` 三路全屏蔽，`:mshuf` 三路都取自另一 log 的同一 token。链的末尾读数：navtest、navhard、navtest 的 `:noside` / `:sideoff` / `:mshuf`。dev eval 多一栏 `ade_sideoff`。
+3. 支路 head 的标准化统计：F0 视图用 `front.npy` 缓存 token（与 A 相同的 rng、相同的 8 192 行）；侧视图用同一批行经初始化时的支路 encoder（= 冻结 Cinque）现算（全量数据上含在 32 s 的初始化里）。读数：三路 `mu` 的 RMS 1.09 / 1.18 / 1.21，`sd` 均值 1.13 / 0.99 / 0.99。
+
+**恒等**（`runs/vis_train/ident/W-s{0,1}.json`，navtest 前 2 048 行、前 15 个 plan 点）
+
+| 量 | s0 | s1 |
+|:--|--:|--:|
+| memory 屏蔽 对 SH30：> 0.032 m 的行 / 最大 / 中位 | 0 / 0.03125 m / 0.0029 m | 0 / 0.03125 m / 0.0020 m |
+| 同上按原登记线（> 0.03 m 的行） | 0.20% | 0.29% |
+| 错模型对照（另一 seed）> 0.032 m | 70.0% | 70.0% |
+| 屏蔽后的 bias 对 SH30 自己的 adapter（fp32）最大差 | 0 | 0 |
+| `:sideoff` 对 memory 全开：> 0.03 m 的行 / 中位 | 92.7% / 0.16 m | 92.6% / 0.22 m |
+| W 的 F0 视图 token 对 A 的支路 token（512 行）最大差 | 0 | 0 |
+| 像素缓存 token 对 `front.npy`：mean \|d\| / max | 2.6e-4 / 0.031 | 同量级 |
+
+`pass_2ulp` 两个 seed 都为 true（含新增的「侧视被读」一条）。初始化时侧视 token 与 F0 token 的 mean |d| 1.30（RMS 1.65），不是同一内容的复制。
+
+**分级启动**（`train-smoke-vt-stage-W-s0`，全量数据 300 步，card 5 与 A0-s0 同卡）：loss 全程有限、无跳过步；dev ADE 1.233（步 0，memory 新初始化）→ 0.724 → 0.596 → **0.583**（步 300），起点（屏蔽 memory）0.561，差 +0.022 m（线 0.1 m）；视觉位移 0.09%（各 stage 0.09–0.12%），policy 0.07%，adapter 2.98%；支路 head loss 4.98 → 0.50、head ADE 9.85 → 1.23 m；步 300 时 `ade_masked` 0.585、`ade_sideoff` 0.592；1.54 it/s，45.1 GB。参照 A 的分级启动：步 300 ADE 0.579、位移 0.11%、head ADE 1.16。
+
+**正式运行**（23:43 CST 提交）
+
+| 链 | 训练任务 | 状态（23:51 CST） | it/s | 峰值 | 预计结束 |
+|:--|:--|:--|--:|--:|:--|
+| W-s0，50 000 步 | `vt-t-W-s0` 1010-234311-a449 | card 5，与 A0-s0 同卡（pool 放置） | 1.56 | 45.2 GB（卡上 46 / 预订 50） | 一直同卡 08:40 CST；A0-s0 约 01:20 CST 结束后独占，速度未测，按 A 的独占 / 同卡比例估约 2.3 it/s → 约 06:20 CST（07:20 JST） |
+| W-s1，50 000 步 | `vt-t-W-s1` 1010-234311-23ce | 排队：`--when-exists runs/op_parity/runs/VT-A0-s1/ckpt-final.pt`（`VT_WHEN`），即 A0-s1 结束（约 01:20 CST）后由 pool 放置；preflight 已过 | – | – | 独占约 2.3 it/s 时约 07:20 CST |
+
+- W-s1 加门的原因：现在放它只能与第一波的 F / A0 轻任务三个挤一张卡，会拖慢它们；门开时 F / A0 已结束，有空卡。
+- 到早上没跑完：按相同步数的 snapshot（`VT-W-s<seed>-k<NN>` 对 `VT-A-s<seed>-k<NN>`）比较，每个 snapshot 的 navtest 读数由链里的 `vt-b-W-*` 任务自动提交。
+
+**怎么续**：与第一波相同。box 上 `tmux kill-window -t jev:vt-W-s<seed>` 后重跑同一条命令 `scripts/tmux_run.sh vt-W-s<seed> experiments/vis_train/scripts/vt_chain.sh W <seed> 50000`（训练 `--resume` 从最近的 snapshot 续，步数必须仍是 50 000；W-s1 的 `VT_WHEN` 在 A0-s1 结束后可省）。状态在 `$DATA_DIR/runs/vis_train/chain/W-s<seed>/{STATUS,DONE,ERROR,jobs.txt,pool/}`，训练日志 `pool/train/log.txt`，dev 曲线 `runs/op_parity/runs/VT-W-s<seed>/evals.json`。建造期的任务日志在 `chain/W-build/`（ident、四个测量 smoke、分级启动、回归比对）。若 `--vram-cap 49` 触发 OOM（峰值 45.2 GB，余量 3.8 GB）：`VT_VRAM=56` 重跑同一条命令。
 
 ## 第一波的链（接手的 lane agent 维护；2026-10-10 23:20 CST 起）
 
