@@ -70,3 +70,13 @@ HUGSIM 的 O2b（对向 / 横穿车）没有写反事实里物体在 E 之后外
    前 2 s 内 > 0.3 rad/s）。看到的事实：b45734f4、48a3f74a、05f35348、69fc21e8 四个单位起始 22.6–34.3 m/s，在 1.8–2.4 s 时 yaw rate
    到 1.9–3.0 rad/s（其余 28 个单位的最大值 ≤ 0.71），车身在 0.5 s 内转过 20–50°，即第 219 条描述的 spin；原规则因为时间窗 2 s 与
    23 m/s 的线各漏掉一部分。
+
+## 补记 3（LOWDIAG2，2026-10-10，先于任何新 seed 的逐 rollout 读数）：多 seed 复现，定义冻结
+
+目的：第 237 / 239 条每榜只有一个 seed，关键计数很小（PAI：command 正确而 plan 不动 5、入弯过快 4、直路 drift 5、overrun 5；HUGSIM：入弯过快 4、前车 9）。本补记只复现，不改任何东西。
+- **冻结**：类定义、优先级、阈值、补记 1 与补记 2、corridor 子类的读法、forced-command replay、HUGSIM 的 O2b 反事实时长（E + 10 s 为主读数）、脚本（`lbd_pai_x.py`、`lbd_pai_replay.py`、`lbd_pai.py`、`lbd_hugsim.py`、`lbd_hlead.py`）一律不动。脚本在新 seed 上若报错，只修管道（路径、seed 参数），在结果文档里写出改了什么。口径仍同时给「补记后」与「首版登记」两种。
+- **PAI**：base `P2H10-F-s1`（FIX1 的 `ab_*_s1`，已存 zero-score 的 rollout.asl）、`P2H10-F-s2`、`P2H10-F-s3`（BODY1 跑过，但 rollout 日志已剪掉；用同命令 `pai_native.sh`，`JEV_VCONT=1.0 JEV_LEAD=1`，同 6 个 chunk 文件，重跑并保留零分日志）。s0 沿用第 237 条的表。每个 seed 的 corridor flag 零分都做 forced-command replay。报：逐 seed 的类表、各类计数的跨 seed 分布、逐 scene 在 4 个 seed 里落入同一类的个数。重跑的分数与第 235 条的同 tag 数字会对照，不同则如实写出（闭环不逐位可复现）。
+- **HUGSIM 64**：`SH30-F-s1` `spec_plan_smooth` 的已存 run，同一分类。
+- **HLEAD 重复**：`op_lead` 开 / 关于 `SH30-F-s1`，以及 `SH30-F-s0` 开关臂的一次重复，经 `jevdrive.bench`；报 L1 的 9 个单位与第 239 条里丢分的三个 scenario（090-hard-01、124-hard-01、053-medium-02）。
+- **判据（事先写，无阈值检验）**：对 237 / 239 的每个头条计数，报 4 个（HUGSIM 2 个）seed 的值，范围与 s0 是否在其内；「成立」= 其余 seed 上同一类仍是该榜最大的几类之一且计数不低于 s0 的一半；「不成立」= 低于一半或排序翻转。不做其他读法。
+- 预算：估计约 5 card-hour（PAI 12 个新 stack x 约 13 min，replay 3 x 13 min，HUGSIM 3 个 bench run 约 2.4）；超过 12 停下报告。不训练，不调参。
