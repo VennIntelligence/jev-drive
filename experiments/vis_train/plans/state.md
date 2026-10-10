@@ -220,3 +220,37 @@ A / A0 / B 六条链的 preflight（6 步 smoke，eval 在步 0 与步 3）真�
 - `SH30-F-s{0,1}` 的 navhard（W 帧）参照行已于 2026-10-10 23:40 CST 经 `bench run` 提交，跑完后下一次 `sync` 进板表。
 - W 臂：`VT-W-*` 在 bench 里能 resolve 之后脚本自动纳入（登记 50 k、每 5 k、对照 A；步数不同时改脚本顶部的 `STEPS` / `EVERY` / `SEEDS`）；`:sideoff` 的读数名按 `VT-W-s<seed>:sideoff` 取。
 - 链目录里 `A / B` 的 `pool/b-k50`、`b-k55` 与 `A0` 的 `b-k50` 下的 `ERROR` 是 23:07 取消 60 k 提交时留下的（`cancelled while queued`），不是读数失败。
+
+## 读数交接（第一任 reads builder，2026-10-11 00:10 CST 收尾；之后不再改）
+
+读数由 jev-night 的 reads builder 接手，「读数」一节归它维护；本节只记我留下的东西。
+
+### 我提交、仍在 pool 里的任务（不要取消，接手方直接用）
+
+Stage-0 probe 链 `k05-s0`（第 160 条协议，验证用：第一个 A / B snapshot 的支路 token），四个任务都还在排队，卡在 box 的内存线（`memory working set ... > kill line 541`），没有失败：
+
+| job id | 名字 | 做什么 | 等什么 | 日志目录 |
+|:--|:--|:--|:--|:--|
+| 1010-234950-0f52 | `vt-probe-tok-VT-A-s0-k05` | `vt.py tokens --tag VT-A-s0-k05`（一张卡，16 GB） | 内存线 | `$DATA_DIR/runs/vis_train/reads/probe/k05-s0/pool/vt-probe-tok-VT-A-s0-k05/` |
+| 1010-234950-faa0 | `vt-probe-tok-VT-B-s0-k05` | 同上，`VT-B-s0-k05` | 内存线 | `.../pool/vt-probe-tok-VT-B-s0-k05/` |
+| 1010-235054-3000 | `vt-probe-dec-k05-s0` | `vt_read.py probe-decode`：`rep.py` 的 thin decoder 在 V 与两份支路 token 上（一张卡，12 GB） | `--after` 0f52（提交时写错成只跟第一个 token 任务，见下） | `.../pool/vt-probe-dec-k05-s0/` |
+| 1010-235054-e225 | `vt-probe-score-k05-s0` | `opb_score.py`，24 核，3 154 个 > 20° token × 3 个 key | `--after` 3000 | `.../pool/vt-probe-score-k05-s0/` |
+
+- 产物：`$DATA_DIR/runs/vis_train/tokens/VT-{A,B}-s0-k05/`（各约 1.2 GB）→ `$DATA_DIR/runs/vis_train/reads/probe/k05-s0/{decoder_poses.npz, tokens_t20.txt, score_t20.csv}`；`jobs.json` 记着四个 id。`score_t20.csv` 出现后下一次 `vt_read.py sync` 把它读进 `probe.csv` / `reads.md`。
+- 已知问题：decode 任务的 `--after` 我是在修 `--after` 的逗号格式之后补交的，`jobs.json` 是手写的，实际提交的依赖要以 `cl queue` 的 why 列为准；若 decode 在 B 的 token 落盘之前启动，它会因缺 `VT-B-s0-k05/*.npy` 报错，此时同一条命令重跑即续（已完成的阶段跳过）：box 上 `.venv/bin/python experiments/vis_train/scripts/vt_read.py probe --name k05-s0 --tags VT-A-s0-k05 VT-B-s0-k05`。
+- 这条 probe 路径没有在真实数据上跑通过：token dump、`rep.cmd_decode` 的 monkey-patch（`_load_tok` / `fit_pca` / `OUT` / `ARMS`）、V 的复现（应接近 10.59%）都未验证。
+
+已结束、无需再管：`bench run --model SH30-F-s0 SH30-F-s1 --bench navhard`（W 帧参照行，23:39 CST 提交，八个阶段全部 done，`$DATA_DIR/runs/bench/navhard/SH30-F-s{0,1}@warp/`）；两次 `vt-read`（1010-232856-1d45、1010-233925-e409）。队列里的 `vt-read` 1010-235353-395d 不是我提交的。
+
+### 读数命令（我交付时的版本，commit a67eecf0；之后以接手方的脚本为准）
+
+- Mac：`.venv/bin/python experiments/vis_train/scripts/vt_read.py sync`（提交 `vt_read.py box` 为一个 pool CPU 任务，等待，拷回 `results/`）；`sync --no-replay`、`sync --copy-only`；`vt_read.py first`。
+- box：`$DATA_DIR/envs/navsim2/bin/python experiments/vis_train/scripts/vt_read.py check`；probe 见上。
+- box 上的落点：`$DATA_DIR/runs/vis_train/reads/tok/<模型>.parquet`（逐 token 缓存）、`reads/out/`（六个小文件）、`reads/pool/<时间>/`（pool 日志）、`reads/<时间>/`（run 目录）、`reads/probe/<名字>/`。
+
+### 我交付时已验证与未完成
+
+- 已在真实 snapshot 上验证：navtest 全分解与转角桶、off-road / 切内侧 / 转不过去、NC 类别与弧长比、位移表、趋势图、`first`、不退步表（F k05–k20、F0 k10–k20、A0 k10、SH30 k00；14 个模型的回放与存档子分最大差 4.9e-12）。
+- 写了但没有真实输入、未验证：A / B / C / W 的任何行（第一个 `VT-A/B-*-k05` 的 navtest 读数在我收尾时还没出）、判定线（转弯线、W 线、seed 反向）、`:noside` / `:mshuf` / `:sideoff`、FoV 分层在 W 上的读法、navhard / HUGSIM 板表的配对行、Stage-0 probe。
+- 没做：prereg 读数 5（C 的原生帧直路 ADE）；A0 / A / B / C / W 的 HUGSIM（bench 无 serving）。
+- box checkout 里没有我留下的未跟踪或改动文件；Mac 上我没有未提交的改动。
