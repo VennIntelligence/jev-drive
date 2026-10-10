@@ -7,6 +7,7 @@
 # shuffled memory (W: also only the side views masked, :sideoff), for the plain-P2 arms F / F0 HUGSIM 64 (spec_plan_smooth, the SH30 reference protocol) once the last arm (VT_LAST) is done.
 # State: $DATA_DIR/runs/vis_train/chain/<arm>-s<seed>/{STATUS, DONE, ERROR, log.txt, jobs.txt, pool/}. Rerunning the same command resumes.
 # Speed flags of the training step: VT_SPEED (default from the throughput section of plans/state.md); sizes: VT_VRAM / VT_CPU / VT_RAM.
+# VT_WHEN=<path>: the training job stays queued until the path exists (W-s1: after a first-wave job that would share its card).
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
 ARM=$1 SEED=$2 STEPS=$3
@@ -33,7 +34,7 @@ waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do slee
 OWNER=vis_train PRIO=10 MOPT=":noside :mshuf"
 case $ARM in
   # W (second wave): three views = 192 pairs per step; sizes and speed flags from the measurement in plans/state.md ("W 臂"); below the first wave's priority
-  W)   EVERY=5000 MEM=1 VRAM=${VT_VRAM:-64} CPU=${VT_CPU:-10} RAM=${VT_RAM:-64} SPEED=${VT_SPEED---enc-compile --compile} TRAIN=--train
+  W)   EVERY=5000 MEM=1 VRAM=${VT_VRAM:-50} CPU=${VT_CPU:-10} RAM=${VT_RAM:-64} SPEED=${VT_SPEED---enc-compile --compile --enc-chunk 64} TRAIN=--train   # measured 45.1 GB
        SPEED="$SPEED --vram-cap $((VRAM - 1))" OWNER=vis_train-W PRIO=5 MOPT=":noside :sideoff :mshuf" ;;   # the cap: W cannot outgrow its booking
   A|B) EVERY=5000 MEM=1 VRAM=${VT_VRAM:-32} CPU=${VT_CPU:-8} RAM=${VT_RAM:-64} SPEED=${VT_SPEED---enc-compile --compile} TRAIN=--train ;;   # measured 27 GB
   C)   EVERY=5000 MEM=0 VRAM=${VT_VRAM:-36} CPU=${VT_CPU:-12} RAM=${VT_RAM:-96} SPEED=${VT_SPEED---enc-compile --compile} TRAIN=--train ;;  # measured 29 GB
@@ -54,7 +55,7 @@ fi
 # ---------------------------------------------------------------- training
 smoke="$PY $S/vt.py train --arm $ARM --seed $SEED --steps 6 --eval-every 3 --snap-every 3 --tag smoke-vt-$ARM-s$SEED --scratch --data navtrain_full.s0of12 $SPEED"
 status "submit: train $STEPS steps, snapshot reads every $EVERY"
-sub "vt-t-$ARM-s$SEED" "$L/train" $TRAIN --vram "$VRAM" --cpu "$CPU" --ram "$RAM" --priority "$PRIO" --tries 4 --preflight "$smoke" -- \
+sub "vt-t-$ARM-s$SEED" "$L/train" $TRAIN --vram "$VRAM" --cpu "$CPU" --ram "$RAM" --priority "$PRIO" --tries 4 ${VT_WHEN:+--when-exists "$VT_WHEN"} --preflight "$smoke" -- \
     $PY $S/vt.py train --arm "$ARM" --seed "$SEED" --steps "$STEPS" --resume $SPEED
 TID=$(jid "vt-t-$ARM-s$SEED")
 
