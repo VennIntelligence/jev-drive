@@ -24,7 +24,7 @@ plan's own heading error at its 4 s arc length before (baseline) / after (arm) [
 minus the logged 4 s heading], arm - shuffled, masked - on, the verdict.  -> <out>/<name>_tables.md, <name>_reads.json
 
   $DATA_DIR/envs/op-train/bin/python experiments/corridor/scripts/head1_pilot_report.py --name b --base H0=GH0-F-s0,GH0-F-s1 \\
-      --arms HP=HP-F-s0,HP-F-s1 HPX=HPX-F-s0,HPX-F-s1 --shuffled HP=HPX --replays geo_s0 h1b --r2 --pred stage1=0.48 --out <dir>
+      --arms HP=H1P-F-s0,H1P-F-s1 HPX=H1PX-F-s0,H1PX-F-s1 --shuffled HP=HPX --replays geo_s0 h1b --r2 --pred stage1=0.48 --out <dir>
 """
 import argparse
 import glob

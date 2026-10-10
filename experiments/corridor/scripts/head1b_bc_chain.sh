@@ -6,7 +6,8 @@
 #   stage 0  code-path smoke on a SMOKE input ($O/smoke/prof: logged-path labels / the stage-1 head; no read touches it), the identity check of
 #            the memory channel, and step C's missing no-memory baseline seed (P2H10S-P-s1; it needs no head)
 #   stage 1  gated on $H1/final/DONE (the step-A heads): the head on P2H10S's hinge-only off-track rows, the qp tokenizer, then
-#            B: HP / HPX x seeds 0, 1 on decision 204's SH30 pilot recipe (baseline GH0-F-s0/s1 reused)
+#            B: arms HP / HPX = tags H1P-F-s{0,1} / H1PX-F-s{0,1} (HP-F-s* is decision 158's checkpoint: never written here) on decision 204's
+#               SH30 pilot recipe (baseline GH0-F-s0/s1 reused)
 #            C: the qp memory on the P2H10S pilot recipe x seeds 0, 1 (baseline P2H10S-P-s0 reused + s1)
 #   stage 2  navtest (bench), the turn replay, the two reports; this lane's navtest memory banks are dropped after scoring
 # State: $DATA_DIR/runs/corridor/head1b/chain/{STATUS, DONE | ERROR, log.txt, jobs.txt}; reports in $DATA_DIR/runs/corridor/head1b/report. Rerunning resumes.
@@ -27,7 +28,7 @@ SMK=$O/smoke/prof
 BDATA="navtrain_full.s2of12 navtrain_full.s3of12 navtrain_full.s4of12"
 BF="--arm P2 --frames warp --host --data $BDATA --split navsim/op-parity-s234 --batch 64 --warmup 100 --hinge-lam 30 --hinge-margin 0.5"   # decision 204's SH30 pilot
 CF="--data navtrain_full.s2of12 navtrain_full.s3of12 --ho ot1:4,yr1:4,bd4:5 --agent-lam 10 --ho-w 3 --ho-excl navsim/body1-val-logs --shape"   # P2H10S-P-s0's flags
-BARMS=(HP-F-s0 HP-F-s1 HPX-F-s0 HPX-F-s1); CARMS=(P2H10S-HP-P-s0 P2H10S-HP-P-s1)
+BARMS=(H1P-F-s0 H1P-F-s1 H1PX-F-s0 H1PX-F-s1); CARMS=(P2H10S-HP-P-s0 P2H10S-HP-P-s1)
 status() { echo "$(date '+%F %T') head1b B/C (exploratory): $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
@@ -35,16 +36,23 @@ sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
         [[ -n $live ]] && return; rm -f "$ld/ERROR"
         local id; id=$($CL submit --owner corridor-head1b --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 20; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; return 0; }
+claim() {  # tag: a tag this chain writes must be new, or one this chain claimed before ($D/tags.txt); never an older lane's checkpoint or bench run
+  grep -qx "$1" "$D/tags.txt" 2>/dev/null && return
+  local hit; hit=$(ls -d $RUNS/runs/$1 $RUNS/train-$1 $MEM/ge_$1 $DATA_DIR/runs/bench/*/$1 $DATA_DIR/runs/bench/*/$1[@_:]* 2>/dev/null | head -3)
+  [[ -z $hit ]] || die "tag $1 already exists and was not created by this chain: $hit"
+  echo "$1" >> "$D/tags.txt"; }
 summary() { cat "$(ls -d "$RUNS/train-$1"/*/ | tail -1)DONE"; }
 
 for t in GH0-F-s0 GH0-F-s1 P2H10S-P-s0; do [[ -f $RUNS/runs/$t/ckpt-final.pt ]] || die "missing reused checkpoint $t"; done
 for d in $BDATA lb_navtest; do [[ -f $MEM/geo_x/$d.perm.npy ]] || die "missing geo_x permutation of $d"; done
+for t in P2H10S-P-s1 "${BARMS[@]}" "${CARMS[@]}"; do claim $t; done
 
 # ---------------------------------------------------------------- stage 0
 sub h1b-c-base-s1 $L/t-P2H10S-P-s1 --train --vram 20 --cpu 4 --ram 40 --timeout-h 1 -- $PY $SB/bd4_train.py train --seed 1 $CF --steps 3000 --eval-every 1000 --tag P2H10S-P-s1
 sub h1b-ident $L/ident --vram 8 --cpu 4 --ram 32 --timeout-h 1 -- $PY $SP/path_req.py ident --tag GH0-F-s0
 if [[ ! -f $D/SMOKE_OK ]]; then
   status "stage 0: smoke on the SMOKE input $SMK"
+  for t in H1BSMOKE-qp H1BSMOKE-qpx H1BSMOKE-C; do claim $t; done
   $PY $SP/path_req.py selftest || die "path_req selftest"
   $PY $SC/head1b_prof.py smoke || die "smoke profiles"
   S1=$(ls $H1/train-L-f0-p1000-s0/*/ckpt.pt | tail -1)
@@ -72,8 +80,8 @@ status "stage 1: jobs queued behind $FIN (off-track profiles, tokenizer, B: ${BA
 sub h1b-ot $L/ot --when-exists $FIN --vram 8 --cpu 8 --ram 32 --timeout-h 1 -- $PY $SC/head1b_prof.py ot --match-final --out $O/prof_ot
 sub h1b-tok-qp $L/tok-qp --when-exists $FIN --vram 4 --cpu 2 --ram 16 --timeout-h 1 -- $PY $SP/path_req.py tok --kind qp
 for s in 0 1; do
-  sub h1b-t-HP-F-s$s $L/t-HP-F-s$s --when-exists $PR/tok/qp.pt --train --vram 24 --cpu 4 --ram 40 --timeout-h 1 -- $PY $SP/pp_train.py $BF --mem-e2e qp --mem-init $PR/tok/qp.pt --seed $s --steps 3000 --eval-every 1000 --tag HP-F-s$s
-  sub h1b-t-HPX-F-s$s $L/t-HPX-F-s$s --when-exists $PR/tok/qp.pt --train --vram 24 --cpu 4 --ram 40 --timeout-h 1 -- $PY $SP/pp_train.py $BF --mem-e2e qpx --mem-init $PR/tok/qp.pt --seed $s --steps 3000 --eval-every 1000 --tag HPX-F-s$s
+  sub h1b-t-H1P-F-s$s $L/t-H1P-F-s$s --when-exists $PR/tok/qp.pt --train --vram 24 --cpu 4 --ram 40 --timeout-h 1 -- $PY $SP/pp_train.py $BF --mem-e2e qp --mem-init $PR/tok/qp.pt --seed $s --steps 3000 --eval-every 1000 --tag H1P-F-s$s
+  sub h1b-t-H1PX-F-s$s $L/t-H1PX-F-s$s --when-exists $PR/tok/qp.pt --train --vram 24 --cpu 4 --ram 40 --timeout-h 1 -- $PY $SP/pp_train.py $BF --mem-e2e qpx --mem-init $PR/tok/qp.pt --seed $s --steps 3000 --eval-every 1000 --tag H1PX-F-s$s
 done
 AFT=(); [[ -f $L/ot/DONE ]] || AFT=(--after "$(awk '$2 == "h1b-ot" {i = $1} END {print i}' "$D/jobs.txt")")
 for s in 0 1; do
@@ -90,14 +98,14 @@ done
 
 # ---------------------------------------------------------------- stage 2
 UN=("${BARMS[@]}" "${CARMS[@]}" P2H10S-P-s0 P2H10S-P-s1)
-ALL=("${UN[@]}" HP-F-s0:noside HP-F-s1:noside P2H10S-HP-P-s0:noside P2H10S-HP-P-s1:noside)
+ALL=("${UN[@]}" H1P-F-s0:noside H1P-F-s1:noside P2H10S-HP-P-s0:noside P2H10S-HP-P-s1:noside)
 status "stage 2: navtest: ${ALL[*]}"
 "${B[@]}" run --model "${ALL[@]}" --bench navtest || die "bench navtest"
 "${B[@]}" status --model "${ALL[@]}" --bench navtest --wait || die "navtest"
 sub h1b-replay $L/replay --vram 0.5 --cpu 36 --ram 64 -- $NAV $SP/turn_oracle.py replay --name h1b --models "${UN[@]}" GH0-F-s0 GH0-F-s1
 waitdirs $L/replay
 rm -rf $L/report-b $L/report-c
-sub h1b-report-b $L/report-b --vram 0.5 --cpu 8 --ram 32 -- $PY $SC/head1_pilot_report.py --name b --base H0=GH0-F-s0,GH0-F-s1 --arms HP=HP-F-s0,HP-F-s1 HPX=HPX-F-s0,HPX-F-s1 \
+sub h1b-report-b $L/report-b --vram 0.5 --cpu 8 --ram 32 -- $PY $SC/head1_pilot_report.py --name b --base H0=GH0-F-s0,GH0-F-s1 --arms HP=H1P-F-s0,H1P-F-s1 HPX=H1PX-F-s0,H1PX-F-s1 \
     --shuffled HP=HPX --lines memory --replays h1b --prof $H1/final/prof --r2 --pred stage1-head-decision-243=0.48 --out $O/report
 sub h1b-report-c $L/report-c --vram 0.5 --cpu 8 --ram 32 -- $PY $SC/head1_pilot_report.py --name c --base S=P2H10S-P-s0,P2H10S-P-s1 --arms SHP=P2H10S-HP-P-s0,P2H10S-HP-P-s1 \
     --lines memory --replays h1b --widening --prof $H1/final/prof --prof-data navtrain_full.s2of12 navtrain_full.s3of12 --prof-split navsim/op-parity-full-train --out $O/report
