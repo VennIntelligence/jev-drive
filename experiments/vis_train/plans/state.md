@@ -89,6 +89,7 @@ navtrain 103 288 token 与 navtest + navhard 18 058 token，各 16 套标定；�
 | 数据 | 缓存的 t0 key 对现渲染 | 缓存的前一帧对现算 CPU warp（16 行） | (t0 − 0.5 s key, 缓存 t0 key) 对 `side.npy` 的 k = 3（P3 配对） | 缓存的 W 对 对 `side.npy` | 另一行的 `side.npy`（跨行尺度） |
 |:--|:--|:--|:--|:--|:--|
 | `lb_navtest` | 逐字节相同 | 逐字节相同 | mean \|d\| 4.2e-4，max 0.0625（RMS 1.84） | mean \|d\| 0.857 | mean \|d\| 1.246 |
+| `navtrain_full.s0of12` | 逐字节相同 | 逐字节相同 | mean \|d\| 1.3e-4，max 0.0625（RMS 1.81） | mean \|d\| 0.828 | mean \|d\| 1.290 |
 
 配对相同时复现 P3 的 token（与前视缓存检查的 2.9e-4 同量级，来自 fp16 的 batch 组成）；换成 W 配对后 token 差 0.857，是跨行差异的 0.69 倍：图像对间隔对 encoder 输出的影响很大（第 142 条），所以 W 的侧视 token 不等于 P3 的侧视 token，这是预期差异。图像对的平均像素差：W 对 12.8，P3 对 20.2（灰度级）。
 
@@ -101,5 +102,6 @@ navtrain 103 288 token 与 navtest + navhard 18 058 token，各 16 套标定；�
 
 ### 进度
 
-- 22:41 CST：`lb_navtest` 侧视缓存完成，检查通过；navtrain 12 shard 与 `lb_navhard` 在 pool 里（等核）。
+- 22:41 CST：`lb_navtest` 侧视缓存完成，检查通过。
+- 22:50 CST 前后：navtrain 12 个 shard（103 288 行，151.3 GiB）与 `lb_navhard`（5 912 行，8.7 GiB）全部完成，`navtrain_full.s0of12` 检查通过（结果 `px_side/check-s0.json`、`check-navtest.json`）。阶段 1 结束；盘余 285 GiB。
 - 阶段 2（trainer 的 W 臂、`VT-W-*` 的 bench 路由、链）在第一波启动之后才动 `vt.py` / `vt_chain.sh` / bench 文件。
