@@ -133,6 +133,37 @@ def wrap(a):
     return (np.asarray(a) + np.pi) % (2 * np.pi) - np.pi
 
 
+_P = {}
+
+
+def _pose_chunk(idx):
+    """Arms, fits and heading errors of a chunk of token indices (worker of cmd_poses; inputs in _P, inherited by fork)."""
+    import pt_swap as PS
+    G, names, fut, Z = _P["G"], _P["names"], _P["fut"], _P["Z"]
+    out = []
+    for i in idx:
+        g = G[names[i]]
+        lc = PS.Curve(fut[i])
+        R, CP = corridor_path(g)
+        F = dict(lane_change=g["lane_change"], d0=g["d0"], gap=g.get("gap", 0), n_conn=g["n_conn"], exit_h=g.get("exit_h", np.nan),
+                 hR_log=wrap(R.at([lc.sv[-1]])[0, 2] - fut[i, -1, 2]), dR_log4=R.frenet(fut[i, -1:, :2])[1][0])
+        A = {}
+        for m in SEEDS:
+            p = Z[m][i].astype(np.float64)
+            pc = PS.Curve(p)
+            sk = pc.sv[1:]
+            pk, lk = pc.at(sk), lc.at(sk)
+            cp = CP.at(sk)
+            K, F["kp_shift"], F["log_dmax"] = clamped_log(g, R, lc, max(pc.sv[-1], lc.L) + 1.0)
+            kp = K.at(sk)
+            A |= {f"{m}_cp": cp, f"{m}_ce": add_error(cp, pk, lk), f"{m}_kp": kp, f"{m}_ke": add_error(kp, pk, lk)}
+            F |= {f"{m}_{k}": v for k, v in fits(pc, lc).items()}
+            F[f"{m}_hR_plan"] = wrap(R.at([pc.sv[-1]])[0, 2] - fut[i, -1, 2])
+            F[f"{m}_h_plan"] = wrap(np.unwrap(np.r_[0, p[:, 2]])[-1] - fut[i, -1, 2])
+        out.append((int(i), F, A))
+    return out
+
+
 # ---------------------------------------------------------------- poses
 def cmd_poses(a):
     import pt_swap as PS
@@ -144,9 +175,9 @@ def cmd_poses(a):
         names, fut = tab["names"].astype(str), tab["fut"].astype(np.float64)
         n = len(names)
         G = {r["token"]: r for r in pickle.load(open(OUT / a.geom, "rb"))}
-        ok = np.array([t in G and G[t]["status"] in ("ok", "short") for t in names])
+        ok = np.array([t in G and G[t]["status"] == "ok" for t in names])
         arrs = {f"{m}_pp": Z[f"{m}_pp"] for m in SEEDS}
-        F = dict(names=names, ok=ok, has=np.array([t in G for t in names]), lane_change=np.zeros(n, bool), d0=np.full(n, np.nan),
+        F = dict(names=names, ok=ok, has=np.array([t in G for t in names]), status=np.array([G[t]["status"] if t in G else "" for t in names]), lane_change=np.zeros(n, bool), d0=np.full(n, np.nan),
                  gap=np.zeros(n, int), exit_h=np.full(n, np.nan), n_conn=np.zeros(n, int), kp_shift=np.full(n, np.nan), log_dmax=np.full(n, np.nan),
                  hR_log=np.full(n, np.nan), dR_log4=np.full(n, np.nan))
         for m in SEEDS:
@@ -155,31 +186,19 @@ def cmd_poses(a):
             for k in ("r0", "rA", "rC", "delta", "c", "Lc", "hR_plan", "h_plan"):
                 F[f"{m}_{k}"] = np.full(n, np.nan)
             F[f"{m}_cls"] = np.array([G[t].get(f"{m}_cls", "") if t in G else "" for t in names])
+            F[f"{m}_cls2"] = np.array([G[t].get(f"{m}_cls2", "") if t in G else "" for t in names])
             F[f"{m}_endgap"] = np.array([G[t].get(f"{m}_endgap", 0) if t in G else 0 for t in names])
-        for i in run.tqdm(np.flatnonzero(ok), desc="tokens"):
-            g = G[names[i]]
-            lc = PS.Curve(fut[i])
-            R, CP = corridor_path(g)
-            F["lane_change"][i], F["d0"][i], F["gap"][i], F["n_conn"][i] = g["lane_change"], g["d0"], g.get("gap", 0), g["n_conn"]
-            F["exit_h"][i] = g.get("exit_h", np.nan)
-            F["hR_log"][i] = wrap(R.at([lc.sv[-1]])[0, 2] - fut[i, -1, 2])
-            F["dR_log4"][i] = R.frenet(fut[i, -1:, :2])[1][0]
-            kp = None
-            for m in SEEDS:
-                p = Z[f"{m}_pp"][i].astype(np.float64)
-                pc = PS.Curve(p)
-                sk = pc.sv[1:]
-                pk, lk = pc.at(sk), lc.at(sk)
-                cp = CP.at(sk)
-                arrs[f"{m}_cp"][i], arrs[f"{m}_ce"][i] = cp, add_error(cp, pk, lk)
-                K, sh, dmax = clamped_log(g, R, lc, max(pc.sv[-1], lc.L) + 1.0)
-                kp = K.at(sk)
-                arrs[f"{m}_kp"][i], arrs[f"{m}_ke"][i] = kp, add_error(kp, pk, lk)
-                F["kp_shift"][i], F["log_dmax"][i] = sh, dmax
-                for k, v in fits(pc, lc).items():
-                    F[f"{m}_{k}"][i] = v
-                F[f"{m}_hR_plan"][i] = wrap(R.at([pc.sv[-1]])[0, 2] - fut[i, -1, 2])
-                F[f"{m}_h_plan"][i] = wrap(np.unwrap(np.r_[0, p[:, 2]])[-1] - fut[i, -1, 2])
+        from jevdrive import par
+        _P.update(G=G, names=names, fut=fut, Z={m: Z[f"{m}_pp"] for m in SEEDS})
+        idx = np.flatnonzero(ok)
+        res = par.pmap(_pose_chunk, [idx[k::256] for k in range(min(256, len(idx)))], run=run, desc="token chunks")
+        res.raise_if_failed()
+        for ch in res.values:
+            for i, fa, ar in ch:
+                for k, v in fa.items():
+                    F[k][i] = v
+                for k, v in ar.items():
+                    arrs[k][i] = v
         tag = a.tag
         np.savez(OUT / f"poses{tag}.npz", tokens=names, **arrs)
         np.savez_compressed(OUT / f"feat{tag}.npz", **F)
