@@ -181,10 +181,11 @@ done
 ```
 
 Env `/data/envs/op-train` (torch 2.14.0+cu130; `/data/runs/tokyo_dual3090/env.sh` rebuilds it). `--label-bank` is required on a 24 GB card
-(the recipe as shipped runs out of memory at batch 128; the bank is bit-identical to the dense rasters); `--compile` gives 7.1 it/s per card
-against 4.0 eager, with both cards training. Table of every configuration tried, and the full-length runs:
+(the recipe as shipped runs out of memory at batch 128; the bank is bit-identical to the dense rasters); `--compile` gives 7.2 to 7.3 it/s per card
+against 4.0 eager, with both cards training: the full 10 000-step run on all 12 shards took 23 min per seed at 17.3 GB reserved (18.1 GB on
+the card), and its dev curve and `s_b1a` closed-loop score match the main-box checkpoint of the same seed within seed spread. Table of every configuration tried, and the full-length runs:
 [experiments/body1/results/tokyo_3090_train.md](../experiments/body1/results/tokyo_3090_train.md). The card of a training run is free for nothing
-else at CONC 4 evaluation sizes (14 GB training + 24 GB stack do not share a card): training and evaluation take one card each.
+else at CONC 4 evaluation sizes (18 GB training + 24 GB stack do not share a card): training and evaluation take one card each.
 
 ### Training data from the GPU box
 

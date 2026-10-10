@@ -43,7 +43,7 @@ student's plan on CARLA frames turns 0.28 to 0.54 of the expert's and launches o
 
 **Served plan length (2026-10-11, diagnosis).** The 0.909 of the decision-0 check is a cold start (one keyframe) read 1.5 s before the navtest token, not a frame mismatch on the nuPlan track; the PAI driver does feed warp-trained checkpoints real-frame slots (offline arc 0.895 of the log, ADE 1.35 against 0.61 m). [results/served_plan_length.md](results/served_plan_length.md).
 
-**Training on a 24 GB card (Tokyo box, 2026-10-11; infrastructure, no result on the model).** The recipe as shipped runs out of memory on an RTX 3090; `bd4_train.py --label-bank` (hinge rasters once per distinct label, bit-identical) fits at 16.3 GB and `--compile` on top gives 7.1 it/s, the main box's eager speed, also with one seed per card at once: [results/tokyo_3090_train.md](results/tokyo_3090_train.md), runner `scripts/tokyo_bench.sh`.
+**Training on a 24 GB card (Tokyo box, 2026-10-11; infrastructure, no result on the model).** The recipe as shipped runs out of memory on an RTX 3090; `bd4_train.py --label-bank` (hinge rasters once per distinct label, bit-identical) fits at 16.3 GB and `--compile` on top gives 7.1 it/s, the main box's eager speed, also with one seed per card at once. Full 10 000-step runs of both seeds on the full set: 23 min each, 17.3 GB, dev ADE 0.546 / 0.545 against the main box's 0.545 / 0.543, PAI `s_b1a` (33 scenes) +0.067 / -0.041 against the main-box checkpoints, i.e. seed-sized and of both signs: [results/tokyo_3090_train.md](results/tokyo_3090_train.md), runner `scripts/tokyo_bench.sh`.
 
 <!-- files:begin -->
 <!-- files:end -->
