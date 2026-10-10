@@ -72,8 +72,8 @@ turn (the log running inside the centreline, decision 240).
 | G3 independence: R2 >= 0.538 (0.93 x R2 >= +0.5), all tokens, pilot policy GH0-F | **R2 0.513 [0.420, 0.586]**, corr 0.53 [0.46, 0.59], predicted gain +0.48 | **no (marginal)** |
 
 Rule behind G3 (prereg): decision 204's independent-noise arms gain 86 / 62 / 22 % of the oracle at noise-to-policy error ratios 0.39 / 0.79 /
-1.57, and 1 / (1 + r^2) = 87 / 62 / 29 %; the same statistic computed for decision 204's thin head from its stored files is 0.084 (along-track)
-and predicts +0.12 where QH measured +0.09 [-0.11, +0.28]. Gain = oracle gain x R2; the oracle for a shape-only signal is QS, +0.93.
+1.57, and 1 / (1 + r^2) = 87 / 62 / 29 %; the same statistic computed for decision 204's thin head from its stored files is 0.084 (along-track),
+which times the full oracle's +1.38 predicts +0.12 where QH measured +0.09 [-0.11, +0.28]. Gain = oracle gain x R2; the oracle for a shape-only signal is QS, +0.93.
 
 ## (a) (c) (d) Heading error at the plan's own 4 s arc length (deg RMS; navtest)
 
@@ -106,8 +106,8 @@ also miss on the same tokens.
 
 ![heading error](../figs/h1_heading.png)
 
-What to look at: per bucket, the head on any label (blue L, green M, orange C) is below the policy's own plan (grey) and far below the blind
-head (yellow), and above the privileged map label (purple). Left: SH30-F's arc length; right: the pilot policy's. Bars: 95 % CI by log.
+What to look at: on > 20 and > 45 deg the head on any label (blue L, green M, orange C) is below the policy's own plan (grey); on all tokens
+the map-label head is level with SH30-F's plan. Every head is far below the blind head (yellow) and above the privileged map label (purple). Left: SH30-F's arc length; right: the pilot policy's. Bars: 95 % CI by log.
 
 ![error scatter](../figs/h1_scatter.png)
 
@@ -156,15 +156,15 @@ on the same failure class is not this number (this fit gives the policy +1.50 m 
 | 50 % | 417 | 9.21 [8.11, 10.39] | 10.94 [9.04, 12.59] | 5.76 | 0.151 |
 | 100 % | 834 | 8.11 [7.13, 9.20] | 9.03 [7.87, 10.07] | 5.28 | 0.228 |
 
-At a quarter of the logs the head is worse than SH30-F's own plan (13.31 against 11.24); it crosses between 25 and 50 %. Each doubling still
-takes 1.4 to 2.4 deg off the > 45 deg error.
+At a quarter of the logs the head is worse than SH30-F's own plan (13.31 against 11.24); it crosses between 25 and 50 %. The last two doublings take
+2.4 and 1.9 deg off the navtest > 45 deg error (1.4 and 1.1 deg on held-out navtrain; the first doubling 0.8 and 1.6).
 
 ## Reading
 
 1. Decision 204's negative on "re-predict from the same frozen features" does not extend to this label form. QH's thin head was worse than
    the policy (heading 7.46 against 7.38 deg on all tokens, R2 0.12 to 0.19); this head, on the same tokens, is 2.1 deg better than the same
-   pilot policy and explains half of its heading error. What changed: the target (heading against arc length instead of 8 timed poses), all
-   of navtrain instead of three shards' worth, attention over all 8 slots instead of an MLP on 2. This lane did not separate the three.
+   pilot policy and explains half of its heading error. What changed: the target (heading against arc length instead of 8 timed poses), the 834
+   logs of a navtrain fold instead of three shards' worth, attention over all 8 slots instead of an MLP on 2. This lane did not separate the three.
 2. The failing line is independence, and it is a matter of degree. The head's error variance is about half of the pilot policy's and
    correlated 0.53 with it; a head that kept the correlation and reached the map label's accuracy (4.78 deg on all tokens) would sit near
    R2 0.6. The learning curve says more labelled logs move it in that direction; nothing here says the frozen tokens lack the information.

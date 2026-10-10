@@ -19,6 +19,7 @@
 - [alpasim-collisions/](alpasim-collisions/index.html)：AlpaSim 里的 at-fault 碰撞：nuPlan 公开集上是横向漂移，PAI 上是纵向且 lead 头提前看到了前车；PAI 的轨迹速度接口缺陷与诊断臂；31 个片段；第八节（SWV1，决策 220）：按 plan 自身扫掠足迹的碰撞分类与净空反事实。
 - [body1/](body1/index.html)：BODY1 车身接触预测：冻结 token 上的 contact head 过离线闸门（AUC 0.905 / 0.978），刹停与单决策横向 re-plan 两个 serving 臂都在 one-chunk 检查处停，登记线无读数；loss 臂（补记 5）过 G3、闭环 L1 过但 L2 / L3 不过，不晋级。
 - [wod_scout/](wod_scout/index.html)：WOD-E2E 重开前的侦察：Spotlight 成员不可知、纵向之外只改路径 +0.290 且集中在 30 帧、夜间与行人都是速度问题、评分员偏好的标签只有 479 帧（决策 242）。
+- [corridor/](corridor/index.html)：冻结视觉特征上的转弯描述头：急弯 4 秒朝向 8.54 度对规划的 11.24 度，但误差不够独立（指标 0.513，线 0.538），喂回驾驶模型的试验没有做（决策 243）。
 
 ## 记录与工具
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。
