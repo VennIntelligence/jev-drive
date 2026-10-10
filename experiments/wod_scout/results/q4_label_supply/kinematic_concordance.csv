@@ -1,0 +1,26 @@
+quantity,pairs,n pairs,concordance,lo,hi,reading
+5 s arc length (progress): higher-scored goes further,all pairs,1429,0.5619314205738278,0.5309412482814204,0.5928803424229403,weak
+5 s arc length (progress): higher-scored goes further,frames stopped v0 < 0.5,357,0.5714285714285714,0.5,0.6438083815920228,unrelated
+5 s arc length (progress): higher-scored goes further,frames moving,1072,0.558768656716418,0.5254050517343531,0.5911828239430281,weak
+5 s arc length (progress): higher-scored goes further,pairs with the top-rated,958,0.5448851774530271,0.5094142259414226,0.577962577962578,weak
+5 s arc length (progress): higher-scored goes further,score difference >= 2,944,0.559322033898305,0.5223392397343813,0.596379606189419,weak
+min longitudinal accel: higher-scored brakes less hard,all pairs,1429,0.5374387683694891,0.5076923076923077,0.5667365478686234,weak
+min longitudinal accel: higher-scored brakes less hard,frames stopped v0 < 0.5,357,0.5770308123249299,0.5176108432595954,0.6366126372273914,weak
+min longitudinal accel: higher-scored brakes less hard,frames moving,1072,0.5242537313432836,0.4903216854167288,0.5585344057193923,unrelated
+min longitudinal accel: higher-scored brakes less hard,pairs with the top-rated,958,0.5187891440501043,0.4812098732540771,0.5572916666666666,unrelated
+min longitudinal accel: higher-scored brakes less hard,score difference >= 2,944,0.5254237288135594,0.48874440937901104,0.5617757942437666,unrelated
+max |lateral accel|: higher-scored is gentler,all pairs,1429,0.5024492652204339,0.47445766270118966,0.531514818005854,unrelated
+max |lateral accel|: higher-scored is gentler,frames stopped v0 < 0.5,357,0.45938375350140054,0.3964483714483715,0.5213696369636964,unrelated
+max |lateral accel|: higher-scored is gentler,frames moving,1072,0.5167910447761194,0.4851651431836035,0.5503975114164013,unrelated
+max |lateral accel|: higher-scored is gentler,pairs with the top-rated,958,0.5125260960334029,0.4790794979079498,0.5480167014613778,unrelated
+max |lateral accel|: higher-scored is gentler,score difference >= 2,944,0.5201271186440678,0.48501070663811563,0.5555585296216988,unrelated
+max |jerk|: higher-scored is smoother,all pairs,1429,0.3799860041987404,0.3519163763066202,0.4080056179775281,opposite
+max |jerk|: higher-scored is smoother,frames stopped v0 < 0.5,357,0.44537815126050423,0.3862233308182562,0.5041812660127224,unrelated
+max |jerk|: higher-scored is smoother,frames moving,1072,0.3582089552238806,0.3256477740059688,0.3905820497551587,opposite
+max |jerk|: higher-scored is smoother,pairs with the top-rated,958,0.33924843423799583,0.3054393305439331,0.375,opposite
+max |jerk|: higher-scored is smoother,score difference >= 2,944,0.3697033898305085,0.3347858671399826,0.40407577313513243,opposite
+ADE to the logged future: higher-scored is closer to the log,all pairs,1429,0.5976207137858642,0.5685311122468536,0.6272040169133193,weak
+ADE to the logged future: higher-scored is closer to the log,frames stopped v0 < 0.5,357,0.6106442577030813,0.5519974683544304,0.6719784379241933,weak
+ADE to the logged future: higher-scored is closer to the log,frames moving,1072,0.5932835820895522,0.5582926904678824,0.6267567680772936,weak
+ADE to the logged future: higher-scored is closer to the log,pairs with the top-rated,958,0.5981210855949896,0.5617154811715481,0.6349372384937239,weak
+ADE to the logged future: higher-scored is closer to the log,score difference >= 2,944,0.625,0.5895279821327363,0.6604031047822317,weak
