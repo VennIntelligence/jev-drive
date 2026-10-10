@@ -225,15 +225,14 @@ class MapG:
         return np.vstack(pts), np.array(own)
 
     def centreline(self, seq, xy, ahead=90.0):
-        """Centreline of a connected node sequence from the projection of xy onto the whole chain (its first 80 m), extended
+        """Centreline of a connected node sequence from the projection of xy onto the whole chain, extended
         downstream along the straightest successors until `ahead` m, and upstream through the predecessor nearest to xy while xy
         projects onto the very start. Returns (samples in map coordinates starting at the projection, nodes used, node per sample)."""
         seq, xy = list(seq), np.asarray(xy, np.float64)
         for _ in range(5):
             pts, own = self._chain(seq)
             ln = Line(pts)
-            head = Line(ln.xy[:max(2, int(np.searchsorted(ln.S, 80.0)))])
-            s0 = float(head.frenet(xy[None])[0][0])
+            s0 = float(ln.frenet(xy[None])[0][0])
             if s0 > 1e-3 or not self.pred[seq[0]]:
                 break
             seq.insert(0, min(self.pred[seq[0]], key=lambda k: float(np.hypot(*(self.line[k].xy - xy).T).min())))
