@@ -96,3 +96,12 @@ loss 非有限、分级启动检查不过、dev ADE 比起点差 > 0.3 m 持续�
 5. 最终报告对每个臂写明收益（如有）来自哪个方向：转弯、纵向 / 前车、还是别处。
 
 原判定线（> 20° DAC 的「在收 / 平 / 没测到」）保留为转弯方向的读法；候选资格由第 4 点决定。
+
+## 补记 3（2026-10-11，臂 W 的实现选择，arm-W agent；W 的任何训练步与读数之前）
+
+「补记 1（第二波臂 W）」没有写明或需要改的几处：
+
+1. **侧视图的图像对 = W 协议的 0.2 s 对**，不是 P3 的 0.5 s 对（key k − 1, key k）。前视 t0 slot 的对是（t0 key 按 ego 运动 warp 到 t0 − 0.2 s 的位姿，t0 key）（`op_interp` 的 `warp` 在两个 key 之间取较近的 key，t0 − 0.2 s 取 t0 key）。侧视图用同一构造：t0 key 按 P3 的方式渲染（`OpenpilotMaps(cam, yaw_deg = 安装 yaw)`，与 `pp_prep.render_side` 逐字节相同），前一帧 = 同一张 t0 key 经 `op_interp.warp_frame` warp 到 t0 − 0.2 s。warp 的几何不改代码：位置 c、朝向 ψ 的相机等价于绕竖直轴转过 ψ 的车体系上的前向相机（相机位置 R(−ψ)c，位姿 (x, y, yaw + ψ)），`warp_frame` 原样适用（`lib/side_store.virtual`）。理由：三个视图过同一个共享权重的支路 encoder，第 142 条表明图像对的间隔决定 encoder 读出的速度；0.5 s 对会让侧视图读出 2.5 倍的速度，与 F0 视图不一致。代价：前一帧不含真实的第二帧信息（F0 视图同样如此），路面以上的近处结构按 60 m 球面 warp，侧向视差比前视大。与 P3 缓存 token 的预期差异见 state.md（同配对时复现，换成 W 配对后 mean |d| 约为跨行差异的 0.7 倍）。
+2. **只存 t0 的一对**（每 token 2 相机 × 2 帧 × 0.39 MB = 1.57 MB；navtrain 151 GiB、navtest 18 GiB、navhard 9 GiB），`$DATA_DIR/runs/vis_train/px_side/<data>/side_t0.npy`，行序 = `tab.npz`。
+3. **盘余量线由 300 GB 改为 50 GB**（用户 2026-10-11 改，经 main 转达）。建完后预计剩约 290 GiB。`vt_side.py build` 在写每个文件前按「当前空闲 − 第一波像素缓存尚未写入的部分 − 本文件」核对，低于 50 GiB 即停。
+4. 视图顺序与 embedding：memory 的相机维为 [CAM_F0, CAM_L0, CAM_R0]；测试时「屏蔽侧视」= 只屏蔽后两路（`side_mask`），训练时的 memory 屏蔽（25% 行）三路同屏蔽。
