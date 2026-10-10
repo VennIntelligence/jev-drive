@@ -14,7 +14,7 @@ CI by log): inside what two seeds of the same recipe differ by (the 12 base-seed
 offroad 35 against 42 (each beyond all 12 base-seed pairs), corridor 37 against 28 (also beyond all 12). The corridor zeros are the
 cost: all four new zeros by the flip rule are corridor zeros on 48 to 70 deg right turns, and the > 45 deg bucket has 43 zeros against 33
 (mean -0.0326 [-0.0858, +0.0200]). Slow scenes 401 against 434 and mean progress +0.0091 (0.9467 against 0.9375): no sign of the progress
-loss of Amendment 5 (-0.0145, slow 277 against 217); in open scenes progress is +0.0078 above the base, beyond every base-seed pair. Read
+loss of Amendment 5 (-0.0145, slow 277 against 217); in open scenes progress is +0.0093 above the base, beyond every base-seed pair (+0.0078 with the first read's grouping, see the correction in section 5). Read
 by the lane's four lines (arithmetic only): on seeds 0-1 against TR1's baseline L1b and L3 are met, L1a and L2 are not; on four seeds L1b, L2
 and L3 are met, L1a is not (seed 1 has 25 zeros against 23). The arm is not promoted by this; the driver stays `P2H10-F`.
 
@@ -100,14 +100,22 @@ in both seeds; `78b4153a` and `77155a60` are among its four new zeros in both se
 Group of the scene at its navtest token from the base plan (`prog_ol.py`'s definition: `lead` = an object ahead in the lane within max(10 m, 3 s x v0)),
 four pairs, progress = `progress_clipped_rel`, interval by log.
 
+**Correction, 2026-10-11.** The base plan that assigns the group was read on off-protocol frames in the first version (the lane's reader opened
+`lb_navtest` on GIMM frames for warp-trained checkpoints until e7747c0b, [navtest_warp.md](navtest_warp.md)). Regrouped on the scored plans
+(`navtest_warp/shape_cl/report.md`); 1 to 20 scenes move per group, the reading is the same. Nothing else on this page is a navtest own-plan read:
+scores, zeros, progress, the nulls and the > 45 deg bucket (grouped by the logged turn) are unchanged. The premise in the page's status, "the arm
+stopped at G3 (b)", refers to the read that the same correction reverses (decision 232): on the scored plans G3 (b) is met.
+
 | Group | scenes | base / arm mean progress | difference per pair [95 % CI by log] | N1 / N2 range of the difference | slow, sum of the 4 pairs, base -> arm | outside the spread |
 |:--|--:|:--|:--|:--|:--|:--|
-| lead | 159 | 0.919 / 0.930 | +0.0115 [+0.0038, +0.0203] | +-0.0203 / +-0.0128 | 137 -> 137 | no |
-| open | 329 | 0.945 / 0.952 | +0.0078 [+0.0032, +0.0126] | +-0.0058 / +-0.0038 | 190 -> 164 | **progress above all 24**, slow no |
+| lead | 158 | 0.924 / 0.933 | +0.0094 [+0.0021, +0.0170] | +-0.0199 / +-0.0124 | 133 -> 132 | no |
+| open | 349 | 0.940 / 0.949 | +0.0093 [+0.0046, +0.0144] | +-0.0063 / +-0.0044 | 206 -> 170 | **progress above all 24**, slow no |
+| first read's grouping (superseded): lead | 159 | 0.919 / 0.930 | +0.0115 [+0.0038, +0.0203] | +-0.0203 / +-0.0128 | 137 -> 137 | no |
+| first read's grouping: open | 329 | 0.945 / 0.952 | +0.0078 [+0.0032, +0.0126] | +-0.0058 / +-0.0038 | 190 -> 164 | progress above all 24, slow no |
 
-Amendment 5's arm on the same split (progress_diagnosis.md, two seeds): lead -0.0296, open -0.0099. The shape-only arm does not slow the car behind
-leads; its progress is above the base's, strongest in open scenes (the lead interval is as wide as N1's range). Other groups (`near obj` +0.0040, `near edge`
-+0.0104, `contact` 26 scenes) are in `results/shape/cl/report.md`.
+Amendment 5's arm on the same split (progress_diagnosis.md, two seeds): lead -0.0314, open -0.0105 (first read's grouping -0.0296, -0.0099). The shape-only arm does not slow the car behind
+leads; its progress is above the base's, strongest in open scenes (the lead interval is as wide as N1's range). Other groups (`near obj` +0.0060, `near edge`
++0.0078, `contact` 16 scenes) are in `results/navtest_warp/shape_cl/report.md` (first read: +0.0040, +0.0104, 26 scenes, `results/shape/cl/report.md`).
 
 ## 6. Scenes turning more than 45 deg (61 scenes, 20 logs; logged 4 s future of the scene's navtest token)
 

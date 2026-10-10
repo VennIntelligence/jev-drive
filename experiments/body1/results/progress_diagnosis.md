@@ -5,22 +5,32 @@ own plans of the four checkpoints on hold logs and navtest, and the hinge gradie
 [prog_grad.py](../scripts/prog_grad.py), [prog_cl.py](../scripts/prog_cl.py); tables `results/prog/`; figures `figs/prog/`. Everything here is post hoc on
 development scenes; the proximity groups were fixed in `prog_ol.py` before a number was read, they are not registered lines.
 
+**Correction, 2026-10-11 (navtest own-plan reads re-read on warp frames).** Until e7747c0b the lane's plan reader opened `lb_navtest` on GIMM
+frames for these warp-trained checkpoints, so the open-loop navtest numbers of the first version of this page were measured on plans the
+benchmark does not score ([navtest_warp.md](navtest_warp.md); tables [navtest_warp/prog/](navtest_warp/prog/), [navtest_warp/prog_cl/](navtest_warp/prog_cl/)).
+They are replaced below with the old number named each time. What changes: on logged navtest states the arm's plan is **not shorter everywhere**; the
+pooled ratio is 0.9985 / 0.9980 (was 0.9905), open-road tokens are not shortened (0.9998 / 0.9995, was 0.993), and the shortening sits behind a lead
+(0.9931, was 0.982) and on contact states. What does not change: the hold-log ratios, every closed-loop number (scores, progress, the served-plan arcs
+of `drive.jsonl`), the gradient split, and therefore verdicts 1, 3, 4 and the closed-loop half of 2. The closed-loop tables that group scenes by the
+base plan at the navtest token are regrouped on the scored plans (2 to 40 pairs move per group); the reading is the same. The figures
+`figs/prog/ol_arc.png` (left panel) and `cl_progress.png` (group colours) still show the first read.
+
 ## Verdict
 
 1. **The lost progress and the removed collisions are different scenes.** 95.6 % of the progress loss and 76 of the 78 "score 1 -> slow" pairs lie outside
    the 11 scenes with a collision zero in any of the four runs; in the 5 scenes whose collision was removed the arm's progress is never below the base's.
    The score difference -0.0046 splits into +0.0029 from zero flips and -0.0074 from progress. It is a side effect, not a trade inside scenes.
 2. **The side effect is a shorter speed profile, strongest behind a lead and on states that look like the hinge-only rows.** Open loop the arm's 4 s arc
-   is 0.999 x base on the on-log imitation rows of hold logs, 0.990 / 0.978 / 0.939 on `ot1` / `yr1` / `bd4` states (the three hinge-only families), 0.9905 on
-   navtest tokens (open road 0.993, lead ahead 0.982). In the loop the served plans are 0.976 x base over all decisions, 0.944 in scenes that start with a
-   lead in the lane, and those scenes (23 % of the pairs) carry 46 to 49 % of the progress loss.
+   is 0.999 x base on the on-log imitation rows of hold logs, 0.990 / 0.978 / 0.939 on `ot1` / `yr1` / `bd4` states (the three hinge-only families), 0.998 on
+   navtest tokens (open road 1.000, lead ahead 0.993; first read, off-protocol: 0.9905, 0.993, 0.982). In the loop the served plans are 0.976 x base over all decisions, 0.944 in scenes that start with a
+   lead in the lane, and those scenes (23 % of the pairs) carry 49 to 50 % of the progress loss (46 to 49 % with the first read's grouping).
 3. **The term that pulls the plan back is the agent hinge (A); the road terms (B + C) act across the path.** On training rows 96 % of the agent-hinge-positive
    imitation rows and 84 to 88 % of the positive hinge-only rows have a gradient that moves the plan backwards, and slowing alone (same path at 0.75 of the
    arc) zeroes the agent hinge on 76 % / 32 to 72 % of them. The road hinges put 97 to 99.5 % of their gradient across the path and their first-order
    arc pull is about zero. On imitation rows the imitation target holds the arc (hence 0.999); a hinge-only row has no target, so nothing opposes the pull.
 4. **Item C's raster is not behind the new offroad zeros**: on all 6 new offroad pairs (4 scenes) the two rasters give the same margins along both runs.
 5. The new zeros are a second, smaller effect of another kind: 13 of 16 pairs are open scenes, 9 turn more than 45 deg, none is a launch, their open-loop
-   arc is not shorter (0.92 to 1.02, median 1.00). They are shape changes on turns, and a timing fix does not address them.
+   arc is not shorter (0.95 to 1.05, median 1.00; first read 0.92 to 1.02). With the regrouping 14 of the 16 pairs are open scenes (first read 13). They are shape changes on turns, and a timing fix does not address them.
 
 A separable mechanism exists, so a draft Amendment 6 is appended to the pre-registration (DRAFT, NOT IN FORCE).
 
@@ -35,34 +45,43 @@ seed 0, the noise floor.
 
 | States | n | all | open | near edge | near obj | lead | contact | seed floor (all) |
 |:--|--:|:--|:--|:--|:--|:--|:--|:--|
-| navtest on-log (never trained on) | 12 146 | 0.9905 [0.989, 0.992] \| 0.9905 | 0.9931 \| 0.9927 | 0.9931 \| 0.9925 | 0.9903 \| 0.9918 | 0.9822 \| 0.9836 | 0.9870 \| 0.9851 | 1.0003 |
+| navtest on-log (never trained on), warp frames | 12 146 | 0.9985 [0.998, 0.999] \| 0.9980 | 0.9998 \| 0.9995 | 1.0015 \| 1.0003 | 0.9984 \| 0.9972 | 0.9931 \| 0.9931 | 0.9914 \| 0.9914 | 0.9995 |
+| navtest, first read on off-protocol plans (superseded) | 12 146 | 0.9905 [0.989, 0.992] \| 0.9905 | 0.9931 \| 0.9927 | 0.9931 \| 0.9925 | 0.9903 \| 0.9918 | 0.9822 \| 0.9836 | 0.9870 \| 0.9851 | 1.0003 |
 | hold logs, on-log (imitation rows of the training set) | 10 926 | 0.9990 | 0.9994 | 1.0009 | 1.0003 | 0.9957 | 0.9853 | 0.9994 |
 | hold logs, `ot1` | 7 366 | 0.9900 | 0.9927 | 0.9951 | 0.9904 | 0.9785 | 0.9724 | 0.9999 |
 | hold logs, `yr1` | 7 366 | 0.9779 | 0.9853 | 0.9877 | 0.9786 | 0.9616 | 0.9366 | 0.9994 |
 | hold logs, `bd4` | 4 425 | 0.9391 | 0.9612 | 0.9541 | 0.9292 | 0.9271 | 0.8950 | 0.9982 |
 
-(hold rows: seed 0; seed 1 is in the csv and agrees.) The shortening is global on every state that is not an imitation row: 0.7 % on open navtest tokens (42 %
-of the tokens, 36 to 38 % of the summed arc difference), 1.8 % behind a lead, with a dose response in the lead gap (under 20 m: 0.979 to 0.981; 20 to 40 m:
-0.992; no lead: 0.9925). It grows with how far the state is from the log: 1 % (`ot1`, 0.5 m / 2 deg), 2.2 % (`yr1`), 6.1 % (`bd4`, 2 to 8 deg), and there it is
-present on open states too (`bd4` open 0.961). By speed on navtest: under 1 m/s 0.999 / 1.003 (no shortening at launch), 1 to 10 m/s 0.988 to 0.991, over
-10 m/s 0.996. Over 45 deg: 0.9935 / 0.9889. The plan also moves sideways: rms cross-path difference to the base 0.067 m on navtest against a seed floor
-of 0.035 m, 0.45 m on `bd4` against 0.056 m. Reference (decision 221): the base's own plan is already 0.892 of the logged 4 s arc on navtest.
+(hold rows: seed 0; seed 1 is in the csv and agrees.) On the scored navtest plans the shortening is not global: open tokens (43 % of the tokens) are at
+0.9998 / 0.9995 and hold 8 to 12 % of the summed arc difference; behind a lead the plan is 0.7 % shorter and that group holds 83 % / 63 % of the difference,
+with a dose response in the lead gap (under 5 m: 0.983 / 0.987; 5 to 10 m: 0.990 / 0.991; 10 to 20 m: 0.995 / 0.993; 20 to 40 m: 0.998; no lead: 0.9998 /
+0.9992). On hold states it grows with how far the state is from the log: 1 % (`ot1`, 0.5 m / 2 deg), 2.2 % (`yr1`), 6.1 % (`bd4`, 2 to 8 deg), and there it is
+present on open states too (`bd4` open 0.961); so "global" holds for off-track states, not for logged ones. By speed on navtest: under 1 m/s 0.995 / 1.001,
+1 to 6 m/s 0.996 to 0.997, 6 to 10 m/s 0.999 to 1.000, over 10 m/s 1.000 / 0.999. Over 45 deg: 0.9985 / 0.9997. The plan also moves sideways: rms cross-path
+difference to the base 0.058 m on navtest against a seed floor of 0.028 m, 0.45 m on `bd4` against 0.056 m. The base's own plan is 0.997 of the logged 4 s
+arc on navtest (20.06 m against 20.12 m).
+First read, off-protocol plans (superseded): "global on every state that is not an imitation row: 0.7 % on open navtest tokens (36 to 38 % of the summed
+difference), 1.8 % behind a lead (under 20 m: 0.979 to 0.981; 20 to 40 m: 0.992; no lead: 0.9925)"; by speed 0.999 / 1.003, 0.988 to 0.991, 0.996; over
+45 deg 0.9935 / 0.9889; cross-path 0.067 m against 0.035 m; "the base's own plan is already 0.892 of the logged 4 s arc on navtest", which was the
+off-protocol frames (17.95 m), not the checkpoint, and is not a number of decision 221.
 
 ![ol](../figs/prog/ol_arc.png)
-What to look at: left, navtest: every group and every speed bin above 1 m/s sits below the grey seed-floor band, lead (purple) lowest among the groups
+What to look at (the left panel is the first read on off-protocol plans; on the scored plans only the lead and contact groups sit below the seed-floor
+band): left, navtest: every group and every speed bin above 1 m/s sits below the grey seed-floor band, lead (purple) lowest among the groups
 without contact; right, hold states (three quarters off-track): the same order, three times larger, contact states (red) down to 0.88 to 0.93.
 
-**Closed loop** (`results/prog/cl_groups.csv`; 1 400 (seed, scene) pairs, the scene's group taken at its navtest token; progress = `progress_clipped_rel`;
+**Closed loop** (`results/navtest_warp/prog_cl/cl_groups.csv`, groups from the base plan on warp frames; first read `results/prog/cl_groups.csv`; 1 400 (seed, scene) pairs, the scene's group taken at its navtest token; progress = `progress_clipped_rel`;
 "nz" = pairs with no zero on either side; arc ratios are of the served plans in `drive.jsonl`):
 
 | Scenes | pairs | progress arm - base [95 % CI by log] | share of the loss (all \| nz) | score 1 -> slow | slow -> 1 | plan arc at decision 0 | plan arc, all decisions | driven distance |
 |:--|--:|:--|:--|--:|--:|--:|--:|--:|
 | all | 1 400 | -0.0145 [-0.0203, -0.0085] | 100 % | 78 | 23 | 0.988 | 0.976 | 0.985 |
-| lead | 318 | -0.0296 [-0.0395, -0.0206] | 46 % \| 49 % | 34 | 3 | 0.958 | 0.944 | 0.962 |
-| near obj | 198 | -0.0147 [-0.0272, -0.0028] | 14 % \| 13 % | 16 | 3 | 0.991 | 0.970 | 0.981 |
-| near edge | 174 | -0.0115 [-0.0212, -0.0038] | 10 % \| 11 % | 5 | 0 | 0.995 | 0.983 | 0.987 |
-| open | 658 | -0.0099 [-0.0167, -0.0031] | 32 % \| 27 % | 23 | 16 | 0.994 | 0.986 | 0.991 |
-| contact | 52 | +0.0109 [-0.0017, +0.0264] | -3 % \| -1 % | 0 | 1 | 0.991 | 0.990 | 0.997 |
+| lead | 316 | -0.0314 [-0.0407, -0.0238] | 49 % \| 50 % | 34 | 3 | 0.957 | 0.944 | 0.962 |
+| near obj | 186 | -0.0099 [-0.0240, +0.0030] | 9 % \| 8 % | 11 | 4 | 0.994 | 0.980 | 0.986 |
+| near edge | 168 | -0.0099 [-0.0166, -0.0037] | 8 % \| 10 % | 5 | 0 | 0.997 | 0.986 | 0.988 |
+| open | 698 | -0.0105 [-0.0171, -0.0040] | 36 % \| 32 % | 28 | 16 | 0.993 | 0.983 | 0.990 |
+| contact | 32 | +0.0157 [-0.0067, +0.0531] | -2 % \| +1 % | 0 | 0 | 0.992 | 0.980 | 0.994 |
+| first read's grouping (superseded): lead / near obj / near edge / open / contact | 318 / 198 / 174 / 658 / 52 | -0.0296 / -0.0147 / -0.0115 / -0.0099 / +0.0109 | 46 % / 14 % / 10 % / 32 % / -3 % | 34 / 16 / 5 / 23 / 0 | 3 / 3 / 0 / 16 / 1 | | 0.944 / 0.970 / 0.983 / 0.986 / 0.990 | |
 | launch (v0 < 1 m/s) | 212 | -0.0134 [-0.0298, +0.0026] | 14 % \| 15 % | 10 | 7 | 0.949 | 0.988 | 0.986 |
 | v0 >= 1 m/s | 1 188 | -0.0146 [-0.0204, -0.0089] | 86 % \| 85 % | 68 | 16 | 0.990 | 0.975 | 0.985 |
 | turn under 10 deg | 994 | -0.0184 [-0.0242, -0.0128] | 90 % \| 94 % | 57 | 16 | 0.989 | 0.969 | 0.980 |
@@ -70,9 +89,10 @@ without contact; right, hold states (three quarters off-track): the same order, 
 | turn over 45 deg | 122 | -0.0182 [-0.0412, +0.0019] | 11 % \| 5 % | 9 | 0 | 0.987 | 0.987 | 0.998 |
 
 By the nearest obstacle of the base run itself: under 0.5 m +0.006 (74 pairs), 0.5 to 1.5 m -0.0195 (43 % of the loss), 1.5 to 4 m -0.0225 (42 %), 4 m or
-more / none -0.0068 (17 %). So the loss has two layers: a global one of about 1 % of progress in open scenes (the open-loop 0.7 %), and three times that
+more / none -0.0068 (17 %). So the loss has two layers: a global one of about 1 % of progress in open scenes (served plans 1.7 % shorter there; the open-loop navtest plan is not shorter on open tokens, so
+this layer shows only in the loop, where the first read had matched it with an open-loop 0.7 %), and three times that
 behind a lead, where the served plans are 4 to 6 % shorter. This is decision 226's picture reached from the training side: the lesson slows the car
-behind leads that the base passed without contact (lead scenes: zeros 9 -> 3, but slow 63 -> 98). Launch scenes lose the same 0.013 with an interval that
+behind leads that the base passed without contact (lead scenes: zeros 9 -> 3, but slow 61 -> 95; first read's grouping 63 -> 98). Launch scenes lose the same 0.013 with an interval that
 includes 0; their decision-0 plan is 5 % shorter, later decisions are not.
 
 ![cl](../figs/prog/cl_progress.png)
@@ -119,16 +139,17 @@ Slow scenes (score between 0 and 1, i.e. progress under 0.8 of the log): 217 -> 
 
 | Set | pairs | base progress, median | base progress under 0.85 | progress change, median | lead | near obj | near edge | open | launch | turn over 45 deg | plan arc at decision 0 |
 |:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| base score 1, all | 1 134 | 0.963 | 10 % | -0.006 | 22 % | 14 % | 14 % | 48 % | 15 % | 8 % | 0.989 |
-| score 1 -> slow | 78 | 0.840 | 58 % | -0.086 | 44 % | 21 % | 6 % | 30 % | 13 % | 12 % | 0.952 |
-| slow -> score 1 | 23 | 0.786 | 100 % | +0.057 | 13 % | 13 % | 0 % | 70 % | 30 % | 0 % | 0.996 |
+| base score 1, all | 1 134 | 0.963 | 10 % | -0.006 | 22 % | 13 % | 13 % | 50 % | 15 % | 8 % | 0.989 |
+| score 1 -> slow | 78 | 0.840 | 58 % | -0.086 | 44 % | 14 % | 6 % | 36 % | 13 % | 12 % | 0.952 |
+| slow -> score 1 | 23 | 0.786 | 100 % | +0.057 | 13 % | 17 % | 0 % | 70 % | 30 % | 0 % | 0.996 |
+| first read's grouping (superseded): near obj / near edge / open of the three rows | | | | | | 14 %, 21 %, 13 % | 14 %, 6 %, 0 % | 48 %, 30 %, 70 % | | | |
 
-The new slow scenes are scenes that sat close above the 0.8 line and have a lead or a near object (65 % against 36 % of all), and their drop is large
-(median -0.086): scaling every base progress by the mean ratio of its group would move only 31 pairs under the line (27 with one global ratio), not 78.
+The new slow scenes are scenes that sat close above the 0.8 line and have a lead or a near object (58 % against 35 % of all; first read's grouping 65 % against 36 %), and their drop is large
+(median -0.086): scaling every base progress by the mean ratio of its group would move only 32 pairs under the line (first read 31) (27 with one global ratio), not 78.
 The count is therefore not a threshold artefact of a 1 % shift; it is the lead effect on scenes with little margin.
 
 Scenes over 45 deg (122 pairs): -0.0207 = -0.0141 from zero flips (9 new against 7 removed zero pairs) and -0.0066 from progress (9 pairs to slow, none
-back). The plan is about 1 % shorter there, as everywhere (open-loop arc 0.993, served plans 0.987), and the driven distance is not (0.998). navtest's bucket gains through fewer inside cuts in one
+back). The served plans are about 1 % shorter there (0.987); the open-loop plan on the scored frames is not (1.001; first read 0.993, "as everywhere"), and the driven distance is not (0.998). navtest's bucket gains through fewer inside cuts in one
 open-loop plan; in the loop the same push away from the inside edge removes inside cuts (`a04628cd`, `fcb45b2a`) and creates wide exits (`78b4153a`,
 `77155a60`, `e933d70d`, `52d3f15d`, `f0a6222a`: corridor zeros on 48 to 70 deg turns whose base plan passes 0.2 to 0.9 m from the raster edge). On this
 bucket the boundary lesson is a trade inside the class, and it nets to about zero (offroad + corridor zeros 35 against 35 overall).
@@ -180,4 +201,6 @@ Limits: post hoc, on development scenes, two seeds; the groups are this file's d
 bins in the csv); a scene's group is taken at its first token, not along the run; the on-log hold states are imitation rows of the training set, so their
 0.999 is not a held-out number (navtest is); the gradient split is first order in pose space, it does not pass through the network and does not include
 the opposing imitation term; closed-loop traces are placed in the token frame from the controller log (first pose = token pose), which the plan arc at
-decision 0 supports (ratio to the open-loop plan 1.010, r = 0.90) but does not prove to the decimetre; A against the road hinge on hinge-only rows is not separated.
+decision 0 supported against the first read's off-protocol open-loop plans (ratio 1.010, r = 0.90) and supports less against the scored ones (ratio
+0.909, r = 0.92: the plan served at decision 0 is 9 % shorter than the bench's plan at the token and about as long as the GIMM-frame one; not examined,
+[navtest_warp.md](navtest_warp.md)); A against the road hinge on hinge-only rows is not separated.
