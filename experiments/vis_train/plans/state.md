@@ -216,6 +216,38 @@ A / A0 / B 六条链的 preflight（6 步 smoke，eval 在步 0 与步 3）真�
 - F / F0 的 HUGSIM 等 `VT-C-s0/ckpt-final.pt` 出现后才排（`VT_LAST` 默认）。
 - 恒等：`runs/vis_train/ident/{A,A0}-s{0,1}.json`、`B-s0.json`、`C-s0.json` 均 `pass_2ulp` = true（> 0.032 m 的行 0，错模型对照 70%），F-s0 逐位相同。分级启动：A / B / C 的 `train-smoke-vt-stage-*` 均完成（A：步 300 dev ADE 0.579 对起点 0.561，位移 0.11%，支路 head ADE 9.85 → 1.16）。
 
+### 交接（2026-10-11 00:10 CST，lane 交给 jev-night；本节之后我不再动任何任务）
+
+**没有取消任何任务。** 00:09 CST 的全部在跑 / 排队 / 带门任务（262 行：id、状态、名字、在等什么）在 [handover-jobs.txt](handover-jobs.txt)；现状以 `cl queue | grep -E "vis_train|VT-"` 为准。分组：
+
+| 组 | id | 状态 / 在等什么 |
+|:--|:--|:--|
+| 训练 F-s0 / F-s1 / F0-s0（60 k） | 1010-225245-4c70 / -6d51 / -9b86 | 在跑，步 46.0 k / 38.7 k / 32.2 k |
+| 训练 A0-s0 / A0-s1（50 k） | 1010-230854-fb48 / -523d | 在跑，步 26.7 k / 25.3 k |
+| 训练 A-s0 / A-s1 / B-s0 / B-s1（50 k） | 1010-230854-22a0 / -4952 / -b6ec / -c74d | 在跑，步 9.6 k，2.76 it/s，card 4 / 3 / 3 / 4 |
+| 训练 C-s0（40 k） | 1010-230021-65dc | 在跑，步 4.5 k，1.23 it/s（card 0，与 F0 同卡） |
+| 训练 W-s0 / W-s1（50 k） | 1010-234311-a449 / -23ce | W-s0 在跑（card 5，1.55 it/s，45 GB）；W-s1 等 `VT-A0-s1/ckpt-final.pt` |
+| snapshot 读数的启动任务 `vt-b-<臂>-s<seed>-k<NN>`（约 90 个，各链 `jobs.txt`） | 见清单 | 各等自己的 `VT-…-k<NN>/ckpt-final.pt`；出现后跑 `bench run --model … --bench navtest` 并退出 |
+| 末尾读数 `vt-b-*-final`（11 个） | 见清单 | `--after` 各自的训练任务；navtest + navhard（A / B / W 另有 `:noside` / `:mshuf`，W 另有 `:sideoff`） |
+| HUGSIM 64 `vt-b-{F-s0,F-s1,F0-s0}-hugsim` | 1010-225249-aa34 / -f3b9、1010-225247-fcd6 | `--after` 训练，且等 `VT-C-s0/ckpt-final.pt`（约 05:45 CST） |
+| bench 自己的 `bn-navtest-VT-*` 阶段（约 150 个） | 见清单 | **被内存门挡住**，见下 |
+| Stage-0 probe 链（k05，seed 0） | 1010-234950-0f52、-faa0（tokens）→ 1010-235054-3000（decode）→ -e225（score） | tokens 被内存门挡住，其余 `--after` |
+| `vt-read`（读数表重建） | 1010-235353-395d | 被内存门挡住；不是本 session 的任务（接手方的 reads builder 提交） |
+| `vt-native-onnx-test` | 1011-000816-17fb | 被内存门挡住；不是本 session 及其子 agent 提交的（owner `vis_train`，00:08 CST；应属接手方） |
+| `SH30-F-s{0,1}` 的 navhard（W 帧）参照行 | – | 已完成（本 session 的 reads builder 经 `bench run` 提交，8 个 stage 全 done） |
+
+**已知问题**
+
+1. **内存门（最要紧）**：00:09 CST box 的 working set 496 GiB，对 kill line 541；pool 以「memory working set … > kill line（page cache; trimming）」把所有新的 CPU / 读数任务挡在队列里，最早的已等 28 min（`bn-navtest-VT-A-s1-k05` 的评分 worker、F 的 k25–k45、A0 的 k2x、probe、`vt-read`）。训练不受影响，但 snapshot 读数在积压，第一批 A / B 读数因此还没出齐。来源未查实（疑为 534 GB 像素缓存的 page cache 加 12 个训练各自的 `front.npy` host 映射）；我没有动它。接手后先看 `cl top` 第二行与 `cl usage`，确认 trimming 是否在降；不降就要让训练结束（F / A0 约 01:20 CST）腾出内存，或找 pool 的维护者。
+2. B-s1 没有单独的恒等 json（只有 `ident/B-s0.json`）；A / A0 / W 两个 seed 都有，C 只有 seed 0（本来就只有一个）。B-s1 与 B-s0 走同一代码，训练已在跑；补一个 `vt.py ident --arm B --seed 1 --lr0-steps 10 --enc-compile --compile`（pool，约 2 min）即可。
+3. 恒等按原登记线（> 0.03 m 的行 < 0.1%）不过，按补记 1 的两个 ulp 线过；两栏都在 json 里。
+4. W 的 `--vram-cap 49`：峰值 45.2 GB，余量 3.8 GB；OOM 时 `VT_VRAM=56` 重跑同一条链命令（W 节「怎么续」）。
+5. A / B 的步数是 50 k 不是 60 k（两个同卡 2.76 it/s）；F 的对照行用 k50。若 F / A0 结束后 A / B 所在的卡没有变快（它们两两同卡，不会迁移），结束时间仍是约 04:15 CST。
+6. 第一个 snapshot 的短表（给 main 的报告）还没发：`vt_read.py first`，等 A / B / C 的 k05 读数出齐。
+7. Stage-0 probe 的 decode 任务（-3000）只 `--after` A 的 token 任务；若在 B 的 token 落盘前启动会因缺 `VT-B-s0-k05/*.npy` 报错，同一条 `vt_read.py probe --name k05-s0 --tags VT-A-s0-k05 VT-B-s0-k05` 重跑即续。整条 probe 路径、判定线、`:noside` / `:mshuf` / `:sideoff`、W 的 FoV 分层、navhard / HUGSIM 配对行都还没有在真实输入上跑过（见「读数交接」节）；`vt_read.py` 是否认 `VT-W-*` 未核对。
+8. 可删的 smoke 目录：`runs/op_parity/runs/smoke-vt-*`（W 的各约 1.7 GB）。
+9. 没做的：读数的结论、趋势图的说明、decision 条目（先 pull，取当时的下一个空号）、`research/vis_train/index.html` 及第二读者核对、README 的 Conclusion。
+
 ### 吞吐（batch 64，navtrain 12 shard；`runs/vis_train/prof-step-*`）
 
 | 步型 | 第 145 条 U2（在线 CPU 渲染） | 像素缓存 + U2 的 encoder 路径 | + `fast_encode` | + 编译（上线配置） | 分级启动实测（独占） | 正式运行（两个同卡） |

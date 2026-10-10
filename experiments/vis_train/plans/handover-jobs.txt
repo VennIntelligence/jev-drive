@@ -1,0 +1,262 @@
+Sun Oct 11 00:09:43 CST 2026
+1010-225245-4c70 running vt-t-F-s0
+1010-225245-6d51 running vt-t-F-s1
+1010-225245-9b86 running vt-t-F0-s0
+1010-230021-65dc running vt-t-C-s0
+1010-230854-b6ec running vt-t-B-s0
+1010-230854-22a0 running vt-t-A-s0
+1010-230854-4952 running vt-t-A-s1
+1010-230854-c74d running vt-t-B-s1
+1010-230854-fb48 running vt-t-A0-s0
+1010-230854-523d running vt-t-A0-s1
+1010-234311-a449 running vt-t-W-s0
+1010-234121-faac running bn-navtest-VT-B-s1-k05
+1010-234121-ec5d running bn-navtest-VT-A-s1-k05
+1010-234121-b23c running bn-navtest-VT-A-s1-k05
+1010-234121-b92f running bn-navtest-VT-A-s1-k05
+1010-234121-d538 running bn-navtest-VT-A-s1-k05
+1010-234121-9eae running bn-navtest-VT-A-s1-k05
+1010-234311-23ce queued vt-t-W-s1 | 26m waiting for VT-A0-s1/ckpt-final.pt
+1011-000816-17fb queued vt-native-onnx-test | 1m memory working set 496 + 17 young + 16 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-225247-b074 queued vt-b-F0-s0-k40 | 76m waiting for VT-F0-s0-k40/ckpt-final.pt
+1010-225247-b1c3 queued vt-b-F0-s0-k50 | 76m waiting for VT-F0-s0-k50/ckpt-final.pt
+1010-225247-3a82 queued vt-b-F0-s0-final | 76m after 1010-225245-9b86 (running)
+1010-225247-fcd6 queued vt-b-F0-s0-hugsim | 76m after 1010-225245-9b86 (running)
+1010-225248-7fe6 queued vt-b-F-s1-k40 | 76m waiting for VT-F-s1-k40/ckpt-final.pt
+1010-225248-f2af queued vt-b-F-s1-k45 | 76m waiting for VT-F-s1-k45/ckpt-final.pt
+1010-225248-e903 queued vt-b-F-s1-k50 | 76m waiting for VT-F-s1-k50/ckpt-final.pt
+1010-225248-b76d queued vt-b-F-s0-k50 | 76m waiting for VT-F-s0-k50/ckpt-final.pt
+1010-225249-8036 queued vt-b-F-s1-k55 | 76m waiting for VT-F-s1-k55/ckpt-final.pt
+1010-225249-532c queued vt-b-F-s0-k55 | 76m waiting for VT-F-s0-k55/ckpt-final.pt
+1010-225249-4338 queued vt-b-F-s1-final | 76m after 1010-225245-6d51 (running)
+1010-225249-a601 queued vt-b-F-s0-final | 76m after 1010-225245-4c70 (running)
+1010-225249-f3b9 queued vt-b-F-s1-hugsim | 76m after 1010-225245-6d51 (running)
+1010-225249-aa34 queued vt-b-F-s0-hugsim | 76m after 1010-225245-4c70 (running)
+1010-230022-34bb queued vt-b-C-s0-k05 | 69m waiting for VT-C-s0-k05/ckpt-final.pt
+1010-230022-73a8 queued vt-b-C-s0-k10 | 69m waiting for VT-C-s0-k10/ckpt-final.pt
+1010-230022-434b queued vt-b-C-s0-k15 | 69m waiting for VT-C-s0-k15/ckpt-final.pt
+1010-230023-f0de queued vt-b-C-s0-k20 | 69m waiting for VT-C-s0-k20/ckpt-final.pt
+1010-230023-319c queued vt-b-C-s0-k25 | 69m waiting for VT-C-s0-k25/ckpt-final.pt
+1010-230023-f54f queued vt-b-C-s0-k30 | 69m waiting for VT-C-s0-k30/ckpt-final.pt
+1010-230023-3702 queued vt-b-C-s0-k35 | 69m waiting for VT-C-s0-k35/ckpt-final.pt
+1010-230024-6929 queued vt-b-C-s0-final | 69m after 1010-230021-65dc (running)
+1010-230855-5ed8 queued vt-b-B-s0-k10 | 60m waiting for VT-B-s0-k10/ckpt-final.pt
+1010-230855-9949 queued vt-b-A-s0-k10 | 60m waiting for VT-A-s0-k10/ckpt-final.pt
+1010-230855-59a4 queued vt-b-A-s1-k10 | 60m waiting for VT-A-s1-k10/ckpt-final.pt
+1010-230855-a382 queued vt-b-B-s1-k10 | 60m waiting for VT-B-s1-k10/ckpt-final.pt
+1010-230855-e9b2 queued vt-b-A-s0-k15 | 60m waiting for VT-A-s0-k15/ckpt-final.pt
+1010-230855-7631 queued vt-b-B-s0-k15 | 60m waiting for VT-B-s0-k15/ckpt-final.pt
+1010-230855-a9cb queued vt-b-A-s1-k15 | 60m waiting for VT-A-s1-k15/ckpt-final.pt
+1010-230855-6b4b queued vt-b-B-s1-k15 | 60m waiting for VT-B-s1-k15/ckpt-final.pt
+1010-230855-a5c4 queued vt-b-A0-s0-k30 | 60m waiting for VT-A0-s0-k30/ckpt-final.pt
+1010-230855-0293 queued vt-b-A0-s1-k30 | 60m waiting for VT-A0-s1-k30/ckpt-final.pt
+1010-230855-b967 queued vt-b-B-s0-k20 | 60m waiting for VT-B-s0-k20/ckpt-final.pt
+1010-230855-ebb9 queued vt-b-A-s0-k20 | 60m waiting for VT-A-s0-k20/ckpt-final.pt
+1010-230855-403a queued vt-b-A-s1-k20 | 60m waiting for VT-A-s1-k20/ckpt-final.pt
+1010-230855-3f4d queued vt-b-B-s1-k20 | 60m waiting for VT-B-s1-k20/ckpt-final.pt
+1010-230855-6b09 queued vt-b-A0-s0-k40 | 60m waiting for VT-A0-s0-k40/ckpt-final.pt
+1010-230855-4f38 queued vt-b-A0-s1-k40 | 60m waiting for VT-A0-s1-k40/ckpt-final.pt
+1010-230855-d031 queued vt-b-B-s0-k25 | 60m waiting for VT-B-s0-k25/ckpt-final.pt
+1010-230855-c6b0 queued vt-b-A-s0-k25 | 60m waiting for VT-A-s0-k25/ckpt-final.pt
+1010-230855-d9ba queued vt-b-A-s1-k25 | 60m waiting for VT-A-s1-k25/ckpt-final.pt
+1010-230855-c5e1 queued vt-b-B-s1-k25 | 60m waiting for VT-B-s1-k25/ckpt-final.pt
+1010-230855-039c queued vt-b-A0-s0-final | 60m after 1010-230854-fb48 (running)
+1010-230855-ba3d queued vt-b-A0-s1-final | 60m after 1010-230854-523d (running)
+1010-230856-ec3d queued vt-b-A-s1-k30 | 60m waiting for VT-A-s1-k30/ckpt-final.pt
+1010-230856-90c5 queued vt-b-B-s0-k30 | 60m waiting for VT-B-s0-k30/ckpt-final.pt
+1010-230856-7ef2 queued vt-b-A-s0-k30 | 60m waiting for VT-A-s0-k30/ckpt-final.pt
+1010-230856-c178 queued vt-b-B-s1-k30 | 60m waiting for VT-B-s1-k30/ckpt-final.pt
+1010-230856-3c56 queued vt-b-A-s1-k35 | 60m waiting for VT-A-s1-k35/ckpt-final.pt
+1010-230856-9659 queued vt-b-A-s0-k35 | 60m waiting for VT-A-s0-k35/ckpt-final.pt
+1010-230856-0fdb queued vt-b-B-s0-k35 | 60m waiting for VT-B-s0-k35/ckpt-final.pt
+1010-230856-e98a queued vt-b-B-s1-k35 | 60m waiting for VT-B-s1-k35/ckpt-final.pt
+1010-230856-4dee queued vt-b-B-s0-k40 | 60m waiting for VT-B-s0-k40/ckpt-final.pt
+1010-230856-5d6e queued vt-b-A-s0-k40 | 60m waiting for VT-A-s0-k40/ckpt-final.pt
+1010-230856-5d84 queued vt-b-A-s1-k40 | 60m waiting for VT-A-s1-k40/ckpt-final.pt
+1010-230856-e587 queued vt-b-B-s1-k40 | 60m waiting for VT-B-s1-k40/ckpt-final.pt
+1010-230857-f219 queued vt-b-B-s0-k45 | 60m waiting for VT-B-s0-k45/ckpt-final.pt
+1010-230857-4d6d queued vt-b-A-s0-k45 | 60m waiting for VT-A-s0-k45/ckpt-final.pt
+1010-230857-850f queued vt-b-A-s1-k45 | 60m waiting for VT-A-s1-k45/ckpt-final.pt
+1010-230857-f260 queued vt-b-B-s1-k45 | 60m waiting for VT-B-s1-k45/ckpt-final.pt
+1010-230857-b7db queued vt-b-B-s0-final | 60m after 1010-230854-b6ec (running)
+1010-230857-2cbd queued vt-b-A-s0-final | 60m after 1010-230854-22a0 (running)
+1010-230857-683e queued vt-b-A-s1-final | 60m after 1010-230854-4952 (running)
+1010-230857-0fcf queued vt-b-B-s1-final | 60m after 1010-230854-c74d (running)
+1010-234121-c36c queued bn-navtest-VT-A-s1-k05 | 28m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234121-b7aa queued bn-navtest-VT-A-s1-k05 | 28m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234121-aa93 queued bn-navtest-VT-A-s1-k05 | 28m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234121-2b88 queued bn-navtest-VT-A-s1-k05 | 28m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234121-c9fd queued bn-navtest-VT-A-s1-k05 | 28m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234121-60d0 queued bn-navtest-VT-A-s1-k05 | 28m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234121-eb0f queued bn-navtest-VT-A-s1-k05 | 28m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234121-7c0b queued bn-navtest-VT-A-s1-k05 | 28m after 1010-234121-ec5d (running)
+1010-234311-9122 queued vt-b-W-s1-k05 | 26m waiting for VT-W-s1-k05/ckpt-final.pt
+1010-234311-2fd8 queued vt-b-W-s0-k05 | 26m waiting for VT-W-s0-k05/ckpt-final.pt
+1010-234312-d623 queued vt-b-W-s1-k10 | 26m waiting for VT-W-s1-k10/ckpt-final.pt
+1010-234312-ff65 queued vt-b-W-s0-k10 | 26m waiting for VT-W-s0-k10/ckpt-final.pt
+1010-234312-322f queued vt-b-W-s0-k15 | 26m waiting for VT-W-s0-k15/ckpt-final.pt
+1010-234312-9eec queued vt-b-W-s1-k15 | 26m waiting for VT-W-s1-k15/ckpt-final.pt
+1010-234312-31d6 queued vt-b-W-s0-k20 | 26m waiting for VT-W-s0-k20/ckpt-final.pt
+1010-234312-166d queued vt-b-W-s1-k20 | 26m waiting for VT-W-s1-k20/ckpt-final.pt
+1010-234313-bd49 queued vt-b-W-s0-k25 | 26m waiting for VT-W-s0-k25/ckpt-final.pt
+1010-234313-e068 queued vt-b-W-s1-k25 | 26m waiting for VT-W-s1-k25/ckpt-final.pt
+1010-234313-5988 queued vt-b-W-s0-k30 | 26m waiting for VT-W-s0-k30/ckpt-final.pt
+1010-234313-b709 queued vt-b-W-s1-k30 | 26m waiting for VT-W-s1-k30/ckpt-final.pt
+1010-234313-0e92 queued vt-b-W-s0-k35 | 26m waiting for VT-W-s0-k35/ckpt-final.pt
+1010-234313-8b1f queued vt-b-W-s1-k35 | 26m waiting for VT-W-s1-k35/ckpt-final.pt
+1010-234314-54d8 queued vt-b-W-s0-k40 | 26m waiting for VT-W-s0-k40/ckpt-final.pt
+1010-234314-5ff6 queued vt-b-W-s1-k40 | 26m waiting for VT-W-s1-k40/ckpt-final.pt
+1010-234314-748a queued vt-b-W-s0-k45 | 26m waiting for VT-W-s0-k45/ckpt-final.pt
+1010-234314-fc90 queued vt-b-W-s1-k45 | 26m waiting for VT-W-s1-k45/ckpt-final.pt
+1010-234314-000e queued vt-b-W-s0-final | 26m after 1010-234311-a449 (running)
+1010-234315-cd67 queued vt-b-W-s1-final | 26m after 1010-234311-23ce (queued)
+1010-234350-e61e queued bn-navtest-VT-F-s0-k25 | 25m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234350-ba85 queued bn-navtest-VT-F-s0-k25 | 25m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234350-d2fb queued bn-navtest-VT-F-s0-k25 | 25m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234350-8889 queued bn-navtest-VT-F-s0-k25 | 25m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234350-957e queued bn-navtest-VT-F-s0-k25 | 25m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234350-ed32 queued bn-navtest-VT-F-s0-k25 | 25m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234350-fdd8 queued bn-navtest-VT-F-s0-k25 | 25m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234350-fbc5 queued bn-navtest-VT-F-s0-k25 | 25m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234350-e410 queued bn-navtest-VT-F-s0-k25 | 25m memory working set 496 + 25 young + 12 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234350-233d queued bn-navtest-VT-F-s0-k25 | 25m after 1010-234350-e61e (queued)
+1010-234700-d910 queued bn-navtest-VT-A0-s0-k2 | 22m memory working set 496 + 25 young + 32 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234700-3691 queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-d910 (queued)
+1010-234700-9e2d queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-8b8a queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-a223 queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-be9c queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-20a1 queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-0f52 queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-4e26 queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-d268 queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-aecb queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-7a48 queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-e08b queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-2348 queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-3691 (queued)
+1010-234700-f195 queued bn-navtest-VT-A0-s0-k2 | 22m after 1010-234700-9e2d (queued)
+1010-234950-0f52 queued vt-probe-tok-VT-A-s0-k | 19m memory working set 496 + 25 young + 48 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234950-cf7a queued bn-navtest-VT-F-s0-k30 | 19m memory working set 496 + 25 young + 24 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234950-7443 queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-cf7a (queued)
+1010-234950-5492 queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-2b93 queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-b3fb queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-b4a1 queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-cd9b queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-4a86 queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-e60e queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-2f1f queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-449f queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-c9c7 queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-c2d3 queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-3247 queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-7443 (queued)
+1010-234950-bf18 queued bn-navtest-VT-F-s0-k30 | 19m after 1010-234950-5492 (queued)
+1010-234950-70d2 queued bn-navtest-VT-F-s1-k30 | 19m memory working set 496 + 25 young + 24 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-234950-4450 queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-70d2 (queued)
+1010-234950-2dbb queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-85d4 queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-5c7c queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-9f78 queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-1c11 queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-95cb queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-e1fe queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-0dd9 queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-91a3 queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-2759 queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-04e5 queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-2375 queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-4450 (queued)
+1010-234950-e67d queued bn-navtest-VT-F-s1-k30 | 19m after 1010-234950-2dbb (queued)
+1010-234950-faa0 queued vt-probe-tok-VT-B-s0-k | 19m memory working set 496 + 25 young + 48 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-235054-3000 queued vt-probe-dec-k05-s0 | 18m after 1010-234950-0f52 (queued)
+1010-235054-e225 queued vt-probe-score-k05-s0 | 18m after 1010-235054-3000 (queued)
+1010-235353-395d queued vt-read | 15m memory working set 496 + 25 young + 32 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-235549-ef4b queued bn-navtest-VT-F-s0-k35 | 13m memory working set 496 + 25 young + 24 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-235549-4abc queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-ef4b (queued)
+1010-235549-5d60 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-5179 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-64d2 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-efb9 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-30b0 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-e7da queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-5ec5 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-8faf queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-4f51 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-3198 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-2040 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-4a06 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-4abc (queued)
+1010-235549-1724 queued bn-navtest-VT-F-s0-k35 | 13m after 1010-235549-5d60 (queued)
+1010-235653-4208 queued bn-navtest-VT-A0-s1-k2 | 12m memory working set 496 + 25 young + 32 GB + 16 reserve > kill line 541 (page cache; trimming)
+1010-235653-200c queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-4208 (queued)
+1010-235653-a9a5 queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-ebe6 queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-4e4f queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-3ffc queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-a7cb queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-69d4 queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-7ab0 queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-18ed queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-0b44 queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-68b2 queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-f5b0 queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-6c8d queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-200c (queued)
+1010-235653-ff6e queued bn-navtest-VT-A0-s1-k2 | 12m after 1010-235653-a9a5 (queued)
+1011-000045-83bc queued bn-navtest-VT-F-s1-k35 | 8m memory working set 496 + 25 young + 24 GB + 16 reserve > kill line 541 (page cache; trimming)
+1011-000045-97e1 queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-83bc (queued)
+1011-000045-5d7b queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-a0e7 queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-8743 queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-ef34 queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-021c queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-2843 queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-5cd8 queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-1e56 queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-35cb queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-5df0 queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-30ce queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-9c82 queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-97e1 (queued)
+1011-000045-73cd queued bn-navtest-VT-F-s1-k35 | 8m after 1011-000045-5d7b (queued)
+1011-000148-5ba5 queued bn-navtest-VT-F-s0-k40 | 7m memory working set 496 + 25 young + 24 GB + 16 reserve > kill line 541 (page cache; trimming)
+1011-000148-2991 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-5ba5 (queued)
+1011-000148-d14d queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-c212 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-907b queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-0588 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-df12 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-e7c4 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-b955 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-430a queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-b153 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-28f7 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-22d0 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-c723 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-2991 (queued)
+1011-000148-9885 queued bn-navtest-VT-F-s0-k40 | 7m after 1011-000148-d14d (queued)
+1011-000313-40aa queued bn-navtest-VT-F0-s0-k3 | 6m memory working set 496 + 25 young + 24 GB + 16 reserve > kill line 541 (page cache; trimming)
+1011-000313-96d6 queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-40aa (queued)
+1011-000313-0b82 queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-353b queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-d794 queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-9281 queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-afef queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-b2dc queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-3738 queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-042d queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-4d9b queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-6fd9 queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-fd8b queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-e0b0 queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-96d6 (queued)
+1011-000313-3fe0 queued bn-navtest-VT-F0-s0-k3 | 6m after 1011-000313-0b82 (queued)
+1011-000807-0582 queued bn-navtest-VT-F-s0-k45 | 1m memory working set 496 + 25 young + 24 GB + 16 reserve > kill line 541 (page cache; trimming)
+1011-000807-656d queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-0582 (queued)
+1011-000807-1ffd queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-ff07 queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-93a6 queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-6c67 queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-db3e queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-c585 queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-8910 queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-fe58 queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-fd32 queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-32fe queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-bf5e queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-3136 queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-656d (queued)
+1011-000807-a7f0 queued bn-navtest-VT-F-s0-k45 | 1m after 1011-000807-1ffd (queued)
