@@ -65,3 +65,82 @@ cluster bootstrap by log (B 1000). Navtest = seed mean per token, all 12 146 tok
 - What cannot be attributed from stored results: PAI progress loss (12 units, 5.46), HUGSIM stop / yield, any board's "slow" scenes by situation except nuPlan 700 (token labels recomputed by me).
 
 Sub-score split, all situations and recipes: `stoplbl/part0_situations.csv`, `part0_subscore_loss_navtest.csv`, `part0_term_excess_navtest.csv`, `part0_tlc.csv`; nuPlan 700: `alpasim_nuplan_700_*.csv`, `alpasim_nuplan_zeros_labels.csv`.
+
+## Part 1: inventory of labels (sized by Part 0: turns > 45 deg first, stop sign / yield second, red light last)
+
+Everything below is **measured on the box** unless a row says "read from code / docs". Sampled: 300 random navtrain logs (seed 0), 267 of which contain navtrain tokens, 23 901 navtrain tokens
+(of 103 288), 96.3% with a complete route (30 s hindsight or >= 50 m); counts are fractions with a log-cluster bootstrap CI, then scaled to 103 288 (`stoplbl/navtrain_counts.csv`). All of navtest
+(147 logs, 75 122 frames, 12 146 tokens) was labelled for Part 0. Code: `scripts/stoplbl_label.py` (labeler, 267 logs in about 4 minutes on 32 workers, so full navtrain is about 15 to 20 minutes and
+about 60 MB), `stoplbl_counts.py`, `stoplbl_sheet.py`.
+
+### Fields that exist
+
+| field | navtrain / navtest (nuPlan logs + maps), measured | in a training cache? |
+|---|---|---|
+| per-frame light state | log pkl `traffic_lights` = list of (lane-connector id, is_red); populated in 51.7% [48.0, 55.4] of frames; only red / not red (yellow and green are not separated); lights listed only for connectors the log tracked | no. Only `experiments/op_probe` `attrs_navtest.csv` (a navtest red flag); raw log only |
+| stop-line / stop-polygon geometry | map layer `stop_polygons`, types 0 pedestrian crossing, 1 stop sign, 2 traffic-light stop line, 3 turn stop (unprotected-turn yield), 4 yield (Singapore only, 3 polygons); 4 cities, e.g. Boston 678 polygons, Las Vegas 567, Pittsburgh 305, Singapore 546; `lane_connectors.traffic_light_stop_line_fids` ties a light line to its connectors | no (raw maps in `datasets/navsim/maps`) |
+| lane connector / intersection geometry | `lane_connectors` (turn type, linked light lines), `intersections`; cached only as `jct_s`, `jct_dist`, `n_turn`, `turn_s` ... in `processed/op_route_cmd/navtrain/route.npz` (103 288 rows) | yes (route fields), light lines no |
+| crosswalks | map layer `crosswalks` (polygons, marked flag); pedestrians come from the log boxes (`anns`) | partly: `op_adapt/navtrain_labels.parquet` has pedestrian-in-corridor and distance, not the crosswalk |
+| stop-sign locations | only as type-1 stop polygons (the stop line), no sign positions | no |
+| route curvature ahead | hindsight path: `route.npz` has `turn_deg`, `turn_s`, `turn_end_s`, `turn_rmin` for all 103 288 tokens (decision 93 / op_route_cmd; 32 269 samples with a turn >= 25 deg) | yes |
+
+Other datasets (code / file reading, one measurement where stated):
+
+| dataset | red light / stop line | stop sign / yield | turn | usable for |
+|---|---|---|---|---|
+| AlpaSim nuPlan public scenes (navtest logs, 12 148 scene dirs in `alpasim_nuplan/nuplan_test`) | **yes**: `tls_data_dt0.05.feather` per scene (lane id, scene_ts, status; 84 rows in the scene I opened, status codes not decoded) plus the nuPlan map of the city | same nuPlan map | same | scoring / diagnosis of the board; label rows for training are not allowed (public scenes = navtest) |
+| AlpaSim PAI (67 `.usdz` scenes on the box, measured over all 67) | static only: `map.xodr` has 1 315 TrafficLight signals (966 dynamic = real lights, 349 static), 325 `stopline`, 41 `yieldline`, 791 RegulatorySigns of which 188 are R1 (stop sign), plus `roadMark` objects named stop; 61 of 67 scenes have at least one signal. No time-varying light state in `map.xodr` (checked `sequence_tracks.json`, `datasource_summary.json`, `data_info.json` for light fields: none found). Parsing map to route: not done | yes (R1 stop signs, yield lines) | lanes and edges only (pai.md) | diagnosis only; the logged driver's stop (L5) already marks 5 overruns |
+| HUGSIM 64 scenarios (4 datasets x 16) | none: HD = rc, nc, dac, ttc, comfort; the scenario yamls hold plan, start pose, difficulty, no signal | none | route reference only | only nuScenes (16 of 64 runs, 8.32 of 35.63 lost) could be queried through the nuScenes map expansion (`stop_line`, `ped_crossing`, `traffic_light` layers exist in `datasets/nuscenes/maps/expansion`, no light state); waymo / pandaset / kitti360 scenes: nothing |
+| WOD-E2E | none (decision 236, `docs/waymo-e2e.md`: front3 images, calibration, ego history / future, `intent`, rater trajectories on val; agent boxes and road geometry 0 in train / val). Confirmed for lights: no field | none | `intent` only | image-only supervision |
+| nuScenes (box has v1.0-trainval + map expansion) | map has `traffic_light`, `stop_line` layers, no light state | | yes | stop lines only; read from the file listing, not used here |
+
+### Counts on navtrain (sample, per 103 288 tokens)
+
+| situation (route target within 50 m) | frames in sample | fraction [95% CI] | scaled to navtrain | log driver behaviour |
+|---|--:|--:|--:|---|
+| red light, state at t0 | 2 176 | 9.5% [7.9, 10.9] | 9 763 [8 199, 11 226] | stopped (min speed < 1 m/s) 6 609 (6.4%); passes at >= 3 m/s 2 521 (2.4%) |
+| **red light, state when the ego reaches the line (hindsight)** | 1 369 | 6.0% [5.0, 7.0] | 6 142 [5 137, 7 185] | stopped 5 433 (5.3%); passes at >= 3 m/s 332 (0.3%): the log driver almost never runs a red |
+| red at t0 but not at arrival | 1 286 | 5.6% | 5 770 | the light turns green on the way: **59% of the red-at-t0 frames** |
+| any light line (red or not) | 4 989 | 21.7% [19.2, 23.9] | 22 383 | |
+| stop sign | 1 853 | 8.1% [6.6, 9.7] | 8 313 [6 842, 9 983] | stopped 6 784 (6.6%); slowed to < 0.6 v0 677 (0.7%) |
+| yield / turn-stop | 3 013 | 13.1% [11.3, 15.3] | 13 518 | stopped 2 773 (2.7%); the turn-stop line is conditional (see sample check) |
+| crosswalk with a pedestrian near it | 3 029 | 13.2% [11.3, 15.3] | 13 590 | stopped 4 154 (4.0%) |
+| any stop target (red t0 / sign / yield / ped) | 8 003 | 34.8% [32.7, 37.0] | 35 905 | |
+| turn >= 45 deg starting within 50 m (hindsight route) | 7 143 | 31.0% [28.8, 33.1] | 32 047 [29 701, 34 184] | entry speed of the log driver, percentiles 10 / 25 / 50 / 75 / 90: 1.0 / 2.4 / 3.7 / 4.8 / 6.2 m/s; v0 median 3.6; curvature speed sqrt(2 m/s2 / kappa_max): median 3.65, so the log's entry speed is above it in 49% and above 1.5x in 24% |
+| turn >= 45 deg within 30 m, v0 > 3 m/s | 4 384 / 6 293 | 19.0% / 27.3% | 19 669 / 28 233 | |
+
+(`stoplbl/navtrain_counts.csv`, `navtrain_turn_entry_speed.csv`.) The PAI fast entries (6.4 to 10.4 m/s, decision 153 / 237) lie beyond the 90th percentile (6.2 m/s) of the log driver's entry.
+The turn count is looser than the bench strata (11.9% of navtest tokens have a logged 4 s heading change > 45 deg): the route turn is read from the 30 s hindsight path.
+
+### Label quality, 20 frames per situation, front image next to the label (judged by me, one reader)
+
+Contact sheets: `figs/stoplbl/{red,stopsign,yield,turn}_{0..4}.jpg` (4 frames per image, label in the yellow header; `*_meta.csv` lists token and log).
+Look at: the header text against the lights and signs in the picture, and against the driver's minimum speed on the route.
+
+| situation | right | wrong | cannot tell | what the failures are |
+|---|--:|--:|--:|---|
+| red light (t0 state), stop line 6 to 40 m ahead | 13 / 20 | 1 | 6 | wrong: a green light is visible and the driver passes (red belongs to another movement); the 6 cannot-tell frames are all drivers that pass at 5 to 9 m/s, the red at t0 is not the red at arrival. The geometry (stop line distance) was never visibly off. Consistent with the 59% above, so the target must use the state at arrival, which only a log (not a single frame) gives |
+| stop sign, line 6 to 40 m ahead | 12 / 20 | 2 | 6 | wrong: a parking-lot polygon (driver passes at 6.4 m/s) and a Singapore junction without a visible sign (driver passes at 4.8 m/s); cannot tell: sign not visible in the frame at 36 m, the driver stops (garage exits, one car-following stop) |
+| yield / turn-stop line, 6 to 40 m ahead | line is on the route in 20 / 20, but the picture demands a yield in 3 / 20 | | | 14 of 20 are green-light protected intersections where the driver passes at speed, 3 are standstill frames, 3 yield (min speed 0.7 / 1.5 / 4.1 m/s). The polygon says "yield if turning against traffic", not "stop"; as a label it is nearly all negatives |
+| turn >= 45 deg, starts 8 to 40 m ahead | 17 / 20 | 0 | 3 | turn visible in 17; the 3 are turns that start 30 to 40 m ahead and are not visible yet |
+
+### The natural supervision target
+
+- **s_stop(t): arc distance along the ego's route to the next point where it must stop** = min over the traffic-light line whose lane connector is red *when the ego reaches it*, the stop-sign line, and optionally the yield line when a conflicting agent is present.
+  Computable from the log and the map for every frame that has a hindsight route: 96.3% of the sampled navtrain tokens (route complete), of which 14.0% have a target within 50 m
+  (19.1% within 80 m, 25.0% anywhere on the route); the other frames get "no stop target ahead", also a computable label. Of the 14.0%, 11.8% of all frames are the ones where the log driver also stops there (2 717 frames in the sample), the remaining 2.2% are lights that turn or signs the driver rolls (0.7% decelerate only).
+  The state at the frame itself is the wrong input to the label (59% of "red now within 50 m" are green on arrival): the label needs frames t+k of the log, so it is hindsight, as the route polyline of decision 93 is.
+- **Turns**: v_req(s) = sqrt(a_lat / kappa(s)) from the hindsight path heading, with the backwards braking limit; computable on the 96.3% too (31.0% have a >= 45 deg turn within 50 m). a_lat = 2 m/s2 puts the median log entry exactly at the limit, so the log driver's own entry-speed distribution (percentiles above) is the better "required speed" than a physical limit: the label is a percentile of what the log did at that curvature.
+- Not computable: yellow (only red / not red is logged, so yellow-onset timing is unknown), lights with no state in the log (48% of frames carry no light entry; 5.8% of stop-line approaches have state `unk`), a yield that depends on a conflicting agent (needs the agents, available in nuPlan logs but not tested), stop-sign locations other than their stop line.
+
+### What is missing
+
+- Light state in any cache and the state at the arrival frame; the stop-polygon distance in any cache (all derived on the fly from raw logs and maps here).
+- Light state for the board scenes: PAI has static lights and stop lines but no per-time state; HUGSIM has none (nuScenes scenes only via the map expansion, no state); WOD-E2E none. For these boards the stop line / sign geometry is the only available score-side label, and the logged driver's own stop (PAI L5) the state proxy.
+- A yield label that says whether yielding is required (needs conflicting-agent logic).
+
+### Sampled / measured / read
+
+Measured by me: all navtest and navtrain-sample numbers, the PAI map signal counts (67 usdz, `map.xodr`), the nuScenes / HUGSIM / WOD file inventory, the 80 sample judgements. Quoted: PAI and HUGSIM class numbers (decision 237), WOD (decision 169, 236), pt-swap (decision 203 family).
+Not measured: label noise beyond the 20-frame checks (one reader), stage-2 navhard situations (inherited from the stage-1 token), light state codes in the AlpaSim tls feather.
+Files: `stoplbl.md`, `results/stoplbl/*.csv`, `figs/stoplbl/*`, `scripts/stoplbl_*.py`. Box: `$DATA_DIR/runs/lowboard_diag/stoplbl/` (parquet labels, sheets).

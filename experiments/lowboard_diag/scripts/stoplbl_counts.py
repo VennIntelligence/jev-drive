@@ -26,6 +26,12 @@ S["red50"] = L.tl_red_d <= 50
 S["red50_driver_stopped(vmin<1)"] = S["red50"] & (L.tl_red_vmin < 1.0)
 S["red50_driver_decel(v_line<0.6 v0, not stopped)"] = S["red50"] & (L.tl_red_vmin >= 1.0) & (L.tl_red_vline < 0.6 * L.v0)
 S["red50_driver_passed(vmin>=3)"] = S["red50"] & (L.tl_red_vmin >= 3.0)
+S["red_at_arrival50 (state when the ego reaches the line)"] = L.tl_redarr_d <= 50
+S["red_at_arrival50_driver_stopped(vmin<1)"] = (L.tl_redarr_d <= 50) & (L.tl_redarr_vmin < 1.0)
+S["red_at_arrival50_driver_passed(vmin>=3)"] = (L.tl_redarr_d <= 50) & (L.tl_redarr_vmin >= 3.0)
+S["red_now50_but_not_at_arrival"] = S["red50"] & ~(L.tl_redarr_d <= 50)
+S["red_at_arrival50_not_red_now"] = (L.tl_redarr_d <= 50) & ~S["red50"]
+S["frames_with_any_light_state_in_log"] = L.n_tl > 0
 S["tl_line50_any_state"] = L.tl_line_d <= 50
 S["tl_line50_green_or_other"] = (L.tl_line_d <= 50) & ~S["red50"]
 S["stop_sign50"] = L.ss_d <= 50
