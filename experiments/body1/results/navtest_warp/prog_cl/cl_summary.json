@@ -1,0 +1,86 @@
+{
+ "pairs": 1400,
+ "scenes": 700,
+ "mean_dscore": -0.004560773321337337,
+ "dscore_from_zero_flips": 0.0028788855813607216,
+ "dscore_from_progress": -0.007439658902698059,
+ "mean_dprog": -0.014461526313312711,
+ "mean_dprog_both_nonzero": -0.01417949048316376,
+ "prog_ratio_both_nonzero": 0.9850064703021963,
+ "group_prog_ratio": {
+  "contact": 0.9958248727002275,
+  "lead": 0.9669952733747429,
+  "near obj": 0.9907303957963476,
+  "near edge": 0.9880543789456815,
+  "open": 0.9904424602779781
+ },
+ "to_slow": 78,
+ "from_slow": 23,
+ "slow_base": 217,
+ "slow_arm": 277,
+ "slow_from_zero_base": 8,
+ "slow_to_zero_arm": 3,
+ "counterfactual_to_slow_group_scaling": 32,
+ "counterfactual_to_slow_uniform_scaling": 27,
+ "seed_floor": {
+  "base_s0_1_to_s1_slow": 10,
+  "base_s0_slow_to_s1_1": 17,
+  "base_seed_dprog": -0.006146068869797587,
+  "arm_seed_dprog": -0.007380005959958908
+ },
+ "trade": {
+  "collision scenes (a collision zero in any of the 4 runs)": {
+   "pairs": 22,
+   "scenes": 11,
+   "share_dprog": 0.02973975388121401,
+   "share_dprog_nz": 0.026967582571199133,
+   "dprog_nz": -0.10209721697274102,
+   "to_slow": 1,
+   "from_slow": 1,
+   "dscore_sum": 4.093296917021808,
+   "removed_collisions": 8,
+   "new_collisions": 3
+  },
+  "collision scenes or base-run obstacle distance < 0.5 m": {
+   "pairs": 80,
+   "scenes": 45,
+   "share_dprog": 0.045390571843569275,
+   "share_dprog_nz": 0.04370688349396548,
+   "dprog_nz": -0.013132614078827938,
+   "to_slow": 2,
+   "from_slow": 1,
+   "dscore_sum": 3.6347265056230893,
+   "removed_collisions": 8,
+   "new_collisions": 3
+  },
+  "the rest": {
+   "pairs": 1320,
+   "scenes": 665,
+   "share_dprog": 0.9546094281564307,
+   "share_dprog_nz": 0.9562931165060343,
+   "dprog_nz": -0.014231340493755861,
+   "to_slow": 76,
+   "from_slow": 22,
+   "dscore_sum": -10.01980915549536,
+   "removed_collisions": 0,
+   "new_collisions": 0
+  }
+ },
+ "k0_arc_vs_openloop": {
+  "corr_base": 0.9225841854062686,
+  "ratio_base": 0.9090430133546269
+ },
+ "gt45": {
+  "pairs": 122,
+  "dscore": -0.020732563469421983,
+  "from_zero_flips": -0.014108278588703534,
+  "from_progress": -0.0066242848807184515,
+  "dprog_nz": -0.010678847928730535,
+  "to_slow": 9,
+  "from_slow": 0,
+  "new_zero": 9,
+  "rem_zero": 7,
+  "arc0_ratio": 0.9872735934788797,
+  "ol_ratio": 1.0014222869000282
+ }
+}

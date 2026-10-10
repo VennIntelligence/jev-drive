@@ -4,6 +4,16 @@
 An ablation only: no new loss term, no closed loop, no arm is promoted or served. Tables: [sdrop/](sdrop/) (`summary.md`, `contrasts.csv`,
 `arc.csv`, `widening.csv`, `bench/`, the readers' own files `g3_sdrop_*`, `ol_sdrop_*`, `d_*_vs_*`).
 
+**Correction, 2026-10-11 (navtest own-plan reads re-read on warp frames).** Until e7747c0b the own-plan reader (`bd4_g3.plans`) fed the
+navtest tokens to these warp-trained checkpoints as GIMM frames, so every navtest number computed from the own plan in the first version of
+this page was off-protocol (plans 1.74 m from the bench's on average, ADE to the log 1.60 m against 0.63 m). They are re-read on warp frames
+([navtest_warp.md](navtest_warp.md), tables [navtest_warp/sdrop/](navtest_warp/sdrop/)) and replaced below; each replaced passage names the
+old number. Affected: W2 and the lateral shift on navtest, the navtest own-plan contact rates, the navtest arc ratios. Not affected: navhard
+and navtest scores (`jevdrive.bench`), the turn-oracle replay, every hold-log read (hold states were always read on warp frames). The
+verdicts of both registered questions stand; the sizes changed, and three side statements did not survive (marked "not re-established").
+The files in `sdrop/` that carry the old navtest own-plan numbers (`summary.md`, `summary.json`, `contrasts.csv` rows `navtest own plan`,
+`widening.csv` rows `navtest`, `arc.csv` rows `navtest`, `g3_sdrop_navtest_*`, `ol_sdrop_navtest*`) are kept as the superseded record.
+
 `P2H10S` = `P2H10` + (A) agent hinge on the own plan, (B) hinge-only off-track rows `ot1` / `yr1` / `bd4`, (C) road hinge of those rows on the
 road-and-lane raster; shape-only hinge gradient. Arms (seeds 0 and 1, 10 000 steps, all 12 shards, the trainer and flags of `P2H10S-F` minus one):
 
@@ -49,22 +59,30 @@ one whose interval excludes 0).
 
 **Question 2: does the widening at turns over 45 deg come only from the road hinge on hinge-only rows.** No; the registered claim fails.
 noA is wide as expected, noB is not wide, but **noC is wide**: with no road hinge anywhere, the agent hinge on the hinge-only rows alone
-puts 55 / 54 navtest turn tokens more than 2 m outside the logged path against 45 / 46 for the base (excess +10 / +8, tolerance +5).
-The widening belongs to the hinge-only rows; the road hinge is the larger part, not the only one.
+puts 97 / 98 navtest turn tokens more than 2 m outside the logged path against 84 / 79 for the base (excess +13 / +19, tolerance +5).
+The widening belongs to the hinge-only rows; the road hinge is the larger part, not the only one. (Re-read on warp frames; the first
+version read 55 / 54 against 45 / 46 on off-protocol frames. Verdict re-established on every arm; all counts are about twice the old ones
+and the continuous shifts about half.)
 
 | navtest tokens over 45 deg (1 517), own plan | W2, seed 0 / 1 | excess over base | verdict | mean signed lateral at 4 s, arm - base (m, + = outside) | arm - S |
 |:--|:--|:--|:--|:--|:--|
-| base | 45 / 46 | | | | |
-| S | 58 / 65 | +13 / +19 | | +0.224 [+0.186, +0.267] | |
-| noA (road hinge on the rows) | 54 / 63 | +9 / +17 | wide | +0.168 [+0.130, +0.211] | -0.055 [-0.064, -0.047] |
-| noB (no rows) | 45 / 47 | 0 / +1 | not wide | +0.032 [+0.024, +0.040] | -0.192 [-0.237, -0.152] |
-| noC (agent hinge on the rows) | 55 / 54 | +10 / +8 | **wide** | +0.123 [+0.110, +0.139] | -0.100 [-0.138, -0.065] |
+| base | 84 / 79 | | | | |
+| S | 116 / 118 | +32 / +39 | | +0.123 [+0.085, +0.163] | |
+| noA (road hinge on the rows) | 111 / 114 | +27 / +35 | wide | +0.102 [+0.062, +0.145] | -0.021 [-0.029, -0.013] |
+| noB (no rows) | 85 / 82 | +1 / +3 | not wide | +0.012 [+0.007, +0.018] | -0.111 [-0.152, -0.072] |
+| noC (agent hinge on the rows) | 97 / 98 | +13 / +19 | **wide** | +0.059 [+0.044, +0.074] | -0.064 [-0.097, -0.030] |
+
+Superseded read on off-protocol frames (same order of rows): W2 45 / 46, 58 / 65, 54 / 63, 45 / 47, 55 / 54; lateral shift against the
+base +0.224, +0.168, +0.032, +0.123 m. The W2 share of S over the base is +2.3 pp [+1.1, +3.8] (old +1.1 pp [+0.4, +1.7]). The absolute
+mean lateral at 4 s is outside the logged path for every arm on warp frames (base +0.29 / +0.27 m, S +0.38 / +0.43 m), as on the hold
+on-log rows; the first version had it inside (base -0.54 / -0.58 m), which was the off-protocol frames, not the checkpoints.
 
 Hold on-log turn rows (1 173): W2 base 40 / 38, S 48 / 52, noA 44 / 51, noB 42 / 40, noC 47 / 53; lateral shift against the base
-+0.067 (S), +0.047 (noA), +0.010 (noB), +0.056 (noC) m, every interval excluding 0. By side on navtest (W2, seed 0 / 1): right turns base
-17 / 17, S 23 / 26, noA 19 / 27, noB 16 / 17, noC 21 / 23; left turns 28 / 29, 35 / 39, 35 / 36, 29 / 30, 34 / 31. The lateral shifts of
-noA and noC against the base add up to more than S's (0.168 + 0.123 against 0.224 m): the two hinges push the same plans the same way.
-noC's seed 1 clears the tolerance by 3 tokens; the continuous measure does not depend on that margin.
++0.067 (S), +0.047 (noA), +0.010 (noB), +0.056 (noC) m, every interval excluding 0 (hold reads, not affected). By side on navtest (W2,
+seed 0 / 1, warp frames): right turns base 26 / 25, S 37 / 42, noA 36 / 42, noB 28 / 27, noC 33 / 35; left turns 58 / 54, 79 / 76,
+75 / 72, 57 / 55, 64 / 63 (old: right 17 / 17, 23 / 26, 19 / 27, 16 / 17, 21 / 23; left 28 / 29, 35 / 39, 35 / 36, 29 / 30, 34 / 31).
+The lateral shifts of noA and noC against the base add up to more than S's (0.102 + 0.059 against 0.123 m; old 0.168 + 0.123 against
+0.224 m): the two hinges push the same plans the same way (re-established). noC clears the tolerance by 8 and 14 tokens (old: by 5 and 3).
 
 ## Which ingredient carries which effect
 
@@ -79,23 +97,29 @@ with an interval excluding 0; "not needed" = arm - base keeps at least half with
 | navtest EPDMS, > 45 deg (1 517) | +0.81 [+0.10, +1.53] | not needed (1.08) | unresolved (0.38) | **carries (0.04)** |
 | navtest DAC failure %, all | -0.35 [-0.53, -0.19] | not needed (1.11) | carries (0.01) | carries (0.19) |
 | navtest inside-cut %, > 45 deg | -0.73 [-1.39, -0.19] | not needed (1.09) | carries (0.14) | unresolved (0.36) |
-| navtest own-plan boundary rate | -0.0065 [-0.0103, -0.0033] | not needed (0.86) | carries (0.15) | carries (0.34) |
+| navtest own-plan boundary rate (warp frames; old -0.0065 [-0.0103, -0.0033], shares 0.86 / 0.15 / 0.34) | -0.0029 [-0.0046, -0.0013] | not needed (0.90) | carries (0.10) | carries (0.16) |
 | hold own-plan agent rate, pooled (30 083) | -0.0104 [-0.0124, -0.0085] | not needed (0.63) | carries (0.02) | not needed (0.67) |
 | hold own-plan agent rate, off-track (19 157) | -0.0160 [-0.0190, -0.0130] | not needed (0.63) | carries (0.01) | not needed (0.68) |
 | hold own-plan boundary rate, pooled | -0.0167 [-0.0190, -0.0145] | not needed (0.94) | carries (0.01) | carries (0.39) |
 | hold own-plan boundary rate, on-log (10 926) | -0.0018 [-0.0029, -0.0009] | not needed (0.92) | carries (-0.03) | carries (0.31) |
 | hold own-plan boundary rate, off-track | -0.0252 [-0.0286, -0.0221] | not needed (0.95) | carries (0.01) | carries (0.40) |
-| lateral at 4 s, navtest > 45 deg (the widening) | +0.224 m [+0.186, +0.267] | not needed (0.75) | carries (0.14) | not needed (0.55) |
+| lateral at 4 s, navtest > 45 deg (the widening; warp frames; old +0.224 m [+0.186, +0.267], shares 0.75 / 0.14 / 0.55) | +0.123 m [+0.085, +0.163] | not needed (0.83) | carries (0.10) | **carries (0.48)**, was "not needed (0.55)" |
 
-Effects of S whose own interval includes 0 on these two seeds get no verdict: navtest own-plan agent rate (-0.0002 [-0.0014, +0.0010]),
+The common-rule label of noC on the lateral shift changed from "not needed" to "carries" on the warp read: noC keeps 48 % of the shift
+(old 55 %) and gives back 52 % against S (-0.064 m [-0.097, -0.030]). It sits on the 50 % boundary in both reads; the registered verdict of
+Question 2 is the W2 count with its tolerance, and that stands.
+
+Effects of S whose own interval includes 0 on these two seeds get no verdict: navtest own-plan agent rate (-0.0006 [-0.0014, +0.0001] on
+warp frames; old -0.0002 [-0.0014, +0.0010]),
 hold on-log agent rate, cannot-make-the-turn at > 45 deg (+0.16 [-0.41, +0.78] pp; noA +0.20, noB -0.10, noC +0.36 against the base, all
 intervals including 0), navhard stage 1.
 
 Read by ingredient:
 - **B, the hinge-only off-track rows, is the precondition of everything.** noB (the agent hinge on logged rows only) stays at the base on every
-  read, with three small shifts whose intervals exclude 0 (> 45 deg navtest EPDMS +0.30 [+0.09, +0.51], navtest boundary rate -0.0010
-  [-0.0021, -0.00004], lateral at 4 s +0.03 m): navhard 31.46 against 31.84, navtest 88.72 against 88.67 (+0.04 [-0.03, +0.12]), hold agent rate 0.0268 against 0.0270, boundary
-  0.0336 against 0.0338, W2 45 / 47 against 45 / 46. The agent hinge on logged rows does nothing measurable at full scale (pilot: -5.3 % /
+  read, with two small shifts whose intervals exclude 0 (> 45 deg navtest EPDMS +0.30 [+0.09, +0.51], lateral at 4 s +0.012 m [+0.007,
+  +0.018]; the third of the first version, the navtest boundary rate, -0.0010 [-0.0021, -0.00004], is -0.0003 [-0.0009, +0.0003] on warp
+  frames: not re-established): navhard 31.46 against 31.84, navtest 88.72 against 88.67 (+0.04 [-0.03, +0.12]), hold agent rate 0.0268 against 0.0270, boundary
+  0.0336 against 0.0338, W2 85 / 82 against 84 / 79 (warp frames). The agent hinge on logged rows does nothing measurable at full scale (pilot: -5.3 % /
   -2.9 %, decision 232 point 3).
 - **C, the road hinge on those rows, carries the navtest gain and the road half.** Without it navtest is the base's (88.74, +0.07 [-0.06,
   +0.21]; > 45 deg +0.03), with it alone (noA) the whole navtest gain is there (89.06, +0.39 [+0.22, +0.57]; > 45 deg +0.87 [+0.15,
@@ -129,9 +153,13 @@ Turn-oracle replay at > 45 deg (1 517 tokens; %, two-seed mean; arm - base):
 | noC | 10.15, -0.03 [-0.49, +0.43] | 4.52, -0.26 [-0.59, +0.04] | 2.97, +0.36 [-0.07, +0.82] |
 
 4 s arc-length ratio against the base (two-seed mean; per seed in `sdrop/arc.csv`): no arm misses a line of Amendment 6 on either seed.
-navtest pooled S 0.9990, noA 0.9997, noB 1.0024, noC 0.9969 (seed 1: 0.9958); open 0.9997 / 1.0005 / 1.0025 / 0.9971; lead 0.9964 /
-0.9966 / 1.0020 / 0.9969; hold pooled 1.0005 / 1.0003 / 1.0003 / 1.0001; `bd4` 0.9990 / 0.9982 / 1.0007 / 0.9987. The small shortening
-behind a lead (0.3 to 0.4 %) is present in both arms with hinge-only rows and absent without them.
+navtest (warp frames) pooled S 1.0012, noA 1.0011, noB 1.0001, noC 1.0008; open 1.0013 / 1.0012 / 1.0001 / 1.0009; lead 1.0006 /
+1.0003 / 0.9999 / 1.0006 (old, off-protocol: pooled 0.9990 / 0.9997 / 1.0024 / 0.9969, open 0.9997 / 1.0005 / 1.0025 / 0.9971, lead
+0.9964 / 0.9966 / 1.0020 / 0.9969); hold pooled 1.0005 / 1.0003 / 1.0003 / 1.0001; `bd4` 0.9990 / 0.9982 / 1.0007 / 0.9987. The first
+version's "small shortening behind a lead (0.3 to 0.4 %) in the arms with hinge-only rows" is **not re-established** on navtest (lead
+ratios 0.9999 to 1.0006, S 1.0006 [0.9999, 1.0013]); on hold lead states S is 0.9988 [0.9977, 1.0000] and noC 0.9986 [0.9977, 0.9995]
+against noB 1.0003, a shortening of 0.1 %, not 0.3 to 0.4 %. The proximity groups (open / lead) are defined on the base plan, so their
+sizes moved with the re-read (open 5 243, lead 3 458; old 5 142, 3 472).
 
 Own-plan contact rates on the hold logs (30 083 states, 121 logs; rate, relative change against the base):
 
@@ -147,8 +175,11 @@ Own-plan contact rates on the hold logs (30 083 states, 121 logs; rate, relative
 | > 45 deg (3 954) | agent | 0.0319 | 0.0209 | 0.0226 | 0.0314 | 0.0295 (-0.0024 [-0.0056, +0.0005]) |
 | > 45 deg | boundary | 0.0876 | 0.0512 | 0.0527 | 0.0857 | 0.0794 |
 
-navtest on-log tokens: boundary rate base 0.0365, S 0.0300, noA 0.0309, noB 0.0355, noC 0.0343; agent rate 0.0120 / 0.0118 / 0.0122 / 0.0123 /
-0.0119 (no arm moves it, as decision 232 found for S).
+navtest on-log tokens (warp frames): boundary rate base 0.0172, S 0.0143, noA 0.0146, noB 0.0169, noC 0.0168; agent rate 0.0116 / 0.0110 /
+0.0114 / 0.0113 / 0.0116 (no arm moves it with an interval excluding 0; S -0.0006 [-0.0014, +0.0001]). Old, off-protocol: boundary
+0.0365 / 0.0300 / 0.0309 / 0.0355 / 0.0343, agent 0.0120 / 0.0118 / 0.0122 / 0.0123 / 0.0119. The boundary rate of the base on navtest
+is half of what the first version reported; its fall under S is 17 % in both reads; noC's fall against the base (old -0.0022 [-0.0041,
+-0.0005]) is -0.0005 [-0.0014, +0.0004] on warp frames: not re-established.
 
 ## Checks, cost, deviations, limits
 
@@ -158,7 +189,9 @@ the arm's dropped flag(s) and two switches added after the stored run and left o
 (`sdrop/config_identity.json`). (3) Smokes: each arm logs its own terms (`sdrop/smoke.json`). (4) Training sanity: `dev_ade` 0.539 to 0.545 m,
 `dev_drift_off` 0.041 to 0.044, hinge-only rows per batch 13 / 0 / 13. (5) The report's per-seed contact rates equal `bd4_g3.py`'s on all 24
 numbers (0.0 states apart); the stored W2 of the base and of S (45 / 46, 58 / 65) and the stored navhard and navtest numbers of S are
-reproduced.
+reproduced. (The W2 part of this check reproduced the same off-protocol read and so could not catch it. The warp re-read has its own
+check: a CPU forward on warp frames against the bench's archived plans, W2 141 / 97 / 111 / 83 against 141 / 97 / 110 / 84 on four
+checkpoints, [navtest_warp.md](navtest_warp.md).)
 
 Cost. About 5 card-hours of job time against the estimate of 5.5 (at most 8): six full runs 3.8 (noA and noB 46 min each, noC 23 min; the
 cards were shared with another lane's 12 jobs that arrived as the chain started, and the full runs waited about 30 min for room), the
