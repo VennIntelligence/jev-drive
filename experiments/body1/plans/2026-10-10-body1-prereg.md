@@ -825,3 +825,129 @@ one base seed read against another passes L2 in 4 of 12 pairings, L3 in 9, all f
 each, no serving switch, same loop script and chunk lists as the base; one addition: besides the 12 ordered pairs of base seeds (N1) the 12 disjoint 2-vs-2 splits (N2) serve as
 the null of statistics over sets of pairs, "outside the base's seed spread" requiring both). Result and tables: [results/shape_closed_loop.md](../results/shape_closed_loop.md). The arm is
 not promoted and no PAI read exists.
+
+## Amendment 7 (2026-10-10, in force; the user reopened the loss arm for one variant with a route constraint at turns)
+
+Written by the lane agent after the open-loop look of item 2 and before any code of the variant ran; no checkpoint of it exists at this commit and no
+number of it has been read. Tags `P2H10R-*`.
+
+1. **Disclosure.** This is the **fourth trained variant of 4.3** (Amendment 4 pilot; Amendment 5 pilot + full run + closed loop; Amendment 6 pilot + full
+   run + a descriptive closed loop; this one). Amendment 6 item 10 said that no further variant follows; the main session repeated it after decision
+   233. **The user, told this, decided on 2026-10-10 to reopen the arm for one variant that removes the wide turns.** It is designed after reading all
+   700 x 4 development scenes of the nuPlan track with two earlier variants (the four new corridor zeros of decision 233 are what it is aimed at), after
+   three pilot-scale and two full-scale reads of hold logs by this lane, and after the look below, which read hold logs and navtest tokens once more
+   with `P2H10S` and the base. It is reported as such everywhere its numbers appear. **Nothing follows it without a new decision by the user**: no
+   second band, no second weight, no redesign after a read.
+2. **The look, and the single addition.** Open loop, no training, no simulator, navtrain hold logs and navtest tokens only
+   (`scripts/route_ol.py` on the plan dumps of `prog_ol.py`; `lib/route.py`; tables `results/route/ol_a6_*`): distance of the 8 poses of the own
+   plan (0.5 to 4 s) to the logged path of the same state (the polyline through the logged t0 pose and the 8 logged future poses, extended by a ray at each
+   end, so that only the lateral part counts), signed by the side of the logged turn. Turn rows = |logged 4 s heading change| > 45 deg.
+
+   | Turn rows > 45 deg | n | `P2H10S-F` s0 / s1 / s2 / s3 | `P2H10-F` s0 / s1 / s2 / s3 |
+   |:--|--:|:--|:--|
+   | navtest: plan more than 2 m outside the logged path within 4 s (W2), tokens | 1 517 | 58 / 65 / 59 / 65 | 45 / 46 / 47 / 49 |
+   | navtest: plan leaves the 4 m tube, either side, tokens | 1 517 | 34 / 23 / 29 / 35 | 33 / 37 / 35 / 36 |
+   | navtest: mean lateral at 4 s, + = outside (m) | 1 517 | -0.36 / -0.31 / -0.35 / -0.35 | -0.54 / -0.58 / -0.57 / -0.56 |
+   | hold logs, on-log states: W2, rows | 1 173 | 48 / 52 / 51 / 50 | 40 / 38 / 43 / 40 |
+   | hold logs, on-log states: leaves the 4 m tube, rows | 1 173 | 7 / 6 / 7 / 6 | 7 / 7 / 7 / 7 |
+   | hold logs, on-log + `ot1` + `yr1` + `bd4`: W2, rows | 3 954 | 350 / 367 / 357 / 374 | 389 / 381 / 400 / 406 |
+   | hold logs, the same: leaves the 4 m tube, rows | 3 954 | 64 / 59 / 64 / 59 | 127 / 122 / 126 / 125 |
+   | hold logs, the same: mean lateral at 4 s, + = outside (m) | 3 954 | +0.32 / +0.36 / +0.36 / +0.37 | +0.16 / +0.14 / +0.16 / +0.18 |
+
+   What it shows. (i) The own plan of `P2H10S` lies further outside at turns in every seed and on every state family: mean lateral at 4 s +0.18 to +0.27 m
+   over the base on navtest, +0.04 to +0.09 m on on-log hold states, +0.14 to +0.19 m on `ot1`, +0.14 to +0.21 m on `yr1`, +0.31 to +0.39 m on `bd4`
+   (right turns more than left: `bd4` +0.57 / +0.65 m), paired intervals excluding 0. (ii) On logged states the wide tail grows with it: W2 is up by 12 to 19
+   navtest tokens and 8 to 14 hold rows in each of the four seeds (the four base seeds differ among themselves by at most 4 tokens and 5 rows). (iii) **The
+   unsigned 4 m tube does not show it**: on navtest `P2H10S` is below the base in three of four seeds, and on off-track hold states it is far below (the base,
+   never trained on `bd4` states, wanders to both sides there: 37 % of its `bd4` turn plans leave a 2 m tube against 23 % for `P2H10S`). (iv) Pilot-scale
+   ablations of Amendment 6: "A on on-log rows only" does not move the plan outwards (mean lateral +0.000 m on navtest, -0.001 m on hold turn rows; W2 55
+   against 54 tokens), "B + C without A" does (+0.08 m, +0.14 m; 71 against 54): the outward shift comes from the hinge-only rows, where the road hinge
+   pushes the path off the inside edge and nothing names the route (the outside of a junction is drivable, so the road hinge is silent there).
+
+   **The single addition to `P2H10S`: a route hinge (term R).** On every row that carries the new hinges of Amendment 4 (the imitation rows of the train
+   logs, as term A, and the hinge-only rows `ot1` / `yr1` / `bd4`) the loss gains `mean_k relu(d_k - B)`, `d_k` the distance (m) of plan pose k (the 8 poses
+   0.5 to 4 s, rear axle) to the logged path of that row as defined above, in the row's own frame (`lib/route.path_dist`). The poses pass through
+   `shape_only` like the other new hinges, so the term has no along-heading pose gradient and cannot touch the speed profile. Weights are the existing ones,
+   nothing new: lambda 10 on the mean over the labelled imitation rows; on hinge-only rows summed, divided by the number of imitation rows, x 10 x w = 3.
+   Everything else is `P2H10S-F` unchanged (every P2H10 ingredient, A, B, C, rows 4 / 4 / 5, margins, `--ho-excl`, `--shape`). Training rows as before: no
+   AlpaSim scene; the logged path of a navtrain row is the imitation target the row already carries.
+   **The one new number is the dead band B, with two candidates fixed now: 1.5 m and 2.5 m** (the board's corridor is 4 m; the plan's own 4 s horizon may use
+   at most 4 m minus a margin of 2.5 or 1.5 m, since the closed loop keeps adding to it after the horizon). It is selected on the validation part of the
+   train logs (`navsim/body1-val-logs`, kept out of the hinge-only rows as before), never on hold logs: one pilot per candidate (`P2H10R-Pb15-s0`,
+   `P2H10R-Pb25-s0`); a candidate is eligible if its dev ADE <= switch-off pilot + 0.01 m, `dev_drift_off` <= 0.30, on the validation part's states of
+   shards s2 + s3 its own-plan agent-contact rate is at least 30 % and its boundary rate at least 25 % below the switch-off pilot's (point estimates;
+   the body lesson is kept), and over steps 2 701 to 3 000 the route hinge is non-zero on at most 5 % of the imitation rows and 20 % of the hinge-only rows
+   (it stays a tube). Among the eligible candidates the one with the lower W2 on the validation part's turn rows > 45 deg (four families pooled) is
+   taken; a difference under 2 rows counts as a tie and goes to 2.5 m (the wider tube). No eligible candidate: the variant ends. The selection is pushed
+   before any hold-log read of a `P2H10R` checkpoint.
+   **Why a dead-band hinge is not the imitation target of decisions 212 / 213.** Those rows carried the logged future as a target at every pose of every
+   off-track row: position, heading and timing, so a row at 0.5 to 1.5 m from the log asked for a return to it inside the horizon, which is a yaw rate
+   against the offset (decision 213's amplifier; +-1.5 m rows diverged, -0.106). Term R is zero inside the tube: on the hold states of `P2H10S`'s own
+   plans it is non-zero on 3.2 % of on-log rows and 11.4 % of off-track rows at B = 1.5 m (5.5 % `ot1`, 11.0 % `yr1`, 22 % `bd4`) and on 0.9 % / 3.5 %
+   at B = 2.5 m; a plan that runs parallel to the log at its state's own offset (at most 0.5 m at t0 in every family) gets no gradient; there is no heading
+   target and no timing; the gradient is cross-heading only. Checked, not assumed: the eligibility line on the share of non-zero rows above, logged from
+   the first step per family (`route`, `route_ho`, `route_pos`, `route_ho_pos`, `fam/<f>/route_*`, `imit/route_*`); the continuation-slope line of the
+   gates (decision 205's amplifier); in the closed loop, offroad zeros (where decision 212's divergence showed, 55 of 98.5).
+   **Why not another single change.** The road hinge's margin or side at turns: the hinge is silent on the outside of a junction, so no margin names the
+   route, and weakening it on the inside gives back the removed inside cuts (navtest 4.78 % -> 4.05 %) and offroad zeros. A weight (w below 3): trades the
+   whole lesson (Amendment 5's selection: w = 1 moved the rates by half as much) and the widening is present in "B + C without A" at any weight read.
+   Term R on imitation rows only or hinge-only rows only: the look finds the shift on both; one term on the rows term A already uses is the plain form.
+3. **Gates, fixed before any number.** Readers as Amendment 6 (`bd4_g3.py`, `ot3_rows.py probe`, `prog_ol.py`) plus `route_ol.py` on the same plan dumps.
+   Counts are rows / tokens, no rounding in the variant's favour.
+   - **Corridor line (new).** W2 = number of turn rows > 45 deg whose own plan has a pose more than 2.0 m on the outside of the logged path within 4 s
+     (outside = left of the path on a right turn). (C-a) navtest tokens (1 517): W2(new) - W2(reference) <= +5. (C-b) on-log states of hold logs: <= +5
+     rows at full scale (1 173 rows), <= +1 row at pilot scale (207 rows of shards s2 + s3). (C-c, the main session's wording, kept as a guard) number of turn
+     rows > 45 deg whose plan leaves the 4 m tube on either side: navtest <= reference + 5; hold logs, four families pooled, <= reference + 5 (3 954
+     rows) and <= reference + 1 at pilot scale (686 rows). The tolerance 5 is the largest difference between two base seeds on W2 (4 tokens, 5 rows).
+     Controls on the registered numbers. Positive (`P2H10S`, must fail): pilot `P2H10S-P-s0` against `P2H10-P-s0` (C-a) 75 against 54, (C-b) 15 against 10;
+     full scale (C-a) +13 / +19 / +12 / +16, (C-b) +8 / +14 / +8 / +10 in seeds 0 to 3: fails (C-a) and (C-b) in the pilot and in all four seeds. Negative
+     (must pass): the base against itself is 0 by construction, and one base seed against another passes (C-a), (C-b) in all 12 ordered pairs (at most +4
+     tokens, +5 rows); "A on on-log rows only" at pilot scale 55 against 54 and 9 against 10: passes. (C-c) does not separate them (`P2H10S` 48 against 47
+     and 25 against 27 in the pilot; at full scale at most +1 token and 58 to 68 rows below): it guards against a variant that buys W2 with excursions to the inside.
+     The 4 m unsigned tube of the main session's proposal is therefore not the discriminating line; W2 is, and the reason is the table of item 2.
+   - **Pilot gate** (shards s2 + s3, 3 000 steps, seed 0, the selected band only, one read of hold logs, against the switch-off pilot `P2H10-P-s0`):
+     Amendment 6 item 5 unchanged (agent-contact rate down >= 30 % relative, boundary rate down >= 25 %, both paired log-clustered intervals excluding 0;
+     dev ADE <= switch-off + 0.01 m; continuation slope <= switch-off + 0.05; 4 s arc ratio >= 0.995 pooled and on open states) **plus (C-a), (C-b), (C-c)**.
+     The navtest half of the corridor line is read at pilot scale too (navtest tokens are no training rows; `P2H10S-P-s0` was read on them the same way).
+   - **G3 at full scale** (four seeds `P2H10R-F-s{0,1,2,3}`, each against `P2H10-F` of the same seed; every item on every seed, the stricter reading of
+     "both seeds"): (a) to (e) of Amendment 6 item 6 with its note (d), **(b) read as registered** (navtest on-log agent rate and boundary rate do not rise by
+     the point estimate, their sum falls), plus (C-a), (C-b), (C-c) on every seed. (d) with the bench of the four base seeds (seeds 2, 3 are scored for
+     this), `dev_drift_off` <= 0.30.
+   - A missed line of the pilot gate or of G3 on any seed ends the variant. `P2H10S` missed (b) by one token in one of four seeds; the same can happen here
+     and would end it.
+4. **Validation on three boards, fixed before any number.** Reached only if G3 is met. Every statistic is reported next to the base's own seed spread: N1,
+   the 12 ordered pairs of base seeds, and N2, the 12 disjoint 2-against-2 splits (`shape_closed_loop.md` section 3), "outside the spread" = beyond both.
+   - **(A) AlpaSim nuPlan, 700 scenes x 4 seeds** (`P2H10R-F-s{0..3}`, unchanged `sh30` driver, the chunk lists of the base, pilot8 sanity first;
+     development scenes): (A1) mean scene score over the four seeds not below `P2H10S`'s 0.9517 and not below the base's 0.9477; (A2) at-fault collision +
+     offroad zeros, four-seed total, not above `P2H10S`'s 53 + 4 (N2's largest per-pair value of that statistic, +1.0, times four pairs; the smaller of the
+     two nulls) = 57; (A3) corridor zeros, four-seed total, not above the base's 28; (A4) zeros in the > 45 deg bucket (61 scenes), four-seed total, not
+     above the base's 33. Reported besides: per-seed table next to base and `P2H10S`, flips by the 3-of-4 / 1-of-4 rule with `78b4153a`, `77155a60`,
+     `e933d70d`, `52d3f15d` listed individually, slow scenes, progress, the lead / open split, L1a / L1b / L2 / L3 as arithmetic.
+   - **(B) navtest through `jevdrive.bench`** (four seeds against the four base seeds): (B1) mean EPDMS >= base - 0.3; (B2) in the > 45 deg bucket
+     (`turn_oracle.py`) the inside-cut share and (B3) the cannot-make-turn share, each as the mean over the four seeds, not above the base's
+     (`P2H10S` seeds 0-1: 4.05 % against 4.78 %, 2.77 % against 2.60 %).
+   - **(C) PAI, 60 scenes x 4 seeds, two servings** (plain; decision 226's `JEV_VCONT=1.0 JEV_LEAD=1`), `scripts/pai_chain.sh`, against the base rows of note
+     (j) (reused from `$DATA_DIR/runs/body1/pai/`, not rerun): mean scene score over the four seeds not below the base's, in each serving. After note
+     (j) PAI's 60 scenes are development scenes for this lane; this is said wherever the number appears.
+   - **"Counts as a success" = (A1) to (A4), (B1) to (B3) and (C) in both servings, all of them.** Anything else is reported as what it is, line by line. No
+     line is re-read with another seed set, scene set or serving after the read.
+5. **Kill criteria, cost, and what each outcome means.**
+
+   | Step | Ends the variant if | Card-hours | Wall |
+   |:--|:--|--:|--:|
+   | code; switch-off identity (to `P2H10S`'s code path and to `pp_train.py`, bit for bit) | identity fails | 0.1 | 1 h of work |
+   | two pilots + validation reads + selection | no eligible band | 0.4 | 25 min |
+   | hold-log + navtest read of the selected pilot (pilot gate) | any line missed | 0.2 | 15 min |
+   | full runs, 4 seeds (2 at a time on card 2) | - | 1.6 | 55 min |
+   | G3 (a) to (e) + corridor line, bench of 4 + 2 checkpoints, turn oracle | any line missed on any seed | 1.5 | 45 min |
+   | closed loop: pilot8, then 12 chunk jobs | (pilot8: driver error) | 3.0 | 1.5 h (2 stacks on card 2, more through the pool if it has room) |
+   | PAI: 8 x 6 stacks | - | 2.0 | 1 h |
+   | total | | about 8.8 of the 10 | about 6 h |
+
+   Disk under 5 GB (rollout logs pruned). Outcomes: selection or pilot gate missed on the contact lines = the route hinge takes back the clearance, i.e. at
+   turns the inside-edge lesson and the route are one axis on these rows; missed on the corridor line = a tube on navtrain rows does not reach the wide
+   tail of unseen turns, the constraint would have to come from rows the lane does not have (decision 227: route failures, stage 2); G3 missed on (b)
+   alone = the same one-token class as decision 232, reported with its interval. On the boards: all lines met = `P2H10R-F` is the lane's candidate for the
+   servable, named as the fourth variant, read on development scenes, the swap is the user's decision; (A3) / (A4) met with (A2) missed = the route and the
+   clearance trade against each other in the closed loop as well; (A3) / (A4) missed = the open-loop corridor line does not predict the closed-loop corridor
+   zeros, and the wide turns are a compounding effect the 4 s tube does not hold.
