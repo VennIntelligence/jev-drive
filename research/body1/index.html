@@ -10,9 +10,10 @@ figure{margin:20px 0}img{max-width:100%}figcaption{font-size:14px;color:#444}
 code{font-size:13px}
 @media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}}
 </style></head><body>
-<h1>BODY1：接触预测头过了离线闸门，两个 serving 臂在 one-chunk 检查处停，loss 臂过了 G3 但闭环 L2 / L3 不过；形状-only 变体停在 G3 (b)，4-seed 描述性闭环读数：碰撞与 offroad zero 降、corridor zero 升</h1>
+<h1>BODY1：没有任何一个臂过登记线；<code>P2H10S</code> 在两块板上点估计都高于 base，代价是 48 至 70° 大弯走宽；route dead-band hinge 停在 pilot gate；PAI 只有描述性读数</h1>
 
-<div class="v"><b>结论。</b>冻结 Cinque token 上的 contact head（arm S0）在 navtrain hold logs 上对学生自己 plan 的 agent contact AUC 为 0.905 [0.868, 0.934]，boundary contact 为 0.978 [0.969, 0.985]；三个用户类均不低于 0.80，&gt; 45° 桶 agent 0.819 [0.716, 0.925]、boundary 0.941 [0.912, 0.964]。在决策 220 的 AlpaSim 决策上（G2）为 0.885 [0.774, 0.969]。两个在 driver 里读这个头的 serving 臂都在 one-chunk 检查处停，全量（700 scene × 2 seed）和 PAI 都没有跑，<b>登记的 L1 / L2 / L3 没有任何一条有读数</b>，下表只是单 chunk、单 seed 的描述性读数。
+<div class="v"><b>当前状态（2026-10-10）。</b>没有任何一个臂过登记线，servable 仍是 <code>P2H10-F</code>。最接近的 <code>P2H10S</code> 在两块板上点估计都在 base 之上：nuPlan 700 scene 4 seed 配对 +0.0040，在 base 自己的 seed spread 之内；PAI 60 scene 在 serving（<code>JEV_VCONT=1.0 JEV_LEAD=1</code>）下 0.4211 对 0.3545，plain driver 下 0.2780 对 0.2026，PAI 数字按第十三节更正后的分解读。代价是 48 至 70° 右转上 plan 转得不够的 corridor zero（nuPlan 新增 4 个）。针对它的第四个变体 <code>P2H10R</code>（route dead-band hinge）在 pilot gate 的 corridor 线上不过（第十二节）。PAI 的读数是描述性的，登记的 PAI 读数不存在，60 个 PAI scene 已是 development scene。以下 G1 / G2 与前三个臂的表是早期读数。</div>
+<div class="v"><b>前三个臂的结论。</b>冻结 Cinque token 上的 contact head（arm S0）在 navtrain hold logs 上对学生自己 plan 的 agent contact AUC 为 0.905 [0.868, 0.934]，boundary contact 为 0.978 [0.969, 0.985]；三个用户类均不低于 0.80，&gt; 45° 桶 agent 0.819 [0.716, 0.925]、boundary 0.941 [0.912, 0.964]。在决策 220 的 AlpaSim 决策上（G2）为 0.885 [0.774, 0.969]。两个在 driver 里读这个头的 serving 臂都在 one-chunk 检查处停，全量（700 scene × 2 seed）和 PAI 都没有跑，<b>登记的 L1 / L2 / L3 没有任何一条有读数</b>，下表只是单 chunk、单 seed 的描述性读数。
 <table>
 <tr><th>臂（chunk，P2H10-F-s0，单 seed）</th><th>n</th><th>均分 基线 → 开关</th><th>Δ [95% CI，按 log]</th><th>zeros</th><th>碰撞 / offroad / corridor</th><th>slow</th><th>&gt; 45° 均分，zeros</th></tr>
 <tr><td>4.1 无记忆刹停（chunk0）</td><td>234</td><td>0.9518 → 0.9451</td><td>−0.0067 [−0.0159, +0.0011]</td><td>7 → 5</td><td>4/2/1 → 2/2/1</td><td>43 → 50</td><td>0.7898 → 0.8186，4 → 3</td></tr>
@@ -20,7 +21,7 @@ code{font-size:13px}
 </table>
 刹停：碰撞 zero 4 → 2，7 次 false stop 共 −2.84 对 2 次救回 +1.30。re-plan：被 re-plan 的 19 个 scene 里去掉 1 个 zero、新造 2 个。两个 chunk 都是 regression check：公开 scene 都参与过 P2H10 的选择。
 </div>
-<p><b>后续（第八至十一节）：</b>loss 臂 progress 损失的诊断（决策 230）、stage 2 在 CARLA 上被零生成 pre-check 关闭（决策 231）、补记 6 的形状-only 变体 <code>P2H10S</code> 停在 G3 (b)（决策 232），以及它的 4-seed 描述性闭环读数（第十一节，不能晋级）。以下表和结论块为前三个臂的读数。</p>
+<p><b>后续（第八至十三节）：</b>loss 臂 progress 损失的诊断（决策 230）、stage 2 在 CARLA 上被零生成 pre-check 关闭（决策 231）、补记 6 的形状-only 变体 <code>P2H10S</code> 停在 G3 (b)（决策 232），以及它的 4-seed 描述性闭环读数（第十一节，不能晋级）、补记 7 的 route hinge 在 pilot gate 停止（第十二节，决策 234）、PAI 上的描述性读数（第十三节，决策 235）。以下表和结论块为前三个臂的读数。</p>
 <p>来源：<code>experiments/body1/results/{taxonomy,s0_gate,stop_closed_loop,replan_closed_loop}.md</code>，预登记 <code>experiments/body1/plans/2026-10-10-body1-prereg.md</code>，决策 223、224、225。以下 L1 / L2 / L3 为登记线：L1 目标类 zeros 下降；L2 均分差 ≥ 0 且按 log 聚类的 95% 下界 &gt; −0.005；L3 slow scene ≤ 1.1 × 基线。</p>
 
 <h2>一、Scene taxonomy 与 row generator</h2>
@@ -298,7 +299,52 @@ code{font-size:13px}
 <p>去掉的 zero 是 clearance 课要解决的漂移（图三十三、三十四）或留在 corridor 内的弧（图三十五）；新增的 zero 是 48 至 70° 右转上 plan 转得不够、与物体无关：这与 Amendment 5 的新增 corridor zero 是同一个副作用，只是现在没有 progress 损失。</p>
 <p><b>成本与限制。</b>12 个 chunk job 加 pilot8 与图的重跑约 3.0 card-h（预算 4）、job 墙钟约 35 min，盘 2.4 GB。pilot8：8 / 8 rollout 完成，均分 0.9773 对 TR1 同 scene 的 0.9736，五个相同。限制：描述性读数、development scene、四个 seed 和 27 个 log；<code>P2H10-F-s{0,1}</code> 是 2026-10-06 的 TR1 训练、其余在当天 checkout 上训练；null 的 N2 与逐对归一是本读数加的；&gt; 45° 桶只有 20 个 log；这一读数不回答 G3 (b)（navtest 上 agent 接触率）为什么差一个 token。</p>
 
-<h2>十二、解读与下一步</h2>
+<h2>十二、补记 7：route dead-band hinge <code>P2H10R</code> 停在 pilot gate（决策 234）</h2>
+<div class="v"><b>结论。</b>在 <code>P2H10S</code> 上加一项「own plan 到 logged path 的距离超出 dead band 的部分」的 hinge，目标是去掉 48 至 70° 弯上的走宽。pilot gate 的 corridor 线不过：band 取 2.5 m 时，navtest 上 &gt; 45° 的 token 里 plan 偏到 logged path 外侧 2 m 以上的有 67 个对关掉新项的 pilot 的 54 个（线：至多 +5；<code>P2H10S-P-s0</code> 为 75），留出 log 的 on-log 弯道行为 12 对 10（线：至多 +1；<code>P2H10S-P-s0</code> 为 15）。接触线、弧长线、dev ADE、斜率全过（agent −40.2%、boundary −33.8%）。按登记变体到此结束：没有 full run、G3、闭环、navtest bench、PAI。来源：<code>experiments/body1/results/route_pilot.md</code>，决策 234。1 seed，pilot 规模。</div>
+<ul>
+<li><b>训练前的开环观察。</b><code>P2H10S</code> 的 own plan 在 &gt; 45° 的弯上整体外移：4 s 处比同 seed 的 base 靠外 navtest +0.18 [+0.14, +0.23] / +0.27 [+0.23, +0.31] m（seed 0 / 1），<code>bd4</code> 行 +0.31 / +0.39 m；偏到外侧 2 m 以上的 token 58 / 65 / 59 / 65 对 base 的 45 / 46 / 47 / 49。不分侧的「离开 4 m 管道」分不开两者，所以登记的线用外侧 2 m。</li>
+<li><b>外移的来源（pilot 规模 drop-one）。</b>agent hinge 只放 on-log 行不外移（55 对 54）；去掉 agent hinge、留 road hinge 外移（71 对 54）：外侧是 drivable，没有任何项约束 route。</li>
+<li><b>band 选择（只用 train log 的验证部分）。</b>1.5 m 的 dev ADE 0.6051，超过上限 0.6013；2.5 m 是 0.5949，选 2.5 m。2.5 m 的项在 99.3% 的 imitation 行和 96.6% 的 hinge-only 行上为零，是一个管道。</li>
+<li><b>为什么不过。</b>管道够得着远尾（navtest 离开 4 m 管道 47 → 31，留出 log 27 → 10 行），够不着外移：外移是每个 plan 0.2 至 0.3 m、质量大部分在 2.5 m 以内；navtest 弯道 4 s 处平均横向 −0.29 m，<code>P2H10S-P-s0</code> 为 −0.36 m，关掉新项的 pilot 为 −0.48 m（+ 为外侧）。1.5 m 的 band 开始咬到外移，但 dev ADE 超限，等于一个横向 target（决策 212、213 警告过的区域）。</li>
+<li>另记：navtest 的 4 s 弧长比 0.9915，全量时 G3 (e) 的 0.995 会是第二条要过的线。</li>
+</ul>
+<table><tr><th>pilot gate 的线（<code>P2H10R-Pb25-s0</code> 对 <code>P2H10-P-s0</code>）</th><th>值</th><th>线</th><th>结果</th></tr>
+<tr><td>own-plan agent 接触率（hold）</td><td>−40.2%</td><td>≥ 30%</td><td>过</td></tr>
+<tr><td>own-plan boundary 率（hold）</td><td>−33.8%</td><td>≥ 25%</td><td>过</td></tr>
+<tr><td>dev ADE（m）</td><td>0.5949 对 0.5913</td><td>≤ +0.01</td><td>过</td></tr>
+<tr><td>续接斜率 alpha_05</td><td>0.851 对 1.079</td><td>≤ +0.05</td><td>过</td></tr>
+<tr><td>(C-a) navtest &gt; 45° 外侧 2 m 以上的 token（1 517）</td><td>67 对 54</td><td>≤ 参考 + 5</td><td><b>不过</b></td></tr>
+<tr><td>(C-b) on-log 弯道行（207）</td><td>12 对 10</td><td>≤ 参考 + 1</td><td><b>不过</b></td></tr>
+<tr><td>(C-c) 离开 4 m 管道，navtest / hold 弯道行</td><td>31 对 47 / 10 对 27</td><td>≤ 参考 + 5 / + 1</td><td>过</td></tr></table>
+<p>含义：第 233 条的走宽是每个 plan 几十厘米的外偏在闭环里累积出来的；在这套行上，「不蹭内侧边缘」的课与「沿 route 走」不能靠到 log 的距离 hinge 分开。W2 能否预测闭环 corridor zero 没有被检验（没有 <code>P2H10R</code> checkpoint 进过 simulator）。本 lane 对留出 log 已在 pilot 规模读过四次；loss 臂不再有变体，大弯缺的是 route 能力本身，需要不以 log 距离为形式的约束。</p>
+
+<h2>十三、<code>P2H10S</code> 与 base 在 PAI 60 scene 上的描述性读数（补记 6 note (j)，决策 235）</h2>
+<div class="v"><b>结论。</b>这是描述性读数；登记的 PAI 读数不存在（以 nuPlan 过线为条件），本读数不替代它、不能晋级任何臂，60 个 PAI scene 此后是本 lane 的 development scene。60 scene、每个 scene 每个 tag 每个 serving 一次 rollout。plain driver 下四 seed 均值：base 0.2026，<code>P2H10S</code> 0.2780（按 seed 配对 +0.0755 [+0.0216, +0.1363]）；PAI 的 serving 下：base 0.3545，<code>P2H10S</code> 0.4211（+0.0667 [−0.0077, +0.1479]）。对 base 自己的 seed spread（最大 base 对 base 差：plain 0.0957，served 0.0292）：plain 的差在 spread 之内，served 的差在其外，但 CI 含 0。<code>P2H10B</code>（2 seed）：plain 0.2615（+0.0465 [−0.0256, +0.1249]），served 0.4291（+0.0665 [−0.0108, +0.1509]）。所有均值、配对差与 CI 在逐 scene 重算后没有变化。来源：<code>experiments/body1/results/pai_descriptive.md</code>、<code>results/pai/pai_decomposition.md</code>，决策 235。</div>
+<figure><img src="figs/pai_per_seed.png" alt=""><figcaption>图三十九：每个 seed 的 PAI 均分，灰带为四个 base seed 的范围。看右图（served，PAI 实际使用的配置）：<code>P2H10S</code> 的四个 seed 和 <code>P2H10B</code> 的两个 seed 都在灰带之上（<code>P2H10B</code> s0 只高 0.002），没有一个到达 alpamayo1 的虚线（0.5033，441 scene，样本不可比）；左图（plain）六个臂点里四个在宽灰带之上。</figcaption></figure>
+<h3>一处更正：零分构成</h3>
+<p>决策 235 第 2 点把「零分构成」表读反了：表里每一对行都是先 base 后臂，臂在每一类上零分都更少、progress 更高，所谓「均分更高但零分更多」的不一致不存在。报告本身有三处不清楚，已改：(1) 类别列是互斥的（优先级 at-fault 碰撞 &gt; offroad &gt; corridor，同时 offroad 和 corridor 的 scene 记为 offroad），所以「corridor zero 少一到三个」不是 corridor 的效应，按原始 flag 计 corridor 只动 0.5 个（plain 19.0 → 18.5，served 17.75 → 17.25）；(2) progress 列对所有 rollout 取均值，包含失败的，不是分数用的量；(3) driver 异常是 1 200 个 rollout 里的 9 个（plain 5、served 4），不是 960 里的 8 个，而且 served 下全部落在 base 一侧。</p>
+<p>PAI 的 scene 分数 = 0（只要 at-fault 碰撞、offroad、left corridor 任一被设）否则 <code>min(clamp(progress_clipped_rel, 0, 1) / 0.8, 1)</code>。flag 会重叠（1 200 个 rollout 里 offroad + corridor 52 个，碰撞 + corridor 1 个，碰撞 + offroad 0 个）。</p>
+<table><tr><th>serving</th><th>家族</th><th>zeros</th><th>非零 scene</th><th>非零 scene 均分</th><th>非零 scene 的 progress</th><th>全部 rollout 的 progress</th><th>driver 异常</th></tr>
+<tr><td>plain</td><td>base（4 seed）</td><td>43.25</td><td>16.75</td><td>0.724</td><td>0.666</td><td>0.54</td><td>0.25</td></tr>
+<tr><td>plain</td><td><code>P2H10S</code>（4）</td><td>36.75</td><td>23.25</td><td>0.718</td><td>0.653</td><td>0.58</td><td>0.75</td></tr>
+<tr><td>served</td><td>base（4）</td><td>31.25</td><td>28.75</td><td>0.741</td><td>0.670</td><td>0.60</td><td>1.00</td></tr>
+<tr><td>served</td><td><code>P2H10S</code>（4）</td><td>27.75</td><td>32.25</td><td>0.783</td><td>0.718</td><td>0.64</td><td>0.00</td></tr></table>
+<h3>臂减 base 的分解（按 seed 序号和 scene 配对，四对均值）</h3>
+<p>每个 seed 对的均分差 = (gain + loss + change) / 60：gain = base 为 0、臂非零的 scene 上臂的分数和；loss = base 非零、臂为 0 的 scene 上 base 分数和的负值；change = 两者都非零的 scene 上的分数差之和。</p>
+<table><tr><th>serving</th><th>家族（对数）</th><th>差</th><th>0 → 非零（个）</th><th>非零 → 0（个）</th><th>两者非零（个）</th><th>gain</th><th>loss</th><th>两者非零的变化</th></tr>
+<tr><td>plain</td><td><code>P2H10S</code>（4）</td><td>+0.0755</td><td>7.75</td><td>1.25</td><td>15.50</td><td>+0.0950</td><td>−0.0188</td><td>−0.0007</td></tr>
+<tr><td>plain</td><td><code>P2H10B</code>（2）</td><td>+0.0465</td><td>7.00</td><td>3.50</td><td>14.00</td><td>+0.0979</td><td>−0.0499</td><td>−0.0015</td></tr>
+<tr><td>served</td><td><code>P2H10S</code>（4）</td><td>+0.0667</td><td>7.25</td><td>3.75</td><td>25.00</td><td>+0.1071</td><td>−0.0477</td><td>+0.0073</td></tr>
+<tr><td>served</td><td><code>P2H10B</code>（2）</td><td>+0.0665</td><td>6.50</td><td>3.00</td><td>26.00</td><td>+0.1020</td><td>−0.0351</td><td>−0.0004</td></tr></table>
+<ul>
+<li>差几乎全部来自哪些 scene 是零分：<code>P2H10S</code> 每个 seed 净少 6.5（plain）和 3.5（served）个零分 scene；救回的 scene 平均得分约 0.74（plain）和 0.89（served），丢掉的约 0.90 和 0.76。两者都非零的 scene 上分数几乎不变（−0.0007 / +0.0073）：臂没有在 base 已经开过的 scene 上开得更好。</li>
+<li>臂的零分减少主要在 offroad（14.5 → 8.75 plain，10.0 → 8.5 served）；at-fault 碰撞零分不动（12.5 → 12.5；4.0 → 3.75），served 下碰撞零分从 12.5 压到约 4 是 serving 本身的效果。臂在非零 scene 上的 progress 在 plain 下并不更高（0.666 → 0.653），全部 rollout 的 progress 更高是因为被救回的 scene。</li>
+<li>served 下 driver 异常不平衡：base 在 4 个 seed 里有 4 个异常零分（s0 1、s2 2、s3 1），<code>P2H10S</code> 为 0。按非零 scene 约 0.74 的分数，这约占 served +0.0667 里的 4 × 0.74 / 240 = +0.012；plain 下方向相反（base 1，<code>P2H10S</code> 3）。异常是 device mismatch 崩溃，与 checkpoint 无关，仍按零分计入。</li>
+<li>在至少 3 个 seed 里同向翻转的 scene：0 → 非零 plain 4 个、served 4 个（<code>75c23f0</code> 两处都有），共 7 个不同的 scene（base 的零分 flag：offroad 3 个，corridor 5 个）；非零 → 0 只有 served 的 <code>94877a4</code>（3 个 seed）。其余的增益是 seed 层面的变动，量级与 base 自己的 seed spread 相当。</li>
+</ul>
+<p><b>限制。</b>60 scene 是难度分层样本，均分不能与 alpamayo1 的 441 scene 0.5033 比；每个 scene 一次 rollout；seed 只按序号配对，没有共享训练状态；<code>P2H10B</code> 只有两个 seed；<code>P2H10S-F-s1</code> plain 的 3 个 stack 因 box 系统盘满（<code>/tmp</code> ENOSPC）重跑，首读 0.2133、重跑 0.2863，其余 stack 无此问题；base s0 / s1 复用 PAI2 与 FIX1 的同命令结果。</p>
+
+<h2>十四、解读与下一步</h2>
 <ul>
 <li>loss 臂：离线上对自己 plan 的接触去了一半（hold logs agent −49%、boundary −53%），navtest +0.52；闭环里只有碰撞类降了三分之一，offroad + corridor 持平（35 对 35），且 slow scene 增加 60、progress 降 0.014 至 0.015。hold-log 上 on-log 状态的降幅只有 24%，闭环里的失败正是学生自己走到的 on-log 状态，这个落差是离线 gate 没有量到的东西。</li>
 <li>L1 的余量只有 3 至 5 个 zero，落在基线两个 seed 之间的差（26 对 23）之内；L2 的下界 −0.013 至 −0.016 远低于 −0.005。按登记线这个臂不晋级，也不跑 PAI。</li>
@@ -308,9 +354,11 @@ code{font-size:13px}
 <li>下一步（两个 serving 臂之后，已执行）：诊断基线全部 zero（第五节）与 loss 臂（第六、七节）。loss 臂闭环不过之后剩下的是：15 个 corridor 路线问题与 4 个物体在相机外的碰撞不在车身课范围内（需要 stage 2 的 CARLA 行），以及目标跨决策保持的 serving 动作。</li>
 <li>700 × 2 的全量和 PAI 对两个 serving 臂都没有跑；PAI hook 不存在。loss 臂跑了 700 × 2，未跑 PAI（nuPlan 线没过）。</li>
 <li>形状-only 臂（补记 6）：progress 损失没有出现（偏慢 401 对 434、均 progress +0.0091），碰撞与 offroad zero 下降、corridor zero 上升，都在 base 的 seed spread 之外；新增的 4 个 corridor zero 全是 48 至 70° 右转上 plan 转得不够，这个副作用与 loss 臂相同。按登记不晋级，不再有 loss 臂的变体；corridor / 大转角仍是未解的类，stage 2 已关闭，要够到它只能在 navtrain 上想办法（决策 231）。</li>
+<li>route dead-band hinge（补记 7）：pilot gate 的 corridor 线不过（W2 67 对 54，线 ≤ +5），loss 臂不再有变体（第十二节）。</li>
+<li>PAI 描述性读数：<code>P2H10S</code> 的增益是零分 scene 的减少（主要 offroad），不是已通过 scene 上的改进，也不是碰撞；served 下 base 多 4 个 driver 异常约占 +0.012（第十三节）。</li>
 </ul>
 
-<h2>十三、限制</h2>
+<h2>十五、限制</h2>
 <ul>
 <li>每个闭环读数都是一个 chunk、一个 seed：刹停 4 个基线碰撞、36 个 flagged scene；re-plan 2 个基线碰撞、19 个被 re-plan 的 scene，「2 对 1」的计数很小，L2 的 CI 含 0。基线是同一 checkpoint 的另一次 run，靠未触发 scene 的逐个相同（198 / 198、214 / 214）成立；「造出」「去掉」按对基线 run 的结果定，不是接触标签。</li>
 <li>这是 regression check：公开 scene 都参与过 P2H10 的选择。serving-only，navtest 不变也没有评。</li>
