@@ -121,7 +121,7 @@ def main(a):
         nm = names()
         tot = {s: 0 for s in ("train", "val", "test")}
         agg = {s: {k: Counter() for k in ("has", "bytes", "nz", "reps")} for s in tot}
-        for r in res:
+        for r in res.values:
             tot[r["split"]] += r["frames"]
             for k in agg[r["split"]]:
                 agg[r["split"]][k].update(r[k])
