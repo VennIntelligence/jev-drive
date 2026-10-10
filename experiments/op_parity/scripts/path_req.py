@@ -16,6 +16,11 @@ nearest polyline point faded out over 3 m; kinds without timing leave the second
   qch       heading at 4 s only: a 20 m constant-curvature arc that ends at the logged heading change (no speed, no shape)
   qc7       exit class only: the same arc for the centre of the signed turn bucket (straight, +-5-20, +-20-45, > 45 deg)
   qh        qf of the path predicted by `head` (thin head on frozen Cinque tokens + the P2 ego input): NOT privileged
+  qp        HEAD1b step B / C (experiments/corridor, amendment of plans/2026-10-10-head1-prereg.md; EXPLORATORY): the heading-versus-arc-length
+            profile PREDICTED by the HEAD1 head (frozen vision tokens + ego; NOT privileged), integrated to a polyline over 0 .. 40 m and
+            extended straight to 64 m along its heading at 40 m; the qs encoding (no arrival times). Profiles are read per data dir from the
+            first directory of $H1B_PROF (colon-separated; default the head's final out-of-fold predictions) that holds <data>.npy (N, 22)
+  qpx       qp of another log's row (geo_x's fixed derangement): its shuffled-content control
 
   selftest (CPU)              shapes, finiteness and the realised error statistics of every kind on navtest rows
   tok   --kind K (GPU, pool)  pre-train the tokenizer of a kind with its own thin plan head on navsim/op-parity-geotok-train (outside the pilot's
@@ -25,6 +30,8 @@ nearest polyline point faded out over 3 m; kinds without timing leave the second
   gate  --stage dev|navtest   the pre-registered reliability gate of the undegraded oracle (exit 2: not met; exit 3: oracle itself below the line)
   report (op-train, CPU)      tables, the curve, reference predictors, the registered reading -> $OUT/report/
   fig   (any env)             the curve figure from the committed report files
+  ident --tag T (GPU, pool)   HEAD1b identity check of the memory channel: the no-memory checkpoint T moved into the memory arm's model, memory
+                              masked on every row, must give T's own outputs (dev rows + navtest) -> $OUT/ident_<T>.json (exit 2: not met)
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
@@ -54,13 +61,14 @@ AXES = {"lat": ("cross-track error std at 4 s (m)", [("QF", 0.0), ("QN025", 0.25
         "content": ("content kept", [("QF", "path + timing"), ("QS", "path shape"), ("QV", "speed profile"), ("QCH", "heading at 4 s"),
                                      ("QC7", "exit class")])}
 LINES = (0.5, 0.3)
+P_DS, P_N = 2.5, 17                          # qp: the profile's grid points at 0, 2.5 .. 40 m (the first 17 of the head's 22)
 H0_DEV_ADE = 0.6305                          # GH0-F-s0 / s1 dev ADE 0.632 / 0.629 (decision 200)
 
 
 # ---------------------------------------------------------------- degradations and the field
 def parse(kind):
     assert kind[:1] == "q", kind
-    for n in ("c7", "ch", "f", "x", "n", "l", "t", "s", "v", "h"):
+    for n in ("c7", "ch", "px", "p", "f", "x", "n", "l", "t", "s", "v", "h"):
         if kind[1:].startswith(n):
             r = kind[1 + len(n):]
             return n, (float(r) if r else 0.0)
@@ -79,6 +87,12 @@ def poly(kind, fut, z=None):
     import torch
     name, lv = parse(kind)
     B, dev = len(fut), fut.device
+    if name in ("p", "px"):                                                       # fut = (B, 22) heading (rad) on the head's arc-length grid
+        h = fut[:, :P_N]
+        hm = 0.5 * (h[:, 1:] + h[:, :-1])                                         # heading of a 2.5 m step = the mean of its two grid points
+        V = torch.cat([fut.new_zeros(B, 1, 2), (P_DS * torch.stack([torch.cos(hm), torch.sin(hm)], -1)).cumsum(1)], 1)
+        tan = torch.stack([torch.cos(h[:, -1]), torch.sin(h[:, -1])], -1)
+        return torch.cat([V, (V[:, -1] + (EXT_LEN - P_DS * (P_N - 1)) * tan)[:, None]], 1), None
     p, psi, o = fut[..., :2], fut[..., 2], fut.new_zeros(len(fut), 1, 2)
     k8 = torch.arange(1, 9, device=dev) / 8.0
     T = torch.cat([fut.new_zeros(B, 1), k8.expand(B, 8)], 1)
@@ -165,6 +179,22 @@ class PathMem:
         return self.net.tokens(self.raster(rows))
 
 
+def prof_dirs():
+    import os
+    d = os.environ.get("H1B_PROF") or f"{G.D / 'runs/corridor/head1/final/prof'}:{G.D / 'runs/corridor/head1b/prof_ot'}"
+    return [_pl.Path(x) for x in d.split(":") if x]
+
+
+def prof(data):
+    """The fed heading profile (N, 22) fp32 of a data dir (kind qp), tab order."""
+    fs = [d / f"{data}.npy" for d in prof_dirs() if (d / f"{data}.npy").exists()]
+    assert fs, f"no heading profile of {data} under {[str(d) for d in prof_dirs()]}"
+    x = np.load(fs[0])
+    assert x.ndim == 2 and x.shape[1] == 22 and np.isfinite(x).all(), (str(fs[0]), x.shape)
+    print(f"path-req qp: profile of {data} from {fs[0]} {x.shape}", flush=True)
+    return x.astype(np.float32)
+
+
 def _xperm(datas, logs):
     """geo_x's fixed derangement of every data dir (decision 197), as rows of the concatenated dirs."""
     ps, off = [], 0
@@ -182,11 +212,11 @@ def attach(cfg, S, hinge, dev):
     import torch
     name = parse(cfg.mem_e2e)[0]
     src = S.fut
-    if name == "h":
-        src = torch.as_tensor(np.concatenate([np.load(OUT / "head" / f"{d}.npy") for d in cfg.data]), dtype=torch.float32, device=dev)
+    if name in ("h", "p", "px"):
+        src = torch.as_tensor(np.concatenate([np.load(OUT / "head" / f"{d}.npy") if name == "h" else prof(d) for d in cfg.data]), dtype=torch.float32, device=dev)
         assert len(src) == S.n
     return PathMem(cfg.mem_e2e, src, dev, z=noise(S.n, "+".join(cfg.data)).to(dev),
-                   perm=_xperm(cfg.data, S.tab["log"]) if name == "x" else None, init=cfg.mem_init)
+                   perm=_xperm(cfg.data, S.tab["log"]) if name in ("x", "px") else None, init=cfg.mem_init)
 
 
 def finish(om, model, S, dv_rows, W, rear, hinge, run, tag, ckpt_dir):
@@ -222,16 +252,18 @@ def finish(om, model, S, dv_rows, W, rear, hinge, run, tag, ckpt_dir):
         name = parse(om.kind)[0]
         tab = np.load(G.CR / G.TEST / "tab.npz")
         n = len(tab["names"])
-        src = np.load(OUT / "head" / f"{G.TEST}.npy") if name == "h" else tab["fut"]
-        assert src.shape == (n, 8, 3) and np.isfinite(src).all(), "the path field needs 8 finite poses on every navtest row"
+        src = np.load(OUT / "head" / f"{G.TEST}.npy") if name == "h" else prof(G.TEST) if name in ("p", "px") else tab["fut"]
+        assert src.shape == ((n, 22) if name in ("p", "px") else (n, 8, 3)) and np.isfinite(src).all(), "the path field needs finite inputs on every navtest row"
         te = PathMem(om.kind, torch.as_tensor(src, dtype=torch.float32, device=dev), dev, z=noise(n, G.TEST).to(dev),
-                     perm=_xperm([G.TEST], tab["log"]) if name == "x" else None, net=om.net)
+                     perm=_xperm([G.TEST], tab["log"]) if name in ("x", "px") else None, net=om.net)
         bank = torch.cat([te[torch.arange(i, min(i + 512, n), device=dev)].half() for i in range(0, n, 512)]).cpu().numpy()
         assert bank.shape == (n, G.NTOK, G.DTOK) and np.isfinite(bank).all()
         G._save(f"ge_{tag}", G.TEST, bank)
         dg["e2e_bank_rms"] = float(np.sqrt((bank[::6].astype(np.float32) ** 2).mean()))
     run.info(f"path-req {om.kind}: " + json.dumps(dg) + f"; navtest bank {bank.shape} -> {G.MEM / f'ge_{tag}'}")
     run.summary.update(dg)
+    if name in ("p", "px"):
+        run.summary.update(prof_dirs=[str(d) for d in prof_dirs()])
 
 
 # ---------------------------------------------------------------- error statistics of a set of predicted poses
@@ -279,6 +311,18 @@ def cmd_selftest(a):
             assert (abs(got / lv - 1) < 0.05) if parse(kind)[0] == "n" else (0.75 < got / lv < 1.05), (kind, got)   # along-track: clipped at standstill
             assert parse(kind)[0] == "l" or st["lon_rms4"] < 0.02, (kind, st)       # cross-track errors are normal to the logged heading
         print(msg)
+    s = torch.arange(P_N) * P_DS                                                  # qp: a constant-curvature profile integrates to its arc; a zero profile is qs of a straight log
+    kap = torch.tensor([0.0, 0.02, -0.05, 0.1])[:, None]
+    hp = torch.cat([kap * s, (kap * s)[:, -1:].expand(-1, 22 - P_N)], 1)
+    Q, T = poly("qp", hp)
+    kk = torch.where(kap == 0, torch.ones_like(kap), kap)
+    ex = torch.stack([torch.where(kap == 0, s.expand(4, -1), torch.sin(kap * s) / kk), torch.where(kap == 0, torch.zeros(4, P_N), (1 - torch.cos(kap * s)) / kk)], -1)
+    assert T is None and Q.shape == (4, P_N + 1, 2) and (Q[:, :P_N] - ex).norm(dim=-1).max() < 0.15, (Q[:, :P_N] - ex).norm(dim=-1).max()
+    assert torch.allclose((Q[:, -1] - Q[:, -2]).norm(dim=-1), torch.tensor(EXT_LEN - 40.0)) and parse("qp")[0] == "p" and parse("qpx")[0] == "px"
+    st8 = torch.zeros(1, 8, 3)
+    st8[0, :, 0] = torch.arange(1, 9) * 5.0
+    assert torch.allclose(field(*poly("qp", hp[:1]), gx, gy), field(*poly("qs", st8), gx, gy), atol=1e-5)
+    print(f"qp     polyline vertices {tuple(Q.shape[1:])}; arc error of the integration at kappa 0.1 / m: {float((Q[3, :P_N] - ex[3]).norm(dim=-1).max()):.4f} m")
     f0 = field(*poly("qf", fut[:8]), gx, gy)
     xs = field(*poly("qx", fut[8:16]), gx, gy)
     assert not torch.allclose(f0, xs)
@@ -314,7 +358,10 @@ def cmd_tok(a):
         ft = torch.as_tensor(np.nan_to_num(fut), dtype=torch.float32, device=dev)
         eg = torch.as_tensor(ego, dtype=torch.float32, device=dev)
         torch.manual_seed(0)
-        om = PathMem(a.kind, ft, dev, z=noise(len(names), "navtrain12").to(dev))
+        qp = parse(a.kind)[0] == "p"                                              # HEAD1b: the field of the head's out-of-fold profile; the target stays the logged future
+        src = torch.as_tensor(np.concatenate([prof(d) for d in _navtrain()[0]]), dtype=torch.float32, device=dev) if qp else ft
+        assert len(src) == len(names)
+        om = PathMem(a.kind, src, dev, z=noise(len(names), "navtrain12").to(dev))
         net = om.net
         opt = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-2)
         steps, wu = (30 if a.smoke else a.steps), (5 if a.smoke else 150)
@@ -345,7 +392,7 @@ def cmd_tok(a):
             return float((P[..., :2] - ft[r][..., :2]).norm(dim=-1).mean())
         st = dict(kind=a.kind, steps=steps, fit_rows=len(fit), train_s=time.time() - t0, gpu_peak_gb=torch.cuda.max_memory_reserved() / 2 ** 30,
                   head_dev_ade=ade(dv), head_dev_ade_mismatched=ade(dv, dv[G.derange(log[dv], np.random.default_rng(1))]),
-                  head_fit_ade=ade(fit[:: max(1, len(fit) // 4000)]))
+                  head_fit_ade=ade(fit[:: max(1, len(fit) // 4000)])) | (dict(prof_dirs=[str(d) for d in prof_dirs()]) if qp else {})
         run.info("tokenizer head: " + json.dumps(st))
         run.summary.update(st)
         if not a.smoke:
@@ -437,6 +484,58 @@ def cmd_head(a):
         run.info("thin head: " + json.dumps({k: (v if not isinstance(v, dict) else {m: v[m] for m in ("ade", "lat_rms4", "lon_rms4", "c7_acc")})
                                               for k, v in st.items()}))
         run.summary.update(dev_ade=st["dev"]["ade"], pilot_train_ade=st["pilot_train"]["ade"])
+
+
+def cmd_ident(a):
+    """HEAD1b identity check. The memory arm's adapter has the side branch (side_in, cam / time / slot embeddings), created between the ego MLP and
+    the queries / decoder, so its init draws differ from the no-memory adapter's and a memory-masked TRAINING run cannot reproduce the baseline bit
+    for bit. What the code allows: the baseline's weights moved into the memory arm's model (the side branch at its own init), every row's memory
+    masked -> the outputs must be the baseline's (dev rows of the pilot split and every 6th navtest row); with the memory on they must differ."""
+    import torch
+    import pp_train as T
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    dev = torch.device("cuda")
+    with Run("op_parity", f"path-req-ident-{a.tag}", seed=0, config=vars(a)) as run:
+        base = T.load_pmodel(a.tag, dev)
+        assert base.arm == "P2" and base.mem is None, base.arm
+        ck = torch.load(T.proot("runs", a.tag) / "ckpt-final.pt", map_location="cpu", weights_only=False)["model"]
+        torch.manual_seed(0)
+        m = T.PModel("P2+ge_ident").to(dev).eval()
+        for k, v in ck["net"].items():
+            m.net.params[k].data.copy_(v)
+        r = m.adapter.load_state_dict(ck["parity"], strict=False)
+        assert not r.unexpected_keys and all(k.split(".")[0] in ("side_in", "cam_emb", "t_emb", "s_emb") for k in r.missing_keys), r
+        res = dict(tag=a.tag, side_branch_keys_at_init=list(r.missing_keys), sets={})
+        g = torch.Generator(device=dev).manual_seed(0)
+        pi = None
+        for name, datas in (("dev", list(G.PILOT)), ("navtest", [G.TEST])):
+            S = T.Store(datas, dev, need_side=False, frames="warp", host=True)
+            pi = torch.as_tensor(S.pi, device=dev) if S.pi is not None else pi
+            W = torch.as_tensor(T.R2.t_weights(T.T8), device=dev)
+            rows = (np.flatnonzero(splits.load("navsim/op-parity-s234-dev").mask(S.tab["names"])) if name == "dev" else np.arange(0, S.n, 6))
+            d_out, d_xy, d_on, n = 0.0, 0.0, 0.0, 0
+            with torch.no_grad():
+                for i in range(0, len(rows), 128):
+                    q = torch.as_tensor(rows[i:i + 128], device=dev)
+                    fr, eg, tc = S.front[q], S.ego[q], S.tc[q]
+                    mem = torch.randn((len(q), G.NTOK, G.DTOK), device=dev, generator=g)
+                    o0 = base(fr, eg, tc).float()
+                    o1 = m(fr, eg, tc, mem, torch.zeros(len(q), 1, dtype=torch.bool, device=dev)).float()
+                    o2 = m(fr, eg, tc, mem, None).float()
+                    xy = lambda o: torch.stack(T.rear(o[:, pi].view(-1, 33, 15), S.cam_x[q], W)[:2], -1)  # noqa: E731
+                    d_out, d_xy = max(d_out, float((o1 - o0).abs().max())), max(d_xy, float((xy(o1) - xy(o0)).norm(dim=-1).max()))
+                    d_on, n = max(d_on, float((xy(o2) - xy(o0)).norm(dim=-1).max())), n + len(q)
+            res["sets"][name] = dict(rows=n, max_abs_output_diff_masked=d_out, max_plan_xy_diff_masked_m=d_xy, max_plan_xy_diff_memory_on_m=d_on)
+            del S
+        res["bit_identical"] = all(v["max_abs_output_diff_masked"] == 0.0 for v in res["sets"].values())
+        res["identical"] = all(v["max_plan_xy_diff_masked_m"] <= 1e-3 for v in res["sets"].values())      # fp16 compute: 1 mm
+        res["mask_matters"] = all(v["max_plan_xy_diff_memory_on_m"] > 1e-3 for v in res["sets"].values())
+        OUT.mkdir(parents=True, exist_ok=True)
+        (OUT / f"ident_{a.tag}.json").write_text(json.dumps(res, indent=1) + "\n")
+        run.info("identity: " + json.dumps(res))
+        run.summary.update({k: v for k, v in res.items() if k != "side_branch_keys_at_init"})
+    raise SystemExit(0 if res["identical"] and res["mask_matters"] else 2)
 
 
 # ---------------------------------------------------------------- gate / report
@@ -719,5 +818,7 @@ if __name__ == "__main__":
     p = sp.add_parser("report")
     p.add_argument("--replays", nargs="+", default=["geo_s0", "geo_e2e", "path_req"])
     sp.add_parser("fig")
+    p = sp.add_parser("ident")
+    p.add_argument("--tag", default="GH0-F-s0")
     a = ap.parse_args()
-    {"selftest": cmd_selftest, "tok": cmd_tok, "head": cmd_head, "gate": cmd_gate, "report": cmd_report, "fig": cmd_fig}[a.cmd](a)
+    {"selftest": cmd_selftest, "tok": cmd_tok, "head": cmd_head, "gate": cmd_gate, "report": cmd_report, "fig": cmd_fig, "ident": cmd_ident}[a.cmd](a)

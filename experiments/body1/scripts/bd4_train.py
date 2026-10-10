@@ -9,6 +9,10 @@ the train logs out of the hinge-only rows (the weight is selected there).
 Prereg Amendment 6: --shape gives the new hinges the plan's shape only (lib/loss43.shape_only; values unchanged, tags P2H10S-*).
 Prereg Amendment 7: --route-band B adds the route hinge (term R: relu(distance of the plan poses to the row's logged path - B), on the
 imitation rows of the train logs and on the hinge-only rows; tags P2H10R-*); 0 = off, the code path of P2H10S.
+HEAD1b step C (experiments/corridor, amendment of plans/2026-10-10-head1-prereg.md; EXPLORATORY): --mem-e2e qp adds pp_train's memory channel
+(arm P2+ge_<tag>, tokenizer of experiments/op_parity/scripts/path_req.py trained jointly, memory masked on pp_train.MEM_DROP of the rows from its
+own rng stream) fed with the HEAD1 head's predicted heading profile of every row, hinge-only rows included (the head read on the row's own
+tokens and ego). "" = off: the model, the row stream and the optimizer are the ones above.
 
   train  --tag P2H10B-P-s0 --data navtrain_full.s2of12 navtrain_full.s3of12 --steps 3000 --ho ot1:4,yr1:4,bd4:5 --agent-lam 10
   train  --tag P2H10S-CHECK --shape-check P2H10B-Pw3-s0 ... (the pilot's flags)   Amendment 6 note (a): no training; on --check-batches batches
@@ -48,6 +52,9 @@ def cmd_train(a):
     cfg = T.Cfg(arm="P2", seed=a.seed, steps=a.steps, batch=a.batch, data=tuple(a.data) + hod, split=a.split, frames="warp", host=True, warmup=a.warmup,
                 eval_every=a.eval_every, hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, agent_lam=a.agent_lam, agent_margin=a.agent_margin,
                 agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels)
+    if a.mem_e2e:                                                    # HEAD1b step C: the names pp_train gives a --mem-e2e run (bench reads the bank mem/ge_<tag>)
+        assert a.mem_e2e.startswith("q") and not a.shape_check
+        cfg = replace(cfg, mem_e2e=a.mem_e2e, mem_init=a.mem_init, mem=f"ge_{a.tag}", arm=f"P2+ge_{a.tag}")
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, 0])                       # pp_train's row stream
     hrng = np.random.default_rng([cfg.seed, 0, 43])                  # hinge-only rows: own stream
@@ -72,7 +79,7 @@ def cmd_train(a):
     kk = [k for _, k in ho]
     k = sum(kk)
     nB = cfg.batch
-    model = T.PModel("P2").to(dev)
+    model = T.PModel(cfg.arm).to(dev)
     base, new = model.groups()
     tstd = S.t_out[torch.as_tensor(tr_rows, device=dev)].float().std(0).clamp_min(1e-3)
     hinge = Hinge([data_dir() / f for f in cfg.hinge_labels], names, dev, cfg.hinge_margin, list(cfg.hinge_footprint)) if cfg.hinge_lam > 0 else None
@@ -101,7 +108,13 @@ def cmd_train(a):
                   ho=torch.as_tensor(is_ho, device=dev) if k else None, fam=torch.as_tensor(fam, device=dev), fams=fams, agent2=agent2, road=road, road_lam=a.road_lam, ho_w=a.ho_w, shape=a.shape,
                   **(dict(route_band=a.route_band, route_lam=a.route_lam, route_off=torch.as_tensor(off, dtype=torch.float32, device=dev),
                           route_ok=torch.as_tensor(in_tr, device=dev)) if a.route_band > 0 else {}))
-    opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}, {"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}], weight_decay=cfg.wd)
+    om = None
+    if cfg.mem_e2e:                                                  # built after the model and the losses, as pp_train does
+        import path_req as GE
+        om = S.mem = GE.attach(cfg, S, hinge, dev)
+        mrng = np.random.default_rng([cfg.seed, 0, 11])              # pp_train's memory-drop stream
+    opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}, {"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}] +
+                            ([{"params": om.params, "lr": cfg.lr_new, "base": cfg.lr_new}] if om is not None else []), weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
     d = T.proot("runs", a.tag)
     with Run("op_parity", f"train-{a.tag}", seed=cfg.seed, config=asdict(cfg) | {"body1": vars(a)}) as run:
@@ -122,7 +135,7 @@ def cmd_train(a):
             if k:
                 r = np.concatenate([r] + [hrng.choice(p, q, replace=False) for p, q in zip(pools, kk)])
                 an = np.concatenate([an, np.zeros(k, bool)])
-            return r, an, None
+            return r, an, (mrng.random((nB, 1)) >= T.MEM_DROP if om is not None else None)   # True = memory present
 
         def fetch(dr):
             return dr, S.front[dr[0]]
@@ -133,18 +146,21 @@ def cmd_train(a):
         pre = T.Prefetch(draw, fetch, cfg.steps, a.prefetch, a.fetch_workers)
         t0, hist = time.time(), []
         for step in range(cfg.steps):
-            (r, an, _), front = pre.get()
+            (r, an, sm), front = pre.get()
             rows, anchor = torch.as_tensor(r, device=dev), torch.as_tensor(an, device=dev)
             for g in opt.param_groups:
                 g["lr"] = g["base"] * min(1.0, (step + 1) / cfg.warmup) * 0.5 * (1 + np.cos(np.pi * step / cfg.steps))
             ego = S.ego[rows] * (~anchor)[:, None].float()
-            total, Ls = LS(model(front, ego, S.tc[rows], None, None, nv=None), S, rows, anchor)
+            side, smask = (om[rows], torch.as_tensor(sm, device=dev)) if om is not None else (None, None)
+            total, Ls = LS(model(front, ego, S.tc[rows], side, smask, nv=None), S, rows, anchor)
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {q: float(v) for q, v in Ls.items()} }")
             opt.zero_grad(set_to_none=True)
             scaler.scale(total).backward()
             scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(base + new, 1.0)
+            if om is not None:
+                torch.nn.utils.clip_grad_norm_(om.params, 1.0)
             scaler.step(opt)
             scaler.update()
             hist.append({q: float(v) for q, v in Ls.items()})
@@ -170,6 +186,8 @@ def cmd_train(a):
         torch.save(model.adapter.state_dict(), d / "adapter.pt")
         run.summary.update(steps=cfg.steps, train_s=time.time() - t0, ckpt=str(d / "ckpt-final.pt"), n_train=len(tr_rows), ho_per_batch=k,
                            gpu_peak_gb=torch.cuda.max_memory_reserved() / 2 ** 30)
+        if om is not None:                                           # tokenizer weights, dev diagnostics (on / masked / mismatched), the navtest bank
+            GE.finish(om, model, S, dv_rows, LS.W, T.rear, hinge, run, a.tag, d)
 
 
 def shape_check(run, a, S, LS, draw, dev, T):
@@ -310,6 +328,8 @@ if __name__ == "__main__":
     p.add_argument("--road-lam", type=float, default=10.0, help="C: drivable hinge on the hinge-only rows (0 = off)")
     p.add_argument("--road-margin", type=float, default=0.3)
     p.add_argument("--road-labels", default=ROAD, help="its raster (default: the scorer-layer raster; the NAVSIM raster for the ablation without C)")
+    p.add_argument("--mem-e2e", default="", help="HEAD1b step C: path_req.py memory kind (qp) through pp_train's memory channel; \"\" = off")
+    p.add_argument("--mem-init", default="", help="its tokenizer state dict (path_req.py tok)")
     p.add_argument("--prefetch", type=int, default=4)
     p.add_argument("--fetch-workers", type=int, default=2)
     p.add_argument("--dev-card-gb", type=float, default=4.0)
