@@ -211,7 +211,7 @@ One seed read as if it were an arm against another (12 ordered pairs, same recip
 | slow scenes | 100 to 117; score 1 -> slow 4 to 22 per pair (mean 14.2) |
 | L2 (mean >= 0 and lower bound > -0.005) would read as met | 4 of 12 |
 | L3 (slow <= 1.1 x base) would read as met | 9 of 12 |
-| L1a / L1b would read as met | 6 / 2 of 12 |
+| L1a / L1b would read as met (totals) | 6 / 3 of 12 |
 | all four lines | 2 of 12 (seed 1 against seed 0, seed 1 against seed 3) |
 
 What this says about the lane's lines, with no arm involved: a second seed of the unchanged recipe passes L2 in a third of the pairings, because the
