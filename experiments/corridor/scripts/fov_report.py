@@ -282,7 +282,8 @@ def main():
         m = mk.to_numpy() & g
         f, pf = cb._s(x, m)
         n, pn = cb._s(np.ones_like(x), m)
-        return f / n, pf / pn
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return f / n, (pf / pn if pn else np.nan)
 
     rows, dd = [], {}
     for lab, mk in (("SH30", sh), ("WA-JEPA", M.unit == "wa")):
