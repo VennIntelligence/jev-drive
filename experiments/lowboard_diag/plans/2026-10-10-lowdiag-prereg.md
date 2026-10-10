@@ -57,3 +57,16 @@ HUGSIM 的 O2b（对向 / 横穿车）没有写反事实里物体在 E 之后外
 另加只作描述、不参与分类的列：`obj_on_ref`（被撞物体是否站在日志路径的扫掠带里，用来把 L1 分成「日志车道里的前车」与
 「ego 自己偏过去撞上的」；原 L1 对静止物体的「已在已行驶路径里」恒成立，这一点在读 longitudinal 类时要用这一列）、`gap_ahead`
 （onset 前 2 s ego 正前方走廊内最近物体的间距）、`w_max`（事件前最大 yaw rate）。
+
+## 补记 2（2026-10-10，看过全部 32 个 PAI 单位的逐单位表与另外 8 个 BEV 之后）
+
+这两处是读数之后改的，按事后修订对待；结果文档里同时给出不做这两处修订的原登记口径计数。
+1. **新增 L5 overrun（归 longitudinal）**：K = corridor，E 时 ego 的弧长已超过日志路径的末端，且日志 ego 在末端是静止的（最后 1 s
+   车速 < 0.5 m/s）。看到的事实：21626256、9e3fd12d、b0fa4732、1c7e2423、7a824ffa 五个 corridor 零分里 scorer 的
+   `lateral_dist_to_gt_trajectory` 与 `dist_to_gt_trajectory` 相等，ego 横向只偏 0.2–2.9 m，flag 在 ego 越过日志终点 3–4 m 时触发；
+   日志司机在 20 s 内停住了（已看的三个 BEV 的模型输入帧里是红灯），ego 以 13–15 m/s 开过去。原规则把它们归进 route 的 drift。
+   corridor 子类里它们单列为「0 overran the logged stop」，不进 1–4 的份额。
+2. **O2a（hand-over spin）改为**：起始车速 ≥ 20 m/s、E 在起始后 4 s 内、E 之前 |yaw rate| 最大值 ≥ 1.0 rad/s（原文是 > 23 m/s 且
+   前 2 s 内 > 0.3 rad/s）。看到的事实：b45734f4、48a3f74a、05f35348、69fc21e8 四个单位起始 22.6–34.3 m/s，在 1.8–2.4 s 时 yaw rate
+   到 1.9–3.0 rad/s（其余 28 个单位的最大值 ≤ 0.71），车身在 0.5 s 内转过 20–50°，即第 219 条描述的 spin；原规则因为时间窗 2 s 与
+   23 m/s 的线各漏掉一部分。

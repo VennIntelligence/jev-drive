@@ -88,6 +88,14 @@ class Unit:
         self.ev = ev
         self.flag = min(ev, key=ev.get) if ev else None
         self.K, self.E = (FLAG_K[self.flag], float(ev[self.flag])) if ev else ("none", float(r.T1))
+        xy, keep = r.gt_rig[:, 1:3], [0]                      # the logged path thinned to >= 0.5 m steps (a standing log jitters), continued 40 m straight
+        for i in range(1, len(xy)):
+            if np.hypot(*(xy[i] - xy[keep[-1]])) >= 0.5:
+                keep.append(i)
+        xy = xy[keep]
+        self.L_log = float(np.hypot(*np.diff(xy, axis=0).T).sum()) if len(xy) > 1 else 0.0
+        h = np.arctan2(*(xy[-1] - xy[-2])[::-1]) if len(xy) > 1 else r.gt_rig[0, 3]
+        r.path = np.r_[xy, (xy[-1] + 40.0 * np.array([np.cos(h), np.sin(h)]))[None]]
         self.ref, self.edges = Ref(r.path), edges_geom(mp)
         self.t = np.arange(r.T0, self.E + 1, 1e5)
         self.rig = r.ego_rig(self.t)
@@ -132,15 +140,19 @@ class Unit:
         j = int(np.clip(np.searchsorted(sg, self.s_on), 1, len(gt) - 2))
         v_log = float(np.hypot(*(gt[j + 1, 1:3] - gt[j - 1, 1:3])) / max((gt[j + 1, 0] - gt[j - 1, 0]) * 1e-6, 1e-3))
         R["v_log_on"] = round(v_log, 2)
+        mt = lambda n: float(CL.metric(o, n)[np.abs(CL.metric(o, n)[:, 0] - E).argmin(), 1])  # noqa: E731
+        fast = np.flatnonzero(np.hypot(*np.diff(gt[:, 1:3], axis=0).T) / np.maximum(np.diff(gt[:, 0]) * 1e-6, 1e-3) > 0.3)
+        R.update(log_len=round(self.L_log, 1), over_end=round(float(self.s[-1]) - self.L_log, 1), log_stop_t=round((gt[fast[-1] + 1, 0] - r.T0) * 1e-6, 1) if len(fast) else 0.0,
+                 sc_lat=round(mt("lateral_dist_to_gt_trajectory"), 2), sc_dist=round(mt("dist_to_gt_trajectory"), 2))
         dh = np.abs(deg(CL.wrap(self.rig[self.i_on:, 2] - self.ref.heading(self.s[self.i_on:]))))
         R["hdg_div_deg"] = round(float(dh.max()), 1)
         F = set()
         if self.K == "none":
             F.add("O1")
-        w = np.abs(np.diff(np.unwrap(self.rig[:21, 2]))) / 0.1
         wa = np.abs(np.diff(np.unwrap(self.rig[:, 2]))) / 0.1
-        R.update(v_start=round(float(self.v[0]), 1), w_max=round(float(wa.max()), 2) if len(wa) else "")
-        if self.v[0] > 23 and len(w) and w.max() > 0.3:
+        iw = np.flatnonzero(wa > 0.3)
+        R.update(v_start=round(float(self.v[0]), 1), w_max=round(float(wa.max()), 2) if len(wa) else "", w_t=round(float(iw[0]) * 0.1, 1) if len(iw) else "")
+        if self.v[0] >= 20 and len(wa) and wa.max() >= 1.0 and E - r.T0 <= 4e6:   # Amendment 2 (was: > 23 m/s and > 0.3 rad/s within 2 s)
             F.add("O2a")
         self.struck = None
         if self.K == "agent":
@@ -172,6 +184,10 @@ class Unit:
             R.update(inpath2s=int(inpath), frontal=int(rel[0] > 0), brake_clears=int(clears))
             if inpath and rel[0] > 0 and clears:
                 F.add("L1")
+        v_end = float(np.hypot(*(gt[-1, 1:3] - gt[-11, 1:3])) / max((gt[-1, 0] - gt[-11, 0]) * 1e-6, 1e-3))
+        self.over = self.K == "corridor" and self.s[-1] > self.L_log and v_end < 0.5
+        if self.over:                                        # Amendment 2: the corridor flag fired past the end of a logged path that ends in a standstill
+            F.add("L5")
         if self.K in ("boundary", "corridor"):
             if self.rtype != "straight" and self.v[self.i_on] ** 2 / self.R > A_LAT:
                 F.add("L2")
@@ -188,7 +204,7 @@ class Unit:
             F.add("C1")
         if self.K == "boundary" and self.rtype != "turn":
             F.add("C2")
-        cls = ("other" if F & {"O1", "O2a", "O2c"} else "longitudinal" if F & {"L1", "L2"} else "route" if F & {"R1", "R2"} or self.K == "corridor"
+        cls = ("other" if F & {"O1", "O2a", "O2c"} else "longitudinal" if F & {"L1", "L2", "L5"} else "route" if F & {"R1", "R2"} or self.K == "corridor"
                else "clearance")
         R.update(raw="+".join(sorted(F)), cls=cls)
         self.F, self.cls = F, cls
@@ -298,7 +314,9 @@ class Unit:
         effm = float(np.median(np.abs(eff))) if eff else np.nan
         rdev = float(np.median(dev)) if dev else np.nan
         exit_side = 0 if self.lat[-1] > 0 else 2
-        if rt != "straight":
+        if self.over:
+            sub = "0 overran the logged stop"
+        elif rt != "straight":
             sub = "1 route info" if cf != ct or abs(rdev) >= 3 else "2 info unused" if effm < 1 else "3 turn not made"
         else:
             sub = "1 route info" if cf != 1 and cf == exit_side else "4 drift"
