@@ -6,7 +6,8 @@ student (P2H10-F-s0 / -s1), the S0 contact head (two seeds, mean logit) and the 
 
 ## Verdict
 
-**By the registered table the outcome is "Stop": line D1 (d) is missed.** The student's own-plan boundary rate on moving straight CARLA
+**Stage 2 on CARLA is closed by P0; nothing is built.** By the registered table the outcome is "Stop": line D1 (d) is missed, and the
+other lines read the same way (the agent head fails zero-shot, the launch line (b) is missed, the P0-E line is missed with both port fixes). The student's own-plan boundary rate on moving straight CARLA
 rows is 2.38 % against 0.21 % on navtrain (11 x; line 3 x). The contact head itself passes on the road edge and fails on objects.
 Post hoc, the reader's own floor on these rows (the expert's executed future through the same raster) is 1.05 %, already 5 x the navtrain
 rate, so line (d) could not have been met on this cache whatever the student did; that is said here and the line is not moved.
@@ -21,7 +22,7 @@ rate, so line (d) could not have been met on this cache whatever the student did
 | D1 (b) 1 s displacement / speed, moving | 0.868 | 0.960 | >= 0.85, within 0.10 | holds |
 | D1 (c) turn direction | 0.838 [0.823, 0.851]; > 45 deg 0.818 [0.800, 0.834] | 0.998; 0.998 | >= 0.80; >= 0.75 | holds |
 | D1 (d) own-plan boundary rate, moving straight rows | 2.38 % [2.10, 2.68] (MKZ) | 0.21 % [0.06, 0.42] | <= 3 x nav (0.63 %) | **missed** |
-| P0-E unexcused standing / all ticks, six routes | A0 as shipped 0.431 (3 of 6 routes under 0.30); A1 both fixes: section 4 | - | < 0.20 pooled and < 0.30 on >= 5 routes | section 4 |
+| P0-E unexcused standing / all ticks, six routes | A0 as shipped 0.431 (3 of 6 routes under 0.30); **A1 both port fixes 0.620 (1 of 6 under 0.30)**; standing share 0.863 / 0.866 | - | < 0.20 pooled and < 0.30 on >= 5 routes | **missed**: the fixed ports do not make the student move |
 
 What the table does not show and matters as much (reported, no line):
 
@@ -140,17 +141,37 @@ Identical-rerun spread against the design's probe: standing share per route 0.89
 (28008: 0.025 with the hero's own light, 0.625 with a route-light rule; 334 the reverse) and not pooled: 0.431 / 0.537 / 0.474 under the
 three readings, all far above the line.
 
-**A1, both fixes**: A1_PENDING
+**A1, both fixes** (`port.ego` + `port.cmd`, pool job `1010-084130-ff46`):
+
+| Route | Ticks | Standing | Metres | Own-plan speed at 1 s, standing (median / p90) | Excused: light / actor / either | Unexcused standing / all ticks |
+|---|--:|--:|--:|--:|--:|--:|
+| 10255 | 1 852 | 0.75 | 30.3 | 0.09 / 0.29 | 0.00 / 0.13 / 0.13 | 0.649 |
+| 5423 | 4 000 | 0.93 | 32.4 | 0.28 / 0.87 | 0.00 / 0.33 / 0.33 | 0.622 |
+| 28008 | 4 000 | 0.71 | 129.4 | 0.01 / 0.07 | 0.01 / 0.04 / 0.05 | 0.673 |
+| 15102 | 3 601 | 0.87 | 61.1 | 0.00 / 0.04 | 0.00 / 0.00 / 0.00 | 0.873 |
+| 28147 | 4 000 | 0.92 | 37.2 | 0.08 / 0.29 | 0.00 / 0.01 / 0.01 | 0.914 |
+| 334 | 4 000 | 0.95 | 34.8 | -0.05 / 0.05 | 0.00 / 0.96 / 0.96 | 0.034 |
+| pooled | 21 453 | 0.87 | 325.1 | 0.02 / 0.41 | 0.00 / 0.28 / 0.28 | **0.620** |
+
+**Line missed** (0.620 pooled against < 0.20; one route of six under 0.30). With the acceleration, the lateral velocity and the command
+fed as the labels compute them, the car stands on the same share of ticks (0.866 against 0.863) and drives no further (325 against
+362 m); the unexcused share rises because the cars stop at other places, away from lights and leads. Under the two alternative excuse
+readings A1 is 0.564 / 0.723. The standing is therefore not an artefact of these two ports; with D1 (b) it sits in the student's own plan
+on CARLA frames (decision 128's addendum, now with the trained ports correct). A2 / A3 were not released (their condition, A1 passing
+or lowering the share by 10 points, is not met). The default-off `port` switch stays in `lib/op_arb_agent.py` as it is.
 
 ![probe](../figs/s2p0/probe_speed.png)
 
-Speed against time per route, A0 and A1, with red-light and actor-ahead spans shaded. **What to look at:** whether the long flat
-stretches at zero fall inside shaded spans (excused) or in the open (the student stands with nothing in front of it).
+Speed against time per route, A0 and A1, with red-light and actor-ahead spans shaded. **What to look at:** the long flat stretches at
+zero: in A1 most of them lie outside the shaded spans (the student stands with nothing in front of it), and no route shows A1 moving
+where A0 stood.
 
 ## 5. What it means for stage 2
 
-- **Registered outcome: stop** (D1 (d)). The line that triggers it is label-limited on this cache (section 3); the main session decides
-  whether that stop stands. This lane agent launches nothing further.
+- **Stage 2 on CARLA is closed by P0; nothing is built** (the user's decision, forwarded by the main session after these reads: CARLA is
+  not pursued further if it does not work). Registered outcome per line: D1 (d) missed = stop; D2 agent fail = class 1 dropped; D1 (b)
+  and P0-E missed = no mode F; D2 boundary pass and D1 (a), (c) hold. The one line that triggers the stop by the letter is label-limited
+  on this cache (section 3), and the stop does not rest on it alone: items 1 to 3 below. No generator code, no S0, no S1.
 - Independent of (d), what P0 does establish:
   1. Class 1 (obstacle ahead) is out: the head's agent half does not transfer (0.59, fail), and the student's CARLA plans run into leads
      at 55 x the navtrain rate, a CARLA-specific longitudinal behaviour that rows of "our student in the loop" would be made of.
@@ -160,17 +181,17 @@ stretches at zero fall inside shaded spans (excused) or in the open (the student
   3. Mode F (student speed) is out on the open-loop read alone: launch share 0.24 against 0.995 (D1 (b) missed). If stage 2 were built,
      it would be the design's fallback (expert-carried, modes L and I), i.e. injected lateral states at the expert's speed with an expert
      path target, not "the states the student itself reaches".
-- If the main session overrides the stop for class 2 only, the registered path is the fallback row of the table (code + S0 + S1, modes L
-  and I), and the raster must get the junction fill and a de-speckle first: with the b2dc raster the boundary truth has a 1 % floor.
+- For the record, had class 2 been continued, the registered path was the fallback row of the table (code + S0 + S1, modes L
+  and I), and the raster would have needed the junction fill and a de-speckle first: with the b2dc raster the boundary truth has a 1 % floor.
 
-**Cost line.** The probe confirms the design's M1 (134 ms per tick, 6 workers on one card, 0.30 card-h per six-route arm against 0.26).
+**Cost line (not spent).** The probe confirms the design's M1 (134 ms per tick, 6 workers on one card, 0.30 card-h per six-route arm against 0.26).
 The design's table stands: code + S0 + S1 about 1.2 card-h and 2 agent-days; class 2 only about 14 card-h; full 30 (23 to 40) card-h, 52
 to 73 GB. With class 1 dropped (300 of 1 200 sites) the full set would be about 22 card-h (17 to 30) and 39 to 55 GB (scaled by sites, an estimate).
 
 ## 6. Costs
 
 D1 / D2: forward 1.5 min on one card (76 394 rows, 2 student seeds, 3 heads), labels 3 min on 40 cores, report 8.5 min CPU; three smokes
-on 12 clips; about 0.05 card-h, 1.1 GB on the box. P0-E: A0 0.30 card-h, A1 in section 4. Pool jobs, owner `body1`, `--ram` declared.
+on 12 clips; about 0.05 card-h, 1.1 GB on the box. P0-E: A0 0.30 and A1 about 0.33 card-h (21 453 ticks at 137 ms), no A2 / A3. Total about 0.7 of the 1.5 card-hours. Pool jobs, owner `body1`, `--ram` declared.
 
 ## 7. Deviations from the pre-registration
 

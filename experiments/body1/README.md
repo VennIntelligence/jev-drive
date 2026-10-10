@@ -36,8 +36,8 @@ segments; nothing generated) in [plans/2026-10-10-stage2-carla-design.md](plans/
 zero-generation pre-check P0 in [plans/2026-10-10-stage2-prereg.md](plans/2026-10-10-stage2-prereg.md); its result in
 [results/stage2_p0.md](results/stage2_p0.md): by the registered table stage 2 stops (own-plan boundary rate on CARLA straights 11 x navtrain, a line the
 b2dc raster's own 1 % floor makes unmeetable); the contact head reads CARLA road edges zero-shot (AUC 0.84) and not CARLA objects (0.59); the
-student's plan on CARLA frames turns 0.28 to 0.54 of the expert's and launches on 24 % of standing rows. Nothing further is launched
-without the main session.
+student's plan on CARLA frames turns 0.28 to 0.54 of the expert's and launches on 24 % of standing rows; with both input ports fixed it still stands on 87 % of closed-loop ticks (unexcused 0.62, line 0.20).
+**Stage 2 on CARLA is closed by P0; nothing is built.**
 
 <!-- files:begin -->
 <!-- files:end -->
