@@ -129,7 +129,7 @@ F-s0 在 00:26 CST 结束，card 1 空出；F-s1、F0-s0、A0 两条约 01:20 CS
 - 这不是按中途读数加码：决定时 C 没有任何 navtest 读数（C-s0 在步 5 000，首个 snapshot 的 bench 尚未出），依据只有空卡。
 - 读数：C、F0 的登记比较（C − F0、F0 − F）在 seed 1 上同样做，并报两个 seed 的均值；早上没跑完则在相同步数的 snapshot 上比较。HUGSIM 的 `VT_LAST` 门不变（`VT-C-s0`）。
 
-## 补记 7（2026-10-11 01:05 CST，R-builder；臂 R 与续跑的任何训练步、任何读数之前；用户 00:40 CST 批准）
+## 补记 7（2026-10-11 01:00 CST，R-builder；臂 R 与续跑的任何训练步、任何读数之前；用户 00:40 CST 批准）
 
 接第 145、160、204、244、245 条。今晚的 A / B 都是从 `SH30-F-s{0,1}` 以常数 lr 续训：可训练支路是在一个已经训好的 policy 之上训的，表征阶段排在 policy 阶段之后，两种剂量混在一起。约定的原则：最终权重来自**一次**联合的 policy 训练；开发分成「改表征」（慢，带自己的 head，用 probe 读）与「改 loss 集」（快，总是联合训练，10 k 步，2 seed）；serving 规则不进配方。臂 R（reverse order）把次序倒过来测一次。
 
@@ -186,3 +186,5 @@ navtest 全分解（EPDMS 全部子项 × 四个转角桶）；> 45° 与 > 20°
 11. **不做**：HUGSIM 与 WOD（memory 臂没有 serving 路径，补记 2 第 3 点）；R 的 Stage-0 probe（bank 就是来源 checkpoint 的 token，`fin-AB` probe 已排）。
 12. **分级启动**（本补记 push 之后才提交）：先建 `vtr_0`，R-0 seed 0 在全量数据上跑 300 步（tag `smoke-vtr-0-s0`，warmup 100），再跑续跑路径 100 步（`smoke-vt-A2-s0`，自 `VT-A-s0-k15`）。检查清单：loss 全程有限；dev ADE 有限且在 100 / 200 / 300 步下降；memory 开 / 屏蔽 / 换成别的 log 三种 dev ADE 互不相同；bench 的 parity-plans 在 navtest 上对三种选项给出互不相同的 plan；续跑第 0 步的 dev ADE 与位移复现 `VT-A-s0` 的 `evals.json` 第 15 000 步（ADE 差 < 0.005 m，位移相对差 < 1%）；吞吐与显存用来定正式任务的预订。不过则不排正式任务。
 13. **资源**：R 的训练是缓存 token 的轻任务（SH30 当时 4.2 it/s、23.7 GB、40 min / 个），不占每卡的训练名额，预订 26 GB / 4 核 / 48 GB；bank 任务 16 GB；续跑与 A / B 相同（32 GB、8 核、`--train`）。全部经 pool，owner `vis_train-R`，一条自推进的链 `scripts/vt_r_chain.sh`。
+
+**分级启动的结果（01:05 CST，补记 7 第 12 点；全部通过，正式任务 01:07 CST 入队）。** `smoke-vtr-0-s0`（R-0，seed 0，全量数据 300 步，编译路径，与第一波任务同卡）：loss 全程有限；dev ADE 1.107 → 0.940 → 0.911 m（步 100 / 200 / 300）；步 300 时 memory 开 / 屏蔽 / 换成别的 log 的 dev ADE 0.911 / 0.963 / 1.161 m；bench 的 parity-plans 在 navtest 12 146 行上三种选项两两相差 > 0.03 m 的行占 94–97%（中位 0.25–0.39 m）；7.1 it/s（编译后的稳态，共享卡），峰值 12.6 GB。续跑路径 `smoke-vt-A2-s0`（自 `VT-A-s0-k15`，100 步）：第 0 步 dev ADE 0.5722、屏蔽 0.5609、视觉位移 1.17%，与 `VT-A-s0` 的 `evals.json` 第 15 000 步逐位相同；3.33 it/s（与第一波同卡），25.0 GB。据此第 13 点的 R 训练预订由 26 GB 改为 16 GB；其余不变。编译路径可用，不改 eager。

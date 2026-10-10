@@ -23,12 +23,17 @@ and its amendments in `plans/`):
 | F0 | 0 | frozen, no anchor rows, no distillation | F |
 | W (second wave) | 0, 1 | A with three t0 views: the shared-weight branch encodes CAM_F0 / CAM_L0 / CAM_R0 (at least +-82 deg together), 3 x 32 tokens through the memory channel; test-time `:sideoff` masks the two side views | A |
 
+| R (prereg amendment 7, gated) | 0, 1 | the branch FROZEN: the policy is trained from the shipped weights with the full SH30 recipe (10 000 steps x 128, cosine) and reads a precomputed token bank through the memory channel: `VTR-A` / `VTR-B` = the final branch of A / B, `VTR-0` = Cinque's own t0 tokens | `VTR-0`; reference SH30 |
+| A2 or B2 (amendment 7) | 0, 1 | the better of A / B continued for 30 000 steps under the new tags `VT-A2` / `VT-B2-s<seed>` | A0, its own k50 |
+
 A0 / A / B / W carry the branch's own head (thin decoder on [tokens, ego]; decision 204), trained jointly, unused at inference.
 
 **How it runs.** `scripts/vt_chain.sh <arm> <seed> <steps>` (one tmux window per arm and seed) puts the whole chain into the GPU pool:
 the training job (`scripts/vt.py train`, resumable from its last snapshot), a navtest read per snapshot (`VT-<arm>-s<seed>-k<NN>`) and the
 final reads (`VT-<arm>-s<seed>`: navtest, navhard on protocol W, test-time masked / shuffled memory for A and B, HUGSIM 64 for the plain
 P2 arms F and F0), all through `python -m jevdrive.bench` (family `vt`: `vt.py plans` reads the cached slot tokens and the pixel cache).
+Arm R and the continuation are one more chain, `scripts/vt_r_chain.sh all` (`scripts/vt_r.py`: token banks, the registered gate on arm A's masked-memory
+drop, the choice of the continued arm; trainer `experiments/op_parity/scripts/pp_train.py --mem vtr_*`); its state is in `plans/state.md`, section 「R 臂」.
 `scripts/vt.py ident` is the identity gate, `scripts/vt.py tokens` dumps branch tokens for the decision-160 Stage-0 probe.
 
 **Throughput.** Pixels are rendered once into `$DATA_DIR/runs/vis_train/px/` (`scripts/vt_px.py`) and read through `lib/pixel_store.py`;
