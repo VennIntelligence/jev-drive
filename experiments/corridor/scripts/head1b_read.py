@@ -122,7 +122,7 @@ def cmd_final(a):
             if j == 0:
                 test.append(z["test"][..., 0].astype(np.float64))
                 tn = z["names_test"]
-            runs[f"f{j}-s{s}"] = dict(name=nm, **{k: v for k, v in run_info(nm).items() if k != "curve"})
+            runs[f"f{j}-s{s}"] = {k: v for k, v in run_info(nm).items() if k != "curve"}
     assert (cnt == 1).all(), f"out-of-fold coverage: {np.bincount(cnt)}"
     tt = np.load(CR / TEST_DIR / "tab.npz")
     assert (tn == tt["names"]).all() and not set(tt["log"].tolist()) & set(logs.tolist())
