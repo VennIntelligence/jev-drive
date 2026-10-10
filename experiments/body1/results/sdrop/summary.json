@@ -1,0 +1,668 @@
+{
+ "q1": {
+  "G2": 3.331790679641592,
+  "half": 1.665895339820796,
+  "arms": {
+   "noA": {
+    "minus_S": {
+     "arm": "noA",
+     "vs": "S",
+     "n": 225,
+     "new": 45.212396993194965,
+     "ref": 46.376397344809845,
+     "diff": -1.1640003516148703,
+     "lo": -2.1800175055340394,
+     "hi": -0.24014330991733604,
+     "per_seed": "44.933 / 45.492"
+    },
+    "minus_base": {
+     "arm": "noA",
+     "vs": "base",
+     "n": 225,
+     "new": 45.212396993194965,
+     "ref": 43.04460666516824,
+     "diff": 2.1677903280267223,
+     "lo": 0.25222686567570957,
+     "hi": 4.014400043800725,
+     "per_seed": "44.933 / 45.492"
+    },
+    "share_kept": 0.6506382112395837,
+    "verdict": "not needed"
+   },
+   "noB": {
+    "minus_S": {
+     "arm": "noB",
+     "vs": "S",
+     "n": 225,
+     "new": 42.84243087833636,
+     "ref": 46.376397344809845,
+     "diff": -3.5339664664734727,
+     "lo": -5.476558530772336,
+     "hi": -1.6410446302516315,
+     "per_seed": "42.897 / 42.787"
+    },
+    "minus_base": {
+     "arm": "noB",
+     "vs": "base",
+     "n": 225,
+     "new": 42.84243087833636,
+     "ref": 43.04460666516824,
+     "diff": -0.20217578683187973,
+     "lo": -1.0935436650023471,
+     "hi": 0.6644984031219588,
+     "per_seed": "42.897 / 42.787"
+    },
+    "share_kept": -0.060680818896350415,
+    "verdict": "carries"
+   },
+   "noC": {
+    "minus_S": {
+     "arm": "noC",
+     "vs": "S",
+     "n": 225,
+     "new": 44.842581517377546,
+     "ref": 46.376397344809845,
+     "diff": -1.533815827432288,
+     "lo": -2.984379886710605,
+     "hi": -0.04689707464593385,
+     "per_seed": "44.733 / 44.952"
+    },
+    "minus_base": {
+     "arm": "noC",
+     "vs": "base",
+     "n": 225,
+     "new": 44.842581517377546,
+     "ref": 43.04460666516824,
+     "diff": 1.7979748522093044,
+     "lo": 0.11519022224105147,
+     "hi": 3.4553732436711195,
+     "per_seed": "44.733 / 44.952"
+    },
+    "share_kept": 0.5396421999723934,
+    "verdict": "not needed"
+   }
+  }
+ },
+ "navhard_combined_per_seed": {
+  "base": [
+   31.39811144877055,
+   32.27775261194225
+  ],
+  "S": [
+   33.274902811761734,
+   34.83820450131663
+  ],
+  "noA": [
+   32.608838738441435,
+   32.94562367507258
+  ],
+  "noB": [
+   31.437245760262183,
+   31.492385271282124
+  ],
+  "noC": [
+   32.53558210605571,
+   33.135135826733965
+  ]
+ },
+ "q2": {
+  "tolerance": 5,
+  "base_W2": [
+   45,
+   46
+  ],
+  "S_W2": [
+   58,
+   65
+  ],
+  "arms": {
+   "noA": {
+    "W2": [
+     54,
+     63
+    ],
+    "excess_over_base": [
+     9,
+     17
+    ],
+    "verdict": "wide"
+   },
+   "noB": {
+    "W2": [
+     45,
+     47
+    ],
+    "excess_over_base": [
+     0,
+     1
+    ],
+    "verdict": "not wide"
+   },
+   "noC": {
+    "W2": [
+     55,
+     54
+    ],
+    "excess_over_base": [
+     10,
+     8
+    ],
+    "verdict": "wide"
+   }
+  },
+  "only_road_hinge_on_hinge_only_rows": "fails"
+ },
+ "arc_guard_missed": [],
+ "attribution": {
+  "navhard | 225 groups | combined": {
+   "effect": {
+    "diff": 2.2186216261827907,
+    "lo": 0.25289350839180846,
+    "hi": 4.36382502784694,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "carries",
+     "share_kept": 0.4233706033131502
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": -0.16817492004087328
+    },
+    "noC": {
+     "verdict": "unresolved",
+     "share_kept": 0.44957054608475366
+    }
+   }
+  },
+  "navhard | 225 groups | stage1": {
+   "effect": {
+    "diff": -0.5700858235486701,
+    "lo": -2.20709177577964,
+    "hi": 1.3166222726131223,
+    "excludes_0": false
+   },
+   "arms": {
+    "noA": {
+     "verdict": "unresolved",
+     "share_kept": 2.135747641004526
+    },
+    "noB": {
+     "verdict": "unresolved",
+     "share_kept": -0.010654814917515342
+    },
+    "noC": {
+     "verdict": "not needed",
+     "share_kept": 1.9124763591196887
+    }
+   }
+  },
+  "navhard | 225 groups | stage2": {
+   "effect": {
+    "diff": 3.331790679641592,
+    "lo": 1.2746921770212112,
+    "hi": 5.4818826718913085,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.6506382112395837
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": -0.060680818896350415
+    },
+    "noC": {
+     "verdict": "not needed",
+     "share_kept": 0.5396421999723934
+    }
+   }
+  },
+  "navtest | all | EPDMS": {
+   "effect": {
+    "diff": 0.3767805266439199,
+    "lo": 0.20387412550710024,
+    "hi": 0.5659550115473394,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 1.0290506753642603
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.11253432871735163
+    },
+    "noC": {
+     "verdict": "carries",
+     "share_kept": 0.18337275783448806
+    }
+   }
+  },
+  "navtest | > 45 deg | EPDMS": {
+   "effect": {
+    "diff": 0.8071503980978685,
+    "lo": 0.10201499932306671,
+    "hi": 1.5336669991052527,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 1.0813659108802103
+    },
+    "noB": {
+     "verdict": "unresolved",
+     "share_kept": 0.3755243432952294
+    },
+    "noC": {
+     "verdict": "carries",
+     "share_kept": 0.03659159832781052
+    }
+   }
+  },
+  "navtest replay | all | DAC fail %": {
+   "effect": {
+    "diff": -0.3457928536143586,
+    "lo": -0.5251124617309962,
+    "hi": -0.1933635494467898,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 1.1071428571428572
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.01190476190476183
+    },
+    "noC": {
+     "verdict": "carries",
+     "share_kept": 0.19047619047619044
+    }
+   }
+  },
+  "navtest replay | T45 (> 45 deg) | DAC fail %": {
+   "effect": {
+    "diff": -0.8569545154911009,
+    "lo": -1.6581632653061225,
+    "hi": -0.0737463126843657,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 1.1538461538461537
+    },
+    "noB": {
+     "verdict": "unresolved",
+     "share_kept": 0.3461538461538461
+    },
+    "noC": {
+     "verdict": "carries",
+     "share_kept": 0.03846153846153842
+    }
+   }
+  },
+  "navtest replay | T45 (> 45 deg) | inside-cut %": {
+   "effect": {
+    "diff": -0.7251153592617007,
+    "lo": -1.3941790408353087,
+    "hi": -0.1865602130925107,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 1.0909090909090908
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.13636363636363624
+    },
+    "noC": {
+     "verdict": "unresolved",
+     "share_kept": 0.36363636363636354
+    }
+   }
+  },
+  "navtest replay | T45 (> 45 deg) | cannot-make-turn %": {
+   "effect": {
+    "diff": 0.1647989452867501,
+    "lo": -0.4081771673246955,
+    "hi": 0.7837016189963328,
+    "excludes_0": false
+   },
+   "arms": {
+    "noA": {
+     "verdict": "unresolved",
+     "share_kept": 1.2
+    },
+    "noB": {
+     "verdict": "unresolved",
+     "share_kept": -0.5999999999999996
+    },
+    "noC": {
+     "verdict": "unresolved",
+     "share_kept": 2.2000000000000006
+    }
+   }
+  },
+  "navtest own plan | pooled | agent rate": {
+   "effect": {
+    "diff": -0.00020582907953235632,
+    "lo": -0.0013768724730140948,
+    "hi": 0.0009528201576408464,
+    "excludes_0": false
+   },
+   "arms": {
+    "noA": {
+     "verdict": "unresolved",
+     "share_kept": -1.0
+    },
+    "noB": {
+     "verdict": "unresolved",
+     "share_kept": -1.2
+    },
+    "noC": {
+     "verdict": "unresolved",
+     "share_kept": 0.4
+    }
+   }
+  },
+  "navtest own plan | pooled | boundary rate": {
+   "effect": {
+    "diff": -0.00650419891322246,
+    "lo": -0.01024817627543104,
+    "hi": -0.0033184473886909986,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.860759493670886
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.15189873417721517
+    },
+    "noC": {
+     "verdict": "carries",
+     "share_kept": 0.33544303797468356
+    }
+   }
+  },
+  "navtest own plan | > 45 deg | signed lateral at 4 s (m, + = outside)": {
+   "effect": {
+    "diff": 0.2234846176484301,
+    "lo": 0.18590076661984048,
+    "hi": 0.26717633298560534,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.7522728775284419
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.14120777599203713
+    },
+    "noC": {
+     "verdict": "not needed",
+     "share_kept": 0.5516314043508145
+    }
+   }
+  },
+  "navtest own plan | > 45 deg | W2 share": {
+   "effect": {
+    "diff": 0.01054713249835201,
+    "lo": 0.0042854090354090355,
+    "hi": 0.016845441439622143,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.8125000000000001
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.03125
+    },
+    "noC": {
+     "verdict": "not needed",
+     "share_kept": 0.5625
+    }
+   }
+  },
+  "hold own plan | pooled | agent rate": {
+   "effect": {
+    "diff": -0.010437788784363262,
+    "lo": -0.012381258879580595,
+    "hi": -0.008539287667318027,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.6321656050955414
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.01751592356687898
+    },
+    "noC": {
+     "verdict": "not needed",
+     "share_kept": 0.6671974522292993
+    }
+   }
+  },
+  "hold own plan | on-log | agent rate": {
+   "effect": {
+    "diff": -0.0006406736225517115,
+    "lo": -0.0016611407576803746,
+    "hi": 0.00027938066822780515,
+    "excludes_0": false
+   },
+   "arms": {
+    "noA": {
+     "verdict": "unresolved",
+     "share_kept": 0.8571428571428572
+    },
+    "noB": {
+     "verdict": "unresolved",
+     "share_kept": 0.14285714285714288
+    },
+    "noC": {
+     "verdict": "unresolved",
+     "share_kept": 0.2142857142857143
+    }
+   }
+  },
+  "hold own plan | off-track | agent rate": {
+   "effect": {
+    "diff": -0.0160254737171791,
+    "lo": -0.019021136583184745,
+    "hi": -0.012980936911151071,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.6270358306188925
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.014657980456026058
+    },
+    "noC": {
+     "verdict": "not needed",
+     "share_kept": 0.6775244299674267
+    }
+   }
+  },
+  "hold own plan | pooled | boundary rate": {
+   "effect": {
+    "diff": -0.016670544825981452,
+    "lo": -0.01900992425073775,
+    "hi": -0.014533231658920724,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.9441674975074775
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.01296111665004985
+    },
+    "noC": {
+     "verdict": "carries",
+     "share_kept": 0.39282153539381853
+    }
+   }
+  },
+  "hold own plan | on-log | boundary rate": {
+   "effect": {
+    "diff": -0.0017847336628226248,
+    "lo": -0.0029155050579156325,
+    "hi": -0.0009108154138078411,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.9230769230769231
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": -0.025641025641025644
+    },
+    "noC": {
+     "verdict": "carries",
+     "share_kept": 0.3076923076923077
+    }
+   }
+  },
+  "hold own plan | off-track | boundary rate": {
+   "effect": {
+    "diff": -0.025160515738372396,
+    "lo": -0.028603759762808458,
+    "hi": -0.022097978430888537,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.9450207468879669
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.014522821576763484
+    },
+    "noC": {
+     "verdict": "carries",
+     "share_kept": 0.3962655601659751
+    }
+   }
+  },
+  "hold on-log own plan | > 45 deg | signed lateral at 4 s (m, + = outside)": {
+   "effect": {
+    "diff": 0.06699143243841921,
+    "lo": 0.030991610486011473,
+    "hi": 0.10133329286017224,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.7025244788560826
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.15448677882422085
+    },
+    "noC": {
+     "verdict": "not needed",
+     "share_kept": 0.831815689003295
+    }
+   }
+  },
+  "hold on-log own plan | > 45 deg | W2 share": {
+   "effect": {
+    "diff": 0.00937766410912191,
+    "lo": 0.003698209658049428,
+    "hi": 0.015800282183255337,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.7727272727272727
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.1818181818181818
+    },
+    "noC": {
+     "verdict": "not needed",
+     "share_kept": 1.0
+    }
+   }
+  },
+  "hold four families own plan | > 45 deg | signed lateral at 4 s (m, + = outside)": {
+   "effect": {
+    "diff": 0.19321441150438243,
+    "lo": 0.14650987729881446,
+    "hi": 0.2386732395448202,
+    "excludes_0": true
+   },
+   "arms": {
+    "noA": {
+     "verdict": "not needed",
+     "share_kept": 0.8653720107174451
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": 0.07761774193090261
+    },
+    "noC": {
+     "verdict": "carries",
+     "share_kept": 0.4427954288785205
+    }
+   }
+  },
+  "hold four families own plan | > 45 deg | W2 share": {
+   "effect": {
+    "diff": -0.006702073849266565,
+    "lo": -0.016246990988396017,
+    "hi": 0.003354305950768873,
+    "excludes_0": false
+   },
+   "arms": {
+    "noA": {
+     "verdict": "unresolved",
+     "share_kept": 1.1320754716981132
+    },
+    "noB": {
+     "verdict": "carries",
+     "share_kept": -0.4905660377358491
+    },
+    "noC": {
+     "verdict": "carries",
+     "share_kept": -0.6226415094339622
+    }
+   }
+  }
+ },
+ "cross_check_bd4_g3": {
+  "max_states_apart": 0.0,
+  "n": 24
+ }
+}

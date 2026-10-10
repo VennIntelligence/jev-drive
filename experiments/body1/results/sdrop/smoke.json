@@ -1,0 +1,49 @@
+{
+ "noA": {
+  "run": "/root/autodl-tmp/ujs/runs/op_parity/train-SDROP-SMOKE-noA/20261010-184404",
+  "done": true,
+  "terms_as_registered": true,
+  "loss_scalars": [
+   "loss/cons",
+   "loss/distill",
+   "loss/distill_ho",
+   "loss/hinge",
+   "loss/imit",
+   "loss/road_ho",
+   "loss/road_ho_pos"
+  ]
+ },
+ "noB": {
+  "run": "/root/autodl-tmp/ujs/runs/op_parity/train-SDROP-SMOKE-noB/20261010-184401",
+  "done": true,
+  "terms_as_registered": true,
+  "loss_scalars": [
+   "loss/agent",
+   "loss/agent_pos",
+   "loss/agent_posmean",
+   "loss/agent_posn",
+   "loss/cons",
+   "loss/distill",
+   "loss/hinge",
+   "loss/imit"
+  ]
+ },
+ "noC": {
+  "run": "/root/autodl-tmp/ujs/runs/op_parity/train-SDROP-SMOKE-noC/20261010-184401",
+  "done": true,
+  "terms_as_registered": true,
+  "loss_scalars": [
+   "loss/agent",
+   "loss/agent_ho",
+   "loss/agent_ho_pos",
+   "loss/agent_pos",
+   "loss/agent_posmean",
+   "loss/agent_posn",
+   "loss/cons",
+   "loss/distill",
+   "loss/distill_ho",
+   "loss/hinge",
+   "loss/imit"
+  ]
+ }
+}

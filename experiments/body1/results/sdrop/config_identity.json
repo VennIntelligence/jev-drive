@@ -1,0 +1,238 @@
+{
+ "P2H10S-noA-F-s0": {
+  "run": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-noA-F-s0/20261010-191352",
+  "ref": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-F-s0/20261010-084046",
+  "differing_keys": {
+   "agent_lam": [
+    0.0,
+    10.0
+   ],
+   "body1.agent_lam": [
+    0.0,
+    10.0
+   ],
+   "body1.route_band": [
+    0.0,
+    "<absent>"
+   ],
+   "body1.route_lam": [
+    10.0,
+    "<absent>"
+   ],
+   "body1.tag": [
+    "P2H10S-noA-F-s0",
+    "P2H10S-F-s0"
+   ]
+  },
+  "unexpected": [],
+  "added_since_off": [
+   "body1.route_band",
+   "body1.route_lam"
+  ],
+  "steps": 10000,
+  "dev_ade": 0.5453531742095947,
+  "dev_drift_off": 0.04428640380501747,
+  "ho_per_batch": 13,
+  "train_s": 2741.612501144409,
+  "gpu_peak_gb": 27.1796875,
+  "ref_dev_ade": 0.5452736020088196,
+  "sane": true
+ },
+ "P2H10S-noA-F-s1": {
+  "run": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-noA-F-s1/20261010-191352",
+  "ref": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-F-s1/20261010-084046",
+  "differing_keys": {
+   "agent_lam": [
+    0.0,
+    10.0
+   ],
+   "body1.agent_lam": [
+    0.0,
+    10.0
+   ],
+   "body1.route_band": [
+    0.0,
+    "<absent>"
+   ],
+   "body1.route_lam": [
+    10.0,
+    "<absent>"
+   ],
+   "body1.tag": [
+    "P2H10S-noA-F-s1",
+    "P2H10S-F-s1"
+   ]
+  },
+  "unexpected": [],
+  "added_since_off": [
+   "body1.route_band",
+   "body1.route_lam"
+  ],
+  "steps": 10000,
+  "dev_ade": 0.5436310768127441,
+  "dev_drift_off": 0.04350045323371887,
+  "ho_per_batch": 13,
+  "train_s": 2741.566287279129,
+  "gpu_peak_gb": 27.1796875,
+  "ref_dev_ade": 0.543161928653717,
+  "sane": true
+ },
+ "P2H10S-noB-F-s0": {
+  "run": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-noB-F-s0/20261010-191404",
+  "ref": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-F-s0/20261010-084046",
+  "differing_keys": {
+   "body1.ho": [
+    "",
+    "ot1:4,yr1:4,bd4:5"
+   ],
+   "body1.ho_excl": [
+    "",
+    "navsim/body1-val-logs"
+   ],
+   "body1.ho_w": [
+    1.0,
+    3.0
+   ],
+   "body1.route_band": [
+    0.0,
+    "<absent>"
+   ],
+   "body1.route_lam": [
+    10.0,
+    "<absent>"
+   ],
+   "body1.tag": [
+    "P2H10S-noB-F-s0",
+    "P2H10S-F-s0"
+   ],
+   "data": "hinge-only cache dirs absent"
+  },
+  "unexpected": [],
+  "added_since_off": [
+   "body1.route_band",
+   "body1.route_lam"
+  ],
+  "steps": 10000,
+  "dev_ade": 0.5411806106567383,
+  "dev_drift_off": 0.04107237979769707,
+  "ho_per_batch": 0,
+  "train_s": 2751.655532836914,
+  "gpu_peak_gb": 16.02734375,
+  "ref_dev_ade": 0.5452736020088196,
+  "sane": true
+ },
+ "P2H10S-noB-F-s1": {
+  "run": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-noB-F-s1/20261010-191404",
+  "ref": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-F-s1/20261010-084046",
+  "differing_keys": {
+   "body1.ho": [
+    "",
+    "ot1:4,yr1:4,bd4:5"
+   ],
+   "body1.ho_excl": [
+    "",
+    "navsim/body1-val-logs"
+   ],
+   "body1.ho_w": [
+    1.0,
+    3.0
+   ],
+   "body1.route_band": [
+    0.0,
+    "<absent>"
+   ],
+   "body1.route_lam": [
+    10.0,
+    "<absent>"
+   ],
+   "body1.tag": [
+    "P2H10S-noB-F-s1",
+    "P2H10S-F-s1"
+   ],
+   "data": "hinge-only cache dirs absent"
+  },
+  "unexpected": [],
+  "added_since_off": [
+   "body1.route_band",
+   "body1.route_lam"
+  ],
+  "steps": 10000,
+  "dev_ade": 0.5392158031463623,
+  "dev_drift_off": 0.04054189845919609,
+  "ho_per_batch": 0,
+  "train_s": 2751.6542139053345,
+  "gpu_peak_gb": 16.02734375,
+  "ref_dev_ade": 0.543161928653717,
+  "sane": true
+ },
+ "P2H10S-noC-F-s0": {
+  "run": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-noC-F-s0/20261010-191534",
+  "ref": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-F-s0/20261010-084046",
+  "differing_keys": {
+   "body1.road_lam": [
+    0.0,
+    10.0
+   ],
+   "body1.route_band": [
+    0.0,
+    "<absent>"
+   ],
+   "body1.route_lam": [
+    10.0,
+    "<absent>"
+   ],
+   "body1.tag": [
+    "P2H10S-noC-F-s0",
+    "P2H10S-F-s0"
+   ]
+  },
+  "unexpected": [],
+  "added_since_off": [
+   "body1.route_band",
+   "body1.route_lam"
+  ],
+  "steps": 10000,
+  "dev_ade": 0.5447936654090881,
+  "dev_drift_off": 0.04304112121462822,
+  "ho_per_batch": 13,
+  "train_s": 1394.4196426868439,
+  "gpu_peak_gb": 22.54296875,
+  "ref_dev_ade": 0.5452736020088196,
+  "sane": true
+ },
+ "P2H10S-noC-F-s1": {
+  "run": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-noC-F-s1/20261010-191534",
+  "ref": "/root/autodl-tmp/ujs/runs/op_parity/train-P2H10S-F-s1/20261010-084046",
+  "differing_keys": {
+   "body1.road_lam": [
+    0.0,
+    10.0
+   ],
+   "body1.route_band": [
+    0.0,
+    "<absent>"
+   ],
+   "body1.route_lam": [
+    10.0,
+    "<absent>"
+   ],
+   "body1.tag": [
+    "P2H10S-noC-F-s1",
+    "P2H10S-F-s1"
+   ]
+  },
+  "unexpected": [],
+  "added_since_off": [
+   "body1.route_band",
+   "body1.route_lam"
+  ],
+  "steps": 10000,
+  "dev_ade": 0.5438179969787598,
+  "dev_drift_off": 0.04224613681435585,
+  "ho_per_batch": 13,
+  "train_s": 1390.2577123641968,
+  "gpu_peak_gb": 22.224609375,
+  "ref_dev_ade": 0.543161928653717,
+  "sane": true
+ }
+}
