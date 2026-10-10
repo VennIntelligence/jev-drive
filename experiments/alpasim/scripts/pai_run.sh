@@ -6,7 +6,7 @@
 #   pai_run.sh <out dir> <scenes.tsv | file of scene ids> [wizard overrides...]
 # Env: DATA_DIR (/data), ALPASIM_SRC, NUREC (scene cache with all-usdzs/, pai_fetch.sh), IMG (driver image), BASE (trusted image),
 #   GPU (card of renderer + physics, default 1), DGPU (driver card, default $GPU), STAGE (rows of the tsv with stage <= this, default 1),
-#   CONC (concurrent rollouts, default 1), TAG (checkpoint, default P2H10-F-s0), DRV_ENV (extra `-e K=V` for the driver, space
+#   CONC (concurrent rollouts, default 1), NRE_CACHE (scenes the renderer keeps loaded, default CONC + 1; about 3 GB of VRAM each), TAG (checkpoint, default P2H10-F-s0), DRV_ENV (extra `-e K=V` for the driver, space
 #   separated; the serving switches: `-e JEV_VCONT=1.0 -e JEV_LEAD=1`, lib/serve_fix.py), DRV_PY (a driver variant in lib/ run instead of pai_driver.py, e.g. col1_pai_driver.py), PAI_BASEPORT (default 6400), HARMONIZER (0 = the renderer of the public leaderboard: the dev preset's
 #   `--enable-harmonizer` removed, as the ec2 preset does; 1 = the dev preset as shipped, which is how the bundled reference runs were
 #   made; the weights are then mounted from $NUREC/harmonizer because the renderer cannot fetch them from inside the container).
@@ -69,7 +69,7 @@ wiz=(uv run alpasim_wizard +e2e_challenge=dev "scenes.scene_ids=[$(echo "$ids" |
      "services.renderer.gpus=[$GPU]" "services.physics.gpus=[$GPU]" "wizard.baseport=$PORT0"
      "runtime.endpoints.renderer.n_concurrent_rollouts=$CONC" "runtime.endpoints.driver.n_concurrent_rollouts=$CONC"
      "runtime.endpoints.physics.n_concurrent_rollouts=$CONC" "runtime.endpoints.controller.n_concurrent_rollouts=$CONC"
-     "defines.nre_cache_size=$((CONC + 1))" wizard.run_method=NONE "wizard.log_dir=$R" "$@")
+     "defines.nre_cache_size=${NRE_CACHE:-$((CONC + 1))}" wizard.run_method=NONE "wizard.log_dir=$R" "$@")
 printf '%q ' "${wiz[@]}" > "$OUT/wizard_cmd.txt"; echo >> "$OUT/wizard_cmd.txt"
 docker run --rm --gpus all -v "$SRC:$SRC" -v "$R:$R" -v "$NUREC:$NUREC" -e "PYTHONPATH=$SRC/src/wizard:$SRC/src/utils" -e HF_HUB_OFFLINE=1 \
   -e "ALPASIM_DRIVER_HOST=$ip" -e ALPASIM_DRIVER_PORT=6789 "$BASE" \
@@ -95,5 +95,5 @@ wall=$(( $(date +%s) - t1 ))
 stop_all; wait "$sampler"; rm -f "$OUT/.stop"
 (( rc == 0 )) || die "compose exited with $rc after $wall s, see compose.log"
 [[ -f $R/aggregate/results-summary.json ]] || die "no results-summary.json"
-echo "{\"scenes\": $n, \"conc\": $CONC, \"wall_s\": $wall, \"gpu\": $GPU, \"driver_gpu\": $DGPU, \"tag\": \"$TAG\", \"harmonizer\": ${HARMONIZER:-0}, \"image\": \"$IMG\", \"base\": \"$BASE\"}" > "$OUT/run.json"
+echo "{\"scenes\": $n, \"conc\": $CONC, \"wall_s\": $wall, \"gpu\": $GPU, \"driver_gpu\": $DGPU, \"tag\": \"$TAG\", \"nre_cache\": ${NRE_CACHE:-$((CONC + 1))}, \"harmonizer\": ${HARMONIZER:-0}, \"image\": \"$IMG\", \"base\": \"$BASE\"}" > "$OUT/run.json"
 date > "$OUT/DONE"; st "done: $n scenes in $wall s"
