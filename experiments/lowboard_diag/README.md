@@ -15,6 +15,13 @@ the event in 6 of 29. HUGSIM: other 31.1%, longitudinal 30.9%, clearance 30.3% (
 
 **Next.** Main decides the next core from the draft decision entry; open items are listed at the end of each result doc.
 
+**HLEAD (2026-10-10), the first fix tried on a class of this table.** openpilot's own lead path (the AlpaSim switch of decision 226,
+now `jevdrive/openpilot/lead_long.py`, HUGSIM agent option `op_lead`) in the HUGSIM loop: none of the 9 L1 units ends on its lead any
+more (1 completes, 4 stand behind the parked car until max_steps, 2 end on background later, 2 are struck by another, oncoming actor),
+L1 HD +0.155 [+0.036, +0.304]; HUGSIM 64 HD does not move, -0.005 [-0.068, +0.049], because 3 completed scenarios are lost to the slower
+launch. One seed. [results/hlead.md](results/hlead.md), [plans/2026-10-10-hlead-prereg.md](plans/2026-10-10-hlead-prereg.md),
+`scripts/lbd_hlead.py`, tables in `results/hlead/`.
+
 **Read more.** [results/pai.md](results/pai.md), [results/hugsim.md](results/hugsim.md),
 [plans/2026-10-10-lowdiag-prereg.md](plans/2026-10-10-lowdiag-prereg.md) (class definitions, priority, "base right", two amendments).
 
