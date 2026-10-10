@@ -964,3 +964,12 @@ non-zero on 3.2 % of imitation rows and 9.7 % of hinge-only rows, W2 49 of 490 t
 65). Reported with it: on the validation part's turn rows the mean lateral at 4 s is +0.44 m for the 2.5 m pilot, +0.37 m for the 1.5 m pilot,
 +0.44 m for `P2H10S-P-s0` and +0.26 m for the switch-off pilot, so the selected band trims the tail and leaves the mean shift where `P2H10S` has it.
 Table: `results/route/select.md`. Next: the pilot gate of item 3 for `P2H10R-Pb25-s0`, one read of hold logs and navtest.
+
+**Status of Amendment 7 after the pilot gate (2026-10-10 12:30 box time, added after the read; nothing above was changed).** `P2H10R-Pb25-s0` against
+`P2H10-P-s0`, hold logs and navtest read once. Amendment 6's lines are met (agent -40.2 % [-0.0142, -0.0071], boundary -33.8 % [-0.0142, -0.0044], dev ADE
+0.5949 against 0.5913 m, slope 0.851 against 1.079, arc ratio 1.0001 pooled / 1.0006 open) and so is the guard (C-c) (31 against 47 navtest tokens, 10
+against 27 hold rows). **The corridor line is not met: (C-a) 67 against 54 navtest tokens (limit +5; `P2H10S-P-s0` 75), (C-b) 12 against 10 on-log hold rows
+(limit +1; `P2H10S-P-s0` 15).** By item 3 the variant ends here: no full run, no G3, no closed loop, no navtest bench, no PAI read; the servable checkpoint
+stays `P2H10-F`. The tube removes plans beyond its band on both sides and leaves the outward shift inside it (mean lateral at 4 s on navtest turn tokens
+-0.29 m against -0.36 m for `P2H10S-P-s0` and -0.48 m for the switch-off pilot). Details: [results/route_pilot.md](../results/route_pilot.md). Nothing follows
+without a new decision by the user.

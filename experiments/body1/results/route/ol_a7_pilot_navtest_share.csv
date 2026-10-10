@@ -1,0 +1,6 @@
+pair,group,n,share_states,mean_diff_m,share_of_total_diff
+P2H10R-Pb25-s0,contact,582,0.0479,-0.0759,0.0240
+P2H10R-Pb25-s0,lead,3454,0.2844,-0.1467,0.2751
+P2H10R-Pb25-s0,near obj,1295,0.1066,-0.1853,0.1302
+P2H10R-Pb25-s0,near edge,1714,0.1411,-0.1534,0.1427
+P2H10R-Pb25-s0,open,5101,0.4200,-0.1546,0.4280
