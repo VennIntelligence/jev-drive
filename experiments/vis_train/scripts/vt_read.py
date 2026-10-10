@@ -48,7 +48,7 @@ VERSION = "vt_read-1"                                   # bump to invalidate the
 
 STEPS = {"F": 60, "F0": 60, "A0": 50, "A": 50, "B": 50, "C": 40, "W": 50}       # thousand steps (plans/state.md)
 EVERY = {"F": 5, "F0": 10, "A0": 10, "A": 5, "B": 5, "C": 5, "W": 5}            # registered snapshot spacing
-SEEDS = {"F": (0, 1), "F0": (0,), "A0": (0, 1), "A": (0, 1), "B": (0, 1), "C": (0,), "W": (0, 1)}
+SEEDS = {"F": (0, 1), "F0": (0, 1), "A0": (0, 1), "A": (0, 1), "B": (0, 1), "C": (0, 1), "W": (0, 1)}   # F0 / C seed 1: prereg amendment 6; a seed with fewer snapshots only enters the seed mean at the steps both have
 CTRL = {"F": ("SH30",), "F0": ("F",), "A0": ("F",), "A": ("A0", "F"), "B": ("A0", "A", "F"), "C": ("F0", "F"), "W": ("A", "F")}
 PRIMARY = [("A", "A0"), ("B", "A0"), ("B", "A"), ("C", "F0"), ("W", "A")]         # the turn line's comparisons (prereg + amendment 1)
 OPTS = {"A": ("noside", "mshuf"), "B": ("noside", "mshuf"), "W": ("noside", "mshuf", "sideoff")}

@@ -18,7 +18,7 @@ axle (straight windows: a difference below the pose resolution). `shipped` = the
                                    `vt`) under a new tag, so that jevdrive.bench serves it on HUGSIM through the parity path (ONNX with the trained
                                    vision initializers + the ego-adapter bias server); loads it into pp_train.PModel("P2") on the CPU as the check
   submit (box, .venv) [--tags auto|T...]  the three stages as chained pool jobs (CPU / one GPU / CPU); `auto` = shipped, SH30-F-s0,
-                                   and every existing VT-C-s0* / VT-F0-s0* checkpoint. Cached per tag: rerun after each new C snapshot.
+                                   and every existing VT-C-s{0,1}* / VT-F0-s{0,1}* checkpoint. Cached per tag: rerun after each new C snapshot.
 """
 import argparse
 import json
@@ -198,7 +198,7 @@ def cmd_table(a):
                     out.append(dict(metric=m, tag=tag, ref="shipped", kind="ratio", nwin=int(ok.sum()),
                                     **stats.bootstrap((p[tag] / p["shipped"]).to_numpy(float)[ok], groups=seg[ok])))
             if tag.startswith("VT-C-"):                              # the paired control: F0 at the nearest registered step (every 10k)
-                f0 = [c for c in p.columns if c.startswith("VT-F0-s0")]
+                f0 = [c for c in p.columns if c.startswith("VT-F0-s" + tag.split("-s")[1][0])]      # same seed
                 if f0:
                     c = min(f0, key=lambda c: (abs(step_of(c) - step_of(tag)), step_of(c)))
                     ok = (p[tag].notna() & p[c].notna()).to_numpy()
@@ -218,7 +218,7 @@ def cmd_table(a):
 # ---------------------------------------------------------------- submit (box, .venv)
 def auto_tags():
     tags = ["shipped", "SH30-F-s0"]
-    for pat in ("VT-F0-s0", "VT-C-s0"):
+    for pat in ("VT-F0-s0", "VT-C-s0", "VT-F0-s1", "VT-C-s1"):
         tags += sorted(p.parent.name for p in RUNS.glob(f"{pat}*/ckpt-final.pt") if p.parent.name == pat or p.parent.name.startswith(pat + "-k"))
     return tags
 
