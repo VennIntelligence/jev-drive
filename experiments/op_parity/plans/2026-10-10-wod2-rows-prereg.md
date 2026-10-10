@@ -98,3 +98,10 @@ WOD 档保持 WLG，「WOD 没有便宜的训练成分可加」写成结论，�
 约 40 card-hour、2 天；本设计预计 prep 2 × (行池 + dev) + pilot 3 run + full ≤ 4 run + 评测，远低于预算，S1 后给实测估计。所有 GPU job 经 GPU pool
 （`python -m jevdrive.cl submit`）；训练在 `jevdrive.run.Run` 内，split 取自 `jevdrive.data.splits`（`wod/r2-train`、`wod/r2-dev`、`wod/val`）。
 不提交 test，数据不出 box。一次尝试 + 至多一次事先声明的补记。
+
+## 关闭说明（2026-10-10）
+
+lane WOD2 由用户在 pilot 读数之前关闭。没有任何训练被读出：S1 的 WOD 版 prep 未落盘，S2 的三个 pilot run 没有提交到 GPU pool，
+本 lane 的 GPU 花费为 0 card-hour，box 上没有新的 cache / run 目录。第 3–6 节的臂、闸门与判定线因此没有读数，不构成任何结论（既不是「平」也不是负结果）。
+仍然成立的只有第 1 节的标签清点（WOD-E2E 只有相机、标定、ego 历史 / 未来、intent 和 val 的 rater 轨迹；无 agent 框、无道路 / 车道几何）与第 2 节的可行性表
+（可行的只有离轨重投影行与 yaw-rate rows，其先验为「无可测变化」，未经检验）。重开需要 main 明确指示。
