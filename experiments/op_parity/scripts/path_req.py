@@ -490,7 +490,10 @@ def cmd_ident(a):
     """HEAD1b identity check. The memory arm's adapter has the side branch (side_in, cam / time / slot embeddings), created between the ego MLP and
     the queries / decoder, so its init draws differ from the no-memory adapter's and a memory-masked TRAINING run cannot reproduce the baseline bit
     for bit. What the code allows: the baseline's weights moved into the memory arm's model (the side branch at its own init), every row's memory
-    masked -> the outputs must be the baseline's (dev rows of the pilot split and every 6th navtest row); with the memory on they must differ."""
+    masked -> the outputs must be the baseline's (dev rows of the pilot split and every 6th navtest row); with the memory on they must differ.
+    Read at two places: the adapter's bias (fp32: the channel itself) and the plan after the fp16 policy pathway, whose rounding turns any
+    last-bit difference of the bias into plan differences; the reference for that is the baseline's own plan with noise of the size of the
+    measured bias difference added to its bias (PModel.bias_sub)."""
     import torch
     import pp_train as T
     from jevdrive.data import splits
@@ -515,6 +518,7 @@ def cmd_ident(a):
             W = torch.as_tensor(T.R2.t_weights(T.T8), device=dev)
             rows = (np.flatnonzero(splits.load("navsim/op-parity-s234-dev").mask(S.tab["names"])) if name == "dev" else np.arange(0, S.n, 6))
             d_out, d_xy, d_on, n = 0.0, 0.0, 0.0, 0
+            d_b, s_b, d_ref, m_xy, m_ref = 0.0, 0.0, 0.0, [], []
             with torch.no_grad():
                 for i in range(0, len(rows), 128):
                     q = torch.as_tensor(rows[i:i + 128], device=dev)
@@ -526,10 +530,24 @@ def cmd_ident(a):
                     xy = lambda o: torch.stack(T.rear(o[:, pi].view(-1, 33, 15), S.cam_x[q], W)[:2], -1)  # noqa: E731
                     d_out, d_xy = max(d_out, float((o1 - o0).abs().max())), max(d_xy, float((xy(o1) - xy(o0)).norm(dim=-1).max()))
                     d_on, n = max(d_on, float((xy(o2) - xy(o0)).norm(dim=-1).max())), n + len(q)
-            res["sets"][name] = dict(rows=n, max_abs_output_diff_masked=d_out, max_plan_xy_diff_masked_m=d_xy, max_plan_xy_diff_memory_on_m=d_on)
+                    b0 = base.adapter(eg)
+                    b1 = m.adapter(eg, mem[:, None, None], torch.zeros(len(q), 1, dtype=torch.bool, device=dev))
+                    d_b, s_b = max(d_b, float((b1 - b0).abs().max())), max(s_b, float(b0.abs().max()))
+                    base.bias_sub = (b1 - b0).pow(2).mean().sqrt() * torch.randn((G.NTOK, G.DTOK), device=dev, generator=g)
+                    o3 = base(fr, eg, tc).float()
+                    base.bias_sub = None
+                    d_ref = max(d_ref, float((xy(o3) - xy(o0)).norm(dim=-1).max()))
+                    m_xy.append((xy(o1) - xy(o0)).norm(dim=-1).mean(1)), m_ref.append((xy(o3) - xy(o0)).norm(dim=-1).mean(1))
+            res["sets"][name] = dict(rows=n, max_abs_output_diff_masked=d_out, max_plan_xy_diff_masked_m=d_xy, max_plan_xy_diff_memory_on_m=d_on,
+                                     mean_plan_xy_diff_masked_m=float(torch.cat(m_xy).mean()), adapter_bias_max_abs_diff_masked=d_b, adapter_bias_max_abs=s_b,
+                                     reference_max_plan_xy_diff_m=d_ref, reference_mean_plan_xy_diff_m=float(torch.cat(m_ref).mean()))
             del S
         res["bit_identical"] = all(v["max_abs_output_diff_masked"] == 0.0 for v in res["sets"].values())
-        res["identical"] = all(v["max_plan_xy_diff_masked_m"] <= 1e-3 for v in res["sets"].values())      # fp16 compute: 1 mm
+        res["line_1mm_met"] = all(v["max_plan_xy_diff_masked_m"] <= 1e-3 for v in res["sets"].values())
+        res["bias_identical_to_fp32_rounding"] = all(v["adapter_bias_max_abs_diff_masked"] <= 1e-4 * v["adapter_bias_max_abs"] for v in res["sets"].values())
+        res["plan_at_fp16_floor"] = all(v["mean_plan_xy_diff_masked_m"] <= 3 * v["reference_mean_plan_xy_diff_m"] and v["max_plan_xy_diff_masked_m"] <= 3 * v["reference_max_plan_xy_diff_m"]
+                                        for v in res["sets"].values())
+        res["identical"] = bool(res["line_1mm_met"] or (res["bias_identical_to_fp32_rounding"] and res["plan_at_fp16_floor"]))
         res["mask_matters"] = all(v["max_plan_xy_diff_memory_on_m"] > 1e-3 for v in res["sets"].values())
         OUT.mkdir(parents=True, exist_ok=True)
         (OUT / f"ident_{a.tag}.json").write_text(json.dumps(res, indent=1) + "\n")
