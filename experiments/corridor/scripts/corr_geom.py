@@ -63,16 +63,22 @@ class Matcher:
         return self.c[j]
 
     def driven(self, i):
-        """-> (status, node per frame, frames used). Tries the 10 s window, then the 4 s one."""
+        """-> (status, [(frame offset, node)], gap frames in 0-4 s). Tries the 10 s window, then the 4 s one. Amendment A: frames
+        without a candidate are skipped; a token fails when t0 has none, fewer than 5 of the 9 poses of 0-4 s have one, or the
+        frames that have one admit no connected sequence."""
         n = len(self.xy)
         if not self.cand(i):
             return "no_candidate_t0", None, 0
+        near = [k for k in range(i, min(n - 1, i + 8) + 1) if self.cand(k)]
+        gap = min(n - 1, i + 8) - i + 1 - len(near)
+        if len(near) < min(5, n - i):
+            return "no_candidate_4s", None, gap
         for m in (NF, 8):
-            j = min(n - 1, i + m)
-            p = self.g.viterbi([self.cand(k) for k in range(i, j + 1)])
+            fs = [k for k in range(i, min(n - 1, i + m) + 1) if self.cand(k)]
+            p = self.g.viterbi([self.cand(k) for k in fs])
             if p is not None:
-                return ("ok" if j - i >= min(8, n - 1 - i) else "short"), p, j - i
-        return "no_connected_sequence", None, 0
+                return "ok", [(k - i, nd) for k, nd in zip(fs, p)], gap
+        return "no_connected_sequence", None, gap
 
 
 def geom_log(log):
@@ -84,11 +90,12 @@ def geom_log(log):
     for tok, plans in _J[log]:
         i = pos[tok]
         r = dict(token=tok, log=log, loc=g.loc, o=np.r_[xy[i], yaw[i]])
-        st, path, used = M.driven(i)
-        r["status"] = st
-        if path is None:
+        st, fpath, gap = M.driven(i)
+        r["status"], r["gap"] = st, gap
+        if fpath is None:
             out.append(r)
             continue
+        path, used = [nd for _, nd in fpath], fpath[-1][0]
         seq, lc = g.sequence(path)
         run = seq[lc:]
         Rxy, used_nodes, own = g.centreline(run, xy[i], AHEAD)
@@ -98,7 +105,7 @@ def geom_log(log):
         d0 = float(line.frenet(np.zeros((1, 2)))[1][0])        # ego left of the centreline: positive
         blend = BLEND
         if lc > 0:                                   # arc length the log needs to reach the post-change lane run
-            f = next(k for k, nd in enumerate(path) if nd in run)
+            f = next(k for k, nd in fpath if nd in run)
             blend = max(BLEND, float(np.hypot(*np.diff(xy[i:i + f + 1], axis=0).T).sum()))
         conn = [k for k in seq if g.kind[k] == 1]
         r.update(seq=[g.ids[k] for k in seq], lane_change=lc > 0, R=Re.astype(np.float32), hw=hw.astype(np.float32), d0=d0, blend=blend,
@@ -114,19 +121,21 @@ def geom_log(log):
             P = np.vstack([np.zeros(3), p8]).astype(np.float64)
             Pm, Py = to_map(P[:, :2], xy[i], yaw[i]), P[:, 2] + yaw[i]
             cs = [g.candidates(Pm[k], Py[k]) for k in range(9)]
-            if not cs[-1]:
-                r[f"{sd}_cls"] = "unmatched"
+            has = [k for k in range(9) if cs[k]]
+            if not has:
+                r[f"{sd}_cls"] = r[f"{sd}_cls2"] = "unmatched"
                 continue
-            vp = g.viterbi(cs)
-            end = vp[-1] if vp is not None else min(cs[-1], key=lambda c: c[1])[0]
-            r[f"{sd}_connected"] = vp is not None
-            r[f"{sd}_end"] = g.ids[end]
+            vp = g.viterbi([cs[k] for k in has])
+            end = vp[-1] if vp is not None else min(cs[has[-1]], key=lambda c: c[1])[0]
+            r[f"{sd}_connected"], r[f"{sd}_end"], r[f"{sd}_endgap"] = vp is not None, g.ids[end], 8 - has[-1]
             if end in chain:
-                r[f"{sd}_cls"] = "same"
-            elif any(c in chain for c, _ in cs[-1]):
-                r[f"{sd}_cls"] = "same_amb"
+                c2 = "same"
+            elif any(c in chain for c, _ in cs[has[-1]]):
+                c2 = "same_amb"
             else:
-                r[f"{sd}_cls"] = "a2" if g.group[end] in groups else "a1"
+                c2 = "a2" if g.group[end] in groups else "a1"
+            r[f"{sd}_cls2"] = c2                                   # class of the last pose that has a candidate (amendment A)
+            r[f"{sd}_cls"] = c2 if has[-1] == 8 else "unmatched"    # registered: the 4 s pose itself
         out.append(r)
     return out
 
@@ -174,12 +183,12 @@ def supply_log(log):
             continue
         r = dict(token=f["token"], log=log, loc=g.loc, v=float(np.hypot(*f["ego_dynamic_state"][:2])),
                  dpsi=float(np.degrees(LG.wrap(yaw[i + 8] - yaw[i]))) if i + 8 < n else np.nan)
-        st, path, _ = M.driven(i)
+        st, fpath, _ = M.driven(i)
         r["status"] = st
-        if path is None:
+        if fpath is None:
             rows.append(r)
             continue
-        seq, lc = g.sequence(path)
+        seq, lc = g.sequence([nd for _, nd in fpath])
         s0 = float(g.line[seq[0]].frenet(xy[i][None])[0][0])
         route = {str(x) for x in (f.get("roadblock_ids") or [])}
 

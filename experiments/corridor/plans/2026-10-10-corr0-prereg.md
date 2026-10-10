@@ -39,3 +39,11 @@ token：navtest 12 146；转弯桶 = |日志 4 s heading 变化| > 20°（3 154�
 
 ## 步骤
 先在约 10 个代表 token（切内角、转不过去、通过；左、右）上跑通四项并看 BEV 图核对车道序列与 corridor 几何，再全量。N4 与 navtest 无关，并行跑。bootstrap 单元 = log。
+
+## 补记 A（2026-10-10，10 个 token 的匹配核对之后、任何四项读数之前）
+只看了 10 个代表 token 的匹配状态与车道序列，没有任何分数或误差读数。
+1. **匹配容许缺帧**。10 个里 1 个「转不过去」token 的日志在 connector 内有 4 帧没有候选（偏离 connector centreline 的 heading 差 > 60° 或距离 > 3 m）。改为：没有候选的帧跳过；失败 = t0 无候选，或 0–4 s 的 9 个位姿里有候选的不足 5 个，或有候选的帧之间没有连通序列。缺帧数（0–4 s）逐 token 记录并在结果里报：它本身是「日志路径不在 corridor 内」的读数。
+2. **plan 末端无候选**。10 个里 1 个切内角 token 的两个 seed 的 plan 末端都没有候选。登记的 unmatched 行不变；另加一行 fallback：用最后一个有候选的 plan 位姿定类，并报它离末端几个位姿。
+3. **重叠 polygon 的歧义**。connector polygon 在路口内互相重叠。plan 的 Viterbi 末端对象不在 D 的链上、但该位姿同时也是链上某对象的候选时，记为 same（细分 same_amb 单列），不计入 (a)：(a) 只在 plan 末端位姿不可能属于日志所走的链时成立，是偏保守的口径。a2 = 末端对象与链上某对象同 lane group / 同 roadblock connector，否则 a1。
+4. **KP（次定义）的起点**。t0 时 ego 可能已在 clamp 限之外（10 个里 d0 最大 1.83 m）。clamp 的横移量乘以 smoothstep(弧长 / 衰减长度)，与 CP 的 d0 衰减同长度，使 KP 仍从 ego 出发。
+5. 变道转移加固定代价 0.5（防止 polygon 重叠处的假变道），属实现细节。
