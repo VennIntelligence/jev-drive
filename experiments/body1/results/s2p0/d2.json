@@ -1,0 +1,57 @@
+{
+ "verdict": {
+  "boundary": {
+   "verdict": "pass",
+   "auc": 0.844480252255037,
+   "lo": 0.8289412779099975,
+   "hi": 0.8596037449744295,
+   "footprint": "pac",
+   "queries": "own",
+   "pos": 8482,
+   "routes_pos": 697,
+   "n": 55427,
+   "minus_blind": 0.15051594413475924,
+   "minus_blind_lo": 0.13064907583269755,
+   "few_positives": false
+  },
+  "agent": {
+   "verdict": "fail",
+   "auc": 0.5885826777906652,
+   "lo": 0.5739791315206749,
+   "hi": 0.6035661660227182,
+   "footprint": "pac",
+   "queries": "own",
+   "pos": 13350,
+   "routes_pos": 682,
+   "n": 76075,
+   "minus_blind": 0.019152892881506726,
+   "minus_blind_lo": 0.0008644871351391275,
+   "few_positives": false
+  }
+ },
+ "dropped_kinds": {
+  "static.prop.warningaccident": 1,
+  "overlapped by the hero: vehicle.lincoln": 14,
+  "static.prop.dirtdebris02": 34,
+  "static.prop.warningconstruction": 1,
+  "static.prop.dirtdebris01": 71,
+  "overlapped by the hero: walker.pedestrian": 167,
+  "overlapped by the hero: static.prop.foodcart": 1,
+  "overlapped by the hero: vehicle.dodge": 16,
+  "overlapped by the hero: vehicle.audi": 6,
+  "overlapped by the hero: vehicle.mercedes": 4,
+  "static.prop.constructioncone": 16,
+  "overlapped by the hero: vehicle.ford": 3,
+  "overlapped by the hero: vehicle.nissan": 4,
+  "overlapped by the hero: vehicle.chevrolet": 1,
+  "overlapped by the hero: static.prop.mesh": 3,
+  "overlapped by the hero: static.prop.trafficwarning": 1,
+  "overlapped by the hero: static.prop.constructioncone": 4,
+  "overlapped by the hero: vehicle.carlamotors": 1,
+  "overlapped by the hero: static.prop.busstoplb": 1,
+  "overlapped by the hero: vehicle.diamondback": 1,
+  "overlapped by the hero: vehicle.mini": 4
+ },
+ "rows": 76394,
+ "clips": 998
+}

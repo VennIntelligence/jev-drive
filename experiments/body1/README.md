@@ -33,7 +33,11 @@ road-and-lane raster. **Full run and G3 (a) to (d) at full scale, both seeds, ar
 **Read more.** [plans/2026-10-10-body1-prereg.md](plans/2026-10-10-body1-prereg.md); taxonomy and row set in [results/taxonomy.md](results/taxonomy.md); concept in
 [research/next-round/self-model.md](../../research/next-round/self-model.md); stage 2 design and cost (CARLA rows, expert-carried with student
 segments; nothing generated) in [plans/2026-10-10-stage2-carla-design.md](plans/2026-10-10-stage2-carla-design.md); pre-registration of its
-zero-generation pre-check P0 in [plans/2026-10-10-stage2-prereg.md](plans/2026-10-10-stage2-prereg.md).
+zero-generation pre-check P0 in [plans/2026-10-10-stage2-prereg.md](plans/2026-10-10-stage2-prereg.md); its result in
+[results/stage2_p0.md](results/stage2_p0.md): by the registered table stage 2 stops (own-plan boundary rate on CARLA straights 11 x navtrain, a line the
+b2dc raster's own 1 % floor makes unmeetable); the contact head reads CARLA road edges zero-shot (AUC 0.84) and not CARLA objects (0.59); the
+student's plan on CARLA frames turns 0.28 to 0.54 of the expert's and launches on 24 % of standing rows. Nothing further is launched
+without the main session.
 
 <!-- files:begin -->
 <!-- files:end -->
