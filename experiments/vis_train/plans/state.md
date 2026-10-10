@@ -376,3 +376,9 @@ Stage-0 probe 链 `k05-s0`（第 160 条协议，验证用：第一个 A / B sna
 - 写了但没有真实输入、未验证：A / B / C / W 的任何行（第一个 `VT-A/B-*-k05` 的 navtest 读数在我收尾时还没出）、判定线（转弯线、W 线、seed 反向）、`:noside` / `:mshuf` / `:sideoff`、FoV 分层在 W 上的读法、navhard / HUGSIM 板表的配对行、Stage-0 probe。
 - 没做（更新于 01:00 CST）：读数 5 与 C 的 HUGSIM 已补（见「读数的补充」）；A0 / A / B / W 的 HUGSIM 与 WOD 无 serving 代码。
 - box checkout 里没有我留下的未跟踪或改动文件；Mac 上我没有未提交的改动。
+
+## 04:56 CST 补排的 probe 与门后状态
+
+- R 的门 04:41 判 FAIL（A 减 `:noside` 的 navtest EPDMS −0.75 [−1.09, −0.44]，seed −0.61 / −0.90），16 个 `vtr-*` 已取消；fallback 04:45 选 B（> 45° 出界率对 A0，k40 / k45 / final 平均：A +0.46 pp，B +0.16 pp），`VT-B2-s{0,1}` 在训（+30k 步）。
+- 补排的 Stage-0 probe（都 `--gated`，等各自的 `ckpt-final.pt`）：`fin-W`（tok 1011-045635-26ca、1011-045636-158f，dec 0990，score 9316）、`fin-C1`（tok 1011-045636-5f86，dec 18a8，score d464）、`fin-B2`（tok 1011-045637-e61e / fb29，dec 1857，score 0bdf）。结果由 `vt_read.py sync` 自动读入。
+- A / B final 读数已入 `results/reads.md`（commit 9842f707）。
