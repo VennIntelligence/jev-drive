@@ -1,4 +1,4 @@
-# BODY1 arm 4.3, Amendment 6 (shape-only hinge gradient): pilot gate met, G3 missed on item (b) by one token, no closed loop
+# BODY1 arm 4.3, Amendment 6 (shape-only hinge gradient): pilot gate met, G3 read as missed on item (b) by one token (met on the corrected read of 2026-10-11), no closed loop
 
 2026-10-10. Registered in [plans/2026-10-10-body1-prereg.md](../plans/2026-10-10-body1-prereg.md), Amendment 6 (in force, with notes (a) to (g) written
 before any code ran). **This is the third trained variant of the loss arm 4.3** (after the Amendment 4 pilot and the Amendment 5 pilot, full run and
@@ -9,20 +9,35 @@ The one change against `P2H10B` (Amendment 5): the new hinges (the agent hinge o
 rows) see only the plan's shape. Their poses pass through `p~ = sg(p) + n n^T (p - sg(p))`, n the normal of the pose's own detached heading: values
 unchanged, the pose gradient loses its along-heading component, no new hyper-parameter. Tags `P2H10S-P-s0` (pilot), `P2H10S-F-s{0,1}` (full).
 
+**Correction, 2026-10-11 (navtest own-plan reads re-read on warp frames).** Until e7747c0b the lane's plan reader opened `lb_navtest` on GIMM
+frames for these warp-trained checkpoints, so every navtest own-plan number of the first version of this page (G3 (b), the navtest arc ratios of
+(e) and of the pilot table) was measured on plans the benchmark does not score ([navtest_warp.md](navtest_warp.md), tables
+[navtest_warp/loss/](navtest_warp/loss/), [navtest_warp/shape/](navtest_warp/shape/)). They are replaced below and each replaced passage names
+the old number. **The registered miss does not survive: G3 (b) on seed 0 read 149 against 148 tokens on the off-protocol plans and reads 135
+against 140 on the scored ones; with it every line of G3 is met on both seeds.** The arm was stopped before its registered closed loop on a
+number that came from the reader. This page does not reopen the arm; whether the registered closed-loop read is owed is for the main session
+(decision 232). Hold-log rates, the pilot gate (its lines are on hold logs), the slope, the bench numbers, the code checks and the base's
+closed-loop seed spread are not navtest own-plan reads and are unchanged. The figure `figs/shape/shape_gate.png` still shows the first read in its
+navtest points.
+
 ## Verdict
 
 1. **Pilot gate (item 5): met.** Against the switch-off pilot on hold logs: own-plan agent contact -37.1 %, boundary -33.8 %, both intervals excluding 0;
    4 s arc ratio 0.9989 pooled and 1.0004 on open states (line 0.995 each); dev ADE and slope inside their limits.
-2. **G3 at full scale, both seeds: (a), (c), (d), (e) met; (b) missed on seed 0 by one navtest token.** The navtest own-plan agent-contact rate of
-   `P2H10S-F-s0` is 149 of 12 146 tokens against 148 for `P2H10-F-s0` (+0.00008 [-0.00111, +0.00136]); (b) asks that neither rate rises. Seed 1 meets
-   (b) (138 against 144). By note (d) of the amendment (written before any number: any of (a) to (e) missed on either seed ends the arm before a
+2. **G3 at full scale, both seeds: (a) to (e) all met on the corrected read; the first read had (b) missed on seed 0 by one navtest token.** On the
+   off-protocol plans the navtest own-plan agent-contact rate of `P2H10S-F-s0` was 149 of 12 146 tokens against 148 for `P2H10-F-s0` (+0.00008
+   [-0.00111, +0.00136]), seed 1 138 against 144; (b) asks that neither rate rises. On the scored plans it is 135 against 140 (-0.00041 [-0.00127,
+   +0.00041]) and 132 against 142. What follows in this item is what was done on 2026-10-10 on the first read. By note (d) of the amendment (written before any number: any of (a) to (e) missed on either seed ends the arm before a
    closed loop) and by the lane's instruction for this step, **the arm stops here: no closed loop, no PAI read, the driver stays `P2H10-F`**.
 3. **The mechanism of decision 230 is confirmed open loop.** With the along-heading gradient removed, the speed profile returns to the base's: 4 s arc
-   ratio on navtest 0.9996 / 0.9984 (Amendment 5: 0.9905 / 0.9905), behind a lead 0.9969 / 0.9959 (0.9822 / 0.9836), on `bd4` hold states 0.9991 /
-   0.9989 (0.9391 / 0.9277); the seed floor of the base is 0.9973 (lead) to 1.0003 (pooled).
+   ratio on navtest 1.0017 / 1.0008 (Amendment 5: 0.9985 / 0.9980), behind a lead 1.0007 / 1.0004 (0.9931 / 0.9931), on `bd4` hold states 0.9991 /
+   0.9989 (0.9391 / 0.9277); the seed floor of the base is 0.9972 (lead) to 0.9995 (pooled). (First read, off-protocol: navtest 0.9996 / 0.9984
+   against 0.9905 / 0.9905, lead 0.9969 / 0.9959 against 0.9822 / 0.9836. On the scored plans the two recipes differ on navtest by 0.3 % pooled and
+   0.7 % behind a lead; the large contrast is on hold states.)
 4. **About four fifths of the offline clearance survives without timing; the part that does not is the agent rate on logged states.** Hold logs:
-   agent -39.7 % / -37.7 % (Amendment 5: -48.6 % / -48.3 %), boundary -49.5 % / -49.1 % (-53.5 % / -53.2 %). navtest: boundary -16.6 % / -19.1 % (as
-   Amendment 5's -14.8 % / -18.4 %), agent -0.7 % / +4.2 % relative fall, i.e. unchanged (Amendment 5: 6.1 % / 8.3 %, not significant either).
+   agent -39.7 % / -37.7 % (Amendment 5: -48.6 % / -48.3 %), boundary -49.5 % / -49.1 % (-53.5 % / -53.2 %). navtest: boundary -14.9 % / -18.6 % (as
+   Amendment 5's -13.9 % / -13.8 %), agent 3.6 % / 7.0 % relative fall with intervals including 0, i.e. unchanged, where Amendment 5 has 17.9 % / 16.2 % with
+   intervals excluding 0 (first read: boundary -16.6 % / -19.1 % against -14.8 % / -18.4 %; agent -0.7 % / +4.2 % against 6.1 % / 8.3 %, "not significant either").
    navtest EPDMS 89.05 against 88.67 (+0.38 [+0.20, +0.57]; Amendment 5 +0.52).
 5. **Ablations at pilot scale (gate nothing):** both terms shorten the plan. "B + C without A" keeps a third of the shortening (arc 0.9963, `bd4`
    0.9868) and most of the clearance (agent -25.8 %, boundary -30.9 %); "A on on-log rows only" shortens by 0.2 % (0.9977) and moves no rate
@@ -78,8 +93,9 @@ Arc ratio by group and family (hold states of the two shards; the same four chec
 | `bd4`, lead | 0.9964 | 0.9448 | 0.9812 | 0.9888 |
 | > 45 deg (686) | 1.0045 [1.0022, 1.0068] | 0.9954 | 0.9999 | 0.9987 |
 | launch, v < 1 m/s (347) | 0.9864 [0.9829, 0.9901] | 0.9746 | 0.9856 | 0.9929 |
-| navtest tokens, pooled (12 146; reported, never a line at pilot scale) | 0.9945 [0.9936, 0.9953] | 0.9875 | 0.9927 | 0.9953 |
-| navtest, lead (3 454) | 0.9932 | 0.9853 | 0.9925 | 0.9906 |
+| navtest tokens, pooled (12 146; reported, never a line at pilot scale; warp frames) | 0.9995 [0.9989, 1.0001] | 0.9953 | 0.9989 | 0.9980 |
+| navtest, lead (3 437; warp frames) | 0.9964 | 0.9864 | 0.9958 | 0.9934 |
+| the same two rows in the first read (off-protocol) | 0.9945 [0.9936, 0.9953]; 0.9932 | 0.9875; 0.9853 | 0.9927; 0.9925 | 0.9953; 0.9906 |
 
 Contact rates of this arm by subset (new / reference, relative fall): on-log 0.0033 / 0.0044 agent (25 %, interval includes 0), boundary 0.0060 / 0.0060
 (0 %); `ot1` 27 % / 33 %; `yr1` 35 % / 41 %; `bd4` 43 % / 36 %; > 45 deg 42 % / 38 %; launch 3 against 3 agent positives, 2 against 3 boundary.
@@ -90,8 +106,8 @@ As in Amendment 5 the fall sits in the off-track families; logged states do not 
   states 0.9805: the road hinge of the hinge-only rows, 97 to 99.5 % cross-path at first order (decision 230), shortens the plan at finite step on
   the states where the plan leaves the road. Decision 230's "A is the backward pull" holds for the larger part, not for all of it. The shape-only
   switch covers this as well, since it is applied to the road hinge of the hinge-only rows too.
-- The agent hinge on logged rows alone shortens by 0.2 % everywhere (0.9977 pooled, 0.9952 behind a lead on hold states, 0.9906 on navtest lead
-  states; the diagnosis expected "lead -0.4 %, nothing else") and buys no clearance (agent -5.3 %, boundary -2.9 %).
+- The agent hinge on logged rows alone shortens by 0.2 % everywhere (0.9977 pooled, 0.9952 behind a lead on hold states, 0.9934 on navtest lead
+  states (first read 0.9906); the diagnosis expected "lead -0.4 %, nothing else") and buys no clearance (agent -5.3 %, boundary -2.9 %).
 - B + C without A lowers the agent rate by a quarter (-25.8 %) with no agent term: moving off-track plans back onto the road removes object
   contacts too. A on the hinge-only rows adds the rest (-47.7 % with timing, -37.1 % with shape only).
 - Per-term training scalars at step 3 000 (`results/loss/pilot_terms_*.csv`): share of `bd4` rows with a non-zero agent hinge 0.072 (this arm)
@@ -105,28 +121,33 @@ As in Amendment 5 the fall sits in the off-track families; logged states do not 
 |:--|:--|:--|:--|:-:|:--|
 | (a) hold logs (30 083 states, 121 logs), own-plan agent rate | 0.01645 against 0.02729, -39.7 % [-0.01278, -0.00889] | 0.01662 against 0.02666, -37.7 % [-0.01206, -0.00807] | fall >= 30 %, interval excluding 0 | met | -48.6 % / -48.3 % |
 | (a) hold logs, boundary rate | 0.01705 against 0.03377, -49.5 % [-0.01902, -0.01458] | 0.01722 against 0.03384, -49.1 % [-0.01919, -0.01431] | the same | met | -53.5 % / -53.2 % |
-| (b) navtest on-log (12 146 tokens), agent rate | **0.01227 against 0.01219 (149 against 148 tokens), +0.00008 [-0.00111, +0.00136]** | 0.01136 against 0.01186, -0.00049 [-0.00212, +0.00095] | does not rise | **seed 0 NOT met**, seed 1 met | -0.00074 / -0.00099 |
-| (b) navtest, boundary rate | 0.03022 against 0.03623, -16.6 % [-0.00979, -0.00272] | 0.02972 against 0.03672, -19.1 % [-0.01122, -0.00345] | does not rise | met | -14.8 % / -18.4 % |
-| (b) navtest, sum | -0.00593 [-0.00958, -0.00269], -12.2 % | -0.00749 [-0.01227, -0.00353], -15.4 % | falls | met | -12.6 % / -15.9 % |
+| (b) navtest on-log (12 146 tokens), agent rate, **warp frames** | **0.01111 against 0.01153 (135 against 140 tokens), -0.00041 [-0.00127, +0.00041]** | 0.01087 against 0.01169 (132 against 142), -0.00082 [-0.00183, +0.00009] | does not rise | **met** | -0.00206 [-0.00311, -0.00104] / -0.00189 [-0.00305, -0.00073] |
+| (b) navtest, boundary rate, warp frames | 0.01457 against 0.01712, -14.9 % [-0.00417, -0.00098] | 0.01408 against 0.01729, -18.6 % [-0.00525, -0.00139] | does not rise | met | -13.9 % / -13.8 % |
+| (b) navtest, sum, warp frames | -0.00296 [-0.00479, -0.00114], -10.3 % | -0.00403 [-0.00632, -0.00185], -13.9 % | falls | met | -15.5 % / -14.8 % |
+| (b) first read, off-protocol plans (superseded): agent rate | 0.01227 against 0.01219 (149 against 148 tokens), +0.00008 [-0.00111, +0.00136] | 0.01136 against 0.01186, -0.00049 [-0.00212, +0.00095] | does not rise | seed 0 read as NOT met | -0.00074 / -0.00099 |
+| (b) first read: boundary rate; sum | -16.6 %; -12.2 % | -19.1 %; -15.4 % | | | -14.8 % / -18.4 %; -12.6 % / -15.9 % |
 | (c) continuation slope `alpha_05` (1 137 rows) | 0.822 [0.762, 0.881] against 1.028 | 0.830 [0.771, 0.889] against 1.037 | <= base + 0.05 | met | 0.833 / 0.827 |
 | (d) navtest EPDMS (`jevdrive.bench`) | 89.01 against 88.58 | 89.09 against 88.77 | >= base - 0.3 | met | 89.19 / 89.20 |
 | (d) `dev_drift_off` | 0.045 | 0.044 | <= 0.30 | met | 0.045 / 0.045 |
-| (e) arc, navtest pooled | 0.9996 [0.9989, 1.0003] | 0.9984 [0.9977, 0.9990] | >= 0.995, lower bound >= 0.990 | met | 0.9905 / 0.9905 |
-| (e) arc, navtest open | 1.0002 | 0.9992 | >= 0.995 | met | 0.9931 / 0.9927 |
-| (e) arc, navtest lead | 0.9969 [0.9955, 0.9984] | 0.9959 [0.9949, 0.9971] | >= 0.990 | met | 0.9822 / 0.9836 |
+| (e) arc, navtest pooled, warp frames (first read 0.9996 / 0.9984; 0.9905 / 0.9905) | 1.0017 [1.0012, 1.0021] | 1.0008 [1.0004, 1.0012] | >= 0.995, lower bound >= 0.990 | met | 0.9985 / 0.9980 |
+| (e) arc, navtest open, warp frames (first read 1.0002 / 0.9992; 0.9931 / 0.9927) | 1.0016 | 1.0009 | >= 0.995 | met | 0.9998 / 0.9995 |
+| (e) arc, navtest lead, warp frames (first read 0.9969 / 0.9959; 0.9822 / 0.9836) | 1.0007 [0.9998, 1.0016] | 1.0004 [0.9996, 1.0014] | >= 0.990 | met | 0.9931 / 0.9931 |
 | (e) arc, hold pooled | 1.0009 | 1.0001 | >= 0.990 | met | 0.9835 / 0.9807 |
 | (e) arc, hold `log` / `ot1` / `yr1` / `bd4` | 1.0016 / 1.0015 / 1.0004 / 0.9991 | 1.0010 / 1.0003 / 0.9995 / 0.9989 | each >= 0.980 | met | 0.9990 / 0.9900 / 0.9779 / 0.9391 (seed 0) |
 
-**(b) on seed 0 is the miss.** One more navtest token has an own-plan agent contact (149 against 148); the paired interval is centred on zero and the
-second seed has six fewer (138 against 144). Under the reading this lane has used since Amendment 4 (point estimates, `bd4_g3.py` verdict
-`no_rise_sum_falls`) that is a rise, so (b) is not met on seed 0. What the number says beyond the verdict: on logged navtest states this arm does
-not lower the agent-contact rate at all (two-seed mean 0.01182 against 0.01202), whereas the boundary rate falls by 17 to 19 % with intervals
-excluding 0. Amendment 5's 6 to 8 % agent fall on navtest was itself inside its interval.
+**(b) on seed 0 was the miss of the first read and is met on the corrected one.** On the off-protocol plans one more navtest token had an own-plan
+agent contact (149 against 148), and under the reading this lane has used since Amendment 4 (point estimates, `bd4_g3.py` verdict
+`no_rise_sum_falls`) that was a rise. On the scored plans the arm has five fewer on seed 0 and ten fewer on seed 1 (135 against 140, 132 against
+142; verdict `no_rise_sum_falls` true on both). What the number says beyond the verdict stands: on logged navtest states this arm does not lower
+the agent-contact rate by an amount its interval resolves (two-seed mean 0.01099 against 0.01161, -5 %), whereas the boundary rate falls by 15 to
+19 % with intervals excluding 0. Amendment 5's agent fall on navtest is 16 to 18 % with intervals excluding 0 (first read: 6 to 8 %, inside its
+interval): on navtest the agent half of that recipe did work through timing.
 
 By state family, hold logs (relative fall agent / boundary, seed 0 | seed 1): on-log 18 % / 28 % | 2 % / 19 % (agent intervals touch or include 0);
 `ot1` 29 % / 40 % | 29 % / 45 %; `yr1` 39 % / 53 % | 38 % / 51 %; `bd4` 48 % / 54 % | 47 % / 54 %. > 45 deg hold states (3 954): agent 36 % / 33 %,
-boundary 42 % / 41 %. > 45 deg navtest tokens (1 517): boundary -25.8 % / -29.6 % (intervals excluding 0), agent -2 % / -18 % (not significant).
-Launch (v < 1 m/s) navtest tokens: agent 17 against 18 and 18 against 15 positives.
+boundary 42 % / 41 %. > 45 deg navtest tokens (1 517), warp frames: boundary -9.6 % / -14.1 % (intervals including 0), agent -15 % / -27 % (seed 1's interval excludes 0);
+first read: boundary -25.8 % / -29.6 % (intervals excluding 0), agent -2 % / -18 %. The boundary fall at > 45 deg on navtest is not re-established.
+Launch (v < 1 m/s) navtest tokens: agent 24 against 22 and 20 against 20 positives (first read 17 against 18 and 18 against 15).
 
 (d), navtest through `jevdrive.bench`, the three arms in one report (`results/shape/g3_a6_full_bench/`), and the turn-oracle replay
 (`results/shape/g3_a6_full_d.csv`; two-seed mean, new - base, cluster bootstrap by log):
@@ -163,7 +184,9 @@ Replay check: all 422 / 424 (new) and 469 / 461 (base) DAC-failing tokens replay
 - For the closed loop this matters because the loop's zeros are on states the student reaches from logged starts. Of Amendment 5's five removed
   collision scenes, decision 230 judged two lateral by their strips and two possibly timing. Whether a shape-only lesson keeps any of them was the
   question of the closed-loop read that the registered gate now does not allow.
-- The arc lines do what they were added for: every one of them separates this arm from Amendment 5's checkpoints at pilot scale and at full scale.
+- The arc lines do what they were added for on hold states: every hold line separates this arm from Amendment 5's checkpoints at pilot scale and at
+  full scale. On the corrected navtest read the navtest lines do not: `P2H10B-F` is at 0.9985 / 0.9980 pooled, 0.9998 / 0.9995 open and 0.9931 behind a
+  lead, above each of the three navtest lines (first read: below all three).
 
 ## 5. Supplementary reads asked for by the main session (note (h); none of them changes the verdict)
 
@@ -178,18 +201,19 @@ trained and read open loop only, and no `P2H10S` checkpoint is run in the closed
 |:--|:--|:--|:--|:-:|
 | (a) hold, agent rate (positives of 30 083) | 516 against 832, -38.0 % [-0.0126, -0.0086] | 487 against 814, -40.2 % [-0.0130, -0.0088] | fall >= 30 % | met |
 | (a) hold, boundary rate | 519 against 1 014, -48.8 % | 503 against 1 012, -50.3 % | fall >= 30 % | met |
-| (b) navtest, agent rate (positives of 12 146) | 143 against 151, -0.00066 [-0.0023, +0.0007] | 147 against 151, -0.00033 [-0.0015, +0.0009] | does not rise | met |
-| (b) navtest, boundary rate / sum | -17.2 % / -14.3 % | -14.3 % / -11.4 % | no rise / falls | met |
-| (e) arc, navtest pooled | 1.0014 [1.0003, 1.0025] | 0.9952 [0.9942, 0.9962] | >= 0.995, lower bound >= 0.990 | met |
-| (e) arc, navtest open | 1.0007 | **0.9949 [0.9935, 0.9963]** | >= 0.995 | **seed 3 NOT met** |
-| (e) arc, navtest lead | 1.0041 | 0.9947 | >= 0.990 | met |
+| (b) navtest, agent rate (positives of 12 146), warp frames (first read 143 against 151; 147 against 151) | 134 against 141, -0.00058 [-0.0017, +0.0006] | 130 against 137, -0.00058 [-0.0016, +0.0005] | does not rise | met |
+| (b) navtest, boundary rate / sum, warp frames (first read -17.2 % / -14.3 %; -14.3 % / -11.4 %) | -13.9 % / -10.3 % | -23.2 % / -16.2 % | no rise / falls | met |
+| (e) arc, navtest pooled, warp frames (first read 1.0014; 0.9952) | 1.0010 [1.0005, 1.0015] | 1.0000 [0.9995, 1.0005] | >= 0.995, lower bound >= 0.990 | met |
+| (e) arc, navtest open, warp frames (first read 1.0007; 0.9949 [0.9935, 0.9963], seed 3 read as not met) | 1.0013 | 1.0001 [0.9993, 1.0008] | >= 0.995 | met |
+| (e) arc, navtest lead, warp frames (first read 1.0041; 0.9947) | 0.9992 | 0.9983 | >= 0.990 | met |
 | (e) arc, hold pooled; `log` / `ot1` / `yr1` / `bd4` | 1.0006; 1.0011 / 1.0009 / 0.9994 / 1.0014 | 0.9997; 1.0001 / 1.0004 / 0.9992 / 0.9984 | >= 0.990; each >= 0.980 | met |
 | `dev_drift_off`, dev ADE | 0.043, 0.546 (base 0.041, 0.541) | 0.043, 0.542 (base 0.041, 0.542) | <= 0.30 | met |
 
-Over four seeds the navtest agent rate is 149 / 138 / 143 / 147 positives against 148 / 144 / 151 / 151 for the base: a mean fall of 2.9 % that no
-single seed resolves, with the registered seed 0 on the wrong side by one token. The navtest arc ratio is 0.9996 / 0.9984 / 1.0014 / 0.9952 against a
-base seed-to-seed ratio of 0.9987 to 1.0003; seed 3 sits 0.0001 under the open-state line. So each of the two gate items closest to its line is
-missed by one of four seeds, by an amount inside the seed spread of the base. (c) and (d) were not run for seeds 2 and 3.
+Over four seeds the navtest agent rate is 135 / 132 / 134 / 130 positives against 140 / 142 / 141 / 137 for the base on the scored plans: a mean fall of
+5.2 % that no single seed resolves, every seed on the falling side. The navtest arc ratio is 1.0017 / 1.0008 / 1.0010 / 1.0000 against a base
+seed-to-seed ratio of 0.9995 to 1.0005. No seed misses a line. (First read, off-protocol: 149 / 138 / 143 / 147 against 148 / 144 / 151 / 151 with
+seed 0 on the wrong side by one token; arcs 0.9996 / 0.9984 / 1.0014 / 0.9952 with seed 3 0.0001 under the open-state line; "each of the two gate
+items closest to its line is missed by one of four seeds" described the reader's noise, not the checkpoints.) (c) and (d) were not run for seeds 2 and 3.
 
 **The base's own seed spread in the closed loop** (700 scenes, 27 logs; seeds 0 and 1 are TR1's runs, seeds 2 and 3 were trained and run here with
 the same loop script, chunk lists and overrides, owner `body1`; `results/shape/base_seeds.{md,json}`, reader `scripts/base_seeds.py`):

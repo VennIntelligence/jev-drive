@@ -29,18 +29,23 @@ Per user class and the road-and-lane raster rate ("road" rows) are in the csv.
 
 ## (b) navtest on-log tokens (12 146, never trained on; needs: neither rate up, their sum down)
 
-| Seed | Rate | New | P2H10-F | Difference [95 % CI] | Relative fall |
-|--:|:--|--:|--:|:--|--:|
-| 0 | agent | 0.01144 | 0.01219 | -0.00074 [-0.00216, +0.00047] | 6.1 % |
-| 0 | boundary | 0.03087 | 0.03623 | -0.00535 [-0.00928, -0.00206] | 14.8 % |
-| 0 | sum | 0.04232 | 0.04841 | -0.00609 [-0.01016, -0.00262] | 12.6 % |
-| 1 | agent | 0.01087 | 0.01186 | -0.00099 [-0.00239, +0.00032] | 8.3 % |
-| 1 | boundary | 0.02997 | 0.03672 | -0.00675 [-0.01074, -0.00347] | 18.4 % |
-| 1 | sum | 0.04084 | 0.04858 | -0.00774 [-0.01194, -0.00426] | 15.9 % |
+**Correction, 2026-10-11.** The first version of this table was read on off-protocol plans: until e7747c0b the reader opened `lb_navtest` on GIMM
+frames for these warp-trained checkpoints ([navtest_warp.md](navtest_warp.md)). Re-read on warp frames, the plans `jevdrive.bench` scores
+(`navtest_warp/loss/g3_a5_full_navtest_s{0,1}.*`); the verdict of (b) is unchanged, the agent fall is larger and now outside its interval:
 
-Neither rate rises, the sum falls with an interval excluding 0 on both seeds. The agent rate on the real tokens falls by 6 to 8 %, not
-significantly: the 30 to 50 % falls of (a) are on off-track and launch states, not on logged ones. > 45 deg tokens: boundary rate -27 % / -29 %
-(intervals excluding 0), agent rate -7 % / -16 % (not significant).
+| Seed | Rate | New | P2H10-F | Difference [95 % CI] | Relative fall | first read (off-protocol): new, base, fall |
+|--:|:--|--:|--:|:--|--:|:--|
+| 0 | agent | 0.00947 | 0.01153 | -0.00206 [-0.00311, -0.00104] | 17.9 % | 0.01144, 0.01219, 6.1 % [-0.00216, +0.00047] |
+| 0 | boundary | 0.01474 | 0.01712 | -0.00239 [-0.00408, -0.00083] | 13.9 % | 0.03087, 0.03623, 14.8 % |
+| 0 | sum | 0.02421 | 0.02865 | -0.00445 [-0.00627, -0.00266] | 15.5 % | 0.04232, 0.04841, 12.6 % |
+| 1 | agent | 0.00980 | 0.01169 | -0.00189 [-0.00305, -0.00073] | 16.2 % | 0.01087, 0.01186, 8.3 % [-0.00239, +0.00032] |
+| 1 | boundary | 0.01490 | 0.01729 | -0.00239 [-0.00427, -0.00071] | 13.8 % | 0.02997, 0.03672, 18.4 % |
+| 1 | sum | 0.02470 | 0.02898 | -0.00428 [-0.00644, -0.00213] | 14.8 % | 0.04084, 0.04858, 15.9 % |
+
+Neither rate rises, the sum falls with an interval excluding 0 on both seeds. The agent rate on the real tokens falls by 16 to 18 % with
+intervals excluding 0 (115 against 140 and 119 against 142 tokens; the first read had 6 to 8 %, "not significantly"). It is still well below the
+30 to 50 % falls of (a), which are on off-track and launch states. > 45 deg tokens: boundary rate -6 % / -7 % (intervals including 0; first read
+-27 % / -29 % with intervals excluding 0, not re-established), agent rate -20 % / -36 % (seed 1's interval excludes 0; first read -7 % / -16 %).
 
 ## (c) Heading: decision 205's continuation slope `alpha_05` (needs <= P2H10-F + 0.05)
 
