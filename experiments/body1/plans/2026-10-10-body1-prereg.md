@@ -753,3 +753,30 @@ on the same states: 0.9863 / 0.9913, fails both arc lines as expected. Ablations
 -30.9 %, arc 0.9963 / 0.9985; "A on on-log rows only" agent -5.3 %, boundary -2.9 %, arc 0.9977 / 0.9983. Hold logs have now been read at
 pilot scale by three arms of this lane. The arm goes on to the full run of 2 seeds. Table: `results/shape/pilot_gate.md`.
 
+**Status after G3 at full scale (2026-10-10 09:15 box time, added after the reads; nothing above was changed).** `P2H10S-F-s{0,1}` against
+P2H10-F of the same seed: (a) hold logs agent -39.7 % / -37.7 %, boundary -49.5 % / -49.1 %, intervals excluding 0: met; (b) navtest on-log:
+boundary rate and sum fall on both seeds with intervals excluding 0, **the agent rate of seed 0 is 149 against 148 tokens of 12 146 (+0.00008
+[-0.00111, +0.00136]): it rises, (b) is not met on seed 0** (seed 1: 138 against 144, met); (c) slope 0.822 / 0.830 against 1.028 / 1.037:
+met; (d) navtest 89.05 against 88.67 (+0.38 [+0.20, +0.57]), > 45 deg bucket +0.81 [+0.10, +1.53], cannot-make-turn 2.77 against 2.60 %,
+`dev_drift_off` 0.045 / 0.044: met; (e) every arc line met on both seeds (navtest pooled 0.9996 / 0.9984, open 1.0002 / 0.9992, lead 0.9969 /
+0.9959, hold pooled 1.0009 / 1.0001, families 0.9989 to 1.0016). **By note (d) the arm ends here: no closed loop, no PAI read, the servable
+checkpoint stays P2H10-F.** The miss is one token on one seed, inside its interval. Details: [results/shape_pilot.md](../results/shape_pilot.md).
+
+**Note (h) to Amendment 6 (2026-10-10 09:20 box time; an instruction of the main session that reached the lane agent AFTER the G3 numbers above
+were read and the chain had stopped; no closed-loop number of any `P2H10S` checkpoint exists, and by the status above none will).**
+The main session asked for (1) parallel execution of the chain (both seeds, the G3 jobs, all six chunk jobs at once after the chunk1 x s0
+checklist) and (2) a supplementary 4-seed read: seeds 2 and 3 of the arm (`P2H10S-F-s{2,3}`) and of the base (`P2H10-F-s{2,3}`, P2H10-F's
+recipe from its meta.json), both on the 700 scenes, lines on 4 seeds with arm seed k paired with base seed k, the registered read staying
+seeds 0 and 1 against TR1's baseline runs; and, if the primary chain stops at a gate, still the closed loop of the base seeds. What that
+becomes, fixed now, before any of these runs exists:
+- (1) is moot for the closed loop (there is none). The trainings and reads below are submitted together through the pool.
+- **Base seeds 2 and 3 are trained and run in the closed loop** (`pp_train.py --arm P2 --seed k --frames warp --host --data` all 12 shards
+  `--split navsim/op-parity-full --steps 10000 --batch 128 --warmup 300 --eval-every 1000 --hinge-lam 10`, at today's checkout; 700 scenes
+  each through `ot2_loop.py` with the chunk lists and overrides of TR1's baseline jobs, owner `body1`). Read: mean, zeros by class, slow
+  scenes and mean progress per seed for the four base seeds, and for each of the six seed pairs the quantities of L1a / L1b / L2 / L3
+  computed as if one seed were an arm against the other. It is a description of the base's own seed spread; it is no line and promotes nothing.
+- **Arm seeds 2 and 3 are trained and read open loop only**: G3 (a), (b) and the arc lines (e) against the base of the same seed, the
+  proximity groups from `P2H10-F-s0`'s plan as before. They get no closed loop (the arm has ended), they are labelled supplementary, and
+  they do not change the verdict above whatever they read; in particular a met (b) on seeds 2 and 3 does not re-open the closed loop.
+- The 4-seed closed-loop read of the arm does not exist.
+

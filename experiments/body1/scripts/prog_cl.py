@@ -26,12 +26,13 @@ DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 REPO = _H.parents[3]
 OUT, FIG = REPO / "experiments/body1/results/prog", REPO / "experiments/body1/figs/prog"
 GROUPS = ("contact", "lead", "near obj", "near edge", "open")
+ARM, MAN, OLN = "P2H10B-F", "runs/body1/cl/loss-man.json", "ol_navtest"            # --arm / --man / --ol: another arm of the lane (Amendment 6)
 ZC = {"collision_at_fault": "collision", "offroad": "offroad", "left_corridor_laterally": "corridor"}
 FRONT, REAR, HALF_W = 4.049, -1.127, 1.1485
 
 
 def run_dirs():
-    arm = json.loads((DATA / "runs/body1/cl/loss-man.json").read_text())
+    arm = json.loads((DATA / MAN).read_text())
     base = {f"P2H10-F-s{i}": [sorted(glob.glob(str(DATA / f"runs/alpasim/tr1/a/runs/P2H10-F-s{i}-chunk{j}/*")))[-1] for j in range(3)] for i in (0, 1)}
     return base | arm
 
@@ -60,13 +61,13 @@ def load():
     import stop_report as SR
     from prog_ol import group
     dirs = run_dirs()
-    T = pd.read_parquet(DATA / "runs/body1/prog/ol_navtest.parquet")
+    T = pd.read_parquet(DATA / f"runs/body1/prog/{OLN}.parquet")
     T["grp"] = group(T)
     T = T.set_index("name")
     rows, keep = [], {}
     for i in (0, 1):
         rec = {}
-        for side, k in (("base", f"P2H10-F-s{i}"), ("arm", f"P2H10B-F-s{i}")):
+        for side, k in (("base", f"P2H10-F-s{i}"), ("arm", f"{ARM}-s{i}")):
             Rr = R.load_driver(dirs[k])[0]
             D, where = SR.drives(dirs[k])
             rec[side] = (Rr, D, where)
@@ -85,7 +86,7 @@ def load():
             if tok in T.index:
                 t = T.loc[tok]
                 r |= dict(grp=t.grp, v0=float(t.v0), turn=float(t.dyaw), lead_gap=float(t.lead_gap), clr=float(t["clr|P2H10-F-s0"]), bm=float(t["bm|P2H10-F-s0"]),
-                          ol_ratio=float(t[f"arc4|P2H10B-F-s{i}"] / max(t[f"arc4|P2H10-F-s{i}"], 1e-3)), ol_arc_base=float(t[f"arc4|P2H10-F-s{i}"]))
+                          ol_ratio=float(t[f"arc4|{ARM}-s{i}"] / max(t[f"arc4|P2H10-F-s{i}"], 1e-3)), ol_arc_base=float(t[f"arc4|P2H10-F-s{i}"]))
             rows.append(r)
     P = pd.DataFrame(rows)
     P["dprog"], P["dscore"] = P.arm_prog - P.base_prog, P.arm_score - P.base_score
@@ -356,7 +357,14 @@ def cmd_figs(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["tables", "raster", "figs"])
+    ap.add_argument("--arm", default=ARM, help="arm tag without the seed; its runs in --man, its open-loop plans in --ol")
+    ap.add_argument("--man", default=MAN, help="manifest {<arm>-s0: [run dirs], <arm>-s1: [...]} under $DATA_DIR")
+    ap.add_argument("--ol", default=OLN, help="prog_ol.py parquet stem under runs/body1/prog")
+    ap.add_argument("--out", default="", help="table / figure sub-directory name instead of prog (results/<out>, figs/<out>)")
     a = ap.parse_args()
+    ARM, MAN, OLN = a.arm, a.man, a.ol
+    if a.out:
+        OUT, FIG = REPO / "experiments/body1/results" / a.out, REPO / "experiments/body1/figs" / a.out
     from jevdrive.run import Run
     with Run("body1", f"prog-cl-{a.cmd}", config=vars(a)) as run:
         {"tables": cmd_tables, "raster": cmd_raster, "figs": cmd_figs}[a.cmd](a)
