@@ -8,6 +8,7 @@ jevdrive/op_interp.py
 jevdrive/op_torch.py
 jevdrive/openpilot/__init__.py
 jevdrive/openpilot/frames.py
+jevdrive/openpilot/lead_long.py
 lib/parity_adapter.py
 experiments/op_adapt_l/lib/op_adapt_l.py
 experiments/op_adapt_r2/lib/op_adapt_r2.py

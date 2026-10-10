@@ -271,6 +271,7 @@ def resolve_hugsim(opts, controller, dataset="nuscenes", op_ctrl_env=None):
     tricks = [k for k in ("forward_only", "straight_stop") if o.get(k, True)] + ["init_speed_1.0"]
     tricks += [k for k in ("derot_below", "derot_sel", "lstab", "launch_long", "engage_s") if o.get(k)]
     tricks += ["lead_margin"] if o.get("lead_margin") is not None else []
+    tricks += ["op_lead"] if o.get("op_lead") is not None else []          # openpilot's lead MPC as a speed limit on the plan (lead_long.py)
     vals = {"rig.height_m": HUGSIM_HEIGHT.get(dataset, 1.5), "rig.level": dataset != "kitti360", "rig.wide": "stitched3",
             "history.frames": "render", "history.rate_hz": 4.0, "history.clock": "hold" if hold else "dilate",
             "history.warmup": "static" if warm > 0 else "cold",

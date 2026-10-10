@@ -57,6 +57,15 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      when the model's lead head reports a lead (prob > 0.5) the plan's speed profile is capped along its own path so
                      that it stops d_min short of the bias-corrected lead distance (lead_v converted to simulator m/s by the
                      dilation); lateral untouched (op_ctrl curvature comes from the model)
+                     op_lead (openpilot, dict, {} = defaults, default off; lane HLEAD, experiments/lowboard_diag/plans/2026-10-10-hlead-prereg.md):
+                     openpilot's own lead path (jevdrive/openpilot/lead_long.py: radard's lead probability filter and vision lead,
+                     the lead MPC, the planner tick; the AlpaSim switch JEV_LEAD of decision 226) as a speed limit on the plan. After
+                     forward_only and before lead_margin / straight_stop the plan's points are pulled back along its own path to the
+                     pointwise minimum of the plan's speed and the lead MPC's speed solution; it only slows, has no latch, and the
+                     lateral curvature is untouched. The planner runs in the model's clock and units (ego speed x dilation, times /
+                     dilation: 4 planner ticks per simulator step), on the lead outputs of the same forward pass (the server returns
+                     them on the request flag `lead_out`). Key: cam_to_front (m from the device to the ego box front, default 1.5 =
+                     half of HUGSIM's 3 m ego box, which is centred on the ego position)
                      parity (openpilot, dict, default off; experiments/op_parity, lib/parity_hugsim.py): {"socket": the parity bias
                      server, "clock": "model" | "sim"}; every step the agent sends the ego status, 4-pose history, route command
                      (and, for an arm that reads them, the side / rear camera key frames) to that server and passes the returned
@@ -91,6 +100,7 @@ from jevdrive import hugsim_zs as Z  # noqa: E402
 from jevdrive.openpilot import interface as IF  # noqa: E402
 from jevdrive.openpilot import resume as RR  # noqa: E402
 from jevdrive.openpilot import lead_margin as LM  # noqa: E402
+from jevdrive.openpilot import lead_long as LD  # noqa: E402
 sys.path.insert(0, str(ROOT / "lib"))
 import launch_stab as LS  # noqa: E402
 import launch_long as LL  # noqa: E402
@@ -212,6 +222,8 @@ class Agent:
             reps = per_ctx if self.step else per_ctx * max(1, int(round(self.opts.get("warmup_s", 5.0) / OP_CTX_S)))
         desire = Z.DESIRE[int(info["command"])] if self.opts.get("desire", True) else 0
         meta = {"traffic": self.opts.get("traffic", [1, 0]), "speed": float(info["ego_velo"]) * dil}
+        if self.opts.get("op_lead") is not None:           # also return the decoded lead outputs of this pass
+            meta["lead_out"] = True
         below, ctx = float(self.opts.get("derot_below", 0)), int(self.opts.get("derot_ctx", 25))
         if below > 0:
             self.buf.append((self.step, {c: obs["rgb"][c] for c in self.op.cams}, img2, desire))
@@ -279,6 +291,7 @@ class Agent:
         else:
             r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2})
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)
+        self.ol_in = (out.get("lead"), out.get("lead_prob3"), float(out["vel"][0]))
         rec.update(desire=desire, reps=reps, infer_ms=r.get("infer_ms"), rtt_ms=r["rtt_ms"],
                    lead_prob=r.get("lead_prob"), lead_x=r.get("lead_x"), lead_v=r.get("lead_v"), engaged=r.get("engaged"),
                    kappa=self.lateral_kappa(r, out), accel=r.get("accel"), model_pos=np.round(out["pos"][[4, 8, 12, 16, 20, 24, 32], :2], 3).tolist(),
@@ -318,6 +331,17 @@ class Agent:
                 if not np.allclose(fwd, plan):
                     rec["raw_plan"] = np.round(plan, 3).tolist()
                 plan = fwd
+            if self.opts.get("op_lead") is not None and self.model != "alpamayo":
+                if not hasattr(self, "ol"):
+                    o = self.opts["op_lead"] if isinstance(self.opts["op_lead"], dict) else {}
+                    self.ol = LD.PlanLead(float(o.get("cam_to_front", 1.5)))
+                dil = 1.0 if self.opts.get("op_clock", "dilate") == "hold" else float(self.opts.get("dilation", 1.25))
+                mu, lp, mv = self.ol_in                    # model units and clock: speed x dil, time / dil
+                xy, rec["ol"] = self.ol(np.r_[[[0.0, 0.0]], plan], np.r_[0.0, Z.plan_times()] / dil, float(info["ego_velo"]) * dil,
+                                        float(info["timestamp"]) / dil, mu, lp, mv)
+                if rec["ol"]["changed"]:
+                    rec["plan_before_ol"] = np.round(plan, 3).tolist()
+                    plan = xy[1:]
             if self.opts.get("lead_margin") is not None and self.model != "alpamayo":
                 if not hasattr(self, "lm"):
                     self.lm = LM.LeadMargin(self.opts["lead_margin"])

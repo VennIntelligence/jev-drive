@@ -67,6 +67,16 @@ dilate clock); NAVSIM export adapter `lm`, bench model option `:lm` (e.g. `P2H10
 lead_prob / lead_x / lead_v). Margin from the camera: HUGSIM 1.0 m bumper gap, NAVSIM 0.12 m. Pre-registration and result:
 experiments/op_parity/plans/2026-10-07-lead-margin-prereg.md, results/lead_margin.md.
 
+openpilot lead path (option, HUGSIM, `jevdrive/openpilot/lead_long.py`, trick `op_lead`, semi): openpilot's own longitudinal lead chain
+(radard's lead probability filter and vision lead, the lead MPC of long_mpc.py, the planner tick; openpilot ec95db3f, the AlpaSim switch
+`JEV_LEAD` of decision 226, same code) as a speed limit on the plan: the plan's points are pulled back along its own path to the pointwise
+minimum of the plan's speed and the lead MPC's speed solution. It only slows, has no latch, and leaves the lateral curvature alone. HUGSIM
+agent opt `"op_lead": {}` (after forward_only, before lead_margin / straight_stop), e.g.
+`bench run --model SH30-F-s0 --bench hugsim --preset spec_plan_smooth --opts '{"op_lead": {}}'`. Declared deviations: the planner runs in
+the model's dilated clock (ego speed x 1.25, 4 ticks per simulator step), so the following distance d(v) is taken at 1.25 x the simulator
+speed; camera to ego-box front 1.5 m. Pre-registration and result: experiments/lowboard_diag/plans/2026-10-10-hlead-prereg.md,
+results/hlead.md.
+
 ## Presets and reproducibility
 
 | Board | Preset | What it is |
