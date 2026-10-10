@@ -52,6 +52,18 @@ SEEDS = {"F": (0, 1), "F0": (0, 1), "A0": (0, 1), "A": (0, 1), "B": (0, 1), "C":
 CTRL = {"F": ("SH30",), "F0": ("F",), "A0": ("F",), "A": ("A0", "F"), "B": ("A0", "A", "F"), "C": ("F0", "F"), "W": ("A", "F")}
 PRIMARY = [("A", "A0"), ("B", "A0"), ("B", "A"), ("C", "F0"), ("W", "A")]         # the turn line's comparisons (prereg + amendment 1)
 OPTS = {"A": ("noside", "mshuf"), "B": ("noside", "mshuf"), "W": ("noside", "mshuf", "sideoff")}
+# prereg amendment 7. A2 / B2: arm A / B continued under the new tags VT-<X>2-s<seed> for 30 k steps, read as later snapshots of the same arm (steps
+# counted from SH30; the controls were not continued and are read at their nearest snapshot). R0 / RA / RB: arm R, the policy trained from the
+# shipped weights with the SH30 recipe (10 k steps, one checkpoint) reading a frozen token bank through the memory channel (VTR-0 / VTR-A / VTR-B).
+START = {"A2": 50, "B2": 50}                            # thousand steps before the tag's own step 0
+RTAG = {"R0": "VTR-0", "RA": "VTR-A", "RB": "VTR-B"}
+RSRC = {"RA": "A", "RB": "B"}                           # the first-wave arm whose final branch fills the bank
+STEPS |= {"A2": 80, "B2": 80} | dict.fromkeys(RTAG, 10)
+EVERY |= {"A2": 5, "B2": 5} | dict.fromkeys(RTAG, 10)
+SEEDS |= dict.fromkeys([*START, *RTAG], (0, 1))
+CTRL |= {"A2": ("A0", "A", "F"), "B2": ("A0", "B", "F"), "R0": ("SH30",), "RA": ("R0", "SH30"), "RB": ("R0", "RA", "SH30")}
+PRIMARY += [("A2", "A0"), ("B2", "A0"), ("RA", "R0"), ("RB", "R0"), ("RB", "RA")]
+OPTS |= dict.fromkeys([*START, *RTAG], ("noside", "mshuf"))
 SC = ["EPDMS", "NC", "DAC", "DDC", "TLC", "EP", "TTC", "LK", "HC", "EC"]
 RATES = ["offroad", "cut_in", "under", "nc_fail", "ttc_only", "nc_A", "nc_A1", "nc_A2", "nc_B", "nc_C", "nc_D", "nc_E"]
 METRICS = SC + RATES
@@ -63,13 +75,15 @@ V_REF, WA_REF = 10.59, 6.88                             # decision 160: > 20 deg
 
 
 def reg(arm):
-    return list(range(EVERY[arm], STEPS[arm] + 1, EVERY[arm]))
+    return list(range(START.get(arm, 0) + EVERY[arm], STEPS[arm] + 1, EVERY[arm]))
 
 
 def name(arm, seed, step):
     if arm == "SH30" or step == 0:
         return f"SH30-F-s{seed}"
-    return f"VT-{arm}-s{seed}" + ("" if step == STEPS[arm] else f"-k{step:02d}")
+    if arm in RTAG:
+        return f"{RTAG[arm]}-s{seed}"
+    return f"VT-{arm}-s{seed}" + ("" if step == STEPS[arm] else f"-k{step - START.get(arm, 0):02d}")
 
 
 def ctrl_step(c, step):
@@ -82,7 +96,7 @@ def specs():
     for arm in STEPS:
         for s in SEEDS[arm]:
             out += [(arm, s, k, name(arm, s, k)) for k in reg(arm)]
-            out += [(f"{arm}:{o}", s, STEPS[arm], f"VT-{arm}-s{s}:{o}") for o in OPTS.get(arm, ())]
+            out += [(f"{arm}:{o}", s, STEPS[arm], f"{name(arm, s, STEPS[arm])}:{o}") for o in OPTS.get(arm, ())]
     return out
 
 
@@ -385,9 +399,9 @@ def build(run):
     ev = []
     for arm in STEPS:
         for s in SEEDS[arm]:
-            f = RUNS / f"VT-{arm}-s{s}" / "evals.json"
-            if f.exists():
-                ev += [dict(arm=arm, seed=s) | e for e in json.loads(f.read_text())]
+            f = RUNS / name(arm, s, STEPS[arm]) / "evals.json"
+            if f.exists():                                # a continuation counts its steps from the first run's start
+                ev += [dict(arm=arm, seed=s) | e | dict(step=e["step"] + 1000 * START.get(arm, 0)) for e in json.loads(f.read_text())]
     E = pd.DataFrame(ev)
 
     # ---- Stage-0 probe (decision 160): > 20 deg DAC failure of the thin decoder on each token source, paired with V of the same decode run
@@ -425,6 +439,7 @@ def figure(R, stem):
     PSY.apply()
     col = PSY.PALETTE
     C = {"F": PSY.BASELINE, "F0": col["black"], "A0": col["sky_blue"], "A": col["blue"], "B": col["vermillion"], "C": col["green"], "W": col["purple"]}
+    C |= {"A2": C["A"], "B2": C["B"]}                   # the continuation: the same line, drawn on from the arm's final point (arm R is not a step series)
     S = R[(R.board == "navtest") & (R.control == "")].set_index(["arm", "seed", "bucket", "metric", "step"]).value
     fig, axs = plt.subplots(1, 3, figsize=(PSY.DOUBLE_COLUMN_IN, 2.5))
     for ax, (b, k, yl) in zip(axs, ((">20", "offroad", "off-road rate, > 20 deg (%)"), (">45", "offroad", "off-road rate, > 45 deg (%)"), ("all", "EPDMS", "navtest EPDMS"))):
@@ -434,11 +449,12 @@ def figure(R, stem):
                 if (arm, seed, b, k) not in S.index:
                     continue
                 y = S[(arm, seed, b, k)].sort_index()
-                y0 = [S[("SH30", seed, b, k, 0)]] if ("SH30", seed, b, k, 0) in S.index else []
-                x = ([0] if y0 else []) + list(y.index)
+                k0 = (arm[0] if arm in START else "SH30", seed, b, k, START.get(arm, 0))
+                y0 = [S[k0]] if k0 in S.index else []
+                x = ([k0[-1]] if y0 else []) + list(y.index)
                 thin = seed != "mean" and (arm, "mean", b, k) in S.index
                 ax.plot(x, y0 + list(y.to_numpy()), ls, color=c, lw=0.5 if thin else 1.2, alpha=0.55 if thin else 1.0, marker="o", ms=1.2 if thin else 2.2,
-                        label=arm if not thin and (seed == "mean" or (arm, "mean", b, k) not in S.index) else None)
+                        label=arm if arm not in START and not thin and (seed == "mean" or (arm, "mean", b, k) not in S.index) else None)
         ax.set_xlabel("training steps after SH30 (thousands)")
         ax.set_ylabel(yl)
     h, lab = axs[0].get_legend_handles_labels()
@@ -503,13 +519,16 @@ def verdict(q, E, PR, arm, c, seed):
     b, k, thr_c, thr_f = (">45", "cut_in", -1.0, 0.5) if w else (">20", "offroad", -0.5, 0.3)
     r = q(arm, seed, last, c, b, k)
     ser = [q(arm, seed, s, c, b, k)["diff"] for s in st]
-    down = None if len(st) < 6 else bool(np.mean(ser[-3:]) < np.mean(ser[:3]))
-    dv = disp_at(E, arm, seed, last)
+    if arm in START:                                    # a continuation: the series goes on from the arm's own snapshots against the same control
+        ser = [q(arm[0], seed, s, c, b, k)["diff"] for s in q.steps(arm[0], seed, c)] + ser
+    one = arm in RTAG                                   # arm R: one checkpoint, the trend clause does not apply (amendment 7)
+    down = True if one else None if len(ser) < 6 else bool(np.mean(ser[-3:]) < np.mean(ser[:3]))
+    dv = disp_at(E, RSRC[arm], seed, STEPS[RSRC[arm]]) if arm in RSRC else disp_at(E, arm, seed, last)      # arm R: its bank's source checkpoint
     drop = {}
     for o in OPTS.get(arm, ()):
         x = q(f"{arm}:{o}", seed, STEPS[arm], arm, "all", "EPDMS")
         drop[o] = None if x is None else -float(x["diff"])
-    src = [name(arm, s, STEPS[arm]) for s in ((0, 1) if seed == "mean" else (int(seed),))]
+    src = [name(RSRC.get(arm, arm), s, STEPS[RSRC.get(arm, arm)]) for s in ((0, 1) if seed == "mean" else (int(seed),))]
     p = PR[PR.source.isin(src)] if len(PR) else PR
     moved = None if not len(p) else bool(((p.d_lo > 0) | (p.d_hi < 0)).any())
     d, lo, hi = float(r["diff"]), float(r["ci_lo"]), float(r["ci_hi"])
@@ -532,7 +551,7 @@ def verdict(q, E, PR, arm, c, seed):
     line = hit[0] if hit else f"pending ({', '.join(pend)} undecidable: inputs missing)" if pend else "undetermined"
     g = [q(arm, seed, last, c, bb, "EPDMS") for bb in ("all", "<5")]
     guard = all(float(x["ci_lo"]) >= -0.3 for x in g)
-    return dict(arm=arm, control=c, seed=seed, step=last, final=last == STEPS[arm], quantity=f"{k} {b}", d=d, lo=lo, hi=hi, row=r, n_snap=len(st), trend_down=down,
+    return dict(arm=arm, control=c, seed=seed, step=last, final=last == STEPS[arm], quantity=f"{k} {b}", d=d, lo=lo, hi=hi, row=r, n_snap=len(ser), trend_down=None if one else down, one=one,
                 first3=float(np.mean(ser[:3])), last3=float(np.mean(ser[-3:])), disp=dv, drop=drop, probe_moved=moved, line=line, guard=guard, g=g)
 
 
@@ -563,15 +582,38 @@ def report(R, E, PR, L, rdiff):
     for arm in ["SH30", *STEPS]:
         for s in SEEDS.get(arm, (0, 1)):
             got = sorted(have.get((arm, s), []))
+            if arm in START and not got:                  # the continuation that was not chosen (or not started yet)
+                continue
             regs = [0] if arm == "SH30" else reg(arm)
             opts = [o for o in OPTS.get(arm, ()) if (f"{arm}:{o}", s, STEPS[arm]) in L]
-            rws.append([f"{arm}-s{s}", " ".join(f"k{k:02d}" for k in got) or "none", " ".join(f"k{k:02d}" for k in regs if k not in got) or "none",
+            rws.append([f"{arm}-s{s}" + (f" (`{name(arm, s, STEPS[arm])}`)" if arm in START or arm in RTAG else ""), " ".join(f"k{k:02d}" for k in got) or "none", " ".join(f"k{k:02d}" for k in regs if k not in got) or "none",
                         " ".join(opts) or ("none" if arm in OPTS else "n/a")])
     A(md(["arm", "navtest reads present (final = last registered step)", "registered, not read yet", "test-time options read"], rws))
     bad = {k: v for k, v in rdiff.items() if v > 1e-6}
     A(f"Replay identity: the instrumented replay of the failing tokens reproduces the stored 8 sub-scores on {len(rdiff) - len(bad)} / {len(rdiff)} models "
       f"(max |difference| {max(rdiff.values()):.1e})" + (f"; **differs on {bad}**" if bad else "") + ".\n")
 
+    A("## Arm R and the continuation (prereg amendment 7)\n")
+    A("`R0` / `RA` / `RB` = `VTR-0` / `VTR-A` / `VTR-B-s<seed>`: the policy trained from the shipped weights with the SH30 recipe (10 000 steps x 128, cosine), reading through the "
+      "memory channel a frozen token bank: Cinque's own t0 tokens (R0, the control), the final branch of `VT-A-s<seed>` (RA) or of `VT-B-s<seed>` (RB). Their one checkpoint is "
+      "listed as k10; the registered comparisons are RA - R0, RB - R0, RB - RA, each also against SH30 (R0 - SH30 is a reference row). `A2` / `B2` = arm A / B continued for 30 000 "
+      "steps under the tags `VT-A2` / `VT-B2-s<seed>`, read as steps k55 .. k80 of the same arm; its controls were not continued (`ctrl` shows the snapshot used). Both appear in "
+      "every table below under these labels: trend, full decomposition, NC classes and arc ratios, boards (navhard), test-time options, verdicts, no-regression, flips, moved lists.\n")
+    gf = OUT.parent / "chain" / "R" / "gate.json"
+    if gf.exists():
+        g = json.loads(gf.read_text())
+        gt, fb = g.get("gate", {}), g.get("fallback", {})
+        A(f"Gate (`scripts/vt_r.py gate`, {g.get('time', '?')}): " + ("not evaluated" if gt.get("passed") is None else
+          f"masked-memory drop of arm A at its final checkpoint {gt['drop']:+.2f} EPDMS on the seed mean (seeds {', '.join(f'{v:+.2f}' for v in gt['per_seed'].values())}; "
+          f"line >= {g['drop_line']}): **{'passed, R runs' if gt['passed'] else 'failed, R is not run'}**") + ". Continuation: " +
+          ("not chosen" if not fb.get("pick") else f"> 45 deg off-road rate against A0 over the last three snapshots, seed mean: A {fb['value']['A']:+.2f} pp, B {fb['value']['B']:+.2f} pp "
+           f"-> **arm {fb['pick']}**") + ".\n")
+    else:
+        A("Gate: not evaluated yet (`$DATA_DIR/runs/vis_train/chain/R/gate.json`).\n")
+    bk = [json.loads(f.read_text()) for f in sorted((D / "runs/op_parity/mem").glob("vtr_*/bank.json"))]
+    if bk:
+        A(md(["bank", "source checkpoint", "its step", "navtest: mean |token - frozen Cinque token| (RMS of the frozen token)"],
+             [[b["kind"], b["src"], b["step"], "n/a" if "navtest_vs_cinque" not in b else f"{b['navtest_vs_cinque']['mean_abs']:.4f} ({b['navtest_vs_cinque']['ref_rms']:.3f})"] for b in bk]))
     A("## Figure\n\n![trend](trend.png)\n")
     A("Off-road (DAC failure) rate on > 20 deg and > 45 deg tokens and the full navtest EPDMS against training steps; step 0 is `SH30-F-s<seed>`. One colour per arm, "
       "controls (F, F0, A0) dashed, thin lines are single seeds and the thick line their mean. What to look at: whether a trained-vision arm (A, B, C, W; solid) "
@@ -680,6 +722,8 @@ def report(R, E, PR, L, rdiff):
       "snapshots below the first three; **flat** = |diff| < 0.3 pp, CI contains 0, vision displacement >= 1% (A / B: masked-memory drop >= 0.2 EPDMS); **not measured** = displacement "
       "< 0.5%, or (A / B) masked-memory drop < 0.2 and the Stage-0 probe unmoved (its paired CI against V contains 0); otherwise undetermined. W (amendment 1): on the > 45 deg "
       "cut-inside rate, **seeing the curb helps** = diff <= -1.0 pp and CI upper bound < 0; **not used** = |diff| < 0.5 pp, CI contains 0 and the masked-side-view drop < 0.2. "
+      "Arm R (amendment 7): the same line without the trend clause (one checkpoint); displacement and Stage-0 probe are those of the bank's source checkpoint, the masked-memory "
+      "drop is the R arm's own. A2 / B2: the line of A / B, the snapshot series continued. "
       "A line whose inputs are missing is `pending`; a verdict before the final checkpoint is provisional. Guardrail: CI lower bound of the full and the < 5 deg EPDMS difference >= -0.3.\n")
     rws, opp = [], []
     for arm, c in PRIMARY:
@@ -687,7 +731,7 @@ def report(R, E, PR, L, rdiff):
         for s, v in V.items():
             dr = ", ".join(f"{o} {'n/a' if x is None else format(x, '+.2f')}" for o, x in v["drop"].items()) or "n/a"
             rws.append([f"{arm} - {c}", s, f"k{v['step']:02d}" + ("" if v["final"] else " (provisional)"), v["quantity"], ci(v["row"]),
-                        "n/a (< 6 snapshots)" if v["trend_down"] is None else f"{'down' if v['trend_down'] else 'not down'} ({v['first3']:+.2f} -> {v['last3']:+.2f})",
+                        "n/a (one checkpoint)" if v["one"] else "n/a (< 6 snapshots)" if v["trend_down"] is None else f"{'down' if v['trend_down'] else 'not down'} ({v['first3']:+.2f} -> {v['last3']:+.2f})",
                         "n/a" if v["disp"] is None else f"{100 * v['disp']:.2f}%", dr, {None: "not run", True: "moved", False: "unmoved"}[v["probe_moved"]], f"**{v['line']}**",
                         ("pass" if v["guard"] else "**fail: gain counts as traded**") + f" ({ci(v['g'][0])}; {ci(v['g'][1])})"])
         if "0" in V and "1" in V and V["0"]["d"] * V["1"]["d"] < 0:
@@ -786,6 +830,7 @@ def report(R, E, PR, L, rdiff):
     A("## Not produced\n")
     A("- HUGSIM for A0 / A / B / W: `jevdrive.bench` has no serving path for the branch encoder (amendment 2 point 3). Arm C goes through the parity path as the tag "
       "`VTCP2-s0` (`vt_native.py export`); F / F0 are queued in their chains; their boards appear in the table above when read.\n"
+      "- HUGSIM / WOD for arm R and for A2 / B2: memory arms, no serving path (amendment 7 point 11); their `hugsim` cells are listed as missing in the no-regression table.\n"
       "- navhard reference `SH30-F-s{0,1}` on protocol W frames appears in the board table once `bench run --model SH30-F-s0 SH30-F-s1 --bench navhard` has been run.\n")
     return "\n".join(P)
 

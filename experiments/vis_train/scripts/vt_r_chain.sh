@@ -42,7 +42,7 @@ train() {  # tag, seed, kind, steps, extra flags
        "--seed $2 --steps $4 --batch 128 --data $FULL --split navsim/op-parity-full --frames warp --host --hinge-lam 30 --hinge-margin 0.5 --compile --tag $1 $5"
 }
 BANK="--vram 16 --cpu 4 --ram 24"          # one branch encoder at inference (the Stage-0 token job's booking)
-TRAIN="--vram ${VTR_VRAM:-26} --cpu 4 --ram 48"   # SH30 itself peaked at 23.7 GB; a light cached-token job, outside the per-card training cap
+TRAIN="--vram ${VTR_VRAM:-16} --cpu 4 --ram 48"   # staged launch: 12.6 GB peak, 7 it/s compiled on a shared card; a light cached-token job, outside the per-card training cap
 
 if [[ $MODE == smoke ]]; then
   # ---------------------------------------------------------------- staged launch: one R arm for 300 steps, and 100 steps of a continuation
