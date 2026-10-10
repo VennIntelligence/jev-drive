@@ -1,0 +1,31 @@
+rank,manual_type,note
+1,P3 turn geometry,right-hand curve through a construction zone; own ends 2.7 m to the right of the top-rated path
+2,P2 in-lane offset,own drifts 1.6 m right of the top-rated path (which is the logged path); cones on the left
+3,P2 in-lane offset,own swings further left than the top-rated path (as the log does) behind a cut-in car
+4,P3 turn geometry,dark night left turn from near standstill; own turns in too early and too tight
+5,P3 turn geometry,left turn; own turns in earlier and tighter than the top-rated path
+6,P4 different route,night at a green light from standstill; top-rated and log turn right while own goes straight
+7,P3 turn geometry,wide left turn; own slightly tighter
+8,P3 turn geometry,left turn; own curls in tighter and shorter
+9,P3 turn geometry,right turn; own slightly inside
+10,P2 in-lane offset,top-rated moves 1.5 m right along parked cars; own stays straight
+11,P1 other lane,own shifts about 4 m left (as rater 6 does) while the top-rated path keeps the lane; top-rated ends early (auto P6)
+12,P1 other lane,freeway at 25 m/s; top-rated changes lane to the left while own follows the right-hand curve
+13,P4 different route,dark night; top-rated bears left while own goes straight
+14,P4 different route,top-rated starts a right turn over a short distance while own goes straight ahead
+15,P4 different route,night from standstill; top-rated turns left while own goes straight
+16,P3 turn geometry,left turn at a stop sign; own tighter
+17,P1 other lane,road forks under a viaduct; top-rated keeps left and own takes the right branch
+18,P3 turn geometry,right-hand bend; own ends about 5 m further right
+19,P3 turn geometry,both bear right; own turns more (48 deg against 22 deg)
+20,P7 other,dark night; the road bends right and own goes straight while top-rated and log follow the bend
+21,P3 turn geometry,left turn from near standstill; own much tighter and shorter
+22,P5 own drifts,own veers about 1 m left at low speed next to a parked truck; top-rated is short and straight
+23,P3 turn geometry,right turn from standstill; own slightly wide and short
+24,P4 different route,stop sign; top-rated and log turn left while own goes straight
+25,P2 in-lane offset,night rain; same direction and own 0.8 m to the right
+26,P3 turn geometry,dark night right turn; own wider and longer than the top-rated path
+27,P1 other lane,15 m/s; top-rated and log move about 3 m left and own stays in lane
+28,P1 other lane,night at 16 m/s; top-rated moves one lane right and own follows the log
+29,P3 turn geometry,night right-hand ramp; small difference
+30,P3 turn geometry,left-hand bend; small difference (gain 0.44)

@@ -1,0 +1,127 @@
+{
+ "n_rows": 153,
+ "n_accounts": 80,
+ "n_sample": 54,
+ "loo_r2_ten_clusters": 0.5809700251869419,
+ "loo_r2_mean_only": 0.5440109164245798,
+ "slope_spot_on_mean": 1.4401407019061054,
+ "intercept": -4.587272238416662,
+ "resid_sd": 0.2076002834486107,
+ "wlg_mean10": 8.174100000000001,
+ "wlg_spot": 7.342,
+ "wlg_spot_pred": 7.184581873034037,
+ "wlg_spot_resid": 0.1574181269659629,
+ "wlg_resid_z": 0.7582751061365007,
+ "wlg_spot_rank_in_sample": 3,
+ "spot_mean": 6.845078592592592,
+ "spot_sd": 0.3195068263746925,
+ "spot_minus_mean10": -1.0932782748148149,
+ "spot_minus_mean10_sd": 0.2187929609293601,
+ "big_n": 35,
+ "small_n": 12,
+ "big_minus_small": {
+  "Construction": -0.07597004690476261,
+  "Interections": 0.00657624023809511,
+  "Pedestrian": 0.016277527619045884,
+  "Cyclist": -0.003040597142855539,
+  "Multi-Lane Maneuvers": 0.036249311904763104,
+  "Single-Lane Maneuvers": 0.006497809523809295,
+  "Cut_ins": 0.11774863619047515,
+  "Foreign Object Debris": 0.03034688857142953,
+  "Special Vehicles": 0.03458765238095296,
+  "Others": 0.03485222690476064,
+  "Spotlight": 0.06493313761904673
+ },
+ "top_resid": [
+  {
+   "method": "ZSD-Titan",
+   "RFS": 8.167,
+   "Spotlight": 7.183,
+   "spot_resid": -0.133
+  },
+  {
+   "method": "PlusAI-WorldVLA-2B",
+   "RFS": 8.087,
+   "Spotlight": 7.165,
+   "spot_resid": -0.026
+  },
+  {
+   "method": "VAIL+",
+   "RFS": 8.082,
+   "Spotlight": 7.505,
+   "spot_resid": 0.37
+  },
+  {
+   "method": "PlusAI-WorldVLA-2B",
+   "RFS": 8.079,
+   "Spotlight": 7.064,
+   "spot_resid": -0.131
+  },
+  {
+   "method": "VMA-plus",
+   "RFS": 8.079,
+   "Spotlight": 7.169,
+   "spot_resid": -0.009
+  },
+  {
+   "method": "DriveMA-2B",
+   "RFS": 8.075,
+   "Spotlight": 7.264,
+   "spot_resid": 0.105
+  },
+  {
+   "method": "VAIL",
+   "RFS": 8.061,
+   "Spotlight": 7.631,
+   "spot_resid": 0.547
+  },
+  {
+   "method": "VMA",
+   "RFS": 8.06,
+   "Spotlight": 7.251,
+   "spot_resid": 0.113
+  },
+  {
+   "method": "Zero-1",
+   "RFS": 8.048,
+   "Spotlight": 7.005,
+   "spot_resid": -0.147
+  },
+  {
+   "method": "NTR",
+   "RFS": 8.046,
+   "Spotlight": 7.123,
+   "spot_resid": -0.01
+  },
+  {
+   "method": "TTVLM",
+   "RFS": 8.043,
+   "Spotlight": 7.093,
+   "spot_resid": -0.041
+  },
+  {
+   "method": "RAP",
+   "RFS": 8.043,
+   "Spotlight": 7.204,
+   "spot_resid": 0.087
+  },
+  {
+   "method": "QIRL-E2E-lambda0.05",
+   "RFS": 8.025,
+   "Spotlight": 7.154,
+   "spot_resid": 0.058
+  },
+  {
+   "method": "PWVLA",
+   "RFS": 7.993,
+   "Spotlight": 7.076,
+   "spot_resid": 0.02
+  },
+  {
+   "method": "Poutine",
+   "RFS": 7.986,
+   "Spotlight": 6.893,
+   "spot_resid": -0.178
+  }
+ ]
+}

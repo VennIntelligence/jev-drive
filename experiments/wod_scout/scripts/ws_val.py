@@ -172,7 +172,9 @@ def main(a):
         d = o2traj[:, -1] - ens[:, -1]
         hd_own, hd_top = heading_change(ens), heading_change(tp)
         uh = np.stack([np.cos(np.radians(hd_own)), np.sin(np.radians(hd_own))], -1)
-        lat5 = np.abs(d[:, 0] * -uh[:, 1] + d[:, 1] * uh[:, 0])                   # lateral separation at 5 s in the own heading frame
+        slat = d[:, 0] * -uh[:, 1] + d[:, 1] * uh[:, 0]                           # top-rated minus own at 5 s, along own left normal
+        lat5 = np.abs(slat)                                                       # lateral separation at 5 s in the own heading frame
+        own_inside = -slat * np.sign(hd_own)                                      # > 0: own ends further towards its own turn side than the top-rated path
         tstep = np.linalg.norm(np.diff(np.concatenate([np.zeros((n, 1, 2)), tp], 1), axis=1), axis=-1) * W.RFS_FREQ
         nmov = (tstep > 1e-6).cumsum(1).argmax(1)
         padded = (nmov < 19) & (tstep[ii, nmov] > 1.0)
@@ -186,7 +188,7 @@ def main(a):
                    np.where((dh < 15) & (lat5 >= 2.5), "P1 other lane", np.where((dh < 15) & (lat5 >= 0.5), "P2 in-lane offset", "P7 other"))))))
         fr = pd.DataFrame({"rank": np.argsort(order) + 1, "name": names[:n], "cluster": cl, "v0": v0, "intent": intent, "luma": lum_r, "w": w, "rfs_WLG": A, "rfs_top": s_top,
                            "rfs_log": s_log, "rfs_shipped": s_sh, "gap": gap, "o1_gain": o1, "o2_gain": o2, "joint": joint, "w_gap": w * gap, "w_o1": w * o1, "w_o2": wp,
-                           "arc_own": arc_own, "arc_top": arc_top, "head_own": hd_own, "head_top": hd_top, "lat5": lat5, "top_padded": padded, "auto_type": ptype,
+                           "arc_own": arc_own, "arc_top": arc_top, "head_own": hd_own, "head_top": hd_top, "lat5": lat5, "own_inside_m": own_inside, "top_padded": padded, "auto_type": ptype,
                            "scores": [" ".join(f"{s:.0f}" for s in q) for q in sc]})
         fr.to_csv(O2 / "frames.csv", index=False)
         tot = float(wp.sum())
@@ -200,6 +202,18 @@ def main(a):
                 typ.append({"scope": scope, "auto type": t, "frames": int(m.sum()), "path-only pts": float(wp[m].sum()), "share of scope": float(wp[m].sum() / max(wp[mask].sum(), 1e-12)),
                             "gap pts": float((w * gap)[m].sum()), "median lat5 (m)": float(np.median(lat5[m])) if m.any() else np.nan})
         stats.write_table(typ, O2 / "path_types_auto")
+        man = O2 / "top30_manual.csv"                                              # written by hand after looking at the sheets (rank, manual_type, note)
+        if man.exists():
+            mt = pd.read_csv(man).set_index("rank")
+            fr["manual_type"] = fr["rank"].map(mt.manual_type)
+            fr["note"] = fr["rank"].map(mt.note)
+            t30 = fr.loc[pick]
+            mrows = [{"manual type": k, "frames": len(g), "path-only pts": float(g.w_o2.sum()), "share of the top 30": float(g.w_o2.sum() / t30.w_o2.sum()),
+                      "auto type agrees": int((g.auto_type.str[:2] == k[:2]).sum()), "turn intent": int((g.intent >= 2).sum()), "night (luma < 50)": int((g.luma < 50).sum()),
+                      "v0 < 5 m/s": int((g.v0 < 5).sum()), "WLG at the 4.0 floor": int((g.rfs_WLG <= 4.0 + 1e-9).sum()),
+                      "own on the inside (m, median; turn types)": float(g.own_inside_m.median())} for k, g in t30.groupby("manual_type")]
+            stats.write_table(mrows, O2 / "path_types_manual")
+            run.info("manual types:\n%s", pd.DataFrame(mrows).to_string(float_format=lambda v: f"{v:.3f}"))
         stats.write_table(fr.loc[pick].drop(columns=["w"]).to_dict("records"), O2 / "top30")
         run.info("top30:\n%s", fr.loc[pick, ["rank", "name", "cluster", "v0", "rfs_WLG", "rfs_top", "o1_gain", "o2_gain", "lat5", "head_own", "head_top", "auto_type"]]
                  .to_string(float_format=lambda v: f"{v:.2f}"))

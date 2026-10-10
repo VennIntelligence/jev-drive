@@ -1,0 +1,4 @@
+split,frames scanned,frames in index,sequences,frames with a full logged future,sequences with a full logged future,frames with rated trajectories (score >= 0),sequences with rated trajectories,intent straight / left / right / unknown
+train,415663,415663,2037,415663,2037,0,0,349956 / 35837 / 29870 / 0
+val,106360,106360,479,106360,479,479,478,90681 / 7968 / 7711 / 0
+test,203776,203776,1505,0,0,0,0,178079 / 15378 / 10319 / 0
