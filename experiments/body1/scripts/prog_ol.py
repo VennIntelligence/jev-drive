@@ -15,6 +15,10 @@ Proximity groups of a state (thresholds fixed here, before any number was read; 
   open       none of the four
 Ratio = mean arc of the arm / mean arc of the base on the same states; interval from jevdrive.stats.paired(groups=log) on the per-state
 difference, divided by the base mean. `seed` rows give the same ratio between the two seeds of the base (the noise floor).
+
+Prereg Amendment 6 (arc lines of the pilot gate and of G3 (e)): --new / --ref name the pairs (new_i against ref_i; one ref is repeated),
+--name the files (ol_<name>.parquet under runs/body1/prog, tables under --out). The groups come from the plan of the FIRST ref. The seed row is
+written when two different refs are given. Defaults reproduce the diagnosis (P2H10B-F against P2H10-F, files ol_<set>*).
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _sys.path.insert(0, str(_pl.Path(__file__).resolve().parents[1] / "lib"))
@@ -56,6 +60,21 @@ def lead_gap(box, valid, cls, off, v0):
     return np.where(m, gap, np.inf).min(1)
 
 
+def setup(a):
+    """--new / --ref / --name / --out -> module state (pairs, group reference, output paths)."""
+    global NEW, REF, OUT
+    ref = list(a.ref) * (len(a.new) if len(a.ref) == 1 else 1)
+    assert len(ref) == len(a.new), "--ref: one tag, or one per --new"
+    NEW, REF = tuple(a.new), tuple(ref)
+    OUT = B.REPO / a.out
+    a.name = a.name or a.set
+
+
+def pairs_of():
+    p = [(f"s{i}" if NEW == ("P2H10B-F-s0", "P2H10B-F-s1") or len(set(REF)) > 1 else x, x, y) for i, (x, y) in enumerate(zip(NEW, REF))]
+    return p + ([("seed", REF[1], REF[0])] if len(set(REF)) > 1 else [])
+
+
 def cmd_states(a):
     import pandas as pd
     import torch
@@ -65,8 +84,8 @@ def cmd_states(a):
     from jevdrive.data import splits
     from jevdrive.run import Run
     dev = torch.device("cuda")
-    tags = list(NEW + REF)
-    with Run("body1", f"prog-ol-{a.set}", config=vars(a)) as run:
+    tags = list(dict.fromkeys(NEW + REF))
+    with Run("body1", f"prog-ol-{a.name}", config=vars(a)) as run:
         if a.set == "hold":
             hold = splits.load(B.HOLD)
             run.use_split(hold)
@@ -98,7 +117,8 @@ def cmd_states(a):
             fut = np.nan_to_num(t["fut"][rr].astype(np.float64))
             M = pd.DataFrame(dict(fam="navtest", name=t["names"][rr], dy=0.0, dpsi=0.0, log=t["log"][rr], v0=t["speed"][rr], cls="all",
                                   dyaw=np.abs(np.degrees(np.unwrap(fut[:, :, 2], axis=1)[:, -1])), arc_log=knots_arc(fut)[:, -1]))
-        P = G.plans(dirs, rows_of, tags, dev)                                        # (4, n, 8, 3)
+        P = G.plans(dirs, rows_of, tags, dev)                                        # (tags, n, 8, 3)
+        ix = tags.index
         off = M[["dy", "dpsi"]].to_numpy(np.float32)
         for m, tag in enumerate(tags):
             s = knots_arc(P[m].astype(np.float64))
@@ -107,23 +127,22 @@ def cmd_states(a):
             lab = SW.labels(P[m][:, None], off, box, val, cls, sdf)
             M[f"hit|{tag}"], M[f"clr|{tag}"], M[f"lat|{tag}"] = lab["a_hit"][:, 0], lab["a_clr"][:, 0], lab["a_lat"][:, 0]
             M[f"bm|{tag}"], M[f"bt0|{tag}"] = lab["b_margin"][:, 0], lab["b_t0"][:, 0]
-        for i in (0, 1):
-            al, cr = along_cross(P[i].astype(np.float64), P[2 + i].astype(np.float64))
-            M[f"along4|s{i}"], M[f"cross4|s{i}"], M[f"crossrms|s{i}"] = al[:, -1], cr[:, -1], np.sqrt((cr ** 2).mean(1))
-        al, cr = along_cross(P[3].astype(np.float64), P[2].astype(np.float64))        # base seed 1 against base seed 0: the noise floor
-        M["along4|seed"], M["cross4|seed"], M["crossrms|seed"] = al[:, -1], cr[:, -1], np.sqrt((cr ** 2).mean(1))
+        for pn, x, y in pairs_of():                                                  # incl. base seed 1 against base seed 0: the noise floor
+            al, cr = along_cross(P[ix(x)].astype(np.float64), P[ix(y)].astype(np.float64))
+            M[f"along4|{pn}"], M[f"cross4|{pn}"], M[f"crossrms|{pn}"] = al[:, -1], cr[:, -1], np.sqrt((cr ** 2).mean(1))
         M["lead_gap"] = lead_gap(box, val, cls, off.astype(np.float64), M.v0.to_numpy(np.float64))
         d = B.root() / "prog"
         d.mkdir(parents=True, exist_ok=True)
-        M.to_parquet(d / f"ol_{a.set}.parquet")
-        np.save(d / f"ol_{a.set}_plans.npy", P)
-        run.info(f"{a.set}: {len(M)} states, {M.log.nunique()} logs -> {d / f'ol_{a.set}.parquet'}")
+        M.to_parquet(d / f"ol_{a.name}.parquet")
+        np.save(d / f"ol_{a.name}_plans.npy", P)
+        run.info(f"{a.name}: {len(M)} states, {M.log.nunique()} logs -> {d / f'ol_{a.name}.parquet'}")
         run.summary.update(n=len(M), logs=int(M.log.nunique()))
     cmd_tables(a)
 
 
-def group(M, ref=REF[0]):
+def group(M, ref=None):
     """Proximity group of every state from the base plan of seed 0 (first match in GROUPS order)."""
+    ref = ref or REF[0]
     contact = M[f"hit|{ref}"].to_numpy() | ((M[f"bm|{ref}"].to_numpy() < -0.20) & ~M[f"bt0|{ref}"].to_numpy())
     lead = np.isfinite(M.lead_gap.to_numpy())
     nobj = M[f"clr|{ref}"].to_numpy() < 1.0
@@ -134,11 +153,11 @@ def group(M, ref=REF[0]):
 def cmd_tables(a):
     import pandas as pd
     from jevdrive import stats
-    M = pd.read_parquet(B.root() / "prog" / f"ol_{a.set}.parquet")
+    M = pd.read_parquet(B.root() / "prog" / f"ol_{a.name}.parquet")
     M["grp"] = group(M)
     M["vbin"] = np.select([(M.v0 > lo) & (M.v0 <= hi) for lo, hi, _ in VB], [n for *_, n in VB], "?")
     logs = M.log.to_numpy()
-    pairs = [("s0", NEW[0], REF[0]), ("s1", NEW[1], REF[1]), ("seed", REF[1], REF[0])]
+    pairs = pairs_of()
 
     def rows(name, masks, sec=4):
         out = []
@@ -166,15 +185,15 @@ def cmd_tables(a):
     R += rows("open, arc at 1 s", [("open", (M.grp == "open").to_numpy())], sec=1) + rows("open, arc at 2 s", [("open", (M.grp == "open").to_numpy())], sec=2)
     D = pd.DataFrame(R)
     OUT.mkdir(parents=True, exist_ok=True)
-    D.to_csv(OUT / f"ol_{a.set}_arc.csv", index=False, float_format="%.4f")
+    D.to_csv(OUT / f"ol_{a.name}_arc.csv", index=False, float_format="%.4f")
     # where the shortening is: share of the pooled arc difference carried by each group
     sh = []
-    for pn, x, y in pairs[:2]:
+    for pn, x, y in pairs[:len(NEW)]:
         d = (M[f"arc4|{x}"] - M[f"arc4|{y}"]).to_numpy()
         for g in GROUPS:
             m = (M.grp == g).to_numpy()
             sh.append(dict(pair=pn, group=g, n=int(m.sum()), share_states=float(m.mean()), mean_diff_m=float(d[m].mean()) if m.any() else np.nan, share_of_total_diff=float(d[m].sum() / d.sum())))
-    pd.DataFrame(sh).to_csv(OUT / f"ol_{a.set}_share.csv", index=False, float_format="%.4f")
+    pd.DataFrame(sh).to_csv(OUT / f"ol_{a.name}_share.csv", index=False, float_format="%.4f")
     print(D[D.split.isin(["all", "group", "speed", "family"])].to_string(index=False, float_format=lambda v: f"{v:.4f}"))
     print(pd.DataFrame(sh).to_string(index=False, float_format=lambda v: f"{v:.4f}"))
 
@@ -185,5 +204,10 @@ if __name__ == "__main__":
     ap.add_argument("--set", default="hold", choices=["hold", "navtest"])
     ap.add_argument("--fams", nargs="+", default=["log", "ot1", "yr1", "bd4"])
     ap.add_argument("--shards", type=int, nargs="+", default=list(range(B.NSH)))
+    ap.add_argument("--new", nargs="+", default=list(NEW))
+    ap.add_argument("--ref", nargs="+", default=list(REF))
+    ap.add_argument("--name", default="", help="file stem (default: the set)")
+    ap.add_argument("--out", default="experiments/body1/results/prog", help="table directory, relative to the repo")
     a = ap.parse_args()
+    setup(a)
     {"states": cmd_states, "tables": cmd_tables}[a.cmd](a)

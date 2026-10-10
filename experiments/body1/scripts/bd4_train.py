@@ -6,8 +6,12 @@ Batch = (batch - k) rows drawn as pp_train draws them (imitation / anchor) + k h
 uniformly from each family's rows on navsim/body1-train-logs (own rng stream: the normal row stream does not depend on the families).
 Prereg Amendment 5: --ho-w multiplies both hinge terms of the hinge-only rows; --ho-excl navsim/body1-val-logs keeps the validation part of
 the train logs out of the hinge-only rows (the weight is selected there).
+Prereg Amendment 6: --shape gives the new hinges the plan's shape only (lib/loss43.shape_only; values unchanged, tags P2H10S-*).
 
   train  --tag P2H10B-P-s0 --data navtrain_full.s2of12 navtrain_full.s3of12 --steps 3000 --ho ot1:4,yr1:4,bd4:5 --agent-lam 10
+  train  --tag P2H10S-CHECK --shape-check P2H10B-Pw3-s0 ... (the pilot's flags)   Amendment 6 note (a): no training; on --check-batches batches
+         of this trainer at that checkpoint's weights: (i) total and every logged scalar with --shape on against off, bit for bit;
+         (ii) pose gradient of the new hinges: along-heading component with the switch on, cross-heading component on against off -> json
   ident  --a <run dir of pp_train.py> --b <run dir of bd4_train.py with the switches off>     losses and weights equal bit for bit -> json
 
   $DATA_DIR/envs/op-train/bin/python experiments/body1/scripts/bd4_train.py train --tag ... (GPU; through the pool)
@@ -92,7 +96,7 @@ def cmd_train(a):
         n_fb = int(len(fb))
         fb_fam = np.bincount(fam[fb.cpu().numpy()], minlength=len(fams)).tolist()
     LS = Losses43(model.net, cfg, tstd, S.di, S.pi, dev, hinge, None,
-                  ho=torch.as_tensor(is_ho, device=dev) if k else None, fam=torch.as_tensor(fam, device=dev), fams=fams, agent2=agent2, road=road, road_lam=a.road_lam, ho_w=a.ho_w)
+                  ho=torch.as_tensor(is_ho, device=dev) if k else None, fam=torch.as_tensor(fam, device=dev), fams=fams, agent2=agent2, road=road, road_lam=a.road_lam, ho_w=a.ho_w, shape=a.shape)
     opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}, {"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}], weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
     d = T.proot("runs", a.tag)
@@ -101,7 +105,7 @@ def cmd_train(a):
             run.use_split(x)
         run.info(f"{a.tag}: train {len(tr_rows)} normal rows, dev {len(dv_rows)}; hinge-only per batch of {nB}: "
                  + (", ".join(f"{f} {q} of {len(p)}" for (f, q), p in zip(ho, pools)) or "none")
-                 + f" (weight {a.ho_w}, excluded logs {a.ho_excl or 'none'}: {int((is_ho & in_tr & ~in_ho).sum())} rows)"
+                 + f" (weight {a.ho_w}, shape-only hinge gradient {a.shape}, excluded logs {a.ho_excl or 'none'}: {int((is_ho & in_tr & ~in_ho).sum())} rows)"
                  + f"; hinge {cfg.hinge_lam} / {cfg.hinge_margin} m coverage {hinge.coverage if hinge else 0:.4f}; agent {cfg.agent_lam} / {cfg.agent_margin} m / side "
                  f"{cfg.agent_side_margin} rows {int(agent2.ok.sum()) if agent2 is not None else 0} (moved {agent2.moved if agent2 is not None else 0}); "
                  f"road {a.road_lam if road is not None else 0} / {a.road_margin} m rows {int(road.ok.sum()) if road is not None else 0} ({a.road_labels}); "
@@ -117,6 +121,8 @@ def cmd_train(a):
 
         def fetch(dr):
             return dr, S.front[dr[0]]
+        if a.shape_check:
+            return shape_check(run, a, S, LS, draw, dev, T)
         S.front.pin = a.prefetch > 1
         Sd = T.dev_store(S, dv_rows, a.dev_card_gb)
         pre = T.Prefetch(draw, fetch, cfg.steps, a.prefetch, a.fetch_workers)
@@ -159,6 +165,86 @@ def cmd_train(a):
         torch.save(model.adapter.state_dict(), d / "adapter.pt")
         run.summary.update(steps=cfg.steps, train_s=time.time() - t0, ckpt=str(d / "ckpt-final.pt"), n_train=len(tr_rows), ho_per_batch=k,
                            gpu_peak_gb=torch.cuda.max_memory_reserved() / 2 ** 30)
+
+
+def shape_check(run, a, S, LS, draw, dev, T):
+    """Amendment 6 note (a), items (i) and (ii): see the module docstring. Writes --check-out."""
+    import struct
+    import torch
+    from loss43 import shape_only
+    model = T.load_pmodel(a.shape_check, dev)
+    bits = lambda v: struct.pack("<d", float(v))  # noqa: E731
+    res = dict(weights=a.shape_check, batches=a.check_batches, scalars_compared=0, scalars_differ=[], rows=0, agent_pos_rows=0, road_pos_rows=0,
+               max_abs_grad=0.0, max_abs_along_on=0.0, max_abs_along_off=0.0, max_abs_cross_on_minus_off=0.0, max_abs_cross_off=0.0,
+               max_abs_dout_on_minus_off=0.0, max_abs_dout_off=0.0, max_abs_pose_value_diff=0.0)
+    for b in range(a.check_batches):
+        r, an, _ = draw()
+        rows, anchor = torch.as_tensor(r, device=dev), torch.as_tensor(an, device=dev)
+        ego = S.ego[rows] * (~anchor)[:, None].float()
+        with torch.no_grad():
+            out = model(S.front[rows], ego, S.tc[rows], None, None, nv=None)
+        g = {}
+        for on in (False, True):                                      # (i) the same batch, switch off / on
+            LS.shape = on
+            o = out.clone().requires_grad_(True)
+            total, Ls = LS(o, S, rows, anchor)
+            g[on] = (float(total), {q: float(v) for q, v in Ls.items()}, torch.autograd.grad(total, o)[0])
+        keys = sorted(set(g[False][1]) | set(g[True][1]))
+        res["scalars_compared"] += len(keys) + 1
+        res["scalars_differ"] += [f"batch {b}: {q}" for q in keys if q not in g[False][1] or q not in g[True][1] or bits(g[False][1][q]) != bits(g[True][1][q])]
+        if bits(g[False][0]) != bits(g[True][0]):
+            res["scalars_differ"].append(f"batch {b}: total")
+        res["max_abs_dout_on_minus_off"] = max(res["max_abs_dout_on_minus_off"], float((g[True][2] - g[False][2]).abs().max()))
+        res["max_abs_dout_off"] = max(res["max_abs_dout_off"], float(g[False][2].abs().max()))
+        # (ii) the new hinges as functions of the poses (the same masks as Losses43)
+        h = LS.ho[rows] if LS.ho is not None else torch.zeros_like(anchor)
+        imit = ~h & ~anchor & S.has_fut[rows]
+        plan = out.float()[:, LS.pi].view(-1, 33, 15)
+        x, y, psi = (q.detach().requires_grad_(True) for q in T.rear(plan, S.cam_x[rows], LS.W))
+
+        def H(xs, ys):
+            v = xs.sum() * 0.0
+            na = nr = 0
+            if LS.agent2 is not None:
+                m = (imit | h) & LS.agent2.ok[rows]
+                if m.any():
+                    av = LS.agent2.per_step(xs[m], ys[m], psi[m], rows[m]).mean(1)
+                    v, na = v + av.sum(), int((av > 0).sum())
+            if LS.road is not None:
+                m = h & LS.road.ok[rows]
+                if m.any():
+                    rv = torch.relu(LS.road.margin - LS.road.margins(xs[m], ys[m], psi[m], rows[m])).mean(1)
+                    v, nr = v + rv.sum(), int((rv > 0).sum())
+            return v, na, nr
+        v0, na, nr = H(x, y)
+        g0 = torch.autograd.grad(v0, (x, y))
+        xs, ys = shape_only(x, y, psi)
+        res["max_abs_pose_value_diff"] = max(res["max_abs_pose_value_diff"], float(torch.maximum((xs - x).abs().max(), (ys - y).abs().max())))
+        v1, *_ = H(xs, ys)
+        assert bits(v0) == bits(v1)
+        g1 = torch.autograd.grad(v1, (x, y))
+        c, s = torch.cos(psi.detach()).double(), torch.sin(psi.detach()).double()
+        al = lambda q: c * q[0].double() + s * q[1].double()  # noqa: E731
+        cr = lambda q: -s * q[0].double() + c * q[1].double()  # noqa: E731
+        for q, v in (("max_abs_grad", max(float(g0[0].abs().max()), float(g0[1].abs().max()))), ("max_abs_along_on", float(al(g1).abs().max())),
+                     ("max_abs_along_off", float(al(g0).abs().max())), ("max_abs_cross_on_minus_off", float((cr(g1) - cr(g0)).abs().max())),
+                     ("max_abs_cross_off", float(cr(g0).abs().max()))):
+            res[q] = max(res[q], v)
+        res["rows"] += len(rows)
+        res["agent_pos_rows"] += na
+        res["road_pos_rows"] += nr
+    res["values_bit_identical"] = not res["scalars_differ"] and res["max_abs_pose_value_diff"] == 0.0
+    res["along_zero"] = res["max_abs_along_on"] <= 1e-6 * res["max_abs_grad"] and res["max_abs_along_off"] > 1e-3 * res["max_abs_grad"]
+    res["cross_kept"] = res["max_abs_cross_on_minus_off"] <= 1e-6 * res["max_abs_grad"]
+    res["switch_changes_gradient"] = res["max_abs_dout_on_minus_off"] > 0
+    res["pass"] = bool(res["values_bit_identical"] and res["along_zero"] and res["cross_kept"] and res["switch_changes_gradient"] and res["agent_pos_rows"] > 0 and res["road_pos_rows"] > 0)
+    run.info(json.dumps(res, indent=1))
+    run.summary.update({q: v for q, v in res.items() if q != "scalars_differ"})
+    if a.check_out:
+        _pl.Path(a.check_out).parent.mkdir(parents=True, exist_ok=True)
+        _pl.Path(a.check_out).write_text(json.dumps(res, indent=1) + "\n")
+    if not res["pass"]:
+        raise SystemExit(2)
 
 
 def cmd_ident(a):
@@ -206,6 +292,10 @@ if __name__ == "__main__":
     p.add_argument("--ho", default="", help='hinge-only rows per batch by family, e.g. "ot1:4,yr1:4,bd4:5"; "" = none')
     p.add_argument("--ho-w", type=float, default=1.0, help="Amendment 5: multiplier on the agent and road hinge of the hinge-only rows")
     p.add_argument("--ho-excl", default="", help='Amendment 5: split whose logs give no hinge-only row, e.g. navsim/body1-val-logs; "" = none')
+    p.add_argument("--shape", action="store_true", help="Amendment 6: the new hinges (A, and the road hinge of hinge-only rows) get no along-heading pose gradient")
+    p.add_argument("--shape-check", default="", help="Amendment 6 note (a): checkpoint tag; check the switch on batches of this trainer and exit (no training)")
+    p.add_argument("--check-batches", type=int, default=40)
+    p.add_argument("--check-out", default="")
     p.add_argument("--agent-lam", type=float, default=0.0, help="A: agent hinge on imitation rows (train logs) and hinge-only rows; 0 = off")
     p.add_argument("--agent-margin", type=float, default=0.3)
     p.add_argument("--agent-side-margin", type=float, default=0.0)

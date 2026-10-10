@@ -724,7 +724,8 @@ any number of it exists; each fixes something the items left open and takes the 
   definitions of `prog_ol.py` unchanged), ratio = mean 4 s arc of the arm / of the reference; the pooled ratio and the ratio on the `open`
   group must each be >= 0.995 as point estimates, to four decimals, no rounding in the arm's favour. `prog_ol.py` gets `--new / --ref /
   --name` arguments for this (defaults reproduce the diagnosis files); nothing else in it changes. One read of hold logs: the pilot's
-  `bd4_g3.py` and `prog_ol.py` are each run once for the arm; the ablations and the positive control are read by the same two calls.
+  `bd4_g3.py` and `prog_ol.py` are each run once for the arm; the ablations and the positive control are read by the same `prog_ol.py`
+  call and by one `bd4_g3.py` call each (that reader takes one new checkpoint per call; corrected before any job of the arm was submitted).
 - (d) **G3.** (a) to (d) as Amendment 4 item 5 and the Amendment 5 run of them (same readers, same reference checkpoints `P2H10-F-s{0,1}`,
   navtest baseline = the bench run of `P2H10-F` already stored for `loss_g3.md`'s table if `jevdrive.bench` returns it at this checkout,
   otherwise re-scored in the same call). (e): proximity groups from `P2H10-F-s0`'s plan for both seeds, as in the diagnosis; every listed

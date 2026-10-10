@@ -12,6 +12,11 @@ Logged per step (floats in the returned dict; `fam/<f>/...` per hinge-only famil
   <term>_mean  mean loss over the rows;  <term>_pos  share of rows with a non-zero hinge;  <term>_posmean  mean loss on those rows (absent if none)
 with <term> in {agent, road} for the families and {agent, hinge} for the imitation rows. Unconditional rates of the batch: `agent_pos` (share
 of the imitation + hinge-only rows whose plan has a non-zero agent hinge), `agent_ho_pos` / `road_ho_pos` (the same over the hinge-only rows).
+
+shape=True (prereg Amendment 6 item 2): the agent hinge (imitation and hinge-only rows) and the road hinge of the hinge-only rows see the
+plan's shape only. Their poses pass through `shape_only`: values unchanged bit for bit, the gradient with respect to every (x, y) loses its
+component along the pose's own heading, so these hinges can move the path sideways and turn it but cannot pull a pose back along the path.
+P2H10's own on-log drivable hinge (inside pp_train.Losses) never sees the switch.
 """
 import numpy as np
 import torch
@@ -51,13 +56,23 @@ def row_stats(v: torch.Tensor, pre: str) -> dict:
     return out
 
 
+def shape_only(x, y, psi):
+    """Poses (n, K) -> (x~, y~) with the same values and d(x~, y~) / d(x, y) = n n^T, n = unit normal of the detached heading:
+    p~ = sg(p) + n n^T (p - sg(p)). The yaw is not touched (the caller passes psi on unchanged)."""
+    xd, yd, pd = x.detach(), y.detach(), psi.detach()
+    nx, ny = -torch.sin(pd), torch.cos(pd)
+    s = nx * (x - xd) + ny * (y - yd)                                                     # 0 in value, carries the cross-heading gradient
+    return xd + nx * s, yd + ny * s
+
+
 class Losses43(T.Losses):
     """T.Losses + hinge-only rows. ho (n_store,) bool marks hinge-only Store rows, fam (n_store,) int their family index (-1 on normal rows);
     agent2 = OffAgentHinge over all rows (or None), road = ot_rows.off_hinge on the scorer-layer raster for the hinge-only rows (or None)."""
 
-    def __init__(self, *a, ho=None, fam=None, fams=(), agent2=None, road=None, road_lam=10.0, ho_w=1.0, **k):
+    def __init__(self, *a, ho=None, fam=None, fams=(), agent2=None, road=None, road_lam=10.0, ho_w=1.0, shape=False, **k):
         super().__init__(*a, **k)
         self.ho, self.fam, self.fams, self.agent2, self.road, self.road_lam, self.ho_w = ho, fam, fams, agent2, road, road_lam, ho_w
+        self.shape = shape
 
     def __call__(self, out, S, rows, anchor):
         c = self.cfg
@@ -73,6 +88,7 @@ class Losses43(T.Losses):
         imit = n & ~anchor & S.has_fut[rows]
         n_imit = imit.sum().clamp_min(1)
         x, y, psi = T.rear(plan, S.cam_x[rows], self.W)
+        xs, ys = shape_only(x, y, psi) if self.shape else (x, y)                         # poses of the NEW hinges (Amendment 6)
         if self.hinge is not None and imit.any():                                        # logging only: P2H10's term per row
             m = imit & self.hinge.ok[rows]
             if m.any():
@@ -81,7 +97,7 @@ class Losses43(T.Losses):
             m = (imit | h) & self.agent2.ok[rows]
             av = torch.zeros(len(rows), device=o.device)
             if m.any():
-                av[m] = self.agent2.per_step(x[m], y[m], psi[m], rows[m]).mean(1)
+                av[m] = self.agent2.per_step(xs[m], ys[m], psi[m], rows[m]).mean(1)
             mi = imit & self.agent2.ok[rows]
             Ls["agent"] = av[mi].mean() if mi.any() else av.sum() * 0.0                  # A on imitation rows: AgentHinge's own mean
             total = total + c.agent_lam * Ls["agent"]
@@ -104,7 +120,7 @@ class Losses43(T.Losses):
                 rv = torch.zeros(len(rows), device=o.device)
                 m = h & self.road.ok[rows]
                 if m.any():
-                    rv[m] = torch.relu(self.road.margin - self.road.margins(x[m], y[m], psi[m], rows[m])).mean(1)
+                    rv[m] = torch.relu(self.road.margin - self.road.margins(xs[m], ys[m], psi[m], rows[m])).mean(1)
                 Ls["road_ho"] = rv[h].sum() / n_imit
                 total = total + self.ho_w * self.road_lam * Ls["road_ho"]
                 Ls["road_ho_pos"] = (rv[h] > 0).float().mean()
