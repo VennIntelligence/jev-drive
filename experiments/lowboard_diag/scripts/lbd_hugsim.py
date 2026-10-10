@@ -33,7 +33,8 @@ PRESET = "spec_plan_smooth"
 REFS = [("WA-JEPA", "exam"), ("P0", "spec"), ("P0", "spec_plan_smooth")]   # reference arms: light records only
 KIND = {"fg_collision": "agent", "bg_collision": "boundary", "off_route": "corridor", "max_steps": "none"}
 LAT_ON, BRAKE, T_CF, T_BAND, BAND_PAD = 1.5, 4.0, 3.0, 2.0, 0.5      # registered: onset 1.5 m, 4 m/s^2 from E - 3 s, band at E - 2 s
-T_EXTRA = 3.0          # choice: the struck actor continues at its last recorded velocity for 3 s past E (lm_offline's rule)
+T_EXTRA = 10.0         # choice: past E the struck actor continues at its last recorded velocity (lm_offline's rule) for 10 s, long
+                       # enough not to bind ("stopped and still hit"); contact within 3 s and up to E are kept as sensitivity columns
 COV_OFF = 0.5          # fd_hugsim's DAC line: footprint coverage < 0.5 = off the drivable ground
 DIL = 1.25             # model speed units -> simulator m/s (lm_offline)
 SUBS = ["rc", "nc", "dac", "ttc", "c"]
@@ -81,11 +82,11 @@ def struck(R):
 
 def brake_cf(R, i):
     """Ego brakes at 4 m/s^2 from E - 3 s along its driven path (pose by arc length, clamped to the path end); the actor moves as
-    recorded, then at constant velocity for T_EXTRA. -> (contact up to E + T_EXTRA, contact up to E, stop pose)."""
+    recorded, then at constant velocity. -> (contact up to E + T_EXTRA, up to E + 3 s, up to E, stop pose)."""
     X, Y, YAW, V, n = R["X"], R["Y"], R["YAW"], R["V"], R["n"]
     k0 = max(0, n - round(T_CF / DT))
     arc = np.r_[0.0, np.cumsum(np.hypot(np.diff(X[k0:]), np.diff(Y[k0:])))] + 1e-9 * np.arange(n - k0 + 1)
-    hit, hit_E, pose = False, False, None
+    hit, hit_3, hit_E, pose = False, False, False, None
     for j in range(n - k0 + round(T_EXTRA / DT) + 1):
         t = min(j * DT, V[k0] / BRAKE)
         sc = min(V[k0] * t - 0.5 * BRAKE * t * t, arc[-1])
@@ -93,8 +94,9 @@ def brake_cf(R, i):
         o = actor_at(R["objs"], i, k0 + j, n)
         if o is not None and ego_box(*pose).intersects(box_poly(o)):
             hit = True
+            hit_3 |= k0 + j <= n + round(3.0 / DT)
             hit_E |= k0 + j <= n
-    return hit, hit_E, pose
+    return hit, hit_3, hit_E, pose
 
 
 def plan_hits(R, route, scene, kind, i, lat):
@@ -190,7 +192,7 @@ def analyse(row, d, route, scene, planners=()):
     if K == "agent":
         st = struck(R)
         i = st["i"]
-        cf, cf_E, pose = brake_cf(R, i)
+        cf, cf_3, cf_E, pose = brake_cf(R, i)
         kb = n - round(T_BAND / DT)
         from shapely.geometry import LineString
         tip = xy[n] + EGO_L / 2 * np.array([np.cos(YAW[n]), np.sin(YAW[n])])
@@ -201,7 +203,7 @@ def analyse(row, d, route, scene, planners=()):
         f["O2c"] = st["lx"] < 0 and abs(st["dh"]) < 45
         f["L1"] = in_band and st["lx"] > 0 and not cf
         ev.update(obj_i=i, obj_lx=st["lx"], obj_ly=st["ly"], obj_dh=st["dh"], obj_v=st["vo"], obj_inter=st["inter"],
-                  obj_planner=planners[i] if i < len(planners) else "", in_band=in_band, cf_contact=cf, cf_contact_to_E=cf_E)
+                  obj_planner=planners[i] if i < len(planners) else "", in_band=in_band, cf_contact=cf, cf_contact_3s=cf_3, cf_contact_to_E=cf_E)
         ex.update(cf_pose=pose, band=band)
         # base-right (lead, same moment): the run's own lead head asks for >= 1.5 m/s^2 at least 1.5 s before E
         ks = [k for k in range(0, n - round(1.5 / DT) + 1) if R["steps"].get(k, {}).get("lead_prob") is not None]
@@ -254,6 +256,13 @@ def light(d, route, wajepa):
     return dict(s=s, V=R["V"], lat=lat)
 
 
+def scene_of(d):
+    """ground.ply / scene.ply of a scenario: the run dir if it keeps them, else the WA-JEPA run dir of the same scenario (the point
+    sets are per scenario, identical across runs)."""
+    d = Path(d)
+    return FD.Scene(d if (d / "ground.ply").exists() else D / "runs/hugsim-wajepa/wajepa/wj" / d.name)
+
+
 def planners_of(scenario, dataset):
     import yaml
     f = D / "datasets/hugsim/scenarios" / dataset / f"{scenario}.yaml"
@@ -273,7 +282,7 @@ def _work(job):
             print("reference failed", nm, sc, repr(e), flush=True)
     for arm, r in items:
         d = Path(r["run_dir"])
-        scene = scene or FD.Scene(d)
+        scene = scene or scene_of(d)
         row = dict(arm=arm, scenario=sc, dataset=r["dataset"], difficulty=r["difficulty"], scene=r["scene"], end=r["end"],
                    hd=float(r["hdscore"]), lost=1 - float(r["hdscore"]), **{k: float(r[k]) for k in ("rc", "nc", "dac", "ttc", "c")})
         ev, _ = analyse(row, d, route, scene, planners_of(sc, r["dataset"]))
@@ -333,7 +342,7 @@ def report(a):
     import pandas as pd
     E = pd.read_csv(OUT / "units.csv")
     E = E[E.arm.isin(a.arms)].copy()
-    for c in FLAGS + ["in_plan", "in_plan_fd", "base_right_lead", "lead_seen", "cf_contact", "cf_contact_to_E", "in_band"]:
+    for c in FLAGS + ["in_plan", "in_plan_fd", "base_right_lead", "lead_seen", "cf_contact", "cf_contact_3s", "cf_contact_to_E", "in_band"]:
         E[c] = E[c].map({True: True, False: False, "True": True, "False": False}) if c in E else np.nan
     scen = sorted(E.scenario.unique())
     idx = np.random.default_rng(0).integers(0, len(scen), (10000, len(scen)))
@@ -405,7 +414,7 @@ def report(a):
     br = ag.groupby(["cls", "sub"]).agg(runs=("lost", "size"), lead_seen=("lead_seen", "sum"), base_right_lead=("base_right_lead", "sum"),
                                         lead_first_median_s=("lead_first_s", "median"), a_need_max_median=("lead_a_need_max", "median"),
                                         attack_planner=("obj_planner", lambda x: int((x == "AttackPlanner").sum())),
-                                        cf_contact=("cf_contact", "sum"), cf_contact_to_E=("cf_contact_to_E", "sum"), in_band=("in_band", "sum")).reset_index()
+                                        cf_contact=("cf_contact", "sum"), cf_contact_3s=("cf_contact_3s", "sum"), cf_contact_to_E=("cf_contact_to_E", "sum"), in_band=("in_band", "sum")).reset_index()
     br.to_csv(OUT / "base_right_lead.csv", index=False, float_format="%.3f")
     P("## T4 base-right (lead, same moment), K = agent: lead_prob >= 0.5 and a_need >= 1.5 m/s^2 at a step >= 1.5 s before E\n")
     P(br.to_markdown(index=False, floatfmt=".2f") + "\n")
@@ -420,7 +429,7 @@ def report(a):
         P(t.to_markdown(index=False, floatfmt=".2f") + "\n")
     cols = ["scenario", "arm", "end", "K", "hd", "lost", "t_E", "t_on", "ref", "R_ref", "dpsi_ref", "v_on", "side", "flags", "cls", "sub", "in_plan",
             "plan_lead_s", "in_plan_fd", "track_dev_med", "track_dev_max", "base_right_lead", "lead_first_s", "obj_dh", "obj_lx", "obj_ly", "obj_v",
-            "obj_planner", "in_band", "cf_contact", "cf_contact_to_E", "lat_E", "herr_max_after_on"]
+            "obj_planner", "in_band", "cf_contact", "cf_contact_3s", "cf_contact_to_E", "lat_E", "herr_max_after_on"]
     cols += [c for nm in refs for c in (f"{nm}_end", f"{nm}_passed", f"{nm}_reached", f"{nm}_same_kind")]
     U = F[[c for c in cols if c in F.columns]].sort_values(["cls", "sub", "scenario"])
     U.to_csv(OUT / "failed_units.csv", index=False, float_format="%.3f")
@@ -449,7 +458,7 @@ def bev(a):
         u, _ = T.load("hugsim", arm, PRESET)
         r = u.loc[sc]
         d = Path(r.run_dir)
-        scene, route = FD.Scene(d), FD.Route(routes[r.scene]["xz"])
+        scene, route = scene_of(d), FD.Route(routes[r.scene]["xz"])
         ev, ex = analyse(dict(arm=arm, scenario=sc, end=r.end, hd=float(r.hdscore)), d, route, scene, planners_of(sc, r.dataset))
         R, n = ex["R"], ex["R"]["n"]
         fig = plt.figure(figsize=(PS.DOUBLE_COLUMN_IN, 4.3))
@@ -487,7 +496,7 @@ def bev(a):
         num = lambda k, f=".1f": "-" if ev.get(k) is None or not np.isfinite(ev.get(k)) else format(ev[k], f)  # noqa: E731
         fig.suptitle(f"{sc} / {arm}: {r.end}, HD {r.hdscore:.2f}, E {ev['t_E']:.2f} s, onset {ev['t_on']:.2f} s, ref {ev['ref']} "
                      f"(R {min(ev['R_ref'], 999):.0f} m, dpsi {ev['dpsi_ref']:.0f} deg), v_on {ev['v_on']:.1f} m/s\n"
-                     f"class {ev['cls']} / {ev['sub']}; flags {ev['flags'] or '-'}; in-plan {ev.get('in_plan')} lead {num('plan_lead_s', '.2f')} s; "
+                     f"class {ev['cls']} / {ev['sub']}; flags {ev['flags'] or '-'}; in-plan {ev.get('in_plan')} (fd {ev.get('in_plan_fd', '-')}) lead {num('plan_lead_s', '.2f')} s; "
                      f"obj dh {num('obj_dh', '.0f')} deg lx {num('obj_lx')} ly {num('obj_ly')} v {num('obj_v')} {ev.get('obj_planner', '')}; "
                      f"band {ev.get('in_band', '-')} cf {ev.get('cf_contact', '-')}; lead-right {ev.get('base_right_lead', '-')}; "
                      f"lat_E {ev['lat_E']:.1f} herr {ev['herr_max_after_on']:.0f}", fontsize=6.2, x=0.01, ha="left")
@@ -502,6 +511,7 @@ def bev(a):
                 axv = fig.add_subplot(gs[row, 1])
                 axv.axis("off")
                 if ok:
+                    im = im[im.max(axis=(1, 2)) > 8]            # drop the empty camera rows of single-row rigs
                     h, w = im.shape[:2]
                     axv.imshow(cv2.resize(im[:, :, ::-1], (480, round(480 * h / w)), interpolation=cv2.INTER_AREA))
                     axv.text(0.01, 0.97, f"video frame {fi} / {nf} (E - {back * DT:.0f} s)", transform=axv.transAxes, va="top", fontsize=5.5, color="w",
