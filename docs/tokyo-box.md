@@ -15,6 +15,7 @@ windowed timings must not be mixed with off-screen ones.
 - GPU selection (2026-09-23 one card; 2026-10-09 two) - UUIDs, graphicsadapter mapping, UUID recheck
 - AlpaSim host setup (2026-10-09) - files under /data, link speeds, node table
 - Driver and kernel are upgraded by hand (2026-10-10) - unattended-upgrades blacklist, pinned kernel, Clash boot loop
+- Two cards (2026-10-11) - PAI evaluation on both cards, one training seed per card, the training-data pull, the card 0 power fault
 - Looking at CARLA - windowed launch, screenshots, recording
 - Everything long runs in tmux - tmux sessions jev and dl
 - Network: Clash in global mode, and nodes that decay - selector, node benchmarks, git/pip routing
@@ -138,6 +139,76 @@ dead group even DNS fails, so nothing leaves the box except Tailscale. Way out: 
 clash-verge-health.timer`, then `PUT /proxies/GLOBAL {"name": "DIRECT"}`: domestic hosts, GitHub HTTPS and `hf-mirror.com`
 work on DIRECT (`HFROOT=https://hf-mirror.com` for the HF pull scripts); huggingface.co, Docker Hub and nvcr.io need a live
 node. On 2026-10-10 10:30 JST all 70 nodes of the current subscription failed the delay test.
+
+## Two cards (2026-10-11)
+
+Settled command lines for the two RTX 3090s. Everything runs in tmux `jev` (downloads in `dl`) and writes STATUS / DONE / ERROR next to its
+output; scripts that chain several of these ran from frozen clones under `/data/runs/tokyo_dual3090/` (lane scratch, `HANDOVER.md` there).
+
+### PAI closed-loop evaluation on both cards
+
+```bash
+cd ~/mycode/jev-drive
+tmux new-window -d -t jev -n pai "bash experiments/alpasim/scripts/pai_eval.sh /data/runs/alpasim/<out> <checkpoint tag> /data/runs/alpasim/pai_full/s_*.tsv"
+python3 experiments/alpasim/scripts/pai_eval_report.py --rows a='/data/runs/alpasim/<out>/runs/*' b='<other run dirs>' --mean ab=a,b --pair a-b --out read.md
+```
+
+`pai_eval.sh` cuts the scene lists into chunks (`CHUNK`, default 48) and runs one `pai_run.sh` stack per card (`CARDS`, default `0 1`) on the
+next unclaimed chunk; `CONC` 4 rollouts per card; the served configuration (`JEV_VCONT=1.0 JEV_LEAD=1`) is the default `SERVE`. Checkpoints
+other than the image's own are mounted from `/data/runs/op_parity/runs/<tag>`. A rerun resumes (finished chunks are skipped); `JOIN=1 CARDS=0`
+adds a freed card to a run that is going on. Measured:
+
+| | |
+|---|---|
+| One card, CONC 4 | 67 to 79 scenes / h on chunks of 33 to 99 scenes; card peak 23.9 to 24.1 GB, so a card holds one stack and nothing else |
+| Two cards, one stack each | 133 scenes / h (142 scenes of `P2H10-F-s0` in 3 849 s, chunks of 36) |
+| CONC 5 | not faster than CONC 4 |
+| Where the time goes | `render_rgb` 79 to 83 % of the summed RPC time, the driver 7 to 9 % (50 ms per call); about 2 min fixed cost per stack start |
+| Repeatability | `P2H10S-F-s0` on `s_b1a` rerun through `pai_eval.sh`: 0.3905, all 33 scenes identical to the first run |
+
+The renderer is the bottleneck and is bound to one card, which is why the unit is one stack per card and not a faster driver. A bare `wait`
+in the first version also waited for the script's own log `tee` and never returned after the last chunk (two idle cards for 4 min on
+2026-10-11 01:19 JST); fixed in 7b36a3ea.
+
+### Adapter training, one seed per card
+
+```bash
+cd ~/mycode/jev-drive
+for s in 0 1; do
+  TAG=P2H10S-F-<name>-s$s DATA="$(printf 'navtrain_full.s%sof12 ' {0..11})" \
+    tmux new-window -d -t jev -n tr$s "bash experiments/body1/scripts/tokyo_bench.sh full-s$s $s --seed $s --steps 10000 --label-bank --compile"
+done
+```
+
+Env `/data/envs/op-train` (torch 2.14.0+cu130; `/data/runs/tokyo_dual3090/env.sh` rebuilds it). `--label-bank` is required on a 24 GB card
+(the recipe as shipped runs out of memory at batch 128; the bank is bit-identical to the dense rasters); `--compile` gives 7.1 it/s per card
+against 4.0 eager, with both cards training. Table of every configuration tried, and the full-length runs:
+[experiments/body1/results/tokyo_3090_train.md](../experiments/body1/results/tokyo_3090_train.md). The card of a training run is free for nothing
+else at CONC 4 evaluation sizes (14 GB training + 24 GB stack do not share a card): training and evaluation take one card each.
+
+### Training data from the GPU box
+
+```bash
+# on the Mac (the login comes from the forwarded agent; no key is ever copied to the Tokyo box)
+ssh-add ~/.ssh/id_ed25519; ssh -A ujs@100.108.238.8 'bash /data/runs/op_parity/pull_train/open_masters.sh 32'
+launchctl submit -l pt.keepalive -- /usr/bin/env SSH_AUTH_SOCK=$SSH_AUTH_SOCK /bin/bash -c \
+  'caffeinate -i bash /tmp/pt/keepalive.sh; launchctl remove pt.keepalive'   # a copy of experiments/alpasim/scripts/keepalive.sh; ends at DONE
+# on the Tokyo box
+cd /data/runs/op_parity/pull_train && python3 pull_train.py plan && tmux new-window -d -t dl -n train-pull "python3 pull_train.py run 32"
+```
+
+`pull_train.py` (experiments/alpasim/scripts/) fetches 16 MB ranges over 32 persistent ssh masters into `<file>.pulling`, resumes from
+`state/*.chunks` and links a file into place only after its sha256 equals the box's; DONE is written when every essential file is verified.
+The essential set of the P2 / warp recipe is 82.2 GB (4 label files, and per shard `tab.npz`, `front.npy`, `teacher.npz` of navtrain_full /
+ot1 / yr1 / bd4); `side*.npy`, `x4.npy`, `samples.npz` (49 GB) are pulled only if `ENABLE_TAIL` exists. The box's outbound link gives about
+4 MB/s in total whatever the stream count (one stream alone about 0.1), and past about 50 connections its sshd drops them: about 5.5 h for the
+set. The box address lives only in `/data/runs/alpasim/tokyo_setup/box.env` and the Mac's ssh config.
+
+### Card 0 power fault (2026-10-10)
+
+On 2026-10-10 card 0 reported about 390 W while idle and ran at a graphics clock of about 225 MHz under load (a third of its speed). A reboot at
+22:14 JST cured it; it has not returned through the night of 2026-10-11 (both cards 1 845 to 1 950 MHz under load, 24 to 27 W idle). If it
+returns, stop using card 0 (`CARDS=1`); `pai_eval.sh` leaves a card that reads idle above 300 W to the other one.
 
 ## Looking at CARLA
 
