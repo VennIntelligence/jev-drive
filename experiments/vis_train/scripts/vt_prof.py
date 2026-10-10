@@ -118,6 +118,121 @@ def cmd_enc(a):
         (OUT / f"enc-{a.tag}.json").write_text(json.dumps(res, indent=1))
 
 
+def cmd_step(a):
+    """One training step of shape A or C on real rows, timed by segment (every segment ends in a cuda synchronize)."""
+    import torch
+    import pp_train as T
+    import pp_unfreeze as U
+    from jevdrive import op_adapt as A
+    dev = torch.device("cuda")
+    torch.backends.cudnn.benchmark = a.bench
+    datas = [d for d in (a.data or SH) if (PX.px_root() / d / "frames.npy").exists()]
+    with Run("vis_train", f"prof-step-{a.tag}", config=vars(a)) as run:
+        torch.manual_seed(0)
+        rng = np.random.default_rng(0)
+        S = T.Store(datas, dev, need_side=False, frames="warp", host=True)
+        S.front.pin = True
+        PS = PX.PixelStore(datas, dev, mode="t0" if a.shape == "A" else "all", threads=a.threads)
+        assert len(PS) == S.n
+        if a.shape == "A":
+            model = T.PModel("P2+ge_vt").to(dev)
+            enc = mk_enc(torch.float16).to(dev)
+            pol, new = model.groups()
+            vis = [p for p in enc.params.values() if p.requires_grad]
+        else:
+            model = U._torch_model()("U2").to(dev)
+            enc = model.net
+            pol, vis, new = model.groups()
+        tstd = S.t_out[:20000].float().std(0).clamp_min(1e-3)
+        LS = T.Losses(model.net, T.Cfg(arm="P2", lam_i=1.0, lam_c=3.0, lam_d=30.0), tstd, S.di, S.pi, dev)
+        opt = torch.optim.AdamW([{"params": pol, "lr": 1e-5}, {"params": new, "lr": 1e-4}, {"params": vis, "lr": 1e-5}], weight_decay=0.01, fused=a.fused)
+        scaler = torch.amp.GradScaler()
+        allp = pol + vis + new
+        d_frac = 0.25 if a.shape == "A" else 0.0
+        io = {"read": [], "up": []}
+
+        def draw():
+            return rng.choice(S.n, a.batch, replace=False), rng.random(a.batch) < d_frac, rng.random((a.batch, 1)) >= 0.25
+
+        def fetch(dr):
+            t0 = time.perf_counter()
+            if a.shape == "A":
+                hb, front = PS.host(dr[0], PX.T0, 2), S.front[dr[0]]
+            else:
+                hb, front = PS.host(dr[0]), None
+            t1 = time.perf_counter()
+            g = hb.to(dev, non_blocking=True)
+            torch.cuda.current_stream().synchronize() if a.sync_io else None
+            io["read"].append(t1 - t0), io["up"].append(time.perf_counter() - t1)
+            return dr, front, g
+
+        def encode(p, c, grad):
+            if a.enc == "u2":
+                return enc_u2(enc, p, c) if grad else model.encode(p, c) if a.shape == "C" else None
+            return PX.fast_encode(enc, p, c, grad=grad, compiled=a.compiled, chunk=0 if grad else a.chunk)
+
+        fwd = torch.compile(model, dynamic=False) if a.pol_compile and a.shape == "A" else model
+        pre = T.Prefetch(draw, fetch, a.warm + a.steps, depth=a.depth, workers=a.pw)
+        seg = {k: [] for k in ("wait", "enc", "policy", "backward", "optim", "log")}
+        torch.cuda.reset_peak_memory_stats()
+        import resource
+        t_all = cpu0 = None
+        for step in range(a.warm + a.steps):
+            if step == a.warm:
+                t_all, cpu0 = sync(), sum(resource.getrusage(w).ru_utime + resource.getrusage(w).ru_stime for w in (resource.RUSAGE_SELF, resource.RUSAGE_CHILDREN))
+                io = {"read": [], "up": []}
+            t0 = sync()
+            (rows_np, an_np, sm_np), front, g = pre.get()
+            rows, anchor = torch.as_tensor(rows_np, device=dev), torch.as_tensor(an_np, device=dev)
+            t1 = sync()
+            ego = S.ego[rows] * (~anchor)[:, None].float()
+            if a.shape == "A":
+                h = encode(g[:, 0], g[:, 1], True)
+                t2 = sync()
+                out = fwd(front, ego, S.tc[rows], side=h, side_mask=torch.as_tensor(sm_np, device=dev))
+            else:
+                with torch.no_grad():
+                    hp = encode(torch.cat([torch.zeros_like(g[:, :1]), g[:, :6]], 1).flatten(0, 1), g[:, :7].flatten(0, 1), False)
+                ht = encode(g[:, 6], g[:, 7], True)
+                front = torch.cat([hp.reshape(a.batch, 7, *A.H_SHAPE), ht[:, None]], 1)
+                t2 = sync()
+                H = torch.cat([front.new_zeros(a.batch, 1, *A.H_SHAPE), front], 1).to(model.net.dtype)
+                valid = torch.ones(a.batch, A.CONTEXT, dtype=torch.bool, device=dev)
+                valid[:, 0] = False
+                H = model.adapter.apply(H, ego) * valid[:, :, None, None].to(H.dtype)
+                out = model.net.run_batched(A.policy_feeds(model.net, H, T.AT, S.tc[rows].to(model.net.dtype)), ["outputs"])["outputs"].reshape(a.batch, -1)
+            total, Ls = LS(out, S, rows, anchor)
+            t3 = sync()
+            opt.zero_grad(set_to_none=True)
+            scaler.scale(total).backward()
+            t4 = sync()
+            scaler.unscale_(opt)
+            torch.nn.utils.clip_grad_norm_(allp, 1.0)
+            scaler.step(opt)
+            scaler.update()
+            t5 = sync()
+            _ = {k: float(v) for k, v in Ls.items()}
+            t6 = sync()
+            assert torch.isfinite(total), "non-finite loss"
+            if step >= a.warm:
+                for k, v in zip(seg, (t1 - t0, t2 - t1, t3 - t2, t4 - t3, t5 - t4, t6 - t5)):
+                    seg[k].append(v)
+            if step == 0:
+                run.info(f"first step {time.perf_counter() - t0:.1f} s (compile / cudnn search included)")
+        el = sync() - t_all
+        cpu = sum(resource.getrusage(w).ru_utime + resource.getrusage(w).ru_stime for w in (resource.RUSAGE_SELF, resource.RUSAGE_CHILDREN)) - cpu0
+        import subprocess
+        r = {"shape": a.shape, "enc": a.enc, "batch": a.batch, "it_s": a.steps / el, "samples_s": a.steps * a.batch / el,
+             "ms": {k: 1e3 * float(np.mean(v)) for k, v in seg.items()}, "read_ms_thread": 1e3 * float(np.mean(io["read"])),
+             "upload_ms_thread": 1e3 * float(np.mean(io["up"])), "peak_alloc_gb": torch.cuda.max_memory_allocated() / 2 ** 30,
+             "peak_reserved_gb": torch.cuda.max_memory_reserved() / 2 ** 30, "cpu_cores_used": cpu / el, "rows": int(S.n), "datas": len(datas),
+             "loss": float(total)}
+        run.info(json.dumps(r))
+        run.summary |= r
+        OUT.mkdir(parents=True, exist_ok=True)
+        (OUT / f"step-{a.tag}.json").write_text(json.dumps(r | {"args": vars(a)}, indent=1))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -129,5 +244,23 @@ if __name__ == "__main__":
     p.add_argument("--profile", action="store_true")
     p.add_argument("--tag", required=True)
     cli_args(p)
+    p = sp.add_parser("step")
+    p.add_argument("--shape", required=True, choices=["A", "C"])
+    p.add_argument("--enc", default="fast", choices=["fast", "u2"], help="u2: the shipped encode (checkpoint per 8 pairs, chunks of 128 without autograd)")
+    p.add_argument("--compiled", action="store_true", help="torch.compile of the encoder pass")
+    p.add_argument("--pol-compile", action="store_true", help="torch.compile of the policy forward (shape A)")
+    p.add_argument("--fused", action="store_true", help="fused AdamW")
+    p.add_argument("--bench", action="store_true", help="cudnn.benchmark")
+    p.add_argument("--sync-io", action="store_true", help="synchronise the upload inside the fetch thread (to time it)")
+    p.add_argument("--batch", type=int, default=64)
+    p.add_argument("--chunk", type=int, default=128, help="pairs per pass of the slots without autograd")
+    p.add_argument("--steps", type=int, default=40)
+    p.add_argument("--warm", type=int, default=5)
+    p.add_argument("--depth", type=int, default=3)
+    p.add_argument("--pw", type=int, default=2, help="prefetch threads")
+    p.add_argument("--threads", type=int, default=0, help="reader threads of the pixel store")
+    p.add_argument("--data", nargs="+", default=None)
+    p.add_argument("--tag", required=True)
+    cli_args(p)
     a = ap.parse_args()
-    {"enc": cmd_enc}[a.cmd](a)
+    {"enc": cmd_enc, "step": cmd_step}[a.cmd](a)
