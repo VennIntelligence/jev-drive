@@ -207,6 +207,7 @@ def work(token):
     base0 = bases[0]
     for nm, tt in (("1s", fut[1, :2]), ("2s", fut[3, :2]), ("3s", fut[5, :2]), ("4s", fut[7, :2])):
         row[f"brg_path_{nm}"] = float(bearing(tt[None], base0)[0])
+        row[f"dist_path_{nm}"] = float(np.hypot(tt[0] - base0[3], tt[1] - base0[4]))     # from the camera, m (points under ~8 m are below the image)
     for a in (5, 10, 15, 20, 30):
         p = pick_s(path, s, [a])
         row[f"brg_path_s{a}"] = float(bearing(p, base0)[0]) if np.isfinite(p).all() else np.nan
