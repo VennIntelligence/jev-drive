@@ -614,10 +614,13 @@ L3 slow 277 against 238.7 (base 217) not met; reading B (933 pairs) L1a 29 again
 PAI read was run, the servable checkpoint stays P2H10-F. A second attempt made after one pilot read of hold logs; a regression check.
 Details: [results/loss_closed_loop.md](../results/loss_closed_loop.md). Note (b) item 5 (car-park / generic-drivable check of the new offroad zeros) was not made per scene.
 
-## Amendment 6: DRAFT, NOT IN FORCE (2026-10-10; written by the diagnosis agent after decision 229; nothing below may be trained or read until the main session accepts it and removes this heading's qualifier)
+## Amendment 6 (2026-10-10, in force; accepted by the main session before any training of this arm)
 
 A third attempt at the loss arm 4.3, shaped by [results/progress_diagnosis.md](../results/progress_diagnosis.md). It is written after the closed-loop read
 of Amendment 5 and after a post hoc diagnosis on the same development scenes, and has to be reported as such everywhere.
+Drafted by the diagnosis agent after decision 229 and accepted by the main session after decision 230 with the content of items 1 to 9 kept
+and items 10 and 11 added; the notes below the cost table were written by the lane agent before any code of the arm ran. No checkpoint of
+this arm exists at this commit and no number of it has been read.
 
 1. **What the diagnosis found (the reason for one more arm).** The removed collisions and the lost progress are different scenes (95.6 % of the progress
    loss outside the 11 collision scenes; no removed collision paid with progress in its own scene). The loss is a shorter speed profile: own-plan 4 s arc
@@ -686,3 +689,53 @@ of Amendment 5 and after a post hoc diagnosis on the same development scenes, an
 
    Optional and separate (attribution only, no closed loop, do not gate this arm): the two informative drop-one runs of Amendment 4 item 11, "B + C
    without A" and "A on on-log rows only", one seed each, read with G3 (a) and `prog_ol.py`: 0.9 card-h, 1 h wall, 0.2 GB together.
+   (Superseded by item 11: they are trained, at pilot scale.)
+10. **Disclosure: this is the third trained variant of 4.3, and the last.** Amendment 5 called itself "a disclosed second and last attempt at
+    the loss arm". This arm exists all the same, because decision 230 found the failure of Amendment 5 (L2, L3) to be a separable side effect
+    of one gradient component and not a trade inside scenes. It is the third trained variant of 4.3 (Amendment 4 pilot, Amendment 5 pilot +
+    full run + closed loop, this one) and is reported as such everywhere its numbers appear. **No further variant of the loss arm follows
+    it, whatever it reads**: not candidates (2) or (3) of item 3, not variant D, not another weight.
+11. **The two drop-one ablations of the diagnosis are trained at pilot scale, alongside the arm's pilot.** "B + C without A" and "A on
+    on-log rows only" (progress_diagnosis.md section 2), shards s2 + s3, 3 000 steps, seed 0, the pilot's data and split. They are read on
+    the open-loop quantities only (own-plan contact rates of `bd4_g3.py`, arc ratios of `prog_ol.py`, the per-term training scalars),
+    **gate nothing and get no closed-loop run**, no full run and no navtest bench. This replaces the "optional" full-scale runs of the
+    paragraph under item 9 and the full-scale ablations of Amendment 4 item 11.
+
+**Notes to Amendment 6 (2026-10-10, written by the lane agent with the amendment's acceptance, before any code of the arm ran and before
+any number of it exists; each fixes something the items left open and takes the stricter reading; none loosens a line).**
+- (a) **The switch.** `bd4_train.py --shape` -> `Losses43(shape=True)`: after `x, y, psi = T.rear(...)` the poses given to the agent hinge
+  (imitation and hinge-only rows) and to the road hinge of the hinge-only rows are `x~ = sg(x) - sin(sg(psi)) s`, `y~ = sg(y) + cos(sg(psi)) s`
+  with `s = -sin(sg(psi)) (x - sg(x)) + cos(sg(psi)) (y - sg(y))` (identically 0 in value), psi passed unchanged. P2H10's own on-log
+  drivable hinge and every other term do not see the switch. Shown before the pilot is submitted (`scripts/bd4_shape_check.py`, one batch of
+  the pilot's stores at the `P2H10B-Pw3-s0` weights): (i) every logged scalar and the total with the switch on equal, bit for bit, the
+  same batch with it off; (ii) the gradient of the summed new hinges with respect to the poses (x~, y~ taken as free variables, i.e.
+  d hinge / d x, d hinge / d y pulled back through the projection) has an along-heading component of zero to numerical precision while
+  its cross-heading component equals the unprojected one; (iii) with the switch off, 60 steps against the unedited `pp_train.py`: scalars
+  and weights bit for bit (as `ident_a5.json`).
+- (b) **The ablations are drop-ones of the `P2H10B` recipe (along-path gradient included), not of the shape-only arm**: their question
+  (decision 230, last line; progress_diagnosis.md "what this cannot separate") is which term shortens the plan, which the shape-only switch
+  would hide. `P2H10B-Pw3-noA-s0` = `P2H10B-Pw3-s0` with `--agent-lam 0` (hinge-only rows 4 / 4 / 5 with the road hinge at w = 3 on item C's
+  raster, `--ho-excl` kept, no agent hinge anywhere). `P2H10B-P-Aon-s0` = `--agent-lam 10 --ho ""` (the agent hinge on the imitation rows
+  of the train logs, no hinge-only row, hence 128 normal rows per batch and no w). Both are read against `P2H10-P-s0` on the hold states
+  of the two shards, next to `P2H10B-Pw3-s0` (all terms, the positive control) and `P2H10S-P-s0`.
+- (c) **Pilot gate, how each number is read.** Contact lines, dev ADE and slope exactly as Amendment 5 item 4 with its note (e)
+  (`bd4_g3.py --set hold --shards 2 3`, `ot3_rows.py probe`). Arc lines: `prog_ol.py` with the arm's own plan against `P2H10-P-s0`'s on
+  the same hold states (families `log`, `ot1`, `yr1`, `bd4`, shards 2 + 3; the proximity group of a state from `P2H10-P-s0`'s plan, the
+  definitions of `prog_ol.py` unchanged), ratio = mean 4 s arc of the arm / of the reference; the pooled ratio and the ratio on the `open`
+  group must each be >= 0.995 as point estimates, to four decimals, no rounding in the arm's favour. `prog_ol.py` gets `--new / --ref /
+  --name` arguments for this (defaults reproduce the diagnosis files); nothing else in it changes. One read of hold logs: the pilot's
+  `bd4_g3.py` and `prog_ol.py` are each run once for the arm; the ablations and the positive control are read by the same two calls.
+- (d) **G3.** (a) to (d) as Amendment 4 item 5 and the Amendment 5 run of them (same readers, same reference checkpoints `P2H10-F-s{0,1}`,
+  navtest baseline = the bench run of `P2H10-F` already stored for `loss_g3.md`'s table if `jevdrive.bench` returns it at this checkout,
+  otherwise re-scored in the same call). (e): proximity groups from `P2H10-F-s0`'s plan for both seeds, as in the diagnosis; every listed
+  ratio must hold on each seed separately. **Kill criteria, stricter than item 8's list: any of (a), (b), (c), (d), (e) missed on either seed
+  ends the arm before a closed loop.**
+- (e) **Closed loop.** Checklist of chunk1 x s0 as Amendment 4 item 6 (233 / 233; collision + offroad zeros not above the baseline's;
+  heading sd at decision 9 <= 1.25 x base; baseline-clean scenes turned into a collision / offroad zero not more often than zeros removed).
+  Lines on all 1 400 pairs: L1a and L1b down in the two-seed total and in neither seed up, L2 mean difference >= 0 with the log-clustered
+  lower bound > -0.005, L3 slow <= 1.1 x base. There is no reading B. The comparison with `P2H10B-F` is descriptive. One read: the report
+  script is run on the complete 700 x 2 once; a job that dies for an infrastructure reason is rerun unchanged before the read.
+- (f) **PAI line** (only if all four lines pass): 60 public scenes x 2 seeds against `P2H10-F-s{0,1}` (0.1734 / 0.2565), mean paired difference
+  over the 120 pairs >= 0 and at-fault collision zeros in the two-seed total not above the baseline's.
+- (g) **What the servable tag would be.** If all four nuPlan lines pass: `P2H10S-F-s{0,1}`, stated as the third variant, read on development
+  scenes; the PAI read is reported next to it and does not change the nuPlan verdict.
