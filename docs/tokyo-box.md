@@ -14,6 +14,7 @@ windowed timings must not be mixed with off-screen ones.
 - What it is - login, hardware table, paths
 - GPU selection (2026-09-23 one card; 2026-10-09 two) - UUIDs, graphicsadapter mapping, UUID recheck
 - AlpaSim host setup (2026-10-09) - files under /data, link speeds, node table
+- Driver and kernel are upgraded by hand (2026-10-10) - unattended-upgrades blacklist, pinned kernel, Clash boot loop
 - Looking at CARLA - windowed launch, screenshots, recording
 - Everything long runs in tmux - tmux sessions jev and dl
 - Network: Clash in global mode, and nodes that decay - selector, node benchmarks, git/pip routing
@@ -43,7 +44,7 @@ from GPU-box model experiments ([remote-box.md](remote-box.md)).
 | OS / kernel | Ubuntu 24.04.3, currently booted on 7.0.0-31-generic |
 | CPU / RAM | Ryzen 9 9950X, 16 cores / 32 threads; 60 GB |
 | Docker | 28.3.3, `ujs` in group `docker`; nvidia-container-toolkit 1.20.1, `runtimes.nvidia` in `/etc/docker/daemon.json` next to the Clash `proxies` (backup `daemon.json.bak-20261009`); `docker run --gpus all` sees both cards (installed 2026-10-09) |
-| GPU | Two RTX 3090 24 GB, driver 580.173.02, PCI `01:00.0` (index 0) and `03:00.0` (index 1) |
+| GPU | Two RTX 3090 24 GB, driver 580.178.04 (since 2026-10-10, see "Driver and kernel are upgraded by hand"), PCI `01:00.0` (index 0) and `03:00.0` (index 1) |
 | Disks | `/` 1.8 TB (1.4 TB free), `/data` 3.6 TB (nearly empty) |
 | Desktop | GNOME Wayland + Xwayland on `:0`, seat0, 3840x2160 |
 | Code | `~/mycode/jev-drive` (clean clone, `origin` is plain `github.com`) |
@@ -115,6 +116,28 @@ device); `adapter.pt` is not read. `jevdrive/op_adapt.py` looks for the model at
   Hugging Face. Node ranking changes within minutes and a host can read 0 on a node that is fast elsewhere. `tokyo_nodebench.sh screen|full` repeats it.
 - The subscription was replaced at 17:14 JST (new node names, e.g. `AWS日本01`); the table above is for the old list. The current node read 0.7-2.8 MB/s
   per host while another pull ran. Global mode was kept, no Clash rule or config change was made today.
+
+## Driver and kernel are upgraded by hand (2026-10-10)
+
+On 2026-10-10 06:30 JST `unattended-upgrade` moved the NVIDIA userspace to 580.178.04 under the loaded 580.173.02 module
+(`nvidia-smi`: "Driver/library version mismatch", every GPU job dead until a reboot) and pulled kernel 7.0.0-38 without
+headers, so without a DKMS nvidia module. Fixed the same day:
+
+- `/etc/apt/apt.conf.d/51-hold-nvidia-kernel` blacklists `nvidia-`, `libnvidia-`, `linux-modules-nvidia-`, `linux-image-`,
+  `linux-headers-`, `linux-modules-` (and relatives) for unattended upgrades. Upgrade them together by hand, then reboot.
+  Kernel security updates are therefore manual too.
+- GRUB boots 7.0.0-34 (`GRUB_DEFAULT` pinned to its menu id, backup `/etc/default/grub.bak-20261010`): the kernel with the
+  DKMS nvidia 580.178.04 module. Do not boot 7.0.0-38 before `linux-headers-7.0.0-38-generic` is installed and `dkms status`
+  lists nvidia for it.
+- After the reboot both cards report 580.178.04 (module and userspace) and `docker run --gpus all` works.
+
+Reboot checklist: nothing but restartable downloads in tmux; `postgres` restarts itself; tmux sessions are gone afterwards.
+Clash after a boot: `clash-verge-boot.service` starts the core and picks a region group; when every node of the
+subscription is dead it fails and systemd restarts it every 15 s, which restarts the core each time, and with `GLOBAL` on a
+dead group even DNS fails, so nothing leaves the box except Tailscale. Way out: `sudo systemctl stop clash-verge-boot.service
+clash-verge-health.timer`, then `PUT /proxies/GLOBAL {"name": "DIRECT"}`: domestic hosts, GitHub HTTPS and `hf-mirror.com`
+work on DIRECT (`HFROOT=https://hf-mirror.com` for the HF pull scripts); huggingface.co, Docker Hub and nvcr.io need a live
+node. On 2026-10-10 10:30 JST all 70 nodes of the current subscription failed the delay test.
 
 ## Looking at CARLA
 
