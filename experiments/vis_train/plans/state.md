@@ -282,17 +282,15 @@ A / A0 / B 六条链的 preflight（6 步 smoke，eval 在步 0 与步 3）真�
 - 同 seed、同步数；对照在该步没有 snapshot 时取其最近的登记 snapshot（并列取早的），表里 `ctrl` 列标出。A / B 的 k05、k15… 对 A0 就是这种情况（A0 每 10 k）。A / B 的末尾（50 k）对 F 用 `VT-F-s*-k50`；C 的末尾对 `VT-F0-s0-k40`。navhard / HUGSIM 只有末尾 checkpoint 有，对照取其末尾（步数不同时 `ctrl step` 列可见）。
 - 判定线、护栏、不退步规则、seed 反向都在 `reads.md` 末尾按登记的阈值机械算出；输入缺失的线写 `pending`，末尾 checkpoint 之前写 provisional。「Stage-0 probe 不动」取为「支路 token 对同一次 decode 的 V 的配对 CI 含 0」（预登记没有给数，这是读数脚本的取法）。趋势 = 差值序列后三个 snapshot 的均值对前三个，少于 6 个 snapshot 时写 n/a。
 
-### 还缺什么
+### 读数的补充（2026-10-11 01:00 CST，reads builder）
 
-- prereg 读数 5（C 的原生帧直路 ADE 对 shipped，第 137 条）不在脚本里。
-- A0 / A / B / C / W 的 HUGSIM：bench 没有支路 encoder 的 serving，只有 F / F0 在排。
-- `SH30-F-s{0,1}` 的 navhard（W 帧）参照行已于 2026-10-10 23:40 CST 经 `bench run` 提交，跑完后下一次 `sync` 进板表。
-- W 臂：`VT-W-*` 在 bench 里能 resolve 之后脚本自动纳入（登记 50 k、每 5 k、对照 A；步数不同时改脚本顶部的 `STEPS` / `EVERY` / `SEEDS`）；`:sideoff` 的读数名按 `VT-W-s<seed>:sideoff` 取。
-- 链目录里 `A / B` 的 `pool/b-k50`、`b-k55` 与 `A0` 的 `b-k50` 下的 `ERROR` 是 23:07 取消 60 k 提交时留下的（`cancelled while queued`），不是读数失败。
-
-## 读数交接（第一任 reads builder，2026-10-11 00:10 CST 收尾；之后不再改）
-
-读数由 jev-night 的 reads builder 接手，「读数」一节归它维护；本节只记我留下的东西。
+- **sync 已含**：每个对照在最新 snapshot 的 up / down / did not move 三张清单（全部指标 x 桶 x 板，含 rate 与弧长比），README 链接 reads.md 与 trend.png。种子：F0、C 有 seed 1（补记 6），均值只在两个 seed 都有的步数出现。
+- **读数 5**（C 的原生帧直路 ADE）：`scripts/vt_native.py`，comma1M 30 个直路窗（op_fov 的 ArmWarper 帧与 `window_metrics` 原样，shipped 复现 op_wide_ft 的 0.715 [0.525, 0.945]），P2 格式 checkpoint 经 `pp_hugsim.py onnx`（含训练后的视觉权重）+ 自身 ego adapter 的 bias（ego 特征由 comma 运动按 parity_hugsim 的约定构造）。box 上一条命令：`.venv/bin/python experiments/vis_train/scripts/vt_native.py submit`（默认 tags=auto：shipped、SH30-F-s0、现存的 VT-C-s{0,1}* 与 VT-F0-s{0,1}*；按 tag 缓存，C 每出新 snapshot 重跑即可），三段 pool 任务（CPU、一张卡 8 GB、CPU），结果在 `runs/vis_train/native/table.{csv,md}`，下一次 `sync` 写进 reads.md 的「Prereg read 5」一节。C 终点后的自动重跑已排：`vt-native-final`（seed 0）、`vt-native-final-s1`。试跑：UF-U2-s0 ADE5 比 shipped 1.50x，VT-F0-s0-k10 1.64x（P2 配方本身就抬高这个量，所以 C 的判读看 C − F0 的配对差，不只看对 shipped 的比）。
+- **C 的 HUGSIM 64**：可走现有路径。`vt_native.py export --src VT-C-s<seed> --dst VTCP2-s<seed>` 把 C 的 checkpoint 写成普通 P2 格式新 tag（加 `arm: P2`、去 `vt`，并在 CPU 上载入 `PModel("P2")` 自检；ONNX 含全部视觉初始化，试过 UF-U2-s0 的 455 个视觉张量），然后 bench 的 parity 路径原样服务。已排（门控在 `VT-C-s<seed>/ckpt-final.pt`）：`vt-export-C-s0` 1011-001558-3537 -> `vt-b-C-s0-hugsim` 1011-001558-dc20；`vt-export-C-s1` 1011-003636-ac10 -> `vt-b-C-s1-hugsim` 1011-003637-32f3。reads.md 的 HUGSIM 板按 `VTCP2-s<seed>` 读 C。A0 / A / B / W 的 HUGSIM 需要 bias server 里跑支路 encoder，未写，记「未跑」。
+- **WOD-E2E val 零样本**：F、F0 是 P2 格式，可直接走 op_parity 的 `serve` 流程（`scripts/vt_wod.sh`：ONNX -> `pp_wod.py bias` -> `wod_zeroshot_openpilot.py`，与 SH30 参照行同协议，参照 `SH30-F-s{0,1}` 的 preds 已存）。已排（门控在 checkpoint，优先级 2）：VT-F-s0 1011-001530-724a/9c83/ccf6，VT-F-s1 1011-001531-bd5f/1693/6550，VT-F0-s0 1011-001532-be83/43c2/da45，VTCP2-s0 1011-001559-f0d6/2ba7/b7f9，VTCP2-s1 1011-003638-4a67/42c2/c008，VT-F0-s1 1011-003639-7a1b/8585/11c8。读法见 vt_wod.sh 头部的 `wod_parity.py report` 命令。A0 / A / B / W 需要在 harness 里跑支路，未写，记「未跑」。
+- **Stage-0 probe**：`vt_read.py probe --gated`（checkpoint 未出现时也能排，token 任务等 ckpt，优先级 2）。已排 `fin-AB`（VT-A/B-s0/s1；tok 1011-001637-c842、1011-001638-1cbc/7b0b/2a9a，dec d7b4，score fb20）与 `fin-C`（VT-C-s0；tok 1011-001639-e79c，dec debd，score b620）。VT-W 与 VT-C-s1 的 probe 没排（W 终点时间未定；C-s1 同 fin-C）：终点后 `vt_read.py probe --gated --name fin-W --tags VT-W-s0 VT-W-s1`。另一会话排的 k05 probe（A/B s0 k05）仍在队列，结果自动读入。
+- **接线核对**：链里已有 navhard（stage 1 / 2 分报）、A/B 的 `:noside :mshuf`、W 的 `:noside :sideoff :mshuf`、NC 类别、弧长比、位移、W 的 FoV 分层（均在 reads.md 对应小节，等 snapshot）。未发现需修的接线。
+- **还缺**：A0 / A / B / W 的 HUGSIM 与 WOD（见上，需要支路 serving 代码）。
 
 ### 我提交、仍在 pool 里的任务（不要取消，接手方直接用）
 
@@ -321,5 +319,5 @@ Stage-0 probe 链 `k05-s0`（第 160 条协议，验证用：第一个 A / B sna
 
 - 已在真实 snapshot 上验证：navtest 全分解与转角桶、off-road / 切内侧 / 转不过去、NC 类别与弧长比、位移表、趋势图、`first`、不退步表（F k05–k20、F0 k10–k20、A0 k10、SH30 k00；14 个模型的回放与存档子分最大差 4.9e-12）。
 - 写了但没有真实输入、未验证：A / B / C / W 的任何行（第一个 `VT-A/B-*-k05` 的 navtest 读数在我收尾时还没出）、判定线（转弯线、W 线、seed 反向）、`:noside` / `:mshuf` / `:sideoff`、FoV 分层在 W 上的读法、navhard / HUGSIM 板表的配对行、Stage-0 probe。
-- 没做：prereg 读数 5（C 的原生帧直路 ADE）；A0 / A / B / C / W 的 HUGSIM（bench 无 serving）。
+- 没做（更新于 01:00 CST）：读数 5 与 C 的 HUGSIM 已补（见「读数的补充」）；A0 / A / B / W 的 HUGSIM 与 WOD 无 serving 代码。
 - box checkout 里没有我留下的未跟踪或改动文件；Mac 上我没有未提交的改动。

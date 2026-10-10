@@ -318,6 +318,39 @@ def build(run):
                     emit(meta | dict(control=c, ctrl_step=cs), mk, *a, *b)
         run.status(f"build: navtest {arm} k{step:02d}")
 
+    # ---- flips: tokens the control fails and the arm passes ("fixed") / the control passes and the arm fails ("broken"), per failure class
+    FLC = [(k, b) for k in ("offroad", "cut_in", "under") for b in (">45", ">20")] + \
+          [(k, "all") for k in ("nc_fail", "nc_A", "nc_A1", "nc_A2", "nc_B", "nc_C", "nc_D", "nc_E", "ttc_fail", "offroad")]
+    col = {k: j for j, k in enumerate(METRICS)}
+
+    def fails(key, k):
+        x = X[key]
+        return x[:, col["TTC"]] < 100 if k == "ttc_fail" else x[:, col[k]] > 50
+    fl = []
+    for arm in STEPS:
+        for c in CTRL[arm]:
+            per = {}
+            for s in SEEDS[arm]:
+                st = sorted(t for (a, sd, t) in X if a == arm and sd == s and (c, s, ctrl_step(c, t)) in X)
+                if st:
+                    per[s] = st
+            if not per:
+                continue
+            for s in [*per, "sum"]:
+                ss = list(per) if s == "sum" else [s]
+                common = set.intersection(*[set(per[q]) for q in ss])
+                for pick, step in (("latest common", max(common) if common else None), ("final", STEPS[arm] if common and STEPS[arm] in common else None)):
+                    if step is None:
+                        continue
+                    for k, b in FLC:
+                        fx = br = na = nc_ = 0
+                        for q in ss:
+                            a_, c_ = fails((arm, q, step), k)[M[b]], fails((c, q, ctrl_step(c, step)), k)[M[b]]
+                            fx, br, na, nc_ = fx + int((c_ & ~a_).sum()), br + int((~c_ & a_).sum()), na + int(a_.sum()), nc_ + int(c_.sum())
+                        fl.append(dict(arm=arm, control=c, seed=str(s), pick=pick, step=step, ctrl_step=ctrl_step(c, step), cls=k, bucket=b, fixed=fx, broken=br,
+                                       net=fx - br, ctrl_fail=nc_, arm_fail=na))
+    FL = pd.DataFrame(fl, columns=["arm", "control", "seed", "pick", "step", "ctrl_step", "cls", "bucket", "fixed", "broken", "net", "ctrl_fail", "arm_fail"])
+
     # ---- boards of the final checkpoints: navhard two-stage (by group, clustered by the stage-1 log), HUGSIM 64 (per scenario)
     BU = {}
     for bench, cols in (("navhard", ["combined", "stage1", "stage2"]), ("hugsim", ["hdscore"])):
@@ -373,6 +406,7 @@ def build(run):
     od = OUT / "out"
     od.mkdir(parents=True, exist_ok=True)
     R.to_parquet(od / "reads.parquet", index=False)
+    FL.to_csv(od / "flips.csv", index=False)
     E.to_csv(od / "disp.csv", index=False)
     PR.to_csv(od / "probe.csv", index=False)
     figure(R, od / "trend")
@@ -688,6 +722,29 @@ def report(R, E, PR, L, rdiff):
                         ("candidate" if not dn else "**not a candidate**") + (f" (missing: {', '.join(miss)})" if miss else ""), "; ".join(split) or "none"])
     A(md(["comparison", "seed", "snapshot", "up", "down", "not moved (cells)", "no-regression", "seeds significant in opposite directions"], rws))
 
+    A("### Flips: saved N, hurt M (token counts)\n")
+    A("Per comparison, failure class and bucket: **fixed** = tokens the control fails and the arm passes, **broken** = tokens the control passes and the arm fails, "
+      "net = fixed - broken, `ctrl fail` / `arm fail` = the failing token counts. Failure = the rate columns' definitions (off-road DAC < 1; cut-inside / under-turn on "
+      "off-road tokens; NC < 1 by the class of decision 196, A1 stopped vehicle ahead, A2 moving lead; TTC < 1). `latest common` = the latest snapshot every listed "
+      "seed has (control at its nearest registered snapshot), `final` = the registered last step. `sum` adds the seeds' counts. Same seed pairing as everywhere else; "
+      "file `flips.csv`.\n")
+    fp = OUT / "out" / "flips.csv"
+    if fp.exists():
+        import pandas as pd
+        FLD = pd.read_csv(fp, dtype={"seed": str})
+        for (arm, c), g in FLD.groupby(["arm", "control"], sort=False):
+            A(f"**{arm} - {c}**\n")
+            rw = []
+            for (k, b), h in g.groupby(["cls", "bucket"], sort=False):
+                cells_ = []
+                for pick in ("latest common", "final"):
+                    x = h[h.pick == pick]
+                    cells_.append("; ".join(f"s{r.seed} k{r.step:02d}: +{r.fixed} / -{r.broken} = {r.net:+d}" if r.seed != "sum" else f"**sum k{r.step:02d}: +{r.fixed} / -{r.broken} = {r.net:+d}** ({r.ctrl_fail} -> {r.arm_fail})"
+                                            for r in x.itertuples()) or "-")
+                rw.append([k, b, *cells_])
+            A(md(["class", "bucket", "latest common (fixed / broken = net)", "final"], rw))
+    else:
+        A("Not built yet.\n")
     A("### Moved up / moved down / did not move (every metric x bucket x board)\n")
     A("Per comparison at the latest snapshot: every cell of the long table, i.e. the scores, the rates (off-road, cut-inside, under-turn, NC classes, TTC-only), the two arc "
       "ratios, each over all + the four turn buckets + > 20 deg, then the boards read. **up** = CI entirely above 0, **down** = CI entirely below 0, **did not move** = CI contains 0 "
@@ -798,7 +855,7 @@ def cmd_sync(a):
         wait = f"until [ -f {ld}/DONE ] || [ -f {ld}/ERROR ]; do sleep 15; done; [ -f {ld}/DONE ] || {{ tail -30 {ld}/log.txt; exit 1; }}"
         subprocess.run([*SSH, wait], check=True)
     RES.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["scp", "-q", "-o", "ControlPath=none", *(f"autodl:{OUT}/out/{f}" for f in ("reads.parquet", "reads.md", "disp.csv", "probe.csv", "trend.png", "trend.pdf")), str(RES)], check=True)
+    subprocess.run(["scp", "-q", "-o", "ControlPath=none", *(f"autodl:{OUT}/out/{f}" for f in ("reads.parquet", "reads.md", "disp.csv", "probe.csv", "flips.csv", "trend.png", "trend.pdf")), str(RES)], check=True)
     print(f"copied to {RES}")
 
 
