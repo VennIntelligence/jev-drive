@@ -475,7 +475,7 @@ def cmd_fig(a):
     R = B["reads"]
     fig, axs = plt.subplots(1, 2, figsize=(PSY.DOUBLE_COLUMN_IN, 2.5))
     cells = [("L-full", col["blue"]), ("L-thin", col["green"]), ("P-full", col["orange"]), ("P-thin", col["vermillion"])]
-    for ax, (key, q, yl) in zip(axs, (("T|SH30-F|>45", "rms", "navtest > 45 deg: 4 s heading error RMS at SH30-F's arc (deg)"), ("T|GH0-F (pilot)|all", "r2", r"navtest, all: $R^2$ against the pilot policy"))):
+    for ax, (key, q, yl) in zip(axs, (("T|SH30-F|>45", "rms", "navtest > 45 deg, SH30-F's 4 s arc:\nheading error RMS (deg)"), ("T|GH0-F (pilot)|all", "r2", "navtest, all tokens:\n" + r"$R^2$ against the pilot policy"))):
         x = 0
         for c, cl in cells:
             for s in (0, 1):
