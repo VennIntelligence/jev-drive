@@ -57,17 +57,20 @@ def load_agent(src, name):
     return m
 
 
-def pick(clips, n, turns):
+def pick(clips, n, turns, turn_rows):
+    """2 clips per town in sha256(route) order (up to n), then clips with a junction turn whose cache rows carry >= 50 left / right commands
+    at 20 m (turn_rows: route -> count) until `turns` such clips are in."""
     h = sorted((c for c in clips if c["n_rows"] > 0), key=lambda c: hashlib.sha256(c["route"].encode()).hexdigest())
     out, per = [], {}
+    good = lambda c: bool(c["turn"]) and turn_rows.get(c["route"], 0) >= 50  # noqa: E731
     for c in h:
         if per.get(c["town"], 0) < 2 and len(out) < n:
             per[c["town"]] = per.get(c["town"], 0) + 1
             out.append(c)
     for c in h:
-        if sum(bool(x["turn"]) for x in out) >= turns:
+        if sum(good(x) for x in out) >= turns:
             break
-        if c["turn"] and c not in out:
+        if good(c) and c not in out:
             out.append(c)
     return out
 
@@ -136,11 +139,12 @@ def main(a):
         new = load_agent((REPO / "lib/op_arb_agent.py").read_text(), "op_arb_agent_new")
         old = load_agent(subprocess.check_output(["git", "-C", str(REPO), "show", f"{a.base}:lib/op_arb_agent.py"]).decode(), "op_arb_agent_old")
         C = D / "runs/op_parity/cache"
-        clips = pick(json.loads((C / "b2d_v2/plan.json").read_text())["clips"], a.clips, a.turns)
         tab, tab20 = np.load(C / "b2d_v2/tab.npz"), np.load(C / "b2d_v2L20/tab.npz")
         names = tab["names"]
         assert np.array_equal(names, tab20["names"])
         E30, E20, log = tab["ego"], tab20["ego"], tab["log"]
+        u, cnt = np.unique(log[E20[:, 2] == 0], return_counts=True)
+        clips = pick(json.loads((C / "b2d_v2/plan.json").read_text())["clips"], a.clips, a.turns, dict(zip(u.tolist(), cnt.tolist())))
         rows, bad_cmd, fed_all, ship_all, lab_all, spd_all = [], [], [], [], [], []
         ident_ticks, ident_ok = 0, True
         for c in run.tqdm(clips, desc="clips"):
@@ -164,7 +168,7 @@ def main(a):
             rows.append(dict(route=c["route"], town=c["town"], type=c["type"], turn=c["turn"], ticks=len(e_old), rows=len(idx), identical_off=same,
                              noncmd_max=float(d[:, NONCMD].max()), vel_max=float(d[:, 4:6].max()), acc_max=float(d[:, 6:8].max()), pose_max=float(d[:, 8:].max()),
                              cmd_agree_L20=float(agree.mean()), cmd_agree_L30=float((fed[:, 1:4] == lab[:, 1:4]).all(1).mean()),
-                             turn_rows_L20=float((lab20[:, 2] == 0).mean()),
+                             turn_rows_L20=int((lab20[:, 2] == 0).sum()), cmd_switches_L20=int((np.diff(lab20[:, 1:4], axis=0) != 0).any(1).sum()),
                              shipped_cmd_agree_L20=float((ship[:, 1:4] == lab20[:, 1:4]).all(1).mean()),
                              shipped_vx_absmax=float(sd[:, 4].max() * 10), shipped_vy_absp95=float(np.percentile(sd[:, 5], 95) * 10),
                              shipped_ax_absp95=float(np.percentile(sd[:, 6], 95) * 3), shipped_ay_absp95=float(np.percentile(sd[:, 7], 95) * 3)))
@@ -179,14 +183,15 @@ def main(a):
         conv = dict(navtrain=convention(nav["ego"], nav["speed"]), replay_fixed=convention(fed, spd), replay_shipped=convention(ship, spd),
                     b2d_cache_same_rows=convention(lab, spd))
         towns = sorted({r["town"] for r in rows})
-        n_turn = sum(bool(r["turn"]) for r in rows)
+        n_turn = sum(bool(r["turn"]) and r["turn_rows_L20"] >= 50 for r in rows)
         ks = [conv[k]["ay_slope"] for k in ("navtrain", "replay_fixed")]
         ship_d = np.abs(ship - lab)
         res = dict(base=a.base, clips=len(rows), towns=towns, turn_clips=n_turn, ticks_replayed=ident_ticks, rows_compared=int(len(fed)),
                    bit_identity=dict(passed=ident_ok, ticks=ident_ticks, what="parity_ego of the agent file at --base vs the working file with port = {}, np.array_equal over all ticks of all clips"),
                    i_noncmd=dict(max_abs=float(d[:, NONCMD].max()), line=1e-3, passed=bool(d[:, NONCMD].max() <= 1e-3), per_dim_max=per_dim),
                    i_cmd=dict(agree_L20=agree, line=0.99, passed=bool(agree >= 0.99), disagreements=len(bad_cmd), rows=bad_cmd[:200]),
-                   i_material=dict(passed=bool(len(rows) >= 20 and len(towns) >= 3 and n_turn >= 5)),
+                   i_material=dict(passed=bool(len(rows) >= 20 and len(towns) >= 3 and n_turn >= 5), turn_command_rows=int((lab[:, 2] == 0).sum()),
+                                   command_switches=int(sum(r["cmd_switches_L20"] for r in rows))),
                    ii_convention=dict(conv, line=[0.8, 1.2], passed=bool(all(0.8 <= k <= 1.2 for k in ks))),
                    shipped_vs_labels=dict(cmd_agree_L20=float((ship[:, 1:4] == lab[:, 1:4]).all(1).mean()),
                                           cmd_agree_L20_on_turn_rows=float((ship[:, 1:4] == lab[:, 1:4]).all(1)[lab[:, 2] == 0].mean()),
