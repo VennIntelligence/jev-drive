@@ -806,3 +806,17 @@ one base seed read against another passes L2 in 4 of 12 pairings, L3 in 9, all f
 5. **A finding of the supplementary read that binds later lanes' pre-registrations, not this one:** with two seeds and 700 scenes, a base seed
    read against another base seed passes L2 in 4 of 12 ordered pairs and all four lines in 2 of 12 (CI half-width 0.0078 against the -0.005
    line). The lane's L2 was underpowered as written; it is not rewritten here.
+
+### Amendment 6, note (j) (2026-10-10, main session; written before any PAI number of a BODY1 checkpoint exists)
+
+1. **The registered PAI read does not exist and is not replaced.** It was conditional on the nuPlan lines; no arm met them.
+2. **A descriptive PAI read is made, labelled as such everywhere.** Reason: the user asked (2026-10-10) what the body lesson gives and offered
+   the idle cards; PAI is the track where at-fault collisions dominate the base's zeros (decision 226: 14 / 11 of 60) and the only board this
+   lane has not looked at. Making this read spends that status: afterwards PAI's 60 scenes are development scenes for this lane too.
+3. **What is run** (60 scenes, the PAI2 chunk file and command of docs/alpasim.md "PAI on the GPU box"): `P2H10-F-s{0,1,2,3}` (s0 / s1 exist
+   from PAI2 and FIX1 and are reused if the command is identical, else rerun), `P2H10S-F-s{0,1,2,3}`, `P2H10B-F-s{0,1}`; each under (i) the
+   plain driver and (ii) decision 226's PAI serving (`JEV_VCONT=1.0 JEV_LEAD=1`), the configuration PAI is actually served with.
+4. **What is reported, fixed now:** per tag and serving the mean score, zeros by class (at-fault collision, offroad, corridor), slow scenes,
+   mean progress; arm minus base paired by seed index and scene, scene-bootstrap CI, for (i) and (ii) separately; the same differences
+   between base seeds as the null (an effect is "outside the base's seed spread" only beyond all base-pair differences; decision 226 found
+   0.173 against 0.257 for two seeds); alpamayo1's 0.5033 as the reference row. No selection of a serving or seed after the read.
