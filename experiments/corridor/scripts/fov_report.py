@@ -299,9 +299,9 @@ def main():
                  "difference (pp)": PS.pc((100 * (dd["SH30"][1] - dd["WA-JEPA"][1]), 100 * lo, 100 * hi), "{:+.1f}")})
     P(PS.md(pd.DataFrame(rows), 1) + "\n")
     P("The in-frame share is not independent of the turn: tighter turns put more of the path beyond the frame and are harder for any model. The same "
-      "comparison stratified by the logged 4 s heading change (45 - 70, 70 - 110, > 110 deg; strata weighted by their size), so the contrast is "
+      "comparison stratified by the logged 4 s heading change (45 - 55, 55 - 65, > 65 deg; strata weighted by their size), so the contrast is "
       "within similar turn angles:\n")
-    strata = [(45, 70), (70, 110), (110, 400)]
+    strata = [(45, 55), (55, 65), (65, 400)]
     w = np.array([((M.dpsi > lo_) & (M.dpsi <= hi_)).to_numpy()[sh.to_numpy() & (low | high)].sum() for lo_, hi_ in strata], float)
     w /= w.sum()
     dd = {}
