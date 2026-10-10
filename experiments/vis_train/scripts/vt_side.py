@@ -274,6 +274,7 @@ def cmd_check(a):
             SS.close()
         run.summary |= res
         (SD.side_root() / f"check{'-' + a.tag if a.tag else ''}.json").write_text(json.dumps(res, indent=1))
+        assert all(r["cur_bytes_equal"] and r["prev_bytes_equal_first16"] for r in res.values()), "cached bytes differ from a fresh render"
 
 
 if __name__ == "__main__":
