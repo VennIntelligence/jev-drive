@@ -13,7 +13,7 @@ pooled ratio is 0.9985 / 0.9980 (was 0.9905), open-road tokens are not shortened
 (0.9931, was 0.982) and on contact states. What does not change: the hold-log ratios, every closed-loop number (scores, progress, the served-plan arcs
 of `drive.jsonl`), the gradient split, and therefore verdicts 1, 3, 4 and the closed-loop half of 2. The closed-loop tables that group scenes by the
 base plan at the navtest token are regrouped on the scored plans (2 to 40 pairs move per group); the reading is the same. The figures
-`figs/prog/ol_arc.png` (left panel) and `cl_progress.png` (group colours) still show the first read.
+`figs/prog/ol_arc.png` (left panel) and `cl_progress.png` were redrawn on the warp-frame tables on 2026-10-11 (`prog_cl.py figs --warp ... --warp-cl ...`).
 
 ## Verdict
 
@@ -66,9 +66,9 @@ difference), 1.8 % behind a lead (under 20 m: 0.979 to 0.981; 20 to 40 m: 0.992;
 off-protocol frames (17.95 m), not the checkpoint, and is not a number of decision 221.
 
 ![ol](../figs/prog/ol_arc.png)
-What to look at (the left panel is the first read on off-protocol plans; on the scored plans only the lead and contact groups sit below the seed-floor
-band): left, navtest: every group and every speed bin above 1 m/s sits below the grey seed-floor band, lead (purple) lowest among the groups
-without contact; right, hold states (three quarters off-track): the same order, three times larger, contact states (red) down to 0.88 to 0.93.
+What to look at (left panel redrawn on the warp-frame table `results/navtest_warp/prog/ol_navtest_w_arc.csv`; right panel unchanged, hold states): left, navtest:
+open, near obj and near edge sit inside or above the grey seed-floor band at every speed; only contact (red, below 6 m/s, 0.97 to 0.99) and lead (purple,
+0.990 to 0.995) sit below it, and the lead cells are only 0.002 to 0.01 under the band's lower edge; right, hold states (three quarters off-track): the same order, three times larger, contact states (red) down to 0.88 to 0.93.
 
 **Closed loop** (`results/navtest_warp/prog_cl/cl_groups.csv`, groups from the base plan on warp frames; first read `results/prog/cl_groups.csv`; 1 400 (seed, scene) pairs, the scene's group taken at its navtest token; progress = `progress_clipped_rel`;
 "nz" = pairs with no zero on either side; arc ratios are of the served plans in `drive.jsonl`):
@@ -96,8 +96,9 @@ behind leads that the base passed without contact (lead scenes: zeros 9 -> 3, bu
 includes 0; their decision-0 plan is 5 % shorter, later decisions are not.
 
 ![cl](../figs/prog/cl_progress.png)
-What to look at: left, the points below the diagonal that fall under the dotted 0.8 line are the new slow scenes, mostly purple (lead); middle, the red
-bars (base-score-1 pairs that become slow) pile up just right of 0.8; right, the loss per group with its share.
+What to look at (redrawn on the warp-frame grouping, `results/navtest_warp/prog_cl/`): left, the points below the diagonal that fall under the dotted 0.8 line
+are the new slow scenes, mostly purple (lead); middle, the red bars (base-score-1 pairs that become slow) pile up just right of 0.8 (this panel does not depend on
+the grouping); right, the loss per group with its share (lead about half of the loss).
 
 ## 2. Which loss term does it
 

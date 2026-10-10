@@ -161,7 +161,7 @@ code{font-size:13px}
 <table><tr><th>项</th><th>线</th><th>seed 0</th><th>seed 1</th><th>结果</th></tr>
 <tr><td>(a) hold logs agent 接触率（30 083 个状态，121 个 log）</td><td>降 ≥ 30%，CI 不含 0</td><td>0.01403 对 0.02729（−48.6%）</td><td>0.01380 对 0.02666（−48.3%）</td><td>过</td></tr>
 <tr><td>(a) hold logs boundary 率</td><td>降 ≥ 30%</td><td>0.01569 对 0.03377（−53.5%）</td><td>0.01582 对 0.03384（−53.2%）</td><td>过</td></tr>
-<tr><td>(b) navtest on-log（12 146 个 token）两率之和</td><td>两率不升，和降</td><td>0.04232 对 0.04841（−12.6%）</td><td>0.04084 对 0.04858（−15.9%）</td><td>过（agent 率只降 6–8%，不显著）</td></tr>
+<tr><td>(b) navtest on-log（12 146 个 token）两率之和</td><td>两率不升，和降</td><td>0.02421 对 0.02865（−15.5%；原读数 0.04232 对 0.04841）</td><td>0.02470 对 0.02898（−14.8%；原读数 0.04084 对 0.04858）</td><td>过（warp 帧上 agent 率降 16–18%，CI 不含 0；原读数 6–8%，不显著）</td></tr>
 <tr><td>(c) 续接斜率 alpha_05</td><td>≤ P2H10-F + 0.05</td><td>0.833 对 1.028</td><td>0.827 对 1.037</td><td>过</td></tr>
 <tr><td>(d) navtest EPDMS（两 seed 均值）</td><td>≥ base − 0.3</td><td colspan="2">89.19 对 88.67（+0.52 [+0.35, +0.70]）</td><td>过</td></tr>
 <tr><td>(d) &gt; 45° 桶 EPDMS</td><td>报告</td><td colspan="2">79.55 对 78.61（+0.93 [+0.28, +1.62]）；inside-cut 4.15% 对 4.78%；cannot-make-turn 2.70% 对 2.60%（不变）</td><td>报告</td></tr>
@@ -198,7 +198,7 @@ code{font-size:13px}
 <tr><td>hold logs <code>yr1</code></td><td>7 366</td><td>0.9779</td><td>0.9853</td><td>0.9616</td></tr>
 <tr><td>hold logs <code>bd4</code></td><td>4 425</td><td>0.9391</td><td>0.9612</td><td>0.9271</td></tr></table>
 <p>base 两个 seed 之间的 floor 在 navtest 上是 0.9995（原读数 1.0003）。离 log 越远变短越重：imitation 行 0.999（有 logged target 顶住），<code>ot1</code> 1.0%、<code>yr1</code> 2.2%、<code>bd4</code> 6.1%。navtest 的 on-log 状态上不是全局变短：open 路段 0.9998 / 0.9995，变短只在 lead 后面（0.9931，占弧长差总和的 63 至 83%）与 contact 状态（0.9914）；原读数的「全局变短 0.7 至 1.8%」是读错帧造成的。launch（&lt; 1 m/s）0.995 / 1.001。</p>
-<figure><img src="figs/prog_ol_arc.png" alt=""><figcaption>图二十七（左图仍是原读数，画的是 GIMM 帧上的 plan；warp 帧上只有 lead 与 contact 两组低于 seed-floor 带）：左，navtest：每个组、高于 1 m/s 的速度桶几乎都在灰色 seed-floor 带下面，lead（紫）在无接触的组里最低；右，hold 状态（四分之三是离轨）：顺序相同、幅度约三倍，contact 状态（红）降到 0.88 至 0.93。</figcaption></figure>
+<figure><img src="figs/prog_ol_arc.png" alt=""><figcaption>图二十七：左，navtest（warp 帧）：open、near obj、near edge 在每个速度桶都在灰色 seed-floor 带内或之上；只有 contact（红，6 m/s 以下，0.97 至 0.99）与 lead（紫，0.990 至 0.995）低于带，lead 只比带的下沿低 0.002 至 0.01；右，hold 状态（四分之三是离轨）：顺序相同、幅度约三倍，contact 状态（红）降到 0.88 至 0.93。</figcaption></figure>
 <h3>闭环：700 × 2 seed 的 1 400 个 (seed, scene) 对，scene 的组取其 navtest token</h3>
 <table><tr><th>scene</th><th>对数</th><th>progress 臂 − base [95% CI，按 log]</th><th>占损失</th><th>满分 → 偏慢</th><th>偏慢 → 满分</th><th>served plan 弧长比（全部决策）</th></tr>
 <tr><td>全部</td><td>1 400</td><td>−0.0145 [−0.0203, −0.0085]</td><td>100%</td><td>78</td><td>23</td><td>0.976</td></tr>
@@ -207,7 +207,7 @@ code{font-size:13px}
 <tr><td>转角 &lt; 10°</td><td>994</td><td>−0.0184 [−0.0242, −0.0128]</td><td>90%</td><td>57</td><td>16</td><td>0.969</td></tr>
 <tr><td>转角 &gt; 45°</td><td>122</td><td>−0.0182 [−0.0412, +0.0019]</td><td>11%</td><td>9</td><td>0</td><td>0.987</td></tr></table>
 <p>lead 与 open 两行按 warp 帧上的 base plan 重新分组（原分组：lead 318 对、−0.0296、46%；open 658 对、−0.0099、32%、0.986），读法不变。lead 后面 plan 短 4 至 6%，lead scene 占 pair 的 23%、占损失的 49 至 50%；lead scene 上零分 9 → 3，偏慢 61 → 95。base 两个 seed 之间「满分 → 偏慢」的 floor 是 10 / 17，所以 78 对 23 在噪声之外。</p>
-<figure><img src="figs/prog_cl_progress.png" alt=""><figcaption>图二十八：左，对角线下方且低于 0.8 虚线的点是新增的偏慢 scene，多数是紫色（lead）；中，红柱（base 满分、臂偏慢的对）堆在 0.8 右边一点；右，各组的损失与占比。</figcaption></figure>
+<figure><img src="figs/prog_cl_progress.png" alt=""><figcaption>图二十八（按 warp 帧上的分组重画）：左，对角线下方且低于 0.8 虚线的点是新增的偏慢 scene，多数是紫色（lead）；中，红柱（base 满分、臂偏慢的对）堆在 0.8 右边一点；右，各组的损失与占比。</figcaption></figure>
 <h3>哪一项在拉</h3>
 <p>hinge 对 plan 8 个 pose 的梯度在 plan 自己的 heading 系里拆开（训练 log 的行）：agent hinge 在 imitation 行上 96% 的正例行梯度向后、每 batch 的弧长拉力 −0.0022，hinge-only 行上 84 至 88% 向后；同一路径缩到 0.75 弧长就能清零 76%（imitation 行）。road hinge 97 至 99.5% 是横向梯度，弧长拉力约 +0.0001。imitation 行有 logged target 顶住所以弧长没动，hinge-only 行没有反向项所以短了 1 至 6%。hinge-only 行上 A 与 road hinge 各占多少，当时没有分开（drop-one 当时未训，见第十节）。</p>
 <figure><img src="figs/prog_grad_terms.png" alt=""><figcaption>图二十九：左，agent 项（第一、三、五、七组）10 至 45% 的梯度沿路径，road 项几乎没有；中，唯一明显为负的柱是 agent 项，imitation 行最大；右，缩短弧长能解掉相当一部分 agent 正例（imitation 行、ot1 行为主），很少解掉 road 正例。橙 = base checkpoint，蓝 = 训练后。</figcaption></figure>
@@ -237,7 +237,7 @@ code{font-size:13px}
 <tr><td>(c) 续接斜率 alpha_05</td><td>≤ base + 0.05</td><td>0.822 对 1.028</td><td>0.830 对 1.037</td><td>过</td></tr>
 <tr><td>(d) navtest EPDMS（两 seed 均值）</td><td>≥ base − 0.3</td><td colspan="2">89.05 对 88.67（+0.38）</td><td>过</td></tr>
 <tr><td>(e) 4 s 弧长比 navtest / lead / <code>bd4</code></td><td>各自的线</td><td>1.0017 / 1.0007 / 0.9991（原 0.9996 / 0.9969）</td><td>1.0008 / 1.0004 / 0.9989（原 0.9984 / 0.9959）</td><td>过</td></tr></table>
-<figure><img src="figs/shape_gate.png" alt=""><figcaption>图三十二：左，蓝柱（本臂）在两条虚线之上，只让出全梯度配方（橙）约五分之一的 agent 降幅；中，蓝在每个组和状态族上都在 1.00，橙低 1 至 5%，绿（无 agent hinge）和紫（agent hinge 只放在 logged 行）各只是橙的一小部分；右，全量下每个蓝点都在自己的虚线之上，Amendment 5 的橙点有四个在线下。</figcaption></figure>
+<figure><img src="figs/shape_gate.png" alt=""><figcaption>图三十二：左，蓝柱（本臂）在两条虚线之上，只让出全梯度配方（橙）约五分之一的 agent 降幅；中，蓝在每个组和状态族上都在 1.00，橙低 1 至 5%，绿（无 agent hinge）和紫（agent hinge 只放在 logged 行）各只是橙的一小部分；右，全量下每个蓝点都在自己的虚线之上，Amendment 5 的橙点有三个在线下（hold pooled、yr1、bd4；navtest 的三个橙点都在线上）。</figcaption></figure>
 <p>代价：没有 timing 之后，navtest on-log 的 agent 接触率不再下降（warp 帧上 <code>P2H10S</code> 降 3.6% / 7.0%，CI 含 0；上一配方降 17.9% / 16.2%，CI 不含 0），上一配方在 navtest 上 NC / TTC 的增益消失，EP 回到 base；留出 log 上 agent 降幅保住约五分之四、出界约十分之九。pilot 规模的 drop-one：「B + C 不带 A」仍变短（弧长 0.9963，<code>bd4</code> 0.9868）且保住 agent −25.8% / boundary −30.9%，所以第八节说的「向后拉的是 agent hinge」只对大部分成立；「A 只放在 on-log 行」只缩 0.2%、两个接触率基本不动（−5.3% / −2.9%），效果来自离轨的 hinge-only 行。</p>
 <h3>base 自己的 seed spread（补充读数，不是线）</h3>
 <p>为读本臂新训了 <code>P2H10-F-s{2,3}</code> 并在同一 driver、同一 chunk 列表上跑 700 scene：</p>
@@ -284,9 +284,9 @@ code{font-size:13px}
 <p>去掉 = 在至少 3 个 base seed 里是 zero 且在至多 1 个臂 seed 里是 zero，新增反之。去掉 5 个（碰撞 2、offroad 2、corridor 1）：<code>80f6c94f</code>、<code>994ab680</code>（碰撞）、<code>fcb45b2a</code>、<code>00ff8eeb</code>（offroad）、<code>927b73fe</code>（corridor）；新增 4 个，全是 corridor、臂 4 个 seed 全 zero 且 base 4 个 seed 全不是：<code>78b4153a</code>（右转 48°）、<code>77155a60</code>（67°）、<code>e933d70d</code>（70°）、<code>52d3f15d</code>（55°）。四个 seed 都是 zero 的 scene：base 20 个、臂 17 个。这 9 个翻转全部也是 Amendment 5 那个臂的翻转（去掉的 5 个在它两个 seed 里都去掉，新增里 78b4153a 与 77155a60 两个 seed 都新增，e933d70d 与 52d3f15d 各出现在一个 seed）。该规则没有 base 对 base 的类比（需要 4 对 4），所以翻转数没有 null；作参照，base 的 12 个有序配对在单对上各有 1 至 5 个去掉与 1 至 5 个新增。</p>
 <h3>lead / open 拆分与 &gt; 45° 桶</h3>
 <table><tr><th>分组（scene 的 navtest token，base plan 的 proximity 组）</th><th>scene 数</th><th>base / 臂 均 progress</th><th>每对差 [95% CI，按 log]</th><th>N1 / N2 范围</th><th>偏慢（四对之和）base → 臂</th><th>是否在 spread 之外</th></tr>
-<tr><td>lead</td><td>159</td><td>0.919 / 0.930</td><td>+0.0115 [+0.0038, +0.0203]</td><td>±0.0203 / ±0.0128</td><td>137 → 137</td><td>否</td></tr>
-<tr><td>open</td><td>329</td><td>0.945 / 0.952</td><td>+0.0078 [+0.0032, +0.0126]</td><td>±0.0058 / ±0.0038</td><td>190 → 164</td><td><b>progress 高于全部 24 个</b>；偏慢否</td></tr></table>
-<p>Amendment 5 的臂在同一拆分上 lead −0.0296、open −0.0099（第八节）；形状-only 的臂不在 lead 后面变慢，progress 高于 base，open 上最明显。</p>
+<tr><td>lead</td><td>158</td><td>0.924 / 0.933</td><td>+0.0094 [+0.0021, +0.0170]</td><td>±0.0199 / ±0.0124</td><td>133 → 132</td><td>否</td></tr>
+<tr><td>open</td><td>349</td><td>0.940 / 0.949</td><td>+0.0093 [+0.0046, +0.0144]</td><td>±0.0063 / ±0.0044</td><td>206 → 170</td><td><b>progress 高于全部 24 个</b>；偏慢否</td></tr></table>
+<p>Amendment 5 的臂在同一拆分上 lead −0.0314、open −0.0105（第八节）；形状-only 的臂不在 lead 后面变慢，progress 在 lead 与 open 上都高于 base（+0.0094 与 +0.0093）：lead 的区间不含 0 但仍在 base 的 seed spread 之内，open 高于 spread 的全部成员。（2026-10-11 更正：原分组下是 lead +0.0115、open +0.0078，「open 上最明显」不再成立。）</p>
 <table><tr><th>&gt; 45° 桶（61 个 scene、20 个 log）</th><th>均分</th><th>zeros</th><th>碰撞 / offroad / corridor</th></tr>
 <tr><td>P2H10-F s0 / s1 / s2 / s3</td><td>0.8143 / 0.8544 / 0.8682 / 0.8443</td><td>10 / 8 / 7 / 8（33）</td><td>6 / 19 / 8</td></tr>
 <tr><td>P2H10S-F s0 / s1 / s2 / s3</td><td>0.8233 / 0.7578 / 0.8244 / 0.8453</td><td>10 / 14 / 10 / 9（43）</td><td>5 / 21 / 17</td></tr>

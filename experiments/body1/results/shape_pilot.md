@@ -17,7 +17,7 @@ the old number. **The registered miss does not survive: G3 (b) on seed 0 read 14
 against 140 on the scored ones; with it every line of G3 is met on both seeds.** The arm was stopped before its registered closed loop on a
 number that came from the reader. This page does not reopen the arm; whether the registered closed-loop read is owed is for the main session
 (decision 232). Hold-log rates, the pilot gate (its lines are on hold logs), the slope, the bench numbers, the code checks and the base's
-closed-loop seed spread are not navtest own-plan reads and are unchanged. The figure `figs/shape/shape_gate.png` still shows the first read in its
+closed-loop seed spread are not navtest own-plan reads and are unchanged. The figure `figs/shape/shape_gate.png` was redrawn on 2026-10-11 from `results/navtest_warp/shape/` (the hold points are unchanged); before that it showed the first read in its
 navtest points.
 
 ## Verdict
@@ -47,7 +47,7 @@ navtest points.
 What to look at: left, the blue bars (this arm) stay above both dotted lines while giving up a fifth of the orange (full gradient) agent fall;
 middle, blue sits on 1.00 in every group and family where orange is 1 to 5 % below, green (no agent hinge) and purple (agent hinge on logged rows
 only) are each a fraction of orange; right, at full scale every blue point is above its dotted line and the orange points of Amendment 5 are below
-four of them.
+three of them (hold pooled, `yr1`, `bd4`; the three navtest points of orange are above their lines).
 
 ## 1. Code checks before the pilot (note (a); `results/shape/shape_check.json`, `ident_a6.json`)
 

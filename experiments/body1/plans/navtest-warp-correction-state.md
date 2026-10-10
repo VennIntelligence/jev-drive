@@ -37,8 +37,8 @@ lane 的重读表一致（我逐项对过 232 / 234 / 244 的主要数字）。�
 `progress_diagnosis.md`、`shape_closed_loop.md`（41aa5c99；`loss_closed_loop.md` 里没有按 base plan 分组的表，不受影响），
 lane README、`experiments/INDEX.md` 的 body1 行、`research/body1/index.html`、`navtest_warp.md` 的「已更正页面」与「遗留问题」两节（1c04f85b），
 预登记的更正行与第 236 条（8d374db6），S-DROP 预登记末尾的更正行。第 3 项的 grep 残留只剩：标明「原 / first read / superseded」的旧数，
-`results/{shape,route,sdrop}/` 下保留为旧读数的生成表。没有重画的图：`figs/shape/shape_gate.png`、`figs/prog/ol_arc.png` 左图、
-`figs/prog/cl_progress.png` 的分组颜色（各页已注明）。
+`results/{shape,route,sdrop}/` 下保留为旧读数的生成表。三张旧图（`figs/shape/shape_gate.png`、`figs/prog/ol_arc.png` 左图、
+`figs/prog/cl_progress.png`）已在同一夜用 warp 表重画，各页的「未重画」备注已删。
 遗留给 main 的两点：(1) 第 232 条的登记闭环读数是否补做；(2) `prog_cl.py` 的 decision-0 对齐检查在 warp 帧 plan 上是 0.909（原 1.010），
 即 AlpaSim 里第一个 served plan 比 bench 评分的 plan 短 9%，原因未查（`navtest_warp.md` 末节）。
 

@@ -265,6 +265,7 @@ def cmd_raster(a):
 
 
 def cmd_figs(a):
+    """--warp DIR: read the navtest arc table (ol_navtest_w_arc.csv), cl_pairs.csv and cl_groups.csv from DIR (results/navtest_warp/prog[_cl]); the hold arc table stays in OUT."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -273,7 +274,7 @@ def cmd_figs(a):
     col = dict(zip(GROUPS, ["tab:red", "tab:purple", "tab:orange", "tab:olive", "tab:blue"]))
     fig, ax = plt.subplots(1, 2, figsize=(12, 4.2), sharey=True)
     for q, st in zip(ax, ("navtest", "hold")):
-        f = OUT / f"ol_{st}_arc.csv"
+        f = Path(a.warp) / "ol_navtest_w_arc.csv" if a.warp and st == "navtest" else OUT / f"ol_{st}_arc.csv"
         if not f.exists():
             continue
         D = pd.read_csv(f)
@@ -295,7 +296,8 @@ def cmd_figs(a):
     fig.tight_layout()
     fig.savefig(FIG / "ol_arc.png", dpi=120)
     plt.close(fig)
-    f = OUT / "cl_pairs.csv"
+    CL = Path(a.warp_cl) if a.warp_cl else OUT
+    f = CL / "cl_pairs.csv"
     if f.exists():
         P = pd.read_csv(f)
         fig, ax = plt.subplots(1, 3, figsize=(15, 4.6))
@@ -315,7 +317,7 @@ def cmd_figs(a):
         ax[1].axvline(0.8, color="k", ls=":", lw=0.8)
         ax[1].set_xlabel("progress of the base run"), ax[1].set_ylabel("pairs"), ax[1].legend(fontsize=8)
         ax[1].set_title("the extra slow scenes sit just above the 0.8 line in the base run", fontsize=9)
-        G = pd.read_csv(OUT / "cl_groups.csv")
+        G = pd.read_csv(CL / "cl_groups.csv")
         d = G[G.split == "group"].set_index("subset").reindex(GROUPS)
         x = np.arange(len(d))
         ax[2].bar(x, d.dprog_nz, yerr=[d.dprog_nz - d.lo_nz, d.hi_nz - d.dprog_nz], color=[col[g] for g in GROUPS], capsize=3)
@@ -361,6 +363,8 @@ if __name__ == "__main__":
     ap.add_argument("--man", default=MAN, help="manifest {<arm>-s0: [run dirs], <arm>-s1: [...]} under $DATA_DIR")
     ap.add_argument("--ol", default=OLN, help="prog_ol.py parquet stem under runs/body1/prog")
     ap.add_argument("--out", default="", help="table / figure sub-directory name instead of prog (results/<out>, figs/<out>)")
+    ap.add_argument("--warp", default="", help="figs: directory with the warp-frame navtest arc table ol_navtest_w_arc.csv")
+    ap.add_argument("--warp-cl", default="", help="figs: directory with the re-read cl_pairs.csv / cl_groups.csv")
     a = ap.parse_args()
     ARM, MAN, OLN = a.arm, a.man, a.ol
     if a.out:

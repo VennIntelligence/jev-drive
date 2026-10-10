@@ -104,8 +104,8 @@ made, a descriptive four-seed closed loop exists (decision 233), and whether the
 table, seeds 2 and 3), [loss_g3.md](loss_g3.md) (G3 (b) of Amendment 5), [progress_diagnosis.md](progress_diagnosis.md) (open-loop navtest arcs,
 the group tables), [shape_closed_loop.md](shape_closed_loop.md) (lead / open split), the lane README and its `experiments/INDEX.md` line, the
 Chinese page `research/body1/index.html`, decisions 229, 230, 232, 233, 234, 244 and their lines in `research/decisions.md`. Each replaced
-passage names the first read's number. Figures were not redrawn: `figs/shape/shape_gate.png` (navtest points), `figs/prog/ol_arc.png` (left
-panel) and the group colours of `figs/prog/cl_progress.png` show the first read; their pages say so. Identity of the fixed reader over all
+passage names the first read's number. Figures redrawn the same night from the warp-frame tables (`shape_fig.py --res`, `prog_cl.py figs --warp --warp-cl`): `figs/shape/shape_gate.png`
+(navtest points), `figs/prog/ol_arc.png` (left panel) and `figs/prog/cl_progress.png` (group colours); the old files are superseded in git history. Identity of the fixed reader over all
 12 146 tokens (8 poses): forward on warp frames against the bench's archived plans 0.004 m mean, 0.028 m at the 99th percentile, 0.07 m at most
 (four checkpoints); the first read's dumps against the same archived plans 1.34 to 1.45 m mean, 6 m at the 99th percentile.
 

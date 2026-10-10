@@ -1,7 +1,9 @@
 """BODY1 arm 4.3, Amendment 6: figure of the pilot gate and of G3 (e) from results/shape/{pilot_gate,g3e}.json (no model).
 
-  $DATA_DIR/envs/op-train/bin/python experiments/body1/scripts/shape_fig.py     -> experiments/body1/figs/shape/shape_gate.png
+  $DATA_DIR/envs/op-train/bin/python experiments/body1/scripts/shape_fig.py [--res experiments/body1/results/navtest_warp/shape]
+                                                                          -> experiments/body1/figs/shape/shape_gate.png
 """
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -15,13 +17,13 @@ NM = {"P2H10S-P-s0": "shape-only arm", "P2H10B-Pw3-s0": "all terms, full gradien
 COL = {"P2H10S-P-s0": "tab:blue", "P2H10B-Pw3-s0": "tab:orange", "P2H10B-Pw3-noA-s0": "tab:green", "P2H10B-P-Aon-s0": "tab:purple"}
 
 
-def main():
+def main(res=RES):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from jevdrive.run import Run
     with Run("body1", "shape-fig") as run:
-        P, G = json.loads((RES / "pilot_gate.json").read_text())["tags"], json.loads((RES / "g3e.json").read_text())["lines"]
+        P, G = json.loads((res / "pilot_gate.json").read_text())["tags"], json.loads((res / "g3e.json").read_text())["lines"]
         fig, ax = plt.subplots(1, 3, figsize=(17, 4.6), gridspec_kw=dict(width_ratios=[0.8, 1.5, 1.3]))
         tags = list(NM)
         for i, t in enumerate(tags):                                  # pilot: relative fall of the two own-plan rates
@@ -58,4 +60,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--res", default=str(RES), help="directory with pilot_gate.json and g3e.json (results/navtest_warp/shape for the warp-frame navtest read)")
+    main(Path(ap.parse_args().res))
