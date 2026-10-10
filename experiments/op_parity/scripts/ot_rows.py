@@ -213,7 +213,7 @@ def cmd_prep(a):
 
 
 # ---------------------------------------------------------------- trainer pieces
-def off_hinge(cfg, names, off, dev):
+def off_hinge(cfg, names, off, dev, bank=False):
     """lib/drivable_hinge.Hinge whose plans are given in a row's own (perturbed) frame: off (n, 2) = (dy, dpsi) of the row's t0 pose in the
     frame of its SDF raster (zeros on normal rows, where this is exactly Hinge)."""
     import torch
@@ -235,7 +235,7 @@ def off_hinge(cfg, names, off, dev):
             from drivable_hinge import X0, Y0
             g = torch.stack([(xy[..., 1] - Y0) / 24.0 - 1.0, (xy[..., 0] - X0) / 32.0 - 1.0], -1)[:, :, None]
             return torch.nn.functional.grid_sample(self.sdf[rows].float(), g, mode="bilinear", padding_mode="border", align_corners=False)[:, 0, :, 0]
-    h = OffHinge([data_dir() / f for f in cfg.hinge_labels], names, dev, cfg.hinge_margin, list(cfg.hinge_footprint))
+    h = OffHinge([data_dir() / f for f in cfg.hinge_labels], names, dev, cfg.hinge_margin, list(cfg.hinge_footprint), **({"bank": True} if bank else {}))
     h.off = torch.as_tensor(off, dtype=torch.float32, device=dev)
     return h
 

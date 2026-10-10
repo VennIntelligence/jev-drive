@@ -82,14 +82,15 @@ def cmd_train(a):
     model = T.PModel(cfg.arm).to(dev)
     base, new = model.groups()
     tstd = S.t_out[torch.as_tensor(tr_rows, device=dev)].float().std(0).clamp_min(1e-3)
-    hinge = Hinge([data_dir() / f for f in cfg.hinge_labels], names, dev, cfg.hinge_margin, list(cfg.hinge_footprint)) if cfg.hinge_lam > 0 else None
+    bk = {"bank": True} if a.label_bank else {}                      # speed knob: label rasters once per distinct label (lib/drivable_hinge.RowBank)
+    hinge = Hinge([data_dir() / f for f in cfg.hinge_labels], names, dev, cfg.hinge_margin, list(cfg.hinge_footprint), **bk) if cfg.hinge_lam > 0 else None
     off = OR.offsets(cfg.data)
     agent2 = road = None
     if cfg.agent_lam > 0:                                            # A: imitation rows of the train logs + every hinge-only row
         agent2 = OffAgentHinge(data_dir() / cfg.agent_labels, np.where(in_tr, names, ""), off, dev, cfg.agent_margin,
                                None if cfg.agent_side_margin < 0 else cfg.agent_side_margin)
     if k and a.road_lam > 0:                                         # C: the scorer-layer raster (or, --road-labels, another one) on the hinge-only rows
-        road = OR.off_hinge(replace(cfg, hinge_labels=(a.road_labels,), hinge_margin=a.road_margin), np.where(is_ho, names, ""), off, dev)
+        road = OR.off_hinge(replace(cfg, hinge_labels=(a.road_labels,), hinge_margin=a.road_margin), np.where(is_ho, names, ""), off, dev, **bk)
     n_fb = 0
     if road is not None and hinge is not None:                       # note (x): a row that does not start on the scorer-layer road keeps the NAVSIM raster
         hr = torch.nonzero(torch.as_tensor(is_ho, device=dev) & road.ok)[:, 0]
@@ -143,6 +144,8 @@ def cmd_train(a):
             return shape_check(run, a, S, LS, draw, dev, T)
         S.front.pin = a.prefetch > 1
         Sd = T.dev_store(S, dv_rows, a.dev_card_gb)
+        fwd = torch.compile(model, dynamic=False) if a.compile else model   # the step only (pp_train's --compile); dev eval stays eager
+        run.info(f"card before the first step: {torch.cuda.memory_allocated() / 2 ** 30:.2f} GB allocated; label bank {a.label_bank}, compiled step {a.compile}")
         pre = T.Prefetch(draw, fetch, cfg.steps, a.prefetch, a.fetch_workers)
         t0, hist = time.time(), []
         for step in range(cfg.steps):
@@ -152,7 +155,7 @@ def cmd_train(a):
                 g["lr"] = g["base"] * min(1.0, (step + 1) / cfg.warmup) * 0.5 * (1 + np.cos(np.pi * step / cfg.steps))
             ego = S.ego[rows] * (~anchor)[:, None].float()
             side, smask = (om[rows], torch.as_tensor(sm, device=dev)) if om is not None else (None, None)
-            total, Ls = LS(model(front, ego, S.tc[rows], side, smask, nv=None), S, rows, anchor)
+            total, Ls = LS(fwd(front, ego, S.tc[rows], side, smask, nv=None), S, rows, anchor)
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {q: float(v) for q, v in Ls.items()} }")
             opt.zero_grad(set_to_none=True)
@@ -333,6 +336,8 @@ if __name__ == "__main__":
     p.add_argument("--prefetch", type=int, default=4)
     p.add_argument("--fetch-workers", type=int, default=2)
     p.add_argument("--dev-card-gb", type=float, default=4.0)
+    p.add_argument("--label-bank", action="store_true", help="hinge rasters once per distinct label on the card (same values; 13.8 -> 5.2 GB at full scale): fits a 24 GB card")
+    p.add_argument("--compile", action="store_true", help="torch.compile (inductor) of the training step, as pp_train.py --compile: faster, not bit-identical to eager")
     p = sub.add_parser("ident")
     p.add_argument("--a", required=True)
     p.add_argument("--b", required=True)
