@@ -76,7 +76,8 @@ def pair_stats(C, pairs, mask=None):
     pr = sum(C.prog[a][m].mean() - C.prog[b][m].mean() for a, b in pairs) / n
     cl = lambda ks: [sum(int((C.zc[k][m] == f).sum()) for k in ks) for f in CLS]  # noqa: E731
     return dict(pairs=n, scenes=int(m.sum()), mean=p["mean"], lo=p["lo"], hi=p["hi"], zeros_arm=za, zeros_base=zb, co_arm=ca, co_base=cb,
-                dz1a=(sum(za) - sum(zb)) / n, dz1b=(sum(ca) - sum(cb)) / n, slow_arm=sa, slow_base=sb, dslow=(sa - sb) / n, dprog=float(pr),
+                dcoll=(cl([a for a, _ in pairs])[0] - cl([b for _, b in pairs])[0]) / n, doff=(cl([a for a, _ in pairs])[1] - cl([b for _, b in pairs])[1]) / n,
+                dcor=(cl([a for a, _ in pairs])[2] - cl([b for _, b in pairs])[2]) / n, dz1a=(sum(za) - sum(zb)) / n, dz1b=(sum(ca) - sum(cb)) / n, slow_arm=sa, slow_base=sb, dslow=(sa - sb) / n, dprog=float(pr),
                 cls_arm=cl([a for a, _ in pairs]), cls_base=cl([b for _, b in pairs]),
                 L1a=bool(sum(za) < sum(zb) and all(x <= y for x, y in zip(za, zb))), L1b=bool(sum(ca) < sum(cb) and all(x <= y for x, y in zip(ca, cb))),
                 L2=bool(p["mean"] >= 0 and p["lo"] > -0.005), L3=bool(sa <= 1.1 * sb))
@@ -93,7 +94,7 @@ def nulls(C, mask=None):
 
 
 KEYS = (("mean", "L2 mean difference", "{:+.4f}"), ("lo", "L2 CI lower bound", "{:+.4f}"), ("dz1a", "L1a zeros per pair (arm - base)", "{:+.2f}"),
-        ("dz1b", "L1b zeros per pair (arm - base)", "{:+.2f}"), ("dslow", "slow scenes per pair (arm - base)", "{:+.1f}"), ("dprog", "mean progress per pair (arm - base)", "{:+.4f}"))
+        ("dz1b", "L1b zeros per pair (arm - base)", "{:+.2f}"), ("dcoll", "at-fault collision zeros per pair", "{:+.2f}"), ("doff", "offroad zeros per pair", "{:+.2f}"), ("dcor", "corridor zeros per pair", "{:+.2f}"), ("dslow", "slow scenes per pair (arm - base)", "{:+.1f}"), ("dprog", "mean progress per pair (arm - base)", "{:+.4f}"))
 
 
 def vs_null(v, n1, n2):
