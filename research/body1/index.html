@@ -340,7 +340,7 @@ code{font-size:13px}
 <li>差几乎全部来自哪些 scene 是零分：<code>P2H10S</code> 每个 seed 净少 6.5（plain）和 3.5（served）个零分 scene；救回的 scene 平均得分约 0.74（plain）和 0.89（served），丢掉的约 0.90 和 0.76。两者都非零的 scene 上分数几乎不变（−0.0007 / +0.0073）：臂没有在 base 已经开过的 scene 上开得更好。</li>
 <li>臂的零分减少主要在 offroad（14.5 → 8.75 plain，10.0 → 8.5 served）；at-fault 碰撞零分不动（12.5 → 12.5；4.0 → 3.75），served 下碰撞零分从 12.5 压到约 4 是 serving 本身的效果。臂在非零 scene 上的 progress 在 plain 下并不更高（0.666 → 0.653），全部 rollout 的 progress 更高是因为被救回的 scene。</li>
 <li>served 下 driver 异常不平衡：base 在 4 个 seed 里有 4 个异常零分（s0 1、s2 2、s3 1），<code>P2H10S</code> 为 0。按非零 scene 约 0.74 的分数，这约占 served +0.0667 里的 4 × 0.74 / 240 = +0.012；plain 下方向相反（base 1，<code>P2H10S</code> 3）。异常是 device mismatch 崩溃，与 checkpoint 无关，仍按零分计入。</li>
-<li>在至少 3 个 seed 里同向翻转的 scene：0 → 非零 plain 4 个、served 4 个（<code>75c23f0</code> 两处都有），共 7 个不同的 scene（base 的零分 flag：offroad 3 个，corridor 5 个）；非零 → 0 只有 served 的 <code>94877a4</code>（3 个 seed）。其余的增益是 seed 层面的变动，量级与 base 自己的 seed spread 相当。</li>
+<li>在至少 3 个 seed 里同向翻转的 scene：0 → 非零 plain 4 个、served 4 个（<code>75c23f0</code> 两处都有），共 7 个不同的 scene（8 条记录里 base 的零分 flag：offroad 3 条，corridor 5 条）；非零 → 0 只有 served 的 <code>94877a4</code>（3 个 seed）。其余的增益是 seed 层面的变动，量级与 base 自己的 seed spread 相当。</li>
 </ul>
 <p><b>限制。</b>60 scene 是难度分层样本，均分不能与 alpamayo1 的 441 scene 0.5033 比；每个 scene 一次 rollout；seed 只按序号配对，没有共享训练状态；<code>P2H10B</code> 只有两个 seed；<code>P2H10S-F-s1</code> plain 的 3 个 stack 因 box 系统盘满（<code>/tmp</code> ENOSPC）重跑，首读 0.2133、重跑 0.2863，其余 stack 无此问题；base s0 / s1 复用 PAI2 与 FIX1 的同命令结果。</p>
 
