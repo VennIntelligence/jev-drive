@@ -6,6 +6,8 @@
   div      (envs/op-train, GPU) plans of the flow heads for the 16 fixed noise rows on every navtest token -> $OUT/div/samples.npz, and
                                 the first 8 rows on the > 20 deg tokens as a score-poses input -> $OUT/div/poses.npz (keys s<seed>n<k>)
   geom     (.venv)              equal-arc curve offset C(4 s) of every member (decision 207's definition, pt_swap.Curve) -> $OUT/geom.npz
+  nc       (.venv, then envs/navsim2 with --replay)  amendment A.2: the NC-failing (member, token) rows of the six members through
+                                decision 196's event replay (nc_tax / fd_navsim, same code path) -> $OUT/nc/replay.parquet
   report   (envs/op-train)      tables and the verdict against the registered lines -> $OUT/report/{tables.md, summary.json, *.csv}
 
 Reads: 2-seed mean per token, cluster bootstrap by log (jevdrive.stats.paired, B 10 000). The turn failure classes are decision 153's, read
@@ -129,6 +131,45 @@ def cmd_geom(a):
         np.savez(OUT / "geom.npz", **G)
 
 
+def cmd_nc(a):
+    import pickle
+    _sys.path[:0] = [str(_R / "experiments/op_parity/scripts")]
+    from jevdrive.bench import compat, tables as BT
+    from jevdrive.run import Run
+    d = OUT / "nc"
+    d.mkdir(parents=True, exist_ok=True)
+    kf = d / "keys.pkl"
+    if not a.replay:
+        plans, want = {}, {}
+        for spec in sum(ARMS.values(), []):
+            u = BT.load("navtest", spec)[0]
+            z = np.load(compat.pred_file(spec, "navtest"))
+            pos = {t: i for i, t in enumerate(z["tokens"].astype(str))}
+            bad = sorted(u.index[u.NC < 1])
+            plans[spec] = {t: np.asarray(z["poses"][pos[t]], np.float64) for t in bad}
+            for t in bad:
+                want.setdefault(t, []).append(spec)
+        pickle.dump({"plans": plans, "want": want}, open(kf, "wb"))
+        print(json.dumps({k: len(v) for k, v in plans.items()} | {"tokens": len(want)}))
+        return
+    import multiprocessing as mp
+    import pandas as pd
+    import fd_navsim as FD
+    todo = sorted(pickle.load(open(kf, "rb"))["want"])
+    procs = len(__import__("os").sched_getaffinity(0))
+    with Run("flowhead", "flow1-nc-replay", config=dict(n_tokens=len(todo), procs=procs)) as run:
+        rows = []
+        with mp.get_context("fork").Pool(procs, initializer=FD._init, initargs=("navtest", kf)) as pool:
+            for i, r in enumerate(pool.imap_unordered(FD.work, todo, chunksize=2)):
+                for x in r["rows"]:
+                    x.pop("_states")
+                    rows.append(x)
+                if (i + 1) % 100 == 0:
+                    run.status(f"{i + 1}/{len(todo)} tokens")
+        pd.DataFrame(rows).to_parquet(d / "replay.parquet")
+        run.summary.update(rows=len(rows), tokens=len(todo))
+
+
 def md(df, digits=2):
     import pandas as pd
     return pd.DataFrame(df).to_markdown(index=False, floatfmt=f".{digits}f")
@@ -182,6 +223,18 @@ def cmd_report(a):
         ps = {k: [u.score.to_numpy(float) for u in U[k]] for k in ARMS}
         rows.append(dict(bucket=b, n=int(m.sum())) | contrast(v, m, log, 100.0, ps))
     P_("## 2. navtest EPDMS by logged 4 s heading change (deg)\n\n" + md(rows) + "\n")
+    grid = {}                                                                   # amendment A.1: sub-metric x bucket, FM - RG and RG - SH30
+    for c in ("score",) + SUBS:
+        v = {k: seedmean([u[c].to_numpy(float) for u in U[k]]) for k in ARMS}
+        for b in ("all",) + TURNS:
+            for x, y in PAIRS[:2]:
+                r_ = stats.paired(v[x][B[b]], v[y][B[b]], groups=log[B[b]])
+                grid[(f"{x} - {y}", "EPDMS" if c == "score" else c, b)] = [100 * r_["mean"], 100 * r_["lo"], 100 * r_["hi"]]
+    for pr_ in ("FM - RG", "RG - SH30"):
+        rows = [dict(metric=c) | {b: "{:+.2f} [{:+.2f}, {:+.2f}]{}".format(*grid[(pr_, c, b)], " *" if grid[(pr_, c, b)][1] > 0 or grid[(pr_, c, b)][2] < 0 else "")
+                                  for b in ("all",) + TURNS} for c in ("EPDMS",) + SUBS]
+        P_(f"## 2{'a' if pr_ == 'FM - RG' else 'b'}. navtest sub-metric x turn bucket, {pr_} (x 100; * = CI excludes 0)\n\n" + md(rows) + "\n")
+    summ["grid"] = {" | ".join(k): v for k, v in grid.items()}
     rows = []
     for b in (">45", ">20", "<5"):
         for c in ("DAC fail %", "inside-cut %", "cannot-make-turn %", "other DAC fail %", "NC+TTC fail %", "EP"):
@@ -200,6 +253,56 @@ def cmd_report(a):
             ps = {k: [f(G[s]) for s in ARMS[k]] for k in ARMS}
             rows.append(dict(bucket=b, metric=nm) | contrast(v, B[b], log, 1.0, ps))
     P_("## 4. Curve offset at equal arc length, 4 s (decision 207's C; reference: SH30 0.71 m on > 20 deg, 0.88 m on > 45 deg)\n\n" + md(rows, 3) + "\n")
+
+    # ---- amendment A.2: NC failures by decision 196's classes, 4 s arc-length ratios
+    import nc_tax as NT
+    from jevdrive.bench.navsim import SUBS as SUBN
+    rp = pd.read_parquet(OUT / "nc" / "replay.parquet").set_index(["key", "token"])
+    pos, ncx, chk = {t: i for i, t in enumerate(names)}, {}, 0.0
+    CL = ["A", "A1 stopped vehicle ahead", "A2 lead vehicle (moving)", "B", "C", "D", "E"]
+    for k, specs in ARMS.items():
+        ncx[k] = []
+        for s, u in zip(specs, U[k]):
+            ind = {c: np.zeros(len(names)) for c in CL + ["NC fail"]}
+            for t in u.index[u.NC < 1]:
+                r = rp.loc[(s, t)]
+                chk = max(chk, max(abs(float(r[SUBN[q]]) - float(u.at[t, q])) for q in NT.SUB8))
+                cls = NT.classify(r.to_dict())[2]
+                for c in (cls[0], cls, "NC fail"):
+                    if c in ind:
+                        ind[c][pos[t]] = 1.0
+            ncx[k].append(ind)
+    rows = []
+    for c in ["NC fail"] + CL:
+        summ_row = summ.setdefault(f"nc|{c}", {})
+        v = {k: seedmean([i_[c] for i_ in ncx[k]]) for k in ARMS}
+        r = dict(**{"class": NT.BIG.get(c, c)}, **{f"{k} tokens": float(v[k].sum()) for k in ARMS})
+        r |= {k_: v_ for k_, v_ in contrast(v, B["all"], log, 100.0).items() if " - " in k_}
+        r["FM - RG, < 5 deg"] = (lambda q: f"{100 * q['mean']:+.3f} [{100 * q['lo']:+.3f}, {100 * q['hi']:+.3f}]")(stats.paired(v["FM"][B["<5"]], v["RG"][B["<5"]], groups=log[B["<5"]]))
+        rows.append(r)
+    P_("## 4a. NC failures by decision 196's classes (tokens = 2-seed mean count; differences in pp of all 12 146 tokens)\n\n"
+       f"Reference (decision 196, SH30): NC 176.5, A 93.5 (A1 58.5, A2 35), B 23, C 13.5, D 16.5, E 30. Replay check: max abs sub-score difference to the bench units {chk:.1e}.\n\n"
+       + md(rows, 3) + "\n")
+    summ["nc_replay_check"] = chk
+    Pz = {k: [np.load(TO.pf(s)) for s in v] for k, v in ARMS.items()}
+    arcs = {}
+    for k in ARMS:
+        arcs[k] = []
+        for z in Pz[k]:
+            zp = {t: i for i, t in enumerate(z["tokens"].astype(str))}
+            arcs[k].append(NT.arc(z["poses"][[zp[t] for t in names]]))
+    la = NT.arc(fut)
+    mv = la >= 2.0
+    rows = []
+    for b in ("all",) + TURNS:
+        m = B[b] & mv
+        for nm, f in (("plan arc / log arc", lambda x: x / np.maximum(la, 0.5)), ("arc > 1.1 x log (%)", lambda x: 100.0 * (x > 1.1 * la))):
+            summ_row = summ.setdefault(f"arc|{b}|{nm}", {})
+            v = {k: seedmean([f(x) for x in arcs[k]]) for k in ARMS}
+            rows.append(dict(bucket=b, n=int(m.sum()), read=nm) | contrast(v, m, log, 1.0, {k: [f(x) for x in arcs[k]] for k in ARMS}))
+        q = stats.paired(seedmean(arcs["FM"])[m] / np.maximum(seedmean(arcs["RG"])[m], 0.5), np.ones(int(m.sum())), groups=log[m])
+        rows.append(dict(bucket=b, n=int(m.sum()), read="FM arc / RG arc (per token) - 1") | {"FM - RG": f"{q['mean']:+.4f} [{q['lo']:+.4f}, {q['hi']:+.4f}]"})
+    P_("## 4b. 4 s arc length (tokens whose logged 4 s arc is >= 2 m)\n\n" + md(rows, 4) + "\n")
 
     # ---- navhard
     H = {k: [BT.load("navhard", s + "@gimm")[0] for s in v] for k, v in ARMS.items()}
@@ -280,6 +383,28 @@ def cmd_report(a):
        + f"\n\nIdentity of row 0 against the bench units (max abs difference of the 8 sub-scores, per seed): `{json.dumps(idn)}`\n")
     summ["oracle_identity"] = idn
 
+    # ---- amendment A.4: the no-regression table (FM - RG, and the same cells for RG - SH30)
+    def cells(x, y):
+        k = f"{x}-{y}"
+        c = [("navtest all | " + ("EPDMS" if q == "score" else q), summ[f"navtest|all|{q}"][k]) for q in ("score",) + SUBS]
+        c += [(f"navtest {b} | EPDMS", summ[f"navtest|{b}|score"][k]) for b in TURNS]
+        c += [(f"navhard | {q}", summ[f"navhard|{q}"][k]) for q in ("combined", "stage1", "stage2")]
+        return c
+    nr = {}
+    for x, y in PAIRS[:2]:
+        cs = cells(x, y)
+        up, dn = [n for n, v in cs if v[1] > 0], [n for n, v in cs if v[2] < 0]
+        fine = [f"{c} | {b}" for (pr_, c, b), v in grid.items() if pr_ == f"{x} - {y}" and b != "all" and c != "EPDMS" and (v[1] > 0 or v[2] < 0)]
+        nr[f"{x} - {y}"] = dict(up=up, down=dn, flat=[n for n, v in cs if not (v[1] > 0 or v[2] < 0)], fine_cells_ci_excludes_0=fine,
+                                candidate=bool(not dn and up))
+        rows = [dict(cell=n, diff="{:+.2f} [{:+.2f}, {:+.2f}]".format(*v), moved="up" if v[1] > 0 else "down" if v[2] < 0 else "not moved") for n, v in cs]
+        P_(f"## 9{'a' if x == 'FM' else 'b'}. No-regression table, {x} - {y} (amendment A.4; x 100)\n\n" + md(rows) + f"\n\nUp: {up or 'none'}. Down: {dn or 'none'}. "
+           f"Fine cells (sub-metric x bucket, not in the rule) with a CI excluding 0: {fine or 'none'}. Candidate by the rule: {nr[f'{x} - {y}']['candidate']}.\n")
+    summ["no_regression"] = nr
+    hs = lambda k: any(summ[c][k][1] > 0 for c in ("navtest|all|score", "navhard|combined", "navhard|stage1", "navhard|stage2"))  # noqa: E731
+    summ["hugsim_condition"] = dict(fm_beats_rg=hs("FM-RG"), rg_beats_sh30=hs("RG-SH30"))
+    P_(f"HUGSIM 64 condition (amendment A.3): `{json.dumps(summ['hugsim_condition'])}`\n")
+
     # ---- registered lines
     rg = float(np.mean([100 * u.score.mean() for u in U["RG"]]))
     d45, ep, s5 = summ["navtest|>45|DAC fail %"]["FM-RG"], summ["navtest|all|score"]["FM-RG"], summ["navtest|<5|score"]["FM-RG"]
@@ -310,5 +435,6 @@ if __name__ == "__main__":
     p.add_argument("--steps", type=int, default=10000)
     for c in ("div", "geom", "report"):
         sp.add_parser(c)
+    sp.add_parser("nc").add_argument("--replay", action="store_true")
     a = ap.parse_args()
-    {"ident": cmd_ident, "smoke": cmd_smoke, "trained": cmd_trained, "div": cmd_div, "geom": cmd_geom, "report": cmd_report}[a.cmd](a)
+    {"nc": cmd_nc, "ident": cmd_ident, "smoke": cmd_smoke, "trained": cmd_trained, "div": cmd_div, "geom": cmd_geom, "report": cmd_report}[a.cmd](a)

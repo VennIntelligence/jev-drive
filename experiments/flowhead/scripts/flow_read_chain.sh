@@ -31,10 +31,12 @@ sub flow1-replay "$L/replay" --vram 0.5 --cpu 48 --ram 64 -- $NAV $SP/turn_oracl
     --models FMH-F-s0 FMH-F-s1 RGH-F-s0 RGH-F-s1 SH30-F-s0 SH30-F-s1
 sub flow1-div "$L/div" --vram 24 --cpu 8 --ram 24 -- $PY $F/flow1.py div
 sub flow1-geom "$L/geom" --vram 0.5 --cpu 4 --ram 16 -- $VPY $F/flow1.py geom
+"$VPY" $F/flow1.py nc || die "nc select"
+sub flow1-nc "$L/nc" --vram 0.5 --cpu 24 --ram 48 -- $NAV $F/flow1.py nc --replay
 waitdirs "$L/div"
 status "score-poses of 8 noise rows x 2 seeds on the > 20 deg tokens"
 "${BN[@]}" score-poses --poses "$O/div/poses.npz" --traffic non_reactive --out "$O/div/score.csv" --wait || die "score-poses"
-waitdirs "$L/replay" "$L/geom"
+waitdirs "$L/replay" "$L/geom" "$L/nc"
 status "tables"
 "${BN[@]}" report --bench navtest --arms $(arm FM FMH) --vs $(arm RG RGH) $(arm SH30 SH30) WA-JEPA --out "$O/report/bench" || die "report navtest"
 "${BN[@]}" report --bench navhard --arms $(arm FM FMH @gimm) --vs $(arm RG RGH @gimm) $(arm SH30 SH30 @gimm) WA-JEPA --out "$O/report/bench" || die "report navhard"
