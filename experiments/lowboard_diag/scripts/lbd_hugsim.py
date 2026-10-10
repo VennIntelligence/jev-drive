@@ -25,7 +25,7 @@ sys.path[:0] = [str(REPO), str(REPO / "experiments/op_parity/scripts"), str(REPO
 import fd_hugsim as FD  # noqa: E402
 from fd_hugsim import DT, EGO_L, EGO_W, box_poly, wrap  # noqa: E402
 
-OUT = REPO / "experiments/lowboard_diag/results/hugsim"
+OUT = Path(os.environ.get("LBD_OUT", REPO / "experiments/lowboard_diag/results/hugsim"))      # LOWDIAG2: per-seed output dir (default = decision 237's)
 FIGS = REPO / "experiments/lowboard_diag/figs/hugsim"
 D = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 ARMS = ["SH30-F-s0"]
