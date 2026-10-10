@@ -87,3 +87,4 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 **other**
 
 - [corridor](corridor/README.md) (CORR0, HEAD1, lane corridor label, turn-description head): Corridor centreline as target: -9.9 EPDMS on turns; wrong exit 2.6% of DAC fails; HEAD1: frozen-token heading head 8.54 vs SH30 11.24 deg at > 45 deg, independence R2 0.513 < 0.538, exploratory HEAD1b: fed back three ways at pilot scale, heading error falls 1.2 to 3.2 deg, EPDMS within 0.2, off-road rate unchanged [d240, d243, d245]
+- [flowhead](flowhead/README.md) (FLOW1, flow-matching plan head, trajectory head): Flow head vs the same head as a regression on SH30 features: > 45 deg off-road -4.98 pp but EPDMS -1.10 (EP, LK, EC, < 5 deg down), not a candidate, branch closed [d246]
