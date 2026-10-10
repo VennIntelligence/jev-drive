@@ -1,0 +1,8 @@
+cls,K,runs,in_plan,lead_median_s,lead_min_s,lead_max_s,in_plan_fd,track_dev_med,track_dev_max
+clearance,agent,7,7,2.750,2.500,3.250,0,0.109,0.416
+clearance,boundary,5,0,,,,5,0.131,0.512
+longitudinal,agent,9,9,1.250,0.750,2.250,0,0.120,0.538
+longitudinal,boundary,3,2,3.250,2.750,3.750,3,0.134,0.697
+longitudinal,corridor,1,1,4.250,4.250,4.250,0,0.153,1.123
+other,agent,12,12,2.500,0.750,4.000,0,0.114,0.383
+route,boundary,1,1,2.250,2.250,2.250,1,0.088,0.600

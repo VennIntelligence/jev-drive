@@ -356,7 +356,7 @@ def report(a):
     P(f"Arms {', '.join(a.arms)} `{PRESET}`: {len(E)} runs, {len(scen)} scenarios, mean HD {E.hd.mean():.4f}, lost score "
       f"{E.lost.sum():.2f}; failed {len(F)} ({F.end.value_counts().to_dict()}), complete {int((E.K == 'complete').sum())}. "
       "CI: scenario bootstrap of the ratio of sums, 10 000 draws, seed 0; cells with n < 8 are descriptive.\n")
-    refs = [c[:-4] for c in E.columns if c.endswith("_passed")]
+    refs = [c[:-7] for c in E.columns if c.endswith("_passed")]
     rows = []
     for cls in CLASSES + ["complete with penalties", "all failed", "all"]:
         m = (E.cls == cls) if cls in CLASSES else (E.K == "complete") if cls.startswith("complete") else (E.K != "complete") if cls == "all failed" else (E.lost >= 0)
@@ -401,7 +401,22 @@ def report(a):
     fl.to_csv(OUT / "flags.csv", index=False)
     P("## T2 raw flags (multi-select; the class columns say where the flagged runs ended up)\n")
     P(fl.to_markdown(index=False) + "\n")
-    P("Flag combinations: " + ", ".join(f"{k or '(none)'}: {v}" for k, v in F.flags.fillna("").value_counts().items()) + "\n")
+    P("Flag combinations: " + ", ".join(f"{k or '(none)'}: {v}" for k, v in F["flags"].fillna("").value_counts().items()) + "\n")
+    sens = []
+    for nm, col in (("E + 10 s (primary)", "cf_contact"), ("E + 3 s", "cf_contact_3s"), ("up to E", "cf_contact_to_E")):
+        cf = F[col] == True  # noqa: E712
+        o2 = ((F.obj_dh.abs() >= 60) & cf) | F.O2c
+        l1 = (F.in_band == True) & (F.obj_lx > 0) & ~cf  # noqa: E712
+        c2 = np.where(F.K != "agent", F.cls, np.where(o2, "other", np.where(l1, "longitudinal", np.where(F.R1, "route", "clearance"))))
+        sens.append(dict(actor_extrapolated_to=nm, **{f"{c} runs": int((c2 == c).sum()) for c in CLASSES},
+                         **{f"{c} share": round(F.lost[c2 == c].sum() / E.lost.sum(), 3) for c in CLASSES}))
+    S = pd.DataFrame(sens)
+    S.to_csv(OUT / "sensitivity_cf_horizon.csv", index=False)
+    P("### T2b sensitivity: how long the struck actor is carried on at its last velocity in the brake counterfactual (O2b vs C1)\n")
+    P(S.to_markdown(index=False) + "\n")
+    on = F[(F.K == "agent") & (F.obj_dh.abs() >= 60)]
+    P(f"Oncoming / crossing struck actors (|dh| >= 60 deg): {len(on)} runs, lost share {on.lost.sum() / E.lost.sum():.3f}; by planner and class: "
+      + ", ".join(f"{k[0]} / {k[1]}: {v}" for k, v in on.groupby(["obj_planner", "sub"]).size().items()) + "\n")
     ip = F.groupby(["cls", "K"]).agg(runs=("lost", "size"), in_plan=("in_plan", lambda x: int((x == True).sum())),  # noqa: E712
                                     lead_median_s=("plan_lead_s", "median"), lead_min_s=("plan_lead_s", "min"), lead_max_s=("plan_lead_s", "max"),
                                     in_plan_fd=("in_plan_fd", lambda x: int((x == True).sum())), track_dev_med=("track_dev_med", "median"),  # noqa: E712
