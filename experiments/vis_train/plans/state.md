@@ -153,6 +153,43 @@ navtrain 103 288 token 与 navtest + navhard 18 058 token，各 16 套标定；�
 
 **怎么续**：与第一波相同。box 上 `tmux kill-window -t jev:vt-W-s<seed>` 后重跑同一条命令 `scripts/tmux_run.sh vt-W-s<seed> experiments/vis_train/scripts/vt_chain.sh W <seed> 50000`（训练 `--resume` 从最近的 snapshot 续，步数必须仍是 50 000；W-s1 的 `VT_WHEN` 在 A0-s1 结束后可省）。状态在 `$DATA_DIR/runs/vis_train/chain/W-s<seed>/{STATUS,DONE,ERROR,jobs.txt,pool/}`，训练日志 `pool/train/log.txt`，dev 曲线 `runs/op_parity/runs/VT-W-s<seed>/evals.json`。建造期的任务日志在 `chain/W-build/`（ident、四个测量 smoke、分级启动、回归比对）。若 `--vram-cap 49` 触发 OOM（峰值 45.2 GB，余量 3.8 GB）：`VT_VRAM=56` 重跑同一条命令。
 
+### 交接（00:10 CST / 01:10 JST，arm-W builder 收尾；由 jev-night 接手）
+
+W 的建造已结束，没有半成品、没有未提交的改动（Mac 与 box 的 checkout 里都没有我的未跟踪或已改文件）。两条链的 tmux 窗口 `jev:vt-W-s0`、`jev:vt-W-s1` 在等各自的训练任务，不要关。
+
+**仍在 pool 里的任务**（owner `vis_train-W`；日志目录 `$DATA_DIR/runs/vis_train/chain/W-s<seed>/pool/<子目录>/`）
+
+| 任务 | id | 状态（00:09 CST） | 做什么 / 等什么 | 日志子目录 |
+|:--|:--|:--|:--|:--|
+| `vt-t-W-s0` | 1010-234311-a449 | running，card 5，与 A0-s0 同卡 | 训练 50 000 步；步 2 000，1.53–1.56 it/s，峰值 45.4 GB reserved（卡上 46 / 预订 50） | `train/` |
+| `vt-b-W-s0-k05 … k45` | 1010-234311-2fd8、234312-ff65、234312-322f、234312-31d6、234313-bd49、234313-5988、234313-0e92、234314-54d8、234314-748a | queued | 各等 `runs/op_parity/runs/VT-W-s0-k<NN>/ckpt-final.pt` 出现，然后 `bench run --model VT-W-s0-k<NN> --bench navtest` | `b-k<NN>/` |
+| `vt-b-W-s0-final` | 1010-234314-000e | queued | `--after` 训练任务且等 `VT-W-s0/ckpt-final.pt`；navtest + navhard，navtest 的 `:noside` / `:sideoff` / `:mshuf` | `b-final/` |
+| `vt-t-W-s1` | 1010-234311-23ce | queued（门） | 等 `runs/op_parity/runs/VT-A0-s1/ckpt-final.pt`（A0-s1 结束，约 01:20 CST），之后由 pool 放置（需要 50 GB 空余且该卡训练任务未满）；preflight 已过 | `train/` |
+| `vt-b-W-s1-k05 … k45` | 1010-234311-9122、234312-d623、234312-9eec、234312-166d、234313-e068、234313-b709、234313-8b1f、234314-5ff6、234314-fc90 | queued | 同 s0，等 `VT-W-s1-k<NN>/ckpt-final.pt` | `b-k<NN>/` |
+| `vt-b-W-s1-final` | 1010-234315-cd67 | queued | 同 s0，`--after` 1010-234311-23ce | `b-final/` |
+
+已结束的建造任务（ident、四个测量 smoke、分级启动、回归比对、两个 preflight）全部 rc 0，日志在 `chain/W-build/` 与 `chain/W-s<seed>/pool/train/preflight/`。
+
+**W-s0 的 dev 读数**（步 1 000）：ADE 0.5669，`ade_masked` 0.5652，`ade_sideoff` 0.5656，head ADE 0.99 m，视觉位移 0.24%；起点 0.5606。停止规则未触发。
+
+**预计**：W-s0 一直与 A0-s0 同卡则 08:40 CST；A0-s0 约 01:20 CST 结束后独占，独占速度没有测过（按 A 的独占 / 同卡比例估约 2.3 it/s，约 06:20 CST）。W-s1 在门开后独占一张卡时约 07:20 CST。早上没跑完按相同步数的 snapshot 对 A 比较。
+
+**重启命令**（box 上，先 `tmux kill-window -t jev:vt-W-s<seed>`；同一条命令即续，训练 `--resume`，步数必须仍是 50 000）
+
+```bash
+scripts/tmux_run.sh vt-W-s0 experiments/vis_train/scripts/vt_chain.sh W 0 50000
+scripts/tmux_run.sh vt-W-s1 env VT_WHEN=$DATA_DIR/runs/op_parity/runs/VT-A0-s1/ckpt-final.pt experiments/vis_train/scripts/vt_chain.sh W 1 50000   # A0-s1 结束后 VT_WHEN 可省
+```
+
+**已知问题**
+
+- `--vram-cap 49`（链里 = 预订 50 − 1）是 CUDA 分配器的硬上限，峰值 45.4 GB，余量 3.6 GB。若训练任务报 CUDA OOM（`pool/train/log.txt`；pool 会按 `--tries 4` 带 `--resume` 重试，但同一上限下会再 OOM）：kill 窗口后用 `VT_VRAM=56 scripts/tmux_run.sh …` 重跑同一条命令。`VT_VRAM` 只改预订与上限，不进 `Cfg`，`claim` 不受影响。
+- W-s0 与 A0-s0 同卡，两者互相拖慢（A0-s0 约 01:20 CST 结束）；这是 pool 的放置，没有手动干预。
+- 独占时的 it/s 是估计，不是实测；A0-s0 结束后读 `pool/train/STATUS` 即可得到。
+- 链的 `STATUS` 文件停在「queued: train job …; waiting」直到训练结束，进度看 `pool/train/log.txt` 与 `runs/op_parity/runs/VT-W-s<seed>/evals.json`。
+- 我的 smoke 目录还在 `runs/op_parity/runs/`：`smoke-vt-stage-W-s0`（分级启动）、`smoke-vt-W-s{0,1}` 与 `-k00`（链的 preflight，重跑链时 `--scratch` 会重建）；各约 1.7 GB，可删。
+- 没做的：W 的 HUGSIM（family vt 不上 HUGSIM）、`vt_read.py` 里是否已认 `VT-W-*` 与 `:sideoff`（读数 agent 的文件，我没有改也没有核对）、按「路沿是否在常规视场内」分层的读数（上面「给读数 agent」一节）。
+
 ## 第一波的链（接手的 lane agent 维护；2026-10-10 23:20 CST 起）
 
 ### 怎么续
