@@ -690,7 +690,7 @@ def report(R, E, PR, L, rdiff):
     B = R[R.board != "navtest"]
     if len(B):
         rws = [[r.board, f"{r.arm}-s{r.seed}", r.metric, f"{r.value:.3f}" if r.board == "hugsim" else f"{r.value:.2f}", r.control or "",
-                "" if not r.control else f"k{int(r.ctrl_step):02d}", "" if not r.control else ci(r, "+.3f" if r.board == "hugsim" else "+.2f")] for r in B.itertuples()]
+                "" if not r.control else f"k{int(r.ctrl_step):02d}", "" if not r.control else ci(r._asdict(), "+.3f" if r.board == "hugsim" else "+.2f")] for r in B.itertuples()]
         A(md(["board", "model (final)", "metric", "value", "control", "ctrl step", "diff"], [[x[0], x[1], x[2], x[3], x[4], x[5], x[6]] for x in rws]))
     else:
         A("No navhard or HUGSIM read of a final checkpoint exists yet.\n")
