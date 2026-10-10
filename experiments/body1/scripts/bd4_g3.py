@@ -22,8 +22,6 @@ import numpy as np  # noqa: E402
 import b1 as B  # noqa: E402
 
 B.FAMS["bd4"] = "bd4_"
-OUT = B.REPO / "experiments/body1/results/loss"
-
 
 def plans(dirs, rows_of, tags, dev):
     """Own plans (len(tags), n, 8, 3) of the selected rows of each cache dir, in the state's own frame."""
@@ -116,6 +114,7 @@ def main(a):
                     rows.append(dict(ref=ref, subset=name, rate=q, n=int(m.sum()), logs=int(len(np.unique(logs[m]))), new=r["mean_a"], base=r["mean_b"], diff=r["mean"],
                                      lo=r["lo"], hi=r["hi"], rel_fall=(r["mean_b"] - r["mean_a"]) / r["mean_b"] if r["mean_b"] > 0 else np.nan))
         D = pd.DataFrame(rows)
+        OUT = B.REPO / a.out
         OUT.mkdir(parents=True, exist_ok=True)
         D.to_csv(OUT / f"g3_{a.name}.csv", index=False, float_format="%.5f")
         pooled = {ref: {q: D[(D.ref == ref) & (D.subset == "pooled") & (D.rate == q)].iloc[0].to_dict() for q in R[a.new]} for ref in a.ref}
@@ -137,4 +136,5 @@ if __name__ == "__main__":
     ap.add_argument("--set", default="hold", choices=["hold", "val", "navtest"])
     ap.add_argument("--fams", nargs="+", default=["log", "ot1", "yr1", "bd4"])
     ap.add_argument("--shards", type=int, nargs="+", default=list(range(B.NSH)))
+    ap.add_argument("--out", default="experiments/body1/results/loss", help="table directory, relative to the repo")
     main(ap.parse_args())
