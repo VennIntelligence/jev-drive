@@ -606,6 +606,14 @@ sum -12.6 % / -15.9 % with intervals excluding 0; (c) continuation slope 0.833 /
 numbers are those of a second attempt made after one pilot read of hold logs. Reading (d) used a fresh bench run of P2H10-F at this checkout.
 Next: the closed loop of item 6 (pilot8, chunk1 x s0 checklist, five chunk jobs). Details: [results/loss_g3.md](../results/loss_g3.md).
 
+**Correction, 2026-10-11 (added below the status; nothing above was changed).** Item (b) of the status above was read on off-protocol plans: until
+e7747c0b the lane's reader opened `lb_navtest` on GIMM frames for these warp-trained checkpoints ([results/navtest_warp.md](../results/navtest_warp.md)).
+Re-read on warp frames (`results/navtest_warp/loss/g3_a5_full_navtest_s{0,1}.json`): neither rate up, sum -15.5 % [-0.00627, -0.00266] / -14.8 %
+[-0.00644, -0.00213] (was -12.6 % / -15.9 %), agent 115 against 140 and 119 against 142 tokens (was 139 against 148, 132 against 144). (b) met,
+G3 met: re-established. (a), (c), (d) are not affected. The reference values of `P2H10B-F` quoted in Amendment 6 (item 1 and the reference
+values under its arc lines) for the navtest arc, 0.9905 pooled / 0.993 open / 0.982 lead, read 0.9985 and 0.9980 / 0.9998 and 0.9995 / 0.9931 and 0.9931 on warp frames
+(`results/navtest_warp/shape/g3e.md`); the hold-state values are not affected.
+
 **Status after the closed loop (2026-10-10 08:40 box time, added after the reads; nothing above was changed).** Staged checks of item 6 passed
 (chunk1 x s0: 233 / 233, collision + offroad zeros 7 against 7, heading sd ratio 0.95, 1 new against 1 removed). Full read, 700 scenes x 2 seeds,
 `P2H10B-F-s{0,1}` against TR1's P2H10-F: reading A (1 400 pairs) L1a 44 against 49 met, L1b 30 against 34 met, L2 -0.0046 [-0.0131, +0.0052] not met,
@@ -762,6 +770,17 @@ met; (d) navtest 89.05 against 88.67 (+0.38 [+0.20, +0.57]), > 45 deg bucket +0.
 0.9959, hold pooled 1.0009 / 1.0001, families 0.9989 to 1.0016). **By note (d) the arm ends here: no closed loop, no PAI read, the servable
 checkpoint stays P2H10-F.** The miss is one token on one seed, inside its interval. Details: [results/shape_pilot.md](../results/shape_pilot.md).
 
+**Correction, 2026-10-11 (added below the status; nothing above was changed).** Items (b) and the navtest rows of (e) in the status above were read
+on off-protocol plans: until e7747c0b the lane's reader opened `lb_navtest` on GIMM frames for these warp-trained checkpoints
+([results/navtest_warp.md](../results/navtest_warp.md)). Re-read on warp frames, the plans `jevdrive.bench` scores
+(`results/navtest_warp/loss/g3_a6_full_navtest_s{0,1}.json`, `results/navtest_warp/shape/g3e.md`): (b) agent rate, seed 0, 135 against 140 tokens of
+12 146, -0.00041 [-0.00127, +0.00041] (was 149 against 148, +0.00008 [-0.00111, +0.00136]): it does not rise, **(b) is met on seed 0**; seed 1 132
+against 142, -0.00082 [-0.00183, +0.00009] (was 138 against 144): met; boundary rate and sum still fall on both seeds with intervals excluding 0.
+(e) navtest pooled 1.0017 [1.0012, 1.0021] / 1.0008 [1.0004, 1.0012], open 1.0016 / 1.0009, lead 1.0007 / 1.0004 (was 0.9996 / 0.9984, 1.0002 /
+0.9992, 0.9969 / 0.9959): met, re-established. With (b) met every item of G3 is met on both registered seeds; the registered miss is not
+re-established and the stop rested on the reader's number. The registered closed-loop read of item 6 was never made; this line does not reopen the
+arm, and whether that read is owed is for the main session and the user (decision 232). (a), (c), (d) and the hold rows of (e) are not affected.
+
 **Note (h) to Amendment 6 (2026-10-10 09:20 box time; an instruction of the main session that reached the lane agent AFTER the G3 numbers above
 were read and the chain had stopped; no closed-loop number of any `P2H10S` checkpoint exists, and by the status above none will).**
 The main session asked for (1) parallel execution of the chain (both seeds, the G3 jobs, all six chunk jobs at once after the chunk1 x s0
@@ -786,6 +805,12 @@ seed 2, on seed 3 the navtest open-state ratio is 0.9949 against the line 0.995 
 (700 scenes): mean 0.9468 / 0.9495 / 0.9498 / 0.9446, zeros 26 / 23 / 24 / 25, at-fault collisions 8 / 6 / 7 / 7, slow 112 / 105 / 100 / 117;
 one base seed read against another passes L2 in 4 of 12 pairings, L3 in 9, all four lines in 2. Supplementary; the verdict above stands and no
 `P2H10S` checkpoint was run in the closed loop. [results/shape_pilot.md](../results/shape_pilot.md) section 5.
+
+**Correction, 2026-10-11 (added below the status of note (h); nothing above was changed).** Same reader error as in the correction below the G3
+status. Re-read on warp frames (`results/navtest_warp/loss/g3_a6_full_navtest_s{2,3}.json`, `results/navtest_warp/shape/g3e_s23.md`): (b) navtest
+agent 134 against 141 and 130 against 137 tokens (was 143 against 151, 147 against 151), met on both, re-established; (e) seed 3 navtest open-state
+ratio 1.0001 [0.9993, 1.0008] (was 0.9949, read as under the line 0.995), pooled 1.0000 [0.9995, 1.0005] (was 0.9952), lead 0.9983 [0.9974, 0.9992]
+(was 0.9947): (e) is met on seed 3 as well, changed. The hold-log rates and the base's closed-loop seed spread are not affected.
 
 
 ### Amendment 6, note (i) (2026-10-10, main session; written after the G3 read of `P2H10S` and before any closed-loop number of it exists)
@@ -973,3 +998,12 @@ against 27 hold rows). **The corridor line is not met: (C-a) 67 against 54 navte
 stays `P2H10-F`. The tube removes plans beyond its band on both sides and leaves the outward shift inside it (mean lateral at 4 s on navtest turn tokens
 -0.29 m against -0.36 m for `P2H10S-P-s0` and -0.48 m for the switch-off pilot). Details: [results/route_pilot.md](../results/route_pilot.md). Nothing follows
 without a new decision by the user.
+
+**Correction, 2026-10-11 (added below the status; nothing above was changed).** The navtest numbers of the status above, and of the look table in
+item 2 of this amendment, were read on off-protocol plans: until e7747c0b the lane's reader opened `lb_navtest` on GIMM frames for these warp-trained
+checkpoints ([results/navtest_warp.md](../results/navtest_warp.md)). Re-read on warp frames (`results/navtest_warp/route/pilot_gate.md`): (C-a) 138
+against 110 navtest tokens (was 67 against 54), `P2H10S-P-s0` 141 (was 75): not met, as before, by +28 where it was +13; (C-c) 19 against 25 (was 31
+against 47): met; mean lateral at 4 s on navtest turn tokens +0.43 m against +0.42 m for `P2H10S-P-s0` and +0.31 m for the switch-off pilot (was
+-0.29 / -0.36 / -0.48: the sign changes, the order does not). Look table of item 2, W2 on navtest: 116 / 118 / 119 / 126 against 84 / 79 / 87 / 91
+(was 58 / 65 / 59 / 65 against 45 / 46 / 47 / 49); its other navtest rows are in [results/route_pilot.md](../results/route_pilot.md). The verdict of
+the gate is re-established; (C-b) and every hold-log and validation-part number are not affected.
