@@ -287,435 +287,675 @@ A0,F,sum,final,50,50,nc_D,all,12,3,9,35,26
 A0,F,sum,final,50,50,nc_E,all,13,9,4,65,61
 A0,F,sum,final,50,50,ttc_fail,all,62,66,-4,451,455
 A0,F,sum,final,50,50,offroad,all,118,137,-19,727,746
-A,A0,0,latest common,35,30,offroad,>45,34,58,-24,144,168
-A,A0,0,latest common,35,30,offroad,>20,69,98,-29,238,267
-A,A0,0,latest common,35,30,cut_in,>45,28,35,-7,86,93
-A,A0,0,latest common,35,30,cut_in,>20,52,63,-11,148,159
-A,A0,0,latest common,35,30,under,>45,12,10,2,32,30
-A,A0,0,latest common,35,30,under,>20,19,15,4,44,40
-A,A0,0,latest common,35,30,nc_fail,all,47,64,-17,169,186
-A,A0,0,latest common,35,30,nc_A,all,35,41,-6,88,94
-A,A0,0,latest common,35,30,nc_A1,all,24,24,0,63,63
-A,A0,0,latest common,35,30,nc_A2,all,11,17,-6,25,31
-A,A0,0,latest common,35,30,nc_B,all,3,7,-4,18,22
-A,A0,0,latest common,35,30,nc_C,all,5,4,1,14,13
-A,A0,0,latest common,35,30,nc_D,all,6,10,-4,17,21
-A,A0,0,latest common,35,30,nc_E,all,10,14,-4,32,36
-A,A0,0,latest common,35,30,ttc_fail,all,57,83,-26,223,249
-A,A0,0,latest common,35,30,offroad,all,93,127,-34,348,382
-A,A0,1,latest common,35,30,offroad,>45,48,68,-20,135,155
-A,A0,1,latest common,35,30,offroad,>20,83,108,-25,229,254
-A,A0,1,latest common,35,30,cut_in,>45,11,55,-44,54,98
-A,A0,1,latest common,35,30,cut_in,>20,30,88,-58,108,166
-A,A0,1,latest common,35,30,under,>45,23,9,14,44,30
-A,A0,1,latest common,35,30,under,>20,31,15,16,59,43
-A,A0,1,latest common,35,30,nc_fail,all,46,73,-27,149,176
-A,A0,1,latest common,35,30,nc_A,all,30,50,-20,75,95
-A,A0,1,latest common,35,30,nc_A1,all,16,29,-13,52,65
-A,A0,1,latest common,35,30,nc_A2,all,14,21,-7,23,30
-A,A0,1,latest common,35,30,nc_B,all,5,9,-4,17,21
-A,A0,1,latest common,35,30,nc_C,all,3,4,-1,13,14
-A,A0,1,latest common,35,30,nc_D,all,6,10,-4,16,20
-A,A0,1,latest common,35,30,nc_E,all,10,8,2,28,26
-A,A0,1,latest common,35,30,ttc_fail,all,67,87,-20,228,248
-A,A0,1,latest common,35,30,offroad,all,123,136,-13,354,367
-A,A0,sum,latest common,35,30,offroad,>45,82,126,-44,279,323
-A,A0,sum,latest common,35,30,offroad,>20,152,206,-54,467,521
-A,A0,sum,latest common,35,30,cut_in,>45,39,90,-51,140,191
-A,A0,sum,latest common,35,30,cut_in,>20,82,151,-69,256,325
-A,A0,sum,latest common,35,30,under,>45,35,19,16,76,60
-A,A0,sum,latest common,35,30,under,>20,50,30,20,103,83
-A,A0,sum,latest common,35,30,nc_fail,all,93,137,-44,318,362
-A,A0,sum,latest common,35,30,nc_A,all,65,91,-26,163,189
-A,A0,sum,latest common,35,30,nc_A1,all,40,53,-13,115,128
-A,A0,sum,latest common,35,30,nc_A2,all,25,38,-13,48,61
-A,A0,sum,latest common,35,30,nc_B,all,8,16,-8,35,43
-A,A0,sum,latest common,35,30,nc_C,all,8,8,0,27,27
-A,A0,sum,latest common,35,30,nc_D,all,12,20,-8,33,41
-A,A0,sum,latest common,35,30,nc_E,all,20,22,-2,60,62
-A,A0,sum,latest common,35,30,ttc_fail,all,124,170,-46,451,497
-A,A0,sum,latest common,35,30,offroad,all,216,263,-47,702,749
-A,F,0,latest common,35,35,offroad,>45,51,51,0,168,168
-A,F,0,latest common,35,35,offroad,>20,91,86,5,272,267
-A,F,0,latest common,35,35,cut_in,>45,39,31,8,101,93
-A,F,0,latest common,35,35,cut_in,>20,72,53,19,178,159
-A,F,0,latest common,35,35,under,>45,9,9,0,30,30
-A,F,0,latest common,35,35,under,>20,12,15,-3,37,40
-A,F,0,latest common,35,35,nc_fail,all,54,54,0,186,186
-A,F,0,latest common,35,35,nc_A,all,45,36,9,103,94
-A,F,0,latest common,35,35,nc_A1,all,28,22,6,69,63
-A,F,0,latest common,35,35,nc_A2,all,17,14,3,34,31
-A,F,0,latest common,35,35,nc_B,all,4,5,-1,21,22
-A,F,0,latest common,35,35,nc_C,all,3,3,0,13,13
-A,F,0,latest common,35,35,nc_D,all,7,13,-6,15,21
-A,F,0,latest common,35,35,nc_E,all,10,12,-2,34,36
-A,F,0,latest common,35,35,ttc_fail,all,65,68,-3,246,249
-A,F,0,latest common,35,35,offroad,all,122,115,7,389,382
-A,F,1,latest common,35,35,offroad,>45,35,69,-34,121,155
-A,F,1,latest common,35,35,offroad,>20,62,116,-54,200,254
-A,F,1,latest common,35,35,cut_in,>45,8,57,-49,49,98
-A,F,1,latest common,35,35,cut_in,>20,20,95,-75,91,166
-A,F,1,latest common,35,35,under,>45,20,12,8,38,30
-A,F,1,latest common,35,35,under,>20,29,19,10,53,43
-A,F,1,latest common,35,35,nc_fail,all,42,75,-33,143,176
-A,F,1,latest common,35,35,nc_A,all,27,51,-24,71,95
-A,F,1,latest common,35,35,nc_A1,all,14,34,-20,45,65
-A,F,1,latest common,35,35,nc_A2,all,13,17,-4,26,30
-A,F,1,latest common,35,35,nc_B,all,5,9,-4,17,21
-A,F,1,latest common,35,35,nc_C,all,1,6,-5,9,14
-A,F,1,latest common,35,35,nc_D,all,7,10,-3,17,20
-A,F,1,latest common,35,35,nc_E,all,9,6,3,29,26
-A,F,1,latest common,35,35,ttc_fail,all,59,85,-26,222,248
-A,F,1,latest common,35,35,offroad,all,91,146,-55,312,367
-A,F,sum,latest common,35,35,offroad,>45,86,120,-34,289,323
-A,F,sum,latest common,35,35,offroad,>20,153,202,-49,472,521
-A,F,sum,latest common,35,35,cut_in,>45,47,88,-41,150,191
-A,F,sum,latest common,35,35,cut_in,>20,92,148,-56,269,325
-A,F,sum,latest common,35,35,under,>45,29,21,8,68,60
-A,F,sum,latest common,35,35,under,>20,41,34,7,90,83
-A,F,sum,latest common,35,35,nc_fail,all,96,129,-33,329,362
-A,F,sum,latest common,35,35,nc_A,all,72,87,-15,174,189
-A,F,sum,latest common,35,35,nc_A1,all,42,56,-14,114,128
-A,F,sum,latest common,35,35,nc_A2,all,30,31,-1,60,61
-A,F,sum,latest common,35,35,nc_B,all,9,14,-5,38,43
-A,F,sum,latest common,35,35,nc_C,all,4,9,-5,22,27
-A,F,sum,latest common,35,35,nc_D,all,14,23,-9,32,41
-A,F,sum,latest common,35,35,nc_E,all,19,18,1,63,62
-A,F,sum,latest common,35,35,ttc_fail,all,124,153,-29,468,497
-A,F,sum,latest common,35,35,offroad,all,213,261,-48,701,749
-B,A0,0,latest common,35,30,offroad,>45,34,48,-14,144,158
-B,A0,0,latest common,35,30,offroad,>20,62,85,-23,238,261
-B,A0,0,latest common,35,30,cut_in,>45,27,34,-7,86,93
-B,A0,0,latest common,35,30,cut_in,>20,46,59,-13,148,161
-B,A0,0,latest common,35,30,under,>45,12,9,3,32,29
-B,A0,0,latest common,35,30,under,>20,19,12,7,44,37
-B,A0,0,latest common,35,30,nc_fail,all,51,63,-12,169,181
-B,A0,0,latest common,35,30,nc_A,all,35,43,-8,88,96
-B,A0,0,latest common,35,30,nc_A1,all,24,25,-1,63,64
-B,A0,0,latest common,35,30,nc_A2,all,11,18,-7,25,32
-B,A0,0,latest common,35,30,nc_B,all,4,6,-2,18,20
-B,A0,0,latest common,35,30,nc_C,all,6,6,0,14,14
-B,A0,0,latest common,35,30,nc_D,all,7,4,3,17,14
-B,A0,0,latest common,35,30,nc_E,all,10,15,-5,32,37
-B,A0,0,latest common,35,30,ttc_fail,all,58,87,-29,223,252
-B,A0,0,latest common,35,30,offroad,all,92,111,-19,348,367
-B,A0,1,latest common,35,30,offroad,>45,47,52,-5,135,140
-B,A0,1,latest common,35,30,offroad,>20,76,90,-14,229,243
-B,A0,1,latest common,35,30,cut_in,>45,14,39,-25,54,79
-B,A0,1,latest common,35,30,cut_in,>20,30,62,-32,108,140
-B,A0,1,latest common,35,30,under,>45,19,10,9,44,35
-B,A0,1,latest common,35,30,under,>20,26,19,7,59,52
-B,A0,1,latest common,35,30,nc_fail,all,42,73,-31,149,180
-B,A0,1,latest common,35,30,nc_A,all,31,46,-15,75,90
-B,A0,1,latest common,35,30,nc_A1,all,17,25,-8,52,60
-B,A0,1,latest common,35,30,nc_A2,all,14,21,-7,23,30
-B,A0,1,latest common,35,30,nc_B,all,3,8,-5,17,22
-B,A0,1,latest common,35,30,nc_C,all,6,3,3,13,10
-B,A0,1,latest common,35,30,nc_D,all,6,16,-10,16,26
-B,A0,1,latest common,35,30,nc_E,all,10,14,-4,28,32
-B,A0,1,latest common,35,30,ttc_fail,all,64,76,-12,228,240
-B,A0,1,latest common,35,30,offroad,all,114,122,-8,354,362
-B,A0,sum,latest common,35,30,offroad,>45,81,100,-19,279,298
-B,A0,sum,latest common,35,30,offroad,>20,138,175,-37,467,504
-B,A0,sum,latest common,35,30,cut_in,>45,41,73,-32,140,172
-B,A0,sum,latest common,35,30,cut_in,>20,76,121,-45,256,301
-B,A0,sum,latest common,35,30,under,>45,31,19,12,76,64
-B,A0,sum,latest common,35,30,under,>20,45,31,14,103,89
-B,A0,sum,latest common,35,30,nc_fail,all,93,136,-43,318,361
-B,A0,sum,latest common,35,30,nc_A,all,66,89,-23,163,186
-B,A0,sum,latest common,35,30,nc_A1,all,41,50,-9,115,124
-B,A0,sum,latest common,35,30,nc_A2,all,25,39,-14,48,62
-B,A0,sum,latest common,35,30,nc_B,all,7,14,-7,35,42
-B,A0,sum,latest common,35,30,nc_C,all,12,9,3,27,24
-B,A0,sum,latest common,35,30,nc_D,all,13,20,-7,33,40
-B,A0,sum,latest common,35,30,nc_E,all,20,29,-9,60,69
-B,A0,sum,latest common,35,30,ttc_fail,all,122,163,-41,451,492
-B,A0,sum,latest common,35,30,offroad,all,206,233,-27,702,729
-B,A,0,latest common,35,35,offroad,>45,41,31,10,168,158
-B,A,0,latest common,35,35,offroad,>20,62,56,6,267,261
-B,A,0,latest common,35,35,cut_in,>45,22,22,0,93,93
-B,A,0,latest common,35,35,cut_in,>20,37,39,-2,159,161
-B,A,0,latest common,35,35,under,>45,8,7,1,30,29
-B,A,0,latest common,35,35,under,>20,10,7,3,40,37
-B,A,0,latest common,35,35,nc_fail,all,32,27,5,186,181
-B,A,0,latest common,35,35,nc_A,all,17,19,-2,94,96
-B,A,0,latest common,35,35,nc_A1,all,12,13,-1,63,64
-B,A,0,latest common,35,35,nc_A2,all,5,6,-1,31,32
-B,A,0,latest common,35,35,nc_B,all,3,1,2,22,20
-B,A,0,latest common,35,35,nc_C,all,2,3,-1,13,14
-B,A,0,latest common,35,35,nc_D,all,11,4,7,21,14
-B,A,0,latest common,35,35,nc_E,all,8,9,-1,36,37
-B,A,0,latest common,35,35,ttc_fail,all,34,37,-3,249,252
-B,A,0,latest common,35,35,offroad,all,86,71,15,382,367
-B,A,1,latest common,35,35,offroad,>45,42,27,15,155,140
-B,A,1,latest common,35,35,offroad,>20,68,57,11,254,243
-B,A,1,latest common,35,35,cut_in,>45,36,17,19,98,79
-B,A,1,latest common,35,35,cut_in,>20,56,30,26,166,140
-B,A,1,latest common,35,35,under,>45,4,9,-5,30,35
-B,A,1,latest common,35,35,under,>20,8,17,-9,43,52
-B,A,1,latest common,35,35,nc_fail,all,26,30,-4,176,180
-B,A,1,latest common,35,35,nc_A,all,17,12,5,95,90
-B,A,1,latest common,35,35,nc_A1,all,13,8,5,65,60
-B,A,1,latest common,35,35,nc_A2,all,4,4,0,30,30
-B,A,1,latest common,35,35,nc_B,all,3,4,-1,21,22
-B,A,1,latest common,35,35,nc_C,all,4,0,4,14,10
-B,A,1,latest common,35,35,nc_D,all,5,11,-6,20,26
-B,A,1,latest common,35,35,nc_E,all,4,10,-6,26,32
-B,A,1,latest common,35,35,ttc_fail,all,42,34,8,248,240
-B,A,1,latest common,35,35,offroad,all,89,84,5,367,362
-B,A,sum,latest common,35,35,offroad,>45,83,58,25,323,298
-B,A,sum,latest common,35,35,offroad,>20,130,113,17,521,504
-B,A,sum,latest common,35,35,cut_in,>45,58,39,19,191,172
-B,A,sum,latest common,35,35,cut_in,>20,93,69,24,325,301
-B,A,sum,latest common,35,35,under,>45,12,16,-4,60,64
-B,A,sum,latest common,35,35,under,>20,18,24,-6,83,89
-B,A,sum,latest common,35,35,nc_fail,all,58,57,1,362,361
-B,A,sum,latest common,35,35,nc_A,all,34,31,3,189,186
-B,A,sum,latest common,35,35,nc_A1,all,25,21,4,128,124
-B,A,sum,latest common,35,35,nc_A2,all,9,10,-1,61,62
-B,A,sum,latest common,35,35,nc_B,all,6,5,1,43,42
-B,A,sum,latest common,35,35,nc_C,all,6,3,3,27,24
-B,A,sum,latest common,35,35,nc_D,all,16,15,1,41,40
-B,A,sum,latest common,35,35,nc_E,all,12,19,-7,62,69
-B,A,sum,latest common,35,35,ttc_fail,all,76,71,5,497,492
-B,A,sum,latest common,35,35,offroad,all,175,155,20,749,729
-B,F,0,latest common,35,35,offroad,>45,51,41,10,168,158
-B,F,0,latest common,35,35,offroad,>20,85,74,11,272,261
-B,F,0,latest common,35,35,cut_in,>45,36,28,8,101,93
-B,F,0,latest common,35,35,cut_in,>20,65,48,17,178,161
-B,F,0,latest common,35,35,under,>45,10,9,1,30,29
-B,F,0,latest common,35,35,under,>20,13,13,0,37,37
-B,F,0,latest common,35,35,nc_fail,all,59,54,5,186,181
-B,F,0,latest common,35,35,nc_A,all,43,36,7,103,96
-B,F,0,latest common,35,35,nc_A1,all,27,22,5,69,64
-B,F,0,latest common,35,35,nc_A2,all,16,14,2,34,32
-B,F,0,latest common,35,35,nc_B,all,5,4,1,21,20
-B,F,0,latest common,35,35,nc_C,all,4,5,-1,13,14
-B,F,0,latest common,35,35,nc_D,all,6,5,1,15,14
-B,F,0,latest common,35,35,nc_E,all,10,13,-3,34,37
-B,F,0,latest common,35,35,ttc_fail,all,66,72,-6,246,252
-B,F,0,latest common,35,35,offroad,all,121,99,22,389,367
-B,F,1,latest common,35,35,offroad,>45,36,55,-19,121,140
-B,F,1,latest common,35,35,offroad,>20,58,101,-43,200,243
-B,F,1,latest common,35,35,cut_in,>45,11,41,-30,49,79
-B,F,1,latest common,35,35,cut_in,>20,21,70,-49,91,140
-B,F,1,latest common,35,35,under,>45,17,14,3,38,35
-B,F,1,latest common,35,35,under,>20,24,23,1,53,52
-B,F,1,latest common,35,35,nc_fail,all,41,78,-37,143,180
-B,F,1,latest common,35,35,nc_A,all,26,45,-19,71,90
-B,F,1,latest common,35,35,nc_A1,all,13,28,-15,45,60
-B,F,1,latest common,35,35,nc_A2,all,13,17,-4,26,30
-B,F,1,latest common,35,35,nc_B,all,4,9,-5,17,22
-B,F,1,latest common,35,35,nc_C,all,3,4,-1,9,10
-B,F,1,latest common,35,35,nc_D,all,7,16,-9,17,26
-B,F,1,latest common,35,35,nc_E,all,11,14,-3,29,32
-B,F,1,latest common,35,35,ttc_fail,all,55,73,-18,222,240
-B,F,1,latest common,35,35,offroad,all,87,137,-50,312,362
-B,F,sum,latest common,35,35,offroad,>45,87,96,-9,289,298
-B,F,sum,latest common,35,35,offroad,>20,143,175,-32,472,504
-B,F,sum,latest common,35,35,cut_in,>45,47,69,-22,150,172
-B,F,sum,latest common,35,35,cut_in,>20,86,118,-32,269,301
-B,F,sum,latest common,35,35,under,>45,27,23,4,68,64
-B,F,sum,latest common,35,35,under,>20,37,36,1,90,89
-B,F,sum,latest common,35,35,nc_fail,all,100,132,-32,329,361
-B,F,sum,latest common,35,35,nc_A,all,69,81,-12,174,186
-B,F,sum,latest common,35,35,nc_A1,all,40,50,-10,114,124
-B,F,sum,latest common,35,35,nc_A2,all,29,31,-2,60,62
-B,F,sum,latest common,35,35,nc_B,all,9,13,-4,38,42
-B,F,sum,latest common,35,35,nc_C,all,7,9,-2,22,24
-B,F,sum,latest common,35,35,nc_D,all,13,21,-8,32,40
-B,F,sum,latest common,35,35,nc_E,all,21,27,-6,63,69
-B,F,sum,latest common,35,35,ttc_fail,all,121,145,-24,468,492
-B,F,sum,latest common,35,35,offroad,all,208,236,-28,701,729
-C,F0,0,latest common,15,10,offroad,>45,50,55,-5,145,150
-C,F0,0,latest common,15,10,offroad,>20,96,90,6,240,234
-C,F0,0,latest common,15,10,cut_in,>45,27,34,-7,77,84
-C,F0,0,latest common,15,10,cut_in,>20,62,56,6,144,138
-C,F0,0,latest common,15,10,under,>45,21,19,2,34,32
-C,F0,0,latest common,15,10,under,>20,27,25,2,45,43
-C,F0,0,latest common,15,10,nc_fail,all,52,68,-16,166,182
-C,F0,0,latest common,15,10,nc_A,all,27,46,-19,81,100
-C,F0,0,latest common,15,10,nc_A1,all,21,25,-4,54,58
-C,F0,0,latest common,15,10,nc_A2,all,6,21,-15,27,42
-C,F0,0,latest common,15,10,nc_B,all,6,7,-1,18,19
-C,F0,0,latest common,15,10,nc_C,all,3,2,1,12,11
-C,F0,0,latest common,15,10,nc_D,all,10,10,0,18,18
-C,F0,0,latest common,15,10,nc_E,all,16,13,3,37,34
-C,F0,0,latest common,15,10,ttc_fail,all,84,102,-18,231,249
-C,F0,0,latest common,15,10,offroad,all,147,132,15,367,352
-C,F0,1,latest common,10,10,offroad,>45,45,46,-1,134,135
-C,F0,1,latest common,10,10,offroad,>20,86,78,8,225,217
-C,F0,1,latest common,10,10,cut_in,>45,16,35,-19,53,72
-C,F0,1,latest common,10,10,cut_in,>20,41,61,-20,105,125
-C,F0,1,latest common,10,10,under,>45,23,12,11,41,30
-C,F0,1,latest common,10,10,under,>20,32,16,16,60,44
-C,F0,1,latest common,10,10,nc_fail,all,52,38,14,169,155
-C,F0,1,latest common,10,10,nc_A,all,30,30,0,89,89
-C,F0,1,latest common,10,10,nc_A1,all,18,18,0,55,55
-C,F0,1,latest common,10,10,nc_A2,all,12,12,0,34,34
-C,F0,1,latest common,10,10,nc_B,all,9,0,9,21,12
-C,F0,1,latest common,10,10,nc_C,all,1,4,-3,7,10
-C,F0,1,latest common,10,10,nc_D,all,10,3,7,17,10
-C,F0,1,latest common,10,10,nc_E,all,13,12,1,35,34
-C,F0,1,latest common,10,10,ttc_fail,all,74,55,19,239,220
-C,F0,1,latest common,10,10,offroad,all,133,112,21,333,312
-C,F0,sum,latest common,10,10,offroad,>45,95,85,10,279,269
-C,F0,sum,latest common,10,10,offroad,>20,180,145,35,465,430
-C,F0,sum,latest common,10,10,cut_in,>45,46,58,-12,130,142
-C,F0,sum,latest common,10,10,cut_in,>20,104,105,-1,249,250
-C,F0,sum,latest common,10,10,under,>45,39,32,7,75,68
-C,F0,sum,latest common,10,10,under,>20,53,41,12,105,93
-C,F0,sum,latest common,10,10,nc_fail,all,103,85,18,335,317
-C,F0,sum,latest common,10,10,nc_A,all,52,62,-10,170,180
-C,F0,sum,latest common,10,10,nc_A1,all,36,37,-1,109,110
-C,F0,sum,latest common,10,10,nc_A2,all,16,25,-9,61,70
-C,F0,sum,latest common,10,10,nc_B,all,15,3,12,39,27
-C,F0,sum,latest common,10,10,nc_C,all,3,6,-3,19,22
-C,F0,sum,latest common,10,10,nc_D,all,22,9,13,35,22
-C,F0,sum,latest common,10,10,nc_E,all,28,22,6,72,66
-C,F0,sum,latest common,10,10,ttc_fail,all,149,126,23,470,447
-C,F0,sum,latest common,10,10,offroad,all,274,207,67,700,633
-C,F,0,latest common,15,15,offroad,>45,39,60,-21,129,150
-C,F,0,latest common,15,15,offroad,>20,81,98,-17,217,234
-C,F,0,latest common,15,15,cut_in,>45,19,41,-22,62,84
-C,F,0,latest common,15,15,cut_in,>20,47,69,-22,116,138
-C,F,0,latest common,15,15,under,>45,23,19,4,36,32
-C,F,0,latest common,15,15,under,>20,33,24,9,52,43
-C,F,0,latest common,15,15,nc_fail,all,40,74,-34,148,182
-C,F,0,latest common,15,15,nc_A,all,18,47,-29,71,100
-C,F,0,latest common,15,15,nc_A1,all,14,25,-11,47,58
-C,F,0,latest common,15,15,nc_A2,all,4,22,-18,24,42
-C,F,0,latest common,15,15,nc_B,all,5,8,-3,16,19
-C,F,0,latest common,15,15,nc_C,all,4,2,2,13,11
-C,F,0,latest common,15,15,nc_D,all,8,10,-2,16,18
-C,F,0,latest common,15,15,nc_E,all,13,15,-2,32,34
-C,F,0,latest common,15,15,ttc_fail,all,70,103,-33,216,249
-C,F,0,latest common,15,15,offroad,all,131,146,-15,337,352
-C,F,1,latest common,10,10,offroad,>45,42,45,-3,132,135
-C,F,1,latest common,10,10,offroad,>20,83,82,1,218,217
-C,F,1,latest common,10,10,cut_in,>45,19,31,-12,60,72
-C,F,1,latest common,10,10,cut_in,>20,47,58,-11,114,125
-C,F,1,latest common,10,10,under,>45,24,15,9,39,30
-C,F,1,latest common,10,10,under,>20,29,22,7,51,44
-C,F,1,latest common,10,10,nc_fail,all,45,45,0,155,155
-C,F,1,latest common,10,10,nc_A,all,23,30,-7,82,89
-C,F,1,latest common,10,10,nc_A1,all,19,18,1,56,55
-C,F,1,latest common,10,10,nc_A2,all,4,12,-8,26,34
-C,F,1,latest common,10,10,nc_B,all,9,0,9,21,12
-C,F,1,latest common,10,10,nc_C,all,4,4,0,10,10
-C,F,1,latest common,10,10,nc_D,all,6,4,2,12,10
-C,F,1,latest common,10,10,nc_E,all,12,16,-4,30,34
-C,F,1,latest common,10,10,ttc_fail,all,69,64,5,225,220
-C,F,1,latest common,10,10,offroad,all,134,116,18,330,312
-C,F,sum,latest common,10,10,offroad,>45,89,87,2,271,269
-C,F,sum,latest common,10,10,offroad,>20,173,153,20,450,430
-C,F,sum,latest common,10,10,cut_in,>45,47,57,-10,132,142
-C,F,sum,latest common,10,10,cut_in,>20,105,106,-1,249,250
-C,F,sum,latest common,10,10,under,>45,39,34,5,73,68
-C,F,sum,latest common,10,10,under,>20,50,47,3,96,93
-C,F,sum,latest common,10,10,nc_fail,all,108,83,25,342,317
-C,F,sum,latest common,10,10,nc_A,all,57,58,-1,179,180
-C,F,sum,latest common,10,10,nc_A1,all,41,37,4,114,110
-C,F,sum,latest common,10,10,nc_A2,all,16,21,-5,65,70
-C,F,sum,latest common,10,10,nc_B,all,20,2,18,45,27
-C,F,sum,latest common,10,10,nc_C,all,7,5,2,24,22
-C,F,sum,latest common,10,10,nc_D,all,14,9,5,27,22
-C,F,sum,latest common,10,10,nc_E,all,27,26,1,67,66
-C,F,sum,latest common,10,10,ttc_fail,all,153,121,32,479,447
-C,F,sum,latest common,10,10,offroad,all,269,217,52,685,633
-W,A,0,latest common,15,15,offroad,>45,38,24,14,148,134
-W,A,0,latest common,15,15,offroad,>20,74,45,29,255,226
-W,A,0,latest common,15,15,cut_in,>45,27,12,15,82,67
-W,A,0,latest common,15,15,cut_in,>20,56,23,33,150,117
-W,A,0,latest common,15,15,under,>45,10,12,-2,33,35
-W,A,0,latest common,15,15,under,>20,17,16,1,51,50
-W,A,0,latest common,15,15,nc_fail,all,32,29,3,166,163
-W,A,0,latest common,15,15,nc_A,all,18,19,-1,85,86
-W,A,0,latest common,15,15,nc_A1,all,14,16,-2,58,60
-W,A,0,latest common,15,15,nc_A2,all,4,3,1,27,26
-W,A,0,latest common,15,15,nc_B,all,5,2,3,20,17
-W,A,0,latest common,15,15,nc_C,all,2,2,0,11,11
-W,A,0,latest common,15,15,nc_D,all,9,11,-2,17,19
-W,A,0,latest common,15,15,nc_E,all,10,7,3,33,30
-W,A,0,latest common,15,15,ttc_fail,all,40,42,-2,234,236
-W,A,0,latest common,15,15,offroad,all,99,63,36,381,345
-W,A,1,latest common,5,5,offroad,>45,6,9,-3,130,133
-W,A,1,latest common,5,5,offroad,>20,17,15,2,233,231
-W,A,1,latest common,5,5,cut_in,>45,2,8,-6,59,65
-W,A,1,latest common,5,5,cut_in,>20,5,14,-9,122,131
-W,A,1,latest common,5,5,under,>45,8,3,5,41,36
-W,A,1,latest common,5,5,under,>20,17,3,14,61,47
-W,A,1,latest common,5,5,nc_fail,all,10,12,-2,172,174
-W,A,1,latest common,5,5,nc_A,all,4,5,-1,90,91
-W,A,1,latest common,5,5,nc_A1,all,0,3,-3,55,58
-W,A,1,latest common,5,5,nc_A2,all,4,2,2,35,33
-W,A,1,latest common,5,5,nc_B,all,0,3,-3,16,19
-W,A,1,latest common,5,5,nc_C,all,1,1,0,14,14
-W,A,1,latest common,5,5,nc_D,all,2,4,-2,17,19
-W,A,1,latest common,5,5,nc_E,all,5,1,4,35,31
-W,A,1,latest common,5,5,ttc_fail,all,13,16,-3,233,236
-W,A,1,latest common,5,5,offroad,all,25,21,4,369,365
-W,A,sum,latest common,5,5,offroad,>45,9,20,-11,275,286
-W,A,sum,latest common,5,5,offroad,>20,24,32,-8,496,504
-W,A,sum,latest common,5,5,cut_in,>45,3,15,-12,134,146
-W,A,sum,latest common,5,5,cut_in,>20,8,26,-18,286,304
-W,A,sum,latest common,5,5,under,>45,11,8,3,71,68
-W,A,sum,latest common,5,5,under,>20,22,9,13,100,87
-W,A,sum,latest common,5,5,nc_fail,all,20,22,-2,354,356
-W,A,sum,latest common,5,5,nc_A,all,8,10,-2,189,191
-W,A,sum,latest common,5,5,nc_A1,all,4,8,-4,119,123
-W,A,sum,latest common,5,5,nc_A2,all,4,2,2,70,68
-W,A,sum,latest common,5,5,nc_B,all,2,5,-3,38,41
-W,A,sum,latest common,5,5,nc_C,all,2,2,0,28,28
-W,A,sum,latest common,5,5,nc_D,all,8,7,1,32,31
-W,A,sum,latest common,5,5,nc_E,all,5,3,2,67,65
-W,A,sum,latest common,5,5,ttc_fail,all,28,29,-1,474,475
-W,A,sum,latest common,5,5,offroad,all,34,46,-12,750,762
-W,F,0,latest common,15,15,offroad,>45,23,28,-5,129,134
-W,F,0,latest common,15,15,offroad,>20,42,51,-9,217,226
-W,F,0,latest common,15,15,cut_in,>45,14,19,-5,62,67
-W,F,0,latest common,15,15,cut_in,>20,30,31,-1,116,117
-W,F,0,latest common,15,15,under,>45,10,9,1,36,35
-W,F,0,latest common,15,15,under,>20,15,13,2,52,50
-W,F,0,latest common,15,15,nc_fail,all,24,39,-15,148,163
-W,F,0,latest common,15,15,nc_A,all,12,27,-15,71,86
-W,F,0,latest common,15,15,nc_A1,all,7,20,-13,47,60
-W,F,0,latest common,15,15,nc_A2,all,5,7,-2,24,26
-W,F,0,latest common,15,15,nc_B,all,3,4,-1,16,17
-W,F,0,latest common,15,15,nc_C,all,4,2,2,13,11
-W,F,0,latest common,15,15,nc_D,all,6,9,-3,16,19
-W,F,0,latest common,15,15,nc_E,all,6,4,2,32,30
-W,F,0,latest common,15,15,ttc_fail,all,25,45,-20,216,236
-W,F,0,latest common,15,15,offroad,all,56,64,-8,337,345
-W,F,1,latest common,5,5,offroad,>45,4,8,-4,129,133
-W,F,1,latest common,5,5,offroad,>20,15,9,6,237,231
-W,F,1,latest common,5,5,cut_in,>45,1,4,-3,62,65
-W,F,1,latest common,5,5,cut_in,>20,7,6,1,132,131
-W,F,1,latest common,5,5,under,>45,5,5,0,36,36
-W,F,1,latest common,5,5,under,>20,13,5,8,55,47
-W,F,1,latest common,5,5,nc_fail,all,11,8,3,177,174
-W,F,1,latest common,5,5,nc_A,all,6,5,1,92,91
-W,F,1,latest common,5,5,nc_A1,all,3,3,0,58,58
-W,F,1,latest common,5,5,nc_A2,all,3,2,1,34,33
-W,F,1,latest common,5,5,nc_B,all,3,1,2,21,19
-W,F,1,latest common,5,5,nc_C,all,0,2,-2,12,14
-W,F,1,latest common,5,5,nc_D,all,3,3,0,19,19
-W,F,1,latest common,5,5,nc_E,all,4,2,2,33,31
-W,F,1,latest common,5,5,ttc_fail,all,15,9,6,242,236
-W,F,1,latest common,5,5,offroad,all,21,14,7,372,365
-W,F,sum,latest common,5,5,offroad,>45,10,14,-4,282,286
-W,F,sum,latest common,5,5,offroad,>20,28,18,10,514,504
-W,F,sum,latest common,5,5,cut_in,>45,4,9,-5,141,146
-W,F,sum,latest common,5,5,cut_in,>20,14,13,1,305,304
-W,F,sum,latest common,5,5,under,>45,6,6,0,68,68
-W,F,sum,latest common,5,5,under,>20,16,7,9,96,87
-W,F,sum,latest common,5,5,nc_fail,all,22,17,5,361,356
-W,F,sum,latest common,5,5,nc_A,all,11,10,1,192,191
-W,F,sum,latest common,5,5,nc_A1,all,6,6,0,123,123
-W,F,sum,latest common,5,5,nc_A2,all,5,4,1,69,68
-W,F,sum,latest common,5,5,nc_B,all,7,2,5,46,41
-W,F,sum,latest common,5,5,nc_C,all,0,3,-3,25,28
-W,F,sum,latest common,5,5,nc_D,all,7,4,3,34,31
-W,F,sum,latest common,5,5,nc_E,all,4,5,-1,64,65
-W,F,sum,latest common,5,5,ttc_fail,all,26,19,7,482,475
-W,F,sum,latest common,5,5,offroad,all,42,31,11,773,762
+A,A0,0,latest common,50,50,offroad,>45,52,62,-10,148,158
+A,A0,0,latest common,50,50,offroad,>20,83,96,-13,242,255
+A,A0,0,latest common,50,50,cut_in,>45,32,43,-11,79,90
+A,A0,0,latest common,50,50,cut_in,>20,53,66,-13,139,152
+A,A0,0,latest common,50,50,under,>45,22,7,15,40,25
+A,A0,0,latest common,50,50,under,>20,29,14,15,53,38
+A,A0,0,latest common,50,50,nc_fail,all,47,71,-24,152,176
+A,A0,0,latest common,50,50,nc_A,all,38,46,-8,81,89
+A,A0,0,latest common,50,50,nc_A1,all,21,27,-6,53,59
+A,A0,0,latest common,50,50,nc_A2,all,17,19,-2,28,30
+A,A0,0,latest common,50,50,nc_B,all,1,7,-6,17,23
+A,A0,0,latest common,50,50,nc_C,all,4,4,0,12,12
+A,A0,0,latest common,50,50,nc_D,all,5,12,-7,12,19
+A,A0,0,latest common,50,50,nc_E,all,11,14,-3,30,33
+A,A0,0,latest common,50,50,ttc_fail,all,53,96,-43,219,262
+A,A0,0,latest common,50,50,offroad,all,123,133,-10,366,376
+A,A0,0,final,50,50,offroad,>45,52,62,-10,148,158
+A,A0,0,final,50,50,offroad,>20,83,96,-13,242,255
+A,A0,0,final,50,50,cut_in,>45,32,43,-11,79,90
+A,A0,0,final,50,50,cut_in,>20,53,66,-13,139,152
+A,A0,0,final,50,50,under,>45,22,7,15,40,25
+A,A0,0,final,50,50,under,>20,29,14,15,53,38
+A,A0,0,final,50,50,nc_fail,all,47,71,-24,152,176
+A,A0,0,final,50,50,nc_A,all,38,46,-8,81,89
+A,A0,0,final,50,50,nc_A1,all,21,27,-6,53,59
+A,A0,0,final,50,50,nc_A2,all,17,19,-2,28,30
+A,A0,0,final,50,50,nc_B,all,1,7,-6,17,23
+A,A0,0,final,50,50,nc_C,all,4,4,0,12,12
+A,A0,0,final,50,50,nc_D,all,5,12,-7,12,19
+A,A0,0,final,50,50,nc_E,all,11,14,-3,30,33
+A,A0,0,final,50,50,ttc_fail,all,53,96,-43,219,262
+A,A0,0,final,50,50,offroad,all,123,133,-10,366,376
+A,A0,1,latest common,50,50,offroad,>45,49,68,-19,151,170
+A,A0,1,latest common,50,50,offroad,>20,85,109,-24,256,280
+A,A0,1,latest common,50,50,cut_in,>45,25,47,-22,83,105
+A,A0,1,latest common,50,50,cut_in,>20,52,76,-24,157,181
+A,A0,1,latest common,50,50,under,>45,15,12,3,35,32
+A,A0,1,latest common,50,50,under,>20,22,17,5,48,43
+A,A0,1,latest common,50,50,nc_fail,all,53,72,-19,171,190
+A,A0,1,latest common,50,50,nc_A,all,44,51,-7,97,104
+A,A0,1,latest common,50,50,nc_A1,all,30,30,0,65,65
+A,A0,1,latest common,50,50,nc_A2,all,14,21,-7,32,39
+A,A0,1,latest common,50,50,nc_B,all,4,8,-4,18,22
+A,A0,1,latest common,50,50,nc_C,all,2,4,-2,11,13
+A,A0,1,latest common,50,50,nc_D,all,4,11,-7,14,21
+A,A0,1,latest common,50,50,nc_E,all,11,10,1,31,30
+A,A0,1,latest common,50,50,ttc_fail,all,64,89,-25,236,261
+A,A0,1,latest common,50,50,offroad,all,122,162,-40,380,420
+A,A0,1,final,50,50,offroad,>45,49,68,-19,151,170
+A,A0,1,final,50,50,offroad,>20,85,109,-24,256,280
+A,A0,1,final,50,50,cut_in,>45,25,47,-22,83,105
+A,A0,1,final,50,50,cut_in,>20,52,76,-24,157,181
+A,A0,1,final,50,50,under,>45,15,12,3,35,32
+A,A0,1,final,50,50,under,>20,22,17,5,48,43
+A,A0,1,final,50,50,nc_fail,all,53,72,-19,171,190
+A,A0,1,final,50,50,nc_A,all,44,51,-7,97,104
+A,A0,1,final,50,50,nc_A1,all,30,30,0,65,65
+A,A0,1,final,50,50,nc_A2,all,14,21,-7,32,39
+A,A0,1,final,50,50,nc_B,all,4,8,-4,18,22
+A,A0,1,final,50,50,nc_C,all,2,4,-2,11,13
+A,A0,1,final,50,50,nc_D,all,4,11,-7,14,21
+A,A0,1,final,50,50,nc_E,all,11,10,1,31,30
+A,A0,1,final,50,50,ttc_fail,all,64,89,-25,236,261
+A,A0,1,final,50,50,offroad,all,122,162,-40,380,420
+A,A0,sum,latest common,50,50,offroad,>45,101,130,-29,299,328
+A,A0,sum,latest common,50,50,offroad,>20,168,205,-37,498,535
+A,A0,sum,latest common,50,50,cut_in,>45,57,90,-33,162,195
+A,A0,sum,latest common,50,50,cut_in,>20,105,142,-37,296,333
+A,A0,sum,latest common,50,50,under,>45,37,19,18,75,57
+A,A0,sum,latest common,50,50,under,>20,51,31,20,101,81
+A,A0,sum,latest common,50,50,nc_fail,all,100,143,-43,323,366
+A,A0,sum,latest common,50,50,nc_A,all,82,97,-15,178,193
+A,A0,sum,latest common,50,50,nc_A1,all,51,57,-6,118,124
+A,A0,sum,latest common,50,50,nc_A2,all,31,40,-9,60,69
+A,A0,sum,latest common,50,50,nc_B,all,5,15,-10,35,45
+A,A0,sum,latest common,50,50,nc_C,all,6,8,-2,23,25
+A,A0,sum,latest common,50,50,nc_D,all,9,23,-14,26,40
+A,A0,sum,latest common,50,50,nc_E,all,22,24,-2,61,63
+A,A0,sum,latest common,50,50,ttc_fail,all,117,185,-68,455,523
+A,A0,sum,latest common,50,50,offroad,all,245,295,-50,746,796
+A,A0,sum,final,50,50,offroad,>45,101,130,-29,299,328
+A,A0,sum,final,50,50,offroad,>20,168,205,-37,498,535
+A,A0,sum,final,50,50,cut_in,>45,57,90,-33,162,195
+A,A0,sum,final,50,50,cut_in,>20,105,142,-37,296,333
+A,A0,sum,final,50,50,under,>45,37,19,18,75,57
+A,A0,sum,final,50,50,under,>20,51,31,20,101,81
+A,A0,sum,final,50,50,nc_fail,all,100,143,-43,323,366
+A,A0,sum,final,50,50,nc_A,all,82,97,-15,178,193
+A,A0,sum,final,50,50,nc_A1,all,51,57,-6,118,124
+A,A0,sum,final,50,50,nc_A2,all,31,40,-9,60,69
+A,A0,sum,final,50,50,nc_B,all,5,15,-10,35,45
+A,A0,sum,final,50,50,nc_C,all,6,8,-2,23,25
+A,A0,sum,final,50,50,nc_D,all,9,23,-14,26,40
+A,A0,sum,final,50,50,nc_E,all,22,24,-2,61,63
+A,A0,sum,final,50,50,ttc_fail,all,117,185,-68,455,523
+A,A0,sum,final,50,50,offroad,all,245,295,-50,746,796
+A,F,0,latest common,50,50,offroad,>45,45,54,-9,149,158
+A,F,0,latest common,50,50,offroad,>20,81,91,-10,245,255
+A,F,0,latest common,50,50,cut_in,>45,26,35,-9,81,90
+A,F,0,latest common,50,50,cut_in,>20,54,57,-3,149,152
+A,F,0,latest common,50,50,under,>45,20,8,12,37,25
+A,F,0,latest common,50,50,under,>20,24,17,7,45,38
+A,F,0,latest common,50,50,nc_fail,all,46,65,-19,157,176
+A,F,0,latest common,50,50,nc_A,all,32,44,-12,77,89
+A,F,0,latest common,50,50,nc_A1,all,18,28,-10,49,59
+A,F,0,latest common,50,50,nc_A2,all,14,16,-2,28,30
+A,F,0,latest common,50,50,nc_B,all,2,7,-5,18,23
+A,F,0,latest common,50,50,nc_C,all,4,3,1,13,12
+A,F,0,latest common,50,50,nc_D,all,10,12,-2,17,19
+A,F,0,latest common,50,50,nc_E,all,12,13,-1,32,33
+A,F,0,latest common,50,50,ttc_fail,all,61,94,-33,229,262
+A,F,0,latest common,50,50,offroad,all,119,128,-9,367,376
+A,F,0,final,50,50,offroad,>45,45,54,-9,149,158
+A,F,0,final,50,50,offroad,>20,81,91,-10,245,255
+A,F,0,final,50,50,cut_in,>45,26,35,-9,81,90
+A,F,0,final,50,50,cut_in,>20,54,57,-3,149,152
+A,F,0,final,50,50,under,>45,20,8,12,37,25
+A,F,0,final,50,50,under,>20,24,17,7,45,38
+A,F,0,final,50,50,nc_fail,all,46,65,-19,157,176
+A,F,0,final,50,50,nc_A,all,32,44,-12,77,89
+A,F,0,final,50,50,nc_A1,all,18,28,-10,49,59
+A,F,0,final,50,50,nc_A2,all,14,16,-2,28,30
+A,F,0,final,50,50,nc_B,all,2,7,-5,18,23
+A,F,0,final,50,50,nc_C,all,4,3,1,13,12
+A,F,0,final,50,50,nc_D,all,10,12,-2,17,19
+A,F,0,final,50,50,nc_E,all,12,13,-1,32,33
+A,F,0,final,50,50,ttc_fail,all,61,94,-33,229,262
+A,F,0,final,50,50,offroad,all,119,128,-9,367,376
+A,F,1,latest common,50,50,offroad,>45,48,75,-27,143,170
+A,F,1,latest common,50,50,offroad,>20,76,118,-42,238,280
+A,F,1,latest common,50,50,cut_in,>45,23,47,-24,81,105
+A,F,1,latest common,50,50,cut_in,>20,46,76,-30,151,181
+A,F,1,latest common,50,50,under,>45,14,13,1,33,32
+A,F,1,latest common,50,50,under,>20,17,19,-2,41,43
+A,F,1,latest common,50,50,nc_fail,all,43,71,-28,162,190
+A,F,1,latest common,50,50,nc_A,all,30,52,-22,82,104
+A,F,1,latest common,50,50,nc_A1,all,21,29,-8,57,65
+A,F,1,latest common,50,50,nc_A2,all,9,23,-14,25,39
+A,F,1,latest common,50,50,nc_B,all,5,6,-1,21,22
+A,F,1,latest common,50,50,nc_C,all,0,5,-5,8,13
+A,F,1,latest common,50,50,nc_D,all,7,10,-3,18,21
+A,F,1,latest common,50,50,nc_E,all,13,10,3,33,30
+A,F,1,latest common,50,50,ttc_fail,all,58,97,-39,222,261
+A,F,1,latest common,50,50,offroad,all,106,166,-60,360,420
+A,F,1,final,50,50,offroad,>45,48,75,-27,143,170
+A,F,1,final,50,50,offroad,>20,76,118,-42,238,280
+A,F,1,final,50,50,cut_in,>45,23,47,-24,81,105
+A,F,1,final,50,50,cut_in,>20,46,76,-30,151,181
+A,F,1,final,50,50,under,>45,14,13,1,33,32
+A,F,1,final,50,50,under,>20,17,19,-2,41,43
+A,F,1,final,50,50,nc_fail,all,43,71,-28,162,190
+A,F,1,final,50,50,nc_A,all,30,52,-22,82,104
+A,F,1,final,50,50,nc_A1,all,21,29,-8,57,65
+A,F,1,final,50,50,nc_A2,all,9,23,-14,25,39
+A,F,1,final,50,50,nc_B,all,5,6,-1,21,22
+A,F,1,final,50,50,nc_C,all,0,5,-5,8,13
+A,F,1,final,50,50,nc_D,all,7,10,-3,18,21
+A,F,1,final,50,50,nc_E,all,13,10,3,33,30
+A,F,1,final,50,50,ttc_fail,all,58,97,-39,222,261
+A,F,1,final,50,50,offroad,all,106,166,-60,360,420
+A,F,sum,latest common,50,50,offroad,>45,93,129,-36,292,328
+A,F,sum,latest common,50,50,offroad,>20,157,209,-52,483,535
+A,F,sum,latest common,50,50,cut_in,>45,49,82,-33,162,195
+A,F,sum,latest common,50,50,cut_in,>20,100,133,-33,300,333
+A,F,sum,latest common,50,50,under,>45,34,21,13,70,57
+A,F,sum,latest common,50,50,under,>20,41,36,5,86,81
+A,F,sum,latest common,50,50,nc_fail,all,89,136,-47,319,366
+A,F,sum,latest common,50,50,nc_A,all,62,96,-34,159,193
+A,F,sum,latest common,50,50,nc_A1,all,39,57,-18,106,124
+A,F,sum,latest common,50,50,nc_A2,all,23,39,-16,53,69
+A,F,sum,latest common,50,50,nc_B,all,7,13,-6,39,45
+A,F,sum,latest common,50,50,nc_C,all,4,8,-4,21,25
+A,F,sum,latest common,50,50,nc_D,all,17,22,-5,35,40
+A,F,sum,latest common,50,50,nc_E,all,25,23,2,65,63
+A,F,sum,latest common,50,50,ttc_fail,all,119,191,-72,451,523
+A,F,sum,latest common,50,50,offroad,all,225,294,-69,727,796
+A,F,sum,final,50,50,offroad,>45,93,129,-36,292,328
+A,F,sum,final,50,50,offroad,>20,157,209,-52,483,535
+A,F,sum,final,50,50,cut_in,>45,49,82,-33,162,195
+A,F,sum,final,50,50,cut_in,>20,100,133,-33,300,333
+A,F,sum,final,50,50,under,>45,34,21,13,70,57
+A,F,sum,final,50,50,under,>20,41,36,5,86,81
+A,F,sum,final,50,50,nc_fail,all,89,136,-47,319,366
+A,F,sum,final,50,50,nc_A,all,62,96,-34,159,193
+A,F,sum,final,50,50,nc_A1,all,39,57,-18,106,124
+A,F,sum,final,50,50,nc_A2,all,23,39,-16,53,69
+A,F,sum,final,50,50,nc_B,all,7,13,-6,39,45
+A,F,sum,final,50,50,nc_C,all,4,8,-4,21,25
+A,F,sum,final,50,50,nc_D,all,17,22,-5,35,40
+A,F,sum,final,50,50,nc_E,all,25,23,2,65,63
+A,F,sum,final,50,50,ttc_fail,all,119,191,-72,451,523
+A,F,sum,final,50,50,offroad,all,225,294,-69,727,796
+B,A0,0,latest common,50,50,offroad,>45,52,58,-6,148,154
+B,A0,0,latest common,50,50,offroad,>20,90,94,-4,242,246
+B,A0,0,latest common,50,50,cut_in,>45,34,38,-4,79,83
+B,A0,0,latest common,50,50,cut_in,>20,61,61,0,139,139
+B,A0,0,latest common,50,50,under,>45,21,11,10,40,30
+B,A0,0,latest common,50,50,under,>20,29,17,12,53,41
+B,A0,0,latest common,50,50,nc_fail,all,46,75,-29,152,181
+B,A0,0,latest common,50,50,nc_A,all,35,45,-10,81,91
+B,A0,0,latest common,50,50,nc_A1,all,21,28,-7,53,60
+B,A0,0,latest common,50,50,nc_A2,all,14,17,-3,28,31
+B,A0,0,latest common,50,50,nc_B,all,1,6,-5,17,22
+B,A0,0,latest common,50,50,nc_C,all,4,5,-1,12,13
+B,A0,0,latest common,50,50,nc_D,all,5,12,-7,12,19
+B,A0,0,latest common,50,50,nc_E,all,10,16,-6,30,36
+B,A0,0,latest common,50,50,ttc_fail,all,56,98,-42,219,261
+B,A0,0,latest common,50,50,offroad,all,130,137,-7,366,373
+B,A0,0,final,50,50,offroad,>45,52,58,-6,148,154
+B,A0,0,final,50,50,offroad,>20,90,94,-4,242,246
+B,A0,0,final,50,50,cut_in,>45,34,38,-4,79,83
+B,A0,0,final,50,50,cut_in,>20,61,61,0,139,139
+B,A0,0,final,50,50,under,>45,21,11,10,40,30
+B,A0,0,final,50,50,under,>20,29,17,12,53,41
+B,A0,0,final,50,50,nc_fail,all,46,75,-29,152,181
+B,A0,0,final,50,50,nc_A,all,35,45,-10,81,91
+B,A0,0,final,50,50,nc_A1,all,21,28,-7,53,60
+B,A0,0,final,50,50,nc_A2,all,14,17,-3,28,31
+B,A0,0,final,50,50,nc_B,all,1,6,-5,17,22
+B,A0,0,final,50,50,nc_C,all,4,5,-1,12,13
+B,A0,0,final,50,50,nc_D,all,5,12,-7,12,19
+B,A0,0,final,50,50,nc_E,all,10,16,-6,30,36
+B,A0,0,final,50,50,ttc_fail,all,56,98,-42,219,261
+B,A0,0,final,50,50,offroad,all,130,137,-7,366,373
+B,A0,1,latest common,50,50,offroad,>45,47,68,-21,151,172
+B,A0,1,latest common,50,50,offroad,>20,78,124,-46,256,302
+B,A0,1,latest common,50,50,cut_in,>45,28,50,-22,83,105
+B,A0,1,latest common,50,50,cut_in,>20,48,95,-47,157,204
+B,A0,1,latest common,50,50,under,>45,11,9,2,35,33
+B,A0,1,latest common,50,50,under,>20,21,16,5,48,43
+B,A0,1,latest common,50,50,nc_fail,all,53,81,-28,171,199
+B,A0,1,latest common,50,50,nc_A,all,41,46,-5,97,102
+B,A0,1,latest common,50,50,nc_A1,all,26,30,-4,65,69
+B,A0,1,latest common,50,50,nc_A2,all,15,16,-1,32,33
+B,A0,1,latest common,50,50,nc_B,all,4,10,-6,18,24
+B,A0,1,latest common,50,50,nc_C,all,2,3,-1,11,12
+B,A0,1,latest common,50,50,nc_D,all,5,17,-12,14,26
+B,A0,1,latest common,50,50,nc_E,all,10,14,-4,31,35
+B,A0,1,latest common,50,50,ttc_fail,all,66,96,-30,236,266
+B,A0,1,latest common,50,50,offroad,all,117,176,-59,380,439
+B,A0,1,final,50,50,offroad,>45,47,68,-21,151,172
+B,A0,1,final,50,50,offroad,>20,78,124,-46,256,302
+B,A0,1,final,50,50,cut_in,>45,28,50,-22,83,105
+B,A0,1,final,50,50,cut_in,>20,48,95,-47,157,204
+B,A0,1,final,50,50,under,>45,11,9,2,35,33
+B,A0,1,final,50,50,under,>20,21,16,5,48,43
+B,A0,1,final,50,50,nc_fail,all,53,81,-28,171,199
+B,A0,1,final,50,50,nc_A,all,41,46,-5,97,102
+B,A0,1,final,50,50,nc_A1,all,26,30,-4,65,69
+B,A0,1,final,50,50,nc_A2,all,15,16,-1,32,33
+B,A0,1,final,50,50,nc_B,all,4,10,-6,18,24
+B,A0,1,final,50,50,nc_C,all,2,3,-1,11,12
+B,A0,1,final,50,50,nc_D,all,5,17,-12,14,26
+B,A0,1,final,50,50,nc_E,all,10,14,-4,31,35
+B,A0,1,final,50,50,ttc_fail,all,66,96,-30,236,266
+B,A0,1,final,50,50,offroad,all,117,176,-59,380,439
+B,A0,sum,latest common,50,50,offroad,>45,99,126,-27,299,326
+B,A0,sum,latest common,50,50,offroad,>20,168,218,-50,498,548
+B,A0,sum,latest common,50,50,cut_in,>45,62,88,-26,162,188
+B,A0,sum,latest common,50,50,cut_in,>20,109,156,-47,296,343
+B,A0,sum,latest common,50,50,under,>45,32,20,12,75,63
+B,A0,sum,latest common,50,50,under,>20,50,33,17,101,84
+B,A0,sum,latest common,50,50,nc_fail,all,99,156,-57,323,380
+B,A0,sum,latest common,50,50,nc_A,all,76,91,-15,178,193
+B,A0,sum,latest common,50,50,nc_A1,all,47,58,-11,118,129
+B,A0,sum,latest common,50,50,nc_A2,all,29,33,-4,60,64
+B,A0,sum,latest common,50,50,nc_B,all,5,16,-11,35,46
+B,A0,sum,latest common,50,50,nc_C,all,6,8,-2,23,25
+B,A0,sum,latest common,50,50,nc_D,all,10,29,-19,26,45
+B,A0,sum,latest common,50,50,nc_E,all,20,30,-10,61,71
+B,A0,sum,latest common,50,50,ttc_fail,all,122,194,-72,455,527
+B,A0,sum,latest common,50,50,offroad,all,247,313,-66,746,812
+B,A0,sum,final,50,50,offroad,>45,99,126,-27,299,326
+B,A0,sum,final,50,50,offroad,>20,168,218,-50,498,548
+B,A0,sum,final,50,50,cut_in,>45,62,88,-26,162,188
+B,A0,sum,final,50,50,cut_in,>20,109,156,-47,296,343
+B,A0,sum,final,50,50,under,>45,32,20,12,75,63
+B,A0,sum,final,50,50,under,>20,50,33,17,101,84
+B,A0,sum,final,50,50,nc_fail,all,99,156,-57,323,380
+B,A0,sum,final,50,50,nc_A,all,76,91,-15,178,193
+B,A0,sum,final,50,50,nc_A1,all,47,58,-11,118,129
+B,A0,sum,final,50,50,nc_A2,all,29,33,-4,60,64
+B,A0,sum,final,50,50,nc_B,all,5,16,-11,35,46
+B,A0,sum,final,50,50,nc_C,all,6,8,-2,23,25
+B,A0,sum,final,50,50,nc_D,all,10,29,-19,26,45
+B,A0,sum,final,50,50,nc_E,all,20,30,-10,61,71
+B,A0,sum,final,50,50,ttc_fail,all,122,194,-72,455,527
+B,A0,sum,final,50,50,offroad,all,247,313,-66,746,812
+B,A,0,latest common,50,50,offroad,>45,38,34,4,158,154
+B,A,0,latest common,50,50,offroad,>20,68,59,9,255,246
+B,A,0,latest common,50,50,cut_in,>45,24,17,7,90,83
+B,A,0,latest common,50,50,cut_in,>20,45,32,13,152,139
+B,A,0,latest common,50,50,under,>45,7,12,-5,25,30
+B,A,0,latest common,50,50,under,>20,12,15,-3,38,41
+B,A,0,latest common,50,50,nc_fail,all,25,30,-5,176,181
+B,A,0,latest common,50,50,nc_A,all,16,18,-2,89,91
+B,A,0,latest common,50,50,nc_A1,all,12,13,-1,59,60
+B,A,0,latest common,50,50,nc_A2,all,4,5,-1,30,31
+B,A,0,latest common,50,50,nc_B,all,2,1,1,23,22
+B,A,0,latest common,50,50,nc_C,all,1,2,-1,12,13
+B,A,0,latest common,50,50,nc_D,all,8,8,0,19,19
+B,A,0,latest common,50,50,nc_E,all,7,10,-3,33,36
+B,A,0,latest common,50,50,ttc_fail,all,44,43,1,262,261
+B,A,0,latest common,50,50,offroad,all,94,91,3,376,373
+B,A,0,final,50,50,offroad,>45,38,34,4,158,154
+B,A,0,final,50,50,offroad,>20,68,59,9,255,246
+B,A,0,final,50,50,cut_in,>45,24,17,7,90,83
+B,A,0,final,50,50,cut_in,>20,45,32,13,152,139
+B,A,0,final,50,50,under,>45,7,12,-5,25,30
+B,A,0,final,50,50,under,>20,12,15,-3,38,41
+B,A,0,final,50,50,nc_fail,all,25,30,-5,176,181
+B,A,0,final,50,50,nc_A,all,16,18,-2,89,91
+B,A,0,final,50,50,nc_A1,all,12,13,-1,59,60
+B,A,0,final,50,50,nc_A2,all,4,5,-1,30,31
+B,A,0,final,50,50,nc_B,all,2,1,1,23,22
+B,A,0,final,50,50,nc_C,all,1,2,-1,12,13
+B,A,0,final,50,50,nc_D,all,8,8,0,19,19
+B,A,0,final,50,50,nc_E,all,7,10,-3,33,36
+B,A,0,final,50,50,ttc_fail,all,44,43,1,262,261
+B,A,0,final,50,50,offroad,all,94,91,3,376,373
+B,A,1,latest common,50,50,offroad,>45,45,47,-2,170,172
+B,A,1,latest common,50,50,offroad,>20,68,90,-22,280,302
+B,A,1,latest common,50,50,cut_in,>45,30,30,0,105,105
+B,A,1,latest common,50,50,cut_in,>20,39,62,-23,181,204
+B,A,1,latest common,50,50,under,>45,8,9,-1,32,33
+B,A,1,latest common,50,50,under,>20,13,13,0,43,43
+B,A,1,latest common,50,50,nc_fail,all,26,35,-9,190,199
+B,A,1,latest common,50,50,nc_A,all,23,21,2,104,102
+B,A,1,latest common,50,50,nc_A1,all,13,17,-4,65,69
+B,A,1,latest common,50,50,nc_A2,all,10,4,6,39,33
+B,A,1,latest common,50,50,nc_B,all,1,3,-2,22,24
+B,A,1,latest common,50,50,nc_C,all,2,1,1,13,12
+B,A,1,latest common,50,50,nc_D,all,8,13,-5,21,26
+B,A,1,latest common,50,50,nc_E,all,5,10,-5,30,35
+B,A,1,latest common,50,50,ttc_fail,all,41,46,-5,261,266
+B,A,1,latest common,50,50,offroad,all,103,122,-19,420,439
+B,A,1,final,50,50,offroad,>45,45,47,-2,170,172
+B,A,1,final,50,50,offroad,>20,68,90,-22,280,302
+B,A,1,final,50,50,cut_in,>45,30,30,0,105,105
+B,A,1,final,50,50,cut_in,>20,39,62,-23,181,204
+B,A,1,final,50,50,under,>45,8,9,-1,32,33
+B,A,1,final,50,50,under,>20,13,13,0,43,43
+B,A,1,final,50,50,nc_fail,all,26,35,-9,190,199
+B,A,1,final,50,50,nc_A,all,23,21,2,104,102
+B,A,1,final,50,50,nc_A1,all,13,17,-4,65,69
+B,A,1,final,50,50,nc_A2,all,10,4,6,39,33
+B,A,1,final,50,50,nc_B,all,1,3,-2,22,24
+B,A,1,final,50,50,nc_C,all,2,1,1,13,12
+B,A,1,final,50,50,nc_D,all,8,13,-5,21,26
+B,A,1,final,50,50,nc_E,all,5,10,-5,30,35
+B,A,1,final,50,50,ttc_fail,all,41,46,-5,261,266
+B,A,1,final,50,50,offroad,all,103,122,-19,420,439
+B,A,sum,latest common,50,50,offroad,>45,83,81,2,328,326
+B,A,sum,latest common,50,50,offroad,>20,136,149,-13,535,548
+B,A,sum,latest common,50,50,cut_in,>45,54,47,7,195,188
+B,A,sum,latest common,50,50,cut_in,>20,84,94,-10,333,343
+B,A,sum,latest common,50,50,under,>45,15,21,-6,57,63
+B,A,sum,latest common,50,50,under,>20,25,28,-3,81,84
+B,A,sum,latest common,50,50,nc_fail,all,51,65,-14,366,380
+B,A,sum,latest common,50,50,nc_A,all,39,39,0,193,193
+B,A,sum,latest common,50,50,nc_A1,all,25,30,-5,124,129
+B,A,sum,latest common,50,50,nc_A2,all,14,9,5,69,64
+B,A,sum,latest common,50,50,nc_B,all,3,4,-1,45,46
+B,A,sum,latest common,50,50,nc_C,all,3,3,0,25,25
+B,A,sum,latest common,50,50,nc_D,all,16,21,-5,40,45
+B,A,sum,latest common,50,50,nc_E,all,12,20,-8,63,71
+B,A,sum,latest common,50,50,ttc_fail,all,85,89,-4,523,527
+B,A,sum,latest common,50,50,offroad,all,197,213,-16,796,812
+B,A,sum,final,50,50,offroad,>45,83,81,2,328,326
+B,A,sum,final,50,50,offroad,>20,136,149,-13,535,548
+B,A,sum,final,50,50,cut_in,>45,54,47,7,195,188
+B,A,sum,final,50,50,cut_in,>20,84,94,-10,333,343
+B,A,sum,final,50,50,under,>45,15,21,-6,57,63
+B,A,sum,final,50,50,under,>20,25,28,-3,81,84
+B,A,sum,final,50,50,nc_fail,all,51,65,-14,366,380
+B,A,sum,final,50,50,nc_A,all,39,39,0,193,193
+B,A,sum,final,50,50,nc_A1,all,25,30,-5,124,129
+B,A,sum,final,50,50,nc_A2,all,14,9,5,69,64
+B,A,sum,final,50,50,nc_B,all,3,4,-1,45,46
+B,A,sum,final,50,50,nc_C,all,3,3,0,25,25
+B,A,sum,final,50,50,nc_D,all,16,21,-5,40,45
+B,A,sum,final,50,50,nc_E,all,12,20,-8,63,71
+B,A,sum,final,50,50,ttc_fail,all,85,89,-4,523,527
+B,A,sum,final,50,50,offroad,all,197,213,-16,796,812
+B,F,0,latest common,50,50,offroad,>45,50,55,-5,149,154
+B,F,0,latest common,50,50,offroad,>20,87,88,-1,245,246
+B,F,0,latest common,50,50,cut_in,>45,32,34,-2,81,83
+B,F,0,latest common,50,50,cut_in,>20,62,52,10,149,139
+B,F,0,latest common,50,50,under,>45,19,12,7,37,30
+B,F,0,latest common,50,50,under,>20,24,20,4,45,41
+B,F,0,latest common,50,50,nc_fail,all,45,69,-24,157,181
+B,F,0,latest common,50,50,nc_A,all,30,44,-14,77,91
+B,F,0,latest common,50,50,nc_A1,all,18,29,-11,49,60
+B,F,0,latest common,50,50,nc_A2,all,12,15,-3,28,31
+B,F,0,latest common,50,50,nc_B,all,1,5,-4,18,22
+B,F,0,latest common,50,50,nc_C,all,3,3,0,13,13
+B,F,0,latest common,50,50,nc_D,all,10,12,-2,17,19
+B,F,0,latest common,50,50,nc_E,all,11,15,-4,32,36
+B,F,0,latest common,50,50,ttc_fail,all,58,90,-32,229,261
+B,F,0,latest common,50,50,offroad,all,125,131,-6,367,373
+B,F,0,final,50,50,offroad,>45,50,55,-5,149,154
+B,F,0,final,50,50,offroad,>20,87,88,-1,245,246
+B,F,0,final,50,50,cut_in,>45,32,34,-2,81,83
+B,F,0,final,50,50,cut_in,>20,62,52,10,149,139
+B,F,0,final,50,50,under,>45,19,12,7,37,30
+B,F,0,final,50,50,under,>20,24,20,4,45,41
+B,F,0,final,50,50,nc_fail,all,45,69,-24,157,181
+B,F,0,final,50,50,nc_A,all,30,44,-14,77,91
+B,F,0,final,50,50,nc_A1,all,18,29,-11,49,60
+B,F,0,final,50,50,nc_A2,all,12,15,-3,28,31
+B,F,0,final,50,50,nc_B,all,1,5,-4,18,22
+B,F,0,final,50,50,nc_C,all,3,3,0,13,13
+B,F,0,final,50,50,nc_D,all,10,12,-2,17,19
+B,F,0,final,50,50,nc_E,all,11,15,-4,32,36
+B,F,0,final,50,50,ttc_fail,all,58,90,-32,229,261
+B,F,0,final,50,50,offroad,all,125,131,-6,367,373
+B,F,1,latest common,50,50,offroad,>45,46,75,-29,143,172
+B,F,1,latest common,50,50,offroad,>20,68,132,-64,238,302
+B,F,1,latest common,50,50,cut_in,>45,27,51,-24,81,105
+B,F,1,latest common,50,50,cut_in,>20,43,96,-53,151,204
+B,F,1,latest common,50,50,under,>45,14,14,0,33,33
+B,F,1,latest common,50,50,under,>20,18,20,-2,41,43
+B,F,1,latest common,50,50,nc_fail,all,45,82,-37,162,199
+B,F,1,latest common,50,50,nc_A,all,29,49,-20,82,102
+B,F,1,latest common,50,50,nc_A1,all,19,31,-12,57,69
+B,F,1,latest common,50,50,nc_A2,all,10,18,-8,25,33
+B,F,1,latest common,50,50,nc_B,all,5,8,-3,21,24
+B,F,1,latest common,50,50,nc_C,all,2,6,-4,8,12
+B,F,1,latest common,50,50,nc_D,all,7,15,-8,18,26
+B,F,1,latest common,50,50,nc_E,all,11,13,-2,33,35
+B,F,1,latest common,50,50,ttc_fail,all,60,104,-44,222,266
+B,F,1,latest common,50,50,offroad,all,103,182,-79,360,439
+B,F,1,final,50,50,offroad,>45,46,75,-29,143,172
+B,F,1,final,50,50,offroad,>20,68,132,-64,238,302
+B,F,1,final,50,50,cut_in,>45,27,51,-24,81,105
+B,F,1,final,50,50,cut_in,>20,43,96,-53,151,204
+B,F,1,final,50,50,under,>45,14,14,0,33,33
+B,F,1,final,50,50,under,>20,18,20,-2,41,43
+B,F,1,final,50,50,nc_fail,all,45,82,-37,162,199
+B,F,1,final,50,50,nc_A,all,29,49,-20,82,102
+B,F,1,final,50,50,nc_A1,all,19,31,-12,57,69
+B,F,1,final,50,50,nc_A2,all,10,18,-8,25,33
+B,F,1,final,50,50,nc_B,all,5,8,-3,21,24
+B,F,1,final,50,50,nc_C,all,2,6,-4,8,12
+B,F,1,final,50,50,nc_D,all,7,15,-8,18,26
+B,F,1,final,50,50,nc_E,all,11,13,-2,33,35
+B,F,1,final,50,50,ttc_fail,all,60,104,-44,222,266
+B,F,1,final,50,50,offroad,all,103,182,-79,360,439
+B,F,sum,latest common,50,50,offroad,>45,96,130,-34,292,326
+B,F,sum,latest common,50,50,offroad,>20,155,220,-65,483,548
+B,F,sum,latest common,50,50,cut_in,>45,59,85,-26,162,188
+B,F,sum,latest common,50,50,cut_in,>20,105,148,-43,300,343
+B,F,sum,latest common,50,50,under,>45,33,26,7,70,63
+B,F,sum,latest common,50,50,under,>20,42,40,2,86,84
+B,F,sum,latest common,50,50,nc_fail,all,90,151,-61,319,380
+B,F,sum,latest common,50,50,nc_A,all,59,93,-34,159,193
+B,F,sum,latest common,50,50,nc_A1,all,37,60,-23,106,129
+B,F,sum,latest common,50,50,nc_A2,all,22,33,-11,53,64
+B,F,sum,latest common,50,50,nc_B,all,6,13,-7,39,46
+B,F,sum,latest common,50,50,nc_C,all,5,9,-4,21,25
+B,F,sum,latest common,50,50,nc_D,all,17,27,-10,35,45
+B,F,sum,latest common,50,50,nc_E,all,22,28,-6,65,71
+B,F,sum,latest common,50,50,ttc_fail,all,118,194,-76,451,527
+B,F,sum,latest common,50,50,offroad,all,228,313,-85,727,812
+B,F,sum,final,50,50,offroad,>45,96,130,-34,292,326
+B,F,sum,final,50,50,offroad,>20,155,220,-65,483,548
+B,F,sum,final,50,50,cut_in,>45,59,85,-26,162,188
+B,F,sum,final,50,50,cut_in,>20,105,148,-43,300,343
+B,F,sum,final,50,50,under,>45,33,26,7,70,63
+B,F,sum,final,50,50,under,>20,42,40,2,86,84
+B,F,sum,final,50,50,nc_fail,all,90,151,-61,319,380
+B,F,sum,final,50,50,nc_A,all,59,93,-34,159,193
+B,F,sum,final,50,50,nc_A1,all,37,60,-23,106,129
+B,F,sum,final,50,50,nc_A2,all,22,33,-11,53,64
+B,F,sum,final,50,50,nc_B,all,6,13,-7,39,46
+B,F,sum,final,50,50,nc_C,all,5,9,-4,21,25
+B,F,sum,final,50,50,nc_D,all,17,27,-10,35,45
+B,F,sum,final,50,50,nc_E,all,22,28,-6,65,71
+B,F,sum,final,50,50,ttc_fail,all,118,194,-76,451,527
+B,F,sum,final,50,50,offroad,all,228,313,-85,727,812
+C,F0,0,latest common,25,20,offroad,>45,67,64,3,152,149
+C,F0,0,latest common,25,20,offroad,>20,119,103,16,253,237
+C,F0,0,latest common,25,20,cut_in,>45,33,42,-9,71,80
+C,F0,0,latest common,25,20,cut_in,>20,64,73,-9,128,137
+C,F0,0,latest common,25,20,under,>45,21,18,3,40,37
+C,F0,0,latest common,25,20,under,>20,35,23,12,61,49
+C,F0,0,latest common,25,20,nc_fail,all,68,89,-21,176,197
+C,F0,0,latest common,25,20,nc_A,all,42,58,-16,94,110
+C,F0,0,latest common,25,20,nc_A1,all,29,25,4,60,56
+C,F0,0,latest common,25,20,nc_A2,all,13,33,-20,34,54
+C,F0,0,latest common,25,20,nc_B,all,4,6,-2,18,20
+C,F0,0,latest common,25,20,nc_C,all,3,6,-3,10,13
+C,F0,0,latest common,25,20,nc_D,all,10,9,1,16,15
+C,F0,0,latest common,25,20,nc_E,all,19,20,-1,38,39
+C,F0,0,latest common,25,20,ttc_fail,all,90,100,-10,247,257
+C,F0,0,latest common,25,20,offroad,all,168,167,1,366,365
+C,F0,1,latest common,20,20,offroad,>45,60,55,5,153,148
+C,F0,1,latest common,20,20,offroad,>20,115,87,28,262,234
+C,F0,1,latest common,20,20,cut_in,>45,36,31,5,83,78
+C,F0,1,latest common,20,20,cut_in,>20,77,49,28,158,130
+C,F0,1,latest common,20,20,under,>45,21,21,0,34,34
+C,F0,1,latest common,20,20,under,>20,27,29,-2,48,50
+C,F0,1,latest common,20,20,nc_fail,all,57,69,-12,172,184
+C,F0,1,latest common,20,20,nc_A,all,35,34,1,98,97
+C,F0,1,latest common,20,20,nc_A1,all,27,13,14,65,51
+C,F0,1,latest common,20,20,nc_A2,all,8,21,-13,33,46
+C,F0,1,latest common,20,20,nc_B,all,5,9,-4,20,24
+C,F0,1,latest common,20,20,nc_C,all,2,5,-3,9,12
+C,F0,1,latest common,20,20,nc_D,all,6,9,-3,13,16
+C,F0,1,latest common,20,20,nc_E,all,17,20,-3,32,35
+C,F0,1,latest common,20,20,ttc_fail,all,72,89,-17,237,254
+C,F0,1,latest common,20,20,offroad,all,168,131,37,368,331
+C,F0,sum,latest common,20,20,offroad,>45,124,113,11,305,294
+C,F0,sum,latest common,20,20,offroad,>20,227,193,34,515,481
+C,F0,sum,latest common,20,20,cut_in,>45,68,74,-6,154,160
+C,F0,sum,latest common,20,20,cut_in,>20,137,129,8,286,278
+C,F0,sum,latest common,20,20,under,>45,45,35,10,74,64
+C,F0,sum,latest common,20,20,under,>20,64,51,13,109,96
+C,F0,sum,latest common,20,20,nc_fail,all,128,154,-26,348,374
+C,F0,sum,latest common,20,20,nc_A,all,77,89,-12,192,204
+C,F0,sum,latest common,20,20,nc_A1,all,56,39,17,125,108
+C,F0,sum,latest common,20,20,nc_A2,all,21,50,-29,67,96
+C,F0,sum,latest common,20,20,nc_B,all,8,13,-5,38,43
+C,F0,sum,latest common,20,20,nc_C,all,4,10,-6,19,25
+C,F0,sum,latest common,20,20,nc_D,all,15,18,-3,29,32
+C,F0,sum,latest common,20,20,nc_E,all,38,38,0,70,70
+C,F0,sum,latest common,20,20,ttc_fail,all,155,185,-30,484,514
+C,F0,sum,latest common,20,20,offroad,all,330,293,37,734,697
+C,F,0,latest common,25,25,offroad,>45,54,68,-14,135,149
+C,F,0,latest common,25,25,offroad,>20,104,109,-5,232,237
+C,F,0,latest common,25,25,cut_in,>45,31,41,-10,70,80
+C,F,0,latest common,25,25,cut_in,>20,67,70,-3,134,137
+C,F,0,latest common,25,25,under,>45,17,24,-7,30,37
+C,F,0,latest common,25,25,under,>20,23,30,-7,42,49
+C,F,0,latest common,25,25,nc_fail,all,59,87,-28,169,197
+C,F,0,latest common,25,25,nc_A,all,33,55,-22,88,110
+C,F,0,latest common,25,25,nc_A1,all,22,26,-4,52,56
+C,F,0,latest common,25,25,nc_A2,all,11,29,-18,36,54
+C,F,0,latest common,25,25,nc_B,all,7,6,1,21,20
+C,F,0,latest common,25,25,nc_C,all,3,5,-2,11,13
+C,F,0,latest common,25,25,nc_D,all,12,9,3,18,15
+C,F,0,latest common,25,25,nc_E,all,13,21,-8,31,39
+C,F,0,latest common,25,25,ttc_fail,all,71,98,-27,230,257
+C,F,0,latest common,25,25,offroad,all,156,170,-14,351,365
+C,F,1,latest common,20,20,offroad,>45,48,61,-13,135,148
+C,F,1,latest common,20,20,offroad,>20,100,97,3,237,234
+C,F,1,latest common,20,20,cut_in,>45,36,30,6,84,78
+C,F,1,latest common,20,20,cut_in,>20,79,50,29,159,130
+C,F,1,latest common,20,20,under,>45,13,21,-8,26,34
+C,F,1,latest common,20,20,under,>20,15,30,-15,35,50
+C,F,1,latest common,20,20,nc_fail,all,52,79,-27,157,184
+C,F,1,latest common,20,20,nc_A,all,29,45,-16,81,97
+C,F,1,latest common,20,20,nc_A1,all,24,16,8,59,51
+C,F,1,latest common,20,20,nc_A2,all,5,29,-24,22,46
+C,F,1,latest common,20,20,nc_B,all,4,10,-6,18,24
+C,F,1,latest common,20,20,nc_C,all,2,4,-2,10,12
+C,F,1,latest common,20,20,nc_D,all,11,9,2,18,16
+C,F,1,latest common,20,20,nc_E,all,15,20,-5,30,35
+C,F,1,latest common,20,20,ttc_fail,all,64,105,-41,213,254
+C,F,1,latest common,20,20,offroad,all,155,138,17,348,331
+C,F,sum,latest common,20,20,offroad,>45,108,123,-15,279,294
+C,F,sum,latest common,20,20,offroad,>20,201,206,-5,476,481
+C,F,sum,latest common,20,20,cut_in,>45,68,73,-5,155,160
+C,F,sum,latest common,20,20,cut_in,>20,135,128,7,285,278
+C,F,sum,latest common,20,20,under,>45,37,37,0,64,64
+C,F,sum,latest common,20,20,under,>20,50,55,-5,91,96
+C,F,sum,latest common,20,20,nc_fail,all,113,164,-51,323,374
+C,F,sum,latest common,20,20,nc_A,all,65,98,-33,171,204
+C,F,sum,latest common,20,20,nc_A1,all,51,41,10,118,108
+C,F,sum,latest common,20,20,nc_A2,all,14,57,-43,53,96
+C,F,sum,latest common,20,20,nc_B,all,9,15,-6,37,43
+C,F,sum,latest common,20,20,nc_C,all,5,10,-5,20,25
+C,F,sum,latest common,20,20,nc_D,all,23,19,4,36,32
+C,F,sum,latest common,20,20,nc_E,all,29,40,-11,59,70
+C,F,sum,latest common,20,20,ttc_fail,all,138,198,-60,454,514
+C,F,sum,latest common,20,20,offroad,all,305,303,2,699,697
+W,A,0,latest common,25,25,offroad,>45,57,40,17,159,142
+W,A,0,latest common,25,25,offroad,>20,93,74,19,265,246
+W,A,0,latest common,25,25,cut_in,>45,39,24,15,97,82
+W,A,0,latest common,25,25,cut_in,>20,68,50,18,171,153
+W,A,0,latest common,25,25,under,>45,11,13,-2,29,31
+W,A,0,latest common,25,25,under,>20,14,15,-1,40,41
+W,A,0,latest common,25,25,nc_fail,all,49,40,9,181,172
+W,A,0,latest common,25,25,nc_A,all,24,28,-4,91,95
+W,A,0,latest common,25,25,nc_A1,all,15,25,-10,56,66
+W,A,0,latest common,25,25,nc_A2,all,9,3,6,35,29
+W,A,0,latest common,25,25,nc_B,all,6,4,2,22,20
+W,A,0,latest common,25,25,nc_C,all,4,2,2,11,9
+W,A,0,latest common,25,25,nc_D,all,11,5,6,20,14
+W,A,0,latest common,25,25,nc_E,all,10,7,3,37,34
+W,A,0,latest common,25,25,ttc_fail,all,55,51,4,246,242
+W,A,0,latest common,25,25,offroad,all,114,105,9,371,362
+W,A,1,latest common,15,15,offroad,>45,47,27,20,144,124
+W,A,1,latest common,15,15,offroad,>20,87,52,35,251,216
+W,A,1,latest common,15,15,cut_in,>45,27,18,9,72,63
+W,A,1,latest common,15,15,cut_in,>20,61,35,26,148,122
+W,A,1,latest common,15,15,under,>45,14,9,5,35,30
+W,A,1,latest common,15,15,under,>20,17,14,3,45,42
+W,A,1,latest common,15,15,nc_fail,all,33,21,12,174,162
+W,A,1,latest common,15,15,nc_A,all,18,17,1,89,88
+W,A,1,latest common,15,15,nc_A1,all,14,10,4,55,51
+W,A,1,latest common,15,15,nc_A2,all,4,7,-3,34,37
+W,A,1,latest common,15,15,nc_B,all,6,0,6,21,15
+W,A,1,latest common,15,15,nc_C,all,1,4,-3,11,14
+W,A,1,latest common,15,15,nc_D,all,12,5,7,23,16
+W,A,1,latest common,15,15,nc_E,all,5,4,1,30,29
+W,A,1,latest common,15,15,ttc_fail,all,33,27,6,235,229
+W,A,1,latest common,15,15,offroad,all,109,65,44,380,336
+W,A,sum,latest common,15,15,offroad,>45,85,51,34,292,258
+W,A,sum,latest common,15,15,offroad,>20,161,97,64,506,442
+W,A,sum,latest common,15,15,cut_in,>45,54,30,24,154,130
+W,A,sum,latest common,15,15,cut_in,>20,117,58,59,298,239
+W,A,sum,latest common,15,15,under,>45,24,21,3,68,65
+W,A,sum,latest common,15,15,under,>20,34,30,4,96,92
+W,A,sum,latest common,15,15,nc_fail,all,65,50,15,340,325
+W,A,sum,latest common,15,15,nc_A,all,36,36,0,174,174
+W,A,sum,latest common,15,15,nc_A1,all,28,26,2,113,111
+W,A,sum,latest common,15,15,nc_A2,all,8,10,-2,61,63
+W,A,sum,latest common,15,15,nc_B,all,11,2,9,41,32
+W,A,sum,latest common,15,15,nc_C,all,3,6,-3,22,25
+W,A,sum,latest common,15,15,nc_D,all,21,16,5,40,35
+W,A,sum,latest common,15,15,nc_E,all,15,11,4,63,59
+W,A,sum,latest common,15,15,ttc_fail,all,73,69,4,469,465
+W,A,sum,latest common,15,15,offroad,all,208,128,80,761,681
+W,F,0,latest common,25,25,offroad,>45,38,45,-7,135,142
+W,F,0,latest common,25,25,offroad,>20,65,79,-14,232,246
+W,F,0,latest common,25,25,cut_in,>45,20,32,-12,70,82
+W,F,0,latest common,25,25,cut_in,>20,41,60,-19,134,153
+W,F,0,latest common,25,25,under,>45,10,11,-1,30,31
+W,F,0,latest common,25,25,under,>20,16,15,1,42,41
+W,F,0,latest common,25,25,nc_fail,all,46,49,-3,169,172
+W,F,0,latest common,25,25,nc_A,all,30,37,-7,88,95
+W,F,0,latest common,25,25,nc_A1,all,14,28,-14,52,66
+W,F,0,latest common,25,25,nc_A2,all,16,9,7,36,29
+W,F,0,latest common,25,25,nc_B,all,6,5,1,21,20
+W,F,0,latest common,25,25,nc_C,all,4,2,2,11,9
+W,F,0,latest common,25,25,nc_D,all,8,4,4,18,14
+W,F,0,latest common,25,25,nc_E,all,5,8,-3,31,34
+W,F,0,latest common,25,25,ttc_fail,all,50,62,-12,230,242
+W,F,0,latest common,25,25,offroad,all,91,102,-11,351,362
+W,F,1,latest common,15,15,offroad,>45,40,22,18,142,124
+W,F,1,latest common,15,15,offroad,>20,61,40,21,237,216
+W,F,1,latest common,15,15,cut_in,>45,15,15,0,63,63
+W,F,1,latest common,15,15,cut_in,>20,32,27,5,127,122
+W,F,1,latest common,15,15,under,>45,15,8,7,37,30
+W,F,1,latest common,15,15,under,>20,16,11,5,47,42
+W,F,1,latest common,15,15,nc_fail,all,42,29,13,175,162
+W,F,1,latest common,15,15,nc_A,all,24,20,4,92,88
+W,F,1,latest common,15,15,nc_A1,all,17,10,7,58,51
+W,F,1,latest common,15,15,nc_A2,all,7,10,-3,34,37
+W,F,1,latest common,15,15,nc_B,all,10,2,8,23,15
+W,F,1,latest common,15,15,nc_C,all,2,4,-2,12,14
+W,F,1,latest common,15,15,nc_D,all,7,6,1,17,16
+W,F,1,latest common,15,15,nc_E,all,7,5,2,31,29
+W,F,1,latest common,15,15,ttc_fail,all,53,34,19,248,229
+W,F,1,latest common,15,15,offroad,all,81,52,29,365,336
+W,F,sum,latest common,15,15,offroad,>45,63,50,13,271,258
+W,F,sum,latest common,15,15,offroad,>20,103,91,12,454,442
+W,F,sum,latest common,15,15,cut_in,>45,29,34,-5,125,130
+W,F,sum,latest common,15,15,cut_in,>20,62,58,4,243,239
+W,F,sum,latest common,15,15,under,>45,25,17,8,73,65
+W,F,sum,latest common,15,15,under,>20,31,24,7,99,92
+W,F,sum,latest common,15,15,nc_fail,all,66,68,-2,323,325
+W,F,sum,latest common,15,15,nc_A,all,36,47,-11,163,174
+W,F,sum,latest common,15,15,nc_A1,all,24,30,-6,105,111
+W,F,sum,latest common,15,15,nc_A2,all,12,17,-5,58,63
+W,F,sum,latest common,15,15,nc_B,all,13,6,7,39,32
+W,F,sum,latest common,15,15,nc_C,all,6,6,0,25,25
+W,F,sum,latest common,15,15,nc_D,all,13,15,-2,33,35
+W,F,sum,latest common,15,15,nc_E,all,13,9,4,63,59
+W,F,sum,latest common,15,15,ttc_fail,all,78,79,-1,464,465
+W,F,sum,latest common,15,15,offroad,all,137,116,21,702,681
