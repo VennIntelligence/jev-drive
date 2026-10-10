@@ -323,7 +323,7 @@ def build(run):
     for bench, cols in (("navhard", ["combined", "stage1", "stage2"]), ("hugsim", ["hdscore"])):
         for arm in ["SH30", *STEPS]:
             for s in SEEDS.get(arm, (0, 1)):
-                u = board_units(bench, name(arm, s, STEPS.get(arm, 0)))
+                u = board_units(bench, f"VTCP2-s{s}" if (bench, arm) == ("hugsim", "C") else name(arm, s, STEPS.get(arm, 0)))   # C is served as a P2 tag (vt_native.py export)
                 if u is not None:
                     BU[(bench, arm, s)] = u
         for (bn, arm, s), u in list(BU.items()):
@@ -712,9 +712,23 @@ def report(R, E, PR, L, rdiff):
             for g, d in grp.items():
                 A(f"- {g} ({sum(len(v) for v in d.values())}): " + ("; ".join(f"{k} [{', '.join(v)}]" for k, v in d.items()) or "none"))
             A("")
+    A("## Prereg read 5: arm C, straight-road ADE on comma1M native cameras against the shipped model (decision 137's forgetting read)\n")
+    nt = OUT.parent / "native" / "table.csv"
+    if nt.exists():
+        import pandas as pd
+        T = pd.read_csv(nt)
+        A("30 straight 10 s windows of `experiments/op_fov` (native rig, road 910 / wide 455 px), ADE5 = mean plan-to-logged-path distance over the first 5 s, "
+          "`experiments/op_fov/scripts/fov_report.window_metrics` unchanged; by-segment cluster bootstrap. Ego-adapter bias from comma motion "
+          "(`scripts/vt_native.py` header). `value` = metres, `ratio` = tag / shipped per window (decision 137: x2.6 for the fine-tuned arms there), "
+          "`diff` = C minus the F0 snapshot nearest in steps.\n")
+        A(md(["metric", "tag", "vs", "kind", "windows", "mean [lo, hi]"],
+             [[r.metric, r.tag, r.ref if isinstance(r.ref, str) else "-", r.kind, r.nwin, f"{r['mean']:.3f} [{r.lo:.3f}, {r.hi:.3f}]"]
+              for _, r in T.sort_values(["metric", "kind", "tag"]).iterrows()]))
+    else:
+        A("Not run yet: `.venv/bin/python experiments/vis_train/scripts/vt_native.py submit` on the box (cached per tag; rerun after each new C snapshot).\n")
     A("## Not produced\n")
-    A("- Prereg read 5 (arm C: straight-road ADE on native frames against the shipped model, decision 137's forgetting read) is not part of this script.\n"
-      "- HUGSIM for A0 / A / B / C / W: `jevdrive.bench` has no serving path for the branch encoder or the in-place trained encoder (amendment 2 point 3); only F / F0 are queued.\n"
+    A("- HUGSIM for A0 / A / B / W: `jevdrive.bench` has no serving path for the branch encoder (amendment 2 point 3). Arm C goes through the parity path as the tag "
+      "`VTCP2-s0` (`vt_native.py export`); F / F0 are queued in their chains; their boards appear in the table above when read.\n"
       "- navhard reference `SH30-F-s{0,1}` on protocol W frames appears in the board table once `bench run --model SH30-F-s0 SH30-F-s1 --bench navhard` has been run.\n")
     return "\n".join(P)
 
