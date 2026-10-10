@@ -28,7 +28,7 @@ import col1_lib as CL  # noqa: E402
 import swv1_lib as S  # noqa: E402
 
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
-ROOT = DATA / "runs/lowboard_diag/pai"
+ROOT = DATA / os.environ.get("LBD_PAI_ROOT", "runs/lowboard_diag/pai")      # LOWDIAG2: one root per base seed (default = the seed-0 root of decision 237)
 FLAG_K = {"collision_at_fault": "agent", "offroad": "boundary", "left_corridor_laterally": "corridor"}
 ON, CORR, A_BRAKE, A_LAT = 1.5, 4.0, 4.0, 4.0                 # onset band, corridor (eval config), counterfactual braking, fast-entry line
 CMD = ("left", "straight", "right", "unknown")
