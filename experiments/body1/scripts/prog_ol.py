@@ -86,8 +86,8 @@ def cmd_states(a):
     dev = torch.device("cuda")
     tags = list(dict.fromkeys(NEW + REF))
     with Run("body1", f"prog-ol-{a.name}", config=vars(a)) as run:
-        if a.set == "hold":
-            hold = splits.load(B.HOLD)
+        if a.set in ("hold", "val"):
+            hold = splits.load(B.HOLD if a.set == "hold" else B.VAL)
             run.use_split(hold)
             L = B.labels()
             tax = np.load(B.root() / "taxonomy" / "tax.npz")
@@ -201,7 +201,7 @@ def cmd_tables(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["states", "tables"])
-    ap.add_argument("--set", default="hold", choices=["hold", "navtest"])
+    ap.add_argument("--set", default="hold", choices=["hold", "val", "navtest"], help="val = navsim/body1-val-logs (Amendment 7: band selection)")
     ap.add_argument("--fams", nargs="+", default=["log", "ot1", "yr1", "bd4"])
     ap.add_argument("--shards", type=int, nargs="+", default=list(range(B.NSH)))
     ap.add_argument("--new", nargs="+", default=list(NEW))

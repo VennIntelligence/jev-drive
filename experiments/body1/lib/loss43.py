@@ -17,6 +17,11 @@ shape=True (prereg Amendment 6 item 2): the agent hinge (imitation and hinge-onl
 plan's shape only. Their poses pass through `shape_only`: values unchanged bit for bit, the gradient with respect to every (x, y) loses its
 component along the pose's own heading, so these hinges can move the path sideways and turn it but cannot pull a pose back along the path.
 P2H10's own on-log drivable hinge (inside pp_train.Losses) never sees the switch.
+
+route_band > 0 (prereg Amendment 7, term R): a route hinge on the rows that carry the new hinges (imitation rows of the train logs, as term A,
+and the hinge-only rows): mean over the 8 plan poses of relu(d - route_band), d = distance to the row's logged path (lib/route.path_dist),
+on the same poses as the other new hinges (shape-only with shape=True). Weight route_lam on the mean over those imitation rows; on hinge-only
+rows summed / number of imitation rows x route_lam x ho_w. With route_band = 0 no operation is added.
 """
 import numpy as np
 import torch
@@ -69,16 +74,18 @@ class Losses43(T.Losses):
     """T.Losses + hinge-only rows. ho (n_store,) bool marks hinge-only Store rows, fam (n_store,) int their family index (-1 on normal rows);
     agent2 = OffAgentHinge over all rows (or None), road = ot_rows.off_hinge on the scorer-layer raster for the hinge-only rows (or None)."""
 
-    def __init__(self, *a, ho=None, fam=None, fams=(), agent2=None, road=None, road_lam=10.0, ho_w=1.0, shape=False, **k):
+    def __init__(self, *a, ho=None, fam=None, fams=(), agent2=None, road=None, road_lam=10.0, ho_w=1.0, shape=False,
+                 route_band=0.0, route_lam=10.0, route_off=None, route_ok=None, **k):
         super().__init__(*a, **k)
         self.ho, self.fam, self.fams, self.agent2, self.road, self.road_lam, self.ho_w = ho, fam, fams, agent2, road, road_lam, ho_w
         self.shape = shape
+        self.route_band, self.route_lam, self.route_off, self.route_ok = route_band, route_lam, route_off, route_ok
 
     def __call__(self, out, S, rows, anchor):
         c = self.cfg
         h = self.ho[rows] if self.ho is not None else None
         if h is None or not h.any():
-            if self.agent2 is None:
+            if self.agent2 is None and self.route_band <= 0:
                 return super().__call__(out, S, rows, anchor)
             h = torch.zeros_like(anchor)
         n = ~h
@@ -110,6 +117,22 @@ class Losses43(T.Losses):
             Ls["agent_pos"] = (allpos > 0).float().mean() if len(allpos) else av.sum() * 0.0
             if (allpos > 0).any():
                 Ls["agent_posmean"] = allpos[allpos > 0].mean().detach()                 # the pilot gate's number
+        tv = None
+        if self.route_band > 0:                                                          # R (Amendment 7): tube around the row's logged path
+            from route import path_dist
+            ok = self.route_ok[rows] & S.has_fut[rows]
+            m = (imit | h) & ok
+            tv = torch.zeros(len(rows), device=o.device)
+            if m.any():
+                tv[m] = torch.relu(path_dist(xs[m], ys[m], S.fut[rows[m]], self.route_off[rows[m]]) - self.route_band).mean(1)
+            mi = imit & ok
+            Ls["route"] = tv[mi].mean() if mi.any() else tv.sum() * 0.0
+            total = total + self.route_lam * Ls["route"]
+            Ls |= row_stats(tv[mi], "imit/route")
+            if h.any():
+                Ls["route_ho"] = tv[h].sum() / n_imit
+                total = total + self.ho_w * self.route_lam * Ls["route_ho"]
+                Ls["route_ho_pos"] = (tv[h] > 0).float().mean()
         if h.any():
             # non-plan heads of the hinge-only rows distilled to shipped on the same tokens (the plan columns are left free)
             e = ((o[h][:, self.di] - S.t_out[rows[h]]) / self.tstd).pow(2) * self.dmask
@@ -131,4 +154,6 @@ class Losses43(T.Losses):
                     Ls |= row_stats(av[m], f"fam/{name}/agent")
                 if rv is not None:
                     Ls |= row_stats(rv[m], f"fam/{name}/road")
+                if tv is not None:
+                    Ls |= row_stats(tv[m], f"fam/{name}/route")
         return total, Ls

@@ -7,6 +7,8 @@ uniformly from each family's rows on navsim/body1-train-logs (own rng stream: th
 Prereg Amendment 5: --ho-w multiplies both hinge terms of the hinge-only rows; --ho-excl navsim/body1-val-logs keeps the validation part of
 the train logs out of the hinge-only rows (the weight is selected there).
 Prereg Amendment 6: --shape gives the new hinges the plan's shape only (lib/loss43.shape_only; values unchanged, tags P2H10S-*).
+Prereg Amendment 7: --route-band B adds the route hinge (term R: relu(distance of the plan poses to the row's logged path - B), on the
+imitation rows of the train logs and on the hinge-only rows; tags P2H10R-*); 0 = off, the code path of P2H10S.
 
   train  --tag P2H10B-P-s0 --data navtrain_full.s2of12 navtrain_full.s3of12 --steps 3000 --ho ot1:4,yr1:4,bd4:5 --agent-lam 10
   train  --tag P2H10S-CHECK --shape-check P2H10B-Pw3-s0 ... (the pilot's flags)   Amendment 6 note (a): no training; on --check-batches batches
@@ -96,7 +98,9 @@ def cmd_train(a):
         n_fb = int(len(fb))
         fb_fam = np.bincount(fam[fb.cpu().numpy()], minlength=len(fams)).tolist()
     LS = Losses43(model.net, cfg, tstd, S.di, S.pi, dev, hinge, None,
-                  ho=torch.as_tensor(is_ho, device=dev) if k else None, fam=torch.as_tensor(fam, device=dev), fams=fams, agent2=agent2, road=road, road_lam=a.road_lam, ho_w=a.ho_w, shape=a.shape)
+                  ho=torch.as_tensor(is_ho, device=dev) if k else None, fam=torch.as_tensor(fam, device=dev), fams=fams, agent2=agent2, road=road, road_lam=a.road_lam, ho_w=a.ho_w, shape=a.shape,
+                  **(dict(route_band=a.route_band, route_lam=a.route_lam, route_off=torch.as_tensor(off, dtype=torch.float32, device=dev),
+                          route_ok=torch.as_tensor(in_tr, device=dev)) if a.route_band > 0 else {}))
     opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}, {"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}], weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
     d = T.proot("runs", a.tag)
@@ -109,7 +113,8 @@ def cmd_train(a):
                  + f"; hinge {cfg.hinge_lam} / {cfg.hinge_margin} m coverage {hinge.coverage if hinge else 0:.4f}; agent {cfg.agent_lam} / {cfg.agent_margin} m / side "
                  f"{cfg.agent_side_margin} rows {int(agent2.ok.sum()) if agent2 is not None else 0} (moved {agent2.moved if agent2 is not None else 0}); "
                  f"road {a.road_lam if road is not None else 0} / {a.road_margin} m rows {int(road.ok.sum()) if road is not None else 0} ({a.road_labels}); "
-                 f"hinge-only rows not on the scorer-layer road at t0 (NAVSIM raster kept): {n_fb} {dict(zip(fams, fb_fam)) if n_fb else ''}")
+                 f"hinge-only rows not on the scorer-layer road at t0 (NAVSIM raster kept): {n_fb} {dict(zip(fams, fb_fam)) if n_fb else ''}"
+                 + (f"; route hinge band {a.route_band} m, lambda {a.route_lam}" if a.route_band > 0 else ""))
 
         def draw():                                                   # pp_train's draw on the normal rows, then the hinge-only rows
             r = rng.choice(tr_rows, nB - k, replace=len(tr_rows) < nB - k)
@@ -293,6 +298,8 @@ if __name__ == "__main__":
     p.add_argument("--ho-w", type=float, default=1.0, help="Amendment 5: multiplier on the agent and road hinge of the hinge-only rows")
     p.add_argument("--ho-excl", default="", help='Amendment 5: split whose logs give no hinge-only row, e.g. navsim/body1-val-logs; "" = none')
     p.add_argument("--shape", action="store_true", help="Amendment 6: the new hinges (A, and the road hinge of hinge-only rows) get no along-heading pose gradient")
+    p.add_argument("--route-band", type=float, default=0.0, help="Amendment 7: dead band (m) of the route hinge on imitation rows (train logs) and hinge-only rows; 0 = off")
+    p.add_argument("--route-lam", type=float, default=10.0)
     p.add_argument("--shape-check", default="", help="Amendment 6 note (a): checkpoint tag; check the switch on batches of this trainer and exit (no training)")
     p.add_argument("--check-batches", type=int, default=40)
     p.add_argument("--check-out", default="")
