@@ -1,0 +1,27 @@
+{
+ "n": 60,
+ "mean": 0.36606666666666665,
+ "lost": 38.036,
+ "by_class": {
+  "other": {
+   "n": 6,
+   "lost": 6.0
+  },
+  "longitudinal": {
+   "n": 26,
+   "lost": 17.036
+  },
+  "route": {
+   "n": 8,
+   "lost": 8.0
+  },
+  "clearance": {
+   "n": 7,
+   "lost": 7.0
+  },
+  "pass": {
+   "n": 13,
+   "lost": 0.0
+  }
+ }
+}

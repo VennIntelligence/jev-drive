@@ -1,0 +1,4 @@
+actor_extrapolated_to,other runs,longitudinal runs,route runs,clearance runs,other share,longitudinal share,route share,clearance share
+E + 10 s (primary),12,15,1,10,0.308,0.331,0.019,0.26
+E + 3 s,6,15,1,16,0.149,0.331,0.019,0.418
+up to E,1,15,1,21,0.025,0.331,0.019,0.543

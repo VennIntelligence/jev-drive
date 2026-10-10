@@ -1,0 +1,5 @@
+cls,sub,runs,lead_seen,base_right_lead,lead_first_median_s,a_need_max_median,attack_planner,cf_contact,cf_contact_3s,cf_contact_to_E,in_band
+clearance,C1,7,7,1,2.000,0.040,6,0,0,0,0
+longitudinal,L1,10,10,7,4.000,2.233,0,0,0,0,10
+other,O2b,11,10,0,,0.038,4,11,5,0,0
+other,O2c,1,True,False,,0.015,1,False,False,False,False

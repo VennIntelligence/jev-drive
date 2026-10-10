@@ -1,0 +1,8 @@
+cls,runs,scenarios,lost,share_of_lost,mean_hd,base_right_lead (agent units),base_right_lead lost share,WA-JEPA_exam passed / reached,WA-JEPA_exam passed lost share,P0_spec passed / reached,P0_spec passed lost share,in_plan,plan_lead_median_s,track_dev_med_m,track_dev_max_m
+other,12,12,11.17,"0.308 [0.165, 0.453]",0.069,0 / 12,0.0,1 / 4,0.247,2 / 2,1.0,12 / 12,2.625,0.11,0.38
+longitudinal,15,15,12.01,"0.331 [0.190, 0.478]",0.199,7 / 10,0.676,5 / 7,0.687,1 / 3,0.367,14 / 15,2.125,0.14,1.13
+route,1,1,0.7,"0.019 [0.000, 0.063]",0.303,-,,1 / 1,1.0,1 / 1,1.0,1 / 1,1.0,0.08,0.38
+clearance,10,10,9.41,"0.260 [0.125, 0.400]",0.059,1 / 7,0.141,1 / 4,0.225,2 / 3,0.648,7 / 10,2.75,0.12,0.41
+complete with penalties,26,26,2.95,"0.082 [0.031, 0.150]",0.886,,,,,,,,,,
+all failed,38,38,33.28,"0.918 [0.850, 0.969]",0.124,8 / 29,0.259,8 / 16,0.464,6 / 9,0.67,34 / 38,2.5,0.12,1.13
+all,64,64,36.23,"1.000 [1.000, 1.000]",0.434,,,,,,,,,,

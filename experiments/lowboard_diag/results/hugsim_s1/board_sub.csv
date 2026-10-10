@@ -1,0 +1,15 @@
+cls,sub,K,ref,runs,scenarios,lost,share_of_lost
+clearance,C1,agent,straight,4,4,3.835,0.106
+clearance,C1,agent,turn,3,3,2.825,0.078
+clearance,C2,boundary,bend,2,2,1.745,0.048
+clearance,C2,boundary,straight,1,1,1.000,0.028
+longitudinal,L1,agent,bend,3,3,2.875,0.079
+longitudinal,L1,agent,straight,4,4,3.353,0.093
+longitudinal,L1,agent,turn,3,3,2.592,0.072
+longitudinal,L2,boundary,bend,1,1,0.000,0.000
+longitudinal,L2,boundary,turn,3,3,2.402,0.066
+longitudinal,L2,corridor,turn,1,1,0.788,0.022
+other,O2b,agent,bend,1,1,0.975,0.027
+other,O2b,agent,straight,10,10,9.282,0.256
+other,O2c,agent,straight,1,1,0.910,0.025
+route,R1,boundary,straight,1,1,0.697,0.019

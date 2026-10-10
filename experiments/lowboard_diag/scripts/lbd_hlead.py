@@ -21,10 +21,11 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(REPO / "experiments/op_parity/scripts")]
 
-OUT = REPO / "experiments/lowboard_diag/results/hlead"
+OUT = Path(os.environ.get("LBD_OUT", REPO / "experiments/lowboard_diag/results/hlead"))      # LOWDIAG2: per-seed output dir, arms and the decision-237 table (plumbing only)
+FAILED = Path(os.environ.get("LBD_FAILED", REPO / "experiments/lowboard_diag/results/hugsim/failed_units.csv"))
 D = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 BASE = "SH30-F-s0_spec_plan_smooth"
-ARMS = {"A0": BASE, "A0r": BASE + "-rhlead-off", "A1": BASE + "-ca9065d178c07"}
+ARMS = json.loads(os.environ["LBD_ARMS"]) if "LBD_ARMS" in os.environ else {"A0": BASE, "A0r": BASE + "-rhlead-off", "A1": BASE + "-ca9065d178c07"}
 FAIL = ("fg_collision", "bg_collision", "off_route")
 WORSE, V_STAND, T_STALL, CAM_FRONT = 0.05, 0.1, 10.0, 1.5      # registered: worse = HD difference <= -0.05; stall = standing >= 10 s
 CUT = 0.5                                                      # m at the plan end: a step counts as limited (any change at all is `ol_frac`)
@@ -131,7 +132,7 @@ def report(a):
     import pandas as pd
     from jevdrive import stats
     U = pd.read_csv(OUT / "units.csv")
-    F = pd.read_csv(REPO / "experiments/lowboard_diag/results/hugsim/failed_units.csv").set_index("scenario")
+    F = pd.read_csv(FAILED).set_index("scenario")
     W = {arm: g.set_index("scenario") for arm, g in U.groupby("arm")}
     sc = sorted(set(W["A1"].index) & set(W["A0"].index))
     has_r = "A0r" in W
