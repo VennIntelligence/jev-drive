@@ -76,6 +76,11 @@ MEM_DROP = 0.25                                                 # rows whose mem
 # of the base model's own plan (`moving`: rows fed >= 0.5 m/s; `lead`: those of them where the base model reports a lead, p > 0.5).
 ARMS["P2L"] = dict(ego=True, side=False, lead=True)
 RETIME_V = 0.5                                                  # m/s: below it the target keeps the logged timing (the launch)
+# HEAD1b B2 (experiments/corridor/plans/2026-10-10-head1-prereg.md amendment, lib/heading_aux.py; EXPLORATORY): --aux-lam >= 0 adds a head on
+# the plan-pathway hidden state (graph value select_4) that regresses the arc-length heading profile of the logged path on the imitation rows
+# (0 = a probe on the detached state: the policy is the plain recipe bit for bit). The head is not in the checkpoint (aux.pt next to it).
+# --holdout head1val keeps the validation logs (sha256("head1val|" + log) % 10 == 0) out of the train rows; aux_eval.npz holds the plans and
+# the head's profiles on them (without --holdout: on the dev rows).
 # path-req (plans/2026-10-09-path-req-prereg.md, scripts/path_req.py, --mem-e2e q<kind>): the same channel fed with degraded fields of the LOGGED
 # FUTURE path (label leak: oracle probes only); --mem-lr sets the tokenizer's own learning rate.
 
@@ -141,6 +146,9 @@ class Cfg:
     hist_cv: bool = False                 # TR1: history poses re-spaced along their own path at the current speed inside the adapter
     lead_init: str = ""                   # TR1 (arm P2L): state dict of the lead-token MLP pre-trained with its own head (scripts/tr1.py tok)
     retime: str = ""                      # TR1: imitation target on the logged path at the base plan's arc lengths: "" | moving | lead
+    aux_lam: float = -1.0                 # HEAD1b B2: weight of the heading-profile auxiliary head (lib/heading_aux.py); < 0 = no head, 0 = detached probe
+    aux_labels: str = "runs/corridor/head1/labels/navtrain.npz"
+    holdout: str = ""                     # HEAD1b B2: salt of the log-level validation part removed from the train rows ("" = none; head1val)
 
 
 def proot(*p) -> _pl.Path:
@@ -169,6 +177,7 @@ class PModel(nn.Module):
         k = arm_kw(arm)
         self.mem = k.get("mem")
         self.tr1 = {}                                # TR1 ego-input reduction (set_tr1), saved with the weights
+        self.tap = None                              # training side only (HEAD1b B2): a graph value returned next to the outputs
         self.lead_cols = None
         if self.mem:
             self.adapter = PA.ParityAdapter(use_ego=True, use_side=True, n_cam=1, n_t=1)
@@ -217,8 +226,8 @@ class PModel(nn.Module):
             else:
                 H = self.adapter.apply(H, ego, side if self.adapter.use_side else None, side_mask)
         H = H * valid[:, :, None, None].to(H.dtype)
-        o = self.net.run_batched(A.policy_feeds(self.net, H, AT, tc.to(self.net.dtype)), ["outputs"])
-        return o["outputs"].reshape(B, -1)
+        o = self.net.run_batched(A.policy_feeds(self.net, H, AT, tc.to(self.net.dtype)), ["outputs"] + ([self.tap] if self.tap else []))
+        return (o["outputs"].reshape(B, -1), o[self.tap].reshape(B, -1)) if self.tap else o["outputs"].reshape(B, -1)
 
     def groups(self):
         base = [p for p in self.net.params.values() if p.requires_grad]
@@ -643,7 +652,8 @@ def main(a):
               wod_split=a.wod_split, wod_mass=a.wod_mass, wod_slots=a.wod_slots, stop_gate_free=a.stop_gate_free,
               agent_lam=a.agent_lam, agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels,
               mem_e2e=a.mem_e2e, mem_init=a.mem_init, mem_lr=a.mem_lr,
-              ego_noax=a.ego_noax, hist_cv=a.hist_cv, lead_init=a.lead_init, retime=a.retime)
+              ego_noax=a.ego_noax, hist_cv=a.hist_cv, lead_init=a.lead_init, retime=a.retime,
+              aux_lam=a.aux_lam, aux_labels=a.aux_labels, holdout=a.holdout)
     tag = a.tag or f"{a.arm}-s{a.seed}"
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng([cfg.seed, rank])                   # the same row stream for every arm of one seed
@@ -652,6 +662,12 @@ def main(a):
                 is_b2d=np.concatenate([np.full(len(z["names"]), d.startswith("b2d_")) for d, z in zip(cfg.data, tz)]),
                 is_wod=np.concatenate([np.full(len(z["names"]), d.startswith("wod_")) for d, z in zip(cfg.data, tz)]))
     tr_rows, dv_rows, sp = split_rows(tabs, cfg.split, cfg.b2d_split, cfg.wod_split)
+    ho_rows = tr_rows[:0]
+    if cfg.holdout:                                                 # HEAD1b B2: the validation logs leave the train rows
+        import heading_aux as HX
+        hm = HX.holdout_mask(tabs["log"][tr_rows], cfg.holdout)
+        tr_rows, ho_rows = tr_rows[~hm], tr_rows[hm]
+        assert len(ho_rows) and not set(tabs["log"][tr_rows].tolist()) & set(tabs["log"][ho_rows].tolist())
     if cfg.mem_e2e:
         assert not cfg.mem and a.tag and world == 1 and cfg.hinge_lam > 0 and not cfg.hinge_replay, "--mem-e2e: P2 + hinge, a --tag, one GPU, no --mem"
         cfg.mem = f"ge_{tag}"
@@ -702,6 +718,13 @@ def main(a):
         om = S.mem = GE.attach(cfg, S, hinge, dev)                  # S.mem[rows] -> tokens (dev_eval reads it like a bank)
     opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}] + ([{"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}] if new else []) +
                             ([{"params": om.params, "lr": cfg.mem_lr or cfg.lr_new, "base": cfg.mem_lr or cfg.lr_new}] if om else []), weight_decay=cfg.wd)
+    aux = None
+    if cfg.aux_lam >= 0:                                            # built after the model and the tokenizer: their init draws are unchanged
+        import heading_aux as HX
+        assert cfg.arm == "P2" and world == 1 and not a.compile, "--aux-lam: arm P2, one GPU, eager step"
+        aux = HX.HeadingAux(data_dir() / cfg.aux_labels, S.tab["names"], dev)
+        opt.add_param_group({"params": list(aux.parameters()), "lr": cfg.lr_new, "base": cfg.lr_new})
+        model.tap = HX.TAP
     scaler = torch.amp.GradScaler()
     d = proot("runs", tag)
     ctx = Run("op_parity", f"train-{tag}", seed=cfg.seed, config=asdict(cfg)) if rank == 0 else None
@@ -710,6 +733,9 @@ def main(a):
         if run:
             for x in sp:
                 run.use_split(x)
+            if aux is not None or len(ho_rows):
+                run.info(f"EXPLORATORY (HEAD1b B2): aux lambda {cfg.aux_lam} on {HX.TAP}, labels cover {aux.coverage if aux else float('nan'):.4f} of {S.n} rows; "
+                         f"held-out validation rows {len(ho_rows)} ({len(set(tabs['log'][ho_rows].tolist()))} logs)")
             run.info(f"{tag}: train {len(tr_rows)} dev {len(dv_rows)} rows, base {sum(p.numel() for p in base) / 1e6:.1f}M, "
                      f"adapter {sum(p.numel() for p in new) / 1e6:.2f}M, world {world}")
         t0, hist = time.time(), []
@@ -805,7 +831,14 @@ def main(a):
                 side = om[rows]                                                      # tokens of this step's tokenizer: the losses reach its weights
             lkw = {"lead": S.leadf[rows]} if use_lead else {}
             out = fwd(front_b, ego, S.tc[rows], side, smask, nv=None if S.nv is None else S.nv[rows], **lkw)
+            if aux is not None:
+                out, hid = out
             total, Ls = LS(out, S, rows, anchor)
+            if aux is not None:                                                      # imitation rows only; lambda 0: a probe on the detached state
+                Ls["aux"] = aux.loss(hid if cfg.aux_lam > 0 else hid.detach(), rows, ~anchor & S.has_fut[rows])
+                if run and cfg.aux_lam > 0 and (step + 1) % cfg.eval_every == 0:
+                    run.scalars(aux.dose(total, cfg.aux_lam * Ls["aux"], base + new), step + 1)
+                total = total + (cfg.aux_lam if cfg.aux_lam > 0 else 1.0) * Ls["aux"]
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {k: float(v) for k, v in Ls.items()} }")
             opt.zero_grad(set_to_none=True)
@@ -819,6 +852,8 @@ def main(a):
             torch.nn.utils.clip_grad_norm_(base + new, 1.0)
             if om is not None:                                                       # clipped on its own: the policy's clip is that of the other arms
                 tok_gn = float(torch.nn.utils.clip_grad_norm_(om.params, 1.0))
+            if aux is not None:
+                torch.nn.utils.clip_grad_norm_(aux.parameters(), 1.0)
             scaler.step(opt)
             scaler.update()
             hist.append({k: float(v) for k, v in Ls.items()})
@@ -835,6 +870,7 @@ def main(a):
                              f"; {(step + 1) / el:.2f} it/s, {torch.cuda.max_memory_reserved() / 2 ** 30:.1f} GB")
                     run.status(f"step {step + 1}/{cfg.steps}")
             if run and ((step + 1) % cfg.eval_every == 0 or step + 1 == cfg.steps):
+                model.tap = None
                 ev = dev_eval(model.eval(), Sd, dv_rows, LS.W)
                 dvb = dv_rows[S.is_b2d[dv_rows]]
                 if len(dvb) and len(dvb) < len(dv_rows):
@@ -844,11 +880,16 @@ def main(a):
                     ev |= {"wod_" + k: v for k, v in dev_eval(model, Sd, dvw, LS.W).items()}
                     ev |= {"nav_" + k: v for k, v in dev_eval(model, Sd, dv_rows[~S.is_wod[dv_rows]], LS.W).items()}
                 model.train()
+                model.tap = HX.TAP if aux is not None else None
                 run.scalars({f"dev/{k}": v for k, v in ev.items()}, step + 1)
                 run.info(f"dev @ {step + 1}: " + ", ".join(f"{k} {v:.3f}" for k, v in ev.items()))
                 run.summary.update({f"dev_{k}": v for k, v in ev.items()})
+        model.tap = None
         if run:
             torch.save({"model": model.state(), "cfg": asdict(cfg)}, d / "ckpt-final.pt")
+            if aux is not None:                                                      # the head and its read rows; neither is part of the checkpoint
+                torch.save(aux.net.state_dict(), d / "aux.pt")
+                aux.dump(model, S, ho_rows if len(ho_rows) else dv_rows, LS.W, rear, d / "aux_eval.npz")
             if model.adapter is not None:
                 torch.save(model.adapter.state_dict(), d / "adapter.pt")
             run.summary.update(steps=cfg.steps, train_s=time.time() - t0, ckpt=str(d / "ckpt-final.pt"))
@@ -921,5 +962,8 @@ if __name__ == "__main__":
     ap.add_argument("--lead-init", default="", help="TR1 (arm P2L): pre-trained lead-token MLP (scripts/tr1.py tok)")
     ap.add_argument("--retime", default="", choices=["", "moving", "lead"], help="TR1: imitation target = the logged path at the base plan's arc lengths")
     ap.add_argument("--mem-lr", type=float, default=0.0, help="geo-e2e / path-req: learning rate of the tokenizer group (0 = the adapter's lr_new)")
+    ap.add_argument("--aux-lam", type=float, default=-1.0, help="HEAD1b B2 (exploratory): weight of the heading-profile head on select_4; < 0 off, 0 detached probe")
+    ap.add_argument("--aux-labels", default=Cfg.aux_labels, help="heading-profile label file under $DATA_DIR (head1_labels.py)")
+    ap.add_argument("--holdout", default="", help="HEAD1b B2: salt of the validation logs removed from the train rows (head1val)")
     speed_args(ap)
     main(ap.parse_args())

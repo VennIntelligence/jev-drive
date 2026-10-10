@@ -110,3 +110,11 @@ A 的 fold 预测一齐就启动，不等 A 的 navtest 读数。配方 = 第 20
 - **位姿目标的 loss** = `path_req._imit`（xy Huber δ 1.0 m + 3 × yaw Huber δ 0.1 rad）；step 选择用同一 loss 在 fold 0 val 行上的加权值（与 L 头同一批 val 行、同一权重）。
 - **位姿头的弧长读法**：8 个位姿经 `pt_swap.Curve` 成曲线，在 22 点网格上取 heading；policy plan 的 4 s 弧长超出该头自己的 4 s 弧长时，主读数沿末端 heading 直线延长（ext-line），并列 `pt_swap` 的常曲率延长（ext-arc）作敏感性，同时报需要延长的 token 比例。
 - **QH 原头**只在 navtest 上读（它的拟合行 `geotok-train` 与 fold 0 的 held-out log 重叠，H 上不是 held-out）。
+
+### 补记 2026-10-10（HEAD1b B2 实现说明，任何 B2 读数之前提交并 push；探索性）
+- **挂载的 hidden state** = Cinque 图的 `select_4`（节点 638，512 维）：off-policy temporal summarizer 的 transformer 输出取最后一个 token，plan / lead / lead_prob / desire_state 四个头都从它解码（plan = final(select_4 + head_mlp.plan(LN(select_4)))）。它在 parity adapter 之后（adapter 把 bias 加在 summarizer 读的 9 帧上），可训练的 plan 通路除 plan 头自己的 MLP 外都在它上游；辅助梯度因此到达 adapter 与 summarizer，plan 的读出层不受辅助头直接约束。没有选 `add_54`（plan 头 MLP 之后）：那一层只差一个线性层就是 plan 输出，辅助目标会与 plan 读出争同一个 512 维。
+- **辅助头** = LayerNorm → Linear(512, 512) → GELU → Linear(512, 22)（0.28 M），输出 rad；loss = 有标签点上的 Huber δ 0.1 的平均，只在 imitation 行（非 anchor 且有日志未来）；anchor 行不算（那里 adapter 输入被置零、plan 被蒸馏到原模型，标签对它没有意义）。辅助头自己一组参数，lr = `lr_new` 3e-4，单独 clip 1.0；policy 的 clip 仍是 base + adapter 的联合范数 1.0（λ > 0 时含辅助梯度）。采样仍是 pilot 配方的均匀行流（没有用 HEAD1 trainer 的转弯加权采样）。
+- **λ = 0 的含义**：辅助头照样建、照样训，但读的是 detach 后的 `select_4`（权重 1）：policy 的梯度与权重与不带头的配方逐位相同，头是「原配方的 hidden state 里读得出多少曲线」的 probe。这是在补记之外多出的一个读数，不改 λ = 0 作为参照的定义。
+- **恒等核对的形式**：同 seed、同行、短跑，`--aux-lam 0` 对不带任何新 flag 的原配方，逐 tensor 比较 `ckpt-final.pt`（期望逐位相同；不同则报最大差并说明）。
+- **选择统计量的口径**：plan 的 4 s heading 误差 = plan 的第 8 个位姿的 yaw（unwrap）− 日志 4 s yaw（即 `head1_read.py` 里 policy 自己的误差的口径），在留出 log 的行中 |日志 4 s heading 变化| > 20° 的行上取 RMS；ADE = 8 个位姿的平均位移误差，全部留出行。若三个 λ 的 ADE 都超过 λ = 0 的 1.02 倍，取 heading RMS 最低者并照实写「ADE 条件无一满足」。
+- **辅助头自身精度**：选择 run 在留出行上、最终臂在 `s234-dev` 行（token 级 dev，log 不是 held-out，只作参考）与 navtest 上读；navtest 上按 `head1_read.py` 的口径（曲线在 plan 自己的 4 s 弧长处的值 − 日志 4 s heading；另列日志 4 s 弧长处）与 stage-1 的 L 头并列。navtest 上的辅助头读数只是描述，不参与任何选择。
