@@ -60,6 +60,13 @@ resume, interface lon.resume = timer+rule; experiments/op_resume/plans/2026-10-0
 and latch constraints are dropped and replaced by max(the rule's launch profile, the plan); the lead-head IDM and the set-speed
 governor stay; inputs: game time, speed, the lead head, the plan's 1 s distance)}. Per plan (every tick) one line in plans.jsonl with openpilot's heads, the base and
 arbitration state, and ground-truth context (evaluation only; only mode oshadow reads it for control).
+Parity input ports (experiments/body1/plans/2026-10-10-stage2-prereg.md section 4; top-level "port": {"ego", "cmd", "log"}, all off by
+default and then every run is as before, bit for bit): "ego" feeds the parity adapter the hero's body-frame velocity and acceleration from
+the simulator state as b2dc_labels.tick_labels computes them (PRIVILEGED simulator state; shipped: vx = speedometer, vy = ay = 0, ax = a 0.5 s
+speed difference); "cmd" takes the parity command from b2dc_labels.route_command on Route.from_geometry of the agent's own dense route at
+PORT_CMD_M (junction turns labelled from geometry; shipped: the route desire); "log" adds to the per-tick context the hero's traffic-light
+state ("htl", "htl_id") and the nearest actor box ahead ("ahead": [m ahead of the front bumper, lateral m (left +), type id], PORT_AHEAD)
+and to plans.jsonl the fed parity ego vector ("pe").
 """
 import sys as _sys, pathlib as _pl  # restructure: dirs of the script modules this file imports by bare name
 _repo = _pl.Path(__file__).resolve().parent if (_pl.Path(__file__).resolve().parent / "jevdrive").exists() else (_pl.Path(__file__).resolve().parents[1] if (_pl.Path(__file__).resolve().parents[1] / "jevdrive").exists() else _pl.Path(__file__).resolve().parents[3])
@@ -93,6 +100,9 @@ REAR_TO_BUMPER = 1.3886 + 2.4508       # MKZ 2020: rear axle -> centre -> front 
 CAM_TO_BUMPER = REAR_TO_BUMPER - rigs.OP_MOUNT_RIG[0]   # openpilot's lead x is measured from the camera
 DT_SIM, HORIZON = 0.05, 5.0
 MODES = ("native", "base", "oshadow", "acc", "e2e", "switch", "drive")
+PORT_CMD_M = 20.0                      # "port.cmd": route_command lookahead (m) = DESIRE_RANGE_M, so the fix changes the function, not the distance
+PORT_AHEAD = (12.0, 1.75, 3.0)         # "port.log": actor box within this many m ahead of the front bumper, +- m of the heading line, +- m in height
+PORT_KINDS = ("vehicle.", "walker.", "static.prop.")
 DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3.0, "twin": False, "lead_p": 0.5,
             "plan_vmin": 1.0, "plan_form": "abs", "release": "none", "release_th": 0.5, "latch_max_s": 20.0,
             "plan_gate": "always", "brake_th": 0.5, "meta_k": 0, "zones": True, "release_s": 0.0,
@@ -252,6 +262,8 @@ class OpArbAgent(Z.ZeroShotAgent):
         self.route_adapter = self.cfg.get("route_adapter") or None
         self.parity = self.cfg.get("parity") or None         # op_parity arms: {"socket": bias server socket}; the op server fetches the bias (ego inputs below)
         self.route_flip = bool(self.cfg.get("route_flip"))   # control: mirror the navigation polyline (left <-> right command)
+        self.port = dict(self.cfg.get("port") or {})         # parity input-port fixes and their logging (module docstring); {} = as shipped
+        self.port_route, self.port_s = None, None
         if self.route_adapter:
             import route_adapter as RA                       # lib/: numpy only on this path (features run on the server)
             self.route_poly_from_path = RA.route_poly_from_path
@@ -336,8 +348,82 @@ class OpArbAgent(Z.ZeroShotAgent):
         a = (speed - v_prev) / 0.5
         cmd = np.zeros(4, np.float32)
         cmd[{Z.DESIRE_TURN_LEFT: 0, Z.DESIRE_TURN_RIGHT: 2}.get(desire, 1)] = 1.0
-        ego = PA.ego_features(pose, np.tile([speed, 0.0], (4, 1)), np.tile([a, 0.0], (4, 1)), cmd)
+        vel, acc = [speed, 0.0], [a, 0.0]
+        if self.port.get("ego"):                             # port fix 1: body-frame velocity / acceleration from the simulator state
+            vel, acc = self.port_body()
+        if self.port.get("cmd"):                             # port fix 2: the labels' route command
+            cmd = self.port_command(xy[-1])
+        ego = PA.ego_features(pose, np.tile(vel, (4, 1)), np.tile(acc, (4, 1)), cmd)
         return [round(float(x), 5) for x in ego]
+
+    # ------------------------------------------------------------------------ parity input ports ("port", default off)
+    def _labels(self):
+        d = str(_repo / "experiments/b2d_collect/lib")
+        if d not in sys.path:
+            sys.path.insert(0, d)
+        import b2dc_labels as L
+        return L
+
+    def _hero_state(self):
+        """Simulator state of the hero (privileged): velocity and acceleration (CARLA world x, y, z) and yaw (deg), as b2dc_agent records them."""
+        from srunner.scenariomanager.carla_data_provider import CarlaDataProvider as CDP
+        h = CDP.get_hero_actor()
+        v, a = h.get_velocity(), h.get_acceleration()
+        return [v.x, v.y, v.z], [a.x, a.y, a.z], h.get_transform().rotation.yaw
+
+    def _junction_ids(self, xyz):
+        """Junction id (-1 outside) of every dense route point: b2dc_labels.junction_ids on the live map."""
+        from srunner.scenariomanager.carla_data_provider import CarlaDataProvider as CDP
+        L, m = self._labels(), CDP.get_map()
+        L._maps.setdefault("live:" + m.name, m)
+        return L.junction_ids("live:" + m.name, None, xyz)
+
+    def port_body(self):
+        """(vx, vy), (ax, ay) of the hero in its body frame (x forward, y left): b2dc_labels.body on the simulator state."""
+        L = self._labels()
+        v, a, yaw = self._hero_state()
+        return L.body(np.array([v]), [yaw])[0], L.body(np.array([a]), [yaw])[0]
+
+    def port_command(self, xy):
+        """NAVSIM one-hot (4,) at the rear-axle position xy (CARLA world): b2dc_labels.route_command on Route.from_geometry of the agent's
+        dense route (progress as the labels track it: the nearest route point within 30 m of the last progress)."""
+        L = self._labels()
+        if self.port_route is None:
+            xyz = np.array([[tf.location.x, tf.location.y, tf.location.z] for tf, _ in self._dense_plan], float)
+            self.port_route = L.Route.from_geometry(xyz, self._junction_ids(xyz))
+        self.port_s = self.port_route.progress(np.array([xy[0], -xy[1]], float), self.port_s)
+        return L.route_command(self.port_route, self.port_s, PORT_CMD_M)
+
+    def _port_ctx(self, hero, tf):
+        """Logging only: the hero's traffic-light state and the nearest vehicle / walker / prop box inside PORT_AHEAD."""
+        tl = hero.get_traffic_light()
+        out = {"htl": str(hero.get_traffic_light_state()), "htl_id": int(tl.id) if tl is not None else -1}
+        from srunner.scenariomanager.carla_data_provider import CarlaDataProvider as CDP
+        yaw, hb = math.radians(tf.rotation.yaw), hero.bounding_box
+        c, s, front = math.cos(yaw), math.sin(yaw), hb.location.x + hb.extent.x
+        u = np.linspace(-1.0, 1.0, 9)
+        ring = np.concatenate([np.stack([u, np.full(9, k)], -1) for k in (-1.0, 1.0)] + [np.stack([np.full(9, k), u], -1) for k in (-1.0, 1.0)])
+        best = None
+        for a in CDP.get_all_actors():
+            tid = a.type_id
+            if a.id == hero.id or not tid.startswith(PORT_KINDS):
+                continue
+            ta = a.get_transform()
+            if abs(ta.location.x - tf.location.x) + abs(ta.location.y - tf.location.y) > 40.0 or abs(ta.location.z - tf.location.z) > PORT_AHEAD[2]:
+                continue
+            bb, ya = a.bounding_box, math.radians(ta.rotation.yaw)
+            loc = np.array([bb.location.x, bb.location.y]) + ring * np.array([bb.extent.x, bb.extent.y])     # box outline, actor frame
+            dx = ta.location.x + math.cos(ya) * loc[:, 0] - math.sin(ya) * loc[:, 1] - tf.location.x
+            dy = ta.location.y + math.sin(ya) * loc[:, 0] + math.cos(ya) * loc[:, 1] - tf.location.y
+            fwd, left = c * dx + s * dy - front, s * dx - c * dy
+            ok = (fwd >= 0.0) & (fwd <= PORT_AHEAD[0]) & (np.abs(left) <= PORT_AHEAD[1])
+            if ok.any():
+                k = int(np.argmin(np.where(ok, fwd, np.inf)))
+                if best is None or fwd[k] < best[0]:
+                    best = [round(float(fwd[k]), 2), round(float(left[k]), 2), tid]
+        if best is not None:
+            out["ahead"] = best
+        return out
 
     def nav_polyline(self, xy, yaw):
         """The route ahead as the adapter's polyline: dense route points from the ego's (rear axle) projection on, up to 170 m of arc,
@@ -393,6 +479,8 @@ class OpArbAgent(Z.ZeroShotAgent):
         ws = self.route.s[max(i0 - 5, 0):i0 + 120]
         s_ego = ws[int(np.argmin(np.linalg.norm(win - rear, axis=1)))]
         out = {"junc": int(CDP.get_map().get_waypoint(tf.location).is_junction)}
+        if self.port.get("log"):
+            out.update(self._port_ctx(hero, tf))
         lead, ped, near = (None, None), (None, None), []
         for a in CDP.get_all_actors():
             tid = a.type_id
@@ -667,6 +755,8 @@ class OpArbAgent(Z.ZeroShotAgent):
         if "ls" in info:                                     # server-side launch stabilisation (op_arb_server.py OP_LSTAB)
             rec["ls"] = {k: info[k] for k in info if k.startswith("ls")}
         rec["ctx"] = self._ctx()
+        if self.parity and self.port.get("log"):
+            rec["pe"] = meta["parity_ego"]
         if self.pc is not None:
             rec["pc"] = {k: v for k, v in self.pc.meta.items() if k not in ("junctions", "obstacles")}
         self.plan_log.write(json.dumps(rec, default=_json_scalar) + "\n")
