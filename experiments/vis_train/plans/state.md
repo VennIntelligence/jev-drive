@@ -105,3 +105,38 @@ navtrain 103 288 token 与 navtest + navhard 18 058 token，各 16 套标定；�
 - 22:41 CST：`lb_navtest` 侧视缓存完成，检查通过。
 - 22:50 CST 前后：navtrain 12 个 shard（103 288 行，151.3 GiB）与 `lb_navhard`（5 912 行，8.7 GiB）全部完成，`navtrain_full.s0of12` 检查通过（结果 `px_side/check-s0.json`、`check-navtest.json`）。阶段 1 结束；盘余 285 GiB。
 - 阶段 2（trainer 的 W 臂、`VT-W-*` 的 bench 路由、链）在第一波启动之后才动 `vt.py` / `vt_chain.sh` / bench 文件。
+
+## 第一波的链（接手的 lane agent 维护；2026-10-10 23:20 CST 起）
+
+### 怎么续
+
+- 每臂一条链：box 上 `scripts/tmux_run.sh vt-<臂>-s<seed> experiments/vis_train/scripts/vt_chain.sh <臂> <seed> <步数>`，状态在 `$DATA_DIR/runs/vis_train/chain/<臂>-s<seed>/{STATUS,DONE,ERROR,jobs.txt,pool/}`。同一条命令重跑即续（训练 `--resume`，步数必须与首次相同，否则 `claim` 拒绝）。重跑前先 `tmux kill-window -t jev:vt-<臂>-s<seed>`（窗口在脚本退出后留着）。
+- box 上 `python` 不在 PATH：pool / bench 用 `~/data/jev-drive/.venv/bin/python -m jevdrive.cl|bench`，torch 任务用 `$DATA_DIR/envs/op-train/bin/python`。
+
+### 22:53 CST 的失败与修复
+
+A / A0 / B 六条链的 preflight（6 步 smoke，eval 在步 0 与步 3）真失败，不是被杀：停止规则把 memory 臂步 0 的 memory-on ADE（1.08–1.12 m，对起点 0.57 m，构造性差值）计了两次。修复 = 停止规则从 warmup 之后计数（commit d630dc45，prereg 补记 4）。pool 的 `rc None` 只是「依赖失败」的转述，preflight 自身 rc 1。
+
+### 步数与当前任务（23:09 CST 重启后）
+
+| 臂 | 步数 | 卡（pool 放置） | 23:15 实测 it/s | 预计结束（CST / JST） |
+|:--|--:|:--|--:|:--|
+| F-s0 / F-s1 / F0-s0 | 60 000（22:52 启动，未动） | 1 / 2 / 0 | 6.6 / 7.6 / 6.2（独占时 15） | 约 01:10–01:20 / 02:10–02:20 |
+| A0-s0 / A0-s1 | 50 000 | 5 / 2 | 6.3 / 7.5 | 约 01:20 / 02:20 |
+| A-s0、B-s1 | 50 000 | 4（两个同卡） | 2.76 / 2.77 | 约 04:15 / 05:15 |
+| A-s1、B-s0 | 50 000 | 3（两个同卡） | 2.76 / 2.73 | 约 04:15 / 05:15 |
+| C-s0 | 40 000 | 0（与 F0 同卡） | 1.23（F0 结束后预计约 1.9） | 约 05:45 / 06:45 |
+
+- 步数的来由：A / B 先按分级启动的独占速度（5.28 it/s）以 60 k 提交；pool 把四个任务两两放在同一张卡上，实测 2.76 it/s，60 k 要到 06:10 JST，于是 23:07 取消（各跑了约 1 000 步，无 snapshot，run 目录只有 `vt_run.json` / `evals.json`，已删）并以 50 k 重新提交（50 000 / 2.76 = 5.0 h）。A0 同步数。F 已在跑 60 k，保留（对照取最大者；与 A / B 的比较用 F 的 k50）。
+- C 取 40 k：F0 每 10 k 一个 snapshot，C 的末尾对 `VT-F0-s0-k40`；1.23 it/s（与 F0 同卡约 2 h）→ 1.9 it/s。
+- F / F0 的 HUGSIM 等 `VT-C-s0/ckpt-final.pt` 出现后才排（`VT_LAST` 默认）。
+- 恒等：`runs/vis_train/ident/{A,A0}-s{0,1}.json`、`B-s0.json`、`C-s0.json` 均 `pass_2ulp` = true（> 0.032 m 的行 0，错模型对照 70%），F-s0 逐位相同。分级启动：A / B / C 的 `train-smoke-vt-stage-*` 均完成（A：步 300 dev ADE 0.579 对起点 0.561，位移 0.11%，支路 head ADE 9.85 → 1.16）。
+
+### 吞吐（batch 64，navtrain 12 shard；`runs/vis_train/prof-step-*`）
+
+| 步型 | 第 145 条 U2（在线 CPU 渲染） | 像素缓存 + U2 的 encoder 路径 | + `fast_encode` | + 编译（上线配置） | 分级启动实测（独占） | 正式运行（两个同卡） |
+|:--|--:|--:|--:|--:|--:|--:|
+| A / B（只过 t0 一对） | 0.7 it/s | 1.69（GPU 70%） | 4.20（87%） | 5.04（90%） | 5.28 | 2.76 × 2 = 5.5 / 卡 |
+| C（8 个 slot 全过 encoder） | 0.7 it/s | 1.08（71%） | 1.71（91%） | 1.92（89%） | 1.89 | 1.23（与 F0 同卡） |
+
+对 0.7 it/s：A / B 独占 7.5 倍、每卡合计 7.9 倍、单任务同卡时 3.9 倍；C 独占 2.7 倍。
