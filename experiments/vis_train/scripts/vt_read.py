@@ -808,7 +808,8 @@ def cmd_probe(a):
     od.mkdir(parents=True, exist_ok=True)
     S = "experiments/vis_train/scripts"
     datas = ["lb_navtest", "navtrain_full.s2of12", "navtrain_full.s3of12", "navtrain_full.s4of12"]
-    assert all((RUNS / t / "ckpt-final.pt").exists() for t in a.tags), "a tag has no checkpoint"
+    assert a.gated or all((RUNS / t / "ckpt-final.pt").exists() for t in a.tags), "a tag has no checkpoint (--gated queues the chain on the checkpoints)"
+    lowp = ["--priority", str(a.priority)]
 
     jf = od / "jobs.json"
     jobs = json.loads(jf.read_text()) if jf.exists() else {}
@@ -825,11 +826,11 @@ def cmd_probe(a):
         jf.write_text(json.dumps(jobs))
         print(nm, jobs[nm])
         return jobs[nm]
-    tj = [sub(f"vt-probe-tok-{t}", all((D / "runs/vis_train/tokens" / t / f"{d}.npy").exists() for d in datas), [], "--vram", "16", "--cpu", "4", "--ram", "24", "--",
+    tj = [sub(f"vt-probe-tok-{t}", all((D / "runs/vis_train/tokens" / t / f"{d}.npy").exists() for d in datas), [], "--vram", "16", "--cpu", "4", "--ram", "24", *lowp, "--when-exists", str(RUNS / t / "ckpt-final.pt"), "--",
               str(py), f"{S}/vt.py", "tokens", "--tag", t) for t in a.tags]
-    dj = sub(f"vt-probe-dec-{a.name}", (od / "decoder_poses.npz").exists(), [j for j in tj if j], "--vram", "12", "--cpu", "4", "--ram", "48", "--",
+    dj = sub(f"vt-probe-dec-{a.name}", (od / "decoder_poses.npz").exists(), [j for j in tj if j], "--vram", "12", "--cpu", "4", "--ram", "48", *lowp, "--",
              str(py), f"{S}/vt_read.py", "probe-decode", "--name", a.name, "--tags", *a.tags)
-    sub(f"vt-probe-score-{a.name}", (od / "score_t20.csv").exists(), [dj] if dj else [], "--vram", "0.5", "--cpu", str(a.cpu), "--ram", "48", "--",
+    sub(f"vt-probe-score-{a.name}", (od / "score_t20.csv").exists(), [dj] if dj else [], "--vram", "0.5", "--cpu", str(a.cpu), "--ram", "48", *lowp, "--",
         str(D / "envs/navsim2/bin/python"), "experiments/op_probe/scripts/opb_score.py", "--poses", str(od / "decoder_poses.npz"), "--keys", "V", *a.tags,
         "--tokens", str(od / "tokens_t20.txt"), "--out", str(od / "score_t20.csv"))
 
@@ -860,6 +861,8 @@ if __name__ == "__main__":
     p.add_argument("--tags", nargs="+", required=True, help="checkpoint tags with a branch or their own encoder (VT-A / B / C / W-s<seed>[-k<NN>])")
     p.add_argument("--name", required=True, help="probe run name ($OUT/probe/<name>)")
     p.add_argument("--cpu", type=int, default=24)
+    p.add_argument("--gated", action="store_true", help="queue the chain before the checkpoints exist (the token jobs wait for them)")
+    p.add_argument("--priority", type=int, default=2)
     p = sp.add_parser("probe-decode")
     p.add_argument("--tags", nargs="+", required=True)
     p.add_argument("--name", required=True)
