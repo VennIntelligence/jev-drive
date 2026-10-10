@@ -41,7 +41,8 @@ worker() {  # card: takes chunks until none is left; a card that reads the 2026-
     done
   done
 }
-for g in $CARDS; do worker "$g" & sleep 20; done; wait      # staggered: two stacks starting at once race for the wizard's docker network
+pids=(); for g in $CARDS; do worker "$g" & pids+=($!); sleep 20; done      # staggered: two stacks starting at once race for the wizard's docker network
+wait "${pids[@]}"                                                         # the workers only: a bare wait also waits for the log tee above, which never ends
 (( J )) && { st "joined cards $CARDS: no chunk left"; exit 0; }
 busy() {  # a claimed chunk of a joined card is still running (its driver container is up)
   local c; for c in "$O"/claims/*; do c=$(basename "$c"); [[ -f $O/runs/${L}_$c/DONE ]] && continue
