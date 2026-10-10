@@ -190,8 +190,9 @@ def clip_labels(job):
     box, valid, cls, drop = clip_boxes(cd, ticks)
     o = dict(box=box.astype(np.float16), valid=valid, cls=cls)
     with footprint(**MKZ):                                                      # sanity query: the expert's own executed future must not be a contact
-        o["exp_a_hit"] = np.concatenate([SW.labels(fut[c:c + 128][:, None], np.zeros((len(fut[c:c + 128]), 2), np.float32), box[c:c + 128], valid[c:c + 128], cls[c:c + 128],
-                                                   sdf[c:c + 128])["a_hit"][:, 0] for c in range(0, len(ticks), 128)])
+        ex = [SW.labels(fut[c:c + 128][:, None], np.zeros((len(fut[c:c + 128]), 2), np.float32), box[c:c + 128], valid[c:c + 128], cls[c:c + 128], sdf[c:c + 128])
+              for c in range(0, len(ticks), 128)]
+        o["exp_a_hit"], o["exp_b_margin"], o["exp_b_t0"] = (np.concatenate([e[k][:, 0] for e in ex]) for k in ("a_hit", "b_margin", "b_t0"))
     for fp, kw in (("pac", PAC), ("mkz", MKZ)):
         with footprint(**kw):
             for c in range(0, len(ticks), 128):
@@ -380,6 +381,21 @@ def report(a, run):
          "c_turn>=0.80": c["c_dir_turn"]["v"] >= 0.80, "c_over45>=0.75": c["c_dir_over45"]["v"] >= 0.75,
          "d_boundary<=3xnav": c["d_boundary_rate_straight"]["v"] <= 3 * n["d_boundary_rate_straight"]["v"]}
     D1["lines"] = {k: bool(v) for k, v in L.items()}
+    # post hoc (not a registered line): the raster's own noise floor = the expert's executed future through the same reader, and the own-plan
+    # rates on the rows where the expert's future is clean (no boundary contact, no agent contact)
+    em, et0, eah = Lb["exp_b_margin"], Lb["exp_b_t0"], Lb["exp_a_hit"]
+    st = (speed > 3) & (np.abs(eh) < 5)
+    elab = (em < 90) & ~et0
+    clean = elab & (em >= 0) & ~eah
+    bm2, bt2 = Lb["mkz_b_margin"][:, :2], Lb["mkz_b_t0"][:, :2]
+    lab2 = (bm2 < 90) & ~bt2
+    two = lambda m: np.repeat(m, 2)  # noqa: E731
+    D1["posthoc"] = dict(expert_future_boundary_rate_straight=share((em < -0.20) & elab & st, elab & st, route), expert_future_agent_rate_straight=share(eah & st, st, route),
+                         own_boundary_rate_straight_expert_clean=share(((bm2 < -0.20) & lab2 & (st & clean)[:, None]).reshape(-1), (lab2 & (st & clean)[:, None]).reshape(-1), two(route)),
+                         own_agent_rate_straight_expert_clean=share((Lb["mkz_a_hit"][:, :2] & (st & clean)[:, None]).reshape(-1), two(st & clean), two(route)),
+                         own_agent_first_contact_s_median=float(np.median(Lb["mkz_a_t"][:, :2][Lb["mkz_a_hit"][:, :2] & (speed >= 0.5)[:, None]])),
+                         own_agent_struck_class=np.bincount(Lb["mkz_a_cls"][:, :2][Lb["mkz_a_hit"][:, :2] & (speed >= 0.5)[:, None]].astype(int), minlength=4).tolist())
+    run.info("D1 post hoc " + json.dumps(D1["posthoc"]))
     (RES / f"d1{sfx}.json").write_text(json.dumps(D1, indent=1))
     run.info("D1 lines " + json.dumps(D1["lines"]))
     for k in ("a_arc_ratio_median", "a_collapse_share", "b_launch_share", "b_1s_ratio_median", "c_dir_turn", "c_dir_over45", "d_boundary_rate_straight", "d_agent_rate_straight"):
@@ -390,7 +406,9 @@ def report(a, run):
     subs = {"primary (speed >= 0.5)": speed >= 0.5, "all": np.ones(len(speed), bool), "moving (> 3)": speed > 3, "standing (< 0.5)": speed < 0.5,
             "turn (> 20 deg)": (speed > 3) & (np.abs(eh) > 20), "over 45 deg": (speed > 3) & (np.abs(eh) > 45), "straight (< 5 deg)": (speed > 3) & (np.abs(eh) < 5),
             "scenario obstacle": (speed >= 0.5) & obst, "night": (speed >= 0.5) & (wx[:, 0] < 0), "day": (speed >= 0.5) & (wx[:, 0] >= 0),
-            "wet": (speed >= 0.5) & (wx[:, 2] > 50), "fog": (speed >= 0.5) & (wx[:, 3] > 20)} | {f"town {t}": (speed >= 0.5) & (town == t) for t in np.unique(town)}
+            "wet": (speed >= 0.5) & (wx[:, 2] > 50), "fog": (speed >= 0.5) & (wx[:, 3] > 20),
+            "post hoc: expert future clean": (speed >= 0.5) & clean, "post hoc: expert future clean, over 45 deg": (speed > 3) & (np.abs(eh) > 45) & clean,
+            "post hoc: expert future clean, turn": (speed > 3) & (np.abs(eh) > 20) & clean} | {f"town {t}": (speed >= 0.5) & (town == t) for t in np.unique(town)}
     rowsD2 = []
     for fp in ("pac", "mkz"):
         mg, t0, ah, rear = Lb[f"{fp}_b_margin"], Lb[f"{fp}_b_t0"], Lb[f"{fp}_a_hit"], Lb[f"{fp}_a_rear"]

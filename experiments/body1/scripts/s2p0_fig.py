@@ -49,7 +49,11 @@ def main(a, run):
                 used.add(ex["route"][i]), picks.append((name, int(i)))
                 if sum(n == name for n, _ in picks) == k:
                     break
-    fig, ax = plt.subplots(2, len(picks), figsize=(3.6 * len(picks), 7.4), gridspec_kw=dict(height_ratios=[2.2, 1]))
+    nc = (len(picks) + 1) // 2
+    fig, axs = plt.subplots(4, nc, figsize=(4.6 * nc, 17), gridspec_kw=dict(height_ratios=[2.2, 1, 2.2, 1]))
+    ax = np.concatenate([axs[:2], axs[2:]], 1)
+    for e in ax[:, len(picks):].ravel():
+        e.axis("off")
     rec = []
     for j, (name, i) in enumerate(picks):
         cd = R.clip_dir(ex["route"][i])
@@ -81,16 +85,16 @@ def main(a, run):
                 kk = int(round(tt / 0.1))
                 b.plot(d[kk, 1], d[kk, 0], mk, color="k", ms=11, mew=2.2)
         b.set_xlim(14, -14), b.set_ylim(-6, 46), b.set_aspect("equal")
-        b.set_title(f"{name}\n{ex['route'][i]} t{tk} {ex['town'][i]} v={tb['speed'][i]:.1f} m/s\np_agent {p[i, 0]:.2f} (truth {int(ya[i])})   p_boundary {p[i, 1]:.2f} (truth {int(yb[i])}, margin {mg[i]:+.2f} m)", fontsize=8)
+        b.set_title(f"{name}: {ex['route'][i]} t{tk} {ex['town'][i]} v={tb['speed'][i]:.1f} m/s\np_agent {p[i, 0]:.2f} (truth {int(ya[i])})\np_boundary {p[i, 1]:.2f} (truth {int(yb[i])}, margin {mg[i]:+.2f} m)", fontsize=9)
         if j == 0:
-            b.legend(fontsize=7, loc="lower left"), b.set_ylabel("x forward (m); grey = off the drivable raster; red = actor boxes at t0 (dark) and t0 + 4 s (light)")
+            b.legend(fontsize=7, loc="lower left"), b.set_ylabel("x forward (m); grey = off raster; red = actors at t0 (dark), t0 + 4 s (light)", fontsize=8)
         pair = F.read_pairs(cd / "frames.mp4", frames=[tk])[0]
         img = C.draw(C.yuv_rgb(pair[0]), "road", [(tb["fut"][i][:, :2], (0, 158, 115)), (z["q"][i, 0][:, :2], (0, 114, 178))])
         ax[1, j].imshow(img), ax[1, j].axis("off")
         rec.append(dict(case=name, route=ex["route"][i], tick=tk, town=ex["town"][i], speed=float(tb["speed"][i]), p_agent=float(p[i, 0]), p_boundary=float(p[i, 1]),
                         truth_agent=int(ya[i]), truth_boundary=int(yb[i]), margin_m=float(mg[i]), t_agent_s=ta, t_boundary_s=tbd))
-    fig.suptitle("S0 contact head (navtrain-trained, frozen) zero-shot on CARLA rows: own-plan sweep, MKZ footprint; x = first agent contact, + = first boundary contact", fontsize=10)
-    fig.tight_layout()
+    fig.suptitle("S0 contact head (navtrain-trained, frozen) zero-shot on CARLA rows: own-plan sweep, MKZ footprint; x = first agent contact, + = first boundary contact", fontsize=11)
+    fig.tight_layout(rect=(0, 0, 1, 0.98))
     o = B.REPO / "experiments/body1/figs/s2p0"
     o.mkdir(parents=True, exist_ok=True)
     fig.savefig(o / "cases.png", dpi=110)
