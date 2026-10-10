@@ -96,17 +96,21 @@ def geom_log(log):
             out.append(r)
             continue
         path, used = [nd for _, nd in fpath], fpath[-1][0]
-        seq, lc = g.sequence(path)
-        run = seq[lc:]
+        runs = g.runs(path)
+        seq = [k for _, rn in runs for k in rn]
+        # amendment B: the corridor is the lane run the log is in at 4 s (a lane change later than that is ignored)
+        ri = max(k for k, (j, _) in enumerate(runs) if fpath[j][0] <= 8)
+        run, lc = runs[ri][1], ri
         Rxy, used_nodes, own = g.centreline(run, xy[i], AHEAD)
         hw = g.half_width(Rxy, own)
         Re = to_ego(Rxy, xy[i], yaw[i])
         line = LG.Line(Re)
         d0 = float(line.frenet(np.zeros((1, 2)))[1][0])        # ego left of the centreline: positive
         blend = BLEND
-        if lc > 0:                                   # arc length the log needs to reach the post-change lane run
-            f = next(k for k, nd in fpath if nd in run)
+        if lc > 0:                                   # arc length the log needs to reach the lane run it ends the 4 s in
+            f = fpath[runs[ri][0]][0]
             blend = max(BLEND, float(np.hypot(*np.diff(xy[i:i + f + 1], axis=0).T).sum()))
+        r["start_x"] = float(Re[0, 0])               # sanity: the centreline starts abeam of the ego (0 unless the chain starts ahead)
         conn = [k for k in seq if g.kind[k] == 1]
         r.update(seq=[g.ids[k] for k in seq], lane_change=lc > 0, R=Re.astype(np.float32), hw=hw.astype(np.float32), d0=d0, blend=blend,
                  frames=used, n_conn=len(conn), start_kind=g.kind[seq[0]])

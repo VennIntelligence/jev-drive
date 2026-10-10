@@ -60,7 +60,7 @@ def main(a):
         st = F["status"]
         rows = []
         for b, mk in (("all navtest", np.ones(n, bool)), *BK.items()):
-            rows.append({"tokens": b, "n": int(mk.sum()), "matched": int((mk & ok).sum()), "failed %": 100 * float((mk & ~ok).mean()),
+            rows.append({"tokens": b, "n": int(mk.sum()), "matched": int((mk & ok).sum()), "failed %": 100 * float((mk & ~ok).sum() / mk.sum()),
                          "no candidate t0": int((mk & (st == "no_candidate_t0")).sum()), "< 5 of 9 poses": int((mk & (st == "no_candidate_4s")).sum()),
                          "no connected sequence": int((mk & (st == "no_connected_sequence")).sum()),
                          "lane change %": 100 * float(F["lane_change"][mk & ok].mean()), "gap frames >= 1 %": 100 * float((F["gap"][mk & ok] > 0).mean()),

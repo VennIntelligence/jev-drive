@@ -216,34 +216,52 @@ class MapG:
         h = self.line[i].h[-1]
         return min(self.succ[i], key=lambda k: abs(float(wrap(self.line[k].h[-1] - h))))
 
+    def _chain(self, seq):
+        pts, own = [], []
+        for n, k in enumerate(seq):
+            p = self.line[k].xy if n == 0 else self.line[k].xy[1:]
+            pts.append(p)
+            own += [k] * len(p)
+        return np.vstack(pts), np.array(own)
+
     def centreline(self, seq, xy, ahead=90.0):
-        """Centreline of a connected node sequence from the projection of xy, extended downstream along the straightest successors
-        until `ahead` m; upstream through the predecessor nearest to xy while xy projects before the start.
-        Returns (Line in map coordinates starting at the projection, nodes used, node index per sample)."""
-        seq = list(seq)
-        for _ in range(4):
-            s, _d = self.line[seq[0]].frenet(np.asarray(xy)[None])
-            if s[0] > 1e-3 or not self.pred[seq[0]]:
+        """Centreline of a connected node sequence from the projection of xy onto the whole chain (its first 80 m), extended
+        downstream along the straightest successors until `ahead` m, and upstream through the predecessor nearest to xy while xy
+        projects onto the very start. Returns (samples in map coordinates starting at the projection, nodes used, node per sample)."""
+        seq, xy = list(seq), np.asarray(xy, np.float64)
+        for _ in range(5):
+            pts, own = self._chain(seq)
+            ln = Line(pts)
+            head = Line(ln.xy[:max(2, int(np.searchsorted(ln.S, 80.0)))])
+            s0 = float(head.frenet(xy[None])[0][0])
+            if s0 > 1e-3 or not self.pred[seq[0]]:
                 break
-            seq.insert(0, min(self.pred[seq[0]], key=lambda k: abs(float(self.line[k].frenet(np.asarray(xy)[None])[1][0]))))
-        s0 = float(self.line[seq[0]].frenet(np.asarray(xy)[None])[0][0])
-        tot = sum(self.line[k].L for k in seq) - s0
+            seq.insert(0, min(self.pred[seq[0]], key=lambda k: float(np.hypot(*(self.line[k].xy - xy).T).min())))
+        tot = ln.L - s0
         while tot < ahead:
             k = self.straightest(seq[-1])
             if k is None or k in seq:
                 break
             seq.append(k)
             tot += self.line[k].L
-        pts, own = [], []
-        for n, k in enumerate(seq):
-            p = self.line[k].xy if n == 0 else self.line[k].xy[1:]
-            pts.append(p)
-            own += [k] * len(p)
-        pts, own = np.vstack(pts), np.array(own)
+        pts, own = self._chain(seq)
         seg = np.r_[0, np.cumsum(np.hypot(*np.diff(pts, axis=0).T))]
         st = s0 + np.arange(0, max(min(ahead, seg[-1] - s0), STEP) + 1e-9, STEP)
         xy2 = np.stack([np.interp(st, seg, pts[:, 0]), np.interp(st, seg, pts[:, 1])], 1)
         return xy2, seq, own[np.clip(np.searchsorted(seg, st), 0, len(own) - 1)]
+
+    def runs(self, nodes):
+        """Matched node per pose -> [(index of the run's first pose, node sequence of the run)]; a new run starts at each lateral move."""
+        out = [(0, [nodes[0]])]
+        for i, b in enumerate(nodes[1:], 1):
+            a = out[-1][1][-1]
+            if b == a:
+                continue
+            if self.reach(a)[b][1]:
+                out.append((i, [b]))
+            else:
+                out[-1][1].extend(self._fill(a, b) + [b])
+        return out
 
     def half_width(self, xy, own):
         """Distance from each centreline sample to the boundary of its own node polygon."""
