@@ -233,6 +233,58 @@ def cmd_step(a):
         (OUT / f"step-{a.tag}.json").write_text(json.dumps(r | {"args": vars(a)}, indent=1))
 
 
+def cmd_equiv(a):
+    """Plans of one model on fixed rows through every pixel path against its cached-token path (front.npy): plan points <= 4 s, metres."""
+    import torch
+    import pp_prep as P
+    import pp_train as T
+    from jevdrive import op_adapt as A
+    dev = torch.device("cuda")
+    with Run("vis_train", f"prof-equiv-{a.tag}", config=vars(a)) as run:
+        S = T.Store([a.data], dev, need_side=False, frames="warp", host=True)
+        PS = PX.PixelStore([a.data], dev, mode="all")
+        rows = np.arange(min(a.rows, len(PS)))
+        m = T.load_pmodel(a.model, dev)
+        pi = torch.as_tensor(A.plan_index(m.net.slices), device=dev)
+        keep = torch.as_tensor(np.flatnonzero(A.T_IDXS <= 4.0), device=dev)
+        B = a.batch
+
+        def plans(tokens, model=m):
+            out = []
+            with torch.no_grad():
+                for i in range(0, len(rows), B):
+                    r = torch.as_tensor(rows[i:i + B], device=dev)
+                    o = model(tokens(rows[i:i + B]), S.ego[r], S.tc[r]).float()
+                    out.append(o[:, pi].view(-1, 33, 15)[:, keep, :2])
+            return torch.cat(out)
+
+        def px(kind):
+            def f(r):
+                g = PS.frames(r)
+                prev = torch.cat([torch.zeros_like(g[:, :1]), g[:, :-1]], 1)
+                if kind == "shipped":                                               # pp_prep's passes: all 8 slots, 128 pairs per pass
+                    h = torch.from_numpy(P.enc_dev(m.net, prev.flatten(0, 1), g.flatten(0, 1))).to(dev)
+                    return h.reshape(len(r), 8, *A.H_SHAPE)
+                hp = PX.fast_encode(m.net, prev[:, :7].flatten(0, 1), g[:, :7].flatten(0, 1), grad=False)
+                ht = PX.fast_encode(m.net, prev[:, 7], g[:, 7], grad=False, chunk=len(r), compiled=kind == "compiled")
+                return torch.cat([hp.reshape(len(r), 7, *A.H_SHAPE), ht[:, None]], 1)
+            return f
+        ref = plans(lambda r: S.front[r])
+        res = {}
+        paths = {"px_shipped": px("shipped"), "px_fast": px("fast")} | ({"px_fast_compiled": px("compiled")} if a.compiled else {})
+        cmp = {k: plans(f) for k, f in paths.items()}
+        if a.wrong:
+            cmp["wrong_model_cached"] = plans(lambda r: S.front[r], T.load_pmodel(a.wrong, dev))
+        for k, p in cmp.items():
+            d = torch.linalg.norm(p - ref, dim=-1)                                  # (n, points)
+            res[k] = {"mean_m": float(d.mean()), "median_row_max_m": float(d.amax(1).median()), "max_m": float(d.max()),
+                      "rows_over_0.03m": float((d.amax(1) > 0.03).float().mean())}
+            run.info(f"{a.model} on {a.data} first {len(rows)} rows, {k} vs cached tokens: {res[k]}")
+        run.summary |= res
+        OUT.mkdir(parents=True, exist_ok=True)
+        (OUT / f"equiv-{a.tag}.json").write_text(json.dumps(res | {"args": vars(a)}, indent=1))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -262,5 +314,14 @@ if __name__ == "__main__":
     p.add_argument("--data", nargs="+", default=None)
     p.add_argument("--tag", required=True)
     cli_args(p)
+    p = sp.add_parser("equiv")
+    p.add_argument("--data", default="lb_navtest")
+    p.add_argument("--model", default="SH30-F-s0")
+    p.add_argument("--wrong", default="SH30-F-s1", help="wrong-model control on the cached tokens ('' = none)")
+    p.add_argument("--rows", type=int, default=2048)
+    p.add_argument("--batch", type=int, default=64)
+    p.add_argument("--compiled", action="store_true")
+    p.add_argument("--tag", required=True)
+    cli_args(p)
     a = ap.parse_args()
-    {"enc": cmd_enc, "step": cmd_step}[a.cmd](a)
+    {"enc": cmd_enc, "step": cmd_step, "equiv": cmd_equiv}[a.cmd](a)
