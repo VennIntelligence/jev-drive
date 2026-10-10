@@ -18,6 +18,7 @@ import asyncio
 import csv
 import glob
 import json
+import multiprocessing as mp
 import os
 import pickle
 import sys
@@ -107,7 +108,7 @@ def main():
         pickle.dump(L, open(o / "lite.pkl", "wb"), protocol=4)
         kept = [] if a.lite_only else sorted(s for s in L if glob.glob(f"{run}/rollouts/{s}/*/rollout.asl") and "metrics" in L[s])
         if kept:
-            with ProcessPoolExecutor(a.jobs) as ex:
+            with ProcessPoolExecutor(a.jobs, mp_context=mp.get_context("spawn")) as ex:       # polars is loaded in the parent: no fork
                 logs = dict(ex.map(X.one_log, [(run, s) for s in kept]))
                 list(ex.map(one_msgs, [(run, s, str(o / "msgs")) for s in kept]))
             for s, v in logs.items():
