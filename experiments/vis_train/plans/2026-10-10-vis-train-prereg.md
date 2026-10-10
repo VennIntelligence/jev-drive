@@ -120,3 +120,11 @@ W 的阶段 2（trainer、bench 路由、链）实现时定下、「补记 1（�
 4. **测试时的屏蔽**：`:noside` 三路全屏蔽，`:sideoff` 只屏蔽 CAM_L0 / CAM_R0（F0 视图保留；`vt.py plans --mem sideoff`，仅 W），`:mshuf` 三路都换成另一 log 同一 token 的。W 的末尾读数：navtest、navhard，以及 navtest 上的 `:noside`、`:sideoff`、`:mshuf`。补记 1（W）判定线里的「屏蔽侧视 token 掉分」读 `:sideoff`。dev eval 多记一栏 `ade_sideoff`（诊断，不进停止规则）。
 5. **恒等**：memory 屏蔽对 `SH30-F-s<seed>`，判据同 A（`pass_2ulp`：> 0.032 m 的行 < 0.1%，错模型对照 > 50%）；另加一条：初始化时 `:sideoff` 对 memory 全开的 plan，差 > 0.03 m 的行 > 50%（侧视 token 确实进了 policy）。同时报告 W 的 F0 视图 token 对 A 的支路 token（同一批行）。
 6. **梯度 pass 的切法是速度选择，不是设计选择**：一步 192 个图像对（A 是 64）。一次过 192 对、每视图一次 64 对（`--enc-chunk 64`，其中 F0 那次就是 A 的那次调用）、或 activation checkpointing（`--enc-ckpt`）三者数学上相同，差别在 fp16 的 batch 组成量级；按实测的显存峰值与 it/s 取能被 pool 今晚放下的最快者，数字与选择写在 state.md「W 臂」。训练进程用 `--vram-cap` 把 CUDA 分配器卡在预订值以下，超了只会自己 OOM，不挤同卡的第一波任务。
+
+## 补记 6（2026-10-11 01:35 JST，jev-night；C-s1 / F0-s1 的任何训练步之前，且未看过 C 的任何读数）
+
+F-s0 在 00:26 CST 结束，card 1 空出；F-s1、F0-s0、A0 两条约 01:20 CST 结束后再空出约一张半卡。W-s1 按补记 5 取其中一张。剩下的一张用来给只有一个 seed 的臂补第二个 seed：
+
+- **C-s1**（40 000 步，每 5 k 一个 snapshot）与其对照 **F0-s1**（60 000 步，每 10 k），设置与 seed 0 完全相同（同一条链脚本，起点 `SH30-F-s1`）。理由：C 是唯一「原地训练 encoder」的臂，判定线里「两个 seed 方向相反降一档」对单 seed 的臂无从检查；加 seed 不改任何臂的定义、步数或读数。
+- 这不是按中途读数加码：决定时 C 没有任何 navtest 读数（C-s0 在步 5 000，首个 snapshot 的 bench 尚未出），依据只有空卡。
+- 读数：C、F0 的登记比较（C − F0、F0 − F）在 seed 1 上同样做，并报两个 seed 的均值；早上没跑完则在相同步数的 snapshot 上比较。HUGSIM 的 `VT_LAST` 门不变（`VT-C-s0`）。
