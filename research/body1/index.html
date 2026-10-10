@@ -300,7 +300,7 @@ code{font-size:13px}
 <figure><img src="figs/shape_new_e933d70d.png" alt=""><figcaption>图三十七：新增 corridor zero（0 → 4 / 4），70° 右转。看 plan 几乎直行穿过路口而日志右转，偏移 5.8 m 对 3.3 m，事件在 4.1 s。</figcaption></figure>
 <figure><img src="figs/shape_new_52d3f15d.png" alt=""><figcaption>图三十八：新增 corridor zero（0 → 4 / 4），55° 右转。看 plan 在转但比日志晚、少，偏移 5.1 m 对 2.9 m，事件在 4.5 s。</figcaption></figure>
 <p>去掉的 zero 是 clearance 课要解决的漂移（图三十三、三十四）或留在 corridor 内的弧（图三十五）；新增的 zero 是 48 至 70° 右转上 plan 转得不够、与物体无关：这与 Amendment 5 的新增 corridor zero 是同一个副作用，只是现在没有 progress 损失。</p>
-<p><b>成本与限制。</b>12 个 chunk job 加 pilot8 与图的重跑约 3.0 card-h（预算 4）、job 墙钟约 35 min，盘 2.4 GB。pilot8：8 / 8 rollout 完成，均分 0.9773 对 TR1 同 scene 的 0.9736，五个相同。限制：描述性读数、development scene、四个 seed 和 27 个 log；<code>P2H10-F-s{0,1}</code> 是 2026-10-06 的 TR1 训练、其余在当天 checkout 上训练；null 的 N2 与逐对归一是本读数加的；&gt; 45° 桶只有 20 个 log；这一读数不回答 G3 (b)（navtest 上 agent 接触率）为什么差一个 token。</p>
+<p><b>成本与限制。</b>12 个 chunk job 加 pilot8 与图的重跑约 3.0 card-h（预算 4）、job 墙钟约 35 min，盘 2.4 GB。pilot8：8 / 8 rollout 完成，均分 0.9773 对 TR1 同 scene 的 0.9736，五个相同。限制：描述性读数、development scene、四个 seed 和 27 个 log；<code>P2H10-F-s{0,1}</code> 是 2026-10-06 的 TR1 训练、其余在当天 checkout 上训练；null 的 N2 与逐对归一是本读数加的；&gt; 45° 桶只有 20 个 log；这一读数不回答 G3 (b)（navtest 上 agent 接触率）。（2026-10-11 更正：原句写的是「为什么差一个 token」；那一个 token 来自读错帧的 plan，warp 帧上是 135 对 140，G3 (b) 过线，见页首。）</p>
 
 <h2>十二、补记 7：route dead-band hinge <code>P2H10R</code> 停在 pilot gate（决策 234）</h2>
 <div class="v"><b>结论。</b>在 <code>P2H10S</code> 上加一项「own plan 到 logged path 的距离超出 dead band 的部分」的 hinge，目标是去掉 48 至 70° 弯上的走宽。pilot gate 的 corridor 线不过：band 取 2.5 m 时，navtest 上 &gt; 45° 的 token 里 plan 偏到 logged path 外侧 2 m 以上的有 138 个对关掉新项的 pilot 的 110 个（线：至多 +5；<code>P2H10S-P-s0</code> 为 141；warp 帧重读，原读数 67 对 54、75，判定不变），留出 log 的 on-log 弯道行为 12 对 10（线：至多 +1；<code>P2H10S-P-s0</code> 为 15）。接触线、弧长线、dev ADE、斜率全过（agent −40.2%、boundary −33.8%）。按登记变体到此结束：没有 full run、G3、闭环、navtest bench、PAI。来源：<code>experiments/body1/results/route_pilot.md</code>，决策 234。1 seed，pilot 规模。</div>
@@ -316,9 +316,9 @@ code{font-size:13px}
 <tr><td>own-plan boundary 率（hold）</td><td>−33.8%</td><td>≥ 25%</td><td>过</td></tr>
 <tr><td>dev ADE（m）</td><td>0.5949 对 0.5913</td><td>≤ +0.01</td><td>过</td></tr>
 <tr><td>续接斜率 alpha_05</td><td>0.851 对 1.079</td><td>≤ +0.05</td><td>过</td></tr>
-<tr><td>(C-a) navtest &gt; 45° 外侧 2 m 以上的 token（1 517）</td><td>67 对 54</td><td>≤ 参考 + 5</td><td><b>不过</b></td></tr>
+<tr><td>(C-a) navtest &gt; 45° 外侧 2 m 以上的 token（1 517）</td><td>138 对 110（warp 帧重读；原读数 67 对 54）</td><td>≤ 参考 + 5</td><td><b>不过</b></td></tr>
 <tr><td>(C-b) on-log 弯道行（207）</td><td>12 对 10</td><td>≤ 参考 + 1</td><td><b>不过</b></td></tr>
-<tr><td>(C-c) 离开 4 m 管道，navtest / hold 弯道行</td><td>31 对 47 / 10 对 27</td><td>≤ 参考 + 5 / + 1</td><td>过</td></tr></table>
+<tr><td>(C-c) 离开 4 m 管道，navtest / hold 弯道行</td><td>19 对 25（warp 帧重读；原读数 31 对 47）/ 10 对 27</td><td>≤ 参考 + 5 / + 1</td><td>过</td></tr></table>
 <p>含义：第 233 条的走宽是每个 plan 几十厘米的外偏在闭环里累积出来的；在这套行上，「不蹭内侧边缘」的课与「沿 route 走」不能靠到 log 的距离 hinge 分开。W2 能否预测闭环 corridor zero 没有被检验（没有 <code>P2H10R</code> checkpoint 进过 simulator）。本 lane 对留出 log 已在 pilot 规模读过四次；loss 臂不再有变体，大弯缺的是 route 能力本身，需要不以 log 距离为形式的约束。</p>
 
 <h2>十三、<code>P2H10S</code> 与 base 在 PAI 60 scene 上的描述性读数（补记 6 note (j)，决策 235）</h2>
