@@ -82,6 +82,7 @@ def label_log(job):
     xy = np.array([f["ego2global_translation"][:2] for f in fr], float)
     yaw = np.unwrap(np.array([yaw_of(f["ego2global_rotation"]) for f in fr]))
     sp = np.array([np.hypot(*f["ego_dynamic_state"][:2]) for f in fr], float)
+    tld = [{str(a): bool(b) for a, b in (f.get("traffic_lights") or [])} for f in fr]
     rows = []
     for i in range(n):
         j = min(n - 1, i + FMAX)
@@ -131,11 +132,17 @@ def label_log(job):
                     if dd < bd:
                         best, bd = cid, dd
                 st = tl.get(str(best), None) if best is not None and bd < 3.0 else None
-                tls.append((d, st, any(tl.get(str(x), False) for x in conns), best is not None and bd < 3.0))
+                k_arr = int(min(np.searchsorted(s_k, d), len(s_k) - 1))     # first logged frame at / after the line: the state the ego actually meets
+                st_arr = tld[i + k_arr].get(str(best), None) if best is not None and bd < 3.0 else None
+                tls.append((d, st, any(tl.get(str(x), False) for x in conns), best is not None and bd < 3.0, st_arr))
             red = [x for x in tls if x[1] is True]
             r["tl_line_d"] = tls[0][0] if tls else np.nan
             r["tl_line_state"] = {True: "red", False: "notred", None: "unk"}[tls[0][1]] if tls else ""
             r["tl_red_d"] = red[0][0] if red else np.nan
+            ra = [x for x in tls if x[4] is True]
+            r["tl_redarr_d"] = ra[0][0] if ra else np.nan                 # first line that is red when the ego reaches it (hindsight)
+            if ra:
+                r["tl_redarr_vline"], r["tl_redarr_vmin"] = beh(ra[0][0])
             r["tl_redany_d"] = next((x[0] for x in tls if x[2]), np.nan)
             if red:
                 r["tl_red_vline"], r["tl_red_vmin"] = beh(red[0][0])
