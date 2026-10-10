@@ -41,5 +41,7 @@ b2dc raster's own 1 % floor makes unmeetable); the contact head reads CARLA road
 student's plan on CARLA frames turns 0.28 to 0.54 of the expert's and launches on 24 % of standing rows; with both input ports fixed it still stands on 87 % of closed-loop ticks (unexcused 0.62, line 0.20).
 **Stage 2 on CARLA is closed by P0; nothing is built.**
 
+**Served plan length (2026-10-11, diagnosis).** The 0.909 of the decision-0 check is a cold start (one keyframe) read 1.5 s before the navtest token, not a frame mismatch on the nuPlan track; the PAI driver does feed warp-trained checkpoints real-frame slots (offline arc 0.895 of the log, ADE 1.35 against 0.61 m). [results/served_plan_length.md](results/served_plan_length.md).
+
 <!-- files:begin -->
 <!-- files:end -->
