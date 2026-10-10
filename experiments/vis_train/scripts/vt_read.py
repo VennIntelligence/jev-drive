@@ -687,6 +687,31 @@ def report(R, E, PR, L, rdiff):
             rws.append([f"{arm} - {c}", seed, f"k{s:02d}" + ("" if s == STEPS[arm] else " (provisional)"), "; ".join(up) or "none", "; ".join(dn) or "none", len(got) - len(up) - len(dn),
                         ("candidate" if not dn else "**not a candidate**") + (f" (missing: {', '.join(miss)})" if miss else ""), "; ".join(split) or "none"])
     A(md(["comparison", "seed", "snapshot", "up", "down", "not moved (cells)", "no-regression", "seeds significant in opposite directions"], rws))
+
+    A("### Moved up / moved down / did not move (every metric x bucket x board)\n")
+    A("Per comparison at the latest snapshot: every cell of the long table, i.e. the scores, the rates (off-road, cut-inside, under-turn, NC classes, TTC-only), the two arc "
+      "ratios, each over all + the four turn buckets + > 20 deg, then the boards read. **up** = CI entirely above 0, **down** = CI entirely below 0, **did not move** = CI contains 0 "
+      "(cells grouped by metric, buckets in brackets). For rates and arc ratios up is not better: read the sign against the metric.\n")
+    for arm in STEPS:
+        for c in CTRL[arm]:
+            sd = q.seeds(arm, c)
+            if not sd:
+                continue
+            seed, s = sd[0], q.steps(arm, sd[0], c)[-1]
+            cl = cells(q, arm, c, seed, s)
+            for k in [*RATES, "arc_ratio_log", "arc_ratio_ctrl"]:
+                cl += [(f"{k} {b}", q(arm, seed, s, c, b, k)) for b in BUCKETS]
+            cl += [(f"{k} >20", q(arm, seed, s, c, ">20", k)) for k in SC]
+            got = [(n, r) for n, r in cl if r is not None and np.isfinite(r["diff"])]
+            grp = {"up": {}, "down": {}, "did not move": {}}
+            for n, r in got:
+                k, b = n.split(" ", 1)
+                g = "up" if r["ci_lo"] > 0 else "down" if r["ci_hi"] < 0 else "did not move"
+                grp[g].setdefault(k, []).append(b if g == "did not move" else f"{b} {ci(r)}")
+            A(f"**{arm} - {c}**, seed {seed}, k{s:02d}" + ("" if s == STEPS[arm] else " (provisional)") + f", {len(got)} cells\n")
+            for g, d in grp.items():
+                A(f"- {g} ({sum(len(v) for v in d.values())}): " + ("; ".join(f"{k} [{', '.join(v)}]" for k, v in d.items()) or "none"))
+            A("")
     A("## Not produced\n")
     A("- Prereg read 5 (arm C: straight-road ADE on native frames against the shipped model, decision 137's forgetting read) is not part of this script.\n"
       "- HUGSIM for A0 / A / B / C / W: `jevdrive.bench` has no serving path for the branch encoder or the in-place trained encoder (amendment 2 point 3); only F / F0 are queued.\n"
