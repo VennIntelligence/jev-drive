@@ -270,6 +270,33 @@ def main():
             r[f"{nm}: DAC fail %"] = F(cb.mean(M.fail.astype(float).to_numpy(), m.to_numpy()))
         rows.append(r)
     P(PS.md(pd.DataFrame(rows), 1) + "\n")
+    P("Failure rate of the part of the population whose logged path is mostly out of the SH30 frame (< 80% of its far path inside at t0) against the "
+      "rest, per model, and the difference of the two differences (positive = SH30's failures lean more on the out-of-view part than WA-JEPA's, "
+      "the view-limit signature). A joint log-cluster bootstrap.\n")
+    x = M.fail.to_numpy(float)
+    fin = np.isfinite(M.path_w_fov_t0.to_numpy(float))
+    low = (M.path_w_fov_t0 < 0.8).to_numpy() & fin
+    high = (M.path_w_fov_t0 >= 0.8).to_numpy() & fin
+
+    def rate(mk, g):
+        m = mk.to_numpy() & g
+        f, pf = cb._s(x, m)
+        n, pn = cb._s(np.ones_like(x), m)
+        return f / n, pf / pn
+
+    rows, dd = [], {}
+    for lab, mk in (("SH30", sh), ("WA-JEPA", M.unit == "wa")):
+        bl, pl = rate(mk, low)
+        bh, ph = rate(mk, high)
+        dd[lab] = (bl - bh, pl - ph)
+        lo, hi = np.nanquantile(bl - bh, [0.025, 0.975])
+        rows.append({"model": lab, "fail % < 80% in frame": f"{100 * pl:.1f}", "fail % >= 80% in frame": f"{100 * ph:.1f}",
+                     "difference (pp)": PS.pc((100 * (pl - ph), 100 * lo, 100 * hi), "{:+.1f}")})
+    b = dd["SH30"][0] - dd["WA-JEPA"][0]
+    lo, hi = np.nanquantile(b, [0.025, 0.975])
+    rows.append({"model": "SH30 - WA-JEPA", "fail % < 80% in frame": "", "fail % >= 80% in frame": "",
+                 "difference (pp)": PS.pc((100 * (dd["SH30"][1] - dd["WA-JEPA"][1]), 100 * lo, 100 * hi), "{:+.1f}")})
+    P(PS.md(pd.DataFrame(rows), 1) + "\n")
     P("WA-JEPA failure departure points in WA-JEPA's own cameras (share inside the union of its four native cameras, pinhole test):\n")
     rows = []
     for nm in ("WA-JEPA DAC fail", "SH30 DAC fail"):
