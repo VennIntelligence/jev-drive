@@ -43,6 +43,10 @@ worker() {  # card: takes chunks until none is left; a card that reads the 2026-
 }
 for g in $CARDS; do worker "$g" & sleep 20; done; wait      # staggered: two stacks starting at once race for the wizard's docker network
 (( J )) && { st "joined cards $CARDS: no chunk left"; exit 0; }
+busy() {  # a claimed chunk of a joined card is still running (its driver container is up)
+  local c; for c in "$O"/claims/*; do c=$(basename "$c"); [[ -f $O/runs/${L}_$c/DONE ]] && continue
+    docker ps -q --filter "name=pai-$(echo "${L}_$c" | tr -c 'a-zA-Z0-9\n' '-')-drv" | grep -q . && return 0; done; return 1; }
+while busy || { sleep 60; busy; }; do sleep 30; done
 left=$(for f in "$O"/chunks/*.txt; do [[ -f $O/runs/${L}_$(basename "$f" .txt)/DONE ]] || echo "$f"; done | wc -l)
 (( left > 0 )) && ! [[ -f $O/ERROR ]] && echo "$left chunks unfinished" >> "$O/ERROR"
 w=$(( $(date +%s) - t0 ))
