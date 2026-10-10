@@ -189,6 +189,7 @@ def cmd_poses(a):
             F[f"{m}_cls2"] = np.array([G[t].get(f"{m}_cls2", "") if t in G else "" for t in names])
             F[f"{m}_endgap"] = np.array([G[t].get(f"{m}_endgap", 0) if t in G else 0 for t in names])
         from jevdrive import par
+        from scipy.interpolate import CubicSpline  # noqa: F401  (imported before the fork: workers must not import scipy concurrently)
         _P.update(G=G, names=names, fut=fut, Z={m: Z[f"{m}_pp"] for m in SEEDS})
         idx = np.flatnonzero(ok)
         res = par.pmap(_pose_chunk, [idx[k::256] for k in range(min(256, len(idx)))], run=run, desc="token chunks")
