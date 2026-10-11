@@ -34,7 +34,7 @@ CK=$DATA_DIR/runs/op_parity/runs
 status() { echo "$(date '+%F %T') onpol train y$STAGE: $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 sub() { local n=$1; shift; [[ -f $L/$n/DONE || -f $CK/$n/ckpt-final.pt ]] && return
-        $CL queue 2>/dev/null | awk -v n="on-$n" '$4 == n && ($2 == "queued" || $2 == "running") {f = 1} END {exit !f}' && return; rm -f "$L/$n/ERROR"
+        $CL queue 2>/dev/null | awk -v n="on-$n" '$4 == substr(n, 1, 22) && ($2 == "queued" || $2 == "running") {f = 1} END {exit !f}' && return; rm -f "$L/$n/ERROR"   # cl queue cuts names at 22 characters
         $CL submit --owner onpol-nuplan --name "on-$n" --train --priority 15 --vram "${VRAM:-40}" --cpu 6 --ram 60 --timeout-h 4 --log-dir "$L/$n" -- "$@" > /dev/null || die "submit $n"; }
 waitdirs() { for n in "$@"; do until [[ -f $L/$n/DONE || -f $L/$n/ERROR ]]; do [[ -f $CK/$n/ckpt-final.pt && ! -d $L/$n ]] && break; sleep 30; done
              [[ -f $L/$n/ERROR ]] && die "job failed: $L/$n"; done; return 0; }
@@ -75,7 +75,7 @@ elif [[ $STAGE == full ]]; then
   fi
   status "$T0 first 300 steps ok ($D/first300.txt); the rest"
   tags=()
-  for f in YSELFnoL YNONE; do for s in 0 1; do run "$f" "$f-ON-s$s$X" "$s" --steps "$NF"; tags+=("$f-ON-s$s$X"); done; done
+  for f in YSELFnoL YNONE; do for s in 0 1; do t=$f-ON-s$s$X; [[ $t == "$T0" ]] || run "$f" "$t" "$s" --steps "$NF"; tags+=("$t"); done; done
   waitdirs "${tags[@]}"
   for t in "${tags[@]}"; do [[ -f $CK/$t/ckpt-final.pt ]] || die "no checkpoint for $t"; done
   grep -h "dev @ $NF" "$L"/*/log.txt | sed 's/.*INFO *//' | cut -c1-200
