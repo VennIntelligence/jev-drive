@@ -1,0 +1,2655 @@
+{
+ "standin": true,
+ "split": "train",
+ "scenes": 1031,
+ "logs": 28,
+ "gt45": 104,
+ "tags": {
+  "control YR10m10-F": [
+   "YR10m10-F-s0",
+   "YR10m10-F-s1"
+  ],
+  "YSELFnoL-ON": [
+   "YSELFnoL-ON-s0",
+   "YSELFnoL-ON-s1"
+  ],
+  "YNONE-ON": [
+   "YNONE-ON-s0",
+   "YNONE-ON-s1"
+  ],
+  "SSELFnoL-ON (4 seeds)": [
+   "SSELFnoL-ON-s0",
+   "SSELFnoL-ON-s1",
+   "SSELFnoL-ON-s2",
+   "SSELFnoL-ON-s3"
+  ],
+  "control P2H10S-F (4 seeds)": [
+   "P2H10S-F-s0",
+   "P2H10S-F-s1",
+   "P2H10S-F-s2",
+   "P2H10S-F-s3"
+  ],
+  "SSELFnoL-ON s2, s3": [
+   "SSELFnoL-ON-s2",
+   "SSELFnoL-ON-s3"
+  ],
+  "control P2H10S-F s2, s3": [
+   "P2H10S-F-s2",
+   "P2H10S-F-s3"
+  ],
+  "SSELFnoL-ON s0, s1": [
+   "SSELFnoL-ON-s0",
+   "SSELFnoL-ON-s1"
+  ],
+  "control P2H10S-F s0, s1": [
+   "P2H10S-F-s0",
+   "P2H10S-F-s1"
+  ]
+ },
+ "missing": {},
+ "sources": {
+  "P2H10S-F-s0": [
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s0-chunk0/20261010-100122",
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s0-chunk1/20261010-100122",
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s0-chunk2/20261010-100122",
+   "/root/autodl-tmp/ujs/runs/alpasim/nuplan1491/a/runs/P2H10S-F-s0@cf1fresh-cf1fresh/20261011-124312",
+   "/root/autodl-tmp/ujs/runs/alpasim/nuplan1491/a/runs/P2H10S-F-s0@ot3new-ot3new/20261011-124312"
+  ],
+  "P2H10S-F-s1": [
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s1-chunk0/20261010-100122",
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s1-chunk1/20261010-100122",
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s1-chunk2/20261010-100122",
+   "/root/autodl-tmp/ujs/runs/alpasim/nuplan1491/a/runs/P2H10S-F-s1@cf1fresh-cf1fresh/20261011-124312",
+   "/root/autodl-tmp/ujs/runs/alpasim/nuplan1491/a/runs/P2H10S-F-s1@ot3new-ot3new/20261011-124312"
+  ],
+  "P2H10S-F-s2": [
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s2-chunk0/20261010-101525",
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s2-chunk1/20261010-101525",
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s2-chunk2/20261010-101525",
+   "/root/autodl-tmp/ujs/runs/alpasim/nuplan1491/a/runs/P2H10S-F-s2@cf1fresh-cf1fresh/20261011-124313",
+   "/root/autodl-tmp/ujs/runs/alpasim/nuplan1491/a/runs/P2H10S-F-s2@ot3new-ot3new/20261011-124313"
+  ],
+  "P2H10S-F-s3": [
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s3-chunk0/20261010-101525",
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s3-chunk1/20261010-101626",
+   "/root/autodl-tmp/ujs/runs/body1/cl/shape-cl/runs/P2H10S-F-s3-chunk2/20261010-101626",
+   "/root/autodl-tmp/ujs/runs/alpasim/nuplan1491/a/runs/P2H10S-F-s3@cf1fresh-cf1fresh/20261011-130615",
+   "/root/autodl-tmp/ujs/runs/alpasim/nuplan1491/a/runs/P2H10S-F-s3@ot3new-ot3new/20261011-130717"
+  ],
+  "SSELFnoL-ON-s0": [
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s0-chunk0/20261011-142223",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s0-chunk1/20261011-142323",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s0-chunk2/20261011-142824",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s0@fresh-cf1fresh/20261011-143425",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s0@new-ot3new/20261011-143626"
+  ],
+  "SSELFnoL-ON-s1": [
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s1-chunk0/20261011-143927",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s1-chunk1/20261011-144028",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s1-chunk2/20261011-144429",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s1@fresh-cf1fresh/20261011-144630",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s1@new-ot3new/20261011-145732"
+  ],
+  "SSELFnoL-ON-s2": [
+   "/root/autodl-tmp/ujs/runs/onpol_nuplan/seeds4/loop/runs/JAPSnoY-s2-chunk0/20261011-200344",
+   "/root/autodl-tmp/ujs/runs/onpol_nuplan/seeds4/loop/runs/JAPSnoY-s2-chunk1/20261011-200344",
+   "/root/autodl-tmp/ujs/runs/onpol_nuplan/seeds4/loop/runs/JAPSnoY-s2-chunk2/20261011-200344",
+   "/root/autodl-tmp/ujs/runs/onpol_nuplan/seeds4/loop/runs/JAPSnoY-s2@fresh-cf1fresh/20261011-200945",
+   "/root/autodl-tmp/ujs/runs/onpol_nuplan/seeds4/loop/runs/JAPSnoY-s2@new-ot3new/20261011-201746"
+  ],
+  "SSELFnoL-ON-s3": [
+   "/root/autodl-tmp/ujs/runs/onpol_nuplan/seeds4/loop/runs/JAPSnoY-s3-chunk0/20261011-201847",
+   "/root/autodl-tmp/ujs/runs/onpol_nuplan/seeds4/loop/runs/JAPSnoY-s3-chunk1/20261011-201847",
+   "/root/autodl-tmp/ujs/runs/onpol_nuplan/seeds4/loop/runs/JAPSnoY-s3-chunk2/20261011-203148",
+   "/root/autodl-tmp/ujs/runs/onpol_nuplan/seeds4/loop/runs/JAPSnoY-s3@fresh-cf1fresh/20261011-203349",
+   "/root/autodl-tmp/ujs/runs/onpol_nuplan/seeds4/loop/runs/JAPSnoY-s3@new-ot3new/20261011-203349"
+  ],
+  "YNONE-ON-s0": [
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/ref/runs/APY10m10-AB-s0-chunk0/20261011-124538",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/ref/runs/APY10m10-AB-s0-chunk1/20261011-124538",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/ref/runs/APY10m10-AB-s0-chunk2/20261011-124538",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/refx/runs/APY10m10-AB-s0@new-ot3new/20261011-135858",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/ref/runs/APY10m10-AB-s0@fresh-cf1fresh/20261011-132743"
+  ],
+  "YNONE-ON-s1": [
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/ref/runs/APY10m10-AB-s1-chunk0/20261011-130240",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/ref/runs/APY10m10-AB-s1-chunk1/20261011-130440",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/ref/runs/APY10m10-AB-s1-chunk2/20261011-131141",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/refx/runs/APY10m10-AB-s1@new-ot3new/20261011-135858",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/refx/runs/APY10m10-AB-s1@fresh-cf1fresh/20261011-135859"
+  ],
+  "YR10m10-F-s0": [
+   "/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk0/20261010-012222",
+   "/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk1/20261010-012222",
+   "/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s0-chunk2/20261010-012222",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/ref/runs/P2H10-F-s0@new-ot3new/20261011-124538",
+   "/root/autodl-tmp/ujs/runs/alpasim/cf1/a/runs/P2H10-F-s0@fresh-cf1fresh/20261009-195520"
+  ],
+  "YR10m10-F-s1": [
+   "/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s1-chunk0/20261010-013623",
+   "/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s1-chunk1/20261010-013623",
+   "/root/autodl-tmp/ujs/runs/alpasim/tr1/a/runs/P2H10-F-s1-chunk2/20261010-013823",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/ref/runs/P2H10-F-s1@new-ot3new/20261011-130139",
+   "/root/autodl-tmp/ujs/runs/alpasim/cf1/a/runs/P2H10-F-s1@fresh-cf1fresh/20261009-201622"
+  ],
+  "YSELFnoL-ON-s0": [
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s0-chunk0/20261011-142223",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s0-chunk1/20261011-142323",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s0-chunk2/20261011-142824",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s0@fresh-cf1fresh/20261011-143425",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s0@new-ot3new/20261011-143626"
+  ],
+  "YSELFnoL-ON-s1": [
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s1-chunk0/20261011-143927",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s1-chunk1/20261011-144028",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s1-chunk2/20261011-144429",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s1@fresh-cf1fresh/20261011-144630",
+   "/root/autodl-tmp/ujs/runs/alpasim/joint1/arms/runs/JAPSnoY-s1@new-ot3new/20261011-145732"
+  ]
+ },
+ "arms": {
+  "control YR10m10-F": {
+   "tags": [
+    "YR10m10-F-s0",
+    "YR10m10-F-s1"
+   ],
+   "mean": [
+    0.9148744130137518,
+    0.894740325083096,
+    0.9362547274300562
+   ],
+   "seeds": [
+    0.9143933629047943,
+    0.9153554631227093
+   ],
+   "zeros": 56.5,
+   "at-fault": 42.0,
+   "collision": 10.5,
+   "offroad": 31.5,
+   "corridor": 14.5,
+   "per_seed": {
+    "YR10m10-F-s0": {
+     "collision": 12,
+     "offroad": 30,
+     "corridor": 16
+    },
+    "YR10m10-F-s1": {
+     "collision": 9,
+     "offroad": 33,
+     "corridor": 13
+    }
+   },
+   "events": 42.0,
+   "slow": 197.0,
+   "progress": 0.9097187540692739,
+   "gt_dist": 0.9880888963346635,
+   "gt45": {
+    "n": 104,
+    "mean": 0.7985265113761694,
+    "zeros": 18.0,
+    "at-fault": 12.5,
+    "collision": 2.5,
+    "offroad": 10.0,
+    "corridor": 5.5
+   }
+  },
+  "YSELFnoL-ON": {
+   "tags": [
+    "YSELFnoL-ON-s0",
+    "YSELFnoL-ON-s1"
+   ],
+   "mean": [
+    0.9372281101462588,
+    0.9137966394926751,
+    0.9570744763165668
+   ],
+   "seeds": [
+    0.935286320399833,
+    0.9391698998926848
+   ],
+   "zeros": 50.0,
+   "at-fault": 29.0,
+   "collision": 7.0,
+   "offroad": 22.0,
+   "corridor": 21.0,
+   "per_seed": {
+    "YSELFnoL-ON-s0": {
+     "collision": 8,
+     "offroad": 21,
+     "corridor": 22
+    },
+    "YSELFnoL-ON-s1": {
+     "collision": 6,
+     "offroad": 23,
+     "corridor": 20
+    }
+   },
+   "events": 29.0,
+   "slow": 92.0,
+   "progress": 0.9677797305653679,
+   "gt_dist": 1.1518905738593384,
+   "gt45": {
+    "n": 104,
+    "mean": 0.77389784160622,
+    "zeros": 22.0,
+    "at-fault": 10.5,
+    "collision": 1.0,
+    "offroad": 9.5,
+    "corridor": 11.5
+   }
+  },
+  "YNONE-ON": {
+   "tags": [
+    "YNONE-ON-s0",
+    "YNONE-ON-s1"
+   ],
+   "mean": [
+    0.9308837041928415,
+    0.9128235292980347,
+    0.9485817834994646
+   ],
+   "seeds": [
+    0.931388809750556,
+    0.9303785986351271
+   ],
+   "zeros": 55.0,
+   "at-fault": 39.0,
+   "collision": 11.5,
+   "offroad": 27.5,
+   "corridor": 16.0,
+   "per_seed": {
+    "YNONE-ON-s0": {
+     "collision": 10,
+     "offroad": 27,
+     "corridor": 17
+    },
+    "YNONE-ON-s1": {
+     "collision": 13,
+     "offroad": 28,
+     "corridor": 15
+    }
+   },
+   "events": 39.0,
+   "slow": 107.5,
+   "progress": 0.9603390061253069,
+   "gt_dist": 1.1316241625377816,
+   "gt45": {
+    "n": 104,
+    "mean": 0.8187561571383483,
+    "zeros": 17.5,
+    "at-fault": 12.5,
+    "collision": 2.0,
+    "offroad": 10.5,
+    "corridor": 5.0
+   }
+  },
+  "control P2H10S-F (4 seeds)": {
+   "tags": [
+    "P2H10S-F-s0",
+    "P2H10S-F-s1",
+    "P2H10S-F-s2",
+    "P2H10S-F-s3"
+   ],
+   "mean": [
+    0.9240567314941077,
+    0.9068311261143291,
+    0.9421725106469208
+   ],
+   "seeds": [
+    0.9198999102836273,
+    0.9247346318316247,
+    0.9242832899937292,
+    0.92730909386745
+   ],
+   "zeros": 50.5,
+   "at-fault": 32.0,
+   "collision": 6.75,
+   "offroad": 25.25,
+   "corridor": 18.5,
+   "per_seed": {
+    "P2H10S-F-s0": {
+     "collision": 6,
+     "offroad": 28,
+     "corridor": 20
+    },
+    "P2H10S-F-s1": {
+     "collision": 7,
+     "offroad": 26,
+     "corridor": 16
+    },
+    "P2H10S-F-s2": {
+     "collision": 7,
+     "offroad": 26,
+     "corridor": 17
+    },
+    "P2H10S-F-s3": {
+     "collision": 7,
+     "offroad": 21,
+     "corridor": 21
+    }
+   },
+   "events": 32.0,
+   "slow": 167.0,
+   "progress": 0.9220737430611992,
+   "gt_dist": 0.9829630186731324,
+   "gt45": {
+    "n": 104,
+    "mean": 0.7752006490106177,
+    "zeros": 21.0,
+    "at-fault": 12.5,
+    "collision": 2.25,
+    "offroad": 10.25,
+    "corridor": 8.5
+   }
+  },
+  "SSELFnoL-ON (4 seeds)": {
+   "tags": [
+    "SSELFnoL-ON-s0",
+    "SSELFnoL-ON-s1",
+    "SSELFnoL-ON-s2",
+    "SSELFnoL-ON-s3"
+   ],
+   "mean": [
+    0.9337384082049431,
+    0.9098603540603336,
+    0.9535734877679595
+   ],
+   "seeds": [
+    0.935286320399833,
+    0.9391698998926848,
+    0.9311210420994092,
+    0.9293763704278458
+   ],
+   "zeros": 53.25,
+   "at-fault": 30.75,
+   "collision": 7.75,
+   "offroad": 23.0,
+   "corridor": 22.5,
+   "per_seed": {
+    "SSELFnoL-ON-s0": {
+     "collision": 8,
+     "offroad": 21,
+     "corridor": 22
+    },
+    "SSELFnoL-ON-s1": {
+     "collision": 6,
+     "offroad": 23,
+     "corridor": 20
+    },
+    "SSELFnoL-ON-s2": {
+     "collision": 8,
+     "offroad": 23,
+     "corridor": 24
+    },
+    "SSELFnoL-ON-s3": {
+     "collision": 9,
+     "offroad": 25,
+     "corridor": 24
+    }
+   },
+   "events": 30.75,
+   "slow": 95.5,
+   "progress": 0.9665487765544779,
+   "gt_dist": 1.1586018263856162,
+   "gt45": {
+    "n": 104,
+    "mean": 0.7616880726928925,
+    "zeros": 23.25,
+    "at-fault": 11.0,
+    "collision": 1.0,
+    "offroad": 10.0,
+    "corridor": 12.25
+   }
+  },
+  "control P2H10S-F s0, s1": {
+   "tags": [
+    "P2H10S-F-s0",
+    "P2H10S-F-s1"
+   ],
+   "mean": [
+    0.9223172710576261,
+    0.9047222580014617,
+    0.9406859761030321
+   ],
+   "seeds": [
+    0.9198999102836273,
+    0.9247346318316247
+   ],
+   "zeros": 51.5,
+   "at-fault": 33.5,
+   "collision": 6.5,
+   "offroad": 27.0,
+   "corridor": 18.0,
+   "per_seed": {
+    "P2H10S-F-s0": {
+     "collision": 6,
+     "offroad": 28,
+     "corridor": 20
+    },
+    "P2H10S-F-s1": {
+     "collision": 7,
+     "offroad": 26,
+     "corridor": 16
+    }
+   },
+   "events": 33.5,
+   "slow": 176.0,
+   "progress": 0.9201957504169337,
+   "gt_dist": 0.982504442814463,
+   "gt45": {
+    "n": 104,
+    "mean": 0.7740407384076705,
+    "zeros": 21.0,
+    "at-fault": 13.0,
+    "collision": 2.0,
+    "offroad": 11.0,
+    "corridor": 8.0
+   }
+  },
+  "SSELFnoL-ON s0, s1": {
+   "tags": [
+    "SSELFnoL-ON-s0",
+    "SSELFnoL-ON-s1"
+   ],
+   "mean": [
+    0.9372281101462588,
+    0.9137966394926751,
+    0.9570744763165668
+   ],
+   "seeds": [
+    0.935286320399833,
+    0.9391698998926848
+   ],
+   "zeros": 50.0,
+   "at-fault": 29.0,
+   "collision": 7.0,
+   "offroad": 22.0,
+   "corridor": 21.0,
+   "per_seed": {
+    "SSELFnoL-ON-s0": {
+     "collision": 8,
+     "offroad": 21,
+     "corridor": 22
+    },
+    "SSELFnoL-ON-s1": {
+     "collision": 6,
+     "offroad": 23,
+     "corridor": 20
+    }
+   },
+   "events": 29.0,
+   "slow": 92.0,
+   "progress": 0.9677797305653679,
+   "gt_dist": 1.1518905738593384,
+   "gt45": {
+    "n": 104,
+    "mean": 0.77389784160622,
+    "zeros": 22.0,
+    "at-fault": 10.5,
+    "collision": 1.0,
+    "offroad": 9.5,
+    "corridor": 11.5
+   }
+  },
+  "control P2H10S-F s2, s3": {
+   "tags": [
+    "P2H10S-F-s2",
+    "P2H10S-F-s3"
+   ],
+   "mean": [
+    0.9257961919305895,
+    0.90852759416139,
+    0.9440087990253275
+   ],
+   "seeds": [
+    0.9242832899937292,
+    0.92730909386745
+   ],
+   "zeros": 49.5,
+   "at-fault": 30.5,
+   "collision": 7.0,
+   "offroad": 23.5,
+   "corridor": 19.0,
+   "per_seed": {
+    "P2H10S-F-s2": {
+     "collision": 7,
+     "offroad": 26,
+     "corridor": 17
+    },
+    "P2H10S-F-s3": {
+     "collision": 7,
+     "offroad": 21,
+     "corridor": 21
+    }
+   },
+   "events": 30.5,
+   "slow": 158.0,
+   "progress": 0.9239517357054645,
+   "gt_dist": 0.9834215945318019,
+   "gt45": {
+    "n": 104,
+    "mean": 0.776360559613565,
+    "zeros": 21.0,
+    "at-fault": 12.0,
+    "collision": 2.5,
+    "offroad": 9.5,
+    "corridor": 9.0
+   }
+  },
+  "SSELFnoL-ON s2, s3": {
+   "tags": [
+    "SSELFnoL-ON-s2",
+    "SSELFnoL-ON-s3"
+   ],
+   "mean": [
+    0.9302487062636274,
+    0.9059173874415926,
+    0.9501876801523188
+   ],
+   "seeds": [
+    0.9311210420994092,
+    0.9293763704278458
+   ],
+   "zeros": 56.5,
+   "at-fault": 32.5,
+   "collision": 8.5,
+   "offroad": 24.0,
+   "corridor": 24.0,
+   "per_seed": {
+    "SSELFnoL-ON-s2": {
+     "collision": 8,
+     "offroad": 23,
+     "corridor": 24
+    },
+    "SSELFnoL-ON-s3": {
+     "collision": 9,
+     "offroad": 25,
+     "corridor": 24
+    }
+   },
+   "events": 32.5,
+   "slow": 99.0,
+   "progress": 0.9653178225435878,
+   "gt_dist": 1.1653130789118942,
+   "gt45": {
+    "n": 104,
+    "mean": 0.7494783037795647,
+    "zeros": 24.5,
+    "at-fault": 11.5,
+    "collision": 1.0,
+    "offroad": 10.5,
+    "corridor": 13.0
+   }
+  }
+ },
+ "seeds": {
+  "s0": {
+   "arm": "SSELFnoL-ON-s0",
+   "control": "P2H10S-F-s0",
+   "mean": [
+    0.935286320399833,
+    0.9198999102836273
+   ],
+   "zeros": [
+    51,
+    54
+   ],
+   "atfault": [
+    29,
+    34
+   ],
+   "kinds": {
+    "SSELFnoL-ON-s0": [
+     8,
+     21,
+     22
+    ],
+    "P2H10S-F-s0": [
+     6,
+     28,
+     20
+    ]
+   },
+   "fewer": true
+  },
+  "s1": {
+   "arm": "SSELFnoL-ON-s1",
+   "control": "P2H10S-F-s1",
+   "mean": [
+    0.9391698998926848,
+    0.9247346318316247
+   ],
+   "zeros": [
+    49,
+    49
+   ],
+   "atfault": [
+    29,
+    33
+   ],
+   "kinds": {
+    "SSELFnoL-ON-s1": [
+     6,
+     23,
+     20
+    ],
+    "P2H10S-F-s1": [
+     7,
+     26,
+     16
+    ]
+   },
+   "fewer": false
+  },
+  "s2": {
+   "arm": "SSELFnoL-ON-s2",
+   "control": "P2H10S-F-s2",
+   "mean": [
+    0.9311210420994092,
+    0.9242832899937292
+   ],
+   "zeros": [
+    55,
+    50
+   ],
+   "atfault": [
+    31,
+    33
+   ],
+   "kinds": {
+    "SSELFnoL-ON-s2": [
+     8,
+     23,
+     24
+    ],
+    "P2H10S-F-s2": [
+     7,
+     26,
+     17
+    ]
+   },
+   "fewer": false
+  },
+  "s3": {
+   "arm": "SSELFnoL-ON-s3",
+   "control": "P2H10S-F-s3",
+   "mean": [
+    0.9293763704278458,
+    0.92730909386745
+   ],
+   "zeros": [
+    58,
+    49
+   ],
+   "atfault": [
+    34,
+    28
+   ],
+   "kinds": {
+    "SSELFnoL-ON-s3": [
+     9,
+     25,
+     24
+    ],
+    "P2H10S-F-s3": [
+     7,
+     21,
+     21
+    ]
+   },
+   "fewer": false
+  }
+ },
+ "diff": {
+  "YSELFnoL-ON - control YR10m10-F": {
+   "score": {
+    "point": 0.022353697132507094,
+    "scene": [
+     0.010068366557613194,
+     0.03429256887342841
+    ],
+    "logs": [
+     0.006263262721365371,
+     0.038156956072686585
+    ]
+   },
+   "zeros": {
+    "point": -6.5,
+    "scene": [
+     -18.5,
+     5.5
+    ],
+    "logs": [
+     -20.436253288994973,
+     8.746569012322281
+    ]
+   },
+   "at-fault": {
+    "point": -13.0,
+    "scene": [
+     -22.5,
+     -4.0
+    ],
+    "logs": [
+     -23.479195770398206,
+     -1.485484054622546
+    ]
+   },
+   "collision": {
+    "point": -3.5,
+    "scene": [
+     -9.5,
+     2.0
+    ],
+    "logs": [
+     -10.357252520595841,
+     4.124103203203202
+    ]
+   },
+   "offroad": {
+    "point": -9.5,
+    "scene": [
+     -17.0,
+     -2.5
+    ],
+    "logs": [
+     -17.623931623931625,
+     -1.3049809007799524
+    ]
+   },
+   "corridor": {
+    "point": 6.5,
+    "scene": [
+     -1.5,
+     15.0
+    ],
+    "logs": [
+     -2.673304553825353,
+     16.645303326810176
+    ]
+   },
+   "slow": {
+    "point": -105.0,
+    "scene": [
+     -126.5,
+     -84.5
+    ],
+    "logs": [
+     -135.45783566721582,
+     -76.40319360758109
+    ]
+   },
+   "progress": {
+    "point": 0.058060976496093916,
+    "scene": [
+     0.050512961339346,
+     0.06557239185962023
+    ],
+    "logs": [
+     0.05004330117213014,
+     0.06546772213639612
+    ]
+   },
+   "gt_dist": {
+    "point": 0.16380167752467475,
+    "scene": [
+     0.10693684206594613,
+     0.22294005567291092
+    ],
+    "logs": [
+     0.09926956464843899,
+     0.23566734892224797
+    ],
+    "n": 1025
+   },
+   "gt45": {
+    "score": {
+     "point": -0.024628669769949447,
+     "scene": [
+      -0.08347094515763777,
+      0.03176667550696364
+     ],
+     "logs": [
+      -0.09273511565402939,
+      0.03821890876169663
+     ]
+    },
+    "zeros": {
+     "point": 4.0,
+     "scene": [
+      -2.0,
+      10.5
+     ],
+     "logs": [
+      -2.857142857142857,
+      10.89543778801843
+     ]
+    },
+    "at-fault": {
+     "point": -2.0,
+     "scene": [
+      -5.5,
+      1.5
+     ],
+     "logs": [
+      -5.441860465116279,
+      1.5918367346938775
+     ]
+    },
+    "collision": {
+     "point": -1.5,
+     "scene": [
+      -4.0,
+      0.0
+     ],
+     "logs": [
+      -3.466666666666667,
+      0.0
+     ]
+    },
+    "offroad": {
+     "point": -0.5,
+     "scene": [
+      -3.5,
+      2.5
+     ],
+     "logs": [
+      -3.9327731092436973,
+      2.6219590866649676
+     ]
+    },
+    "corridor": {
+     "point": 6.0,
+     "scene": [
+      0.0,
+      12.0
+     ],
+     "logs": [
+      0.0,
+      12.170212765957448
+     ]
+    },
+    "slow": {
+     "point": -10.5,
+     "scene": [
+      -17.0,
+      -5.0
+     ],
+     "logs": [
+      -16.82389355742297,
+      -5.39622641509434
+     ]
+    },
+    "progress": {
+     "point": 0.03945809989225535,
+     "scene": [
+      0.01581691890715725,
+      0.06606406141136949
+     ],
+     "logs": [
+      0.018346824899989154,
+      0.06123020418302776
+     ]
+    }
+   }
+  },
+  "YNONE-ON - control YR10m10-F": {
+   "score": {
+    "point": 0.01600929117908979,
+    "scene": [
+     0.0028924259163629544,
+     0.028792732213114906
+    ],
+    "logs": [
+     0.005029318320722217,
+     0.02615677488561375
+    ]
+   },
+   "zeros": {
+    "point": -1.5,
+    "scene": [
+     -14.0,
+     11.5
+    ],
+    "logs": [
+     -9.726415094339622,
+     8.270330251487229
+    ]
+   },
+   "at-fault": {
+    "point": -3.0,
+    "scene": [
+     -13.0,
+     7.0
+    ],
+    "logs": [
+     -10.014051196459269,
+     5.614460740011329
+    ]
+   },
+   "collision": {
+    "point": 1.0,
+    "scene": [
+     -5.5,
+     7.5
+    ],
+    "logs": [
+     -5.054034278742719,
+     8.238819863013696
+    ]
+   },
+   "offroad": {
+    "point": -4.0,
+    "scene": [
+     -11.5,
+     3.5
+    ],
+    "logs": [
+     -9.645561482535166,
+     1.7776373457402477
+    ]
+   },
+   "corridor": {
+    "point": 1.5,
+    "scene": [
+     -6.5,
+     9.5
+    ],
+    "logs": [
+     -6.3343389874948715,
+     8.329587335986135
+    ]
+   },
+   "slow": {
+    "point": -89.5,
+    "scene": [
+     -109.5,
+     -70.0
+    ],
+    "logs": [
+     -116.74801516391635,
+     -64.18663759115624
+    ]
+   },
+   "progress": {
+    "point": 0.05062025205603289,
+    "scene": [
+     0.043307527402236715,
+     0.0580607546202431
+    ],
+    "logs": [
+     0.04267566665642908,
+     0.057698273176994955
+    ]
+   },
+   "gt_dist": {
+    "point": 0.14353526620311802,
+    "scene": [
+     0.08796691430508534,
+     0.20113748727503347
+    ],
+    "logs": [
+     0.08482219195148193,
+     0.20854681175373366
+    ],
+    "n": 1025
+   },
+   "gt45": {
+    "score": {
+     "point": 0.020229645762178766,
+     "scene": [
+      -0.04674539825476613,
+      0.08770401382761309
+     ],
+     "logs": [
+      -0.050216562675122894,
+      0.08940225354886996
+     ]
+    },
+    "zeros": {
+     "point": -0.5,
+     "scene": [
+      -7.5,
+      6.5
+     ],
+     "logs": [
+      -6.969072164948454,
+      6.35585034013605
+     ]
+    },
+    "at-fault": {
+     "point": 0.0,
+     "scene": [
+      -4.5,
+      4.5
+     ],
+     "logs": [
+      -2.9887931034482755,
+      3.872728176575854
+     ]
+    },
+    "collision": {
+     "point": -0.5,
+     "scene": [
+      -3.5,
+      2.5
+     ],
+     "logs": [
+      -3.033333333333333,
+      2.810810810810811
+     ]
+    },
+    "offroad": {
+     "point": 0.5,
+     "scene": [
+      -3.0,
+      4.0
+     ],
+     "logs": [
+      -1.793103448275862,
+      3.3193702127659535
+     ]
+    },
+    "corridor": {
+     "point": -0.5,
+     "scene": [
+      -6.0,
+      5.0
+     ],
+     "logs": [
+      -5.977143729020445,
+      4.894117647058824
+     ]
+    },
+    "slow": {
+     "point": -11.0,
+     "scene": [
+      -17.5,
+      -4.5
+     ],
+     "logs": [
+      -19.093957270408165,
+      -4.2816577540107055
+     ]
+    },
+    "progress": {
+     "point": 0.06476429375420281,
+     "scene": [
+      0.039251591704790714,
+      0.0932950938695391
+     ],
+     "logs": [
+      0.04013100745992813,
+      0.09042445827539744
+     ]
+    }
+   }
+  },
+  "YSELFnoL-ON - YNONE-ON": {
+   "score": {
+    "point": 0.0063444059534173,
+    "scene": [
+     -0.003042907343959576,
+     0.015687076787166767
+    ],
+    "logs": [
+     -0.004094314336336517,
+     0.016266570401057844
+    ]
+   },
+   "zeros": {
+    "point": -5.0,
+    "scene": [
+     -14.5,
+     5.0
+    ],
+    "logs": [
+     -15.693515448153432,
+     6.3075890217957795
+    ]
+   },
+   "at-fault": {
+    "point": -10.0,
+    "scene": [
+     -17.5,
+     -2.5
+    ],
+    "logs": [
+     -17.050873364436736,
+     -3.108464687897319
+    ]
+   },
+   "collision": {
+    "point": -4.5,
+    "scene": [
+     -8.0,
+     -1.0
+    ],
+    "logs": [
+     -8.844498311663722,
+     -1.2312653202575137
+    ]
+   },
+   "offroad": {
+    "point": -5.5,
+    "scene": [
+     -12.5,
+     1.0
+    ],
+    "logs": [
+     -10.954440220141702,
+     0.009525129342063903
+    ]
+   },
+   "corridor": {
+    "point": 5.0,
+    "scene": [
+     -1.5,
+     12.0
+    ],
+    "logs": [
+     -1.4189379846925845,
+     13.144678492239468
+    ]
+   },
+   "slow": {
+    "point": -15.5,
+    "scene": [
+     -28.0,
+     -3.0
+    ],
+    "logs": [
+     -29.63294256676649,
+     -1.5608061027552433
+    ]
+   },
+   "progress": {
+    "point": 0.007440724440061019,
+    "scene": [
+     0.004200223748139266,
+     0.010625500979186178
+    ],
+    "logs": [
+     0.004667130151605507,
+     0.01025250028279249
+    ]
+   },
+   "gt_dist": {
+    "point": 0.020266411321556786,
+    "scene": [
+     -0.017170919769295027,
+     0.05725395742870574
+    ],
+    "logs": [
+     -0.012473041403671403,
+     0.05591094698682519
+    ],
+    "n": 1025
+   },
+   "gt45": {
+    "score": {
+     "point": -0.044858315532128205,
+     "scene": [
+      -0.10488920790605558,
+      0.012388723361886036
+     ],
+     "logs": [
+      -0.11022406673945094,
+      0.017117291313126386
+     ]
+    },
+    "zeros": {
+     "point": 4.5,
+     "scene": [
+      -1.5,
+      11.0
+     ],
+     "logs": [
+      -2.5245796826900304,
+      11.903734020049662
+     ]
+    },
+    "at-fault": {
+     "point": -2.0,
+     "scene": [
+      -5.5,
+      1.5
+     ],
+     "logs": [
+      -5.958333333333333,
+      1.2682926829268293
+     ]
+    },
+    "collision": {
+     "point": -1.0,
+     "scene": [
+      -3.0,
+      0.0
+     ],
+     "logs": [
+      -3.6705882352941175,
+      0.0
+     ]
+    },
+    "offroad": {
+     "point": -1.0,
+     "scene": [
+      -3.5,
+      2.0
+     ],
+     "logs": [
+      -3.759036144578313,
+      1.8088270980788657
+     ]
+    },
+    "corridor": {
+     "point": 6.5,
+     "scene": [
+      1.5,
+      12.0
+     ],
+     "logs": [
+      0.4998809523809525,
+      13.68421052631579
+     ]
+    },
+    "slow": {
+     "point": 0.5,
+     "scene": [
+      -5.0,
+      6.0
+     ],
+     "logs": [
+      -5.2,
+      7.027027027027027
+     ]
+    },
+    "progress": {
+     "point": -0.02530619386194747,
+     "scene": [
+      -0.04240163107058427,
+      -0.010371471903721317
+     ],
+     "logs": [
+      -0.03999152268521621,
+      -0.013458185247911772
+     ]
+    }
+   }
+  },
+  "SSELFnoL-ON (4 seeds) - control P2H10S-F (4 seeds)": {
+   "score": {
+    "point": 0.009681676710835368,
+    "scene": [
+     -8.432322198869166e-05,
+     0.019357366006488606
+    ],
+    "logs": [
+     -0.003916997993171936,
+     0.02147046332672162
+    ]
+   },
+   "zeros": {
+    "point": 2.75,
+    "scene": [
+     -6.756249999999994,
+     12.25
+    ],
+    "logs": [
+     -8.714356294523633,
+     15.691374515624895
+    ]
+   },
+   "at-fault": {
+    "point": -1.25,
+    "scene": [
+     -8.0,
+     5.25
+    ],
+    "logs": [
+     -9.007882959352914,
+     7.4913934712844785
+    ]
+   },
+   "collision": {
+    "point": 1.0,
+    "scene": [
+     -3.25,
+     5.5
+    ],
+    "logs": [
+     -3.8759827250648744,
+     6.973488806084348
+    ]
+   },
+   "offroad": {
+    "point": -2.25,
+    "scene": [
+     -7.25,
+     2.5
+    ],
+    "logs": [
+     -8.880093514386466,
+     4.612469658287508
+    ]
+   },
+   "corridor": {
+    "point": 4.0,
+    "scene": [
+     -3.75,
+     11.5
+    ],
+    "logs": [
+     -4.1265676496239685,
+     13.89828431372549
+    ]
+   },
+   "slow": {
+    "point": -71.5,
+    "scene": [
+     -88.0,
+     -55.25
+    ],
+    "logs": [
+     -93.27645053670157,
+     -50.800880289366404
+    ]
+   },
+   "progress": {
+    "point": 0.04447503349327871,
+    "scene": [
+     0.038184699007118975,
+     0.05096860199080153
+    ],
+    "logs": [
+     0.0370889531749847,
+     0.05123813418839827
+    ]
+   },
+   "gt_dist": {
+    "point": 0.17563880771248377,
+    "scene": [
+     0.1301150842425199,
+     0.22394417946835354
+    ],
+    "logs": [
+     0.1282158602266301,
+     0.23009041996453095
+    ],
+    "n": 1025
+   },
+   "gt45": {
+    "score": {
+     "point": -0.013512576317725417,
+     "scene": [
+      -0.06654920442781999,
+      0.039739321335004164
+     ],
+     "logs": [
+      -0.07184187487694606,
+      0.038331616165087415
+     ]
+    },
+    "zeros": {
+     "point": 2.25,
+     "scene": [
+      -3.5,
+      8.006249999999909
+     ],
+     "logs": [
+      -3.428571428571429,
+      8.59683195592284
+     ]
+    },
+    "at-fault": {
+     "point": -1.5,
+     "scene": [
+      -5.5,
+      1.75
+     ],
+     "logs": [
+      -5.14857556510368,
+      2.260869565217391
+     ]
+    },
+    "collision": {
+     "point": -1.25,
+     "scene": [
+      -3.5,
+      0.0
+     ],
+     "logs": [
+      -3.12,
+      0.0
+     ]
+    },
+    "offroad": {
+     "point": -0.25,
+     "scene": [
+      -3.25,
+      2.5
+     ],
+     "logs": [
+      -3.400245901639344,
+      2.567901234567901
+     ]
+    },
+    "corridor": {
+     "point": 3.75,
+     "scene": [
+      -1.5,
+      9.0
+     ],
+     "logs": [
+      -1.8798028477546544,
+      9.603730904817859
+     ]
+    },
+    "slow": {
+     "point": -6.5,
+     "scene": [
+      -11.75,
+      -1.5
+     ],
+     "logs": [
+      -12.1651376146789,
+      -1.8958333333333335
+     ]
+    },
+    "progress": {
+     "point": 0.031105746881556283,
+     "scene": [
+      0.009888099587840666,
+      0.051859029146666354
+     ],
+     "logs": [
+      0.012673817933635749,
+      0.04920372800797038
+     ]
+    }
+   }
+  },
+  "SSELFnoL-ON s2, s3 - control P2H10S-F s2, s3": {
+   "score": {
+    "point": 0.0044525143330379,
+    "scene": [
+     -0.006307543664782346,
+     0.015163680958431248
+    ],
+    "logs": [
+     -0.010579911860697684,
+     0.017291457823319964
+    ]
+   },
+   "zeros": {
+    "point": 7.0,
+    "scene": [
+     -3.5,
+     18.0
+    ],
+    "logs": [
+     -5.656624812349118,
+     21.31398275979325
+    ]
+   },
+   "at-fault": {
+    "point": 2.0,
+    "scene": [
+     -6.0,
+     9.5
+    ],
+    "logs": [
+     -7.346027849060977,
+     12.428408905554162
+    ]
+   },
+   "collision": {
+    "point": 1.5,
+    "scene": [
+     -3.0,
+     6.5
+    ],
+    "logs": [
+     -3.4432525788860744,
+     7.607052215191764
+    ]
+   },
+   "offroad": {
+    "point": 0.5,
+    "scene": [
+     -5.5,
+     6.5
+    ],
+    "logs": [
+     -7.51903064813543,
+     9.474054054054054
+    ]
+   },
+   "corridor": {
+    "point": 5.0,
+    "scene": [
+     -3.0,
+     13.5
+    ],
+    "logs": [
+     -3.5840834915190203,
+     15.479424321414893
+    ]
+   },
+   "slow": {
+    "point": -59.0,
+    "scene": [
+     -75.5,
+     -42.98750000000018
+    ],
+    "logs": [
+     -78.671472914559,
+     -39.96124031007752
+    ]
+   },
+   "progress": {
+    "point": 0.041366086838123206,
+    "scene": [
+     0.03476400914299478,
+     0.04811200057140379
+    ],
+    "logs": [
+     0.03374233097134256,
+     0.04821359846200901
+    ]
+   },
+   "gt_dist": {
+    "point": 0.18189148438009226,
+    "scene": [
+     0.13321710332039172,
+     0.23350280385850236
+    ],
+    "logs": [
+     0.12864577287025764,
+     0.24189472411877888
+    ],
+    "n": 1025
+   },
+   "gt45": {
+    "score": {
+     "point": -0.0268822558340003,
+     "scene": [
+      -0.08249024516048659,
+      0.026291410227686704
+     ],
+     "logs": [
+      -0.08551478675669286,
+      0.022657679154063838
+     ]
+    },
+    "zeros": {
+     "point": 3.5,
+     "scene": [
+      -2.5,
+      9.5
+     ],
+     "logs": [
+      -2.0394163964798513,
+      9.957446808510639
+     ]
+    },
+    "at-fault": {
+     "point": -0.5,
+     "scene": [
+      -5.0,
+      3.5
+     ],
+     "logs": [
+      -4.369747899159664,
+      4.439024390243903
+     ]
+    },
+    "collision": {
+     "point": -1.5,
+     "scene": [
+      -4.0,
+      0.0
+     ],
+     "logs": [
+      -3.391304347826087,
+      0.0
+     ]
+    },
+    "offroad": {
+     "point": 1.0,
+     "scene": [
+      -2.5,
+      4.5
+     ],
+     "logs": [
+      -2.08,
+      5.0120481927710845
+     ]
+    },
+    "corridor": {
+     "point": 4.0,
+     "scene": [
+      -1.0,
+      9.5
+     ],
+     "logs": [
+      -1.8795180722891565,
+      9.803866012650047
+     ]
+    },
+    "slow": {
+     "point": -3.5,
+     "scene": [
+      -8.5,
+      1.0
+     ],
+     "logs": [
+      -8.937718413978494,
+      1.142857142857143
+     ]
+    },
+    "progress": {
+     "point": 0.026902082894300145,
+     "scene": [
+      0.0028552404607996586,
+      0.04992266257172835
+     ],
+     "logs": [
+      0.006984427289786739,
+      0.04696099077512123
+     ]
+    }
+   }
+  },
+  "SSELFnoL-ON s0, s1 - control P2H10S-F s0, s1": {
+   "score": {
+    "point": 0.014910839088632838,
+    "scene": [
+     0.004735887073122161,
+     0.024955011396102657
+    ],
+    "logs": [
+     0.0016237181963243415,
+     0.02645648735508192
+    ]
+   },
+   "zeros": {
+    "point": -1.5,
+    "scene": [
+     -11.5,
+     8.5
+    ],
+    "logs": [
+     -12.434308378281367,
+     11.051071878940732
+    ]
+   },
+   "at-fault": {
+    "point": -4.5,
+    "scene": [
+     -11.5,
+     2.0
+    ],
+    "logs": [
+     -11.401353908904081,
+     3.7669478442573396
+    ]
+   },
+   "collision": {
+    "point": 0.5,
+    "scene": [
+     -4.0,
+     5.0
+    ],
+    "logs": [
+     -4.6864702415418975,
+     6.586329923377393
+    ]
+   },
+   "offroad": {
+    "point": -5.0,
+    "scene": [
+     -10.5,
+     0.0
+    ],
+    "logs": [
+     -10.5957071985167,
+     0.5287587448559665
+    ]
+   },
+   "corridor": {
+    "point": 3.0,
+    "scene": [
+     -5.0,
+     11.0
+    ],
+    "logs": [
+     -5.625247052781736,
+     13.001412111118366
+    ]
+   },
+   "slow": {
+    "point": -84.0,
+    "scene": [
+     -103.0,
+     -65.0
+    ],
+    "logs": [
+     -109.60293253675893,
+     -60.30106199235548
+    ]
+   },
+   "progress": {
+    "point": 0.04758398014843421,
+    "scene": [
+     0.04123429452150081,
+     0.05414203174253006
+    ],
+    "logs": [
+     0.03997726639394927,
+     0.054899005196146336
+    ]
+   },
+   "gt_dist": {
+    "point": 0.1693861310448753,
+    "scene": [
+     0.12372891625210097,
+     0.21780718650420597
+    ],
+    "logs": [
+     0.12582975948807704,
+     0.21965803691363261
+    ],
+    "n": 1025
+   },
+   "gt45": {
+    "score": {
+     "point": -0.00014289680145054934,
+     "scene": [
+      -0.06042633756060845,
+      0.05967916674745586
+     ],
+     "logs": [
+      -0.07147080652420892,
+      0.06489128529791816
+     ]
+    },
+    "zeros": {
+     "point": 1.0,
+     "scene": [
+      -5.5,
+      7.5
+     ],
+     "logs": [
+      -5.909090909090909,
+      8.666666666666666
+     ]
+    },
+    "at-fault": {
+     "point": -2.5,
+     "scene": [
+      -6.5,
+      1.5
+     ],
+     "logs": [
+      -6.8196721311475414,
+      1.9025844707988342
+     ]
+    },
+    "collision": {
+     "point": -1.0,
+     "scene": [
+      -3.0,
+      0.0
+     ],
+     "logs": [
+      -2.9433962264150946,
+      0.0
+     ]
+    },
+    "offroad": {
+     "point": -1.5,
+     "scene": [
+      -5.0,
+      2.0
+     ],
+     "logs": [
+      -5.842879213483146,
+      2.3111111111111113
+     ]
+    },
+    "corridor": {
+     "point": 3.5,
+     "scene": [
+      -2.5,
+      9.5
+     ],
+     "logs": [
+      -2.810810810810811,
+      10.4
+     ]
+    },
+    "slow": {
+     "point": -9.5,
+     "scene": [
+      -16.0,
+      -3.0
+     ],
+     "logs": [
+      -16.049966329966328,
+      -3.9245283018867925
+     ]
+    },
+    "progress": {
+     "point": 0.03530941086881244,
+     "scene": [
+      0.014634141089155868,
+      0.05565584940161917
+     ],
+     "logs": [
+      0.015686770805975157,
+      0.053826935800699104
+     ]
+    }
+   }
+  }
+ },
+ "flips": [
+  {
+   "arm": "YSELFnoL-ON",
+   "ref": "control YR10m10-F",
+   "kinds": "zeros",
+   "fixed": 19,
+   "broken": 12,
+   "net": 7,
+   "partial_better": 13,
+   "partial_worse": 14,
+   "ref_zeros": 56.5,
+   "arm_zeros": 50.0,
+   "fixed_scenes": [
+    "2021.05.25.15.59.03_veh-30_03499_03671-00ff8eeb53cc598b",
+    "2021.06.28.18.03.27_veh-14_00620_01581-4f8d9bfa869553bb",
+    "2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918",
+    "2021.06.28.20.24.43_veh-38_03385_04952-927b73fea33f5218",
+    "2021.06.28.21.16.05_veh-14_00957_01198-a04628cdd3f25947",
+    "2021.09.09.14.18.22_veh-48_00322_00895-994ab680895a55d2",
+    "2021.09.09.17.18.51_veh-48_00098_00328-e133b313fabc56b4",
+    "2021.09.16.15.12.03_veh-42_01037_01434-fe6105aa925d5621",
+    "2021.09.16.19.12.04_veh-42_01438_01677-5cf43f51d45c552f",
+    "2021.09.16.19.27.01_veh-45_01749_03230-5b4cbfe57b9b524b",
+    "2021.09.29.19.02.14_veh-28_00273_00514-c8deb087395357c3",
+    "2021.09.29.19.02.14_veh-28_00540_00917-7fcf6a30139b5d3e",
+    "2021.09.29.19.02.14_veh-28_00964_01689-9e970e2a22da585c",
+    "2021.09.29.19.02.14_veh-28_02451_02708-6856c3ad77315d3c",
+    "2021.10.06.07.26.10_veh-52_00006_00398-2a30c259f67c561d",
+    "2021.10.06.07.26.10_veh-52_00006_00398-e36e9da57e1e5e32",
+    "2021.10.06.07.26.10_veh-52_00953_01126-67debdeae60b5fa4",
+    "2021.10.06.07.26.10_veh-52_00953_01126-b1649a41e6155dd2",
+    "2021.10.06.07.26.10_veh-52_01245_02064-0004474e9e3f5470"
+   ],
+   "broken_scenes": [
+    "2021.05.25.14.24.08_veh-25_03764_04034-23ee145aa4de582b",
+    "2021.05.25.16.37.23_veh-25_00005_00217-60681597a59d5cf9",
+    "2021.09.09.14.18.22_veh-48_00322_00895-6d08dce7cfaa5035",
+    "2021.09.09.17.18.51_veh-48_00889_01147-6782b9c3686f58f3",
+    "2021.09.16.13.53.10_veh-42_00630_00818-c9150b81da695ae9",
+    "2021.09.16.15.12.03_veh-42_01037_01434-16ee6602bb5c5e99",
+    "2021.09.16.19.12.04_veh-42_01438_01677-4161016e65df5b37",
+    "2021.09.29.14.44.26_veh-28_00528_00992-6e3cf172a2755fae",
+    "2021.09.29.14.44.26_veh-28_01059_01191-6eac35cd4c6e53b0",
+    "2021.09.29.14.44.26_veh-28_01202_01296-afbf26b6d3bb5bee",
+    "2021.10.06.07.26.10_veh-52_01245_02064-21b8742127e7523c",
+    "2021.10.06.07.26.10_veh-52_01245_02064-947b3794a3275a2c"
+   ]
+  },
+  {
+   "arm": "YSELFnoL-ON",
+   "ref": "control YR10m10-F",
+   "kinds": "at-fault",
+   "fixed": 14,
+   "broken": 4,
+   "net": 10,
+   "partial_better": 12,
+   "partial_worse": 6,
+   "ref_zeros": 42.0,
+   "arm_zeros": 29.0,
+   "fixed_scenes": [
+    "2021.05.25.15.59.03_veh-30_03499_03671-00ff8eeb53cc598b",
+    "2021.06.28.18.03.27_veh-14_00620_01581-4f8d9bfa869553bb",
+    "2021.09.09.14.18.22_veh-48_00322_00895-994ab680895a55d2",
+    "2021.09.09.17.18.51_veh-48_00098_00328-e133b313fabc56b4",
+    "2021.09.16.19.27.01_veh-45_01749_03230-5b4cbfe57b9b524b",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.19.02.14_veh-28_00273_00514-c8deb087395357c3",
+    "2021.09.29.19.02.14_veh-28_00540_00917-7fcf6a30139b5d3e",
+    "2021.09.29.19.02.14_veh-28_00964_01689-9e970e2a22da585c",
+    "2021.09.29.19.02.14_veh-28_02451_02708-6856c3ad77315d3c",
+    "2021.10.06.07.26.10_veh-52_00006_00398-2a30c259f67c561d",
+    "2021.10.06.07.26.10_veh-52_00006_00398-e36e9da57e1e5e32",
+    "2021.10.06.07.26.10_veh-52_00953_01126-67debdeae60b5fa4",
+    "2021.10.06.07.26.10_veh-52_01245_02064-0004474e9e3f5470"
+   ],
+   "broken_scenes": [
+    "2021.09.09.14.18.22_veh-48_00322_00895-6d08dce7cfaa5035",
+    "2021.09.29.14.44.26_veh-28_00528_00992-6e3cf172a2755fae",
+    "2021.09.29.14.44.26_veh-28_01059_01191-6eac35cd4c6e53b0",
+    "2021.10.06.07.26.10_veh-52_01245_02064-21b8742127e7523c"
+   ]
+  },
+  {
+   "arm": "YSELFnoL-ON",
+   "ref": "control YR10m10-F",
+   "kinds": "corridor",
+   "fixed": 5,
+   "broken": 9,
+   "net": -4,
+   "partial_better": 5,
+   "partial_worse": 10,
+   "ref_zeros": 14.5,
+   "arm_zeros": 21.0,
+   "fixed_scenes": [
+    "2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918",
+    "2021.06.28.20.24.43_veh-38_03385_04952-927b73fea33f5218",
+    "2021.06.28.21.16.05_veh-14_00957_01198-a04628cdd3f25947",
+    "2021.09.16.15.12.03_veh-42_01037_01434-fe6105aa925d5621",
+    "2021.09.16.19.12.04_veh-42_01438_01677-5cf43f51d45c552f"
+   ],
+   "broken_scenes": [
+    "2021.05.25.14.24.08_veh-25_03764_04034-23ee145aa4de582b",
+    "2021.05.25.16.37.23_veh-25_00005_00217-60681597a59d5cf9",
+    "2021.09.09.17.18.51_veh-48_00889_01147-6782b9c3686f58f3",
+    "2021.09.16.13.53.10_veh-42_00630_00818-c9150b81da695ae9",
+    "2021.09.16.15.12.03_veh-42_01037_01434-16ee6602bb5c5e99",
+    "2021.09.16.19.12.04_veh-42_01438_01677-4161016e65df5b37",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.14.44.26_veh-28_01202_01296-afbf26b6d3bb5bee",
+    "2021.10.06.07.26.10_veh-52_01245_02064-947b3794a3275a2c"
+   ]
+  },
+  {
+   "arm": "YNONE-ON",
+   "ref": "control YR10m10-F",
+   "kinds": "zeros",
+   "fixed": 18,
+   "broken": 14,
+   "net": 4,
+   "partial_better": 18,
+   "partial_worse": 23,
+   "ref_zeros": 56.5,
+   "arm_zeros": 55.0,
+   "fixed_scenes": [
+    "2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918",
+    "2021.06.28.20.24.43_veh-38_03385_04952-927b73fea33f5218",
+    "2021.06.28.21.16.05_veh-14_00957_01198-a04628cdd3f25947",
+    "2021.08.30.14.54.34_veh-40_00885_00986-9f105aba36355fe1",
+    "2021.09.09.14.18.22_veh-48_00322_00895-994ab680895a55d2",
+    "2021.09.16.15.12.03_veh-42_01037_01434-fe6105aa925d5621",
+    "2021.09.16.19.12.04_veh-42_01438_01677-5cf43f51d45c552f",
+    "2021.09.16.19.27.01_veh-45_01749_03230-5b4cbfe57b9b524b",
+    "2021.09.16.19.27.01_veh-45_01749_03230-9551ef5e14315cc0",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.14.44.26_veh-28_01331_01485-a5ee1632a31556a1",
+    "2021.09.29.19.02.14_veh-28_00964_01689-9e970e2a22da585c",
+    "2021.09.29.19.02.14_veh-28_02451_02708-6856c3ad77315d3c",
+    "2021.10.06.07.26.10_veh-52_00006_00398-2a30c259f67c561d",
+    "2021.10.06.07.26.10_veh-52_00006_00398-e36e9da57e1e5e32",
+    "2021.10.06.07.26.10_veh-52_00953_01126-67debdeae60b5fa4",
+    "2021.10.06.07.26.10_veh-52_00953_01126-b1649a41e6155dd2",
+    "2021.10.06.07.26.10_veh-52_01245_02064-1c0c94dbcd5359fc"
+   ],
+   "broken_scenes": [
+    "2021.05.25.14.24.08_veh-25_03764_04034-23ee145aa4de582b",
+    "2021.06.28.20.24.43_veh-38_03385_04952-1786ef7edac65502",
+    "2021.08.30.14.54.34_veh-40_00439_00835-638b83e65dd259f8",
+    "2021.09.09.17.18.51_veh-48_00889_01147-6782b9c3686f58f3",
+    "2021.09.16.13.53.10_veh-42_00630_00818-c9150b81da695ae9",
+    "2021.09.16.15.12.03_veh-42_01037_01434-2a34f4d0aefc5039",
+    "2021.09.16.16.20.27_veh-08_02435_02525-3acfdef9ef305e77",
+    "2021.09.16.19.27.01_veh-45_01749_03230-1fe5f6af95e15489",
+    "2021.09.29.14.44.26_veh-28_00528_00992-6e3cf172a2755fae",
+    "2021.09.29.14.44.26_veh-28_01059_01191-6eac35cd4c6e53b0",
+    "2021.09.29.18.19.40_veh-28_00438_00833-697c73f258ef5745",
+    "2021.10.06.07.26.10_veh-52_01245_02064-21b8742127e7523c",
+    "2021.10.06.07.26.10_veh-52_01245_02064-947b3794a3275a2c",
+    "2021.10.06.07.26.10_veh-52_01245_02064-f016e2b6ac155a30"
+   ]
+  },
+  {
+   "arm": "YNONE-ON",
+   "ref": "control YR10m10-F",
+   "kinds": "at-fault",
+   "fixed": 11,
+   "broken": 6,
+   "net": 5,
+   "partial_better": 14,
+   "partial_worse": 18,
+   "ref_zeros": 42.0,
+   "arm_zeros": 39.0,
+   "fixed_scenes": [
+    "2021.08.30.14.54.34_veh-40_00885_00986-9f105aba36355fe1",
+    "2021.09.09.14.18.22_veh-48_00322_00895-994ab680895a55d2",
+    "2021.09.16.19.27.01_veh-45_01749_03230-5b4cbfe57b9b524b",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.14.44.26_veh-28_01331_01485-a5ee1632a31556a1",
+    "2021.09.29.19.02.14_veh-28_00964_01689-9e970e2a22da585c",
+    "2021.09.29.19.02.14_veh-28_02451_02708-6856c3ad77315d3c",
+    "2021.10.06.07.26.10_veh-52_00006_00398-2a30c259f67c561d",
+    "2021.10.06.07.26.10_veh-52_00006_00398-e36e9da57e1e5e32",
+    "2021.10.06.07.26.10_veh-52_00953_01126-67debdeae60b5fa4",
+    "2021.10.06.07.26.10_veh-52_01245_02064-1c0c94dbcd5359fc"
+   ],
+   "broken_scenes": [
+    "2021.06.28.20.24.43_veh-38_03385_04952-1786ef7edac65502",
+    "2021.08.30.14.54.34_veh-40_00439_00835-638b83e65dd259f8",
+    "2021.09.16.16.20.27_veh-08_02435_02525-3acfdef9ef305e77",
+    "2021.09.29.14.44.26_veh-28_00528_00992-6e3cf172a2755fae",
+    "2021.10.06.07.26.10_veh-52_01245_02064-21b8742127e7523c",
+    "2021.10.06.07.26.10_veh-52_01245_02064-f016e2b6ac155a30"
+   ]
+  },
+  {
+   "arm": "YNONE-ON",
+   "ref": "control YR10m10-F",
+   "kinds": "corridor",
+   "fixed": 6,
+   "broken": 6,
+   "net": 0,
+   "partial_better": 7,
+   "partial_worse": 10,
+   "ref_zeros": 14.5,
+   "arm_zeros": 16.0,
+   "fixed_scenes": [
+    "2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918",
+    "2021.06.28.20.24.43_veh-38_03385_04952-927b73fea33f5218",
+    "2021.06.28.21.16.05_veh-14_00957_01198-a04628cdd3f25947",
+    "2021.09.16.15.12.03_veh-42_01037_01434-fe6105aa925d5621",
+    "2021.09.16.19.12.04_veh-42_01438_01677-5cf43f51d45c552f",
+    "2021.09.16.19.27.01_veh-45_01749_03230-9551ef5e14315cc0"
+   ],
+   "broken_scenes": [
+    "2021.05.25.14.24.08_veh-25_03764_04034-23ee145aa4de582b",
+    "2021.09.09.17.18.51_veh-48_00889_01147-6782b9c3686f58f3",
+    "2021.09.16.13.53.10_veh-42_00630_00818-c9150b81da695ae9",
+    "2021.09.16.19.27.01_veh-45_01749_03230-1fe5f6af95e15489",
+    "2021.09.29.18.19.40_veh-28_00438_00833-697c73f258ef5745",
+    "2021.10.06.07.26.10_veh-52_01245_02064-947b3794a3275a2c"
+   ]
+  },
+  {
+   "arm": "YSELFnoL-ON",
+   "ref": "YNONE-ON",
+   "kinds": "zeros",
+   "fixed": 7,
+   "broken": 10,
+   "net": -3,
+   "partial_better": 24,
+   "partial_worse": 8,
+   "ref_zeros": 55.0,
+   "arm_zeros": 50.0,
+   "fixed_scenes": [
+    "2021.09.16.16.20.27_veh-08_02435_02525-3acfdef9ef305e77",
+    "2021.09.29.18.19.40_veh-28_00438_00833-697c73f258ef5745",
+    "2021.09.29.18.19.40_veh-28_01268_01685-fefad5f7d3405512",
+    "2021.09.29.19.02.14_veh-28_00273_00514-c8deb087395357c3",
+    "2021.10.06.07.26.10_veh-52_00422_00728-fb1d534ccf82583f",
+    "2021.10.06.07.26.10_veh-52_00772_00917-687fa6fce3ab5f91",
+    "2021.10.06.07.26.10_veh-52_01245_02064-f016e2b6ac155a30"
+   ],
+   "broken_scenes": [
+    "2021.08.30.14.54.34_veh-40_00439_00835-537935a8e7b653f2",
+    "2021.08.30.14.54.34_veh-40_00885_00986-9f105aba36355fe1",
+    "2021.08.30.16.16.44_veh-40_00256_00716-eb15f0d956eb5ac4",
+    "2021.09.09.14.18.22_veh-48_00322_00895-6d08dce7cfaa5035",
+    "2021.09.16.19.12.04_veh-42_01438_01677-4161016e65df5b37",
+    "2021.09.16.19.27.01_veh-45_01749_03230-9551ef5e14315cc0",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.14.44.26_veh-28_01202_01296-afbf26b6d3bb5bee",
+    "2021.09.29.14.44.26_veh-28_01331_01485-a5ee1632a31556a1",
+    "2021.10.06.07.26.10_veh-52_01245_02064-1c0c94dbcd5359fc"
+   ]
+  },
+  {
+   "arm": "YSELFnoL-ON",
+   "ref": "YNONE-ON",
+   "kinds": "at-fault",
+   "fixed": 5,
+   "broken": 4,
+   "net": 1,
+   "partial_better": 21,
+   "partial_worse": 3,
+   "ref_zeros": 39.0,
+   "arm_zeros": 29.0,
+   "fixed_scenes": [
+    "2021.09.16.16.20.27_veh-08_02435_02525-3acfdef9ef305e77",
+    "2021.09.29.18.19.40_veh-28_01268_01685-fefad5f7d3405512",
+    "2021.09.29.19.02.14_veh-28_00273_00514-c8deb087395357c3",
+    "2021.10.06.07.26.10_veh-52_00772_00917-687fa6fce3ab5f91",
+    "2021.10.06.07.26.10_veh-52_01245_02064-f016e2b6ac155a30"
+   ],
+   "broken_scenes": [
+    "2021.08.30.14.54.34_veh-40_00885_00986-9f105aba36355fe1",
+    "2021.09.09.14.18.22_veh-48_00322_00895-6d08dce7cfaa5035",
+    "2021.09.29.14.44.26_veh-28_01331_01485-a5ee1632a31556a1",
+    "2021.10.06.07.26.10_veh-52_01245_02064-1c0c94dbcd5359fc"
+   ]
+  },
+  {
+   "arm": "YSELFnoL-ON",
+   "ref": "YNONE-ON",
+   "kinds": "corridor",
+   "fixed": 2,
+   "broken": 6,
+   "net": -4,
+   "partial_better": 6,
+   "partial_worse": 8,
+   "ref_zeros": 16.0,
+   "arm_zeros": 21.0,
+   "fixed_scenes": [
+    "2021.09.29.18.19.40_veh-28_00438_00833-697c73f258ef5745",
+    "2021.10.06.07.26.10_veh-52_00422_00728-fb1d534ccf82583f"
+   ],
+   "broken_scenes": [
+    "2021.08.30.14.54.34_veh-40_00439_00835-537935a8e7b653f2",
+    "2021.08.30.16.16.44_veh-40_00256_00716-eb15f0d956eb5ac4",
+    "2021.09.16.19.12.04_veh-42_01438_01677-4161016e65df5b37",
+    "2021.09.16.19.27.01_veh-45_01749_03230-9551ef5e14315cc0",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.14.44.26_veh-28_01202_01296-afbf26b6d3bb5bee"
+   ]
+  },
+  {
+   "arm": "SSELFnoL-ON (4 seeds)",
+   "ref": "control P2H10S-F (4 seeds)",
+   "kinds": "zeros",
+   "fixed": 8,
+   "broken": 4,
+   "net": 4,
+   "partial_better": 22,
+   "partial_worse": 32,
+   "ref_zeros": 50.5,
+   "arm_zeros": 53.25,
+   "fixed_scenes": [
+    "2021.05.25.14.16.10_veh-35_01100_01664-78b4153a6d3e5b33",
+    "2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918",
+    "2021.09.09.17.18.51_veh-48_00098_00328-e133b313fabc56b4",
+    "2021.09.16.15.12.03_veh-42_01037_01434-fe6105aa925d5621",
+    "2021.09.29.18.19.40_veh-28_00844_01218-04cdd9195f885ac6",
+    "2021.09.29.19.02.14_veh-28_00540_00917-68df055f82485e95",
+    "2021.10.06.07.26.10_veh-52_00953_01126-67debdeae60b5fa4",
+    "2021.10.06.07.26.10_veh-52_01245_02064-a9956fd52aa15f39"
+   ],
+   "broken_scenes": [
+    "2021.09.09.17.18.51_veh-48_00889_01147-6782b9c3686f58f3",
+    "2021.09.16.19.12.04_veh-42_01438_01677-4161016e65df5b37",
+    "2021.09.29.14.44.26_veh-28_00528_00992-6e3cf172a2755fae",
+    "2021.09.29.14.44.26_veh-28_01059_01191-6eac35cd4c6e53b0"
+   ]
+  },
+  {
+   "arm": "SSELFnoL-ON (4 seeds)",
+   "ref": "control P2H10S-F (4 seeds)",
+   "kinds": "at-fault",
+   "fixed": 4,
+   "broken": 2,
+   "net": 2,
+   "partial_better": 14,
+   "partial_worse": 15,
+   "ref_zeros": 32.0,
+   "arm_zeros": 30.75,
+   "fixed_scenes": [
+    "2021.09.09.17.18.51_veh-48_00098_00328-e133b313fabc56b4",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.19.02.14_veh-28_00540_00917-68df055f82485e95",
+    "2021.10.06.07.26.10_veh-52_00953_01126-67debdeae60b5fa4"
+   ],
+   "broken_scenes": [
+    "2021.09.29.14.44.26_veh-28_00528_00992-6e3cf172a2755fae",
+    "2021.09.29.14.44.26_veh-28_01059_01191-6eac35cd4c6e53b0"
+   ]
+  },
+  {
+   "arm": "SSELFnoL-ON (4 seeds)",
+   "ref": "control P2H10S-F (4 seeds)",
+   "kinds": "corridor",
+   "fixed": 5,
+   "broken": 2,
+   "net": 3,
+   "partial_better": 10,
+   "partial_worse": 20,
+   "ref_zeros": 18.5,
+   "arm_zeros": 22.5,
+   "fixed_scenes": [
+    "2021.05.25.14.16.10_veh-35_01100_01664-78b4153a6d3e5b33",
+    "2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918",
+    "2021.09.16.15.12.03_veh-42_01037_01434-fe6105aa925d5621",
+    "2021.09.29.18.19.40_veh-28_00844_01218-04cdd9195f885ac6",
+    "2021.10.06.07.26.10_veh-52_01245_02064-a9956fd52aa15f39"
+   ],
+   "broken_scenes": [
+    "2021.09.09.17.18.51_veh-48_00889_01147-6782b9c3686f58f3",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9"
+   ]
+  },
+  {
+   "arm": "SSELFnoL-ON s2, s3",
+   "ref": "control P2H10S-F s2, s3",
+   "kinds": "zeros",
+   "fixed": 9,
+   "broken": 15,
+   "net": -6,
+   "partial_better": 13,
+   "partial_worse": 15,
+   "ref_zeros": 49.5,
+   "arm_zeros": 56.5,
+   "fixed_scenes": [
+    "2021.05.25.14.16.10_veh-35_01100_01664-78b4153a6d3e5b33",
+    "2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918",
+    "2021.09.09.17.18.51_veh-48_00098_00328-e133b313fabc56b4",
+    "2021.09.16.15.12.03_veh-42_01037_01434-fe6105aa925d5621",
+    "2021.09.29.18.19.40_veh-28_00844_01218-04cdd9195f885ac6",
+    "2021.09.29.19.02.14_veh-28_00540_00917-68df055f82485e95",
+    "2021.10.06.07.26.10_veh-52_00953_01126-67debdeae60b5fa4",
+    "2021.10.06.07.26.10_veh-52_00953_01126-934c8ac938ad5dca",
+    "2021.10.06.07.26.10_veh-52_01245_02064-a9956fd52aa15f39"
+   ],
+   "broken_scenes": [
+    "2021.05.25.14.24.08_veh-25_03764_04034-23ee145aa4de582b",
+    "2021.05.25.14.24.08_veh-25_03764_04034-5e9e8c31277d5edc",
+    "2021.05.25.15.59.03_veh-30_04463_04606-6e3c7a34388e5ae3",
+    "2021.08.30.16.16.44_veh-40_00256_00716-43a4f01072795345",
+    "2021.09.09.14.18.22_veh-48_00322_00895-6d08dce7cfaa5035",
+    "2021.09.09.17.18.51_veh-48_00657_00876-215c38293c335e25",
+    "2021.09.09.17.18.51_veh-48_00889_01147-6782b9c3686f58f3",
+    "2021.09.09.17.18.51_veh-48_01173_01237-2556a5c923c95128",
+    "2021.09.16.19.12.04_veh-42_01438_01677-4161016e65df5b37",
+    "2021.09.16.19.27.01_veh-45_00472_00711-8cc8fe63227d5c07",
+    "2021.09.16.19.27.01_veh-45_01749_03230-1fe5f6af95e15489",
+    "2021.09.16.19.27.01_veh-45_01749_03230-a3d10c0a5a835300",
+    "2021.09.29.14.44.26_veh-28_00528_00992-6e3cf172a2755fae",
+    "2021.09.29.14.44.26_veh-28_01059_01191-6eac35cd4c6e53b0",
+    "2021.10.06.07.26.10_veh-52_00422_00728-fb1d534ccf82583f"
+   ]
+  },
+  {
+   "arm": "SSELFnoL-ON s2, s3",
+   "ref": "control P2H10S-F s2, s3",
+   "kinds": "at-fault",
+   "fixed": 5,
+   "broken": 7,
+   "net": -2,
+   "partial_better": 7,
+   "partial_worse": 7,
+   "ref_zeros": 30.5,
+   "arm_zeros": 32.5,
+   "fixed_scenes": [
+    "2021.09.09.17.18.51_veh-48_00098_00328-e133b313fabc56b4",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.19.02.14_veh-28_00540_00917-68df055f82485e95",
+    "2021.10.06.07.26.10_veh-52_00953_01126-67debdeae60b5fa4",
+    "2021.10.06.07.26.10_veh-52_00953_01126-934c8ac938ad5dca"
+   ],
+   "broken_scenes": [
+    "2021.05.25.15.59.03_veh-30_04463_04606-6e3c7a34388e5ae3",
+    "2021.09.09.14.18.22_veh-48_00322_00895-6d08dce7cfaa5035",
+    "2021.09.09.17.18.51_veh-48_00657_00876-215c38293c335e25",
+    "2021.09.09.17.18.51_veh-48_01173_01237-2556a5c923c95128",
+    "2021.09.16.19.12.04_veh-42_01438_01677-4161016e65df5b37",
+    "2021.09.29.14.44.26_veh-28_00528_00992-6e3cf172a2755fae",
+    "2021.09.29.14.44.26_veh-28_01059_01191-6eac35cd4c6e53b0"
+   ]
+  },
+  {
+   "arm": "SSELFnoL-ON s2, s3",
+   "ref": "control P2H10S-F s2, s3",
+   "kinds": "corridor",
+   "fixed": 5,
+   "broken": 10,
+   "net": -5,
+   "partial_better": 7,
+   "partial_worse": 7,
+   "ref_zeros": 19.0,
+   "arm_zeros": 24.0,
+   "fixed_scenes": [
+    "2021.05.25.14.16.10_veh-35_01100_01664-78b4153a6d3e5b33",
+    "2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918",
+    "2021.09.16.15.12.03_veh-42_01037_01434-fe6105aa925d5621",
+    "2021.09.29.18.19.40_veh-28_00844_01218-04cdd9195f885ac6",
+    "2021.10.06.07.26.10_veh-52_01245_02064-a9956fd52aa15f39"
+   ],
+   "broken_scenes": [
+    "2021.05.25.14.24.08_veh-25_03764_04034-23ee145aa4de582b",
+    "2021.05.25.14.24.08_veh-25_03764_04034-5e9e8c31277d5edc",
+    "2021.08.30.16.16.44_veh-40_00256_00716-43a4f01072795345",
+    "2021.09.09.17.18.51_veh-48_00889_01147-6782b9c3686f58f3",
+    "2021.09.16.19.27.01_veh-45_00472_00711-8cc8fe63227d5c07",
+    "2021.09.16.19.27.01_veh-45_01749_03230-1fe5f6af95e15489",
+    "2021.09.16.19.27.01_veh-45_01749_03230-a3d10c0a5a835300",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.19.02.14_veh-28_00273_00514-9897a102ee075dee",
+    "2021.10.06.07.26.10_veh-52_00422_00728-fb1d534ccf82583f"
+   ]
+  },
+  {
+   "arm": "SSELFnoL-ON s0, s1",
+   "ref": "control P2H10S-F s0, s1",
+   "kinds": "zeros",
+   "fixed": 12,
+   "broken": 9,
+   "net": 3,
+   "partial_better": 11,
+   "partial_worse": 14,
+   "ref_zeros": 51.5,
+   "arm_zeros": 50.0,
+   "fixed_scenes": [
+    "2021.05.25.14.16.10_veh-35_01100_01664-78b4153a6d3e5b33",
+    "2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918",
+    "2021.06.28.20.24.43_veh-38_03385_04952-e933d70dd378598f",
+    "2021.09.09.14.18.22_veh-48_00322_00895-52d3f15d6ca75701",
+    "2021.09.09.17.18.51_veh-48_00098_00328-e133b313fabc56b4",
+    "2021.09.16.15.12.03_veh-42_01037_01434-fe6105aa925d5621",
+    "2021.09.29.18.19.40_veh-28_00844_01218-04cdd9195f885ac6",
+    "2021.09.29.19.02.14_veh-28_00273_00514-2575048779565f0b",
+    "2021.09.29.19.02.14_veh-28_00540_00917-68df055f82485e95",
+    "2021.10.06.07.26.10_veh-52_00772_00917-687fa6fce3ab5f91",
+    "2021.10.06.07.26.10_veh-52_00953_01126-67debdeae60b5fa4",
+    "2021.10.06.07.26.10_veh-52_01245_02064-a9956fd52aa15f39"
+   ],
+   "broken_scenes": [
+    "2021.05.25.16.37.23_veh-25_00005_00217-60681597a59d5cf9",
+    "2021.09.09.17.18.51_veh-48_00889_01147-6782b9c3686f58f3",
+    "2021.09.16.13.53.10_veh-42_00630_00818-c9150b81da695ae9",
+    "2021.09.16.15.12.03_veh-42_01037_01434-16ee6602bb5c5e99",
+    "2021.09.16.19.12.04_veh-42_01438_01677-4161016e65df5b37",
+    "2021.09.29.14.44.26_veh-28_00528_00992-6e3cf172a2755fae",
+    "2021.09.29.14.44.26_veh-28_01059_01191-6eac35cd4c6e53b0",
+    "2021.09.29.14.44.26_veh-28_01202_01296-afbf26b6d3bb5bee",
+    "2021.10.06.07.26.10_veh-52_01245_02064-21b8742127e7523c"
+   ]
+  },
+  {
+   "arm": "SSELFnoL-ON s0, s1",
+   "ref": "control P2H10S-F s0, s1",
+   "kinds": "at-fault",
+   "fixed": 6,
+   "broken": 3,
+   "net": 3,
+   "partial_better": 8,
+   "partial_worse": 5,
+   "ref_zeros": 33.5,
+   "arm_zeros": 29.0,
+   "fixed_scenes": [
+    "2021.09.09.17.18.51_veh-48_00098_00328-e133b313fabc56b4",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.19.02.14_veh-28_00273_00514-2575048779565f0b",
+    "2021.09.29.19.02.14_veh-28_00540_00917-68df055f82485e95",
+    "2021.10.06.07.26.10_veh-52_00772_00917-687fa6fce3ab5f91",
+    "2021.10.06.07.26.10_veh-52_00953_01126-67debdeae60b5fa4"
+   ],
+   "broken_scenes": [
+    "2021.09.29.14.44.26_veh-28_00528_00992-6e3cf172a2755fae",
+    "2021.09.29.14.44.26_veh-28_01059_01191-6eac35cd4c6e53b0",
+    "2021.10.06.07.26.10_veh-52_01245_02064-21b8742127e7523c"
+   ]
+  },
+  {
+   "arm": "SSELFnoL-ON s0, s1",
+   "ref": "control P2H10S-F s0, s1",
+   "kinds": "corridor",
+   "fixed": 7,
+   "broken": 7,
+   "net": 0,
+   "partial_better": 4,
+   "partial_worse": 10,
+   "ref_zeros": 18.0,
+   "arm_zeros": 21.0,
+   "fixed_scenes": [
+    "2021.05.25.14.16.10_veh-35_01100_01664-78b4153a6d3e5b33",
+    "2021.06.28.20.24.43_veh-38_03385_04952-1347c91c511a5918",
+    "2021.06.28.20.24.43_veh-38_03385_04952-e933d70dd378598f",
+    "2021.09.09.14.18.22_veh-48_00322_00895-52d3f15d6ca75701",
+    "2021.09.16.15.12.03_veh-42_01037_01434-fe6105aa925d5621",
+    "2021.09.29.18.19.40_veh-28_00844_01218-04cdd9195f885ac6",
+    "2021.10.06.07.26.10_veh-52_01245_02064-a9956fd52aa15f39"
+   ],
+   "broken_scenes": [
+    "2021.05.25.16.37.23_veh-25_00005_00217-60681597a59d5cf9",
+    "2021.09.09.17.18.51_veh-48_00889_01147-6782b9c3686f58f3",
+    "2021.09.16.13.53.10_veh-42_00630_00818-c9150b81da695ae9",
+    "2021.09.16.15.12.03_veh-42_01037_01434-16ee6602bb5c5e99",
+    "2021.09.16.19.12.04_veh-42_01438_01677-4161016e65df5b37",
+    "2021.09.16.19.27.01_veh-45_01749_03230-d33c6db306f35ef9",
+    "2021.09.29.14.44.26_veh-28_01202_01296-afbf26b6d3bb5bee"
+   ]
+  }
+ ],
+ "B": {
+  "trainings": {
+   "YSELFnoL-ON-s0": null,
+   "YSELFnoL-ON-s1": null,
+   "YNONE-ON-s0": null,
+   "YNONE-ON-s1": null
+  },
+  "null": {
+   "control_s0_vs_s1": {
+    "fixed": 8,
+    "broken": 11,
+    "net": -3
+   },
+   "round1_four_seed": [
+    -1,
+    1,
+    2,
+    -2,
+    -1,
+    1
+   ],
+   "round1_registered": 2,
+   "value": 3
+  },
+  "lines": {
+   "i": true,
+   "ii": true,
+   "iii": true,
+   "holds": true,
+   "net": 7,
+   "null": 3
+  }
+ },
+ "C": {
+  "null": {
+   "values": [
+    -1,
+    1,
+    2,
+    -2,
+    -1,
+    1
+   ],
+   "max": 2
+  },
+  "lines": {
+   "zeros": [
+    53.25,
+    50.5
+   ],
+   "atfault": [
+    30.75,
+    32.0
+   ],
+   "H": true,
+   "net_s23": -6,
+   "net_all": 4,
+   "null": 2,
+   "four_seed_zeros": {
+    "point": 2.75,
+    "scene": [
+     -6.756249999999994,
+     12.25
+    ],
+    "logs": [
+     -8.714356294523633,
+     15.691374515624895
+    ]
+   },
+   "sign_with_ci": false,
+   "new_seeds_each_fewer": false,
+   "new_seeds_mean_fewer": false,
+   "firms_up": false
+  }
+ },
+ "selfcheck": {
+  "rows": [
+   [
+    "scenes in the table",
+    1031,
+    1031,
+    true
+   ],
+   [
+    "per-scene scores, max abs difference over all tags (table rounds to 1e-6)",
+    "5.0e-07",
+    "<= 5.0e-07",
+    true
+   ],
+   [
+    "per-scene zero classes that differ, all tags",
+    0,
+    0,
+    true
+   ],
+   [
+    "control YR10m10-F: seed-mean zeros / at-fault zeros",
+    "56.5 / 42",
+    "56.5 / 42",
+    true
+   ],
+   [
+    "YSELFnoL-ON: seed-mean zeros / at-fault zeros",
+    "50 / 29",
+    "50 / 29",
+    true
+   ],
+   [
+    "YNONE-ON: seed-mean zeros / at-fault zeros",
+    "55 / 39",
+    "55 / 39",
+    true
+   ],
+   [
+    "control P2H10S-F (4 seeds): seed-mean zeros / at-fault zeros",
+    "50.5 / 32",
+    "50.5 / 32",
+    true
+   ],
+   [
+    "SSELFnoL-ON (4 seeds): seed-mean zeros / at-fault zeros",
+    "53.25 / 30.75",
+    "53.25 / 30.75",
+    true
+   ],
+   [
+    "control P2H10S-F s0, s1: seed-mean zeros / at-fault zeros",
+    "51.5 / 33.5",
+    "51.5 / 33.5",
+    true
+   ],
+   [
+    "SSELFnoL-ON s0, s1: seed-mean zeros / at-fault zeros",
+    "50 / 29",
+    "50 / 29",
+    true
+   ],
+   [
+    "control P2H10S-F s2, s3: seed-mean zeros / at-fault zeros",
+    "49.5 / 30.5",
+    "49.5 / 30.5",
+    true
+   ],
+   [
+    "SSELFnoL-ON s2, s3: seed-mean zeros / at-fault zeros",
+    "56.5 / 32.5",
+    "56.5 / 32.5",
+    true
+   ],
+   [
+    "YSELFnoL-ON vs control YR10m10-F: fixed / broken",
+    "19 / 12",
+    "19 / 12",
+    true
+   ],
+   [
+    "YNONE-ON vs control YR10m10-F: fixed / broken",
+    "18 / 14",
+    "18 / 14",
+    true
+   ],
+   [
+    "YSELFnoL-ON vs YNONE-ON: fixed / broken",
+    "7 / 10",
+    "7 / 10",
+    true
+   ],
+   [
+    "SSELFnoL-ON (4 seeds) vs control P2H10S-F (4 seeds): fixed / broken",
+    "8 / 4",
+    "8 / 4",
+    true
+   ],
+   [
+    "SSELFnoL-ON s2, s3 vs control P2H10S-F s2, s3: fixed / broken",
+    "9 / 15",
+    "9 / 15",
+    true
+   ],
+   [
+    "SSELFnoL-ON s0, s1 vs control P2H10S-F s0, s1: fixed / broken",
+    "12 / 9",
+    "12 / 9",
+    true
+   ],
+   [
+    "YSELFnoL-ON - control YR10m10-F: zeros difference, mean score difference",
+    "-6.50, +0.02235",
+    "-6.50, +0.02235",
+    true
+   ],
+   [
+    "YNONE-ON - control YR10m10-F: zeros difference, mean score difference",
+    "-1.50, +0.01601",
+    "-1.50, +0.01601",
+    true
+   ],
+   [
+    "YSELFnoL-ON - YNONE-ON: zeros difference, mean score difference",
+    "-5.00, +0.00634",
+    "-5.00, +0.00634",
+    true
+   ],
+   [
+    "SSELFnoL-ON (4 seeds) - control P2H10S-F (4 seeds): zeros difference, mean score difference",
+    "+2.75, +0.00968",
+    "+2.75, +0.00968",
+    true
+   ],
+   [
+    "SSELFnoL-ON s2, s3 - control P2H10S-F s2, s3: zeros difference, mean score difference",
+    "+7.00, +0.00445",
+    "+7.00, +0.00445",
+    true
+   ],
+   [
+    "SSELFnoL-ON s0, s1 - control P2H10S-F s0, s1: zeros difference, mean score difference",
+    "-1.50, +0.01491",
+    "-1.50, +0.01491",
+    true
+   ],
+   [
+    "B null: control s0 against s1, fixed - broken",
+    "-3",
+    "-3",
+    true
+   ]
+  ],
+  "mismatches": []
+ }
+}
