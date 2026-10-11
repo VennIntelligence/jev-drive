@@ -228,8 +228,7 @@ each; 1.5 TB free.
   rows of 16 scenes. Weighted loss per batch on the parent's plan: corridor 1.25, P 0.62, B 0.52, road edge 0.076, agent 0.058, C 0.028
   (ON-SELF 2.55; ON-IMIT's imitation term 2.34).
 - Control on the held rows (`P2H10S-F-s0`, the pilot's reference): ADE to the recovery target 4.768 m (1 to 4 s), summed term rate 0.307
-  (agent 0.069, road edge 0.064, corridor 0.108, B 0.052, C 0.014; P 0.032 is not in the registered sum, which then reads 0.307 - 0.032 =
-  0.275), arc / served 1.033, dev ADE 0.545, drift off 0.045.
+  (agent 0.069, road edge 0.064, corridor 0.108, B 0.052, C 0.014, the five registered terms; P 0.032 is not in the sum), arc / served 1.033, dev ADE 0.545, drift off 0.045.
 - Seen before the pilot, in a 400-step test run of ON-SELF (not the pilot's schedule): navtrain dev ADE rose to 0.608 (line 0.575). The
   pilot lines stand as registered.
 - 22:37: pilots started on card 1 (SELF, IMIT, BOTH in sequence, 3 000 steps each).
