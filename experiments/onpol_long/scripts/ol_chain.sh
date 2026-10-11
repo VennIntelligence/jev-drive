@@ -126,5 +126,23 @@ submit-rest)   # everything after the rollouts of one base, chained with --after
   done
   sub ol-report-$F "$(IFS=,; echo "${rids[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report $F > /dev/null || exit 1
   echo "submitted for $T: $(tail -n 12 $W/jobs.txt | tr '\n' ';')" ;;
+submit-skc)    # Amendment 2: the arm's half again (geo -> tok -> strip; tok -> arm trainings -> reads; all reads -> report), the ON-NONE reads already queued
+  T=$1; F=$2; NONE_READS=$3; N=L18$F; CTL=$( [[ $F == Y ]] && echo smoke10eY || echo smoke10e )
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-13} --no-check ${after:+--after $after} \
+            --log-dir "$W/pool/$name-a2" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 2)" >> $W/jobs.txt; }
+  g=$(sub ol-geo-$F "" --vram 0.5 --cpu 48 --ram 96 --timeout-h 2 -- bash $E/scripts/ol_chain.sh geo $T $N) || exit 1
+  k=$(sub ol-tok-$F "$g" --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash $E/scripts/ol_chain.sh tok $N $CTL) || exit 1
+  sub ol-strip-$F "$k" --vram 0.5 --cpu 16 --ram 16 --timeout-h 2 -- bash $E/scripts/ol_chain.sh strip $T $N > /dev/null || exit 1
+  if [[ $F == Y ]]; then REC="--yr-mass 0.1 --label-bank"; SK="--agent-lam 10 --agent-on-only --shape --ho-w 3"
+  else REC="--ho ot1:4,yr1:4,bd4:5 --ho-w 3 --ho-excl navsim/body1-val-logs --agent-lam 10 --shape --label-bank"; SK=""; fi
+  ONR="--on on1_$N --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self --on-lon ol_kc"
+  OT="env PYTHONPATH=$PWD/$E/lib $TR $ON/scripts/on_train.py train --exp onpol_long --init $T --steps ${OL_STEPS:-10000}"
+  rids=($(echo $NONE_READS | tr , ' '))
+  for s in 0 1; do
+    a=$(sub ol-train-${F}SKC-s$s "$k" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT $REC $SK $ONR --seed $s --tag ${F}SKC-L18-s$s) || exit 1
+    r=$(sub ol-read-${F}SKC-L18-s$s "$a" --vram 32 --cpu 8 --ram 90 --timeout-h 3 -- bash $E/scripts/ol_chain.sh read1 ${F}SKC-L18-s$s) || exit 1; rids+=($r)
+  done
+  sub ol-report-$F "$(IFS=,; echo "${rids[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report $F > /dev/null || exit 1
+  echo "submitted for $T: $(tail -n 8 $W/jobs.txt | tr '\n' ';')" ;;
 *) die "unknown stage $STAGE" ;;
 esac

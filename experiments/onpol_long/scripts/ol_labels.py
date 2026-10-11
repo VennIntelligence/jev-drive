@@ -119,7 +119,7 @@ def cmd_gate(a):
     res["R1"] = dict(a_one_ulp=ra, b_control=r1["control_single"], c_wrong_seed=rc, written_pass=r1["pass"])
     if not (all(v >= 0.99 for v in ra.values()) and r1["b"] and all(v < 0.2 for v in rc.values())):
         fail.append(f"R1 as amended: (a) {ra}, (b) {r1['b']} {r1['control_single']}, (c) {rc}")
-    res["R2"] = {k: r2[k] for k in ("ego_max_m", "act_share_within", "act_max_m", "act_n", "rollouts", "with_sim")}
+    res["R2"] = {k: r2.get(k) for k in ("ego_max_m", "act_share_within", "act_max_m", "act_n", "rollouts", "with_sim", "frame_excluded")}
     if not (r2["ego_max_m"] <= 0.3 and r2["act_share_within"] >= 0.9999):
         fail.append(f"R2 as amended: ego {r2['ego_max_m']:.3f} m, actors within 0.5 m {r2['act_share_within']:.5f}")
     M, tab = dict(np.load(rows / "meta.npz")), np.load(pool / "tab.npz")
@@ -155,7 +155,8 @@ def cmd_gate(a):
     md = [f"# ONPOL-LONG pool gates, rows `{a.name}`: {'PASS' if not fail else 'FAIL'}", "",
           f"R1 as amended (one fp16 ulp or 0.03 m on the first 15 plan points, >= 0.99): {ra}; interpreted control {r1['control_single']}; wrong-seed control "
           f"(8 poses within 0.03 m, < 0.20): {rc}. R2: ego at the log-replay decisions max {r2['ego_max_m']:.3f} m (<= 0.3); actor samples within 0.5 m "
-          f"{r2['act_share_within']:.5f} of {r2['act_n']} (>= 0.9999).", "", f"Lane raster present on {res['lane_ok']:.4f} of the rows.", "",
+          f"{r2['act_share_within']:.5f} of {r2['act_n']} (>= 0.9999). Rollouts without a time alignment to the navsim log (frame error > "
+          f"{r2.get('frame_tol_m', 0.1)} m; Amendment 2), no rows: {r2.get('frame_excluded', [])}.", "", f"Lane raster present on {res['lane_ok']:.4f} of the rows.", "",
           "| term (served plans) | active rows | share | scenes | mean | mean when active | along-heading gradient max | share active on the log's own future |", "|:--|--:|--:|--:|--:|--:|--:|--:|"]
     md += [f"| {q} | {v['active_rows']} | {v['active']:.4f} | {v['scenes']} | {v['mean']:.4f} | {v['mean_when_active']:.3f} | {v['grad_along_max']:.1e} | {v['log_active']:.4f} |" for q, v in res["K0"].items()]
     md += ["", "Active share by decision index k: " + "; ".join(f"{q}: " + ", ".join(f"{j} {s:.3f}" for j, s in v["by_k"].items()) for q, v in res["K0"].items()), ""]

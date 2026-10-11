@@ -67,7 +67,8 @@ PSI_MAX, LR_MIN, LR_T, BLEND_S = np.radians(30.0), 4.0, 1.0, 2.0
 ROAD_LAYERS = ("ROADBLOCK", "ROADBLOCK_CONNECTOR", "INTERSECTION", "LANE", "LANE_CONNECTOR")
 NAV_LAYERS = ("ROADBLOCK", "INTERSECTION", "CARPARK_AREA")
 TOL_M, R2_EGO, R2_ACT = 0.03, 0.3, 0.5
-REASONS = ("abort", "no_sim", "no_dump", "overlap", "corridor", "log_future", "path_end", "raster")
+REASONS = ("abort", "no_sim", "no_dump", "overlap", "corridor", "log_future", "path_end", "raster", "frame")
+FRAME_TOL = 0.1                                                # m: a rollout whose logged ego track does not match the navsim log this well is not aligned
 _C = {}
 
 
@@ -293,6 +294,9 @@ def geo_one(job):
     if T0 is None:
         recs = drv["rec"]
         return dict(rows=[base | dict(k=k, t_us=r["t0"], excl="no_sim") for k, r in sorted(recs.items())], r2=None)
+    if e_best > FRAME_TOL:                                                      # onpol_long Amendment 2: no time alignment found (log gap), no rows
+        return dict(rows=[base | dict(k=k, t_us=r["t0"], excl="frame") for k, r in sorted(drv["rec"].items())], r2=None,
+                    frame_bad=dict(scene=scene, tag=tag, frame_err=e_best, t0_rel=round((T0 - int(L["T"][i])) * 1e-6, 2)))
     O = logp(T0)[:2] - rig[0, 1:3]                                              # map position of the local origin
     a = max(int(np.searchsorted(L["T"], T0)) - 10, 0)
     G = Path(L["P"][a:], L["T"][a:])
@@ -479,7 +483,8 @@ def cmd_geo(a):
                   frame_err_max_m=max(r["frame_err"] for r in R), ego_n=len(eg), ego_max_m=float(eg.max()), ego_share_within=float((eg <= R2_EGO).mean()),
                   act_n=len(ac), act_nolog=int(sum(r["act_nolog"] for r in R)), act_median_m=float(np.median(ac)), act_p99_m=float(np.percentile(ac, 99)), act_max_m=float(ac.max()),
                   act_share_within=float((ac <= R2_ACT).mean()), act_yaw_p99_deg=float(np.degrees(np.percentile(ay, 99))), act_yaw_max_deg=float(np.degrees(ay.max())),
-                  path_dense_max_m=max(r["path_dense"] for r in R), anchor_vs_sim_max_m=float(st("d_anchor", float).max()), tol_ego_m=R2_EGO, tol_act_m=R2_ACT)
+                  path_dense_max_m=max(r["path_dense"] for r in R), anchor_vs_sim_max_m=float(st("d_anchor", float).max()), tol_ego_m=R2_EGO, tol_act_m=R2_ACT,
+                  frame_excluded=[v["frame_bad"] for v in res.values if v.get("frame_bad")], frame_tol_m=FRAME_TOL)
         # at the log-replay decisions the imitation target must be the log's own future (label sanity, not part of the registered gate)
         rep = [r for r in keep if r["k"] < 2]
         r2["imit_at_replay_max_m"] = float(max(np.hypot(*(r["fut_reg"][:, :2] - r["logfut"][1:, :2]).T).max() for r in rep)) if rep else None
