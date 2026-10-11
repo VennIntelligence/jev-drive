@@ -267,3 +267,12 @@ Consequences, fixed now:
    only"), labelled as such. Both versions are reported; neither is chosen after the read.
 4. Dev ADE of the eight full runs is reported beside the closed-loop table.
 5. The 48-scene smoke on train scenes stays a gate of mechanics for every pilot checkpoint.
+
+## Amendment 6 (2026-10-11 late, AFTER the held read was opened: an addition, exploratory by construction)
+
+The read (`results/read/on_report.md`) leaves one arm with a gain over the control, `SSELFnoL-ON`, and Amendment 3 had removed the arm
+that tells "the on-policy rows" from "10 000 more steps of the S recipe" (`SNONE-ON`; the full runs' dev ADE fell below the archived
+start in most arms, so more steps do something). The budget tally stands near 16 card-hours, so the two ON-NONE runs of the original
+registration are trained now (`SNONE-ON-s{0,1}`, same schedule and start, no on-policy rows; its pilot passed) and read on `held`
+(about 1.7 card-hours). They were decided after the read was seen: every comparison against ON-NONE is exploratory, the registered
+tables are not changed by them, and the report is regenerated with the ON-NONE rows filled in.
