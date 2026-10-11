@@ -152,7 +152,7 @@ class TestVisTrain(TmpData):
         n = M.resolve("VT-A-s0:mshuf")
         self.assertEqual((n.opt, n.key("navtest")), ("mshuf", "VT-A-s0@warp_mshuf"))
         self.assertEqual(M.resolve("VT-B-s1:noside").key("navtest"), "VT-B-s1@warp_noside")
-        for bad in ("VT-C-s0:noside", "VT-A-s0:lm", "VT-A-s0@gimm", "VT-F-s0:mshuf"):
+        for bad in ("VT-C-s0:noside", "VT-A-s0:lm", "VT-A-s0@gimm"):          # :mshuf is defined for parity memory arms (VTR-*) since arm R
             with self.assertRaises(ValueError):
                 M.resolve(bad)
         with self.assertRaises(FileNotFoundError):
