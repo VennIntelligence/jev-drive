@@ -1,0 +1,228 @@
+{
+ "none": "SNONE-ON-P-s0",
+ "none_dev_ade": 0.5396775007247925,
+ "archived_dev_ade": 0.545,
+ "ade_tol": 0.01,
+ "drift_max": 0.3,
+ "same_on_policy_rows": true,
+ "arms": {
+  "SNONE-ON-P-s0": {
+   "tag": "SNONE-ON-P-s0",
+   "run": "/root/autodl-tmp/ujs/runs/onpol_nuplan/on-train-SNONE-ON-P-s0/20261011-210821",
+   "ended_ok": true,
+   "composition": [
+    128,
+    115,
+    13,
+    0
+   ],
+   "mode": "off",
+   "steps": 3000,
+   "finite": true,
+   "dev_step": 3000,
+   "dev_ade": 0.5396775007247925,
+   "dev_drift_off": 0.04565224051475525,
+   "dev0_ade": 0.5452736020088196,
+   "it_s": 5.940057595235229,
+   "on_hash": {},
+   "ckpt": true,
+   "on": {
+    "201-400": {},
+    "2701-3000": {}
+   },
+   "complete": true,
+   "fail": [],
+   "pass": true
+  },
+  "SIMIT-ON-P-s0": {
+   "tag": "SIMIT-ON-P-s0",
+   "run": "/root/autodl-tmp/ujs/runs/onpol_nuplan/on-train-SIMIT-ON-P-s0/20261011-210805",
+   "ended_ok": true,
+   "composition": [
+    128,
+    102,
+    13,
+    13
+   ],
+   "mode": "imit",
+   "steps": 3000,
+   "finite": true,
+   "dev_step": 3000,
+   "dev_ade": 0.557371199131012,
+   "dev_drift_off": 0.04882161691784859,
+   "dev0_ade": 0.5452736020088196,
+   "it_s": 7.023358645234241,
+   "on_hash": {
+    "60": "0be17ad130954fdb",
+    "1000": "df51758df03409f4",
+    "2000": "05baf7963ac3941f",
+    "3000": "d82cf9a7ad31e713"
+   },
+   "ckpt": true,
+   "on": {
+    "201-400": {
+     "imit": 3.1937833228707317,
+     "ade": 1.6679708218574523
+    },
+    "2701-3000": {
+     "imit": 2.3120412649710977,
+     "ade": 1.2720164382457735
+    }
+   },
+   "complete": true,
+   "fail": [
+    "dev ADE 0.557371199131012 > ON-NONE 0.5396775007247925 + 0.01"
+   ],
+   "pass": false
+  },
+  "SSELF-ON-P-s0": {
+   "tag": "SSELF-ON-P-s0",
+   "run": "/root/autodl-tmp/ujs/runs/onpol_nuplan/on-train-SSELF-ON-P-s0/20261011-210805",
+   "ended_ok": true,
+   "composition": [
+    128,
+    102,
+    13,
+    13
+   ],
+   "mode": "self",
+   "steps": 3000,
+   "finite": true,
+   "dev_step": 3000,
+   "dev_ade": 0.5596268177032471,
+   "dev_drift_off": 0.050767961889505386,
+   "dev0_ade": 0.5452736020088196,
+   "it_s": 5.664229640666353,
+   "on_hash": {
+    "60": "0be17ad130954fdb",
+    "1000": "df51758df03409f4",
+    "2000": "05baf7963ac3941f",
+    "3000": "d82cf9a7ad31e713"
+   },
+   "ckpt": true,
+   "on": {
+    "201-400": {
+     "agent_pos": 0.04923077113926411,
+     "agent_mean": 0.0079883916739891,
+     "agent_posmean": 0.15094172288083016,
+     "road_pos": 0.1550000074133277,
+     "road_mean": 0.023776387666008605,
+     "road_posmean": 0.16981691807403837
+    },
+    "2701-3000": {
+     "agent_pos": 0.04205128376682599,
+     "agent_mean": 0.004940802197955539,
+     "agent_posmean": 0.11319904525643311,
+     "road_pos": 0.14384616081913312,
+     "road_mean": 0.017067779751444804,
+     "road_posmean": 0.11009545421989382
+    }
+   },
+   "complete": true,
+   "fail": [
+    "dev ADE 0.5596268177032471 > ON-NONE 0.5396775007247925 + 0.01"
+   ],
+   "pass": false
+  },
+  "SBOTH-ON-P-s0": {
+   "tag": "SBOTH-ON-P-s0",
+   "run": "/root/autodl-tmp/ujs/runs/onpol_nuplan/on-train-SBOTH-ON-P-s0/20261011-210805",
+   "ended_ok": true,
+   "composition": [
+    128,
+    102,
+    13,
+    13
+   ],
+   "mode": "both",
+   "steps": 3000,
+   "finite": true,
+   "dev_step": 3000,
+   "dev_ade": 0.5681552290916443,
+   "dev_drift_off": 0.05232842639088631,
+   "dev0_ade": 0.5452736020088196,
+   "it_s": 5.411736255025346,
+   "on_hash": {
+    "60": "0be17ad130954fdb",
+    "1000": "df51758df03409f4",
+    "2000": "05baf7963ac3941f",
+    "3000": "d82cf9a7ad31e713"
+   },
+   "ckpt": true,
+   "on": {
+    "201-400": {
+     "imit": 3.116216950416565,
+     "ade": 1.6093566462397575,
+     "agent_pos": 0.046538463383913035,
+     "agent_mean": 0.00760039252554634,
+     "agent_posmean": 0.1556222831779418,
+     "road_pos": 0.15807693075388668,
+     "road_mean": 0.022920960844411413,
+     "road_posmean": 0.16286995131546939
+    },
+    "2701-3000": {
+     "imit": 2.330534557104111,
+     "ade": 1.278036133845647,
+     "agent_pos": 0.031538462738196056,
+     "agent_mean": 0.003686684648904095,
+     "agent_posmean": 0.11399297296982323,
+     "road_pos": 0.138717954903841,
+     "road_mean": 0.01534475872028286,
+     "road_posmean": 0.11636125332403492
+    }
+   },
+   "complete": true,
+   "fail": [
+    "dev ADE 0.5681552290916443 > ON-NONE 0.5396775007247925 + 0.01"
+   ],
+   "pass": false
+  },
+  "SSELFnoL-ON-P-s0": {
+   "tag": "SSELFnoL-ON-P-s0",
+   "run": "/root/autodl-tmp/ujs/runs/onpol_nuplan/on-train-SSELFnoL-ON-P-s0/20261011-210947",
+   "ended_ok": true,
+   "composition": [
+    128,
+    102,
+    13,
+    13
+   ],
+   "mode": "self",
+   "steps": 3000,
+   "finite": true,
+   "dev_step": 3000,
+   "dev_ade": 0.5423702597618103,
+   "dev_drift_off": 0.04624098166823387,
+   "dev0_ade": 0.5452736020088196,
+   "it_s": 5.823625784650548,
+   "on_hash": {
+    "60": "0be17ad130954fdb",
+    "1000": "df51758df03409f4",
+    "2000": "05baf7963ac3941f",
+    "3000": "d82cf9a7ad31e713"
+   },
+   "ckpt": true,
+   "on": {
+    "201-400": {
+     "agent_pos": 0.05461538687348366,
+     "agent_mean": 0.009056282887031558,
+     "agent_posmean": 0.1616382853205983,
+     "road_pos": 0.15538462296128272,
+     "road_mean": 0.02422309029602786,
+     "road_posmean": 0.17257469161671363
+    },
+    "2701-3000": {
+     "agent_pos": 0.053076925228039425,
+     "agent_mean": 0.006750107355765066,
+     "agent_posmean": 0.1319410240695846,
+     "road_pos": 0.1384615448862314,
+     "road_mean": 0.016904820794262983,
+     "road_posmean": 0.13962286794901846
+    }
+   },
+   "complete": true,
+   "fail": [],
+   "pass": true
+  }
+ }
+}
