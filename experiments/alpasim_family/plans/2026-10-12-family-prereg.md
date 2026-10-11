@@ -83,3 +83,11 @@ LTF：L0（对照）、Lcal（pitch=2+yaw=2+f=1.05，改它收到的标定）、
 ## 不做的事
 
 不跑 challenge CLI submit / warm-up；不改第三方代码（MTGS、LTF、garage 只读）；不改提交镜像的 driver 文件（扰动只在包装里）。
+
+## 补充 1（读完 YR 的 24 个 arm、读 APY 之前写，2026-10-12）
+
+YR 的结果：P+2 / P+3 / Y+4 满足判据 (a)(b)(c)，LTF 的标定 arm 与对照逐 scene 相同。追加两个探索性检验（不改原判据）：
+1. **APY 的排序预测**：private 上 APY 掉得比 YR 多（-0.295 对 -0.125，GT x2.0 对 x1.84）。如果"上报的俯仰比渲染偏下约 2 deg"是机制，
+   同一扰动下 APY10m10-AB-s0（ap2 driver）应比 YR 掉得更多。预测：APY 在 P+2 下 Δscore < YR 的 -0.148。不满足则机制的证据减弱。
+   跑 APY 的 A0 与 P+2，同 96 个场景。
+2. **Rnom**：不信上报的安装旋转，改用固定的名义旋转（水平，俯 1.45 deg）：在 public 上要付多少（serving 修复候选的代价）。

@@ -1,15 +1,19 @@
 """FAMILY: the served sh30 driver (experiments/alpasim/lib/sh30_driver.py, imported and run unchanged) with FAM_ARM applied
 (fam_perturb.py): the CAM_F0 calibration a session is told is replaced right after Session() reads it, and image arms rewrite the
 JPEGs before submit_image_observation. The start record in drive.jsonl logs the calibration actually used. Run by
-experiments/alpasim/scripts/drivers/fam.sh (envs/op-train)."""
+experiments/alpasim/scripts/drivers/fam.sh (envs/op-train); FAM_FAMILY=ap2 serves the AP2 family instead (AP2_TAG)."""
 import logging
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "alpasim/lib"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import os  # noqa: E402
+
 import fam_perturb as P  # noqa: E402
 import sh30_driver as S  # noqa: E402
+
+FAMILY = os.environ.get("FAM_FAMILY", "sh30")       # ap2: the AlpaSim-standard driver (ap2_driver.Driver subclasses sh30_driver.Driver)
 
 A = P.arm()
 _init, _img = S.Session.__init__, S.Driver.submit_image_observation
@@ -30,5 +34,9 @@ S.Session.__init__ = init
 S.Driver.submit_image_observation = submit_image
 
 if __name__ == "__main__":
-    logging.getLogger("sh30").warning("FAM_ARM %s", A or "control")
-    S.main()
+    logging.getLogger("sh30").warning("FAM_ARM %s (%s)", A or "control", FAMILY)
+    if FAMILY == "ap2":
+        import ap2_driver
+        ap2_driver.main()
+    else:
+        S.main()
