@@ -7,6 +7,9 @@ uniformly from each family's rows on navsim/body1-train-logs (own rng stream: th
 Prereg Amendment 5: --ho-w multiplies both hinge terms of the hinge-only rows; --ho-excl navsim/body1-val-logs keeps the validation part of
 the train logs out of the hinge-only rows (the weight is selected there).
 Prereg Amendment 6: --shape gives the new hinges the plan's shape only (lib/loss43.shape_only; values unchanged, tags P2H10S-*).
+Log-consistent margins (plans/2026-10-11-logmargin-pilot-prereg.md, lib/logmargin.py): --logmargin gives the two new hinges a margin per row,
+m = min(m0, c - 0.05 m), c = the clearance of the row's logged path to the hinge's labels (tags P2H10SM-*); before the first step it writes the
+pre-registration's G0 tables (--lm-out) and stops with exit 2 if a G0 gate is missed. Off = the code path of P2H10S.
 Prereg Amendment 7: --route-band B adds the route hinge (term R: relu(distance of the plan poses to the row's logged path - B), on the
 imitation rows of the train logs and on the hinge-only rows; tags P2H10R-*); 0 = off, the code path of P2H10S.
 HEAD1b step C (experiments/corridor, amendment of plans/2026-10-10-head1-prereg.md; EXPLORATORY): --mem-e2e qp adds pp_train's memory channel
@@ -105,10 +108,18 @@ def cmd_train(a):
         road.ok[fb] = hinge.ok[fb]
         n_fb = int(len(fb))
         fb_fam = np.bincount(fam[fb.cpu().numpy()], minlength=len(fams)).tolist()
+    lm, lmk = None, {}
+    if a.logmargin:                                                  # log-consistent margins, after note (x)'s fallback raster
+        import logmargin as LM
+        assert agent2 is not None and road is not None, "--logmargin needs the S recipe: the agent hinge and hinge-only rows with the road hinge"
+        offt = torch.as_tensor(off, dtype=torch.float32, device=dev)
+        ca, cr, ka, kr = LM.clearances(S, agent2, road, offt, torch.nonzero(agent2.ok & S.has_fut)[:, 0], torch.nonzero(road.ok)[:, 0])
+        cap_a, m_r = LM.margins(ca, cr, a.road_margin)
+        lm, lmk = (offt, ca, cr, ka, kr, cap_a, m_r), dict(lm_agent=cap_a, lm_road=m_r)
     LS = Losses43(model.net, cfg, tstd, S.di, S.pi, dev, hinge, None,
                   ho=torch.as_tensor(is_ho, device=dev) if k else None, fam=torch.as_tensor(fam, device=dev), fams=fams, agent2=agent2, road=road, road_lam=a.road_lam, ho_w=a.ho_w, shape=a.shape,
                   **(dict(route_band=a.route_band, route_lam=a.route_lam, route_off=torch.as_tensor(off, dtype=torch.float32, device=dev),
-                          route_ok=torch.as_tensor(in_tr, device=dev)) if a.route_band > 0 else {}))
+                          route_ok=torch.as_tensor(in_tr, device=dev)) if a.route_band > 0 else {}), **lmk)
     om = None
     if cfg.mem_e2e:                                                  # built after the model and the losses, as pp_train does
         import path_req as GE
@@ -128,7 +139,10 @@ def cmd_train(a):
                  f"{cfg.agent_side_margin} rows {int(agent2.ok.sum()) if agent2 is not None else 0} (moved {agent2.moved if agent2 is not None else 0}); "
                  f"road {a.road_lam if road is not None else 0} / {a.road_margin} m rows {int(road.ok.sum()) if road is not None else 0} ({a.road_labels}); "
                  f"hinge-only rows not on the scorer-layer road at t0 (NAVSIM raster kept): {n_fb} {dict(zip(fams, fb_fam)) if n_fb else ''}"
-                 + (f"; route hinge band {a.route_band} m, lambda {a.route_lam}" if a.route_band > 0 else ""))
+                 + (f"; route hinge band {a.route_band} m, lambda {a.route_lam}" if a.route_band > 0 else "")
+                 + ("; log-consistent margins (agent and road hinge)" if a.logmargin else ""))
+        if lm is not None:
+            lm_check(run, a, S, agent2, road, lm, tr_rows, in_tr, pools, fam, fams, nd)
 
         def draw():                                                   # pp_train's draw on the normal rows, then the hinge-only rows
             r = rng.choice(tr_rows, nB - k, replace=len(tr_rows) < nB - k)
@@ -191,6 +205,33 @@ def cmd_train(a):
                            gpu_peak_gb=torch.cuda.max_memory_reserved() / 2 ** 30)
         if om is not None:                                           # tokenizer weights, dev diagnostics (on / masked / mismatched), the navtest bank
             GE.finish(om, model, S, dv_rows, LS.W, T.rear, hinge, run, a.tag, d)
+
+
+def lm_check(run, a, S, agent2, road, lm, tr_rows, in_tr, pools, fam, fams, nd):
+    """G0.b / G0.c of plans/2026-10-11-logmargin-pilot-prereg.md on the rows this run can carry each hinge on -> <lm-out>/g0.{json,md}, c.npz;
+    exit 2 (before any step) if a G0 gate is missed."""
+    import logmargin as LM
+    import route as RT
+    from jevdrive.common import data_dir
+    offt, ca, cr, ka, kr, cap_a, m_r = lm
+    has, aok, rok = (x.cpu().numpy() for x in (S.has_fut, agent2.ok, road.ok))
+    ho = np.concatenate(pools)
+    pop_a = np.concatenate([tr_rows[in_tr[tr_rows] & has[tr_rows] & aok[tr_rows]], ho[aok[ho]]])
+    pop_r = ho[rok[ho]]
+    off = offt.cpu().numpy().astype(np.float64)
+    turn = RT.turn_deg(S.tab["fut"], off)
+    src = LM.src_rows(a.data, fams, nd)
+    res = LM.g0(S, agent2, road, offt, ca, cr, ka, kr, cap_a, m_r, pop_a, pop_r, fam, fams, src, turn)
+    out = _pl.Path(a.lm_out or data_dir() / "runs/body1/logmargin" / f"g0-{a.tag}")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "g0.json").write_text(json.dumps(res, indent=1) + "\n")
+    (out / "g0.md").write_text(LM.g0_md(res))
+    np.savez_compressed(out / "c.npz", pop_a=pop_a, pop_r=pop_r, c_agent=ca.cpu().numpy(), c_road=cr.cpu().numpy(), step_agent=ka.cpu().numpy(),
+                        step_road=kr.cpu().numpy(), fam=fam, src=src, turn=turn, off=off)
+    run.info("G0 of the log-consistent margins:\n" + LM.g0_md(res))
+    run.summary.update(lm_g0_gate=res["gate"], lm_g0_out=str(out))
+    if not res["gate"]:
+        raise SystemExit(2)
 
 
 def shape_check(run, a, S, LS, draw, dev, T):
@@ -321,6 +362,8 @@ if __name__ == "__main__":
     p.add_argument("--shape", action="store_true", help="Amendment 6: the new hinges (A, and the road hinge of hinge-only rows) get no along-heading pose gradient")
     p.add_argument("--route-band", type=float, default=0.0, help="Amendment 7: dead band (m) of the route hinge on imitation rows (train logs) and hinge-only rows; 0 = off")
     p.add_argument("--route-lam", type=float, default=10.0)
+    p.add_argument("--logmargin", action="store_true", help="log-consistent margins of the agent and road hinge (plans/2026-10-11-logmargin-pilot-prereg.md)")
+    p.add_argument("--lm-out", default="", help="--logmargin: directory of the G0 tables (default $DATA_DIR/runs/body1/logmargin/g0-<tag>)")
     p.add_argument("--shape-check", default="", help="Amendment 6 note (a): checkpoint tag; check the switch on batches of this trainer and exit (no training)")
     p.add_argument("--check-batches", type=int, default=40)
     p.add_argument("--check-out", default="")

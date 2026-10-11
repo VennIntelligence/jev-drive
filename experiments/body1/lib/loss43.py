@@ -22,6 +22,11 @@ route_band > 0 (prereg Amendment 7, term R): a route hinge on the rows that carr
 and the hinge-only rows): mean over the 8 plan poses of relu(d - route_band), d = distance to the row's logged path (lib/route.path_dist),
 on the same poses as the other new hinges (shape-only with shape=True). Weight route_lam on the mean over those imitation rows; on hinge-only
 rows summed / number of imitation rows x route_lam x ho_w. With route_band = 0 no operation is added.
+
+lm_agent / lm_road (plans/2026-10-11-logmargin-pilot-prereg.md, lib/logmargin.py): log-consistent margins of the two new hinges. lm_agent (n_store,)
+caps the agent hinge's margin per row (m = min(m0, cap); cap = the row's logged-path clearance - 0.05 m, +inf where the logged path counts no
+object), lm_road (n_store,) replaces the road hinge's margin per row (min(road margin, clearance - 0.05 m)). None = the fixed margins, and the
+code path of P2H10S.
 """
 import numpy as np
 import torch
@@ -75,11 +80,12 @@ class Losses43(T.Losses):
     agent2 = OffAgentHinge over all rows (or None), road = ot_rows.off_hinge on the scorer-layer raster for the hinge-only rows (or None)."""
 
     def __init__(self, *a, ho=None, fam=None, fams=(), agent2=None, road=None, road_lam=10.0, ho_w=1.0, shape=False,
-                 route_band=0.0, route_lam=10.0, route_off=None, route_ok=None, **k):
+                 route_band=0.0, route_lam=10.0, route_off=None, route_ok=None, lm_agent=None, lm_road=None, **k):
         super().__init__(*a, **k)
         self.ho, self.fam, self.fams, self.agent2, self.road, self.road_lam, self.ho_w = ho, fam, fams, agent2, road, road_lam, ho_w
         self.shape = shape
         self.route_band, self.route_lam, self.route_off, self.route_ok = route_band, route_lam, route_off, route_ok
+        self.lm_agent, self.lm_road = lm_agent, lm_road
 
     def __call__(self, out, S, rows, anchor):
         c = self.cfg
@@ -103,8 +109,11 @@ class Losses43(T.Losses):
         if self.agent2 is not None:
             m = (imit | h) & self.agent2.ok[rows]
             av = torch.zeros(len(rows), device=o.device)
-            if m.any():
+            if m.any() and self.lm_agent is None:
                 av[m] = self.agent2.per_step(xs[m], ys[m], psi[m], rows[m]).mean(1)
+            elif m.any():                                                                # log-consistent margins: m = min(m0, cap of the row)
+                from logmargin import agent_steps
+                av[m] = agent_steps(self.agent2, xs[m], ys[m], psi[m], rows[m], self.lm_agent[rows[m]]).mean(1)
             mi = imit & self.agent2.ok[rows]
             Ls["agent"] = av[mi].mean() if mi.any() else av.sum() * 0.0                  # A on imitation rows: AgentHinge's own mean
             total = total + c.agent_lam * Ls["agent"]
@@ -143,7 +152,8 @@ class Losses43(T.Losses):
                 rv = torch.zeros(len(rows), device=o.device)
                 m = h & self.road.ok[rows]
                 if m.any():
-                    rv[m] = torch.relu(self.road.margin - self.road.margins(xs[m], ys[m], psi[m], rows[m])).mean(1)
+                    mg = self.road.margin if self.lm_road is None else self.lm_road[rows[m]][:, None]   # log-consistent: the row's own margin
+                    rv[m] = torch.relu(mg - self.road.margins(xs[m], ys[m], psi[m], rows[m])).mean(1)
                 Ls["road_ho"] = rv[h].sum() / n_imit
                 total = total + self.ho_w * self.road_lam * Ls["road_ho"]
                 Ls["road_ho_pos"] = (rv[h] > 0).float().mean()

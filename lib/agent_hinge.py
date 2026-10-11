@@ -195,12 +195,14 @@ class AgentHinge:
         self.e_off, self.e_hl, self.e_hw = (f + REAR) / 2, (f - REAR) / 2, HALF_W
         self.c_off = (FRONT + REAR) / 2                       # centre of the unextended box: the front half plane is taken about it
 
-    def distances(self, x, y, psi, rows):
+    def distances(self, x, y, psi, rows, p0=None):
         """x, y, psi (B, 8) plan poses -> signed distance (B, 41, K) of the extended ego box to each object box, counted mask (B, 41, K),
-        in-corridor mask (B, 41, K): the object box overlaps the ego's lateral extent |y| < half width in the ego frame of that step."""
+        in-corridor mask (B, 41, K): the object box overlaps the ego's lateral extent |y| < half width in the ego frame of that step.
+        p0 (B, 3): the pose the 0.1 s densification starts from; None = the origin (the row's own t0 pose). experiments/body1/lib/logmargin.py
+        densifies a logged path from the logged t0 pose with it."""
         import torch
         P = torch.stack([x, y, psi], -1)
-        d = torch.einsum("kj,bjc->bkc", self.M, torch.cat([torch.zeros_like(P[:, :1]), P], 1))      # (B, 41, 3)
+        d = torch.einsum("kj,bjc->bkc", self.M, torch.cat([torch.zeros_like(P[:, :1]) if p0 is None else p0[:, None], P], 1))      # (B, 41, 3)
         bx = torch.einsum("kj,bjoc->bkoc", self.M, self.box[rows])                                   # (B, 41, K, 5)
         bad = torch.einsum("kj,bjo->bko", self.Mv, (~self.val[rows]).float())
         valid = bad < 0.5
