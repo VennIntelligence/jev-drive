@@ -77,8 +77,9 @@ def build(rung: str, d: int = 256, enc: int = 3, dec: int = 3, drop: float = 0.1
             if s.nat:
                 nat, hid = N
                 z = s.np_(nat.float()) + s.hp(hid.float())                     # (B, 2, d): one per student
-                g = z[:, s.qm.clamp_min(0)]                                     # (B, Q, d)
-                g = torch.where((s.qm >= 0)[None, :, None], g, s.null.to(g.dtype))
+                qm = s.qm[:Q]                                                   # a single query (OOD rows) = slot 0, the serving student
+                g = z[:, qm.clamp_min(0)]                                       # (B, Q, d)
+                g = torch.where((qm >= 0)[None, :, None], g, s.null.to(g.dtype))
                 x = x + g[:, :, None]
             x = x.flatten(1, 2)
             for l in c.dec:
@@ -88,8 +89,9 @@ def build(rung: str, d: int = 256, enc: int = 3, dec: int = 3, drop: float = 0.1
     return LHead()
 
 
-def predict(net, D, idx=None, slots: int = 8, batch: int = 512):
-    """Batched eval forward over device tensors D (V, E, Qp, nat, hid, obj, rte, lin, trn; absent = None) -> (n, Q, len(OUT)) numpy."""
+def predict(net, D, idx=None, slots: int = 8, batch: int = 512, valid=None):
+    """Batched eval forward over device tensors D (V, E, Qp, nat, hid, obj, rte, lin, trn; absent = None) -> (n, Q, len(OUT)) numpy.
+    The head sees the `slots` newest slots, or the explicit mask valid (n, 8) (device tensor aligned with the selected rows)."""
     import torch
     net.eval()
     n = len(D["Qp"])
@@ -98,7 +100,7 @@ def predict(net, D, idx=None, slots: int = 8, batch: int = 512):
     with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
         for c in range(0, len(idx), batch):
             i = idx[c:c + batch]
-            v = (torch.arange(8, device=i.device)[None] >= 8 - slots).expand(len(i), 8)
+            v = (torch.arange(8, device=i.device)[None] >= 8 - slots).expand(len(i), 8) if valid is None else valid[c:c + batch]
             N = (D["nat"][i], D["hid"][i]) if net.nat else None
             P = tuple(D[k][i] for k in ("obj", "rte", "lin", "trn")) if net.priv else None
             Vi = None

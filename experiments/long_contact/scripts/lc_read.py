@@ -268,9 +268,11 @@ def cmd_report(a):
                     st.append(dict(label=k, stratum=sname, value=val, rung=rung, auc=v["auc"], lo=v["lo"], hi=v["hi"], n=int(mm.sum()), pos=int(y[mm].sum()),
                                    logs_pos=len(set(logs[mm][y[mm]]))))
         pd.DataFrame(st).to_csv(out / "strata.csv", index=False)
-        # ---- operating point for the OOD lead times: A logit at 2 % of the P1 A negatives, per non-privileged rung (two-seed score)
-        y, m = label_mask(D, "A")
-        thr = {rung: float(np.quantile(score(rung, "A")[m & ~y], 0.98)) for rung in lad}
+        # ---- operating points for the OOD lead times: per label and rung, the two-seed logit at 2 % of the P1 negatives
+        thr = {}
+        for k in LC.LONG:
+            y, m = label_mask(D, k)
+            thr[k] = {rung: float(np.quantile(score(rung, k)[m & ~y], 0.98)) for rung in lad}
         (out / "thresholds.json").write_text(json.dumps(thr, indent=1))
         run.summary.update(verdict=ver)
         with pd.option_context("display.width", 250, "display.max_rows", 500):
