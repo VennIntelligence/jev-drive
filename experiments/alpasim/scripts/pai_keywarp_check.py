@@ -157,7 +157,10 @@ def navtest(a):
         c = data_dir() / "runs/op_parity/cache"
         tx, tn, mt = np.load(c / "lb_hq_navtestX/tab.npz"), np.load(c / "lb_navtest/tab.npz"), OL.meta("lb_hq_navtestX")
         assert (np.array(mt["names"]) == tx["names"]).all() and np.allclose(mt["syn_t"], [-1.4, -1.2, -0.8, -0.6, -0.4, -0.2])
-        keys, real = OL.Keys("lb_hq_navtestX"), np.load(OL.root("lb_hq_navtestX") / "real.npy", mmap_mode="r")
+        real = np.load(OL.root("lb_hq_navtestX") / "real.npy", mmap_mode="r")
+        idx = Z.load_index("navtest", slim=True)                         # the keyframes: the tokens' CAM_F0 JPEGs (sh30_check.py parity)
+        by = {e["token"]: e for e in idx}
+        keys = lambda i: np.stack([C.pack_fast(by[tx["names"][i]]["cams"][f]["CAM_F0"]["path"], by[tx["names"][i]]["cams"][-1]["CAM_F0"]) for f in range(4)])  # noqa: E731
         rown = {t: i for i, t in enumerate(tn["names"].tolist())}
         ix = np.array([k for k, t in enumerate(tx["names"].tolist()) if t in rown])
         sel = np.sort(ix[np.random.default_rng(0).permutation(len(ix))[:a.n]])       # the draw of served_plan_length.md
@@ -171,7 +174,7 @@ def navtest(a):
         PC.PA.ego_features = lambda *_: ego_row[0]                       # the benchmark's ego features (its 4-step acceleration history)
         px = []
         for i in run.tqdm(sel, desc="tokens"):
-            kf = np.asarray(keys[int(i)])
+            kf = keys(int(i))
             fr = {t_us(t): kf[j] for j, t in enumerate(I.T_KEY)} | {t_us(t): np.asarray(real[i, j]) for j, t in enumerate(mt["syn_t"])}
             P, V, cam, ego_row[0] = tx["pose"][i].astype(np.float64), tx["vel"][i].astype(np.float64), tx["cam"][i].astype(np.float64), tx["ego"][i]
             for k, kw in (("off", {}), ("on", dict(keywarp=True, dev=core.dev))):
