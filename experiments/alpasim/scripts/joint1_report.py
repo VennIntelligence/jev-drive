@@ -352,13 +352,13 @@ def guards(rec, K):
                     for c, cc in (("stage1", "s1"), ("stage2", "s2")):
                         g[bench][f"{cc}_vs_{ref}"] = stats.paired(ex[c][common], rex[c][rj], lg[common])
         nt, nh, hu = (g.get(b, {}).get(f"vs_{r}") for b, r in (("navtest", "P2H10S"), ("navhard", "P2H10"), ("hugsim", "P2H10")))
-        if nt is None or nh is None:
+        if k == "P2H10":
+            l3 = "reference (the line's base)"
+        elif nt is None or nh is None:
             l3 = "not read"
         else:
             ok = nt["mean"] >= -0.2 and nh["hi"] >= 0
             l3 = ("not met" if not ok else "HUGSIM not read" if hu is None else "met" if hu["mean"] >= -0.03 else "not met")
-            if ok and hu is None and k == "P2H10":
-                l3 = "reference"
         g["L3"] = l3
         out[k] = g
     return out
