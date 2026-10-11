@@ -567,6 +567,23 @@ class Dispatch(unittest.TestCase):
         self.assertIn(b, [e["id"] for e in ev if e["kind"] == "admit_idle"])
         self.cancel_all(d2)
 
+    def test_gpu_job_shares_cores_when_all_are_pinned(self):
+        self.box = fake_box()
+        self.box.affinity = list(range(8))                                       # 8 pinnable cores in all
+        self.box.numa = {0: list(range(4)), 1: list(range(4, 8))}
+        P.submit("sleep 30", name="score", pool=self.tmp, vram_gb=0.5, cpu=8)
+        g = P.submit("sleep 30", name="plans", pool=self.tmp, vram_gb=5, cpu=3)
+        c = P.submit("sleep 30", name="score2", pool=self.tmp, vram_gb=0.5, cpu=2)
+        d = self.disp(cpu_budget=100)
+        d.round()
+        self.assertEqual(d.st["jobs"][g]["state"], "running")                    # the card is not left idle
+        self.assertEqual(len(P.parse_cpus(d.st["jobs"][g]["cpus"])), 3)
+        self.assertEqual(d.st["jobs"][c]["state"], "queued")                     # CPU-only work waits for free cores
+        self.assertIn("free cores to pin", d.st["jobs"][c]["why"])
+        ev = [json.loads(l) for l in (self.tmp / "events.jsonl").read_text().splitlines()]
+        self.assertIn(g, [e["id"] for e in ev if e["kind"] == "pin_shared"])
+        self.cancel_all(d)
+
     def test_idle_rule_never_relaxes_ram(self):
         self.box.mem_max_gb, self.box.mem_used_gb = 100.0, 90.0
         jid = P.submit("true", name="r", pool=self.tmp, vram_gb=5, cpu=3, ram_gb=1)

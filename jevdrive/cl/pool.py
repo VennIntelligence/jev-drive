@@ -58,8 +58,11 @@ state.json and in its `launch` event), so "why did it wait" has an answer afterw
 Work conservation (an idle card never waits on bookkeeping). A card is idle when it has no pool job, no whole hold and
 at most idle_vram_gb (1 GB) used outside the pool, for >= idle_s (120 s, config). Then:
   admit_idle     a queued job with vram_gb > 1 blocked only by the CPU budget or the PID plan cap starts on that card
-                 anyway (highest priority first; logged `admit_idle`). VRAM, RAM, CARLA, ports and pinning are never
+                 anyway (highest priority first; logged `admit_idle`). VRAM, RAM, CARLA and ports are never
                  relaxed, and CPU-only jobs (vram_gb <= 1) never use this rule.
+  pin_shared     a job with vram_gb > 1 that fits a card while every core is already pinned (CPU-only stages can pin
+                 the whole host under cpu_overcommit) is pinned to the least-pinned cores of the card's NUMA node
+                 instead of waiting (logged `pin_shared`). CPU-only jobs still wait for free cores.
   auto_retarget  a queued job restricted by `gpus` whose allowed cards cannot take it, while a card outside `gpus` is idle
                  and would fit it, gets that card added to its gpus and starts there (logged `auto_retarget`).
                  `submit --pin-strict` opts out.
@@ -114,7 +117,7 @@ import subprocess
 import sys
 import time
 import traceback
-from collections import deque
+from collections import Counter, deque
 import dataclasses
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -610,9 +613,14 @@ def choose(spec: Spec, cards: list, cfg: dict, jid: str):
     return best, why
 
 
-def pick_cpus(n: int, numa: int, box, taken: set):
+def pick_cpus(n: int, numa: int, box, taken: set, load=None):
+    """`n` unpinned cores, the card's NUMA node first; None when there are not enough. With `load` (core -> pins) the
+    least-pinned cores of the node are shared instead of returning None."""
     if n <= 0:
         return ""
+    if load is not None:
+        node = box.primary_cpus(numa) or box.primary_cpus() or list(box.affinity)
+        return format_cpus(sorted(sorted(node, key=lambda c: (load[c], c))[:n])) if len(node) >= n else None
     pool = [c for c in box.primary_cpus(numa) if c not in taken]
     pool += [c for c in box.primary_cpus() if c not in taken and c not in pool]
     pool += [c for c in box.affinity if c not in taken and c not in pool]
@@ -968,9 +976,10 @@ class Dispatcher:
         used_blocks = port_blocks(self.ports_fn())
         for h in holds:
             used_blocks |= blocks_of(idx_range(h.get("idx", "")))
-        taken_cpu = set()
+        taken_cpu, pin_load = set(), Counter()
         for h in holds:
             taken_cpu |= set(parse_cpus(h.get("cpus") or ""))
+            pin_load.update(parse_cpus(h.get("cpus") or ""))
         cpu_used = float(sum(int(h.get("cpu") or 0) for h in holds))
         now, trust = time.time(), cfg["trust_measured"]
         self.track_idle(cards, now, cfg)
@@ -981,6 +990,7 @@ class Dispatcher:
             if j.get("span"):
                 used_blocks |= blocks_of(range(j["idx"], j["idx"] + j["span"]))
             taken_cpu |= set(parse_cpus(j.get("cpus") or ""))
+            pin_load.update(parse_cpus(j.get("cpus") or ""))
             known = known_caps(self.hist, j["spec"]) if trust else {}
             cpu_used += cpu_charge(j, now, known.get("cpu"))
             if now - j.get("t0", 0) < YOUNG_S:
@@ -1053,6 +1063,10 @@ class Dispatcher:
             cpus = ""
             if a is not None and s.cpu:
                 cpus = pick_cpus(s.cpu, a.numa, box, taken_cpu)
+                if cpus is None and is_gpu(j["spec"]):     # every core is pinned (CPU-only stages): share, never idle a card
+                    cpus = pick_cpus(s.cpu, a.numa, box, taken_cpu, pin_load)
+                    if cpus is not None:
+                        self.log("pin_shared", id=j["id"], name=s.name, card=a.index, cpus=cpus)
                 if cpus is None:
                     a, reasons = None, {"all": "no %d free cores to pin" % s.cpu}
             if a is None:
@@ -1091,6 +1105,7 @@ class Dispatcher:
             if i0 is not None:
                 used_blocks |= blocks_of(range(i0, i0 + span))
             taken_cpu |= set(parse_cpus(cpus))
+            pin_load.update(parse_cpus(cpus))
             cpu_used += n_cpu
             young_threads += pid_need
             young_ram += ram_need
