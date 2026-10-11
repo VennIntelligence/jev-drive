@@ -228,7 +228,8 @@ def cmd_train(a):
     if ap:
         import copy
         Sd = copy.copy(S)
-        Sd.front, cold_d = T.card_rows([S.front, cold], dv_rows, a.dev_card_gb)
+        Sd.front = T.card_rows([S.front], dv_rows, a.dev_card_gb)[0]
+        cold_d = T.card_rows([cold], dv_o, a.dev_card_gb)[0]           # the cold-start store holds the base rows only
     else:
         Sd, cold_d = T.dev_store(S, dv_rows, a.dev_card_gb), None
     fwd = torch.compile(model, dynamic=False) if a.compile else model

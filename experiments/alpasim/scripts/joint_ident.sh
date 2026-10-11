@@ -13,7 +13,8 @@ CL="$PWD/.venv/bin/python -m jevdrive.cl"
 R=experiments/alpasim/results/joint1; mkdir -p "$R"
 status() { echo "$(date '+%F %T') joint ident: $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
-sub() { local n=$1; shift; [[ -f $L/$n/DONE ]] && return; rm -f "$L/$n/ERROR"
+sub() { local n=$1; shift; [[ -f $L/$n/DONE ]] && return
+        $CL queue 2>/dev/null | awk -v n="jid-$n" '$4 == n && ($2 == "queued" || $2 == "running") {f = 1} END {exit !f}' && return; rm -f "$L/$n/ERROR"
         $CL submit --owner alpasim-joint1 --name "jid-$n" --train --priority 15 --vram 20 --cpu 4 --ram 40 --timeout-h 1 --log-dir "$L/$n" -- "$@" > /dev/null || die "submit $n"; }
 waitdirs() { for n in "$@"; do until [[ -f $L/$n/DONE || -f $L/$n/ERROR ]]; do sleep 20; done; [[ -f $L/$n/ERROR ]] && die "job failed: $L/$n"; done; return 0; }
 status "code $(git rev-parse --short HEAD)"
