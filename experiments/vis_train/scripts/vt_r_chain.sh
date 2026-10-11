@@ -29,8 +29,9 @@ FULL=$(for i in $(seq 0 11); do printf 'navtrain_full.s%dof12 ' "$i"; done)
 status() { echo "$(date '+%F %T') vis_train R ($MODE): $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 jid() { awk -v n="$1" '$2 == n {i = $1} END {print i}' "$D/jobs.txt" 2>/dev/null; }
+# queued rows have no card column, so the name is field 3 there and field 4 on running rows
 sub() { local n=$1 ld=$2; shift 2; [[ -f $ld/DONE ]] && return
-        local live; live=$($CL queue 2>/dev/null | awk -v n="$n" '($3 == n || $4 == n) && ($2 == "queued" || $2 == "running" || $2 == "inbox") {print $1; exit}'   # queued rows have no card column)
+        local live; live=$($CL queue 2>/dev/null | awk -v n="$n" '($3 == n || $4 == n) && ($2 == "queued" || $2 == "running" || $2 == "inbox") {print $1; exit}')
         [[ -n $live ]] && return; rm -f "$ld/ERROR"
         local id; id=$($CL submit --owner "$OWNER" --name "$n" --log-dir "$ld" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 30; done; [[ -f $ld/ERROR ]] && return 1; done; return 0; }
