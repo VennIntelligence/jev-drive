@@ -163,7 +163,7 @@ def report(a):
                     pairs.append(dict(length=L, a=p, b=q, metric=col, diff=d[col].mean(), ci=ci(boot(s_, c_))))
     P = pd.DataFrame(pairs)
     out = ["## Per checkpoint and length", "", md(T), "",
-          "## Recipes (seed mean per scene), ranks per length", "", Rmd(T), "",
+          "## Recipes (seed mean per scene), ranks per length", "", md(RT), "",
           "## Paired recipe differences a - b (log-clustered bootstrap, 10 000 draws)", "", md(P), "",
           f"Scenes in every label: {len(scenes)}; logs: {len(logs)}."]
     Path(a.out).write_text("\n".join(out) + "\n")
