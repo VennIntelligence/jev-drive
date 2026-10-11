@@ -135,13 +135,13 @@ def report(a):
         tab.append(r)
     T = pd.DataFrame(tab)
     # recipe x length seed means and paired recipe differences
-    R = S.groupby(["recipe", "length", "scene", "log"]).agg(score=("score", "mean"), gt=("dist_to_gt_trajectory", "mean")).reset_index()
+    R = S.groupby(["recipe", "length", "scene", "log"]).agg(score=("score", "mean"), gtd=("dist_to_gt_trajectory", "mean")).reset_index()
     rec = []
     for (rc, L), x in R.groupby(["recipe", "length"]):
-        rec.append(dict(recipe=rc, length=L, seeds=S[(S.recipe == rc) & (S.length == L)].tag.nunique(), score=x.score.mean(), gt=x.gt.mean()))
+        rec.append(dict(recipe=rc, length=L, seeds=S[(S.recipe == rc) & (S.length == L)].tag.nunique(), score=x.score.mean(), gtd=x.gtd.mean()))
     RT = pd.DataFrame(rec)
-    for col in ("score", "gt"):
-        RT[f"rank_{col}"] = RT.groupby("length")[col].rank(ascending=(col == "gt")).astype(int)
+    for col in ("score", "gtd"):
+        RT[f"rank_{col}"] = RT.groupby("length")[col].rank(ascending=(col == "gtd")).astype(int)
     pairs = []
     recipes = sorted(R.recipe.unique())
     for L in sorted(R.length.unique()):
@@ -150,8 +150,8 @@ def report(a):
                 A, B = R[(R.recipe == p) & (R.length == L)].set_index("scene"), R[(R.recipe == q) & (R.length == L)].set_index("scene")
                 if A.empty or B.empty:
                     continue
-                d = (A[["score", "gt"]] - B[["score", "gt"]]).join(A["log"]).reset_index()
-                for col in ("score", "gt"):
+                d = (A[["score", "gtd"]] - B[["score", "gtd"]]).join(A["log"]).reset_index()
+                for col in ("score", "gtd"):
                     s_, c_ = per_log(d, col)
                     pairs.append(dict(length=L, a=p, b=q, metric=col, diff=d[col].mean(), ci=ci(boot(s_, c_))))
     P = pd.DataFrame(pairs)
