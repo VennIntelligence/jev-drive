@@ -3,10 +3,10 @@
   pai_eval_report.py --rows s1='/data/runs/alpasim/pai_s1/runs/*' s0='/data/runs/alpasim/pai_full/runs/p2h10s-f-s0_*' [--pair s1-s0 ...]
                      [--mean both=s0,s1] [--scenes tsv] [--out md]        (plain python3 + numpy, on the Tokyo box)
 --mean adds a row whose scene score is the mean of the named rows (their common scenes; it has no zero kinds).
---only <file of scene ids> restricts the scene set of the row table and the pairs (a subset read); --detail appends, after everything else, a
-per-row table (scenes scored 1, slow scenes, zeros by kind, driver errors of the run dirs) and, per --pair, the decomposition of the difference
-into the zero -> scored, scored -> zero and both-scored parts (a mean row is zero on a scene only if every seed is zero); without the two
-options the output is as before.
+--only <file of scene ids> restricts the scene set of the row table and the pairs (a subset read). --detail appends, after everything else, a
+per-row table (scenes scored 1, slow scenes, zeros by kind, driver errors of the run dirs) and one table of the --pair differences with CI,
+better / worse counts and the decomposition of each difference into its zero -> scored, scored -> zero and both-scored parts (a mean row is
+zero on a scene only if every seed is zero). Without the two options the output is as before.
 Tables: mean scene score and zeros by kind per label on the scenes every label scored; per --pair the paired difference with a bootstrap
 95 % CI over scenes (10000 draws, seed 0); throughput of every run dir (scenes, CONC, card, wall, scenes per hour, render / drive share of
 the summed RPC time, per-container VRAM peaks, card peak). --scenes writes one row per scene (scores of every label).
@@ -77,12 +77,14 @@ for k, v in R.items():
     cnt = [sum(bool(v[x]["score_metrics"].get(f)) for x in z) for f in P.FAIL]
     kinds = " | ".join(map(str, cnt)) + f" | {sum(not any(v[x]['score_metrics'].get(f) for f in P.FAIL) for x in z)}" if k in D else " | | | "
     L.append(f"| {k} | {np.mean([v[x]['score'] for x in sc]):.4f} | {len(z)} | {kinds} |")
+PS = []
 for pr in a.pair:
     ka, kb = pr.split("-", 1)
     s = sorted(set(R[ka]) & set(R[kb]) & (keep if keep is not None else set(R[ka])))
     d = np.array([R[ka][x]["score"] - R[kb][x]["score"] for x in s])
     rng = np.random.default_rng(0)
     bs = d[rng.integers(0, len(d), (10000, len(d)))].mean(1)
+    PS.append((ka, kb, s, d, np.percentile(bs, 2.5), np.percentile(bs, 97.5)))
     L += ["", f"Paired difference {ka} - {kb} on {len(s)} scenes: {d.mean():+.4f}, bootstrap 95% CI [{np.percentile(bs, 2.5):+.4f}, {np.percentile(bs, 97.5):+.4f}]; "
           f"means {np.mean([R[ka][x]['score'] for x in s]):.4f} / {np.mean([R[kb][x]['score'] for x in s]):.4f}; {ka} better on {(d > 0.01).sum()}, "
           f"worse on {(d < -0.01).sum()}, within 0.01 on {(abs(d) <= 0.01).sum()} (max |difference| {abs(d).max():.4f})."]
@@ -110,19 +112,17 @@ if a.detail:
         kinds = " | ".join(str(sum(bool(v[q]["score_metrics"].get(f)) for q in z)) for f in P.FAIL) + \
             f" | {sum(not any(v[q]['score_metrics'].get(f) for f in P.FAIL) for q in z)} | {err(D[k])}" if k in D else " | | | | "
         L.append(f"| {k} | {len(sc)} | {x.mean():.4f} | {(x >= 1).sum() if k in D else ''} | {((x > 0) & (x < 1)).sum() if k in D else ''} | {len(z)} | {kinds} |")
-    L += ["", "Decomposition of each pair (a - b). Fixed = b zero and a scored, broken = b scored and a zero; a part is the summed difference of those scenes "
-          "divided by the scenes of the pair, so the three parts add up to the mean difference (check column).", "",
-          "| Pair | Scenes | Mean difference | Fixed: scenes | part | Broken: scenes | part | Both scored: scenes | part | Both zero: scenes | Check |",
-          "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
-    for pr in a.pair:
-        ka, kb = pr.split("-", 1)
-        s = sorted(set(R[ka]) & set(R[kb]) & (keep if keep is not None else set(R[ka])))
+    L += ["", "Every pair a - b with its decomposition by zero / scored status. Fixed = b zero and a scored, broken = b scored and a zero; a part is the "
+          "summed difference of those scenes divided by the scenes of the pair, so the three parts add up to the mean difference (check column). "
+          "Better / worse / within = scenes where a is above b by more than 0.01 / below by more than 0.01 / within 0.01.", "",
+          "| Pair (a - b) | Scenes | Mean difference | Bootstrap 95 % CI | Better / worse / within | Fixed: scenes | part | Broken: scenes | part | "
+          "Both scored: scenes | part | Both zero: scenes | Check |", "|---|--:|--:|---|---|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for ka, kb, s, d, lo, hi in PS:
         xa, xb = np.array([R[ka][q]["score"] for q in s]), np.array([R[kb][q]["score"] for q in s])
-        d = xa - xb
         m = [(xb == 0) & (xa > 0), (xb > 0) & (xa == 0), (xb > 0) & (xa > 0), (xb == 0) & (xa == 0)]
         part = [d[q].sum() / len(d) for q in m]
-        L.append(f"| {ka} - {kb} | {len(s)} | {d.mean():+.4f} | {m[0].sum()} | {part[0]:+.4f} | {m[1].sum()} | {part[1]:+.4f} | {m[2].sum()} | {part[2]:+.4f} | "
-                 f"{m[3].sum()} | {sum(part) - d.mean():+.1e} |")
+        L.append(f"| {ka} - {kb} | {len(s)} | {d.mean():+.4f} | [{lo:+.4f}, {hi:+.4f}] | {(d > 0.01).sum()} / {(d < -0.01).sum()} / {(abs(d) <= 0.01).sum()} | "
+                 f"{m[0].sum()} | {part[0]:+.4f} | {m[1].sum()} | {part[1]:+.4f} | {m[2].sum()} | {part[2]:+.4f} | {m[3].sum()} | {sum(part) - d.mean():+.0e} |")
 print("\n".join(L))
 if a.out:
     Path(a.out).write_text("\n".join(L) + "\n")
