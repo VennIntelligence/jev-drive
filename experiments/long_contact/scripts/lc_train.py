@@ -51,6 +51,58 @@ def load_extra(R, nat=False, priv=False):
     return {k: np.concatenate(v) for k, v in out.items()}
 
 
+def load_tokens_host(src, n, chunk: int = 2048, threads: int = 8):
+    """The (n, 8, 32, 512) fp16 vision tokens of the selected states in host memory (a torch CPU tensor), gathered from the memory-mapped caches.
+    Host mode keeps the card's share to the model (S0 kept all 57 GB on the card; on a shared box no card has that free)."""
+    import torch
+    from concurrent.futures import ThreadPoolExecutor
+    V = torch.empty((n, 8, 32, 512), dtype=torch.float16)
+    jobs = [(d, m[c:c + chunk], o + c) for d, m, o in src for c in range(0, len(m), chunk)]
+
+    def one(j):
+        d, rows, o = j
+        f = np.load(B.cache_root() / f"{d}@warp" / "front.npy", mmap_mode="r")
+        V[o:o + len(rows)] = torch.from_numpy(np.ascontiguousarray(f[rows]))
+        return len(rows)
+    with ThreadPoolExecutor(threads) as ex:
+        list(ex.map(one, jobs))
+    return V
+
+
+class HostBatches:
+    """Training batches with the tokens gathered on worker threads from the host tensor into page-locked buffers and uploaded ahead of the loop
+    (depth batches in flight). Indices are drawn on the caller's thread from a CPU generator, in step order."""
+
+    def __init__(self, V, cdf, batch, seed, step0, dev, depth=3, workers=3):
+        import torch
+        from collections import deque
+        from concurrent.futures import ThreadPoolExecutor
+        self.V, self.cdf, self.batch, self.dev = V, cdf.cpu(), batch, dev
+        self.gen = torch.Generator().manual_seed(seed * 100003 + step0)
+        self.pool, self.q, self.depth = ThreadPoolExecutor(workers), deque(), depth
+        self.n = len(V) if V is not None else len(self.cdf)
+        for _ in range(depth):
+            self._push()
+
+    def _push(self):
+        import torch
+        b = torch.searchsorted(self.cdf, torch.rand(self.batch, generator=self.gen, dtype=self.cdf.dtype)).clamp_max(self.n - 1)
+        self.q.append(self.pool.submit(self._fetch, b))
+
+    def _fetch(self, b):
+        import torch
+        if self.V is None:
+            return b.to(self.dev), None, None
+        buf = torch.empty((len(b),) + tuple(self.V.shape[1:]), dtype=torch.float16, pin_memory=True)
+        torch.index_select(self.V, 0, b, out=buf)
+        return b.to(self.dev), buf.to(self.dev, non_blocking=True), buf
+
+    def get(self):
+        b, v, buf = self.q.popleft().result()
+        self._push()
+        return b, v, buf
+
+
 def balance_long(cls_state, lab, qok, fit):
     """w4-style weights of one longitudinal label: (4 user classes x {pos, neg}) cells at equal mass over the fit rows with a label; per-row
     weight = cell mass / max(cell rows, CELL_FLOOR). -> (n, Q) float32 (0 where no label or outside fit + val), mean 1 over the used fit rows; cells."""
@@ -121,7 +173,8 @@ def cmd_train(a):
         run.info("states: fit %d, val %d; S0 cells %s; long cells (class x [neg, pos]) %s; tables in %.0f s", fit.sum(), val.sum(), cells.astype(int).tolist(),
                  {k: v.astype(int).tolist() for k, v in CL.items()}, time.time() - t0)
         G = lambda x, dt=torch.float32: torch.as_tensor(np.ascontiguousarray(x)).to(dev, dt)  # noqa: E731
-        D = dict(V=C.load_tokens(R["src"], n, dev) if a.rung not in ("blind", "blind_nat") else None)
+        vis_ = a.rung not in ("blind", "blind_nat")
+        D = dict(V=(load_tokens_host(R["src"], n) if a.host else C.load_tokens(R["src"], n, dev)) if vis_ else None)
         emu, esd = R["ego"][fit].mean(0), R["ego"][fit].std(0) + 1e-6
         D["E"], D["Qp"] = G((R["ego"] - emu) / esd), G(R["q"])
         nmu = nsd = None
@@ -163,10 +216,15 @@ def cmd_train(a):
         run.info("%s: %.2f M parameters", a.rung, sum(x.numel() for x in net.parameters()) / 1e6)
         hub = lambda x, y, w: ((F.huber_loss(x, torch.nan_to_num(y.float()), delta=a.delta, reduction="none") * w * torch.isfinite(y)).sum() / (w * torch.isfinite(y)).sum().clamp_min(1e-6))  # noqa: E731
         t2 = time.time()
+        src = HostBatches(D["V"] if (a.host and net.vision) else None, cdf, a.batch, a.seed, step0, dev) if a.host else None
         for step in run.tqdm(range(step0, a.steps), desc=f"train {a.tag}", initial=step0, total=a.steps):
             for g in opt.param_groups:
                 g["lr"] = a.lr * lr_at(step)
-            b = torch.searchsorted(cdf, torch.rand(a.batch, device=dev, generator=gen, dtype=cdf.dtype)).clamp_max(n - 1)
+            if src is not None:
+                b, Vb, _buf = src.get()
+            else:
+                b = torch.searchsorted(cdf, torch.rand(a.batch, device=dev, generator=gen, dtype=cdf.dtype)).clamp_max(n - 1)
+                Vb = D["V"][b] if net.vision else None
             valid = torch.ones((a.batch, 8), dtype=torch.bool, device=dev)
             if net.vision:
                 k = torch.randint(1, 8, (a.batch,), device=dev, generator=gen)
@@ -175,7 +233,7 @@ def cmd_train(a):
             Nb = (D["nat"][b], D["hid"][b]) if net.nat else None
             Pb = tuple(D[x][b] for x in ("obj", "rte", "lin", "trn")) if net.priv else None
             with torch.autocast("cuda", dtype=torch.bfloat16):
-                o, s = net(D["V"][b] if net.vision else None, valid, D["E"][b], D["Qp"][b], Nb, Pb)
+                o, s = net(Vb, valid, D["E"][b], D["Qp"][b], Nb, Pb)
             w = tgt["w"][b] * inv[b][:, None]
             w = w / w.sum()
             la = (F.binary_cross_entropy_with_logits(o[..., 0], tgt["a"][b], reduction="none") * w).sum()
@@ -255,6 +313,7 @@ if __name__ == "__main__":
     p.add_argument("--lam-s", type=float, default=1.0)
     p.add_argument("--lam-long", type=float, default=1.0)
     p.add_argument("--auto", action="store_true")
+    p.add_argument("--host", type=int, default=1, help="1: vision tokens in host memory, gathered per batch (default); 0: all on the card (S0)")
     cli_args(p)
     a = ap.parse_args()
     {"train": cmd_train}[a.cmd](a)

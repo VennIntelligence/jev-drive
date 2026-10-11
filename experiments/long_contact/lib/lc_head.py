@@ -101,7 +101,10 @@ def predict(net, D, idx=None, slots: int = 8, batch: int = 512):
             v = (torch.arange(8, device=i.device)[None] >= 8 - slots).expand(len(i), 8)
             N = (D["nat"][i], D["hid"][i]) if net.nat else None
             P = tuple(D[k][i] for k in ("obj", "rte", "lin", "trn")) if net.priv else None
-            o, _ = net(D["V"][i] if net.vision else None, v, D["E"][i], D["Qp"][i], N, P)
+            Vi = None
+            if net.vision:
+                Vi = D["V"][i.cpu()].to(i.device, non_blocking=True) if D["V"].device.type == "cpu" else D["V"][i]
+            o, _ = net(Vi, v, D["E"][i], D["Qp"][i], N, P)
             O.append(o.cpu().numpy())
     net.train()
     return np.concatenate(O)

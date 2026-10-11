@@ -23,25 +23,25 @@ sub() { local n=$1 ld=$2; shift 2; if [[ -f $ld/DONE ]]; then return; fi
         local id; id=$($CL submit --owner long-probe --name "$n" --log-dir "$ld" "${aft[@]}" "$@") || die "submit $n"; echo "$id $n" >> "$D/jobs.txt"; LAST=$id; }
 waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do sleep 30; done; [[ -f $ld/ERROR ]] && die "job failed: $ld/ERROR"; done; return 0; }
 rdir() { sed -n 1p "$O/train/runs/$1-s$2.dir"; }
-TRAIN=(--train --cpu 6 --ram 28 --timeout-h 2 --tries 2)
+TRAIN=(--train --cpu 8 --timeout-h 3 --tries 2)                # vision tokens live in host memory (lc_train.py --host 1): small VRAM, large RAM
 
 status "stage 1: pilot (rungs vis and priv, seed 0, shards s2-s4, 6000 steps; validation logs only)"
 for r in vis priv; do
-  sub lc-pilot-$r "$L/pilot-$r" "${TRAIN[@]}" --vram 30 -- $PY $S/lc_train.py train --rung $r --seed 0 --shards 2 3 4 --steps 6000 --tag pilot-$r --auto
+  sub lc-pilot-$r "$L/pilot-$r" "${TRAIN[@]}" --vram 10 --ram 40 -- $PY $S/lc_train.py train --rung $r --seed 0 --shards 2 3 4 --steps 6000 --tag pilot-$r --auto
 done
 waitdirs "$L/pilot-vis" "$L/pilot-priv"
 $PY $S/lc_read.py pilot --runs vis="$(rdir pilot-vis 0)" priv="$(rdir pilot-priv 0)" || die "pilot checklist (prereg section 7): $O/read/pilot.json"
 
 status "stage 2: full runs, 5 rungs x 2 seeds, chained on one card"
 for r in blind vis nat priv blind_nat; do for s in 0 1; do
-  v=66; [[ $r == blind* ]] && v=8
-  sub lc-$r-s$s "$L/full-$r-s$s" "${TRAIN[@]}" --vram $v -- $PY $S/lc_train.py train --rung $r --seed $s --tag full-$r --auto
+  v=10; m=84; [[ $r == blind* ]] && v=6 && m=28
+  sub lc-$r-s$s "$L/full-$r-s$s" "${TRAIN[@]}" --vram $v --ram $m -- $PY $S/lc_train.py train --rung $r --seed $s --tag full-$r --auto
 done; done
 waitdirs $(for r in blind vis nat priv blind_nat; do for s in 0 1; do echo "$L/full-$r-s$s"; done; done)
 
 status "stage 3: hold-log predictions (all heads of the ten checkpoints) and the S0 re-read"
 RUNS=$(for r in blind vis nat priv blind_nat; do for s in 0 1; do echo -n "$r-s$s=$(rdir full-$r $s) "; done; done)
-sub lc-predict "$L/predict" --vram 20 --cpu 6 --ram 40 --timeout-h 2 -- $PY $S/lc_read.py predict --s0 --runs $RUNS
+sub lc-predict "$L/predict" --vram 14 --cpu 8 --ram 40 --timeout-h 2 -- $PY $S/lc_read.py predict --s0 --runs $RUNS
 waitdirs "$L/predict"
 LAD=$(for r in blind vis nat priv blind_nat; do echo -n "$r=$r-s0,$r-s1 "; done)
 sub lc-report "$L/report" --vram 0.5 --cpu 8 --ram 40 --timeout-h 2 -- $PY $S/lc_read.py report --ladder $LAD

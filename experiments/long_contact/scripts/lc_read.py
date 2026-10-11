@@ -52,7 +52,7 @@ def cmd_predict(a):
         X = TR.load_extra(R, nat=True, priv=True)
         n = len(R["gi"])
         G = lambda x, dt=torch.float32: torch.as_tensor(np.ascontiguousarray(x)).to(dev, dt)  # noqa: E731
-        V, Qp = C.load_tokens(R["src"], n, dev), G(R["q"])
+        V, Qp = TR.load_tokens_host(R["src"], n), G(R["q"])                    # host memory: 6.7 GB, gathered per batch
         P = {k: G(X[k], torch.float16) for k in ("obj", "rte", "lin", "trn")}
         (rd() / "pred").mkdir(parents=True, exist_ok=True)
         log = open(rd() / "reads.jsonl", "a")
@@ -75,7 +75,9 @@ def cmd_predict(a):
             E0 = None
             for name, rel in S0_RUNS.items():
                 net, ck = C.load_ckpt(C.sroot() / rel / "ckpt.pt", dev)
-                out, _ = C.predict(net, V if net.vision else None, G((R["ego"] - ck["emu"]) / ck["esd"]), Qp)
+                Vd = V.to(dev) if net.vision else None                           # S0's predict indexes on the card
+                out, _ = C.predict(net, Vd, G((R["ego"] - ck["emu"]) / ck["esd"]), Qp)
+                del Vd
                 np.savez(rd() / "pred" / f"{name}.npz", gi=R["gi"], fam=R["fam"], out=out.astype(np.float32))
                 log.write(json.dumps(dict(t=time.strftime("%Y-%m-%d %H:%M:%S"), name=name, ckpt=str(C.sroot() / rel), read="hold rows (S0 re-read, positive control)")) + "\n")
                 del net, E0
