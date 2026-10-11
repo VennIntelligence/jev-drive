@@ -1,0 +1,559 @@
+{
+ "missing": {},
+ "arms": {
+  "P2H10-F": {
+   "tags": [
+    "P2H10-F-s0",
+    "P2H10-F-s1"
+   ],
+   "seeds": [
+    0.9182960016601631,
+    0.9205615289403977
+   ],
+   "mean": [
+    0.9194287653002804,
+    0.9018417050233333,
+    0.9387804209191994
+   ],
+   "zeros3": 75.0,
+   "classes": {
+    "collision": 11.5,
+    "offroad": 44.0,
+    "corridor": 19.5
+   },
+   "atfault": 55.5,
+   "events": 55.5,
+   "slow": 265.5,
+   "progress": 0.9146213922028653,
+   "per_seed_zeros": {
+    "P2H10-F-s0": {
+     "collision": 13,
+     "offroad": 43,
+     "corridor": 22
+    },
+    "P2H10-F-s1": {
+     "collision": 10,
+     "offroad": 45,
+     "corridor": 17
+    }
+   }
+  },
+  "P2H10S-F": {
+   "tags": [
+    "P2H10S-F-s0",
+    "P2H10S-F-s1",
+    "P2H10S-F-s2",
+    "P2H10S-F-s3"
+   ],
+   "seeds": [
+    0.920139443312743,
+    0.9251224393987985,
+    0.9268883906995441,
+    0.9250474001042653
+   ],
+   "mean": [
+    0.9242994183788378,
+    0.9070437975549652,
+    0.9423176534320232
+   ],
+   "zeros3": 72.0,
+   "classes": {
+    "collision": 7.5,
+    "offroad": 37.25,
+    "corridor": 27.25
+   },
+   "atfault": 44.75,
+   "events": 44.75,
+   "slow": 232.25,
+   "progress": 0.9251236662138567,
+   "per_seed_zeros": {
+    "P2H10S-F-s0": {
+     "collision": 7,
+     "offroad": 40,
+     "corridor": 30
+    },
+    "P2H10S-F-s1": {
+     "collision": 8,
+     "offroad": 39,
+     "corridor": 23
+    },
+    "P2H10S-F-s2": {
+     "collision": 7,
+     "offroad": 37,
+     "corridor": 24
+    },
+    "P2H10S-F-s3": {
+     "collision": 8,
+     "offroad": 33,
+     "corridor": 32
+    }
+   }
+  },
+  "JAPSnoY": {
+   "tags": [
+    "JAPSnoY-s0",
+    "JAPSnoY-s1",
+    "JAPSnoY-s2",
+    "JAPSnoY-s3"
+   ],
+   "seeds": [
+    0.9337864622256592,
+    0.9381998715214526,
+    0.9325394550930022,
+    0.9317731242253025
+   ],
+   "mean": [
+    0.934074728266354,
+    0.9135517239165843,
+    0.9530743450442398
+   ],
+   "zeros3": 74.25,
+   "classes": {
+    "collision": 8.75,
+    "offroad": 33.25,
+    "corridor": 32.25
+   },
+   "atfault": 42.0,
+   "events": 42.0,
+   "slow": 128.5,
+   "progress": 0.9676877276559425,
+   "per_seed_zeros": {
+    "JAPSnoY-s0": {
+     "collision": 10,
+     "offroad": 32,
+     "corridor": 32
+    },
+    "JAPSnoY-s1": {
+     "collision": 7,
+     "offroad": 32,
+     "corridor": 31
+    },
+    "JAPSnoY-s2": {
+     "collision": 8,
+     "offroad": 34,
+     "corridor": 33
+    },
+    "JAPSnoY-s3": {
+     "collision": 10,
+     "offroad": 35,
+     "corridor": 33
+    }
+   }
+  },
+  "APY10m10-AB": {
+   "tags": [
+    "APY10m10-AB-s0",
+    "APY10m10-AB-s1",
+    "APY10m10-AB-s2",
+    "APY10m10-AB-s3"
+   ],
+   "seeds": [
+    0.9343541613344518,
+    0.9324266045792194,
+    0.9320651756684382,
+    0.9315869949793353
+   ],
+   "mean": [
+    0.9326082341403612,
+    0.9160939363174194,
+    0.9496094848678657
+   ],
+   "zeros3": 75.0,
+   "classes": {
+    "collision": 12.75,
+    "offroad": 39.75,
+    "corridor": 22.5
+   },
+   "atfault": 52.5,
+   "events": 52.5,
+   "slow": 140.75,
+   "progress": 0.9628197835911352,
+   "per_seed_zeros": {
+    "APY10m10-AB-s0": {
+     "collision": 11,
+     "offroad": 38,
+     "corridor": 23
+    },
+    "APY10m10-AB-s1": {
+     "collision": 13,
+     "offroad": 41,
+     "corridor": 22
+    },
+    "APY10m10-AB-s2": {
+     "collision": 13,
+     "offroad": 40,
+     "corridor": 22
+    },
+    "APY10m10-AB-s3": {
+     "collision": 14,
+     "offroad": 40,
+     "corridor": 23
+    }
+   }
+  }
+ },
+ "diff": {
+  "JAPSnoY - P2H10-F": {
+   "score": [
+    0.014645962966073728,
+    0.0020065262090753536,
+    0.027861229795576335
+   ],
+   "zeros3": [
+    -0.75,
+    -14.5,
+    13.25
+   ],
+   "atfault": [
+    -13.5,
+    -24.0,
+    -2.75
+   ],
+   "corridor": [
+    12.75,
+    3.25,
+    22.25
+   ],
+   "zeros3_logs": [
+    -0.7500000000000001,
+    -17.28867323018751,
+    16.195346852256602
+   ]
+  },
+  "JAPSnoY - P2H10S-F": {
+   "score": [
+    0.009775309887516346,
+    -0.0005094531523628881,
+    0.019925288326862096
+   ],
+   "zeros3": [
+    2.25,
+    -9.25,
+    13.75
+   ],
+   "atfault": [
+    -2.75,
+    -10.5,
+    4.75
+   ],
+   "corridor": [
+    5.0,
+    -4.0,
+    14.0
+   ],
+   "zeros3_logs": [
+    2.25,
+    -11.434268459053905,
+    16.093116798881606
+   ]
+  },
+  "APY10m10-AB - P2H10-F": {
+   "score": [
+    0.013179468840080782,
+    0.004043009594743366,
+    0.022410339304688585
+   ],
+   "zeros3": [
+    0.0,
+    -14.0,
+    14.25
+   ],
+   "atfault": [
+    -3.0,
+    -13.75,
+    7.75
+   ],
+   "corridor": [
+    3.0,
+    -6.0,
+    12.25
+   ],
+   "zeros3_logs": [
+    0.0,
+    -10.38827326656886,
+    10.783247414696033
+   ]
+  },
+  "APY10m10-AB - P2H10S-F": {
+   "score": [
+    0.008308815761523397,
+    0.001026379096236282,
+    0.014922162613337663
+   ],
+   "zeros3": [
+    3.0,
+    -11.5,
+    16.75
+   ],
+   "atfault": [
+    7.75,
+    -2.0,
+    17.5
+   ],
+   "corridor": [
+    -4.75,
+    -14.75,
+    5.0
+   ],
+   "zeros3_logs": [
+    3.0000000000000004,
+    -5.779313651209899,
+    12.25562949721218
+   ]
+  },
+  "JAPSnoY - APY10m10-AB": {
+   "score": [
+    0.0014664941259929479,
+    -0.006266421734618577,
+    0.009139899685877102
+   ],
+   "zeros3": [
+    -0.75,
+    -11.25,
+    10.25
+   ],
+   "atfault": [
+    -10.5,
+    -18.5,
+    -2.25
+   ],
+   "corridor": [
+    9.75,
+    2.75,
+    17.25
+   ],
+   "zeros3_logs": [
+    -0.7500000000000001,
+    -12.488038964645185,
+    11.09691334609737
+   ]
+  },
+  "P2H10S-F - P2H10-F": {
+   "score": [
+    0.0048706530785573845,
+    -0.0017186993425077723,
+    0.011902097245772233
+   ],
+   "zeros3": [
+    -3.0,
+    -14.5,
+    8.75
+   ],
+   "atfault": [
+    -10.75,
+    -20.0,
+    -1.75
+   ],
+   "corridor": [
+    7.75,
+    0.25,
+    15.25
+   ],
+   "zeros3_logs": [
+    -3.0000000000000004,
+    -12.164980647041189,
+    5.811382160472193
+   ]
+  }
+ },
+ "flips": [
+  {
+   "arm": "JAPSnoY",
+   "ref": "P2H10-F",
+   "cls": "three classes",
+   "fixed": 24,
+   "broken": 13,
+   "partial_better": 18,
+   "partial_worse": 40,
+   "ref_zeros": 75.0,
+   "arm_zeros": 74.25
+  },
+  {
+   "arm": "JAPSnoY",
+   "ref": "P2H10-F",
+   "cls": "collision + offroad",
+   "fixed": 18,
+   "broken": 4,
+   "partial_better": 16,
+   "partial_worse": 19,
+   "ref_zeros": 55.5,
+   "arm_zeros": 42.0
+  },
+  {
+   "arm": "JAPSnoY",
+   "ref": "P2H10-F",
+   "cls": "corridor",
+   "fixed": 6,
+   "broken": 9,
+   "partial_better": 6,
+   "partial_worse": 26,
+   "ref_zeros": 19.5,
+   "arm_zeros": 32.25
+  },
+  {
+   "arm": "JAPSnoY",
+   "ref": "P2H10S-F",
+   "cls": "three classes",
+   "fixed": 11,
+   "broken": 6,
+   "partial_better": 31,
+   "partial_worse": 45,
+   "ref_zeros": 72.0,
+   "arm_zeros": 74.25
+  },
+  {
+   "arm": "JAPSnoY",
+   "ref": "P2H10S-F",
+   "cls": "collision + offroad",
+   "fixed": 6,
+   "broken": 2,
+   "partial_better": 18,
+   "partial_worse": 21,
+   "ref_zeros": 44.75,
+   "arm_zeros": 42.0
+  },
+  {
+   "arm": "JAPSnoY",
+   "ref": "P2H10S-F",
+   "cls": "corridor",
+   "fixed": 6,
+   "broken": 4,
+   "partial_better": 15,
+   "partial_worse": 28,
+   "ref_zeros": 27.25,
+   "arm_zeros": 32.25
+  },
+  {
+   "arm": "APY10m10-AB",
+   "ref": "P2H10-F",
+   "cls": "three classes",
+   "fixed": 21,
+   "broken": 16,
+   "partial_better": 29,
+   "partial_worse": 46,
+   "ref_zeros": 75.0,
+   "arm_zeros": 75.0
+  },
+  {
+   "arm": "APY10m10-AB",
+   "ref": "P2H10-F",
+   "cls": "collision + offroad",
+   "fixed": 13,
+   "broken": 6,
+   "partial_better": 21,
+   "partial_worse": 36,
+   "ref_zeros": 55.5,
+   "arm_zeros": 52.5
+  },
+  {
+   "arm": "APY10m10-AB",
+   "ref": "P2H10-F",
+   "cls": "corridor",
+   "fixed": 7,
+   "broken": 7,
+   "partial_better": 12,
+   "partial_worse": 19,
+   "ref_zeros": 19.5,
+   "arm_zeros": 22.5
+  },
+  {
+   "arm": "APY10m10-AB",
+   "ref": "P2H10S-F",
+   "cls": "three classes",
+   "fixed": 18,
+   "broken": 13,
+   "partial_better": 41,
+   "partial_worse": 55,
+   "ref_zeros": 72.0,
+   "arm_zeros": 75.0
+  },
+  {
+   "arm": "APY10m10-AB",
+   "ref": "P2H10S-F",
+   "cls": "collision + offroad",
+   "fixed": 7,
+   "broken": 5,
+   "partial_better": 19,
+   "partial_worse": 42,
+   "ref_zeros": 44.75,
+   "arm_zeros": 52.5
+  },
+  {
+   "arm": "APY10m10-AB",
+   "ref": "P2H10S-F",
+   "cls": "corridor",
+   "fixed": 11,
+   "broken": 6,
+   "partial_better": 23,
+   "partial_worse": 20,
+   "ref_zeros": 27.25,
+   "arm_zeros": 22.5
+  },
+  {
+   "arm": "JAPSnoY",
+   "ref": "APY10m10-AB",
+   "cls": "three classes",
+   "fixed": 3,
+   "broken": 10,
+   "partial_better": 48,
+   "partial_worse": 29,
+   "ref_zeros": 75.0,
+   "arm_zeros": 74.25
+  },
+  {
+   "arm": "JAPSnoY",
+   "ref": "APY10m10-AB",
+   "cls": "collision + offroad",
+   "fixed": 2,
+   "broken": 4,
+   "partial_better": 41,
+   "partial_worse": 12,
+   "ref_zeros": 52.5,
+   "arm_zeros": 42.0
+  },
+  {
+   "arm": "JAPSnoY",
+   "ref": "APY10m10-AB",
+   "cls": "corridor",
+   "fixed": 1,
+   "broken": 5,
+   "partial_better": 14,
+   "partial_worse": 23,
+   "ref_zeros": 22.5,
+   "arm_zeros": 32.25
+  },
+  {
+   "arm": "P2H10S-F",
+   "ref": "P2H10-F",
+   "cls": "three classes",
+   "fixed": 15,
+   "broken": 6,
+   "partial_better": 24,
+   "partial_worse": 43,
+   "ref_zeros": 75.0,
+   "arm_zeros": 72.0
+  },
+  {
+   "arm": "P2H10S-F",
+   "ref": "P2H10-F",
+   "cls": "collision + offroad",
+   "fixed": 13,
+   "broken": 1,
+   "partial_better": 17,
+   "partial_worse": 21,
+   "ref_zeros": 55.5,
+   "arm_zeros": 44.75
+  },
+  {
+   "arm": "P2H10S-F",
+   "ref": "P2H10-F",
+   "cls": "corridor",
+   "fixed": 3,
+   "broken": 5,
+   "partial_better": 8,
+   "partial_worse": 25,
+   "ref_zeros": 19.5,
+   "arm_zeros": 27.25
+  }
+ ]
+}
