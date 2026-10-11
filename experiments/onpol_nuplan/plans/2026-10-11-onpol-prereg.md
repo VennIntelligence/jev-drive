@@ -175,3 +175,21 @@ R1 (amended): (a) first 15 plan points within 0.03 m on at least 99 % of the poo
 rows; (c) the wrong-seed control stays below 20 %. The 8-pose share is reported as a diagnostic. (b) is met by the smoke; (a) and (c)
 are read again on the full pool. The pool keeps rows of the compiled path (the path every read of this lane and the image-independent
 box reads use).
+
+## Amendment 2 (2026-10-11, after the independent audit of the 10-scene smoke; before the pool is built, any training and any closed-loop read)
+
+The audit (no bug in frames, time, raster, box layout, target formula, exclusions or the split guard) found that the imitation target as
+registered starts with a speed jump: D_k takes the log's travel whatever the ego's own speed is, so the target's first 0.5 s asks for
+D_1 / 0.5 s - v_ego = +0.53 m/s on average over the 100 smoke rows, more than 1 m/s on 26 % and more than 2 m/s on 5 % (maximum 5.05):
+the visited states are slower than the log (fed speed 4.25 against the log's 5.73 m/s at decision 9). A recovery expert does not teleport
+its speed, and an infeasible target would make ON-IMIT a weaker baseline than RoaD / DAgger deserves.
+
+Imitation target, progress (replaces D_k; the lateral return and everything else are unchanged): the target's speed starts at the ego's
+own speed and blends linearly into the log's speed over 2.0 s (P): `v(tau) = v_ego + (v_log(t + tau) - v_ego) min(tau / 2 s, 1)`,
+`D_k = integral of max(v, 0) over [0, 0.5 k]` (0.1 s steps), `v_ego` = the speed of the visited state, `v_log` = the log's speed along G
+at the same clock time; `Lr = max(4 m, 1.0 s x D_8 / 4 s)` with the new D_8. "Speed from the log" still holds from 2 s on. The registered
+version is kept in the pool as `fut_reg` and its statistics are reported beside the new one; it is not trained on.
+
+Stated for the read: the on-policy agent hinge sees vehicles only (the simulator has no pedestrians or cyclists; S's offline labels have
+them). ON-SELF without L has no term that asks for progress, ON-IMIT has one by construction; the registered lines are on zeros, and slow
+scenes and progress are reported beside them.
