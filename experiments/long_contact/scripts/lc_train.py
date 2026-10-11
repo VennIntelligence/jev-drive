@@ -8,7 +8,8 @@ Loss = S0's (agent / boundary BCE with `w4` weights, clearance / margin / first-
 each with its own w4-style weights: 4 user classes x {positive, negative} at equal mass over the fit rows that carry the label; a cell's
 per-row weight is capped at the rate of a cell of CELL_FLOOR rows). States are sampled with probability ~ (sum of the four weight sets over
 the state's queries) ** alpha, the rest of the weight in the loss (S0's scheme). Selection: per output group the best evaluation step
-(lat = S0's rule, mean of the own-plan agent and boundary AUC; A, B, C = the own-plan AUC of that label) -> ckpt.pt holds the four states.
+(lat = S0's rule, mean of the own-plan agent and boundary AUC; A, B, C = the AUC of that label on the own plan and its arc re-timings,
+query slots 0, 1, 16-19) -> ckpt.pt holds the four states.
 """
 import os
 for _k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
@@ -61,14 +62,19 @@ def balance_long(cls_state, lab, qok, fit):
     return (w / w[fit][use[fit]].mean()).astype(np.float32), n.reshape(4, 2)
 
 
+SEL = list(C.OWN) + list(range(16, 20))          # A / B / C selection rows: the own plan and its arc re-timings (prereg section 5)
+
+
 def val_read(Y, out, rows):
-    """Own-plan AUCs on the validation states `rows`: agent, boundary (S0) and A, B, C."""
+    """AUCs on the validation states `rows`: agent / boundary on the own plan (S0's rule); A, B, C on the own plan + its arc re-timings
+    (selection, key A ...) and on the own plan alone (key A_own ...)."""
     r = {}
     own = list(C.OWN)
     for k, (y, ok) in Y.items():
-        yy, oo = y[rows][:, own], ok[rows][:, own]
-        r[k] = C.auc(yy[oo], out[:, own, H.IDX[k]][oo])
-        r[f"{k}_pos"] = int(yy[oo].sum())
+        for nm, qs in ((k, own if k in ("a", "b") else SEL), (f"{k}_own", own)):
+            yy, oo = y[rows][:, qs], ok[rows][:, qs]
+            r[nm] = C.auc(yy[oo], out[:, qs, H.IDX[k]][oo])
+            r[f"{nm}_pos"] = int(yy[oo].sum())
     r["lat"] = 0.5 * (r["a"] + r["b"])
     return r
 

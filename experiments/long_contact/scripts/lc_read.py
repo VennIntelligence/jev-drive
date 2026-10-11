@@ -267,6 +267,31 @@ def cmd_report(a):
             print(pd.DataFrame(pc).to_string(index=False))
 
 
+def cmd_pilot(a):
+    """Pilot checklist (prereg section 7): reads the VALIDATION reads stored in the two pilot checkpoints (no hold row is touched)."""
+    import torch
+    res, ok = {}, True
+    for spec in a.runs:
+        name, d = spec.split("=")
+        ck = torch.load(_pl.Path(d) / "ckpt.pt", map_location="cpu", weights_only=False)
+        v = {h: {k: ck["val"][h][k] for k in ck["val"][h]} for h in H.HEADS}
+        fin = all(np.isfinite(c[k]) for c in ck["curve"] for k in ("a", "b"))
+        res[name] = dict(rung=ck["config"]["rung"], val=v, finite=fin)
+        ok &= fin
+    vis = next(r for r in res.values() if r["rung"] == "vis")
+    pri = next(r for r in res.values() if r["rung"] == "priv")
+    chk = dict(lateral_agent=vis["val"]["lat"]["a"] >= 0.80, lateral_boundary=vis["val"]["lat"]["b"] >= 0.90)
+    for k in LC.LONG:
+        chk[f"{k}_priv_ceiling"] = pri["val"][k][k] >= 0.90
+        chk[f"{k}_val_positives"] = vis["val"][k][f"{k}_pos"] > 0
+    ok &= all(chk.values())
+    out = dict(checks=chk, passed=bool(ok), runs=res)
+    (rd() / "pilot.json").parent.mkdir(parents=True, exist_ok=True)
+    (rd() / "pilot.json").write_text(json.dumps(out, indent=1, default=float))
+    print(json.dumps(out, indent=1, default=float))
+    raise SystemExit(0 if ok else 1)
+
+
 if __name__ == "__main__":
     from jevdrive.run import cli_args
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -278,5 +303,7 @@ if __name__ == "__main__":
     p = sp.add_parser("report")
     p.add_argument("--ladder", nargs="+", required=True, help="RUNG=NAME_S0,NAME_S1")
     cli_args(p)
+    p = sp.add_parser("pilot")
+    p.add_argument("--runs", nargs="+", required=True, help="NAME=RUN_DIR (the vis and priv pilots)")
     a = ap.parse_args()
-    {"predict": cmd_predict, "report": cmd_report}[a.cmd](a)
+    {"predict": cmd_predict, "report": cmd_report, "pilot": cmd_pilot}[a.cmd](a)
