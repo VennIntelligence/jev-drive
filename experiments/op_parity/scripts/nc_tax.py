@@ -480,30 +480,32 @@ def cmd_report(a):
             L.append("\n### Uniform scaling of every token (change against a = 1.0 in points; counts are seed means)\n\n" + md(t, 2))
             summ["uniform_base"] = {f"s{s}": {k: 100 * float(sa[(sa.seed == s) & (sa.a == 1.0)][SUBS[k]].mean()) for k in ("NC", "TTC", "DAC", "EP")} for s in SEEDS}
 
-        # 4. navhard stage 1: counts only
-        H, UH, wah, geoh, chkh = fail_rows("navhard")
-        summ["replay_max_abs_diff_vs_bench"]["navhard"] = chkh
-        H.to_csv(RES / "navhard_s1_fail_tokens.csv", index=False)
-        L.append(f"\n## navhard stage 1 ({len(UH[0])} tokens, G frames): counts only\n")
-        t = counts(H, ["set"], ["wa_pass", "ev_lt3", "fast"]).rename(columns=ren)
-        L.append(md(t))
-        for st in ("NC", "TTC-only"):
-            G = H[H.set == st]
-            if not len(G):
-                continue
-            t = counts(G, ["cls"], ["wa_pass"]).rename(columns=ren)
-            t.to_csv(RES / f"navhard_s1_{st}_class.csv", index=False)
-            L.append(f"\n### navhard stage 1, {st} failures by sub-class\n\n" + md(t))
-            L.append(f"\n### navhard stage 1, {st}: class x turn bucket (seed-mean counts)\n\n" + md(cross(G, "turn", TURNS)))
-            L.append(f"\n### navhard stage 1, {st}: class x t0 ego speed band (seed-mean counts)\n\n" + md(cross(G, "speed", SPEEDS)))
-        wn, wt = fail_sets(wah)
-        summ["navhard_s1"] = dict(tokens=len(UH[0]), wa_nc=int(wn.sum()), wa_ttc_only=int(wt.sum()),
-                                  arm={f"s{s}": dict(nc=int(fail_sets(UH[s])[0].sum()), ttc_only=int(fail_sets(UH[s])[1].sum())) for s in SEEDS})
-        L.append(f"\nWA-JEPA on the same {len(wah)} stage-1 tokens: {int(wn.sum())} NC failures, {int(wt.sum())} TTC-only failures (stored per-token scores).")
+        # 4. navhard stage 1: counts only (skipped when the chain ran without navhard, NC_TAX_BENCHES)
+        H = None
+        if (OUT / "replay_navhard.parquet").exists():
+            H, UH, wah, geoh, chkh = fail_rows("navhard")
+            summ["replay_max_abs_diff_vs_bench"]["navhard"] = chkh
+            H.to_csv(RES / "navhard_s1_fail_tokens.csv", index=False)
+            L.append(f"\n## navhard stage 1 ({len(UH[0])} tokens, G frames): counts only\n")
+            t = counts(H, ["set"], ["wa_pass", "ev_lt3", "fast"]).rename(columns=ren)
+            L.append(md(t))
+            for st in ("NC", "TTC-only"):
+                G = H[H.set == st]
+                if not len(G):
+                    continue
+                t = counts(G, ["cls"], ["wa_pass"]).rename(columns=ren)
+                t.to_csv(RES / f"navhard_s1_{st}_class.csv", index=False)
+                L.append(f"\n### navhard stage 1, {st} failures by sub-class\n\n" + md(t))
+                L.append(f"\n### navhard stage 1, {st}: class x turn bucket (seed-mean counts)\n\n" + md(cross(G, "turn", TURNS)))
+                L.append(f"\n### navhard stage 1, {st}: class x t0 ego speed band (seed-mean counts)\n\n" + md(cross(G, "speed", SPEEDS)))
+            wn, wt = fail_sets(wah)
+            summ["navhard_s1"] = dict(tokens=len(UH[0]), wa_nc=int(wn.sum()), wa_ttc_only=int(wt.sum()),
+                                      arm={f"s{s}": dict(nc=int(fail_sets(UH[s])[0].sum()), ttc_only=int(fail_sets(UH[s])[1].sum())) for s in SEEDS})
+            L.append(f"\nWA-JEPA on the same {len(wah)} stage-1 tokens: {int(wn.sum())} NC failures, {int(wt.sum())} TTC-only failures (stored per-token scores).")
 
         (RES / "tables.md").write_text("\n".join(L) + "\n")
         (RES / "summary.json").write_text(json.dumps(summ, indent=1, default=float))
-        run.summary.update(navtest_rows=len(F), navhard_rows=len(H), replay_check=summ["replay_max_abs_diff_vs_bench"])
+        run.summary.update(navtest_rows=len(F), navhard_rows=0 if H is None else len(H), replay_check=summ["replay_max_abs_diff_vs_bench"])
         run.info(f"wrote {RES}")
 
 

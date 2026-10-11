@@ -25,7 +25,7 @@ score() {   # score <stage> -> $O/score_<stage>.csv
   "$VPY" $S gate --stage "$1" --score "$O/score_$1.csv" || die "identity gate $1"
 }
 
-for b in navtest navhard; do
+for b in ${NC_TAX_BENCHES:-navtest navhard}; do
   status "select $b"; "$VPY" $S select --bench $b || die "select $b"
   status "replay $b"; "$NPY" $S replay --bench $b || die "replay $b"
 done
