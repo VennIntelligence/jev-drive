@@ -1002,7 +1002,7 @@ class Dispatcher:
         adm = capacity.Admission.from_box(box)
         state = {j["id"]: j["state"] for j in self.st["jobs"].values()}
         queue = sorted(self.jobs("queued"), key=lambda j: (-float(j["spec"].get("priority") or 0), j["t_submit"]))
-        starts, head_reserved = 0, False
+        starts, head_reserved = Counter(), False        # starts per round, GPU and CPU-only jobs counted apart
         for j in queue:
             s = Spec(**j["spec"])
             bad = [a for a in s.after if state.get(a) in ("failed", "cancelled")]
@@ -1015,7 +1015,7 @@ class Dispatcher:
                 why = "after %s (%s)" % (wait[0], state.get(wait[0], "unknown id"))
             elif s.when_exists and not Path(s.when_exists).exists():
                 why = "waiting for %s" % s.when_exists
-            elif starts >= cfg["max_starts"]:
+            elif starts[is_gpu(j["spec"])] >= cfg["max_starts"]:
                 why = "start limit this round"
             if why:
                 self.set_why(j, why)
@@ -1036,7 +1036,7 @@ class Dispatcher:
             if box.mem_max_gb and box.mem_used_gb + young_ram + ram_need > 0.85 * box.mem_max_gb:
                 hard = "memory %.0f + %.0f GB > 85%% of %.0f" % (box.mem_used_gb + young_ram, ram_need, box.mem_max_gb)
             elif ws_line and box.mem_ws_gb + young_ws + ws_need + cfg["ws_reserve_gb"] > ws_line and not (
-                    starts == 0 and now - j.setdefault("t_ws", now) >= cfg["ws_wait_s"]):
+                    not starts and now - j.setdefault("t_ws", now) >= cfg["ws_wait_s"]):
                 hard = "memory working set %.0f + %.0f young + %.0f GB + %.0f reserve > kill line %.0f (page cache; trimming)" % (
                     box.mem_ws_gb, young_ws, ws_need, cfg["ws_reserve_gb"], ws_line)
                 self.ws_want = max(self.ws_want, young_ws + ws_need + cfg["ws_reserve_gb"])
@@ -1092,7 +1092,7 @@ class Dispatcher:
                          need=round(ws_need, 1), line=round(ws_line, 1))     # the trimmer could not make room in ws_wait_s
             j["vram_booked"] = round(v_need, 1)
             self.launch(j, s, a.index, i0, span if i0 is not None else 0, cpus, box, adm)
-            starts += 1
+            starts[is_gpu(j["spec"])] += 1
             a.jobs += is_gpu(j["spec"])
             a.cpu_jobs += not is_gpu(j["spec"])
             a.pool_gb += v_need

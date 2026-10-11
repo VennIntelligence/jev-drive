@@ -265,7 +265,7 @@ the pool) is declared, or the pool will only see its current VRAM:
 With `--pid` the hold ends by itself when that process exits; `holds` lists, `unhold <hid>` drops one.
 
 **Config** (`$DATA_DIR/runs/pool/config.json`, re-read every round): `carla_per_card` (6), `train_per_card` (2),
-`headroom_gb` (4), `cpu_overcommit` (1.0) or `cpu_budget`, `max_starts` per round (4), `hold_s` (900), `cards` (all),
+`headroom_gb` (4), `cpu_overcommit` (1.0) or `cpu_budget`, `max_starts` per round (4; jobs with `vram_gb` > 1 and CPU-only jobs are counted apart, so a scoring fan-out cannot keep cards idle), `hold_s` (900), `cards` (all),
 `poll_s` (20). The box runs `cpu_overcommit` 1.4 since 2026-10-08: charges are declared or 1.2 x peak cores, the measured
 mean was about 40 busy cores at 68 charged of a 75-core quota, and CPU contention only slows jobs (RAM and VRAM are never
 overcommitted). Spool layout: `inbox/`, `cancel/`, `holds.json`, `state.json`, `status.json`, `events.jsonl`, `usage.jsonl`, `history.json`, `jobs/<id>/`.

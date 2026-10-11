@@ -584,6 +584,16 @@ class Dispatch(unittest.TestCase):
         self.assertIn(g, [e["id"] for e in ev if e["kind"] == "pin_shared"])
         self.cancel_all(d)
 
+    def test_cpu_only_starts_do_not_use_up_the_gpu_start_limit(self):
+        for i in range(3):
+            P.submit("sleep 30", name="score%d" % i, pool=self.tmp, vram_gb=0.5, cpu=1)
+        g = P.submit("sleep 30", name="plans", pool=self.tmp, vram_gb=5, cpu=1)
+        d = self.disp(max_starts=2)
+        d.round()
+        self.assertEqual(d.st["jobs"][g]["state"], "running")                    # queued behind 3 CPU-only jobs
+        self.assertEqual(sum(j["state"] == "running" for j in d.st["jobs"].values()), 3)
+        self.cancel_all(d)
+
     def test_idle_rule_never_relaxes_ram(self):
         self.box.mem_max_gb, self.box.mem_used_gb = 100.0, 90.0
         jid = P.submit("true", name="r", pool=self.tmp, vram_gb=5, cpu=3, ram_gb=1)
