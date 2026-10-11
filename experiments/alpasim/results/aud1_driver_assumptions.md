@@ -163,7 +163,7 @@ Constants that encode a nuPlan vehicle or sensor property, all of them on the se
 | ego box 5.176 x 2.297 m, `CENTER` 1.461 m | `scripts/c1_lib.py` | analysis only, not served |
 
 No wheelbase, camera height, pitch or ego dimension is hard-coded in the served path. Per-scene values seen: camera x 1.64-1.81 m,
-height 1.49-1.54 m, fx 1526-1623, fy 1362-1633 over 429 scenes; distortion delivered as zeros (the renderer's pinhole).
+height 1.49-1.54 m, fx 1526-1623, fy 1362-1633 over 429 scenes; distortion delivered as zeros (the renderer's pinhole). (Corrected 2026-10-12, FAMILY: the request carries no distortion, but MTGS renders WITH the asset's colmap distortion, k1 about -0.34; the driver is never told. Measured harmless: telling it the distortion moves the score +0.003; ../../alpasim_family/results/dependence.md.)
 
 Verdict: **safe.** Every calibration component the evaluator sends is used where it physically belongs; the caches are keyed by the
 components they use. The only fixed sensor property is the image size, which the shared nuPlan config fixes at 1920 x 1080 for every preset.

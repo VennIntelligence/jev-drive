@@ -69,7 +69,7 @@ APY10m10-AB-s0 driver logs for every scene that started a session (1479; the 12 
 
 - **Every scene has its own calibration key**: 1479 distinct `navsim_zs.calib_key` values (R, K, D at 4 decimals) in 1479 scenes. The
   intrinsics change per scene, even within one log. fx runs 1435-1623, and fy 755-1638 (fy / fx 0.53-1.07; 30 scenes below 0.90). cx,
-  cy = 960, 560 everywhere except veh-08 (970.5, 578.4). Distortion is zero everywhere: MTGS renders an undistorted pinhole camera.
+  cy = 960, 560 everywhere except veh-08 (970.5, 578.4). Distortion is zero everywhere: MTGS renders an undistorted pinhole camera. (Corrected 2026-10-12, FAMILY: the request carries no distortion, but MTGS renders WITH the asset's colmap distortion, k1 about -0.34; the driver is never told. Measured harmless: telling it the distortion moves the score +0.003; ../../alpasim_family/results/dependence.md.)
 - The mounting rotation is a per-vehicle / per-log property: 132 distinct rotations at 3 decimals across 16 vehicles and 44 logs. Yaw
   -1.78 to +2.24 deg (veh-48 about -1.7, veh-45 about +2.0, the rest within +-0.5), pitch 0.19-2.41 deg, translation x 1.57-1.81 m,
   height 1.49-1.58 m.
