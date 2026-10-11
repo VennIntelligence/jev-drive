@@ -85,24 +85,28 @@ def cmd_predict(a):
 
 
 # ---------------------------------------------------------------- report
-def own_table(R, X, T):
-    """One row per (hold state, own slot): labels, masks, strata."""
+P1_SLOTS, P0_SLOTS = (0, 1, 16, 17, 18, 19), (0, 1)
+
+
+def row_table(R, X, T, slots=P1_SLOTS):
+    """One row per (hold state, query slot in `slots`): labels, masks, strata; pop = own (slots 0, 1) or arc (16-19)."""
     import pandas as pd
     cls, gt45 = C.classes(T)
     Y = C.targets(R)
-    n = len(R["gi"])
-    rep = lambda x: np.repeat(x, 2)  # noqa: E731
-    o = lambda x: x[:, :2].ravel()  # noqa: E731
+    n, k = len(R["gi"]), len(slots)
+    rep = lambda x: np.repeat(x, k)  # noqa: E731
+    o = lambda x: x[:, list(slots)].ravel()  # noqa: E731
     speed = np.concatenate([np.load(B.cache_root() / d / "tab.npz")["speed"][m] for d, m, _ in R["src"]])
+    sl = np.tile(np.array(slots), n)
     return pd.DataFrame(dict(
-        i=rep(np.arange(n)), slot=np.tile(C.OWN, n), log=rep(R["log"]), fam=rep(np.array(R["fams"])[R["fam"]]), cls=rep(cls[R["gi"]]), gt45=rep(gt45[R["gi"]]),
-        speed=rep(speed), band=rep(LC.speed_band(speed)), a=o(Y["a"]), a_ok=o(Y["a_ok"]), b=o(Y["b"]), b_ok=o(Y["b_ok"]), a_cls=o(R["a_cls"]),
-        A=o(X["a_lab"]), A_sub=o(X["a_sub"]), B=o(X["b_lab"]), B_kind=o(X["b_kind"]), C=o(X["c_lab"]), C_dv=o(X["c_dv"]),
+        i=rep(np.arange(n)), slot=sl, pop=np.where(sl < 2, "own", "arc"), log=rep(R["log"]), fam=rep(np.array(R["fams"])[R["fam"]]), cls=rep(cls[R["gi"]]),
+        gt45=rep(gt45[R["gi"]]), speed=rep(speed), band=rep(LC.speed_band(speed)), a=o(Y["a"]), a_ok=o(Y["a_ok"]), b=o(Y["b"]), b_ok=o(Y["b_ok"]),
+        a_cls=o(R["a_cls"]), A=o(X["a_lab"]), A_sub=o(X["a_sub"]), B=o(X["b_lab"]), B_kind=o(X["b_kind"]), C=o(X["c_lab"]), C_dv=o(X["c_dv"]),
         b_ahead=rep(X["b_ahead"]), c_ahead=rep(X["c_ahead"]), qok=o(R["qok"])))
 
 
 def label_mask(D, k):
-    """(y, mask) of label k on the own-plan table."""
+    """(y, mask) of label k on a row table."""
     if k == "a":
         return D.a.to_numpy(), D.a_ok.to_numpy()
     if k == "b":
@@ -134,7 +138,9 @@ def cmd_report(a):
             run.use_split(s)
         X = TR.load_extra(R)
         T = dict(np.load(B.root() / "taxonomy" / "tax.npz"))
-        D = own_table(R, X, T)
+        D = row_table(R, X, T)
+        own_m = (D["pop"] == "own").to_numpy()
+        pops = {"P1 own + arc": np.ones(len(D), bool), "P0 own": own_m}
         out = rd() / "report"
         out.mkdir(parents=True, exist_ok=True)
         lad = dict(x.split("=") for x in a.ladder)                       # rung -> "NAME_S0,NAME_S1"
@@ -144,40 +150,45 @@ def cmd_report(a):
                 z = np.load(rd() / "pred" / f"{nm}.npz")
                 assert (z["gi"] == R["gi"]).all()
                 pr[(rung, s)] = {h: z[f"out_{h}"].astype(np.float32) for h in H.HEADS}
-        own = lambda o, col: o[:, :2, col].ravel()  # noqa: E731
+        ii, ss = D.i.to_numpy(), D.slot.to_numpy()
         head_of = dict(a="lat", b="lat", A="A", B="B", C="C")
 
         def score(rung, k, seed=None):
             col = H.IDX[k]
             if seed is not None:
-                return own(pr[(rung, seed)][head_of[k]], col)
-            return np.mean([own(pr[(rung, s)][head_of[k]], col) for s in (0, 1)], 0)
+                return pr[(rung, seed)][head_of[k]][ii, ss, col]
+            return np.mean([pr[(rung, s)][head_of[k]][ii, ss, col] for s in (0, 1)], 0)
         logs = D.log.to_numpy()
         rows, gains, ver = [], [], {}
-        for k in ("A", "B", "C", "a", "b"):
-            y, m = label_mask(D, k)
-            sc = {}
-            for rung in lad:
-                sc[f"{rung}|mean"] = score(rung, k)
-                for s in (0, 1):
-                    sc[f"{rung}|s{s}"] = score(rung, k, s)
-            r = read(y[m], {kk: v[m] for kk, v in sc.items()}, logs[m])
-            for kk, v in r.items():
-                rung, which = kk.split("|")
-                rows.append(dict(label=k, rung=rung, score=which, auc=v["auc"], lo=v["lo"], hi=v["hi"], n=int(m.sum()), pos=int(y[m].sum()),
-                                 logs=len(set(logs[m])), logs_pos=len(set(logs[m][y[m]]))))
-            if "blind" in lad:
+        for pname, pm in pops.items():
+            for k in ("A", "B", "C", "a", "b"):
+                y, m = label_mask(D, k)
+                m = m & pm
+                sc = {}
                 for rung in lad:
-                    if rung == "blind":
-                        continue
-                    dd = r[f"{rung}|mean"]["draws"] - r["blind|mean"]["draws"]
-                    lo, hi = H.ci(dd)
-                    gains.append(dict(label=k, rung=rung, d=r[f"{rung}|mean"]["auc"] - r["blind|mean"]["auc"], lo=lo, hi=hi))
-            if k in LC.LONG and all(x in lad for x in NON_PRIV):
-                best = max(NON_PRIV, key=lambda x: r[f"{x}|mean"]["auc"])
-                g = next((x for x in gains if x["label"] == k and x["rung"] == best), dict(d=0.0, lo=0.0, hi=0.0))
-                ver[k] = dict(best=best, auc=r[f"{best}|mean"]["auc"], lo=r[f"{best}|mean"]["lo"], hi=r[f"{best}|mean"]["hi"], gain=g["d"], gain_lo=g["lo"], gain_hi=g["hi"],
-                              verdict=verdict(r[f"{best}|mean"], g), pos=int(y[m].sum()), logs_pos=len(set(logs[m][y[m]])))
+                    sc[f"{rung}|mean"] = score(rung, k)
+                    for s in (0, 1):
+                        sc[f"{rung}|s{s}"] = score(rung, k, s)
+                r = read(y[m], {kk: v[m] for kk, v in sc.items()}, logs[m])
+                for kk, v in r.items():
+                    rung, which = kk.split("|")
+                    rows.append(dict(pop=pname, label=k, rung=rung, score=which, auc=v["auc"], lo=v["lo"], hi=v["hi"], n=int(m.sum()), pos=int(y[m].sum()),
+                                     logs=len(set(logs[m])), logs_pos=len(set(logs[m][y[m]]))))
+                gk = []
+                pairs = [(x, "blind") for x in lad if x != "blind"] + [("nat", "vis"), ("priv", "nat"), ("blind_nat", "blind"), ("nat", "blind_nat")]
+                for hi_, lo_ in pairs:
+                    if hi_ in lad and lo_ in lad:
+                        dd = r[f"{hi_}|mean"]["draws"] - r[f"{lo_}|mean"]["draws"]
+                        cl, ch = H.ci(dd)
+                        gk.append(dict(pop=pname, label=k, rung=hi_, vs=lo_, d=r[f"{hi_}|mean"]["auc"] - r[f"{lo_}|mean"]["auc"], lo=cl, hi=ch))
+                gains += gk
+                if k in LC.LONG and all(x in lad for x in NON_PRIV):
+                    best = max(NON_PRIV, key=lambda x: r[f"{x}|mean"]["auc"])
+                    g = next((x for x in gk if x["rung"] == best and x["vs"] == "blind"), dict(d=0.0, lo=0.0, hi=0.0))
+                    ver[f"{pname}|{k}"] = dict(pop=pname, label=k, best=best, auc=r[f"{best}|mean"]["auc"], lo=r[f"{best}|mean"]["lo"], hi=r[f"{best}|mean"]["hi"],
+                                               gain=g["d"], gain_lo=g["lo"], gain_hi=g["hi"], verdict=verdict(r[f"{best}|mean"], g), pos=int(y[m].sum()),
+                                               logs_pos=len(set(logs[m][y[m]])), blind=r["blind|mean"]["auc"],
+                                               priv=r["priv|mean"]["auc"] if "priv" in lad else np.nan)
         L = pd.DataFrame(rows)
         L.to_csv(out / "ladder.csv", index=False)
         pd.DataFrame(gains).to_csv(out / "gains.csv", index=False)
@@ -193,32 +204,47 @@ def cmd_report(a):
         pc = []
         if s0:
             ens = np.mean([s0["S0-step-s0"], s0["S0-step-s1"]], 0)
-            S0s = {"S0 (mean of seeds)": ens, "S0 blind seed 0": s0["S0-blind-s0"]}
-            for k, col in (("a", 0), ("b", 1), ("A", 0)):
-                y, m = label_mask(D, k)
-                r = read(y[m], {nm: own(o, col)[m] for nm, o in S0s.items()}, logs[m])
-                pc += [dict(label=k, score=nm, auc=v["auc"], lo=v["lo"], hi=v["hi"], n=int(m.sum()), pos=int(y[m].sum())) for nm, v in r.items()]
-            # lateral-by-class split of the S0 agent read: positives by contact type against the same no-contact negatives
-            ya, ma = label_mask(D, "a")
-            Al = D.A.to_numpy()
-            veh = D.a_cls.to_numpy() == 0
-            neg = ma & ~ya
-            for nm, pos in (("A-type: vehicle ahead in own lane (A positive)", ya & (Al == 1)), ("other vehicle contact (lateral / go-around / drift / cut-in / crossing)", ya & (Al != 1) & veh),
-                            ("other object (pedestrian, cyclist, generic)", ya & (Al != 1) & ~veh), ("all agent contacts (S0 G1)", ya)):
-                mm = ma & (pos | neg)
-                for snm, o in S0s.items():
-                    rr = read(pos[mm], {snm: own(o, 0)[mm]}, logs[mm], 2000)[snm]
-                    pc.append(dict(label="agent split", subset=nm, score=snm, auc=rr["auc"], lo=rr["lo"], hi=rr["hi"], n=int(mm.sum()), pos=int(pos[mm].sum()),
-                                   logs_pos=len(set(logs[mm][pos[mm]]))))
-                for rung in ("vis", "nat"):
-                    if rung in lad:
-                        rr = read(pos[mm], {rung: score(rung, "a")[mm]}, logs[mm], 2000)[rung]
-                        pc.append(dict(label="agent split", subset=nm, score=f"ladder {rung} (lat head)", auc=rr["auc"], lo=rr["lo"], hi=rr["hi"], n=int(mm.sum()),
-                                       pos=int(pos[mm].sum()), logs_pos=len(set(logs[mm][pos[mm]]))))
+            S0s = {"S0 (mean of seeds)": ens, "S0 step seed 0": s0["S0-step-s0"], "S0 step seed 1": s0["S0-step-s1"], "S0 blind seed 0": s0["S0-blind-s0"]}
+            s0sc = lambda o, col: o[ii, ss, col]  # noqa: E731
+            for pname, pm in pops.items():
+                for k, col in (("a", 0), ("b", 1)):
+                    y, m = label_mask(D, k)
+                    m = m & pm
+                    r = read(y[m], {nm: s0sc(o, col)[m] for nm, o in S0s.items()}, logs[m])
+                    pc += [dict(pop=pname, label=k, subset="all", score=nm, auc=v["auc"], lo=v["lo"], hi=v["hi"], n=int(m.sum()), pos=int(y[m].sum()),
+                                logs_pos=len(set(logs[m][y[m]]))) for nm, v in r.items()]
+                # lateral-by-class split of the agent read: positives by contact type against the same no-contact negatives
+                ya, ma = label_mask(D, "a")
+                ma = ma & pm
+                Al = D.A.to_numpy()
+                veh = D.a_cls.to_numpy() == 0
+                neg = ma & ~ya
+                for nm, pos in (("A-type: vehicle ahead in own lane (A positive)", ya & (Al == 1)),
+                                ("other vehicle contact (lateral / go-around / drift / cut-in / crossing)", ya & (Al != 1) & veh),
+                                ("other object (pedestrian, cyclist, generic object)", ya & (Al != 1) & ~veh)):
+                    mm = ma & (pos | neg)
+                    sc = {snm: s0sc(o, 0)[mm] for snm, o in S0s.items() if "seed" not in snm or "blind" in snm}
+                    for rung in ("vis", "nat", "priv"):
+                        if rung in lad:
+                            sc[f"ladder {rung} (lat head)"] = score(rung, "a")[mm]
+                    if "vis" in lad:
+                        sc["ladder vis (A head)"] = score("vis", "A")[mm]
+                    rr = read(pos[mm], sc, logs[mm], 2000)
+                    pc += [dict(pop=pname, label="agent split", subset=nm, score=snm, auc=v["auc"], lo=v["lo"], hi=v["hi"], n=int(mm.sum()), pos=int(pos[mm].sum()),
+                                logs_pos=len(set(logs[mm][pos[mm]]))) for snm, v in rr.items()]
+            # the S0 lateral head as a score for the longitudinal labels (descriptive)
+            for pname, pm in pops.items():
+                for k in LC.LONG:
+                    y, m = label_mask(D, k)
+                    m = m & pm
+                    r = read(y[m], {"S0 agent logit": s0sc(ens, 0)[m], "S0 boundary logit": s0sc(ens, 1)[m]}, logs[m], 2000)
+                    pc += [dict(pop=pname, label=k, subset="S0 head as a score", score=nm, auc=v["auc"], lo=v["lo"], hi=v["hi"], n=int(m.sum()), pos=int(y[m].sum()))
+                           for nm, v in r.items()]
         pd.DataFrame(pc).to_csv(out / "positive_control.csv", index=False)
-        # ---- strata (descriptive): speed band, sub-class, state family, "stop / turn ahead" for every rung's two-seed score
+        # ---- strata (descriptive, P1): speed band, sub-class, population, state family, user class, decision-relevant subsets; every rung's two-seed score
         st = []
         strata = [("speed band", LC.SPEED_NAMES[b], D.band.to_numpy() == b) for b in range(4)] + [("states", f, (D.fam == f).to_numpy()) for f in FAMS]
+        strata += [("query", p_, (D["pop"] == p_).to_numpy()) for p_ in ("own", "arc")]
         strata += [("user class", B.CLS[c], (D.cls == c).to_numpy()) for c in range(4)] + [("> 45 deg", "yes", D.gt45.to_numpy())]
         for k in LC.LONG:
             y, m = label_mask(D, k)
@@ -240,28 +266,13 @@ def cmd_report(a):
                     st.append(dict(label=k, stratum=sname, value=val, rung=rung, auc=v["auc"], lo=v["lo"], hi=v["hi"], n=int(mm.sum()), pos=int(y[mm].sum()),
                                    logs_pos=len(set(logs[mm][y[mm]]))))
         pd.DataFrame(st).to_csv(out / "strata.csv", index=False)
-        # ---- the S0 lateral head as a score for the longitudinal labels (descriptive)
-        if s0:
-            rows = []
-            for k in LC.LONG:
-                y, m = label_mask(D, k)
-                r = read(y[m], {"S0 agent logit": own(ens, 0)[m], "S0 boundary logit": own(ens, 1)[m]}, logs[m], 2000)
-                rows += [dict(label=k, score=nm, auc=v["auc"], lo=v["lo"], hi=v["hi"]) for nm, v in r.items()]
-            pd.DataFrame(rows).to_csv(out / "s0_on_long.csv", index=False)
-        # ---- arc family (the own plan re-timed x c, c ~ U(0.5, 1.5); descriptive, more positives)
-        rows = []
-        qs = list(range(16, 20))
-        for k in LC.LONG:
-            lab = X[f"{k.lower()}_lab"][:, qs]
-            y, m = (lab == 1).ravel(), ((lab >= 0) & R["qok"][:, qs]).ravel()
-            lg = np.repeat(R["log"], len(qs))
-            sc = {rung: np.mean([pr[(rung, s)][k][:, qs, H.IDX[k]] for s in (0, 1)], 0).ravel() for rung in lad}
-            r = read(y[m], {kk: v[m] for kk, v in sc.items()}, lg[m], 2000)
-            rows += [dict(label=k, rung=rung, auc=v["auc"], lo=v["lo"], hi=v["hi"], n=int(m.sum()), pos=int(y[m].sum()), logs_pos=len(set(lg[m][y[m]]))) for rung, v in r.items()]
-        pd.DataFrame(rows).to_csv(out / "arc_family.csv", index=False)
+        # ---- operating point for the OOD lead times: A logit at 2 % of the P1 A negatives, per non-privileged rung (two-seed score)
+        y, m = label_mask(D, "A")
+        thr = {rung: float(np.quantile(score(rung, "A")[m & ~y], 0.98)) for rung in lad}
+        (out / "thresholds.json").write_text(json.dumps(thr, indent=1))
         run.summary.update(verdict=ver)
-        with pd.option_context("display.width", 250, "display.max_rows", 400):
-            print(L.to_string(index=False))
+        with pd.option_context("display.width", 250, "display.max_rows", 500):
+            print(L[L.score == "mean"].to_string(index=False))
             print(pd.DataFrame(gains).to_string(index=False))
             print(json.dumps(ver, indent=1))
             print(pd.DataFrame(pc).to_string(index=False))
