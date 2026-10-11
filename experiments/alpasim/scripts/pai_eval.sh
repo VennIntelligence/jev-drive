@@ -9,6 +9,7 @@
 #   "-e JEV_VCONT=1.0 -e JEV_LEAD=1"), IMG / DRV_PY / HARMONIZER as pai_run.sh. The checkpoint is mounted into the driver image.
 #   JOIN=1: these cards join a run that is already going on <out root> (same tag and lists): they take unclaimed chunks and leave STATUS,
 #   DONE / ERROR and eval.json to the first call. A card freed by another job is added this way.
+#   JOIN=1 CARDS=" " (no card): writes the chunk lists once, checks the checkpoint and returns (pai_queue.sh starts from this).
 # State: <out>/{STATUS, DONE | ERROR, log.txt, eval.json (scenes, wall, scenes per hour)}, chunk lists in <out>/chunks/, one run per chunk in
 # <out>/runs/<lowercase tag>_<chunk> (finished chunks are skipped: rerunning resumes). Read with pai_eval_report.py.
 set -uo pipefail
@@ -42,7 +43,7 @@ worker() {  # card: takes chunks until none is left; a card that reads the 2026-
   done
 }
 pids=(); for g in $CARDS; do worker "$g" & pids+=($!); sleep 20; done      # staggered: two stacks starting at once race for the wizard's docker network
-wait "${pids[@]}"                                                         # the workers only: a bare wait also waits for the log tee above, which never ends
+(( ${#pids[@]} )) && wait "${pids[@]}"                                    # the workers only: a bare wait also waits for the log tee above, which never ends
 (( J )) && { st "joined cards $CARDS: no chunk left"; exit 0; }
 busy() {  # a claimed chunk of a joined card is still running (its driver container is up)
   local c; for c in "$O"/claims/*; do c=$(basename "$c"); [[ -f $O/runs/${L}_$c/DONE ]] && continue
