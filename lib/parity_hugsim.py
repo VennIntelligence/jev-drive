@@ -43,6 +43,7 @@ NAV_MAP = (2, 0, 1)                                                  # HUGSIM co
 SIDE = ("CAM_FRONT_LEFT", "CAM_FRONT_RIGHT", "CAM_BACK")             # order of parity_adapter.SIDE_CAMS (L0, R0, B0)
 KEYS_S = np.array([-1.5, -1.0, -0.5, 0.0])                           # history keys on the model clock (NAVSIM 2 Hz), oldest first
 SIM_DT = 0.25
+M1_BACK, M2_BACK = (7, 5, 2, 0), (6, 4, 2, 0)                        # simulator steps back of the 4 keys, oldest first: model clock / real clock (frame_ab.md)
 
 
 def mount_yaw_deg(calib: dict) -> float:
@@ -149,3 +150,61 @@ class ParityInputs:
         rec = {"ego": np.round(ego, 4).tolist(), "gated": gated, "ax_raw": round(float(np.ravel(info.get("accelerate", 0.0))[0]), 4), "bias_rms": round(float(np.sqrt(np.mean(np.square(b.astype(np.float32))))), 5),
                "prep_ms": round(1e3 * (t1 - t0), 1), "rtt_ms": round(1e3 * (time.perf_counter() - t1), 1)}
         return b, rec
+
+
+# ---------------------------------------------------------------- stateless training protocol (sh30_core.Core.plan) on HUGSIM states
+# State rows as zs_agent.py opt trace_frames writes them: [t, x, y, theta, v, accelerate, command, ...] per simulator step.
+
+def hist_of(st, n: int):
+    """jevdrive.hugsim_zs.History of the first n + 1 state rows and the info fields ego_inputs reads."""
+    h = Z.History()
+    h.t, h.pos, h.th, h.v = list(st[:n + 1, 0]), list(st[:n + 1, 1:3]), list(st[:n + 1, 3]), list(st[:n + 1, 4])
+    return h, {"ego_velo": st[n, 4], "accelerate": st[n, 5], "command": int(st[n, 6])}
+
+
+def core_inputs(st, img, n: int, back, scale: float, d: float):
+    """sh30_core.Core.plan arguments of decision n (the offline arms `wd` / `b` of experiments/hugsim/results/frame_ab.md and the agent opt
+    `stateless`): the keys that exist (oldest first; img[k] = the packed frame of simulator step k), their rear-axle poses in the frame of step
+    n on a clock `scale` times faster than the simulator's (ego_inputs: the same poses, velocity and acceleration the bias server gets at scale
+    1.25), per-key body velocity, the yaw rate of the oldest key (cold start only). Also returns the ego features of ego_inputs."""
+    h, info = hist_of(st, n)
+    ego, pose = ego_inputs(h, info, d, scale)
+    have = [i for i, bk in enumerate(back) if n - bk >= 0]
+    tq = st[n, 0] + KEYS_S * scale
+    v = np.interp(tq, st[:n + 1, 0], st[:n + 1, 4]) * scale
+    k0 = n - back[have[0]]
+    w = -(st[min(k0 + 1, n), 3] - st[k0, 3]) / (SIM_DT / scale) if n > k0 else 0.0          # left-positive, on the arm's clock
+    cmd = np.zeros(4, np.float32)
+    cmd[NAV_MAP[int(st[n, 6])]] = 1.0
+    return dict(keys=[img[n - back[i]] for i in have], pose=pose[have], vel=np.c_[v[have], np.zeros(len(have))],
+                acc=np.array([st[n, 5] * scale ** 2, 0.0]), cmd=cmd, yaw_rate=float(w)), ego
+
+
+class Stateless:
+    """Agent opt `stateless` (experiments/hugsim/plans/2026-10-11-stateless-cl-prereg.md, results/stateless_cl.md): every decision goes through
+    the training protocol on the real clock (mapping M2 = arm `b` of frame_ab.md: keys = the renders of steps n, n-2, n-4, n-6 at their own
+    poses, 8-slot warp lattice, nothing dilated, sh30_core's own cold start while fewer than 4 keys exist) instead of the queued ONNX. This
+    class keeps the last 7 packed frames and the state rows and asks the Core server (experiments/hugsim/scripts/stateless_server.py, which
+    calls sh30_core.Core.plan unchanged) over the policy socket; the reply has the fields of hugsim_zs_server.Openpilot.plan."""
+
+    def __init__(self, sock, d: float, cam_h: float, lht: bool = False):
+        self.sock, self.d, self.lht = sock, float(d), bool(lht)
+        self.cam_t = [float(d), 0.0, float(cam_h)]
+        self.st, self.img = [], {}
+
+    def step(self, img2: np.ndarray, row) -> tuple[dict, dict]:
+        """img2: this step's packed frame; row: [t, x, y, theta, v, accelerate, command] -> (reply info, reply arrays)."""
+        n = len(self.st)
+        self.st.append(np.asarray(row, np.float64)[:7])
+        self.img[n] = img2
+        self.img.pop(n - max(M2_BACK) - 1, None)
+        kw, _ = core_inputs(np.stack(self.st), self.img, n, M2_BACK, 1.0, self.d)
+        t0 = time.perf_counter()
+        wire.send(self.sock, {"cmd": "plan", "stateless": True, "cam_t": self.cam_t, "yaw_rate": kw["yaw_rate"], "lht": self.lht,
+                              "speed": float(self.st[-1][4])},
+                  {"keys": np.stack(kw["keys"]), "pose": np.asarray(kw["pose"], np.float64), "vel": np.asarray(kw["vel"], np.float64),
+                   "acc": np.asarray(kw["acc"], np.float64), "cmd": kw["cmd"]})
+        info, out = wire.recv(self.sock)
+        info["rtt_ms"] = 1e3 * (time.perf_counter() - t0)
+        info["nkeys"] = len(kw["keys"])
+        return info, out

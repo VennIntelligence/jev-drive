@@ -6,7 +6,8 @@ A run = (model, preset) over a scenario set; units are scenarios. Stages:
              under $DATA_DIR/runs/op_parity/hugsim/onnx is linked instead of rebuilt
   w<i>       K worker jobs (one per card by default), each starting its own servers (parity: bias server pp_hugsim.py serve +
              policy server hugsim_zs_server.py --onnx; onnx: policy server; WA-JEPA: none, its client loads the model) and W
-             scenario slots. The slots of all jobs pull from one shared queue (claim files), longest expected scenario first,
+             scenario slots; with the agent opt `stateless` (parity arms; experiments/hugsim/results/stateless_cl.md) the job's only
+             server is the training-protocol server stateless_server.py (sh30_core.Core) on the policy socket. The slots of all jobs pull from one shared queue (claim files), longest expected scenario first,
              so the cards finish together. Every scenario is one `zs_run.py run` of that single scenario (resumable rows in
              <run>/results.csv), watched: no sim.log growth for `stall_s` or longer than `timeout_s` -> its process tree is
              stopped (jevdrive.cl.procs) and it is retried; before every scenario each server is checked (process alive, socket
@@ -43,6 +44,7 @@ from .models import REPO, TS_OPTS, Model, data_dir, resolve
 ZS_RUN = REPO / "experiments/hugsim/archive/zs_run.py"
 SERVER = REPO / "experiments/hugsim/archive/hugsim_zs_server.py"
 PPH = REPO / "experiments/op_parity/scripts/pp_hugsim.py"
+STATELESS = REPO / "experiments/hugsim/scripts/stateless_server.py"
 LEGACY_ONNX = lambda: data_dir() / "runs/op_parity/hugsim/onnx"  # noqa: E731
 from ..openpilot.interface import HUGSIM_PRESETS
 
@@ -73,6 +75,8 @@ def configuration(preset="exam", opts=None, controller="", controller_env=None, 
         raise ValueError("parity options must be an object")
     if options.get("parity", {}).get("socket"):
         raise ValueError("bench manages the parity socket")
+    if options.get("stateless") is not None and not isinstance(options["stateless"], dict):
+        raise ValueError("stateless options must be an object")
     for k, v in env.items():
         if k not in CONTROLLER_ENV:
             raise ValueError(f"unsupported controller env {k!r}: {CONTROLLER_ENV}")
@@ -141,6 +145,9 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
         if not Path(identity["onnx"]).is_file():
             raise FileNotFoundError(identity["onnx"])
     preset = identity["preset"]
+    stateless = identity["opts"].get("stateless") is not None
+    if stateless and m.family != "parity":
+        raise ValueError("the stateless training protocol serves parity arms only")
     if m.family == "wajepa" and preset != "exam":
         raise SystemExit("WA-JEPA runs the exam preset only (its client has no openpilot lateral path)")
     run_dir = Path(run_dir)
@@ -174,7 +181,7 @@ def stages(m: Model, preset: str, run_dir: Path, scenarios: list, workers: int =
     if todo:
         for i in range(k):
             S.append(R.Stage(f"w{i}", R.stage_cmd("jev", "hugsim-worker", run_dir, i), done=str(run_dir / "workers" / f"w{i}.DONE"),
-                             vram=round(base + per * w, 1), cpu=2 * w + 3, ram=ram, after=[s.name for s in S if s.name == "onnx"],
+                             vram=round(base + per * w, 1), cpu=2 * w + 3 + (8 if stateless else 0), ram=ram, after=[s.name for s in S if s.name == "onnx"],
                              tries=2))
     S.append(R.Stage("collect", R.stage_cmd("hugsim", "hugsim-collect", run_dir), done=str(run_dir / "DONE"), vram=0.5, cpu=4, ram=16,
                      after=[s.name for s in S if s.name.startswith("w")]))
@@ -294,7 +301,7 @@ class Server:
 class Servers:
     """The model's resident servers of one worker job; `ensure` pings them and restarts them when needed."""
 
-    def __init__(self, m: Model, run_dir: Path, i: int):
+    def __init__(self, m: Model, run_dir: Path, i: int, stateless: bool = False):
         self.m, self.lock, self.restarts = m, threading.Lock(), 0
         d = run_dir / "servers"
         d.mkdir(parents=True, exist_ok=True)
@@ -302,6 +309,11 @@ class Servers:
         tmp.mkdir(parents=True, exist_ok=True)
         env = dict(os.environ)
         self.list, self.op_sock, self.bias_sock = [], "", ""
+        if stateless:                                                 # agent opt `stateless`: sh30_core.Core behind the policy socket, no ONNX / bias server
+            self.op_sock = str(tmp / "sl.sock")
+            self.list.append(Server("stateless", [R.py("op-train"), "-u", str(STATELESS), "--tag", m.name, "--socket", self.op_sock,
+                                                  "--ready-file", str(d / f"w{i}-sl.ready")], self.op_sock, d / f"w{i}-sl.ready", d / f"w{i}-sl.log", env))
+            return
         if m.family == "parity":
             self.bias_sock = str(tmp / "bias.sock")
             tag = "P3-init" if m.name == "P0" else m.name          # P0: shipped weights + an untrained P3 adapter (bias exactly 0)
@@ -468,7 +480,7 @@ def worker(run_dir: str, i: int) -> None:
     tree = cfg.get("controller") or configuration(cfg["preset"])["controller"]
     subprocess.run([R.py("hugsim"), str(ZS_RUN), "setup-trees", tree], check=True, cwd=REPO)
     q = Queue(run_dir, cfg["scenarios"], i)
-    srv = Servers(m, run_dir, i)
+    srv = Servers(m, run_dir, i, stateless=cfg.get("opts", {}).get("stateless") is not None)
     stop_beat = threading.Event()
 
     def beat():

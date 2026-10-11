@@ -32,33 +32,18 @@ from jevdrive.data import splits  # noqa: E402
 from jevdrive.openpilot.interface import HUGSIM_HEIGHT  # noqa: E402
 from jevdrive.run import Run, cli_args  # noqa: E402
 
-M1_BACK, M2_BACK = (7, 5, 2, 0), (6, 4, 2, 0)        # simulator steps back of the 4 keys, oldest first
+M1_BACK, M2_BACK = PH.M1_BACK, PH.M2_BACK            # simulator steps back of the 4 keys, oldest first
 DIL, SIM_DT = 1.25, 0.25
 
 
 def history(S, n):
     """jevdrive.hugsim_zs.History of the first n + 1 recorded steps and the info fields parity_hugsim.ego_inputs reads."""
-    h, st = HZ.History(), S["state"]
-    h.t, h.pos, h.th, h.v = list(st[:n + 1, 0]), list(st[:n + 1, 1:3]), list(st[:n + 1, 3]), list(st[:n + 1, 4])
-    return h, {"ego_velo": st[n, 4], "accelerate": st[n, 5], "command": int(st[n, 6])}
+    return PH.hist_of(S["state"], n)
 
 
 def core_inputs(S, n, back, scale, d):
-    """Core.plan arguments of decision n: the keys that exist (oldest first), their rear-axle poses in the frame of step n on a clock
-    `scale` times faster than the simulator's (parity_hugsim.ego_inputs: the same poses, velocity and acceleration the bias server gets
-    at scale 1.25), per-key body velocity, the yaw rate of the oldest key (cold start only)."""
-    h, info = history(S, n)
-    ego, pose = PH.ego_inputs(h, info, d, scale)
-    st = S["state"]
-    have = [i for i, bk in enumerate(back) if n - bk >= 0]
-    tq = st[n, 0] + PH.KEYS_S * scale
-    v = np.interp(tq, st[:n + 1, 0], st[:n + 1, 4]) * scale
-    k0 = n - back[have[0]]
-    w = -(st[min(k0 + 1, n), 3] - st[k0, 3]) / (SIM_DT / scale) if n > k0 else 0.0          # left-positive, on the arm's clock
-    cmd = np.zeros(4, np.float32)
-    cmd[PH.NAV_MAP[int(st[n, 6])]] = 1.0
-    return dict(keys=[S["img2"][n - back[i]] for i in have], pose=pose[have], vel=np.c_[v[have], np.zeros(len(have))],
-                acc=np.array([st[n, 5] * scale ** 2, 0.0]), cmd=cmd, yaw_rate=float(w)), ego
+    """Core.plan arguments of decision n (lib/parity_hugsim.core_inputs, shared with the agent opt `stateless`)."""
+    return PH.core_inputs(S["state"], S["img2"], n, back, scale, d)
 
 
 def main():

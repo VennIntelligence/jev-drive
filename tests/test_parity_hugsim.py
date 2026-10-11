@@ -33,5 +33,23 @@ class ZeroAcc(unittest.TestCase):
         np.testing.assert_array_equal(e0, e2)
 
 
+class StatelessInputs(unittest.TestCase):
+    """core_inputs on the real clock (agent opt `stateless`, frame_ab arm `b`): key count through the cold start, undilated speed and poses."""
+
+    def test_keys_and_clock(self):
+        t = np.arange(12) * 0.25
+        st = np.stack([t, np.zeros(12), 5.0 * t, np.zeros(12), np.full(12, 5.0), np.full(12, 0.4), np.full(12, 2.0)], -1)
+        img = {k: np.full((2, 6, 4, 4), k, np.uint8) for k in range(12)}
+        for n, m in ((0, 1), (1, 1), (2, 2), (3, 2), (4, 3), (5, 3), (6, 4), (11, 4)):
+            kw, _ = PH.core_inputs(st, img, n, PH.M2_BACK, 1.0, 1.0)
+            self.assertEqual(len(kw["keys"]), m)
+            self.assertEqual([int(k[0, 0, 0, 0]) for k in kw["keys"]], [n - b for b in PH.M2_BACK if n - b >= 0])
+        np.testing.assert_allclose(kw["pose"][:, 0], [-7.5, -5.0, -2.5, 0.0], atol=1e-9)      # 5 m/s, keys 0.5 s apart
+        np.testing.assert_allclose(kw["vel"][:, 0], 5.0)
+        np.testing.assert_allclose(kw["acc"], [0.4, 0.0])
+        kd, _ = PH.core_inputs(st, img, 11, PH.M1_BACK, 1.25, 1.0)                              # the dilated bridge arm: speed x 1.25
+        np.testing.assert_allclose(kd["vel"][:, 0], 6.25)
+
+
 if __name__ == "__main__":
     unittest.main()

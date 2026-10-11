@@ -81,6 +81,14 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      at full precision, the ego state (time, position, heading, speed, acceleration, command), desire, model steps, fed
                      speed, and the model's plan as returned (pos, yaw, vel, action curvature / acceleration); step 0 also writes
                      zs_frames/setup.json (dataset, rear offset, dilation). Plans and zs_steps.jsonl are unchanged
+                     stateless (openpilot parity arms, dict, {} = defaults, default off; plans/2026-10-11-stateless-cl-prereg.md,
+                     results/stateless_cl.md): every decision is served through the training protocol on the real clock instead of the
+                     queued ONNX - keys = the packed frames of steps n, n-2, n-4, n-6 at their own poses, 8-slot warp lattice,
+                     sh30_core.Core.plan called unchanged by the server behind HUGSIM_ZS_SOCKET (scripts/stateless_server.py), its own
+                     cold start while fewer than 4 keys exist (no static warm-up), no desire input, nothing dilated: speed, ego features
+                     and plan times are the simulator's (lib/parity_hugsim.Stateless). The lateral path needs OP_CTRL delay 0.2 (the
+                     lateralDelay on the real clock; 0.25 is its dilated value) and the agent refuses any other; not combined with
+                     parity / derot / lstab / op_lead / lead_margin / op_clock hold. Key: lht (default: the scene's traffic flag)
 
 Interface (jevdrive/openpilot/interface.py, docs/openpilot-interface.md): experiments/hugsim/archive/zs_run.py resolves a named
 preset (--preset spec | spec_cold | spec_hold | opctrl_d118 | exam) into the controller tree, OP_CTRL and these opts and passes HUGSIM_ZS_PRESET /
@@ -154,7 +162,18 @@ class Agent:
         else:
             self.op = Z.OpenpilotFrames(cal)
             cov = {"coverage": self.op.coverage, "sources": self.op.src_frac}
-        self.par = None
+        self.par = self.sl = None
+        if self.opts.get("stateless") is not None and self.model != "alpamayo":
+            import parity_hugsim as PH
+            bad = [k for k in ("parity", "derot_below", "derot_sel", "lstab", "op_lead", "lead_margin") if self.opts.get(k) is not None]
+            if bad or self.opts.get("op_clock", "dilate") == "hold" or self.server.get("server") != "stateless":
+                raise ValueError(f"stateless: not combined with {bad or 'op_clock hold'}, and needs the stateless server (got {self.server})")
+            delay = json.loads(os.environ.get("OP_CTRL") or "{}").get("delay")
+            if self.opts.get("op_ctrl") and delay != 0.2:
+                raise ValueError(f"stateless runs on the real clock: OP_CTRL delay must be 0.2 s (got {delay})")
+            so = self.opts["stateless"] if isinstance(self.opts["stateless"], dict) else {}
+            self.sl = PH.Stateless(self.sock, self.d, IF.HUGSIM_HEIGHT.get(self.dataset, 1.5),
+                                   lht=so.get("lht", list(self.opts.get("traffic", [1, 0])) == [0, 1]))
         if self.opts.get("parity") and self.model != "alpamayo":
             import parity_hugsim as PH
             if any(k in self.opts for k in ("derot_below", "derot_sel", "lstab")):
@@ -220,9 +239,23 @@ class Agent:
                                 xyz=out["xyz"], yaw=out["yaw"], plan=plan, rgb_front=obs["rgb"]["CAM_FRONT"])
         return plan
 
+    # ---- openpilot through the stateless training protocol (opt `stateless`): real clock, dilation 1 at every consumer
+    def stateless(self, img2, info, rec):
+        r, out = self.sl.step(img2, [float(info["timestamp"]), *self.hist.pos[-1], self.hist.th[-1], float(info["ego_velo"]),
+                                     float(np.ravel(info.get("accelerate", 0.0))[0]), int(info["command"])])
+        plan = Z.openpilot_to_plan(out["pos"], out["t"], 1.0)
+        self.ol_in = (None, None, float(out["vel"][0]))
+        rec.update(desire=0, reps=0, infer_ms=r.get("infer_ms"), rtt_ms=r["rtt_ms"], lead_prob=r.get("lead_prob"), lead_x=r.get("lead_x"),
+                   lead_v=r.get("lead_v"), engaged=r.get("engaged"), kappa=self.lateral_kappa(r, out), accel=r.get("accel"),
+                   model_pos=np.round(out["pos"][[4, 8, 12, 16, 20, 24, 32], :2], 3).tolist(), model_v=np.round(out["vel"][[0, 8, 16, 24]], 3).tolist(),
+                   sl={"nkeys": r["nkeys"], "valid": r.get("valid_slots"), "ms": r.get("ms"), "queue_ms": round(r.get("queue_ms", 0.0), 1)})
+        return plan
+
     # ---- openpilot: one simulator step = one 0.2 s context step (clock dilated by 1.25)
     def openpilot(self, obs, info, rec):
         img2 = self.op.pack(obs["rgb"])
+        if self.sl is not None:
+            return self.stateless(img2, info, rec)
         hold = self.opts.get("op_clock", "dilate") == "hold" and self.model != "lebowski"
         if hold:            # 20 Hz clock at face value: each 4 Hz frame held for 5 model steps (0.25 s)
             per_ctx, dil = 5, 1.0

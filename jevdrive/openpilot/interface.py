@@ -284,6 +284,10 @@ def resolve_hugsim(opts, controller, dataset="nuscenes", op_ctrl_env=None):
     if par and par.get("ego", True):              # experiments/op_parity (lib/parity_hugsim.py): what the served arm reads
         vals["command.channel"] += "+onehot"
         vals["inputs.extra"] = ("ego-status", "pose-history") + (("side-cams",) if par.get("side", True) else ())
+    if o.get("stateless") is not None:            # the training protocol on the real clock (lib/parity_hugsim.Stateless, results/stateless_cl.md)
+        vals.update({"history.frames": "warp-lattice", "history.rate_hz": 2.0, "history.clock": "real", "history.warmup": "backwarp",
+                     "lateral.delay_s": round(delay, 4) if opc else "n/a", "command.channel": "onehot",
+                     "inputs.extra": ("ego-status", "pose-history")})
     return vals
 
 
