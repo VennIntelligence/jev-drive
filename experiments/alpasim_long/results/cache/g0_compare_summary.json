@@ -1,0 +1,101 @@
+{
+ "a": "/root/autodl-tmp/ujs/datasets/alpasim_nuplan_long/after80",
+ "b": "/root/autodl-tmp/ujs/datasets/alpasim_nuplan",
+ "scenes": 1491,
+ "list_a": 1491,
+ "list_b": 12146,
+ "list_names_equal": false,
+ "list_location_split_equal": true,
+ "errors": 0,
+ "exact": 1491,
+ "prefix_equal": 1491,
+ "len_pairs": [
+  [
+   "56->56",
+   1491
+  ]
+ ],
+ "worst_prefix": [
+  {
+   "scene": "2021.10.06.07.26.10_veh-52_01245_02064-85570db66d605000",
+   "len_a": 56,
+   "len_b": 56,
+   "rows_a": 221,
+   "rows_b": 221,
+   "prefix_rows_a": 221,
+   "prefix_rows_b": 221,
+   "cols_equal": true,
+   "prefix_max_abs": 0.0,
+   "prefix_ids_equal": true,
+   "agents_a": 5,
+   "agents_b": 5,
+   "agents_prefix_equal": true,
+   "tls_bytes_equal": true
+  },
+  {
+   "scene": "2021.10.06.07.26.10_veh-52_01245_02064-2b10974c7f7e5444",
+   "len_a": 56,
+   "len_b": 56,
+   "rows_a": 295,
+   "rows_b": 295,
+   "prefix_rows_a": 295,
+   "prefix_rows_b": 295,
+   "cols_equal": true,
+   "prefix_max_abs": 0.0,
+   "prefix_ids_equal": true,
+   "agents_a": 7,
+   "agents_b": 7,
+   "agents_prefix_equal": true,
+   "tls_bytes_equal": true
+  },
+  {
+   "scene": "2021.10.06.07.26.10_veh-52_01245_02064-0004474e9e3f5470",
+   "len_a": 56,
+   "len_b": 56,
+   "rows_a": 345,
+   "rows_b": 345,
+   "prefix_rows_a": 345,
+   "prefix_rows_b": 345,
+   "cols_equal": true,
+   "prefix_max_abs": 0.0,
+   "prefix_ids_equal": true,
+   "agents_a": 10,
+   "agents_b": 10,
+   "agents_prefix_equal": true,
+   "tls_bytes_equal": true
+  },
+  {
+   "scene": "2021.10.06.07.26.10_veh-52_01245_02064-4ceacfb6be565ab3",
+   "len_a": 56,
+   "len_b": 56,
+   "rows_a": 224,
+   "rows_b": 224,
+   "prefix_rows_a": 224,
+   "prefix_rows_b": 224,
+   "cols_equal": true,
+   "prefix_max_abs": 0.0,
+   "prefix_ids_equal": true,
+   "agents_a": 4,
+   "agents_b": 4,
+   "agents_prefix_equal": true,
+   "tls_bytes_equal": true
+  },
+  {
+   "scene": "2021.10.06.07.26.10_veh-52_01245_02064-829e3a1622565a63",
+   "len_a": 56,
+   "len_b": 56,
+   "rows_a": 135,
+   "rows_b": 135,
+   "prefix_rows_a": 135,
+   "prefix_rows_b": 135,
+   "cols_equal": true,
+   "prefix_max_abs": 0.0,
+   "prefix_ids_equal": true,
+   "agents_a": 5,
+   "agents_b": 5,
+   "agents_prefix_equal": true,
+   "tls_bytes_equal": true
+  }
+ ],
+ "first_errors": []
+}

@@ -1,0 +1,129 @@
+{
+ "a": "/root/autodl-tmp/ujs/datasets/alpasim_nuplan_long/after160",
+ "b": "/root/autodl-tmp/ujs/datasets/alpasim_nuplan_long/after80",
+ "scenes": 1491,
+ "list_a": 1491,
+ "list_b": 1491,
+ "list_names_equal": true,
+ "list_location_split_equal": true,
+ "errors": 0,
+ "exact": 0,
+ "prefix_equal": 1400,
+ "len_pairs": [
+  [
+   "96->56",
+   1477
+  ],
+  [
+   "95->56",
+   3
+  ],
+  [
+   "85->56",
+   3
+  ],
+  [
+   "79->56",
+   2
+  ],
+  [
+   "70->56",
+   2
+  ],
+  [
+   "69->56",
+   1
+  ],
+  [
+   "90->56",
+   1
+  ],
+  [
+   "84->56",
+   1
+  ]
+ ],
+ "worst_prefix": [
+  {
+   "scene": "2021.09.16.19.49.00_veh-42_00990_01609-4abb45d9ee1a5c5c",
+   "len_a": 96,
+   "len_b": 56,
+   "rows_a": 204,
+   "rows_b": 112,
+   "prefix_rows_a": 112,
+   "prefix_rows_b": 112,
+   "cols_equal": true,
+   "prefix_max_abs": 1.7763568394002505e-14,
+   "prefix_ids_equal": true,
+   "agents_a": 3,
+   "agents_b": 2,
+   "agents_prefix_equal": true,
+   "tls_bytes_equal": true
+  },
+  {
+   "scene": "2021.09.16.19.27.01_veh-45_01749_03230-790a5a0973815ab3",
+   "len_a": 96,
+   "len_b": 56,
+   "rows_a": 1927,
+   "rows_b": 1337,
+   "prefix_rows_a": 1337,
+   "prefix_rows_b": 1337,
+   "cols_equal": true,
+   "prefix_max_abs": 2.220446049250313e-15,
+   "prefix_ids_equal": true,
+   "agents_a": 41,
+   "agents_b": 37,
+   "agents_prefix_equal": true,
+   "tls_bytes_equal": false
+  },
+  {
+   "scene": "2021.06.03.17.06.58_veh-35_02943_03220-d91f0c28683e52da",
+   "len_a": 96,
+   "len_b": 56,
+   "rows_a": 1620,
+   "rows_b": 1065,
+   "prefix_rows_a": 1065,
+   "prefix_rows_b": 1065,
+   "cols_equal": true,
+   "prefix_max_abs": 2.220446049250313e-15,
+   "prefix_ids_equal": true,
+   "agents_a": 31,
+   "agents_b": 25,
+   "agents_prefix_equal": true,
+   "tls_bytes_equal": true
+  },
+  {
+   "scene": "2021.06.28.16.29.11_veh-38_00022_00368-73a3a880d8d8522c",
+   "len_a": 96,
+   "len_b": 56,
+   "rows_a": 1143,
+   "rows_b": 653,
+   "prefix_rows_a": 653,
+   "prefix_rows_b": 653,
+   "cols_equal": true,
+   "prefix_max_abs": 1.1102230246251565e-15,
+   "prefix_ids_equal": true,
+   "agents_a": 14,
+   "agents_b": 13,
+   "agents_prefix_equal": true,
+   "tls_bytes_equal": false
+  },
+  {
+   "scene": "2021.06.03.13.55.17_veh-35_02866_03582-110bec4c6d2153d7",
+   "len_a": 96,
+   "len_b": 56,
+   "rows_a": 2055,
+   "rows_b": 1202,
+   "prefix_rows_a": 1202,
+   "prefix_rows_b": 1202,
+   "cols_equal": true,
+   "prefix_max_abs": 3.469446951953614e-18,
+   "prefix_ids_equal": true,
+   "agents_a": 35,
+   "agents_b": 27,
+   "agents_prefix_equal": true,
+   "tls_bytes_equal": false
+  }
+ ],
+ "first_errors": []
+}
