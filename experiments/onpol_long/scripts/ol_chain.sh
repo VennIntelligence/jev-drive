@@ -100,11 +100,11 @@ for r in json.load(open(f"{D}/aggregate/results-summary.json"))["rollouts"]:
 print("pruned", n, "rollout.asl")
 PY
   ;;
-report)  # the registered read of one family against its control and base (ol_report.py)
-  F=$1; B=$( [[ $F == Y ]] && echo YR10m10-F || echo P2H10S-F ); H=$DATA_DIR/runs/alpasim_long/held/h18
-  R=(); for t in ${F}SKC-L18-s0 ${F}SKC-L18-s1 ${F}NONE-L18-s0 ${F}NONE-L18-s1; do R+=("$t@18=$W/read/$t/run"); done
+report)  # the registered read of one family against its control and base (ol_report.py); ARM = SKC (round 1) or S (Amendment 3)
+  F=$1; A=${2:-SKC}; B=$( [[ $F == Y ]] && echo YR10m10-F || echo P2H10S-F ); H=$DATA_DIR/runs/alpasim_long/held/h18
+  R=(); for t in ${F}$A-L18-s0 ${F}$A-L18-s1 ${F}NONE-L18-s0 ${F}NONE-L18-s1; do R+=("$t@18=$W/read/$t/run"); done
   for t in $B-s0 $B-s1; do [[ -f $H/$t/aggregate/results-summary.json ]] && R+=("$t@18=$H/$t"); done
-  $P $E/scripts/ol_report.py --family $F --runs "${R[@]}" --out $W/report/$F || die "ol_report rc $?" ;;
+  $P $E/scripts/ol_report.py --family $F --arm $A --runs "${R[@]}" --out $W/report/$F$([[ $A == SKC ]] || echo "-$A") || die "ol_report rc $?" ;;
 submit-rest)   # everything after the rollouts of one base, chained with --after
   T=$1; F=$2; RIDS=$3; AL=${4:-}; N=L18$F; B=${T%-s0}; CTL=$( [[ $F == Y ]] && echo smoke10eY || echo smoke10e )
   [[ -f $DATA_DIR/runs/onpol_nuplan/rows/$CTL/r1.json ]] || die "no interpreted control $CTL"
@@ -144,5 +144,20 @@ submit-skc)    # Amendment 2: the arm's half again (geo -> tok -> strip; tok -> 
   done
   sub ol-report-$F "$(IFS=,; echo "${rids[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report $F > /dev/null || exit 1
   echo "submitted for $T: $(tail -n 8 $W/jobs.txt | tr '\n' ';')" ;;
+submit-s)      # Amendment 3: the S-only arm on the same pool (decision 259's recipe, no --on-lon), trainings -> reads -> report
+  T=$1; F=$2; N=L18$F
+  [[ -f $W/rows/$N/gates.json ]] && python3 -c "import json,sys; sys.exit(not json.load(open(sys.argv[1]))['pass'])" $W/rows/$N/gates.json || die "pool gates of $N not passed"
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
+            --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 3)" >> $W/jobs.txt; }
+  if [[ $F == Y ]]; then REC="--yr-mass 0.1 --label-bank"; SK="--agent-lam 10 --agent-on-only --shape --ho-w 3"
+  else REC="--ho ot1:4,yr1:4,bd4:5 --ho-w 3 --ho-excl navsim/body1-val-logs --agent-lam 10 --shape --label-bank"; SK=""; fi
+  OT="$TR $ON/scripts/on_train.py train --exp onpol_long --init $T --steps ${OL_STEPS:-10000}"
+  rids=()
+  for s in 0 1; do
+    a=$(sub ol-train-${F}S-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT $REC $SK --on on1_$N --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self --seed $s --tag ${F}S-L18-s$s) || exit 1
+    r=$(sub ol-read-${F}S-L18-s$s "$a" --vram 32 --cpu 8 --ram 90 --timeout-h 3 -- bash $E/scripts/ol_chain.sh read1 ${F}S-L18-s$s) || exit 1; rids+=($r)
+  done
+  sub ol-report-${F}S "$(IFS=,; echo "${rids[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report $F S > /dev/null || exit 1
+  echo "submitted for $T: $(tail -n 5 $W/jobs.txt | tr '\n' ';')" ;;
 *) die "unknown stage $STAGE" ;;
 esac

@@ -28,7 +28,7 @@ def main(a):
     K = pd.read_parquet(out / "per_scene_k.parquet")
     S["tag"] = S.label.str.split("@").str[0]
     f, base = a.family, BASE[a.family]
-    arm, ctl, bas = [f"{f}SKC-L18-s{s}" for s in (0, 1)], [f"{f}NONE-L18-s{s}" for s in (0, 1)], [f"{base}-s{s}" for s in (0, 1)]
+    arm, ctl, bas = [f"{f}{a.arm}-L18-s{s}" for s in (0, 1)], [f"{f}NONE-L18-s{s}" for s in (0, 1)], [f"{base}-s{s}" for s in (0, 1)]
     have = set(S.tag)
     assert set(arm + ctl + bas[:1]) <= have, f"missing reads: {sorted(set(arm + ctl + bas[:1]) - have)}"
     bas = [t for t in bas if t in have]
@@ -84,13 +84,13 @@ def main(a):
     R["cl1_strict"] = dict(score_ci_low_gt0=sc[0] > 0, atfault_not_above_base_mean=ac["z_atf"] <= R["base_seeds"]["z_atf"],
                            gt_lower_by_010=cc["gt"] - ac["gt"] >= 0.10, fixed_minus_broken_over_null=(fx - br) > R["null_max"])
     R["cl1_strict"]["met"] = all(R["cl1_strict"].values())
-    (out / f"report_{f}.json").write_text(json.dumps(R, indent=1) + "\n")
+    (out / f"report_{f}{a.arm}.json").write_text(json.dumps(R, indent=1) + "\n")
     row = lambda n, x: (f"| {n} | {x['score']:.4f} | {x['zero']:.1f} | {x['z_col']:.1f} / {x['z_off']:.1f} / {x['z_cor']:.1f} / {x['z_oth']:.1f} | {x['z_atf']:.1f} | {x['gt']:.3f} | "  # noqa: E731
                         f"{x['slope']:.4f} | " + " ; ".join(f"{t} {v['score']:.4f} / {v['zeros']} / {v['atf']} / {v['gt']:.3f}" for t, v in x["seeds"].items()) + " |")
     md = [f"# ONPOL-LONG round 1, family {f} (base {base}-s0): {len(scenes)} scenes, length `{a.length}`, {len(L)} logs", "",
           f"Dropped for every label alike: {len(fold)} scenes without a rollout in at least one label (route generation failed: route folds back).", "",
           "| | mean score | zeros | collision at fault / offroad / corridor / other zeros | at-fault zeros | GT distance (m) | drift slope k >= 4 (m / decision) | per seed: score / zeros / at-fault zeros / GT |",
-          "|:--|--:|--:|:--|--:|--:|--:|:--|", row(f"arm {f}SKC-L18 (S + K + C on-policy rows)", ac), row(f"control {f}NONE-L18 (same continuation, no rows)", cc),
+          "|:--|--:|--:|:--|--:|--:|--:|:--|", row(f"arm {f}{a.arm}-L18 ({ {'SKC': 'S + K on-policy rows (C dropped by K0)', 'S': 'S hinges only on the same rows (Amendment 3)'}.get(a.arm, a.arm)})", ac), row(f"control {f}NONE-L18 (same continuation, no rows)", cc),
           row(f"base {base}-s0", R["base_s0"]), row(f"base {base} seeds {', '.join(t[-1] for t in bas)}", R["base_seeds"]), "",
           "Zeros = scenes scored 0; a zero can carry more than one kind (offroad and corridor together), `other` = none of the three. Paired per-scene seed-mean differences, log-clustered 95 % CI (10 000 draws); zero columns are totals over the scenes:", "",
           "| a - b | mean score | zeros | at-fault zeros | collision / offroad / corridor / other zeros | GT distance (m) | fixed / broken |", "|:--|:--|:--|:--|:--|:--|:--|"]
@@ -104,7 +104,7 @@ def main(a):
            f"({ac['zero']:.1f} vs {cc['zero']:.1f}); at-fault zeros not above the control's (hard gate) {R['adopt']['atfault_not_above']} ({ac['z_atf']:.1f} vs {cc['z_atf']:.1f}); "
            f"GT distance not larger {R['adopt']['gt_not_larger']} ({ac['gt']:.3f} vs {cc['gt']:.3f} m).", "",
            f"CL-1 as written in closed-loop.md (reported beside it): {'met' if R['cl1_strict']['met'] else 'not met'} - {json.dumps({k: bool(v) for k, v in R['cl1_strict'].items()})}.", ""]
-    (out / f"report_{f}.md").write_text("\n".join(md))
+    (out / f"report_{f}{a.arm}.md").write_text("\n".join(md))
     print("\n".join(md))
 
 
@@ -112,5 +112,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--family", required=True, choices=sorted(BASE)), ap.add_argument("--runs", nargs="+", required=True)
     ap.add_argument("--out", required=True), ap.add_argument("--jobs", type=int, default=16)
+    ap.add_argument("--arm", default="SKC", help="arm family suffix: SKC (round 1) or S (Amendment 3)")
     ap.add_argument("--length", default="18", help="label suffix after @ (18 for the held read, pai for the Tokyo transfer read)")
     main(ap.parse_args())
