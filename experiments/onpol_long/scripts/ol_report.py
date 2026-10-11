@@ -39,8 +39,9 @@ def main(a):
     S["zero"], S["z_col"] = z.astype(int), (z & (S.collision_at_fault > 0)).astype(int)
     S["z_off"], S["z_cor"] = (z & (S.offroad > 0)).astype(int), (z & (S.left_corridor_laterally > 0)).astype(int)
     S["z_atf"] = (z & (S.offroad_or_collision_at_fault > 0)).astype(int)
+    S["z_oth"] = (z & ~(S.collision_at_fault > 0) & ~(S.offroad > 0) & ~(S.left_corridor_laterally > 0)).astype(int)
     S["gt"] = S.dist_to_gt_trajectory
-    piv = {c: S.pivot(index="scene", columns="tag", values=c) for c in ("score", "zero", "z_col", "z_off", "z_cor", "z_atf", "gt")}
+    piv = {c: S.pivot(index="scene", columns="tag", values=c) for c in ("score", "zero", "z_col", "z_off", "z_cor", "z_oth", "z_atf", "gt")}
     logs = S.drop_duplicates("scene").set_index("scene").log.reindex(scenes)
     L = np.array(sorted(logs.unique()))
     li = np.searchsorted(L, logs.to_numpy())
@@ -52,21 +53,22 @@ def main(a):
         return float(((kk.to_numpy() - kk.mean()) * x).sum() / (x * x).sum())
 
     def fam(tags):
-        r = {c: float(piv[c][tags].mean(1).mean() if c in ("score", "gt") else piv[c][tags].sum(0).mean()) for c in piv}
+        r = {c: float(piv[c][tags].mean(1).mean() if c in ("score", "gt") else piv[c][tags].sum(0).mean()) for c in piv}   # gt: nan-skipping
         return r | dict(seeds={t: dict(score=float(piv["score"][t].mean()), zeros=int(piv["zero"][t].sum()), atf=int(piv["z_atf"][t].sum()),
                                        gt=float(piv["gt"][t].mean())) for t in tags}, slope=slope(tags))
 
     def diff(A, Bt, c, total=False):
         d = (piv[c][A].mean(1) - piv[c][Bt].mean(1)).to_numpy() * (len(scenes) if total else 1)
-        bs = (W @ d) / W.sum(1)
-        return dict(diff=float(d.mean()), ci=[float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))])
+        ok = np.isfinite(d)                                                      # GT distance: scenes where every label has one
+        bs = (W[:, ok] @ d[ok]) / W[:, ok].sum(1)
+        return dict(diff=float(d[ok].mean()), ci=[float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))], n=int(ok.sum()))
 
     def fb(A, Bt):   # fixed = zero in every seed of B, in no seed of A; broken = the reverse
         za, zb = piv["zero"][A], piv["zero"][Bt]
         return int(((zb.min(1) == 1) & (za.max(1) == 0)).sum()), int(((za.min(1) == 1) & (zb.max(1) == 0)).sum())
     null = [abs(x - y) for p, q in ((ctl[0], ctl[1]),) + (((bas[0], bas[1]),) if len(bas) > 1 else ()) for x, y in [fb([p], [q])]]
     R = dict(family=f, base=base, scenes=len(scenes), logs=len(L), arm=fam(arm), control=fam(ctl), base_s0=fam(bas[:1]), base_seeds=fam(bas))
-    cols = ("score", "zero", "z_atf", "z_col", "z_off", "z_cor", "gt")
+    cols = ("score", "zero", "z_atf", "z_col", "z_off", "z_cor", "z_oth", "gt")
     R["pairs"] = {f"{n1} - {n2}": {c: diff(A, Bt, c, c.startswith("z")) for c in cols} | {"fixed_broken": fb(A, Bt)}
                   for n1, A, n2, Bt in (("arm", arm, "control", ctl), ("arm", arm, "base s0", bas[:1]), ("control", ctl, "base s0", bas[:1]))}
     R["null_max"] = max(null)
@@ -79,18 +81,18 @@ def main(a):
                            gt_lower_by_010=cc["gt"] - ac["gt"] >= 0.10, fixed_minus_broken_over_null=(fx - br) > R["null_max"])
     R["cl1_strict"]["met"] = all(R["cl1_strict"].values())
     (out / f"report_{f}.json").write_text(json.dumps(R, indent=1) + "\n")
-    row = lambda n, x: (f"| {n} | {x['score']:.4f} | {x['zero']:.1f} | {x['z_col']:.1f} / {x['z_off']:.1f} / {x['z_cor']:.1f} | {x['z_atf']:.1f} | {x['gt']:.3f} | "  # noqa: E731
+    row = lambda n, x: (f"| {n} | {x['score']:.4f} | {x['zero']:.1f} | {x['z_col']:.1f} / {x['z_off']:.1f} / {x['z_cor']:.1f} / {x['z_oth']:.1f} | {x['z_atf']:.1f} | {x['gt']:.3f} | "  # noqa: E731
                         f"{x['slope']:.4f} | " + " ; ".join(f"{t} {v['score']:.4f} / {v['zeros']} / {v['atf']} / {v['gt']:.3f}" for t, v in x["seeds"].items()) + " |")
     md = [f"# ONPOL-LONG round 1, family {f} (base {base}-s0): held {len(scenes)} scenes at 18 decisions, {len(L)} logs", "",
-          "| | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) | drift slope k 4..18 (m / decision) | per seed: score / zeros / at-fault zeros / GT |",
+          "| | mean score | zeros | collision at fault / offroad / corridor / other zeros | at-fault zeros | GT distance (m) | drift slope k 4..18 (m / decision) | per seed: score / zeros / at-fault zeros / GT |",
           "|:--|--:|--:|:--|--:|--:|--:|:--|", row(f"arm {f}SKC-L18 (S + K + C on-policy rows)", ac), row(f"control {f}NONE-L18 (same continuation, no rows)", cc),
           row(f"base {base}-s0", R["base_s0"]), row(f"base {base} seeds {', '.join(t[-1] for t in bas)}", R["base_seeds"]), "",
-          "Paired per-scene seed-mean differences, log-clustered 95 % CI (10 000 draws); zero columns are totals over the scenes:", "",
-          "| a - b | mean score | zeros | at-fault zeros | collision / offroad / corridor zeros | GT distance (m) | fixed / broken |", "|:--|:--|:--|:--|:--|:--|:--|"]
+          "Zeros = scenes scored 0; a zero can carry more than one kind (offroad and corridor together), `other` = none of the three. Paired per-scene seed-mean differences, log-clustered 95 % CI (10 000 draws); zero columns are totals over the scenes:", "",
+          "| a - b | mean score | zeros | at-fault zeros | collision / offroad / corridor / other zeros | GT distance (m) | fixed / broken |", "|:--|:--|:--|:--|:--|:--|:--|"]
     ci = lambda v, p=4: f"{v['diff']:+.{p}f} [{v['ci'][0]:+.{p}f}, {v['ci'][1]:+.{p}f}]"  # noqa: E731
     for n, p in R["pairs"].items():
-        md.append(f"| {n} | {ci(p['score'])} | {ci(p['zero'], 1)} | {ci(p['z_atf'], 1)} | {p['z_col']['diff']:+.1f} / {p['z_off']['diff']:+.1f} / {p['z_cor']['diff']:+.1f} | "
-                  f"{ci(p['gt'], 3)} | {p['fixed_broken'][0]} / {p['fixed_broken'][1]} |")
+        md.append(f"| {n} | {ci(p['score'])} | {ci(p['zero'], 1)} | {ci(p['z_atf'], 1)} | {p['z_col']['diff']:+.1f} / {p['z_off']['diff']:+.1f} / {p['z_cor']['diff']:+.1f} / {p['z_oth']['diff']:+.1f} | "
+                  f"{ci(p['gt'], 3)} ({p['gt']['n']} scenes) | {p['fixed_broken'][0]} / {p['fixed_broken'][1]} |")
     md += ["", f"Null of fixed - broken: max |fixed - broken| of the single-seed comparisons {f}NONE-L18 s0 / s1" + (f" and {base} s0 / s1" if len(bas) > 1 else "")
            + f" = {R['null_max']}.", "",
            f"**Adoption line (registered): {'ADOPTED' if R['adopt']['adopted'] else 'NOT adopted'}** - fewer zeros than the control {R['adopt']['fewer_zeros']} "

@@ -119,8 +119,8 @@ submit-rest)   # everything after the rollouts of one base, chained with --after
   OT="env PYTHONPATH=$PWD/$E/lib $TR $ON/scripts/on_train.py train --exp onpol_long --init $T --steps ${OL_STEPS:-10000}"
   rids=()
   for s in 0 1; do
-    a=$(sub ol-train-${F}SKC-s$s "$k" --train --vram 40 --cpu 6 --ram 60 --timeout-h 4 -- $OT $REC $SK $ONR --seed $s --tag ${F}SKC-L18-s$s) || exit 1
-    c=$(sub ol-train-${F}NONE-s$s "$AL" --train --vram 40 --cpu 6 --ram 60 --timeout-h 4 -- $OT $REC --seed $s --tag ${F}NONE-L18-s$s) || exit 1
+    a=$(sub ol-train-${F}SKC-s$s "$k" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT $REC $SK $ONR --seed $s --tag ${F}SKC-L18-s$s) || exit 1
+    c=$(sub ol-train-${F}NONE-s$s "$AL" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT $REC --seed $s --tag ${F}NONE-L18-s$s) || exit 1
     for x in "$a ${F}SKC-L18-s$s" "$c ${F}NONE-L18-s$s"; do set -- $x
       rids+=($(sub ol-read-$2 "$1" --vram 32 --cpu 8 --ram 90 --timeout-h 3 -- bash $E/scripts/ol_chain.sh read1 $2)) || exit 1; done
   done
