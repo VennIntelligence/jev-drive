@@ -1,0 +1,51 @@
+{
+ "rule": "sorted logs permuted with numpy.random.default_rng(0), taken into train until >= 1000 scenes; rest held",
+ "n_scenes": 1491,
+ "n_logs": 44,
+ "sources": {
+  "chunk0": {
+   "n": 234,
+   "sha256": "8a770fdc17e1d3689fc16b542721b7507fbb3e625e68988dfc62b6c65d4a65ce"
+  },
+  "chunk1": {
+   "n": 233,
+   "sha256": "e8aa0b3c08e399200024b2bf899ecee0e76708d6142d08bc8e726c449c8e80f8"
+  },
+  "chunk2": {
+   "n": 233,
+   "sha256": "4d0bd1d83fd29e66be95090a9e6664e631ac55066eb4abef7f23af68d7120928"
+  },
+  "cf1fresh": {
+   "n": 391,
+   "sha256": "9b65c1939b2921c1022f18e9de83adad288d6b03bd3ca133967b154acf4e1c0a"
+  },
+  "ot3new": {
+   "n": 400,
+   "sha256": "f244808cf24ece617ba9ed74991d8cb68cb9d542f355f23b5fb08d272ddf357f"
+  }
+ },
+ "train": {
+  "scenes": 1031,
+  "logs": 28,
+  "split_id": "alpasim_nuplan/onpol-train@v1:d2d88603e14a",
+  "by_source": {
+   "chunk0": 168,
+   "chunk1": 166,
+   "chunk2": 166,
+   "cf1fresh": 252,
+   "ot3new": 279
+  }
+ },
+ "held": {
+  "scenes": 460,
+  "logs": 16,
+  "split_id": "alpasim_nuplan/onpol-held@v1:84a54f7a5dc9",
+  "by_source": {
+   "chunk0": 66,
+   "chunk1": 67,
+   "chunk2": 67,
+   "cf1fresh": 139,
+   "ot3new": 121
+  }
+ }
+}
