@@ -1,0 +1,25 @@
+{
+ "rollouts": 2062,
+ "with_sim": 2050,
+ "t0_rel_s": {
+  "-1.5": 2050
+ },
+ "frame_err_max_m": 0.06520535901499742,
+ "ego_n": 4100,
+ "ego_max_m": 0.01821028797820944,
+ "ego_share_within": 1.0,
+ "act_n": 457034,
+ "act_nolog": 13830,
+ "act_median_m": 0.013405853890405012,
+ "act_p99_m": 0.09708836685166455,
+ "act_max_m": 0.8562101217540425,
+ "act_share_within": 0.99997374374773,
+ "act_yaw_p99_deg": 0.5655769770119249,
+ "act_yaw_max_deg": 36.92887366325668,
+ "path_dense_max_m": 0.08286492030910789,
+ "anchor_vs_sim_max_m": 2.480825389312406e-06,
+ "tol_ego_m": 0.3,
+ "tol_act_m": 0.5,
+ "imit_at_replay_max_m": 0.331920325756073,
+ "pass": false
+}

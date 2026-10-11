@@ -1,0 +1,57 @@
+{
+ "tol_m": 0.03,
+ "need": 0.99,
+ "tags": {
+  "P2H10S-F-s0": {
+   "n": 10193,
+   "mu_share": 0.9796919454527617,
+   "pose_share": 0.8030020602374178,
+   "mu_median": 0.0078125,
+   "mu_max": 0.046875,
+   "pose_median": 0.015625,
+   "pose_max": 0.09375,
+   "control": "P2H10S-F-s1",
+   "pose_share_within_32m": 0.8447954478563721,
+   "pose_share_one_ulp": 0.9101344059648778,
+   "pose_share_trainer_formula": 0.8048660845678407,
+   "rear_formula_max": 0.025770187377929688,
+   "single_n": 204,
+   "single_identical": 0.0,
+   "single_max": 0.1875,
+   "control_mu_share": 0.1286176787991759,
+   "control_pose_share": 0.013833022662611596,
+   "control_pose_median": 0.19928812980651855
+  },
+  "P2H10S-F-s1": {
+   "n": 10193,
+   "mu_share": 0.9800843716275875,
+   "pose_share": 0.7813205140782891,
+   "mu_median": 0.0078125,
+   "mu_max": 0.046875,
+   "pose_median": 0.015625,
+   "pose_max": 0.11768722534179688,
+   "control": "P2H10S-F-s0",
+   "pose_share_within_32m": 0.8188953203178652,
+   "pose_share_one_ulp": 0.8873736878249779,
+   "pose_share_trainer_formula": 0.7894633572059256,
+   "rear_formula_max": 0.025501251220703125,
+   "single_n": 204,
+   "single_identical": 0.0,
+   "single_max": 0.1875,
+   "control_mu_share": 0.14833709408417542,
+   "control_pose_share": 0.01707053860492495,
+   "control_pose_median": 0.19643211364746094
+  }
+ },
+ "a": false,
+ "c": true,
+ "b": true,
+ "control": "smoke10e",
+ "control_single": [
+  [
+   100,
+   1.0
+  ]
+ ],
+ "pass": false
+}
