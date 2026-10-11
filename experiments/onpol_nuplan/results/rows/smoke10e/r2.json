@@ -1,0 +1,24 @@
+{
+ "rollouts": 10,
+ "with_sim": 10,
+ "t0_rel_s": {
+  "-1.5": 10
+ },
+ "frame_err_max_m": 0.007012305928792255,
+ "ego_n": 20,
+ "ego_max_m": 0.0031266477992479896,
+ "ego_share_within": 1.0,
+ "act_n": 2273,
+ "act_median_m": 0.013011007167158854,
+ "act_p99_m": 0.06013030575812722,
+ "act_max_m": 0.17011786739634946,
+ "act_share_within": 1.0,
+ "act_yaw_p99_deg": 0.25227125558607344,
+ "act_yaw_max_deg": 36.75734226858064,
+ "path_dense_max_m": 0.018784303901000655,
+ "anchor_vs_sim_max_m": 2.04791754403641e-06,
+ "tol_ego_m": 0.3,
+ "tol_act_m": 0.5,
+ "imit_at_replay_max_m": 0.008267219178378582,
+ "pass": true
+}

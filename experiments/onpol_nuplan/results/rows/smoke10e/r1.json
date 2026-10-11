@@ -1,0 +1,27 @@
+{
+ "tol_m": 0.03,
+ "need": 0.99,
+ "tags": {
+  "P2H10S-F-s0": {
+   "n": 100,
+   "mu_share": 1.0,
+   "pose_share": 0.96,
+   "mu_median": 0.00390625,
+   "mu_max": 0.015625,
+   "pose_median": 0.011841773986816406,
+   "pose_max": 0.04358100891113281,
+   "control": "P2H10S-F-s1",
+   "pose_share_within_32m": 0.96,
+   "pose_share_one_ulp": 0.98,
+   "pose_share_trainer_formula": 0.95,
+   "rear_formula_max": 0.015684127807617188,
+   "single_n": 100,
+   "single_identical": 1.0,
+   "single_max": 0.0,
+   "control_mu_share": 0.26,
+   "control_pose_share": 0.05,
+   "control_pose_median": 0.11898660659790039
+  }
+ },
+ "pass": false
+}
