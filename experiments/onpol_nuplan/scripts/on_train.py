@@ -9,7 +9,7 @@ OffAgentHinge, ot_rows' off_hinge / offsets. Only joint_train's S subset is carr
                     match exactly); fresh optimiser, scaler and schedule; dev metrics are also logged at step 0. The encoder stays frozen as before.
   --on POOL --on-k 13 --on-mode imit|self|both
                     k rows of every batch are drawn uniformly (without replacement inside a batch) from the pool cache dir POOL with the rng stream
-                    [seed, 0, 53]: the same pool indices at every step in every mode (a running sha1 of them is logged as `on_hash`). The normal
+                    [seed, 0, 53]: the same pool indices at every step in every mode (a running sha1 of them is logged as `on_hash`, also at step 60). The normal
                     rows shrink by k; the hinge-only rows of --ho stay. Batch order: normal, on-policy, hinge-only. On-policy rows are never anchor
                     rows, never dev rows, and never carry P2H10's own drivable hinge or the imitation rows' agent term A.
       imit          imitation rows on the pool's 8-pose target (tab `fut`, the row's own frame): they enter pp_train.Losses like any imitation row
@@ -334,13 +334,14 @@ def cmd_train(a):
                 hist = []
                 el = time.time() - t0
                 run.scalars({f"loss/{q}": v for q, v in mm.items()} | {"throughput/steps_per_s": (step + 1) / el, "gpu/peak_gb": torch.cuda.max_memory_reserved() / 2 ** 30}, step + 1)
-                if (step + 1) % 100 == 0 or step + 1 == cfg.steps or step + 1 == 60:
+                if (step + 1) % 100 == 0 or step + 1 == cfg.steps:
                     run.info(f"step {step + 1}: " + ", ".join(f"{q} {v:.4f}" for q, v in mm.items() if "/" not in q)
                              + ("; on: " + ", ".join(f"{q[3:]} {v:.4f}" for q, v in mm.items() if q.startswith("on/")) + f"; on_hash {hsh}" if k_on else "")
                              + f"; {(step + 1) / el:.2f} it/s, {torch.cuda.max_memory_reserved() / 2 ** 30:.1f} GB")
                     run.status(f"step {step + 1}/{cfg.steps}")
-                    if k_on:
-                        run.summary.update({f"on_hash_{step + 1}": hsh})
+            if k_on and (step + 1 == 60 or (step + 1) % 1000 == 0 or step + 1 == cfg.steps):    # gate T3: the on-policy indices drawn so far
+                run.info(f"on_hash @ {step + 1}: {hsh}")
+                run.summary.update({f"on_hash_{step + 1}": hsh})
             if (step + 1) % cfg.eval_every == 0 or step + 1 == cfg.steps:
                 ev = T.dev_eval(model.eval(), Sd, dv_o, LS.W)
                 model.train()
@@ -490,7 +491,7 @@ def cmd_t3(a):
     res, bad, want = {}, [], dict(imit=(1, 0), self=(0, 1), both=(1, 1))
     for md, tag in zip(MODES, a.tags):
         sc, log = run_scalars(a.exp, tag)
-        hs = dict(re.findall(r"step (\d+): .*on_hash ([0-9a-f]+)", log))
+        hs = dict(re.findall(r"on_hash @ (\d+): ([0-9a-f]+)", log))
         k = int(re.search(r"(\d+) on-policy \(mode (\w+)", log).group(1))
         mode = re.search(r"(\d+) on-policy \(mode (\w+)", log).group(2)
         ni, nh = sc.get("loss/on/n_imit", {}), sc.get("loss/on/n_hinge", {})

@@ -4,13 +4,14 @@
 #   T1  60 steps, seed 0, one shard, no --init, no --on: bit-identical to joint_train.py with the S flags (joint_train.py ident)
 #   T2  --init P2H10S-F-s0, all shards: every tensor loaded, dev ADE at step 0 = the archived 0.545 to 3 decimals
 #   T3  imit / self / both draw the same on-policy indices over 60 steps (running sha1), per-mode row accounting, and the known-answer test
-#   scripts/tmux_run.sh on-gates bash experiments/onpol_nuplan/scripts/on_gates.sh [POOL]      (default onstand_navtrain_full.s2of12)
-# State: $DATA_DIR/runs/onpol_nuplan/gates/{STATUS, DONE | ERROR, log.txt, pool/<job>/}; results experiments/onpol_nuplan/results/gates/*.json.
-# Rerunning resumes (finished jobs are not resubmitted; their tags exist, a tag is never overwritten).
+#   scripts/tmux_run.sh on-gates bash experiments/onpol_nuplan/scripts/on_gates.sh [POOL [GEN]]      (default onstand_navtrain_full.s2of12, GEN "")
+# State: $DATA_DIR/runs/onpol_nuplan/gates<GEN>/{STATUS, DONE | ERROR, log.txt, pool/<job>/}; results experiments/onpol_nuplan/results/gates/*.json.
+# Rerunning resumes (finished jobs are not resubmitted; their tags ONG<GEN>-* exist and a tag is never overwritten: a new code version takes a new GEN).
+# The four all-shard runs go one after the other, so each gets the emptiest card and their steps / s are comparable.
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
-POOL=${1:-onstand_navtrain_full.s2of12}
-D=$DATA_DIR/runs/onpol_nuplan/gates; L=$D/pool; mkdir -p "$L"; rm -f "$D/DONE" "$D/ERROR"
+POOL=${1:-onstand_navtrain_full.s2of12}; G=ONG${2:-}
+D=$DATA_DIR/runs/onpol_nuplan/gates${2:-}; L=$D/pool; mkdir -p "$L"; rm -f "$D/DONE" "$D/ERROR"
 exec > >(tee -a "$D/log.txt") 2>&1
 PY=$DATA_DIR/envs/op-train/bin/python
 CL="$PWD/.venv/bin/python -m jevdrive.cl"
@@ -26,18 +27,18 @@ status "code $(git rev-parse --short HEAD); pool $POOL"
 S="--ho ot1:4,yr1:4,bd4:5 --ho-w 3 --ho-excl navsim/body1-val-logs --agent-lam 10 --shape --label-bank"
 SH="--data navtrain_full.s2of12 --split navsim/op-parity-full --batch 128 --warmup 300 --eval-every 30 --steps 60 --seed 0"
 OT="$PY experiments/onpol_nuplan/scripts/on_train.py"
-sub t1-jt 20 $PY experiments/alpasim/scripts/joint_train.py train --exp onpol_nuplan $SH $S --tag ONG-T1-jt
-sub t1-on 20 $OT train $SH $S --tag ONG-T1-on
+sub t1-jt 20 $PY experiments/alpasim/scripts/joint_train.py train --exp onpol_nuplan $SH $S --tag $G-T1-jt
+sub t1-on 20 $OT train $SH $S --tag $G-T1-on
 sub known 20 $OT known --data navtrain_full.s2of12 $S --init P2H10S-F-s0 --on "$POOL" --out "$R/t3_known.json"
 FL="--steps 300 --eval-every 300 --seed 0 --init P2H10S-F-s0 $S"       # all shards: T2, T3's hash and row accounting, steps / s
-for m in imit self both; do sub "f-$m" 40 $OT train $FL --on "$POOL" --on-mode $m --tag "ONG-$m"; done
-sub f-none 40 $OT train $FL --tag ONG-none
-status "7 jobs submitted; waiting"
-waitdirs t1-jt t1-on known f-imit f-self f-both f-none
+status "T1 and known-answer jobs submitted; the all-shard runs one by one"
+sub f-none 40 $OT train $FL --tag $G-none; waitdirs f-none
+for m in imit self both; do sub "f-$m" 40 $OT train $FL --on "$POOL" --on-mode $m --tag "$G-$m"; waitdirs "f-$m"; done
+waitdirs t1-jt t1-on known
 fail=()
-$OT ident --a ONG-T1-jt --b ONG-T1-on --out "$R/t1_ident.json" > /dev/null || fail+=(T1)
-$OT t2 --tags ONG-none ONG-imit ONG-self ONG-both --out "$R/t2_init_perf.json" > /dev/null || fail+=(T2)
-$OT t3 --tags ONG-imit ONG-self ONG-both --step 60 --out "$R/t3_modes.json" > /dev/null || fail+=(T3)
-grep -h "dev @\|step 60:\|step 300:" "$L"/f-*/log.txt | sed 's/.*INFO *//' | cut -c1-400
+$OT ident --a $G-T1-jt --b $G-T1-on --out "$R/t1_ident.json" > /dev/null || fail+=(T1)
+$OT t2 --tags $G-none $G-imit $G-self $G-both --out "$R/t2_init_perf.json" > /dev/null || fail+=(T2)
+$OT t3 --tags $G-imit $G-self $G-both --step 60 --out "$R/t3_modes.json" > /dev/null || fail+=(T3)
+grep -h "dev @\|on_hash @ 60\|step 300:\|running on card" "$L"/f-*/log.txt "$L"/f-*/STATUS | sed 's/.*INFO *//' | cut -c1-400
 [[ ${#fail[@]} -eq 0 ]] || die "gates failed: ${fail[*]} (see $R/*.json)"
 status "T1, T2, T3 pass"; date '+%F %T' > "$D/DONE"
