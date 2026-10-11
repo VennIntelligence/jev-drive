@@ -9,8 +9,9 @@
   long_read.py report --in DIR [DIR ...] --out <md> [--json <json>] [--pairs A:B ...]
       label = <tag>@<length>, e.g. YR10m10-F-s0@18; recipe = tag without -s<seed>.
 
-GT distance (the leaderboard's) = mean over scenes of the per-scene max of dist_to_gt_trajectory, cut at the first step at or beyond 4 m (the
-evaluator drops the steps after the ego leaves the 4 m corridor). The rebuilt value is checked against the aggregate's own per rollout.
+GT distance (the leaderboard's) = mean over scenes of the per-scene max of dist_to_gt_trajectory over the steps the evaluator keeps (up to
+and including the first step at or beyond 4 m or with a collision or offroad). The rebuilt value is checked against the aggregate's own per
+rollout; the same rule over k <= 10 gives the long run's first-10-decision GT distance, corridor zeros and at-fault events.
 Drift slope = OLS slope over k = 4..K of the per-k mean distance to the logged path (aud1_drift_by_decision.md, all scenes).
 CIs: log-clustered bootstrap over the held logs (10 000 draws), paired across labels on the same scenes.
 """
@@ -28,13 +29,17 @@ FLAGS = ("collision_at_fault", "offroad", "left_corridor_laterally", "offroad_or
          "gt_dist_traveled_m")
 
 
-def gt_cut(d):
-    """Aggregated GT distance from an untruncated series: the max up to and including the first value >= 4 m."""
-    d = np.asarray([x for x in d if x is not None and np.isfinite(x)], float)
-    if not len(d):
-        return np.nan
-    hit = np.flatnonzero(d >= 4.0)
-    return float(d[: hit[0] + 1].max()) if len(hit) else float(d.max())
+def cut(x, kmax=None):
+    """The evaluator's truncation on one rollout's per-k rows (k sorted): keep steps up to and including the first step with
+    dist_to_gt >= 4 m or (collision_any or offroad) (aggregation/main.py and processing.py DEFAULT_MODIFIERS). Returns
+    (GT distance = max dist over the kept steps, corridor zero, at-fault event (offroad or front / lateral collision)), optionally
+    only over k <= kmax."""
+    if kmax is not None:
+        x = x[x.k <= kmax]
+    d, ev, atf = x.dist_gt.to_numpy(float), x.ev.to_numpy(bool), x.atf.to_numpy(bool)
+    hit = np.flatnonzero((d >= 4.0) | ev)
+    n = hit[0] + 1 if len(hit) else len(d)
+    return float(np.nanmax(d[:n])) if n else np.nan, bool((d[:n] >= 4.0).any() and not ev[:n].any()), bool(atf[:n].any())
 
 
 def one(a):
@@ -43,10 +48,13 @@ def one(a):
     f = sorted(glob.glob(f"{D}/rollouts/{scene}/*/metrics.parquet"))
     if not f:
         return []
-    m = pl.read_parquet(f[0]).filter(pl.col("name") == "dist_to_gt_trajectory").select(pl.col("timestamps_us").cast(pl.Int64), "values")
-    ser = dict(zip(m["timestamps_us"].to_list(), m["values"].to_list()))
-    ks = sorted((t - T0) // DT for t in ser if t >= T0 and (t - T0) % DT == 0)
-    return [dict(label=label, scene=scene, k=int(k), dist_gt=ser[T0 + DT * k]) for k in ks]
+    names = ("dist_to_gt_trajectory", "collision_any", "offroad", "collision_front", "collision_lateral")
+    m = pl.read_parquet(f[0]).filter(pl.col("name").is_in(names)).select("name", pl.col("timestamps_us").cast(pl.Int64), "values")
+    ser = {n: dict(zip(x["timestamps_us"].to_list(), x["values"].to_list())) for (n,), x in m.group_by("name")}
+    g = lambda n, t: (ser.get(n, {}).get(t) or 0.0) > 0
+    ks = sorted((t - T0) // DT for t in ser["dist_to_gt_trajectory"] if t >= T0 and (t - T0) % DT == 0)
+    return [dict(label=label, scene=scene, k=int(k), dist_gt=ser["dist_to_gt_trajectory"][t], ev=g("collision_any", t) or g("offroad", t),
+                 atf=g("offroad", t) or g("collision_front", t) or g("collision_lateral", t)) for k in ks for t in [T0 + DT * k]]
 
 
 def collect(a):
@@ -70,10 +78,9 @@ def collect(a):
         K = pd.DataFrame([r for rr in ex.map(one, jobs, chunksize=8) for r in rr])
     S = pd.DataFrame(rows)
     g = K.sort_values("k").groupby(["label", "scene"])
-    S = S.merge(pd.DataFrame(dict(decisions=g.k.max(), gt_rebuilt=g.dist_gt.apply(gt_cut),
-                                  gt_cut10=g.apply(lambda x: gt_cut(x[x.k <= 10].dist_gt), include_groups=False),
-                                  corridor_cut10=g.apply(lambda x: bool((x[x.k <= 10].dist_gt >= 4).any()), include_groups=False))).reset_index(),
-                on=["label", "scene"], how="left")
+    full, c10 = g.apply(lambda x: cut(x), include_groups=False), g.apply(lambda x: cut(x, 10), include_groups=False)
+    S = S.merge(pd.DataFrame(dict(decisions=g.k.max(), gt_rebuilt=full.str[0], gt_cut10=c10.str[0], corridor_cut10=c10.str[1],
+                                  atfault_cut10=c10.str[2])).reset_index(), on=["label", "scene"], how="left")
     S.to_csv(out / "per_scene.csv", index=False)
     K.to_parquet(out / "per_scene_k.parquet")
     print(S.groupby("label").agg(n=("scene", "size"), score=("score", "mean"), dec_min=("decisions", "min"), dec_max=("decisions", "max"),
@@ -122,7 +129,7 @@ def report(a):
                  atfault_events=int((x.offroad_or_collision_at_fault > 0).sum()),
                  atfault_km=x.dist_traveled_m.sum() / max(1, (x.offroad_or_collision_at_fault > 0).sum()) / 1000,
                  gt_dist=x.dist_to_gt_trajectory.mean(), gt_rebuilt_match=float((abs(x.gt_rebuilt - x.dist_to_gt_trajectory) < 1e-6).mean()),
-                 gt_cut10=x.gt_cut10.mean(), corridor_by_k10=int(x.corridor_cut10.sum()),
+                 gt_cut10=x.gt_cut10.mean(), corridor_by_k10=int(x.corridor_cut10.sum()), atfault_by_k10=int(x.atfault_cut10.sum()),
                  slope_4_K=slope(curve.to_numpy(), curve.index.to_numpy()), slope_4_10=slope(c10.to_numpy(), c10.index.to_numpy()),
                  driven_m=x.dist_traveled_m.mean(), logged_m=x.gt_dist_traveled_m.mean())
         tab.append(r)
