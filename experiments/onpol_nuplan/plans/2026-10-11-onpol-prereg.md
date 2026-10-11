@@ -215,3 +215,24 @@ scenes), all above 0.2 %. Gate files: `results/gates/lon_*.json`, `lon_gates.md`
   the route over 0 to 60 m ahead. Only the first >= 45 deg turn of a route carries C; every simulator actor counts as a vehicle.
 - The verdict sentences are unchanged. Added, descriptive: ON-SELF against SSELFnoL (what L adds to S on the on-policy rows), by the
   same paired table.
+
+## Amendment 4 (2026-10-11, gates R1 / R2 on the full pool; before the pilots and any closed-loop read)
+
+Read on the full pool `on1_train` (20 386 rows; `results/rows/train/r1.md`, `r2.md`). Both gates miss their written thresholds and the
+lane's main session rules both as met in substance; this is the second rewrite of R1 and is stated as such.
+
+- **R1 (a)** needs 0.99 and reads 0.9797 / 0.9801 (seed 0 / 1) at 0.03 m. The tolerance sits just under one fp16 ulp beyond 32 m
+  (0.03125 m): at 0.03126 m the share is 0.9992 / 0.9987, and on the 84 % of rows whose 15 points stay below 16 m it is 0.994 at 0.03 m.
+  The smoke's 0.99 was 99 of 100 rows. Clauses (b) (interpreted control bit-identical, 100 of 100) and (c) (wrong-seed control 0.014 /
+  0.017 on the 8 poses, 0.13 / 0.15 on plan points) are met. R1 (a) is restated as "within one fp16 ulp of the point's magnitude or
+  0.03 m, whichever is larger, on at least 99 % of rows": met. The purpose of R1, that the stored inputs are the driver's, rests on (b)
+  and (c).
+- **R2**: ego 0.018 m at worst over 4100 log-replay decisions (limit 0.3); actor centres within 0.5 m on 0.99997 of 457 034 samples,
+  median 0.013 m. The 12 samples over 0.5 m (maximum 0.856 m) are 6 actor-times in two scenes, identical in both seeds, where the
+  simulator replays its own logged trajectory exactly and that trajectory differs from the navsim annotation: not a frame or time
+  error. R2 is read as met; the labels use the simulator's pose during the rollout.
+- Found while building the pool and fixed before any training: the logged path's heading came from 0.1 m polyline segments, which is
+  noise where the log stands still (about 3 % of decision-0 / 1 rows had a target swerving up to 0.85 m). The heading now comes from the
+  logged yaw. After the fix the registered target at the log-replay decisions equals the log future within 0.33 m at worst (0.9 % of
+  those rows over 0.1 m). The fixed path code is re-checked by the independent auditor in parallel with the pilots; a bug found there
+  stops the full trainings until the pool is rebuilt.
