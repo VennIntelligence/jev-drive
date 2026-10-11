@@ -1,0 +1,34 @@
+{
+ "tag": "JAPS-P300",
+ "driver": "ap2",
+ "composition": [
+  "128",
+  "102",
+  "13",
+  "13"
+ ],
+ "last_step": 300,
+ "losses": {
+  "agent": 0.002,
+  "agent_ho": 0.0008,
+  "agent_ho_pos": 0.0462,
+  "agent_pos": 0.023,
+  "agent_posmean": 0.1014,
+  "cons": 0.0119,
+  "distill": 0.0051,
+  "distill_ho": 0.0003,
+  "hinge": 0.0065,
+  "imit": 1.6489,
+  "road_ho": 0.0054,
+  "road_ho_pos": 0.2985
+ },
+ "it_s": 2.96,
+ "peak_gb": 23.0,
+ "dev": "ade 1.008, drift_on 0.994, drift_off 0.095, ade_m1 1.358, ade_m2 1.104, ade_m3 0.988, ade_m4 1.008, ot_ade 1.387, ot_drift_on 1.006, ot_drift_off 0.130",
+ "family": "ap2",
+ "smoke_rollouts": 48,
+ "drive_records": 576,
+ "nonfinite_plans": 0,
+ "fail": [],
+ "pass": true
+}

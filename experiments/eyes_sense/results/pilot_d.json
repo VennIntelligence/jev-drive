@@ -1,0 +1,36 @@
+{
+ "arm": "d",
+ "composition": [
+  "128",
+  "115",
+  "0",
+  "13"
+ ],
+ "losses": {
+  "agent": 0.0019,
+  "agent_ho": 0.0018,
+  "agent_ho_pos": 0.0738,
+  "agent_pos": 0.0255,
+  "agent_posmean": 0.129,
+  "cons": 0.0125,
+  "distill": 0.0017,
+  "distill_ho": 0.0002,
+  "hinge": 0.0043,
+  "imit": 1.408,
+  "road_ho": 0.0031,
+  "road_ho_pos": 0.2708
+ },
+ "dev": {
+  "ade": 1.029,
+  "drift_on": 1.02,
+  "drift_off": 0.093,
+  "mem_ade_on": 1.029,
+  "mem_ade_masked": 1.079,
+  "mem_ade_shuf": 1.228
+ },
+ "peak_gb": 20.7,
+ "it_s": 2.93,
+ "fail": [],
+ "ok": true,
+ "hinge_only_memory": "masked by construction (joint_train.py draw(): sm[nN + k_yr:] = False)"
+}

@@ -1,0 +1,17 @@
+{
+ "a": "JID-YR-o",
+ "b": "JID-YR-j",
+ "arm_a": "P2",
+ "arm_b": "P2",
+ "net_tensors": 109,
+ "net_only_a": [],
+ "net_only_b": [],
+ "net_max_abs_diff": 0.0,
+ "net_tensors_differ": 0,
+ "parity_tensors": 46,
+ "parity_only_a": [],
+ "parity_only_b": [],
+ "parity_max_abs_diff": 0.0,
+ "parity_tensors_differ": 0,
+ "identical": true
+}

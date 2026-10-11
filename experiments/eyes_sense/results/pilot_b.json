@@ -1,0 +1,28 @@
+{
+ "arm": "b",
+ "composition": [
+  "128",
+  "128",
+  "0",
+  "0"
+ ],
+ "losses": {
+  "cons": 0.0119,
+  "distill": 0.002,
+  "hinge": 0.0045,
+  "imit": 1.3974
+ },
+ "dev": {
+  "ade": 1.03,
+  "drift_on": 1.045,
+  "drift_off": 0.09,
+  "mem_ade_on": 1.03,
+  "mem_ade_masked": 1.046,
+  "mem_ade_shuf": 1.222
+ },
+ "peak_gb": 15.8,
+ "it_s": 5.44,
+ "fail": [],
+ "ok": true,
+ "hinge_only_memory": "n/a"
+}
