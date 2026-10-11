@@ -1,0 +1,113 @@
+{
+ "states": 40440,
+ "rows": 80880,
+ "fams": [
+  "log",
+  "ot1",
+  "yr1"
+ ],
+ "shards": [
+  2,
+  3
+ ],
+ "queries": "0, 1 (own plans of P2H10-F s0 / s1)",
+ "A_margin0": {
+  "label_positive": 267,
+  "hinge_positive": 259,
+  "share": 0.9700374531835206,
+  "by_family": {
+   "log": {
+    "n": 93,
+    "share": 0.967741935483871
+   },
+   "ot1": {
+    "n": 79,
+    "share": 0.9746835443037974
+   },
+   "yr1": {
+    "n": 95,
+    "share": 0.968421052631579
+   }
+  }
+ },
+ "B_red_light_at_line": {
+  "label_positive": 81,
+  "hinge_positive": 81,
+  "share": 1.0,
+  "by_family": {
+   "log": {
+    "n": 37,
+    "share": 1.0
+   },
+   "ot1": {
+    "n": 20,
+    "share": 1.0
+   },
+   "yr1": {
+    "n": 24,
+    "share": 1.0
+   }
+  },
+  "missed_with_a_line_already_passed_at_t0": 0
+ },
+ "C_as_implemented": {
+  "label_positive": 154,
+  "hinge_positive": 154,
+  "share": 1.0,
+  "by_family": {
+   "log": {
+    "n": 57,
+    "share": 1.0
+   },
+   "ot1": {
+    "n": 45,
+    "share": 1.0
+   },
+   "yr1": {
+    "n": 52,
+    "share": 1.0
+   }
+  }
+ },
+ "A_trained_hinge": {
+  "active_share_all": 0.015368447082096934,
+  "active_share_label_pos": 1.0,
+  "active_share_label_neg": 0.011843414935302197,
+  "mean_when_active": 0.26875540614128113,
+  "p99_when_active": 2.3248257637023926
+ },
+ "B_trained_hinge": {
+  "active_share_all": 0.002262611275964392,
+  "active_share_label_pos": 0.6639344262295082,
+  "active_share_label_neg": 0.0010660848653138131,
+  "mean_when_active": 0.5007549524307251,
+  "p99_when_active": 7.311931133270264
+ },
+ "C_trained_hinge": {
+  "active_share_all": 0.008963897131552918,
+  "active_share_label_pos": 1.0,
+  "active_share_label_neg": 0.004277994596217352,
+  "mean_when_active": 0.10924385488033295,
+  "p99_when_active": 0.7548484206199646
+ },
+ "logged_future_as_plan_log_states": {
+  "states": 17216,
+  "note": "how often the logged driver itself violates the on-policy (fixed-margin) item; design.md's log-consistent margins make this 0 by construction",
+  "A": {
+   "active_share": 0.0051696096654275095,
+   "mean_when_active": 0.10165957361459732,
+   "p99_when_active": 0.4526588022708893
+  },
+  "B": {
+   "active_share": 0.0023234200743494425,
+   "mean_when_active": 0.3545035421848297,
+   "p99_when_active": 5.056662082672119
+  },
+  "C": {
+   "active_share": 0.00034851301115241634,
+   "mean_when_active": 0.3096825182437897,
+   "p99_when_active": 0.6445809602737427
+  }
+ },
+ "pass": true
+}

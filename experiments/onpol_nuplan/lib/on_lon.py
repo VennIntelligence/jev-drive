@@ -20,19 +20,28 @@ Terms (t on the 41-step dense grid 0 .. 4 s; s_f / l_f = arc / lateral offset of
   A  lead contact (m).  Per A-eligible actor j at the row's time (lc.a_eligible on the simulator boxes: vehicle, valid, centre within 1.5 m of
      the route, ahead of the ego front, aligned with the route or slower than 0.5 m/s; the 4 nearest by rear arc): sigma_j(t) = min arc of its 4
      corners, lambda_j(t) = lateral offset of its centre. g_j(t) = sigma_j(t) - s_f(t); m_j = min(2.0, max(g_j(0) - 0.5, 0)) with g_j(0) the gap
-     at the row's own pose; h_A = mean_t max_j [valid_j(t) & |lambda_j(t)| <= 1.5 & t > 0 & g_j(0) > 0] relu(m_j - g_j(t)).
+     at the row's own pose; h_A = mean_t max_j [valid_j(t) & |lambda_j(t)| <= 1.5 & t > 0 & g_j(0) > 0 & |l_f(t)| <= 3.5] relu(m_j - g_j(t)).
+     DEVIATION (audit): the gate |l_f(t)| <= 3.5 on the plan's own front point, as B and C have it (a row may sit up to 4 m beside the route).
   B  stop line (m).  Traffic-light lines only (stop-sign lines are masked), eligible in the context (ln_elig) and not already passed by the
      front bumper at the row's time (d_l >= s_f(0); DEVIATION from the prereg's formula, which would otherwise pin a car that is already past
      the line): mu_l(t) = the light of the route's connector is red at the log frame nearest t (by timestamp); theta_l = max(d_l - 1.0, s_f(0));
-     h_B = mean_t max_l mu_l(t) [|l_f(t)| <= 3.5] [s_f(t) <= rlen] relu(s_f(t) - theta_l).
+     h_B = mean_t max_l mu_l(t) [not cleared_l(t)] [|l_f(t)| <= 3.5] [s_f(t) <= rlen] relu(s_f(t) - theta_l), cleared_l(t) = the front bumper was
+     beyond d_l at some step t' <= t that was not a must-stop step. DEVIATION (audit): without it a plan that crosses on green is charged for
+     every later step once the light turns red (the LONG-PROBE label reads the light at the crossing; design.md had the log-relaxed theta).
   C  speed into the first >= 45 deg route turn (m/s).  Eligible when the logged driver passes the curvature peak s_pk at >= 1 m/s.
-     v_cap(s) = max(v_ref + 1.0, 1.15 v_ref), v_ref(s) = max of the route's logged speed (ctx `vlog`, speed at the first arrival) over the grid
-     vertices within 1 m of s; h_C = mean_t [s_pk - 10 <= s_r(t) <= s_pk + 3] [|l_r(t)| <= 3.5] [|psi(t) - H(s_pk)| <= 30 deg] relu(v(t) - v_cap).
-     DEVIATION from design.md: v_ref comes from the context's logged speed by arc everywhere, not from the dense logged future of the row
-     (an on-policy row has no logged future of its own).
+     v_cap(s) = max(v_ref + 1.0, 1.15 v_ref), v_ref(s) = max(the route's logged speed at the two grid vertices around s (ctx `vlog`, speed at the
+     first arrival), the logged speed at the peak); h_C = mean_t [s_pk - 10 <= s_r(t) <= s_pk + 3] [|l_r(t)| <= 3.5] [|psi(t) - H(s_pk)| <= 30 deg] relu(v(t) - v_cap).
+     DEVIATIONS from design.md: v_ref comes from the context's logged speed by arc everywhere, not from the dense logged future of the row
+     (an on-policy row has no logged future of its own); and it is floored at the log's speed at the peak (audit): where the log waited at a
+     line before the turn its speed by arc is 0, which would cap a row that arrives on green at 1 m/s.
   P  progress guard (m).  h_P = mean_k relu(0.95 D_k - 0.5 - s_plan(t_k)), k = 1 .. 8, D_k = the log's travel over the same clock interval
-     (s_log(t + 0.5 k) - s_log(t), by timestamp), s_plan = the plan's own arc length; only on OPEN rows: no A-eligible actor, no eligible stop
-     line of either type and no eligible turn peak within 60 m ahead of the row along the route.
+     (s_log(t + 0.5 k) - s_log(t), by timestamp), s_plan = the plan's own arc length; only on OPEN rows. design.md's "open" (`p_open_design`):
+     no A-eligible actor, no eligible stop line of either type and no eligible turn peak within 60 m ahead of the row along the route.
+     DEVIATION (audit; the pack's default `p_open`, scripts/on_lon_pack.py --p-open strict): additionally no stop line of any kind (eligible or
+     not) within 60 m ahead, and no actor of any class whose centre is within 2.5 m of the route and 0 .. 60 m ahead of the row at any of the
+     9 label times. Away from the log's timeline the log's progress is not safe by construction, and in ON-SELF nothing else acts along the
+     path (S's hinges are shape-only), so P must not push where the labels cannot see what is ahead.
+Known limits: only the first >= 45 deg turn of a scene's route carries C; a line or actor the context cannot label gives no B / A.
 """
 import math
 import sys
@@ -47,7 +56,7 @@ NA, NL = 4, 4
 M_A0, M_A_BACK, M_B = 2.0, 0.5, 1.0
 LAT_IN, LAT_ROUTE = 1.5, 3.5
 C_PRE, C_POST, C_HEAD, C_ADD, C_MUL, C_VLOG_MIN = 10.0, 3.0, math.radians(30.0), 1.0, 1.15, 1.0
-P_FRAC, P_SLACK, OPEN_M = 0.95, 0.5, 60.0
+P_FRAC, P_SLACK, OPEN_M, P_ACT_LAT = 0.95, 0.5, 60.0, 2.5
 BIG = 1e3
 ITEMS = ("A", "B", "C", "P")
 EPS = 1e-12
@@ -146,13 +155,15 @@ def terms(poses_rear, rows, pack, margin_a=None, theta_b=None):
     # A
     gap = g("a_sig") - sf[:, None]                                              # (n, NA, 41)
     m = g("a_m")[..., None] if margin_a is None else torch.full_like(g("a_m"), margin_a)[..., None]
-    act = g("a_val") & (g("a_lam").abs() <= LAT_IN) & tpos & (g("a_g0") > 0)[..., None]
+    act = g("a_val") & (g("a_lam").abs() <= LAT_IN) & tpos & (g("a_g0") > 0)[..., None] & (lf.abs() <= LAT_ROUTE)[:, None]
     sA = torch.where(act, torch.relu(m - gap), torch.zeros_like(gap)).amax(1)
     # B
     th = g("b_th") if theta_b is None else g("b_d") - theta_b
     on = ((lf.abs() <= LAT_ROUTE) & (sf <= rlen[:, None]))[:, None]
     over = torch.relu(sf[:, None] - th[..., None])                              # (n, NL, 41)
-    sB = torch.where(g("b_mu") & on, over, torch.zeros_like(over)).amax(1)
+    mu = g("b_mu")
+    cleared = ((sf.detach()[:, None] > g("b_d")[..., None]) & ~mu).cummax(-1)[0]  # beyond the line at a step that was not a must-stop step
+    sB = torch.where(mu & on & ~cleared, over, torch.zeros_like(over)).amax(1)
     # C
     v = path_speed(d)
     cap = g("c_cap")
@@ -245,8 +256,8 @@ def build_rows(R, H, rlen, box, valid, cls, ln_type, ln_d, ln_elig, ln_red, tn_o
     SW = LC.SW
     S, NR = R.shape[:2]
     assert NR == LC.NR, f"route grid {NR} != lc.NR {LC.NR}"
-    R, H, rlen = R.astype(np.float32), H.astype(np.float32), rlen.astype(np.float32)
     ok = np.ones(S, bool) if ok is None else ok
+    R, H, rlen = np.nan_to_num(R).astype(np.float32), np.nan_to_num(H).astype(np.float32), np.nan_to_num(rlen).astype(np.float32)   # finite also on not-ok rows
     ar = np.arange(S)
     # the row's own pose on the route
     p0 = np.zeros((S, 2, 2), np.float32)
@@ -282,17 +293,22 @@ def build_rows(R, H, rlen, box, valid, cls, ln_type, ln_d, ln_elig, ln_red, tn_o
     spk = np.nan_to_num(tn_spk).astype(np.float32)
     hpk = H[ar, np.clip(np.round(spk).astype(np.int64), 0, NR - 1)]
     vl = np.where(np.isfinite(vlog), vlog.astype(np.float32), -np.inf)
-    pad = np.pad(vl, ((0, 0), (1, 1)), constant_values=-np.inf)
-    vref = np.maximum(np.maximum(pad[:, :-2], pad[:, 1:-1]), pad[:, 2:])
+    vref = np.where(np.isfinite(vl), np.maximum(vl, np.where(c_ok, np.nan_to_num(tn_vpk), 0.0).astype(np.float32)[:, None]), -np.inf)
     c_cap = np.where(np.isfinite(vref), np.maximum(vref + C_ADD, C_MUL * vref), BIG).astype(np.float32)
     # ---- P
     ahead = lambda s: (s >= sr0[:, None] - C_POST) & (s <= sr0[:, None] + OPEN_M)  # noqa: E731
     has_a = (pe & (a_g0 <= OPEN_M)).any(1)
     has_b = (ln_elig & np.isfinite(ln_d) & ahead(dl)).any(1)
     has_c = c_ok & ahead(spk[:, None])[:, 0]
-    p_open = ~(has_a | has_b | has_c)
+    p_open_design = ~(has_a | has_b | has_c)
+    any_line = ((ln_type > 0) & np.isfinite(ln_d) & ahead(dl)).any(1)
+    vk = valid & (cls >= 0)[:, None]                                            # (S, 9, K) every labelled actor at the 9 label times
+    sa, la = LC.project(R, box[..., :2].reshape(S, -1, 2).astype(np.float32))
+    sa, la = sa.reshape(vk.shape), la.reshape(vk.shape)
+    any_actor = (vk & (np.abs(la) <= P_ACT_LAT) & (sa >= sr0[:, None, None]) & (sa <= sr0[:, None, None] + OPEN_M)).any((1, 2))
+    p_open = p_open_design & ~any_line & ~any_actor
     p_D = np.where(np.isfinite(D), D, -2 * BIG).astype(np.float32)
     return dict(route=R, rhead=H, rlen=rlen, ok=ok, s0=sr0, l0=l0[:, 0], sf0=sf0,
                 a_sig=a_sig, a_lam=a_lam, a_val=a_val, a_m=a_m, a_g0=a_g0, a_slot=np.where(pe, pick, -1).astype(np.int8),
                 b_d=dl, b_th=b_th, b_mu=b_mu, b_use=b_use, c_ok=c_ok, c_spk=spk, c_hpk=hpk.astype(np.float32), c_cap=c_cap,
-                p_D=p_D, p_open=p_open, has_a=has_a, has_b=has_b, has_c=has_c)
+                p_D=p_D, p_open=p_open, p_open_design=p_open_design, has_a=has_a, has_b=has_b, has_c=has_c, any_line=any_line, any_actor=any_actor)

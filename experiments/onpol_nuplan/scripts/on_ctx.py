@@ -11,7 +11,9 @@ What differs from the navtrain context (module constants of lc are overridden in
   NR       261 (0 .. 260 m at 1 m) instead of 131: 2 s back + 5.5 s of rollout + a 4 s plan + up to 40 m ahead of the log.
   NK       24 light-state keyframes (origin + 0.5 k, 0 .. 11.5 s) instead of 9, so every dense step of every decision has its keyframe.
            `ln_elig` of a light line therefore asks for a known state somewhere in 11.5 s, not 4 s.
-  extras   origin (3,) float64 global x, y, yaw of the route frame; tok_k (frames from the origin to the scene token); kf_ts (NKF,) int64 log
+  NL       8 stop lines per scene (nearest from the origin) instead of 4: rows up to 110 m down the route still find the lines ahead of them.
+  extras   kf_arc_err (max over the checked keyframes of |projected arc - own arc|; the packer drops scenes above 0.4 m: a folded route);
+           origin (3,) float64 global x, y, yaw of the route frame; tok_k (frames from the origin to the scene token); kf_ts (NKF,) int64 log
            timestamps (us) of the frames origin + k, kf_pose (NKF, 3) float64 their global rear-axle poses, kf_s (NKF,) their arc along the route,
            kf_v (NKF,) their speed (nan / -1 past the log's end). The packer aligns a pool row to the log through these.
 Everything else (route / rhead / rlen / hlen / vlog / tlog, ln_*, tn_*) is lc_ctx's, in the ORIGIN frame (x forward, y left).
@@ -40,8 +42,8 @@ EXP = HERE.parents[2]
 sys.path[:0] = [str(HERE.parents[3]), str(EXP / "long_contact/lib"), str(EXP / "long_contact/scripts"), str(EXP / "lowboard_diag/scripts")]
 import lc as LC  # noqa: E402
 
-NR, NK, BACK, NKF = 261, 24, 4, 24
-LC.NR, LC.NK = NR, NK                            # process-local override, read by lc.project / lc_ctx.label_log at call time
+NR, NK, NL, BACK, NKF = 261, 24, 8, 4, 24
+LC.NR, LC.NK, LC.NL = NR, NK, NL                            # process-local override, read by lc.project / lc_ctx.label_log at call time
 import lc_ctx as CTX  # noqa: E402
 import b1 as B  # noqa: E402
 import stoplbl_label as SL  # noqa: E402
@@ -80,6 +82,7 @@ def work(job):
     yaw = np.unwrap(np.array([SL.yaw_of(f["ego2global_rotation"]) for f in fr]))
     sp = np.array([np.hypot(*f["ego_dynamic_state"][:2]) for f in fr], float)
     ts = np.array([f["timestamp"] for f in fr], np.int64)
+    assert (np.diff(ts) > 0).all(), f"{log}: frames are not in time order (lc_ctx indexes them by position)"
     out = []
     for gi, r in CTX.label_log((path, want2)):
         i, i0 = meta[gi]
@@ -148,11 +151,13 @@ def main(a):
                     hlen_min=float(np.nanmin(Z["hlen"])), hlen_median=float(np.nanmedian(Z["hlen"])),
                     arc_at_last_decision_max=float(np.nanmax(s_last)), reach_needed_max=float(np.nanmax(need)),
                     scenes_reach_beyond_grid=int((need > NR - 1).sum()),
+                    NL=NL, scenes_with_all_line_slots_used=int((Z["ln_type"] > 0).all(1).sum()),
                     lines=int((Z["ln_type"] > 0).sum()), tl_lines=int((Z["ln_type"] == 2).sum()), tl_elig=int((Z["ln_elig"] & (Z["ln_type"] == 2)).sum()),
                     tl_elig_red_somewhere=int((Z["ln_elig"] & (Z["ln_type"] == 2) & (Z["ln_st"] == 1).any(-1)).sum()),
                     ss_lines=int((Z["ln_type"] == 1).sum()), ss_elig=int((Z["ln_elig"] & (Z["ln_type"] == 1)).sum()),
                     turns=int(Z["tn_ok"].sum()), turns_elig=int((Z["tn_ok"] & (Z["tn_vpk"] >= LC.C_VLOG_MIN)).sum()))
         dsm = np.where(on, np.abs(s - Z["kf_s"]), 0).max(1)
+        Z["kf_arc_err"] = dsm.astype(np.float32)
         gate["kf_arc_outliers"] = {str(Z["scene"][i]): float(dsm[i]) for i in np.where(dsm > 0.4)[0]}
         gate["scenes_with_frame_gap"] = int(((np.diff(Z["kf_ts"], axis=1) > 6e5) & (Z["kf_ts"][:, 1:] > 0)).any(1).sum())
         gate["pass"] = bool(gate["labelled"] == N and gate["kf_arc_p999"] < 0.5 and gate["kf_lat_max"] < 0.25)

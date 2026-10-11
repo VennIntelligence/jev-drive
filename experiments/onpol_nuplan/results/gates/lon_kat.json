@@ -1,0 +1,52 @@
+{
+ "NR131": {
+  "dense": 1.52587890625e-05,
+  "front_point": 1.52587890625e-05,
+  "project_front_arc": 0.0,
+  "project_front_lat": 0.0,
+  "project_rear_arc": 0.0,
+  "project_rear_lat": 0.0,
+  "project_random_arc": 0.0,
+  "project_random_lat": 0.0,
+  "gap": 0.0,
+  "path_speed": 0.000152587890625,
+  "plan_arc_vs_sweep_arc": 8.392333984375e-05,
+  "points": 764000
+ },
+ "NR261": {
+  "dense": 1.52587890625e-05,
+  "front_point": 3.0517578125e-05,
+  "project_front_arc": 0.0,
+  "project_front_lat": 0.0,
+  "project_rear_arc": 0.0,
+  "project_rear_lat": 0.0,
+  "project_random_arc": 0.0,
+  "project_random_lat": 0.0,
+  "gap": 0.0,
+  "path_speed": 0.000152587890625,
+  "plan_arc_vs_sweep_arc": 0.0001678466796875,
+  "points": 764000
+ },
+ "end_to_end": {
+  "NR131": {
+   "front_arc_max": 0.022708892822265625,
+   "front_arc_share_above_1e_3": 0.00032926829268292685,
+   "front_lat_max": 0.08107757568359375,
+   "rear_arc_max": 0.0131378173828125,
+   "rear_lat_max": 0.089996337890625,
+   "front_arc_max_within_3p5m_of_route": 1.52587890625e-05
+  },
+  "NR261": {
+   "front_arc_max": 0.048854827880859375,
+   "front_arc_share_above_1e_3": 0.0005609756097560975,
+   "front_lat_max": 0.2089080810546875,
+   "rear_arc_max": 0.03305816650390625,
+   "rear_lat_max": 0.1037139892578125,
+   "front_arc_max_within_3p5m_of_route": 0.000675201416015625
+  }
+ },
+ "max_abs_diff": 0.0001678466796875,
+ "tol": 0.002,
+ "note": "float32 on both sides; arcs reach 260 m, so 1e-4 m is rounding",
+ "pass": true
+}

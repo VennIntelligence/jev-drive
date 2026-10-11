@@ -1,0 +1,39 @@
+{
+ "scenes": 1491,
+ "labelled": 1491,
+ "logs": 136,
+ "NR": 261,
+ "NK": 24,
+ "BACK": 4,
+ "kf_checked": 35676,
+ "kf_arc_max": 2.5498480796813965,
+ "kf_lat_max": 0.18377861380577087,
+ "kf_arc_p999": 0.30763835906981873,
+ "tok_k_counts": {
+  "3": 23,
+  "4": 1468
+ },
+ "kf_dt_ms_min": 498.325,
+ "kf_dt_ms_max": 1000.504,
+ "frames_after_origin_min": 14,
+ "scenes_log_ends_before_tok_plus_9p5s": 24,
+ "hlen_min": 2.9846413135528564,
+ "hlen_median": 150.4984893798828,
+ "arc_at_last_decision_max": 109.11451721191406,
+ "reach_needed_max": 212.0575714111328,
+ "scenes_reach_beyond_grid": 0,
+ "lines": 1140,
+ "tl_lines": 843,
+ "tl_elig": 384,
+ "tl_elig_red_somewhere": 254,
+ "ss_lines": 297,
+ "ss_elig": 17,
+ "turns": 586,
+ "turns_elig": 583,
+ "kf_arc_outliers": {
+  "2021.09.09.18.29.25_veh-39_00427_00556-cd4e4564d732554e": 0.4691123962402344,
+  "2021.09.16.13.53.10_veh-42_00630_00818-39cbed62434a528b": 2.5498480796813965
+ },
+ "scenes_with_frame_gap": 12,
+ "pass": true
+}

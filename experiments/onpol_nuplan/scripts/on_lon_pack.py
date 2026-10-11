@@ -13,7 +13,7 @@ lib/on_lon.py reads, then gate (iv): activation of every item on the pool's stor
 Join, per row (meta.npz of scripts/on_rows.py: pose_map = the row's rear-axle pose in the nuPlan map frame, t_us = simulation time of the
 decision, simulation time 0 = the log frame 3 before the scene token; scene, k, the served plan `poses`):
   frame   the scene's route (origin frame, global origin pose in the context) is re-expressed in the row's own rear-axle frame;
-  time    the row's log time against the context's keyframe timestamps: the light state of a dense step is the state at the nearest log frame
+  time    the row's log time (meta `t_log_us`) against the context's keyframe timestamps: the light state of a dense step is the state at the nearest log frame
           (unknown when none is within 0.3 s), the log's progress D_k is its arc at t + 0.5 k minus its arc at t (linear between frames);
   actors  the rows' agent.npz (own frame, t + 0 .. 4 s; cls 0 = vehicle as on_rows.py wrote it).
 A row gets ok = False (all four terms 0) when its scene has no context, its time is outside the context's keyframes, it has no actor label,
@@ -33,6 +33,7 @@ import on_lon as OL  # noqa: E402
 import lc as LC  # noqa: E402
 import b1 as B  # noqa: E402
 
+ARC_ERR = 0.4
 T_NEAR, MIN_SHARE, SIM0 = 0.3e6, 0.002, -3                # SIM0: simulation time 0 = log frame index(token) - 3 (on_rows.FRAME_OFF)
 _C = {}
 
@@ -58,7 +59,7 @@ def load_all(name: str, ctx: Path) -> dict:
         names = tab["names"]
         assert (ag["tokens"] == names).all() and (m["names"] == names).all(), "agent.npz / meta.npz rows are not the tab's rows"
         X = dict(np.load(ctx, allow_pickle=False))
-        M = dict(scene=m["scene"].astype(str), k=m["k"].astype(int), seed=m["seed"].astype(int), t_sim=m["t_us"].astype(np.int64), pose=m["pose_map"].astype(np.float64),
+        M = dict(t_log=m["t_log_us"].astype(np.int64), scene=m["scene"].astype(str), k=m["k"].astype(int), seed=m["seed"].astype(int), t_sim=m["t_us"].astype(np.int64), pose=m["pose_map"].astype(np.float64),
                  served=m["poses"].astype(np.float32), D=m["D"].astype(np.float32), lead=m["lead"].astype(np.float32),
                  logfut=m["logfut"].astype(np.float32))
         _C.clear()
@@ -79,8 +80,9 @@ def work(u):
     sj = np.where(have, si, 0)
     pose = M["pose"][lo:hi]
     k0 = X["tok_k"][sj].astype(int) + SIM0                                                       # context keyframe of simulation time 0
-    t = np.take_along_axis(X["kf_ts"][sj], np.clip(k0, 0, None)[:, None], 1)[:, 0] + M["t_sim"][lo:hi]   # the row's log time (us)
-    have &= k0 >= 0
+    t_idx = np.take_along_axis(X["kf_ts"][sj], np.clip(k0, 0, None)[:, None], 1)[:, 0] + M["t_sim"][lo:hi]
+    t = M["t_log"][lo:hi]                                                                        # the row's log time (us), on_rows.py's own (track-matched)
+    have &= ~(X["kf_arc_err"][sj] > ARC_ERR) if "kf_arc_err" in X else True                      # a folded route (standstill jitter)
     ok = have & X["ok"][sj] & np.isfinite(pose).all(1) & G["aok"][lo:hi]
     pose = np.where(np.isfinite(pose), pose, 0.0)
     # frame: route (origin frame) -> the row's own frame
@@ -119,7 +121,7 @@ def work(u):
     cls = G["cls"][lo:hi]
     Z = OL.build_rows(R, H, np.nan_to_num(X["rlen"][sj]), box, valid, cls, X["ln_type"][sj], X["ln_d"][sj], X["ln_elig"][sj], ln_red, X["tn_ok"][sj], X["tn_spk"][sj],
                       X["tn_vpk"][sj], X["vlog"][sj].astype(np.float32), D, ok=ok)
-    Z |= dict(slog=slog, dlog=dlog, n_actor=valid[:, 0].sum(1).astype(np.int16), n_veh=((cls == 0) & valid[:, 0]).sum(1).astype(np.int16),
+    Z |= dict(slog=slog, dlog=dlog, t_idx_diff=np.abs(t_idx - t).astype(np.float32) / 1e6, n_actor=valid[:, 0].sum(1).astype(np.int16), n_veh=((cls == 0) & valid[:, 0]).sum(1).astype(np.int16),
               red_now=ln_red[:, :, 0] & Z["b_use"], light_known=known.mean(1).astype(np.float32))
     return Z
 
@@ -213,18 +215,23 @@ def cmd_pack(a):
         Z = {k: np.concatenate([r[k] for r in res.values]) for k in res.values[0]}
         Z["names"] = G["names"]
         ok = Z["ok"]
+        if a.p_open == "design":
+            Z["p_open"] = Z["p_open_design"]
         served, fut = M["served"], G["fut"]
         Dm = np.where(Z["p_D"] > -OL.BIG, Z["p_D"], np.nan)
         E, F = evaluate(Z, served), evaluate(Z, fut)
         rep_k = ok & (M["k"] <= 1) & np.isfinite(M["logfut"]).all((1, 2))       # log-replay decisions: the row's pose is the log's, so the log's own
         LG = evaluate(Z, np.nan_to_num(M["logfut"][:, 1:]))                     # future is a plan from this row ("does the log violate the item")
         far = np.abs(M["lead"]) > 5.0
+        Pd = evaluate(Z | dict(p_open=Z["p_open_design"]), served)["P"]         # P under design.md's "open", for the record
         sh = lambda m: float(m.mean()) if len(m) else None  # noqa: E731
         q = lambda v, p: [float(x) for x in np.quantile(v, p)] if len(v) else None  # noqa: E731
         ahead = (Z["s0"] - Z["slog"])[ok]
         gate = dict(rows_name=a.name, ctx=str(ctx), rows=int(N), rows_ok=int(ok.sum()), scenes=len(set(M["scene"].tolist())),
                     not_ok=dict(no_context=int((~np.isin(M["scene"], G["X"]["scene"])).sum()), no_actor_label=int((~G["aok"]).sum()), total=int((~ok).sum())),
+                    p_open=a.p_open, folded_route_rows=int((G["X"]["kf_arc_err"][[G["sidx"].get(s_, 0) for s_ in M["scene"].tolist()]] > ARC_ERR).sum()),
                     cross_check_with_on_rows=dict(
+                        log_time_by_frame_index_minus_t_log_us_abs_s_max=float(Z["t_idx_diff"].max()), rows_where_they_differ_by_more_than_50ms=int((Z["t_idx_diff"] > 0.05).sum()),
                         D_abs_diff_q50_q99_max=q(np.abs(Dm - M["D"])[np.isfinite(Dm) & ok[:, None]], [0.5, 0.99, 1.0]),
                         lead_abs_diff_q50_q99_max=q(np.abs((Z["s0"] - Z["slog"]) - M["lead"])[ok], [0.5, 0.99, 1.0]),
                         note="D = the log's travel over t .. t + 0.5 k, lead = arc ahead of the log at the same time; on_rows.py computes both on its own path G"),
@@ -236,7 +243,9 @@ def cmd_pack(a):
                     light_state_known_share_of_steps=float(Z["light_known"][ok].mean()),
                     context=dict(rows_with_A_eligible_actor=sh(Z["has_a"][ok]), rows_with_light_line_ahead=sh(Z["b_use"][ok].any(1)),
                                  rows_with_red_in_window=sh(Z["b_mu"][ok].any((1, 2))), rows_red_now=sh(Z["red_now"][ok].any(1)),
-                                 rows_with_eligible_turn=sh(Z["c_ok"][ok]), rows_open=sh(Z["p_open"][ok]),
+                                 rows_with_eligible_turn=sh(Z["c_ok"][ok]), rows_open=sh(Z["p_open"][ok]), rows_open_design=sh(Z["p_open_design"][ok]),
+                                 rows_design_open_closed_by_a_line=sh((Z["p_open_design"] & Z["any_line"])[ok]),
+                                 rows_design_open_closed_by_an_actor_near_the_route=sh((Z["p_open_design"] & Z["any_actor"])[ok]),
                                  rows_open_with_full_D=sh((Z["p_open"] & (Z["p_D"] > -OL.BIG).all(1))[ok]),
                                  A_margin_q10_q50_q90=q(Z["a_m"][Z["a_g0"] > 0], [0.1, 0.5, 0.9]), A_margin_zero_share=sh(Z["a_m"][Z["a_g0"] > 0] <= 0)),
                     replay_rows=int(rep_k.sum()), items={})
@@ -259,6 +268,7 @@ def cmd_pack(a):
             if share >= MIN_SHARE:
                 kept.append(it)
         items = tuple(a.items) if a.items else tuple(kept)
+        gate["items"]["P"] |= dict(active_share_served_with_design_open=float((Pd > 0).mean()), mean_when_active_with_design_open=float(Pd[Pd > 0].mean()) if (Pd > 0).any() else None)
         gate |= dict(items_in_pack=list(items), items_dropped_by_the_0p2_percent_rule=[i for i in OL.ITEMS if i not in kept], items_forced=bool(a.items))
         Z["items"] = np.array(items)
         out = rows_dir(a.name) / OL.PACK_NAME if not a.out else Path(a.out)
@@ -297,4 +307,5 @@ if __name__ == "__main__":
     ap.add_argument("--ctx", default="")
     ap.add_argument("--out", default="")
     ap.add_argument("--items", nargs="*", default=None)
+    ap.add_argument("--p-open", choices=["strict", "design"], default="strict", help="which rows carry P (lib/on_lon.py docstring)")
     cmd_pack(ap.parse_args())

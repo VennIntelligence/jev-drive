@@ -1,0 +1,73 @@
+{
+ "rows": 4000,
+ "values_bit_for_bit": true,
+ "values_bit_for_bit_f32": true,
+ "items": {
+  "A": {
+   "active_rows": 2245,
+   "value_equal_unprojected": true,
+   "grad_along_abs_max": 0.12195099206624527,
+   "grad_cross_abs_max": 3.469446951953614e-18,
+   "grad_yaw_abs_max": 0.0,
+   "unprojected_cross_abs_max": 0.11701855564372762,
+   "unprojected_yaw_abs_max": 0.0,
+   "along_minus_unprojected_along_abs_max": 2.7755575615628914e-17,
+   "finite_difference_along_abs_err_max": 2.9215272562277406e-10,
+   "finite_difference_share_within_1e_4": 1.0,
+   "finite": true
+  },
+  "B": {
+   "active_rows": 1485,
+   "value_equal_unprojected": true,
+   "grad_along_abs_max": 0.1219510994454546,
+   "grad_cross_abs_max": 3.469446951953614e-18,
+   "grad_yaw_abs_max": 0.0,
+   "unprojected_cross_abs_max": 0.11701855564372762,
+   "unprojected_yaw_abs_max": 0.0,
+   "along_minus_unprojected_along_abs_max": 2.7755575615628914e-17,
+   "finite_difference_along_abs_err_max": 2.3913371283157403e-10,
+   "finite_difference_share_within_1e_4": 1.0,
+   "finite": true
+  },
+  "C": {
+   "active_rows": 1290,
+   "value_equal_unprojected": true,
+   "grad_along_abs_max": 0.2682926814729741,
+   "grad_cross_abs_max": 6.938893903907228e-18,
+   "grad_yaw_abs_max": 0.0,
+   "unprojected_cross_abs_max": 0.0267065130379001,
+   "unprojected_yaw_abs_max": 0.0,
+   "along_minus_unprojected_along_abs_max": 5.551115123125783e-17,
+   "finite_difference_along_abs_err_max": 7.671642487938612e-11,
+   "finite_difference_share_within_1e_4": 1.0,
+   "finite": true
+  },
+  "P": {
+   "active_rows": 1283,
+   "value_equal_unprojected": true,
+   "grad_along_abs_max": 0.12886631382173144,
+   "grad_cross_abs_max": 3.469446951953614e-18,
+   "grad_yaw_abs_max": 0.0,
+   "unprojected_cross_abs_max": 0.08216508302472056,
+   "unprojected_yaw_abs_max": 0.0,
+   "along_minus_unprojected_along_abs_max": 2.7755575615628914e-17,
+   "finite_difference_along_abs_err_max": 2.399102860817237e-10,
+   "finite_difference_share_within_1e_4": 1.0,
+   "finite": true
+  }
+ },
+ "f32": {
+  "grad_cross_abs_max": 7.450580596923828e-09,
+  "grad_along_abs_max": 0.4633989632129669,
+  "grad_yaw_abs_max": 0.0,
+  "finite": true,
+  "keys": [
+   "lonA",
+   "lonB",
+   "lonC",
+   "lonP"
+  ],
+  "zero_plan_finite": true
+ },
+ "pass": true
+}
