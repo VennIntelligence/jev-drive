@@ -249,3 +249,19 @@ each; 1.5 TB free.
 - Pass-2 cut: pass 2 is stopped when its second chunk ends (80 of the 144 training scenes, about 23:28), its rows are built as pass `log`,
   then ON-SELF and ON-IMIT train in parallel with 12 `pol` + 4 `log` rows per batch. `scripts/onp_final_chain.sh` runs this, the G-load of
   the three checkpoints and the 281 queue (SELF, IMIT, FT).
+- 23:26: pass 2 cut at 80 of the 144 training scenes (15 884 on-log rows, G-in equal; G-id of pass `log`: registered rule 29.9 % over,
+  2-ulp 4.8 %, working line passes with 0.04 % over max(0.03 m, 4 ulp), largest difference 0.125 m, wrong checkpoint 97 % over).
+- 23:28 to 23:58: full trainings (10 000 steps): FT-CTRL on card 1, then ON-SELF and ON-IMIT in parallel, 12 `pol` + 4 `log` rows per batch.
+  All three checkpoints load through the driver image. Held rows (1 977) and dev, `/data/runs/onpol_pai/train/held/full.md`:
+
+  | Tag | Dev ADE | Drift off | ADE to recovery target, 1-4 s | agent / edge / corridor / B / C rate | Summed rate | Arc / served |
+  |---|--:|--:|--:|---|--:|--:|
+  | `P2H10S-F-s0` (control) | 0.545 | 0.045 | 4.768 | 0.069 / 0.064 / 0.108 / 0.052 / 0.014 | 0.307 | 1.033 |
+  | `P2H10S-FT-F-s0` | 0.529 | 0.046 | 4.764 | 0.072 / 0.068 / 0.112 / 0.050 / 0.009 | 0.311 | 1.023 |
+  | `P2H10S-SELF-ON-F-s0` | 0.548 | 0.053 | 5.093 | 0.065 / 0.020 / 0.112 / 0.015 / 0.004 | 0.215 | 1.128 |
+  | `P2H10S-IMIT-ON-F-s0` | 0.556 | 0.059 | 3.427 | 0.024 / 0.037 / 0.090 / 0.038 / 0.015 | 0.204 | 1.095 |
+
+  Open loop, descriptive: ON-SELF lowers the road-edge, stop-line and turn-speed rates and leaves the agent and corridor rates where the
+  control has them; ON-IMIT lowers the agent rate most and has the lower summed rate without being trained on the terms. Both plan longer
+  than the control (arc ratio 1.13 and 1.10 against 1.03). Fine-tuning alone (FT) changes none of the held-row quantities.
+- 23:59: the 281 queue started (`/data/runs/onpol_pai/read281`: self, imit, ft; 843 scenes; frozen clone at c58f7136 for the PAI scripts).
