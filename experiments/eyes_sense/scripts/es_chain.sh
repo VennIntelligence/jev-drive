@@ -60,9 +60,9 @@ subx() { local n=$1; shift; [[ -f $L/$n/DONE ]] && return
          $CL submit --owner eyes_sense --name "es-$n" --priority 15 --timeout-h 3 --log-dir "$L/$n" "$@" > /dev/null || die "submit $n"; }
 if ! python3 -c "import json, sys; sys.exit(0 if len(json.load(open('$BANK/bank.json'))['rows']) == 14 else 1)" 2>/dev/null; then
   status "rebuilding the vtr_W0 bank: side-view cache (vt_side.py split + build), then es_bank.py"
-  subx side-split --vram 0 --cpu 2 --ram 48 -- $PY experiments/vis_train/scripts/vt_side.py split --datas $DATAS
+  subx side-split --vram 0.5 --cpu 2 --ram 48 -- $PY experiments/vis_train/scripts/vt_side.py split --datas $DATAS
   waitdirs side-split
-  for d in $DATAS; do subx "side-build-$d" --vram 0 --cpu 6 --ram 16 -- $PY experiments/vis_train/scripts/vt_side.py build --data "$d"; done
+  for d in $DATAS; do subx "side-build-$d" --vram 0.5 --cpu 6 --ram 16 -- $PY experiments/vis_train/scripts/vt_side.py build --data "$d"; done
   waitdirs $(for d in $DATAS; do echo "side-build-$d"; done)
   subx bank --vram 12 --cpu 4 --ram 40 -- $PY experiments/eyes_sense/scripts/es_bank.py
   waitdirs bank
