@@ -18,6 +18,8 @@ OffAgentHinge, ot_rows' off_hinge / offsets. Only joint_train's S subset is carr
       self          hinge-only rows through Losses43's own hinge-only path (family `on`): agent hinge on the own plan against the row's actor boxes
                     and the road-and-lane raster hinge, both shape-only with --shape, each summed over the hinge-only rows / n_imit x lam x ho_w;
                     non-plan heads in `distill_ho` (summed over the hinge-only rows / number of other rows, lam_d 30); no imitation target.
+                    As bd4_train's note (x) does for S's rows, a row whose footprint at t0 is off the road-and-lane raster takes the pool's
+                    drivable raster (<POOL>/drivable.npz, P2H10's layers) if the pool has one.
       both          the imit row plus the two hinges of the on-policy rows, summed / n_imit x lam x ho_w (n_imit then counts the on-policy rows).
   --on-lon          extra per-row terms of the on-policy rows in self / both from experiments/onpol_nuplan/lib/on_lon.py (plans/on_pool_format.md):
                     each term summed / n_imit x --on-lon-lam 10 x ho_w. Off: no operation is added.
@@ -225,17 +227,23 @@ def setup(a, dev):
         agent2.box[on0:], agent2.val[on0:] = ah.box, ah.val
         on_aok = torch.zeros(S.n, dtype=torch.bool, device=dev)
         on_aok[on0:] = ah.ok
-        with torch.no_grad():
+        with torch.no_grad():                                         # note (x) for the pool: rows off the road raster at t0 take <POOL>/drivable.npz
             r = torch.arange(on0, S.n, device=dev)
             r = r[road.ok[r]]
             z = torch.zeros(len(r), 8, device=dev)
-            n_offroad = sum(int((road.margins(z[i:i + 4096], z[i:i + 4096], z[i:i + 4096], r[i:i + 4096]).amin(1) < 0).sum()) for i in range(0, len(r), 4096))
-        onrec |= dict(agent_rows=int(ah.ok.sum()), road_rows=int(road.ok[on0:].sum()), offroad_at_t0=n_offroad)
+            fb = torch.cat([r[i:i + 4096][road.margins(z[i:i + 4096], z[i:i + 4096], z[i:i + 4096], r[i:i + 4096]).amin(1) < 0] for i in range(0, len(r), 4096)] or [r])
+        onrec |= dict(agent_rows=int(ah.ok.sum()), road_rows=int(road.ok[on0:].sum()), offroad_at_t0=int(len(fb)), drivable_raster_kept=0)
+        if len(fb) and (pd / "drivable.npz").exists():
+            dr = Hinge(pd / "drivable.npz", pn, dev, a.road_margin, bank=True)
+            road.sdf[fb], road.ok[fb] = dr.sdf[fb - on0], dr.ok[fb - on0]
+            onrec |= dict(drivable_raster_kept=int(len(fb)), road_rows=int(road.ok[on0:].sum()))
+            del dr
         del ah
     lon = pack = None
     if a.on_lon:
         assert hing, "--on-lon: self / both only"
-        import on_lon as lon
+        import importlib
+        lon = importlib.import_module(a.on_lon)
         pack = lon.load(pd, pn, dev) if hasattr(lon, "load") else dict(dir=pd, names=pn, dev=dev)
     t = lambda x: torch.as_tensor(x, device=dev)  # noqa: E731
 
@@ -394,7 +402,7 @@ def cmd_known(a):
     import torch
     import pp_train as T
     dev = torch.device("cuda")
-    a.batch, a.on_mode, a.on_k, a.on_lon = 128, "self", 13, False
+    a.batch, a.on_mode, a.on_k, a.on_lon = 128, "self", 13, ""
     ns = setup(a, dev)
     S, model, cfg, k = ns.S, ns.model, ns.cfg, ns.k_on
     jb = ns.fams.index("bd4")
@@ -575,7 +583,8 @@ if __name__ == "__main__":
     p.add_argument("--on-k", type=int, default=13)
     p.add_argument("--on-mode", default="", choices=("",) + MODES)
     p.add_argument("--on-split", default="", help="registered split of the pool's scenes (alpasim_nuplan/onpol-train), recorded with the run")
-    p.add_argument("--on-lon", action="store_true", help="extra on-policy terms from experiments/onpol_nuplan/lib/on_lon.py (self / both)")
+    p.add_argument("--on-lon", nargs="?", const="on_lon", default="", metavar="MODULE",
+                   help="extra on-policy terms (self / both) from experiments/onpol_nuplan/lib/on_lon.py (or another module with its load / loss)")
     p.add_argument("--on-lon-lam", type=float, default=10.0)
     p.add_argument("--prefetch", type=int, default=4)
     p.add_argument("--fetch-workers", type=int, default=2)

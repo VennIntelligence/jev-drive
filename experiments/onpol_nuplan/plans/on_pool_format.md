@@ -39,12 +39,13 @@ the driver expressed its plan (`sh30_core.Core.plan` -> `poses`).
 `teacher.plan` is never read on these rows (they are never anchor rows and never dev rows) but the Store needs the key.
 The trainer asserts: names unique, all start with `on:`, none in the split; `fut` finite; `di` / `pi` equal the base teacher's; label
 `tokens` cover `names`; shapes above. It logs: rows, logs, rows with agent / road labels, rows whose footprint at t is off the raster.
-Unlike S's hinge-only rows, a row that is off the road raster at t keeps that raster (S swaps in the NAVSIM drivable raster there; the
-pool has none): say so if rule (b) leaves many.
+As bd4_train's note (x) does for S's hinge-only rows, a row whose footprint at t is off the road raster takes the raster of the optional
+`<POOL>/drivable.npz` (same layout, P2H10's layers ROADBLOCK, INTERSECTION, CARPARK_AREA) in `self` and `both`; without that file it
+keeps the road raster. The count is in the log line (`offroad_at_t0`, `drivable_raster_kept`).
 
 ## Optional longitudinal labels (lane L)
 
-`on_train.py --on-lon` imports `experiments/onpol_nuplan/lib/on_lon.py`: `load(pool_dir: Path, names (N,), dev) -> pack` (optional; without
+`on_train.py --on-lon [MODULE]` imports `experiments/onpol_nuplan/lib/on_lon.py`: `load(pool_dir: Path, names (N,), dev) -> pack` (optional; without
 it `pack = dict(dir=pool_dir, names=names, dev=dev)`) and `loss(poses (n, 8, 3) torch, rear-axle x, y, yaw of the own plan in the own
 frame, with gradient; rows (n,) long = row index in the pool; pack) -> {term: (n,) per-row loss}`. Each term is added as
 lam 10 x ho_w x sum over the rows / imitation rows of the batch, in `self` and `both`. Its files live beside the others in `<POOL>/`.
