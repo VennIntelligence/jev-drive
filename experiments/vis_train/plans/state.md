@@ -198,6 +198,8 @@ scripts/tmux_run.sh vt-W-s1 env VT_WHEN=$DATA_DIR/runs/op_parity/runs/VT-A0-s1/c
 
 **2026-10-11 08:55 CST**：闸门未过（−0.75），用户决定照跑 R（prereg 补记 8）。**08:58 CST 改臂**：R 臂 = `VTR-0`、`VTR-B`、`VTR-W0`、`VTR-W`（seed 0 / 1，8 个训练），`VTR-A` 与 A2 / B2 续跑取消（B2 此前已按 `FALLBACK_B` 跑完，不受影响）。bank：`vtr_0`（Cinque t0）、`vtr_B-s{0,1}`（`VT-B-s{0,1}` final，step 50 000）、`vtr_W0`（冻结 Cinque 编码器 × W 的三视角，(N, 3, 32, 512)）、`vtr_W-s{0,1}`（`VT-W-s{0,1}` final，都是 step 50 000；W-s1 的 final 08:50 已写出，没用 snapshot）。`pp_train.py` 对 `vtr_W*` 用 3 相机适配器。覆盖是持久的：`chain/R/GATE_OVERRIDE` 存在时，重启链（`scripts/tmux_run.sh vt-R experiments/vis_train/scripts/vt_r_chain.sh all`，不必再带 `VT_R_SKIP_GATE=1`）只续 R 部分。
 
+**收尾记录（2026-10-11，write-up agent）**：链 `jev:vt-R` 09:59 CST `DONE`；8 个训练与 32 个读数全部完成，无报错无重试（`chain/R/log.txt`）。结果、预期（E1 / E2 / E3）、登记判词与逐 seed 数字都在决策 248 的 i 节和 `results/reads.md`：RB − R0 EPDMS −1.01 [−1.36, −0.69]、切内侧 > 45° +1.88 [+0.93, +2.93]、翻转 50 / 107；RW0 − R0 全部含 0（EPDMS −0.00，翻转 46 / 40）；RW − RW0 EPDMS −0.73 [−1.05, −0.42]、切内侧 +0.86 [+0.08, +1.68]、翻转 52 / 78；四个比较的 > 20° off-road 判词都是 undetermined（RW0 − R0 字面为没测到，reads.md 打印 pending）。闸门失败（−0.75 对 ≥ +0.2）原样保留，已在 248 与页面里写明。本节不再有待办。绝对 EPDMS（`chain/R/log.txt`）：R0 89.46 / 89.55，RB 88.52 / 88.46，RW0 89.44 / 89.56，RW 88.94 / 88.61。
+
 ### 队列（生效的一批：08:55–09:00 CST 入队；owner `vis_train-R`；链 `jev:vt-R` 09:00 起；01:07 与 08:54 两批均已取消，id 仍在 `jobs.txt` 里）
 
 | 任务 | id | 等什么 | 做什么 |
