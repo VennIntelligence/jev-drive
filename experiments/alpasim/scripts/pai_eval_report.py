@@ -6,7 +6,8 @@
 --only <file of scene ids> restricts the scene set of the row table and the pairs (a subset read). --detail appends, after everything else, a
 per-row table (scenes scored 1, slow scenes, zeros by kind, driver errors of the run dirs) and one table of the --pair differences with CI,
 better / worse counts and the decomposition of each difference into its zero -> scored, scored -> zero and both-scored parts (a mean row is
-zero on a scene only if every seed is zero). Without the two options the output is as before.
+zero on a scene only if every seed is zero); a pair with a mean row also gets the average of its seed-pair decompositions. Without the two options the
+output is as before.
 Tables: mean scene score and zeros by kind per label on the scenes every label scored; per --pair the paired difference with a bootstrap
 95 % CI over scenes (10000 draws, seed 0); throughput of every run dir (scenes, CONC, card, wall, scenes per hour, render / drive share of
 the summed RPC time, per-container VRAM peaks, card peak). --scenes writes one row per scene (scores of every label).
@@ -64,9 +65,11 @@ D, R = {}, {}
 for x in a.rows:
     k, pat = x.split("=", 1)
     D[k], R[k] = load(pat)
+MEAN = {}
 for x in a.mean:
     k, ks = x.split("=", 1)
     ks = ks.split(",")
+    MEAN[k] = ks
     R[k] = {q: {"score": float(np.mean([R[j][q]["score"] for j in ks])), "score_metrics": {}} for q in set.intersection(*(set(R[j]) for j in ks))}
 keep = {ln.split("\t")[0].strip() for ln in Path(a.only).read_text().splitlines() if ln.strip() and not ln.startswith("scene_id")} if a.only else None
 sc = sorted(set.intersection(*(set(v) for v in R.values())) & (keep if keep is not None else set.union(*(set(v) for v in R.values()))))
@@ -123,6 +126,23 @@ if a.detail:
         part = [d[q].sum() / len(d) for q in m]
         L.append(f"| {ka} - {kb} | {len(s)} | {d.mean():+.4f} | [{lo:+.4f}, {hi:+.4f}] | {(d > 0.01).sum()} / {(d < -0.01).sum()} / {(abs(d) <= 0.01).sum()} | "
                  f"{m[0].sum()} | {part[0]:+.4f} | {m[1].sum()} | {part[1]:+.4f} | {m[2].sum()} | {part[2]:+.4f} | {m[3].sum()} | {sum(part) - d.mean():+.0e} |")
+    mp = [x for x in PS if x[0] in MEAN or x[1] in MEAN]
+    if mp:
+        L += ["", "Pairs with a mean row, decomposed over the seed pairs: a mean row is the average of its seeds, so a - b is the average of the single-seed differences "
+              "(a seed - b seed) over all seed pairs, and each of those has a clean zero / scored status. Scenes are averaged over the seed pairs, "
+              "a part is the average of the pairs' parts, so the three parts add up to the mean difference of the pair (check column).", "",
+              "| Pair (a - b) | Seed pairs | Mean difference | Fixed: scenes | part | Broken: scenes | part | Both scored: scenes | part | Both zero: scenes | Check |",
+              "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+        for ka, kb, s, d, lo, hi in mp:
+            cnt, prt = [], []
+            for i in MEAN.get(ka, [ka]):
+                for j in MEAN.get(kb, [kb]):
+                    xa, xb = np.array([R[i][q]["score"] for q in s]), np.array([R[j][q]["score"] for q in s])
+                    m = [(xb == 0) & (xa > 0), (xb > 0) & (xa == 0), (xb > 0) & (xa > 0), (xb == 0) & (xa == 0)]
+                    cnt.append([q.sum() for q in m])
+                    prt.append([(xa - xb)[q].sum() / len(s) for q in m])
+            c, q = np.mean(cnt, 0), np.mean(prt, 0)
+            L.append(f"| {ka} - {kb} | {len(cnt)} | {d.mean():+.4f} | {c[0]:.2f} | {q[0]:+.4f} | {c[1]:.2f} | {q[1]:+.4f} | {c[2]:.2f} | {q[2]:+.4f} | {c[3]:.2f} | {q.sum() - d.mean():+.0e} |")
 print("\n".join(L))
 if a.out:
     Path(a.out).write_text("\n".join(L) + "\n")

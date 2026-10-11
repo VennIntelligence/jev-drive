@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Wall clock and card time of pai_eval.sh / pai_queue.sh runs, from the run dirs: a chunk starts at the first `driver ... on GPU` line of its
-log.txt (pai_run.sh) and ends at the mtime of its DONE; run.json has the card, the scenes and the compose-phase wall. Plain python3, on the Tokyo box
+"""Wall clock and card time of pai_eval.sh / pai_queue.sh runs, from the run dirs: a chunk starts at the last `driver ... on GPU` line of its
+log.txt (pai_run.sh; earlier lines are aborted attempts, listed in the chunk table) and ends at the mtime of its DONE; run.json has the card, the scenes and the compose-phase wall. Plain python3, on the Tokyo box
 (timestamps in the log are local time).
   pai_queue_timing.py '<queue root>/*/runs/*' [--out md]          one table per run, one per card, the queue totals
 """
@@ -19,11 +19,12 @@ rows = []
 for d in sorted(Path(x) for p in a.pattern for x in glob.glob(p)):
     if not (d / "DONE").exists() or not (d / "run.json").exists():
         continue
-    t0 = next((time.mktime(time.strptime(m[1], "%Y-%m-%d %H:%M:%S")) for ln in (d / "log.txt").read_text().splitlines()
-               if (m := re.match(r"(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) driver .* on GPU", ln))), None)
+    st = [time.mktime(time.strptime(m[1], "%Y-%m-%d %H:%M:%S")) for ln in (d / "log.txt").read_text().splitlines()
+          if (m := re.match(r"(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) driver .* on GPU", ln))]
     j = json.loads((d / "run.json").read_text())
-    if t0 is not None:
-        rows.append(dict(run=d.parent.parent.name + "/" + d.name, card=j["gpu"], scenes=j["scenes"], compose=j["wall_s"], t0=t0, t1=(d / "DONE").stat().st_mtime))
+    if st:  # the last start is the attempt that finished; earlier ones were aborted (killed, failed) and are counted in `aborted`
+        rows.append(dict(run=d.parent.parent.name + "/" + d.name, card=j["gpu"], scenes=j["scenes"], compose=j["wall_s"], t0=st[-1], t1=(d / "DONE").stat().st_mtime,
+                         aborted=len(st) - 1, first=st[0]))
 fmt = lambda s: f"{int(s // 3600)} h {int(s % 3600 // 60):02d} min"  # noqa: E731
 q0, q1 = min(r["t0"] for r in rows), max(r["t1"] for r in rows)
 L = [f"Queue: {len(rows)} chunks, {sum(r['scenes'] for r in rows)} scenes, {time.strftime('%F %T', time.localtime(q0))} to {time.strftime('%F %T', time.localtime(q1))}, wall {fmt(q1 - q0)}.", "",
@@ -40,9 +41,10 @@ for k, c in runs.items():
     s0, s1 = min(r["t0"] for r in c), max(r["t1"] for r in c)
     L.append(f"| {k} | {len(c)} | {sum(r['scenes'] for r in c)} | {time.strftime('%F %T', time.localtime(s0))} | {time.strftime('%F %T', time.localtime(s1))} | {fmt(s1 - s0)} | "
              f"{fmt(sum(r['t1'] - r['t0'] for r in c))} |")
-L += ["", "| Chunk | Card | Scenes | Start | End | Elapsed min | Compose s |", "|---|--:|--:|---|---|--:|--:|"]
+L += ["", "| Chunk | Card | Scenes | Start | End | Elapsed min | Compose s | Aborted attempts (first start) |", "|---|--:|--:|---|---|--:|--:|---|"]
 for r in sorted(rows, key=lambda r: r["t0"]):
-    L.append(f"| {r['run']} | {r['card']} | {r['scenes']} | {time.strftime('%T', time.localtime(r['t0']))} | {time.strftime('%T', time.localtime(r['t1']))} | {(r['t1'] - r['t0']) / 60:.1f} | {r['compose']} |")
+    L.append(f"| {r['run']} | {r['card']} | {r['scenes']} | {time.strftime('%T', time.localtime(r['t0']))} | {time.strftime('%T', time.localtime(r['t1']))} | {(r['t1'] - r['t0']) / 60:.1f} | "
+             f"{r['compose']} | {str(r['aborted']) + ' (' + time.strftime('%T', time.localtime(r['first'])) + ')' if r['aborted'] else ''} |")
 print("\n".join(L))
 if a.out:
     Path(a.out).write_text("\n".join(L) + "\n")
