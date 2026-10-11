@@ -6,7 +6,8 @@ experiments/lowboard_diag/scripts/stoplbl_label.py's (decision 238), imported un
   $DATA_DIR/envs/navsim2/bin/python experiments/long_contact/scripts/lc_ctx.py run [--limit-logs N] [--workers W]
   -> $DATA_DIR/runs/long_contact/ctx/ctx.npz (one row per navtrain token, body1 global row order), gate.json
 
-Gate: the 8 logged future poses rebuilt from the log pkl must equal the cache's `fut` (max |diff| < 0.05 m) and the t0 speed its `speed`.
+Gate: the 8 logged future poses rebuilt from the log pkl must equal the cache's `fut` within 0.25 m / 0.02 rad (the cache was built from float32
+global coordinates: measured max 0.165 m, p99.9 0.110 m, yaw 0.0065 rad on 2026-10-11) and the t0 speed its `speed` within 0.05 m/s.
 """
 import argparse
 import json
@@ -235,7 +236,7 @@ def cmd_run(a):
         (out.parent / "gate.json").write_text(json.dumps(gate, indent=1))
         run.summary.update(gate)
         run.info("gate %s", json.dumps(gate))
-        assert gate["fut_max_xy"] < 0.05 and gate["speed_max"] < 0.05, "the log pkl does not reproduce the cache's fut / speed"
+        assert gate["fut_max_xy"] < 0.25 and gate["fut_max_yaw"] < 0.02 and gate["speed_max"] < 0.05, "the log pkl does not reproduce the cache's fut / speed"
 
 
 if __name__ == "__main__":
