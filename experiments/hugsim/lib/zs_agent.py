@@ -71,6 +71,11 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      (and, for an arm that reads them, the side / rear camera key frames) to that server and passes the returned
                      (32, 512) bias to the policy server as `intent_bias` (the served ONNX must have that input: pp_hugsim.py onnx);
                      not combined with derot / lstab
+                     trace (openpilot, bool, default false; plans/2026-10-11-serving-trace-prereg.md, results/serving_trace.md): logging
+                     only - every request carries the flag `trace`, the policy server answers with the CRC32s of its ONNX-internal image
+                     and feature queues after each model step (hugsim_zs_server.queue_trace, read-only), and the agent writes one line
+                     per decision to <output>/zs_trace.jsonl (simulator time, CRC32 of the frame sent, model steps, fed speed, the plan
+                     read-out times, the parity pose-history times); plans and zs_steps.jsonl are unchanged
 
 Interface (jevdrive/openpilot/interface.py, docs/openpilot-interface.md): experiments/hugsim/archive/zs_run.py resolves a named
 preset (--preset spec | spec_cold | spec_hold | opctrl_d118 | exam) into the controller tree, OP_CTRL and these opts and passes HUGSIM_ZS_PRESET /
@@ -107,6 +112,7 @@ import launch_long as LL  # noqa: E402
 
 OP_T = np.array([10.0 * (i / 32) ** 2 for i in range(33)])
 OP_CTX_S = 0.2                                     # openpilot context step (5 Hz)
+PH_KEYS = np.array([-1.5, -1.0, -0.5, 0.0])        # lib/parity_hugsim.KEYS_S (trace log only)
 
 
 class Agent:
@@ -224,6 +230,8 @@ class Agent:
         meta = {"traffic": self.opts.get("traffic", [1, 0]), "speed": float(info["ego_velo"]) * dil}
         if self.opts.get("op_lead") is not None:           # also return the decoded lead outputs of this pass
             meta["lead_out"] = True
+        if self.opts.get("trace"):                         # logging only: the server's queue CRCs ride back in the reply info
+            meta["trace"] = True
         below, ctx = float(self.opts.get("derot_below", 0)), int(self.opts.get("derot_ctx", 25))
         if below > 0:
             self.buf.append((self.step, {c: obs["rgb"][c] for c in self.op.cams}, img2, desire))
@@ -291,6 +299,15 @@ class Agent:
         else:
             r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2})
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)
+        if self.opts.get("trace"):
+            if not hasattr(self, "tlog"):
+                self.tlog = open(self.out / "zs_trace.jsonl", "w", buffering=1)
+            self.tlog.write(json.dumps({
+                "step": self.step, "t": float(info["timestamp"]), "v": float(info["ego_velo"]), "speed_fed": meta["speed"], "dil": dil,
+                "per_ctx": per_ctx, "reps": reps, "img2_crc": zlib.crc32(np.ascontiguousarray(img2).tobytes()),
+                "tau": (Z.plan_times() / dil).tolist(), "plan_t": Z.plan_times().tolist(),
+                "par_scale": self.par and self.par.scale, "par_key_t": self.par and (float(info["timestamp"]) + PH_KEYS * self.par.scale).tolist(),
+                "srv": r.get("trace")}) + "\n")
         self.ol_in = (out.get("lead"), out.get("lead_prob3"), float(out["vel"][0]))
         rec.update(desire=desire, reps=reps, infer_ms=r.get("infer_ms"), rtt_ms=r["rtt_ms"],
                    lead_prob=r.get("lead_prob"), lead_x=r.get("lead_x"), lead_v=r.get("lead_v"), engaged=r.get("engaged"),

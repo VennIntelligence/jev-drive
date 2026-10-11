@@ -17,6 +17,7 @@ import sys as _sys, pathlib as _pl  # restructure: dirs of the script modules th
 _sys.path[:0] = [str(_pl.Path(__file__).resolve().parents[3] / _d) for _d in ("scripts",)]
 import sys
 import time
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -25,6 +26,20 @@ sys.path[:0] = [str(Path(__file__).resolve().parents[3] / "scripts")]
 import zeroshot_policy_server as S  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "lib"))
 import launch_stab as LS  # noqa: E402
+
+
+def queue_trace(m, full=False):
+    """Read-only view of a queued model's ONNX-internal queues after a step (request flag `trace`, zs_agent.py opt `trace`, default off;
+    experiments/hugsim/results/serving_trace.md): the model step count, the CRC32 of each of the 5 frames in state_img_q (both cameras, the
+    bytes the agent sent as img2) and of the newest state_feat_q row; full: the CRC32 of all 128 feature rows. Copies the states to the
+    host and writes nothing back."""
+    st = {n: v.numpy() for n, v in m.sets[m.n % 2].items()} if m.device else m.state   # the set the last step wrote
+    iq, fq = st["state_img_q"], st["state_feat_q"]
+    rec = {"n": int(m.n), "img": [zlib.crc32(np.ascontiguousarray(iq[:, i]).tobytes()) for i in range(iq.shape[1])],
+           "feat": zlib.crc32(np.ascontiguousarray(fq[-1]).tobytes())}
+    if full:
+        rec["feat_q"] = [zlib.crc32(np.ascontiguousarray(r).tobytes()) for r in fq]
+    return rec
 
 
 def lead_xv(lead):
@@ -143,9 +158,13 @@ class Openpilot(S.OpenpilotModel):
             if "intent_bias" in m.inputs:              # adapted ONNX: this request's bias (or none), never a stale one from the pool
                 b = prep.get("bias")
                 m.extra = {} if b is None else {"intent_bias": np.asarray(b, np.float16).reshape(1, 32, 512)}
-            for _ in range(reps):
+            trace = [] if meta.get("trace") and "state_img_q" in m.inputs else None
+            for i in range(reps):
                 raw = m.step(prep["img2"], desire=desire, traffic=traffic)
+                if trace is not None:
+                    trace.append(queue_trace(m, full=i == reps - 1))
         else:
+            trace = None
             m = self.model
             for k in self.STATE:
                 setattr(m, k, state[k])
@@ -165,6 +184,8 @@ class Openpilot(S.OpenpilotModel):
                 "lat_std4": float(lat_std[self.t_idxs <= 4.0 + 1e-6].sum()),
                 "engaged": d["engaged"], "lead_prob": float(np.ravel(d["lead_prob"])[0]),
                 **lead_xv(d.get("lead"))}
+        if trace is not None:
+            info["trace"] = trace
         out = {"pos": d["plan_pos"].astype(np.float32), "vel": d["plan_vel"][:, 0].astype(np.float32),
                "yaw": d["plan_yaw"].astype(np.float32), "yaw_rate": d["plan_yaw_rate"].astype(np.float32), "t": self.t_idxs}
         if meta.get("lead_out"):                           # zs_agent.py opt `op_lead`: all three lead selections of this pass (means, probabilities)
