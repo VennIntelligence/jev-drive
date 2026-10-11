@@ -1,0 +1,63 @@
+{
+ "tol_m": 0.03,
+ "t_max_s": 4.0,
+ "decisions": 989,
+ "scenarios": 16,
+ "share_over_b": 0.0,
+ "max_b_m": 0.0,
+ "act_max_diff": 0.0,
+ "nkeys_equal": true,
+ "control_share_over_wd": 0.9989888776541962,
+ "share_over_log": 1.0,
+ "scene_lht": [
+  {
+   "scenario": "scene-0013_medium_00",
+   "n": 21,
+   "over_b": 21,
+   "max_b_m": 1.0703125,
+   "median_b_m": 0.53125
+  },
+  {
+   "scenario": "scene-0041_medium_00",
+   "n": 24,
+   "over_b": 24,
+   "max_b_m": 0.953125,
+   "median_b_m": 0.6328125
+  },
+  {
+   "scenario": "scene-0051_easy_00",
+   "n": 43,
+   "over_b": 42,
+   "max_b_m": 0.75,
+   "median_b_m": 0.40625
+  },
+  {
+   "scenario": "scene-0930_hard_00",
+   "n": 37,
+   "over_b": 37,
+   "max_b_m": 0.953125,
+   "median_b_m": 0.3125
+  }
+ ],
+ "latency_ms": {
+  "server_infer": {
+   "median": 87.87248400039971,
+   "p95": 103.54489078745246,
+   "p99": 106.59479576162994,
+   "max": 117.79219401068985
+  },
+  "client_rtt": {
+   "median": 89.70314194448292,
+   "p95": 105.3804151713848,
+   "p99": 108.19696169346571,
+   "max": 119.53317420557141
+  },
+  "lattice_frames": {
+   "median": 48.85,
+   "p95": 64.232,
+   "p99": 66.5872,
+   "max": 71.95
+  }
+ },
+ "passed": true
+}

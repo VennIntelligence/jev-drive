@@ -1,0 +1,16 @@
+pair,quantity,n,units,mean,lo,hi,n_boot,seed,alpha,mean_a,mean_b,n_both
+stateless vs r3,"time to 2 m/s, arm - ref (s), scenarios where both reach it",61.0,61.0,-0.6229508196721312,-0.6926229508196722,-0.5573770491803278,10000.0,0.0,0.05,0.9057377049180327,1.528688524590164,61.0
+stateless vs r3,"time below 2 m/s per scenario, arm - ref (s)",64.0,64.0,-3.11328125,-4.72666015625,-1.75390625,10000.0,0.0,0.05,2.84765625,5.9609375,
+stateless vs r3,"mean plan arc 0-3 s on decisions below 2 m/s, arm / ref",,,1.4628164875676464,1.3297291887002034,1.6493198782272411,,,,,,
+stateless vs r3,"step-0 plan arc 0-3 s, arm / ref",,,4.201614232155332,4.010674899282829,4.453343598037388,,,,,,
+stateless vs r3,"plan arc 0-3 s / (3 s x v), warm v > 3 m/s, arm / ref",,,1.0139193555737749,0.9941997057224364,1.0362073202520683,,,,,,
+stateless vs rr1,"time to 2 m/s, arm - ref (s), scenarios where both reach it",61.0,61.0,-0.6229508196721312,-0.6926229508196722,-0.5573770491803278,10000.0,0.0,0.05,0.9057377049180327,1.528688524590164,61.0
+stateless vs rr1,"time below 2 m/s per scenario, arm - ref (s)",64.0,64.0,-3.21875,-4.85546875,-1.8046875,10000.0,0.0,0.05,2.84765625,6.06640625,
+stateless vs rr1,"mean plan arc 0-3 s on decisions below 2 m/s, arm / ref",,,1.4759864172204293,1.341570807929651,1.6516472697222955,,,,,,
+stateless vs rr1,"step-0 plan arc 0-3 s, arm / ref",,,4.201614232155332,4.010674899282829,4.453343598037388,,,,,,
+stateless vs rr1,"plan arc 0-3 s / (3 s x v), warm v > 3 m/s, arm / ref",,,1.0140665022234636,0.9941558784471347,1.036494234643544,,,,,,
+stateless vs rr2,"time to 2 m/s, arm - ref (s), scenarios where both reach it",61.0,61.0,-0.6229508196721312,-0.6926229508196722,-0.5573770491803278,10000.0,0.0,0.05,0.9057377049180327,1.528688524590164,61.0
+stateless vs rr2,"time below 2 m/s per scenario, arm - ref (s)",64.0,64.0,-3.23046875,-4.875,-1.81640625,10000.0,0.0,0.05,2.84765625,6.078125,
+stateless vs rr2,"mean plan arc 0-3 s on decisions below 2 m/s, arm / ref",,,1.4721415788573928,1.3408675554418736,1.6466423328483286,,,,,,
+stateless vs rr2,"step-0 plan arc 0-3 s, arm / ref",,,4.201614232155332,4.010674899282829,4.453343598037388,,,,,,
+stateless vs rr2,"plan arc 0-3 s / (3 s x v), warm v > 3 m/s, arm / ref",,,1.0140839059673974,0.9943245577200056,1.036395773606595,,,,,,
