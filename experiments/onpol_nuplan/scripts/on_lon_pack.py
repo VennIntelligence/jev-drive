@@ -60,7 +60,8 @@ def load_all(name: str, ctx: Path) -> dict:
         assert (ag["tokens"] == names).all() and (m["names"] == names).all(), "agent.npz / meta.npz rows are not the tab's rows"
         X = dict(np.load(ctx, allow_pickle=False))
         M = dict(t_log=m["t_log_us"].astype(np.int64), scene=m["scene"].astype(str), k=m["k"].astype(int), seed=m["seed"].astype(int), t_sim=m["t_us"].astype(np.int64), pose=m["pose_map"].astype(np.float64),
-                 served=m["poses"].astype(np.float32), D=m["D"].astype(np.float32), lead=m["lead"].astype(np.float32),
+                 served=m["poses"].astype(np.float32), D=m["D"].astype(np.float32),
+                 D_reg=m["D_reg"].astype(np.float32) if "D_reg" in m.files else m["D"].astype(np.float32), lead=m["lead"].astype(np.float32),
                  logfut=m["logfut"].astype(np.float32))
         _C.clear()
         _C[key] = dict(names=names, fut=tab["fut"].astype(np.float32), meta=M, box=ag["box"], valid=ag["valid"], cls=ag["cls"].astype(np.int64), aok=ag["ok"], X=X,
@@ -218,23 +219,27 @@ def cmd_pack(a):
         if a.p_open == "design":
             Z["p_open"] = Z["p_open_design"]
         served, fut = M["served"], G["fut"]
-        Dm = np.where(Z["p_D"] > -OL.BIG, Z["p_D"], np.nan)
+        Dm = np.where(Z["p_D"] > -OL.BIG, Z["p_D"], np.nan)                      # the log's own travel, recomputed here from the context
+        Z["p_D_log"] = Z["p_D"]
+        if a.p_ref == "amended":                                                # the prereg's D_k after Amendment 2 (on_rows.py meta `D`)
+            Z["p_D"] = np.where(np.isfinite(M["D"]) & (Z["p_D"] > -OL.BIG), M["D"], -2 * OL.BIG).astype(np.float32)
         E, F = evaluate(Z, served), evaluate(Z, fut)
         rep_k = ok & (M["k"] <= 1) & np.isfinite(M["logfut"]).all((1, 2))       # log-replay decisions: the row's pose is the log's, so the log's own
         LG = evaluate(Z, np.nan_to_num(M["logfut"][:, 1:]))                     # future is a plan from this row ("does the log violate the item")
         far = np.abs(M["lead"]) > 5.0
         Pd = evaluate(Z | dict(p_open=Z["p_open_design"]), served)["P"]         # P under design.md's "open", for the record
+        Pl = evaluate(Z | dict(p_D=Z["p_D_log"]), served)["P"]                  # P against the log's own travel (the prereg before Amendment 2)
         sh = lambda m: float(m.mean()) if len(m) else None  # noqa: E731
         q = lambda v, p: [float(x) for x in np.quantile(v, p)] if len(v) else None  # noqa: E731
         ahead = (Z["s0"] - Z["slog"])[ok]
         gate = dict(rows_name=a.name, ctx=str(ctx), rows=int(N), rows_ok=int(ok.sum()), scenes=len(set(M["scene"].tolist())),
                     not_ok=dict(no_context=int((~np.isin(M["scene"], G["X"]["scene"])).sum()), no_actor_label=int((~G["aok"]).sum()), total=int((~ok).sum())),
-                    p_open=a.p_open, folded_route_rows=int((G["X"]["kf_arc_err"][[G["sidx"].get(s_, 0) for s_ in M["scene"].tolist()]] > ARC_ERR).sum()),
+                    p_open=a.p_open, p_ref=a.p_ref, folded_route_rows=int((G["X"]["kf_arc_err"][[G["sidx"].get(s_, 0) for s_ in M["scene"].tolist()]] > ARC_ERR).sum()),
                     cross_check_with_on_rows=dict(
                         log_time_by_frame_index_minus_t_log_us_abs_s_max=float(Z["t_idx_diff"].max()), rows_where_they_differ_by_more_than_50ms=int((Z["t_idx_diff"] > 0.05).sum()),
-                        D_abs_diff_q50_q99_max=q(np.abs(Dm - M["D"])[np.isfinite(Dm) & ok[:, None]], [0.5, 0.99, 1.0]),
+                        D_abs_diff_q50_q99_max=q(np.abs(Dm - M["D_reg"])[np.isfinite(Dm) & ok[:, None]], [0.5, 0.99, 1.0]),
                         lead_abs_diff_q50_q99_max=q(np.abs((Z["s0"] - Z["slog"]) - M["lead"])[ok], [0.5, 0.99, 1.0]),
-                        note="D = the log's travel over t .. t + 0.5 k, lead = arc ahead of the log at the same time; on_rows.py computes both on its own path G"),
+                        note="D = the log's travel over t .. t + 0.5 k (on_rows.py `D_reg`), lead = arc ahead of the log at the same time; on_rows.py computes both on its own path G"),
                     actors_per_row_mean=float(Z["n_actor"].mean()), vehicles_per_row_mean=float(Z["n_veh"].mean()),
                     lateral_offset_abs_q50_q90_q99_max=q(np.abs(Z["l0"][ok]), [0.5, 0.9, 0.99, 1.0]),
                     arc_ahead_of_log_q01_q10_q50_q90_q99=q(ahead, [0.01, 0.1, 0.5, 0.9, 0.99]),
@@ -268,7 +273,8 @@ def cmd_pack(a):
             if share >= MIN_SHARE:
                 kept.append(it)
         items = tuple(a.items) if a.items else tuple(kept)
-        gate["items"]["P"] |= dict(active_share_served_with_design_open=float((Pd > 0).mean()), mean_when_active_with_design_open=float(Pd[Pd > 0].mean()) if (Pd > 0).any() else None)
+        gate["items"]["P"] |= dict(active_share_served_with_log_travel=float((Pl > 0).mean()), mean_when_active_with_log_travel=float(Pl[Pl > 0].mean()) if (Pl > 0).any() else None,
+                                   active_share_served_with_design_open=float((Pd > 0).mean()), mean_when_active_with_design_open=float(Pd[Pd > 0].mean()) if (Pd > 0).any() else None)
         gate |= dict(items_in_pack=list(items), items_dropped_by_the_0p2_percent_rule=[i for i in OL.ITEMS if i not in kept], items_forced=bool(a.items))
         Z["items"] = np.array(items)
         out = rows_dir(a.name) / OL.PACK_NAME if not a.out else Path(a.out)
@@ -307,5 +313,7 @@ if __name__ == "__main__":
     ap.add_argument("--ctx", default="")
     ap.add_argument("--out", default="")
     ap.add_argument("--items", nargs="*", default=None)
+    ap.add_argument("--p-ref", choices=["amended", "log"], default="amended",
+                    help="P's reference travel: the prereg's D_k after Amendment 2 (speed blends from the ego's into the log's over 2 s) or the log's own travel")
     ap.add_argument("--p-open", choices=["strict", "design"], default="strict", help="which rows carry P (lib/on_lon.py docstring)")
     cmd_pack(ap.parse_args())

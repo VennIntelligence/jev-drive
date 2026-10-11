@@ -34,8 +34,9 @@ Terms (t on the 41-step dense grid 0 .. 4 s; s_f / l_f = arc / lateral offset of
      DEVIATIONS from design.md: v_ref comes from the context's logged speed by arc everywhere, not from the dense logged future of the row
      (an on-policy row has no logged future of its own); and it is floored at the log's speed at the peak (audit): where the log waited at a
      line before the turn its speed by arc is 0, which would cap a row that arrives on green at 1 m/s.
-  P  progress guard (m).  h_P = mean_k relu(0.95 D_k - 0.5 - s_plan(t_k)), k = 1 .. 8, D_k = the log's travel over the same clock interval
-     (s_log(t + 0.5 k) - s_log(t), by timestamp), s_plan = the plan's own arc length; only on OPEN rows. design.md's "open" (`p_open_design`):
+  P  progress guard (m).  h_P = mean_k relu(0.95 D_k - 0.5 - s_plan(t_k)), k = 1 .. 8, D_k = the prereg's D_k as Amendment 2 redefined it
+     (on_rows.py meta `D`: the speed blends from the ego's own into the log's over 2 s; the pack's default, on_lon_pack.py --p-ref amended;
+     `--p-ref log` = the log's travel s_log(t + 0.5 k) - s_log(t), which asks a slow row for a speed jump), s_plan = the plan's own arc length; only on OPEN rows. design.md's "open" (`p_open_design`):
      no A-eligible actor, no eligible stop line of either type and no eligible turn peak within 60 m ahead of the row along the route.
      DEVIATION (audit; the pack's default `p_open`, scripts/on_lon_pack.py --p-open strict): additionally no stop line of any kind (eligible or
      not) within 60 m ahead, and no actor of any class whose centre is within 4.5 m of the route and 0 .. 60 m ahead of the row at any of the
