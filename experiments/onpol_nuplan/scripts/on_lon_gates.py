@@ -153,7 +153,7 @@ def cmd_grad(a, run):
 
 def cmd_kat(a, run):
     rng = np.random.default_rng(0)
-    out = {}
+    out, chain = {}, {}
     for NR in (131, 261):
         LC.NR = NR
         S = 2000
@@ -173,15 +173,23 @@ def cmd_kat(a, run):
         spn, lpn = LC.project(R, pts)
         spt, lpt = OL.project(torch.tensor(R), torch.tensor(pts))
         mx = lambda u, w: float(np.abs(np.asarray(u) - w.numpy()).max())  # noqa: E731
-        # the gap operator of A: an object's rear arc minus the front arc, both ways
-        sig = rng.uniform(0, NR, (S, 1)).astype(np.float32)
-        out[f"NR{NR}"] = dict(dense=mx(d, dt), front_point=max(mx(fx, ft[..., 0]), mx(fy, ft[..., 1])), project_front_arc=mx(sn, st), project_front_lat=mx(ln, lt),
-                              project_rear_arc=mx(srn, srt), project_rear_lat=mx(lrn, lrt), project_random_arc=mx(spn, spt), project_random_lat=mx(lpn, lpt),
-                              gap=mx(sig - sn, torch.tensor(sig) - st), path_speed=mx(LC.path_speed(d), OL.path_speed(dt)),
+        # operators on IDENTICAL inputs (the numpy dense points fed to the torch projection)
+        st_i, lt_i = OL.project(torch.tensor(R), torch.tensor(np.stack([fx, fy], -1)))
+        srt_i, lrt_i = OL.project(torch.tensor(R), torch.tensor(d[..., :2]))
+        sig = rng.uniform(0, NR, (S, 1)).astype(np.float32)                     # the gap operator of A: an object's rear arc minus the front arc
+        out[f"NR{NR}"] = dict(dense=mx(d, dt), front_point=max(mx(fx, ft[..., 0]), mx(fy, ft[..., 1])), project_front_arc=mx(sn, st_i), project_front_lat=mx(ln, lt_i),
+                              project_rear_arc=mx(srn, srt_i), project_rear_lat=mx(lrn, lrt_i), project_random_arc=mx(spn, spt), project_random_lat=mx(lpn, lpt),
+                              gap=mx(sig - sn, torch.tensor(sig) - st_i), path_speed=mx(LC.path_speed(d), OL.path_speed(dt)),
                               plan_arc_vs_sweep_arc=mx(SW.arc(d)[:, 5::5], OL.plan_arc(torch.tensor(q[..., 0]), torch.tensor(q[..., 1]))),
                               points=int(sn.size + srn.size + spn.size))
+        # end to end (torch dense -> torch projection against numpy dense -> numpy projection): inputs differ by float rounding (1e-5 m), and the
+        # projection is discontinuous where a point is equidistant from two route segments, so a few points jump; reported, not gated
+        e = np.abs(sn - st.numpy())
+        chain[f"NR{NR}"] = dict(front_arc_max=float(e.max()), front_arc_share_above_1e_3=float((e > 1e-3).mean()), front_lat_max=mx(ln, lt),
+                                rear_arc_max=mx(srn, srt), rear_lat_max=mx(lrn, lrt),
+                                front_arc_max_within_3p5m_of_route=float(e[np.abs(ln) <= 3.5].max()))
     worst = max(v for o in out.values() for k, v in o.items() if k != "points")
-    out |= dict(max_abs_diff=worst, tol=2e-3, note="float32 on both sides; arcs reach 260 m, so 1e-4 m is rounding", **{"pass": bool(worst <= 2e-3)})
+    out |= dict(end_to_end=chain, max_abs_diff=worst, tol=2e-3, note="float32 on both sides; arcs reach 260 m, so 1e-4 m is rounding", **{"pass": bool(worst <= 2e-3)})
     return out
 
 
