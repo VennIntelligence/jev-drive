@@ -43,6 +43,9 @@ ALIASES = {  # names the decision log and old notes use: a grep on INDEX.md find
     "elicitation": "E1-E6", "real_transfer": "G0-G3", "night_queue_2": "nq2, N1-N6, P6", "night_queue_3": "nq3, Q1-Q6",
     "night_queue_4": "nq4, G K X OPL", "p3_ped_exam": "P3, ped dose", "world_model": "W, WL, WL-2", "controlnet_pair": "cn_pair",
     "statepol": "state-space", "op_route_cmd": "route polyline, nav route", "wm_policy": "worldmodel-4B as policy, WM-uncond",
+    "onpol_nuplan": "ONPOL-NUPLAN, on-policy rows, self-consequence vs imitation labels, RoaD / DAgger contrast",
+    "onpol_pai": "ONPOL-PAI, on-policy rows on PAI", "eyes_sense": "EYES-vs-SENSE, same eyes better car sense, side views x body lesson",
+    "alpasim": "AlpaSim challenge, nuPlan track", "op_parity": "input parity, WA-JEPA inputs",
 }
 
 
@@ -161,8 +164,8 @@ def main():
     for t in topics:
         src = DRAFTS / f"{t}.md" if (DRAFTS / f"{t}.md").exists() else EXP / t / "README.md"
         if not src.exists():
-            print(f"no README for {t}", file=sys.stderr)
-            return 1
+            print(f"warning: no README for experiments/{t}, skipped (add one from experiments/TEMPLATE.md)", file=sys.stderr)
+            continue
         out[t] = readme(t, src.read_text())
     idx = index(out)
     if a.check:

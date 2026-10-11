@@ -3,7 +3,6 @@
 status: concluded
 decisions: 259 (inputs: 220, 232, 233, 244, 253, 254, 257)
 index: held 460 scenes: on-policy S hinges 0.939 / 14.5 zeros vs control 0.925 / 21.5; imitation 0.912 / 24
-key: experiments/onpol_nuplan/plans/2026-10-11-onpol-prereg.md, experiments/onpol_nuplan/results/read/on_report.md, experiments/onpol_nuplan/results/rows/train/report.md, experiments/onpol_nuplan/results/pilot/pilot_gates.md, experiments/onpol_nuplan/results/gates/lon_gates.md, experiments/onpol_nuplan/results/seeds4/seeds4_report.md, experiments/onpol_nuplan/scripts/on_rows.py, experiments/onpol_nuplan/scripts/on_train.py, experiments/onpol_nuplan/lib/on_lon.py, experiments/onpol_nuplan/scripts/on_report.py, experiments/onpol_nuplan/scripts/on_read.sh, experiments/onpol_nuplan/plans/on_pool_format.md
 
 **Question.** At identical on-policy states (the decisions the frozen-encoder driver `P2H10S-F` visits in AlpaSim nuPlan rollouts), do
 self-consequence labels on the model's own plan beat imitation labels (RoaD / DAgger), add to them, or lose?
@@ -14,7 +13,7 @@ standing, the S hinges alone on the on-policy rows (`SSELFnoL-ON`), scores 0.939
 control's 0.9248 and 21.5 (+0.0143 [+0.0017, +0.0276], zeros -7.0 [-13.2, -1.2], fixed 6 / broken 0 against a null maximum of 2);
 imitation labels raise at-fault zeros (20 against 12.75) and the L items cancel S's gain (decision 259).
 
-**Read more.** Pre-registration with six amendments: [plans/2026-10-11-onpol-prereg.md](plans/2026-10-11-onpol-prereg.md). Morning
+**Read more.** Pre-registration with six amendments: [plans/2026-10-11-onpol-prereg.md](plans/2026-10-11-onpol-prereg.md). Clip read of the fixed and broken scenes (ON-IMIT's extra offroad: imitation at the visited states or the imitation target overshooting logged stops): [results/read/clips_read.md](results/read/clips_read.md), clips indexed in [results/read/clips.md](results/read/clips.md). Morning
 state file: `tmp/onpol-nuplan-state.md`.
 
 ## Results (2026-10-11 night; local closed loop, nothing submitted)
@@ -121,4 +120,20 @@ Cost: 17.9 card-hours of card occupancy on the box between 19:25 and 23:35 CST (
 13.9 computing, 4.0 with a job and an idle GPU), step 0 included; 59 GB under `$DATA_DIR/runs/onpol_nuplan` (41 GB rollout dumps).
 
 <!-- files:begin -->
+## Files
+
+- `2026-10-11-onpol-prereg.md` (plans): self-consequence labels against …
+- `on_report.md` (results): ONPOL-NUPLAN read-out on the held scenes
+- `report.md` (results): On-policy rows `train`
+- `pilot_gates.md` (results): training-side gates
+- `lon_gates.md` (results): ONPOL-NUPLAN, self-consequence L
+- `seeds4_report.md` (results): four seeds of JAPSnoY and APY10m10-AB
+- `on_rows.py` (scripts): finished on-policy rollouts -> one …
+- `on_train.py` (scripts): with the S flags, plus a start from an …
+- `on_lon.py` (lib): ONPOL-NUPLAN self-consequence L
+- `on_report.py` (scripts): ONPOL-NUPLAN read-out of the `held` …
+- `on_read.sh` (scripts): closed-loop runs of the lane's …
+- `on_pool_format.md` (plans): the on-policy pool as `on_train.py` …
+
+[results/](results/) 56 result files · [figs/](figs/) 4 figures · [plans/](plans/) 3 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 21 entry points
 <!-- files:end -->
