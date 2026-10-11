@@ -111,3 +111,16 @@ up, > 45 deg cut-inside down, and, for (c) - (a) where the closed loop exists, n
 
 `scripts/es_chain.sh` (pool jobs: identity runs, pilots, full runs, bench reads, the read-out), state under `$DATA_DIR/runs/eyes_sense/`. Results
 `results/contrast.md` (+ tables), README, INDEX line, decision draft.
+
+## Amendment 1 (2026-10-11, 13:30 CST; before any read of any arm)
+
+The disk cleanup of about 13:00 CST removed every `runs/op_parity/mem/vtr_*` bank, `vtr_W0` included, and the vis_train pixel caches
+(`runs/vis_train/px`, `px_side`). The pilots ESb-P300 / ESd-P300 trained on the deleted bank; the four full runs then failed on the missing file
+(nothing was read). The bank is rebuilt by `scripts/es_bank.py` and `es_chain.sh` runs that before the full runs:
+- CAM_F0: the t0 slot token of the W token cache (`cache/<data>@warp/front.npy[:, -1]`); the deleted bank's F0 view differed from it by 0.0003 mean
+  |d| (token RMS 1.691; experiments/vis_train/results/reads.md, bank table), i.e. the fp16 batch noise of the same frozen encoder on the same pixels.
+- CAM_L0 / CAM_R0: vis_train's side-view cache rebuilt with `experiments/vis_train/scripts/vt_side.py split / build` unchanged (renders are
+  deterministic: its own check found cached and fresh renders byte-identical), encoded with the frozen Cinque encoder (`pp_prep.encoder`, the
+  encoder of the W token cache).
+So the rebuilt bank is decision 248's RW0 bank up to fp16 noise, for all 14 data dirs (12 navtrain shards, navtest, navhard; the bench reads of
+(b) / (d) use the same files). Nothing else changes; the registered lines stand as written.
