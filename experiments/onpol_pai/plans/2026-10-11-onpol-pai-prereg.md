@@ -174,3 +174,31 @@ each; 1.5 TB free.
 - 20:34: the control's at-fault zeros (zero-score scenes with the at-fault collision or the offroad flag) from the stored run dirs, computed
   before any new row exists: S seeds 0 to 3 = **51 / 43 / 45 / 40** (mean 44.75). The parent `P2H10S-F-s0` is also the largest, so line H
   reads: an arm with more than 51 at-fault zeros is a negative.
+- 20:44 to 21:55: stages B and C passed the checklist (12 / 12 and 144 / 144 results, 0 driver errors); 144 scenes in 4 259 s on two cards
+  (121 scenes / h). Pass 1 = 160 scenes.
+- 21:59: rows for the 160 scenes built (31 772 rows; `results/rows_pol.md`). **G-in passes**: 3 200 of 3 200 dumps bit-equal, 31 772 of
+  31 772 decisions equal to the driver's log. Back-warped cold-start slots are recomputed inside the driver image (the two images'
+  OpenCV versions differ by 1 to 3 grey levels on synthesised slots).
+- **Mask, added before any training (not in section 3):** rows after the scorer stopped reading the rollout (`after_end`: first offroad, any
+  collision, corridor exit) are excluded together with `after_event`.
+- **Road-edge margin changed before any training:** 0.3 m inside the ego corridor and 0 outside (S's own agent margins), not 0.3 m everywhere:
+  with 0.3 m everywhere the log's own future violates the term on 17 % of on-log rows (three of the 16 held scenes drive within 0.3 m of an
+  edge), which fails G-log.
+- Further trainer assumptions accepted before training: a stop line is used up to 30 m past the logged path's last point (a log parked at a
+  light has its line there) and dropped once the ego's front bumper has passed it; stop-line eligibility on PAI = the logged driver stops
+  for the line (below 1 m/s within 15 m before it) before crossing; the ego box is the simulator's (`veh_sim`, equal to the vehicle spec
+  in 160 of 160 scenes); non-plan heads of on-policy rows are distilled to the shipped model in every arm, as S does on its hinge-only
+  rows; each on-policy row counts like one imitation row.
+- **G-id: FAILED as registered, and failed once more after one amendment; the lane proceeds on a stated judgement (deviation).**
+  Registered rule (share of rows with a point over 0.03 m in the first 4 s <= 1 %): 24.4 % (median difference 0.016 m, largest 0.14 m).
+  Amendment made after seeing that (tolerance per coordinate = max(0.03 m, 2 fp16 ulps at its magnitude), same 1 % line): 5.28 %
+  (0.53 % at 3 ulps, 0.33 % at 4). The line was not moved again. Evidence that the residual is numerical and not a wrong input: the
+  driver's own function (`pai_core.plan`, one decision per call) run in the training env on the same rows misses the registered line by
+  the same amount (24.2 % against the trainer path's 26.6 % on an 850-row sample); the difference is unbiased (per-scene mean within
+  0.009 m) and grows with the distance of the plan points (0 % at 0.8 m/s, 40 to 56 % at 21 to 29 m/s, where 4 s points lie at 60 to
+  120 m); the wrong-checkpoint control (`P2H10S-F-s1`) is 99 % over with a median of 0.35 m. Not shown: that no input difference smaller
+  than this noise exists. Reports: `/data/runs/onpol_pai/train/cache/gid/` on the Tokyo box.
+- Identity: `onp_train.py` with the on-policy rows off and no init equals `bd4_train.py` over 60 steps (39 scalars and all weights, bit for bit).
+- 22:12: pass 2 started on card 0 (log-replay driver `lib/onp_log_driver.py`: the model runs and is logged as usual, the returned trajectory
+  is the recording's own, from `submit_recording_ground_truth`; on the 4 stage-A scenes the ego stays within 0.03 m laterally and 0.46 m
+  along the path of the log). Order: the 144 training scenes first. Estimate 2.6 h for 160 scenes on one card.
