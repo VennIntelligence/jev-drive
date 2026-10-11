@@ -21,6 +21,13 @@ OffAgentHinge, ot_rows' off_hinge / offsets. Only joint_train's S subset is carr
                     As bd4_train's note (x) does for S's rows, a row whose footprint at t0 is off the road-and-lane raster takes the pool's
                     drivable raster (<POOL>/drivable.npz, P2H10's layers) if the pool has one.
       both          the imit row plus the two hinges of the on-policy rows, summed / n_imit x lam x ho_w (n_imit then counts the on-policy rows).
+  --yr-mass F       round 2 (plans/2026-10-12-onpol2-prereg.md, B: the YR10m10-F base): joint_train's yaw-rate rows, operation for operation:
+                    round(batch x F) imitation rows of every batch from the caches yr1_* out of the normal rows' stream [seed, 0], never anchor rows,
+                    P2H10's drivable hinge in each row's own frame (ot_rows.off_hinge), dev metrics `ot_*` on the yaw-rate dev rows. Batch order:
+                    normal, yaw-rate, on-policy, hinge-only; the on-policy rows come out of the normal rows. With --init / --on off and no S flag
+                    the run is `joint_train.py --yr-mass F` bit for bit (gate Y1). 0 = off: no operation is added.
+  --agent-on-only   self / both: the agent hinge exists on the on-policy rows only (the pool's actor boxes); no offline row carries it (a base
+                    without lesson S: --ho "" and this flag). Logged: `on/off_agent_rows` = offline rows of the batch with an agent label (0).
   --on-lon          extra per-row terms of the on-policy rows in self / both from experiments/onpol_nuplan/lib/on_lon.py (plans/on_pool_format.md):
                     each term summed / n_imit x --on-lon-lam 10 x ho_w. Off: no operation is added.
 
@@ -35,6 +42,8 @@ loss and mean displacement to the target (m); agent_* / road_* (+ every --on-lon
                                            = plain imitation rows; `both` = imit + the hinges x ho_w / n_imit (exit 2 on a mismatch)
   t3       --tags IMIT SELF BOTH --out F.json            gate T3 from three logged runs: equal on_hash, per-mode row accounting
   t2       --tags T .. [--ref 0.545] --out F.json        gate T2 from logged --init runs (key match, dev ADE at step 0) + steps / s, peak GB
+  y3       --tags SELF SELF2 --out F.json                gate Y3 (round 2) from two logged `self` runs of the Y recipe: row accounting, no agent
+                                           hinge on offline rows, equal on_hash
 
   $DATA_DIR/envs/op-train/bin/python experiments/onpol_nuplan/scripts/on_train.py train --tag SSELF-ON-s0 --init P2H10S-F-s0 --on on1 --on-mode self \
       --ho ot1:4,yr1:4,bd4:5 --ho-w 3 --ho-excl navsim/body1-val-logs --agent-lam 10 --shape --label-bank
@@ -67,9 +76,10 @@ def losses_on():
         carries them; `imit` / `both`: plain imitation rows without a label in `hinge` and with agent2.ok False, so Losses43 adds the imitation
         term and nothing else; `both` then adds the two hinges here from on_aok (the pool's agent ok) and road.ok."""
 
-        def __init__(self, *a, on, mode, on_aok=None, on0=0, lon=None, pack=None, lon_lam=10.0, **k):
+        def __init__(self, *a, on, mode, on_aok=None, on0=0, lon=None, pack=None, lon_lam=10.0, agent_off=False, **k):
             super().__init__(*a, **k)
             self.on, self.mode, self.on_aok, self.on0, self.lon, self.pack, self.lon_lam = on, mode, on_aok, on0, lon, pack, lon_lam
+            self.agent_off = agent_off
 
         def __call__(self, out, S, rows, anchor):
             total, Ls = super().__call__(out, S, rows, anchor)
@@ -109,6 +119,8 @@ def losses_on():
                 hg = hg.clone()
                 hg[m] |= ok | ko
             Ls["on/n_hinge"] = (m & hg).sum().float()
+            if self.agent_off:                                           # --agent-on-only: offline rows that would enter the agent hinge
+                Ls["on/off_agent_rows"] = (~m & self.agent2.ok[rows]).sum().float()
             if self.lon is not None and self.mode != "imit":
                 for q, v in self.lon.loss(torch.stack([x, y, psi], -1), r - self.on0, self.pack).items():
                     Ls[f"on/{q}_ho"] = v.sum() / n_imit
@@ -157,10 +169,13 @@ def setup(a, dev):
     assert mode in MODES + (None,), "--on needs --on-mode imit | self | both"
     hing = mode in ("self", "both")
     nB, k_ho, k_on = a.batch, sum(kk), a.on_k if a.on else 0
-    nN = nB - k_ho - k_on                                            # normal rows per batch
+    k_yr = int(round(nB * a.yr_mass))                                # joint_train --yr-mass
+    nN = nB - k_yr - k_ho - k_on                                     # normal rows per batch
     assert nN > 0 and not (hing and not (a.agent_lam > 0 and a.road_lam > 0)), "self / both need --agent-lam and --road-lam"
+    assert not a.agent_on_only or hing, "--agent-on-only: with --on-mode self | both"
+    yr = tuple(f"yr1_{d}" for d in a.data) if k_yr else ()
     hod = tuple(f"{f}_{d}" for f in fams for d in a.data)
-    cfg = T.Cfg(arm="P2", seed=a.seed, steps=a.steps, batch=nB, data=tuple(a.data) + hod + ((a.on,) if a.on else ()), split=a.split, frames="warp", host=True,
+    cfg = T.Cfg(arm="P2", seed=a.seed, steps=a.steps, batch=nB, data=tuple(a.data) + yr + hod + ((a.on,) if a.on else ()), split=a.split, frames="warp", host=True,
                 warmup=a.warmup, eval_every=a.eval_every, hinge_lam=a.hinge_lam, hinge_margin=a.hinge_margin, agent_lam=a.agent_lam,
                 agent_margin=a.agent_margin, agent_side_margin=a.agent_side_margin, agent_labels=a.agent_labels)
     torch.manual_seed(cfg.seed)
@@ -169,11 +184,13 @@ def setup(a, dev):
     nd = [len(np.load(OR.CR / d / "tab.npz")["names"]) for d in cfg.data]
     n_base, n_on = sum(nd[:len(a.data)]), nd[-1] if a.on else 0
     on0 = S.n - n_on
-    _, fam, src = JT.layout(list(a.data), False, fams, nd[:len(a.data) + len(hod)])
+    is_yr, fam, src = JT.layout(list(a.data), bool(k_yr), fams, nd[:len(a.data) + len(yr) + len(hod)])
     fam, is_on = np.concatenate([fam, np.full(n_on, -1)]), np.arange(S.n) >= on0
-    is_ho = fam >= 0
-    tr_o, dv_o, sp = T.split_rows(dict(names=np.where(is_ho | is_on, "", names), log=logs, is_b2d=S.is_b2d, is_wod=S.is_wod), cfg.split)
-    assert not (is_ho | is_on)[tr_o].any() and not (is_ho | is_on)[dv_o].any()
+    is_yr, is_ho = np.concatenate([is_yr, np.zeros(n_on, bool)]), fam >= 0
+    tr_rows, dv_rows, sp = T.split_rows(dict(names=np.where(is_ho | is_on, "", names), log=logs, is_b2d=S.is_b2d, is_wod=S.is_wod), cfg.split)
+    assert not (is_ho | is_on)[tr_rows].any() and not (is_ho | is_on)[dv_rows].any()
+    tr_o, tr_t, dv_o, dv_t = tr_rows[~is_yr[tr_rows]], tr_rows[is_yr[tr_rows]], dv_rows[~is_yr[dv_rows]], dv_rows[is_yr[dv_rows]]
+    assert k_yr == 0 or len(tr_t) >= k_yr
     off = OR.offsets(cfg.data)
     trl = splits.load(B1.TRAIN)
     in_tr = trl.mask(logs) & ~is_on
@@ -199,11 +216,16 @@ def setup(a, dev):
     base, new = model.groups()
     tstd = S.t_out[torch.as_tensor(tr_o, device=dev)].float().std(0).clamp_min(1e-3)
     bk = {"bank": True} if a.label_bank else {}
-    hinge = Hinge([data_dir() / f for f in cfg.hinge_labels], np.where(is_on, "", names), dev, cfg.hinge_margin, list(cfg.hinge_footprint), **bk) if cfg.hinge_lam > 0 else None
+    hinge = None
+    if cfg.hinge_lam > 0:                                            # with yaw-rate rows: in each row's own frame, as joint_train
+        hinge = (OR.off_hinge(cfg, np.where(is_on, "", names), off, dev, **bk) if k_yr else
+                 Hinge([data_dir() / f for f in cfg.hinge_labels], np.where(is_on, "", names), dev, cfg.hinge_margin, list(cfg.hinge_footprint), **bk))
     agent2 = road = on_aok = None
     if cfg.agent_lam > 0:                                            # A: imitation rows of the train logs + every hinge-only row, each in its own frame
         agent2 = OffAgentHinge(data_dir() / cfg.agent_labels, np.where(in_tr, names, ""), off, dev, cfg.agent_margin,
                                None if cfg.agent_side_margin < 0 else cfg.agent_side_margin)
+        if a.agent_on_only:                                          # no offline row carries the agent hinge; the pool's rows are set below
+            agent2.ok[:] = False
     if (k_ho or hing) and a.road_lam > 0:                            # C: the road-and-lane raster on the hinge-only rows (+ the pool's own file)
         rc = replace(cfg, hinge_labels=(a.road_labels,) + ((str(pd / "road.npz"),) if hing else ()), hinge_footprint=("pacifica",) * (1 + hing),
                      hinge_margin=a.road_margin)
@@ -256,10 +278,10 @@ def setup(a, dev):
         sf = md == "self"                                            # family `on`: Losses43's own hinge-only rows
         return losses_on()(model.net, cfg, tstd, S.di, S.pi, dev, hinge, None, ho=t(is_ho | (is_on & sf)) if k_ho or sf else None,
                            fam=t(np.where(is_on & sf, len(fams), fam)), fams=fams + ["on"] * sf, on=t(is_on), mode=md, on_aok=on_aok, on0=on0,
-                           lon=lon, pack=pack, lon_lam=a.on_lon_lam, **k43)
+                           lon=lon, pack=pack, lon_lam=a.on_lon_lam, agent_off=a.agent_on_only, **k43)
     return SimpleNamespace(cfg=cfg, S=S, model=model, base=base, new=new, hinge=hinge, agent2=agent2, road=road, losses=losses, mode=mode, ho=ho, fams=fams,
                            kk=kk, pools=pools, nN=nN, k_ho=k_ho, k_on=k_on, n_on=n_on, on0=on0, nv=nv, tr_o=tr_o, dv_o=dv_o, sp=sp, trl=trl, excl=excl,
-                           n_fb=n_fb, init=init, onrec=onrec, names=names, fam=fam, is_on=is_on)
+                           n_fb=n_fb, init=init, onrec=onrec, names=names, fam=fam, is_on=is_on, k_yr=k_yr, tr_t=tr_t, dv_t=dv_t, dv_rows=dv_rows)
 
 
 def cmd_train(a):
@@ -273,8 +295,9 @@ def cmd_train(a):
     ns = setup(a, dev)
     cfg, S, model, base, new, pools, kk = ns.cfg, ns.S, ns.model, ns.base, ns.new, ns.pools, ns.kk
     nB, nN, k_ho, k_on, tr_o, dv_o = cfg.batch, ns.nN, ns.k_ho, ns.k_on, ns.tr_o, ns.dv_o
+    k_yr, tr_t, dv_t = ns.k_yr, ns.tr_t, ns.dv_t
     LS = ns.losses(ns.mode)
-    pp_lr = not (k_ho or k_on or a.agent_lam > 0)                    # pp_train's own recipe: its cosine form
+    pp_lr = not (k_yr or k_ho or k_on or a.agent_lam > 0)            # pp_train's own recipe: its cosine form
     rng = np.random.default_rng([cfg.seed, 0])                       # pp_train / bd4_train's row stream
     hrng = np.random.default_rng([cfg.seed, 0, 43])                  # bd4_train's hinge-only rows
     orng = np.random.default_rng([cfg.seed, 0, 53])                  # the on-policy rows
@@ -284,7 +307,10 @@ def cmd_train(a):
 
     def draw():
         r = rng.choice(tr_o, nN, replace=len(tr_o) < nN)
+        if k_yr:                                                     # joint_train: the yaw-rate rows from the same stream, right after the normal rows
+            r = np.concatenate([r, rng.choice(tr_t, k_yr, replace=False)])
         an = rng.random(nB - k_ho - k_on) < cfg.d_frac
+        an[nN:] = False                                              # yaw-rate rows: imitation rows only (no row without --yr-mass)
         if k_on:                                                     # after the normal rows; never anchor rows
             i = orng.choice(ns.n_on, k_on, replace=ns.n_on < k_on)
             sha.update(i.astype("<i8").tobytes())
@@ -297,22 +323,30 @@ def cmd_train(a):
     def fetch(dr):
         return dr, S.front[dr[0]]
     S.front.pin = a.prefetch > 1
-    Sd = T.dev_store(S, dv_o, a.dev_card_gb)
+    Sd = T.dev_store(S, ns.dv_rows, a.dev_card_gb)
+
+    def dev_ev():                                                    # joint_train's dev metrics (ot_* = the yaw-rate dev rows)
+        ev = T.dev_eval(model.eval(), Sd, dv_o, LS.W)
+        if len(dv_t):
+            ev |= {"ot_" + q: v for q, v in T.dev_eval(model, S, dv_t, LS.W).items()}
+        model.train()
+        return ev
     with Run(a.exp, f"on-train-{a.tag}", seed=cfg.seed, config=asdict(cfg) | {"onpol": vars(a)}) as run:
         for x in ns.sp + ((ns.trl,) if k_ho or ns.agent2 is not None else ()) + ((ns.excl,) if ns.excl is not None and k_ho else ()) + \
                 ((splits.load(a.on_split),) if a.on and a.on_split else ()):
             run.use_split(x)
-        run.info(f"{a.tag}: navsim input standard; train {len(tr_o)} normal rows, dev {len(dv_o)}; per batch of {nB}: {nN} normal, {k_ho} hinge-only ("
+        run.info(f"{a.tag}: navsim input standard; train {len(tr_o)} normal" + (f" + {len(tr_t)} yaw-rate rows, dev {len(dv_o)} + {len(dv_t)}" if k_yr else f" rows, dev {len(dv_o)}")
+                 + f"; per batch of {nB}: {nN} normal, " + (f"{k_yr} yaw-rate, " if k_yr else "") + f"{k_ho} hinge-only ("
                  + (", ".join(f"{f} {q} of {len(p)}" for (f, q), p in zip(ns.ho, pools)) or "none") + f"), {k_on} on-policy (mode {ns.mode or 'off'}; "
                  f"{json.dumps(ns.onrec)}; lon {bool(a.on_lon)}); weight {a.ho_w}, shape-only {a.shape}, excluded logs {a.ho_excl or 'none'}; hinge {cfg.hinge_lam} / "
-                 f"{cfg.hinge_margin} m coverage {ns.hinge.coverage if ns.hinge else 0:.4f}; agent {cfg.agent_lam} / {cfg.agent_margin} m rows "
+                 f"{cfg.hinge_margin} m coverage {ns.hinge.coverage if ns.hinge else 0:.4f}{' (own frame)' if k_yr else ''}; agent {cfg.agent_lam} / {cfg.agent_margin} m"
+                 f"{' (on-policy rows only)' if a.agent_on_only else ''} rows "
                  f"{int(ns.agent2.ok.sum()) if ns.agent2 is not None else 0}; road {a.road_lam if ns.road is not None else 0} rows "
                  f"{int(ns.road.ok.sum()) if ns.road is not None else 0} (NAVSIM raster kept on {ns.n_fb}); label bank {a.label_bank}, "
                  f"cosine form {'pp_train' if pp_lr else 'pi * step / steps'}")
         if ns.init:
             run.info(f"init {json.dumps(ns.init)}")
-            ev = T.dev_eval(model.eval(), Sd, dv_o, LS.W)
-            model.train()
+            ev = dev_ev()
             run.scalars({f"dev/{q}": v for q, v in ev.items()}, 0)
             run.info("dev @ 0: " + ", ".join(f"{q} {v:.3f}" for q, v in ev.items()))
             run.summary.update({f"dev0_{q}": v for q, v in ev.items()} | {"init": ns.init})
@@ -351,8 +385,7 @@ def cmd_train(a):
                 run.info(f"on_hash @ {step + 1}: {hsh}")
                 run.summary.update({f"on_hash_{step + 1}": hsh})
             if (step + 1) % cfg.eval_every == 0 or step + 1 == cfg.steps:
-                ev = T.dev_eval(model.eval(), Sd, dv_o, LS.W)
-                model.train()
+                ev = dev_ev()
                 run.scalars({f"dev/{q}": v for q, v in ev.items()}, step + 1)
                 run.info(f"dev @ {step + 1}: " + ", ".join(f"{q} {v:.3f}" for q, v in ev.items()))
                 run.summary.update({f"dev_{q}": v for q, v in ev.items()})
@@ -360,6 +393,7 @@ def cmd_train(a):
         torch.save(model.adapter.state_dict(), d / "adapter.pt")
         run.summary.update(steps=cfg.steps, train_s=time.time() - t0, it_s=cfg.steps / (time.time() - t0), ckpt=str(d / "ckpt-final.pt"), n_train=len(tr_o),
                            ho_per_batch=k_ho, on_per_batch=k_on, on_mode=ns.mode or "off", on_hash=hsh, on=ns.onrec,
+                           **(dict(yr_per_batch=k_yr, n_train_yr=len(tr_t), agent_on_only=a.agent_on_only) if k_yr or a.agent_on_only else {}),
                            gpu_peak_gb=torch.cuda.max_memory_reserved() / 2 ** 30)
 
 
@@ -402,7 +436,7 @@ def cmd_known(a):
     import torch
     import pp_train as T
     dev = torch.device("cuda")
-    a.batch, a.on_mode, a.on_k, a.on_lon = 128, "self", 13, ""
+    a.batch, a.on_mode, a.on_k, a.on_lon, a.yr_mass, a.agent_on_only = 128, "self", 13, "", 0.0, False
     ns = setup(a, dev)
     S, model, cfg, k = ns.S, ns.model, ns.cfg, ns.k_on
     jb = ns.fams.index("bd4")
@@ -547,6 +581,46 @@ def cmd_t2(a):
     raise SystemExit(0 if not bad else 2)
 
 
+def cmd_y3(a):
+    """Gate Y3 (round 2) from the logs of two `self` runs of the Y recipe (same seed, pool and flags): at every logged step the on-policy rows
+    carry a hinge and no imitation term, no offline row enters the agent hinge (`agent` = 0, on/off_agent_rows = 0, no imit/agent_* statistic)
+    while the offline rows keep their imitation term and P2H10's drivable hinge, both on-policy hinges fire somewhere, and the two runs drew the
+    same on-policy indices (running sha1 at --step)."""
+    import re
+    res, bad = {}, []
+    for tag in a.tags:
+        sc, log = run_scalars(a.exp, tag)
+        comp = re.search(r"per batch of \d+: (.*?\(mode \w+)", log).group(1)
+        k, mode = re.search(r"(\d+) on-policy \(mode (\w+)", log).groups()
+        k, L = int(k), {q[5:]: v for q, v in sc.items() if q.startswith("loss/")}
+        on = sorted(q[3:] for q in L if q.startswith("on/"))
+        r = res[tag] = dict(composition=comp, mode=mode, hash=dict(re.findall(r"on_hash @ (\d+): ([0-9a-f]+)", log)), on_terms=on,
+                            n_imit=sorted(set(L["on/n_imit"].values())), n_hinge=sorted(set(L["on/n_hinge"].values())),
+                            off_agent_rows=sorted(set(L.get("on/off_agent_rows", {None: None}).values())), offline_agent=sorted(set(L["agent"].values())),
+                            offline_agent_stats=sorted(q for q in L if q.startswith("imit/agent")), agent_only_on="(on-policy rows only)" in log,
+                            on_agent_pos_max=max(L["on/agent_pos"].values()), on_road_pos_max=max(L["on/road_pos"].values()),
+                            on_agent_ho_max=max(L["agent_ho"].values()), on_road_ho_max=max(L["road_ho"].values()),
+                            offline_terms={q: L[q][max(L[q])] for q in ("imit", "hinge", "distill", "distill_ho") if q in L})
+        for ok, msg in ((mode == "self" and "yaw-rate" in comp and "0 hinge-only" in comp, f"composition {comp}"),
+                        (r["n_imit"] == [0.0] and r["n_hinge"] == [float(k)], f"n_imit {r['n_imit']}, n_hinge {r['n_hinge']} (expected 0 / {k})"),
+                        (not {"imit", "ade"} & set(on) and {"agent_mean", "road_mean"} <= set(on), f"on-policy terms {on}"),
+                        (r["off_agent_rows"] == [0.0] and r["offline_agent"] == [0.0] and not r["offline_agent_stats"] and r["agent_only_on"],
+                         f"offline agent hinge: rows {r['off_agent_rows']}, term {r['offline_agent']}, stats {r['offline_agent_stats']}"),
+                        (r["on_agent_pos_max"] > 0 and r["on_road_pos_max"] > 0, "vacuous: an on-policy hinge never fires"),
+                        ({"imit", "hinge", "distill"} <= set(r["offline_terms"]), f"offline terms {sorted(r['offline_terms'])}")):
+            if not ok:
+                bad.append(f"{tag}: {msg}")
+    hs = [res[t]["hash"].get(str(a.step)) for t in a.tags]
+    if not hs[0] or len(set(hs)) != 1:
+        bad.append(f"on_hash at step {a.step}: {hs}")
+    res |= {"hash_step": a.step, "hash": hs[0], "fail": bad, "pass": not bad}
+    print(json.dumps(res, indent=1))
+    if a.out:
+        _pl.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+        _pl.Path(a.out).write_text(json.dumps(res, indent=1) + "\n")
+    raise SystemExit(0 if not bad else 2)
+
+
 def recipe_args(p):
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--data", nargs="+", default=JT.FULL)
@@ -566,6 +640,8 @@ def recipe_args(p):
     p.add_argument("--road-labels", default=JT.ROAD)
     p.add_argument("--label-bank", action="store_true")
     p.add_argument("--init", default="", help="run tag whose trained net and adapter weights the run starts from")
+    p.add_argument("--yr-mass", type=float, default=0.0, help="joint_train's: share of every batch drawn from the yaw-rate rows (yr1_*) as imitation rows; 0 = off")
+    p.add_argument("--agent-on-only", action="store_true", help="the agent hinge on the on-policy rows only (self / both); offline rows carry none")
     p.add_argument("--on", default="", help="on-policy pool: a cache dir under runs/op_parity/cache (plans/on_pool_format.md); '' = no on-policy rows")
 
 
@@ -617,5 +693,10 @@ if __name__ == "__main__":
     p.add_argument("--exp", default="onpol_nuplan")
     p.add_argument("--ref", type=float, default=0.545, help="archived dev ADE of the --init checkpoint")
     p.add_argument("--out", default="")
+    p = sub.add_parser("y3")
+    p.add_argument("--tags", nargs=2, required=True, metavar=("SELF", "SELF2"))
+    p.add_argument("--exp", default="onpol_nuplan")
+    p.add_argument("--step", type=int, default=60)
+    p.add_argument("--out", default="")
     a = ap_.parse_args()
-    {"train": cmd_train, "ident": JT.cmd_ident, "standin": cmd_standin, "known": cmd_known, "t3": cmd_t3, "t2": cmd_t2}[a.cmd](a)
+    {"train": cmd_train, "ident": JT.cmd_ident, "standin": cmd_standin, "known": cmd_known, "t3": cmd_t3, "t2": cmd_t2, "y3": cmd_y3}[a.cmd](a)
