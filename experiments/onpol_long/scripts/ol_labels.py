@@ -14,8 +14,10 @@ Nothing here changes on_rows.py's files; it adds two label files to the pool dir
   gate  --name N --out DIR         envs/op-train (torch): after on_rows.py tok. Gate R1 as amended (onpol_nuplan prereg Amendment 4: (a) first 15
                                    plan points within one fp16 ulp or 0.03 m on >= 0.99 of the rows, (b) the interpreted control of r1.json, (c)
                                    wrong-seed control < 0.20), gate R2 as Amendment 4 read it (ego <= 0.3 m; actor samples within 0.5 m on >= 0.9999),
-                                   and gate K0: on the served plans each of K and C is active on >= 0.2 % of the rows (closed-loop.md, 10-13
-                                   row), the terms are finite and their gradient has no along-heading component (shape-only). Writes DIR/gates.json,
+                                   and gate K0: the terms are finite and their gradient has no along-heading component (shape-only); an item is
+                                   trained only if it is active on >= 0.2 % of the rows on the served plans (closed-loop.md, 10-13 row) and
+                                   on <= 2 % of the rows on the log's own future (a label the logged driver violates is not a consequence
+                                   label); the passing items go to P/kc_items.json, which lib/ol_kc.py reads; no item passing = fail. Writes DIR/gates.json,
                                    gates.md, bev_kc.png; exit 2 if a gate fails.
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
@@ -109,7 +111,7 @@ def cmd_gate(a):
     import ol_kc
     out = _pl.Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    pool, rows = CR / f"on1_{a.name}", ROWS / a.name
+    pool, rows = _pl.Path(a.pool or CR / f"on1_{a.name}"), _pl.Path(a.rows or ROWS / a.name)
     res, fail = dict(name=a.name), []
     r1, r2 = (json.loads((rows / f).read_text()) for f in ("r1.json", "r2.json"))
     ra = {t: q["mu_share_one_ulp"] for t, q in r1["tags"].items()}
@@ -121,21 +123,32 @@ def cmd_gate(a):
     if not (r2["ego_max_m"] <= 0.3 and r2["act_share_within"] >= 0.9999):
         fail.append(f"R2 as amended: ego {r2['ego_max_m']:.3f} m, actors within 0.5 m {r2['act_share_within']:.5f}")
     M, tab = dict(np.load(rows / "meta.npz")), np.load(pool / "tab.npz")
-    pack = ol_kc.load(pool, tab["names"], "cpu")
+    pack = ol_kc.load(pool, tab["names"], "cpu", items=["kcorr", "klane"])
     P = torch.tensor(M["poses"], dtype=torch.float32, requires_grad=True)
     idx = torch.arange(len(P))
     L = ol_kc.loss(P, idx, pack)
+    lf = M["logfut"][:, 1:].astype(np.float32)                                     # the log's own poses at t + 0.5 .. 4 s (NaN past the log's end)
+    lok = np.isfinite(lf).all((1, 2))
+    LL = ol_kc.loss(torch.from_numpy(np.nan_to_num(lf[lok])), idx[torch.from_numpy(lok)], pack)
     k = M["k"]
-    res["K0"] = {}
+    res["K0"], items = {}, []
     for q, v in L.items():
+        lg = float((LL[q] > 0).float().mean())
         g = torch.autograd.grad(v.sum(), P, retain_graph=True)[0]
         along = (g[..., 0] * torch.cos(P[..., 2]) + g[..., 1] * torch.sin(P[..., 2])).abs().max().item()
         act = (v > 0).numpy()
         res["K0"][q] = dict(active=float(act.mean()), active_rows=int(act.sum()), scenes=int(len(set(M["scene"][act].tolist()))), mean=float(v.mean()),
                             mean_when_active=float(v[v > 0].mean()) if act.any() else 0.0, finite=bool(torch.isfinite(v).all()), grad_along_max=along,
                             grad_cross_max=float(g[..., :2].abs().max()), by_k={int(j): float(act[k == j].mean()) for j in sorted(set(k.tolist()))})
-        if not (act.mean() >= 0.002 and res["K0"][q]["finite"] and along < 1e-6):
-            fail.append(f"K0 {q}: active {act.mean():.4f}, finite {res['K0'][q]['finite']}, along-heading gradient {along:.2e}")
+        res["K0"][q] |= dict(log_active=lg, log_rows=int(lok.sum()))
+        if not (res["K0"][q]["finite"] and along <= 1e-5 * max(1.0, res["K0"][q]["grad_cross_max"])):
+            fail.append(f"K0 {q}: finite {res['K0'][q]['finite']}, along-heading gradient {along:.2e}")
+        elif act.mean() >= 0.002 and lg <= 0.02:
+            items.append(q)
+    if not items:
+        fail.append("K0: no item passes (active on >= 0.2 % of the served plans and on <= 2 % of the logged futures)")
+    res["items"] = items
+    (pool / "kc_items.json").write_text(json.dumps(dict(items=items, K0=res["K0"]), indent=1) + "\n")
     res["lane_ok"] = float(pack["lane_ok"].float().mean())
     res |= dict(fail=fail, **{"pass": not fail})
     (out / "gates.json").write_text(json.dumps(res, indent=1) + "\n")
@@ -143,10 +156,11 @@ def cmd_gate(a):
           f"R1 as amended (one fp16 ulp or 0.03 m on the first 15 plan points, >= 0.99): {ra}; interpreted control {r1['control_single']}; wrong-seed control "
           f"(8 poses within 0.03 m, < 0.20): {rc}. R2: ego at the log-replay decisions max {r2['ego_max_m']:.3f} m (<= 0.3); actor samples within 0.5 m "
           f"{r2['act_share_within']:.5f} of {r2['act_n']} (>= 0.9999).", "", f"Lane raster present on {res['lane_ok']:.4f} of the rows.", "",
-          "| term (served plans) | active rows | share | scenes | mean | mean when active | along-heading gradient max |", "|:--|--:|--:|--:|--:|--:|--:|"]
-    md += [f"| {q} | {v['active_rows']} | {v['active']:.4f} | {v['scenes']} | {v['mean']:.4f} | {v['mean_when_active']:.3f} | {v['grad_along_max']:.1e} |" for q, v in res["K0"].items()]
+          "| term (served plans) | active rows | share | scenes | mean | mean when active | along-heading gradient max | share active on the log's own future |", "|:--|--:|--:|--:|--:|--:|--:|--:|"]
+    md += [f"| {q} | {v['active_rows']} | {v['active']:.4f} | {v['scenes']} | {v['mean']:.4f} | {v['mean_when_active']:.3f} | {v['grad_along_max']:.1e} | {v['log_active']:.4f} |" for q, v in res["K0"].items()]
     md += ["", "Active share by decision index k: " + "; ".join(f"{q}: " + ", ".join(f"{j} {s:.3f}" for j, s in v["by_k"].items()) for q, v in res["K0"].items()), ""]
-    md += [f"Failures: {fail}" if fail else "All gates pass.", ""]
+    md += [f"Items trained (K0: active on >= 0.2 % of the served plans, on <= 2 % of the logged futures): {items}", "",
+           f"Failures: {fail}" if fail else "All gates pass.", ""]
     (out / "gates.md").write_text("\n".join(md))
     bev(M, tab, pack, L, out / "bev_kc.png")
     print("\n".join(md))
@@ -194,5 +208,6 @@ if __name__ == "__main__":
     p.add_argument("--name", required=True), p.add_argument("--workers", type=int, default=0)
     p = sub.add_parser("gate")
     p.add_argument("--name", required=True), p.add_argument("--out", required=True)
+    p.add_argument("--pool", default="", help="pool dir (test; default the cache dir of --name)"), p.add_argument("--rows", default="", help="rows dir (test)")
     a = ap.parse_args()
     {"build": cmd_build, "gate": cmd_gate}[a.cmd](a)

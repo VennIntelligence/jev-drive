@@ -5,6 +5,7 @@ experiments/onpol_nuplan/plans/on_pool_format.md):
     pack = ol_kc.load(pool_dir, names, device)    # <pool>/corr.npz and <pool>/lane.npz of scripts/ol_labels.py build, in the trainer's row order
     L = ol_kc.loss(poses_rear, rows, pack)        # poses_rear (n, 8, 3) rear-axle x, y, yaw at 0.5 .. 4 s in each row's own frame (with grad),
                                                   # rows (n,) pool row indices -> {"kcorr", "klane"}: (n,) per-row losses in metres
+Only the items listed in <pool>/kc_items.json (written by scripts/ol_labels.py gate: the items that pass gate K0) are returned.
 The trainer applies lambda (--on-lon-lam 10) and the hinge-only row weight (ho_w 3), summed over the rows / imitation rows of the batch.
 
   K  kcorr = mean over the 8 poses of relu(d_k - 1.5 m), d_k = distance of the rear axle to the logged rear-axle path (polyline, 1 m vertices)
@@ -14,6 +15,7 @@ The trainer applies lambda (--on-lon-lam 10) and the hinge-only row weight (ho_w
 Both are shape-only as S's hinges (body1 loss43.shape_only): values unchanged, the gradient of a rear-axle position keeps only its component
 across the pose's own detached heading; the yaw keeps its gradient (C through the box centre). Neither asks for speed.
 """
+import json
 from pathlib import Path
 
 import numpy as np
@@ -38,14 +40,16 @@ def _rows(f, names):
     return z, idx
 
 
-def load(pool_dir, names, dev):
+def load(pool_dir, names, dev, items=None):
     pool_dir = Path(pool_dir)
+    items = items or json.loads((pool_dir / "kc_items.json").read_text())["items"]
+    assert items and set(items) <= {"kcorr", "klane"}, items
     zc, ic = _rows(pool_dir / "corr.npz", names)
     zl, il = _rows(pool_dir / "lane.npz", names)
     g = torch.as_tensor(zc["gpath"][ic], dtype=torch.float32, device=dev)
     assert torch.isfinite(g).all() and g.shape[1:] == (86, 2), g.shape
     return dict(gpath=g, m=torch.as_tensor(zl["m"][il], dtype=torch.float16, device=dev), lane_ok=torch.as_tensor(zl["ok"][il], device=dev),
-                x0=float(zl["x0"]), y0=float(zl["y0"]), res=float(zl["res"]))
+                x0=float(zl["x0"]), y0=float(zl["y0"]), res=float(zl["res"]), items=list(items))
 
 
 def corridor(xs, ys, G):
@@ -76,4 +80,4 @@ def loss(poses, rows, pack):
     cx, cy = xs[:, 1:] + CEN * torch.cos(psi[:, 1:]), ys[:, 1:] + CEN * torch.sin(psi[:, 1:])
     m, inside = lane_margin(cx, cy, pack, rows)
     klane = (torch.relu(-m) * inside).mean(1)
-    return {"kcorr": kcorr, "klane": klane}
+    return {q: v for q, v in (("kcorr", kcorr), ("klane", klane)) if q in pack["items"]}
