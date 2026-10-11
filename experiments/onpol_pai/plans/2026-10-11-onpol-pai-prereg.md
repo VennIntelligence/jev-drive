@@ -168,4 +168,9 @@ each; 1.5 TB free.
 
 ## As run
 
-(filled as the night goes)
+- 20:25 to 20:32 JST: stage A (4 scenes, card 0) done in 430 s; checklist passed (4 / 4 results, 0 driver errors, 198 to 199 decisions,
+  20 dumps and one `rollout.asl` per scene; 0.47 GB + 38 MB of dumps per scene). No score read.
+- 20:31: stage B (12 scenes, card 1) started; `scripts/onp_pass1_chain.sh` checks it and starts stage C (144 scenes, both cards, CHUNK 36).
+- 20:34: the control's at-fault zeros (zero-score scenes with the at-fault collision or the offroad flag) from the stored run dirs, computed
+  before any new row exists: S seeds 0 to 3 = **51 / 43 / 45 / 40** (mean 44.75). The parent `P2H10S-F-s0` is also the largest, so line H
+  reads: an arm with more than 51 at-fault zeros is a negative.
