@@ -19,7 +19,8 @@ A row's own frame = the rear-axle pose the driver anchored its plan to (drive.js
 Output = the pool contract of on_train.py (plans/on_pool_format.md). Row order: (tag, scene, k). Only rows that pass the prereg's exclusions
 are in the pool; every decision is listed in all.npz with its reason. P = $DATA_DIR/runs/op_parity/cache/on1_<N>:
   P/tab.npz           names (n,) str "on:<scene>:<seed>:<k>"; log (n,) str log unit (c0b_report.log_of); ego (n, 20) float32 the ego vector fed
-                      to the adapter (from the dump, unrounded); fut (n, 8, 3) float32 imitation target x, y, yaw at 0.5 .. 4 s, row frame;
+                      to the adapter (from the dump, unrounded); fut (n, 8, 3) float32 imitation target (prereg Amendment 2) x, y, yaw at 0.5 .. 4 s, row frame; fut_reg the target as
+                      first registered (not trained on);
                       cam (n, 3) float32 camera position in the rear-axle frame; lht (n,) bool False; speed (n,) float32 m/s (the fed body
                       velocity); served (n, 8, 3) float32 the served plan; pose (n, 4, 3) history poses fed (drive.jsonl, 1e-4 m); cmd (n, 4, 4)
                       one-hot command of t0 repeated; acc (n, 4, 2) the fed acceleration repeated; vel (n, 4, 2) NaN except the t0 row (the
@@ -62,7 +63,7 @@ ROWS = DATA / "runs/onpol_nuplan/rows"
 SPLIT = "alpasim_nuplan/onpol-train"
 FRAME_OFF, STEP_US, NT, K = -3, 500_000, 9, 32
 CEN, CORRIDOR, EXT = 1.461, 4.0, 40.0                          # rear axle -> box centre (m); the scorer's corridor; straight continuation of the logged path
-PSI_MAX, LR_MIN, LR_T = np.radians(30.0), 4.0, 1.0
+PSI_MAX, LR_MIN, LR_T, BLEND_S = np.radians(30.0), 4.0, 1.0, 2.0
 ROAD_LAYERS = ("ROADBLOCK", "ROADBLOCK_CONNECTOR", "INTERSECTION", "LANE", "LANE_CONNECTOR")
 NAV_LAYERS = ("ROADBLOCK", "INTERSECTION", "CARPARK_AREA")
 TOL_M, R2_EGO, R2_ACT = 0.03, 0.3, 0.5
@@ -226,6 +227,16 @@ def imitation(G: Path, s0, e0, psi_e, D):
     return np.c_[c(D), np.arctan2(t[:, 1], t[:, 0])], Lr
 
 
+def progress(G: Path, tl, v_ego):
+    """Amendment 2: the target's travel D_k, k = 1..8, from log time tl (us): v(tau) = v_ego + (v_log(tl + tau) - v_ego) min(tau / 2 s, 1),
+    D_k = integral of max(v, 0) over [0, 0.5 k] (0.1 s steps, trapezoid); v_log = the log's speed along G (central difference of its arc over
+    0.1 s). -> D (8,), v_log (41,)."""
+    tau = np.arange(41) * 0.1
+    v_log = (G.s_log(tl + (tau + 0.05) * 1e6) - G.s_log(tl + (tau - 0.05) * 1e6)) / 0.1
+    v = np.maximum(v_ego + (v_log - v_ego) * np.minimum(tau / BLEND_S, 1.0), 0.0)
+    return np.r_[0.0, np.cumsum((v[1:] + v[:-1]) * 0.05)][5::5], v_log
+
+
 def box_poly(c, L, W):
     """Centre poses (n, 3), sizes (n,) -> shapely polygons (n,)."""
     import shapely
@@ -303,12 +314,13 @@ def geo_one(job):
         return None
 
     # ---- gate R2 material: ego at the log-replay decisions, simulator actors against the log's boxes, the dense path against the rollout's 10 Hz logged track
-    r2 = dict(scene=scene, tag=tag, t0_rel=round((T0 - int(L["T"][i])) * 1e-6, 2), frame_err=e_best, ego=[], act=[], act_yaw=[], n_act=len(ids))
+    r2 = dict(scene=scene, tag=tag, t0_rel=round((T0 - int(L["T"][i])) * 1e-6, 2), frame_err=e_best, ego=[], act=[], act_yaw=[], act_nolog=0, n_act=len(ids))
     for t in o["actor_t"]:
         for q in ids:
             tr = o["actors"][q]
             n = int(np.abs(tr[:, 0] - t).argmin())
             b = log_box(L, q, T0 + t)
+            r2["act_nolog"] += int(b is None and abs(tr[n, 0] - t) <= 1000)
             if b is not None and abs(tr[n, 0] - t) <= 1000:
                 r2["act"].append(float(np.hypot(*(tr[n, 1:3] + O - b[:2]))))
                 r2["act_yaw"].append(float(abs(wrap(tr[n, 3] - b[2]))))
@@ -369,10 +381,14 @@ def geo_one(job):
             row["excl"] = "corridor"
         elif T0 + t + 8 * STEP_US > t_end:
             row["excl"] = "log_future"
-        D = G.s_log(T0 + t + STEP_US * np.arange(1, 9)) - sl
-        if not row["excl"] and s0 + D[-1] > G.s[-1] - 0.1:
+        D_reg = G.s_log(T0 + t + STEP_US * np.arange(1, 9)) - sl                # the registered progress: the log's own travel
+        v_ego = float(np.hypot(row["ego"][4], row["ego"][5]) * 10.0)
+        D, v_log = progress(G, T0 + t, v_ego)                                   # Amendment 2
+        if not row["excl"] and s0 + max(D[-1], D_reg[-1]) > G.s[-1] - 0.1:
             row["excl"] = "path_end"
         fut, Lr = imitation(G, s0, e0, psi, D)
+        row |= dict(fut_reg=into(pm, imitation(G, s0, e0, psi, D_reg)[0]).astype(np.float32), D_reg=D_reg.astype(np.float32), v_log=float(v_log[0]))
+        row["fut_reg"][:, 2] = wrap(row["fut_reg"][:, 2])
         gp = G.at(s0 + np.arange(-15.0, 71.0))[0]
         lf = np.array([logp(T0 + t + j * STEP_US) if T0 + t + j * STEP_US <= t_end else np.full(3, np.nan) for j in range(NT)])
         row |= dict(fut=into(pm, fut).astype(np.float32), Lr=Lr, D=D.astype(np.float32), path_ext=bool(s0 + D[-1] > G.s_end),
@@ -436,7 +452,7 @@ def cmd_geo(a):
         vel = np.full((n, 4, 2), np.nan, np.float32)
         vel[:, 3] = ego[:, 4:6] * 10.0
         np.savez(pool / "tab.npz", names=names, log=logs, ego=ego, pose=st("hist"), vel=vel, acc=np.repeat(ego[:, None, 6:8] * 3.0, 4, 1),
-                 cmd=np.repeat(np.eye(4, dtype=np.float32)[st("cmd", int)][:, None], 4, 1), fut=st("fut"), cam=st("cam"), lht=np.zeros(n, bool),
+                 cmd=np.repeat(np.eye(4, dtype=np.float32)[st("cmd", int)][:, None], 4, 1), fut=st("fut"), fut_reg=st("fut_reg"), cam=st("cam"), lht=np.zeros(n, bool),
                  speed=np.hypot(ego[:, 4], ego[:, 5]) * 10.0, served=st("poses").astype(np.float32))
         np.savez(pool / "agent.npz", tokens=names, log=logs, box=st("box"), valid=st("bval"), cls=st("cls"), ok=np.ones(n, bool),
                  classes=np.array(["vehicle", "generic_object", "pedestrian", "bicycle"]))
@@ -447,7 +463,7 @@ def cmd_geo(a):
             (out / f"{f}.npz").symlink_to(pool / f"{f}.npz")
         np.savez(out / "meta.npz", names=names, scene=st("scene", str), log=st("log", str), logu=logs, tag=st("tag", str),
                  seed=st("seed", int), k=st("k", int), t_us=st("t_us", np.int64), t_log_us=st("t_log_us", np.int64), pose_map=st("pose_map"), anchor=st("anchor"), speed=np.hypot(ego[:, 4], ego[:, 5]) * 10.0,
-                 s0=st("s0", float), e0=st("e0", float), psi_e=st("psi_e", float), lead=st("lead", float), Lr=st("Lr", float), D=st("D"), path_ext=st("path_ext", bool),
+                 s0=st("s0", float), e0=st("e0", float), psi_e=st("psi_e", float), lead=st("lead", float), Lr=st("Lr", float), D=st("D"), D_reg=st("D_reg"), v_log=st("v_log", float), path_ext=st("path_ext", bool),
                  n_act=st("n_act", int), d_anchor=st("d_anchor", float), n_keys=st("n_keys", int), poses=st("poses"), mu=st("mu"), gpath=st("gpath"), logfut=st("logfut"),
                  dump=st("dump", str), run=st("run", str))
         g = lambda key, r: r.get(key, np.nan)  # noqa: E731
@@ -458,12 +474,12 @@ def cmd_geo(a):
         eg, ac, ay = (np.array([x for r in R for x in r[q]]) for q in ("ego", "act", "act_yaw"))
         r2 = dict(rollouts=len(jobs), with_sim=len(R), t0_rel_s={str(d): int(sum(r["t0_rel"] == d for r in R)) for d in sorted({r["t0_rel"] for r in R})},
                   frame_err_max_m=max(r["frame_err"] for r in R), ego_n=len(eg), ego_max_m=float(eg.max()), ego_share_within=float((eg <= R2_EGO).mean()),
-                  act_n=len(ac), act_median_m=float(np.median(ac)), act_p99_m=float(np.percentile(ac, 99)), act_max_m=float(ac.max()),
+                  act_n=len(ac), act_nolog=int(sum(r["act_nolog"] for r in R)), act_median_m=float(np.median(ac)), act_p99_m=float(np.percentile(ac, 99)), act_max_m=float(ac.max()),
                   act_share_within=float((ac <= R2_ACT).mean()), act_yaw_p99_deg=float(np.degrees(np.percentile(ay, 99))), act_yaw_max_deg=float(np.degrees(ay.max())),
                   path_dense_max_m=max(r["path_dense"] for r in R), anchor_vs_sim_max_m=float(st("d_anchor", float).max()), tol_ego_m=R2_EGO, tol_act_m=R2_ACT)
         # at the log-replay decisions the imitation target must be the log's own future (label sanity, not part of the registered gate)
         rep = [r for r in keep if r["k"] < 2]
-        r2["imit_at_replay_max_m"] = float(max(np.hypot(*(r["fut"][:, :2] - r["logfut"][1:, :2]).T).max() for r in rep)) if rep else None
+        r2["imit_at_replay_max_m"] = float(max(np.hypot(*(r["fut_reg"][:, :2] - r["logfut"][1:, :2]).T).max() for r in rep)) if rep else None
         r2["pass"] = bool(len(R) and r2["ego_max_m"] <= R2_EGO and r2["act_max_m"] <= R2_ACT)
         (out / "r2.json").write_text(json.dumps(r2, indent=1) + "\n")
         (out / "r2.md").write_text("\n".join([f"# Gate R2 (frames), rows `{a.name}`: {'PASS' if r2['pass'] else 'FAIL'}", ""] + md_table(["quantity", "value", "limit"], [
@@ -473,10 +489,12 @@ def cmd_geo(a):
             (f"simulator actor centres against the log's boxes of the same tracks, {len(ac)} samples: median / p99 / max (m)",
              f"{r2['act_median_m']:.3f} / {r2['act_p99_m']:.3f} / {r2['act_max_m']:.3f}", R2_ACT),
             ("share of actor samples within the limit", f"{r2['act_share_within']:.4f}", ""),
+            ("simulator actor samples whose track the log lacks in a neighbouring 2 Hz frame (not compared; the label keeps the simulator's pose)",
+             f"{r2['act_nolog']} ({r2['act_nolog'] / max(r2['act_nolog'] + len(ac), 1):.4f})", ""),
             ("actor yaw difference, p99 / max (deg)", f"{r2['act_yaw_p99_deg']:.2f} / {r2['act_yaw_max_deg']:.2f}", ""),
             ("dense logged path (Hermite through 2 Hz) against the rollout's 10 Hz logged track, max lateral (m)", f"{r2['path_dense_max_m']:.4f}", ""),
             ("driver anchor against the simulator's rear axle at t0, max (m)", f"{r2['anchor_vs_sim_max_m']:.4f}", ""),
-            ("imitation target against the log's own future at decisions 0 and 1, max (m)", f"{r2['imit_at_replay_max_m']:.3f}" if rep else "n/a", "")]) + [""]))
+            ("registered imitation target (fut_reg) against the log's own future at decisions 0 and 1, max (m)", f"{r2['imit_at_replay_max_m']:.3f}" if rep else "n/a", "")]) + [""]))
         run.summary.update(rows=n, decisions=len(rows), excluded={q: int(sum(r["excl"] == q for r in rows)) for q in REASONS if any(r["excl"] == q for r in rows)}, r2=r2)
         run.info(f"{n} rows of {len(rows)} decisions -> {pool}, {out}; R2 {'PASS' if r2['pass'] else 'FAIL'}: {json.dumps(r2)}")
 
@@ -491,6 +509,7 @@ def cmd_tok(a):
     from drivable_hinge import Hinge
     from experiments.op_adapt_r2.lib import op_adapt_r2 as R2
     from jevdrive import cache
+    from jevdrive.common import n_cpus
     from jevdrive import navsim_zs as Z
     from jevdrive import op_adapt as A
     from jevdrive import op_interp as I
@@ -512,7 +531,7 @@ def cmd_tok(a):
                 cur = np.stack([np.load(M["dump"][i])["cur"] for i in rows])                        # (b, 8, 2, 6, 128, 256) as fed
                 return rows, np.concatenate([np.zeros_like(cur[:, :1]), cur[:, :-1]], 1).reshape(-1, *cur.shape[2:]), cur.reshape(-1, *cur.shape[2:])
             fr = np.zeros((n, 8) + A.H_SHAPE, np.float16)
-            with ThreadPoolExecutor(16) as ex:
+            with ThreadPoolExecutor(min(n_cpus(), len(os.sched_getaffinity(0)))) as ex:
                 for rows, prev, cur in run.tqdm(PP._bounded(ex, load, [np.arange(i, min(i + 32, n)) for i in range(0, n, 32)], 8), total=(n + 31) // 32, desc="front"):
                     fr[rows] = enc(prev, cur).reshape(len(rows), 8, *A.H_SHAPE)
             return fr
@@ -587,12 +606,18 @@ def cmd_tok(a):
             lines.append((t, len(rows), f"{q['mu_share']:.4f}", f"{q['pose_share']:.4f}", f"{q['mu_median']:.4f} / {q['mu_max']:.4f}", f"{q['pose_median']:.4f} / {q['pose_max']:.4f}",
                           f"{q['pose_share_within_32m']:.4f} / {q['pose_share_one_ulp']:.4f}", f"{q['pose_share_trainer_formula']:.4f} ({q['rear_formula_max']:.4f})",
                           f"{q['single_identical']:.3f} of {q['single_n']} (max {q['single_max']:.4f})" if q["single_n"] else "not run", f"{other}: {q['control_mu_share']:.4f} / {q['control_pose_share']:.4f} (median {q['control_pose_median']:.3f} m)"))
-        r1["pass"] = bool(all(q["mu_share"] >= 0.99 and q["pose_share"] >= 0.99 and q["control_pose_share"] < 0.5 for q in r1["tags"].values()))
+        cf = ROWS / a.control / "r1.json"
+        ctl = [q for q in json.loads(cf.read_text())["tags"].values() if q.get("single_n")] if a.control and cf.exists() else []
+        r1 |= dict(a=bool(all(q["mu_share"] >= 0.99 for q in r1["tags"].values())), c=bool(all(q["control_pose_share"] < 0.2 for q in r1["tags"].values())),
+                   b=bool(ctl and all(q["single_identical"] >= 0.99 for q in ctl)), control=a.control,
+                   control_single=[[q["single_n"], q["single_identical"]] for q in ctl])
+        r1["pass"] = bool(r1["a"] and r1["b"] and r1["c"])
         (out / "r1.json").write_text(json.dumps(r1, indent=1) + "\n")
         (out / "r1.md").write_text("\n".join([f"# Gate R1 (inputs), rows `{a.name}`: {'PASS' if r1['pass'] else 'FAIL'}", "",
-                                              f"Trainer forward (pp_train.PModel, eager, stored tokens + ego vector) against the served plan (compiled passes); share of rows within {TOL_M} m, needs "
-                                              ">= 0.99 on both; the 8 poses = the trainer's plan through the serving export (op_interp.to_rear). Control = the other seed's checkpoint on the same "
-                                              "rows (must stay below 0.5 on the poses). Diagnostics, not the gate: the pose share counted over the poses served within 32 m only / with a 0.03126 m "
+                                              f"Amendment 1: (a) first 15 plan points within {TOL_M} m on >= 0.99 of the rows against the served (compiled) plans: {'met' if r1['a'] else 'NOT met'}; "
+                                              f"(b) interpreted control `{a.control}`, rows forwarded with the driver's batch shape bit-identical on >= 0.99: "
+                                              f"{'met' if r1['b'] else 'NOT met'} {r1['control_single']}; (c) wrong-seed control within {TOL_M} m on the 8 poses on < 0.20 of the rows: "
+                                              f"{'met' if r1['c'] else 'NOT met'}. The 8-pose share is a diagnostic (the trainer's plan through the serving export, op_interp.to_rear). Diagnostics, not the gate: the pose share counted over the poses served within 32 m only / with a 0.03126 m "
                                               "tolerance (one fp16 ulp of a plan point beyond 32 m); the pose share with the trainer's own pose formula (pp_train.rear) and, in brackets, the "
                                               "largest difference of that formula from the serving export on the served plan itself; --single: rows forwarded one at a time as the driver does (8 image pairs in one "
                                               "encoder call from the dump, policy batch 1): share whose whole plan mean (33 x 15) equals the served one bit for bit.", ""] +
@@ -609,6 +634,21 @@ def cmd_tok(a):
             z = torch.zeros(n, 8, device=dev)
             off0 = (rh.margins(z, z, z, rr).amin(1) < 0).cpu().numpy()                             # footprint off the road raster at t0 (bd4_train note (x))
         ade = np.hypot(*(M["poses"][..., :2] - tab["fut"][..., :2]).transpose(2, 0, 1)).mean(1)
+        v_ego, kk, tg = tab["speed"].astype(np.float64), M["k"], {}
+
+        def target(fut, D):
+            """Served plan against a target: ADE, mean |along| / |across| the target's heading, first-step speed jump D_1 / 0.5 s - v_ego."""
+            d = M["poses"][..., :2] - fut[..., :2]
+            c, s_ = np.cos(fut[..., 2]), np.sin(fut[..., 2])
+            lon, lat, j = np.abs(c * d[..., 0] + s_ * d[..., 1]).mean(1), np.abs(-s_ * d[..., 0] + c * d[..., 1]).mean(1), D[:, 0] / 0.5 - v_ego
+            return dict(ade=float(np.hypot(d[..., 0], d[..., 1]).mean()), lon=float(lon.mean()), lat=float(lat.mean()), jump_mean=float(j.mean()), jump_abs_mean=float(np.abs(j).mean()),
+                        jump_over_1=float((np.abs(j) > 1).mean()), jump_over_2=float((np.abs(j) > 2).mean()), jump_max=float(np.abs(j).max()),
+                        by_k={int(k): [float(np.hypot(d[..., 0], d[..., 1])[kk == k].mean()), float(j[kk == k].mean())] for k in range(10) if (kk == k).any()})
+        tg = dict(fut=target(tab["fut"].astype(np.float64), M["D"].astype(np.float64)), fut_reg=target(tab["fut_reg"].astype(np.float64), M["D_reg"].astype(np.float64)))
+        by_tag = {t: dict(rows=int(m.sum()), decisions=int((allr["tag"] == t).sum()), excluded={q: int(((allr["excl"] == q) & (allr["tag"] == t)).sum()) for q in REASONS},
+                          off_path_05=float((np.abs(M["e0"][m]) > 0.5).mean()), ahead_5=float((M["lead"][m] > 5).mean()), behind_5=float((M["lead"][m] < -5).mean()),
+                          agent_active=float((av[m] > 0).mean()), road_active=float((rv[m] > 0).mean()), road_off_at_t0=float(off0[m].mean()), imit_ade=float(ade[m].mean()),
+                          v_ego_mean=float(v_ego[m].mean()), v_log_mean=float(M["v_log"][m].mean())) for t in tags for m in [M["tag"] == t]}
         e0, lead, ex = np.abs(M["e0"]), M["lead"], allr["excl"]
         rep = dict(name=a.name, decisions=len(ex), rows=n, scenes=len(set(M["scene"].tolist())), rollouts=len(set(zip(allr["tag"].tolist(), allr["scene"].tolist()))),
                    logs=len(set(M["logu"].tolist())), excluded={q: int((ex == q).sum()) for q in REASONS}, off_path_05=float((e0 > 0.5).mean()), off_path_10=float((e0 > 1.0).mean()),
@@ -616,7 +656,7 @@ def cmd_tok(a):
                    lead_p05_p50_p95=[float(np.percentile(lead, q)) for q in (5, 50, 95)], per_k={int(k): int((M["k"] == k).sum()) for k in range(10)},
                    per_k_decisions={int(k): int((allr["k"] == k).sum()) for k in range(10)}, per_tag={t: int((M["tag"] == t).sum()) for t in tags},
                    agent_active=float((av > 0).mean()), road_active=float((rv > 0).mean()), drivable_active=float((nv > 0).mean()), road_off_at_t0=float(off0.mean()),
-                   imit_ade_mean=float(ade.mean()), imit_ade_over_05=float((ade > 0.5).mean()), path_ext=float(M["path_ext"].mean()), actors_mean=float(M["n_act"].mean()),
+                   imit_ade_mean=float(ade.mean()), imit_ade_over_05=float((ade > 0.5).mean()), targets=tg, by_tag=by_tag, path_ext=float(M["path_ext"].mean()), actors_mean=float(M["n_act"].mean()),
                    actors_over_k=float((M["n_act"] > K).mean()), cold_rows=int((M["n_keys"] < 4).sum()), front_bytes=int(front.nbytes),
                    active_by_k={int(k): [float((av[M["k"] == k] > 0).mean()), float((rv[M["k"] == k] > 0).mean())] for k in range(10) if (M["k"] == k).any()})
         np.savez(out / "active.npz", names=tab["names"], agent=av, road=rv, drivable=nv, road_off_t0=off0, imit_ade=ade)
@@ -637,6 +677,17 @@ def cmd_tok(a):
         L += md_table(["decision k"] + [str(k) for k in range(10)], [("decisions", *[rep["per_k_decisions"][k] for k in range(10)]), ("rows", *[rep["per_k"][k] for k in range(10)]),
                                                                     ("agent hinge active", *[f"{rep['active_by_k'].get(k, [np.nan])[0]:.2f}" for k in range(10)]),
                                                                     ("road hinge active", *[f"{rep['active_by_k'].get(k, [np.nan, np.nan])[1]:.2f}" for k in range(10)])]) + [""]
+        L += ["Imitation targets, the served plan against each (`fut` = Amendment 2, trained on; `fut_reg` = as registered, kept in the tab, not trained on):", ""]
+        L += md_table(["target", "ADE (m)", "mean abs along / across (m)", "first-step speed jump D_1 / 0.5 s - v_ego: mean / mean abs (m/s)", "share over 1 / 2 m/s", "max (m/s)"],
+                      [(q, f"{v['ade']:.3f}", f"{v['lon']:.3f} / {v['lat']:.3f}", f"{v['jump_mean']:+.3f} / {v['jump_abs_mean']:.3f}", f"{v['jump_over_1']:.3f} / {v['jump_over_2']:.3f}",
+                        f"{v['jump_max']:.2f}") for q, v in tg.items()]) + [""]
+        L += md_table(["decision k"] + [str(k) for k in range(10)], [(f"{q}: {w}", *[f"{tg[q]['by_k'].get(k, [np.nan, np.nan])[j]:{f_}}" for k in range(10)])
+                                                                    for q in tg for j, w, f_ in ((0, "ADE (m)", ".2f"), (1, "speed jump (m/s)", "+.2f"))]) + [""]
+        L += md_table(["per serving tag"] + tags, [(w, *[fn(by_tag[t]) for t in tags]) for w, fn in (
+            ("decisions", lambda b: b["decisions"]), ("rows", lambda b: b["rows"]), ("excluded (reason: n)", lambda b: ", ".join(f"{q} {v}" for q, v in b["excluded"].items() if v) or "none"),
+            ("more than 0.5 m off the path", lambda b: f"{b['off_path_05']:.3f}"), ("more than 5 m ahead / behind", lambda b: f"{b['ahead_5']:.3f} / {b['behind_5']:.3f}"),
+            ("agent / road hinge active", lambda b: f"{b['agent_active']:.3f} / {b['road_active']:.3f}"), ("off the road raster at t0", lambda b: f"{b['road_off_at_t0']:.3f}"),
+            ("served plan against `fut`, ADE (m)", lambda b: f"{b['imit_ade']:.3f}"), ("fed speed / log speed at t0, mean (m/s)", lambda b: f"{b['v_ego_mean']:.2f} / {b['v_log_mean']:.2f}"))]) + [""]
         (out / "report.md").write_text("\n".join(L))
         run.summary.update(rows=n, r1=r1, report=rep)
         run.info(f"R1 {'PASS' if r1['pass'] else 'FAIL'}: {json.dumps(r1['tags'])}")
@@ -662,6 +713,8 @@ def cmd_bev(a):
                   ("turn", np.argsort(-turn)), ("decision 0 (cold start)", np.flatnonzero(M["k"] == 0)), ("random", rng.permutation(n))]
         if act is not None:
             groups[5:5] = [("agent hinge active", np.argsort(-act["agent"])), ("road hinge active", np.argsort(-act["road"]))]
+        if a.focus:                                                                          # only the most off-path and most hinge-active rows
+            groups = [g for g in groups if g[0] in ("off the path", "agent hinge active", "road hinge active")]
         per, pick = max(a.n // len(groups), 1), []
         for name, order in groups:
             seen = {M["scene"][i] for _, i in pick}
@@ -690,6 +743,8 @@ def cmd_bev(a):
             lf = M["logfut"][i]
             A.plot(lf[:, 1], lf[:, 0], "x", color="#7f7f7f", ms=5)
             f, p = np.r_[np.zeros((1, 3)), tab["fut"][i]], np.r_[np.zeros((1, 3)), M["poses"][i]]
+            if "fut_reg" in tab:
+                A.plot(tab["fut_reg"][i][:, 1], tab["fut_reg"][i][:, 0], "+", color="#9467bd", ms=5)
             A.plot(f[:, 1], f[:, 0], "o-", color="#ff7f0e", ms=3, lw=1.2)
             A.plot(p[:, 1], p[:, 0], "o-", color="k", ms=3, lw=1.2)
             for q in (0, 4, 8):
@@ -702,7 +757,7 @@ def cmd_bev(a):
         for A in axs.ravel()[len(pick):]:
             A.axis("off")
         fig.suptitle(f"on-policy rows `{a.name}`, row frame (x forward up, y left): grey = road-and-lane raster (blue edge), red = simulator actor boxes at t0 .. t0 + 4 s (fading), "
-                     "dashed = logged path, x = the log's own positions at t0 .. + 4 s,\norange = imitation target, black = the served own plan with the ego box at 0 / 2 / 4 s (green)", fontsize=9)
+                     "dashed = logged path, x = the log's own positions at t0 .. + 4 s,\norange = imitation target (purple + = as registered), black = the served own plan with the ego box at 0 / 2 / 4 s (green)", fontsize=9)
         fig.tight_layout(rect=(0, 0, 1, 0.97))
         fn = out / "bev" / f"on_rows_bev_{a.name}.png"
         fig.savefig(fn, dpi=75)
@@ -717,8 +772,10 @@ if __name__ == "__main__":
     p.add_argument("--name", required=True), p.add_argument("--roll", nargs="+", required=True), p.add_argument("--workers", type=int, default=0)
     p = sub.add_parser("tok")
     p.add_argument("--name", required=True), p.add_argument("--force", action="store_true")
+    p.add_argument("--control", default="smoke10e", help="rows name of the interpreted-driver control whose r1.json (--single) gives clause (b) of gate R1")
     p.add_argument("--single", type=int, default=0, help="gate R1 extra: this many rows per tag forwarded one at a time (the driver's batch shapes)")
     p = sub.add_parser("bev")
     p.add_argument("--name", required=True), p.add_argument("--n", type=int, default=16)
+    p.add_argument("--focus", action="store_true", help="only the most off-path and the most hinge-active rows")
     a = ap.parse_args()
     {"geo": cmd_geo, "tok": cmd_tok, "bev": cmd_bev}[a.cmd](a)

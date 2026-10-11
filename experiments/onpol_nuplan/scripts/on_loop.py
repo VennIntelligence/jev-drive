@@ -20,7 +20,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
 ALP = REPO / "experiments/alpasim/scripts"
-sys.path.insert(0, str(ALP))
+sys.path[:0] = [str(ALP), str(REPO)]
 SPLIT = REPO / "experiments/onpol_nuplan/results/split"
 N_CHUNK, SMOKE_STEP = 4, 104
 
@@ -44,6 +44,7 @@ def main():
         print({k: len(v) for k, v in write_lists(Path(sys.argv[2])).items()})
         return
     import ot2_loop as L
+    from jevdrive.common import n_cpus
     B = L.B
     lists = Path(os.environ["ON_LISTS"])
     write_lists(lists)
@@ -61,7 +62,7 @@ def main():
         def finish(self):
             if (self.D / "aggregate/results-summary.json").exists():           # before the pruning in ot2_loop.Job.finish
                 f = self.D / "onpol_sim.pkl"
-                r = subprocess.run([py, str(ALP / "c1_extract.py"), "logs", "--run", str(self.D), "--out", str(f), "--jobs", "16"],
+                r = subprocess.run([py, str(ALP / "c1_extract.py"), "logs", "--run", str(self.D), "--out", str(f), "--jobs", str(max(4, min(32, n_cpus() // 4)))],
                                    cwd=B.REPO, capture_output=True, text=True)
                 if r.returncode or not f.exists():
                     B.fail(f"{self.name}: simulator-state extraction failed in {self.D} (rollout logs left as they are): {r.stderr[-400:]}")
