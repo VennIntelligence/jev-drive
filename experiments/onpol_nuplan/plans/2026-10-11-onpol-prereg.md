@@ -160,3 +160,18 @@ arm; no multiplicity correction over three verdict sentences. All 1491 scenes ar
 
 `experiments/onpol_nuplan/README.md` (from experiments/TEMPLATE.md), one INDEX.md line, `results/` (split, row report, gates, pilot
 table, read-out, per-scene csv, clips index), a decision draft with the standing stated as it is, `tmp/onpol-nuplan-state.md`.
+
+## Amendment 1 (2026-10-11, after the 10-scene smoke, before the full rollout, any training and any closed-loop read)
+
+Gate R1 as written failed on its second clause and is rewritten; the smoke numbers that prompted this are in
+`results/rows/smoke10*/`. Measured on 100 smoke rows: first 15 plan points within 0.03 m on 0.99 of rows, the 8 served poses on 0.80
+(maximum 0.045 m); against the same scenes served with interpreted passes (`SH30_COMPILE=0`, smoke10e) 1.00 / 0.96, and forwarded one
+row at a time with the driver's batch shape the interpreted plans are reproduced bit for bit on 100 of 100 rows; the wrong-seed control
+(`-s1` weights) is within 0.03 m on 0.04 of rows (median 0.123 m). So the stored inputs are the driver's; what the pose clause measured
+is fp16 rounding of the compiled passes and of the batch size, the case docs/long-runs.md's equality rule warns about.
+
+R1 (amended): (a) first 15 plan points within 0.03 m on at least 99 % of the pool rows against the served (compiled) plans; (b) on a
+10-scene interpreted control, rows forwarded with the driver's batch shape reproduce the served plan bit for bit on at least 99 % of
+rows; (c) the wrong-seed control stays below 20 %. The 8-pose share is reported as a diagnostic. (b) is met by the smoke; (a) and (c)
+are read again on the full pool. The pool keeps rows of the compiled path (the path every read of this lane and the image-independent
+box reads use).
