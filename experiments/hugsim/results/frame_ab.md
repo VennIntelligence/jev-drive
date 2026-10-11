@@ -53,7 +53,7 @@ all arms but `b`). CIs: `jevdrive.stats`, cluster bootstrap over scenarios (B = 
 
 | gate | reading | result |
 |:--|:--|:--|
-| (i) offline replay = serving | `off` against the logged plan, points within 3.2 model s, tolerance 0.03 m: 0 / 989 decisions over, max difference 0.0 m (bit-identical, action curvature too). Control (bias zeroed): 989 / 989 over, median 2.1-4.3 m per scenario | pass |
+| (i) offline replay = serving | `off` against the logged plan, points within 3.2 model s, tolerance 0.03 m: 0 / 989 decisions over, max difference 0.0 m (bit-identical, action curvature too). Control (bias zeroed): 989 / 989 over, max 11.4 m | pass |
 | (ii) `Core.plan` = training protocol | 32 navtest tokens (real CAM_F0 JPEGs) against the bench predictions of the checkpoint: 32 / 32 within 0.05 m, max 0.046 m, median 0.009 m. Control (adapter bias off): 32 / 32 over, median 2.37 m | pass |
 | (iii) HUGSIM pose convention of the warp | render n-2 warped along the recorded ego motion to the pose of step n-1, luma MAE against the real render n-1, 111 decisions at v > 3 m/s: 10.0 against 13.0 unwarped, 12.1 mirrored, 16.3 reversed; below unwarped in 93 % | pass |
 
