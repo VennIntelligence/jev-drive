@@ -8,7 +8,7 @@ S3 serves byte ranges, so zipfile reads the central directory and each member th
 Members are fetched in parallel (one connection per member); a member is written to <name>.part and renamed when
 its CRC checks out (zipfile verifies it on read).
 """
-import argparse, io, os, sys, zipfile, urllib.request
+import argparse, io, os, sys, time, zipfile, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 URL = "https://motional-nuplan.s3-ap-northeast-1.amazonaws.com/public/nuplan-v1.1/nuplan-v1.1_test.zip"
@@ -31,13 +31,16 @@ class HttpFile(io.RawIOBase):
         return self.pos
 
     def _get(self, a, b):
-        for attempt in range(8):
+        for attempt in range(40):
             try:
                 req = urllib.request.Request(self.url, headers={"Range": f"bytes={a}-{b - 1}"})
-                return urllib.request.urlopen(req, timeout=120).read()
-            except Exception as e:  # transient network errors: retry
-                if attempt == 7: raise
-                print(f"retry {a}-{b}: {e}", file=sys.stderr)
+                d = urllib.request.urlopen(req, timeout=120).read()
+                if len(d) == b - a: return d
+                raise IOError(f"short read {len(d)} of {b - a}")
+            except Exception as e:  # transient network errors (Clash drops TLS streams): retry with backoff
+                if attempt == 39: raise
+                print(f"retry {attempt + 1} {a}-{b}: {e}", file=sys.stderr)
+                time.sleep(min(60, 2 ** min(attempt, 6)))
 
     def read(self, n=-1):
         if n < 0: n = self.size - self.pos
