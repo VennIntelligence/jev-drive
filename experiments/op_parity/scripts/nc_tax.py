@@ -35,15 +35,24 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(Path(__file__).parent)]
 D = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
-OUT = D / "runs/op_parity/nc_tax"
+# Environment overrides (defaults = decision 196's run; experiments/long_oracle reuses this script for other drivers):
+#   NC_TAX_MODEL / NC_TAX_NAVHARD_MODEL  model tag patterns ("{}" = seed); NC_TAX_OUT  output dir under $DATA_DIR;
+#   NC_TAX_EXP  jevdrive.run experiment name; NC_TAX_EXTRA  extra scales (space-separated) added to the scored family.
+OUT = D / os.environ.get("NC_TAX_OUT", "runs/op_parity/nc_tax")
 RES = OUT / "report"                                     # copied to experiments/op_parity/results/nc_taxonomy/ on the Mac
+EXP = os.environ.get("NC_TAX_EXP", "op_parity")
 SEEDS = (0, 1)
-MODEL = {"navtest": "SH30-F-s{}", "navhard": "SH30-F-s{}@gimm"}
+MODEL = {"navtest": os.environ.get("NC_TAX_MODEL", "SH30-F-s{}"), "navhard": os.environ.get("NC_TAX_NAVHARD_MODEL", "SH30-F-s{}@gimm")}
 SPLIT = {"navtest": "navsim/navtest", "navhard": "navsim/navhard_two_stage"}
 MAIN = (0.7, 0.8, 0.9, 1.0, 1.1)
-EXT = (0.5, 0.6) + MAIN
+EXTRA = tuple(float(x) for x in os.environ.get("NC_TAX_EXTRA", "").split())
+EXT = tuple(sorted(set((0.5, 0.6) + MAIN + EXTRA)))
 DOSE = {"0.9-1.1": (0.9, 1.1), "0.8-1.1": (0.8, 0.9, 1.1), "0.7-1.1 (main)": (0.7, 0.8, 0.9, 1.1), "0.5-1.1 (extended)": (0.5, 0.6, 0.7, 0.8, 0.9, 1.1),
         "slower only (0.7-0.9)": (0.7, 0.8, 0.9), "faster only (1.1)": (1.1,)}
+if EXTRA:                                                # families over the added fine scales (long_oracle pre-registration)
+    DOSE |= {"0.95-1.05": (0.95, 1.05), "0.85-1.15": (0.85, 0.9, 0.95, 1.05, 1.1, 1.15),
+             "all scales": tuple(x for x in EXT if x != 1.0)}
+    DOSE = {k: v for k, v in DOSE.items() if set(v) <= set(EXT)}
 SUB8 = ["NC", "DAC", "DDC", "TLC", "EP", "TTC", "LK", "HC"]
 EP_TOL = 1e-6
 SIDE_DX, SIDE_DY = 4.05, 1.0
@@ -90,7 +99,7 @@ def preds(bench, seed):
 def cmd_select(a):
     from jevdrive.data import splits
     from jevdrive.run import Run
-    with Run("op_parity", f"nc_tax/select-{a.bench}", config=vars(a)) as run:
+    with Run(EXP, f"nc_tax/select-{a.bench}", config=vars(a)) as run:
         run.use_split(splits.load(SPLIT[a.bench]))
         OUT.mkdir(parents=True, exist_ok=True)
         plans, want, n = {}, {}, {}
@@ -118,7 +127,7 @@ def cmd_replay(a):
     kf = OUT / f"keys_{a.bench}.pkl"
     todo = sorted(pickle.load(open(kf, "rb"))["want"])
     procs = a.procs or max(4, n_cpus() // 3)
-    with Run("op_parity", f"nc_tax/replay-{a.bench}", config=vars(a) | {"n_tokens": len(todo), "procs": procs}) as run:
+    with Run(EXP, f"nc_tax/replay-{a.bench}", config=vars(a) | {"n_tokens": len(todo), "procs": procs}) as run:
         t0, rows = time.time(), []
         with mp.get_context("fork").Pool(procs, initializer=FD._init, initargs=(a.bench, kf)) as pool:
             for i, r in enumerate(pool.imap_unordered(FD.work, todo, chunksize=2)):
@@ -137,7 +146,7 @@ def cmd_family(a):
     import turn_ceiling as TC
     from jevdrive.data import splits
     from jevdrive.run import Run
-    with Run("op_parity", "nc_tax/family", config=vars(a)) as run:
+    with Run(EXP, "nc_tax/family", config=vars(a)) as run:
         nt = splits.load(SPLIT["navtest"])
         run.use_split(nt)
         arrs, bad, tok0 = {}, set(), None
@@ -163,7 +172,7 @@ def cmd_gate(a):
     from jevdrive.bench import poses as BP, tables as T
     from jevdrive.bench.navsim import SUBS
     from jevdrive.run import Run
-    with Run("op_parity", f"nc_tax/gate-{a.stage}", config=vars(a)) as run:
+    with Run(EXP, f"nc_tax/gate-{a.stage}", config=vars(a)) as run:
         tok = BP.read_tokens(OUT / f"tokens_{a.stage}.txt")
         df = pd.read_csv(a.score)
         ids = df[df.key.isin([akey(s, 1.0) for s in SEEDS])]                   # only the identity rows are read here
@@ -334,7 +343,7 @@ def cmd_report(a):
     from jevdrive.bench.navsim import SUBS
     from jevdrive.data import splits
     from jevdrive.run import Run
-    with Run("op_parity", "nc_tax/report", config=vars(a)) as run:
+    with Run(EXP, "nc_tax/report", config=vars(a)) as run:
         run.use_split(splits.load(SPLIT["navtest"]))
         run.use_split(splits.load(SPLIT["navhard"]))
         RES.mkdir(parents=True, exist_ok=True)
@@ -367,8 +376,8 @@ def cmd_report(a):
                     t["big"] = t.big.map(BIG)
                     t.insert(5, "share % [95% CI]", [ci(stats, G.big == b[0], G.log) for b in t.big])
                     t["WA-JEPA passes % [95% CI]"] = [ci(stats, G.wa_pass[G.big == b[0]], G.log[G.big == b[0]]) for b in t.big]
-                    t["SH30-specific (fails, WA passes): n"] = [G.wa_pass[G.big == b[0]].sum() / len(SEEDS) for b in t.big]
-                    t["SH30-specific share of set % [95% CI]"] = [ci(stats, (G.big == b[0]) & (G.wa_pass == 1), G.log) for b in t.big]
+                    t["arm-specific (fails, WA passes): n"] = [G.wa_pass[G.big == b[0]].sum() / len(SEEDS) for b in t.big]
+                    t["arm-specific share of set % [95% CI]"] = [ci(stats, (G.big == b[0]) & (G.wa_pass == 1), G.log) for b in t.big]
                     t["recovered, main % [95% CI]"] = [ci(stats, G["rec 0.7-1.1 (main)"][G.big == b[0]], G.log[G.big == b[0]]) for b in t.big]
                     summ[f"navtest_{st}_by_class"] = t.to_dict("records")
                 L.append(f"\n### {st} failures by {nm}\n\n" + md(t))
@@ -441,7 +450,7 @@ def cmd_report(a):
         t = pd.DataFrame(rows)
         t.to_csv(RES / "oracle_board_upper.csv", index=False)
         summ["oracle_board_upper"] = rows
-        L.append("\n### Board-level upper bound: a* on SH30's failing tokens only, all other tokens unchanged (points of the 12 146-token mean)\n\n" + md(t))
+        L.append("\n### Board-level upper bound: a* on the arm's failing tokens only, all other tokens unchanged (points of the 12 146-token mean)\n\n" + md(t))
 
         # 3. uniform scaling of every token (stage 1)
         if a.score_all and Path(a.score_all).exists():
@@ -489,7 +498,7 @@ def cmd_report(a):
             L.append(f"\n### navhard stage 1, {st}: class x t0 ego speed band (seed-mean counts)\n\n" + md(cross(G, "speed", SPEEDS)))
         wn, wt = fail_sets(wah)
         summ["navhard_s1"] = dict(tokens=len(UH[0]), wa_nc=int(wn.sum()), wa_ttc_only=int(wt.sum()),
-                                  sh30={f"s{s}": dict(nc=int(fail_sets(UH[s])[0].sum()), ttc_only=int(fail_sets(UH[s])[1].sum())) for s in SEEDS})
+                                  arm={f"s{s}": dict(nc=int(fail_sets(UH[s])[0].sum()), ttc_only=int(fail_sets(UH[s])[1].sum())) for s in SEEDS})
         L.append(f"\nWA-JEPA on the same {len(wah)} stage-1 tokens: {int(wn.sum())} NC failures, {int(wt.sum())} TTC-only failures (stored per-token scores).")
 
         (RES / "tables.md").write_text("\n".join(L) + "\n")

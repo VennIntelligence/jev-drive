@@ -8,7 +8,7 @@
 # State: $DATA_DIR/runs/op_parity/nc_tax/chain/{STATUS, DONE, ERROR, log.txt}. Rerunning resumes the scoring (finished chunks stay).
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
-O=$DATA_DIR/runs/op_parity/nc_tax
+O=$DATA_DIR/${NC_TAX_OUT:-runs/op_parity/nc_tax}          # NC_TAX_* overrides: see nc_tax.py (long_oracle reuses this chain)
 D=$O/chain; mkdir -p "$D"; rm -f "$D/DONE" "$D/ERROR"
 exec > >(tee -a "$D/log.txt") 2>&1
 NPY=$DATA_DIR/envs/navsim2/bin/python
@@ -20,7 +20,7 @@ die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
 score() {   # score <stage> -> $O/score_<stage>.csv
   read -ra K < "$O/keys.txt"
   "$VPY" -m jevdrive.bench score-poses --poses "$O/poses.npz" --keys "${K[@]}" --tokens "$O/tokens_$1.txt" --out "$O/score_$1.csv" \
-      --traffic non_reactive --jobs "$JOBS" --owner op_parity --wait || die "score-poses $1"
+      --traffic non_reactive --jobs "$JOBS" --owner "${NC_TAX_EXP:-op_parity}" --wait || die "score-poses $1"
   [[ -f $O/score_$1.csv ]] || die "score-poses $1 wrote no CSV"
   "$VPY" $S gate --stage "$1" --score "$O/score_$1.csv" || die "identity gate $1"
 }
