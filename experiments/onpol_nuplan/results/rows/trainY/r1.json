@@ -1,0 +1,63 @@
+{
+ "tol_m": 0.03,
+ "need": 0.99,
+ "tags": {
+  "YR10m10-F-s0": {
+   "n": 10198,
+   "mu_share": 0.980976662090606,
+   "pose_share": 0.7855461855265738,
+   "mu_median": 0.0078125,
+   "mu_max": 0.046875,
+   "pose_median": 0.015625,
+   "pose_max": 0.09375381469726562,
+   "control": "YR10m10-F-s1",
+   "mu_share_one_ulp": 0.9990194155716807,
+   "mu_share_slow": 0.9947952810548231,
+   "slow_share": 0.8478132967248481,
+   "pose_share_within_32m": 0.8202588742890763,
+   "pose_share_one_ulp": 0.8874289076289469,
+   "pose_share_trainer_formula": 0.7878015297117081,
+   "rear_formula_max": 0.025641441345214844,
+   "single_n": 204,
+   "single_identical": 0.0,
+   "single_max": 0.25,
+   "control_mu_share": 0.13306530692292606,
+   "control_pose_share": 0.014708766424789174,
+   "control_pose_median": 0.2091217041015625
+  },
+  "YR10m10-F-s1": {
+   "n": 10195,
+   "mu_share": 0.9795978420794507,
+   "pose_share": 0.8117704757233938,
+   "mu_median": 0.0078125,
+   "mu_max": 0.046875,
+   "pose_median": 0.015625,
+   "pose_max": 0.11758804321289062,
+   "control": "YR10m10-F-s0",
+   "mu_share_one_ulp": 0.9984306032368808,
+   "mu_share_slow": 0.9941656942823804,
+   "slow_share": 0.8406081412457087,
+   "pose_share_within_32m": 0.8525747915644925,
+   "pose_share_one_ulp": 0.9145659637076998,
+   "pose_share_trainer_formula": 0.8142226581657676,
+   "rear_formula_max": 0.025774002075195312,
+   "single_n": 204,
+   "single_identical": 0.0,
+   "single_max": 0.171875,
+   "control_mu_share": 0.14752329573320255,
+   "control_pose_share": 0.014811181951937225,
+   "control_pose_median": 0.20635223388671875
+  }
+ },
+ "a": false,
+ "c": true,
+ "b": true,
+ "control": "smoke10eY",
+ "control_single": [
+  [
+   100,
+   1.0
+  ]
+ ],
+ "pass": false
+}

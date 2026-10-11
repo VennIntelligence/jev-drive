@@ -1,0 +1,40 @@
+{
+ "tol_m": 0.03,
+ "need": 0.99,
+ "tags": {
+  "YR10m10-F-s0": {
+   "n": 100,
+   "mu_share": 1.0,
+   "pose_share": 1.0,
+   "mu_median": 0.00390625,
+   "mu_max": 0.015625,
+   "pose_median": 0.009056329727172852,
+   "pose_max": 0.02393341064453125,
+   "control": "YR10m10-F-s1",
+   "mu_share_one_ulp": 1.0,
+   "mu_share_slow": 1.0,
+   "slow_share": 0.95,
+   "pose_share_within_32m": 1.0,
+   "pose_share_one_ulp": 1.0,
+   "pose_share_trainer_formula": 1.0,
+   "rear_formula_max": 0.014123916625976562,
+   "single_n": 100,
+   "single_identical": 1.0,
+   "single_max": 0.0,
+   "control_mu_share": 0.12,
+   "control_pose_share": 0.03,
+   "control_pose_median": 0.17996978759765625
+  }
+ },
+ "a": true,
+ "c": true,
+ "b": true,
+ "control": "smoke10e",
+ "control_single": [
+  [
+   100,
+   1.0
+  ]
+ ],
+ "pass": true
+}

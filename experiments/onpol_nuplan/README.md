@@ -127,6 +127,37 @@ scripts/tmux_run.sh on-read-held env ON_FOURTH=SSELFnoL bash experiments/onpol_n
 Cost: 17.9 card-hours of card occupancy on the box between 19:25 and 23:35 CST (`cl usage --hours 5`, this lane was the only user:
 13.9 computing, 4.0 with a job and an idle GPU), step 0 included; 59 GB under `$DATA_DIR/runs/onpol_nuplan` (41 GB rollout dumps).
 
+## Round 2 (2026-10-12, in progress; [plans/2026-10-12-onpol2-prereg.md](plans/2026-10-12-onpol2-prereg.md) B and C)
+
+State: rollouts, pool, trainer and chain are ready; **no pilot, full training or held read of round 2 has been started.**
+
+- Rollouts of `YR10m10-F-s0 / -s1` on the 1031 train scenes (`BASE=YR10m10-F on_roll.sh full`, 8 pool jobs, 45 min wall, 41 GB of
+  dumps): 2062 rollouts, 2050 driver sessions with 10 decisions each, 20 500 dumps, 0 driver errors, no retry.
+- Pool `on1_trainY`: 20 393 rows from 1025 scenes (round 1: 20 386). [results/rows/trainY/report.md](results/rows/trainY/report.md),
+  gates `r1.md`, `r2.md` beside it. Both gates print FAIL as coded, with round 1's numbers: R1 (a) 0.981 / 0.980 at 0.03 m and
+  0.9990 / 0.9984 at one fp16 ulp, (b) 100 of 100 on the YR interpreted control `results/rows/smoke10eY/`, (c) 0.015 / 0.015; R2
+  identical to round 1's (ego 0.018 m, 12 of 457 034 actor samples over 0.5 m). Under Amendment 4's reading both are met; the ruling
+  for this pool is the main session's.
+- ![BEV of 21 rows of on1_trainY](figs/on_rows_bev_trainY.png) `figs/on_rows_bev_trainY.png`: the 7 most off-path, 7 most
+  agent-hinge-active and 7 most road-hinge-active rows. Check that rasters, actor boxes, logged path and served plan sit together; the
+  road-hinge panels are again the one scene whose map has almost no road polygon.
+- Trainer: `on_train.py --yr-mass 0.1` (joint_train's yaw-rate rows) and `--agent-on-only`. Batch of 128: `YSELFnoL-ON` = 102 normal +
+  13 yaw-rate + 13 on-policy rows, `YNONE-ON` = 115 normal + 13 yaw-rate (the prereg's "89 / 13 / 13" sums to 115; the archived
+  recipe is 115 normal + 13 yaw-rate, so the on-policy rows come out of the normal rows). Gates in `results/gates/y_*.json`: Y1
+  bit-identical to `joint_train.py --yr-mass 0.1`; Y2 every tensor loaded, dev ADE at step 0 0.5386 = the archived run's; Y3 row
+  accounting and equal on-policy indices; round 1's T1 and its `self` mode (against the round-1 gate checkpoint) bit-identical.
+- Reader: `on_report2.py`, tested on stored train-split reads only ([results/standin2/on2_report.md](results/standin2/on2_report.md),
+  not a result).
+
+```bash
+scripts/tmux_run.sh on-ypilot bash experiments/onpol_nuplan/scripts/on_train_y.sh pilot             # 2 pilots + results/pilot_y/pilot_gates.md
+scripts/tmux_run.sh on-read-smoke bash experiments/onpol_nuplan/scripts/on_read.sh smoke YSELFnoL-ON-P-s0 YNONE-ON-P-s0
+scripts/tmux_run.sh on-yfull bash experiments/onpol_nuplan/scripts/on_train_y.sh full               # refuses unless both pilot gates and both smokes passed
+scripts/tmux_run.sh on-c bash experiments/onpol_nuplan/scripts/on_train_y.sh c                      # SSELFnoL-ON-s2 / -s3 (section C)
+scripts/tmux_run.sh on-read-held bash experiments/onpol_nuplan/scripts/on_read.sh held {YSELFnoL,YNONE}-ON-s{0,1} YR10m10-F-s{0,1} SSELFnoL-ON-s{2,3}
+.venv/bin/python experiments/onpol_nuplan/scripts/on_report2.py                                      # -> results/read2/
+```
+
 <!-- files:begin -->
 ## Files
 
