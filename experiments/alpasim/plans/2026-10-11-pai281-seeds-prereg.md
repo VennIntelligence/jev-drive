@@ -67,3 +67,15 @@ Only the reading of its point 2: after this read there is no single-base-seed ca
 measured on all of them. The direction of 247 (S above base, the whole difference coming from zero-score scenes becoming scored) is said
 to hold if S4 - B2 is positive with a CI excluding 0, every S seed is above B2, and |base s1 - base s0| is smaller than the smallest of the
 four S seed - B2 differences. If not, the addendum states which part failed. Neither outcome promotes a checkpoint.
+
+## As run (appended 2026-10-11 after the read; the text above is unchanged)
+
+- Runs, configuration, chunk cut and order as written. The first launch hung before any stack started: `pai_queue.sh` initialises each run with
+  `pai_eval.sh` in `JOIN=1` mode and no card, and a bare `wait` there never returned. Fixed in `pai_eval.sh` (36669eda), relaunched at 13:41:27 JST.
+- The queue was paused by the user at 16:51:09 and resumed at 16:57:30 by running the launch script again; two in-flight chunks (`s2` c006, `s3` c000)
+  were rerun from scratch, 34 min of card time lost. The rerun of c006 reproduced the killed attempt's scores and flags on 36 of 36 scenes.
+- The read-out lists were run as written, including the supplementary pairs and the two halves. Added after the first read and marked exploratory in
+  the results: the seed-pair decomposition of the pairs with a mean row, the zero-status flips between seed pairs, the scene counts 44 / 5 / 19, the SD
+  of the S seeds and the ratio of the smallest S - base difference to the base's own.
+- The statement of the last section was checked and holds (S4 - B2 +0.1100 [+0.0760, +0.1458]; every S seed above B2; 0.0016 against 0.0891).
+

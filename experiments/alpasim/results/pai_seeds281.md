@@ -256,6 +256,10 @@ second reader.
   written its rollouts into the run dir, so its `results-summary.json` holds 72 records for 36 scenes; the two records of every scene have identical
   score and scorer flags (36 of 36), so the per-scene tables do not depend on which is read. That is a second datum, next to decision 252's, that a rerun
   of the same scene list reproduces to the last digit, here also across the two cards.
+- **Exploratory (added after the first read; everything else in this section is on the list written before the runs).** The seed-pair decomposition of
+  the pairs with a mean row (the scene-level one, which the plan lists, puts a scene that some seeds fix into "both scored": +0.0248 for S4 - B2, which
+  is why the seed-pair version was added), the zero-status flips between seed pairs, the scene counts 44 / 5 / 19, the SD of the S seeds and the ratio of
+  the smallest S - base difference to the base's own.
 - **Code.** The queue ran from a frozen clone at 36669eda (it holds `pai_queue.sh` and the `pai_eval.sh` fix for `JOIN=1 CARDS=" "`, which the first
   attempt of the queue hit: a bare `wait` with no card hangs on the log `tee`; no stack had started). The read-out ran from the box checkout at
   bfeab949 (`pai_eval_report.py --detail --only`, added for this read; its default output is unchanged). The code of the new runs includes decision 252's
