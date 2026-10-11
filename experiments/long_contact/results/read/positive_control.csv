@@ -1,0 +1,65 @@
+pop,label,subset,score,auc,lo,hi,n,pos,logs_pos
+P1 own + arc,a,all,S0 (mean of seeds),0.9190047469188836,0.9012305368481631,0.9339781221818474,153948,4854,98.0
+P1 own + arc,a,all,S0 step seed 0,0.9107816499391526,0.893186111950722,0.9252847367764283,153948,4854,98.0
+P1 own + arc,a,all,S0 step seed 1,0.9067009096983965,0.887171964344819,0.924027710532859,153948,4854,98.0
+P1 own + arc,a,all,S0 blind seed 0,0.8242298605124188,0.8018919408896333,0.8452259140159337,153948,4854,98.0
+P1 own + arc,b,all,S0 (mean of seeds),0.9779372647066543,0.9696038187326361,0.9844730419564743,148037,4468,94.0
+P1 own + arc,b,all,S0 step seed 0,0.9704282543968811,0.9604418644190987,0.978259003017444,148037,4468,94.0
+P1 own + arc,b,all,S0 step seed 1,0.9743994170780216,0.964646394361266,0.9820195486788341,148037,4468,94.0
+P1 own + arc,b,all,S0 blind seed 0,0.8137279846343041,0.7871349630548861,0.8358306281764875,148037,4468,94.0
+P1 own + arc,agent split,A-type: vehicle ahead in own lane (A positive),S0 (mean of seeds),0.9609177560197627,0.9442828239702422,0.9741969982060288,150999,1905,65.0
+P1 own + arc,agent split,A-type: vehicle ahead in own lane (A positive),S0 blind seed 0,0.9115758305273212,0.8833757685303998,0.9379568401274068,150999,1905,65.0
+P1 own + arc,agent split,A-type: vehicle ahead in own lane (A positive),ladder vis (lat head),0.9617936976256977,0.947617529079271,0.9746895036877671,150999,1905,65.0
+P1 own + arc,agent split,A-type: vehicle ahead in own lane (A positive),ladder nat (lat head),0.9684618208590561,0.9583996732153894,0.9792679204922139,150999,1905,65.0
+P1 own + arc,agent split,A-type: vehicle ahead in own lane (A positive),ladder priv (lat head),0.9975611609255511,0.9958818505887105,0.9985735599927548,150999,1905,65.0
+P1 own + arc,agent split,A-type: vehicle ahead in own lane (A positive),ladder vis (A head),0.9841944751372657,0.9773159424622591,0.9901760914558456,150999,1905,65.0
+P1 own + arc,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),S0 (mean of seeds),0.9005936027096266,0.8732510830452391,0.9234195273666502,151438,2344,82.0
+P1 own + arc,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),S0 blind seed 0,0.7707012070768648,0.7353179390341362,0.8003834351217521,151438,2344,82.0
+P1 own + arc,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),ladder vis (lat head),0.89618755903404,0.8703044931346781,0.9175215035737332,151438,2344,82.0
+P1 own + arc,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),ladder nat (lat head),0.8980514921044611,0.8709310148285397,0.9198677288750714,151438,2344,82.0
+P1 own + arc,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),ladder priv (lat head),0.9914237326214843,0.988841532370488,0.9935872571117604,151438,2344,82.0
+P1 own + arc,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),ladder vis (A head),0.8141976900547566,0.7882762310990276,0.8391962905036109,151438,2344,82.0
+P1 own + arc,agent split,"other object (pedestrian, cyclist, generic object)",S0 (mean of seeds),0.858362498471484,0.8134117009127314,0.903764645086322,149699,605,39.0
+P1 own + arc,agent split,"other object (pedestrian, cyclist, generic object)",S0 blind seed 0,0.7565886882389468,0.7138690854440148,0.8005067561649294,149699,605,39.0
+P1 own + arc,agent split,"other object (pedestrian, cyclist, generic object)",ladder vis (lat head),0.8699985321812065,0.8318355991244698,0.9058172461004573,149699,605,39.0
+P1 own + arc,agent split,"other object (pedestrian, cyclist, generic object)",ladder nat (lat head),0.8677325425736739,0.8229369185628426,0.9070376379495598,149699,605,39.0
+P1 own + arc,agent split,"other object (pedestrian, cyclist, generic object)",ladder priv (lat head),0.9835179193069944,0.9715371637198359,0.9918741259597731,149699,605,39.0
+P1 own + arc,agent split,"other object (pedestrian, cyclist, generic object)",ladder vis (A head),0.80656537940954,0.7592219911180549,0.8492871297890651,149699,605,39.0
+P0 own,a,all,S0 (mean of seeds),0.9054761916946934,0.86766100628074,0.9343640476579733,51316,911,64.0
+P0 own,a,all,S0 step seed 0,0.8978248089487229,0.8585738958325476,0.9273094751839998,51316,911,64.0
+P0 own,a,all,S0 step seed 1,0.8915604133412879,0.8550254502113441,0.9211784949519102,51316,911,64.0
+P0 own,a,all,S0 blind seed 0,0.7701162842229314,0.7302156386319395,0.803529578190144,51316,911,64.0
+P0 own,b,all,S0 (mean of seeds),0.9781939949233461,0.9689513513930396,0.9853444893891388,49417,1090,82.0
+P0 own,b,all,S0 step seed 0,0.970569351415804,0.95853320222046,0.9797760749293195,49417,1090,82.0
+P0 own,b,all,S0 step seed 1,0.9748407209828001,0.9644183155360581,0.9829284066338619,49417,1090,82.0
+P0 own,b,all,S0 blind seed 0,0.7785124105790768,0.7418396030446274,0.8095873100961309,49417,1090,82.0
+P0 own,agent split,A-type: vehicle ahead in own lane (A positive),S0 (mean of seeds),0.9463837037642158,0.9080822353666196,0.9730131528801432,50490,85,7.0
+P0 own,agent split,A-type: vehicle ahead in own lane (A positive),S0 blind seed 0,0.7571939058333382,0.6371771623830854,0.8591192399976862,50490,85,7.0
+P0 own,agent split,A-type: vehicle ahead in own lane (A positive),ladder vis (lat head),0.932853300034427,0.8769326918657623,0.9585481003258881,50490,85,7.0
+P0 own,agent split,A-type: vehicle ahead in own lane (A positive),ladder nat (lat head),0.9283885235475006,0.8340658835865712,0.9557985700480228,50490,85,7.0
+P0 own,agent split,A-type: vehicle ahead in own lane (A positive),ladder priv (lat head),0.9979702060369828,0.9950697387967304,0.9992824637673773,50490,85,7.0
+P0 own,agent split,A-type: vehicle ahead in own lane (A positive),ladder vis (A head),0.9899843036113364,0.978244651644685,0.993542228352609,50490,85,7.0
+P0 own,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),S0 (mean of seeds),0.9061217139691394,0.8623349486440584,0.9409481001006784,51082,677,58.0
+P0 own,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),S0 blind seed 0,0.7742054059313065,0.7282742412268244,0.816085310478887,51082,677,58.0
+P0 own,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),ladder vis (lat head),0.8996074485002352,0.8577038690396868,0.934787044522367,51082,677,58.0
+P0 own,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),ladder nat (lat head),0.9033750549646826,0.8582615889132041,0.9365125234400153,51082,677,58.0
+P0 own,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),ladder priv (lat head),0.9956511342322169,0.9942187691272332,0.9968583129421164,51082,677,58.0
+P0 own,agent split,other vehicle contact (lateral / go-around / drift / cut-in / crossing),ladder vis (A head),0.8198287959111697,0.7669401655916743,0.8647785870917972,51082,677,58.0
+P0 own,agent split,"other object (pedestrian, cyclist, generic object)",S0 (mean of seeds),0.8792066809181203,0.8305255145272238,0.9255406080693599,50554,149,24.0
+P0 own,agent split,"other object (pedestrian, cyclist, generic object)",S0 blind seed 0,0.7589086786292774,0.6880961249069169,0.818347092611437,50554,149,24.0
+P0 own,agent split,"other object (pedestrian, cyclist, generic object)",ladder vis (lat head),0.8807351726185682,0.8327464465266732,0.9231216661777378,50554,149,24.0
+P0 own,agent split,"other object (pedestrian, cyclist, generic object)",ladder nat (lat head),0.8814134370658072,0.8238707497586344,0.9303971048110428,50554,149,24.0
+P0 own,agent split,"other object (pedestrian, cyclist, generic object)",ladder priv (lat head),0.9888614970417471,0.9758780391828478,0.9964833189317736,50554,149,24.0
+P0 own,agent split,"other object (pedestrian, cyclist, generic object)",ladder vis (A head),0.827905775300602,0.7635082213568603,0.8813070376081522,50554,149,24.0
+P1 own + arc,A,S0 head as a score,S0 agent logit,0.9609177560197627,0.9442828239702422,0.9741969982060288,150999,1905,
+P1 own + arc,A,S0 head as a score,S0 boundary logit,0.42937072199549847,0.3797136552193242,0.47304223285386604,150999,1905,
+P1 own + arc,B,S0 head as a score,S0 agent logit,0.7309019744852164,0.6414035242801239,0.8238578221224302,153633,397,
+P1 own + arc,B,S0 head as a score,S0 boundary logit,0.6022831594183135,0.516812916270839,0.6714565111843751,153633,397,
+P1 own + arc,C,S0 head as a score,S0 agent logit,0.6704737049875343,0.6223369188903791,0.7150978752870127,150888,1909,
+P1 own + arc,C,S0 head as a score,S0 boundary logit,0.7498576876921467,0.6979640800505093,0.8009248055145646,150888,1909,
+P0 own,A,S0 head as a score,S0 agent logit,0.9463837037642158,0.9080822353666196,0.9730131528801432,50490,85,
+P0 own,A,S0 head as a score,S0 boundary logit,0.40326928350945573,0.30993922608459396,0.46648419063477015,50490,85,
+P0 own,B,S0 head as a score,S0 agent logit,0.585361989526296,0.334600338159073,0.8134840538989799,51233,36,
+P0 own,B,S0 head as a score,S0 boundary logit,0.561767942132026,0.38509013451392926,0.7252161579589349,51233,36,
+P0 own,C,S0 head as a score,S0 agent logit,0.6583145996339553,0.4541129340826723,0.8302995258593782,50954,111,
+P0 own,C,S0 head as a score,S0 boundary logit,0.37792246153279135,0.23780784082560505,0.5407168156010145,50954,111,
