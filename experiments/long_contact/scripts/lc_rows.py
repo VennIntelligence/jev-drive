@@ -5,6 +5,11 @@
           c_lab, c_dv, c_t: (n, 24); a_elig_n, b_ahead, c_ahead: (n,)), aligned with body1/rows/<cache dir>.npz
   survey  label counts (no model output): own-plan positives per class, split (hold / val / fit), state family, speed band, sub-class
           -> $DATA_DIR/runs/long_contact/rows/survey/*.csv (copied to experiments/long_contact/results/survey/)
+  priv    rung-4 (privileged, oracle-only) inputs per state in the STATE's frame -> $DATA_DIR/runs/long_contact/priv/<cache dir>.npz:
+          obj (n, 32, 69) the 32 logged agent boxes at 0 .. 4 s (x, y, sin / cos yaw, L, W, valid) + class + A-eligible + speed;
+          rte (n, 157) the hindsight route every 4 m to 120 m + the logged speed / arrival time there + its known length;
+          lin (n, 4, 40) the stop lines (type, arc, eligibility, light state at the 9 keyframes, the logged stop / crossing);
+          trn (n, 10) the first >= 45 deg turn (start / peak / end arc, curvature, angle, logged speed at peak and start, eligibility)
 The trainer never reads a hold-log row; this step labels all rows (labels only, no model).
 """
 import argparse
@@ -23,14 +28,84 @@ import contact_head as C  # noqa: E402
 FAMS = ("log", "ot1", "yr1")
 KEYS = ("a_lab", "a_sub", "a_t", "b_lab", "b_kind", "b_t", "c_lab", "c_dv", "c_t", "a_elig_n", "b_ahead", "c_ahead")
 CTX_KEYS = ("ok", "route", "rhead", "rlen", "ln_type", "ln_d", "ln_st", "ln_elig", "tn_ok", "tn_spk", "tn_vpk")
+PRIV_KEYS = CTX_KEYS + ("hlen", "vlog", "tlog", "ln_conn", "ln_tstop", "ln_tcross", "ln_stcross", "tn_sa", "tn_sb", "tn_kpk", "tn_dth", "tn_va", "tn_tpk")
 _X = {}
 
 
-def ctx():
-    if not _X:
+def ctx(keys=CTX_KEYS):
+    if not all(k in _X for k in keys):
         z = np.load(LC.ctx_path())
-        _X.update({k: z[k] for k in CTX_KEYS})
+        _X.update({k: z[k] for k in keys})
     return _X
+
+
+def to_state(x, y, off):
+    """Logged-frame points (S, ...) -> the state's own frame (inverse of sweep.to_log); off (S, 2) = (dy, dpsi)."""
+    sh = (len(off),) + (1,) * (np.ndim(x) - 1)
+    dy, c, s = off[:, 0].reshape(sh), np.cos(off[:, 1]).reshape(sh), np.sin(off[:, 1]).reshape(sh)
+    return c * x + s * (y - dy), -s * x + c * (y - dy)
+
+
+def priv_feats(gi, off, L, X):
+    """Rung-4 inputs of states (global label rows gi, offsets off) -> dict obj / rte / lin / trn (float16)."""
+    S = len(gi)
+    box, valid, cls = np.asarray(L["box"][gi]).astype(np.float32), np.asarray(L["valid"][gi]), np.asarray(L["cls"][gi])
+    R, H, rlen = X["route"][gi], X["rhead"][gi], X["rlen"][gi]
+    _, _, vel = LC.SW.dense_boxes(box, valid)
+    elig, _ = LC.a_eligible(box[:, 0], valid[:, 0] & (cls >= 0), cls, vel[:, 0], R, H, rlen)
+    v = valid & (cls >= 0)[:, None]
+    bx, by = to_state(box[..., 0], box[..., 1], off)
+    yaw = box[..., 2] - off[:, 1, None, None]
+    o = np.stack([bx / 32, by / 24, np.sin(yaw), np.cos(yaw), box[..., 3] / 5, box[..., 4] / 2.5, np.ones_like(bx)], -1) * v[..., None]   # (S, 9, K, 7)
+    o = o.transpose(0, 2, 1, 3).reshape(S, -1, 63)
+    oh = np.eye(4, dtype=np.float32)[np.clip(cls, 0, 3)] * (cls >= 0)[..., None]
+    obj = np.concatenate([o, oh, elig[..., None], (np.hypot(vel[:, 0, :, 0], vel[:, 0, :, 1]) / 10)[..., None]], -1)
+    idx = np.arange(0, 121, 4)
+    rx, ry = to_state(R[:, idx, 0], R[:, idx, 1], off)
+    vl, tl = X["vlog"][gi][:, idx].astype(np.float32), X["tlog"][gi][:, idx].astype(np.float32)
+    rte = np.concatenate([rx / 32, ry / 24, np.nan_to_num(vl / 10), np.isfinite(vl), np.nan_to_num(tl / 10), (rlen / 100)[:, None], (X["hlen"][gi] / 100)[:, None]], -1)
+    ty, st = X["ln_type"][gi], X["ln_st"][gi]
+    f = lambda a: np.nan_to_num(a / 10)[..., None]  # noqa: E731
+    has = lambda a: np.isfinite(a)[..., None]  # noqa: E731
+    lin = np.concatenate([(ty > 0)[..., None], X["ln_elig"][gi][..., None], (ty == 1)[..., None], (ty == 2)[..., None], np.nan_to_num(X["ln_d"][gi] / 50)[..., None],
+                          X["ln_conn"][gi][..., None], np.eye(3, dtype=np.float32)[st + 1].reshape(S, LC.NL, -1), f(X["ln_tstop"][gi]), has(X["ln_tstop"][gi]),
+                          f(X["ln_tcross"][gi]), has(X["ln_tcross"][gi]), np.eye(3, dtype=np.float32)[X["ln_stcross"][gi] + 1]], -1)
+    t = lambda k, sc: np.nan_to_num(X[f"tn_{k}"][gi] / sc)  # noqa: E731
+    trn = np.stack([X["tn_ok"][gi], t("sa", 50), t("sb", 50), t("spk", 50), t("kpk", 0.1), t("dth", 90), t("vpk", 10), t("va", 10), t("tpk", 10),
+                    X["tn_ok"][gi] & (X["tn_vpk"][gi] >= LC.C_VLOG_MIN)], -1)
+    return {k: x.astype(np.float16) for k, x in dict(obj=obj, rte=rte, lin=lin, trn=trn).items()}
+
+
+def priv_file(f, k):
+    return LC.root() / "priv" / f"{B.cdir(f, k)}.npz"
+
+
+def work_priv(u):
+    f, k, chunk = u
+    z = np.load(B.root() / "rows" / f"{B.cdir(f, k)}.npz")
+    L, X = B.labels(), ctx(PRIV_KEYS)
+    gi, off = z["gi"], z["off"].astype(np.float32)
+    parts = [priv_feats(gi[c:c + chunk], off[c:c + chunk], L, X) for c in range(0, len(gi), chunk)]
+    out = {x: np.concatenate([p[x] for p in parts]) for x in parts[0]}
+    p = priv_file(f, k)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(p.with_suffix(".tmp.npz"), gi=gi, **out)
+    p.with_suffix(".tmp.npz").rename(p)
+    return f, k, len(gi)
+
+
+def cmd_priv(a):
+    from jevdrive import par
+    from jevdrive.common import n_cpus
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    with Run("long_contact", "priv", config=vars(a)) as run:
+        run.use_split(splits.load("navsim/navtrain"))
+        units = [(f, k, 512) for f in a.fams for k in (a.shards if a.shards is not None else range(B.NSH))]
+        res = par.pmap(work_priv, units, run=run, workers=min(a.workers or n_cpus(), len(units)), desc="priv units",
+                       skip=None if a.force else (lambda u: priv_file(u[0], u[1]).exists()))
+        res.raise_if_failed()
+        run.summary.update(units=len(units))
 
 
 def unit_file(f, k):
@@ -168,5 +243,10 @@ if __name__ == "__main__":
     cli_args(p)
     p = sp.add_parser("survey")
     cli_args(p)
+    p = sp.add_parser("priv")
+    p.add_argument("--fams", nargs="+", default=list(FAMS))
+    p.add_argument("--shards", type=int, nargs="+", default=None)
+    p.add_argument("--workers", type=int, default=0)
+    cli_args(p)
     a = ap.parse_args()
-    {"gen": cmd_gen, "survey": cmd_survey}[a.cmd](a)
+    {"gen": cmd_gen, "survey": cmd_survey, "priv": cmd_priv}[a.cmd](a)
