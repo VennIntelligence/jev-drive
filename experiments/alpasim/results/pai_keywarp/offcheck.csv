@@ -1,0 +1,4 @@
+rerun,stored,stored_scene_list,scenes,identical,within_0p01,zero_flips,mean_rerun,mean_stored,max_abs
+S-s0-off,S-s0-off-stored,33,33,33,33,0,0.3905234445651098,0.3905234445651098,0.0
+base-s0-off,base-s0-off-stored,99,33,33,33,0,0.3114100869313917,0.3114100869313917,0.0
+base-s1-off,base-s1-off-stored,35,33,33,33,0,0.33131026158761895,0.33131026158761895,0.0

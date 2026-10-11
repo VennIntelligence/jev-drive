@@ -1,0 +1,315 @@
+{
+ "name": "S-s1-on",
+ "runs": [
+  {
+   "dir": "/data/runs/alpasim/keywarp/S-s1-on/runs/p2h10s-f-s1_c000",
+   "scenes": 33,
+   "conc": 4,
+   "wall_s": 1667,
+   "gpu": 1,
+   "driver_gpu": 1,
+   "tag": "P2H10S-F-s1",
+   "nre_cache": 5,
+   "harmonizer": 0,
+   "image": "jev-alpasim:p2h10-f-s0-6f3d05d1",
+   "base": "alpasim-base:0.89.0"
+  }
+ ],
+ "scenes": {
+  "clipgt-0e05cb0c-9cfc-4e81-b801-0216fde5cd20": {
+   "score": 0.4120944969967883,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.4120944969967883,
+   "failure_reason": ""
+  },
+  "clipgt-0f4b8753-22c6-4440-814d-8cb6d641ffd0": {
+   "score": 0.2994284622363154,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.2994284622363154,
+   "failure_reason": ""
+  },
+  "clipgt-13d646af-4ff3-48e4-9a88-012a58eb6cd6": {
+   "score": 0.0,
+   "collision_at_fault": false,
+   "offroad": true,
+   "left_corridor_laterally": false,
+   "progress": 0.5543433564678055,
+   "failure_reason": "offroad"
+  },
+  "clipgt-288829f8-8808-46dc-a7e0-29ed1f7fddbc": {
+   "score": 0.21705043106544133,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.21705043106544133,
+   "failure_reason": ""
+  },
+  "clipgt-2eaf1872-7780-43df-bdf1-9f48975e6436": {
+   "score": 0.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": true,
+   "progress": 0.1345511583067958,
+   "failure_reason": "left_corridor_laterally"
+  },
+  "clipgt-44df49fe-0729-4c30-98d0-5a40f43b7b09": {
+   "score": 0.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": true,
+   "progress": 1.0,
+   "failure_reason": "left_corridor_laterally"
+  },
+  "clipgt-4ecc114d-4c76-49bb-874c-601561d738bb": {
+   "score": 0.0,
+   "collision_at_fault": true,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.9409005141496202,
+   "failure_reason": "collision_at_fault"
+  },
+  "clipgt-55b7be99-88a0-41b7-b46b-e96509c2d38c": {
+   "score": 0.6138730876455369,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.6138730876455369,
+   "failure_reason": ""
+  },
+  "clipgt-56bf7a4b-7618-4ef0-b666-e8d59bbbf798": {
+   "score": 0.46513472489417673,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.46513472489417673,
+   "failure_reason": ""
+  },
+  "clipgt-596af0c7-c33f-4160-84d9-5ab525e9675e": {
+   "score": 0.0,
+   "collision_at_fault": false,
+   "offroad": true,
+   "left_corridor_laterally": true,
+   "progress": 0.14747390982976874,
+   "failure_reason": "offroad"
+  },
+  "clipgt-5b5f9d86-b5c3-4612-bdc5-c1d877e0ae20": {
+   "score": 0.6631474078403207,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.6631474078403207,
+   "failure_reason": ""
+  },
+  "clipgt-5ddb96bd-7221-4107-8987-29b9928c58c7": {
+   "score": 0.0,
+   "collision_at_fault": true,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.2363940090816519,
+   "failure_reason": "collision_at_fault"
+  },
+  "clipgt-5fcb2ba7-6a4b-4ce1-887b-8eafa677b4f0": {
+   "score": 1.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 1.0,
+   "failure_reason": ""
+  },
+  "clipgt-6027da62-8d21-4895-a583-1de455ea9803": {
+   "score": 1.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 1.0,
+   "failure_reason": ""
+  },
+  "clipgt-61e73e86-05de-43af-b992-1fec947ee626": {
+   "score": 0.6714292498607386,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.6714292498607386,
+   "failure_reason": ""
+  },
+  "clipgt-6250146a-7f9f-4508-851e-e25b7d9dc36a": {
+   "score": 0.6192919526456575,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.6192919526456575,
+   "failure_reason": ""
+  },
+  "clipgt-62cfe9d3-df92-4395-9faf-897ee20ef839": {
+   "score": 0.8619690717206736,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.8619690717206736,
+   "failure_reason": ""
+  },
+  "clipgt-65907a2b-e934-4920-9580-c8f14fee5164": {
+   "score": 1.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 1.0,
+   "failure_reason": ""
+  },
+  "clipgt-66b15fbe-cae1-4e82-a592-2ea55b56dd93": {
+   "score": 0.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": true,
+   "progress": 0.9384682223093885,
+   "failure_reason": "left_corridor_laterally"
+  },
+  "clipgt-68c3be44-7f95-46ce-ab72-ee05aeb986bc": {
+   "score": 0.9066972075570199,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.9066972075570199,
+   "failure_reason": ""
+  },
+  "clipgt-6e6cbe67-bccd-4d4d-9943-933a272b7bf0": {
+   "score": 0.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": true,
+   "progress": 0.3672763684293937,
+   "failure_reason": "left_corridor_laterally"
+  },
+  "clipgt-6e7b42a3-285c-4252-bcdc-a453ef64a231": {
+   "score": 1.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 1.0,
+   "failure_reason": ""
+  },
+  "clipgt-6ee9ee78-cb61-4a1c-a45f-2d808f311c7f": {
+   "score": 1.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 1.0,
+   "failure_reason": ""
+  },
+  "clipgt-6f3be572-0c6a-407c-b9fa-136cce998e3c": {
+   "score": 1.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 1.0,
+   "failure_reason": ""
+  },
+  "clipgt-7381c9fa-1857-430f-aee9-22c59685656e": {
+   "score": 0.0,
+   "collision_at_fault": false,
+   "offroad": true,
+   "left_corridor_laterally": false,
+   "progress": 0.2681798361110414,
+   "failure_reason": "offroad"
+  },
+  "clipgt-76f7e025-e86a-47d9-ba21-f5aa5834322c": {
+   "score": 1.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 1.0,
+   "failure_reason": ""
+  },
+  "clipgt-7750265d-c41f-42a3-8b49-ee128b71fa55": {
+   "score": 0.8148130879646083,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.8148130879646083,
+   "failure_reason": ""
+  },
+  "clipgt-788c4ad9-54b1-45fe-9b41-9e7dff82b0cd": {
+   "score": 1.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 1.0,
+   "failure_reason": ""
+  },
+  "clipgt-7c346fd5-4223-40da-8785-c49fe69f06a1": {
+   "score": 0.24961394637090564,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.24961394637090564,
+   "failure_reason": ""
+  },
+  "clipgt-7cfa81de-ec20-4f9e-add1-b1165fb9de99": {
+   "score": 0.35109081017519345,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.35109081017519345,
+   "failure_reason": ""
+  },
+  "clipgt-7d994ed3-d15f-4c0d-a0ff-fd36ba005726": {
+   "score": 0.0,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": true,
+   "progress": 1.0,
+   "failure_reason": "left_corridor_laterally"
+  },
+  "clipgt-8120803d-0cca-49c5-afc7-c87529d87ce7": {
+   "score": 0.0,
+   "collision_at_fault": false,
+   "offroad": true,
+   "left_corridor_laterally": true,
+   "progress": 0.14754874104134968,
+   "failure_reason": "offroad"
+  },
+  "clipgt-81dc4ece-fa69-40dc-bffc-1f8606e8b3a2": {
+   "score": 0.039617195512761286,
+   "collision_at_fault": false,
+   "offroad": false,
+   "left_corridor_laterally": false,
+   "progress": 0.039617195512761286,
+   "failure_reason": ""
+  }
+ },
+ "missing": [],
+ "latency": {
+  "inferences": 6487,
+  "keywarp_inferences": 6487,
+  "total_ms_p50_p95_p99_max": [
+   58.97,
+   83.267,
+   119.1354000000002,
+   192.54
+  ],
+  "warm_total_ms_p50_p95_p99_max": [
+   58.96,
+   83.34599999999999,
+   118.9681,
+   192.54
+  ],
+  "share_over_100ms": 0.028364421149992294,
+  "warm_median_ms": {
+   "slots": 8.195,
+   "encode": 33.34,
+   "policy": 12.32,
+   "wait": 0.0
+  }
+ },
+ "counters": {
+  "drive": 6487,
+  "inference": 6487,
+  "inference_error": 0,
+  "input_error": 0,
+  "cold": 495
+ }
+}

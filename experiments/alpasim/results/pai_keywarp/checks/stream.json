@@ -1,0 +1,56 @@
+{
+ "tag": "P2H10-F-s0",
+ "scenes": [
+  "clipgt-071d15c4-a179-4311-b724-f7de1d45ab65",
+  "clipgt-13fb89b9-2196-4545-abb4-c3029d89fcbe",
+  "clipgt-213dfdac-3596-472d-8dc9-aaef6d0a7b92"
+ ],
+ "decisions": 596,
+ "warm_decisions": 551,
+ "decisions_by_keys": {
+  "1": 15,
+  "2": 15,
+  "3": 15,
+  "4": 551
+ },
+ "i_off_identical_decisions": 596,
+ "ii_on_validity_equal_decisions": 596,
+ "ii_on_pixels": 1874853888,
+ "ii_on_pixels_differing": 0,
+ "ii_on_pixel_maxabs": 0,
+ "ii_decisions_with_a_differing_pixel": 0,
+ "ii_plan_on_vs_core_cpu_m": {
+  "n": 551,
+  "median": 0.0,
+  "p99": 0.0,
+  "max": 0.0,
+  "share_over_tol": 0.0
+ },
+ "ii_plan_on_vs_core_gpu_m": {
+  "n": 551,
+  "median": 0.0,
+  "p99": 0.0,
+  "max": 0.0,
+  "share_over_tol": 0.0
+ },
+ "control_plan_on_vs_off_m": {
+  "n": 551,
+  "median": 1.8560962677001953,
+  "p99": 14.9780592918396,
+  "max": 32.547080993652344,
+  "share_over_tol": 1.0
+ },
+ "control_plan_on_vs_off_m_above_3mps": {
+  "n": 442,
+  "median": 2.1438846588134766,
+  "p99": 15.994735660552973,
+  "max": 32.547080993652344,
+  "share_over_tol": 1.0
+ },
+ "off_on_pixel_mean_abs_warm": 3.8952002995531987,
+ "slots_ms_median_off_on_warm": [
+  0.2178169961553067,
+  3.409171993553173
+ ],
+ "tol_m": 0.03
+}
