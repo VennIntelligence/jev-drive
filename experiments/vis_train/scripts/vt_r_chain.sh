@@ -75,6 +75,8 @@ fi
 # ---------------------------------------------------------------- arm R (released by GATE_PASS)
 status "submit: arm R (banks, 6 trainings, reads), the continuation of A and of B, the gate"
 G="--when-exists $D/GATE_PASS"
+# VT_R_SKIP_GATE=1 (user override, prereg amendment 8): arm R only, no gate wait, no continuation, no gate job
+[[ ${VT_R_SKIP_GATE:-0} == 1 ]] && G=""
 sub vtr-bank-0 "$L/bank-0" --vram 0.5 --cpu 2 --ram 8 --priority 9 $G -- $PY $S/vt_r.py bank --kind vtr_0 --src cinque
 for s in 0 1; do for x in A B; do
   sub "vtr-bank-$x-s$s" "$L/bank-$x-s$s" $BANK --priority 9 $G -- $PY $S/vt_r.py bank --kind "vtr_$x-s$s" --src "$x" --seed "$s"
@@ -88,7 +90,7 @@ done; done
 
 # ---------------------------------------------------------------- the continuation of A and of B (one of them is released by FALLBACK_<X>, the other cancelled by the gate)
 CS=${VTR_CONT_STEPS:-30000}
-for x in A B; do for s in 0 1; do
+[[ ${VT_R_SKIP_GATE:-0} == 1 ]] || for x in A B; do for s in 0 1; do
   t=VT-${x}2-s$s; l=$L/c-$x-s$s
   sub "vt-t-${x}2-s$s" "$l/train" --train --vram "${VT_VRAM:-32}" --cpu 8 --ram 64 --priority 4 --tries 4 --when-exists "$D/FALLBACK_$x" -- \
       $PY $S/vt.py train --arm "$x" --seed "$s" --steps "$CS" --tag "$t" --init "VT-$x-s$s" --resume --enc-compile --compile
@@ -100,13 +102,13 @@ for x in A B; do for s in 0 1; do
 done; done
 
 # ---------------------------------------------------------------- the gate (last: jobs.txt is complete when it reads it)
-sub vt-rgate "$L/gate" --vram 0.5 --cpu 1 --ram 6 --priority 10 --when-exists "$R/VT-A-s0/ckpt-final.pt" -- $VPY $S/vt_r.py gate --jobs "$D/jobs.txt"
+[[ ${VT_R_SKIP_GATE:-0} == 1 ]] || sub vt-rgate "$L/gate" --vram 0.5 --cpu 1 --ram 6 --priority 10 --when-exists "$R/VT-A-s0/ckpt-final.pt" -- $VPY $S/vt_r.py gate --jobs "$D/jobs.txt"
 
 # ---------------------------------------------------------------- wait
 status "queued; waiting for the gate (job $(jid vt-rgate): after VT-A-s0's final checkpoint and the navtest reads of the first-wave chains)"
-until [[ -f $D/GATE_PASS || -f $D/GATE_FAIL || -f $L/gate/DONE || -f $L/gate/ERROR ]]; do sleep 30; done
-if [[ -f $D/GATE_PASS ]]; then
-  status "gate passed: arm R training ($(cat "$D/GATE_PASS"))"
+until [[ ${VT_R_SKIP_GATE:-0} == 1 || -f $D/GATE_PASS || -f $D/GATE_FAIL || -f $L/gate/DONE || -f $L/gate/ERROR ]]; do sleep 30; done
+if [[ ${VT_R_SKIP_GATE:-0} == 1 || -f $D/GATE_PASS ]]; then
+  status "arm R training (gate $([[ ${VT_R_SKIP_GATE:-0} == 1 ]] && echo overridden || cat "$D/GATE_PASS"))"
   for s in 0 1; do for x in 0 A B; do waitdirs "$L/t-$x-s$s" "$L/b-$x-s$s" || die "R-$x-s$s: training or its read starter failed ($L/t-$x-s$s, $L/b-$x-s$s)"; done; done
   status "arm R trained; reads"
   $B status --model "${RT[@]}" --bench navtest --wait || die "R navtest reads"
@@ -114,6 +116,7 @@ if [[ -f $D/GATE_PASS ]]; then
   MM=(); for t in "${RT[@]}"; do MM+=("$t:noside" "$t:mshuf"); done
   $B status --model "${MM[@]}" --bench navtest --wait || die "R masked / shuffled reads"
   RMSG="R read"
+  [[ ${VT_R_SKIP_GATE:-0} == 1 ]] && { status "$RMSG (gate overridden; no continuation)"; date > "$D/DONE"; exit 0; }
 elif [[ -f $D/GATE_FAIL ]]; then
   RMSG="R not run: the gate failed ($(cat "$D/GATE_FAIL"))"
 else

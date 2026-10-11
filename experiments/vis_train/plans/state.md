@@ -196,6 +196,8 @@ scripts/tmux_run.sh vt-W-s1 env VT_WHEN=$DATA_DIR/runs/op_parity/runs/VT-A0-s1/c
 
 **是什么**：支路冻结、policy 用 SH30 配方从头训（`pp_train.py --mem vtr_*`，10 000 步 × 128，cosine）经 memory 通道读 token bank。`VTR-0`（bank `vtr_0` = Cinque t0 token，对照）、`VTR-A` / `VTR-B`（bank = `VT-A/B-s<seed>` 末尾支路的 token），各 seed 0 / 1。另有登记的续跑：A / B 里较好者自末尾 checkpoint 再训 30 000 步，新 tag `VT-A2` / `VT-B2-s<seed>`。代码：`scripts/vt_r.py`（`bank` / `check` / `gate`）、`scripts/vt_r_chain.sh`（`smoke` / `all`）。
 
+**2026-10-11 08:55 CST**：闸门未过（−0.75），用户决定照跑 R（prereg 补记 8）；`VT_R_SKIP_GATE=1 scripts/tmux_run.sh vt-R experiments/vis_train/scripts/vt_r_chain.sh all` 重新提交 R 部分，下面的队列表是被取消的旧任务，新 id 看 `jobs.txt` 末尾。
+
 ### 队列（01:07 CST 入队；owner `vis_train-R`；一条链 `jev:vt-R`，全部任务 id 在 `$DATA_DIR/runs/vis_train/chain/R/jobs.txt`）
 
 | 任务 | id | 等什么 | 做什么 |
