@@ -30,10 +30,12 @@ status "code $(git rev-parse --short HEAD); pilots (300 steps, seed 0)"
 for a in "${ARMS[@]}"; do sub "p-$a" "${VR[$a]}" $JT ${F[$a]} --seed 0 --steps 300 --eval-every 300 --tag "$a-P300"; done
 waitdirs p-JAPS p-JAPSnoY p-JAPSnoA
 status "pilot smokes (48 scenes each, at once)"
+pids=()                                                              # wait on these pids only: a bare `wait` also waits on the log's tee
 for a in "${ARMS[@]}"; do
-  [[ -f $DATA_DIR/runs/alpasim/joint1/chain-smoke-$a-P300/DONE ]] || bash experiments/alpasim/scripts/joint1_chain.sh smoke "$a-P300" "${DRV[$a]}" > /dev/null 2>&1 &
+  [[ -f $DATA_DIR/runs/alpasim/joint1/chain-smoke-$a-P300/DONE ]] && continue
+  bash experiments/alpasim/scripts/joint1_chain.sh smoke "$a-P300" "${DRV[$a]}" > /dev/null 2>&1 & pids+=($!)
 done
-wait
+[[ ${#pids[@]} -eq 0 ]] || wait "${pids[@]}"
 ok=()
 for a in "${ARMS[@]}"; do
   [[ -f $DATA_DIR/runs/alpasim/joint1/chain-smoke-$a-P300/DONE ]] || { status "smoke of $a-P300 failed: $DATA_DIR/runs/alpasim/joint1/chain-smoke-$a-P300"; continue; }
