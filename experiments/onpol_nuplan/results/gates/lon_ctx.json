@@ -22,6 +22,8 @@
  "arc_at_last_decision_max": 109.11451721191406,
  "reach_needed_max": 212.0575714111328,
  "scenes_reach_beyond_grid": 0,
+ "NL": 8,
+ "scenes_with_all_line_slots_used": 0,
  "lines": 1140,
  "tl_lines": 843,
  "tl_elig": 384,

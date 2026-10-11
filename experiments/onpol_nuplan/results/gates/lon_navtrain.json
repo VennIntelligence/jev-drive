@@ -70,25 +70,25 @@
   }
  },
  "A_trained_hinge": {
-  "active_share_all": 0.015368447082096934,
+  "active_share_all": 0.015207715133531157,
   "active_share_label_pos": 1.0,
-  "active_share_label_neg": 0.011843414935302197,
-  "mean_when_active": 0.26875540614128113,
-  "p99_when_active": 2.3248257637023926
+  "active_share_label_neg": 0.011717421159394725,
+  "mean_when_active": 0.26289698481559753,
+  "p99_when_active": 2.251854181289673
  },
  "B_trained_hinge": {
-  "active_share_all": 0.002262611275964392,
+  "active_share_all": 0.0019906033630069236,
   "active_share_label_pos": 0.6639344262295082,
-  "active_share_label_neg": 0.0010660848653138131,
-  "mean_when_active": 0.5007549524307251,
-  "p99_when_active": 7.311931133270264
+  "active_share_label_neg": 0.000793365481163768,
+  "mean_when_active": 0.1958312690258026,
+  "p99_when_active": 1.1279915571212769
  },
  "C_trained_hinge": {
-  "active_share_all": 0.008963897131552918,
+  "active_share_all": 0.008024233432245302,
   "active_share_label_pos": 1.0,
-  "active_share_label_neg": 0.004277994596217352,
-  "mean_when_active": 0.10924385488033295,
-  "p99_when_active": 0.7548484206199646
+  "active_share_label_neg": 0.003402381667167017,
+  "mean_when_active": 0.1268232762813568,
+  "p99_when_active": 0.8885151743888855
  },
  "logged_future_as_plan_log_states": {
   "states": 17216,
@@ -99,14 +99,14 @@
    "p99_when_active": 0.4526588022708893
   },
   "B": {
-   "active_share": 0.0023234200743494425,
-   "mean_when_active": 0.3545035421848297,
-   "p99_when_active": 5.056662082672119
+   "active_share": 0.001974907063197026,
+   "mean_when_active": 0.10107940435409546,
+   "p99_when_active": 0.6203126311302185
   },
   "C": {
    "active_share": 0.00034851301115241634,
-   "mean_when_active": 0.3096825182437897,
-   "p99_when_active": 0.6445809602737427
+   "mean_when_active": 0.31267213821411133,
+   "p99_when_active": 0.647249698638916
   }
  },
  "pass": true

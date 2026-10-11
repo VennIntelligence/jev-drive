@@ -4,7 +4,7 @@
  "values_bit_for_bit_f32": true,
  "items": {
   "A": {
-   "active_rows": 2245,
+   "active_rows": 1897,
    "value_equal_unprojected": true,
    "grad_along_abs_max": 0.12195099206624527,
    "grad_cross_abs_max": 3.469446951953614e-18,
@@ -12,7 +12,7 @@
    "unprojected_cross_abs_max": 0.11701855564372762,
    "unprojected_yaw_abs_max": 0.0,
    "along_minus_unprojected_along_abs_max": 2.7755575615628914e-17,
-   "finite_difference_along_abs_err_max": 2.9215272562277406e-10,
+   "finite_difference_along_abs_err_max": 2.722629760532058e-10,
    "finite_difference_share_within_1e_4": 1.0,
    "finite": true
   },
@@ -43,7 +43,7 @@
    "finite": true
   },
   "P": {
-   "active_rows": 1283,
+   "active_rows": 1268,
    "value_equal_unprojected": true,
    "grad_along_abs_max": 0.12886631382173144,
    "grad_cross_abs_max": 3.469446951953614e-18,
@@ -51,7 +51,7 @@
    "unprojected_cross_abs_max": 0.08216508302472056,
    "unprojected_yaw_abs_max": 0.0,
    "along_minus_unprojected_along_abs_max": 2.7755575615628914e-17,
-   "finite_difference_along_abs_err_max": 2.399102860817237e-10,
+   "finite_difference_along_abs_err_max": 3.4222169542630354e-10,
    "finite_difference_share_within_1e_4": 1.0,
    "finite": true
   }

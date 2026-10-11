@@ -1,0 +1,230 @@
+{
+ "rows_name": "smoke1",
+ "ctx": "/root/autodl-tmp/ujs/runs/onpol_nuplan/ctx/ctx.npz",
+ "rows": 10,
+ "rows_ok": 10,
+ "scenes": 1,
+ "not_ok": {
+  "no_context": 0,
+  "no_actor_label": 0,
+  "total": 0
+ },
+ "cross_check_with_on_rows": {
+  "D_abs_diff_q50_q99_max": [
+   1.33514404296875e-05,
+   3.7536621093749905e-05,
+   4.9591064453125e-05
+  ],
+  "lead_abs_diff_q50_q99_max": [
+   4.3346546590328217e-05,
+   0.00016425013542175295,
+   0.00016868114471435547
+  ],
+  "note": "D = the log's travel over t .. t + 0.5 k, lead = arc ahead of the log at the same time; on_rows.py computes both on its own path G"
+ },
+ "actors_per_row_mean": 17.7,
+ "vehicles_per_row_mean": 17.7,
+ "lateral_offset_abs_q50_q90_q99_max": [
+  0.04413342475891113,
+  0.1948998764157295,
+  0.22048034116625786,
+  0.22332261502742767
+ ],
+ "arc_ahead_of_log_q01_q10_q50_q90_q99": [
+  -2.6407831954956054,
+  -1.996176528930664,
+  -0.6074495315551758,
+  0.00022535324096679634,
+  0.0014559078216552735
+ ],
+ "rows_more_than_5m_ahead": 0.0,
+ "rows_more_than_5m_behind": 0.0,
+ "distance_to_logged_pose_at_same_time_by_k": {
+  "0": [
+   0.000506156706251204,
+   0.000506156706251204,
+   0.000506156706251204
+  ],
+  "1": [
+   0.0016079130582511425,
+   0.0016079130582511425,
+   0.0016079130582511425
+  ],
+  "2": [
+   0.030668087303638458,
+   0.030668087303638458,
+   0.030668087303638458
+  ],
+  "3": [
+   0.1928686499595642,
+   0.1928686499595642,
+   0.1928686499595642
+  ],
+  "4": [
+   0.45116034150123596,
+   0.45116034150123596,
+   0.45116034150123596
+  ],
+  "5": [
+   0.7671635150909424,
+   0.7671635150909424,
+   0.7671635150909424
+  ],
+  "6": [
+   1.1103060245513916,
+   1.1103060245513916,
+   1.1103060245513916
+  ],
+  "7": [
+   1.4582664966583252,
+   1.4582664966583252,
+   1.4582664966583252
+  ],
+  "8": [
+   1.9261997938156128,
+   1.9261997938156128,
+   1.9261997938156128
+  ],
+  "9": [
+   2.721574068069458,
+   2.721574068069458,
+   2.721574068069458
+  ]
+ },
+ "light_state_known_share_of_steps": 1.0,
+ "context": {
+  "rows_with_A_eligible_actor": 1.0,
+  "rows_with_light_line_ahead": 0.0,
+  "rows_with_red_in_window": 0.0,
+  "rows_red_now": 0.0,
+  "rows_with_eligible_turn": 0.0,
+  "rows_open": 0.0,
+  "rows_open_with_full_D": 0.0,
+  "A_margin_q10_q50_q90": [
+   2.0,
+   2.0,
+   2.0
+  ],
+  "A_margin_zero_share": 0.0
+ },
+ "replay_rows": 2,
+ "items": {
+  "A": {
+   "active_share_served": 0.0,
+   "active_rows": 0,
+   "active_scenes": 0,
+   "mean_when_active": null,
+   "q50_q90_q99_max_when_active": null,
+   "active_share_by_k": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0,
+    "7": 0.0,
+    "8": 0.0,
+    "9": 0.0
+   },
+   "active_share_on_imitation_target": 0.0,
+   "mean_on_imitation_target_when_active": null,
+   "active_share_of_the_logs_own_future_at_replay_decisions": 0.0,
+   "mean_of_the_logs_own_future_when_active": null,
+   "active_share_rows_within_5m_of_the_log": 0.0,
+   "active_share_rows_beyond_5m_of_the_log": null,
+   "passes_0p2_percent": false,
+   "top20": []
+  },
+  "B": {
+   "active_share_served": 0.0,
+   "active_rows": 0,
+   "active_scenes": 0,
+   "mean_when_active": null,
+   "q50_q90_q99_max_when_active": null,
+   "active_share_by_k": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0,
+    "7": 0.0,
+    "8": 0.0,
+    "9": 0.0
+   },
+   "active_share_on_imitation_target": 0.0,
+   "mean_on_imitation_target_when_active": null,
+   "active_share_of_the_logs_own_future_at_replay_decisions": 0.0,
+   "mean_of_the_logs_own_future_when_active": null,
+   "active_share_rows_within_5m_of_the_log": 0.0,
+   "active_share_rows_beyond_5m_of_the_log": null,
+   "passes_0p2_percent": false,
+   "top20": []
+  },
+  "C": {
+   "active_share_served": 0.0,
+   "active_rows": 0,
+   "active_scenes": 0,
+   "mean_when_active": null,
+   "q50_q90_q99_max_when_active": null,
+   "active_share_by_k": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0,
+    "7": 0.0,
+    "8": 0.0,
+    "9": 0.0
+   },
+   "active_share_on_imitation_target": 0.0,
+   "mean_on_imitation_target_when_active": null,
+   "active_share_of_the_logs_own_future_at_replay_decisions": 0.0,
+   "mean_of_the_logs_own_future_when_active": null,
+   "active_share_rows_within_5m_of_the_log": 0.0,
+   "active_share_rows_beyond_5m_of_the_log": null,
+   "passes_0p2_percent": false,
+   "top20": []
+  },
+  "P": {
+   "active_share_served": 0.0,
+   "active_rows": 0,
+   "active_scenes": 0,
+   "mean_when_active": null,
+   "q50_q90_q99_max_when_active": null,
+   "active_share_by_k": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0,
+    "7": 0.0,
+    "8": 0.0,
+    "9": 0.0
+   },
+   "active_share_on_imitation_target": 0.0,
+   "mean_on_imitation_target_when_active": null,
+   "active_share_of_the_logs_own_future_at_replay_decisions": 0.0,
+   "mean_of_the_logs_own_future_when_active": null,
+   "active_share_rows_within_5m_of_the_log": 0.0,
+   "active_share_rows_beyond_5m_of_the_log": null,
+   "passes_0p2_percent": false,
+   "top20": []
+  }
+ },
+ "items_in_pack": [],
+ "items_dropped_by_the_0p2_percent_rule": [
+  "A",
+  "B",
+  "C",
+  "P"
+ ],
+ "items_forced": false,
+ "pack": "/root/autodl-tmp/ujs/runs/onpol_nuplan/rows/smoke1/lon.npz"
+}
