@@ -2,7 +2,8 @@
 on-policy state, in the on-policy versions of plans/2026-10-11-onpol-prereg.md ("Self-consequence L"). Analytic terms only: labels + own plan.
 
 Trainer hook (scripts/on_train.py --on-lon):
-    pack = on_lon.load_pack(path, device)
+    pack = on_lon.load(pool_dir, names, device)    # the pack of scripts/on_lon_pack.py (pack_path), re-ordered to the trainer's row names
+                                                   # (on_lon.load_pack(path, device) reads a pack in its own order)
     L = on_lon.loss(poses_rear, rows, pack)        # poses_rear (n, 8, 3) rear-axle x, y, yaw at 0.5 .. 4 s in each row's own frame (with grad),
                                                    # rows (n,) pool row indices -> {"lonA", "lonB", "lonC", "lonP"}: (n,) per-row losses
 Units: lonA, lonB, lonP in metres, lonC in m/s. The trainer applies lambda 10 and the hinge-only row weight. Only the items in pack["items"]
@@ -134,7 +135,7 @@ def wrap(a):
 def terms(poses_rear, rows, pack, margin_a=None, theta_b=None):
     """-> dict of per-row (n,) hinges for all four items + the per-step tensors (for the gates and previews).
     margin_a / theta_b override the stored A margin (a scalar) / B threshold offset (theta = d_l - theta_b) for the label-agreement gate."""
-    x, y, psi = poses_rear.unbind(-1)
+    x, y, psi = poses_rear.float().unbind(-1)                                   # arcs reach 260 m: never in half precision
     xt, yt = timing_only(x, y, psi)
     d = dense(xt, yt, psi.detach())
     g = lambda k: pack[k][rows]  # noqa: E731
@@ -184,10 +185,42 @@ def to_pack(Z: dict, device="cpu", items=ITEMS) -> dict:
     return P
 
 
-def load_pack(path, device="cpu") -> dict:
+def _bare(n: str) -> str:
+    return n[3:] if n.startswith("on:") else n
+
+
+def load_pack(path, device="cpu", names=None) -> dict:
+    """The pack npz of scripts/on_lon_pack.py -> tensors. names (N,) = the trainer's pool row order: the pack is re-ordered to it and must cover it
+    (row ids are compared without an `on:` prefix)."""
     z = np.load(path, allow_pickle=False)
     items = tuple(str(x) for x in z["items"]) if "items" in z.files else ITEMS
-    return to_pack({k: z[k] for k in z.files}, device, items)
+    Z = {k: z[k] for k in z.files}
+    if names is not None:
+        n0 = len(Z["names"])
+        pos = {_bare(n): i for i, n in enumerate(Z["names"].tolist())}
+        want = [_bare(n) for n in np.asarray(names).tolist()]
+        miss = [n for n in want if n not in pos]
+        assert len(pos) == n0 and not miss, f"{path}: {len(miss)} pool rows without longitudinal labels, e.g. {miss[:2]}"
+        o = np.array([pos[n] for n in want])
+        Z = {k: (v[o] if k != "items" and v.ndim and len(v) == n0 else v) for k, v in Z.items()}
+    return to_pack(Z, device, items)
+
+
+PACK_NAME = "lon.npz"
+
+
+def pack_path(pool_dir) -> Path:
+    """<POOL>/lon.npz if present, else the rows dir of scripts/on_rows.py: cache/on1_<N> -> runs/onpol_nuplan/rows/<N>/lon.npz."""
+    pool_dir = Path(pool_dir)
+    p = pool_dir / PACK_NAME
+    if p.exists():
+        return p
+    return pool_dir.parents[2] / "onpol_nuplan" / "rows" / pool_dir.name.split("_", 1)[-1] / PACK_NAME
+
+
+def load(pool_dir, names, dev) -> dict:
+    """on_train.py's hook (plans/on_pool_format.md)."""
+    return load_pack(pack_path(pool_dir), dev, names)
 
 
 # ---------------------------------------------------------------- pack builder (numpy; everything in the rows' own frames)
