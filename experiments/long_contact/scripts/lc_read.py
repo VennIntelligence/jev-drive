@@ -282,6 +282,57 @@ def cmd_report(a):
             print(pd.DataFrame(pc).to_string(index=False))
 
 
+def cmd_tables(a):
+    """report/*.csv (+ OOD csv if present) -> report/tables.md: the Markdown tables of results/ladder.md (numbers straight from the csv)."""
+    import pandas as pd
+    rp = rd() / "report"
+    L, G, PC, ST = (pd.read_csv(rp / f) for f in ("ladder.csv", "gains.csv", "positive_control.csv", "strata.csv"))
+    ver = json.loads((rp / "verdict.json").read_text())
+    f3 = lambda r: f"{r['auc']:.3f} [{r['lo']:.3f}, {r['hi']:.3f}]" if pd.notna(r.get("auc")) else "n/a"  # noqa: E731
+    fd = lambda r: f"{r['d']:+.3f} [{r['lo']:+.3f}, {r['hi']:+.3f}]"  # noqa: E731
+    rungs = [r for r in ("blind", "vis", "nat", "priv", "blind_nat") if r in set(L.rung)]
+    out = []
+    for pop in ("P1 own + arc", "P0 own"):
+        out += [f"### {pop}: AUC, two-seed score [95% log-cluster CI]", "",
+                "| label | positives (logs) | " + " | ".join(rungs) + " | best non-priv - blind | nat - vis | verdict |", "|---|---|" + "---|" * (len(rungs) + 3)]
+        for k in ("A", "B", "C", "a", "b"):
+            x = L[(L["pop"] == pop) & (L.label == k) & (L.score == "mean")].set_index("rung")
+            if x.empty:
+                continue
+            v = ver.get(f"{pop}|{k}", {})
+            g = G[(G["pop"] == pop) & (G.label == k)]
+            gb = g[(g.rung == v.get("best")) & (g.vs == "blind")]
+            gn = g[(g.rung == "nat") & (g.vs == "vis")]
+            name = {"a": "agent contact (S0 label)", "b": "boundary (S0 label)"}.get(k, k)
+            out.append(f"| {name} | {int(x.iloc[0]['pos'])} ({int(x.iloc[0]['logs_pos'])}) | " + " | ".join(f3(x.loc[r]) for r in rungs)
+                       + f" | {(v.get('best', '') + ' ' + fd(gb.iloc[0])) if len(gb) else '-'} | {fd(gn.iloc[0]) if len(gn) else '-'} | {v.get('verdict', '-')} |")
+        out += ["", "Per seed (seed 0 / seed 1):", "", "| label | " + " | ".join(rungs) + " |", "|---|" + "---|" * len(rungs)]
+        for k in ("A", "B", "C", "a", "b"):
+            x = L[(L["pop"] == pop) & (L.label == k)]
+            if x.empty:
+                continue
+            cell = lambda r: " / ".join(f"{x[(x.rung == r) & (x.score == s_)].auc.iloc[0]:.3f}" for s_ in ("s0", "s1"))  # noqa: E731
+            out.append(f"| {k} | " + " | ".join(cell(r) for r in rungs) + " |")
+        out += [""]
+    out += ["### Gains (paired, same log-cluster draws)", "", "| population | label | rung | against | AUC difference [95% CI] |", "|---|---|---|---|---|"]
+    out += [f"| {r['pop']} | {r['label']} | {r['rung']} | {r['vs']} | {fd(r)} |" for r in G.to_dict("records")]
+    out += ["", "### Positive control and lateral split", "", "| population | label | subset | score | AUC [95% CI] | n | positives (logs) |", "|---|---|---|---|---|--:|---|"]
+    for r in PC.to_dict("records"):
+        out.append(f"| {r['pop']} | {r['label']} | {r.get('subset', '')} | {r['score']} | {f3(r)} | {int(r['n'])} | {int(r['pos'])}"
+                   + (f" ({int(r['logs_pos'])})" if pd.notna(r.get('logs_pos')) else "") + " |")
+    out += ["", "### Strata (P1, two-seed score, 2 000 resamples)", "", "| label | stratum | value | positives (logs) | " + " | ".join(rungs) + " |",
+            "|---|---|---|---|" + "---|" * len(rungs)]
+    for (k, sn, val), x in ST.groupby(["label", "stratum", "value"], sort=False):
+        x = x.set_index("rung") if "rung" in x and x.rung.notna().any() else None
+        if x is None:
+            r0 = ST[(ST.label == k) & (ST.stratum == sn) & (ST.value == val)].iloc[0]
+            out.append(f"| {k} | {sn} | {val} | {int(r0['pos'])} | " + " | ".join("too few" for _ in rungs) + " |")
+            continue
+        out.append(f"| {k} | {sn} | {val} | {int(x.iloc[0]['pos'])} ({int(x.iloc[0]['logs_pos'])}) | " + " | ".join(f3(x.loc[r]) if r in x.index else "" for r in rungs) + " |")
+    (rp / "tables.md").write_text("\n".join(out) + "\n")
+    print("\n".join(out))
+
+
 def cmd_pilot(a):
     """Pilot checklist (prereg section 7): reads the VALIDATION reads stored in the two pilot checkpoints (no hold row is touched)."""
     import torch
@@ -318,7 +369,8 @@ if __name__ == "__main__":
     p = sp.add_parser("report")
     p.add_argument("--ladder", nargs="+", required=True, help="RUNG=NAME_S0,NAME_S1")
     cli_args(p)
+    sp.add_parser("tables")
     p = sp.add_parser("pilot")
     p.add_argument("--runs", nargs="+", required=True, help="NAME=RUN_DIR (the vis and priv pilots)")
     a = ap.parse_args()
-    {"predict": cmd_predict, "report": cmd_report, "pilot": cmd_pilot}[a.cmd](a)
+    {"predict": cmd_predict, "report": cmd_report, "pilot": cmd_pilot, "tables": cmd_tables}[a.cmd](a)

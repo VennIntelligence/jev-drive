@@ -1,0 +1,73 @@
+label,split,stratum,value,pos,neg,excluded
+A,hold,speed band,< 2,2,5387.0,29.0
+A,hold,speed band,2-5,25,16062.0,321.0
+A,hold,speed band,5-10,58,25460.0,342.0
+A,hold,speed band,>= 10,0,3496.0,134.0
+A,hold,user class,0,41,10687.0,100.0
+A,hold,user class,1,44,9124.0,194.0
+A,hold,user class,2,0,6556.0,138.0
+A,hold,user class,3,0,24038.0,394.0
+A,hold,> 45 deg,0,79,44958.0,717.0
+A,hold,> 45 deg,1,6,5447.0,109.0
+A,hold,sub-class,A1 stopped,74,,
+A,hold,sub-class,A2 moving,11,,
+A,fit,speed band,< 2,97,38860.0,223.0
+A,fit,speed band,2-5,458,129479.0,2439.0
+A,fit,speed band,5-10,687,173743.0,3038.0
+A,fit,speed band,>= 10,61,34826.0,663.0
+A,fit,user class,0,348,81903.0,1021.0
+A,fit,user class,1,874,73779.0,1951.0
+A,fit,user class,2,11,48192.0,917.0
+A,fit,user class,3,70,173034.0,2474.0
+A,fit,> 45 deg,0,1288,337516.0,5658.0
+A,fit,> 45 deg,1,15,39392.0,705.0
+A,fit,sub-class,A1 stopped,853,,
+A,fit,sub-class,A2 moving,450,,
+B,hold,speed band,< 2,11,5358.0,49.0
+B,hold,speed band,2-5,18,16386.0,4.0
+B,hold,speed band,5-10,7,25823.0,30.0
+B,hold,speed band,>= 10,0,3630.0,0.0
+B,hold,user class,0,26,10788.0,14.0
+B,hold,user class,1,5,9304.0,53.0
+B,hold,user class,2,0,6694.0,0.0
+B,hold,user class,3,5,24411.0,16.0
+B,hold,> 45 deg,0,36,45635.0,83.0
+B,hold,> 45 deg,1,0,5562.0,0.0
+B,hold,sub-class,stop sign,14,,
+B,hold,sub-class,red light,22,,
+B,hold,state has an eligible line <= 60 m,1,36,9193.0,83.0
+B,fit,speed band,< 2,78,38803.0,299.0
+B,fit,speed band,2-5,355,132001.0,20.0
+B,fit,speed band,5-10,197,177219.0,52.0
+B,fit,speed band,>= 10,36,35496.0,18.0
+B,fit,user class,0,399,82797.0,76.0
+B,fit,user class,1,37,76430.0,137.0
+B,fit,user class,2,38,49081.0,1.0
+B,fit,user class,3,192,175211.0,175.0
+B,fit,> 45 deg,0,648,343426.0,388.0
+B,fit,> 45 deg,1,18,40093.0,1.0
+B,fit,sub-class,stop sign,192,,
+B,fit,sub-class,red light,474,,
+B,fit,state has an eligible line <= 60 m,1,666,65328.0,388.0
+C,hold,speed band,< 2,3,5352.0,63.0
+C,hold,speed band,2-5,22,16209.0,177.0
+C,hold,speed band,5-10,86,25652.0,122.0
+C,hold,speed band,>= 10,0,3630.0,0.0
+C,hold,user class,0,46,10676.0,106.0
+C,hold,user class,1,38,9281.0,43.0
+C,hold,user class,2,26,6467.0,201.0
+C,hold,user class,3,1,24419.0,12.0
+C,hold,> 45 deg,0,58,45539.0,157.0
+C,hold,> 45 deg,1,53,5304.0,205.0
+C,hold,state has an eligible turn peak <= 60 m,1,111,12571.0,356.0
+C,fit,speed band,< 2,26,38656.0,498.0
+C,fit,speed band,2-5,237,130500.0,1639.0
+C,fit,speed band,5-10,392,176172.0,904.0
+C,fit,speed band,>= 10,0,35548.0,2.0
+C,fit,user class,0,344,82015.0,913.0
+C,fit,user class,1,106,76134.0,364.0
+C,fit,user class,2,184,47477.0,1459.0
+C,fit,user class,3,21,175250.0,307.0
+C,fit,> 45 deg,0,479,342378.0,1605.0
+C,fit,> 45 deg,1,176,38498.0,1438.0
+C,fit,state has an eligible turn peak <= 60 m,1,655,100799.0,2818.0
