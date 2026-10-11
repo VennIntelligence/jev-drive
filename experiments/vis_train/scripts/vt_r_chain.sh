@@ -73,7 +73,7 @@ if [[ ! -s $D/jobs.txt ]]; then
 fi
 
 # ---------------------------------------------------------------- arm R (released by GATE_PASS)
-status "submit: arm R (banks, 6 trainings, reads), the continuation of A and of B, the gate"
+status "submit: arm R (banks, 8 trainings, reads), the continuation of A and of B, the gate"
 G="--when-exists $D/GATE_PASS"
 # VT_R_SKIP_GATE=1 (user override, prereg amendment 8): arm R only, no gate wait, no continuation, no gate job
 [[ ${VT_R_SKIP_GATE:-0} == 1 ]] && G=""
@@ -110,7 +110,7 @@ status "queued; waiting for the gate (job $(jid vt-rgate): after VT-A-s0's final
 until [[ ${VT_R_SKIP_GATE:-0} == 1 || -f $D/GATE_PASS || -f $D/GATE_FAIL || -f $L/gate/DONE || -f $L/gate/ERROR ]]; do sleep 30; done
 if [[ ${VT_R_SKIP_GATE:-0} == 1 || -f $D/GATE_PASS ]]; then
   status "arm R training (gate $([[ ${VT_R_SKIP_GATE:-0} == 1 ]] && echo overridden || cat "$D/GATE_PASS"))"
-  for s in 0 1; do for x in 0 A B; do waitdirs "$L/t-$x-s$s" "$L/b-$x-s$s" || die "R-$x-s$s: training or its read starter failed ($L/t-$x-s$s, $L/b-$x-s$s)"; done; done
+  for s in 0 1; do for x in 0 B W0 W; do waitdirs "$L/t-$x-s$s" "$L/b-$x-s$s" || die "R-$x-s$s: training or its read starter failed ($L/t-$x-s$s, $L/b-$x-s$s)"; done; done
   status "arm R trained; reads"
   $B status --model "${RT[@]}" --bench navtest --wait || die "R navtest reads"
   $B status --model "${RT[@]}" --bench navhard --wait || die "R navhard reads"
