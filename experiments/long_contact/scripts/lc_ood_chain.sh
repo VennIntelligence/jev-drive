@@ -25,6 +25,11 @@ waitdirs() { for ld in "$@"; do until [[ -f $ld/DONE || -f $ld/ERROR ]]; do slee
 status "waiting for the main chain"
 until [[ -f $O/chain/DONE || -f $O/chain/ERROR ]]; do sleep 60; done
 [[ -f $O/chain/ERROR ]] && die "main chain failed"
+status "CPU: kinematic baselines and the hard subset (prereg addendum 1)"
+sub lc-kin "$L/kin" --vram 0.5 --cpu 8 --ram 60 --timeout-h 2 -- $PY $S/lc_read.py kin
+waitdirs "$L/kin"
+$PY $S/lc_read.py tables > /dev/null || die "tables"
+LAST=""
 status "GPU: decision 220 nuPlan decisions, PAI replay with token dump, PAI scores"
 sub lc-ood-g2 "$L/g2" --vram 12 --cpu 8 --ram 32 --timeout-h 1 -- $PY $S/lc_ood.py g2
 sub lc-pai-replay "$L/pai-replay" --vram 16 --cpu 8 --ram 40 --timeout-h 3 --env ALPASIM_SRC=$DATA_DIR/third_party/alpasim --env SH30_TAG=P2H10-F-s0 -- $PY $S/lc_pai.py replay --tag P2H10-F-s0

@@ -7,7 +7,8 @@ student's native outputs (lead, lead_prob, meta, action; select_4 / mean) from t
 
   replay  (GPU, pool) -> read/pai/dump/<scene>.npz
   score   (GPU, pool) the ladder's B / C / A logits (rungs blind / vis / nat, both seeds) -> read/pai/scores.npz
-  report  (CPU) per LOWDIAG unit with an overrun (L5 -> B) or a fast turn entry (L2 -> C): the time before the event of the first decision
+  report  (CPU) per LOWDIAG unit with an overrun (L5 -> B), a fast turn entry (L2 -> C) or a lead contact (L1 -> A; both are lateral in
+          fact by lowboard_diag/results/pai.md): per rung (blind / vis / nat) the time before the event of the first decision
           flagged at the hold-log P1 2 % threshold of that label, and the flag rate on decisions of the other replayed scenes
           -> read/pai/lead.csv, flags.csv
   env ALPASIM_SRC=$DATA_DIR/third_party/alpasim SH30_TAG=P2H10-F-s0 $DATA_DIR/envs/op-train/bin/python experiments/long_contact/scripts/lc_pai.py replay
@@ -181,7 +182,7 @@ def cmd_report(a):
             u = U[U.scene == scn]
             raw = str(u.raw.iloc[0]) if len(u) else ""
             tev = float(u.t_event.iloc[0]) if len(u) and np.isfinite(u.t_event.iloc[0]) else np.nan
-            for lab, flag in (("B", "L5"), ("C", "L2")):
+            for lab, flag in (("B", "L5"), ("C", "L2"), ("A", "L1")):           # L1 = LOWDIAG's lead-contact units (lateral in fact, pai.md)
                 for rung in RUNGS:
                     s = 0.5 * (S[f"{f.stem}|{rung}-s0|{lab}"] + S[f"{f.stem}|{rung}-s1|{lab}"])
                     th = thr[lab][rung]

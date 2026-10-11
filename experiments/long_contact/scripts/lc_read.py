@@ -282,6 +282,104 @@ def cmd_report(a):
             print(pd.DataFrame(pc).to_string(index=False))
 
 
+KIN_SLOTS = P1_SLOTS
+
+
+def kin_feats(R, slots=KIN_SLOTS):
+    """Per (state, slot) kinematic features (prereg addendum 1): v0, a0 and the plan's speed-profile / curvature summary -> dict of (n * k,)."""
+    a0 = np.concatenate([np.load(B.cache_root() / d / "tab.npz")["acc"][m][:, -1, 0] for d, m, _ in R["src"]]).astype(np.float32)
+    v0 = np.concatenate([np.load(B.cache_root() / d / "tab.npz")["speed"][m] for d, m, _ in R["src"]]).astype(np.float32)
+    q = R["q"][:, list(slots)].astype(np.float64)                                   # (n, k, 8, 3)
+    p0 = np.concatenate([np.zeros_like(q[..., :1, :]), q], -2)
+    seg = np.hypot(np.diff(p0[..., 0], axis=-1), np.diff(p0[..., 1], axis=-1))      # (n, k, 8) m per 0.5 s
+    spd = seg / 0.5
+    dyaw = np.abs(np.diff(np.unwrap(p0[..., 2], axis=-1), axis=-1))
+    kap = dyaw / np.maximum(seg, 0.1)
+    j = kap.argmax(-1)
+    k = len(slots)
+    rep = lambda x: np.repeat(x, k)  # noqa: E731
+    F = dict(v0=rep(v0), a0=rep(a0), arc4=seg.sum(-1).ravel(), vmin=spd[..., 1:].min(-1).ravel(), vmax=spd.max(-1).ravel(),
+             acc=((spd[..., -1] - spd[..., 0]) / 3.5).ravel(), ratio=(seg.sum(-1) / np.maximum(4 * v0[:, None], 2.0)).ravel(),
+             kmax=kap.max(-1).ravel(), v_at_kmax=np.take_along_axis(spd, j[..., None], -1)[..., 0].ravel(), alat=(spd ** 2 * kap).max(-1).ravel())
+    F |= {f"s{i}": spd[..., i].ravel() for i in range(8)}
+    return {x: v.astype(np.float32) for x, v in F.items()}
+
+
+KIN_MODELS = {"K1 v0": ["v0"], "K2 a0": ["a0"], "K3 v0 + a0": ["v0", "a0"],
+              "K4 plan speed profile": ["v0", "a0", "arc4", "vmin", "vmax", "acc", "ratio"] + [f"s{i}" for i in range(8)]}
+KIN_MODELS["K5 K4 + plan curvature"] = KIN_MODELS["K4 plan speed profile"] + ["kmax", "v_at_kmax", "alat"]
+KIN_SINGLE = {"A": [("plan 4 s arc length", "arc4")], "B": [("plan min speed after 0.5 s", "vmin"), ("plan 4 s arc length", "arc4")],
+              "C": [("plan max v^2 kappa", "alat"), ("plan speed at its max curvature", "v_at_kmax")], "a": [], "b": []}
+
+
+def cmd_kin(a):
+    """Prereg addendum 1: kinematic baselines (fit logs -> hold), the hard subset without a kinematic cue, every rung's AUC there."""
+    import pandas as pd
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    from jevdrive.data import splits
+    from jevdrive.run import Run
+    with Run("long_contact", "read/kin", config=vars(a)) as run:
+        ho, tr = splits.load(B.HOLD), splits.load(B.TRAIN)
+        run.use_split(ho), run.use_split(tr)
+        Rf = C.load_rows(FAMS, range(B.NSH), lambda log, hold: ~hold & ~np.array([C.is_val(l) for l in log.tolist()]), steps=False)
+        assert tr.mask(Rf["log"]).all()
+        Xf, Ff = TR.load_extra(Rf), kin_feats(Rf)
+        Rh, _ = hold_rows()
+        Xh, Fh = TR.load_extra(Rh), kin_feats(Rh)
+        T = dict(np.load(B.root() / "taxonomy" / "tax.npz"))
+        Dh = row_table(Rh, Xh, T)
+        Dfit = row_table(Rf, Xf, T)
+        # hard subset per hold state: not decelerating at t0, and the logged driver's minimum speed over the next 8 s is >= 1 m/s below v0
+        Z = np.load(LC.ctx_path())
+        vl, tl = Z["vlog"][Rh["gi"]].astype(np.float32), Z["tlog"][Rh["gi"]].astype(np.float32)
+        vmin8 = np.where(np.isfinite(vl) & (tl <= 8.0), vl, np.inf).min(1)
+        k = len(KIN_SLOTS)
+        a0, v0 = Fh["a0"].reshape(-1, k)[:, 0], Fh["v0"].reshape(-1, k)[:, 0]
+        hard = np.repeat((a0 >= 0) & (v0 - vmin8 >= 1.0), k)
+        hard0 = np.repeat(a0 >= 0, k)
+        own = (Dh["pop"] == "own").to_numpy()
+        pops = {"P1 own + arc": np.ones(len(Dh), bool), "P0 own": own, "P1 & H (no kinematic cue)": hard, "P0 & H": own & hard, "P1 & H0 (a0 >= 0)": hard0}
+        # rung scores
+        names = sorted({p.stem.rsplit("-s", 1)[0] for p in (rd() / "pred").glob("*-s[01].npz") if not p.stem.startswith("S0")})
+        ii, ss = Dh.i.to_numpy(), Dh.slot.to_numpy()
+        head_of = dict(a="lat", b="lat", A="A", B="B", C="C")
+        rows = []
+        for lab in ("A", "B", "C", "a", "b"):
+            yf, mf = label_mask(Dfit, lab)
+            yh, mh = label_mask(Dh, lab)
+            sc = {}
+            for r in names:
+                zz = [np.load(rd() / "pred" / f"{r}-s{s_}.npz")[f"out_{head_of[lab]}"].astype(np.float32)[ii, ss, H.IDX[lab]] for s_ in (0, 1)]
+                sc[f"rung {r}"] = 0.5 * (zz[0] + zz[1])
+            rng = np.random.default_rng(0)
+            fit_idx = np.flatnonzero(mf)
+            fit_idx = rng.choice(fit_idx, min(len(fit_idx), 600_000), replace=False)
+            for nm, cols in KIN_MODELS.items():
+                Xtr = np.stack([Ff[c][fit_idx] for c in cols], 1)
+                mdl = make_pipeline(StandardScaler(), LogisticRegression(max_iter=500, class_weight="balanced")).fit(Xtr, yf[fit_idx])
+                sc[nm] = mdl.decision_function(np.stack([Fh[c] for c in cols], 1))
+            for nm, c in KIN_SINGLE.get(lab, []):
+                sc[nm] = Fh[c].astype(float)
+            for pname, pm in pops.items():
+                m = mh & pm
+                if yh[m].sum() >= 5 and (~yh[m]).sum() >= 5:
+                    r = read(yh[m], {kk: v[m] for kk, v in sc.items()}, Dh.log.to_numpy()[m], 2000)
+                    rows += [dict(pop=pname, label=lab, score=kk, auc=v["auc"], lo=v["lo"], hi=v["hi"], n=int(m.sum()), pos=int(yh[m].sum()),
+                                  logs_pos=len(set(Dh.log.to_numpy()[m][yh[m]]))) for kk, v in r.items()]
+                else:
+                    rows.append(dict(pop=pname, label=lab, score="(too few positives)", n=int(m.sum()), pos=int(yh[m].sum())))
+            run.info("%s done", lab)
+        K = pd.DataFrame(rows)
+        K.to_csv(rd() / "report" / "kin.csv", index=False)
+        hs = dict(states=int(len(a0)), H=int(((a0 >= 0) & (v0 - vmin8 >= 1.0)).sum()), H0=int((a0 >= 0).sum()))
+        (rd() / "report" / "kin_subsets.json").write_text(json.dumps(hs, indent=1))
+        run.summary.update(hs)
+        with pd.option_context("display.width", 250, "display.max_rows", 600):
+            print(K.to_string(index=False))
+
+
 def cmd_tables(a):
     """report/*.csv (+ OOD csv if present) -> report/tables.md: the Markdown tables of results/ladder.md (numbers straight from the csv)."""
     import pandas as pd
@@ -329,6 +427,13 @@ def cmd_tables(a):
             out.append(f"| {k} | {sn} | {val} | {int(r0['pos'])} | " + " | ".join("too few" for _ in rungs) + " |")
             continue
         out.append(f"| {k} | {sn} | {val} | {int(x.iloc[0]['pos'])} ({int(x.iloc[0]['logs_pos'])}) | " + " | ".join(f3(x.loc[r]) if r in x.index else "" for r in rungs) + " |")
+    if (rp / "kin.csv").exists():
+        K = pd.read_csv(rp / "kin.csv")
+        out += ["", "### Kinematic baselines and the hard subset (prereg addendum 1; descriptive)", "",
+                "| population | label | score | AUC [95% CI] | n | positives (logs) |", "|---|---|---|---|--:|---|"]
+        for r in K.to_dict("records"):
+            out.append(f"| {r['pop']} | {r['label']} | {r['score']} | {f3(r) if pd.notna(r.get('auc')) else 'n/a'} | {int(r['n'])} | {int(r['pos'])}"
+                       + (f" ({int(r['logs_pos'])})" if pd.notna(r.get('logs_pos')) else "") + " |")
     (rp / "tables.md").write_text("\n".join(out) + "\n")
     print("\n".join(out))
 
@@ -370,7 +475,8 @@ if __name__ == "__main__":
     p.add_argument("--ladder", nargs="+", required=True, help="RUNG=NAME_S0,NAME_S1")
     cli_args(p)
     sp.add_parser("tables")
+    cli_args(sp.add_parser("kin"))
     p = sp.add_parser("pilot")
     p.add_argument("--runs", nargs="+", required=True, help="NAME=RUN_DIR (the vis and priv pilots)")
     a = ap.parse_args()
-    {"predict": cmd_predict, "report": cmd_report, "pilot": cmd_pilot, "tables": cmd_tables}[a.cmd](a)
+    {"predict": cmd_predict, "report": cmd_report, "pilot": cmd_pilot, "tables": cmd_tables, "kin": cmd_kin}[a.cmd](a)
