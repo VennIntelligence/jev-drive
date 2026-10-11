@@ -1,0 +1,556 @@
+{
+ "replay_max_abs_diff_vs_bench": {
+  "navtest": {
+   "s0": 1.1102230246251565e-16,
+   "s1": 1.1102230246251565e-16
+  },
+  "navhard": {
+   "s0": 0.0,
+   "s1": 0.0
+  }
+ },
+ "navtest_rows_dropped_replay_mismatch": 0,
+ "navtest_NC_by_class": [
+  {
+   "big": "A stopped / slow vehicle ahead",
+   "n_s0": 96,
+   "n_s1": 85,
+   "n": 90.5,
+   "share %": 52.01149425287356,
+   "share % [95% CI]": "52 [42, 62]",
+   "WA-JEPA passes %": 77.90055248618785,
+   "event at ego < 3 m/s %": 51.38121546961326,
+   "plan > 1.1 x logged arc %": 71.27071823204419,
+   "recovered, main %": 75.13812154696133,
+   "clean recovered, main %": 69.61325966850829,
+   "recovered, extended %": 95.02762430939227,
+   "WA-JEPA passes % [95% CI]": "78 [68, 89]",
+   "arm-specific (fails, WA passes): n": 70.5,
+   "arm-specific share of set % [95% CI]": "41 [32, 51]",
+   "recovered, main % [95% CI]": "75 [61, 88]"
+  },
+  {
+   "big": "B cut-in",
+   "n_s0": 21,
+   "n_s1": 21,
+   "n": 21.0,
+   "share %": 12.068965517241379,
+   "share % [95% CI]": "12 [6, 20]",
+   "WA-JEPA passes %": 59.523809523809526,
+   "event at ego < 3 m/s %": 76.19047619047619,
+   "plan > 1.1 x logged arc %": 83.33333333333334,
+   "recovered, main %": 88.09523809523809,
+   "clean recovered, main %": 83.33333333333334,
+   "recovered, extended %": 100.0,
+   "WA-JEPA passes % [95% CI]": "60 [34, 86]",
+   "arm-specific (fails, WA passes): n": 12.5,
+   "arm-specific share of set % [95% CI]": "7 [3, 13]",
+   "recovered, main % [95% CI]": "88 [75, 100]"
+  },
+  {
+   "big": "C crossing at junction",
+   "n_s0": 15,
+   "n_s1": 14,
+   "n": 14.5,
+   "share %": 8.333333333333334,
+   "share % [95% CI]": "8 [0, 17]",
+   "WA-JEPA passes %": 65.51724137931035,
+   "event at ego < 3 m/s %": 34.48275862068966,
+   "plan > 1.1 x logged arc %": 72.41379310344827,
+   "recovered, main %": 72.41379310344827,
+   "clean recovered, main %": 72.41379310344827,
+   "recovered, extended %": 93.10344827586206,
+   "WA-JEPA passes % [95% CI]": "66 [38, 100]",
+   "arm-specific (fails, WA passes): n": 9.5,
+   "arm-specific share of set % [95% CI]": "5 [0, 11]",
+   "recovered, main % [95% CI]": "72 [38, 100]"
+  },
+  {
+   "big": "D side contact",
+   "n_s0": 16,
+   "n_s1": 12,
+   "n": 14.0,
+   "share %": 8.045977011494253,
+   "share % [95% CI]": "8 [4, 14]",
+   "WA-JEPA passes %": 100.0,
+   "event at ego < 3 m/s %": 0.0,
+   "plan > 1.1 x logged arc %": 0.0,
+   "recovered, main %": 67.85714285714286,
+   "clean recovered, main %": 67.85714285714286,
+   "recovered, extended %": 89.28571428571429,
+   "WA-JEPA passes % [95% CI]": "100 [100, 100]",
+   "arm-specific (fails, WA passes): n": 14.0,
+   "arm-specific share of set % [95% CI]": "8 [4, 14]",
+   "recovered, main % [95% CI]": "68 [52, 86]"
+  },
+  {
+   "big": "E other",
+   "n_s0": 33,
+   "n_s1": 35,
+   "n": 34.0,
+   "share %": 19.54022988505747,
+   "share % [95% CI]": "20 [13, 27]",
+   "WA-JEPA passes %": 80.88235294117648,
+   "event at ego < 3 m/s %": 13.23529411764706,
+   "plan > 1.1 x logged arc %": 29.411764705882355,
+   "recovered, main %": 55.88235294117647,
+   "clean recovered, main %": 48.529411764705884,
+   "recovered, extended %": 91.17647058823529,
+   "WA-JEPA passes % [95% CI]": "81 [65, 97]",
+   "arm-specific (fails, WA passes): n": 27.5,
+   "arm-specific share of set % [95% CI]": "16 [11, 22]",
+   "recovered, main % [95% CI]": "56 [38, 74]"
+  }
+ ],
+ "navtest_TTC-only_by_class": [
+  {
+   "big": "A stopped / slow vehicle ahead",
+   "n_s0": 30,
+   "n_s1": 29,
+   "n": 29.5,
+   "share %": 32.417582417582416,
+   "share % [95% CI]": "32 [22, 45]",
+   "WA-JEPA passes %": 79.66101694915254,
+   "event at ego < 3 m/s %": 35.59322033898305,
+   "plan > 1.1 x logged arc %": 54.23728813559322,
+   "recovered, main %": 83.05084745762711,
+   "clean recovered, main %": 77.96610169491525,
+   "recovered, extended %": 93.22033898305084,
+   "WA-JEPA passes % [95% CI]": "80 [62, 94]",
+   "arm-specific (fails, WA passes): n": 23.5,
+   "arm-specific share of set % [95% CI]": "26 [16, 37]",
+   "recovered, main % [95% CI]": "83 [69, 94]"
+  },
+  {
+   "big": "B cut-in",
+   "n_s0": 11,
+   "n_s1": 8,
+   "n": 9.5,
+   "share %": 10.43956043956044,
+   "share % [95% CI]": "10 [2, 21]",
+   "WA-JEPA passes %": 31.57894736842105,
+   "event at ego < 3 m/s %": 10.526315789473683,
+   "plan > 1.1 x logged arc %": 5.263157894736842,
+   "recovered, main %": 52.63157894736842,
+   "clean recovered, main %": 52.63157894736842,
+   "recovered, extended %": 52.63157894736842,
+   "WA-JEPA passes % [95% CI]": "32 [11, 86]",
+   "arm-specific (fails, WA passes): n": 3.0,
+   "arm-specific share of set % [95% CI]": "3 [1, 6]",
+   "recovered, main % [95% CI]": "53 [11, 100]"
+  },
+  {
+   "big": "C crossing at junction",
+   "n_s0": 4,
+   "n_s1": 5,
+   "n": 4.5,
+   "share %": 4.945054945054945,
+   "share % [95% CI]": "5 [0, 12]",
+   "WA-JEPA passes %": 77.77777777777779,
+   "event at ego < 3 m/s %": 0.0,
+   "plan > 1.1 x logged arc %": 0.0,
+   "recovered, main %": 77.77777777777779,
+   "clean recovered, main %": 77.77777777777779,
+   "recovered, extended %": 77.77777777777779,
+   "WA-JEPA passes % [95% CI]": "78 [0, 100]",
+   "arm-specific (fails, WA passes): n": 3.5,
+   "arm-specific share of set % [95% CI]": "4 [0, 11]",
+   "recovered, main % [95% CI]": "78 [67, 100]"
+  },
+  {
+   "big": "D side contact",
+   "n_s0": 7,
+   "n_s1": 8,
+   "n": 7.5,
+   "share %": 8.241758241758241,
+   "share % [95% CI]": "8 [2, 16]",
+   "WA-JEPA passes %": 100.0,
+   "event at ego < 3 m/s %": 0.0,
+   "plan > 1.1 x logged arc %": 0.0,
+   "recovered, main %": 100.0,
+   "clean recovered, main %": 100.0,
+   "recovered, extended %": 100.0,
+   "WA-JEPA passes % [95% CI]": "100 [100, 100]",
+   "arm-specific (fails, WA passes): n": 7.5,
+   "arm-specific share of set % [95% CI]": "8 [2, 16]",
+   "recovered, main % [95% CI]": "100 [100, 100]"
+  },
+  {
+   "big": "E other",
+   "n_s0": 38,
+   "n_s1": 42,
+   "n": 40.0,
+   "share %": 43.956043956043956,
+   "share % [95% CI]": "44 [28, 60]",
+   "WA-JEPA passes %": 58.75,
+   "event at ego < 3 m/s %": 18.75,
+   "plan > 1.1 x logged arc %": 27.500000000000004,
+   "recovered, main %": 63.74999999999999,
+   "clean recovered, main %": 48.75,
+   "recovered, extended %": 80.0,
+   "WA-JEPA passes % [95% CI]": "59 [43, 73]",
+   "arm-specific (fails, WA passes): n": 23.5,
+   "arm-specific share of set % [95% CI]": "26 [15, 37]",
+   "recovered, main % [95% CI]": "64 [51, 75]"
+  }
+ ],
+ "wa_own": {
+  "nc": 75,
+  "ttc_only": 67
+ },
+ "oracle_recovery": [
+  {
+   "set": "NC",
+   "family": "0.9-1.1",
+   "n": 174.0,
+   "recovered % [95% CI]": "33 [26, 40]",
+   "clean recovered % [95% CI]": "31 [24, 37]"
+  },
+  {
+   "set": "NC",
+   "family": "0.8-1.1",
+   "n": 174.0,
+   "recovered % [95% CI]": "58 [50, 67]",
+   "clean recovered % [95% CI]": "53 [45, 62]"
+  },
+  {
+   "set": "NC",
+   "family": "0.7-1.1 (main)",
+   "n": 174.0,
+   "recovered % [95% CI]": "72 [64, 82]",
+   "clean recovered % [95% CI]": "67 [59, 76]"
+  },
+  {
+   "set": "NC",
+   "family": "0.5-1.1 (extended)",
+   "n": 174.0,
+   "recovered % [95% CI]": "94 [92, 97]",
+   "clean recovered % [95% CI]": "92 [88, 96]"
+  },
+  {
+   "set": "NC",
+   "family": "slower only (0.7-0.9)",
+   "n": 174.0,
+   "recovered % [95% CI]": "70 [62, 80]",
+   "clean recovered % [95% CI]": "65 [57, 74]"
+  },
+  {
+   "set": "NC",
+   "family": "faster only (1.1)",
+   "n": 174.0,
+   "recovered % [95% CI]": "3 [1, 6]",
+   "clean recovered % [95% CI]": "3 [1, 6]"
+  },
+  {
+   "set": "NC",
+   "family": "0.95-1.05",
+   "n": 174.0,
+   "recovered % [95% CI]": "18 [13, 24]",
+   "clean recovered % [95% CI]": "17 [12, 24]"
+  },
+  {
+   "set": "NC",
+   "family": "0.85-1.15",
+   "n": 174.0,
+   "recovered % [95% CI]": "49 [42, 57]",
+   "clean recovered % [95% CI]": "45 [38, 53]"
+  },
+  {
+   "set": "NC",
+   "family": "all scales",
+   "n": 174.0,
+   "recovered % [95% CI]": "94 [92, 97]",
+   "clean recovered % [95% CI]": "92 [88, 96]"
+  },
+  {
+   "set": "TTC-only",
+   "family": "0.9-1.1",
+   "n": 91.0,
+   "recovered % [95% CI]": "51 [41, 60]",
+   "clean recovered % [95% CI]": "46 [36, 56]"
+  },
+  {
+   "set": "TTC-only",
+   "family": "0.8-1.1",
+   "n": 91.0,
+   "recovered % [95% CI]": "63 [53, 73]",
+   "clean recovered % [95% CI]": "56 [44, 67]"
+  },
+  {
+   "set": "TTC-only",
+   "family": "0.7-1.1 (main)",
+   "n": 91.0,
+   "recovered % [95% CI]": "73 [62, 83]",
+   "clean recovered % [95% CI]": "64 [52, 76]"
+  },
+  {
+   "set": "TTC-only",
+   "family": "0.5-1.1 (extended)",
+   "n": 91.0,
+   "recovered % [95% CI]": "83 [72, 92]",
+   "clean recovered % [95% CI]": "74 [61, 85]"
+  },
+  {
+   "set": "TTC-only",
+   "family": "slower only (0.7-0.9)",
+   "n": 91.0,
+   "recovered % [95% CI]": "66 [55, 77]",
+   "clean recovered % [95% CI]": "57 [45, 68]"
+  },
+  {
+   "set": "TTC-only",
+   "family": "faster only (1.1)",
+   "n": 91.0,
+   "recovered % [95% CI]": "13 [7, 20]",
+   "clean recovered % [95% CI]": "12 [6, 19]"
+  },
+  {
+   "set": "TTC-only",
+   "family": "0.95-1.05",
+   "n": 91.0,
+   "recovered % [95% CI]": "33 [23, 42]",
+   "clean recovered % [95% CI]": "31 [21, 41]"
+  },
+  {
+   "set": "TTC-only",
+   "family": "0.85-1.15",
+   "n": 91.0,
+   "recovered % [95% CI]": "62 [53, 71]",
+   "clean recovered % [95% CI]": "54 [44, 64]"
+  },
+  {
+   "set": "TTC-only",
+   "family": "all scales",
+   "n": 91.0,
+   "recovered % [95% CI]": "86 [77, 93]",
+   "clean recovered % [95% CI]": "76 [66, 87]"
+  }
+ ],
+ "oracle_ep_cost_tokens": [
+  {
+   "set": "NC",
+   "tokens": "recovered (main)",
+   "n": 125.5,
+   "EP(a*) - EP(1.0), x100": -3.2626935698295565,
+   "no-EC EPDMS(a*) - (1.0), x100": 86.44182692081964,
+   "a*=0.7": 33.0,
+   "a*=0.8": 44.5,
+   "a*=0.9": 44.0,
+   "a*=1.1": 4.0
+  },
+  {
+   "set": "NC",
+   "tokens": "clean recovered (main)",
+   "n": 117.0,
+   "EP(a*) - EP(1.0), x100": -3.2175019087796803,
+   "no-EC EPDMS(a*) - (1.0), x100": 92.72178870566552,
+   "a*=0.7": 30.0,
+   "a*=0.8": 41.0,
+   "a*=0.9": 42.0,
+   "a*=1.1": 4.0
+  },
+  {
+   "set": "TTC-only",
+   "tokens": "recovered (main)",
+   "n": 66.0,
+   "EP(a*) - EP(1.0), x100": -3.3633780509136915,
+   "no-EC EPDMS(a*) - (1.0), x100": 33.14301893566734,
+   "a*=0.7": 9.0,
+   "a*=0.8": 12.5,
+   "a*=0.9": 34.0,
+   "a*=1.1": 10.5
+  },
+  {
+   "set": "TTC-only",
+   "tokens": "clean recovered (main)",
+   "n": 58.5,
+   "EP(a*) - EP(1.0), x100": -3.0467748872600047,
+   "no-EC EPDMS(a*) - (1.0), x100": 37.39212392741956,
+   "a*=0.7": 8.0,
+   "a*=0.8": 9.5,
+   "a*=0.9": 31.0,
+   "a*=1.1": 10.0
+  }
+ ],
+ "oracle_board_upper": [
+  {
+   "family": "main 0.7-1.1",
+   "NC (s0 / s1)": "+0.918 (+0.984 / +0.852)",
+   "TTC (s0 / s1)": "+1.247 (+1.342 / +1.153)",
+   "EP (s0 / s1)": "-0.046 (-0.051 / -0.041)",
+   "no-EC EPDMS (s0 / s1)": "+1.073 (+1.142 / +1.005)",
+   "tokens replaced (seed mean)": 175.5
+  },
+  {
+   "family": "extended 0.5-1.1",
+   "NC (s0 / s1)": "+1.262 (+1.326 / +1.198)",
+   "TTC (s0 / s1)": "+1.700 (+1.754 / +1.647)",
+   "EP (s0 / s1)": "-0.074 (-0.071 / -0.077)",
+   "no-EC EPDMS (s0 / s1)": "+1.443 (+1.496 / +1.391)",
+   "tokens replaced (seed mean)": 230.0
+  }
+ ],
+ "uniform_scaling": [
+  {
+   "a": 0.5,
+   "dNC": 0.236703441462216,
+   "dTTC": -2.601679565288978,
+   "dDAC": 0.29227729293594407,
+   "dEP": -23.687046065097157,
+   "dno-EC EPDMS": -9.499213233383557,
+   "NC fail": 140.0,
+   "new NC fail": 124.5,
+   "fixed NC fail": 158.5,
+   "TTC-only fail": 485.0
+  },
+  {
+   "a": 0.6,
+   "dNC": 0.45899884735716157,
+   "dTTC": -1.2061584060596042,
+   "dDAC": 0.5228058620121878,
+   "dEP": -18.25495421442809,
+   "dno-EC EPDMS": -6.096282967125626,
+   "NC fail": 114.0,
+   "new NC fail": 83.0,
+   "fixed NC fail": 143.0,
+   "TTC-only fail": 315.0
+  },
+  {
+   "a": 0.7,
+   "dNC": 0.6318952741643402,
+   "dTTC": 0.1399637740820081,
+   "dDAC": 0.8315494813107227,
+   "dEP": -13.1521358100746,
+   "dno-EC EPDMS": -3.280026844750478,
+   "NC fail": 93.5,
+   "new NC fail": 40.5,
+   "fixed NC fail": 121.0,
+   "TTC-only fail": 164.0
+  },
+  {
+   "a": 0.8,
+   "dNC": 0.6442450189362792,
+   "dTTC": 0.6792359624567756,
+   "dDAC": 0.8356660629013635,
+   "dEP": -8.373096695214567,
+   "dno-EC EPDMS": -1.3315247137986819,
+   "NC fail": 93.0,
+   "new NC fail": 15.5,
+   "fixed NC fail": 96.5,
+   "TTC-only fail": 81.0
+  },
+  {
+   "a": 0.85,
+   "dNC": 0.5495636423513972,
+   "dTTC": 0.6463033097316051,
+   "dDAC": 0.7862670838136021,
+   "dEP": -6.116372437091622,
+   "dno-EC EPDMS": -0.6600241496333925,
+   "NC fail": 105.5,
+   "new NC fail": 9.5,
+   "fixed NC fail": 78.0,
+   "TTC-only fail": 72.5
+  },
+  {
+   "a": 0.9,
+   "dNC": 0.36020088918162774,
+   "dTTC": 0.551621933146712,
+   "dDAC": 0.6051374938251253,
+   "dEP": -3.9610030980786917,
+   "dno-EC EPDMS": -0.2753592744554223,
+   "NC fail": 129.0,
+   "new NC fail": 6.5,
+   "fixed NC fail": 51.5,
+   "TTC-only fail": 65.0
+  },
+  {
+   "a": 0.95,
+   "dNC": 0.20171249794171398,
+   "dTTC": 0.2799275481640051,
+   "dDAC": 0.3746089247488871,
+   "dEP": -1.9109871966902003,
+   "dno-EC EPDMS": -0.01141540951821729,
+   "NC fail": 149.0,
+   "new NC fail": 2.5,
+   "fixed NC fail": 27.5,
+   "TTC-only fail": 78.5
+  },
+  {
+   "a": 1.0,
+   "dNC": 0.0,
+   "dTTC": 0.0,
+   "dDAC": 0.0,
+   "dEP": 0.0,
+   "dno-EC EPDMS": 0.0,
+   "NC fail": 174.0,
+   "new NC fail": 0.0,
+   "fixed NC fail": 0.0,
+   "TTC-only fail": 91.0
+  },
+  {
+   "a": 1.05,
+   "dNC": -0.3005104561172367,
+   "dTTC": -0.3663757615675889,
+   "dDAC": -0.4528239749711893,
+   "dEP": 1.7712086147455397,
+   "dno-EC EPDMS": -0.33348674788376553,
+   "NC fail": 211.0,
+   "new NC fail": 41.0,
+   "fixed NC fail": 4.0,
+   "TTC-only fail": 96.5
+  },
+  {
+   "a": 1.1,
+   "dNC": -0.6710027992754775,
+   "dTTC": -0.8150831549481263,
+   "dDAC": -0.9591635106207863,
+   "dEP": 3.3816660447243296,
+   "dno-EC EPDMS": -0.9085218825519548,
+   "NC fail": 257.0,
+   "new NC fail": 89.0,
+   "fixed NC fail": 6.0,
+   "TTC-only fail": 111.0
+  },
+  {
+   "a": 1.15,
+   "dNC": -1.3214226905977233,
+   "dTTC": -1.5396015149020281,
+   "dDAC": -1.5848839123991432,
+   "dEP": 4.829534731279111,
+   "dno-EC EPDMS": -1.9590359083044684,
+   "NC fail": 338.5,
+   "new NC fail": 171.0,
+   "fixed NC fail": 6.5,
+   "TTC-only fail": 128.5
+  }
+ ],
+ "uniform_base": {
+  "s0": {
+   "NC": 98.57977935122673,
+   "TTC": 97.92524287831384,
+   "DAC": 96.52560513749383,
+   "EP": 87.24063238056456
+  },
+  "s1": {
+   "NC": 98.69504363576486,
+   "TTC": 98.02404083648938,
+   "DAC": 96.50913881113124,
+   "EP": 87.1591525606822
+  }
+ },
+ "navhard_s1": {
+  "tokens": 450,
+  "wa_nc": 9,
+  "wa_ttc_only": 4,
+  "arm": {
+   "s0": {
+    "nc": 18,
+    "ttc_only": 1
+   },
+   "s1": {
+    "nc": 15,
+    "ttc_only": 3
+   }
+  }
+ }
+}

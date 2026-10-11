@@ -1,0 +1,705 @@
+arm,seed,set,cls,a,n,fixed
+P2H10S-F,0,NC,A1 stopped vehicle ahead,0.5,60,55
+P2H10S-F,0,NC,A2 lead vehicle (moving),0.5,36,36
+P2H10S-F,0,NC,B cut-in,0.5,21,21
+P2H10S-F,0,NC,C crossing / turn conflict,0.5,15,13
+P2H10S-F,0,NC,D side contact,0.5,16,11
+P2H10S-F,0,NC,E VRU,0.5,6,5
+P2H10S-F,0,NC,E oncoming,0.5,9,9
+P2H10S-F,0,NC,E static object,0.5,18,15
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,0.5,27,22
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),0.5,3,2
+P2H10S-F,0,TTC-only,B cut-in,0.5,11,6
+P2H10S-F,0,TTC-only,C crossing / turn conflict,0.5,4,1
+P2H10S-F,0,TTC-only,D side contact,0.5,7,6
+P2H10S-F,0,TTC-only,E VRU,0.5,8,6
+P2H10S-F,0,TTC-only,E oncoming,0.5,8,5
+P2H10S-F,0,TTC-only,E static object,0.5,22,15
+P2H10S-F,0,NC,A1 stopped vehicle ahead,0.6,60,48
+P2H10S-F,0,NC,A2 lead vehicle (moving),0.6,36,35
+P2H10S-F,0,NC,B cut-in,0.6,21,20
+P2H10S-F,0,NC,C crossing / turn conflict,0.6,15,11
+P2H10S-F,0,NC,D side contact,0.6,16,9
+P2H10S-F,0,NC,E VRU,0.6,6,4
+P2H10S-F,0,NC,E oncoming,0.6,9,8
+P2H10S-F,0,NC,E static object,0.6,18,14
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,0.6,27,20
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),0.6,3,2
+P2H10S-F,0,TTC-only,B cut-in,0.6,11,4
+P2H10S-F,0,TTC-only,C crossing / turn conflict,0.6,4,2
+P2H10S-F,0,TTC-only,D side contact,0.6,7,6
+P2H10S-F,0,TTC-only,E VRU,0.6,8,6
+P2H10S-F,0,TTC-only,E oncoming,0.6,8,6
+P2H10S-F,0,TTC-only,E static object,0.6,22,15
+P2H10S-F,0,NC,A1 stopped vehicle ahead,0.7,60,41
+P2H10S-F,0,NC,A2 lead vehicle (moving),0.7,36,33
+P2H10S-F,0,NC,B cut-in,0.7,21,18
+P2H10S-F,0,NC,C crossing / turn conflict,0.7,15,9
+P2H10S-F,0,NC,D side contact,0.7,16,8
+P2H10S-F,0,NC,E VRU,0.7,6,3
+P2H10S-F,0,NC,E oncoming,0.7,9,3
+P2H10S-F,0,NC,E static object,0.7,18,13
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,0.7,27,21
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),0.7,3,2
+P2H10S-F,0,TTC-only,B cut-in,0.7,11,5
+P2H10S-F,0,TTC-only,C crossing / turn conflict,0.7,4,3
+P2H10S-F,0,TTC-only,D side contact,0.7,7,6
+P2H10S-F,0,TTC-only,E VRU,0.7,8,5
+P2H10S-F,0,TTC-only,E oncoming,0.7,8,5
+P2H10S-F,0,TTC-only,E static object,0.7,22,13
+P2H10S-F,0,NC,A1 stopped vehicle ahead,0.8,60,30
+P2H10S-F,0,NC,A2 lead vehicle (moving),0.8,36,29
+P2H10S-F,0,NC,B cut-in,0.8,21,15
+P2H10S-F,0,NC,C crossing / turn conflict,0.8,15,9
+P2H10S-F,0,NC,D side contact,0.8,16,6
+P2H10S-F,0,NC,E VRU,0.8,6,1
+P2H10S-F,0,NC,E oncoming,0.8,9,3
+P2H10S-F,0,NC,E static object,0.8,18,10
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,0.8,27,18
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),0.8,3,2
+P2H10S-F,0,TTC-only,B cut-in,0.8,11,3
+P2H10S-F,0,TTC-only,C crossing / turn conflict,0.8,4,3
+P2H10S-F,0,TTC-only,D side contact,0.8,7,5
+P2H10S-F,0,TTC-only,E VRU,0.8,8,5
+P2H10S-F,0,TTC-only,E oncoming,0.8,8,3
+P2H10S-F,0,TTC-only,E static object,0.8,22,8
+P2H10S-F,0,NC,A1 stopped vehicle ahead,0.85,60,23
+P2H10S-F,0,NC,A2 lead vehicle (moving),0.85,36,26
+P2H10S-F,0,NC,B cut-in,0.85,21,12
+P2H10S-F,0,NC,C crossing / turn conflict,0.85,15,9
+P2H10S-F,0,NC,D side contact,0.85,16,4
+P2H10S-F,0,NC,E VRU,0.85,6,0
+P2H10S-F,0,NC,E oncoming,0.85,9,3
+P2H10S-F,0,NC,E static object,0.85,18,7
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,0.85,27,18
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),0.85,3,2
+P2H10S-F,0,TTC-only,B cut-in,0.85,11,3
+P2H10S-F,0,TTC-only,C crossing / turn conflict,0.85,4,2
+P2H10S-F,0,TTC-only,D side contact,0.85,7,3
+P2H10S-F,0,TTC-only,E VRU,0.85,8,4
+P2H10S-F,0,TTC-only,E oncoming,0.85,8,3
+P2H10S-F,0,TTC-only,E static object,0.85,22,8
+P2H10S-F,0,NC,A1 stopped vehicle ahead,0.9,60,16
+P2H10S-F,0,NC,A2 lead vehicle (moving),0.9,36,16
+P2H10S-F,0,NC,B cut-in,0.9,21,10
+P2H10S-F,0,NC,C crossing / turn conflict,0.9,15,7
+P2H10S-F,0,NC,D side contact,0.9,16,2
+P2H10S-F,0,NC,E VRU,0.9,6,0
+P2H10S-F,0,NC,E oncoming,0.9,9,2
+P2H10S-F,0,NC,E static object,0.9,18,5
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,0.9,27,17
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),0.9,3,2
+P2H10S-F,0,TTC-only,B cut-in,0.9,11,2
+P2H10S-F,0,TTC-only,C crossing / turn conflict,0.9,4,1
+P2H10S-F,0,TTC-only,D side contact,0.9,7,2
+P2H10S-F,0,TTC-only,E VRU,0.9,8,4
+P2H10S-F,0,TTC-only,E oncoming,0.9,8,2
+P2H10S-F,0,TTC-only,E static object,0.9,22,6
+P2H10S-F,0,NC,A1 stopped vehicle ahead,0.95,60,10
+P2H10S-F,0,NC,A2 lead vehicle (moving),0.95,36,9
+P2H10S-F,0,NC,B cut-in,0.95,21,5
+P2H10S-F,0,NC,C crossing / turn conflict,0.95,15,3
+P2H10S-F,0,NC,D side contact,0.95,16,1
+P2H10S-F,0,NC,E VRU,0.95,6,0
+P2H10S-F,0,NC,E oncoming,0.95,9,0
+P2H10S-F,0,NC,E static object,0.95,18,2
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,0.95,27,13
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),0.95,3,2
+P2H10S-F,0,TTC-only,B cut-in,0.95,11,2
+P2H10S-F,0,TTC-only,C crossing / turn conflict,0.95,4,1
+P2H10S-F,0,TTC-only,D side contact,0.95,7,1
+P2H10S-F,0,TTC-only,E VRU,0.95,8,1
+P2H10S-F,0,TTC-only,E oncoming,0.95,8,1
+P2H10S-F,0,TTC-only,E static object,0.95,22,3
+P2H10S-F,0,NC,A1 stopped vehicle ahead,1.0,60,0
+P2H10S-F,0,NC,A2 lead vehicle (moving),1.0,36,0
+P2H10S-F,0,NC,B cut-in,1.0,21,0
+P2H10S-F,0,NC,C crossing / turn conflict,1.0,15,0
+P2H10S-F,0,NC,D side contact,1.0,16,0
+P2H10S-F,0,NC,E VRU,1.0,6,0
+P2H10S-F,0,NC,E oncoming,1.0,9,0
+P2H10S-F,0,NC,E static object,1.0,18,0
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,1.0,27,0
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),1.0,3,0
+P2H10S-F,0,TTC-only,B cut-in,1.0,11,0
+P2H10S-F,0,TTC-only,C crossing / turn conflict,1.0,4,0
+P2H10S-F,0,TTC-only,D side contact,1.0,7,0
+P2H10S-F,0,TTC-only,E VRU,1.0,8,0
+P2H10S-F,0,TTC-only,E oncoming,1.0,8,0
+P2H10S-F,0,TTC-only,E static object,1.0,22,0
+P2H10S-F,0,NC,A1 stopped vehicle ahead,1.05,60,1
+P2H10S-F,0,NC,A2 lead vehicle (moving),1.05,36,0
+P2H10S-F,0,NC,B cut-in,1.05,21,0
+P2H10S-F,0,NC,C crossing / turn conflict,1.05,15,0
+P2H10S-F,0,NC,D side contact,1.05,16,3
+P2H10S-F,0,NC,E VRU,1.05,6,0
+P2H10S-F,0,NC,E oncoming,1.05,9,0
+P2H10S-F,0,NC,E static object,1.05,18,0
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,1.05,27,2
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),1.05,3,1
+P2H10S-F,0,TTC-only,B cut-in,1.05,11,1
+P2H10S-F,0,TTC-only,C crossing / turn conflict,1.05,4,0
+P2H10S-F,0,TTC-only,D side contact,1.05,7,1
+P2H10S-F,0,TTC-only,E VRU,1.05,8,0
+P2H10S-F,0,TTC-only,E oncoming,1.05,8,1
+P2H10S-F,0,TTC-only,E static object,1.05,22,2
+P2H10S-F,0,NC,A1 stopped vehicle ahead,1.1,60,1
+P2H10S-F,0,NC,A2 lead vehicle (moving),1.1,36,0
+P2H10S-F,0,NC,B cut-in,1.1,21,0
+P2H10S-F,0,NC,C crossing / turn conflict,1.1,15,1
+P2H10S-F,0,NC,D side contact,1.1,16,4
+P2H10S-F,0,NC,E VRU,1.1,6,1
+P2H10S-F,0,NC,E oncoming,1.1,9,0
+P2H10S-F,0,NC,E static object,1.1,18,1
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,1.1,27,4
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),1.1,3,1
+P2H10S-F,0,TTC-only,B cut-in,1.1,11,3
+P2H10S-F,0,TTC-only,C crossing / turn conflict,1.1,4,0
+P2H10S-F,0,TTC-only,D side contact,1.1,7,1
+P2H10S-F,0,TTC-only,E VRU,1.1,8,1
+P2H10S-F,0,TTC-only,E oncoming,1.1,8,1
+P2H10S-F,0,TTC-only,E static object,1.1,22,2
+P2H10S-F,0,NC,A1 stopped vehicle ahead,1.15,60,1
+P2H10S-F,0,NC,A2 lead vehicle (moving),1.15,36,0
+P2H10S-F,0,NC,B cut-in,1.15,21,0
+P2H10S-F,0,NC,C crossing / turn conflict,1.15,15,0
+P2H10S-F,0,NC,D side contact,1.15,16,4
+P2H10S-F,0,NC,E VRU,1.15,6,1
+P2H10S-F,0,NC,E oncoming,1.15,9,0
+P2H10S-F,0,NC,E static object,1.15,18,2
+P2H10S-F,0,TTC-only,A1 stopped vehicle ahead,1.15,27,4
+P2H10S-F,0,TTC-only,A2 lead vehicle (moving),1.15,3,1
+P2H10S-F,0,TTC-only,B cut-in,1.15,11,4
+P2H10S-F,0,TTC-only,C crossing / turn conflict,1.15,4,0
+P2H10S-F,0,TTC-only,D side contact,1.15,7,1
+P2H10S-F,0,TTC-only,E VRU,1.15,8,1
+P2H10S-F,0,TTC-only,E oncoming,1.15,8,0
+P2H10S-F,0,TTC-only,E static object,1.15,22,2
+P2H10S-F,1,NC,A1 stopped vehicle ahead,0.5,56,50
+P2H10S-F,1,NC,A2 lead vehicle (moving),0.5,29,29
+P2H10S-F,1,NC,B cut-in,0.5,21,21
+P2H10S-F,1,NC,C crossing / turn conflict,0.5,14,12
+P2H10S-F,1,NC,D side contact,0.5,12,9
+P2H10S-F,1,NC,E VRU,0.5,7,6
+P2H10S-F,1,NC,E oncoming,0.5,9,9
+P2H10S-F,1,NC,E static object,0.5,19,16
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,0.5,26,23
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),0.5,3,2
+P2H10S-F,1,TTC-only,B cut-in,0.5,8,3
+P2H10S-F,1,TTC-only,C crossing / turn conflict,0.5,5,2
+P2H10S-F,1,TTC-only,D side contact,0.5,8,7
+P2H10S-F,1,TTC-only,E VRU,0.5,10,8
+P2H10S-F,1,TTC-only,E oncoming,0.5,9,6
+P2H10S-F,1,TTC-only,E static object,0.5,23,18
+P2H10S-F,1,NC,A1 stopped vehicle ahead,0.6,56,44
+P2H10S-F,1,NC,A2 lead vehicle (moving),0.6,29,28
+P2H10S-F,1,NC,B cut-in,0.6,21,19
+P2H10S-F,1,NC,C crossing / turn conflict,0.6,14,10
+P2H10S-F,1,NC,D side contact,0.6,12,8
+P2H10S-F,1,NC,E VRU,0.6,7,5
+P2H10S-F,1,NC,E oncoming,0.6,9,8
+P2H10S-F,1,NC,E static object,0.6,19,15
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,0.6,26,21
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),0.6,3,2
+P2H10S-F,1,TTC-only,B cut-in,0.6,8,1
+P2H10S-F,1,TTC-only,C crossing / turn conflict,0.6,5,3
+P2H10S-F,1,TTC-only,D side contact,0.6,8,7
+P2H10S-F,1,TTC-only,E VRU,0.6,10,8
+P2H10S-F,1,TTC-only,E oncoming,0.6,9,7
+P2H10S-F,1,TTC-only,E static object,0.6,23,15
+P2H10S-F,1,NC,A1 stopped vehicle ahead,0.7,56,35
+P2H10S-F,1,NC,A2 lead vehicle (moving),0.7,29,27
+P2H10S-F,1,NC,B cut-in,0.7,21,19
+P2H10S-F,1,NC,C crossing / turn conflict,0.7,14,9
+P2H10S-F,1,NC,D side contact,0.7,12,5
+P2H10S-F,1,NC,E VRU,0.7,7,3
+P2H10S-F,1,NC,E oncoming,0.7,9,3
+P2H10S-F,1,NC,E static object,0.7,19,13
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,0.7,26,19
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),0.7,3,2
+P2H10S-F,1,TTC-only,B cut-in,0.7,8,1
+P2H10S-F,1,TTC-only,C crossing / turn conflict,0.7,5,4
+P2H10S-F,1,TTC-only,D side contact,0.7,8,8
+P2H10S-F,1,TTC-only,E VRU,0.7,10,7
+P2H10S-F,1,TTC-only,E oncoming,0.7,9,4
+P2H10S-F,1,TTC-only,E static object,0.7,23,15
+P2H10S-F,1,NC,A1 stopped vehicle ahead,0.8,56,27
+P2H10S-F,1,NC,A2 lead vehicle (moving),0.8,29,25
+P2H10S-F,1,NC,B cut-in,0.8,21,14
+P2H10S-F,1,NC,C crossing / turn conflict,0.8,14,8
+P2H10S-F,1,NC,D side contact,0.8,12,3
+P2H10S-F,1,NC,E VRU,0.8,7,2
+P2H10S-F,1,NC,E oncoming,0.8,9,3
+P2H10S-F,1,NC,E static object,0.8,19,8
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,0.8,26,17
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),0.8,3,2
+P2H10S-F,1,TTC-only,B cut-in,0.8,8,1
+P2H10S-F,1,TTC-only,C crossing / turn conflict,0.8,5,3
+P2H10S-F,1,TTC-only,D side contact,0.8,8,7
+P2H10S-F,1,TTC-only,E VRU,0.8,10,6
+P2H10S-F,1,TTC-only,E oncoming,0.8,9,4
+P2H10S-F,1,TTC-only,E static object,0.8,23,13
+P2H10S-F,1,NC,A1 stopped vehicle ahead,0.85,56,19
+P2H10S-F,1,NC,A2 lead vehicle (moving),0.85,29,20
+P2H10S-F,1,NC,B cut-in,0.85,21,12
+P2H10S-F,1,NC,C crossing / turn conflict,0.85,14,7
+P2H10S-F,1,NC,D side contact,0.85,12,3
+P2H10S-F,1,NC,E VRU,0.85,7,1
+P2H10S-F,1,NC,E oncoming,0.85,9,3
+P2H10S-F,1,NC,E static object,0.85,19,7
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,0.85,26,17
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),0.85,3,2
+P2H10S-F,1,TTC-only,B cut-in,0.85,8,0
+P2H10S-F,1,TTC-only,C crossing / turn conflict,0.85,5,2
+P2H10S-F,1,TTC-only,D side contact,0.85,8,6
+P2H10S-F,1,TTC-only,E VRU,0.85,10,5
+P2H10S-F,1,TTC-only,E oncoming,0.85,9,4
+P2H10S-F,1,TTC-only,E static object,0.85,23,9
+P2H10S-F,1,NC,A1 stopped vehicle ahead,0.9,56,11
+P2H10S-F,1,NC,A2 lead vehicle (moving),0.9,29,10
+P2H10S-F,1,NC,B cut-in,0.9,21,10
+P2H10S-F,1,NC,C crossing / turn conflict,0.9,14,4
+P2H10S-F,1,NC,D side contact,0.9,12,2
+P2H10S-F,1,NC,E VRU,0.9,7,1
+P2H10S-F,1,NC,E oncoming,0.9,9,2
+P2H10S-F,1,NC,E static object,0.9,19,5
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,0.9,26,16
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),0.9,3,1
+P2H10S-F,1,TTC-only,B cut-in,0.9,8,0
+P2H10S-F,1,TTC-only,C crossing / turn conflict,0.9,5,1
+P2H10S-F,1,TTC-only,D side contact,0.9,8,4
+P2H10S-F,1,TTC-only,E VRU,0.9,10,5
+P2H10S-F,1,TTC-only,E oncoming,0.9,9,3
+P2H10S-F,1,TTC-only,E static object,0.9,23,7
+P2H10S-F,1,NC,A1 stopped vehicle ahead,0.95,56,8
+P2H10S-F,1,NC,A2 lead vehicle (moving),0.95,29,5
+P2H10S-F,1,NC,B cut-in,0.95,21,5
+P2H10S-F,1,NC,C crossing / turn conflict,0.95,14,2
+P2H10S-F,1,NC,D side contact,0.95,12,1
+P2H10S-F,1,NC,E VRU,0.95,7,1
+P2H10S-F,1,NC,E oncoming,0.95,9,1
+P2H10S-F,1,NC,E static object,0.95,19,2
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,0.95,26,10
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),0.95,3,1
+P2H10S-F,1,TTC-only,B cut-in,0.95,8,0
+P2H10S-F,1,TTC-only,C crossing / turn conflict,0.95,5,1
+P2H10S-F,1,TTC-only,D side contact,0.95,8,1
+P2H10S-F,1,TTC-only,E VRU,0.95,10,1
+P2H10S-F,1,TTC-only,E oncoming,0.95,9,2
+P2H10S-F,1,TTC-only,E static object,0.95,23,4
+P2H10S-F,1,NC,A1 stopped vehicle ahead,1.0,56,0
+P2H10S-F,1,NC,A2 lead vehicle (moving),1.0,29,0
+P2H10S-F,1,NC,B cut-in,1.0,21,0
+P2H10S-F,1,NC,C crossing / turn conflict,1.0,14,0
+P2H10S-F,1,NC,D side contact,1.0,12,0
+P2H10S-F,1,NC,E VRU,1.0,7,0
+P2H10S-F,1,NC,E oncoming,1.0,9,0
+P2H10S-F,1,NC,E static object,1.0,19,0
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,1.0,26,0
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),1.0,3,0
+P2H10S-F,1,TTC-only,B cut-in,1.0,8,0
+P2H10S-F,1,TTC-only,C crossing / turn conflict,1.0,5,0
+P2H10S-F,1,TTC-only,D side contact,1.0,8,0
+P2H10S-F,1,TTC-only,E VRU,1.0,10,0
+P2H10S-F,1,TTC-only,E oncoming,1.0,9,0
+P2H10S-F,1,TTC-only,E static object,1.0,23,0
+P2H10S-F,1,NC,A1 stopped vehicle ahead,1.05,56,0
+P2H10S-F,1,NC,A2 lead vehicle (moving),1.05,29,0
+P2H10S-F,1,NC,B cut-in,1.05,21,0
+P2H10S-F,1,NC,C crossing / turn conflict,1.05,14,0
+P2H10S-F,1,NC,D side contact,1.05,12,3
+P2H10S-F,1,NC,E VRU,1.05,7,0
+P2H10S-F,1,NC,E oncoming,1.05,9,0
+P2H10S-F,1,NC,E static object,1.05,19,1
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,1.05,26,1
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),1.05,3,1
+P2H10S-F,1,TTC-only,B cut-in,1.05,8,2
+P2H10S-F,1,TTC-only,C crossing / turn conflict,1.05,5,0
+P2H10S-F,1,TTC-only,D side contact,1.05,8,0
+P2H10S-F,1,TTC-only,E VRU,1.05,10,1
+P2H10S-F,1,TTC-only,E oncoming,1.05,9,1
+P2H10S-F,1,TTC-only,E static object,1.05,23,3
+P2H10S-F,1,NC,A1 stopped vehicle ahead,1.1,56,0
+P2H10S-F,1,NC,A2 lead vehicle (moving),1.1,29,0
+P2H10S-F,1,NC,B cut-in,1.1,21,0
+P2H10S-F,1,NC,C crossing / turn conflict,1.1,14,0
+P2H10S-F,1,NC,D side contact,1.1,12,3
+P2H10S-F,1,NC,E VRU,1.1,7,0
+P2H10S-F,1,NC,E oncoming,1.1,9,0
+P2H10S-F,1,NC,E static object,1.1,19,1
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,1.1,26,1
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),1.1,3,1
+P2H10S-F,1,TTC-only,B cut-in,1.1,8,3
+P2H10S-F,1,TTC-only,C crossing / turn conflict,1.1,5,1
+P2H10S-F,1,TTC-only,D side contact,1.1,8,0
+P2H10S-F,1,TTC-only,E VRU,1.1,10,1
+P2H10S-F,1,TTC-only,E oncoming,1.1,9,1
+P2H10S-F,1,TTC-only,E static object,1.1,23,3
+P2H10S-F,1,NC,A1 stopped vehicle ahead,1.15,56,0
+P2H10S-F,1,NC,A2 lead vehicle (moving),1.15,29,0
+P2H10S-F,1,NC,B cut-in,1.15,21,0
+P2H10S-F,1,NC,C crossing / turn conflict,1.15,14,0
+P2H10S-F,1,NC,D side contact,1.15,12,3
+P2H10S-F,1,NC,E VRU,1.15,7,1
+P2H10S-F,1,NC,E oncoming,1.15,9,0
+P2H10S-F,1,NC,E static object,1.15,19,1
+P2H10S-F,1,TTC-only,A1 stopped vehicle ahead,1.15,26,0
+P2H10S-F,1,TTC-only,A2 lead vehicle (moving),1.15,3,1
+P2H10S-F,1,TTC-only,B cut-in,1.15,8,5
+P2H10S-F,1,TTC-only,C crossing / turn conflict,1.15,5,1
+P2H10S-F,1,TTC-only,D side contact,1.15,8,0
+P2H10S-F,1,TTC-only,E VRU,1.15,10,2
+P2H10S-F,1,TTC-only,E oncoming,1.15,9,0
+P2H10S-F,1,TTC-only,E static object,1.15,23,5
+P2H10-F,0,NC,A1 stopped vehicle ahead,0.5,58,53
+P2H10-F,0,NC,A2 lead vehicle (moving),0.5,36,36
+P2H10-F,0,NC,B cut-in,0.5,21,21
+P2H10-F,0,NC,C crossing / turn conflict,0.5,15,12
+P2H10-F,0,NC,D side contact,0.5,19,15
+P2H10-F,0,NC,E VRU,0.5,7,6
+P2H10-F,0,NC,E oncoming,0.5,9,9
+P2H10-F,0,NC,E static object,0.5,23,18
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,0.5,20,17
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),0.5,3,2
+P2H10-F,0,TTC-only,B cut-in,0.5,10,5
+P2H10-F,0,TTC-only,C crossing / turn conflict,0.5,5,2
+P2H10-F,0,TTC-only,D side contact,0.5,7,5
+P2H10-F,0,TTC-only,E VRU,0.5,7,5
+P2H10-F,0,TTC-only,E oncoming,0.5,9,7
+P2H10-F,0,TTC-only,E static object,0.5,25,17
+P2H10-F,0,NC,A1 stopped vehicle ahead,0.6,58,48
+P2H10-F,0,NC,A2 lead vehicle (moving),0.6,36,35
+P2H10-F,0,NC,B cut-in,0.6,21,20
+P2H10-F,0,NC,C crossing / turn conflict,0.6,15,10
+P2H10-F,0,NC,D side contact,0.6,19,14
+P2H10-F,0,NC,E VRU,0.6,7,5
+P2H10-F,0,NC,E oncoming,0.6,9,8
+P2H10-F,0,NC,E static object,0.6,23,18
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,0.6,20,15
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),0.6,3,2
+P2H10-F,0,TTC-only,B cut-in,0.6,10,3
+P2H10-F,0,TTC-only,C crossing / turn conflict,0.6,5,3
+P2H10-F,0,TTC-only,D side contact,0.6,7,5
+P2H10-F,0,TTC-only,E VRU,0.6,7,5
+P2H10-F,0,TTC-only,E oncoming,0.6,9,7
+P2H10-F,0,TTC-only,E static object,0.6,25,17
+P2H10-F,0,NC,A1 stopped vehicle ahead,0.7,58,37
+P2H10-F,0,NC,A2 lead vehicle (moving),0.7,36,33
+P2H10-F,0,NC,B cut-in,0.7,21,18
+P2H10-F,0,NC,C crossing / turn conflict,0.7,15,10
+P2H10-F,0,NC,D side contact,0.7,19,11
+P2H10-F,0,NC,E VRU,0.7,7,3
+P2H10-F,0,NC,E oncoming,0.7,9,4
+P2H10-F,0,NC,E static object,0.7,23,15
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,0.7,20,13
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),0.7,3,2
+P2H10-F,0,TTC-only,B cut-in,0.7,10,3
+P2H10-F,0,TTC-only,C crossing / turn conflict,0.7,5,4
+P2H10-F,0,TTC-only,D side contact,0.7,7,5
+P2H10-F,0,TTC-only,E VRU,0.7,7,4
+P2H10-F,0,TTC-only,E oncoming,0.7,9,4
+P2H10-F,0,TTC-only,E static object,0.7,25,17
+P2H10-F,0,NC,A1 stopped vehicle ahead,0.8,58,28
+P2H10-F,0,NC,A2 lead vehicle (moving),0.8,36,31
+P2H10-F,0,NC,B cut-in,0.8,21,14
+P2H10-F,0,NC,C crossing / turn conflict,0.8,15,9
+P2H10-F,0,NC,D side contact,0.8,19,9
+P2H10-F,0,NC,E VRU,0.8,7,1
+P2H10-F,0,NC,E oncoming,0.8,9,3
+P2H10-F,0,NC,E static object,0.8,23,9
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,0.8,20,9
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),0.8,3,2
+P2H10-F,0,TTC-only,B cut-in,0.8,10,2
+P2H10-F,0,TTC-only,C crossing / turn conflict,0.8,5,4
+P2H10-F,0,TTC-only,D side contact,0.8,7,3
+P2H10-F,0,TTC-only,E VRU,0.8,7,4
+P2H10-F,0,TTC-only,E oncoming,0.8,9,3
+P2H10-F,0,TTC-only,E static object,0.8,25,14
+P2H10-F,0,NC,A1 stopped vehicle ahead,0.85,58,19
+P2H10-F,0,NC,A2 lead vehicle (moving),0.85,36,24
+P2H10-F,0,NC,B cut-in,0.85,21,12
+P2H10-F,0,NC,C crossing / turn conflict,0.85,15,7
+P2H10-F,0,NC,D side contact,0.85,19,7
+P2H10-F,0,NC,E VRU,0.85,7,1
+P2H10-F,0,NC,E oncoming,0.85,9,3
+P2H10-F,0,NC,E static object,0.85,23,6
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,0.85,20,9
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),0.85,3,2
+P2H10-F,0,TTC-only,B cut-in,0.85,10,2
+P2H10-F,0,TTC-only,C crossing / turn conflict,0.85,5,4
+P2H10-F,0,TTC-only,D side contact,0.85,7,3
+P2H10-F,0,TTC-only,E VRU,0.85,7,3
+P2H10-F,0,TTC-only,E oncoming,0.85,9,3
+P2H10-F,0,TTC-only,E static object,0.85,25,11
+P2H10-F,0,NC,A1 stopped vehicle ahead,0.9,58,17
+P2H10-F,0,NC,A2 lead vehicle (moving),0.9,36,16
+P2H10-F,0,NC,B cut-in,0.9,21,10
+P2H10-F,0,NC,C crossing / turn conflict,0.9,15,5
+P2H10-F,0,NC,D side contact,0.9,19,7
+P2H10-F,0,NC,E VRU,0.9,7,1
+P2H10-F,0,NC,E oncoming,0.9,9,1
+P2H10-F,0,NC,E static object,0.9,23,4
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,0.9,20,6
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),0.9,3,2
+P2H10-F,0,TTC-only,B cut-in,0.9,10,1
+P2H10-F,0,TTC-only,C crossing / turn conflict,0.9,5,2
+P2H10-F,0,TTC-only,D side contact,0.9,7,3
+P2H10-F,0,TTC-only,E VRU,0.9,7,3
+P2H10-F,0,TTC-only,E oncoming,0.9,9,2
+P2H10-F,0,TTC-only,E static object,0.9,25,9
+P2H10-F,0,NC,A1 stopped vehicle ahead,0.95,58,6
+P2H10-F,0,NC,A2 lead vehicle (moving),0.95,36,11
+P2H10-F,0,NC,B cut-in,0.95,21,5
+P2H10-F,0,NC,C crossing / turn conflict,0.95,15,3
+P2H10-F,0,NC,D side contact,0.95,19,4
+P2H10-F,0,NC,E VRU,0.95,7,1
+P2H10-F,0,NC,E oncoming,0.95,9,0
+P2H10-F,0,NC,E static object,0.95,23,1
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,0.95,20,6
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),0.95,3,1
+P2H10-F,0,TTC-only,B cut-in,0.95,10,1
+P2H10-F,0,TTC-only,C crossing / turn conflict,0.95,5,1
+P2H10-F,0,TTC-only,D side contact,0.95,7,2
+P2H10-F,0,TTC-only,E VRU,0.95,7,1
+P2H10-F,0,TTC-only,E oncoming,0.95,9,1
+P2H10-F,0,TTC-only,E static object,0.95,25,4
+P2H10-F,0,NC,A1 stopped vehicle ahead,1.0,58,0
+P2H10-F,0,NC,A2 lead vehicle (moving),1.0,36,0
+P2H10-F,0,NC,B cut-in,1.0,21,0
+P2H10-F,0,NC,C crossing / turn conflict,1.0,15,0
+P2H10-F,0,NC,D side contact,1.0,19,0
+P2H10-F,0,NC,E VRU,1.0,7,0
+P2H10-F,0,NC,E oncoming,1.0,9,0
+P2H10-F,0,NC,E static object,1.0,23,0
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,1.0,20,0
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),1.0,3,0
+P2H10-F,0,TTC-only,B cut-in,1.0,10,0
+P2H10-F,0,TTC-only,C crossing / turn conflict,1.0,5,0
+P2H10-F,0,TTC-only,D side contact,1.0,7,0
+P2H10-F,0,TTC-only,E VRU,1.0,7,0
+P2H10-F,0,TTC-only,E oncoming,1.0,9,0
+P2H10-F,0,TTC-only,E static object,1.0,25,0
+P2H10-F,0,NC,A1 stopped vehicle ahead,1.05,58,0
+P2H10-F,0,NC,A2 lead vehicle (moving),1.05,36,0
+P2H10-F,0,NC,B cut-in,1.05,21,0
+P2H10-F,0,NC,C crossing / turn conflict,1.05,15,1
+P2H10-F,0,NC,D side contact,1.05,19,2
+P2H10-F,0,NC,E VRU,1.05,7,0
+P2H10-F,0,NC,E oncoming,1.05,9,0
+P2H10-F,0,NC,E static object,1.05,23,4
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,1.05,20,3
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),1.05,3,1
+P2H10-F,0,TTC-only,B cut-in,1.05,10,0
+P2H10-F,0,TTC-only,C crossing / turn conflict,1.05,5,0
+P2H10-F,0,TTC-only,D side contact,1.05,7,2
+P2H10-F,0,TTC-only,E VRU,1.05,7,0
+P2H10-F,0,TTC-only,E oncoming,1.05,9,1
+P2H10-F,0,TTC-only,E static object,1.05,25,3
+P2H10-F,0,NC,A1 stopped vehicle ahead,1.1,58,0
+P2H10-F,0,NC,A2 lead vehicle (moving),1.1,36,0
+P2H10-F,0,NC,B cut-in,1.1,21,0
+P2H10-F,0,NC,C crossing / turn conflict,1.1,15,1
+P2H10-F,0,NC,D side contact,1.1,19,3
+P2H10-F,0,NC,E VRU,1.1,7,0
+P2H10-F,0,NC,E oncoming,1.1,9,0
+P2H10-F,0,NC,E static object,1.1,23,5
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,1.1,20,4
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),1.1,3,1
+P2H10-F,0,TTC-only,B cut-in,1.1,10,3
+P2H10-F,0,TTC-only,C crossing / turn conflict,1.1,5,0
+P2H10-F,0,TTC-only,D side contact,1.1,7,2
+P2H10-F,0,TTC-only,E VRU,1.1,7,1
+P2H10-F,0,TTC-only,E oncoming,1.1,9,1
+P2H10-F,0,TTC-only,E static object,1.1,25,5
+P2H10-F,0,NC,A1 stopped vehicle ahead,1.15,58,0
+P2H10-F,0,NC,A2 lead vehicle (moving),1.15,36,0
+P2H10-F,0,NC,B cut-in,1.15,21,0
+P2H10-F,0,NC,C crossing / turn conflict,1.15,15,1
+P2H10-F,0,NC,D side contact,1.15,19,4
+P2H10-F,0,NC,E VRU,1.15,7,0
+P2H10-F,0,NC,E oncoming,1.15,9,0
+P2H10-F,0,NC,E static object,1.15,23,5
+P2H10-F,0,TTC-only,A1 stopped vehicle ahead,1.15,20,4
+P2H10-F,0,TTC-only,A2 lead vehicle (moving),1.15,3,1
+P2H10-F,0,TTC-only,B cut-in,1.15,10,5
+P2H10-F,0,TTC-only,C crossing / turn conflict,1.15,5,1
+P2H10-F,0,TTC-only,D side contact,1.15,7,2
+P2H10-F,0,TTC-only,E VRU,1.15,7,1
+P2H10-F,0,TTC-only,E oncoming,1.15,9,2
+P2H10-F,0,TTC-only,E static object,1.15,25,6
+P2H10-F,1,NC,A1 stopped vehicle ahead,0.5,60,55
+P2H10-F,1,NC,A2 lead vehicle (moving),0.5,33,33
+P2H10-F,1,NC,B cut-in,0.5,21,21
+P2H10-F,1,NC,C crossing / turn conflict,0.5,14,12
+P2H10-F,1,NC,D side contact,0.5,17,14
+P2H10-F,1,NC,E VRU,0.5,7,6
+P2H10-F,1,NC,E oncoming,0.5,8,8
+P2H10-F,1,NC,E static object,0.5,16,13
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,0.5,16,12
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),0.5,3,2
+P2H10-F,1,TTC-only,B cut-in,0.5,9,4
+P2H10-F,1,TTC-only,C crossing / turn conflict,0.5,5,2
+P2H10-F,1,TTC-only,D side contact,0.5,6,6
+P2H10-F,1,TTC-only,E VRU,0.5,9,7
+P2H10-F,1,TTC-only,E oncoming,0.5,8,6
+P2H10-F,1,TTC-only,E static object,0.5,25,19
+P2H10-F,1,NC,A1 stopped vehicle ahead,0.6,60,50
+P2H10-F,1,NC,A2 lead vehicle (moving),0.6,33,32
+P2H10-F,1,NC,B cut-in,0.6,21,20
+P2H10-F,1,NC,C crossing / turn conflict,0.6,14,11
+P2H10-F,1,NC,D side contact,0.6,17,13
+P2H10-F,1,NC,E VRU,0.6,7,5
+P2H10-F,1,NC,E oncoming,0.6,8,7
+P2H10-F,1,NC,E static object,0.6,16,12
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,0.6,16,11
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),0.6,3,2
+P2H10-F,1,TTC-only,B cut-in,0.6,9,2
+P2H10-F,1,TTC-only,C crossing / turn conflict,0.6,5,3
+P2H10-F,1,TTC-only,D side contact,0.6,6,6
+P2H10-F,1,TTC-only,E VRU,0.6,9,7
+P2H10-F,1,TTC-only,E oncoming,0.6,8,6
+P2H10-F,1,TTC-only,E static object,0.6,25,19
+P2H10-F,1,NC,A1 stopped vehicle ahead,0.7,60,40
+P2H10-F,1,NC,A2 lead vehicle (moving),0.7,33,31
+P2H10-F,1,NC,B cut-in,0.7,21,20
+P2H10-F,1,NC,C crossing / turn conflict,0.7,14,9
+P2H10-F,1,NC,D side contact,0.7,17,11
+P2H10-F,1,NC,E VRU,0.7,7,3
+P2H10-F,1,NC,E oncoming,0.7,8,6
+P2H10-F,1,NC,E static object,0.7,16,9
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,0.7,16,9
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),0.7,3,2
+P2H10-F,1,TTC-only,B cut-in,0.7,9,2
+P2H10-F,1,TTC-only,C crossing / turn conflict,0.7,5,4
+P2H10-F,1,TTC-only,D side contact,0.7,6,6
+P2H10-F,1,TTC-only,E VRU,0.7,9,6
+P2H10-F,1,TTC-only,E oncoming,0.7,8,4
+P2H10-F,1,TTC-only,E static object,0.7,25,19
+P2H10-F,1,NC,A1 stopped vehicle ahead,0.8,60,31
+P2H10-F,1,NC,A2 lead vehicle (moving),0.8,33,29
+P2H10-F,1,NC,B cut-in,0.8,21,15
+P2H10-F,1,NC,C crossing / turn conflict,0.8,14,8
+P2H10-F,1,NC,D side contact,0.8,17,8
+P2H10-F,1,NC,E VRU,0.8,7,2
+P2H10-F,1,NC,E oncoming,0.8,8,3
+P2H10-F,1,NC,E static object,0.8,16,7
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,0.8,16,8
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),0.8,3,2
+P2H10-F,1,TTC-only,B cut-in,0.8,9,1
+P2H10-F,1,TTC-only,C crossing / turn conflict,0.8,5,4
+P2H10-F,1,TTC-only,D side contact,0.8,6,5
+P2H10-F,1,TTC-only,E VRU,0.8,9,6
+P2H10-F,1,TTC-only,E oncoming,0.8,8,3
+P2H10-F,1,TTC-only,E static object,0.8,25,15
+P2H10-F,1,NC,A1 stopped vehicle ahead,0.85,60,24
+P2H10-F,1,NC,A2 lead vehicle (moving),0.85,33,26
+P2H10-F,1,NC,B cut-in,0.85,21,11
+P2H10-F,1,NC,C crossing / turn conflict,0.85,14,6
+P2H10-F,1,NC,D side contact,0.85,17,7
+P2H10-F,1,NC,E VRU,0.85,7,1
+P2H10-F,1,NC,E oncoming,0.85,8,2
+P2H10-F,1,NC,E static object,0.85,16,5
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,0.85,16,8
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),0.85,3,2
+P2H10-F,1,TTC-only,B cut-in,0.85,9,1
+P2H10-F,1,TTC-only,C crossing / turn conflict,0.85,5,3
+P2H10-F,1,TTC-only,D side contact,0.85,6,5
+P2H10-F,1,TTC-only,E VRU,0.85,9,5
+P2H10-F,1,TTC-only,E oncoming,0.85,8,1
+P2H10-F,1,TTC-only,E static object,0.85,25,16
+P2H10-F,1,NC,A1 stopped vehicle ahead,0.9,60,18
+P2H10-F,1,NC,A2 lead vehicle (moving),0.9,33,14
+P2H10-F,1,NC,B cut-in,0.9,21,9
+P2H10-F,1,NC,C crossing / turn conflict,0.9,14,3
+P2H10-F,1,NC,D side contact,0.9,17,3
+P2H10-F,1,NC,E VRU,0.9,7,1
+P2H10-F,1,NC,E oncoming,0.9,8,2
+P2H10-F,1,NC,E static object,0.9,16,4
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,0.9,16,5
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),0.9,3,2
+P2H10-F,1,TTC-only,B cut-in,0.9,9,1
+P2H10-F,1,TTC-only,C crossing / turn conflict,0.9,5,0
+P2H10-F,1,TTC-only,D side contact,0.9,6,3
+P2H10-F,1,TTC-only,E VRU,0.9,9,4
+P2H10-F,1,TTC-only,E oncoming,0.9,8,1
+P2H10-F,1,TTC-only,E static object,0.9,25,12
+P2H10-F,1,NC,A1 stopped vehicle ahead,0.95,60,12
+P2H10-F,1,NC,A2 lead vehicle (moving),0.95,33,11
+P2H10-F,1,NC,B cut-in,0.95,21,5
+P2H10-F,1,NC,C crossing / turn conflict,0.95,14,1
+P2H10-F,1,NC,D side contact,0.95,17,3
+P2H10-F,1,NC,E VRU,0.95,7,0
+P2H10-F,1,NC,E oncoming,0.95,8,0
+P2H10-F,1,NC,E static object,0.95,16,3
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,0.95,16,4
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),0.95,3,2
+P2H10-F,1,TTC-only,B cut-in,0.95,9,1
+P2H10-F,1,TTC-only,C crossing / turn conflict,0.95,5,0
+P2H10-F,1,TTC-only,D side contact,0.95,6,2
+P2H10-F,1,TTC-only,E VRU,0.95,9,2
+P2H10-F,1,TTC-only,E oncoming,0.95,8,0
+P2H10-F,1,TTC-only,E static object,0.95,25,4
+P2H10-F,1,NC,A1 stopped vehicle ahead,1.0,60,0
+P2H10-F,1,NC,A2 lead vehicle (moving),1.0,33,0
+P2H10-F,1,NC,B cut-in,1.0,21,0
+P2H10-F,1,NC,C crossing / turn conflict,1.0,14,0
+P2H10-F,1,NC,D side contact,1.0,17,0
+P2H10-F,1,NC,E VRU,1.0,7,0
+P2H10-F,1,NC,E oncoming,1.0,8,0
+P2H10-F,1,NC,E static object,1.0,16,0
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,1.0,16,0
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),1.0,3,0
+P2H10-F,1,TTC-only,B cut-in,1.0,9,0
+P2H10-F,1,TTC-only,C crossing / turn conflict,1.0,5,0
+P2H10-F,1,TTC-only,D side contact,1.0,6,0
+P2H10-F,1,TTC-only,E VRU,1.0,9,0
+P2H10-F,1,TTC-only,E oncoming,1.0,8,0
+P2H10-F,1,TTC-only,E static object,1.0,25,0
+P2H10-F,1,NC,A1 stopped vehicle ahead,1.05,60,0
+P2H10-F,1,NC,A2 lead vehicle (moving),1.05,33,0
+P2H10-F,1,NC,B cut-in,1.05,21,0
+P2H10-F,1,NC,C crossing / turn conflict,1.05,14,0
+P2H10-F,1,NC,D side contact,1.05,17,3
+P2H10-F,1,NC,E VRU,1.05,7,0
+P2H10-F,1,NC,E oncoming,1.05,8,0
+P2H10-F,1,NC,E static object,1.05,16,0
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,1.05,16,2
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),1.05,3,1
+P2H10-F,1,TTC-only,B cut-in,1.05,9,0
+P2H10-F,1,TTC-only,C crossing / turn conflict,1.05,5,0
+P2H10-F,1,TTC-only,D side contact,1.05,6,0
+P2H10-F,1,TTC-only,E VRU,1.05,9,1
+P2H10-F,1,TTC-only,E oncoming,1.05,8,0
+P2H10-F,1,TTC-only,E static object,1.05,25,5
+P2H10-F,1,NC,A1 stopped vehicle ahead,1.1,60,0
+P2H10-F,1,NC,A2 lead vehicle (moving),1.1,33,0
+P2H10-F,1,NC,B cut-in,1.1,21,0
+P2H10-F,1,NC,C crossing / turn conflict,1.1,14,0
+P2H10-F,1,NC,D side contact,1.1,17,3
+P2H10-F,1,NC,E VRU,1.1,7,0
+P2H10-F,1,NC,E oncoming,1.1,8,0
+P2H10-F,1,NC,E static object,1.1,16,0
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,1.1,16,2
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),1.1,3,1
+P2H10-F,1,TTC-only,B cut-in,1.1,9,4
+P2H10-F,1,TTC-only,C crossing / turn conflict,1.1,5,1
+P2H10-F,1,TTC-only,D side contact,1.1,6,0
+P2H10-F,1,TTC-only,E VRU,1.1,9,1
+P2H10-F,1,TTC-only,E oncoming,1.1,8,0
+P2H10-F,1,TTC-only,E static object,1.1,25,4
+P2H10-F,1,NC,A1 stopped vehicle ahead,1.15,60,0
+P2H10-F,1,NC,A2 lead vehicle (moving),1.15,33,0
+P2H10-F,1,NC,B cut-in,1.15,21,0
+P2H10-F,1,NC,C crossing / turn conflict,1.15,14,0
+P2H10-F,1,NC,D side contact,1.15,17,4
+P2H10-F,1,NC,E VRU,1.15,7,0
+P2H10-F,1,NC,E oncoming,1.15,8,1
+P2H10-F,1,NC,E static object,1.15,16,1
+P2H10-F,1,TTC-only,A1 stopped vehicle ahead,1.15,16,2
+P2H10-F,1,TTC-only,A2 lead vehicle (moving),1.15,3,1
+P2H10-F,1,TTC-only,B cut-in,1.15,9,5
+P2H10-F,1,TTC-only,C crossing / turn conflict,1.15,5,1
+P2H10-F,1,TTC-only,D side contact,1.15,6,0
+P2H10-F,1,TTC-only,E VRU,1.15,9,2
+P2H10-F,1,TTC-only,E oncoming,1.15,8,1
+P2H10-F,1,TTC-only,E static object,1.15,25,6
