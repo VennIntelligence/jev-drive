@@ -1,7 +1,7 @@
 # alpasim: AlpaSim E2E Closed Loop Challenge feasibility
 
 status: live
-decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 212, 213, 215, 219, 226, 247 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
+decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 212, 213, 215, 219, 226, 247, 253, 254 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
 index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
 key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/results/lat1_frame_synthesis.md, experiments/alpasim/results/lat1_train_audit.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
@@ -79,3 +79,14 @@ collisions and the 11 slow scenes; `--compile` trainers through navtest and clos
 **nuPlan 1491: P2H10S-F against P2H10-F and APY10m10-AB (2026-10-11, descriptive, nothing promoted).** P2H10S-F seeds 0-3 were run on the 791 public scenes outside the BODY1 read (unchanged `sh30` driver), so all three checkpoints are paired on all 1491. Means 0.9243 / 0.9196 / 0.9335 (P2H10S / P2H10 / APY10m10); P2H10S - P2H10 +0.0047 [-0.0016, +0.0115], APY10m10 - P2H10 +0.0139 [+0.0048, +0.0227], P2H10S - APY10m10 -0.0092 [-0.0160, -0.0016] (log-clustered). Tables, per-seed means and the 791-scene restriction: [results/nuplan1491_pick.md](results/nuplan1491_pick.md).
 
 **FIX1: serving switches (2026-10-10, decision 226, pre-registered).** Three switches in `lib/serve_fix.py`, all off by default: (a) speed-continuous serving (`JEV_VCONT`), (b) openpilot's lead MPC as a speed limit (`JEV_LEAD`), (c) the base model's speed profile on the adapter's path (`JEV_BASE`). nuPlan, 700 scenes: every arm loses (+a -0.007, +b -0.086, +a+b -0.071, (c) -0.08 to -0.15), driver unchanged. PAI, 60 scenes x 2 seeds on the box: base 0.215, +a+b 0.363 (+0.148 [+0.061, +0.244]), +c2+b 0.368 (tie). Flags are per track; no PAI submission image exists yet. Results: [results/fix1_serving.md](results/fix1_serving.md), plan [plans/2026-10-09-fix1-prereg.md](plans/2026-10-09-fix1-prereg.md).
+
+**JOINT-1: one joint training for nuPlan submission #2, drop-one read on all 1491 scenes (2026-10-11, decision 254, pre-registered).** One trainer
+carries every recipe flag (`scripts/joint_train.py`; each sub-recipe reproduces its original trainer bit for bit, and full-length runs reproduce
+P2H10-F / P2H10S-F). APS = AP2 input standard + body lesson S + yaw-rate rows and its three drop-one arms, two seeds each, against P2H10-F on one
+driver path (stored reads reused only where a rerun reproduced them scene for scene; the `ap2` path had moved at tolerance level since CF1, so its
+reads were rerun). **No arm meets the registered line**: zeros of the three classes vs P2H10-F, APS +12.5 [-4.0, +29.5] (corridor +14.0 [+3.5, +24.5]),
+AP2 + S -3.0 [-17.0, +11.0], S + yaw rows +2.0, APY10m10-AB -1.0, P2H10S-F -1.5; the AlpaSim-standard arms also miss the navtest guardrail
+(-0.32 to -0.59 against P2H10S-F). The ingredients interact negatively: AP2 + S without the yaw rows has 15.5 fewer zeros than APS and the best mean
+(0.9360, +0.0166 [+0.0029, +0.0306] over P2H10-F) with the fewest collision + offroad zeros (40.5 against 55.5), but more corridor zeros (+12.0).
+S carries APS's corridor-zero increase; yaw rows and the AP2 standard are not needed for it. [results/joint1.md](results/joint1.md), plan
+[plans/2026-10-11-joint1-prereg.md](plans/2026-10-11-joint1-prereg.md).
