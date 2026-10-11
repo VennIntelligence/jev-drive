@@ -52,24 +52,48 @@ The fixed on-policy margins are not log-consistent: the logged driver itself clo
 a lead in 0.5 % of states and stops within the last metre before a red line in 0.2 %, by about 0.1 m each. On navtrain log states B is
 active as often on the logged future as on the model's own plan.
 
-## (iv) Activation on the pool (`lon_pool-<rows name>.json`)
+## (iv) Activation on the pool (`lon_pool-train.json`; smoke: `lon_pool-smoke10.json`)
 
-Smoke only so far (`smoke10`: 10 scenes, 100 rows, `P2H10S-F-s0`); the 0.2 % rule cannot be read on 100 rows.
-Join checks on these rows: the log's travel D against `on_rows.py`'s own within 8 mm, the arc ahead of the log within 4 cm, the row
-pose against the logged pose at decisions 0 and 1 within 3 mm, the row's log time by frame index against `t_log_us` within 0.5 ms.
+Pool `train`: 20 386 rows of 1025 scenes (`P2H10S-F-s0` and `-s1`), 20 352 with labels (34 rows of the two folded-route scenes get none).
+Pack: `$DATA_DIR/runs/onpol_nuplan/rows/train/lon.npz`, items A B C P, P on strictly open rows against the amended D_k.
+Join checks: the log's travel against `on_rows.py`'s `D_reg` median 0.1 mm, p99 6 cm, max 0.34 m; the arc ahead of the log median 0.2 mm,
+p99 7 cm, max 0.65 m; the row pose against the logged pose at decisions 0 / 1 at most 1.5 / 1.8 cm; the row's log time by frame index
+against `t_log_us` at most 2 ms; light state known at every dense step. Rows: 0.6 % more than 5 m ahead of the log, 2.6 % more than 5 m
+behind; lateral offset from the route median 0.04 m, p99 1.98 m.
 
-| item | rows with context | active on the served plan | on the imitation target |
-|:--|:--|--:|--:|
-| A | 55 % have an eligible lead | 0 of 100 | 0 |
-| B | 20 % a light line ahead, 10 % red in the window | 0 of 100 | 0 |
-| C | 60 % of rows are in a scene with an eligible turn | 0 of 100 | 0 |
-| P | 3 % open (18 % by design.md's rule) | 3 of 100 (one scene), mean 2.06 m (8 of 100, 1.51 m by design.md's rule) | 0 |
+| item | rows with context | active on the served plan (rows, scenes) | mean / p90 / max when active | active on the imitation target | the log's own future at decisions 0, 1 (4092 rows) | 0.2 % rule |
+|:--|:--|--:|:--|--:|--:|:--|
+| A | 47.5 % have an eligible lead | 1.37 % (279, 41) | 0.43 / 1.15 / 3.76 m | 0.39 % | 0.20 %, mean 0.05 m | in |
+| B | 23.7 % a light line ahead, 12.0 % red in the window, 9.1 % red now | 0.43 % (88, 11) | 0.59 / 2.09 / 6.92 m (median 0.08 m) | 0.25 % | 0.39 %, mean 0.01 m | in |
+| C | 36.0 % of rows are in a scene with an eligible turn | 1.35 % (275, 41) | 0.14 / 0.33 / 1.34 m/s | 0.52 %, mean 0.04 m/s | 0 | in |
+| P | 11.5 % open (34.5 % by design.md's rule; 22.3 % closed by an actor within 4.5 m of the route, 4.5 % by a line) | 5.43 % (1107, 110) | 1.38 / 3.68 / 9.22 m | 0 | 0.29 %, mean 0.19 m | in |
 
-![preview](../../figs/lon_preview-smoke10.png)
+P variants for the record: against the log's own travel 5.74 %, mean 2.01 m; with design.md's open rule 16.6 %, mean 1.68 m.
+Activation of A and C grows with the decision index (A 0.7 % at k = 0 to 2.2 % at k = 9; C 0.5 % to 2.4 % at k = 7); B is flat (0.3 to 0.5 %).
+The item masses are concentrated: the 20 most active rows come from 7 (A), 4 (B), 5 (C) and 12 (P) scenes; B is active in 11 scenes in all.
+The most active rows per item with scene, seed and k: `items.<item>.top20` in the json.
 
-What to look at: each panel is one row in its own frame (x forward). Grey band = the route, blue = the served plan from the ego box,
-green dashed = the imitation target, red circles = the plan poses P charges (the plan is shorter than 0.95 x the log's travel - 0.5 m),
-grey boxes = actors at the row's time with their 4 s tracks (red = A-eligible), orange cross = the turn peak. With the strict rule only
-one scene of the ten has P rows: an empty curve where the served plan is both shorter than the log's travel and drifting off the route.
-Under design.md's rule P was also active on a row whose plan leaves the route towards a vehicle 3 m beside it (the reason for the strict
-rule: no actor within 4.5 m of the route ahead).
+![preview](../../figs/lon_preview-train.png)
+
+What to look at: each panel is one row in its own frame (x forward): the 3 most active rows of each item from different scenes. Grey band
+= the route, blue = the served plan from the ego box, green dashed = the imitation target, red dots = the dense steps the item charges
+(P: red circles on the charged poses), boxes = actors at the row's time with their 4 s tracks (red = A-eligible), ticks across the route =
+stop lines (red = must stop now, orange = red later in the window, green = usable light line not red, black = not usable), orange cross =
+the turn peak. A: the plan runs through a lead (panels 1, 2), and in panel 3 it passes a stopped lead while 2 m beside the route (the
+kind of row where a purely along-route gap is debatable). B: a row standing at a red line whose plan creeps 15 m through it (panel 4),
+a plan through a lead and a red line at 8.8 m/s (5, the same row as A's panel 2), a plan that reaches a line that turns red (6).
+C: plans that go wide and fast into the turn. P: empty road, the plan much shorter than the target's travel.
+
+Smoke (`smoke10`, 100 rows, before the full pool): A, B, C 0 of 100, P 3 of 100; preview `figs/lon_preview-smoke10.png`.
+
+## Audit
+
+An independent read of the three files (Opus, no access to these results) found no sign, frame, shape or sentinel error and no gradient
+path around `timing_only`. Its findings and what was done: B charged a plan for every red step after a crossing on green (fixed: nothing
+after a crossing on a non-red step; known-answer test green-then-red / red / red-then-green = 0 / 0.68 / 0); the row time was rebuilt
+from the frame index (now `t_log_us`); P's "open" did not see crossing actors or unusable lines (strict rule, P gated on the pose's
+lateral offset); C's cap inherited a standstill of the log before the turn (floored at the log's peak speed) and was 1 m wider than
+written (now the two vertices around s); A had no gate on the plan's own lateral offset (added); routes folded by standstill jitter (the
+two scenes dropped); NaN on rows without context (the pack is finite everywhere). Not changed: only the first >= 45 deg turn of a route
+carries C; `on_rows.py` gives every actor class 0, so every simulator actor counts as a vehicle.
+After the fixes gates (i) - (iii) were rerun (the numbers above); the fixes themselves were not audited a second time.
