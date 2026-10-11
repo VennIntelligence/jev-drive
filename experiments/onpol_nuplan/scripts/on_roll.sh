@@ -34,6 +34,6 @@ esac
 [[ $STAGE == full ]] && cap=${OT2_MAX_ACTIVE:-3} || cap=1
 ON_LISTS=$W/lists OT_LANE=onpol OT_OUT=$W OT_OWNER=alpasim-onpol OT_PRIO=${OT_PRIO:-12} OT2_MAX_ACTIVE=$cap \
   python3 experiments/onpol_nuplan/scripts/on_loop.py "$STAGE" "${J[@]}" || die "on_loop rc $? (see $W/$STAGE/ERROR)"
-n=$(find "$W/$STAGE/runs" -path '*driver-logs/dump/*.npz' | wc -l); b=$(find "$W/$STAGE/runs" -path '*driver-logs/dump/*.npz' -printf '%s\n' | awk '{s += $1} END {print s + 0}')
+n=$(find "$W/$STAGE/runs" -path '*driver-logs/dump/*.npz' | wc -l); b=$(find "$W/$STAGE/runs" -path '*driver-logs/dump/*.npz' -printf '%s\n' | awk '{s += $1} END {printf "%d", s}')
 status "all done: $n dumped decisions, $b bytes ($((b / (n > 0 ? n : 1))) per decision), run dirs $(du -sh "$W/$STAGE/runs" | cut -f1)"
 date '+%F %T' > "$O/DONE"
