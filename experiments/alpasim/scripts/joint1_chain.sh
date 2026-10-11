@@ -5,8 +5,8 @@
 #   ref    references whose stored reads ran on the uncompiled driver (OT3, 2026-10-09 before 18:22 CST): P2H10-F s0 / s1 on ot3new,
 #          APY10m10-AB s0 / s1 on the 700; reproducibility checks of the stored compiled reads: P2H10-F-s0 on chunk0 (against TR1's run) and on
 #          cf1fresh (against CF1's), APY10m10-AB-s0 on cf1fresh (against CF1's)
-#   refx   only if a check differs: the rest of the stored compiled reference reads, rerun (P2H10-F s0 / s1 on the 700 and s1 on cf1fresh, APY10m10-AB
-#          s1 on cf1fresh and s0 / s1 on ot3new)
+#   refx   only if a check differs: the rest of the stored compiled reference reads, rerun (P2H10-F and P2H10S-F s0 / s1 on the 700, P2H10-F s1 on
+#          cf1fresh, APY10m10-AB s1 on cf1fresh and s0 / s1 on ot3new)
 #   arms   the trained arms (JAPS, JAPSnoY, JAPSnoA; seeds 0 / 1) on all 1491 scenes; each job waits for its checkpoint (ot2_loop OT2_WAIT_H)
 #   smoke  <tag> <driver>: the 48-scene pilot smoke of one pilot checkpoint (list smoke48 = runs/alpasim/scenes_navtest_full_part001_48.txt)
 # State: $DATA_DIR/runs/alpasim/joint1/<stage>/{STATUS, DONE, ERROR, log.txt, manifest.json, runs/}.
@@ -26,7 +26,7 @@ case $STAGE in
     for s in 0 1; do sh "P2H10-F-s$s@new" "P2H10-F-s$s" ot3new; a2 "APY10m10-AB-s$s" "APY10m10-AB-s$s"; done
     sh "P2H10-F-s0@chk0" P2H10-F-s0 chunk0; sh "P2H10-F-s0@fresh" P2H10-F-s0 cf1fresh; a2 "APY10m10-AB-s0@fresh" APY10m10-AB-s0 cf1fresh ;;
   refx)
-    for s in 0 1; do sh "P2H10-F-s$s" "P2H10-F-s$s"; a2 "APY10m10-AB-s$s@new" "APY10m10-AB-s$s" ot3new; done
+    for s in 0 1; do sh "P2H10-F-s$s" "P2H10-F-s$s"; sh "P2H10S-F-s$s" "P2H10S-F-s$s"; a2 "APY10m10-AB-s$s@new" "APY10m10-AB-s$s" ot3new; done
     sh "P2H10-F-s1@fresh" P2H10-F-s1 cf1fresh; a2 "APY10m10-AB-s1@fresh" APY10m10-AB-s1 cf1fresh ;;
   arms)
     for t in JAPS JAPSnoY; do for s in 0 1; do a2 "$t-s$s" "$t-s$s"; a2 "$t-s$s@fresh" "$t-s$s" cf1fresh; a2 "$t-s$s@new" "$t-s$s" ot3new; done; done
