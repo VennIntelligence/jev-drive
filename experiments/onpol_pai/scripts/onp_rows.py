@@ -62,13 +62,15 @@ class _Fed(Exception):
 
 def replay(asl: str, dump_of, cold: str, lht: bool) -> dict:
     """rollout.asl -> {md: rollout metadata, frames: {frame_end_us: model frame}, rows: {k: captured inputs | {error}}, gate}.
-    dump_of(k) -> the PAI_DUMP file of decision k or None; every one found is compared with the replay on the spot, except the frames
+    Rows are keyed by the Drive call's time_now_us (the log-replay driver of pass 2 can refuse a call before pai_driver counts it,
+    so the replay's own call counter is not the served k). dump_of(now) -> the PAI_DUMP file of that decision or None; every one found is compared with the replay on the spot, except the frames
     of a cold-start row (gate["cold"]: {k: [file, the other fields equal]}; `finalize` compares those in the driver image)."""
     import c1_extract as X
     import lbd_pai_x as LX
     import pai_driver as PD
     logging.getLogger("pai").disabled = True                                  # the tap's exception is logged by the driver as a failure
     PC, cap = PD.PC, {}
+    k_srv = lambda f: int(Path(f).stem.split("_k")[1])                         # noqa: E731  the served call counter, from the dump's name
     if not hasattr(PC, "_slots"):
         PC._slots = PC.slots
 
@@ -106,7 +108,7 @@ def replay(asl: str, dump_of, cold: str, lht: bool) -> dict:
                 drv.submit_route(m, ctx)
             elif kind == "driver_request":
                 cap.clear()
-                k, err = s.count["drive"], ""
+                k, err = int(m.time_now_us), ""
                 try:
                     drv.drive(m, ctx)
                 except RuntimeError as e:
@@ -127,12 +129,12 @@ def replay(asl: str, dump_of, cold: str, lht: bool) -> dict:
                                            ("valid", np.array_equal(z["valid"], cap["valid"])), ("real", np.array_equal(z["real"], cap["real"])),
                                            ("ego", np.array_equal(z["ego"], cap["ego"])), ("t0", int(z["t0"]) == t0)) if not ok]
                     if cold:
-                        g["cold"][k] = [str(f), not bad]
+                        g["cold"][k_srv(f)] = [str(f), not bad]
                     else:
                         g["n"] += 1
                         g["eq"] += not bad
                     if bad and len(g["diff"]) < 5:
-                        g["diff"].append(dict(k=k, fields=bad, cur_bytes_differ=int((z["cur"] != cap["cur"]).sum()),
+                        g["diff"].append(dict(k=k_srv(f), fields=bad, cur_bytes_differ=int((z["cur"] != cap["cur"]).sum()),
                                               cur_slots_differ=np.flatnonzero((z["cur"] != cap["cur"]).reshape(8, -1).any(1)).tolist(),
                                               ego_max=float(np.abs(z["ego"] - cap["ego"]).max())))
     try:
@@ -233,16 +235,17 @@ def scene_rows(j: dict) -> dict:
         raise RuntimeError(f"asl session {o['session']} != {sess}")
     lap("one_log")
     rec, start = driver_logs(run, sess)
-    dump = lambda k: (lambda f: f if f.exists() else None)(Path(run) / "driver/dump" / f"s{start['n']:02d}_k{k:03d}.npz")  # noqa: E731
+    k_of = {r["now"]: r["k"] for r in rec}
+    dump = lambda now: (lambda f: f if now in k_of and f.exists() else None)(Path(run) / "driver/dump" / f"s{start['n']:02d}_k{k_of.get(now, 0):03d}.npz")  # noqa: E731
     R = replay(asl, dump, j["cold"], j["lht"])
     lap("replay")
 
     # ---- rows = the served decisions, aligned with the replay by the driver's call counter
     rec = [r for r in rec if r.get("infer")]
-    miss = [r["k"] for r in rec if "t0" not in R["rows"].get(r["k"], {})]
+    miss = [r["now"] for r in rec if "t0" not in R["rows"].get(r["now"], {})]
     if miss or not rec:
-        raise RuntimeError(f"{len(miss)} of {len(rec)} served decisions not reproduced by the replay; first k {miss[:5]}: {R['rows'].get(miss[0]) if miss else None}")
-    rows, N = [R["rows"][r["k"]] for r in rec], len(rec)
+        raise RuntimeError(f"{len(miss)} of {len(rec)} served decisions not reproduced by the replay; first time_now {miss[:5]}: {R['rows'].get(miss[0]) if miss else None}")
+    rows, N = [R["rows"][r["now"]] for r in rec], len(rec)
     st = lambda key, dt=np.float64: np.array([x[key] for x in rows], dt)      # noqa: E731
     jl = lambda key, dt=np.float32: np.array([r[key] for r in rec], dt)       # noqa: E731
     t0, P, V, anchor, ego_in, cmd = st("t0", np.int64), st("P"), st("V"), st("anchor"), st("ego", np.float32), st("cmd", np.float32)
@@ -258,6 +261,8 @@ def scene_rows(j: dict) -> dict:
              poses_model=np.array([r.get("poses_model", r["poses"]) for r in rec], np.float32), anchor=anchor, z0=st("z0", np.float32),
              v0=np.hypot(V[:, -1, 0], V[:, -1, 1]).astype(np.float32))
     Z["pass"] = j["pass"]
+    if "log_poses" in rec[0]:                                                 # pass 2 (lib/onp_log_driver.py): the ego was steered along the log
+        Z.update(rec_log_poses=jl("log_poses"), rec_log_valid=jl("log_valid", np.int8), rec_log_now=jl("log_now"))
     # ---- G-in, drive.jsonl half: the driver's rounded records
     eq = ((np.abs(P.round(4) - jl("hist", np.float64)).reshape(N, -1).max(1) < 1e-9) & (ego_in.round(5) == Z["ego"]).all(1)
           & (np.abs(anchor.round(4) - jl("anchor", np.float64)).max(1) < 1e-9) & (cmd.argmax(1) == jl("cmd", np.int64)) & (t0 == jl("t0", np.int64)))
@@ -302,6 +307,10 @@ def scene_rows(j: dict) -> dict:
     ix = np.searchsorted(mt, t0).clip(0, max(len(mt) - 1, 0))
     m = (np.abs(mt[ix] - t0) < 1000) & (ix >= 2) if len(mt) else np.zeros(N, bool)      # the scorer sets its first two steps to 0
     chk_lat = float(np.abs(dlat[m] - mv[ix[m]]).max()) if m.any() else float("nan")
+    chk_lp = float("nan")
+    if "rec_log_poses" in Z:                                                  # the driver's log label against ours (its frame: the egomotion pose of time_now)
+        m = np.arange(8)[None] < Z["rec_log_valid"][:, None]
+        chk_lp = float(np.abs(Z["rec_log_poses"][..., :2] - lf[..., :2])[m & fok].max()) if (m & fok).any() else float("nan")
     Z.update(veh=veh, veh_sim=veh_sim, log_xyyaw=np.c_[path.xy, path.yaw], log_t_us=path.t, log_v=path.v.astype(np.float32), log_s=path.s.astype(np.float32),
              path_len=np.float32(path.len), log0=l0, log_fut=lf, log_fut_ok=fok, s_ego=s_ego, e0=e0, dpsi0=dpsi0, ds0=s_ego - ls,
              path=pth[..., :2], path_ok=(arcs >= 0) & (arcs <= path.len), path_v=path.speed(arcs), path_h=pth[..., 2],
@@ -323,13 +332,15 @@ def scene_rows(j: dict) -> dict:
     except Exception as e:
         map_err = f"{e!r}"[:300] + " | " + " <- ".join(x.strip().split("\n")[0] for x in traceback.format_tb(e.__traceback__)[-4:])
     lap("map")
-    near = [e for e in edges if len(e) > 1 and (np.hypot(*(e[:, None, :2] - path.pv[None, ::5]).transpose(2, 0, 1)).min() < 150.0)]
+    near = [e for e in edges if len(e) > 1 and (np.hypot(*(e[:, None, :2] - path.pv[None, ::5]).transpose(2, 0, 1)).min() < 250.0)]
     rs = [G.resample(e) for e in near]
     exyz = np.concatenate(rs) if rs else np.zeros((0, 3))
     eoff = np.r_[0, np.cumsum([len(r) for r in rs])].astype(np.int32)
     seg = G.edge_segments(exyz, eoff) if len(exyz) else np.zeros((0, 5))
-    ebox, eok = G.edge_rows(seg, anchor, Z["z0"] + q.vec.z)
-    Z.update(edge_box=ebox, edge_ok=eok, edges_xyz=exyz, edges_off=eoff, has_edges=not map_err, has_stop=not map_err)
+    t4 = t0 + 4_000_000                                                       # where the ego really was 4 s later (rows of the last 4 s: none)
+    ego4 = np.where((t4 <= t0[-1])[:, None], np.stack([np.interp(t4, t0, anchor[:, i]) for i in (0, 1)], 1), np.nan)
+    ebox, eok, er, ecov = G.edge_rows(seg, anchor, Z["z0"] + q.vec.z, path, s_ego, Z["v0"], ego4)
+    Z.update(edge_box=ebox, edge_ok=eok, edge_r=er, edge_cov4=ecov, edges_xyz=exyz, edges_off=eoff, has_edges=not map_err, has_stop=not map_err)
     Z.update(G.stop_rows(G.crossings(path, lines, front), t0, s_ego, front))
     if map_err:
         Z["stop_s"][:], Z["wl_s"][:] = np.nan, np.nan
@@ -340,12 +351,9 @@ def scene_rows(j: dict) -> dict:
              zero_kind=zk, t_event_us=ev, after_event=t0 >= ev.min(), t_rel_us=np.int64(t_rel), t_end_us=np.int64(t_end), after_end=t0 > t_end,
              corridor_m=np.float32(j["corridor"]))
     lap("labels")
-    in40 = np.hypot(*(seg[None, :, :2] - anchor[:, None, :2]).transpose(2, 0, 1)) <= G.EDGE_R if len(seg) else np.zeros((N, 0), bool)
-    lvl = ~(np.abs(seg[None, :, 4] - (Z["z0"] + q.vec.z)[:, None]) > G.EDGE_DZ) if len(seg) else in40
     meta = dict(args={k: j[k] for k in ("cold", "lht", "nurec", "pass", "tag")}, n_rows=N, n_frames=len(frame_ts), n_cold=len(cold), n_calls=len(R["rows"]),
                 n_actors=len(ids), n_edges=len(near), n_wait_lines=len(lines), map_error=map_err, **gate, chk_logged_centre_m=chk_log, chk_scorer_lateral_m=chk_lat,
-                chk_anchor_vs_sim_m=chk_anchor, chk_event_flags=bool((zk == (ev != G.NEVER)).all()), edge_segs_40m=int(in40.sum()),
-                edge_segs_40m_same_level=int((in40 & lvl).sum()), edge_rows_full=int(eok.all(1).sum()), secs=T, secs_build=round(sum(T.values()), 2))
+                chk_anchor_vs_sim_m=chk_anchor, chk_event_flags=bool((zk == (ev != G.NEVER)).all()), chk_log_poses_m=chk_lp, edge_rows_full=int(eok.all(1).sum()), secs=T, secs_build=round(sum(T.values()), 2))
     Z["meta"] = json.dumps(meta)
     f32 = ("log0", "log_fut", "s_ego", "e0", "dpsi0", "ds0", "path", "path_v", "path_h", "imit", "dlat_c", "edges_xyz")
     return {k: (np.asarray(v, np.float32) if k in f32 else v) for k, v in Z.items()}
@@ -411,13 +419,13 @@ def jobs_of(a, out: Path, say) -> list:
     jobs, seen = [], set()
     for run in sorted({r.rstrip("/") for g in a.runs for r in glob.glob(g) if os.path.isdir(r)}):
         sm = Path(run) / "sim/aggregate/results-summary.json"
-        if not (sm.exists() and (Path(run) / "DONE").exists()):
+        if not (sm.exists() and (Path(run) / "DONE").exists()) and not a.partial:
             say(f"skip {run}: no DONE / results-summary.json (pai_run.sh has not finished it)")
             continue
         tag = json.loads((Path(run) / "run.json").read_text()).get("tag", a.tag) if (Path(run) / "run.json").exists() else a.tag
         ev = Path(run) / "sim/eval-config.yaml"
         cor = next((float(x.split(":")[1]) for x in ev.read_text().splitlines() if "max_dist_to_gt_trajectory" in x), np.nan) if ev.exists() else np.nan
-        for r in json.loads(sm.read_text())["rollouts"]:
+        for r in json.loads(sm.read_text())["rollouts"] if sm.exists() else [dict(clipgt_id=p.parent.parent.name) for p in sorted((Path(run) / "sim/rollouts").glob("*/*/metrics.parquet"))]:
             sc = r["clipgt_id"]
             ds = [p.parent for p in sorted((Path(run) / "sim/rollouts" / sc).glob("*/metrics.parquet")) if (p.parent / "rollout.asl").exists()]
             ds = [d for d in ds if d.name == r.get("rollout_id")] or ds       # a retried scene: the session of the summary row
@@ -522,7 +530,8 @@ def cmd_report(a):
         for k in ("e0", "ds0", "v0", "after_event", "after_end", "dlat_c"):
             add(k, z[k])
         add("lead", (z["box_ok"][:, 0] & (d.min(-1) <= 2.0)).any(1)), add("anybox", z["box_ok"][:, 0].any(1)), add("nbox", z["box_ok"][:, 0].sum(1))
-        add("edge3", esd.min(1) < 3.0), add("edge_any", z["edge_ok"].any(1)), add("stop60", (z["stop_s"] <= 60).any(1)), add("wl60", (z["wl_s"] <= 60).any(1))
+        add("edge3", esd.min(1) < 3.0), add("edge_any", z["edge_ok"].any(1)), add("edge_full", z["edge_ok"].all(1)), add("edge_cov4", z["edge_cov4"]), add("edge_r", z["edge_r"])
+        add("edge_reach", np.where(z["edge_ok"], eb[..., 0], -np.inf).max(1)), add("edge_fwd", G.edge_fwd(z["v0"])), add("stop60", (z["stop_s"] <= 60).any(1)), add("wl60", (z["wl_s"] <= 60).any(1))
         add("turn60", z["turn_s"] <= 60), add("cold", (z["slot"] < 0).any(1)), add("dlog", np.hypot(z["log0"][:, 0], z["log0"][:, 1]))
         add("imit_ok", z["imit_ok"].all(1)), add("past_end", z["s_ego"] > z["path_len"]), add("box_full", z["box_ok"].all(1)[:, 0] if N else np.zeros(0, bool))
         per.append(dict(scene=str(z["scene"]), n=N, score=float(z["score"]), fail=str(z["fail_reason"]), ev=z["t_event_us"], t0=z["t0_us"], m=m, has_stop=bool(z["has_stop"]),
@@ -566,7 +575,7 @@ def cmd_report(a):
           f"| cold-start rows: bytes of the synthesised slots replaced by the driver image's own warp | {sum(m.get('cold_bytes_changed', 0) for m in metas)} |",
           f"| summary zero flags agree with the per-step series (`t_event_us` finite) | {sum(m['chk_event_flags'] for m in metas)} of {len(metas)} scenes |",
           f"| `veh` (start.jsonl) equals `veh_sim` (rollout metadata) | {sum(p['veh_eq'] for p in per)} of {len(per)} scenes |",
-          f"| road-edge segments within 40 m, all levels / at the ego's level | {sum(m['edge_segs_40m'] for m in metas)} / {sum(m['edge_segs_40m_same_level'] for m in metas)} |",
+          f"| pass 2 only: the log-replay driver's `log_poses` against `log_fut` (x, y), max over scenes | {max(fin('chk_log_poses_m'), default=float('nan')):.4f} m ({len(fin('chk_log_poses_m'))} scenes) |",
           "", "## Label items: real or stubbed", "", "| item | status |", "|---|---|",
           "| inputs, `box`, logged path, `imit`, turns, scorer events | real in every scene built |",
           f"| road edges (`edge_box`, `edges_xyz`) | real in {sum(p['has_edges'] for p in per)} of {len(per)} scenes |",
@@ -579,7 +588,7 @@ def cmd_report(a):
           f"| any simulator box at t0 (mean {A['nbox'].mean():.1f} of 32 slots) | {sh(A['anybox'])} |",
           f"| box horizon complete (nearest box valid at all 9 times) | {sh(A['box_full'])} |",
           f"| a road-edge segment centre within 3 m of the ego box (`veh_sim`) | {sh(A['edge3'])} |",
-          f"| any road-edge segment within 40 m | {sh(A['edge_any'])} |",
+          f"| any road-edge segment kept | {sh(A['edge_any'])} |",
           f"| an ELIGIBLE stop line ahead within 60 m (`stop_s`) | {sh(A['stop60'])} |",
           f"| any wait line ahead within 60 m (`wl_s`) | {sh(A['wl60'])} |",
           f"| a >= 45 deg turn peak ahead within 60 m | {sh(A['turn60'])} |",
@@ -587,6 +596,14 @@ def cmd_report(a):
           f"| `imit` valid at all 8 poses | {sh(A['imit_ok'])} |",
           f"| ego projection past the end of the logged path | {sh(A['past_end'])} |"]
     L += [f"| speed {lo} to {hi} m/s | {sh((A['v0'] >= lo) & (A['v0'] < hi))} |" for lo, hi in SPEED]
+    er, c4 = A["edge_reach"][A["edge_any"]], A["edge_cov4"]
+    L += ["", "## Road-edge coverage (192 segments ranked by distance to the logged-path window s_ego - 5 m .. s_ego + max(30 m, 4.5 s x v0 + 10 m), within 15 m of it)", "",
+          "| quantity | value |", "|---|---|",
+          f"| rows where the cap of 192 binds | {sh(A['edge_full'])} |",
+          f"| forward reach of the kept segments (largest x in the rig frame), median / p10 (m) | {np.median(er):.1f} / {np.percentile(er, 10):.1f} |",
+          f"| window's forward length, median / p10 (m) | {np.median(A['edge_fwd']):.1f} / {np.percentile(A['edge_fwd'], 10):.1f} |",
+          f"| covered radius around the window `edge_r`, median / p10 (m) | {np.median(A['edge_r']):.1f} / {np.percentile(A['edge_r'], 10):.1f} |",
+          f"| rows whose realised 4 s ego position is inside the covered region (`edge_cov4`; of the {int((c4 >= 0).sum())} rows that have one) | {sh(c4[c4 >= 0] == 1)} |"]
     L += ["", "## How far the visited states are from the log", "", "| quantity | value |", "|---|---|",
           f"| abs(e0) percentiles 5 / 25 / 50 / 75 / 95 / 99 / max (m) | {pct(np.abs(A['e0']))} |",
           f"| ds0 percentiles 5 / 25 / 50 / 75 / 95 / 99 / max (m; positive = ahead of the log) | {pct(A['ds0'])} |",
@@ -688,6 +705,7 @@ if __name__ == "__main__":
     p.add_argument("--cold", default="backwarp", help="PAI_COLD the rollouts were served with")
     p.add_argument("--lht", action="store_true", help="PAI_LHT=1 was served")
     p.add_argument("--nurec", default=str(D / "datasets/nurec"))
+    p.add_argument("--partial", action="store_true", help="dry checks only: also take the scored rollouts of a run dir that is still running (no summary row: score NaN)")
     p.add_argument("--redo", action="store_true", help="rebuild scenes that already have a file (it is replaced atomically)")
     a = ap.parse_args()
     {"rows": cmd_rows, "cold": cmd_cold, "report": cmd_report, "fig": cmd_fig}[a.cmd](a)

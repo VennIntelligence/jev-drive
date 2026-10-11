@@ -12,8 +12,9 @@ Terms      per row, on the model's own plan, all in the rig frame at t0 (OnLoss.
   edge     the same hinge, the same margins (0.3 m inside the ego corridor, 0 outside), against the 96 nearest road-edge segments as
            static thin boxes. With 0.3 m outside the corridor too the log's own future violates it on 17 % of the rows where the ego
            is on the log (three of 16 scenes drive within 0.3 m of an edge); with S's margins on 0.2 %                      shape-only
-  corr     route hinge: mean over the 8 poses of relu(distance to the finite logged path - 3.0 m); a pose past the path's end counts by
-           its distance to the end point                                                                                    shape-only
+  corr     lateral corridor: mean over the 8 poses of relu(|perpendicular offset from the logged path| - 3.0 m), the path continued
+           straight along its end segments past both ends of the window (the 100 m cap and the path's real end): nothing is charged
+           for being past the end along the path (the overrun of a logged stop is term `stop`'s)                           shape-only
   stop     design 3.2 item B, stop-sign rule: front bumper arc s_f(t) <= theta_l = max(d_l - 1.0 m, the log's own furthest front-bumper
            arc while it has not crossed) at every dense step t with t0 + t < the log's crossing time of line l, gated by
            |lateral| <= 3.5 m and s_f not more than 30 m past the path's last point (its straight continuation, where the row files
@@ -25,13 +26,15 @@ Terms      per row, on the model's own plan, all in the rig frame at t0 (OnLoss.
            within 1 m of s                                                                                                  timing-only
   prog     design 3.2 guard P: mean over the 8 poses of relu(0.95 x the log's same-time progress - 0.5 m - the plan's arc length), only
            on `open` rows (no stop line and no turn peak within 60 m ahead, no actor box within 2 m of the path in the next 60 m)
+           where the ego is within 2.0 m of the log's own arc position (|ds0|): further away the log's same-time progress is that of
+           another place on the road
                                                                                                                             timing-only
   imit     the recipe's imitation distance (pp_train.Losses.dist's Huber terms) to `imit` (pass pol) / `log_fut` (pass log)
 Weights    as S weighs its hinge-only rows (loss43): a term is summed over the on-policy rows and divided by the number of imitation rows
            of the batch's normal rows, x lam (10) x ho_w (3); the imitation term the same sum x lam_i (1): an on-policy row counts like
            one on-log imitation row. Non-plan heads of the on-policy rows are distilled to shipped Cinque on the same tokens with the
            per-row weight of a normal row (as loss43's distill_ho), in every arm.
-Logged     on_<term> (the weighted sum above, before lam), on/<pass>/<term>_mean | _pos | _posmean over the pass's rows of the batch
+Logged     on_<term> (the sum above, before lam), onw_<term> (its weighted contribution to the total), on/<pass>/<term>_mean | _pos | _posmean over the pass's rows of the batch
            (loss43.row_stats), on/<pass>/<term>_elig (share of rows the term is defined on). Every term is logged in every arm; `arm`
            only decides which of them reach the total.
 """
@@ -50,7 +53,7 @@ M_B, LAT_IN = 1.0, 3.5                         # stop-line margin; lateral gate 
 EXT = 30.0                                     # a stop line may lie on the straight continuation of the path past its last sample (rows_format.md)
 TURN_WIN, TURN_HEAD, V_PK_MIN = (-10.0, 3.0), math.radians(30.0), 1.0
 P_K, P_C = 0.95, 0.5
-OPEN_S, OPEN_BOX = 60.0, 2.0
+OPEN_S, OPEN_BOX, P_DS = 60.0, 2.0, 2.0
 S0 = 20                                        # grid index of the ego's own arc position on `path` (s_ego - 20 m .. s_ego + 100 m at 1 m)
 SHAPE_T, TIME_T = ("agent", "edge", "corr"), ("stop", "turn", "prog")
 TERMS = SHAPE_T + TIME_T
@@ -168,7 +171,7 @@ class OnRows:
         self.edge, self.edge_ok = z("edge_box"), t(cat("edge_ok"), torch.bool)
         self.path, self.path_ok, self.path_h = z("path"), t(cat("path_ok"), torch.bool), z("path_h")
         self.path_v = t(np.nan_to_num(cat("path_v").astype(np.float32), nan=1e3))          # no logged speed there: no cap
-        self.has_path = self.path_ok[:, S0 - 1:S0 + 1].all(1)                              # the ego's own arc is on the finite path
+        self.has_path = (self.path_ok[:, :-1] & self.path_ok[:, 1:]).any(1)                # a finite segment exists
         self.rlen = (self.path_ok * torch.arange(self.path_ok.shape[1], device=dev)).amax(1).float()   # grid arc of the last finite point
         self.log0, self.log_fut, lok = z("log0"), z("log_fut"), cat("log_fut_ok")
         l0 = np.isfinite(cat("log0")).all(1)
@@ -202,7 +205,7 @@ class OnRows:
             p = torch.stack([torch.cat([px, b[..., :1]], -1), torch.cat([py, b[..., 1:2]], -1)], -1)        # (n, 9, K, 5, 2)
             d = project(self.path[i:i + 512, sl], self.path_ok[i:i + 512, sl], p.flatten(1, 3))[2].view(p.shape[:-1])
             near[i:i + 512] = ((d < OPEN_BOX).any(-1) & v).flatten(1).any(1)
-        return o & ~near
+        return o & ~near & (self.ds0.abs() <= P_DS)
 
     def pool(self, scenes, pas=None, after=False):
         """Row numbers of the scenes (and of one pass), usable, by default without the rows at or after the rollout's first scorer event
@@ -261,7 +264,7 @@ class OnLoss:
         out["agent"] = (box_steps(ds, bx, bv, fr, re, hw, AG_M, AG_SIDE).mean(1), R.box_ok[r].flatten(1).any(1))
         out["edge"] = (box_steps(ds, R.edge[r][:, None], R.edge_ok[r][:, None], fr, re, hw, EDGE_M, EDGE_SIDE).mean(1), R.edge_ok[r].any(1))
         path, pok, hp = R.path[r], R.path_ok[r], R.has_path[r]
-        out["corr"] = ((project(path, pok, torch.stack([xs, ys], -1))[2] - BAND).clamp_min(0).mean(1) * hp, hp)
+        out["corr"] = ((project(path, pok, torch.stack([xs, ys], -1))[1].abs() - BAND).clamp_min(0).mean(1) * hp, hp)
         # longitudinal terms: timing-only poses, the yaw detached
         dt = dense(self.M, xt, yt, pd)
         c, s = torch.cos(dt[..., 2]), torch.sin(dt[..., 2])
@@ -313,6 +316,7 @@ class OnLoss:
         for k, (v, ok) in vals.items():
             v = v * ok
             Ls[f"on_{k}"] = v.sum() / n_imit
+            Ls[f"onw_{k}"] = (self.lam_i if k == "imit" else self.ho_w * self.lam) * Ls[f"on_{k}"].detach()   # what the term adds (or would add) to the total
             if k in self.on:
                 total = total + (self.lam_i if k == "imit" else self.ho_w * self.lam) * Ls[f"on_{k}"]
             for i, p in enumerate(R.passes):
@@ -346,8 +350,8 @@ def held_eval(model, R: OnRows, OL: OnLoss, rows, bs=256) -> dict:
             add(f"{k}_v", v), add(f"{k}_elig", e.float())
             if k != "prog":
                 act |= v > 0
-        past = (project(R.path[r], R.path_ok[r], torch.stack([x, y], -1))[0] > R.rlen[r][:, None]).any(1)   # a pose past the path's last point
-        add("corr_end", ((tv["corr"][0] > 0) & past).float())
+        past = (project(R.path[r], R.path_ok[r], torch.stack([x, y], -1))[0] > R.rlen[r][:, None]).any(1) & (R.rlen[r] < R.path.shape[1] - 1)
+        add("past_end", past.float())                            # a pose past the logged path's real end (count only; no term charges it)
         add("active", act.float())
         a, a_s, a_m = arc(x, y), arc(R.poses[r][..., 0], R.poses[r][..., 1]), arc(R.poses_model[r][..., 0], R.poses_model[r][..., 1])
         add("arc", a), add("arc_served", a_s), add("arc_parent", a_m)
@@ -361,6 +365,6 @@ def held_eval(model, R: OnRows, OL: OnLoss, rows, bs=256) -> dict:
     for k in TERMS:
         v = c[f"{k}_v"]
         res |= {f"{k}_rate": float((v > 0).double().mean()), f"{k}_mean": float(v.mean()), f"{k}_elig": float(c[f"{k}_elig"].mean())}
-    res["corr_end_rate"] = float(c["corr_end"].mean())           # corr > 0 on a plan that runs past the logged path's end (a longitudinal case)
+    res["past_end_rate"] = float(c["past_end"].mean())
     res["rate_sum"] = sum(res[f"{k}_rate"] for k in TERMS if k != "prog")
     return res

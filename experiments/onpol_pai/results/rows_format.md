@@ -11,7 +11,7 @@ pass directory, copied to `experiments/onpol_pai/results/`) is the generated sum
 
 Deviations from the task's wording, all additive or dtype-only: `P`, `V`, `acc`, `anchor` are float64 (the driver's own arrays,
 unrounded); `stop_kind` has three values; extra keys `ego_in`, `z0`, `veh_sim`, `box_cls`, `box_label`, `box_id`, `log0`, `log_s`,
-`path_len`, `wl_*`, `has_edges`, `t_rel_us`, `t_end_us`, `after_end`, `corridor_m`, `dlat_c`, `run`, `meta`.
+`path_len`, `wl_*`, `has_edges`, `edge_r`, `edge_cov4`, `rec_log_*` (pass `log`), `t_rel_us`, `t_end_us`, `after_end`, `corridor_m`, `dlat_c`, `run`, `meta`.
 
 N = decisions with `infer = true` of the session the scorer read (the session directory that holds `metrics.parquet`), in `k` order.
 M = distinct model frames of the session, L = samples of the logged ego path (10 Hz, about 202), E = scene road-edge vertices.
@@ -92,7 +92,9 @@ then `pai_core.plan(core, cur, valid[i], P[i], V[i], acc[i], cmd[i], cam_t, lht)
 | `path_v` | (N, 121) | the log's speed at those arcs (minimum over the log samples that share an arc: a logged stop reads 0) |
 | `path_h` | (N, 121) | path heading at those arcs, relative to the ego yaw at t0 (unwrapped along the arc) |
 | `imit`, `imit_ok` | (N, 8, 3), (N, 8) bool | RoaD / DAgger recovery target, definition below |
-| `edge_box`, `edge_ok` | (N, 96, 5), (N, 96) bool | the 96 nearest road-edge segments within 40 m of the rig origin, at the ego's level (|z - z_ego| <= 3 m where the map has z), as thin boxes x, y, yaw, length (about 1.0), width 0.1; rig frame at t0; nearest first |
+| `edge_box`, `edge_ok` | (N, 192, 5), (N, 192) bool | road-edge segments as thin boxes x, y, yaw, length (about 1.0), width 0.1; rig frame at t0. Selection (changed 2026-10-11 after the audit; was the 96 nearest to the ego within 40 m): segments at the ego's level (abs(z - z_ego) <= 3 m where the map has z) within 15 m of the logged-path window from `s_ego - 5 m` to `s_ego + max(30 m, 4.5 s x v0 + 10 m)` (1 m samples; straight along the path's last heading where it ends early), ranked by distance to that window, the 192 nearest |
+| `edge_r` | (N,) | radius around the window inside which every segment is kept: 15 m, or the distance of the last kept segment when the cap of 192 binds |
+| `edge_cov4` | (N,) int8 | the ego's realised position 4 s later (this rollout) lies within `edge_r` of the window: 1 / 0; -1 = rows of the last 4 s |
 | `edges_xyz` | (E, 3) | scene road-edge polylines resampled at 1 m, concatenated, local frame (z NaN if the map has none) |
 | `edges_off` | (n_poly + 1,) int32 | polyline j = `edges_xyz[edges_off[j]:edges_off[j + 1]]` |
 | `has_stop`, `has_edges` | bool | the map's wait lines / road edges were read for this scene (false = the scene loader failed; the arrays are then stubs and `meta.map_error` says why) |
@@ -102,6 +104,7 @@ then `pai_core.plan(core, cur, valid[i], P[i], V[i], acc[i], cmd[i], cam_t, lht)
 | `wl_s`, `wl_tcross_us`, `wl_tstop_us`, `wl_kind`, `wl_implicit` | (N, 4) | the same for ALL wait lines crossed ahead within 100 m (eligible or not); `wl_tstop_us` = first time the log is slower than 1 m/s with the rear axle in [line - 15 m, line - front + 1.5 m] before crossing |
 | `turn_s` | (N,) | arc from `s_ego` to the curvature peak of the first >= 45 deg turn of the logged path ahead, within 100 m; NaN if none |
 | `turn_vpk` | (N,) | the log's speed at that peak |
+| `rec_log_poses`, `rec_log_valid`, `rec_log_now` | (N, 8, 3), (N,) int8, (N, 3) | pass `log` only (lib/onp_log_driver.py): the log-replay driver's own `log_poses` / `log_valid` / `log_now` from drive.jsonl. In that pass the served plan (`poses`) was NOT executed: the ego followed the log |
 | `score` | float | scene score from `results-summary.json` |
 | `fail_reason` | str | the summary's `failure_reason` ("" if none) |
 | `zero_kind` | (3,) bool | summary flags [collision_at_fault, offroad, left_corridor_laterally] != 0 |

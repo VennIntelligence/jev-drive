@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # ONPOL-PAI training stages on the Tokyo box, one self-advancing stage per call (tmux session jev, window onp-tr*). A stage never starts
 # the next one: the main session reads its gates first.
-#   onp_night.sh cache [card]          row cache of pass pol (and pass log if it has row files), then gate G-id            ~10 min per pass
+#   onp_night.sh cache [card]          row cache of pass pol (and pass log if it has row files; incremental), then G-id    ~5 min per pass
+#                                      (the registered rule is printed; the stage stops on the working line of the pre-registration's
+#                                      deviation: wrong checkpoint >= 0.9 over, largest difference <= 0.25 m, <= 1 % over max(0.03 m, 4 ulp))
 #   onp_night.sh check [card|cpu]      onp_train.py check (log consistency, gradient directions, operators)               ~2 min
 #   onp_night.sh smoke "<cards>"       60 steps of SELF, IMIT, BOTH, FT (tags P2H10S-*-T-s0, overwritten)                   ~4 min each
 #   onp_night.sh pilot "<cards>"       3 000 steps of SELF, IMIT, BOTH (tags -P-), then the held read                     ~10 min each
-#   onp_night.sh full  "<cards>"       10 000 steps of SELF, IMIT, BOTH, FT (tags -F-), then the held read; needs <root>/FULL_GO, which
-#                                      the main session creates after reading the pilot                                  ~26 min each
+#   onp_night.sh full  "<cards>"       cache + G-id of pass log as its row files stand at that moment, then 10 000 steps of SELF, IMIT,
+#                                      BOTH, FT (tags -F-), then the held read; needs <root>/FULL_GO, which the main session creates
+#                                      after reading the pilot                                                           ~26 min each
 #   onp_night.sh held  [card] <tag>..  the held read of any tags -> <root>/held/held.{md,json}
 #   onp_night.sh gload <tag> [card]    G-load: the checkpoint through sh30_core.Core + pai_core.plan inside the driver image
 #   tmux new-window -d -t jev -n onp-tr-pilot "bash experiments/onpol_pai/scripts/onp_night.sh pilot '0 1'"
@@ -38,7 +41,7 @@ train() {  # cards, kind, steps, extra flags: every card takes unclaimed arms of
     ( for a in $ARMS; do
         O=$R/$a; t=$(tag "$a" "$kind")
         mkdir "$R/claims/$a" 2>/dev/null || continue
-        [[ -f $O/DONE && -f $DATA_DIR/runs/op_parity/runs/$t/ckpt-final.pt ]] && { echo "$(date '+%F %T') card $g: $a ($t) already done"; continue; }
+        [[ $kind != T && -f $O/DONE && -f $DATA_DIR/runs/op_parity/runs/$t/ckpt-final.pt ]] && { echo "$(date '+%F %T') card $g: $a ($t) already done"; continue; }
         mkdir -p "$O"; rm -f "$O"/{DONE,ERROR}; echo "$(date '+%F %T') card $g: $a -> $t, $steps steps"
         # shellcheck disable=SC2086
         if CUDA_VISIBLE_DEVICES=$g "$PY" "$T" train --tag "$t" --init "$INIT" --seed "$SEED" --steps "$steps" $(arm_flags "$a") $RECIPE $more ${EXTRA:-} > "$O/log.txt" 2>&1
@@ -59,17 +62,22 @@ finish() {  # kind: held read of the parent and of the arms that finished; stage
   (( ${#bad[@]} )) && die "failed: ${bad[*]} (see $R/<ARM>/ERROR)"
   date > "$R/DONE"; st "done: ${ok[*]}; held read $ROOT/held/$stage.md"
 }
+cache_pass() {  # pass, card: incremental cache build of the pass's row files, then G-id (registered rule: printed, not a stop; working line: a stop)
+  local p=$1 g=$2 rc
+  ls "$LANE/rows/$p"/*.npz >/dev/null 2>&1 || { echo "no row file of pass $p: skipped"; return 0; }
+  st "cache of pass $p on card $g"
+  CUDA_VISIBLE_DEVICES=$g "$PY" "$C" build --pass "$p" || die "cache build of pass $p"
+  st "G-id of pass $p"
+  CUDA_VISIBLE_DEVICES=$g "$PY" "$C" gid --pass "$p" --tag "$INIT" --control "${CONTROL:-P2H10S-F-s1}" > "$R/gid-$p.out" 2>&1; echo "registered G-id of pass $p: $(grep '^Gate' "$ROOT/cache/gid/$p-$INIT.md")"
+  CUDA_VISIBLE_DEVICES=$g "$PY" "$C" gid-ulp --pass "$p" --tag "$INIT" --control "${CONTROL:-P2H10S-F-s1}" > "$R/gid-ulp-$p.out" 2>&1; rc=$?
+  grep '^Working line' "$ROOT/cache/gid/$p-$INIT-ulp.md" || die "G-id of pass $p did not run: $R/gid-ulp-$p.out"
+  (( rc == 0 )) || die "G-id working line of pass $p failed: $ROOT/cache/gid/$p-$INIT-ulp.md"
+}
 case $stage in
   cache)
     g=${1:-1}; free "$g"
-    for p in pol log; do
-      ls "$LANE/rows/$p"/*.npz >/dev/null 2>&1 || { echo "no row file of pass $p: skipped"; continue; }
-      st "cache of pass $p on card $g"
-      CUDA_VISIBLE_DEVICES=$g "$PY" "$C" build --pass "$p" || die "cache build of pass $p"
-      st "G-id of pass $p"
-      CUDA_VISIBLE_DEVICES=$g "$PY" "$C" gid --pass "$p" --tag "$INIT" --control "${CONTROL:-P2H10S-F-s1}" || die "G-id of pass $p failed or did not run: $ROOT/cache/gid/$p-$INIT.md"
-    done
-    date > "$R/DONE"; st "done: $(cat "$ROOT"/cache/gid/*-"$INIT".md | grep Gate | tr '\n' ' ')";;
+    for p in pol log; do cache_pass "$p" "$g"; done
+    date > "$R/DONE"; st "done: $(grep -h 'Working line:' "$ROOT"/cache/gid/*-"$INIT"-ulp.md | tr '\n' ' ')";;
   check)
     g=${1:-1}; free "$g"; st "running on $g"
     if [[ $g == cpu ]]; then CUDA_VISIBLE_DEVICES= "$PY" "$T" check --device cpu > "$R/check.out" 2>&1; else CUDA_VISIBLE_DEVICES=$g "$PY" "$T" check > "$R/check.out" 2>&1; fi || die "check failed: $R/check.out"
@@ -86,6 +94,7 @@ case $stage in
   full)
     cards=${1:-0 1}; free $cards; ARMS=${ARMS:-SELF IMIT BOTH FT}
     [[ -f $ROOT/FULL_GO ]] || die "$ROOT/FULL_GO missing: the main session reads the pilot gates and creates it; this stage does not start by itself"
+    cache_pass log "${cards%% *}"                             # whatever rows/log holds now (only new scenes are encoded); no pass log: all 16 rows from pol
     st "arms $ARMS, 10000 steps, cards $cards"
     train "$cards" F 10000 ""; finish F "${cards%% *}";;
   held)

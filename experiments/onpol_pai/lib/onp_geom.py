@@ -4,11 +4,11 @@ Poses are (x, y, yaw); "local" = the rollout's local frame, "rig frame at a" = x
 import numpy as np
 
 NEVER = np.iinfo(np.int64).max
-NT, K, NE, NP = 9, 32, 96, 121                   # box times (t0 + 0.5 j s), boxes per row, edge segments per row, path samples per row
+NT, K, NE, NP = 9, 32, 192, 121                   # box times (t0 + 0.5 j s), boxes per row, edge segments per row, path samples per row
 T_BOX = (np.arange(NT) * 500_000).astype(np.int64)
 T_FUT = (np.arange(1, 9) * 500_000).astype(np.int64)
 PATH_ARC = np.arange(-20.0, 101.0)               # arcs of `path` relative to s_ego
-EDGE_R, EDGE_DZ, EDGE_STEP, EDGE_W = 40.0, 3.0, 1.0, 0.1
+EDGE_BAND, EDGE_BACK, EDGE_DZ, EDGE_STEP, EDGE_W = 15.0, 5.0, 3.0, 1.0, 0.1
 STOP_AHEAD, STOP_ZONE, V_LOG_STOP, STOP_EXT, NL = 100.0, 15.0, 1.0, 30.0, 4      # lc.py: STOP_ZONE, V_LOG_STOP, EXT, NL
 CLASSES = ("vehicle", "generic_object", "pedestrian", "bicycle")                 # agent_labels' classes
 CLS = {"person": 2, "rider": 3, "": 1, **{k: 0 for k in ("automobile", "heavy_truck", "trailer", "bus", "train_or_tram_car", "other_vehicle")}}
@@ -218,18 +218,35 @@ def edge_segments(xyz, off):
     return np.c_[(a[:, :2] + b[:, :2]) / 2, np.arctan2(d[:, 1], d[:, 0]), np.hypot(d[:, 0], d[:, 1]), (a[:, 2] + b[:, 2]) / 2]
 
 
-def edge_rows(seg, anchor, z_ego):
-    """Segments (m, 5), rows anchor (N, 3), ego z (N,) -> edge_box (N, NE, 5), edge_ok (N, NE): nearest first, within EDGE_R, same level."""
+def edge_fwd(v0):
+    """Forward length (m) of the logged-path window whose surroundings a row's road-edge labels cover: the plan horizon."""
+    return np.maximum(30.0, 4.5 * np.asarray(v0, np.float64) + 10.0)
+
+
+def edge_rows(seg, anchor, z_ego, path: Path, s_ego, v0, ego4):
+    """Segments (m, 5), rows anchor (N, 3), ego z (N,), their path arcs and speeds, realised ego position 4 s later ego4 (N, 2) local
+    (NaN = none) -> edge_box (N, NE, 5), edge_ok (N, NE), edge_r (N,), edge_cov4 (N,) int8.
+    Selection: segments at the ego's level within EDGE_BAND of the logged-path window from s_ego - EDGE_BACK to s_ego + edge_fwd(v0)
+    (1 m samples; straight along the path's end heading where it ends early), ranked by distance to the window, the NE nearest.
+    edge_r = the radius around the window inside which every segment is kept (EDGE_BAND, or the last kept distance when the cap binds);
+    edge_cov4 = the realised 4 s position lies within edge_r of the window (1 / 0; -1 = no realised position)."""
     N = len(anchor)
-    box, ok = np.zeros((N, NE, 5), np.float32), np.zeros((N, NE), bool)
+    box, ok, r, cov = np.zeros((N, NE, 5), np.float32), np.zeros((N, NE), bool), np.full(N, EDGE_BAND, np.float32), np.full(N, -1, np.int8)
+    fwd = edge_fwd(v0)
     for n in range(N):
-        d = np.hypot(*(seg[:, :2] - anchor[n, :2]).T)
-        m = (d <= EDGE_R) & ~(np.abs(seg[:, 4] - z_ego[n]) > EDGE_DZ)                    # NaN z (no elevation in the map) passes
-        j = np.flatnonzero(m)
-        j = j[np.argsort(d[j], kind="stable")[:NE]]
+        W = path.at(np.arange(s_ego[n] - EDGE_BACK, s_ego[n] + fwd[n] + 1e-6, 1.0))[:, :2]
+        j = np.flatnonzero((np.hypot(*(seg[:, :2] - anchor[n, :2]).T) <= fwd[n] + EDGE_BAND + 25.0) & ~(np.abs(seg[:, 4] - z_ego[n]) > EDGE_DZ))
+        d = np.hypot(*(seg[j, None, :2] - W[None]).transpose(2, 0, 1)).min(1) if len(j) else np.zeros(0)     # NaN z (no elevation) passes the level test
+        j, d = j[d <= EDGE_BAND], d[d <= EDGE_BAND]
+        o = np.argsort(d, kind="stable")[:NE]
+        if len(d) > NE:
+            r[n] = d[o[-1]]
+        j = j[o]
         box[n, :len(j)] = np.c_[to_rig(seg[j, :2], anchor[n]), wrap(seg[j, 2] - anchor[n, 2]), seg[j, 3], np.full(len(j), EDGE_W)]
         ok[n, :len(j)] = True
-    return box, ok
+        if np.isfinite(ego4[n, 0]):
+            cov[n] = np.hypot(*(W - ego4[n]).T).min() <= r[n]
+    return box, ok, r, cov
 
 
 # ---------------------------------------------------------------- wait lines

@@ -236,6 +236,10 @@ def cmd_train(a):
                     if k_on:
                         run.info("  on-policy terms, share of rows > 0 (mean): " + "; ".join(
                             f"{p} " + " ".join(f"{q} {m.get(f'on/{p}/{q}_pos', 0):.3f} ({m.get(f'on/{p}/{q}_mean', 0):.4f})" for q in OL.TERMS + ("imit",)) for p, _ in kon))
+                        wsum = sum(m[f"onw_{q}"] for q in OLs.on) or 1.0
+                        run.info("  weighted contribution per batch (share of the arm's on-policy loss; * = in the total): " + ", ".join(
+                            f"{q}{'*' if q in OLs.on else ''} {m[f'onw_{q}']:.4f}" + (f" ({m[f'onw_{q}'] / wsum:.2f})" if q in OLs.on else "") for q in OL.TERMS + ("imit",))
+                                 + f"; Store rows' loss {m['imit'] + cfg.lam_c * m.get('cons', 0) + cfg.lam_d * m['distill']:.4f} (imit + 3 cons + 30 distill)")
                     run.status(f"step {step + 1}/{cfg.steps}")
             if (step + 1) % cfg.eval_every == 0 or step + 1 == cfg.steps:
                 ev = T.dev_eval(model.eval(), Sd, dv_rows, LS.W)
@@ -286,11 +290,11 @@ def cmd_held(a):
               "Term columns: share of rows with a non-zero term / mean of the term over all rows. Rate sum = agent + edge + corr + stop + turn. "
               "Arc ratio = summed 4 s arc length of the plans / that of the plans served in the rollout (after serve_fix) and / that of the parent's logged model plan. "
               f"Dev = pp_train.dev_eval on the navtrain dev rows ({len(dv_rows)}).\n\n"
-              "| Tag | n target | ADE 1-4 s | ADE 0.5-4 s | FDE 4 s | " + " | ".join(T_) + " | corr, plan past the path end | Rate sum | Any active | Arc / served | Arc / parent plan | Dev ADE | Dev drift on | Dev drift off |\n"
+              "| Tag | n target | ADE 1-4 s | ADE 0.5-4 s | FDE 4 s | " + " | ".join(T_) + " | Plan past the path's real end (count only) | Rate sum | Any active | Arc / served | Arc / parent plan | Dev ADE | Dev drift on | Dev drift off |\n"
               "|---|--:|--:|--:|--:|" + "--:|" * len(T_) + "--:|--:|--:|--:|--:|--:|--:|--:|\n"
               + "".join(f"| `{t}` | {v['n_target']} | {v['ade_1_4']:.3f} | {v['ade_05_4']:.3f} | {v['fde_4']:.3f} | "
                         + " | ".join(f"{v[q + '_rate']:.4f} / {v[q + '_mean']:.4f}" for q in T_)
-                        + f" | {v['corr_end_rate']:.4f} | {v['rate_sum']:.4f} | {v['active_rate']:.4f} | {v['arc_ratio_served']:.3f} | {v['arc_ratio_parent']:.3f} | {v['dev_ade']:.3f} | {v['dev_drift_on']:.3f} | {v['dev_drift_off']:.3f} |\n"
+                        + f" | {v['past_end_rate']:.4f} | {v['rate_sum']:.4f} | {v['active_rate']:.4f} | {v['arc_ratio_served']:.3f} | {v['arc_ratio_parent']:.3f} | {v['dev_ade']:.3f} | {v['dev_drift_on']:.3f} | {v['dev_drift_off']:.3f} |\n"
                         for t, v in res.items())
               + "\nShare of rows each term is defined on: " + ", ".join(f"{q} {next(iter(res.values()))[q + '_elig']:.3f}" for q in T_) + ".\n")
         (out / f"{a.name}.json").write_text(json.dumps(res, indent=1) + "\n")
@@ -409,6 +413,16 @@ def cmd_check(a):
                                            elig=dict(stop=float(R.stop_ok[torch.as_tensor(rows, device=dev)].any(1).float().mean()),
                                                      turn=float(R.turn_ok[torch.as_tensor(rows, device=dev)].float().mean()),
                                                      open=float(R.open[torch.as_tensor(rows, device=dev)].float().mean())))
+    tr = R.pool(scenes(a, ["stageC.txt"]), "pol")                   # expected weighted contribution per batch on the parent's plan
+    if len(tr):
+        v = run_terms(tr, lambda r: (R.poses_model[r][..., 0], R.poses_model[r][..., 1], R.poses_model[r][..., 2]))
+        iv = np.concatenate([(lambda r: (L.imit(R.poses_model[r][..., 0], R.poses_model[r][..., 1], R.poses_model[r][..., 2], r)[0]).cpu().numpy())(torch.as_tensor(tr[i:i + 256], device=dev))
+                             for i in range(0, len(tr), 256)])
+        n_imit = 99 * 0.75                                           # imitation rows among the 99 normal rows (anchor share 0.25)
+        w = {q: 30.0 * 16 * float(x.mean()) / n_imit for q, x in v.items()} | {"imit": 16 * float(iv.mean()) / n_imit}
+        tot = sum(w[q] for q in OL.TERMS)
+        res["weighted_per_batch_parent_plan"] = dict(rows=int(len(tr)), n_imit=n_imit, terms={q: dict(weighted=w[q], share_of_self=w[q] / tot if q != "imit" else None,
+                                                     rate=float((v[q] > 0).mean()) if q != "imit" else None) for q in OL.TERMS + ("imit",)}, self_total=tot)
     lc_ok = all(t["share_zero"] >= 0.99 for name, p in res["log_consistency"].items() if "ds0" in name or name == "pass log" for t in p["terms"].values())
     res["pass"] = dict(log_consistency=bool(lc_ok), gradient=all(v["pass"] for v in gr.values()),
                        operators=bool(res["box_steps_vs_AgentHinge"]["max_abs_diff"] < 1e-4 and res["rear_xy_vs_to_rear"]["max_abs_diff"] < 1e-3))
