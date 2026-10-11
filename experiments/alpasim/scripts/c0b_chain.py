@@ -187,6 +187,18 @@ def driver_health(dirs):
     """Counts over driver-logs close records: (sessions, drive calls, inference errors, input errors)."""
     s = d = ie = ip = 0
     for D in dirs:
+        if not (D / "driver-logs/drive.jsonl").exists():   # shipped sample drivers (LTF, DiffusionDrive): cumulative per-session counters
+            last = {}                                      # in native-logs/driver.log; fallbacks count as input errors
+            for line in (D / "native-logs/driver.log").open():
+                if "inference_error=" in line:
+                    kv = dict(t.split("=", 1) for t in line.split() if "=" in t)
+                    last[kv["session"]] = kv
+            for kv in last.values():
+                s += 1
+                d += sum(int(v) for k, v in kv.items() if k.endswith("_inference") or k == "cached_plan")
+                ie += int(kv["inference_error"])
+                ip += int(kv.get("straight_fallback", 0)) + int(kv.get("dynamic_state_fallback", 0))
+            continue
         for line in (D / "driver-logs/drive.jsonl").open():
             if '"close"' in line:
                 r = json.loads(line)

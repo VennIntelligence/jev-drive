@@ -1,0 +1,9 @@
+proxy,loo_hits,n
+P2 cmd*logm kl0.01,2,5
+P2 city*logm kl0.01,2,5
+P2 ylat*logm kl0.01,2,5
+P2 logm*acc kl0.01,3,5
+P2 cmd*logm kl0.1,2,5
+P2 xfirst*logm kl0.01,2,5
+P2 city*logm kl0.1,2,5
+P2 stat*xfirst kl0.01,2,5

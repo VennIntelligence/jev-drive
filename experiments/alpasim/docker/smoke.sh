@@ -71,6 +71,6 @@ cp "$OUT/driver-logs/drive.jsonl" "$OUT/drive.jsonl" 2>/dev/null
 read -r peak tmp < "$OUT/.peak"; stop_all; wait "$sampler"; rm -f "$OUT"/.stop "$OUT"/.peak
 (( rc == 0 )) || die "compose exited with $rc after $wall s, see compose.log"
 [[ -f $R/aggregate/results-summary.json ]] || die "no results-summary.json"
-python3 "$here/compare.py" "$R/aggregate/results-summary.json" ${REF:+--ref "$REF"} --drive "$OUT/drive.jsonl" --label "${TAG:-default}" \
+python3 "$here/compare.py" "$R/aggregate/results-summary.json" ${REF:+--ref "$REF"} $( [[ -s $OUT/drive.jsonl ]] && echo "--drive $OUT/drive.jsonl" ) --label "${TAG:-default}" \
   --meta "image=$IMG" "base=$BASE" "render_arch=$cap" "wall_s=$wall" "driver_gpu_peak_mib=$peak" "tmp_peak_bytes=$tmp" --out "$OUT" || die "compare"
 date > "$OUT/DONE"; st "done: $(head -3 "$OUT/compare.md" | tail -1)"

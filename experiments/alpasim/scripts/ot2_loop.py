@@ -84,7 +84,9 @@ class Job(B.Job):
         if missing:
             B.fail(f"{self.name}: {len(missing)} scenes still missing after {self.tries} tries")
         s, d, ie, ip = B.driver_health(self.dirs)
-        if ie or ip:
+        if (ie or ip) and os.environ.get("OT_HEALTH_WARN"):   # a shipped third-party driver's own fallback (e.g. no route): log, keep the run
+            B.log(f"{self.name}: driver errors (inference {ie}, input {ip}) kept (OT_HEALTH_WARN)")
+        elif ie or ip:
             B.fail(f"{self.name}: driver errors (inference {ie}, input {ip}) in {self.dirs}")
         self.state = "done"
         B.log(f"{self.name}: done, {len(R)} rollouts, {s} sessions, {d} drive calls in {self.D}")

@@ -153,6 +153,26 @@ navhard S2（3DGS 渲染的离轨后续）是 AlpaSim 最近的离线代理：Al
 - 条款：有参赛者转述要求提交物以 Apache-2.0 公开并给 NVIDIA 宽泛许可（issue 188，二手），原文登录后才看得到。
 - 注册是否已完成、Docker 机器在哪，本稿没有核到。
 
+### 2.3 最后一个正式名额怎么选（PROXY，2026-10-12，第 262 条）
+
+**读到的**：公开 1491 scene 的任何分层或重加权都排不对五个 private 成绩已知的策略（我们两次提交、LTF / DiffusionDrive 样例、garage 0014）；
+样例和 garage 从公开到 private 基本不掉甚至上涨，只有我们 openpilot 学生一族大掉。公开均分、公开 at-fault 距离与 private 排序相反，
+公开 GT 距离（离日志路径）是唯一顺着走的量，族内两次都对（APY→YR：公开 −0.19 m，private −0.56 m、+0.16 分）。
+
+**选法（写死，候选出来之前）**：
+1. 只在 openpilot 学生族内比较；第三方 driver 的公开分不能拿来和我们比。
+2. 主量是公开 1491 scene 的 GT 距离（截断后逐 clip 最大值的均值，`experiments/alpasim_proxy/scripts/proxy_transfer.py`），按 log 聚类配对 CI；
+   换掉 `YR10m10-F-s0` 的条件是对它配对差的 CI 上界 < 0（更近日志路径），且 ≥ 4 m 出路比例不升。公开均分和公开 at-fault 距离只作护栏
+   （均分不低于 YR 0.02 以上），不作选择量。
+3. LONG-HORIZON 读数（experiments/alpasim_long）落地后：长 scene 上同样的规则，且先用 LTF / DD / garage 三个锚点在长 scene 上复核 GT 距离仍顺着
+   private 走；不顺就只信 10 决策的读数。
+4. 用户的 warm-up（32 个 private scene，只回状态，30 天 3 次，不占正式名额）是唯一能直接看 private 的探针：最后候选与 `YR10m10-F-s0` 各交一次
+   warm-up，比 passed 数；这是用户的动作。
+5. 没有候选满足 2：最后一个名额不用于换 checkpoint，留给能解释族内落差的改动（首要嫌疑：openpilot 的标定 warp 在 private 车辆标定上的输入路径，
+   未验证；样例和 garage 直接读原图）。
+6. 现状：存的候选没有一个在公开 GT 上与 YR 分得开（YR s1 0.93、P2H10-F-s1 0.96、P2H10S-F 0.99，YR s0 0.94 [0.83, 1.04]），所以按此规则目前
+   不换。
+
 ## 3. 检验与判定线
 
 线在这里写死；每项开跑前各写一份预登记。先小后大：pilot 规模先读一次，明确为负就停。
