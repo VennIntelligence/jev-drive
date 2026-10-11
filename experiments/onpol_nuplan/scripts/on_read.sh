@@ -7,6 +7,8 @@
 #   smoke <tag> ...   the 48-scene pilot smoke: each checkpoint on results/split/smoke48_train.txt (48 TRAIN scenes), then the checklist
 #                     results/pilot/smoke_<tag>.json (48 / 48 rollouts, 0 non-finite plans, 0 driver errors, 10 drive calls per session).
 #                     Its score is not a read: nothing here prints or stores it. Exit 2 if a checklist fails.
+#                     The json lands in the box's working tree (and in read/smoke/): copy it to the Mac, commit it there and delete the box
+#                     copy before the next `git pull` on the box (an untracked file of the same name blocks the pull).
 #   held [<tag> ...]  THE READ: each checkpoint on results/split/held.txt (460 scenes), one pool job per checkpoint. Default tags = the arms
 #                     SIMIT-ON / SSELF-ON / SBOTH-ON s0 s1, the fourth family (SSELFnoL-ON if its training exists or ON_FOURTH says so, else
 #                     SNONE-ON) and the control P2H10S-F s0-s3. Refused: a tag given twice, a tag outside those families (ON_HELD_ANY=1
@@ -49,7 +51,8 @@ status "$# checkpoints on $LIST: $*"
 ON_SPLIT=$SPLIT ON_LISTS=$W/lists OT_LANE=onpol OT_OUT=$W OT_OWNER=alpasim-onpol OT_PRIO=${OT_PRIO:-12} OT2_MAX_ACTIVE=${OT2_MAX_ACTIVE:-4} \
   python3 $E/scripts/on_read_loop.py "$STAGE" "${J[@]}" || die "on_read_loop rc $? (see $W/$STAGE/ERROR)"
 if [[ $STAGE == smoke ]]; then
-  bad=; for t; do python3 $E/scripts/on_read_loop.py --check "$t" "$W/smoke/manifest.json" "$t@smoke48" "$E/results/pilot/smoke_$t.json" > "$O/check_$t.log" 2>&1 || bad+=" $t"; done
+  bad=; for t; do python3 $E/scripts/on_read_loop.py --check "$t" "$W/smoke/manifest.json" "$t@smoke48" "$E/results/pilot/smoke_$t.json" > "$O/check_$t.log" 2>&1 || bad+=" $t"
+              cp "$E/results/pilot/smoke_$t.json" "$W/smoke/"; done
   [[ -z $bad ]] || { status "ERROR smoke checklist failed:$bad (results/pilot/smoke_<tag>.json)"; echo "checklist:$bad" > "$O/ERROR"; exit 2; }
 fi
 status "all done: $*"; date '+%F %T' > "$O/DONE"

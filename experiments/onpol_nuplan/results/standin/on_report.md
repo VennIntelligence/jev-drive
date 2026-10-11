@@ -176,6 +176,7 @@ Verdict: "Not separated".
 | tag | scenes compared | scenes that differ (score or zero kind) | zero flips | max abs score difference | mean rerun / stored |
 |:--|--:|--:|--:|--:|:--|
 | P2H10S-F-s0 | 48 of 1031 | 2 | 0 | 0.0082 | not shown (a smoke is not a read) |
+| P2H10S-F-s1 | 48 of 1031 | 0 | 0 | 0.0000 | not shown (a smoke is not a read) |
 
 P2H10S-F-s0, scenes that differ: `2021.09.29.18.19.40_veh-28_00438_00833-887e4d57da835b12`, `2021.10.06.07.26.10_veh-52_00422_00728-eeba0804c2645281`
 
