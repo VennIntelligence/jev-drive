@@ -37,7 +37,8 @@ def q(x, p=(5, 50, 95)):
 def clock(run_dirs, v_min, warm):
     """Per-decision ratios, pooled over the scenarios of the runs."""
     R = {k: [] for k in ("dt", "vfed_over_v", "key_t_oldest", "plan_t_dil", "plan_t_raw", "d1_over_v", "exec_over_plan",
-                         "arc_model", "arc_sim", "mv0_over_vfed", "reps")}
+                         "arc_model", "arc_sim", "mv0_over_vfed", "reps", "arc_model_steady")}
+    pool = dict(arc=0.0, den=0.0, arc_steady=0.0, den_steady=0.0)        # pooled sums, as served_plan_length.md reads arc / (T x fed speed)
     n_scen = 0
     for d in run_dirs:
         for f in sorted(Path(d).glob("bench/zs/*/zs_steps.jsonl")):
@@ -83,8 +84,17 @@ def clock(run_dirs, v_min, warm):
                     R["arc_sim"].append(float(np.linalg.norm(np.diff(np.r_[[[0.0, 0.0]], plan[:6]], axis=0), axis=1).sum()) / (3.0 * v[i]))
                     vfed = 1.25 * v[i]
                     R["arc_model"].append(float(arc[5]) / (tm[5] * vfed))                  # arc to model 3.906 s over fed speed
+                    pool["arc"] += float(arc[5])
+                    pool["den"] += tm[5] * vfed
+                    if i >= 4 and abs(v[i] - v[i - 4]) < 0.3:                              # speed held over the last second
+                        R["arc_model_steady"].append(R["arc_model"][-1])
+                        pool["arc_steady"] += float(arc[5])
+                        pool["den_steady"] += tm[5] * vfed
                     R["mv0_over_vfed"].append(float(s["model_v"][0]) / vfed)
-    return n_scen, {k: q(x) for k, x in R.items()}
+    tab = {k: q(x) for k, x in R.items()}
+    tab["arc_model"]["pooled"] = pool["arc"] / max(pool["den"], 1e-9)
+    tab["arc_model_steady"]["pooled"] = pool["arc_steady"] / max(pool["den_steady"], 1e-9)
+    return n_scen, tab
 
 
 def slots(trace_dir, probe):
@@ -176,7 +186,7 @@ def main():
             if dirs:
                 n, tab = clock(dirs, a.v_min, a.warm)
                 res[name] = dict(runs=[Path(d).name for d in dirs], scenarios=n, v_min=a.v_min, warm=a.warm, table=tab)
-                write_csv(out / f"{name}.csv", [dict(metric=k, **v) for k, v in tab.items()])
+                write_csv(out / f"{name}.csv", [dict(metric=k, **dict(dict(pooled=""), **v)) for k, v in tab.items()])
                 run.info("%s (%d scenario runs): %s", name, n, json.dumps({k: [round(v[p], 4) for p in ("p5", "p50", "p95")] + [v["n"]] for k, v in tab.items()}))
         if a.trace and a.probe:
             probe = json.loads(Path(a.probe).read_text())
