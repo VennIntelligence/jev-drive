@@ -268,3 +268,7 @@ each; 1.5 TB free.
 - 00:31 (10-12): the 281 queue was killed by another session (Tokyo cards needed for the submission-image smoke), 31 min in, no chunk
   finished, nothing read; the two partial chunk dirs were moved to `read281/self/runs/paused-20261012-003154/`. Restarted at 01:09, queue
   only, same command, same chunk lists.
+- 02:24 (10-12): **the 281 read was stopped by the user's decision** (relayed by another session; `read281/STOPPED.md`): the PAI track is
+  not submitted and the Tokyo box is reserved for other reads. State at the stop: ON-SELF 4 of 8 chunks finished (144 of 281 scenes),
+  2 chunks killed mid-run, ON-IMIT and FT-CTRL not started. **No score of any new checkpoint was read**, complete or partial; lines H and
+  V have no verdict. The finished chunks stay on the box; a restart of the queue would keep them.
