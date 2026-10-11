@@ -265,3 +265,6 @@ each; 1.5 TB free.
   control has them; ON-IMIT lowers the agent rate most and has the lower summed rate without being trained on the terms. Both plan longer
   than the control (arc ratio 1.13 and 1.10 against 1.03). Fine-tuning alone (FT) changes none of the held-row quantities.
 - 23:59: the 281 queue started (`/data/runs/onpol_pai/read281`: self, imit, ft; 843 scenes; frozen clone at c58f7136 for the PAI scripts).
+- 00:31 (10-12): the 281 queue was killed by another session (Tokyo cards needed for the submission-image smoke), 31 min in, no chunk
+  finished, nothing read; the two partial chunk dirs were moved to `read281/self/runs/paused-20261012-003154/`. Restarted at 01:09, queue
+  only, same command, same chunk lists.
