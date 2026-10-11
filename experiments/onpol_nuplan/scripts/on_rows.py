@@ -150,16 +150,19 @@ def log_box(L, tk, t):
 
 # ---------------------------------------------------------------- the logged path G
 class Path:
-    """The logged rear-axle path of a log from frame `a` on: cubic Hermite through the 2 Hz poses (tangent = the logged heading; frames that
-    moved less than 5 cm are merged), sampled every 0.1 m, continued EXT m straight beyond the last frame. xy (m, 2), s (m,) arc, h (m,)
-    heading of the segment that starts at each vertex; SF (frames,) arc of every frame, TF their times; s_end = arc of the last frame."""
+    """The logged rear-axle path of a log from frame `a` on: cubic Hermite through the 2 Hz poses (tangent = the logged heading; a frame less
+    than MERGE m from the last kept one is merged into it, so a standing log's jitter draws no path), sampled every 0.1 m, continued EXT m
+    straight beyond the last frame. xy (m, 2), s (m,) arc, h (m,) heading at each vertex = the logged heading, linear in the segment
+    parameter between two kept frames (never the direction of a 0.1 m polyline segment); SF (frames,) arc of every frame, TF their times;
+    s_end = arc of the last frame."""
+    MERGE = 0.2
 
     def __init__(self, P, T):
         keep = [0]
         for i in range(1, len(P)):
-            if np.hypot(*(P[i, :2] - P[keep[-1], :2])) > 0.05:
+            if np.hypot(*(P[i, :2] - P[keep[-1], :2])) > self.MERGE:
                 keep.append(i)
-        out, at = [P[:1, :2]], [0]
+        out, hd, at = [P[:1, :2]], [P[:1, 2]], [0]
         for i, j in zip(keep[:-1], keep[1:]):
             a, b = P[i], P[j]
             d = b[:2] - a[:2]
@@ -170,7 +173,7 @@ class Path:
                 seg = a[:2] + u * d
             else:
                 seg = (2 * u**3 - 3 * u**2 + 1) * a[:2] + (u**3 - 2 * u**2 + u) * ta + (-2 * u**3 + 3 * u**2) * b[:2] + (u**3 - u**2) * tb
-            out.append(seg)
+            out.append(seg), hd.append(a[2] + u[:, 0] * (b[2] - a[2]))
             at.append(at[-1] + len(seg))
         xy = np.concatenate(out)
         s = np.r_[0, np.cumsum(np.hypot(*np.diff(xy, axis=0).T))]
@@ -178,26 +181,28 @@ class Path:
         yaw = P[keep[-1], 2]
         self.xy = np.r_[xy, xy[-1:] + EXT * np.array([[np.cos(yaw), np.sin(yaw)]])]
         self.s = np.r_[s, s[-1] + EXT]
-        d = np.diff(self.xy, axis=0)
-        self.h = np.unwrap(np.r_[np.arctan2(d[:, 1], d[:, 0]), yaw])
-        self.h[-1] = self.h[-2]
-        SF = np.zeros(len(P))
+        self.h = np.r_[np.concatenate(hd), yaw]
+        SF, last = np.zeros(len(P)), 0
         SF[keep] = s[at]
-        for i in range(1, len(P)):                                               # a merged frame takes the arc of the frame it was merged into
-            if i not in set(keep):
-                SF[i] = SF[i - 1]
-        self.SF, self.TF = SF, np.asarray(T, np.float64)
+        ks = set(keep)
+        for i in range(1, len(P)):                                               # a merged frame: its advance along the kept frame's heading, never backwards
+            if i in ks:
+                last = i
+            else:
+                q = P[last]
+                SF[i] = max(SF[i - 1], SF[last] + (P[i, :2] - q[:2]) @ np.array([np.cos(q[2]), np.sin(q[2])]))
+        self.SF, self.TF = np.maximum.accumulate(SF), np.asarray(T, np.float64)
 
     def s_log(self, t):
         """Arc position of the log at log time t (us)."""
         return np.interp(t, self.TF, self.SF)
 
     def at(self, s):
-        """Points (n, 2) and segment headings (n,) at arcs s (clamped to the path)."""
+        """Points (n, 2) and path headings (n,) at arcs s (clamped to the path)."""
         s = np.clip(np.atleast_1d(s), 0, self.s[-1])
         i = np.clip(np.searchsorted(self.s, s, "right") - 1, 0, len(self.s) - 2)
-        w = ((s - self.s[i]) / np.maximum(self.s[i + 1] - self.s[i], 1e-9))[:, None]
-        return self.xy[i] + w * (self.xy[i + 1] - self.xy[i]), self.h[i]
+        w = (s - self.s[i]) / np.maximum(self.s[i + 1] - self.s[i], 1e-9)
+        return self.xy[i] + w[:, None] * (self.xy[i + 1] - self.xy[i]), self.h[i] + w * (self.h[i + 1] - self.h[i])
 
     def project(self, p, lo, hi):
         """Point p (2,) -> (arc of the foot, signed lateral offset, left +, heading of the path at the foot), nearest segment with arc in [lo, hi]."""
@@ -208,23 +213,20 @@ class Path:
         w = np.clip(((p - a) * d).sum(1) / L2, 0, 1)
         f = a + w[:, None] * d
         j = int(np.hypot(*(p - f).T).argmin())
-        h = self.h[i0 + j]
+        h = self.h[i0 + j] + w[j] * (self.h[i0 + j + 1] - self.h[i0 + j])
         return float(self.s[i0 + j] + w[j] * np.sqrt(L2[j])), float((p - f[j]) @ np.array([-np.sin(h), np.cos(h)])), float(h)
 
 
 def imitation(G: Path, s0, e0, psi_e, D):
     """The prereg's imitation target: 8 poses (map frame) = G at s0 + D_k moved by e(D_k) along G's left normal, e(d) = (e0 + (tan(psi_e) +
-    e0 / Lr) d) exp(-d / Lr), Lr = max(4 m, 1 s x D_8 / 4 s), psi_e clipped to +-30 deg; heading = the tangent of that curve (central
-    difference over 0.1 m). -> (8, 3), Lr."""
+    e0 / Lr) d) exp(-d / Lr), Lr = max(4 m, 1 s x D_8 / 4 s), psi_e clipped to +-30 deg; heading = the tangent of that curve = G's heading +
+    atan(de / dd) (G's curvature times e is neglected: below 2 % of the slope for |e| < 4 m on a 200 m radius). -> (8, 3), Lr."""
+    D = np.asarray(D, np.float64)
     Lr = max(LR_MIN, LR_T * D[-1] / 4.0)
     a = np.tan(np.clip(psi_e, -PSI_MAX, PSI_MAX)) + e0 / Lr
-
-    def c(d):
-        xy, h = G.at(s0 + d)
-        return xy + ((e0 + a * d) * np.exp(-d / Lr))[:, None] * np.c_[-np.sin(h), np.cos(h)]
-    D = np.asarray(D, np.float64)
-    t = c(D + 0.05) - c(D - 0.05)
-    return np.c_[c(D), np.arctan2(t[:, 1], t[:, 0])], Lr
+    xy, h = G.at(s0 + D)
+    e, de = (e0 + a * D) * np.exp(-D / Lr), (a - (e0 + a * D) / Lr) * np.exp(-D / Lr)
+    return np.c_[xy + e[:, None] * np.c_[-np.sin(h), np.cos(h)], h + np.arctan(de)], Lr
 
 
 def progress(G: Path, tl, v_ego):
