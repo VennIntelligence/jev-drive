@@ -598,15 +598,17 @@ def cmd_tok(a):
         for t in tags:
             rows = np.flatnonzero(M["tag"] == t)
             other = t[:-1] + str(1 - int(t[-1]))
+            slow = np.abs(M["mu"][rows][:, :15, 0]).max(1) < 16.0                              # plan points below 16 m: one fp16 ulp <= 0.008 m
             (dm, dp, dn, dr, df), (cm, cp, _, _, _) = diff(models[t], rows), diff(models[other], rows)
             d1 = single(models[t], rows[:: max(len(rows) // a.single, 1)]) if a.single else np.full(1, np.nan)
             r1["tags"][t] = dict(n=len(rows), mu_share=float((dm <= TOL_M).mean()), pose_share=float((dp <= TOL_M).mean()), mu_median=float(np.median(dm)),
                                  mu_max=float(dm.max()), pose_median=float(np.median(dp)), pose_max=float(dp.max()), control=other,
+                                 mu_share_one_ulp=float((dm <= 0.03126).mean()), mu_share_slow=float((dm[slow] <= TOL_M).mean()), slow_share=float(slow.mean()),
                                  pose_share_within_32m=float((dn <= TOL_M).mean()), pose_share_one_ulp=float((dp <= 0.03126).mean()), pose_share_trainer_formula=float((dr <= TOL_M).mean()),
                                  rear_formula_max=float(df.max()), single_n=int(len(d1)) if a.single else 0, single_identical=float((d1 == 0).mean()), single_max=float(d1.max()),
                                  control_mu_share=float((cm <= TOL_M).mean()), control_pose_share=float((cp <= TOL_M).mean()), control_pose_median=float(np.median(cp)))
             q = r1["tags"][t]
-            lines.append((t, len(rows), f"{q['mu_share']:.4f}", f"{q['pose_share']:.4f}", f"{q['mu_median']:.4f} / {q['mu_max']:.4f}", f"{q['pose_median']:.4f} / {q['pose_max']:.4f}",
+            lines.append((t, len(rows), f"{q['mu_share']:.4f}", f"{q['pose_share']:.4f}", f"{q['mu_median']:.4f} / {q['mu_max']:.4f}", f"{q['mu_share_one_ulp']:.4f} / {q['mu_share_slow']:.4f} ({q['slow_share']:.3f} of rows)", f"{q['pose_median']:.4f} / {q['pose_max']:.4f}",
                           f"{q['pose_share_within_32m']:.4f} / {q['pose_share_one_ulp']:.4f}", f"{q['pose_share_trainer_formula']:.4f} ({q['rear_formula_max']:.4f})",
                           f"{q['single_identical']:.3f} of {q['single_n']} (max {q['single_max']:.4f})" if q["single_n"] else "not run", f"{other}: {q['control_mu_share']:.4f} / {q['control_pose_share']:.4f} (median {q['control_pose_median']:.3f} m)"))
         cf = ROWS / a.control / "r1.json"
@@ -624,7 +626,7 @@ def cmd_tok(a):
                                               "tolerance (one fp16 ulp of a plan point beyond 32 m); the pose share with the trainer's own pose formula (pp_train.rear) and, in brackets, the "
                                               "largest difference of that formula from the serving export on the served plan itself; --single: rows forwarded one at a time as the driver does (8 image pairs in one "
                                               "encoder call from the dump, policy batch 1): share whose whole plan mean (33 x 15) equals the served one bit for bit.", ""] +
-                                             md_table(["serving tag", "rows", "first 15 plan points", "8 poses", "plan points median / max (m)", "poses median / max (m)", "poses within 32 m / one-ulp tolerance", "poses, trainer formula (formula gap, m)", "one row at a time: identical plan mean", "wrong-seed control (points / poses)"], lines) + [""]))
+                                             md_table(["serving tag", "rows", "first 15 plan points", "8 poses", "plan points median / max (m)", "plan points within 0.03126 m / within 0.03 m on rows whose 15 points stay below 16 m", "poses median / max (m)", "poses within 32 m / one-ulp tolerance", "poses, trainer formula (formula gap, m)", "one row at a time: identical plan mean", "wrong-seed control (points / poses)"], lines) + [""]))
         # ---- own-plan activation of each label (S's hinges as loss43 runs them: agent 0.3 m in the corridor / 0 beside it, road 0.3 m)
         ah = AgentHinge(root / "agent.npz", tab["names"], dev, 0.3, 0.0)
         rh, nh = Hinge(root / "road.npz", tab["names"], dev, 0.3), Hinge(root / "drivable.npz", tab["names"], dev, 0.3)
