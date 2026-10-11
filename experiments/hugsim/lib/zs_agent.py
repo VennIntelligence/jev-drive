@@ -76,6 +76,11 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      and feature queues after each model step (hugsim_zs_server.queue_trace, read-only), and the agent writes one line
                      per decision to <output>/zs_trace.jsonl (simulator time, CRC32 of the frame sent, model steps, fed speed, the plan
                      read-out times, the parity pose-history times); plans and zs_steps.jsonl are unchanged
+                     trace_frames (openpilot, bool, default false; plans/2026-10-11-frame-ab-prereg.md, results/frame_ab.md): logging only -
+                     every decision writes <output>/zs_frames/<step>.npz: the packed frame sent (img2), the parity bias and ego features
+                     at full precision, the ego state (time, position, heading, speed, acceleration, command), desire, model steps, fed
+                     speed, and the model's plan as returned (pos, yaw, vel, action curvature / acceleration); step 0 also writes
+                     zs_frames/setup.json (dataset, rear offset, dilation). Plans and zs_steps.jsonl are unchanged
 
 Interface (jevdrive/openpilot/interface.py, docs/openpilot-interface.md): experiments/hugsim/archive/zs_run.py resolves a named
 preset (--preset spec | spec_cold | spec_hold | opctrl_d118 | exam) into the controller tree, OP_CTRL and these opts and passes HUGSIM_ZS_PRESET /
@@ -293,6 +298,7 @@ class Agent:
                 out = dict(out, pos=LS.merge_lateral(out["pos"], sp))
         elif self.par is not None:                        # op_parity: the bias of this step rides with the frame
             bias, rec["parity"] = self.par.bias(obs["rgb"], info, self.hist)
+            self.sent_bias = bias
             r, out = self.call(dict(meta, desire=desire, reps=reps), {"img2": img2, "intent_bias": bias})
             if self.opts["parity"].get("select"):         # op_parity turn selector: replace the plan (and its smooth curvature) by the picked candidate
                 out, r, rec["sel"] = self.par.select(out, r, self.par.last_ego)
@@ -308,6 +314,19 @@ class Agent:
                 "tau": (Z.plan_times() / dil).tolist(), "plan_t": Z.plan_times().tolist(),
                 "par_scale": self.par and self.par.scale, "par_key_t": self.par and (float(info["timestamp"]) + PH_KEYS * self.par.scale).tolist(),
                 "srv": r.get("trace")}) + "\n")
+        if self.opts.get("trace_frames"):                  # logging only: everything an offline replay of this decision needs
+            fd = self.out / "zs_frames"
+            if not self.step:
+                fd.mkdir(exist_ok=True)
+                (fd / "setup.json").write_text(json.dumps({"dataset": self.dataset, "rear_offset": self.d, "dil": dil, "per_ctx": per_ctx,
+                                                           "traffic": meta["traffic"], "par_scale": self.par and self.par.scale}))
+            bias = getattr(self, "sent_bias", None)
+            np.savez(fd / f"{self.step:04d}.npz", img2=img2, bias=np.zeros(0, np.float16) if bias is None else bias,
+                     ego=np.asarray(self.par.last_ego, np.float32) if self.par is not None else np.zeros(0, np.float32),
+                     state=np.array([float(info["timestamp"]), *self.hist.pos[-1], self.hist.th[-1], float(info["ego_velo"]),
+                                     float(np.ravel(info.get("accelerate", 0.0))[0]), int(info["command"]), desire, reps, meta["speed"]], np.float64),
+                     pos=out["pos"], yaw=out["yaw"], vel=out["vel"], yaw_rate=out["yaw_rate"],
+                     act=np.array([r.get("curvature"), r.get("curvature_plan"), r.get("curvature_smooth"), r.get("accel")], np.float64))
         self.ol_in = (out.get("lead"), out.get("lead_prob3"), float(out["vel"][0]))
         rec.update(desire=desire, reps=reps, infer_ms=r.get("infer_ms"), rtt_ms=r["rtt_ms"],
                    lead_prob=r.get("lead_prob"), lead_x=r.get("lead_x"), lead_v=r.get("lead_v"), engaged=r.get("engaged"),
