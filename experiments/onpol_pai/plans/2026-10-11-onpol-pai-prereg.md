@@ -1,6 +1,6 @@
 # ONPOL-PAI pre-registration: on-policy self-consequence rows against on-policy imitation rows, AlpaSim PAI track
 
-Written 2026-10-11, 20:35 to 20:50 JST, by the main session of lane ONPOL-PAI (task: `tmp/onpol-pai-prompt.md`), before any score of a
+Written 2026-10-11 (committed 20:32 JST, 60a81aca), by the main session of lane ONPOL-PAI (task: `tmp/onpol-pai-prompt.md`), before any score of a
 new checkpoint exists and before any score of the training-scene rollouts was read (the 4-scene stage had finished; only its completion
 and driver-error counts were looked at). The user is asleep: every choice below that the task left open is marked **(assumed)** and is
 the main session's. Thresholds are design choices, not measurements. Wall-clock figures are estimates unless a source is named.
