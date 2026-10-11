@@ -71,6 +71,14 @@ Standing and limits:
 - **`-ON` checkpoints have seen renders of navtest logs: never report them on navtest or navhard.**
 - Control reruns against the stored reads of the same scenes: 10 of 1840 scene reads differ (maximum 0.0066), no zero flip.
 
+## Round 2, item A: long-horizon read stopped at its smoke (2026-10-12)
+
+[results/long/smoke.md](results/long/smoke.md). No public scene can run beyond 10 decisions on the box: the scene length comes from the
+organisers' prebuilt trajdata cache (111 frames at 20 Hz = 5.5 s per scene), the window override
+`runtime.scene_provider.trajdata.dataset.extra_params.num_timesteps_after` is silently ignored while that cache exists, and a rebuild needs
+the raw nuPlan test logs and the nuPlan devkit, neither of which is on the box. The nuPlan logs and the MTGS reconstructions themselves
+would carry 18 decisions on 99 % of the scenes. No held scene was rolled. `scripts/on_long.sh smoke`, `on_long_smoke.py`, `on_long_probe.py`.
+
 ## Step 0: four seeds of `JAPSnoY` and `APY10m10-AB` on all 1491 scenes (for the submission #2 choice, decisions 253 / 254)
 
 [results/seeds4/seeds4_report.md](results/seeds4/seeds4_report.md). New seeds 2 and 3 of each, trained with `joint_train.py`

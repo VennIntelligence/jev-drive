@@ -1,0 +1,17 @@
+num_timesteps_before 30 after 160 cache_location /root/autodl-tmp/ujs/datasets/alpasim_nuplan data_dir /root/autodl-tmp/ujs/datasets/alpasim_nuplan rebuild_cache False
+NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.
+loader scenes: 12146
+2021.05.25.14.16.10_veh-35_00083_00485-34f30283d3bd53ec frames 56 dt 0.1 range_s 5.500 decisions 10
+2021.05.25.14.16.10_veh-35_01690_02183-30f09e001cf55013 frames 56 dt 0.1 range_s 5.500 decisions 10
+2021.05.25.14.24.08_veh-25_04059_04203-6225b347244658c1 frames 56 dt 0.1 range_s 5.500 decisions 10
+2021.06.28.20.24.43_veh-38_03385_04952-e61699cda2f15e01 frames 56 dt 0.1 range_s 5.500 decisions 10
+2021.08.30.13.45.25_veh-40_01116_01336-0ba54149d1575f95 frames 56 dt 0.1 range_s 5.500 decisions 10
+2021.08.30.16.16.44_veh-40_01099_01351-9af711dfa6eb5952 frames 56 dt 0.1 range_s 5.500 decisions 10
+2021.09.16.19.27.01_veh-45_01749_03230-89e02236312d5038 frames 56 dt 0.1 range_s 5.500 decisions 10
+2021.09.29.18.19.40_veh-28_00438_00833-887e4d57da835b12 frames 56 dt 0.1 range_s 5.500 decisions 10
+2021.09.29.19.02.14_veh-28_00964_01689-51259bf89422548a frames 56 dt 0.1 range_s 5.500 decisions 10
+2021.10.06.07.26.10_veh-52_01245_02064-1c0c94dbcd5359fc frames 56 dt 0.1 range_s 5.500 decisions 10
+
+real	0m8.770s
+user	0m27.924s
+sys	0m1.761s

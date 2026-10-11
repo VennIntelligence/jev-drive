@@ -1,0 +1,575 @@
+{
+ "list": "experiments/onpol_nuplan/results/long/smoke10_train.txt",
+ "scenes": [
+  "2021.05.25.14.16.10_veh-35_00083_00485-34f30283d3bd53ec",
+  "2021.05.25.14.16.10_veh-35_01690_02183-30f09e001cf55013",
+  "2021.05.25.14.24.08_veh-25_04059_04203-6225b347244658c1",
+  "2021.06.28.20.24.43_veh-38_03385_04952-e61699cda2f15e01",
+  "2021.08.30.13.45.25_veh-40_01116_01336-0ba54149d1575f95",
+  "2021.08.30.16.16.44_veh-40_01099_01351-9af711dfa6eb5952",
+  "2021.09.16.19.27.01_veh-45_01749_03230-89e02236312d5038",
+  "2021.09.29.18.19.40_veh-28_00438_00833-887e4d57da835b12",
+  "2021.09.29.19.02.14_veh-28_00964_01689-51259bf89422548a",
+  "2021.10.06.07.26.10_veh-52_01245_02064-1c0c94dbcd5359fc"
+ ],
+ "arms": {
+  "ship": {
+   "dir": "/root/autodl-tmp/ujs/runs/onpol_nuplan/long/smoke/runs/ship",
+   "pool": "DONE",
+   "rc": 0,
+   "error": null,
+   "runtime_s": 93.02422523498535,
+   "total_s": 141.17371368408203,
+   "peak_rss_gib": {
+    "driver": 6.47,
+    "controller-0": 0.78,
+    "renderer-0": 3.71,
+    "runtime-0": 10.34
+   },
+   "peak_gpu_mib": {
+    "driver": 2102.0,
+    "controller-0": 0.0,
+    "renderer-0": 12012.0,
+    "runtime-0": 0.0
+   },
+   "overrides": [],
+   "disk_mb": 270,
+   "log_lines": {
+    "runtime-0": {
+     "n": 3,
+     "first": [
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.",
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.",
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ],
+     "last": [
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.",
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ]
+    },
+    "renderer-0": {
+     "n": 1,
+     "first": [
+      "00:21:38.898 WARNING:\tNuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ],
+     "last": [
+      "00:21:38.898 WARNING:\tNuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ]
+    }
+   },
+   "clip_lines": 10,
+   "clip_example": "00:22:03.082 [W1] INFO:\tClipping n_sim_steps from 200 to 10 because only 10 complete policy steps fit between first_policy_timestamp_us=17000 and scene end=5500000",
+   "scene": {
+    "2021.05.25.14.16.10_veh-35_00083_00485-34f30283d3bd53ec": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.6137697652836025,
+     "dist_m": 35.89472631314457,
+     "gt_m": 42.74064769000335,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.05.25.14.16.10_veh-35_01690_02183-30f09e001cf55013": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 2.575718929414011,
+     "dist_m": 22.5276888750842,
+     "gt_m": 22.547892199080252,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.05.25.14.24.08_veh-25_04059_04203-6225b347244658c1": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 4.293810552185471,
+     "dist_m": 11.084171149382842,
+     "gt_m": 7.15495736520203,
+     "duration_frac_20s": 0.175,
+     "decisions": 10
+    },
+    "2021.06.28.20.24.43_veh-38_03385_04952-e61699cda2f15e01": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.4258893128003538,
+     "dist_m": 22.68241549304566,
+     "gt_m": 26.61770260008027,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.08.30.13.45.25_veh-40_01116_01336-0ba54149d1575f95": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.31735555918036207,
+     "dist_m": 19.682093091778288,
+     "gt_m": 23.136211180829946,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.08.30.16.16.44_veh-40_01099_01351-9af711dfa6eb5952": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.2502592282992956,
+     "dist_m": 12.981624516254856,
+     "gt_m": 15.082669539976857,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.09.16.19.27.01_veh-45_01749_03230-89e02236312d5038": {
+     "score": 0.0,
+     "fail": "left_corridor_laterally",
+     "gt_dist": 4.020347872692362,
+     "dist_m": 18.342856445792997,
+     "gt_m": 28.488333592158625,
+     "duration_frac_20s": 0.15,
+     "decisions": 10
+    },
+    "2021.09.29.18.19.40_veh-28_00438_00833-887e4d57da835b12": {
+     "score": 0.7657466502523004,
+     "fail": null,
+     "gt_dist": 0.09642687794519052,
+     "dist_m": 4.526059243085898,
+     "gt_m": 9.52190764109454,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.09.29.19.02.14_veh-28_00964_01689-51259bf89422548a": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.29144162262481216,
+     "dist_m": 31.349600265313747,
+     "gt_m": 36.35851462978368,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.10.06.07.26.10_veh-52_01245_02064-1c0c94dbcd5359fc": {
+     "score": 0.0,
+     "fail": "offroad",
+     "gt_dist": 1.1939375792063556,
+     "dist_m": 13.416174926592408,
+     "gt_m": 17.445620118773277,
+     "duration_frac_20s": 0.15,
+     "decisions": 10
+    }
+   },
+   "rollouts": 10,
+   "inference_errors": 0,
+   "input_errors": 0,
+   "decisions": [
+    10
+   ],
+   "missing": []
+  },
+  "a80": {
+   "dir": "/root/autodl-tmp/ujs/runs/onpol_nuplan/long/smoke/runs/a80",
+   "pool": "DONE",
+   "rc": 0,
+   "error": null,
+   "runtime_s": 65.01893448829651,
+   "total_s": 113.17775654792786,
+   "peak_rss_gib": {
+    "driver": 6.47,
+    "controller-0": 0.77,
+    "renderer-0": 3.82,
+    "runtime-0": 10.32
+   },
+   "peak_gpu_mib": {
+    "driver": 2102.0,
+    "controller-0": 0.0,
+    "renderer-0": 11564.0,
+    "runtime-0": 0.0
+   },
+   "overrides": [
+    "runtime.scene_provider.trajdata.dataset.extra_params.num_timesteps_after=80"
+   ],
+   "disk_mb": 270,
+   "log_lines": {
+    "runtime-0": {
+     "n": 3,
+     "first": [
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.",
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.",
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ],
+     "last": [
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.",
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ]
+    },
+    "renderer-0": {
+     "n": 1,
+     "first": [
+      "00:24:27.150 WARNING:\tNuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ],
+     "last": [
+      "00:24:27.150 WARNING:\tNuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ]
+    }
+   },
+   "clip_lines": 10,
+   "clip_example": "00:24:51.539 [W1] INFO:\tClipping n_sim_steps from 200 to 10 because only 10 complete policy steps fit between first_policy_timestamp_us=17000 and scene end=5500000",
+   "scene": {
+    "2021.05.25.14.16.10_veh-35_00083_00485-34f30283d3bd53ec": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.6137697652836025,
+     "dist_m": 35.89472631314457,
+     "gt_m": 42.74064769000335,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.05.25.14.16.10_veh-35_01690_02183-30f09e001cf55013": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 2.575718929414011,
+     "dist_m": 22.5276888750842,
+     "gt_m": 22.547892199080252,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.05.25.14.24.08_veh-25_04059_04203-6225b347244658c1": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 4.293810552185471,
+     "dist_m": 11.084171149382842,
+     "gt_m": 7.15495736520203,
+     "duration_frac_20s": 0.175,
+     "decisions": 10
+    },
+    "2021.06.28.20.24.43_veh-38_03385_04952-e61699cda2f15e01": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.4258893128003538,
+     "dist_m": 22.68241549304566,
+     "gt_m": 26.61770260008027,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.08.30.13.45.25_veh-40_01116_01336-0ba54149d1575f95": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.31735555918036207,
+     "dist_m": 19.682093091778288,
+     "gt_m": 23.136211180829946,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.08.30.16.16.44_veh-40_01099_01351-9af711dfa6eb5952": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.2502592282992956,
+     "dist_m": 12.981624516254856,
+     "gt_m": 15.082669539976857,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.09.16.19.27.01_veh-45_01749_03230-89e02236312d5038": {
+     "score": 0.0,
+     "fail": "left_corridor_laterally",
+     "gt_dist": 4.020347872692362,
+     "dist_m": 18.342856445792997,
+     "gt_m": 28.488333592158625,
+     "duration_frac_20s": 0.15,
+     "decisions": 10
+    },
+    "2021.09.29.18.19.40_veh-28_00438_00833-887e4d57da835b12": {
+     "score": 0.7657466502523004,
+     "fail": null,
+     "gt_dist": 0.09642687794519052,
+     "dist_m": 4.526059243085898,
+     "gt_m": 9.52190764109454,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.09.29.19.02.14_veh-28_00964_01689-51259bf89422548a": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.29144162262481216,
+     "dist_m": 31.349600265313747,
+     "gt_m": 36.35851462978368,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.10.06.07.26.10_veh-52_01245_02064-1c0c94dbcd5359fc": {
+     "score": 0.0,
+     "fail": "offroad",
+     "gt_dist": 1.1939375792063556,
+     "dist_m": 13.416174926592408,
+     "gt_m": 17.445620118773277,
+     "duration_frac_20s": 0.15,
+     "decisions": 10
+    }
+   },
+   "rollouts": 10,
+   "inference_errors": 0,
+   "input_errors": 0,
+   "decisions": [
+    10
+   ],
+   "missing": []
+  },
+  "b160": {
+   "dir": "/root/autodl-tmp/ujs/runs/onpol_nuplan/long/smoke/runs/b160",
+   "pool": "DONE",
+   "rc": 0,
+   "error": null,
+   "runtime_s": 92.02462100982666,
+   "total_s": 141.42149591445923,
+   "peak_rss_gib": {
+    "driver": 6.48,
+    "controller-0": 0.77,
+    "renderer-0": 3.85,
+    "runtime-0": 10.27
+   },
+   "peak_gpu_mib": {
+    "driver": 2102.0,
+    "controller-0": 0.0,
+    "renderer-0": 12120.0,
+    "runtime-0": 0.0
+   },
+   "overrides": [
+    "runtime.scene_provider.trajdata.dataset.extra_params.num_timesteps_after=160"
+   ],
+   "disk_mb": 270,
+   "log_lines": {
+    "runtime-0": {
+     "n": 3,
+     "first": [
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.",
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.",
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ],
+     "last": [
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.",
+      "NuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ]
+    },
+    "renderer-0": {
+     "n": 1,
+     "first": [
+      "00:26:55.108 WARNING:\tNuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ],
+     "last": [
+      "00:26:55.108 WARNING:\tNuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit."
+     ]
+    }
+   },
+   "clip_lines": 10,
+   "clip_example": "00:27:19.207 [W1] INFO:\tClipping n_sim_steps from 200 to 10 because only 10 complete policy steps fit between first_policy_timestamp_us=17000 and scene end=5500000",
+   "scene": {
+    "2021.05.25.14.16.10_veh-35_00083_00485-34f30283d3bd53ec": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.6137697652836025,
+     "dist_m": 35.89472631314457,
+     "gt_m": 42.74064769000335,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.05.25.14.16.10_veh-35_01690_02183-30f09e001cf55013": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 2.575718929414011,
+     "dist_m": 22.5276888750842,
+     "gt_m": 22.547892199080252,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.05.25.14.24.08_veh-25_04059_04203-6225b347244658c1": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 4.293810552185471,
+     "dist_m": 11.084171149382842,
+     "gt_m": 7.15495736520203,
+     "duration_frac_20s": 0.175,
+     "decisions": 10
+    },
+    "2021.06.28.20.24.43_veh-38_03385_04952-e61699cda2f15e01": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.4258893128003538,
+     "dist_m": 22.68241549304566,
+     "gt_m": 26.61770260008027,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.08.30.13.45.25_veh-40_01116_01336-0ba54149d1575f95": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.31735555918036207,
+     "dist_m": 19.682093091778288,
+     "gt_m": 23.136211180829946,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.08.30.16.16.44_veh-40_01099_01351-9af711dfa6eb5952": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.2502592282992956,
+     "dist_m": 12.981624516254856,
+     "gt_m": 15.082669539976857,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.09.16.19.27.01_veh-45_01749_03230-89e02236312d5038": {
+     "score": 0.0,
+     "fail": "left_corridor_laterally",
+     "gt_dist": 4.020347872692362,
+     "dist_m": 18.342856445792997,
+     "gt_m": 28.488333592158625,
+     "duration_frac_20s": 0.15,
+     "decisions": 10
+    },
+    "2021.09.29.18.19.40_veh-28_00438_00833-887e4d57da835b12": {
+     "score": 0.7657466502523004,
+     "fail": null,
+     "gt_dist": 0.09642687794519052,
+     "dist_m": 4.526059243085898,
+     "gt_m": 9.52190764109454,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.09.29.19.02.14_veh-28_00964_01689-51259bf89422548a": {
+     "score": 1.0,
+     "fail": null,
+     "gt_dist": 0.29144162262481216,
+     "dist_m": 31.349600265313747,
+     "gt_m": 36.35851462978368,
+     "duration_frac_20s": 0.19999999999999998,
+     "decisions": 10
+    },
+    "2021.10.06.07.26.10_veh-52_01245_02064-1c0c94dbcd5359fc": {
+     "score": 0.0,
+     "fail": "offroad",
+     "gt_dist": 1.1939375792063556,
+     "dist_m": 13.416174926592408,
+     "gt_m": 17.445620118773277,
+     "duration_frac_20s": 0.15,
+     "decisions": 10
+    }
+   },
+   "rollouts": 10,
+   "inference_errors": 0,
+   "input_errors": 0,
+   "decisions": [
+    10
+   ],
+   "missing": []
+  },
+  "c160new": {
+   "dir": "/root/autodl-tmp/ujs/runs/onpol_nuplan/long/smoke/runs/c160new",
+   "pool": "ERROR",
+   "pool_error": "# job 1012-002841-ddb1 failed: rc 1 (rc 1, try 1) 2026-10-12 00:30:02\n\n\n==> 2026-10-12 00:28:59 try 1 on card 0 idx  span 0 cpus 0-7\n$ taskset -c 0-7 env SH30_TAG=P2H10S-F-s0 bash experiments/alpasim/scripts/run.sh /root/autodl-tmp/ujs/runs/onpol_nuplan/long/smoke/runs/c160new sh30 --scene-list expe",
+   "rc": 1,
+   "error": "renderer-0 exited with 0 before listening on 23146",
+   "runtime_s": null,
+   "total_s": 44.820374727249146,
+   "peak_rss_gib": {
+    "driver": 6.09,
+    "controller-0": 0.7,
+    "renderer-0": 0.72
+   },
+   "peak_gpu_mib": {
+    "driver": 2102.0,
+    "controller-0": 0.0,
+    "renderer-0": 0.0
+   },
+   "overrides": [
+    "runtime.scene_provider.trajdata.dataset.extra_params.num_timesteps_after=160",
+    "runtime.scene_provider.trajdata.cache_location=/root/autodl-tmp/ujs/runs/onpol_nuplan/long/smoke/cache_after160"
+   ],
+   "disk_mb": 2,
+   "log_lines": {
+    "renderer-0": {
+     "n": 12147,
+     "first": [
+      "00:29:42.295 WARNING:\tNuPlan devkit is not installed; using empty nuPlan log split metadata. This is valid for fully cached datasets, but rebuilding from raw NuPlan data requires the NuPlan devkit.",
+      "Warning: Database file /root/autodl-tmp/ujs/datasets/alpasim_nuplan/test/2021.10.06.07.26.10_veh-52_01245_02064.db not found, skipping...",
+      "Warning: Database file /root/autodl-tmp/ujs/datasets/alpasim_nuplan/test/2021.10.06.07.26.10_veh-52_01245_02064.db not found, skipping..."
+     ],
+     "last": [
+      "Warning: Database file /root/autodl-tmp/ujs/datasets/alpasim_nuplan/test/2021.09.29.18.19.40_veh-28_00331_00426.db not found, skipping...",
+      "Warning: Database file /root/autodl-tmp/ujs/datasets/alpasim_nuplan/test/2021.09.29.18.19.40_veh-28_00331_00426.db not found, skipping..."
+     ]
+    }
+   },
+   "scene": {},
+   "rollouts": 0,
+   "inference_errors": 0,
+   "input_errors": 0,
+   "decisions": [],
+   "missing": [
+    "2021.05.25.14.16.10_veh-35_00083_00485-34f30283d3bd53ec",
+    "2021.05.25.14.16.10_veh-35_01690_02183-30f09e001cf55013",
+    "2021.05.25.14.24.08_veh-25_04059_04203-6225b347244658c1",
+    "2021.06.28.20.24.43_veh-38_03385_04952-e61699cda2f15e01",
+    "2021.08.30.13.45.25_veh-40_01116_01336-0ba54149d1575f95",
+    "2021.08.30.16.16.44_veh-40_01099_01351-9af711dfa6eb5952",
+    "2021.09.16.19.27.01_veh-45_01749_03230-89e02236312d5038",
+    "2021.09.29.18.19.40_veh-28_00438_00833-887e4d57da835b12",
+    "2021.09.29.19.02.14_veh-28_00964_01689-51259bf89422548a",
+    "2021.10.06.07.26.10_veh-52_01245_02064-1c0c94dbcd5359fc"
+   ]
+  }
+ },
+ "gate_A1": {
+  "shipped_window": {
+   "scenes": 10,
+   "zero_flips": [],
+   "max_abs_score_diff": 0.0,
+   "plans": {
+    "pairs": 100,
+    "expected": 100,
+    "share_le_0p03": 1.0,
+    "max_m": 0.0,
+    "median_m": 0.0,
+    "identical": 100,
+    "max_by_decision": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "passed": true
+  },
+  "wider_window": {
+   "rollouts": 10,
+   "missing": [],
+   "inference_errors": 0,
+   "input_errors": 0,
+   "plans": {
+    "pairs": 100,
+    "expected": 100,
+    "share_le_0p03": 1.0,
+    "max_m": 0.0,
+    "median_m": 0.0,
+    "identical": 100,
+    "max_by_decision": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "passed": true
+  },
+  "passed": true
+ },
+ "extends": {
+  "b160": [],
+  "c160new": []
+ },
+ "any_scene_beyond_10_decisions": false
+}
