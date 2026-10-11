@@ -50,7 +50,9 @@ def main(a):
     W = np.stack([np.bincount(d, minlength=len(L)) for d in np.random.default_rng(0).integers(0, len(L), (B, len(L)))])[:, li]   # (B, scenes)
 
     def slope(tags):
-        kk = K[K.label.isin([t + "@18" for t in tags]) & K.scene.isin(scenes) & K.k.between(4, 18)].groupby("k").dist_gt.mean()
+        kk = K[K.label.isin([f"{t}@{a.length}" for t in tags]) & K.scene.isin(scenes) & (K.k >= 4)].groupby("k").dist_gt.mean()
+        if len(kk) < 2:
+            return float("nan")
         x = kk.index.to_numpy(float) - kk.index.to_numpy(float).mean()
         return float(((kk.to_numpy() - kk.mean()) * x).sum() / (x * x).sum())
 
@@ -85,9 +87,9 @@ def main(a):
     (out / f"report_{f}.json").write_text(json.dumps(R, indent=1) + "\n")
     row = lambda n, x: (f"| {n} | {x['score']:.4f} | {x['zero']:.1f} | {x['z_col']:.1f} / {x['z_off']:.1f} / {x['z_cor']:.1f} / {x['z_oth']:.1f} | {x['z_atf']:.1f} | {x['gt']:.3f} | "  # noqa: E731
                         f"{x['slope']:.4f} | " + " ; ".join(f"{t} {v['score']:.4f} / {v['zeros']} / {v['atf']} / {v['gt']:.3f}" for t, v in x["seeds"].items()) + " |")
-    md = [f"# ONPOL-LONG round 1, family {f} (base {base}-s0): held {len(scenes)} scenes at 18 decisions, {len(L)} logs", "",
+    md = [f"# ONPOL-LONG round 1, family {f} (base {base}-s0): {len(scenes)} scenes, length `{a.length}`, {len(L)} logs", "",
           f"Dropped for every label alike: {len(fold)} scenes without a rollout in at least one label (route generation failed: route folds back).", "",
-          "| | mean score | zeros | collision at fault / offroad / corridor / other zeros | at-fault zeros | GT distance (m) | drift slope k 4..18 (m / decision) | per seed: score / zeros / at-fault zeros / GT |",
+          "| | mean score | zeros | collision at fault / offroad / corridor / other zeros | at-fault zeros | GT distance (m) | drift slope k >= 4 (m / decision) | per seed: score / zeros / at-fault zeros / GT |",
           "|:--|--:|--:|:--|--:|--:|--:|:--|", row(f"arm {f}SKC-L18 (S + K + C on-policy rows)", ac), row(f"control {f}NONE-L18 (same continuation, no rows)", cc),
           row(f"base {base}-s0", R["base_s0"]), row(f"base {base} seeds {', '.join(t[-1] for t in bas)}", R["base_seeds"]), "",
           "Zeros = scenes scored 0; a zero can carry more than one kind (offroad and corridor together), `other` = none of the three. Paired per-scene seed-mean differences, log-clustered 95 % CI (10 000 draws); zero columns are totals over the scenes:", "",
@@ -110,4 +112,5 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--family", required=True, choices=sorted(BASE)), ap.add_argument("--runs", nargs="+", required=True)
     ap.add_argument("--out", required=True), ap.add_argument("--jobs", type=int, default=16)
+    ap.add_argument("--length", default="18", help="label suffix after @ (18 for the held read, pai for the Tokyo transfer read)")
     main(ap.parse_args())
