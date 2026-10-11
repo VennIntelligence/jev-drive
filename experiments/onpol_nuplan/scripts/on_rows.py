@@ -10,38 +10,42 @@ report and a BEV preview. Nothing here changes a model; simulator state, map and
             $DATA_DIR/envs/op-train/bin/python experiments/onpol_nuplan/scripts/on_rows.py tok --name N
   bev   --name N [--n 16]                     CPU, envs/op-train (matplotlib) -> <rows dir>/bev/*.png (copied to experiments/onpol_nuplan/figs/)
 
-Time and frame (established from data, proved per scene by gate R2): the rollout of scene `<log>-<token>` starts 1.5 s before the token's frame
-(simulation time 0 = navsim log frame index(token) - 3), decisions k = 0..9 at simulation time 0.017 + 0.5 k s; the rollout's local frame is the
-nuPlan map frame translated to the logged rear-axle position at simulation time 0 (no rotation). Decisions 0 and 1 are at log-replay states.
+Time and frame (established from data per rollout, proved by gate R2): the rollout of scene `<log>-<token>` starts 1.5 s before the token's
+frame; simulation time 0 is found per rollout by matching the rollout's own logged ego track against the navsim log by time (sim_start), not
+by frame index. Decisions k = 0..9 at simulation time 0.017 + 0.5 k s. The rollout's local frame is the nuPlan map frame translated to the
+logged rear-axle position at simulation time 0 (no rotation). Decisions 0 and 1 are at log-replay states.
 A row's own frame = the rear-axle pose the driver anchored its plan to (drive.jsonl `anchor`, the pose observation at t0): x forward, y left.
 
-Row order: (tag, scene, k). Only rows that pass the exclusions are stored in the cache; every decision is listed in all.npz with its reason.
-  $DATA_DIR/runs/op_parity/cache/on1_<N>/tab.npz           pp_train.Store layout (ot_rows.py tabs), n rows:
-      names (n,) str "s<seed>k<k>-<token>"; log (n,) str nuPlan log file name; ego (n, 20) float32 the ego vector fed to the adapter, from the
-      dump; fut (n, 8, 3) float32 imitation target x, y, yaw at 0.5 .. 4 s, row frame; cam (n, 3) float32 camera position in the rear-axle
-      frame; lht (n,) bool False; speed (n,) float32 m/s (the fed body velocity); off (n, 2) zeros (labels are already in the row frame, so
-      ot_rows.off_hinge / loss43.OffAgentHinge reduce to the plain hinges); pose (n, 4, 3) float32 history poses fed (drive.jsonl, 1e-4 m);
-      cmd (n, 4, 4) one-hot command of t0 repeated; acc (n, 4, 2) the fed acceleration repeated; vel (n, 4, 2) NaN except the t0 row
-      (the older velocities enter the warp only and are not logged); src_row (n,) -1
-  $DATA_DIR/runs/op_parity/cache/on1_<N>@warp/front.npy    (n, 8, 32, 512) float16: Cinque vision tokens of the 8 dumped slot frames (encoder pair
-      of slot i = (slot i - 1 or zeros, slot i)), through pp_prep.encoder, the trainer's encoder path
-  $DATA_DIR/runs/op_parity/cache/on1_<N>@warp/teacher.npz  out (n, 1086), plan (n, 33, 15), di, pi: shipped Cinque on these tokens (ot_rows.py)
-  $DATA_DIR/runs/onpol_nuplan/rows/<N>/ (aligned with the tab, `tokens` = names):
-      agent.npz     lib/agent_hinge.py label layout, K = 32: box (n, 9, 32, 5) float32 x, y, yaw, length, width of the simulator's actors at
-                    t0 + 0, 0.5 .. 4 s in the row frame; valid (n, 9, 32); cls (n, 32) int8 (0 = vehicle, -1 = empty); ok; tokens; log; classes.
-                    Pose: the simulator's own actor pose while the rollout lasts (to simulation time 5.017 s), the nuPlan log's box of the same
-                    track after it (the traffic replays the log); size: the simulator's box of the actor. The 32 actors nearest to the row
-                    origin over the 9 times.
-      road.npz      runs/body1/labels_road layout: sdf (n, 128, 96) float16 signed distance (m, + inside) to ROADBLOCK | ROADBLOCK_CONNECTOR |
-                    INTERSECTION | LANE | LANE_CONNECTOR at the row pose (opb_labels.sdf_raster, unedited); tokens, log, pose_global, ok, x0, y0, res, layers
-      drivable.npz  the same with ROADBLOCK | INTERSECTION | CARPARK_AREA (P2H10's raster; bd4_train's fallback for rows off the road raster)
-      meta.npz      per row: scene, logu (log unit), tag, seed, k, t_us (simulation time of t0), pose_map (3) rear axle in the nuPlan map frame,
-                    anchor (3) the same in the rollout frame, speed, s0, e0 (m, left +), psi_e (rad), lead (m, + ahead of the log's position at
-                    the same time), Lr, D (8) log travel, path_ext (target beyond the log's last frame, on the 40 m straight continuation),
-                    n_act, d_anchor (m, driver anchor against the simulator's ego), poses (8, 3) served plan, mu (33, 15) plan mean,
-                    gpath (86, 2) logged path from s0 - 15 m to s0 + 70 m, logfut (9, 3) the log's own poses at t0 + 0 .. 4 s, dump (file), run
-      all.npz       every decision of every rollout: scene, tag, seed, k, t_us, excl ("" = kept), row (index in the tab or -1), e0, lead
-      r2.json / r2.md, r1.json / r1.md, report.json / report.md, bev/
+Output = the pool contract of on_train.py (plans/on_pool_format.md). Row order: (tag, scene, k). Only rows that pass the prereg's exclusions
+are in the pool; every decision is listed in all.npz with its reason. P = $DATA_DIR/runs/op_parity/cache/on1_<N>:
+  P/tab.npz           names (n,) str "on:<scene>:<seed>:<k>"; log (n,) str log unit (c0b_report.log_of); ego (n, 20) float32 the ego vector fed
+                      to the adapter (from the dump, unrounded); fut (n, 8, 3) float32 imitation target x, y, yaw at 0.5 .. 4 s, row frame;
+                      cam (n, 3) float32 camera position in the rear-axle frame; lht (n,) bool False; speed (n,) float32 m/s (the fed body
+                      velocity); served (n, 8, 3) float32 the served plan; pose (n, 4, 3) history poses fed (drive.jsonl, 1e-4 m); cmd (n, 4, 4)
+                      one-hot command of t0 repeated; acc (n, 4, 2) the fed acceleration repeated; vel (n, 4, 2) NaN except the t0 row (the
+                      older velocities enter the frame warp only and are not logged). No `off`: every label is in the row frame.
+  P@warp/front.npy    (n, 8, 32, 512) float16: Cinque vision tokens of the 8 dumped slot frames (encoder pair of slot i = (slot i - 1 or
+                      zeros, slot i)) through pp_prep.encoder, the trainer's eager encoder path. The driver's own tokens (compiled pass) are
+                      not in SH30_DUMP; gate R1 bounds the difference at the plan. Every row has 8 valid slots (backwarp cold start).
+  P@warp/teacher.npz  out (n, 1086), plan (n, 33, 15), di, pi: shipped Cinque on these tokens (ot_rows.py make_teacher, same call)
+  P/agent.npz         lib/agent_hinge.py label layout, K = 32: box (n, 9, 32, 5) float32 x, y, yaw (unwrapped over time), length, width of the
+                      simulator's actors at t0 + 0, 0.5 .. 4 s in the row frame; valid (n, 9, 32); cls (n, 32) int8 (0 = vehicle, -1 = empty);
+                      ok; tokens = names; log; classes. Pose: the simulator's own actor pose while the rollout lasts (to simulation time
+                      5.017 s), after it the nuPlan log's box of the same track (the traffic replays the log); size: the simulator's box of
+                      the actor (constant; the log's box size varies by frame). The 32 actors nearest to the row origin over the 9 times.
+  P/road.npz          runs/body1/labels_road layout: sdf (n, 128, 96) float16 signed distance (m, + inside) to ROADBLOCK | ROADBLOCK_CONNECTOR |
+                      INTERSECTION | LANE | LANE_CONNECTOR at the row pose (opb_labels.sdf_raster, unedited); tokens, log, pose_global, ok, x0, y0, res, layers
+  P/drivable.npz      the same with ROADBLOCK | INTERSECTION | CARPARK_AREA (P2H10's raster; what bd4_train swaps in for rows off the road raster)
+R = $DATA_DIR/runs/onpol_nuplan/rows/<N> (aligned with the tab; agent.npz / road.npz / drivable.npz here are links to the pool's):
+  R/meta.npz          names, scene, log (nuPlan log file), logu (log unit), tag, seed, k, t_us (simulation time of t0), t_log_us (its log time),
+                      pose_map (3) rear axle in the nuPlan map frame, anchor (3) the same in the rollout frame, speed, s0, e0 (m, left +),
+                      psi_e (rad, unclipped), lead (m, + ahead of the log's position at the same time), Lr, D (8) log travel, path_ext (target
+                      beyond the log's last frame, on the 40 m straight continuation), n_act, d_anchor (m, driver anchor against the
+                      simulator's ego), n_keys, poses (8, 3) served plan, mu (33, 15) plan mean, gpath (86, 2) logged path from s0 - 15 m to
+                      s0 + 70 m, logfut (9, 3) the log's own poses at t0 + 0 .. 4 s, dump (file), run
+  R/all.npz           every decision of every rollout: scene, tag, seed, k, t_us, excl ("" = kept), row (index in the tab or -1), e0, lead
+  R/active.npz        per row, the stored own plan: agent / road / drivable hinge value, road_off_t0, imit_ade
+  R/r2.json, r2.md, r1.json, r1.md, report.json, report.md, bev/
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
@@ -233,21 +237,22 @@ def box_poly(c, L, W):
 
 
 # ---------------------------------------------------------------- one rollout -> rows
-def frame_offset(L, i, rig) -> tuple:
-    """Simulation time 0 against the navsim log: for d in -6 .. 2, the largest distance over 11 frames between the log's rear-axle track from
-    frame i + d (translated to its first pose) and the rollout's logged ego track `rig` (t_us, x, y, yaw; local). -> (best d, its error, error at -3)."""
-    T, P, err = L["T"], L["P"], {}
-    for d in range(-6, 3):
-        j = i + d
-        if j < 0:
+def sim_start(L, i, rig) -> tuple:
+    """Log time (us) of simulation time 0, from data: the candidate (a log frame 6 before .. 2 after the token's, or the token's time - 1.5 s)
+    whose log track, translated to its first pose, lies closest to the rollout's own logged ego track `rig` (t_us, x, y, yaw; local, 10 Hz).
+    Poses are compared by time, at 0, 0.5 .. 5 s, never by frame index (some logs have a 1 s gap). -> (T0, its largest distance in m)."""
+    T, P = L["T"], L["P"]
+    tau = np.arange(0, rig[-1, 0] + 1, STEP_US, dtype=np.float64)
+    loc = np.c_[np.interp(tau, rig[:, 0], rig[:, 1]), np.interp(tau, rig[:, 0], rig[:, 2])] - rig[0, 1:3]
+    best = (None, np.inf)
+    for T0 in [int(T[j]) for j in range(max(i - 6, 0), min(i + 3, len(T)))] + [int(T[i]) + FRAME_OFF * STEP_US]:
+        if T0 < T[0] or T0 + tau[-1] > T[-1]:
             continue
-        m = min(11, len(T) - j)
-        tt = (T[j:j + m] - T[j]).astype(np.float64)
-        ok = tt <= rig[-1, 0]
-        loc = np.c_[np.interp(tt, rig[:, 0], rig[:, 1]), np.interp(tt, rig[:, 0], rig[:, 2])] - rig[0, 1:3]
-        err[d] = float(np.hypot(*(P[j:j + m, :2] - P[j, :2] - loc)[ok].T).max())
-    best = min(err, key=err.get)
-    return best, err[best], err.get(FRAME_OFF, np.inf)
+        g = np.c_[np.interp(T0 + tau, T, P[:, 0]), np.interp(T0 + tau, T, P[:, 1])]
+        e = float(np.hypot(*(g - g[0] - loc).T).max())
+        if e < best[1] - 1e-9:
+            best = (T0, e)
+    return best
 
 
 def geo_one(job):
@@ -269,14 +274,16 @@ def geo_one(job):
     ego = np.c_[ego_c[:, 0], CL.to_rig(ego_c, CEN)]                             # the simulator's rear axle, local frame
     g = o["logged"][0]["traj"]
     rig = np.c_[g[:, 0], CL.to_rig(g, CEN)]                                     # the rollout's logged ego, local frame, 10 Hz
-    d_best, e_best, e_m3 = frame_offset(L, i, rig)
-    j0 = i + FRAME_OFF
-    T0, O = L["T"][j0], L["P"][j0, :2] - rig[0, 1:3]                            # log time of simulation time 0; map position of the local origin
-    a = max(j0 - 10, 0)
+    logp = lambda t: np.array([np.interp(t, L["T"], L["P"][:, q]) for q in range(3)])  # noqa: E731  the log's pose at log time t
+    T0, e_best = sim_start(L, i, rig)                                           # log time of simulation time 0
+    if T0 is None:
+        recs = drv["rec"]
+        return dict(rows=[base | dict(k=k, t_us=r["t0"], excl="no_sim") for k, r in sorted(recs.items())], r2=None)
+    O = logp(T0)[:2] - rig[0, 1:3]                                              # map position of the local origin
+    a = max(int(np.searchsorted(L["T"], T0)) - 10, 0)
     G = Path(L["P"][a:], L["T"][a:])
     t_end, t_sim_end = L["T"][-1], ego[-1, 0]
     to_map = lambda p: np.r_[p[:2] + O, p[2]]                                   # noqa: E731
-    logp = lambda t: np.array([np.interp(t, L["T"], L["P"][:, q]) for q in range(3)])  # noqa: E731  the log's pose at log time t
     ids = [q for q in o["actors"] if q != "EGO"]
     size = np.array([o["size"][q][:2] for q in ids], np.float64).reshape(-1, 2)
     Le, We = o["size"]["EGO"][:2]
@@ -290,13 +297,13 @@ def geo_one(job):
                 return tr[n, 1:]
             m = int(np.searchsorted(tr[:, 0], t))
             return CL.interp(tr, t)[0] if 0 < m < len(tr) and tr[m, 0] - tr[m - 1, 0] <= 600_000 else None
-        if t > t_sim_end:
+        if t > t_sim_end and tr[-1, 0] >= t_sim_end - 1000:                      # an actor the rollout still had at its end
             b = log_box(L, q, T0 + t)
             return None if b is None else np.r_[b[:2] - O, b[2]]
         return None
 
     # ---- gate R2 material: ego at the log-replay decisions, simulator actors against the log's boxes, the dense path against the rollout's 10 Hz logged track
-    r2 = dict(scene=scene, tag=tag, frame_off=d_best, frame_err=e_best, frame_err_m3=e_m3, ego=[], act=[], act_yaw=[], n_act=len(ids))
+    r2 = dict(scene=scene, tag=tag, t0_rel=round((T0 - int(L["T"][i])) * 1e-6, 2), frame_err=e_best, ego=[], act=[], act_yaw=[], n_act=len(ids))
     for t in o["actor_t"]:
         for q in ids:
             tr = o["actors"][q]
@@ -327,7 +334,7 @@ def geo_one(job):
         s0, e0, hG = G.project(pm[:2], sl - 60, sl + 80)
         psi = float(wrap(pm[2] - hG))
         dump = _pl.Path(run) / "driver-logs/dump" / f"s{drv['n']:02d}_k{k}.npz"
-        row |= dict(t_us=t, anchor=anchor, pose_map=pm, s0=s0, e0=e0, psi_e=psi, lead=s0 - sl, d_anchor=float(np.hypot(*(se[:2] - anchor[:2]))),
+        row |= dict(t_us=t, t_log_us=int(T0 + t), anchor=anchor, pose_map=pm, s0=s0, e0=e0, psi_e=psi, lead=s0 - sl, d_anchor=float(np.hypot(*(se[:2] - anchor[:2]))),
                     hist=np.array(r["hist"], np.float32), cmd=int(r["cmd"]), dump=str(dump), n_keys=int(r["n_keys"]))
         if not dump.exists():
             row["excl"] = "no_dump"
@@ -422,21 +429,24 @@ def cmd_geo(a):
         for i, r in enumerate(keep):
             r["row"] = i
         st = lambda key, dt=None, src=keep: np.array([r[key] for r in src], dt) if dt else np.stack([r[key] for r in src])  # noqa: E731
-        names = np.array([f"s{r['seed']}k{r['k']}-{r['scene'].rsplit('-', 1)[1]}" for r in keep])
+        names = np.array([f"on:{r['scene']}:{r['seed']}:{r['k']}" for r in keep])
         assert len(set(names.tolist())) == n
-        logs, ego = st("log", str), st("ego")
-        (CR / f"{FAM}_{a.name}").mkdir(parents=True, exist_ok=True), out.mkdir(parents=True, exist_ok=True)
+        logs, ego, pool = np.array([CB.log_of(r["scene"]) for r in keep]), st("ego"), CR / f"{FAM}_{a.name}"
+        pool.mkdir(parents=True, exist_ok=True), out.mkdir(parents=True, exist_ok=True)
         vel = np.full((n, 4, 2), np.nan, np.float32)
         vel[:, 3] = ego[:, 4:6] * 10.0
-        np.savez(CR / f"{FAM}_{a.name}" / "tab.npz", names=names, log=logs, ego=ego, pose=st("hist"), vel=vel, acc=np.repeat(ego[:, None, 6:8] * 3.0, 4, 1),
+        np.savez(pool / "tab.npz", names=names, log=logs, ego=ego, pose=st("hist"), vel=vel, acc=np.repeat(ego[:, None, 6:8] * 3.0, 4, 1),
                  cmd=np.repeat(np.eye(4, dtype=np.float32)[st("cmd", int)][:, None], 4, 1), fut=st("fut"), cam=st("cam"), lht=np.zeros(n, bool),
-                 speed=np.hypot(ego[:, 4], ego[:, 5]) * 10.0, off=np.zeros((n, 2), np.float32), src_row=np.full(n, -1))
-        np.savez(out / "agent.npz", tokens=names, log=logs, box=st("box"), valid=st("bval"), cls=st("cls"), ok=np.ones(n, bool),
+                 speed=np.hypot(ego[:, 4], ego[:, 5]) * 10.0, served=st("poses").astype(np.float32))
+        np.savez(pool / "agent.npz", tokens=names, log=logs, box=st("box"), valid=st("bval"), cls=st("cls"), ok=np.ones(n, bool),
                  classes=np.array(["vehicle", "generic_object", "pedestrian", "bicycle"]))
         for f, key, layers in (("road", "sdf_road", ROAD_LAYERS), ("drivable", "sdf_nav", NAV_LAYERS)):
-            np.savez(out / f"{f}.npz", tokens=names, log=logs, pose_global=st("pose_map"), sdf=st(key), ok=np.ones(n, bool), x0=-8.0, y0=-24.0, res=0.5, layers=np.array(layers))
-        np.savez(out / "meta.npz", names=names, scene=st("scene", str), log=logs, logu=np.array([CB.log_of(r["scene"]) for r in keep]), tag=st("tag", str),
-                 seed=st("seed", int), k=st("k", int), t_us=st("t_us", np.int64), pose_map=st("pose_map"), anchor=st("anchor"), speed=np.hypot(ego[:, 4], ego[:, 5]) * 10.0,
+            np.savez(pool / f"{f}.npz", tokens=names, log=logs, pose_global=st("pose_map"), sdf=st(key), ok=np.ones(n, bool), x0=-8.0, y0=-24.0, res=0.5, layers=np.array(layers))
+        for f in ("agent", "road", "drivable"):                                              # the label files live in the pool dir; the rows dir links to them
+            (out / f"{f}.npz").unlink(missing_ok=True)
+            (out / f"{f}.npz").symlink_to(pool / f"{f}.npz")
+        np.savez(out / "meta.npz", names=names, scene=st("scene", str), log=st("log", str), logu=logs, tag=st("tag", str),
+                 seed=st("seed", int), k=st("k", int), t_us=st("t_us", np.int64), t_log_us=st("t_log_us", np.int64), pose_map=st("pose_map"), anchor=st("anchor"), speed=np.hypot(ego[:, 4], ego[:, 5]) * 10.0,
                  s0=st("s0", float), e0=st("e0", float), psi_e=st("psi_e", float), lead=st("lead", float), Lr=st("Lr", float), D=st("D"), path_ext=st("path_ext", bool),
                  n_act=st("n_act", int), d_anchor=st("d_anchor", float), n_keys=st("n_keys", int), poses=st("poses"), mu=st("mu"), gpath=st("gpath"), logfut=st("logfut"),
                  dump=st("dump", str), run=st("run", str))
@@ -446,19 +456,19 @@ def cmd_geo(a):
         # ---- gate R2
         R = [v["r2"] for v in res.values if v["r2"]]
         eg, ac, ay = (np.array([x for r in R for x in r[q]]) for q in ("ego", "act", "act_yaw"))
-        r2 = dict(rollouts=len(jobs), with_sim=len(R), frame_off={str(d): int(sum(r["frame_off"] == d for r in R)) for d in sorted({r["frame_off"] for r in R})},
-                  frame_err_max_m=max(r["frame_err_m3"] for r in R), ego_n=len(eg), ego_max_m=float(eg.max()), ego_share_within=float((eg <= R2_EGO).mean()),
+        r2 = dict(rollouts=len(jobs), with_sim=len(R), t0_rel_s={str(d): int(sum(r["t0_rel"] == d for r in R)) for d in sorted({r["t0_rel"] for r in R})},
+                  frame_err_max_m=max(r["frame_err"] for r in R), ego_n=len(eg), ego_max_m=float(eg.max()), ego_share_within=float((eg <= R2_EGO).mean()),
                   act_n=len(ac), act_median_m=float(np.median(ac)), act_p99_m=float(np.percentile(ac, 99)), act_max_m=float(ac.max()),
                   act_share_within=float((ac <= R2_ACT).mean()), act_yaw_p99_deg=float(np.degrees(np.percentile(ay, 99))), act_yaw_max_deg=float(np.degrees(ay.max())),
                   path_dense_max_m=max(r["path_dense"] for r in R), anchor_vs_sim_max_m=float(st("d_anchor", float).max()), tol_ego_m=R2_EGO, tol_act_m=R2_ACT)
         # at the log-replay decisions the imitation target must be the log's own future (label sanity, not part of the registered gate)
         rep = [r for r in keep if r["k"] < 2]
         r2["imit_at_replay_max_m"] = float(max(np.hypot(*(r["fut"][:, :2] - r["logfut"][1:, :2]).T).max() for r in rep)) if rep else None
-        r2["pass"] = bool(r2["frame_off"] == {str(FRAME_OFF): len(R)} and r2["ego_max_m"] <= R2_EGO and r2["act_max_m"] <= R2_ACT)
+        r2["pass"] = bool(len(R) and r2["ego_max_m"] <= R2_EGO and r2["act_max_m"] <= R2_ACT)
         (out / "r2.json").write_text(json.dumps(r2, indent=1) + "\n")
         (out / "r2.md").write_text("\n".join([f"# Gate R2 (frames), rows `{a.name}`: {'PASS' if r2['pass'] else 'FAIL'}", ""] + md_table(["quantity", "value", "limit"], [
-            ("rollouts with simulator state", f"{len(R)} of {len(jobs)}", ""), ("simulation time 0 = token frame + d, best d per rollout", r2["frame_off"], f"all {FRAME_OFF}"),
-            ("logged ego track of the rollout against the navsim log from that frame, max (m)", f"{r2['frame_err_max_m']:.4f}", ""),
+            ("rollouts with simulator state", f"{len(R)} of {len(jobs)}", ""), ("simulation time 0 against the token's log time (s): rollouts per value", r2["t0_rel_s"], ""),
+            ("the rollout's own logged ego track against the navsim log from that time, max over 0 .. 5 s (m)", f"{r2['frame_err_max_m']:.4f}", ""),
             (f"simulator ego against the log's pose at decisions 0 and 1, max of {len(eg)} (m)", f"{r2['ego_max_m']:.4f}", R2_EGO),
             (f"simulator actor centres against the log's boxes of the same tracks, {len(ac)} samples: median / p99 / max (m)",
              f"{r2['act_median_m']:.3f} / {r2['act_p99_m']:.3f} / {r2['act_max_m']:.3f}", R2_ACT),
@@ -468,7 +478,7 @@ def cmd_geo(a):
             ("driver anchor against the simulator's rear axle at t0, max (m)", f"{r2['anchor_vs_sim_max_m']:.4f}", ""),
             ("imitation target against the log's own future at decisions 0 and 1, max (m)", f"{r2['imit_at_replay_max_m']:.3f}" if rep else "n/a", "")]) + [""]))
         run.summary.update(rows=n, decisions=len(rows), excluded={q: int(sum(r["excl"] == q for r in rows)) for q in REASONS if any(r["excl"] == q for r in rows)}, r2=r2)
-        run.info(f"{n} rows of {len(rows)} decisions -> {CR / (FAM + '_' + a.name)}, {out}; R2 {'PASS' if r2['pass'] else 'FAIL'}: {json.dumps(r2)}")
+        run.info(f"{n} rows of {len(rows)} decisions -> {pool}, {out}; R2 {'PASS' if r2['pass'] else 'FAIL'}: {json.dumps(r2)}")
 
 
 # ---------------------------------------------------------------- tokens, teacher, gate R1, report
@@ -529,38 +539,47 @@ def cmd_tok(a):
 
         @torch.no_grad()
         def diff(model, rows):
-            """Per row: max |difference| over the first 15 plan points (x, y) and over the 8 poses (x, y), trainer forward against served."""
-            dm, dp = [], []
+            """Per row, trainer forward against served: max |difference| over the first 15 plan points (x, y); over the 8 poses (x, y); over the
+            poses served within 32 m (beyond it one fp16 ulp of a plan point is 0.031 m); and T.rear of the served mu against the served poses."""
+            dm, dp, dn, df = [], [], [], []
             for i in range(0, len(rows), 128):
                 r = rows[i:i + 128]
                 rt = torch.as_tensor(r, device=dev)
                 p = model(torch.from_numpy(np.ascontiguousarray(front[r])).to(dev), ego[rt], tc[rt]).float()[:, pi].view(-1, 33, 15)
                 x, y, _ = T.rear(p, cam_x[rt], W)
-                dm.append((p[:, :15, :2] - torch.from_numpy(M["mu"][r][:, :15, :2]).to(dev)).abs().amax((1, 2)).cpu().numpy())
+                mu = torch.from_numpy(M["mu"][r]).to(dev)
+                dm.append((p[:, :15, :2] - mu[:, :15, :2]).abs().amax((1, 2)).cpu().numpy())
                 sp = torch.from_numpy(M["poses"][r].astype(np.float32)).to(dev)
-                dp.append(torch.maximum((x - sp[..., 0]).abs(), (y - sp[..., 1]).abs()).amax(1).cpu().numpy())
-            return np.concatenate(dm), np.concatenate(dp)
+                d = torch.maximum((x - sp[..., 0]).abs(), (y - sp[..., 1]).abs())
+                dp.append(d.amax(1).cpu().numpy())
+                dn.append(d.masked_fill(sp[..., 0].abs() >= 32.0, 0.0).amax(1).cpu().numpy())
+                xs, ys, _ = T.rear(mu, cam_x[rt], W)
+                df.append(torch.maximum((xs - sp[..., 0]).abs(), (ys - sp[..., 1]).abs()).amax(1).cpu().numpy())
+            return tuple(np.concatenate(v) for v in (dm, dp, dn, df))
         models = {t: T.load_pmodel(t, dev) for t in sorted(set(tags) | {t[:-1] + str(1 - int(t[-1])) for t in tags})}
         r1, lines = dict(tol_m=TOL_M, need=0.99, tags={}), []
         for t in tags:
             rows = np.flatnonzero(M["tag"] == t)
             other = t[:-1] + str(1 - int(t[-1]))
-            (dm, dp), (cm, cp) = diff(models[t], rows), diff(models[other], rows)
+            (dm, dp, dn, df), (cm, cp, _, _) = diff(models[t], rows), diff(models[other], rows)
             r1["tags"][t] = dict(n=len(rows), mu_share=float((dm <= TOL_M).mean()), pose_share=float((dp <= TOL_M).mean()), mu_median=float(np.median(dm)),
                                  mu_max=float(dm.max()), pose_median=float(np.median(dp)), pose_max=float(dp.max()), control=other,
+                                 pose_share_within_32m=float((dn <= TOL_M).mean()), pose_share_one_ulp=float((dp <= 0.03126).mean()), rear_formula_max=float(df.max()),
                                  control_mu_share=float((cm <= TOL_M).mean()), control_pose_share=float((cp <= TOL_M).mean()), control_pose_median=float(np.median(cp)))
             q = r1["tags"][t]
             lines.append((t, len(rows), f"{q['mu_share']:.4f}", f"{q['pose_share']:.4f}", f"{q['mu_median']:.4f} / {q['mu_max']:.4f}", f"{q['pose_median']:.4f} / {q['pose_max']:.4f}",
-                          f"{other}: {q['control_mu_share']:.4f} / {q['control_pose_share']:.4f} (median {q['control_pose_median']:.3f} m)"))
+                          f"{q['pose_share_within_32m']:.4f} / {q['pose_share_one_ulp']:.4f}", f"{q['rear_formula_max']:.5f}", f"{other}: {q['control_mu_share']:.4f} / {q['control_pose_share']:.4f} (median {q['control_pose_median']:.3f} m)"))
         r1["pass"] = bool(all(q["mu_share"] >= 0.99 and q["pose_share"] >= 0.99 and q["control_pose_share"] < 0.5 for q in r1["tags"].values()))
         (out / "r1.json").write_text(json.dumps(r1, indent=1) + "\n")
         (out / "r1.md").write_text("\n".join([f"# Gate R1 (inputs), rows `{a.name}`: {'PASS' if r1['pass'] else 'FAIL'}", "",
                                               f"Trainer forward (pp_train.PModel, eager, stored tokens + ego vector) against the served plan; share of rows within {TOL_M} m, needs >= 0.99 "
-                                              "on both; control = the other seed's checkpoint on the same rows (must stay below 0.5 on the poses).", ""] +
-                                             md_table(["serving tag", "rows", "first 15 plan points", "8 poses", "plan points median / max (m)", "poses median / max (m)", "wrong-seed control"], lines) + [""]))
+                                              "on both; control = the other seed's checkpoint on the same rows (must stay below 0.5 on the poses). Diagnostics, not the gate: the pose share "
+                                              "counted over the poses served within 32 m only / with a 0.03126 m tolerance (one fp16 ulp of a plan point beyond 32 m), and the trainer's "
+                                              "pose formula (pp_train.rear) on the served plan mean against the served poses.", ""] +
+                                             md_table(["serving tag", "rows", "first 15 plan points", "8 poses", "plan points median / max (m)", "poses median / max (m)", "poses within 32 m / one-ulp tolerance", "pose formula max (m)", "wrong-seed control (points / poses)"], lines) + [""]))
         # ---- own-plan activation of each label (S's hinges as loss43 runs them: agent 0.3 m in the corridor / 0 beside it, road 0.3 m)
-        ah = AgentHinge(out / "agent.npz", tab["names"], dev, 0.3, 0.0)
-        rh, nh = Hinge(out / "road.npz", tab["names"], dev, 0.3), Hinge(out / "drivable.npz", tab["names"], dev, 0.3)
+        ah = AgentHinge(root / "agent.npz", tab["names"], dev, 0.3, 0.0)
+        rh, nh = Hinge(root / "road.npz", tab["names"], dev, 0.3), Hinge(root / "drivable.npz", tab["names"], dev, 0.3)
         P = torch.from_numpy(M["poses"].astype(np.float32)).to(dev)
         rr = torch.arange(n, device=dev)
         with torch.no_grad():
