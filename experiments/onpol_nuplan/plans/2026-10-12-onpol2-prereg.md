@@ -72,3 +72,17 @@ handoff's branch does not stop it (the Tokyo status command is not run by this l
 | B: rollouts 2 x 1031 scenes, pool, gates, 2 pilots, 4 trainings, 6 checkpoints x 460 scenes | 5 - 6 | 0.7 + 0.2 + 0.4 + 2.5 + 1.2 |
 | C: 2 trainings + 2 x 460 scenes | 1.5 | |
 | **Total** | **9 - 11.5** | cut order above 12: C, then `YNONE`'s read |
+
+## Amendment 1 (2026-10-12 02:15 JST, before the pilots and any read)
+
+- Correction of an arithmetic slip in section B: a YR batch of 128 is 115 normal + 13 yaw-rate rows (the archived run's log), so
+  `YSELFnoL-ON` is **102 normal / 13 yaw-rate / 13 on-policy** and `YNONE-ON` 115 / 13, not "89 / 13 / 13".
+- Gates on the pool `on1_trainY` (20 393 rows; `results/rows/trainY/r1.md`, `r2.md`), read by the standard this round inherits
+  (round 1's Amendments 1 and 4), which is not a new ruling: R1 (a) 0.9990 / 0.9984 within one fp16 ulp or 0.03 m (0.981 / 0.980 at
+  0.03 m alone), (b) the YR interpreted control bit-identical on 100 of 100 rows, (c) wrong-seed control 0.015; R2 ego 0.018 m, actors
+  within 0.5 m on 0.99997 of 457 034 samples, the same 12 samples in the same two scenes as round 1. Both met; item B goes on.
+- Trainer gates Y1 to Y3 and the round-1 regression pass (`results/gates/y_*.json`). `full` additionally requires the 48-scene smoke
+  checklists, as the Pilot paragraph says.
+- Item A stopped at its smoke as registered (`results/long/smoke.md`): the scene cache bounds every scene at 10 decisions.
+- Item C: the official submission #2 status is recorded (decision 260: private GT distance 1.733 m against 2.29 m; scene score not
+  available). The handoff's stop branch did not occur, so C stays queued after B.
