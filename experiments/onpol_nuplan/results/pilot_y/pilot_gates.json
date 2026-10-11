@@ -1,0 +1,87 @@
+{
+ "none": "YNONE-ON-P-s0",
+ "none_dev_ade": 0.5315292477607727,
+ "archived_dev_ade": 0.539,
+ "ade_tol": 0.01,
+ "drift_max": 0.3,
+ "same_on_policy_rows": true,
+ "arms": {
+  "YNONE-ON-P-s0": {
+   "tag": "YNONE-ON-P-s0",
+   "run": "/root/autodl-tmp/ujs/runs/onpol_nuplan/on-train-YNONE-ON-P-s0/20261012-011125",
+   "ended_ok": true,
+   "composition": [
+    128,
+    115,
+    0,
+    0
+   ],
+   "mode": "off",
+   "steps": 3000,
+   "finite": true,
+   "dev_step": 3000,
+   "dev_ade": 0.5315292477607727,
+   "dev_drift_off": 0.04509098455309868,
+   "dev0_ade": 0.5386115908622742,
+   "it_s": 7.771029826310383,
+   "on_hash": {},
+   "ckpt": true,
+   "yaw_rate": 13,
+   "on": {
+    "201-400": {},
+    "2701-3000": {}
+   },
+   "complete": true,
+   "fail": [],
+   "pass": true
+  },
+  "YSELFnoL-ON-P-s0": {
+   "tag": "YSELFnoL-ON-P-s0",
+   "run": "/root/autodl-tmp/ujs/runs/onpol_nuplan/on-train-YSELFnoL-ON-P-s0/20261012-011131",
+   "ended_ok": true,
+   "composition": [
+    128,
+    102,
+    0,
+    13
+   ],
+   "mode": "self",
+   "steps": 3000,
+   "finite": true,
+   "dev_step": 3000,
+   "dev_ade": 0.5351068377494812,
+   "dev_drift_off": 0.04517536982893944,
+   "dev0_ade": 0.5386115908622742,
+   "it_s": 7.230656417612923,
+   "on_hash": {
+    "60": "2eec060c930fe533",
+    "1000": "ad8f2bd5d070b871",
+    "2000": "51877369d5d8fb97",
+    "3000": "d84cf6c0b7ecb83b"
+   },
+   "ckpt": true,
+   "yaw_rate": 13,
+   "on": {
+    "201-400": {
+     "agent_pos": 0.04961538664996624,
+     "agent_mean": 0.007417806851062777,
+     "agent_posmean": 0.16122237349942364,
+     "road_pos": 0.16692308504134415,
+     "road_mean": 0.026291271518113033,
+     "road_posmean": 0.12432844558975423
+    },
+    "2701-3000": {
+     "agent_pos": 0.045641027390956886,
+     "agent_mean": 0.0069877162595124295,
+     "agent_posmean": 0.15561552425662292,
+     "road_pos": 0.14179487826923529,
+     "road_mean": 0.024614509586152356,
+     "road_posmean": 0.21547010897129826
+    }
+   },
+   "complete": true,
+   "fail": [],
+   "pass": true
+  }
+ }
+}
