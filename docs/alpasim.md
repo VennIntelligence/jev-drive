@@ -291,6 +291,13 @@ $C status <submission_id>; $C submissions --track nuplan-warmup
 $C submit --track nuplan "$URI"             # official; add --controller-gains gains.json to change the MPC gains
 ```
 
+**First warm-up (2026-10-11, user).** Image `jev-alpasim:apy10m10-ab-s0-2d7d7fdf` (checkpoint `APY10m10-AB-s0`, ap2 driver,
+all serving switches off; local test / smoke in `/data/runs/alpasim/tokyo_image/APY10m10-AB-s0-20261011-165113/`, 48 scenes
+containerised 0.9708 vs native 0.9701) pushed as `teams/lao-siji:apy10m10-ab-s0-v1` (4.78 GB compressed, digest `abdbd7dc…`) and
+submitted to `nuplan-warmup` at 08:25 UTC: `SUCCEEDED`, 32 / 32 rollouts scored, throughput check passed with observed wall time
+270.6 s against a 2700 s limit (`margin_s` 2429); evaluation itself took 9 min after 1 h 39 min in the queue. Submission id
+`2065ba22-8525-41a6-b445-a6c09611d9a4`. The official `nuplan` submission of the same URI is the user's next action.
+
 ## Serving switches: the speed profile of the returned trajectory (2026-10-10, decision 226)
 
 Read this before you change what the drivers return, or build an image with a switch on. Code: `experiments/alpasim/lib/serve_fix.py`
