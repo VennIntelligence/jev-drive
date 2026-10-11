@@ -197,7 +197,7 @@ class PModel(nn.Module):
         self.tap = None                              # training side only (HEAD1b B2): a graph value returned next to the outputs
         self.lead_cols = None
         if self.mem:
-            self.adapter = PA.ParityAdapter(use_ego=True, use_side=True, n_cam=1, n_t=1)
+            self.adapter = PA.ParityAdapter(use_ego=True, use_side=True, n_cam=3 if self.mem.startswith("vtr_W") else 1, n_t=1)   # vtr_W*: 3-view banks (N, 3, 32, 512)
         elif k.get("lead"):
             self.adapter = PA.ParityAdapter(use_ego=True, use_side=False, use_lead=True)
             sl = self.net.slices
@@ -222,6 +222,8 @@ class PModel(nn.Module):
             valid = valid & (torch.arange(A.CONTEXT, device=H.device)[None] >= (A.CONTEXT - nv)[:, None])
         if self.mem and side is not None and side.dim() == 3:
             side = side[:, None, None]                                  # memory (B, 32, 512) -> side channel (B, 1 cam, 1 time, 32, 512)
+        elif self.mem and side is not None and side.dim() == 4:
+            side = side[:, :, None]                                     # 3-view memory (B, 3, 32, 512) -> (B, 3 cam, 1 time, 32, 512)
         if self.adapter is not None and inputs_on and self.lead_cols is not None:
             if lead is None:                                            # serving: the base model's lead outputs = this model without the bias
                 with torch.no_grad():

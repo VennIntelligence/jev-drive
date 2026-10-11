@@ -62,12 +62,12 @@ fi
 [[ $MODE == all ]] || { echo "mode $MODE?"; exit 2; }
 
 # ---------------------------------------------------------------- tag-collision guard (first start only: no job of this chain exists yet)
-RT=(); CT=(); for s in 0 1; do RT+=(VTR-0-s$s VTR-A-s$s VTR-B-s$s); CT+=(VT-A2-s$s VT-B2-s$s); done
+RT=(); CT=(); for s in 0 1; do RT+=(VTR-0-s$s VTR-B-s$s VTR-W0-s$s VTR-W-s$s); CT+=(VT-A2-s$s VT-B2-s$s); done
 if [[ ! -s $D/jobs.txt ]]; then
   hit=$(for t in "${RT[@]}" "${CT[@]}"; do
           ls -d "$R/$t" "$R/$t"-k[0-9]* "$DATA_DIR"/runs/bench/nav*/"$t"@* "$DATA_DIR"/runs/bench/nav*/"$t"-k[0-9]* "$DATA_DIR"/runs/bench/hugsim/"$t"_* \
                 "$O/train-$t" "$DATA_DIR/runs/op_parity/train-$t" "$DATA_DIR"/runs/bench/ol/*/plans/"$t"[@-]* 2>/dev/null; done
-        ls -d "$M"/vtr_[AB]-s[01] 2>/dev/null)
+        ls -d "$M"/vtr_[BW]-s[01] 2>/dev/null)
   [[ -z $hit ]] || die "tag collision, nothing submitted: $hit"
   [[ ! -e $M/vtr_0 ]] || grep -q '"src": "cinque"' "$M/vtr_0/bank.json" || die "$M/vtr_0 exists and is not the Cinque t0 bank"
 fi
@@ -78,11 +78,12 @@ G="--when-exists $D/GATE_PASS"
 # VT_R_SKIP_GATE=1 (user override, prereg amendment 8): arm R only, no gate wait, no continuation, no gate job
 [[ ${VT_R_SKIP_GATE:-0} == 1 ]] && G=""
 sub vtr-bank-0 "$L/bank-0" --vram 0.5 --cpu 2 --ram 8 --priority 9 $G -- $PY $S/vt_r.py bank --kind vtr_0 --src cinque
-for s in 0 1; do for x in A B; do
+sub vtr-bank-W0 "$L/bank-W0" $BANK --priority 9 $G -- $PY $S/vt_r.py bank --kind vtr_W0 --src W0   # amendment 8: the frozen encoder on the three W views
+for s in 0 1; do for x in B W; do
   sub "vtr-bank-$x-s$s" "$L/bank-$x-s$s" $BANK --priority 9 $G -- $PY $S/vt_r.py bank --kind "vtr_$x-s$s" --src "$x" --seed "$s"
 done; done
-for s in 0 1; do for x in 0 A B; do
-  t=VTR-$x-s$s; k=vtr_$x-s$s; b=bank-$x-s$s; [[ $x == 0 ]] && k=vtr_0 b=bank-0
+for s in 0 1; do for x in 0 B W0 W; do
+  t=VTR-$x-s$s; k=vtr_$x-s$s; b=bank-$x-s$s; [[ $x == 0 ]] && k=vtr_0 b=bank-0; [[ $x == W0 ]] && k=vtr_W0 b=bank-W0
   sub "vtr-t-$x-s$s" "$L/t-$x-s$s" $TRAIN --priority 8 --tries 2 $G $(after "vtr-$b" "$L/$b") -- bash -c "$(train "$t" "$s" "$k" 10000 '--warmup 300 --eval-every 1000')"
   sub "vtr-b-$x-s$s" "$L/b-$x-s$s" --vram 0.5 --cpu 1 --ram 4 --priority 8 $(after "vtr-t-$x-s$s" "$L/t-$x-s$s") --when-exists "$R/$t/ckpt-final.pt" -- \
       bash -c "$B run --model $t --bench navtest navhard && $B run --model $t:noside $t:mshuf --bench navtest"

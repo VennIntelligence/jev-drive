@@ -56,13 +56,13 @@ OPTS = {"A": ("noside", "mshuf"), "B": ("noside", "mshuf"), "W": ("noside", "msh
 # counted from SH30; the controls were not continued and are read at their nearest snapshot). R0 / RA / RB: arm R, the policy trained from the
 # shipped weights with the SH30 recipe (10 k steps, one checkpoint) reading a frozen token bank through the memory channel (VTR-0 / VTR-A / VTR-B).
 START = {"A2": 50, "B2": 50}                            # thousand steps before the tag's own step 0
-RTAG = {"R0": "VTR-0", "RA": "VTR-A", "RB": "VTR-B"}
-RSRC = {"RA": "A", "RB": "B"}                           # the first-wave arm whose final branch fills the bank
+RTAG = {"R0": "VTR-0", "RB": "VTR-B", "RW0": "VTR-W0", "RW": "VTR-W"}   # amendment 8: VTR-A dropped, the W arms added
+RSRC = {"RB": "B", "RW": "W"}                           # the first-wave arm whose final branch fills the bank
 STEPS |= {"A2": 80, "B2": 80} | dict.fromkeys(RTAG, 10)
 EVERY |= {"A2": 5, "B2": 5} | dict.fromkeys(RTAG, 10)
 SEEDS |= dict.fromkeys([*START, *RTAG], (0, 1))
-CTRL |= {"A2": ("A0", "A", "F"), "B2": ("A0", "B", "F"), "R0": ("SH30",), "RA": ("R0", "SH30"), "RB": ("R0", "RA", "SH30")}
-PRIMARY += [("A2", "A0"), ("B2", "A0"), ("RA", "R0"), ("RB", "R0"), ("RB", "RA")]
+CTRL |= {"A2": ("A0", "A", "F"), "B2": ("A0", "B", "F"), "R0": ("SH30",), "RB": ("R0", "SH30"), "RW0": ("R0", "SH30"), "RW": ("R0", "RW0", "SH30")}
+PRIMARY += [("A2", "A0"), ("B2", "A0"), ("RB", "R0"), ("RW0", "R0"), ("RW", "R0"), ("RW", "RW0")]
 OPTS |= dict.fromkeys([*START, *RTAG], ("noside", "mshuf"))
 SC = ["EPDMS", "NC", "DAC", "DDC", "TLC", "EP", "TTC", "LK", "HC", "EC"]
 RATES = ["offroad", "cut_in", "under", "nc_fail", "ttc_only", "nc_A", "nc_A1", "nc_A2", "nc_B", "nc_C", "nc_D", "nc_E"]
@@ -594,9 +594,9 @@ def report(R, E, PR, L, rdiff):
       f"(max |difference| {max(rdiff.values()):.1e})" + (f"; **differs on {bad}**" if bad else "") + ".\n")
 
     A("## Arm R and the continuation (prereg amendment 7)\n")
-    A("`R0` / `RA` / `RB` = `VTR-0` / `VTR-A` / `VTR-B-s<seed>`: the policy trained from the shipped weights with the SH30 recipe (10 000 steps x 128, cosine), reading through the "
-      "memory channel a frozen token bank: Cinque's own t0 tokens (R0, the control), the final branch of `VT-A-s<seed>` (RA) or of `VT-B-s<seed>` (RB). Their one checkpoint is "
-      "listed as k10; the registered comparisons are RA - R0, RB - R0, RB - RA, each also against SH30 (R0 - SH30 is a reference row). `A2` / `B2` = arm A / B continued for 30 000 "
+    A("`R0` / `RB` / `RW0` / `RW` = `VTR-0` / `VTR-B` / `VTR-W0` / `VTR-W-s<seed>`: the policy trained from the shipped weights with the SH30 recipe (10 000 steps x 128, cosine), reading through the "
+      "memory channel a frozen token bank: Cinque's own t0 tokens (R0, the control), the final branch of `VT-B-s<seed>` (RB), Cinque's frozen encoder on the three views of arm W (RW0), or the trained branch of `VT-W-s<seed>` on those views (RW). Their one checkpoint is "
+      "listed as k10; the registered comparisons are RB - R0, RW0 - R0, RW - R0, RW - RW0, each also against SH30 (R0 - SH30 is a reference row). `A2` / `B2` = arm A / B continued for 30 000 "
       "steps under the tags `VT-A2` / `VT-B2-s<seed>`, read as steps k55 .. k80 of the same arm; its controls were not continued (`ctrl` shows the snapshot used). Both appear in "
       "every table below under these labels: trend, full decomposition, NC classes and arc ratios, boards (navhard), test-time options, verdicts, no-regression, flips, moved lists.\n")
     gf = OUT.parent / "chain" / "R" / "gate.json"
@@ -708,7 +708,7 @@ def report(R, E, PR, L, rdiff):
     A("Strata (fixed token sets, `runs/corridor/fov/`): `edge out / in` = share of the inner-curb samples inside the wide frame's horizontal view at t0 is 0 / above 0; "
       "`SH30 cut-in, point out / in` = the tokens where `SH30-F-s<seed>` cut inside, by whether its departure point was inside the view (per seed only).\n")
     rws = []
-    for arm, c in (("W", "A"), ("A", "A0"), ("B", "A0")):
+    for arm, c in (("W", "A"), ("A", "A0"), ("B", "A0"), ("RW", "R0"), ("RW0", "R0"), ("RW", "RW0")):
         for seed in q.seeds(arm, c):
             st = q.steps(arm, seed, c)
             for b in FOVB:

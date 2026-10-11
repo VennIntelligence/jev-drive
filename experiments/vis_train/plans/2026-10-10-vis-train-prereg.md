@@ -195,3 +195,9 @@ navtest 全分解（EPDMS 全部子项 × 四个转角桶）；> 45° 与 > 20°
 2. **理由**：闸门预设「支路在续训下被有用地读取」；而 R（支路冻结、policy 从出厂权重用完整 SH30 配方重训）要检验的恰恰是这一点。闸门失败本身不能回答 R 的问题，所以不据此放弃 R。
 3. **其余不变**：臂（`VTR-0` / `VTR-A` / `VTR-B`，seed 0 / 1，bank 来源、10 000 步、SH30 配方）、tag、读数（navtest、navhard、navtest `:noside` / `:mshuf`）、判词行、对照（R0 / SH30）一律按补记 7。闸门失败这一事实随 R 的结果一并报告，不得在判词里隐去。
 4. **实现**：`vt_r_chain.sh` 加环境变量 `VT_R_SKIP_GATE=1`：只提交 R 部分（去掉 `--when-exists GATE_PASS`），不提交闸门任务与续跑任务，不等闸门；其余行为不变。续跑已经按 `FALLBACK_B` 选出的 B 臂单独进行，与本补记无关。
+5. **臂改为 `VTR-0`、`VTR-B`、`VTR-W0`、`VTR-W`（seed 0 / 1，共 8 个训练），`VTR-A` 整臂取消**（用户 2026-10-11 08:58 CST，第一个 W 臂训练步之前；`VTR-0` 与 `VTR-B` 的训练 08:55 已入池开跑，配置与补记 7 完全相同，未受影响；`VTR-A` 的 bank 与训练任务已经从池里取消，没有任何 A 的读数）。
+   - `VTR-W0`：bank `vtr_W0` = 冻结的出厂 Cinque 编码器在 W 臂同样的三个视角（CAM_F0 / CAM_L0 / CAM_R0，同一像素缓存与取景）上的 t0 token，3 × 32 token，经 memory 通道；不含任何训练过的视觉权重。由 `vt_r.py bank --src W0` 生成（未加载 checkpoint 的 `VT("W")`，走与 W 的 branch 完全相同的 `Infer.mem` 路径）。
+   - `VTR-W`：bank `vtr_W-s<seed>` = `VT-W-s<seed>` 训练好的 branch 在同三个视角上的 token。来源取 `VT-W-s0` 与 `VT-W-s1` 的 `ckpt-final.pt`（两者在 bank 时刻都已存在；实际 step 记入 `mem/vtr_W-s*/bank.json` 与 state.md）。
+   - 适配器改动（最小）：`pp_train.PModel` 对 `vtr_W*` 的 memory 臂用 `n_cam=3`（其余 `n_cam=1`），forward 接受 (B, 3, 32, 512) 的 memory（升维成 (B, 3, 1, 32, 512)）；训练的 25% 行 memory drop 与 `:noside` 的 (B,1) 掩码对三个视角一起生效（适配器里 broadcast）。bank 是 (N, 3, 32, 512) fp16，`Tokens` 按行取，无需改。`vtr_0` / `vtr_B` 路径不变。
+6. **登记的比较**：`VTR-B − VTR-0`、`VTR-W0 − VTR-0`、`VTR-W − VTR-0`、`VTR-W − VTR-W0`，每个另对 SH30；seed 均值与 CI 的读法同补记 7。判词行同补记 7。W 臂另报 > 45° 内切率按内侧路沿是否在前视视野内分层（`vt_read.py` 对 W − A 已用的 FoV 分层），比较为 `VTR-W − VTR-0`、`VTR-W0 − VTR-0`、`VTR-W − VTR-W0`。
+7. **读数**：每个臂 navtest、navhard、navtest `:noside` / `:mshuf`，全部经 `python -m jevdrive.bench`；`vt_read.py` 加标签 `RW0` / `RW` 并去掉 `RA`。放置：8 个训练 16 GB / 4 核，由 pool 在 6 张卡上打包。

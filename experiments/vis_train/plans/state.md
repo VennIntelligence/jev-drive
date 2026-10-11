@@ -198,6 +198,8 @@ scripts/tmux_run.sh vt-W-s1 env VT_WHEN=$DATA_DIR/runs/op_parity/runs/VT-A0-s1/c
 
 **2026-10-11 08:55 CST**：闸门未过（−0.75），用户决定照跑 R（prereg 补记 8）；`VT_R_SKIP_GATE=1 scripts/tmux_run.sh vt-R experiments/vis_train/scripts/vt_r_chain.sh all` 重新提交 R 部分，下面的队列表是被取消的旧任务，新 id 看 `jobs.txt` 末尾。
 
+**08:58 CST 改臂（补记 8 第 5–7 点）**：R 臂 = `VTR-0`、`VTR-B`、`VTR-W0`、`VTR-W`（8 个训练），`VTR-A` 取消。bank `vtr_W0`（冻结 Cinque 编码器 × W 的三视角）、`vtr_W-s{0,1}`（`VT-W-s{0,1}` 的 `ckpt-final.pt`，step 见各 `bank.json`）；`pp_train.py` 对 `vtr_W*` 用 3 相机适配器。
+
 ### 队列（01:07 CST 入队；owner `vis_train-R`；一条链 `jev:vt-R`，全部任务 id 在 `$DATA_DIR/runs/vis_train/chain/R/jobs.txt`）
 
 | 任务 | id | 等什么 | 做什么 |

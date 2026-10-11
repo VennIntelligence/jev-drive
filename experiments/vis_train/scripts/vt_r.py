@@ -6,6 +6,9 @@ reading the branch tokens through the memory channel (pp_train --mem vtr_<name>:
   R-0  VTR-0-s<seed>  bank vtr_0        Cinque's own frozen t0 tokens (arm A0's input): the control
   R-A  VTR-A-s<seed>  bank vtr_A-s<seed>  the branch of VT-A-s<seed> at its final checkpoint
   R-B  VTR-B-s<seed>  bank vtr_B-s<seed>  the branch of VT-B-s<seed> at its final checkpoint
+  R-W0 VTR-W0-s<seed> bank vtr_W0         amendment 8: the frozen shipped encoder on the three views of arm W (N, 3, 32, 512), --src W0
+  R-W  VTR-W-s<seed>  bank vtr_W-s<seed>  amendment 8: the branch of VT-W-s<seed> on those views (final checkpoint, else the latest snapshot), --src W
+  (R-A, VTR-A, was dropped in amendment 8.) pp_train.PModel gives a vtr_W* memory arm a 3-camera adapter.
 Reference rows: SH30-F-s<seed> (no channel). The checkpoints are plain pp_train memory arms, so `jevdrive.bench` serves them on the parity path
 (`:noside` masks the bank, `:mshuf` reads the bank row of a token of another log).
 
@@ -50,8 +53,8 @@ def _atomic(f: _pl.Path, write):
 def source(a) -> tuple:
     """-> (tag, step) of the checkpoint the bank is computed from; ('cinque', 0) for the frozen t0 tokens."""
     import torch
-    if a.src == "cinque":
-        return "cinque", 0
+    if a.src in ("cinque", "W0"):                # W0: the frozen shipped encoder on the three views of arm W (a fresh VT("W"): no trained vision weights)
+        return {"cinque": "cinque", "W0": "cinque-w3"}[a.src], 0
     tag = f"VT-{a.src}-s{a.seed}"
     fin, t0 = RUNS / tag / "ckpt-final.pt", time.time()
     while not fin.exists():                      # alive: no stop-rule marker, no chain error, the wait budget not used up
@@ -81,10 +84,14 @@ def cmd_bank(a):
     meta = (json.loads(mf.read_text()) if mf.exists() else meta | {"rows": {}})
     with Run("vis_train", f"bank-{a.kind}", config=vars(a) | {"src_tag": tag, "src_step": step}) as run:
         dev = torch.device("cuda" if tag != "cinque" else "cpu")
+        nv = 3 if a.src in ("W", "W0") else 1
         if tag != "cinque":
             import vt as V
-            m, _ = V.load_tag(tag, dev)
-            assert m.k["vis"] == "branch" and m.nv == 1, f"{tag} (arm {m.arm}): not a one-view branch arm"
+            if tag == "cinque-w3":
+                m = V.VT("W").to(dev).eval()
+            else:
+                m, _ = V.load_tag(tag, dev)
+            assert m.k["vis"] == "branch" and m.nv == nv, f"{tag} (arm {m.arm}): not a {nv}-view branch arm"
         for data in a.datas:
             f = od / f"{data}.npy"
             names = np.load(CACHE / data / "tab.npz")["names"]
@@ -93,7 +100,7 @@ def cmd_bank(a):
             front = np.load(CACHE / f"{data}@warp" / "front.npy", mmap_mode="r")      # (N, 8, 32, 512): Cinque's frozen slot tokens, protocol W
             assert len(front) == len(names)
             tmp = od / f".{data}.{os.getpid()}.npy"
-            o = np.lib.format.open_memmap(tmp, "w+", np.float16, (len(names), 32, 512))
+            o = np.lib.format.open_memmap(tmp, "w+", np.float16, (len(names), 32, 512) if nv == 1 else (len(names), nv, 32, 512))
             if tag == "cinque":
                 for i in run.tqdm(range(0, len(names), 4096), desc=data):
                     o[i:i + 4096] = front[i:i + 4096, -1]
@@ -106,7 +113,7 @@ def cmd_bank(a):
                 del I
             assert np.isfinite(o[:4096].astype(np.float32)).all()
             if data == "lb_navtest":             # how far the branch tokens are from the frozen ones (0 for vtr_0)
-                d = o[:2048].astype(np.float32) - np.asarray(front[:2048, -1], np.float32)
+                d = (o[:2048] if nv == 1 else o[:2048, 0]).astype(np.float32) - np.asarray(front[:2048, -1], np.float32)   # W: the F0 view
                 meta["navtest_vs_cinque"] = dict(mean_abs=float(np.abs(d).mean()), rms=float(np.sqrt((d ** 2).mean())),
                                                  ref_rms=float(np.sqrt((np.asarray(front[:2048, -1], np.float32) ** 2).mean())))
             o.flush()
@@ -239,7 +246,7 @@ if __name__ == "__main__":
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("bank")
     p.add_argument("--kind", required=True)
-    p.add_argument("--src", required=True, choices=["cinque", "A", "B"])
+    p.add_argument("--src", required=True, choices=["cinque", "A", "B", "W", "W0"])
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--datas", nargs="+", default=list(DATAS))
     p.add_argument("--wait-min", type=float, default=120, help="how long a missing final checkpoint is waited for before the latest snapshot is used")
