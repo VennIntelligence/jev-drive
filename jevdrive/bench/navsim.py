@@ -199,6 +199,11 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
     M = T.Tokens([T.MEM_ROOT / mem / f"{data}.npy"], dev) if mem else None
     assert m.opt != "mshuf" or M is not None, f"{m.spec}: :mshuf needs a memory arm (pp_train --mem)"
     perm = torch.as_tensor(_derange(S.tab["log"]), device=dev) if m.opt == "mshuf" else None   # :mshuf: the bank row of a token of another log
+    sideoff = None                                           # :sideoff: three-view banks (vtr_W*, views CAM_F0 / CAM_L0 / CAM_R0), the side views masked
+    if m.opt == "sideoff":
+        shp = None if M is None else (M.mms[0].shape if M.host else M.t.shape)
+        assert shp is not None and len(shp) == 4 and shp[1] == 3, f"{m.spec}: :sideoff needs a memory arm with a three-view bank (vtr_W*)"
+        sideoff = torch.tensor([True, False, False], device=dev).expand(batch, -1)
     sl = model.net.slices
     pi = np.arange(sl["plan"].start, sl["plan"].start + 495)
     ps = np.arange(sl["plan"].start + 495, sl["plan"].start + 990)
@@ -209,7 +214,7 @@ def parity_plans(spec: str, bench: str, out: str, batch: int = 128, data: str = 
     with torch.no_grad():
         for i in range(0, S.n, batch):
             r = torch.arange(i, min(i + batch, S.n), device=dev)
-            mask = torch.zeros(len(r), 1 if M is not None else 3, dtype=torch.bool, device=dev) if m.opt == "noside" else None
+            mask = torch.zeros(len(r), 1 if M is not None else 3, dtype=torch.bool, device=dev) if m.opt == "noside" else sideoff[:len(r)] if sideoff is not None else None
             side = M[r if perm is None else perm[r]] if M is not None else (S.side[r] if side_ok else None)
             o = model(S.front[r], S.ego[r], S.tc[r], side, mask).float().cpu().numpy()
             mu[i:i + len(r)] = o[:, pi].reshape(-1, 33, 15)

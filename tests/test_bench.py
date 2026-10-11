@@ -55,10 +55,14 @@ class TestModels(TmpData):
         self.assertEqual(M.resolve("UF-V-s0").frames, "vh140")
         n = M.resolve("P3-F-s0:noside")
         self.assertEqual((n.opt, n.key("navtest"), n.key("hugsim")), ("noside", "P3-F-s0@warp_noside", "P3-F-s0"))
+        n = M.resolve("ESb-s0:sideoff")                                  # parity memory arms with a three-view bank: side views masked
+        self.assertEqual((n.family, n.opt, n.key("navtest")), ("parity", "sideoff", "ESb-s0@warp_sideoff"))
         self.assertTrue(M.resolve("UF-U2-s0").unfreeze)
         self.assertTrue(M.resolve("P2-F-s0").ckpt.endswith("runs/op_parity/runs/P2-F-s0/ckpt-final.pt"))
         with self.assertRaises(ValueError):
             M.resolve("cinque:noside")
+        with self.assertRaises(ValueError):
+            M.resolve("cinque:sideoff")
         with self.assertRaises(ValueError):
             M.resolve("P2-F-s0@bogus")
         with self.assertRaises(ValueError):
