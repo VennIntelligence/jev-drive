@@ -232,3 +232,20 @@ each; 1.5 TB free.
 - Seen before the pilot, in a 400-step test run of ON-SELF (not the pilot's schedule): navtrain dev ADE rose to 0.608 (line 0.575). The
   pilot lines stand as registered.
 - 22:37: pilots started on card 1 (SELF, IMIT, BOTH in sequence, 3 000 steps each).
+- 23:03: **pilot read** (3 000 steps, held rows 1 977, `/data/runs/onpol_pai/train/held/pilot.md`):
+
+  | Tag | Dev ADE (line <= 0.575) | Drift off (<= 0.30) | ADE to recovery target, 1-4 s | Summed term rate | Arc / served |
+  |---|--:|--:|--:|--:|--:|
+  | `P2H10S-F-s0` (control) | 0.545 | 0.045 | 4.768 | 0.307 | 1.033 |
+  | `P2H10S-SELF-ON-P-s0` | 0.570 | 0.057 | 4.589 | 0.236 | 1.118 |
+  | `P2H10S-IMIT-ON-P-s0` | 0.569 | 0.059 | 3.257 | 0.239 | 1.096 |
+  | `P2H10S-BOTH-ON-P-s0` | **0.586** | 0.065 | 3.199 | 0.182 | 1.083 |
+
+  ON-SELF and ON-IMIT pass every line (no NaN; forgetting lines; learnable: SELF's term rate 0.236 < 0.307, IMIT's ADE 3.26 < 4.77).
+  **ON-BOTH misses the dev ADE line (0.586 > 0.575) and stops here, as registered; it is not trained in full and not read on the 281.**
+  Not registered, noted: every arm's plans are longer than the served ones on held rows (arc ratio 1.08 to 1.12 against the control's
+  1.03), and ON-IMIT lowers the summed term rate as much as ON-SELF does (0.239 against 0.236) without being trained on those terms.
+- 23:04: FT-CTRL full training started on card 1 (it uses no on-policy row, so it does not depend on the pass-2 cut).
+- Pass-2 cut: pass 2 is stopped when its second chunk ends (80 of the 144 training scenes, about 23:28), its rows are built as pass `log`,
+  then ON-SELF and ON-IMIT train in parallel with 12 `pol` + 4 `log` rows per batch. `scripts/onp_final_chain.sh` runs this, the G-load of
+  the three checkpoints and the 281 queue (SELF, IMIT, FT).
