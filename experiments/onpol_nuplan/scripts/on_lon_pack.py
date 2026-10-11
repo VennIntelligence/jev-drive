@@ -59,7 +59,8 @@ def load_all(name: str, ctx: Path) -> dict:
         assert (ag["tokens"] == names).all() and (m["names"] == names).all(), "agent.npz / meta.npz rows are not the tab's rows"
         X = dict(np.load(ctx, allow_pickle=False))
         M = dict(scene=m["scene"].astype(str), k=m["k"].astype(int), seed=m["seed"].astype(int), t_sim=m["t_us"].astype(np.int64), pose=m["pose_map"].astype(np.float64),
-                 served=m["poses"].astype(np.float32), D=m["D"].astype(np.float32), lead=m["lead"].astype(np.float32))
+                 served=m["poses"].astype(np.float32), D=m["D"].astype(np.float32), lead=m["lead"].astype(np.float32),
+                 logfut=m["logfut"].astype(np.float32))
         _C.clear()
         _C[key] = dict(names=names, fut=tab["fut"].astype(np.float32), meta=M, box=ag["box"], valid=ag["valid"], cls=ag["cls"].astype(np.int64), aok=ag["ok"], X=X,
                        sidx={s_: i for i, s_ in enumerate(X["scene"].tolist())})
@@ -215,6 +216,9 @@ def cmd_pack(a):
         served, fut = M["served"], G["fut"]
         Dm = np.where(Z["p_D"] > -OL.BIG, Z["p_D"], np.nan)
         E, F = evaluate(Z, served), evaluate(Z, fut)
+        rep_k = ok & (M["k"] <= 1) & np.isfinite(M["logfut"]).all((1, 2))       # log-replay decisions: the row's pose is the log's, so the log's own
+        LG = evaluate(Z, np.nan_to_num(M["logfut"][:, 1:]))                     # future is a plan from this row ("does the log violate the item")
+        far = np.abs(M["lead"]) > 5.0
         sh = lambda m: float(m.mean()) if len(m) else None  # noqa: E731
         q = lambda v, p: [float(x) for x in np.quantile(v, p)] if len(v) else None  # noqa: E731
         ahead = (Z["s0"] - Z["slog"])[ok]
@@ -235,7 +239,7 @@ def cmd_pack(a):
                                  rows_with_eligible_turn=sh(Z["c_ok"][ok]), rows_open=sh(Z["p_open"][ok]),
                                  rows_open_with_full_D=sh((Z["p_open"] & (Z["p_D"] > -OL.BIG).all(1))[ok]),
                                  A_margin_q10_q50_q90=q(Z["a_m"][Z["a_g0"] > 0], [0.1, 0.5, 0.9]), A_margin_zero_share=sh(Z["a_m"][Z["a_g0"] > 0] <= 0)),
-                    items={})
+                    replay_rows=int(rep_k.sum()), items={})
         kept = []
         for it in OL.ITEMS:
             h, hf = E[it], F[it]
@@ -246,8 +250,12 @@ def cmd_pack(a):
                                      mean_when_active=float(h[act].mean()) if act.any() else None, q50_q90_q99_max_when_active=q(h[act], [0.5, 0.9, 0.99, 1.0]),
                                      active_share_by_k={int(k): sh(act[M["k"] == k]) for k in np.unique(M["k"])},
                                      active_share_on_imitation_target=float((hf > 0).mean()), mean_on_imitation_target_when_active=float(hf[hf > 0].mean()) if (hf > 0).any() else None,
+                                     active_share_of_the_logs_own_future_at_replay_decisions=sh(LG[it][rep_k] > 0),
+                                     mean_of_the_logs_own_future_when_active=float(LG[it][rep_k][LG[it][rep_k] > 0].mean()) if (LG[it][rep_k] > 0).any() else None,
+                                     active_share_rows_within_5m_of_the_log=sh(act[ok & ~far]), active_share_rows_beyond_5m_of_the_log=sh(act[ok & far]),
                                      passes_0p2_percent=bool(share >= MIN_SHARE),
-                                     top20=[dict(name=str(Z["names"][r]), scene=str(M["scene"][r]), k=int(M["k"][r]), value=float(h[r])) for r in top if h[r] > 0])
+                                     top20=[dict(name=str(Z["names"][r]), scene=str(M["scene"][r]), seed=int(M["seed"][r]), k=int(M["k"][r]), value=float(h[r]), lead_m=float(M["lead"][r]),
+                                                lateral_m=float(Z["l0"][r])) for r in top if h[r] > 0])
             if share >= MIN_SHARE:
                 kept.append(it)
         items = tuple(a.items) if a.items else tuple(kept)
