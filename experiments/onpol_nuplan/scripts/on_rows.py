@@ -155,14 +155,15 @@ class Path:
     straight beyond the last frame. xy (m, 2), s (m,) arc, h (m,) heading at each vertex = the logged heading, linear in the segment
     parameter between two kept frames (never the direction of a 0.1 m polyline segment); SF (frames,) arc of every frame, TF their times;
     s_end = arc of the last frame."""
-    MERGE = 0.2
+    MERGE, BACK = 0.2, 5.0
 
     def __init__(self, P, T):
         keep = [0]
         for i in range(1, len(P)):
             if np.hypot(*(P[i, :2] - P[keep[-1], :2])) > self.MERGE:
                 keep.append(i)
-        out, hd, at = [P[:1, :2]], [P[:1, 2]], [0]
+        back = P[0, :2] - self.BACK * np.array([np.cos(P[0, 2]), np.sin(P[0, 2])])    # a straight lead-in, so a pose just behind the first frame projects
+        out, hd, at = [back[None], P[:1, :2]], [P[[0, 0], 2]], [1]
         for i, j in zip(keep[:-1], keep[1:]):
             a, b = P[i], P[j]
             d = b[:2] - a[:2]
