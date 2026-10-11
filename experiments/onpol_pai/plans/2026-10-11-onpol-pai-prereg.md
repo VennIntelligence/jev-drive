@@ -220,3 +220,16 @@ each; 1.5 TB free.
      outside the labelled radius in 68 % of rows. Now 192 segments selected along the path window ahead (to max(30 m, 4.5 s x v0 + 10 m)).
   Left as is and noted: the audit's G-log run has the road-edge term at zero on 98.78 % of on-log rows (line 99 %; maximum 0.145 m) and the
   agent term on 99.19 %; the rerun after the amendments is recorded below, the line is not moved.
+- 22:37: after the amendments. Rows rebuilt (G-in again 3 200 / 3 200; the realised 4 s ego position is inside the labelled edge region in
+  90.1 % of rows); token cache kept by input-key equality on 160 of 160 scenes. **G-log** on the 5 798 rows within 0.3 m / 0.5 m of the log:
+  agent 99.28 %, corridor 100 %, B 99.81 %, C 100 %, P 100 %, **road edge 98.90 % (miss; line 99 %, maximum 0.145 m, worst rows in one
+  scene)**: recorded, line not moved, the term is trained as is. G-load passes (an `-ON` checkpoint loads through the unchanged driver
+  image). Gradient directions pass for all six terms. Train pool: 19 102 rows of 144 scenes (10 693 of 31 772 rows masked); held 1 977
+  rows of 16 scenes. Weighted loss per batch on the parent's plan: corridor 1.25, P 0.62, B 0.52, road edge 0.076, agent 0.058, C 0.028
+  (ON-SELF 2.55; ON-IMIT's imitation term 2.34).
+- Control on the held rows (`P2H10S-F-s0`, the pilot's reference): ADE to the recovery target 4.768 m (1 to 4 s), summed term rate 0.307
+  (agent 0.069, road edge 0.064, corridor 0.108, B 0.052, C 0.014; P 0.032 is not in the registered sum, which then reads 0.307 - 0.032 =
+  0.275), arc / served 1.033, dev ADE 0.545, drift off 0.045.
+- Seen before the pilot, in a 400-step test run of ON-SELF (not the pilot's schedule): navtrain dev ADE rose to 0.608 (line 0.575). The
+  pilot lines stand as registered.
+- 22:37: pilots started on card 1 (SELF, IMIT, BOTH in sequence, 3 000 steps each).
