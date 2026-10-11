@@ -235,6 +235,12 @@ def nav_chunk(u):
         for it in "ABC":
             out.setdefault(f"h{it}0", []).append(T0[f"lon{it}"].numpy())
             out.setdefault(f"h{it}", []).append(T1[f"lon{it}"].numpy())
+    # the logged driver's own future as the plan (log states only: the state frame is the logged frame), with the trained on-policy definitions
+    lf = g("fut").astype(np.float32)
+    lok = np.isfinite(lf).all((1, 2)) & (f == "log") & g("ok")
+    with torch.no_grad():
+        TL = OL.terms(torch.tensor(np.nan_to_num(lf)), rows, pack)
+    out |= {f"l{it}": np.where(lok, TL[f"lon{it}"].numpy(), np.nan) for it in "ABC"}
     return {k_: (np.stack(v, 1) if isinstance(v, list) else v) for k_, v in out.items()}
 
 
@@ -269,6 +275,11 @@ def cmd_navtrain(a, run):
         out[f"{it}_trained_hinge"] = dict(active_share_all=float((h > 0).mean()), active_share_label_pos=float((h[D[lab] == 1] > 0).mean()),
                                           active_share_label_neg=float((h[D[lab] == 0] > 0).mean()), mean_when_active=float(h[h > 0].mean()) if (h > 0).any() else None,
                                           p99_when_active=float(np.quantile(h[h > 0], 0.99)) if (h > 0).any() else None)
+    lg = np.isfinite(D["lA"])
+    out["logged_future_as_plan_log_states"] = dict(
+        states=int(lg.sum()), note="how often the logged driver itself violates the on-policy (fixed-margin) item; design.md's log-consistent margins make this 0 by construction",
+        **{it: dict(active_share=float((D[f"l{it}"][lg] > 0).mean()), mean_when_active=float(D[f"l{it}"][lg][D[f"l{it}"][lg] > 0].mean()) if (D[f"l{it}"][lg] > 0).any() else None,
+                    p99_when_active=float(np.quantile(D[f"l{it}"][lg][D[f"l{it}"][lg] > 0], 0.99)) if (D[f"l{it}"][lg] > 0).any() else None) for it in "ABC"})
     out["pass"] = bool(all(out[k]["share"] is not None and out[k]["share"] >= 0.95 for k in ("A_margin0", "B_red_light_at_line", "C_as_implemented")))
     return out
 
