@@ -193,3 +193,25 @@ version is kept in the pool as `fut_reg` and its statistics are reported beside 
 Stated for the read: the on-policy agent hinge sees vehicles only (the simulator has no pedestrians or cyclists; S's offline labels have
 them). ON-SELF without L has no term that asks for progress, ON-IMIT has one by construction; the registered lines are on zeros, and slow
 scenes and progress are reported beside them.
+
+## Amendment 3 (2026-10-11, L inclusion; before the pilots, any training and any closed-loop read)
+
+L met the inclusion rule before the pilots: (i) an independent Opus read of `lib/on_lon.py` and the packer found no sign, frame, shape or
+gradient-path error (its findings were fixed and the gates rerun; the fixes were not audited a second time); (ii) `timing_only` keeps
+values bit for bit with a cross-heading gradient of at most 7e-18 against 0.12 to 0.27 along the heading; (iii) on the full pool (20 386
+rows) the served own plan activates A on 1.37 % of rows (41 scenes), B on 0.43 % (11 scenes), C on 1.35 % (41 scenes), P on 5.43 % (110
+scenes), all above 0.2 %. Gate files: `results/gates/lon_*.json`, `lon_gates.md`. So, by the rule registered above:
+
+- **ON-SELF and ON-BOTH carry S + L (A, B, C, P)**; the fourth family is `SSELFnoL-ON` (ON-SELF with the S hinges only, the drop-one arm
+  of L as a group) and **ON-NONE is not trained** (five pilots: the four families and `SNONE-ON-P-s0`, which stays as the pilot gate's
+  reference only). The missing continuation control is a limit of the read: "10 000 more steps" is not separated from "the rows" against
+  the archived control; between the arms it cancels.
+- No item is dropped. B has the thinnest support (11 scenes; median violation 0.08 m, a last-metre standoff the log itself shows as
+  often) and stays in because it passes the rule; its value is not separately readable tonight (no per-item drop-one arm).
+- L as implemented differs from the text above in these points, fixed before any training: A also requires the plan's own front point
+  within 3.5 m of the route; B masks lines already passed at t and charges nothing after the front crossed on a non-red step; C's
+  reference speed is the logged speed along the route by arc, floored at the log's speed at the turn peak; P uses Amendment 2's D_k, is
+  charged only within 3.5 m of the route, and "open" additionally requires no stop line of any kind and no actor centre within 4.5 m of
+  the route over 0 to 60 m ahead. Only the first >= 45 deg turn of a route carries C; every simulator actor counts as a vehicle.
+- The verdict sentences are unchanged. Added, descriptive: ON-SELF against SSELFnoL (what L adds to S on the on-policy rows), by the
+  same paired table.
