@@ -1,0 +1,19 @@
+{
+ "tag": "YSELFnoL-ON-P-s0",
+ "list": "smoke48_train",
+ "scenes": 48,
+ "rollouts": 48,
+ "sessions": 48,
+ "drive_calls": 480,
+ "served_plans": 480,
+ "nonfinite_plans": 0,
+ "inference_errors": 0,
+ "input_errors": 0,
+ "sessions_not_10_calls": {},
+ "run_dirs": [
+  "/root/autodl-tmp/ujs/runs/onpol_nuplan/read/smoke/runs/YSELFnoL-ON-P-s0@smoke48-smoke48_train/20261012-011905"
+ ],
+ "note": "the scores of this smoke are not a read and are not in this file",
+ "fail": [],
+ "pass": true
+}
