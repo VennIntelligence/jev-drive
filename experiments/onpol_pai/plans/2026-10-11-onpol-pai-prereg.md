@@ -202,3 +202,21 @@ each; 1.5 TB free.
 - 22:12: pass 2 started on card 0 (log-replay driver `lib/onp_log_driver.py`: the model runs and is logged as usual, the returned trajectory
   is the recording's own, from `submit_recording_ground_truth`; on the 4 stage-A scenes the ego stays within 0.03 m laterally and 0.46 m
   along the path of the log). Order: the 144 training scenes first. Estimate 2.6 h for 160 scenes on one card.
+- 22:30: **independent Opus audit** (read-only, own computations on the 160 row files; scripts in `/data/runs/onpol_pai/audit/` on Tokyo).
+  Verified by computation: label frames and time base (`log_fut`, `e0`, `ds0`, `path`, box times; box convention confirmed by the ego's
+  realised future against the boxes: 336 of 21 030 clean rows overlap as documented, 970 to 3 913 under any alternative convention),
+  `imit` against section 4, masks, split (0 of the 281 test ids in the rows or the cache), weights and margins, the on-policy rng stream.
+  Three amendments follow from it, **all made before any pilot or training run**:
+  1. **Corridor term redefined (defect).** As first coded it took the end of the 100 m path window for the end of the path (the log's own
+     future violated it above 25 m/s: zero on only 93.4 % of on-log rows) and charged poses past the real end their full distance to the
+     end point (85.5 % of the term's loss mass, with a gradient the shape-only projection removes). Now: perpendicular distance to the
+     path continued straight at both ends, band 3.0 m, shape-only. Being past the end along the path is not charged; the overrun of a
+     logged stop is left to term B. The scorer's flag for driving past the path's end is therefore not a trained consequence.
+  2. **Guard P restricted to open rows with |ds0| <= 2.0 m.** As registered it dominated ON-SELF (weighted loss per batch on the parent's
+     plan: P 10.3, corridor 6.5, B 0.40, agent 0.058, road edge 0.053, C 0.022; ON-IMIT's imitation term 2.35) and 93 % of its mass sat
+     on rows where the ego is more than 2 m behind the log, where "the log's progress at the same time" is a label from another place on
+     the road.
+  3. **Road-edge labels cover the plan horizon.** The 96 nearest segments reached a median 20.9 m; the ego's realised 4 s position lay
+     outside the labelled radius in 68 % of rows. Now 192 segments selected along the path window ahead (to max(30 m, 4.5 s x v0 + 10 m)).
+  Left as is and noted: the audit's G-log run has the road-edge term at zero on 98.78 % of on-log rows (line 99 %; maximum 0.145 m) and the
+  agent term on 99.19 %; the rerun after the amendments is recorded below, the line is not moved.
