@@ -33,6 +33,8 @@ def main(a):
     assert set(arm + ctl + bas[:1]) <= have, f"missing reads: {sorted(set(arm + ctl + bas[:1]) - have)}"
     bas = [t for t in bas if t in have]
     scenes = sorted(set.intersection(*[set(S[S.tag == t].scene) for t in arm + ctl + bas]))
+    fold = sorted(set(S[S.scene.isin(scenes) & S.offroad_or_collision_at_fault.isna()].scene))   # no rollout (route fold): not a scene of the read
+    scenes = [x for x in scenes if x not in set(fold)]
     S = S[S.scene.isin(scenes)].copy()
     S["log"] = S.scene.str.rsplit("-", n=1).str[0]
     z = S.score == 0
@@ -67,7 +69,7 @@ def main(a):
         za, zb = piv["zero"][A], piv["zero"][Bt]
         return int(((zb.min(1) == 1) & (za.max(1) == 0)).sum()), int(((za.min(1) == 1) & (zb.max(1) == 0)).sum())
     null = [abs(x - y) for p, q in ((ctl[0], ctl[1]),) + (((bas[0], bas[1]),) if len(bas) > 1 else ()) for x, y in [fb([p], [q])]]
-    R = dict(family=f, base=base, scenes=len(scenes), logs=len(L), arm=fam(arm), control=fam(ctl), base_s0=fam(bas[:1]), base_seeds=fam(bas))
+    R = dict(family=f, base=base, scenes=len(scenes), dropped_no_rollout=fold, logs=len(L), arm=fam(arm), control=fam(ctl), base_s0=fam(bas[:1]), base_seeds=fam(bas))
     cols = ("score", "zero", "z_atf", "z_col", "z_off", "z_cor", "z_oth", "gt")
     R["pairs"] = {f"{n1} - {n2}": {c: diff(A, Bt, c, c.startswith("z")) for c in cols} | {"fixed_broken": fb(A, Bt)}
                   for n1, A, n2, Bt in (("arm", arm, "control", ctl), ("arm", arm, "base s0", bas[:1]), ("control", ctl, "base s0", bas[:1]))}
@@ -84,6 +86,7 @@ def main(a):
     row = lambda n, x: (f"| {n} | {x['score']:.4f} | {x['zero']:.1f} | {x['z_col']:.1f} / {x['z_off']:.1f} / {x['z_cor']:.1f} / {x['z_oth']:.1f} | {x['z_atf']:.1f} | {x['gt']:.3f} | "  # noqa: E731
                         f"{x['slope']:.4f} | " + " ; ".join(f"{t} {v['score']:.4f} / {v['zeros']} / {v['atf']} / {v['gt']:.3f}" for t, v in x["seeds"].items()) + " |")
     md = [f"# ONPOL-LONG round 1, family {f} (base {base}-s0): held {len(scenes)} scenes at 18 decisions, {len(L)} logs", "",
+          f"Dropped for every label alike: {len(fold)} scenes without a rollout in at least one label (route generation failed: route folds back).", "",
           "| | mean score | zeros | collision at fault / offroad / corridor / other zeros | at-fault zeros | GT distance (m) | drift slope k 4..18 (m / decision) | per seed: score / zeros / at-fault zeros / GT |",
           "|:--|--:|--:|:--|--:|--:|--:|:--|", row(f"arm {f}SKC-L18 (S + K + C on-policy rows)", ac), row(f"control {f}NONE-L18 (same continuation, no rows)", cc),
           row(f"base {base}-s0", R["base_s0"]), row(f"base {base} seeds {', '.join(t[-1] for t in bas)}", R["base_seeds"]), "",
