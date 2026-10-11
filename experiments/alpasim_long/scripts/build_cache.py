@@ -11,7 +11,9 @@ only cache_location (-> --out), dataset.data_dir (-> --raw, which holds test/<lo
 with AlpaSim's own trajdata_provider_config_to_params + trajdata's UnifiedDataset, unedited. One deviation from the runtime's call:
 require_map_cache=False, because the four prebuilt map files of the shipped cache are symlinked into --out/nuplan_test/maps instead of being
 rebuilt from the raw nuPlan maps (that needs the full devkit map API). The shipped cache is never written (asserted).
-compare: per scene of the shipped scene list, scene length, agent table at dt 0.1 (all columns), traffic lights, and the metadata's agent
+By default only the central token that names each public scene id is built (1491 of the configs' 12 146 tokens; the runs use only
+those ids, and trajdata caches each scene on its own); --all-tokens builds all.
+compare: per scene of a's scene list, scene length, agent table at dt 0.1 (all columns), traffic lights, and the metadata's agent
 list; a and b must be identical at the shipped window (gate G0). With different windows it reports the prefix agreement instead.
 """
 import argparse
@@ -45,6 +47,12 @@ def build(a):
     td.dataset.extra_params.num_timesteps_after = a.after
     td.rebuild_cache = True
     params = trajdata_provider_config_to_params(OmegaConf.to_object(td))
+    kw = params["dataset_kwargs"]["nuplan_test"]
+    if not a.all_tokens:   # only the central token each public scene id names (<log>-<token> = the config file's stem)
+        ids = {p.stem for p in Path(td.dataset.extra_params.config_dir).glob("*.yaml")}
+        n0 = len(kw["central_tokens_config"])
+        kw["central_tokens_config"] = [c for c in kw["central_tokens_config"] if f"{c['logfile']}-{c['central_token']}" in ids]
+        print(f"central tokens: {len(kw['central_tokens_config'])} of {n0} (the {len(ids)} scene ids)", flush=True)
     print(json.dumps({k: (v if k != "dataset_kwargs" else {d: {x: (y if x != "central_tokens_config" else f"<{len(y)} tokens>")
                                                                 for x, y in kw.items()} for d, kw in v.items()}) for k, v in params.items()},
                      default=str, indent=1), flush=True)
@@ -107,6 +115,7 @@ if __name__ == "__main__":
     p.add_argument("--after", type=int, required=True), p.add_argument("--out", required=True)
     p.add_argument("--raw", default=str(DATA / "datasets/nuplan_raw")), p.add_argument("--template", default=str(TEMPLATE))
     p.add_argument("--workers", type=int, default=24)
+    p.add_argument("--all-tokens", action="store_true", help="every central token of the configs (12 146), not only the 1491 scene ids")
     p.set_defaults(fn=build)
     p = sub.add_parser("compare")
     p.add_argument("--a", required=True), p.add_argument("--b", required=True), p.add_argument("--out", required=True)
