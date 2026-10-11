@@ -668,7 +668,7 @@ class Dispatch(unittest.TestCase):
         P.submit("sleep 30", name="pinner", pool=self.tmp, vram_gb=5, cpu=200)      # pins every core of the fake box
         d = self.disp(hold_s=0, cpu_budget=1000)
         d.round()
-        big = P.submit("true", name="needs-cores", pool=self.tmp, vram_gb=5, cpu=50, priority=5)
+        big = P.submit("true", name="needs-cores", pool=self.tmp, vram_gb=0.5, cpu=50, priority=5)   # CPU-only: waits for cores
         small = P.submit("true", name="small", pool=self.tmp, vram_gb=5)
         d.round()
         self.assertIn("free cores to pin", d.st["jobs"][big]["why"])
