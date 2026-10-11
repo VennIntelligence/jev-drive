@@ -38,8 +38,9 @@ Terms (t on the 41-step dense grid 0 .. 4 s; s_f / l_f = arc / lateral offset of
      (s_log(t + 0.5 k) - s_log(t), by timestamp), s_plan = the plan's own arc length; only on OPEN rows. design.md's "open" (`p_open_design`):
      no A-eligible actor, no eligible stop line of either type and no eligible turn peak within 60 m ahead of the row along the route.
      DEVIATION (audit; the pack's default `p_open`, scripts/on_lon_pack.py --p-open strict): additionally no stop line of any kind (eligible or
-     not) within 60 m ahead, and no actor of any class whose centre is within 2.5 m of the route and 0 .. 60 m ahead of the row at any of the
-     9 label times. Away from the log's timeline the log's progress is not safe by construction, and in ON-SELF nothing else acts along the
+     not) within 60 m ahead, and no actor of any class whose centre is within 4.5 m of the route and 0 .. 60 m ahead of the row at any of the
+     9 label times (the smoke preview showed a plan that leaves the route towards a vehicle 3 m beside it); and in the loss a pose is charged
+     only while it is within 3.5 m of the route (|l_r(t_k)| <= 3.5, as B and C). Away from the log's timeline the log's progress is not safe by construction, and in ON-SELF nothing else acts along the
      path (S's hinges are shape-only), so P must not push where the labels cannot see what is ahead.
 Known limits: only the first >= 45 deg turn of a scene's route carries C; a line or actor the context cannot label gives no B / A.
 """
@@ -56,7 +57,7 @@ NA, NL = 4, 4
 M_A0, M_A_BACK, M_B = 2.0, 0.5, 1.0
 LAT_IN, LAT_ROUTE = 1.5, 3.5
 C_PRE, C_POST, C_HEAD, C_ADD, C_MUL, C_VLOG_MIN = 10.0, 3.0, math.radians(30.0), 1.0, 1.15, 1.0
-P_FRAC, P_SLACK, OPEN_M, P_ACT_LAT = 0.95, 0.5, 60.0, 2.5
+P_FRAC, P_SLACK, OPEN_M, P_ACT_LAT = 0.95, 0.5, 60.0, 4.5
 BIG = 1e3
 ITEMS = ("A", "B", "C", "P")
 EPS = 1e-12
@@ -178,7 +179,7 @@ def terms(poses_rear, rows, pack, margin_a=None, theta_b=None):
     sC = torch.where(w, torch.relu(v - vcap), torch.zeros_like(v))
     # P
     D = g("p_D")
-    sP = torch.where(g("p_open")[:, None] & (D > -BIG), torch.relu(P_FRAC * D - P_SLACK - plan_arc(xt, yt)), torch.zeros_like(D))
+    sP = torch.where(g("p_open")[:, None] & (D > -BIG) & (lr[:, 5::5].abs() <= LAT_ROUTE), torch.relu(P_FRAC * D - P_SLACK - plan_arc(xt, yt)), torch.zeros_like(D))
     z = ok.to(sA.dtype)
     return dict(lonA=sA.mean(-1) * z, lonB=sB.mean(-1) * z, lonC=sC.mean(-1) * z, lonP=sP.mean(-1) * z,
                 steps=dict(A=sA, B=sB, C=sC, P=sP, sf=sf, lf=lf, sr=sr, lr=lr, v=v, vcap=vcap, d=d))
