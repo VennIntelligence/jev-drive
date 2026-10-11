@@ -1,0 +1,81 @@
+{
+ "imit": {
+  "tag": "ONG3-imit",
+  "mode": "imit",
+  "k": 13,
+  "hash": {
+   "60": "0af71c160d992ce4",
+   "300": "8dcefd6be9e4ac83"
+  },
+  "n_imit": [
+   13.0
+  ],
+  "n_hinge": [
+   0.0
+  ],
+  "on_terms": [
+   "ade",
+   "imit",
+   "n_hinge",
+   "n_imit"
+  ]
+ },
+ "self": {
+  "tag": "ONG3-self",
+  "mode": "self",
+  "k": 13,
+  "hash": {
+   "60": "0af71c160d992ce4",
+   "300": "8dcefd6be9e4ac83"
+  },
+  "n_imit": [
+   0.0
+  ],
+  "n_hinge": [
+   13.0
+  ],
+  "on_terms": [
+   "agent_mean",
+   "agent_pos",
+   "agent_posmean",
+   "n_hinge",
+   "n_imit",
+   "road_mean",
+   "road_pos",
+   "road_posmean"
+  ]
+ },
+ "both": {
+  "tag": "ONG3-both",
+  "mode": "both",
+  "k": 13,
+  "hash": {
+   "60": "0af71c160d992ce4",
+   "300": "8dcefd6be9e4ac83"
+  },
+  "n_imit": [
+   13.0
+  ],
+  "n_hinge": [
+   13.0
+  ],
+  "on_terms": [
+   "ade",
+   "agent_ho",
+   "agent_mean",
+   "agent_pos",
+   "agent_posmean",
+   "imit",
+   "n_hinge",
+   "n_imit",
+   "road_ho",
+   "road_mean",
+   "road_pos",
+   "road_posmean"
+  ]
+ },
+ "hash_step": 60,
+ "hash": "0af71c160d992ce4",
+ "fail": [],
+ "pass": true
+}

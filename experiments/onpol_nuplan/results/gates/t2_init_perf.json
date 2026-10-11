@@ -1,0 +1,105 @@
+{
+ "ONG3-none": {
+  "init": {
+   "init": "P2H10S-F-s0",
+   "arm": "P2",
+   "net_trainable": 109,
+   "net_loaded": 109,
+   "net_missing": [],
+   "net_unexpected": [],
+   "adapter_tensors": 46,
+   "adapter_loaded": 46,
+   "adapter_missing": [],
+   "adapter_unexpected": [],
+   "tr1": {},
+   "max_abs_diff_after_load": 0.0
+  },
+  "dev0": {
+   "ade": 0.5452736020088196,
+   "drift_on": 1.456725835800171,
+   "drift_off": 0.04503413662314415
+  },
+  "steps": 300,
+  "it_s": 7.085977099018305,
+  "peak_gb": 20.3984375,
+  "composition": "115 normal, 13 hinge-only (ot1 4 of 56348, yr1 4 of 56348, bd4 5 of 33641), 0 on-policy (mode off"
+ },
+ "ONG3-imit": {
+  "init": {
+   "init": "P2H10S-F-s0",
+   "arm": "P2",
+   "net_trainable": 109,
+   "net_loaded": 109,
+   "net_missing": [],
+   "net_unexpected": [],
+   "adapter_tensors": 46,
+   "adapter_loaded": 46,
+   "adapter_missing": [],
+   "adapter_unexpected": [],
+   "tr1": {},
+   "max_abs_diff_after_load": 0.0
+  },
+  "dev0": {
+   "ade": 0.5452736020088196,
+   "drift_on": 1.456725835800171,
+   "drift_off": 0.04503413662314415
+  },
+  "steps": 300,
+  "it_s": 7.155401258835124,
+  "peak_gb": 20.544921875,
+  "composition": "102 normal, 13 hinge-only (ot1 4 of 56348, yr1 4 of 56348, bd4 5 of 33641), 13 on-policy (mode imit"
+ },
+ "ONG3-self": {
+  "init": {
+   "init": "P2H10S-F-s0",
+   "arm": "P2",
+   "net_trainable": 109,
+   "net_loaded": 109,
+   "net_missing": [],
+   "net_unexpected": [],
+   "adapter_tensors": 46,
+   "adapter_loaded": 46,
+   "adapter_missing": [],
+   "adapter_unexpected": [],
+   "tr1": {},
+   "max_abs_diff_after_load": 0.0
+  },
+  "dev0": {
+   "ade": 0.5452736020088196,
+   "drift_on": 1.456725835800171,
+   "drift_off": 0.04503413662314415
+  },
+  "steps": 300,
+  "it_s": 6.992968696695643,
+  "peak_gb": 20.49609375,
+  "composition": "102 normal, 13 hinge-only (ot1 4 of 56348, yr1 4 of 56348, bd4 5 of 33641), 13 on-policy (mode self"
+ },
+ "ONG3-both": {
+  "init": {
+   "init": "P2H10S-F-s0",
+   "arm": "P2",
+   "net_trainable": 109,
+   "net_loaded": 109,
+   "net_missing": [],
+   "net_unexpected": [],
+   "adapter_tensors": 46,
+   "adapter_loaded": 46,
+   "adapter_missing": [],
+   "adapter_unexpected": [],
+   "tr1": {},
+   "max_abs_diff_after_load": 0.0
+  },
+  "dev0": {
+   "ade": 0.5452736020088196,
+   "drift_on": 1.456725835800171,
+   "drift_off": 0.04503413662314415
+  },
+  "steps": 300,
+  "it_s": 5.582593094783169,
+  "peak_gb": 20.638671875,
+  "composition": "102 normal, 13 hinge-only (ot1 4 of 56348, yr1 4 of 56348, bd4 5 of 33641), 13 on-policy (mode both"
+ },
+ "ref_ade": 0.545,
+ "fail": [],
+ "pass": true
+}
