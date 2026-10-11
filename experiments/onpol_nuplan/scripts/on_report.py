@@ -25,7 +25,11 @@ Definitions (helpers of c0b_report.py / joint1_report.py, as the prereg says):
   fixed, broken  of X against Y on the three kinds: fixed = zero in every seed of Y and in no seed of X, broken = the reverse
   null           fixed - broken of the control against itself: the three 2-against-2 splits of s0-s3, each in both directions (6 values)
   H              seed-mean at-fault zeros of the arm <= the control's four-seed mean (above = the arm is a negative)
-  verdicts       module function verdicts(); every sentence is printed with the numbers that decide it
+  verdicts       module function verdicts(); every sentence is printed with the numbers that decide it, twice: (A) as registered with
+                 ON-SELF = SSELF-ON (S + L), (B) the fallback of Amendment 5 item 3 with SSELFnoL-ON (S hinges only) in the place of ON-SELF
+  standing       Amendments 3 and 5: results/pilot/pilot_gates.json gives each arm's pilot gate; whatever rests on an arm whose pilot failed
+                 is labelled descriptive, only an arm that passed (SSELFnoL-ON) keeps the registered standing against the control.
+                 ON-NONE is not trained: its pairs print as such. The trainings' dev ADE / dev_drift_off stand beside the closed-loop table.
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _H = _pl.Path(__file__).resolve()
@@ -45,9 +49,11 @@ E = _H.parents[1]
 SPLIT = E / "results/split"
 CLS, SHORT = J.CLS, J.SHORT
 KIND = {"zeros": CLS, "at-fault": CLS[:2], "collision": CLS[:1], "offroad": CLS[1:2], "corridor": CLS[2:]}
-FAM = {"ON-IMIT": "SIMIT-ON", "ON-SELF": "SSELF-ON", "ON-BOTH": "SBOTH-ON", "ON-NONE": "SNONE-ON", "ON-SELFnoL": "SSELFnoL-ON"}
+FAM = {"ON-IMIT": "SIMIT-ON", "ON-SELF": "SSELF-ON", "ON-BOTH": "SBOTH-ON", "ON-SELFnoL": "SSELFnoL-ON", "ON-NONE": "SNONE-ON"}
+NOL, NONE = "ON-SELFnoL", "ON-NONE"                                 # Amendment 3: ON-SELF / ON-BOTH carry S + L, NOL is S only, ON-NONE is not trained
+DESC = "descriptive: pilot dev-ADE gate failed as registered, stop not followed (Amendment 5)"
 CTRL, C4, C2 = "P2H10S-F", "control", "control (s0, s1)"
-STANDIN = {"SIMIT-ON": "P2H10-F", "SSELF-ON": "JAPSnoA", "SBOTH-ON": "JAPS", "SNONE-ON": "JAPSnoY"}      # stored recipes that play the arms in --standin
+STANDIN = {"SIMIT-ON": "P2H10-F", "SSELF-ON": "JAPSnoA", "SBOTH-ON": "JAPS", "SSELFnoL-ON": "JAPSnoY"}      # stored recipes that play the arms in --standin
 SPLITS = (((0, 1), (2, 3)), ((0, 2), (1, 3)), ((0, 3), (1, 2)))
 
 
@@ -76,6 +82,12 @@ def pair(G, a, b, logs, mask=None):
         d = G[a][k][m] - G[b][k][m]
         s, l = J.sboot(d), R.ci(d, logs[m])
         out[k] = dict(point=s[0], scene=[s[1], s[2]], logs=[l[1] * len(d), l[2] * len(d)])
+    d = G[a]["slow"][m] - G[b]["slow"][m]
+    s, l = J.sboot(d), R.ci(d, logs[m])
+    out["slow"] = dict(point=s[0], scene=[s[1], s[2]], logs=[l[1] * len(d), l[2] * len(d)])
+    d = G[a]["prog"][m] - G[b]["prog"][m]
+    s, l = stats.bootstrap(d), R.ci(d, logs[m])
+    out["progress"] = dict(point=float(d.mean()), scene=[s["lo"], s["hi"]], logs=[l[1], l[2]])
     return out
 
 
@@ -96,44 +108,85 @@ def fq(q):
     return f"{q['point']:+.1f} [{q['scene'][0]:+.1f}, {q['scene'][1]:+.1f}] ({q['logs'][0]:+.1f}, {q['logs'][1]:+.1f})"
 
 
-def verdicts(st):
-    """The hard gate and the four sentences of the prereg from the numbers in st -> ({arm: H}, [(sentence, holds or None, numbers)])."""
+def verdicts(st, S="ON-SELF"):
+    """The hard gate and the four sentences of the prereg from the numbers in st, with arm S in the place of ON-SELF (Amendment 5 item 3: the
+    fallback reads them with ON-SELFnoL) -> ({arm: H}, [(sentence, holds or None, numbers, arms the sentence rests on)])."""
     ar, null = st["arms"], st["null"]
     cz = ar[C4]["at-fault"] if C4 in ar else None
     net = {k: v["net"] for k, v in st["net_vs_control01"].items()}
     nmax = max(null["values"]) if null else None
     H = {k: dict(atfault=v["at-fault"], control=cz, passes=bool(v["at-fault"] <= cz)) for k, v in ar.items() if k in FAM and cz is not None}
-    out = []
+    ctl, out = "the control (four seeds, or s0 / s1)", []
 
     def beats(x, y):
         need = [k for k in (x, y) if k not in ar]
         if need or cz is None or nmax is None or x not in net:
-            return None, f"cannot be evaluated: missing {need or 'the control (four seeds, or s0 / s1)'}"
+            return None, f"cannot be evaluated: missing {need or ctl}"
         fewer = {k: bool(ar[x][k] < ar[y][k]) for k in ("collision", "offroad", "corridor", "at-fault")}
         ok = all(fewer.values()) and H[x]["passes"] and net[x] > nmax
         return ok, (f"seed-mean zeros {x} / {y}: " + ", ".join(f"{k} {ar[x][k]:g} / {ar[y][k]:g} ({'fewer' if v else 'not fewer'})" for k, v in fewer.items())
                     + f"; H: {x} at-fault {ar[x]['at-fault']:g} against the control's {cz:g} ({'passes' if H[x]['passes'] else 'fails'}); fixed - broken of {x} against "
                     f"{C2}: {net[x]:+d} against the null's maximum {nmax:+d} ({'exceeds' if net[x] > nmax else 'does not exceed'})")
-    for x, y, name in (("ON-SELF", "ON-IMIT", "Self beats imitation"), ("ON-IMIT", "ON-SELF", "Imitation beats self")):
-        out.append((name, *beats(x, y)))
-    need = [k for k in ("ON-BOTH", "ON-IMIT", "ON-SELF") if k not in ar]
+    for x, y, name in ((S, "ON-IMIT", "Self beats imitation"), ("ON-IMIT", S, "Imitation beats self")):
+        out.append((name, *beats(x, y), (x, y)))
+    oth = ("ON-IMIT", S)
+    need = [k for k in ("ON-BOTH", *oth) if k not in ar]
     if need or cz is None or nmax is None or "ON-BOTH" not in net:
-        out.append(("Adds", None, f"cannot be evaluated: missing {need or 'the control (four seeds, or s0 / s1)'}"))
+        out.append(("Adds", None, f"cannot be evaluated: missing {need or ctl}", ("ON-BOTH", *oth)))
     else:
-        b = ar["ON-BOTH"]
-        f1 = {y: bool(b["at-fault"] < ar[y]["at-fault"]) for y in ("ON-IMIT", "ON-SELF")}
-        f2 = {y: bool(b["zeros"] < ar[y]["zeros"]) for y in ("ON-IMIT", "ON-SELF")}
-        ok = H["ON-BOTH"]["passes"] and all(f1.values()) and all(f2.values()) and net["ON-BOTH"] > nmax
-        out.append(("Adds", ok, f"H: ON-BOTH at-fault {b['at-fault']:g} against the control's {cz:g} ({'passes' if H['ON-BOTH']['passes'] else 'fails'}); at-fault zeros ON-BOTH "
-                    f"{b['at-fault']:g} against ON-IMIT {ar['ON-IMIT']['at-fault']:g} / ON-SELF {ar['ON-SELF']['at-fault']:g} ({'fewer than each' if all(f1.values()) else 'not fewer than each'}); "
-                    f"zeros in total {b['zeros']:g} against {ar['ON-IMIT']['zeros']:g} / {ar['ON-SELF']['zeros']:g} ({'fewer than each' if all(f2.values()) else 'not fewer than each'}); "
-                    f"fixed - broken against {C2}: {net['ON-BOTH']:+d} against the null's maximum {nmax:+d} ({'exceeds' if net['ON-BOTH'] > nmax else 'does not exceed'})"))
-    hold, unk = any(v for _, v, _ in out), any(v is None for _, v, _ in out)
-    d = st["diff"].get("ON-SELF - ON-IMIT")
+        b, hb = ar["ON-BOTH"], H["ON-BOTH"]["passes"]
+        f1, f2 = (all(b[q] < ar[y][q] for y in oth) for q in ("at-fault", "zeros"))
+        each = lambda v: "fewer than each" if v else "not fewer than each"  # noqa: E731
+        out.append(("Adds", bool(hb and f1 and f2 and net["ON-BOTH"] > nmax),
+                    f"H: ON-BOTH at-fault {b['at-fault']:g} against the control's {cz:g} ({'passes' if hb else 'fails'}); at-fault zeros ON-BOTH {b['at-fault']:g} against "
+                    + " / ".join(f"{y} {ar[y]['at-fault']:g}" for y in oth) + f" ({each(f1)}); zeros in total {b['zeros']:g} against " + " / ".join(f"{ar[y]['zeros']:g}" for y in oth)
+                    + f" ({each(f2)}); fixed - broken against {C2}: {net['ON-BOTH']:+d} against the null's maximum {nmax:+d} ({'exceeds' if net['ON-BOTH'] > nmax else 'does not exceed'})",
+                    ("ON-BOTH", *oth)))
+    hold, unk = any(v for _, v, *_ in out), any(v is None for _, v, *_ in out)
+    d = st["diff"].get(f"{S} - ON-IMIT")
     out.append(("Not separated", False if hold else None if unk else True,
                 ("a sentence above holds" if hold else "cannot be evaluated: a sentence above cannot" if unk else "none of the three sentences holds")
-                + (f"; ON-SELF - ON-IMIT [CI scenes] (CI logs): zeros in total {fq(d['zeros'])}, at-fault zeros {fq(d['at-fault'])}, mean score {fs(d['score'])}" if d else "")))
+                + (f"; {S} - ON-IMIT [CI scenes] (CI logs): zeros in total {fq(d['zeros'])}, at-fault zeros {fq(d['at-fault'])}, mean score {fs(d['score'])}" if d else ""),
+                ("ON-BOTH", *oth)))
     return H, out
+
+
+def pilots():
+    """results/pilot/pilot_gates.json -> {arm: pilot gate row + the standing Amendment 5 fixes}; {} when the file is not there."""
+    f = E / "results/pilot/pilot_gates.json"
+    if not f.exists():
+        return {}
+    g = json.loads(f.read_text())
+    out = {}
+    for k, fam in FAM.items():
+        r = g["arms"].get(f"{fam}-P-s0")
+        if r and k != NONE:
+            out[k] = dict(tag=r["tag"], passed=bool(r["pass"]), dev_ade=r.get("dev_ade"), none=g.get("none_dev_ade"), tol=g.get("ade_tol"), drift=r.get("dev_drift_off"),
+                          fail=r.get("fail", []), standing="registered" if r["pass"] else DESC)
+    return out
+
+
+def trainings(tags):
+    """Final dev ADE / dev_drift_off of the full trainings from their newest run dir $DATA_DIR/runs/onpol_nuplan/on-train-<tag>/ (events.jsonl scalars,
+    as on_pilot_check.py reads them); the dev ADE at step 0 is the archived P2H10S-F-s<seed> the run starts from (trainer gate T2)."""
+    out = {}
+    for t in tags:
+        runs = sorted((J.DATA / "runs/onpol_nuplan").glob(f"on-train-{t}/*/events.jsonl"))
+        if not runs:
+            out[t] = None
+            continue
+        sc, end = {}, None
+        for ln in runs[-1].read_text().splitlines():
+            e = json.loads(ln)
+            if e.get("kind") == "scalar" and e["tag"] in ("dev/ade", "dev/drift_off"):
+                sc.setdefault(e["tag"], {})[int(e["step"])] = e["value"]
+            elif e.get("kind") == "end":
+                end = e.get("ok")
+        ade = sc.get("dev/ade", {})
+        last = max(ade, default=None)
+        out[t] = dict(run=str(runs[-1].parent), ended_ok=end, dev_step=last, dev_ade=ade.get(last), dev_drift_off=sc.get("dev/drift_off", {}).get(last), dev0_ade=ade.get(0),
+                      ckpt=(J.DATA / "runs/op_parity/runs" / t / "ckpt-final.pt").exists())
+    return out
 
 
 def main():
@@ -168,7 +221,8 @@ def main():
     T = SR.turns()
     turn = np.array([T.get(s.rsplit("-", 1)[1], np.nan) for s in scenes])
     g45 = np.abs(turn) > 45
-    G = {k: dict(sc=np.mean([A[t].sc for t in rec[k]], 0), **{q: np.mean([A[t].z(c) for t in rec[k]], 0) for q, c in KIND.items()}) for k in K}
+    G = {k: dict(sc=np.mean([A[t].sc for t in rec[k]], 0), slow=np.mean([(A[t].sc > 0) & (A[t].sc < 1) for t in rec[k]], 0), prog=np.mean([A[t].prog for t in rec[k]], 0),
+                 **{q: np.mean([A[t].z(c) for t in rec[k]], 0) for q, c in KIND.items()}) for k in K}
     n = len(scenes)
     title = ("# ONPOL-NUPLAN read-out: STAND-IN TEST on stored reads of train-split scenes (not a result)" if a.standin else "# ONPOL-NUPLAN read-out on the held scenes")
     L = [title + " (generated by scripts/on_report.py; do not edit)", ""]
@@ -178,14 +232,28 @@ def main():
     L += [f"{n} scenes of `alpasim_nuplan/onpol-{split}`, {len(set(logs))} logs, {int(g45.sum())} turning more than 45 deg (navtest token's logged 4 s heading change; "
           f"{int(np.isnan(turn).sum())} without one). Tags with all scenes: {', '.join(have) or 'none'}.", ""]
     L += [f"**Skipped, not all scenes in the run dirs (scenes missing): {miss}.**", ""] if miss else []
-    gone = [k for k in rec if k not in K]
+    gone = [k for k in rec if k not in K and k != NONE]
     L += [f"**Not read: {', '.join(gone)}; every table, pair and sentence below that needs one of them leaves it out or says so.**", ""] if gone else []
+    L += ["ON-NONE (`SNONE-ON`): not trained (Amendment 3); \"10 000 more steps\" is not separated from \"the rows\" against the archived control.", ""] if NONE not in K else []
+    P = pilots()
+    stand = lambda *ks: "registered" if all(P.get(k, {}).get("passed") for k in ks) else DESC if any(k in P and not P[k]["passed"] for k in ks) else "pilot gate not found"  # noqa: E731
+    L += ["## Standing (Amendments 3 and 5)", "",
+          "ON-SELF and ON-BOTH carry S + L; ON-SELFnoL carries the S hinges only. An arm whose pilot failed a registered gate was trained and read all the same (Amendment 5): "
+          "everything that rests on such an arm is descriptive, never a registered pass. Only an arm whose pilot passed keeps the registered standing against the control.", "",
+          "| arm | family | pilot | pilot dev ADE (gate: <= ON-NONE pilot + tolerance) | dev_drift_off | pilot gate | standing of its read |", "|:--|:--|:--|:--|--:|:--|:--|"]
+    for k in [x for x in FAM if x != NONE]:
+        p = P.get(k)
+        L.append(f"| {k} | `{FAM[k]}` | | | | not found in results/pilot/pilot_gates.json | pilot gate not found |" if not p else
+                 f"| {k} | `{FAM[k]}` | {p['tag']} | {p['dev_ade']:.3f} ({p['dev_ade'] - p['none']:+.3f} against {p['none']:.3f} + {p['tol']:.3f}) | {p['drift']:.3f} | "
+                 f"{'pass' if p['passed'] else 'FAIL: ' + '; '.join(p['fail'])} | {p['standing']} |")
+    L.append("")
     if a.stored_control and not a.standin:
         L += [f"Control seeds {a.stored_control} are their stored reads (BODY1 / lane nuplan1491), not reruns of this lane.", ""]
     mism = {t: D[t][1] for t in have if D[t][1]}
     L += [f"Scores that differ between two runs of one tag: {mism}.", ""] if mism else []
     st = dict(standin=a.standin, split=split, scenes=n, logs=len(set(logs)), gt45=int(g45.sum()), tags={k: rec[k] for k in K}, missing=miss, not_read=gone,
-              sources={t: [str(x) for x in d] for t, d in src.items()}, arms={}, diff={}, flips=[], net_vs_control01={}, null={})
+              sources={t: [str(x) for x in d] for t, d in src.items()}, arms={}, diff={}, flips=[], net_vs_control01={}, null={}, pilot=P,
+              standing={k: stand(k) for k in FAM if k != NONE})
 
     # ---- per arm
     L += ["## Per arm (score = per-scene mean of the seeds; counts = means over the seeds of the per-seed counts)", "",
@@ -204,20 +272,43 @@ def main():
                  f"{r['at-fault']:g} | {'; '.join('/'.join(str(v) for v in d.values()) for d in r['per_seed'].values())} | {r['fold']:g} | {r['events']:g} | {r['slow']:g} | "
                  f"{r['progress']:.4f} | {g['mean']:.4f}, {g['zeros']:g} ({g['collision']:g} / {g['offroad']:g} / {g['corridor']:g}) |")
 
+    # ---- the trainings (Amendment 5 item 4)
+    TR = trainings([f"{FAM[k]}-s{x}" for k in FAM if k != NONE for x in (0, 1)])
+    st["trainings"] = TR
+    f3 = lambda v: "-" if v is None else f"{v:.3f}"  # noqa: E731
+    L += ["", "## The trainings beside the closed loop (trainer's dev set: held navtrain logs; newest run dir of each tag)", "",
+          "| arm | tag | dev ADE at the last dev step (m) | - archived start | dev_drift_off | last dev step | ended | checkpoint | standing |", "|:--|:--|--:|--:|--:|--:|:--|:--|:--|"]
+    for k in [x for x in FAM if x != NONE]:
+        for x in (0, 1):
+            r = TR[f"{FAM[k]}-s{x}"]
+            L.append(f"| {k} | {FAM[k]}-s{x} | | | | | no run dir | | {stand(k)} |" if r is None else
+                     f"| {k} | {FAM[k]}-s{x} | {f3(r['dev_ade'])} | {'-' if None in (r['dev_ade'], r['dev0_ade']) else format(r['dev_ade'] - r['dev0_ade'], '+.3f')} | {f3(r['dev_drift_off'])} | "
+                     f"{r['dev_step']} | {'ok' if r['ended_ok'] else 'not ended' if r['ended_ok'] is None else 'FAILED'} | {'yes' if r['ckpt'] else 'no'} | {stand(k)} |")
+    d0 = {x: sorted({round(r["dev0_ade"], 4) for t, r in TR.items() if r and t.endswith(f"-s{x}") and r["dev0_ade"] is not None}) for x in (0, 1)}
+    L += ["", "Archived control (the start of every arm, dev ADE at step 0 of the runs above): " + "; ".join(
+        f"P2H10S-F-s{x} " + (" / ".join(f"{v:.3f}" for v in d0[x]) if d0[x] else ("0.545 (the archived value of the prereg; no run of this lane to read it from)" if x == 0 else "not in this source"))
+        for x in (0, 1)) + "; P2H10S-F-s2 / s3: not in this source (no arm starts from them)."]
+
     # ---- paired differences
     arms = [k for k in FAM if k in K]
-    pairs = ([(x, c) for c in (C4, C2) if c in K for x in arms] + [(x, "ON-NONE") for x in arms if x != "ON-NONE" and "ON-NONE" in K]
-             + [(x, y) for x, y in (("ON-SELF", "ON-IMIT"), ("ON-BOTH", "ON-IMIT"), ("ON-BOTH", "ON-SELF"), ("ON-SELF", "ON-SELFnoL"), ("ON-BOTH", "ON-SELFnoL"), ("ON-IMIT", "ON-SELFnoL"))
-                if x in K and y in K])
-    L += ["", "## Paired differences (A - B of per-scene seed means; point [95 % CI scenes] (CI logs), 10 000 draws; score = mean over scenes, zeros = sum over scenes)", "",
-          "| A - B | mean score | zeros | at-fault zeros | collision | offroad | corridor | > 45 deg: zeros | > 45 deg: corridor |", "|:--|:--|:--|:--|:--|:--|:--|:--|:--|"]
+    pairs = ([(x, c) for c in (C4, C2) if c in K for x in arms] + [(x, NOL) for x in ("ON-SELF", "ON-IMIT", "ON-BOTH") if x in K and NOL in K]
+             + [(x, NONE) for x in arms if x != NONE and NONE in K]
+             + [(x, y) for x, y in (("ON-SELF", "ON-IMIT"), (NOL, "ON-IMIT"), ("ON-BOTH", "ON-IMIT"), ("ON-BOTH", "ON-SELF")) if x in K and y in K])
+    L += ["", "## Paired differences (A - B of per-scene seed means; point [95 % CI scenes] (CI logs), 10 000 draws; score and progress = mean over scenes, zeros and slow = sum over scenes)", "",
+          "`ON-SELF - ON-SELFnoL` is what L adds to S on the on-policy rows (Amendment 3). Slow = scenes with 0 < score < 1.", "",
+          "| A - B | mean score | zeros | at-fault zeros | collision | offroad | corridor | slow scenes | progress | > 45 deg: zeros | > 45 deg: corridor | standing |",
+          "|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|"]
     for x, y in pairs:
         d, d45 = pair(G, x, y, logs), pair(G, x, y, logs, g45)
-        st["diff"][f"{x} - {y}"] = d | {"gt45": d45}
-        L.append(f"| {x} - {y} | {fs(d['score'])} | " + " | ".join(fq(d[q]) for q in KIND) + f" | {fq(d45['zeros'])} | {fq(d45['corridor'])} |")
+        st["diff"][f"{x} - {y}"] = d | {"gt45": d45, "standing": stand(*[k for k in (x, y) if k in FAM])}
+        L.append(f"| {x} - {y} | {fs(d['score'])} | " + " | ".join(fq(d[q]) for q in KIND) + f" | {fq(d['slow'])} | {fs(d['progress'])} | {fq(d45['zeros'])} | {fq(d45['corridor'])} | "
+                 f"{stand(*[k for k in (x, y) if k in FAM])} |")
+    if NONE not in K:
+        L += [f"| {x} - {NONE} | not trained (Amendment 3) | | | | | | | | | | |" for x in arms]
 
     # ---- fixed and broken
     fp = ([(x, c) for c in (C2, C4) if c in K for x in arms] + [(x, y) for x, y in pairs if y not in (C4, C2)])
+    L += ["", "Against ON-NONE: not trained (Amendment 3)."] if NONE not in K else []
     L += ["", "## Fixed and broken scenes (A against reference B: fixed = zero in every seed of B and in no seed of A, broken = the reverse; partial = other changes)", "",
           "| A vs B | kinds | fixed | broken | fixed - broken | partial (better / worse) | zeros B -> A |", "|:--|:--|--:|--:|--:|:--|:--|"]
     for x, y in fp:
@@ -254,17 +345,25 @@ def main():
                 f"{r[k]['fixed']} / {r[k]['broken']} / {r[k]['net']:+d}" for k in ("zeros", "at-fault", "corridor")) + " |")
         L += ["", f"Null values (zeros of the three kinds): {', '.join(f'{v:+d}' for v in vals)}; maximum {max(vals):+d}."]
 
-    # ---- gate and verdicts
-    H, V = verdicts(st)
-    st["H"], st["verdicts"] = H, [dict(sentence=s, holds=v, numbers=t) for s, v, t in V]
+    # ---- gate and verdicts: (A) as registered, (B) the fallback of Amendment 5 item 3
     word = {True: "**holds**", False: "does not hold", None: "**not evaluated**"}
+    H, VA = verdicts(st)
+    VB = verdicts(st, NOL)[1]
+    st["H"] = {k: h | {"standing": stand(k)} for k, h in H.items()}
     L += ["", "## Hard gate H and the registered sentences", ""]
-    L += [f"- H, {k}: seed-mean at-fault zeros {h['atfault']:g} against the control's four-seed mean {h['control']:g} -> **{'passes' if h['passes'] else 'NEGATIVE (fails H)'}**"
-          for k, h in H.items()] or ["- H: not evaluated (the control's four seeds are not all read)"]
-    L += [""] + [f"- \"{s}\": {word[v]}. {t}." for s, v, t in V]
-    st["verdict"] = dict(holds=[s for s, v, _ in V if v], not_evaluated=[s for s, v, _ in V if v is None])
-    L += ["", "Verdict: " + (" and ".join(f"\"{s}\"" for s in st["verdict"]["holds"]) or "none of the sentences is established")
-          + (f"; not evaluated (arms missing): {', '.join(st['verdict']['not_evaluated'])}" if st["verdict"]["not_evaluated"] else "") + "."]
+    L += [f"- H, {k}: seed-mean at-fault zeros {h['atfault']:g} against the control's four-seed mean {h['control']:g} -> **{'passes' if h['passes'] else 'NEGATIVE (fails H)'}** "
+          f"[{stand(k)}]" for k, h in H.items()] or ["- H: not evaluated (the control's four seeds are not all read)"]
+    st["verdicts"], st["verdict"] = {}, {}
+    for key, V, head in (("registered", VA, "(A) As registered: ON-SELF = `SSELF-ON` (S + L)"),
+                         ("fallback", VB, "(B) Fallback (Amendment 5 item 3): `SSELFnoL-ON` (S hinges only) in the place of ON-SELF; \"Adds\" here is ON-BOTH against ON-IMIT and ON-SELFnoL, "
+                                          "reported in addition to (A)'s")):
+        st["verdicts"][key] = [dict(sentence=q, holds=v, numbers=t, rests_on=list(u), standing=stand(*u)) for q, v, t, u in V]
+        st["verdict"][key] = dict(holds=[q for q, v, *_ in V if v], not_evaluated=[q for q, v, *_ in V if v is None])
+        L += ["", f"### {head}", ""] + [f"- \"{q}\": {word[v]}. {t}. Standing: {stand(*u)}." for q, v, t, u in V]
+        L += ["", f"Verdict {head[1]}: " + (" and ".join(f"\"{q}\"" for q in st["verdict"][key]["holds"]) or "none of the sentences is established")
+              + (f"; not evaluated (arms missing): {', '.join(st['verdict'][key]['not_evaluated'])}" if st["verdict"][key]["not_evaluated"] else "") + "."]
+    L += ["", "Both versions are reported; neither is chosen after the read. Every sentence rests on at least one arm whose pilot failed the dev-ADE gate, so both blocks are descriptive; "
+          "the registered standing is kept only by ON-SELFnoL against the control (its row of H, of the per-arm table, of the paired differences and of fixed / broken)."]
 
     # ---- reproducibility of the control reruns
     if a.standin:                                                    # the smoke reruns of on_read.sh (48 train scenes) against the stored reads
@@ -333,7 +432,7 @@ def selfcheck(st, A, scenes, logs, rec, K):
     add("per-scene zero classes that differ, all tags", int(sum((A[t].cls != cl[t]).sum() for t in A)), 0)
     f1 = lambda t: f"{t[0]:+.1f} [{t[1]:+.1f}, {t[2]:+.1f}]"  # noqa: E731
     for x in [k for k in FAM if k in K]:
-        for y in (C2, "ON-NONE"):
+        for y in (C2, NOL):
             if y not in K or x == y:
                 continue
             for q, c in (("zeros", CLS), ("at-fault", CLS[:2]), ("corridor", CLS[2:])):
