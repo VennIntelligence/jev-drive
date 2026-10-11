@@ -15,10 +15,12 @@ Labels (registered in plans/2026-10-11-long-probe-prereg.md; `a_lab` etc. in {1 
   A  the own sweep (body1 sweep: ego box at 0.1 s against the logged boxes at matching times) contacts an A-eligible object (a vehicle whose
      centre lies within LAT_IN of the route at t0, ahead of the ego front, aligned with the route or stopped) after t = 0, and the same
      arc-length profile driven along the route (the counterfactual "speed profile on the lane") contacts the same object.
-  B  the own plan's front bumper passes an eligible stop line (where the logged driver stops or whose light is red in the window) while the
-     stop is mandatory: TL red at the crossing keyframe; stop sign without having slowed below V_STOPPED first.
-  C  the own plan reaches the curvature peak of the first >= 45 deg route turn within 4 s at a speed above the logged driver's there by
-     C_ABS m/s and the factor C_REL.
+  B  the own plan's front bumper passes an eligible stop line while the stop is mandatory. Eligible: a stop sign at which the logged driver
+     comes to a stop after t0; a traffic-light line whose route connector has a known state in the window, which the logged driver does not
+     cross on red, and at which it stops, or which it crosses on a known non-red state, or never reaches in 30 s. Mandatory: light red at
+     the keyframe nearest the crossing; stop sign: the plan has not slowed below V_STOPPED before the line.
+  C  the own plan reaches the curvature peak of the first >= 45 deg route turn within 4 s, heading within C_HEAD of the route there, at a
+     speed above the logged driver's at the peak by C_ABS m/s and the factor C_REL (the logged driver passes the peak at >= C_VLOG_MIN).
 """
 import sys
 from pathlib import Path
@@ -38,7 +40,7 @@ LAT_IN, LAT_ROUTE = 1.5, 3.5                     # A: object centre within 1.5 m
 HEAD_IN, V_OBJ_STOP = 45.0, 0.5                  # A: object heading within 45 deg of the route heading, or slower than 0.5 m/s
 STOP_ZONE, V_LOG_STOP = 15.0, 1.0                # logged driver "stops at the line": speed < 1 m/s with the rear axle in [d - 15, d - FRONT + 1.5]
 V_STOPPED = 0.5                                  # B, stop sign: the plan has stopped when its speed fell below 0.5 m/s before the line
-C_ABS, C_REL, C_BAND, C_VLOG_MIN, TURN_DEG = 1.5, 1.25, 0.5, 1.0, 45.0
+C_ABS, C_REL, C_BAND, C_VLOG_MIN, TURN_DEG, C_HEAD = 1.5, 1.25, 0.5, 1.0, 45.0, 30.0
 QM = np.r_[0, 1, -1, -1, np.tile([0, 0, 1, 1], 5)].astype(np.int8)      # (24,) student model a query is built on (-1: ship / log)
 LONG = ("A", "B", "C")
 SPEED_BINS, SPEED_NAMES = (2.0, 5.0, 10.0), ("< 2", "2-5", "5-10", ">= 10")
@@ -213,10 +215,13 @@ def labels(q, off, box, valid, cls, X, a_hit, a_t0, qok):
     reached = at.any(-1)
     stp = np.where(reached, at.argmax(-1), SW.NS)
     vpk = np.take_along_axis(vp, np.minimum(stp, SW.NS - 1)[..., None], -1)[..., 0]
+    ypk = np.take_along_axis(d[..., 2], np.minimum(stp, SW.NS - 1)[..., None], -1)[..., 0]
+    hpk = np.take_along_axis(H, np.clip(np.round(spk).astype(np.int64), 0, NR - 1)[:, None], 1)        # route heading at the peak
+    takes = np.degrees(np.abs(np.angle(np.exp(1j * (ypk - hpk))))) <= C_HEAD                            # the plan is in the turn, not on another exit
     dv = vpk - np.nan_to_num(vlog_pk)[:, None]
-    fast = reached & elig_c[:, None] & (dv >= C_ABS) & (vpk >= C_REL * np.nan_to_num(vlog_pk)[:, None])
-    neg = ~reached | (elig_c[:, None] & (dv <= C_BAND))                         # peak not reached within 4 s, or not faster than the log
-    c_lab = np.where(fast, 1, np.where(neg, 0, -1)).astype(np.int8)            # -1: the band (C_BAND, C_ABS), or a peak where the log stops
+    fast = reached & takes & elig_c[:, None] & (dv >= C_ABS) & (vpk >= C_REL * np.nan_to_num(vlog_pk)[:, None])
+    neg = ~reached | (takes & elig_c[:, None] & (dv <= C_BAND))                # peak not reached within 4 s, or not faster than the log
+    c_lab = np.where(fast, 1, np.where(neg, 0, -1)).astype(np.int8)            # -1: the band (C_BAND, C_ABS), a peak where the log stops, another exit
     c_lab[~qok | ~ok_ctx[:, None]] = -1
     out |= dict(c_lab=c_lab, c_dv=np.where(reached & elig_c[:, None], dv, np.nan).astype(np.float32),
                 c_t=np.where(reached, stp * SW.DT, SW.BIG).astype(np.float32), c_ahead=elig_c & (spk <= 60.0))

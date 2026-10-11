@@ -170,7 +170,10 @@ def label_log(job):
                     ln["ln_st"][q] = [st(k) for k in range(LC.NK)]
                     if crossed:
                         ln["ln_stcross"][q] = st(kc)
-                    ln["ln_elig"][q] = (ln["ln_st"][q] >= 0).any() and ln["ln_stcross"][q] != 1
+                    # eligible: a known state in the window, the logged driver does not cross on red, and it either stops before the line,
+                    # crosses on a known non-red state, or never reaches the line within the window (a waiting driver)
+                    ln["ln_elig"][q] = bool((ln["ln_st"][q] >= 0).any() and ln["ln_stcross"][q] != 1
+                                            and (np.isfinite(ln["ln_tstop"][q]) or ln["ln_stcross"][q] == 0 or not crossed))
             else:                                                              # stop sign: a future stop of the logged driver, not one already made
                 ln["ln_elig"][q] = bool(np.isfinite(ln["ln_tstop"][q]) and ln["ln_tstop"][q] > 0.5)
         r |= ln
