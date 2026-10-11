@@ -87,6 +87,13 @@ def collect(a):
                                  gt=("dist_to_gt_trajectory", "mean"), gt_rebuilt=("gt_rebuilt", "mean")).to_string())
 
 
+def md(df):
+    L = ["| " + " | ".join(map(str, df.columns)) + " |", "|" + "|".join(":--" if df[c].dtype == object else "--:" for c in df.columns) + "|"]
+    for _, r in df.iterrows():
+        L.append("| " + " | ".join(f"{v:.4f}" if isinstance(v, float) else str(v) for v in r.values) + " |")
+    return "\n".join(L)
+
+
 def report(a):
     import pandas as pd
     S = pd.concat([pd.read_csv(Path(d) / "per_scene.csv") for d in a.inp], ignore_index=True)
@@ -155,9 +162,9 @@ def report(a):
                     s_, c_ = per_log(d, col)
                     pairs.append(dict(length=L, a=p, b=q, metric=col, diff=d[col].mean(), ci=ci(boot(s_, c_))))
     P = pd.DataFrame(pairs)
-    md = ["## Per checkpoint and length", "", T.to_markdown(index=False, floatfmt=".4f"), "",
-          "## Recipes (seed mean per scene), ranks per length", "", RT.to_markdown(index=False, floatfmt=".4f"), "",
-          "## Paired recipe differences a - b (log-clustered bootstrap, 10 000 draws)", "", P.to_markdown(index=False, floatfmt=".4f"), "",
+    md = ["## Per checkpoint and length", "", md(T), "",
+          "## Recipes (seed mean per scene), ranks per length", "", Rmd(T), "",
+          "## Paired recipe differences a - b (log-clustered bootstrap, 10 000 draws)", "", md(P), "",
           f"Scenes in every label: {len(scenes)}; logs: {len(logs)}."]
     Path(a.out).write_text("\n".join(md) + "\n")
     if a.json:
