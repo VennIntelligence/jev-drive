@@ -11,16 +11,18 @@
 #               in `full` and is added as a fifth pilot
 #   ARMS="SIMIT SSELF"   full: train only these families (default: all four); an arm whose pilot gate failed is skipped and named unless FORCE=1
 #   VRAM=40     GB booked per training
+#   SFX=-smoke PILOT_STEPS=100 FULL_STEPS=400   chain smoke: tags <tag><SFX>, state dir <stage><SFX>, the gate table under the state dir (not the repo)
 # State: $DATA_DIR/runs/onpol_nuplan/train/<stage>/{STATUS, DONE | ERROR, log.txt, pool/<job>/}. Rerunning resumes: a finished job is not resubmitted, a
 # queued or running one is not doubled, and on_train.py never overwrites an existing checkpoint.
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
 STAGE=${1:?pilot | full}; POOL=${2:?pool cache dir name}
-D=$DATA_DIR/runs/onpol_nuplan/train/$STAGE; L=$D/pool; mkdir -p "$L"; rm -f "$D/DONE" "$D/ERROR"
+X=${SFX:-}; NP=${PILOT_STEPS:-3000}; NF=${FULL_STEPS:-10000}
+D=$DATA_DIR/runs/onpol_nuplan/train/$STAGE$X; L=$D/pool; mkdir -p "$L"; rm -f "$D/DONE" "$D/ERROR"
 exec > >(tee -a "$D/log.txt") 2>&1
 PY=$DATA_DIR/envs/op-train/bin/python
 CL="$PWD/.venv/bin/python -m jevdrive.cl"
-R=experiments/onpol_nuplan/results/pilot
+R=experiments/onpol_nuplan/results/pilot; [[ -n $X ]] && R=$DATA_DIR/runs/onpol_nuplan/train/pilot$X/results
 CK=$DATA_DIR/runs/op_parity/runs
 status() { echo "$(date '+%F %T') onpol train $STAGE: $*" | tee "$D/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$D/ERROR"; exit 1; }
@@ -40,11 +42,11 @@ run() { local fam=$1 tag=$2 seed=$3; shift 3; sub "$tag" $OT ${F[$fam]} --seed "
 status "code $(git rev-parse --short HEAD); pool $POOL; lon ${ON_LON:-0}"
 if [[ $STAGE == pilot ]]; then
   P=(SIMIT SSELF SBOTH SNONE); [[ -n $LON ]] && P+=(SSELFnoL)
-  for f in "${P[@]}"; do run "$f" "$f-ON-P-s0" 0 --steps 3000 --eval-every 1000; done
-  status "${#P[@]} pilots submitted (3 000 steps); waiting"
-  waitdirs "${P[@]/%/-ON-P-s0}"
-  T=("${P[@]/%/-ON-P-s0}"); T=("${T[@]/SNONE-ON-P-s0}")
-  $PY experiments/onpol_nuplan/scripts/on_pilot_check.py --tags ${T[*]} --none SNONE-ON-P-s0 --out "$R" > "$D/pilot_gates.txt"; rc=$?
+  for f in "${P[@]}"; do run "$f" "$f-ON-P-s0$X" 0 --steps "$NP" --eval-every 1000; done
+  status "${#P[@]} pilots submitted ($NP steps); waiting"
+  waitdirs "${P[@]/%/-ON-P-s0$X}"
+  T=("${P[@]/%/-ON-P-s0$X}"); T=("${T[@]/SNONE-ON-P-s0$X}")
+  $PY experiments/onpol_nuplan/scripts/on_pilot_check.py --tags ${T[*]} --none "SNONE-ON-P-s0$X" --steps "$NP" --out "$R" > "$D/pilot_gates.txt"; rc=$?
   cat "$D/pilot_gates.txt"
   [[ $rc -eq 0 ]] || die "pilot gates: exit $rc (2 = an arm fails, 3 = no ON-NONE pilot); see $R/pilot_gates.md"
   status "pilots pass the training-side gates: $R/pilot_gates.md"
@@ -52,26 +54,27 @@ elif [[ $STAGE == full ]]; then
   A=(${ARMS:-SIMIT SSELF SBOTH $([[ -n $LON ]] && echo SSELFnoL || echo SNONE)})
   ok=()
   for f in "${A[@]}"; do
-    if [[ ${FORCE:-0} == 1 ]] || python3 -c "import json,sys; sys.exit(not json.load(open('$R/pilot_gates.json'))['arms']['$f-ON-P-s0']['pass'])" 2>/dev/null; then ok+=("$f")
+    if [[ ${FORCE:-0} == 1 ]] || python3 -c "import json,sys; sys.exit(not json.load(open('$R/pilot_gates.json'))['arms']['$f-ON-P-s0$X']['pass'])" 2>/dev/null; then ok+=("$f")
     else status "skipped $f: its pilot did not pass (or $R/pilot_gates.json is missing); FORCE=1 overrides"; fi
   done
-  [[ " ${ok[*]} " == *" SSELF "* ]] || die "SSELF is not trainable: the first full run is SSELF-ON-s0"
-  run SSELF SSELF-ON-s0 0
-  status "SSELF-ON-s0 submitted; waiting for its step 300"
-  until grep -q "step 300:" "$L/SSELF-ON-s0/log.txt" 2>/dev/null || [[ -f $L/SSELF-ON-s0/DONE || -f $L/SSELF-ON-s0/ERROR || ( -f $CK/SSELF-ON-s0/ckpt-final.pt && ! -d $L/SSELF-ON-s0 ) ]]; do sleep 30; done
-  [[ -f $L/SSELF-ON-s0/ERROR ]] && die "job failed: $L/SSELF-ON-s0"
-  if [[ -f $L/SSELF-ON-s0/log.txt ]]; then
-    grep -h "per batch of\|dev @ 0\|step [123]00:" "$L/SSELF-ON-s0/log.txt" | sed 's/.*INFO *//' | cut -c1-700 | tee "$D/first300.txt"
-    grep -q "per batch of 128: 102 normal, 13 hinge-only .* 13 on-policy (mode self" "$D/first300.txt" || die "SSELF-ON-s0: composition"
-    [[ $(grep -c "n_hinge 13.0000, n_imit 0.0000" "$D/first300.txt") -ge 3 ]] || die "SSELF-ON-s0: on-policy row accounting in the first 300 steps"
-    grep "step [123]00:" "$D/first300.txt" | grep -qi "nan\|inf " && die "SSELF-ON-s0: non-finite loss"
+  T0=SSELF-ON-s0$X
+  [[ " ${ok[*]} " == *" SSELF "* ]] || die "SSELF is not trainable: the first full run is $T0"
+  run SSELF $T0 0 --steps "$NF"
+  status "$T0 submitted; waiting for its step 300"
+  until grep -q "step 300:" "$L/$T0/log.txt" 2>/dev/null || [[ -f $L/$T0/DONE || -f $L/$T0/ERROR || ( -f $CK/$T0/ckpt-final.pt && ! -d $L/$T0 ) ]]; do sleep 30; done
+  [[ -f $L/$T0/ERROR ]] && die "job failed: $L/$T0"
+  if [[ -f $L/$T0/log.txt ]]; then
+    grep -h "per batch of\|dev @ 0\|step [123]00:" "$L/$T0/log.txt" | sed 's/.*INFO *//' | cut -c1-700 | tee "$D/first300.txt"
+    grep -q "per batch of 128: 102 normal, 13 hinge-only .* 13 on-policy (mode self" "$D/first300.txt" || die "$T0: composition"
+    [[ $(grep -c "n_hinge 13.0000, n_imit 0.0000" "$D/first300.txt") -ge 3 ]] || die "$T0: on-policy row accounting in the first 300 steps"
+    grep "step [123]00:" "$D/first300.txt" | grep -qi "nan\|inf " && die "$T0: non-finite loss"
   fi
-  status "SSELF-ON-s0 first 300 steps ok ($D/first300.txt); the rest: ${ok[*]} x seeds 0 1"
+  status "$T0 first 300 steps ok ($D/first300.txt); the rest: ${ok[*]} x seeds 0 1"
   tags=()
-  for f in "${ok[@]}"; do for s in 0 1; do run "$f" "$f-ON-s$s" "$s"; tags+=("$f-ON-s$s"); done; done
+  for f in "${ok[@]}"; do for s in 0 1; do run "$f" "$f-ON-s$s$X" "$s" --steps "$NF"; tags+=("$f-ON-s$s$X"); done; done
   waitdirs "${tags[@]}"
   for t in "${tags[@]}"; do [[ -f $CK/$t/ckpt-final.pt ]] || die "no checkpoint for $t"; done
-  grep -h "dev @ 10000" "$L"/*/log.txt | sed 's/.*INFO *//' | cut -c1-200
+  grep -h "dev @ $NF" "$L"/*/log.txt | sed 's/.*INFO *//' | cut -c1-200
   status "${#tags[@]} checkpoints: ${tags[*]}"
 else
   die "stage $STAGE: pilot | full"
