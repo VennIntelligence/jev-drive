@@ -52,6 +52,21 @@ print(json.dumps(res))
 sys.exit(1 if fail else 0)
 PYEOF
 done
+# the vtr_W0 bank: rebuilt after the disk cleanup of 2026-10-11 (scripts/es_bank.py docstring) unless all 14 data dirs are in its bank.json
+BANK=$DATA_DIR/runs/op_parity/mem/vtr_W0
+DATAS="$(for i in $(seq 0 11); do echo -n "navtrain_full.s${i}of12 "; done)lb_navtest lb_navhard"
+subx() { local n=$1; shift; [[ -f $L/$n/DONE ]] && return
+         $CL queue 2>/dev/null | awk -v n="es-$n" '$4 == n && ($2 == "queued" || $2 == "running") {f = 1} END {exit !f}' && return; rm -f "$L/$n/ERROR"
+         $CL submit --owner eyes_sense --name "es-$n" --priority 15 --timeout-h 3 --log-dir "$L/$n" "$@" > /dev/null || die "submit $n"; }
+if ! python3 -c "import json, sys; sys.exit(0 if len(json.load(open('$BANK/bank.json'))['rows']) == 14 else 1)" 2>/dev/null; then
+  status "rebuilding the vtr_W0 bank: side-view cache (vt_side.py split + build), then es_bank.py"
+  subx side-split --vram 0 --cpu 2 --ram 48 -- $PY experiments/vis_train/scripts/vt_side.py split --datas $DATAS
+  waitdirs side-split
+  for d in $DATAS; do subx "side-build-$d" --vram 0 --cpu 6 --ram 16 -- $PY experiments/vis_train/scripts/vt_side.py build --data "$d"; done
+  waitdirs $(for d in $DATAS; do echo "side-build-$d"; done)
+  subx bank --vram 12 --cpu 4 --ram 40 -- $PY experiments/eyes_sense/scripts/es_bank.py
+  waitdirs bank
+fi
 status "pilots passed; full runs (b) / (d)"
 for s in 0 1; do sub "f-b-s$s" 30 $JT --mem vtr_W0 --seed $s --tag "ESb-s$s"; sub "f-d-s$s" 36 $JT $S --mem vtr_W0 --seed $s --tag "ESd-s$s"; done
 waitdirs id-a-s0 id-a-s1 id-c-s0 id-c-s1
