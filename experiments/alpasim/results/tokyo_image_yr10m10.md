@@ -168,4 +168,6 @@ Last verified: 2026-10-12
 
 `submit --track nuplan 696254625193.dkr.ecr.us-east-1.amazonaws.com/teams/lao-siji:yr10m10-f-s0-v1` -> submission id
 `cdf145f9-c8fb-474d-ba8a-22499f1b4a59`, status `QUEUED` (queue position 1 of 1) at about 01:10 JST. One official slot remains for October,
-held for the final week (board closes 2026-10-31). Result to be recorded here and in research/decisions.md when `status` reports `SUCCEEDED`.
+held for the final week (board closes 2026-10-31). **Result (SUCCEEDED 16:22 UTC, evaluation 26 min):** average scene score 0.80, PCS 1007 [961, 1053], rank 47-62 of 106, at-fault distance 0.529 km,
+GT distance 1.733 m, 1000 / 1000 rollouts, wall time 1166 s of 3000 s. Submission #1 (APY10m10-AB-s0): 0.640 / 788 / 0.132 km / 2.29 m. On the public
+1491 scenes the two checkpoints differ by -0.010 score, -0.19 m GT distance, at-fault not separable (aud1_drift_by_decision.md). Decision 260.
