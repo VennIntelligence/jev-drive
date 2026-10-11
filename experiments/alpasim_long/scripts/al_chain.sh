@@ -66,7 +66,7 @@ held)
   [[ $(wc -l < $SPL/held.txt) -eq 460 ]] || die "held.txt is not 460 scenes"
   T18=${AL_TAGS18:-YR10m10-F-s0,YR10m10-F-s1,P2H10S-F-s0,P2H10S-F-s1,SSELFnoL-ON-s0,SSELFnoL-ON-s1}; T10=${AL_TAGS10:-YR10m10-F-s0,YR10m10-F-s1}
   for t in ${T18//,/ } ${T10//,/ }; do [[ -f $DATA_DIR/runs/op_parity/runs/$t/ckpt-final.pt ]] || die "no checkpoint $t"; done
-  common=(--owner alpasim-long --vram 32 --cpu 8 --tries 1 --priority 12 --timeout-h 3)
+  common=(--owner alpasim-long --vram 32 --cpu 8 --tries 1 --priority 12 --timeout-h 3 --no-check)  # --no-check: cl fanout static check calls a missing pool.fanout_fill
   CL fanout --arms "$T18" --name al-h18 "${common[@]}" --ram ${AL_RAM18:-90} --log-dir "$O/h18/{arm}/pool" \
     -- bash -c "mkdir -p $O/h18/{arm} && SH30_TAG={arm} exec bash experiments/alpasim/scripts/run.sh $O/h18/{arm} sh30 --scene-list $SPL/held.txt ${BASE[*]} $(win 160)" \
     || die "fanout h18"
