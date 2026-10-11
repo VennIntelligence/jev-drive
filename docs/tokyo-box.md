@@ -170,6 +170,12 @@ The renderer is the bottleneck and is bound to one card, which is why the unit i
 in the first version also waited for the script's own log `tee` and never returned after the last chunk (two idle cards for 4 min on
 2026-10-11 01:19 JST); fixed in 7b36a3ea.
 
+Several runs in a row (seeds, arms) go through `pai_queue.sh <root> '<name>|<checkpoint tag>|<scene lists or glob>'...`: one worker per card
+walks the runs in order with `pai_eval.sh` in `JOIN=1` mode, so a card that has no chunk left in one run starts the next run at once instead
+of waiting for the other card's last chunk (25 to 40 min). It adds STATUS / DONE / ERROR, `gpu.csv` (card utilisation, power, clock, memory
+once a minute) and one repair pass for chunks that failed twice; a rerun resumes. First used by lane PAI-281
+([prereg](../experiments/alpasim/plans/2026-10-11-pai281-seeds-prereg.md)).
+
 ### Adapter training, one seed per card
 
 ```bash

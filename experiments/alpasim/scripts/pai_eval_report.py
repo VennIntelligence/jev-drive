@@ -3,6 +3,10 @@
   pai_eval_report.py --rows s1='/data/runs/alpasim/pai_s1/runs/*' s0='/data/runs/alpasim/pai_full/runs/p2h10s-f-s0_*' [--pair s1-s0 ...]
                      [--mean both=s0,s1] [--scenes tsv] [--out md]        (plain python3 + numpy, on the Tokyo box)
 --mean adds a row whose scene score is the mean of the named rows (their common scenes; it has no zero kinds).
+--only <file of scene ids> restricts the scene set of the row table and the pairs (a subset read); --detail appends, after everything else, a
+per-row table (scenes scored 1, slow scenes, zeros by kind, driver errors of the run dirs) and, per --pair, the decomposition of the difference
+into the zero -> scored, scored -> zero and both-scored parts (a mean row is zero on a scene only if every seed is zero); without the two
+options the output is as before.
 Tables: mean scene score and zeros by kind per label on the scenes every label scored; per --pair the paired difference with a bootstrap
 95 % CI over scenes (10000 draws, seed 0); throughput of every run dir (scenes, CONC, card, wall, scenes per hour, render / drive share of
 the summed RPC time, per-container VRAM peaks, card peak). --scenes writes one row per scene (scores of every label).
@@ -53,6 +57,8 @@ ap.add_argument("--rows", nargs="+", required=True, help="label=glob[,glob...]")
 ap.add_argument("--pair", nargs="*", default=[], help="a-b: paired difference a minus b on their common scenes")
 ap.add_argument("--mean", nargs="*", default=[], help="label=a,b[,...]: the per-scene mean of rows a, b, ...")
 ap.add_argument("--scenes"), ap.add_argument("--out")
+ap.add_argument("--only", help="file of scene ids (first column, a scene_id header is skipped): restrict the scenes of the tables and pairs")
+ap.add_argument("--detail", action="store_true", help="append the per-row detail and the decomposition of every pair")
 a = ap.parse_args()
 D, R = {}, {}
 for x in a.rows:
@@ -62,7 +68,8 @@ for x in a.mean:
     k, ks = x.split("=", 1)
     ks = ks.split(",")
     R[k] = {q: {"score": float(np.mean([R[j][q]["score"] for j in ks])), "score_metrics": {}} for q in set.intersection(*(set(R[j]) for j in ks))}
-sc = sorted(set.intersection(*(set(v) for v in R.values())))
+keep = {ln.split("\t")[0].strip() for ln in Path(a.only).read_text().splitlines() if ln.strip() and not ln.startswith("scene_id")} if a.only else None
+sc = sorted(set.intersection(*(set(v) for v in R.values())) & (keep if keep is not None else set.union(*(set(v) for v in R.values()))))
 L = [f"Scenes scored by every row: {len(sc)} (" + ", ".join(f"{k} {len(v)}" for k, v in R.items()) + ").", "",
      "| Row | Mean | Zeros | at-fault collision | offroad | left corridor | other zero |", "|---|--:|--:|--:|--:|--:|--:|"]
 for k, v in R.items():
@@ -72,7 +79,7 @@ for k, v in R.items():
     L.append(f"| {k} | {np.mean([v[x]['score'] for x in sc]):.4f} | {len(z)} | {kinds} |")
 for pr in a.pair:
     ka, kb = pr.split("-", 1)
-    s = sorted(set(R[ka]) & set(R[kb]))
+    s = sorted(set(R[ka]) & set(R[kb]) & (keep if keep is not None else set(R[ka])))
     d = np.array([R[ka][x]["score"] - R[kb][x]["score"] for x in s])
     rng = np.random.default_rng(0)
     bs = d[rng.integers(0, len(d), (10000, len(d)))].mean(1)
@@ -90,6 +97,32 @@ for k, dirs in D.items():
         L.append(f"| {k}: {d.name} | {j['scenes']} | {j['conc']} | {j['gpu']} | {j['wall_s']} | {j['scenes'] * 3600 / j['wall_s']:.0f} | "
                  f"{t.get('sensorsim.render_rgb', 0) / tot:.2f} | {t.get('driver.drive', 0) / tot:.2f} | {np.median(dr) if dr else float('nan'):.0f} | "
                  + ", ".join(f"{q} {v}" for q, v in sorted(pk.items())) + f" | {card} |")
+if a.detail:
+    err = lambda dirs: sum(x.get("inference_error", 0) + x.get("input_error", 0) for d in dirs for x in P.drive_log(d)[1])  # noqa: E731
+    L += ["", f"Detail on the {len(sc)} scenes scored by every row. Score 1 = perfect scene, slow = 0 < score < 1; zero kinds are the scorer's flags on "
+          "zero-score scenes (two flags can sit on one scene); driver errors = inference_error + input_error counters over all scenes of the row's "
+          "run dirs; a mean row has no flags and is zero on a scene only if every seed is zero.", "",
+          "| Row | Scenes | Mean | Score 1 | Slow | Zeros | at-fault collision | offroad | left corridor | other zero | Driver errors |",
+          "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for k, v in R.items():
+        x = np.array([v[q]["score"] for q in sc])
+        z = [q for q in sc if v[q]["score"] == 0]
+        kinds = " | ".join(str(sum(bool(v[q]["score_metrics"].get(f)) for q in z)) for f in P.FAIL) + \
+            f" | {sum(not any(v[q]['score_metrics'].get(f) for f in P.FAIL) for q in z)} | {err(D[k])}" if k in D else " | | | | "
+        L.append(f"| {k} | {len(sc)} | {x.mean():.4f} | {(x >= 1).sum() if k in D else ''} | {((x > 0) & (x < 1)).sum() if k in D else ''} | {len(z)} | {kinds} |")
+    L += ["", "Decomposition of each pair (a - b). Fixed = b zero and a scored, broken = b scored and a zero; a part is the summed difference of those scenes "
+          "divided by the scenes of the pair, so the three parts add up to the mean difference (check column).", "",
+          "| Pair | Scenes | Mean difference | Fixed: scenes | part | Broken: scenes | part | Both scored: scenes | part | Both zero: scenes | Check |",
+          "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+    for pr in a.pair:
+        ka, kb = pr.split("-", 1)
+        s = sorted(set(R[ka]) & set(R[kb]) & (keep if keep is not None else set(R[ka])))
+        xa, xb = np.array([R[ka][q]["score"] for q in s]), np.array([R[kb][q]["score"] for q in s])
+        d = xa - xb
+        m = [(xb == 0) & (xa > 0), (xb > 0) & (xa == 0), (xb > 0) & (xa > 0), (xb == 0) & (xa == 0)]
+        part = [d[q].sum() / len(d) for q in m]
+        L.append(f"| {ka} - {kb} | {len(s)} | {d.mean():+.4f} | {m[0].sum()} | {part[0]:+.4f} | {m[1].sum()} | {part[1]:+.4f} | {m[2].sum()} | {part[2]:+.4f} | "
+                 f"{m[3].sum()} | {sum(part) - d.mean():+.1e} |")
 print("\n".join(L))
 if a.out:
     Path(a.out).write_text("\n".join(L) + "\n")
