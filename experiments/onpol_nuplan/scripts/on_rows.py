@@ -491,7 +491,9 @@ def cmd_tok(a):
     from drivable_hinge import Hinge
     from experiments.op_adapt_r2.lib import op_adapt_r2 as R2
     from jevdrive import cache
+    from jevdrive import navsim_zs as Z
     from jevdrive import op_adapt as A
+    from jevdrive import op_interp as I
     from jevdrive.data import splits
     from jevdrive.run import Run
     out, root, froot = ROWS / a.name, CR / f"{FAM}_{a.name}", CR / f"{FAM}_{a.name}@warp"
@@ -539,44 +541,49 @@ def cmd_tok(a):
 
         @torch.no_grad()
         def diff(model, rows):
-            """Per row, trainer forward against served: max |difference| over the first 15 plan points (x, y); over the 8 poses (x, y); over the
-            poses served within 32 m (beyond it one fp16 ulp of a plan point is 0.031 m); and T.rear of the served mu against the served poses."""
-            dm, dp, dn, df = [], [], [], []
+            """Per row, trainer forward against served: max |difference| over (0) the first 15 plan points (x, y); (1) the 8 poses (x, y), the
+            trainer's plan through the serving export (op_interp.to_rear, as sh30_core.Core.plan); (2) the same over the poses served within
+            32 m (beyond it one fp16 ulp of a plan point is 0.031 m); (3) the 8 poses through the trainer's own formula (pp_train.rear, which
+            interpolates before the lever arm and drops the camera's lateral offset); (4) pp_train.rear of the served mu against the served poses."""
+            out = [[] for _ in range(5)]
             for i in range(0, len(rows), 128):
                 r = rows[i:i + 128]
                 rt = torch.as_tensor(r, device=dev)
                 p = model(torch.from_numpy(np.ascontiguousarray(front[r])).to(dev), ego[rt], tc[rt]).float()[:, pi].view(-1, 33, 15)
-                x, y, _ = T.rear(p, cam_x[rt], W)
-                mu = torch.from_numpy(M["mu"][r]).to(dev)
-                dm.append((p[:, :15, :2] - mu[:, :15, :2]).abs().amax((1, 2)).cpu().numpy())
-                sp = torch.from_numpy(M["poses"][r].astype(np.float32)).to(dev)
-                d = torch.maximum((x - sp[..., 0]).abs(), (y - sp[..., 1]).abs())
-                dp.append(d.amax(1).cpu().numpy())
-                dn.append(d.masked_fill(sp[..., 0].abs() >= 32.0, 0.0).amax(1).cpu().numpy())
-                xs, ys, _ = T.rear(mu, cam_x[rt], W)
-                df.append(torch.maximum((xs - sp[..., 0]).abs(), (ys - sp[..., 1]).abs()).amax(1).cpu().numpy())
-            return tuple(np.concatenate(v) for v in (dm, dp, dn, df))
+                mu, sp = torch.from_numpy(M["mu"][r]).to(dev), torch.from_numpy(M["poses"][r].astype(np.float32)).to(dev)
+                pn = p.cpu().numpy()
+                ex = np.stack([I.to_rear(q[:, 0:3], q[:, 11], I.T_IDXS, c[:2], Z.T_OUT, "lever") for q, c in zip(pn, tab["cam"][r].astype(np.float64))])
+                d = np.abs(ex[..., :2] - M["poses"][r][..., :2]).max(2)
+                out[0].append((p[:, :15, :2] - mu[:, :15, :2]).abs().amax((1, 2)).cpu().numpy())
+                out[1].append(d.max(1))
+                out[2].append(np.where(np.abs(M["poses"][r][..., 0]) < 32.0, d, 0.0).max(1))
+                for j, q in ((3, p), (4, mu)):
+                    x, y, _ = T.rear(q, cam_x[rt], W)
+                    out[j].append(torch.maximum((x - sp[..., 0]).abs(), (y - sp[..., 1]).abs()).amax(1).cpu().numpy())
+            return tuple(np.concatenate(v) for v in out)
         models = {t: T.load_pmodel(t, dev) for t in sorted(set(tags) | {t[:-1] + str(1 - int(t[-1])) for t in tags})}
         r1, lines = dict(tol_m=TOL_M, need=0.99, tags={}), []
         for t in tags:
             rows = np.flatnonzero(M["tag"] == t)
             other = t[:-1] + str(1 - int(t[-1]))
-            (dm, dp, dn, df), (cm, cp, _, _) = diff(models[t], rows), diff(models[other], rows)
+            (dm, dp, dn, dr, df), (cm, cp, _, _, _) = diff(models[t], rows), diff(models[other], rows)
             r1["tags"][t] = dict(n=len(rows), mu_share=float((dm <= TOL_M).mean()), pose_share=float((dp <= TOL_M).mean()), mu_median=float(np.median(dm)),
                                  mu_max=float(dm.max()), pose_median=float(np.median(dp)), pose_max=float(dp.max()), control=other,
-                                 pose_share_within_32m=float((dn <= TOL_M).mean()), pose_share_one_ulp=float((dp <= 0.03126).mean()), rear_formula_max=float(df.max()),
+                                 pose_share_within_32m=float((dn <= TOL_M).mean()), pose_share_one_ulp=float((dp <= 0.03126).mean()), pose_share_trainer_formula=float((dr <= TOL_M).mean()),
+                                 rear_formula_max=float(df.max()),
                                  control_mu_share=float((cm <= TOL_M).mean()), control_pose_share=float((cp <= TOL_M).mean()), control_pose_median=float(np.median(cp)))
             q = r1["tags"][t]
             lines.append((t, len(rows), f"{q['mu_share']:.4f}", f"{q['pose_share']:.4f}", f"{q['mu_median']:.4f} / {q['mu_max']:.4f}", f"{q['pose_median']:.4f} / {q['pose_max']:.4f}",
-                          f"{q['pose_share_within_32m']:.4f} / {q['pose_share_one_ulp']:.4f}", f"{q['rear_formula_max']:.5f}", f"{other}: {q['control_mu_share']:.4f} / {q['control_pose_share']:.4f} (median {q['control_pose_median']:.3f} m)"))
+                          f"{q['pose_share_within_32m']:.4f} / {q['pose_share_one_ulp']:.4f}", f"{q['pose_share_trainer_formula']:.4f} ({q['rear_formula_max']:.4f})", f"{other}: {q['control_mu_share']:.4f} / {q['control_pose_share']:.4f} (median {q['control_pose_median']:.3f} m)"))
         r1["pass"] = bool(all(q["mu_share"] >= 0.99 and q["pose_share"] >= 0.99 and q["control_pose_share"] < 0.5 for q in r1["tags"].values()))
         (out / "r1.json").write_text(json.dumps(r1, indent=1) + "\n")
         (out / "r1.md").write_text("\n".join([f"# Gate R1 (inputs), rows `{a.name}`: {'PASS' if r1['pass'] else 'FAIL'}", "",
-                                              f"Trainer forward (pp_train.PModel, eager, stored tokens + ego vector) against the served plan; share of rows within {TOL_M} m, needs >= 0.99 "
-                                              "on both; control = the other seed's checkpoint on the same rows (must stay below 0.5 on the poses). Diagnostics, not the gate: the pose share "
-                                              "counted over the poses served within 32 m only / with a 0.03126 m tolerance (one fp16 ulp of a plan point beyond 32 m), and the trainer's "
-                                              "pose formula (pp_train.rear) on the served plan mean against the served poses.", ""] +
-                                             md_table(["serving tag", "rows", "first 15 plan points", "8 poses", "plan points median / max (m)", "poses median / max (m)", "poses within 32 m / one-ulp tolerance", "pose formula max (m)", "wrong-seed control (points / poses)"], lines) + [""]))
+                                              f"Trainer forward (pp_train.PModel, eager, stored tokens + ego vector) against the served plan (compiled passes); share of rows within {TOL_M} m, needs "
+                                              ">= 0.99 on both; the 8 poses = the trainer's plan through the serving export (op_interp.to_rear). Control = the other seed's checkpoint on the same "
+                                              "rows (must stay below 0.5 on the poses). Diagnostics, not the gate: the pose share counted over the poses served within 32 m only / with a 0.03126 m "
+                                              "tolerance (one fp16 ulp of a plan point beyond 32 m); the pose share with the trainer's own pose formula (pp_train.rear) and, in brackets, the "
+                                              "largest difference of that formula from the serving export on the served plan itself.", ""] +
+                                             md_table(["serving tag", "rows", "first 15 plan points", "8 poses", "plan points median / max (m)", "poses median / max (m)", "poses within 32 m / one-ulp tolerance", "poses, trainer formula (formula gap, m)", "wrong-seed control (points / poses)"], lines) + [""]))
         # ---- own-plan activation of each label (S's hinges as loss43 runs them: agent 0.3 m in the corridor / 0 beside it, road 0.3 m)
         ah = AgentHinge(root / "agent.npz", tab["names"], dev, 0.3, 0.0)
         rh, nh = Hinge(root / "road.npz", tab["names"], dev, 0.3), Hinge(root / "drivable.npz", tab["names"], dev, 0.3)
