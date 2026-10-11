@@ -23,5 +23,15 @@
    "control_pose_median": 0.1230313777923584
   }
  },
- "pass": false
+ "a": true,
+ "c": true,
+ "b": true,
+ "control": "smoke10e",
+ "control_single": [
+  [
+   100,
+   1.0
+  ]
+ ],
+ "pass": true
 }

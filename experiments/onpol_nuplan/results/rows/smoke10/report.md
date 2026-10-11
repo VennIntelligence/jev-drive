@@ -23,7 +23,7 @@
 | own plan activates the road-and-lane hinge (0.3 m) | 0.170 |
 | own plan activates P2H10's drivable hinge on these rows (0.3 m; not a label of this lane) | 0.170 |
 | footprint off the road-and-lane raster at t0 | 0.020 |
-| own plan against the imitation target: mean ADE (m) / share over 0.5 m | 2.676 / 0.940 |
+| own plan against the imitation target: mean ADE (m) / share over 0.5 m | 2.138 / 0.910 |
 | imitation target on the straight continuation beyond the log | 0.000 |
 | actors per row, mean / share of rows with more than 32 | 23.3 / 0.270 |
 | cold-start rows (fewer than 4 keyframes) | 30 |
@@ -34,3 +34,29 @@
 | rows | 10 | 10 | 10 | 10 | 10 | 10 | 10 | 10 | 10 | 10 |
 | agent hinge active | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.10 |
 | road hinge active | 0.10 | 0.10 | 0.20 | 0.20 | 0.30 | 0.20 | 0.20 | 0.20 | 0.10 | 0.10 |
+
+Imitation targets, the served plan against each (`fut` = Amendment 2, trained on; `fut_reg` = as registered, kept in the tab, not trained on):
+
+| target | ADE (m) | mean abs along / across (m) | first-step speed jump D_1 / 0.5 s - v_ego: mean / mean abs (m/s) | share over 1 / 2 m/s | max (m/s) |
+|:--|--:|--:|--:|--:|--:|
+| fut | 2.138 | 1.986 / 0.477 | +0.066 / 0.091 | 0.000 / 0.000 | 0.63 |
+| fut_reg | 2.676 | 2.543 / 0.482 | +0.534 / 0.732 | 0.260 / 0.050 | 5.05 |
+
+| decision k | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| fut: ADE (m) | 1.45 | 0.91 | 1.17 | 1.58 | 1.87 | 2.24 | 2.63 | 2.94 | 3.20 | 3.40 |
+| fut: speed jump (m/s) | -0.02 | +0.00 | +0.01 | +0.03 | +0.05 | +0.07 | +0.09 | +0.11 | +0.15 | +0.19 |
+| fut_reg: ADE (m) | 1.48 | 0.98 | 1.33 | 1.89 | 2.34 | 2.84 | 3.31 | 3.76 | 4.19 | 4.63 |
+| fut_reg: speed jump (m/s) | -0.14 | +0.01 | +0.10 | +0.23 | +0.37 | +0.54 | +0.69 | +0.89 | +1.16 | +1.49 |
+
+| per serving tag | P2H10S-F-s0 |
+|:--|--:|
+| decisions | 100 |
+| rows | 100 |
+| excluded (reason: n) | none |
+| more than 0.5 m off the path | 0.130 |
+| more than 5 m ahead / behind | 0.000 / 0.020 |
+| agent / road hinge active | 0.010 / 0.170 |
+| off the road raster at t0 | 0.020 |
+| served plan against `fut`, ADE (m) | 2.138 |
+| fed speed / log speed at t0, mean (m/s) | 5.38 / 5.93 |
