@@ -16,7 +16,9 @@
 # State: $DATA_DIR/runs/onpol_nuplan/read/<stage>/{STATUS, DONE, ERROR, log.txt, manifest.json {label: [run dirs]}, runs/}; the chain's own
 # STATUS / DONE / ERROR / log.txt in read/chain-<stage>/. A rerun skips the labels already in the manifest (label = <tag> for held,
 # <tag>@smoke48 for smoke), so a finished checkpoint is never rolled out on held twice; one chain per stage at a time (lock).
-# Estimate (smoke of P2H10S-F-s0, 2026-10-11): results/pilot/read_estimate.md.
+# Estimate for held, 12 checkpoints x 460 scenes: 3.0-3.5 s per scene and stack next to six other stacks (lane nuplan1491 / JOINT-1 / this lane's
+# rollouts, 2026-10-11; 4.7 at worst) -> 24-37 min per job, booked 29 of 80 GB; 5-7 stack-hours = 1.8-2.7 card-hours; 1.3-1.9 h wall at 4 stacks
+# once the checkpoints exist; 69 GiB RAM declared per job (42-45 measured); rollout logs 12 GB per job before pruning.
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
 STAGE=${1:?stage: smoke | held}; shift

@@ -12,6 +12,7 @@ stored reads (joint1_report.sources(): BODY1 + lane nuplan1491) instead of a rer
 of s0 / s1 reproduce their stored reads with no zero flip (the reproducibility section says whether they do).
 --standin is the test of this file and reads no held scene: the stored reads of the TRAIN-split scenes (results/split/train.txt) play the
 read, P2H10S-F s0-s3 as the control and STANDIN's stored recipes as the arms; records of other scenes are dropped as the run dirs are loaded.
+The reproducibility section then compares on_read.sh's smoke reruns of control tags (48 train scenes) with their stored reads.
 It ends with a self-check against experiments/alpasim/results/joint1/joint1_per_scene.csv (the table joint1_report.py wrote) restricted to the
 same scenes: per-scene scores and zero classes, fixed / broken counts by joint1_report's expressions and its CIs; exit 3 if anything differs.
 
@@ -78,6 +79,15 @@ def pair(G, a, b, logs, mask=None):
     return out
 
 
+def repro(x, y, scenes):
+    """Rerun records x against stored records y on the scenes both have -> scenes that differ (score or zero kind), zero flips, max abs difference."""
+    sc = [s for s in scenes if s in x and s in y]
+    d = [abs(x[s]["score"] - y[s]["score"]) for s in sc]
+    return dict(compared=len(sc), differ=[s for s, v in zip(sc, d) if v > 1e-9 or R.zclass(x[s]) != R.zclass(y[s])],
+                zero_flips=[s for s in sc if (x[s]["score"] == 0) != (y[s]["score"] == 0)], max_abs=max(d, default=float("nan")),
+                mean_rerun=float(np.mean([x[s]["score"] for s in sc])) if sc else None, mean_stored=float(np.mean([y[s]["score"] for s in sc])) if sc else None)
+
+
 def fs(q):
     return f"{q['point']:+.4f} [{q['scene'][0]:+.4f}, {q['scene'][1]:+.4f}] ({q['logs'][0]:+.4f}, {q['logs'][1]:+.4f})"
 
@@ -118,13 +128,11 @@ def verdicts(st):
                     f"{b['at-fault']:g} against ON-IMIT {ar['ON-IMIT']['at-fault']:g} / ON-SELF {ar['ON-SELF']['at-fault']:g} ({'fewer than each' if all(f1.values()) else 'not fewer than each'}); "
                     f"zeros in total {b['zeros']:g} against {ar['ON-IMIT']['zeros']:g} / {ar['ON-SELF']['zeros']:g} ({'fewer than each' if all(f2.values()) else 'not fewer than each'}); "
                     f"fixed - broken against {C2}: {net['ON-BOTH']:+d} against the null's maximum {nmax:+d} ({'exceeds' if net['ON-BOTH'] > nmax else 'does not exceed'})"))
-    if any(v is None for _, v, _ in out):
-        out.append(("Not separated", None, "cannot be evaluated: a sentence above cannot"))
-    else:
-        d = st["diff"].get("ON-SELF - ON-IMIT")
-        out.append(("Not separated", not any(v for _, v, _ in out), "none of the three sentences holds" if not any(v for _, v, _ in out) else "a sentence above holds"))
-        if d:
-            out[-1] = (*out[-1][:2], out[-1][2] + f"; ON-SELF - ON-IMIT [CI scenes] (CI logs): zeros in total {fq(d['zeros'])}, at-fault zeros {fq(d['at-fault'])}, mean score {fs(d['score'])}")
+    hold, unk = any(v for _, v, _ in out), any(v is None for _, v, _ in out)
+    d = st["diff"].get("ON-SELF - ON-IMIT")
+    out.append(("Not separated", False if hold else None if unk else True,
+                ("a sentence above holds" if hold else "cannot be evaluated: a sentence above cannot" if unk else "none of the three sentences holds")
+                + (f"; ON-SELF - ON-IMIT [CI scenes] (CI logs): zeros in total {fq(d['zeros'])}, at-fault zeros {fq(d['at-fault'])}, mean score {fs(d['score'])}" if d else "")))
     return H, out
 
 
@@ -134,6 +142,7 @@ def main():
     ap.add_argument("--standin", action="store_true", help="test on stored reads of train-split scenes; reads no held scene")
     ap.add_argument("--stored-control", type=int, nargs="*", default=[], help="control seeds taken from their stored reads instead of a rerun")
     ap.add_argument("--manifest", default=str(J.DATA / "runs/onpol_nuplan/read/held/manifest.json"))
+    ap.add_argument("--smoke-manifest", default=str(J.DATA / "runs/onpol_nuplan/read/smoke/manifest.json"), help="--standin: on_read.sh smoke runs of control tags")
     a = ap.parse_args()
     out = _pl.Path(a.out or E / "results" / ("standin" if a.standin else "read"))
     out.mkdir(parents=True, exist_ok=True)
@@ -253,29 +262,31 @@ def main():
     L += [f"- H, {k}: seed-mean at-fault zeros {h['atfault']:g} against the control's four-seed mean {h['control']:g} -> **{'passes' if h['passes'] else 'NEGATIVE (fails H)'}**"
           for k, h in H.items()] or ["- H: not evaluated (the control's four seeds are not all read)"]
     L += [""] + [f"- \"{s}\": {word[v]}. {t}." for s, v, t in V]
-    hold = [s for s, v, _ in V if v]
-    st["verdict"] = None if any(v is None for _, v, _ in V) else hold
-    L += ["", "Verdict: " + ("not evaluated (arms missing)" if st["verdict"] is None else " and ".join(f"\"{s}\"" for s in hold)) + "."]
+    st["verdict"] = dict(holds=[s for s, v, _ in V if v], not_evaluated=[s for s, v, _ in V if v is None])
+    L += ["", "Verdict: " + (" and ".join(f"\"{s}\"" for s in st["verdict"]["holds"]) or "none of the sentences is established")
+          + (f"; not evaluated (arms missing): {', '.join(st['verdict']['not_evaluated'])}" if st["verdict"]["not_evaluated"] else "") + "."]
 
     # ---- reproducibility of the control reruns
-    if not a.standin:
-        L += ["", "## Reproducibility: control reruns of this lane against the stored reads of the same scenes (BODY1 / lane nuplan1491 run dirs)", "",
-              "| tag | scenes compared | scenes that differ (score or zero kind) | zero flips | max abs score difference | mean rerun / stored |", "|:--|--:|--:|--:|--:|:--|"]
-        st["repro"] = {}
-        for t in [x for x in ctl if x in A and x not in [f"{CTRL}-s{s}" for s in a.stored_control]]:
-            b = load(stored.get(t, []), keep)[0]
-            sc = [s for s in scenes if s in b]
-            da = {s: D[t][0][s] for s in sc}
-            dif = [s for s in sc if abs(da[s]["score"] - b[s]["score"]) > 1e-9 or R.zclass(da[s]) != R.zclass(b[s])]
-            flip = [s for s in sc if (da[s]["score"] == 0) != (b[s]["score"] == 0)]
-            mx = max((abs(da[s]["score"] - b[s]["score"]) for s in sc), default=float("nan"))
-            st["repro"][t] = dict(compared=len(sc), differ=dif, zero_flips=flip, max_abs=mx, mean_rerun=float(np.mean([da[s]["score"] for s in sc])) if sc else None,
-                                  mean_stored=float(np.mean([b[s]["score"] for s in sc])) if sc else None)
-            L.append(f"| {t} | {len(sc)} of {n} | {len(dif)} | {len(flip)} | {mx:.4f} | " + (f"{st['repro'][t]['mean_rerun']:.4f} / {st['repro'][t]['mean_stored']:.4f} |" if sc else "n/a |"))
-        for t, r in st["repro"].items():
-            L += [f"\n{t}, scenes that differ: " + ", ".join(f"`{s}`" + (" (zero flip)" if s in r["zero_flips"] else "") for s in r["differ"])] if r["differ"] else []
-        if not st["repro"]:
-            L.append("| (no rerun of the control in the run dirs) | | | | | |")
+    if a.standin:                                                    # the smoke reruns of on_read.sh (48 train scenes) against the stored reads
+        sm = J.man(a.smoke_manifest)
+        runs = {t: load(sm[f"{t}@smoke48"], keep)[0] for t in ctl if t in A and sm.get(f"{t}@smoke48")}
+        ref, head = {t: D[t][0] for t in runs}, "smoke reruns of on_read.sh (train scenes of smoke48_train.txt)"
+    else:
+        runs = {t: D[t][0] for t in ctl if t in A and t not in [f"{CTRL}-s{s}" for s in a.stored_control]}
+        ref, head = {t: load(stored.get(t, []), keep)[0] for t in runs}, "control reruns of this lane"
+    L += ["", f"## Reproducibility: {head} against the stored reads of the same scenes (BODY1 / lane nuplan1491 run dirs)", "",
+          "| tag | scenes compared | scenes that differ (score or zero kind) | zero flips | max abs score difference | mean rerun / stored |", "|:--|--:|--:|--:|--:|:--|"]
+    st["repro"] = {}
+    for t, x in runs.items():
+        r = st["repro"][t] = repro(x, ref[t], scenes)
+        L.append(f"| {t} | {r['compared']} of {n} | {len(r['differ'])} | {len(r['zero_flips'])} | {r['max_abs']:.4f} | "
+                 + ("not shown (a smoke is not a read)" if a.standin else f"{r['mean_rerun']:.4f} / {r['mean_stored']:.4f}" if r["compared"] else "n/a") + " |")
+    L += ["| (no rerun of the control in the run dirs) | | | | | |"] if not runs else []
+    for t, r in st["repro"].items():
+        L += ["", f"{t}, scenes that differ: " + ", ".join(f"`{s}`" + (" (zero flip)" if s in r["zero_flips"] else "") for s in r["differ"])] if r["differ"] else []
+    if a.standin:
+        for r in st["repro"].values():
+            r.pop("mean_rerun"), r.pop("mean_stored")
 
     # ---- files
     with (out / "on_per_scene.csv").open("w", newline="") as fh:
