@@ -14,26 +14,30 @@
 # State: $DATA_DIR/runs/onpol_nuplan/roll/<stage>/{STATUS, DONE, ERROR, log.txt, manifest.json {label: [run dirs]}, runs/}; the chain's own
 # STATUS / DONE / ERROR / log.txt in roll/chain-<stage>/. Rerunning a stage skips the labels already in its manifest.
 # Measured on the smokes (2026-10-11): results/rows/smoke10/ (dump bytes per decision, wall); full estimate in the lane README.
+# Round 2 (plans/2026-10-12-onpol2-prereg.md, B): BASE=<recipe> rolls <recipe>-s0 / -s1 instead (labels, SH30_TAG and the required checkpoints
+# from it) into the stage directory <stage>-<recipe>, e.g. `BASE=YR10m10-F on_roll.sh full` -> roll/full-YR10m10-F, chain state in
+# roll/chain-full-YR10m10-F. Without BASE everything is round 1's (P2H10S-F, roll/<stage>).
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
-STAGE=$1
+BASE=${BASE:-}; R=${BASE:-P2H10S-F}
+STAGE=$1${BASE:+-$BASE}
 W=$DATA_DIR/runs/onpol_nuplan/roll; O=$W/chain-$STAGE; mkdir -p "$O"; rm -f "$O/DONE" "$O/ERROR"
 exec > >(tee -a "$O/log.txt") 2>&1
 status() { echo "$(date '+%F %T') onpol-roll $STAGE: $*" | tee "$O/STATUS"; }
 die() { status "ERROR $*"; echo "$*" > "$O/ERROR"; exit 1; }
 status "code $(git rev-parse --short HEAD); free $(df -BG --output=avail "$DATA_DIR" | tail -1 | tr -d ' ')"
 J=()
-job() { J+=("P2H10S-F-s$1@$2:sh30:SH30_TAG=P2H10S-F-s$1,SH30_DUMP=1000000${3:+,$3}:P2H10S-F-s$1:$2"); }      # seed list [ENV=VALUE]
-case $STAGE in
+job() { J+=("$R-s$1@$2:sh30:SH30_TAG=$R-s$1,SH30_DUMP=1000000${3:+,$3}:$R-s$1:$2"); }      # seed list [ENV=VALUE]
+case $1 in
   smoke1)  job 0 on_smoke1 ;;
   smoke10) job 0 on_smoke10 ;;
   smoke10e) job 0 on_smoke10 SH30_COMPILE=0 ;;
   full)    for s in 0 1; do for c in 0 1 2 3; do job $s on_c$c; done; done ;;
   *) die "unknown stage $STAGE" ;;
 esac
-[[ $STAGE == full ]] && cap=${OT2_MAX_ACTIVE:-3} || cap=1
+[[ $1 == full ]] && cap=${OT2_MAX_ACTIVE:-3} || cap=1
 ON_LISTS=$W/lists OT_LANE=onpol OT_OUT=$W OT_OWNER=alpasim-onpol OT_PRIO=${OT_PRIO:-12} OT2_MAX_ACTIVE=$cap \
   python3 experiments/onpol_nuplan/scripts/on_loop.py "$STAGE" "${J[@]}" || die "on_loop rc $? (see $W/$STAGE/ERROR)"
-n=$(find "$W/$STAGE/runs" -path '*driver-logs/dump/*.npz' | wc -l); b=$(find "$W/$STAGE/runs" -path '*driver-logs/dump/*.npz' -printf '%s\n' | awk '{s += $1} END {printf "%d", s}')
+n=$(find "$W/$STAGE/runs" -path '*driver-logs/dump/*.npz' | wc -l); b=$(find "$W/$STAGE/runs" -path '*driver-logs/dump/*.npz' -printf '%s\n' | awk '{s += $1} END {printf "%.0f", s}')
 status "all done: $n dumped decisions, $b bytes ($((b / (n > 0 ? n : 1))) per decision), run dirs $(du -sh "$W/$STAGE/runs" | cut -f1)"
 date '+%F %T' > "$O/DONE"
