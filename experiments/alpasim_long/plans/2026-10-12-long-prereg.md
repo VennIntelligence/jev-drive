@@ -88,3 +88,12 @@ central tokens was decided before any comparison (cost: about 30 scenes per minu
 Note (test build with the filter, 896 scenes, logs still arriving): 491 scenes exact, 405 not written: trajdata's workers re-read the
 central-token scene list and logs that arrived during the build shifted the indices. The real builds run only after all 136 logs are on
 disk (al_chain.sh `cache` refuses otherwise).
+
+## Amendment 2 (03:25 JST, after the held read, before running it): is 18 decisions private-like? (exploratory)
+
+The read's YR10m10-F-s0 at 18 decisions (0.771, at-fault 0.474 km, GT 1.49 m) is close to its private submission (0.80, 0.529 km,
+1.733 m) and far from its 10-decision values (0.928, 0.787 km, 0.957 m). Submission #1, APY10m10-AB-s0, scored privately 0.640,
+0.132 km, 2.29 m. Two more pool jobs, held 460, `run.sh ap2` with `AP2_TAG=APY10m10-AB-s0` (its read path in ot3 / cf1), at 18 and at 10
+decisions. Reading, descriptive only (two private points cannot validate a suite): does 18 decisions reproduce the private ordering
+(YR10m10-F-s0 above APY10m10-AB-s0 by about 0.16 in score, with lower GT distance and more km per at-fault event), which 10 decisions
+reverses on the public scenes (0.925 against 0.935)?
