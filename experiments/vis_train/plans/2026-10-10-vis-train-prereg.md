@@ -201,3 +201,7 @@ navtest 全分解（EPDMS 全部子项 × 四个转角桶）；> 45° 与 > 20°
    - 适配器改动（最小）：`pp_train.PModel` 对 `vtr_W*` 的 memory 臂用 `n_cam=3`（其余 `n_cam=1`），forward 接受 (B, 3, 32, 512) 的 memory（升维成 (B, 3, 1, 32, 512)）；训练的 25% 行 memory drop 与 `:noside` 的 (B,1) 掩码对三个视角一起生效（适配器里 broadcast）。bank 是 (N, 3, 32, 512) fp16，`Tokens` 按行取，无需改。`vtr_0` / `vtr_B` 路径不变。
 6. **登记的比较**：`VTR-B − VTR-0`、`VTR-W0 − VTR-0`、`VTR-W − VTR-0`、`VTR-W − VTR-W0`，每个另对 SH30；seed 均值与 CI 的读法同补记 7。判词行同补记 7。W 臂另报 > 45° 内切率按内侧路沿是否在前视视野内分层（`vt_read.py` 对 W − A 已用的 FoV 分层），比较为 `VTR-W − VTR-0`、`VTR-W0 − VTR-0`、`VTR-W − VTR-W0`。
 7. **读数**：每个臂 navtest、navhard、navtest `:noside` / `:mshuf`，全部经 `python -m jevdrive.bench`；`vt_read.py` 加标签 `RW0` / `RW` 并去掉 `RA`。放置：8 个训练 16 GB / 4 核，由 pool 在 6 张卡上打包。
+8. **执行记录（09:10 CST 核对，W 臂第一个训练步之前）**：
+   - 08:54 的第一次重提交仍带 `--when-exists GATE_PASS`，没有生效，已全部取消（含 `vt-t-A2-s{0,1}` 及其读数、`vtr-*-A-*`）；生效的是 08:55–09:00 CST 不带闸门的提交（链 `jev:vt-R`，`VT_R_SKIP_GATE=1`，09:00 起）。
+   - 覆盖做成持久的：首次带 `VT_R_SKIP_GATE=1` 启动时写 `chain/R/GATE_OVERRIDE`，之后不论带不带该变量，重启链都走同一条路径（不再提交闸门、续跑，不等 `GATE_PASS`）。`gate.json` / `GATE_FAIL` 原样保留作为闸门失败的记录；`reads.md` 的闸门行写「failed; overridden by the user」。
+   - bank 来源与 step：`vtr_B-s0` / `vtr_B-s1` = `VT-B-s0` / `VT-B-s1` 的 `ckpt-final.pt`（step 50 000）；`vtr_W-s0` = `VT-W-s0` 的 `ckpt-final.pt`（step 50 000）；`vtr_W-s1` = `VT-W-s1` 的 `ckpt-final.pt`（step 50 000，08:50 CST 写出，bank 09:00 开始时已存在，没有用 snapshot）；`vtr_W0` = 未加载 checkpoint 的 `VT("W")`（step 0）。

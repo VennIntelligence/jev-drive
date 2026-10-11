@@ -53,8 +53,8 @@ CTRL = {"F": ("SH30",), "F0": ("F",), "A0": ("F",), "A": ("A0", "F"), "B": ("A0"
 PRIMARY = [("A", "A0"), ("B", "A0"), ("B", "A"), ("C", "F0"), ("W", "A")]         # the turn line's comparisons (prereg + amendment 1)
 OPTS = {"A": ("noside", "mshuf"), "B": ("noside", "mshuf"), "W": ("noside", "mshuf", "sideoff")}
 # prereg amendment 7. A2 / B2: arm A / B continued under the new tags VT-<X>2-s<seed> for 30 k steps, read as later snapshots of the same arm (steps
-# counted from SH30; the controls were not continued and are read at their nearest snapshot). R0 / RA / RB: arm R, the policy trained from the
-# shipped weights with the SH30 recipe (10 k steps, one checkpoint) reading a frozen token bank through the memory channel (VTR-0 / VTR-A / VTR-B).
+# counted from SH30; the controls were not continued and are read at their nearest snapshot). R0 / RB / RW0 / RW: arm R, the policy trained from the
+# shipped weights with the SH30 recipe (10 k steps, one checkpoint) reading a frozen token bank through the memory channel (VTR-0 / VTR-B / VTR-W0 / VTR-W; amendment 8).
 START = {"A2": 50, "B2": 50}                            # thousand steps before the tag's own step 0
 RTAG = {"R0": "VTR-0", "RB": "VTR-B", "RW0": "VTR-W0", "RW": "VTR-W"}   # amendment 8: VTR-A dropped, the W arms added
 RSRC = {"RB": "B", "RW": "W"}                           # the first-wave arm whose final branch fills the bank
@@ -605,7 +605,7 @@ def report(R, E, PR, L, rdiff):
         gt, fb = g.get("gate", {}), g.get("fallback", {})
         A(f"Gate (`scripts/vt_r.py gate`, {g.get('time', '?')}): " + ("not evaluated" if gt.get("passed") is None else
           f"masked-memory drop of arm A at its final checkpoint {gt['drop']:+.2f} EPDMS on the seed mean (seeds {', '.join(f'{v:+.2f}' for v in gt['per_seed'].values())}; "
-          f"line >= {g['drop_line']}): **{'passed, R runs' if gt['passed'] else 'failed, R is not run'}**") + ". Continuation: " +
+          f"line >= {g['drop_line']}): **{'passed, R runs' if gt['passed'] else 'failed, R is not run' if not (gf.parent / 'GATE_OVERRIDE').exists() else 'failed; overridden by the user (prereg amendment 8), R is run'}**") + ". Continuation: " +
           ("not chosen" if not fb.get("pick") else f"> 45 deg off-road rate against A0 over the last three snapshots, seed mean: A {fb['value']['A']:+.2f} pp, B {fb['value']['B']:+.2f} pp "
            f"-> **arm {fb['pick']}**") + ".\n")
     else:

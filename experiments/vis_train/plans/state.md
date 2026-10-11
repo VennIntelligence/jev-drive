@@ -196,25 +196,23 @@ scripts/tmux_run.sh vt-W-s1 env VT_WHEN=$DATA_DIR/runs/op_parity/runs/VT-A0-s1/c
 
 **是什么**：支路冻结、policy 用 SH30 配方从头训（`pp_train.py --mem vtr_*`，10 000 步 × 128，cosine）经 memory 通道读 token bank。`VTR-0`（bank `vtr_0` = Cinque t0 token，对照）、`VTR-A` / `VTR-B`（bank = `VT-A/B-s<seed>` 末尾支路的 token），各 seed 0 / 1。另有登记的续跑：A / B 里较好者自末尾 checkpoint 再训 30 000 步，新 tag `VT-A2` / `VT-B2-s<seed>`。代码：`scripts/vt_r.py`（`bank` / `check` / `gate`）、`scripts/vt_r_chain.sh`（`smoke` / `all`）。
 
-**2026-10-11 08:55 CST**：闸门未过（−0.75），用户决定照跑 R（prereg 补记 8）；`VT_R_SKIP_GATE=1 scripts/tmux_run.sh vt-R experiments/vis_train/scripts/vt_r_chain.sh all` 重新提交 R 部分，下面的队列表是被取消的旧任务，新 id 看 `jobs.txt` 末尾。
+**2026-10-11 08:55 CST**：闸门未过（−0.75），用户决定照跑 R（prereg 补记 8）。**08:58 CST 改臂**：R 臂 = `VTR-0`、`VTR-B`、`VTR-W0`、`VTR-W`（seed 0 / 1，8 个训练），`VTR-A` 与 A2 / B2 续跑取消（B2 此前已按 `FALLBACK_B` 跑完，不受影响）。bank：`vtr_0`（Cinque t0）、`vtr_B-s{0,1}`（`VT-B-s{0,1}` final，step 50 000）、`vtr_W0`（冻结 Cinque 编码器 × W 的三视角，(N, 3, 32, 512)）、`vtr_W-s{0,1}`（`VT-W-s{0,1}` final，都是 step 50 000；W-s1 的 final 08:50 已写出，没用 snapshot）。`pp_train.py` 对 `vtr_W*` 用 3 相机适配器。覆盖是持久的：`chain/R/GATE_OVERRIDE` 存在时，重启链（`scripts/tmux_run.sh vt-R experiments/vis_train/scripts/vt_r_chain.sh all`，不必再带 `VT_R_SKIP_GATE=1`）只续 R 部分。
 
-**08:58 CST 改臂（补记 8 第 5–7 点）**：R 臂 = `VTR-0`、`VTR-B`、`VTR-W0`、`VTR-W`（8 个训练），`VTR-A` 取消。bank `vtr_W0`（冻结 Cinque 编码器 × W 的三视角）、`vtr_W-s{0,1}`（`VT-W-s{0,1}` 的 `ckpt-final.pt`，step 见各 `bank.json`）；`pp_train.py` 对 `vtr_W*` 用 3 相机适配器。
-
-### 队列（01:07 CST 入队；owner `vis_train-R`；一条链 `jev:vt-R`，全部任务 id 在 `$DATA_DIR/runs/vis_train/chain/R/jobs.txt`）
+### 队列（生效的一批：08:55–09:00 CST 入队；owner `vis_train-R`；链 `jev:vt-R` 09:00 起；01:07 与 08:54 两批均已取消，id 仍在 `jobs.txt` 里）
 
 | 任务 | id | 等什么 | 做什么 |
 |:--|:--|:--|:--|
-| `vt-rgate` | 1011-010746-c839 | `VT-A-s0/ckpt-final.pt` 出现后启动；之后自己每 2 min 查一次第一波的 navtest 读数（不提交 bench），10 h 超时 | 写 `chain/R/gate.json`、`GATE_PASS` 或 `GATE_FAIL`、`FALLBACK_A` 或 `FALLBACK_B`；取消不跑的一侧 |
-| `vtr-bank-{A,B}-s{0,1}` | 1011-010731-6ea1 / -478d / -69b0、1011-010732-15de | `GATE_PASS` | bank（12 shard + navtest + navhard，各 3.98 GB，一张卡 16 GB） |
-| `vtr-t-{0,A,B}-s{0,1}` | s0：1011-010732-46c0、1011-010733-07e7、1011-010734-f99f；s1：1011-010734-b740、1011-010735-3c4a、1011-010736-0c22 | `GATE_PASS`；A / B 另 `--after` 各自的 bank（`vtr_0` 已建好） | 训练 `VTR-<臂>-s<seed>`，16 GB / 4 核，不占训练名额，优先级 8 |
-| `vtr-b-{0,A,B}-s{0,1}` | 1011-010732-b674、1011-010733-3e37、1011-010734-fa5f、1011-010735-5905、1011-010735-0cd3、1011-010736-6fc3 | `--after` 训练，且 checkpoint 出现 | `bench run`：navtest、navhard，navtest 的 `:noside` / `:mshuf` |
-| `vt-t-{A2,B2}-s{0,1}` | 1011-010736-1fc4、1011-010739-edce、1011-010741-0d7b、1011-010744-2c1f | `FALLBACK_A` / `FALLBACK_B`（只有一个会出现，另一臂的任务被 gate 取消） | 续跑 30 000 步，32 GB / 8 核 / `--train`，优先级 4 |
-| `vt-b-{A2,B2}-s{0,1}-k05…k25`、`-final` | 见 `jobs.txt` | 各自的 checkpoint | snapshot 的 navtest 读数；末尾 navtest + navhard + `:noside` / `:mshuf` |
+| `vtr-bank-B-s{0,1}` | 1011-085541-869d、1011-085542-0c22 | — | 已完成 08:58 |
+| `vtr-bank-W0`、`vtr-bank-W-s{0,1}` | 1011-090014-2404、1011-090014-66ae、1011-090015-d16f | — | 09:00 开跑，16 GB / 4 核 |
+| `vtr-t-{0,B}-s{0,1}` | s0：1011-085543-3f03、1011-085544-355f；s1：1011-085545-b813、1011-085547-b9b8 | — | 08:56–08:59 开跑，10–13 it/s |
+| `vtr-t-{W0,W}-s{0,1}` | s0：1011-090016-8da7、1011-090017-9c8f；s1：1011-090019-8f4d、1011-090020-ddbe | `--after` 各自的 bank | 训练，16 GB / 4 核，优先级 8 |
+| `vtr-b-{0,B,W0,W}-s{0,1}` | 0：1011-085543-f0eb、1011-085546-18de；B：1011-085545-0dc2、1011-085548-f175；W0：1011-090017-def6、1011-090020-e453；W：1011-090018-cb47、1011-090021-1b89 | `--after` 训练，且 `ckpt-final.pt` 出现 | `bench run`：navtest、navhard，navtest 的 `:noside` / `:mshuf` |
 
-**闸门读什么**：`VT-A-s{0,1}` 与 `VT-A-s{0,1}:noside` 的 navtest（EPDMS 差的 seed 均值 ≥ 0.2 即过）；选臂读 `VT-{A,B}-s{0,1}` 的 k40、k45、末尾与 `VT-A0-s{0,1}` 的 k40、末尾（> 45° off-road 率对 A0，6 个差的均值，低者，相等取 B）。两个判词各自在输入到齐时写出，互不等待。进度：`chain/R/GATE_STATUS`（还缺哪些读数）、`chain/R/STATUS`、`chain/R/pool/gate/log.txt`。
+**闸门读什么**（历史；已被补记 8 覆盖）：`VT-A-s{0,1}` 与 `VT-A-s{0,1}:noside` 的 navtest（EPDMS 差的 seed 均值 ≥ 0.2 即过）；选臂读 `VT-{A,B}-s{0,1}` 的 k40、k45、末尾与 `VT-A0-s{0,1}` 的 k40、末尾（> 45° off-road 率对 A0，6 个差的均值，低者，相等取 B）。两个判词各自在输入到齐时写出，互不等待。进度：`chain/R/GATE_STATUS`（还缺哪些读数）、`chain/R/STATUS`、`chain/R/pool/gate/log.txt`。
 
 ### 预计时间（CST；JST = +1 h）
 
+- **补记 8 之后（09:10 估）**：`VTR-0` / `VTR-B` 约 09:15–09:20 训完；W 的 bank 约 09:15 完，`VTR-W0` / `VTR-W` 约 09:35–09:50 训完；读数（8 × navtest、navhard、`:noside`、`:mshuf`）估 10:15–11:00 到齐。下面几条是闸门之前的旧估计。
 - A / B 训练约 04:13 结束（00:53 时步 16.9 k，2.76 it/s）；末尾读数（plans + 12 个评分 shard，空闲时约 9 min / 个，队列里有第一波的积压）估 04:45–05:15 到齐 → 闸门与选臂。
 - R：bank 约 5 min；6 个训练各 10 000 步，分级启动实测 7.1 it/s（共享卡）→ 单个约 25 min，几个同卡估 30–45 min → 约 05:45–06:00 训完；读数 18 个 navtest + 6 个 navhard，估 **06:45–07:45** 全部到齐（取决于 CPU 积压）。
 - 续跑：选臂读数到齐即放（约 05:00）。两个 seed 同卡 2.76 it/s → 3.0 h，各占一张卡 5.3 it/s → 1.6 h；训完 **06:40–08:00**，末尾读数再加约 30–60 min。到早上没训完时 k05…k25 的 snapshot 读数照常出。
