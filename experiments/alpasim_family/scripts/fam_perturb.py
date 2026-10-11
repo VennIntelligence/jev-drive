@@ -9,6 +9,8 @@ FAM_ARM = key=value items joined by "+" (a GPU-pool job spec cannot carry commas
     tz=d      camera height + d m (slot warp road plane);  tx=d  camera x + d m (plan lever arm)
     D=nom     the public assets' median CAM_F0 distortion (what MTGS renders with, never reported); D=asset the scene's own (oracle,
               looked up by scene id in FAM_CALIB, results/asset_calib_public.csv); D=raw nuPlan's raw CAM_F0 distortion
+    Rnom=p    ignore the told mount rotation: a level camera on the rig's x axis pitched p deg down (public median 1.45; exploratory,
+              the serving fix that does not trust the report)
     default   the MTGS adapter's fallback camera (fx 1920, fy 1080, cx 960, cy 560, identity mount at the rig origin)
   image (applied to every CAM_F0 / L0 / R0 JPEG before the driver sees it; re-encoded at the runtime's quality 95)
     zoom=z    centre crop of z x the frame, resized back to 1920 x 1080 (a narrower lens on the same mount); with kfollow=1 the
@@ -56,6 +58,8 @@ def told(cam: dict, scene: str, a: dict) -> dict:
     K, R, t, D = (np.array(cam[k], np.float64) for k in ("K", "R", "t", "D"))
     if "default" in a:
         K, R, t, D = np.array([[1920., 0, 960], [0, 1080, 560], [0, 0, 1]]), np.eye(3), np.zeros(3), np.zeros(5)
+    if "Rnom" in a:
+        R = _rot(1, float(a["Rnom"])) @ np.array([[0., 0, 1], [-1, 0, 0], [0, -1, 0]])
     for key, axis, sign in (("roll", 0, 1), ("pitch", 1, 1), ("yaw", 2, 1)):
         if key in a:
             R = _rot(axis, sign * float(a[key])) @ R
