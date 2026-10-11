@@ -17,7 +17,8 @@ YR10m10-F < P2H10S-F), SSELFnoL-ON stays first by score and separates (+0.044 [+
 last on at-fault zeros (42), tied with P2H10S-F; YR10m10-F-s0 at 18 decisions (0.771 / 0.474 km / 1.49 m) is near its private result
 (0.80 / 0.529 km / 1.733 m) (decision 262).
 
-**Next.** Amendment 2 (APY10m10-AB-s0 at 18 and 10 decisions against its private 0.640) is queued in the pool; then closed-loop
+**Next.** Amendment 2 (APY10m10-AB-s0 at 18 and 10 decisions against its private 0.640) is queued in the pool (jobs
+1012-031731-cb61 / 1012-031732-3cd6, read-out 1012-032433-78f7 -> `$DATA_DIR/runs/alpasim_long/held/read_apy/report.md`; not read yet); then closed-loop
 training at 18 decisions on the train scenes and an 18-decision selection set.
 
 **Read more.** [plans/2026-10-12-long-prereg.md](plans/2026-10-12-long-prereg.md); the earlier dead end:
