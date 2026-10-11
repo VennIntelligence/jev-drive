@@ -83,15 +83,16 @@ def cmd_g2(a):
             logs = np.array([s.rsplit("-", 1)[0] for s in z["scene"]])
             tc = np.array([[0.0, 1.0] if lht.get(l, False) else [1.0, 0.0] for l in logs], np.float32)
             nv = valid.sum(1).astype(np.int64)
-            best = None
+            cand = []
             for t, model in models.items():
                 o, nat, hid = student_forward(model, tok, ego, tc, nv, dev)
                 d = float(np.abs(o[:, model.net.slices["plan"]] - raw).max())
                 run.info("%s: %s forward against the dumped plan slice: max |diff| %.4g", g, t, d)
-                if best is None or d < best[0]:
-                    best = (d, t, nat, hid)
-            d, srv, nat, hid = best
-            assert d < 0.05, f"{g}: no student reproduces the dumped plan (best {srv}: {d})"
+                cand.append((d, t, nat, hid))
+            cand.sort(key=lambda c: c[0])
+            d, srv, nat, hid = cand[0]
+            # identity up to one fp16 step of the largest plan values (64-256 m: 0.0625-0.125), and far from the other student
+            assert d <= 0.125 and cand[1][0] > 10 * max(d, 0.01), f"{g}: no student reproduces the dumped plan ({[(c[1], c[0]) for c in cand]})"
             arr = dict(scene=z["scene"], k=z["k"], served=srv, ident=d)
             V, vm = torch.as_tensor(tok).to(dev), torch.as_tensor(valid).to(dev)
             Qp = torch.as_tensor(poses[:, None]).to(dev)
