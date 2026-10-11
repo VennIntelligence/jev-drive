@@ -13,7 +13,7 @@ on_clips.sh runs the steps in order.
   clip    [--jobs N] [--webp] (AlpaSim venv) col1_clip.render per case in parallel -> gif/<id>.gif (<= 1.4 MiB); --webp adds a 480-px
           webp/<id>.webp review copy (the repo takes clips under ~500 KB only: the index lists every size, nothing is copied by this script)
   index   index.md: scene, arm, fixed / broken, the zero kind per seed of both sides, the clips         (copy to results/read/clips.md)
-  prune   after ON_KEEP_ASL=all: delete rollout.asl of the rollouts without a failure reason under read/held (ot2_loop's own rule)
+  prune   [--stage held] after ON_KEEP_ASL=all: delete rollout.asl of the rollouts without a failure reason under read/<stage> (ot2_loop's rule)
 
 One clip shows one rollout (col1_clip.py's layout: bird's-eye view with the served plan, the two model frames, speed / gap / lead prob); the
 tool has no side-by-side layout, so the two sides of a scene are separate clips named by tag. A clip needs the rollout's rollout.asl:
@@ -181,7 +181,7 @@ def cmd_index(a):
 
 def cmd_prune(a):
     n = b = 0
-    for dirs in json.loads((W / "read/held/manifest.json").read_text()).values():
+    for dirs in json.loads((W / "read" / a.stage / "manifest.json").read_text()).values():
         for d in dirs:
             for r in json.loads(Path(d, "aggregate/results-summary.json").read_text())["rollouts"]:
                 if not r.get("failure_reason"):
@@ -202,6 +202,8 @@ def main():
         if n == "cases":
             p.add_argument("--stats", default=str(RES / "on_stats.json")), p.add_argument("--arms", nargs="*", default=["ON-IMIT", "ON-SELF", "ON-BOTH"])
             p.add_argument("--test-run"), p.add_argument("--limit", type=int, default=0)
+        if n == "prune":
+            p.add_argument("--stage", default="held", help="stage of on_read.sh whose run dirs are pruned")
         if n == "clip":
             p.add_argument("--webp", action="store_true"), p.add_argument("--force", action="store_true"), p.add_argument("--max-mb", type=float, default=1.4)
     a = ap.parse_args()
