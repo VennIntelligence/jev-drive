@@ -6,6 +6,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 - [onpol_nuplan](onpol_nuplan/README.md) (ONPOL-NUPLAN, on-policy rows, self-consequence vs imitation labels, RoaD / DAgger contrast): concluded; held 460 scenes: on-policy S hinges 0.939 / 14.5 zeros vs control 0.925 / 21.5; imitation 0.912 / 24 [d259]
 - [onpol_pai](onpol_pai/README.md) (ONPOL-PAI, on-policy rows on PAI, self-consequence vs imitation labels): live; stopped before the 281 read (user, 10-12 02:24 JST); open loop only: SELF term rate 0.215 vs 0.307 [d261]
+- [onpol_long](onpol_long/README.md) (ONPOL-LONG, closed-loop training at 18 decisions, CL-1 round 1): live; round 1 queued: S + corridor hinge rows at 18 decisions vs ON-NONE, held 460
 - [alpasim_long](alpasim_long/README.md) (ALPASIM-LONG, full-length nuPlan rollouts, 18 decisions): live; raw nuPlan logs + vehicle-only rebuild give 18-decision scenes (was 10) [d262]
 - [eyes_sense](eyes_sense/README.md) (EYES-vs-SENSE, same eyes better car sense, side views x body lesson): concluded; side views stay closed (> 45 deg cut-in +1.02 with S); body lesson navhard +2.2 [d255,(inputs:,136,232,233,236,243,244,245,248,254)]
 - [alpasim_proxy](alpasim_proxy/README.md) (PROXY, private-like selection set for the last AlpaSim slot): live; no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6) [d262]
