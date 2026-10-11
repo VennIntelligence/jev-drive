@@ -144,7 +144,9 @@ def wrap(a):
 def terms(poses_rear, rows, pack, margin_a=None, theta_b=None):
     """-> dict of per-row (n,) hinges for all four items + the per-step tensors (for the gates and previews).
     margin_a / theta_b override the stored A margin (a scalar) / B threshold offset (theta = d_l - theta_b) for the label-agreement gate."""
-    x, y, psi = poses_rear.float().unbind(-1)                                   # arcs reach 260 m: never in half precision
+    if poses_rear.dtype in (torch.float16, torch.bfloat16):                     # arcs reach 260 m: never in half precision
+        poses_rear = poses_rear.float()
+    x, y, psi = poses_rear.unbind(-1)
     xt, yt = timing_only(x, y, psi)
     d = dense(xt, yt, psi.detach())
     g = lambda k: pack[k][rows]  # noqa: E731
