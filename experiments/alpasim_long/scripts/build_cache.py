@@ -10,7 +10,9 @@ build: takes scene_provider.trajdata of a finished run's generated-user-config-0
 only cache_location (-> --out), dataset.data_dir (-> --raw, which holds test/<log>.db) and num_timesteps_after (-> N), and builds the cache
 with AlpaSim's own trajdata_provider_config_to_params + trajdata's UnifiedDataset, unedited. One deviation from the runtime's call:
 require_map_cache=False, because the four prebuilt map files of the shipped cache are symlinked into --out/nuplan_test/maps instead of being
-rebuilt from the raw nuPlan maps (that needs the full devkit map API). The shipped cache is never written (asserted).
+rebuilt from the raw nuPlan maps (that needs the full devkit map API). Second deviation: detected agents are restricted to the nuPlan
+category `vehicle` (trajdata's query also takes bicycle and pedestrian; the shipped cache has vehicles only, and with that filter the
+rebuilt agent tables are identical to the shipped ones; --all-types turns it off). The shipped cache is never written (asserted).
 By default only the central token that names each public scene id is built (1491 of the configs' 12 146 tokens; the runs use only
 those ids, and trajdata caches each scene on its own); --all-tokens builds all.
 compare: per scene of a's scene list, scene length, agent table at dt 0.1 (all columns), traffic lights, and the metadata's agent
@@ -56,6 +58,9 @@ def build(a):
     print(json.dumps({k: (v if k != "dataset_kwargs" else {d: {x: (y if x != "central_tokens_config" else f"<{len(y)} tokens>")
                                                                 for x, y in kw.items()} for d, kw in v.items()}) for k, v in params.items()},
                      default=str, indent=1), flush=True)
+    if not a.all_types:   # the shipped cache holds vehicles only (the track simulates vehicles only); trajdata's query also takes
+        orig = nuplan_utils.NuPlanObject.get_detected_agents   # bicycles and pedestrians, so drop them at the source (G0 checks identity)
+        nuplan_utils.NuPlanObject.get_detected_agents = lambda self, t: (lambda d: d[d.category_name == "vehicle"].reset_index(drop=True))(orig(self, t))
     ds = UnifiedDataset(**params, require_map_cache=False, verbose=True)
     print(f"built {ds.num_scenes()} scenes into {out}", flush=True)
 
@@ -82,7 +87,7 @@ def _cmp_scene(args):
         r["agents_a"], r["agents_b"] = len(ma.agents), len(mb.agents)
         r["agents_prefix_equal"] = sorted(x.name for x in ma.agents if x.first_timestep < n) == sorted(x.name for x in mb.agents if x.first_timestep < n)
         ta, tb = (Path(x) / "nuplan_test" / s / "tls_data_dt0.05.feather" for x in (a, b))
-        r["tls_bytes_equal"] = ta.exists() == tb.exists() and (not ta.exists() or ta.read_bytes() == tb.read_bytes())
+        r["tls_bytes_equal"] = ta.exists() == tb.exists() and (not ta.exists() or pd.read_feather(ta).equals(pd.read_feather(tb)))  # content
     except Exception as e:  # a missing scene is a result
         r["error"] = f"{type(e).__name__}: {str(e)[:200]}"
     return r
@@ -115,6 +120,7 @@ if __name__ == "__main__":
     p.add_argument("--after", type=int, required=True), p.add_argument("--out", required=True)
     p.add_argument("--raw", default=str(DATA / "datasets/nuplan_raw")), p.add_argument("--template", default=str(TEMPLATE))
     p.add_argument("--workers", type=int, default=24)
+    p.add_argument("--all-types", action="store_true", help="keep bicycles and pedestrians (trajdata's own query; the shipped cache has none)")
     p.add_argument("--all-tokens", action="store_true", help="every central token of the configs (12 146), not only the 1491 scene ids")
     p.set_defaults(fn=build)
     p = sub.add_parser("compare")
