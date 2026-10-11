@@ -225,7 +225,7 @@ def cmd_report(a):
                                 ("other vehicle contact (lateral / go-around / drift / cut-in / crossing)", ya & (Al != 1) & veh),
                                 ("other object (pedestrian, cyclist, generic object)", ya & (Al != 1) & ~veh)):
                     mm = ma & (pos | neg)
-                    sc = {snm: s0sc(o, 0)[mm] for snm, o in S0s.items() if "seed" not in snm or "blind" in snm}
+                    sc = {snm: s0sc(o, 0)[mm] for snm, o in S0s.items() if snm in ("S0 (mean of seeds)", "S0 blind seed 0")}
                     for rung in ("vis", "nat", "priv"):
                         if rung in lad:
                             sc[f"ladder {rung} (lat head)"] = score(rung, "a")[mm]
