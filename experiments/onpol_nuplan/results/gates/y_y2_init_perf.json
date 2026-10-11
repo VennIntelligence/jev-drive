@@ -1,0 +1,61 @@
+{
+ "ONY-none": {
+  "init": {
+   "init": "YR10m10-F-s0",
+   "arm": "P2",
+   "net_trainable": 109,
+   "net_loaded": 109,
+   "net_missing": [],
+   "net_unexpected": [],
+   "adapter_tensors": 46,
+   "adapter_loaded": 46,
+   "adapter_missing": [],
+   "adapter_unexpected": [],
+   "tr1": {},
+   "max_abs_diff_after_load": 0.0
+  },
+  "dev0": {
+   "ade": 0.5386115908622742,
+   "drift_on": 1.469294786453247,
+   "drift_off": 0.04367310553789139,
+   "ot_ade": 0.7427954077720642,
+   "ot_drift_on": 1.723158597946167,
+   "ot_drift_off": 0.08010932058095932
+  },
+  "steps": 300,
+  "it_s": 7.785181344733761,
+  "peak_gb": 16.263671875,
+  "composition": "115 normal, 13 yaw-rate, 0 hinge-only (none), 0 on-policy (mode off"
+ },
+ "ONY-self": {
+  "init": {
+   "init": "YR10m10-F-s0",
+   "arm": "P2",
+   "net_trainable": 109,
+   "net_loaded": 109,
+   "net_missing": [],
+   "net_unexpected": [],
+   "adapter_tensors": 46,
+   "adapter_loaded": 46,
+   "adapter_missing": [],
+   "adapter_unexpected": [],
+   "tr1": {},
+   "max_abs_diff_after_load": 0.0
+  },
+  "dev0": {
+   "ade": 0.5386115908622742,
+   "drift_on": 1.469294786453247,
+   "drift_off": 0.04367310553789139,
+   "ot_ade": 0.7427954077720642,
+   "ot_drift_on": 1.723158597946167,
+   "ot_drift_off": 0.08010932058095932
+  },
+  "steps": 300,
+  "it_s": 7.261089094463263,
+  "peak_gb": 17.953125,
+  "composition": "102 normal, 13 yaw-rate, 0 hinge-only (none), 13 on-policy (mode self"
+ },
+ "ref_ade": 0.539,
+ "fail": [],
+ "pass": true
+}

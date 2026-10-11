@@ -13,6 +13,8 @@
 #                     SIMIT-ON / SSELF-ON / SBOTH-ON s0 s1, the fourth family (SSELFnoL-ON if its training exists or ON_FOURTH says so, else
 #                     SNONE-ON) and the control P2H10S-F s0-s3. Refused: a tag given twice, a tag outside those families (ON_HELD_ANY=1
 #                     lifts this), split files that differ from the committed ones; the loop refuses every list but held.txt.
+#                     Round 2 (plans/2026-10-12-onpol2-prereg.md, B and C) is read by naming its tags: YSELFnoL-ON / YNONE-ON s0 s1 and their
+#                     control YR10m10-F s0 s1; SSELFnoL-ON s2 s3 (the default list is round 1's).
 #                     ON_HELD_GATE=all makes every job wait for all checkpoints of the list (no held rollout before the last training ends).
 # OT2_MAX_ACTIVE (default 4) stacks at a time; ON_KEEP_ASL=all keeps every rollout.asl (default: ot2_loop's pruning, failed rollouts only).
 # State: $DATA_DIR/runs/onpol_nuplan/read/<stage>/{STATUS, DONE, ERROR, log.txt, manifest.json {label: [run dirs]}, runs/}; the chain's own
@@ -39,7 +41,7 @@ case $STAGE in
       F=${ON_FOURTH:-$([[ -d $CK/SSELFnoL-ON-s0 || -d $CK/SSELFnoL-ON-s1 ]] && echo SSELFnoL || echo SNONE)}
       set -- {SIMIT,SSELF,SBOTH,$F}-ON-s{0,1} P2H10S-F-s{0,1,2,3}
     fi
-    for t; do [[ -n ${ON_HELD_ANY:-} || $t =~ ^(SIMIT|SSELF|SBOTH|SNONE|SSELFnoL)-ON-s[01]$ || $t =~ ^P2H10S-F-s[0-3]$ ]] || die "tag $t is not an arm or the control of the prereg"; done
+    for t; do [[ -n ${ON_HELD_ANY:-} || $t =~ ^(SIMIT|SSELF|SBOTH|SNONE|SSELFnoL)-ON-s[01]$ || $t =~ ^P2H10S-F-s[0-3]$ || $t =~ ^(YSELFnoL|YNONE)-ON-s[01]$ || $t =~ ^YR10m10-F-s[01]$ || $t =~ ^SSELFnoL-ON-s[23]$ ]] || die "tag $t is not an arm or the control of the prereg"; done
     [[ $(wc -l < "$SP/held.txt") -eq 460 ]] || die "held.txt is not the 460 scenes"
     SPLIT=held LIST=held SFX= ;;
   *) die "unknown stage $STAGE" ;;

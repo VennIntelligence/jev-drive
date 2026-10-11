@@ -8,6 +8,10 @@ dev ADE at the last step <= the ON-NONE pilot's + 0.010 m (the archived S, 0.545
 Descriptive: on the on-policy rows, hinge activation (share of rows with a non-zero hinge, mean hinge) and the imitation error (loss, mean displacement
 to the target) over steps 2701-3000 against 201-400, from the 25-step means of the trainer. Writes <out>/pilot_gates.{json,md}; exit 0 = every arm
 passes, 2 = an arm fails (reasons in the json), 3 = the ON-NONE pilot is missing or incomplete.
+
+Round 2 (plans/2026-10-12-onpol2-prereg.md, B "Pilot"; on_train_y.sh): the Y family on the YR10m10-F base, reference = the YNONE pilot:
+  on_pilot_check.py --tags YSELFnoL-ON-P-s0 --none YNONE-ON-P-s0 --ho-k 0 --yr-k 13 --archived 0.539 --archived-name YR10m10-F-s0 --out .../results/pilot_y
+composition 102 normal / 13 yaw-rate / 0 hinge-only / 13 on-policy (the reference: 115 / 13 / 0 / 0). The defaults are round 1's.
 """
 import argparse
 import json
@@ -34,7 +38,8 @@ def read(tag, exp, steps):
         elif e.get("kind") == "end":
             end = e.get("ok")
     log = (runs[-1].parent / "log.txt").read_text()
-    m = re.search(r"per batch of (\d+): (\d+) normal, (\d+) hinge-only .*?\), (\d+) on-policy \(mode (\w+)", log)
+    m = re.search(r"per batch of (\d+): (\d+) normal, (?:(\d+) yaw-rate, )?(\d+) hinge-only .*?\), (\d+) on-policy \(mode (\w+)", log)
+    yr, m = (int(m.group(3) or 0), re.match(r"(.*)\|(.*)\|(.*)\|(.*)\|(.*)", "|".join(m.group(1, 2, 4, 5, 6)))) if m else (None, None)
     loss = {q[5:]: v for q, v in sc.items() if q.startswith("loss/")}
     last = max(sc.get("dev/ade", {0: None}))
     win = lambda q, lo, hi: [v for s, v in loss.get(q, {}).items() if lo <= s - 12 <= hi] or None  # noqa: E731  a 25-step mean is placed at its centre
@@ -42,7 +47,7 @@ def read(tag, exp, steps):
              steps=max(max(v) for v in loss.values()) if loss else 0, finite=all(math.isfinite(x) for v in loss.values() for x in v.values()),
              dev_step=last, dev_ade=sc.get("dev/ade", {}).get(last), dev_drift_off=sc.get("dev/drift_off", {}).get(last), dev0_ade=sc.get("dev/ade", {}).get(0),
              it_s=(sc.get("throughput/steps_per_s") or {0: None})[max(sc.get("throughput/steps_per_s") or {0: 0})], on_hash=dict(re.findall(r"on_hash @ (\d+): ([0-9a-f]+)", log)),
-             ckpt=(DATA / "runs/op_parity/runs" / tag / "ckpt-final.pt").exists(),
+             ckpt=(DATA / "runs/op_parity/runs" / tag / "ckpt-final.pt").exists(), **({"yaw_rate": yr} if yr else {}),
              on={w: {q[3:]: sum(x) / len(x) for q in DESC if (x := win(q, lo, hi))} for w, (lo, hi) in WIN.items()})
     r["complete"] = bool(end and r["steps"] == steps and last == steps and r["ckpt"])
     return r
@@ -55,7 +60,10 @@ def main():
     ap.add_argument("--exp", default="onpol_nuplan")
     ap.add_argument("--steps", type=int, default=3000)
     ap.add_argument("--k", type=int, default=13)
+    ap.add_argument("--ho-k", type=int, default=13, help="hinge-only rows per batch of the recipe (S: 13; the YR base: 0)")
+    ap.add_argument("--yr-k", type=int, default=0, help="yaw-rate rows per batch of the recipe (the YR base: 13)")
     ap.add_argument("--archived", type=float, default=0.545, help="dev ADE of the archived P2H10S-F-s0 (shown, not a gate)")
+    ap.add_argument("--archived-name", default="P2H10S-F-s0")
     ap.add_argument("--ade-tol", type=float, default=0.010)
     ap.add_argument("--drift-max", type=float, default=0.30)
     ap.add_argument("--out", default=str(Path(__file__).resolve().parents[1] / "results/pilot"))
@@ -68,7 +76,7 @@ def main():
             arms[tag] = dict(tag=tag, fail=["no run dir"], **{"pass": False})
             continue
         on = tag != a.none
-        want = [128, 128 - 13 - a.k * on, 13, a.k * on]
+        want = [128, 128 - a.ho_k - a.yr_k - a.k * on, a.ho_k, a.k * on]
         bad = []
         if not r["complete"]:
             bad.append(f"incomplete: ended_ok {r['ended_ok']}, steps {r['steps']}, dev at {r['dev_step']}, checkpoint {r['ckpt']}")
@@ -76,6 +84,8 @@ def main():
             bad.append("non-finite loss")
         if r["composition"] != want:
             bad.append(f"composition {r['composition']} != {want}")
+        if r.get("yaw_rate", 0) != a.yr_k:
+            bad.append(f"yaw-rate rows per batch {r.get('yaw_rate', 0)} != {a.yr_k}")
         if on and ref is None:
             bad.append("no complete ON-NONE pilot to compare with")
         elif r["dev_ade"] is None or (on and not r["dev_ade"] <= ref + a.ade_tol):
@@ -90,15 +100,15 @@ def main():
     (out / "pilot_gates.json").write_text(json.dumps(res, indent=1) + "\n")
     f = lambda v, n=3: "-" if v is None else f"{v:.{n}f}"  # noqa: E731
     md = [f"# ONPOL-NUPLAN pilots: training-side gates ({a.steps} steps, seed 0)", "",
-          f"Dev ADE gate: <= ON-NONE ({f(ref)}) + {a.ade_tol} m; archived P2H10S-F-s0 {a.archived}; dev_drift_off <= {a.drift_max}. "
+          f"Dev ADE gate: <= ON-NONE ({f(ref)}) + {a.ade_tol} m; archived {a.archived_name} {a.archived}; dev_drift_off <= {a.drift_max}. "
           f"On-policy rows identical across the arms (running sha1 of the drawn indices): {res['same_on_policy_rows']}.", "",
-          "| Tag | Mode | Rows per batch (normal / hinge-only / on-policy) | Finite | Dev ADE at 0 | Dev ADE | - ON-NONE | drift_off | it/s | Gate |", "|:--|:--|:--|:--|--:|--:|--:|--:|--:|:--|"]
+          f"| Tag | Mode | Rows per batch (normal / {'yaw-rate / ' if a.yr_k else ''}hinge-only / on-policy) | Finite | Dev ADE at 0 | Dev ADE | - ON-NONE | drift_off | it/s | Gate |", "|:--|:--|:--|:--|--:|--:|--:|--:|--:|:--|"]
     for t, r in arms.items():
         if "composition" not in r:
             md.append(f"| {t} | | | | | | | | | FAIL: no run dir |")
             continue
         c = r["composition"]
-        comp, dd = " / ".join(map(str, c[1:])) if c else "-", "-" if ref is None or r["dev_ade"] is None else f"{r['dev_ade'] - ref:+.3f}"
+        comp, dd = " / ".join(map(str, c[1:2] + ([r.get("yaw_rate", 0)] if a.yr_k else []) + c[2:])) if c else "-", "-" if ref is None or r["dev_ade"] is None else f"{r['dev_ade'] - ref:+.3f}"
         md.append(f"| {t} | {r['mode']} | {comp} | {r['finite']} | {f(r['dev0_ade'])} | {f(r['dev_ade'])} | {dd} | {f(r['dev_drift_off'])} | {f(r['it_s'], 2)} | "
                   + ("pass" if r["pass"] else "FAIL: " + "; ".join(r["fail"])) + " |")
     md += ["", "Descriptive, on-policy rows (means of the trainer's 25-step means; `pos` = share of rows with a non-zero hinge, `mean` over all rows, "

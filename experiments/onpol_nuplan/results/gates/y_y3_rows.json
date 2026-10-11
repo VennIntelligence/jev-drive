@@ -1,0 +1,91 @@
+{
+ "ONY-self": {
+  "composition": "102 normal, 13 yaw-rate, 0 hinge-only (none), 13 on-policy (mode self",
+  "mode": "self",
+  "hash": {
+   "60": "0be17ad130954fdb",
+   "300": "76e83f42e37df14e"
+  },
+  "on_terms": [
+   "agent_mean",
+   "agent_pos",
+   "agent_posmean",
+   "n_hinge",
+   "n_imit",
+   "off_agent_rows",
+   "road_mean",
+   "road_pos",
+   "road_posmean"
+  ],
+  "n_imit": [
+   0.0
+  ],
+  "n_hinge": [
+   13.0
+  ],
+  "off_agent_rows": [
+   0.0
+  ],
+  "offline_agent": [
+   0.0
+  ],
+  "offline_agent_stats": [],
+  "agent_only_on": true,
+  "on_agent_pos_max": 0.07076923400163651,
+  "on_road_pos_max": 0.20307693332433702,
+  "on_agent_ho_max": 0.0017518825450679287,
+  "on_road_ho_max": 0.008174431672377977,
+  "offline_terms": {
+   "imit": 0.7609939527511597,
+   "hinge": 0.0028549648821353914,
+   "distill": 0.0014619489340111614,
+   "distill_ho": 0.00033802193065639584
+  }
+ },
+ "ONY-selfb": {
+  "composition": "102 normal, 13 yaw-rate, 0 hinge-only (none), 13 on-policy (mode self",
+  "mode": "self",
+  "hash": {
+   "60": "0be17ad130954fdb"
+  },
+  "on_terms": [
+   "agent_mean",
+   "agent_pos",
+   "agent_posmean",
+   "n_hinge",
+   "n_imit",
+   "off_agent_rows",
+   "road_mean",
+   "road_pos",
+   "road_posmean"
+  ],
+  "n_imit": [
+   0.0
+  ],
+  "n_hinge": [
+   13.0
+  ],
+  "off_agent_rows": [
+   0.0
+  ],
+  "offline_agent": [
+   0.0
+  ],
+  "offline_agent_stats": [],
+  "agent_only_on": true,
+  "on_agent_pos_max": 0.052307694256305694,
+  "on_road_pos_max": 0.20000000894069672,
+  "on_agent_ho_max": 0.0010281998605933041,
+  "on_road_ho_max": 0.0015067834171327377,
+  "offline_terms": {
+   "imit": 0.810751211643219,
+   "hinge": 0.0033498040225822478,
+   "distill": 0.0015480868401937186,
+   "distill_ho": 0.00032552677148487417
+  }
+ },
+ "hash_step": 60,
+ "hash": "0be17ad130954fdb",
+ "fail": [],
+ "pass": true
+}
