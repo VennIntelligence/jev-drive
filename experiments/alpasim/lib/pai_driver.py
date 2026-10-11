@@ -10,13 +10,16 @@ adaptation of the nuPlan-track checkpoints (sh30_driver.py), no training. What t
   command   the shipped NAVSIM samples' rule on the route (navigation.command_from_route, imported)
   output    8 rear-axle poses at 0.5 s -> the rollout's local frame at the pose of t0 -> 10 Hz trajectory, the LTF sample's functions.
             The rig origin is taken as the rear axle (the lever arm of the plan is the camera's x, y in the rig frame)
+  keywarp   PAI_KEYWARP=1 (off by default): the slots are built as the checkpoints were trained and as the nuPlan driver builds them,
+            from the frames at t0 - 1.5 / 1.0 / 0.5 / 0 s only, the rest warped (pai_core.key_slots -> sh30_core.lattice_gpu). It
+            discards 6 of every 10 rendered frames; results/pai_keywarp.md
   rate      one inference per PAI_EVERY `drive` calls (default 1 = every call, 10 Hz); between inferences the cached plan is returned
   traffic   right-hand convention unless PAI_LHT=1 (the driver is not told the country)
 
 A `drive` whose inputs are incomplete or whose inference raises is aborted with a gRPC error and counted (no straight-line fallback).
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, SH30_TAG (op_parity run tag), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl:
 one record per call; start.jsonl: the full rollout spec of every session), PAI_DUMP (number of sessions whose model frames and source
-JPEG are saved once per second to <log dir>/dump), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default).
+JPEG are saved once per second to <log dir>/dump), PAI_KEYWARP, JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
 from __future__ import annotations
@@ -100,8 +103,8 @@ class Session:
 
 
 class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
-    def __init__(self, core: C.Core, log_dir: Path, cold: str, every: int = 1, dump: int = 0, lht: bool = False):
-        self.core, self.cold, self.every, self.dump, self.lht, self.dir = core, cold, every, dump, lht, log_dir
+    def __init__(self, core: C.Core, log_dir: Path, cold: str, every: int = 1, dump: int = 0, lht: bool = False, keywarp: bool = False):
+        self.core, self.cold, self.every, self.dump, self.lht, self.dir, self.keywarp = core, cold, every, dump, lht, log_dir, keywarp
         self.sessions, self.lock, self.gpu, self.nsess = {}, threading.Lock(), threading.Lock(), 0
         log_dir.mkdir(parents=True, exist_ok=True)
         self.out = open(log_dir / "drive.jsonl", "a", buffering=1)
@@ -205,7 +208,11 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         if infer:
             try:
                 t_f = time.perf_counter()
-                cur, valid, real = PC.slots(frames, t0, P, V, s.cam_t, self.cold)
+                if self.keywarp:                             # the warp runs on the card: one at a time, as in sh30_core.Core.plan
+                    with self.gpu:
+                        cur, valid, real = PC.slots(frames, t0, P, V, s.cam_t, self.cold, keywarp=True, dev=self.core.dev)
+                else:
+                    cur, valid, real = PC.slots(frames, t0, P, V, s.cam_t, self.cold)
                 t_q = time.perf_counter()
                 with self.gpu:
                     t_g = time.perf_counter()
@@ -233,15 +240,18 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                            "slots": round(1e3 * (t_q - t_f), 2), "wait": round(1e3 * (t_g - t_q), 2)})
             if fx is not None:
                 rec.update(fix=fx, poses_model=o["poses_model"].round(4).tolist())
+            if self.keywarp:                                 # n_real then counts the slots at or after the oldest keyframe; ms.slots
+                rec.update(keywarp=True)                     # includes the wait for the card
             if s.n < self.dump and k % 10 == 0:
-                np.savez_compressed(self.dir / "dump" / f"s{s.n:02d}_k{k:03d}.npz", cur=cur, valid=valid, real=real, mu=o["mu"],
+                np.savez_compressed(self.dir / "dump" / f"s{s.n:02d}_k{k:03d}.npz", valid=valid, real=real, mu=o["mu"],
+                                    cur=cur if isinstance(cur, np.ndarray) else cur.cpu().numpy(),
                                     poses=o["poses"], ego=o["ego"], cam_t=s.cam_t, scene=s.scene, now=now, t0=t0,
                                     jpeg=np.frombuffer(s.jpeg.get(t0, b""), np.uint8))
         self.out.write(json.dumps(rec) + "\n")
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{FX.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 
@@ -256,10 +266,16 @@ def main() -> None:
     LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d", FX.VCONT, FX.LEAD, FX.BASE)
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros
     warm = lambda: PC.plan(core, z, np.ones(8, bool), e((4, 3)), e((4, 2)), e(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731
+    kw = os.environ.get("PAI_KEYWARP", "0") == "1"
+    if kw:                                                   # the warm-up also takes the warp path (its planes are built on first use)
+        fr = {int(t): z[0] for t in PC.T_KEY_US}
+        warm = lambda: PC.plan(core, *PC.slots(fr, 0, e((4, 3)), e((4, 2)), [1.7, 0.0, 1.5], "backwarp", keywarp=True, dev=core.dev)[:2],  # noqa: E731
+                               e((4, 3)), e((4, 2)), e(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])
     warm(), warm()
     LOG.info("%s ready in %.1f s, VRAM %.2f GiB", core.tag, time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
     drv = Driver(core, log_dir, os.environ.get("PAI_COLD", "backwarp"), int(os.environ.get("PAI_EVERY", "1")),
-                 int(os.environ.get("PAI_DUMP", "0")), os.environ.get("PAI_LHT", "0") == "1")
+                 int(os.environ.get("PAI_DUMP", "0")), os.environ.get("PAI_LHT", "0") == "1", kw)
+    LOG.info("slots: %s", "keyframes at 2 Hz + sh30_core.lattice_gpu warps (PAI_KEYWARP)" if kw else "rendered 10 Hz frames")
     server = grpc.server(S.warm_workers(warm))
     egodriver_pb2_grpc.add_EgodriverServiceServicer_to_server(drv, server)
     if server.add_insecure_port(f"{host}:{port}") == 0:

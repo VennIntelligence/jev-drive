@@ -9,6 +9,10 @@ nothing is synthesised once 1.4 s of history exists. Serving-side only: the chec
            straight rig axes, nearest pixel, 2x2 chroma mean: navsim_zs.OpenpilotMaps with the projection replaced
   slots    `slots`: real frames where the session has one, else (cold start, or a dropped frame) the nearest real slot re-projected
            along the ego track (op_interp.warp_frame, the `backwarp` rule of sh30_core) or a zero state (`zero`)
+           keywarp (PAI_KEYWARP=1, off by default): the frame protocol the checkpoints were trained on and the nuPlan driver serves.
+           Only the frames at t0 - 1.5 / 1.0 / 0.5 / 0 s are read, as 2 Hz keyframes, and the slots are sh30_core.lattice_gpu's (a key
+           where the slot is one, else the nearest key warped along the ego track; cold start = sh30_core's rule on the oldest key).
+           The other 6 of every 10 rendered frames are not used: the train / serve mismatch test, not the serving ceiling
   plan     `plan`: the encode / policy / export half of sh30_core.Core.plan, unchanged
 """
 from __future__ import annotations
@@ -22,6 +26,7 @@ import sh30_core as C
 from sh30_core import I, PA, Z
 
 T_SLOT_US = np.round(C.SLOT_T * 1e6).astype(np.int64)
+T_KEY_US = np.round(I.T_KEY * 1e6).astype(np.int64)
 
 
 def _poly(c, x):
@@ -98,10 +103,29 @@ def decode(jpeg: bytes) -> np.ndarray:
     return np.asarray(im.convert("YCbCr"))
 
 
-def slots(frames: dict, t0: int, P, V, cam_t, cold: str, tol_us: int = 30_000):
+def key_slots(frames: dict, t0: int, P, V, cam_t, cold: str, dev, tol_us: int = 30_000):
+    """slots under the trained frame protocol: the frames within tol_us of t0 - 1.5 / 1.0 / 0.5 / 0 s (the newest unbroken run of them)
+    are the keyframes and sh30_core.lattice_gpu builds the 8 slots from them, as sh30_core.Core.plan does on the nuPlan track -> uint8
+    tensor (8, 2, 6, 128, 256) on dev, validity, and the slots at or after the oldest keyframe (all 8 once 1.5 s of frames exist; the
+    older ones are that keyframe back-warped, or invalid under cold = zero). Every other frame of the stream is ignored."""
+    ts = np.array(sorted(frames), np.int64)
+    near = [int(ts[np.abs(ts - (t0 + d)).argmin()]) for d in T_KEY_US]
+    miss = np.flatnonzero([abs(n - (t0 + int(d))) > tol_us for n, d in zip(near, T_KEY_US)])
+    e = int(miss.max()) + 1 if len(miss) else 0
+    if e > 3:
+        raise ValueError(f"no frame within {tol_us} us of t0 = {t0}")
+    K = np.zeros((4,) + C.FRAME, np.uint8)
+    K[e:] = [frames[n] for n in near[e:]]
+    cur, valid = C.lattice_gpu(K, e, I.track_navsim(P, V), np.asarray(cam_t, np.float64), cold, dev)
+    return cur, valid, C.SLOT_T >= I.T_KEY[e] - 1e-9
+
+
+def slots(frames: dict, t0: int, P, V, cam_t, cold: str, tol_us: int = 30_000, keywarp: bool = False, dev=None):
     """frames {frame time us: packed frame}; history P (4, 3), V (4, 2) at op_interp.T_KEY -> the slot frames (8, 2, 6, 128, 256),
     their validity, and which are real. A slot without a frame within tol_us is the nearest real slot re-projected along the ego
-    track (cold = backwarp) or invalid (zero)."""
+    track (cold = backwarp) or invalid (zero). keywarp: key_slots instead (the slot frames are then a tensor on dev)."""
+    if keywarp:
+        return key_slots(frames, t0, P, V, cam_t, cold, dev, tol_us)
     ts = np.array(sorted(frames), np.int64)
     near = [ts[np.abs(ts - (t0 + d)).argmin()] for d in T_SLOT_US]
     real = np.array([abs(int(n) - (t0 + int(d))) <= tol_us for n, d in zip(near, T_SLOT_US)])
@@ -119,15 +143,17 @@ def slots(frames: dict, t0: int, P, V, cam_t, cold: str, tol_us: int = 30_000):
 
 
 def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t, lht: bool = False) -> dict:
-    """One decision from the slot frames: sh30_core.Core.plan after its frame synthesis. P (4, 3), V (4, 2) history at op_interp.T_KEY
-    in the t0 frame, acc (2,), cmd (4,) one-hot [L, S, R, unknown] -> poses (8, 3) rear-axle x, y, yaw at 0.5 .. 4 s, stage times."""
+    """One decision from the slot frames (array, or key_slots' tensor on the card): sh30_core.Core.plan after its frame synthesis. P (4, 3),
+    V (4, 2) history at op_interp.T_KEY in the t0 frame, acc (2,), cmd (4,) one-hot [L, S, R, unknown] -> poses (8, 3) rear-axle x, y, yaw
+    at 0.5 .. 4 s, stage times."""
     torch, A = core.torch, core.A
     t0 = time.perf_counter()
-    prev = np.concatenate([np.zeros((1,) + C.FRAME, np.uint8), cur[:-1]])
+    gpu = not isinstance(cur, np.ndarray)
+    prev = torch.cat([torch.zeros_like(cur[:1]), cur[:-1]]) if gpu else np.concatenate([np.zeros((1,) + C.FRAME, np.uint8), cur[:-1]])
     ego = PA.ego_features(P, V, np.tile(np.asarray(acc, np.float32), (4, 1)), np.asarray(cmd, np.float32))
     cam_t = np.asarray(cam_t, np.float64)
     with torch.no_grad():
-        p, c = (torch.from_numpy(x[valid]).to(core.dev) for x in (prev, cur))
+        p, c = (x[np.flatnonzero(valid)] if gpu else torch.from_numpy(x[valid]).to(core.dev) for x in (prev, cur))
         H = core.model.net.run_batched(A.vision_feeds(p, c), ["view_39"])["view_39"].reshape(1, int(valid.sum()), *A.H_SHAPE)
         t1 = core._sync()
         tc = torch.tensor([[0.0, 1.0] if lht else [1.0, 0.0]], device=core.dev)
