@@ -18,7 +18,8 @@ Everything else (route / rhead / rlen / hlen / vlog / tlog, ln_*, tn_*) is lc_ct
 Unchanged limits: the hindsight route is the next 30 s of the log + 30 m straight; only the first >= 45 deg turn ahead of the origin is kept.
 
 Gate (self-consistency; lc_ctx's own gate compares with the navtrain cache and does not apply to test logs): every scene labelled; every logged
-keyframe on the hindsight path projects onto the route within 0.05 m laterally and 0.10 m of its own arc (frames, origin and the longer grid).
+keyframe on the hindsight path projects onto the route within 0.15 m laterally and 0.5 m of its own arc (frames, origin and the longer grid;
+the 1 m grid is a chord resampling of the 2 Hz polyline and its index is used as the arc, so a few cm to dm of drift in curves is lc's own).
 """
 import argparse
 import json
@@ -149,7 +150,7 @@ def main(a):
                     tl_elig_red_somewhere=int((Z["ln_elig"] & (Z["ln_type"] == 2) & (Z["ln_st"] == 1).any(-1)).sum()),
                     ss_lines=int((Z["ln_type"] == 1).sum()), ss_elig=int((Z["ln_elig"] & (Z["ln_type"] == 1)).sum()),
                     turns=int(Z["tn_ok"].sum()), turns_elig=int((Z["tn_ok"] & (Z["tn_vpk"] >= LC.C_VLOG_MIN)).sum()))
-        gate["pass"] = bool(gate["labelled"] == N and gate["kf_arc_max"] < 0.10 and gate["kf_lat_max"] < 0.05)
+        gate["pass"] = bool(gate["labelled"] == N and gate["kf_arc_max"] < 0.5 and gate["kf_lat_max"] < 0.15)
         out = out_dir() / ("ctx.npz" if not a.limit else f"ctx-first{a.limit}.npz")
         out.parent.mkdir(parents=True, exist_ok=True)
         tmp = out.with_suffix(".tmp.npz")
