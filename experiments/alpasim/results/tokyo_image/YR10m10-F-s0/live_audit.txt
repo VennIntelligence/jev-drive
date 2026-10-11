@@ -1,0 +1,22 @@
+cold_start_s 17.988831971
+server pid 1 uid ['10001', '10001', '10001', '10001'] CapEff 0000000000000000 NoNewPrivs 1
+server env: {"ALPASIM_CONTESTANT_REPLICAS": "1", "ALPASIM_CONTESTANT_REPLICA_INDEX": "0", "ALPASIM_DRIVER_GRPC_WORKERS": "8", "ALPASIM_DRIVER_HOST": "0.0.0.0", "ALPASIM_DRIVER_LOG_DIR": "/tmp/alpasim-driver", "ALPASIM_DRIVER_PORT": "6789", "ALPASIM_SRC": "/app/alpasim", "JEV_DRIVER": "auto", "JEV_LEAD": "0", "JEV_TAG": "YR10m10-F-s0", "JEV_VCONT": "0", "SH30_COMPILE": "0", "SH30_GIT_HASH": "073dea33"}
+write /app/x refused: Read-only file system
+write /x refused: Read-only file system
+write /app/data/runs/op_parity/runs/YR10m10-F-s0/x refused: Read-only file system
+write /run/x refused: Permission denied
+write /tmp/x OK
+interfaces ['lo']
+connect ('1.1.1.1', 443) refused: [Errno 101] Network is unreachable
+connect ('pypi.org', 443) refused: [Errno -3] Temporary failure in name resolution
+get_version: version_id: "jev-YR10m10-F-s0-backwarp" git_hash: "073dea33" grpc_api_version {   minor: 54 } 
+{"version": "jev-YR10m10-F-s0-backwarp", "git": "073dea33", "api": [0, 54, 0], "ready_wait_s": 0.01, "sessions": 2, "drives": 40, "jpeg_kb": 736, "drive_ms": {"p50": 50.5, "p90": 54.2, "p99": 69.7, "max": 70.2, "mean": 51.8}}
+{"kind": "close", "t": 1791733516.0615609, "session": "probe-0-1", "scene": "", "drive": 10, "inference": 10, "inference_error": 0, "input_error": 0, "state_rotated": 0, "cold": 3}
+{"kind": "drive", "t": 1791733516.0895746, "session": "probe-1-1", "scene": "", "now": 4517000, "t0": 4517000, "k": 9, "n_keys": 4, "n_slots": 8, "cmd": 1, "route0": [40.0, 0.0], "motion": 1.0, "line": [true, 0.0, 0.0], "rotated": [false, false, false, false], "ego": [1.0, 0.0, 1.0, 0.0, 0.800000011
+{"kind": "close", "t": 1791733516.090213, "session": "probe-1-1", "scene": "", "drive": 10, "inference": 10, "inference_error": 0, "input_error": 0, "state_rotated": 0, "cold": 3}
+ Used
+57344
+    0
+serve: driver sh30, tag YR10m10-F-s0, replica 0 of 1
+2026-10-11 15:45:02,748 INFO sh30: serving: JEV_VCONT 0, JEV_LEAD 0, JEV_BASE 0
+2026-10-11 15:45:02,748 INFO sh30: YR10m10-F-s0 (backwarp, motion 1.00, synth gpu, compiled False, jpeg libjpeg) ready in 4.9 s, VRAM 0.97 GiB

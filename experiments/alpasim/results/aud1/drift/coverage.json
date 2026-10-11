@@ -1,0 +1,63 @@
+{
+ "APY10m10-AB-s0": {
+  "scenes": 1491,
+  "with_parquet": 1479,
+  "run_dirs": 5
+ },
+ "APY10m10-AB-s1": {
+  "scenes": 1491,
+  "with_parquet": 1479,
+  "run_dirs": 5
+ },
+ "P2H10-F-s0": {
+  "scenes": 1491,
+  "with_parquet": 1479,
+  "run_dirs": 5
+ },
+ "P2H10-F-s1": {
+  "scenes": 1491,
+  "with_parquet": 1479,
+  "run_dirs": 5
+ },
+ "YR10m10-F-s0": {
+  "scenes": 1491,
+  "with_parquet": 1479,
+  "run_dirs": 5
+ },
+ "YR10m10-F-s1": {
+  "scenes": 1491,
+  "with_parquet": 1478,
+  "run_dirs": 5
+ },
+ "SH30-F-s0": {
+  "scenes": 1491,
+  "with_parquet": 1479,
+  "run_dirs": 6
+ },
+ "AP2-AB-s0": {
+  "scenes": 1491,
+  "with_parquet": 1479,
+  "run_dirs": 6
+ },
+ "WA-JEPA": {
+  "scenes": 1491,
+  "with_parquet": 1479,
+  "run_dirs": 11
+ },
+ "_logged_paths": {
+  "scenes": 1479,
+  "loaded": 1479,
+  "missing": []
+ },
+ "_ctrl_rows_with_pose": {
+  "AP2-AB-s0": 14790,
+  "APY10m10-AB-s0": 14790,
+  "APY10m10-AB-s1": 14790,
+  "P2H10-F-s0": 14790,
+  "P2H10-F-s1": 14790,
+  "SH30-F-s0": 14790,
+  "WA-JEPA": 14790,
+  "YR10m10-F-s0": 14790,
+  "YR10m10-F-s1": 14780
+ }
+}

@@ -1,0 +1,179 @@
+{
+ "APY10m10-AB-s0": {
+  "n_rollouts": 1491,
+  "n_clips": 1479,
+  "avg_scene_score": 0.9350983167036135,
+  "zeros": 83,
+  "sum_dist_traveled_km": 41.40293372916893,
+  "at_fault_incidents": 48.0,
+  "avg_dist_between_incidents_at_fault_km": 0.8625611193576861,
+  "dist_to_gt_trajectory_mean_m": 1.1299746850938777,
+  "dist_to_gt_trajectory_median_m": 0.4259878670586203,
+  "dist_to_gt_trajectory_p90_m": 3.4284260096370374,
+  "frac_dist_to_gt_ge_4m": 0.07707910750507099,
+  "mean_dist_traveled_m": 27.993869999438086,
+  "lateral_dist_to_gt_trajectory_mean_m": 0.7363835003862599,
+  "runs": [
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/APY10m10-AB-s0-chunk0/20261009-170125",
+    "n_clips": 234.0,
+    "avg_dist_between_incidents_at_fault": 1.139976487711103,
+    "dist_to_gt_trajectory": 1.0346807218750114
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/APY10m10-AB-s0-chunk1/20261009-170126",
+    "n_clips": 233.0,
+    "avg_dist_between_incidents_at_fault": 1.1753505477943311,
+    "dist_to_gt_trajectory": 0.9239096950012701
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/APY10m10-AB-s0-chunk2/20261009-170126",
+    "n_clips": 233.0,
+    "avg_dist_between_incidents_at_fault": 1.3051019822157437,
+    "dist_to_gt_trajectory": 1.1492174853453212
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/cf1/a/runs/APY10m10-AB-s0@new-ot3new/20261009-195520",
+    "n_clips": 390.0,
+    "avg_dist_between_incidents_at_fault": 0.8321429711355504,
+    "dist_to_gt_trajectory": 1.263131316936841
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/cf1/a/runs/APY10m10-AB-s0@fresh-cf1fresh/20261009-203623",
+    "n_clips": 389.0,
+    "avg_dist_between_incidents_at_fault": 0.5648668322386363,
+    "dist_to_gt_trajectory": 1.1657003180179137
+   }
+  ]
+ },
+ "P2H10-F-s0": {
+  "n_rollouts": 1491,
+  "n_clips": 1479,
+  "avg_scene_score": 0.9191619241712258,
+  "zeros": 89,
+  "sum_dist_traveled_km": 39.736726350687995,
+  "at_fault_incidents": 55.0,
+  "avg_dist_between_incidents_at_fault_km": 0.7224859336488727,
+  "dist_to_gt_trajectory_mean_m": 1.0195684366964546,
+  "dist_to_gt_trajectory_median_m": 0.4858338121545711,
+  "dist_to_gt_trajectory_p90_m": 2.9217409744966187,
+  "frac_dist_to_gt_ge_4m": 0.05544286680189317,
+  "mean_dist_traveled_m": 26.867293002493575,
+  "lateral_dist_to_gt_trajectory_mean_m": 0.762912075850547,
+  "runs": [
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/P2H10-F-s0-chunk0/20261009-125421",
+    "n_clips": 234.0,
+    "avg_dist_between_incidents_at_fault": 1.3184864693306162,
+    "dist_to_gt_trajectory": 0.9571679943596063
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/P2H10-F-s0-chunk1/20261009-125421",
+    "n_clips": 233.0,
+    "avg_dist_between_incidents_at_fault": 0.9798955507045792,
+    "dist_to_gt_trajectory": 0.8218355930241562
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/P2H10-F-s0-chunk2/20261009-125421",
+    "n_clips": 233.0,
+    "avg_dist_between_incidents_at_fault": 1.2665991985088827,
+    "dist_to_gt_trajectory": 1.0303749486519465
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/ot3/a/runs/P2H10-F-s0@new-ot3new/20261009-181257",
+    "n_clips": 390.0,
+    "avg_dist_between_incidents_at_fault": 0.6428088927466232,
+    "dist_to_gt_trajectory": 1.1064229720045917
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/cf1/a/runs/P2H10-F-s0@fresh-cf1fresh/20261009-195520",
+    "n_clips": 389.0,
+    "avg_dist_between_incidents_at_fault": 0.4394130396642036,
+    "dist_to_gt_trajectory": 1.0819907246827398
+   }
+  ]
+ },
+ "WA-JEPA": {
+  "n_rollouts": 1491,
+  "n_clips": 1479,
+  "avg_scene_score": 0.8946867967376453,
+  "zeros": 146,
+  "sum_dist_traveled_km": 39.804780233627625,
+  "at_fault_incidents": 75.0,
+  "avg_dist_between_incidents_at_fault_km": 0.5307304031150349,
+  "dist_to_gt_trajectory_mean_m": 1.19308431357366,
+  "dist_to_gt_trajectory_median_m": 0.5412015714734456,
+  "dist_to_gt_trajectory_p90_m": 3.9171897873018446,
+  "frac_dist_to_gt_ge_4m": 0.09939148073022312,
+  "mean_dist_traveled_m": 26.913306445995687,
+  "lateral_dist_to_gt_trajectory_mean_m": 0.8326219199037495,
+  "runs": [
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0b/runs/wajepa-c0/20261009-094102",
+    "n_clips": 234.0,
+    "avg_dist_between_incidents_at_fault": 0.49473778344332875,
+    "dist_to_gt_trajectory": 1.0346960160777812
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0b/runs/wajepa-c1/20261009-084558",
+    "n_clips": 233.0,
+    "avg_dist_between_incidents_at_fault": 0.557145685047989,
+    "dist_to_gt_trajectory": 0.9394632573981474
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0b/runs/wajepa-c2/20261009-084558",
+    "n_clips": 233.0,
+    "avg_dist_between_incidents_at_fault": 0.6192717393175431,
+    "dist_to_gt_trajectory": 1.1532899381303363
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0c/b1/runs/wajepa-c0/20261009-144444",
+    "n_clips": 96.0,
+    "avg_dist_between_incidents_at_fault": 0.6370628318575123,
+    "dist_to_gt_trajectory": 1.415606737099921
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0c/b1/runs/wajepa-c1/20261009-150344",
+    "n_clips": 96.0,
+    "avg_dist_between_incidents_at_fault": 0.2519720170342325,
+    "dist_to_gt_trajectory": 1.560768087654884
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0c/b1/runs/wajepa-c2/20261009-150645",
+    "n_clips": 98.0,
+    "avg_dist_between_incidents_at_fault": 0.2042173024252664,
+    "dist_to_gt_trajectory": 1.3536079757992383
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0c/b2/runs/wajepa-c0/20261009-174356",
+    "n_clips": 100.0,
+    "avg_dist_between_incidents_at_fault": 3.0589564359079766,
+    "dist_to_gt_trajectory": 0.9142006610886396
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0c/b2/runs/wajepa-c1/20261009-175757",
+    "n_clips": 100.0,
+    "avg_dist_between_incidents_at_fault": 2.9538215044944356,
+    "dist_to_gt_trajectory": 1.0944631082428977
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0c/b3/runs/wajepa-c0/20261009-185015",
+    "n_clips": 95.0,
+    "avg_dist_between_incidents_at_fault": 0.33581323759401865,
+    "dist_to_gt_trajectory": 1.5408079460053863
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0c/b3/runs/wajepa-c1/20261009-191315",
+    "n_clips": 97.0,
+    "avg_dist_between_incidents_at_fault": 0.8195168643290605,
+    "dist_to_gt_trajectory": 1.2391680275626191
+   },
+   {
+    "dir": "/root/autodl-tmp/ujs/runs/alpasim/c0c/b3/runs/wajepa-c2/20261009-191716",
+    "n_clips": 97.0,
+    "avg_dist_between_incidents_at_fault": 0.6525781077873143,
+    "dist_to_gt_trajectory": 1.536220022402882
+   }
+  ]
+ }
+}
