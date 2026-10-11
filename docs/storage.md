@@ -91,11 +91,22 @@ infra-accept,scale_check,unified,nq3,waymo_heads,op_cosmos_probe}`); and the per
 earlier decisions: `runs/cosmos*` samples, `runs/hugsim-exam`, `runs/hugsim-wajepa` (the ply fallback of
 `experiments/lowboard_diag/scripts/lbd_hugsim.py`). Each new HUGSIM bench run writes ply again (~27 MB x 2 per episode).
 
+2026-10-11b cleanup (user-approved, script and log in `tmp/cleanup_1011b.*` on the data disk): 535G -> 1474G free, 939G
+removed, all of it concluded-line material or B2D generated caches. The VT lane (decision 248): `runs/vis_train/{px,px_side}`
+(546G, pixel caches; `scripts/vt_px.py` / `vt_side.py` rebuild them), `native/{onnx,bias}`, `tokens`; the per-snapshot
+checkpoints `runs/op_parity/runs/VT-*-kNN`, `smoke-vt-*`, `UF-U*`, `smoke-U*`, `time-U*` (163G; the final `VT-*-s{0,1}`,
+`VTCP2-*` and `VTR-*` stay, so every read in reads.md can be repeated), the arm-R token banks `runs/op_parity/mem/vtr_*` (50G).
+TRT engines of concluded models in `runs/op_interp/trt_cache` and `models/openpilot/trt_cache` (85G; the engines of `cinque`,
+`SH30-F`, `P2H10-F`, `P2-F`, `shipped` and the `pp-*-chk` stay; any other model rebuilds its engine on first use). B2D generated
+caches: `runs/op_parity/cache/b2d_v2*` (24G), `runs/op_adapt_L/b2d`, `processed/op_route_cmd`. B2D infrastructure untouched
+(`third_party/carla`, the leaderboard envs, `checkpoints/scout`, `runs/op_route_ft`, `runs/op_wide_ft`, `runs/b2d` results).
+
 Live but regenerable (ask first):
 `runs/op_adapt_H/{fixbank,bank,samples,bank2}` non-CARLA parts ~300G (H line, last trained 2026-10-03, no live reader; `runs/`
-and `onnx/` stay for the bench `adapt_h` family), `runs/op_img_cmd/ft/{bank,runs}` 48G, `runs/op_adapt_L` 56G,
+and `onnx/` stay for the bench `adapt_h` family), `runs/op_img_cmd/ft/{bank,runs}` 48G, `runs/op_adapt_L` 52G (`t/H`, `gate_curve/*.npy`, `readout`),
 `runs/op_lb` side caches (`lb_hq_*`, `hq`, `g_*`, `lb_guardneg`, `lb_h1train`, `lb_imgtrain`) 42G, `runs/op_parity/runs/smoke-vt-*`
-24G, `processed/op_adapt/nusc` 41G, `datasets/comma1M` 21G, stale engines in `runs/op_interp/trt_cache` and
-`models/openpilot/trt_cache` (118G in total, prune by model name), `runs/{vlm_thin,vlm_cmp,opctrl,opctrl_long}` 31G.
-Paused CARLA / Bench2Drive material deliberately kept on 10-10 (`third_party/carla`, the leaderboard-model envs,
-`runs/op_route_ft`, `runs/op_parity/cache/b2d_v2`) is about 110G. Re-scan before deleting anything.
+24G, `processed/op_adapt/nusc` 41G, `datasets/comma1M` 21G, `runs/{vlm_thin,vlm_cmp,opctrl,opctrl_long}` 31G.
+Paused CARLA / Bench2Drive material deliberately kept (`third_party/carla`, the leaderboard-model envs,
+`runs/op_route_ft`) is about 85G. Also regenerable: `runs/bench/hugsim` ply (30G, refilled by every bench run), `runs/lowboard_diag/pai2`
+rollout.asl (27G), the HF copies of diffusiongemma / Qwen3-VL-8B / InternVL2 / unidepth (40G), `envs/{ultralytics,sam3}` with
+`models/{sam3.1,ultralytics,lama}` and `models/openpilot/{taps,lebowski*}` (28G, readers all concluded). Re-scan before deleting anything.
