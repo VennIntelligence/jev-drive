@@ -544,8 +544,9 @@ def cmd_tok(a):
             """Per row, trainer forward against served: max |difference| over (0) the first 15 plan points (x, y); (1) the 8 poses (x, y), the
             trainer's plan through the serving export (op_interp.to_rear, as sh30_core.Core.plan); (2) the same over the poses served within
             32 m (beyond it one fp16 ulp of a plan point is 0.031 m); (3) the 8 poses through the trainer's own formula (pp_train.rear, which
-            interpolates before the lever arm and drops the camera's lateral offset); (4) pp_train.rear of the served mu against the served poses."""
-            out = [[] for _ in range(5)]
+            interpolates before the lever arm and drops the camera's lateral offset); (4) pp_train.rear of the served mu against the served poses;
+            (5) the first 15 plan points again, in fp16 ulps of the served value (the plan head's output precision)."""
+            out = [[] for _ in range(6)]
             for i in range(0, len(rows), 128):
                 r = rows[i:i + 128]
                 rt = torch.as_tensor(r, device=dev)
@@ -554,7 +555,9 @@ def cmd_tok(a):
                 pn = p.cpu().numpy()
                 ex = np.stack([I.to_rear(q[:, 0:3], q[:, 11], I.T_IDXS, c[:2], Z.T_OUT, "lever") for q, c in zip(pn, tab["cam"][r].astype(np.float64))])
                 d = np.abs(ex[..., :2] - M["poses"][r][..., :2]).max(2)
-                out[0].append((p[:, :15, :2] - mu[:, :15, :2]).abs().amax((1, 2)).cpu().numpy())
+                e = (p[:, :15, :2] - mu[:, :15, :2]).abs()
+                out[0].append(e.amax((1, 2)).cpu().numpy())
+                out[5].append((e / torch.exp2(torch.floor(torch.log2(mu[:, :15, :2].abs().clamp_min(2.0 ** -14))) - 10)).amax((1, 2)).cpu().numpy())
                 out[1].append(d.max(1))
                 out[2].append(np.where(np.abs(M["poses"][r][..., 0]) < 32.0, d, 0.0).max(1))
                 for j, q in ((3, p), (4, mu)):
@@ -566,15 +569,17 @@ def cmd_tok(a):
         for t in tags:
             rows = np.flatnonzero(M["tag"] == t)
             other = t[:-1] + str(1 - int(t[-1]))
-            (dm, dp, dn, dr, df), (cm, cp, _, _, _) = diff(models[t], rows), diff(models[other], rows)
+            (dm, dp, dn, dr, df, du), (cm, cp, _, _, _, cu) = diff(models[t], rows), diff(models[other], rows)
             r1["tags"][t] = dict(n=len(rows), mu_share=float((dm <= TOL_M).mean()), pose_share=float((dp <= TOL_M).mean()), mu_median=float(np.median(dm)),
                                  mu_max=float(dm.max()), pose_median=float(np.median(dp)), pose_max=float(dp.max()), control=other,
                                  pose_share_within_32m=float((dn <= TOL_M).mean()), pose_share_one_ulp=float((dp <= 0.03126).mean()), pose_share_trainer_formula=float((dr <= TOL_M).mean()),
-                                 rear_formula_max=float(df.max()),
+                                 rear_formula_max=float(df.max()), mu_ulp_share_1_2_4=[float((du <= q).mean()) for q in (1, 2, 4)], mu_ulp_max=float(du.max()),
+                                 control_mu_ulp_share_4=float((cu <= 4).mean()),
                                  control_mu_share=float((cm <= TOL_M).mean()), control_pose_share=float((cp <= TOL_M).mean()), control_pose_median=float(np.median(cp)))
             q = r1["tags"][t]
             lines.append((t, len(rows), f"{q['mu_share']:.4f}", f"{q['pose_share']:.4f}", f"{q['mu_median']:.4f} / {q['mu_max']:.4f}", f"{q['pose_median']:.4f} / {q['pose_max']:.4f}",
-                          f"{q['pose_share_within_32m']:.4f} / {q['pose_share_one_ulp']:.4f}", f"{q['pose_share_trainer_formula']:.4f} ({q['rear_formula_max']:.4f})", f"{other}: {q['control_mu_share']:.4f} / {q['control_pose_share']:.4f} (median {q['control_pose_median']:.3f} m)"))
+                          f"{q['pose_share_within_32m']:.4f} / {q['pose_share_one_ulp']:.4f}", f"{q['pose_share_trainer_formula']:.4f} ({q['rear_formula_max']:.4f})",
+                          " / ".join(f"{v:.3f}" for v in q["mu_ulp_share_1_2_4"]) + f" (max {q['mu_ulp_max']:.0f}; control <= 4: {q['control_mu_ulp_share_4']:.3f})", f"{other}: {q['control_mu_share']:.4f} / {q['control_pose_share']:.4f} (median {q['control_pose_median']:.3f} m)"))
         r1["pass"] = bool(all(q["mu_share"] >= 0.99 and q["pose_share"] >= 0.99 and q["control_pose_share"] < 0.5 for q in r1["tags"].values()))
         (out / "r1.json").write_text(json.dumps(r1, indent=1) + "\n")
         (out / "r1.md").write_text("\n".join([f"# Gate R1 (inputs), rows `{a.name}`: {'PASS' if r1['pass'] else 'FAIL'}", "",
@@ -582,8 +587,9 @@ def cmd_tok(a):
                                               ">= 0.99 on both; the 8 poses = the trainer's plan through the serving export (op_interp.to_rear). Control = the other seed's checkpoint on the same "
                                               "rows (must stay below 0.5 on the poses). Diagnostics, not the gate: the pose share counted over the poses served within 32 m only / with a 0.03126 m "
                                               "tolerance (one fp16 ulp of a plan point beyond 32 m); the pose share with the trainer's own pose formula (pp_train.rear) and, in brackets, the "
-                                              "largest difference of that formula from the serving export on the served plan itself.", ""] +
-                                             md_table(["serving tag", "rows", "first 15 plan points", "8 poses", "plan points median / max (m)", "poses median / max (m)", "poses within 32 m / one-ulp tolerance", "poses, trainer formula (formula gap, m)", "wrong-seed control (points / poses)"], lines) + [""]))
+                                              "largest difference of that formula from the serving export on the served plan itself; the share of rows whose first 15 plan points all "
+                                              "lie within 1 / 2 / 4 fp16 ulps of the served value.", ""] +
+                                             md_table(["serving tag", "rows", "first 15 plan points", "8 poses", "plan points median / max (m)", "poses median / max (m)", "poses within 32 m / one-ulp tolerance", "poses, trainer formula (formula gap, m)", "plan points within 1 / 2 / 4 ulps", "wrong-seed control (points / poses)"], lines) + [""]))
         # ---- own-plan activation of each label (S's hinges as loss43 runs them: agent 0.3 m in the corridor / 0 beside it, road 0.3 m)
         ah = AgentHinge(root / "agent.npz", tab["names"], dev, 0.3, 0.0)
         rh, nh = Hinge(root / "road.npz", tab["names"], dev, 0.3), Hinge(root / "drivable.npz", tab["names"], dev, 0.3)
