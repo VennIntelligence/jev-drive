@@ -1,0 +1,11 @@
+pair,group,n,share_states,mean_diff_m,share_of_total_diff
+P2H10SM-P-s0,contact,258,0.0510,-0.1617,0.5084
+P2H10SM-P-s0,lead,1047,0.2068,-0.0609,0.7767
+P2H10SM-P-s0,near obj,645,0.1274,-0.0482,0.3789
+P2H10SM-P-s0,near edge,849,0.1677,0.0178,-0.1838
+P2H10SM-P-s0,open,2263,0.4471,0.0174,-0.4802
+P2H10S-P-s0,contact,258,0.0510,-0.1897,0.4177
+P2H10S-P-s0,lead,1047,0.2068,-0.0620,0.5539
+P2H10S-P-s0,near obj,645,0.1274,-0.0442,0.2435
+P2H10S-P-s0,near edge,849,0.1677,0.0062,-0.0452
+P2H10S-P-s0,open,2263,0.4471,0.0088,-0.1698

@@ -124,3 +124,11 @@ One seed, pilot scale (2 of 12 shards, 3 000 steps); open loop only; whether W2 
 tolerance 12 comes from full-scale seeds; the hold logs have been read many times by this lane; the 0.05 m slack and the per-row (not per-object)
 cap are fixed here without a sweep; a per-row cap also lowers the margin for objects the logged path did not pass closely, when another
 object was close.
+
+**Status after the read (2026-10-11 17:53 box time, added after the reads; nothing above was changed).** G0.a met: `LM-IDENT-OFF` against
+`B43A7-IDENT-S1`, 42 scalars and every weight bit for bit. G0.b met: the logged path gives zero hinge on 39 739 / 39 739 agent rows and 24 352 /
+24 352 road rows; hinge-only rows equal their source log rows on all 24 352 (largest difference 1.5e-5 m agent, 7.6e-6 m road). G0.c: the logged
+path violates S's road margin on 13.3 % of hinge-only rows (10.2 % on turns over 45 deg) and S's agent margin on 0.04 % (none on turns). Pilot
+`P2H10SM-P-s0`, one read: **(i) not met**, W2 142 against 110 (limit 122; S pilot 140 in the same call); (ii) met, agent -37.9 %, boundary -33.8 %;
+(iii) met, dev ADE 0.5902 m, arc ratio 0.9992. By section 6: the fixed margin is not the drift mechanism (pilot scale); not a candidate; no further
+run. 0.245 card-hours. Details: [results/logmargin_pilot.md](../results/logmargin_pilot.md).
