@@ -109,11 +109,8 @@ def _prog(Rr, scenes, h):
 
 
 def _progress(r):
-    m = r.get("metrics") or {}
-    for k in ("progress", "progress_ratio", "route_progress"):
-        if k in m:
-            return float(m[k])
-    return float("nan")
+    """progress_clipped_rel, as shape_cl_report.py reads it (missing counts as 0)."""
+    return float((r.get("score_metrics") or {}).get("progress_clipped_rel") or 0.0)
 
 
 if __name__ == "__main__":
