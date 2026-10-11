@@ -1,0 +1,461 @@
+{
+ "tol_m": 0.03,
+ "t_max_model_s": 3.2,
+ "backend": "trt",
+ "onnx": "/root/autodl-tmp/ujs/runs/bench/hugsim/_onnx/pp-P2H10-F-s0.onnx",
+ "passed": true,
+ "total": {
+  "off": {
+   "n": 989,
+   "over": 0,
+   "max_m": 0.0,
+   "share_over": 0.0
+  },
+  "nod": {
+   "n": 989,
+   "over": 163,
+   "max_m": 6.2109375,
+   "share_over": 0.16481294236602628
+  },
+  "zb": {
+   "n": 989,
+   "over": 989,
+   "max_m": 11.419921875,
+   "share_over": 1.0
+  }
+ },
+ "rows": [
+  {
+   "scenario": "0000_2800_3000_easy_00",
+   "arm": "off",
+   "n": 81,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "0000_2800_3000_easy_00",
+   "arm": "nod",
+   "n": 81,
+   "over": 33,
+   "max_m": 5.984375,
+   "median_m": 0.0,
+   "kappa_max": 0.011631971457973123
+  },
+  {
+   "scenario": "0000_2800_3000_easy_00",
+   "arm": "zb",
+   "n": 81,
+   "over": 81,
+   "max_m": 6.765625,
+   "median_m": 2.125,
+   "kappa_max": 0.007275901734828949
+  },
+  {
+   "scenario": "0000_570_770_easy_00",
+   "arm": "off",
+   "n": 34,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "0000_570_770_easy_00",
+   "arm": "nod",
+   "n": 34,
+   "over": 7,
+   "max_m": 6.2109375,
+   "median_m": 0.0,
+   "kappa_max": 0.00286139571107924
+  },
+  {
+   "scenario": "0000_570_770_easy_00",
+   "arm": "zb",
+   "n": 34,
+   "over": 34,
+   "max_m": 6.0625,
+   "median_m": 1.3125,
+   "kappa_max": 0.0091705322265625
+  },
+  {
+   "scenario": "0000_5980_6180_easy_00",
+   "arm": "off",
+   "n": 49,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "0000_5980_6180_easy_00",
+   "arm": "nod",
+   "n": 49,
+   "over": 25,
+   "max_m": 4.609375,
+   "median_m": 0.4107666015625,
+   "kappa_max": 0.02829084638506174
+  },
+  {
+   "scenario": "0000_5980_6180_easy_00",
+   "arm": "zb",
+   "n": 49,
+   "over": 49,
+   "max_m": 6.546875,
+   "median_m": 2.2529296875,
+   "kappa_max": 0.016439503990113735
+  },
+  {
+   "scenario": "0000_8440_8640_easy_00",
+   "arm": "off",
+   "n": 97,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "0000_8440_8640_easy_00",
+   "arm": "nod",
+   "n": 97,
+   "over": 54,
+   "max_m": 5.390625,
+   "median_m": 0.2421875,
+   "kappa_max": 0.021072128787636757
+  },
+  {
+   "scenario": "0000_8440_8640_easy_00",
+   "arm": "zb",
+   "n": 97,
+   "over": 97,
+   "max_m": 7.734375,
+   "median_m": 2.765625,
+   "kappa_max": 0.014385223388671875
+  },
+  {
+   "scenario": "021_extreme_02",
+   "arm": "off",
+   "n": 24,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "021_extreme_02",
+   "arm": "nod",
+   "n": 24,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "021_extreme_02",
+   "arm": "zb",
+   "n": 24,
+   "over": 24,
+   "max_m": 8.3203125,
+   "median_m": 0.8818359375,
+   "kappa_max": 0.008229255676269531
+  },
+  {
+   "scenario": "034_hard_00",
+   "arm": "off",
+   "n": 20,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "034_hard_00",
+   "arm": "nod",
+   "n": 20,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "034_hard_00",
+   "arm": "zb",
+   "n": 20,
+   "over": 20,
+   "max_m": 6.625,
+   "median_m": 2.2578125,
+   "kappa_max": 0.0051032304763793945
+  },
+  {
+   "scenario": "039_easy_00",
+   "arm": "off",
+   "n": 32,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "039_easy_00",
+   "arm": "nod",
+   "n": 32,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "039_easy_00",
+   "arm": "zb",
+   "n": 32,
+   "over": 32,
+   "max_m": 7.5625,
+   "median_m": 4.1875,
+   "kappa_max": 0.0036610602983273566
+  },
+  {
+   "scenario": "040_easy_00",
+   "arm": "off",
+   "n": 119,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "040_easy_00",
+   "arm": "nod",
+   "n": 119,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "040_easy_00",
+   "arm": "zb",
+   "n": 119,
+   "over": 119,
+   "max_m": 5.515625,
+   "median_m": 0.921875,
+   "kappa_max": 0.004780769348144531
+  },
+  {
+   "scenario": "113792265837_0_200_easy_00",
+   "arm": "off",
+   "n": 192,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "113792265837_0_200_easy_00",
+   "arm": "nod",
+   "n": 192,
+   "over": 24,
+   "max_m": 2.5594482421875,
+   "median_m": 0.0,
+   "kappa_max": 0.007984868250787258
+  },
+  {
+   "scenario": "113792265837_0_200_easy_00",
+   "arm": "zb",
+   "n": 192,
+   "over": 192,
+   "max_m": 5.09375,
+   "median_m": 2.41796875,
+   "kappa_max": 0.009339746087789536
+  },
+  {
+   "scenario": "144248042870_0_200_extreme_00",
+   "arm": "off",
+   "n": 21,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "144248042870_0_200_extreme_00",
+   "arm": "nod",
+   "n": 21,
+   "over": 9,
+   "max_m": 1.18359375,
+   "median_m": 0.0,
+   "kappa_max": 0.006606728304177523
+  },
+  {
+   "scenario": "144248042870_0_200_extreme_00",
+   "arm": "zb",
+   "n": 21,
+   "over": 21,
+   "max_m": 7.677734375,
+   "median_m": 2.5390625,
+   "kappa_max": 0.006986948661506176
+  },
+  {
+   "scenario": "398895700423_0_200_easy_00",
+   "arm": "off",
+   "n": 161,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "398895700423_0_200_easy_00",
+   "arm": "nod",
+   "n": 161,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "398895700423_0_200_easy_00",
+   "arm": "zb",
+   "n": 161,
+   "over": 161,
+   "max_m": 5.296875,
+   "median_m": 2.11328125,
+   "kappa_max": 0.007847846718505025
+  },
+  {
+   "scenario": "881121006469_0_200_hard_00",
+   "arm": "off",
+   "n": 34,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "881121006469_0_200_hard_00",
+   "arm": "nod",
+   "n": 34,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "881121006469_0_200_hard_00",
+   "arm": "zb",
+   "n": 34,
+   "over": 34,
+   "max_m": 11.419921875,
+   "median_m": 2.92425537109375,
+   "kappa_max": 0.01641237363219261
+  },
+  {
+   "scenario": "scene-0013_medium_00",
+   "arm": "off",
+   "n": 21,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "scene-0013_medium_00",
+   "arm": "nod",
+   "n": 21,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "scene-0013_medium_00",
+   "arm": "zb",
+   "n": 21,
+   "over": 21,
+   "max_m": 4.7265625,
+   "median_m": 2.546875,
+   "kappa_max": 0.0057468414306640625
+  },
+  {
+   "scenario": "scene-0041_medium_00",
+   "arm": "off",
+   "n": 24,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "scene-0041_medium_00",
+   "arm": "nod",
+   "n": 24,
+   "over": 11,
+   "max_m": 3.886688232421875,
+   "median_m": 0.0,
+   "kappa_max": 0.004928458365611732
+  },
+  {
+   "scenario": "scene-0041_medium_00",
+   "arm": "zb",
+   "n": 24,
+   "over": 24,
+   "max_m": 6.46875,
+   "median_m": 4.3203125,
+   "kappa_max": 0.0015277862548828125
+  },
+  {
+   "scenario": "scene-0051_easy_00",
+   "arm": "off",
+   "n": 43,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "scene-0051_easy_00",
+   "arm": "nod",
+   "n": 43,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "scene-0051_easy_00",
+   "arm": "zb",
+   "n": 43,
+   "over": 43,
+   "max_m": 7.09375,
+   "median_m": 2.0625,
+   "kappa_max": 0.003684957162477076
+  },
+  {
+   "scenario": "scene-0930_hard_00",
+   "arm": "off",
+   "n": 37,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "scene-0930_hard_00",
+   "arm": "nod",
+   "n": 37,
+   "over": 0,
+   "max_m": 0.0,
+   "median_m": 0.0,
+   "kappa_max": 0.0
+  },
+  {
+   "scenario": "scene-0930_hard_00",
+   "arm": "zb",
+   "n": 37,
+   "over": 37,
+   "max_m": 8.0,
+   "median_m": 3.140625,
+   "kappa_max": 0.008707046508789062
+  }
+ ]
+}
