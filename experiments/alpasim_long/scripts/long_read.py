@@ -162,14 +162,14 @@ def report(a):
                     s_, c_ = per_log(d, col)
                     pairs.append(dict(length=L, a=p, b=q, metric=col, diff=d[col].mean(), ci=ci(boot(s_, c_))))
     P = pd.DataFrame(pairs)
-    md = ["## Per checkpoint and length", "", md(T), "",
+    out = ["## Per checkpoint and length", "", md(T), "",
           "## Recipes (seed mean per scene), ranks per length", "", Rmd(T), "",
           "## Paired recipe differences a - b (log-clustered bootstrap, 10 000 draws)", "", md(P), "",
           f"Scenes in every label: {len(scenes)}; logs: {len(logs)}."]
-    Path(a.out).write_text("\n".join(md) + "\n")
+    Path(a.out).write_text("\n".join(out) + "\n")
     if a.json:
         Path(a.json).write_text(json.dumps(dict(labels=tab, recipes=rec, pairs=pairs, scenes=len(scenes)), indent=1, default=float))
-    print("\n".join(md))
+    print("\n".join(out))
 
 
 if __name__ == "__main__":
