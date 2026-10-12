@@ -23,13 +23,17 @@ dist_to_gt >= 4 m (corridor); the first such step k_z ends the rollout for this 
              route at the crossing is <= 2.5 m (projections are local: within -30 / +60 m of the previous decision's station)
   cover      memory covers +20 m (rmem.I20 valid) at the decision 20 m before the entry: the last decision with station <= entry - 20 m
              (decision 0 when the rollout starts closer). served = the logged `rmem`; offline = the same memory rebuilt from the
-             regenerated messages (rm_build feats_of; G-serve showed both equal); auto = served when every decision logs `rmem`, else no
-             buckets (old checkpoints: completion only)
+             regenerated messages (rm_build feats_of; G-serve showed both equal); auto = served when every decision logs `rmem`, else
+             offline (old checkpoints: the memory they would have held; prereg Amendment 1 needs it for the reference side)
   junction   decisions k <= k_z with station in [entry - 20, exit + 10] m: |distance to the route|, pooled over scenes (median / p90)
   plan 2 s   arc length of the served plan from the rear axle through its 0.5 .. 2.0 s poses minus the fed speed x 2 s, decisions
              k <= k_z with speed >= 1 m/s (all, and the junction stretch); reported only (decision 285's "plan shorter than the car")
 CIs: log-clustered bootstrap (10 000 draws, jevdrive.stats), log = scene id without its last "-<hash>"; --pairs A:B gives the rate
 difference A - B with one draw of logs applied to both (bucket members may differ between labels: the ego paths differ).
+Per-decision L5 (plans/2026-10-13-route-night-prereg.md Amendment 1), for every --pairs A:B: junction-stretch decisions of the turn scenes
+present in both labels on the same (scene, k); half = covered when that decision's memory covers +20 m in both, uncovered when in neither,
+discordant pairs counted and left out; statistic = median |lateral| of A minus median |lateral| of B over the half's pairs (also the median
+of the paired differences), log-clustered paired bootstrap (B = 10 000, one draw of logs for both). Line: covered half, RBS - RB0 CI upper < 0.
 """
 from __future__ import annotations
 
@@ -124,7 +128,7 @@ def one(job):
     Rl = Rl[keep]
     S = stations(Rl)
     served = all("rmem" in r for r in recs)
-    mode = ("served" if served else "none") if cover == "auto" else cover
+    mode = ("served" if served else "offline") if cover == "auto" else cover
     if mode == "served" and not served:
         raise ValueError(f"{scene}: --cover served but the drive records have no rmem")
     F = feats_of(W, A) if mode == "offline" else {r["k"]: np.asarray(r["rmem"], np.float32) for r in recs} if mode == "served" else None
@@ -203,6 +207,32 @@ def diff_rate(T, A, B, mask_a, mask_b):
                 n_a=int(len(xa)), n_b=int(len(xb)))
 
 
+def dec_pair(Dx, A, B):
+    """Amendment 1: paired junction-stretch decisions of labels A and B -> {covered, uncovered: stats}, discordant count."""
+    cols = ["scene", "k", "lat", "c20"]
+    m = Dx[(Dx.label == A) & Dx.junction][cols].merge(Dx[(Dx.label == B) & Dx.junction][cols], on=["scene", "k"], suffixes=("_a", "_b"))
+    ca, cb = m.c20_a.astype(bool), m.c20_b.astype(bool)
+    out = dict(pairs=int(len(m)), discordant=int((ca != cb).sum()))
+    rng = np.random.default_rng(0)
+    for half, sel in (("covered", ca & cb), ("uncovered", ~ca & ~cb)):
+        x = m[sel.to_numpy()]
+        if not len(x):
+            out[half] = dict(n=0)
+            continue
+        la, lb = x.lat_a.abs().to_numpy(), x.lat_b.abs().to_numpy()
+        lg = x.scene.str.rsplit("-", n=1).str[0].to_numpy()
+        L, inv = np.unique(lg, return_inverse=True)
+        idx = [np.flatnonzero(inv == j) for j in range(len(L))]
+        bd, bp = np.empty(N_BOOT), np.empty(N_BOOT)
+        for b in range(N_BOOT):
+            r = np.concatenate([idx[j] for j in rng.integers(0, len(L), len(L))])
+            bd[b], bp[b] = np.median(la[r]) - np.median(lb[r]), np.median(la[r] - lb[r])
+        out[half] = dict(n=int(len(x)), scenes=int(x.scene.nunique()), logs=int(len(L)), med_a=float(np.median(la)), med_b=float(np.median(lb)),
+                         diff=float(np.median(la) - np.median(lb)), lo=float(np.quantile(bd, 0.025)), hi=float(np.quantile(bd, 0.975)),
+                         paired_med=float(np.median(la - lb)), paired_lo=float(np.quantile(bp, 0.025)), paired_hi=float(np.quantile(bp, 0.975)))
+    return out
+
+
 def main(a):
     import pandas as pd
     import ev as EV
@@ -266,7 +296,7 @@ def main(a):
             run.info(f"{lab}: {json.dumps(r, default=float)[:600]}")
         for p in a.pairs or []:
             A, B = p.split(":")
-            Rj["pairs"][p] = {b: diff_rate(T, A, B, buckets[b], buckets[b]) for b in buckets
+            Rj["pairs"][p] = {"decision": dec_pair(Dx, A, B)} | {b: diff_rate(T, A, B, buckets[b], buckets[b]) for b in buckets
                               if b in ("all", "left", "right") or (Rj["labels"][A]["cover_mode"] != "none" and Rj["labels"][B]["cover_mode"] != "none")}
         (out / "follow.json").write_text(json.dumps(Rj, indent=1, default=float) + "\n")
         f = lambda r: "-" if not r or not r.get("n") else f"{100 * r['rate']:.1f} % ({r['n']}) [{100 * r['lo']:.0f}, {100 * r['hi']:.0f}]"  # noqa: E731
@@ -279,7 +309,7 @@ def main(a):
               "| label | rollouts / turns | completion all | left | right | covered | uncovered | completed / event / off / short | junction lat median / p90 (m) | plan 2 s deficit median (junction) | route0 <= 5 cm |",
               "|:--|--:|:--|:--|:--|:--|:--|:--|:--|:--|--:|"]
         for lab, r in Rj["labels"].items():
-            md.append(f"| {lab} | {r['rollouts']} / {r['turns']} | {f(r['all'])} | {f(r['left'])} | {f(r['right'])} | {f(r.get('covered'))} | {f(r.get('uncovered'))} | "
+            md.append(f"| {lab} ({r['cover_mode']}) | {r['rollouts']} / {r['turns']} | {f(r['all'])} | {f(r['left'])} | {f(r['right'])} | {f(r.get('covered'))} | {f(r.get('uncovered'))} | "
                       f"{' / '.join(str(v) for v in r['outcomes'].values())} | "
                       f"{r['junction_lat']['median']:.2f} / {r['junction_lat']['p90']:.2f} ({r['junction_lat']['n']}) | "
                       f"{r['plan2s_deficit']['median']:+.2f} ({r['plan2s_deficit']['junction_median']:+.2f}) | {r['g0_share_005']:.3f} |")
@@ -287,7 +317,19 @@ def main(a):
             md += ["", "| pair A - B | bucket | completion difference (pp) [95 % CI] | n A / n B |", "|:--|:--|:--|:--|"]
             for p, v in Rj["pairs"].items():
                 for b, q in v.items():
+                    if b == "decision":
+                        continue
                     md.append(f"| {p} | {b} | {100 * q['diff']:+.1f} [{100 * q['lo']:+.1f}, {100 * q['hi']:+.1f}] | {q['n_a']} / {q['n_b']} |")
+        if Rj["pairs"]:
+            md += ["", "Per-decision L5 (Amendment 1): junction-stretch decisions paired on (scene, k), |lateral to the route| (m), A - B difference of medians "
+                   "[log-clustered paired 95 % CI], median of paired differences beside it:", "",
+                   "| pair A - B | half | pairs (scenes / logs) | median A / B | A - B medians [CI] | paired median [CI] |", "|:--|:--|:--|:--|:--|:--|"]
+            for p, v in Rj["pairs"].items():
+                for h in ("covered", "uncovered"):
+                    q = v["decision"][h]
+                    md.append(f"| {p} | {h} | {q['n']} ({q.get('scenes', 0)} / {q.get('logs', 0)}) | " + (f"{q['med_a']:.2f} / {q['med_b']:.2f} | {q['diff']:+.3f} [{q['lo']:+.3f}, {q['hi']:+.3f}] | "
+                              f"{q['paired_med']:+.3f} [{q['paired_lo']:+.3f}, {q['paired_hi']:+.3f}] |" if q["n"] else "- | - | - |"))
+                md.append(f"| {p} | discordant (left out) | {v['decision']['discordant']} of {v['decision']['pairs']} | | | |")
         if err:
             md += ["", f"{len(err)} rollouts without a route rebuild (excluded): " + ", ".join(sorted(err)[:10])]
         (out / "follow.md").write_text("\n".join(md) + "\n")
