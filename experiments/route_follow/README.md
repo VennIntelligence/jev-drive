@@ -22,7 +22,11 @@ README called RBSG2 the route-following candidate, withdrawn. Amendment 5: S-onl
 the cov20-only hinge (RBS2Gc) is worse. Counterfactual rows (RB-F) teach route switching at junctions (G-swap 55 % of need, 94 % on the
 counterfactual side) but not lane changes (5-7 %), and cost G-real.
 
-**Next.** Tokyo: RB0-F-s0 PAI re-roll with gains 20, RSG-L18-s0 PAI 281 read queued; RSG-L18 is a base only after PAI 281. The mechanism
+PAI 281 (Tokyo, controller gain rel_front_steering_angle_weight 20 after expert B's pilot passed): RSG-L18-s0 0.572 / 70 zeros, the best
+stored PAI read (YS-L18-s0 0.517 / 96, paired +0.056 [+0.019, +0.093]; YR10m10-F-s0 +0.086), but the references ran with gains 5 (the pilot
+gives ~19 spins and ~3 zeros of a YS-L18 read to the gains); same-gains references are queued.
+
+**Next.** Same-gains PAI references (RB0-F-s0 / ys0 at gains 20); RSG-PAI-s0 (PAI on-policy rows, trained) 281 read; RBSG2-L18-s0 281 (mechanism). The mechanism
 lead (the hinge needs the policy's own over-turning states) is for a next round, with a public-set read before any held claim (held 452
 could not separate RBSG2 from RSG; the public set separates them by 32.5 zeros).
 
