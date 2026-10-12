@@ -56,26 +56,29 @@
   "pass": true
  },
  "G_dump": {
-  "pass_": null,
-  "note": "not available",
-  "pass": false
+  "pass": false,
+  "run": false,
+  "wording": "reconstructed slot pairs",
+  "reason": "G-dump not run on J_on: the held-452 validation of the reconstruction (600 decisions) is not within fp16 noise (token mean abs 8.5e-3 against a noise floor of 8.5e-4, per-row max p99 1.4); the coordinator's rule stops before J_on. Numbers: runs/junction_eyes/slots/validate.json and validate_fwd.json"
  },
  "G_ref": {
   "pass": false,
   "note": "[Errno 2] No such file or directory: '/root/autodl-tmp/ujs/runs/op_probe/feats/WA/lb_navtest-gref.npz'"
  },
  "G_repro": {
-  "old": {
-   "held_turn20": 0.9342325269808995,
-   "navtest_near": 1.1072536179643684
-  },
-  "old-s0": {
-   "held_turn20": 1.0738983308530747,
-   "navtest_near": 1.3135999476630618
-  },
-  "old-s1": {
-   "held_turn20": 0.9925097546938555,
-   "navtest_near": 1.0627397428398284
+  "P_row": {
+   "old": {
+    "held_turn20": 0.9342325269808995,
+    "navtest_near": 1.1072536179643684
+   },
+   "old-s0": {
+    "held_turn20": 1.0738983308530747,
+    "navtest_near": 1.3135999476630618
+   },
+   "old-s1": {
+    "held_turn20": 0.9925097546938555,
+    "navtest_near": 1.0627397428398284
+   }
   },
   "held_range": [
    0.85,
@@ -85,7 +88,33 @@
    1.126,
    1.398
   ],
-  "pass": false
+  "P_row_in_range": false,
+  "c": {
+   "held_turn20": 0.9231268433654183,
+   "held_seeds": [
+    0.916282918824066,
+    0.9716296250688177
+   ],
+   "navtest_near": 1.198960839326848,
+   "navtest_seeds": [
+    1.334702269316652,
+    1.2960313955924008
+   ],
+   "held_range": [
+    0.85,
+    1.046
+   ],
+   "navtest_range": [
+    1.126,
+    1.398
+   ],
+   "pass": true
+  },
+  "pass": true
  },
- "pass": false
+ "pass": false,
+ "not_passed": [
+  "G_dump",
+  "G_ref"
+ ]
 }

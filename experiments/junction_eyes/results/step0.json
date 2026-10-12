@@ -1,0 +1,250 @@
+{
+ "gates": {
+  "G_lab_cover": {
+   "held452": 0.9431009957325747,
+   "navtest16": 0.9448767833981842,
+   "zero98": 0.9725085910652921,
+   "pass": true
+  },
+  "G_lab_sign": {
+   "held452": {
+    "L": 1.529674768447876,
+    "C": -0.18275438249111176,
+    "R": -1.9325469732284546,
+    "ok": true
+   },
+   "navtest16": {
+    "L": 1.6073853969573975,
+    "C": -0.07250278443098068,
+    "R": -1.7903637886047363,
+    "ok": true
+   },
+   "zero98": {
+    "L": 3.831037998199463,
+    "C": 1.6997897624969482,
+    "R": -0.6525657773017883,
+    "ok": true
+   },
+   "pass": true
+  },
+  "G_lab_sides": {
+   "scenes": 20,
+   "tokens": 155,
+   "points": 2088,
+   "median": 0.0,
+   "p90": 0.010296211577951908,
+   "both_defined_share": 0.8980645161290323,
+   "rb_agree": 1.0,
+   "pass": true
+  },
+  "G_split": {
+   "token": {
+    "overlap": 0,
+    "first": []
+   },
+   "scene": {
+    "overlap": 0,
+    "first": []
+   },
+   "log": {
+    "overlap": 0,
+    "first": []
+   },
+   "unit": {
+    "overlap": 0,
+    "first": []
+   },
+   "pass": true
+  },
+  "G_dump": {
+   "pass": false,
+   "run": false,
+   "wording": "reconstructed slot pairs",
+   "reason": "G-dump not run on J_on: the held-452 validation of the reconstruction (600 decisions) is not within fp16 noise (token mean abs 8.5e-3 against a noise floor of 8.5e-4, per-row max p99 1.4); the coordinator's rule stops before J_on. Numbers: runs/junction_eyes/slots/validate.json and validate_fwd.json"
+  },
+  "G_ref": {
+   "pass": false,
+   "note": "[Errno 2] No such file or directory: '/root/autodl-tmp/ujs/runs/op_probe/feats/WA/lb_navtest-gref.npz'"
+  },
+  "G_repro": {
+   "P_row": {
+    "old": {
+     "held_turn20": 0.9342325269808995,
+     "navtest_near": 1.1072536179643684
+    },
+    "old-s0": {
+     "held_turn20": 1.0738983308530747,
+     "navtest_near": 1.3135999476630618
+    },
+    "old-s1": {
+     "held_turn20": 0.9925097546938555,
+     "navtest_near": 1.0627397428398284
+    }
+   },
+   "held_range": [
+    0.85,
+    1.046
+   ],
+   "navtest_range": [
+    1.126,
+    1.398
+   ],
+   "P_row_in_range": false,
+   "c": {
+    "held_turn20": 0.9231268433654183,
+    "held_seeds": [
+     0.916282918824066,
+     0.9716296250688177
+    ],
+    "navtest_near": 1.198960839326848,
+    "navtest_seeds": [
+     1.334702269316652,
+     1.2960313955924008
+    ],
+    "held_range": [
+     0.85,
+     1.046
+    ],
+    "navtest_range": [
+     1.126,
+     1.398
+    ],
+    "pass": true
+   },
+   "pass": true
+  },
+  "pass": false,
+  "not_passed": [
+   "G_dump",
+   "G_ref"
+  ]
+ },
+ "provisional": [
+  "G_dump",
+  "G_ref"
+ ],
+ "z0": {
+  "ra_near20_held452": {
+   "median": 1.5153989791870117,
+   "lo": 1.3344184160232544,
+   "hi": 1.7422306537628174,
+   "n": 1150,
+   "ok": false
+  },
+  "rb_offroad_ratio_held452": {
+   "ratio": 0.7612672887823512,
+   "lo": 0.7160934783333975,
+   "hi": 0.8082730986753118,
+   "iou_in": 0.692859003218425,
+   "iou_far": 0.9101389399335083,
+   "ok": false
+  },
+  "ra_near20_navtest16": {
+   "median": 0.9891402721405029,
+   "lo": 0.8149483099579811,
+   "hi": 1.1755002737045288,
+   "n": 776,
+   "ok": false
+  },
+  "rb_offroad_ratio_navtest16": {
+   "ratio": 0.8905883041100778,
+   "lo": 0.8415530989693345,
+   "hi": 0.9622825122463915,
+   "iou_in": 0.7816305267955981,
+   "iou_far": 0.8776564021651329,
+   "ok": true
+  }
+ },
+ "verdict": "go to step 1",
+ "rule41": {
+  "share15": 0.4626253418413856,
+  "share20": 0.6230975828111012,
+  "field_arms": true,
+  "g1_s15_only": true
+ },
+ "arms": [
+  "L-F0",
+  "L-F0-nav",
+  "U-F0",
+  "L-W90",
+  "L-3V"
+ ],
+ "counts": {
+  "held452": {
+   "rows": 8129,
+   "turn": 2109,
+   "straight": 4498,
+   "clusters": 452
+  },
+  "navtest16": {
+   "rows": 3712,
+   "turn": 1542,
+   "straight": 1445,
+   "clusters": 39
+  },
+  "zero98": {
+   "rows": 457,
+   "turn": 291,
+   "straight": 99,
+   "clusters": 72
+  },
+  "navtest_all": {
+   "rows": 12146,
+   "turn": 4635,
+   "straight": 5044,
+   "clusters": 136
+  }
+ },
+ "g1_inputs": {
+  "A|navtest16|s15": {
+   "median": 0.7289055585861206,
+   "lo": 0.6080804541707039,
+   "hi": 0.8554332613945007
+  },
+  "A|navtest16|s20": {
+   "median": 0.9891402721405029,
+   "lo": 0.8149483099579811,
+   "hi": 1.1755002737045288
+  },
+  "A|held452|s15": {
+   "median": 1.1288247108459473,
+   "lo": 0.9707963466644287,
+   "hi": 1.346754696965217
+  },
+  "A|held452|s20": {
+   "median": 1.5153989791870117,
+   "lo": 1.3344184160232544,
+   "hi": 1.7422306537628174
+  },
+  "A-blind|navtest16|s15": {
+   "median": 1.4923622608184814,
+   "lo": 1.1533221006393433,
+   "hi": 1.6816387176513672
+  },
+  "A-blind|navtest16|s20": {
+   "median": 2.133841037750244,
+   "lo": 1.739074355363846,
+   "hi": 2.5846822261810303
+  },
+  "A-blind|held452|s15": {
+   "median": 2.4597272872924805,
+   "lo": 2.1287155985832213,
+   "hi": 2.951450824737549
+  },
+  "A-blind|held452|s20": {
+   "median": 3.7780776023864746,
+   "lo": 3.2741655349731444,
+   "hi": 4.29542875289917
+  },
+  "A-s7|navtest16|s15": {
+   "median": 0.7556675672531128,
+   "lo": 0.6508188247680664,
+   "hi": 0.9088668197393411
+  },
+  "A-s7|navtest16|s20": {
+   "median": 1.0565165281295776,
+   "lo": 0.9166015982627869,
+   "hi": 1.2174437046051025
+  }
+ }
+}

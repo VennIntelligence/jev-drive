@@ -354,6 +354,7 @@ def report(a):
             x = np.arange(len(xb)) + (j - 1.5) * 0.08
             ax.errorbar(x, y, yerr=[np.clip(y - lo, 0, None), np.clip(hi - y, 0, None)], color=col[k], marker="o", ms=2.5, lw=1, capsize=1.5, label=lbl[k])
         ax.axhline(0.5, color="k", lw=0.5, ls=(0, (2, 3)))
+        ax.set_yscale("log")
         ax.set_xticks(np.arange(len(xb)), ["in", "0-10", "10-20", "20-40", "40-60", "none"], fontsize=7)
         ax.set_title({"navtest16": "navtest-16 (real)", "held452": "held-452 (reconstructed)", "zero98": "zero-98 (reconstructed)"}[g], fontsize=8)
         ax.set_xlabel("route distance to junction (m)", fontsize=7)
