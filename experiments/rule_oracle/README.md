@@ -1,14 +1,14 @@
 # rule_oracle: rule-based planner as AlpaSim nuPlan driver
 
-status: planned
+status: closed
 decisions: -
-index: scoped: PDM-Closed re-impl on the scene loader, 4 arms ~2.5 card-h
+index: closed 2026-10-12 (user): scoped only, not run; zero-shot form killed by d269 (heads unusable)
 
 **Question.** Can a mature rule-based planner (the PDM-Closed idea) drive the local AlpaSim nuPlan 18-decision loop (held 460 scenes),
 as a privileged oracle on the true map and replayed traffic (ceiling probe only, never an image) and zero-shot on the frozen openpilot
 model's lane / edge / lead heads, and is there a ceiling above the learned line (`YS-L18`)?
 
-**Conclusion.** Not run. Scoped (2026-10-12): both forms are feasible; the cheaper path is a ~450-line numpy PDM-Closed re-implementation
+**Conclusion.** Closed by the user on 2026-10-12 without running: a 450-line planner is not a credible ceiling on this road geometry, and the zero-shot form lost its input when decision 269 found the openpilot lane / edge / lead heads unusable on nuPlan city scenes. Scoped (2026-10-12): both forms are feasible; the cheaper path is a ~450-line numpy PDM-Closed re-implementation
 in AlpaSim's own venv that reads map, replayed traffic and logged path through the runtime's scene loader by the `debug_info.scene_id` the
 driver receives locally (same objects and frame as the simulator and evaluator); four registered arms (log replay L0, log route A1, honest
 route A2, lead-only A2L) cost about 2.5 card-hours.
