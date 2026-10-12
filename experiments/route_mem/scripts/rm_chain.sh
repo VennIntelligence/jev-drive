@@ -45,7 +45,7 @@ submit-build)
   sub rm-pool "" --vram 0.5 --cpu 32 --ram 80 --timeout-h 1 -- $P $E/scripts/rm_build.py pool --name L18YS --workers 32 || exit 1 ;;
 submit-train)   # after=$AFTER (comma ids) if set
   for s in "$@"; do
-    sub rm-train-s$s "${AFTER:-}" --train --vram 28 --cpu 6 --ram 70 --timeout-h 3 -- $TR $E/scripts/rm_train.py train --tag RM-L18-s$s --init YS-L18-s1 \
+    sub rm-train-s$s "${AFTER:-}" --train --vram 28 --cpu 6 --ram 70 --timeout-h 3 -- $TR $E/scripts/rm_train.py train --tag YRM-L18-s$s --init YS-L18-s1 \
       --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_L18YS \
       --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self --seed $s || exit 1
   done ;;
