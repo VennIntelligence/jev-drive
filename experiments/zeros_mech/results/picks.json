@@ -1,0 +1,50 @@
+[
+ {
+  "cls": "early-inside",
+  "label": "YS-L18-s1",
+  "scene": "2021.09.16.14.39.34_veh-42_00297_00935-a3882e6ae8635832",
+  "k": 8,
+  "type": "corridor",
+  "k_ev": 10
+ },
+ {
+  "cls": "late-outside",
+  "label": "YS-L18-s1",
+  "scene": "2021.09.16.14.39.34_veh-42_00297_00935-47da19c4edbe5b95",
+  "k": 9,
+  "type": "corridor",
+  "k_ev": 11
+ },
+ {
+  "cls": "command on a straight road",
+  "label": "YS-L18-s1",
+  "scene": "2021.05.25.17.54.41_veh-35_02723_02902-f42258b638fc5b64",
+  "k": 10,
+  "type": "corridor",
+  "k_ev": 16
+ },
+ {
+  "cls": "lead and deflection",
+  "label": "YS-L18-s1",
+  "scene": "2021.05.25.17.54.41_veh-35_04111_04288-8051c60f20705909",
+  "k": 9,
+  "type": "collision",
+  "k_ev": 9
+ },
+ {
+  "cls": "oncoming lane",
+  "label": "YS-L18-s1",
+  "scene": "2021.09.16.14.39.34_veh-42_00297_00935-bf00c76f25185b83",
+  "k": 13,
+  "type": "collision",
+  "k_ev": 17
+ },
+ {
+  "cls": "none of the three (drift)",
+  "label": "YS-L18-s1",
+  "scene": "2021.06.28.16.57.59_veh-26_00016_00484-0722adecc3d45ac4",
+  "k": 8,
+  "type": "collision",
+  "k_ev": 10
+ }
+]
