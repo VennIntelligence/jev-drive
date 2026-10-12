@@ -199,7 +199,7 @@ def ctrl(run, rid):
     if not f.exists():
         return None
     c = np.loadtxt(f, delimiter=",", skiprows=1, usecols=(0, 1, 2, 6, 7, 8, 9), ndmin=2)
-    return {int(r[0]): (r[1], r[2], 2 * np.arctan2(r[4], r[3]), float(np.hypot(r[5], r[6]))) for r in c}
+    return {int(r[0]): (r[1], r[2], 2 * np.arctan2(r[3], r[4]), float(np.hypot(r[5], r[6]))) for r in c}        # t, x, y, qz, qw, vx, vy
 
 
 def plan_at(P, a, dist):
