@@ -275,6 +275,65 @@ def cmd_gdump(a):
         (o / "gdump.json").write_text(json.dumps(res, indent=1))
 
 
+def cmd_zero(a):
+    """zero-98: the stored driver messages replayed through the real driver class (as eyes_vs_head ev.py replay); the slot pair (6, 7) of the
+    served decision is captured from Core.plan -> zero98_pairs.npy in zero98.parquet order (+ ok mask)."""
+    import pickle
+    import tempfile
+    import pandas as pd
+    import torch
+    import sys
+    sys.path[:0] = [str(_R / "experiments/eyes_vs_head/scripts")]
+    import ev as EV
+    import sh30_driver as D
+    from jevdrive.run import Run
+    df = pd.read_parquet(ROWS / "zero98.parquet").sort_values("rid").reset_index(drop=True)
+    want = {(r.tag, r.scene, int(r.k)): i for i, r in enumerate(df.itertuples())}
+    with Run("junction_eyes", "slots-zero", config=vars(a)) as run:
+        SLOTS.mkdir(parents=True, exist_ok=True)
+        out = np.lib.format.open_memmap(SLOTS / "zero98_pairs.npy", "w+", np.uint8, (len(df),) + PAIR)
+        ok = np.zeros(len(df), bool)
+        pb, ctx = D.egodriver_pb2, EV.Ctx()
+        for tag in sorted({t for t, _, _ in want}):
+            core = D.C.Core(tag, "cuda", "backwarp", 1.0, "gpu")
+            drv = D.Driver(core, Path(tempfile.mkdtemp()), 0, False)
+            last, orig = {}, core.plan
+
+            def plan(*x, _o=orig, **k):
+                last["o"] = _o(*x, **k)
+                return last["o"]
+            core.plan = plan
+            for scene in sorted({sc for t, sc, _ in want if t == tag}):
+                uuid = None
+                for kind, raw in pickle.load(open(EV.OUT / "msgs" / tag / f"{scene}.pkl", "rb")):
+                    if kind == "driver_session_request":
+                        req = pb.DriveSessionRequest.FromString(raw)
+                        uuid = req.session_uuid
+                        drv.start_session(req, ctx)
+                    elif kind == "driver_camera_image":
+                        drv.submit_image_observation(pb.RolloutCameraImage.FromString(raw), ctx)
+                    elif kind == "driver_ego_trajectory":
+                        drv.submit_egomotion_observation(pb.RolloutEgoTrajectory.FromString(raw), ctx)
+                    elif kind == "route_request":
+                        drv.submit_route(pb.RouteRequest.FromString(raw), ctx)
+                    elif kind == "driver_request":
+                        try:
+                            drv.drive(pb.DriveRequest.FromString(raw), ctx)
+                        except RuntimeError:
+                            continue
+                        k = drv.sessions[uuid].count["drive"] - 1
+                        i = want.get((tag, scene, k))
+                        if i is not None:
+                            out[i], ok[i] = pair_of(last["o"]["cur"]), True
+                drv.sessions.pop(uuid, None)
+            run.info(f"{tag}: {int(ok.sum())} of {len(df)} so far")
+            del core, drv
+            torch.cuda.empty_cache()
+        out.flush()
+        np.save(SLOTS / "zero98_pairs.ok.npy", ok)
+        run.info(f"{int(ok.sum())} of {len(df)} rows")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -289,8 +348,9 @@ if __name__ == "__main__":
     p.add_argument("--shard", type=int, default=0)
     p.add_argument("--of", type=int, default=1)
     cli_args(p)
+    cli_args(sp.add_parser("zero"))
     p = sp.add_parser("gdump")
     p.add_argument("--n", type=int, default=500)
     cli_args(p)
     a = ap.parse_args()
-    {"validate": cmd_validate, "held": cmd_held, "jon": cmd_jon, "gdump": cmd_gdump}[a.cmd](a)
+    {"validate": cmd_validate, "held": cmd_held, "jon": cmd_jon, "gdump": cmd_gdump, "zero": cmd_zero}[a.cmd](a)
