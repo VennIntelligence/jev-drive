@@ -77,3 +77,72 @@ slot-7 token of the same rows (`results/pixels/jon_direct.json`):
 | rows whose mean abs exceeds 10x the floor mean | 28.2 % | - |
 
 The direct numbers agree with the held-452 proxy; the reconstruction is not within fp16 noise (accepted by the coordinator). `step0/gdump.json` carries both.
+
+## 4. Field-of-view arms: the 90 deg wide slot (L-W90) and three views (L-3V) (executor 2b)
+Code: `scripts/je_w90.py` (`coverage`, `build`, `keep`, `link3v`, `check`); `jevdrive/op_interp.warp_view` (one view of `warp_frame`, optional K;
+`warp_frame`'s bytes unchanged). All 103 288 navtrain rows (J_nav is nearly all of navtrain, see section 1) and all 12 146 navtest rows; rows in
+the order of `px/<data>/frames-t0.npy`. Disk left after this section: 789 GB.
+
+![F0 wide, W90 wide, CAM_L0, CAM_R0 of one navtest right-angle turn](../figs/px_w90_3v.png)
+
+What to look at: the W90 frame (top right) holds the F0 frame's scene between the dashed lines (+-29.4 deg), the side cameras beyond the red
+seams (about +-36 deg); the black bands above and below are the same for every row. The bottom row is the 3V input (L0 / R0 along their
+mounting yaws, +-55 deg).
+
+### 4.1 W90 wide slot
+| file | shape | size |
+|:--|:--|--:|
+| `px90/<data>/w90-t0.npy`, data = `navtrain_full.s{0..11}of12`, `lb_navtest` | (N, 2, 6, 128, 256) uint8 = [prev, cur] wide frames | 393 216 B / row; 38.8 GB navtrain + 4.5 GB navtest |
+| `px90/mask.npy` | (128, 256) bool, True = seen (block grid of the 256 x 512 luma) | |
+| `px90/coverage.json` | per calibration: picks, seams, camera yaws and reach | |
+| `keep_w90/frames.npy` | (20391, 2, 6, 128, 256) uint8: road = `keep/frames.npy`'s, wide = W90 | 8.0 GB |
+| `keep_w90/{rows.npz, teacher_*, selection.json, ...}` | links to `keep/` (the teacher stays the factory model on the 58.7 deg frames) | |
+
+- Frame: `frames.wide_K(256)` (focal 256, principal point (256, 151.8)), +-45 deg. cur = the t0 keys of CAM_F0 / L0 / R0 reprojected by pure
+  rotation (parallax ignored), nearest sampling of libjpeg YCbCr and 2 x 2 chroma mean (`navsim_zs.OpenpilotMaps`' sampling): CAM_F0 wherever
+  it sees, else the side camera that sees the ray nearest its axis. prev = cur warped to the ego pose 0.2 s earlier with the F0 cache's
+  road-plane warp at the same K (`warp_view`, CAM_F0's position), as protocol W's t0 pair. Then the mask: black (Y 0, Cb Cr 128) outside it.
+- Mask: the block rows that all 20 calibrations of navtrain + navtest see across the full width = luma rows 68..243, 68.8 % of the rows
+  (elevation -19.7 to +18.2 deg); the same for every row. (77.1 % of the blocks are seen under every calibration; the corners outside the band
+  are blacked out too, so the slot is one horizontal band.)
+- Coverage: the three views reach -89.2 / +89.7 deg on the horizon (>= +-82.4 deg), no gap; mounting yaws L0 +54.7..55.4, R0 -54.9..-55.5 deg;
+  CAM_F0 sees +-36.0 deg. Seams (F0 -> side camera) at 34.1-38.1 deg either side depending on the calibration.
+- Keep rows: comma's wide camera (openpilot's pinhole model, focal 567) warped with `get_warp_matrix(rpy_calib, cam_K, True, model_K=wide_K(256))`
+  (je_keep's decode and warp path), then the same mask. The rows' road frames, fidx, teacher are keep/'s. Check: the factory-K warp of the
+  first frame of every window from the same decode = `keep/frames.npy`'s wide bytes, 58 of 58.
+
+Checks (`results/pixels/check-w90.json`; 256 random rows per data dir, 13 dirs = 3 328 rows):
+
+| check | result |
+|:--|:--|
+| (a) the renderer at the factory K with CAM_F0 only = the F0 t0 cache's wide slot | cur 3 328 / 3 328 byte-equal, prev 3 328 / 3 328 |
+| (b) stored W90 = a fresh render | 3 328 / 3 328 |
+| (d) W90 pixels inside +-29.4 deg not from CAM_F0 | 0 |
+| (c) central +-29.4 deg: W90 luma resampled (bilinear) back to the factory K vs the F0 wide luma, mean abs / p99 / max (98.8 % of the factory frame lies inside the band) | cur 4.30-4.54 / 36-39 / 190-222; prev 4.82-5.18 / 42-47 / 227-255 |
+| floor: the F0 wide luma to K 256 (area) and back (bilinear) | 4.13-4.36 |
+| reference: another row's frame | 52-63 |
+| (e) seams: mean luma step across the seam column vs neighbouring columns (4-12 px away), band rows | 10.7-12.8 vs 6.9-7.3 (ratio 1.55-1.77) |
+
+Reading: the centre is CAM_F0 itself (a, d); its difference to the F0 frame after the resampling round trip (4.4) is the resolution loss of
+focal 256 vs 455 (floor 4.2), not a misalignment (a wrong row: 52-63); the large maxima are single pixels at sharp edges (nearest sampling). The seams are continuous in geometry (no gap, no
+jump at the horizon in the figure) but show a 1.6-1.8x luma step from the cameras' exposure / white balance and the mounting offset
+(parallax of near objects); not corrected.
+
+### 4.2 3V: CAM_L0 / CAM_R0 t0 pairs
+The side cache of lane VT arm W (`vt_side.py build`, 2026-10-11) already covers every navtrain and navtest row with this semantics (per camera:
+the t0 key along its mounting yaw, and that key warped to the pose 0.2 s earlier). Not re-rendered: hard-linked (same inode, no extra disk;
+survives a clean-up of the vis_train path) by `je_w90.py link3v`.
+
+| file | shape | size |
+|:--|:--|--:|
+| `px_side/<data>/side_t0.npy` (hard link of `runs/vis_train/px_side/<data>/side_t0.npy`) | (N, 2, 2, 2, 6, 128, 256) uint8 = [CAM_L0, CAM_R0] x [prev, cur] x [road, wide] | 1.57 MB / row; 162 GB navtrain + 19 GB navtest |
+| `px_side/<data>/meta.npz` | names, cam_t, yaw, pose (lib/side_store.py) | |
+
+F0 view = `px/<data>/frames-t0.npy` (not duplicated). Checks (same 3 328 rows): side names = tab.npz names (13 / 13 dirs); the CAM_F0 view
+rendered through vt_side's pairing (key along the ego axis, `warp_frame` in the yaw-0 frame) = the F0 t0 cache bytes, 3 328 / 3 328; side cur
+= a fresh render 3 328 / 3 328, side prev = a fresh warp 3 328 / 3 328.
+
+### 4.3 Loading (experiments/junction_eyes/lib/je_data.py)
+- L-W90, J_nav / navtest rows: road slot from `px/<data>/frames-t0.npy[r, :, 0]`, wide slot from `px90/<data>/w90-t0.npy[r]` (same r). Keep rows:
+  `KeepStore(RUN / "keep_w90")`.
+- L-3V: F0 pair from `px/<data>/frames-t0.npy`; L0 / R0 pairs `PairStore(px_side/<data>/side_t0.npy, view=0 | 1)`.
