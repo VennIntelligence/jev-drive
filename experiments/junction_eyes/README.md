@@ -1,8 +1,8 @@
 # junction_eyes: teach Cinque's own eyes to see junctions
 
-status: live
+status: concluded
 decisions: 283
-index: frozen eye misses junction corridor, R-A 0.99 m vs 0.5; step 1 runs
+index: frozen eye misses junction corridor, R-A 0.99 m vs 0.5; step 1 stopped by the user before any arm
 
 **Question.** Does the frozen Cinque vision trunk already see the near corridor (own lane ahead, road edge, oncoming
 lane) at junctions on a fair ruler, and if not, can LoRA on the trunk (map labels as targets, no plan loss) teach it
@@ -10,10 +10,11 @@ without forgetting the native camera?
 
 **Conclusion.** Step 0: on the fair route-conditioned ruler the frozen eye does not see the near corridor at junctions (R-A at 20 m near
 junctions 0.99 m real / 1.52 m reconstructed against a 0.5 m bar; blind 2.13 / 3.78; 62 % of the 20 m label points lie outside the
-wide slot), so step 1 runs L-F0, L-F0-nav, U-F0, L-W90 and L-3V against a 0.10 m G1 bar (decision 283).
-
-**Next.** Step 1 (pre-registration B): L-F0, L-F0-nav, U-F0, L-W90, L-3V, 2 seeds each -> read protocol with a
-pipeline-matched Z' -> G1 / G2 / G3 -> step 2 policy only if an arm passes.
+wide slot), so step 1 was registered (pre-registration B, five arms against a 0.10 m G1 bar; decision 283). Stopped by the user on
+2026-10-12 night before any arm was trained: the PAI replays show the failure at junctions is not field of view but the
+policy not following the navigation waypoints (turns early, hits the curb); that line continues in
+[research/next-round/route-follow.md](../../research/next-round/route-follow.md). Trainer, Conv-LoRA, merge export and
+their gates are finished and reusable ([results/trainer.md](results/trainer.md)).
 
 **Read more.** [research/next-round/junction-eyes-plan.md](../../research/next-round/junction-eyes-plan.md) (the
 execution plan, Chinese), [research/next-round/junction-eyes.md](../../research/next-round/junction-eyes.md)
