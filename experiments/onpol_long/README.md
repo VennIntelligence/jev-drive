@@ -1,7 +1,7 @@
 # onpol_long: closed-loop training at 18 decisions, round 1
 
 status: live
-decisions: 264, 269, 270 (inputs 259, 262)
+decisions: 264, 269, 270, 271 (inputs 259, 262)
 index: S-only rows at 18 decisions on YR10m10-F: 0.838 vs base 0.785, zeros 44 vs 74; S + corridor not adopted
 
 **Question.** At 18 decisions (token + 8 s) in local AlpaSim nuPlan, do on-policy rows of the base's own rollouts on the 1031 train scenes,
@@ -19,12 +19,42 @@ A second on-policy round (rows from `YS-L18`'s own rollouts, from `YS-L18-s1`) d
 than its own no-row control and slightly worse than round 1 (zeros 50.5 against 43), so the loop stops at round 1 and "more rounds help"
 is recorded as negative for this setting.
 
-**Next.** Ego-status dropout arms `YSED` / `YSEX` (Amendment 11) reading; PAI transfer read on the Tokyo box (Amendments 1, 4, 5). `YS2G-L18` passed the
-public-mean guardrail of the last-slot rule (Amendment 10, decision 269); the candidate-scoring line stopped at its feasibility gate (Amendment 12, decision 270).
+**Next.** PAI transfer read on the Tokyo box (Amendments 1, 4, 5). `YS2G-L18` passed the
+public-mean guardrail of the last-slot rule (Amendment 10, decision 269); the candidate-scoring line stopped at its feasibility gate (Amendment 12, decision 270). Ego-status dropout (Amendment 11) does not cut the drift: it removes the open-loop reliance and drift rises (decision 271).
 
 **Read more.** [plans/2026-10-12-ol1-prereg.md](plans/2026-10-12-ol1-prereg.md); the plan: [research/next-round/closed-loop.md](../../research/next-round/closed-loop.md);
 the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpol_nuplan/README.md); the 18-decision driver path:
 [../alpasim_long/README.md](../alpasim_long/README.md).
+
+## Ego-status shortcut ablation (Amendment 11; YS-L18's recipe + ego-status dropout; held 452 at 18 decisions, every read on cards 1-5)
+
+[results/read/report_YSED.md](results/read/report_YSED.md), [report_YSEX.md](results/read/report_YSEX.md), [ego_drift.md](results/read/ego_drift.md) (slopes with
+log-clustered CIs, open-loop reliance; `ego_reliance.json`). `YS-L18-s0` and `YR10m10-F-s0` re-read off card 0 for this comparison (0.8345 / 45 zeros and
+0.7866 / 73, against their stored card-0 reads 0.835 / 45 and 0.785 / 74). The ego status = vx, vy, ax, ay and the 4 history poses of the adapter's ego
+vector (`present` and the command kept); `YSED` zeroes it on half the rows in training, `YSEX` everywhere, also when served.
+
+| | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) | drift slope (m / decision) | dev ADE intact / ego zeroed (m) |
+|:--|--:|--:|:--|--:|--:|:--|:--|
+| `YSED-L18` (p 0.5) s0 / s1 | 0.841 (0.832 / 0.851) | 54.5 | 10.5 / 14.0 / 31.0 | 24.5 | 1.576 | 0.119 [0.091, 0.150] | 0.541 / 0.610 |
+| `YSEX-L18` (removed) s0 / s1 | 0.842 (0.846 / 0.838) | 60.0 | 9.5 / 17.5 / 35.0 | 27.0 | 1.562 | 0.119 [0.090, 0.157] | 0.605 / 0.605 |
+| control `YS-L18` | 0.838 | 44.0 | 9.0 / 14.5 / 22.0 | 23.5 | 1.357 | 0.096 [0.072, 0.123] | 0.529 / 2.147 |
+| base `YR10m10-F` s0 (s0 + s1 for the slope) | 0.787 | 73 | 8 / 33 / 36 | 41 | 1.492 | 0.134 [0.095, 0.180] | 0.540 / 2.003 |
+
+| a - b (log-clustered 95 % CI) | mean score | zeros | at-fault zeros | GT distance (m) | drift slope |
+|:--|:--|:--|:--|:--|:--|
+| `YSED` - `YS-L18` | +0.003 [-0.013, +0.020] | +10.5 [+3.8, +18.4] | +1.0 [-3.1, +5.3] | +0.220 [+0.135, +0.309] | +0.023 [+0.007, +0.037] |
+| `YSEX` - `YS-L18` | +0.005 [-0.018, +0.027] | +16.0 [+7.2, +26.1] | +3.5 [-1.7, +8.2] | +0.205 [+0.114, +0.307] | +0.023 [+0.001, +0.048] |
+| `YS-L18` - base | +0.051 [+0.022, +0.080] | -29.0 [-42.6, -15.7] | -17.5 [-27.1, -6.7] | -0.135 [-0.262, -0.010] | -0.038 [-0.062, -0.016] |
+
+- Line 1 (arm interesting = drift slope and corridor zeros below `YS-L18`, at-fault zeros not above): **neither arm**; both drift faster, have 9-13 more corridor
+  zeros and 0.2 m more GT distance; the mean score does not move.
+- Line 2 (diagnostic): (a) the base relies on the ego status, both seeds: dev ADE 0.54 -> 1.96 / 2.05 m with it zeroed (reliance +1.42 / +1.51 m, almost all
+  longitudinal: plan shift 1.83 m along, 0.27 m across). (b) Spearman of reliance against drift slope over the six registered checkpoints -0.54 (registered >= 0.6),
+  and `YSED` cut its reliance by 96 % (+1.62 -> +0.07 m) while its slope **rose** (+0.023 [+0.007, +0.037]). By the registered rule the claim "the ego-status
+  shortcut causes the drift" is **refuted** for this setting (decision 271). The on-policy S rows themselves raise the reliance a little (YS 1.62 against YR 1.46)
+  while cutting the drift.
+- Caveat: a zeroed ego status is the vector of a standing car, so the dropout also teaches "treat as stopped and read the images"; the removed arm `YSEX` (no
+  ambiguity at serving) gives the same slope.
 
 ## Last-slot guardrail for `YS2G-L18` (Amendment 10; all 1491 public scenes at 10 decisions, cards 1-5)
 
