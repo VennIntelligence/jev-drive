@@ -75,3 +75,18 @@ the served plan two decisions before the event is active in 9 / 11 for (a), 8 / 
 
 Caveat for the usable variants: on turning rows the human's own path is active on 0.12 (straight 0.01), so on turns the hinge would still charge some
 human-like plans (the region is classified at the t0 heading for the whole 4 s). No training is queued; the variant is the user's choice.
+
+## Amendment 17: local heading per plan point (label test) -> variant (a) with the t0 heading
+
+`scripts/ol_onclab2.py` (job 1012-182136-9ac0, exact zeros_mech rule per point, no raster; `onclab2_L18YS.json`). Rear-axle point, active rows:
+
+| | all | straight | turn (>= 45 deg) |
+|:--|--:|--:|--:|
+| served plan, t0 heading | 0.068 | 0.039 | 0.257 |
+| served plan, local heading | 0.070 | 0.040 | 0.265 |
+| human path, t0 heading | 0.019 | 0.008 | 0.112 |
+| human path, local heading | 0.017 | 0.008 | 0.084 |
+
+Across-traffic early-inside events active two decisions ahead: 9 / 11 with either heading. The written rule (human on turns < 0.05 and >= 8 / 11) is
+not met by the local heading (0.084), so the trainings use variant (a) with the t0 heading on the Amendment 15 raster (`OL_ONC_MODE=point`). The exact
+per-point t0 numbers reproduce the raster version of Amendment 16 (served 0.068 against 0.072, human 0.019 against 0.021).

@@ -1,0 +1,110 @@
+{
+ "rows": 34788,
+ "table": {
+  "served_t0": {
+   "all": 0.06841439576865586,
+   "straight": 0.039388103629955304,
+   "turn": 0.25712275765036935
+  },
+  "served_local": {
+   "all": 0.07008163734621134,
+   "straight": 0.0395334471857854,
+   "turn": 0.2645093211396412
+  },
+  "human_t0": {
+   "all": 0.019144532597447396,
+   "straight": 0.007775880236909996,
+   "turn": 0.11185367569468871
+  },
+  "human_local": {
+   "all": 0.016586179142232954,
+   "straight": 0.007703208458994949,
+   "turn": 0.08441786844882167
+  }
+ },
+ "events": [
+  {
+   "scene": "bd70654a",
+   "type": "collision",
+   "k": 12,
+   "t0": true,
+   "local": true
+  },
+  {
+   "scene": "47e0ff3b",
+   "type": "collision",
+   "k": 14,
+   "t0": true,
+   "local": true
+  },
+  {
+   "scene": "e6056b57",
+   "type": "corridor",
+   "k": 7,
+   "t0": true,
+   "local": true
+  },
+  {
+   "scene": "a3882e6a",
+   "type": "corridor",
+   "k": 8,
+   "t0": true,
+   "local": true
+  },
+  {
+   "scene": "a3dd6d53",
+   "type": "corridor",
+   "k": 11,
+   "t0": true,
+   "local": true
+  },
+  {
+   "scene": "330166de",
+   "type": "corridor",
+   "k": 15,
+   "t0": false,
+   "local": false
+  },
+  {
+   "scene": "f3512ae1",
+   "type": "corridor",
+   "k": 15,
+   "t0": true,
+   "local": true
+  },
+  {
+   "scene": "8c9e3fd9",
+   "type": "offroad",
+   "k": 8,
+   "t0": false,
+   "local": false
+  },
+  {
+   "scene": "fde7abb6",
+   "type": "offroad",
+   "k": 9,
+   "t0": true,
+   "local": true
+  },
+  {
+   "scene": "53f8bc40",
+   "type": "offroad",
+   "k": 10,
+   "t0": true,
+   "local": true
+  },
+  {
+   "scene": "c687799d",
+   "type": "offroad",
+   "k": 12,
+   "t0": true,
+   "local": true
+  }
+ ],
+ "events_active": {
+  "t0": 9,
+  "local": 9,
+  "n": 11
+ },
+ "use_local": false
+}

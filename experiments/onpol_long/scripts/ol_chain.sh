@@ -457,5 +457,22 @@ report-armb3)  # Amendment 15: each arm present (SO25, SO50, SBz) against YS2G a
   CD=$(ls -d $W/zm/zeros_mech/collect/*/ | tail -1); echo "$CD" > $O/zm_collect_dir.txt
   $P $ZW report --collect $CD --rows $(ls -d $DATA_DIR/runs/zeros_mech/rows/*/ | tail -1) --out $O/zm --figs $O/zm/figs || echo "zm_read report failed"
   [[ -f $O/zm/per_rollout_reads.csv.gz ]] && $P $E/scripts/ol_dirraster.py lines --reads $O/zm --collect $CD --out $O/lines.json ;;
+submit-armb4)  # Amendment 17: arm B' with variant (a) (rear-axle point, t0 heading) on the zeros_mech-rule raster: YSO25 / YSO50 x seeds 0 / 1, reads, report
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
+            --log-dir "$W/pool/$name-a17" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 17)" >> $W/jobs.txt; }
+  RB=$W/rows/L18YS-zmonc; G15="--gpus 1,2,3,4,5 --pin-strict"
+  python3 -c "import json,sys; s = json.load(open('$RB/onclab.json')); v = s['table']['a rear axle']['served']; print('served (a)', v); sys.exit(v > 0.10)" || die "label gate (a) > 0.10"
+  OT="$TR $ON/scripts/on_train.py train --exp onpol_long --init YS-L18-s1 --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank \
+      --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_L18YS --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self --on-lon ol_onc"
+  rids=()
+  for x in "SO25 2.5" "SO50 5"; do set -- $x
+    for s in 0 1; do
+      a=$(sub ol-train-Y$1-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 2 $G15 -- env PYTHONPATH=$PWD/$E/lib OL_ONC=$RB/onc.npz OL_ONC_MODE=point $OT --on-lon-lam $2 --seed $s --tag Y$1-L18-s$s) || exit 1
+      for i in $(seq 0 5); do rids+=($(sub ol-read-Y$1-L18-s$s-$i "$a" --vram 32 --cpu 8 --ram 40 --timeout-h 2 $G15 --env CL_HIST_KEY=ol-fast-read -- \
+            env OL_RCH=6 bash $E/scripts/ol_fast.sh read Y$1-L18-s$s $i 6)) || exit 1; done
+    done
+  done
+  sub ol-report-armb4 "$(IFS=,; echo "${rids[*]}")" --vram 0.5 --cpu 64 --ram 64 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report-armb3 > /dev/null || exit 1
+  echo "submitted: $(grep -c "amendment 17" $W/jobs.txt) jobs" ;;
 *) die "unknown stage $STAGE" ;;
 esac
