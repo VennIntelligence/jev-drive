@@ -34,7 +34,7 @@ def cmd_table(a):
             v = o["metrics"].get(m)
             if float(P[s][flag] or 0) > 0 and v is not None and (v[:, 1] > 0).any():
                 t = v[v[:, 1] > 0, 0].min()
-                first[k] = (int(np.searchsorted(now, t, side="right")) - 1, (t - now[0]) / 1e6)
+                first[k] = (max(int(np.searchsorted(now, t, side="right")) - 1, 0), (t - now[0]) / 1e6)
         typ = min(first, key=lambda k: first[k][1]) if first else "other"       # type = the earliest failure
         rows.append(dict(scene=s, type=typ, decision=first[typ][0] if first else -1, t_s=round(first[typ][1], 2) if first else "",
                          kinds="+".join(first) or "-", n_drive=len(now), dist_m=P[s]["dist_traveled_m"], gt_m=P[s]["gt_dist_traveled_m"]))
