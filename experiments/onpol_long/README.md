@@ -22,6 +22,26 @@ S-only arm is flat against the base (-0.0075). The same continued training witho
 the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpol_nuplan/README.md); the 18-decision driver path:
 [../alpasim_long/README.md](../alpasim_long/README.md).
 
+## Round 1b: gentle continuation (Amendment 6; Y family, same rows, lr x 0.1, no warm-up restart, 2 500 steps)
+
+[results/read/report_YSG_base.md](results/read/report_YSG_base.md) (against the base), [report_YSG_ys.md](results/read/report_YSG_ys.md) (against `YS-L18`, seed mean).
+
+| | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) |
+|:--|--:|--:|:--|--:|--:|
+| `YSG-L18` (S rows, gentle) s0 / s1 | 0.829 (0.829 / 0.828) | 51.5 | 8.5 / 22.0 / 23.5 | 30.5 | 1.300 |
+| `YNONEG-L18` (no rows, gentle) | 0.774 | 78.0 | 9.0 / 37.0 / 35.5 | 46.0 | 1.454 |
+| `YS-L18` (round 1, full schedule) | 0.838 | 44.0 | 9.0 / 14.5 / 22.0 | 23.5 | 1.357 |
+| base `YR10m10-F-s0` | 0.785 | 74 | 10 / 33 / 35 | 43 | 1.495 |
+
+- Control line (registered): `YNONEG` - base -0.0106 [-0.0266, +0.0053], zeros +4.0 [-3.8, +12.1]: the CI includes 0, **holds**. The gentle schedule
+  stops the continuation from hurting the base (the full schedule cost -0.092). Dev ADE stays at the base's (0.539 -> 0.537-0.539).
+- `YSG` against `YS-L18` (registered: preferred for round 3 only if not worse on any of four): mean score -0.009 [-0.030, +0.011], zeros +7.5
+  [-2.4, +17.4], at-fault zeros +7.0 [-2.1, +15.8], GT distance -0.057 [-0.132, +0.024]: worse on three of four, **not preferred**; round 3
+  keeps `YS-L18`'s schedule. Against the base `YSG` is still +0.044 [+0.019, +0.069], zeros -22.5, and against its own control +0.054.
+- Reading: with the gentle schedule the rows' effect is about 80 % of `YS-L18`'s gain over the base (+0.044 against +0.053) with the
+  continuation itself near zero, so most of `YS-L18`'s gain is the rows, not a lucky continuation; the full schedule's loss on ON-NONE
+  (-0.092) did not carry into `YS-L18`.
+
 ## S-only arms (Amendment 3; same pools, same schedule, no K)
 
 [results/read/report_YS.md](results/read/report_YS.md), [report_PS.md](results/read/report_PS.md).
