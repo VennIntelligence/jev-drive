@@ -573,7 +573,7 @@ The completed v4 campaign reused its server across all six groups and restarted 
 
 The simulator writes one front-wide 10 fps mp4 per rollout deep under `sim/rollouts/<scene>/<uuid>/`. `~/bin/pai_videos.py`
 (on the Tokyo box, source in this commit's `experiments/alpasim/scripts/pai_videos.py`) rebuilds a flat symlink index at
-`~/Desktop/pai_videos/`: `<arm>/<score>_<zero kind>_<scene8>.mp4` for one arm, `by_scene/<scene8>/<arm>_<score>_<kind>.mp4`
-to compare arms on one scene. Rerun it to pick up new chunks; it reads `results-summary.json`, so only scored rollouts appear.
+`~/Desktop/pai_videos/`, one flat folder, `<scene8>_<arm>_<score>_<zero kind>.mp4`, so the arms of one scene sort
+next to each other. Rerun it to pick up new chunks; it reads `results-summary.json`, so only scored rollouts appear.
 Double-click plays in `ffplay` (registered as the mp4 handler in `~/.local/share/applications/ffplay.desktop`; no other
 player is installed and there is no sudo). Keys in ffplay: space pause, left / right seek 10 s, q quit; `-loop 0` repeats.

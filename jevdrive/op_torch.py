@@ -8,8 +8,13 @@ which also keeps the hard-coded batch-1 reshapes valid. Autograd runs through it
   dtype        compute dtype for the graph's float16 values (float32 for equivalence, bfloat16 for training,
                float16 to mirror the graph literally); graph float32 values stay float32
   trainable    initializer names that become requires_grad parameters (fp32 master copies)
-  lora         {initializer name: rank} adds a low-rank update x @ (W + A @ B * alpha / rank) to MatMul / Gemm
-               weights; A, B are fp32 parameters, B starts at zero so the model starts exactly at the original
+  lora         {initializer name: rank} adds a low-rank update W + A @ B * alpha / rank to a MatMul / Gemm weight or a
+               Conv kernel; A @ B has the weight's 2-D shape: MatMul (in, out), Gemm as stored, Conv (out, in / group * k * k)
+               reshaped back to the kernel (a 1 x 1 pointwise conv is a Linear on (out, in)). A, B are fp32 parameters, B
+               starts at zero so the model starts exactly at the original. A depthwise conv (C x 1 x k x k, few parameters)
+               is made fully trainable through `trainable` instead.
+  merged()     {initializer name: fp32 array} of every weight the training changed (W + A @ B * alpha / r, or the trained
+               fp32 master); `write_merged` puts them into a copy of the ONNX file (export; the source file is never written)
 
 Split points (cinque): the vision trunk ends in `view_39` (1, 32, 512), the per-frame hidden state that the model
 queues; the policy reads 9 of 33 queued frames (`index`, (1, 9, 32, 512)) and emits `outputs` and the temporal
@@ -75,11 +80,13 @@ class OnnxTorch(torch.nn.Module):
         self.lora_scale = {}
         for w, r in (lora or {}).items():
             W = self.params[_key(w)]
-            din, dout = W.shape if W.ndim == 2 else (None, None)
-            # Gemm weights here are (out, in) with transB=1, MatMul weights (in, out): orient A @ B like W
+            assert W.ndim in (2, 4) and not W.requires_grad, f"{w}: LoRA needs a frozen 2-D or 4-D weight, got {tuple(W.shape)}"
+            # A @ B is shaped like W viewed as 2-D: Gemm (out, in) with transB=1 / MatMul (in, out) as stored, Conv (out, in * k * k)
+            din, dout = W.shape[0], W[0].numel()
             self.lora[_key(w) + "__A"] = torch.nn.Parameter(torch.randn(din, r) / r ** 0.5)
             self.lora[_key(w) + "__B"] = torch.nn.Parameter(torch.zeros(r, dout))
             self.lora_scale[w] = (lora_alpha or r) / r
+        self.trainable = sorted(trainable & self.fnames)
 
     def _fdt(self, a):
         return self.dtype if a.dtype == np.float16 else torch.float32
@@ -252,7 +259,7 @@ class OnnxTorch(torch.nn.Module):
     def op_Conv(self, x, at, ins):
         p = at.get("pads", [0, 0, 0, 0])
         assert p[:2] == p[2:], p
-        w = x[1].to(x[0].dtype)
+        w = (self._lora(ins[1], x[1]) if ins[1] in self.fnames else x[1]).to(x[0].dtype)
         b = x[2].to(x[0].dtype) if len(x) > 2 else None
         return F.conv2d(x[0], w, b, at.get("strides", [1, 1]), p[:2], at.get("dilations", [1, 1]), at.get("group", 1))
 
@@ -263,12 +270,23 @@ class OnnxTorch(torch.nn.Module):
         out = F.layer_norm(y.float(), (n,), x[1].float(), x[2].float() if len(x) > 2 else None, at["epsilon"])
         return out.to(y.dtype)
 
-    def _lora(self, name, w):
+    def _delta(self, name):
         k = _key(name)
-        if k + "__A" not in self.lora:
+        return (self.lora[k + "__A"] @ self.lora[k + "__B"] * self.lora_scale[name]).reshape(self.params[k].shape)
+
+    def _lora(self, name, w):
+        if _key(name) + "__A" not in self.lora:
             return w
-        d = self.lora[k + "__A"] @ self.lora[k + "__B"] * self.lora_scale[name]
-        return w + d.to(w.dtype)
+        return w + self._delta(name).to(w.dtype)
+
+    @torch.no_grad()
+    def merged(self) -> dict:
+        """{initializer name: fp32 numpy} of the weights training changed: LoRA targets W + A @ B * alpha / r (W as
+        loaded, i.e. the fp16 value exactly in fp32), `trainable` weights their fp32 master."""
+        out = {w: self.params[_key(w)].float().cpu().numpy() for w in self.trainable}
+        for w in self.lora_scale:
+            out[w] = (self.params[_key(w)].float() + self._delta(w).float()).cpu().numpy()
+        return out
 
     def op_MatMul(self, x, at, ins):
         a, b = x
@@ -316,6 +334,30 @@ class OnnxTorch(torch.nn.Module):
         if len(x) > 1 and x[1] is not None:
             return list(torch.split(x[0], self._ints(ins[1], x[1]), ax))
         return list(torch.chunk(x[0], at["num_outputs"], ax))
+
+
+def write_merged(src: str | Path, dst: str | Path, weights: dict) -> dict:
+    """Copy of the ONNX file `src` with the named initializers replaced (cast to their stored dtype; shapes must match);
+    every other byte of the graph is kept. Never writes `src`. -> {name: max |stored - fp32 value|} (the rounding)."""
+    src, dst = Path(src).resolve(), Path(dst).resolve()
+    assert src != dst, "write_merged never overwrites its source"
+    m = onnx.load(str(src))
+    init = {t.name: t for t in m.graph.initializer}
+    missing = set(weights) - set(init)
+    assert not missing, f"not initializers of {src.name}: {sorted(missing)[:5]}"
+    err = {}
+    for name, a in weights.items():
+        t = init[name]
+        old = numpy_helper.to_array(t)
+        assert old.shape == a.shape, f"{name}: {a.shape} vs stored {old.shape}"
+        new = np.asarray(a, np.float32).astype(old.dtype)
+        err[name] = float(np.abs(new.astype(np.float32) - a).max())
+        t.CopyFrom(numpy_helper.from_array(new, name))
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dst.with_name(f".{dst.name}.tmp")
+    onnx.save(m, str(tmp))
+    tmp.replace(dst)
+    return err
 
 
 # ---------------------------------------------------------------- cinque split helpers

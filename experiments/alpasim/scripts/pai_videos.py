@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Flat symlink index of PAI rollout videos for watching on the Tokyo desktop.
 
-Writes ~/Desktop/pai_videos/<arm>/<score>_<zero kind>_<scene8>.mp4 -> the front-wide mp4 of that rollout,
-and ~/Desktop/pai_videos/by_scene/<scene8>/<arm>_<score>.mp4 for side-by-side comparison of arms.
+One flat folder ~/Desktop/pai_videos/<scene8>_<arm>_<score>_<zero kind>.mp4 -> the front-wide mp4 of that rollout;
+sorted by name, the arms of one scene sit next to each other.
 Idempotent: rerun to pick up new chunks. Usage: pai_videos.py [ROOT] (default /data/runs/onpol_long/pai281).
 """
 import glob, json, os, shutil, sys
@@ -27,10 +27,7 @@ for summ in sorted(glob.glob(str(ROOT / "*/runs/*/sim/aggregate/results-summary.
             continue
         kind = next((SHORT[f] for f in FAIL if (r.get("score_metrics") or {}).get(f)), "ok" if score > 0 else "zero")
         s8 = scene.replace("clipgt-", "")[:8]
-        a = OUT / arm / f"{score:.2f}_{kind}_{s8}.mp4"
-        b = OUT / "by_scene" / s8 / f"{arm}_{score:.2f}_{kind}.mp4"
-        for ln in (a, b):
-            ln.parent.mkdir(parents=True, exist_ok=True)
-            ln.symlink_to(mp4[0])
+        OUT.mkdir(parents=True, exist_ok=True)
+        (OUT / f"{s8}_{arm}_{score:.2f}_{kind}.mp4").symlink_to(mp4[0])
         n += 1
 print(f"{n} videos linked under {OUT}")

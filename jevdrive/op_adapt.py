@@ -145,6 +145,28 @@ def node_weights(onnx_path, first: str, last: str) -> list[str]:
     return sorted({i for n in g.node[prod[first]:prod[last] + 1] for i in n.input if i in fl})
 
 
+def vision_lora_targets(model="cinque") -> dict:
+    """The whole vision trunk (graph start .. view_39) by layer type, for LoRA + depthwise training (junction_eyes plan 5.2):
+    matmul   the ConvNeXt MLP weights (the 1 x 1 pointwise convs, as MatMul on channels-last; (in, out))
+    conv     every dense Conv kernel: the 4 x 4 stem, the 2 x 2 stride-2 downsamples, the 1 x 1 head projection
+    dw       the 7 x 7 depthwise conv kernels (group = channels): trained in full, not low-rank."""
+    import onnx
+    path = MODELS_DIR / FILES[model]
+    g = onnx.load(str(path), load_external_data=False).graph
+    init = {t.name: tuple(t.dims) for t in g.initializer}
+    w = set(node_weights(path, g.node[0].output[0], "view_39"))
+    out = {"matmul": [], "conv": [], "dw": []}
+    for n in g.node:
+        if len(n.input) < 2 or n.input[1] not in w:
+            continue
+        if n.op_type == "MatMul" and len(init[n.input[1]]) == 2:
+            out["matmul"].append(n.input[1])
+        elif n.op_type == "Conv":
+            grp = next((onnx.helper.get_attribute_value(a) for a in n.attribute if a.name == "group"), 1)
+            out["dw" if grp > 1 else "conv"].append(n.input[1])
+    return {k: sorted(set(v)) for k, v in out.items()}
+
+
 def stage4_weights(model="cinque") -> list[str]:
     return node_weights(MODELS_DIR / FILES[model], *STAGE4)
 
