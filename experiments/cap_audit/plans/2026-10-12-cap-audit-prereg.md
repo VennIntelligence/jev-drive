@@ -150,3 +150,11 @@ CI：按 log 聚类的 bootstrap（jevdrive.stats 惯例，default_rng(0)，10 0
 
 CPU：zm_read collect 在 452 scene × 8 label 上 22 s（64 worker）；本线主读数 1479 × 8 label、每决策多两个 shapely 并集与车距，估 5–15 分钟；
 held 452 × 9 label 估 2–5 分钟；感知导出 < 5 分钟。无 GPU。总计远小于 1 小时，不走 staged launch。
+
+## 8. 补记（读数前）
+
+**补记 1（2026-10-12 18:25，任何登记量读出之前）。** 第一次全量 collect 的 G-lat 不过（pub 0.856、held 0.828，线 0.95），G-cov / G-pose / G-gap
+（Spearman 0.990）/ G-dir（同向 0.995、对向 0.004）都过。原因是尺子不同，不是数据：评估器的 lateral_dist_to_gt_trajectory 量的是**车身多边形质心**
+到完整日志折线的距离（`eval/scorers/ground_truth.py`），我们自算的是后轴；有航向误差时两者差到 0.1 m 以上。改为在质心处自算一次（`lat_c`）只用于
+G-lat，线不变；登记量 `lat_log` 本来就是评估器自己的值，不受影响；后轴的有符号偏差 `lat` 只用于转弯的内 / 外描述。另一处与第 2 节文字不同：
+评估器的 margin 用其自己的车身收缩与圆角，自算值与评估器的 Pearson 0.99（6 scene 冒烟），登记量用自算值（ego 与日志同一函数），照原文。

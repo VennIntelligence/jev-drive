@@ -278,14 +278,15 @@ def scene_job(job):
             gmin, gx, gy, lgap = traffic(states[k], a, hull, front)
             p1 = C.get(t + 1_000_000)
             le = at("lateral_dist_to_gt_trajectory", t)
-            row = dict(label=lab, scene=scene, k=k, kept=kept, x=a[0], y=a[1], yaw=a[2], v=p[3], v1=p1[3] if p1 else np.nan, s=s_e, lat=lat,
+            lat_c = project(Lp, SL, ZM.to_local(a, [[(rear + front) / 2, 0.0]])[0], s_e - 10, s_e + 10)[1]    # the evaluator's ruler: box centroid
+            row = dict(label=lab, scene=scene, k=k, kept=kept, x=a[0], y=a[1], yaw=a[2], v=p[3], v1=p1[3] if p1 else np.nan, s=s_e, lat=lat, lat_c=lat_c,
                        head_path=float(np.degrees(ZM.wrap(a[2] - path_yaw(s_e)))), cls=cls, junc=junc, lane_off=off, lane_dh=dh, margin=mg,
                        gap=gmin, gap_x=gx, gap_y=gy, lead_gap=lgap, lat_eval=le, dist_gt=at("dist_to_gt_trajectory", t),
                        offroad=at("offroad", t), coll=at("collision_any", t), wrong_lane=at("wrong_lane", t),
                        gap_eval=at("min_distance_to_obstacle_m", t), margin_eval=at("min_distance_to_lane_boundary_m", t))
             if le is not None and kept:
                 g["lat_n"] += 1
-                g["lat_ok"] += abs(abs(lat) - le) <= 0.10
+                g["lat_ok"] += abs(abs(lat_c) - le) <= 0.10
             if row["gap_eval"] is not None and kept and len(g["gap_pairs"]) < 400:
                 g["gap_pairs"].append((gmin, min(float(row["gap_eval"]), GAP_CAP)))
             r = recs.get(k)
