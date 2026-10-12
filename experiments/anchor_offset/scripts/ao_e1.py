@@ -205,9 +205,9 @@ def report(a):
     ko = g.apply(lambda x: x.k[x.offroad.astype(bool)].min(), include_groups=False).rename("k_o")
     Rl = Rl.join(kc, on=["label", "scene"]).join(ko, on=["label", "scene"])
     z = Rl.score == 0
-    Rl["corr"] = z & (Rl.left_corridor_laterally > 0)
-    Rl["offr"] = z & (Rl.offroad > 0)
-    Rl["clean"] = ~((Rl.left_corridor_laterally > 0) | (Rl.offroad > 0) | (Rl.collision_at_fault > 0))
+    Rl["is_corr"] = z & (Rl.left_corridor_laterally > 0)
+    Rl["is_offr"] = z & (Rl.is_offroad > 0)
+    Rl["clean"] = ~((Rl.left_corridor_laterally > 0) | (Rl.is_offroad > 0) | (Rl.collision_at_fault > 0))
     Rl["log"] = Rl.scene.str.rsplit("-", n=1).str[0]
     Rl["fam"] = Rl.label.str.replace(r"-s\d+$", "", regex=True)
     logs = np.array(sorted(Rl.log.unique()))
@@ -228,7 +228,7 @@ def report(a):
 
     res = {}
     for ev, kcol in (("corridor", "k_c"), ("offroad", "k_o")):
-        pos = Rl[Rl["corr" if ev == "corridor" else "offr"] & Rl[kcol].notna()]
+        pos = Rl[Rl["is_corr" if ev == "corridor" else "is_offr"] & Rl[kcol].notna()]
         P_ok = pos[pos[kcol] >= 2]
         neg = Rl[Rl.clean]
         res[ev] = dict(events=int(len(pos)), events_k_le_1=int((pos[kcol] < 2).sum()), clean=int(len(neg)),
@@ -277,13 +277,13 @@ def report(a):
                 res[ev][m].setdefault("auc_by_family", {})[f] = float(wauc(sc[mf], y[mf], np.ones((1, mf.sum()), np.float32))[0])
     # E3: does the plan shrink the offset at N m when the car is >= 1 m off the route
     e3 = {}
-    posr = Rl[(Rl.corr | Rl.offr)]
+    posr = Rl[(Rl.is_corr | Rl.is_offr)]
     pre = []
     for r in posr.itertuples():
         x = Dk.get((r.label, r.scene))
         if x is None:
             continue
-        kev = np.nanmin([r.k_c if r.corr else np.nan, r.k_o if r.offr else np.nan])
+        kev = np.nanmin([r.k_c if r.is_corr else np.nan, r.k_o if r.is_offr else np.nan])
         pre.append(x[x.k < kev])
     pre = pd.concat(pre) if pre else D.iloc[:0]
     cl = pd.concat([Dk[(r.label, r.scene)] for r in Rl[Rl.clean].itertuples() if (r.label, r.scene) in Dk])
