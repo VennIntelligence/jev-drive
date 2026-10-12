@@ -3,7 +3,7 @@ Paths, layouts and check numbers: experiments/junction_eyes/results/pixels.md se
 
   coverage --datas D ...  per calibration of CAM_L0 / F0 / R0: which camera each pixel of the 90 deg wide frame takes (frames.wide_K(256),
                           512 x 256: CAM_F0 wherever it sees, else the side camera nearest its axis), seam bearings; the slot mask = the
-                          2 x 2 blocks every calibration sees -> $RUN/px90/{mask.npy, coverage.json}
+                          rows of 2 x 2 blocks every calibration sees across the full width (a horizontal band) -> $RUN/px90/{mask.npy, coverage.json}
   build --data D          CPU render of the t0 pair's wide slot at 90 deg -> $RUN/px90/<data>/w90-t0.npy (N, 2, 6, 128, 256) uint8
                           = [prev, cur] wide frames, rows as px/<data>/frames-t0.npy (the road slot stays that file's). cur = the t0 keys
                           of the three cameras reprojected by pure rotation (nearest sampling of libjpeg YCbCr, chroma 2 x 2 mean, as
@@ -175,7 +175,8 @@ def cmd_coverage(a):
             rows.append(dict(n=r["n"], seams=seams, seen=float(seen.mean()), seen_horizon=float(seen[hr].mean()),
                              yaw={c: Z.cam_yaw_deg(r["cams"][c]) for c in VIEWS},
                              reach={c: view_reach(r["cams"][c], c) for c in VIEWS}))
-        blk = seen_all[0::2, 0::2] & seen_all[1::2, 0::2] & seen_all[0::2, 1::2] & seen_all[1::2, 1::2]
+        seen_blk = seen_all[0::2, 0::2] & seen_all[1::2, 0::2] & seen_all[0::2, 1::2] & seen_all[1::2, 1::2]
+        blk = np.repeat(seen_blk.all(1, keepdims=True), seen_blk.shape[1], 1)    # a horizontal band: the block rows seen across the width
         np.save(P90 / "mask.npy", blk)
         colc = blk[:, MODEL_W // 4]                                          # the centre column of the block grid
         vr = np.flatnonzero(colc)
@@ -184,7 +185,7 @@ def cmd_coverage(a):
         reachR = max(x["reach"]["CAM_R0"][0] for x in rows)
         allseam = [s["at"] for x in rows for s in x["seams"]]
         res = dict(datas=a.datas, tokens=int(sum(x["n"] for x in rows)), calibrations=len(rows), K=K90.tolist(),
-                   mask_share=float(blk.mean()), band_rows_share=float(colc.mean()), band_rows=[int(2 * vr[0]), int(2 * vr[-1] + 1)],
+                   mask_share=float(blk.mean()), seen_by_every_calibration_share=float(seen_blk.mean()), band_rows_share=float(colc.mean()), band_rows=[int(2 * vr[0]), int(2 * vr[-1] + 1)],
                    band_elev_deg=[el(2 * vr[-1] + 1.5), el(2 * vr[0] - 0.5)], mask_full_width_rows_share=float(blk.all(1).mean()),
                    reach_three_views_deg=[float(reachR), float(reachL)],
                    seams_horizon_deg=dict(min=float(min(allseam)), max=float(max(allseam)),
