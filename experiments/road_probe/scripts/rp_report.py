@@ -39,7 +39,10 @@ def md(cols, rows):
 
 def picks(a):
     R = Path(a.read)
-    W = pd.read_csv(R / "r3_windows.csv").dropna(subset=["werr"]).sort_values("werr").reset_index(drop=True)
+    Z = pd.read_parquet(R / "dec_zero.parquet")
+    one = Z.groupby("scene").tag.nunique()
+    W = pd.read_csv(R / "r3_windows.csv").dropna(subset=["werr"])
+    W = W[W.scene.map(one) == 1].sort_values("werr").reset_index(drop=True)      # scenes zeroed by one driver only: (scene, k) is unique
     sel = [W.iloc[int(q * (len(W) - 1))] for q in (0.1, 0.4, 0.7, 0.95)]
     out = [["zero", r.scene, int(r.k_ev), r.group] for r in sel]
     H = pd.read_parquet(R / "dec_held.parquet")
@@ -120,9 +123,58 @@ def report(a):
     L += md(["predictor", "held AUC (pos / neg)", "zero rollouts AUC (pos / neg)"],
             [[NAMES[k], f"{f3(v['held']['auc'])} ({v['held']['pos']} / {v['held']['neg']})", f"{f3(v['zero']['auc'])} ({v['zero']['pos']} / {v['zero']['neg']})"]
              for k, v in S["onc"].items()]) + [""]
+    L += explore(R)
     (OUT / "rp_report.md").write_text("\n".join(L) + "\n")
     figures(R, T, LC, JB, S)
     print("\n".join(L))
+
+
+def explore(R):
+    """Post-read, EXPLORATORY (not registered): why most R3 windows have no ego-lane label, R3 under decision 272's nearest-boundary measure,
+    and the error against the car's offset from the route. Needs labels_zero.parquet / labels_held.parquet (copies of $W/labels/) in the read dir."""
+    import csv
+    if not (R / "labels_zero.parquet").exists():
+        return []
+    Lz, Dz = pd.read_parquet(R / "labels_zero.parquet"), pd.read_parquet(R / "dec_zero.parquet")
+    ev = [r for r in csv.DictReader(open(REPO / "experiments/eyes_vs_head/results/events_P0.csv")) if r["group"] in ("YS-L18-s1", "YR10m10-F-s0") and r["type"] in ("corridor", "offroad")]
+    wid = np.full(len(Lz), -1)
+    for i, e in enumerate(ev):
+        wid[((Lz.tag == e["group"]) & (Lz.scene == e["scene"]) & (Lz.k >= max(0, int(e["k_ev"]) - 4)) & (Lz.k <= int(e["k_ev"]))).values] = i
+    w = wid >= 0
+    W = Lz[w]
+    B = np.stack(W.xB20.values)
+
+    def near(y):
+        d = np.abs(B - y[:, None])
+        d[~np.isfinite(d)] = np.inf
+        m = d.min(1)
+        return np.where(np.isfinite(m) & np.isfinite(y), m, np.nan)
+    rows = []
+    for k in ("P", "lin-p1000-s0", "blind-p1000-s0", "P0", "P0K"):
+        e = np.r_[near(Dz[w][f"{k}:L20"].values), near(Dz[w][f"{k}:R20"].values)]
+        wm = pd.Series(e).groupby(np.r_[wid[w], wid[w]]).median()
+        rows.append([NAMES[k], f3(float(np.nanmedian(e))), f3(float(wm.median())), int(wm.notna().sum()), f3(float((wm <= 0.5).mean()))])
+    out = ["## Exploratory (decided after the read, not registered)", "",
+           f"- **Why 53 of 98 windows have no ego-lane label.** In the {len(W)} window decisions the 20 m line crosses few lane edges (median "
+           f"{int(W.nB20.median())}; on the decisions without a label the bracketing gap around the route is usually wider than 6 m or one side is missing), "
+           f"the route crossing is missing on {f3(float(W.ylog20.isna().mean()))}; the car is {f3(float(W.e_log.abs().median()), 2)} m off the logged route "
+           f"(median), > 2 m on {f3(float((W.e_log.abs() > 2).mean()))}. The registered R3 therefore reads the 45 windows where the route lane is "
+           "well defined at 20 m.", "",
+           "- **R3 under decision 272's measure** (distance of each predicted ego line at 20 m to the nearest map lane boundary; defined wherever the line "
+           "crosses any boundary, 95 windows):", ""]
+    out += md(["predictor", "decision median (m)", "window median (m)", "windows", "share of windows <= 0.5 m"], rows) + [""]
+    lines = []
+    for g, sub in (("zero", "all window-rollout decisions"), ("held", "held turns")):
+        L_, D_ = pd.read_parquet(R / f"labels_{g}.parquet"), pd.read_parquet(R / f"dec_{g}.parquet")
+        e = np.c_[(D_["P:L20"] - L_.L20).abs(), (D_["P:R20"] - L_.R20).abs()].mean(1)
+        s = (L_.turn40 >= 20).values if g == "held" else np.ones(len(L_), bool)
+        for lo, hi in ((0, 0.5), (0.5, 1), (1, 2), (2, 99)):
+            m = s & (L_.e_log.abs() >= lo).values & (L_.e_log.abs() < hi).values
+            lines.append([sub, f"{lo}-{hi if hi < 99 else 'inf'}", int(np.isfinite(e[m]).sum()), f3(float(np.nanmedian(e[m])))])
+    out += ["- **Error against the car's offset from the route** (probe, ego-lane measure, 20 m, mean of the two sides): the error is ~0.9 m already "
+            "while the car is still on the route, so the R3 failure is not just the car having left the lane the label describes.", ""]
+    out += md(["decisions", "abs offset from route (m)", "n", "median error (m)"], lines) + [""]
+    return out
 
 
 def figures(R, T, LC, JB, S):
@@ -145,7 +197,7 @@ def figures(R, T, LC, JB, S):
         ax[j].set_xticks([10, 20, 40]), ax[j].set_xlabel("distance ahead (m)"), ax[j].set_ylim(0, None)
         ps.panel(ax[j], f"({'ab'[j]}) held {sub}")
     ax[0].set_ylabel("ego-lane boundary error (m)")
-    ax[0].legend(fontsize=6.5, loc="upper left")
+    ax[1].legend(fontsize=6.5, loc="upper left")
     W3 = pd.read_csv(R / "r3_windows.csv")
     groups = [("straight", "LR20"), ("gentle", "LR20"), ("turn", "LR20")]
     xs = np.arange(4)
@@ -215,7 +267,7 @@ def figures(R, T, LC, JB, S):
     ax[1, 0].set_xlabel("lateral (m, right +)"), ax[0, 0].set_ylabel("ahead (m)")
     fig.tight_layout(h_pad=0.4, w_pad=0.4)
     for ext in ("png", "pdf"):
-        fig.savefig(FIGS / f"rp_bev.{ext}", bbox_inches="tight")
+        fig.savefig(FIGS / f"rp_bev.{ext}", bbox_inches="tight", dpi=220)
     plt.close(fig)
 
 

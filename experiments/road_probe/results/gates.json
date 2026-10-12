@@ -1,0 +1,52 @@
+{
+ "G_roll": {
+  "rollouts": 460,
+  "mean": 0.8261167138303422,
+  "stored_rollouts": 460,
+  "stored_mean": 0.8261167138303422,
+  "pass": true
+ },
+ "G_tok": {
+  "n": 8129,
+  "share": 1.0,
+  "median": 0.015625,
+  "max": 0.09375,
+  "pass": true
+ },
+ "G_rep": {
+  "n": 1764,
+  "missing": 0,
+  "share": 1.0,
+  "median": 0.011789089620760456,
+  "pass": true
+ },
+ "G_frame_train": {
+  "scenes": 1020,
+  "share": 1.0,
+  "max": 9.536935274009178e-09,
+  "pass": true
+ },
+ "G_frame_held": {
+  "scenes": 452,
+  "share": 1.0,
+  "max": 8.94349024211053e-09,
+  "pass": true
+ },
+ "G_frame_zero": {
+  "scenes": 72,
+  "share": 1.0,
+  "max": 8.107108175247511e-09,
+  "pass": true
+ },
+ "G_lab": {
+  "straight": 4498,
+  "share": 0.9077367718986216,
+  "pass": true
+ },
+ "G_sign": {
+  "L20": 1.508859682217345,
+  "R20": -1.8831468538340315,
+  "pass": true
+ },
+ "pass": true
+}
