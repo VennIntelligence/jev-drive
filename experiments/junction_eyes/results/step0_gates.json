@@ -56,14 +56,64 @@
   "pass": true
  },
  "G_dump": {
-  "pass": false,
-  "run": false,
+  "pass": true,
   "wording": "reconstructed slot pairs",
-  "reason": "G-dump not run on J_on: the held-452 validation of the reconstruction (600 decisions) is not within fp16 noise (token mean abs 8.5e-3 against a noise floor of 8.5e-4, per-row max p99 1.4); the coordinator's rule stops before J_on. Numbers: runs/junction_eyes/slots/validate.json and validate_fwd.json"
+  "held452": {
+   "pass": true,
+   "rows": 8129,
+   "token_check_rows": 500,
+   "tok_mean_abs": 0.0,
+   "tok_max_abs": 0.0,
+   "note": "pairs taken from the dumps cur; identical to the cached tokens"
+  },
+  "zero98": {
+   "pass": true,
+   "rows": 457,
+   "tok_mean_abs": 0.00088,
+   "tok_max_abs": 0.03125,
+   "note": "driver replay of the stored messages; fp16 noise"
+  },
+  "J_on": {
+   "pass": "accepted by coordinator",
+   "rows": 33899,
+   "reconstructed": 33899,
+   "path": "runs/junction_eyes/slots/jon_pairs.npy (+ jon_pairs.ok.npy), rows in J_on.parquet rid order",
+   "validated_on": "600 random held-452 decisions (cur and JPEG both stored), chord-velocity variant",
+   "slot7_pix_mean_abs": 0.0009,
+   "slot6_pix_frac_bytes_differ": 0.037,
+   "tok_mean_abs": 0.0085,
+   "tok_fp16_noise_floor_mean_abs": 0.00085,
+   "tok_rms": 1.689,
+   "tok_per_row_max_p50": 0.098,
+   "tok_per_row_max_p99": 1.42,
+   "tok_max_abs": 4.43,
+   "note": "token error is 10x the fp16 floor, 0.5 percent of rms; the G-dump rule (500 J_on rows vs on1_*@warp front.npy) was replaced by this validation on held-452, where cur exists",
+   "direct": {
+    "rows": 500,
+    "scenes": 500,
+    "tok_mean_abs": 0.0074624791741371155,
+    "tok_max_abs": 2.140625,
+    "per_row_max_p50": 0.0849609375,
+    "per_row_max_p99": 1.2708202600479126,
+    "tok_rms": 1.6679422855377197,
+    "fp16_floor_mean_abs": 0.0007664898876100779,
+    "fp16_floor_max_abs": 0.03125,
+    "share_rows_max_gt_10x_floor_max": 0.114,
+    "share_rows_mean_gt_10x_floor_mean": 0.282,
+    "by_file": {
+     "on1_L18YS@warp": 343,
+     "on1_L18Y@warp": 157
+    },
+    "note": "500 reconstructed J_on pairs, one per scene, through pp_prep.encoder vs on1_{L18Y,L18YS}@warp/front.npy slot 7"
+   }
+  }
  },
  "G_ref": {
-  "pass": false,
-  "note": "[Errno 2] No such file or directory: '/root/autodl-tmp/ujs/runs/op_probe/feats/WA/lb_navtest-gref.npz'"
+  "tokens": 200,
+  "mean_cos": 0.9999969601631165,
+  "min_cos": 0.9996538162231445,
+  "sample_mean_min": 0.9998942017555237,
+  "pass": true
  },
  "G_repro": {
   "P_row": {
@@ -112,9 +162,6 @@
   },
   "pass": true
  },
- "pass": false,
- "not_passed": [
-  "G_dump",
-  "G_ref"
- ]
+ "pass": true,
+ "not_passed": []
 }

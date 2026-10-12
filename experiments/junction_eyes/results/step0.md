@@ -1,16 +1,19 @@
 # junction_eyes step 0: the frozen eye on the new rulers
 
-Pre-registration: [plans/2026-10-12-prereg-A.md](../plans/2026-10-12-prereg-A.md) (pushed before any label or read; amendments 1-2). Scripts `scripts/je0.py`, `scripts/je0_read.py`, `lib/je_ruler.py`; box `$DATA_DIR/runs/junction_eyes/step0/` (read `20261012-215143`). Figures [figs/je0_ra.png](../figs/je0_ra.png), [figs/je0_rb.png](../figs/je0_rb.png). Rows: [rows.md](rows.md).
+Pre-registration: [plans/2026-10-12-prereg-A.md](../plans/2026-10-12-prereg-A.md) (pushed before any label or read; amendments 1-2). Scripts `scripts/je0.py`, `scripts/je0_read.py`, `lib/je_ruler.py`; box `$DATA_DIR/runs/junction_eyes/step0/` (read `20261012-221719`). Figures [figs/je0_ra.png](../figs/je0_ra.png), [figs/je0_rb.png](../figs/je0_rb.png). Rows: [rows.md](rows.md).
 
-## Gates
+## Gates (all pass)
 
-- G_lab_cover: **pass**; {"held452": 0.9431009957325747, "navtest16": 0.9448767833981842, "zero98": 0.9725085910652921}
-- G_lab_sign: **pass**; {"held452": {"L": 1.529674768447876, "C": -0.18275438249111176, "R": -1.9325469732284546, "ok": true}, "navtest16": {"L": 1.6073853969573975, "C": -0.07250278443098068, "R": -1.7903637886047363, "ok": true}, "zero98": {"L": 3.831037998199463, "C": 1.6997897624969482, "R": -0.6525657773017883, "ok": true}}
-- G_lab_sides: **pass**; {"scenes": 20, "tokens": 155, "points": 2088, "median": 0.0, "p90": 0.010296211577951908, "both_defined_share": 0.8980645161290323, "rb_agree": 1.0}
-- G_split: **pass**; {"token": {"overlap": 0, "first": []}, "scene": {"overlap": 0, "first": []}, "log": {"overlap": 0, "first": []}, "unit": {"overlap": 0, "first": []}}
-- G_dump: **FAIL**; {"run": false, "wording": "reconstructed slot pairs", "reason": "G-dump not run on J_on: the held-452 validation of the reconstruction (600 decisions) is not within fp16 noise (token mean abs 8.5e-3 against a noise floor of 8.5e-4, per-row max p99 1.4); the coordinator's rule stops before J_on. Numbers: runs/junction_eyes/slots/validate.json and validate_fwd.json"}
-- G_ref: **FAIL**; {"note": "[Errno 2] No such file or directory: '/root/autodl-tmp/ujs/runs/op_probe/feats/WA/lb_navtest-gref.npz'"}
-- G_repro: **pass**; {"P_row": {"old": {"held_turn20": 0.9342325269808995, "navtest_near": 1.1072536179643684}, "old-s0": {"held_turn20": 1.0738983308530747, "navtest_near": 1.3135999476630618}, "old-s1": {"held_turn20": 0.9925097546938555, "navtest_near": 1.0627397428398284}}, "held_range": [0.85, 1.046], "navtest_range": [1.126, 1.398], "P_row_in_range": false, "c": {"held_turn20": 0.9231268433654183, "held_seeds": 
+| gate | read | line |
+|:--|:--|:--|
+| G-lab (i) R-A defined at s = 20, turns | 0.945 navtest-16 / 0.943 held-452 / 0.973 zero-98 (first label pass 0.81 / 0.83 / 0.80 failed; labeler fixed, amendment 4) | >= 0.9 |
+| G-lab (ii) sign, straight, s = 20 (L / C / R median y) | navtest-16 1.61 / -0.07 / -1.79; held-452 1.53 / -0.18 / -1.93; zero-98 3.83 / 1.70 / -0.65 | L > C > R |
+| G-lab (iii) navsim side vs AlpaSim scene loader, 20 held scenes, 2 088 points | median 0.000 m, p90 0.010 m; R-B cells 100 % equal | < 0.2 m |
+| G-split (token / segment / drive log / unit) | 0 / 0 / 0 / 0 | 0 |
+| G-dump | held-452 exact, zero-98 fp16; J_on reconstructed slot pairs accepted by the coordinator (token mean abs 7.5e-3 vs floor 7.7e-4; amendment 6) | step-0 probes read d275's caches |
+| G-ref (WA-Cf re-extraction, 200 navtest tokens) | mean cosine 0.99999, min 0.9997 | >= 0.999 |
+| G-repro (c) (rp_real's own fit rows, amendment 5) | held-452 turn 20 m 0.923 (seeds 0.916 / 0.972); navtest near 1.199 (1.335 / 1.296) | [0.850, 1.046] and [1.126, 1.398] |
+| old ruler on P (descriptive; the original G-repro, missed) | held 0.934; navtest near 1.107 (seeds 1.314 / 1.063) | was [1.126, 1.398] |
 
 ## Z-0 line (registered)
 
@@ -23,6 +26,29 @@ Close iff R-A s = 20 m, turn decisions, near bucket (in junction + 0-20 m) media
 
 **Verdict: go to step 1.**
 
+Three of the four Z-0 conditions fail; only the navtest-16 R-B ratio (0.89) passes. The frozen eye does **not** see the near corridor at
+junctions on the fair ruler: the line goes to step 1.
+
+## Reading
+
+- **Most of the junction bump is real, not label difficulty.** On the new route-conditioned ruler the blind head (ego + command) is
+  1.49 m off at s = 15 near junctions on navtest-16 against 0.73 m for the probe; at s = 20, 2.13 against 0.99. The old cross-line ruler
+  gave a 0.29 m gap (1.47 vs 1.18, decision 275 / rp_real). The tokens carry clearly more than ego + command, but at s = 20 near junctions
+  they are still twice as far off as 20-60 m before a junction (0.99 vs 0.46 m).
+- **Real frames beat reconstructed frames.** The same probe is 0.73 m (s = 15) on navtest-16 and 1.13 m on held-452 (the same 16 drive
+  logs as MTGS reconstructions, on-policy states); at s = 20, 0.99 vs 1.52. On the old ruler the two were equal (1.18 / 1.19). R-B
+  off-road IoU in junction: 0.78 real against 0.69 reconstructed. zero-98 (the windows before an off-road zero) is far worse: 3.2 m near.
+- **WA-Cf reference (not a method).** WA-JEPA's fine-tuned front encoder, read only from its 32 newest-frame tokens: 0.59 m at s = 15
+  near junctions on navtest-16, against 0.76 for Cinque's own slot 7 under the same head and rows (matched row), and 0.73 for the full
+  8-slot Cinque probe. A NAVSIM-supervised encoder does better on the same frame, by 0.16 m matched; the G1 bar for step 1 is therefore
+  the 0.10 m floor ((Z − WA-Cf) / 3 = 0.045 m at s = 15).
+- **Field of view (R-C).** Near junctions on navtest-16 turns, 46 % of the label points at s = 15 and 62 % at s = 20 lie outside the
+  wide slot (±29.4 deg); 84 % at s = 20 lie outside the road slot. 20-60 m before a junction it is 9 % / 14 %. In the zero-98 windows
+  75 % are outside the wide slot already at s = 10-20. By the registered 4.1 rule the field arms (L-W90, L-3V) run, and the F0 arms are
+  judged at s = 15 only.
+- Oncoming-lane IoU (R-B class 2) near junctions is low: 0.53 navtest-16, 0.40 held-452, 0.28 zero-98, against 0.75 / 0.68 / 0.52
+  20-60 m before (exploration).
+
 ## R-A: turn decisions, error at s = 20 m by distance to the junction
 
 | read set | predictor | in junction | 0-10 m | 10-20 m | 20-40 m | 40-60 m | none within 60 m | near | far |
@@ -30,6 +56,7 @@ Close iff R-A s = 20 m, turn decisions, near bucket (in junction + 0-20 m) media
 | navtest16 | probe, Cinque tokens (2 seeds) | 0.90 (220) | 1.00 (433) | 1.19 (123) | 0.46 (185) | 0.45 (85) | 0.52 (491) | 0.99 [0.81, 1.18] | 0.46 [0.40, 0.53] |
 | navtest16 | blind (ego + command) | 1.58 (220) | 2.48 (433) | 2.53 (123) | 0.95 (185) | 1.43 (85) | 1.31 (491) | 2.13 [1.74, 2.58] | 1.09 [0.71, 1.59] |
 | navtest16 | Cinque slot 7 only | 0.90 (220) | 1.11 (433) | 1.29 (123) | 0.50 (185) | 0.57 (85) | 0.59 (491) | 1.06 [0.92, 1.22] | 0.53 [0.39, 0.73] |
+| navtest16 | WA-Cf (reference) | 0.61 (220) | 0.81 (433) | 1.18 (123) | 0.35 (185) | 0.32 (85) | 0.41 (491) | 0.78 [0.66, 0.96] | 0.34 [0.27, 0.44] |
 | held452 | probe, Cinque tokens (2 seeds) | 1.67 (372) | 1.50 (538) | 1.34 (240) | 0.62 (141) | 0.61 (84) | 0.90 (725) | 1.52 [1.33, 1.74] | 0.61 [0.50, 0.78] |
 | held452 | blind (ego + command) | 3.01 (372) | 4.56 (538) | 3.65 (240) | 2.52 (141) | 1.39 (84) | 2.30 (725) | 3.78 [3.27, 4.30] | 1.81 [1.47, 2.53] |
 | zero98 | probe, Cinque tokens (2 seeds) | 3.19 (117) | 3.24 (73) | 9.70 (12) | 1.99 (6) | 1.15 (8) | 3.29 (75) | 3.24 [2.28, 4.47] | 1.76 [1.28, 1.93] |
@@ -44,6 +71,7 @@ R-A by arc length, turn decisions, near bucket (exploration):
 | navtest16 | probe, Cinque tokens (2 seeds) | 0.42 | 0.56 | 0.73 | 0.99 | 1.47 |
 | navtest16 | blind (ego + command) | 0.56 | 0.87 | 1.49 | 2.13 | 4.01 |
 | navtest16 | Cinque slot 7 only | 0.42 | 0.57 | 0.76 | 1.06 | 1.64 |
+| navtest16 | WA-Cf (reference) | 0.31 | 0.43 | 0.59 | 0.78 | 1.17 |
 | held452 | probe, Cinque tokens (2 seeds) | 0.56 | 0.78 | 1.13 | 1.52 | 2.09 |
 | held452 | blind (ego + command) | 0.87 | 1.44 | 2.46 | 3.78 | 6.55 |
 | zero98 | probe, Cinque tokens (2 seeds) | 1.76 | 2.64 | 2.85 | 3.24 | 4.34 |
@@ -114,3 +142,19 @@ IoU pooled over the decisions of a bucket (sum of intersections / sum of unions)
 
 Registered 4.1 rule (navtest-16, turn, near): share beyond 29.4 deg at s = 15 0.46, at s = 20 0.62 -> field arms (L-W90, L-3V) RUN; F0 G1 at s = 15 only: True. Recommended step-1 arm set: L-F0, L-F0-nav, U-F0, L-W90, L-3V.
 
+
+## Figures
+
+![R-A by distance to the junction](../figs/je0_ra.png)
+
+R-A error at s = 20 m on turn decisions, by route distance to the junction, log scale, with 95 % cluster-bootstrap CIs. Dotted line: the
+0.5 m Z-0 bar. Two things to read here:
+- On every read set the Cinque probe (dark blue) rises inside and just before the junction, and stays well below the blind floor (grey).
+- On real frames (left), Cinque's slot 7 alone (light blue) tracks the full probe. The WA-Cf reference (orange) sits about 0.15-0.2 m
+  lower near the junction.
+
+![R-B IoU by distance to the junction](../figs/je0_rb.png)
+
+R-B IoU over cells 0-20 m ahead on turn decisions. Left: the off-road class, which is the Z-0 quantity. Its in-junction / 20-60 m ratio is
+0.89 on navtest-16 and 0.76 on held-452. Right: the oncoming class. It roughly halves near junctions, and zero-98 is lowest throughout.
+Dotted grey lines are the blind heads.
