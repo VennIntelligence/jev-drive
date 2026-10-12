@@ -338,11 +338,12 @@ def scene_job(job):
             gate["rollouts_asl"] += 1
             byid = {o["id"]: o for o in objs}
             for aid, X in A.items():
-                if aid == "EGO":
+                if aid == "EGO":                                                   # the asl keeps EGO at its box centre, the driver the rear axle
                     for t, x, y, _ in X:
                         k = int((t - T0) // DT)
                         if t >= T0 and (t - T0) % DT == 0 and k in anch:
-                            dd = float(np.hypot(x - anch[k][0], y - anch[k][1]))
+                            c = to_local(anch[k], [[(rear + front) / 2, 0.0]])[0]
+                            dd = float(np.hypot(x - c[0], y - c[1]))
                             gate["ego_pairs"] += 1
                             gate["ego_ok"] += dd <= 0.05
                             gate["ego_max"] = max(gate["ego_max"], dd)
