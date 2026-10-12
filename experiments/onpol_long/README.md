@@ -1,7 +1,7 @@
 # onpol_long: closed-loop training at 18 decisions, round 1
 
 status: live
-decisions: 264 (inputs 259, 262)
+decisions: 264, 269, 270 (inputs 259, 262)
 index: S-only rows at 18 decisions on YR10m10-F: 0.838 vs base 0.785, zeros 44 vs 74; S + corridor not adopted
 
 **Question.** At 18 decisions (token + 8 s) in local AlpaSim nuPlan, do on-policy rows of the base's own rollouts on the 1031 train scenes,
@@ -19,11 +19,48 @@ A second on-policy round (rows from `YS-L18`'s own rollouts, from `YS-L18-s1`) d
 than its own no-row control and slightly worse than round 1 (zeros 50.5 against 43), so the loop stops at round 1 and "more rounds help"
 is recorded as negative for this setting.
 
-**Next.** PAI transfer read on the Tokyo box (Amendments 1, 4, 5, running).
+**Next.** Ego-status dropout arms `YSED` / `YSEX` (Amendment 11) reading; PAI transfer read on the Tokyo box (Amendments 1, 4, 5). `YS2G-L18` passed the
+public-mean guardrail of the last-slot rule (Amendment 10, decision 269); the candidate-scoring line stopped at its feasibility gate (Amendment 12, decision 270).
 
 **Read more.** [plans/2026-10-12-ol1-prereg.md](plans/2026-10-12-ol1-prereg.md); the plan: [research/next-round/closed-loop.md](../../research/next-round/closed-loop.md);
 the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpol_nuplan/README.md); the 18-decision driver path:
 [../alpasim_long/README.md](../alpasim_long/README.md).
+
+## Last-slot guardrail for `YS2G-L18` (Amendment 10; all 1491 public scenes at 10 decisions, cards 1-5)
+
+[results/read/confirm_g10.md](results/read/confirm_g10.md) (1479 scenes with a rollout, 136 logs; base = the stored 2026-10-09 rollouts; `YS-L18`'s read of Amendment 5 reused).
+
+| | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) |
+|:--|--:|--:|:--|--:|--:|
+| `YS2G-L18` s0 / s1 | 0.9511 (0.9515 / 0.9506) | 43 (43 / 43) | 9.5 / 24 / 10 | 33.5 | 0.885 |
+| `YS-L18` s0 / s1 | 0.9450 | 47.5 | 10.5 / 22.5 / 14.5 | 33 | 0.904 |
+| base `YR10m10-F-s0` | 0.9323 | 68 | 7 / 43 / 20 | 50 | 0.941 |
+
+| a - b (log-clustered 95 % CI) | mean score | zeros | at-fault zeros | GT distance (m) |
+|:--|:--|:--|:--|:--|
+| `YS2G-L18` - base | +0.0188 [+0.0092, +0.0291] | -25.0 [-39.8, -11.1] | -16.5 [-28.6, -4.9] | -0.055 [-0.096, -0.019] |
+| `YS2G-L18` - `YS-L18` | +0.0060 [+0.0018, +0.0103] | -4.5 [-10.7, +1.6] | +0.5 [-5.0, +5.8] | -0.018 [-0.036, -0.001] |
+
+Registered line (each seed not more than 0.02 below the base, seed-mean GT distance lower): **passed** (decision 269). With the held read
+(decision 264: GT -0.22 m, zeros -32.5) `YS2G-L18` meets plan.md 3.3 (8)'s replacement rule on both lengths; using it is the user's call.
+
+## Candidate-scoring feasibility (Amendment 12; no new rollouts; `YS-L18-s1`'s 43 held zero events)
+
+[results/read/scorer_feasibility.md](results/read/scorer_feasibility.md) (per event), `scorer_feasibility.json`; `scripts/ol_scorer.py`. The stored driver messages
+were replayed through the real driver (gpu synthesis, compiled passes; 5 of 253 window decisions off by more than one fp16 ulp / 0.03 m, dropped),
+labels from `on_rows.geo_one` on the replay, 283 candidates per decision (p0, 31 local variants, 256 navtrain k-means futures of the speed bin), d223's
+two-seed contact head unretrained.
+
+| gate | result | line |
+|:--|:--|:--|
+| recoverable: a safe (no contact, on the road-and-lane raster, within 4 m of the logged path) and progressing (>= 0.8 x p0) candidate at or before the onset (E1 alarm, else the event decision) | 42 / 43 (p0 itself unsafe at that decision in 34) | >= 60 %: pass |
+| rankable: the head's pick (lowest risk with own arc >= 0.8 x p0's) is safe and progressing and below p0 | 10 / 42 = 0.24 | >= 50 %: **fail** |
+
+Candidate-level AUC of the head on its own channel: off-raster 0.897 (median per decision 0.943), collision 0.680 (0.727), corridor 0.733 (no corridor
+channel; risk = max of the two). The pick's risk is below p0's in 42 / 42 but it is safe in only 10: mostly vocabulary trajectories the head scores near 0
+that leave the corridor or touch a vehicle. **The line stops** (decision 270); the `YSEX` reads were released (they had been parked on card 9 by the
+user's hold). Reading: in the 2 s before nearly every failure some trajectory would have been safe over the next 4 s (open loop, non-reactive traffic), but
+the frozen-token head does not say which; collision and corridor are what it misses.
 
 ## Round 2 (Amendment 5; rows from `YS-L18` s0 + s1 rollouts, from `YS-L18-s1`, full schedule)
 
