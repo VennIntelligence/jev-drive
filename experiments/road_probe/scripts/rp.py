@@ -53,6 +53,7 @@ OUTS = [f"{s}{d}" for d in DS for s in SIDES] + ["h20", "onc"]        # 12 later
 NREG = 13
 LANE_W = (2.0, 6.0)
 SCALE = EV.SCALE
+DUMMY_LEAD = dict(lead=np.zeros(72, np.float32), lead_prob=np.zeros(3, np.float32))     # ev.heads also decodes the lead (unused here)
 
 
 def logu(scene):
@@ -605,7 +606,7 @@ def shipped(g, D, scale=False):
     out, prob = np.full((n, NREG), np.nan, np.float32), np.zeros((n, 4), np.float32)
     for i in range(n):
         cam = tb["cam"][i].astype(float)
-        h = EV.heads({k: raw[k][i] for k in raw}, cam)
+        h = EV.heads({**{k: raw[k][i] for k in raw}, **DUMMY_LEAD}, cam)
         ll, re = h["ll"], h["re"]
         if scale:
             ll, re = cam[1] + (ll - cam[1]) / SCALE, cam[1] + (re - cam[1]) / SCALE
@@ -879,7 +880,7 @@ def bev(a):
             for key in [k for k in pay if k[0] == g]:
                 i = idx[(key[1], int(key[2]))]
                 cam = tb["cam"][i].astype(float)
-                h = EV.heads({q: raw[q][i] for q in raw}, cam)
+                h = EV.heads({**{q: raw[q][i] for q in raw}, **DUMMY_LEAD}, cam)
                 sel = EV.X_IDXS <= 60
                 pay[key].update(row=i, plan=tb["poses"][i].astype(np.float32), cam=cam, xs=cam[0] + EV.X_IDXS[sel], ll=h["ll"][:, sel], re=h["re"][:, sel], pr=h["pr"])
         pickle.dump(pay, open(Path(a.read) / "bev.pkl", "wb"), protocol=4)
