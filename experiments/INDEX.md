@@ -4,6 +4,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 **live**
 
+- [route_follow](route_follow/README.md) (ROUTE-FOLLOW, expert A, route following, command counterfactual, navigation ignored): live; route reaches the model only as a 3-way command; counterfactual read pending [d pending]
 - [steer_long](steer_long/README.md) (STEER-LONG, expert B, sharp steering / spin / slowness, curvature cap, MPC gains): live; pre-registered forensic read on stored rollouts [d pending]
 - [cap_audit](cap_audit/README.md): live; worse than every reference only on cruise lag: YS2G +0.59 m behind at 5-10 m/s [d278]
 - [junction_eyes](junction_eyes/README.md) (JE, junction eyes, corridor rulers, trunk LoRA): live; frozen eye misses junction corridor, R-A 0.99 m vs 0.5; step 1 runs [d283]
