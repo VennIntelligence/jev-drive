@@ -206,8 +206,8 @@ def report(a):
     Rl = Rl.join(kc, on=["label", "scene"]).join(ko, on=["label", "scene"])
     z = Rl.score == 0
     Rl["is_corr"] = z & (Rl.left_corridor_laterally > 0)
-    Rl["is_offr"] = z & (Rl.is_offroad > 0)
-    Rl["clean"] = ~((Rl.left_corridor_laterally > 0) | (Rl.is_offroad > 0) | (Rl.collision_at_fault > 0))
+    Rl["is_offr"] = z & (Rl.offroad > 0)
+    Rl["clean"] = ~((Rl.left_corridor_laterally > 0) | (Rl.offroad > 0) | (Rl.collision_at_fault > 0))
     Rl["log"] = Rl.scene.str.rsplit("-", n=1).str[0]
     Rl["fam"] = Rl.label.str.replace(r"-s\d+$", "", regex=True)
     logs = np.array(sorted(Rl.log.unique()))
