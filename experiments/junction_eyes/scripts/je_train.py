@@ -233,6 +233,9 @@ def cmd_train(a):
     from jevdrive.data import splits
     from jevdrive.run import Run
     dev = torch.device("cuda")
+    if a.compile and a.gn_every:                      # per-term norms retain the graph; compiled backward donates buffers otherwise
+        import torch._functorch.config as fc
+        fc.donated_buffer = False
     tag = a.tag or f"JE-{a.arm}-s{a.seed}"
     d = CKPT / tag
     if d.exists() and not a.resume and not (a.scratch and tag.startswith("smoke")):
