@@ -118,11 +118,22 @@ def estimates(rows, routes_local):
                     dn = d
                     break
             rec[f"L2_n_c{D}"], rec[f"L2_n_d{D}"] = v, dn
+            v, dn = np.nan, np.nan                                     # exploratory (post-read): newest covering route that starts at or
+            for d in sorted(rc):                                       # behind the line, so a crossing on a returning leg is not taken
+                if rc[d][0, 0] <= xsD[D]:
+                    v = first_cross(rc[d], xsD[D])
+                    if np.isfinite(v):
+                        dn = d
+                        break
+            rec[f"L2_b_c{D}"], rec[f"L2_b_d{D}"] = v, dn
+        for d in DLIST:
+            rec[f"x0_{d}"] = rc[d][0, 0] if d in rc else np.nan        # carried route start (ego x) and distance travelled since k - d
+            rec[f"trav_{d}"] = float(np.hypot(*(by[k - d]["anchor"][:2] - a[:2]))) if (k - d) in by else np.nan
         # L3: route centre + probe width (same d, else the current probe)
-        for d in (*DLIST, "n"):
+        for d in (*DLIST, "n", "b"):
             for D in DS:
                 c = rec[f"L2_{d}_c{D}"]
-                dw = rec[f"L2_n_d{D}"] if d == "n" else d
+                dw = rec[f"L2_{d}_d{D}"] if d in ("n", "b") else d
                 w = probe(int(dw), "L", D) - probe(int(dw), "R", D) if np.isfinite(dw) else np.nan
                 if not np.isfinite(w):
                     w = probe(0, "L", D) - probe(0, "R", D)
