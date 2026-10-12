@@ -43,3 +43,12 @@ Rows ≈ 17 k (d264 order); `route.npz` ok >= 0.95, cov20 share recorded; G-rout
 ## Serving
 
 nuPlan reads: all serving switches off. PAI (Tokyo): `JEV_VCONT=1.0 JEV_LEAD=1`; controller gains per expert B's pilot verdict (20 if it passes, default otherwise). VHIST, curvature cap untouched.
+
+## Amendment 1 (2026-10-13, before any RB0 read is analysed)
+
+L5 is read per decision, not per scene: decisions in the junction stretch (20 m before entry to 10 m after exit) of >= 60° turn scenes, split
+by whether that decision's own memory covers +20 m; the statistic is the lateral distance to the route, compared between checkpoints on the
+same scene and decision with a log-clustered paired bootstrap (B = 10 000). Line: within the covered half, RBS − RB0 median lateral distance
+smaller with CI upper bound < 0 on held 452; the uncovered half and the train-split rollouts (RB0 / RB vs YR10m10-F-s0 / YS-L18 references,
+same scenes) are reported alongside; per-scene turn completion stays a description on both splits. Reason: held 452 has 24 turn scenes and
+the train split 64, with 1–3 scenes per split whose memory covers +20 m at the entry, so the scene-level bucket of section 6 cannot be read.
