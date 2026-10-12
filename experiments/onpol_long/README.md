@@ -15,12 +15,33 @@ GT distance 1.36 against 1.50 m, both seeds alike (decision 264). Adding the cor
 adopted on either base (P2H10S-F strongly negative: offroad zeros 79 against 24; YR10m10-F fails the at-fault gate). On P2H10S-F the
 S-only arm is flat against the base (-0.0075). The same continued training without rows loses to the base on both (-0.092 Y, -0.028 P).
 
-**Next.** Amendment 5: confirmation reads of `YS-L18` (train 1031 at 18 decisions, all 1491 at 10 decisions) and round 2 of the loop from
-`YS-L18-s1` (queued); PAI transfer read on the Tokyo box (Amendments 1, 4, 5, running).
+A second on-policy round (rows from `YS-L18`'s own rollouts, from `YS-L18-s1`) does not pass the registered round gate: it is no better
+than its own no-row control and slightly worse than round 1 (zeros 50.5 against 43), so the loop stops at round 1 and "more rounds help"
+is recorded as negative for this setting.
+
+**Next.** PAI transfer read on the Tokyo box (Amendments 1, 4, 5, running).
 
 **Read more.** [plans/2026-10-12-ol1-prereg.md](plans/2026-10-12-ol1-prereg.md); the plan: [research/next-round/closed-loop.md](../../research/next-round/closed-loop.md);
 the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpol_nuplan/README.md); the 18-decision driver path:
 [../alpasim_long/README.md](../alpasim_long/README.md).
+
+## Round 2 (Amendment 5; rows from `YS-L18` s0 + s1 rollouts, from `YS-L18-s1`, full schedule)
+
+[results/read/report_YS2_prev.md](results/read/report_YS2_prev.md) (against round 1, `YS-L18-s1`), [report_YS2_base.md](results/read/report_YS2_base.md)
+(against the base). Pool `on1_L18YS`: 34 788 rows from 2042 rollouts, gates pass ([results/gates/gates_L18YS.md](results/gates/gates_L18YS.md)).
+
+| | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) |
+|:--|--:|--:|:--|--:|--:|
+| `YS2-L18` (S rows of round-1 rollouts) s0 / s1 | 0.833 (0.838 / 0.827) | 50.5 | 7.5 / 23.0 / 22.0 | 30.5 | 1.396 |
+| `YS2NONE-L18` (same continuation, no rows) | 0.824 | 51.5 | 6.0 / 23.5 / 25.5 | 29.5 | 1.370 |
+| round 1 `YS-L18-s1` (the start) | 0.841 | 43 | 9 / 15 / 21 | 24 | 1.346 |
+| base `YR10m10-F-s0` | 0.785 | 74 | 10 / 33 / 35 | 43 | 1.495 |
+
+- Round gate (closed-loop.md section 6, line 3; against `YS-L18-s1`): zeros 50.5 against 43, at-fault zeros 30.5 against 24, GT 1.396
+  against 1.346 m: **not passed**. By the registered rule the loop stops at round 1, "more rounds help" is negative here, round 3 is not run.
+- Against its own control: +0.009 [-0.016, +0.033], zeros -1.0 [-13.0, +11.1], at-fault +1.0: the second round's rows add nothing measurable;
+  the continuation itself costs round 1 a little (`YS2NONE` - `YS-L18-s1` -0.017 [-0.043, +0.007]). Against the base `YS2` is still +0.048.
+- `YS2-L18-s0`'s read ran on card 0 (Amendment 7).
 
 ## Round 1b: gentle continuation (Amendment 6; Y family, same rows, lr x 0.1, no warm-up restart, 2 500 steps)
 
