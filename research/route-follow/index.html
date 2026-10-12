@@ -42,14 +42,14 @@ G-rely Δ = 路口开发集行把记忆置空后的 ADE 变化（米）。转弯
 <tr class="ref"><td>YR10m10-F（参照）</td><td class="l">旧底座，提交 #2</td><td>0.771 / 0.781</td><td>82 / 79</td><td>10/33/31 · 4/37/30</td><td>74 / 71</td><td>43 / 41</td><td>1.495 / 1.404</td><td>—</td><td>37.5 / 37.5</td><td>—</td></tr>
 </table>
 <p>读法：新底座 RB0-F 的零分结构和旧家族不同，走廊零分少（15 / 9 对 YS 的 22 / 19）、出路多（29 / 37 对 14 / 15）。RSG 在三类上都是最少的那一档。
-路口段自车到路线的横距中位所有 checkpoint 都在 0.48–0.68 米；plan 2 秒短缺（plan 2 秒弧长减车速 × 2 秒）中位在 −0.18 到 −0.36 米，路口段为正（+0.21 到 +0.93），
+路口段自车到路线的横距中位所有 checkpoint 都在 0.48–0.69 米；plan 2 秒短缺（plan 2 秒弧长减车速 × 2 秒）中位在 −0.18 到 −0.36 米，路口段为正（+0.21 到 +0.93），
 即第 285 条说的「plan 比车短」在 nuPlan held 上不明显。完整列见决策 286。</p>
 
 <h2>二、RSG-L18：新底座加一轮只带 S 的行</h2>
 <p>配对（452 个场景、39 个日志，seed 平均对 RB0-F-s0，95% 置信区间按日志聚类重抽 10 000 次）：均分 +0.045 [+0.022, +0.072]，零分 −25.0 [−36.9, −14.2]，at-fault −16.0 [−26.4, −6.7]，
 GT −0.174 [−0.252, −0.105] 米，fixed / broken 27 / 4（null 5）。L3 三项全过，closed-loop.md 的 CL-1 原文也满足。对全程续训的无行对照 RNONE：零分 −43.5 [−55.0, −32.4]。
 两个 seed 几乎一样（26 / 26，at-fault 21 / 19）。</p>
-<p>行没有把路线依赖冲掉：RSG 的 G-rely 是 +0.025 / +0.028，和底座一样，开发集 ADE 0.528 / 0.527 也和底座一样。对照第 264 条：同一个温和 schedule 的 S 行放在旧底座 YR10m10 上（YSG）零分 51.5，
+<p>行没有把路线依赖冲掉：RSG 的 G-rely 是 +0.025 / +0.028，和底座一样，开发集 ADE 0.528 / 0.527 也和底座一样。对照<a href="../decisions/264.md">第 264 条</a>第 9 项（补记 6）：同一个温和 schedule 的 S 行放在旧底座 YR10m10 上（YSG），held 452 零分 51.5；
 放在新底座上是 26（同为 452 口径），差别来自底座。转弯完成率对 RB0-s0 +12.5 / +4.2 个百分点，置信区间含 0；逐决策的 L5 也不过。所以 RSG 少掉的零分不是「更会跟路线」读得出来的，主要是出路（−14）和走廊（−10）。</p>
 <p>还不能叫它新底座的理由：它是看过 RNONE（全程 schedule 伤底座）和 RBSG（hinge 臂出路多）之后用补记 3 加的拆分臂；公开 1491 护栏已过（见二·补），PAI 281 没读；所有续训都从同一个 RB0-F-s0 起。</p>
 
@@ -117,13 +117,13 @@ held 18 决策的读数不足以判一个带路线 hinge 的臂。所以<b>只�
 <p>来源 <code>experiments/route_follow/results/route-night/a3/offroad_a3.md</code>（RSG / RBSGc 用同一脚本 <code>rf_offroad.py</code> 在本页之前补跑）。整个差就在「右转内侧」一列，两个 seed、两种行来源、两种步数都一样，
 拆分臂把它钉在路线 hinge 上：拿掉 hinge 回到底座水平，只在记忆覆盖的行上加减半。</p>
 <p>诊断（<a href="../route-follow-offroad.md">route-follow-offroad.md</a>，测）排除了三个直观的解释：标签没有出路（零分点 ±30 米内的标签点全部在路上、放得下车；训练池 17 427 行里只有 7 行有一个放不下车的点）；
-记忆没有漂移（记忆点对当场重建的路线偏差中位 4–6 厘米）；hinge 也没有压过道路项（「hinge 已满足但车放不下」的份额与底座相当）。剩下的是过转：转弯零分里自车航向比路线更往里的份额 54–71%，无 hinge 的是 11–18%。
+记忆没有漂移（记忆点对当场重建的路线偏差中位 3.8–8.2 厘米（各臂的 mem_maxgap 中位，<code>offroad_diag.json</code>））；hinge 也没有压过道路项（「hinge 已满足但车放不下」的份额与底座相当）。剩下的是过转：转弯零分里自车航向比路线更往里的份额 54–71%，无 hinge 的是 11–18%。
 推断（没做干预）：on-policy 行来自 RB0 自己的 rollout，RB0 右转偏外，hinge 在这些行上只会说「再早一点、再急一点」，池里几乎没有转过头的状态（RB0 的 plan 放不下车的行只有 1.3%），
 对称的 hinge 和道路项在另一侧拿不到样本；反事实行全是日志状态，同样没有。第二轮的 RBSG2 把 RBSG 自己转过头的状态加回池子，右转内侧回到 4 / 4（见第七节），与这个推断一致。</p>
 <div class="figs">
-<figure><img src="../../experiments/route_follow/figs/offroad_2.png" alt="offroad_2"><figcaption>RBSG-L18-s0 的一个新增出路零分（底座在该场景不是零分），路口右转 −90°。灰 = 可行驶面，蓝虚线 = 当步标签，橙 = 服务的 plan，黑 = 自车轨迹，红叉 = 第一次出路。
+<figure><img src="figs/offroad_2.png" alt="offroad_2"><figcaption>RBSG-L18-s0 的一个新增出路零分（底座在该场景不是零分），路口右转 −90°。灰 = 可行驶面，蓝虚线 = 当步标签，橙 = 服务的 plan，黑 = 自车轨迹，红叉 = 第一次出路。
 看橙线：入弯前 plan 已经朝出口偏，整段在蓝虚线内侧，车在转角处压上路缘（离路线 2.9 米）；蓝虚线本身全在灰色里。</figcaption></figure>
-<figure><img src="../../experiments/route_follow/figs/offroad_3.png" alt="offroad_3"><figcaption>RBSG-L18-s0，右转 −82°：自车就在路线上（0.1 米），但航向比路线多转 19°，车身斜着扫出转角。这一类说明问题不是「没跟上路线」，而是在小半径右转里转过头。</figcaption></figure>
+<figure><img src="figs/offroad_3.png" alt="offroad_3"><figcaption>RBSG-L18-s0，右转 −82°：自车就在路线上（0.1 米），但航向比路线多转 19°，车身斜着扫出转角。这一类说明问题不是「没跟上路线」，而是在小半径右转里转过头。</figcaption></figure>
 </div>
 
 <h2>四、反事实行：路口会换路线，变道不会</h2>
@@ -137,8 +137,8 @@ held 18 决策的读数不足以判一个带路线 hinge 的臂。所以<b>只�
 <p>线：横移 ≥ 50%、终点侧 ≥ 70%、直路平移横移 ≤ 0.10 米（RB-F 0.003 米）：RB-F 两个 seed 都过。只换记忆时只有一半效果，路口换路线要靠记忆和命令一起；变道行只有 19 行，横移不到所需（中位 1.8 米）的十分之一。
 代价：开发集 ADE 0.605 对 RB0 0.528（G-real 不过），记忆置空反而让 ADE 降（G-rely 不过），闭环零分 87 / 78，右转内侧 17。</p>
 <div class="figs">
-<figure><img src="../../experiments/route_follow/figs/cf_bev_0.png" alt="cf_bev_0"><figcaption>路口类反事实行：蓝 = 真实路线（日志右转），红 = 反事实标签（左转出口），红点 = 喂给模型的反事实记忆，绿 = 日志 4 秒未来。看红线是否全程在灰色道路内、从另一个出口离开。</figcaption></figure>
-<figure><img src="../../experiments/route_follow/figs/cf_bev_3.png" alt="cf_bev_3"><figcaption>变道类反事实行：日志（绿）换道，反事实标签（红）留在原车道。两条路线在车前近处只差一个车道左右，要的是 1–2 秒内的一次横移，这正是 RB-F 没学会的那一类。</figcaption></figure>
+<figure><img src="figs/cf_bev_0.png" alt="cf_bev_0"><figcaption>路口类反事实行：蓝 = 真实路线（日志右转），红 = 反事实标签（左转出口），红点 = 喂给模型的反事实记忆，绿 = 日志 4 秒未来。看红线是否全程在灰色道路内、从另一个出口离开。</figcaption></figure>
+<figure><img src="figs/cf_bev_3.png" alt="cf_bev_3"><figcaption>变道类反事实行：日志（绿）换道，反事实标签（红）留在原车道。两条路线在车前近处只差一个车道左右，要的是 1–2 秒内的一次横移，这正是 RB-F 没学会的那一类。</figcaption></figure>
 </div>
 
 <h2>五、六条线与闸</h2>

@@ -27,7 +27,7 @@ lead (the hinge needs the policy's own over-turning states) is for a next round,
 could not separate RBSG2 from RSG; the public set separates them by 32.5 zeros).
 
 **Read more.** [research/decisions/286.md](../../research/decisions/286.md) (Chinese; full table, six line verdicts, branches, card-hours);
-human page [research/route-follow/route-night.html](../../research/route-follow/route-night.html); task book
+human page [research/route-follow/index.html](../../research/route-follow/index.html) (four figures copied to research/route-follow/figs/); task book
 [research/next-round/route-night.md](../../research/next-round/route-night.md); registration
 [plans/2026-10-13-route-night-prereg.md](plans/2026-10-13-route-night-prereg.md) (Amendments 1-5); diagnosis
 [research/next-round/route-follow.md](../../research/next-round/route-follow.md).
