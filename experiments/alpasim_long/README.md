@@ -14,10 +14,11 @@ shipped one at the shipped window on all 1491 public scenes (G0), rollouts on it
 camera coverage, not the data. On the 460 held scenes (2 seeds) the GT-distance ordering holds from 10 to 18 decisions (SSELFnoL-ON <
 YR10m10-F < P2H10S-F), SSELFnoL-ON stays first by score and separates (+0.044 [+0.018, +0.068] over YR10m10-F), and YR10m10-F drops to
 last on at-fault zeros (42), tied with P2H10S-F; YR10m10-F-s0 at 18 decisions (0.771 / 0.474 km / 1.49 m) is near its private result
-(0.80 / 0.529 km / 1.733 m) (decision 265).
+(0.80 / 0.529 km / 1.733 m), but across six drivers 18 decisions is not a private stand-in: every family drops 0.11-0.23 from 10 to 18
+decisions, the third-party drivers score privately at or above their 10-decision level, and only GT distance ranks the drivers like private
+(tau 0.6 at both lengths; amendment 3) (decision 265).
 
-**Next.** Amendment 2 (APY10m10-AB-s0 at 18 and 10 decisions against its private 0.640) is queued in the pool (jobs
-1012-031731-cb61 / 1012-031732-3cd6, read-out 1012-032433-78f7 -> `$DATA_DIR/runs/alpasim_long/held/read_apy/report.md`; not read yet); then closed-loop
+**Next.** 18 decisions is a harder local suite for every family but not a private stand-in (amendment 3); then closed-loop
 training at 18 decisions on the train scenes and an 18-decision selection set.
 
 **Read more.** [plans/2026-10-12-long-prereg.md](plans/2026-10-12-long-prereg.md); the earlier dead end:
@@ -126,12 +127,61 @@ Reading the 10-decision metrics against this:
   (0.131 -> 0.116). Ordering by slope: SSELFnoL-ON < YR10m10-F < P2H10S-F at 18, the same as by GT distance.
 - **Against submission #2:** YR10m10-F-s0 at 18 decisions reads 0.771 / at-fault 0.474 km / GT 1.49 m. Privately it scored 0.80 /
   0.529 km / 1.733 m; at 10 decisions it reads 0.928 / 0.787 km / 0.957 m. The 18-decision read lands near the private numbers on all
-  three metrics; the 10-decision read does not. Amendment 2 tests this on submission #1's checkpoint (below).
+  three metrics; the 10-decision read does not. Amendments 2 and 3 show this does not generalise (below).
 
 Cost: 8 pool jobs, 34-37 min wall per 18-decision job (4.6 s per scene and stack) against 23 min at 10 decisions (1.5x); runtime RSS 33-34
 GiB in both; disk 44 MB per scene and job before pruning (121 GB for the six 18-decision jobs), 17 GB after (rollout.asl kept for
 zero-score rollouts only).
 About 4.5 card-hours booked for the eight jobs (6 cards, 02:34-03:14 CST); the lane in total about 5 card-hours.
+
+## Amendment 2: submission #1's checkpoint at 18 decisions
+
+[results/apy/report.md](results/apy/report.md). APY10m10-AB-s0, held 460, `run.sh ap2`, one run per length.
+
+| | score | zeros (at-fault / corridor) | at-fault km | GT distance m | drift slope 4..K |
+|:--|--:|:--|--:|--:|--:|
+| APY10m10-AB-s0, 10 decisions | 0.941 | 24 (12 / 6) | 1.10 | 1.11 | 0.167 |
+| APY10m10-AB-s0, 18 decisions | 0.783 | 89 (45 / 42) | 0.49 | 1.71 | 0.191 |
+| APY10m10-AB-s0, private | 0.640 | | 0.132 | 2.29 | |
+| YR10m10-F-s0, 18 decisions | 0.771 | 82 (43 / 35) | 0.47 | 1.49 | 0.142 |
+| YR10m10-F-s0, private | 0.800 | | 0.529 | 1.733 | |
+
+At 18 decisions APY10m10-AB-s0 has the most zeros, the steepest drift and the largest GT distance of the seven checkpoints read here,
+and its GT distance is above YR10m10-F-s0's (+0.26 m [+0.13, +0.41]), as on private (2.29 against 1.73 m). Its score does not separate
+from YR10m10-F-s0 (+0.007 [-0.028, +0.039]) where private puts it 0.16 lower, and its private at-fault distance (0.132 km) is far below
+the local 0.49. So 18 decisions reproduces the private direction on GT distance and zeros for the two submissions, not the size of the
+private score gap.
+
+## Amendment 3: other driver families, 10 against 18 decisions
+
+[results/families/report.md](results/families/report.md) (`report.json`, `per_scene.csv`). Held 460, 18 decisions new (7 pool jobs,
+WA-JEPA in 4 chunks); 10 decisions = the stored runs on all 1491 public scenes cut to the 460 (WA-JEPA: c0c; LTF / DD / garage: the
+alpasim_proxy anchor runs), the same base overrides. One run per driver. Private values: leaderboard JSON of 2026-10-12 (alpasim_proxy);
+WA-JEPA's private row is team-lucifer's `wajepa-s2-20260904`, not known to be our configuration.
+
+| Driver | score 10 -> 18 (private) | zeros 10 -> 18 | at-fault zeros 10 -> 18 | corridor zeros 10 -> 18 | at-fault km 10 / 18 (private) | GT distance m 10 / 18 (private) | GT, first 10 of 18 | drift slope 4..10 / 4..18 |
+|:--|:--|:--|:--|:--|:--|:--|--:|:--|
+| YR10m10-F-s0 (ours, sub. #2) | 0.928 -> 0.771 (**0.800**) | 26 -> 82 | 16 -> 43 | 4 -> 35 | 0.79 / 0.47 (0.53) | 0.96 / 1.49 (1.73) | 0.69 | 0.137 / 0.142 |
+| APY10m10-AB-s0 (ours, sub. #1) | 0.941 -> 0.783 (**0.640**) | 24 -> 89 | 12 -> 45 | 6 -> 42 | 1.10 / 0.49 (0.13) | 1.11 / 1.71 (2.29) | 0.73 | 0.167 / 0.191 |
+| WA-JEPA (reference arm) | 0.887 -> 0.753 (0.762?) | 48 -> 93 | 26 -> 51 | 17 -> 35 | 0.48 / 0.37 (0.63?) | 1.19 / 1.43 (1.85?) | 0.88 | 0.204 / 0.156 |
+| garage model_0014 | 0.729 -> 0.617 (**0.848**) | 86 -> 129 | 72 -> 106 | 10 -> 17 | 0.16 / 0.17 (0.23) | 0.85 / 1.08 (0.72) | 0.68 | 0.145 / 0.089 |
+| SimScale LTF sample | 0.784 -> 0.559 (**0.738**) | 86 -> 184 | 58 -> 103 | 27 -> 83 | 0.23 / 0.20 (0.27) | 1.91 / 2.55 (2.27) | 1.20 | 0.310 / 0.242 |
+| SimScale DiffusionDrive sample | 0.757 -> 0.530 (**0.772**) | 99 -> 200 | 67 -> 118 | 29 -> 84 | 0.19 / 0.17 (0.27) | 1.90 / 2.47 (2.16) | 1.25 | 0.313 / 0.227 |
+
+**The drop is not ours alone.** Every family loses 0.11-0.23 in score from 10 to 18 decisions and roughly doubles its zeros; the SimScale
+samples lose the most (-0.23, corridor zeros x3), garage the least (-0.11; its zeros are at-fault offroad already at 10 decisions).
+
+**18 decisions does not reproduce private across families.** Private minus local score at 10 / 18 decisions: YR10m10-F-s0 -0.13 / +0.03,
+WA-JEPA -0.13 / +0.01 (unverified private row), APY10m10-AB-s0 -0.30 / -0.14, LTF -0.05 / +0.18, DD +0.02 / +0.24, garage +0.12 / +0.23.
+The third-party drivers score privately about their 10-decision level or above, not their 18-decision level; our two submissions score
+privately at or below their 18-decision level. Rank agreement with private over the six drivers (Kendall tau): score -0.47 at 10, -0.20 at
+18; at-fault km +0.20 / +0.07; GT distance +0.60 at both (3 discordant pairs of 15). Without WA-JEPA: score -0.60 / -0.20, GT +0.60 / +0.60.
+So the YR10m10-F-s0 match was not a general property of the length: a longer local suite moves our family toward its private numbers and
+the others away from theirs. The private gap stays driver-specific (as alpasim_proxy and decision 263 found), and length alone does not
+explain it. Caveats: one run per driver; on these 460 scenes LTF and DD score 0.04 below their 1491-scene values (0.824 / 0.797), so
+the held set is harder for them than the public average.
+
+Cost: 7 jobs, 11:23-12:31 CST; LTF / DD / garage 40-48 min per 460 scenes, WA-JEPA 47-66 min per 115-scene chunk; about 6 card-hours.
 
 <!-- files:begin -->
 <!-- files:end -->
