@@ -1,0 +1,10 @@
+{
+ "lb_navtest": {
+  "rows": 512,
+  "mean_abs": 0.0002682554768398404,
+  "max_abs": 0.03125,
+  "front_rms": 1.706286907196045,
+  "pixel_rows": 48,
+  "pixel_rows_differing": 0
+ }
+}

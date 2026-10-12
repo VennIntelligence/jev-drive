@@ -1,0 +1,44 @@
+{
+ "n": 600,
+ "skipped_missing_keys": 0,
+ "slot5_pix_mean_abs": 0.05193984561496311,
+ "slot5_pix_max": 120,
+ "slot5_pix_frac_differ": 0.03876612769232856,
+ "slot5_pix_frac_gt2": 0.0024533801608615452,
+ "slot6_pix_mean_abs": 0.03815970102945963,
+ "slot6_pix_max": 81,
+ "slot6_pix_frac_differ": 0.029428833855523005,
+ "slot6_pix_frac_gt2": 0.0016442065768771702,
+ "slot7_pix_mean_abs": 0.0008984417385525174,
+ "slot7_pix_max": 83,
+ "slot7_pix_frac_differ": 0.00030039893256293405,
+ "slot7_pix_frac_gt2": 9.1400146484375e-05,
+ "frames_all_equal_frac": 0.0,
+ "slot7_pix_mean_abs_by_n_keys": {
+  "1": [
+   36,
+   0.0009451265688295718
+  ],
+  "2": [
+   37,
+   0.0009227443385768581
+  ],
+  "3": [
+   33,
+   0.000977795533459596
+  ],
+  "4": [
+   494,
+   0.0008879184079395453
+  ]
+ },
+ "tok_mean_abs": 0.007963154464960098,
+ "tok_max_abs": 5.3203125,
+ "tok_rms": 1.688918948173523,
+ "tok_per_row_max_p50_p99": [
+  0.05859375,
+  2.4552905559539795
+ ],
+ "tok_noise_floor_mean_abs": 0.0008510806364938617,
+ "tok_noise_floor_max_abs": 0.03125
+}

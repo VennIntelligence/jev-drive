@@ -1,0 +1,98 @@
+{
+ "navtrain_full.s0of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.6791733503341675,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s1of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.687775731086731,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s2of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.6924775838851929,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s3of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.677918553352356,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s4of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.6819664239883423,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s5of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.6775602102279663,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s6of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.693483591079712,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s7of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.67954421043396,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s8of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.6946967840194702,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s9of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.6921535730361938,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s10of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.6749359369277954,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ },
+ "navtrain_full.s11of12": {
+  "rows": 256,
+  "mean_abs": 0.0,
+  "max_abs": 0.0,
+  "front_rms": 1.67523992061615,
+  "pixel_rows": 16,
+  "pixel_rows_differing": 0
+ }
+}
