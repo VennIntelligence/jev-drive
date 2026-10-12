@@ -1,0 +1,126 @@
+{
+ "rows": {
+  "train": 14765,
+  "dev": 309,
+  "j0": 8980,
+  "j1": 3196,
+  "lc": 2589,
+  "tokens": 12042,
+  "logs": 825
+ },
+ "build": {
+  "rows": 19127,
+  "ok": 15074,
+  "ok_by_class": {
+   "j0": [
+    9190,
+    11416
+   ],
+   "j1": [
+    3269,
+    3739
+   ],
+   "lc": [
+    2615,
+    3972
+   ]
+  }
+ },
+ "G_cf1": {
+  "n": 50,
+  "median_gap_msg_at_decision": 84.57603454589844,
+  "median_gap_first_msg_j0": 70.7636947631836,
+  "median_gap_merged_memory": 80.49270629882812,
+  "share_ge_2m_at_decision": 1.0,
+  "all_rows_median_gap_at_decision": {
+   "j0": 83.70175170898438,
+   "j1": 85.63442993164062,
+   "lc": 4.606908321380615
+  },
+  "pass": true
+ },
+ "G_cf2": {
+  "samples": 381161,
+  "inside": 0.9999947528734576,
+  "by_class": {
+   "j0": 0.9999956654414315,
+   "j1": 0.9999876096545571,
+   "lc": 1.0
+  },
+  "rows_all_inside": 0.9998645445309854,
+  "pass": true
+ },
+ "generator_by_class": {
+  "j0": {
+   "map": 6891,
+   "rec": 2089
+  },
+  "j1": {
+   "map": 2856,
+   "rec": 340
+  },
+  "lc": {
+   "map": 1777,
+   "rec": 812
+  }
+ },
+ "cov20": 0.3943785980358957,
+ "cmd_LSRU": [
+  8900,
+  1472,
+  4393,
+  0
+ ],
+ "snap_p95": 1.1710094213485718,
+ "data": [
+  "navtrain_full.s0of12",
+  "navtrain_full.s1of12",
+  "navtrain_full.s2of12",
+  "navtrain_full.s3of12",
+  "navtrain_full.s4of12",
+  "navtrain_full.s5of12",
+  "navtrain_full.s6of12",
+  "navtrain_full.s7of12",
+  "navtrain_full.s8of12",
+  "navtrain_full.s9of12",
+  "navtrain_full.s10of12",
+  "navtrain_full.s11of12"
+ ],
+ "real_memory_vs_rm_build": {
+  "n": 18295,
+  "share_le_1e2": 0.9998906805138016,
+  "max": 3.599609375
+ },
+ "G_cf3": [
+  {
+   "fig": "experiments/route_follow/figs/cf_bev_0.png",
+   "token": "2aea0f00bc2a5e81",
+   "cls": "j0"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cf_bev_1.png",
+   "token": "a4d7f43551fa508c",
+   "cls": "j0"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cf_bev_2.png",
+   "token": "8e475454489d5f5b",
+   "cls": "j0"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cf_bev_3.png",
+   "token": "3890e00805995a65",
+   "cls": "lc"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cf_bev_4.png",
+   "token": "4f1c6ee095d2574d",
+   "cls": "lc"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cf_bev_5.png",
+   "token": "1ac71381f2445030",
+   "cls": "lc"
+  }
+ ]
+}
