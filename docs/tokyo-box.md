@@ -575,5 +575,5 @@ The simulator writes one front-wide 10 fps mp4 per rollout deep under `sim/rollo
 (on the Tokyo box, source in this commit's `experiments/alpasim/scripts/pai_videos.py`) rebuilds a flat symlink index at
 `~/Desktop/pai_videos/`, one flat folder, `<scene8>_<arm>_<score>_<zero kind>.mp4`, so the arms of one scene sort
 next to each other. Rerun it to pick up new chunks; it reads `results-summary.json`, so only scored rollouts appear.
-Double-click plays in `ffplay` (registered as the mp4 handler in `~/.local/share/applications/ffplay.desktop`; no other
-player is installed and there is no sudo). Keys in ffplay: space pause, left / right seek 10 s, q quit; `-loop 0` repeats.
+Double-click plays with the desktop default (Chrome via the GNOME association; do not register another handler, an
+ffplay registration on 2026-10-12 broke double-click and was reverted).
