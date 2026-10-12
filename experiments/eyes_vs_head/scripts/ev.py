@@ -361,6 +361,7 @@ def read_unit(job):
                     ye = float(at(h["re"][j], cam[0] + d, cam[0]))
                     row[f"{H}_r{j}_{int(d)}"] = ye
                     row[f"{H}_re{j}_{int(d)}"], _ = near(R[d], ye)
+                    row[f"{H}_rf{j}_{int(d)}"], _ = near(R[d], 2 * cam[1] - ye)          # G-sign: the same edge with y mirrored
             # ego lane framed at 10 m: both lines matched within 0.5 m to adjacent crossings
             y1, y2 = row[f"{H}_y1_10"], row[f"{H}_y2_10"]
             e1, i1 = near(B[10.0], y1)
