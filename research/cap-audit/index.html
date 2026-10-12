@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CAP-AUDIT：全部决策上的能力记分卡</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:1100px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:4px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:14px}th,td{border:1px solid #ccc;padding:4px 10px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f3f3f3}
+table.ev td{text-align:left;font-size:13px}table.ev td:nth-child(3),table.ev td:nth-child(5){text-align:right}
+figure{margin:16px 0}img{max-width:100%}figcaption{font-size:14px;color:#444}code{font-size:12px;word-break:break-all}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}}
+</style></head><body>
+</head><body>
+<h1>CAP-AUDIT：不只零分，全部决策上我们差在哪</h1>
+<div class="v"><b>要点：</b>此前只诊断过零分。这次把已存的 10 决策 public rollout（1479 个场景、136 个日志，与 private 同长）上每一个决策都量一遍：17 个能力量（横向、纵向、合法性、交互），
+对人类日志在同一时刻的同一个量取缺口，再和同一渲染上跑的四个参考 driver（WA-JEPA、LTF、DiffusionDrive、garage 0014）逐场景配对比。按预登记的线（比<b>每一个</b>参考都差、超出置信区间），
+我们只在一类上落后：<b>巡航起步（5–10 米/秒）时比人慢、落在人后面</b>。YS2G 比最慢的参考还多落后 0.59 米 [0.22, 0.97]，提交 #2 的 YR 0.77 米 [0.38, 1.19]；
+这些场景上我们巡航比人慢 0.87–0.92 米/秒。这是纵向问题，对应的杠杆是新标签课 L。横向、合法性、交互几乎每一格都不差于最好的参考。
+读数后的探索看到第二族：横穿对向的转弯里我们待在对向车道的时间和离他车的距离比四个参考里的三个差，S 课让它变多。</div>
+
+<h2>一、怎么量</h2>
+<p>只用已存的东西、只用 CPU：控制器每 0.1 秒的后轴位姿与速度、评估器每 0.5 秒的序列、模拟器自己的场景加载器给出的日志路径、带行驶方向的车道多边形、回放的他车（只有车辆）。
+十个检查点各一个回合：我们的 YR10m10-F-s0、YS2G-L18 两 seed、YS-L18 两 seed、APY（只描述），参考 WA-JEPA、LTF、DD、G0014。每个回合在评估器截断前的决策上算量，先在场景内平均，再在格内对场景平均。
+“缺口”是 driver 减人类日志（车道边距、最近车距反过来，越大越差）。格 = 一个量 × 一个场景分组：转弯几何（直行、缓弯、靠路沿转弯、横穿对向转弯）、起始速度四档、nuPlan 原始日志里的场景标签十族（路口、起步转弯、停止线 / 红绿灯、行人、上下客区、跟车、静止、障碍、变道、无标签）。
+判据 m* = 四个参考里“我们 − 参考”的最小值（按场景配对）；按日志聚类 bootstrap（10 000 次）的 2.5% 分位 &gt; 0 就是旗标。预登记在任何读数前提交（<code>experiments/cap_audit/plans/2026-10-12-cap-audit-prereg.md</code>，<code>f9981841</code>）。</p>
+<p>闸全过：每个检查点 1479 / 1479 个回合都有评估器序列和控制器位姿；自算横向偏差与评估器在 96.7% 的决策上差 ≤ 0.1 米（第一次 0.856，原因是评估器量车身质心、我们量后轴，读数前改了尺子，见补记 1）；
+自算最近车距与评估器 Spearman 0.990；日志自己 99.5% 在同向车道、0.4% 在对向车道；1491 个场景里 1457 个有场景标签。</p>
+
+<h2>二、登记读数：五个旗标格，都不是强旗标</h2>
+<table><tr><th>检查点</th><th>分组</th><th>量</th><th>m* [95% CI]</th><th>只看都活下来的场景</th><th>18 决策 held</th><th>归类</th><th>杠杆</th></tr>
+<tr><td>YR10m10-F-s0</td><td>起始 5–10 米/秒（714 场景）</td><td>落后人类（米）</td><td>+0.774 [+0.377, +1.190]</td><td>+0.675 成立</td><td>+0.710</td><td>纵向</td><td>新标签课 L</td></tr>
+<tr><td>YS2G</td><td>起始 5–10 米/秒</td><td>落后人类</td><td>+0.593 [+0.217, +0.972]</td><td>+0.554 成立</td><td>+1.244</td><td>纵向</td><td>新标签课 L</td></tr>
+<tr><td>YS-L18</td><td>起始 5–10 米/秒</td><td>落后人类</td><td>+0.590 [+0.214, +0.971]</td><td>+0.531 成立</td><td>+1.064</td><td>纵向</td><td>新标签课 L</td></tr>
+<tr><td>YS-L18</td><td>靠路沿转弯（113）</td><td>落后人类</td><td>+1.210 [+0.308, +2.031]</td><td>+0.343 不成立</td><td>+1.181</td><td>纵向</td><td>新标签课 L</td></tr>
+<tr><td>YS-L18</td><td>直行（1070）</td><td>对日志路径的航向误差（度）</td><td>+0.263 [+0.104, +0.362]</td><td>+0.253 成立</td><td>+0.232</td><td>感知</td><td>感知侧修法</td></tr></table>
+<p>每行 287 个可判格（≥ 30 个场景、≥ 10 个日志），没有一格的 bootstrap z 超过 3.75（约为格数的 Bonferroni）。数字来源：<code>experiments/cap_audit/results/cap_report.md</code>、<code>flags.csv</code>。</p>
+<p><b>落后到底是什么。</b>起始 5–10 米/秒的场景上，有符号速度差（driver − 人）YR −0.91、YS2G −0.87 米/秒，参考 WA-JEPA −0.73、garage −0.53，两个样例反而偏快（+0.23、+0.12）；5 秒后我们落后人类 4.1–4.2 米，WA-JEPA 3.5、garage 2.8、LTF 1.7、DD 1.8。
+全部场景上我们落后 3.1 米，garage 也是 3.1，所以这一格不旗标；我们自己家族的 APY 只落后 2.2 米。也就是说：不是哪个场景特有，而是巡航速度整体偏低，在中速巡航上最明显。
+注意第 252 条：在 navtest 上把速度一刀切调快不净正（快 5% 新增碰撞），所以 L 课的速度项要随场景条件化，不能是常数增益。</p>
+<p><b>直行航向这一格。</b>只有 YS-L18 有，YS2G（+0.125，区间含 0）和 YR（+0.106）都没有。按登记规则归感知：这些场景的 held 直行决策上，出厂车道线头 20 米处的车道边界误差中位 0.62 米、两条线都在的比例 0.15（第 272 条的线是 0.30 米、0.80），
+而 serving 没有异常（规划对执行 1 秒处 0.075 米，全体 0.074）。这条规则在直行上很宽：第 272 条已知眼睛在所有直行决策上都差，所以任何直行横向格都会被归到感知。</p>
+
+<figure><img src="../../experiments/cap_audit/figs/ca_heatmap.png" alt="能力 × 场景热图"><figcaption>每一格是 m*（四个参考里“我们 − 参考”的最小值）除以该量在全部 driver 上的标准差：红 = 比最差的参考还差，蓝 = 至少不比某个参考差。
+黑框是登记旗标，灰点是样本不足不判。左 YS2G、右 YR。看“落后人类”那一行在 5–10 米/秒那一列的红框；其余几乎全蓝，即横向、合法性、交互上我们不比任何一个参考都差。</figcaption></figure>
+
+<h2>三、对人类日志的缺口（全部场景，YS2G）</h2>
+<table><tr><th>量</th><th>YS2G</th><th>YR</th><th>参考范围</th></tr>
+<tr><td>对日志路径横向偏差（米）</td><td>0.27</td><td>0.26</td><td>0.32–0.45</td></tr>
+<tr><td>对日志路径航向误差（度）</td><td>2.0</td><td>2.1</td><td>2.2–2.8</td></tr>
+<tr><td>漂移斜率（米 / 决策）</td><td>0.073</td><td>0.077</td><td>0.10–0.14</td></tr>
+<tr><td>用掉一半走廊（≥ 2 米）的场景比例</td><td>0.078</td><td>0.087</td><td>0.10–0.18</td></tr>
+<tr><td>速度误差 |Δv|（米/秒）</td><td>0.89</td><td>0.92</td><td>0.87–1.04</td></tr>
+<tr><td>人停住时我们的速度（米/秒）</td><td>0.51</td><td>0.53</td><td>0.49–0.93</td></tr>
+<tr><td>人刹车时少刹的量（米/秒）</td><td>0.22</td><td>0.24</td><td>0.36–0.77</td></tr>
+<tr><td>5 秒后落后人类（米）</td><td>3.1</td><td>3.1</td><td>2.0–3.1</td></tr></table>
+<p>最大的绝对缺口仍在转弯：横穿对向转弯横向 0.45 米、13% 的场景用掉一半走廊、航向 3.2 度；靠路沿转弯 0.39 米、13%、3.4 度。这些格我们比参考好，但它们是 private 上最可能变成零分的“退化但活下来”。</p>
+
+<h2>四、探索（未登记）：比四个里三个参考差</h2>
+<ul><li><b>落后人类</b>：全部场景、路口、直行、跟车都比 WA-JEPA、LTF、DD 差，garage 同样慢。</li>
+<li><b>横穿对向转弯里的对向车道与车距</b>：对向车道占比超出日志 YS2G +0.031、YS-L18 +0.041、YR +0.018，参考 WA-JEPA −0.009、LTF −0.006、DD −0.005，garage +0.117（更常进对向，所以不旗标）；
+YS2G 对 WA-JEPA +0.039 [+0.018, +0.064]，最近车距也近 0.20 米。停止线、起步转弯、起步与中速分组同样。S 行比 YR 更高，即第 268 条的 H3 在全部决策上也看得到；对应的带方向栅格与对向 hinge 臂已经失败（第 274、276、277 条）。</li></ul>
+
+<figure><img src="../../experiments/cap_audit/figs/ca_bev.png" alt="例子"><figcaption>按登记规则挑的五格例子（旗标格先，其次按标准化下界排的未旗标格），自车系、车头朝上；黑虚线是人类路径，叉是人类在最后一个决策时刻的位置，彩色线和圆点是各 driver 的执行路径与同一时刻的位置，橙色车道框是对向车道。
+看第一幅：同一条直路上我们的两个检查点（深蓝、绿）在自车框处（这一帧以 YS2G 自己的位置为原点），人类（叉）和参考已经开到前面；第二幅靠路沿右转也一样。后两幅（直行无车道、直行对向）是同一排序取到的退化格，只有一两个决策，不说明问题。</figcaption></figure>
+
+<h2>五、局限与数据位置</h2>
+<ul><li>参考里三个是弱 driver（public 0.75–0.83），“比每个参考都差”很严，只抓得到连弱 driver 都比我们好的能力；private 最好的 garage 既慢又常进对向，所以这两族缺口单独都解释不了 private 排名。</li>
+<li>模拟里只有回放的车辆，不反应、没有行人；“让行”只能量成“人刹的地方我们刹没刹”。</li>
+<li>感知列只有 held 上 YS-L18-s1 的重跑（第 275 条）。参考各一次 run；public 是本族的开发场景。</li>
+<li>箱子：<code>$DATA_DIR/runs/cap_audit/collect-pub/20261012-182318/</code>、<code>collect-held/20261012-182423/</code>（逐决策 parquet、鸟瞰图数据）；代码 <code>experiments/cap_audit/scripts/ca.py</code>、<code>ca_report.py</code>；决策条目 <code>research/decisions/278.md</code>。</li></ul>
+</body></html>
