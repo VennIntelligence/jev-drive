@@ -248,7 +248,7 @@ def gates(Ro, St, RL):
     per = {}
     for lab, x in Ro.groupby("label"):
         x = x[x.st_gt.notna()]
-        per[lab] = dict(n=len(x), gt=float(ok(x.gt, x.st_gt).mean()), lat=float(ok(x.gt_lat_max, x.st_lat).mean()),
+        per[lab] = dict(n=len(x), gt=float(ok(x["gt"], x["st_gt"]).mean()), lat=float(ok(x.gt_lat_max, x.st_lat).mean()),
                         loc=float(ok(x["loc"], x.st_loc).mean()), prog=float(ok(x.prog, x.st_prog).mean()),
                         score=float(ok(x.score_re, x.score.astype(float)).mean()))
     G["G1a_rollout"] = dict(per_label=per, line=0.999, passed=bool(all(min(v[m] for m in ("gt", "lat", "loc", "prog", "score")) >= 0.999 for v in per.values())))
@@ -257,7 +257,7 @@ def gates(Ro, St, RL):
     pg = {lab: dict(n=len(x), d=float(ok(x.d_geo, x.d_ev).mean()), e=float(ok(x.e_geo, x.e_ev).mean())) for lab, x in k.groupby("label")}
     G["G1b_geometry"] = dict(per_label=pg, line=0.99, passed=bool(all(min(v["d"], v["e"]) >= 0.99 for v in pg.values())))
     r = Ro[Ro.gt_geo.notna()]
-    G["gt_geo_match"] = float(ok(r.gt_geo, r.gt).mean())
+    G["gt_geo_match"] = float(ok(r["gt_geo"], r["gt"]).mean())
     G["passed"] = bool(G["G1a_rollout"]["passed"] and G["G1a_run"]["passed"] and G["G1b_geometry"]["passed"])
     return G
 
