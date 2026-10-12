@@ -137,9 +137,9 @@ def scene_job(job):
                  st_gt=st.get("dist_to_gt_trajectory"), st_lat=st.get("lateral_dist_to_gt_trajectory"), st_loc=st.get("dist_to_gt_location"),
                  st_prog=st.get("progress_rel_to_total"), has_ctrl=C is not None)
         keptset = set(kept)
-        oc_cut = max(kept)                                                                # collision / offroad / 4 m cut of the real rollout
         g = lambda n, t: float(S.get(n, {}).get(int(t)) or 0.0)                              # noqa: E731
-        hard = next((t for t in sorted(S["dist_to_gt_trajectory"]) if g("collision_any", t) > 0 or g("offroad", t) > 0), None)
+        ev = [t for t in sorted(S["dist_to_gt_trajectory"]) if g("eval_relevant", t) > 0]
+        hard = next((t for t in sorted(S["dist_to_gt_trajectory"]) if (not ev or t >= ev[0]) and (g("collision_any", t) > 0 or g("offroad", t) > 0)), None)
         if C is not None:
             # ego centre on the 10 Hz controller grid up to the hard cut: station / cross profile for the counterfactual
             tc = np.array(sorted(t for t in C if t <= (hard if hard is not None else tk[-1])))
