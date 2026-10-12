@@ -240,7 +240,7 @@ def report(a):
                     return np.nan
                 x = x[x.k < upto] if upto is not None else x
                 return float(x[m].max()) if len(x) else np.nan
-            sp = np.array([score(r, r[kcol]) for r in P_ok.itertuples()])
+            sp = np.array([score(r, getattr(r, kcol)) for r in P_ok.itertuples()])
             sn = np.array([score(r, None) for r in neg.itertuples()])
             sc = np.r_[sp, sn]
             y = np.r_[np.ones(len(sp), bool), np.zeros(len(sn), bool)]
