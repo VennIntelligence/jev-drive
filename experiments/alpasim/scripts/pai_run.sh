@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One PAI-track closed-loop run on the Tokyo box: the official containerised stack (`+e2e_challenge=dev`: NRE renderer, physics,
 # nonlinear MPC, runtime + eval; AlpaSim unmodified at the deployed commit) against our driver in the nuPlan submission image with
-# experiments/alpasim/lib/pai_{core,driver}.py and serve_fix.py mounted over it. Modelled on docker/smoke.sh; shares the box with it, so everything
+# experiments/alpasim/lib/pai_{core,driver}.py, serve_fix.py and route_mem/lib/rmem.py (ROUTE-MEM checkpoints) mounted over it. Modelled on docker/smoke.sh; shares the box with it, so everything
 # here has its own names: compose project pai-<name>, network pai-nonet, ports from PAI_BASEPORT, containers pai-*.
 #   pai_run.sh <out dir> <scenes.tsv | file of scene ids> [wizard overrides...]
 # Env: DATA_DIR (/data), ALPASIM_SRC, NUREC (scene cache with all-usdzs/, pai_fetch.sh), IMG (driver image), BASE (trusted image),
@@ -38,6 +38,7 @@ docker run -d --name "$N" --init --cap-drop ALL --security-opt no-new-privileges
   -v "$lib/pai_core.py:/app/jev-drive/experiments/alpasim/lib/pai_core.py:ro" -v "$lib/pai_driver.py:/app/jev-drive/experiments/alpasim/lib/pai_driver.py:ro" \
   -v "$lib/serve_fix.py:/app/jev-drive/experiments/alpasim/lib/serve_fix.py:ro" \
   -v "$here/../../../jevdrive/openpilot/lead_long.py:/app/jev-drive/jevdrive/openpilot/lead_long.py:ro" \
+  -v "$here/../../route_mem/lib/rmem.py:/app/jev-drive/experiments/route_mem/lib/rmem.py:ro" \
   ${DRV_PY:+-v "$lib/$DRV_PY:/app/jev-drive/experiments/alpasim/lib/$DRV_PY:ro"} \
   -v "$OUT/driver:/logs" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "SH30_TAG=$TAG" ${DRV_ENV:-} \
   "$IMG" python "/app/jev-drive/experiments/alpasim/lib/${DRV_PY:-pai_driver.py}" >/dev/null || die "docker run"

@@ -15,6 +15,11 @@ adaptation of the nuPlan-track checkpoints (sh30_driver.py), no training. What t
             discards 6 of every 10 rendered frames; results/pai_keywarp.md
   rate      one inference per PAI_EVERY `drive` calls (default 1 = every call, 10 Hz); between inferences the cached plan is returned
   traffic   right-hand convention unless PAI_LHT=1 (the driver is not told the country)
+  route     every route message (all its waypoints, rig frame of the message time) is logged once as a drive.jsonl `route` record with its
+            timestamp and the ego pose at that time (local frame, written at the first inference that has the pose). For a checkpoint
+            with the ROUTE-MEM branch (sidecar route_mem.json, experiments/route_mem/lib/rmem.py) the messages also go into rmem.Tracker
+            and the memory features are fed after the ego row and logged as `rmem` (sh30_driver's rule); SH30_RMEM=0 feeds an empty
+            memory instead. The branch checkpoint is loaded here (load_branch): the submission image's pp_train / sh30_core predate it
 
 A `drive` whose inputs are incomplete or whose inference raises is aborted with a gRPC error and counted (no straight-line fallback).
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, SH30_TAG (op_parity run tag), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl:
@@ -40,6 +45,8 @@ from sh30_driver import common_pb2, egodriver_pb2, egodriver_pb2_grpc, grpc
 import pai_core as PC
 import serve_fix as FX
 from pai_core import C, I
+
+RMEM = None                                          # experiments/route_mem/lib/rmem.py (mounted by pai_run.sh), set in main() for a branch checkpoint
 
 LOG = logging.getLogger("pai")
 CAM = os.environ.get("PAI_CAM", "camera_front_wide_120fov")
@@ -75,6 +82,9 @@ class Session:
         self.fix = FX.new(req.rollout_spec.vehicle, t.x)
         self.maps, self.frames, self.jpeg, self.poses, self.states = None, {}, {}, {}, {}
         self.cmd, self.route0, self.plan, self.anchor = np.array([0, 0, 0, 1], np.float32), None, None, None
+        # route memory; route messages not yet logged (ts -> waypoints); the pose of each message, kept when first known (the egomotion
+        # store above keeps 3.3 s only, the memory needs every message's pose)
+        self.rt, self.unlogged, self.rpose = (RMEM.Tracker() if RMEM else None), {}, {}
         self.lock = threading.Lock()
         self.count = dict(drive=0, inference=0, inference_error=0, input_error=0, state_rotated=0, cold=0, images=0)
 
@@ -106,6 +116,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
     def __init__(self, core: C.Core, log_dir: Path, cold: str, every: int = 1, dump: int = 0, lht: bool = False, keywarp: bool = False):
         self.core, self.cold, self.every, self.dump, self.lht, self.dir, self.keywarp = core, cold, every, dump, lht, log_dir, keywarp
         self.sessions, self.lock, self.gpu, self.nsess = {}, threading.Lock(), threading.Lock(), 0
+        self.rmem_on = os.environ.get("SH30_RMEM", "1") != "0"
         log_dir.mkdir(parents=True, exist_ok=True)
         self.out = open(log_dir / "drive.jsonl", "a", buffering=1)
         self.start = open(log_dir / "start.jsonl", "a", buffering=1)
@@ -178,6 +189,11 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         s = self._s(req.session_uuid, ctx)
         s.cmd = S.command_from_route(req.route)
         s.route0 = [req.route.waypoints[0].x, req.route.waypoints[0].y] if req.route.waypoints else None
+        wp = [[w.x, w.y] for w in req.route.waypoints]
+        with s.lock:
+            s.unlogged[int(req.route.timestamp_us)] = wp
+            if s.rt is not None:
+                s.rt.add(int(req.route.timestamp_us), wp)
         return common_pb2.Empty()
 
     def submit_recording_ground_truth(self, req, ctx):
@@ -205,6 +221,13 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 P, V = C.fill_history(pose, np.array([d[0] for d in dyn]), dyn[0][2])
                 frames, cmd = dict(s.frames), np.asarray(s.cmd, np.float32).copy()
                 s.count["state_rotated"] += int(dyn[-1][3])
+                routes = []                              # route messages up to t0 whose pose is known now: pose kept, logged once
+                for ts in sorted(t for t in s.unlogged if t <= t0):
+                    if (pr := s.pose_at(ts)) is not None:
+                        s.rpose[ts] = pr
+                        routes.append({"kind": "route", "session": req.session_uuid, "scene": s.scene, "ts": ts,
+                                       "pose": pr.round(6).tolist(), "wp": np.round(s.unlogged.pop(ts), 4).tolist()})
+                rf = s.rt.features(t0, s.rpose.get, p0) if s.rt is not None and self.rmem_on else None
         if infer:
             try:
                 t_f = time.perf_counter()
@@ -216,7 +239,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 t_q = time.perf_counter()
                 with self.gpu:
                     t_g = time.perf_counter()
-                    o = PC.plan(self.core, cur, valid, P, V, dyn[-1][1], cmd, s.cam_t, self.lht)
+                    o = PC.plan(self.core, cur, valid, P, V, dyn[-1][1], cmd, s.cam_t, self.lht, **({"route": rf} if s.rt is not None else {}))
             except Exception as e:
                 s.count["inference_error"] += 1
                 LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
@@ -240,6 +263,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                            "slots": round(1e3 * (t_q - t_f), 2), "wait": round(1e3 * (t_g - t_q), 2)})
             if fx is not None:
                 rec.update(fix=fx, poses_model=o["poses_model"].round(4).tolist())
+            if "rmem" in o:
+                rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
             if self.keywarp:                                 # n_real then counts the slots at or after the oldest keyframe; ms.slots
                 rec.update(keywarp=True)                     # includes the wait for the card
             if s.n < self.dump and k % 10 == 0:
@@ -247,6 +272,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                                     cur=cur if isinstance(cur, np.ndarray) else cur.cpu().numpy(),
                                     poses=o["poses"], ego=o["ego"], cam_t=s.cam_t, scene=s.scene, now=now, t0=t0,
                                     jpeg=np.frombuffer(s.jpeg.get(t0, b""), np.uint8))
+        if infer:
+            for r in routes:
+                self.out.write(json.dumps(r) + "\n")
         self.out.write(json.dumps(rec) + "\n")
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
@@ -255,13 +283,43 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                                     grpc_api_version=S.API)
 
 
+def load_branch(tag: str):
+    """A checkpoint with the ROUTE-MEM sidecar -> rmem, else None. When it has one, pp_train.load_pmodel is swapped for a loader that attaches
+    the branch before loading the weights (rmem.load_pmodel, with the image's older ParityAdapter given its missing in_tf = None)."""
+    import pp_train as T
+    if tag == "P0" or tag.endswith("-init") or not (T.proot("runs", tag) / "route_mem.json").exists():
+        return None
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "route_mem" / "lib"))
+    import rmem as RM
+    import torch
+
+    def load(tag, dev):
+        kw = json.loads((T.proot("runs", tag) / RM.SIDECAR).read_text()).get("head", {})
+        ck = torch.load(T.proot("runs", tag) / "ckpt-final.pt", map_location="cpu", weights_only=False)
+        m = T.PModel(ck["model"]["arm"]).to(dev)
+        if not hasattr(m.adapter, "in_tf"):
+            m.adapter.in_tf = None
+        RM.attach(m, **kw)
+        m.load_state(ck["model"])
+        return m.eval()
+    T.load_pmodel = load
+    return RM
+
+
 def main() -> None:
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     import torch
     host, port = os.environ.get("ALPASIM_DRIVER_HOST", "0.0.0.0"), int(os.environ.get("ALPASIM_DRIVER_PORT", "6789"))
     log_dir = Path(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/tmp/alpasim-driver"))
     t0 = time.time()
-    core = C.Core(os.environ.get("SH30_TAG", "P2H10-F-s0"), os.environ.get("SH30_DEVICE", "cuda"))
+    global RMEM
+    tag = os.environ.get("SH30_TAG", "P2H10-F-s0")
+    RMEM = load_branch(tag)
+    core = C.Core(tag, os.environ.get("SH30_DEVICE", "cuda"))
+    if RMEM:
+        core.rm, core.rm_dim = True, RMEM.DIM
+        LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
     core.lead_out, core.base_out = FX.NEED_LEAD, FX.BASE > 0
     LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d", FX.VCONT, FX.LEAD, FX.BASE)
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros
