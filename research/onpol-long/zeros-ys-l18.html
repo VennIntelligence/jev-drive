@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YS-L18-s1 零分场景</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:1100px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:4px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:14px}th,td{border:1px solid #ccc;padding:4px 10px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f3f3f3}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:20px}figure{margin:0}img{max-width:100%}figcaption{font-size:14px;color:#444}code{font-size:12px;word-break:break-all}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}}
+</style></head><body>
+<h1>YS-L18-s1 在 held 读数上的零分场景</h1>
+<div class="v"><b>要点：</b>YS-L18-s1 在 18 个决策的 held 读数（452 个有分数的场景）上有 43 个零分场景有日志：走廊 19、出路 15、有责碰撞 9。走廊和碰撞多发生在后半程（决策 13 到 14 的中位数），出路里有 4 个从第一个采样就被判出路，更像起点位姿贴着地图边界，不是漂移。下面 15 个片段是分层抽样（6、5、4），描述是看 GIF 帧后的读法，不是测量。</div>
+<h2>一、零分数量，按类型与失败决策</h2>
+<p>失败决策是第一个出现失败指标的采样所在的决策序号（从 0 起，2 Hz，每个回合 18 个）。每个场景按最早出现的失败归类；报告里按种子均值、可重叠计数的 22 / 14.5 / 9 与此划分不同（2 个场景同时带两种失败）。另有 8 个零分场景因路线生成失败没有回合日志。来源：<code>$DATA_DIR/runs/onpol_long/zeros/YS-L18-s1/zeros.csv</code>。</p>
+<table><tr><th>类型</th><th>场景数</th><th>决策 0</th><th>决策 1-6</th><th>决策 7-10</th><th>决策 11-14</th><th>决策 15-17</th><th>中位决策</th></tr>
+<tr><td>走廊</td><td>19</td><td>0</td><td>0</td><td>5</td><td>7</td><td>7</td><td>13</td></tr>
+<tr><td>出路</td><td>15</td><td>4</td><td>1</td><td>5</td><td>3</td><td>2</td><td>7</td></tr>
+<tr><td>碰撞</td><td>9</td><td>0</td><td>0</td><td>2</td><td>3</td><td>4</td><td>14</td></tr>
+<tr><td>合计</td><td>43</td><td>4</td><td>1</td><td>12</td><td>13</td><td>13</td><td>11</td></tr></table>
+<h2>二、15 个片段</h2>
+<p>每个类型内随机抽样（<code>numpy default_rng(0)</code>，不放回）。每个 GIF 一个回合：左为鸟瞰图（蓝色自车、绿色已发出的规划、虚线日志、灰色其他车辆，碰撞后自车变红橙色），右为模型看到的两帧，下方为速度和前车概率。地图、其他车辆和日志路径只画给读者看。GIF 文件在仓库 <code>experiments/onpol_long/figs/zeros/</code>，箱子上在 <code>$DATA_DIR/runs/onpol_long/zeros/YS-L18-s1/gif/</code>。每段描述后看的是：自车线相对日志线（虚线）偏向哪边。</p>
+<h3>走廊（6 个）</h3><div class='g'>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.05.25.17.54.41_veh-35_02723_02902-f42258b638fc5b64.gif" alt="f42258b6" loading="lazy"><figcaption><b>f42258b6</b>，失败决策 16（8.0 秒）。左转指令、左弯道路：走的线比日志更直，停在日志路径内侧（左侧），最后 1.5 秒滑出走廊。<br><code>2021.05.25.17.54.41_veh-35_02723_02902-f42258b638fc5b64</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.09.16.14.39.34_veh-42_00297_00935-47da19c4edbe5b95.gif" alt="47da19c4" loading="lazy"><figcaption><b>47da19c4</b>，失败决策 11（5.5 秒）。丁字路口右转：进入路口更深才开始转，弧线偏大，最后落在日志转弯线的外侧（上方）。<br><code>2021.09.16.14.39.34_veh-42_00297_00935-47da19c4edbe5b95</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.09.16.14.39.34_veh-42_00297_00935-a3882e6ae8635832.gif" alt="a3882e6a" loading="lazy"><figcaption><b>a3882e6a</b>，失败决策 10（5.0 秒）。十字路口左转：转得过早，切内侧弯角，然后沿横向道路的内侧（下缘）直行，明显低于日志弧线。<br><code>2021.09.16.14.39.34_veh-42_00297_00935-a3882e6ae8635832</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.09.16.19.49.00_veh-42_00990_01609-5ddfd1fe80af5ceb.gif" alt="5ddfd1fe" loading="lazy"><figcaption><b>5ddfd1fe</b>，失败决策 15（7.5 秒）。丁字路口有排队车辆，日志直行：自车约 4.5 秒起向左偏，继续向左上穿过路口，离开日志的直线。<br><code>2021.09.16.19.49.00_veh-42_00990_01609-5ddfd1fe80af5ceb</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.09.16.19.49.00_veh-42_00990_01609-ded4ce0e91b4596a.gif" alt="ded4ce0e" loading="lazy"><figcaption><b>ded4ce0e</b>，失败决策 14（7.0 秒）。两侧停车的直路：约 4.5 秒起向日志直线的左侧漂移，绕开左侧的车，最终越过横向限度。<br><code>2021.09.16.19.49.00_veh-42_00990_01609-ded4ce0e91b4596a</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.09.29.15.23.04_veh-28_00601_00802-a3dd6d539acc5c9b.gif" alt="a3dd6d53" loading="lazy"><figcaption><b>a3dd6d53</b>，失败决策 13（6.5 秒）。沿一排停放车辆的左弯道路：比日志更早、更急地向左转（切内侧），最后远在日志弧线的左边。<br><code>2021.09.29.15.23.04_veh-28_00601_00802-a3dd6d539acc5c9b</code></figcaption></figure>
+</div>
+<h3>出路（5 个）</h3><div class='g'>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.10.06.08.16.17_veh-52_00181_00574-be6f90f06bc35be3.gif" alt="be6f90f0" loading="lazy"><figcaption><b>be6f90f0</b>，失败决策 5（2.5 秒）。经过导流岛的斜向道路：过岛后沿一条直线向左上行驶，贴到路面外缘；第 5 个决策（2.5 秒）被判出路。<br><code>2021.10.06.08.16.17_veh-52_00181_00574-be6f90f06bc35be3</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.10.06.08.16.17_veh-52_00181_00574-ddc1271ea57154bc.gif" alt="ddc1271e" loading="lazy"><figcaption><b>ddc1271e</b>，失败决策 7（3.5 秒）。带岔路的急弯：规划转向右侧分支，日志走的是左侧急弯；自车上了错误的分支，第 7 个决策（3.5 秒）出路。<br><code>2021.10.06.08.16.17_veh-52_00181_00574-ddc1271ea57154bc</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.10.06.08.16.17_veh-52_00922_01296-da6d3b6810995466.gif" alt="da6d3b68" loading="lazy"><figcaption><b>da6d3b68</b>，失败决策 0（0.0 秒）。缓右弯道路：从第一个采样（决策 0）起就被判出路，自车一开始就在路面左缘，沿一条直线行驶，而道路向右弯；更像起点位姿贴着地图边界，不是漂移。<br><code>2021.10.06.08.16.17_veh-52_00922_01296-da6d3b6810995466</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.10.06.08.16.17_veh-52_01949_02501-667ea4f79faf5baa.gif" alt="667ea4f7" loading="lazy"><figcaption><b>667ea4f7</b>，失败决策 17（9.0 秒）。右弯道路、身后有车：大致沿车道、在日志线附近但偏左偏短，贴着左缘；出路标志直到最后一个决策（17，9.0 秒）才出现。<br><code>2021.10.06.08.16.17_veh-52_01949_02501-667ea4f79faf5baa</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.10.06.08.16.17_veh-52_01949_02501-9a3778686fd058d2.gif" alt="9a377868" loading="lazy"><figcaption><b>9a377868</b>，失败决策 0（0.0 秒）。斜向双车道：从决策 0 起就被判出路；自车起点在左车道右缘，沿与日志平行的直线行驶，偏移始终存在；更像起点位姿贴着地图边界，不是漂移。<br><code>2021.10.06.08.16.17_veh-52_01949_02501-9a3778686fd058d2</code></figcaption></figure>
+</div>
+<h3>碰撞（4 个）</h3><div class='g'>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.05.25.17.54.41_veh-35_04111_04288-8051c60f20705909.gif" alt="8051c60f" loading="lazy"><figcaption><b>8051c60f</b>，失败决策 9（4.5 秒）。停车密集的街道：沿车道左缘直行穿过一簇停放车辆，而日志向右靠；4.5 秒首次接触，继续行驶又擦碰了其他车。<br><code>2021.05.25.17.54.41_veh-35_04111_04288-8051c60f20705909</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.06.03.12.02.06_veh-35_01100_01227-7bbb6cfc4f135e50.gif" alt="7bbb6cfc" loading="lazy"><figcaption><b>7bbb6cfc</b>，失败决策 17（8.5 秒）。宽阔多车道街道、有停放或慢速车辆：沿日志直线行驶，随后在车群缝隙里略向左偏，8.5 秒碰到左侧一辆车。<br><code>2021.06.03.12.02.06_veh-35_01100_01227-7bbb6cfc4f135e50</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.09.16.14.39.34_veh-42_00297_00935-bf00c76f25185b83.gif" alt="bf00c76f" loading="lazy"><figcaption><b>bf00c76f</b>，失败决策 17（8.5 秒）。前方有弯的道路：向日志线的左侧漂移（日志一直在路右侧），8.5 秒撞上左缘的一辆车，看不出明显避让。<br><code>2021.09.16.14.39.34_veh-42_00297_00935-bf00c76f25185b83</code></figcaption></figure>
+<figure><img src="../../experiments/onpol_long/figs/zeros/2021.09.16.19.49.00_veh-42_00990_01609-bd70654aee0f54a6.gif" alt="bd70654a" loading="lazy"><figcaption><b>bd70654a</b>，失败决策 14（7.0 秒）。向横向道路左转：转弯线高于日志，进入横向道路上一辆停着的车所在的车道；7.0 秒接触。<br><code>2021.09.16.19.49.00_veh-42_00990_01609-bd70654aee0f54a6</code></figcaption></figure>
+</div>
+<h2>三、局限</h2><ul><li>回放是开环的：用日志里的驱动消息重放真实驱动类，绿色规划是当时发出的，前车概率面板来自回放。</li><li>描述是看每个 GIF 的 6 帧后的读法，没有逐帧测量；“更像起点位姿贴着地图边界”是从决策 0 就被判出路加上画面位置推断的，没有查地图多边形。</li><li>只有一个种子（s1），没有和对照组同场景比较。</li></ul></body></html>
