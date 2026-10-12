@@ -26,6 +26,7 @@
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。
 - [next-round/plan.md](next-round/plan.md)：下一轮方向与计划（2026-10-09 改写）：论文线与比赛线分开，后果监督的轻量表征支路，判定线、日历。
 - [next-round/closed-loop.md](next-round/closed-loop.md)：闭环训练线方案：全长（18–20 决策）训练、估算与排期。
+- [literature/anchored-planning-2026.md](literature/anchored-planning-2026.md)：文献笔记，Aim Short to Reach Far（Anchored Planning，arXiv 2609.30036）：冻结世界模型只把远目标换成近锚点，CEM 成功率 9.2% → 59.8%；与我们漂移的异同、serving 近锚点校正与短程锚点标签，三个两天内的小实验。
 - [recipes.md](recipes.md)：配方总表，活着的和已死的配方各一行，带决策号。
 - [next-round/overnight.md](next-round/overnight.md)：2026-10-09 夜的执行任务书：NC 失败分类、真值几何 oracle、离轨 warp 行。
 - `lit/`：文献长报告，只在这台 Mac 上，不进 git。
