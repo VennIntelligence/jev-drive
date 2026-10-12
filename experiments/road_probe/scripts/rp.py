@@ -734,7 +734,7 @@ def read(a):
             for g in ("held", "zero"):
                 err[k][g][:, 12] = np.degrees(np.abs(EV.wrap(P[k][g][:, 12] - Ldt[g][:, 12])))
         names = ["P", "P-p1000-s0", "P-p1000-s1", "blind-p1000-s0", "lin-p1000-s0", "P0", "P0K"]
-        cl_h = Dh.scene.values
+        cl_h = Dh.scene.to_numpy(dtype=str)
         # R1 / R2
         rows = []
         for sub, m in (("straight", st_), ("turn", tu_), ("gentle", ~st_ & ~tu_), ("all", np.ones(len(Dh), bool))):
@@ -742,9 +742,7 @@ def read(a):
                 e = err[k]["held"][m]
                 for qn, cols in (("L20", [4]), ("R20", [5]), ("LR20", [4, 5]), ("LR10", [0, 1]), ("LR40", [8, 9]), ("E20", [6, 7]), ("E10", [2, 3]), ("E40", [10, 11]), ("h20_deg", [12])):
                     ee = e[:, cols].ravel()
-                    cc = np.repeat(cl_h[m], len(cols)).reshape(-1, len(cols)).ravel() if len(cols) > 1 else cl_h[m]
-                    if len(cols) > 1:
-                        cc = np.repeat(cl_h[m][:, None], len(cols), 1).ravel()
+                    cc = np.repeat(cl_h[m][:, None], len(cols), 1).ravel()
                     md, p9 = boot_q(ee, cc, 0.5, B=a.boot), boot_q(ee, cc, 0.9, B=a.boot)
                     rows.append(dict(subset=sub, pred=k, q=qn, n=md["n"], scenes=md["clusters"], median=md["v"], med_lo=md["lo"], med_hi=md["hi"],
                                      p90=p9["v"], p90_lo=p9["lo"], p90_hi=p9["hi"]))
