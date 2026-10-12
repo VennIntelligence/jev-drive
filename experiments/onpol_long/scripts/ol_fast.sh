@@ -67,8 +67,8 @@ roll)      # one chunk of the train split with the frame dump; then ol_chain.sh 
 read)      # one chunk of the held 460 at 18 decisions
   TAG=$1; i=$2; n=$3; D=$W/read/$TAG/c$i/run
   sim "$TAG" "$W/lists/held_n$n/c$i.txt" "$D"; prune "$D" read ;;
-readlist)  # one checkpoint on any scene list at 18 decisions (the pipeline smoke)
-  sim "$1" "$2" "$3"; prune "$3" read ;;
+readlist)  # one checkpoint on any scene list at 18 decisions (the pipeline smoke; OL_DUMP=1: with roll's frame dump, no pruning)
+  if [[ -n ${OL_DUMP:-} ]]; then sim "$1" "$2" "$3" 1000000; else sim "$1" "$2" "$3"; prune "$3" read; fi ;;
 geo)       # ol_chain.sh geo over n chunks, first half: manifest, on_rows.py geo (unedited), WK workers
   N=$2; n=$3; RR=()
   for T in ${1//,/ }; do R=$W/roll/$T; RR+=("$R")
@@ -103,7 +103,7 @@ scale)     # stacks per card: phases k = 1..4, each k stacks at once on this job
 submit-smoke)
   TAG=$1; L=$2; D=$3
   CL submit --owner onpol-long --name ol-speed-smoke --tries 1 --priority ${PRIO:-13} --no-check --vram 24 --cpu 6 --ram 30 --timeout-h 1 \
-     --log-dir "$D.pool" -- bash $E/scripts/ol_fast.sh readlist "$TAG" "$L" "$D" ;;
+     --log-dir "$D.pool" --env OL_DUMP=${OL_DUMP:-} -- bash $E/scripts/ol_fast.sh readlist "$TAG" "$L" "$D" ;;
 submit-scale)
   TAG=$1; L=$2; O=$3; mkdir -p "$O"
   CL submit --owner onpol-long --name ol-speed-scale --tries 1 --priority ${PRIO:-13} --no-check --vram 79 --cpu 24 --ram 120 --timeout-h 2 \
