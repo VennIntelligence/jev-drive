@@ -78,3 +78,15 @@ RBSG2-L18-s{0,1} = --init RB0-F-s0, gentle schedule (--steps 2500 --warmup 1 --l
 --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self --on-lon on_route. Lines: L3 vs RB0 (zeros fewer with CI upper < 0, at-fault
 upper <= +2, GT not larger); mechanism line from the diagnosis: inside-of-right-turn offroad zeros <= 6, offroad <= 34, left corridor <= 11
 on both seeds; L5 per decision as Amendment 1. Added 2026-10-13 03:35 JST before any round-2 read.
+
+## Amendment 5 (2026-10-13 04:15 JST, before any RS2G / RBS2Gc read and before any round-2 read)
+
+After the Amendment 3 reads (RSG-L18 34 / 34 zeros, L3 pass vs RB0; RBSGc 46 / 50): RSG-L18-s0 is also rolled on the 1020 train scenes at 18
+decisions (pool L18RSG, same labels and pool gates; R1 (c) wrong seed = RSG-L18-s1); on1_L18R2s = on1_L18RB0 + on1_L18RSG (ol_pool_merge.py,
+feature file concatenated in the merged order); on1_L18R2sc = its copy with route.npz ok &= cov20 (as on1_L18RB0c). Two gentle arms from
+--init RB0-F-s0 (--steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500, REC flags as Amendment 3, --on-k 13 --on-split
+alpasim_nuplan/onpol-train --on-mode self): RS2G-L18-s{0,1} (--on on1_L18R2s, no --on-lon: S hinges only) and RBS2Gc-L18-s{0,1}
+(--on on1_L18R2sc --on-lon on_route: route hinge only on rows whose memory covers +20 m). Lines: L3 vs RB0 (zeros fewer with CI upper < 0,
+at-fault upper <= +2, GT not larger); round gate vs RSG-L18-s0 (d264 / ol1 prereg round gate: zeros fewer, lateral GT distance not larger,
+at-fault zeros not more; log-clustered paired bootstrap CI reported); L5 per decision as Amendment 1; rf_offroad inside-of-right-turn counts
+reported. RBSG2 (Amendment 4) unchanged. Added 2026-10-13 04:15 JST before any of these reads.
