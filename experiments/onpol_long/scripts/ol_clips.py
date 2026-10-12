@@ -17,7 +17,7 @@ import numpy as np
 
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 W = DATA / "runs/onpol_long"
-KIND = [("collision_at_fault", "collision"), ("offroad", "offroad"), ("left_corridor_laterally", "corridor")]
+KIND = [("collision_any", "collision"), ("offroad", "offroad"), ("left_corridor_laterally", "corridor")]       # offroad series: 1 = on road, 0 = off
 
 
 def cmd_table(a):
@@ -32,8 +32,9 @@ def cmd_table(a):
         first = {}
         for m, k in KIND:
             v = o["metrics"].get(m)
-            if v is not None and (v[:, 1] > 0).any():
-                t = v[(v[:, 1] > 0), 0].min()
+            bad = (v[:, 1] < 0.5) if m == "offroad" else (v[:, 1] > 0)
+            if v is not None and bad.any():
+                t = v[bad, 0].min()
                 first[k] = (int(np.searchsorted(now, t, side="right")) - 1, (t - now[0]) / 1e6)
         typ = min(first, key=lambda k: first[k][1]) if first else "other"       # type = the earliest failure
         rows.append(dict(scene=s, type=typ, decision=first[typ][0] if first else -1, t_s=round(first[typ][1], 2) if first else "",

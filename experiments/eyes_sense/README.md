@@ -3,7 +3,6 @@
 status: concluded
 decisions: 255 (inputs: 136, 232, 233, 236, 243, 244, 245, 248, 254)
 index: side views stay closed (> 45 deg cut-in +1.02 with S); body lesson navhard +2.2
-key: experiments/eyes_sense/results/contrast.md, experiments/eyes_sense/plans/2026-10-11-eyes-sense-prereg.md, experiments/alpasim/scripts/joint_train.py, experiments/alpasim/plans/2026-10-11-joint1-prereg.md, experiments/vis_train/scripts/vt_read.py, experiments/vis_train/scripts/vt_r.py, experiments/body1/lib/loss43.py, experiments/body1/scripts/bd4_train.py, experiments/op_parity/scripts/pp_train.py, jevdrive/bench/navsim.py
 
 **Question.** In one joint policy training from the shipped weights (lambda-10 recipe), do two more frozen views (EYES: the untrained 3-view token
 bank of decision 248's RW0) lower the > 45 deg cut-inside and off-road failure rates without a < 5 deg, NC or EC cost, and how do they compare
@@ -16,4 +15,8 @@ with the body lesson (SENSE: `P2H10S`) read in the same tables?
 **Read more.** [plans/2026-10-11-eyes-sense-prereg.md](plans/2026-10-11-eyes-sense-prereg.md); decision 248 and experiments/vis_train/results/reads.md.
 
 <!-- files:begin -->
+## Files
+
+
+[results/](results/) 12 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 3 entry points
 <!-- files:end -->

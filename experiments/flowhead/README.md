@@ -3,7 +3,6 @@
 status: closed
 decisions: 246 (inputs: 144, 148, 172, 204, 207, 240, 243)
 index: Flow-matching trajectory head vs the same head as a regression on SH30 features: off-road on turns -5 pp but EPDMS -1.1, not a candidate; closed
-key: experiments/flowhead/plans/2026-10-10-flow-head-prereg.md, lib/traj_head.py, experiments/op_parity/scripts/pp_train.py, experiments/flowhead/scripts/flow_train_chain.sh, experiments/flowhead/scripts/flow1.py, jevdrive/bench/navsim.py
 
 **Question.** With everything else as the SH30 recipe (frozen Cinque encoder), does a flow-matching trajectory head in place of the regressed plan lower the off-road failures of navtest turns above 45 deg?
 
@@ -14,6 +13,10 @@ key: experiments/flowhead/plans/2026-10-10-flow-head-prereg.md, lib/traj_head.py
 **Read more.** Pre-registration (Chinese): [plans/2026-10-10-flow-head-prereg.md](plans/2026-10-10-flow-head-prereg.md).
 
 <!-- files:begin -->
+## Files
+
+
+[results/](results/) 3 result files · [plans/](plans/) 2 live plans · [scripts/](scripts/) 3 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points, `results/` small result files, `plans/` plan notes. Refresh the file list and INDEX.md with `python tools/topic_index.py`.

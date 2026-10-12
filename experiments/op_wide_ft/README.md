@@ -3,7 +3,6 @@
 status: concluded
 decisions: (pending) (inputs: 127, 128, 130, 133, 134, 135, 136)
 index: Fine-tune with 116 deg wide: B2D small set 0/9 both arms, ol exit -0.002; gate stop
-key: experiments/op_wide_ft/plans/2026-10-05-wide-ft-prereg.md, experiments/op_wide_ft/scripts/wide_run.py, experiments/op_wide_ft/scripts/wide_chain.sh, experiments/op_wide_ft/scripts/wide_lane.py, experiments/op_wide_ft/scripts/wide_report.py, experiments/op_wide_ft/scripts/wide_ol.py, experiments/op_wide_ft/scripts/wide_real.py, experiments/op_route_ft/scripts/rft.py, jevdrive/openpilot/frames.py
 
 **Question.** Once fine-tuned with its wide slot widened to 116 deg (same 512x256 tensor, wide model focal 455 -> 160, horizon row fixed, road
 camera unchanged), does openpilot use the wide view to turn on sharp / 90 deg B2D junction turns where the shipped model under-turns (decision 127)?
@@ -50,6 +49,10 @@ wide FOV, decision 135), [../alpamayo_turns/README.md](../alpamayo_turns/README.
 (the fine-tune recipe and the B2D turn harness).
 
 <!-- files:begin -->
+## Files
+
+
+[results/](results/) 13 result files · [figs/](figs/) 3 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 8 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

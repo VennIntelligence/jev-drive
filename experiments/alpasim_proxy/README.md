@@ -3,7 +3,6 @@
 status: live
 decisions: 262
 index: no public reweighting orders 5 private anchors (frozen 0/84); public GT distance does (tau 0.6)
-key: experiments/alpasim_proxy/plans/2026-10-12-proxy-prereg.md, experiments/alpasim_proxy/scripts/proxy_fit.py, experiments/alpasim_proxy/scripts/proxy_collect.py, experiments/alpasim_proxy/results/fit_a2/fits.csv, experiments/alpasim_proxy/results/leaderboard_nuplan_20261012.json, experiments/alpasim/results/aud1_private_gap.md, experiments/alpasim/results/aud1_drift_by_decision.md, experiments/alpasim/scripts/drivers/dd.sh, experiments/alpasim/scripts/c0b_chain.py
 
 **Question.** Is there a reweighting or stratum of the 1491 public AlpaSim nuPlan scenes that reproduces the private leaderboard ordering and
 gaps of policies whose private numbers are known, so the last official slot can be chosen on it?
@@ -19,13 +18,12 @@ long-horizon lane ([../alpasim_long/](../alpasim_long/)); this topic takes its l
 <!-- files:begin -->
 ## Files
 
-- `2026-10-12-proxy-prereg.md` (plans): pre-registration, Amendment 1 (frozen two-anchor fit, V5)
-- `proxy_fit.py` (scripts): reweighting proxies P0-P3, validity tests V1-V5
-- `proxy_transfer.py` (scripts): P4, which public statistic orders the anchors like private
-- `proxy_collect.py` (scripts): box, anchor per-scene / per-decision tables
-- `garage_driver.py`, `setup_garage.sh` (scripts): garage 0014 as a native AlpaSim driver
-- `anchors/*.csv`, `fit_a2/`, `fit_a5/`, `transfer_a5/`, `tokyo_samples/` (results)
-- `leaderboard_nuplan_20261012.json`, `scene_city.csv` (results)
+- `2026-10-12-proxy-prereg.md` (plans): PROXY 预注册：一个行为像 private …
+- `proxy_fit.py` (scripts): can a reweighting of the 1491 public …
+- `proxy_transfer.py` (scripts): which PUBLIC statistic orders the …
+- `proxy_collect.py` (scripts): per-scene and per-decision tables of …
+
+[results/](results/) 22 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 5 entry points
 <!-- files:end -->
 
 ## Anchors: five policies whose private numbers are known

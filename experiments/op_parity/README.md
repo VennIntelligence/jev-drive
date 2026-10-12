@@ -3,7 +3,6 @@
 status: live
 decisions: (pending) (inputs: 92, 96, 104, 111, 118, 128, 135, 136, 137, 138, 139)
 index: Cinque + ego / pose / cmd / side cams vs WA-JEPA, equal inputs and data
-key: experiments/op_parity/plans/2026-10-06-parity-prereg.md, lib/parity_adapter.py, experiments/op_parity/scripts/pp_prep.py, experiments/op_parity/scripts/pp_train.py, experiments/op_parity/scripts/pp_eval.py, experiments/op_parity/scripts/pp_unfreeze.py, experiments/op_parity/scripts/pp_navhard.py, jevdrive/navsim_zs.py, experiments/hugsim/results/wajepa_ref.md, lib/agent_hinge.py
 
 **Question.** With no input disadvantage relative to WA-JEPA (command, ego velocity / acceleration, 4-pose history, side and rear cameras)
 and the same fine-tuning data (navtrain), how much of WA-JEPA's lead over openpilot Cinque (HUGSIM 0.451 vs 0.278, navtest EPDMS 91.71)
@@ -121,6 +120,10 @@ Under the `spec` preset (decision 118's lateral path) on the 10 + 19 decision-11
 (P2 stuck 0 of 29 vs 24, HD 0.453 vs 0.306, fg collisions 10 vs 1).
 
 <!-- files:begin -->
+## Files
+
+
+[results/](results/) 1075 result files · [figs/](figs/) 85 figures · [plans/](plans/) 49 live plans · [scripts/](scripts/) 151 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

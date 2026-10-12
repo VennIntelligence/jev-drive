@@ -1,6 +1,6 @@
 # b2d_privileged: Privileged-rule ceilings on B2D routes
 
-status: live
+status: paused (2026-10-11 index review: B2D / CARLA lanes paused, d82)
 decisions: 82
 index: Red light + green release DS 75.0 to 95.0
 

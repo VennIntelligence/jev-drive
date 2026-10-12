@@ -3,7 +3,6 @@
 status: concluded
 decisions: (pending)
 index: Cross cams off: dA_H +0.01 [-0.15,0.14] (nav); tele-slot drop -0.39
-key: experiments/alpamayo_turns/README.md experiments/alpamayo_turns/results/pilot.md experiments/alpamayo_turns/plans/2026-10-05-prereg.md experiments/alpamayo_turns/figs/summary.png experiments/alpamayo_turns/figs/cases_bev.png experiments/alpamayo_turns/scripts/turns.py experiments/alpamayo_turns/scripts/turns_figs.py experiments/alpamayo_turns/results/effects.md jevdrive/alpamayo/data.py
 
 **Question.** On real sharp (~90 deg, low speed) turns, does NVIDIA Alpamayo 1.5 with its own multi-camera rig follow the
 turn, and does it need the cross-left / cross-right cameras to do so (ceiling for an openpilot side-view adapter)?
@@ -26,8 +25,8 @@ next to A-C and A-Tblk (tele slot vs tele content). Per-arm input + trajectory f
 <!-- files:begin -->
 ## Files
 
-- `turns.py` (scripts): scan / fetch / infer / opframes / oprun / score; Alpamayo as shipped, cameras via the loader
-- `turns_figs.py` (scripts): per-arm input + trajectory figures, all-turn BEV, summary
+- `turns.py` (scripts): Alpamayo 1.5 on real sharp turns
+- `turns_figs.py` (scripts): Figures for alpamayo_turns
 
-[scripts/](scripts/) 2 entry points · [results/](results/) 6 result files · [figs/](figs/) 12 figures · [plans/](plans/) 1 plan
+[results/](results/) 6 result files · [figs/](figs/) 12 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
 <!-- files:end -->

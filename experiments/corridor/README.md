@@ -3,7 +3,6 @@
 status: concluded
 decisions: 240, 243, 245
 index: Corridor centreline as target: -9.9 EPDMS on turns; wrong exit 2.6% of DAC fails; HEAD1: frozen-token heading head 8.54 vs SH30 11.24 deg at > 45 deg, independence R2 0.513 < 0.538, exploratory HEAD1b: fed back three ways at pilot scale, heading error falls 1.2 to 3.2 deg, EPDMS within 0.2, off-road rate unchanged
-key: experiments/corridor/results/head1b.md experiments/corridor/results/head1.md experiments/corridor/results/head1/tables.md experiments/corridor/plans/2026-10-10-head1-prereg.md experiments/corridor/scripts/head1_labels.py experiments/corridor/scripts/head1_train.py experiments/corridor/scripts/head1_read.py experiments/corridor/results/corr0.md experiments/corridor/results/corr0/tables.md experiments/corridor/plans/2026-10-10-corr0-prereg.md experiments/corridor/lib/lanegraph.py experiments/corridor/scripts/corr_geom.py experiments/corridor/scripts/corr.py experiments/corridor/scripts/corr_report.py experiments/corridor/scripts/corr_chain.sh experiments/corridor/scripts/corr_bev.py
 
 **Question.** Is the lane corridor of the commanded exit, taken from the nuPlan map, the right supervision label for fixing SH30's turn failures (measured without training)?
 
@@ -16,6 +15,10 @@ key: experiments/corridor/results/head1b.md experiments/corridor/results/head1.m
 **Read more.** Was the road a > 45 deg turn needs inside the model's camera view (FOV check, no decision entry): [results/fov.md](results/fov.md), `scripts/fov_build.py`, `scripts/fov_report.py`. [results/corr0.md](results/corr0.md); pre-registration with amendments A and B in [plans/](plans/2026-10-10-corr0-prereg.md). The map, the logged future and the driven lane sequence are privileged: analysis only.
 
 <!-- files:begin -->
+## Files
+
+
+[results/](results/) 33 result files · [figs/](figs/) 18 figures · [plans/](plans/) 2 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 15 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points, `lib/` code other topics import, `results/` small result files, `figs/` figures, `plans/` plan notes.

@@ -1,6 +1,6 @@
 # op_route_cmd: route polyline input material
 
-status: live
+status: paused (2026-10-11 index review: material ready, no training planned, route lanes not in next-round plan)
 decisions: (inputs: 93, 102, 118, 121)
 index: Route polyline material: navtrain 103 k / WOD 522 k labelled, 32 k / 62 k turns >= 25 deg; noise + negatives + CARLA plan, no training
 
@@ -29,14 +29,14 @@ its C preset and has unit tests; a negative-route generator (4 kinds, 158 sample
 - `route_poly.py` (lib): the navigation-level input "which way …
 - `route_neg.py` (lib): a route that contradicts the scene
 - `data_prep.md` (results): counts, format, merge notes
-- `negatives.md` (results): spec, generator, sample
+- `negatives.md` (results): spec, generator, screens, sidecar
 - `carla_pairs_plan.md` (results): CARLA counterfactual route-polyline …
 - `route_nav.py` (scripts): Route polylines for NAVSIM navtrain
 - `route_wod.py` (scripts): Route polylines for WOD-E2E
 - `route_report.py` (scripts): Counts of the route-polyline material
 - `route_samples.png` (figs): 
 
-[results/](results/) 9 result files · [figs/](figs/) 4 figures · [plans/](plans/) 0 live plans · [scripts/](scripts/) 9 entry points
+[results/](results/) 13 result files · [figs/](figs/) 10 figures · [scripts/](scripts/) 20 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

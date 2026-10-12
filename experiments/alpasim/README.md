@@ -3,7 +3,6 @@
 status: live
 decisions: 184, 185, 188, 189, 199, 201, 202, 205, 209, 210, 211, 212, 213, 215, 219, 226, 247, 253, 254 (inputs: 142, 144, 104, 116, 133, 149, 169, 170, 174, 177)
 index: 48 public scenes: WA-JEPA 0.978, SH30 0.947, AlpaSim-aligned AP2 0.932, LTF 0.874
-key: docs/alpasim.md, experiments/alpasim/results/sh30_smoke.md, experiments/alpasim/results/lat1_frame_synthesis.md, experiments/alpasim/results/lat1_train_audit.md, experiments/alpasim/lib/sh30_core.py, experiments/alpasim/lib/sh30_driver.py, experiments/alpasim/scripts/run_native.py, experiments/alpasim/scripts/run.sh, experiments/alpasim/scripts/driver_tap.py, docs/openpilot-interface.md, docs/zeroshot-adapters.md, scripts/op_lb.py, experiments/hugsim/lib/zs_agent.py
 
 **Question.** Can SH30 (openpilot Cinque + adapter + drivable hinge, navtest EPDMS 89.55) enter the nuPlan track of the AlpaSim E2E
 Closed Loop Challenge 2026 by 2026-10-31, and what does the public 1 485-scene closed-loop suite cost on our box.
@@ -78,6 +77,10 @@ collisions and the 11 slow scenes; `--compile` trainers through navtest and clos
 **PAI-KW: keyframe + warp slots on PAI (2026-10-11, pre-registered, descriptive; decision pending).** `PAI_KEYWARP=1` (off by default) makes the PAI driver build its slots as the checkpoints were trained: frames at t0 - 1.5 / 1.0 / 0.5 / 0 s as keyframes, the rest from `sh30_core.lattice_gpu`; it discards 6 of 10 rendered frames, so it tests the train / serve mismatch, not the serving ceiling. Checks: off path identical (596 replayed decisions, three closed-loop reruns equal to the stored rollouts), on path pixel-identical to the nuPlan / training lattice, offline 600 tokens arc / log 0.895 -> 0.993 and ADE 1.35 -> 0.61 m. Closed loop, `s_b1a` 33 scenes, two seeds per arm, served configuration: on - off base -0.0085 [-0.161, +0.141], S +0.0336 [-0.100, +0.167] (not separable; 23 zeros fixed and 9 broken of 132 rollouts, scored scenes lower 0.80 -> 0.62); S - base +0.083 [-0.034, +0.204] off, +0.125 [+0.037, +0.233] on, difference of differences +0.042 [-0.112, +0.195]. Latency +8 ms median at CONC 4, tail not worse. Mixed warp + real-frame training is written down in the plan, not started. [results/pai_keywarp.md](results/pai_keywarp.md), plan [plans/2026-10-11-pai-keywarp-prereg.md](plans/2026-10-11-pai-keywarp-prereg.md).
 
 <!-- files:begin -->
+## Files
+
+
+[archive/](archive/) 4 one-off code · [results/](results/) 295 result files · [figs/](figs/) 75 figures · [plans/](plans/) 14 live plans · [lib/](lib/) 12 library · [scripts/](scripts/) 132 entry points
 <!-- files:end -->
 
 **CF1: confirmation read on untouched scenes (2026-10-09, decision 216, pre-registered).** YR10m10 minus P2H10 on part012-015 (391 scenes, 6 logs): -0.0069 [-0.0110, -0.0016], refuted; 791 fresh scenes +0.0043 [-0.0031, +0.0148], all 1491 +0.0052; the +0.0153 of decision 213 was a high draw. Exploratory APY10m10-AB minus YR10m10 on the 791 fresh scenes +0.0146 [+0.0006, +0.0266] (marginal candidate; all of it on part012-015, none on OT3's 400); all 1491: P2H10 0.9196, YR10m10 0.9248, APY10m10 0.9335. [results/cf1_confirm.md](results/cf1_confirm.md), plan [plans/2026-10-09-cf1-confirm-prereg.md](plans/2026-10-09-cf1-confirm-prereg.md). Code `scripts/cf1_chain.sh`, `scripts/cf1_report.py`. Amendment 1: AP2H10-AB (input standard, no rows) on the 791 fresh scenes: APY10m10 - AP2H10 +0.0081 [+0.0001, +0.0156] (rows add, marginally), AP2H10 - P2H10 +0.0108 [-0.0042, +0.0267] (791) / +0.0068 (1491), not past the line; the two fresh sets disagree on which part carries the gain; no untouched scenes remain.

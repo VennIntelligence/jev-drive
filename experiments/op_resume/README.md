@@ -1,9 +1,8 @@
 # op_resume: emulated driver resume from a held standstill
 
-status: live
+status: concluded (2026-10-11 index review: stopped at the pre-registered pilot gate, d124)
 decisions: (pending) (inputs: 90, 96, 107, 113, 117, 118, 119, 124, 126)
 index: Driver-resume rule: 5/6 stuck HUGSIM runs launch (HD +0.12), missed-lead collision: gate stop
-key: experiments/op_resume/results/pilot.md, experiments/op_resume/plans/2026-10-05-op-resume-prereg.md, jevdrive/openpilot/resume.py, jevdrive/openpilot/interface.py, tests/test_openpilot_resume.py, experiments/hugsim/lib/zs_agent.py, lib/op_arb_agent.py, experiments/op_resume/scripts/or_submit.py, experiments/op_resume/scripts/or_hugsim.sh, experiments/op_resume/scripts/or_offline.py, experiments/op_resume/scripts/or_report.py
 
 **Question.** Does a product-faithful emulation of the driver's resume press (the car held >= 10 s, the model's own lead head
 clear within 15 m; launch to 2.5 m/s, then hand back) fix HUGSIM `spec`'s runs stuck on stop plans (decisions 118 / 119) without
@@ -20,6 +19,21 @@ the full stage. On B2D the rule never fires behind the 5 s timer. [results/pilot
 [../hugsim/results/op_control_stack_long.md](../hugsim/results/op_control_stack_long.md) (decision 119).
 
 <!-- files:begin -->
+## Files
+
+- `pilot.md` (results): 5 of 6 stuck HUGSIM runs launch, but …
+- `2026-10-05-op-resume-prereg.md` (plans): op_resume pre-registration
+- `resume.py` (jevdrive/openpilot): Emulated driver resume from a held …
+- `interface.py` (jevdrive/openpilot): the one interface spec every board …
+- `test_openpilot_resume.py` (tests): the shared emulated driver resume, and …
+- `zs_agent.py` (experiments/hugsim/lib): HUGSIM agent process for the zero-shot …
+- `op_arb_agent.py` (lib): Bench2Drive agent for the openpilot …
+- `or_submit.py` (scripts): Submit op_resume's closed-loop units to …
+- `or_hugsim.sh` (scripts): One GPU-pool job of op_resume on HUGSIM
+- `or_offline.py` (scripts): Offline description of standstills in …
+- `or_report.py` (scripts): per-case rows, pre-registered readouts …
+
+[results/](results/) 4 result files · [figs/](figs/) 1 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 6 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

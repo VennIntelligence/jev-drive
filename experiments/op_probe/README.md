@@ -1,9 +1,8 @@
 # op_probe: where P2 loses drivable-area information on its navtest DAC failures
 
-status: live
+status: concluded (2026-10-11 index review: localization read, decisions d144-146, no planned next step)
 decisions: (pending) (inputs: 104, 112, 144, 145, 146)
 index: P2 vs WA-JEPA DAC failures: probes per stage (vision / temporal / head)
-key: experiments/op_probe/plans/2026-10-06-dac-localize-prereg.md, experiments/op_probe/scripts/opb_labels.py, experiments/op_probe/scripts/opb_feats.py, experiments/op_probe/scripts/opb_wajepa.py, experiments/op_probe/scripts/opb_score.py, experiments/op_probe/scripts/opb_probe.py, experiments/op_probe/results/dac-localize.md, lib/parity_adapter.py, experiments/op_parity/scripts/pp_train.py
 
 **Question.** On the navtest tokens where op_parity P2 fails drivable-area compliance and WA-JEPA passes, is the road geometry (a) absent
 from Cinque's frozen vision features, (b) present there but lost in the temporal / hidden path, or (c) present before the plan head but not
@@ -33,6 +32,19 @@ the inside of turns (+0.36 m); 60% of WA's arise only in the LQR replay and 82% 
 unfreeze with a dense drivable-SDF auxiliary head; WA / V-JEPA front tokens as adapter memory (trade test).
 
 <!-- files:begin -->
+## Files
+
+- `2026-10-06-dac-localize-prereg.md` (plans): op_probe：P2 在 navtest DAC 上输给 WA-JEPA …
+- `opb_labels.py` (scripts): drivable signed-distance raster per …
+- `opb_feats.py` (scripts): op_probe stage features of op_parity …
+- `opb_wajepa.py` (scripts): op_probe reference features
+- `opb_score.py` (scripts): op_probe per-token navtest scoring of …
+- `opb_probe.py` (scripts): token sets, probes per stage, decoders
+- `dac-localize.md` (results): P2's navtest drivable-area failures …
+- `parity_adapter.py` (lib): Input-parity adapter for openpilot …
+- `pp_train.py` (experiments/op_parity/scripts): Cinque fine-tuned on navtrain with …
+
+[results/](results/) 62 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 10 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

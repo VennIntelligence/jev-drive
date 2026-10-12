@@ -3,7 +3,6 @@
 status: concluded
 decisions: pending (draft in results/long_oracle.md; inputs: 196, 203, 226, 232, 241, 247, 249-251)
 index: no speed scale beats served on navtest (0.95 ties, 1.05 -0.33); target class A (41% arm-specific)
-key: experiments/long_oracle/results/long_oracle.md, experiments/long_oracle/plans/2026-10-11-long-oracle-prereg.md, experiments/long_oracle/results/long_oracle/tables.md, experiments/long_oracle/results/long_oracle/P2H10S-F/tables.md, experiments/long_oracle/results/long_oracle/P2H10-F/tables.md, experiments/long_oracle/scripts/lo_report.py, experiments/long_oracle/scripts/lo_chain.sh, experiments/op_parity/scripts/nc_tax.py
 
 **Question.** Is there a longitudinal operating point for the current driver (`P2H10S-F`) better than the one it serves, and which collision
 class should a longitudinal fix target?
@@ -18,6 +17,10 @@ the method is decision 196's ([../op_parity/results/nc_taxonomy.md](../op_parity
 overrides.
 
 <!-- files:begin -->
+## Files
+
+
+[results/](results/) 44 result files · [plans/](plans/) 1 live plans · [scripts/](scripts/) 2 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

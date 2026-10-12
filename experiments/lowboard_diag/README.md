@@ -1,9 +1,8 @@
 # lowboard_diag: why the two low closed-loop boards lose points
 
-status: live
+status: concluded (2026-10-11 index review: final reading in results/, follow-ups run in long_contact, d237-241)
 decisions: 237, 239, 241 (inputs: 138, 153, 170, 218, 219, 220, 226, 227, 235)
 index: PAI: longitudinal 43% of lost score, route 23%; corridor zeros are not missing route info; HUGSIM: three-way tie, route 1%
-key: experiments/lowboard_diag/results/seeds.md, experiments/lowboard_diag/plans/2026-10-10-lowdiag-prereg.md, experiments/lowboard_diag/results/pai.md, experiments/lowboard_diag/results/hugsim.md, experiments/lowboard_diag/results/pai/units.csv, experiments/lowboard_diag/results/hugsim/tables.md, experiments/lowboard_diag/scripts/lbd_pai.py, experiments/lowboard_diag/scripts/lbd_hugsim.py
 
 **Question.** On AlpaSim PAI (base P2H10-F served, 60 scenes) and HUGSIM 64 (SH30), which share of the lost score is longitudinal,
 route, clearance or other, was each failure already in the served plan, and was the shipped base model's own output right there?
@@ -34,4 +33,16 @@ lost scenarios of decision 239 are lost again. [results/seeds.md](results/seeds.
 [plans/2026-10-10-lowdiag-prereg.md](plans/2026-10-10-lowdiag-prereg.md) (class definitions, priority, "base right", two amendments).
 
 <!-- files:begin -->
+## Files
+
+- `seeds.md` (results): seed spread of the decision-237 failure …
+- `2026-10-10-lowdiag-prereg.md` (plans): LOWDIAG：两块低分闭环榜的失分诊断，一套共用分类（预登记，2026-10- …
+- `pai.md` (results): 18 "corridor" zeros are 5 overruns of …
+- `hugsim.md` (results): the 38 failed SH30 runs split three ways
+- `units.csv` (results): 
+- `tables.md` (results): HLEAD tables
+- `lbd_pai.py` (scripts): LOWDIAG, PAI half, analysis
+- `lbd_hugsim.py` (scripts): every failed SH30 run under the shared …
+
+[results/](results/) 70 result files · [figs/](figs/) 34 figures · [plans/](plans/) 2 live plans · [scripts/](scripts/) 13 entry points
 <!-- files:end -->

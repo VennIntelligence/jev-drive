@@ -1,9 +1,8 @@
 # op_route_ft: route-choice adapter fine-tune of openpilot
 
-status: live
+status: concluded (2026-10-11 index review: misses the primary line on B2D 25 junction turns, d127)
 decisions: 128, 129, 133, 134 (inputs: 118, 121, 122, 127)
 index: Route-choice adapter (bear / poly) + action pathway fine-tune; B2D 25 junction turns primary
-key: experiments/op_route_ft/plans/2026-10-05-route-ft-prereg.md, experiments/op_route_ft/scripts/rft.py, experiments/op_route_ft/scripts/rft_eval.py, lib/route_adapter.py, tests/test_route_adapter.py
 
 **Question.** Does a lightly fine-tuned openpilot (shipped Cinque, stage 4 + plan / action pathways + a small route adapter) turn at B2D junctions by itself when it is told the route?
 
@@ -15,6 +14,15 @@ key: experiments/op_route_ft/plans/2026-10-05-route-ft-prereg.md, experiments/op
 [../op_adapt_h/README.md](../op_adapt_h/README.md) (layer-3 recipe reused), [../op_adapt_l/README.md](../op_adapt_l/README.md) (intent adapter, T4 slices), [../op_guard/](../op_guard/) (guard set).
 
 <!-- files:begin -->
+## Files
+
+- `2026-10-05-route-ft-prereg.md` (plans): op_route_ft 预登记（2026-10-05 夜，训练前写定）
+- `rft.py` (scripts): route-choice fine-tune of openpilot …
+- `rft_eval.py` (scripts): Open-loop readouts of op_route_ft …
+- `route_adapter.py` (lib): Route-choice adapter for openpilot …
+- `test_route_adapter.py` (tests): maneuver features, zero-init identity …
+
+[results/](results/) 35 result files · [figs/](figs/) 11 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 34 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

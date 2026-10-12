@@ -3,7 +3,6 @@
 status: concluded
 decisions: (pending)
 index: Stopped at step 0: no in-distribution history-only mode (anchors fixed)
-key: experiments/wm_policy/results/step0.md, experiments/reactivity/archive/i4_worldmodel_probe.py
 
 **Question.** Run without the ego's future, is comma's worldmodel-4B (plan head) itself a usable driving predictor,
 compared with Cinque on held-out comma1M / WOD clips?
@@ -19,6 +18,10 @@ as the brief allows ([results/step0.md](results/step0.md)).
 `experiments/reactivity/archive/i4_worldmodel_probe.py`.
 
 <!-- files:begin -->
+## Files
+
+
+[results/](results/) 1 result files
 <!-- files:end -->
 
 Layout: `results/` small result files. No code, no GPU time used.

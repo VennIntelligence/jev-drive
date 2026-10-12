@@ -3,7 +3,6 @@
 status: concluded
 decisions: (pending)
 index: Wide FOV 90/116 deg: turn gain -0.005..-0.033, early stop; wide frame barely used
-key: experiments/op_fov/README.md experiments/op_fov/results/pilot.md experiments/op_fov/figs/fov_inputs.png experiments/op_fov/plans/2026-10-05-fov-prereg.md experiments/op_fov/scripts/fov_replay.py experiments/op_fov/scripts/fov_report.py jevdrive/openpilot/frames.py
 
 **Question.** Does feeding the shipped Cinque a wider field of view (smaller model-frame focal, same 512x256 frames) help it on
 sharp / 90 deg turns on real road data, without breaking its scale on straight roads?
@@ -16,4 +15,8 @@ x1.22, ADE x8.7). With its own camera the model already turns about right on rea
 **Read more.** Results [results/pilot.md](results/pilot.md). Pre-registration: [plans/2026-10-05-fov-prereg.md](plans/2026-10-05-fov-prereg.md).
 
 <!-- files:begin -->
+## Files
+
+
+[results/](results/) 8 result files · [figs/](figs/) 2 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 4 entry points
 <!-- files:end -->

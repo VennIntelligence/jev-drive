@@ -1,9 +1,8 @@
 # b2d_collect: PDM-Lite imitation data for a B2D P2
 
-status: live
+status: paused (2026-10-11 index review: B2D / CARLA lanes paused, next-round plan section 5)
 decisions: (pending) (inputs: 121, 127, 128, 133, 134, 137, 144, 147, 148)
 index: 998 B2D clips, 902 k ticks at 20 Hz, 60% junction turns, all gates pass
-key: experiments/b2d_collect/plans/2026-10-06-b2d-collect-prereg.md, experiments/b2d_collect/results/full.md, experiments/b2d_collect/results/stages.md, experiments/b2d_collect/scripts/b2dc_agent.py, experiments/b2d_collect/lib/b2dc_frames.py, experiments/b2d_collect/lib/b2dc_labels.py, experiments/b2d_collect/scripts/b2dc_routes.py, experiments/b2d_collect/scripts/b2dc_labels.py, experiments/b2d_collect/scripts/b2dc_check.py, experiments/b2d_collect/scripts/b2dc_lane.py, experiments/b2d_collect/scripts/b2dc_gif.py, tests/test_b2dc_frames.py
 
 **Question.** Can we collect a Bench2Drive imitation dataset (PDM-Lite driving, openpilot road + wide cameras on the open-loop-aligned rig at
 native 20 Hz, stored as the model frames Cinque consumes) that op_parity P2 (decision 144, + drivable-SDF hinge, decision 148) can train on
@@ -29,6 +28,22 @@ signs, P2 0.86 (the open problem, not the data): [results/full.md](results/full.
 `footprint`; DAgger through the agent's `_drive()` hook.
 
 <!-- files:begin -->
+## Files
+
+- `2026-10-06-b2d-collect-prereg.md` (plans): b2d_collect：B2D 版 op_parity P2 …
+- `full.md` (results): full collection
+- `stages.md` (results): smoke and 10-route stage
+- `b2dc_agent.py` (scripts): PDM-Lite drives (SimLingo's Bench2Drive …
+- `b2dc_frames.py` (lib): openpilot model frames for the B2D …
+- `b2dc_labels.py` (lib): Training labels of a collected B2D …
+- `b2dc_routes.py` (scripts): CPU only, no CARLA server
+- `b2dc_labels.py` (scripts): Labels and dataset index of a B2D …
+- `b2dc_check.py` (scripts): Validation of collected B2D clips
+- `b2dc_lane.py` (scripts): one chained driver per stage, staged 1 …
+- `b2dc_gif.py` (scripts): Captioned GIFs of collected B2D clips
+- `test_b2dc_frames.py` (tests): the collector's packing is …
+
+[results/](results/) 2 result files · [figs/](figs/) 5 figures · [plans/](plans/) 1 live plans · [lib/](lib/) 2 library · [scripts/](scripts/) 6 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

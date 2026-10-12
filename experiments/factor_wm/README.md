@@ -1,9 +1,8 @@
 # factor_wm: Factorized world model, exact ego, pretrained exogenous
 
-status: live
+status: paused (2026-10-11 index review: stopped in research/next-round/plan.md section 5, d177)
 decisions: (inputs: 54, 76, 103, 123, 132, 138, 139)
 index: G1 and P2+DAgger fail: in-engine fixes, HUGSIM launch stalls (18->48; 1->9/12)
-key: experiments/factor_wm/plans/2026-10-05-stage1-prereg.md, experiments/factor_wm/results/g0-verdict.md, experiments/factor_wm/results/g1.md, experiments/factor_wm/scripts/fw_common.py, experiments/factor_wm/scripts/fw_g0.py, research/world-model/index.html, experiments/op_dagger/scripts/dg_common.py, experiments/op_dagger/scripts/dg_roll.py, experiments/op_dagger/results/pilot.md, experiments/world_model/README.md
 
 **Question.** Does a driving world model whose ego part is exact (kinematics + geometric reprojection of real frames) and whose exogenous part
 comes from fine-tuned industrial pretrained models train openpilot better than learned world models? Stage 1 (ego part only): does on-policy
@@ -29,4 +28,18 @@ the best closed-loop arm (HD 0.328, 15 completes) but fixes only 2 of 12.
 CARLA fork pairs), [research/world-model/index.html](../../research/world-model/index.html) (novelty check, ~40 works).
 
 <!-- files:begin -->
+## Files
+
+- `2026-10-05-stage1-prereg.md` (plans): factor_wm 第 1 阶段预登记：ego 精确的模拟器里在策略上训练 …
+- `g0-verdict.md` (results): factor_wm gate G0：结论（2026-10-05，未训练）
+- `g1.md` (results): factor_wm G1：结论（2026-10-06）
+- `fw_common.py` (scripts): factor_wm stage 1 engine pieces
+- `fw_g0.py` (scripts): factor_wm gate G0 rollouts
+- `index.html` (research/world-model): 
+- `dg_common.py` (experiments/op_dagger/scripts): clip sets, logged poses, the …
+- `dg_roll.py` (experiments/op_dagger/scripts): op_dagger rollout engine runs
+- `pilot.md` (experiments/op_dagger/results): results so far
+- `README.md` (experiments/world_model): Latent world model on openpilot + …
+
+[results/](results/) 14 result files · [figs/](figs/) 1 figures · [plans/](plans/) 2 live plans · [scripts/](scripts/) 15 entry points
 <!-- files:end -->

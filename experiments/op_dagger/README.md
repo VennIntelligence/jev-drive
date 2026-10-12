@@ -1,9 +1,8 @@
 # op_dagger: DAgger fine-tune on reprojection rollouts
 
-status: live
+status: paused (2026-10-11 index review: stopped in research/next-round/plan.md section 5)
 decisions: 132 (inputs: 92, 98, 100, 111, 118, 123, 124)
 index: Reprojection rollout engine on real WOD logs + DAgger pilot (paper §3 fig 8)
-key: experiments/op_dagger/plans/2026-10-06-dagger-prereg.md, experiments/op_dagger/results/pilot.md, experiments/op_dagger/scripts/dg_common.py, experiments/op_dagger/scripts/dg_roll.py, experiments/op_dagger/scripts/dg_train.py, experiments/op_dagger/scripts/dg_report.py, experiments/op_dagger/scripts/dg_clips.py
 
 **Question.** If geometric reprojection is the rollout engine, and openpilot (shipped Cinque) drives 1-2 s closed loop on real WOD logs
 (action curvature -> lib/op_ctrl -> kinematic step at the logged speed -> re-projected logged frames), does fine-tuning on its own visited
@@ -23,4 +22,15 @@ decision 123 gain) -> `dg_roll.py collect --model shipped --set train` -> `dg_tr
 Data: `$DATA_DIR/runs/op_dagger/{clips,roll,runs,check}`.
 
 <!-- files:begin -->
+## Files
+
+- `2026-10-06-dagger-prereg.md` (plans): op_dagger 预登记：重投影 rollout 上的 DAgger …
+- `pilot.md` (results): results so far
+- `dg_common.py` (scripts): clip sets, logged poses, the …
+- `dg_roll.py` (scripts): op_dagger rollout engine runs
+- `dg_train.py` (scripts): the op_route_ft recipe without a route …
+- `dg_report.py` (scripts): op_dagger readouts, exactly as defines …
+- `dg_clips.py` (scripts): 20 frames on the 5 Hz lattice per clip
+
+[results/](results/) 9 result files · [figs/](figs/) 3 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 7 entry points
 <!-- files:end -->

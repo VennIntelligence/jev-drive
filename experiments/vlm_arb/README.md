@@ -1,6 +1,6 @@
 # vlm_arb: VLM slow channel and arbitration table
 
-status: live
+status: paused (2026-10-11 index review: B2D / CARLA lanes paused, d84-95)
 decisions: 84, 85, 86, 87, 89, 91, 95, 105
 index: Zero-shot Qwen3-VL-4B light reading: red-light infractions 13 to 6 (privileged 5), DS +5.0; fixed bypass pbyp2, stop-line R2 vred2, yellow rule vred3
 
@@ -53,7 +53,7 @@ Seeds 0 and 1, DS (paired, route-cluster CI): vmerge3 68.3, vm3priv 75.4, vm3nor
 ## Files
 
 
-[archive/](archive/) 3 one-off code · [results/](results/) 146 result files · [plans/](plans/) 9 live plans · [scripts/](scripts/) 67 entry points
+[archive/](archive/) 3 one-off code · [results/](results/) 161 result files · [plans/](plans/) 10 live plans · [scripts/](scripts/) 67 entry points
 <!-- files:end -->
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded

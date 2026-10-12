@@ -1,6 +1,6 @@
 # op_common_cause: is openpilot's low-speed failure one cause?
 
-status: live
+status: paused (2026-10-11 index review: not in next-round plan, B2D / CARLA lanes paused, d92-93)
 decisions: 92, 93
 index: Plan follows fake history yaw, 3-7x more at low speed, real and CARLA alike
 

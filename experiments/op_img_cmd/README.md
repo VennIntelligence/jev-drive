@@ -1,6 +1,6 @@
 # op_img_cmd: route command drawn into openpilot's image
 
-status: live
+status: paused (2026-10-11 index review: not in next-round plan, CARLA stage dropped, open missing-exit control unresolved)
 decisions: 99, 102
 index: Image route: zero-shot uptake <= 0.14; fine-tuned 0.54-0.64, drift 0.29 m; sky arrow (no map) 0.29-0.39, junction drift 0.13-0.27 m; negatives: CARLA 0.30, wrong-exit control fails
 
@@ -141,5 +141,5 @@ navtrain (0.09 vs 0.00). Left turns are taken up least (combo toward L / S / R +
 - `img_geom_nav.py` (scripts): Route geometry for the image-command …
 - `img_sheet.py` (scripts): what the model sees
 
-[results/](results/) 24 result files · [figs/](figs/) 4 figures · [plans/](plans/) 2 live plans · [scripts/](scripts/) 16 entry points
+[results/](results/) 176 result files · [figs/](figs/) 6 figures · [plans/](plans/) 3 live plans · [scripts/](scripts/) 32 entry points
 <!-- files:end -->

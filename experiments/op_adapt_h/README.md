@@ -1,6 +1,6 @@
 # op_adapt_h: layer-3 history and offset pairs for Cinque
 
-status: live
+status: concluded (2026-10-11 index review: pilot read in d98, HUGSIM spins 8 to 6 only, no planned next step)
 decisions: 98, 101, 106, 107 (inputs: 92, 94, 96, 100)
 index: Fake-yaw following -71..-78%, navtest +0.82; HUGSIM spins 8 to 6 only
 
@@ -38,5 +38,5 @@ checkpoints unchanged.
 - `h_prep.py` (scripts): every domain in one layout so that the …
 - `h_nav_pool.py` (scripts): a fresh navtrain token pool on op_lb's …
 
-[results/](results/) 35 result files · [figs/](figs/) 0 figures · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 12 entry points
+[results/](results/) 79 result files · [figs/](figs/) 0 figures · [plans/](plans/) 3 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 18 entry points
 <!-- files:end -->

@@ -1,6 +1,6 @@
 # op_adapt_l: Cinque adapted on real-log human futures
 
-status: live
+status: concluded (2026-10-11 index review: read in d77-81, B2D no gain, B2D lanes paused)
 decisions: 77, 78, 79, 80, 81
 index: Stop capture 0.252 to 0.559 open loop; B2D no gain
 
@@ -26,5 +26,5 @@ index: Stop capture 0.252 to 0.559 open loop; B2D no gain
 - `op_adapt_l_gate_curve_chain.py` (scripts): Staged tmux supervisor for gate and …
 - `make_op_adapt_l_figs.py` (scripts): Figures
 
-[results/](results/) 53 result files · [figs/](figs/) 11 figures · [plans/](plans/) 5 live plans · [lib/](lib/) 3 library · [scripts/](scripts/) 21 entry points
+[archive/](archive/) 1 one-off code · [results/](results/) 53 result files · [figs/](figs/) 11 figures · [plans/](plans/) 5 live plans · [lib/](lib/) 3 library · [scripts/](scripts/) 20 entry points
 <!-- files:end -->
