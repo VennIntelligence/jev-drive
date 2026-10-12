@@ -1,7 +1,7 @@
 # onpol_long: closed-loop training at 18 decisions, round 1
 
 status: live
-decisions: 264, 269, 270, 271 (inputs 259, 262)
+decisions: 264, 269, 270, 271, 274 (inputs 259, 262)
 index: S-only rows at 18 decisions on YR10m10-F: 0.838 vs base 0.785, zeros 44 vs 74; S + corridor not adopted
 
 **Question.** At 18 decisions (token + 8 s) in local AlpaSim nuPlan, do on-policy rows of the base's own rollouts on the 1031 train scenes,
@@ -19,12 +19,30 @@ A second on-policy round (rows from `YS-L18`'s own rollouts, from `YS-L18-s1`) d
 than its own no-row control and slightly worse than round 1 (zeros 50.5 against 43), so the loop stops at round 1 and "more rounds help"
 is recorded as negative for this setting.
 
-**Next.** PAI transfer read on the Tokyo box (Amendments 1, 4, 5). `YS2G-L18` passed the
+**Next.** Arm B (directional road raster) not adopted (Amendment 13, decision 274). PAI transfer read on the Tokyo box (Amendments 1, 4, 5). `YS2G-L18` passed the
 public-mean guardrail of the last-slot rule (Amendment 10, decision 269); the candidate-scoring line stopped at its feasibility gate (Amendment 12, decision 270). Ego-status dropout (Amendment 11) does not cut the drift: it removes the open-loop reliance and drift rises (decision 271).
 
 **Read more.** [plans/2026-10-12-ol1-prereg.md](plans/2026-10-12-ol1-prereg.md); the plan: [research/next-round/closed-loop.md](../../research/next-round/closed-loop.md);
 the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpol_nuplan/README.md); the 18-decision driver path:
 [../alpasim_long/README.md](../alpasim_long/README.md).
+
+## Arm B: directional road raster (Amendment 13; round 2b's recipe with the S road raster directional; held 452 at 18 decisions, cards 1-5)
+
+[results/read/report_YSB.md](results/read/report_YSB.md) (lines, label statistics, stage timings, the paired read), `lines_YSB.json`, `dir_stats_L18YS.json`;
+`scripts/ol_dirraster.py`, `on_train.py --on-road`. ![directional raster on three early-inside turn zeros](figs/armb_dir_raster_turns.png)
+`figs/armb_dir_raster_turns.png`: grey kept, red removed by direction; check that the removed area is the oncoming carriageway and the served plan enters it.
+
+| | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) | early-inside across-traffic turn zeros | late-outside kerb-side | oncoming 2 s before (corridor + collision zeros) |
+|:--|--:|--:|:--|--:|--:|--:|--:|:--|
+| `YSB-L18` s0 / s1 | 0.829 (0.835 / 0.824) | 53.0 | 8.5 / 23.0 / 23.0 | 31.5 | 1.400 | 3.0 | 10.5 | 0.13 (8 / 60) |
+| control `YS2G-L18` | 0.847 | 41.5 | 7.0 / 15.0 / 19.5 | 22.0 | 1.276 | 5.5 | 7.5 | 0.23 (12 / 53) |
+| `YS-L18` (s0 re-read off card 0) | 0.838 | 44.0 | 9.0 / 14.5 / 22.0 | 23.5 | 1.357 | 10.5 | 6.0 | 0.31 (18 / 59) |
+
+- `YSB` - `YS2G`: -0.018 [-0.042, +0.002], zeros +11.5 [+1.8, +22.7], at-fault +9.5 [-0.5, +19.5], GT +0.124 [+0.013, +0.232] m. Registered lines: 1 (early-inside
+  across) and 3 (oncoming share < 0.17) met; 2 (kerb-side late-outside), 4 (zeros <= 41.5) and 5 (GT not above YS2G) not: **not adopted** (decision 274).
+- Every pool row changes (the centre line between the directions becomes a road edge); the served plan's road hinge goes from active on 0.12 to 0.28 of the rows.
+  The mechanism moved the way d268 predicted, and the price is offroad and kerb-side failures. Straight corridor zeros past the log end 3 against 4.5 (artefact).
+- Timings: labels 0.7 min, training 6.7 min per seed, held read 7.3-9.1 min per 77-scene chunk (two per card), report 0.7 min; submit to report about 27 min.
 
 ## Ego-status shortcut ablation (Amendment 11; YS-L18's recipe + ego-status dropout; held 452 at 18 decisions, every read on cards 1-5)
 

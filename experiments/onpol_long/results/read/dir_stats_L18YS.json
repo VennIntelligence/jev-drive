@@ -1,0 +1,26 @@
+{
+ "rows": 34788,
+ "errors": 0,
+ "err_sample": [],
+ "gate_i_max_diff": 0.0,
+ "gate_i_rows": 200,
+ "gate_i_pass": true,
+ "changed_rows": 34788,
+ "changed_share": 1.0,
+ "lanes_dropped_mean": 14.358916867885478,
+ "roadblocks_dropped_rows": 34788,
+ "sign_flip_pixel_share_of_changed": 0.09075025927133638,
+ "hinge_active_before": 0.12185236288375302,
+ "hinge_active_after": 0.2845808899620559,
+ "hinge_newly_active": 6718,
+ "changed_share_by_log_turn": {
+  "0-15 deg": 1.0,
+  "15-45 deg": 1.0,
+  "45-360 deg": 1.0
+ },
+ "rows_by_log_turn": {
+  "0-15 deg": 27521,
+  "15-45 deg": 4424,
+  "45-360 deg": 2843
+ }
+}
