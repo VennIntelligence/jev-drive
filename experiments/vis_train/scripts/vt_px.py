@@ -255,7 +255,7 @@ def cmd_check(a):
     with Run("vis_train", "px-check", config=vars(a)) as run:
         net, _ = P.encoder(dev)
         for d in a.datas:
-            PS = PX.PixelStore([d], dev, mode="all")
+            PS = PX.PixelStore([d], dev, mode="all", root=_ROOT[0])
             ref = np.load(CR / f"{d}@warp" / "front.npy", mmap_mode="r")
             rows = np.sort(np.random.default_rng(0).choice(len(PS), min(a.rows, len(PS)), replace=False))
             dm, mx, sq, n, t0d = 0.0, 0.0, 0.0, 0, 0.0
@@ -274,7 +274,7 @@ def cmd_check(a):
             PS.close()
         train = [d for d in a.datas if d.startswith("navtrain_full")]
         if len(train) > 1:                                                         # the future-token index of arm B over the given shards
-            PS = PX.PixelStore(train, dev)
+            PS = PX.PixelStore(train, dev, root=_ROOT[0])
             res["future"] = {f"k{k}": float(PS.future_index(k)[1].mean()) for k in (1, 2, 3, 4)} | {"rows": len(PS), "datas": len(train)}
             run.info(f"future-token coverage over {len(train)} shards ({len(PS)} rows): {res['future']}")
         run.summary |= res
