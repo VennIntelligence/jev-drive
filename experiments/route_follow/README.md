@@ -1,7 +1,7 @@
 # route_follow: does the served policy use its route
 
 status: live
-decisions: (none yet; inputs 237, 245, 268, 282, 283, body1 Amendment 7)
+decisions: pending
 index: route used but weak at junctions (0.56 m at 2 s, 18% of need); lane change unused (0.05 m)
 
 **Question.** At junction turns and lane changes, does the plan of the served checkpoints move at the controller's horizon (1-2 s) when the
