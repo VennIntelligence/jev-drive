@@ -257,7 +257,7 @@ def cmd_fig(a):
     pickle.dump(out, open(a.out, "wb"), protocol=4)
 
 
-GROUPS = {"YSB": ("YSB-L18-s0", "YSB-L18-s1"), "YSO25": ("YSO25-L18-s0", "YSO25-L18-s1"), "YSO50": ("YSO50-L18-s0", "YSO50-L18-s1"), "YS2G": ("YS2G-L18-s0", "YS2G-L18-s1"), "YS": ("YS-L18-s0", "YS-L18-s1"), "base": ("YR10m10-F-s0",)}
+GROUPS = {"YSB": ("YSB-L18-s0", "YSB-L18-s1"), "YSO25": ("YSO25-L18-s0", "YSO25-L18-s1"), "YSO50": ("YSO50-L18-s0", "YSO50-L18-s1"), "YSBz": ("YSBz-L18-s0", "YSBz-L18-s1"), "YS2G": ("YS2G-L18-s0", "YS2G-L18-s1"), "YS": ("YS-L18-s0", "YS-L18-s1"), "base": ("YR10m10-F-s0",)}
 
 
 def cmd_lines(a):

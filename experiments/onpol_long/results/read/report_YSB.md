@@ -1,3 +1,5 @@
+**VOID (10-12 evening; decision 274 voided in place).** This read used an oncoming removal set (lane heading at the point nearest the row, whole roadblocks) that marks 9.9 % of the human's own positions as oncoming (zeros_mech's lane rule: 0.4 %), so it measured the wrong raster. Arm B is redone on the corrected region in Amendment 15; its result is added below this header when it lands. The original read follows unchanged.
+
 # ONPOL-LONG Amendment 13: arm B, directional road raster (`YSB-L18`, round 2b's recipe with the directional S road raster; held 452, 18 decisions, cards 1-5)
 
 Registered lines (seed-mean point estimates; control `YS2G-L18`, same pool, schedule, start; only the road raster differs):
