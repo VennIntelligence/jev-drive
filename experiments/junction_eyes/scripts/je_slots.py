@@ -145,7 +145,7 @@ def cmd_validate(a):
         stats["tok_per_row_max_p50_p99"] = [float(np.percentile(e.max((1, 2)), q)) for q in (50, 99)]
         # fp16 noise floor: the same dump pair encoded twice in different batch sizes
         t1 = enc(pr[:64, 0], pr[:64, 1]).astype(np.float32)
-        t2 = np.concatenate([enc(pr[i:i + 7, 0], pr[i:i + 7, 1]) for i in range(0, 64, 7)]).astype(np.float32)
+        t2 = np.concatenate([enc(pr[i:min(i + 7, 64), 0], pr[i:min(i + 7, 64), 1]) for i in range(0, 64, 7)]).astype(np.float32)
         stats["tok_noise_floor_mean_abs"] = float(np.abs(t1 - t2).mean())
         stats["tok_noise_floor_max_abs"] = float(np.abs(t1 - t2).max())
         run.info(json.dumps(stats, indent=1))
