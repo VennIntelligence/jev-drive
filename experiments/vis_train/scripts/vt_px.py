@@ -151,17 +151,17 @@ def cmd_build(a):
     import pp_prep as P
     d, names = a.data, names_of(a.data)
     N = len(names) if not a.limit else min(a.limit, len(names))
-    t0 = a.t0
-    nf = 2 if t0 else PX.NF
-    out = pdir(d) / ((T0_FILE if t0 else "frames.npy") if not a.limit else f"frames{'-t0' if t0 else ''}-first{a.limit}.npy")
+    t0only = a.t0
+    nf = 2 if t0only else PX.NF
+    out = pdir(d) / ((T0_FILE if t0only else "frames.npy") if not a.limit else f"frames{'-t0' if t0only else ''}-first{a.limit}.npy")
     with Run("vis_train", f"px-build-{d}", config=vars(a)) as run:
         with open(pdir(d) / "ents.pkl", "rb") as f:
             ents = pickle.load(f)
         assert [e["token"] for e in ents] == names
         src, syn_t = step_sources()
-        t0need = t0_needs(src[-2:], syn_t) if t0 else None
-        key = cache.key(params=kbase(d, names) | dict(limit=a.limit, src=[list(map(str, s)) for s in src]) | (dict(t0=True) if t0 else {}),
-                        code=[_job_t0 if t0 else _job])
+        t0need = t0_needs(src[-2:], syn_t) if t0only else None
+        key = cache.key(params=kbase(d, names) | dict(limit=a.limit, src=[list(map(str, s)) for s in src]) | (dict(t0=True) if t0only else {}),
+                        code=[_job_t0 if t0only else _job])
         W = a.workers or PX.cores()
         st = {}
         import shutil
@@ -171,20 +171,20 @@ def cmd_build(a):
             raise RuntimeError(f"{d}: {free:.0f} GB free - {need:.1f} GB < {MIN_FREE_GB} GB floor; not written")
 
         def make():
-            proot = pdir(d) / (".part" if not a.limit else f".part{a.limit}") if not t0 else pdir(d) / (".part-t0" if not a.limit else f".part-t0{a.limit}")
+            proot = pdir(d) / (".part" + ("-t0" if t0only else "") + (str(a.limit) if a.limit else ""))
             proot.mkdir(exist_ok=True)
             part = st["part"] = P.Part(proot, key, N, a.force)
             part.open("frames", (N, nf) + PX.FRAME, np.uint8).flush()
             _G.pop("out", None)
             _G.update(ents=ents, src=src, syn_t=syn_t, path=str(proot / "frames.part.npy"))
-            if t0:
+            if t0only:
                 _G["t0"] = (t0need[0], t0need[1], src[-2:])
             todo = np.flatnonzero(~part.done)
             chunks = [todo[i:i + 8] for i in range(0, len(todo), 8)]
             run.info(f"{d}: {len(todo)} of {N} rows to render, {W} workers")
             t0 = time.time()
             with ProcessPoolExecutor(W) as ex:
-                futs = [ex.submit(_job_t0 if t0 else _job, c) for c in chunks]
+                futs = [ex.submit(_job_t0 if t0only else _job, c) for c in chunks]
                 for f in run.tqdm(as_completed(futs), total=len(futs), desc=f"render {d}"):
                     part.mark(f.result())
             part.save()
