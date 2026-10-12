@@ -15,7 +15,7 @@
 - **held 帧（新跑）**：`YS-L18-s1` 在 `alpasim_nuplan/onpol-held`（460 scene，18 决策，alpasim_long 的 driver 路径，与 onpol_long read1 同一套参数）
   上重跑一遍并打开 `SH30_DUMP`，3 个 pool job；token 用同一个 `pp_prep.encoder`、同一种 slot 配对（on_rows make_front 的写法）。这样 held 是无选择偏差的
   全部决策，且与训练 token 同一条管线。
-- **R3 零分窗口（已存）**：第 269 条登记的 98 个 corridor + offroad 零分（`YS-L18-s1` 64 + `YR10m10-F-s0` 34），事件与 k_ev 取 zeros_mech
+- **R3 零分窗口（已存）**：第 269 条登记的 98 个 corridor + offroad 零分（`YR10m10-F-s0` 64 + `YS-L18-s1` 34；初稿把两边数目写反，读数前改正，总数 98 不变），事件与 k_ev 取 zeros_mech
   `per_rollout.parquet`，窗口 W = 决策 max(0, k_ev − 4) … k_ev；token 用存的 driver 消息（`$DATA_DIR/runs/eyes_vs_head/msgs/<label>/`）按 live driver
   设置重放取 served token（ol_scorer.py replay 的写法：compiled、gpu 合成）。
 - **折**：train / held 已按 log 单元分开（on_split.py）；训练内部 sha256("rpval|" + log) % 7 == 0 的 log 单元作 val，只用于选 step 与 ridge λ。
@@ -79,3 +79,11 @@ h20（rad）、对向 logit。
 产出 `experiments/road_probe/`：README、INDEX 一行、`scripts/rp.py`（labels / tok / replay / train / read）、`results/rp_report.md`（闸、登记表、线与判词、
 学习曲线）、2–3 张图（误差按距离与场景类型；4–6 个 BEV 例子：地图、探针输出、随附头、plan，含零分窗口）；research/decisions.md 一条。大文件留 box
 `$DATA_DIR/runs/road_probe/`。
+
+## 7. 读数前的补充（2026-10-12，写代码时，任何标签统计、训练与读数之前）
+
+- 事件表用第 269 条的逐事件表 `experiments/eyes_vs_head/results/events_P0.csv`（group、scene、type、k_ev，与 zeros_mech `per_rollout.parquet` 同源），
+  取 group ∈ {YR10m10-F-s0, YS-L18-s1}、type ∈ {corridor, offroad}，正好 98 个。
+- R3 的随附头：不读 eyes_vs_head 存的重放文件，而在本线自己的重放里对同一组 served token 用同一个调用（`load_pmodel("P0")(H, ego, tc)`，ev.py 的写法）
+  再算一次，与 token 一一对应；数值与第 269 条相同（同一函数、同一输入）。
+- R3 的分母：窗口误差在至少一侧可评的窗口上取中位；「两侧都 ≤ 0.5 m」的份额以两侧都可评的窗口为分母；两种窗口数都报。
