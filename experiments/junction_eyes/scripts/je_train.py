@@ -79,7 +79,8 @@ def head_losses(m: M.JE, tok, ego, ra, rb):
 
 
 class Keep:
-    """The keep term: lam_d x mean over rows of mean over the distilled columns of ((student - teacher) / std)^2."""
+    """The keep term: lam_d x mean over rows of mean over the distilled columns of ((student - teacher) / std)^2 (logged weighted;
+    keep_plan = the unweighted mean over the plan columns)."""
 
     def __init__(self, m: M.JE, KS: D.KeepStore, rows, dev, lam=30.0):
         di, self.plan = M.distill_cols(m.net)
@@ -91,7 +92,7 @@ class Keep:
     def __call__(self, out, rows):
         t = torch.as_tensor(self.KS.teacher[np.asarray(rows)], device=self.dev)[:, self.di]
         e = ((out.float()[:, self.di] - t) / self.std).pow(2)
-        return e.mean(1).mean(), e[:, torch.as_tensor(self.plan, device=self.dev)].mean()
+        return self.lam * e.mean(1).mean(), e[:, torch.as_tensor(self.plan, device=self.dev)].mean()     # weighted term, raw plan-column error
 
 
 # ---------------------------------------------------------------- the lane
