@@ -28,6 +28,7 @@ if len(sys.argv) > 1 and sys.argv[1] in ("labels", "read"):                # one
 import numpy as np  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[3]
+sys.path[:0] = [str(REPO), str(REPO / "experiments/road_probe/scripts")]
 OUT, FIGS = REPO / "experiments/road_probe/results", REPO / "experiments/road_probe/figs"
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 W = DATA / "runs/road_probe"
@@ -146,7 +147,6 @@ def labels(a):
     from jevdrive.common import n_cpus
     from jevdrive.data import splits
     from jevdrive.run import Run
-    sys.path[:0] = [str(REPO / "experiments/road_probe/scripts")]
     import rp  # noqa: F401  (sets the AlpaSim / zeros_mech paths for the workers)
     with Run("road_probe", f"real/labels-{a.split}", config=vars(a)) as run:
         sp = splits.load(f"navsim/{a.split}")
@@ -196,7 +196,6 @@ def train(a):
     import time
     import torch
     import torch.nn.functional as F
-    sys.path[:0] = [str(REPO / "experiments/road_probe/scripts")]
     import head1_train as H1
     import rp
     from jevdrive.data import splits
@@ -339,7 +338,6 @@ def verdict(c):
 def read(a):
     import pandas as pd
     from jevdrive.run import Run
-    sys.path[:0] = [str(REPO / "experiments/road_probe/scripts")]
     import rp
     with Run("road_probe", "real/read", config=vars(a)) as run:
         out = Path(run.dir)
