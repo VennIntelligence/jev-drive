@@ -316,6 +316,38 @@ def cmd_train(a):
                            gpu_peak_gb=torch.cuda.max_memory_reserved() / 2 ** 30, ckpt=str(d))
 
 
+def cmd_prof(a):
+    """Throughput split: n batch fetches alone (host reads, one thread like a prefetch worker), then n training steps on one fetched batch
+    (GPU alone), then n steps with the prefetcher (the real loop). Steps run at lr 0 on a throwaway model; nothing is saved."""
+    from jevdrive.run import Run
+    dev = torch.device("cuda")
+    with Run("junction_eyes", f"step1/prof-{a.arm}", config=vars(a)) as run:
+        ln = Lane(a, dev)
+        for g in ln.opt.param_groups:
+            g["base"] = 0.0
+        t = time.time()
+        items = [ln.fetch(ln.draw()) for _ in range(a.n)]
+        res = {"fetch_s": (time.time() - t) / a.n}
+        for k in range(3):                                    # warm-up (compile)
+            ln.step(items[0], k)
+        torch.cuda.synchronize()
+        t = time.time()
+        for k in range(a.n):
+            ln.step(items[k % len(items)], k)
+        torch.cuda.synchronize()
+        res["gpu_step_s"] = (time.time() - t) / a.n
+        pre = D.Prefetch(ln.draw, ln.fetch, a.n, a.prefetch, a.fetch_workers)
+        t = time.time()
+        for k in range(a.n):
+            ln.step(pre.get(), k)
+        torch.cuda.synchronize()
+        res["loop_step_s"] = (time.time() - t) / a.n
+        res |= {"loop_it_s": 1 / res["loop_step_s"], "gpu_it_s": 1 / res["gpu_step_s"], "fetch_per_s_one_thread": 1 / res["fetch_s"],
+                "peak_gb": torch.cuda.max_memory_reserved() / 2 ** 30, "gpu": torch.cuda.get_device_name()}
+        run.summary.update(res)
+        run.info(json.dumps(res))
+
+
 # ---------------------------------------------------------------- identity gate (4.4 / 5.2)
 @torch.no_grad()
 def cmd_ident(a):
@@ -375,7 +407,7 @@ if __name__ == "__main__":
     from jevdrive.run import cli_args
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("train", "ident"):
+    for name in ("train", "ident", "prof"):
         p = sp.add_parser(name)
         p.add_argument("--data", default="", help="data JSON (see docstring)")
         p.add_argument("--synthetic", action="store_true", help="plumbing only: real navtrain pairs, random labels; never read")
@@ -385,6 +417,8 @@ if __name__ == "__main__":
         if name == "ident":
             p.add_argument("--n", type=int, default=512)
             continue
+        if name == "prof":
+            p.add_argument("--n", type=int, default=40)
         cli_args(p)
         p.add_argument("--arm", required=True, choices=list(ARMS))
         p.add_argument("--tag", default="")
@@ -399,7 +433,9 @@ if __name__ == "__main__":
         p.add_argument("--fetch-workers", type=int, default=3)
         p.add_argument("--scratch", action="store_true", help="smoke* tags only: delete the tag's checkpoint dir first")
     a = ap.parse_args()
-    if a.cmd == "train":
+    if a.cmd == "prof":
+        a.steps, a.tag, a.gn_every = 1000, "prof", 0
+    if a.cmd in ("train", "prof"):
         assert not (a.nav_only and not (a.tag or "").startswith("smoke")), "--nav-only is a smoke option"
         assert not (a.synthetic and not (a.tag or "").startswith("smoke")), "--synthetic runs are smoke runs: --tag smoke-..."
-    {"train": cmd_train, "ident": cmd_ident}[a.cmd](a)
+    {"train": cmd_train, "ident": cmd_ident, "prof": cmd_prof}[a.cmd](a)
