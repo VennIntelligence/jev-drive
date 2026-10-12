@@ -10,6 +10,7 @@ The trainer multiplies by --on-lon-lam (2.5 / 5 = 0.25 / 0.5 of the road hinge's
 """
 import os
 
+import numpy as np
 import torch
 
 from ol_kc import shape_only
@@ -17,7 +18,7 @@ from ol_kc import shape_only
 
 def load(pool_dir, names, dev):
     from drivable_hinge import Hinge
-    return dict(h=Hinge(os.environ["OL_ONC"], list(names), dev, 0.0, bank=True))
+    return dict(h=Hinge(os.environ["OL_ONC"], np.asarray(names), dev, 0.0, bank=True))
 
 
 def loss(poses, rows, pack):
