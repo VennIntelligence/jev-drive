@@ -35,6 +35,7 @@ import zm_read as ZM  # noqa: E402  (zeros_mech helpers, unedited: Lanes, object
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 RUNS = DATA / "runs"
 OUT = REPO / "experiments/cap_audit/results"
+OUT.mkdir(parents=True, exist_ok=True)
 T0, DT = 17_000, 500_000
 KSET = {"pub": 10, "held": 18}
 OURS = ("YR10m10-F-s0", "APY10m10-AB-s0", "YS2G-L18-s0", "YS2G-L18-s1", "YS-L18-s0", "YS-L18-s1")
