@@ -1,0 +1,52 @@
+[
+ {
+  "cell": "v5-10:behind",
+  "label": "YS2G-L18-s1",
+  "scene": "2021.10.06.08.16.17_veh-52_01590_01725-dd2d7e23754e58d3",
+  "k": 10,
+  "row": "YS2G",
+  "flagged": true,
+  "std_lo": 0.06524334390751445,
+  "excess": 12.9115023613141
+ },
+ {
+  "cell": "kerb_turn:behind",
+  "label": "YS2G-L18-s1",
+  "scene": "2021.09.29.14.44.26_veh-28_01331_01485-49ee466685265a80",
+  "k": 10,
+  "row": "YS2G",
+  "flagged": false,
+  "std_lo": -0.008712299510150196,
+  "excess": 10.764714246058098
+ },
+ {
+  "cell": "straight:head_path",
+  "label": "YS2G-L18-s1",
+  "scene": "2021.09.09.17.18.51_veh-48_01248_01450-a567ea679ba056ce",
+  "k": 10,
+  "row": "YS2G",
+  "flagged": false,
+  "std_lo": -0.009824859392607455,
+  "excess": 9.202253390803705
+ },
+ {
+  "cell": "straight:nolane",
+  "label": "YS2G-L18-s1",
+  "scene": "2021.09.16.15.47.30_veh-45_01199_01391-0481cf2b75f1532f",
+  "k": 10,
+  "row": "YS2G",
+  "flagged": false,
+  "std_lo": -0.016911697764365408,
+  "excess": 0.1
+ },
+ {
+  "cell": "straight:onc",
+  "label": "YS2G-L18-s1",
+  "scene": "2021.09.29.14.44.26_veh-28_01640_01743-4ab74b20c99e5d20",
+  "k": 1,
+  "row": "YS2G",
+  "flagged": false,
+  "std_lo": -0.024361604784229912,
+  "excess": 0.4
+ }
+]

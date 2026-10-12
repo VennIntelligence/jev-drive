@@ -1,0 +1,44 @@
+{
+ "scenes": 1479,
+ "scene_errors": 0,
+ "G_cov": {
+  "per_label": {
+   "APY10m10-AB-s0": 1479,
+   "DD": 1479,
+   "G0014": 1479,
+   "LTF": 1479,
+   "WA-JEPA": 1479,
+   "YR10m10-F-s0": 1479,
+   "YS-L18-s0": 1479,
+   "YS-L18-s1": 1479,
+   "YS2G-L18-s0": 1479,
+   "YS2G-L18-s1": 1479
+  },
+  "line": 1470,
+  "passed": true
+ },
+ "G_pose": {
+  "share": 1.0,
+  "passed": true
+ },
+ "G_lat": {
+  "share": 0.9671688152497162,
+  "n": 143583,
+  "passed": true
+ },
+ "G_gap": {
+  "spearman": 0.9899633772747427,
+  "n": 143583,
+  "passed": true
+ },
+ "G_dir": {
+  "same": 0.9950080118328608,
+  "onc": 0.004314063848144953,
+  "passed": true
+ },
+ "anchor_match": {
+  "share": 0.9960183307039291,
+  "n": 79866
+ },
+ "passed": true
+}

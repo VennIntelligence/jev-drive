@@ -361,8 +361,17 @@ def tables(a):
     heatmap(C, p["P"], figs / "ca_heatmap")
     # BEV picks: the 5 worst flagged cells of the YS2G row by standardized lower bound, then YR, then unflagged by the same order
     picks = []
-    order = pd.concat([F[F.label == "YS2G"].sort_values("std_lo", ascending=False), F[F.label == "YR10m10-F-s0"].sort_values("std_lo", ascending=False)]) if len(F) else F
+    sd = {m: float(np.nanstd(p["P"][p["P"].label.isin(REFS + sum(OURS.values(), []))][f"{m}|d"])) for m in MEAS}
+    Mx = C[(C.row == "mstar") & C.testable].copy()
+    Mx["std_lo"] = [lo / sd[m] if sd[m] > 0 else np.nan for lo, m in zip(Mx.lo, Mx.measure)]
+    Mx["flagged"] = Mx.flag.astype(bool)
+    order = pd.concat([Mx[(Mx.label == "YS2G") & Mx.flagged].sort_values("std_lo", ascending=False),
+                       Mx[(Mx.label == "YR10m10-F-s0") & Mx.flagged].sort_values("std_lo", ascending=False),
+                       Mx[(Mx.label == "YS2G") & ~Mx.flagged].sort_values("std_lo", ascending=False)])
+    E = C[(C.row == "excess") & (C.lo > 0) & (C.n >= 30) & (C.logs >= 10)]
+    E.to_csv(out / "pairwise_worse.csv", index=False)       # exploratory: cells where one of our rows is worse than a single reference
     seen = set()
+    Dpub = load(a.pub)[0]
     for _, f in order.iterrows():
         if (f.group, f.measure) in seen:
             continue
@@ -371,18 +380,22 @@ def tables(a):
         X = p["P"].set_index(["label", "scene"])
         sc = sorted(p["G"][f.group])
         mine = X.loc[o][f"{f.measure}|d"].reindex(sc)
-        refm = pd.concat([X.loc[r][f"{f.measure}|d"].reindex(sc) for r in REFS], axis=1).max(1)
+        refm = pd.concat([X.loc[r][f"{f.measure}|d"].reindex(sc) for r in REFS], axis=1).max(axis=1)
+        if not (mine - refm).max() > 0:          # a degenerate cell (all zeros): no scene shows it, take the next one
+            continue
         s = (mine - refm).idxmax()
         lab = OURS[o][0] if len(OURS[o]) == 1 else OURS[o][1]
-        Dd = load(a.pub)[0]
-        Dd = Dd[(Dd.label == lab) & (Dd.scene == s) & Dd.kept]
-        col = {"lat_log": "lat_eval", "gap_min": "gap", "margin": "margin"}.get(f.measure)
-        if col is not None and len(Dd):
+        Dd = Dpub[(Dpub.label == lab) & (Dpub.scene == s) & Dpub.kept]
+        col = {"lat_log": "lat_eval", "gap_min": "gap", "margin": "margin", "head_path": "head_path", "lane_ctr": "lane_off"}.get(f.measure)
+        if f.measure in ("onc", "nolane") and len(Dd) and (Dd.cls == {"onc": 2, "nolane": 0}[f.measure]).any():
+            k = int(Dd.k[Dd.cls == {"onc": 2, "nolane": 0}[f.measure]].iloc[0])
+        elif col is not None and len(Dd):
             v = pd.to_numeric(Dd[col], errors="coerce").abs()
             k = int(Dd.k.iloc[int(v.argmin() if f.measure in ("gap_min", "margin") else v.argmax())])
         else:
             k = int(Dd.k.max()) if len(Dd) else 5
-        picks.append(dict(cell=f"{f.group}:{f.measure}", label=lab, scene=s, k=k, row=o, excess=float((mine - refm).max())))
+        picks.append(dict(cell=f"{f.group}:{f.measure}", label=lab, scene=s, k=k, row=o, flagged=bool(f.flagged), std_lo=float(f.std_lo),
+                          excess=float((mine - refm).max())))
         if len(picks) == 5:
             break
     (out / "bev_picks.json").write_text(json.dumps(picks, indent=1))
