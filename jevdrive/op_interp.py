@@ -133,20 +133,23 @@ def track_wod(past) -> EgoTrack:
 _RAYS = {}
 
 
-def _rays(view: str) -> np.ndarray:
-    """(H, W, 3) vehicle-frame rays of the model frame's pixel centres (openpilot calib = vehicle axes)."""
-    if view not in _RAYS:
-        K = OP_K[view]
+def _rays(view: str, K=None) -> np.ndarray:
+    """(H, W, 3) vehicle-frame rays of the model frame's pixel centres (openpilot calib = vehicle axes). K overrides the view's
+    intrinsics (e.g. openpilot.frames.wide_K(256), a 90 deg wide frame)."""
+    K = OP_K[view] if K is None else np.asarray(K, float)
+    key = (view, K.tobytes())
+    if key not in _RAYS:
         u, v = np.meshgrid(np.arange(W, dtype=float), np.arange(H, dtype=float))
         r = np.stack([(u - K[0, 2]) / K[0, 0], (v - K[1, 2]) / K[1, 1], np.ones_like(u)], -1) @ OPENCV_TO_VEHICLE.T
-        _RAYS[view] = r
-    return _RAYS[view]
+        _RAYS[key] = r
+    return _RAYS[key]
 
 
-def warp_map(view: str, cam, pose_dst, pose_src):
+def warp_map(view: str, cam, pose_dst, pose_src, K=None):
     """Source-image pixel coordinates (map_x, map_y) (H, W) for every destination pixel: the destination ray hits the
-    road plane z = 0 (camera at height cam[2]) or the 60 m sphere, moves with the ego from pose_dst to pose_src."""
-    r = _rays(view)
+    road plane z = 0 (camera at height cam[2]) or the 60 m sphere, moves with the ego from pose_dst to pose_src.
+    K overrides the view's intrinsics (source and destination frame)."""
+    r = _rays(view, K)
     c = np.asarray(cam, float)
     down = -r[..., 2]
     lam = np.where(down > 1e-6, c[2] / np.maximum(down, 1e-6), np.inf)
@@ -156,7 +159,7 @@ def warp_map(view: str, cam, pose_dst, pose_src):
     Ps = (Pw - pose_src[:2]) @ rot2(pose_src[2])                             # R^T (Pw - p)
     ray = np.concatenate([Ps, P[..., 2:]], -1) - c
     cv = ray @ OPENCV_TO_VEHICLE                                             # vehicle -> opencv
-    K = OP_K[view]
+    K = OP_K[view] if K is None else np.asarray(K, float)
     z = np.where(cv[..., 2] > 0.1, cv[..., 2], np.nan)
     mx = K[0, 0] * cv[..., 0] / z + K[0, 2]
     my = K[1, 1] * cv[..., 1] / z + K[1, 2]
@@ -165,18 +168,20 @@ def warp_map(view: str, cam, pose_dst, pose_src):
 
 def warp_frame(packed_src, cam, pose_dst, pose_src):
     """One packed frame (2, 6, 128, 256) re-projected from pose_src to pose_dst (both views), bilinear, border replicate."""
+    return np.stack([warp_view(packed_src[k], view, cam, pose_dst, pose_src) for k, view in enumerate(("road", "wide"))])
+
+
+def warp_view(packed_src, view, cam, pose_dst, pose_src, K=None):
+    """One packed view (6, 128, 256) of warp_frame; K overrides the view's intrinsics."""
     import cv2
-    out = np.empty_like(packed_src)
-    for k, view in enumerate(("road", "wide")):
-        mx, my = warp_map(view, cam, pose_dst, pose_src)
-        Y, U, V = unpack(packed_src[k])
-        Yw = cv2.remap(Y, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-        # chroma site (i, j) = centre of its 2x2 luma block; its source position in chroma pixel units
-        hx, hy = (mx[0::2, 0::2] + mx[1::2, 1::2]) / 4 - 0.25, (my[0::2, 0::2] + my[1::2, 1::2]) / 4 - 0.25
-        Uw = cv2.remap(np.ascontiguousarray(U), hx, hy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-        Vw = cv2.remap(np.ascontiguousarray(V), hx, hy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-        out[k] = pack(Yw, Uw, Vw)
-    return out
+    mx, my = warp_map(view, cam, pose_dst, pose_src, K)
+    Y, U, V = unpack(packed_src)
+    Yw = cv2.remap(Y, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    # chroma site (i, j) = centre of its 2x2 luma block; its source position in chroma pixel units
+    hx, hy = (mx[0::2, 0::2] + mx[1::2, 1::2]) / 4 - 0.25, (my[0::2, 0::2] + my[1::2, 1::2]) / 4 - 0.25
+    Uw = cv2.remap(np.ascontiguousarray(U), hx, hy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    Vw = cv2.remap(np.ascontiguousarray(V), hx, hy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    return pack(Yw, Uw, Vw)
 
 
 _GPU = {}
