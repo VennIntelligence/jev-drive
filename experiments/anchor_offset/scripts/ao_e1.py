@@ -46,7 +46,8 @@ def project(R, S, p, lo=-np.inf, hi=np.inf):
     q = a + t[:, None] * seg
     d = np.hypot(*(p - q).T)
     i = int(d.argmin())
-    lat = float(np.cross(seg[i] / np.sqrt(L2[i]), p - a[i]))
+    u, v = seg[i] / np.sqrt(L2[i]), p - a[i]
+    lat = float(u[0] * v[1] - u[1] * v[0])
     return float(s0[i] + t[i] * np.sqrt(L2[i])), lat
 
 
