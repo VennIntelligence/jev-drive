@@ -1,0 +1,17 @@
+{
+ "rows": 34788,
+ "errors": 0,
+ "err_sample": [],
+ "region_nonempty": 1.0,
+ "onc_active": 0.2065079912613545,
+ "road_active": 0.12185236288375302,
+ "onc_active_by_log_turn": {
+  "0-15 deg": 0.18709349224228772,
+  "15-45 deg": 0.24502712477396021,
+  "45-360 deg": 0.33450580372845584
+ },
+ "gate_onc": false,
+ "gate_road": true,
+ "gate_errors": true,
+ "pass": false
+}
