@@ -260,5 +260,29 @@ report-r2g)
   for t in YR10m10-F-s0 YR10m10-F-s1; do R+=("$t@18=$H/$t"); done
   $P $E/scripts/ol_report.py --family Y --arm S2G --ctl S2GNONE --base-tags YS-L18-s1,YS-L18-s0 --runs "${R[@]}" --out $W/report/Y-S2G || die "ol_report (prev round) rc $?"
   $P $E/scripts/ol_report.py --family Y --arm S2G --ctl S2GNONE --base-tags YR10m10-F-s0,YR10m10-F-s1 --runs "${R[@]}" --out $W/report/Y-S2G-base || die "ol_report (base) rc $?" ;;
+merge)        # Amendment 9: pool on1_L18YA = round-1 rows (on1_L18Y) + round-2 rows (on1_L18YS)
+  $TR $E/scripts/ol_pool_merge.py --out on1_L18YA --pools on1_L18Y:r1 on1_L18YS:r2 || die "merge rc $?" ;;
+submit-agg)    # Amendment 9: YS-AGG from YS-L18-s1 on the aggregated pool, gentle (YSAGG) and full schedule (YSAGGF), seeds 0 / 1; reads off card 0
+  I=YS-L18-s1; N=L18YA
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
+            --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 9)" >> $W/jobs.txt; }
+  m=$(sub ol-merge-YA "" --vram 0.5 --cpu 8 --ram 64 --timeout-h 1 -- bash $E/scripts/ol_chain.sh merge) || exit 1
+  G="--steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500"; FU="--steps 10000"
+  rids=()
+  for v in G F; do sch=$([[ $v == G ]] && echo "$G" || echo "$FU"); tg=YSAGG$([[ $v == F ]] && echo F)
+    for s in 0 1; do
+      a=$(sub ol-train-$tg-s$s "$m" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $TR $ON/scripts/on_train.py train --exp onpol_long --init $I $sch --yr-mass 0.1 \
+            --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_$N --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self --seed $s --tag $tg-L18-s$s) || exit 1
+      rids+=($(sub ol-read-$tg-L18-s$s "$a" --vram 32 --cpu 8 --ram 90 --timeout-h 3 --gpus 1,2,3,4,5 --pin-strict -- bash $E/scripts/ol_chain.sh read1 $tg-L18-s$s)) || exit 1
+    done
+  done
+  sub ol-report-YSAGG "$(IFS=,; echo "${rids[*]}"),1012-140808-4a0c" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report-agg > /dev/null || exit 1
+  echo "submitted: $(grep -c "amendment 9" $W/jobs.txt) jobs" ;;
+report-agg)    # each aggregated arm against YS-L18-s1 with round 2b's gentle control (gentle arm) / round 2's full control (full arm)
+  H=$DATA_DIR/runs/alpasim_long/held/h18
+  for v in G F; do tg=YSAGG$([[ $v == F ]] && echo F); c=$([[ $v == G ]] && echo S2GNONE || echo S2NONE); R=()
+    for t in $tg-L18-s0 $tg-L18-s1 Y$c-L18-s0 Y$c-L18-s1 YS-L18-s1 YS-L18-s0; do R+=("$t@18=$W/read/$t/run"); done
+    $P $E/scripts/ol_report.py --family Y --arm SAGG$([[ $v == F ]] && echo F) --ctl $c --base-tags YS-L18-s1,YS-L18-s0 --runs "${R[@]}" --out $W/report/Y-$tg || die "ol_report $tg rc $?"
+  done ;;
 *) die "unknown stage $STAGE" ;;
 esac
