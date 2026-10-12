@@ -186,7 +186,7 @@ def main(a):
           "so the mirror test is run on the road edges (asymmetric); stated here, not changed after a read.", ""]
     # ------------------------------------------------ R1
     rows = []
-    for H in ("P0", "FT"):
+    for H in ("P0", "FT", "P0K"):
         for lab, sub in (("ctrl straight", ctrl & st), ("ctrl turn", ctrl & tu), ("ctrl all", ctrl),
                          ("held pre-window straight", D.group.isin(HELD) & (D.pos == "pre") & st), ("held pre-window turn", D.group.isin(HELD) & (D.pos == "pre") & tu),
                          ("held window (2 s before event)", D.group.isin(HELD) & (D.pos == "window")), ("held after event", D.group.isin(HELD) & (D.pos == "post"))):
@@ -204,6 +204,9 @@ def main(a):
           "error at 20 m (s1 = line 1, positive = further left than the nearest boundary; s2 = line 2), and the road-edge heads against the road-area "
           "boundary (re_*):", "",
           md([r for r in rows if r["head"] == "P0"], ["sample", "medall10", "p90all10", "medall20", "p90all20", "medall40", "s1_20", "s2_20", "re_med10", "re_p90_10", "re_med20", "re_p90_20"]), ""]
+    L += ["Exploratory, not registered: P0 with decision 104's scale undone (lateral offsets from the camera divided by 0.689, the lane-width ratio "
+          "openpilot reads on real nuPlan frames; fixed before this read, not fitted here), errors at every decision regardless of probability:", "",
+          md([r for r in rows if r["head"] == "P0K"], ["sample", "medall10", "p90all10", "medall20", "p90all20", "medall40", "s1_20", "s2_20", "re_med20", "re_p90_20"]), ""]
     c = rows[0]
     li = dict(i=c["both"] >= 0.80, ii=c["med20"] < 0.30, iii=c["p90_20"] < 0.75)
     J["R1_line"] = dict(both=c["both"], med20=c["med20"], p90_20=c["p90_20"], **{k: bool(v) for k, v in li.items()}, usable=bool(all(li.values())))
@@ -225,6 +228,9 @@ def main(a):
     C = classify(D[D.group.isin(GROUPS)], E, "P0", True)
     Cg = classify(D[D.group.isin(GROUPS)], E, "P0", False)
     Cf = classify(D[D.group.isin(GROUPS)], E, "FT", True)
+    Ck = classify(D[D.group.isin(GROUPS)], E, "P0K", False)
+    Ck.to_csv(out / "events_P0_scaled_geometry_only.csv", index=False)
+    J["R2_counts_geo_scaled"] = counts(Ck, GROUPS)
     C.to_csv(out / "events_P0.csv", index=False)
     Cg.to_csv(out / "events_P0_geometry_only.csv", index=False)
     J["R2_counts"], J["R2_counts_geo"], J["R2_counts_FT"] = counts(C, GROUPS), counts(Cg, GROUPS), counts(Cf, GROUPS)
@@ -247,9 +253,10 @@ def main(a):
           f"Per driver: {BASE} (a) {per[BASE]['a']:.3f} / (b) {per[BASE]['b']:.3f} of {per[BASE]['n']}; {YS1} (a) {per[YS1]['a']:.3f} / (b) {per[YS1]['b']:.3f} of {per[YS1]['n']}.", "",
           "FT heads (descriptive):", "", md(J["R2_counts_FT"], ccols), "",
           "Exploratory, not registered (decided after seeing that the probabilities are low everywhere, R1): the same rule with the probability "
-          "condition dropped (the ego-lane adjacency check is also dropped in this variant):", "", md(J["R2_counts_geo"], ccols), ""]
+          "condition dropped (the ego-lane adjacency check is also dropped in this variant):", "", md(J["R2_counts_geo"], ccols), "",
+          "Exploratory, not registered: the geometry-only rule on the scale-corrected P0 heads (above):", "", md(J["R2_counts_geo_scaled"], ccols), ""]
     pooled = []
-    for name, X in (("registered (P0)", C), ("geometry only (P0, exploratory)", Cg), ("FT", Cf)):
+    for name, X in (("registered (P0)", C), ("geometry only (P0, exploratory)", Cg), ("geometry only, scale-corrected (P0, exploratory)", Ck), ("FT", Cf)):
         Y = X[X.group.isin([BASE, YS1])]
         pooled.append(dict(rule=name, **{f"{t}_{k}": int(((Y.type == t) & (Y.cls == k)).sum()) for t in ("corridor", "offroad", "collision") for k in "abc"}))
     J["R2_pooled"] = pooled
@@ -292,15 +299,16 @@ def main(a):
     # ------------------------------------------------ per-event table
     T = C.merge(Cg[["group", "scene", "cls", "sub"]].rename(columns={"cls": "cls_geo", "sub": "sub_geo"}), on=["group", "scene"])
     T = T.merge(Cf[["group", "scene", "cls"]].rename(columns={"cls": "cls_FT"}), on=["group", "scene"])
+    T = T.merge(Ck[["group", "scene", "cls"]].rename(columns={"cls": "cls_geoK"}), on=["group", "scene"])
     T = T[T.group.isin([BASE, YS1])].sort_values(["group", "type", "sid"])
     L += [f"## Per-event table ({YS1} and {BASE})", "",
-          "cls = registered class (P0), cls_geo = the exploratory geometry-only class, cls_FT = FT heads; j = the decision the class rests on; "
+          "cls = registered class (P0), cls_geo = the exploratory geometry-only class, cls_geoK = the same on scale-corrected heads, cls_FT = FT heads; j = the decision the class rests on; "
           "both / right / wrong / cross = window decisions with both ego lines present / eyes right / eyes wrong / plan crossing a predicted line or edge; "
           "p1, p2 = median ego-line probabilities in the window; e20 = median ego-line error at 20 m regardless of probability.", "",
-          md(T.to_dict("records"), ["group", "sid", "type", "k_ev", "side", "cls", "sub", "cls_geo", "sub_geo", "cls_FT", "j", "n_win", "both", "right", "wrong", "cross", "p1", "p2", "e20"]), ""]
+          md(T.to_dict("records"), ["group", "sid", "type", "k_ev", "side", "cls", "sub", "cls_geo", "sub_geo", "cls_geoK", "cls_FT", "j", "n_win", "both", "right", "wrong", "cross", "p1", "p2", "e20"]), ""]
     (out / "ev_report.md").write_text("\n".join(L))
     (out / "ev.json").write_text(json.dumps(J, indent=1, default=float))
-    figures(D, C, Cg, R, figs, out)
+    figures(D, C, Ck, R, figs, out)
     print("\n".join(L[:60]))
 
 
@@ -349,7 +357,7 @@ def figures(D, C, Cg, R, figs, out):
                 picks.append((Y.iloc[0].group, Y.iloc[0].scene, cls, t, int(Y.iloc[0].j), "registered"))
     X = Cg[(Cg.cls == "a") & Cg.group.isin([YS1, BASE])].sort_values(["type", "group", "sid"])
     if len(X):
-        picks.append((X.iloc[0].group, X.iloc[0].scene, "a", X.iloc[0].type, int(X.iloc[0].j), "geometry only"))
+        picks.append((X.iloc[0].group, X.iloc[0].scene, "a", X.iloc[0].type, int(X.iloc[0].j), "geometry only, scale-corrected"))
     picks = [p for p in picks if (p[0], p[1]) in bev and p[4] in bev[(p[0], p[1])]][:6]
     json.dump([dict(group=p[0], scene=p[1], cls=p[2], type=p[3], k=p[4], rule=p[5]) for p in picks], open(out / "bev_picks.json", "w"), indent=1)
     if not picks:
@@ -374,7 +382,7 @@ def figures(D, C, Cg, R, figs, out):
         A.set_xlim(-12, 12), A.set_ylim(-8, 55), A.set_aspect("equal")
         A.set_xlabel("lateral (m, right +)")
         A.text(0.02, 0.99, f"({cls}) {t}\n{g.replace('-L18', '').replace('10m10-F', '')} {s[-16:-8]} k{k}\np {b['pr'][1]:.2f} / {b['pr'][2]:.2f}" +
-               ("\ngeometry only" if rule != "registered" else ""), transform=A.transAxes, va="top", fontsize=6.5)
+               ("\ngeometry only, scaled" if rule != "registered" else ""), transform=A.transAxes, va="top", fontsize=6.5)
     ax[0].set_ylabel("ahead of rear axle (m)")
     fig.tight_layout()
     ps.save(fig, figs / "ev_bev")

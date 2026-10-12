@@ -1,0 +1,34 @@
+[
+ {
+  "group": "YR10m10-F-s0",
+  "scene": "2021.06.03.17.06.58_veh-35_02943_03220-0393e11b085a5cc2",
+  "cls": "b",
+  "type": "corridor",
+  "k": 12,
+  "rule": "registered"
+ },
+ {
+  "group": "YR10m10-F-s0",
+  "scene": "2021.09.16.19.49.00_veh-42_00990_01609-02015675e4585611",
+  "cls": "b",
+  "type": "offroad",
+  "k": 3,
+  "rule": "registered"
+ },
+ {
+  "group": "YR10m10-F-s0",
+  "scene": "2021.06.03.12.02.06_veh-35_03526_03712-0c3c4cd553475d3a",
+  "cls": "c",
+  "type": "collision",
+  "k": 17,
+  "rule": "registered"
+ },
+ {
+  "group": "YS-L18-s1",
+  "scene": "2021.09.16.19.49.00_veh-42_00990_01609-5ddfd1fe80af5ceb",
+  "cls": "a",
+  "type": "corridor",
+  "k": 13,
+  "rule": "geometry only, scale-corrected"
+ }
+]
