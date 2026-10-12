@@ -29,7 +29,10 @@ import os
 import sys
 from pathlib import Path
 
-import numpy as np
+if len(sys.argv) > 1 and sys.argv[1] in ("collect", "bev"):        # one thread per worker process: the box sets OMP_NUM_THREADS to the
+    for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "POLARS_MAX_THREADS", "RAYON_NUM_THREADS"):  # quota, and 64
+        os.environ[_v] = "1"                                         # workers x (BLAS + polars + rayon pools) exhaust the thread limit
+import numpy as np  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/anchor_offset/scripts"), str(REPO / "experiments/alpasim/scripts")]
@@ -238,13 +241,17 @@ def scene_job(job):
     SL = stations(Lp)
     Sg = np.r_[0.0, np.cumsum(np.hypot(*np.diff(Pg[:, :2], axis=0).T))]       # the log's own station at each GT sample
     zt = lambda t: float(np.interp(t, Tg, Pg[:, 2]))                           # noqa: E731
-    # AlpaSim's route, extended by every decision as the rollouts extended it (ao_e1)
-    g = RouteGenerator.create(Pg, vector_map=ds.map, route_generator_type=RouteGeneratorType.MAP, route_start_offset_m=START_M)
-    for d in labs.values():
-        for r in d["recs"]:
-            x, y, yaw = r["anchor"]
-            g.generate_route(int(r["t0"]), Pose(np.array([x, y, zt(r["t0"])]), np.array([0.0, 0.0, np.sin(yaw / 2), np.cos(yaw / 2)])))
-    Rr = dedupe(np.asarray(g.route_polyline_in_local.points, float)[:, :2])
+    # AlpaSim's route, extended by every decision as the rollouts extended it (ao_e1); descriptive only (route60), so a failure is counted
+    try:
+        g = RouteGenerator.create(Pg, vector_map=ds.map, route_generator_type=RouteGeneratorType.MAP, route_start_offset_m=START_M)
+        for d in labs.values():
+            for r in d["recs"]:
+                x, y, yaw = r["anchor"]
+                g.generate_route(int(r["t0"]), Pose(np.array([x, y, zt(r["t0"])]), np.array([0.0, 0.0, np.sin(yaw / 2), np.cos(yaw / 2)])))
+        Rr = dedupe(np.asarray(g.route_polyline_in_local.points, float)[:, :2])
+        route_err = 0
+    except Exception:  # noqa: BLE001
+        Rr, route_err = Lp.copy(), 1
     SR = stations(Rr)
     objs = objects(ds)
     tk = T0 + DT * np.arange(NK)
@@ -252,7 +259,7 @@ def scene_job(job):
     lanes = Lanes(ds.map)
     lane_log = [lanes.cls(np.interp(t, Tg, Pg[:, 0]), np.interp(t, Tg, Pg[:, 1]), zt(t), np.interp(t, Tg, Yg)) for t in tk]
     dec, roll = [], []
-    gate = dict(act_pairs=0, act_ok=0, act_max=0.0, act_missing=0, ego_pairs=0, ego_ok=0, ego_max=0.0, rollouts_asl=0)
+    gate = dict(act_pairs=0, act_ok=0, act_max=0.0, act_missing=0, ego_pairs=0, ego_ok=0, ego_max=0.0, rollouts_asl=0, route_err=route_err)
     for lab, d in labs.items():
         recs = sorted(d["recs"], key=lambda r: r["t0"])
         ser, asl = series(d["run"], scene, d["rid"])
@@ -279,7 +286,7 @@ def scene_job(job):
             s_r, _ = project(Rr, SR, a[:2], lo, hi)
             hint_r = s_r
             ch = at_station(Rr, SR, [s_r, s_r + 5, s_r + 55, s_r + 60])
-            route60 = np.degrees(wrap(np.arctan2(*(ch[3] - ch[2])[::-1]) - np.arctan2(*(ch[1] - ch[0])[::-1])))
+            route60 = np.nan if route_err else np.degrees(wrap(np.arctan2(*(ch[3] - ch[2])[::-1]) - np.arctan2(*(ch[1] - ch[0])[::-1])))
             P = np.asarray(r["poses"], float)
             Pm = to_local(a, P[:, :2])
             yl = [project(Lp, SL, Pm[i], s_e - 10, s_e + 80)[1] for i in (3, 5, 7)]
@@ -390,9 +397,10 @@ def collect(a):
                 if s in keep:
                     jobs.setdefault(s, {})[lab] = dict(run=D, rid=r.get("rollout_id"), score=r.get("score"), metrics=r.get("metrics") or {},
                                                        recs=recs.get(s, []))
-        units = [(s, cfg, v) for s, v in sorted(jobs.items())][: a.limit or None]
+        norec = sorted(s for s, v in jobs.items() if not any(x["recs"] for x in v.values()))   # route-fold scenes: no rollout in any label
+        units = [(s, cfg, v) for s, v in sorted(jobs.items()) if s not in norec][: a.limit or None]
         workers = a.workers or min(64, n_cpus())
-        run.info(f"{len(units)} scenes x {len(runs)} labels, {workers} workers, scene config {cfg}")
+        run.info(f"{len(units)} scenes x {len(runs)} labels ({len(norec)} without any driver record skipped), {workers} workers, scene config {cfg}")
         res = par.pmap(scene_job, units, workers=workers, run=run, desc="scenes")
         out = Path(run.dir)
         err = [dict(scene=units[i][0], err=res.errors[i].strip().splitlines()[-1][:300]) for i in sorted(res.errors)]
@@ -404,7 +412,7 @@ def collect(a):
         R.to_parquet(out / "per_rollout.parquet", index=False)
         G = {k: sum(v["gate"][k] for v in vals) for k in vals[0]["gate"] if k not in ("act_max", "ego_max", "ego_dims")}
         G.update(act_max=max(v["gate"]["act_max"] for v in vals), ego_max=max(v["gate"]["ego_max"] for v in vals),
-                 ego_dims=vals[0]["gate"]["ego_dims"], scenes=len(units), scene_errors=len(err))
+                 ego_dims=vals[0]["gate"]["ego_dims"], scenes=len(units), scene_errors=len(err), no_record_scenes=norec)
         G["G_act"] = dict(share=G["act_ok"] / max(G["act_pairs"], 1), missing=G["act_missing"], ego_share=G["ego_ok"] / max(G["ego_pairs"], 1))
         G["G_act"]["pass"] = bool(G["G_act"]["share"] >= 0.99 and G["act_missing"] == 0 and G["G_act"]["ego_share"] >= 0.99)
         G["G_dir"] = dict(same=G["log_same"] / max(G["log_lane_n"], 1), onc=G["log_onc"] / max(G["log_lane_n"], 1))
