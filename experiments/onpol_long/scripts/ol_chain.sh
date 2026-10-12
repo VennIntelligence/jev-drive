@@ -335,5 +335,14 @@ report-ego)   # Amendment 11: each dropout arm against YS-L18 (control) and the 
      --tags YR10m10-F-s0 YR10m10-F-s1 YS-L18-s0 YS-L18-s1 YSED-L18-s0 YSED-L18-s1 YSEX-L18-s0 YSEX-L18-s1 \
      --groups YR=YR10m10-F-s0,YR10m10-F-s1 YS=YS-L18-s0,YS-L18-s1 YSED=YSED-L18-s0,YSED-L18-s1 YSEX=YSEX-L18-s0,YSEX-L18-s1 \
      --pairs YSED:YS YSEX:YS YS:YR YSED:YR YSEX:YR || die "ol_ego drift rc $?" ;;
+submit-scorer)  # Amendment 12: candidate-scoring feasibility on YS-L18-s1's 43 zero events (ol_scorer.py prep -> replay -> geo -> score), one card off card 0
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-15} --no-check ${after:+--after $after} \
+            --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 12)" >> $W/jobs.txt; }
+  S="$E/scripts/ol_scorer.py"; mkdir -p $W/scorer
+  p=$(sub ol-sc-prep "" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- $P $S prep) || exit 1
+  r=$(sub ol-sc-replay "$p" --vram 16 --cpu 8 --ram 40 --timeout-h 1 --gpus 1,2,3,4,5 --pin-strict -- env ALPASIM_SRC=$DATA_DIR/third_party/alpasim OMP_NUM_THREADS=2 $TR $S replay) || exit 1
+  g=$(sub ol-sc-geo "$r" --vram 0.5 --cpu 16 --ram 48 --timeout-h 1 -- $NAV $S geo --workers 16) || exit 1
+  sub ol-sc-score "$g" --vram 16 --cpu 8 --ram 48 --timeout-h 1 --gpus 1,2,3,4,5 -- $TR $S score > /dev/null || exit 1
+  echo "submitted: $(grep -c "amendment 12" $W/jobs.txt) jobs" ;;
 *) die "unknown stage $STAGE" ;;
 esac
