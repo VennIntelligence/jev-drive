@@ -289,9 +289,9 @@ def heatmap(C, P, path, labels=("YS2G", "YR10m10-F-s0")):
         ax.set_title({"YS2G": "YS2G-L18 (seed mean)", "YR10m10-F-s0": "YR10m10-F-s0 (sub. #2)"}.get(o, o), fontsize=8)
         for x in (0.5, 4.5, 8.5):
             ax.axvline(x, color="w", lw=1.5)
-    cb = fig.colorbar(im, ax=axs, fraction=0.025, pad=0.01)
-    cb.set_label("min over references of (ours - ref) / SD", fontsize=7.5)
     fig.subplots_adjust(left=0.1, right=0.9, bottom=0.25, top=0.93, wspace=0.06)
+    cb = fig.colorbar(im, cax=fig.add_axes([0.915, 0.25, 0.012, 0.68]))
+    cb.set_label("min over references of (ours - ref) / SD", fontsize=7.5)
     return ps.save(fig, path)
 
 
@@ -311,7 +311,7 @@ def tables(a):
         boot = Boot(S.log)
         C = cell_table(P, S, G, boot)
         C.to_csv(out / f"cells_{st}.csv", index=False)
-        P.to_csv(out / f"per_scene_{st}.csv.gz", index=False)
+        P.to_csv(R / f"tmp/cap_audit/per_scene_{st}.csv.gz", index=False)          # 2-4 MB: kept out of git
         res[st] = dict(P=P, S=S, G=G, boot=boot, C=C)
         md += [f"## {st}: {S.scene.nunique()} scenes, {S.log.nunique()} logs, groups: " + ", ".join(f"{g} {len(v)}" for g, v in G.items()), ""]
     # primary = pub; sensitivity (survived) and held replication of the flagged cells
@@ -412,6 +412,7 @@ def bevfig(a):
     import plot_style as ps
     ps.apply()
     B_ = pickle.load(open(a.bev, "rb"))
+    _ = None
     col = {"YS2G-L18-s1": ps.PALETTE["green"], "YR10m10-F-s0": ps.PALETTE["blue"], "WA-JEPA": ps.PALETTE["purple"], "LTF": ps.PALETTE["orange"],
            "DD": ps.PALETTE["vermillion"], "G0014": ps.PALETTE["sky_blue"]}
     n = len(B_)
@@ -431,6 +432,8 @@ def bevfig(a):
         for lab, pth in b["paths"].items():
             if lab in col:
                 ax.plot(-pth[:, 1], pth[:, 0], color=col[lab], lw=0.9 if lab != b["pick"]["label"] else 1.4, label=lab)
+                ax.plot(-pth[-1, 1], pth[-1, 0], "o", color=col[lab], ms=3)          # position at the last decision
+        ax.plot(-b["log_end"][1], b["log_end"][0], "x", color="k", ms=4) if b.get("log_end") is not None else None
         if b["plan"] is not None:
             ax.plot(-b["plan"][:, 1], b["plan"][:, 0], color=ps.PALETTE["green"], lw=0.8, ls=":", marker=".", ms=2, label="served plan")
         r, f, h = b["ego"]

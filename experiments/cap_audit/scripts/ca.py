@@ -430,7 +430,8 @@ def bev(a):
         E, dpsi, _ = ZM.rel(st, anchor, float(vc.aabb_x_offset_m + vc.aabb_x_m))
         out[f"{p['cell']}|{scene}|{k}"] = dict(pick=p, lanes=Ls, objs=dict(x=E[:, 0], y=E[:, 1], dpsi=dpsi, L=st["L"], W=st["W"]),
                                               log=ZM.in_ego(anchor, Pg[:, :2]), paths={lab: ZM.in_ego(anchor, v[:, :2]) for lab, v in paths.items()},
-                                              plan=plan, ego=(float(vc.aabb_x_offset_m), float(vc.aabb_x_offset_m + vc.aabb_x_m), float(vc.aabb_y_m) / 2))
+                                              plan=plan, log_end=ZM.in_ego(anchor, [[np.interp(T0 + DT * K, Tg, Pg[:, 0]), np.interp(T0 + DT * K, Tg, Pg[:, 1])]])[0],
+                                              ego=(float(vc.aabb_x_offset_m), float(vc.aabb_x_offset_m + vc.aabb_x_m), float(vc.aabb_y_m) / 2))
     pickle.dump(out, open(C / "bev.pkl", "wb"), protocol=4)
     print(len(out), "BEV payloads ->", C / "bev.pkl")
 
