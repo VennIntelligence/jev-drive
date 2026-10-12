@@ -87,3 +87,46 @@ h20（rad）、对向 logit。
 - R3 的随附头：不读 eyes_vs_head 存的重放文件，而在本线自己的重放里对同一组 served token 用同一个调用（`load_pmodel("P0")(H, ego, tc)`，ev.py 的写法）
   再算一次，与 token 一一对应；数值与第 269 条相同（同一函数、同一输入）。
 - R3 的分母：窗口误差在至少一侧可评的窗口上取中位；「两侧都 ≤ 0.5 m」的份额以两侧都可评的窗口为分母；两种窗口数都报。
+
+## 8. 补记（2026-10-12 晚，ROAD-PROBE-REAL：路口模糊在真实相机帧上还在不在；写定并 push 于任何真实帧标签、训练与读数之前）
+
+**问题**。第 275 条的转弯误差按到路口距离：路口内与路口前 20 m 内 1.1–1.7 m，路口还在 20–60 m 外时 0.42–0.47 m。这是冻结 encoder 在**真实**相机帧上也有的性质，
+还是 AlpaSim 用 MTGS 重建出来的图像的伪影？第 272 条说 0.689 压缩不是重建造成的（第 104 条在真实帧上就看到），路口桶曲线还没在真实帧上查过。
+
+**写本节之前看过的**：只有数据格式与数量——navtest / navtrain token 缓存（`op_parity/cache/lb_navtest@warp` 12 146 行，`navtrain_full.s{0..11}of12@warp`
+103 288 行、1 192 个 log 段、162 个 drive log 单元；tab 的 cam / ego 键），navsim 日志 pkl 的键，trajdata 缓存地图（after160 的 `nuplan_test/maps`，
+世界坐标，与 navsim 日志位姿同一坐标；只查过一个位姿附近的车道数），以及下面的重叠计数。没有算任何真实帧标签、没有训练、没有读任何误差。
+
+**重叠（读前查到，决定评估集）**：AlpaSim nuPlan 的 scene 就是 navtest 的 token。navtest 的 44 个 drive log 单元（`logu`）里 28 个在 onpol-train、16 个在 onpol-held；
+navtrain 与 navtest 不共享单元。所以 (a) 行只在 held 单元的 navtest token 上评（3 712 行、39 个 log 段，正好是重建帧 held 读数的那些路）。
+
+**数据与标签**。token = 已缓存的 `@warp` front（与 HEAD1 / BODY1 同一份），不重算，不需要 token pass。标签 = 第 2 节的定义原样（`rp.py lab_unit` 的写法：横线、
+路线车道左右边界、ROAD_AREA 边界、h20、turn40、到路口距离、对向类），只把来源换成：地图 = AlpaSim 加载的同一份 trajdata nuPlan 矢量地图（after160 缓存，
+同一组 vector_map_params，世界坐标，不平移）；日志路径 = navsim 日志段的 ego 后轴位姿（2 Hz，全段，终点外延 60 m）；anchor = token 那一帧的后轴位姿
+（ego2global，yaw 由四元数）；cam = token tab 的 cam。CPU（AlpaSim venv），每个 worker 一个 BLAS 线程，`n_cpus()` 个 worker，按 log 段并行。
+
+**头**（全部 = `rp.py head()` 原样：HEAD1 的 `build()`、14 个 query、8 000 step、batch 256、lr 3e-4、wd 0.05、warmup 300、每 500 step 在 val 上取最好）：
+- **(a) 重建帧头，原样搬到真实帧**（domain shift 行）：第 275 条的 P 没有存权重，按同一代码、同一 seed 0 / 1 重训并存权重；登记读数 = 两 seed 预测平均。
+  闸 **G-repro**：重训的 P（两 seed 平均）在 held 转弯 20 m 的中位误差与存的 0.877 相差 ≤ 0.05 m。ego 标准化用它自己训练集的统计量（与第 275 条相同）。
+- **(b) 真实帧头**（干净行）：同一个头在 navtrain token 上训练，log 级折：val = sha256("rpval|" + drive log 单元) % 7 == 0 的单元（只用于选 step），其余全部 fit；
+  navtest 不参与拟合与选择。seed 0 / 1，登记读数 = 两 seed 平均。
+- **blind 底**：(b) 的同一头不读 token（ego + command），navtrain，seed 0。
+- **随附头**：P0（`load_pmodel("P0")`，tc = (1, 0)）在同一组 navtest token 上，线 1 / 线 2 当 L / R，原始与撤 0.689 两版（第 3 节的写法）；在同一个 GPU job 里算。
+- **探索（不登记）**：(c) 数据量对齐：(b) 只用按 sha256("rplc|" + 单元) 排序的前 27 个 fit 单元（= 第 275 条 P 的 fit 单元数），seed 0。
+
+**读数**。转弯决策（turn40 ≥ 20°），20 m 处 L、R 误差合并；桶 = 在路口内 / 0–10 / 10–20 / 20–40 / 40–60 / 60 m 内无路口（第 4 节的桶）；每桶中位数，
+按 navtest log 段整簇 bootstrap（B = 2000，百分位）。**near** = 在路口内 + 0–10 + 10–20 三桶合并的中位误差，**far** = 20–40 + 40–60 两桶合并的中位误差，
+**比** = near / far（同一簇 bootstrap 的 CI）。重建帧参照 = 第 275 条已存读数（`read/20261012-175622` 的 `dec_held.parquet`，P 两 seed 平均）的同一组量。
+直行与全体决策同表描述。
+
+**判词（只看 (b)，全部 navtest 转弯决策）**：
+- near < 0.6 m →「**重建伪影**」：真实帧上路口里不模糊，是 AlpaSim 循环的图像有问题，不是眼睛；
+- 否则比 > 2 →「**真实帧上同样的形状**」：路口模糊是冻结 encoder 自己的性质；
+- 否则（near ≥ 0.6、比 ≤ 2）→「**未定**」：真实帧转弯整体都模糊，没有路口特有的形状。
+(b) 在 held 单元子集（同一批路）上的同一判词另报；与全体不一致时写明。(a) 只作 domain shift 描述，不判。
+
+**闸**：G-frame-real（navtest、navtrain 分别）：token 后轴落在某条车道多边形或 ROAD_AREA 内的比例 ≥ 0.95（地图与日志同一坐标系）；G-lab：navtest 直行
+（turn40 < 5°）20 m 两侧都可评 ≥ 0.70；G-sign：直行 L20 中位 > 0 > R20 中位；G-repro（上）。任何闸不过：停、写原因，不读登记量。阈值、桶、判词线读后不改。
+
+**预算与产出**：标签 CPU 约半小时；GPU 是训练（与第 275 条的训练一样走 pool，不是 token pass）：(a) × 2、(b) × 2、blind、(c) 共 6 个 pool job，各约 10–15 分钟。
+产出 `results/rp_real.md`、一张图（两条真实帧桶曲线对重建帧曲线）、README 更新、第 275 条原地补记（不新开编号）。
