@@ -51,6 +51,7 @@ DS = (10.0, 20.0, 40.0)
 HEADS = ("lane_lines", "lane_lines_prob", "road_edges", "lead", "lead_prob")
 MERGE, HALF, R_RIGHT, R_WRONG = 0.3, 15.0, 0.5, 1.0                  # registered: crossings merged within 0.3 m, |y| <= 15 m, 0.5 / 1.0 m
 LEAD_POS, LEAD_V = 2.0, 2.0
+SCALE = 0.689                                                       # decision 104: openpilot lane width / map on real nuPlan frames
 
 
 def wrap(a):
@@ -347,8 +348,10 @@ def read_unit(job):
             row[f"ylog{int(d)}"] = log_y(LP, a, cam[0] + d)
         P = np.asarray(r["poses"], float)
         sel = (P[:, 0] - cam[0] >= 0) & (P[:, 0] - cam[0] <= 40)
-        for H in ("P0", "FT"):
-            h = heads(r[H], cam)
+        for H in ("P0", "FT", "P0K"):
+            h = heads(r[H[:2]], cam)
+            if H == "P0K":                                   # exploratory: decision 104's scale (lane width 0.689 of the map) undone about the camera
+                h["ll"], h["re"] = cam[1] + (h["ll"] - cam[1]) / SCALE, cam[1] + (h["re"] - cam[1]) / SCALE
             for i in range(4):
                 row[f"{H}_p{i}"] = float(h["pr"][i])
             for d in DS:
