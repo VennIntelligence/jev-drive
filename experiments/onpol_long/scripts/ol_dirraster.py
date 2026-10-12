@@ -7,6 +7,9 @@
       lanes are dropped; INTERSECTION / LANE_CONNECTOR / ROADBLOCK_CONNECTOR kept. Rows with nothing dropped keep the pool's raster bit for bit.
       -> DIR/road.npz (the pool's road.npz layout, same tokens), DIR/dir_stats.json / .md (gate (i), changed rows, hinge activation before / after)
   fig   --events CSV --run <pseudo run> --tag T --out F.pkl     old and new raster at chosen held decisions (the early-inside across-traffic turns)
+  onc   --pool on1_L18YS --rows L18YS --out DIR [--workers N]   Amendment 14 (arm B'): the oncoming region per row = arm B's removed lanes / roadblocks
+        minus intersections and connectors; raster = signed distance to it (+ outside) -> DIR/onc.npz (road.npz layout), DIR/onc_stats.json; label gate:
+        oncoming hinge active on the served plan <= 0.10 of rows and the pool road hinge activity 0.122 (exit 2 otherwise)
   lines --reads <zm_read report dir> --collect <zm_read collect dir> --out F.json   (AlpaSim venv) Amendment 13's mechanism lines per label group from
         zm_read's per_rollout_reads.csv.gz (its own classifications, unedited): early-inside zeros on across-traffic turns, late-outside zeros on
         kerb-side turns, share of corridor + collision zeros with the rear axle in an oncoming lane 2 s before, straight corridor zeros past the log end
@@ -87,6 +90,80 @@ def directional(m, pose, drop=True):
     polys = [o.polygon for k, v in objs.items() for o in v
              if not ((k == L.LANE and o.id in bad) or (k == L.ROADBLOCK and o.id in rb_bad))]
     return raster(polys, pose), len(bad), len(rb_bad)
+
+
+def oncoming(m, pose):
+    """-> signed distance (+ outside) to the oncoming region (arm B's dropped set minus intersections and connectors), region non-empty."""
+    import opb_labels as OL
+    from nuplan.common.actor_state.state_representation import Point2D
+    from nuplan.common.maps.maps_datatypes import SemanticMapLayer as L
+    from shapely.ops import unary_union
+    objs = m.get_proximal_map_objects(Point2D(float(pose[0]), float(pose[1])), OL.RADIUS, [getattr(L, n) for n in LAYERS])
+    bad = {o.id for o in objs[L.LANE] if lane_dir(o, pose) > MAXD}
+    reg = [o.polygon for o in objs[L.LANE] if o.id in bad]
+    for o in objs[L.ROADBLOCK]:
+        lanes = list(o.interior_edges)
+        if lanes and all((x.id in bad) or lane_dir(x, pose) > MAXD for x in lanes):
+            reg.append(o.polygon)
+    if not reg:
+        return np.full((OL.NH, OL.NW), 20.0, np.float32), False
+    keep = [o.polygon for k in (L.INTERSECTION, L.LANE_CONNECTOR, L.ROADBLOCK_CONNECTOR) for o in objs[k]]
+    r = unary_union(reg).difference(unary_union(keep)) if keep else unary_union(reg)
+    if r.is_empty:
+        return np.full((OL.NH, OL.NW), 20.0, np.float32), False
+    return -raster([r], pose), True
+
+
+def work_onc(job):
+    import opb_labels as OL
+    loc, idx, poses = job
+    m = OL._map(loc)
+    out = []
+    for i, p in zip(idx, poses):
+        try:
+            s, ne = oncoming(m, p)
+            out.append((i, np.clip(s, -20, 20).astype(np.float16), ne, ""))
+        except Exception as e:  # noqa: BLE001
+            out.append((i, None, False, f"{type(e).__name__}: {e}"))
+    return out
+
+
+def cmd_onc(a):
+    import opb_labels  # noqa: F401
+    C = DATA / "runs/op_parity/cache" / a.pool
+    z = dict(np.load(C / "road.npz"))
+    M = np.load(DATA / "runs/onpol_nuplan/rows" / a.rows / "meta.npz")
+    assert np.array_equal(M["names"], z["tokens"])
+    n = len(z["tokens"])
+    locs = np.array([loc_of(lg) for lg in M["log"]])
+    jobs = [(lc, q, z["pose_global"][q]) for lc in sorted(set(locs)) for q in np.array_split(np.flatnonzero(locs == lc), max(1, int((locs == lc).sum()) // 200))]
+    sdf, ne, err = np.full_like(z["sdf"], 20.0), np.zeros(n, bool), []
+    with ProcessPoolExecutor(a.workers) as ex:
+        for res in ex.map(work_onc, jobs):
+            for i, s_, e_, msg in res:
+                if msg:
+                    err.append((int(i), msg))
+                else:
+                    sdf[i], ne[i] = s_, e_
+    import sweep as SW
+    d = SW.dense(M["poses"][:, None].astype(np.float32), np.zeros((n, 1, 2), np.float32))
+    m_, ins = SW.corner_margins(d, sdf.astype(np.float32))
+    a_onc = (np.where(ins.all(-1), m_.min(-1), np.inf) < 0).any(-1)[:, 0]
+    a_road = act(M["poses"], z["sdf"])
+    dpsi = np.degrees(np.abs(wrap(M["logfut"][:, -1, 2] - M["logfut"][:, 0, 2])))
+    bins = {f"{lo}-{hi} deg": (dpsi >= lo) & (dpsi < hi) for lo, hi in ((0, 15), (15, 45), (45, 360))}
+    st = dict(rows=n, errors=len(err), err_sample=err[:5], region_nonempty=float(ne.mean()), onc_active=float(a_onc.mean()),
+              road_active=float(a_road.mean()), onc_active_by_log_turn={k: float(a_onc[b].mean()) for k, b in bins.items()},
+              gate_onc=bool(a_onc.mean() <= 0.10), gate_road=bool(round(float(a_road.mean()), 3) == 0.122), gate_errors=not err)
+    st["pass"] = st["gate_onc"] and st["gate_road"] and st["gate_errors"]
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    np.savez(out / "onc.npz", **(z | {"sdf": sdf, "ok": np.ones(n, bool), "layers": np.array(("oncoming: LANE / ROADBLOCK > 90 deg minus INTERSECTION / connectors",))}))
+    (out / "onc_stats.json").write_text(json.dumps(st, indent=1) + "\n")
+    print(json.dumps(st, indent=1), flush=True)
+    if not st["pass"]:
+        print("label gate failed: no training", flush=True)
+        raise SystemExit(2)
 
 
 def work(job):
@@ -180,7 +257,7 @@ def cmd_fig(a):
     pickle.dump(out, open(a.out, "wb"), protocol=4)
 
 
-GROUPS = {"YSB": ("YSB-L18-s0", "YSB-L18-s1"), "YS2G": ("YS2G-L18-s0", "YS2G-L18-s1"), "YS": ("YS-L18-s0", "YS-L18-s1"), "base": ("YR10m10-F-s0",)}
+GROUPS = {"YSB": ("YSB-L18-s0", "YSB-L18-s1"), "YSO25": ("YSO25-L18-s0", "YSO25-L18-s1"), "YSO50": ("YSO50-L18-s0", "YSO50-L18-s1"), "YS2G": ("YS2G-L18-s0", "YS2G-L18-s1"), "YS": ("YS-L18-s0", "YS-L18-s1"), "base": ("YR10m10-F-s0",)}
 
 
 def cmd_lines(a):
@@ -194,6 +271,8 @@ def cmd_lines(a):
     ZE["past_end"] = [bool(Dk[(r.label, r.scene)].pipe(lambda x: x[x.k <= r.k_ev]).s_e.max() > L17[r.scene]) for r in ZE.itertuples()]
     out = {}
     for g, labs in GROUPS.items():
+        if not set(labs) <= set(RR.label):
+            continue
         z = ZE[ZE.label.isin(labs)]
         n = len(labs)
         cc = z[z.type.isin(("corridor", "collision"))]
@@ -216,7 +295,10 @@ if __name__ == "__main__":
     p = sub.add_parser("fig")
     p.add_argument("--events", required=True), p.add_argument("--run", required=True), p.add_argument("--tag", default="YS-L18-s1")
     p.add_argument("--out", required=True), p.add_argument("--n", type=int, default=3)
+    p = sub.add_parser("onc")
+    p.add_argument("--pool", default="on1_L18YS"), p.add_argument("--rows", default="L18YS"), p.add_argument("--out", required=True)
+    p.add_argument("--workers", type=int, default=64)
     p = sub.add_parser("lines")
     p.add_argument("--reads", required=True), p.add_argument("--collect", required=True), p.add_argument("--out", required=True)
     a = ap.parse_args()
-    {"build": cmd_build, "fig": cmd_fig, "lines": cmd_lines}[a.cmd](a)
+    {"build": cmd_build, "fig": cmd_fig, "onc": cmd_onc, "lines": cmd_lines}[a.cmd](a)
