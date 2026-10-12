@@ -59,3 +59,13 @@ RNONE-L18 reads 80 / 75 zeros vs RB0's 59 (continuation alone hurts the base, as
 added: --init RB0-F-s0, --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500, same rows / hinges / --on-lon on_route as RBS (d264
 addendum 6's schedule), judged on the same lines L3 (vs RB0) and L5; RNONEG-L18-s0 (same gentle schedule, no rows) as its control for L4.
 Added 2026-10-13 ~03:00 JST before any RBS / RBSG read.
+
+## Amendment 3 (2026-10-13 ~03:40 JST, before any of these reads)
+
+Two drop-one arms on the gentle schedule (--init RB0-F-s0 --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500, REC flags --yr-mass 0.1
+--label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4, rows --on <pool> --on-k 13 --on-split alpasim_nuplan/onpol-train
+--on-mode self): RSG-L18-s{0,1} = RBSG without the route hinge (no --on-lon; S hinges only, d264's YSG recipe on the new base) to attribute
+RBSG's extra offroad zeros to the route hinge or to the rows; RBSGc-L18-s{0,1} = RBSG with the route hinge applied only on rows whose memory
+covers +20 m (pool copy on1_L18RB0c whose route.npz has ok &= cov20, everything else identical), testing the hypothesis that the hinge on rows
+with an empty near-field memory teaches blind turns. Lines: L3 vs RB0 (zeros fewer, CI upper < 0; at-fault upper <= +2; GT not larger) and
+L5 per decision as Amendment 1; RNONEG-L18-s0 (60 zeros) is the gentle control. Added 2026-10-13 ~03:40 JST before any of these reads.
