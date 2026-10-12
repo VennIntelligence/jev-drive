@@ -61,3 +61,19 @@ noise**. Decision (coordinator): **accept, chord-velocity variant, no re-roll**.
 (held-452 exact, zero-98 fp16 noise, navtest-16 from the pixel path). All 33 899 J_on rows were reconstructed (`jon_pairs.ok.npy` all True). The G-dump
 rule was replaced by the held-452 validation above (cur exists there); `step0/gdump.json` records held-452 pass (exact), zero-98 pass (fp16 noise) and
 J_on "reconstructed slot pairs, accepted by coordinator" with these numbers. Any use of the J_on pairs must be worded "reconstructed slot pairs".
+
+### G-dump, direct comparison on J_on (500 reconstructed pairs)
+500 reconstructed J_on pairs (one per scene, 343 from `on1_L18YS`, 157 from `on1_L18Y`) through `pp_prep.encoder` against d275's `on1_{L18Y,L18YS}@warp/front.npy`
+slot-7 token of the same rows (`results/pixels/jon_direct.json`):
+
+| quantity | direct (J_on, 500 rows) | proxy (held-452, 600 rows) |
+|:--|--:|--:|
+| token mean abs diff | 7.5e-3 | 8.5e-3 |
+| per-row max, p50 / p99 | 0.085 / 1.27 | 0.098 / 1.42 |
+| token max abs | 2.14 | 4.43 |
+| token rms | 1.67 | 1.69 |
+| fp16 floor (mean / max) | 7.7e-4 / 0.031 | 8.5e-4 / 0.031 |
+| rows whose per-row max exceeds 10x the floor max (0.31) | 11.4 % | - |
+| rows whose mean abs exceeds 10x the floor mean | 28.2 % | - |
+
+The direct numbers agree with the held-452 proxy; the reconstruction is not within fp16 noise (accepted by the coordinator). `step0/gdump.json` carries both.

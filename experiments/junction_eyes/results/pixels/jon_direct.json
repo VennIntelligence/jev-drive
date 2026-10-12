@@ -1,0 +1,17 @@
+{
+ "rows": 500,
+ "scenes": 500,
+ "tok_mean_abs": 0.0074624791741371155,
+ "tok_max_abs": 2.140625,
+ "per_row_max_p50": 0.0849609375,
+ "per_row_max_p99": 1.2708202600479126,
+ "tok_rms": 1.6679422855377197,
+ "fp16_floor_mean_abs": 0.0007664898876100779,
+ "fp16_floor_max_abs": 0.03125,
+ "share_rows_max_gt_10x_floor_max": 0.114,
+ "share_rows_mean_gt_10x_floor_mean": 0.282,
+ "by_file": {
+  "on1_L18YS@warp": 343,
+  "on1_L18Y@warp": 157
+ }
+}
