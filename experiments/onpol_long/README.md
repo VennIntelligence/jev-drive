@@ -60,18 +60,20 @@ vector (`present` and the command kept); `YSED` zeroes it on half the rows in tr
 
 [results/read/confirm_g10.md](results/read/confirm_g10.md) (1479 scenes with a rollout, 136 logs; base = the stored 2026-10-09 rollouts; `YS-L18`'s read of Amendment 5 reused).
 
-| | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) |
-|:--|--:|--:|:--|--:|--:|
-| `YS2G-L18` s0 / s1 | 0.9511 (0.9515 / 0.9506) | 43 (43 / 43) | 9.5 / 24 / 10 | 33.5 | 0.885 |
-| `YS-L18` s0 / s1 | 0.9450 | 47.5 | 10.5 / 22.5 / 14.5 | 33 | 0.904 |
-| base `YR10m10-F-s0` | 0.9323 | 68 | 7 / 43 / 20 | 50 | 0.941 |
+| | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) | at-fault distance (km) [CI] |
+|:--|--:|--:|:--|--:|--:|:--|
+| `YS2G-L18` s0 / s1 | 0.9511 (0.9515 / 0.9506) | 43 (43 / 43) | 9.5 / 24 / 10 | 33.5 | 0.885 | 1.180 [0.799, 1.944] |
+| `YS-L18` s0 / s1 | 0.9450 | 47.5 | 10.5 / 22.5 / 14.5 | 33 | 0.904 | 1.194 [0.821, 1.972] |
+| base `YR10m10-F-s0` | 0.9323 | 68 | 7 / 43 / 20 | 50 | 0.941 | 0.789 [0.576, 1.162] |
 
-| a - b (log-clustered 95 % CI) | mean score | zeros | at-fault zeros | GT distance (m) |
-|:--|:--|:--|:--|:--|
-| `YS2G-L18` - base | +0.0188 [+0.0092, +0.0291] | -25.0 [-39.8, -11.1] | -16.5 [-28.6, -4.9] | -0.055 [-0.096, -0.019] |
-| `YS2G-L18` - `YS-L18` | +0.0060 [+0.0018, +0.0103] | -4.5 [-10.7, +1.6] | +0.5 [-5.0, +5.8] | -0.018 [-0.036, -0.001] |
+| a - b (log-clustered 95 % CI) | mean score | zeros | at-fault zeros | GT distance (m) | at-fault distance (km) |
+|:--|:--|:--|:--|:--|:--|
+| `YS2G-L18` - base | +0.0188 [+0.0092, +0.0291] | -25.0 [-39.8, -11.1] | -16.5 [-28.6, -4.9] | -0.055 [-0.096, -0.019] | +0.391 [+0.109, +0.968] |
+| `YS2G-L18` - `YS-L18` | +0.0060 [+0.0018, +0.0103] | -4.5 [-10.7, +1.6] | +0.5 [-5.0, +5.8] | -0.018 [-0.036, -0.001] | -0.014 [-0.257, +0.245] |
 
-Registered line (each seed not more than 0.02 below the base, seed-mean GT distance lower): **passed** (decision 269). With the held read
+Registered line (each seed not more than 0.02 below the base, seed-mean GT distance lower): **passed** (decision 269). At-fault distance = total km driven /
+at-fault incidents (AUD1's definition; added after the organiser confirmed the private suite is 10 decisions, decision 265), comparable in kind to the private
+leaderboard column (YR private 0.80 / 0.529 km / 1.733 m; local YR 0.932 / 0.789 km / 0.941 m). With the held read
 (decision 264: GT -0.22 m, zeros -32.5) `YS2G-L18` meets plan.md 3.3 (8)'s replacement rule on both lengths; using it is the user's call.
 
 ## Candidate-scoring feasibility (Amendment 12; no new rollouts; `YS-L18-s1`'s 43 held zero events)
