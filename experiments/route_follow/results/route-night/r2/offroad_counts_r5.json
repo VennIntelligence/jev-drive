@@ -1,0 +1,100 @@
+{
+ "RB-F-s0": {
+  "offroad": 49,
+  "inside_right": 17,
+  "inside_left": 14,
+  "junction_approach": 31,
+  "lat_z_med": 0.8430221219469816
+ },
+ "RB0-F-s0": {
+  "offroad": 29,
+  "inside_right": 1,
+  "inside_left": 7,
+  "junction_approach": 9,
+  "lat_z_med": 0.8389788261825589
+ },
+ "RB0-F-s1": {
+  "offroad": 37,
+  "inside_right": 2,
+  "inside_left": 10,
+  "junction_approach": 21,
+  "lat_z_med": 0.7103458183684216
+ },
+ "RBS-L18-s0": {
+  "offroad": 71,
+  "inside_right": 20,
+  "inside_left": 18,
+  "junction_approach": 37,
+  "lat_z_med": 0.6668239075859719
+ },
+ "RBS-L18-s1": {
+  "offroad": 64,
+  "inside_right": 21,
+  "inside_left": 19,
+  "junction_approach": 36,
+  "lat_z_med": 0.6822691570140688
+ },
+ "RBS2Gc-L18-s0": {
+  "offroad": 21,
+  "inside_right": 5,
+  "inside_left": 5,
+  "junction_approach": 11,
+  "lat_z_med": 0.9087094457201652
+ },
+ "RBS2Gc-L18-s1": {
+  "offroad": 27,
+  "inside_right": 9,
+  "inside_left": 6,
+  "junction_approach": 15,
+  "lat_z_med": 0.7309175399197064
+ },
+ "RBSG-L18-s0": {
+  "offroad": 40,
+  "inside_right": 19,
+  "inside_left": 8,
+  "junction_approach": 29,
+  "lat_z_med": 0.8107648847895677
+ },
+ "RBSG-L18-s1": {
+  "offroad": 43,
+  "inside_right": 21,
+  "inside_left": 7,
+  "junction_approach": 28,
+  "lat_z_med": 0.7279143995803398
+ },
+ "RNONEG-L18-s0": {
+  "offroad": 31,
+  "inside_right": 1,
+  "inside_left": 9,
+  "junction_approach": 12,
+  "lat_z_med": 0.8083945211065799
+ },
+ "RS2G-L18-s0": {
+  "offroad": 17,
+  "inside_right": 2,
+  "inside_left": 5,
+  "junction_approach": 11,
+  "lat_z_med": 1.1737029274052109
+ },
+ "RS2G-L18-s1": {
+  "offroad": 17,
+  "inside_right": 2,
+  "inside_left": 4,
+  "junction_approach": 8,
+  "lat_z_med": 0.6904676604904278
+ },
+ "RSG-L18-s0": {
+  "offroad": 17,
+  "inside_right": 1,
+  "inside_left": 6,
+  "junction_approach": 11,
+  "lat_z_med": 1.0168836666508625
+ },
+ "RSG-L18-s1": {
+  "offroad": 13,
+  "inside_right": 1,
+  "inside_left": 5,
+  "junction_approach": 9,
+  "lat_z_med": 1.045004196218663
+ }
+}
