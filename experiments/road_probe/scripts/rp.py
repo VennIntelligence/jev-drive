@@ -297,6 +297,14 @@ def lab_unit(job):
     ds = loader(str(EV.CFG)).get_data_source(scene)
     tr = ds.rig.trajectory
     Tg, Pg3, Yg = np.asarray(tr.timestamps_us, float), np.asarray(tr.positions, float), np.unwrap(np.asarray(tr.yaws, float))
+    A = np.array([r["anchor"] for r in rows])
+    allp = np.vstack([Pg3[:, :2], A[:, :2]])
+    return lab_rows(g, scene, rows, Tg, Pg3, Yg, EV.Geo(ds, (allp.min(0) - 90, allp.max(0) + 90)), ZM.Lanes(ds.map))
+
+
+def lab_rows(g, scene, rows, Tg, Pg3, Yg, G, lanes):
+    """Labels of the decisions `rows` of one logged path (timestamps Tg, positions Pg3 (n, 3), unwrapped yaws Yg) against map geometry G
+    (ev.Geo) and lane classes `lanes` (zm_read.Lanes); shared with rp_real.py (real navsim frames)."""
     Pg = Pg3[:, :2]
     LP = np.vstack([Pg, Pg[-1] + np.outer(np.linspace(2.0, 60.0, 30), [np.cos(Yg[-1]), np.sin(Yg[-1])])])
     keep = np.r_[True, np.hypot(*np.diff(LP, axis=0).T) > 1e-3]
@@ -304,10 +312,6 @@ def lab_unit(job):
     S = arc(LP)
     seg = np.unwrap(np.arctan2(*np.diff(LP, axis=0).T[::-1]))
     Y = np.r_[seg, seg[-1]]                                               # heading at each vertex (of the segment leaving it)
-    A = np.array([r["anchor"] for r in rows])
-    allp = np.vstack([Pg, A[:, :2]])
-    G = EV.Geo(ds, (allp.min(0) - 90, allp.max(0) + 90))
-    lanes = ZM.Lanes(ds.map)
     out = []
     for r in rows:
         a, cam = r["anchor"], r["cam"]
@@ -481,7 +485,9 @@ def train(a):
         run.summary.update(pred=str(f), n_fit=len(i_fit), logs_fit=len(set(logs[fit])))
 
 
-def head(run, H1, a, V, E, Ys, i_fit, i_val, dev, F):
+def head(run, H1, a, V, E, Ys, i_fit, i_val, dev, F, groups=("held", "zero")):
+    """Fit on V / E["train"] rows i_fit (step chosen on i_val) -> predictions on every row of each of `groups` and on i_val; the chosen
+    weights go to the run dir (best.pt)."""
     import time
     import torch
     vision = a.arm != "blind"
@@ -539,7 +545,9 @@ def head(run, H1, a, V, E, Ys, i_fit, i_val, dev, F):
             for c in range(0, len(idx), 512):
                 O.append(fwd(g, torch.as_tensor(idx[c:c + 512], device=dev)).float().cpu().numpy())
         return np.concatenate(O)
-    P = dict(held=pred("held", np.arange(len(E["held"]))), zero=pred("zero", np.arange(len(E["zero"]))), val=pred("train", i_val))
+    P = {g: pred(g, np.arange(len(E[g]))) for g in groups}
+    P["val"] = pred("train", i_val)
+    torch.save(best, run.path("best.pt"))
     run.path("curve.json").write_text(json.dumps(curve, indent=1))
     run.summary.update(best_step=int(min(curve, key=lambda c: c["val"])["step"]), best_val=best_v, its=steps / max(time.time() - t1, 1e-6),
                        vram_gb=torch.cuda.max_memory_reserved() / 2 ** 30)

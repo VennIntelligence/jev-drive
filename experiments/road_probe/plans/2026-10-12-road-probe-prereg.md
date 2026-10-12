@@ -130,3 +130,5 @@ navtrain 与 navtest 不共享单元。所以 (a) 行只在 held 单元的 navte
 
 **预算与产出**：标签 CPU 约半小时；GPU 是训练（与第 275 条的训练一样走 pool，不是 token pass）：(a) × 2、(b) × 2、blind、(c) 共 6 个 pool job，各约 10–15 分钟。
 产出 `results/rp_real.md`、一张图（两条真实帧桶曲线对重建帧曲线）、README 更新、第 275 条原地补记（不新开编号）。
+- 实现细节（写代码时、任何标签计算之前）：navsim 日志只有 2 Hz，弯里直线连接会切角，日志路径按位姿的航向做三次 Hermite 插值（每步 10 个子点；停车与倒车步保持直线）
+  再进 `rp.lab_rows`（AlpaSim 那边是 10 Hz 的 rig 轨迹）。CI 的 bootstrap 只在转弯子集用 B = 2000，直行 / 全体的描述行用 B = 200。
