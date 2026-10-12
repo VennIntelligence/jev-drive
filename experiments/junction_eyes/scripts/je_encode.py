@@ -3,6 +3,7 @@ checkpoint's vision weights -> view_39 tokens, for executor 1's HEAD1 probes on 
 
   python je_encode.py --tag JE-L-F0-s0 [--which best] --sets sets.json [--only P navtest held zero98]
   python je_encode.py --tag factory --sets sets.json          the frozen trunk (Z; reproduces the frozen caches: a check)
+  python je_encode.py --tag factory --preset f0               Z' of pre-registration B: the factory trunk through the step-1 pixel path
 
 sets.json: {"<set>": {"px": npy (N, [V,] 2, 2, 6, 128, 256), "view": null, "names": npy or npz with "names" (optional)}} or
 {"<set>": {"data": "navtrain_full.s0of12" | "lb_navtest", "kind": "f0" | "w90" | "3v"}} (je_data.pixel_store; 3v gives (N, 3, 32, 512)); the J_on /
@@ -26,10 +27,22 @@ from jevdrive.common import data_dir  # noqa: E402
 STEP1 = data_dir() / "runs" / "junction_eyes" / "step1"
 
 
+def preset(kind: str) -> dict:
+    """The read protocol's sets (plan 4.5) for an input kind: every navtrain shard (P and val rows are selected by executor 1 through
+    tok_file / tok_row), lb_navtest (navtest-16 inside it), and for f0 the slot pairs of J_on (reconstructed), held-452 and zero-98 in their
+    parquet order (the W90 / 3V arms have no reconstructed-frame reads, plan 4.1)."""
+    sets = {d: {"data": d, "kind": kind} for d in [f"navtrain_full.s{k}of12" for k in range(12)] + ["lb_navtest"]}
+    if kind == "f0":
+        sl = STEP1.parent / "slots"
+        sets |= {"J_on": {"px": str(sl / "jon_pairs.npy")}, "held452": {"px": str(sl / "held452_pairs.npy")},
+                 "zero98": {"px": str(sl / "zero98_pairs.npy")}}
+    return sets
+
+
 def main(a):
     from jevdrive.run import Run
     dev = torch.device("cuda")
-    sets = json.loads(_pl.Path(a.sets).read_text())
+    sets = preset(a.preset) if a.preset else json.loads(_pl.Path(a.sets).read_text())
     names = a.only or list(sets)
     with Run("junction_eyes", f"step1/encode-{a.tag}", config=vars(a)) as run:
         if a.tag == "factory":
@@ -73,7 +86,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tag", required=True, help="a step-1 checkpoint tag, or factory")
     ap.add_argument("--which", default="best", choices=("best", "last"))
-    ap.add_argument("--sets", required=True)
+    ap.add_argument("--sets", default="", help="sets JSON (see docstring)")
+    ap.add_argument("--preset", default="", choices=("", "f0", "w90", "3v"), help="the read protocol's sets for an input kind")
     ap.add_argument("--only", nargs="*", default=[])
     ap.add_argument("--batch", type=int, default=256)
     ap.add_argument("--force", action="store_true")
