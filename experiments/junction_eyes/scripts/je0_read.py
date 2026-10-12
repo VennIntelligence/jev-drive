@@ -221,12 +221,12 @@ def read(a):
 
                         def fn(ix, Ii=Ii, Ui=Ui, b=b):
                             r = {}
-                            bb = b[ix]
+                            bb, Ix, Ux = b[ix], Ii[ix], Ui[ix]
+                            ms = {x: (np.isin(bb, NEAR) if x == "near" else np.isin(bb, FAR) if x == "far" else bb == x) for x in BINS + ("near", "far")}
                             for c in range(3):
-                                for x in BINS + ("near", "far"):
-                                    mm = np.isin(bb, NEAR) if x == "near" else np.isin(bb, FAR) if x == "far" else bb == x
-                                    u = Ui[ix][mm, c].sum()
-                                    r[f"{c}|{x}"] = float(Ii[ix][mm, c].sum() / u) if u > 0 else np.nan
+                                for x, mm in ms.items():
+                                    u = Ux[mm, c].sum()
+                                    r[f"{c}|{x}"] = float(Ix[mm, c].sum() / u) if u > 0 else np.nan
                                 r[f"{c}|ratio_in_far"] = r[f"{c}|in junction"] / r[f"{c}|far"] if r[f"{c}|far"] and np.isfinite(r[f"{c}|far"]) else np.nan
                             return r
                         reg = reg_name == "0-20" and sub == "turn" and g != "navtest_all"
