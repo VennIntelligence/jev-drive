@@ -285,7 +285,8 @@ class OnnxTorch(torch.nn.Module):
         loaded, i.e. the fp16 value exactly in fp32), `trainable` weights their fp32 master."""
         out = {w: self.params[_key(w)].float().cpu().numpy() for w in self.trainable}
         for w in self.lora_scale:
-            out[w] = (self.params[_key(w)].float() + self._delta(w).float()).cpu().numpy()
+            W, d = self.params[_key(w)].float(), self._delta(w).float()
+            out[w] = torch.where(d != 0, W + d, W).cpu().numpy()     # a zero update keeps W's bytes (-0 + 0 would give +0)
         return out
 
     def op_MatMul(self, x, at, ins):

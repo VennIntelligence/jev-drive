@@ -5,18 +5,18 @@
                                        initializers of a COPY of the factory ONNX -> step1/onnx/<T>.onnx (+ .json); the factory
                                        file's sha256 is checked before and after (never written)
   gate   --tag T [--n 512]            equivalence: (a) view_39 of the torch model (fp32, unmerged LoRA) vs the merged ONNX on
-                                       onnxruntime (its vision subgraph, CUDA, the graph's fp16) on n pairs, against the same
+                                       onnxruntime (its vision subgraph, CPU, the graph's fp16) on n pairs, against the same
                                        comparison for the factory weights (the fp16 noise floor); (b) the plan (x, y) of the first 15
                                        points along a comma1M 20 Hz stream, torch Stepper vs the merged ONNX stepped by OPModel
                                        (line 0.5 m), with the factory pair as the floor
   serve0                               G-serve: the B = 0 model merged -> every changed initializer byte-identical to the factory,
-                                       and its plans along the stream bit-identical to the factory ONNX's (onnxruntime CPU, eager)
+                                       and its plans along the stream bit-identical to the factory ONNX's (onnxruntime CPU; op-train's onnxruntime has no CUDA provider)
 Outputs: step1/gates/{equiv-<T>,serve0}.json.
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
 _sys.path[:0] = [str(_R), str(_R / "lib"), str(_R / "experiments/junction_eyes/lib")]
-import argparse, hashlib, json  # noqa: E401,E402
+import argparse, hashlib, json, os  # noqa: E401,E402
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
@@ -78,7 +78,9 @@ def vision_onnx(src: _pl.Path) -> _pl.Path:
 def ort_vision(path, prev, cur):
     import onnxruntime as ort
     from jevdrive.openpilot import model as OM  # noqa: F401  (preloads the CUDA libraries for onnxruntime)
-    s = ort.InferenceSession(str(vision_onnx(path)), providers=[("CUDAExecutionProvider", {"device_id": 0}), "CPUExecutionProvider"])
+    so = ort.SessionOptions()
+    so.intra_op_num_threads = max(1, len(os.sched_getaffinity(0)))
+    s = ort.InferenceSession(str(vision_onnx(path)), so, providers=["CPUExecutionProvider"])
     pair = np.concatenate([prev, cur], 2)                                  # (n, 2, 12, 128, 256)
     return np.stack([s.run(None, {A.VISION_IN[0]: p[0:1], A.VISION_IN[1]: p[1:2]})[0].reshape(32, 512) for p in pair]).astype(np.float32)
 
@@ -106,7 +108,7 @@ def plans_torch(net, frames):
     return raw[:, A.plan_index(net.slices)].reshape(len(frames), 33, 15)
 
 
-def plans_ort(path, frames, backend="cuda"):
+def plans_ort(path, frames, backend="cpu"):
     from jevdrive.openpilot.model import OPModel
     m = OPModel(str(path), backend)
     m.reset()
@@ -173,11 +175,12 @@ def cmd_serve0(a):
         g0 = {t.name: t for t in onnx.load(str(BASE)).graph.initializer}
         g1 = {t.name: t for t in onnx.load(str(onx)).graph.initializer}
         changed = set(m.net.merged())
-        same = [numpy_helper.to_array(g0[k]).tobytes() == numpy_helper.to_array(g1[k]).tobytes() for k in changed]
-        res = {"n_changed_initializers": len(changed), "bytes_identical": int(sum(same)), "export": rec}
+        arr = {k: (numpy_helper.to_array(g0[k]), numpy_helper.to_array(g1[k])) for k in changed}
+        res = {"n_changed_initializers": len(changed), "bytes_identical": int(sum(x.tobytes() == y.tobytes() for x, y in arr.values())),
+               "values_identical": int(sum(np.array_equal(x, y) for x, y in arr.values())), "export": rec}
         fr, seg = stream(a.steps, a.seg)
         res["segment"] = seg
-        for be in ("cpu", "cuda"):
+        for be in ("cpu",):                       # the op-train onnxruntime has the CPU provider only
             p0, p1 = plans_ort(BASE, fr, be), plans_ort(onx, fr, be)
             e = np.abs(p0 - p1).max((1, 2))
             res[f"plans_{be}"] = dict(steps=len(fr), bitwise_identical_steps=int((e == 0).sum()), max_abs=float(e.max()))
