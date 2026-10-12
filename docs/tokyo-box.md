@@ -573,13 +573,15 @@ The completed v4 campaign reused its server across all six groups and restarted 
 
 The simulator writes one front-wide 10 fps mp4 per rollout deep under `sim/rollouts/<scene>/<uuid>/`. `~/bin/pai_videos.py`
 on the Tokyo box (source `experiments/alpasim/scripts/pai_videos.py`) rebuilds `~/Desktop/pai_videos/`: one flat folder of
-symlinks `<scene8>_<arm>_<score>_<zero kind>.mp4` plus `index.html`. Rerun it after new chunks; it reads
+symlinks `<scene8>_<arm>_<score>_<zero kind>.mp4`, and `~/Desktop/pai_videos.html` (the gallery, kept outside the folder so it
+sorts first on the Desktop). Rerun it after new chunks; it reads
 `results-summary.json`, so only scored rollouts appear.
 
-- `index.html` (open in Chrome): one row per scene, one column per arm, score / zero kind / distance driven on each cell;
+- `pai_videos.html` (open in Chrome): one row per scene with the scene's first frame (one JPEG per scene in `~/.cache/pai_thumbs`,
+  rendered once; all arms start identical), one column per arm, score / zero kind / distance driven on each cell;
   filters by arm, kind, max score, scene prefix; sort by scene, arm spread or min score; "arms disagree" keeps spread > 0.1.
-  `j` / `k` next / previous scene and play the row, space pause, `.` / `,` step 0.1 s, `0` rewind, click one video to play
-  it alone. Videos load lazily, 1549 rows are fine.
+  `j` / `k` next / previous scene and play the row, space pause, `.` / `,` step 0.1 s, `0` rewind, click a cell to play it
+  alone, double-click to enlarge it, Esc closes. Only the active row holds `<video>` elements, so 1549 rollouts load instantly.
 - `mpv` (apt, 2026-10-12; mp4 default handler): the folder is the playlist via `autoload.lua`, Enter / `j` next,
   Shift+Enter / `k` previous, `.` / `,` frame step, `[` / `]` speed, `q` quit; file name and time on screen; one clip loops
   until you move on. Config in `~/.config/mpv/`.
