@@ -32,6 +32,7 @@ OffAgentHinge, ot_rows' off_hinge / offsets. Only joint_train's S subset is carr
                     not `present`, not the command) zeroed on a fraction P of the non-anchor rows of every batch, drawn from its own stream
                     [seed, 0, 71] (every row stream unchanged). P = 1: the adapter's input transform zeroes it (TR1 key `noego`, saved with the
                     weights, so the served driver gets no ego status either). 0 = off: no operation is added.
+  --on-road FILE    onpol_long Amendment 13: the pool rows' road raster from FILE instead of <POOL>/road.npz (same tokens, layout); '' = the pool's.
   --on-lon          extra per-row terms of the on-policy rows in self / both from experiments/onpol_nuplan/lib/on_lon.py (plans/on_pool_format.md):
                     each term summed / n_imit x --on-lon-lam 10 x ho_w. Off: no operation is added.
 
@@ -231,7 +232,7 @@ def setup(a, dev):
         if a.agent_on_only:                                          # no offline row carries the agent hinge; the pool's rows are set below
             agent2.ok[:] = False
     if (k_ho or hing) and a.road_lam > 0:                            # C: the road-and-lane raster on the hinge-only rows (+ the pool's own file)
-        rc = replace(cfg, hinge_labels=(a.road_labels,) + ((str(pd / "road.npz"),) if hing else ()), hinge_footprint=("pacifica",) * (1 + hing),
+        rc = replace(cfg, hinge_labels=(a.road_labels,) + ((getattr(a, "on_road", "") or str(pd / "road.npz"),) if hing else ()), hinge_footprint=("pacifica",) * (1 + hing),
                      hinge_margin=a.road_margin)
         road = OR.off_hinge(rc, np.where(is_ho | (is_on & hing), names, ""), off, dev, **bk)
     n_fb = 0
@@ -678,6 +679,7 @@ if __name__ == "__main__":
     p.add_argument("--prefetch", type=int, default=4)
     p.add_argument("--fetch-workers", type=int, default=2)
     p.add_argument("--dev-card-gb", type=float, default=4.0)
+    p.add_argument("--on-road", default="", help="road-and-lane raster of the pool's rows in place of <POOL>/road.npz (same layout and names; onpol_long Amendment 13)")
     p.add_argument("--ego-drop", type=float, default=0.0, help="share of rows with the ego status zeroed; 1 = removed, also when served (onpol_long Amendment 11)")
     p = sub.add_parser("ident")
     p.add_argument("--a", required=True)

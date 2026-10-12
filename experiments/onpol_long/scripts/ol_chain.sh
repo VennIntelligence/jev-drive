@@ -344,5 +344,40 @@ submit-scorer)  # Amendment 12: candidate-scoring feasibility on YS-L18-s1's 43 
   g=$(sub ol-sc-geo "$r" --vram 0.5 --cpu 16 --ram 48 --timeout-h 1 -- $NAV $S geo --workers 16) || exit 1
   sub ol-sc-score "$g" --vram 16 --cpu 8 --ram 48 --timeout-h 1 --gpus 1,2,3,4,5 -- $TR $S score > /dev/null || exit 1
   echo "submitted: $(grep -c "amendment 12" $W/jobs.txt) jobs" ;;
+submit-armb)   # Amendment 13: arm B, directional road raster on pool on1_L18YS (CPU) -> YSB-L18-s{0,1} (round 2b's recipe with --on-road) -> held reads in
+               # 6 chunks (ol_fast.sh read), all off card 0 -> report-armb (ol_report against YS2G and YS-L18, zm_read collect on merged views)
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
+            --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 13)" >> $W/jobs.txt; }
+  RB=$W/rows/L18YS-dir; G15="--gpus 1,2,3,4,5 --pin-strict"; X1="env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1"
+  d=$(sub ol-armb-dir "" --vram 0.5 --cpu 64 --ram 120 --timeout-h 2 -- $X1 $NAV $E/scripts/ol_dirraster.py build --out $RB --workers 64) || exit 1
+  sub ol-armb-fig "" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $X1 $NAV $E/scripts/ol_dirraster.py fig --events experiments/zeros_mech/results/events_YS-L18-s1.csv \
+      --run $W/scorer/YS-L18-s1/run --out $RB/fig_turns.pkl > /dev/null || exit 1
+  OT="$TR $ON/scripts/on_train.py train --exp onpol_long --init YS-L18-s1 --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank"
+  rids=()
+  for s in 0 1; do
+    a=$(sub ol-train-YSB-s$s "$d" --train --vram 26 --cpu 6 --ram 60 --timeout-h 2 $G15 -- $OT --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_L18YS --on-k 13 \
+          --on-split alpasim_nuplan/onpol-train --on-mode self --on-road $RB/road.npz --seed $s --tag YSB-L18-s$s) || exit 1
+    for i in $(seq 0 5); do rids+=($(sub ol-read-YSB-L18-s$s-$i "$a" --vram 32 --cpu 8 --ram 40 --timeout-h 2 $G15 --env CL_HIST_KEY=ol-fast-read -- \
+          env OL_RCH=6 bash $E/scripts/ol_fast.sh read YSB-L18-s$s $i 6)) || exit 1; done
+  done
+  sub ol-report-armb "$(IFS=,; echo "${rids[*]}")" --vram 0.5 --cpu 64 --ram 64 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report-armb > /dev/null || exit 1
+  echo "submitted: $(grep -c "amendment 13" $W/jobs.txt) jobs" ;;
+report-armb)   # Amendment 13: YSB against YS2G (control) and YS-L18 (seed means); zm_read collect + report (unedited) on merged views; the registered lines
+  H=$DATA_DIR/runs/alpasim_long/held/h18; c() { ls -d $W/read/$1/c*/run | paste -sd,; }
+  R=("YSB-L18-s0@18=$(c YSB-L18-s0)" "YSB-L18-s1@18=$(c YSB-L18-s1)" "YS2G-L18-s0@18=$W/read/YS2G-L18-s0/run" "YS2G-L18-s1@18=$W/read/YS2G-L18-s1/run"
+     "YS-L18-s0@18=$(c c15-YS-L18-s0)" "YS-L18-s1@18=$W/read/YS-L18-s1/run")
+  $P $E/scripts/ol_report.py --family Y --arm SB --ctl S2G --base-tags YS-L18-s0,YS-L18-s1 --ref-mean --runs "${R[@]}" --out $W/report/Y-SB || die "ol_report rc $?"
+  for t in YSB-L18-s0 YSB-L18-s1 c15-YS-L18-s0; do V=$W/read/$t/merged; rm -rf $V; mkdir -p $V/aggregate $V/driver-logs $V/rollouts
+    cp $W/read/$t/c0/run/generated-user-config-0.yaml $V/; cat $W/read/$t/c*/run/driver-logs/drive.jsonl > $V/driver-logs/drive.jsonl
+    for q in $W/read/$t/c*/run/rollouts/*; do ln -s $q $V/rollouts/; done
+    python3 -c "import json,sys,glob; json.dump({'rollouts': [r for f in sorted(glob.glob(sys.argv[1] + '/c*/run/aggregate/results-summary.json')) for r in json.load(open(f))['rollouts']]}, open(sys.argv[2], 'w'))" $W/read/$t $V/aggregate/results-summary.json
+  done
+  RO=$W/read; ZM=experiments/zeros_mech/scripts/zm_read.py
+  env OMP_NUM_THREADS=1 $P $ZM collect --runs YSB-L18-s0=$RO/YSB-L18-s0/merged YSB-L18-s1=$RO/YSB-L18-s1/merged YS-L18-s0=$RO/c15-YS-L18-s0/merged YS-L18-s1=$RO/YS-L18-s1/run \
+      YNONE-L18-s0=$RO/YNONE-L18-s0/run YNONE-L18-s1=$RO/YNONE-L18-s1/run YS2G-L18-s0=$RO/YS2G-L18-s0/run YS2G-L18-s1=$RO/YS2G-L18-s1/run \
+      YR10m10-F-s0=$H/YR10m10-F-s0 YR10m10-F-s1=$H/YR10m10-F-s1 || die "zm_read collect rc $?"
+  CD=$(ls -d $DATA_DIR/runs/zeros_mech/collect/*/ | tail -1); echo "$CD" > $W/report/Y-SB/zm_collect_dir.txt
+  $P $ZM report --collect $CD --rows $(ls -d $DATA_DIR/runs/zeros_mech/rows/*/ | tail -1) --out $W/report/Y-SB/zm --figs $W/report/Y-SB/zm/figs || echo "zm_read report failed (run it on the Mac)"
+  [[ -f $W/report/Y-SB/zm/per_rollout_reads.csv.gz ]] && $P $E/scripts/ol_dirraster.py lines --reads $W/report/Y-SB/zm --collect $CD --out $W/report/Y-SB/lines.json ;;
 *) die "unknown stage $STAGE" ;;
 esac
