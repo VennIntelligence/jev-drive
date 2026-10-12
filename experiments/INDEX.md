@@ -5,7 +5,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 **live**
 
 - [cap_audit](cap_audit/README.md): live; worse than every reference only on cruise lag: YS2G +0.59 m behind at 5-10 m/s [d278]
-- [junction_eyes](junction_eyes/README.md): live; frozen eye misses junction corridor, R-A 0.99 m vs 0.5; step 1 runs [d283]
+- [junction_eyes](junction_eyes/README.md) (JE, junction eyes, corridor rulers, trunk LoRA): live; frozen eye misses junction corridor, R-A 0.99 m vs 0.5; step 1 runs [d283]
 - [zeros_mech](zeros_mech/README.md) (ZEROS-MECH, why the S-family zeros: turn timing / command, cut-around reflex, oncoming lane): live; H3 arm (31% of YS zeros in an oncoming lane); H2 not shown; H1 half [d268]
 - [onpol_nuplan](onpol_nuplan/README.md) (ONPOL-NUPLAN, on-policy rows, self-consequence vs imitation labels, RoaD / DAgger contrast): concluded; held 460 scenes: on-policy S hinges 0.939 / 14.5 zeros vs control 0.925 / 21.5; imitation 0.912 / 24 [d259]
 - [onpol_pai](onpol_pai/README.md) (ONPOL-PAI, on-policy rows on PAI, self-consequence vs imitation labels): live; stopped before the 281 read (user, 10-12 02:24 JST); open loop only: SELF term rate 0.215 vs 0.307 [d261]
