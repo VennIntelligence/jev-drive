@@ -35,8 +35,10 @@ import je_model as M  # noqa: E402
 from jevdrive.common import data_dir  # noqa: E402
 
 ARMS = {"L-F0": dict(vis="lora", src=("nav", "on")), "L-F0-nav": dict(vis="lora", src=("nav",)),
-        "U-F0": dict(vis="full", src=("nav", "on")), "L-W90": dict(vis="lora", src=("nav",), px="w90"),
-        "L-3V": dict(vis="lora", src=("nav",), views=3)}
+        "U-F0": dict(vis="full", src=("nav", "on")), "L-W90": dict(vis="lora", src=("nav",), px_file="frames-t0-w90.npy", keep_frames="frames-w90.npy"),
+        "L-3V": dict(vis="lora", src=("nav",), views=3, px_file="frames-t0-3v.npy", view="all")}
+# L-W90 / L-3V pixel file names are executor 2's (results/pixels.md); --data overrides them ({"nav": {"px_file", "px_root"}, "keep_frames"}).
+# L-3V: the J rows carry [F0, L0, R0] t0 pairs; the keep rows (comma) have the F0 view only, which is all the policy reads.
 STEP1 = data_dir() / "runs" / "junction_eyes" / "step1"
 CKPT = STEP1 / "ckpt"
 SMOKE_PX = data_dir() / "runs" / "vis_train" / "px_side"          # (N, 2 views, 2, 2, 6, 128, 256): navtrain L0 / R0 t0 pairs
@@ -50,7 +52,8 @@ STEP0 = data_dir() / "runs" / "junction_eyes" / "step0"
 PX = data_dir() / "runs" / "junction_eyes" / "px"
 CACHE = data_dir() / "runs" / "op_parity" / "cache"
 DEFAULT_DATA = {"nav": {"rows": str(STEP0 / "rows" / "J_nav.parquet"), "px_root": str(PX)},
-                "on": {"rows": str(STEP0 / "rows" / "J_on.parquet"), "px_root": str(PX), "per_unit": True},
+                "on": {"rows": str(STEP0 / "rows" / "J_on.parquet"), "per_unit": True,          # reconstructed slot pairs (results/pixels.md 3)
+                       "px_root": str(data_dir() / "runs" / "junction_eyes" / "slots" / "jon_pairs.npy")},
                 "labels": str(STEP0 / "labels"), "keep": str(data_dir() / "runs" / "junction_eyes" / "keep"), "splits": []}
 
 
@@ -62,10 +65,14 @@ def sources(a, arm: dict):
                "on": D.synthetic_source("on", SMOKE_PX / "navtrain_full.s1of12" / "side_t0.npy", 1, n, a.seed)}
         src["on"].w = D.per_unit_weight(src["on"].unit, src["on"].fit)
         return {k: v for k, v in src.items() if k in names}, D.KeepStore(a.keep or SMOKE_KEEP), []
-    spec = DEFAULT_DATA | (json.loads(_pl.Path(a.data).read_text()) if a.data else {})
-    src = {k: D.real_source(k, spec[k]["rows"], spec["labels"], spec[k]["px_root"], CACHE, spec[k].get("px_file", "frames-t0.npy"),
-                            spec[k].get("per_unit", False)) for k in names}
-    return src, D.KeepStore(a.keep or spec["keep"]), spec.get("splits", [])
+    spec = {k: (dict(v) if isinstance(v, dict) else v) for k, v in DEFAULT_DATA.items()}
+    for k, v in (json.loads(_pl.Path(a.data).read_text()) if a.data else {}).items():
+        spec[k] = spec[k] | v if isinstance(v, dict) and isinstance(spec.get(k), dict) else v
+    src = {k: D.real_source(k, spec[k]["rows"], spec["labels"], spec[k]["px_root"], CACHE, spec[k].get("px_file", arm.get("px_file", "frames-t0.npy")),
+                            spec[k].get("per_unit", False), arm.get("view")) for k in names}
+    keep = a.keep or spec["keep"]
+    kf = spec.get("keep_frames") or (str(_pl.Path(keep) / arm["keep_frames"]) if "keep_frames" in arm else None)
+    return src, D.KeepStore(keep, frames=kf), spec.get("splits", [])
 
 
 # ---------------------------------------------------------------- losses
@@ -155,8 +162,9 @@ class Lane:
         B = kp.shape[0]
         with torch.no_grad():
             hc = m.encode(kp[:, :-1].flatten(0, 1), kc[:, :-1].flatten(0, 1)).reshape(B, M.A.CONTEXT - 1, 32, 512)
-        prev = torch.cat([b[k][0] for k in ks] + [kp[:, -1]])
-        cur = torch.cat([b[k][1] for k in ks] + [kc[:, -1]])
+        nv = m.n_view                                  # 3V: J rows (b, 3, ...) -> 3 b pairs, view-major inside each row
+        prev = torch.cat([b[k][0].flatten(0, 1) if nv > 1 else b[k][0] for k in ks] + [kp[:, -1]])
+        cur = torch.cat([b[k][1].flatten(0, 1) if nv > 1 else b[k][1] for k in ks] + [kc[:, -1]])
         with torch.set_grad_enabled(grad):
             tok = m.encode(prev, cur, grad=grad)
             nj = tok.shape[0] - B
@@ -165,7 +173,8 @@ class Lane:
             L = {}
             L["keep"], L["keep_plan"] = self.keep(out, d["keep"])
             ego, ra, rb = (torch.cat([b[k][i] for k in ks]) for i in (2, 3, 4))
-            L["ra"], L["rb"] = head_losses(m, tok[:nj], ego, ra, rb)
+            tj = tok[:nj].reshape(-1, nv, 32, 512) if nv > 1 else tok[:nj]
+            L["ra"], L["rb"] = head_losses(m, tj, ego, ra, rb)
         return L
 
     def total(self, L):
@@ -202,7 +211,7 @@ class Lane:
             for i in range(0, len(r), bs):
                 rr = r[i:i + bs]
                 p, c = (x.to(self.dev) for x in s.px.get(rr))
-                tok = m.encode(p, c)
+                tok = m.encode(p.flatten(0, 1), c.flatten(0, 1)).reshape(len(rr), m.n_view, 32, 512) if m.n_view > 1 else m.encode(p, c)
                 la, lb = head_losses(m, tok, *(torch.from_numpy(np.ascontiguousarray(x)).to(self.dev) for x in (s.ego[rr], s.ra[rr], s.rb[rr])))
                 num["ra"] += float(la) * len(rr)
                 num["rb"] += float(lb) * len(rr)

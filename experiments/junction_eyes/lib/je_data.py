@@ -75,12 +75,19 @@ class _Reader:
 
 
 class PairStore:
-    def __init__(self, path, view: int | None = None, threads=0):
+    """view None: rows (2, 2, 6, 128, 256); view k: the k-th view of rows (V, 2, 2, 6, 128, 256); view "all": every view, get() gives
+    (B, V, 2, 6, 128, 256) prev / cur (the 3V arm: [F0, L0, R0])."""
+
+    def __init__(self, path, view=None, threads=0):
         self.R = _Reader(path, threads)
         sh = self.R.shape[1:]
+        self.nv = 0
         if view is None:
             assert sh == (2,) + FRAME, f"{path}: rows {sh}, want (2, 2, 6, 128, 256) or pass view="
             self.off = 0
+        elif view == "all":
+            assert sh[1:] == (2,) + FRAME, f"{path}: rows {sh}"
+            self.off, self.nv = 0, sh[0]
         else:
             assert sh[1:] == (2,) + FRAME and 0 <= view < sh[0], f"{path}: rows {sh}, view {view}"
             self.off = view * 2 * FB
@@ -88,9 +95,13 @@ class PairStore:
     def __len__(self):
         return len(self.R)
 
+    @property
+    def row_shape(self):
+        return ((self.nv,) if self.nv else ()) + (2,) + FRAME
+
     def get(self, rows):
-        g = self.R.read(rows, self.off, 2 * FB, (2,) + FRAME)
-        return g[:, 0], g[:, 1]
+        g = self.R.read(rows, self.off, int(np.prod(self.row_shape)), self.row_shape)
+        return (g[:, :, 0], g[:, :, 1]) if self.nv else (g[:, 0], g[:, 1])
 
 
 class KeepStore:
@@ -100,9 +111,10 @@ class KeepStore:
     modeld-style at 20 Hz from the segment start (jevdrive.op_adapt.Stepper), seg (N,) str, held (N,) bool (the 60 held-out
     segments: never trained on), action_t (2,)."""
 
-    def __init__(self, d, threads=0):
+    def __init__(self, d, threads=0, frames=None):
+        """frames: another frames.npy of the same frame order (L-W90: the wide slot at 90 deg); the teacher stays the one of `d`."""
         d = Path(d)
-        self.R = _Reader(d / "frames.npy", threads)
+        self.R = _Reader(Path(frames) if frames else d / "frames.npy", threads)
         assert self.R.shape[1:] == FRAME, f"{d}/frames.npy: {self.R.shape}"
         z = np.load(d / "rows.npz", allow_pickle=False)
         self.fidx, self.teacher = z["fidx"].astype(np.int64), z["teacher"].astype(np.float32)
@@ -211,20 +223,22 @@ class MultiPairStore:
         fi, ri = self.fi[r], self.ri[r]
         parts = {k: np.flatnonzero(fi == k) for k in np.unique(fi)}
         got = {k: self.st[k].get(ri[j]) for k, j in parts.items()}
+        sh = self.st[0].row_shape
         out = []
         for i in range(2):
-            o = torch.empty((len(r),) + FRAME, dtype=torch.uint8, pin_memory=torch.cuda.is_available())
+            o = torch.empty((len(r),) + sh[:-5] + FRAME, dtype=torch.uint8, pin_memory=torch.cuda.is_available())
             for k, j in parts.items():
                 o[torch.from_numpy(j)] = got[k][i]
             out.append(o)
         return out[0], out[1]
 
 
-def real_source(name: str, rows_parquet, labels_dir, px_root, cache_root, px_file="frames-t0.npy", per_unit=False) -> Source:
+def real_source(name: str, rows_parquet, labels_dir, px_root, cache_root, px_file="frames-t0.npy", per_unit=False, view=None) -> Source:
     """A J source from executor 1's rows (results/rows.md) and executor 2's pixel caches (results/pixels.md): labels by `rid`, ego from
     the frozen-token cache's tab.npz (`tab_file`, `tok_row`), pixels from <px_root>/<tab_file>/<px_file> at row `tok_row`."""
     import pandas as pd
     df = pd.read_parquet(rows_parquet)
+    df["pos"] = np.arange(len(df))                         # row in a pixel file kept in the parquet's order (px_root = that .npy file)
     df = df[df.split.isin(["fit", "val"])].reset_index(drop=True)
     labels_dir = Path(labels_dir)
     ra = np.load(labels_dir / "ra.npy", mmap_mode="r")[df.rid.values].reshape(-1, 15, 2)
@@ -238,7 +252,11 @@ def real_source(name: str, rows_parquet, labels_dir, px_root, cache_root, px_fil
         ego[m] = z["ego"][df.tok_row.values[m]]
         if name == "nav":                                   # navtrain token caches carry the token names
             assert (z["names"][df.tok_row.values[m]] == df.token.values[m]).all(), f"{f}: tab rows do not match the row table"
-    px = MultiPairStore([Path(px_root) / f / px_file for f in files], fi, df.tok_row.values)
+    if str(px_root).endswith(".npy"):                      # one file in parquet row order (executor 2's slot pairs, e.g. slots/jon_pairs.npy)
+        px = MultiPairStore([Path(px_root)], np.zeros(len(df), int), df.pos.values, view)
+        assert len(px.st[0]) == int(df.pos.max()) + 1 or len(px.st[0]) >= len(pd.read_parquet(rows_parquet, columns=["rid"])), px_root
+    else:
+        px = MultiPairStore([Path(px_root) / f / px_file for f in files], fi, df.tok_row.values, view)
     fit, val = (df.split == "fit").values, (df.split == "val").values
     w = df.w_scene.values if per_unit else None
     return Source(name, px, ego, ra, rb, fit, val, df.token.values.astype(str), df.unit.values.astype(str), w)
