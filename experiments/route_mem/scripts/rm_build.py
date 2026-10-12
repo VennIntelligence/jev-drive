@@ -319,6 +319,24 @@ def cmd_cover(a):
     print(D.groupby("label").agg(decisions=("k", "size"), c20=("c20", "mean"), n=("n", "mean")).to_string())
 
 
+def cmd_same(a):
+    """Plans of two runs on the same scenes (drive.jsonl poses, 1e-4 m): share of decisions whose plan points within 4 s differ by <= 0.03 m
+    (docs/long-runs.md: fp16 plan equality) -> printed and written to served/same_<label>.json."""
+    from ao_e1 import drive_records
+    A, B = drive_records(a.a), drive_records(a.b)
+    d = []
+    for sc in sorted(set(A) & set(B)):
+        pb = {r["k"]: np.asarray(r["poses"], float) for r in B[sc]}
+        for r in A[sc]:
+            if r["k"] in pb:
+                d.append(float(np.abs(np.asarray(r["poses"], float)[:, :2] - pb[r["k"]][:, :2]).max()))
+    d = np.array(d)
+    g = dict(decisions=len(d), share_le_003=float((d <= 0.03).mean()), max=float(d.max()), median=float(np.median(d)))
+    (OUT / "served").mkdir(parents=True, exist_ok=True)
+    (OUT / "served" / f"same_{a.label}.json").write_text(json.dumps(g, indent=1))
+    print(json.dumps(g))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -333,5 +351,7 @@ if __name__ == "__main__":
     p.add_argument("--run", required=True), p.add_argument("--tag", default=""), p.add_argument("--workers", type=int, default=0)
     p = sub.add_parser("cover")
     p.add_argument("--runs", nargs="+", required=True), p.add_argument("--out", required=True)
+    p = sub.add_parser("same")
+    p.add_argument("--a", required=True), p.add_argument("--b", required=True), p.add_argument("--label", required=True)
     a = ap.parse_args()
-    dict(nav=cmd_nav, yr=cmd_yr, pool=cmd_pool, served=cmd_served, cover=cmd_cover)[a.cmd](a)
+    dict(same=cmd_same, nav=cmd_nav, yr=cmd_yr, pool=cmd_pool, served=cmd_served, cover=cmd_cover)[a.cmd](a)

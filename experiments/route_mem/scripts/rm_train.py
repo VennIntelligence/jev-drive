@@ -257,6 +257,20 @@ def cmd_rely(a):
     (out / f"{a.tag}.json").write_text(json.dumps(rr, indent=1))
 
 
+def cmd_zero(a):
+    """--init TAG --tag OUT: TAG's weights + the branch at its zero init (the serving check: plans equal TAG's, the memory is logged)."""
+    import torch
+    import pp_train as T
+    d = T.proot("runs", a.tag)
+    assert not (d / "ckpt-final.pt").exists(), f"{d} exists"
+    m = T.load_pmodel(a.init, torch.device("cuda"))
+    RM.attach(m, **HEAD)
+    d.mkdir(parents=True, exist_ok=True)
+    torch.save({"model": m.state(), "route_mem": HEAD, "zero_of": a.init}, d / "ckpt-final.pt")
+    RM.write_sidecar(a.tag, HEAD, dict(init=a.init, zero=True))
+    print("wrote", d)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -283,6 +297,11 @@ if __name__ == "__main__":
         p.add_argument("--rm-lr", type=float, default=3e-4)
         p.add_argument("--rm-warmup", type=int, default=100)
         p.add_argument("--rm-drop", type=float, default=0.25)
+    p = sub.add_parser("zero")
+    p.add_argument("--init", required=True), p.add_argument("--tag", required=True)
     a = ap.parse_args()
+    if a.cmd == "zero":
+        cmd_zero(a)
+        raise SystemExit(0)
     assert a.ego_drop == 0 and not a.on_lon and not a.on_road, "ROUTE-MEM runs on_train's Y recipe only"
     dict(train=cmd_train, rely=cmd_rely)[a.cmd](a)

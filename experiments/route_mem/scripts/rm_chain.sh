@@ -60,5 +60,12 @@ submit-served)
   T=$1; L=$W/lists/serve5.txt; [[ -f $L ]] || die "no $L"
   s=$(sub rm-serve-$T "${2:-}" --vram 24 --cpu 6 --ram 30 --timeout-h 1 --gpus 1,2,3,4,5 --pin-strict -- bash $E/scripts/rm_chain.sh readlist $T $L $W/served_runs/$T) || exit 1
   sub rm-served-chk-$T "$s" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $P $E/scripts/rm_build.py served --run $W/served_runs/$T --tag $T --workers 4 > /dev/null || exit 1 ;;
+submit-zero)    # RMI-L18 = YS-L18-s1 + the branch at zero; 5-scene reads of both on cards 1-5; served check and plan equality
+  z=$(sub rm-zero "" --vram 8 --cpu 4 --ram 30 --timeout-h 1 -- $TR $E/scripts/rm_train.py zero --init YS-L18-s1 --tag RMI-L18) || exit 1
+  L=$W/lists/serve5.txt; [[ -f $L ]] || die "no $L"
+  b=$(sub rm-serve-YS-L18-s1 "" --vram 24 --cpu 6 --ram 30 --timeout-h 1 --gpus 1,2,3,4,5 --pin-strict -- bash $E/scripts/rm_chain.sh readlist YS-L18-s1 $L $W/served_runs/YS-L18-s1) || exit 1
+  s=$(sub rm-serve-RMI-L18 "$z" --vram 24 --cpu 6 --ram 30 --timeout-h 1 --gpus 1,2,3,4,5 --pin-strict -- bash $E/scripts/rm_chain.sh readlist RMI-L18 $L $W/served_runs/RMI-L18) || exit 1
+  sub rm-served-chk-RMI-L18 "$s" --vram 0.5 --cpu 4 --ram 16 --timeout-h 1 -- $P $E/scripts/rm_build.py served --run $W/served_runs/RMI-L18 --tag RMI-L18 --workers 4 > /dev/null || exit 1
+  sub rm-same-RMI-L18 "$s,$b" --vram 0.5 --cpu 2 --ram 8 --timeout-h 1 -- $P $E/scripts/rm_build.py same --a $W/served_runs/RMI-L18 --b $W/served_runs/YS-L18-s1 --label RMI-L18 > /dev/null || exit 1 ;;
 *) die "unknown stage $STAGE" ;;
 esac
