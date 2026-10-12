@@ -1,0 +1,71 @@
+{
+ "YRM-L18-s0": {
+  "dev0": 0.5283955931663513,
+  "dev": 0.5277164578437805,
+  "dev_nomem": 0.528452455997467,
+  "g_init": true,
+  "g_dev": true,
+  "rely": {
+   "rows": 1789,
+   "logs": 32,
+   "ade_on": 0.5277871489524841,
+   "ade_masked": 0.528452455997467,
+   "junction_rows": 895,
+   "straight_rows": 490,
+   "d_junction": 0.00042744140955619514,
+   "d_straight": -0.00032979820389300585,
+   "d_all": 0.0006652984884567559,
+   "diff": 0.0007572396425530314,
+   "diff_lo": -0.0028872388897333446,
+   "diff_hi": 0.004970723019273519,
+   "ade_on_junction": 0.5610309839248657,
+   "ade_on_straight": 0.45998620986938477,
+   "read": false
+  },
+  "g_rely": false
+ },
+ "YRM-L18-s1": {
+  "dev0": 0.5283955931663513,
+  "dev": 0.5274131894111633,
+  "dev_nomem": 0.5283380746841431,
+  "g_init": true,
+  "g_dev": true,
+  "rely": {
+   "rows": 1789,
+   "logs": 32,
+   "ade_on": 0.5274727940559387,
+   "ade_masked": 0.5283380746841431,
+   "junction_rows": 895,
+   "straight_rows": 490,
+   "d_junction": 0.0011373613961040974,
+   "d_straight": -0.0017775694141164422,
+   "d_all": 0.0008652600809000432,
+   "diff": 0.0029149306938052177,
+   "diff_lo": -0.0005990519003510386,
+   "diff_hi": 0.0066810974871890855,
+   "ade_on_junction": 0.562142014503479,
+   "ade_on_straight": 0.4602832496166229,
+   "read": false
+  },
+  "g_rely": false
+ },
+ "serve": {
+  "memory": {
+   "scenes": 5,
+   "decisions": 90,
+   "mask_same": 1.0,
+   "d_max_le_005": 1.0,
+   "d_max_max": 0.0001451418938813731,
+   "n_served_mean": 26.944444444444443,
+   "pass": true
+  },
+  "eager_same": {
+   "decisions": 90,
+   "share_le_003": 1.0,
+   "max": 0.0,
+   "median": 0.0
+  },
+  "g_serve": true
+ },
+ "pass": false
+}

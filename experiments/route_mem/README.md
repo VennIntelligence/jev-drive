@@ -1,21 +1,24 @@
 # route_mem: route-memory input branch for the nuPlan driver
 
-status: live
-decisions: (inputs 266, 272, 275, 278, 279; contrast 127-134, 189, 204)
-index: route memory as an adapter branch on YS2G's recipe; pre-registered, training queued
+status: concluded
+decisions: 282 (inputs 266, 272, 275, 278, 279; contrast 127-134, 189, 204)
+index: route-memory branch ignored by the policy: masking it moves junction dev ADE 0.0004 / 0.0011 m (line 0.01); stopped before closed loop
 
 **Question.** Decision 279 showed that the AlpaSim route waypoints the driver received earlier, carried into the current frame by its own ego
 poses, place the lane centre to 0.2-0.35 m inside the junction stretch where the frozen eyes miss by 1.1-1.7 m (decision 275). Fed to the
 adapter as a route-memory branch (Cinque frozen, command kept) on `YS2G`'s recipe, do the junction road-exit zeros fall where the memory reaches
 and stay where it does not?
 
-**Next.** Training `YRM-L18-s{0,1}` (YS2G's recipe + the branch), gates G-init / G-serve / G-dev / G-rely, then the held 452 read at 18
-decisions against `YS2G` and `YS-L18` (plans/2026-10-12-route-mem-prereg.md).
+**Conclusion.** By the registered reliance gate the branch is ignored: on YS2G's recipe (2 500 gentle steps, branch at lr 3e-4) masking the
+memory changes the dev ADE of junction-approach rows by +0.0004 / +0.0011 m (line >= 0.01 m) and the junction-minus-straight difference CI includes 0
+in both seeds, although the branch's output layer grew to norm 0.55-0.58; G-init, G-serve (served memory equals the offline rebuild on 90 / 90
+decisions; zero branch bit-identical in eager mode) and G-dev (0.5277 / 0.5274) pass. The 12 held read jobs were cancelled; no closed-loop read
+(decision 282).
 
 **Read more.** [plans/2026-10-12-route-mem-prereg.md](plans/2026-10-12-route-mem-prereg.md) (Chinese; design, gates, registered lines, how it
 differs from decisions 127-134 / 189 / 204). Memory = every route message of the episode, carried by the ego poses, merged, 40 points at -6 .. +72 m
 with a validity mask (`lib/rmem.py`, the same code offline and in the served driver); the served driver uses it only for a checkpoint with a
-`route_mem.json` sidecar, `SH30_RMEM=0` feeds an empty memory. Box: `$DATA_DIR/runs/route_mem/` (feat/, rely/, served/, read/, cover/).
+`route_mem.json` sidecar, `SH30_RMEM=0` feeds an empty memory. Box: `$DATA_DIR/runs/route_mem/` (feat/, rely/, served/, gates.json). Gate table: [results/gates.json](results/gates.json).
 
 <!-- files:begin -->
 ## Files
@@ -29,5 +32,5 @@ with a validity mask (`lib/rmem.py`, the same code offline and in the served dri
 - `sh30_core.py` (experiments/alpasim/lib): SH30 as a causal 2 Hz planner
 - `README.md` (experiments/local_map): carried probe and route at the zeros
 
-[results/](results/) 0 result files · [figs/](figs/) 0 figures · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 3 entry points
+[results/](results/) 1 result files · [figs/](figs/) 0 figures · [plans/](plans/) 1 live plans · [lib/](lib/) 1 library · [scripts/](scripts/) 4 entry points
 <!-- files:end -->

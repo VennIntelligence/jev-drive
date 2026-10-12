@@ -5,7 +5,6 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 **live**
 
 - [cap_audit](cap_audit/README.md): live; worse than every reference only on cruise lag: YS2G +0.59 m behind at 5-10 m/s [d278]
-- [route_mem](route_mem/README.md): live; route memory as an adapter branch on YS2G's recipe; pre-registered, training queued [d(inputs,266,272,275,278,279;,contrast,127-134,189,204)]
 - [zeros_mech](zeros_mech/README.md) (ZEROS-MECH, why the S-family zeros: turn timing / command, cut-around reflex, oncoming lane): live; H3 arm (31% of YS zeros in an oncoming lane); H2 not shown; H1 half [d268]
 - [onpol_nuplan](onpol_nuplan/README.md) (ONPOL-NUPLAN, on-policy rows, self-consequence vs imitation labels, RoaD / DAgger contrast): concluded; held 460 scenes: on-policy S hinges 0.939 / 14.5 zeros vs control 0.925 / 21.5; imitation 0.912 / 24 [d259]
 - [onpol_pai](onpol_pai/README.md) (ONPOL-PAI, on-policy rows on PAI, self-consequence vs imitation labels): live; stopped before the 281 read (user, 10-12 02:24 JST); open loop only: SELF term rate 0.215 vs 0.307 [d261]
@@ -98,6 +97,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 - [gt_decomp](gt_decomp/README.md): GT is nearest-point: lag adds 0; YR 0.941 = 0.681 cross + 0.260 past path end [d280]
 - [local_map](local_map/README.md): route received earlier: 0.35 m at 20 m on 28 / 45 zero windows (line < 0.5); carried probe 2-4 m [d279,(inputs,272,275)]
 - [road_probe](road_probe/README.md): frozen eyes do not see city roads: R3 zeros 1.26 m (line > 1.0); straight 0.25 m, turns 0.88 m; junction blur also on real navtest frames (1.18 vs 0.46 m), not a reconstruction artefact [d275,(inputs,223,243,268,272)]
+- [route_mem](route_mem/README.md): route-memory branch ignored by the policy: masking it moves junction dev ADE 0.0004 / 0.0011 m (line 0.01); stopped before closed loop [d282,(inputs,266,272,275,278,279;,contrast,127-134,189,204)]
 - [rule_oracle](rule_oracle/README.md): planned; scoped: PDM-Closed re-impl on the scene loader, 4 arms ~2.5 card-h [d-] — closed 2026-10-12, not run
 - [corridor](corridor/README.md) (CORR0, HEAD1, lane corridor label, turn-description head): Corridor centreline as target: -9.9 EPDMS on turns; wrong exit 2.6% of DAC fails; HEAD1: frozen-token heading head 8.54 vs SH30 11.24 deg at > 45 deg, independence R2 0.513 < 0.538, exploratory HEAD1b: fed back three ways at pilot scale, heading error falls 1.2 to 3.2 deg, EPDMS within 0.2, off-road rate unchanged [d240, d243, d245]
 - [flowhead](flowhead/README.md) (FLOW1, flow-matching plan head, trajectory head): Flow head vs the same head as a regression on SH30 features: > 45 deg off-road -4.98 pp but EPDMS -1.10 (EP, LK, EC, < 5 deg down), not a candidate, branch closed [d246]
