@@ -14,6 +14,7 @@ overlay, so these frames are blurrier and show an orange / green line that the m
 
   pai_turn_frames.py [--root /data/runs/onpol_long/pai281] [--out ~/Desktop/pai_turns] [--base ybase] [--cmp ys2g0 ys1]
                      [--smax 0.3] [--deg 30] [--n 40] [--procs 8] [--scenes <scene8> ...]
+                     [--what jpg video]
 """
 import argparse, functools, glob, io, json, struct, subprocess, sys, types
 from concurrent.futures import ProcessPoolExecutor
@@ -76,33 +77,36 @@ def turn_deg(dr) -> float:
     return float(np.degrees(np.angle(complex(*c1) / complex(*c0))))
 
 
-def asl_frames(path: Path, cam: str, want: list) -> dict:
-    """{wanted t0: JPEG bytes} of camera cam from a rollout.asl (length-prefixed LogEntry protobufs)."""
+def asl_frames(path: Path, cam: str, want=None) -> dict:
+    """{wanted t0 (all if want is None): JPEG bytes} of camera cam from a rollout.asl (length-prefixed LogEntry protobufs)."""
     m = types.ModuleType("alpasim_grpc")
     m.__path__ = [GRPC]
     sys.modules.setdefault("alpasim_grpc", m)
     from alpasim_grpc.v0.logging_pb2 import LogEntry
-    got, want = {}, set(want)
+    got, want = {}, None if want is None else set(want)
     with open(path, "rb") as f:
-        while (h := f.read(4)) and len(got) < len(want):
+        while (h := f.read(4)) and (want is None or len(got) < len(want)):
             e = LogEntry.FromString(f.read(struct.unpack(">L", h)[0]))
             if e.WhichOneof("log_entry") == "driver_camera_image":
                 c = e.driver_camera_image.camera_image
-                if c.logical_id == cam and c.frame_end_us in want:
+                if c.logical_id == cam and (want is None or c.frame_end_us in want):
                     got[c.frame_end_us] = c.image_bytes
     return got
 
 
-def mp4_frames(mp4: Path, idx: list) -> dict:
-    """{frame index: RGB camera panel} from the eval composite mp4 (panel = non-white bbox of the lower half)."""
-    sel = "+".join(f"eq(n\\,{i})" for i in idx)
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(mp4), "-vf", f"select='{sel}'", "-vsync", "0", "-f", "rawvideo",
-                          "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
-    fr = np.frombuffer(raw, np.uint8).reshape(-1, 1000, 900, 3)
-    low = fr[0, 500:].astype(int).sum(-1) < 700
+def mp4_frames(mp4: Path, idx=None) -> dict:
+    """{frame index (all if idx is None): RGB camera panel} from the eval composite mp4 (panel = non-white bbox of the lower half)."""
+    def grab(vf):
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(mp4), "-vf", vf, "-vsync", "0", "-f", "rawvideo", "-pix_fmt", "rgb24",
+                              "-"], capture_output=True, check=True).stdout
+        return np.frombuffer(raw, np.uint8)
+    low = grab("select='eq(n\\,0)'").reshape(1000, 900, 3)[500:].astype(int).sum(-1) < 700
     ys, xs = np.flatnonzero(low.any(1)) + 500, np.flatnonzero(low.any(0))
     y0, y1, x0, x1 = ys[0] + 2, ys[-1] - 1, xs[0] + 2, xs[-1] - 1                  # inside the panel border
-    return {i: f[y0:y1, x0:x1] for i, f in zip(idx, fr)}
+    y0, x0, y1, x1 = y0 + y0 % 2, x0 + x0 % 2, y1 - (y1 - y0 - y0 % 2) % 2, x1 - (x1 - x0 - x0 % 2) % 2   # even (yuv420 crop)
+    sel = "" if idx is None else "select='" + "+".join(f"eq(n\\,{i})" for i in idx) + "',"
+    fr = grab(f"{sel}crop={x1 - x0}:{y1 - y0}:{x0}:{y0}").reshape(-1, y1 - y0, x1 - x0, 3)
+    return dict(zip(range(len(fr)) if idx is None else idx, fr))
 
 
 def rows_k(n: int, ke) -> list:
@@ -124,6 +128,25 @@ def event_t(run: Path, r, kd):
     df = pd.read_parquet(p[0])
     df = df[df.name.isin(EVENT[kd]) & (df["values"] > 0)]
     return None if df.empty else int(df.timestamps_us.min())
+
+
+def draw_plan(dw, d, ct, K, x0, y0, S, w, h):
+    """The served plan of decision d (rear axle, rig frame, on the ground) on a model frame pasted at (x0, y0), scale S."""
+    p = np.r_[[[0.0, 0.0]], np.array(d["poses"])[:, :2]] - ct[:2]
+    p = p[p[:, 0] > 1.0]
+    u = (K[0, 0] * -p[:, 1] / p[:, 0] + K[0, 2]) * S + x0
+    v = (K[1, 1] * ct[2] / p[:, 0] + K[1, 2]) * S + y0
+    pts = [(a, b) for a, b in zip(u, v) if x0 <= a < x0 + w and y0 <= b < y0 + h]
+    if len(pts) > 1:
+        dw.line(pts, fill=(255, 0, 255), width=3)
+    for a, b in pts[1:]:
+        dw.ellipse((a - 3, b - 3, a + 3, b + 3), fill=(255, 0, 255))
+
+
+def tag(d):
+    v0 = (d.get("fix") or {}).get("v0", float("nan"))
+    cmd = {0: "L", 1: "S", 2: "R"}.get(d.get("cmd"), "?")
+    return f"cmd {cmd}  v {v0:.1f} m/s  plan {np.hypot(*np.array(d['poses'][-1][:2])):.0f} m in 4 s"
 
 
 def render(job):
@@ -167,27 +190,79 @@ def render(job):
         if im.shape[:2] not in maps:
             maps[im.shape[:2]] = Maps(st["spec"], st["R"], (im.shape[1], im.shape[0]))
         f = maps[im.shape[:2]](im)
-        p = np.r_[[[0.0, 0.0]], np.array(d["poses"])[:, :2]] - ct[:2]
-        v0 = (d.get("fix") or {}).get("v0", float("nan"))
-        cmd = {0: "L", 1: "S", 2: "R"}.get(d.get("cmd"), "?")
-        tag = f"t = {d['k'] / 10:.1f} s  cmd {cmd}  v {v0:.1f} m/s  plan {np.hypot(*np.array(d['poses'][-1][:2])):.0f} m in 4 s" + \
-              ("   <- first zero event" if k == ke else "")
-        dw.text((PAD, y + 5), tag, fill="red" if k == ke else "black", font=big)
+        dw.text((PAD, y + 5), f"t = {d['k'] / 10:.1f} s  " + tag(d) + ("   <- first zero event" if k == ke else ""),
+                fill="red" if k == ke else "black", font=big)
         for j, K in enumerate((MEDMODEL_K, SBIGMODEL_K)):
             x0 = PAD + j * (w + PAD)
             canvas.paste(Image.fromarray(rgb(f[j])).resize((w, h), Image.BILINEAR), (x0, y + TOP))
-            ok = p[:, 0] > 1.0
-            u = (K[0, 0] * -p[ok, 1] / p[ok, 0] + K[0, 2]) * S + x0
-            v = (K[1, 1] * ct[2] / p[ok, 0] + K[1, 2]) * S + y + TOP
-            pts = [(a, b) for a, b in zip(u, v) if x0 <= a < x0 + w and y + TOP <= b < y + TOP + h]
-            if len(pts) > 1:
-                dw.line(pts, fill=(255, 0, 255), width=3)
-            for a, b in pts[1:]:
-                dw.ellipse((a - 3, b - 3, a + 3, b + 3), fill=(255, 0, 255))
+            draw_plan(dw, d, ct, K, x0, y + TOP, S, w, h)
     s8 = scene.replace("clipgt-", "")[:8]
     name = out / f"{s8}_{arm}_{r['score']:.2f}_{kd}_{'L' if turn > 0 else 'R'}{abs(turn):.0f}.jpg"
     canvas.save(name, quality=88)
     return f"{name.name} {src} rows {len(img)}"
+
+
+def video(job):
+    """Every received frame (10 Hz) as road | wide with the latest served plan held between drive calls -> <name>.mp4 (H.264, 10 fps)."""
+    from PIL import Image, ImageDraw, ImageFont
+    from pai_core import Maps, decode
+    from jevdrive.openpilot.frames import MEDMODEL_K, SBIGMODEL_K
+    from pai_report import rgb
+    arm, run, r, turn, out = job
+    scene, kd = r["clipgt_id"], kind(r)
+    dr, st = drive(run, scene)
+    if not dr:
+        return f"skip {scene} {arm}: no drive log"
+    te = event_t(run, r, kd)
+    rd = run / "sim/rollouts" / scene / r["rollout_id"]
+    if (rd / "rollout.asl").exists():                     # frame time us -> latest decision with t0 <= it
+        src, jp = "asl", asl_frames(rd / "rollout.asl", st["cam"])
+        keys, at = sorted(jp), np.array([d["t0"] for d in dr])
+        get = lambda t: decode(jp[t])
+        tev = None if te is None else next((t for t in keys if t >= te), None)
+    else:                                                 # mp4 frame i <-> decision k = i
+        mp4 = sorted(rd.glob("*camera_front_wide*.mp4"))
+        if not mp4:
+            return f"skip {scene} {arm}: no mp4"
+        src, fr = "mp4 panel", mp4_frames(mp4[0])
+        keys, at = sorted(fr), np.array([d["k"] for d in dr])
+        get = lambda i: np.asarray(Image.fromarray(fr[i]).convert("YCbCr"))
+        tev = None if te is None else dr[int(np.abs(np.array([d["t0"] for d in dr]) - te).argmin())]["k"]
+    S, PAD, TOP = 1.5, 6, 64
+    w, h = int(512 * S), int(256 * S)
+    W, H = 2 * w + 3 * PAD, TOP + h + PAD
+    big, small = ImageFont.load_default(20), ImageFont.load_default(15)
+    ct, maps = np.array(st["cam_t"], float), {}
+    head = f"{scene[7:15]}  {arm}  score {r['score']:.2f}  {kd}  turn {turn:+.0f} deg  source: {src}" + \
+           ("  (orange / green = eval overlay, not model input)" if src != "asl" else "")
+    name = out / f"{scene[7:15]}_{arm}_{r['score']:.2f}_{kd}_{'L' if turn > 0 else 'R'}{abs(turn):.0f}.mp4"
+    ff = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", "10", "-i", "-",
+                           "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-threads", "1", str(name)],
+                          stdin=subprocess.PIPE)
+    t_first = keys[0]
+    for key in keys:
+        i = np.searchsorted(at, key, side="right") - 1
+        im = get(key)
+        if im.shape[:2] not in maps:
+            maps[im.shape[:2]] = Maps(st["spec"], st["R"], (im.shape[1], im.shape[0]))
+        f = maps[im.shape[:2]](im)
+        hit = tev is not None and key >= tev
+        flash = hit and (key - tev) < (5 if src != "asl" else 500_000)    # 0.5 s red flash
+        c = Image.new("RGB", (W, H), (200, 0, 0) if flash else "white")
+        dw = ImageDraw.Draw(c)
+        t = (key - t_first) / (10 if src != "asl" else 1e6)
+        dw.text((PAD, 4), head, fill="white" if flash else "black", font=small)
+        dw.text((PAD, 28), f"t = {t:4.1f} s  " + (tag(dr[i]) if i >= 0 else "no plan yet") +
+                (f"   ZERO EVENT: {kd}" if hit else ""), fill="white" if flash else "red" if hit else "black", font=big)
+        for j, K in enumerate((MEDMODEL_K, SBIGMODEL_K)):
+            x0 = PAD + j * (w + PAD)
+            c.paste(Image.fromarray(rgb(f[j])).resize((w, h), Image.BILINEAR), (x0, TOP))
+            if i >= 0:
+                draw_plan(dw, dr[i], ct, K, x0, TOP, S, w, h)
+        ff.stdin.write(c.tobytes())
+    ff.stdin.close()
+    ff.wait()
+    return f"{name.name} {src} frames {len(keys)} {name.stat().st_size / 2**20:.1f} MiB"
 
 
 def main():
@@ -196,6 +271,7 @@ def main():
     ap.add_argument("--base", default="ybase"), ap.add_argument("--cmp", nargs="+", default=["ys2g0", "ys1"])
     ap.add_argument("--smax", type=float, default=0.3), ap.add_argument("--deg", type=float, default=30.0)
     ap.add_argument("--n", type=int, default=40), ap.add_argument("--procs", type=int, default=8), ap.add_argument("--scenes", nargs="*")
+    ap.add_argument("--what", nargs="+", default=["jpg"], choices=["jpg", "video"], help="per-row JPEGs and / or full mp4s")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -215,8 +291,9 @@ def main():
             if arm:
                 jobs.append((arm, *I[(arm, s)], turns[s], out))
     with ProcessPoolExecutor(a.procs) as ex:
-        for m in ex.map(render, jobs):
-            print(m, flush=True)
+        for fn in [{"jpg": render, "video": video}[w] for w in a.what]:
+            for m in ex.map(fn, jobs):
+                print(m, flush=True)
     (out / "README.txt").write_text(
         f"What openpilot saw on low-scoring PAI turn scenes ({a.root}).\n"
         f"Selection: {a.base} score < {a.smax} and |route heading change| > {a.deg} deg, the {len(pick)} largest turns; the turn is the\n"
@@ -229,6 +306,9 @@ def main():
         "Frames are re-derived (no dumps were kept) with pai_core.Maps from: 'asl' = the exact JPEGs the driver received\n"
         "(rollout.asl), or 'mp4' = the camera panel of the eval video (lower resolution, carries the eval's orange / green overlay\n"
         "which the model did not see). The source is in each image's title.\n"
+        "Videos (--what video): <same name>.mp4, every received frame at 10 Hz, road | wide with the latest served plan held between\n"
+        "drive calls, top strip with time, command, speed, plan length and the frame source; a 0.5 s red flash and a red label from\n"
+        "the first zero event on.\n"
         "Script: experiments/alpasim/scripts/pai_turn_frames.py\n")
 
 
