@@ -5,8 +5,14 @@ Each `experiments/<topic>/README.md` carries `status:`, `decisions:`, `index:` a
 the 8-12 files an agent opens first; the block between `files:begin` / `files:end` is generated from them (later runs
 read the key files back from the block). INDEX.md is one line per topic. Run after adding a topic or a key file:
 
-    python tools/topic_index.py            # from the repo root
-    python tools/topic_index.py --check    # exit 1 if a README block or INDEX.md is stale
+    python tools/topic_index.py --topic NAME [--topic NAME2]   # your own topic(s) only: rewrites those READMEs' blocks
+                                                               # and those INDEX.md lines; everything else stays untouched
+    python tools/topic_index.py --check                        # read-only; exit 1 and list stale READMEs / INDEX.md
+    python tools/topic_index.py --all                          # dry run: list the READMEs and INDEX.md that would change
+    python tools/topic_index.py --all --write                  # regenerate every topic (clobbers other lanes' uncommitted
+                                                               # README / INDEX.md edits: use only on a clean tree)
+
+A topic without a README is warned about and skipped.
 """
 from __future__ import annotations
 
@@ -155,10 +161,49 @@ def index(readmes: dict[str, str]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def line_of(idx: str, t: str):
+    return next((l for l in idx.splitlines() if l.startswith(f"- [{t}]({t}/README.md)")), None)
+
+
+def merge_lines(cur: str, gen: str, topics: list[str]) -> str:
+    """Current INDEX.md with only the lines of `topics` replaced (or inserted where `gen` places them)."""
+    lines, glines = cur.splitlines(), gen.splitlines()
+    for t in topics:
+        new, old = line_of(gen, t), line_of(cur, t)
+        if new is None:
+            continue
+        if old == new:
+            continue
+        if old is not None and f"- [{t}]" in old and (i := lines.index(old)) >= 0 and \
+                next((h for h in reversed(lines[:i]) if h.startswith("**")), None) == \
+                next((h for h in reversed(glines[:glines.index(new)]) if h.startswith("**")), None):
+            lines[i] = new                      # same group: replace in place
+            continue
+        if old is not None:
+            lines.remove(old)                   # moved group (e.g. status became live): re-insert
+        g = glines.index(new)
+        prev = next((l for l in reversed(glines[:g]) if l.strip() and l in lines), None)
+        if prev is None:
+            lines += [new]
+        else:
+            j = lines.index(prev) + 1
+            if prev.startswith("**"):
+                j += 1                          # skip the blank line under a group header
+            lines.insert(j, new)
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--check", action="store_true")
+    ap.add_argument("--check", action="store_true", help="read-only; exit 1 and list stale files")
+    ap.add_argument("--topic", action="append", default=[], metavar="NAME", help="restrict to this topic (repeatable)")
+    ap.add_argument("--all", action="store_true", help="every topic (dry run unless --write)")
+    ap.add_argument("--write", action="store_true", help="apply --all")
     a = ap.parse_args()
+    if not (a.check or a.topic or a.all):
+        ap.error("pick one of --topic NAME, --check, --all (see the usage note)")
+    if a.write and not a.all and not a.topic:
+        ap.error("--write goes with --all")
     topics = sorted(p.name for p in EXP.iterdir() if p.is_dir() and not p.name.startswith((".", "_")))
     out = {}
     for t in topics:
@@ -167,16 +212,44 @@ def main():
             print(f"warning: no README for experiments/{t}, skipped (add one from experiments/TEMPLATE.md)", file=sys.stderr)
             continue
         out[t] = readme(t, src.read_text())
+    sel = a.topic
+    for t in sel:
+        if t not in out:
+            print(f"error: topic {t!r} has no README to process", file=sys.stderr)
+            return 2
+    idx_path = EXP / "INDEX.md"
     idx = index(out)
+    cur = idx_path.read_text() if idx_path.exists() else ""
+    stale = [f"experiments/{t}/README.md" for t, x in out.items() if (EXP / t / "README.md").read_text() != x]
     if a.check:
-        stale = [f"experiments/{t}/README.md" for t, x in out.items() if (EXP / t / "README.md").read_text() != x]
-        if not (EXP / "INDEX.md").exists() or (EXP / "INDEX.md").read_text() != idx:
+        if cur != idx:
             stale.append("experiments/INDEX.md")
         print("\n".join(stale) or "up to date")
         return 1 if stale else 0
+    if sel:
+        changed = []
+        for t in sel:
+            if (EXP / t / "README.md").read_text() != out[t]:
+                (EXP / t / "README.md").write_text(out[t])
+                changed.append(f"experiments/{t}/README.md")
+        new = merge_lines(cur, idx, sel)
+        if new != cur:
+            idx_path.write_text(new)
+            changed.append("experiments/INDEX.md")
+        print("updated: " + (", ".join(changed) or "nothing (already current)"))
+        return 0
+    if not a.write:
+        if cur != idx:
+            stale.append("experiments/INDEX.md")
+        print("warning: --all would rewrite these files (dry run; add --write to apply, which clobbers other lanes' "
+              "uncommitted edits):", file=sys.stderr)
+        print("\n".join(stale) or "nothing: all up to date")
+        return 0
     for t, x in out.items():
-        (EXP / t / "README.md").write_text(x)
-    (EXP / "INDEX.md").write_text(idx)
+        if (EXP / t / "README.md").read_text() != x:
+            (EXP / t / "README.md").write_text(x)
+    if cur != idx:
+        idx_path.write_text(idx)
     big = {t: len(x.encode()) // 4 for t, x in out.items() if len(x.encode()) // 4 > 300 or x.count("\n") > 60}
     print(f"{len(out)} READMEs (avg {sum(len(x.encode()) for x in out.values()) // 4 // len(out)} tok), "
           f"INDEX.md {len(idx.encode()) // 4} tok; over 300 tok / 60 lines: {big}")

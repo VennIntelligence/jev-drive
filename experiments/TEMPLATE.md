@@ -18,4 +18,5 @@ key: <the 8-12 files an agent opens first, repo-root paths; the file list below 
 
 Layout: `scripts/` entry points (live), `lib/` code other topics import, `archive/` one-off code of a concluded
 experiment, `results/` small result files, `figs/` figures, `plans/` live plan notes. Refresh the file list and
-INDEX.md with `python tools/topic_index.py`.
+INDEX.md with `python tools/topic_index.py --topic <name>` (your topic only; a bare run or `--all` would rewrite
+other lanes' READMEs, so `--all` is a dry run unless `--write`; `--check` is read-only).
