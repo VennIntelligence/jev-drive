@@ -2,7 +2,7 @@
 
 status: concluded
 decisions: 275 (inputs 223, 243, 268, 272)
-index: frozen eyes do not see city roads: R3 zeros 1.26 m (line > 1.0); straight 0.25 m, turns 0.88 m
+index: frozen eyes do not see city roads: R3 zeros 1.26 m (line > 1.0); straight 0.25 m, turns 0.88 m; junction blur also on real navtest frames (1.18 vs 0.46 m), not a reconstruction artefact
 
 **Question.** Is the road geometry of nuPlan city scenes (ego-lane boundaries, road edges, lane heading at 10 / 20 / 40 m), especially at
 junctions and bends, present in the frozen openpilot (Cinque) vision tokens our AlpaSim driver already computes, although the shipped
@@ -16,10 +16,18 @@ undone; p90 1.18 m, so decision 272's "usable" line is still not met), turns 0.8
 blind floor. The error grows in and just before junctions (1.1-1.7 m) and more data still helps on turns (-0.10 m per doubling of log units)
 but not reliably at the zeros (-0.26 [-0.54, +0.01]) (decision 275).
 
+**Real frames (amendment 8).** The junction blur also appears on real nuPlan camera frames. It is not an artefact of the MTGS-reconstructed
+images. A probe of the same family, trained on navtrain's frozen tokens (142 drive logs) and read on navtest turns, is 1.18 m [0.94, 1.46]
+off inside / within 20 m of the junction and 0.46 m [0.38, 0.55] when the junction is 20-60 m away. The ratio is 2.58 [1.93, 3.38] (line: > 2
+with near >= 0.6). The reconstructed read gave 1.19 / 0.44. Decision 275's probe moved to real frames as is does the same (1.29 / 0.49). The
+blind ego + command floor has the same bump on real frames (1.47 / 0.64), so the tokens add only 0.3 m inside junctions. Details:
+[results/rp_real.md](results/rp_real.md), figure [figs/rp_real.png](figs/rp_real.png).
+
 **Read more.** [plans/2026-10-12-road-probe-prereg.md](plans/2026-10-12-road-probe-prereg.md) (Chinese, pushed before any read, with
 pre-read clarifications in section 7); [results/rp_report.md](results/rp_report.md) (gates, R1-R3 tables, verdict, learning curve, junction
 distance, oncoming-lane AUC, post-read exploratory section); tables `results/*.csv`, `rp.json`. Box `$DATA_DIR/runs/road_probe/`: held
 rollouts with frame dumps `roll/c*/run`, tokens `tok/{held,zero}/`, labels `labels/`, predictions `pred/`, read `read/20261012-175622`.
+Real frames: `rp_real.py labels --split navtest|navtrain` (CPU) -> `rp_real.py train --arm A|B|blind|C|P0` (7 pool jobs, 4-15 min each) -> `rp_real.py read` -> `rp_real.py report` (Mac); box `$DATA_DIR/runs/road_probe/real/`.
 Pipeline: `rp_chain.sh submit-roll` (3 pool jobs) -> `rp.py tok` / `replay` (GPU) -> `rp.py labels --group train|held|zero` (CPU)
 -> `rp.py train --arm P|blind|lin [--frac F] [--seed S]` -> `rp.py read` -> `rp_report.py picks`, `rp.py bev`, `rp_report.py report` (Mac).
 Cost: about 1.2 card-hours (held rollouts 3 x 12 min, tokens / replay 3 min, 7 probe runs 4-7 min each).
@@ -33,6 +41,11 @@ Figures:
   windows fall from 1.9 to 1.3 m but flatten between 14 and 27 units.
 - [figs/rp_junction.png](figs/rp_junction.png): turn-decision error at 20 m against the route distance to the junction: the probe is at 0.4-0.5 m
   while the junction is still 20-60 m away and at 1.1-1.7 m inside it and in the last 20 m before it; the shipped heads are 4-5 m there.
+- [figs/rp_real.png](figs/rp_real.png): turn (left) and straight (right) decisions, ego-lane boundary error at 20 m by route distance to the
+  junction. Red: decision 275's probe on reconstructed AlpaSim frames. Orange: the same probe on real navtest frames of the same 16 drive logs.
+  Teal: the probe trained on navtrain, read on all navtest (dashed: the same 16 logs). Grey dotted: the blind floor. The dotted line is
+  the registered 0.6 m. Look at the turn panel: every frame source has the same bump inside / within 20 m of the junction and the same
+  ~0.45 m floor at 20-60 m, and the blind floor rises there too.
 - [figs/rp_bev.png](figs/rp_bev.png): four zero windows (the event decision; picked at the 10 / 40 / 70 / 95 % quantiles of the probe's window
   error among scenes zeroed by one driver) and two held turns (median and 90th percentile), ego frame, right positive. Map lane edges grey,
   road-area boundary black, logged route green, served plan red; probe ego-lane boundaries blue dots and road edges light-blue squares at 10 / 20 / 40 m;

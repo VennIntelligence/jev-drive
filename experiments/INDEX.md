@@ -96,7 +96,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 - [eyes_vs_head](eyes_vs_head/README.md): eyes wrong at 98 / 98 zeros (lane probs < 0.5); eyes + rules not supported [d272]
 - [local_map](local_map/README.md): route received earlier: 0.35 m at 20 m on 28 / 45 zero windows (line < 0.5); carried probe 2-4 m [d279,(inputs,272,275)]
-- [road_probe](road_probe/README.md): frozen eyes do not see city roads: R3 zeros 1.26 m (line > 1.0); straight 0.25 m, turns 0.88 m [d275,(inputs,223,243,268,272)]
+- [road_probe](road_probe/README.md): frozen eyes do not see city roads: R3 zeros 1.26 m (line > 1.0); straight 0.25 m, turns 0.88 m; junction blur also on real navtest frames (1.18 vs 0.46 m), not a reconstruction artefact [d275,(inputs,223,243,268,272)]
 - [rule_oracle](rule_oracle/README.md): planned; scoped: PDM-Closed re-impl on the scene loader, 4 arms ~2.5 card-h [d-] — closed 2026-10-12, not run
 - [corridor](corridor/README.md) (CORR0, HEAD1, lane corridor label, turn-description head): Corridor centreline as target: -9.9 EPDMS on turns; wrong exit 2.6% of DAC fails; HEAD1: frozen-token heading head 8.54 vs SH30 11.24 deg at > 45 deg, independence R2 0.513 < 0.538, exploratory HEAD1b: fed back three ways at pilot scale, heading error falls 1.2 to 3.2 deg, EPDMS within 0.2, off-road rate unchanged [d240, d243, d245]
 - [flowhead](flowhead/README.md) (FLOW1, flow-matching plan head, trajectory head): Flow head vs the same head as a regression on SH30 features: > 45 deg off-road -4.98 pp but EPDMS -1.10 (EP, LK, EC, < 5 deg down), not a candidate, branch closed [d246]
