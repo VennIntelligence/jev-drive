@@ -328,8 +328,8 @@ def lab_unit(job):
                 ER = float(R[R < yl].max()) if (R < yl).any() else np.nan
             rec[f"L{d}"], rec[f"R{d}"], rec[f"EL{d}"], rec[f"ER{d}"] = L, Rr, EL, ER
             if d == 20:
-                rec["B20"] = np.r_[B, np.full(max(0, 24 - len(B)), np.nan)][:24].astype(np.float32)
-                rec["R20"] = np.r_[R, np.full(max(0, 24 - len(R)), np.nan)][:24].astype(np.float32)
+                rec["xB20"] = np.r_[B, np.full(max(0, 24 - len(B)), np.nan)][:24].astype(np.float32)        # crossings, for the nearest-boundary error
+                rec["xR20"] = np.r_[R, np.full(max(0, 24 - len(R)), np.nan)][:24].astype(np.float32)
         # route: logged path heading change over 40 m from the ego's projection; junction distance along it
         s0 = proj_s(LP, S, a[:2])
         _, y0 = path_at(LP, S, Y, s0)
@@ -750,7 +750,7 @@ def read(a):
         T = pd.DataFrame(rows)
         T.to_csv(out / "r12.csv", index=False)
         # nearest-boundary error (decision 269's measure) at 20 m, L and R predictions pooled
-        B20 = {g: np.stack(D.B20.values) for g, D in (("held", Dh), ("zero", Dz))}
+        B20 = {g: np.stack(D.xB20.values) for g, D in (("held", Dh), ("zero", Dz))}
         nb = []
         for sub, m in (("straight", st_), ("turn", tu_)):
             for k in names:
