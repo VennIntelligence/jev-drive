@@ -26,7 +26,7 @@
 - [cap-audit/](cap-audit/index.html)：全部已存决策（不只零分）上的能力记分卡（决策 278）：17 个能力量 × 场景分组，对人类日志与四个参考 driver；只有巡航起步落后人类比每个参考都差（纵向，新标签课 L），横向 / 合法性 / 交互不差于最好的参考；探索：横穿对向转弯里对向车道占比偏高。
 - [self-consequence/](self-consequence/index.html)：设计稿（未训练）：冻结编码器上一次联合训练，在车身课 S 之上加纵向课 L（本车道前车、必须停的停止点、入弯速度三个解析 hinge 加进度护栏，只改时机），六个新臂带逐项去掉，PAI 与 AlpaSim nuPlan 判；工作稿 `design.md`。
 - [gt-decomp/](gt-decomp/index.html)：榜单 GT 距离拆纵 / 横（决策 280）：评估器量到整条日志路径的最近点，巡航落后贡献 0；纵向部分只来自越过日志终点（领先人类），YR 0.941 = 横向 0.681 + 越终点 0.260；巡航提速式课 L 不动 GT、进度分上界 +0.022。
-- [route-follow/route-night.html](route-follow/route-night.html)：ROUTE-NIGHT（决策 286）：从出厂权重重训的路线记忆底座 RB0-F 第一次在离线依赖路线记忆，加一轮温和行有两个候选：只带 S 的 RSG-L18 held 零分 34 / 34（底座 59），第二轮带路线 hinge 的 RBSG2-L18 零分 37 / 37、跟路线更好；只用底座自身状态训路线 hinge 会让车在右转里切内侧（17–21 对 1–2），加回转过头的状态后 4 / 4；反事实行教会路口换路线、没教会变道；附出路诊断 [route-follow-offroad.md](route-follow-offroad.md)。
+- [route-follow/route-night.html](route-follow/route-night.html)：ROUTE-NIGHT（决策 286）：从出厂权重重训的路线记忆底座 RB0-F 第一次在离线依赖路线记忆，唯一候选是只带 S 的温和一轮 RSG-L18（held 零分 34 / 34、底座 59，胜过 YS2G；公开 1491 与 YS2G 持平、护栏过）；路线 hinge 不采用：只用底座自身状态会让车在右转里切内侧（17–21 对 1–2），加回转过头状态的 RBSG2 在 held 上修好、公开集上零分 77.5；反事实行教会路口换路线、没教会变道；附出路诊断 [route-follow-offroad.md](route-follow-offroad.md)。
 
 ## 记录与工具
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。

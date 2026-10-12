@@ -4,7 +4,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 **live**
 
-- [route_follow](route_follow/README.md) (ROUTE-FOLLOW, ROUTE-NIGHT, expert A, route following, command counterfactual, R-CF, RB0-F, RB-F, RSG-L18, route hinge, on1_CF): live; route-memory base relied on; held zeros RSG 34, RBSG2 37 vs base 59 [d284,286]
+- [route_follow](route_follow/README.md) (ROUTE-FOLLOW, ROUTE-NIGHT, expert A, route following, command counterfactual, R-CF, RB0-F, RB-F, RSG-L18, route hinge, on1_CF): live; route-memory base relied on; RSG-L18 held zeros 34 vs 59, public ties YS2G [d284,286]
 - [steer_long](steer_long/README.md) (STEER-LONG, expert B, sharp steering / spin / slowness, curvature cap, MPC gains): live; PAI high-speed spins = force-GT handoff, MPC gain 20 fixes in replay; slowness = speed-history loop (CF +83 %) [d pending]
 - [cap_audit](cap_audit/README.md): live; worse than every reference only on cruise lag: YS2G +0.59 m behind at 5-10 m/s [d278]
 - [junction_eyes](junction_eyes/README.md) (JE, junction eyes, corridor rulers, trunk LoRA): concluded; frozen eye misses junction corridor, R-A 0.99 m vs 0.5; step 1 stopped by the user before any arm [d283]

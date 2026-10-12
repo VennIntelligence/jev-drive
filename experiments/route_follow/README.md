@@ -2,7 +2,7 @@
 
 status: live
 decisions: 284, 286
-index: route-memory base relied on; held zeros RSG 34, RBSG2 37 vs base 59
+index: route-memory base relied on; RSG-L18 held zeros 34 vs 59, public ties YS2G
 
 **Question.** At junction turns and lane changes, does the plan of the served checkpoints move at the controller's horizon (1-2 s) when the
 route they are given changes; and (route-night, 2026-10-13) does a base retrained from the shipped weights with the route memory as input and
@@ -11,22 +11,20 @@ the route itself as a target follow it?
 **Conclusion.** Diagnosis (decision 284): the route reaches every served checkpoint only as a 3-way command from one waypoint ~40 m ahead; a
 command swap moves the plan 0.56 m at 2 s at junctions (18 % of need), at 3-4 s rather than 1-2 s, and lane changes not at all. Route-night
 (decision 286): the fresh base RB0-F (YR10m10 recipe + route-memory branch) is the first checkpoint that relies on the route memory offline
-(junction dev ADE +0.025 / +0.022 m when masked; d282 +0.0004 / +0.0011) and reads 59 / 59 held-460 zeros (YR10m10 82 / 79); one gentle
-S-only on-policy round on it, RSG-L18, reads 34 / 34 zeros, 0.866 / 0.868, GT 1.14 m and passes L3 (zeros -25 [-37, -14] vs RB0), the lowest
-18-decision held zeros so far (the safety candidate). With rows from the base's own states only, the route hinge makes the car cut inside
-right turns (right-turn-inside offroad zeros 17-21 vs 1-2; RSG 1 / 1) and the registered arm RBS-L18 reads 122 / 99 zeros; round 2 adds
-RBSG's own over-turning states to the pool and RBSG2-L18 (S + route hinge) reads 37 / 37 zeros, 4 / 4 right-turn-inside, corridor 3 / 4,
-lateral GT 0.74 / 0.76, L3 pass (-22 [-35, -10]): the route-following candidate. Paired on held 452 both beat the old family's best YS2G-L18
-(zeros RSG -15.5 [-24.9, -5.3], RBSG2 -12.5 [-23.2, -2.2]; score +0.035 / +0.040) and tie with each other (`a3/guard/held18.md`).
-RBSG2's G-rely fails (the route may be learned into the trunk rather than through the branch; interpretation). Counterfactual rows (RB-F)
-teach route switching at junctions (G-swap 55 % of need, 94 % on the counterfactual side) but not lane changes (5-7 %), and cost G-real.
+(junction dev ADE +0.025 / +0.022 m when masked; d282 +0.0004 / +0.0011) and reads 59 / 59 held-460 zeros (YR10m10 82 / 79). The one
+candidate that stands is RSG-L18 (one gentle S-only on-policy round on RB0-F): held 34 / 34 zeros, L3 pass (-25 [-37, -14] vs RB0),
+beats YS2G-L18 paired on held 452 (zeros -15.5 [-24.9, -5.3]); on the public 1491 / 10 decisions it passes the guardrail (+0.016 over
+YR10m10-F-s0) and ties YS-L18 / YS2G on score and zeros with GT 0.09-0.11 m closer. The route hinge as trained tonight is not adopted:
+with rows from the base's own states it makes the car cut inside right turns (right-turn-inside offroad zeros 17-21 vs 1-2; RBS-L18
+122 / 99 zeros); adding the hinge policy's own over-turning states (RBSG2-L18) fixes this on held (4 / 4, 37 / 37 zeros, corridor 3 / 4)
+but the offroad cost returns on the public set (77.5 zeros, at-fault 69; vs RSG +32.5 [+20.8, +45.5]); an earlier version of this
+README called RBSG2 the route-following candidate, withdrawn. Amendment 5: S-only rows from RSG's rollouts (RS2G) add nothing over RSG,
+the cov20-only hinge (RBS2Gc) is worse. Counterfactual rows (RB-F) teach route switching at junctions (G-swap 55 % of need, 94 % on the
+counterfactual side) but not lane changes (5-7 %), and cost G-real.
 
-Amendment 5 (rows from RSG's own rollouts): S-only RS2G adds nothing over RSG (round gate fails, zeros +2.5 [-1.1, +6.9]) and the
-cov20-only hinge RBS2Gc is worse (+10.5 [+4.5, +15.9]); the hinge helps only with the hinge-trained policy's own over-turning states.
-
-**Next.** Tokyo: RB0-F-s0 PAI re-roll with gains 20, RSG-L18-s0 PAI 281 read
-queued. RSG-L18 passes the public 1491 / 10-decision guard (+0.016 over YR10m10-F-s0; ties YS-L18 /
-YS2G on score and zeros, GT 0.10 m closer; `a3/guard/all10_RSG.md`). Before either candidate is called a base: RBSG2's 1491 guard, PAI 281; for RBSG2 also a closed-loop read with the memory masked (does it still follow the route?).
+**Next.** Tokyo: RB0-F-s0 PAI re-roll with gains 20, RSG-L18-s0 PAI 281 read queued; RSG-L18 is a base only after PAI 281. The mechanism
+lead (the hinge needs the policy's own over-turning states) is for a next round, with a public-set read before any held claim (held 452
+could not separate RBSG2 from RSG; the public set separates them by 32.5 zeros).
 
 **Read more.** [research/decisions/286.md](../../research/decisions/286.md) (Chinese; full table, six line verdicts, branches, card-hours);
 human page [research/route-follow/route-night.html](../../research/route-follow/route-night.html); task book
@@ -69,5 +67,5 @@ and `labels/{held,zero}.parquet` (decision 275).
 - `rf_cf.py` (scripts): ROUTE-FOLLOW counterfactual
 - `pai_driver.py` (experiments/alpasim/lib): The SH30 family as an AlpaSim PAI-track …
 
-[results/](results/) 58 result files · [figs/](figs/) 32 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 6 entry points
+[results/](results/) 84 result files · [figs/](figs/) 32 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 7 entry points
 <!-- files:end -->
