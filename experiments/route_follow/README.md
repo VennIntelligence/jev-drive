@@ -2,7 +2,7 @@
 
 status: live
 decisions: 284, 286
-index: fresh route-memory base relied on; RSG-L18 held zeros 34 vs base 59; route hinge cuts right turns
+index: route-memory base relied on; held zeros RSG 34, RBSG2 37 vs base 59
 
 **Question.** At junction turns and lane changes, does the plan of the served checkpoints move at the controller's horizon (1-2 s) when the
 route they are given changes; and (route-night, 2026-10-13) does a base retrained from the shipped weights with the route memory as input and
@@ -13,13 +13,16 @@ command swap moves the plan 0.56 m at 2 s at junctions (18 % of need), at 3-4 s 
 (decision 286): the fresh base RB0-F (YR10m10 recipe + route-memory branch) is the first checkpoint that relies on the route memory offline
 (junction dev ADE +0.025 / +0.022 m when masked; d282 +0.0004 / +0.0011) and reads 59 / 59 held-460 zeros (YR10m10 82 / 79); one gentle
 S-only on-policy round on it, RSG-L18, reads 34 / 34 zeros, 0.866 / 0.868, GT 1.14 m and passes L3 (zeros -25 [-37, -14] vs RB0), the lowest
-18-decision held zeros so far. The route hinge as trained tonight is not adopted: every arm with it gains right-turn-inside offroad zeros
-(17-21 vs 1-2; RSG 1 / 1, hinge on cov20 rows only 5 / 10) and the registered arm RBS-L18 reads 122 / 99 zeros; counterfactual rows (RB-F)
+18-decision held zeros so far (the safety candidate). With rows from the base's own states only, the route hinge makes the car cut inside
+right turns (right-turn-inside offroad zeros 17-21 vs 1-2; RSG 1 / 1) and the registered arm RBS-L18 reads 122 / 99 zeros; round 2 adds
+RBSG's own over-turning states to the pool and RBSG2-L18 (S + route hinge) reads 37 / 37 zeros, 4 / 4 right-turn-inside, corridor 3 / 4,
+lateral GT 0.74 / 0.76, L3 pass (-22 [-35, -10]): the route-following candidate, though its G-rely fails (the route may be learned into the
+trunk rather than through the branch; interpretation). Counterfactual rows (RB-F)
 teach route switching at junctions (G-swap 55 % of need, 94 % on the counterfactual side) but not lane changes (5-7 %), and cost G-real.
 
-**Next.** Round 2 (prereg Amendments 4-5: RBSG2 with RBSG's own over-turning states; RS2G / RBS2Gc from RSG rollouts) is running, results
-~07:00 JST; Tokyo: RB0-F-s0 PAI re-roll with gains 20, RSG-L18-s0 PAI 281 read queued. Before RSG-L18 is called a base: paired CI against
-YS2G-L18, the public 1491 / 10-decision guard, PAI 281.
+**Next.** Amendment 5 (RS2G / RBS2Gc from RSG rollouts) is running; Tokyo: RB0-F-s0 PAI re-roll with gains 20, RSG-L18-s0 PAI 281 read
+queued. Before either candidate (RSG-L18, RBSG2-L18) is called a base: paired CI against YS2G-L18 and against each other, the public 1491 /
+10-decision guard, PAI 281; for RBSG2 also a closed-loop read with the memory masked (does it still follow the route?).
 
 **Read more.** [research/decisions/286.md](../../research/decisions/286.md) (Chinese; full table, six line verdicts, branches, card-hours);
 human page [research/route-follow/route-night.html](../../research/route-follow/route-night.html); task book
@@ -31,7 +34,7 @@ human page [research/route-follow/route-night.html](../../research/route-follow/
   "right-turn inside" column (17-21 vs 1-2) and the H1-H5 verdicts (labels on road, memory not drifted, over-rotation in small right turns).
 - [results/route-night/](results/route-night/): held reads (`held_raw.txt`, `a3/held_raw_a3.txt`), `ol_report` tables (`report_RBS.md`,
   `report_RBSG.md`, `a3/report_RSG.md`, `a3/report_RBSGc.md`), route following (`follow_held.md`, `follow_train.md`, `a3/follow_a3.md`),
-  G-swap (`gswap/`), G-rely (`rely/`, `a3/rely/`), pool gates (`pool_L18RB0_gates.md`), inside-of-turn counts for all arms (`a3/offroad_a3.md`).
+  G-swap (`gswap/`), G-rely (`rely/`, `a3/rely/`), pool gates (`pool_L18RB0_gates.md`), inside-of-turn counts for all arms (`a3/offroad_a3.md`); round 2 in `r2/` (`report_RBSG2.md`, `held_raw_r2.txt`, `offroad_counts.json`).
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane
@@ -62,5 +65,5 @@ and `labels/{held,zero}.parquet` (decision 275).
 - `rf_cf.py` (scripts): ROUTE-FOLLOW counterfactual
 - `pai_driver.py` (experiments/alpasim/lib): The SH30 family as an AlpaSim PAI-track …
 
-[results/](results/) 44 result files · [figs/](figs/) 32 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 6 entry points
+[results/](results/) 58 result files · [figs/](figs/) 32 figures · [plans/](plans/) 1 live plans · [scripts/](scripts/) 6 entry points
 <!-- files:end -->
