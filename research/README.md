@@ -10,6 +10,7 @@
 - [four-directions/](four-directions/index.html)：四个方向的综合诊断：急弯内侧切角与入弯速度、宽弯擦边余量、前车近距测距偏差与夜间归属。
 - [b2d-closed-loop/](b2d-closed-loop/index.html)：Bench2Drive 闭环里表征和控制哪个是瓶颈，双通道分裂与动力学实测。
 - [benchmarks/](benchmarks/index.html)：四大基准地形、分数成分解构与榜单完整性（哪些分数能信）。
+- [onpol-long/zeros-ys-l18.html](onpol-long/zeros-ys-l18.html)：YS-L18-s1 在 held 读数上 43 个零分场景（走廊 19、出路 15、碰撞 9）的失败决策分布与 15 个片段。
 - [world-model/](world-model/index.html)：世界模型与反事实配对：因果效应闸门、WL-2 判格、no-go 汇总，以及分解世界模型（ego 精确、外生预训练）的设计与查新。
 - [literature/](literature/index.html)：文献现状：薄 head、反事实与视频生成。
 - [paper-outline/](paper-outline/index.html)：论文骨架 trick or trade：工业模型跨榜泛化与逐榜技巧归因。2026-10-08 起世界模型训练场一节废弃，候选主线见页首（决策 177）。
