@@ -102,7 +102,7 @@ def cmd_register(a):
     for name, mem, note in (("junction-eyes-keep", s["keep"], "keep-set source segments (66)"),
                             ("junction-eyes-heldout", s["held"], "E5 held-out segments: never read by any junction_eyes training job")):
         r = splits.define("comma1m", name, mem, "segment", org, used_by=["junction_eyes"], status="frozen", notes=note)
-        print(r.id, r.n)
+        print(r.id)
     splits.check_disjoint(splits.load("comma1m/junction-eyes-keep"), splits.load("comma1m/junction-eyes-heldout"))
 
 
@@ -151,20 +151,22 @@ def rows_of(s):
 
 
 def cmd_pairs(a):
+    """rows.npz in the layout of experiments/junction_eyes/lib/je_data.KeepStore (frames.npy is its frames file: every 20 Hz frame of the
+    windows, so any row's 5 Hz context f - 4k is stored): fidx (N, 10) frames [t0 - 1.8 s .. t0] 0.2 s apart, teacher (N, n_out) = the
+    factory raw outputs at t0, seg, held (all False: the held-out segments are not in this store), action_t. Extras: win, vframe, turn,
+    temporal, vision (the teacher's select_4 / mean taps)."""
     from jevdrive.run import Run
     s = json.loads((RUN / "selection.json").read_text())
     win, g, vf = rows_of(s)
-    with Run("junction_eyes", "keep-pairs", config=vars(a)) as run:
-        F = np.load(RUN / "frames.npy", mmap_mode="r")
-        out = np.lib.format.open_memmap(RUN / "t0.npy", "w+", np.uint8, (len(g), 2) + FRAME)
-        for i in range(0, len(g), 2048):
-            out[i:i + 2048, 0] = F[g[i:i + 2048] - BACK]
-            out[i:i + 2048, 1] = F[g[i:i + 2048]]
-        out.flush()
-        kind = np.array([s["windows"][i]["kind"] == "turn" for i in win])
+    with Run("junction_eyes", "keep-rows", config=vars(a)) as run:
+        T = {k: np.load(RUN / f"teacher_{k}.npy", mmap_mode="r") for k in ("raw", "temporal", "vision")}
+        fidx = g[:, None] - BACK * np.arange(9, -1, -1)[None]
+        assert (fidx >= 0).all()
+        turn = np.array([s["windows"][i]["kind"] == "turn" for i in win])
         seg = np.array([s["windows"][i]["seg"] for i in win])
-        np.savez(RUN / "rows.npz", win=win, g=g, vframe=vf, turn=kind, seg=seg)
-        run.info(f"{len(g)} rows ({int(kind.sum())} turn), t0.npy {out.nbytes / 2 ** 30:.1f} GB")
+        np.savez(RUN / "rows.npz", fidx=fidx.astype(np.int64), teacher=np.asarray(T["raw"][g]), seg=seg, held=np.zeros(len(g), bool),
+                 action_t=np.array(ACTION_T), win=win, vframe=vf, turn=turn, temporal=np.asarray(T["temporal"][g]), vision=np.asarray(T["vision"][g]))
+        run.info(f"{len(g)} rows ({int(turn.sum())} turn)")
 
 
 # ---------------------------------------------------------------- teacher
