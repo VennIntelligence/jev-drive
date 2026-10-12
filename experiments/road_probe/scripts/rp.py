@@ -258,13 +258,13 @@ def group_rows(g):
     if g == "train":
         out, off = [], 0
         for s in TRAIN_SETS:
-            tb, M = np.load(CR / f"on1_{s}/tab.npz"), np.load(ROWS / s / "meta.npz", allow_pickle=True)
+            tb, M = dict(np.load(CR / f"on1_{s}/tab.npz")), dict(np.load(ROWS / s / "meta.npz", allow_pickle=True))
             assert (M["names"] == tb["names"]).all()
             out += [dict(row=off + i, scene=str(M["scene"][i]), k=int(M["k"][i]), t0=int(M["t_us"][i]), anchor=M["anchor"][i].astype(float),
                          cam=tb["cam"][i].astype(float), src=s, tag=str(M["tag"][i])) for i in range(len(tb["names"]))]
             off += len(tb["names"])
         return out
-    tb = np.load(W / f"tok/{g}/tab.npz")
+    tb = dict(np.load(W / f"tok/{g}/tab.npz"))
     return [dict(row=i, scene=str(tb["scene"][i]), k=int(tb["k"][i]), t0=int(tb["t0"][i]), anchor=tb["anchor"][i].astype(float), cam=tb["cam"][i].astype(float),
                  src=g, tag=str(tb["label"][i]) if "label" in tb.files else HELD_TAG) for i in range(len(tb["k"]))]
 
@@ -593,6 +593,289 @@ def ridge(run, Vt, E, V, Ys, i_fit, i_val, dev, lams=(1e1, 1e2, 1e3, 1e4, 1e5)):
     return dict(held=pred("held", np.arange(len(E["held"]))), zero=pred("zero", np.arange(len(E["zero"]))), val=pred("train", i_val))
 
 
+# ---------------------------------------------------------------- read (CPU): gates, registered tables, lines, verdict
+CURVE = (0.125, 0.25, 0.5, 1.0)
+DB = (0, 10, 20, 40, 60)
+
+
+def shipped(g, D, scale=False):
+    """P0 heads on a group's tokens -> (n, 13) predictions in OUTS order (h20 from the ego-line centre slope), and (n, 4) line probabilities."""
+    raw, tb = dict(np.load(W / f"tok/{g}/p0.npz")), dict(np.load(W / f"tok/{g}/tab.npz"))
+    n = len(tb["k"])
+    out, prob = np.full((n, NREG), np.nan, np.float32), np.zeros((n, 4), np.float32)
+    for i in range(n):
+        cam = tb["cam"][i].astype(float)
+        h = EV.heads({k: raw[k][i] for k in raw}, cam)
+        ll, re = h["ll"], h["re"]
+        if scale:
+            ll, re = cam[1] + (ll - cam[1]) / SCALE, cam[1] + (re - cam[1]) / SCALE
+        prob[i] = h["pr"]
+        for j, d in enumerate(DS):
+            x = cam[0] + d
+            out[i, 4 * j:4 * j + 4] = [EV.at(ll[1], x, cam[0]), EV.at(ll[2], x, cam[0]), EV.at(re[0], x, cam[0]), EV.at(re[1], x, cam[0])]
+        c = lambda x: 0.5 * (EV.at(ll[1], x, cam[0]) + EV.at(ll[2], x, cam[0]))  # noqa: E731
+        out[i, 12] = np.arctan2(c(cam[0] + 22.0) - c(cam[0] + 18.0), 4.0)
+    return out, prob
+
+
+def boot_q(e, cl, q=0.5, B=2000, seed=0):
+    """Quantile q of e with a percentile CI from resampling clusters cl (scenes)."""
+    m = np.isfinite(e)
+    e, cl = e[m], cl[m]
+    if not len(e):
+        return dict(n=0, v=np.nan, lo=np.nan, hi=np.nan, clusters=0)
+    u, inv = np.unique(cl, return_inverse=True)
+    groups = [e[inv == k] for k in range(len(u))]
+    rng = np.random.default_rng(seed)
+    bs = [np.quantile(np.concatenate([groups[k] for k in rng.integers(0, len(u), len(u))]), q) for _ in range(B)]
+    return dict(n=int(len(e)), clusters=int(len(u)), v=float(np.quantile(e, q)), lo=float(np.quantile(bs, 0.025)), hi=float(np.quantile(bs, 0.975)))
+
+
+def auc(y, s):
+    from scipy.stats import rankdata
+    m = np.isfinite(y) & np.isfinite(s)
+    y, s = y[m], s[m]
+    n1, n0 = int((y == 1).sum()), int((y == 0).sum())
+    if not n1 or not n0:
+        return dict(auc=np.nan, pos=n1, neg=n0)
+    r = rankdata(s)
+    return dict(auc=float((r[y == 1].sum() - n1 * (n1 + 1) / 2) / (n1 * n0)), pos=n1, neg=n0)
+
+
+def r3_windows(err_l, err_r, Dz, ev):
+    """Per registered window: per-side median of the 20 m error over its decisions -> window error (mean of the sides), both-within flag."""
+    out = []
+    for e in ev:
+        k_ev = int(e["k_ev"])
+        m = ((Dz.tag == e["group"]) & (Dz.scene == e["scene"]) & (Dz.k >= max(0, k_ev - 4)) & (Dz.k <= k_ev)).values
+        ml = float(np.nanmedian(err_l[m])) if np.isfinite(err_l[m]).any() else np.nan
+        mr = float(np.nanmedian(err_r[m])) if np.isfinite(err_r[m]).any() else np.nan
+        sides = [x for x in (ml, mr) if np.isfinite(x)]
+        out.append(dict(group=e["group"], scene=e["scene"], type=e["type"], k_ev=k_ev, n_dec=int(m.sum()), med_L=ml, med_R=mr,
+                        werr=float(np.mean(sides)) if sides else np.nan, both=bool(np.isfinite(ml) and np.isfinite(mr) and ml <= 0.5 and mr <= 0.5),
+                        both_eval=bool(np.isfinite(ml) and np.isfinite(mr))))
+    return out
+
+
+def r3_summary(W_, B=2000):
+    import pandas as pd
+    X = pd.DataFrame(W_)
+    w = X.werr.values
+    ok = np.isfinite(w)
+    rng = np.random.default_rng(0)
+    idx = np.flatnonzero(ok)
+    bm = [np.median(w[rng.choice(idx, len(idx))]) for _ in range(B)]
+    be = X.both_eval.values
+    sh = X.both.values[be]
+    bs = [rng.choice(sh, len(sh)).mean() for _ in range(B)] if len(sh) else [np.nan]
+    return dict(windows=len(X), eval=int(ok.sum()), both_eval=int(be.sum()), median=float(np.median(w[ok])), med_lo=float(np.quantile(bm, 0.025)),
+                med_hi=float(np.quantile(bm, 0.975)), share=float(sh.mean()) if len(sh) else np.nan, share_lo=float(np.quantile(bs, 0.025)),
+                share_hi=float(np.quantile(bs, 0.975)))
+
+
+def nearest(B, y):
+    """|y - nearest crossing| per row; B (n, 24) NaN-padded."""
+    d = np.abs(B - y[:, None])
+    d[~np.isfinite(d)] = np.inf
+    m = d.min(1)
+    return np.where(np.isfinite(m) & np.isfinite(y), m, np.nan)
+
+
+def read(a):
+    import pandas as pd
+    from jevdrive.run import Run
+    with Run("road_probe", "read", config=vars(a)) as run:
+        out = Path(run.dir)
+        Dh, Dz = pd.read_parquet(W / "labels/held.parquet"), pd.read_parquet(W / "labels/zero.parquet")
+        ev = zero_events()
+        G = {}
+        # gates
+        sc = []
+        for rd in sorted(W.glob("roll/c*/run")):
+            sc += [float(r["score"]) for r in json.loads((rd / "aggregate/results-summary.json").read_text())["rollouts"] if r.get("score") is not None]
+        held = set(np.loadtxt(REPO / "experiments/onpol_nuplan/results/split/held.txt", dtype=str).tolist())
+        st = [float(r["score"]) for r in json.loads((DATA / "runs/onpol_long/read" / HELD_TAG / "run/aggregate/results-summary.json").read_text())["rollouts"]
+              if r.get("score") is not None and r["clipgt_id"] in held]
+        G["G_roll"] = dict(rollouts=len(sc), mean=float(np.mean(sc)), stored_rollouts=len(st), stored_mean=float(np.mean(st)))
+        G["G_roll"]["pass"] = bool(len(sc) >= 450 and abs(G["G_roll"]["mean"] - G["G_roll"]["stored_mean"]) < 0.03)
+        G["G_tok"] = json.loads((W / "tok/held/G_tok.json").read_text())
+        G["G_rep"] = json.loads((W / "tok/zero/G_rep.json").read_text())
+        for g in ("train", "held", "zero"):
+            G[f"G_frame_{g}"] = json.loads((W / f"labels/{g}.gates.json").read_text())["G_frame"]
+        st_ = (Dh.turn40 < 5).values
+        tu_ = (Dh.turn40 >= 20).values
+        G["G_lab"] = dict(straight=int(st_.sum()), share=float((Dh.L20.notna() & Dh.R20.notna())[st_].mean()))
+        G["G_lab"]["pass"] = bool(G["G_lab"]["share"] >= 0.70)
+        G["G_sign"] = dict(L20=float(Dh.L20[st_].median()), R20=float(Dh.R20[st_].median()))
+        G["G_sign"]["pass"] = bool(G["G_sign"]["L20"] > 0 > G["G_sign"]["R20"])
+        G["pass"] = all(v["pass"] for k, v in G.items() if k.startswith("G_"))
+        (out / "gates.json").write_text(json.dumps(G, indent=1, default=float))
+        run.info(json.dumps(G, default=float))
+        if not G["pass"] and not a.force:
+            run.info("a gate failed: no registered read")
+            return
+        # predictions
+        P, meta = {}, {}
+        for f in sorted((W / "pred").glob("*.npz")):
+            if "smoke" in f.stem:
+                continue
+            z = np.load(f)
+            P[f.stem] = dict(held=z["held"], zero=z["zero"])
+            meta[f.stem] = dict(logs_fit=int(z["logs_fit"]), scenes_fit=int(z["scenes_fit"]), n_fit=int(z["n_fit"]))
+        P["P"] = {g: 0.5 * (P["P-p1000-s0"][g] + P["P-p1000-s1"][g]) for g in ("held", "zero")}
+        sh = {g: shipped(g, D) for g, D in (("held", Dh), ("zero", Dz))}
+        shk = {g: shipped(g, D, True)[0] for g, D in (("held", Dh), ("zero", Dz))}
+        P["P0"] = {g: sh[g][0] for g in sh}
+        P["P0K"] = shk
+        Ldt = {g: np.stack([D[c].values for c in OUTS[:NREG]], 1) for g, D in (("held", Dh), ("zero", Dz))}
+        err = {k: {g: np.abs(v[g][:, :NREG] - Ldt[g]) for g in ("held", "zero")} for k, v in P.items()}
+        for k in err:
+            for g in ("held", "zero"):
+                err[k][g][:, 12] = np.degrees(np.abs(EV.wrap(P[k][g][:, 12] - Ldt[g][:, 12])))
+        names = ["P", "P-p1000-s0", "P-p1000-s1", "blind-p1000-s0", "lin-p1000-s0", "P0", "P0K"]
+        cl_h = Dh.scene.values
+        # R1 / R2
+        rows = []
+        for sub, m in (("straight", st_), ("turn", tu_), ("gentle", ~st_ & ~tu_), ("all", np.ones(len(Dh), bool))):
+            for k in names:
+                e = err[k]["held"][m]
+                for qn, cols in (("L20", [4]), ("R20", [5]), ("LR20", [4, 5]), ("LR10", [0, 1]), ("LR40", [8, 9]), ("E20", [6, 7]), ("E10", [2, 3]), ("E40", [10, 11]), ("h20_deg", [12])):
+                    ee = e[:, cols].ravel()
+                    cc = np.repeat(cl_h[m], len(cols)).reshape(-1, len(cols)).ravel() if len(cols) > 1 else cl_h[m]
+                    if len(cols) > 1:
+                        cc = np.repeat(cl_h[m][:, None], len(cols), 1).ravel()
+                    md, p9 = boot_q(ee, cc, 0.5, B=a.boot), boot_q(ee, cc, 0.9, B=a.boot)
+                    rows.append(dict(subset=sub, pred=k, q=qn, n=md["n"], scenes=md["clusters"], median=md["v"], med_lo=md["lo"], med_hi=md["hi"],
+                                     p90=p9["v"], p90_lo=p9["lo"], p90_hi=p9["hi"]))
+        T = pd.DataFrame(rows)
+        T.to_csv(out / "r12.csv", index=False)
+        # nearest-boundary error (decision 269's measure) at 20 m, L and R predictions pooled
+        B20 = {g: np.stack(D.B20.values) for g, D in (("held", Dh), ("zero", Dz))}
+        nb = []
+        for sub, m in (("straight", st_), ("turn", tu_)):
+            for k in names:
+                e = np.r_[nearest(B20["held"][m], P[k]["held"][m, 4]), nearest(B20["held"][m], P[k]["held"][m, 5])]
+                r = boot_q(e, np.r_[cl_h[m], cl_h[m]], B=a.boot)
+                nb.append(dict(subset=sub, pred=k, n=r["n"], median=r["v"], lo=r["lo"], hi=r["hi"], p90=float(np.nanquantile(e, 0.9))))
+        pd.DataFrame(nb).to_csv(out / "nearest.csv", index=False)
+        # P0 presence (both ego lines > 0.5)
+        pres = {s: float((sh["held"][1][m][:, 1:3] > 0.5).all(1).mean()) for s, m in (("straight", st_), ("turn", tu_))}
+        # R3
+        r3, r3w = {}, {}
+        for k in names + [n for n in P if n.startswith("P-p") and n.endswith("-s0")]:
+            r3w[k] = r3_windows(err[k]["zero"][:, 4], err[k]["zero"][:, 5], Dz, ev)
+            r3[k] = r3_summary(r3w[k], B=a.boot)
+        pd.DataFrame(r3w["P"]).assign(P0=[w["werr"] for w in r3w["P0"]], P0K=[w["werr"] for w in r3w["P0K"]]).to_csv(out / "r3_windows.csv", index=False)
+        R = r3["P"]
+        verdict = ("eyes repairable" if R["median"] < 0.3 and R["share"] >= 0.6 else "frozen eyes do not see city roads" if R["median"] > 1.0 else "undetermined")
+        # learning curve
+        lc = []
+        for f in CURVE:
+            k = f"P-p{int(round(f * 1000)):04d}-s0"
+            if k not in P:
+                continue
+            e = err[k]["held"]
+            lc.append(dict(frac=f, logs=meta[k]["logs_fit"], scenes=meta[k]["scenes_fit"], rows=meta[k]["n_fit"],
+                           straight=float(np.nanmedian(e[st_][:, 4:6])), turn=float(np.nanmedian(e[tu_][:, 4:6])), r3=r3[k]["median"], r3_share=r3[k]["share"]))
+        LC = pd.DataFrame(lc)
+        slope = {}
+        if len(LC) >= 3:
+            x = np.log2(LC.logs.values.astype(float))
+            rng = np.random.default_rng(0)
+            for col in ("turn", "r3"):
+                b0 = float(np.polyfit(x, LC[col].values, 1)[0])
+                bs = []
+                if col == "r3":
+                    ws = {k: pd.DataFrame(r3w[f"P-p{int(round(f * 1000)):04d}-s0"]).werr.values for k, f in zip(range(len(LC)), LC.frac)}
+                    nW = len(ws[0])
+                    for _ in range(a.boot):
+                        i = rng.integers(0, nW, nW)
+                        bs.append(np.polyfit(x, [np.nanmedian(ws[j][i]) for j in range(len(LC))], 1)[0])
+                else:
+                    us = np.unique(cl_h[tu_])
+                    E_ = {j: err[f"P-p{int(round(f * 1000)):04d}-s0"]["held"][tu_][:, 4:6] for j, f in enumerate(LC.frac)}
+                    gi = {u: np.flatnonzero(cl_h[tu_] == u) for u in us}
+                    for _ in range(min(a.boot, 500)):
+                        idx = np.concatenate([gi[u] for u in rng.choice(us, len(us))])
+                        bs.append(np.polyfit(x, [np.nanmedian(E_[j][idx]) for j in range(len(LC))], 1)[0])
+                slope[col] = dict(per_doubling=b0, lo=float(np.quantile(bs, 0.025)), hi=float(np.quantile(bs, 0.975)))
+        LC.to_csv(out / "curve.csv", index=False)
+        # turn error by distance to the junction (held turn decisions)
+        jb = []
+        jd = Dh.jdist.values
+        bins = [("in junction", jd == 0)] + [(f"{lo}-{hi} m", (jd > lo) & (jd <= hi)) for lo, hi in zip(DB[:-1], DB[1:])] + [("none within 60 m", np.isnan(jd))]
+        for lab, mb in bins:
+            for sub, m in (("turn", tu_), ("straight", st_)):
+                mm = mb & m
+                for k in ("P", "P0", "P0K", "blind-p1000-s0", "lin-p1000-s0"):
+                    e = err[k]["held"][mm][:, 4:6].ravel()
+                    jb.append(dict(bin=lab, subset=sub, pred=k, n=int(np.isfinite(e).sum()), decisions=int(mm.sum()), median=float(np.nanmedian(e)) if np.isfinite(e).any() else np.nan))
+        pd.DataFrame(jb).to_csv(out / "junction.csv", index=False)
+        # exploratory: oncoming-lane classifier
+        onc = {}
+        yh = np.where(Dh.lane_cls.values == 0, np.nan, (Dh.lane_cls.values == 2).astype(float))
+        yz = np.where(Dz.lane_cls.values == 0, np.nan, (Dz.lane_cls.values == 2).astype(float))
+        for k in ("P", "P-p1000-s0", "lin-p1000-s0", "blind-p1000-s0"):
+            onc[k] = dict(held=auc(yh, P[k]["held"][:, 13]), zero=auc(yz, P[k]["zero"][:, 13]))
+        # per-decision errors for the figures
+        keep = ["row", "scene", "k", "tag", "turn40", "jdist", "lane_cls"] + OUTS[:NREG]
+        for g, D in (("held", Dh), ("zero", Dz)):
+            X = D[keep].copy()
+            for k in ("P", "P0", "P0K", "blind-p1000-s0", "lin-p1000-s0"):
+                for j, c in enumerate(OUTS):
+                    if j < NREG:
+                        X[f"{k}:{c}"] = P[k][g][:, j]
+            X.to_parquet(out / f"dec_{g}.parquet", index=False)
+        S = dict(gates=G, verdict=verdict, r3=r3, slope=slope, presence_P0=pres, onc=onc, meta=meta,
+                 counts=dict(held=len(Dh), held_scenes=int(Dh.scene.nunique()), straight=int(st_.sum()), turn=int(tu_.sum()), zero=len(Dz), windows=len(ev)))
+        (out / "rp.json").write_text(json.dumps(S, indent=1, default=float))
+        run.summary.update(verdict=verdict, r3=R)
+        run.info(f"verdict: {verdict}; R3 {json.dumps(R)}")
+
+
+# ---------------------------------------------------------------- bev payloads (AlpaSim venv)
+def bev_unit(job):
+    g, scene, rows = job
+    from ao_e1 import loader
+    ds = loader(str(EV.CFG)).get_data_source(scene)
+    tr = ds.rig.trajectory
+    Pg, Yg = np.asarray(tr.positions, float)[:, :2], np.unwrap(np.asarray(tr.yaws, float))
+    LP = np.vstack([Pg, Pg[-1] + np.outer(np.linspace(2.0, 60.0, 30), [np.cos(Yg[-1]), np.sin(Yg[-1])])])
+    A = np.array([r["anchor"] for r in rows])
+    allp = np.vstack([Pg, A[:, :2]])
+    G = EV.Geo(ds, (allp.min(0) - 90, allp.max(0) + 90))
+    out = {}
+    box = lambda p: ((np.abs(p[:, 1]) < 25) & (p[:, 0] > -15) & (p[:, 0] < 60)).any()  # noqa: E731
+    for r in rows:
+        a = r["anchor"]
+        Lg = EV.in_ego(a, LP)
+        out[(g, scene, r["k"])] = dict(edges=[p.astype(np.float32) for p in (EV.in_ego(a, q) for q in G.edges) if box(p)],
+                                       road=[p.astype(np.float32) for p in (EV.in_ego(a, q) for q in G.road) if box(p)],
+                                       log=Lg[(Lg[:, 0] > -15) & (Lg[:, 0] < 60) & (np.abs(Lg[:, 1]) < 25)].astype(np.float32))
+    return out
+
+
+def bev(a):
+    from jevdrive import par
+    from jevdrive.run import Run
+    picks = json.loads(Path(a.picks).read_text())                       # [[group, scene, k], ...]
+    with Run("road_probe", "bev", config=vars(a)) as run:
+        jobs = []
+        for g in sorted({p[0] for p in picks}):
+            rows = {(r["scene"], r["k"]): r for r in group_rows(g)}
+            by = {}
+            for p in picks:
+                if p[0] == g:
+                    by.setdefault(p[1], []).append(rows[(p[1], int(p[2]))])
+            jobs += [(g, s, rr) for s, rr in by.items()]
+        res = par.pmap(bev_unit, jobs, workers=min(len(jobs), 16), run=run, desc="bev")
+        res.raise_if_failed()
+        pay = {}
+        for v in res.values:
+            pay.update(v)
+        pickle.dump(pay, open(Path(a.read) / "bev.pkl", "wb"), protocol=4)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -607,5 +890,9 @@ if __name__ == "__main__":
     p.add_argument("--steps", type=int, default=8000), p.add_argument("--batch", type=int, default=256), p.add_argument("--eval", type=int, default=500)
     p.add_argument("--lr", type=float, default=3e-4), p.add_argument("--wd", type=float, default=0.05), p.add_argument("--warm", type=int, default=300)
     p.add_argument("--smoke", action="store_true")
+    p = sub.add_parser("read")
+    p.add_argument("--boot", type=int, default=2000), p.add_argument("--force", action="store_true")
+    p = sub.add_parser("bev")
+    p.add_argument("--picks", required=True), p.add_argument("--read", required=True)
     a = ap.parse_args()
-    dict(tok=tok, replay=replay, labels=labels, train=train)[a.cmd](a)
+    dict(tok=tok, replay=replay, labels=labels, train=train, read=read, bev=bev)[a.cmd](a)
