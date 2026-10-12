@@ -1,0 +1,48 @@
+{
+ "rollouts": 550,
+ "errors": 0,
+ "err_first": [],
+ "G_frame": {
+  "decisions": 1764,
+  "anchor_share": 1.0,
+  "anchor_max": 0.0,
+  "sim_share": 1.0,
+  "sim_median": 3.159611384004278e-07,
+  "sim_max": 3.2139900983111914e-06,
+  "pass": true
+ },
+ "G_carry": {
+  "points": 16047,
+  "median": 2.1794035232612606e-06,
+  "p95": 9.343749734438762e-06,
+  "mirror_median": 3.918341067402037,
+  "chord_median": 0.0005915306710074844,
+  "chord_p95": 0.09563031860711428,
+  "pass": true
+ },
+ "G_sign_mirror": {
+  "ratio": 1797896.087429752,
+  "pass": true
+ },
+ "G_route": {
+  "zero_points": 16998,
+  "zero_share": 0.9965290034121661,
+  "held_decisions": 8129,
+  "held_share": 0.9990158691105917,
+  "held_median": 3.814697265625e-06,
+  "pass": true
+ },
+ "G_sign": {
+  "L20": 1.4253377123435924,
+  "R20": -1.9826412023889053,
+  "pass": true
+ },
+ "G_d0": {
+  "r3": 1.2551398536573621,
+  "r3_eval": 45,
+  "j010": 1.1492006381375908,
+  "j1020": 1.6833296510928695,
+  "pass": true
+ },
+ "pass": true
+}
