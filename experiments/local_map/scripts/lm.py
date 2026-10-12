@@ -148,7 +148,7 @@ def route_regen(ds, rows):
         wp = wp[np.isfinite(wp).all(1)]
         rig[r["kt"]] = wp
         out[r["kt"]] = EV.to_local(r["anchor"], wp) if len(wp) else np.zeros((0, 2))
-    return out, rig
+    return out, rig, np.asarray(g.route_polyline_in_local.points, float)[:, :2]
 
 
 def msgs_of(label, scene):
@@ -171,8 +171,8 @@ def unit(job):
     g, label, scene, rows, win, r0 = job
     from ao_e1 import loader
     ds = loader(str(EV.CFG)).get_data_source(scene)
-    gates = dict(frame_anchor=[], frame_sim=[], carry=[], carry_mirror=[], route_wp=[], route0=[])
-    regen, regen_rig = route_regen(ds, rows)
+    gates = dict(frame_anchor=[], frame_sim=[], carry=[], carry_mirror=[], carry_chord=[], route_wp=[], route0=[])
+    regen, regen_rig, dense = route_regen(ds, rows)
     if g == "zero":
         import c1_extract as X
         ego, msg_routes = msgs_of(label, scene)
@@ -196,21 +196,29 @@ def unit(job):
                 gates["frame_sim"].append(float(np.hypot(*(q - p[:2]))))
             else:
                 gates["frame_sim"].append(np.inf)
-        # G-carry: the route of k-1 carried into k against the route of k (overlapping arc only); mirrored = headings negated
+        # G-carry (amended before the read, prereg section 7): the route received at k-1 carried into k against the map route polyline
+        # (AlpaSim's dense lane-centre route) in the frame of k, interior points only; mirrored = headings negated. The registered first
+        # form (against the 4.2 m chords of the route received at k) is kept as carry_chord.
         by = {r["kt"]: r for r in rows}
         for r in rows:
             k = r["kt"]
-            if k - 1 in by and k in routes and k - 1 in routes and len(routes[k]) >= 2:
-                Pk = EV.in_ego(r["anchor"], routes[k])
+            if k - 1 in by and k - 1 in routes and len(routes[k - 1]):
+                Dn = EV.in_ego(r["anchor"], dense)
                 for mir, key in ((False, "carry"), (True, "carry_mirror")):
                     a1, a0 = np.array(by[k - 1]["anchor"], float), np.array(r["anchor"], float)
                     if mir:
                         a1[2], a0[2] = -a1[2], -a0[2]
                     C = carry(a1, a0, EV.in_ego(by[k - 1]["anchor"], routes[k - 1]))
                     for q in C:
-                        dd, inner = seg_dist(Pk, q)
+                        dd, inner = seg_dist(Dn, q)
                         if inner:
                             gates[key].append(dd)
+                if k in routes and len(routes[k]) >= 2:
+                    Pk = EV.in_ego(r["anchor"], routes[k])
+                    for q in EV.in_ego(r["anchor"], routes[k - 1]):
+                        dd, inner = seg_dist(Pk, q)
+                        if inner:
+                            gates["carry_chord"].append(dd)
     else:
         routes = regen
         for r in rows:
@@ -306,7 +314,9 @@ def read(a):
                             sim_median=float(np.median(fs)), sim_max=float(fs.max()))
         G["G_frame"]["pass"] = bool(G["G_frame"]["anchor_share"] >= 0.99 and G["G_frame"]["sim_share"] >= 0.99)
         c, cm = gl["carry"], gl["carry_mirror"]
-        G["G_carry"] = dict(points=len(c), median=float(np.median(c)), p95=float(np.quantile(c, 0.95)), mirror_median=float(np.median(cm)))
+        cc = gl["carry_chord"]
+        G["G_carry"] = dict(points=len(c), median=float(np.median(c)), p95=float(np.quantile(c, 0.95)), mirror_median=float(np.median(cm)),
+                            chord_median=float(np.median(cc)), chord_p95=float(np.quantile(cc, 0.95)))
         G["G_carry"]["pass"] = bool(G["G_carry"]["median"] < 0.05 and G["G_carry"]["p95"] < 0.20)
         G["G_sign_mirror"] = dict(ratio=float(np.median(cm) / max(np.median(c), 1e-9)))
         G["G_sign_mirror"]["pass"] = bool(G["G_sign_mirror"]["ratio"] > 10)
