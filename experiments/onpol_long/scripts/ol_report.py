@@ -28,7 +28,10 @@ def main(a):
     K = pd.read_parquet(out / "per_scene_k.parquet")
     S["tag"] = S.label.str.split("@").str[0]
     f, base = a.family, BASE[a.family]
-    arm, ctl, bas = [f"{f}{a.arm}-L18-s{s}" for s in (0, 1)], [f"{f}NONE-L18-s{s}" for s in (0, 1)], [f"{base}-s{s}" for s in (0, 1)]
+    arm, ctl, bas = [f"{f}{a.arm}-L18-s{s}" for s in (0, 1)], [f"{f}{a.ctl}-L18-s{s}" for s in (0, 1)], [f"{base}-s{s}" for s in (0, 1)]
+    if a.base_tags:                                                              # Amendment 5: the previous round's checkpoint as the reference
+        bas = a.base_tags.split(",")
+        base = bas[0].rsplit("-s", 1)[0]
     have = set(S.tag)
     assert set(arm + ctl + bas[:1]) <= have, f"missing reads: {sorted(set(arm + ctl + bas[:1]) - have)}"
     bas = [t for t in bas if t in have]
@@ -74,12 +77,15 @@ def main(a):
     R = dict(family=f, base=base, scenes=len(scenes), dropped_no_rollout=fold, logs=len(L), arm=fam(arm), control=fam(ctl), base_s0=fam(bas[:1]), base_seeds=fam(bas))
     cols = ("score", "zero", "z_atf", "z_col", "z_off", "z_cor", "z_oth", "gt")
     R["pairs"] = {f"{n1} - {n2}": {c: diff(A, Bt, c, c.startswith("z")) for c in cols} | {"fixed_broken": fb(A, Bt)}
-                  for n1, A, n2, Bt in (("arm", arm, "control", ctl), ("arm", arm, "base s0", bas[:1]), ("control", ctl, "base s0", bas[:1]))}
+                  for n1, A, n2, Bt in (("arm", arm, "control", ctl), ("arm", arm, f"reference {bas[0]}", bas[:1]), ("control", ctl, f"reference {bas[0]}", bas[:1]))}
     R["null_max"] = max(null)
     ac, cc = R["arm"], R["control"]
     fx, br = R["pairs"]["arm - control"]["fixed_broken"]
     R["adopt"] = dict(fewer_zeros=ac["zero"] < cc["zero"], atfault_not_above=ac["z_atf"] <= cc["z_atf"], gt_not_larger=ac["gt"] <= cc["gt"])
     R["adopt"]["adopted"] = all(R["adopt"].values())
+    bc = R["base_s0"]                                                           # closed-loop.md round gate (Amendment 5): against the reference
+    R["round_gate"] = dict(fewer_zeros=ac["zero"] < bc["zero"], atfault_not_above=ac["z_atf"] <= bc["z_atf"], gt_not_larger=ac["gt"] <= bc["gt"])
+    R["round_gate"]["passed"] = all(R["round_gate"].values())
     sc = R["pairs"]["arm - control"]["score"]["ci"]
     R["cl1_strict"] = dict(score_ci_low_gt0=sc[0] > 0, atfault_not_above_base_mean=ac["z_atf"] <= R["base_seeds"]["z_atf"],
                            gt_lower_by_010=cc["gt"] - ac["gt"] >= 0.10, fixed_minus_broken_over_null=(fx - br) > R["null_max"])
@@ -90,8 +96,8 @@ def main(a):
     md = [f"# ONPOL-LONG round 1, family {f} (base {base}-s0): {len(scenes)} scenes, length `{a.length}`, {len(L)} logs", "",
           f"Dropped for every label alike: {len(fold)} scenes without a rollout in at least one label (route generation failed: route folds back).", "",
           "| | mean score | zeros | collision at fault / offroad / corridor / other zeros | at-fault zeros | GT distance (m) | drift slope k >= 4 (m / decision) | per seed: score / zeros / at-fault zeros / GT |",
-          "|:--|--:|--:|:--|--:|--:|--:|:--|", row(f"arm {f}{a.arm}-L18 ({ {'SKC': 'S + K on-policy rows (C dropped by K0)', 'S': 'S hinges only on the same rows (Amendment 3)'}.get(a.arm, a.arm)})", ac), row(f"control {f}NONE-L18 (same continuation, no rows)", cc),
-          row(f"base {base}-s0", R["base_s0"]), row(f"base {base} seeds {', '.join(t[-1] for t in bas)}", R["base_seeds"]), "",
+          "|:--|--:|--:|:--|--:|--:|--:|:--|", row(f"arm {f}{a.arm}-L18 ({ {'SKC': 'S + K on-policy rows (C dropped by K0)', 'S': 'S hinges only on the same rows (Amendment 3)', 'S2': 'round 2: S rows of YS-L18 rollouts, from YS-L18-s1'}.get(a.arm, a.arm)})", ac), row(f"control {f}NONE-L18 (same continuation, no rows)", cc),
+          row(f"reference {bas[0]}", R["base_s0"]), row(f"reference {', '.join(bas)}", R["base_seeds"]), "",
           "Zeros = scenes scored 0; a zero can carry more than one kind (offroad and corridor together), `other` = none of the three. Paired per-scene seed-mean differences, log-clustered 95 % CI (10 000 draws); zero columns are totals over the scenes:", "",
           "| a - b | mean score | zeros | at-fault zeros | collision / offroad / corridor / other zeros | GT distance (m) | fixed / broken |", "|:--|:--|:--|:--|:--|:--|:--|"]
     ci = lambda v, p=4: f"{v['diff']:+.{p}f} [{v['ci'][0]:+.{p}f}, {v['ci'][1]:+.{p}f}]"  # noqa: E731
@@ -103,6 +109,8 @@ def main(a):
            f"**Adoption line (registered): {'ADOPTED' if R['adopt']['adopted'] else 'NOT adopted'}** - fewer zeros than the control {R['adopt']['fewer_zeros']} "
            f"({ac['zero']:.1f} vs {cc['zero']:.1f}); at-fault zeros not above the control's (hard gate) {R['adopt']['atfault_not_above']} ({ac['z_atf']:.1f} vs {cc['z_atf']:.1f}); "
            f"GT distance not larger {R['adopt']['gt_not_larger']} ({ac['gt']:.3f} vs {cc['gt']:.3f} m).", "",
+           f"Round gate (closed-loop.md; registered for round 2 in Amendment 5) against {bas[0]}: {'PASSED' if R['round_gate']['passed'] else 'not passed'} - "
+           f"{json.dumps({k: bool(v) for k, v in R['round_gate'].items()})} (zeros {ac['zero']:.1f} vs {bc['zero']:.1f}, at-fault {ac['z_atf']:.1f} vs {bc['z_atf']:.1f}, GT {ac['gt']:.3f} vs {bc['gt']:.3f}).", "",
            f"CL-1 as written in closed-loop.md (reported beside it): {'met' if R['cl1_strict']['met'] else 'not met'} - {json.dumps({k: bool(v) for k, v in R['cl1_strict'].items()})}.", ""]
     (out / f"report_{f}{a.arm}.md").write_text("\n".join(md))
     print("\n".join(md))
@@ -112,6 +120,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--family", required=True, choices=sorted(BASE)), ap.add_argument("--runs", nargs="+", required=True)
     ap.add_argument("--out", required=True), ap.add_argument("--jobs", type=int, default=16)
+    ap.add_argument("--ctl", default="NONE", help="control family suffix (S2NONE for round 2)")
+    ap.add_argument("--base-tags", default="", help="reference tags, first = the paired one (default <family base>-s0, -s1)")
     ap.add_argument("--arm", default="SKC", help="arm family suffix: SKC (round 1) or S (Amendment 3)")
     ap.add_argument("--length", default="18", help="label suffix after @ (18 for the held read, pai for the Tokyo transfer read)")
     main(ap.parse_args())
