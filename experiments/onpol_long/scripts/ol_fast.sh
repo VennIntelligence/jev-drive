@@ -4,6 +4,7 @@
 # other scenes share its simulator stack or card):
 #   OL_NCH      train rollouts in this many pool jobs (default 12: two stacks per card; one stack used 10-40 % of a card)
 #   OL_RCH      each held read in this many pool jobs (default 6); the report joins the chunk dirs (long_read takes comma-separated dirs)
+#   OL_STEPS, OL_TRAIN_ARGS  trainer steps and extra on_train.py flags for all four trainings (default: 10 000, none = submit-r2's recipe)
 #   OL_WORKERS / OL_LWORKERS  on_rows.py geo / ol_labels.py build workers (default 48 each, as ol_chain.sh; geo itself takes ~30 s)
 #   and the K / C label build (ol_labels.py build, 18 of ol_chain.sh's 19 geo minutes) runs beside the tokens instead of before them: the S-only
 #   recipe never reads its files; its gate (ol_labels.py gate, unchanged) still runs on every pool and gates strip and the report
@@ -126,7 +127,7 @@ submit-round)   # one Y-recipe round from <init> (submit-r2's recipe): rollouts 
   k=$(SUBP=$HI sub ol-tok-$A "$g" --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- $FX tok $N smoke10eY) || exit 1
   q=$(sub ol-gate-$A "$k,$l" --vram 0.5 --cpu 8 --ram 32 --timeout-h 1 -- $FX gate $N) || exit 1
   sub ol-strip-$A "$q" --vram 0.5 --cpu 16 --ram 16 --timeout-h 2 -- bash $E/scripts/ol_chain.sh strip $RT $N > /dev/null || exit 1
-  OT="$TR $ON/scripts/on_train.py train --exp onpol_long --init $I --steps ${OL_STEPS:-10000} --yr-mass 0.1 --label-bank"
+  OT="$TR $ON/scripts/on_train.py train --exp onpol_long --init $I --steps ${OL_STEPS:-10000} --yr-mass 0.1 --label-bank ${OL_TRAIN_ARGS:-}"   # e.g. Amendment 6's "--warmup 1 --lr-scale 0.1"
   rids=()
   for s in 0 1; do
     a=$(SUBP=$HI sub ol-train-Y$A-s$s "$k" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_$N --on-k 13 \

@@ -106,6 +106,11 @@ bash experiments/onpol_long/scripts/ol_chain.sh submit-rest <base tag> Y|P <roll
 #   tok -> train <F>SKC-L18-s{0,1} -> read1 ; train <F>NONE-L18-s{0,1} -> read1 ; all reads -> report (ol_report.py)
 ```
 
+Faster rounds (same programs, same per-scene results; [results/pipeline_profile.md](results/pipeline_profile.md)): `ol_fast.sh submit-round <init>
+<arm>` queues one Y-recipe round with rollouts in 12 jobs and each held read in 6 (two simulator stacks per card), the K / C label build beside
+the tokens instead of before them, and the arm's path one priority step above the controls: critical path ~45-50 min against 95-110 for
+`ol_chain.sh` (estimate until the first ol_fast round is timed). `OL_DRY=1` prints the submissions.
+
 State on the box: `$DATA_DIR/runs/onpol_long/{roll,rows,read,report,pool}`, job ids in `jobs.txt`; pools `runs/op_parity/cache/on1_L18{Y,P}`,
 rows `runs/onpol_nuplan/rows/L18{Y,P}` (on_rows.py's own locations).
 

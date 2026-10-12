@@ -26,9 +26,26 @@ idle while four trainings ran; 05:01-05:27 four read jobs alone on cards 0-3 at 
 Clean serial path of one round, from these stage times: rollouts 15-29 + geo 19 + tok 3 + training 24-27 + read 32 + report 0.3 = **95-110 min**
 (round 1 took 3 h 14 min with the tok failure and two amendments).
 
-## Round 2 (Amendment 5, running; measured 11:24-TBD)
+## Round 2 (Amendment 5, ol_chain.sh submit-r2; measured 11:24-13:05 while it ran)
 
-TBD
+Rollouts of two checkpoints (YS-L18-s0 / -s1, 2 x 6 chunks) and eight 10-decision confirmation reads at once, the controls' trainings at
+t = 0, sharing the box with alpasim_long's seven 18-decision stacks:
+
+| stage | jobs | first start | last end | stage wall (min) | job min (median / max) | GPU job-h | mean card util while on it | peak VRAM GB |
+|:--|--:|:--|:--|--:|:--|--:|--:|--:|
+| roll (2 062 train scenes) | 12 | 11:24 | 12:24 | 60 | 16.2 / 31.4 | 3.95 | 64 % | 29.5 |
+| a10 (1 491 scenes at 10 decisions, x 2) | 8 | 11:35 | 12:37 | 62 | 21.1 / 36.7 | 3.04 | 44 % | 28.0 |
+| train, controls YS2NONE-s0/s1 | 2 | 11:33 | 12:02 | 29 | 28.9 | 0.95 | 95 % | 16.8 |
+| read, controls (460 held, one job each) | 2 | 12:17 | - | - | - | - | 25 % | - |
+| geo (on_rows geo 1 min + ol_labels build 35 min, 34 788 rows) | 1 | 12:24 | 12:59 | 36 | 35.9 | CPU, 48 cores | - | - |
+| tok | 1 | 12:59 | 13:04 | 5 | 4.8 | 0.08 | 86 % | 5.4 |
+| arm trainings, reads, report | 5 | queued behind tok | | | | | | |
+
+The pool booked every stack at its 32 GB declaration (one chunk peaked at 29.5 GB), so two stacks per card filled the booking while the cards
+held 12-50 GB and ran at 0-44 % util (12:05-12:40). During the 36-minute label build the lane had one or two read stacks on cards 1, 4, 5 and
+nothing else ready: cards 2 and 3 sat at 0 % for 12:24-12:43 (other lanes filled them later). Lane-wide 11:20-13:05: a lane GPU job on the card
+in 72 % of card-minutes, card util < 10 % in 21 %, mean util 50 %. Expected end: arm trainings ~13:05-13:35, arm reads ~13:35-14:10, report
+~14:10, i.e. ~2 h 45 min for the round, of which ~60 min of rollouts and 36 min of label build sit on the critical path.
 
 ## Where the time goes
 
@@ -42,7 +59,11 @@ renderer's 4 Python threads (CPU / GIL side of each render call), not by the GPU
 **Stacks per card scale, trainers do not mix.** Round 1, 03:15-03:40, per card (rollouts completed per minute): two rollout stacks on a card
 22-28 scenes / min at 6-46 % util, the same per stack as one alone (P2H10S chunks 4.7-5.4 s / scene next to a YR chunk, 4.7 alone); one stack
 next to a training 5.8-7.2 / min (8.0-9.6 s / scene: a training at 90 % util halves a stack); two stacks next to a training 12.8-13.0. Two
-trainings on one card: 35-41 min instead of 24-25. Scaling test on one card (`ol_fast.sh scale`, 1-4 stacks of 48 held scenes at once): TBD.
+trainings on one card: 35-41 min instead of 24-25. Scaling test on one card (`ol_fast.sh scale`, k = 1-4 stacks of 48 held scenes at once, card 0, 12:24-13:03, the box busy with round 2's
+label build and alpasim_long): k = 1 546 s for 48 scenes, k = 2 578 s for 96, k = 3 752 s for 144, k = 4 471 s for 192 (the box's CPU load
+dropped for the last phase: per-stack steady rate 8.2 s / scene at k = 1-2, 9.8-11.4 at k = 3, 5.0-6.5 at k = 4). Two stacks per card give
+~1.9x the card's throughput, a third ~2.2x under the same load; the per-stack rate follows the host's CPU load more than the stack count,
+as expected of a renderer bound by its own threads. Renderer VRAM peaks in these 48-scene runs 12-27 GB.
 
 **Fixed cost per run.** Startup 50-60 s (driver compile warm-up 35 s), first rollout done after ~60 s more, then the tail and aggregation
 (~40 s). A 48-scene run: 5.7-5.9 s / scene in steady state, 320-470 s in all; a 172-scene chunk 830-900 s; a 460-scene read 1 840 s.
@@ -89,12 +110,17 @@ to be replaced by the first ol_fast round):
 | rollout with the frame dump, 48 train scenes, rerun of round 1's chunk c2 of YR10m10-F-s0 | card 2 vs card 5 | 48 / 48 identical | 864 / 864 identical | 864 / 864 identical (all arrays but the stripped `cur`) |
 | the same rollout smoke on card 0 | card 0 vs card 5 | 36 / 48 identical, max diff 0.012, mean 0.8917 vs 0.8918 | 259 / 864 | 253 / 864: JPEGs differ by 1-2 levels in 12-116 pixels from decision 0 |
 | CAM_F0-only render request (rejected) | card 0 vs card 1 | 47 / 48, max diff 0.0036 | 832 / 846 | - |
-| scaling test, 1-4 stacks on one card | card TBD | TBD | TBD | - |
+| scaling test, 10 runs of 48 held scenes, 1-4 stacks on card 0, vs round 1's read (card 1) | card 0 vs card 1 | 6 of 10 runs 48 / 48 identical; scenes 97-144 (three runs): 36 / 48, two scenes flip 0 <-> 1 (net 0), mean 0.9097 vs 0.9109; scenes 145-192: 44 / 48, max 0.0015 | identical runs 864 / 864; others 95 / 864 and 667 / 864 | - |
+| the same scenes twice on card 0 (k = 2 vs k = 4; k = 2 vs k = 3) | card 0 vs card 0 | 48 / 48 | 864 / 864; 844 / 864 (max 4.4 m) | - |
 
-So splitting the scene list across jobs and stacks does not change a rollout. **Card 0 does**: it is the one card with ECC enabled
-(`nvidia-smi`: ecc.mode Enabled on card 0, Disabled on 1-5), and every run on it renders a few pixels differently from the other cards, which
-moves plans from the first decision of some scenes. This is not new with ol_fast.sh: ol_chain.sh jobs land on card 0 as well (round 1: roll c0,
-reads YNONE-s0/s1 and YS-L18-s0 ran there).
+So splitting the scene list across jobs and stacks does not change a rollout: every run off card 0 reproduced round 1 bit for bit (scores,
+every plan, every dumped frame), whatever else shared the card. **The simulator is not bit-reproducible on card 0**: the renderer's JPEGs
+differ from the other cards' by 1-2 grey levels in 12-116 pixels from decision 0 on some scenes, plans move by up to tens of metres later in
+the rollout, and a scene can flip between zero and full score (two of 48 in one scene block, net 0); even two runs on card 0 differed once
+in 20 decisions of one scene. Card 0 is the only card with ECC enabled (`nvidia-smi`: ecc.mode Enabled on card 0, Disabled on 1-5); whether
+ECC is the cause is not shown. This is not new with ol_fast.sh: ol_chain.sh jobs land on card 0 as well (round 1: roll c0 of YR10m10-F-s0,
+reads YNONE-L18-s0/s1 and YS-L18-s0 ran there). Max per-scene score difference against round 1 in all checks: 1.0 (a flip, card 0); off
+card 0: 0.
 
 Rejected: asking the renderer for CAM_F0 only (the camera sh30 reads). MTGS renders every asset camera per request either way; renderer CPU per
 scene did not fall (2.7 cores, 24 cpu-s / scene against 17), and its one differing scene was on card 0.
@@ -106,3 +132,12 @@ scene did not fall (2.7 cores, 24 cpu-s / scene against 17), and its one differi
 - Training (24 min x 4, now half the round): GPU-bound. DDP over two cards would roughly halve it but changes batches and numerics, so results
   change; not done. Removing the per-step `float()` syncs in on_train.py might give 5-10 %; not done (shared trainer, round 2 queued on it).
 - Pipelining rollouts into geo per chunk: geo is now ~1 min, nothing left to gain.
+- The label build itself (35 min for round 2's two-checkpoint pool) at 48 workers; off the critical path now unless it outlasts tok + training
+  + reads (~40 min); `OL_LWORKERS=96` halves it if memory allows (geo at 48 workers peaked at 55-67 GB RSS).
+
+## Needs a decision
+
+- Card 0: keep it in the pool for closed-loop reads (results then depend slightly on placement, as they already do) or keep AlpaSim jobs off it
+  (a pool-level card restriction for these job names; one card less for the simulator). Checking whether turning ECC off on card 0 makes it
+  agree with the others needs the platform (root).
+- Nothing else: host memory stayed far from the kill line (working set 226-243 of 541 GB during round 2), disk 776 GB free.
