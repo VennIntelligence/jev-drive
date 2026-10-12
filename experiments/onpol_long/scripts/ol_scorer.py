@@ -226,6 +226,22 @@ def cmd_score(a):
     ev = json.loads((X / "events.json").read_text())
     G = pickle.load(open(X / "geo.pkl", "rb"))
     rp = json.loads((X / "replay.json").read_text())
+    orig = {}
+    for line in open(RUN / "driver-logs/drive.jsonl"):
+        r_ = json.loads(line)
+        if r_["kind"] == "drive":
+            orig[(r_["scene"], r_["k"])] = np.array(r_["poses"])
+    for e in ev:                                                     # replay check, gate R1's rule: every pose within one fp16 ulp or 0.03 m
+        if (X / "tok" / f"{e['scene']}.npz").exists() and isinstance(rp.get(e["scene"]), dict):
+            T_ = np.load(X / "tok" / f"{e['scene']}.npz")
+            bad = []
+            for kk, P_ in zip(T_["k"], T_["poses"]):
+                o_ = orig.get((e["scene"], int(kk)))
+                tol = np.maximum(0.03, np.spacing(np.abs(o_).astype(np.float16)).astype(np.float64)) if o_ is not None else None
+                if o_ is None or (np.abs(P_ - o_) > tol + 1e-6).any():
+                    bad.append(int(kk))
+            rp[e["scene"]]["bad_k"] = bad
+    (X / "replay_r1.json").write_text(json.dumps(rp, indent=1) + "\n")
     VOC = vocab(dev)
     body = SB.Body(dev)
     rows, recs = [], []
