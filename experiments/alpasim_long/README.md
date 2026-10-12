@@ -1,7 +1,7 @@
 # alpasim_long: full-length nuPlan rollouts in local AlpaSim
 
 status: live
-decisions: 262
+decisions: 265
 index: 18-decision scenes (was 10); held 460: SSELFnoL-ON 0.821, P2H10S-F 0.787, YR10m10-F 0.776
 
 **Question.** Can local AlpaSim nuPlan rollouts run longer than the shipped 10 decisions, how long, at what cost, and does the candidate
@@ -14,7 +14,7 @@ shipped one at the shipped window on all 1491 public scenes (G0), rollouts on it
 camera coverage, not the data. On the 460 held scenes (2 seeds) the GT-distance ordering holds from 10 to 18 decisions (SSELFnoL-ON <
 YR10m10-F < P2H10S-F), SSELFnoL-ON stays first by score and separates (+0.044 [+0.018, +0.068] over YR10m10-F), and YR10m10-F drops to
 last on at-fault zeros (42), tied with P2H10S-F; YR10m10-F-s0 at 18 decisions (0.771 / 0.474 km / 1.49 m) is near its private result
-(0.80 / 0.529 km / 1.733 m) (decision 262).
+(0.80 / 0.529 km / 1.733 m) (decision 265).
 
 **Next.** Amendment 2 (APY10m10-AB-s0 at 18 and 10 decisions against its private 0.640) is queued in the pool (jobs
 1012-031731-cb61 / 1012-031732-3cd6, read-out 1012-032433-78f7 -> `$DATA_DIR/runs/alpasim_long/held/read_apy/report.md`; not read yet); then closed-loop

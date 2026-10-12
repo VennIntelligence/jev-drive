@@ -25,6 +25,8 @@
 ## 记录与工具
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。
 - [next-round/plan.md](next-round/plan.md)：下一轮方向与计划（2026-10-09 改写）：论文线与比赛线分开，后果监督的轻量表征支路，判定线、日历。
+- [next-round/closed-loop.md](next-round/closed-loop.md)：闭环训练线方案：全长（18–20 决策）训练、估算与排期。
+- [recipes.md](recipes.md)：配方总表，活着的和已死的配方各一行，带决策号。
 - [next-round/overnight.md](next-round/overnight.md)：2026-10-09 夜的执行任务书：NC 失败分类、真值几何 oracle、离轨 warp 行。
 - `lit/`：文献长报告，只在这台 Mac 上，不进 git。
 - [plot_style.py](plot_style.py)：所有图共用的 plot style 模块。

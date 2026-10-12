@@ -10,7 +10,7 @@
 - **hinge**：只在越线时才罚的损失。**可行驶 hinge**：plan 的车身足迹离可行驶区域边界不足 margin 时罚，λ 是它的权重。
 - **navtest / navhard**：NAVSIM 开环榜（EPDMS 分，navhard 两阶段）；**HUGSIM**：3DGS 闭环榜（HD 分）；**WOD-E2E**：Waymo 开环榜（RFS 分）。
 - **AlpaSim nuPlan**：比赛的闭环模拟器，公开 1491 个 scene（就是 navtest 的 log）；**private**：主办方不公开的正式评测集；**PAI**：AlpaSim 的另一条赛道（不提交，d261）。
-- **决策**：driver 每 0.5 s 被调用一次、返回 4 s plan；公开 scene 原样 10 个决策，重建缓存后可跑 18 个（d262 ALPASIM-LONG）。
+- **决策**：driver 每 0.5 s 被调用一次、返回 4 s plan；公开 scene 原样 10 个决策，重建缓存后可跑 18 个（d265 ALPASIM-LONG）。
 - **零分**：scene 得 0，分三类：at-fault 碰撞、offroad（出路）、corridor（离日志路径横向 ≥ 4 m）。**GT distance**：离日志路径的最大横向距离的均值。
 - **held 460 / train 1031**：d259 起按 log 划分的公开 scene，train 出训练行，held 只作判定；它是行的留出，不是配方选择的留出。
 - **on-policy 行**：driver 自己在闭环里开到的状态（离日志可能已偏）上取的训练行；**ON-NONE**：同起点同步数续训、不加这些行的对照。
@@ -23,7 +23,7 @@
 | P2H10-F | 可行驶 hinge λ 10（margin 0.3 m）（损失） | P2 | AlpaSim held 300 对 SH30 +0.0369 [+0.0087, +0.0668]；700 scene 0.9483（2 seed）；1491 scene 0.9196 | 所有 AlpaSim 读数的登记基线；P2H10S / YR 的底座 | 205, 212, 253 |
 | P2H10S-F | P2H10 + 车身课 S：自己 plan 的扫掠足迹对车辆框、对道路车道栅格两个 hinge，梯度只看 plan 形状；加 hinge-only 离轨行（数据行 + 损失） | P2H10 | PAI 281 scene，4 seed S 对 2 seed base +0.1100 [+0.0760, +0.1458]；navhard 33.46 对 31.54，+1.91 [+0.13, +3.74]；navtest +0.38 [+0.20, +0.57] | 闭环训练 P 族底座；论文臂（车身课） | 232, 236, 247, 253, 255 |
 | YR10m10-F | P2H10 + 10% yaw-rate 行：注入的 yaw rate 与航向偏置解耦的合成行（数据行） | P2H10 | **private 0.80**（提交 #2，PCS 1007，at-fault 0.529 km，GT 1.733 m）；公开 1100 scene 对 P2H10 +0.0095 [+0.0024, +0.0166] | **提交 #2 的 checkpoint（`YR10m10-F-s0`）**；最后名额的对照；Y 族底座 | 213, 216, 260 |
-| SSELFnoL-ON | P2H10S-F 续训 10 000 步，每 batch 13 行换成 10 决策 on-policy 行，行上只加 S 的两个 hinge（数据行 + 损失） | P2H10S-F | held 460：0.9392 对 control 0.9248，+0.0143 [+0.0017, +0.0276]，零分 −7.0 [−13.2, −1.2]；18 决策 0.821，对 YR10m10-F +0.044 [+0.018, +0.068] | 闭环训练线的第一个正读数；最后名额候选（规则见 plan.md 2.3，见弱点） | 259, 262 |
+| SSELFnoL-ON | P2H10S-F 续训 10 000 步，每 batch 13 行换成 10 决策 on-policy 行，行上只加 S 的两个 hinge（数据行 + 损失） | P2H10S-F | held 460：0.9392 对 control 0.9248，+0.0143 [+0.0017, +0.0276]，零分 −7.0 [−13.2, −1.2]；18 决策 0.821，对 YR10m10-F +0.044 [+0.018, +0.068] | 闭环训练线的第一个正读数；最后名额候选（规则见 plan.md 2.3，见弱点） | 259, 265 |
 | YS-L18 | 同上的 S-only，但行取自 18 决策 rollout，底座换成 YR（数据行 + 损失） | YR10m10-F-s0 | held 452、18 决策：0.838，对 ON-NONE +0.1446 [+0.1187, +0.1730]，对底座 +0.0529 [+0.0241, +0.0823]；at-fault 零分 23.5 对底座 43；GT 1.357 对 1.495 m | 第 2 轮起点（`YS-L18-s1`）；最后名额候选 | 264 补记 3（**未入 decisions.md**） |
 | Rnom（serving） | driver 不信 session 上报的相机安装姿态，改用固定名义旋转（serving） | 任意 openpilot 学生 | 96 个公开 scene −0.003 [−0.034, +0.028]（免费） | 提交前的保险选项，待用户定 | 263 |
 | PAI (a)+(b)（serving） | `JEV_VCONT` 速度连续 + `JEV_LEAD` openpilot 前车 MPC 作限速（serving） | P2H10-F 起 | PAI 60 scene × 2 seed：0.215 → 0.363，+0.148 [+0.061, +0.244] | PAI 的 served 配置（d247 等读数都用它）；PAI 不提交 | 226 |
@@ -46,7 +46,7 @@ PAI 绝对分带 10 Hz slot 的 caveat（d247）。
 
 **YR10m10-F**：P2H10 配方 + 每 batch 13 / 128 行 yaw-rate 行（缓存 `yr1`；40% 只有最近 0.5 s 的注入 yaw，60% 三段 random walk，±2.5° 截断）。
 `experiments/alpasim/scripts/ot3_rows.py train --std navsim --ot-mass 0.10`；镜像 `jev-alpasim:yr10m10-f-s0-073dea33`。
-弱点：未碰过的 part012–015 上对 P2H10 −0.0069 [−0.0110, −0.0016]，确认读数为否（d216）；18 决策上 at-fault 零分 42、三者最多（d262）；
+弱点：未碰过的 part012–015 上对 P2H10 −0.0069 [−0.0110, −0.0016]，确认读数为否（d216）；18 决策上 at-fault 零分 42、三者最多（d265）；
 private 0.80 与 go-straight 0.799 同分（d260）；对上报俯仰 2–3° 的误差很敏感（d263）。
 
 **SSELFnoL-ON**：行池 `on1_train`（P2H10S-F s0 / s1 在 1031 train scene 上 10 决策滚出的 20 386 行），每 batch 13 行 on-policy、只给 S 两个 hinge。
@@ -124,7 +124,7 @@ private 0.80 与 go-straight 0.799 同分（d260）；对上报俯仰 2–3° �
 
 ## 来源之间的不一致
 
-1. **第 262 号用了两次**：decisions.md 里 PROXY（公开 scene 当代理）与 ALPASIM-LONG（18 决策）都编为 262；本表引用 262 时两者都可能，按内容区分。
+1. **第 262 号曾用了两次**：已改编，262 只指 PROXY（公开 scene 当代理），ALPASIM-LONG（18 决策）改为 265。
 2. **SSELFnoL-ON 的 10 决策零分**：d259 / onpol_nuplan 写 14.5，alpasim_long held 表写 20.5；均分相同（0.939）。推：差的 6 个是路线折返、从不起 session 的 6 个 scene，后者算作零分，未核实。
 3. **YS-L18 / PS-L18**：box 报告（2026-10-12 06:27）已出，d264 与 onpol_long README 仍写「在跑」；ol_chain.sh 的补记 5 只在工作区，未提交。
 4. **P2H10S-F 的 1491 均分**：d253 为 4 seed 0.9243，JOINT-1 表为 2 seed 0.9226；种子数不同，不是矛盾。APY10m10-AB 公开均分 0.9335（2 seed，d253）、0.935（d260 取整）、0.9326（4 seed，d259）同理。
