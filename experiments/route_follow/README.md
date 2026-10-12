@@ -22,8 +22,8 @@ RBSG2's G-rely fails (the route may be learned into the trunk rather than throug
 teach route switching at junctions (G-swap 55 % of need, 94 % on the counterfactual side) but not lane changes (5-7 %), and cost G-real.
 
 **Next.** Amendment 5 (RS2G / RBS2Gc from RSG rollouts) is running; Tokyo: RB0-F-s0 PAI re-roll with gains 20, RSG-L18-s0 PAI 281 read
-queued. Before either candidate (RSG-L18, RBSG2-L18) is called a base: the public 1491 /
-10-decision guard, PAI 281; for RBSG2 also a closed-loop read with the memory masked (does it still follow the route?).
+queued. RSG-L18 passes the public 1491 / 10-decision guard (+0.016 over YR10m10-F-s0; ties YS-L18 /
+YS2G on score and zeros, GT 0.10 m closer; `a3/guard/all10_RSG.md`). Before either candidate is called a base: RBSG2's 1491 guard, PAI 281; for RBSG2 also a closed-loop read with the memory masked (does it still follow the route?).
 
 **Read more.** [research/decisions/286.md](../../research/decisions/286.md) (Chinese; full table, six line verdicts, branches, card-hours);
 human page [research/route-follow/route-night.html](../../research/route-follow/route-night.html); task book
