@@ -266,7 +266,7 @@ def group_rows(g):
         return out
     tb = dict(np.load(W / f"tok/{g}/tab.npz"))
     return [dict(row=i, scene=str(tb["scene"][i]), k=int(tb["k"][i]), t0=int(tb["t0"][i]), anchor=tb["anchor"][i].astype(float), cam=tb["cam"][i].astype(float),
-                 src=g, tag=str(tb["label"][i]) if "label" in tb.files else HELD_TAG) for i in range(len(tb["k"]))]
+                 src=g, tag=str(tb["label"][i]) if "label" in tb else HELD_TAG) for i in range(len(tb["k"]))]
 
 
 def arc(P):
