@@ -5,7 +5,6 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 **live**
 
 - [cap_audit](cap_audit/README.md): live; worse than every reference only on cruise lag: YS2G +0.59 m behind at 5-10 m/s [d278]
-- [gt_decomp](gt_decomp/README.md): live; pre-registered; read pending [d(pending)]
 - [zeros_mech](zeros_mech/README.md) (ZEROS-MECH, why the S-family zeros: turn timing / command, cut-around reflex, oncoming lane): live; H3 arm (31% of YS zeros in an oncoming lane); H2 not shown; H1 half [d268]
 - [onpol_nuplan](onpol_nuplan/README.md) (ONPOL-NUPLAN, on-policy rows, self-consequence vs imitation labels, RoaD / DAgger contrast): concluded; held 460 scenes: on-policy S hinges 0.939 / 14.5 zeros vs control 0.925 / 21.5; imitation 0.912 / 24 [d259]
 - [onpol_pai](onpol_pai/README.md) (ONPOL-PAI, on-policy rows on PAI, self-consequence vs imitation labels): live; stopped before the 281 read (user, 10-12 02:24 JST); open loop only: SELF term rate 0.215 vs 0.307 [d261]
@@ -95,6 +94,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 **other**
 
 - [eyes_vs_head](eyes_vs_head/README.md): eyes wrong at 98 / 98 zeros (lane probs < 0.5); eyes + rules not supported [d272]
+- [gt_decomp](gt_decomp/README.md): GT is nearest-point: lag adds 0; YR 0.941 = 0.681 cross + 0.260 past path end [d280]
 - [local_map](local_map/README.md): route received earlier: 0.35 m at 20 m on 28 / 45 zero windows (line < 0.5); carried probe 2-4 m [d279,(inputs,272,275)]
 - [road_probe](road_probe/README.md): frozen eyes do not see city roads: R3 zeros 1.26 m (line > 1.0); straight 0.25 m, turns 0.88 m; junction blur also on real navtest frames (1.18 vs 0.46 m), not a reconstruction artefact [d275,(inputs,223,243,268,272)]
 - [rule_oracle](rule_oracle/README.md): planned; scoped: PDM-Closed re-impl on the scene loader, 4 arms ~2.5 card-h [d-] — closed 2026-10-12, not run

@@ -25,6 +25,7 @@
 - [zeros-mech/](zeros-mech/index.html)：YS 零分的三个机制假设在已存 held rollout 上的预登记读数（决策 268）：对向车道（H3）得到一个臂，绕前车反射（H2）未确立，指令（H1）只有直路一半且基底同样有；S 课把横穿对向的转弯失败从晚而宽翻成提前切内侧；43 个零分逐条分类。
 - [cap-audit/](cap-audit/index.html)：全部已存决策（不只零分）上的能力记分卡（决策 278）：17 个能力量 × 场景分组，对人类日志与四个参考 driver；只有巡航起步落后人类比每个参考都差（纵向，新标签课 L），横向 / 合法性 / 交互不差于最好的参考；探索：横穿对向转弯里对向车道占比偏高。
 - [self-consequence/](self-consequence/index.html)：设计稿（未训练）：冻结编码器上一次联合训练，在车身课 S 之上加纵向课 L（本车道前车、必须停的停止点、入弯速度三个解析 hinge 加进度护栏，只改时机），六个新臂带逐项去掉，PAI 与 AlpaSim nuPlan 判；工作稿 `design.md`。
+- [gt-decomp/](gt-decomp/index.html)：榜单 GT 距离拆纵 / 横（决策 280）：评估器量到整条日志路径的最近点，巡航落后贡献 0；纵向部分只来自越过日志终点（领先人类），YR 0.941 = 横向 0.681 + 越终点 0.260；巡航提速式课 L 不动 GT、进度分上界 +0.022。
 
 ## 记录与工具
 - [decisions.md](decisions.md)：跨 session 的决定，一行一条，全文在 `decisions/`。

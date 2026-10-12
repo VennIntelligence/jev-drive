@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GT-DECOMP：榜单 GT 距离的纵向与横向</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:1100px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:4px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:14px}th,td{border:1px solid #ccc;padding:4px 10px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f3f3f3}
+figure{margin:16px 0}img{max-width:100%}figcaption{font-size:14px;color:#444}code{font-size:12px;word-break:break-all}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}}
+</style></head><body>
+<h1>GT-DECOMP：榜单的 "Distance to GT Trajectory" 里，多少是落后、多少是偏离</h1>
+<div class="v"><b>要点：</b>榜单的 GT 距离不是按时间对齐的误差，而是自车车身中心到<b>整条人类日志路径</b>的最近点距离（评估器 <code>ground_truth.py</code> 第 106–108 行）。
+所以我们巡航时落后人类，对这个指标的贡献<b>恒为 0</b>。它的纵向部分只有一种来源：自车<b>跑到人前面、越过了日志路径的终点</b>，这时距离按到终点的直线距离增长。
+提交 #2（YR10m10-F-s0）本地 0.941 米 = 横向 0.681 + 越过终点 0.260。越过终点集中在 12.6% 的场景里，public 上多是人起步慢的场景；85 个 ≥ 4 米的 clip 里有 65 个是这样来的，这些场景基本不扣分（0.978）。
+把我们的节奏换成人类的（路径不变），GT 降 0.335 米，其中 0.320 来自这些越终点场景，其余场景只降 0.014。
+结论：<b>巡航提速式的纵向课 L 不会动 GT</b>，进度分最多挣回 0.022（离 WA-JEPA 只差 0.014），零分不变，所以它不是下一个训练臂。决策 280。</div>
+
+<h2>一、指标到底量什么</h2>
+<p>评估器每 0.5 秒（每个决策一步）算一次车身中心到日志路径折线的最近距离（shapely <code>LineString.distance</code>），不看「人在这一刻到了哪」；一个 rollout 取所有保留步的最大值，碰撞 / 出路之后、第一次 ≥ 4 米之后的步去掉；榜单值是各 clip 的平均。
+同一个文件里还有按时间对齐的 <code>dist_to_gt_location</code>（即 ADE 类误差，第 271 条量的就是它），但它不进榜单。日志路径在 5.5 秒结束，最后一个评估步在 5.017 秒：
+<b>落后</b>的车还在路径上，距离只量横向；<b>领先</b>到越过终点的车，最近点被钉在终点上，前后差也算进距离。我们把每个 rollout 最大值那一步拆成 横向部分（<code>lateral_dist_to_gt_trajectory</code>，越过终点时只取垂直分量）和 越终点部分（两者之差）。</p>
+<p>复现：从每个 rollout 的逐步序列重做截断与聚合，与存档的每个 rollout 值和每个 run 的 clip 均值 100% 在 1 毫米内；用场景加载器的日志轨迹与控制器位姿重建几何，每步距离也 100% 在 1 毫米内（10 个 driver，public 1479 个场景、held 452 个）。</p>
+
+<h2>二、拆开后（10 决策 public，1479 个场景、136 个日志）</h2>
+<table>
+<tr><th>driver</th><th>GT（米）</th><th>横向部分</th><th>越终点部分</th><th>越终点的场景</th><th>≥ 4 米的 clip（其中横向不到 4 米）</th></tr>
+<tr><td>YR10m10-F-s0（提交 #2）</td><td>0.941</td><td>0.681</td><td>0.260</td><td>12.6%</td><td>85（65）</td></tr>
+<tr><td>YS2G（两 seed 平均）</td><td>0.885</td><td><b>0.652</b></td><td>0.233</td><td>12.5%</td><td>67（56）</td></tr>
+<tr><td>WA-JEPA</td><td>1.193</td><td>0.829</td><td>0.364</td><td>14.4%</td><td>147（87）</td></tr>
+<tr><td>LTF</td><td>1.876</td><td>0.994</td><td>0.882</td><td>34.6%</td><td>265（191）</td></tr>
+<tr><td>DiffusionDrive</td><td>1.843</td><td>1.049</td><td>0.795</td><td>32.0%</td><td>260（179）</td></tr>
+<tr><td>garage 0014</td><td><b>0.869</b></td><td>0.743</td><td><b>0.126</b></td><td>8.0%</td><td>71（28）</td></tr>
+</table>
+<p>逐场景配对（95% 置信区间按日志聚类重抽）：YR 比 WA-JEPA 低 0.252 [0.166, 0.340]，比 LTF、DiffusionDrive 低 0.9 米以上；比 garage 高 0.072 [−0.008, +0.158]，不可分辨，
+其中横向反而低 0.062 [0.004, 0.122]，<b>越终点部分高 0.133 [0.086, 0.187]</b>。YS2G 对 garage 同样：总差 +0.016，越终点 +0.107 [0.063, 0.155]。也就是说，在唯一不输的参考面前，我们多出的只有「跑到人前面」这一项。
+预登记时我们预期自己的纵向部分接近 0，这一条错了。</p>
+<figure><img src="figs/gd_split.png" alt="split"><figcaption>(a) 榜单 GT 距离 = 横向（蓝）+ 越过日志终点（橙），每个 driver 在 1479 个场景上的平均。看 YR / YS2G 与 garage：总高度相近，我们的橙色更多、蓝色更少。
+(b) 同样的场景，按时间对齐的每决策误差平方拆成横向²与纵向²：几乎全是纵向（YR 94.8%），这正是第 271 条看到的「误差沿行驶方向」，但它不进榜单。</figcaption></figure>
+<figure><img src="figs/gd_lag.png" alt="lag" style="max-width:560px"><figcaption>每个决策时刻沿路径相对人类的前后位置（米，正 = 领先），保留步平均。我们 5 秒后平均落后 2.5 米，与 garage（3.0）、WA-JEPA（2.2）同一档；LTF、DiffusionDrive 不落后，但它们越过终点最多。平均落后与越终点并存：落后在巡航场景，越终点在人起步慢的场景。</figcaption></figure>
+
+<h2>三、反事实：路径不变，节奏换成人类的</h2>
+<p>把自车 0.1 秒一点的轨迹按弧长参数化，记下每个弧长处的横向偏差；反事实里自车在每个时刻位于人类所在的弧长，横向沿用自己在那里的偏差（没走到的弧长沿用最后一个值，YR 15.9% 的步；只用走到过的弧长的下界版也列出）。碰撞与出路的截断时刻不变，不能重新模拟。</p>
+<table>
+<tr><th>driver</th><th>实际 GT</th><th>人类节奏</th><th>变化 [95% CI]</th><th>来自越终点场景</th><th>来自其余场景</th></tr>
+<tr><td>YR10m10-F-s0</td><td>0.941</td><td>0.606</td><td>−0.335 [−0.411, −0.265]</td><td>−0.320</td><td><b>−0.014</b></td></tr>
+<tr><td>YS2G</td><td>0.885</td><td>0.585</td><td>−0.301 [−0.368, −0.237]</td><td>−0.291</td><td>−0.010</td></tr>
+<tr><td>WA-JEPA</td><td>1.193</td><td>0.771</td><td>−0.423 [−0.523, −0.327]</td><td>−0.436</td><td>+0.013</td></tr>
+<tr><td>LTF</td><td>1.876</td><td>0.948</td><td>−0.928 [−1.062, −0.792]</td><td>−0.945</td><td>+0.018</td></tr>
+<tr><td>DiffusionDrive</td><td>1.843</td><td>0.974</td><td>−0.869 [−0.990, −0.754]</td><td>−0.874</td><td>+0.005</td></tr>
+<tr><td>garage 0014</td><td>0.869</td><td>0.679</td><td>−0.190 [−0.236, −0.145]</td><td>−0.165</td><td>−0.025</td></tr>
+</table>
+<p>越终点与其余场景的拆分是读数后加的探索。「其余场景」就是巡航落后所在的地方，每个 driver 都在 ±0.03 米内：消掉落后不动 GT。
+越终点场景在 public 上是人起步慢的场景：人类起步速度中位 1.2 米/秒、末速 3.3（其余场景 6.2）、5.5 秒的日志路径只有 9.7 米（其余 35.4），我们最后一步领先人类中位 4.5 米。
+held 18 决策上越终点场景的人类并不慢（末速 6.3），我们同样是领先。</p>
+<p>算术（只是算术）：落后加不了这个指标。横向保持 0.681 米时，要从 0.941 到 private 的 1.733，越终点部分要从 0.260 涨到 1.05，即 51% 的 clip 越终点（本地 12.6%）；
+按本地每个 clip 的结构，等价于 23.9% 的 clip ≥ 4 米（本地 5.7%，其中四分之三是越终点）。private 上两种来源分不开。</p>
+
+<h2>四、进度分</h2>
+<p>场景分 = 0（过错碰撞、出路、横向离开 4 米走廊）否则 min(进度 / 0.8, 1)，日志路径不到 5 米的场景进度记 1。越过终点不算离开走廊。</p>
+<table>
+<tr><th>driver</th><th>平均分</th><th>非零场景里进度 &lt; 1 的</th><th>进度扣掉的分（按全部场景平均）</th></tr>
+<tr><td>YR10m10-F-s0</td><td>0.932</td><td>262（17.7%）</td><td>0.022 [0.017, 0.027]</td></tr>
+<tr><td>YS2G</td><td><b>0.951</b></td><td>252</td><td>0.020</td></tr>
+<tr><td>APY10m10-AB-s0（提交 #1）</td><td>0.943</td><td>143</td><td>0.009</td></tr>
+<tr><td>WA-JEPA</td><td>0.902</td><td>91</td><td><b>0.007</b></td></tr>
+<tr><td>LTF</td><td>0.831</td><td>224</td><td>0.028</td></tr>
+<tr><td>DiffusionDrive</td><td>0.803</td><td>220</td><td>0.029</td></tr>
+<tr><td>garage 0014</td><td>0.746</td><td>312</td><td>0.093</td></tr>
+</table>
+<p>YR 比 WA-JEPA 多扣 0.014 [0.009, 0.020]，比其余三个少扣。18 决策 held 上扣得更多：YS2G 0.061，参考 0.036–0.046。</p>
+
+<h2>五、对课 L 的建议</h2>
+<p><b>巡航提速式的课 L 不是下一个训练臂。</b>预登记的预期应写成：public 10 决策上 GT 变化 0 ± 0.05 米（反事实在非越终点场景上 −0.014）；分数变化不超过 +0.022（进度扣分全部收回的上界），现实不超过 +0.014（到 WA-JEPA 的水平）；零分不变；held 18 决策上界 +0.061。
+不分场景地提速，会在人起步慢的场景里更多地跑到人前面，GT 反而上升。如果课 L 要动 GT，该加的是另一个方向的项：从低速起步时不要跑到人前面（越终点部分的上界是 −0.26 米），而这一项基本不影响分数。
+private 上的分数差距仍在零分（横向离开走廊、碰撞），那是下一臂该对准的地方。</p>
+
+<h2>来源</h2>
+<p>预登记 <code>experiments/gt_decomp/plans/2026-10-12-gt-decomp-prereg.md</code>；表 <code>experiments/gt_decomp/results/gt_decomp.md</code> 与 <code>results/pub_*.csv</code>、<code>held_*.csv</code>、<code>gd.json</code>；
+决策 <code>research/decisions/280.md</code>；代码 <code>experiments/gt_decomp/scripts/gd.py</code>、<code>gd_report.py</code>；box <code>$DATA_DIR/runs/gt_decomp/collect-pub/20261012-185417</code>、<code>collect-held/20261012-185436</code>。
+评估器 <code>~/data/third_party/alpasim</code> @ 0bb4c4b，<code>src/eval/src/eval/scorers/ground_truth.py</code>、<code>aggregation/{main,processing,modifiers,scene_score}.py</code>。</p>
+</body></html>

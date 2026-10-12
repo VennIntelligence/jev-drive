@@ -37,14 +37,14 @@ def per_scene(d):
     M["along_last"] = last.along
     R = R.set_index(["label", "scene"]).join(M).reset_index()
     R["score"] = R.score.astype(float)
-    R["gt_over_d"] = R.gt_cf - R.gt
-    R["gt_over_dlb"] = R.gt_cf_lb - R.gt
-    R["gt2"], R["lat2"] = R.gt ** 2, R.gt_lat ** 2
+    R["gt_over_d"] = R.gt_cf - R["gt"]
+    R["gt_over_dlb"] = R.gt_cf_lb - R["gt"]
+    R["gt2"], R["lat2"] = R["gt"] ** 2, R.gt_lat ** 2
     R["nz"] = (R.score > 0).astype(float)
     R["prog_short"] = ((R.score > 0) & (R.score < 1 - 1e-9)).astype(float)
     R["prog_cost"] = np.where(R.score > 0, 1 - R.score, 0.0)
     R["prog_cost_all"] = 1 - R.prog_score                                                  # progress shortfall incl. zero scenes
-    R["clip4"] = (R.gt >= 4.0).astype(float)
+    R["clip4"] = (R["gt"] >= 4.0).astype(float)
     num = [c for c in R.columns if c not in ("label", "scene", "run") and pd.api.types.is_numeric_dtype(R[c])]
     extra = []
     for name, labs in OURS.items():
@@ -153,7 +153,8 @@ def figs(Pp, Lc):
     ax.bar(x, m.gt_over, bottom=m.gt_lat, color=ps.PALETTE["orange"], width=0.65, label="along-track (past the path end)")
     ax.set_xticks(x, [short[r] for r in ROWS], rotation=35, ha="right")
     ax.set_ylabel("leaderboard GT distance (m)")
-    ax.legend(loc="upper right", fontsize=7)
+    ax.legend(loc="upper left", fontsize=7)
+    ax.set_ylim(0, 2.5)
     ps.bars(ax)
     ps.panel(ax, "(a)")
     ax = axs[1]
@@ -175,7 +176,8 @@ def figs(Pp, Lc):
     ps.zero_line(ax)
     ax.set_xlabel("time since start (s)")
     ax.set_ylabel("along-track vs human (m, + ahead)")
-    ax.legend(fontsize=6.5, ncol=2, loc="lower left")
+    ax.set_ylim(-3.2, 1.9)
+    ax.legend(fontsize=6.5, ncol=3, loc="upper left", columnspacing=0.8, handlelength=1.6)
     fig.subplots_adjust(left=0.17, right=0.98, bottom=0.18, top=0.97)
     s2 = ps.save(fig, FIGS / "gd_lag")
     plt.close(fig)
@@ -199,14 +201,14 @@ def report(a):
         TA = drv_table(P, logs, boot, cA)
         sh = P.groupby("label").apply(lambda x: 1 - x.lat2.sum() / x.gt2.sum() if x.gt2.sum() else np.nan).reindex(ROWS)
         TA["over_sq_share"] = sh.values
-        TA["over_share"] = (TA.gt_over / TA.gt).values
+        TA["over_share"] = (TA.gt_over / TA["gt"]).values
         cB = ["e_geo", "along", "aalong", "across", "along_last"]
         TB = drv_table(P, logs, boot, cB)
         k = S[S.kept]
         TB["along_sq_share"] = [float((lambda x: (x.along ** 2).sum() / ((x.along ** 2).sum() + (x.cross ** 2).sum()))(k[k.label.isin(OURS.get(r, [r]))]))
                                 for r in ROWS]
         PA = paired(P, logs, boot, ["gt", "gt_lat", "gt_over", "aalong", "along", "across", "along_last"])
-        PA["over_of_gt_excess"] = PA.gt_over / PA.gt
+        PA["over_of_gt_excess"] = PA.gt_over / PA["gt"]
         CF = drv_table(P, logs, boot, ["gt", "gt_cf", "gt_over_d", "gt_over_dlb"])
         CF["cf_ext_share"] = [float(P[P.label == r].cf_ext.sum() / P[P.label == r].cf_n.sum()) for r in ROWS]
         PCF = paired(P, logs, boot, ["gt_cf"])
@@ -223,7 +225,7 @@ def report(a):
                 q = p[p.ours == o].set_index("ref")
                 gr.append(dict(group=gname, ours=o, n=int(q.n.min()), logs=int(q.logs.min()), gt=t.loc[NAME.get(o, o), "gt"],
                                gt_refs=f"{t.loc[[NAME.get(r, r) for r in REFS], 'gt'].min():.2f}-{t.loc[[NAME.get(r, r) for r in REFS], 'gt'].max():.2f}",
-                               d_gt_min=q.gt.min(), d_gt_max=q.gt.max(), d_over_max=q.gt_over.abs().max(),
+                               d_gt_min=q["gt"].min(), d_gt_max=q["gt"].max(), d_over_max=q.gt_over.abs().max(),
                                lag=t.loc[NAME.get(o, o), "along_last"],
                                lag_refs=f"{t.loc[[NAME.get(r, r) for r in REFS], 'along_last'].min():+.2f} to {t.loc[[NAME.get(r, r) for r in REFS], 'along_last'].max():+.2f}",
                                d_lag_lo=q.along_last.max(), cost=t.loc[NAME.get(o, o), "prog_cost"], d_cost_min=q.prog_cost.min(), d_cost_max=q.prog_cost.max()))
@@ -234,9 +236,10 @@ def report(a):
             df.to_csv(OUT / f"{st}_{nm}.csv", index=False)
         # arithmetic (c), our submission on this set
         y = P[P.label == PRIVATE_LABEL]
-        lo, hi = y.gt[y.gt < 4].mean(), y.gt[y.gt >= 4].mean()
-        J[st] |= dict(yr_gt=float(y.gt.mean()), yr_lo=float(lo), yr_hi=float(hi), yr_clip4=float((y.gt >= 4).mean()),
-                      need_clip4=float((PRIVATE_GT - lo) / (hi - lo)), yr_over_any=int(y.over_any.sum()), n=len(y))
+        lo, hi = y["gt"][y["gt"] < 4].mean(), y["gt"][y["gt"] >= 4].mean()
+        J[st] |= dict(yr_gt=float(y["gt"].mean()), yr_lo=float(lo), yr_hi=float(hi), yr_clip4=float((y["gt"] >= 4).mean()),
+                      need_clip4=float((PRIVATE_GT - lo) / (hi - lo)), yr_over_any=int(y.over_any.sum()), n=len(y),
+                      yr_lat=float(y.gt_lat.mean()), yr_over=float(y.gt_over.mean()), yr_over_per=float(y.gt_over[y.over_any > 0].mean()))
         if st == "pub":
             Pp, Lp = P, Lc
         # ---- markdown
@@ -278,11 +281,43 @@ def report(a):
         w("\n### Along-track lag by decision (m, + ahead of the human; kept steps)\n")
         pv = Lc.pivot(index="k", columns="label", values="along")[ROWS]
         w(md(pv.reset_index().rename(columns=lambda c: NAME.get(c, c)), ["k"] + [NAME.get(c, c) for c in ROWS], ["k"] + [NAME.get(c, c) for c in ROWS]))
+        # ---- exploratory (not pre-registered): where the along-track (past-end) part comes from
+        Lg = pd.read_parquet(Path(cap) / "log.parquet")
+        vend = Lg[Lg.k == K].set_index("scene").v
+        Lpath = pd.read_parquet(Path(d) / "pathinfo.parquet").set_index("scene").L
+        v0 = Sc.set_index("scene").v0
+        ex = []
+        for lab in ROWS:
+            x = P[P.label == lab].set_index("scene")
+            ov = x.over_any > 0.25                                                          # seed-mean rows: past the end in either seed
+            n = len(x)
+            ex.append(dict(driver=NAME.get(lab, lab), n_over=int(ov.sum()), share_over=float(ov.mean()),
+                           cf_over=float(x.gt_over_d[ov].sum() / n), cf_rest=float(x.gt_over_d[~ov].sum() / n), cf_rest_mean=float(x.gt_over_d[~ov].mean()),
+                           ge4=int((x["gt"] >= 4).sum()), ge4_over_only=int(((x["gt"] >= 4) & (x.gt_lat < 4)).sum()),
+                           gt_over_on_over=float(x.gt_over[ov].mean()), score_over=float(x.score[ov].mean()), score_rest=float(x.score[~ov].mean()),
+                           v0_over=float(v0.reindex(x.index)[ov].median()), vend_over=float(vend.reindex(x.index)[ov].median()),
+                           vend_rest=float(vend.reindex(x.index)[~ov].median()), L_over=float(Lpath.reindex(x.index)[ov].median()),
+                           L_rest=float(Lpath.reindex(x.index)[~ov].median()), lead_over=float(x.along_last[ov].median())))
+        EX = pd.DataFrame(ex)
+        EX.to_csv(OUT / f"{st}_exploratory.csv", index=False)
+        J[st]["exploratory"] = EX.set_index("driver").to_dict("index")
+        w("\n### Exploratory (not pre-registered): where the along-track part comes from\n")
+        w(md(EX, ["driver", "n_over", "share_over", "gt_over_on_over", "cf_over", "cf_rest", "ge4", "ge4_over_only", "score_over", "score_rest", "lead_over",
+                  "v0_over", "vend_over", "vend_rest", "L_over", "L_rest"],
+             ["driver", "scenes past the path end", "share", "along part on those", "CF change from those (per all scenes)", "CF change from the rest",
+              "clips >= 4 m", "of which cross < 4 m", "score on past-end scenes", "score on the rest", "median along at last step there (m)",
+              "median human v0 there", "median human v at end there", "rest", "median logged path (m) there", "rest"]))
+        w("\nPast-end scenes are scenes where the driver ends ahead of the human (median along at the last step above). The human-speed and logged-path "
+          "columns say which human behaviour they come from on this set. 'CF change from the rest' = what the human timing does to GT on every other scene "
+          "(this is where cruise lag lives).\n")
         w(f"\n### Arithmetic (c), {PRIVATE_LABEL}\n")
         w(f"Local GT {J[st]['yr_gt']:.3f} m; clips < 4 m average {lo:.3f} m, clips >= 4 m average {hi:.3f} m, {100 * J[st]['yr_clip4']:.1f}% of clips >= 4 m. "
           f"Leaderboard private {PRIVATE_GT} m with the same per-clip structure needs {100 * J[st]['need_clip4']:.1f}% of clips to leave the 4 m corridor "
           f"(arithmetic only). Lagging the human cannot add to this metric (nearest-point distance); {J[st]['yr_over_any']} of {J[st]['n']} clips have "
-          "any step past the end of the logged path.\n")
+          "any step past the end of the logged path. "
+          f"Along-track route (arithmetic only): with the cross part fixed at {J[st]['yr_lat']:.3f} m, the along (past-end) part would have to grow from "
+          f"{J[st]['yr_over']:.3f} to {PRIVATE_GT - J[st]['yr_lat']:.3f} m, i.e. {(PRIVATE_GT - J[st]['yr_lat']) / J[st]['yr_over_per']:.0%} of clips "
+          f"past the end at the local {J[st]['yr_over_per']:.2f} m per such clip (local {J[st]['yr_over_any'] / J[st]['n']:.1%}).\n")
     s1, s2 = figs(Pp, Lp)
     J["figs"] = dict(split=s1, lag=s2)
     head = ["# GT-DECOMP: the leaderboard GT distance, along-track vs cross-track", "",
