@@ -315,28 +315,39 @@ def cmd_ident(a):
         rows = np.arange(a.n)
         p, c = (x.to(dev) for x in px.get(rows))
         res = {"n": a.n}
-        for dt in (torch.bfloat16, torch.float32):
+        enc = lambda mm, grad=False: torch.cat([mm.encode(p[i:i + 64], c[i:i + 64], grad=grad).detach() for i in range(0, a.n, 64)]).float()  # noqa: E731
+        h32 = None
+        for dt in (torch.float32, torch.bfloat16):
             ref = M.JE("none", dtype=dt, heads=False).to(dev)
-            h0 = torch.cat([ref.encode(p[i:i + 64], c[i:i + 64]) for i in range(0, a.n, 64)]).float()
+            h0 = enc(ref)
             del ref
+            dn = str(dt)[6:]
+            if h32 is None:
+                h32 = h0
+            res[f"frozen_{dn}_vs_fp32"] = dict(max_abs=float((h0 - h32).abs().max()), mean_abs=float((h0 - h32).abs().mean()))
             for vis in ("lora", "full"):
                 m = M.JE(vis, dtype=dt, heads=False).to(dev)
                 for grad in (False, True):            # the no-grad chunks and the training (grad) pass
                     with torch.set_grad_enabled(grad):
-                        h = torch.cat([m.encode(p[i:i + 64], c[i:i + 64], grad=grad).detach() for i in range(0, a.n, 64)]).float()
-                    k = f"{vis}_{str(dt)[6:]}_{'grad' if grad else 'nograd'}"
+                        h = enc(m, grad)
+                    k = f"{vis}_{dn}_{'grad' if grad else 'nograd'}"
                     res[k] = dict(bitwise_equal_share=float((h == h0).float().mean()), max_abs=float((h - h0).abs().max()),
-                                  ref_rms=float(h0.pow(2).mean().sqrt()))
+                                  ref_rms=float(h0.pow(2).mean().sqrt()), vs_fp32_mean_abs=float((h - h32).abs().mean()),
+                                  vs_fp32_max_abs=float((h - h32).abs().max()))
                     run.info(f"{k}: {res[k]}")
                 if vis == "lora":                     # control: a small nonzero B must move the tokens
                     for kk, v in m.net.lora.items():
                         if kk.endswith("__B"):
                             v.normal_(0, 1e-3)
-                    h = torch.cat([m.encode(p[i:i + 64], c[i:i + 64]) for i in range(0, a.n, 64)]).float()
-                    res[f"control_B1e-3_{str(dt)[6:]}"] = dict(max_abs=float((h - h0).abs().max()), mean_abs=float((h - h0).abs().mean()))
+                    h = enc(m)
+                    res[f"control_B1e-3_{dn}"] = dict(max_abs=float((h - h0).abs().max()), mean_abs=float((h - h0).abs().mean()))
                 del m
                 torch.cuda.empty_cache()
-        res["pass"] = all(v["bitwise_equal_share"] == 1.0 for k, v in res.items() if isinstance(v, dict) and "bitwise_equal_share" in v)
+        # LoRA (B = 0, depthwise masters) must be bitwise the frozen trunk in both dtypes; U (all masters fp32) bitwise in fp32 and, in
+        # bf16, no further from the fp32 trunk than the frozen bf16 trunk is (its fp32 LayerNorm masters skip one bf16 rounding)
+        res["pass"] = bool(all(res[f"lora_{d}_{g}"]["bitwise_equal_share"] == 1.0 for d in ("float32", "bfloat16") for g in ("grad", "nograd"))
+                           and all(res[f"full_float32_{g}"]["bitwise_equal_share"] == 1.0 for g in ("grad", "nograd"))
+                           and all(res[f"full_bfloat16_{g}"]["vs_fp32_mean_abs"] <= 1.1 * res["frozen_bfloat16_vs_fp32"]["mean_abs"] for g in ("grad", "nograd")))
         out = STEP1 / "gates" / "ident.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(res, indent=1))
