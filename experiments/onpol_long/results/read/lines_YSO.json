@@ -1,0 +1,67 @@
+{
+ "YSO25": {
+  "seeds": 2,
+  "zeros": 37.5,
+  "early_inside_across": 2.5,
+  "late_outside_kerb": 7.5,
+  "onc_pre_share": 0.17073170731707318,
+  "onc_pre_n": [
+   7,
+   41
+  ],
+  "straight_corridor_past_end": 2.5,
+  "straight_corridor": 3.5
+ },
+ "YSO50": {
+  "seeds": 2,
+  "zeros": 44.0,
+  "early_inside_across": 2.0,
+  "late_outside_kerb": 10.5,
+  "onc_pre_share": 0.12244897959183673,
+  "onc_pre_n": [
+   6,
+   49
+  ],
+  "straight_corridor_past_end": 2.5,
+  "straight_corridor": 4.0
+ },
+ "YS2G": {
+  "seeds": 2,
+  "zeros": 41.5,
+  "early_inside_across": 5.5,
+  "late_outside_kerb": 7.5,
+  "onc_pre_share": 0.22641509433962265,
+  "onc_pre_n": [
+   12,
+   53
+  ],
+  "straight_corridor_past_end": 4.5,
+  "straight_corridor": 6.0
+ },
+ "YS": {
+  "seeds": 2,
+  "zeros": 44.0,
+  "early_inside_across": 10.5,
+  "late_outside_kerb": 6.0,
+  "onc_pre_share": 0.3050847457627119,
+  "onc_pre_n": [
+   18,
+   59
+  ],
+  "straight_corridor_past_end": 4.5,
+  "straight_corridor": 6.0
+ },
+ "base": {
+  "seeds": 1,
+  "zeros": 74.0,
+  "early_inside_across": 6.0,
+  "late_outside_kerb": 17.0,
+  "onc_pre_share": 0.17073170731707318,
+  "onc_pre_n": [
+   7,
+   41
+  ],
+  "straight_corridor_past_end": 2.0,
+  "straight_corridor": 7.0
+ }
+}

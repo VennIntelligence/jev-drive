@@ -90,3 +90,77 @@ human-like plans (the region is classified at the t0 heading for the whole 4 s).
 Across-traffic early-inside events active two decisions ahead: 9 / 11 with either heading. The written rule (human on turns < 0.05 and >= 8 / 11) is
 not met by the local heading (0.084), so the trainings use variant (a) with the t0 heading on the Amendment 15 raster (`OL_ONC_MODE=point`). The exact
 per-point t0 numbers reproduce the raster version of Amendment 16 (served 0.068 against 0.072, human 0.019 against 0.021).
+
+## Amendment 17 read: arm B' with variant (a) (rear-axle oncoming hinge, t0 heading), held 452 / 18 decisions, cards 1-5
+
+Jobs: trainings 1012-182636-3563 / -182638-745f (YSO25 s0 / s1), 1012-182639-01d8 / -182641-3a69 (YSO50), 24 read chunks, report 1012-182642-d4cd (a first submission failed at setup on a list-for-array bug in `ol_onc.load`, fixed and resubmitted; no training step ran). Timings: training 6.7 min per run, read 8.1 min per 77-scene chunk on average (max 10.0), report 1 min. zm_read collect `runs/onpol_long/zm/zeros_mech/collect/20261012-185754` (through `ol_zm.py`).
+
+| line (seed mean) | YSO25 (lam 2.5) | YSO50 (lam 5) | YS2G | YS-L18 | base |
+|:--|--:|--:|--:|--:|--:|
+| 1. early-inside zeros, across-traffic turns < 5.5 | 2.5 ok | 2 ok | 5.5 | 10.5 | 6 |
+| 2. late-outside zeros, kerb-side turns <= 7.5 | 7.5 ok | 10.5 no | 7.5 | 6 | 17 |
+| 3. oncoming 2 s before (corridor + collision zeros) < 0.17 | 0.171 (7 / 41) no | 0.122 (6 / 49) ok | 0.226 | 0.305 | 0.171 |
+| 4. zeros <= 41.5 | 37.5 ok | 44 no | 41.5 | 44 | 74 |
+| 5. GT distance <= 1.276 m (selection) | 1.306 no | 1.349 no | 1.276 | 1.357 | 1.495 |
+| mean score | 0.8584 | 0.8469 | 0.8474 | 0.8376 | 0.7866 |
+| at-fault zeros | 22.5 | 24.5 | 22.0 | 23.5 | 41 |
+| separate: straight corridor zeros past the log end / all | 2.5 / 3.5 | 2.5 / 4 | 4.5 / 6 | 4.5 / 6 | 2 / 7 |
+
+Paired against YS2G (seed means, log-clustered 95 % CI): YSO25 +0.011 [-0.007, +0.026], zeros -4.0 [-10.9, +4.4], at-fault +0.5, GT +0.030 [-0.022, +0.079] m; YSO50 -0.001 [-0.021, +0.017], zeros +2.5, at-fault +2.5, GT +0.074 [-0.014, +0.160] m. Against YS-L18: YSO25 +0.021 [+0.000, +0.039], GT -0.051 [-0.137, +0.033].
+
+**Verdict: neither weight adopted** (line 5, the selection quantity, fails for both). YSO25 meets lines 1, 2 and 4 and misses line 3 by one event (7 / 41 = 0.1707 against < 0.17, the base level) and line 5 by +0.030 m (CI includes 0); it has the highest mean score of this topic (0.858) and the fewest zeros (37.5). YSO50 meets 1 and 3, fails 2, 4 and 5: the stronger weight pushes plans to the kerb side again (offroad zeros 19.5, kerb-side late-outside 10.5).
+
+---
+
+# ONPOL-LONG round 1, family Y (base YS-L18-s0): 452 scenes, length `18`, 39 logs
+
+Dropped for every label alike: 8 scenes without a rollout in at least one label (route generation failed: route folds back).
+
+| | mean score | zeros | collision at fault / offroad / corridor / other zeros | at-fault zeros | GT distance (m) | drift slope k >= 4 (m / decision) | per seed: score / zeros / at-fault zeros / GT |
+|:--|--:|--:|:--|--:|--:|--:|:--|
+| arm YSO25-L18 (SO25) | 0.8584 | 37.5 | 5.5 / 17.0 / 16.0 / 0.0 | 22.5 | 1.306 | 0.0921 | YSO25-L18-s0 0.8584 / 37 / 22 / 1.318 ; YSO25-L18-s1 0.8585 / 38 / 23 / 1.293 |
+| control YS2G-L18 | 0.8474 | 41.5 | 7.0 / 15.0 / 19.5 / 0.0 | 22.0 | 1.276 | 0.0903 | YS2G-L18-s0 0.8434 / 43 / 24 / 1.272 ; YS2G-L18-s1 0.8514 / 40 / 20 / 1.279 |
+| reference YS-L18-s0 | 0.8345 | 45.0 | 9.0 / 14.0 / 23.0 / 0.0 | 23.0 | 1.367 | 0.0962 | YS-L18-s0 0.8345 / 45 / 23 / 1.367 |
+| reference YS-L18-s0, YS-L18-s1 | 0.8376 | 44.0 | 9.0 / 14.5 / 22.0 / 0.0 | 23.5 | 1.357 | 0.0960 | YS-L18-s0 0.8345 / 45 / 23 / 1.367 ; YS-L18-s1 0.8407 / 43 / 24 / 1.346 |
+
+Zeros = scenes scored 0; a zero can carry more than one kind (offroad and corridor together), `other` = none of the three. Paired per-scene seed-mean differences, log-clustered 95 % CI (10 000 draws); zero columns are totals over the scenes:
+
+| a - b | mean score | zeros | at-fault zeros | collision / offroad / corridor / other zeros | GT distance (m) | fixed / broken |
+|:--|:--|:--|:--|:--|:--|:--|
+| arm - control | +0.0110 [-0.0069, +0.0255] | -4.0 [-10.9, +4.4] | +0.5 [-6.0, +7.4] | -1.5 / +2.0 / -3.5 / +0.0 | +0.030 [-0.022, +0.079] (452 scenes) | 6 / 3 |
+| arm - reference YS-L18-s0+YS-L18-s1 | +0.0208 [+0.0003, +0.0386] | -6.5 [-14.5, +2.6] | -1.0 [-8.7, +7.1] | -3.5 / +2.5 / -6.0 / +0.0 | -0.051 [-0.137, +0.033] (452 scenes) | 9 / 7 |
+| control - reference YS-L18-s0+YS-L18-s1 | +0.0098 [-0.0003, +0.0205] | -2.5 [-7.3, +1.8] | -1.5 [-6.1, +3.3] | -2.0 / +0.5 / -2.5 / +0.0 | -0.081 [-0.141, -0.024] (452 scenes) | 5 / 2 |
+
+Null of fixed - broken: max |fixed - broken| of the single-seed comparisons YNONE-L18 s0 / s1 and YS-L18 s0 / s1 = 3.
+
+**Adoption line (registered): NOT adopted** - fewer zeros than the control True (37.5 vs 41.5); at-fault zeros not above the control's (hard gate) False (22.5 vs 22.0); GT distance not larger False (1.306 vs 1.276 m).
+
+Round gate (closed-loop.md; registered for round 2 in Amendment 5; with score for Amendment 6) against YS-L18-s0+YS-L18-s1: PASSED - {"fewer_zeros": true, "atfault_not_above": true, "gt_not_larger": true, "passed": true, "score_not_lower": true} (zeros 37.5 vs 44.0, at-fault 22.5 vs 23.5, GT 1.306 vs 1.357).
+
+CL-1 as written in closed-loop.md (reported beside it): not met - {"score_ci_low_gt0": false, "atfault_not_above_base_mean": true, "gt_lower_by_010": false, "fixed_minus_broken_over_null": false, "met": false}.
+# ONPOL-LONG round 1, family Y (base YS-L18-s0): 452 scenes, length `18`, 39 logs
+
+Dropped for every label alike: 8 scenes without a rollout in at least one label (route generation failed: route folds back).
+
+| | mean score | zeros | collision at fault / offroad / corridor / other zeros | at-fault zeros | GT distance (m) | drift slope k >= 4 (m / decision) | per seed: score / zeros / at-fault zeros / GT |
+|:--|--:|--:|:--|--:|--:|--:|:--|
+| arm YSO50-L18 (SO50) | 0.8469 | 44.0 | 5.0 / 19.5 / 21.0 / 0.0 | 24.5 | 1.349 | 0.1058 | YSO50-L18-s0 0.8385 / 48 / 27 / 1.338 ; YSO50-L18-s1 0.8553 / 40 / 22 / 1.361 |
+| control YS2G-L18 | 0.8474 | 41.5 | 7.0 / 15.0 / 19.5 / 0.0 | 22.0 | 1.276 | 0.0903 | YS2G-L18-s0 0.8434 / 43 / 24 / 1.272 ; YS2G-L18-s1 0.8514 / 40 / 20 / 1.279 |
+| reference YS-L18-s0 | 0.8345 | 45.0 | 9.0 / 14.0 / 23.0 / 0.0 | 23.0 | 1.367 | 0.0962 | YS-L18-s0 0.8345 / 45 / 23 / 1.367 |
+| reference YS-L18-s0, YS-L18-s1 | 0.8376 | 44.0 | 9.0 / 14.5 / 22.0 / 0.0 | 23.5 | 1.357 | 0.0960 | YS-L18-s0 0.8345 / 45 / 23 / 1.367 ; YS-L18-s1 0.8407 / 43 / 24 / 1.346 |
+
+Zeros = scenes scored 0; a zero can carry more than one kind (offroad and corridor together), `other` = none of the three. Paired per-scene seed-mean differences, log-clustered 95 % CI (10 000 draws); zero columns are totals over the scenes:
+
+| a - b | mean score | zeros | at-fault zeros | collision / offroad / corridor / other zeros | GT distance (m) | fixed / broken |
+|:--|:--|:--|:--|:--|:--|:--|
+| arm - control | -0.0005 [-0.0214, +0.0167] | +2.5 [-5.8, +12.5] | +2.5 [-5.0, +10.4] | -2.0 / +4.5 / +1.5 / +0.0 | +0.074 [-0.014, +0.160] (452 scenes) | 5 / 9 |
+| arm - reference YS-L18-s0+YS-L18-s1 | +0.0093 [-0.0148, +0.0308] | +0.0 [-9.7, +10.9] | +1.0 [-6.2, +8.6] | -4.0 / +5.0 / -1.0 / +0.0 | -0.007 [-0.127, +0.111] (452 scenes) | 11 / 11 |
+| control - reference YS-L18-s0+YS-L18-s1 | +0.0098 [-0.0003, +0.0205] | -2.5 [-7.3, +1.8] | -1.5 [-6.1, +3.3] | -2.0 / +0.5 / -2.5 / +0.0 | -0.081 [-0.141, -0.024] (452 scenes) | 5 / 2 |
+
+Null of fixed - broken: max |fixed - broken| of the single-seed comparisons YNONE-L18 s0 / s1 and YS-L18 s0 / s1 = 3.
+
+**Adoption line (registered): NOT adopted** - fewer zeros than the control False (44.0 vs 41.5); at-fault zeros not above the control's (hard gate) False (24.5 vs 22.0); GT distance not larger False (1.349 vs 1.276 m).
+
+Round gate (closed-loop.md; registered for round 2 in Amendment 5; with score for Amendment 6) against YS-L18-s0+YS-L18-s1: not passed - {"fewer_zeros": false, "atfault_not_above": false, "gt_not_larger": true, "passed": false, "score_not_lower": true} (zeros 44.0 vs 44.0, at-fault 24.5 vs 23.5, GT 1.349 vs 1.357).
+
+CL-1 as written in closed-loop.md (reported beside it): not met - {"score_ci_low_gt0": false, "atfault_not_above_base_mean": false, "gt_lower_by_010": false, "fixed_minus_broken_over_null": false, "met": false}.

@@ -19,12 +19,26 @@ A second on-policy round (rows from `YS-L18`'s own rollouts, from `YS-L18-s1`) d
 than its own no-row control and slightly worse than round 1 (zeros 50.5 against 43), so the loop stops at round 1 and "more rounds help"
 is recorded as negative for this setting.
 
-**Next.** Arm B (Amendment 13, decision 274) is void; arm B' (Amendment 14, decision 276) and arm B / B' on zeros_mech's lane rule (Amendment 15, decision 277) stopped at their label gates: footprint hinges on oncoming lanes fire on normal driving. PAI transfer read on the Tokyo box (Amendments 1, 4, 5). `YS2G-L18` passed the
+**Next.** Arm B' with the rear-axle oncoming hinge: not adopted, YSO25 closest (Amendment 17, decision 281). Arm B (Amendment 13, decision 274) is void; arm B' (Amendment 14, decision 276) and arm B / B' on zeros_mech's lane rule (Amendment 15, decision 277) stopped at their label gates: footprint hinges on oncoming lanes fire on normal driving. PAI transfer read on the Tokyo box (Amendments 1, 4, 5). `YS2G-L18` passed the
 public-mean guardrail of the last-slot rule (Amendment 10, decision 269); the candidate-scoring line stopped at its feasibility gate (Amendment 12, decision 270). Ego-status dropout (Amendment 11) does not cut the drift: it removes the open-loop reliance and drift rises (decision 271).
 
 **Read more.** [plans/2026-10-12-ol1-prereg.md](plans/2026-10-12-ol1-prereg.md); the plan: [research/next-round/closed-loop.md](../../research/next-round/closed-loop.md);
 the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpol_nuplan/README.md); the 18-decision driver path:
 [../alpasim_long/README.md](../alpasim_long/README.md).
+
+## Arm B' with the rear-axle oncoming hinge (Amendment 17; held 452 at 18 decisions, cards 1-5)
+
+[results/read/report_YSB2.md](results/read/report_YSB2.md) (last section), `report_YSO25.json`, `report_YSO50.json`, `lines_YSO.json`.
+
+| | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) | early-inside across | late-outside kerb | oncoming 2 s before |
+|:--|--:|--:|:--|--:|--:|--:|--:|:--|
+| `YSO25-L18` (lam 2.5) s0 / s1 | 0.858 (0.858 / 0.859) | 37.5 | 5.5 / 17.0 / 16.0 | 22.5 | 1.306 | 2.5 | 7.5 | 0.171 (7 / 41) |
+| `YSO50-L18` (lam 5) | 0.847 | 44.0 | 5.0 / 19.5 / 21.0 | 24.5 | 1.349 | 2.0 | 10.5 | 0.122 (6 / 49) |
+| control `YS2G-L18` | 0.847 | 41.5 | 7.0 / 15.0 / 19.5 | 22.0 | 1.276 | 5.5 | 7.5 | 0.226 (12 / 53) |
+
+Neither adopted (decision 281): GT distance, the selection quantity, is above `YS2G` for both (`YSO25` +0.030 [-0.022, +0.079] m). `YSO25` meets lines 1, 2, 4,
+misses 3 by one event and 5 by 0.03 m, with the best mean score and fewest zeros of the topic; `YSO50` pushes plans to the kerb again.
+Timings: training 6.7 min, read 8.1 min per chunk (max 10.0), report 1 min.
 
 ## Oncoming hinge variants (Amendment 16, label study, no training)
 
