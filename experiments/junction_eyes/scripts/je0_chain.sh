@@ -19,7 +19,7 @@ wa)
         --log-dir $S/wa/pool/$d.$i -- bash -c "$WAPY --data $d --rows-file $f --shard $i 3 --batch 16 --workers 16"
     done
   done
-  python3 -c "import numpy as np; np.save('$S/wa/rows/gref.npy', np.arange(0, 600, 3))"
+  $OPT -c "import numpy as np; np.save('$S/wa/rows/gref.npy', np.arange(0, 600, 3))"
   CL submit --name JEW-gref --owner junction-eyes --vram 24 --cpu 16 --ram 40 --tries 2 --timeout-h 1 --no-check --log-dir $S/wa/pool/gref -- \
     bash -c "$WAPY --data lb_navtest --rows-file $S/wa/rows/gref.npy --tag -gref --batch 16 --workers 16" ;;
 probes)
