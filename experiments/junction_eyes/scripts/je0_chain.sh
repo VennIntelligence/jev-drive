@@ -22,7 +22,7 @@ wa)
   done
   $OPT -c "import numpy as np; np.save('$S/wa/rows/gref.npy', np.arange(0, 600, 3))"
   [[ -e $D/runs/op_probe/feats/WA/lb_navtest-gref.npz ]] || CL submit --name JEW-gref --owner junction-eyes --vram 24 --cpu 16 --ram 45 --tries 2 --timeout-h 1 --no-check --log-dir $S/wa/pool/gref -- \
-    bash -c "$WAPY --data lb_navtest --rows-file $S/wa/rows/gref.npy --tag -gref --batch 16 --workers 16" ;;
+    bash -c "$WAPY --data lb_navtest --rows-file $S/wa/rows/gref.npy --tag=-gref --batch 16 --workers 16" ;;
 probes)
   P() { local n=$1; shift; CL submit --name JEP-$n --owner junction-eyes --vram 60 --cpu 8 --ram 12 --tries 2 --timeout-h 2 --no-check \
           --log-dir $S/pool/JEP-$n "$@"; }
