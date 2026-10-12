@@ -52,6 +52,10 @@ def one(a):
     m = pl.read_parquet(f[0]).filter(pl.col("name").is_in(names)).select("name", pl.col("timestamps_us").cast(pl.Int64), "values")
     ser = {n: dict(zip(x["timestamps_us"].to_list(), x["values"].to_list())) for (n,), x in m.group_by("name")}
     g = lambda n, t: (ser.get(n, {}).get(t) or 0.0) > 0
+    if label.endswith("@pai"):                    # PAI runs (Tokyo stack): own clock, every simulator step; k = step index, no decision grid
+        ts = sorted(ser["dist_to_gt_trajectory"])
+        return [dict(label=label, scene=scene, k=i, dist_gt=ser["dist_to_gt_trajectory"][t], ev=g("collision_any", t) or g("offroad", t),
+                     atf=g("offroad", t) or g("collision_front", t) or g("collision_lateral", t)) for i, t in enumerate(ts)]
     ks = sorted((t - T0) // DT for t in ser["dist_to_gt_trajectory"] if t >= T0 and (t - T0) % DT == 0)
     return [dict(label=label, scene=scene, k=int(k), dist_gt=ser["dist_to_gt_trajectory"][t], ev=g("collision_any", t) or g("offroad", t),
                  atf=g("offroad", t) or g("collision_front", t) or g("collision_lateral", t)) for k in ks for t in [T0 + DT * k]]
