@@ -253,3 +253,19 @@ class _Sub:
 
     def get(self, rows):
         return self.px.get(rows)
+
+
+def comma_frames(seg: str, max_frames: int = 1200) -> np.ndarray:
+    """20 Hz model frames (n, 2, 6, 128, 256) of a comma1M segment (jevdrive.openpilot.frames.segment_model_frames). The hevc decoder
+    (PyAV) lives in the openpilot env, not in op-train, so the decode runs there in a child process and comes back through a temp npy."""
+    import subprocess
+    import tempfile
+    from jevdrive.common import data_dir
+    repo = Path(__file__).resolve().parents[3]
+    py = data_dir() / "envs" / "openpilot" / "bin" / "python"
+    with tempfile.TemporaryDirectory(dir=data_dir() / "tmp") as d:
+        out = Path(d) / "f.npy"
+        code = ("import sys, numpy as np; sys.path.insert(0, sys.argv[1]); from jevdrive.openpilot.frames import segment_model_frames as f; "
+                "np.save(sys.argv[4], f(sys.argv[2], max_frames=int(sys.argv[3]))[0])")
+        subprocess.run([str(py), "-c", code, str(repo), str(data_dir() / "datasets" / "comma1M" / seg), str(max_frames), str(out)], check=True)
+        return np.load(out)

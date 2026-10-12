@@ -9,15 +9,16 @@ Segments: the first of comma1m/junction-eyes-keep with both cameras, plus --held
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
-_sys.path[:0] = [str(_R)]
+_sys.path[:0] = [str(_R), str(_R / "experiments/junction_eyes/lib")]
 import argparse, os  # noqa: E401,E402
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
+import je_data as D  # noqa: E402
+
 from jevdrive import op_adapt as A  # noqa: E402
 from jevdrive.common import data_dir  # noqa: E402
-from jevdrive.openpilot.frames import segment_model_frames  # noqa: E402
 
 AT = (0.275, 0.525)
 
@@ -36,7 +37,7 @@ def main(a):
         st = A.Stepper(net, "cinque")
         frames, fidx, teach, seg, held = [], [], [], [], []
         for i, s in enumerate(segs):
-            fr, _ = segment_model_frames(root / s, max_frames=a.max_frames)
+            fr = D.comma_frames(s, a.max_frames)
             raw = st.run_stream(fr, AT, repeat=1)[0]                       # (n, n_out) per 20 Hz step
             t0 = np.arange(36, len(fr), a.every)
             t0 = t0[t0 % 4 == 0]

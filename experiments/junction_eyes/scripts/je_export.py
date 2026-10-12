@@ -91,11 +91,13 @@ def torch_vision(net, prev, cur, dev):
 
 
 def stream(n_steps: int, seg: str = ""):
-    """20 Hz model frames (n, 2, 6, 128, 256) of one comma1M segment (default: the first in sorted order)."""
-    from jevdrive.openpilot.frames import segment_model_frames
+    """20 Hz model frames (n, 2, 6, 128, 256) of one comma1M segment."""
+    import je_data as D
     root = data_dir() / "datasets" / "comma1M"
-    seg = seg or sorted(p.name for p in root.iterdir() if (p / "fcamera.hevc").exists())[0]
-    return segment_model_frames(root / seg, max_frames=n_steps)[0], seg
+    if not seg:                                   # default: the first held-out keep segment (never trained on) with both cameras
+        from jevdrive.data import splits
+        seg = [x for x in sorted(splits.load("comma1m/junction-eyes-heldout")) if (root / x / "ecamera.hevc").exists()][0]
+    return D.comma_frames(seg, n_steps), seg
 
 
 def plans_torch(net, frames):
