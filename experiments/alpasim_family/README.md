@@ -1,7 +1,7 @@
 # alpasim_family: why only openpilot drivers fall on private
 
 status: live
-decisions: 263
+decisions: 263, 267
 index: reported pitch +2-3 deg reproduces YR's private drop; APY ordering fails; no code path
 
 **Question.** Is the openpilot family's private-only loss (YR10m10-F-s0 0.925 -> 0.80, GT 0.94 -> 1.73 m; APY 0.935 -> 0.640) explained by
@@ -12,7 +12,9 @@ sensitive to it: a reported pitch 2-3 deg further down than the rendered camera 
 (-0.148 / -0.175 score, GT x1.58 / x2.16, drift on 15 / 16 vehicles; yaw 4 deg also), while the LTF sample is untouched. But it is not
 the explanation as it stands: under the same error APY loses less than YR (-0.067 against -0.148), the reverse of private, and no
 shipped code path makes the report differ from the render (same pickle fields; the omitted distortion is harmless, +0.003; the
-flat-pickle fallback camera collapses the driver to 0.46, not 0.80) (decision 263).
+flat-pickle fallback camera collapses the driver to 0.46, not 0.80) (decision 263). Reconstruction quality is not it either: on every
+per-asset quality proxy (pose correction, intrinsics anisotropy, distortion deviation, background density) our family is the least
+sensitive driver set, while LTF / DD lose 0.12 on the worst pose-correction decile and garage 0.27 on the sparsest backgrounds (decision 267).
 
 **Next.** A serving-side guard is free on public: ignoring the reported mount for a fixed nominal one scores -0.003 [-0.034, +0.028]
 (96 scenes); confirming on all 1491 scenes costs about 2 card-hours, and only a warm-up pass count (32 private scenes, 2 left until
@@ -20,7 +22,7 @@ flat-pickle fallback camera collapses the driver to 0.46, not 0.80) (decision 26
 
 **Read more.** Dependence table [results/dependence.md](results/dependence.md) (task 1; also the renderer's undisclosed distortion and
 the level, fixed-altitude closed-loop ego), sensitivity [results/sensitivity.md](results/sensitivity.md) (task 2), warm-up rules
-[results/warmup.md](results/warmup.md) (task 3), pre-registration and amendment 1 [plans/2026-10-12-family-prereg.md](plans/2026-10-12-family-prereg.md),
+[results/warmup.md](results/warmup.md) (task 3), reconstruction quality [results/quality.md](results/quality.md), pre-registration and amendment 1 [plans/2026-10-12-family-prereg.md](plans/2026-10-12-family-prereg.md),
 render against the real frame [figs/render_vs_real.jpg](figs/render_vs_real.jpg).
 
 <!-- files:begin -->
@@ -30,6 +32,9 @@ render against the real frame [figs/render_vs_real.jpg](figs/render_vs_real.jpg)
 - `dependence.md` (results): what each nuPlan-track driver reads …
 - `sensitivity.md` (results): calibration and image-geometry …
 - `warmup.md` (results): what the nuPlan warm-up track is
+- `quality.md` (results): reconstruction quality vs the family's private loss
+- `2026-10-12-quality-prereg.md` (plans): FAMILY-Q 预注册
+- `asset_quality.py`, `q5_photometric.py`, `quality_report.py` (scripts): quality measures and regressions
 - `fam_perturb.py` (scripts): what a driver is told about CAM_F0, or …
 - `fam_driver.py` (scripts): the served sh30 driver with FAM_ARM …
 - `fam_ltf.py` (scripts): the shipped SimScale LTF sample with …
