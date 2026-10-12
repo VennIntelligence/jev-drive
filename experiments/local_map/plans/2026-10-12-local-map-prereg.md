@@ -65,3 +65,11 @@ anchor（driver 由 egomotion 得到的 local 系 rig 位姿）；route 路点�
 CPU（AlpaSim venv，`n_cpus()` 个 worker、每个一线程），读消息、重算路点、带估计约 20 分钟。产出 `experiments/local_map/`：README、INDEX 一行、
 `scripts/lm.py`（box：read）与 `scripts/lm_report.py`（Mac：表与图）、`results/lm_report.md`、两张图（Z 与 H 上误差随 d 的曲线；4 个 BEV 例子：地图、带过来的探针、
 带过来的 route、served plan、日志路径）；research/decisions.md 一条。大文件留 box `$DATA_DIR/runs/local_map/`。
+
+## 7. 读数前的补充（2026-10-12，3 个 rollout 的 smoke 之后、任何登记量之前）
+
+- **G-carry 改口径**：smoke 上原口径（k − 1 收到的路点带到 k，到 k 收到的路点折线的距离）中位 2e-5 m、p95 0.33 m。尾巴来自 4.2 m 弦在弯道上的弓高
+  （c² / 8R，R = 10 m 时 0.22 m）：同一口径不经任何搬运、两条 route 直接在同一 local 系比，p95 也是 0.33 m。所以改为：k − 1 收到的路点带到 k，到 AlpaSim
+  自己的稠密车道中心 route 折线（`RouteGenerator.route_polyline_in_local`，带到 k 系）的距离，只取内点；线不变（中位 < 0.05 m、p95 < 0.20 m），镜像同样算。
+  原口径的数照报（`chord_*`），不作闸。smoke 上新口径中位 2e-6 m、p95 7e-6 m，镜像 6.4 m。
+- smoke 上其余闸：G-frame（tab anchor 0 m；模拟器 EGO 减 1.461 m 后 1e-6 m）、G-route（零分组逐点、held 首点都 ≤ 0.05 m）都过；没有看任何误差量。
