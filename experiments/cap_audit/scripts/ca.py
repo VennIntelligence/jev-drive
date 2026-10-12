@@ -181,6 +181,19 @@ def traffic(st, a, hull, front):
     return gmin, gx, gy, (float(gap[box].min()) if box.any() else np.nan)
 
 
+SER = ZM.SER + ("min_distance_to_obstacle_m", "min_distance_to_lane_boundary_m")
+
+
+def series(run, scene, rid):
+    """The evaluator's 2 Hz series of one rollout (zm_read.series with two more metrics) -> {name: {t_us: value}} or None."""
+    import polars as pl
+    f = Path(run) / f"rollouts/{scene}/{rid}/metrics.parquet"
+    if not f.exists():
+        return None
+    m = pl.read_parquet(f).filter(pl.col("name").is_in(list(SER))).select("name", pl.col("timestamps_us").cast(pl.Int64), "values")
+    return {n: dict(zip(x["timestamps_us"].to_list(), x["values"].to_list())) for (n,), x in m.group_by("name")}
+
+
 def ctrl(run, rid):
     f = Path(run) / f"controller/alpasim_controller_{rid}.csv"
     if not f.exists():
@@ -237,7 +250,7 @@ def scene_job(job):
         if not d["rid"]:
             roll.append(dict(label=lab, scene=scene, has=False))
             continue
-        ser, _ = ZM.series(d["run"], scene, d["rid"])
+        ser = series(d["run"], scene, d["rid"])
         if ser is None:
             roll.append(dict(label=lab, scene=scene, has=False))
             continue
