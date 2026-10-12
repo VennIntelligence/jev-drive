@@ -43,6 +43,22 @@ the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpo
   the continuation itself costs round 1 a little (`YS2NONE` - `YS-L18-s1` -0.017 [-0.043, +0.007]). Against the base `YS2` is still +0.048.
 - `YS2-L18-s0`'s read ran on card 0 (Amendment 7).
 
+## Round 2b (Amendment 8; round-2 rows, gentle schedule, from `YS-L18-s1`; reads on cards 1-5)
+
+[results/read/report_YS2G_prev.md](results/read/report_YS2G_prev.md) (against `YS-L18-s1`), [report_YS2G_base.md](results/read/report_YS2G_base.md).
+
+| | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) |
+|:--|--:|--:|:--|--:|--:|
+| `YS2G-L18` s0 / s1 | 0.847 (0.843 / 0.851) | 41.5 (43 / 40) | 7.0 / 15.0 / 19.5 | 22.0 | 1.276 |
+| `YS2GNONE-L18` (no rows, gentle) | 0.826 | 48.5 | 12.5 / 16.5 / 21.0 | 29.0 | 1.310 |
+| round 1 `YS-L18-s1` (the start) | 0.841 | 43 | 9 / 15 / 21 | 24 | 1.346 |
+
+- Round gate (against `YS-L18-s1`): zeros 41.5 against 43, at-fault zeros 22.0 against 24, GT 1.276 against 1.346 m: **passed**, narrowly:
+  paired differences +0.007 [-0.007, +0.020], zeros -1.5 [-7.4, +4.4], at-fault -2.0 [-8.7, +4.5], GT -0.070 [-0.136, -0.006]; seed 0 has 43
+  zeros, as many as the start. Against its own control +0.021 [+0.007, +0.035], zeros -7.0; against the base `YR10m10-F-s0` +0.063 [+0.035,
+  +0.091], zeros -32.5, at-fault -21.0, GT -0.22 m, fixed / broken 40 / 6: the best checkpoint of this topic on held.
+- The gentle control drifts down a little from its start (-0.015 [-0.026, -0.002]), less than round 2's full-schedule control (-0.017, wider CI).
+
 ## Round 1b: gentle continuation (Amendment 6; Y family, same rows, lr x 0.1, no warm-up restart, 2 500 steps)
 
 [results/read/report_YSG_base.md](results/read/report_YSG_base.md) (against the base), [report_YSG_ys.md](results/read/report_YSG_ys.md) (against `YS-L18`, seed mean).
