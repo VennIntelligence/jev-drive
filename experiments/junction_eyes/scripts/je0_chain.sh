@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# junction_eyes step 0 GPU jobs (plans/2026-10-12-prereg-A.md). Every job is a pool job. Box, repo root:
+# junction_eyes step 0 GPU jobs (the WA extractor holds about 37 GB of host RAM per job: --ram 45) (plans/2026-10-12-prereg-A.md). Every job is a pool job. Box, repo root:
 #   bash experiments/junction_eyes/scripts/je0_chain.sh wa       -> WA-Cf features of the J_nav tokens of shards s0, s1, s5-s11 (3 sub-shards each)
 #                                                                   + G-ref (rows 0, 3, ..., 597 of lb_navtest re-extracted)
 #   bash experiments/junction_eyes/scripts/je0_chain.sh probes   -> JEP-<arm>-s<seed>: R-A / R-B x 2 seeds, blind x 2 rulers, old ruler x 2,
@@ -15,12 +15,13 @@ wa)
   for f in $S/wa/rows/navtrain_full.s*of12.npy; do
     d=$(basename $f .npy)
     for i in 0 1 2; do
-      CL submit --name JEW-${d#navtrain_full.}-$i --owner junction-eyes --vram 24 --cpu 16 --ram 40 --tries 2 --timeout-h 2 --no-check \
+      [[ -e $D/runs/op_probe/feats/WA/$d.s${i}of3.npz ]] && continue      # resume: only the missing sub-shards
+      CL submit --name JEW-${d#navtrain_full.}-$i --owner junction-eyes --vram 24 --cpu 16 --ram 45 --tries 2 --timeout-h 2 --no-check \
         --log-dir $S/wa/pool/$d.$i -- bash -c "$WAPY --data $d --rows-file $f --shard $i 3 --batch 16 --workers 16"
     done
   done
   $OPT -c "import numpy as np; np.save('$S/wa/rows/gref.npy', np.arange(0, 600, 3))"
-  CL submit --name JEW-gref --owner junction-eyes --vram 24 --cpu 16 --ram 40 --tries 2 --timeout-h 1 --no-check --log-dir $S/wa/pool/gref -- \
+  [[ -e $D/runs/op_probe/feats/WA/lb_navtest-gref.npz ]] || CL submit --name JEW-gref --owner junction-eyes --vram 24 --cpu 16 --ram 45 --tries 2 --timeout-h 1 --no-check --log-dir $S/wa/pool/gref -- \
     bash -c "$WAPY --data lb_navtest --rows-file $S/wa/rows/gref.npy --tag -gref --batch 16 --workers 16" ;;
 probes)
   P() { local n=$1; shift; CL submit --name JEP-$n --owner junction-eyes --vram 60 --cpu 8 --ram 60 --tries 2 --timeout-h 2 --no-check \
