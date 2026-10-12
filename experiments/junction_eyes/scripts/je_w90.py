@@ -185,7 +185,8 @@ def cmd_coverage(a):
         reachR = max(x["reach"]["CAM_R0"][0] for x in rows)
         allseam = [s["at"] for x in rows for s in x["seams"]]
         res = dict(datas=a.datas, tokens=int(sum(x["n"] for x in rows)), calibrations=len(rows), K=K90.tolist(),
-                   mask_share=float(blk.mean()), seen_by_every_calibration_share=float(seen_blk.mean()), band_rows_share=float(colc.mean()), band_rows=[int(2 * vr[0]), int(2 * vr[-1] + 1)],
+                   mask_share=float(blk.mean()), seen_by_every_calibration_share=float(seen_blk.mean()),
+                   band_rows_share=float(colc.mean()), band_rows=[int(2 * vr[0]), int(2 * vr[-1] + 1)],
                    band_elev_deg=[el(2 * vr[-1] + 1.5), el(2 * vr[0] - 0.5)], mask_full_width_rows_share=float(blk.all(1).mean()),
                    reach_three_views_deg=[float(reachR), float(reachL)],
                    seams_horizon_deg=dict(min=float(min(allseam)), max=float(max(allseam)),
@@ -466,8 +467,8 @@ def figure(d, ef, es, f0, w90, sd, token, mask):
     if not token:                                                            # the sharpest junction turn of the data's read rows
         import pandas as pd
         df = pd.read_parquet(RUN / "step0" / "rows" / "all.parquet", columns=["tok_file", "token", "jdist", "turn40"])
-        df = df[(df.tok_file == d) & (df.jdist <= 15)]
-        token = df.token.values[np.argmax(np.abs(df.turn40.values))]
+        df = df[(df.tok_file.str.replace("@warp", "") == d) & (df.jdist <= 15)]
+        token = df.token.values[np.argmin(np.abs(np.abs(df.turn40.values) - 90))]          # a right-angle junction turn
     i = names.index(token)
     S = stitch(cams_of(ef[i], es[i]))
     rgb = lambda p: I.to_rgb(torch.from_numpy(np.ascontiguousarray(p))).permute(1, 2, 0).numpy()  # noqa: E731
