@@ -17,9 +17,9 @@ SS = (5.0, 10.0, 15.0, 20.0, 30.0)
 NRA = len(SS) * 3 * 2                                   # 30 numbers: s-major, points C, L, R, coords x, y
 GX = np.arange(48) * 0.5 + 0.25                         # rear-axle frame cell centres (m)
 GY = np.arange(48) * 0.5 - 11.75
-STEP, BACK, AHEAD, GAP, JUMP = 1.0, 20.0, 80.0, 4.0, 6.0
+STEP, BACK, AHEAD, NEAR_M, CHANGE_M = 1.0, 20.0, 80.0, 1.0, 6.0
 WMIN, WMAX = 1.5, 8.0
-HEAD_MAX, JUNC, ONC = np.radians(45.0), np.radians(30.0), np.radians(120.0)
+HEAD_MAX, JUNC, ONC = np.radians(60.0), np.radians(30.0), np.radians(120.0)
 OVERLAP = 1.0                                          # m^2 of polygon overlap that makes two crossing lanes junction lanes
 T_WIN = 15e6                                           # us: the anchor is projected on the logged path within +- 15 s of t
 
@@ -88,7 +88,7 @@ class LocalMap:
         from trajdata.maps.vec_map_elements import MapElementType as MT
         self.sh = shapely
         inb = lambda X: bool(((X[:, 0] >= lo[0]) & (X[:, 0] <= hi[0]) & (X[:, 1] >= lo[1]) & (X[:, 1] <= hi[1])).any())  # noqa: E731
-        self.C, self.L, self.R, polys = [], [], [], []
+        self.C, self.L, self.R, polys, self.ids, self.nxt, self.adj = [], [], [], [], [], [], []
         for ln in vm.elements.get(MT.ROAD_LANE, {}).values():
             if ln.left_edge is None or ln.right_edge is None or ln.center is None:
                 continue
@@ -99,6 +99,8 @@ class LocalMap:
             if p.is_empty:
                 continue
             self.C.append(C), self.L.append(L), self.R.append(R), polys.append(p)
+            self.ids.append(str(ln.id)), self.nxt.append({str(x) for x in ln.next_lanes}), self.adj.append({str(x) for x in ln.adj_lanes_left | ln.adj_lanes_right})
+        self.ix = {k: i for i, k in enumerate(self.ids)}
         self.poly = polys
         for p in polys:
             shapely.prepare(p)
@@ -128,45 +130,109 @@ class LocalMap:
 
     # ------------------------------------------------------------ R-A
     def route(self, LP, S, H):
-        """Samples every STEP m of the logged path -> dict(s path arc, c (n, 2) route centre, l / r boundary points (NaN if none),
-        t tangent heading, ok assigned, run id (-1 = none)): the lane sequence the path follows (amendment 1 item 3)."""
+        """The lane sequence the logged path follows (amendment 4): samples every STEP m are assigned the lane within NEAR_M m (containing
+        lanes first) whose centre-line heading is closest to the path's (< 60 deg); consecutive lanes are joined through the map's
+        successor links (one missing connector is filled in from next_lanes), a lane change is cut at the switch sample, anything else
+        breaks the sequence. -> dict of route points every ~1 m: c (n, 2), l / r boundary points (NaN if none), t tangent heading,
+        sp path arc (for windowing), run id."""
         sg = np.arange(0.0, S[-1], STEP)
         P = np.c_[np.interp(sg, S, LP[:, 0]), np.interp(sg, S, LP[:, 1])]
         h = np.interp(sg, S, H)
         n = len(sg)
-        c, l, r, t = np.full((n, 2), np.nan), np.full((n, 2), np.nan), np.full((n, 2), np.nan), np.full(n, np.nan)
-        best = np.full(n, np.inf)
-        lane = np.full(n, -1)
+        lane, best = np.full(n, -1), np.full(n, np.inf)
         if self.tree is not None and n:
-            ii, jj = self.tree.query(self.sh.points(P), predicate="within")
+            pts = self.sh.points(P)
+            ii, jj = self.tree.query(pts, predicate="dwithin", distance=NEAR_M)
             for j in np.unique(jj):
                 m = ii[jj == j]
-                q, hd = seg_proj(self.C[j], P[m])
-                dh = np.abs(wrap(hd - h[m]))
-                b = (dh < HEAD_MAX) & (dh < best[m])
-                m, q, hd, dh = m[b], q[b], hd[b], dh[b]
-                best[m], lane[m], c[m], t[m] = dh, j, q, hd
-        for j in np.unique(lane[lane >= 0]):
-            m = np.flatnonzero(lane == j)
-            nv = np.c_[-np.sin(t[m]), np.cos(t[m])]
-            lam_l = ray_hit(c[m], nv, self.L[j])
-            lam_r = ray_hit(c[m], nv, self.R[j])
-            ll = np.nanmin(np.where(lam_l > 0, lam_l, np.nan), 1) if lam_l.size else np.full(len(m), np.nan)
-            rr = np.nanmax(np.where(lam_r < 0, lam_r, np.nan), 1) if lam_r.size else np.full(len(m), np.nan)
+                dh = np.abs(wrap(seg_proj(self.C[j], P[m])[1] - h[m]))
+                sc = dh + 0.5 * self.sh.distance(self.poly[j], pts[m])
+                b = (dh < HEAD_MAX) & (sc < best[m])
+                best[m[b]], lane[m[b]] = sc[b], j
+        E = []                                                   # entries [lane, first sample, last sample]
+        for i in np.flatnonzero(lane >= 0):
+            if E and E[-1][0] == lane[i]:
+                E[-1][2] = i
+            else:
+                E.append([int(lane[i]), int(i), int(i)])
+        k = 1
+        while k < len(E) - 1:                                    # flicker A, B, A with B <= 2 samples -> A
+            if E[k - 1][0] == E[k + 1][0] and E[k][2] - E[k][1] < 2:
+                E[k - 1][2] = E[k + 1][2]
+                del E[k:k + 2]
+            else:
+                k += 1
+        F = []                                                   # with filled-in connectors (first sample None)
+        for k, e in enumerate(E):
+            if F:
+                x, y = F[-1][0], e[0]
+                if self.ids[y] not in self.nxt[x]:
+                    zs = [self.ix[z] for z in self.nxt[x] if z in self.ix and self.ids[y] in self.nxt[self.ix[z]]]
+                    if zs:
+                        gap = P[F[-1][2]:e[1] + 1]
+                        z = min(zs, key=lambda z: float(np.mean([proj(self.C[z], p)[2] for p in gap])))
+                        F.append([z, None, None])
+            F.append(list(e))
+        out = {q: [] for q in ("c", "l", "r", "t", "sp", "run")}
+        run, sp_prev = 0, 0.0
+
+        def larc(j, p):
+            C = self.C[j]
+            Sc = np.r_[0.0, np.cumsum(np.hypot(*np.diff(C, axis=0).T))]
+            i, u, _ = proj(C, p)
+            return Sc, Sc[i] + u * (Sc[i + 1] - Sc[i])
+        trans = []                                               # transition k -> k + 1: succ / change / break
+        for k in range(len(F) - 1):
+            x, y = F[k][0], F[k + 1][0]
+            if self.ids[y] in self.nxt[x]:
+                trans.append("succ")
+            else:
+                q = P[F[k + 1][1]] if F[k + 1][1] is not None else self.C[y][0]
+                trans.append("change" if (self.ids[y] in self.adj[x] or proj(self.C[x], q)[2] <= CHANGE_M) else "break")
+        for k, (j, i0, i1) in enumerate(F):
+            C = self.C[j]
+            Sc = np.r_[0.0, np.cumsum(np.hypot(*np.diff(C, axis=0).T))]
+            tin = trans[k - 1] if k else "break"
+            tout = trans[k] if k < len(trans) else "break"
+            if i0 is None:
+                a0, a1, sp0 = 0.0, Sc[-1], sp_prev
+            else:
+                _, ap0 = larc(j, P[i0])
+                _, ap1 = larc(j, P[i1])
+                a0 = 0.0 if tin == "succ" else ap0
+                if tout == "succ":
+                    a1 = Sc[-1]
+                elif tout == "change":
+                    a1 = larc(j, P[F[k + 1][1]] if F[k + 1][1] is not None else self.C[F[k + 1][0]][0])[1]
+                else:
+                    a1 = ap1
+                sp0 = sg[i0] - (ap0 - a0)
+            a1 = max(a1, a0)
+            ar = np.r_[np.arange(a0, a1, STEP), a1]
+            c = np.c_[np.interp(ar, Sc, C[:, 0]), np.interp(ar, Sc, C[:, 1])]
+            seg = np.clip(np.searchsorted(Sc, ar, side="right") - 1, 0, len(C) - 2)
+            th = np.arctan2(C[seg + 1, 1] - C[seg, 1], C[seg + 1, 0] - C[seg, 0])
+            nv = np.c_[-np.sin(th), np.cos(th)]
+            lam_l, lam_r = ray_hit(c, nv, self.L[j]), ray_hit(c, nv, self.R[j])
+            with np.errstate(all="ignore"):
+                import warnings
+                warnings.simplefilter("ignore")
+                ll = np.nanmin(np.where(lam_l > 0, lam_l, np.nan), 1)
+                rr = np.nanmax(np.where(lam_r < 0, lam_r, np.nan), 1)
             w = ll - rr
             okw = np.isfinite(w) & (w >= WMIN) & (w <= WMAX)
-            l[m] = np.where(okw[:, None], c[m] + ll[:, None] * nv, np.nan)
-            r[m] = np.where(okw[:, None], c[m] + rr[:, None] * nv, np.nan)
-        ok = lane >= 0
-        run = np.full(n, -1)
-        k, last, prev = -1, -np.inf, None
-        for i in range(n):
-            if not ok[i]:
-                continue
-            if sg[i] - last > GAP or (prev is not None and np.hypot(*(c[i] - c[prev])) > JUMP):
-                k += 1
-            run[i], last, prev = k, sg[i], i
-        return dict(s=sg, c=c, l=l, r=r, t=t, ok=ok, run=run)
+            out["c"].append(c)
+            out["l"].append(np.where(okw[:, None], c + ll[:, None] * nv, np.nan))
+            out["r"].append(np.where(okw[:, None], c + rr[:, None] * nv, np.nan))
+            out["t"].append(th)
+            out["sp"].append(sp0 + (ar - a0))
+            out["run"].append(np.full(len(ar), run))
+            sp_prev = sp0 + (a1 - a0)
+            if tout == "break":
+                run += 1
+        if not F:
+            return dict(c=np.zeros((0, 2)), l=np.zeros((0, 2)), r=np.zeros((0, 2)), t=np.zeros(0), sp=np.zeros(0), run=np.zeros(0, int))
+        return {q: np.concatenate(v) for q, v in out.items()}
 
     # ------------------------------------------------------------ R-B
     def rb_label(self, a):
@@ -220,19 +286,11 @@ def ra_label(rt, LP, S, TT, a, cam, t):
     w = np.arange(w[0], min(w[-1] + 2, len(LP)))
     i, u, _ = proj(LP[w], np.asarray(a[:2], float))
     s0 = S[w[i]] + u * (S[w[i] + 1] - S[w[i]])
-    sg, run = rt["s"], rt["run"]
-    win = (sg >= s0 - BACK) & (sg <= s0 + AHEAD) & (run >= 0)
-    if not win.any():
+    sp, run = rt["sp"], rt["run"]
+    if not len(sp):
         return out, s0, np.nan
-    k0 = int(np.argmin(np.abs(sg - s0)))
-    cand = np.flatnonzero(win & (sg >= sg[k0] - 0.5 * STEP))
-    if run[k0] >= 0 and win[k0]:
-        rid = run[k0]
-    elif len(cand) and sg[cand[0]] - s0 <= GAP:
-        rid = run[cand[0]]
-    else:
-        return out, s0, np.nan
-    m = np.flatnonzero(win & (run == rid))
+    rid = run[int(np.argmin(np.abs(sp - s0)))]
+    m = np.flatnonzero((run == rid) & (sp >= s0 - BACK - 10) & (sp <= s0 + AHEAD + 20))
     if len(m) < 2:
         return out, s0, np.nan
     c, l, r, th = rt["c"][m], rt["l"][m], rt["r"][m], rt["t"][m]
