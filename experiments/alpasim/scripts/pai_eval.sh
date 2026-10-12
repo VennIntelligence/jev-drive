@@ -6,7 +6,8 @@
 #   tmux new-window -d -t jev -n pai "bash experiments/alpasim/scripts/pai_eval.sh /data/runs/alpasim/pai_full2 P2H10S-F-s1 /data/runs/alpasim/pai_full/s_*.tsv"
 # Env: CARDS ("0 1"), CONC (4 rollouts per card), NRE_CACHE (pai_run.sh), CHUNK (scenes per stack start, 48: a start costs ~2 min, a failed
 #   chunk is rerun once and loses at most its own scenes), SERVE (driver switches, default the served configuration
-#   "-e JEV_VCONT=1.0 -e JEV_LEAD=1"), IMG / DRV_PY / HARMONIZER as pai_run.sh. The checkpoint is mounted into the driver image.
+#   "-e JEV_VCONT=1.0 -e JEV_LEAD=1"), WIZ (extra wizard overrides, space separated, e.g. "controller.gains.rel_front_steering_angle_weight=20"),
+#   IMG / DRV_PY / HARMONIZER as pai_run.sh. The checkpoint is mounted into the driver image.
 #   JOIN=1: these cards join a run that is already going on <out root> (same tag and lists): they take unclaimed chunks and leave STATUS,
 #   DONE / ERROR and eval.json to the first call. A card freed by another job is added this way.
 #   JOIN=1 CARDS=" " (no card): writes the chunk lists once, checks the checkpoint and returns (pai_queue.sh starts from this).
@@ -37,7 +38,7 @@ worker() {  # card: takes chunks until none is left; a card that reads the 2026-
     for k in 1 2; do
       echo "$(date '+%F %T') card $g: $c ($(wc -l < "$f") scenes), attempt $k"
       GPU=$g CONC=$CONC PAI_BASEPORT=$((6400 + 100 * g)) TAG=$T DRV_ENV="$SERVE -v $C:/app/data/runs/op_parity/runs/$T:ro" \
-        bash "$here/pai_run.sh" "$r" "$f" > "$O/runs/${L}_$c.out" 2>&1 && break
+        bash "$here/pai_run.sh" "$r" "$f" ${WIZ:-} > "$O/runs/${L}_$c.out" 2>&1 && break
       (( k == 2 )) && echo "chunk $c failed twice on card $g: $(cat "$r/ERROR" 2>/dev/null)" >> "$O/ERROR"
     done
   done
