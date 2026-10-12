@@ -15,9 +15,11 @@ Schedule:    AdamW, LoRA 3e-4 wd 0, depthwise 1e-5 wd 0 (U: all vision 1e-5 wd 0
              selects the best checkpoint (sum of the two); navtest and the read sets play no part.
 Outputs:     $DATA_DIR/runs/junction_eyes/step1/ckpt/<tag>/{best.pt, last.pt, resume.pt, evals.json}; the run dir (Run) beside it.
 
---data JSON: {"nav": {"px": npy, "rows": npz}, "on": {...}, "keep": dir, "splits": [registered split names]} (rows schema:
-results/trainer.md "Inputs"); --synthetic: plumbing only (real navtrain image pairs from the VT side cache, random labels,
-the mini keep store of je_keep_mini.py): smoke and gates, never read.
+Data (default, no --data): J_nav / J_on rows and labels of executor 1 ($DATA_DIR/runs/junction_eyes/step0/{rows,labels}, results/rows.md),
+the t0 pixel pairs of executor 2 (px/<tab_file>/frames-t0.npy at `tok_row`, results/pixels.md), ego from the token caches' tab.npz, the keep
+store keep/ (results/keep_set.md). --data JSON overrides parts of that ({"on": {"rows", "px_root", "px_file", "per_unit"}, "keep", "splits"}),
+e.g. once the J_on slot pairs exist. --synthetic: plumbing only (navtrain side pairs, random labels, the mini keep store); never read.
+--nav-only (smoke tags only): J_nav alone at 48 rows / step whatever the arm.
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
@@ -49,7 +51,7 @@ PX = data_dir() / "runs" / "junction_eyes" / "px"
 CACHE = data_dir() / "runs" / "op_parity" / "cache"
 DEFAULT_DATA = {"nav": {"rows": str(STEP0 / "rows" / "J_nav.parquet"), "px_root": str(PX)},
                 "on": {"rows": str(STEP0 / "rows" / "J_on.parquet"), "px_root": str(PX), "per_unit": True},
-                "labels": str(STEP0 / "labels"), "keep": str(data_dir() / "runs" / "junction_eyes" / "keep" / "store"), "splits": []}
+                "labels": str(STEP0 / "labels"), "keep": str(data_dir() / "runs" / "junction_eyes" / "keep"), "splits": []}
 
 
 def sources(a, arm: dict):
