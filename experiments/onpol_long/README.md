@@ -132,6 +132,14 @@ at-fault incidents (AUD1's definition; added after the organiser confirmed the p
 leaderboard column (YR private 0.80 / 0.529 km / 1.733 m; local YR 0.932 / 0.789 km / 0.941 m). With the held read
 (decision 264: GT -0.22 m, zeros -32.5) `YS2G-L18` meets plan.md 3.3 (8)'s replacement rule on both lengths; using it is the user's call.
 
+## PAI transfer read of `YS2G-L18` (Tokyo box, 2026-10-12 20:05 - 10-13 00:24 JST)
+
+Same stack, image, driver flags and 281 PAI scenes as the `YS-L18` read ([results/read/report_pai.md](results/read/report_pai.md)); report
+[results/read/report_pai_ys2g.md](results/read/report_pai_ys2g.md) (arm `YS2G-L18`, comparison `YS-L18`, reference `YR10m10-F-s0`). 4 scenes of `YS2G-L18-s1` chunk c003
+failed at driver connect (gRPC UNAVAILABLE, infrastructure, score 0) and are dropped from every label, so 277 scenes. `YS2G-L18`: score 0.5356, zeros 87.5, at-fault 33.0,
+GT 2.219 m. Against `YS-L18`: +0.0088 [-0.0069, +0.0248], zeros -3.0 [-8.5, +2.5], at-fault -2.5 [-7.0, +1.5], GT -0.086 [-0.152, -0.026] m, fixed / broken 1 / 1: level with
+`YS-L18` on PAI. Against `YR10m10-F-s0`: +0.0501 [+0.0108, +0.0887], zeros -20.5 [-34.0, -7.0], at-fault -17.0, GT -0.229 m, 32 / 13 (decision 273).
+
 ## Candidate-scoring feasibility (Amendment 12; no new rollouts; `YS-L18-s1`'s 43 held zero events)
 
 [results/read/scorer_feasibility.md](results/read/scorer_feasibility.md) (per event), `scorer_feasibility.json`; `scripts/ol_scorer.py`. The stored driver messages
