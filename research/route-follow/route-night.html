@@ -35,6 +35,8 @@ G-rely Δ = 路口开发集行把记忆置空后的 ADE 变化（米）。转弯
 <tr class="best"><td><b>RSG-L18</b></td><td class="l">温和续训 + 只 S 两项（无路线 hinge）</td><td><b>0.866 / 0.868</b></td><td><b>34 / 34</b></td><td>4/17/5 · 6/13/7</td><td><b>26 / 26</b></td><td><b>21 / 19</b></td><td><b>1.135 / 1.144</b></td><td>+0.025 / +0.028</td><td>66.7 / 58.3</td><td>1 / 1</td></tr>
 <tr><td>RBSGc-L18</td><td class="l">温和续训 + S + 路线 hinge 只加在记忆覆盖 +20 米的行</td><td>0.845 / 0.842</td><td>46 / 50</td><td>5/27/6 · 5/30/7</td><td>38 / 42</td><td>32 / 35</td><td>1.151 / 1.225</td><td>+0.008 / +0.012</td><td><b>79.2 / 70.8</b></td><td>5 / 10</td></tr>
 <tr class="best"><td><b>RBSG2-L18</b>（第二轮）</td><td class="l">温和续训 + S + 路线 hinge，池里加回 RBSG 自己的 rollout</td><td><b>0.870 / 0.873</b></td><td>37 / 37</td><td>4/22/3 · 5/20/4</td><td>29 / 29</td><td>26 / 25</td><td>1.215 / 1.185</td><td>+0.004 / +0.008</td><td><b>70.8 / 75.0</b></td><td>4 / 4</td></tr>
+<tr><td>RS2G-L18（补记 5）</td><td class="l">温和续训 + 只 S，池里加 RSG 自己的 rollout</td><td>0.865 / 0.863</td><td>36 / 37</td><td>4/17/7 · 4/17/8</td><td>28 / 29</td><td>21 / 21</td><td>1.158 / 1.159</td><td>+0.025 / +0.028</td><td>66.7 / 62.5</td><td>2 / 2</td></tr>
+<tr><td>RBS2Gc-L18（补记 5）</td><td class="l">同池，路线 hinge 只在覆盖行</td><td>0.868 / 0.845</td><td>39 / 50</td><td>6/21/4 · 6/27/9</td><td>31 / 42</td><td>27 / 33</td><td>1.185 / 1.259</td><td>+0.009 / +0.016</td><td>75.0 / 70.8</td><td>5 / 9</td></tr>
 <tr class="ref"><td>YS-L18（参照）</td><td class="l">旧家族，第 264 条</td><td>0.820 / 0.826</td><td>53 / 51</td><td>9/14/22 · 9/15/19</td><td>45 / 43</td><td>23 / 24</td><td>1.368 / 1.346</td><td>—</td><td>54.2 / 54.2</td><td>—</td></tr>
 <tr class="ref"><td>YS2G-L18（参照）</td><td class="l">旧家族最好，第 264 条第 11 项</td><td>0.829 / 0.837</td><td>51 / 48</td><td>7/17/19 · 7/13/20</td><td>43 / 40</td><td>24 / 20</td><td>1.272 / 1.279</td><td>—</td><td>58.3 / 58.3</td><td>—</td></tr>
 <tr class="ref"><td>YR10m10-F（参照）</td><td class="l">旧底座，提交 #2</td><td>0.771 / 0.781</td><td>82 / 79</td><td>10/33/31 · 4/37/30</td><td>74 / 71</td><td>43 / 41</td><td>1.495 / 1.404</td><td>—</td><td>37.5 / 37.5</td><td>—</td></tr>
@@ -129,7 +131,7 @@ held 18 决策上对旧家族的优势到 10 决策缩成持平，和第 265 条
 <tr><td>L1 G-rely</td><td class="l"><b>RB0-F 过</b>；RB-F 不过</td><td class="l">路口 Δ +0.025 / +0.022，路口 − 直路下界 +0.013 / +0.007；RB-F −0.032 / −0.019</td></tr>
 <tr><td>L2 G-swap</td><td class="l"><b>RB-F 过</b>（只路口）</td><td class="l">0.55 / 0.56，终点侧 94% / 95%，G-ST 0.003 米</td></tr>
 <tr><td>L0 G-real</td><td class="l">RB-F 不过</td><td class="l">开发集 ADE +0.077（线 +0.01）</td></tr>
-<tr><td>L3 对 RB0</td><td class="l">RBS、RBSG、RBSGc 不过；<b>RSG、RBSG2 过</b></td><td class="l">零分 +51.5 / +6.5 / −11.0 [−25.0, +1.0] / −25.0 [−36.9, −14.2] / −22.0 [−35.4, −10.2]</td></tr>
+<tr><td>L3 对 RB0</td><td class="l">RBS、RBSG、RBSGc、RBS2Gc 不过；<b>RSG、RBSG2、RS2G 过</b></td><td class="l">零分 +51.5 / +6.5 / −11.0 [−25.0, +1.0] / −14.5（at-fault 上界 +3.8）；−25.0 [−36.9, −14.2] / −22.0 [−35.4, −10.2] / −22.5 [−34.1, −12.1]</td></tr>
 <tr><td>L4 对无行对照</td><td class="l">RBS 不过；温和臂只有点估计</td><td class="l">RBS 对 RNONE +33.0 [+13.6, +49.4]；RSG 34 对 RNONEG 60（单 seed，未算配对）</td></tr>
 <tr><td>L5 逐决策跟路线</td><td class="l">没有臂过</td><td class="l">覆盖半边 RBS-s0 −0.62 [−0.85, −0.31] 过、s1 不过；其余臂置信区间含 0；路口横距中位全部 &lt; 1 米</td></tr>
 </table>
@@ -147,7 +149,7 @@ pool 记录 01:15–04:15 之间 GPU 在算 10.0 card-h（6 卡 × 3 小时的 5
 <li>RNONE、RB-F-s1 和三个参照的右转内侧计数。</li>
 </ul>
 
-<h2>七、第二轮（补记 4）：把转过头的状态加回池子</h2>
+<h2>七、第二轮（补记 4–5）：把转过头的状态加回池子</h2>
 <p>RBSG-L18-s0 在训练的 1 020 个场景上滚 18 决策，出 17 380 行（路线标签 ok 0.9997，覆盖 +20 米 46%，首点一致 0.993，R1 / R2 过），和第一轮的池合成 34 809 行；从 RB0-F-s0 起，温和 schedule，S 两项 + 路线 hinge，即 RBSG2-L18。</p>
 <table>
 <tr><th>RBSG2-L18（s0 / s1）</th><th>读数</th><th>线</th><th>判词</th></tr>
@@ -159,8 +161,14 @@ pool 记录 01:15–04:15 之间 GPU 在算 10.0 card-h（6 卡 × 3 小时的 5
 <p>和 RSG 比：零分持平（37 对 34，460 原始；452 配对 +3.0 [−4.7, +9.9]），跟路线明显更好：走廊零分 3–4 对 5–7，横向 GT 0.74–0.76 对 0.87–0.88，转弯完成率对 RB0 +16.7 / +20.8 个百分点，右转完成 62.5% / 62.5%（RBSG 12.5% / 37.5%）。
 所以两个候选分工：<b>RSG-L18 是安全候选，RBSG2-L18 是跟路线候选</b>。</p>
 <p>G-rely 不过的一种解释（推断，没检验）：路线被学进了主干和 plan 本身，而不是只经过记忆支路，所以开环里把记忆置空不再伤 ADE。这也意味着 RBSG2 在闭环里靠什么跟路线还不清楚，闭环里置空记忆的读数可以直接回答。</p>
-<div class="todo"><b>[待填：补记 5]</b><br>
-RS2G-L18-s0 / s1（RSG rollout 的行 + on1_L18RB0，只 S）与 RBS2Gc-L18-s0 / s1（同池、hinge 只在覆盖行）：零分、L3 对 RB0、轮次闸对 RSG-L18-s0、L5、右转内侧计数。</div>
+<h3>补记 5：从 RSG 自己的 rollout 再出一轮行</h3>
+<p>RSG-L18-s0 在训练场景上滚 18 决策，出 17 474 行（标签 ok 0.9999、首点一致 0.994、R1 0.9989；错 seed 对照 0.102，低于 0.20 的线，但比 RBSG 那一池的 0.018 高，因为 RSG 两个 seed 本身更像），与第一轮的池合成 34 903 行。</p>
+<table>
+<tr><th>臂（s0 / s1）</th><th>对 RB0（L3）</th><th>轮次闸：对 RSG-L18-s0</th><th>G-rely</th><th>右转内侧</th></tr>
+<tr><td>RS2G-L18（只 S）</td><td class="l">零分 −22.5 [−34.1, −12.1]，at-fault −15.0 [−25.7, −5.4]，GT −0.156：<b>过</b></td><td class="l">零分 +2.5 [−1.1, +6.9]，GT +0.023 [−0.004, +0.050]：不过</td><td>过 / 过</td><td>2 / 2</td></tr>
+<tr><td>RBS2Gc-L18（hinge 只在覆盖行）</td><td class="l">零分 −14.5 [−27.7, −2.8]，at-fault 上界 +3.8 &gt; +2：不过</td><td class="l">零分 +10.5 [+4.5, +15.9]，at-fault +9.0 [+2.8, +15.2]：不过</td><td>不过 / 过</td><td>5 / 9</td></tr>
+</table>
+<p>两个臂的 L5 都不过。读法：第二轮的 S 行在 RSG 之上没有增益；在 RSG 自己的 rollout 上，只加在覆盖行的路线 hinge 比 RSG 差。路线 hinge 只有在行里带着「hinge 训出来的策略自己转过头的状态」时才有用（RBSG2 的池）。站得住的候选仍是 RSG-L18 和 RBSG2-L18。</p>
 
 <h2>八、PAI 线（Tokyo）</h2>
 <p>B 的 gains pilot 过（<code>rel_front_steering_angle_weight</code> 20：交接打转 3 对 22，g2 + g3 零分 45 对 48），PAI rollout 用 20；<code>pai_driver.py</code> 已能 serve 带路线记忆的 checkpoint（<code>19137cec</code>）。</p>

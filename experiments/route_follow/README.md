@@ -21,7 +21,10 @@ lateral GT 0.74 / 0.76, L3 pass (-22 [-35, -10]): the route-following candidate.
 RBSG2's G-rely fails (the route may be learned into the trunk rather than through the branch; interpretation). Counterfactual rows (RB-F)
 teach route switching at junctions (G-swap 55 % of need, 94 % on the counterfactual side) but not lane changes (5-7 %), and cost G-real.
 
-**Next.** Amendment 5 (RS2G / RBS2Gc from RSG rollouts) is running; Tokyo: RB0-F-s0 PAI re-roll with gains 20, RSG-L18-s0 PAI 281 read
+Amendment 5 (rows from RSG's own rollouts): S-only RS2G adds nothing over RSG (round gate fails, zeros +2.5 [-1.1, +6.9]) and the
+cov20-only hinge RBS2Gc is worse (+10.5 [+4.5, +15.9]); the hinge helps only with the hinge-trained policy's own over-turning states.
+
+**Next.** Tokyo: RB0-F-s0 PAI re-roll with gains 20, RSG-L18-s0 PAI 281 read
 queued. RSG-L18 passes the public 1491 / 10-decision guard (+0.016 over YR10m10-F-s0; ties YS-L18 /
 YS2G on score and zeros, GT 0.10 m closer; `a3/guard/all10_RSG.md`). Before either candidate is called a base: RBSG2's 1491 guard, PAI 281; for RBSG2 also a closed-loop read with the memory masked (does it still follow the route?).
 
