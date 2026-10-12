@@ -69,3 +69,12 @@ RBSG's extra offroad zeros to the route hinge or to the rows; RBSGc-L18-s{0,1} =
 covers +20 m (pool copy on1_L18RB0c whose route.npz has ok &= cov20, everything else identical), testing the hypothesis that the hinge on rows
 with an empty near-field memory teaches blind turns. Lines: L3 vs RB0 (zeros fewer, CI upper < 0; at-fault upper <= +2; GT not larger) and
 L5 per decision as Amendment 1; RNONEG-L18-s0 (60 zeros) is the gentle control. Added 2026-10-13 ~03:40 JST before any of these reads.
+
+## Amendment 4 (2026-10-13 03:35 JST, before any round-2 read)
+
+Round 2 rows ([research/route-follow-offroad.md](../../../research/route-follow-offroad.md)): RBSG-L18-s0 is rolled on the 1020 train scenes at
+18 decisions; its rows (pool L18RBSG, same labels: S hinges + route hinge dz 1.0) are merged with on1_L18RB0 into on1_L18R2;
+RBSG2-L18-s{0,1} = --init RB0-F-s0, gentle schedule (--steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500), REC flags, --on on1_L18R2
+--on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self --on-lon on_route. Lines: L3 vs RB0 (zeros fewer with CI upper < 0, at-fault
+upper <= +2, GT not larger); mechanism line from the diagnosis: inside-of-right-turn offroad zeros <= 6, offroad <= 34, left corridor <= 11
+on both seeds; L5 per decision as Amendment 1. Added 2026-10-13 03:35 JST before any round-2 read.
