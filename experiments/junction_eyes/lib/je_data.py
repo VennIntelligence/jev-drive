@@ -209,7 +209,8 @@ class MultiPairStore:
     """Rows spread over several pair files: row i lives in file fi[i] at row ri[i]."""
 
     def __init__(self, paths, fi, ri, view=None, threads=0):
-        self.st = [PairStore(p, view, threads) for p in paths]
+        """paths: npy files (PairStore with `view`) or ready store objects (get / __len__ / row_shape)."""
+        self.st = [p if hasattr(p, "get") else PairStore(p, view, threads) for p in paths]
         self.fi, self.ri = np.asarray(fi), np.asarray(ri, np.int64)
         for k, s in enumerate(self.st):
             assert self.ri[self.fi == k].max(initial=-1) < len(s), paths[k]
@@ -233,9 +234,58 @@ class MultiPairStore:
         return out[0], out[1]
 
 
-def real_source(name: str, rows_parquet, labels_dir, px_root, cache_root, px_file="frames-t0.npy", per_unit=False, view=None) -> Source:
+class W90Store:
+    """L-W90 pairs: the road slot of the F0 t0 cache, the wide slot from px90/<data>/w90-t0.npy ((N, 2, 6, 128, 256) = [prev, cur] wide)."""
+
+    def __init__(self, f0_path, w90_path, threads=0):
+        self.f0, self.w = PairStore(f0_path, None, threads), _Reader(w90_path, threads)
+        assert self.w.shape[1:] == (2,) + FRAME[1:] and len(self.w) == len(self.f0), w90_path
+        self.row_shape = (2,) + FRAME
+
+    def __len__(self):
+        return len(self.f0)
+
+    def get(self, rows):
+        p, c = self.f0.get(rows)
+        w = self.w.read(rows, 0, int(np.prod(self.w.shape[1:])), self.w.shape[1:])
+        p[:, 1], c[:, 1] = w[:, 0], w[:, 1]
+        return p, c
+
+
+class ThreeViewStore:
+    """L-3V pairs (B, 3, 2, 6, 128, 256) = [CAM_F0 (the F0 t0 cache), CAM_L0, CAM_R0 (px_side/<data>/side_t0.npy views 0, 1)]."""
+
+    def __init__(self, f0_path, side_path, threads=0):
+        self.f0, self.sd = PairStore(f0_path, None, threads), PairStore(side_path, "all", threads)
+        assert self.sd.nv == 2 and len(self.sd) == len(self.f0), side_path
+        self.row_shape = (3, 2) + FRAME
+
+    def __len__(self):
+        return len(self.f0)
+
+    def get(self, rows):
+        import torch
+        (p, c), (sp, sc) = self.f0.get(rows), self.sd.get(rows)
+        return torch.cat([p[:, None], sp], 1), torch.cat([c[:, None], sc], 1)
+
+
+def pixel_store(kind: str, run_root, data: str):
+    """Per data dir (navtrain_full.sKof12, lb_navtest) the store of an input kind: f0 | w90 | 3v (results/pixels.md 1, 4)."""
+    r = Path(run_root)
+    f0 = r / "px" / data / "frames-t0.npy"
+    if kind == "f0":
+        return PairStore(f0)
+    if kind == "w90":
+        return W90Store(f0, r / "px90" / data / "w90-t0.npy")
+    if kind == "3v":
+        return ThreeViewStore(f0, r / "px_side" / data / "side_t0.npy")
+    raise ValueError(kind)
+
+
+def real_source(name: str, rows_parquet, labels_dir, px_root, cache_root, kind="f0", per_unit=False) -> Source:
     """A J source from executor 1's rows (results/rows.md) and executor 2's pixel caches (results/pixels.md): labels by `rid`, ego from
-    the frozen-token cache's tab.npz (`tab_file`, `tok_row`), pixels from <px_root>/<tab_file>/<px_file> at row `tok_row`."""
+    the frozen-token cache's tab.npz (`tab_file`, `tok_row`), pixels of input kind `kind` from the junction_eyes run root `px_root`
+    (pixel_store(kind, px_root, tab_file) at row `tok_row`), or, when px_root is an .npy file, from that file in the parquet's row order."""
     import pandas as pd
     df = pd.read_parquet(rows_parquet)
     df["pos"] = np.arange(len(df))                         # row in a pixel file kept in the parquet's order (px_root = that .npy file)
@@ -253,10 +303,11 @@ def real_source(name: str, rows_parquet, labels_dir, px_root, cache_root, px_fil
         if name == "nav":                                   # navtrain token caches carry the token names
             assert (z["names"][df.tok_row.values[m]] == df.token.values[m]).all(), f"{f}: tab rows do not match the row table"
     if str(px_root).endswith(".npy"):                      # one file in parquet row order (executor 2's slot pairs, e.g. slots/jon_pairs.npy)
-        px = MultiPairStore([Path(px_root)], np.zeros(len(df), int), df.pos.values, view)
+        assert kind == "f0", kind
+        px = MultiPairStore([Path(px_root)], np.zeros(len(df), int), df.pos.values)
         assert len(px.st[0]) == int(df.pos.max()) + 1 or len(px.st[0]) >= len(pd.read_parquet(rows_parquet, columns=["rid"])), px_root
     else:
-        px = MultiPairStore([Path(px_root) / f / px_file for f in files], fi, df.tok_row.values, view)
+        px = MultiPairStore([pixel_store(kind, px_root, f) for f in files], fi, df.tok_row.values)
     fit, val = (df.split == "fit").values, (df.split == "val").values
     w = df.w_scene.values if per_unit else None
     return Source(name, px, ego, ra, rb, fit, val, df.token.values.astype(str), df.unit.values.astype(str), w)

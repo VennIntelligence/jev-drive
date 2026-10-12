@@ -4,7 +4,8 @@ checkpoint's vision weights -> view_39 tokens, for executor 1's HEAD1 probes on 
   python je_encode.py --tag JE-L-F0-s0 [--which best] --sets sets.json [--only P navtest held zero98]
   python je_encode.py --tag factory --sets sets.json          the frozen trunk (Z; reproduces the frozen caches: a check)
 
-sets.json: {"<set>": {"px": npy (N, [V,] 2, 2, 6, 128, 256), "view": null, "names": npy or npz with "names" (optional)}}; the J_on /
+sets.json: {"<set>": {"px": npy (N, [V,] 2, 2, 6, 128, 256), "view": null, "names": npy or npz with "names" (optional)}} or
+{"<set>": {"data": "navtrain_full.s0of12" | "lb_navtest", "kind": "f0" | "w90" | "3v"}} (je_data.pixel_store; 3v gives (N, 3, 32, 512)); the J_on /
 held-452 / zero-98 entries are executor 2's slot-pair extracts ((slot 6, slot 7) pairs, the driver's pairing), J_nav / navtest the
 protocol-W t0 pairs (results/pixels.md). Output: $DATA_DIR/runs/junction_eyes/step1/tokens/<tag>/<set>.npy (N, 32, 512) fp16 in
 the pixel file's row order (+ <set>.names.npy when names are given), written tmp + rename, skipped when present (--force redoes).
@@ -43,16 +44,19 @@ def main(a):
             if out.exists() and not a.force:
                 run.info(f"{s}: {out} exists, skipped")
                 continue
-            px = D.PairStore(spec["px"], spec.get("view"))
+            px = D.PairStore(spec["px"], spec.get("view")) if "px" in spec else D.pixel_store(spec.get("kind", "f0"), STEP1.parent, spec["data"])
             n, t0 = len(px), time.time()
+            nv = px.row_shape[0] if len(px.row_shape) == 6 else 0
             tmp = od / f".{s}.{os.getpid()}.npy"
-            o = np.lib.format.open_memmap(tmp, "w+", np.float16, (n, 32, 512))
+            o = np.lib.format.open_memmap(tmp, "w+", np.float16, ((n, nv) if nv else (n,)) + (32, 512))
             pre = D.Prefetch(iter(range(0, n, a.batch)).__next__, lambda i: (i, px.get(np.arange(i, min(i + a.batch, n)))),
                              (n + a.batch - 1) // a.batch, 4, 3)
             for _ in run.tqdm(range((n + a.batch - 1) // a.batch), desc=s):
                 i, (p, c) = pre.get()
                 with torch.no_grad():
-                    o[i:i + len(p)] = m.encode(p.to(dev, non_blocking=True), c.to(dev, non_blocking=True)).half().cpu().numpy()
+                    p, c = p.to(dev, non_blocking=True), c.to(dev, non_blocking=True)
+                    h = m.encode(p.flatten(0, 1), c.flatten(0, 1)).reshape(len(p), nv, 32, 512) if nv else m.encode(p, c)
+                    o[i:i + len(p)] = h.half().cpu().numpy()
             o.flush()
             del o
             os.replace(tmp, out)

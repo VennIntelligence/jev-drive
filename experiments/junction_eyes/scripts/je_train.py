@@ -35,10 +35,10 @@ import je_model as M  # noqa: E402
 from jevdrive.common import data_dir  # noqa: E402
 
 ARMS = {"L-F0": dict(vis="lora", src=("nav", "on")), "L-F0-nav": dict(vis="lora", src=("nav",)),
-        "U-F0": dict(vis="full", src=("nav", "on")), "L-W90": dict(vis="lora", src=("nav",), px_file="frames-t0-w90.npy", keep_frames="frames-w90.npy"),
-        "L-3V": dict(vis="lora", src=("nav",), views=3, px_file="frames-t0-3v.npy", view="all")}
-# L-W90 / L-3V pixel file names are executor 2's (results/pixels.md); --data overrides them ({"nav": {"px_file", "px_root"}, "keep_frames"}).
-# L-3V: the J rows carry [F0, L0, R0] t0 pairs; the keep rows (comma) have the F0 view only, which is all the policy reads.
+        "U-F0": dict(vis="full", src=("nav", "on")), "L-W90": dict(vis="lora", src=("nav",), kind="w90", keep="keep_w90"),
+        "L-3V": dict(vis="lora", src=("nav",), views=3, kind="3v")}
+# Inputs (results/pixels.md 1, 4): f0 = px/<data>/frames-t0.npy; w90 = its road slot + px90/<data>/w90-t0.npy, keep rows keep_w90/ (comma wide
+# warped to 90 deg, the teacher on the 58.7 deg frames); 3v = [F0, L0, R0] from px/ and px_side/, keep rows F0 only (all the policy reads).
 STEP1 = data_dir() / "runs" / "junction_eyes" / "step1"
 CKPT = STEP1 / "ckpt"
 SMOKE_PX = data_dir() / "runs" / "vis_train" / "px_side"          # (N, 2 views, 2, 2, 6, 128, 256): navtrain L0 / R0 t0 pairs
@@ -49,9 +49,10 @@ WD = dict(lora=0.0, dw=0.0, full=0.0, head=0.05)
 
 # ---------------------------------------------------------------- data
 STEP0 = data_dir() / "runs" / "junction_eyes" / "step0"
-PX = data_dir() / "runs" / "junction_eyes" / "px"
+JE = data_dir() / "runs" / "junction_eyes"
+PX = JE / "px"
 CACHE = data_dir() / "runs" / "op_parity" / "cache"
-DEFAULT_DATA = {"nav": {"rows": str(STEP0 / "rows" / "J_nav.parquet"), "px_root": str(PX)},
+DEFAULT_DATA = {"nav": {"rows": str(STEP0 / "rows" / "J_nav.parquet"), "px_root": str(JE)},
                 "on": {"rows": str(STEP0 / "rows" / "J_on.parquet"), "per_unit": True,          # reconstructed slot pairs (results/pixels.md 3)
                        "px_root": str(data_dir() / "runs" / "junction_eyes" / "slots" / "jon_pairs.npy")},
                 "labels": str(STEP0 / "labels"), "keep": str(data_dir() / "runs" / "junction_eyes" / "keep"), "splits": []}
@@ -68,10 +69,10 @@ def sources(a, arm: dict):
     spec = {k: (dict(v) if isinstance(v, dict) else v) for k, v in DEFAULT_DATA.items()}
     for k, v in (json.loads(_pl.Path(a.data).read_text()) if a.data else {}).items():
         spec[k] = spec[k] | v if isinstance(v, dict) and isinstance(spec.get(k), dict) else v
-    src = {k: D.real_source(k, spec[k]["rows"], spec["labels"], spec[k]["px_root"], CACHE, spec[k].get("px_file", arm.get("px_file", "frames-t0.npy")),
-                            spec[k].get("per_unit", False), arm.get("view")) for k in names}
-    keep = a.keep or spec["keep"]
-    kf = spec.get("keep_frames") or (str(_pl.Path(keep) / arm["keep_frames"]) if "keep_frames" in arm else None)
+    src = {k: D.real_source(k, spec[k]["rows"], spec["labels"], spec[k]["px_root"], CACHE, spec[k].get("kind", arm.get("kind", "f0")),
+                            spec[k].get("per_unit", False)) for k in names}
+    keep = a.keep or (str(JE / arm["keep"]) if "keep" in arm else spec["keep"])
+    kf = spec.get("keep_frames")
     return src, D.KeepStore(keep, frames=kf), spec.get("splits", [])
 
 
