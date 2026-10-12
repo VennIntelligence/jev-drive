@@ -302,7 +302,8 @@ def cmd_train(a):
     hrng = np.random.default_rng([cfg.seed, 0, 43])                  # bd4_train's hinge-only rows
     orng = np.random.default_rng([cfg.seed, 0, 53])                  # the on-policy rows
     sha = hashlib.sha1()
-    opt = torch.optim.AdamW([{"params": base, "lr": cfg.lr, "base": cfg.lr}, {"params": new, "lr": cfg.lr_new, "base": cfg.lr_new}], weight_decay=cfg.wd)
+    lb, ln = (cfg.lr, cfg.lr_new) if a.lr_scale == 1.0 else (cfg.lr * a.lr_scale, cfg.lr_new * a.lr_scale)   # onpol_long Amendment 6: gentle continuation
+    opt = torch.optim.AdamW([{"params": base, "lr": lb, "base": lb}, {"params": new, "lr": ln, "base": ln}], weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
 
     def draw():
@@ -654,6 +655,7 @@ if __name__ == "__main__":
     p.add_argument("--steps", type=int, default=10000)
     p.add_argument("--batch", type=int, default=128)
     p.add_argument("--warmup", type=int, default=300)
+    p.add_argument("--lr-scale", type=float, default=1.0, help="both learning rates x this (1.0 = the recipe's; onpol_long Amendment 6)")
     p.add_argument("--eval-every", type=int, default=1000)
     recipe_args(p)
     p.add_argument("--on-k", type=int, default=13)

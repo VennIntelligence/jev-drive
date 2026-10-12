@@ -218,5 +218,26 @@ report2)      # Amendment 5 round-2 reads: against the previous round (YS-L18-s1
   for t in YR10m10-F-s0 YR10m10-F-s1; do R+=("$t@18=$H/$t"); done
   $P $E/scripts/ol_report.py --family Y --arm S2 --ctl S2NONE --base-tags YS-L18-s1,YS-L18-s0 --runs "${R[@]}" --out $W/report/Y-S2 || die "ol_report (prev round) rc $?"
   $P $E/scripts/ol_report.py --family Y --arm S2 --ctl S2NONE --base-tags YR10m10-F-s0,YR10m10-F-s1 --runs "${R[@]}" --out $W/report/Y-S2-base || die "ol_report (base) rc $?" ;;
+submit-gentle)  # Amendment 6: round 1b, gentle continuation of YR10m10-F-s0 (lr x 0.1, warm-up 1 step, 2 500 steps), ON-NONE-gentle and S-only-gentle
+  N=L18Y
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
+            --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 6)" >> $W/jobs.txt; }
+  OT="$TR $ON/scripts/on_train.py train --exp onpol_long --init YR10m10-F-s0 --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank"
+  rids=()
+  for s in 0 1; do
+    a=$(sub ol-train-YSG-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 2 -- $OT --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_$N --on-k 13 \
+          --on-split alpasim_nuplan/onpol-train --on-mode self --seed $s --tag YSG-L18-s$s) || exit 1
+    c=$(sub ol-train-YNONEG-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 2 -- $OT --seed $s --tag YNONEG-L18-s$s) || exit 1
+    for x in "$a YSG-L18-s$s" "$c YNONEG-L18-s$s"; do set -- $x
+      rids+=($(sub ol-read-$2 "$1" --vram 32 --cpu 8 --ram 90 --timeout-h 3 -- bash $E/scripts/ol_chain.sh read1 $2)) || exit 1; done
+  done
+  sub ol-report-YSG "$(IFS=,; echo "${rids[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report-gentle > /dev/null || exit 1
+  echo "submitted: $(grep -c "amendment 6" $W/jobs.txt) jobs" ;;
+report-gentle)
+  H=$DATA_DIR/runs/alpasim_long/held/h18; R=()
+  for t in YSG-L18-s0 YSG-L18-s1 YNONEG-L18-s0 YNONEG-L18-s1 YS-L18-s0 YS-L18-s1; do R+=("$t@18=$W/read/$t/run"); done
+  for t in YR10m10-F-s0 YR10m10-F-s1; do R+=("$t@18=$H/$t"); done
+  $P $E/scripts/ol_report.py --family Y --arm SG --ctl NONEG --runs "${R[@]}" --out $W/report/Y-SG-base || die "ol_report (base) rc $?"
+  $P $E/scripts/ol_report.py --family Y --arm SG --ctl NONEG --base-tags YS-L18-s0,YS-L18-s1 --ref-mean --runs "${R[@]}" --out $W/report/Y-SG-ys || die "ol_report (YS) rc $?" ;;
 *) die "unknown stage $STAGE" ;;
 esac
