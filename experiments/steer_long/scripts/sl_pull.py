@@ -10,6 +10,8 @@ A run dir is either a nuPlan run (`controller/`, `driver-logs/drive.jsonl`, `rol
   ctrl.csv.gz      every controller CSV row with its session uuid in front
   metrics/<scene>__<rollout>.parquet   the evaluator's per-rollout series, copied as they are
   summary.json     the results-summary rollouts of all run dirs
+The evaluator writes timestamps_us as a 128-bit integer that pyarrow cannot read; afterwards, with any Python that has polars (AlpaSim venv on the box, or a scratch venv on the Mac),
+the per-rollout files of a label are concatenated into <label>/metrics64.parquet (name, timestamps_us cast to Int64, values, rid).
 """
 import csv
 import glob
