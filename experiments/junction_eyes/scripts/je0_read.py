@@ -149,11 +149,15 @@ def read(a):
                 mn = (ln.turn40.values >= 20) & (ln.jdist.values <= 20)
                 en = np.abs(pn[:, 4:6] - ln[["L20", "R20"]].values)[mn]
                 rep[k] = dict(held_turn20=float(np.nanmedian(eh)), navtest_near=float(np.nanmedian(en)))
-            G["G_repro"] = dict(**rep, held_range=[0.850, 1.046], navtest_range=[1.126, 1.398])
-            G["G_repro"]["pass"] = bool(0.850 <= rep["old"]["held_turn20"] <= 1.046 and 1.126 <= rep["old"]["navtest_near"] <= 1.398)
+            G["G_repro"] = dict(P_row=rep, held_range=[0.850, 1.046], navtest_range=[1.126, 1.398])
+            G["G_repro"]["P_row_in_range"] = bool(0.850 <= rep["old"]["held_turn20"] <= 1.046 and 1.126 <= rep["old"]["navtest_near"] <= 1.398)
+            fc = W / "repro/g_repro_c.json"                       # amendment 5: the check on rp_real's own fit rows decides the gate
+            G["G_repro"]["c"] = json.loads(fc.read_text()) if fc.exists() else None
+            G["G_repro"]["pass"] = bool(G["G_repro"]["c"] and G["G_repro"]["c"]["pass"])
         else:
             G["G_repro"] = {"pass": False, "note": "old-ruler predictions missing"}
         G["pass"] = bool(all(v["pass"] for k, v in G.items() if k.startswith("G_")))
+        G["not_passed"] = [k for k, v in G.items() if k.startswith("G_") and not v["pass"]]
         (out / "gates.json").write_text(json.dumps(G, indent=1, default=float))
         run.info(json.dumps(G, default=float))
         if not G["pass"] and not a.force:
@@ -298,7 +302,7 @@ def read(a):
                     sel = TA[(TA.pred == k) & (TA.set == g) & (TA.subset == "turn") & (TA.s == s) & (TA.bin == "near")]
                     if len(sel):
                         g1[f"{k}|{g}|s{s}"] = dict(median=float(sel.iloc[0]["median"]), lo=float(sel.iloc[0]["lo"]), hi=float(sel.iloc[0]["hi"]))
-        S = dict(gates=G, z0=z0, verdict=verdict, rule41=rule, arms=arms, counts=cnt, g1_inputs=g1)
+        S = dict(gates=G, provisional=G["not_passed"], z0=z0, verdict=verdict, rule41=rule, arms=arms, counts=cnt, g1_inputs=g1)
         (out / "je0.json").write_text(json.dumps(S, indent=1, default=float))
         # per-decision table for figures and BEV examples (zero-98: four decisions with the largest off-road + oncoming share ahead)
         dec = rs[["rid", "set", "scene", "k", "bin", "turn40"]].copy()
