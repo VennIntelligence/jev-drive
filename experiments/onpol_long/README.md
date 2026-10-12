@@ -2,27 +2,58 @@
 
 status: live
 decisions: 264 (inputs 259, 262)
-index: S + corridor rows at 18 decisions: not adopted; P offroad zeros 79 vs 24, Y at-fault 80 vs 79.5
+index: S-only rows at 18 decisions on YR10m10-F: 0.838 vs base 0.785, zeros 44 vs 74; S + corridor not adopted
 
 **Question.** At 18 decisions (token + 8 s) in local AlpaSim nuPlan, do on-policy rows of the base's own rollouts on the 1031 train scenes,
 carrying only consequence hinges on the model's own plan (S: swept footprint against vehicles, road-and-lane raster; K: 1.5 m dead band to
 the logged path; C: lane-centre offset if it passes its label gate), give fewer zeros than the same continued training without rows
 (ON-NONE) on the 460 held scenes, with at-fault zeros and GT distance not worse?
 
-**Conclusion.** Neither family's arm is adopted (decision 264). The lane-centre hinge C was dropped before training (the logged driving
-itself violates it on 46 % of the rows), so the arm is S + corridor hinge K. On the P2H10S-F base it is strongly negative (0.590 against
-ON-NONE 0.771, at-fault zeros 97.5 against 35.5, offroad zeros 79 against 24, corridor zeros 22 against 47, drives 25 % less distance);
-on the YR10m10-F base it has fewer zeros (96 against 120, -24 [-47.9, -2.5], all corridor) and a lower GT distance (-0.50 m) but fails the
-hard gate by half a scene (at-fault zeros 80 against 79.5) and ties on mean score. The same continued training without rows (ON-NONE) is
-itself worse than the base on both families (-0.028 / -0.092).
+**Conclusion.** On the YR10m10-F-s0 base, on-policy rows at 18 decisions carrying only the S hinges (`YS-L18`, Amendment 3) are
+adopted: on 452 held scenes 0.838 against the base's 0.785 (+0.053 [+0.024, +0.082]), zeros 44 against 74, at-fault zeros 23.5 against 43,
+GT distance 1.36 against 1.50 m, both seeds alike (decision 264). Adding the corridor hinge K (the registered round-1 arm `SKC`) is not
+adopted on either base (P2H10S-F strongly negative: offroad zeros 79 against 24; YR10m10-F fails the at-fault gate). On P2H10S-F the
+S-only arm is flat against the base (-0.0075). The same continued training without rows loses to the base on both (-0.092 Y, -0.028 P).
 
-**Next.** Amendment 3: the S-only arm on the same 18-decision rows (separates K); PAI transfer read on the Tokyo box (Amendment 1, running).
+**Next.** Amendment 5: confirmation reads of `YS-L18` (train 1031 at 18 decisions, all 1491 at 10 decisions) and round 2 of the loop from
+`YS-L18-s1` (queued); PAI transfer read on the Tokyo box (Amendments 1, 4, 5, running).
 
 **Read more.** [plans/2026-10-12-ol1-prereg.md](plans/2026-10-12-ol1-prereg.md); the plan: [research/next-round/closed-loop.md](../../research/next-round/closed-loop.md);
 the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpol_nuplan/README.md); the 18-decision driver path:
 [../alpasim_long/README.md](../alpasim_long/README.md).
 
-## Held 460 at 18 decisions (2026-10-12 morning; 452 scenes after 8 route-fold scenes, two training seeds from the s0 base)
+## S-only arms (Amendment 3; same pools, same schedule, no K)
+
+[results/read/report_YS.md](results/read/report_YS.md), [report_PS.md](results/read/report_PS.md).
+
+| family | | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) |
+|:--|:--|--:|--:|:--|--:|--:|
+| Y | `YS-L18` s0 / s1 | 0.838 (0.835 / 0.841) | 44.0 (45 / 43) | 9.0 / 14.5 / 22.0 | 23.5 | 1.357 |
+| Y | ON-NONE `YNONE-L18` | 0.693 | 120.0 | 23.5 / 56.0 / 51.5 | 79.5 | 1.746 |
+| Y | base `YR10m10-F-s0` | 0.785 | 74 | 10 / 33 / 35 | 43 | 1.495 |
+| P | `PS-L18` s0 / s1 | 0.791 (0.793 / 0.790) | 66.0 | 15.0 / 21.5 / 31.0 | 36.0 | 1.430 |
+| P | ON-NONE `PNONE-L18` | 0.771 | 81.0 | 11.5 / 24.0 / 47.0 | 35.5 | 1.674 |
+| P | base `P2H10S-F-s0` | 0.799 | 68 | 8 / 24 / 39 | 32 | 1.588 |
+
+| a - b (log-clustered 95 % CI) | mean score | zeros | at-fault zeros | GT distance (m) | fixed / broken (null max) |
+|:--|:--|:--|:--|:--|:--|
+| `YS-L18` - ON-NONE | +0.145 [+0.119, +0.173] | -76.0 [-89.9, -63.5] | -56.0 [-69.8, -43.1] | -0.389 [-0.509, -0.272] | 52 / 5 (8) |
+| `YS-L18` - base | +0.053 [+0.024, +0.082] | -30.0 [-43.5, -16.7] | -19.5 [-28.8, -9.3] | -0.138 [-0.266, -0.014] | 38 / 10 |
+| `PS-L18` - ON-NONE | +0.021 [-0.010, +0.053] | -15.0 [-30.2, -0.9] | +0.5 [-11.5, +10.9] | -0.245 [-0.370, -0.111] | 28 / 19 (1) |
+| `PS-L18` - base | -0.008 [-0.044, +0.025] | -2.0 [-17.6, +14.5] | +4.0 [-4.8, +12.3] | -0.158 [-0.274, -0.020] | 25 / 25 |
+
+Registered line: `YS-L18` adopted (and CL-1 as written met); `PS-L18` not (at-fault zeros 36 against 35.5). So on these rows K is what
+broke the round-1 arms: S alone on the same rows is the best checkpoint of the night on the YR base and neutral on the P2H10S base.
+
+Why ON-NONE loses to the base (descriptive): the continuation repeats the base's whole schedule from its end point (fresh AdamW, lr 3e-5
+backbone / 3e-4 adapter, 300 warm-up steps back to full rate, cosine over 10 000 steps): a second full training on the same data, not a
+fine-tune. It lowers open-loop dev ADE (0.539 -> 0.524 Y, 0.545 -> 0.529 P) and loses closed loop at 18 decisions. In round 1 (decision
+259, 10 decisions) the same continuation on P2H10S matched its control (-0.004); at 18 decisions P's loss sits in decisions 11-17 (first
+at-fault step at k <= 10: ON-NONE 15 / 14 against the base 14 / 16) while Y's already shows early (35 / 35 against 21 / 16). What I would
+change (not launched): continue at a tenth of the rate (3e-6 / 3e-5), no warm-up restart, 2 000-3 000 steps, so that the on-policy rows
+move the plan without re-fitting the imitation data; read ON-NONE first to show it stays at the base.
+
+## Round 1 as registered (S + K): held 460 at 18 decisions (2026-10-12 morning; 452 scenes after 8 route-fold scenes, two training seeds from the s0 base)
 
 [results/read/report_P.md](results/read/report_P.md), [results/read/report_Y.md](results/read/report_Y.md) (per-scene csv and json beside them).
 
