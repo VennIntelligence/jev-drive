@@ -47,6 +47,9 @@ def parse(dump: Path):
     return Path(dump).parents[2], int(m[1]), int(m[2])
 
 
+VMODE = ["chord"]                                      # chord: body-frame chord velocity; fwd: (|chord|, 0) along the heading
+
+
 def body_vel(P, vlast):
     """Body-frame velocities (4, 2) at the 4 keys: newest = the dump's, others finite differences of the poses (0.5 s)."""
     from jevdrive import op_interp as I
@@ -57,6 +60,8 @@ def body_vel(P, vlast):
     V = np.zeros((4, 2))
     for j in range(3):
         V[j] = I.rot2(P[j, 2]).T @ W[j]
+        if VMODE[0] == "fwd":
+            V[j] = [np.hypot(*W[j]) * np.sign(V[j, 0] if V[j, 0] else 1.0), 0.0]
     V[3] = vlast
     return V
 
@@ -110,6 +115,7 @@ def cmd_validate(a):
     from jevdrive import op_adapt as A
     from jevdrive.run import Run
     dev = torch.device("cuda")
+    VMODE[0] = a.vmode
     root = data_dir() / "runs/road_probe/roll"
     files = sorted(root.glob("c*/run/driver-logs/dump/*.npz"))
     rng = np.random.default_rng(0)
@@ -151,7 +157,7 @@ def cmd_validate(a):
         run.info(json.dumps(stats, indent=1))
         out = data_dir() / "runs/junction_eyes/slots"
         out.mkdir(parents=True, exist_ok=True)
-        (out / "validate.json").write_text(json.dumps(stats, indent=1))
+        (out / f"validate{a.tag}.json").write_text(json.dumps(stats, indent=1))
 
 
 SLOTS = data_dir() / "runs/junction_eyes/slots"
@@ -340,6 +346,8 @@ if __name__ == "__main__":
     from jevdrive.run import cli_args
     p = sp.add_parser("validate")
     p.add_argument("--n", type=int, default=600)
+    p.add_argument("--vmode", default="chord")
+    p.add_argument("--tag", default="")
     cli_args(p)
     p = sp.add_parser("held")
     p.add_argument("--check", type=int, default=500)
