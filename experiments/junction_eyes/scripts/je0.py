@@ -31,7 +31,7 @@ sys.path[:0] = [str(REPO), str(REPO / "experiments/junction_eyes/lib"), str(REPO
                 str(REPO / "experiments/corridor/scripts")]
 TOPIC = REPO / "experiments/junction_eyes"
 DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
-W = DATA / "runs/junction_eyes/step0"
+W = Path(os.environ.get("JE0_W", DATA / "runs/junction_eyes/step0"))
 RP = DATA / "runs/road_probe"
 CR = DATA / "runs/op_parity/cache"
 LOGS = DATA / "datasets/navsim/navsim_logs"
