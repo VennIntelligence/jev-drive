@@ -873,6 +873,15 @@ def bev(a):
         pay = {}
         for v in res.values:
             pay.update(v)
+        for g in sorted({p[0] for p in picks}):                        # served plan and the P0 heads' curves (ego frame, left +)
+            tb, raw = dict(np.load(W / f"tok/{g}/tab.npz")), dict(np.load(W / f"tok/{g}/p0.npz"))
+            idx = {(str(s_), int(k_)): i for i, (s_, k_) in enumerate(zip(tb["scene"], tb["k"]))}
+            for key in [k for k in pay if k[0] == g]:
+                i = idx[(key[1], int(key[2]))]
+                cam = tb["cam"][i].astype(float)
+                h = EV.heads({q: raw[q][i] for q in raw}, cam)
+                sel = EV.X_IDXS <= 60
+                pay[key].update(row=i, plan=tb["poses"][i].astype(np.float32), cam=cam, xs=cam[0] + EV.X_IDXS[sel], ll=h["ll"][:, sel], re=h["re"][:, sel], pr=h["pr"])
         pickle.dump(pay, open(Path(a.read) / "bev.pkl", "wb"), protocol=4)
 
 
