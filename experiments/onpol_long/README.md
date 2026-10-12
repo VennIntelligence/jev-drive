@@ -19,8 +19,11 @@ A second on-policy round (rows from `YS-L18`'s own rollouts, from `YS-L18-s1`) d
 than its own no-row control and slightly worse than round 1 (zeros 50.5 against 43), so the loop stops at round 1 and "more rounds help"
 is recorded as negative for this setting.
 
-**Next.** Arm B' with the rear-axle oncoming hinge: not adopted, YSO25 closest (Amendment 17, decision 281). Arm B (Amendment 13, decision 274) is void; arm B' (Amendment 14, decision 276) and arm B / B' on zeros_mech's lane rule (Amendment 15, decision 277) stopped at their label gates: footprint hinges on oncoming lanes fire on normal driving. PAI transfer read on the Tokyo box (Amendments 1, 4, 5). `YS2G-L18` passed the
-public-mean guardrail of the last-slot rule (Amendment 10, decision 269); the candidate-scoring line stopped at its feasibility gate (Amendment 12, decision 270). Ego-status dropout (Amendment 11) does not cut the drift: it removes the open-loop reliance and drift rises (decision 271).
+**Next.** Lateral on-policy labels are at a plateau: S-only rows (`YS-L18`, round 2b `YS2G`) are the best; corridor K, lane-centre C, the directional road raster
+(arm B, void, decision 274), the footprint oncoming hinge (stopped at its gates, 276-277) and the rear-axle oncoming hinge (`YSO25`, not adopted on the selection
+quantity GT, decision 281) did not beat `YS2G`. `YS2G-L18` passed the public guardrail (decision 269) and is the last-slot candidate under plan.md 3.3 (8).
+The next levers are the route-memory input branch and the longitudinal course (fresh agents); PAI transfer read on the Tokyo box (Amendments 1, 4, 5).
+Handoff: `tmp/onpol-long-handoff-2026-10-12-evening.md` (Mac).
 
 **Read more.** [plans/2026-10-12-ol1-prereg.md](plans/2026-10-12-ol1-prereg.md); the plan: [research/next-round/closed-loop.md](../../research/next-round/closed-loop.md);
 the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpol_nuplan/README.md); the 18-decision driver path:
