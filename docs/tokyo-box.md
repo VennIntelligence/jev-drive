@@ -568,3 +568,12 @@ provenance limits are indexed by the article notes.
 The later v4 smoke reproduced a single nonfinite IMU compass value at simulation time 9.10 s while GNSS, gyro and speed remained finite. Log raw motion before pose validation. The initialized filter now predicts heading from the gyro for at most 0.2 s, records degraded observations, and skips compass correction; an uninitialized or longer dropout brakes and resets history. A fresh valid pose forces a new trajectory. The recovery smoke completed 100%, and 126 regression tests passed. This is bounded sensor recovery, not simulator-truth substitution.
 
 The completed v4 campaign reused its server across all six groups and restarted only after three recorded rc139 failures. All failed attempts remain archived. This observation still does not establish a fixed safe process lifetime. Its 11 official TickRuntime failures all had contact before prolonged low speed; zero official blocked/deviation events must not be reported as zero real stalls, and ego-only logs do not establish collision responsibility. See the [final report](../experiments/b2d_controller/results/b2d-controller/final-report.md) for the 60 selected records, 63 attempts and all intermediate evidence.
+
+## Watching PAI rollout videos at the monitor (2026-10-12)
+
+The simulator writes one front-wide 10 fps mp4 per rollout deep under `sim/rollouts/<scene>/<uuid>/`. `~/bin/pai_videos.py`
+(on the Tokyo box, source in this commit's `experiments/alpasim/scripts/pai_videos.py`) rebuilds a flat symlink index at
+`~/Desktop/pai_videos/`: `<arm>/<score>_<zero kind>_<scene8>.mp4` for one arm, `by_scene/<scene8>/<arm>_<score>_<kind>.mp4`
+to compare arms on one scene. Rerun it to pick up new chunks; it reads `results-summary.json`, so only scored rollouts appear.
+Double-click plays in `ffplay` (registered as the mp4 handler in `~/.local/share/applications/ffplay.desktop`; no other
+player is installed and there is no sudo). Keys in ffplay: space pause, left / right seek 10 s, q quit; `-loop 0` repeats.
