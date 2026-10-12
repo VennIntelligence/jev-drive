@@ -113,26 +113,27 @@ submit-round)   # one Y-recipe round from <init> (submit-r2's recipe): rollouts 
                 # on held in RCH jobs right after its own training; report after all reads
   I=$1; A=$2; RT=${3:-$1}; N=L18$A; lists
   [[ -f $CK/$I/ckpt-final.pt || -n ${OL_DRY:-} ]] || die "no checkpoint $I"; [[ ! -e $W/rows/$N ]] || die "rows $N exist"
-  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
+  # the arm's path (rollouts -> rows -> arm trainings -> arm reads) one priority step above the controls and the side stages
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${SUBP:-${PRIO:-14}} --no-check ${after:+--after $after} \
             --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; [[ -n ${OL_DRY:-} ]] || echo "$id $name (ol_fast $A)" >> $W/jobs.txt; }
-  FX="env OL_NCH=$NCH OL_RCH=$RCH OL_WORKERS=$WK OL_LWORKERS=$LWK bash $E/scripts/ol_fast.sh"
+  HI=$((${PRIO:-14} + 1)); FX="env OL_NCH=$NCH OL_RCH=$RCH OL_WORKERS=$WK OL_LWORKERS=$LWK bash $E/scripts/ol_fast.sh"
   rr=()
   for T in ${RT//,/ }; do [[ -n ${OL_DRY:-} ]] || mkdir -p $W/roll/$T
-    for i in $(seq 0 $((NCH - 1))); do rr+=($(sub ol-roll-$T-$i "" --vram 24 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=ol-fast-roll -- $FX roll $T $i $NCH)) || exit 1; done
+    for i in $(seq 0 $((NCH - 1))); do rr+=($(SUBP=$HI sub ol-roll-$T-$i "" --vram 24 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=ol-fast-roll -- $FX roll $T $i $NCH)) || exit 1; done
   done
-  g=$(sub ol-geo-$A "$(IFS=,; echo "${rr[*]}")" --vram 0.5 --cpu $WK --ram 120 --timeout-h 2 -- $FX geo $RT $N $NCH) || exit 1
+  g=$(SUBP=$HI sub ol-geo-$A "$(IFS=,; echo "${rr[*]}")" --vram 0.5 --cpu $WK --ram 64 --timeout-h 2 -- $FX geo $RT $N $NCH) || exit 1
   l=$(sub ol-labels-$A "$g" --vram 0.5 --cpu $LWK --ram 96 --timeout-h 2 -- $FX labels $N) || exit 1
-  k=$(sub ol-tok-$A "$g" --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- $FX tok $N smoke10eY) || exit 1
+  k=$(SUBP=$HI sub ol-tok-$A "$g" --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- $FX tok $N smoke10eY) || exit 1
   q=$(sub ol-gate-$A "$k,$l" --vram 0.5 --cpu 8 --ram 32 --timeout-h 1 -- $FX gate $N) || exit 1
   sub ol-strip-$A "$q" --vram 0.5 --cpu 16 --ram 16 --timeout-h 2 -- bash $E/scripts/ol_chain.sh strip $RT $N > /dev/null || exit 1
   OT="$TR $ON/scripts/on_train.py train --exp onpol_long --init $I --steps ${OL_STEPS:-10000} --yr-mass 0.1 --label-bank"
   rids=()
   for s in 0 1; do
-    a=$(sub ol-train-Y$A-s$s "$k" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_$N --on-k 13 \
+    a=$(SUBP=$HI sub ol-train-Y$A-s$s "$k" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_$N --on-k 13 \
           --on-split alpasim_nuplan/onpol-train --on-mode self --seed $s --tag Y$A-L18-s$s) || exit 1
     c=$(sub ol-train-Y${A}NONE-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT --seed $s --tag Y${A}NONE-L18-s$s) || exit 1
-    for x in "$a Y$A-L18-s$s" "$c Y${A}NONE-L18-s$s"; do set -- $x
-      for i in $(seq 0 $((RCH - 1))); do rids+=($(sub ol-read-$2-$i "$1" --vram 24 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=ol-fast-read -- $FX read $2 $i $RCH)) || exit 1; done; done
+    for x in "$a Y$A-L18-s$s $HI" "$c Y${A}NONE-L18-s$s ${PRIO:-14}"; do set -- $x
+      for i in $(seq 0 $((RCH - 1))); do rids+=($(SUBP=$3 sub ol-read-$2-$i "$1" --vram 24 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=ol-fast-read -- $FX read $2 $i $RCH)) || exit 1; done; done
   done
   sub ol-report-Y$A "$(IFS=,; echo "${rids[*]}"),$q" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- $FX report $A $I Y-$A > /dev/null || exit 1
   echo "submitted: $(grep -c "(ol_fast $A)" $W/jobs.txt) jobs" ;;
