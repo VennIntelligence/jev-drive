@@ -77,12 +77,13 @@ body{font:14px system-ui;margin:0;background:#111;color:#ddd}
  <span>scene <input id=q placeholder="8 hex" style="width:7em"></span>
  <span>sort <select id=sort><option value=scene>scene</option><option value=spread>arm spread</option><option value=min>min score</option></select></span>
  <span>only scenes where arms disagree <input id=dis type=checkbox></span>
- <span style="color:#888">j / k next / prev scene, space play / pause row, . , frame step, click a cell to play it, double-click to enlarge, Esc closes</span>
+ <span>speed <select id=rate><option>1</option><option selected>1.5</option><option>2</option><option>3</option><option>4</option></select>x</span>
+ <span style="color:#888">j / k next / prev scene, space play / pause row, . , frame step, click a cell to play it, double-click to enlarge, Esc closes, [ ] speed</span>
 </div>
 <div id=list></div>
 <div id=big><video loop muted></video><div class=lab></div></div>
 <script>
-for(const id of ["smax","q","dis","sort","n","list","big"]) window[id+"_"]=document.getElementById(id);
+for(const id of ["smax","q","dis","sort","n","list","big","rate"]) window[id+"_"]=document.getElementById(id);
 const R=__ROWS__, ARMS=__ARMS__, KINDS=["ok","crash","offroad","corridor","zero"];
 const byScene={}; for(const r of R){(byScene[r.scene]??={})[r.arm]=r}
 const chk=(id,xs,on=true)=>document.getElementById(id).innerHTML=xs.map(x=>`<label><input type=checkbox value="${x}" ${on?"checked":""}> ${x}</label>`).join("");
@@ -102,7 +103,7 @@ function render(){
       return `<div class=cell><img loading=lazy src="pai_videos/thumbs/${x.s}.jpg" data-src="pai_videos/${r.file}"><div class=lab>${a} <b class=${r.kind}>${r.score.toFixed(2)} ${r.kind}</b> ${r.dist}/${r.gt} m <span style="color:#666">${r.chunk}</span></div></div>`}).join("")+`</div>`).join("");
   cur=-1;
 }
-function toVideo(im){const v=document.createElement("video");v.src=im.dataset.src;v.poster=im.src;v.loop=true;v.muted=true;v.dataset.src=im.dataset.src;v.dataset.thumb=im.src;im.replaceWith(v);return v}
+function toVideo(im){const v=document.createElement("video");v.src=im.dataset.src;v.playbackRate=+rate_.value;v.poster=im.src;v.loop=true;v.muted=true;v.dataset.src=im.dataset.src;v.dataset.thumb=im.src;im.replaceWith(v);return v}
 function toPh(v){const i=document.createElement("img");i.loading="lazy";i.src=v.dataset.thumb;i.dataset.src=v.dataset.src;v.pause();v.removeAttribute("src");v.load();v.replaceWith(i)}
 function go(i,scroll){
   if(i<0||i>=scenes.length) return;
@@ -111,7 +112,7 @@ function go(i,scroll){
   d.querySelectorAll(".cell img").forEach(im=>{const v=toVideo(im); v.play()});
 }
 const bigV=big_.querySelector("video");
-function openBig(cell){const src=(cell.querySelector("img,video")||{}).dataset.src; if(!src) return; bigV.src=src; bigV.currentTime=0; bigV.play(); big_.querySelector(".lab").textContent=cell.querySelector(".lab").textContent; big_.classList.add("on")}
+function openBig(cell){const src=(cell.querySelector("img,video")||{}).dataset.src; if(!src) return; bigV.src=src; bigV.playbackRate=+rate_.value; bigV.currentTime=0; bigV.play(); big_.querySelector(".lab").textContent=cell.querySelector(".lab").textContent; big_.classList.add("on")}
 function closeBig(){big_.classList.remove("on"); bigV.pause(); bigV.removeAttribute("src"); bigV.load()}
 big_.addEventListener("click",e=>{if(e.target===big_) closeBig()}); bigV.addEventListener("dblclick",closeBig);
 list_.addEventListener("dblclick",e=>{const c=e.target.closest(".cell"); if(c) openBig(c)});
@@ -123,9 +124,12 @@ addEventListener("keydown",e=>{
   else if(e.key==" "){e.preventDefault(); vs.forEach(v=>v.paused?v.play():v.pause())}
   else if(e.key=="."||e.key==","){vs.forEach(v=>{v.pause(); v.currentTime+= e.key=="."?0.1:-0.1})}
   else if(e.key=="0"){vs.forEach(v=>{v.currentTime=0})}
+  else if(e.key=="["||e.key=="]"){const o=[...rate_.options].map(x=>+x.value); let i=o.indexOf(+rate_.value)+(e.key=="]"?1:-1); i=Math.max(0,Math.min(o.length-1,i)); rate_.value=o[i]; setRate()}
 });
 list_.addEventListener("click",e=>{const t=e.target.closest(".cell"); if(!t) return; const d=t.closest(".scene"); const k=[...d.querySelectorAll(".cell")].indexOf(t);
   if(+d.dataset.i!==cur) go(+d.dataset.i); const vs=[...d.querySelectorAll(".cell")].map(c=>c.querySelector("video")); vs.forEach((x,j)=>{if(!x) return; if(j===k){x.paused?x.play():x.pause()} else x.pause()})});
+function setRate(){document.querySelectorAll("video").forEach(v=>v.playbackRate=+rate_.value)}
+rate_.addEventListener("change",setRate);
 for(const id of ["arms","kinds","smax","q","sort","dis"]) document.getElementById(id).addEventListener(id=="q"||id=="smax"?"input":"change",render);
 render();
 </script>"""
