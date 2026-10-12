@@ -70,8 +70,11 @@ def cmd_replay(a):
             orig[(r["scene"], r["k"])] = np.array(r["poses"])
     dl = X / "run/driver-logs"
     assert not (dl / "drive.jsonl").exists(), f"{dl} already replayed"
-    core = D.C.Core(TAG, "cuda", os.environ.get("SH30_COLD", "backwarp"))
-    drv = D.Driver(core, dl, 1000, False)
+    core = D.C.Core(TAG, "cuda", os.environ.get("SH30_COLD", "backwarp"), float(os.environ.get("SH30_MOTION", "1")), os.environ.get("SH30_SYNTH", "gpu"))
+    z = np.zeros(D.C.FRAME, np.uint8)
+    decode = D.tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 4, 4)])
+    drv = D.Driver(core, dl, 1000, False)                                # the live driver's settings (sh30_driver main): gpu synthesis, compiled passes
+    drv.decode = decode
     pb, last, plan0 = D.egodriver_pb2, {}, core.plan
 
     def plan(*x, **k):
