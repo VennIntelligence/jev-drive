@@ -601,6 +601,7 @@ if __name__ == "__main__":
     p.add_argument("--warm", type=int, default=300), p.add_argument("--smoke", action="store_true")
     p = sub.add_parser("read")
     p.add_argument("--boot", type=int, default=2000), p.add_argument("--force", action="store_true")
+    p.add_argument("--gdump", default=str(W / "gdump.json"))
     p = sub.add_parser("report")
     p.add_argument("--read", required=True)
     a = ap.parse_args()
