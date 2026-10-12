@@ -40,7 +40,7 @@ AREAS = [  # INDEX.md order; live topics come first
 ]
 ALIASES = {  # names the decision log and old notes use: a grep on INDEX.md finds the topic
     "junction_eyes": "JE, junction eyes, corridor rulers, trunk LoRA",
-    "route_follow": "ROUTE-FOLLOW, expert A, route following, command counterfactual, R-CF",
+    "route_follow": "ROUTE-FOLLOW, ROUTE-NIGHT, expert A, route following, command counterfactual, R-CF, RB0-F, RB-F, RSG-L18, route hinge, on1_CF",
     "vlm_arb": "vlm-arb, vlm_arb",
     "op_adapt_l": "op-adapt L", "op_adapt_r2": "op-adapt r2, S_jev", "op_adapt_r1": "op-adapt r1, op_torch",
     "op_closed_loop": "op-arb, op-drive", "op_openloop": "op-interp, op-lb, navhard", "skill_pack": "N0-N4, navsim raise",

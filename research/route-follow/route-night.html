@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROUTE-NIGHT：跟着路线开的新底座（2026-10-13 夜）</title>
+<style>
+body{font:16px/1.7 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;max-width:1180px;margin:0 auto;padding:24px 16px;color:#1d1d1f;background:#fff}
+h1{font-size:26px}h2{margin-top:36px;border-bottom:1px solid #ddd;padding-bottom:4px}
+.v{background:#fff4e5;border-left:5px solid #d95f02;padding:12px 16px;margin:16px 0}
+.todo{background:#eef3ff;border:2px dashed #3b6fd8;padding:12px 16px;margin:16px 0}
+table{border-collapse:collapse;margin:12px 0;font-size:13.5px}th,td{border:1px solid #ccc;padding:4px 8px;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f3f3f3}
+td.l{text-align:left}tr.best td{background:#eaf6ea}tr.ref td{color:#666}
+.figs{display:flex;gap:16px;flex-wrap:wrap}.figs figure{flex:1 1 420px}
+figure{margin:16px 0}img{max-width:100%}figcaption{font-size:14px;color:#444}code{font-size:12px;word-break:break-all}
+@media(prefers-color-scheme:dark){body{background:#161618;color:#e8e8ea}th{background:#26262a}th,td{border-color:#444}.v{background:#2a2118}.todo{background:#18213a}tr.best td{background:#1d2e1d}tr.ref td{color:#999}figcaption{color:#aaa}h2{border-color:#444}img{background:#fff}}
+</style></head><body>
+<h1>ROUTE-NIGHT：从出厂权重重训一个读路线的底座（2026-10-13 夜）</h1>
+<div class="v"><b>要点：</b>
+<b>一，</b>把 driver 收到过的路线点作为输入支路、从出厂权重按 YR10m10 配方重训的底座 <b>RB0-F</b>，是第一个在离线真正依赖路线记忆的 checkpoint：路口行把记忆置空，ADE 变差 0.025 / 0.022 米（线 0.01；上周同一支路在旧配方里是 0.0004 / 0.0011，第 282 条）。held 460 个场景、18 决策上零分 59 / 59，比旧底座 YR10m10 的 82 / 79 少。
+<b>二，</b>在它上面加一轮温和的 on-policy 行，只带车身课 S 的两个 hinge（<b>RSG-L18</b>），零分 34 / 34、均分 0.866 / 0.868、GT 1.14 米，对 RB0 零分 −25 [−37, −14]、at-fault −16、均分 +0.045 [+0.022, +0.072]：过 L3，是到目前为止 18 决策 held 上零分最少的 checkpoint（YS2G 是 48–51，尚未做配对置信区间）。
+<b>三，</b>今晚的新损失「路线 hinge」不采用：凡带它训的臂，右转内侧的出路零分都是 17–21 个，不带的是 1–2 个；把它从 RBSG 里拿掉（RSG）就回到 1 / 1。登记的主臂 RBS-L18 零分 122 / 99，L3、L4 都不过。
+<b>四，</b>反事实行（同一画面配另一条合法路线）教会了路口按换过的路线走（G-swap：横移达到所需的 55%，4 秒终点 94% 落在反事实一侧），没教会变道（5–7%），而且让开环模仿变差、闭环零分更多（87 / 78）。
+决策 <a href="../decisions/286.md">286</a>。</div>
+
+<h2>一、读数总表（held 460，18 决策）</h2>
+<p>均分、零分、分类、GT 来自 <code>held_raw.txt</code> / <code>a3/held_raw_a3.txt</code>（460 个场景）；「零分 452」与 at-fault 是登记口径 <code>ol_report</code>（有 rollout 的 452 个场景）。
+G-rely Δ = 路口开发集行把记忆置空后的 ADE 变化（米）。转弯完成率：held 里 24 个 ≥ 60° 的转弯场景，「全部 / 记忆未覆盖」（记忆覆盖 +20 米的只有 1 个场景，不读）。
+右转内侧 = 落在右转内侧的出路零分。所有续训都从 <code>RB0-F-s0</code> 起，s0 / s1 是续训的 seed。— = 未算或不适用。</p>
+<table>
+<tr><th>checkpoint</th><th>做了什么</th><th>均分</th><th>零分</th><th>碰撞 / 出路 / 走廊</th><th>零分 452</th><th>at-fault 452</th><th>GT（横向）米</th><th>G-rely Δ</th><th>转弯完成 %</th><th>右转内侧</th></tr>
+<tr><td>RB0-F-s0 / s1</td><td class="l">出厂权重 + YR10m10 配方 + 路线记忆支路</td><td>0.822 / 0.825</td><td>59 / 59</td><td>7/29/15 · 5/37/9</td><td>51 / 51</td><td>36 / 42</td><td>1.314 / 1.238</td><td>+0.025 / +0.022</td><td>54.2 / 62.5</td><td>1 / 2</td></tr>
+<tr><td>RB-F-s0 / s1</td><td class="l">RB0 + 反事实行（路线 hinge 0.5 米）</td><td>0.768 / 0.786</td><td>87 / 78</td><td>21/49/9 · 17/43/10</td><td>—</td><td>—</td><td>1.682 / 1.599</td><td>−0.032 / −0.019</td><td>75.0 / 66.7</td><td>17 / —</td></tr>
+<tr><td>RNONE-L18</td><td class="l">全程续训 10 000 步，无行</td><td>0.781 / 0.786</td><td>80 / 75</td><td>16/39/17 · 17/40/10</td><td>72 / 67</td><td>55 / 57</td><td>1.526 / 1.452</td><td>+0.026 / +0.023</td><td>62.5 / 62.5</td><td>—</td></tr>
+<tr><td>RBS-L18（登记主臂）</td><td class="l">全程续训 + S 两项 + 路线 hinge</td><td>0.671 / 0.714</td><td>122 / 99</td><td>27/71/16 · 17/64/10</td><td>114 / 91</td><td>98 / 81</td><td>1.391 / 1.294</td><td>+0.014 / +0.013</td><td>58.3 / 62.5</td><td>20 / 21</td></tr>
+<tr><td>RNONEG-L18-s0</td><td class="l">温和续训 2 500 步、lr × 0.1，无行</td><td>0.816</td><td>60</td><td>6/31/15</td><td>—</td><td>—</td><td>1.293</td><td>+0.026</td><td>41.7</td><td>1</td></tr>
+<tr><td>RBSG-L18</td><td class="l">温和续训 + S 两项 + 路线 hinge</td><td>0.801 / 0.796</td><td>65 / 66</td><td>9/40/8 · 7/43/8</td><td>57 / 58</td><td>49 / 50</td><td>1.190 / 1.196</td><td>−0.005 / −0.003</td><td>54.2 / 58.3</td><td>19 / 21</td></tr>
+<tr class="best"><td><b>RSG-L18</b></td><td class="l">温和续训 + 只 S 两项（无路线 hinge）</td><td><b>0.866 / 0.868</b></td><td><b>34 / 34</b></td><td>4/17/5 · 6/13/7</td><td><b>26 / 26</b></td><td><b>21 / 19</b></td><td><b>1.135 / 1.144</b></td><td>+0.025 / +0.028</td><td>66.7 / 58.3</td><td>1 / 1</td></tr>
+<tr><td>RBSGc-L18</td><td class="l">温和续训 + S + 路线 hinge 只加在记忆覆盖 +20 米的行</td><td>0.845 / 0.842</td><td>46 / 50</td><td>5/27/6 · 5/30/7</td><td>38 / 42</td><td>32 / 35</td><td>1.151 / 1.225</td><td>+0.008 / +0.012</td><td><b>79.2 / 70.8</b></td><td>5 / 10</td></tr>
+<tr class="ref"><td>YS-L18（参照）</td><td class="l">旧家族，第 264 条</td><td>0.820 / 0.826</td><td>53 / 51</td><td>9/14/22 · 9/15/19</td><td>45 / 43</td><td>23 / 24</td><td>1.368 / 1.346</td><td>—</td><td>54.2 / 54.2</td><td>—</td></tr>
+<tr class="ref"><td>YS2G-L18（参照）</td><td class="l">旧家族最好，第 264 条第 11 项</td><td>0.829 / 0.837</td><td>51 / 48</td><td>7/17/19 · 7/13/20</td><td>43 / 40</td><td>24 / 20</td><td>1.272 / 1.279</td><td>—</td><td>58.3 / 58.3</td><td>—</td></tr>
+<tr class="ref"><td>YR10m10-F（参照）</td><td class="l">旧底座，提交 #2</td><td>0.771 / 0.781</td><td>82 / 79</td><td>10/33/31 · 4/37/30</td><td>74 / 71</td><td>43 / 41</td><td>1.495 / 1.404</td><td>—</td><td>37.5 / 37.5</td><td>—</td></tr>
+</table>
+<p>读法：新底座 RB0-F 的零分结构和旧家族不同，走廊零分少（15 / 9 对 YS 的 22 / 19）、出路多（29 / 37 对 14 / 15）。RSG 在三类上都是最少的那一档。
+路口段自车到路线的横距中位所有 checkpoint 都在 0.48–0.68 米；plan 2 秒短缺（plan 2 秒弧长减车速 × 2 秒）中位在 −0.18 到 −0.36 米，路口段为正（+0.21 到 +0.93），
+即第 285 条说的「plan 比车短」在 nuPlan held 上不明显。完整列见决策 286。</p>
+
+<h2>二、RSG-L18：新底座加一轮只带 S 的行</h2>
+<p>配对（452 个场景、39 个日志，seed 平均对 RB0-F-s0，95% 置信区间按日志聚类重抽 10 000 次）：均分 +0.045 [+0.022, +0.072]，零分 −25.0 [−36.9, −14.2]，at-fault −16.0 [−26.4, −6.7]，
+GT −0.174 [−0.252, −0.105] 米，fixed / broken 27 / 4（null 5）。L3 三项全过，closed-loop.md 的 CL-1 原文也满足。对全程续训的无行对照 RNONE：零分 −43.5 [−55.0, −32.4]。
+两个 seed 几乎一样（26 / 26，at-fault 21 / 19）。</p>
+<p>行没有把路线依赖冲掉：RSG 的 G-rely 是 +0.025 / +0.028，和底座一样，开发集 ADE 0.528 / 0.527 也和底座一样。对照第 264 条：同一个温和 schedule 的 S 行放在旧底座 YR10m10 上（YSG）零分 51.5，
+放在新底座上是 26（同为 452 口径），差别来自底座。转弯完成率对 RB0-s0 +12.5 / +4.2 个百分点，置信区间含 0；逐决策的 L5 也不过。所以 RSG 少掉的零分不是「更会跟路线」读得出来的，主要是出路（−14）和走廊（−10）。</p>
+<p>还不能叫它新底座的理由：它是看过 RNONE（全程 schedule 伤底座）和 RBSG（hinge 臂出路多）之后用补记 3 加的拆分臂；对 YS2G 的配对置信区间没算；公开 1491 场景的护栏、PAI 281 都没读；所有续训都从同一个 RB0-F-s0 起。</p>
+
+<h2>三、路线 hinge 为什么不采用：车在右转里转过头，压内侧路缘</h2>
+<table>
+<tr><th>checkpoint</th><th>路线 hinge</th><th>出路零分</th><th>路口 / 进路口</th><th>转弯处零分</th><th>右转内侧</th><th>左转内侧</th></tr>
+<tr><td>RB0-F-s0 / s1</td><td class="l">无</td><td>29 / 37</td><td>5/4 · 13/8</td><td>19 / 28</td><td>1 / 2</td><td>7 / 10</td></tr>
+<tr><td>RNONEG-L18-s0</td><td class="l">无</td><td>31</td><td>10/2</td><td>21</td><td>1</td><td>9</td></tr>
+<tr><td>RSG-L18</td><td class="l">无（只 S）</td><td>17 / 13</td><td>8/3 · 7/2</td><td>11 / 8</td><td><b>1 / 1</b></td><td>6 / 5</td></tr>
+<tr><td>RBSGc-L18</td><td class="l">只在记忆覆盖 +20 米的行</td><td>27 / 30</td><td>9/6 · 11/6</td><td>20 / 23</td><td>5 / 10</td><td>9 / 6</td></tr>
+<tr><td>RBSG-L18</td><td class="l">on-policy 行，死区 1 米</td><td>40 / 43</td><td>20/9 · 18/10</td><td>31 / 36</td><td><b>19 / 21</b></td><td>8 / 7</td></tr>
+<tr><td>RB-F-s0</td><td class="l">反事实行，死区 0.5 米</td><td>49</td><td>19/12</td><td>39</td><td><b>17</b></td><td>14</td></tr>
+<tr><td>RBS-L18</td><td class="l">on-policy 行，全程续训</td><td>71 / 64</td><td>18/19 · 20/16</td><td>50 / 48</td><td><b>20 / 21</b></td><td>18 / 19</td></tr>
+</table>
+<p>来源 <code>experiments/route_follow/results/route-night/a3/offroad_a3.md</code>（RSG / RBSGc 用同一脚本 <code>rf_offroad.py</code> 在本页之前补跑）。整个差就在「右转内侧」一列，两个 seed、两种行来源、两种步数都一样，
+拆分臂把它钉在路线 hinge 上：拿掉 hinge 回到底座水平，只在记忆覆盖的行上加减半。</p>
+<p>诊断（<a href="../route-follow-offroad.md">route-follow-offroad.md</a>，测）排除了三个直观的解释：标签没有出路（零分点 ±30 米内的标签点全部在路上、放得下车；训练池 17 427 行里只有 7 行有一个放不下车的点）；
+记忆没有漂移（记忆点对当场重建的路线偏差中位 4–6 厘米）；hinge 也没有压过道路项（「hinge 已满足但车放不下」的份额与底座相当）。剩下的是过转：转弯零分里自车航向比路线更往里的份额 54–71%，无 hinge 的是 11–18%。
+推断（没做干预）：on-policy 行来自 RB0 自己的 rollout，RB0 右转偏外，hinge 在这些行上只会说「再早一点、再急一点」，池里几乎没有转过头的状态（RB0 的 plan 放不下车的行只有 1.3%），
+对称的 hinge 和道路项在另一侧拿不到样本；反事实行全是日志状态，同样没有。第二轮的 RBSG2 就是把 RBSG 自己转过头的状态加回池子。</p>
+<div class="figs">
+<figure><img src="../../experiments/route_follow/figs/offroad_2.png" alt="offroad_2"><figcaption>RBSG-L18-s0 的一个新增出路零分（底座在该场景不是零分），路口右转 −90°。灰 = 可行驶面，蓝虚线 = 当步标签，橙 = 服务的 plan，黑 = 自车轨迹，红叉 = 第一次出路。
+看橙线：入弯前 plan 已经朝出口偏，整段在蓝虚线内侧，车在转角处压上路缘（离路线 2.9 米）；蓝虚线本身全在灰色里。</figcaption></figure>
+<figure><img src="../../experiments/route_follow/figs/offroad_3.png" alt="offroad_3"><figcaption>RBSG-L18-s0，右转 −82°：自车就在路线上（0.1 米），但航向比路线多转 19°，车身斜着扫出转角。这一类说明问题不是「没跟上路线」，而是在小半径右转里转过头。</figcaption></figure>
+</div>
+
+<h2>四、反事实行：路口会换路线，变道不会</h2>
+<p>反事实池 <code>on1_CF</code>：14 765 行（路口 8 980 + 3 196、变道 2 589；12 042 个 token、825 个日志），开发集另存 309 行只作 G-swap。G-cf1 决策处反事实与真实路线横距中位 84.6 米（变道类 4.6 米），G-cf2 折线 99.9995% 在道路栅格内，G-cf3 六张图人眼放行。</p>
+<table>
+<tr><th>G-swap（开发集路口行）</th><th>横移 / 所需（中位）</th><th>4 秒终点落反事实一侧</th><th>只换记忆（命令真实）</th><th>变道行横移 / 所需</th></tr>
+<tr><td>RB-F-s0</td><td><b>0.55</b></td><td><b>94%</b></td><td>0.38 / 67%</td><td>0.05</td></tr>
+<tr><td>RB-F-s1</td><td><b>0.56</b></td><td><b>95%</b></td><td>0.25 / 39%</td><td>0.07</td></tr>
+<tr><td>RB0-F-s0（参照）</td><td>0.19</td><td>71%</td><td>0.03 / 12%</td><td>0.02</td></tr>
+</table>
+<p>线：横移 ≥ 50%、终点侧 ≥ 70%、直路平移横移 ≤ 0.10 米（RB-F 0.003 米）：RB-F 两个 seed 都过。只换记忆时只有一半效果，路口换路线要靠记忆和命令一起；变道行只有 19 行，横移不到所需（中位 1.8 米）的十分之一。
+代价：开发集 ADE 0.605 对 RB0 0.528（G-real 不过），记忆置空反而让 ADE 降（G-rely 不过），闭环零分 87 / 78，右转内侧 17。</p>
+<div class="figs">
+<figure><img src="../../experiments/route_follow/figs/cf_bev_0.png" alt="cf_bev_0"><figcaption>路口类反事实行：蓝 = 真实路线（日志右转），红 = 反事实标签（左转出口），红点 = 喂给模型的反事实记忆，绿 = 日志 4 秒未来。看红线是否全程在灰色道路内、从另一个出口离开。</figcaption></figure>
+<figure><img src="../../experiments/route_follow/figs/cf_bev_3.png" alt="cf_bev_3"><figcaption>变道类反事实行：日志（绿）换道，反事实标签（红）留在原车道。两条路线在车前近处只差一个车道左右，要的是 1–2 秒内的一次横移，这正是 RB-F 没学会的那一类。</figcaption></figure>
+</div>
+
+<h2>五、六条线与闸</h2>
+<table>
+<tr><th>线</th><th>判词</th><th>数</th></tr>
+<tr><td>L1 G-rely</td><td class="l"><b>RB0-F 过</b>；RB-F 不过</td><td class="l">路口 Δ +0.025 / +0.022，路口 − 直路下界 +0.013 / +0.007；RB-F −0.032 / −0.019</td></tr>
+<tr><td>L2 G-swap</td><td class="l"><b>RB-F 过</b>（只路口）</td><td class="l">0.55 / 0.56，终点侧 94% / 95%，G-ST 0.003 米</td></tr>
+<tr><td>L0 G-real</td><td class="l">RB-F 不过</td><td class="l">开发集 ADE +0.077（线 +0.01）</td></tr>
+<tr><td>L3 对 RB0</td><td class="l">RBS、RBSG、RBSGc 不过；<b>RSG 过</b></td><td class="l">零分 +51.5 / +6.5 / −11.0 [−25.0, +1.0] / −25.0 [−36.9, −14.2]</td></tr>
+<tr><td>L4 对无行对照</td><td class="l">RBS 不过；温和臂只有点估计</td><td class="l">RBS 对 RNONE +33.0 [+13.6, +49.4]；RSG 34 对 RNONEG 60（单 seed，未算配对）</td></tr>
+<tr><td>L5 逐决策跟路线</td><td class="l">没有臂过</td><td class="l">覆盖半边 RBS-s0 −0.62 [−0.85, −0.31] 过、s1 不过；其余臂置信区间含 0；路口横距中位全部 &lt; 1 米</td></tr>
+</table>
+<p>池闸：<code>on1_L18RB0</code> 17 429 行，路线标签 ok 0.9999，记忆覆盖 +20 米 46%，重建首点与 driver 收到的一致 0.994（线 0.99）；R1 0.9987、interpreted control 过、R2 过，一个 rollout 与日志时间对不上整条不出行。
+决策树：两个底座都按时训出，RB0 过 G-rely、RB 不过，所以链走 RB0；RBS 的 L3 不过之后，任务书写的是「不加臂」，实际上主会话在读数前用补记 2–5 先后加了温和臂、拆分臂和第二轮，RSG 出自补记 3。</p>
+<p>时间：主链 01:15 → 03:25（任务书估 6–7.5 小时）；补记 3 的读数 04:07 出完。GPU job 时主链 14.7 小时（任务书估约 8 card-h；读数按 6 个 chunk 分卡并行，job 时大于卡时），补记 3 再 3.95 小时；
+pool 记录 01:15–04:15 之间 GPU 在算 10.0 card-h（6 卡 × 3 小时的 56%），30% 时间没有排队的活；没有平台 SIGKILL。</p>
+
+<h2>六、没读的</h2>
+<ul>
+<li>RSG 对 YS2G-L18 的配对置信区间；公开 1491 场景 / 10 决策护栏；navtest / navhard；任何提交。</li>
+<li>温和臂对 RNONEG 的配对置信区间（RNONEG 只有 s0，<code>ol_report</code> 用的对照是全程的 RNONE）；RB-F 与 RNONEG 的 452 配对行。</li>
+<li>任务书第 6 节原始的场景级 L5 覆盖桶（覆盖 +20 米的转弯场景只有 1 个），由补记 1 换成逐决策。</li>
+<li>RB-F 自己的 on-policy 链（RB-F 没过 G-rely，链走了 RB0）；第二个 RB0 seed 上的续训。</li>
+<li>RNONE、RB-F-s1 和三个参照的右转内侧计数。</li>
+</ul>
+
+<h2>七、第二轮（补记 4–5）</h2>
+<div class="todo"><b>[待填：第二轮读数，预计 07:00 JST]</b><br>
+RBSG2-L18-s0 / s1（RBSG 自己 rollout 的行 + on1_L18RB0，带路线 hinge）：零分、对 RB0 的 L3、右转内侧 ≤ 6 / 出路 ≤ 34 / 走廊 ≤ 11 两 seed。<br>
+RS2G-L18-s0 / s1（RSG rollout 的行 + on1_L18RB0，只 S）与 RBS2Gc-L18-s0 / s1（同池、hinge 只在覆盖行）：零分、L3 对 RB0、轮次闸对 RSG-L18-s0、L5、右转内侧计数。</div>
+
+<h2>八、PAI 线（Tokyo）</h2>
+<p>B 的 gains pilot 过（<code>rel_front_steering_angle_weight</code> 20：交接打转 3 对 22，g2 + g3 零分 45 对 48），PAI rollout 用 20；<code>pai_driver.py</code> 已能 serve 带路线记忆的 checkpoint（<code>19137cec</code>）。</p>
+<div class="todo"><b>[待填：PAI]</b><br>RB0-F-s0 在 PAI 上重滚（gains 20）与出行的状态；RSG-L18-s0 的 PAI 281 读数（均分、零分，对 <code>pai281/{ybase,ys0,ys1}</code>）。</div>
+
+<h2>九、下一步</h2>
+<ul>
+<li>RSG-L18 要成为新线的底座，先补三个读数：对 YS2G-L18 的配对置信区间、公开 1491 护栏、PAI 281。都过再在它上面谈下一轮。</li>
+<li>路线 hinge 的去留看第二轮：带转过头状态的 RBSG2 右转内侧回到 ≤ 6 且零分不多于 RSG，hinge 可以留；否则跟路线这件事交给记忆输入本身（RB0 已经依赖它），不再加路线目标。</li>
+<li>变道：反事实行在路口有效、变道无效（5–7%）；要做变道，得是变道专门的行或标签，不是同一个 hinge 加量。</li>
+</ul>
+
+<p style="font-size:13px;color:#888">来源：<code>experiments/route_follow/results/route-night/</code>（held_raw*.txt、report_*.md、follow_*.md、gswap/、rely/、pool_L18RB0_gates.md、a3/）、<code>results/cf_gates.json</code>、
+<code>research/route-follow-offroad.md</code>、<code>experiments/steer_long/results/gains_pilot/read.md</code>；登记 <code>experiments/route_follow/plans/2026-10-13-route-night-prereg.md</code>；box <code>$DATA_DIR/runs/route_mem/</code>、<code>$DATA_DIR/runs/route_follow/</code>。</p>
+</body></html>
