@@ -239,5 +239,26 @@ report-gentle)
   for t in YR10m10-F-s0 YR10m10-F-s1; do R+=("$t@18=$H/$t"); done
   $P $E/scripts/ol_report.py --family Y --arm SG --ctl NONEG --runs "${R[@]}" --out $W/report/Y-SG-base || die "ol_report (base) rc $?"
   $P $E/scripts/ol_report.py --family Y --arm SG --ctl NONEG --base-tags YS-L18-s0,YS-L18-s1 --ref-mean --runs "${R[@]}" --out $W/report/Y-SG-ys || die "ol_report (YS) rc $?" ;;
+submit-r2g)    # Amendment 8: round 2b, round-2 rows (pool L18YS), gentle schedule (lr x 0.1, warm-up 1, 2 500 steps) from YS-L18-s1; reads off card 0
+  I=YS-L18-s1; N=L18YS
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
+            --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 8)" >> $W/jobs.txt; }
+  OT="$TR $ON/scripts/on_train.py train --exp onpol_long --init $I --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank"
+  rids=()
+  for s in 0 1; do
+    a=$(sub ol-train-YS2G-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 2 -- $OT --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_$N --on-k 13 \
+          --on-split alpasim_nuplan/onpol-train --on-mode self --seed $s --tag YS2G-L18-s$s) || exit 1
+    c=$(sub ol-train-YS2GNONE-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 2 -- $OT --seed $s --tag YS2GNONE-L18-s$s) || exit 1
+    for x in "$a YS2G-L18-s$s" "$c YS2GNONE-L18-s$s"; do set -- $x
+      rids+=($(sub ol-read-$2 "$1" --vram 32 --cpu 8 --ram 90 --timeout-h 3 --gpus 1,2,3,4,5 --pin-strict -- bash $E/scripts/ol_chain.sh read1 $2)) || exit 1; done
+  done
+  sub ol-report-YS2G "$(IFS=,; echo "${rids[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report-r2g > /dev/null || exit 1
+  echo "submitted: $(grep -c "amendment 8" $W/jobs.txt) jobs" ;;
+report-r2g)
+  H=$DATA_DIR/runs/alpasim_long/held/h18; R=()
+  for t in YS2G-L18-s0 YS2G-L18-s1 YS2GNONE-L18-s0 YS2GNONE-L18-s1 YS-L18-s1 YS-L18-s0; do R+=("$t@18=$W/read/$t/run"); done
+  for t in YR10m10-F-s0 YR10m10-F-s1; do R+=("$t@18=$H/$t"); done
+  $P $E/scripts/ol_report.py --family Y --arm S2G --ctl S2GNONE --base-tags YS-L18-s1,YS-L18-s0 --runs "${R[@]}" --out $W/report/Y-S2G || die "ol_report (prev round) rc $?"
+  $P $E/scripts/ol_report.py --family Y --arm S2G --ctl S2GNONE --base-tags YR10m10-F-s0,YR10m10-F-s1 --runs "${R[@]}" --out $W/report/Y-S2G-base || die "ol_report (base) rc $?" ;;
 *) die "unknown stage $STAGE" ;;
 esac
