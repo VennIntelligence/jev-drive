@@ -4,7 +4,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 **live**
 
-- [zeros_mech](zeros_mech/README.md) (ZEROS-MECH, why the S-family zeros: turn timing / command, cut-around reflex, oncoming lane): live; three mechanism reads on YS-L18 zeros, pre-registered; no read yet [d(pending)]
+- [zeros_mech](zeros_mech/README.md) (ZEROS-MECH, why the S-family zeros: turn timing / command, cut-around reflex, oncoming lane): live; H3 arm (31% of YS zeros in an oncoming lane); H2 not shown; H1 half [d268]
 - [onpol_nuplan](onpol_nuplan/README.md) (ONPOL-NUPLAN, on-policy rows, self-consequence vs imitation labels, RoaD / DAgger contrast): concluded; held 460 scenes: on-policy S hinges 0.939 / 14.5 zeros vs control 0.925 / 21.5; imitation 0.912 / 24 [d259]
 - [onpol_pai](onpol_pai/README.md) (ONPOL-PAI, on-policy rows on PAI, self-consequence vs imitation labels): live; stopped before the 281 read (user, 10-12 02:24 JST); open loop only: SELF term rate 0.215 vs 0.307 [d261]
 - [onpol_long](onpol_long/README.md) (ONPOL-LONG, closed-loop training at 18 decisions, CL-1 round 1): live; S + corridor rows at 18 decisions: not adopted; P offroad zeros 79 vs 24, Y at-fault 80 vs 79.5 [d264]

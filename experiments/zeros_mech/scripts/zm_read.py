@@ -734,7 +734,8 @@ def report(a):
     # ------------------------------------------------ context: zeros by label
     L += [f"# ZEROS-MECH: what the S-family zeros come from (held {len(scenes)} scenes, {len(B.logs)} logs, {len(labels)} labels, 18 decisions)", "",
           "Registered in [plans/2026-10-12-zeros-mech-prereg.md](../plans/2026-10-12-zeros-mech-prereg.md) (pushed before any read); script "
-          "`scripts/zm_read.py`; box run dirs `" + str(C.name) + "` (collect) and `" + str(Rw.name) + "` (rows) under `$DATA_DIR/runs/zeros_mech/`. "
+          "`scripts/zm_read.py`; box run dirs `" + json.loads((C / "meta.json").read_text())["dir"].replace(str(DATA), "$DATA_DIR") + "` (collect) and `" +
+          json.loads((Rw / "meta.json").read_text())["dir"].replace(str(DATA), "$DATA_DIR") + "` (rows). "
           "Groups: base = `YR10m10-F-s0` (YS's start), YS = `YS-L18-s0/s1`, YS2G = `YS2G-L18-s0/s1`, YNONE = `YNONE-L18-s0/s1`, YR-s1 = `YR10m10-F-s1`. "
           "CIs: log-clustered bootstrap (39 logs, 10 000 draws, one draw for all statistics).", ""]
     ga, gd, gc = G["G_act"], G["G_dir"], G["G_cov"]
@@ -841,7 +842,7 @@ def report(a):
     L += md_table(["label", "turn rollouts", "yaw-rate shortfall", "curvature shortfall"], srows)
     L += ["", f"YS - base: yaw rate {f3(sm['YS-base_w'], f='+.3f')}, curvature {f3(sm['YS-base_kap'], f='+.3f')}. Descriptive: the served plan's 4 s heading "
           "change over the log's from the same moment, on decisions where the log turns >= 30 deg in the next 4 s: " +
-          ", ".join(f"{g} {v:.2f}" for g, v in ptr.items()) + ".", ""]
+          ", ".join(f"{g} {v:.3f}" for g, v in ptr.items()) + ".", ""]
     # H1 lines
     za, zb = sel(Zs, "YS"), cls_n["YS"]
     na, nb = len(za), zb["n"]
@@ -1106,18 +1107,35 @@ def report(a):
                     "{1:+.2f} [{0:+.2f}, {2:+.2f}]".format(*v["ds|across"]), "{1:+.2f} [{0:+.2f}, {2:+.2f}]".format(*v["ds|kerb"])] for g, v in td.items()])
     L += ["",
           "7. Share of corridor + collision zeros with oncoming occupancy, difference to base (event-level, log-clustered): " +
-          "; ".join(f"{g} - base {f3(v, f='+.2f')}" for g, v in zo.items()) + ".", ""]
+          "; ".join(f"{g} - base {f3(v, f='+.2f')}" for g, v in zo.items()) + ".",
+          "8. Corridor + collision zeros with oncoming occupancy per seed (counts, not shares): " +
+          ", ".join(f"{g} {zon[g]['onc'] / len(GROUPS[g]):.1f} of {zon[g]['n'] / len(GROUPS[g]):.1f}" for g in ("base", "YS", "YS2G", "YNONE", "YR-s1")) +
+          "; the decision-level rise against base is shared by the no-row continuation (YNONE - base above).", ""]
 
     # ------------------------------------------------ verdicts and arms
     arm_a = h2 == "holds"
     arm_b = bool(arm3)
     arm_c = "yes" if h1c == "holds" else ("straight-road half only" if h1c.startswith("partial: straight") else "no")
     J["arms"] = dict(A=arm_a, B=arm_b, C=arm_c)
-    L += ["## Verdicts by the registered lines", ""] + md_table(["hypothesis", "verdict", "arm (prereg section 8)"], [
-        ["H1-command", h1c + (" (co-occurrence caveat)" if cooc else ""), f"C (route waypoints into the adapter): {arm_c}"],
-        ["H1-smooth", ("supported" if smooth_all else "not supported") + f"; {'not the S lesson' if not_s else 'larger under S'}", "-"],
-        ["H2", h2, f"A (in-lane same-direction objects out of the lateral agent hinge): {'yes' if arm_a else 'no'}"],
-        ["H3", ("gets an arm" if arm3 else "no arm" if arm3 is False else "unreadable") + f"; lesson {'made it worse' if worse else 'did not make it worse'}", f"B (direction-aware road raster): {'yes' if arm_b else 'no'}"]]) + [""]
+    ysc = ZE[ZE.label.isin(GROUPS["YS"]) & (ZE.scls == "straight") & (ZE.type == "corridor")]
+    rt = ysc.route_turns == True  # noqa: E712
+    X_["YS_straight_corridor"] = dict(n=int(len(ysc)), scenes=int(ysc.scene.nunique()), past_end=int(ysc.past_end.sum()), route_turns=int(rt.sum()),
+                                      both=int((ysc.past_end & rt).sum()))
+    q = X_["YS_straight_corridor"]
+    L += ["## Verdicts by the registered lines", ""] + md_table(["hypothesis", "verdict (registered line)", "what qualifies it (numbers above)", "arm (prereg section 8)"], [
+        ["H1-command", h1c + (" (co-occurrence caveat)" if cooc else ""),
+         f"(a) is met in every group (base 7 / 7); YS's {q['n']} events come from {q['scenes']} scenes; {q['past_end']} happen after the ego passed the end of "
+         f"the logged path, the route turns within 60 m in {q['route_turns']} (both in {q['both']})",
+         f"C (route waypoints into the adapter): {arm_c}"],
+        ["H1-smooth", ("supported" if smooth_all else "not supported") + "; " + ("not the S lesson" if not_s else "larger under S"),
+         f"S makes turns sharper, not smoother: yaw-rate shortfall YS - base {f3(sm['YS-base_w'], f='+.3f')}; plans of every label turn about 0.86 of the log's next 4 s", "-"],
+        ["H2", h2, f"plan's own |y_h(3)| under a closing lead on straight road: YS - base {f3(X_['yh3_straight|lead']['abs'], f='+.3f')} m; "
+         f"no collision hits the lead; in-lane leads bind {rws['all active']['in-lane lead']:.0%} of hinge-active rows",
+         f"A (in-lane same-direction objects out of the lateral agent hinge): {'yes' if arm_a else 'no'}"],
+        ["H3", ("gets an arm" if arm3 else "no arm" if arm3 is False else "unreadable") + f"; lesson {'made it worse' if worse else 'did not make it worse'}",
+         f"'worse' is marginal (CI lower {r3['YS-base', 'onc_rear']['ci'][0]:+.4f}) and shared by YNONE ({f3(r3['YNONE-base', 'onc_rear'], f='+.4f')}); "
+         f"per seed the oncoming zeros stay ({zon['base']['onc']} base vs {zon['YS']['onc'] / 2:.1f} YS) while other zeros fall",
+         f"B (direction-aware road raster): {'yes' if arm_b else 'no'}"]]) + [""]
     (out / "zm_report.md").write_text("\n".join(L) + "\n")
 
     def clean(o):
@@ -1232,6 +1250,7 @@ def figures(a, D, RR, P, T, gaps, r2, figs, picks):
     for g in show:
         x = sel(P, g).groupby("k").onc_rear.mean()
         ax.plot(x.index, 100 * x.values, color=COLOR[g], label=g, marker="o", ms=2)
+    ax.set_xticks(range(0, 18, 3))
     ax.set_xlabel("decision index k (2 Hz)")
     ax.set_ylabel("rear axle in an oncoming lane (%)")
     ax.legend(loc="upper left")
@@ -1243,7 +1262,7 @@ def figures(a, D, RR, P, T, gaps, r2, figs, picks):
         bv = pickle.load(open(a.bev, "rb"))
         ex = [bv[f"{p['label']}|{p['scene']}|{p['k']}"] for p in picks if f"{p['label']}|{p['scene']}|{p['k']}" in bv]
         if ex:
-            fig, axs = plt.subplots(1, len(ex), figsize=(ps.DOUBLE_COLUMN_IN, 3.0))
+            fig, axs = plt.subplots(1, len(ex), figsize=(ps.DOUBLE_COLUMN_IN, 2.75))
             axs = np.atleast_1d(axs)
             fc = lambda d: "#F7C9B0" if abs(d) > 120 else "#F3E7A6" if abs(d) > 60 else "#E4E4E4"   # noqa: E731
             for j, (ax, b) in enumerate(zip(axs, ex)):
@@ -1267,9 +1286,10 @@ def figures(a, D, RR, P, T, gaps, r2, figs, picks):
                 ax.set_yticks([])
                 ax.grid(False)
                 p = b["pick"]
-                ax.set_xlabel(f"{p['cls']}\n{p['scene'].rsplit('-', 1)[1][:8]} k{p['k']} ({p['type']} k{p['k_ev']}), cmd {'LSRU'[b['cmd']]}", fontsize=6.5)
+                short = {"command on a straight road": "command, straight", "none of the three (drift)": "none of the three"}.get(p["cls"], p["cls"])
+                ax.set_xlabel(f"{short}\n{p['scene'].rsplit('-', 1)[1][:8]} k{p['k']}\n{p['type']} at k{p['k_ev']}, cmd {'LSRU'[b['cmd']]}", fontsize=6.5)
                 ps.panel(ax, f"({'abcdefgh'[j]})")
-            fig.tight_layout()
+            fig.tight_layout(w_pad=0.4)
             ps.save(fig, figs / "bev_examples")
             plt.close(fig)
 
