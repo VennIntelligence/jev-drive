@@ -196,8 +196,8 @@ def train(a):
     import time
     import torch
     import torch.nn.functional as F
+    import rp  # sets the corridor / op_parity script paths
     import head1_train as H1
-    import rp
     from jevdrive.data import splits
     from jevdrive.run import Run
     name = f"{a.arm}-s{a.seed}" + ("-smoke" if a.smoke else "")
