@@ -16,12 +16,13 @@ S-only on-policy round on it, RSG-L18, reads 34 / 34 zeros, 0.866 / 0.868, GT 1.
 18-decision held zeros so far (the safety candidate). With rows from the base's own states only, the route hinge makes the car cut inside
 right turns (right-turn-inside offroad zeros 17-21 vs 1-2; RSG 1 / 1) and the registered arm RBS-L18 reads 122 / 99 zeros; round 2 adds
 RBSG's own over-turning states to the pool and RBSG2-L18 (S + route hinge) reads 37 / 37 zeros, 4 / 4 right-turn-inside, corridor 3 / 4,
-lateral GT 0.74 / 0.76, L3 pass (-22 [-35, -10]): the route-following candidate, though its G-rely fails (the route may be learned into the
-trunk rather than through the branch; interpretation). Counterfactual rows (RB-F)
+lateral GT 0.74 / 0.76, L3 pass (-22 [-35, -10]): the route-following candidate. Paired on held 452 both beat the old family's best YS2G-L18
+(zeros RSG -15.5 [-24.9, -5.3], RBSG2 -12.5 [-23.2, -2.2]; score +0.035 / +0.040) and tie with each other (`a3/guard/held18.md`).
+RBSG2's G-rely fails (the route may be learned into the trunk rather than through the branch; interpretation). Counterfactual rows (RB-F)
 teach route switching at junctions (G-swap 55 % of need, 94 % on the counterfactual side) but not lane changes (5-7 %), and cost G-real.
 
 **Next.** Amendment 5 (RS2G / RBS2Gc from RSG rollouts) is running; Tokyo: RB0-F-s0 PAI re-roll with gains 20, RSG-L18-s0 PAI 281 read
-queued. Before either candidate (RSG-L18, RBSG2-L18) is called a base: paired CI against YS2G-L18 and against each other, the public 1491 /
+queued. Before either candidate (RSG-L18, RBSG2-L18) is called a base: the public 1491 /
 10-decision guard, PAI 281; for RBSG2 also a closed-loop read with the memory masked (does it still follow the route?).
 
 **Read more.** [research/decisions/286.md](../../research/decisions/286.md) (Chinese; full table, six line verdicts, branches, card-hours);
