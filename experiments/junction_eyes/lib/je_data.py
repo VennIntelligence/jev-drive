@@ -193,6 +193,57 @@ def synthetic_source(name, px_path, view=None, n=0, seed=0, val_frac=0.1):
     return Source(name, sub, rng.normal(0, 1, (n, 20)), ra, rb, ~val, val, np.array([f"{name}-{i}" for i in rows]), unit)
 
 
+class MultiPairStore:
+    """Rows spread over several pair files: row i lives in file fi[i] at row ri[i]."""
+
+    def __init__(self, paths, fi, ri, view=None, threads=0):
+        self.st = [PairStore(p, view, threads) for p in paths]
+        self.fi, self.ri = np.asarray(fi), np.asarray(ri, np.int64)
+        for k, s in enumerate(self.st):
+            assert self.ri[self.fi == k].max(initial=-1) < len(s), paths[k]
+
+    def __len__(self):
+        return len(self.fi)
+
+    def get(self, rows):
+        import torch
+        r = np.asarray(rows)
+        fi, ri = self.fi[r], self.ri[r]
+        parts = {k: np.flatnonzero(fi == k) for k in np.unique(fi)}
+        got = {k: self.st[k].get(ri[j]) for k, j in parts.items()}
+        out = []
+        for i in range(2):
+            o = torch.empty((len(r),) + FRAME, dtype=torch.uint8, pin_memory=torch.cuda.is_available())
+            for k, j in parts.items():
+                o[torch.from_numpy(j)] = got[k][i]
+            out.append(o)
+        return out[0], out[1]
+
+
+def real_source(name: str, rows_parquet, labels_dir, px_root, cache_root, px_file="frames-t0.npy", per_unit=False) -> Source:
+    """A J source from executor 1's rows (results/rows.md) and executor 2's pixel caches (results/pixels.md): labels by `rid`, ego from
+    the frozen-token cache's tab.npz (`tab_file`, `tok_row`), pixels from <px_root>/<tab_file>/<px_file> at row `tok_row`."""
+    import pandas as pd
+    df = pd.read_parquet(rows_parquet)
+    df = df[df.split.isin(["fit", "val"])].reset_index(drop=True)
+    labels_dir = Path(labels_dir)
+    ra = np.load(labels_dir / "ra.npy", mmap_mode="r")[df.rid.values].reshape(-1, 15, 2)
+    rb = np.load(labels_dir / "rb.npy", mmap_mode="r")[df.rid.values].astype(np.int8)
+    files = sorted(df.tab_file.unique())
+    fi = df.tab_file.map({f: i for i, f in enumerate(files)}).values
+    ego = np.zeros((len(df), 20), np.float32)
+    for i, f in enumerate(files):
+        m = fi == i
+        z = np.load(Path(cache_root) / f / "tab.npz")
+        ego[m] = z["ego"][df.tok_row.values[m]]
+        if name == "nav":                                   # navtrain token caches carry the token names
+            assert (z["names"][df.tok_row.values[m]] == df.token.values[m]).all(), f"{f}: tab rows do not match the row table"
+    px = MultiPairStore([Path(px_root) / f / px_file for f in files], fi, df.tok_row.values)
+    fit, val = (df.split == "fit").values, (df.split == "val").values
+    w = df.w_scene.values if per_unit else None
+    return Source(name, px, ego, ra, rb, fit, val, df.token.values.astype(str), df.unit.values.astype(str), w)
+
+
 class _Sub:
     def __init__(self, px, n):
         self.px, self.n = px, n

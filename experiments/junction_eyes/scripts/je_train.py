@@ -44,39 +44,26 @@ WD = dict(lora=0.0, dw=0.0, full=0.0, head=0.05)
 
 
 # ---------------------------------------------------------------- data
-def load_rows(spec: dict, name: str) -> D.Source:
-    """A J source from executor 1's row table and executor 2's pixel cache (results/rows.md, results/pixels.md)."""
-    z = np.load(spec["rows"], allow_pickle=False)
-    px = D.PairStore(spec["px"], spec.get("view"))
-    pr = z["px_row"] if "px_row" in z.files else np.arange(len(z["names"]))
-    sub = _Rows(px, pr)
-    unit, split = z["unit"].astype(str), z["split"].astype(str)
-    fit, val = split == "P", split == "val"
-    w = D.per_unit_weight(unit, fit) if spec.get("per_unit") else None
-    return D.Source(name, sub, z["ego"], z["ra"], z["rb"], fit, val, z["names"].astype(str), unit, w)
-
-
-class _Rows:
-    def __init__(self, px, idx):
-        self.px, self.idx = px, np.asarray(idx, np.int64)
-
-    def __len__(self):
-        return len(self.idx)
-
-    def get(self, rows):
-        return self.px.get(self.idx[np.asarray(rows)])
+STEP0 = data_dir() / "runs" / "junction_eyes" / "step0"
+PX = data_dir() / "runs" / "junction_eyes" / "px"
+CACHE = data_dir() / "runs" / "op_parity" / "cache"
+DEFAULT_DATA = {"nav": {"rows": str(STEP0 / "rows" / "J_nav.parquet"), "px_root": str(PX)},
+                "on": {"rows": str(STEP0 / "rows" / "J_on.parquet"), "px_root": str(PX), "per_unit": True},
+                "labels": str(STEP0 / "labels"), "keep": str(data_dir() / "runs" / "junction_eyes" / "keep" / "store"), "splits": []}
 
 
 def sources(a, arm: dict):
+    names = ("nav",) if a.nav_only else arm["src"]
     if a.synthetic:
         n = a.synthetic_rows
         src = {"nav": D.synthetic_source("nav", SMOKE_PX / "navtrain_full.s0of12" / "side_t0.npy", 0, n, a.seed),
                "on": D.synthetic_source("on", SMOKE_PX / "navtrain_full.s1of12" / "side_t0.npy", 1, n, a.seed)}
         src["on"].w = D.per_unit_weight(src["on"].unit, src["on"].fit)
-        return {k: v for k, v in src.items() if k in arm["src"]}, D.KeepStore(a.keep or SMOKE_KEEP), []
-    spec = json.loads(_pl.Path(a.data).read_text())
-    src = {k: load_rows(spec[k], k) for k in arm["src"]}
-    return src, D.KeepStore(spec["keep"]), spec.get("splits", [])
+        return {k: v for k, v in src.items() if k in names}, D.KeepStore(a.keep or SMOKE_KEEP), []
+    spec = DEFAULT_DATA | (json.loads(_pl.Path(a.data).read_text()) if a.data else {})
+    src = {k: D.real_source(k, spec[k]["rows"], spec["labels"], spec[k]["px_root"], CACHE, spec[k].get("px_file", "frames-t0.npy"),
+                            spec[k].get("per_unit", False)) for k in names}
+    return src, D.KeepStore(a.keep or spec["keep"]), spec.get("splits", [])
 
 
 # ---------------------------------------------------------------- losses
@@ -324,8 +311,7 @@ def cmd_ident(a):
         if a.synthetic:
             px = D.PairStore(SMOKE_PX / "navtrain_full.s0of12" / "side_t0.npy", 0)
         else:
-            spec = json.loads(_pl.Path(a.data).read_text())["nav"]
-            px = D.PairStore(spec["px"], spec.get("view"))
+            px = D.PairStore(PX / "navtrain_full.s0of12" / "frames-t0.npy")
         rows = np.arange(a.n)
         p, c = (x.to(dev) for x in px.get(rows))
         res = {"n": a.n}
@@ -367,6 +353,7 @@ if __name__ == "__main__":
         p.add_argument("--data", default="", help="data JSON (see docstring)")
         p.add_argument("--synthetic", action="store_true", help="plumbing only: real navtrain pairs, random labels; never read")
         p.add_argument("--synthetic-rows", type=int, default=4000)
+        p.add_argument("--nav-only", action="store_true", help="smoke tags only: J_nav rows alone (48 / step) whatever the arm")
         p.add_argument("--keep", default="", help="keep store dir (default: the mini store with --synthetic)")
         if name == "ident":
             p.add_argument("--n", type=int, default=512)
@@ -386,6 +373,6 @@ if __name__ == "__main__":
         p.add_argument("--scratch", action="store_true", help="smoke* tags only: delete the tag's checkpoint dir first")
     a = ap.parse_args()
     if a.cmd == "train":
-        assert a.synthetic or a.data, "--data or --synthetic"
+        assert not (a.nav_only and not (a.tag or "").startswith("smoke")), "--nav-only is a smoke option"
         assert not (a.synthetic and not (a.tag or "").startswith("smoke")), "--synthetic runs are smoke runs: --tag smoke-..."
     {"train": cmd_train, "ident": cmd_ident}[a.cmd](a)

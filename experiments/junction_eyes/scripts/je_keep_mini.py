@@ -4,7 +4,8 @@ Cinque stepped modeld-style at 20 Hz from the segment start (jevdrive.op_adapt.S
 steps from step 36 on (full 1.8 s history), the frames at the rows' 5 Hz phase stored once.
 
   python je_keep_mini.py --segs 4 [--out $DATA_DIR/runs/junction_eyes/step1/keep_mini] [--held 1]
-The last --held segments are marked held (exercises the held mask; nothing here is read).
+Segments: the first of comma1m/junction-eyes-keep with both cameras, plus --held of junction-eyes-heldout marked held
+(exercises the held mask; nothing here is read).
 """
 import sys as _sys, pathlib as _pl  # noqa: E401
 _R = _pl.Path(__file__).resolve().parents[3]
@@ -26,7 +27,11 @@ def main(a):
     out = _pl.Path(a.out)
     with Run("junction_eyes", "step1/keep-mini", config=vars(a)) as run:
         root = data_dir() / "datasets" / "comma1M"
-        segs = sorted(p.name for p in root.iterdir() if (p / "fcamera.hevc").exists())[a.skip:a.skip + a.segs]
+        from jevdrive.data import splits
+        keep, held = splits.load("comma1m/junction-eyes-keep"), splits.load("comma1m/junction-eyes-heldout")
+        run.use_split(keep), run.use_split(held)
+        segs = [s for s in sorted(keep) if (root / s / "ecamera.hevc").exists()][a.skip:a.skip + a.segs - a.held]
+        segs += [s for s in sorted(held) if (root / s / "ecamera.hevc").exists()][:a.held]
         net = A.load("cinque", torch.float32).cuda()
         st = A.Stepper(net, "cinque")
         frames, fidx, teach, seg, held = [], [], [], [], []
