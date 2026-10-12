@@ -4,7 +4,7 @@
 # other scenes share its simulator stack or card):
 #   OL_NCH      train rollouts in this many pool jobs (default 12: two stacks per card; one stack used 10-40 % of a card)
 #   OL_RCH      each held read in this many pool jobs (default 6); the report joins the chunk dirs (long_read takes comma-separated dirs)
-#   OL_WORKERS  on_rows.py geo workers (default 96; ol_chain.sh 48); OL_LWORKERS label workers (default 48, off the critical path)
+#   OL_WORKERS / OL_LWORKERS  on_rows.py geo / ol_labels.py build workers (default 48 each, as ol_chain.sh; geo itself takes ~30 s)
 #   and the K / C label build (ol_labels.py build, 18 of ol_chain.sh's 19 geo minutes) runs beside the tokens instead of before them: the S-only
 #   recipe never reads its files; its gate (ol_labels.py gate, unchanged) still runs on every pool and gates strip and the report
 # Dependencies: rollouts -> geo -> {tok, labels} ; tok -> arm trainings ; {tok, labels} -> gate -> strip ; each training -> its RCH reads ;
@@ -21,8 +21,8 @@ cd "$(dirname "$0")/../../.."
 E=experiments/onpol_long; ON=experiments/onpol_nuplan; SPL=$ON/results/split; W=$DATA_DIR/runs/onpol_long; CK=$DATA_DIR/runs/op_parity/runs
 C=$DATA_DIR/datasets/alpasim_nuplan_long/after160; KEY=runtime.scene_provider.trajdata
 P=$DATA_DIR/third_party/alpasim/.venv/bin/python; NAV=$DATA_DIR/envs/navsim2/bin/python; TR=$DATA_DIR/envs/op-train/bin/python
-NCH=${OL_NCH:-12}; RCH=${OL_RCH:-6}; WK=${OL_WORKERS:-96}; LWK=${OL_LWORKERS:-48}
-CL() { .venv/bin/python -m jevdrive.cl "$@"; }
+NCH=${OL_NCH:-12}; RCH=${OL_RCH:-6}; WK=${OL_WORKERS:-48}; LWK=${OL_LWORKERS:-48}
+CL() { if [[ -n ${OL_DRY:-} ]]; then echo "DRY cl $*" >&2; echo "dry-$RANDOM"; else .venv/bin/python -m jevdrive.cl "$@"; fi; }   # OL_DRY=1: print the submissions
 die() { echo "$(date '+%F %T') ERROR $*" >&2; exit 1; }
 source <(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print("BASE=(" + " ".join(B.OVERRIDES) + ")")')
 LONG=("$KEY.cache_location=$C" "$KEY.dataset.extra_params.num_timesteps_after=160")
@@ -53,6 +53,7 @@ sim() {  # sim <tag> <scene list> <run dir> [dump]: one 18-decision run, ol_chai
   [[ -f $D/aggregate/results-summary.json ]] || die "no results-summary"; }
 dirs() {  # the run dirs of one read, comma-joined: the chunk dirs, else ol_chain.sh's single run dir, else alpasim_long's h18 read
   local t=$1 c; c=$(ls -d $W/read/$t/c*/run 2>/dev/null | paste -sd,)
+  [[ -z $c || $(ls $W/read/$t/c*/run/aggregate/results-summary.json | wc -l) -eq $(ls -d $W/read/$t/c* | wc -l) ]] || die "$t: a read chunk did not finish"
   if [[ -n $c ]]; then echo "$c"; elif [[ -f $W/read/$t/run/aggregate/results-summary.json ]]; then echo "$W/read/$t/run"; else echo "$DATA_DIR/runs/alpasim_long/held/h18/$t"; fi; }
 STAGE=${1:?stage}; shift
 case $STAGE in
@@ -111,12 +112,12 @@ submit-round)   # one Y-recipe round from <init> (submit-r2's recipe): rollouts 
                 # (ol_chain.sh tok, gates) -> strip; arm Y<arm>-L18-s{0,1} after tok, control Y<arm>NONE-L18-s{0,1} at once; every checkpoint read
                 # on held in RCH jobs right after its own training; report after all reads
   I=$1; A=$2; RT=${3:-$1}; N=L18$A; lists
-  [[ -f $CK/$I/ckpt-final.pt ]] || die "no checkpoint $I"; [[ ! -e $W/rows/$N ]] || die "rows $N exist"
+  [[ -f $CK/$I/ckpt-final.pt || -n ${OL_DRY:-} ]] || die "no checkpoint $I"; [[ ! -e $W/rows/$N ]] || die "rows $N exist"
   sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
-            --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (ol_fast $A)" >> $W/jobs.txt; }
+            --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; [[ -n ${OL_DRY:-} ]] || echo "$id $name (ol_fast $A)" >> $W/jobs.txt; }
   FX="env OL_NCH=$NCH OL_RCH=$RCH OL_WORKERS=$WK OL_LWORKERS=$LWK bash $E/scripts/ol_fast.sh"
   rr=()
-  for T in ${RT//,/ }; do mkdir -p $W/roll/$T
+  for T in ${RT//,/ }; do [[ -n ${OL_DRY:-} ]] || mkdir -p $W/roll/$T
     for i in $(seq 0 $((NCH - 1))); do rr+=($(sub ol-roll-$T-$i "" --vram 24 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=ol-fast-roll -- $FX roll $T $i $NCH)) || exit 1; done
   done
   g=$(sub ol-geo-$A "$(IFS=,; echo "${rr[*]}")" --vram 0.5 --cpu $WK --ram 120 --timeout-h 2 -- $FX geo $RT $N $NCH) || exit 1
