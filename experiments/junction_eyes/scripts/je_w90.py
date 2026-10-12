@@ -365,6 +365,8 @@ def cmd_check(a):
             sd = np.load(P3V / d / "side_t0.npy", mmap_mode="r")
             assert len(f0) == len(w90) == len(sd) == len(ef), d
             rows = np.sort(np.random.default_rng(0).choice(len(ef), min(a.rows, len(ef)), replace=False))
+            import vt_side as VS
+            sv = VS.virt(d)                                                    # side cameras: position, poses in their yawed frames
 
             def one(i):
                 cams = cams_of(ef[i], es[i])
@@ -419,6 +421,7 @@ def cmd_check(a):
                 r["f_F0_cam"] = bool(np.allclose(np.asarray(cams["CAM_F0"]["t"], float), ef[i]["cam"]))
                 side_cur = [VS._render(cams[c], c) for c in ("CAM_L0", "CAM_R0")]
                 r["f_side_cur"] = all(np.array_equal(side_cur[c], sd[i, c, 1]) for c in range(2))
+                r["f_side_prev"] = all(np.array_equal(I.warp_frame(side_cur[c], *(x[i, c] for x in sv)), sd[i, c, 0]) for c in range(2))
                 return i, r
 
             with ThreadPoolExecutor(a.threads) as ex:
@@ -441,7 +444,7 @@ def cmd_check(a):
                      e_seams=dict(n=len(sd_), seam_step=float(np.mean(sd_)), neighbour_step=float(np.mean(bd_)),
                                   ratio=float(np.mean(sd_) / np.mean(bd_)), at_deg=sorted({round(v, 1) for v in at_})),
                      f_3v=dict(F0_view_equals_F0_cache=int(sum(x["f_F0"] for x in R)), F0_cam_position_same=int(sum(x["f_F0_cam"] for x in R)),
-                               side_cur_equals_fresh=int(sum(x["f_side_cur"] for x in R)),
+                               side_cur_equals_fresh=int(sum(x["f_side_cur"] for x in R)), side_prev_equals_fresh=int(sum(x["f_side_prev"] for x in R)),
                                side_names_equal_tab=bool(np.load(P3V / d / "meta.npz")["names"].tolist() == [e["token"] for e in ef])))
             r["c_central_back_to_factory_K"]["share_of_factory_frame_compared"] = float(vm.mean())
             res[d] = r
