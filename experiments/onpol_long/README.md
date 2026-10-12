@@ -19,12 +19,19 @@ A second on-policy round (rows from `YS-L18`'s own rollouts, from `YS-L18-s1`) d
 than its own no-row control and slightly worse than round 1 (zeros 50.5 against 43), so the loop stops at round 1 and "more rounds help"
 is recorded as negative for this setting.
 
-**Next.** Arm B (directional road raster) not adopted (Amendment 13, decision 274); arm B' stopped at its label gate (Amendment 14, decision 276). PAI transfer read on the Tokyo box (Amendments 1, 4, 5). `YS2G-L18` passed the
+**Next.** Arm B (Amendment 13, decision 274) is void; arm B' (Amendment 14, decision 276) and arm B / B' on zeros_mech's lane rule (Amendment 15, decision 277) stopped at their label gates: footprint hinges on oncoming lanes fire on normal driving. PAI transfer read on the Tokyo box (Amendments 1, 4, 5). `YS2G-L18` passed the
 public-mean guardrail of the last-slot rule (Amendment 10, decision 269); the candidate-scoring line stopped at its feasibility gate (Amendment 12, decision 270). Ego-status dropout (Amendment 11) does not cut the drift: it removes the open-loop reliance and drift rises (decision 271).
 
 **Read more.** [plans/2026-10-12-ol1-prereg.md](plans/2026-10-12-ol1-prereg.md); the plan: [research/next-round/closed-loop.md](../../research/next-round/closed-loop.md);
 the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpol_nuplan/README.md); the 18-decision driver path:
 [../alpasim_long/README.md](../alpasim_long/README.md).
+
+## Arm B' and arm B redone on zeros_mech's lane rule (Amendment 15): stopped at the label gates
+
+[results/read/report_YSB2.md](results/read/report_YSB2.md) (second section), `onc_stats_L18YS_zm.json`; `scripts/ol_zmonc.py`. The rule is right on points (the human's own rear
+axle is oncoming on 0.0048 of rows), but footprint hinges on it fire on normal driving: oncoming hinge 0.227 of served plans (line 0.10), road minus oncoming
+cells 0.374 (line 0.16); the human's own box touches the region at t0 on 0.128 of rows. No training ran (decision 277). Decision 274 (arm B) is void; its
+note: its high activity was not mainly mask error (84 % of its removed cells are oncoming by this rule).
 
 ## Arm B': separate oncoming hinge (Amendment 14): stopped at the label gate
 
@@ -34,7 +41,7 @@ ran (decision 276). About half of that is the car's own t0 position near the log
 whole roadblocks) marks part of where the human drove as oncoming, and arm B's raster had the same geometry. A rebuild on the evaluator's lane polygons and
 centre-line yaw (zeros_mech's rule), without the roadblock layer, would need a new amendment.
 
-## Arm B: directional road raster (Amendment 13; round 2b's recipe with the S road raster directional; held 452 at 18 decisions, cards 1-5)
+## Arm B: directional road raster (Amendment 13; VOID, decision 274; round 2b's recipe with the S road raster directional; held 452 at 18 decisions, cards 1-5)
 
 [results/read/report_YSB.md](results/read/report_YSB.md) (lines, label statistics, stage timings, the paired read), `lines_YSB.json`, `dir_stats_L18YS.json`;
 `scripts/ol_dirraster.py`, `on_train.py --on-road`. ![directional raster on three early-inside turn zeros](figs/armb_dir_raster_turns.png)

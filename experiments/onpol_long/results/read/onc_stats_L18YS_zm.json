@@ -1,0 +1,30 @@
+{
+ "rows": 34788,
+ "errors": 0,
+ "err_sample": [],
+ "log_onc_all": 0.004800505921582154,
+ "log_onc_in_lane": 0.004811848095430185,
+ "log_same_in_lane": 0.9946118826715842,
+ "log_rows": 34788,
+ "log_rows_in_lane": 34706,
+ "onc_cells_rows_nonempty": 0.9484879843624239,
+ "onc_active": 0.22729101989191675,
+ "road_active": 0.12185236288375302,
+ "ego_t0_footprint_in_onc": 0.12786018167184088,
+ "onc_active_by_log_turn": {
+  "0-15 deg": 0.19105410413865775,
+  "15-45 deg": 0.29769439421338156,
+  "45-360 deg": 0.46851916989096026
+ },
+ "armb_removed_cells": 37982212,
+ "armb_removed_cells_zm_onc_share": 0.8383098909563245,
+ "armb_ego_t0_footprint_off_road": 0.06484994825802001,
+ "roaddir_active": 0.3735483500057491,
+ "gate_b": false,
+ "roaddir_t0_footprint_off": 0.13395423709325055,
+ "gate_human": true,
+ "gate_onc": false,
+ "gate_road": true,
+ "gate_errors": true,
+ "pass": false
+}
