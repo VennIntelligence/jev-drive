@@ -28,6 +28,10 @@ OffAgentHinge, ot_rows' off_hinge / offsets. Only joint_train's S subset is carr
                     the run is `joint_train.py --yr-mass F` bit for bit (gate Y1). 0 = off: no operation is added.
   --agent-on-only   self / both: the agent hinge exists on the on-policy rows only (the pool's actor boxes); no offline row carries it (a base
                     without lesson S: --ho "" and this flag). Logged: `on/off_agent_rows` = offline rows of the batch with an agent label (0).
+  --ego-drop P      onpol_long Amendment 11: the ego status of the fed ego vector (parity_adapter.EGO_STATE: vx, vy, ax, ay, the 4 history poses;
+                    not `present`, not the command) zeroed on a fraction P of the non-anchor rows of every batch, drawn from its own stream
+                    [seed, 0, 71] (every row stream unchanged). P = 1: the adapter's input transform zeroes it (TR1 key `noego`, saved with the
+                    weights, so the served driver gets no ego status either). 0 = off: no operation is added.
   --on-lon          extra per-row terms of the on-policy rows in self / both from experiments/onpol_nuplan/lib/on_lon.py (plans/on_pool_format.md):
                     each term summed / n_imit x --on-lon-lam 10 x ho_w. Off: no operation is added.
 
@@ -286,6 +290,7 @@ def setup(a, dev):
 
 def cmd_train(a):
     import torch
+    import parity_adapter as PA
     import pp_train as T
     from jevdrive.data import splits
     from jevdrive.run import Run
@@ -301,6 +306,9 @@ def cmd_train(a):
     rng = np.random.default_rng([cfg.seed, 0])                       # pp_train / bd4_train's row stream
     hrng = np.random.default_rng([cfg.seed, 0, 43])                  # bd4_train's hinge-only rows
     orng = np.random.default_rng([cfg.seed, 0, 53])                  # the on-policy rows
+    erng = np.random.default_rng([cfg.seed, 0, 71])                  # --ego-drop's rows
+    if a.ego_drop >= 1.0:                                            # ego status removed, at training and at serving (saved TR1 key)
+        model.set_tr1({"noego": True})
     sha = hashlib.sha1()
     lb, ln = (cfg.lr, cfg.lr_new) if a.lr_scale == 1.0 else (cfg.lr * a.lr_scale, cfg.lr_new * a.lr_scale)   # onpol_long Amendment 6: gentle continuation
     opt = torch.optim.AdamW([{"params": base, "lr": lb, "base": lb}, {"params": new, "lr": ln, "base": ln}], weight_decay=cfg.wd)
@@ -360,6 +368,9 @@ def cmd_train(a):
                 cosf = 0.5 * (1 + np.cos(np.pi * (step / cfg.steps))) if pp_lr else 0.5 * (1 + np.cos(np.pi * step / cfg.steps))
                 g["lr"] = g["base"] * min(1.0, (step + 1) / cfg.warmup) * cosf
             ego = S.ego[rows] * (~anchor)[:, None].float()
+            if 0 < a.ego_drop < 1:
+                dm = torch.as_tensor(erng.random(len(r)) < a.ego_drop, device=dev)
+                ego[:, PA.EGO_STATE] = ego[:, PA.EGO_STATE] * (~dm)[:, None].float()
             out = model(front, ego, S.tc[rows], None, None, nv=None if ns.nv is None else ns.nv[rows])
             total, Ls = LS(out, S, rows, anchor)
             if not torch.isfinite(total):
@@ -667,6 +678,7 @@ if __name__ == "__main__":
     p.add_argument("--prefetch", type=int, default=4)
     p.add_argument("--fetch-workers", type=int, default=2)
     p.add_argument("--dev-card-gb", type=float, default=4.0)
+    p.add_argument("--ego-drop", type=float, default=0.0, help="share of rows with the ego status zeroed; 1 = removed, also when served (onpol_long Amendment 11)")
     p = sub.add_parser("ident")
     p.add_argument("--a", required=True)
     p.add_argument("--b", required=True)

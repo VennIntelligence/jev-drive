@@ -5,6 +5,7 @@
       per set (train18 = the 1031 train scenes at 18 decisions, which supplied the rows: a guardrail, not clean evidence; all10 = all 1491 public
       scenes at 10 decisions): per label mean score, zeros by kind, at-fault zeros, GT distance; per checkpoint against the base on the common scenes
       with a rollout (route-fold scenes dropped): paired difference, log-clustered 95 % CI (10 000 draws). -> DIR/confirm.md, confirm.json
+  --mean NAME=TAG,TAG   (Amendment 10) a seed-mean label: per-scene mean of the tags (zeros then count halves); --pairs A:B .. extra pairs
 """
 import argparse
 import json
@@ -35,27 +36,33 @@ def main(a):
         logs = pd.Series({x: x.rsplit("-", 1)[0] for x in sc})
         L = np.array(sorted(logs.unique()))
         P = {c: X.pivot(index="scene", columns="tag", values=c) for c in ("score", "zero", "z_atf", "z_col", "z_off", "z_cor", "gt")}
+        ms = dict(m.split("=", 1) for m in a.mean)
+        ms = {n: v.split(",") for n, v in ms.items() if set(v.split(",")) <= set(tags)}
+        for n, v in ms.items():
+            for c in P:
+                P[c][n] = P[c][v].mean(1, skipna=c != "gt")
+        tags += list(ms)
         li = np.searchsorted(L, logs.reindex(P["score"].index).to_numpy())
         W = np.stack([np.bincount(d, minlength=len(L)) for d in np.random.default_rng(0).integers(0, len(L), (10000, len(L)))])[:, li]
         md += [f"## {st}: {len(sc)} scenes, {len(L)} logs", "", "| checkpoint | mean score | zeros | collision / offroad / corridor zeros | at-fault zeros | GT distance (m) |",
                "|:--|--:|--:|:--|--:|--:|"]
-        md += [f"| {t} | {P['score'][t].mean():.4f} | {P['zero'][t].sum()} | {P['z_col'][t].sum()} / {P['z_off'][t].sum()} / {P['z_cor'][t].sum()} | "
-               f"{P['z_atf'][t].sum()} | {P['gt'][t].mean():.3f} |" for t in tags]
+        md += [f"| {t} | {P['score'][t].mean():.4f} | {P['zero'][t].sum():g} | {P['z_col'][t].sum():g} / {P['z_off'][t].sum():g} / {P['z_cor'][t].sum():g} | "
+               f"{P['z_atf'][t].sum():g} | {P['gt'][t].mean():.3f} |" for t in tags]
         md += ["", f"| a - {a.base} | mean score | zeros | at-fault zeros | GT distance (m) |", "|:--|:--|:--|:--|:--|"]
         res[st] = {}
-        for t in tags[1:]:
+        for t, b in [(t, a.base) for t in tags[1:]] + [tuple(q.split(":")) for q in a.pairs if set(q.split(":")) <= set(tags)]:
             r = {}
             for c, tot in (("score", False), ("zero", True), ("z_atf", True), ("gt", False)):
-                d = (P[c][t] - P[c][a.base]).to_numpy() * (len(sc) if tot else 1)
+                d = (P[c][t] - P[c][b]).to_numpy() * (len(sc) if tot else 1)
                 ok = np.isfinite(d)
                 bs = (W[:, ok] @ d[ok]) / W[:, ok].sum(1)
                 r[c] = [float(d[ok].mean()), float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))]
-            res[st][t] = r
+            res[st][t if b == a.base else f"{t} - {b}"] = r
             f = lambda v, p=4: f"{v[0]:+.{p}f} [{v[1]:+.{p}f}, {v[2]:+.{p}f}]"  # noqa: E731
-            md.append(f"| {t} | {f(r['score'])} | {f(r['zero'], 1)} | {f(r['z_atf'], 1)} | {f(r['gt'], 3)} |")
+            md.append(f"| {t}{'' if b == a.base else f' - {b}'} | {f(r['score'])} | {f(r['zero'], 1)} | {f(r['z_atf'], 1)} | {f(r['gt'], 3)} |")
         md.append("")
     if "all10" in res:
-        g = {t: v["score"][0] >= -0.02 for t, v in res["all10"].items()}
+        g = {t: v["score"][0] >= -0.02 for t, v in res["all10"].items() if " - " not in t}
         md += [f"Guardrail (Amendment 5): all 1491 at 10 decisions not more than 0.02 below {a.base} on the public mean: {g}.", ""]
         res["guardrail_all10"] = g
     md += ["train18 = the scenes whose rollouts supplied the rows: a guardrail, not clean evidence. all10: the base side is the stored 2026-10-09 rollouts "
@@ -69,4 +76,5 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--runs", nargs="+", required=True), ap.add_argument("--base", required=True), ap.add_argument("--out", required=True)
     ap.add_argument("--jobs", type=int, default=16)
+    ap.add_argument("--mean", nargs="*", default=[]), ap.add_argument("--pairs", nargs="*", default=[])
     main(ap.parse_args())

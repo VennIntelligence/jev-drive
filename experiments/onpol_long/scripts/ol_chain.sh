@@ -284,5 +284,56 @@ report-agg)    # each aggregated arm against YS-L18-s1 with round 2b's gentle co
     for t in $tg-L18-s0 $tg-L18-s1 Y$c-L18-s0 Y$c-L18-s1 YS-L18-s1 YS-L18-s0; do R+=("$t@18=$W/read/$t/run"); done
     $P $E/scripts/ol_report.py --family Y --arm SAGG$([[ $v == F ]] && echo F) --ctl $c --base-tags YS-L18-s1,YS-L18-s0 --runs "${R[@]}" --out $W/report/Y-$tg || die "ol_report $tg rc $?"
   done ;;
+submit-g10)    # Amendment 10: last-slot guardrail, YS2G-L18-s0 / -s1 on all 1491 public scenes at 10 decisions in 10 chunks each, off card 0; then confirm-g10
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
+            --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 10)" >> $W/jobs.txt; }
+  ALL=$W/lists/all1491.txt; [[ $(wc -l < $ALL) -eq 1491 ]] || die "all1491"; mkdir -p $W/lists/all_n10
+  for i in $(seq 0 9); do awk -v i=$i '(NR - 1) % 10 == i' $ALL > $W/lists/all_n10/c$i.txt; done
+  cf=()
+  for T in YS2G-L18-s0 YS2G-L18-s1; do
+    for i in $(seq 0 9); do cf+=($(sub ol-a10-$T-$i "" --vram 32 --cpu 8 --ram 50 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict -- \
+          bash $E/scripts/ol_chain.sh readlist $T $W/lists/all_n10/c$i.txt 10 $W/read10/$T/b$i)) || exit 1; done
+  done
+  sub ol-confirm-g10 "$(IFS=,; echo "${cf[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash $E/scripts/ol_chain.sh confirm-g10 > /dev/null || exit 1
+  echo "submitted: $(grep -c "amendment 10" $W/jobs.txt) jobs" ;;
+confirm-g10)  # Amendment 10: YS2G and YS-L18 against YR10m10-F-s0 (stored 2026-10-09 rollouts) on all 1491 at 10 decisions; YS2G against YS-L18
+  A=$DATA_DIR/runs/alpasim; R=()
+  R+=("YR10m10-F-s0@all10=$(python3 -c "import json; a = json.load(open('$A/ot3/a/manifest.json')); b = json.load(open('$A/cf1/a/manifest.json')); print(','.join(a['YR10m10-F-s0'] + a['YR10m10-F-s0@new'] + b['YR10m10-F-s0@fresh']))")")
+  for T in YS-L18-s0 YS-L18-s1 YS2G-L18-s0 YS2G-L18-s1; do R+=("$T@all10=$(ls -d $W/read10/$T/[ab]*/ | sed 's#/$##' | paste -sd,)"); done
+  $P $E/scripts/ol_confirm.py --runs "${R[@]}" --base YR10m10-F-s0 --mean YS-L18=YS-L18-s0,YS-L18-s1 YS2G-L18=YS2G-L18-s0,YS2G-L18-s1 \
+     --pairs YS2G-L18:YS-L18 YS2G-L18-s0:YS-L18-s1 YS2G-L18-s1:YS-L18-s1 --out $W/report/confirm-g10 || die "ol_confirm rc $?" ;;
+submit-ego)   # Amendment 11: ego-status dropout on YS-L18's recipe (round-1 rows, YR10m10-F-s0, full schedule): YSED (p 0.5) and YSEX (p 1, removed also
+              # when served), seeds 0 / 1; held reads at 18 decisions in 6 chunks off card 0; re-reads of YS-L18-s0 and YR10m10-F-s0 off card 0
+              # (their stored held reads ran on card 0); open-loop reliance of every checkpoint; reports
+  N=L18Y; F="env OL_RCH=6 bash $E/scripts/ol_fast.sh"
+  sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
+            --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 11)" >> $W/jobs.txt; }
+  RD="--vram 32 --cpu 8 --ram 40 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read"
+  OT="$TR $ON/scripts/on_train.py train --exp onpol_long --init YR10m10-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 \
+      --on on1_$N --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self"
+  rids=(); tids=()
+  for x in "SED 0.5" "SEX 1.0"; do set -- $x
+    for s in 0 1; do
+      a=$(sub ol-train-Y$1-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT --ego-drop $2 --seed $s --tag Y$1-L18-s$s) || exit 1; tids+=($a)
+      for i in $(seq 0 5); do rids+=($(sub ol-read-Y$1-L18-s$s-$i "$a" $RD -- $F read Y$1-L18-s$s $i 6)) || exit 1; done
+    done
+  done
+  for T in YS-L18-s0 YR10m10-F-s0; do
+    for i in $(seq 0 5); do rids+=($(sub ol-reread-$T-$i "" $RD -- $F readlist $T $W/lists/held_n6/c$i.txt $W/read/c15-$T/c$i/run)) || exit 1; done
+  done
+  r=$(sub ol-egorel "$(IFS=,; echo "${tids[*]}")" --vram 24 --cpu 6 --ram 60 --timeout-h 1 -- $TR $E/scripts/ol_ego.py rel --out $W/report/Y-ego/reliance.json \
+        --tags YR10m10-F-s0 YR10m10-F-s1 YS-L18-s0 YS-L18-s1 YSED-L18-s0 YSED-L18-s1 YSEX-L18-s0 YSEX-L18-s1) || exit 1
+  sub ol-report-ego "$(IFS=,; echo "${rids[*]}"),$r" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report-ego > /dev/null || exit 1
+  echo "submitted: $(grep -c "amendment 11" $W/jobs.txt) jobs" ;;
+report-ego)   # Amendment 11: each dropout arm against YS-L18 (control) and the base, all reads off card 0 except YR10m10-F-s1's (alpasim_long); drift / reliance
+  H=$DATA_DIR/runs/alpasim_long/held/h18; c() { ls -d $W/read/$1/c*/run | paste -sd,; }
+  R=("YS-L18-s0@18=$(c c15-YS-L18-s0)" "YS-L18-s1@18=$W/read/YS-L18-s1/run" "YR10m10-F-s0@18=$(c c15-YR10m10-F-s0)" "YR10m10-F-s1@18=$H/YR10m10-F-s1")
+  for t in YSED-L18-s0 YSED-L18-s1 YSEX-L18-s0 YSEX-L18-s1; do R+=("$t@18=$(c $t)"); done
+  for A in SED SEX; do
+    $P $E/scripts/ol_report.py --family Y --arm $A --ctl S --base-tags YR10m10-F-s0,YR10m10-F-s1 --runs "${R[@]}" --out $W/report/Y-$A || die "ol_report $A rc $?"; done
+  $P $E/scripts/ol_ego.py drift --reports $W/report/Y-SED $W/report/Y-SEX --rel $W/report/Y-ego/reliance.json --out $W/report/Y-ego \
+     --tags YR10m10-F-s0 YR10m10-F-s1 YS-L18-s0 YS-L18-s1 YSED-L18-s0 YSED-L18-s1 YSEX-L18-s0 YSEX-L18-s1 \
+     --groups YR=YR10m10-F-s0,YR10m10-F-s1 YS=YS-L18-s0,YS-L18-s1 YSED=YSED-L18-s0,YSED-L18-s1 YSEX=YSEX-L18-s0,YSEX-L18-s1 \
+     --pairs YSED:YS YSEX:YS YS:YR YSED:YR YSEX:YR || die "ol_ego drift rc $?" ;;
 *) die "unknown stage $STAGE" ;;
 esac

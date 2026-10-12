@@ -208,7 +208,7 @@ class PModel(nn.Module):
     def set_tr1(self, d: dict):
         self.tr1 = {k: bool(v) for k, v in (d or {}).items() if v}
         if self.adapter is not None:
-            self.adapter.in_tf = PA.ego_transform(self.tr1.get("noax", False), self.tr1.get("hist_cv", False))
+            self.adapter.in_tf = PA.ego_transform(self.tr1.get("noax", False), self.tr1.get("hist_cv", False), self.tr1.get("noego", False))
 
     def forward(self, front, ego, tc, side=None, side_mask=None, inputs_on=True, nv=None, lead=None):
         """front (B, n, 32, 512) cached hidden tokens of the n newest policy slots (n = 8: the 0.2 s protocols; 4: N, one slot per 2 Hz key)

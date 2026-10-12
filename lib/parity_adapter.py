@@ -79,14 +79,19 @@ def cv_history(e):
     return torch.cat([torch.flip(out, [1]), P[:, 3:4]], 1).reshape(B, 12)
 
 
-def ego_transform(noax: bool = False, hist_cv: bool = False):
-    """The in_tf of an adapter (None when nothing is switched on)."""
-    if not (noax or hist_cv):
+EGO_STATE = slice(4, 20)                        # vx, vy, ax, ay and the 4 history poses of ego_features: the ego status (not present, not command)
+
+
+def ego_transform(noax: bool = False, hist_cv: bool = False, noego: bool = False):
+    """The in_tf of an adapter (None when nothing is switched on). noego: the whole ego status zeroed (onpol_long Amendment 11, arm SEX)."""
+    if not (noax or hist_cv or noego):
         return None
 
     def f(ego):
         import torch
         e = ego.clone()
+        if noego:
+            e[:, EGO_STATE] = 0
         if noax:
             e[:, 6] = 0
         if hist_cv:
