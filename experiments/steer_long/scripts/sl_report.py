@@ -65,9 +65,7 @@ def main():
     GT = json.load(open(res / "gates_thresholds.json"))
     E = pd.read_csv(res / "rollouts.csv")
     ER = pd.read_csv(res / "events.csv")
-    ST = pd.read_csv(res / "stops.csv")
     CAP = pd.read_csv(res / "cap_grid.csv")
-    SL = pd.read_parquet(res / "speed_rows.parquet")
     L = ["# STEER-LONG read (pre-registration: research/next-round/steer-long.md section 3, commit 8f48d0c0)", ""]
     J = {}
 
@@ -77,7 +75,7 @@ def main():
         L.append(f"| {k} | {g['summary']} | {g['with_ctrl']} | {g['frame_ok']} / {g['frame_pairs']} ({pct(g['frame_ok'] / max(g['frame_pairs'], 1))}) | "
                  f"{g['rec_ok']} / {g['rec_pairs']} ({pct(g['rec_ok'] / max(g['rec_pairs'], 1))}) |")
     zr = pd.read_parquet(root / "per_rollout.parquet")
-    zr = zr[zr.has_rollout & (zr.type != "")][["label", "scene", "type"]]
+    zr = zr[zr.has_rollout & (zr.type != "") & zr.label.isin(set(E.label))][["label", "scene", "type"]]
     mine = E[(E.track == "nuplan") & (E.kind.fillna("") != "")][["label", "scene", "kind"]]
     mm = zr.merge(mine, on=["label", "scene"], how="outer")
     mis = mm[mm.type.fillna("-") != mm.kind.fillna("-").replace({"other": "other"})]
@@ -125,6 +123,30 @@ def main():
         f = lambda c: f"{np.nanmedian(g[c]):.2f} [{np.nanpercentile(g[c], 90):.2f}]"   # noqa: E731
         L.append(f"| {tr} / {b} | {f('A_path_max')} | {f('A_cmd_max')} | {f('A_exec_max')} | {f('ddelta_max')} | {f('v_ev')} |")
     J["verdicts"] = V.to_dict("records")
+    # exploratory (amendment 1): the same onset rule with the bounded steering state, A_delta = v^2 |tan(delta)| / L, in place of A_cmd
+    if (root / "rows.parquet").exists():
+        Rx = pd.read_parquet(root / "rows.parquet", columns=["track", "session", "t", "v", "delta", "A_path", "A_req"])
+        Rx["A_d"] = Rx.v ** 2 * np.abs(np.tan(Rx.delta)) / 2.85
+        clean = set(E.session[E.clean])
+        Rc = Rx[Rx.session.isin(clean) & (Rx.v >= 1)].copy()
+        Rc["b"] = np.where(Rc.v < 5, "low", np.where(Rc.v < 15, "mid", "high"))
+        th = {k: (np.nanpercentile(g.A_path, 99), np.nanpercentile(g.A_d, 99)) for k, g in Rc.groupby(["track", "b"])}
+        out = []
+        for e in ER.itertuples():
+            r = Rx[(Rx.session == e.session) & (Rx.t >= e.t_ev - 3e6) & (Rx.t <= e.t_ev)].reset_index(drop=True)
+            b = np.where(r.v < 5, "low", np.where(r.v < 15, "mid", "high"))
+            tp = np.array([th[(e.track, q)][0] for q in b]); td = np.array([th[(e.track, q)][1] for q in b])
+            ip, idd = np.flatnonzero(r.A_path > tp), np.flatnonzero(r.A_d > td)
+            op, od = (r.t[ip[0]] if len(ip) else None), (r.t[idd[0]] if len(idd) else None)
+            if op is not None and (od is None or op <= od + 2e5):
+                v = "plan_first"
+            elif od is not None:
+                v = "steer_first_amp" if r.A_d[idd[0]] > 1.5 * (r.A_req[idd[0]] if np.isfinite(r.A_req[idd[0]]) else np.inf) else "steer_first_ref"
+            else:
+                v = "quiet"
+            out.append(dict(track=e.track, bucket=e.bucket, verdict_d=v))
+        X = pd.DataFrame(out).groupby(["track", "bucket", "verdict_d"]).size().unstack(fill_value=0).reset_index()
+        L += ["", "Exploratory (amendment 1): the same rule with A_delta (steering state) in place of A_cmd:", "", md(X)]
 
     # ---- high-speed large-steer episodes (all rollouts) and the human comparison
     rows_path = root / "rows.parquet"
@@ -190,57 +212,7 @@ def main():
                  f"{int(best.cover)} / {int(best.events)}")
     J["cap"] = CAP.to_dict("records")
 
-    # ---- slowness (section 3.6)
-    S = SL[(SL.v_log >= 2) & ~SL.past].copy()
-    S["ratio"] = S.v_e / S.v_log
-    S["lr"] = np.log(np.clip(S.ratio, 0.05, None))
-    S["d100"] = S.d_e / 100
-    L += ["", "## Slowness (section 3.6)", "", "Median v_ego / v_log (position-aligned), by distance travelled:", "",
-          "| track / label | 0-10 | 10-25 | 25-50 | 50-100 | > 100 m | slope of log ratio per 100 m [95 % CI] |", "|:--|--:|--:|--:|--:|--:|:--|"]
-    sl_out = []
-    for (tr, lab), g in S.groupby(["track", "label"]):
-        b = pd.cut(g.d_e, [-1, 10, 25, 50, 100, 1e9])
-        med = g.groupby(b, observed=False).ratio.median().to_numpy()
-        s, lo, hi = boot_slope(g, "d100", "lr", "log")
-        sl_out.append(dict(track=tr, label=lab, slope=s, lo=lo, hi=hi))
-        L.append(f"| {tr} / {lab} | " + " | ".join("-" if np.isnan(x) else f"{x:.2f}" for x in med) + f" | {s:+.3f} [{lo:+.3f}, {hi:+.3f}]"
-                 + (" farther = slower" if hi < 0 else "") + " |")
-    L += ["", "By time since the last stop (or start):", "", "| track / label | 0-2 | 2-4 | 4-6 | 6-9 | 9-20 s |", "|:--|--:|--:|--:|--:|--:|"]
-    for (tr, lab), g in S.groupby(["track", "label"]):
-        b = pd.cut(g.since_stop, [-1, 2, 4, 6, 9, 21])
-        med = g.groupby(b, observed=False).ratio.median().to_numpy()
-        L.append(f"| {tr} / {lab} | " + " | ".join("-" if np.isnan(x) else f"{x:.2f}" for x in med) + " |")
-    Sd = S[S.v_plan.notna()]
-    L += ["", "Decomposition of the deficit (means over rows, m/s): v_log - v_ego = (v_log - v_plan) + (v_plan - v_ego), v_plan = model plan's first 1 s",
-          "", "| track / label | n | v_log | v_plan | v_ego | total | model part | execution part | model share |", "|:--|--:|--:|--:|--:|--:|--:|--:|--:|"]
-    for (tr, lab), g in Sd.groupby(["track", "label"]):
-        tot = (g.v_log - g.v_e).mean()
-        mp = (g.v_log - g.v_plan).mean()
-        ep = (g.v_plan - g.v_e).mean()
-        L.append(f"| {tr} / {lab} | {len(g)} | {g.v_log.mean():.2f} | {g.v_plan.mean():.2f} | {g.v_e.mean():.2f} | {tot:+.2f} | {mp:+.2f} | {ep:+.2f} | "
-                 f"{mp / tot if tot else np.nan:.2f} |")
-    J["slope"] = sl_out
-
-    # ---- stops
-    L += ["", "## Stops (v < 1 m/s for >= 1 s, before any flag)", ""]
-    ST["unexplained"] = ST.unexplained.astype(bool)
-    rows = []
-    for (tr, lab), g in ST.groupby(["track", "label"]):
-        n_roll = int(((E.track == tr) & (E.label == lab)).sum())
-        u = g[g.unexplained]
-        rows.append(dict(track=tr, label=lab, rollouts=n_roll, stops=len(g), unexplained=len(u), at_start=int(u.at_start.sum()),
-                         P=int((u.cls == "P").sum()), L=int((u.cls == "L").sum()), V=int((u.cls == "V").sum()), M=int((u.cls == "M").sum()),
-                         other=int((u.cls == "other").sum())))
-    STb = pd.DataFrame(rows)
-    L += [md(STb, 0), ""]
-    for tr, g in STb.groupby("track"):
-        u = g[["P", "L", "V", "M", "other"]].sum()
-        n = u.sum()
-        if n:
-            top = u.idxmax()
-            L.append(f"- {tr}: unexplained stops {n} ({n / g.rollouts.sum() * 100:.1f} per 100 rollouts), largest class {top} {pct(u[top] / n)}"
-                     + (" -> >= 50 %" if u[top] / n >= 0.5 else ""))
-    J["stops"] = STb.to_dict("records")
+    L += ["", "Slowness, stops, onsets, rear impacts, corridor positions: sl_long.md (amendment 1 replaced the first-pass log alignment)."]
     (res / "sl_report.md").write_text("\n".join(L) + "\n")
     json.dump(J, open(res / "sl_report.json", "w"), indent=1, default=float)
     print("\n".join(L))

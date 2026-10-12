@@ -1,0 +1,135 @@
+{
+ "gates": {
+  "nuplan/YR10m10-F-s0": {
+   "summary": 460,
+   "with_ctrl": 452,
+   "with_drive": 452,
+   "frame_pairs": 7677,
+   "frame_ok": 7653.0,
+   "rec_pairs": 40193,
+   "rec_ok": 40169.0
+  },
+  "nuplan/YR10m10-F-s1": {
+   "summary": 460,
+   "with_ctrl": 452,
+   "with_drive": 452,
+   "frame_pairs": 7677,
+   "frame_ok": 7653.0,
+   "rec_pairs": 40193,
+   "rec_ok": 40169.0
+  },
+  "nuplan/YS-L18-s0": {
+   "summary": 460,
+   "with_ctrl": 452,
+   "with_drive": 452,
+   "frame_pairs": 7677,
+   "frame_ok": 7653.0,
+   "rec_pairs": 40193,
+   "rec_ok": 40169.0
+  },
+  "nuplan/YS-L18-s1": {
+   "summary": 460,
+   "with_ctrl": 452,
+   "with_drive": 452,
+   "frame_pairs": 7677,
+   "frame_ok": 7653.0,
+   "rec_pairs": 40193,
+   "rec_ok": 40169.0
+  },
+  "nuplan/YS2G-L18-s0": {
+   "summary": 460,
+   "with_ctrl": 452,
+   "with_drive": 452,
+   "frame_pairs": 7677,
+   "frame_ok": 7653.0,
+   "rec_pairs": 40193,
+   "rec_ok": 40169.0
+  },
+  "nuplan/YS2G-L18-s1": {
+   "summary": 460,
+   "with_ctrl": 452,
+   "with_drive": 452,
+   "frame_pairs": 7677,
+   "frame_ok": 7653.0,
+   "rec_pairs": 40193,
+   "rec_ok": 40169.0
+  },
+  "pai/ybase": {
+   "summary": 281,
+   "with_ctrl": 281,
+   "with_drive": 281,
+   "frame_pairs": 55412,
+   "frame_ok": 55412.0,
+   "rec_pairs": 55412,
+   "rec_ok": 55412.0
+  },
+  "pai/ys0": {
+   "summary": 281,
+   "with_ctrl": 281,
+   "with_drive": 281,
+   "frame_pairs": 55412,
+   "frame_ok": 55412.0,
+   "rec_pairs": 55412,
+   "rec_ok": 55412.0
+  },
+  "pai/ys1": {
+   "summary": 281,
+   "with_ctrl": 281,
+   "with_drive": 281,
+   "frame_pairs": 55412,
+   "frame_ok": 55412.0,
+   "rec_pairs": 55412,
+   "rec_ok": 55412.0
+  }
+ },
+ "thresholds": {
+  "nuplan/high": {
+   "A_path": 0.4691588543875061,
+   "A_cmd": 0.6699320079278052,
+   "A_exec": 0.5025138062347472,
+   "A_req": 0.4266732663051843,
+   "ddelta": 0.010909019034934006,
+   "n": 427
+  },
+  "nuplan/low": {
+   "A_path": 2.187742395089217,
+   "A_cmd": 2.0382081727912245,
+   "A_exec": 1.9556679629804994,
+   "A_req": 1.7702068432715405,
+   "ddelta": 0.8095607589448733,
+   "n": 89516
+  },
+  "nuplan/mid": {
+   "A_path": 2.2180547538559847,
+   "A_cmd": 2.5919489746053164,
+   "A_exec": 2.4317309912437968,
+   "A_req": 2.1067161698975094,
+   "ddelta": 0.21731151066542304,
+   "n": 108640
+  },
+  "pai/high": {
+   "A_path": 1.5811173497053157,
+   "A_cmd": 9.341447296454447,
+   "A_exec": 5.029826506192744,
+   "A_req": 3.629902948536124,
+   "ddelta": 0.15315162299729035,
+   "n": 19778
+  },
+  "pai/low": {
+   "A_path": 0.8822318795534643,
+   "A_cmd": 2.0822601462379473,
+   "A_exec": 1.885807361054604,
+   "A_req": 1.9941432477720082,
+   "ddelta": 1.0155069684575944,
+   "n": 28458
+  },
+  "pai/mid": {
+   "A_path": 1.3819970621919497,
+   "A_cmd": 3.848180412862733,
+   "A_exec": 3.4489886652260004,
+   "A_req": 3.1706188036962204,
+   "ddelta": 0.38217659726154113,
+   "n": 46762
+  }
+ }
+}

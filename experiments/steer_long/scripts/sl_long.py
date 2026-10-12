@@ -200,7 +200,7 @@ def main():
     SPD, STP, ONS, REAR, COR = (pd.concat(SPD, ignore_index=True), pd.DataFrame(STP), pd.DataFrame(ONS), pd.DataFrame(REAR), pd.DataFrame(COR))
     PX = pd.concat(PX, ignore_index=True) if PX else pd.DataFrame()
     out.mkdir(parents=True, exist_ok=True)
-    SPD.to_parquet(out / "speed_rows2.parquet", index=False)
+    SPD.to_parquet(root / "speed_rows2.parquet", index=False)               # 2.7 MB: scratch, not committed
     for nm, df in (("stops2", STP), ("onsets", ONS), ("rear", REAR), ("corridor_pos", COR)):
         df.to_csv(out / f"{nm}.csv", index=False)
     L = ["# STEER-LONG longitudinal read (sections 3.6 + amendment 1, 3.13 amendment 3)", ""]
