@@ -1,7 +1,7 @@
 # eyes_vs_head: openpilot's own heads at our zeros
 
 status: concluded
-decisions: 269
+decisions: 272
 index: eyes wrong at 98 / 98 zeros (lane probs < 0.5); eyes + rules not supported
 
 **Question.** When our driver scores zero on the stored 18-decision held AlpaSim nuPlan rollouts, did the frozen openpilot model's own
@@ -13,7 +13,7 @@ the heads wrong on the reconstructed images ("eyes wrong")? This decides whether
 ~0.35-0.40 m inside the true lane on each side); on turns presence is 0.003. All 98 corridor + offroad zeros of YS-L18-s1 and YR10m10-F-s0
 are class (b) eyes wrong, 0 eyes right / head wrong (line (a) >= 0.60); with the probability dropped and the scale undone (exploratory)
 it is still 1 (a) / 84 (b). The lead head reported the struck object in 0 / 51 at-fault collisions: the "same-direction" hits are side
-contacts with adjacent-lane cars 0.5-1.5 m to the side, which an in-path lead head does not cover (decision 269).
+contacts with adjacent-lane cars 0.5-1.5 m to the side, which an in-path lead head does not cover (decision 272).
 
 **Read more.** [plans/2026-10-12-eyes-vs-head-prereg.md](plans/2026-10-12-eyes-vs-head-prereg.md) (Chinese, pushed before any read);
 [results/ev_report.md](results/ev_report.md) (gates, R1-R4 tables, lines, verdicts, the per-event table); per-event classes
