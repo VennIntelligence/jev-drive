@@ -52,3 +52,10 @@ same scene and decision with a log-clustered paired bootstrap (B = 10 000). Line
 smaller with CI upper bound < 0 on held 452; the uncovered half and the train-split rollouts (RB0 / RB vs YR10m10-F-s0 / YS-L18 references,
 same scenes) are reported alongside; per-scene turn completion stays a description on both splits. Reason: held 452 has 24 turn scenes and
 the train split 64, with 1–3 scenes per split whose memory covers +20 m at the entry, so the scene-level bucket of section 6 cannot be read.
+
+## Amendment 2 (2026-10-13 ~03:00 JST, before any RBS / RBSG read)
+
+RNONE-L18 reads 80 / 75 zeros vs RB0's 59 (continuation alone hurts the base, as d264 item 4). A gentle-schedule arm RBSG-L18-s{0,1} is
+added: --init RB0-F-s0, --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500, same rows / hinges / --on-lon on_route as RBS (d264
+addendum 6's schedule), judged on the same lines L3 (vs RB0) and L5; RNONEG-L18-s0 (same gentle schedule, no rows) as its control for L4.
+Added 2026-10-13 ~03:00 JST before any RBS / RBSG read.
