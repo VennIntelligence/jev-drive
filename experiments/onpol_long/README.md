@@ -42,6 +42,16 @@ the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpo
 | `PS-L18` - ON-NONE | +0.021 [-0.010, +0.053] | -15.0 [-30.2, -0.9] | +0.5 [-11.5, +10.9] | -0.245 [-0.370, -0.111] | 28 / 19 (1) |
 | `PS-L18` - base | -0.008 [-0.044, +0.025] | -2.0 [-17.6, +14.5] | +4.0 [-4.8, +12.3] | -0.158 [-0.274, -0.020] | 25 / 25 |
 
+Confirmation reads (Amendment 5; [results/read/confirm.md](results/read/confirm.md)), against `YR10m10-F-s0`:
+
+| scene set | `YS-L18-s0` - base | `YS-L18-s1` - base | zeros base / s0 / s1 | at-fault zeros base / s0 / s1 |
+|:--|:--|:--|:--|:--|
+| all 1491 public at 10 decisions (1479 with a rollout; base = stored 2026-10-09 rollouts) | +0.0125 [+0.0033, +0.0226] | +0.0131 [+0.0036, +0.0227] | 68 / 47 / 48 | 50 / 30 / 36 |
+| train 1031 at 18 decisions (the scenes that supplied the rows: guardrail only) | +0.0591 [+0.0381, +0.0819] | +0.0495 [+0.0298, +0.0714] | 168 / 99 / 114 | 102 / 58 / 63 |
+
+The public-mean guardrail (not more than 0.02 below the base on all 1491 at 10 decisions) holds for both seeds: 0.945 against 0.932,
+GT distance -0.04 m.
+
 Registered line: `YS-L18` adopted (and CL-1 as written met); `PS-L18` not (at-fault zeros 36 against 35.5). So on these rows K is what
 broke the round-1 arms: S alone on the same rows is the best checkpoint of the night on the YR base and neutral on the P2H10S base.
 
