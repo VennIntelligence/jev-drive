@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ONPOL-LONG Amendment 9: one on-policy pool from several (DAgger-style aggregation across rounds), in the pool contract of
 experiments/onpol_nuplan/plans/on_pool_format.md. Row names get a round prefix (on:<prefix>:<old name minus 'on:'>) because two rounds can
-share <scene>:<seed>:<k>; the label files' tokens are renamed the same way. Box, envs/op-train (numpy).
+share <scene>:<seed>:<k>; the label files' tokens are renamed the same way (route.npz too, optional per pool). Box, envs/op-train (numpy).
 
   ol_pool_merge.py --out on1_L18YA --pools on1_L18Y:r1 on1_L18YS:r2
 """
@@ -12,6 +12,30 @@ from pathlib import Path
 import numpy as np
 
 CR = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs")) / "runs/op_parity/cache"
+
+
+def route(src, out):
+    """route.npz (route-night's route hinge labels, onpol_nuplan/lib/on_route.py) in the merged row order: tokens renamed like the names (a
+    bare token gets the prefix as well), a pool without the file contributes ok False / NaN rows; no pool with it -> no file."""
+    have = [(d / "route.npz").exists() for d, _ in src]
+    if not any(have):
+        print("route.npz: in no pool, skipped")
+        return
+    Z = [dict(np.load(d / "route.npz")) if h else None for (d, _), h in zip(src, have)]
+    z0 = next(z for z in Z if z is not None)
+    M = {k: [] for k in ("tokens", "ok", "poly", "seglen", "dz", "cov20")}
+    for z, (d, pre) in zip(Z, src):
+        if z is None:
+            nm = np.load(d / "tab.npz")["names"]
+            n = len(nm)
+            z = dict(tokens=nm, ok=np.zeros(n, bool), poly=np.full((n,) + z0["poly"].shape[1:], np.nan, np.float32),
+                     seglen=np.full((n,) + z0["seglen"].shape[1:], np.nan, np.float32), dz=np.ones(n, np.float32), cov20=np.zeros(n, bool))
+        M["tokens"].append(np.array([f"on:{pre}:{t[3:] if t.startswith('on:') else t}" for t in z["tokens"].tolist()]))
+        for k in ("ok", "poly", "seglen", "dz", "cov20"):
+            M[k].append(z[k])
+    M = {k: np.concatenate(v) for k, v in M.items()}
+    np.savez(out / "route.npz", **M)
+    print("route.npz", len(M["tokens"]), "rows,", int(M["ok"].sum()), "ok;", f"missing in {[p for (_, p), h in zip(src, have) if not h]}")
 
 
 def main(a):
@@ -34,6 +58,7 @@ def main(a):
                 M[k] = v0
         np.savez(out / f, **M)
         print(f, len(M[key]), "rows")
+    route(src, out)
     names = np.load(out / "tab.npz")["names"]
     assert len(set(names.tolist())) == len(names)
     F = [np.load(CR / f"{d.name}@warp/front.npy", mmap_mode="r") for d, _ in src]

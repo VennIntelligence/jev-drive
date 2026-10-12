@@ -4,6 +4,8 @@
   ol_report.py --family Y|P --runs <tag>@18=<run dir> ... --out DIR
       collects with alpasim_long's long_read.collect (the evaluator's truncation; per-decision distance to the logged path), then for the family:
       arm <F>SKC-L18-s0/s1, control <F>NONE-L18-s0/s1, base <base>-s0 (and -s1 for the null and CL-1's base mean), all on the same held scenes.
+      Route-night: --family R --arm BS --ctl NONE [--base-tags RB0-F-s0,RB0-F-s1] -> RBS-L18-s*, RNONE-L18-s*, base RB-F (or the base tags);
+      the read dirs are runs/route_mem/read/<TAG>/c*/run (rm_chain.sh submit-read), comma-joined per label.
       -> DIR/per_scene.csv, per_scene_k.parquet (long_read), DIR/report_<F>.md, report_<F>.json
 """
 import argparse
@@ -16,7 +18,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "experiments/alpasim_long/scripts"))
 import long_read as LR  # noqa: E402
 
-BASE = {"Y": "YR10m10-F", "P": "P2H10S-F"}
+BASE = {"Y": "YR10m10-F", "P": "P2H10S-F", "R": "RB-F"}                  # R: route-night (research/next-round/route-night.md)
 B = 10000
 
 

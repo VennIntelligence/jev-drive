@@ -13,6 +13,22 @@ loop repeated here) with the route-memory branch of lib/rmem.py on the adapter. 
             the reliance read on the dev rows (memory on / masked, per-row ADE; junction rows = the route enters a junction within 40 m,
             straight rows = no junction within 60 m and < 5 deg route turn over 40 m) -> rely.json in the run dir and runs/route_mem/rely/<tag>.json
 
+Route-night additions (research/next-round/route-night.md 4 C):
+  --init    a checkpoint WITH the branch (sidecar route_mem.json beside ckpt-final.pt, e.g. RB-F-s0): on_train.setup runs without --init (its
+            load_init demands the plain P2 key set), then the branch is attached and the whole state loaded (cmd_rely's --rm-from path); the
+            dev ADE at step 0 is logged against the init sidecar's recorded final dev ADE (`dev_ade`). An init without sidecar: as before
+            (on_train's load_init, then the branch at zero). No --init: on_train's fresh path (shipped Cinque weights + a fresh P2 adapter,
+            joint_train's start), then the branch; dev metrics at step 0 are logged in every case.
+  defaults  on_train's schedule (10 000 steps, warm-up 300, --lr-scale 1.0, eval every 1000) = the YR10m10-F recipe from the shipped
+            weights and d264's full continuation schedule; the old ROUTE-MEM continuation passes --steps 2500 --warmup 1 --lr-scale 0.1.
+  no pool   --agent-on-only without --on (RB0, RNONE) means no row carries the agent hinge: run as --agent-lam 0 (on_train.setup would
+            refuse the flag without a pool), so the RB / RB0 / RBS / RNONE commands share one $REC.
+  pool rows --rm-drop never zeroes a pool row's (--on) route input (the route hinge must not train a turn without its reason); the drop rng
+            stream still draws one number per batch row. --on-lon / --on-lon-lam / --on-road go to on_train.setup unchanged.
+
+  RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
+       --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
+
   $DATA_DIR/envs/op-train/bin/python experiments/route_mem/scripts/rm_train.py train --tag RM-L18-s0 --init YS-L18-s1 --steps 2500 --warmup 1 \
       --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_L18YS --on-k 13 \
       --on-split alpasim_nuplan/onpol-train --on-mode self --seed 0
@@ -107,12 +123,25 @@ def rely(model, S, dv_o, W, JD, TU, logs):
 def build(a, dev):
     """on_train.setup + the branch + the route features. -> (ns, route params, JD, TU, okc)."""
     import torch
+    import pp_train as T
+    init, a.init = a.init, ("" if a.rm_from or (a.init and RM.has_branch(a.init)) else a.init)   # setup's load_init: plain P2 checkpoints only
     ns = OT.setup(a, dev)
+    a.init = init
     RM.attach(ns.model, **HEAD)
-    if a.rm_from:                                                     # the reliance read of a saved checkpoint
-        import pp_train as T
-        ck = torch.load(T.proot("runs", a.rm_from) / "ckpt-final.pt", map_location="cpu", weights_only=False)
+    src = a.rm_from or (a.init if a.init and RM.has_branch(a.init) else "")
+    if src:                                                           # a checkpoint with the branch: the whole state, branch included
+        ck = torch.load(T.proot("runs", src) / "ckpt-final.pt", map_location="cpu", weights_only=False)
+        sd = json.loads((T.proot("runs", src) / RM.SIDECAR).read_text()) if RM.has_branch(src) else {}
+        assert sd.get("head", HEAD) == HEAD, f"{src}: branch {sd.get('head')} != {HEAD}"
         ns.model.load_state(ck["model"])
+        st = ns.model.adapter.state_dict()
+        assert set(st) == set(ck["model"]["parity"]), "adapter keys differ from the checkpoint's"
+        da = max(float((v.detach().cpu().float() - ck["model"]["parity"][k].float()).abs().max()) for k, v in st.items())
+        dn = max(float((ns.model.net.params[k].detach().cpu().float() - v.float()).abs().max()) for k, v in ck["model"]["net"].items())
+        assert da == 0 and dn == 0, (da, dn)
+        if not a.rm_from:
+            ns.init = dict(init=src, with_branch=True, net_loaded=len(ck["model"]["net"]), adapter_loaded=len(st), max_abs_diff_after_load=0.0,
+                           init_dev_ade=sd.get("dev_ade"))
     F, JD, TU, src, okc = feats(ns.cfg.data, ns.S, dev)
     ns.S.ego = torch.cat([ns.S.ego.float(), F], 1)
     rp = list(ns.model.adapter.route.parameters())
@@ -130,6 +159,7 @@ def cmd_train(a):
     d = T.proot("runs", a.tag)
     assert not (d / "ckpt-final.pt").exists(), f"{d / 'ckpt-final.pt'} exists: a tag is never overwritten"
     a.rm_from = ""
+    assert not a.init or a.init.startswith(("RB-F-", "RB0-F-")) or a.allow_init, f"--init {a.init}: tonight only RB-F / RB0-F (route-night.md 3; --allow-init overrides)"
     ns, rp, JD, TU, okc = build(a, dev)
     cfg, S, model, base, new, pools, kk = ns.cfg, ns.S, ns.model, ns.base, ns.new, ns.pools, ns.kk
     nB, nN, k_ho, k_on, tr_o, dv_o = cfg.batch, ns.nN, ns.k_ho, ns.k_on, ns.tr_o, ns.dv_o
@@ -181,12 +211,14 @@ def cmd_train(a):
         run.info(f"{a.tag}: on_train recipe + route branch ({nroute / 1e6:.2f} M, lr {a.rm_lr}, warm-up {a.rm_warmup}, drop {a.rm_drop}); "
                  f"train {len(tr_o)} normal + {len(tr_t)} yaw-rate rows, dev {len(dv_o)} + {len(dv_t)}; per batch {nN} normal, {k_yr} yaw-rate, "
                  f"{k_on} on-policy (mode {ns.mode or 'off'}; {json.dumps(ns.onrec)}); feature rows ok {json.dumps(okc)}")
-        if ns.init:
-            run.info(f"init {json.dumps(ns.init)}")
-            ev = dev_ev()
-            run.scalars({f"dev/{q}": v for q, v in ev.items()}, 0)
-            run.info("dev @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items()))
-            run.summary.update({f"dev0_{q}": v for q, v in ev.items()} | {"init": ns.init})
+        run.info(f"init {json.dumps(ns.init) if ns.init else 'none: shipped weights + fresh adapter (on_train / joint_train start)'}")
+        ev = dev_ev()
+        run.scalars({f"dev/{q}": v for q, v in ev.items()}, 0)
+        run.info("dev @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items())
+                 + (f"; init's recorded dev ade {ns.init['init_dev_ade']:.4f}" if ns.init and ns.init.get("init_dev_ade") is not None else ""))
+        run.summary.update({f"dev0_{q}": v for q, v in ev.items()} | {"init": ns.init})
+        is_pool = torch.zeros(S.n, dtype=torch.bool, device=dev)
+        is_pool[ns.on0:] = bool(k_on)                                 # --rm-drop never applies to pool rows
         pre = T.Prefetch(draw, fetch, cfg.steps, a.prefetch, a.fetch_workers)
         t0, hist, hsh = time.time(), [], ""
         for step in range(cfg.steps):
@@ -196,7 +228,7 @@ def cmd_train(a):
             for g in opt.param_groups:
                 g["lr"] = g["base"] * min(1.0, (step + 1) / g["wu"]) * cosf
             ego = S.ego[rows] * (~anchor)[:, None].float()
-            keep = torch.as_tensor(mrng.random(len(r)) >= a.rm_drop, device=dev)
+            keep = torch.as_tensor(mrng.random(len(r)) >= a.rm_drop, device=dev) | is_pool[rows]
             ego[:, RM.EGO_DIM:] = ego[:, RM.EGO_DIM:] * keep[:, None].float()
             out = model(front, ego, S.tc[rows], None, None, nv=None if ns.nv is None else ns.nv[rows])
             total, Ls = LS(out, S, rows, anchor)
@@ -229,7 +261,8 @@ def cmd_train(a):
                 run.summary.update({f"dev_{q}": v for q, v in ev.items()})
         torch.save({"model": model.state(), "cfg": asdict(cfg), "onpol": vars(a), "route_mem": HEAD}, d / "ckpt-final.pt")
         torch.save(model.adapter.state_dict(), d / "adapter.pt")
-        RM.write_sidecar(a.tag, HEAD, dict(init=a.init, rm_lr=a.rm_lr, rm_warmup=a.rm_warmup, rm_drop=a.rm_drop))
+        RM.write_sidecar(a.tag, HEAD, dict(init=a.init, rm_lr=a.rm_lr, rm_warmup=a.rm_warmup, rm_drop=a.rm_drop, rm_drop_pool=False,
+                                           on=a.on, on_lon=a.on_lon, steps=cfg.steps, dev_ade=ev.get("ade")))
         rr = rely(model, Sd, dv_o, LS.W, JD, TU, S.tab["log"])
         run.info(f"reliance: {json.dumps(rr)}")
         (_pl.Path(run.dir) / "rely.json").write_text(json.dumps(rr, indent=1))
@@ -278,11 +311,12 @@ if __name__ == "__main__":
         p = sub.add_parser(name)
         p.add_argument("--tag", required=True)
         p.add_argument("--exp", default="route_mem")
-        p.add_argument("--steps", type=int, default=2500)
+        p.add_argument("--steps", type=int, default=10000)
         p.add_argument("--batch", type=int, default=128)
-        p.add_argument("--warmup", type=int, default=1)
-        p.add_argument("--lr-scale", type=float, default=0.1)
-        p.add_argument("--eval-every", type=int, default=500)
+        p.add_argument("--warmup", type=int, default=300)
+        p.add_argument("--lr-scale", type=float, default=1.0)
+        p.add_argument("--eval-every", type=int, default=1000)
+        p.add_argument("--allow-init", action="store_true", help="permit an --init other than tonight's RB-F / RB0-F")
         OT.recipe_args(p)
         p.add_argument("--on-k", type=int, default=13)
         p.add_argument("--on-mode", default="", choices=("",) + OT.MODES)
@@ -303,5 +337,8 @@ if __name__ == "__main__":
     if a.cmd == "zero":
         cmd_zero(a)
         raise SystemExit(0)
-    assert a.ego_drop == 0 and not a.on_lon and not a.on_road, "ROUTE-MEM runs on_train's Y recipe only"
+    assert a.ego_drop == 0, "ROUTE-MEM: no --ego-drop"
+    if a.agent_on_only and not a.on:                                 # agent hinge on pool rows only, and no pool: no row carries it (RB0 / RNONE)
+        print("rm_train: --agent-on-only without --on -> --agent-lam 0 (no row has an agent label)", flush=True)
+        a.agent_lam, a.agent_on_only = 0.0, False
     dict(train=cmd_train, rely=cmd_rely)[a.cmd](a)

@@ -12,7 +12,12 @@ with AlpaSim's own RouteGenerator, as the served driver would have held it. Alpa
   yr     --data navtrain_full.s0of12 ..   the yaw-rate rows (cache yr1_<data>: src_row, off) from nav's features, moved into each row's perturbed frame
   pool   --name L18YS                     on-policy rows ($DATA_DIR/runs/onpol_nuplan/rows/<name>/meta.npz): per rollout the route regenerated at every
                                           decision's driver anchor (drive.jsonl) by RouteGenerator.create (MAP, 40 m) on the scene's after160 data
-                                          source (ao_e1's way, decision 266), in decision order -> feat/on1_<name>.npz (names, f, k, route0_d)
+                                          source (ao_e1's way, decision 266), in decision order -> feat/on1_<name>.npz (names, f, k, route0_d),
+                                          and the route hinge's labels (experiments/onpol_nuplan/lib/on_route.py) -> cache/on1_<name>/route.npz:
+                                          tokens = names, ok, poly (n, 51, 2) = the generator's full route polyline (route_polyline_in_local right
+                                          after that decision's generate_route) in the row frame (the anchor), from 10 m behind the anchor's
+                                          projection to 90 m ahead every 2 m, NaN outside the polyline; seglen (n, 50) (NaN where an end is NaN);
+                                          dz 1.0; cov20 = the memory feature's +20 m point valid
   served --run DIR [--tag LABEL]          a read run whose driver logged its served memory (drive.jsonl `rmem`): the same offline rebuild at the
                                           logged anchors, per decision max |served - offline| over the points valid in either, mask agreement
                                           -> served/<label>.json (gate G-serve) and served/<label>.parquet
@@ -40,6 +45,7 @@ from jevdrive.common import data_dir  # noqa: E402
 OUT = data_dir() / "runs/route_mem"
 CR = data_dir() / "runs/op_parity/cache"
 K_MAX, N_TRACK = 18, 20
+LAB = -10.0 + 2.0 * np.arange(51)                    # route label offsets (m) from the ego's projection (on_route.py, M = 51)
 T0, DT = 17_000, 500_000
 
 
@@ -187,8 +193,39 @@ def cmd_yr(a):
             run.info(f"yr1_{data}: {len(f)} rows")
 
 
-def regen(scene, recs, cfg):
-    """One rollout's drive records (sorted by k) -> {k: (20, 2) rig-frame route waypoints (prepare_for_policy, NaN padded)}, {k: anchor}."""
+def label(Rl, a):
+    """Full route polyline Rl (m, 2) in the local frame and the row's anchor -> (51, 2) row-frame points at LAB along the polyline from the
+    anchor's projection (rmem.window's projection, extrapolated before / beyond the ends), NaN where the offset is off the polyline."""
+    P = np.full((len(LAB), 2), np.nan, np.float32)
+    M = RM.in_ego(a, np.asarray(Rl, np.float64)[:, :2])
+    M = M[np.isfinite(M).all(1)]
+    if len(M) < 2:
+        return P
+    d = np.diff(M, axis=0)
+    L = np.hypot(d[:, 0], d[:, 1])
+    keep = L > 1e-6
+    if not keep.any():
+        return P
+    M, d, L = np.vstack([M[:1], M[1:][keep]]), d[keep], L[keep]
+    u = d / L[:, None]
+    cum = np.r_[0.0, np.cumsum(L)]
+    t = np.clip(-(M[:-1] * u).sum(1), 0.0, L)
+    i = int(np.argmin(np.hypot(*(M[:-1] + t[:, None] * u).T)))
+    s_e = cum[i] + t[i]
+    if i == 0 and t[0] <= 0.0:
+        s_e = float(-(M[0] * u[0]).sum())
+    elif i == len(L) - 1 and t[i] >= L[i]:
+        s_e = cum[-1] + float(-(M[-1] * u[-1]).sum())
+    s = s_e + LAB
+    ok = (s >= 0.0) & (s <= cum[-1])
+    j = np.clip(np.searchsorted(cum, s[ok], side="right") - 1, 0, len(L) - 1)
+    P[ok] = M[j] + (s[ok] - cum[j])[:, None] * u[j]
+    return P
+
+
+def regen(scene, recs, cfg, full=None):
+    """One rollout's drive records (sorted by k) -> {k: (20, 2) rig-frame route waypoints (prepare_for_policy, NaN padded)}, {k: anchor};
+    full (dict) if given gets {k: (m, 2) the generator's whole route polyline in the local frame right after decision k's generate_route}."""
     import logging
     from ao_e1 import loader
     from alpasim_runtime.config import RouteGeneratorType
@@ -204,6 +241,8 @@ def regen(scene, recs, cfg):
         x, y, yaw = r["anchor"]
         pose = Pose(np.array([x, y, np.interp(r["t0"], Tt, P[:, 2])]), np.array([0.0, 0.0, np.sin(yaw / 2), np.cos(yaw / 2)]))
         W[r["k"]] = np.asarray(RouteGenerator.prepare_for_policy(g.generate_route(int(r["t0"]), pose)).waypoints, float)[:, :2]
+        if full is not None:
+            full[r["k"]] = np.asarray(g.route_polyline_in_local.points, float)[:, :2].copy()
         A[r["k"]] = np.asarray(r["anchor"], float)
     return W, A
 
@@ -223,11 +262,12 @@ def pool_one(job):
     run, scene, ks, cfg = job
     from ao_e1 import drive_records
     recs = drive_records(run)[scene]
-    W, A = regen(scene, recs, cfg)
+    Fu = {}
+    W, A = regen(scene, recs, cfg, Fu)
     F = feats_of(W, A)
     r0 = {r["k"]: (float(np.hypot(*(W[r["k"]][0] - np.asarray(r["route0"])))) if r.get("route0") is not None and np.isfinite(W[r["k"]][0]).all() else np.nan)
           for r in recs}
-    return {k: (F[k], r0.get(k, np.nan), A[k]) for k in ks}
+    return {k: (F[k], r0.get(k, np.nan), A[k], label(Fu[k], A[k])) for k in ks}
 
 
 def cmd_pool(a):
@@ -246,16 +286,25 @@ def cmd_pool(a):
         res.raise_if_failed()
         F, D, ok = np.zeros((len(names), RM.DIM), np.float16), np.full(len(names), np.nan, np.float32), np.zeros(len(names), bool)
         da = np.full(len(names), np.nan)
+        poly = np.full((len(names), len(LAB), 2), np.nan, np.float32)
         for key, v in zip(keys, res.values):
             for i, k in by[key]:
-                F[i], D[i], ok[i] = v[k][0], v[k][1], True
+                F[i], D[i], ok[i], poly[i] = v[k][0], v[k][1], True, v[k][3]
                 dd = v[k][2] - np.asarray(m["anchor"][i], float)
                 da[i] = max(np.abs(dd[:2]).max(), abs((dd[2] + np.pi) % (2 * np.pi) - np.pi))                  # the row's own frame = the drive record's anchor
         assert np.nanmax(da) < 1e-3, f"pool rows and drive records disagree on the anchor: {np.nanmax(da)}"
         np.savez(OUT / "feat" / f"on1_{a.name}.npz", names=names, f=F, k=m["k"], ok=ok, route0_d=D)
         sm = RM.summary(F.astype(np.float32))
+        seg = np.linalg.norm(np.diff(poly, axis=1), axis=-1).astype(np.float32)
+        rok = ok & (np.isfinite(poly).all(-1).sum(1) >= 2)
+        if (CR / f"on1_{a.name}").is_dir():                            # the pool dir (ol_chain strip) holds the trainer's files
+            np.savez(CR / f"on1_{a.name}" / "route.npz", tokens=names, ok=rok, poly=poly, seglen=seg, dz=np.ones(len(names), np.float32),
+                     cov20=np.asarray(sm["c20"], bool) & ok)
+        fin = np.isfinite(poly[rok, :, 0])
         rec = dict(rows=len(names), ok=float(ok.mean()), route0_share_005=float((D[ok] <= 0.05).mean()), route0_med=float(np.nanmedian(D)),
-                   c20=float(sm["c20"][ok].mean()), first_med=float(np.nanmedian(sm["first"][ok])))
+                   c20=float(sm["c20"][ok].mean()), first_med=float(np.nanmedian(sm["first"][ok])), route_ok=float(rok.mean()),
+                   route_pts_med=float(np.median(fin.sum(1))) if len(fin) else 0.0, route_dir=str(CR / f"on1_{a.name}"),
+                   route_written=bool((CR / f"on1_{a.name}").is_dir()), route_lat0_med=float(np.nanmedian(np.abs(poly[rok, 5, 1]))) if rok.any() else np.nan)
         run.info(json.dumps(rec))
         run.summary.update(rec)
 
