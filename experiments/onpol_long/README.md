@@ -117,6 +117,14 @@ within 0.5 m 0.99998, ego <= 0.018 m. K fires on 21.9 % / 21.7 % of the served p
 check that the logged path (dashed), its 1.5 m band and the lane-centre band (grey) sit on the served plan's road. Frame dumps: `cur`
 removed after the tokens (35.1 -> 5.6 GB per family), JPEG / plan / ego kept.
 
+## Which card each simulator job ran on (Amendment 7)
+
+Card 0 has ECC on and renders 1-2 grey levels differently from cards 1-5 (pipeline lane, `results/pipeline_profile.md`). Before Amendment 7
+the pool placed jobs freely. Held reads on card 0: the base `YR10m10-F-s0` at 18 decisions (alpasim_long `al-h18`), `YS-L18-s0`,
+`YNONE-L18-s0`, `YNONE-L18-s1`, `PSKC-L18-s1`; every other held read of this topic ran on cards 1-5 (`YS-L18-s1` card 1, `YSG-L18-s0 / -s1`
+cards 2 / 3, `YNONEG` 5 / 2, `PS-L18` 2 / 3, `PNONE` 5 / 4, `YSKC` 1 / 3, `PSKC-L18-s0` 2). Rollout chunks on card 0: `YR10m10` c0,
+`P2H10S` c4, `YS-L18-s0` c2, `YS-L18-s1` c4 / c5. From round 3 on, rollouts and reads use cards 1-5 only (`OL_SIM_GPUS`).
+
 ## Chain
 
 ```bash

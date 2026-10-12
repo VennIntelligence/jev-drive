@@ -5,6 +5,8 @@
 #   OL_NCH      train rollouts in this many pool jobs (default 12: two stacks per card; one stack used 10-40 % of a card)
 #   OL_RCH      each held read in this many pool jobs (default 6); the report joins the chunk dirs (long_read takes comma-separated dirs)
 #   OL_STEPS, OL_TRAIN_ARGS  trainer steps and extra on_train.py flags for all four trainings (default: 10 000, none = submit-r2's recipe)
+#   OL_SIM_GPUS  cards the rollout and read jobs may use (e.g. 1,2,3,4,5: card 0 has ECC on and renders 1-2 grey levels off; onpol_long Amendment 7);
+#                empty = any card. Trainings are not restricted.
 #   OL_WORKERS / OL_LWORKERS  on_rows.py geo / ol_labels.py build workers (default 48 each, as ol_chain.sh; geo itself takes ~30 s)
 #   and the K / C label build (ol_labels.py build, 18 of ol_chain.sh's 19 geo minutes) runs beside the tokens instead of before them: the S-only
 #   recipe never reads its files; its gate (ol_labels.py gate, unchanged) still runs on every pool and gates strip and the report
@@ -120,7 +122,7 @@ submit-round)   # one Y-recipe round from <init> (submit-r2's recipe): rollouts 
   HI=$((${PRIO:-14} + 1)); FX="env OL_NCH=$NCH OL_RCH=$RCH OL_WORKERS=$WK OL_LWORKERS=$LWK bash $E/scripts/ol_fast.sh"
   rr=()
   for T in ${RT//,/ }; do [[ -n ${OL_DRY:-} ]] || mkdir -p $W/roll/$T
-    for i in $(seq 0 $((NCH - 1))); do rr+=($(SUBP=$HI sub ol-roll-$T-$i "" --vram 32 --cpu 8 --ram 40 --timeout-h 2 --env CL_HIST_KEY=ol-fast-roll -- $FX roll $T $i $NCH)) || exit 1; done
+    for i in $(seq 0 $((NCH - 1))); do rr+=($(SUBP=$HI sub ol-roll-$T-$i "" --vram 32 --cpu 8 --ram 40 --timeout-h 2 ${OL_SIM_GPUS:+--gpus $OL_SIM_GPUS --pin-strict} --env CL_HIST_KEY=ol-fast-roll -- $FX roll $T $i $NCH)) || exit 1; done
   done
   g=$(SUBP=$HI sub ol-geo-$A "$(IFS=,; echo "${rr[*]}")" --vram 0.5 --cpu $WK --ram 64 --timeout-h 2 -- $FX geo $RT $N $NCH) || exit 1
   l=$(sub ol-labels-$A "$g" --vram 0.5 --cpu $LWK --ram 96 --timeout-h 2 -- $FX labels $N) || exit 1
@@ -134,7 +136,7 @@ submit-round)   # one Y-recipe round from <init> (submit-r2's recipe): rollouts 
           --on-split alpasim_nuplan/onpol-train --on-mode self --seed $s --tag Y$A-L18-s$s) || exit 1
     c=$(sub ol-train-Y${A}NONE-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT --seed $s --tag Y${A}NONE-L18-s$s) || exit 1
     for x in "$a Y$A-L18-s$s $HI" "$c Y${A}NONE-L18-s$s ${PRIO:-14}"; do set -- $x
-      for i in $(seq 0 $((RCH - 1))); do rids+=($(SUBP=$3 sub ol-read-$2-$i "$1" --vram 32 --cpu 8 --ram 40 --timeout-h 2 --env CL_HIST_KEY=ol-fast-read -- $FX read $2 $i $RCH)) || exit 1; done; done
+      for i in $(seq 0 $((RCH - 1))); do rids+=($(SUBP=$3 sub ol-read-$2-$i "$1" --vram 32 --cpu 8 --ram 40 --timeout-h 2 ${OL_SIM_GPUS:+--gpus $OL_SIM_GPUS --pin-strict} --env CL_HIST_KEY=ol-fast-read -- $FX read $2 $i $RCH)) || exit 1; done; done
   done
   sub ol-report-Y$A "$(IFS=,; echo "${rids[*]}"),$q" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- $FX report $A $I Y-$A > /dev/null || exit 1
   echo "submitted: $(grep -c "(ol_fast $A)" $W/jobs.txt) jobs" ;;
