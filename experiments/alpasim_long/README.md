@@ -3,7 +3,6 @@
 status: live
 decisions: 262
 index: 18-decision scenes (was 10); held 460: SSELFnoL-ON 0.821, P2H10S-F 0.787, YR10m10-F 0.776
-key: experiments/alpasim_long/plans/2026-10-12-long-prereg.md, experiments/alpasim_long/scripts/al_chain.sh, experiments/alpasim_long/scripts/build_cache.py, experiments/alpasim_long/scripts/nuplan_zip.py, experiments/alpasim_long/scripts/fetch_logs.sh, experiments/alpasim_long/scripts/long_read.py, experiments/onpol_nuplan/results/long/smoke.md, experiments/onpol_nuplan/results/long/span.csv
 
 **Question.** Can local AlpaSim nuPlan rollouts run longer than the shipped 10 decisions, how long, at what cost, and does the candidate
 ordering (YR10m10-F, P2H10S-F, SSELFnoL-ON) hold on the 460 held scenes as scenes lengthen?

@@ -97,3 +97,20 @@ The read's YR10m10-F-s0 at 18 decisions (0.771, at-fault 0.474 km, GT 1.49 m) is
 decisions. Reading, descriptive only (two private points cannot validate a suite): does 18 decisions reproduce the private ordering
 (YR10m10-F-s0 above APY10m10-AB-s0 by about 0.16 in score, with lower GT distance and more km per at-fault event), which 10 decisions
 reverses on the public scenes (0.925 against 0.935)?
+
+## Amendment 3 (2026-10-12 11:40 CST, before any run below): does the 10 -> 18 drop hit other driver families? (user request)
+
+Reference drivers on the 460 held scenes at 18 decisions (`after160`), unchanged driver paths, same base overrides as their stored runs:
+WA-JEPA (`run.sh wajepa`, `WAJ_AMP=0`, decision 188's driver; a reference arm only, never part of the method), garage `model_0014`
+(`run.sh garage`), SimScale LTF sample (`run.sh ltf`), SimScale DiffusionDrive sample (`run.sh dd`). 10-decision side: the stored runs on
+all 1491 public scenes, cut to the held 460 (WA-JEPA: c0c manifest; LTF / DD / garage: alpasim_proxy anchors/*.csv run dirs); no new
+10-decision runs (all four cover the 460). WA-JEPA is split into 4 chunks of 115 scenes (its driver took 51 min for 234 scenes at 10
+decisions); the others are one job each. Estimate: 7 pool jobs, about 40 min each, about 4.5 card-hours, about 45 min wall on the 6 free
+cards.
+
+Reported per driver, as for the held read: score 10 -> 18, zeros by kind, at-fault zeros, at-fault km, GT distance, first-10 GT distance,
+drift slope k 4..10 / 4..18; next to the private leaderboard values (alpasim_proxy results/leaderboard_nuplan_20261012.json, the values
+alpasim_proxy's README uses: LTF 0.738 / 0.270 km / 2.27 m, DD 0.772 / 0.267 / 2.16, garage 0014 0.848 / 0.228 / 0.718; WA-JEPA only
+team-lucifer's `wajepa-s2-20260904` 0.762 / 0.626 / 1.85, not known to be our configuration) and with APY10m10-AB-s0 (amendment 2) and
+YR10m10-F-s0. Question, descriptive: does each family's 18-decision local value land near its private value the way YR10m10-F-s0's did,
+and does the 10 -> 18 drop differ between families? No line; 1 run per driver, the private side is 1000 unknown rollouts.

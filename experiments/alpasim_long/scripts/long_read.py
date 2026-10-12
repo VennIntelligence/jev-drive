@@ -62,13 +62,14 @@ def collect(a):
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     rows, jobs = [], []
+    keep = set(Path(a.scenes).read_text().split()) if a.scenes else None
     for spec in a.runs:
         label, dirs = spec.split("=", 1)
         seen = set()
         for D in dirs.split(","):
             for r in json.loads((Path(D) / "aggregate/results-summary.json").read_text())["rollouts"]:
                 s = r["clipgt_id"]
-                if s in seen:
+                if s in seen or (keep is not None and s not in keep):
                     continue
                 seen.add(s)
                 mm = r.get("metrics") or {}
@@ -177,6 +178,7 @@ if __name__ == "__main__":
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("collect")
     p.add_argument("--runs", nargs="+", required=True), p.add_argument("--out", required=True), p.add_argument("--jobs", type=int, default=32)
+    p.add_argument("--scenes", help="only these scenes (one per line)")
     p.set_defaults(fn=collect)
     p = sub.add_parser("report")
     p.add_argument("--in", dest="inp", nargs="+", required=True), p.add_argument("--out", required=True), p.add_argument("--json")
