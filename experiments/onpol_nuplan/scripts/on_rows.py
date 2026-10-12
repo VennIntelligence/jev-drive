@@ -362,6 +362,8 @@ def geo_one(job):
             assert str(z["scene"]) == scene and bool(z["valid"].all()), f"{dump}: scene {z['scene']}, valid {z['valid']}"
             row |= dict(ego=z["ego"].astype(np.float32), poses=z["poses"].astype(np.float64), mu=z["mu"].astype(np.float32), cam=z["cam_t"].astype(np.float32))
         assert np.abs(row["poses"] - np.array(r["poses"])).max() < 1e-3 and np.abs(row["ego"] - np.array(r["ego"])).max() < 1e-4, f"{dump} is not decision {k} of {scene}"
+        if "rmem" in r:                                                         # ROUTE-MEM checkpoint: the route memory fed after the ego row (drive.jsonl, 1e-5)
+            row["rmem"] = np.asarray(r["rmem"], np.float32)
         # actors at t0 + 0, 0.5 .. 4 s -> the row frame; the K nearest over the 9 times
         A = np.full((NT, len(ids), 3), np.nan)
         for j in range(NT):
@@ -426,6 +428,15 @@ def rollouts(stages) -> list:
     return sorted(out, key=lambda x: (x[0], x[2]))
 
 
+def rmem_cols(keep) -> dict:
+    """meta.npz columns of rollouts by a ROUTE-MEM checkpoint: rmem (n, rmem.DIM) float32 the fed route memory (zeros where not logged),
+    rmem_ok (n,) bool logged; {} when no row has one (the meta of other checkpoints is unchanged)."""
+    if not any("rmem" in r for r in keep):
+        return {}
+    dim = len(next(r["rmem"] for r in keep if "rmem" in r))
+    return dict(rmem=np.stack([r.get("rmem", np.zeros(dim, np.float32)) for r in keep]), rmem_ok=np.array(["rmem" in r for r in keep]))
+
+
 def md_table(head, rows) -> list:
     return ["| " + " | ".join(head) + " |", "|" + "|".join([":--"] + ["--:"] * (len(head) - 1)) + "|"] + ["| " + " | ".join(map(str, r)) + " |" for r in rows]
 
@@ -472,7 +483,7 @@ def cmd_geo(a):
                  seed=st("seed", int), k=st("k", int), t_us=st("t_us", np.int64), t_log_us=st("t_log_us", np.int64), pose_map=st("pose_map"), anchor=st("anchor"), speed=np.hypot(ego[:, 4], ego[:, 5]) * 10.0,
                  s0=st("s0", float), e0=st("e0", float), psi_e=st("psi_e", float), lead=st("lead", float), Lr=st("Lr", float), D=st("D"), D_reg=st("D_reg"), v_log=st("v_log", float), path_ext=st("path_ext", bool),
                  n_act=st("n_act", int), d_anchor=st("d_anchor", float), n_keys=st("n_keys", int), poses=st("poses"), mu=st("mu"), gpath=st("gpath"), logfut=st("logfut"),
-                 dump=st("dump", str), run=st("run", str))
+                 dump=st("dump", str), run=st("run", str), **rmem_cols(keep))
         g = lambda key, r: r.get(key, np.nan)  # noqa: E731
         np.savez(out / "all.npz", scene=st("scene", str, rows), tag=st("tag", str, rows), seed=st("seed", int, rows), k=st("k", int, rows), t_us=st("t_us", np.int64, rows),
                  excl=st("excl", str, rows), row=np.array([r.get("row", -1) for r in rows]), e0=np.array([g("e0", r) for r in rows]), lead=np.array([g("lead", r) for r in rows]))
@@ -516,6 +527,8 @@ def cmd_tok(a):
     from agent_hinge import AgentHinge
     from drivable_hinge import Hinge
     from experiments.op_adapt_r2.lib import op_adapt_r2 as R2
+    _sys.path.insert(0, str(_R / "experiments/route_mem/lib"))
+    import rmem as RM
     from jevdrive import cache
     from jevdrive.common import n_cpus
     from jevdrive import navsim_zs as Z
@@ -565,18 +578,25 @@ def cmd_tok(a):
         pi = torch.as_tensor(tz["pi"], device=dev)
         ego, cam_x = torch.from_numpy(tab["ego"]).to(dev), torch.from_numpy(tab["cam"][:, 0].astype(np.float32)).to(dev)
         tags = sorted(set(M["tag"].tolist()))
+        rmem = torch.from_numpy(M["rmem"]).to(dev) if "rmem" in M else torch.zeros(n, RM.DIM, device=dev)
+        branch = {}                                                                            # tag -> the checkpoint carries the ROUTE-MEM branch (sidecar)
+
+        def feed(t, r, zero=False):
+            """The adapter row of checkpoint t for rows r: ego (20), ++ the fed route memory with the ROUTE-MEM branch (as sh30_core.Core.plan;
+            zero: an empty memory instead, the diagnostic that the branch is live)."""
+            return torch.cat([ego[r], torch.zeros_like(rmem[r]) if zero else rmem[r]], 1) if branch[t] else ego[r]
 
         @torch.no_grad()
-        def diff(model, rows):
+        def diff(t, rows, zero=False):
             """Per row, trainer forward against served: max |difference| over (0) the first 15 plan points (x, y); (1) the 8 poses (x, y), the
             trainer's plan through the serving export (op_interp.to_rear, as sh30_core.Core.plan); (2) the same over the poses served within
             32 m (beyond it one fp16 ulp of a plan point is 0.031 m); (3) the 8 poses through the trainer's own formula (pp_train.rear, which
             interpolates before the lever arm and drops the camera's lateral offset); (4) pp_train.rear of the served mu against the served poses."""
-            out = [[] for _ in range(5)]
+            out, model = [[] for _ in range(5)], models[t]
             for i in range(0, len(rows), 128):
                 r = rows[i:i + 128]
                 rt = torch.as_tensor(r, device=dev)
-                p = model(torch.from_numpy(np.ascontiguousarray(front[r])).to(dev), ego[rt], tc[rt]).float()[:, pi].view(-1, 33, 15)
+                p = model(torch.from_numpy(np.ascontiguousarray(front[r])).to(dev), feed(t, rt, zero), tc[rt]).float()[:, pi].view(-1, 33, 15)
                 mu, sp = torch.from_numpy(M["mu"][r]).to(dev), torch.from_numpy(M["poses"][r].astype(np.float32)).to(dev)
                 pn = p.cpu().numpy()
                 ex = np.stack([I.to_rear(q[:, 0:3], q[:, 11], I.T_IDXS, c[:2], Z.T_OUT, "lever") for q, c in zip(pn, tab["cam"][r].astype(np.float64))])
@@ -589,29 +609,37 @@ def cmd_tok(a):
                     out[j].append(torch.maximum((x - sp[..., 0]).abs(), (y - sp[..., 1]).abs()).amax(1).cpu().numpy())
             return tuple(np.concatenate(v) for v in out)
         @torch.no_grad()
-        def single(model, rows):
+        def single(t, rows):
             """Rows forwarded one at a time as sh30_core.Core.plan does (interpreted): max |difference| of the whole plan mean from the served one."""
-            d = []
+            d, model = [], models[t]
             for i in rows:
                 cur = torch.from_numpy(np.load(M["dump"][i])["cur"]).to(dev)
                 H = model.net.run_batched(A.vision_feeds(torch.cat([torch.zeros_like(cur[:1]), cur[:-1]]), cur), ["view_39"])["view_39"].reshape(1, 8, *A.H_SHAPE)
-                p = model(H, ego[i:i + 1], tc[:1]).float()[0, pi].view(33, 15).cpu().numpy()
+                p = model(H, feed(t, slice(i, i + 1)), tc[:1]).float()[0, pi].view(33, 15).cpu().numpy()
                 d.append(float(np.abs(p - M["mu"][i]).max()))
             return np.array(d)
-        models = {t: T.load_pmodel(t, dev) for t in sorted(set(tags) | {t[:-1] + str(1 - int(t[-1])) for t in tags})}
+        have = lambda t: t == "P0" or t.endswith("-init") or (T.proot("runs", t) / "ckpt-final.pt").exists()  # noqa: E731
+        models = {t: RM.load_pmodel(t, dev) for t in sorted(set(tags) | {t[:-1] + str(1 - int(t[-1])) for t in tags}) if have(t)}
+        branch |= {t: RM.has_branch(t) for t in models}
+        if any(branch.values()):
+            run.info(f"ROUTE-MEM branch: {sorted(t for t, b in branch.items() if b)}; fed route memory logged on {M['rmem_ok'].mean() if 'rmem_ok' in M else 0.0:.4f} of the rows")
         r1, lines = dict(tol_m=TOL_M, need=0.99, tags={}), []
         for t in tags:
             rows = np.flatnonzero(M["tag"] == t)
             other = t[:-1] + str(1 - int(t[-1]))
             slow = np.abs(M["mu"][rows][:, :15, 0]).max(1) < 16.0                              # plan points below 16 m: one fp16 ulp <= 0.008 m
-            (dm, dp, dn, dr, df), (cm, cp, _, _, _) = diff(models[t], rows), diff(models[other], rows)
-            d1 = single(models[t], rows[:: max(len(rows) // a.single, 1)]) if a.single else np.full(1, np.nan)
+            (dm, dp, dn, dr, df) = diff(t, rows)
+            cm, cp, _, _, _ = diff(other, rows) if other in models else (np.full(1, np.nan),) * 5     # no wrong-seed checkpoint: clause (c) not met
+            d1 = single(t, rows[:: max(len(rows) // a.single, 1)]) if a.single else np.full(1, np.nan)
             r1["tags"][t] = dict(n=len(rows), mu_share=float((dm <= TOL_M).mean()), pose_share=float((dp <= TOL_M).mean()), mu_median=float(np.median(dm)),
                                  mu_max=float(dm.max()), pose_median=float(np.median(dp)), pose_max=float(dp.max()), control=other,
                                  mu_share_one_ulp=float((dm <= 0.03126).mean()), mu_share_slow=float((dm[slow] <= TOL_M).mean()), slow_share=float(slow.mean()),
                                  pose_share_within_32m=float((dn <= TOL_M).mean()), pose_share_one_ulp=float((dp <= 0.03126).mean()), pose_share_trainer_formula=float((dr <= TOL_M).mean()),
                                  rear_formula_max=float(df.max()), single_n=int(len(d1)) if a.single else 0, single_identical=float((d1 == 0).mean()), single_max=float(d1.max()),
-                                 control_mu_share=float((cm <= TOL_M).mean()), control_pose_share=float((cp <= TOL_M).mean()), control_pose_median=float(np.median(cp)))
+                                 control_mu_share=float((cm <= TOL_M).mean()) if other in models else np.nan, control_pose_share=float((cp <= TOL_M).mean()) if other in models else np.nan,
+                                 control_pose_median=float(np.median(cp)))
+            if branch[t]:                                                                      # diagnostic: the same clause with an empty route memory fed
+                r1["tags"][t] |= dict(rmem_zero_mu_share_one_ulp=float((diff(t, rows, True)[0] <= 0.03126).mean()))
             q = r1["tags"][t]
             lines.append((t, len(rows), f"{q['mu_share']:.4f}", f"{q['pose_share']:.4f}", f"{q['mu_median']:.4f} / {q['mu_max']:.4f}", f"{q['mu_share_one_ulp']:.4f} / {q['mu_share_slow']:.4f} ({q['slow_share']:.3f} of rows)", f"{q['pose_median']:.4f} / {q['pose_max']:.4f}",
                           f"{q['pose_share_within_32m']:.4f} / {q['pose_share_one_ulp']:.4f}", f"{q['pose_share_trainer_formula']:.4f} ({q['rear_formula_max']:.4f})",

@@ -9,7 +9,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
 E=experiments/onpol_long; ON=experiments/onpol_nuplan; SPL=$ON/results/split; W=$DATA_DIR/runs/onpol_long; CK=$DATA_DIR/runs/op_parity/runs
-C=$DATA_DIR/datasets/alpasim_nuplan_long/after160; KEY=runtime.scene_provider.trajdata; NCH=6
+C=$DATA_DIR/datasets/alpasim_nuplan_long/after160; KEY=runtime.scene_provider.trajdata; NCH=${NCH:-6}  # NCH / OL_LIST: smoke overrides (chunk count of geo; roll1's scene list)
 P=$DATA_DIR/third_party/alpasim/.venv/bin/python; NAV=$DATA_DIR/envs/navsim2/bin/python; TR=$DATA_DIR/envs/op-train/bin/python
 CL() { .venv/bin/python -m jevdrive.cl "$@"; }
 die() { echo "$(date '+%F %T') ERROR $*" >&2; exit 1; }
@@ -24,7 +24,7 @@ lists() {  # the train split in NCH interleaved chunks; never a held scene
 STAGE=${1:?stage}; shift
 case $STAGE in
 roll1)   # one chunk: rollouts with the frame dump, then the simulator state (onpol_nuplan's on_loop.py step), then ot2_loop's pruning
-  T=$1; i=$2; D=$W/roll/$T/c$i/run; L=$W/lists/c$i.txt
+  T=$1; i=$2; D=$W/roll/$T/c$i/run; L=${OL_LIST:-$W/lists/c$i.txt}
   [[ -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"; [[ -f $C/nuplan_test/scenes_list.dill ]] || die "no cache $C"
   [[ -z $(comm -12 <(sort "$L") <(sort $SPL/held.txt)) ]] || die "$L has a held scene"
   [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
