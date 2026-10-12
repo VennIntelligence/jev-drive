@@ -1,0 +1,91 @@
+{
+ "G_lab_cover": {
+  "held452": 0.9431009957325747,
+  "navtest16": 0.9448767833981842,
+  "zero98": 0.9725085910652921,
+  "pass": true
+ },
+ "G_lab_sign": {
+  "held452": {
+   "L": 1.529674768447876,
+   "C": -0.18275438249111176,
+   "R": -1.9325469732284546,
+   "ok": true
+  },
+  "navtest16": {
+   "L": 1.6073853969573975,
+   "C": -0.07250278443098068,
+   "R": -1.7903637886047363,
+   "ok": true
+  },
+  "zero98": {
+   "L": 3.831037998199463,
+   "C": 1.6997897624969482,
+   "R": -0.6525657773017883,
+   "ok": true
+  },
+  "pass": true
+ },
+ "G_lab_sides": {
+  "scenes": 20,
+  "tokens": 155,
+  "points": 2088,
+  "median": 0.0,
+  "p90": 0.010296211577951908,
+  "both_defined_share": 0.8980645161290323,
+  "rb_agree": 1.0,
+  "pass": true
+ },
+ "G_split": {
+  "token": {
+   "overlap": 0,
+   "first": []
+  },
+  "scene": {
+   "overlap": 0,
+   "first": []
+  },
+  "log": {
+   "overlap": 0,
+   "first": []
+  },
+  "unit": {
+   "overlap": 0,
+   "first": []
+  },
+  "pass": true
+ },
+ "G_dump": {
+  "pass_": null,
+  "note": "not available",
+  "pass": false
+ },
+ "G_ref": {
+  "pass": false,
+  "note": "[Errno 2] No such file or directory: '/root/autodl-tmp/ujs/runs/op_probe/feats/WA/lb_navtest-gref.npz'"
+ },
+ "G_repro": {
+  "old": {
+   "held_turn20": 0.9342325269808995,
+   "navtest_near": 1.1072536179643684
+  },
+  "old-s0": {
+   "held_turn20": 1.0738983308530747,
+   "navtest_near": 1.3135999476630618
+  },
+  "old-s1": {
+   "held_turn20": 0.9925097546938555,
+   "navtest_near": 1.0627397428398284
+  },
+  "held_range": [
+   0.85,
+   1.046
+  ],
+  "navtest_range": [
+   1.126,
+   1.398
+  ],
+  "pass": false
+ },
+ "pass": false
+}
