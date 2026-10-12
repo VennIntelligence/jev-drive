@@ -37,7 +37,7 @@ Layout (N, 2, 2, 6, 128, 256) = the t0 encoding pair (slot 6, slot 7) (`on_rows.
 |:--|:--|:--|:--|
 | held-452 (8 129 rows, `held452.parquet` order) | done, 6.4 GB | `slots/held452_pairs.npy` | taken straight from the dumps' `cur`; 500 rows through `pp_prep.encoder` vs the cached slot-7 token of `road_probe/tok/held`: mean abs diff 0.0, max 0.0 |
 | zero-98 (457 rows, `zero98.parquet` order) | done, 0.36 GB | `slots/zero98_pairs.npy` (+ `.ok.npy`) | stored driver messages replayed through `sh30_driver.Driver` (exact path), pair captured from `Core.plan`; vs `road_probe/tok/zero` slot-7 tokens: mean abs 8.8e-4, max 0.031 (fp16 noise), 457 of 457 |
-| J_on (33 899 rows) | **not extracted** | - | see below |
+| J_on (33 899 rows, `J_on.parquet` rid order) | done, **reconstructed slot pairs**, 26.7 GB, all rows ok | `slots/jon_pairs.npy` + `slots/jon_pairs.ok.npy` | validation below; accepted by the coordinator |
 
 ### J_on: the dumps have no frames
 The onpol_long roll dumps had `cur` stripped after tokenizing (`experiments/onpol_long/scripts/ol_chain.sh strip`); only the t0 JPEG, ego, mu, poses
@@ -56,8 +56,8 @@ Validation on 600 random held-452 decisions (cur and JPEG both exist; `results/p
 | fp16 noise floor of the encoder (same pixels, other batch) mean / max | 8.5e-4 / 0.031 | same |
 | token rms | 1.69 | |
 
-Slot 7 is the t0 key and reproduces; slot 6 is a warp along an estimated ego track and differs in 3-4 % of bytes. The token difference is about 10x the
-fp16 noise floor (0.5 % of the token rms) with a heavy tail, so the reconstruction is **not within fp16 noise**. Per the coordinator's rule J_on
-was not reconstructed and G-dump was not run on J_on; `step0/gdump.json` says `"pass": false, "run": false` with this reason. The decision (accept
-reconstructed pairs with this error, improve the velocity estimate, or re-roll with SH30_DUMP) is the coordinator's. Any use of the pairs must be
-worded "reconstructed slot pairs".
+Slot 7 is the t0 key and reproduces; slot 6 is a warp along an estimated ego track and differs in 3-4 % of bytes. The token difference is about 10x the fp16 noise floor (0.5 % of the token rms) with a heavy tail, so the reconstruction is **not within fp16
+noise**. Decision (coordinator): **accept, chord-velocity variant, no re-roll**. J_on is a training and probe-fit row set only; the three read sets reproduce
+(held-452 exact, zero-98 fp16 noise, navtest-16 from the pixel path). All 33 899 J_on rows were reconstructed (`jon_pairs.ok.npy` all True). The G-dump
+rule was replaced by the held-452 validation above (cur exists there); `step0/gdump.json` records held-452 pass (exact), zero-98 pass (fp16 noise) and
+J_on "reconstructed slot pairs, accepted by coordinator" with these numbers. Any use of the J_on pairs must be worded "reconstructed slot pairs".
