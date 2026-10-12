@@ -23,7 +23,7 @@ B = 10000
 def main(a):
     import pandas as pd
     out = Path(a.out)
-    LR.collect(argparse.Namespace(runs=a.runs, out=str(out), jobs=a.jobs))
+    LR.collect(argparse.Namespace(runs=a.runs, out=str(out), jobs=a.jobs, scenes=None))
     S = pd.read_csv(out / "per_scene.csv")
     K = pd.read_parquet(out / "per_scene_k.parquet")
     S["tag"] = S.label.str.split("@").str[0]

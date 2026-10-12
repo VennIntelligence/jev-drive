@@ -20,7 +20,7 @@ import long_read as LR  # noqa: E402
 def main(a):
     import pandas as pd
     out = Path(a.out)
-    LR.collect(argparse.Namespace(runs=a.runs, out=str(out), jobs=a.jobs))
+    LR.collect(argparse.Namespace(runs=a.runs, out=str(out), jobs=a.jobs, scenes=None))
     S = pd.read_csv(out / "per_scene.csv")
     S["tag"], S["set"] = S.label.str.split("@").str[0], S.label.str.split("@").str[1]
     z = S.score == 0
