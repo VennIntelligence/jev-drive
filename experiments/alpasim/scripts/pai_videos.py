@@ -4,7 +4,7 @@
 One flat folder ~/Desktop/pai_videos/<scene8>_<arm>_<score>_<zero kind>.mp4 -> the front-wide mp4 of that rollout
 (sorted by name, the arms of one scene sit next to each other; mpv plays the folder as a playlist), plus ~/Desktop/pai_videos.html:
 one row per scene, one column per arm, score and zero kind on each cell, filters by arm / kind / score / scene,
-j / k move between scenes and play the row, click a cell to play it, double-click to enlarge it; each row shows the scene's first frame (~/.cache/pai_thumbs, one JPEG per scene, all arms start identical), cells are text until the row is active and holds the <video> elements. Idempotent: rerun to pick up new chunks.
+j / k move between scenes and play the row, click a cell to play it, double-click to enlarge it; cells fill the row and show the scene's first frame (~/.cache/pai_thumbs, one JPEG per scene, all arms start identical) until the row is active and holds the <video> elements. Idempotent: rerun to pick up new chunks.
 Usage: pai_videos.py [ROOT] (default /data/runs/onpol_long/pai281).
 """
 import glob, json, shutil, subprocess, sys
@@ -56,17 +56,14 @@ html = r"""<!doctype html><meta charset=utf-8><title>PAI rollouts</title>
 body{font:14px system-ui;margin:0;background:#111;color:#ddd}
 #bar{position:sticky;top:0;background:#222;padding:8px 12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;z-index:2}
 #bar label{margin-right:6px;white-space:nowrap}
-.scene{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid #333;align-items:flex-start}
+.scene{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid #333;align-items:flex-start}
 .scene.cur{background:#1d2a1d}
-.head{width:240px;flex:none;font-family:monospace}
-.head img{width:240px;height:267px;object-fit:cover;display:block;background:#000}
-.cell{width:240px;flex:none}
-.scene:not(.cur) .cell{width:150px}
-.cell video{width:240px;height:267px;background:#000;display:block;object-fit:cover}
-.scene:not(.cur) .cell .ph{height:30px}
-.cell .lab{font-family:monospace;font-size:12px;padding:2px 0}
+.head{width:90px;flex:none;font-family:monospace;font-size:12px;padding-top:4px}
+.cell{flex:1 1 0;min-width:0;cursor:pointer}
+.cell video,.cell img{width:100%;aspect-ratio:9/10;background:#000;display:block;object-fit:cover}
+.cell .lab{font-family:monospace;font-size:12px;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ok{color:#8d8}.crash{color:#f66}.offroad{color:#fa4}.corridor{color:#fc6}.zero{color:#aaa}
-.empty{color:#444;font-family:monospace;padding-top:6px}
+.empty{width:100%;aspect-ratio:9/10;background:#181818;color:#444;display:flex;align-items:center;justify-content:center;font-family:monospace}
 #big{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:9}
 #big.on{display:flex}
 #big video{height:88vh;max-width:96vw;background:#000}
@@ -100,34 +97,35 @@ function render(){
   }).filter(x=>x.cells.length&&(!dis||x.spread>0.1));
   const o=sort_.value; scenes.sort((a,b)=>o=="scene"?a.s.localeCompare(b.s):o=="min"?a.min-b.min:b.spread-a.spread);
   n_.textContent=`${scenes.length} scenes / ${scenes.reduce((n,x)=>n+x.cells.length,0)} rollouts`;
-  list_.innerHTML=scenes.map((x,i)=>`<div class=scene data-i=${i}><div class=head><img loading=lazy src="pai_videos/thumbs/${x.s}.jpg">${x.s} <small style="color:#888">spread ${x.spread.toFixed(2)}</small></div>`+
+  list_.innerHTML=scenes.map((x,i)=>`<div class=scene data-i=${i}><div class=head>${x.s}<br><span style="color:#888">spread ${x.spread.toFixed(2)}</span></div>`+
     A.map(a=>{const r=byScene[x.s][a]; if(!r||!K.has(r.kind)||r.score>smax) return `<div class=cell><div class=empty>${a}</div></div>`;
-      return `<div class=cell><div class=ph data-src="pai_videos/${r.file}"></div><div class=lab>${a} <b class=${r.kind}>${r.score.toFixed(2)} ${r.kind}</b> ${r.dist}/${r.gt} m <span style="color:#666">${r.chunk}</span></div></div>`}).join("")+`</div>`).join("");
+      return `<div class=cell><img loading=lazy src="pai_videos/thumbs/${x.s}.jpg" data-src="pai_videos/${r.file}"><div class=lab>${a} <b class=${r.kind}>${r.score.toFixed(2)} ${r.kind}</b> ${r.dist}/${r.gt} m <span style="color:#666">${r.chunk}</span></div></div>`}).join("")+`</div>`).join("");
   cur=-1;
 }
-function toVideo(ph){const v=document.createElement("video");v.src=ph.dataset.src;v.loop=true;v.muted=true;v.dataset.src=ph.dataset.src;ph.replaceWith(v);return v}
-function toPh(v){const p=document.createElement("div");p.className="ph";p.dataset.src=v.dataset.src;v.pause();v.removeAttribute("src");v.load();v.replaceWith(p)}
-function go(i){
+function toVideo(im){const v=document.createElement("video");v.src=im.dataset.src;v.poster=im.src;v.loop=true;v.muted=true;v.dataset.src=im.dataset.src;v.dataset.thumb=im.src;im.replaceWith(v);return v}
+function toPh(v){const i=document.createElement("img");i.loading="lazy";i.src=v.dataset.thumb;i.dataset.src=v.dataset.src;v.pause();v.removeAttribute("src");v.load();v.replaceWith(i)}
+function go(i,scroll){
   if(i<0||i>=scenes.length) return;
   const old=document.querySelector(".scene.cur"); if(old){old.querySelectorAll("video").forEach(toPh); old.classList.remove("cur")}
-  cur=i; const d=document.querySelector(`.scene[data-i="${i}"]`); d.classList.add("cur"); d.scrollIntoView({block:"center"});
-  d.querySelectorAll(".ph").forEach(ph=>{const v=toVideo(ph); v.play()});
+  cur=i; const d=document.querySelector(`.scene[data-i="${i}"]`); d.classList.add("cur"); if(scroll) d.scrollIntoView({block:"center"});
+  d.querySelectorAll(".cell img").forEach(im=>{const v=toVideo(im); v.play()});
 }
 const bigV=big_.querySelector("video");
-function openBig(cell){const src=(cell.querySelector(".ph,video")||{}).dataset.src; if(!src) return; bigV.src=src; bigV.currentTime=0; bigV.play(); big_.querySelector(".lab").textContent=cell.querySelector(".lab").textContent; big_.classList.add("on")}
+function openBig(cell){const src=(cell.querySelector("img,video")||{}).dataset.src; if(!src) return; bigV.src=src; bigV.currentTime=0; bigV.play(); big_.querySelector(".lab").textContent=cell.querySelector(".lab").textContent; big_.classList.add("on")}
 function closeBig(){big_.classList.remove("on"); bigV.pause(); bigV.removeAttribute("src"); bigV.load()}
-big_.addEventListener("click",e=>{if(e.target===big_) closeBig()});
+big_.addEventListener("click",e=>{if(e.target===big_) closeBig()}); bigV.addEventListener("dblclick",closeBig);
 list_.addEventListener("dblclick",e=>{const c=e.target.closest(".cell"); if(c) openBig(c)});
 addEventListener("keydown",e=>{
   if(e.target.tagName=="INPUT"||e.target.tagName=="SELECT") return;
   if(e.key=="Escape") return closeBig();
   const vs=big_.classList.contains("on")?[bigV]:[...document.querySelectorAll(".scene.cur video")];
-  if(e.key=="j") go(cur+1); else if(e.key=="k") go(cur-1);
+  if(e.key=="j") go(cur+1,true); else if(e.key=="k") go(cur-1,true);
   else if(e.key==" "){e.preventDefault(); vs.forEach(v=>v.paused?v.play():v.pause())}
   else if(e.key=="."||e.key==","){vs.forEach(v=>{v.pause(); v.currentTime+= e.key=="."?0.1:-0.1})}
   else if(e.key=="0"){vs.forEach(v=>{v.currentTime=0})}
 });
-list_.addEventListener("click",e=>{const t=e.target.closest(".cell,.head"); if(!t) return; const d=t.closest(".scene"); const k=[...d.querySelectorAll(".cell")].indexOf(t); go(+d.dataset.i); d.querySelectorAll("video").forEach((x,j)=>{if(j!==k)x.pause()})});
+list_.addEventListener("click",e=>{const t=e.target.closest(".cell"); if(!t) return; const d=t.closest(".scene"); const k=[...d.querySelectorAll(".cell")].indexOf(t);
+  if(+d.dataset.i!==cur) go(+d.dataset.i); const vs=[...d.querySelectorAll(".cell")].map(c=>c.querySelector("video")); vs.forEach((x,j)=>{if(!x) return; if(j===k){x.paused?x.play():x.pause()} else x.pause()})});
 for(const id of ["arms","kinds","smax","q","sort","dis"]) document.getElementById(id).addEventListener(id=="q"||id=="smax"?"input":"change",render);
 render();
 </script>"""

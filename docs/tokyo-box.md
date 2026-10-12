@@ -577,7 +577,7 @@ symlinks `<scene8>_<arm>_<score>_<zero kind>.mp4`, and `~/Desktop/pai_videos.htm
 sorts first on the Desktop). Rerun it after new chunks; it reads
 `results-summary.json`, so only scored rollouts appear.
 
-- `pai_videos.html` (open in Chrome): one row per scene with the scene's first frame (one JPEG per scene in `~/.cache/pai_thumbs`,
+- `pai_videos.html` (open in Chrome): one row per scene, cells fill the row and show the scene's first frame (one JPEG per scene in `~/.cache/pai_thumbs`,
   rendered once; all arms start identical), one column per arm, score / zero kind / distance driven on each cell;
   filters by arm, kind, max score, scene prefix; sort by scene, arm spread or min score; "arms disagree" keeps spread > 0.1.
   `j` / `k` next / previous scene and play the row, space pause, `.` / `,` step 0.1 s, `0` rewind, click a cell to play it
