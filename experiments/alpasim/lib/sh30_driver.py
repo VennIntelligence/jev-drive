@@ -13,6 +13,9 @@ What the simulator gives -> what the core is fed (docs/alpasim.md, "What a nuPla
   output    8 rear-axle poses at 0.5 s -> the rollout's local frame at the pose of t0 -> 10 Hz trajectory, with the shipped LTF
             sample's own functions (navsim_transfuser_challenge.trajectory, imported unchanged; Apache-2.0, NVIDIA)
   traffic   right-hand convention unless SH30_LHT=1 (the driver is not told the map)
+  route mem only for a checkpoint with the ROUTE-MEM branch (experiments/route_mem; its sidecar route_mem.json): every route message of the
+            session kept with its time, carried into the decision's rig frame by the received ego poses (rmem.Tracker), fed after the ego
+            row and logged as drive.jsonl `rmem`; SH30_RMEM=0 feeds an empty memory instead (the branch-off read)
 
 Yaw damping (decision 205): SH30_MOTION = the share of the ego's own turning shown to the model in the synthesised slots (sh30_core.py;
 default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route message is a straight line that passes the ego
@@ -63,6 +66,7 @@ from navsim_transfuser_challenge.trajectory import build_trajectory_from_plan, m
 import serve_fix as FX  # noqa: E402
 import sh30_core as C  # noqa: E402
 
+RMEM = None                                          # experiments/route_mem/lib/rmem.py, set in main() for a checkpoint with the branch
 BD = None                                            # BODY1 switches (experiments/body1/lib/serve_body.py); not imported unless JEV_STOP > 0 or JEV_REPLAN
 if float(os.environ.get("JEV_STOP", "0") or 0) > 0 or os.environ.get("JEV_REPLAN", "0") not in ("", "0"):
     sys.path.append(str(Path(__file__).resolve().parents[2] / "body1" / "lib"))
@@ -118,6 +122,7 @@ class Session:
         self.fix = FX.new(req.rollout_spec.vehicle, t.x)
         self.frames, self.jpeg, self.poses, self.states = {}, {}, {}, {}
         self.cmd = np.array([0, 0, 0, 1], np.float32)
+        self.rt = RMEM.Tracker() if RMEM else None
         self.lock = threading.Lock()
         self.count = dict(drive=0, inference=0, inference_error=0, input_error=0, state_rotated=0, cold=0)
 
@@ -146,6 +151,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
 
     def __init__(self, core: C.Core, log_dir: Path, dump: int = 0, lht: bool = False, gate: str = ""):
         self.core, self.lht, self.dump, self.dir, self.gate = core, lht, dump, log_dir, gate
+        self.rmem_on = os.environ.get("SH30_RMEM", "1") != "0"
         self.sessions, self.lock, self.gpu, self.nsess = {}, threading.Lock(), threading.Lock(), 0
         log_dir.mkdir(parents=True, exist_ok=True)
         self.out = open(log_dir / "drive.jsonl", "a", buffering=1)
@@ -215,6 +221,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         s.cmd = command_from_route(req.route)
         s.route0 = [req.route.waypoints[0].x, req.route.waypoints[0].y] if req.route.waypoints else None
         s.line = route_line([[w.x, w.y] for w in req.route.waypoints])
+        if s.rt is not None:
+            with s.lock:
+                s.rt.add(int(req.route.timestamp_us), [[w.x, w.y] for w in req.route.waypoints])
         return common_pb2.Empty()
 
     def submit_recording_ground_truth(self, req, ctx):
@@ -247,12 +256,21 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             s.count["state_rotated"] += int(dyn[-1][3])
             s.count["cold"] += len(keys) < 4
             frames, cmd = [s.frames[k] for k in keys], np.asarray(s.cmd, np.float32).copy()
+            rf = None
+            if s.rt is not None and self.rmem_on:
+                def pose_of(t):
+                    near = min(s.poses, key=lambda q: abs(q - t), default=None)
+                    if near is None or abs(near - t) > TOL_US:
+                        return None
+                    return (*_xy(s.poses[near]), yaw_from_quat(s.poses[near].pose.quat))
+                rf = s.rt.features(t0, pose_of, (*_xy(anchor), yaw0))
         t_q = time.perf_counter()
         try:
             with self.gpu:
                 t_g = time.perf_counter()
                 mo = self.motion(s)
-                o = self.core.plan(frames, pose, np.array([d[0] for d in dyn]), dyn[-1][1], cmd, s.cam["t"], yaw_rate=dyn[0][2], lht=self.lht, motion=mo)
+                o = self.core.plan(frames, pose, np.array([d[0] for d in dyn]), dyn[-1][1], cmd, s.cam["t"], yaw_rate=dyn[0][2], lht=self.lht, motion=mo,
+                                   **({"route": rf} if s.rt is not None else {}))
         except Exception as e:
             s.count["inference_error"] += 1
             LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
@@ -272,6 +290,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                       "total": round(1e3 * (t_out - t_in), 2)}}
         if fx is not None:
             rec.update(fix=fx, poses_model=o["poses_model"].round(4).tolist())
+        if "rmem" in o:
+            rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
         if bd is not None:
             rec.update(body=bd)
         self.out.write(json.dumps(rec) + "\n")
@@ -334,6 +354,10 @@ def main() -> None:
     core = C.Core(os.environ.get("SH30_TAG", "SH30-F-s0"), os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("SH30_COLD", "backwarp"),
                   float(os.environ.get("SH30_MOTION", "1")), os.environ.get("SH30_SYNTH", "gpu"))
     core.lead_out, core.base_out = FX.NEED_LEAD, FX.BASE > 0
+    global RMEM
+    if core.rm:
+        import rmem as RMEM
+        LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
     z = np.zeros(C.FRAME, np.uint8)
     # warm-up: both slot counts compiled before the port opens
     decode = tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 4, 4)])
