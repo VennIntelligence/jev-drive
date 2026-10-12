@@ -55,3 +55,23 @@ as the zeros_mech reading itself is) or tolerate an overlap depth; that is a new
 For decision 274 (the void arm B): 84 % of the cells arm B removed are oncoming by this rule (37 982 212 removed cells), and the corrected directional
 raster is *more* active on the served plans than arm B's (0.374 against 0.285). So arm B's high road-hinge activity, which went with its worse zeros
 and GT, was not mainly mask error: removing oncoming lanes from a footprint-checked road raster fires on normal driving under either geometry.
+
+
+## Amendment 16: point-based oncoming hinge variants (label study, no training)
+
+`scripts/ol_onclab.py` (job 1012-181903-051c, CPU, < 2 min; `onclab_L18YS.json`), on the zeros_mech-rule region of Amendment 15, 34 788 rows. Active = the variant enters
+the oncoming region at any of the 41 dense steps (0-4 s); the human path = the log's 9 poses at 0-4 s, linear to the same steps; heading of the region = the row's t0 heading.
+
+| variant | served plan | human path | served straight / turn (>= 45 deg) | human straight / turn | usable (served <= 0.10, human <= 0.03) |
+|:--|--:|--:|:--|:--|:--|
+| (a) rear-axle point | 0.072 | 0.021 | 0.042 / 0.262 | 0.009 / 0.120 | yes |
+| (b) box centre | 0.075 | 0.021 | 0.045 / 0.266 | 0.009 / 0.127 | yes |
+| (c) footprint, 0.5 m allowed depth | 0.130 | 0.054 | 0.096 / 0.337 | 0.027 / 0.222 | no |
+| (d) footprint, 1.0 m allowed depth | 0.083 | 0.023 | 0.055 / 0.253 | 0.011 / 0.120 | yes |
+
+d268's across-traffic early-inside zero events of YS-L18-s1 (11 with a decision two before the event; region computed on the held scene with the same rule):
+the served plan two decisions before the event is active in 9 / 11 for (a), 8 / 11 for (b) and (d) (c687799d differs: rear axle only). The two never active:
+330166de (corridor) and 8c9e3fd9 (offroad).
+
+Caveat for the usable variants: on turning rows the human's own path is active on 0.12 (straight 0.01), so on turns the hinge would still charge some
+human-like plans (the region is classified at the t0 heading for the whole 4 s). No training is queued; the variant is the user's choice.

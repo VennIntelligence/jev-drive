@@ -1,0 +1,150 @@
+{
+ "rows": 34788,
+ "human_rows": 34788,
+ "table": {
+  "a rear axle": {
+   "served": 0.07157640565712314,
+   "human": 0.021156720708290215,
+   "served_straight": 0.04225863885759965,
+   "served_turn": 0.26204713330988394,
+   "human_straight": 0.008538933905017986,
+   "human_turn": 0.11994372142103411
+  },
+  "b box centre": {
+   "served": 0.07531332643440267,
+   "human": 0.021156720708290215,
+   "served_straight": 0.045310853530031614,
+   "served_turn": 0.266268026732325,
+   "human_straight": 0.00846626212710294,
+   "human_turn": 0.127330284910306
+  },
+  "c footprint, 0.5 m depth": {
+   "served": 0.13004484304932734,
+   "human": 0.053495458203978385,
+   "served_straight": 0.09610842629264925,
+   "served_turn": 0.33696799155821316,
+   "human_straight": 0.0269248937175248,
+   "human_turn": 0.22194864579669363
+  },
+  "d footprint, 1.0 m depth": {
+   "served": 0.0830171323444866,
+   "human": 0.023140163274692423,
+   "served_straight": 0.05526688710439301,
+   "served_turn": 0.2525501231093915,
+   "human_straight": 0.01097343846517205,
+   "human_turn": 0.11959198030249736
+  }
+ },
+ "usable": [
+  "a rear axle",
+  "b box centre",
+  "d footprint, 1.0 m depth"
+ ],
+ "events": [
+  {
+   "scene": "bd70654a",
+   "type": "collision",
+   "k": 12,
+   "a rear axle": true,
+   "b box centre": true,
+   "c footprint, 0.5 m depth": true,
+   "d footprint, 1.0 m depth": true
+  },
+  {
+   "scene": "47e0ff3b",
+   "type": "collision",
+   "k": 14,
+   "a rear axle": true,
+   "b box centre": true,
+   "c footprint, 0.5 m depth": true,
+   "d footprint, 1.0 m depth": true
+  },
+  {
+   "scene": "e6056b57",
+   "type": "corridor",
+   "k": 7,
+   "a rear axle": true,
+   "b box centre": true,
+   "c footprint, 0.5 m depth": true,
+   "d footprint, 1.0 m depth": true
+  },
+  {
+   "scene": "a3882e6a",
+   "type": "corridor",
+   "k": 8,
+   "a rear axle": true,
+   "b box centre": true,
+   "c footprint, 0.5 m depth": true,
+   "d footprint, 1.0 m depth": true
+  },
+  {
+   "scene": "a3dd6d53",
+   "type": "corridor",
+   "k": 11,
+   "a rear axle": true,
+   "b box centre": true,
+   "c footprint, 0.5 m depth": true,
+   "d footprint, 1.0 m depth": true
+  },
+  {
+   "scene": "330166de",
+   "type": "corridor",
+   "k": 15,
+   "a rear axle": false,
+   "b box centre": false,
+   "c footprint, 0.5 m depth": false,
+   "d footprint, 1.0 m depth": false
+  },
+  {
+   "scene": "f3512ae1",
+   "type": "corridor",
+   "k": 15,
+   "a rear axle": true,
+   "b box centre": true,
+   "c footprint, 0.5 m depth": true,
+   "d footprint, 1.0 m depth": true
+  },
+  {
+   "scene": "8c9e3fd9",
+   "type": "offroad",
+   "k": 8,
+   "a rear axle": false,
+   "b box centre": false,
+   "c footprint, 0.5 m depth": false,
+   "d footprint, 1.0 m depth": false
+  },
+  {
+   "scene": "fde7abb6",
+   "type": "offroad",
+   "k": 9,
+   "a rear axle": true,
+   "b box centre": true,
+   "c footprint, 0.5 m depth": true,
+   "d footprint, 1.0 m depth": true
+  },
+  {
+   "scene": "53f8bc40",
+   "type": "offroad",
+   "k": 10,
+   "a rear axle": true,
+   "b box centre": true,
+   "c footprint, 0.5 m depth": true,
+   "d footprint, 1.0 m depth": true
+  },
+  {
+   "scene": "c687799d",
+   "type": "offroad",
+   "k": 12,
+   "a rear axle": true,
+   "b box centre": false,
+   "c footprint, 0.5 m depth": false,
+   "d footprint, 1.0 m depth": false
+  }
+ ],
+ "events_active_share": {
+  "a rear axle": 0.8181818181818182,
+  "b box centre": 0.7272727272727273,
+  "c footprint, 0.5 m depth": 0.7272727272727273,
+  "d footprint, 1.0 m depth": 0.7272727272727273
+ }
+}

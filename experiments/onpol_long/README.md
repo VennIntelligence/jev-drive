@@ -26,6 +26,12 @@ public-mean guardrail of the last-slot rule (Amendment 10, decision 269); the ca
 the row and trainer code it reuses unedited: [../onpol_nuplan/README.md](../onpol_nuplan/README.md); the 18-decision driver path:
 [../alpasim_long/README.md](../alpasim_long/README.md).
 
+## Oncoming hinge variants (Amendment 16, label study, no training)
+
+Point-based checks pass the label bar where footprint checks did not (served plan / human path): rear axle 0.072 / 0.021, box centre 0.075 / 0.021, footprint
+with 1.0 m allowed depth 0.083 / 0.023 (0.5 m depth 0.130 / 0.054 fails); all active on 8-9 of the 11 across-traffic early-inside events two decisions ahead;
+on turning rows the human path is still active on about 0.12. Table in [results/read/report_YSB2.md](results/read/report_YSB2.md) (third section). Waiting for the user's choice.
+
 ## Arm B' and arm B redone on zeros_mech's lane rule (Amendment 15): stopped at the label gates
 
 [results/read/report_YSB2.md](results/read/report_YSB2.md) (second section), `onc_stats_L18YS_zm.json`; `scripts/ol_zmonc.py`. The rule is right on points (the human's own rear
