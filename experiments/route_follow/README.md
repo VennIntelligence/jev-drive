@@ -63,6 +63,10 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   (slowness solved, turn shape not: left turns late / wide, right turns early / inside; the lane-centre "inside cut" is mostly the human's own line);
   `scripts/rf_ledger.py`, `results/ledger/`, figures `figs/ledger_bars.png` (look at "slow" and the turn-zero outside bar) and
   `figs/ledger_turn_shape.png` (look at the orange lines: outward after u = 0.5 on left turns, inward on right turns).
+- [research/route-follow/side-bias.md](../../research/route-follow/side-bias.md): where RSGboth's left / right bias comes from (verdict: the
+  target via the pool's state mix, not tracking, not row balance: RB0's right-turn rows sit outside 4 : 1, so `both` pulls right turns in 0.72 m
+  at 2 s vs 0.29 m on left turns; held plan 2 s RSGboth - RSG right -0.33 m, driven - plan <= 0.1 m); `scripts/rf_sidebias.py`,
+  `results/sidebias/` (`tables.md`), figure `figs/sidebias.png` (look at the right column: plan and driven overlap; orange below green on right turns).
 - [results/route-night/](results/route-night/): held reads (`held_raw.txt`, `a3/held_raw_a3.txt`), `ol_report` tables (`report_RBS.md`,
   `report_RBSG.md`, `a3/report_RSG.md`, `a3/report_RBSGc.md`), route following (`follow_held.md`, `follow_train.md`, `a3/follow_a3.md`),
   G-swap (`gswap/`), G-rely (`rely/`, `a3/rely/`), pool gates (`pool_L18RB0_gates.md`), inside-of-turn counts for all arms (`a3/offroad_a3.md`); round 2 in `r2/`, Amendment 6 in `a6/` (`report_RBSG2.md`, `held_raw_r2.txt`, `offroad_counts.json`).
