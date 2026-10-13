@@ -205,10 +205,29 @@ RSG 是存档 PAI 读数里最好的，但参照都是 gains 5 跑的：pilot �
 
 <h2>九、下一步</h2>
 <ul>
-<li>RSG-L18 是唯一候选：held 配对胜过 YS2G、公开 1491 护栏过、PAI 281 是存档里最好的；PAI 自己的行训的 RSG-PAI-s0 与它持平；剩下的是同 gains 的 PAI 参照。</li>
+<li>RSG-L18 是唯一候选：held 配对胜过 YS2G、公开 1491 护栏过、PAI 281 是存档里最好的；PAI 自己的行训的 RSG-PAI-s0 与它持平；剩下的是同 gains 的 PAI 参照。（白天的读数见第十节；RBSG2 在 PAI 上更高，但公开集已排除。）</li>
+<li>转弯学校 P0–P2 的读数（<code>research/turning-school-checks.md</code>，待出）；holdlead 的 PAI 考试读数；spin-fix 横向约束 v2。</li>
 <li>路线 hinge 今晚的训法不采用。「hinge 需要策略自己转过头的状态」是下一轮的线索；下一轮带 hinge 的臂先读公开 1491，再谈 held。</li>
 <li>变道：反事实行在路口有效、变道无效（5–7%）；要做变道，得是变道专门的行或标签，不是同一个 hinge 加量。</li>
 </ul>
+
+
+<h2>十、10-13 日间补记</h2>
+<p>白天的读数都以 RSG-L18 为参照。结论先说：<b>RSG-L18 仍是唯一候选；路线记忆在闭环里确实被依赖；「慢」的机制确认是速度历史这条输入；下一步是转弯学校的 P0–P2 读数</b>（<code>research/turning-school-checks.md</code>，待出）。</p>
+<table>
+<tr><th>项</th><th>做了什么</th><th>读数</th><th>结论</th></tr>
+<tr><td>allrows</td><td class="l">新划分（nuPlan 1491 全训练、PAI 考试）：行 +45%（RSGall）；再加速度历史 drop（RSGallV）</td><td class="l">RSGall 公开零分 +3.0 [−2.1, +8.6]；RSGallV 去掉约 75% 的 plan 短缺，公开零分 +8.5 [+2.6, +15.1]、横向 GT +0.056 米；held 上 RSGallV 0.8785 / 零分 40 / 被追尾 16（RSG 38）</td><td class="l">都不替代 RSG</td></tr>
+<tr><td>停止线</td><td class="l">RSGB：RSG 配方 + 停止线项 B + 进度护栏 P</td><td class="l">B 只在约 0.5% 的行上活跃，P 主导；走廊零分 7.5 → 12.5，GT +0.39 米；路线依赖丢失</td><td class="l">失败</td></tr>
+<tr><td>VHIST</td><td class="l">serving 时把喂给模型的速度历史 hold 住（画面不变）</td><td class="l">hold 去掉 86% 的短缺、追尾 38 → 16，但 39 个前向碰撞；holdlead（加前车 / 刹车释放）0.894（+0.028）、零分 32、追尾 −20，GT +0.10 米</td><td class="l">棘轮确认；线 M 只因 GT 不过，PAI 考试读数是主会话的例外安排</td></tr>
+<tr><td>critic pilot</td><td class="l">学习的 plan 评分器</td><td class="l">AUC 0.846（线 0.90）、lat2 R² 0.445（线 0.60）、翻转 0.41（线 0.70）；视觉 token 不加东西</td><td class="l">三线都不过；每个状态只有一条 plan，数据是硬约束</td></tr>
+<tr><td>Amendment 6</td><td class="l">第 3 轮 RBSG3；闭环里把路线记忆置空</td><td class="l">RBSG3 公开零分 53（RBSG2 77.5、RSG 45）；置空记忆后 RSG 零分 +24 [+13, +36]、RBSG2 +17 [+5, +30]，主要是走廊</td><td class="l">阻尼迭代、还没到 RSG；记忆在闭环被依赖，离线 G-rely 预测不了</td></tr>
+<tr><td>零分分类</td><td class="l">RSG 在 PAI 281 / held 460 的每个零分和低分</td><td class="l">PAI 离 0.94 差 36.8：慢 13.5、路线跟随类走廊 10.7、人停了车没停 6.0；行人不是问题，nuPlan 仿真里没有行人</td><td class="l">最大单项是慢，不是零分</td></tr>
+<tr><td>spin-fix（中间）</td><td class="l">PAI 交接打转的参考轨迹修正</td><td class="l">38 个打转 scene 全是同一机制；主会话报告 <code>JEV_TRACK=time</code> 去掉全部交接打转（读数文件未入库）</td><td class="l">横向约束 v2 待读</td></tr>
+<tr><td>PAI 考试 v1</td><td class="l">281 个 scene 分组；RBSG2 的 PAI 281</td><td class="l">hard 131 / control 75 / trainable 75；RBSG2-L18-s0 0.5994 / 零分 65（碰撞 12 / 出路 15 / 走廊 38），对 RSG +0.027 [−0.001, +0.056]</td><td class="l">PAI 上最高的均分，但公开 nuPlan 已排除；不改变候选</td></tr>
+</table>
+<p>RBSG2 在两条赛道上方向相反：公开 nuPlan 上零分 77.5（排除），PAI 上走廊零分 38 对 RSG 的 47、均分最高。路线 hinge 对 PAI 的走廊零分有作用，值得在考试集上再读，但候选不变。
+来源：<code>experiments/route_follow/results/{allrows,stopline,vhist,route-night/a6,pai281}/</code>、<code>experiments/critic_pilot/results/</code>、<code>experiments/steer_long/results/spin_fix/</code>、
+<code>experiments/alpasim/results/pai_exam/</code>、<a href="../zero-taxonomy.md">zero-taxonomy.md</a>、看片表 <a href="review-sheet-rsg.md">review-sheet-rsg.md</a>（44 段，Tokyo <code>~/Desktop/rsg-errors/</code>）。</p>
 
 <p style="font-size:13px;color:#888">来源：<code>experiments/route_follow/results/route-night/</code>（held_raw*.txt、report_*.md、follow_*.md、gswap/、rely/、pool_L18RB0_gates.md、a3/、r2/）、<code>results/cf_gates.json</code>、
 <code>research/route-follow-offroad.md</code>、<code>experiments/steer_long/results/gains_pilot/read.md</code>；登记 <code>experiments/route_follow/plans/2026-10-13-route-night-prereg.md</code>；box <code>$DATA_DIR/runs/route_mem/</code>、<code>$DATA_DIR/runs/route_follow/</code>。</p>

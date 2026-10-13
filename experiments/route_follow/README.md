@@ -28,10 +28,18 @@ gives ~19 spins and ~3 zeros of a YS-L18 read to the gains); same-gains referenc
 round on RB0-F-s0's own PAI rows) reads 0.565 / 77, level with RSG-L18 (-0.007 [-0.034, +0.021]): RSG-L18 is the single candidate on
 both tracks (`results/pai281/`).
 
-**Next.** Tokyo PAI 281 queue: RBSG2-L18-s0 (~11:25 JST, mechanism), RB0-F-s0 (~13:35, same-gains base reference), RBSGc-PAI (~15:45);
-a YS-L18-s0 reference at gains 20 is still to be run. The mechanism
-lead (the hinge needs the policy's own over-turning states) is for a next round, with a public-set read before any held claim (held 452
-could not separate RBSG2 from RSG; the public set separates them by 32.5 zeros).
+Day-time addendum (2026-10-13, decision 286): +45 % rows (RSGall) give no public gain (zeros +3); the speed-history drop (RSGallV)
+removes ~75 % of the plan shortness but costs public zeros (+8.5) and GT (+0.056 m); the stop-line arm RSGB fails (B active on ~0.5 % of
+rows, P dominates, corridor 7.5 -> 12.5, GT +0.39 m, route reliance lost); holding the fed speed history (VHIST) removes 86 % of the
+shortness, so the slowness ratchet runs through that input, and holdlead reads held 0.894 (+0.028), 32 zeros, rear-ended -20 but GT +0.10
+(line M fails on GT); a learned plan critic fails all three lines (AUC 0.846, R^2 0.445, flip 0.41; one plan per state); round 3 RBSG3
+reads 53 public zeros (damped iteration toward RSG); with the memory fed empty in closed loop RSG loses 24 zeros and RBSG2 17, mostly
+corridor, so the memory is relied on in closed loop and offline G-rely does not predict it; RSG's PAI gap to 0.94 is 36.8 points
+(slow 13.5, route-following corridor 10.7, drove past the human's stop 6.0; research/zero-taxonomy.md); PAI exam split v1 hard 131 /
+control 75 / trainable 75; RBSG2-L18-s0 on PAI 281 0.599 / 65, the best PAI mean, though excluded on public nuPlan.
+
+**Next.** Turning-school reads P0-P2 (`research/turning-school-checks.md`, to appear); the holdlead PAI exam read (coordinator exception);
+spin-fix lateral bound v2; Tokyo PAI 281: RB0-F-s0 (same-gains base reference), RBSGc-PAI.
 
 **Read more.** [research/decisions/286.md](../../research/decisions/286.md) (Chinese; full table, six line verdicts, branches, card-hours);
 human page [research/route-follow/index.html](../../research/route-follow/index.html) (four figures copied to research/route-follow/figs/); task book
@@ -45,7 +53,7 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   "right-turn inside" column (17-21 vs 1-2) and the H1-H5 verdicts (labels on road, memory not drifted, over-rotation in small right turns).
 - [results/route-night/](results/route-night/): held reads (`held_raw.txt`, `a3/held_raw_a3.txt`), `ol_report` tables (`report_RBS.md`,
   `report_RBSG.md`, `a3/report_RSG.md`, `a3/report_RBSGc.md`), route following (`follow_held.md`, `follow_train.md`, `a3/follow_a3.md`),
-  G-swap (`gswap/`), G-rely (`rely/`, `a3/rely/`), pool gates (`pool_L18RB0_gates.md`), inside-of-turn counts for all arms (`a3/offroad_a3.md`); round 2 in `r2/` (`report_RBSG2.md`, `held_raw_r2.txt`, `offroad_counts.json`).
+  G-swap (`gswap/`), G-rely (`rely/`, `a3/rely/`), pool gates (`pool_L18RB0_gates.md`), inside-of-turn counts for all arms (`a3/offroad_a3.md`); round 2 in `r2/`, Amendment 6 in `a6/` (`report_RBSG2.md`, `held_raw_r2.txt`, `offroad_counts.json`).
 - [results/vhist/](results/vhist/): JEV_VHIST serving switch on held 460 (hold: 86 % of the shortness removed, +36 zeros, all front collisions; holdlead: score +0.028, zeros -2, rear-ended -20, but GT +0.10 fails line M; zero on RSGallV does not help); prereg `plans/2026-10-13-vhist-prereg.md`.
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
