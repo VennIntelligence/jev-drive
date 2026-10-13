@@ -5,6 +5,9 @@ reference label scored > 0 without a handoff spin and its own path turned 60 to 
 completes a turn scene when its own path also turns >= 60 deg with the same sign and the scene scores > 0. Left / right by sign.
 
   rf_pai281.py --rows rsg=/data/runs/route_night/r281/rsg ys0=/data/runs/onpol_long/pai281/ys0 ... --ref ybase,ys0,ys1 [--out md]
+  --lists hard=<file> control=<file> --vs rsg   per scene list: mean, zeros by kind, spins, plan 2 s deficit (served plan arc through 0.5 .. 2.0 s
+                                                minus fed speed x 2 s, inferences with speed >= 1 m/s, whole rollout, per-rollout mean), and the
+                                                scene-paired difference of every label against --vs (bootstrap over scenes, 10 000 draws, seed 0)
 """
 import argparse, csv, glob, json, os
 
@@ -33,13 +36,54 @@ def read(root):
     return out
 
 
+def deficit(root):
+    """{scene: mean plan 2 s deficit (m) of the rollout} from drive.jsonl (PAI: one inference per call)."""
+    out = {}
+    for f in glob.glob(os.path.join(root, "runs", "*", "driver", "drive.jsonl")):
+        acc = {}
+        for line in open(f):
+            if '"infer": true' not in line:
+                continue
+            r = json.loads(line)
+            v = 10.0 * float(np.hypot(r["ego"][4], r["ego"][5]))
+            if v < 1:
+                continue
+            P = np.array(r["poses"])[:4, :2]
+            arc = float(np.hypot(*P[0]) + np.hypot(*np.diff(P, axis=0).T).sum())
+            acc.setdefault(r["scene"], []).append(arc - 2.0 * v)
+        out.update({k: float(np.mean(v)) for k, v in acc.items()})
+    return out
+
+
+def lists(D, roots, a):
+    rng = np.random.default_rng(0)
+    Df = {k: deficit(v) for k, v in roots.items()}
+    L = []
+    for spec in a.lists:
+        n, f = spec.split("=", 1)
+        sc = [s for s in open(f).read().split() if all(s in d for d in D.values())]
+        L += ["", f"## {n}: {len(sc)} scenes", "", "| label | mean | zeros | collision | offroad | corridor | spins | plan 2 s deficit m | vs " + a.vs + " (95 % CI) |",
+              "|:--|--:|--:|--:|--:|--:|--:|--:|:--|"]
+        for k, d in D.items():
+            z = [d[s]["kind"] for s in sc if d[s]["kind"]]
+            df = np.nanmean([Df[k].get(s, np.nan) for s in sc])
+            x = np.array([d[s]["score"] - D[a.vs][s]["score"] for s in sc])
+            bs = x[rng.integers(0, len(x), (10000, len(x)))].mean(1)
+            L.append(f"| {k} | {np.mean([d[s]['score'] for s in sc]):.4f} | {len(z)} | {z.count('collision')} | {z.count('offroad')} | {z.count('corridor')} | "
+                     f"{sum(d[s]['spin'] for s in sc)} | {df:+.2f} | {x.mean():+.4f} [{np.quantile(bs, 0.025):+.4f}, {np.quantile(bs, 0.975):+.4f}] |")
+    return L
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rows", nargs="+", required=True)
     ap.add_argument("--ref", default="ybase,ys0,ys1")
     ap.add_argument("--out", default="")
+    ap.add_argument("--lists", nargs="*", default=[])
+    ap.add_argument("--vs", default="")
     a = ap.parse_args()
-    D = {k: read(v) for k, v in (x.split("=", 1) for x in a.rows)}
+    roots = dict(x.split("=", 1) for x in a.rows)
+    D = {k: read(v) for k, v in roots.items()}
     common = sorted(set.intersection(*[set(d) for d in D.values()]))
     refs = [r for r in a.ref.split(",") if r in D]
     ok = lambda r, s: D[r][s]["score"] > 0 and not D[r][s]["spin"] and 60 <= abs(D[r][s]["turn"]) <= 200  # noqa: E731  a scored, non-spinning turn
@@ -53,6 +97,8 @@ def main():
         nl, nr = sum(v > 0 for v in turns.values()), sum(v < 0 for v in turns.values())
         L.append(f"| {k} | {np.mean([d[s]['score'] for s in common]):.4f} | {len(z)} | {z.count('collision')} | {z.count('offroad')} | {z.count('corridor')} | "
                  f"{sum(d[s]['spin'] for s in common)} | {len(done(1))}/{nl} | {len(done(-1))}/{nr} |")
+    if a.lists:
+        L += lists(D, roots, a)
     print("\n".join(L))
     if a.out:
         open(a.out, "w").write("\n".join(L) + "\n")
