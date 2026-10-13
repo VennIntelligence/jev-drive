@@ -4,7 +4,7 @@
 # from envs/op-train); the pool places the jobs, so a read spreads over every card with room (a stack peaks at 26-27 GB, a box card holds three).
 #   pai_box.sh submit <out root> <checkpoint tag> <scene list>...   lists: pai_scenes.py tsv (stage <= 1 rows) or plain scene ids
 #   pai_box.sh run <out root> <checkpoint tag> <chunk>              job body (one chunk)
-# Env (submit): CHUNK (scenes per job, 25), CHUNKS_FROM (a dir of chunk lists, e.g. a Tokyo read's chunks/: the simulator repeats a scene
+# Env (submit): GPUS (allowed cards, strict, e.g. 1,2,3,4,5), CHUNK (scenes per job, 25), CHUNKS_FROM (a dir of chunk lists, e.g. a Tokyo read's chunks/: the simulator repeats a scene
 #   only within an identical list, so a parity read reuses the other read's lists), CONC (4 rollouts per stack), SERVE (driver switches,
 #   default the served configuration "JEV_VCONT=1.0 JEV_LEAD=1"; other driver env such as JEV_VHIST=holdlead or SH30_RMEM=0 goes here too),
 #   WIZ (wizard overrides, space separated, e.g. "controller.gains.rel_front_steering_angle_weight=20"), PRIO (pool priority, 13),
@@ -43,7 +43,7 @@ PY
     [[ " $miss " == *" $c "* ]] && { echo "$c: scenes missing from the cache, not submitted"; continue; }
     mkdir -p "$r/pool"
     id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --no-check --owner pai-box --name "pai-$L-$c" --vram 28 --cpu 6 --ram 40 --timeout-h 3 \
-           --tries 2 --priority "${PRIO:-13}" ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env CL_HIST_KEY=pai-read4 --env "CONC=${CONC:-4}" \
+           --tries 2 --priority "${PRIO:-13}" ${GPUS:+--gpus "$GPUS" --pin-strict} ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env CL_HIST_KEY=pai-read4 --env "CONC=${CONC:-4}" \
            --env "WIZ=${WIZ:-}" --env "KEEP_VIDEO=${KEEP_VIDEO:-0}" --env "KEEP_ASL=${KEEP_ASL:-0}" "${X[@]}" -- bash "$here/pai_box.sh" run "$O" "$T" "$c" | awk '{print $NF}')
     [[ -n $id ]] || { echo "submit $c failed" >&2; exit 1; }
     echo "$id" > "$r/SUBMITTED"; echo "$id pai-$L-$c" | tee -a "$O/jobs.txt"
