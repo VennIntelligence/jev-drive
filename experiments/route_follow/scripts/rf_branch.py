@@ -3,7 +3,7 @@
 handover decision k and the policy drives from k on (experiments/onpol_pai/lib/onp_log_driver.py, ONP_SWITCH), k at the junction entry
 -40 / -20 / -10 / 0 m along the log. Does the policy complete a turn when it is handed the right entry state at the right speed?
 
-  plan  (Tokyo, inside alpasim-base:0.89.0)  rf_branch.py plan --cfg <a PAI run's generated-user-config-0.yaml> --scenes <ids file> --out <dir>
+  plan  (Tokyo, inside alpasim-base:0.89.0)  rf_branch.py plan --root <a PAI read with these scenes> --scenes <ids file> --out <dir>
         Per scene, from the logged rig path: the turn (largest heading change within 30 m of arc, >= 60 deg; turning-school-checks.md 1),
         the entry (first point of the first 30 m window that reaches 60 deg departing 5 deg from the window start), the exit (first point
         within 5 deg of the largest heading change from the entry inside entry + 40 m), the target (exit + 10 m), and per arm the decision
@@ -14,8 +14,8 @@ handover decision k and the policy drives from k on (experiments/onpol_pai/lib/o
         Per rollout (runs/*/sim of each root): score, zero type and time (rf_tax.classify's rule: the earliest flag that zeroed it), the
         ego's station along the log (windowed projection, monotone), the route (AlpaSim RouteGenerator MAP at the ego's 0.5 s poses, as
         rf_tax.extract), and
-          done     the ego reaches the target station within ROUTE_TOL m of the route, before its zero event and before the rollout ends
-          d_exit   the ego's distance to the log when it first reaches the exit station (None: never reached)
+          done     at some step before its zero event the ego's station is at or past the target and it is within ROUTE_TOL m of the route
+          d_exit   the ego's distance to the log when it first reaches the exit station before its zero event (None: never)
           s_short  target station minus the furthest station reached (> 0: did not get there)
           ho_off   the ego's offset from the log at the handover decision (drive.jsonl `log_now` of record k_eff)
   table (Mac or Tokyo, plain python3)  rf_branch.py table --read <json> [--md <md>]   per-scene table (4 branches), ceiling, completion by arm.
@@ -30,7 +30,7 @@ import os
 import sys
 from pathlib import Path
 
-ARMS, WIN, THR, DEP, EXIT_WIN, EXIT_TOL, TGT, ROUTE_TOL, FGT_K = (40, 20, 10, 0), 30, 60.0, 5.0, 40, 5.0, 10.0, 2.5, 17
+ARMS, WIN, THR, DEP, EXIT_WIN, EXIT_TOL, TGT, ROUTE_TOL, FGT_K, FAR = (40, 20, 10, 0), 30, 60.0, 5.0, 40, 5.0, 10.0, 2.5, 17, 10.0
 
 
 def arc_profile(P, Y, T):
@@ -73,8 +73,12 @@ def plan(a):
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     scenes, P = [x.split()[0] for x in open(a.scenes) if x.strip() and not x.startswith("#")], {}
+    cfg = {}                                                 # scene -> the generated config of the run that rolled it (its loader knows it)
+    for f in glob.glob(os.path.join(a.root, "runs", "*", "sim", "aggregate", "results-summary.json")):
+        for r in json.load(open(f))["rollouts"]:
+            cfg.setdefault(r["clipgt_id"], f.replace("aggregate/results-summary.json", "generated-user-config-0.yaml"))
     for sc in scenes:
-        tr = X.loader(a.cfg).get_data_source(sc).rig.trajectory
+        tr = X.loader(cfg[sc]).get_data_source(sc).rig.trajectory
         s, y, t = arc_profile(np.asarray(tr.positions, float)[:, :2], np.asarray(tr.yaws, float), np.asarray(tr.timestamps_us, float))
         tp = turn_points(s, y, t)
         if tp is None:
@@ -92,7 +96,8 @@ def plan(a):
 
 
 def station(L, xy, s_hint=0.0):
-    """Monotone windowed projection of the ego path xy (n, 2) on the log polyline L (m, 2) -> station (n,), distance (n,)."""
+    """Monotone windowed projection of the ego path xy (n, 2) on the log polyline L (m, 2) -> station (n,), distance (n,); the station
+    only advances while the ego is within FAR m of the log."""
     import numpy as np
     S = np.r_[0.0, np.cumsum(np.hypot(*np.diff(L, axis=0).T))]
     st, dist, cur = np.zeros(len(xy)), np.zeros(len(xy)), s_hint
@@ -106,8 +111,10 @@ def station(L, xy, s_hint=0.0):
         q = a + u[:, None] * ab
         dd = np.hypot(*(p - q).T)
         j = int(dd.argmin())
-        st[i], dist[i] = S[m[j]] + u[j] * np.sqrt(l2[j]), dd[j]
-        cur = max(cur, st[i])
+        dist[i] = dd[j]
+        if dd[j] <= FAR:                                     # off the log the station is held: no creep along the window
+            cur = max(cur, S[m[j]] + u[j] * np.sqrt(l2[j]))
+        st[i] = cur
     return st, dist
 
 
@@ -175,10 +182,11 @@ def read(a):
                 except Exception:  # noqa: BLE001
                     R, rerr = L, 1
                 dr = X.poly_proj(R, xy)[0]
-                hit = np.where((st >= p["target"]) & (C["t"] < t_zero))[0]
-                ix = np.where(st >= p["exit"])[0]
+                ok = C["t"] < t_zero
+                hit = np.where((st >= p["target"]) & ok & (dr <= ROUTE_TOL))[0]
+                ix = np.where((st >= p["exit"]) & ok)[0]
                 row.update(zero=zt, t_zero=(t_zero - C["t"][0]) * 1e-6 if np.isfinite(t_zero) else None, route_err=rerr,
-                           done=bool(len(hit) and dr[hit[0]] <= ROUTE_TOL), d_route_tgt=float(dr[hit[0]]) if len(hit) else None,
+                           done=bool(len(hit)), d_route_tgt=float(dr[hit[0]]) if len(hit) else None,
                            t_tgt=float((C["t"][hit[0]] - C["t"][0]) * 1e-6) if len(hit) else None,
                            d_exit=float(dl[ix[0]]) if len(ix) else None, s_short=float(p["target"] - st[C["t"] < t_zero].max()),
                            end=("zero" if np.isfinite(t_zero) else "rear" if float(m.get("collision_rear") or 0) > 0 else "end"))
@@ -222,7 +230,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("plan")
-    p.add_argument("--cfg", required=True)
+    p.add_argument("--root", required=True)
     p.add_argument("--scenes", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--off", type=int, default=0)
