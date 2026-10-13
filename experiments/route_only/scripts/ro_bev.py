@@ -64,6 +64,10 @@ def main():
     if r.get("route_path"):
         P = np.asarray(r["route_path"])
         ax.plot(P[:, 1], P[:, 0], "-", c="0.55", lw=6, alpha=0.45, label="route path (carried memory + blend)", zorder=1)
+    if r.get("rmem"):                                    # the fed memory window (-6 .. +72 m, valid points): what the route covers now
+        F = np.asarray(r["rmem"]).reshape(40, 5)
+        F = F[F[:, 0] > 0.5]
+        ax.plot(F[:, 2] * 20, F[:, 1] * 20, "o", c="0.35", ms=2.5, label=f"carried route memory ({len(F)} / 40 points valid)", zorder=2)
     pm = np.asarray(r.get("poses_model", r["poses"]))
     ax.plot(np.r_[0, pm[:, 1]], np.r_[0, pm[:, 0]], "o--", c="#d1495b", ms=4, lw=1.4, label="model plan (RSG-L18-s0)", zorder=3)
     ps = np.asarray(r["poses"])
