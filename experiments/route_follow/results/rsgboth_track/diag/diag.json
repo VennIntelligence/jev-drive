@@ -1,0 +1,1004 @@
+{
+ "collect": "/root/autodl-tmp/ujs/runs/zeros_mech/collect/20261013-221420",
+ "follow": "/root/autodl-tmp/ujs/runs/route_follow/rsgboth_track/follow",
+ "pairs": {
+  "RSGboth-L18-s0-rtgate:RSG-L18-s0": {
+   "zeros_A": 41,
+   "zeros_B": 26,
+   "extra_A": {
+    "n": 22,
+    "type": {
+     "offroad": 8,
+     "collision": 7,
+     "corridor": 7
+    },
+    "cls": {
+     "curve": 12,
+     "straight": 6,
+     "junction": 4
+    },
+    "turn_scene": 1,
+    "lead": 8,
+    "box": 9,
+    "at_fault": 7,
+    "v_e_med": 3.2613211915361453,
+    "v_log_med": 1.9626030038870677,
+    "v_ratio_med": 1.651832241808731,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "curve",
+      "n": 2
+     },
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 5
+     },
+     {
+      "type": "corridor",
+      "cls": "curve",
+      "n": 5
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 5
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 1
+     }
+    ]
+   },
+   "extra_B": {
+    "n": 7,
+    "type": {
+     "offroad": 3,
+     "collision": 3,
+     "corridor": 1
+    },
+    "cls": {
+     "straight": 4,
+     "curve": 2,
+     "junction": 1
+    },
+    "turn_scene": 0,
+    "lead": 1,
+    "box": 1,
+    "at_fault": 3,
+    "v_e_med": 2.9679907187057664,
+    "v_log_med": 4.394065032107271,
+    "v_ratio_med": 0.6754544361584929,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 3
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 1
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 1
+     }
+    ]
+   },
+   "shared": {
+    "n": 19,
+    "type": {
+     "offroad": 13,
+     "corridor": 4,
+     "collision": 2
+    },
+    "cls": {
+     "curve": 9,
+     "straight": 5,
+     "junction": 5
+    },
+    "turn_scene": 1,
+    "lead": 0,
+    "box": 2,
+    "at_fault": 2,
+    "v_e_med": 4.533470637143736,
+    "v_log_med": 4.308740346547552,
+    "v_ratio_med": 1.0521568422604657,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "curve",
+      "n": 1
+     },
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 1
+     },
+     {
+      "type": "corridor",
+      "cls": "curve",
+      "n": 2
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 6
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 3
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 4
+     }
+    ]
+   },
+   "speed": {
+    "curve": {
+     "decisions": 2121,
+     "scenes": 246,
+     "v_a": 4.9855707865756225,
+     "v_b": 4.1127657040473355,
+     "v_log": 4.827319809832548,
+     "dv": 0.8728050825282874,
+     "lo": 0.7224622947219465,
+     "hi": 1.032196013897018,
+     "over_log_a": 0.15825097674307662,
+     "over_log_b": -0.7145541057852107,
+     "share_fast_a": 0.17208863743517208,
+     "share_fast_b": 0.06789250353606789
+    },
+    "junction": {
+     "decisions": 728,
+     "scenes": 165,
+     "v_a": 5.519148549910757,
+     "v_b": 5.148082198838986,
+     "v_log": 5.657667527655254,
+     "dv": 0.3710663510717711,
+     "lo": 0.1795423097786751,
+     "hi": 0.56206251051408,
+     "over_log_a": -0.13851897774449748,
+     "over_log_b": -0.5095853288162687,
+     "share_fast_a": 0.13736263736263737,
+     "share_fast_b": 0.10302197802197802
+    },
+    "straight": {
+     "decisions": 3512,
+     "scenes": 344,
+     "v_a": 7.204182111179495,
+     "v_b": 6.236666545930701,
+     "v_log": 7.25360931782433,
+     "dv": 0.9675155652487946,
+     "lo": 0.828872388412393,
+     "hi": 1.1051996324355065,
+     "over_log_a": -0.04942720664483446,
+     "over_log_b": -1.016942771893629,
+     "share_fast_a": 0.12215261958997722,
+     "share_fast_b": 0.04100227790432802
+    }
+   }
+  },
+  "RSGboth-L18-s0-rtgatep:RSG-L18-s0": {
+   "zeros_A": 39,
+   "zeros_B": 26,
+   "extra_A": {
+    "n": 21,
+    "type": {
+     "offroad": 7,
+     "collision": 7,
+     "corridor": 7
+    },
+    "cls": {
+     "curve": 11,
+     "straight": 6,
+     "junction": 4
+    },
+    "turn_scene": 0,
+    "lead": 8,
+    "box": 9,
+    "at_fault": 7,
+    "v_e_med": 3.0971490694812327,
+    "v_log_med": 1.7410311205395832,
+    "v_ratio_med": 1.7038784154867095,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "curve",
+      "n": 2
+     },
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 5
+     },
+     {
+      "type": "corridor",
+      "cls": "curve",
+      "n": 5
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 4
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 1
+     }
+    ]
+   },
+   "extra_B": {
+    "n": 8,
+    "type": {
+     "offroad": 4,
+     "collision": 3,
+     "corridor": 1
+    },
+    "cls": {
+     "straight": 4,
+     "curve": 2,
+     "junction": 2
+    },
+    "turn_scene": 0,
+    "lead": 1,
+    "box": 1,
+    "at_fault": 3,
+    "v_e_med": 3.5177593341804743,
+    "v_log_med": 4.4208770062897385,
+    "v_ratio_med": 0.7391560281250318,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 3
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 1
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 1
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 1
+     }
+    ]
+   },
+   "shared": {
+    "n": 18,
+    "type": {
+     "offroad": 13,
+     "corridor": 4,
+     "collision": 1
+    },
+    "cls": {
+     "curve": 9,
+     "junction": 5,
+     "straight": 4
+    },
+    "turn_scene": 1,
+    "lead": 0,
+    "box": 1,
+    "at_fault": 1,
+    "v_e_med": 4.6295281727174284,
+    "v_log_med": 4.1521059893272465,
+    "v_ratio_med": 1.0537085106568629,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "curve",
+      "n": 1
+     },
+     {
+      "type": "corridor",
+      "cls": "curve",
+      "n": 2
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 6
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 3
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 4
+     }
+    ]
+   },
+   "speed": {
+    "curve": {
+     "decisions": 2129,
+     "scenes": 247,
+     "v_a": 4.983009755500824,
+     "v_b": 4.108813383920883,
+     "v_log": 4.825640265728175,
+     "dv": 0.8741963715799402,
+     "lo": 0.7200613409798649,
+     "hi": 1.0265176803834235,
+     "over_log_a": 0.15736948977264845,
+     "over_log_b": -0.7168268818072917,
+     "share_fast_a": 0.17144199154532644,
+     "share_fast_b": 0.06763738844527947
+    },
+    "junction": {
+     "decisions": 728,
+     "scenes": 165,
+     "v_a": 5.526147984959307,
+     "v_b": 5.150688512200391,
+     "v_log": 5.654905216623969,
+     "dv": 0.3754594727589155,
+     "lo": 0.18402057170419261,
+     "hi": 0.5641318492969558,
+     "over_log_a": -0.12875723166466302,
+     "over_log_b": -0.5042167044235785,
+     "share_fast_a": 0.14423076923076922,
+     "share_fast_b": 0.10302197802197802
+    },
+    "straight": {
+     "decisions": 3514,
+     "scenes": 344,
+     "v_a": 7.203511762603676,
+     "v_b": 6.2358952387193405,
+     "v_log": 7.252896348451121,
+     "dv": 0.9676165238843347,
+     "lo": 0.8303105869985556,
+     "hi": 1.1059922674526437,
+     "over_log_a": -0.04938458584744587,
+     "over_log_b": -1.0170011097317806,
+     "share_fast_a": 0.1217985202048947,
+     "share_fast_b": 0.040978941377347755
+    }
+   }
+  },
+  "RSGboth-L18-s0-rttimep:RSG-L18-s0": {
+   "zeros_A": 41,
+   "zeros_B": 26,
+   "extra_A": {
+    "n": 21,
+    "type": {
+     "offroad": 7,
+     "collision": 7,
+     "corridor": 7
+    },
+    "cls": {
+     "curve": 12,
+     "straight": 6,
+     "junction": 3
+    },
+    "turn_scene": 0,
+    "lead": 8,
+    "box": 9,
+    "at_fault": 7,
+    "v_e_med": 3.0971490694812327,
+    "v_log_med": 1.7410311205395832,
+    "v_ratio_med": 1.7038784154867095,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "curve",
+      "n": 2
+     },
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 5
+     },
+     {
+      "type": "corridor",
+      "cls": "curve",
+      "n": 5
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 5
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 1
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 1
+     }
+    ]
+   },
+   "extra_B": {
+    "n": 6,
+    "type": {
+     "offroad": 3,
+     "collision": 2,
+     "corridor": 1
+    },
+    "cls": {
+     "straight": 3,
+     "curve": 2,
+     "junction": 1
+    },
+    "turn_scene": 0,
+    "lead": 0,
+    "box": 0,
+    "at_fault": 2,
+    "v_e_med": 2.8400732929135533,
+    "v_log_med": 4.138211527169357,
+    "v_ratio_med": 0.662594362614555,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 2
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 1
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 1
+     }
+    ]
+   },
+   "shared": {
+    "n": 20,
+    "type": {
+     "offroad": 13,
+     "corridor": 4,
+     "collision": 3
+    },
+    "cls": {
+     "curve": 9,
+     "straight": 6,
+     "junction": 5
+    },
+    "turn_scene": 1,
+    "lead": 2,
+    "box": 3,
+    "at_fault": 3,
+    "v_e_med": 4.6295281727174284,
+    "v_log_med": 4.318316106809364,
+    "v_ratio_med": 1.0456560319825297,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "curve",
+      "n": 1
+     },
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 2
+     },
+     {
+      "type": "corridor",
+      "cls": "curve",
+      "n": 2
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 6
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 3
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 4
+     }
+    ]
+   },
+   "speed": {
+    "curve": {
+     "decisions": 2123,
+     "scenes": 247,
+     "v_a": 4.984221516798996,
+     "v_b": 4.112680656434795,
+     "v_log": 4.826515001802934,
+     "dv": 0.8715408603642013,
+     "lo": 0.7188072374185202,
+     "hi": 1.022749172494406,
+     "over_log_a": 0.1577065149960617,
+     "over_log_b": -0.7138343453681395,
+     "share_fast_a": 0.17192651907677814,
+     "share_fast_b": 0.06782854451248234
+    },
+    "junction": {
+     "decisions": 726,
+     "scenes": 165,
+     "v_a": 5.54002383274066,
+     "v_b": 5.133692878831753,
+     "v_log": 5.6361809258300335,
+     "dv": 0.40633095390890805,
+     "lo": 0.2178879636814437,
+     "hi": 0.5965633643314323,
+     "over_log_a": -0.0961570930893724,
+     "over_log_b": -0.5024880469982804,
+     "share_fast_a": 0.1418732782369146,
+     "share_fast_b": 0.10192837465564739
+    },
+    "straight": {
+     "decisions": 3518,
+     "scenes": 344,
+     "v_a": 7.208352602730791,
+     "v_b": 6.237966702968084,
+     "v_log": 7.253666545668981,
+     "dv": 0.9703858997627078,
+     "lo": 0.8333878520572814,
+     "hi": 1.1079305760354632,
+     "over_log_a": -0.04531394293818943,
+     "over_log_b": -1.0156998427008972,
+     "share_fast_a": 0.12279704377487209,
+     "share_fast_b": 0.0412166003411029
+    }
+   }
+  },
+  "RSG-L18-s0-rtgatep:RSG-L18-s0": {
+   "zeros_A": 28,
+   "zeros_B": 26,
+   "extra_A": {
+    "n": 6,
+    "type": {
+     "offroad": 4,
+     "corridor": 2
+    },
+    "cls": {
+     "straight": 3,
+     "curve": 3
+    },
+    "turn_scene": 0,
+    "lead": 0,
+    "box": 0,
+    "at_fault": 0,
+    "v_e_med": 3.6821075307652897,
+    "v_log_med": 2.764633229571503,
+    "v_ratio_med": 0.6903004842662865,
+    "by_type_cls": [
+     {
+      "type": "corridor",
+      "cls": "straight",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 3
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 1
+     }
+    ]
+   },
+   "extra_B": {
+    "n": 4,
+    "type": {
+     "offroad": 2,
+     "collision": 1,
+     "corridor": 1
+    },
+    "cls": {
+     "curve": 2,
+     "straight": 1,
+     "junction": 1
+    },
+    "turn_scene": 0,
+    "lead": 1,
+    "box": 1,
+    "at_fault": 1,
+    "v_e_med": 2.8440354981807356,
+    "v_log_med": 3.8860965538415577,
+    "v_ratio_med": 0.8932215887699647,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 1
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 1
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 2
+     }
+    ]
+   },
+   "shared": {
+    "n": 22,
+    "type": {
+     "offroad": 14,
+     "corridor": 6,
+     "collision": 2
+    },
+    "cls": {
+     "curve": 10,
+     "junction": 7,
+     "straight": 5
+    },
+    "turn_scene": 1,
+    "lead": 0,
+    "box": 1,
+    "at_fault": 2,
+    "v_e_med": 4.519411737935862,
+    "v_log_med": 4.168155784538271,
+    "v_ratio_med": 0.9983566475061636,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 2
+     },
+     {
+      "type": "corridor",
+      "cls": "curve",
+      "n": 3
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 3
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 7
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 4
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 3
+     }
+    ]
+   },
+   "speed": {
+    "curve": {
+     "decisions": 2120,
+     "scenes": 238,
+     "v_a": 4.160210691753519,
+     "v_b": 4.127059729897107,
+     "v_log": 4.7959724377252435,
+     "dv": 0.03315096185641193,
+     "lo": -0.011356375493952794,
+     "hi": 0.0762522389553111,
+     "over_log_a": -0.6357617459717263,
+     "over_log_b": -0.6689127078281384,
+     "share_fast_a": 0.05518867924528302,
+     "share_fast_b": 0.06792452830188679
+    },
+    "junction": {
+     "decisions": 765,
+     "scenes": 155,
+     "v_a": 4.969803473060811,
+     "v_b": 5.205924840269209,
+     "v_log": 5.6896876325035475,
+     "dv": -0.23612136720839882,
+     "lo": -0.3114660569217664,
+     "hi": -0.1573199976376254,
+     "over_log_a": -0.7198841594427366,
+     "over_log_b": -0.4837627922343377,
+     "share_fast_a": 0.058823529411764705,
+     "share_fast_b": 0.1084967320261438
+    },
+    "straight": {
+     "decisions": 3526,
+     "scenes": 330,
+     "v_a": 6.180938526098654,
+     "v_b": 6.176943981019922,
+     "v_log": 7.222236178112764,
+     "dv": 0.003994545078731918,
+     "lo": -0.03618799474595661,
+     "hi": 0.04324027209886766,
+     "over_log_a": -1.0412976520141106,
+     "over_log_b": -1.0452921970928426,
+     "share_fast_a": 0.03601815087918321,
+     "share_fast_b": 0.03885422575155984
+    }
+   }
+  },
+  "RSGboth-L18-s0:RSG-L18-s0": {
+   "zeros_A": 33,
+   "zeros_B": 26,
+   "extra_A": {
+    "n": 14,
+    "type": {
+     "corridor": 5,
+     "offroad": 5,
+     "collision": 4
+    },
+    "cls": {
+     "curve": 8,
+     "straight": 4,
+     "junction": 2
+    },
+    "turn_scene": 0,
+    "lead": 5,
+    "box": 5,
+    "at_fault": 4,
+    "v_e_med": 4.019689486107652,
+    "v_log_med": 4.207188151048413,
+    "v_ratio_med": 1.3329168802162572,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "curve",
+      "n": 2
+     },
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 2
+     },
+     {
+      "type": "corridor",
+      "cls": "curve",
+      "n": 3
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 1
+     },
+     {
+      "type": "corridor",
+      "cls": "straight",
+      "n": 1
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 3
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 1
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 1
+     }
+    ]
+   },
+   "extra_B": {
+    "n": 7,
+    "type": {
+     "offroad": 4,
+     "collision": 2,
+     "corridor": 1
+    },
+    "cls": {
+     "straight": 3,
+     "junction": 3,
+     "curve": 1
+    },
+    "turn_scene": 0,
+    "lead": 0,
+    "box": 0,
+    "at_fault": 2,
+    "v_e_med": 4.067527949655182,
+    "v_log_med": 4.447688980472206,
+    "v_ratio_med": 0.8028576200915708,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 2
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 1
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 1
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 2
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 1
+     }
+    ]
+   },
+   "shared": {
+    "n": 19,
+    "type": {
+     "offroad": 12,
+     "corridor": 4,
+     "collision": 3
+    },
+    "cls": {
+     "curve": 10,
+     "junction": 6,
+     "straight": 3
+    },
+    "turn_scene": 1,
+    "lead": 1,
+    "box": 2,
+    "at_fault": 3,
+    "v_e_med": 4.941175931146532,
+    "v_log_med": 3.901302774078353,
+    "v_ratio_med": 1.1867217008496727,
+    "by_type_cls": [
+     {
+      "type": "collision",
+      "cls": "curve",
+      "n": 1
+     },
+     {
+      "type": "collision",
+      "cls": "straight",
+      "n": 2
+     },
+     {
+      "type": "corridor",
+      "cls": "curve",
+      "n": 1
+     },
+     {
+      "type": "corridor",
+      "cls": "junction",
+      "n": 3
+     },
+     {
+      "type": "offroad",
+      "cls": "curve",
+      "n": 8
+     },
+     {
+      "type": "offroad",
+      "cls": "junction",
+      "n": 3
+     },
+     {
+      "type": "offroad",
+      "cls": "straight",
+      "n": 1
+     }
+    ]
+   },
+   "speed": {
+    "curve": {
+     "decisions": 2133,
+     "scenes": 248,
+     "v_a": 4.995161941793766,
+     "v_b": 4.079415731436701,
+     "v_log": 4.7974270742345055,
+     "dv": 0.9157462103570645,
+     "lo": 0.7773058205143628,
+     "hi": 1.0624637696575492,
+     "over_log_a": 0.19773486755926095,
+     "over_log_b": -0.7180113427978035,
+     "share_fast_a": 0.17346460384435067,
+     "share_fast_b": 0.06563525550867323
+    },
+    "junction": {
+     "decisions": 735,
+     "scenes": 167,
+     "v_a": 5.690007884063463,
+     "v_b": 5.145426076757842,
+     "v_log": 5.629724082581548,
+     "dv": 0.544581807305621,
+     "lo": 0.39385227905040815,
+     "hi": 0.7008946829613218,
+     "over_log_a": 0.06028380148191429,
+     "over_log_b": -0.48429800582370663,
+     "share_fast_a": 0.16054421768707483,
+     "share_fast_b": 0.10204081632653061
+    },
+    "straight": {
+     "decisions": 3534,
+     "scenes": 349,
+     "v_a": 7.26584349846706,
+     "v_b": 6.236259681454043,
+     "v_log": 7.250533477838764,
+     "dv": 1.0295838170130174,
+     "lo": 0.9073432412724228,
+     "hi": 1.16291625647397,
+     "over_log_a": 0.01531002062829521,
+     "over_log_b": -1.0142737963847221,
+     "share_fast_a": 0.12195812110922467,
+     "share_fast_b": 0.04216185625353707
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,89 @@
+{
+ "ref": "held 452 @18 (ol_confirm held18); offroad_on_curve over 460 (diag/zeros.csv)",
+ "arms": {
+  "RSGboth plain": {
+   "mean": 0.9179,
+   "zeros": 33,
+   "oct": [
+    17,
+    7,
+    9
+   ],
+   "offroad_curve": 11,
+   "gt": 1.776,
+   "turns": "22/24",
+   "inside": 0.542
+  },
+  "RSGboth gate": {
+   "mean": 0.8936,
+   "d_mean": -0.0244,
+   "zeros": 41,
+   "oct": [
+    21,
+    9,
+    13
+   ],
+   "offroad_curve": 11,
+   "gt": 1.727,
+   "turns": "19/24",
+   "inside": 0.542
+  },
+  "RSGboth gate preview0.5": {
+   "mean": 0.898,
+   "d_mean": -0.0199,
+   "zeros": 39,
+   "oct": [
+    20,
+    8,
+    13
+   ],
+   "offroad_curve": 10,
+   "gt": 1.738,
+   "turns": "21/24",
+   "inside": 0.542
+  },
+  "RSGboth time preview0.5": {
+   "mean": 0.8937,
+   "d_mean": -0.0242,
+   "zeros": 41,
+   "oct": [
+    20,
+    10,
+    13
+   ],
+   "offroad_curve": 11,
+   "gt": 1.731,
+   "turns": "21/24",
+   "inside": 0.542
+  },
+  "RSG plain": {
+   "mean": 0.8809,
+   "zeros": 26,
+   "oct": [
+    17,
+    4,
+    6
+   ],
+   "offroad_curve": 9,
+   "gt": 1.135,
+   "turns": "16/24",
+   "inside": 0.542
+  },
+  "RSG gate preview0.5": {
+   "mean": 0.8751,
+   "d_mean": -0.0058,
+   "zeros": 28,
+   "oct": [
+    18,
+    2,
+    10
+   ],
+   "offroad_curve": 10,
+   "gt": 1.08,
+   "turns": "14/24",
+   "inside": 0.542
+  }
+ },
+ "lines_met": false,
+ "tracking_ratio": "not computed (sf_turn.py needs PAI drive logs)"
+}
