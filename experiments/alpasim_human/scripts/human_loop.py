@@ -13,7 +13,8 @@ stack, so a stack runs the whole remaining playlist and the loop only restarts i
   waiting for the throttle; nothing of that scene is scored) and a new stack starts with <id> first.
 - next: the driver skips the current scene (abort.json: no pacing, full brake, the rollout ends at the stack's own speed, about 10 s);
   the skipped rollout is not counted and the scene is not offered again in this session. Without a running scene: nothing.
-- restart: the stack is stopped at once and a new one starts with the same scene first.
+- restart: the stack is stopped at once and a new one starts with the same scene first. Between two scenes (one closed, the next
+  still loading) next and restart do nothing.
 - stop: the stack is stopped, the loop exits.
 - Pause: no stack starts; inside a stack the driver holds (a waiting scene stays held, a running one stops advancing).
 Scoring: every finished rollout (sim/rollouts/<scene>/<id>/_complete) that was not skipped is scored with AlpaSim's own aggregation
@@ -241,7 +242,8 @@ def main():
             c = ctl.read()
             for a in [a for a in ctl.pending(st["consumed"])]:
                 st["consumed"].append(a["id"])
-                cur = (view().get("scene") if stack else None)
+                v = view()
+                cur = v.get("scene") if v and not v.get("closed") else None    # between scenes next / restart do nothing
                 if a["kind"] == "stop":
                     raise KeyboardInterrupt
                 if a["kind"] == "play" and a["item"] in ids:
