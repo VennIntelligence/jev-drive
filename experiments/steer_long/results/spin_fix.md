@@ -6,6 +6,10 @@ Pre-registration: [plans/2026-10-13-spin-fix-prereg.md](../plans/2026-10-13-spin
 `sf_arm.sh` (one arm on card 0), `sf_replay.py` (offline MPC replay), `sf_turn.py` (turn geometry). Sets and per-case data in `spin_fix/`.
 Tokyo reads: `/data/runs/steer_long/spinfix/reads/<arm>`; box (nuPlan): `$DATA_DIR/runs/steer_long/spinfix/`.
 
+**Status (2026-10-13 18:55 JST, v7): `JEV_TRACK=gate` passes both nuPlan lines (held 452 @18 mean -0.0056, zeros +2, 0 spins;
+public 1479 @10 -0.0037); its PAI reads (38 spin set, 46 controls, gains 20) are queued on Tokyo card 1 (section 6), so lines 1-2 are
+open.** Earlier status (17:20 JST) for v6 below.
+
 **Status (2026-10-13 17:20 JST): line 1 passed, line 2 failed, nothing adopted.** `JEV_TRACK=full` (v6) gets **0 spins on the 38-scene
 spin set**, with zeros 15 vs 16 and mean 0.4518 vs 0.4437. The 46 controls fail the registered no-regression line on the low-speed turns
 (2 new zeros, mean -0.035). nuPlan held 452 fails too (zeros +11), and the ablation pins that cost on the path-tracking law, not on the
@@ -118,3 +122,57 @@ inference in the 6 s before the event where the model plan points >= 30 deg into
   - `pai_eval.sh` takes `RUNPFX`, because two lanes running one tag and chunk at once share the compose project `pai-<tag>-c000`, and the
     second start tears the first stack down.
   - B's handoff replay mixes the GT pose and the driver's anchor at the handoff step, so its amplitudes are not evidence.
+
+## 6. v7: the plan's own path, and the full reference only where that path is not drivable (amendment 2)
+
+Code `track_ref.py` (fb92ddcc): `JEV_TRACK=curv` = `time` (re-timing, AMIN -5, AMAX 3, JLON 10) + VCURV on the plan's own polyline (no path
+tracking, no curvature clipping). `JEV_TRACK=gate` = curv, and on a call where a path segment the curv reference reaches within 2 s
+(T_GATE) has a curvature above GATE (1.0) x the v6 cap at the speed it is passed (max(v_ref, v0 - 2 t); segments passed below GATE_V
+2 m/s are not checked), that call serves the v6 `full` reference. `time` and `full` are unchanged: over 3000 random plans the module returns
+the same arrays as the previous one.
+
+Per case (`scripts/sf_mid.py` on the stored `time` read, `spin_fix/v7_mid_time.csv`): the 21 spins `time` leaves (20 fast, 3 slow,
+2 both) all have a plan whose own path asks for 4-21 m/s^2 of lateral acceleration (median 7) at the speed the car can still have
+there. The curv rebuild of the same plans gives about the same peak (the turn starts inside the braking distance). 3ffad395 at 17.4 s is
+typical: the model brakes from 10 m/s and puts its 0.5 s point 2.3 m to the side. No reference that keeps to the plan's path there is
+drivable, so `curv` alone cannot reach 0. The exception is 1e8e939e, where the plan is mild and the spin follows a deceleration step that
+the jerk limit (added after the `time` read) removes.
+
+Gate screen (`scripts/sf_gate.py`, open loop on stored plans):
+
+| plans | GATE 1.0: rollouts / calls open | 1.25 | 1.5 |
+|:--|:--|:--|:--|
+| nuPlan held 452, stored RSG-L18-s0 | 7.5 % / 1.0 % | 1.1 % / 0.1 % | 0 / 0 |
+| PAI spin set 38, stored RSG | 71 % / 10.2 % | 71 % / 6.8 % | 71 % / 5.2 % |
+| PAI fast controls 20 | 1 / 20 (one call in the force-GT phase) | 1 | 0 |
+| PAI slow controls 16 | 3 / 16 | 3 | 2 |
+| PAI brake controls 10 | 3 / 10 | 3 | 1 |
+| `time` read, its 21 spin rollouts | 20 open before the onset (lead 0.2-2 s), 1e8e939e never | | |
+
+nuPlan (box pool, RSG-L18-s0, against the stored read; `spin_fix/v7_nuplan_held.md`, `v7_nuplan_pub.md`; spins by `sf_detect.py` on the
+controller rows):
+
+| read | mean (diff, 95 % CI) | zeros | at-fault zeros | GT distance (m) | spins |
+|:--|:--|:--|:--|:--|:--|
+| held 452 @18, stored RSG-L18-s0 | 0.8809 | 26 | 21 | 1.135 | 7 (6 fast, 1 slow) |
+| held, RSG-L18-s1 (seed noise) | +0.0021 [-0.010, +0.014] | 26 | 19 | 1.144 | |
+| held, time | -0.0079 [-0.023, +0.007] | 29 | 20 | 1.073 | |
+| held, curv | -0.0079 [-0.023, +0.007] | 29 | 20 | 1.079 | 2 (1 fast, 1 slow) |
+| **held, gate** | **-0.0056 [-0.020, +0.010]** | **28** | 20 | 1.074 | **0** (gate open on 46 / 8129 calls) |
+| public 1479 @10, full v6 | -0.0075 [-0.016, +0.001] | 52 vs 46 | 46 vs 39 | 0.650 vs 0.792 | |
+| **public 1479 @10, gate** | **-0.0037 [-0.008, +0.000]** | **47 vs 46** | 41 vs 39 | 0.708 | |
+
+Line 3 (held: mean within 0.01, zeros within +3) passes for gate; line 4 (public guard, -0.02) passes. VCURV costs nothing on held (curv =
+time to the 4th decimal). The gate removes the 7 nuPlan spins of the stored read without the held cost of v6 (zeros 28 vs v6 37).
+
+Switch off is bit-identical (smoke5, card 1 for every run, plans of all 90 decisions): parent commit rerun vs parent commit 90 / 90 identical;
+the old track_ref.py vs the new one on the same tree (fb92ddcc) 90 / 90 identical. Parent commit vs fb92ddcc differ (10 / 90 identical,
+up to 0.64 m): this comes from other lanes' commits between them (run_native.py, ol_chain.sh, c0b_chain.py, jevdrive/cl/profiles.py),
+not from track_ref. Note for every lane: nuPlan reads made before and after those commits are not plan-identical.
+
+PAI: the read is queued as stage 5 of the Tokyo card-1 chain (`/data/runs/route_night/SPIN_READ_REQUEST`, 84 scenes, spin set first,
+gains 20, output `/data/runs/route_night/r281/spin_read`). The chain runs from `/data/runs/route_night/code`, which is at 19137cec and has no
+JEV_TRACK hook: that checkout has to be at fb92ddcc or later when the stage starts, or the read is the baseline in disguise (check the
+driver.log serving line). Read it with `sf_read.py --list spin_fix/spin_set.txt` and `--list spin_fix/ctrl_all.txt` against
+`/data/runs/route_night/r281/rsg`. If the 46 fail only on scenes where the gate opened, the next arm is GATE 1.5 (amendment 2); nuPlan
+held is still valid for it (between curv and gate 1.0, both of which pass).
