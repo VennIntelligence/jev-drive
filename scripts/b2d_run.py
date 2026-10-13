@@ -821,10 +821,11 @@ class Runner(object):
             ticks = None
             if beat.exists():
                 try:
-                    ticks = json.loads(beat.read_text()).get("ticks")
+                    hb = json.loads(beat.read_text())
+                    ticks = (hb.get("ticks"), hb.get("hold_beat"))  # hold_beat: an agent holding the world on purpose
                 except ValueError:
                     ticks = None
-            if ticks is not None and ticks != last_ticks:
+            if ticks is not None and ticks != (None, None) and ticks != last_ticks:
                 last_ticks, last_change = ticks, now
             stalled = now - last_change
             if stalled > self.a.stall_s:

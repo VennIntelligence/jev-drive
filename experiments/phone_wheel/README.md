@@ -14,7 +14,11 @@ On-phone latency and the physical steering sign are measured on the phone.
 Human drive (below): the user drove Bench2Drive route 24721 (Town01, HardBreakRoute) in openpilot's wide model frame, DS 100,
 RC 100, IS 1.00 (20 min-speed entries, unpenalised), 2026-10-13 run `1013-174600`.
 
-**Next.** The user drives the openpilot loop's 11 routes, so the human's scores sit next to the model's on the same exam.
+Exam on the model's failure routes (2026-10-13, run `1013-232739`, [results/b2d_exam_2026-10-13.md](results/b2d_exam_2026-10-13.md)):
+human mean DS 49.5 over 10 routes (RC 100 on 9 of 10, with red lights and layout touches); on the 4 routes where the best model
+(Cinque + FIX1) is scored, human 48.1 vs model 21.9 (one attempt each).
+
+**Next.** The full 220-route val suite by hand, scored with Bench2Drive's own tools (section "The full exam"), run `1013-235416`.
 
 ## How it works
 
@@ -98,6 +102,49 @@ Results: `/data/runs/human_drive/<stamp>/results.md` (and `results.json`): DS, R
 mean over finished routes, routes never finished; per attempt `attempts/<id>/<n>/human.jsonl` (every tick: phone input,
 applied control, input age, speed, route index, sleep) and `human_summary.json` (sim s, wall per sim s, unpaced, stale ticks).
 `scripts/human_results.py <run>` rebuilds the table.
+
+## The full exam: all 220 Bench2Drive val routes by hand, scored the official way (Tokyo)
+
+```bash
+# Tokyo; wheel daemon in tmux wheel, phone page reloaded and Started (wake lock), card 0 free
+bash ~/mycode/jev-drive/experiments/phone_wheel/scripts/human_drive.sh all                      # new run, 220 routes
+bash ~/mycode/jev-drive/experiments/phone_wheel/scripts/human_drive.sh --resume /data/runs/human_drive/<stamp>   # continue
+/data/envs/carla/bin/python ~/mycode/jev-drive/experiments/phone_wheel/scripts/human_official.py /data/runs/human_drive/<stamp>
+```
+
+- Order: `all` = the 220 routes of `bench2drive_0.0.4_val.xml` grouped by town, small towns first (01, 02, 03, 04, 05, 06,
+  07, 10HD, 11, 15), then Town12, then Town13; XML order inside a town. `<run>/routes.txt` keeps the list, `--resume` reuses it
+  and b2d_run skips every route with `done/<id>.json` (an interrupted route is driven again).
+- Official rules: full routes (`HUMAN_STOP_ON` empty; a collision is a DS penalty and the route goes on, as on the leaderboard;
+  `HUMAN_STOP_ON=collision` restores stop-at-first-collision), tm seed 0, the leaderboard's own route / scenario timeouts
+  and 4000-tick cap. Our additions do not touch scoring: the sim is paced to real time, and each route holds at its first tick until
+  the driver's first throttle press, with no time limit, so the driver can rest between routes. During the hold the agent resets the
+  leaderboard's agent watchdog and writes `hold_beat` into heartbeat.json, which b2d_run's stall check counts as progress.
+  Phone silence (no frame for `WHEEL_STALE_S` 1.0 s) ramps the brake to 1 over `WHEEL_BRAKE_RAMP_S` 1.0 s, holds the last steer,
+  and sets the handbrake at the end of the ramp. The viewer shows the reason and the frame rate received from the daemon.
+- Long-run safety: `--max-attempts 3` (a CARLA crash or stall restarts the server on another port and redoes that route),
+  `--stall-s 600` on tick progress, `--route-timeout-s 86400` (rests count against it), and a viewer that restarts if it exits.
+- Phone page (2026-10-13): sending is driven by devicemotion, requestAnimationFrame and the interval together, because Chrome
+  throttles timers to about 1 Hz when the screen dims, which tripped the old 0.3 s stale rule between routes. The page
+  holds a screen wake lock and shows a red "PAGE THROTTLED" banner under 20 Hz.
+- Official scoring, `scripts/human_official.py <run>`, runs on a partial run too and uses Bench2Drive's own tools as shipped,
+  from `$BENCH2DRIVE_ROOT`:
+  1. Each finished route's leaderboard checkpoint goes to `<run>/official/routes/<id>.json`.
+  2. `tools/merge_route_json.py -f <run>/official/routes` writes `merged.json`, with Driving Score = sum DS / 220 and Success
+     Rate = (Completed or Perfect with no infraction except min_speed) / 220. Undriven routes count 0.
+  3. `tools/ability_benchmark.py -f bench2drive_0.0.4_val.xml -r merged.json` gives the five abilities over the driven routes.
+     Traffic_Signs also credits a failed route that cleared its junction with no red-light or stop infraction (offline
+     OpenDRIVE maps). On a partial run with an ability that has no route, the shipped file divides by zero. A copy with only that
+     division guarded (`official/ability_benchmark_partial.py`) is used instead, and the table says so.
+  4. `tools/efficiency_smoothness_benchmark.py -f merged_metric.json -m <run>/official/metric` gives Efficiency (mean of the
+     min-speed percentages) and Comfort (Smoothness x 100). It reads `metric_info.json`, which `lib/human_agent.py` writes from
+     the Bench2Drive base agent's `get_metric_info()` on every driven tick, as the shipped agents do. Routes driven before
+     2026-10-13 23:50 have no metric_info.json and are left out of these two columns.
+
+  Output: `<run>/official/official.md` puts the human's row (/ 220, plus a row over the driven routes) next to the v0.0.4
+  leaderboard rows. Those are copied from Bench2Drive `docs/v004_update.md` (LEAD 95.59 DS, SimLingo 86.55,
+  Drive-pi0 69.71, DriveTransformer 60.20, DriveAdapter 54.96, ThinkTwice 52.84, TCP 51.44, UniAD 38.69, VAD 38.65,
+  ADMLP 35.39; the B2D paper is arXiv 2406.03877, but its own tables are v0.0.3 and on another route set). Logs: `official/tools.log`.
 
 <!-- files:begin -->
 ## Files

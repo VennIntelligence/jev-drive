@@ -15,13 +15,17 @@ sim speed). The overlays use the hero's true pose: they are a display for the hu
 Pacing: the leaderboard ticks synchronously as fast as it can; the agent sleeps so simulated time never runs ahead of wall
 time x `realtime` (1.0 = real time; 0 = unpaced). When the sim is slower than that, nothing is slept and the lag is
 reported (wall s per sim s, raw = without the sleeps). The route clock starts at the driver's first throttle press
-(`wait_start`, the simulation is held at its first tick, at most `wait_max_s`, below the leaderboard's 300 s agent watchdog).
+(`wait_start`: the simulation is held at its first tick for as long as the driver rests; `wait_max_s` > 0 caps it, 0 = no cap).
+During the hold the agent resets the leaderboard's agent watchdog (ScenarioManager._agent_watchdog, found on the call stack;
+without it the hold falls back to a 240 s cap) and writes `hold_beat` into the attempt's heartbeat.json so b2d_run's stall
+check sees a live route.
 
 Config JSON (--agent-config, optional; missing keys take DEFAULT): steer_gain, steer_expo (steer = gain * ((1 - e) s + e s^3),
 the page has its own curve, so the default is identity); throttle_gamma, throttle_gain (throttle = min(1, gain * t^gamma), default
 0.6 / 1.3: a light touch already pulls, the user found the linear map dull), brake_gamma, brake_gain (default 1.0 / 1.0: the MKZ brake
 is already sharp, 0.05 gives about -3.2 m/s^2; the page's pedal gain scales both pedals before sending); realtime, publish_every, scale, wait_start, wait_max_s, road.
-Per attempt (B2D_ATTEMPT_OUT): human.jsonl (one line per tick) and human_summary.json.
+Per attempt (B2D_ATTEMPT_OUT): human.jsonl (one line per tick), human_summary.json and metric_info.json (the Bench2Drive base
+agent's get_metric_info every driven tick, as the shipped agents log it; read by tools/efficiency_smoothness_benchmark.py).
 
 Stop at the first event (env HUMAN_STOP_ON, default off here; human_drive.sh sets "collision"): a comma list of `collision`
 and `offroute` (> 3.5 m from the dense route for 1 s). 0.5 s after the first such event the agent writes stop_event.json and
@@ -50,7 +54,7 @@ import zeroshot_rigs as rigs  # noqa: E402
 from b2d_controller_adapter import world_to_local  # noqa: E402
 from wheel_client import WheelClient  # noqa: E402
 
-DEFAULT = dict(steer_gain=1.0, steer_expo=0.0, throttle_gamma=0.6, throttle_gain=1.3, brake_gamma=1.0, brake_gain=1.0, realtime=1.0, publish_every=1, scale=2, wait_start=True, wait_max_s=240.0,
+DEFAULT = dict(steer_gain=1.0, steer_expo=0.0, throttle_gamma=0.6, throttle_gain=1.3, brake_gamma=1.0, brake_gain=1.0, realtime=1.0, publish_every=1, scale=2, wait_start=True, wait_max_s=0.0,
                road=False)
 F_MODEL, CX_MODEL, CY_MODEL, W_MODEL, H_MODEL = 455.0, 256.0, 0.5 * (256 + 47.6), 512, 256   # modeld's SBIGMODEL_K frame
 CMD_NAMES = {Z.LEFT: "turn left", Z.RIGHT: "turn right", Z.STRAIGHT: "straight through junction",
@@ -126,6 +130,7 @@ class HumanAgent(AutonomousAgent):
         self.raw_s = self.slept_s = self.sim_s = 0.0
         self.n_stale = self.n_late = 0
         self.v_hist = []
+        self.metric_info, self.hero_actor = {}, None
         self.stop_on = {k.strip() for k in os.environ.get("HUMAN_STOP_ON", "").lower().split(",")} & {"collision", "offroute"}
         self.stop_sensor, self.stop_hits, self.stop_event, self.off_t = None, [], None, None
         self.route = None
@@ -170,12 +175,17 @@ class HumanAgent(AutonomousAgent):
         self.t_prev_in, self.prev_wait, self.prev_sleep = t_in, 0.0, 0.0
         frame = input_data["OP_WIDE"][1]
         if not self.started:                           # hold the world at its first tick until the driver presses throttle
-            t0 = time.time()
-            while time.time() - t0 < float(self.cfg["wait_max_s"]):
+            t0 = t_beat = time.time()
+            wd = self._agent_watchdog()
+            cap = float(self.cfg["wait_max_s"]) or (1e9 if wd is not None else 240.0)
+            while time.time() - t0 < cap:
                 c, st = self._control()
                 self._publish(frame, now, c, st, waiting=True)
                 if not st["stale"] and st["raw_throttle"] > 0.2:
                     break
+                if time.time() - t_beat > 5.0:
+                    t_beat = time.time()
+                    self._hold_beat(wd, t_beat - t0)
                 time.sleep(0.05)
             self.started, self.wait_s = True, round(time.time() - t0, 1)
             self.anchor, self.prev_wait = None, time.time() - t0
@@ -192,6 +202,13 @@ class HumanAgent(AutonomousAgent):
             elif wall - target > 0.5:                  # far behind: re-anchor, never burst to catch up
                 self.anchor, self.n_late = (wall, now), self.n_late + 1
         self.prev_sleep = slept
+        try:                                           # official comfort metric input (Bench2Drive base agent)
+            if self.hero_actor is None:
+                self.hero_actor = CDP.get_hero_actor()
+            self.metric_info[self.tick] = self.get_metric_info()
+        except Exception as e:
+            if len(self.metric_info) == 0:
+                print("metric_info: %r" % (e,), file=sys.stderr, flush=True)
         if self.stop_on:
             try:
                 self._stop_check(now)
@@ -207,11 +224,38 @@ class HumanAgent(AutonomousAgent):
         self.log.write(json.dumps({"t": round(now, 2), "wall": round(time.time(), 3), "steer_in": round(st["steer"], 3),
                                    "steer": round(c.steer, 3), "throttle": round(c.throttle, 3), "brake": round(c.brake, 3),
                                    "rev": c.reverse, "hb": c.hand_brake, "age": round(min(st["age_s"], 99.0), 3),
-                                   "stale": st["stale"], "v": round(self.v_hist[-1][1], 2) if self.v_hist else None,
+                                   "stale": st["stale"], "rx_hz": st.get("rx_hz"), "v": round(self.v_hist[-1][1], 2) if self.v_hist else None,
                                    "ri": int(self.route.i) if self.route is not None else None,
                                    "slept_ms": round(1e3 * slept, 1)}) + "\n")
         self.t_prev_exit = time.time()
         return c
+
+    def _agent_watchdog(self):
+        """The leaderboard's per-tick agent watchdog (ScenarioManager._agent_watchdog), from the caller's frames, or None."""
+        f = sys._getframe(1)
+        while f is not None:
+            wd = getattr(f.f_locals.get("self"), "_agent_watchdog", None)
+            if wd is not None and hasattr(wd, "update"):
+                return wd
+            f = f.f_back
+        return None
+
+    def _hold_beat(self, wd, held_s):
+        """Keep a resting driver's route alive: reset the agent watchdog and mark heartbeat.json for b2d_run's stall check."""
+        try:
+            if wd is not None:
+                wd.update()
+            p = os.path.join(self.out, "heartbeat.json")
+            hb = {}
+            if os.path.exists(p):
+                with open(p) as fh:
+                    hb = json.load(fh)
+            hb.update(hold_beat=round(held_s, 1), hold_t=time.time())
+            with open(p + ".hold", "w") as fh:
+                json.dump(hb, fh)
+            os.replace(p + ".hold", p)
+        except Exception as e:  # never end a route over this
+            print("hold beat: %r" % (e,), file=sys.stderr, flush=True)
 
     def _stop_check(self, now, offroute_m=3.5, offroute_s=1.0, grace_s=0.5):
         hero = self.hero or CDP.get_hero_actor()
@@ -286,6 +330,7 @@ class HumanAgent(AutonomousAgent):
             "route_px": route_px, "route_marks": marks, "img_scale": self.scale,
             "human": {"steer_in": round(st["steer"], 3), "throttle_in": round(st["raw_throttle"], 3), "reverse": bool(st["reverse"]),
                       "handbrake": bool(st["handbrake"]), "stale": bool(st["stale"]), "age_ms": round(1e3 * min(st["age_s"], 99.0), 1),
+                      "rx_hz": st.get("rx_hz"), "stale_reason": st.get("reason"),
                       "progress": round(prog, 4), "route_m": round(float(r.s[-1]), 0) if r is not None else None,
                       "wall_per_sim": round((self.raw_s + self.slept_s) / sim, 3) if self.sim_s else None,
                       "raw_per_sim": round(self.raw_s / sim, 3) if self.sim_s else None, "late": self.n_late,
@@ -311,6 +356,8 @@ class HumanAgent(AutonomousAgent):
         try:
             with open(os.path.join(self.out, "human_summary.json"), "w") as fh:
                 json.dump(summary, fh, indent=1)
+            with open(os.path.join(self.out, "metric_info.json"), "w") as fh:
+                json.dump({str(k): v for k, v in self.metric_info.items()}, fh)
             print("human summary: %s" % json.dumps(summary), flush=True)
             self.log.close()
         finally:

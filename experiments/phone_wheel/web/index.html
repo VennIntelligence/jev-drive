@@ -101,6 +101,7 @@ button#center { background:var(--acc); border-color:var(--acc); min-width:96px; 
       <div id="steerval"><div class="n" id="steer">+0.00</div><div class="d" id="deg">0.0 deg</div></div>
     </div>
     <div id="warn"></div>
+    <div id="throttled" style="display:none;position:fixed;top:0;left:0;right:0;z-index:50;background:#d32f2f;color:#fff;font-weight:700;text-align:center;padding:6px">PAGE THROTTLED: send rate under 20 Hz. Keep this page in the foreground, screen on</div>
     <div id="cal">
       <label><span>Steering range</span><input type="range" id="c_range" min="20" max="90" step="1"><b id="c_range_v"></b></label>
       <label><span>Pedal gain</span><input type="range" id="c_pgain" min="0.5" max="3" step="0.05"><b id="c_pgain_v"></b></label>
@@ -161,6 +162,7 @@ addEventListener('devicemotion', e => {
   const s = IOS ? -1 : 1, k = 0.4;  // one-pole low-pass on the vector, about 25 ms at 60 Hz
   gx += k * (s * a.x - gx); gy += k * (s * a.y - gy);
   motionSeen = performance.now();
+  pump();  // sensor events keep firing when Chrome throttles timers to ~1 Hz: send from here too
 });
 const wrap = d => ((d + 540) % 360) - 180;
 function updateSteer() {
@@ -279,12 +281,24 @@ function frame() {
   return { steer: +steer.toFixed(4), throttle: +g(thr).toFixed(3), brake: +(handbrake ? 1 : g(brk)).toFixed(3), raw_throttle: +g(rawThr).toFixed(3),
            reverse, handbrake, ts: now, seq: seq++, rtt: rtt == null ? null : +rtt.toFixed(1) };
 }
-setInterval(() => {
+// sending is driven by whichever fires: devicemotion, requestAnimationFrame or the interval (timers alone get throttled to
+// ~1 Hz when the screen dims or the page loses focus, which tripped the host's stale rule between routes, 2026-10-13)
+let lastSend = 0;
+function pump() {
+  const now = performance.now();
+  if (now - lastSend < 1000 / SEND_HZ - 2) return;
+  lastSend = now;
   const f = frame();
   if (ws && ws.readyState === 1 && ws.bufferedAmount < 4096) { ws.send(JSON.stringify(f)); sent++; }
   draw(f);
-}, 1000 / SEND_HZ);
-setInterval(() => { hz = sent; sent = 0; $('hz').textContent = hz; $('rtt').textContent = rtt == null ? '-' : rtt.toFixed(0); }, 1000);
+}
+setInterval(pump, 1000 / SEND_HZ);
+(function raf() { pump(); requestAnimationFrame(raf); })();
+setInterval(() => {
+  hz = sent; sent = 0; $('hz').textContent = hz; $('rtt').textContent = rtt == null ? '-' : rtt.toFixed(0);
+  $('throttled').style.display = ws && ws.readyState === 1 && hz < 20 ? 'block' : 'none';
+  if (!wake && document.visibilityState === 'visible') lockWake();
+}, 1000);
 
 // ---- drawing ----
 function draw(f) {
@@ -310,7 +324,14 @@ function draw(f) {
 
 // ---- start: permission (iOS), wake lock, fullscreen ----
 let wake = null;
-async function lockWake() { try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
+async function lockWake() {
+  try {
+    if ('wakeLock' in navigator && !wake) {
+      wake = await navigator.wakeLock.request('screen');
+      wake.addEventListener('release', () => { wake = null; });  // re-requested by the 1 s loop when visible
+    }
+  } catch (e) { wake = null; }
+}
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') lockWake(); });
 $('go').onclick = async () => {
   if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {

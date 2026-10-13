@@ -99,7 +99,7 @@ def draw(canvas, state, images, font, big, status, tag, live):
         msg = big.render("PRESS THROTTLE TO START", True, ORANGE)
         canvas.blit(msg, (20 + (W - msg.get_width()) // 2, 48 + H // 2 - 30))
     if hu.get("stale") and status == "LIVE" and not state.get("waiting"):
-        msg = big.render("PHONE SILENT: BRAKING", True, RED)
+        msg = big.render("PHONE SILENT: BRAKING (%s)" % (hu.get("stale_reason") or "-"), True, RED)
         canvas.blit(msg, (20 + (W - msg.get_width()) // 2, 48 + H // 2 - 30))
     y0, x1, x2, x3 = 840, 20, 560, 1100
     v = state.get("speed", 0)
@@ -118,8 +118,10 @@ def draw(canvas, state, images, font, big, status, tag, live):
     label("brake", (x2, y0 + 94))
     bar(canvas, x2 + 90, y0 + 98, 400, 18, state.get("brake", 0), RED)
     age = hu.get("age_ms")
-    label("input age %s   %s" % ("-" if age is None or age > 5e4 else "%.0f ms" % age, "STALE" if hu.get("stale") else "ok"),
-          (x2, y0 + 128), RED if hu.get("stale") else WHITE)
+    rxhz = hu.get("rx_hz")
+    label("input age %s   rx %s Hz   %s" % ("-" if age is None or age > 5e4 else "%.0f ms" % age, "-" if rxhz is None else rxhz,
+                                          "STALE" if hu.get("stale") else "PAGE THROTTLED?" if rxhz is not None and rxhz < 20 else "ok"),
+          (x2, y0 + 128), RED if hu.get("stale") or (rxhz is not None and rxhz < 20) else WHITE)
     label("raw steer %+.2f  gain %s expo %s   throttle ^%s x%s" % (hu.get("steer_in", 0), hu.get("gain"), hu.get("expo"),
                                                                   hu.get("thr_gamma"), hu.get("thr_gain")), (x2, y0 + 158), GREY)
     label("ROUTE / SIM", (x3, y0), (150, 200, 255))
