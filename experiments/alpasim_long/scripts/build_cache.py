@@ -52,6 +52,8 @@ def build(a):
     kw = params["dataset_kwargs"]["nuplan_test"]
     if not a.all_tokens:   # only the central token each public scene id names (<log>-<token> = the config file's stem)
         ids = {p.stem for p in Path(td.dataset.extra_params.config_dir).glob("*.yaml")}
+        if a.scenes:   # only these scene ids (e.g. a long-window cache for a few dozen scenes)
+            ids &= set(Path(a.scenes).read_text().split())
         n0 = len(kw["central_tokens_config"])
         kw["central_tokens_config"] = [c for c in kw["central_tokens_config"] if f"{c['logfile']}-{c['central_token']}" in ids]
         print(f"central tokens: {len(kw['central_tokens_config'])} of {n0} (the {len(ids)} scene ids)", flush=True)
@@ -120,6 +122,7 @@ if __name__ == "__main__":
     p.add_argument("--after", type=int, required=True), p.add_argument("--out", required=True)
     p.add_argument("--raw", default=str(DATA / "datasets/nuplan_raw")), p.add_argument("--template", default=str(TEMPLATE))
     p.add_argument("--workers", type=int, default=24)
+    p.add_argument("--scenes", help="build: only the scene ids in this file")
     p.add_argument("--all-types", action="store_true", help="keep bicycles and pedestrians (trajdata's own query; the shipped cache has none)")
     p.add_argument("--all-tokens", action="store_true", help="every central token of the configs (12 146), not only the 1491 scene ids")
     p.set_defaults(fn=build)
