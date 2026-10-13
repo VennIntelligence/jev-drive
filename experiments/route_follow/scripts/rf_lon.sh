@@ -3,7 +3,7 @@
 # (--lon-lead / --lon-curve / --lon-stop, weights below = the prereg's). Train job (60-step preflight smoke) -> held 460 / 18-decision read
 # (rm_chain.sh submit-read) + public 1491 / 10-decision guard (10 ol_chain readlist chunks) -> one report job: held.py, ol_confirm held18 + guard,
 # rf_follow, rf_inside, zeros_mech collect + rf_rsgbv.py diag vs RSG-L18-s{k}. Box, repo root. Every GPU job on cards 1-5.
-#   rf_lon.sh submit <seed> | report <seed>
+#   rf_lon.sh submit <seed> | reads <seed> [after id] | report <seed>
 set -uo pipefail; cd "$(dirname "$0")/../../.."
 K=${2:?seed}; T=RSGbothLon-L18-s$K
 RF=$DATA_DIR/runs/route_follow; O=$RF/lon/s$K; G=$RF/guard; M=$DATA_DIR/runs/route_mem/read; E=experiments/onpol_long; W=$DATA_DIR/runs/onpol_long
@@ -18,10 +18,15 @@ submit)
   t=$(sub lon-$T --train --vram 28 --cpu 6 --ram 70 --timeout-h 3 --gpus 1,2,3,4,5 \
       --preflight "$TR experiments/route_mem/scripts/rm_train.py train --tag ${T%-s$K}-smoke-s$K $CMD --steps 60 --eval-every 60" \
       -- $TR experiments/route_mem/scripts/rm_train.py train --tag $T $CMD) || exit 1
+  bash $0 reads $K $t || exit 1 ;;
+reads)  # reads <seed> [after]: the held read, the guard and the report (also alone, e.g. after a cancelled read chain)
+  mkdir -p $O/pool; t=${3:-}
+  sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner route-follow --name "$name" --tries 1 --priority 14 --no-check \
+       --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
   PRIO=14 bash experiments/route_mem/scripts/rm_chain.sh submit-read $T $t || exit 1
   dep=($(grep " rm-cover-$T$" $DATA_DIR/runs/route_mem/jobs.txt | tail -1 | cut -d' ' -f1))
   for i in $(seq 0 9); do
-    dep+=($(sub lon-g10-$T-$i --after $t --vram 27 --cpu 8 --ram 30 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read -- bash $E/scripts/ol_chain.sh readlist $T \
+    dep+=($(sub lon-g10-$T-$i ${t:+--after $t} --vram 27 --cpu 8 --ram 30 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read -- bash $E/scripts/ol_chain.sh readlist $T \
           $W/lists/all_n10/c$i.txt 10 $G/read10/$T/b$i)) || exit 1
   done
   sub lon-report-$T --after "$(IFS=,; echo "${dep[*]}")" --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash experiments/route_follow/scripts/rf_lon.sh report $K > /dev/null || exit 1
