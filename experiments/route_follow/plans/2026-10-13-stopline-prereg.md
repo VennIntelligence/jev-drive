@@ -84,3 +84,13 @@ of RSG-L18-s{0,1}, RB0-F-s0 and RSGB-L18-s{0,1} at the same states; B active sha
 only: B is already near its floor on held (0.13 % on the served plans), so the read can show the hinge moved, not that it matters.
 
 Seed for PAI: fewer public zeros, then higher public mean. It is copied with its sidecar to Tokyo `/data/runs/op_parity/runs/RSGB-L18-s<k>/`.
+
+## Amendment 1 (2026-10-13 10:25 JST, smoke read, before any full training)
+
+Smoke `RSGB-L18-smoke60` (60 steps, seed 0): gate 1 passes. Step-0 dev ADE 0.5276 = RB0-F-s0's; every logged loss finite; `on/lonB_ho`
+0.0008 / 0.0008 / 0.0002 and `on/lonP_ho` 0.020 / 0.019 / 0.028 at steps 25 / 50 / 60 (B active on 0.3-1.5 % of the pool rows in a window,
+P on 6-8 %). Weighted (x lambda 10 x ho_w 3) P adds about 0.6 to the total loss against imitation 0.71-0.81, B about 0.02: as stated above,
+by mass this arm is the progress guard. Dev ADE after 60 steps 0.565 against 0.530 for the S-only control smoke of the allrows prereg (same
+recipe, `on1_L18RSGall`): the shock is noted; gate 2 (+0.02 m on RSG-L18 at step 2500) reads whether it recovers. No change to the arm.
+The held offline read's script reproduces the stored served plans (RSG-L18-s0 recomputed at the pool states: B 10 rows / 0.0124 m, the
+pack's served-plan read 10 rows / 0.0124 m).
