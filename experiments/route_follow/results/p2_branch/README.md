@@ -17,7 +17,7 @@ turns, so the school has to teach how to turn (source 1 / 2 rows), not only when
 | d10 | 3 / 12 | 10 | 0.167 |
 | d0 (handover at the entry) | 4 / 12 | 8 | 0.273 |
 
-- The handover state is right. The ego's offset from the log at k is <= 0.42 m (median about 0.1 m) and its speed is within 0.5 m/s of the
+- The handover state is right. The ego's offset from the log at k is <= 0.42 m (median 0.05 m) and, for every k > 17, its speed is within 0.6 m/s of the
   log's (read.json `ho_off`, `ho_v`; plan.json `v_log`). So the failures are not a bad entry state.
 - Completion rises as the handover moves to the entry (1 -> 2 -> 3 -> 4), but only 3 scenes gained a completion that k17 did not have.
   382a7247 already completes at k17. The other three are eaba3f6a (from d20), 2f227f2c (from d10) and fd01e9ab (d0 only).
