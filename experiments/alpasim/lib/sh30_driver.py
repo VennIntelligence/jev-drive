@@ -310,7 +310,10 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 o["poses"], ri, rp = RP.serve(o["poses"], rM, float(np.hypot(*dyn[-1][0])), rG)
         if TR.ON:                                            # the feasible reference instead of the plan (track_ref.py)
             ref, tri = TR.build(o["poses"], float(np.hypot(*dyn[-1][0])), float(dyn[-1][2]), a0=float(dyn[-1][1][0]))
-            plan = TR.cached_plan(CachedPlan, t0, (anchor.pose.vec.x, anchor.pose.vec.y, yaw0), ref)
+            ax, tilt = TR.anchor((anchor.pose.vec.x, anchor.pose.vec.y, yaw0), anchor.pose.quat)   # tilted pose: the planar yaw
+            plan = TR.cached_plan(CachedPlan, t0, ax, ref)
+            if tilt:
+                tri["tilt"] = round(float((ax[2] - yaw0 + np.pi) % (2 * np.pi) - np.pi), 3)
         else:
             plan = make_cached_plan(t0, anchor, o["poses"])
         traj = build_trajectory_from_plan(plan, anchor, now, tq)

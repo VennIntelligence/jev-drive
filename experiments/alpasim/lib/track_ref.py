@@ -18,6 +18,12 @@ distance is to steer, and at speed any steering is a spin. The fix is to never h
                    ALAT / v^2), v as in the cap, i.e. max(v_ref, v0 - V_DROP t)), else this call serves the full reference. With VCURV the curv
                    reference has already slowed for every turn braking at AMIN can slow for, so the gate opens only for a turn that is too
                    sharp for the car's state (the model's swerve while braking, a 2 m side step within 0.5 s at 10 m/s).
+                   v8 (PP): the check also covers the step from the car onto the path: for each plan node the curv reference
+                   reaches by T_GATE, the curvature of the arc from the car's pose (heading 0) to it, 2 |y| / (x^2 + y^2), against the
+                   same cap. Path starts at the first chord's heading when that is > YAW_TOL off the car's, so a plan that puts its
+                   0.5 s point 1.5 m to the side has no curvature inside the polyline and v7 served it (60cc35db at 16.2 s, the spin
+                   of the v7 PAI read: results/spin_fix.md section 7), only while v0 >= PP_V. Threshold GATE, GATE_LO when the car is
+                   below 5 m/s and accelerating.
   JEV_TRACK=full   (a) + (b): the reference is the forward simulation (kinematic, DT_SIM steps) of a path-tracking law on the same path and
                    speed: curvature = path curvature (feedforward) + a second-order correction of the lateral / heading error over the
                    distance max(TAU_LAT x v, D_MIN), clipped to |kappa| <= min(ALAT / v^2, KMAX below 3.5 m/s .. KDYN above 5 m/s) with
@@ -28,6 +34,9 @@ distance is to steer, and at speed any steering is a spin. The fix is to never h
                    made the receding-horizon reference lag every turn: run 1 of results/spin_fix.md). The MPC then sees a
                    reference whose steering is bounded by these physical limits at every speed (at 30 m/s and ALAT 7: 0.022 rad; a spin command is 0.2-1.1 rad).
   JEV_TRACK_CFG    overrides, e.g. "alat=4,amin=-5,jlat=5" (names: the module constants in lower case).
+  TILT             (any mode on) anchor guard, see anchor(): AlpaSim's physics can put the ego on a tilted pose (a 2 m jump and 40-70 deg of
+                   roll / pitch at a ground-mesh defect: d8bfaaf2 18.3 s, 1e8e939e 18.0 s); the driver's yaw from the full quaternion then
+                   differs from the controller's planar yaw by 0.8-3 rad and the reference, straight in the rig frame, is handed over rotated.
 Unset / 0: off, the driver returns the plan as before, bit for bit.
 
 The returned reference has 41 points at 0.1 s (0 .. 4 s, rig frame at the plan's time); the drivers give it to the controller through the
@@ -53,6 +62,14 @@ YAW_TOL = 0.35                  # rad, plan yaw output against its chords
 GATE, T_GATE = 1.0, 2.0         # gate: open (serve full) when a segment's curvature exceeds GATE x the cap within T_GATE s
 GATE_V = 2.0                    # m/s, gate: segments passed slower than this are not checked (a stopping plan's yaw over centimetre
                                  # segments reads as any curvature; nothing spins at walking pace)
+PP = 1.0                        # gate: 1 = also check the arc from the car onto each plan node (v8), 0 = segments only (v7)
+PP_V = 5.0                      # m/s, PP only when the car is at least this fast (below, the arc onto a node 1-2 m ahead reads ~1 x the cap on
+                                 # ordinary low-speed turns: 8 spin-set rollouts at 2.4-3.5 m/s and 268949d2 in the v7 read's own loop)
+GATE_LO, A_LO = 1.5, 0.5        # gate threshold while the car is slower than V_KIN[1] (5 m/s) and accelerating (a0 >= A_LO m/s^2): the
+                                 # v7 opening at 3.3-4.1 m/s (ratios 1.0-1.19, a0 +1.1) capped 268949d2's right turn out of a stop at KDYN and
+                                 # left the corridor (results/spin_fix.md section 7). Slowing into a turn keeps GATE: that is where KDYN is
+                                 # needed (side slip just above 5 m/s, run 4), and 16 spin-set rollouts open there at 1.0-1.42
+TILT = 0.3                      # anchor guard: |(qx, qy)| above this (about 35 deg of roll / pitch) -> the controller's planar yaw
 PREVIEW = 0.0                   # s, full: the path curvature fed forward is taken v x PREVIEW ahead (lead for the MPC's steering lag)
 LATCAP = 1.0                    # full: 0 = no curvature / curvature-rate clipping (ablation; VCURV still uses ALAT / KDYN)
 VCURV = 1.0                     # full: 1 = also slow for the path's curvature ahead (v^2 |kappa| <= ALAT, braking at AMIN), 0 = off
@@ -118,12 +135,13 @@ def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
     mode = mode or MODE
     if mode == "gate":
         ref, info = build(poses, v0, wz, "curv", a0, **kw)
-        if info["gate"] <= kw.get("gate", GATE):
+        thr = kw.get("gate", GATE) if v0 >= V_KIN[1] or a0 < kw.get("a_lo", A_LO) else kw.get("gate_lo", GATE_LO)
+        if info["gate"] <= thr:
             return ref, {**info, "mode": "gate", "open": 0}
         ref, fi = build(poses, v0, wz, "full", a0, **kw)
-        return ref, {**fi, "mode": "gate", "open": 1, "gate": info["gate"]}
-    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP", "JLON", "LATCAP", "PREVIEW", "T_GATE", "GATE_V")}
-    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP, JLON, LATCAP, PREVIEW, T_GATE, GATE_V = g.values()
+        return ref, {**fi, "mode": "gate", "open": 1, "gate": info["gate"], **({"pp": info["pp"]} if "pp" in info else {})}
+    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP", "JLON", "LATCAP", "PREVIEW", "T_GATE", "GATE_V", "PP", "PP_V")}
+    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP, JLON, LATCAP, PREVIEW, T_GATE, GATE_V, PP, PP_V = g.values()
     kcap = lambda v: np.minimum(np.interp(v, V_KIN, (KMAX, KDYN)), ALAT / np.maximum(v, V_MIN) ** 2)  # noqa: E731
     path, vp = Path(poses), speeds(poses)
     vlim = None
@@ -186,7 +204,24 @@ def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
         vs = np.interp(hs[j], sa, va_)
         r = np.where(vs >= GATE_V, ks / kcap(vs), 0.0)
         info["gate"] = round(float(r.max()), 3) if len(j) else 0.0
+        if PP > 0 and v0 >= PP_V:                                         # the arc from the car (origin, heading 0) onto each node reached
+            q = path.p[1:-1][path.s[1:-1] <= sa[-1]]
+            if len(q):
+                vq = np.interp(path.s[1:len(q) + 1], sa, va_)
+                kq = 2 * np.abs(q[:, 1]) / np.maximum((q ** 2).sum(1), 1e-6)
+                rq = np.where(vq >= GATE_V, kq / kcap(vq), 0.0)
+                info["pp"] = round(float(rq.max()), 3)
+                info["gate"] = max(info["gate"], info["pp"])
     return (t, o[:, 0], o[:, 1], o[:, 2]), info
+
+
+def anchor(xy_yaw, quat):
+    """(x, y, yaw) of the anchor, quat its pose quaternion -> (x, y, yaw), tilted. Level poses (|(qx, qy)| <= TILT): the input, unchanged.
+    Tilted: yaw = 2 atan2(qz, qw), the controller's planar yaw (alpasim controller, benchmark/runner.py), instead of the full-quaternion
+    yaw, which on such a pose is 0.8-3 rad off the controller's state."""
+    if np.hypot(quat.x, quat.y) <= TILT:
+        return xy_yaw, False
+    return (xy_yaw[0], xy_yaw[1], 2.0 * float(np.arctan2(quat.z, quat.w))), True
 
 
 def cached_plan(CachedPlan, t0_us: int, anchor_xy_yaw, ref):

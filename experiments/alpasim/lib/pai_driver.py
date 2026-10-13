@@ -269,7 +269,10 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 quat=common_pb2.Quat(w=float(np.cos(p0[2] / 2)), x=0.0, y=0.0, z=float(np.sin(p0[2] / 2)))))
             if TR.ON:                                        # the feasible reference instead of the plan (track_ref.py)
                 ref, tri = TR.build(o["poses"], float(np.hypot(*V[-1])), float(dyn[-1][2]), a0=float(dyn[-1][1][0]))
-                s.plan = TR.cached_plan(CachedPlan, t0, p0, ref)
+                ax, tilt = TR.anchor(p0, near.pose.quat)    # tilted pose (ground-mesh defect): the controller's planar yaw
+                s.plan = TR.cached_plan(CachedPlan, t0, ax, ref)
+                if tilt:
+                    tri["tilt"] = round(float((ax[2] - p0[2] + np.pi) % (2 * np.pi) - np.pi), 3)
             else:
                 s.plan = S.make_cached_plan(t0, s.anchor, o["poses"])
         traj = S.build_trajectory_from_plan(s.plan, s.anchor, now, tq)
