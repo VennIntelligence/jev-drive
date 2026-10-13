@@ -35,8 +35,8 @@ def load(dirs):
 
 def ztype(r):
     m = r.get("score_metrics") or r.get("metrics") or {}
-    if r.get("failure_reason"):
-        return "sanity" if "sanity" in str(r["failure_reason"]) else "other"
+    if "sanity" in str(r.get("failure_reason") or ""):
+        return "sanity"
     if (m.get("collision_at_fault") or 0) > 0:
         return "collision"
     if (m.get("offroad") or 0) > 0:
@@ -90,7 +90,7 @@ def main():
         z, c = e["ztypes"], e.get("coverage") or {}
         md.append(f"| {lab} | {e['mean']:.4f} | {e['zeros']} | {z.get('collision', 0)} / {z.get('offroad', 0)} / {z.get('corridor', 0)} / {z.get('sanity', 0)} / {z.get('other', 0)} | "
                   f"{e['gt']:.3f} | {e['lat_gt']:.3f} | {e['progress_rel']:.4f} | {e['dist_m']:.1f} / {e['gt_dist_m']:.1f} | "
-                  f"{c.get('served_share', float('nan')):.3f} | {c.get('mean_cov', float('nan')):.2f} | {c.get('gap_median') if c.get('gap_median') is not None else '-'} | "
+                  f"{c.get('served_share', float('nan')):.3f} | {c.get('mean_cov', float('nan')):.2f} | {('%.1f' % c['gap_median']) if c.get('gap_median') is not None else '-'} | "
                   f"{' / '.join(map(str, c.get('dlat_abs_median_1_2_4s') or ['-']))} |")
     for lab, e in out["labels"].items():
         if e.get("coverage"):
