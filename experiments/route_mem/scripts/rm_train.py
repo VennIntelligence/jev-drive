@@ -40,6 +40,10 @@ Turning-school addition (2026-10-13, experiments/route_follow/plans/2026-10-13-t
             weight of a row class in the imitation / hinge sums, without touching the loss. Same orng stream [seed, 0, 53] (numpy's
             weighted choice). '' = off: the uniform draw, bit for bit as before.
 
+  --on-mode mixed   on_train's per-row mode: pool rows tagged mode == "self" (S's on-policy rows) keep the `self` recipe, the rest (demonstration
+            rows) are `both`; `mixcheck` is its known-answer test: on one setup, a batch whose pool rows are all `self` rows gives the
+            `self` loss and gradient exactly, a batch of `both` rows the `both` ones (exit 2 otherwise).
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -311,6 +315,38 @@ def cmd_train(a):
                            gpu_peak_gb=torch.cuda.max_memory_reserved() / 2 ** 30)
 
 
+def cmd_mixcheck(a):
+    """Known-answer test of --on-mode mixed (docstring): same normal rows + k pool rows of one kind, mixed vs the pure mode, per batch."""
+    import torch
+    dev = torch.device("cuda")
+    a.rm_from, a.on_mode = "", "mixed"
+    ns, rp, JD, TU, okc = build(a, dev)
+    S, model, k = ns.S, ns.model, ns.k_on
+    from jevdrive.common import data_dir
+    md = np.load(data_dir() / "runs/op_parity/cache" / a.on / "tab.npz")["mode"].astype(str)
+    rng = np.random.default_rng([a.seed, 0, 97])
+    res = {}
+    for kind, ref in (("self", "self"), ("both", "both")):
+        pool = np.flatnonzero(md == kind if kind == "self" else md != "self")
+        worst = 0.0
+        for b in range(3):
+            r = np.concatenate([rng.choice(ns.tr_o, ns.nN, replace=False), ns.on0 + rng.choice(pool, k, replace=False)])
+            rows, an = torch.as_tensor(r, device=dev), torch.zeros(len(r), dtype=torch.bool, device=dev)
+            with torch.no_grad():
+                out = model(S.front[rows], S.ego[rows], S.tc[rows], None, None, nv=None)
+            vals = []
+            for m in ("mixed", ref):
+                o = out.clone().requires_grad_(True)
+                tot, _ = ns.losses(m)(o, S, rows, an)
+                g = torch.autograd.grad(tot, o)[0]
+                vals.append((float(tot), g))
+            worst = max(worst, abs(vals[0][0] - vals[1][0]), float((vals[0][1] - vals[1][1]).abs().max()))
+        res[kind] = worst
+    ok = all(v <= 1e-6 for v in res.values())
+    print(json.dumps(dict(pool=a.on, max_abs_diff=res, pass_=ok)))
+    raise SystemExit(0 if ok else 2)
+
+
 def cmd_rely(a):
     import torch
     import pp_train as T
@@ -344,7 +380,7 @@ def cmd_zero(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("train", "rely"):
+    for name in ("train", "rely", "mixcheck"):
         p = sub.add_parser(name)
         p.add_argument("--tag", required=True)
         p.add_argument("--exp", default="route_mem")
@@ -356,7 +392,7 @@ if __name__ == "__main__":
         p.add_argument("--allow-init", action="store_true", help="permit an --init other than tonight's RB-F / RB0-F")
         OT.recipe_args(p)
         p.add_argument("--on-k", type=int, default=13)
-        p.add_argument("--on-mode", default="", choices=("",) + OT.MODES)
+        p.add_argument("--on-mode", default="", choices=("",) + OT.ALL_MODES)
         p.add_argument("--on-split", default="")
         p.add_argument("--on-lon", default="")
         p.add_argument("--on-lon-lam", type=float, default=10.0)
@@ -381,4 +417,4 @@ if __name__ == "__main__":
     if a.agent_on_only and not a.on:                                 # agent hinge on pool rows only, and no pool: no row carries it (RB0 / RNONE)
         print("rm_train: --agent-on-only without --on -> --agent-lam 0 (no row has an agent label)", flush=True)
         a.agent_lam, a.agent_on_only = 0.0, False
-    dict(train=cmd_train, rely=cmd_rely)[a.cmd](a)
+    dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)

@@ -21,6 +21,8 @@ OffAgentHinge, ot_rows' off_hinge / offsets. Only joint_train's S subset is carr
                     As bd4_train's note (x) does for S's rows, a row whose footprint at t0 is off the road-and-lane raster takes the pool's
                     drivable raster (<POOL>/drivable.npz, P2H10's layers) if the pool has one.
       both          the imit row plus the two hinges of the on-policy rows, summed / n_imit x lam x ho_w (n_imit then counts the on-policy rows).
+  mixed         per row (turning school, 2026-10-13): pool rows whose tab `mode` is "self" are `self` rows, every other row is a `both` row
+                (one merged pool of S's on-policy rows and demonstration rows, each with its own recipe). Pool without `mode`: = both.
   --yr-mass F       round 2 (plans/2026-10-12-onpol2-prereg.md, B: the YR10m10-F base): joint_train's yaw-rate rows, operation for operation:
                     round(batch x F) imitation rows of every batch from the caches yr1_* out of the normal rows' stream [seed, 0], never anchor rows,
                     P2H10's drivable hinge in each row's own frame (ot_rows.off_hinge), dev metrics `ot_*` on the yaw-rate dev rows. Batch order:
@@ -67,6 +69,7 @@ import numpy as np  # noqa: E402
 import joint_train as JT  # noqa: E402
 
 MODES = ("imit", "self", "both")
+ALL_MODES = MODES + ("mixed",)                                       # `mixed` stays out of the known-answer loop over MODES
 NAVSIM_RASTER = "runs/op_probe/labels/navtrain_all.npz"             # pp_train.Cfg.hinge_labels: P2H10's drivable raster
 
 
@@ -94,6 +97,10 @@ def losses_on():
             c = self.cfg
             Ls = {("on/" + q[7:] if q.startswith("fam/on/") else q): v for q, v in Ls.items()}
             h = self.ho[rows] if self.ho is not None else torch.zeros_like(m)
+            if self.mode == "mixed":                                     # the `self` rows are Losses43's hinge-only rows; the rest is `both`
+                m = m & ~h
+                if not m.any():
+                    return total, Ls
             imit = ~h & ~anchor & S.has_fut[rows]
             n_imit = imit.sum().clamp_min(1)                             # Losses43's n_imit
             r = rows[m]
@@ -109,7 +116,7 @@ def losses_on():
                     f = S.fut[r]
                     Ls["on/imit"] = self.dist(out.float()[m][:, self.pi].view(-1, 33, 15), S.cam_x[r], f[..., 0], f[..., 1], f[..., 2]).mean()
                     Ls["on/ade"] = torch.hypot(x - f[..., 0], y - f[..., 1]).mean()
-            if self.mode == "both":                                      # the hinge-only rows' two hinges, on rows that are imitation rows
+            if self.mode in ("both", "mixed"):                           # the hinge-only rows' two hinges, on rows that are imitation rows
                 xs, ys = shape_only(x, y, psi) if self.shape else (x, y)
                 av, rv = torch.zeros(len(r), device=x.device), torch.zeros(len(r), device=x.device)
                 ok = self.on_aok[r]
@@ -171,8 +178,8 @@ def setup(a, dev):
     ho = [(f, int(k)) for f, k in (x.split(":") for x in a.ho.split(","))] if a.ho else []
     fams, kk = [f for f, _ in ho], [k for _, k in ho]
     mode = a.on_mode if a.on else None
-    assert mode in MODES + (None,), "--on needs --on-mode imit | self | both"
-    hing = mode in ("self", "both")
+    assert mode in ALL_MODES + (None,), "--on needs --on-mode imit | self | both | mixed"
+    hing = mode in ("self", "both", "mixed")
     nB, k_ho, k_on = a.batch, sum(kk), a.on_k if a.on else 0
     k_yr = int(round(nB * a.yr_mass))                                # joint_train --yr-mass
     nN = nB - k_yr - k_ho - k_on                                     # normal rows per batch
@@ -215,6 +222,11 @@ def setup(a, dev):
             nv = torch.full((S.n,), 8, device=dev)
             nv[on0:] = torch.as_tensor(pt["nv"].astype(np.int64), device=dev)
         onrec = dict(pool=a.on, rows=n_on, logs=len(set(pt["log"].tolist())), nv_lt8=int((pt["nv"] < 8).sum()) if "nv" in pt.files else 0, has_off="off" in pt.files)
+    self_on = np.zeros(S.n, bool)                                    # --on-mode mixed: the pool rows tagged mode == "self"
+    if mode == "mixed" and "mode" in pt.files:
+        self_on[on0:] = pt["mode"].astype(str) == "self"
+    if mode == "mixed":
+        onrec |= dict(mixed_self_rows=int(self_on.sum()), mixed_both_rows=int(n_on - self_on.sum()))
     model = T.PModel(cfg.arm).to(dev)
     model.set_tr1(dict(noax=False, hist_cv=False))
     init = load_init(model, a.init) if a.init else None
@@ -276,13 +288,14 @@ def setup(a, dev):
 
     def losses(md):
         k43 = dict(agent2=agent2, road=road, road_lam=a.road_lam, ho_w=a.ho_w, shape=a.shape)
+        sfr = is_on & (self_on if md == "mixed" else np.full(S.n, md == "self"))   # pool rows Losses43 carries as hinge-only rows
         if agent2 is not None:
-            agent2.ok[on0:] = on_aok[on0:] if md == "self" else False
+            agent2.ok[on0:] = on_aok[on0:] & t(sfr[on0:]) if md in ("self", "mixed") else False
         if md is None:
             return Losses43(model.net, cfg, tstd, S.di, S.pi, dev, hinge, None, ho=t(is_ho) if k_ho else None, fam=t(fam), fams=fams, **k43)
-        sf = md == "self"                                            # family `on`: Losses43's own hinge-only rows
-        return losses_on()(model.net, cfg, tstd, S.di, S.pi, dev, hinge, None, ho=t(is_ho | (is_on & sf)) if k_ho or sf else None,
-                           fam=t(np.where(is_on & sf, len(fams), fam)), fams=fams + ["on"] * sf, on=t(is_on), mode=md, on_aok=on_aok, on0=on0,
+        sf = bool(sfr.any())                                         # family `on`: Losses43's own hinge-only rows
+        return losses_on()(model.net, cfg, tstd, S.di, S.pi, dev, hinge, None, ho=t(is_ho | sfr) if k_ho or sf else None,
+                           fam=t(np.where(sfr, len(fams), fam)), fams=fams + ["on"] * sf, on=t(is_on), mode=md, on_aok=on_aok, on0=on0,
                            lon=lon, pack=pack, lon_lam=a.on_lon_lam, agent_off=a.agent_on_only, **k43)
     return SimpleNamespace(cfg=cfg, S=S, model=model, base=base, new=new, hinge=hinge, agent2=agent2, road=road, losses=losses, mode=mode, ho=ho, fams=fams,
                            kk=kk, pools=pools, nN=nN, k_ho=k_ho, k_on=k_on, n_on=n_on, on0=on0, nv=nv, tr_o=tr_o, dv_o=dv_o, sp=sp, trl=trl, excl=excl,
@@ -671,7 +684,7 @@ if __name__ == "__main__":
     p.add_argument("--eval-every", type=int, default=1000)
     recipe_args(p)
     p.add_argument("--on-k", type=int, default=13)
-    p.add_argument("--on-mode", default="", choices=("",) + MODES)
+    p.add_argument("--on-mode", default="", choices=("",) + ALL_MODES)
     p.add_argument("--on-split", default="", help="registered split of the pool's scenes (alpasim_nuplan/onpol-train), recorded with the run")
     p.add_argument("--on-lon", nargs="?", const="on_lon", default="", metavar="MODULE",
                    help="extra on-policy terms (self / both) from experiments/onpol_nuplan/lib/on_lon.py (or another module with its load / loss)")

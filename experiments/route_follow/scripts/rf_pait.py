@@ -449,7 +449,9 @@ def cmd_pack(a):
 
 # ---------------------------------------------------------------- merge
 def cmd_merge(a):
-    src = [(p, pre) for p, pre in (x.split(":") for x in a.pools)]
+    spec = [x.split(":") for x in a.pools]                            # pool:prefix[:mode] (mode -> tab `mode`, on_train --on-mode mixed)
+    src = [(x[0], x[1]) for x in spec]
+    modes = [x[2] if len(x) > 2 else "" for x in spec]
     out, warp = CR / f"on1_{a.out}", CR / f"on1_{a.out}@warp"
     out.mkdir(exist_ok=True), warp.mkdir(exist_ok=True)
     ren = lambda v, pre: np.array([f"on:{pre}:{t[3:]}" for t in v.tolist()])  # noqa: E731
@@ -464,17 +466,22 @@ def cmd_merge(a):
             M[k] = np.concatenate([t[k] if k in t else np.full(n, "") for t, n in zip(tabs, ns)]).astype("U20")
     M["src"] = M["src"].astype("U16")
     M["pool"] = np.concatenate([np.full(n, pre) for n, (_, pre) in zip(ns, src)]).astype("U16")   # --on-weight pool=<prefix>:W balances the parts
+    if any(modes):
+        M["mode"] = np.concatenate([np.full(n, md or "both") for n, md in zip(ns, modes)]).astype("U8")
     np.savez(out / "tab.npz", **M)
     names = M["names"]
     assert len(set(names.tolist())) == len(names)
-    for f, shp in (("agent.npz", None), ("road.npz", None)):
+    for f in ("agent.npz", "road.npz", "drivable.npz"):                # a pool without the file: zero rows, ok False
         Z = [dict(np.load(CR / p / f)) if (CR / p / f).exists() else None for p, _ in src]
+        if all(z is None for z in Z):
+            continue
         z0 = next(z for z in Z if z is not None)
         A = {"tokens": names}
         for k in z0:
             if k == "tokens":
                 continue
             A[k] = np.concatenate([z[k] if z is not None else np.zeros((n,) + z0[k].shape[1:], z0[k].dtype) for z, n in zip(Z, ns)])
+        assert all(z is None or len(z["tokens"]) == n for z, n in zip(Z, ns)), f"{f}: rows"
         np.savez(out / f, **A)
     Z = [dict(np.load(CR / p / "route.npz")) for p, _ in src]
     np.savez(out / "route.npz", tokens=names, **{k: np.concatenate([z[k] for z in Z]) for k in ("ok", "poly", "seglen", "dz", "cov20")})
@@ -492,7 +499,7 @@ def cmd_merge(a):
     Tz = [dict(np.load(CR / f"{p}@warp/teacher.npz")) for p, _ in src]
     assert all(np.array_equal(t["di"], Tz[0]["di"]) and np.array_equal(t["pi"], Tz[0]["pi"]) for t in Tz)
     np.savez(warp / "teacher.npz", out=np.concatenate([t["out"] for t in Tz]), plan=np.concatenate([t["plan"] for t in Tz]), di=Tz[0]["di"], pi=Tz[0]["pi"])
-    print(json.dumps(dict(pool=str(out), rows=len(names), parts={p: n for (p, _), n in zip(src, ns)},
+    print(json.dumps(dict(pool=str(out), rows=len(names), parts={p: n for (p, _), n in zip(src, ns)}, modes=modes,
                           src={s: int((M["src"] == s).sum()) for s in np.unique(M["src"])})))
 
 
