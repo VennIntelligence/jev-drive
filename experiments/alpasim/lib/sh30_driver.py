@@ -23,7 +23,8 @@ default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route m
 
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
 (op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (gpu, the default: slot warp on the card + fast frame packing, same
-frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), JEV_REPLAN (lateral re-plan out of a predicted contact, same module; off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (a feasible reference for the controller
+built from the plan and the ego state: track_ref.py; off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), JEV_REPLAN (lateral re-plan out of a predicted contact, same module; off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -61,9 +62,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import grpc  # noqa: E402
 from alpasim_grpc.v0 import common_pb2, egodriver_pb2, egodriver_pb2_grpc  # noqa: E402
 from navsim_transfuser_challenge.navigation import command_from_route  # noqa: E402
-from navsim_transfuser_challenge.trajectory import build_trajectory_from_plan, make_cached_plan, yaw_from_quat  # noqa: E402
+from navsim_transfuser_challenge.trajectory import CachedPlan, build_trajectory_from_plan, make_cached_plan, yaw_from_quat  # noqa: E402
 
 import serve_fix as FX  # noqa: E402
+import track_ref as TR  # noqa: E402
 import sh30_core as C  # noqa: E402
 
 RMEM = None                                          # experiments/route_mem/lib/rmem.py, set in main() for a checkpoint with the branch
@@ -278,7 +280,11 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         s.count["inference"] += 1
         fx = FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0)
         bd = BD.apply(self.gpu, o, float(np.hypot(*dyn[-1][0])), s, s.count["drive"] - 1) if BD else None
-        plan = make_cached_plan(t0, anchor, o["poses"])
+        if TR.ON:                                            # the feasible reference instead of the plan (track_ref.py)
+            ref, tri = TR.build(o["poses"], float(np.hypot(*dyn[-1][0])), float(dyn[-1][2]))
+            plan = TR.cached_plan(CachedPlan, t0, (anchor.pose.vec.x, anchor.pose.vec.y, yaw0), ref)
+        else:
+            plan = make_cached_plan(t0, anchor, o["poses"])
         traj = build_trajectory_from_plan(plan, anchor, now, tq)
         t_out = time.perf_counter()
         rec = {"kind": "drive", "t": time.time(), "session": req.session_uuid, "scene": s.scene, "now": now, "t0": t0, "k": s.count["drive"] - 1,
@@ -294,6 +300,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
         if bd is not None:
             rec.update(body=bd)
+        if TR.ON:
+            rec.update(track=tri, poses_track=TR.poses8(ref).round(4).tolist())
         self.out.write(json.dumps(rec) + "\n")
         if s.n < self.dump:
             np.savez_compressed(self.dir / "dump" / f"s{s.n:02d}_k{rec['k']}.npz", cur=o["cur"], valid=o["valid"], mu=o["mu"], poses=o["poses"],
@@ -301,7 +309,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}{BD.SUFFIX if BD else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}{TR.SUFFIX}{BD.SUFFIX if BD else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=API)
 
 

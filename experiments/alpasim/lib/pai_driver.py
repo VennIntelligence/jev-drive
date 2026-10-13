@@ -24,7 +24,8 @@ adaptation of the nuPlan-track checkpoints (sh30_driver.py), no training. What t
 A `drive` whose inputs are incomplete or whose inference raises is aborted with a gRPC error and counted (no straight-line fallback).
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, SH30_TAG (op_parity run tag), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl:
 one record per call; start.jsonl: the full rollout spec of every session), PAI_DUMP (number of sessions whose model frames and source
-JPEG are saved once per second to <log dir>/dump), PAI_KEYWARP, JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default).
+JPEG are saved once per second to <log dir>/dump), PAI_KEYWARP, JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (the trajectory handed to
+the controller is a feasible reference built from the plan and the ego state, never a large-steering one: track_ref.py; off by default).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
 from __future__ import annotations
@@ -41,9 +42,11 @@ import numpy as np
 
 import sh30_driver as S
 from sh30_driver import common_pb2, egodriver_pb2, egodriver_pb2_grpc, grpc
+from navsim_transfuser_challenge.trajectory import CachedPlan  # the image's sh30_driver predates its import there
 
 import pai_core as PC
 import serve_fix as FX
+import track_ref as TR
 from pai_core import C, I
 
 RMEM = None                                          # experiments/route_mem/lib/rmem.py (mounted by pai_run.sh), set in main() for a branch checkpoint
@@ -251,7 +254,11 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             s.anchor = common_pb2.PoseAtTime(timestamp_us=t0, pose=common_pb2.Pose(
                 vec=common_pb2.Vec3(x=float(p0[0]), y=float(p0[1]), z=near.pose.vec.z),
                 quat=common_pb2.Quat(w=float(np.cos(p0[2] / 2)), x=0.0, y=0.0, z=float(np.sin(p0[2] / 2)))))
-            s.plan = S.make_cached_plan(t0, s.anchor, o["poses"])
+            if TR.ON:                                        # the feasible reference instead of the plan (track_ref.py)
+                ref, tri = TR.build(o["poses"], float(np.hypot(*V[-1])), float(dyn[-1][2]))
+                s.plan = TR.cached_plan(CachedPlan, t0, p0, ref)
+            else:
+                s.plan = S.make_cached_plan(t0, s.anchor, o["poses"])
         traj = S.build_trajectory_from_plan(s.plan, s.anchor, now, tq)
         t_out = time.perf_counter()
         rec = {"kind": "drive", "t": time.time(), "session": req.session_uuid, "scene": s.scene, "now": now, "tq": tq, "t0": t0, "k": k,
@@ -263,6 +270,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                            "slots": round(1e3 * (t_q - t_f), 2), "wait": round(1e3 * (t_g - t_q), 2)})
             if fx is not None:
                 rec.update(fix=fx, poses_model=o["poses_model"].round(4).tolist())
+            if TR.ON:
+                rec.update(track=tri, poses_track=TR.poses8(ref).round(4).tolist())
             if "rmem" in o:
                 rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
             if self.keywarp:                                 # n_real then counts the slots at or after the oldest keyframe; ms.slots
@@ -279,7 +288,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 
@@ -321,7 +330,8 @@ def main() -> None:
         core.rm, core.rm_dim = True, RMEM.DIM
         LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
     core.lead_out, core.base_out = FX.NEED_LEAD, FX.BASE > 0
-    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d", FX.VCONT, FX.LEAD, FX.BASE)
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, TR.MODE,
+             {k: getattr(TR, k) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN")} if TR.ON else "")
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros
     warm = lambda: PC.plan(core, z, np.ones(8, bool), e((4, 3)), e((4, 2)), e(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731
     kw = os.environ.get("PAI_KEYWARP", "0") == "1"

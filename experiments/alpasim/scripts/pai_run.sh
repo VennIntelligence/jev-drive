@@ -37,6 +37,7 @@ docker run -d --name "$N" --init --cap-drop ALL --security-opt no-new-privileges
   --tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777 --tmpfs /run:rw,nosuid,nodev,size=64m,mode=0755 --network $NET --gpus "device=$DGPU" \
   -v "$lib/pai_core.py:/app/jev-drive/experiments/alpasim/lib/pai_core.py:ro" -v "$lib/pai_driver.py:/app/jev-drive/experiments/alpasim/lib/pai_driver.py:ro" \
   -v "$lib/serve_fix.py:/app/jev-drive/experiments/alpasim/lib/serve_fix.py:ro" \
+  -v "$lib/track_ref.py:/app/jev-drive/experiments/alpasim/lib/track_ref.py:ro" \
   -v "$here/../../../jevdrive/openpilot/lead_long.py:/app/jev-drive/jevdrive/openpilot/lead_long.py:ro" \
   -v "$here/../../route_mem/lib/rmem.py:/app/jev-drive/experiments/route_mem/lib/rmem.py:ro" \
   ${DRV_PY:+-v "$lib/$DRV_PY:/app/jev-drive/experiments/alpasim/lib/$DRV_PY:ro"} \
