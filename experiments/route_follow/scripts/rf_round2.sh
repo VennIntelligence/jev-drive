@@ -9,7 +9,7 @@
 #   3. R2SB-L18-s{0,1} (pool on1_L18SB1s) and R2SBU-L18-s{0,1} (pool on1_L18U2s): RSGboth's gentle recipe from RB0-F-s0, --on-mode both, draw
 #      weights by the registered rule (`train` below), a 60-step smoke job first; each followed by the held 460 / 18 read (rm_chain.sh
 #      submit-read) and the public 1491 / 10 guard (10 ol_chain readlist chunks); one report job.
-# Box, repo root.   rf_round2.sh submit | submit-train <sidetag id> <merge id> | train <pool> <tag> <seed> [rm_train args] | report
+# Box, repo root.   rf_round2.sh submit | resume geo|tok [roll ids] | submit-train <sidetag id> <merge id> | train <pool> <tag> <seed> [rm_train args] | report
 set -uo pipefail; cd "$(dirname "$0")/../../.."
 RF=$DATA_DIR/runs/route_follow; O=$RF/round2; G=$RF/guard; M=$DATA_DIR/runs/route_mem/read; E=experiments/onpol_long; W=$DATA_DIR/runs/onpol_long
 CR=$DATA_DIR/runs/op_parity/cache; P=$DATA_DIR/third_party/alpasim/.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python
@@ -27,17 +27,21 @@ submit)
   rt=$(CL fanout --arms 0,1,2,3,4,5 --name r2-roll-$T0 --owner route-follow --vram 32 --cpu 8 --ram 60 --tries 1 --priority 14 --timeout-h 3 --no-check \
        --gpus 1,2,3,4,5 --pin-strict --log-dir "$W/roll/$T0/c{arm}/pool" -- bash $E/scripts/ol_chain.sh roll1 $T0 "{arm}" | awk '{print $1}' | grep -E '^[0-9]{4}-[0-9]{6}-' | paste -sd,)
   [[ $(echo $rt | tr , '\n' | wc -l) == 6 ]] || { echo "roll fanout: $rt"; exit 1; }; echo "$rt r2-roll" >> $O/jobs.txt
+  bash experiments/route_follow/scripts/rf_round2.sh resume geo $rt || exit 1 ;;
+resume)  # everything after the rollouts: resume geo <roll ids> (rows from scratch) | resume tok (geo's rows already built); RESUME.md
+  mkdir -p $O/pool; FROM=$2; rt=${3:-}
+  sub() { local name=$1; shift; local id; id=$(CL submit --owner route-follow --name "$name" --tries 1 --priority 14 --no-check \
+       --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
   TOK='test -f $DATA_DIR/runs/op_parity/cache/on1_$0@warp/front.npy -a -f $DATA_DIR/runs/onpol_long/rows/$0/gates.json'
-  g=$(sub r2-geo --after $rt --vram 0.5 --cpu 48 --ram 96 --timeout-h 2 -- bash $E/scripts/ol_chain.sh geo $T0 $N) || exit 1
-  k=$(sub r2-tok --after $g --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash -c "bash $E/scripts/ol_chain.sh tok $N smoke10eY; echo tok-and-gate rc \$?; $TOK" $N) || exit 1
+  g=""; [[ $FROM == geo ]] && { g=$(sub r2-geo ${rt:+--after $rt} --vram 0.5 --cpu 48 --ram 96 --timeout-h 2 -- bash $E/scripts/ol_chain.sh geo $T0 $N) || exit 1; }
+  k=$(sub r2-tok ${g:+--after $g} --vram 16 --cpu 16 --ram 64 --timeout-h 2 -- bash -c "bash $E/scripts/ol_chain.sh tok $N smoke10eY; echo tok-and-gate rc \$?; $TOK" $N) || exit 1
   sub r2-strip --after $k --vram 0.5 --cpu 16 --ram 16 --timeout-h 2 -- bash $E/scripts/ol_chain.sh strip $T0 $N > /dev/null || exit 1
   p=$(sub r2-pool --after $k --vram 0.5 --cpu 32 --ram 80 --timeout-h 1 -- $P experiments/route_mem/scripts/rm_build.py pool --name $N --workers 32) || exit 1
   q=$(sub r2-gate --after $p --vram 0.5 --cpu 1 --ram 16 --timeout-h 1 -- bash $RF/r2gate.sh $N L18RB0) || exit 1
   t=$(sub r2-sidetag --after $q --vram 0.5 --cpu 2 --ram 32 --timeout-h 1 -- .venv/bin/python experiments/route_follow/scripts/rf_sidetag.py pool \
       --src on1_$N --out on1_${N}s --dry-out $O/sidetag_r1.json) || exit 1
   m=$(sub r2-merge --after $t --vram 0.5 --cpu 4 --ram 80 --timeout-h 1 -- bash -c "$TR $RF/r2merge.py L18U2s L18RB0s ${N}s && $P $RF/poolgate.py L18U2s") || exit 1
-  bash experiments/route_follow/scripts/rf_round2.sh submit-train $t $m || exit 1
-  cat $O/jobs.txt ;;
+  bash experiments/route_follow/scripts/rf_round2.sh submit-train $t $m || exit 1 ;;
 submit-train)  # the trainings after the side-tag job ($2) and the merge job ($3); the 60-step smoke is its own job (the pool's --preflight
   # ignores --after and would run before the pool exists)
   t=$2; m=$3; mkdir -p $O/pool
