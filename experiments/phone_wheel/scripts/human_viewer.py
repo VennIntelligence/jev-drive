@@ -47,12 +47,15 @@ def bar(canvas, x, y, w, h, value, color, centered=False):
         pygame.draw.rect(canvas, color, (x, y, int(w * max(0.0, min(1.0, value))), h))
 
 
-def draw(canvas, state, images, font, big, status):
+def draw(canvas, state, images, font, big, status, tag):
     def label(msg, pos, color=WHITE, f=None):
         canvas.blit((f or font).render(msg, True, color), pos)
     hu = state.get("human") or {}
-    label("HUMAN (phone wheel) / %s   route %s   step %s   sim %.1f s" % (status, state.get("route", "-"), state.get("step", "-"),
-                                                                          state.get("sim_t", 0)), (20, 12))
+    t = tag.render("DRIVER: HUMAN (phone)", True, (0, 0, 0))     # unmistakable next to the model's viewer window
+    pygame.draw.rect(canvas, ORANGE, (14, 3, t.get_width() + 20, 42), border_radius=8)
+    canvas.blit(t, (24, 24 - t.get_height() // 2))
+    label("%s   route %s   step %s   sim %.1f s" % (status, state.get("route", "-"), state.get("step", "-"), state.get("sim_t", 0)),
+          (t.get_width() + 50, 12))
     W, H = 1560, 780
     if "wide" in images:
         img = images["wide"].copy()
@@ -93,7 +96,8 @@ def draw(canvas, state, images, font, big, status):
     age = hu.get("age_ms")
     label("input age %s   %s" % ("-" if age is None or age > 5e4 else "%.0f ms" % age, "STALE" if hu.get("stale") else "ok"),
           (x2, y0 + 128), RED if hu.get("stale") else WHITE)
-    label("raw steer %+.2f  gain %s  expo %s" % (hu.get("steer_in", 0), hu.get("gain"), hu.get("expo")), (x2, y0 + 158), GREY)
+    label("raw steer %+.2f  gain %s expo %s   throttle ^%s x%s" % (hu.get("steer_in", 0), hu.get("gain"), hu.get("expo"),
+                                                                  hu.get("thr_gamma"), hu.get("thr_gain")), (x2, y0 + 158), GREY)
     label("ROUTE / SIM", (x3, y0), (150, 200, 255))
     p = hu.get("progress", 0) or 0
     label("progress %.0f %% of %s m" % (100 * p, hu.get("route_m")), (x3, y0 + 34))
@@ -119,6 +123,7 @@ def main():
     canvas = pygame.Surface((CW, CH))
     font = pygame.font.SysFont("DejaVu Sans", 22)
     big = pygame.font.SysFont("DejaVu Sans", 44, bold=True)
+    tag = pygame.font.SysFont("DejaVu Sans", 30, bold=True)
     clock = pygame.time.Clock()
     reader, packet, state, images, last_draw = None, None, {}, {}, 0.0
     try:
@@ -147,7 +152,7 @@ def main():
                 canvas.fill((17, 21, 29))
                 age = time.time() - state.get("t", 0)
                 status = ("LIVE" if age < 3 else "STALE") if state.get("running") else ("ENDED" if state else "WAITING FOR A ROUTE")
-                draw(canvas, state, images, font, big, status)
+                draw(canvas, state, images, font, big, status, tag)
                 r = min(screen.get_width() / CW, screen.get_height() / CH)
                 screen.fill((0, 0, 0))
                 screen.blit(pygame.transform.smoothscale(canvas, (max(1, int(CW * r)), max(1, int(CH * r)))), (0, 0))

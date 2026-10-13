@@ -18,7 +18,9 @@ reported (wall s per sim s, raw = without the sleeps). The route clock starts at
 (`wait_start`, the simulation is held at its first tick, at most `wait_max_s`, below the leaderboard's 300 s agent watchdog).
 
 Config JSON (--agent-config, optional; missing keys take DEFAULT): steer_gain, steer_expo (steer = gain * ((1 - e) s + e s^3),
-the page has its own curve, so the default is identity), realtime, publish_every, scale, wait_start, wait_max_s, road.
+the page has its own curve, so the default is identity); throttle_gamma, throttle_gain (throttle = min(1, gain * t^gamma), default
+0.6 / 1.3: a light touch already pulls, the user found the linear map dull), brake_gamma, brake_gain (default 1.0 / 1.0: the MKZ brake
+is already sharp, 0.05 gives about -3.2 m/s^2; the page's pedal gain scales both pedals before sending); realtime, publish_every, scale, wait_start, wait_max_s, road.
 Per attempt (B2D_ATTEMPT_OUT): human.jsonl (one line per tick) and human_summary.json.
 """
 import json
@@ -42,7 +44,7 @@ import zeroshot_rigs as rigs  # noqa: E402
 from b2d_controller_adapter import world_to_local  # noqa: E402
 from wheel_client import WheelClient  # noqa: E402
 
-DEFAULT = dict(steer_gain=1.0, steer_expo=0.0, realtime=1.0, publish_every=1, scale=2, wait_start=True, wait_max_s=240.0,
+DEFAULT = dict(steer_gain=1.0, steer_expo=0.0, throttle_gamma=0.6, throttle_gain=1.3, brake_gamma=1.0, brake_gain=1.0, realtime=1.0, publish_every=1, scale=2, wait_start=True, wait_max_s=240.0,
                road=False)
 F_MODEL, CX_MODEL, CY_MODEL, W_MODEL, H_MODEL = 455.0, 256.0, 0.5 * (256 + 47.6), 512, 256   # modeld's SBIGMODEL_K frame
 CMD_NAMES = {Z.LEFT: "turn left", Z.RIGHT: "turn right", Z.STRAIGHT: "straight through junction",
@@ -72,6 +74,10 @@ def project(dev, scale):
     u = scale * (F_MODEL * dev[:, 1] / dev[:, 0] + CX_MODEL)
     v = scale * (F_MODEL * dev[:, 2] / dev[:, 0] + CY_MODEL)
     return np.round(np.stack([u, v], -1), 1).tolist()
+
+
+def pedal(v, gamma, gain):
+    return float(min(1.0, gain * max(0.0, min(1.0, v)) ** gamma))
 
 
 def shape_steer(s, gain, expo):
@@ -106,7 +112,7 @@ class HumanAgent(AutonomousAgent):
         self.rid = os.environ.get("BENCHMARK_ROUTE_ID", "?")
         self.tick, self.started, self.wait_s, self.hero, self.viz_err = 0, not self.cfg["wait_start"], 0.0, None, 0
         self.anchor = None                       # (wall, sim) of the pacing reference
-        self.t_prev_exit = None                  # wall time the previous run_step returned
+        self.t_prev_in, self.prev_wait, self.prev_sleep = None, 0.0, 0.0   # previous run_step entry, its start wait and pacing sleep
         self.raw_s = self.slept_s = self.sim_s = 0.0
         self.n_stale = self.n_late = 0
         self.v_hist = []
@@ -135,8 +141,9 @@ class HumanAgent(AutonomousAgent):
     def _control(self):
         st = self.wheel.state()
         steer = shape_steer(st["steer"], float(self.cfg["steer_gain"]), float(self.cfg["steer_expo"]))
-        c = carla.VehicleControl(throttle=float(np.clip(st["throttle"], 0, 1)), steer=steer,
-                                 brake=float(np.clip(st["brake"], 0, 1)), hand_brake=bool(st["handbrake"]),
+        k = self.cfg
+        c = carla.VehicleControl(throttle=pedal(st["throttle"], float(k["throttle_gamma"]), float(k["throttle_gain"])), steer=steer,
+                                 brake=pedal(st["brake"], float(k["brake_gamma"]), float(k["brake_gain"])), hand_brake=bool(st["handbrake"]),
                                  reverse=bool(st["reverse"]))
         return c, st
 
@@ -144,9 +151,11 @@ class HumanAgent(AutonomousAgent):
         t_in = time.time()
         self.tick += 1
         now = float(timestamp)
-        if self.t_prev_exit is not None:
-            self.raw_s += t_in - self.t_prev_exit      # simulator tick + render + transfer since our last return
+        if self.t_prev_in is not None:                 # one tick: simulator + render + transfer + this agent
+            self.raw_s += t_in - self.t_prev_in - self.prev_wait - self.prev_sleep
+            self.slept_s += self.prev_sleep
             self.sim_s += 0.05
+        self.t_prev_in, self.prev_wait, self.prev_sleep = t_in, 0.0, 0.0
         frame = input_data["OP_WIDE"][1]
         if not self.started:                           # hold the world at its first tick until the driver presses throttle
             t0 = time.time()
@@ -157,7 +166,7 @@ class HumanAgent(AutonomousAgent):
                     break
                 time.sleep(0.05)
             self.started, self.wait_s = True, round(time.time() - t0, 1)
-            self.anchor = None
+            self.anchor, self.prev_wait = None, time.time() - t0
         slept = 0.0
         rt = float(self.cfg["realtime"])
         if rt > 0:
@@ -170,7 +179,7 @@ class HumanAgent(AutonomousAgent):
                 time.sleep(slept)
             elif wall - target > 0.5:                  # far behind: re-anchor, never burst to catch up
                 self.anchor, self.n_late = (wall, now), self.n_late + 1
-        self.slept_s += slept
+        self.prev_sleep = slept
         c, st = self._control()                        # read the wheel after the sleep: freshest input
         self.n_stale += st["stale"]
         if self.preview is not None and self.tick % int(self.cfg["publish_every"]) == 0:
@@ -236,7 +245,8 @@ class HumanAgent(AutonomousAgent):
                       "progress": round(prog, 4), "route_m": round(float(r.s[-1]), 0) if r is not None else None,
                       "wall_per_sim": round((self.raw_s + self.slept_s) / sim, 3) if self.sim_s else None,
                       "raw_per_sim": round(self.raw_s / sim, 3) if self.sim_s else None, "late": self.n_late,
-                      "gain": self.cfg["steer_gain"], "expo": self.cfg["steer_expo"], "realtime": self.cfg["realtime"]},
+                      "gain": self.cfg["steer_gain"], "expo": self.cfg["steer_expo"],
+                      "thr_gamma": self.cfg["throttle_gamma"], "thr_gain": self.cfg["throttle_gain"], "realtime": self.cfg["realtime"]},
         }
         self.preview.publish(state, {"wide": img})
 

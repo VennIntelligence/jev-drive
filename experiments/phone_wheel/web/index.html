@@ -45,6 +45,10 @@ body.one #brake, body.one #gas { display:none; } body.one #one { display:block; 
 #steerval .n { font-size:clamp(28px, 9vmin, 64px); font-weight:700; font-variant-numeric:tabular-nums; }
 #steerval .d { color:var(--dim); font-variant-numeric:tabular-nums; }
 #btns { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+#cal { display:flex; flex-direction:column; gap:4px; width:min(100%, 520px); }
+#cal label { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--dim); }
+#cal label span { min-width:7.5em; } #cal label b { min-width:4.2em; text-align:right; color:var(--fg); font-variant-numeric:tabular-nums; }
+#cal input[type=range] { flex:1; }
 button { background:#222831; color:var(--fg); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font:inherit; font-weight:600; min-width:64px; }
 button.on { background:var(--acc); border-color:var(--acc); }
 button#stop.on { background:var(--brake); border-color:var(--brake); }
@@ -97,11 +101,12 @@ button#center { background:var(--acc); border-color:var(--acc); min-width:96px; 
       <div id="steerval"><div class="n" id="steer">+0.00</div><div class="d" id="deg">0.0 deg</div></div>
     </div>
     <div id="warn"></div>
+    <div id="cal">
+      <label><span>Steering range</span><input type="range" id="c_range" min="20" max="90" step="1"><b id="c_range_v"></b></label>
+      <label><span>Pedal gain</span><input type="range" id="c_pgain" min="0.5" max="3" step="0.05"><b id="c_pgain_v"></b></label>
+    </div>
     <div id="btns">
       <button id="center">Center</button>
-      <button id="rev">Reverse</button>
-      <button id="stop">Stop</button>
-      <button id="fs">Full</button>
       <button id="set">Settings</button>
     </div>
   </div>
@@ -119,7 +124,7 @@ button#center { background:var(--acc); border-color:var(--acc); min-width:96px; 
 
 <div class="overlay" id="settings"><div class="panel">
   <h2>Settings</h2>
-  <label>Full lock angle <span><input type="range" id="s_range" min="30" max="180" step="5"> <b id="s_range_v"></b> deg</span></label>
+  <div class="row" style="justify-content:flex-start;margin:0 0 6px"><button id="rev">Reverse</button><button id="stop">Stop (handbrake)</button><button id="fs">Full</button></div>
   <label>Dead zone <span><input type="range" id="s_dz" min="0" max="10" step="0.5"> <b id="s_dz_v"></b> deg</span></label>
   <label>Curve <select id="s_curve"><option value="linear">linear</option><option value="expo">mild expo</option></select></label>
   <label>Expo amount <span><input type="range" id="s_expo" min="0" max="0.9" step="0.05"> <b id="s_expo_v"></b></span></label>
@@ -137,9 +142,10 @@ button#center { background:var(--acc); border-color:var(--acc); min-width:96px; 
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
-const DEF = { range: 90, dz: 2, curve: 'expo', expo: 0.35, inv: false, holdb: false, holdg: false, lock: false, autofs: true, pedals: 'one', slew: 0.8, center: 0 };
+const DEF = { range: 60, pgain: 1.3, dz: 2, curve: 'expo', expo: 0.35, inv: false, holdb: false, holdg: false, lock: false, autofs: true, pedals: 'one', slew: 0.8, center: 0 };
 const S = Object.assign({}, DEF, JSON.parse(localStorage.getItem('wheel.settings') || '{}'));
 const save = () => localStorage.setItem('wheel.settings', JSON.stringify(S));
+if (!S.cal2) { S.range = DEF.range; S.pgain = DEF.pgain; S.cal2 = 1; save(); }   // 2026-10-13: range moved to the main screen (20-90 deg)
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 const SEND_HZ = 60, GRAB_X = 36, GRAB_Y = 24, MIN_G = 3.5;
 
@@ -181,7 +187,7 @@ function trackAt(x, y) {
 }
 function setFromY(t, y) { const b = t.el.getBoundingClientRect(); t.v = Math.min(1, Math.max(0, (b.bottom - y) / b.height)); }
 addEventListener('pointerdown', e => {
-  if (e.target.closest('button, .overlay')) return;
+  if (e.target.closest('button, input, select, .overlay')) return;
   const t = trackAt(e.clientX, e.clientY);
   if (!t || t.id !== null) return;
   t.id = e.pointerId; t.el.classList.add('held'); setFromY(t, e.clientY); e.preventDefault();
@@ -206,15 +212,23 @@ async function goFullscreen() {
 document.addEventListener('fullscreenchange', () => $('fs').classList.toggle('on', !!document.fullscreenElement));
 
 // ---- settings panel ----
-const fields = { s_range: 'range', s_dz: 'dz', s_expo: 'expo', s_curve: 'curve', s_inv: 'inv', s_holdb: 'holdb', s_holdg: 'holdg', s_lock: 'lock', s_autofs: 'autofs', s_pedals: 'pedals', s_slew: 'slew' };
+const fields = { s_dz: 'dz', s_expo: 'expo', s_curve: 'curve', s_inv: 'inv', s_holdb: 'holdb', s_holdg: 'holdg', s_lock: 'lock', s_autofs: 'autofs', s_pedals: 'pedals', s_slew: 'slew' };
 function loadForm() {
   for (const [id, k] of Object.entries(fields)) { const el = $(id); if (el.type === 'checkbox') el.checked = S[k]; else el.value = S[k]; }
   document.body.classList.toggle('one', S.pedals === 'one');
-  for (const k of ['range', 'dz', 'expo', 'slew']) $('s_' + k + '_v').textContent = S[k];
+  for (const k of ['dz', 'expo', 'slew']) $('s_' + k + '_v').textContent = S[k];
+  loadCal();
 }
 for (const [id, k] of Object.entries(fields)) $(id).addEventListener('input', e => {
   const el = e.target; S[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value; save(); loadForm();
 });
+// ---- main-screen calibration: steering range (tilt for full lock) and pedal gain (applied here, before sending) ----
+function loadCal() {
+  S.range = Math.min(90, Math.max(20, S.range)); $('c_range').value = S.range; $('c_pgain').value = S.pgain;
+  $('c_range_v').textContent = S.range + ' deg'; $('c_pgain_v').textContent = 'x' + (+S.pgain).toFixed(2);
+}
+for (const [id, k] of [['c_range', 'range'], ['c_pgain', 'pgain']]) $(id).addEventListener('input', e => { S[k] = +e.target.value; save(); loadCal(); });
+loadCal();
 $('set').onclick = () => { loadForm(); $('settings').classList.add('show'); };
 $('s_close').onclick = () => $('settings').classList.remove('show');
 $('s_reset').onclick = () => { const c = S.center; Object.assign(S, DEF, { center: c }); save(); loadForm(); };
@@ -261,7 +275,8 @@ function frame() {
   let [rawThr, brk] = pedals();
   if (handbrake) { rawThr = 0; brk = 1; }
   thr = rawThr > thr ? Math.min(rawThr, thr + S.slew * dt) : rawThr;
-  return { steer: +steer.toFixed(4), throttle: +thr.toFixed(3), brake: +brk.toFixed(3), raw_throttle: +rawThr.toFixed(3),
+  const g = v => Math.min(1, v * S.pgain);
+  return { steer: +steer.toFixed(4), throttle: +g(thr).toFixed(3), brake: +(handbrake ? 1 : g(brk)).toFixed(3), raw_throttle: +g(rawThr).toFixed(3),
            reverse, handbrake, ts: now, seq: seq++, rtt: rtt == null ? null : +rtt.toFixed(1) };
 }
 setInterval(() => {

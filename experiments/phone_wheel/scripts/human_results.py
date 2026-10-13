@@ -21,7 +21,7 @@ def main(run):
         rec = json.loads((att / "results.json").read_text())["_checkpoint"]["records"][0]
         hs = json.loads((att / "human_summary.json").read_text()) if (att / "human_summary.json").exists() else {}
         rows.append({"route": str(d["route_id"]), "town": rec.get("town_name"), "scenario": rec.get("scenario_name"),
-                     "DS": round(100 * rec["scores"]["score_composed"], 2), "RC": round(100 * rec["scores"]["score_route"], 2),
+                     "DS": round(rec["scores"]["score_composed"], 2), "RC": round(rec["scores"]["score_route"], 2),
                      "IS": round(rec["scores"]["score_penalty"], 3), "status": rec["status"],
                      "infractions": {k: len(v) for k, v in rec["infractions"].items() if v},
                      "infraction_text": [x for v in rec["infractions"].values() for x in v],
