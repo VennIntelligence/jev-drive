@@ -56,7 +56,7 @@ submit-read)
   [[ -z ${READ_ENV:-} || -n $S ]] || die "READ_ENV needs READ_SFX (the switched read must not reuse read/$T)"
   for kv in ${READ_ENV:-}; do X+=(--env "$kv"); done
   for i in 0 1 2 3 4 5; do
-    rr+=($(sub rm-read-$L-$i "$A" --vram 26 --cpu 8 --ram 40 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read "${X[@]}" -- bash $E/scripts/rm_chain.sh read $T $i 6 $S)) || exit 1
+    rr+=($(sub rm-read-$L-$i "$A" --vram 20 --cpu 6 --ram 40 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=alpasim-read4 "${X[@]}" -- bash $E/scripts/rm_chain.sh read $T $i 6 $S)) || exit 1
   done
   dd=$(for i in 0 1 2 3 4 5; do printf "%s," $W/read/$L/c$i/run; done)
   sub rm-cover-$L "$(IFS=,; echo "${rr[*]}")" --vram 0.5 --cpu 2 --ram 16 --timeout-h 1 -- $P $E/scripts/rm_build.py cover --runs "$L=${dd%,}" --out $W/cover/$L.parquet > /dev/null || exit 1 ;;
@@ -79,7 +79,7 @@ submit-post)    # submit-post <train ids> <eager serve ids>: eager plan equality
   for T in YRM-L18-s0 YRM-L18-s1; do
     ids=()
     for i in 0 1 2 3 4 5; do
-      ids+=($(sub rm-read-$T-$i "$g" --vram 26 --cpu 8 --ram 40 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read -- bash $E/scripts/rm_chain.sh read $T $i 6)) || exit 1
+      ids+=($(sub rm-read-$T-$i "$g" --vram 20 --cpu 6 --ram 40 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=alpasim-read4 -- bash $E/scripts/rm_chain.sh read $T $i 6)) || exit 1
     done
     dd=$(for i in 0 1 2 3 4 5; do printf "%s," $W/read/$T/c$i/run; done)
     rr+=("${ids[@]}" $(sub rm-cover-$T "$(IFS=,; echo "${ids[*]}")" --vram 0.5 --cpu 2 --ram 16 --timeout-h 1 -- $P $E/scripts/rm_build.py cover --runs "$T=${dd%,}" --out $W/cover/$T.parquet)) || exit 1

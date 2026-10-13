@@ -171,8 +171,13 @@ is needed beyond that, and four undeclared 30 GiB loaders started in one round a
 A killed training restarts from step 0: `pp_train.py` and `ap2_train.py` write no checkpoint before the end.
 
 **Fixing a queued job's declaration.** `cl retarget <ids> --vram 26 [--ram 30] [--gpus 1,2]` edits a queued job in
-place (id and `--after` chains stay); the AlpaSim read family (`ol-read`, `rm-read`, `rg10`, `ro-*`, `sf-*`, `redg`) measures
-VRAM p50 19 / p95 26 / max 28 GB over 212 runs, so `--vram 26` is the honest declaration (3 per card: 26 + 2 x 26.3 history cap < 83.6; 27 misses by 0.2 GB), not 32 (2 per card).
+place (id and `--after` chains stay). The AlpaSim read family (`ol-read`, `rm-read`, `rg10`, `ro-*`, `sf-*`, `redg`) runs
+4 concurrent rollouts / renderer cache 5 with the expandable-segments allocator since 2026-10-13 (`c0b_chain.OVERRIDES`,
+profile `alpasim`): pool VRAM peak p50 12.5 / p95 = max 17.4 GB over 10 public chunks (was p50 19 / p95 26 / max 28-31 GB at 8 / 9),
+RSS 20 GB (was 28), same scores, wall +10 %. So reads declare `--vram 20 --cpu 6` (4 per card: 4 x 20 < 83.6) under
+history key `CL_HIST_KEY=alpasim-read4` (the old key `ol-fast-read` holds 8-concurrent peaks that would mark 20 as
+under-declared). A read queued before that change runs the new settings too, but keeps its old key and declaration: leave it at 26 (retargeting it to 20 alone gets it booked at its key's old peaks).
+Rollouts (`ol-roll`) keep 32 (frame dumps, more RAM). research/alpasim-read-profile.md.
 
 **Restarting the dispatcher** (pool code only takes effect then). State is in `state.json` (saved every round),
 jobs run in their own sessions and are followed by pid + start time, exit codes land in `rc.<try>` files, so running

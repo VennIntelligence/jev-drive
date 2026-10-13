@@ -21,7 +21,7 @@ submit)
     dep+=($(grep " rm-cover-$T$" $DATA_DIR/runs/route_mem/jobs.txt | tail -1 | cut -d' ' -f1))
   done
   for i in $(seq 0 9); do
-    dep+=($(sub redg-rg10-$i --after ${tt[0]} --vram 26 --cpu 8 --ram 30 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read -- bash $E/scripts/ol_chain.sh readlist RRED-L18-s0 \
+    dep+=($(sub redg-rg10-$i --after ${tt[0]} --vram 20 --cpu 6 --ram 30 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=alpasim-read4 -- bash $E/scripts/ol_chain.sh readlist RRED-L18-s0 \
           $W/lists/all_n10/c$i.txt 10 $G/read10/RRED-L18-s0/b$i)) || exit 1
   done
   dep+=($(sub red-read --after "$(IFS=,; echo "${tt[*]}")" --vram 16 --cpu 4 --ram 50 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_redread.py read \

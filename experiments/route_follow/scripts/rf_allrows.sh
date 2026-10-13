@@ -21,7 +21,7 @@ submit)
     s=${T##*-s}; X=(); [[ $T == RSGallV-* ]] && X=(--ego-drop-speed 0.5)
     t=$(sub tr-$T --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 -- $TR experiments/route_mem/scripts/rm_train.py train --tag $T $REC "${X[@]}" --seed $s) || exit 1
     for i in $(seq 0 9); do
-      rr+=($(sub ar10-$T-$i --after $t --vram 26 --cpu 8 --ram 30 --timeout-h 2 --env CL_HIST_KEY=ol-fast-read -- bash $E/scripts/ol_chain.sh readlist $T $W/lists/all_n10/c$i.txt 10 $O/read10/$T/b$i)) || exit 1
+      rr+=($(sub ar10-$T-$i --after $t --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- bash $E/scripts/ol_chain.sh readlist $T $W/lists/all_n10/c$i.txt 10 $O/read10/$T/b$i)) || exit 1
     done
   done
   a=$(IFS=,; echo "${rr[*]}")

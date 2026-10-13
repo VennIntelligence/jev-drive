@@ -308,7 +308,7 @@ submit-ego)   # Amendment 11: ego-status dropout on YS-L18's recipe (round-1 row
   N=L18Y; F="env OL_RCH=6 bash $E/scripts/ol_fast.sh"
   sub() { local name=$1 after=$2; shift 2; local id; id=$(CL submit --owner onpol-long --name "$name" --tries 1 --priority ${PRIO:-14} --no-check ${after:+--after $after} \
             --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name (amendment 11)" >> $W/jobs.txt; }
-  RD="--vram 26 --cpu 8 --ram 40 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read"
+  RD="--vram 20 --cpu 6 --ram 40 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=alpasim-read4"
   OT="$TR $ON/scripts/on_train.py train --exp onpol_long --init YR10m10-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 \
       --on on1_$N --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self"
   rids=(); tids=()
@@ -357,7 +357,7 @@ submit-armb)   # Amendment 13: arm B, directional road raster on pool on1_L18YS 
   for s in 0 1; do
     a=$(sub ol-train-YSB-s$s "$d" --train --vram 26 --cpu 6 --ram 60 --timeout-h 2 $G15 -- $OT --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_L18YS --on-k 13 \
           --on-split alpasim_nuplan/onpol-train --on-mode self --on-road $RB/road.npz --seed $s --tag YSB-L18-s$s) || exit 1
-    for i in $(seq 0 5); do rids+=($(sub ol-read-YSB-L18-s$s-$i "$a" --vram 26 --cpu 8 --ram 40 --timeout-h 2 $G15 --env CL_HIST_KEY=ol-fast-read -- \
+    for i in $(seq 0 5); do rids+=($(sub ol-read-YSB-L18-s$s-$i "$a" --vram 20 --cpu 6 --ram 40 --timeout-h 2 $G15 --env CL_HIST_KEY=alpasim-read4 -- \
           env OL_RCH=6 bash $E/scripts/ol_fast.sh read YSB-L18-s$s $i 6)) || exit 1; done
   done
   sub ol-report-armb "$(IFS=,; echo "${rids[*]}")" --vram 0.5 --cpu 64 --ram 64 --timeout-h 1 -- bash $E/scripts/ol_chain.sh report-armb > /dev/null || exit 1
@@ -391,7 +391,7 @@ submit-armb2)  # Amendment 14: arm B', oncoming hinge channel (ol_dirraster.py o
     for s in 0 1; do
       a=$(sub ol-train-Y$A-s$s "$d" --train --vram 26 --cpu 6 --ram 60 --timeout-h 2 $G15 -- $OT --agent-lam 10 --agent-on-only --shape --ho-w 3 --on on1_L18YS --on-k 13 \
             --on-split alpasim_nuplan/onpol-train --on-mode self --on-lon ol_onc --on-lon-lam $LAM --seed $s --tag Y$A-L18-s$s) || exit 1
-      for i in $(seq 0 5); do rids+=($(sub ol-read-Y$A-L18-s$s-$i "$a" --vram 26 --cpu 8 --ram 40 --timeout-h 2 $G15 --env CL_HIST_KEY=ol-fast-read -- \
+      for i in $(seq 0 5); do rids+=($(sub ol-read-Y$A-L18-s$s-$i "$a" --vram 20 --cpu 6 --ram 40 --timeout-h 2 $G15 --env CL_HIST_KEY=alpasim-read4 -- \
             env OL_RCH=6 bash $E/scripts/ol_fast.sh read Y$A-L18-s$s $i 6)) || exit 1; done
     done
   done
@@ -430,7 +430,7 @@ submit-armb3)  # Amendment 15: oncoming region by zeros_mech's lane rule (ol_zmo
     [[ $A == SBz ]] && { bids=("${rids[@]}"); rids=(); }
     for s in 0 1; do
       a=$(sub ol-train-Y$A-s$s "$AF" --train --vram 26 --cpu 6 --ram 60 --timeout-h 2 $G15 -- env PYTHONPATH=$PWD/$E/lib OL_ONC=$RB/onc.npz $OT "$@" --seed $s --tag Y$A-L18-s$s) || exit 1
-      for i in $(seq 0 5); do rids+=($(sub ol-read-Y$A-L18-s$s-$i "$a" --vram 26 --cpu 8 --ram 40 --timeout-h 2 $G15 --env CL_HIST_KEY=ol-fast-read -- \
+      for i in $(seq 0 5); do rids+=($(sub ol-read-Y$A-L18-s$s-$i "$a" --vram 20 --cpu 6 --ram 40 --timeout-h 2 $G15 --env CL_HIST_KEY=alpasim-read4 -- \
             env OL_RCH=6 bash $E/scripts/ol_fast.sh read Y$A-L18-s$s $i 6)) || exit 1; done
     done
   done
@@ -468,7 +468,7 @@ submit-armb4)  # Amendment 17: arm B' with variant (a) (rear-axle point, t0 head
   for x in "SO25 2.5" "SO50 5"; do set -- $x
     for s in 0 1; do
       a=$(sub ol-train-Y$1-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 2 $G15 -- env PYTHONPATH=$PWD/$E/lib OL_ONC=$RB/onc.npz OL_ONC_MODE=point $OT --on-lon-lam $2 --seed $s --tag Y$1-L18-s$s) || exit 1
-      for i in $(seq 0 5); do rids+=($(sub ol-read-Y$1-L18-s$s-$i "$a" --vram 26 --cpu 8 --ram 40 --timeout-h 2 $G15 --env CL_HIST_KEY=ol-fast-read -- \
+      for i in $(seq 0 5); do rids+=($(sub ol-read-Y$1-L18-s$s-$i "$a" --vram 20 --cpu 6 --ram 40 --timeout-h 2 $G15 --env CL_HIST_KEY=alpasim-read4 -- \
             env OL_RCH=6 bash $E/scripts/ol_fast.sh read Y$1-L18-s$s $i 6)) || exit 1; done
     done
   done

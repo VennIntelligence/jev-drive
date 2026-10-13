@@ -17,7 +17,7 @@ source <(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts
 LONG=("$KEY.cache_location=$C" "$KEY.dataset.extra_params.num_timesteps_after=160")
 sub() { local name=$1 after=$2; shift 2; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner route-only --name "$name" --tries 1 --priority ${PRIO:-12} --no-check \
           ${after:+--after $after} --log-dir "$W/pool/$name" "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id"; echo "$id $name" >> $W/jobs.txt; }
-RD=(--vram 26 --cpu 8 --ram 30 --timeout-h 2 --env CL_HIST_KEY=ol-fast-read)   # measured: VRAM p95 26 / max 28 GB, RAM 28 GB
+RD=(--vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4)   # 4 concurrent / cache 5 (c0b_chain): VRAM p95 17.4 GB, RSS 20 GB (research/alpasim-read-profile.md)
 STAGE=${1:?stage}; shift
 case $STAGE in
 run)
