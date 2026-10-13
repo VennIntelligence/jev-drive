@@ -164,7 +164,8 @@ def _dlat(a, b):
     return (b[[1, 3, 7], 1] - a[[1, 3, 7], 1])
 
 
-if __name__ == "__main__":                                           # self-test
+if __name__ == "__main__":                                           # self-test (own, then bridge)
+    MODE = "own"
     straight = np.c_[np.arange(-10, 90, 4.0), np.zeros(25) + 0.6]
     poses = np.c_[5 * T_POSE, 0.3 * T_POSE, np.zeros(8)]             # plan drifting left at 5 m/s
     o, i, p = serve(poses, straight, 5.0)
