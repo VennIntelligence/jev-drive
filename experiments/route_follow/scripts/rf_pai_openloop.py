@@ -70,7 +70,7 @@ def rows_of(a):
     """-> per-row arrays of the selected turn rows: cache index, scene, turn id (global), d, sign, topo, route features."""
     T = np.load(Path(a.cache) / "tab.npz")
     scenes = T["scenes"][T["sid"]]
-    excl = set(RP.scenes_of(a.exclude)) if a.exclude else set()
+    excl = set(RP.scenes_of([a.exclude])) if a.exclude else set()
     want = [s for s in RP.scenes_of(a.scenes) if s not in excl]
     out = dict(ci=[], sc=[], tid=[], d=[], sgn=[], topo=[], f=[])
     turns = []
