@@ -1,0 +1,38 @@
+## public 1491 / 10, R-own
+served decisions 4456 ego-route lateral offset median 0.75 p90 11.06 p99 32.67; share > 3 m 0.212, > 6 m 0.132
+broken scenes: max ego-route lateral offset on served decisions {'555a5aa7': 2.7, 'c14754d2': 28.5, 'e3185794': 3.3, 'c6845005': 27.6, 'a33d5cb7': 16.8, '88c05270': 33.7, '67c75240': 31.2, '9c555961': 35.9, 'a20b5224': 2.7, 'c5c25657': 31.7}
+scenes with a served decision > 6 m off: 134 of 1479 ; zero there arm / ref: 14 / 7
+common 1491 identical score+GT 1077
+broken (ref>0, arm 0) 10 Counter({'offroad': 8, 'collision': 2})
+  B 2021.05.25.17.54.41_veh-35_02723_02902-42c7526fc6845005 offroad 1.0
+  B 2021.06.03.13.55.17_veh-35_02419_02561-77218354c5c25657 offroad 1.0
+  B 2021.06.03.18.47.39_veh-35_00503_00777-a454e18ca33d5cb7 offroad 1.0
+  B 2021.06.28.16.29.11_veh-38_00022_00368-53d3787367c75240 offroad 1.0
+  B 2021.06.28.16.57.59_veh-26_00016_00484-41da8ea7c14754d2 offroad 1.0
+  B 2021.06.28.20.24.43_veh-38_03385_04952-0774f6d8e3185794 collision 1.0
+  B 2021.09.16.15.47.30_veh-45_01199_01391-708d081d555a5aa7 collision 1.0
+  B 2021.09.16.19.27.01_veh-45_01749_03230-d743862c9c555961 offroad 1.0
+  B 2021.09.29.14.44.26_veh-28_00337_00504-e051405f88c05270 offroad 1.0
+  B 2021.10.06.07.26.10_veh-52_01245_02064-a1848a01a20b5224 offroad 1.0
+fixed (ref 0, arm>0) 0 Counter()
+## held 460 / 18, own
+served decisions 3866 ego-route lateral offset median 0.39 p90 5.13 p99 29.09; share > 3 m 0.153, > 6 m 0.092
+broken scenes: max ego-route lateral offset on served decisions {'c14754d2': 28.5, '1c4d50b3': 0.5, '67c75240': 31.2}
+scenes with a served decision > 6 m off: 64 of 452 ; zero there arm / ref: 8 / 7
+common 460 identical score+GT 206
+broken (ref>0, arm 0) 3 Counter({'offroad': 2, 'collision': 1})
+fixed (ref 0, arm>0) 2 Counter({'offroad': 2})
+## held 460 / 18, bridge
+served decisions 8100 ego-route lateral offset median 0.58 p90 14.76 p99 30.98; share > 3 m 0.282, > 6 m 0.206
+broken scenes: max ego-route lateral offset on served decisions {'d8d8522c': 2.3, 'b2d053b7': 5.9, '61415cb0': 20.6, '760d5a11': 21.3, '4b4356c7': 15.1, '36205814': 2.9, 'c3c85f4c': 13.1, 'ee0f54a6': 28.9, 'b19956b7': 16.8, 'd2d357d8': 8.1, '41235469': 17.4, '30165b51': 6.7, '88195cfa': 27.3, 'e2b95eaa': 38.1, '22575452': 25.3, '12fe5f29': 22.7, '1da95adb': 16.5, 'f979592b': 11.6, 'e0c357d2': 17.5, 'c51f506a': 24.4, '25b45c77': 33.4, 'b3555ef8': 7.1, 'ae455b98': 14.1, 'c14754d2': 28.5, '5bd05d3d': 11.0, 'e6f856e8': 33.2, 'a8635037': 6.4, '204d5e11': 3.6, 'e7d75853': 23.2, '163b5072': 12.6, '23ed53a9': 9.7, '6a78529b': 22.0, '163c53b8': 6.9, '9faf5baa': 13.4, 'bbfd5765': 17.1, '3f515d6e': 17.4, '251e559a': 13.9, '79f15a8f': 16.5, '25185b83': 3.0, 'e25f581b': 3.0, '36c35df7': 2.2, 'a93e5dcd': 0.8, '63c3534c': 26.3, '11d75ed8': 11.8, 'bade58f6': 17.6, 'c379503d': 10.8, '1e905b02': 12.3, '016a5795': 27.3, '9f215995': 32.1, '67c75240': 31.2, 'ce2052ff': 10.8, 'b66451da': 2.4, '15895be2': 18.1, 'a57154bc': 18.5, '44c051e3': 13.8, '26c35e33': 0.5, '789956f1': 17.1, '763b5c36': 35.9, '19e25dfb': 3.2, '1a4f5acb': 27.6, 'edbe5b95': 20.8, '589e5398': 28.4, 'fa15573d': 20.1, '40e55b83': 27.1, '619e557f': 33.7, 'e17050ba': 14.3, 'a40b52b9': 27.0, '754e58d3': 2.4, '27975391': 24.7, '073d5080': 29.3}
+scenes with a served decision > 6 m off: 181 of 452 ; zero there arm / ref: 74 / 19
+common 460 identical score+GT 8
+broken (ref>0, arm 0) 70 Counter({'offroad': 59, 'collision': 8, 'corridor': 3})
+fixed (ref 0, arm>0) 6 Counter({'offroad': 4, 'collision': 1, 'corridor': 1})
+## held 460 / 18, log
+served decisions 4540 ego-route lateral offset median 0.36 p90 4.50 p99 28.31; share > 3 m 0.143, > 6 m 0.083
+broken scenes: max ego-route lateral offset on served decisions {'36205814': 2.4, 'b9eb537e': 1.4, 'e3395557': 0.5, 'e2b95eaa': 38.1, 'fc2d5be7': 0, 'cdd85c9d': 0, 'c14754d2': 28.5, 'e6f856e8': 31.3, 'bbfd5765': 0, 'a324581d': 3.2, '68af5357': 1.7, '67c75240': 31.2, 'a57154bc': 0, 'e9625732': 1.2}
+scenes with a served decision > 6 m off: 71 of 452 ; zero there arm / ref: 8 / 6
+common 460 identical score+GT 8
+broken (ref>0, arm 0) 14 Counter({'offroad': 7, 'collision': 7})
+fixed (ref 0, arm>0) 10 Counter({'offroad': 7, 'collision': 2, 'corridor': 1})
