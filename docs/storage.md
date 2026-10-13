@@ -101,6 +101,21 @@ TRT engines of concluded models in `runs/op_interp/trt_cache` and `models/openpi
 caches: `runs/op_parity/cache/b2d_v2*` (24G), `runs/op_adapt_L/b2d`, `processed/op_route_cmd`. B2D infrastructure untouched
 (`third_party/carla`, the leaderboard envs, `checkpoints/scout`, `runs/op_route_ft`, `runs/op_wide_ft`, `runs/b2d` results).
 
+2026-10-14 cleanup (user-approved, script and log in `tmp/cleanup_1014.*`, full scan in `tmp/du_1014_d3.txt` on the data
+disk; the box came back from a restart with no GPU, disk now 6.4T): 1093G -> 1705G free, 612G removed, all regenerable material
+of concluded lines with no live reader. `runs/op_adapt_H/{fixbank,bank,bank2,bank3}` (222G; `runs/`, `onnx/`, `samples/` stay),
+`runs/vis_train/px_side` (182G, rebuilt on 10-11 by eyes_sense / junction_eyes right after cleanup 1011b; `vt_side.py` rebuilds
+it), `runs/junction_eyes/{px,px90,slots,keep,keep_w90,step1}` (189G; `step0/` and the repo results stay; slots need a GPU to
+rebuild), `runs/op_img_cmd/ft` (50G), `runs/op_adapt_L/{t,gate_curve,readout,followup,pilot}` (38G; `runs/` stays), the ply
+of `runs/bench/hugsim` (35G, 1328 files), `rollout.asl` of `runs/lowboard_diag/pai2` (25G), `runs/op_parity/mem/vtr_W0` (11G),
+`models/openpilot/taps` (9G), HF copies of diffusiongemma / Qwen3-VL-8B / InternVL2 / Wan2.1 / comma world model / R3D2 /
+Cosmos-Reason2 / Qwen3.5 (about 45G) and the top-level scratch files. Tier 2 of that scan (ask first, about 420G):
+`processed/op_adapt/{navtrain,wodtrain,nusc,wodval}` 198G, the onpol_long old-arm warp caches `runs/op_parity/cache/on1_L18{R2,R2s,R3,YA,Y,P}*`
+68G, `runs/op_adapt_H/samples` 48G, `runs/op_lb` side caches 45G, `runs/hugsim-exam` 41G, `runs/road_probe/roll` 18G,
+`datasets/nuscenes` + `processed/nuscenes` 58G, `processed/wod_zeroshot` 22G, `datasets/comma1M` 21G, HF Alpamayo-1.5-10B 21G,
+`envs/{ultralytics,sam3}` + `models/sam3.1` 16G, `runs/op_parity/{s2_thinhead/ft,wa_xboard}` 29G. Kept on purpose: every
+`datasets/` entry, `runs/alpasim/ap2/cache` (120G, read by `route_follow/scripts/rf_cf.py`), all live-lane rollouts.
+
 Live but regenerable (ask first):
 `runs/op_adapt_H/{fixbank,bank,samples,bank2}` non-CARLA parts ~300G (H line, last trained 2026-10-03, no live reader; `runs/`
 and `onnx/` stay for the bench `adapt_h` family), `runs/op_img_cmd/ft/{bank,runs}` 48G, `runs/op_adapt_L` 52G (`t/H`, `gate_curve/*.npy`, `readout`),
