@@ -626,7 +626,7 @@ class Dispatch(unittest.TestCase):
         for v in (10, 11, 12):
             P.hist_record(self.tmp, "pk-s9", v, 1.0, 2.0)
         for i in range(3):
-            P.submit("sleep 30", name="pk-s%d" % i, pool=self.tmp, vram_gb=50)       # declared 50 GB, known to need 15.4
+            P.submit("sleep 30", name="pk-s%d" % i, pool=self.tmp, vram_gb=50)       # declared 50 GB, known to need 14.2
         P.submit("sleep 30", name="fresh", pool=self.tmp, vram_gb=50)               # no history: books its declaration
         d = self.disp(trust_measured=False)
         d.round()
@@ -636,10 +636,10 @@ class Dispatch(unittest.TestCase):
         d = self.disp()
         d.round()
         self.assertEqual([d.st["jobs"][i]["state"] for i in ids], ["running"] * 3)
-        self.assertEqual(d.st["jobs"][ids[0]]["vram_booked"], 15.4)
+        self.assertEqual(d.st["jobs"][ids[0]]["vram_booked"], 14.2)
         d.round()
-        self.assertAlmostEqual(d.last[0].pool_gb, 3 * 15.4, places=1)
-        self.assertIn('"booked_gb": 15.4', (self.tmp / "events.jsonl").read_text())
+        self.assertAlmostEqual(d.last[0].pool_gb, 3 * 14.2, places=1)
+        self.assertIn('"booked_gb": 14.2', (self.tmp / "events.jsonl").read_text())
         self.cancel_all(d)
 
     def test_cpu_only_job_leaves_its_card_idle(self):
