@@ -1,7 +1,7 @@
 """Desktop control panel for a human taking a driving exam item by item (tkinter, Python 3.8+, stdlib only).
 
-Generic over a backend. Bench2Drive is the first one: experiments/phone_wheel/lib/b2d_exam.py.
-experiments/phone_wheel/README.md, section "Desktop panel", documents both.
+Generic over a backend. Bench2Drive: experiments/phone_wheel/lib/b2d_exam.py (README of phone_wheel, section "Desktop panel");
+AlpaSim: experiments/alpasim_human/lib/alpasim_exam.py (README of alpasim_human, section "Desktop panel").
 
 Protocol between the panel and a backend's long-lived drive loop. Two JSON files sit in the backend's live dir, and each has
 exactly one writer:
@@ -70,8 +70,10 @@ class Control(object):
 
 class Backend(object):
     """What the panel needs from an exam. Override every method; items are dicts with
-    id, group, scenario, human (score or None), model (score or None), status (str)."""
+    id, group, scenario, human (score or None), model (score or None), status (str); optional label (row text, default id) and
+    model_src (short name of the model the model score comes from, shown after it)."""
     title = "exam"
+    score_fmt = "%.1f"             # human / model / group-mean cells
     live = None                    # live dir (control.json / loop.json)
     options = {}                   # name -> (label, default bool), e.g. {"stop_on_collision": ("Stop on collision", False)}
 
@@ -201,7 +203,7 @@ def panel(backend):
     tree.column("#0", width=230)
     for c, w, t in zip(cols, (430, 110, 110, 300), ("scenario", "human", "model", "status")):
         tree.heading(c, text=t)
-        tree.column(c, width=w, anchor="w" if c in ("scenario", "status") else "e")
+        tree.column(c, width=w + (50 if c == "model" else 0), anchor="w" if c in ("scenario", "status") else "e")
     sb = ttk.Scrollbar(root, orient="vertical", command=tree.yview)
     tree.configure(yscrollcommand=sb.set)
     sb.pack(side="right", fill="y")
@@ -226,7 +228,7 @@ def panel(backend):
         t.pack(fill="both", expand=True)
 
     shape = {"key": None}
-    fmt = lambda v: "" if v is None else "%.1f" % v  # noqa: E731
+    fmt = lambda v: "" if v is None else backend.score_fmt % v  # noqa: E731
 
     def refresh(force=False):
         try:
@@ -263,16 +265,17 @@ def panel(backend):
                     tree.insert("", "end", iid=parent, text="%s (%d)" % (g, len(its)), open=(parent in open_groups or not shape["key"]),
                                 tags=("group",))
                 for it in its:
-                    tree.insert(parent, "end", iid=it["id"], text=it["id"])
+                    tree.insert(parent, "end", iid=it["id"], text=it.get("label") or it["id"])
             shape["key"] = key
             ctl.update(order=[it["id"] for it in order])
         for it in order:
             tags = ("current",) if alive and st.get("item") == it["id"] else ("done",) if it["human"] is not None else ()
-            tree.item(it["id"], values=(it["scenario"], fmt(it["human"]), fmt(it["model"]), it["status"]), tags=tags)
+            model = fmt(it["model"]) + (" %s" % it["model_src"] if it.get("model_src") and it["model"] is not None else "")
+            tree.item(it["id"], values=(it["scenario"], fmt(it["human"]), model, it["status"]), tags=tags)
         for g, its in groups:
             if g is not None:
                 d = [it["human"] for it in its if it["human"] is not None]
-                tree.item("group:%s" % g, values=("", "%.1f" % (sum(d) / len(d)) if d else "", "", "%d / %d driven" % (len(d), len(its))))
+                tree.item("group:%s" % g, values=("", fmt(sum(d) / len(d)) if d else "", "", "%d / %d driven" % (len(d), len(its))))
 
     def tick():
         try:

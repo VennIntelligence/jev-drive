@@ -9,7 +9,9 @@
 #   HUMAN_H (render height px), HUMAN_FI_MS (camera frame interval ms), HUMAN_VIDEO (0 | 1), HUMAN_NRE (default | nrend: PAI renderer
 #   backend), HUMAN_PHYS (1 | 0: PAI ground physics). Other env: HUMAN_GPU (0; card 1 is refused), HUMAN_BASEPORT (6700: renderer,
 #   physics, controller), HUMAN_DRV_PORT (6790), HUMAN_START (click | throttle | none), HUMAN_WHEEL_PORT (47800; 47801 = fake_wheel.py),
-#   HUMAN_REALTIME (1.0: the driver paces sim time to wall time; 0 = as fast as the stack runs), HUMAN_LIVE (/data/runs/alpasim_human/live), HUMAN_VIEWER (1), HUMAN_IMG (image the driver runs in), HUMAN_MIN_FREE_MB (8000), STAGE.
+#   HUMAN_REALTIME (1.0: the driver paces sim time to wall time; 0 = as fast as the stack runs), HUMAN_LIVE (/data/runs/alpasim_human/live), HUMAN_VIEWER (1), HUMAN_IMG (image the driver runs in), HUMAN_MIN_FREE_MB (8000), STAGE,
+#   HUMAN_FG (0; 1 = run in the foreground after the checks instead of tmux human:alpa-drive: scripts/human_loop.py),
+#   HUMAN_CONTROL (the desktop panel's control.json: pause; lib/human_driver.py).
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, run.json, usage.jsonl (card VRAM, 2 s), driver/{drive,start}.jsonl, driver.log,
 #   sim/ (aggregate/results-summary.json, rollouts/, txt-logs/), results.md / results.json (human_results.py)}.
 set -uo pipefail
@@ -24,6 +26,9 @@ if [[ ${1:-} != --run ]]; then                                    # outer: check
   OUT=$(mkdir -p "$1" && cd "$1" && pwd); LIST=$(cd "$(dirname "$2")" && pwd)/$(basename "$2"); shift 2
   [[ $GPU == 1 ]] && { echo "card 1 runs the PAI chain: refusing HUMAN_GPU=1"; exit 1; }
   free=$(nvidia-smi -i "$GPU" --query-gpu=memory.free --format=csv,noheader,nounits)
+  uuid=$(nvidia-smi -i "$GPU" --query-gpu=uuid --format=csv,noheader)
+  nvidia-smi --query-compute-apps=gpu_uuid,process_name --format=csv,noheader | grep "^$uuid" | grep -q CarlaUE4 && {
+    echo "card $GPU runs CARLA (a B2D exam?)"; launcher refused "card $GPU runs CARLA" ""; exit 1; }
   (( free < ${HUMAN_MIN_FREE_MB:-8000} )) && { echo "card $GPU has $free MiB free"; launcher refused "card $GPU has only $free MiB free" ""; exit 1; }
   P0=${HUMAN_BASEPORT:-6700}
   for p in $P0 $((P0 + 1)) $((P0 + 2)) $((P0 + 3)) ${HUMAN_DRV_PORT:-6790}; do
@@ -36,6 +41,7 @@ if [[ ${1:-} != --run ]]; then                                    # outer: check
       /data/envs/carla/bin/python experiments/alpasim_human/scripts/human_viewer.py --dir $LIVE --window-size ${HUMAN_WIN_SIZE:-2480 1736}; exec bash"
   fi
   launcher running "starting the $TRACK stack" "$OUT"
+  [[ ${HUMAN_FG:-0} == 1 ]] && exec bash "$here/human_stack.sh" "$TRACK" --run "$OUT" "$LIST" "$@"
   tmux kill-window -t human:alpa-drive 2>/dev/null
   extra=""; (( $# )) && extra=$(printf '%q ' "$@")
   envs=$(env | grep -E '^(HUMAN_[A-Z_]+|STAGE|DATA_DIR|NUREC|NUPLAN_ROOT|ALPASIM_SRC|BASE)=' | while IFS= read -r l; do printf '%q ' "$l"; done)
@@ -93,7 +99,7 @@ docker rm -f "$N" >/dev/null 2>&1
 docker run -d --name "$N" --init --network host --user "$(id -u):$(id -g)" -v "$REPO:$REPO:ro" -v "$OUT/driver:/logs" -v "$LIVE:$LIVE" \
   -e ALPASIM_DRIVER_HOST=127.0.0.1 -e "ALPASIM_DRIVER_PORT=$DPORT" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "HUMAN_LIVE=$LIVE" -e "HUMAN_TRACK=$TRACK" \
   -e "HUMAN_N_SCENES=$n" -e "HUMAN_SIM_S=$SIM" -e "HUMAN_HOLD_S=${HUMAN_HOLD_S:-$HOLD}" -e "HUMAN_START=${HUMAN_START:-throttle}" \
-  -e "HUMAN_WAIT_MAX_S=${HUMAN_WAIT_MAX_S:-240}" -e "HUMAN_REALTIME=${HUMAN_REALTIME:-1.0}" -e "HUMAN_WHEEL_PORT=${HUMAN_WHEEL_PORT:-47800}" -e "HUMAN_RUN=$OUT" \
+  -e "HUMAN_WAIT_MAX_S=${HUMAN_WAIT_MAX_S:-240}" -e "HUMAN_REALTIME=${HUMAN_REALTIME:-1.0}" -e "HUMAN_WHEEL_PORT=${HUMAN_WHEEL_PORT:-47800}" -e "HUMAN_RUN=$OUT" -e "HUMAN_CONTROL=${HUMAN_CONTROL:-}" \
   -e "HUMAN_GIT=$(git -C "$REPO" rev-parse --short HEAD)" --entrypoint python "$IMG" "$REPO/experiments/alpasim_human/lib/human_driver.py" >/dev/null || die "docker run"
 t0=$(date +%s)
 until docker logs "$N" 2>&1 | grep -q "listening on"; do

@@ -192,7 +192,7 @@ def draw(c, st, live, imgs, F, status, cal=None):
     c.blit(t, (24, 24 - t.get_height() // 2))
     waiting = st.get("waiting") and status == "LIVE"
     if status == "LIVE":
-        line, col = ("DRIVING", GREEN) if not waiting else ("WAITING FOR PHONE", RED) if st.get("stale") else \
+        line, col = ("SKIPPING", GREY) if st.get("aborted") else ("PAUSED", ORANGE) if st.get("paused") else ("DRIVING", GREEN) if not waiting else ("WAITING FOR PHONE", RED) if st.get("stale") else \
             ("PHONE OK, CLICK TO START" if st.get("start_mode") == "click" else "PHONE OK, PRESS THROTTLE TO START", ORANGE)
     else:
         try:
@@ -229,7 +229,11 @@ def draw(c, st, live, imgs, F, status, cal=None):
             c.blit(f, (30 if i == 0 else 20 + IW - 10 - f.get_width(), 52 + IH - 10 - f.get_height()))
     inset(c, st, 20 + IW - 250, 152, 240, font)
     msg = None
-    if waiting:
+    if status == "LIVE" and st.get("aborted"):
+        msg = ("SKIPPING THIS SCENE (Next item)", GREY)
+    elif status == "LIVE" and st.get("paused"):
+        msg = ("PAUSED: resume on the panel", ORANGE)
+    elif waiting:
         msg = ("WAITING FOR PHONE", RED) if st.get("stale") else \
             ("CLICK TO START" if st.get("start_mode") == "click" else "PRESS THROTTLE TO START", ORANGE)
     elif status == "LIVE" and st.get("stale") and st.get("started"):
@@ -241,7 +245,7 @@ def draw(c, st, live, imgs, F, status, cal=None):
         pygame.draw.rect(c, (0, 0, 0), (20 + (IW - m.get_width()) // 2 - 20, 52 + IH // 2 - m.get_height() // 2 - 10,
                                         m.get_width() + 40, m.get_height() + 20))
         c.blit(m, (20 + (IW - m.get_width()) // 2, 52 + IH // 2 - m.get_height() // 2))
-        if waiting:
+        if waiting and not st.get("paused") and not st.get("aborted"):
             lab("held %.0f s; the scene clock starts on your %s" % (st.get("wait_s", 0), "click (left mouse button, anywhere in this window)"
                 if st.get("start_mode") == "click" else "first throttle press"),
                 (20 + (IW - 900) // 2, 52 + IH // 2 + 60), ORANGE)
