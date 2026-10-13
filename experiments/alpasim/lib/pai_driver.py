@@ -25,7 +25,9 @@ A `drive` whose inputs are incomplete or whose inference raises is aborted with 
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, SH30_TAG (op_parity run tag), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl:
 one record per call; start.jsonl: the full rollout spec of every session), PAI_DUMP (number of sessions whose model frames and source
 JPEG are saved once per second to <log dir>/dump), PAI_KEYWARP, JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (the trajectory handed to
-the controller is a feasible reference built from the plan and the ego state, never a large-steering one: track_ref.py; off by default).
+the controller is a feasible reference built from the plan and the ego state, never a large-steering one: track_ref.py; off by default), JEV_VHIST
+(off | hold | zero: the speed history fed to the adapter, vhist.py, mounted like track_ref.py; logged as `vhist`, `ego` stays the measured
+row; off by default).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
 from __future__ import annotations
@@ -47,6 +49,7 @@ from navsim_transfuser_challenge.trajectory import CachedPlan  # the image's sh3
 import pai_core as PC
 import serve_fix as FX
 import track_ref as TR
+import vhist as VH
 from pai_core import C, I
 
 RMEM = None                                          # experiments/route_mem/lib/rmem.py (mounted by pai_run.sh), set in main() for a branch checkpoint
@@ -88,6 +91,7 @@ class Session:
         # route memory; route messages not yet logged (ts -> waypoints); the pose of each message, kept when first known (the egomotion
         # store above keeps 3.3 s only, the memory needs every message's pose)
         self.rt, self.unlogged, self.rpose = (RMEM.Tracker() if RMEM else None), {}, {}
+        self.vh = VH.new() if VH.ON else None
         self.lock = threading.Lock()
         self.count = dict(drive=0, inference=0, inference_error=0, input_error=0, state_rotated=0, cold=0, images=0)
 
@@ -240,15 +244,24 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 else:
                     cur, valid, real = PC.slots(frames, t0, P, V, s.cam_t, self.cold)
                 t_q = time.perf_counter()
+                vi, efn = {}, None
+                if s.vh is not None:                         # JEV_VHIST (vhist.py): the fed speed history
+                    def efn(e):
+                        f, i = VH.feed(s.vh, e, cmd)
+                        vi.update(i)
+                        return f
                 with self.gpu:
                     t_g = time.perf_counter()
-                    o = PC.plan(self.core, cur, valid, P, V, dyn[-1][1], cmd, s.cam_t, self.lht, **({"route": rf} if s.rt is not None else {}))
+                    o = PC.plan(self.core, cur, valid, P, V, dyn[-1][1], cmd, s.cam_t, self.lht, **({"route": rf} if s.rt is not None else {}),
+                                **({"ego_fn": efn} if efn else {}))
             except Exception as e:
                 s.count["inference_error"] += 1
                 LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
                 ctx.abort(grpc.StatusCode.INTERNAL, f"inference failed: {e!r}")
             s.count["inference"] += 1
             s.count["cold"] += int(not real.all())
+            if s.vh is not None:
+                VH.observe(s.vh, o["poses"])                 # the model's plan, before any serving change
             fx = FX.apply(s.fix, o, float(np.hypot(*V[-1])), float(dyn[-1][1][0]), t0)
             near = s.poses[min(s.poses, key=lambda t: abs(t - t0))]      # the anchor: the interpolated pose of t0 as a PoseAtTime
             s.anchor = common_pb2.PoseAtTime(timestamp_us=t0, pose=common_pb2.Pose(
@@ -274,6 +287,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 rec.update(track=tri, poses_track=TR.poses8(ref).round(4).tolist())
             if "rmem" in o:
                 rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
+            if s.vh is not None:
+                rec.update(vhist={**vi, "ego_fed": np.asarray(o["ego_fed"], np.float64).round(5).tolist()})
             if self.keywarp:                                 # n_real then counts the slots at or after the oldest keyframe; ms.slots
                 rec.update(keywarp=True)                     # includes the wait for the card
             if s.n < self.dump and k % 10 == 0:
@@ -288,7 +303,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 
@@ -330,7 +345,7 @@ def main() -> None:
         core.rm, core.rm_dim = True, RMEM.DIM
         LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
     core.lead_out, core.base_out = FX.NEED_LEAD, FX.BASE > 0
-    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, TR.MODE,
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TR.MODE,
              {k: getattr(TR, k) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN")} if TR.ON else "")
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros
     warm = lambda: PC.plan(core, z, np.ones(8, bool), e((4, 3)), e((4, 2)), e(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731

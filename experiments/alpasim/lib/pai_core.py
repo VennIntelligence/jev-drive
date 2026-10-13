@@ -142,11 +142,12 @@ def slots(frames: dict, t0: int, P, V, cam_t, cold: str, tol_us: int = 30_000, k
     return cur, valid, real
 
 
-def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t, lht: bool = False, route=None) -> dict:
+def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t, lht: bool = False, route=None, ego_fn=None) -> dict:
     """One decision from the slot frames (array, or key_slots' tensor on the card): sh30_core.Core.plan after its frame synthesis. P (4, 3),
     V (4, 2) history at op_interp.T_KEY in the t0 frame, acc (2,), cmd (4,) one-hot [L, S, R, unknown] -> poses (8, 3) rear-axle x, y, yaw
     at 0.5 .. 4 s, stage times. route: rmem features (core.rm_dim,) appended to the ego row when the core serves the ROUTE-MEM branch
-    (core.rm, set by pai_driver; None = an empty memory; ignored otherwise) -> also "rmem", the fed features."""
+    (core.rm, set by pai_driver; None = an empty memory; ignored otherwise) -> also "rmem", the fed features. ego_fn: the measured ego row
+    -> the row fed to the adapter (vhist.py, JEV_VHIST; None = unchanged) -> also "ego_fed"; "ego" stays the measured row."""
     torch, A = core.torch, core.A
     t0 = time.perf_counter()
     gpu = not isinstance(cur, np.ndarray)
@@ -161,7 +162,8 @@ def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t
         rf = None
         if getattr(core, "rm", False):
             rf = np.zeros(core.rm_dim, np.float32) if route is None else np.asarray(route, np.float32).reshape(core.rm_dim)
-        ego_t = torch.from_numpy((ego if rf is None else np.r_[ego, rf])[None]).to(core.dev)
+        fed = ego if ego_fn is None else ego_fn(ego)
+        ego_t = torch.from_numpy((fed if rf is None else np.r_[fed, rf])[None]).to(core.dev)
         out = core.model(H, ego_t, tc).float()
         mu = out[0, core.pi].reshape(33, 15).cpu().numpy()
         sl = core.model.net.slices                          # the lead outputs of the same pass, for serve_fix.py (JEV_LEAD)
@@ -172,4 +174,4 @@ def plan(core: C.Core, cur: np.ndarray, valid: np.ndarray, P, V, acc, cmd, cam_t
         t2 = time.perf_counter()
     poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
     return {"poses": poses, "mu": mu, "ego": ego, **ld, **({"rmem": rf} if rf is not None else {}),
-            "ms": {"encode": 1e3 * (t1 - t0), "policy": 1e3 * (t2 - t1), "export": 1e3 * (time.perf_counter() - t2)}}
+            **({"ego_fed": fed} if ego_fn is not None else {}), "ms": {"encode": 1e3 * (t1 - t0), "policy": 1e3 * (t2 - t1), "export": 1e3 * (time.perf_counter() - t2)}}

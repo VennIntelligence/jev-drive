@@ -2,9 +2,11 @@
 # ROUTE-MEM chain (plans/2026-10-12-route-mem-prereg.md). Every job goes through the GPU pool; ids are appended to $W/jobs.txt.
 #   submit-build                 nav features of the 12 navtrain shards (one CPU job each) -> yaw-rate rows; the on1_L18YS pool rows
 #   submit-train <seed..>        RM-L18-s<seed>: rm_train.py train (YS2G's recipe + the branch; reliance read inside the job)
-#   submit-read <TAG> [after]    one checkpoint on held 460 at 18 decisions in 6 jobs (cards 1-5), then the coverage summary
+#   submit-read <TAG> [after]    one checkpoint on held 460 at 18 decisions in 6 jobs (cards 1-5), then the coverage summary.
+#                                READ_ENV="K=V ..." passes driver switches (e.g. JEV_VHIST=hold) to every chunk job; READ_SFX=<s> (required
+#                                with READ_ENV) reads into read/<TAG>-<s> and names the jobs alike, so a switched read never overwrites the plain one
 #   submit-served <TAG>          the 5-scene served-vs-offline check (G-serve): readlist on lists/serve5.txt, then rm_build.py served
-#   read <TAG> <i> <n> | readlist <TAG> <list> <dir>    job bodies (ol_fast.sh's sim: the same driver path and overrides)
+#   read <TAG> <i> <n> [sfx] | readlist <TAG> <list> <dir>    job bodies (ol_fast.sh's sim: the same driver path and overrides)
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
 E=experiments/route_mem; OL=$DATA_DIR/runs/onpol_long; W=$DATA_DIR/runs/route_mem; CK=$DATA_DIR/runs/op_parity/runs
@@ -35,7 +37,7 @@ PY
 }
 STAGE=${1:?stage}; shift
 case $STAGE in
-read)      T=$1; i=$2; n=$3; D=$W/read/$T/c$i/run; sim "$T" "$OL/lists/held_n$n/c$i.txt" "$D"; prune "$D" ;;
+read)      T=$1; i=$2; n=$3; D=$W/read/$T${4:+-$4}/c$i/run; sim "$T" "$OL/lists/held_n$n/c$i.txt" "$D"; prune "$D" ;;
 readlist)  sim "$1" "$2" "$3"; prune "$3" ;;
 submit-build)
   ids=(); D=()
@@ -50,12 +52,14 @@ submit-train)   # after=$AFTER (comma ids) if set
       --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self --seed $s || exit 1
   done ;;
 submit-read)
-  T=$1; A=${2:-}; rr=()
+  T=$1; A=${2:-}; rr=(); X=(); S=${READ_SFX:-}; L=$T${S:+-$S}
+  [[ -z ${READ_ENV:-} || -n $S ]] || die "READ_ENV needs READ_SFX (the switched read must not reuse read/$T)"
+  for kv in ${READ_ENV:-}; do X+=(--env "$kv"); done
   for i in 0 1 2 3 4 5; do
-    rr+=($(sub rm-read-$T-$i "$A" --vram 32 --cpu 8 --ram 40 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read -- bash $E/scripts/rm_chain.sh read $T $i 6)) || exit 1
+    rr+=($(sub rm-read-$L-$i "$A" --vram 32 --cpu 8 --ram 40 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read "${X[@]}" -- bash $E/scripts/rm_chain.sh read $T $i 6 $S)) || exit 1
   done
-  dd=$(for i in 0 1 2 3 4 5; do printf "%s," $W/read/$T/c$i/run; done)
-  sub rm-cover-$T "$(IFS=,; echo "${rr[*]}")" --vram 0.5 --cpu 2 --ram 16 --timeout-h 1 -- $P $E/scripts/rm_build.py cover --runs "$T=${dd%,}" --out $W/cover/$T.parquet > /dev/null || exit 1 ;;
+  dd=$(for i in 0 1 2 3 4 5; do printf "%s," $W/read/$L/c$i/run; done)
+  sub rm-cover-$L "$(IFS=,; echo "${rr[*]}")" --vram 0.5 --cpu 2 --ram 16 --timeout-h 1 -- $P $E/scripts/rm_build.py cover --runs "$L=${dd%,}" --out $W/cover/$L.parquet > /dev/null || exit 1 ;;
 submit-served)
   T=$1; L=$W/lists/serve5.txt; [[ -f $L ]] || die "no $L"
   s=$(sub rm-serve-$T "${2:-}" --vram 24 --cpu 6 --ram 30 --timeout-h 1 --gpus 1,2,3,4,5 --pin-strict -- bash $E/scripts/rm_chain.sh readlist $T $L $W/served_runs/$T) || exit 1

@@ -24,7 +24,8 @@ default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route m
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
 (op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (gpu, the default: slot warp on the card + fast frame packing, same
 frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (a feasible reference for the controller
-built from the plan and the ego state: track_ref.py; off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), JEV_REPLAN (lateral re-plan out of a predicted contact, same module; off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
+built from the plan and the ego state: track_ref.py; off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), JEV_REPLAN (lateral re-plan out of a predicted contact, same module; off by default), JEV_VHIST (off | hold | zero: the speed history fed to the
+adapter, vhist.py; logged as drive.jsonl `vhist`, `ego` stays the measured row; off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
 """
@@ -66,6 +67,7 @@ from navsim_transfuser_challenge.trajectory import CachedPlan, build_trajectory_
 
 import serve_fix as FX  # noqa: E402
 import track_ref as TR  # noqa: E402
+import vhist as VH  # noqa: E402
 import sh30_core as C  # noqa: E402
 
 RMEM = None                                          # experiments/route_mem/lib/rmem.py, set in main() for a checkpoint with the branch
@@ -125,6 +127,7 @@ class Session:
         self.frames, self.jpeg, self.poses, self.states = {}, {}, {}, {}
         self.cmd = np.array([0, 0, 0, 1], np.float32)
         self.rt = RMEM.Tracker() if RMEM else None
+        self.vh = VH.new() if VH.ON else None
         self.lock = threading.Lock()
         self.count = dict(drive=0, inference=0, inference_error=0, input_error=0, state_rotated=0, cold=0)
 
@@ -267,17 +270,25 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                     return (*_xy(s.poses[near]), yaw_from_quat(s.poses[near].pose.quat))
                 rf = s.rt.features(t0, pose_of, (*_xy(anchor), yaw0))
         t_q = time.perf_counter()
+        vi, efn = {}, None
+        if s.vh is not None:                                 # JEV_VHIST (vhist.py): the fed speed history
+            def efn(e):
+                f, i = VH.feed(s.vh, e, cmd)
+                vi.update(i)
+                return f
         try:
             with self.gpu:
                 t_g = time.perf_counter()
                 mo = self.motion(s)
                 o = self.core.plan(frames, pose, np.array([d[0] for d in dyn]), dyn[-1][1], cmd, s.cam["t"], yaw_rate=dyn[0][2], lht=self.lht, motion=mo,
-                                   **({"route": rf} if s.rt is not None else {}))
+                                   **({"route": rf} if s.rt is not None else {}), **({"ego_fn": efn} if efn else {}))
         except Exception as e:
             s.count["inference_error"] += 1
             LOG.exception("inference failed, session %s t %d", req.session_uuid, now)
             ctx.abort(grpc.StatusCode.INTERNAL, f"SH30 inference failed: {e!r}")
         s.count["inference"] += 1
+        if s.vh is not None:
+            VH.observe(s.vh, o["poses"])                     # the model's plan, before any serving change
         fx = FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0)
         bd = BD.apply(self.gpu, o, float(np.hypot(*dyn[-1][0])), s, s.count["drive"] - 1) if BD else None
         if TR.ON:                                            # the feasible reference instead of the plan (track_ref.py)
@@ -300,6 +311,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
         if bd is not None:
             rec.update(body=bd)
+        if s.vh is not None:
+            rec.update(vhist={**vi, "ego_fed": np.asarray(o["ego_fed"], np.float64).round(5).tolist()})
         if TR.ON:
             rec.update(track=tri, poses_track=TR.poses8(ref).round(4).tolist())
         self.out.write(json.dumps(rec) + "\n")
@@ -309,7 +322,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}{TR.SUFFIX}{BD.SUFFIX if BD else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-{self.core.tag}-{self.core.cold}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{BD.SUFFIX if BD else ''}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=API)
 
 
@@ -369,7 +382,7 @@ def main() -> None:
     z = np.zeros(C.FRAME, np.uint8)
     # warm-up: both slot counts compiled before the port opens
     decode = tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 4, 4)])
-    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d", FX.VCONT, FX.LEAD, FX.BASE)
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE)
     LOG.info("%s (%s, motion %.2f, synth %s, compiled %s, jpeg %s) ready in %.1f s, VRAM %.2f GiB", core.tag, core.cold, core.motion, core.synth,
              core._pol is not None, "nvjpeg" if decode else "libjpeg", time.time() - t0, torch.cuda.max_memory_allocated() / 2**30)
     drv = Driver(core, log_dir, int(os.environ.get("SH30_DUMP", "0")), os.environ.get("SH30_LHT", "0") == "1", os.environ.get("SH30_MOTION_GATE", ""))

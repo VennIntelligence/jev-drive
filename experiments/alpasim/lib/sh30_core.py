@@ -255,13 +255,16 @@ class Core:
             self.torch.cuda.synchronize(self.dev)
         return time.perf_counter()
 
-    def plan(self, keys, pose, vel, acc, cmd, cam_t, yaw_rate: float = 0.0, lht: bool = False, motion: float | None = None, route=None) -> dict:
+    def plan(self, keys, pose, vel, acc, cmd, cam_t, yaw_rate: float = 0.0, lht: bool = False, motion: float | None = None, route=None,
+             ego_fn=None) -> dict:
         """One decision. keys: the m <= 4 newest keyframes (packed, 0.5 s apart, oldest first, the last at t0); pose (m, 3) x, y, yaw of
         the rear axle at those times in the t0 frame; vel (m, 2) body velocities; acc (2,) and cmd (4,) NAVSIM one-hot [L, S, R, unknown]
         at t0; cam_t the camera position in the ego frame; yaw_rate of the oldest state (cold start only); motion: the share of the
         history's turning shown in the synthesised slots (damp_history; default self.motion, 1 = all of it); route: the route-memory
-        features (rmem.DIM,) of a checkpoint with the ROUTE-MEM branch (None = an empty memory; ignored without the branch).
-        -> poses (8, 3) rear-axle x, y, yaw at 0.5 .. 4 s in the t0 frame, mu (33, 15), ego (20,), frames, stage times (ms)."""
+        features (rmem.DIM,) of a checkpoint with the ROUTE-MEM branch (None = an empty memory; ignored without the branch); ego_fn: the
+        measured ego row (20,) -> the row fed to the adapter (vhist.py, JEV_VHIST; None = the measured row, unchanged).
+        -> poses (8, 3) rear-axle x, y, yaw at 0.5 .. 4 s in the t0 frame, mu (33, 15), ego (20,) (the measured row), ego_fed (only with ego_fn),
+        frames, stage times (ms)."""
         torch, A = self.torch, self.A
         t0 = time.perf_counter()
         m = len(keys)
@@ -283,7 +286,8 @@ class Core:
             rf = None
             if self.rm:
                 rf = np.zeros(self.rm_dim, np.float32) if route is None else np.asarray(route, np.float32).reshape(self.rm_dim)
-            ego_t = torch.from_numpy((ego if rf is None else np.r_[ego, rf])[None]).to(self.dev)
+            fed = ego if ego_fn is None else ego_fn(ego)
+            ego_t = torch.from_numpy((fed if rf is None else np.r_[fed, rf])[None]).to(self.dev)
             out = (self._pol or self.model)(H, ego_t, tc).float()
             t3 = self._sync()
             mu, ld = out[0, self.pi].reshape(33, 15).cpu().numpy(), {**self.leads(out), **self.base(H, ego_t, tc, cam_t)}
@@ -291,4 +295,4 @@ class Core:
         poses = I.to_rear(mu[:, 0:3], mu[:, 11], I.T_IDXS, cam_t[:2], Z.T_OUT, "lever")
         t4 = time.perf_counter()
         return {"poses": poses, "mu": mu, "ego": ego, "hist": P, "cur": cur, "valid": valid, "tokens": H[0], **ld, **({"rmem": rf} if self.rm else {}),
-                "ms": {"frames": 1e3 * (t1 - t0), "encode": 1e3 * (t2 - t1), "policy": 1e3 * (t3 - t2), "export": 1e3 * (t4 - t3)}}
+                **({"ego_fed": fed} if ego_fn is not None else {}), "ms": {"frames": 1e3 * (t1 - t0), "encode": 1e3 * (t2 - t1), "policy": 1e3 * (t3 - t2), "export": 1e3 * (t4 - t3)}}
