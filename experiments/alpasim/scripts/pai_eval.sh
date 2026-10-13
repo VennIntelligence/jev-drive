@@ -11,12 +11,14 @@
 #   JOIN=1: these cards join a run that is already going on <out root> (same tag and lists): they take unclaimed chunks and leave STATUS,
 #   DONE / ERROR and eval.json to the first call. A card freed by another job is added this way.
 #   JOIN=1 CARDS=" " (no card): writes the chunk lists once, checks the checkpoint and returns (pai_queue.sh starts from this).
+# RUNPFX (default empty) prefixes the per-chunk run dirs and so the compose project / container names: two runs of one tag and chunk at once
+#   (two lanes) otherwise share pai-<tag>-c000 and the second start tears the first stack down.
 # State: <out>/{STATUS, DONE | ERROR, log.txt, eval.json (scenes, wall, scenes per hour)}, chunk lists in <out>/chunks/, one run per chunk in
 # <out>/runs/<lowercase tag>_<chunk> (finished chunks are skipped: rerunning resumes). Read with pai_eval_report.py.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 O=$(mkdir -p "$1" && cd "$1" && pwd) T=$2; shift 2
-D=${DATA_DIR:-/data}; C=$D/runs/op_parity/runs/$T; L=${T,,}
+D=${DATA_DIR:-/data}; C=$D/runs/op_parity/runs/$T; L=${RUNPFX:-}${T,,}
 CARDS=${CARDS:-0 1}; CONC=${CONC:-4}; CHUNK=${CHUNK:-48}; SERVE=${SERVE--e JEV_VCONT=1.0 -e JEV_LEAD=1}
 J=${JOIN:-0}; mkdir -p "$O"/{chunks,runs}; (( J )) || { rm -rf "$O"/{DONE,ERROR,claims}; mkdir "$O/claims"; }; exec > >(tee -a "$O/log.txt") 2>&1
 st() { echo "$(date '+%F %T') $T: $*" | if (( J )); then cat; else tee "$O/STATUS"; fi; }

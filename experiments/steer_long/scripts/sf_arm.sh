@@ -7,7 +7,7 @@ here=$(cd "$(dirname "$0")" && pwd); repo=$(cd "$here/../../.." && pwd)
 N=$1 L=$2 X=${3:-}; O=/data/runs/steer_long/spinfix/reads; TAG=${TAG:-RSG-L18-s0}; G=${GAINS:-20}
 WZ=""; [[ $G != 5 ]] && WZ="controller.gains.rel_front_steering_angle_weight=$G"
 run() {  # out list
-  CARDS=${CARD:-0} CHUNK=60 SERVE="-e JEV_VCONT=1.0 -e JEV_LEAD=1 $X" WIZ="$WZ" bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$1" "$TAG" "$2"
+  RUNPFX=${RUNPFX-sf-} CARDS=${CARD:-0} CHUNK=60 SERVE="-e JEV_VCONT=1.0 -e JEV_LEAD=1 $X" WIZ="$WZ" bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$1" "$TAG" "$2"
 }
 if [[ ${NOSMOKE:-0} != 1 ]]; then
   mkdir -p "$O/${N}_smoke"; head -2 "$L" > "$O/${N}_smoke/list.txt"
