@@ -74,3 +74,30 @@ PAI recommendation (rule fixed now, applied by the coordinator on Tokyo): M pass
 rollouts truncated by rear contact).
 
 Cost (est.): 18 chunk jobs x ~8 min, about 2.5 card-hours; smoke ~10 min.
+
+## Amendment 1 (2026-10-13, after the first read, before any `holdlead` read): hold with a lead and a brake release
+
+The first read (results/vhist/README.md): `hold` removed 0.86 of the shortness but zeros 34 -> 70, all 39 collision zeros front collisions (the
+car runs into its lead), GT +0.60 m; M failed, Z did not help, no PAI run. Coordinator's request: the lead-release arm.
+
+New mode `JEV_VHIST=holdlead` = `hold` (same v_ref, same feed, releases (a) turn command and (b) previous plan 2 s arc < 2 m) plus two releases,
+checked in this order after (a), (b); all read from the PREVIOUS decision's outputs of the same model (the current pass depends on the fed row,
+so its own outputs cannot gate it):
+- (c) lead: the previous decision's lead / lead_prob outputs inside openpilot's following distance, evaluated at that decision's measured speed
+  with serve_fix.LeadPlanner.inside (JEV_BASE=2's rule, lead_long.py from openpilot source): radard's asymmetric lead-probability filter
+  (rc 0.2 s) > 0.5 and dRel + v_lead^2 / (2 x 2.5) < v^2 / (2 x 2.5) + 1.45 v + 6, with dRel = lead x - camera-to-front-bumper and
+  v_lead = v + lead v - the model's own speed (plan velocity at t = 0). This is B's gap ("JEV_LEAD's radard-filtered lead inside openpilot's
+  following distance").
+- (d) brake: the previous model plan decelerates: segment speeds s1 (0 .. 0.5 s) and s4 (1.5 .. 2.0 s) of the plan, (s1 - s4) / 1.5 s >= 1.0 m/s^2.
+  The threshold is a real brake, not the small braking that starts the ratchet (releasing on every decrease would switch the hold off).
+Released = the measured row is fed (v_ref keeps updating). The lead outputs are switched on in the core (`lead_out`; output slicing only, plans
+unchanged); the served trajectory is unchanged (no JEV_LEAD).
+
+Reads (held 460 / 18, 6 chunks, cards 1-5): `RSG-L18-s0` + holdlead (`read/RSG-L18-s0-vholdl`), and `RSGallV-L18-s1` + holdlead
+(`read/RSGallV-L18-s1-vholdl`) queued alongside (the pool runs it when cards are free). Smoke first: 5 held scenes, holdlead, 0 rule
+mismatches (`rf_vhist.py check`, the lead flag taken from the log) and switch off still bit-identical.
+
+Lines: **M as registered** for RSG + holdlead vs RSG (deficit median >= -0.25, zeros <= 39, GT <= 1.135 + 0.05), plus S's share reported.
+RSGallV + holdlead is compared with allV plain (same M thresholds relative to allV: zeros <= allV + 5, GT <= allV + 0.05) and with RSG.
+PAI rule: RSG + holdlead passes M -> it is the PAI-exam switch set (`SH30_TAG=RSG-L18-s0`, `JEV_VHIST=holdlead`); else if RSGallV + holdlead
+passes against RSG's thresholds (zeros <= 39, GT <= 1.185, deficit median >= -0.25) -> that; else no VHIST on PAI.
