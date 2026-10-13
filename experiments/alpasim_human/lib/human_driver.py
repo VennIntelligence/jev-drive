@@ -201,8 +201,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             sim = (t1 - t0) / 1e6
             rec = {"kind": "close", "t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene, "drives": s.k,
                    "sim_s": round((t1 - s.t_first) / 1e6, 2), "driven_sim_s": round(sim, 2), "driven_wall_s": round(w1 - w0, 2),
-                   "wall_per_sim": round((w1 - w0) / sim, 3) if sim > 0 else None, "stale": s.n_stale, "wait_s": round(s.wait_s, 1),
-                   "slept_s": round(s.slept, 2), "unpaced_per_sim": round((w1 - w0 - s.slept) / sim, 3) if sim > 0 else None,
+                   "wall_per_sim": round((w1 - w0 - s.paused_s) / sim, 3) if sim > 0 else None, "stale": s.n_stale, "wait_s": round(s.wait_s, 1),
+                   "slept_s": round(s.slept, 2), "unpaced_per_sim": round((w1 - w0 - s.slept - s.paused_s) / sim, 3) if sim > 0 else None,
                    "late": s.n_late, "realtime": RT, "aborted": s.aborted, "paused_s": round(s.paused_s, 1)}
             self.out.write(json.dumps(rec) + "\n")
             LOG.info("close %s", rec)
@@ -350,7 +350,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         s.last = (wall, now)
         wps = None
         if s.started and now > s.started[1]:
-            wps = round((wall - s.started[0]) / ((now - s.started[1]) / 1e6), 3)
+            wps = round((wall - s.started[0] - s.paused_s) / ((now - s.started[1]) / 1e6), 3)
         rec = {"kind": "drive", "t": round(wall, 3), "session": req.session_uuid, "scene": s.scene, "k": s.k, "now": now, "tq": tq,
                "ta": ta, **self._panel(st), "delta": round(delta, 4), "accel": round(a, 3), "v": round(v, 3), "pose": [round(x, 3), round(y, 3),
                round(yaw, 5)], "started": s.started is not None, "slept_ms": round(1e3 * slept, 1), "n_out": len(traj.poses), "ms": round(1e3 * (wall - t_in), 2)}
@@ -360,7 +360,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         plan = ((traj_xyv[::4, :2] - [x, y]) @ R.T).round(2).tolist()               # rig frame of the current pose, 0.4 s apart
         self._live(s, {**base, **self._panel(st), "waiting": False, "delta_deg": round(math.degrees(delta), 1), "accel": round(a, 2),
                        "plan": plan, "wall_per_sim": wps, "realtime": RT, "late": s.n_late,
-                       "unpaced_per_sim": round(((wall - s.started[0]) - s.slept) / ((now - s.started[1]) / 1e6), 3) if wps else None, "started": s.started is not None,
+                       "unpaced_per_sim": round(((wall - s.started[0]) - s.slept - s.paused_s) / ((now - s.started[1]) / 1e6), 3) if wps else None, "started": s.started is not None,
                        "paused": False, "aborted": s.aborted})
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
