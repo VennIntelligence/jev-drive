@@ -1,0 +1,12 @@
+nup_held L b40_20  n= 152 near-log=0.69 | H: |lat|>1 0.16 in>1 0.03 out>1 0.13 | log future: |lat|>1 0.11 in>1 0.03 out>1 0.07 med -0.09 | near-log rows H |lat|>1 0.06 in 0.03 out 0.03
+nup_held L b20_0   n= 227 near-log=0.78 | H: |lat|>1 0.17 in>1 0.15 out>1 0.02 | log future: |lat|>1 0.14 in>1 0.13 out>1 0.01 med +0.29 | near-log rows H |lat|>1 0.13 in 0.12 out 0.01
+nup_held L inside  n= 581 near-log=0.48 | H: |lat|>1 0.24 in>1 0.19 out>1 0.05 | log future: |lat|>1 0.20 in>1 0.17 out>1 0.02 med +0.45 | near-log rows H |lat|>1 0.16 in 0.16 out 0.00
+nup_held R b40_20  n= 225 near-log=0.72 | H: |lat|>1 0.12 in>1 0.07 out>1 0.04 | log future: |lat|>1 0.10 in>1 0.08 out>1 0.02 med -0.13 | near-log rows H |lat|>1 0.12 in 0.09 out 0.03
+nup_held R b20_0   n= 205 near-log=0.73 | H: |lat|>1 0.17 in>1 0.12 out>1 0.05 | log future: |lat|>1 0.15 in>1 0.11 out>1 0.03 med +0.05 | near-log rows H |lat|>1 0.15 in 0.13 out 0.02
+nup_held R inside  n= 254 near-log=0.41 | H: |lat|>1 0.34 in>1 0.19 out>1 0.15 | log future: |lat|>1 0.27 in>1 0.24 out>1 0.03 med +0.25 | near-log rows H |lat|>1 0.26 in 0.23 out 0.03
+nup_train L b40_20  n= 442 near-log=0.80 | H: |lat|>1 0.17 in>1 0.08 out>1 0.09 | log future: |lat|>1 0.14 in>1 0.08 out>1 0.07 med -0.02 | near-log rows H |lat|>1 0.13 in 0.08 out 0.05
+nup_train L b20_0   n= 558 near-log=0.76 | H: |lat|>1 0.24 in>1 0.21 out>1 0.04 | log future: |lat|>1 0.21 in>1 0.17 out>1 0.03 med +0.17 | near-log rows H |lat|>1 0.21 in 0.19 out 0.01
+nup_train L inside  n=1058 near-log=0.44 | H: |lat|>1 0.39 in>1 0.29 out>1 0.10 | log future: |lat|>1 0.26 in>1 0.17 out>1 0.09 med +0.34 | near-log rows H |lat|>1 0.25 in 0.17 out 0.08
+nup_train R b40_20  n= 433 near-log=0.74 | H: |lat|>1 0.15 in>1 0.07 out>1 0.09 | log future: |lat|>1 0.12 in>1 0.06 out>1 0.06 med -0.18 | near-log rows H |lat|>1 0.09 in 0.05 out 0.04
+nup_train R b20_0   n= 392 near-log=0.77 | H: |lat|>1 0.21 in>1 0.13 out>1 0.08 | log future: |lat|>1 0.20 in>1 0.11 out>1 0.09 med -0.08 | near-log rows H |lat|>1 0.17 in 0.09 out 0.08
+nup_train R inside  n= 538 near-log=0.44 | H: |lat|>1 0.36 in>1 0.12 out>1 0.24 | log future: |lat|>1 0.21 in>1 0.14 out>1 0.07 med +0.02 | near-log rows H |lat|>1 0.21 in 0.09 out 0.12

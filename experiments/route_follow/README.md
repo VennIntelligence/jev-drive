@@ -54,6 +54,11 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   into the entry); `scripts/rf_pai_follow.py` (+ `.sh`, Tokyo container), `results/pai_follow/`, figure `figs/pai_follow_zeros.png`.
 - [research/route-follow-offroad.md](../../research/route-follow-offroad.md): why route-hinge arms go offroad; look at table 1's
   "right-turn inside" column (17-21 vs 1-2) and the H1-H5 verdicts (labels on road, memory not drifted, over-rotation in small right turns).
+- [research/route-follow/loss-audit.md](../../research/route-follow/loss-audit.md): loss audit of the turn objective (verdict: objective, not
+  representation; the route hinge's lane-centre label prefers wide / inside-cut variants over the human, the S hinges tie, nothing on on-policy
+  rows rewards slowing; the frozen-token head fits the human turns to 0.32 m); `scripts/rf_loss_audit.py`, `results/loss_audit/`, figures
+  `figs/loss_audit_variants_moving.png` (look at J_S: H ties with no-slow and inside-cut) and `figs/loss_audit_grad_moving.png` (route: outward
+  before the entry, inward inside right turns; only imitation has an along-heading push).
 - [results/route-night/](results/route-night/): held reads (`held_raw.txt`, `a3/held_raw_a3.txt`), `ol_report` tables (`report_RBS.md`,
   `report_RBSG.md`, `a3/report_RSG.md`, `a3/report_RBSGc.md`), route following (`follow_held.md`, `follow_train.md`, `a3/follow_a3.md`),
   G-swap (`gswap/`), G-rely (`rely/`, `a3/rely/`), pool gates (`pool_L18RB0_gates.md`), inside-of-turn counts for all arms (`a3/offroad_a3.md`); round 2 in `r2/`, Amendment 6 in `a6/` (`report_RBSG2.md`, `held_raw_r2.txt`, `offroad_counts.json`).

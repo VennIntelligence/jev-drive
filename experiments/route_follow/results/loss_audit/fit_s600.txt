@@ -1,0 +1,22 @@
+nup_held {'rows': 2652, 'train_rows': 2138, 'val_rows': 514, 'scenes': 211}
+  ref_RB0-F-s0     train n=2138 ade=2.245 fde2=1.773 fde4=4.670 lat_in=-0.104 cut=0.106 arc4-H=-1.47 maxade=11.11
+  ref_RB0-F-s0     val   n= 514 ade=2.331 fde2=1.852 fde4=4.844 lat_in=+0.064 cut=0.140 arc4-H=-0.88 maxade=9.74
+  ref_RSG-L18-s0   train n=2138 ade=2.215 fde2=1.751 fde4=4.606 lat_in=-0.095 cut=0.108 arc4-H=-1.50 maxade=10.95
+  ref_RSG-L18-s0   val   n= 514 ade=2.297 fde2=1.824 fde4=4.772 lat_in=+0.072 cut=0.146 arc4-H=-0.91 maxade=9.69
+  A_head           train n=2138 ade=0.898 fde2=0.687 fde4=1.910 lat_in=-0.011 cut=0.097 arc4-H=+0.10 maxade=9.50
+  A_head           val   n= 514 ade=1.541 fde2=1.153 fde4=3.371 lat_in=+0.114 cut=0.212 arc4-H=+0.17 maxade=11.01
+    loss 4.0 -> 2.071
+  B_all            train n=2138 ade=0.644 fde2=0.503 fde4=1.386 lat_in=-0.013 cut=0.073 arc4-H=+0.02 maxade=8.56
+  B_all            val   n= 514 ade=1.440 fde2=1.072 fde4=3.137 lat_in=+0.110 cut=0.204 arc4-H=+0.07 maxade=11.12
+    loss 3.912 -> 1.394
+pait {'rows': 1249, 'train_rows': 957, 'val_rows': 292, 'scenes': 12}
+  ref_RB0-F-s0     train n= 957 ade=1.537 fde2=1.099 fde4=3.433 lat_in=-0.105 cut=0.026 arc4-H=+2.20 maxade=4.46
+  ref_RB0-F-s0     val   n= 292 ade=1.179 fde2=0.692 fde4=2.986 lat_in=-0.003 cut=0.000 arc4-H=+1.63 maxade=3.14
+  ref_RSG-L18-s0   train n= 957 ade=1.541 fde2=1.103 fde4=3.447 lat_in=-0.102 cut=0.029 arc4-H=+2.15 maxade=4.35
+  ref_RSG-L18-s0   val   n= 292 ade=1.164 fde2=0.679 fde4=2.958 lat_in=-0.002 cut=0.000 arc4-H=+1.54 maxade=3.09
+  A_head           train n= 957 ade=0.159 fde2=0.133 fde4=0.321 lat_in=-0.000 cut=0.001 arc4-H=+0.03 maxade=0.77
+  A_head           val   n= 292 ade=0.865 fde2=0.455 fde4=2.307 lat_in=+0.020 cut=0.000 arc4-H=+1.00 maxade=2.83
+    loss 1.264 -> 0.102
+  B_all            train n= 957 ade=0.110 fde2=0.094 fde4=0.224 lat_in=-0.000 cut=0.000 arc4-H=+0.01 maxade=0.40
+  B_all            val   n= 292 ade=0.844 fde2=0.457 fde4=2.214 lat_in=+0.053 cut=0.034 arc4-H=+1.07 maxade=2.97
+    loss 1.161 -> 0.059

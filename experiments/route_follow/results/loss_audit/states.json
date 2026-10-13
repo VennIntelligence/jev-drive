@@ -1,0 +1,107 @@
+{
+ "nup_held": {
+  "pool": "on1_L18RSGallheld",
+  "rows": 7837,
+  "turn_rows": 2652,
+  "turns_left": 130,
+  "turns_right": 96,
+  "rows_by_bin": {
+   "b40_20": {
+    "L": 227,
+    "R": 328
+   },
+   "b20_0": {
+    "L": 551,
+    "R": 398
+   },
+   "inside": {
+    "L": 759,
+    "R": 389
+   }
+  }
+ },
+ "nup_held2": {
+  "pool": "on1_L18RBSG2allheld",
+  "rows": 7852,
+  "turn_rows": 2617,
+  "turns_left": 133,
+  "turns_right": 99,
+  "rows_by_bin": {
+   "b40_20": {
+    "L": 233,
+    "R": 322
+   },
+   "b20_0": {
+    "L": 543,
+    "R": 411
+   },
+   "inside": {
+    "L": 757,
+    "R": 351
+   }
+  }
+ },
+ "nup_train": {
+  "pool": "on1_L18RSG",
+  "rows": 17474,
+  "turn_rows": 5549,
+  "turns_left": 267,
+  "turns_right": 208,
+  "rows_by_bin": {
+   "b40_20": {
+    "L": 733,
+    "R": 659
+   },
+   "b20_0": {
+    "L": 1068,
+    "R": 941
+   },
+   "inside": {
+    "L": 1361,
+    "R": 787
+   }
+  }
+ },
+ "pait": {
+  "pool": "on1_PAIT80",
+  "rows": 1361,
+  "turn_rows": 1249,
+  "turns_left": 9,
+  "turns_right": 5,
+  "rows_by_bin": {
+   "b40_20": {
+    "L": 177,
+    "R": 71
+   },
+   "b20_0": {
+    "L": 436,
+    "R": 219
+   },
+   "inside": {
+    "L": 273,
+    "R": 73
+   }
+  }
+ },
+ "pai_pol": {
+  "pool": "/root/autodl-tmp/ujs/runs/route_follow/loss_audit/pai_pol.npz",
+  "rows": 2331,
+  "turn_rows": 1615,
+  "turns_left": 12,
+  "turns_right": 11,
+  "rows_by_bin": {
+   "b40_20": {
+    "L": 89,
+    "R": 108
+   },
+   "b20_0": {
+    "L": 432,
+    "R": 256
+   },
+   "inside": {
+    "L": 344,
+    "R": 386
+   }
+  }
+ }
+}
