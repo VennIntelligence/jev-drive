@@ -52,7 +52,7 @@ submit)
   cat $O/jobs.txt ;;
 train)  # the registered weight rule on the pool's own counts: right-turn out : in > 1.5 -> R_in x 2, R_out x 2 n_in / n_out (1 : 1), else uniform
   pl=$2; T=$3; s=$4; shift 4; mkdir -p $O
-  WT=$(python3 - "$CR/$pl/tab.npz" "$O/weights_${T}.json" <<'PY'
+  WT=$($TR - "$CR/$pl/tab.npz" "$O/weights_${T}.json" <<'PY'
 import json, sys
 import numpy as np
 r = np.load(sys.argv[1])["rside"].astype(str); o, i = int((r == "R_out").sum()), int((r == "R_in").sum())
