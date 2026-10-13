@@ -1,4 +1,4 @@
-# PAI exam split (provisional v1, 2026-10-13)
+# PAI exam split (v2 with the hard carve-out, 2026-10-13; v1 frozen in [v1/](v1/))
 
 User decision 2026-10-13: the PAI track becomes the exam. Rule: over the scenes every reference read covers, **hard** = scored zero in any
 reference; **control** = a random half (seed 0) of the never-zero scenes; **trainable** = the other never-zero half (PAI training-eligible).
@@ -27,3 +27,29 @@ v1 is frozen. From v2 on, membership only ever moves into **hard**: a v1 control
 (non-infrastructure) moves to hard; every other scene keeps its v1 list. A scene outside v1 goes to hard if it is zero anywhere, else to
 control or trainable by a stable hash (`sha1("<seed>:<scene id>")`, even first byte = control). `pai_exam_split.py --freeze <v1 dir>`.
 The exam reads queued on Tokyo (`/data/runs/route_night/exam206.txt`) use v1 hard + control (206 scenes).
+
+## v2: hard carve-out (user decision 2026-10-13)
+
+The hard half is split in two by a stable per-scene hash: **hard_train** (`hard_train.txt`, training-eligible, like trainable) and
+**hard_exam** (`hard_exam.txt`, never trained on, never used for checkpoint or recipe selection). Rule: u = first 8 bytes of
+`sha1("1013:<scene id>")` read big-endian / 2^64; hard_train if u < 0.5. Hash seed **1013** (fixed before the split was drawn; not to
+be changed to rebalance). Being per scene, the rule also places any scene that moves into hard later.
+
+Built with `pai_exam_split.py --freeze experiments/alpasim/results/pai_exam/v1 --hard-train-frac 0.5 --hash-seed 1013 --refs <the four v1
+refs> --tally turn48=... turn46=...`. Membership of hard / control / trainable is v1's exactly (same refs; the planned weight-20 refs
+and RBSG2 are not added yet; when they are, the v2 rule above applies and the carve-out follows by hash). v1's lists and split.json are
+frozen copies in `v1/`.
+
+| list | scenes | route-follow 2.4 turn scenes (48) | logged turns >= 60 deg / 30 m (46) |
+|:--|--:|--:|--:|
+| hard | 131 | 47 | 42 |
+| **hard_train** | **59** | 21 | 19 |
+| **hard_exam** | **72** | 26 | 23 |
+| control | 75 | 0 | 0 |
+| trainable | 75 | 1 | 4 |
+
+Turn lists: [research/turning-school-checks.md](../../../../research/turning-school-checks.md) (48 = zero rollouts failing at a
+60-125 deg route turn; 46 = logged ego track turns >= 60 deg within 30 m in the 20 s window); their union is
+`experiments/route_follow/results/taxonomy/p1_turn_scenes.txt`. The 59 / 72 imbalance is the hash's draw (binomial sd about 5.7 at
+n = 131), kept as drawn. Training-eligible PAI scenes from v2 on: train160 + trainable 75 + hard_train 59. The exam reads are
+hard_exam 72 + control 75; the queued v1 exam206 reads stay valid and are re-sliced to hard_exam for any training arm that saw hard_train.

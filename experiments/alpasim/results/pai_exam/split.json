@@ -6,6 +6,7 @@
   "rsg": "/data/runs/route_night/r281/rsg"
  },
  "seed": 0,
+ "freeze": "experiments/alpasim/results/pai_exam/v1",
  "covered": 281,
  "infra_excluded": 0,
  "hard": 131,
@@ -39,6 +40,31 @@
    "offroad": 14,
    "left_corridor_laterally": 47,
    "collision_at_fault": 9
+  }
+ },
+ "hard_train_frac": 0.5,
+ "hash_seed": "1013",
+ "hash_rule": "first 8 bytes of sha1(\"<hash_seed>:<scene>\") / 2^64 < frac",
+ "hard_train": 59,
+ "hard_exam": 72,
+ "tally": {
+  "turn48": {
+   "n": 48,
+   "hard": 47,
+   "control": 0,
+   "trainable": 1,
+   "infra_excluded": 0,
+   "hard_train": 21,
+   "hard_exam": 26
+  },
+  "turn46": {
+   "n": 46,
+   "hard": 42,
+   "control": 0,
+   "trainable": 4,
+   "infra_excluded": 0,
+   "hard_train": 19,
+   "hard_exam": 23
   }
  }
 }

@@ -1,0 +1,44 @@
+{
+ "refs": {
+  "ybase": "/data/runs/onpol_long/pai281/ybase",
+  "ys0": "/data/runs/onpol_long/pai281/ys0",
+  "ys1": "/data/runs/onpol_long/pai281/ys1",
+  "rsg": "/data/runs/route_night/r281/rsg"
+ },
+ "seed": 0,
+ "covered": 281,
+ "infra_excluded": 0,
+ "hard": 131,
+ "control": 75,
+ "trainable": 75,
+ "per_ref": {
+  "ybase": {
+   "zeros": 110,
+   "infra": 0,
+   "offroad": 37,
+   "left_corridor_laterally": 59,
+   "collision_at_fault": 14
+  },
+  "ys0": {
+   "zeros": 96,
+   "infra": 0,
+   "offroad": 26,
+   "left_corridor_laterally": 57,
+   "collision_at_fault": 13
+  },
+  "ys1": {
+   "zeros": 89,
+   "infra": 0,
+   "offroad": 22,
+   "left_corridor_laterally": 55,
+   "collision_at_fault": 12
+  },
+  "rsg": {
+   "zeros": 70,
+   "infra": 0,
+   "offroad": 14,
+   "left_corridor_laterally": 47,
+   "collision_at_fault": 9
+  }
+ }
+}
