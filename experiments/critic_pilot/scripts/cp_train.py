@@ -89,7 +89,7 @@ def batches(d, idx, bs, shuffle, rng, vision, dev):
             b = {k: torch.from_numpy(d[k][r]) for k in ("ego", "rmem", "plan", "poly", "q2", *LABS) if k in d}
             if vision:
                 b["front"] = torch.from_numpy(d["front"][r])
-            b = {k: v.pin_memory().to(dev, non_blocking=True) for k, v in b.items()}
+            b = {k: (v.pin_memory().to(dev, non_blocking=True) if dev.type == "cuda" else v) for k, v in b.items()}
             b["idx"] = r
             q.put(b)
         q.put(None)
@@ -171,7 +171,7 @@ def predict(model, d, vision, dev, bs=512):
     import torch
     model.eval()
     P = {k: [] for k in ("ev", "anyz", "spin", "lat2", "prog4", "wzpk")}
-    with torch.no_grad(), torch.autocast("cuda", torch.bfloat16):
+    with torch.no_grad(), torch.autocast(dev.type, torch.bfloat16):
         for b in batches(d, np.arange(len(d["ego"])), bs, False, None, vision, dev):
             o = model(b.get("front"), b["ego"], b["rmem"], b["plan"])
             for k in P:
@@ -223,7 +223,7 @@ def train_arm(arm, cfg, data, a, dev, run, out_dir):
                 for k in ("ev", "anyz", "spin", "prog4", "wzpk"):
                     s = sh.view(-1, *([1] * (lab[k].dim() - 1)))
                     lab[k] = torch.where(s, torch.full_like(lab[k], float("nan")), lab[k])
-            with torch.autocast("cuda", torch.bfloat16):
+            with torch.autocast(dev.type, torch.bfloat16):
                 o = model(b.get("front"), b["ego"], rmem, b["plan"])
             L, parts = CR.loss(o, lab)
             opt.zero_grad(set_to_none=True)
@@ -347,7 +347,7 @@ def grad_read(model, vision, d, D, mu, sd, dev, n=100):
             continue
         rt = torch.as_tensor(r, device=dev)
         plan = torch.tensor(d["plan"][r], device=dev, requires_grad=True)
-        with torch.autocast("cuda", torch.bfloat16):
+        with torch.autocast(dev.type, torch.bfloat16):
             o = model(torch.from_numpy(d["front"][r]).to(dev) if vision else None, torch.from_numpy(d["ego"][r]).to(dev),
                       torch.from_numpy(d["rmem"][r]).to(dev), plan)
         risk = o["ev"][:, :, 1].sum(1) + o["lat2"].abs()
@@ -415,6 +415,7 @@ def main():
     ap.add_argument("--epochs", type=int, default=12)
     ap.add_argument("--bs", type=int, default=256)
     ap.add_argument("--smoke", action="store_true")
+    ap.add_argument("--device", default="cuda", help="cpu: code-path check only")
     ap.add_argument("--steps", type=int, default=30)
     ap.add_argument("--B", type=int, default=10_000)
     ap.add_argument("--B-desc", type=int, default=2_000)
@@ -422,7 +423,7 @@ def main():
     if a.smoke:
         a.epochs, a.B, a.B_desc = 2, 200, 200
     D = data_dir()
-    dev = torch.device("cuda")
+    dev = torch.device(a.device)
     torch.backends.cuda.matmul.allow_tf32 = True
     with Run("critic_pilot", "smoke" if a.smoke else "train", config=vars(a)) as run:
         tr_split, he_split = splits.load("alpasim_nuplan/onpol-train"), splits.load("alpasim_nuplan/onpol-held")

@@ -31,8 +31,8 @@ class Critic(nn.Module):
         self.ptime = nn.Parameter(torch.zeros(8, d))
         self.cls = nn.Parameter(torch.zeros(1, 1, d))
         self.null = nn.Parameter(torch.zeros(1, 1, d))
-        self.type = nn.Parameter(torch.zeros(6, d))                # cls, ego, null, route, plan, vision
-        for p in (self.slot, self.idx, self.roff, self.ptime, self.cls, self.null, self.type):
+        self.kind = nn.Parameter(torch.zeros(6, d))                # cls, ego, null, route, plan, vision
+        for p in (self.roff, self.ptime, self.cls, self.null, self.kind) + ((self.slot, self.idx) if vision else ()):
             nn.init.normal_(p, std=0.02)
         L = nn.TransformerEncoderLayer(d, heads, ff, dropout=0.1, batch_first=True, norm_first=True, activation="gelu")
         self.enc = nn.TransformerEncoder(L, layers)
@@ -41,7 +41,7 @@ class Critic(nn.Module):
 
     def forward(self, front, ego, rmem, plan):
         b = ego.shape[0]
-        T = self.type
+        T = self.kind
         xs = [self.cls.expand(b, 1, -1) + T[0], (self.ego(ego) + T[1])[:, None], self.null.expand(b, 1, -1) + T[2]]
         R = rmem.view(b, N_PT, NF)
         valid = R[..., 0] > 0.5
