@@ -110,14 +110,24 @@ docker run --rm --gpus all -v "$SRC:$SRC" -v "$R:$R" "${mounts[@]}" -e "PYTHONPA
   bash -c 'umask 0000; git config --global --add safe.directory "*"; cd /repo && "$@"' wizard "${wiz[@]}" > "$OUT/wizard.log" 2>&1 || die "wizard failed, see wizard.log"
 [[ -f $R/docker-compose.yaml ]] || die "no docker-compose.yaml"
 # PAI: the public leaderboard's renderer is unharmonised (ec2 preset), as pai_run.sh; HUMAN_NRE=nrend swaps the NRE backend (fast mode)
-python3 - "$R/docker-compose.yaml" "$([[ $MODE == fast ]] && echo "$NRE" || echo default)" <<'PY' || die "compose patch"
+# HUMAN_JIT_CACHE=1 (default): the renderer's JIT caches live on the host, so kernels compiled once are reused by the next launch
+# (cache only, outputs unchanged). Measured: each artifact revision's first PAI scene spent ~40 s in the CUDA driver's PTX JIT
+# (/home/.nv/ComputeCache in the NRE container), lost with the container.
+JIT=$D/cache/alpasim_human/jit; [[ ${HUMAN_JIT_CACHE:-1} == 1 ]] && mkdir -p "$JIT" && chmod 777 "$JIT"
+python3 - "$R/docker-compose.yaml" "$([[ $MODE == fast ]] && echo "$NRE" || echo default)" "$([[ ${HUMAN_JIT_CACHE:-1} == 1 ]] && echo "$JIT")" <<'PY' || die "compose patch"
 import sys, yaml
-f, nre = sys.argv[1:]
+f, nre, jit = sys.argv[1:]
 d = yaml.safe_load(open(f))
 for k, s in d["services"].items():
-    if k.startswith("renderer") and "pycena" in " ".join(s["command"]):
+    if not k.startswith("renderer"):
+        continue
+    if "pycena" in " ".join(s["command"]):
         s["command"] = [c.replace(" --enable-harmonizer", "") + (f" --renderer={nre}" if nre != "default" and "serve-grpc" in c else "")
                         for c in s["command"]]
+    if jit:
+        s.setdefault("volumes", []).append(f"{jit}:/jitcache")
+        s["environment"] = (s.get("environment") or []) + ["CUDA_CACHE_PATH=/jitcache/nv", "CUDA_CACHE_MAXSIZE=4294967296",
+                                                           "TORCH_EXTENSIONS_DIR=/jitcache/torch_extensions", "TORCHINDUCTOR_CACHE_DIR=/jitcache/inductor"]
 yaml.safe_dump(d, open(f, "w"), sort_keys=False)
 PY
 grep -A1 "device_ids:" "$R/docker-compose.yaml" | grep -E "^ *- '[0-9]+'" | grep -vq "'$GPU'" && die "compose puts a service on a card other than $GPU"

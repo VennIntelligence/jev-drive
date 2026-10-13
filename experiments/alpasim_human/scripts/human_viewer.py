@@ -91,7 +91,7 @@ def maneuver(route):
     turn = hd[-1] - hd[0]
     if abs(turn) < math.radians(25):
         lat = r[-1, 1]
-        return 3, "STRAIGHT" if abs(lat) < 3 else ("KEEP LEFT" if lat > 0 else "KEEP RIGHT"), None
+        return (3, "STRAIGHT", None) if abs(lat) < 3 else (1, "KEEP LEFT", None) if lat > 0 else (2, "KEEP RIGHT", None)
     i = int(np.argmax(np.abs(hd - hd[0]) > math.radians(12)))
     return (1, "TURN LEFT", float(np.hypot(*r[i]))) if turn > 0 else (2, "TURN RIGHT", float(np.hypot(*r[i])))
 
