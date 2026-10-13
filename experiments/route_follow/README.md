@@ -59,6 +59,9 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   PAI turns): on the human's states RSG already slows with the human and commits on time; RSGboth is not earlier (20 m before the entry +0.43 m/s
   faster, commit identical, lateral -0.06 m); residual = straight-exit turns +0.56 m/s at the entry and 0.7 m outside at 4 s; `scripts/rf_pai_openloop.py --p1`
   (offline replay of any checkpoint on the dumped inputs), `results/pai_openloop/p1_exam48.md`, figures `figs/p1_exam48_speed.png`, `figs/p1_exam48_lat.png`.
+- [results/p3_branch](results/p3_branch/README.md): turning school P3. A 3 s curvature / speed push of RSG-L18-s0's own plan at the PAI
+  junction entry raises the branch ceiling from 4 to 10 / 12 (passes the 8 line, but 3 of the 6 new scenes complete in a single cell
+  and only 2 of 9 survive a 1.5 s push); prereg `plans/2026-10-14-p3-branch-prereg.md`, `scripts/rf_p3.sh`, `onp_log_driver.py` ONP_BRANCH.
 - [research/route-follow-offroad.md](../../research/route-follow-offroad.md): why route-hinge arms go offroad; look at table 1's
   "right-turn inside" column (17-21 vs 1-2) and the H1-H5 verdicts (labels on road, memory not drifted, over-rotation in small right turns).
 - [research/route-follow/loss-audit.md](../../research/route-follow/loss-audit.md): loss audit of the turn objective (verdict: objective, not
