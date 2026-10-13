@@ -28,7 +28,7 @@ PY
 report)
   F=(); TD=(); HD=()
   for t in $MODELS; do
-    d=$(ls -d $O/read/$t/c*/run | paste -sd,); h=$(ls -d $M/$t/c*/run | paste -sd,)
+    d=$(ls -d $O/read/$t/c* | paste -sd,); h=$(ls -d $M/$t/c*/run | paste -sd,)
     F+=("$t@train=$d" "$t@held=$h"); TD+=("$t=$d"); HD+=("$t=$h")
   done
   $P $X/rf_follow.py --runs "${F[@]}" --out $O/follow --workers 48 --pairs RSGboth-L18-s0@train:RSG-L18-s0@train RSG-L18-s0@train:RB0-F-s0@train \
