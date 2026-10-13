@@ -14,7 +14,13 @@ Speed-history entries = rm_train's EGO_SPEED: ego_features columns 4-9, 11, 12, 
                   v_fed > v_meas: (vx, vy) scaled by v_fed / v_meas ((v_fed, 0) below 0.5 m/s), ax = 0, ay unchanged, the 3 past poses
                   re-spaced along their own polyline (extended straight beyond the oldest) to arcs v_fed x (0.5, 1.0, 1.5) s, yaw
                   interpolated alike (parity_adapter.cv_history's rule at v_fed).
-Inputs are the driver's own: the measured ego state, the route command and the model's previous plan (no log, no map).
+  JEV_VHIST=holdlead  hold with two more releases (prereg Amendment 1), both read from the PREVIOUS decision's outputs of the same model
+                  (the current pass depends on the fed row): (c) a lead inside openpilot's following distance: serve_fix.LeadPlanner.inside
+                  on the previous decision's lead / lead_prob outputs at that decision's measured speed (radard's asymmetric probability
+                  filter > 0.5 and dRel + v_lead^2 / (2 x 2.5) < v^2 / (2 x 2.5) + 1.45 v + 6; JEV_BASE=2's rule), and (d) the model's
+                  previous plan brakes: segment speeds s1 (0 .. 0.5 s) and s4 (1.5 .. 2.0 s) with (s1 - s4) / 1.5 s >= DEC_REL m/s^2.
+                  Needs the lead outputs (NEED_LEAD: the drivers set core.lead_out); the served trajectory is unchanged.
+Inputs are the driver's own: the measured ego state, the route command and the model's previous outputs (no log, no map).
 """
 from __future__ import annotations
 
@@ -23,16 +29,21 @@ import os
 import numpy as np
 
 MODE = (os.environ.get("JEV_VHIST", "") or "off").strip().lower()
-assert MODE in ("off", "hold", "zero"), f"JEV_VHIST={MODE!r}: off | hold | zero"
-ON = MODE != "off"
+assert MODE in ("off", "hold", "zero", "holdlead"), f"JEV_VHIST={MODE!r}: off | hold | zero | holdlead"
+ON, NEED_LEAD = MODE != "off", MODE == "holdlead"
 SUFFIX = f"-vh{MODE}" if ON else ""
 EGO_SPEED = [4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 17, 18]
 REL_ARC = 2.0                                             # m: a previous plan shorter than this over 2 s releases the hold
+DEC_REL = 1.0                                             # m/s^2: a previous plan braking at least this (s1 -> s4) releases holdlead
 T_HIST = np.array([1.5, 1.0, 0.5])                        # s before t0 of the 3 past poses (oldest first)
 
 
-def new() -> dict:
-    return dict(vref=0.0, arc=np.inf)
+def new(cam_to_front: float = 2.26) -> dict:
+    st = dict(vref=0.0, arc=np.inf, dec=0.0, lead=False, v=0.0)
+    if NEED_LEAD:
+        from serve_fix import LeadPlanner
+        st["lp"] = LeadPlanner(cam_to_front)              # its probability filter and following distance only
+    return st
 
 
 def arc2(poses) -> float:
@@ -63,10 +74,14 @@ def feed(st: dict, ego: np.ndarray, cmd) -> tuple[np.ndarray, dict]:
         e = ego.copy()
         e[EGO_SPEED] = 0.0
         return e, dict(mode=MODE, v_meas=round(v, 3), v_fed=0.0)
-    st["vref"] = max(st["vref"], v)
+    st["vref"], st["v"] = max(st["vref"], v), v
     rel = "turn" if (cmd[0] > 0 or cmd[2] > 0) else "stop" if st["arc"] < REL_ARC else ""
+    if not rel and NEED_LEAD:
+        rel = "lead" if st["lead"] else "brake" if st["dec"] >= DEC_REL else ""
     vf = v if rel else max(v, st["vref"])
     info = dict(mode=MODE, v_meas=round(v, 3), v_ref=round(st["vref"], 3), v_fed=round(vf, 3), release=rel)
+    if NEED_LEAD:
+        info.update(prev_lead=bool(st["lead"]), prev_dec=round(float(st["dec"]), 3), prev_arc=round(float(st["arc"]), 3))
     if vf <= v + 1e-6:
         return ego, info
     e = ego.copy()
@@ -77,6 +92,10 @@ def feed(st: dict, ego: np.ndarray, cmd) -> tuple[np.ndarray, dict]:
     return e.astype(np.float32), info
 
 
-def observe(st: dict, poses) -> None:
-    """After the plan: remember the model plan's 2 s arc for the next decision's release rule."""
-    st["arc"] = arc2(poses)
+def observe(st: dict, o: dict) -> None:
+    """After the plan (o = the core's output, poses = the model's plan): remember what the next decision's release rules read."""
+    p = np.r_[np.zeros((1, 2)), np.asarray(o["poses"], float)[:4, :2]]
+    seg = np.linalg.norm(np.diff(p, axis=0), axis=1) / 0.5
+    st["arc"], st["dec"] = float(seg.sum() * 0.5), float((seg[0] - seg[3]) / 1.5)
+    if NEED_LEAD:
+        st["lead"] = st["lp"].inside(st["v"], o["lead"], o["lead_prob"], float(o["mu"][0, 3]))

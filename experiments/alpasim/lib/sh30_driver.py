@@ -24,7 +24,7 @@ default 1 = unchanged). SH30_MOTION_GATE=route applies it only while the route m
 Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, ALPASIM_SRC (AlpaSim checkout: gRPC stubs and the LTF sample), SH30_TAG
 (op_parity run tag, default SH30-F-s0), SH30_COLD (backwarp | zero), SH30_SYNTH (gpu, the default: slot warp on the card + fast frame packing, same
 frames and plans as cpu, the reference path; sh30_core.py), SH30_STAGE_SYNC (0 = no per-stage CUDA sync), JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (a feasible reference for the controller
-built from the plan and the ego state: track_ref.py; off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), JEV_REPLAN (lateral re-plan out of a predicted contact, same module; off by default), JEV_VHIST (off | hold | zero: the speed history fed to the
+built from the plan and the ego state: track_ref.py; off by default), JEV_STOP (stop before a predicted contact: experiments/body1/lib/serve_body.py; off by default), JEV_REPLAN (lateral re-plan out of a predicted contact, same module; off by default), JEV_VHIST (off | hold | zero | holdlead: the speed history fed to the
 adapter, vhist.py; logged as drive.jsonl `vhist`, `ego` stays the measured row; off by default), SH30_COMPILE (1, the default = compiled model passes), SH30_JPEG (libjpeg, the default | nvjpeg), SH30_DEVICE, ALPASIM_DRIVER_LOG_DIR (drive.jsonl: one record per
 call with inputs, plan, stage times; images.jsonl), SH30_DUMP (number of sessions whose model frames and JPEGs are saved to <log dir>/dump).
 Run with envs/op-train:  python experiments/alpasim/lib/sh30_driver.py
@@ -127,7 +127,7 @@ class Session:
         self.frames, self.jpeg, self.poses, self.states = {}, {}, {}, {}
         self.cmd = np.array([0, 0, 0, 1], np.float32)
         self.rt = RMEM.Tracker() if RMEM else None
-        self.vh = VH.new() if VH.ON else None
+        self.vh = VH.new(FX.cam_to_front(req.rollout_spec.vehicle, t.x)) if VH.ON else None
         self.lock = threading.Lock()
         self.count = dict(drive=0, inference=0, inference_error=0, input_error=0, state_rotated=0, cold=0)
 
@@ -288,7 +288,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             ctx.abort(grpc.StatusCode.INTERNAL, f"SH30 inference failed: {e!r}")
         s.count["inference"] += 1
         if s.vh is not None:
-            VH.observe(s.vh, o["poses"])                     # the model's plan, before any serving change
+            VH.observe(s.vh, o)                              # the model's plan, before any serving change
         fx = FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0)
         bd = BD.apply(self.gpu, o, float(np.hypot(*dyn[-1][0])), s, s.count["drive"] - 1) if BD else None
         if TR.ON:                                            # the feasible reference instead of the plan (track_ref.py)
@@ -374,7 +374,7 @@ def main() -> None:
     t0 = time.time()
     core = C.Core(os.environ.get("SH30_TAG", "SH30-F-s0"), os.environ.get("SH30_DEVICE", "cuda"), os.environ.get("SH30_COLD", "backwarp"),
                   float(os.environ.get("SH30_MOTION", "1")), os.environ.get("SH30_SYNTH", "gpu"))
-    core.lead_out, core.base_out = FX.NEED_LEAD, FX.BASE > 0
+    core.lead_out, core.base_out = FX.NEED_LEAD or VH.NEED_LEAD, FX.BASE > 0
     global RMEM
     if core.rm:
         import rmem as RMEM

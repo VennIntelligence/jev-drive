@@ -26,7 +26,7 @@ Environment: ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT, SH30_TAG (op_parity run 
 one record per call; start.jsonl: the full rollout spec of every session), PAI_DUMP (number of sessions whose model frames and source
 JPEG are saved once per second to <log dir>/dump), PAI_KEYWARP, JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (the trajectory handed to
 the controller is a feasible reference built from the plan and the ego state, never a large-steering one: track_ref.py; off by default), JEV_VHIST
-(off | hold | zero: the speed history fed to the adapter, vhist.py, mounted like track_ref.py; logged as `vhist`, `ego` stays the measured
+(off | hold | zero | holdlead: the speed history fed to the adapter, vhist.py, mounted like track_ref.py; logged as `vhist`, `ego` stays the measured
 row; off by default).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
@@ -91,7 +91,7 @@ class Session:
         # route memory; route messages not yet logged (ts -> waypoints); the pose of each message, kept when first known (the egomotion
         # store above keeps 3.3 s only, the memory needs every message's pose)
         self.rt, self.unlogged, self.rpose = (RMEM.Tracker() if RMEM else None), {}, {}
-        self.vh = VH.new() if VH.ON else None
+        self.vh = VH.new(FX.cam_to_front(req.rollout_spec.vehicle, t.x)) if VH.ON else None
         self.lock = threading.Lock()
         self.count = dict(drive=0, inference=0, inference_error=0, input_error=0, state_rotated=0, cold=0, images=0)
 
@@ -261,7 +261,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             s.count["inference"] += 1
             s.count["cold"] += int(not real.all())
             if s.vh is not None:
-                VH.observe(s.vh, o["poses"])                 # the model's plan, before any serving change
+                VH.observe(s.vh, o)                          # the model's plan, before any serving change
             fx = FX.apply(s.fix, o, float(np.hypot(*V[-1])), float(dyn[-1][1][0]), t0)
             near = s.poses[min(s.poses, key=lambda t: abs(t - t0))]      # the anchor: the interpolated pose of t0 as a PoseAtTime
             s.anchor = common_pb2.PoseAtTime(timestamp_us=t0, pose=common_pb2.Pose(
@@ -344,7 +344,7 @@ def main() -> None:
     if RMEM:
         core.rm, core.rm_dim = True, RMEM.DIM
         LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
-    core.lead_out, core.base_out = FX.NEED_LEAD, FX.BASE > 0
+    core.lead_out, core.base_out = FX.NEED_LEAD or VH.NEED_LEAD, FX.BASE > 0
     LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TR.MODE,
              {k: getattr(TR, k) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN")} if TR.ON else "")
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros

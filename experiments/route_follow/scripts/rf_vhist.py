@@ -72,11 +72,18 @@ def check(a):
                 exp = ego.copy()
                 exp[VH.EGO_SPEED] = 0
             else:
+                VH.NEED_LEAD = vh["mode"] == "holdlead"         # holdlead: the lead flag is not recomputable offline, the logged one is used
+                if VH.NEED_LEAD:
+                    st["lead"] = vh["prev_lead"]
+                    if abs(vh["prev_dec"] - st["dec"]) > 2e-3 or abs(min(vh["prev_arc"], 1e6) - min(st["arc"], 1e6)) > 2e-3:
+                        print(f"{sc} k {r['k']}: previous-plan brake / arc {st['dec']:.3f} / {st['arc']:.3f} logged {vh['prev_dec']} / {vh['prev_arc']}")
+                        bad += 1
                 exp, info = VH.feed(st, ego, np.eye(4)[r["cmd"]])
                 if info["release"] != vh["release"] or abs(info["v_fed"] - vh["v_fed"]) > 2e-3:
                     print(f"{sc} k {r['k']}: release / v_fed {info['release']!r} {info['v_fed']} logged {vh['release']!r} {vh['v_fed']}")
                     bad += 1
-                VH.observe(st, r.get("poses_model", r["poses"]))
+                VH.NEED_LEAD = False
+                VH.observe(st, {"poses": r.get("poses_model", r["poses"])})
             if np.abs(exp - fed).max() > 2e-4:                  # the logged rows are rounded to 5 decimals
                 print(f"{sc} k {r['k']}: fed row differs by {np.abs(exp - fed).max():.5f}")
                 bad += 1
