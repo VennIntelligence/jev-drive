@@ -90,3 +90,30 @@ alpasim_nuplan/onpol-train --on-mode self): RS2G-L18-s{0,1} (--on on1_L18R2s, no
 at-fault upper <= +2, GT not larger); round gate vs RSG-L18-s0 (d264 / ol1 prereg round gate: zeros fewer, lateral GT distance not larger,
 at-fault zeros not more; log-clustered paired bootstrap CI reported); L5 per decision as Amendment 1; rf_offroad inside-of-right-turn counts
 reported. RBSG2 (Amendment 4) unchanged. Added 2026-10-13 04:15 JST before any of these reads.
+
+## Amendment 6 (2026-10-13 12:55 JST, before any RBSG3 or no-memory read)
+
+**Experiment 1, iteration.** Question: does iterating the route hinge on the policy's own states converge (public zeros fall toward RSG's 45
+while inside-of-right-turn offroad stays <= 6) or oscillate? After the RBSG2 public read (1491 at 10 decisions: 77.5 zeros vs RSG 45,
+decision 286 correction 2): RBSG2-L18-s0 is rolled at 18 decisions with dumps on the 1031 train scenes (ol_chain.sh submit-roll; rows
+L18RBSG2) and on the 460 held scenes (ol_all.sh's roll1 / geo / tok / strip / pool bodies; rows L18RBSG2allheld), same labels (S hinges +
+route hinge), interpreted control smoke10eY, R1 (c) wrong seed = RBSG2-L18-s1; on1_L18RBSG2all = train + held rows (ol_all.sh merge);
+on1_L18R3 = on1_L18R2 (34 809 rows) + on1_L18RBSG2all (ol_pool_merge.py, feature file concatenated in the merged order). Pool gates as before
+(rows >= 10 000, route.npz ok >= 0.95, route0_share_005 >= 0.99, rows gates R1 / R2 pass). Arm RBSG3-L18-s{0,1} = --init RB0-F-s0, gentle
+schedule (--steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500), REC flags (--yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only
+--shape --ho-w 3 --rm-lr 3e-4), --on on1_L18R3 --on-k 13 --on-split alpasim_nuplan/onpol-all --on-mode self --on-lon on_route.
+The held 460 are now in training, so the read that judges is the public 1491 at 10 decisions (guard.sh way: ol_chain.sh readlist, 10 chunks
+per seed; ol_confirm.py, seed means, log-clustered paired bootstrap B = 10 000, base YR10m10-F-s0 stored rollouts).
+Lines: **A6-1** RBSG3-L18 (seed mean) public zeros < RBSG2-L18's 77.5 with the paired CI upper bound of RBSG3 − RBSG2 < 0;
+**A6-2** RBSG3-L18 at-fault zeros (seed mean) not above RSG-L18's 38.5 + 5 = 43.5. Reported: pairs vs RSG-L18 and vs RBSG2-L18 (score,
+zeros, at-fault, GT), G-rely of RBSG3 (L1), and rf_offroad inside-of-right-turn offroad zeros on the public rollouts (RBSG3, RBSG2, RSG;
+converge reading needs <= 6 per seed on held-equivalent terms; on public there is no prior count, so RSG / RBSG2 public counts are the
+reference). Converge = A6-1 and A6-2 pass and zeros approach 45; oscillate = zeros at or above RBSG2's.
+
+**Experiment 2, closed-loop reliance.** RSG-L18-s0 and RBSG2-L18-s0 on held 460 at 18 decisions (rm_chain.sh readlist on lists/held_n6, the
+stored reads' path) with the route memory fed empty (SH30_RMEM=0 via cl submit --env; output read/<TAG>-nomem), compared with their stored
+reads (RSG 34 zeros, RBSG2 37) per scene: zeros, offroad / corridor / collision zeros, at-fault, GT, lateral GT, inside-of-right-turn
+offroad zeros; scene-paired bootstrap (B = 10 000; log-clustered CI also reported). Line **A6-3**: the offline G-rely verdicts predict the
+closed-loop effect: RSG (G-rely pass, +0.025) loses more than RBSG2 (G-rely fail, +0.004): RSG nomem − stored zeros CI lower bound > 0 and
+RBSG2's Δzeros below RSG's (difference-of-differences CI reported). Reported whichever way it comes out. Added 2026-10-13 12:55 JST before
+any of these reads.
