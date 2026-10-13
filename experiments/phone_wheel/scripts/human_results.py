@@ -4,7 +4,8 @@
     python experiments/phone_wheel/scripts/human_results.py /data/runs/human_drive/<stamp>
 
 Reads <run>/done/<id>.json (scripts/b2d_run.py) -> attempts/<id>/<attempt>/{results.json, human_summary.json}; writes
-<run>/results.json and <run>/results.md and prints the table. Routes requested but never finished are listed, not scored.
+<run>/results.json and <run>/results.md and prints the table. Routes requested but never finished are listed, not scored. With HUMAN_STOP_ON the route ends at the
+first event (status "Failed - Agent crashed", DS / RC up to the stop; "stopped at" column from stop_event.json).
 """
 import json
 import sys
@@ -26,18 +27,22 @@ def main(run):
                      "infractions": {k: len(v) for k, v in rec["infractions"].items() if v},
                      "infraction_text": [x for v in rec["infractions"].values() for x in v],
                      "sim_s": hs.get("sim_s"), "wall_per_sim": hs.get("wall_per_sim"), "raw_per_sim": hs.get("raw_per_sim"),
-                     "wait_s": hs.get("wait_s"), "stale_ticks": hs.get("stale_ticks")})
+                     "wait_s": hs.get("wait_s"), "stale_ticks": hs.get("stale_ticks"),
+                     "stop_event": json.loads((att / "stop_event.json").read_text()) if (att / "stop_event.json").exists() else None})
     order = {r: i for i, r in enumerate(summary.get("attempts", {}))}
     rows.sort(key=lambda r: order.get(r["route"], 1e9))
     never = summary.get("routes_never_finished", [])
     mean = lambda k: round(sum(r[k] for r in rows) / len(rows), 2) if rows else None  # noqa: E731
     out = {"run": str(run), "routes": rows, "never_finished": never, "n": len(rows), "mean_DS": mean("DS"), "mean_RC": mean("RC")}
     (run / "results.json").write_text(json.dumps(out, indent=1))
-    lines = ["| route | town | DS | RC | IS | status | infractions | sim s | wall/sim (raw) |", "|---|---|---|---|---|---|---|---|---|"]
+    lines = ["| route | town | DS | RC | IS | status | infractions | stopped at | sim s | wall/sim (raw) |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
-        lines.append("| %s | %s | %.1f | %.1f | %.2f | %s | %s | %s | %s (%s) |" % (
+        se = r["stop_event"]
+        stop = "-" if not se else "%s %s at %.1f s" % (se["kind"], se.get("with", se.get("dist_m", "")), se["t"])
+        lines.append("| %s | %s | %.1f | %.1f | %.2f | %s | %s | %s | %s | %s (%s) |" % (
             r["route"], r["town"], r["DS"], r["RC"], r["IS"], r["status"],
-            ", ".join("%s %d" % kv for kv in r["infractions"].items()) or "-", r["sim_s"], r["wall_per_sim"], r["raw_per_sim"]))
+            ", ".join("%s %d" % kv for kv in r["infractions"].items()) or "-", stop, r["sim_s"], r["wall_per_sim"], r["raw_per_sim"]))
     lines.append("")
     lines.append("mean over %d finished routes: DS %s, RC %s; never finished: %s" % (len(rows), out["mean_DS"], out["mean_RC"],
                                                                                     ", ".join(never) or "none"))

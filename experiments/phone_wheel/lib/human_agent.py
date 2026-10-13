@@ -22,6 +22,12 @@ the page has its own curve, so the default is identity); throttle_gamma, throttl
 0.6 / 1.3: a light touch already pulls, the user found the linear map dull), brake_gamma, brake_gain (default 1.0 / 1.0: the MKZ brake
 is already sharp, 0.05 gives about -3.2 m/s^2; the page's pedal gain scales both pedals before sending); realtime, publish_every, scale, wait_start, wait_max_s, road.
 Per attempt (B2D_ATTEMPT_OUT): human.jsonl (one line per tick) and human_summary.json.
+
+Stop at the first event (env HUMAN_STOP_ON, default off here; human_drive.sh sets "collision"): a comma list of `collision`
+and `offroute` (> 3.5 m from the dense route for 1 s). 0.5 s after the first such event the agent writes stop_event.json and
+raises, so the leaderboard ends the route there ("Failed - Agent crashed") and scores DS / RC up to that point; b2d_run counts the
+attempt as finished and moves to the next route. Evaluation only (simulator truth), as `stop_on` in
+experiments/b2d_monitor/lib/op_arb_viz_agent.py (decision 288).
 """
 import json
 import math
@@ -49,6 +55,10 @@ DEFAULT = dict(steer_gain=1.0, steer_expo=0.0, throttle_gamma=0.6, throttle_gain
 F_MODEL, CX_MODEL, CY_MODEL, W_MODEL, H_MODEL = 455.0, 256.0, 0.5 * (256 + 47.6), 512, 256   # modeld's SBIGMODEL_K frame
 CMD_NAMES = {Z.LEFT: "turn left", Z.RIGHT: "turn right", Z.STRAIGHT: "straight through junction",
              Z.LANEFOLLOW: "follow lane", Z.CHANGE_LEFT: "lane change left", Z.CHANGE_RIGHT: "lane change right"}
+
+
+class StopRoute(RuntimeError):
+    """Raised on purpose to end the route at its first event (HUMAN_STOP_ON)."""
 
 
 def get_entry_point():
@@ -116,6 +126,8 @@ class HumanAgent(AutonomousAgent):
         self.raw_s = self.slept_s = self.sim_s = 0.0
         self.n_stale = self.n_late = 0
         self.v_hist = []
+        self.stop_on = {k.strip() for k in os.environ.get("HUMAN_STOP_ON", "").lower().split(",")} & {"collision", "offroute"}
+        self.stop_sensor, self.stop_hits, self.stop_event, self.off_t = None, [], None, None
         self.route = None
         if getattr(self, "_dense_plan", None):
             self.route = Z.Route(self._dense_plan)
@@ -180,6 +192,14 @@ class HumanAgent(AutonomousAgent):
             elif wall - target > 0.5:                  # far behind: re-anchor, never burst to catch up
                 self.anchor, self.n_late = (wall, now), self.n_late + 1
         self.prev_sleep = slept
+        if self.stop_on:
+            try:
+                self._stop_check(now)
+            except StopRoute:
+                raise
+            except Exception as e:  # a broken check must never end a human's route: drop it for this route
+                print("stop check disabled: %r" % (e,), file=sys.stderr, flush=True)
+                self.stop_on = set()
         c, st = self._control()                        # read the wheel after the sleep: freshest input
         self.n_stale += st["stale"]
         if self.preview is not None and self.tick % int(self.cfg["publish_every"]) == 0:
@@ -192,6 +212,30 @@ class HumanAgent(AutonomousAgent):
                                    "slept_ms": round(1e3 * slept, 1)}) + "\n")
         self.t_prev_exit = time.time()
         return c
+
+    def _stop_check(self, now, offroute_m=3.5, offroute_s=1.0, grace_s=0.5):
+        hero = self.hero or CDP.get_hero_actor()
+        if hero is None:
+            return
+        if "collision" in self.stop_on and self.stop_sensor is None:
+            bp = CDP.get_world().get_blueprint_library().find("sensor.other.collision")
+            self.stop_sensor = CDP.get_world().spawn_actor(bp, carla.Transform(), attach_to=hero)
+            self.stop_sensor.listen(lambda e: self.stop_hits.append((float(GameTime.get_time()), e.other_actor.type_id)))
+        if self.stop_event is None and self.stop_hits:
+            t, what = self.stop_hits[0]
+            self.stop_event = {"t": round(t, 2), "kind": "collision", "with": what}
+        if "offroute" in self.stop_on and self.route is not None:
+            loc = hero.get_location()
+            d = float(np.min(np.hypot(self.route.xy[:, 0] - loc.x, self.route.xy[:, 1] - loc.y)))
+            self.off_t = (self.off_t or now) if d > offroute_m else None
+            if self.stop_event is None and self.off_t is not None and now - self.off_t >= offroute_s:
+                self.stop_event = {"t": round(now, 2), "kind": "off_route", "dist_m": round(d, 2)}
+        if self.stop_event is not None and now - self.stop_event["t"] >= grace_s:
+            r = self.route
+            self.stop_event["progress"] = round(float(r.s[r.i] / max(r.s[-1], 1e-3)), 3) if r is not None else None
+            with open(os.path.join(self.out, "stop_event.json"), "w") as fh:
+                json.dump(self.stop_event, fh)
+            raise StopRoute("stop_on: route ended at the first %s (%s)" % (self.stop_event["kind"], self.stop_event))
 
     def _publish(self, frame, now, c, st, waiting=False):
         try:
@@ -255,7 +299,15 @@ class HumanAgent(AutonomousAgent):
         summary = {"route": self.rid, "ticks": self.tick, "sim_s": round(self.sim_s, 2), "wait_s": self.wait_s,
                    "wall_s": round(self.raw_s + self.slept_s, 2), "raw_s": round(self.raw_s, 2), "slept_s": round(self.slept_s, 2),
                    "wall_per_sim": round((self.raw_s + self.slept_s) / sim, 3), "raw_per_sim": round(self.raw_s / sim, 3),
-                   "late_reanchors": self.n_late, "stale_ticks": self.n_stale, "config": self.cfg}
+                   "late_reanchors": self.n_late, "stale_ticks": self.n_stale, "config": self.cfg,
+                   "stop_on": sorted(self.stop_on), "stop_event": self.stop_event}
+        if self.stop_sensor is not None:
+            try:
+                self.stop_sensor.stop()
+                self.stop_sensor.destroy()
+            except Exception:
+                pass
+            self.stop_sensor = None
         try:
             with open(os.path.join(self.out, "human_summary.json"), "w") as fh:
                 json.dump(summary, fh, indent=1)

@@ -4,6 +4,7 @@
 #   human:drive   scripts/b2d_run.py with its own off-screen CARLA server, then the results table
 # usage: human_drive.sh [route ids ...]   default: the openpilot monitor loop's 11 routes, in its order
 # env: HUMAN_GPU (0) card = -graphicsadapter; HUMAN_SERVER_INDEX (4: rpc 2200, tm 8200; the openpilot monitor runs use 0 and 2);
+#      HUMAN_STOP_ON (collision): end a route 0.5 s after its first event, "collision", "collision,offroute" or "" (never);
 #      HUMAN_CONFIG agent config JSON (steer_gain, steer_expo, realtime, ...; see lib/human_agent.py); HUMAN_MIN_FREE_MB (8000)
 # Results: /data/runs/human_drive/<stamp>/{results.md,results.json}, per attempt human.jsonl / human_summary.json.
 set -uo pipefail
@@ -17,6 +18,7 @@ export CARLA_ROOT=/data/third_party/carla/CARLA_0.9.15 BENCH2DRIVE_ROOT=/data/th
 
 if [[ ${1:-} == --run ]]; then          # inside human:drive
   OUT=$2; IDS=$3
+  export HUMAN_STOP_ON=${HUMAN_STOP_ON-collision}
   export B2D_SENSOR_TICK=1 B2D_PREVIEW_DIR=$LIVE OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMBA_NUM_THREADS=1
   cd "$REPO"
   (  # the server must sit on card $GPU: CARLA ignores CUDA_VISIBLE_DEVICES and the two-card -graphicsadapter map is unverified
@@ -44,7 +46,9 @@ fi
 mkdir -p "$LIVE"
 tmux has-session -t human 2>/dev/null || tmux new-session -d -s human -n main
 if ! tmux list-windows -t human -F '#{window_name}' | grep -qx viewer; then
-  tmux new-window -d -t human -n viewer "cd $REPO && SDL_VIDEO_WINDOW_POS=${HUMAN_WIN_POS:-1340,40} \
+  # tmux windows take the tmux server's environment, not this shell's: pass the display explicitly (a pre-existing `human`
+  # session without DISPLAY gave a viewer with no window, 2026-10-13)
+  tmux new-window -d -t human -n viewer "cd $REPO && DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY SDL_VIDEO_WINDOW_POS=${HUMAN_WIN_POS:-1340,40} \
     /data/envs/carla/bin/python experiments/phone_wheel/scripts/human_viewer.py --dir $LIVE --window-size ${HUMAN_WIN_SIZE:-2480 1736}; exec bash"
 fi
 ids=$(echo "${*:-24721 24944 27005 24416 27870 24519 26023 334 24948 28147 27297}" | tr ' ' ',' | tr -s ,)
@@ -59,5 +63,5 @@ OUT=$H/$(date +%m%d-%H%M%S); mkdir -p "$OUT"
 status running "starting CARLA" "$OUT" "$ids"
 echo "routes $ids, card $GPU, server index $IDX (rpc $port) -> $OUT"
 tmux kill-window -t human:drive 2>/dev/null
-tmux new-window -d -t human -n drive "bash $REPO/experiments/phone_wheel/scripts/human_drive.sh --run $OUT $ids; exec bash"
+tmux new-window -d -t human -n drive "HUMAN_STOP_ON='${HUMAN_STOP_ON-collision}' HUMAN_CONFIG='${HUMAN_CONFIG:-}' bash $REPO/experiments/phone_wheel/scripts/human_drive.sh --run $OUT $ids; exec bash"
 echo "tmux: human:viewer, human:drive; results: $OUT/results.md"
