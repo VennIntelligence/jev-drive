@@ -152,6 +152,18 @@ class Tracker:
                 B.append(to_local(p, wp))
         return memory(B, anchor).astype(np.float32)
 
+    def polyline(self, t0: int, pose_of, anchor):
+        """The merged route polyline (M, 2) in the rear-axle frame of anchor (same batches as `features`), or None
+        (experiments/alpasim/lib/route_path.py: JEV_ROUTE serves this path)."""
+        B = []
+        for ts in sorted(self.routes):
+            p, wp = (pose_of(ts) if ts <= t0 else None), self.routes[ts]
+            wp = wp[np.isfinite(wp).all(1)]
+            if p is not None and len(wp):
+                B.append(to_local(p, wp))
+        M = merge(B)
+        return None if M is None else in_ego(anchor, M)
+
 
 # ---------------------------------------------------------------- torch branch
 def _torch():
