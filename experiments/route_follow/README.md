@@ -46,7 +46,7 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [results/route-night/](results/route-night/): held reads (`held_raw.txt`, `a3/held_raw_a3.txt`), `ol_report` tables (`report_RBS.md`,
   `report_RBSG.md`, `a3/report_RSG.md`, `a3/report_RBSGc.md`), route following (`follow_held.md`, `follow_train.md`, `a3/follow_a3.md`),
   G-swap (`gswap/`), G-rely (`rely/`, `a3/rely/`), pool gates (`pool_L18RB0_gates.md`), inside-of-turn counts for all arms (`a3/offroad_a3.md`); round 2 in `r2/` (`report_RBSG2.md`, `held_raw_r2.txt`, `offroad_counts.json`).
-- [results/vhist/](results/vhist/): JEV_VHIST serving switch on held 460 (hold removes 86 % of the plan shortness but +36 zeros, all front collisions; zero on RSGallV does not help); prereg `plans/2026-10-13-vhist-prereg.md`.
+- [results/vhist/](results/vhist/): JEV_VHIST serving switch on held 460 (hold: 86 % of the shortness removed, +36 zeros, all front collisions; holdlead: score +0.028, zeros -2, rear-ended -20, but GT +0.10 fails line M; zero on RSGallV does not help); prereg `plans/2026-10-13-vhist-prereg.md`.
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane

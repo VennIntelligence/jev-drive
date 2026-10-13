@@ -30,3 +30,28 @@ deficit threshold was already nearly met by the reference; S (shares on the same
 
 PAI (prereg rule): M fails and Z does not help -> **no VHIST run on the PAI exam**. A next arm, if wanted: hold + a lead release (JEV_LEAD's
 filtered lead inside openpilot's following distance) on the same held read before any PAI time.
+
+## Amendment 1: `holdlead` (hold + lead release + brake release), 2026-10-13
+
+Rule: prereg Amendment 1 (b76b2822, before the read); code 22f76ffc. Smoke: off still 90 / 90 bit-identical, holdlead 0 rule mismatches;
+on the full reads 0 mismatches over chunks c0 and c3 of both labels. `vhist.md` / `vhist.json` / `deficit.md` now hold all six labels.
+
+| label | mean | zeros (coll / off / corr) | GT (m) | rear-ended | progress score | deficit median / mean of rollout means (m) |
+|:--|--:|:--|--:|--:|--:|:--|
+| RSG (stored) | 0.8656 | 34 (4 / 17 / 6) | 1.135 | 38 | 0.902 | -0.258 / -0.257 |
+| RSG + hold | 0.8141 | 70 (39 / 17 / 14) | 1.738 | 16 | 0.930 | -0.068 / -0.036 |
+| **RSG + holdlead** | **0.8939** | **32 (2 / 17 / 6)** | **1.233** | 18 | 0.927 | -0.069 / -0.138 |
+| allV | 0.8785 | 40 (5 / 17 / 10) | 1.467 | 16 | 0.927 | -0.106 / -0.080 |
+| allV + holdlead | 0.8829 | 42 (5 / 17 / 12) | 1.565 | 10 | 0.936 | -0.021 / -0.015 |
+
+Paired: RSG + holdlead - RSG = score +0.028 [+0.019, +0.040], zeros -2 [-5, 0], **GT +0.097 m [+0.033, +0.173]**, rear-ended -20 [-32, -11],
+progress score +0.025, deficit +0.119 [+0.079, +0.162] (share removed 0.46). allV + holdlead - allV: score +0.004, zeros +2, GT +0.099,
+share 0.81.
+
+Lines: **M fails for RSG + holdlead on GT alone** (1.233 against <= 1.185; deficit median and zeros pass). RSGallV + holdlead fails RSG's
+thresholds (zeros 42 > 39, GT 1.565). PAI rule as registered -> **no VHIST run on PAI**.
+Reading: the lead release removes the whole collision cost (front-collision zeros 39 -> 2, below RSG's 4) and keeps most of the
+rear-end benefit (38 -> 18), and the mean score rises +0.028 with a CI clear of 0. What is left is a lateral cost: GT up 0.10 m on both
+checkpoints, the same size as the training-side drop's GT cost on public 1491 (+0.056) to held (+0.33 for allV). The hold is active on 21 %
+of decisions (lead release 10 %, turn 55 %, stop 3 %, brake 0.7 %). Whether to accept a GT cost of 0.1 m for +0.028 score / -20
+rear-end truncations on PAI is a decision line M did not allow; it is for the user.
