@@ -2,16 +2,18 @@
 
 status: live
 decisions: none
-index: phone wheel as AlpaSim driver (PAI / nuPlan, Tokyo card 0); front-only PAI 0.51 wall s per sim s
+index: user drove PAI stage 1 at real time: 0.275 vs P2H10 0.154, alpamayo1 0.438
 
 **Question.** How does a human score on the AlpaSim scenes, driving the official closed loop by hand with the phone wheel?
 
-**Conclusion.** This is tooling, not a result yet. The human driver serves the same gRPC contract as the model drivers, and the
-official stack runs against it on Tokyo card 0. With the front camera alone the PAI stack is faster than real time
-(0.51 wall s per sim s, unpaced), so the driver paces the sim to the wall clock.
+**Conclusion.** On the 10 PAI stage-1 scenes, driven at real time with the front camera only, the user scored a mean of
+0.275. On the same scenes our model P2H10-F-s0 scores 0.154, the organisers' alpamayo1 0.438 and the mean of their
+reference subjects 0.198 (2 passes, 1 slow, 7 zeros: 4 left corridor, 3 off-road). One person, one attempt per scene,
+first contact with the phone controls, so this is weak evidence. It is also not leaderboard-comparable: fast mode renders
+only the front camera.
 
-**Next.** The user drives the PAI stage-1 scenes and the 48 nuPlan scenes. Their scores then sit next to the models'
-scores on the same scenes.
+**Next.** The user stopped here (2026-10-13). Still open: the nuPlan track (launcher written, never run), a JIT-warm
+launch, and gain tuning on the phone.
 
 **Read more.** [phone_wheel](../phone_wheel/README.md) covers the phone page, the daemon and wheel_client. The model
 drivers and the stack are in [docs/alpasim.md](../../docs/alpasim.md), sections "Driver contract", "nuPlan track" and
@@ -91,27 +93,65 @@ itself is unchanged (the image scorer reads the front camera). `HUMAN_MODE=offic
 eval as shipped. In both modes the PAI renderer is unharmonised, as on the public leaderboard (ec2 preset, as `pai_run.sh`).
 On nuPlan, gsplat is built for the card's own arch (sm_86), as `smoke.sh` does.
 
-| Measured on Tokyo card 0, fake wheel or user, PAI, unpaced | Cameras | Wall s per sim s (after start) | Card 0 peak |
-|---|---|--:|--:|
-| official (`HUMAN_MODE=official`), 2 scenes, fake wheel | 6 x 1080 px, 10 Hz | 1.92, 1.73 | 6.0 GB |
-| fast (default), user session `pai_1013-2255`, scene 1 | front 1080 px, 10 Hz | 0.51 | 5.0 GB |
+| Measured on Tokyo card 0, PAI | Cameras | Wall s per sim s after the start | Unpaced | Card 0 peak |
+|---|---|--:|--:|--:|
+| official (`HUMAN_MODE=official`), 2 scenes, fake wheel, unpaced | 6 x 1080 px, 10 Hz | 1.92, 1.73 | same | 6.0 GB |
+| fast, user session 1 `pai_1013-2255`, 10 scenes, unpaced | front 1080 px, 10 Hz | 0.48-0.62 (mean 0.53) | same | 13.1 GB |
+| fast, user session 2 `pai_1013-2305_rt`, 10 scenes, `HUMAN_REALTIME=1.0` | front 1080 px, 10 Hz | 1.00 (0 late re-anchors) | 0.52-0.66 | 13.1 GB |
 
-The user found front-only real-time enough and asked to stop the remaining lever measurements (lower render height,
-frame interval, NRE `--renderer nrend`, physics off). The knobs exist (`HUMAN_H`, `HUMAN_FI_MS`, `HUMAN_NRE`, `HUMAN_PHYS`)
-but are not measured. Because front-only is faster than real time, the driver paces it (`HUMAN_REALTIME=1.0`). That
-pacing arrived after the first user session, which therefore ran at about 2x speed.
+- Front-only is about 3.5x faster than the 6-camera official set and faster than real time, so the driver paces it
+  (`HUMAN_REALTIME`). The user drove session 1 before pacing existed, at 2x fast-forward.
+- The 13 GB peak is the NRE keeping two scene backends (`nre_cache_size=2`).
+- The user found front-only good enough and stopped the other lever measurements (lower render height, frame interval,
+  NRE `--renderer nrend`, physics off). Those knobs exist (`HUMAN_H`, `HUMAN_FI_MS`, `HUMAN_NRE`, `HUMAN_PHYS`) but are
+  not measured. JPEG quality is fixed at 95 in the runtime (`sensorsim_service.py`) and is not configurable.
+
+**Where the loading time goes** (session 2: 154 s of loading in a 496 s wall run; renderer log and driver times):
+- Stack start (compose up to the first scene): 18-27 s.
+- The first scene of each NuRec artifact revision (26.04, then 26.01): 45-59 s from load to first frame. The renderer
+  log shows `NRend JIT: compiled ...` for that whole span: the CUDA driver's PTX JIT, cached in `/home/.nv/ComputeCache`
+  inside the renderer container and lost with it.
+- Every later scene: about 1 s from load to first frame, plus 4-5 s between scenes (runtime map load, NRE backend
+  creation, physics artifact load). This is AlpaSim's own per-scene cost and is left as it is. One stack serves all
+  scenes; compose is not restarted per scene.
+- Fix: `HUMAN_JIT_CACHE=1` (the default) mounts `/data/cache/alpasim_human/jit` as the renderer's CUDA / torch JIT caches.
+  Only the caches change, not the outputs. Measured on the same 2 scenes with the fake wheel: the first-scene loads went
+  from 58.9 + 43.8 s (empty cache, run `test/jit_a`) to 19.2 + 29.2 s (warm cache, `test/jit_b`), about 54 s saved per
+  launch. What is left is not traced.
+- The window shows "LOADING NEXT SCENE (n/10)" between scenes.
 
 ## Results
 
-(filled in below as runs finish)
+Both sessions drove the 10 PAI stage-1 scenes (`pai_scenes_40.tsv`), front camera only, on 2026-10-13. Per-scene tables:
+[results/pai_1013-2305_paced.md](results/pai_1013-2305_paced.md) and
+[results/pai_1013-2255_unpaced.md](results/pai_1013-2255_unpaced.md).
+
+| Session | Pacing | Human mean | Pass | Zeros (corridor / off-road / at-fault) | P2H10 (model) | alpamayo1 | Organisers' mean |
+|---|---|--:|--:|---|--:|--:|--:|
+| 2, `pai_1013-2305_rt` | real time (1.00) | 0.275 | 2 | 7 (4 / 3 / 0) | 0.154 | 0.438 | 0.198 |
+| 1, `pai_1013-2255` | unpaced, 2x fast-forward | 0.270 | 2 | 7 (3 / 1 / 2) | 0.154 | 0.438 | 0.198 |
+
+In session 2 the human passes 071d15c4, which the model zeros, and 5d794411, which the model passes too. The model scores
+above zero only on 49597f01 (0.538), where the human leaves the corridor. Most of the human zeros come from leaving the
+lateral corridor around the logged path, so a different line counts as a failure, not only a crash. Both sessions are one attempt per scene, made while the controls (gains, route cue) were still being changed.
 
 ## Open
 
-- The click start was exercised by the user, not by an agent. With no viewer running, the throttle fallback is covered by
-  the fake-wheel runs.
-- Real-time pacing (`HUMAN_REALTIME`) is not yet verified in a run.
-- Steering and pedal gains are a first guess and have not been tuned on the phone.
-- Fast-mode levers other than the camera set are not measured.
+Verified end to end on Tokyo card 0:
+- PAI official mode (fake wheel, 2 scenes) and PAI fast mode (two user sessions of 10 scenes): results-summary.json, the
+  results table and the live dir all worked.
+- The viewer appeared on the monitor (screenshots), and the projected route overlay was checked on a snapshot.
+- Click start (the user's sessions), throttle start (fake wheel), and pacing at 1.00.
+
+Not verified:
+- **nuPlan: `human_nuplan.sh` was never run** (the user stopped all runs first). Its wizard overrides follow
+  `docker/smoke.sh`; the single-camera override, the MTGS renderer at baseport 6700, the gsplat JIT in a fresh container
+  (196 s natively, possibly per launch without the cache) and the 0.5 s hold are all unchecked.
+- The stale-phone brake path and `HUMAN_START=none`.
+- Whether the warm JIT cache also covers the nuPlan renderer.
+- The route projection for the pinhole (nuPlan) camera.
+- Steering / pedal gains have not been tuned with the user. The route arrives only 40-80 m ahead (`route_start_offset_m: 40`
+  in the preset), so the blue line starts there and the banner is the early cue.
 
 <!-- files:begin -->
 ## Files
@@ -126,5 +166,5 @@ pacing arrived after the first user session, which therefore ran at about 2x spe
 - `README.md` (experiments/phone_wheel): the phone as steering wheel and pedals
 - `alpasim.md` (docs): AlpaSim E2E Closed Loop Challenge 2026
 
-[results/](results/) 0 result files · [lib/](lib/) 1 library · [scripts/](scripts/) 6 entry points
+[results/](results/) 2 result files · [lib/](lib/) 1 library · [scripts/](scripts/) 6 entry points
 <!-- files:end -->
