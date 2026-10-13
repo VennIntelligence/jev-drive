@@ -53,8 +53,8 @@ if ! tmux list-windows -t human -F '#{window_name}' | grep -qx viewer; then
   # tmux windows take the tmux server's environment, not this shell's: pass the display explicitly (a pre-existing `human`
   # session without DISPLAY gave a viewer with no window, 2026-10-13)
   tmux new-window -d -t human -n viewer "cd $REPO && export DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY SDL_VIDEO_WINDOW_POS=${HUMAN_WIN_POS:-1340,40}; \
-    while true; do /data/envs/carla/bin/python experiments/phone_wheel/scripts/human_viewer.py --dir $LIVE --window-size ${HUMAN_WIN_SIZE:-2480 1736}; \
-    echo viewer exited, restarting in 3 s; sleep 3; done"
+    until /data/envs/carla/bin/python experiments/phone_wheel/scripts/human_viewer.py --dir $LIVE --window-size ${HUMAN_WIN_SIZE:-2480 1736}; \
+    do echo viewer crashed, restarting in 3 s; sleep 3; done"   # a user close (Q / Esc / window close) exits 0 and ends the loop
 fi
 RESUME=
 if [[ ${1:-} == --resume ]]; then

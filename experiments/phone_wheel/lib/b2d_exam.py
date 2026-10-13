@@ -137,8 +137,8 @@ class B2DExam(Backend):
             msgs.append("wheel daemon started (tmux wheel)")
         if not sh("pgrep -f 'phone_wheel/scripts/human_viewer.py'").strip():
             sh("tmux has-session -t human 2>/dev/null || tmux new-session -d -s human -n main; tmux kill-window -t human:viewer 2>/dev/null; "
-               "tmux new-window -d -t human -n viewer \"%s SDL_VIDEO_WINDOW_POS=1340,40; cd %s; while true; do %s "
-               "experiments/phone_wheel/scripts/human_viewer.py --dir %s --window-size 2480 1736; sleep 3; done\""
+               "tmux new-window -d -t human -n viewer \"%s SDL_VIDEO_WINDOW_POS=1340,40; cd %s; until %s "
+               "experiments/phone_wheel/scripts/human_viewer.py --dir %s --window-size 2480 1736; do sleep 3; done\""
                % (ENV, REPO, PY, self.live))
             msgs.append("viewer started (tmux human:viewer)")
         return "\n".join(msgs)

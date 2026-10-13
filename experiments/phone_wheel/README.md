@@ -18,7 +18,11 @@ Exam on the model's failure routes (2026-10-13, run `1013-232739`, [results/b2d_
 human mean DS 49.5 over 10 routes (RC 100 on 9 of 10, with red lights and layout touches); on the 4 routes where the best model
 (Cinque + FIX1) is scored, human 48.1 vs model 21.9 (one attempt each).
 
-**Next.** The full 220-route val suite by hand, scored with Bench2Drive's own tools (section "The full exam"), run `1013-235416`.
+Full exam, first session (2026-10-13/14, run `1013-235416`, 14 of 220 routes, Town01-04, same results file): human DS 48.1 over the 14
+driven routes (RC 100 everywhere, losses are vehicle collisions on 11 of 14 and red lights), official format /220: DS 3.06, Efficiency 205.6,
+Comfort 19.4.
+
+**Next.** Resume the 220-route exam from the desktop panel ("Resume last"); the panel's loop still needs its first end-to-end route.
 
 ## How it works
 
