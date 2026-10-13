@@ -20,11 +20,11 @@ submit)
   mkdir -p $O/pool; sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner tschool --name "$name" --tries 1 --priority 14 --no-check \
        --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
   # pool=p weight W so that the PAI rows are 30 % of the drawn pool rows, the topo factors inside them included
-  W=$($TR -c "
+  WP=$($TR -c "
 import numpy as np; t = np.load('$DATA_DIR/runs/op_parity/cache/on1_RSGPAIT/tab.npz'); p = t['pool'] == 'p'
 f = np.where(np.isin(t['topo'], ['straight_exit', 'straight_road']), 2.0, 1.0)
 print(round(0.3 / 0.7 * (~p).sum() / f[p].sum(), 4))") || exit 1
-  ARM_RSGPAIT="--on on1_RSGPAIT --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode both --on-weight pool=p:$W,topo=straight_exit:2,topo=straight_road:2"
+  ARM_RSGPAIT="--on on1_RSGPAIT --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode both --on-weight pool=p:$WP,topo=straight_exit:2,topo=straight_road:2"
   echo "RSGPAIT: $ARM_RSGPAIT" >> $O/jobs.txt
   dep=()
   for T in $NEW; do s=${T##*-s}; a=${T%%-L18*}; v=ARM_$a
@@ -38,6 +38,18 @@ print(round(0.3 / 0.7 * (~p).sum() / f[p].sum(), 4))") || exit 1
   done
   sub ts-report --after "$(IFS=,; echo "${dep[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash experiments/route_follow/scripts/rf_tschool.sh report > /dev/null || exit 1
   cat $O/jobs.txt ;;
+guard)    # resubmit the public 1491 guard chunks of every arm (after its training job in $O/jobs.txt) and the report
+  sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner tschool --name "$name" --tries 1 --priority 14 --no-check \
+       --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
+  dep=()
+  for T in $NEW; do t=$(grep " ts-tr-$T$" $O/jobs.txt | tail -1 | cut -d' ' -f1); [[ -n $t ]] || { echo "no training job for $T" >&2; exit 1; }
+    dep+=($(grep " rm-cover-$T$" $DATA_DIR/runs/route_mem/jobs.txt | tail -1 | cut -d' ' -f1))
+    for i in $(seq 0 9); do rm -rf $O/pool/ts-g10-$T-$i $G/read10/$T/b$i
+      dep+=($(sub ts-g10-$T-$i --after $t --vram 27 --cpu 8 --ram 30 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read -- bash $E/scripts/ol_chain.sh readlist $T \
+            $W/lists/all_n10/c$i.txt 10 $G/read10/$T/b$i)) || exit 1
+    done
+  done
+  rm -rf $O/pool/ts-report; sub ts-report --after "$(IFS=,; echo "${dep[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash experiments/route_follow/scripts/rf_tschool.sh report > /dev/null || exit 1 ;;
 report)
   R=""; for t in $HELD; do R="$R $t=$(ls -d $M/$t/c*/run | paste -sd,)"; done
   python3 $RF/held.py $R > $O/held_raw.txt; rc0=$?
@@ -53,5 +65,5 @@ report)
      RPAIT-L18=RPAIT-L18-s0,RPAIT-L18-s1 RPAITC-L18=RPAITC-L18-s0,RPAITC-L18-s1 --pairs RSGPAIT-L18:RSG-L18 RSGPAIT-L18-s0:RSG-L18-s0 RSGPAIT-L18-s1:RSG-L18-s1 \
      RPAIT-L18:RSG-L18 RPAITC-L18:RSG-L18 --out $O/guard; rc2=$?
   echo "held $rc0 held18 $rc1 guard $rc2"; exit $((rc0 + rc1 + rc2)) ;;
-*) echo "rf_tschool.sh submit | report" >&2; exit 2 ;;
+*) echo "rf_tschool.sh submit | guard | report" >&2; exit 2 ;;
 esac
