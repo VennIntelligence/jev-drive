@@ -119,7 +119,7 @@ def report(a):
     for lab, x in S.groupby("label", sort=False):
         d = D["labels"].get(lab, {})
         res["labels"][lab] = dict(scenes=len(x), rollouts=int(x.rollout.sum()), mean=float(x.score.mean()), zeros=int(x.zero.sum()),
-                                  col=int(x.z_col.sum()), off=int(x.z_off.sum()), cor=int(x.z_cor.sum()), gt=float(x.gt.mean()),
+                                  col=int(x.z_col.sum()), off=int(x.z_off.sum()), cor=int(x.z_cor.sum()), gt=float(x["gt"].mean()),
                                   rear=int(np.nansum(x.rear)), rear_nz=int(np.nansum(x.rear_nz)), prog=float(x.prog.mean()), prel=float(x.prel.mean()),
                                   def_med=d.get("median_dec", np.nan), def_mean=d.get("mean_scene", np.nan))
     logs = np.array([s.rsplit("-", 1)[0] for s in scenes])
