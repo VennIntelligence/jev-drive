@@ -109,3 +109,10 @@ Check on the run itself: before k the plans equal the d0 run's (same driver path
 Read, of the 4 d0 completions (2f227f2c, 382a7247, eaba3f6a, fd01e9ab): >= 3 kept = the state carries the turn (that hint is not needed
 after the entry); <= 1 kept = that hint carries it; 2 = no call. Completions among the 8 d0 failures are reported too. Compared with d0
 4 / 12 and k17 1 / 12; 12 scenes and one seed, so this is descriptive.
+
+## Amendment 3 (control arms as run, 2026-10-13 23:55 JST)
+
+Run as Amendment 2 says, card 1, code 748f8584. Engagement was verified on the run (pre-k decisions bit-identical to d0, the control on at
+every post-k decision). Of the 4 d0 completions, d0+rmem0 kept 2 (no call) and d0+vhzero kept 1 ("that hint carries it" by the rule).
+vhzero also completed 2 scenes d0 failed and had 6 zeros against d0's 8, and it slowed the car by 2 m/s after k. Read:
+[results/p2_branch](../results/p2_branch/README.md).
