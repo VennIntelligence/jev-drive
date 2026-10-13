@@ -1,0 +1,34 @@
+{
+ "raw_db": {
+  "files": 136,
+  "splits": [
+   "test"
+  ],
+  "status_rows": {
+   "green": 1447742,
+   "red": 3138774
+  },
+  "lidar_pc": 714860,
+  "lidar_pc_with_tl": 473800,
+  "files_with_tl": 123
+ },
+ "navtrain_logs": {
+  "frames": 723019,
+  "has_field": 723019,
+  "nonempty": 460636,
+  "entries": 5881919,
+  "red": 3768062,
+  "logs": 1310
+ },
+ "ego_lane": {
+  "tokens": 103288,
+  "tokens_ok": 103288,
+  "with_tl_line_ahead": 39797,
+  "tl_line_0_40m": 20218,
+  "connector_matched_0_40m": 19871,
+  "state_known_t0_0_40m": 16146,
+  "red_t0_0_40m": 10361,
+  "nonred_t0_0_40m": 5785,
+  "stop_sign_line_ahead": 12445
+ }
+}
