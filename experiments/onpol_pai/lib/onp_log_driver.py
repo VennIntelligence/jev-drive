@@ -21,8 +21,18 @@ serving input (f-theta camera through pai_core, rendered 10 Hz frames in every s
                 x > 0 = the ego is behind the log, y > 0 = the ego is right of it) and `log_poses` ((8, 3): the log at time_now + 0.5 .. 4.0 s in that frame, the imitation label in the layout of
                 `poses`; `log_valid` of them lie inside the log). The close record gains `log_error`
 
-A `drive` without a ground-truth message of its own timestamp is aborted with a gRPC error and counted: this driver never returns the
-model's plan. Run through experiments/onpol_pai/scripts/onp_pass2.sh (DRV_PY of pai_run.sh); environment as pai_driver.py plus ONP_HORIZON.
+  switch        ONP_SWITCH (unset = never): the decision index k (the session's `drive` call count, 10 Hz from the first call, as the
+                record's `k`) from which the driver returns the MODEL's plan instead of the log, i.e. the policy drives from k on (turning
+                school P2, route C of research/turning-school-checks.md). Either one integer for every scene or a file of `<scene id> <k>`
+                lines (a scene not in the file is never switched; mount it into the driver container through DRV_ENV `-v`). Before k
+                everything is as above; from k on the response is exactly pai_driver's (the model, its serving changes, its record), and the
+                log fields are still written when the ground truth is there (`log_now` = where the log is, seen from the ego). A k inside
+                the runtime's force-GT window (< 17 in the dev preset) hands over at the end of it; ONP_SWITCH=0 is pai_driver plus the
+                log fields and needs no ground truth. Records gain `switch` (k, null = never) and `ret` ("log" | "model"); every record
+                with ground truth gains `log_t` (s from the first pose of the recording to time_now: decision k <-> log time)
+
+A `drive` before the switch without a ground-truth message of its own timestamp is aborted with a gRPC error and counted. Run through
+experiments/onpol_pai/scripts/onp_pass2.sh (DRV_PY of pai_run.sh); environment as pai_driver.py plus ONP_HORIZON, ONP_SWITCH.
 """
 from __future__ import annotations
 
@@ -36,6 +46,23 @@ import pai_driver as P
 from pai_driver import common_pb2, egodriver_pb2, grpc, S
 
 HORIZON_S, TAIL_US = float(os.environ.get("ONP_HORIZON", "4.0")), 500_000
+
+
+def switch_table(v: str) -> tuple:
+    """ONP_SWITCH -> (k for every scene or None, {scene: k})."""
+    if not v:
+        return None, {}
+    if v.strip().lstrip("-").isdigit():
+        return int(v), {}
+    tab = {}
+    for line in open(v):
+        f = line.split("#")[0].split()
+        if len(f) >= 2:
+            tab[f[0]] = int(f[1])
+    return None, tab
+
+
+SWITCH_ALL, SWITCH = switch_table(os.environ.get("ONP_SWITCH", ""))
 TL = threading.local()
 
 
@@ -108,26 +135,31 @@ class LogDriver(P.Driver):
             quat=common_pb2.Quat(w=float(np.cos(a / 2)), x=0.0, y=0.0, z=float(np.sin(a / 2))))) for i, (x, y, a) in enumerate(ref)])
         rig, _ = sample(t, pos[:, :2], yaw_r, now + 500_000 * np.arange(9.0))        # label layout of `poses`: rig frame of `now`
         rig[:, 2] -= 2 * np.pi * np.round(rig[0, 2] / (2 * np.pi))
-        return traj, {"ret": "log", "ret_n": n + 1, "ret_ext": ext, "log_now": rig[0].round(4).tolist(),
+        return traj, {"ret": "log", "ret_n": n + 1, "ret_ext": ext, "log_t": round((now - t[0]) * 1e-6, 3), "log_now": rig[0].round(4).tolist(),
                       "log_poses": rig[1:].round(4).tolist(), "log_valid": int((now + 500_000 * np.arange(1, 9) <= t[-1]).sum())}
 
     def drive(self, req, ctx):
         s, now = self._s(req.session_uuid, ctx), int(req.time_now_us)
+        sw = SWITCH.get(s.scene, SWITCH_ALL)
+        policy = sw is not None and s.count["drive"] >= sw  # pai_driver's count of this call, before it increments it
         ref = self.log_reference(s, now)
         s.count.setdefault("log_error", 0)
         if isinstance(ref, str):
             s.count["log_error"] += 1
-            ctx.abort(grpc.StatusCode.FAILED_PRECONDITION, ref)
-        TL.extra = ref[1]
+            if not policy:
+                ctx.abort(grpc.StatusCode.FAILED_PRECONDITION, ref)
+            ref = (None, {})
+        x = {k: v for k, v in ref[1].items() if not (policy and k in ("ret_n", "ret_ext"))}
+        TL.extra = {**x, "switch": sw, "ret": "model" if policy else "log"}
         try:
-            super().drive(req, ctx)                          # the model, its record and its dumps; the plan it returns is dropped
+            r = super().drive(req, ctx)                      # the model, its record and its dumps
         finally:
             TL.extra = None
-        return egodriver_pb2.DriveResponse(trajectory=ref[0])
+        return r if policy else egodriver_pb2.DriveResponse(trajectory=ref[0])
 
     def get_version(self, req, ctx):
         v = super().get_version(req, ctx)
-        v.version_id += "-logreplay"
+        v.version_id += "-logreplay" + ("-switch" if SWITCH or SWITCH_ALL is not None else "")
         return v
 
 

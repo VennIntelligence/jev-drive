@@ -10,6 +10,7 @@
 # Env: CARDS ("0"), CONC (4), CHUNK (scenes per stack start, 40), SERVE (driver switches, default those of pass 1:
 #   "-e JEV_VCONT=1.0 -e JEV_LEAD=1 -e PAI_DUMP=100000"), CODE (/data/runs/onpol_pai/code/pass2), REPO (~/mycode/jev-drive), WAIT_S (how long
 #   a worker waits for its card to show <= 1 GB before a chunk, 1800), HORIZON (seconds of log returned per call, 4.0),
+#   WIZ (extra wizard overrides, space separated, e.g. "controller.gains.rel_front_steering_angle_weight=20"),
 #   MODE: driver (default) = the log is returned by the driver and tracked by the stack's MPC (runtime override
 #           simulation_config.send_recording_ground_truth=true, nothing else changed)
 #         force = pai_driver.py unchanged, the runtime itself holds the ego on the log for the whole rollout
@@ -34,7 +35,7 @@ case $MODE in
   force)  drv=; over=("runtime.simulation_config.force_gt_duration_us=${FORCE_US:-30000000}"); serve=$SERVE ;;
   *)      die "MODE $MODE" ;;
 esac
-echo "{\"mode\": \"$MODE\", \"code\": \"$CODE\", \"commit\": \"$(git -C "$CODE" rev-parse HEAD)\", \"driver\": \"${drv:-pai_driver.py}\", \"driver_sha256\": \"$(sha256sum "$CODE/experiments/alpasim/lib/${drv:-pai_driver.py}" | cut -c1-64)\", \"overrides\": \"${over[*]}\", \"serve\": \"$serve\"}" > "$O/code.json"
+echo "{\"mode\": \"$MODE\", \"code\": \"$CODE\", \"commit\": \"$(git -C "$CODE" rev-parse HEAD)\", \"driver\": \"${drv:-pai_driver.py}\", \"driver_sha256\": \"$(sha256sum "$CODE/experiments/alpasim/lib/${drv:-pai_driver.py}" | cut -c1-64)\", \"overrides\": \"${over[*]} ${WIZ:-}\", \"serve\": \"$serve\"}" > "$O/code.json"
 if ! ls "$O"/chunks/*.txt >/dev/null 2>&1; then           # written once: a resumed run keeps its chunks
   for f in "$@"; do if head -1 "$f" | grep -q '^scene_id'; then awk -F'\t' 'NR > 1 && $8 <= 1 {print $1}' "$f"; else grep . "$f"; fi; done \
     | awk '!seen[$0]++' | split -l "$CHUNK" -d -a 3 --additional-suffix=.txt - "$O/chunks/c"
@@ -53,7 +54,7 @@ worker() {  # card: takes chunks until none is left; never starts a stack on a c
         (( $(date +%s) - w > WAIT_S )) && { echo "card $g still has $(used "$g") MiB in use after $WAIT_S s: $c not started" >> "$O/ERROR"; return 1; }; sleep 30; done
       echo "$(date '+%F %T') card $g: $c ($(wc -l < "$f") scenes), attempt $k"
       GPU=$g CONC=$CONC PAI_BASEPORT=$((6400 + 100 * g)) TAG=$T DRV_PY=$drv DRV_ENV="$serve -v $C:/app/data/runs/op_parity/runs/$T:ro" \
-        bash "$run" "$r" "$f" "${over[@]}" > "$r.out" 2>&1 && break
+        bash "$run" "$r" "$f" "${over[@]}" ${WIZ:-} > "$r.out" 2>&1 && break
       (( k == 2 )) && echo "chunk $c failed twice on card $g: $(cat "$r/ERROR" 2>/dev/null)" >> "$O/ERROR"
     done
   done
