@@ -1,0 +1,2 @@
+smoke/p2-new vs smoke/p2-old: decisions 199, k0 plan max|diff| 0.000000, first differing k None, plan max|diff| median 0.0000 max 0.0000; track rows 199/199, pos diff median 0.0000 max 0.000; score 1.0 / 1.0; ret log/log, log_t(k0) 0.044, switch None
+smoke/p2-sw0 vs /data/runs/route_night/r281/rsg: decisions 199, k0 plan max|diff| 0.000000, first differing k None, plan max|diff| median 0.0000 max 0.0000; track rows 199/199, pos diff median 0.0000 max 0.000; score 0.0 / 0.0; ret model/model, log_t(k0) 0.044, switch 0

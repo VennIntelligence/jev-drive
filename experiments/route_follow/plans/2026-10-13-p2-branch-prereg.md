@@ -85,3 +85,13 @@ such (fd01e9ab: d40, d20, d10 all k_eff 17), not dropped. Reference column k17 =
 
 12 scenes, one seed, one checkpoint: the ceiling is a gate for the next build, not an estimate of a rate. The handover is near the log, not
 from the policy's own states (route C, not A); a completion here says the policy can execute the turn from a human entry state.
+
+## Amendment 1 (as run, 2026-10-13 21:45 JST)
+
+- Smoke, scene f9e361aa, card 1. S1: no switch vs the pre-change driver, 199 / 199 decision plans and the controller track bit-identical. S2:
+  `ONP_SWITCH=0` vs the stored 281 rollout, also bit-identical, both score 0. OFF = `log_t` of decision 0 = 0.044 s, inside +- 0.05, so the
+  k were not shifted.
+- Run: Tokyo card 1 (run by the Tokyo chain agent from /data/runs/route_night/p2/RUN_SPEC; card 0 was taken back by the user), code
+  146dc7ad. The only change from the prereg is RUNPFX=p2- for the compose names. k_eff as in plan.json; 9 d40 branches and 3 d20 branches
+  are k_eff 17.
+- Read: [results/p2_branch](../results/p2_branch/README.md). Ceiling 4 / 12 = 33 % (<= 40 %): the "teach how" line.
