@@ -312,7 +312,9 @@ Three things about global mode that cost an hour here:
 `rsync -aP --partial <tokyo path> autodl:<box path>` (Tokyo -> box). From the Mac: wrap it in
 `ssh ujs@100.108.238.8 '...'`, or in tmux `dl` for anything long. Measured 8.5-11 MB/s in either direction (50 / 300 MB
 random files, one stream; 4 streams add nothing, 10.3 pull / 11.4 push, so ~90 Mbit/s is the link cap). That beats the old
-Mac relay (Tokyo -> Mac 0.33 MB/s) and the 35 KB/s seen on 2026-10-12.
+Mac relay (Tokyo -> Mac 0.33 MB/s) and the 35 KB/s seen on 2026-10-12. A killed `--partial` copy leaves the truncated file under its
+real name; for files a job reads as soon as they exist (PAI scenes, docs/alpasim.md "Tokyo-style chunked reads") use
+`--partial-dir=.rsync-partial`. The link is not steady: 11 MB/s Tokyo -> box for two hours on 2026-10-13, then 0.2 MB/s from 21:10 JST.
 
 **Cause of the slow path.** The box and Tokyo are not near each other: the box is AutoDL West-E (Zhongwei, Ningxia,
 China Telecom IDC; `connect.weste.seetacloud.com` = `116.172.94.204`), Tokyo is in Shanghai (China Mobile). The box is an unprivileged container

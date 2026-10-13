@@ -439,3 +439,37 @@ zero is a finished rollout.
 
 Last verified: 2026-10-10
 
+### Tokyo-style chunked reads through the pool (`pai_box.sh`, 2026-10-13)
+
+Read this to take a `pai_eval.sh` read (Tokyo, one Docker stack per 3090) to the GPU box. `pai_box.sh submit` cuts the scene lists into
+chunks (`CHUNK` 25) and submits one pool job per chunk (`pai_native.sh`, `--vram 28 --cpu 6 --ram 40`, history key `pai-read4`), so a read
+spreads over every card with room; the out dir has `pai_eval.sh`'s layout and `pai_eval_report.py` reads it unchanged. A second submit
+resumes: finished and pending chunks are skipped, failed ones resubmitted, and a chunk whose scenes are not all in `$DATA_DIR/datasets/nurec`
+yet is left for a later submit. Mp4s and the `rollout.asl` of scored rollouts are dropped (`KEEP_VIDEO=1` / `KEEP_ASL=1` keep them).
+
+```bash
+# on the box, repo root; the served configuration (JEV_VCONT=1.0 JEV_LEAD=1) is the default SERVE
+P=$DATA_DIR/runs/alpasim/pai_box
+WIZ=controller.gains.rel_front_steering_angle_weight=20 bash experiments/alpasim/scripts/pai_box.sh submit $P/<read> <checkpoint tag> <scene lists>
+#   SERVE="JEV_VCONT=1.0 JEV_LEAD=1 JEV_VHIST=holdlead" for other driver switches; CHUNKS_FROM=<a read's chunks/> repeats that read's lists
+python3 experiments/alpasim/scripts/pai_eval_report.py --rows box="$P/<read>/runs/*" --out read.md
+```
+
+Scenes: the box had 67 (the train scenes); on 2026-10-13 108 of the 147 exam scenes (`/data/runs/route_night/exam147.txt`) were copied before the data disk reached its floor (171 GB free; the other 39, 72 GB, are listed in `$DATA_DIR/runs/alpasim/pai_box/hf_order.tsv`); Tokyo has all 441 curated-validation scenes (754 GB, 1.84 GB per scene). Two ways in, both
+resumable: from Tokyo, `rsync -a --partial <files> autodl:$DATA_DIR/datasets/nurec/all-usdzs/` (tokyo-box.md, "Copying between the GPU box
+and Tokyo"; 11 MB/s for the first two hours on 2026-10-13, then 0.2 MB/s), and on the box `pai_fetch.sh` from `hf-mirror.com`
+(`RG_STOP_FREE_GB` guards the disk floor; 6-15 MB/s with two scenes at a time). Both at once gave 22 MB/s. `rsync --files-from` copies in
+sorted order, not list order: copy the scenes of a chunk you need first one file at a time. Use `--partial-dir=.rsync-partial`, not
+`--partial`: a killed `rsync --partial` leaves the truncated file under its real name, the wizard takes it, and physics / renderer die with
+`BadZipFile` (two such files on 2026-10-13); compare sizes with Tokyo (`stat -c '%s %n'`) before a read.
+
+| Measured 2026-10-13, RSG-L18-s0, gains 20, served configuration | Value |
+|---|---|
+| Agreement with Tokyo's `r281/rsg`, 22 exam scenes (chunk of a different composition) | box 0.7763, Tokyo 0.7759, diff +0.0004 [-0.0059, +0.0061]; 19 of 22 within 0.01, all within 0.05, no zero flips |
+| Agreement, 2-scene smoke | 0.2932 / 0.5161 against 0.2838 / 0.5256 (same failure class: none, progress-limited) |
+| Wall, one stack, CONC 4 | 22 scenes in 1 858 s (84 s per scene, 43 scenes / h; 25 s start-up), card shared with a training job |
+| One 147-scene read | one stack (one card): about 3.4 h (Tokyo's 3090 stack: about 2.1 h); as 6 chunk jobs on 6 cards with room: about 35 min. Three stacks fit a card by VRAM; whether they slow each other is not measured |
+| Output per scene | 0.41 GB with `rollout.asl`, mp4s already dropped; under 2 MB without |
+
+Last verified: 2026-10-13
+
