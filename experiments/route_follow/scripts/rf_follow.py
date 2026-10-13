@@ -55,7 +55,12 @@ import rmem as RM  # noqa: E402
 
 T0, DT = 17_000, 500_000
 WIN, TURN_DEG, LAT_OK, PAST, PRE, HALF = 30.0, 60.0, 2.5, 10.0, 20.0, 5.0
-K_END = 17                                         # the last decision of an 18-decision read: the turn window ends at the log's pose then
+K_END = int(os.environ.get("RF_K_END", 17))        # the last decision of an 18-decision read: the turn window ends at the log's pose then
+
+
+def k_end(Tt):
+    """K_END, or with RF_K_END set (long reads, late-turns-long) clipped to the last decision the scene's rig trajectory allows."""
+    return min(K_END, int((Tt[-1] - 1 - T0) // DT) - 1) if "RF_K_END" in os.environ else K_END
 N_BOOT = 10_000
 
 
@@ -105,7 +110,7 @@ def regen_full(scene, recs, cfg):
         A[r["k"]] = np.asarray(r["anchor"], float)
         G0[r["k"]] = (float(np.hypot(*(W[r["k"]][0] - np.asarray(r["route0"])))) if r.get("route0") is not None and np.isfinite(W[r["k"]][0]).all()
                       else np.nan)
-    t_end = T0 + DT * K_END
+    t_end = T0 + DT * k_end(Tt)
     log_end = np.array([np.interp(t_end, Tt, P[:, 0]), np.interp(t_end, Tt, P[:, 1])])
     return W, A, G0, np.asarray(g.route_polyline_in_local.points, float)[:, :2], log_end
 

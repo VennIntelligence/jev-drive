@@ -190,7 +190,7 @@ def scan_one(job):
         tr = ds.rig.trajectory
         P, Tt, Y = np.asarray(tr.positions, float), np.asarray(tr.timestamps_us, float), np.unwrap(np.asarray(tr.yaws, float))
         recs = [dict(k=k, t0=F.T0 + F.DT * k, anchor=(np.interp(F.T0 + F.DT * k, Tt, P[:, 0]), np.interp(F.T0 + F.DT * k, Tt, P[:, 1]),
-                                                       np.interp(F.T0 + F.DT * k, Tt, Y))) for k in range(F.K_END + 1)]
+                                                       np.interp(F.T0 + F.DT * k, Tt, Y))) for k in range(F.k_end(Tt) + 1)]
         _, A, _, Rl, log_end = F.regen_full(scene, recs, EV.CFG)
         Rl = Rl[np.r_[True, np.hypot(*np.diff(Rl, axis=0).T) > 1e-6]]
         S = stations(Rl)
@@ -214,6 +214,9 @@ def scan(a):
     held = Path(a.held).read_text().split()
     jobs = [(s, "train") for s in sorted(sp.members)] + [(s, "held") for s in held]
     jobs = jobs[: a.limit or None] if not a.limit else jobs[: a.limit // 2] + [(s, "held") for s in held[: a.limit // 2]]
+    if a.only:   # long reads (late-turns-long): only these scenes; RF_K_END / EV_CFG select the window and the cache
+        keep = set(Path(a.only).read_text().split())
+        jobs = [j for j in jobs if j[0] in keep]
     with Run("route_follow", "lateturn-scan", config=vars(a)) as run:
         run.use_split(sp)
         res = par.pmap(scan_one, jobs, run=run, workers=a.workers, desc="scan")
@@ -670,6 +673,7 @@ if __name__ == "__main__":
     p.add_argument("--out", required=True)
     p.add_argument("--workers", type=int, default=24)
     p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--only", default="", help="scan: keep only the scene ids in this file")
     p = sp.add_parser("pick")
     p.add_argument("--scan", required=True)
     p.add_argument("--done", required=True)

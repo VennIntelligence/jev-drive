@@ -44,7 +44,7 @@ RUNS = {"YR10m10-F-s0": DATA / "runs/alpasim_long/held/h18/YR10m10-F-s0", "YR10m
         **{f"{f}-L18-s{s}": DATA / f"runs/onpol_long/read/{f}-L18-s{s}/run" for f in ("YS", "YS2G") for s in (0, 1)}}
 CTRL_MSGS, CTRL_TAG = DATA / "runs/alpasim/col1/lead/msgs/ctrl", "P2H10-F-s0"
 ZM = DATA / "runs/zeros_mech/collect/20261012-155215"
-CFG = RUNS["YR10m10-F-s0"] / "generated-user-config-0.yaml"          # the after160 rebuilt cache: every public scene, one local frame
+CFG = Path(os.environ.get("EV_CFG") or RUNS["YR10m10-F-s0"] / "generated-user-config-0.yaml")  # EV_CFG: a long-window run's config (late-turns-long); default: the after160 rebuilt cache, every public scene, one local frame
 T0, DT = 17_000, 500_000
 X_IDXS = 192.0 * (np.arange(33) / 32.0) ** 2
 DS = (10.0, 20.0, 40.0)
