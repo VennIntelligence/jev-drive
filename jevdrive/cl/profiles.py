@@ -59,6 +59,11 @@ class Profile:
 PROFILES = {
     "stock": Profile("stock", pools="stock", client_threads=0, num_threads=None),
     "reduced": Profile("reduced", pools="reduced", pool_threads=4, client_threads=8, num_threads=2),
+    # AlpaSim stack (renderer, runtime, driver): allocator env only, numeric threads untouched. Applied by
+    # experiments/alpasim/scripts/run_native.py to every process it starts (renderer VRAM peak -2.8 GB,
+    # research/alpasim-read-profile.md); no --profile flag needed.
+    "alpasim": Profile("alpasim", pools="stock", client_threads=0, num_threads=None,
+                       env=(("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True"),)),
 }
 DEFAULT = "reduced"
 

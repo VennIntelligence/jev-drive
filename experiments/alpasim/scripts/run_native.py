@@ -7,8 +7,11 @@ environment, the working dir is the AlpaSim checkout. The runtime starts last an
 (what `docker compose up --exit-code-from runtime-0` does). Nothing in the AlpaSim source is edited.
 
 A driver command (`--driver`, a shell string that honours ALPASIM_DRIVER_HOST / ALPASIM_DRIVER_PORT) is started
-first on a free port; `--tap` puts driver_tap.py between runtime and driver. A sampler records per-service GPU
-memory, CPU seconds and RSS once a second into usage.jsonl; native_summary.json holds peaks and wall times.
+first on a free port and warms up while the wizard and the other services start; the runtime starts once the driver
+listens (saves ~15-19 s a run, research/alpasim-read-profile.md). `--tap` puts driver_tap.py between runtime and driver.
+Every process gets the "alpasim" profile's env (jevdrive/cl/profiles.py: allocator settings) unless the job sets it.
+A sampler records per-service GPU memory, CPU seconds and RSS once a second into usage.jsonl; native_summary.json holds
+peaks and wall times.
 
 A runtime worker that dies (SIGKILLed from outside on this box, docs/alpasim.md "Killed workers") leaves the runtime
 alive but stuck: "Worker N died with exit code -9", "Result pump failed", then no rollout ever finishes. The launcher
@@ -23,6 +26,8 @@ from pathlib import Path
 import yaml
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[2]))
+from jevdrive.cl import profiles  # noqa: E402  (stdlib only)
 WORKER_CRASH = re.compile(rb"Worker \d+ died with exit code[^\n]*|Result pump failed[^\n]*")
 
 
@@ -170,21 +175,29 @@ def main() -> int:
     src, out = str(Path(a.src).resolve()), Path(a.log_dir).resolve()
     subs = tuple(x.split("=", 1) for x in a.sub)
     out.mkdir(parents=True, exist_ok=True)
-    base = dict(os.environ, UV_NO_SYNC="1", PYTHONUNBUFFERED="1", ALPASIM_NUPLAN_ROOT=a.nuplan_root)
+    # the AlpaSim stack's env (allocator settings) comes from the pool's profiles; a job's own env wins
+    base = {**dict(profiles.PROFILES["alpasim"].env), **os.environ,
+            "UV_NO_SYNC": "1", "PYTHONUNBUFFERED": "1", "ALPASIM_NUPLAN_ROOT": a.nuplan_root}
     procs, times, rc = Procs(out), {"t_start": time.time()}, 1
     threading.Thread(target=procs.sample, daemon=True).start()
     try:
-        port = a.driver_port
+        # The driver warms up (checkpoint, compile) while the wizard and the non-runtime services start; it must be
+        # listening before the runtime starts. Its port is fixed now, so the wizard can write it into the configs.
+        port = up = a.driver_port
         if a.driver:
-            port = free_port()
+            port = up = free_port()
             procs.start("driver", a.driver, dict(base, ALPASIM_DRIVER_HOST="127.0.0.1", ALPASIM_DRIVER_PORT=str(port)),
                         a.driver_cwd or src)
-            times["driver_ready_s"] = procs.wait_port("driver", port, a.ready_timeout)
         if a.tap:
-            up, port = port, free_port()
-            procs.start("tap", f"uv run python {HERE / 'driver_tap.py'} --listen 127.0.0.1:{port} "
-                               f"--upstream 127.0.0.1:{up} --out {out / 'driver_tap.jsonl'}", base, src)
-            procs.wait_port("tap", port, 120)
+            port = free_port()
+
+        def driver_up() -> None:
+            if a.driver:
+                times["driver_ready_s"] = procs.wait_port("driver", up, a.ready_timeout)
+            if a.tap:
+                procs.start("tap", f"uv run python {HERE / 'driver_tap.py'} --listen 127.0.0.1:{port} "
+                                   f"--upstream 127.0.0.1:{up} --out {out / 'driver_tap.jsonl'}", base, src)
+                procs.wait_port("tap", port, 120)
 
         # The wizard hands out the first free ports at or above baseport; start from a random one per run.
         if a.scene_list:
@@ -215,8 +228,10 @@ def main() -> int:
         for name in [n for n in services if n not in runtime] + runtime:
             svc = services[name]
             env = dict(base, **dict(e.split("=", 1) for e in svc.get("environment", [])))
-            if name in runtime:
+            if name == runtime[0]:
                 times["services_ready_s"] = time.time() - t0
+                driver_up()
+                times["driver_wait_s"] = time.time() - t0 - times["services_ready_s"]
                 times["t_runtime"] = time.time()
             procs.start(name, host_cmd(svc, src, subs), env, src)
             for p in svc.get("ports", []):

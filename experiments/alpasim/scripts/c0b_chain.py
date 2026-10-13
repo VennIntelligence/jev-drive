@@ -27,9 +27,11 @@ ROOT = DATA / "datasets/alpasim_nuplan"
 STALL_MIN = float(os.environ.get("STALL_MIN", 20))
 MAX_TRIES = 3
 POLL_S = 60
-OVERRIDES = ["+e2e_challenge_nuplan=full", "runtime.nr_workers=2", "runtime.endpoints.renderer.n_concurrent_rollouts=8",
-             "runtime.endpoints.driver.n_concurrent_rollouts=8", "runtime.endpoints.controller.n_concurrent_rollouts=8",
-             "defines.nre_cache_size=9"]
+# 4 concurrent rollouts / renderer scene cache 5 (was 8 / 9 until 2026-10-13): VRAM and RAM down, scores identical, wall within
+# noise; the renderer is the bottleneck either way (research/alpasim-read-profile.md). Every lane's reads and rollouts import this.
+OVERRIDES = ["+e2e_challenge_nuplan=full", "runtime.nr_workers=2", "runtime.endpoints.renderer.n_concurrent_rollouts=4",
+             "runtime.endpoints.driver.n_concurrent_rollouts=4", "runtime.endpoints.controller.n_concurrent_rollouts=4",
+             "defines.nre_cache_size=5"]
 C0 = {"sh30": RA / "c0/sh30_400_rerun", "ap2": RA / "c0/ap2_400_r1"}   # last night's 400-scene runs (one timestamped dir inside)
 PY = [sys.executable, "-m", "jevdrive.cl"]
 
