@@ -44,6 +44,11 @@ Turning-school addition (2026-10-13, experiments/route_follow/plans/2026-10-13-t
             rows) are `both`; `mixcheck` is its known-answer test: on one setup, a batch whose pool rows are all `self` rows gives the
             `self` loss and gradient exactly, a batch of `both` rows the `both` ones (exit 2 otherwise).
 
+Longitudinal safety (2026-10-13, experiments/route_follow/plans/2026-10-13-lon-prereg.md):
+  --lon-lead W --lon-curve W --lon-stop W   the timing-only terms of onpol_nuplan lib/on_lonsafe.py on the pool rows (lead envelope, curve speed,
+            stop-respect): any > 0 sets --on-lon on_lonsafe and --on-lon-lam 1 (the weights carry the scale: each term enters as W x ho_w x
+            sum over the pool rows / n_imit); refused together with another --on-lon module. All 0 (default) = off: no operation is added.
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -400,6 +405,8 @@ if __name__ == "__main__":
         p.add_argument("--ego-drop", type=float, default=0.0)
         p.add_argument("--on-weight", default="", help="KEY=VALUE:W,... draw weights of the pool rows from tab.npz string keys")
         p.add_argument("--ego-drop-speed", type=float, default=0.0, help="share of non-anchor rows with the ego speed history zeroed (training only)")
+        for t in ("lead", "curve", "stop"):
+            p.add_argument(f"--lon-{t}", type=float, default=0.0, help=f"weight of on_lonsafe's {t} term on the pool rows (0 = off)")
         p.add_argument("--prefetch", type=int, default=4)
         p.add_argument("--fetch-workers", type=int, default=2)
         p.add_argument("--dev-card-gb", type=float, default=4.0)
@@ -417,4 +424,9 @@ if __name__ == "__main__":
     if a.agent_on_only and not a.on:                                 # agent hinge on pool rows only, and no pool: no row carries it (RB0 / RNONE)
         print("rm_train: --agent-on-only without --on -> --agent-lam 0 (no row has an agent label)", flush=True)
         a.agent_lam, a.agent_on_only = 0.0, False
+    if max(a.lon_lead, a.lon_curve, a.lon_stop) > 0:                 # on_lonsafe: the weights carry the scale
+        assert a.on and a.on_lon in ("", "on_lonsafe"), "--lon-*: needs --on and no other --on-lon module"
+        import on_lonsafe
+        a.on_lon, a.on_lon_lam = "on_lonsafe", 1.0
+        print(f"rm_train: --on-lon on_lonsafe, --on-lon-lam 1, weights {on_lonsafe.configure(a.lon_lead, a.lon_curve, a.lon_stop)}", flush=True)
     dict(train=cmd_train, rely=cmd_rely, mixcheck=cmd_mixcheck)[a.cmd](a)

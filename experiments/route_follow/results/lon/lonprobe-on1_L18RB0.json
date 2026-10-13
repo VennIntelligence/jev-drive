@@ -1,0 +1,249 @@
+{
+ "pool": "on1_L18RB0",
+ "rows": 17429,
+ "stopped_targets": 0.02708130143582821,
+ "classes": {
+  "curve": 3244,
+  "none": 2,
+  "straight": 11322,
+  "turn": 2861
+ },
+ "sources": {
+  "fut (target)": {
+   "lead": {
+    "share": 0.06529347638992483,
+    "rows": 1138,
+    "mean_when_firing": 47.41343688964844,
+    "by_class": {
+     "curve": 0.0595,
+     "none": 0.0,
+     "straight": 0.0615,
+     "turn": 0.087
+    }
+   },
+   "curve": {
+    "share": 0.012737391703482702,
+    "rows": 222,
+    "mean_when_firing": 0.18515919148921967,
+    "by_class": {
+     "curve": 0.004,
+     "none": 0.0,
+     "straight": 0.0001,
+     "turn": 0.0727
+    }
+   },
+   "stop": {
+    "share": 0.0,
+    "rows": 0,
+    "mean_when_firing": null,
+    "by_class": {
+     "curve": 0.0,
+     "none": 0.0,
+     "straight": 0.0,
+     "turn": 0.0
+    }
+   },
+   "any": 0.07676860405072006
+  },
+  "served (RB0-F-s0)": {
+   "lead": {
+    "share": 0.09151414309484193,
+    "rows": 1595,
+    "mean_when_firing": 35.73344421386719,
+    "by_class": {
+     "curve": 0.0897,
+     "none": 1.0,
+     "straight": 0.077,
+     "turn": 0.1503
+    }
+   },
+   "curve": {
+    "share": 0.0,
+    "rows": 0,
+    "mean_when_firing": null,
+    "by_class": {
+     "curve": 0.0,
+     "none": 0.0,
+     "straight": 0.0,
+     "turn": 0.0
+    }
+   },
+   "stop": {
+    "share": 0.019335590108439958,
+    "rows": 337,
+    "mean_when_firing": 13.685957908630371,
+    "by_class": {
+     "curve": 0.0142,
+     "none": 0.0,
+     "straight": 0.019,
+     "turn": 0.0266
+    }
+   },
+   "any": 0.10488266681966837
+  },
+  "RSGboth-L18-s0": {
+   "lead": {
+    "share": 0.09931722990418268,
+    "rows": 1731,
+    "mean_when_firing": 37.06105041503906,
+    "by_class": {
+     "curve": 0.0949,
+     "none": 1.0,
+     "straight": 0.0886,
+     "turn": 0.1461
+    }
+   },
+   "curve": {
+    "share": 0.00011475127660795227,
+    "rows": 2,
+    "mean_when_firing": 0.0012932191602885723,
+    "by_class": {
+     "curve": 0.0,
+     "none": 0.0,
+     "straight": 0.0,
+     "turn": 0.0007
+    }
+   },
+   "stop": {
+    "share": 0.02002409776808767,
+    "rows": 349,
+    "mean_when_firing": 16.773523330688477,
+    "by_class": {
+     "curve": 0.0139,
+     "none": 0.0,
+     "straight": 0.0195,
+     "turn": 0.029
+    }
+   },
+   "any": 0.11291525618222503
+  },
+  "RSG-L18-s0": {
+   "lead": {
+    "share": 0.08950599575420276,
+    "rows": 1560,
+    "mean_when_firing": 35.4080696105957,
+    "by_class": {
+     "curve": 0.0897,
+     "none": 1.0,
+     "straight": 0.0755,
+     "turn": 0.144
+    }
+   },
+   "curve": {
+    "share": 0.00022950255321590454,
+    "rows": 4,
+    "mean_when_firing": 0.0007734725368209183,
+    "by_class": {
+     "curve": 0.0,
+     "none": 0.0,
+     "straight": 0.0,
+     "turn": 0.0014
+    }
+   },
+   "stop": {
+    "share": 0.01910608755522405,
+    "rows": 333,
+    "mean_when_firing": 13.766765594482422,
+    "by_class": {
+     "curve": 0.0139,
+     "none": 0.0,
+     "straight": 0.0187,
+     "turn": 0.0266
+    }
+   },
+   "any": 0.10281714384072523
+  },
+  "RSGbC2-L18-s0": {
+   "lead": {
+    "share": 0.09289115841413735,
+    "rows": 1619,
+    "mean_when_firing": 35.20588684082031,
+    "by_class": {
+     "curve": 0.0916,
+     "none": 1.0,
+     "straight": 0.0803,
+     "turn": 0.1437
+    }
+   },
+   "curve": {
+    "share": 5.7375638303976134e-05,
+    "rows": 1,
+    "mean_when_firing": 0.002005559392273426,
+    "by_class": {
+     "curve": 0.0,
+     "none": 0.0,
+     "straight": 0.0,
+     "turn": 0.0003
+    }
+   },
+   "stop": {
+    "share": 0.020655229789431406,
+    "rows": 360,
+    "mean_when_firing": 12.8944730758667,
+    "by_class": {
+     "curve": 0.0154,
+     "none": 0.0,
+     "straight": 0.02,
+     "turn": 0.0294
+    }
+   },
+   "any": 0.10734981926673934
+  }
+ },
+ "grad": {
+  "lead": {
+   "rows": 1731,
+   "g_imit_q": [
+    0.30788,
+    0.42857,
+    0.52344
+   ],
+   "g_term_q": [
+    0.92677,
+    2.44531,
+    7.26069
+   ],
+   "w_eq_q": [
+    0.02273,
+    0.05356,
+    0.13442
+   ]
+  },
+  "curve": {
+   "rows": 2,
+   "g_imit_q": [
+    0.87477,
+    0.99457,
+    1.11437
+   ],
+   "g_term_q": [
+    0.01935,
+    0.02964,
+    0.03993
+   ],
+   "w_eq_q": [
+    13.085,
+    17.97789,
+    22.87078
+   ]
+  },
+  "stop": {
+   "rows": 349,
+   "g_imit_q": [
+    0.33863,
+    0.39379,
+    0.48053
+   ],
+   "g_term_q": [
+    2.20547,
+    5.39489,
+    9.57075
+   ],
+   "w_eq_q": [
+    0.01541,
+    0.02538,
+    0.05218
+   ]
+  }
+ }
+}
