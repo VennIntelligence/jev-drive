@@ -1,0 +1,145 @@
+{
+ "pool": "on1_L18RSGallheld",
+ "rows": 7837,
+ "rows_ok": 7837,
+ "rows_red_in_window": 744,
+ "scenes": 447,
+ "items_in_pack": [
+  "B",
+  "P"
+ ],
+ "tags": {
+  "served (rollout policy)": {
+   "B": {
+    "active_share": 0.0012759984688018374,
+    "active_rows": 10,
+    "active_scenes": 3,
+    "mean_when_active": 0.012436107732355595,
+    "mean_all": 1.586845246492885e-05
+   },
+   "P": {
+    "active_share": 0.10322827612606865,
+    "active_rows": 809,
+    "active_scenes": 104,
+    "mean_when_active": 2.218334674835205,
+    "mean_all": 0.22899484634399414
+   },
+   "B_on_red_rows": {
+    "rows": 744,
+    "active_share": 0.013440860215053764,
+    "mean_when_active": 0.012436107732355595,
+    "sum": 0.1243610680103302
+   }
+  },
+  "RSG-L18-s0": {
+   "B": {
+    "active_share": 0.0012759984688018374,
+    "active_rows": 10,
+    "active_scenes": 3,
+    "mean_when_active": 0.01237510796636343,
+    "mean_all": 1.5790617908351123e-05
+   },
+   "P": {
+    "active_share": 0.10335587597294883,
+    "active_rows": 810,
+    "active_scenes": 104,
+    "mean_when_active": 2.2176592350006104,
+    "mean_all": 0.22920812666416168
+   },
+   "B_on_red_rows": {
+    "rows": 744,
+    "active_share": 0.013440860215053764,
+    "mean_when_active": 0.01237510796636343,
+    "sum": 0.12375107407569885
+   }
+  },
+  "RSG-L18-s1": {
+   "B": {
+    "active_share": 0.0014035983156820211,
+    "active_rows": 11,
+    "active_scenes": 3,
+    "mean_when_active": 0.01220766268670559,
+    "mean_all": 1.713465462671593e-05
+   },
+   "P": {
+    "active_share": 0.10310067627918847,
+    "active_rows": 808,
+    "active_scenes": 103,
+    "mean_when_active": 2.2193782329559326,
+    "mean_all": 0.22881940007209778
+   },
+   "B_on_red_rows": {
+    "rows": 744,
+    "active_share": 0.01478494623655914,
+    "mean_when_active": 0.01220766268670559,
+    "sum": 0.13428428769111633
+   }
+  },
+  "RB0-F-s0": {
+   "B": {
+    "active_share": 0.0012759984688018374,
+    "active_rows": 10,
+    "active_scenes": 3,
+    "mean_when_active": 0.013186240568757057,
+    "mean_all": 1.6825622878968716e-05
+   },
+   "P": {
+    "active_share": 0.1028454765854281,
+    "active_rows": 806,
+    "active_scenes": 106,
+    "mean_when_active": 2.2381486892700195,
+    "mean_all": 0.2301834523677826
+   },
+   "B_on_red_rows": {
+    "rows": 744,
+    "active_share": 0.013440860215053764,
+    "mean_when_active": 0.013186240568757057,
+    "sum": 0.13186240196228027
+   }
+  },
+  "RSGB-L18-s0": {
+   "B": {
+    "active_share": 0.001531198162562205,
+    "active_rows": 12,
+    "active_scenes": 4,
+    "mean_when_active": 0.023172205314040184,
+    "mean_all": 3.548124004737474e-05
+   },
+   "P": {
+    "active_share": 0.04287354855174174,
+    "active_rows": 336,
+    "active_scenes": 61,
+    "mean_when_active": 0.9400785565376282,
+    "mean_all": 0.040304508060216904
+   },
+   "B_on_red_rows": {
+    "rows": 744,
+    "active_share": 0.016129032258064516,
+    "mean_when_active": 0.023172205314040184,
+    "sum": 0.278066486120224
+   }
+  },
+  "RSGB-L18-s1": {
+   "B": {
+    "active_share": 0.0016587980094423887,
+    "active_rows": 13,
+    "active_scenes": 4,
+    "mean_when_active": 0.03161725029349327,
+    "mean_all": 5.244663043413311e-05
+   },
+   "P": {
+    "active_share": 0.046191144570626515,
+    "active_rows": 362,
+    "active_scenes": 68,
+    "mean_when_active": 0.9551216959953308,
+    "mean_all": 0.04411816596984863
+   },
+   "B_on_red_rows": {
+    "rows": 744,
+    "active_share": 0.01747311827956989,
+    "mean_when_active": 0.03161725029349327,
+    "sum": 0.4110242426395416
+   }
+  }
+ }
+}
