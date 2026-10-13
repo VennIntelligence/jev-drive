@@ -5,7 +5,8 @@ stale calls, start wait; mean over scenes; the models' scores on the same scenes
     python3 experiments/alpasim_human/scripts/human_results.py <run dir> [--ref label=<results-summary.json | run dir | dir of *.json>]
 
 Default references: PAI (clipgt- scenes) = P2H10-F-s0 in pai_run.sh (/data/runs/alpasim/pai1/runs/a10_c4, stage-1 scenes) and the
-organisers' alpamayo1 (mean of its 3 rollouts, /data/runs/alpasim/pai1/ref); nuPlan = native runs in /data/runs/alpasim/native_ref
+organisers' alpamayo1 and the mean of their reference subjects
+(columns of /data/runs/alpasim/pai1/pai_scenes_40.tsv, pai_scenes.py); nuPlan = native runs in /data/runs/alpasim/native_ref
 (SH30-F-s0 sh30_full48_c8, AP2-AB-s0 ap2_full48). Writes <run>/results.md and results.json. Plain python3.
 """
 import argparse
@@ -14,7 +15,8 @@ from pathlib import Path
 
 FAIL = ("collision_at_fault", "offroad", "left_corridor_laterally")
 R = Path("/data/runs/alpasim")
-REFS = {"pai": {"P2H10 (model)": R / "pai1/runs/a10_c4", "alpamayo1 (organisers)": R / "pai1/ref/alpamayo1.json"},
+REFS = {"pai": {"P2H10 (model)": R / "pai1/runs/a10_c4", "alpamayo1 (organisers)": R / "pai1/pai_scenes_40.tsv:alpamayo1",
+                "organisers' mean": R / "pai1/pai_scenes_40.tsv:ref_mean"},
         "nuplan": {"SH30-F-s0 (model)": R / "native_ref/sh30_full48_c8", "AP2-AB-s0 (model)": R / "native_ref/ap2_full48"}}
 
 
@@ -26,8 +28,13 @@ def summary(p: Path):
 
 
 def scores(p: Path) -> dict:
-    """scene -> mean score over its rollouts (a dir of *.json = several runs pooled)."""
+    """scene -> mean score over its rollouts (a dir of *.json = several runs pooled; <tsv>:<column> = a pai_scenes.py column)."""
     out = {}
+    if ".tsv:" in str(p):
+        f, col = str(p).rsplit(":", 1)
+        rows = [x.split("\t") for x in Path(f).read_text().splitlines()] if Path(f).exists() else [[]]
+        i = rows[0].index(col) if col in rows[0] else None
+        return {r[0]: float(r[i]) for r in rows[1:] if i is not None and len(r) > i}
     docs = [summary(p)] if summary(p) else [json.loads(f.read_text()) for f in sorted(p.glob("*.json"))] if p.is_dir() else []
     for d in docs:
         for r in d["rollouts"]:

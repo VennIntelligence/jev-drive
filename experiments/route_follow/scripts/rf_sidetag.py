@@ -136,7 +136,7 @@ def cmd_read(a):
     out = []
 
     def per_scene(grp, sd, c):
-        return pd.concat([T[x][T[x].side == sd].groupby("scene")[c].mean() for x in grp.split(",")], axis=1).mean(1)
+        return pd.concat([T[x][T[x].side == sd].groupby("scene")[c].mean() for x in grp.split(",")], axis=1).mean(axis=1)
     for p in a.pairs:
         A, B = p.split(":")
         for sd in "LRS":
