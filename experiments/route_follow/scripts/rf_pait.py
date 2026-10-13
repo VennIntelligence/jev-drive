@@ -478,7 +478,7 @@ def cmd_merge(a):
         z0 = next(z for z in Z if z is not None)
         A = {"tokens": names}
         for k in set.intersection(*[set(z) for z in Z if z is not None]):   # keys every present file has (tokens, ok, box / valid, sdf)
-            if k == "tokens" or len(z0[k]) != len(z0["tokens"]):
+            if k == "tokens" or z0[k].ndim == 0 or len(z0[k]) != len(z0["tokens"]):
                 continue
             A[k] = np.concatenate([z[k] if z is not None else np.zeros((n,) + z0[k].shape[1:], z0[k].dtype) for z, n in zip(Z, ns)])
         assert all(z is None or len(z["tokens"]) == n for z, n in zip(Z, ns)), f"{f}: rows"
