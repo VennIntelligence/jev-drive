@@ -13,8 +13,9 @@ distance is to steer, and at speed any steering is a spin. The fix is to never h
   JEV_TRACK=full   (a) + (b): the reference is the forward simulation (kinematic, DT_SIM steps) of a path-tracking law on the same path and
                    speed: curvature = path curvature (feedforward) + a second-order correction of the lateral / heading error over the
                    distance max(TAU_LAT x v, D_MIN), clipped to |kappa| <= min(KMAX, ALAT / v^2) and its rate to
-                   |dkappa/dt| <= min(JLAT / v^2, KRATE); it starts at the ego's current curvature (yaw rate / speed). The MPC then sees a
-                   reference whose steering is bounded by these physical limits at every speed (at 30 m/s and ALAT 4: 0.0127 rad).
+                   |dkappa/dt| <= min(JLAT / v^2, KRATE); it starts at the clipped desired curvature (starting from the ego's measured curvature instead
+                   made the receding-horizon reference lag every turn: run 1 of results/spin_fix.md). The MPC then sees a
+                   reference whose steering is bounded by these physical limits at every speed (at 30 m/s and ALAT 7: 0.022 rad; a spin command is 0.2-1.1 rad).
   JEV_TRACK_CFG    overrides, e.g. "alat=4,amin=-5,jlat=5" (names: the module constants in lower case).
 Unset / 0: off, the driver returns the plan as before, bit for bit.
 
@@ -33,7 +34,8 @@ if MODE not in ("0", "time", "full"):
     raise ValueError(f"JEV_TRACK={MODE!r}: expected time | full | 0")
 
 AMIN, AMAX = -5.0, 3.0          # m/s^2, change of speed of the reference
-ALAT, JLAT = 4.0, 5.0           # m/s^2, m/s^3 (openpilot clip_curvature: 3.0 no-roll, jerk 5.0)
+ALAT, JLAT = 7.0, 10.0          # m/s^2, m/s^3: a tyre-grip bound (0.7 g), not comfort (openpilot clip_curvature: 3.0, jerk 5.0)
+YAW_TOL = 0.35                  # rad, plan yaw output against its chords
 KMAX, KRATE = 0.2, 0.1          # 1/m (openpilot's cap; minimum radius 5 m), 1/m/s (about 0.29 rad/s of road-wheel steering, wheelbase 2.85)
 TAU_LAT, D_MIN, ZETA = 1.0, 4.0, 0.9
 V_MIN = 1.0                     # m/s, floor of v in the curvature limits
@@ -47,27 +49,32 @@ SUFFIX = f"-track{MODE}" if ON else ""
 
 
 class Path:
-    """The plan's path: polyline origin + 8 points, extended 200 m straight along its last chord; arc-length lookups."""
+    """The plan's path: polyline origin + 8 points, extended 200 m straight along its last chord; arc-length lookups. Heading at a node =
+    the plan's own yaw output (the tangent; the origin is 0) unless it disagrees with the mean of the adjacent chords by > YAW_TOL, then that
+    mean; linear in s between nodes, so curvature is piecewise constant and the heading does not lag the path by half a segment."""
 
     def __init__(self, poses):
-        p = np.concatenate([np.zeros((1, 2)), np.asarray(poses, np.float64)[:, :2]])
-        d = np.diff(p, axis=0)
-        ds = np.hypot(*d.T)
+        q = np.asarray(poses, np.float64)
+        p, yw = np.concatenate([np.zeros((1, 2)), q[:, :2]]), np.r_[0.0, q[:, 2]]
+        ds = np.hypot(*np.diff(p, axis=0).T)
         keep = np.r_[True, ds > 0.05]                                     # drop repeated points (stop plans)
-        p = p[keep]
+        p, yw = p[keep], yw[keep]
         d = np.diff(p, axis=0)
         ds = np.hypot(*d.T)
         if len(ds) == 0:                                                  # a plan that does not move: straight ahead
-            p, d, ds = np.array([[0.0, 0.0], [1.0, 0.0]]), np.array([[1.0, 0.0]]), np.array([1.0])
-        h = np.unwrap(np.arctan2(d[:, 1], d[:, 0]))
+            p, yw, d, ds = np.array([[0.0, 0.0], [1.0, 0.0]]), np.zeros(2), np.array([[1.0, 0.0]]), np.array([1.0])
+        ch = np.unwrap(np.arctan2(d[:, 1], d[:, 0]))
+        mean = np.r_[ch[0], (ch[:-1] + ch[1:]) / 2, ch[-1]]
+        yw = mean + (yw - mean + np.pi) % (2 * np.pi) - np.pi             # the yaw output brought next to the chords
+        hn = np.where(np.abs(yw - mean) <= YAW_TOL, yw, mean)
+        hn[0] = 0.0 if abs(mean[0]) <= YAW_TOL else mean[0]
         self.s = np.r_[0.0, np.cumsum(ds)]
         far = p[-1] + 200.0 * d[-1] / ds[-1]
         self.p, self.s = np.vstack([p, far]), np.r_[self.s, self.s[-1] + 200.0]
-        mid = (self.s[:-2] + self.s[1:-1]) / 2                           # heading continuous in s: chord headings at segment midpoints
-        self.hs, self.hv = np.r_[0.0, mid, self.s[-1]], np.r_[h[0], h, h[-1]]
+        self.hs, self.hv = self.s, np.r_[hn, ch[-1]]
 
     def at(self, s):
-        """-> x, y on the polyline, smooth heading, curvature (d heading / ds) at arc length s."""
+        """-> x, y on the polyline, heading, curvature (d heading / ds) at arc length s."""
         x, y = np.interp(s, self.s, self.p[:, 0]), np.interp(s, self.s, self.p[:, 1])
         h = np.interp(s, self.hs, self.hv)
         i = np.clip(np.searchsorted(self.hs, s, side="right") - 1, 0, len(self.hs) - 2)
@@ -82,7 +89,7 @@ def speeds(poses):
 
 
 def build(poses, v0: float, wz: float, mode: str = "", **kw):
-    """Plan (8, 3) rig frame, ego speed and yaw rate -> (t (41,), x, y, yaw (41,)) and a log record. mode / kw (lower-case constant names)
+    """Plan (8, 3) rig frame, ego speed and yaw rate (logged only) -> (t (41,), x, y, yaw (41,)) and a log record. mode / kw (lower-case constant names)
     override the environment's configuration (offline replays)."""
     mode = mode or MODE
     g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN")}
@@ -90,8 +97,8 @@ def build(poses, v0: float, wz: float, mode: str = "", **kw):
     path, vp = Path(poses), speeds(poses)
     n, every = int(round(T_END / DT_SIM)), int(round(DT_OUT / DT_SIM))
     v, s, x, y, th = max(float(v0), 0.0), 0.0, 0.0, 0.0, 0.0
-    k = float(np.clip(wz / max(v, V_MIN), -KMAX, KMAX)) if v > 0.5 else 0.0
-    out, kpk, apk = [(0.0, 0.0, 0.0)], abs(k), 0.0
+    k = None                                                              # first step: the clipped desired curvature
+    out, kpk, apk = [(0.0, 0.0, 0.0)], 0.0, 0.0
     for i in range(n):
         t = i * DT_SIM
         a = float(np.clip((vp[min(int(t / 0.5), 7)] - v) / DT_SIM, AMIN, AMAX))
@@ -110,7 +117,7 @@ def build(poses, v0: float, wz: float, mode: str = "", **kw):
             vv = max(v, V_MIN)
             km = min(KMAX, ALAT / vv ** 2)
             dk = min(JLAT / vv ** 2, KRATE) * DT_SIM
-            k = float(np.clip(np.clip(kd, k - dk, k + dk), -km, km))
+            k = float(np.clip(kd if k is None else np.clip(kd, k - dk, k + dk), -km, km))
             kpk = max(kpk, abs(k))
             v = max(v + a * DT_SIM, 0.0)
             ds = v * DT_SIM
@@ -122,8 +129,8 @@ def build(poses, v0: float, wz: float, mode: str = "", **kw):
             out.append((x, y, th))
     o = np.array(out)
     t = np.arange(len(o)) * DT_OUT
-    return (t, o[:, 0], o[:, 1], o[:, 2]), {"mode": mode, "v0": round(float(v0), 3), "k0": round(float(k), 4), "kpk": round(kpk, 4),
-                                           "amin": round(apk, 2), "s4": round(s, 2)}
+    return (t, o[:, 0], o[:, 1], o[:, 2]), {"mode": mode, "v0": round(float(v0), 3), "k_end": round(float(k or 0.0), 4), "kpk": round(kpk, 4),
+                                           "amin": round(apk, 2), "s4": round(s, 2), "wz": round(float(wz), 4)}
 
 
 def cached_plan(CachedPlan, t0_us: int, anchor_xy_yaw, ref):
