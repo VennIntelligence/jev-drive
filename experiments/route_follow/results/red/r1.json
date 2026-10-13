@@ -1,0 +1,21 @@
+{
+ "pool": "on1_RED",
+ "tag": "RB0-F-s0",
+ "wrong": "RSG-L18-s0",
+ "rows_checked": 478,
+ "rows_pool": 5874,
+ "inputs": {
+  "front": true,
+  "ego_route": true,
+  "teacher": true,
+  "tc": true,
+  "cam": true,
+  "fut_green": true
+ },
+ "a_within_one_fp16_ulp_rows": 1.0,
+ "a_bit_equal_rows": 1.0,
+ "a_max_abs_m": 0.0,
+ "b_shuffled_rows_differ_gt_0p03": 1.0,
+ "c_wrong_ckpt_rows_differ_gt_0p03": 0.6652719665271967,
+ "pass": true
+}

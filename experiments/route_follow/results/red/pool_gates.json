@@ -1,0 +1,74 @@
+{
+ "name": "RED",
+ "counts": {
+  "candidates": 16146,
+  "red_t0": 10361,
+  "green_t0": 5785,
+  "red_dropped_cross_on_red": 1183,
+  "red_dropped_not_elig_other": 253,
+  "red_dropped_turns_green_in_window": 794,
+  "red_dropped_decel_gt_3": 14,
+  "red_dropped_e_dec": 4,
+  "red_eligible": 8113,
+  "green_eligible": 5403,
+  "red_eligible_train_logs": 7218,
+  "green_eligible_train_logs": 4863,
+  "pool_red": 2937,
+  "pool_green": 2937,
+  "pool_rows": 5874,
+  "pool_logs": 539,
+  "held_red": 895,
+  "held_green": 540,
+  "held_logs": 62,
+  "red_share_of_pool": 0.5
+ },
+ "cells_1to1": true,
+ "batch_share": {
+  "on_k": 14,
+  "batch": 128,
+  "red_rows_per_batch": 7.0,
+  "red_share_of_batch_rows": 0.0546875
+ },
+ "labels": {
+  "red_target_B_zero_share": 0.9989785495403473,
+  "red_log_B_zero_share": 0.975485188968335,
+  "red_target_front_past_line_share": 0.0,
+  "red_log_front_past_line_share": 0.017705141300646918,
+  "red_target_lateral_off_log_path_max_m": 6.955341469422075e-07,
+  "red_target_arc_le_log_share": 1.0,
+  "red_target_changed_gt_0p5m_share": 0.07150153217568948,
+  "red_arc_diff_median_m": 0.0,
+  "red_arc_diff_p10_m": 0.0,
+  "red_target_peak_decel_max": 6.212476729103841,
+  "red_target_peak_decel_p99": 2.99292910387397,
+  "red_log_peak_decel_p99": 3.039829112958111,
+  "red_moving_share_v_ge_2": 0.5348995573714674,
+  "green_moving_share_v_ge_2": 0.5348995573714674,
+  "green_log_front_past_line_4s_share": 0.4034729315628192,
+  "d_median_red_green": [
+   18.086761474609375,
+   17.928640365600586
+  ],
+  "v_median_red_green": [
+   2.2488675117492676,
+   2.2438178062438965
+  ]
+ },
+ "gates": {
+  "G-red1 rows (pool red >= 2000, 1:1 per cell, held red >= 300)": true,
+  "G-red2 labels (target B = 0 on >= 99 % of red rows, lateral off log path <= 0.05 m, target arc <= log arc on all, peak decel <= 3 or <= log + 0.5)": true
+ },
+ "pass": true,
+ "G-red3 sheet": {
+  "fig": "experiments/route_follow/figs/red_sheet.png",
+  "tokens": [
+   "94afe573f3dc556c",
+   "eec020b38ab253fb",
+   "938818770c865501",
+   "f9e6c4bd9d27598e",
+   "6d513e2f987e5845",
+   "be930f0685c95e85"
+  ]
+ },
+ "label_fig": "experiments/route_follow/figs/red_labels.png"
+}
