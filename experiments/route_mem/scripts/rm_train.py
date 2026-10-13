@@ -26,6 +26,14 @@ Route-night additions (research/next-round/route-night.md 4 C):
   pool rows --rm-drop never zeroes a pool row's (--on) route input (the route hinge must not train a turn without its reason); the drop rng
             stream still draws one number per batch row. --on-lon / --on-lon-lam / --on-road go to on_train.setup unchanged.
 
+Next-round addition (2026-10-13, experiments/route_follow/plans/2026-10-13-allrows-prereg.md):
+  --ego-drop-speed P   the speed history of the fed ego row (EGO_SPEED: vx, vy, ax, ay and the x / y of the 4 history poses, i.e. everything
+            that carries the ego's own speed; `present`, the command and the 4 history yaws stay) zeroed on a share P of the non-anchor rows of
+            every batch (pool rows included), own rng stream [seed, 0, 71] (on_train --ego-drop's stream; every other stream unchanged).
+            Training only: nothing is saved with the weights, the served row is unchanged. The training-side fix for the slowness ratchet
+            (research/next-round/steer-long.md 4.4: the plan follows its own speed history). on_train's --ego-drop (the whole EGO_STATE,
+            yaws included) stays refused here. 0 = off: no operation is added.
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -47,6 +55,7 @@ import rmem as RM  # noqa: E402
 
 FEAT = None
 HEAD = dict(d=128, layers=2, heads=4)
+EGO_SPEED = [4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 17, 18]              # ego_features: vx, vy, ax, ay, history poses x / y (not present, cmd, yaw)
 
 
 def feats(cfg_data, S, dev):
@@ -170,6 +179,8 @@ def cmd_train(a):
     hrng = np.random.default_rng([cfg.seed, 0, 43])
     orng = np.random.default_rng([cfg.seed, 0, 53])
     mrng = np.random.default_rng([cfg.seed, 0, 89])                  # route-memory drop
+    erng = np.random.default_rng([cfg.seed, 0, 71])                  # --ego-drop-speed's rows
+    esp = torch.as_tensor(EGO_SPEED, device=dev)
     sha = hashlib.sha1()
     lb, ln = (cfg.lr, cfg.lr_new) if a.lr_scale == 1.0 else (cfg.lr * a.lr_scale, cfg.lr_new * a.lr_scale)
     opt = torch.optim.AdamW([{"params": base, "lr": lb, "base": lb, "wu": cfg.warmup}, {"params": new, "lr": ln, "base": ln, "wu": cfg.warmup},
@@ -211,6 +222,8 @@ def cmd_train(a):
         run.info(f"{a.tag}: on_train recipe + route branch ({nroute / 1e6:.2f} M, lr {a.rm_lr}, warm-up {a.rm_warmup}, drop {a.rm_drop}); "
                  f"train {len(tr_o)} normal + {len(tr_t)} yaw-rate rows, dev {len(dv_o)} + {len(dv_t)}; per batch {nN} normal, {k_yr} yaw-rate, "
                  f"{k_on} on-policy (mode {ns.mode or 'off'}; {json.dumps(ns.onrec)}); feature rows ok {json.dumps(okc)}")
+        if a.ego_drop_speed > 0:
+            run.info(f"ego speed history (ego cols {EGO_SPEED}) zeroed on a share {a.ego_drop_speed} of the non-anchor rows, rng [seed, 0, 71]")
         run.info(f"init {json.dumps(ns.init) if ns.init else 'none: shipped weights + fresh adapter (on_train / joint_train start)'}")
         ev = dev_ev()
         run.scalars({f"dev/{q}": v for q, v in ev.items()}, 0)
@@ -230,6 +243,9 @@ def cmd_train(a):
             ego = S.ego[rows] * (~anchor)[:, None].float()
             keep = torch.as_tensor(mrng.random(len(r)) >= a.rm_drop, device=dev) | is_pool[rows]
             ego[:, RM.EGO_DIM:] = ego[:, RM.EGO_DIM:] * keep[:, None].float()
+            if a.ego_drop_speed > 0:
+                dm = torch.as_tensor(erng.random(len(r)) < a.ego_drop_speed, device=dev)
+                ego[:, esp] = ego[:, esp] * (~dm)[:, None].float()
             out = model(front, ego, S.tc[rows], None, None, nv=None if ns.nv is None else ns.nv[rows])
             total, Ls = LS(out, S, rows, anchor)
             if not torch.isfinite(total):
@@ -325,6 +341,7 @@ if __name__ == "__main__":
         p.add_argument("--on-lon-lam", type=float, default=10.0)
         p.add_argument("--on-road", default="")
         p.add_argument("--ego-drop", type=float, default=0.0)
+        p.add_argument("--ego-drop-speed", type=float, default=0.0, help="share of non-anchor rows with the ego speed history zeroed (training only)")
         p.add_argument("--prefetch", type=int, default=4)
         p.add_argument("--fetch-workers", type=int, default=2)
         p.add_argument("--dev-card-gb", type=float, default=4.0)
@@ -337,7 +354,8 @@ if __name__ == "__main__":
     if a.cmd == "zero":
         cmd_zero(a)
         raise SystemExit(0)
-    assert a.ego_drop == 0, "ROUTE-MEM: no --ego-drop"
+    assert a.ego_drop == 0, "ROUTE-MEM: no --ego-drop (--ego-drop-speed drops the speed history only)"
+    assert 0 <= a.ego_drop_speed < 1, "--ego-drop-speed is a share in [0, 1)"
     if a.agent_on_only and not a.on:                                 # agent hinge on pool rows only, and no pool: no row carries it (RB0 / RNONE)
         print("rm_train: --agent-on-only without --on -> --agent-lam 0 (no row has an agent label)", flush=True)
         a.agent_lam, a.agent_on_only = 0.0, False
