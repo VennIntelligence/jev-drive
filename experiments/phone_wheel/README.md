@@ -178,7 +178,7 @@ system Python (`/usr/bin/python3`; envs/carla has no Tcl).
   The loop takes commands from `<live>/control.json` and reports in `<live>/loop.json`; the protocol is in `lib/exam_panel.py`.
 - Generic: `lib/exam_panel.py` is the panel and the protocol over a `Backend` (items with id / group / scenario / human /
   model / status; batch sets, new batch, resume, takeover of a foreign run, official table, side processes).
-  `lib/b2d_exam.py` is the Bench2Drive backend; an AlpaSim backend plugs in the same way.
+  `lib/b2d_exam.py` is the Bench2Drive backend; the AlpaSim backend is in [alpasim_human](../alpasim_human/README.md), section "Desktop panel".
 - Status 2026-10-14 00:05: the panel was rendered on the live run (`figs/panel_b2d.png`). The loop has not yet run a route
   end to end with CARLA, because card 0 was in use by the user's 220-route run. The agent's pause and hold logic is unit-tested.
 

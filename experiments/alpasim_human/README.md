@@ -136,6 +136,61 @@ In session 2 the human passes 071d15c4, which the model zeros, and 5d794411, whi
 above zero only on 49597f01 (0.538), where the human leaves the corridor. Most of the human zeros come from leaving the
 lateral corridor around the logged path, so a different line counts as a failure, not only a crash. Both sessions are one attempt per scene, made while the controls (gains, route cue) were still being changed.
 
+## Desktop panel (Tokyo): scene sets, resume, pause, scene list
+
+Double-click "AlpaSim human exam" on the Tokyo desktop (`scripts/human_panel.sh`; install or refresh the icon with
+`bash experiments/alpasim_human/scripts/human_panel.sh --install`). It is the twin of the "B2D human exam" panel
+([phone_wheel](../phone_wheel/README.md), section "Desktop panel"): the same `lib/exam_panel.py` with the AlpaSim backend
+`lib/alpasim_exam.py`. One panel at a time (lock `/data/runs/alpasim_human/.panel.lock`); it starts the wheel daemon (tmux
+`wheel`) and the AlpaSim viewer (tmux `human:alpa-viewer`, restarted if closed) when they are missing.
+
+- New batch: PAI stage 1 (10), PAI all 40 (`pai_scenes_40.tsv`) or nuPlan navtest 48 (`scenes_navtest_full_part001_48.txt`).
+  It writes `/data/runs/alpasim_human/exam_<track>_<stamp>/exam.json` and starts the loop. Resume last: restart the loop
+  on the latest `exam_*` run; driven scenes are skipped. If the panel loop or a `human_pai.sh` / `human_nuplan.sh` stack
+  from a terminal is running, the panel offers to stop it. If CARLA runs on card 0 (a B2D exam), the panel refuses to start
+  and says so; it never stops the B2D side.
+- Scene list: grouped by PAI artifact revision (26.01 / 26.04) or by nuPlan log segment, with the group's human mean and
+  driven count; or sorted by score, low first. Columns: scene (last 12 characters of the clip id), stage and the organisers'
+  mean, human score, model score with its source (`P2H10` = P2H10-F-s0 on that scene: PAI stage 1 from `pai1/runs/a10_c4`,
+  nuPlan from `native_ref/P2H10-F-s0`; `a1` = the organisers' alpamayo1 where we have no P2H10 read, i.e. PAI stage 2),
+  status (pass / failure reason and progress, or "skipped (Next item)"). "Official table" shows `results.md` of the run: the
+  driven scenes with the human score, failure reason, progress, distance, and P2H10 / alpamayo1 / organisers' mean (PAI) or
+  P2H10 / SH30-F-s0 (nuPlan), with means over the driven scenes.
+- Drive side: `scripts/human_loop.py --run <dir>` in tmux `human:alpa-loop` (plain python3). It runs `human_stack.sh` in the
+  foreground (`HUMAN_FG=1`), one stack per scene list, under `<run>/stacks/<run>-sNN/`. A stack costs about a minute to
+  start and 4-5 s between scenes inside it, so with Playlist on a stack gets every unfinished scene in the panel's order and
+  is only restarted when the order changes. Each scene loads and holds until the first throttle press. With Playlist off a
+  stack gets one scene: a double-clicked one, or the next unfinished one when the throttle is pressed while the loop is idle.
+- Double-click (play): that scene is driven next. The running scene is not aborted; at the next hold point (the following
+  scene loaded and waiting for the throttle, nothing of it scored) the stack is stopped and a new one starts with the
+  chosen scene first.
+- Next item: the driver skips the current scene: hold released, no pacing, full brake (`<live>/abort.json`). The rollout runs
+  out at the stack's own speed, about 10 s; it is not counted and the scene is not offered again in this session. Restart
+  item: the stack is stopped at once and a new one starts with the same scene. Between two scenes (one closed, the next
+  loading) Next and Restart do nothing. Stop: the stack is taken down (`docker compose down`, driver container removed)
+  and the loop exits.
+- Pause: the driver reads `paused` from `control.json` (`HUMAN_CONTROL`): a held scene stays held (the throttle does not
+  start it), a running one is held inside its drive call, so the world does not advance; pacing re-anchors on Resume.
+  Paused time is logged per scene (`paused_s`). Without a stack, no stack starts. The start hold is 1800 s under the panel
+  (`HUMAN_WAIT_MAX_S`; 240 s from a terminal), and paused time does not count towards it.
+- Scoring: each finished rollout (`sim/rollouts/<scene>/<id>/_complete`) that was not skipped is scored by AlpaSim's own
+  aggregation (`alpasim-aggregation` in `alpasim-base`, CPU, about 7 s) on a copy of its `metrics.parquet`
+  (`<run>/scores/<rollout>/`), so scenes of a stack that was stopped early still count. The result goes to
+  `done/<scene>.json` (latest attempt, attempt count) and `scores.jsonl` (all), then `results.md`. Checked on a copy of
+  `pai_1013-2305_rt` with 3 scenes removed: the post-hoc scores equal the stack's own.
+- Viewer: shows "PAUSED: resume on the panel" and "SKIPPING THIS SCENE". Scene i of n counts within the current stack.
+- Test without a GPU: `scripts/fake_stack.py` stands in for `human_stack.sh` (`HUMAN_STACK_SCRIPT=...`). It writes the same
+  files, honours pause and skip, and copies real `metrics.parquet` files of an earlier run, so scoring is real.
+
+![panel](figs/panel_alpasim.png)
+
+`figs/panel_alpasim.png`: the panel on a demo run of PAI all 40 (rendered off-screen on Xvfb; human scores from the
+fake-stack test, which replays the user's session-2 rollouts, so they are not a new drive). Look at the model column: `P2H10` on
+the 10 stage-1 scenes and `a1` (alpamayo1) on the 30 stage-2 scenes; the bold group rows carry the human mean and the driven
+count; the skipped scene shows "skipped (Next item)"; the highlighted row is the loop's current scene.
+
+E2E_PLACEHOLDER
+
 ## Open
 
 Verified end to end on Tokyo card 0:

@@ -5,12 +5,13 @@
 
 Commands come from <live>/control.json (written only by the panel; protocol in lib/exam_panel.py); state goes to <live>/loop.json.
 A stack costs about a minute to start (compose up 18-27 s + the first scene's renderer start) against 4-5 s between scenes inside one
-stack, so a stack runs the whole remaining playlist and the loop only restarts it when the order changes:
+stack, so a stack runs the whole remaining playlist and the loop only restarts it when the order changes. Inside a stack AlpaSim
+picks the scene order itself (observed: clip id order, not the list order), so the playlist order is the set of scenes per stack:
 - Playlist on: a stack gets every unfinished scene in the panel's order (control "order", else exam.json). Each scene loads and holds
   until the first throttle press (lib/human_driver.py). Playlist off: a stack gets one scene (a double-clicked one, or the next
   unfinished one when the driver presses the throttle while the loop is idle).
 - play <id>: drive it next (even if finished). If a stack is running, it is stopped at its next hold point (the next scene loaded and
-  waiting for the throttle; nothing of that scene is scored) and a new stack starts with <id> first.
+  waiting for the throttle; nothing of that scene is scored) and a new stack runs the played scene(s) alone; then the playlist resumes.
 - next: the driver skips the current scene (abort.json: no pacing, full brake, the rollout ends at the stack's own speed, about 10 s);
   the skipped rollout is not counted and the scene is not offered again in this session. Without a running scene: nothing.
 - restart: the stack is stopped at once and a new one starts with the same scene first. Between two scenes (one closed, the next
@@ -272,11 +273,11 @@ def main():
                     continue
                 held = v.get("scene") if v.get("waiting") and not v.get("closed") else None
                 if held and held in stack.ids:
-                    if plays and plays[0] != held:
+                    if held in plays:                          # AlpaSim picks the order inside a stack: any queued play counts
+                        plays.remove(held)
+                    elif plays:
                         end_stack("play %s next" % plays[0])
                         continue
-                    if plays and plays[0] == held:
-                        plays.pop(0)
                     if not c["playlist"] and held not in chosen:
                         end_stack("playlist off")
                         continue
@@ -293,8 +294,8 @@ def main():
                 continue
             todo = []
             if plays:
-                todo = list(dict.fromkeys(plays + (unfinished() if c["playlist"] else [])))
-                plays.clear()
+                todo = list(dict.fromkeys(plays))            # played scenes get a stack of their own (order inside a
+                plays.clear()                                # stack is AlpaSim's), the playlist resumes after it
             elif hold_error:
                 report(item=None, state="idle", msg=hold_error + "; double-click a row to try again")
                 time.sleep(0.5)
