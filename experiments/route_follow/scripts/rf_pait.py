@@ -536,6 +536,7 @@ def cmd_r1(a):
                           pass_=bool(res[a.tag]["share_over"] <= 0.01 and all(res[c]["share_over"] >= 0.9 for c in a.control)))
     gp.write_text(json.dumps(G, indent=1))
     print(json.dumps(G["G_r1_read"], indent=1))
+    raise SystemExit(0 if G["G_r1_read"]["pass_"] else 2)
 
 
 if __name__ == "__main__":

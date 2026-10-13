@@ -37,7 +37,8 @@ docker run --rm --network none --user 0:0 --entrypoint bash -e DATA_DIR=$D -e PY
 st "pack + merge"
 SC=("$D/runs/route_night/train160.txt" "$O/hard_train.txt")
 DATA_DIR=$D $PY experiments/route_follow/scripts/rf_pait.py pack --name PAITn --cache "$W/cache/pait" --route "$O/route" --scenes "${SC[@]}" --hard "$O/hard_train.txt" --out "$O" || die "pack PAITn"
-DATA_DIR=$D $PY experiments/route_follow/scripts/rf_pait.py r1 --name PAITn --cache "$W/cache/pait" --out "$O" --device cuda || st "r1 PAITn line not met (recorded)"
+CUDA_VISIBLE_DEVICES=0 DATA_DIR=$D $PY experiments/route_follow/scripts/rf_pait.py r1 --name PAITn --cache "$W/cache/pait" --out "$O" --device cuda || die "R1 gate (PAITn): line not met, nothing submitted"
+CUDA_VISIBLE_DEVICES=0 DATA_DIR=$D $PY experiments/route_follow/scripts/rf_pait.py r1 --name PAIT80 --cache /data/runs/onpol_pai/train/cache/log --out "$O" --device cuda || die "R1 gate (PAIT80): line not met, nothing submitted"
 DATA_DIR=$D $PY experiments/route_follow/scripts/rf_pait.py merge --out PAIT --pools on1_PAIT80:a on1_PAITn:b || die "merge"
 st "copy to $BOX"
 for p in on1_PAIT on1_PAIT@warp; do rsync -a --partial "$D/runs/op_parity/cache/$p/" "$BOX:$BOXD/runs/op_parity/cache/$p/" || die "rsync $p"; done
