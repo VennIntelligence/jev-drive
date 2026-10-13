@@ -1,0 +1,14 @@
+{
+ "pool": "L18RBSG2all",
+ "rows": 25372,
+ "feat_ok": 1.0,
+ "route_ok": 1.0,
+ "cov20": 0.4864811603342267,
+ "route0_share_005": 0.9949156550528141,
+ "route0_med": 3.814697265625e-06,
+ "rows_gates": {
+  "L18RBSG2": true,
+  "L18RBSG2allheld": true
+ },
+ "pass": true
+}

@@ -1,0 +1,16 @@
+{
+ "RBSG2-L18-s0-nomem": {
+  "offroad": 21,
+  "inside_right": 2,
+  "inside_left": 3,
+  "junction_approach": 14,
+  "lat_z_med": 1.1546691182359068
+ },
+ "RSG-L18-s0-nomem": {
+  "offroad": 21,
+  "inside_right": 3,
+  "inside_left": 5,
+  "junction_approach": 10,
+  "lat_z_med": 1.0168836666508625
+ }
+}

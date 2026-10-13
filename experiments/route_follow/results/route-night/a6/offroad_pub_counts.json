@@ -1,0 +1,44 @@
+{
+ "RBSG2-L18-s0": {
+  "offroad": 57,
+  "inside_right": 12,
+  "inside_left": 14,
+  "junction_approach": 35,
+  "lat_z_med": 0.7434465055536115
+ },
+ "RBSG2-L18-s1": {
+  "offroad": 50,
+  "inside_right": 12,
+  "inside_left": 11,
+  "junction_approach": 31,
+  "lat_z_med": 0.5849855433104306
+ },
+ "RBSG3-L18-s0": {
+  "offroad": 36,
+  "inside_right": 6,
+  "inside_left": 8,
+  "junction_approach": 21,
+  "lat_z_med": 0.5849855433104306
+ },
+ "RBSG3-L18-s1": {
+  "offroad": 33,
+  "inside_right": 7,
+  "inside_left": 6,
+  "junction_approach": 19,
+  "lat_z_med": 0.6058132616205206
+ },
+ "RSG-L18-s0": {
+  "offroad": 31,
+  "inside_right": 4,
+  "inside_left": 11,
+  "junction_approach": 20,
+  "lat_z_med": 0.9383762082838538
+ },
+ "RSG-L18-s1": {
+  "offroad": 30,
+  "inside_right": 4,
+  "inside_left": 10,
+  "junction_approach": 20,
+  "lat_z_med": 0.9642154586892698
+ }
+}
