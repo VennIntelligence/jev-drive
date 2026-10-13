@@ -49,6 +49,9 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 
 - [research/zero-taxonomy.md](../../research/zero-taxonomy.md): every zero / low score of RSG-L18-s0 on PAI 281 and held 460 by mechanism
   (`scripts/rf_tax.py`, per-scene rows in `results/taxonomy/`, figures `figs/tax_*.png`, review sheet `research/route-follow/review-sheet-rsg.md`).
+- [research/route-follow/pai-follow.md](../../research/route-follow/pai-follow.md): PAI 281 turn completion with the real route (RSG 13.9 %,
+  RBSG2 25.0 % of 36 turns) and the map topology of every corridor zero (14 / 22 route zeros have a straight road ahead; the ego never slows
+  into the entry); `scripts/rf_pai_follow.py` (+ `.sh`, Tokyo container), `results/pai_follow/`, figure `figs/pai_follow_zeros.png`.
 - [research/route-follow-offroad.md](../../research/route-follow-offroad.md): why route-hinge arms go offroad; look at table 1's
   "right-turn inside" column (17-21 vs 1-2) and the H1-H5 verdicts (labels on road, memory not drifted, over-rotation in small right turns).
 - [results/route-night/](results/route-night/): held reads (`held_raw.txt`, `a3/held_raw_a3.txt`), `ol_report` tables (`report_RBS.md`,
