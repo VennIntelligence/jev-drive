@@ -1,0 +1,7 @@
+{"arm":"RSGmixPAIT-L18","command":"rm_train.py train --tag RSGmixPAIT-L18-s{k} --init RB0-F-s0 --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on on1_RSGPAIT --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode mixed --on-weight pool=p:1.0306,topo=straight_exit:2,topo=straight_road:2 --seed k",
+"mixcheck":{"pool":"on1_RSGPAIT","max_abs_diff":{"self":0.0,"both":0.0},"pass":true,"tab_modes":{"r:self":17429,"p:both":5160}},
+"held460":{"mean":[0.8338,0.8379],"zeros":[37,33],"rsg_mean":[0.8656,0.8676],"rsg_zeros":[34,34]},
+"public1479_at10":{"mean":[0.9305,0.9318],"zeros":[49,45],"rsg_mean":[0.9473,0.9487],"rsg_zeros":[46,44]},
+"turn_completion_24":{"mixed":[0.708,0.625],"rsg":[0.667,0.583],"rsgpait":[0.875,0.875],"rsgboth":[0.917,0.875]},
+"inside_cut_share_1m":{"mixed":[0.583,0.625],"rsg":[0.542,0.542]},
+"lines":{"held_mean":"FAIL","held_zeros":"PASS (37 = line)","public_zeros":"PASS","public_mean":"FAIL"}}
