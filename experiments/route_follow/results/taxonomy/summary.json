@@ -1,0 +1,929 @@
+{
+ "pai281_rsg": {
+  "n": 281,
+  "mean": 0.572011743158711,
+  "zeros": 70,
+  "gap094": 0.367988256841289,
+  "deficit_total": 0.42798825684128905,
+  "table": [
+   {
+    "band": "zero",
+    "primary": "coll_cyclist",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "coll_ped",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_crossing",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_oncoming",
+    "n": 3,
+    "deficit": 0.0107
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_side",
+    "n": 3,
+    "deficit": 0.0107
+   },
+   {
+    "band": "zero",
+    "primary": "cor_drift",
+    "n": 6,
+    "deficit": 0.0214
+   },
+   {
+    "band": "zero",
+    "primary": "cor_lane_change",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "cor_route_end",
+    "n": 17,
+    "deficit": 0.0605
+   },
+   {
+    "band": "zero",
+    "primary": "cor_straight_at_turn",
+    "n": 11,
+    "deficit": 0.0391
+   },
+   {
+    "band": "zero",
+    "primary": "cor_turn_under",
+    "n": 11,
+    "deficit": 0.0391
+   },
+   {
+    "band": "zero",
+    "primary": "cor_wrong_exit",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "off_curve_inside",
+    "n": 2,
+    "deficit": 0.0071
+   },
+   {
+    "band": "zero",
+    "primary": "off_curve_outside",
+    "n": 2,
+    "deficit": 0.0071
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_inside",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_outside",
+    "n": 4,
+    "deficit": 0.0142
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_straight",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "off_straight",
+    "n": 4,
+    "deficit": 0.0142
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_follow_lead",
+    "n": 1,
+    "deficit": 0.002
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_late_start",
+    "n": 3,
+    "deficit": 0.0085
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_queue",
+    "n": 4,
+    "deficit": 0.0106
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_rear_ended",
+    "n": 5,
+    "deficit": 0.0105
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_slow_behind_lead",
+    "n": 7,
+    "deficit": 0.0177
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_slow_free",
+    "n": 47,
+    "deficit": 0.0913
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_unexplained",
+    "n": 2,
+    "deficit": 0.004
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_rear_ended",
+    "n": 5,
+    "deficit": 0.0039
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_slow_behind_lead",
+    "n": 5,
+    "deficit": 0.0049
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_slow_free",
+    "n": 26,
+    "deficit": 0.0214
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_stopped_lead",
+    "n": 1,
+    "deficit": 0.0008
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_unexplained",
+    "n": 1,
+    "deficit": 0.0014
+   },
+   {
+    "band": "ok>=0.9",
+    "primary": "ok",
+    "n": 104,
+    "deficit": 0.0019
+   }
+  ],
+  "secondary": {
+   "rear_ended": 70,
+   "ref_zero": 62,
+   "ran_stop_line": 29,
+   "junction": 25,
+   "partial_corridor": 14,
+   "late_start": 3,
+   "spin": 2,
+   "stopped_lead_log_passed": 1
+  },
+  "peds": {
+   "encounters": 13,
+   "scenes": 5,
+   "braked": 4,
+   "hit": 0,
+   "coll_ped_zero": 1
+  },
+  "blocks": [
+   {
+    "outcome": "hit",
+    "log_passed": false,
+    "n": 1
+   },
+   {
+    "outcome": "hit",
+    "log_passed": true,
+    "n": 1
+   },
+   {
+    "outcome": "other",
+    "log_passed": false,
+    "n": 50
+   },
+   {
+    "outcome": "other",
+    "log_passed": true,
+    "n": 8
+   },
+   {
+    "outcome": "passed",
+    "log_passed": false,
+    "n": 34
+   },
+   {
+    "outcome": "passed",
+    "log_passed": true,
+    "n": 14
+   },
+   {
+    "outcome": "waited",
+    "log_passed": false,
+    "n": 58
+   },
+   {
+    "outcome": "waited",
+    "log_passed": true,
+    "n": 11
+   }
+  ]
+ },
+ "pai281_ys0": {
+  "n": 281,
+  "mean": 0.5164608840520888,
+  "zeros": 96,
+  "gap094": 0.42353911594791116,
+  "deficit_total": 0.48353911594791116,
+  "table": [
+   {
+    "band": "zero",
+    "primary": "coll_cyclist",
+    "n": 2,
+    "deficit": 0.0071
+   },
+   {
+    "band": "zero",
+    "primary": "coll_ped",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "coll_stationary",
+    "n": 2,
+    "deficit": 0.0071
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_ahead",
+    "n": 2,
+    "deficit": 0.0071
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_crossing",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_oncoming",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_side",
+    "n": 4,
+    "deficit": 0.0142
+   },
+   {
+    "band": "zero",
+    "primary": "cor_drift",
+    "n": 7,
+    "deficit": 0.0249
+   },
+   {
+    "band": "zero",
+    "primary": "cor_lane_change",
+    "n": 3,
+    "deficit": 0.0107
+   },
+   {
+    "band": "zero",
+    "primary": "cor_route_end",
+    "n": 18,
+    "deficit": 0.0641
+   },
+   {
+    "band": "zero",
+    "primary": "cor_straight_at_turn",
+    "n": 18,
+    "deficit": 0.0641
+   },
+   {
+    "band": "zero",
+    "primary": "cor_turn_under",
+    "n": 8,
+    "deficit": 0.0285
+   },
+   {
+    "band": "zero",
+    "primary": "cor_wrong_exit",
+    "n": 3,
+    "deficit": 0.0107
+   },
+   {
+    "band": "zero",
+    "primary": "off_curve_inside",
+    "n": 2,
+    "deficit": 0.0071
+   },
+   {
+    "band": "zero",
+    "primary": "off_curve_outside",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_inside",
+    "n": 1,
+    "deficit": 0.0036
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_outside",
+    "n": 5,
+    "deficit": 0.0178
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_straight",
+    "n": 3,
+    "deficit": 0.0107
+   },
+   {
+    "band": "zero",
+    "primary": "off_straight",
+    "n": 14,
+    "deficit": 0.0498
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_rear_ended",
+    "n": 3,
+    "deficit": 0.0059
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_slow_free",
+    "n": 44,
+    "deficit": 0.0885
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_unexplained",
+    "n": 1,
+    "deficit": 0.0016
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_with_log",
+    "n": 7,
+    "deficit": 0.0194
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_rear_ended",
+    "n": 4,
+    "deficit": 0.0026
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_slow_free",
+    "n": 22,
+    "deficit": 0.02
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_unexplained",
+    "n": 1,
+    "deficit": 0.0007
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_with_log",
+    "n": 1,
+    "deficit": 0.0006
+   },
+   {
+    "band": "ok>=0.9",
+    "primary": "ok",
+    "n": 102,
+    "deficit": 0.0026
+   }
+  ],
+  "secondary": {
+   "ref_zero": 62,
+   "rear_ended": 58,
+   "junction": 30,
+   "ran_stop_line": 30,
+   "partial_corridor": 24,
+   "spin": 16,
+   "oncoming_lane": 1
+  },
+  "peds": {
+   "encounters": 8,
+   "scenes": 1,
+   "braked": 3,
+   "hit": 0,
+   "coll_ped_zero": 1
+  },
+  "blocks": [
+   {
+    "outcome": "hit",
+    "log_passed": true,
+    "n": 1
+   },
+   {
+    "outcome": "other",
+    "log_passed": false,
+    "n": 9
+   },
+   {
+    "outcome": "other",
+    "log_passed": true,
+    "n": 7
+   },
+   {
+    "outcome": "passed",
+    "log_passed": false,
+    "n": 6
+   },
+   {
+    "outcome": "passed",
+    "log_passed": true,
+    "n": 2
+   },
+   {
+    "outcome": "waited",
+    "log_passed": false,
+    "n": 2
+   },
+   {
+    "outcome": "waited",
+    "log_passed": true,
+    "n": 11
+   }
+  ]
+ },
+ "held460_rsg": {
+  "n": 460,
+  "mean": 0.8655703107497491,
+  "zeros": 34,
+  "gap094": 0.07442968925025084,
+  "deficit_total": 0.13442968925025084,
+  "table": [
+   {
+    "band": "zero",
+    "primary": "coll_veh_ahead",
+    "n": 1,
+    "deficit": 0.0022
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_oncoming",
+    "n": 1,
+    "deficit": 0.0022
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_side",
+    "n": 2,
+    "deficit": 0.0043
+   },
+   {
+    "band": "zero",
+    "primary": "cor_route_end",
+    "n": 1,
+    "deficit": 0.0022
+   },
+   {
+    "band": "zero",
+    "primary": "cor_straight_at_turn",
+    "n": 1,
+    "deficit": 0.0022
+   },
+   {
+    "band": "zero",
+    "primary": "cor_turn_under",
+    "n": 3,
+    "deficit": 0.0065
+   },
+   {
+    "band": "zero",
+    "primary": "infra",
+    "n": 8,
+    "deficit": 0.0174
+   },
+   {
+    "band": "zero",
+    "primary": "off_at_start",
+    "n": 4,
+    "deficit": 0.0087
+   },
+   {
+    "band": "zero",
+    "primary": "off_curve_inside",
+    "n": 2,
+    "deficit": 0.0043
+   },
+   {
+    "band": "zero",
+    "primary": "off_curve_outside",
+    "n": 1,
+    "deficit": 0.0022
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_inside",
+    "n": 3,
+    "deficit": 0.0065
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_outside",
+    "n": 3,
+    "deficit": 0.0065
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_straight",
+    "n": 2,
+    "deficit": 0.0043
+   },
+   {
+    "band": "zero",
+    "primary": "off_straight",
+    "n": 2,
+    "deficit": 0.0043
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_queue",
+    "n": 1,
+    "deficit": 0.0011
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_rear_ended",
+    "n": 1,
+    "deficit": 0.0009
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_slow_behind_lead",
+    "n": 4,
+    "deficit": 0.0041
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_slow_free",
+    "n": 5,
+    "deficit": 0.0053
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_stopped_lead",
+    "n": 1,
+    "deficit": 0.0016
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_unexplained",
+    "n": 2,
+    "deficit": 0.0021
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_other",
+    "n": 1,
+    "deficit": 0.0002
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_queue",
+    "n": 1,
+    "deficit": 0.0003
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_rear_ended",
+    "n": 2,
+    "deficit": 0.001
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_slow_behind_lead",
+    "n": 12,
+    "deficit": 0.0058
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_slow_free",
+    "n": 57,
+    "deficit": 0.0265
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_unexplained",
+    "n": 13,
+    "deficit": 0.0068
+   },
+   {
+    "band": "ok>=0.9",
+    "primary": "ok",
+    "n": 326,
+    "deficit": 0.0047
+   }
+  ],
+  "secondary": {
+   "rear_ended": 24,
+   "ref_zero": 21,
+   "partial_corridor": 7,
+   "junction": 6,
+   "oncoming_lane": 2,
+   "stopped_lead_log_passed": 2,
+   "spin": 2
+  },
+  "peds": {
+   "encounters": 0,
+   "scenes": 0,
+   "braked": 0,
+   "hit": 0,
+   "coll_ped_zero": 0
+  },
+  "blocks": [
+   {
+    "outcome": "other",
+    "log_passed": false,
+    "n": 233
+   },
+   {
+    "outcome": "other",
+    "log_passed": true,
+    "n": 18
+   },
+   {
+    "outcome": "passed",
+    "log_passed": false,
+    "n": 26
+   },
+   {
+    "outcome": "passed",
+    "log_passed": true,
+    "n": 24
+   },
+   {
+    "outcome": "waited",
+    "log_passed": false,
+    "n": 30
+   },
+   {
+    "outcome": "waited",
+    "log_passed": true,
+    "n": 3
+   }
+  ]
+ },
+ "held460_rb0": {
+  "n": 460,
+  "mean": 0.8220188480776934,
+  "zeros": 59,
+  "gap094": 0.11798115192230652,
+  "deficit_total": 0.17798115192230649,
+  "table": [
+   {
+    "band": "zero",
+    "primary": "coll_stationary",
+    "n": 1,
+    "deficit": 0.0022
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_ahead",
+    "n": 2,
+    "deficit": 0.0043
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_oncoming",
+    "n": 2,
+    "deficit": 0.0043
+   },
+   {
+    "band": "zero",
+    "primary": "coll_veh_side",
+    "n": 2,
+    "deficit": 0.0043
+   },
+   {
+    "band": "zero",
+    "primary": "cor_route_end",
+    "n": 3,
+    "deficit": 0.0065
+   },
+   {
+    "band": "zero",
+    "primary": "cor_straight_at_turn",
+    "n": 2,
+    "deficit": 0.0043
+   },
+   {
+    "band": "zero",
+    "primary": "cor_turn_under",
+    "n": 7,
+    "deficit": 0.0152
+   },
+   {
+    "band": "zero",
+    "primary": "cor_wrong_exit",
+    "n": 3,
+    "deficit": 0.0065
+   },
+   {
+    "band": "zero",
+    "primary": "infra",
+    "n": 8,
+    "deficit": 0.0174
+   },
+   {
+    "band": "zero",
+    "primary": "off_at_start",
+    "n": 4,
+    "deficit": 0.0087
+   },
+   {
+    "band": "zero",
+    "primary": "off_curve_inside",
+    "n": 3,
+    "deficit": 0.0065
+   },
+   {
+    "band": "zero",
+    "primary": "off_curve_outside",
+    "n": 4,
+    "deficit": 0.0087
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_inside",
+    "n": 3,
+    "deficit": 0.0065
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_outside",
+    "n": 6,
+    "deficit": 0.013
+   },
+   {
+    "band": "zero",
+    "primary": "off_junc_straight",
+    "n": 2,
+    "deficit": 0.0043
+   },
+   {
+    "band": "zero",
+    "primary": "off_straight",
+    "n": 7,
+    "deficit": 0.0152
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_slow_behind_lead",
+    "n": 1,
+    "deficit": 0.0012
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_slow_free",
+    "n": 5,
+    "deficit": 0.0051
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_stopped_lead",
+    "n": 1,
+    "deficit": 0.0014
+   },
+   {
+    "band": "low<0.6",
+    "primary": "low_unexplained",
+    "n": 3,
+    "deficit": 0.0031
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_follow_lead",
+    "n": 1,
+    "deficit": 0.0008
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_other",
+    "n": 1,
+    "deficit": 0.0003
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_queue",
+    "n": 3,
+    "deficit": 0.0014
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_rear_ended",
+    "n": 2,
+    "deficit": 0.0012
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_slow_behind_lead",
+    "n": 12,
+    "deficit": 0.0047
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_slow_free",
+    "n": 37,
+    "deficit": 0.0167
+   },
+   {
+    "band": "mid0.6-0.9",
+    "primary": "low_unexplained",
+    "n": 14,
+    "deficit": 0.0089
+   },
+   {
+    "band": "ok>=0.9",
+    "primary": "ok",
+    "n": 321,
+    "deficit": 0.005
+   }
+  ],
+  "secondary": {
+   "rear_ended": 22,
+   "ref_zero": 21,
+   "junction": 15,
+   "partial_corridor": 10,
+   "spin": 6,
+   "stopped_lead_log_passed": 2,
+   "oncoming_lane": 1
+  },
+  "peds": {
+   "encounters": 0,
+   "scenes": 0,
+   "braked": 0,
+   "hit": 0,
+   "coll_ped_zero": 0
+  },
+  "blocks": [
+   {
+    "outcome": "hit",
+    "log_passed": false,
+    "n": 1
+   },
+   {
+    "outcome": "other",
+    "log_passed": false,
+    "n": 196
+   },
+   {
+    "outcome": "other",
+    "log_passed": true,
+    "n": 25
+   },
+   {
+    "outcome": "passed",
+    "log_passed": false,
+    "n": 27
+   },
+   {
+    "outcome": "passed",
+    "log_passed": true,
+    "n": 26
+   },
+   {
+    "outcome": "waited",
+    "log_passed": false,
+    "n": 42
+   },
+   {
+    "outcome": "waited",
+    "log_passed": true,
+    "n": 3
+   }
+  ]
+ }
+}

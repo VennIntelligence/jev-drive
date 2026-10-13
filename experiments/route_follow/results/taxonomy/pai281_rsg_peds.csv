@@ -1,0 +1,14 @@
+scene,id,k,t_s,gap,v0,vmin,ped_v,braked,slow,hit,score,zero_type
+clipgt-51400458-f276-4c16-902f-484bbf8a05a6,176,15,7.5,9.958,14.55,14.55,0.06517,False,False,False,1,
+clipgt-9fa1d6eb-7e0f-417f-8fa6-7dd38b28b8f9,69,28,14,1.67,5.583,5.519,1.663,False,False,False,1,
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,15,1,0.5,4.876,4.571,4.165,1.023,False,False,False,1,
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,65,1,0.5,6.325,4.571,4.165,0.8624,False,False,False,1,
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,24,11,5.5,6.446,9.715,9.715,0.02967,False,False,False,1,
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,351,11,5.5,7.974,9.715,9.715,0.622,False,False,False,1,
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,26,13,6.5,5.466,11.29,11.29,0.005795,False,False,False,1,
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,363,16,8,7.008,13.21,6.66,1.186,True,False,False,1,
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,372,16,8,8.078,13.21,6.66,1.261,True,False,False,1,
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,458,31,15.5,5.848,2.17,2.17,1.357,False,False,False,1,
+clipgt-b680a689-9afe-4d66-accd-41fa7c0fb633,136,28,14,9.806,2.934,0.3805,1.529,True,False,False,0,corridor
+clipgt-b680a689-9afe-4d66-accd-41fa7c0fb633,135,29,14.5,8.302,2.255,0.1756,1.48,True,False,False,0,corridor
+clipgt-dbfd6c72-9060-4a3e-b0f8-1ee57befde90,33,29,14.5,5.027,0.1176,0.08692,0.8218,False,True,False,1,

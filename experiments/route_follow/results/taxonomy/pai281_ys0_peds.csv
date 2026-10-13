@@ -1,0 +1,9 @@
+scene,id,k,t_s,gap,v0,vmin,ped_v,braked,slow,hit,score,zero_type
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,15,1,0.5,4.876,4.571,4.165,1.023,False,False,False,0,offroad
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,65,1,0.5,6.325,4.571,4.165,0.8624,False,False,False,0,offroad
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,24,11,5.5,6.236,9.611,9.611,0.02967,False,False,False,0,offroad
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,351,11,5.5,7.761,9.611,9.611,0.622,False,False,False,0,offroad
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,26,13,6.5,5.37,11.15,11.15,0.005795,False,False,False,0,offroad
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,363,16,8,6.975,13.27,9.1,1.186,True,False,False,0,offroad
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,372,16,8,8.045,13.27,9.1,1.261,True,False,False,0,offroad
+clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0,367,17,8.5,9.358,13.71,7.346,1.288,True,False,False,0,offroad
