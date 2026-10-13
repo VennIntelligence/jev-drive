@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # LATE-TURNS-LONG (research/route-follow/late-turns.md addendum): the 86 scenes whose first turn the @18 window does not complete, read at
-# token + 19 s (cache after190_lt = alpasim_long/build_cache.py --after 190 --scenes long86.txt; ~40 decisions). Box, repo root, pool jobs.
+# token + 19 s (num_timesteps_after counts 20 Hz steps: 380) (cache after380_lt = alpasim_long/build_cache.py --after 380 --scenes long86.txt; ~40 decisions). Box, repo root, pool jobs.
 #   rf_lateturn_long.sh smoke <TAG>          3 scenes (reconstruction ends early / log ends / fully covered), one job, card 1-5
 #   rf_lateturn_long.sh submit               the 86 scenes x {RSG-L18-s0, RSGboth-L18-s0, RB0-F-s0} in NCH chunks each, cards 1-5
 #   rf_lateturn_long.sh readlist <TAG> <list> <dir>    job body (rm_chain's sim with the long cache)
 set -uo pipefail; cd "$(dirname "$0")/../../.."
 O=$DATA_DIR/runs/route_follow/lateturn_long; CK=$DATA_DIR/runs/op_parity/runs; NCH=${NCH:-3}
-C=$DATA_DIR/datasets/alpasim_nuplan_long/after190_lt; KEY=runtime.scene_provider.trajdata
+C=$DATA_DIR/datasets/alpasim_nuplan_long/after380_lt; KEY=runtime.scene_provider.trajdata
 source <(python3 -c 'import sys; sys.path.insert(0, "experiments/alpasim/scripts"); import c0b_chain as B; print("BASE=(" + " ".join(B.OVERRIDES) + ")")')
-LONG=("$KEY.cache_location=$C" "$KEY.dataset.extra_params.num_timesteps_after=190")
+LONG=("$KEY.cache_location=$C" "$KEY.dataset.extra_params.num_timesteps_after=380")
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner route-follow --name "$name" --tries 1 --priority 14 --no-check \
      --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 case $1 in
