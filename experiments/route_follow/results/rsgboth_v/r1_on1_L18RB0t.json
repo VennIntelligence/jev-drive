@@ -1,0 +1,20 @@
+{
+ "rows": 17429,
+ "rclass": {
+  "curve": 3244,
+  "none": 2,
+  "straight": 11322,
+  "turn": 2861
+ },
+ "cap": false,
+ "capped_rows": 0,
+ "changed": 0,
+ "inode_same": true,
+ "arrays_same": true,
+ "uncapped_fut_equal": true,
+ "path_dev_max": 0.0,
+ "arc_le": true,
+ "arc4_cut_mean": 0.0,
+ "arc4_cut_median": 0.0,
+ "pass": true
+}

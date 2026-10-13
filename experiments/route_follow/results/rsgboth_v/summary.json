@@ -1,0 +1,90 @@
+{
+ "prereg": "experiments/route_follow/plans/2026-10-13-rsgboth-prereg.md",
+ "lines": {
+  "held_zeros_max": 37,
+  "guard_zeros_max": 51,
+  "held_mean_min": 0.8656,
+  "guard_mean_min": 0.9473,
+  "turns_min": 19,
+  "short_max": 2
+ },
+ "arms": {
+  "RSGbA30-L18-s0": {
+   "change": "--agent-lam 30",
+   "held_mean": 0.8957,
+   "held_zeros": 44,
+   "guard_mean": 0.9528,
+   "guard_zeros": 58,
+   "turns": "18/24",
+   "short": 2,
+   "inside10": 0.542,
+   "gt": 1.796,
+   "lines": {
+    "held_zeros": false,
+    "guard_zeros": false,
+    "mean": true,
+    "turns": false
+   },
+   "meets_all": false
+  },
+  "RSGbW-L18-s0": {
+   "change": "--on on1_L18RB0t --on-weight rclass=straight:0.3,rclass=curve:0.3",
+   "held_mean": 0.896,
+   "held_zeros": 45,
+   "guard_mean": 0.9527,
+   "guard_zeros": 60,
+   "turns": "20/24",
+   "short": 0,
+   "inside10": 0.625,
+   "gt": 1.852,
+   "lines": {
+    "held_zeros": false,
+    "guard_zeros": false,
+    "mean": true,
+    "turns": true
+   },
+   "meets_all": false
+  },
+  "RSGbC2-L18-s0": {
+   "change": "--on on1_L18RB0c2",
+   "held_mean": 0.8973,
+   "held_zeros": 40,
+   "guard_mean": 0.952,
+   "guard_zeros": 56,
+   "turns": "20/24",
+   "short": 1,
+   "inside10": 0.542,
+   "gt": 1.294,
+   "lines": {
+    "held_zeros": false,
+    "guard_zeros": false,
+    "mean": true,
+    "turns": true
+   },
+   "meets_all": false
+  }
+ },
+ "refs": {
+  "RSGboth-L18-s0": {
+   "held_mean": 0.902,
+   "held_zeros": 41,
+   "guard_mean": 0.9522,
+   "guard_zeros": 58,
+   "turns": "22/24",
+   "short": 1,
+   "inside10": 0.542,
+   "gt": 1.776
+  },
+  "RSG-L18-s0": {
+   "held_mean": 0.8656,
+   "held_zeros": 34,
+   "guard_mean": 0.9473,
+   "guard_zeros": 46,
+   "turns": "16/24",
+   "short": 7,
+   "inside10": 0.542,
+   "gt": 1.135
+  }
+ },
+ "meets_all": []
+}
