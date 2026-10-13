@@ -1,12 +1,7 @@
 #!/usr/bin/env python
 """Bench2Drive agent for the openpilot closed-loop integration study: a small route follower (the "base") and openpilot
-<<<<<<<< Updated upstream:lib/op_arb_agent.py
 Cinque as a modifier, with several arbitration modes. Plan and registration: fc65452:todos/2026-09-28-op-closedloop.md;
 write-up: research/openpilot-diagnosis/index.html. Python 3.8, route process env (envs/carla or b2d-tcp).
-========
-Cinque as a modifier, with several arbitration modes. Plan and registration: 80eb061:todos/2026-09-28-op-closedloop.md;
-write-up: research/openpilot-closedloop-integration.md. Python 3.8, route process env (envs/carla or b2d-tcp).
->>>>>>>> Stashed changes:experiments/op_closed_loop/lib/op_arb_agent.py
 
 It is scripts/b2d_zeroshot_agent.py (the CL2 openpilot path: native road + wide rig rendered every tick, 5 s warm-up,
 rear-axle plan transform, route turn / lane-change desire, P7 controller fed at 5 Hz) with `_plan` replaced. Every
@@ -20,11 +15,7 @@ mode runs the same openpilot session on the same frames; only what reaches P7 di
   e2e      acc + openpilot's plan as a speed constraint while moving, with a stop latch     (openpilot experimental mode)
   switch   openpilot's own plan (lateral + longitudinal) while rolling outside turn zones; e2e for launches and route turns
            ("zones": false: openpilot's plan also through route turns, i.e. only launches and stop latches are the base's)
-<<<<<<<< Updated upstream:lib/op_arb_agent.py
   drive    op-drive (fc65452:todos/2026-09-29-op-drive.md): openpilot drives lateral on lane-follow route segments ("lat": "op";
-========
-  drive    op-drive (80eb061:todos/2026-09-29-op-drive.md): openpilot drives lateral on lane-follow route segments ("lat": "op";
->>>>>>>> Stashed changes:experiments/op_closed_loop/lib/op_arb_agent.py
            executed as P7 tracking its plan path, "lat_exec": "p7", or its desired curvature through the bicycle model
            at 20 Hz, "curv"); the route geometry steers in zones around route commands ("zone_m": {cmd: [before, after]})
            and while openpilot's path and the route diverge (> div_m at div_arc m ahead, back below div_back_m for
@@ -32,11 +23,7 @@ mode runs the same openpilot session on the same frames; only what reaches P7 di
            rolling), "base" = the set-speed governor alone. "hold": "intent" latches a standstill only when the plan itself
            asked to stop (plan v(5 s) < 0.5 m/s) just before it; released by the plan (x@5 s > release_th for release_s),
            a departing lead (lead head v > lead_go_v) or the driver's resume after latch_max_s of standstill.
-<<<<<<<< Updated upstream:lib/op_arb_agent.py
   R3a (fc65452:todos/2026-09-29-op-drive.md, "registration R3a"; PRIVILEGED simulator state, a ceiling, not an openpilot capability): "tl_stop": true
-========
-  R3a (80eb061:todos/2026-09-29-op-drive.md, "registration R3a"; PRIVILEGED simulator state, a ceiling, not an openpilot capability): "tl_stop": true
->>>>>>>> Stashed changes:experiments/op_closed_loop/lib/op_arb_agent.py
            adds a stop constraint on the ground-truth traffic light that controls the ego's route (red or yellow within tl_n m
            ahead of the bumper; yellow only if the car can stop at 4 m/s^2), stops tl_margin m before the stop line, and while a
            red / yellow light is ahead no release of a stop latch is taken (no plan / lead / timer); the latch is released at green.
@@ -82,12 +69,8 @@ state ("htl", "htl_id") and the nearest actor box ahead ("ahead": [m ahead of th
 and to plans.jsonl the fed parity ego vector ("pe").
 """
 import sys as _sys, pathlib as _pl  # restructure: dirs of the script modules this file imports by bare name
-<<<<<<<< Updated upstream:lib/op_arb_agent.py
 _repo = _pl.Path(__file__).resolve().parent if (_pl.Path(__file__).resolve().parent / "jevdrive").exists() else (_pl.Path(__file__).resolve().parents[1] if (_pl.Path(__file__).resolve().parents[1] / "jevdrive").exists() else _pl.Path(__file__).resolve().parents[3])
 _sys.path[:0] = [str(_repo / _d) for _d in ("lib", "experiments/b2d_privileged/lib", "experiments/op_closed_loop/lib", "scripts",)]
-========
-_sys.path[:0] = [str(_pl.Path(__file__).resolve().parents[3] / _d) for _d in ("experiments/b2d_privileged/lib", "scripts",)]
->>>>>>>> Stashed changes:experiments/op_closed_loop/lib/op_arb_agent.py
 import json
 import math
 import os

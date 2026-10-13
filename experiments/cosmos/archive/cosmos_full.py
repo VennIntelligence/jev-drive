@@ -1,8 +1,4 @@
-<<<<<<<< Updated upstream:experiments/cosmos/archive/cosmos_full.py
 """Cosmos-Transfer G4 full generation (fc65452:todos/2026-09-28-cosmos-pilot.md, "full run"): about 2 000 CARLA x+ / x- pedestrian
-========
-"""Cosmos-Transfer G4 full generation (80eb061:todos/2026-09-28-cosmos-pilot.md, "full run"): about 2 000 CARLA x+ / x- pedestrian
->>>>>>>> Stashed changes:experiments/cosmos/lib/cosmos_full.py
 pairs re-rendered photoreal with the frozen v2 arm G4, as training data for the next op-adapt B round (sim + real).
 
 Scenes. Town12 single-scenario clips cut from the Leaderboard 2.0 training routes the way Bench2Drive cuts its own
