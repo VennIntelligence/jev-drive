@@ -32,7 +32,7 @@ def read(root):
             yaw = np.degrees(np.r_[0, np.cumsum(wz[1:] * np.diff(t))])
             m = r.get("metrics", {})
             kind = "" if r["score"] else ("collision" if m.get("collision_at_fault") else "offroad" if m.get("offroad") else "corridor" if m.get("left_corridor_laterally") else "other")
-            out[r["clipgt_id"]] = dict(score=float(r["score"] or 0), spin=bool(w.any() and np.abs(vx * wz)[w].max() > 6), turn=float(yaw[-1]), kind=kind)
+            out[r["clipgt_id"]] = dict(score=float(r["score"] or 0), rear=bool(m.get("collision_rear")), spin=bool(w.any() and np.abs(vx * wz)[w].max() > 6), turn=float(yaw[-1]), kind=kind)
     return out
 
 
@@ -62,14 +62,14 @@ def lists(D, roots, a):
     for spec in a.lists:
         n, f = spec.split("=", 1)
         sc = [s for s in open(f).read().split() if all(s in d for d in D.values())]
-        L += ["", f"## {n}: {len(sc)} scenes", "", "| label | mean | zeros | collision | offroad | corridor | spins | plan 2 s deficit m | vs " + a.vs + " (95 % CI) |",
-              "|:--|--:|--:|--:|--:|--:|--:|--:|:--|"]
+        L += ["", f"## {n}: {len(sc)} scenes", "", "| label | mean | zeros | collision | offroad | corridor | rear-ended | spins | plan 2 s deficit m | vs " + a.vs + " (95 % CI) |",
+              "|:--|--:|--:|--:|--:|--:|--:|--:|--:|:--|"]
         for k, d in D.items():
             z = [d[s]["kind"] for s in sc if d[s]["kind"]]
             df = np.nanmean([Df[k].get(s, np.nan) for s in sc])
             x = np.array([d[s]["score"] - D[a.vs][s]["score"] for s in sc])
             bs = x[rng.integers(0, len(x), (10000, len(x)))].mean(1)
-            L.append(f"| {k} | {np.mean([d[s]['score'] for s in sc]):.4f} | {len(z)} | {z.count('collision')} | {z.count('offroad')} | {z.count('corridor')} | "
+            L.append(f"| {k} | {np.mean([d[s]['score'] for s in sc]):.4f} | {len(z)} | {z.count('collision')} | {z.count('offroad')} | {z.count('corridor')} | {sum(d[s]['rear'] for s in sc)} | "
                      f"{sum(d[s]['spin'] for s in sc)} | {df:+.2f} | {x.mean():+.4f} [{np.quantile(bs, 0.025):+.4f}, {np.quantile(bs, 0.975):+.4f}] |")
     return L
 
