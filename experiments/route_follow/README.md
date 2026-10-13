@@ -52,6 +52,9 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [research/route-follow/pai-follow.md](../../research/route-follow/pai-follow.md): PAI 281 turn completion with the real route (RSG 13.9 %,
   RBSG2 25.0 % of 36 turns) and the map topology of every corridor zero (14 / 22 route zeros have a straight road ahead; the ego never slows
   into the entry); `scripts/rf_pai_follow.py` (+ `.sh`, Tokyo container), `results/pai_follow/`, figure `figs/pai_follow_zeros.png`.
+- [research/route-follow/late-turns.md](../../research/route-follow/late-turns.md): turn completion by class (late >= 40 m / delayed 20-40 m /
+  early / fork) on nuPlan @18 and PAI: late turns barely exist @18 (4 of 1473 scenes; window median 47 m); entry >= 20 m RSG 18 %, RSGboth 68 %,
+  RB0 14 % (22), mostly "too slow"; forks no harder than other turns; PAI late 1 / 15 for RSG; `scripts/rf_lateturn.py` (+ `.sh`), `results/lateturn/`.
 - [research/route-follow/p1-openloop.md](../../research/route-follow/p1-openloop.md): P1 open-loop read on the Tokyo log-following render (36 exam-hard
   PAI turns): on the human's states RSG already slows with the human and commits on time; RSGboth is not earlier (20 m before the entry +0.43 m/s
   faster, commit identical, lateral -0.06 m); residual = straight-exit turns +0.56 m/s at the entry and 0.7 m outside at 4 s; `scripts/rf_pai_openloop.py --p1`
