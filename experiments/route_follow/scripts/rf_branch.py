@@ -156,7 +156,7 @@ def read(a):
                     continue
                 p, m, score = PL[sc], r.get("metrics") or {}, float(r.get("score") or 0)
                 C, (ser, _) = X.ctrl(sim, r["rollout_id"]), X.series(sim, sc, r["rollout_id"])
-                row = dict(arm=arm, scene=sc, side=p["side"], score=score, k=p["k_eff"].get(arm), rid=r["rollout_id"], **ho.get(sc, {}))
+                row = dict(arm=arm, scene=sc, side=p["side"], score=score, k=p["k_eff"].get(arm.split("+")[0]), rid=r["rollout_id"], **ho.get(sc, {}))
                 if C is None or ser is None:
                     rows.append(dict(row, done=None, note="no controller trace / metrics"))
                     continue

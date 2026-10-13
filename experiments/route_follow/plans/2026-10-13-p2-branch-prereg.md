@@ -95,3 +95,17 @@ from the policy's own states (route C, not A); a completion here says the policy
   146dc7ad. The only change from the prereg is RUNPFX=p2- for the compose names. k_eff as in plan.json; 9 d40 branches and 3 d20 branches
   are k_eff 17.
 - Read: [results/p2_branch](../results/p2_branch/README.md). Ceiling 4 / 12 = 33 % (<= 40 %): the "teach how" line.
+
+## Amendment 2 (control arms, written before they run, 2026-10-13 22:10 JST)
+
+The question (the user's): at the d0 handover, does the policy complete because of the ego state (on the log, right heading and speed)
+or because its hints help (route memory, its own speed history)? Two arms, the same 12 scenes, the d0 switch file, everything else as
+d0 (code: onp_log_driver.py `ONP_AFTER`; the controls act from the switch decision on and never before):
+- **d0+rmem0**: the route-memory features fed to the model are the empty memory from k on (SH30_RMEM=0's feed, but from k on only).
+- **d0+vhzero**: the ego's speed-history entries (vhist.py EGO_SPEED: vx, vy, ax, ay, the history poses' x / y) are zeroed in the fed
+  row at every decision from k on. `JEV_VHIST=zero` by itself would zero them from decision 0, so it is applied from k on through a shim.
+Check on the run itself: before k the plans equal the d0 run's (same driver path); after k the logged `rmem` is all zeros (rmem0) or
+`vhist.ego_fed` has the entries at 0 (vhzero).
+Read, of the 4 d0 completions (2f227f2c, 382a7247, eaba3f6a, fd01e9ab): >= 3 kept = the state carries the turn (that hint is not needed
+after the entry); <= 1 kept = that hint carries it; 2 = no call. Completions among the 8 d0 failures are reported too. Compared with d0
+4 / 12 and k17 1 / 12; 12 scenes and one seed, so this is descriptive.

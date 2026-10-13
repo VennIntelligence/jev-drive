@@ -31,8 +31,14 @@ serving input (f-theta camera through pai_core, rendered 10 Hz frames in every s
                 log fields and needs no ground truth. Records gain `switch` (k, null = never) and `ret` ("log" | "model"); every record
                 with ground truth gains `log_t` (s from the first pose of the recording to time_now: decision k <-> log time)
 
+  after         ONP_AFTER (comma list, unset = none): input controls applied from the switch decision k on, never before (turning
+                school P2 control arms). `rmem0`: the route-memory features fed to the model are the empty memory (what SH30_RMEM=0
+                feeds for the whole run; the tracker keeps taking the route messages). `vhzero`: the ego's speed history is zeroed in the
+                fed row (vhist.py JEV_VHIST=zero's entries; that switch alone zeroes it from decision 0, so it must stay unset here), logged
+                as `vhist`. Records gain `after` (the controls active at this call)
+
 A `drive` before the switch without a ground-truth message of its own timestamp is aborted with a gRPC error and counted. Run through
-experiments/onpol_pai/scripts/onp_pass2.sh (DRV_PY of pai_run.sh); environment as pai_driver.py plus ONP_HORIZON, ONP_SWITCH.
+experiments/onpol_pai/scripts/onp_pass2.sh (DRV_PY of pai_run.sh); environment as pai_driver.py plus ONP_HORIZON, ONP_SWITCH, ONP_AFTER.
 """
 from __future__ import annotations
 
@@ -63,6 +69,48 @@ def switch_table(v: str) -> tuple:
 
 
 SWITCH_ALL, SWITCH = switch_table(os.environ.get("ONP_SWITCH", ""))
+AFTER = {x for x in os.environ.get("ONP_AFTER", "").replace(" ", "").split(",") if x}
+assert AFTER <= {"rmem0", "vhzero"}, f"ONP_AFTER={AFTER}: rmem0, vhzero"
+assert not ("vhzero" in AFTER and P.VH.ON), "ONP_AFTER=vhzero needs JEV_VHIST unset (it would act before the switch)"
+
+
+class MaskedMemory:
+    """rmem.Tracker that feeds the empty memory (None: pai_core.plan's zeros) once `on` is set; route messages still go in."""
+
+    def __init__(self, rt):
+        self.rt, self.on = rt, False
+
+    def add(self, *a, **k):
+        return self.rt.add(*a, **k)
+
+    def features(self, *a, **k):
+        return None if self.on else self.rt.features(*a, **k)
+
+
+class VhShim:
+    """pai_driver's VH for ONP_AFTER=vhzero: a session's state {"zero": True} (set at the switch) gets vhist.py's `zero` row, every other
+    call goes to vhist.py (which is off, so pai_driver never calls it before the switch)."""
+
+    def __init__(self, vh):
+        self.vh = vh
+
+    def __getattr__(self, k):
+        return getattr(self.vh, k)
+
+    def feed(self, st, ego, cmd):
+        if st.get("zero"):
+            e = ego.copy()
+            e[self.vh.EGO_SPEED] = 0.0
+            return e, dict(mode="zero-after", v_meas=round(float(np.hypot(ego[4], ego[5]) * 10.0), 3), v_fed=0.0)
+        return self.vh.feed(st, ego, cmd)
+
+    def observe(self, st, o):
+        if not st.get("zero"):
+            self.vh.observe(st, o)
+
+
+if "vhzero" in AFTER:
+    P.VH = VhShim(P.VH)
 TL = threading.local()
 
 
@@ -109,6 +157,13 @@ class LogDriver(P.Driver):
         super().__init__(*a, **k)
         self.out = Out(self.out)
 
+    def start_session(self, req, ctx):
+        r = super().start_session(req, ctx)
+        s = self.sessions.get(req.session_uuid)
+        if s is not None and "rmem0" in AFTER and s.rt is not None:
+            s.rt = MaskedMemory(s.rt)
+        return r
+
     def submit_recording_ground_truth(self, req, ctx):
         s = self._s(req.session_uuid, ctx)
         s.gt = req.ground_truth                              # parsed in drive: one message per step, each the whole clip
@@ -150,6 +205,12 @@ class LogDriver(P.Driver):
                 ctx.abort(grpc.StatusCode.FAILED_PRECONDITION, ref)
             ref = (None, {})
         x = {k: v for k, v in ref[1].items() if not (policy and k in ("ret_n", "ret_ext"))}
+        if policy and AFTER:                                 # the control arms: from the switch on
+            if isinstance(s.rt, MaskedMemory):
+                s.rt.on = True
+            if "vhzero" in AFTER and s.vh is None:
+                s.vh = {"zero": True}
+            x["after"] = sorted(AFTER)
         TL.extra = {**x, "switch": sw, "ret": "model" if policy else "log"}
         try:
             r = super().drive(req, ctx)                      # the model, its record and its dumps
@@ -159,7 +220,7 @@ class LogDriver(P.Driver):
 
     def get_version(self, req, ctx):
         v = super().get_version(req, ctx)
-        v.version_id += "-logreplay" + ("-switch" if SWITCH or SWITCH_ALL is not None else "")
+        v.version_id += "-logreplay" + ("-switch" if SWITCH or SWITCH_ALL is not None else "") + "".join(f"-{a}" for a in sorted(AFTER))
         return v
 
 
