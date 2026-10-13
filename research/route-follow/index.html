@@ -189,21 +189,23 @@ pool 记录 01:15–04:15 之间 GPU 在算 10.0 card-h（6 卡 × 3 小时的 5
 <h2>八、PAI 线（Tokyo）</h2>
 <p>B 的 gains pilot 过（<code>rel_front_steering_angle_weight</code> 20：交接打转 3 对 22，g2 + g3 零分 45 对 48），PAI rollout 用 20；<code>pai_driver.py</code> 已能 serve 带路线记忆的 checkpoint（<code>19137cec</code>）。</p>
 <p>地图检查：PAI 场景有车道和后继，路线生成器能离线跑，以后能在 PAI 上造反事实行。driver 带路线记忆支路，2 个场景 398 / 398 个决策与存档 ys0 逐位相同。
-RB0-F-s0 在 160 个 PAI 训练场景上重滚：均分 0.572、零分 43，出 22 695 行（记忆覆盖 +20 米 76%；PAI 没有道路栅格，没有道路 hinge），RSG-PAI-s0（温和、只 S）已训，281 读数未出。</p>
+RB0-F-s0 在 160 个 PAI 训练场景上重滚：均分 0.572、零分 43，出 22 695 行（记忆覆盖 +20 米 76%；PAI 没有道路栅格，没有道路 hinge），RSG-PAI-s0（同一套温和、只 S 的一轮，行换成这 22 695 行）也读了 281，见表末行。</p>
 <table>
 <tr><th>PAI 281（281 个场景全部有分）</th><th>控制器 gains</th><th>均分</th><th>零分</th><th>碰撞 / 出路 / 走廊</th><th>交接打转</th></tr>
 <tr class="best"><td><b>RSG-L18-s0</b></td><td>20</td><td><b>0.5720</b></td><td><b>70</b></td><td>9 / 14 / 47</td><td>2</td></tr>
 <tr class="ref"><td>YS-L18-s0（存档）</td><td>5</td><td>0.5165</td><td>96</td><td>13 / 26 / 57</td><td>13</td></tr>
 <tr class="ref"><td>YS-L18-s1（存档）</td><td>5</td><td>0.5363</td><td>89</td><td>12 / 22 / 55</td><td>9</td></tr>
 <tr class="ref"><td>YR10m10-F-s0（存档）</td><td>5</td><td>0.4857</td><td>110</td><td>14 / 37 / 59</td><td>12</td></tr>
+<tr><td>RSG-PAI-s0（PAI 自己的行）</td><td>20</td><td>0.5653</td><td>77</td><td>11 / 19 / 47</td><td>3</td></tr>
 </table>
 <p>场景配对（重抽 10 000 次）：RSG − YS-L18-s0 +0.056 [+0.019, +0.093]，− YS-L18-s1 +0.036 [−0.000, +0.073]，− YR10m10-F-s0 +0.086 [+0.052, +0.123]；YS2G-L18-s0 的存档读数是 0.528 / 零分 90（277 个场景）。
 RSG 是存档 PAI 读数里最好的，但参照都是 gains 5 跑的：pilot 把 YS-L18 一次读数里约 19 次打转、约 3 个零分归给 gains，所以打转从 9–13 降到 2 和几个零分是控制器的功劳，其余才归 checkpoint。同 gains 的参照（RB0-F-s0、YS-L18-s0 用 gains 20）在排队。
-不用地图的转弯代理（20 个转弯场景，噪声大）：RSG 左 6 / 15、右 2 / 5，YS-L18-s0 8 / 15、4 / 5，不当完成率读。来源：Tokyo <code>/data/runs/route_night/r281/rsg_read.md</code>（<code>rf_pai281.py</code>）。</p>
+不用地图的转弯代理（20 个转弯场景，噪声大）：RSG 左 6 / 15、右 2 / 5，YS-L18-s0 8 / 15、4 / 5，不当完成率读。</p>
+<p>RSG-PAI-s0 对 RSG-L18-s0 −0.007 [−0.034, +0.021]：81 个场景更好、24 个更差，零分多 7（出路 5、碰撞 2）；对 YS-L18-s0 +0.049 [+0.011, +0.087]。PAI 自己的行上同样的温和一轮没有胜过 nuPlan 上训的 RSG-L18，两条赛道上的唯一候选都是 RSG-L18。Tokyo 上还排着 RBSG2-L18-s0（约 11:25，看机制）、RB0-F-s0（约 13:35，同 gains 的底座参照）、RBSGc-PAI（约 15:45）的 281。来源 <code>experiments/route_follow/results/pai281/</code>（<code>rf_pai281.py</code>）。</p>
 
 <h2>九、下一步</h2>
 <ul>
-<li>RSG-L18 是唯一候选：held 配对胜过 YS2G、公开 1491 护栏过、PAI 281 是存档里最好的；剩下的是同 gains 的 PAI 参照，以及 RSG-PAI-s0（PAI 自己的行）的 281。</li>
+<li>RSG-L18 是唯一候选：held 配对胜过 YS2G、公开 1491 护栏过、PAI 281 是存档里最好的；PAI 自己的行训的 RSG-PAI-s0 与它持平；剩下的是同 gains 的 PAI 参照。</li>
 <li>路线 hinge 今晚的训法不采用。「hinge 需要策略自己转过头的状态」是下一轮的线索；下一轮带 hinge 的臂先读公开 1491，再谈 held。</li>
 <li>变道：反事实行在路口有效、变道无效（5–7%）；要做变道，得是变道专门的行或标签，不是同一个 hinge 加量。</li>
 </ul>

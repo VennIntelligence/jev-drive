@@ -24,9 +24,12 @@ counterfactual side) but not lane changes (5-7 %), and cost G-real.
 
 PAI 281 (Tokyo, controller gain rel_front_steering_angle_weight 20 after expert B's pilot passed): RSG-L18-s0 0.572 / 70 zeros, the best
 stored PAI read (YS-L18-s0 0.517 / 96, paired +0.056 [+0.019, +0.093]; YR10m10-F-s0 +0.086), but the references ran with gains 5 (the pilot
-gives ~19 spins and ~3 zeros of a YS-L18 read to the gains); same-gains references are queued.
+gives ~19 spins and ~3 zeros of a YS-L18 read to the gains); same-gains references are queued. RSG-PAI-s0 (the same gentle S-only
+round on RB0-F-s0's own PAI rows) reads 0.565 / 77, level with RSG-L18 (-0.007 [-0.034, +0.021]): RSG-L18 is the single candidate on
+both tracks (`results/pai281/`).
 
-**Next.** Same-gains PAI references (RB0-F-s0 / ys0 at gains 20); RSG-PAI-s0 (PAI on-policy rows, trained) 281 read; RBSG2-L18-s0 281 (mechanism). The mechanism
+**Next.** Tokyo PAI 281 queue: RBSG2-L18-s0 (~11:25 JST, mechanism), RB0-F-s0 (~13:35, same-gains base reference), RBSGc-PAI (~15:45);
+a YS-L18-s0 reference at gains 20 is still to be run. The mechanism
 lead (the hinge needs the policy's own over-turning states) is for a next round, with a public-set read before any held claim (held 452
 could not separate RBSG2 from RSG; the public set separates them by 32.5 zeros).
 
