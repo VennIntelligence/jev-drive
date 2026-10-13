@@ -11,6 +11,13 @@ distance is to steer, and at speed any steering is a spin. The fix is to never h
   JEV_TRACK=time   (a) re-timing only: the plan's own path (polyline through its 8 points, straight beyond its end), driven from the ego's
                    current speed and acceleration with the plan's speed as target, the change of speed bounded by [AMIN, AMAX] m/s^2 and
                    its jerk by JLON. The path is unchanged.
+  JEV_TRACK=curv   (a) + the curvature speed limit VCURV of (b) on the plan's own path (no path tracking, no curvature clipping): the
+                   reference slows for the plan's turns instead of widening them, and its positions stay on the plan's polyline.
+  JEV_TRACK=gate   curv while the plan's path is drivable, full only where it is not: each path segment the curv reference reaches by
+                   T_GATE s has curvature <= GATE x the full mode's cap at the speed the reference passes it (curvature <= min(KMAX .. KDYN,
+                   ALAT / v^2), v as in the cap, i.e. max(v_ref, v0 - V_DROP t)), else this call serves the full reference. With VCURV the curv
+                   reference has already slowed for every turn braking at AMIN can slow for, so the gate opens only for a turn that is too
+                   sharp for the car's state (the model's swerve while braking, a 2 m side step within 0.5 s at 10 m/s).
   JEV_TRACK=full   (a) + (b): the reference is the forward simulation (kinematic, DT_SIM steps) of a path-tracking law on the same path and
                    speed: curvature = path curvature (feedforward) + a second-order correction of the lateral / heading error over the
                    distance max(TAU_LAT x v, D_MIN), clipped to |kappa| <= min(ALAT / v^2, KMAX below 3.5 m/s .. KDYN above 5 m/s) with
@@ -33,9 +40,9 @@ import os
 import numpy as np
 
 MODE = os.environ.get("JEV_TRACK", "0") or "0"
-ON = MODE in ("time", "full")
-if MODE not in ("0", "time", "full"):
-    raise ValueError(f"JEV_TRACK={MODE!r}: expected time | full | 0")
+ON = MODE in ("time", "curv", "gate", "full")
+if MODE not in ("0", "time", "curv", "gate", "full"):
+    raise ValueError(f"JEV_TRACK={MODE!r}: expected time | curv | gate | full | 0")
 
 AMIN, AMAX = -5.0, 3.0          # m/s^2, change of speed of the reference
 JLON = 10.0                     # m/s^3, its jerk, starting from the ego's measured acceleration: a plan whose speed flickers between
@@ -43,6 +50,9 @@ JLON = 10.0                     # m/s^3, its jerk, starting from the ego's measu
                                  # still drew a 0.69 rad command from such a step)
 ALAT, JLAT = 4.0, 10.0          # m/s^2, m/s^3 (openpilot clip_curvature: 3.0, jerk 5.0); ALAT 7 left 16 / 38 rollouts above 6 m/s^2 (run 3)
 YAW_TOL = 0.35                  # rad, plan yaw output against its chords
+GATE, T_GATE = 1.0, 2.0         # gate: open (serve full) when a segment's curvature exceeds GATE x the cap within T_GATE s
+GATE_V = 2.0                    # m/s, gate: segments passed slower than this are not checked (a stopping plan's yaw over centimetre
+                                 # segments reads as any curvature; nothing spins at walking pace)
 PREVIEW = 0.0                   # s, full: the path curvature fed forward is taken v x PREVIEW ahead (lead for the MPC's steering lag)
 LATCAP = 1.0                    # full: 0 = no curvature / curvature-rate clipping (ablation; VCURV still uses ALAT / KDYN)
 VCURV = 1.0                     # full: 1 = also slow for the path's curvature ahead (v^2 |kappa| <= ALAT, braking at AMIN), 0 = off
@@ -106,12 +116,18 @@ def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
     """Plan (8, 3) rig frame, ego speed, yaw rate (logged only), acceleration -> (t (41,), x, y, yaw (41,)) and a log record. mode / kw (lower-case constant names)
     override the environment's configuration (offline replays)."""
     mode = mode or MODE
-    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP", "JLON", "LATCAP", "PREVIEW")}
-    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP, JLON, LATCAP, PREVIEW = g.values()
+    if mode == "gate":
+        ref, info = build(poses, v0, wz, "curv", a0, **kw)
+        if info["gate"] <= kw.get("gate", GATE):
+            return ref, {**info, "mode": "gate", "open": 0}
+        ref, fi = build(poses, v0, wz, "full", a0, **kw)
+        return ref, {**fi, "mode": "gate", "open": 1, "gate": info["gate"]}
+    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP", "JLON", "LATCAP", "PREVIEW", "T_GATE", "GATE_V")}
+    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP, JLON, LATCAP, PREVIEW, T_GATE, GATE_V = g.values()
     kcap = lambda v: np.minimum(np.interp(v, V_KIN, (KMAX, KDYN)), ALAT / np.maximum(v, V_MIN) ** 2)  # noqa: E731
     path, vp = Path(poses), speeds(poses)
     vlim = None
-    if mode == "full" and VCURV > 0:                                      # curvature speed limit, backward pass with braking at AMIN
+    if mode in ("full", "curv") and VCURV > 0:                                      # curvature speed limit, backward pass with braking at AMIN
         sg = np.arange(0.0, path.s[-1], 0.5)
         ka = np.abs(path.at(sg)[3])
         va = np.minimum(np.sqrt(ALAT / np.maximum(ka, 1e-4)), np.where(ka <= KDYN, 1e3, np.interp(ka, (KDYN, KMAX), V_KIN[::-1])))
@@ -122,6 +138,7 @@ def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
     v, s, x, y, th = max(float(v0), 0.0), 0.0, 0.0, 0.0, 0.0
     k = None                                                              # first step: the clipped desired curvature
     out, kpk, apk, a = [(0.0, 0.0, 0.0)], 0.0, 0.0, float(np.clip(a0, AMIN, AMAX))
+    sv = [(0.0, max(v, V_MIN, float(v0)))]                              # (s, speed for the cap) up to T_GATE: the gate's drivability check
     for i in range(n):
         t = i * DT_SIM
         vt = vp[min(int(t / 0.5), 7)]
@@ -129,10 +146,12 @@ def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
             vt = min(vt, float(np.interp(s, *vlim)))
         a = float(np.clip(np.clip((vt - v) / DT_SIM, a - JLON * DT_SIM, a + JLON * DT_SIM), AMIN, AMAX))
         apk = min(apk, a)
-        if mode == "time":
+        if mode != "full":
             v = max(v + a * DT_SIM, 0.0)
             s += v * DT_SIM
             x, y, th, _ = path.at(s)
+            if t < T_GATE:
+                sv.append((s, max(v, V_MIN, v0 - V_DROP * (t + DT_SIM))))
         else:
             px, py, ph, pk = path.at(s)
             if PREVIEW > 0:
@@ -157,8 +176,17 @@ def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
             out.append((x, y, th))
     o = np.array(out)
     t = np.arange(len(o)) * DT_OUT
-    return (t, o[:, 0], o[:, 1], o[:, 2]), {"mode": mode, "v0": round(float(v0), 3), "k_end": round(float(k or 0.0), 4), "kpk": round(kpk, 4),
-                                           "amin": round(apk, 2), "s4": round(s, 2), "wz": round(float(wz), 4)}
+    info = {"mode": mode, "v0": round(float(v0), 3), "k_end": round(float(k or 0.0), 4), "kpk": round(kpk, 4), "amin": round(apk, 2),
+            "s4": round(s, 2), "wz": round(float(wz), 4)}
+    if mode == "curv":                                                    # per path segment reached by T_GATE: curvature / cap at its entry speed
+        sa, va_ = np.array(sv).T
+        hs, hv = path.hs, path.hv
+        j = np.arange(len(hs) - 1)[hs[:-1] < sa[-1]]
+        ks = np.abs(hv[j + 1] - hv[j]) / np.maximum(hs[j + 1] - hs[j], 1e-6)
+        vs = np.interp(hs[j], sa, va_)
+        r = np.where(vs >= GATE_V, ks / kcap(vs), 0.0)
+        info["gate"] = round(float(r.max()), 3) if len(j) else 0.0
+    return (t, o[:, 0], o[:, 1], o[:, 2]), info
 
 
 def cached_plan(CachedPlan, t0_us: int, anchor_xy_yaw, ref):
