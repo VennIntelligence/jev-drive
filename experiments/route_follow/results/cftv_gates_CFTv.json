@@ -1,0 +1,86 @@
+{
+ "data": [
+  "navtrain_full.s0of12",
+  "navtrain_full.s1of12",
+  "navtrain_full.s2of12",
+  "navtrain_full.s3of12",
+  "navtrain_full.s4of12",
+  "navtrain_full.s5of12",
+  "navtrain_full.s6of12",
+  "navtrain_full.s7of12",
+  "navtrain_full.s8of12",
+  "navtrain_full.s9of12",
+  "navtrain_full.s10of12",
+  "navtrain_full.s11of12"
+ ],
+ "cft_candidates": 14765,
+ "cft_replicated": 11442,
+ "G_v3_equals_on1_CFT": true,
+ "e2_rows": 1435,
+ "e2_only_rows": 942,
+ "synthetic": {
+  "infeasible_e2v": 62,
+  "e3_actor_overlap": 8,
+  "e4_offroad": 0,
+  "kept": 872,
+  "by_class": {
+   "j0": 596,
+   "j1": 248,
+   "lc": 28
+  }
+ },
+ "G_v1": {
+  "demo_inside": 1.0,
+  "pass": true
+ },
+ "G_v2": {
+  "sane_share": 1.0,
+  "alat_p99": 3.283774805929641,
+  "brake_p99": 2.5004490388047946,
+  "arc4_synthetic_over_human_median": 0.8539431890712712,
+  "v0_median": 5.079622507095337,
+  "speed_at_4s_median": 5.136655807495117,
+  "alat_ok": 1.0,
+  "brake_ok": 1.0,
+  "v0_ok": 1.0,
+  "pass": true
+ },
+ "pool": {
+  "rows": 12314,
+  "human": 11442,
+  "synthetic": 872,
+  "dir": "/root/autodl-tmp/ujs/runs/op_parity/cache/on1_CFTv"
+ },
+ "G_v4": [
+  {
+   "fig": "experiments/route_follow/figs/cftv_bev_0.png",
+   "token": "671f0fb62e3753f4",
+   "cls": "j0"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cftv_bev_1.png",
+   "token": "3d1ffd9713235ef3",
+   "cls": "j0"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cftv_bev_2.png",
+   "token": "b7c5e5a31a415bc9",
+   "cls": "j1"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cftv_bev_3.png",
+   "token": "c739a7eb03c95e5a",
+   "cls": "j1"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cftv_bev_4.png",
+   "token": "30d1a37e61f75ebf",
+   "cls": "j0"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cftv_bev_5.png",
+   "token": "ac800c51d6275d19",
+   "cls": "j0"
+  }
+ ]
+}

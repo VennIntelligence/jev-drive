@@ -54,8 +54,9 @@ EGO_L, EGO_W, EGO_RC = 5.176, 2.297, 1.461                            # nuPlan P
 
 
 # ---------------------------------------------------------------- demo
-def demo(C, fut):
-    """C (m, 2) counterfactual centreline in the row frame, fut (8, 3) logged rear-axle future -> (fut_cft (8, 3), diag dict)."""
+def path(C, fut):
+    """C (m, 2) counterfactual centreline in the row frame, fut (8, 3) logged rear-axle future -> the demo path P (n, 2) at DU steps, its arc
+    cum (n,), tangent hd (n,), the log's arcs S (9,) at 0 .. 4 s, and d0, psi, Lc (rf_cftv.py samples the same path at other arcs)."""
     import lanegraph as LG
     ln = LG.Line(C)
     s0, d0 = (float(v[0]) for v in ln.frenet(np.zeros((1, 2))))
@@ -71,6 +72,12 @@ def demo(C, fut):
     cum = np.r_[0.0, np.cumsum(seg)]
     hd = np.unwrap(np.arctan2(*np.diff(P, axis=0).T[::-1]))
     hd = np.r_[hd[0], 0.5 * (hd[1:] + hd[:-1]), hd[-1]]               # tangent at the vertices
+    return P, cum, hd, S, d0, psi, Lc
+
+
+def demo(C, fut):
+    """C (m, 2) counterfactual centreline in the row frame, fut (8, 3) logged rear-axle future -> (fut_cft (8, 3), diag dict)."""
+    P, cum, hd, S, d0, psi, Lc = path(C, fut)
     out = np.stack([np.interp(S[1:], cum, P[:, 0]), np.interp(S[1:], cum, P[:, 1]), np.interp(S[1:], cum, hd)], 1).astype(np.float32)
     v = np.diff(S) / 0.5
 

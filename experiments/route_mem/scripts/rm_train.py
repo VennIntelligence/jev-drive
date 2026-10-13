@@ -34,6 +34,12 @@ Next-round addition (2026-10-13, experiments/route_follow/plans/2026-10-13-allro
             (research/next-round/steer-long.md 4.4: the plan follows its own speed history). on_train's --ego-drop (the whole EGO_STATE,
             yaws included) stays refused here. 0 = off: no operation is added.
 
+Turning-school addition (2026-10-13, experiments/route_follow/plans/2026-10-13-turning-school-prereg.md):
+  --on-weight KEY=VALUE:W,...   pool rows are drawn with probability proportional to the product of W over the matching terms (string keys of
+            the pool's tab.npz, e.g. src=synthetic:0.5,topo=straight_exit:2; a row without the key or value has factor 1): the expected
+            weight of a row class in the imitation / hinge sums, without touching the loss. Same orng stream [seed, 0, 53] (numpy's
+            weighted choice). '' = off: the uniform draw, bit for bit as before.
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -187,6 +193,19 @@ def cmd_train(a):
                              {"params": rp, "lr": a.rm_lr, "base": a.rm_lr, "wu": a.rm_warmup}], weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
 
+    pw = None
+    if a.on_weight:                                                   # --on-weight: per-row draw probabilities of the pool rows
+        from jevdrive.common import data_dir
+        tb = np.load(data_dir() / "runs/op_parity/cache" / a.on / "tab.npz")
+        w = np.ones(ns.n_on)
+        for term in a.on_weight.split(","):
+            kv, f = term.rsplit(":", 1)
+            k, v = kv.split("=", 1)
+            if k in tb.files:
+                w[tb[k].astype(str) == v] *= float(f)
+        assert len(tb["names"]) == ns.n_on and (w > 0).all(), "--on-weight: pool rows / weights"
+        pw = w / w.sum()
+
     def draw():
         r = rng.choice(tr_o, nN, replace=len(tr_o) < nN)
         if k_yr:
@@ -194,7 +213,7 @@ def cmd_train(a):
         an = rng.random(nB - k_ho - k_on) < cfg.d_frac
         an[nN:] = False
         if k_on:
-            i = orng.choice(ns.n_on, k_on, replace=ns.n_on < k_on)
+            i = orng.choice(ns.n_on, k_on, replace=ns.n_on < k_on) if pw is None else orng.choice(ns.n_on, k_on, replace=True, p=pw)
             sha.update(i.astype("<i8").tobytes())
             r, an = np.concatenate([r, ns.on0 + i]), np.concatenate([an, np.zeros(k_on, bool)])
         if k_ho:
@@ -222,6 +241,8 @@ def cmd_train(a):
         run.info(f"{a.tag}: on_train recipe + route branch ({nroute / 1e6:.2f} M, lr {a.rm_lr}, warm-up {a.rm_warmup}, drop {a.rm_drop}); "
                  f"train {len(tr_o)} normal + {len(tr_t)} yaw-rate rows, dev {len(dv_o)} + {len(dv_t)}; per batch {nN} normal, {k_yr} yaw-rate, "
                  f"{k_on} on-policy (mode {ns.mode or 'off'}; {json.dumps(ns.onrec)}); feature rows ok {json.dumps(okc)}")
+        if pw is not None:
+            run.info(f"--on-weight {a.on_weight}: pool row draw probability min {pw.min() * ns.n_on:.3f} / max {pw.max() * ns.n_on:.3f} x uniform")
         if a.ego_drop_speed > 0:
             run.info(f"ego speed history (ego cols {EGO_SPEED}) zeroed on a share {a.ego_drop_speed} of the non-anchor rows, rng [seed, 0, 71]")
         run.info(f"init {json.dumps(ns.init) if ns.init else 'none: shipped weights + fresh adapter (on_train / joint_train start)'}")
@@ -341,6 +362,7 @@ if __name__ == "__main__":
         p.add_argument("--on-lon-lam", type=float, default=10.0)
         p.add_argument("--on-road", default="")
         p.add_argument("--ego-drop", type=float, default=0.0)
+        p.add_argument("--on-weight", default="", help="KEY=VALUE:W,... draw weights of the pool rows from tab.npz string keys")
         p.add_argument("--ego-drop-speed", type=float, default=0.0, help="share of non-anchor rows with the ego speed history zeroed (training only)")
         p.add_argument("--prefetch", type=int, default=4)
         p.add_argument("--fetch-workers", type=int, default=2)
