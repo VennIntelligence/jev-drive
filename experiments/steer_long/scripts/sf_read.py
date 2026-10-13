@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """SPIN-FIX read (Tokyo host, numpy only): per arm root and scene list, spins (sf_detect.py), zeros, mean score against the baseline root on the
 same scenes (paired), at-fault / front (ego into something ahead) / rear (hit from behind) collisions, per-scene table optional.
-  sf_read.py --list <scenes.txt> --base <root> --arm name=<root> ... [--scenes]"""
+A rollout without metrics (an infrastructure failure, e.g. a renderer CUDA OOM) is not a drive and is skipped; an arm may list several roots (root1,root2: a
+later root's rollout of a scene replaces an earlier one, e.g. a rerun of a failed scene).
+  sf_read.py --list <scenes.txt> --base <root> --arm name=<root>[,<root>..] ... [--scenes]"""
 import argparse, csv, glob, json, os, sys
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -15,7 +17,7 @@ def read(root, keep):
         if not os.path.exists(f):
             continue
         for r in json.load(open(f))["rollouts"]:
-            if r["clipgt_id"] not in keep:
+            if r["clipgt_id"] not in keep or not r.get("metrics"):
                 continue
             c = os.path.join(sim, "controller", f"alpasim_controller_{r['rollout_id']}.csv")
             if not os.path.exists(c):
@@ -42,7 +44,7 @@ def main():
     B = read(a.base, set(S))
     print(f"| arm | scenes | spins | handoff / fast / slow | zeros | at-fault / front / hit from behind | mean | base spins | base zeros | base at-fault / front / behind | base mean (paired) |\n|:--|--:|--:|:--|--:|:--|--:|--:|--:|:--|--:|")
     for name, root in (x.split("=", 1) for x in a.arm):
-        A = read(root, set(S))
+        A = {k: v for r in root.split(",") for k, v in read(r, set(S)).items()}
         both = [s for s in S if s in A and s in B]
         k = lambda D, n: sum(D[s][1][n] is not None for s in both)  # noqa: E731
         c = lambda D: " / ".join(str(sum(D[s][1][n] for s in both)) for n in ("atf", "front", "rear"))  # noqa: E731

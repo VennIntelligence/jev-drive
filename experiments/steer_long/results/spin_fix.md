@@ -6,6 +6,39 @@ Pre-registration: [plans/2026-10-13-spin-fix-prereg.md](../plans/2026-10-13-spin
 `sf_arm.sh` (one arm on card 0), `sf_replay.py` (offline MPC replay), `sf_turn.py` (turn geometry). Sets and per-case data in `spin_fix/`.
 Tokyo reads: `/data/runs/steer_long/spinfix/reads/<arm>`; box (nuPlan): `$DATA_DIR/runs/steer_long/spinfix/`.
 
+**Status (2026-10-14 08:20 JST, v8 PAI read): line 1 fails on one spin, a simulator pose fault (d8bfaaf2); line 2 fails as expected
+(controls zeros 7 vs 6, identical to v7). Nothing adopted.** Read as registered (`sf_read.py --list spin_fix/spin_set.txt` and
+`--list spin_fix/ctrl_all.txt`, base = stored RSG-L18-s0 gains-20 read `/data/runs/route_night/r281/rsg`). v8 run: Tokyo card 1, chain10
+stage SPIN2, 2026-10-13 23:55 -> 2026-10-14 01:05 JST, code = clean worktree `/data/runs/steer_long/spinfix/v8/wt` at 7d001d79, serving
+`JEV_VCONT 1, JEV_LEAD 1, JEV_TRACK gate` (driver.log), `pp` present on the track records; output `/data/runs/route_night/r281/spin_read2`
+(not the suggested `spin_read8`). One control rollout (ec1d0b2b) had no metrics (renderer CUDA out of memory, `failure_reason`); it was rerun
+alone on card 1 from the same worktree (`/data/runs/steer_long/spinfix/reads/v8_ec1d`, 233 s) and merged; `sf_read.py` now skips rollouts
+without metrics and takes `root1,root2` per arm (the earlier version would have scored the failed rollout 0).
+
+| set | spins (base) | zeros (base) | at-fault / front / behind (base) | mean (base) | line |
+|:--|:--|:--|:--|:--|:--|
+| spin set 38 | **1** (26), fast | 15 (16) | 1 / 0 / 6 (1 / 1 / 6) | 0.4516 (0.4437) | 1: **fail** (1 > 0; the spin is a pose fault) |
+| controls 46 | 0 (0) | **7** (6) | 1 / 1 / 19 (0 / 0 / 20) | 0.5823 (0.5668) | 2: **fail** (zeros +1; spins and mean pass) |
+| ctrl_fast 20 | 0 | 0 (0) | 0 / 0 / 13 (0 / 0 / 13) | 0.6157 (0.5958) | |
+| ctrl_slow 16 | 0 | 2 (0) | 0 / 0 / 5 (0 / 0 / 6) | 0.6290 (0.6727) | |
+| ctrl_brake 10 | 0 | 5 (6) | 1 / 1 / 1 (0 / 0 / 1) | 0.4405 (0.3394) | |
+
+The 46 controls are scene for scene the v7 read (same scores: new zeros 268949d2 gate at low speed, 09528162 curv re-timing; recovered
+1bfad87c; 68e53160 front collision, zero both ways), as the offline screen predicted (0 / 46 change). On the spin set v8 changes exactly the
+two v7 spins, as predicted; one is fixed, one is not:
+
+| case | stored RSG (gains 20) | v7 gate | v8 gate | what happened under v8 |
+|:--|:--|:--|:--|:--|
+| 60cc35db | 1.000, spin fast | 1.000, **spin fast 16.3 s** | 1.000, **no spin** | PP keeps the gate open at 16.2-16.3 s (ratio 3.9 / 3.7), where v7 closed it; full is served from 15.0 s through at least 16.6 s |
+| d8bfaaf2 | 0 (offroad), pose jump 2.28 m + tilt 0.65 at 18.1 s, spin fast | 0 (offroad), same fault at 18.3 s, spin fast 18.4 s | 0 (offroad), same fault at 18.2 s (jump 2.18 m, tilt 0.57 -> 0.72 at x 196.8), **spin fast 18.3 s** | the anchor guard fired (logged correction 1.86 rad at 18.2 s, 1.71 at 18.3 s), the reference was mild (gate 0.71, PP 0.22, closed), yet the MPC commanded -0.87 rad at 18.3 s and held full lock to 19.0 s while the car sits at 40-70 deg roll / pitch. Simulator pose fault: the detector is not changed (prereg amendment 3) |
+| 1e8e939e | 0 (at-fault front collision), pose jump 1.70 m + tilt 0.71 at 18.2 s, spin fast 18.9 s | 0 (at-fault lateral collision + offroad), no pose fault, no spin | 0 (same as v7), no pose fault, no spin | the gate / curv path drives past the mesh defect without touching it; the zero remains, not a spin |
+
+Reading: v8 is v7 plus one fix that works (60cc35db). The only spin left on the 38 is the ground-mesh pose fault at d8bfaaf2 (same place in
+every arm that drives there); correcting the anchor yaw is not enough once AlpaSim's physics holds the car tilted, so no serve-side
+reference can remove it. Line 2 is unchanged from v7 and is the same trade as on nuPlan held (the low-speed gate openings that cost
+268949d2 save nuPlan scenes, addendum to amendment 3). nuPlan v8 reads (lines 3-4) are not part of this read; their box commands are in
+[spin_fix/v8_RESUME.md](spin_fix/v8_RESUME.md). Traces: `sf_tilt.py` / `sf_trace.py` on `spin_read2` (Tokyo).
+
 **Status (2026-10-13 23:40 JST, v8): the v7 PAI read failed lines 1-2 (2 spins, controls zeros 7 vs 6). Per case (section 7): one
 gate blind spot (60cc35db) and one simulator pose fault (d8bfaaf2; also 1e8e939e earlier). v8 = `gate` + PP check + tilted-pose anchor
 guard (7d001d79); its PAI read is requested on the Tokyo card-1 queue (`/data/runs/route_night/SPIN_READ_REQUEST2`); nuPlan v8 reads wait
