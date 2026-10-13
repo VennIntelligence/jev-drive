@@ -62,16 +62,18 @@ is 2-4 m off the route; on 334 the 4 s pose aims ~24 m past the entry). Every tu
 | 27870 right (+4.4) | -3.4, 9.7 | -3.4, 8.6 | -3.4, 9.7 | -3.4, 9.7 | -3.4, 9.7 |
 | 24944 left (+4.5) | pole before the turn, 6.4 | 5.9 | off-route, 9.1 | 6.4 | 5.9 |
 
-Cells: car onset (m vs entry), DS. Runs: t4 = `rsg-on-t4`; A `loop-1013-1852-p1` (`cfg/rsg_lat12.json`, P7 aim
+Cells: car onset (m vs entry), DS. First event: a collision in every cell except C2 on 24948 and 27005 (off route), so C2's higher DS
+there (43.7, 33.5) is distance driven before leaving the route, not a completed turn. The default command switches to L / R 18.4-19.6 m
+before the entry on 334, 27005, 24948 and 10.4 m on 27870 (`cmd_on_m` of `rsg_turns.py`). Runs: t4 = `rsg-on-t4`; A `loop-1013-1852-p1` (`cfg/rsg_lat12.json`, P7 aim
 `cfg/P7_la15.json`); B `loop-1013-1903-p1` (`rsg_lat12_vy`; `loop-1013-1902-*` invalid, server bug); C1 `loop-1013-1907-p1`
-(`rsg_lat12_c1`); C2 `loop-1013-1910-p1` (`rsg_lat12_c2`). "flip" = where the command switched to L / R in C1 (m vs entry); in the
-default the switch is 18-20 m before the entry.
+(`rsg_lat12_c1`); C2 `loop-1013-1910-p1` (`rsg_lat12_c2`). "flip" = where the command switched to L / R in C1 (m vs entry).
 
 Reading: the executor horizon (A vs t4) and vy / ay (B) change nothing material. The 18-20 m L/R command is the main onset lever: flipping
 it at 5 m delays the onset by ~4 m on 334 (-10.6 -> -6.6) and 24948 (-3.4 -> +0.8; 24948 then enters within +-3 m of the route onset
 +1.6). With no turn command (C2) the memory alone times the 27005 left turn (+4.2 vs route +5.4 m) but does not make the 24948 right turn;
 334 turns early even with no command (scene / junction-mouth trigger). The steer is a ramp from ~2 s before onset in every arm (the car
-follows a plan that already curves): `figs/steer_lat12_vs_t4.png`, `figs/steer_A_B_C1_C2.png`.
+follows a plan that already curves): `figs/steer_lat12_vs_t4.png`, `figs/steer_A_B_C1_C2.png`. The memory ON / OFF, C1 and C2 rows were re-read with the landed `scripts/rsg_turns.py`
+on 2026-10-13 ~19:35 JST: identical.
 
 ## Start delay
 

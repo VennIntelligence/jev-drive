@@ -35,7 +35,7 @@ RSG on B2D is closed by the user; the monitor stays live as a tool.
 - `rsg_b2d.md` (results): RSG-L18-s0 in the Bench2Drive loop
 - `stage1_cinque.md` (results): shipped Cinque driving Bench2Drive on …
 
-[results/](results/) 2 result files · [figs/](figs/) 4 figures · [lib/](lib/) 2 library · [scripts/](scripts/) 16 entry points
+[results/](results/) 2 result files · [figs/](figs/) 5 figures · [lib/](lib/) 2 library · [scripts/](scripts/) 16 entry points
 <!-- files:end -->
 
 ## What it is
@@ -114,6 +114,20 @@ The agent publishes `state["phase"]`, drawn as the coloured tag in the viewer's 
 timer in N s)`, `the plan stops`, `lead MPC`, `starting (<mode>)`, `stop latch (plan asked to stop)`. `LOADING` is the viewer's own
 (no fresh state: map loading or between routes). Use it to tell a model that will not move (RSG at standstill) from a stalled loop.
 
+## Landing check (2026-10-13 19:35 JST)
+
+From the landed paths on Tokyo, card 0, windowed, `server.sh` + `loop.sh 24721 cfg/op_alone_smooth.json` with the landed viewer: route
+24721 DS 100, RC 100, 1474 ticks, the car moves at 5.85 s (FIX1 launch), `phase` / model / config / overlays published
+(`$DATA_DIR/runs/b2d_monitor/runs/loop-1013-1935-p1`); the loop's second pass with the kept map (`VIZ_REUSE_WORLD` default) also DS 100
+but 1382 ticks (`loop-1013-1936-p2`): a kept world is not the same rollout, hence the rule above. `py_compile` of every `.py` passes
+under envs/carla (3.8.20) and envs/op-train (3.11.11); `rsg_server.py`, `sh30_core`, `pai_core`, `rsg_pack`, `rmem` import under op-train.
+`rsg_turns.py` reproduces the memory ON / OFF, C1 and C2 rows of `results/rsg_b2d.md`.
+
+![the landed viewer, shipped Cinque on 24721](figs/viewer_cinque_24721_landed.png)
+
+`figs/viewer_cinque_24721_landed.png`: the landing check above (pass 2). Look at the top bar (`DRIVING` phase tag, model, config,
+route, progress), the blue route with the 10 / 20 / 40 / 80 m marks and openpilot's yellow plan on it, and the picker's DS 100.
+
 ## Figures
 
 ![RSG-L18-s0 on 334, 7 m before a left turn](figs/viewer_rsg_334_left.png)
@@ -135,7 +149,8 @@ fed `parity_ego` row.
 Look at the ramps from ~2 s before the onset, nearly the same in both arms, and the onsets in the legends (-12.6 vs -10.6 m on 334, equal
 on the right turns): the longer aim only softens the steer after the onset; it does not move the early turn.
 
-![steer around the turn onset, arms A / B / C1](figs/steer_A_B_C1_C2.png)
+![steer around the turn onset, arms A / B / C1 / C2](figs/steer_A_B_C1_C2.png)
 
-`figs/steer_A_B_C1_C2.png`: the same for arms A, B (+ vy / ay) and C1 (L/R within 5 m); C2 is not drawn (the plotting script then
-had three colours; fixed since). Look at 334 and 24948: only C1 moves the onset (legend), B lies on A.
+`figs/steer_A_B_C1_C2.png`: the same for arms A, B (+ vy / ay), C1 (L/R within 5 m) and C2 (command S), regenerated with the landed
+`steer_plot.py` (the Tokyo original dropped the 4th arm). Look at the legends: B lies on A everywhere; C1 moves the onset later on 334
+and 24948; C2 makes 27005 turn late and smoothly (+4.2 m) and makes no turn at all on 24948.
