@@ -154,7 +154,7 @@ three runs.
 memory"). On 2026-10-10 this killed 28 tries of 18 jobs in 90 min (one WOD eval needed 14 starts). The pool now:
 
 - **holds a start** while working set + RAM that jobs younger than 5 min have not allocated yet + the job's RAM
-  (`--ram`, at most 1.2 x history's max RSS + 1; undeclared: history, else `ram_default_gb` 8) + `ws_reserve_gb` (16)
+  (`--ram`, at most 1.2 x history's max + 1; undeclared: history, else `ram_default_gb` 8) + `ws_reserve_gb` (16)
   would be above the line (`queue`: `memory working set ... > kill line`, cause `ram`). After `ws_wait_s` (10 min) of
   that the job starts anyway, one per round (event `ws_override`): the cache could not be dropped.
 - **drops page cache** (`cl trim`, event `trim`; idle files first, oldest access first, then open files, whose mapped
@@ -224,7 +224,7 @@ command when rc alone is not enough.
 | ports | a free block of 2 x `carla` server indices in 160-494 whose RPC and TM port blocks (index i: RPC 2000 + 50i, TM = RPC block of i + 120) miss every pool job, every hold and every LISTENING TCP port on the box; freed only when the job's whole process tree has exited |
 | CPU | charged cores of pool jobs + holds <= cgroup quota x `cpu_overcommit` (1.0). Charge = declared `cpu` while the job is younger than 5 min (or unmeasured), then max(1, 1.2 x its peak measured cores over the last 5 min) (utime + stime of its process tree, every round); holds keep declared cores. `queue` shows `cpu m/d` = measured peak / declared, `top` the charged total. With >= 3 finished runs in history a young or queued job is charged min(declared, 1.2 x their max peak cores). |
 | kill line | working set (`memory.current` - `inactive_file`) + unallocated RAM of jobs younger than 5 min + the job's RAM + 16 GiB <= 0.98 x `memory.max`; see "Memory: the kill line" |
-| PIDs / RAM | pids.current + threads of jobs younger than 5 min + the job's estimate (thread model) <= 0.80 pids.max; cgroup memory without page cache (`memory.stat` anon + shmem + kernel) + what jobs younger than 5 min have not allocated yet (`ram_gb` - their tree's RSS, tapering to 0 at 5 min) + the job's `ram_gb` <= 0.85 memory.max; `ram_gb` counts as at most 1.2 x history's max RSS + 1 GB. (Until 2026-10-08 the whole `ram_gb` of every young job was added on top of the measured memory: half of that day's GPU-job queueing.) |
+| PIDs / RAM | pids.current + threads of jobs younger than 5 min + the job's estimate (thread model) <= 0.80 pids.max; cgroup memory without page cache (`memory.stat` anon + shmem + kernel) + what jobs younger than 5 min have not allocated yet (`ram_gb` - their tree's private memory, tapering to 0 at 5 min) + the job's `ram_gb` <= 0.85 memory.max; `ram_gb` counts as at most 1.2 x history's max + 1 GB. A tree's memory is anon + shmem (`/proc/<pid>/status` RssAnon + RssShmem), what the kill line counts; not RSS, which charged every job the shared file pages of its libraries (~5 GB per AlpaSim read until 2026-10-13). (Until 2026-10-08 the whole `ram_gb` of every young job was added on top of the measured memory: half of that day's GPU-job queueing.) |
 | idle card (work conservation) | A card with no pool job, no whole hold and <= 1 GB used outside the pool for >= `idle_s` (120 s, config) takes the highest-priority queued job with `vram_gb` > 1 that is blocked **only** by the CPU budget or the PID plan cap (event `admit_idle`). VRAM, RAM, CARLA and ports are never relaxed; CPU-only jobs (`vram_gb` <= 1) never use the rule. |
 | core pinning | Each job is pinned to `cpu` cores nobody else is pinned to. Under `cpu_overcommit` CPU-only stages can pin every host core while most of them idle; a job with `vram_gb` > 1 that fits a card is then pinned to the least-pinned cores of the card's NUMA node (event `pin_shared`) instead of waiting. CPU-only jobs wait for free cores. (2026-10-11: 4 cards idle 12 min behind bench scoring shards.) |
 | pinning watchdog | A queued job restricted by `gpus` whose allowed cards are busy gets an idle card (>= `idle_s`) outside `gpus` added to its `gpus` and starts there (event `auto_retarget`). `submit --pin-strict` opts out. |
@@ -235,7 +235,7 @@ do not count and do not make a card busy) wins, VRAM best-fit breaks ties: sprea
 keeps every card computing (one serial chain per card left cards at 0-20% util with one CARLA server where six
 fit, 2026-10-05); best-fit plus the head-job reservation keeps room for a large job.
 
-**History.** When a job ends `done` (>= 60 s), the dispatcher appends its peak VRAM, peak cores and peak RSS to
+**History.** When a job ends `done` (>= 60 s), the dispatcher appends its peak VRAM, peak cores and peak private memory to
 `runs/pool/history.json` under its history key: env `CL_HIST_KEY` when the submitter sets one (`jevdrive.bench` sets
 `bn-<stage kind>@<vram>gb`, so a new model's first run is already known), else its name; then the prefix (lower case, trailing `-s3`, `-k2`, `_t0`, `-007`, `-pf`, digits stripped
 repeatedly: `op-eval-s3-pf` and `op-eval-k2` are `op-eval`; last 20 kept). `submit` without `--vram` / `--cpu` then
@@ -260,7 +260,7 @@ One day's record replayed through old and new accounting: `experiments/cl_infra/
 
 **Process safety.** Each job runs in its own session; its tree is recorded by (pid, start time) plus a `CL_TOKEN` env
 entry (`jevdrive.cl.procs`). When the root exits, members still alive (orphan CARLA servers, setsid children) are
-stopped through a pidfd; resources are freed only after the tree is empty. Cancel, timeout and the RSS cap stop the
+stopped through a pidfd; resources are freed only after the tree is empty. Cancel, timeout and the memory cap (`max_rss_gb`) stop the
 tree the same way. The dispatcher can be restarted at any time (`tmux` window closed, SIGTERM): running jobs keep
 running and are adopted from `state.json`.
 

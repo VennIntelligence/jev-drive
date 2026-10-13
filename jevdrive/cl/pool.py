@@ -46,8 +46,9 @@ card when (all measured live, nvidia-smi cached <= 15 s):
             With >= 3 finished runs in history a young or queued job is charged min(declared, 1.2 x their max).
   PIDs/RAM  pids.current + threads of jobs younger than 5 min + the job's estimate <= 0.80 pids.max; cgroup memory
             without page cache (anon + shmem + kernel) + what young jobs have not allocated yet (ram_gb - their
-            tree's RSS, tapering to 0 at 5 min) + ram_gb <= 0.85 memory.max (ram_gb at most 1.2 x history's max
-            RSS + 1).
+            tree's private memory, tapering to 0 at 5 min) + ram_gb <= 0.85 memory.max (ram_gb at most 1.2 x
+            history's max + 1). A tree's memory is its anon + shmem (rss_gb), not RSS: shared file pages are
+            not charged (since 2026-10-13; history before that is ~5 GB high for AlpaSim reads).
 Among the cards that fit, the least loaded (fewest GPU jobs of the pool + foreign GPU processes; CPU-only jobs with
 vram_gb <= 1 do not count and do not make a card busy) wins and VRAM best-fit breaks ties:
 spreading keeps every card computing, best-fit keeps room for a large job. A job blocked > hold_s (15 min) at the head
@@ -372,7 +373,7 @@ class Spec:
     when_exists: str = ""                         # stay queued until this path exists
     tries: int = 1
     timeout_h: float = 0.0
-    max_rss_gb: float = 0.0                       # stop the job when its tree's RSS exceeds this
+    max_rss_gb: float = 0.0                       # stop the job when its tree's private memory (anon + shmem) exceeds this
     profile: str = ""                             # thread profile (profiles.py); default for CARLA jobs: profiles.DEFAULT
 
     def check(self) -> "Spec":
@@ -539,14 +540,18 @@ def free_index_block(used_blocks: set, span: int, lo: int, hi: int):
 
 
 def rss_gb(pids) -> float:
-    page = os.sysconf("SC_PAGE_SIZE") if hasattr(os, "sysconf") else 4096
+    """GB of private memory (RssAnon + RssShmem) over `pids`: what the platform's kill line counts
+    (memory.current - inactive_file). Not RSS: file-backed pages (shared libraries, mmapped data) are shared by
+    every concurrent job and counted once per process by RSS, which overstated an AlpaSim read by ~5 GB."""
     t = 0
     for p in pids:
         try:
-            t += int(Path("/proc/%d/statm" % p).read_text().split()[1]) * page
+            kb = {k: int(v.split()[0]) for k, v in (ln.split(":", 1) for ln in
+                  Path("/proc/%d/status" % p).read_text().splitlines() if ln.startswith("Rss"))}
+            t += kb.get("RssAnon", 0) + kb.get("RssShmem", 0)
         except (OSError, ValueError, IndexError):
             pass
-    return t / 2 ** 30
+    return t / 2 ** 20
 
 
 @dataclass
