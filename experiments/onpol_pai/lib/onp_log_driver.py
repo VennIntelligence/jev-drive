@@ -37,13 +37,22 @@ serving input (f-theta camera through pai_core, rendered 10 Hz frames in every s
                 fed row (vhist.py JEV_VHIST=zero's entries; that switch alone zeroes it from decision 0, so it must stay unset here), logged
                 as `vhist`. Records gain `after` (the controls active at this call)
 
+  branch        ONP_BRANCH (unset = off, bit-identical to the driver without it): `g<gain>s<scale>[t<seconds>]`, e.g. g1.5s0.8 (t default
+                3.0). For the decisions k_eff .. k_eff + 10 t - 1 (k_eff = max(switch k, ONP_FGT_K = 17), 10 Hz) the served plan's 8 poses
+                are transformed before the MPC sees them (branch_poses: yaw and segment course about the ego multiplied by g at the same
+                arc length, then the path re-sampled at s times its arc length), the raw policy plan before and after (turning school P3,
+                experiments/route_follow/plans/2026-10-14-p3-branch-prereg.md). g1s1 returns the plan untouched. Records gain `branch`
+                ({g, s, t, on}) and, while on, `poses_branch` (the transformed poses; `poses` stays the raw served plan)
+
 A `drive` before the switch without a ground-truth message of its own timestamp is aborted with a gRPC error and counted. Run through
-experiments/onpol_pai/scripts/onp_pass2.sh (DRV_PY of pai_run.sh); environment as pai_driver.py plus ONP_HORIZON, ONP_SWITCH, ONP_AFTER.
+experiments/onpol_pai/scripts/onp_pass2.sh (DRV_PY of pai_run.sh); environment as pai_driver.py plus ONP_HORIZON, ONP_SWITCH, ONP_AFTER,
+ONP_BRANCH, ONP_FGT_K.
 """
 from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 
 import numpy as np
@@ -72,6 +81,33 @@ SWITCH_ALL, SWITCH = switch_table(os.environ.get("ONP_SWITCH", ""))
 AFTER = {x for x in os.environ.get("ONP_AFTER", "").replace(" ", "").split(",") if x}
 assert AFTER <= {"rmem0", "vhzero"}, f"ONP_AFTER={AFTER}: rmem0, vhzero"
 assert not ("vhzero" in AFTER and P.VH.ON), "ONP_AFTER=vhzero needs JEV_VHIST unset (it would act before the switch)"
+_m = re.fullmatch(r"g([\d.]+)s([\d.]+)(?:t([\d.]+))?", os.environ.get("ONP_BRANCH", "").strip())
+assert _m or not os.environ.get("ONP_BRANCH", "").strip(), "ONP_BRANCH=g<gain>s<scale>[t<seconds>], e.g. g1.5s0.8"
+BRANCH = dict(g=float(_m[1]), s=float(_m[2]), t=float(_m[3] or 3.0)) if _m else None
+FGT_K = int(os.environ.get("ONP_FGT_K", "17"))
+assert not (BRANCH and P.TR.ON), "ONP_BRANCH transforms the plan handed to make_cached_plan; JEV_TRACK must be off"
+
+
+def branch_poses(poses, g: float, s: float):
+    """(8, 3) x, y, yaw in the ego frame (ego at the origin, yaw 0) -> the transformed plan. Curvature gain g: every pose's yaw and every
+    segment's course (from the previous pose, the origin first) are multiplied by g, the segment lengths kept, the path re-integrated.
+    Speed scale s: the (transformed) polyline origin -> pose 8 re-sampled at s times each pose's arc length (same path, shorter), yaw
+    interpolated along the arc. g = s = 1 returns the input untouched."""
+    q = np.asarray(poses, np.float64)
+    if g == 1.0 and s == 1.0:
+        return q
+    xy = np.r_[[[0.0, 0.0]], q[:, :2]]
+    d = np.diff(xy, axis=0)
+    ds = np.hypot(*d.T)
+    c = g * np.unwrap(np.r_[0.0, np.arctan2(d[:, 1], d[:, 0])])[1:]
+    yaw = g * np.unwrap(np.r_[0.0, q[:, 2]])
+    xy = np.r_[[[0.0, 0.0]], np.cumsum(ds[:, None] * np.c_[np.cos(c), np.sin(c)], 0)]
+    S = np.r_[0.0, np.cumsum(ds)]
+    if s != 1.0:
+        u = np.maximum.accumulate(S + 1e-9 * np.arange(len(S)))           # strictly increasing for interp (stopped plans)
+        w = s * u[1:]
+        return np.c_[np.interp(w, u, xy[:, 0]), np.interp(w, u, xy[:, 1]), np.interp(w, u, yaw)]
+    return np.c_[xy[1:], yaw[1:]]
 
 
 class MaskedMemory:
@@ -112,6 +148,19 @@ class VhShim:
 if "vhzero" in AFTER:
     P.VH = VhShim(P.VH)
 TL = threading.local()
+
+
+if BRANCH:
+    _make_plan = P.S.make_cached_plan
+
+    def _branch_plan(t0, anchor, poses):
+        """pai_driver's make_cached_plan with the plan transformed inside the window set by drive (TL.branch); logs poses_branch."""
+        if getattr(TL, "branch", False):
+            poses = branch_poses(poses, BRANCH["g"], BRANCH["s"])
+            TL.extra["poses_branch"] = np.round(poses, 4).tolist()
+        return _make_plan(t0, anchor, poses)
+
+    P.S.make_cached_plan = _branch_plan
 
 
 class Out:
@@ -212,15 +261,20 @@ class LogDriver(P.Driver):
                 s.vh = {"zero": True}
             x["after"] = sorted(AFTER)
         TL.extra = {**x, "switch": sw, "ret": "model" if policy else "log"}
+        if BRANCH:                                           # P3: the plan transform from k_eff for t s
+            k0 = max(sw, FGT_K) if policy else None
+            TL.branch = policy and s.count["drive"] < k0 + int(round(10 * BRANCH["t"]))
+            TL.extra["branch"] = {**BRANCH, "on": bool(TL.branch)}
         try:
             r = super().drive(req, ctx)                      # the model, its record and its dumps
         finally:
-            TL.extra = None
+            TL.extra, TL.branch = None, False
         return r if policy else egodriver_pb2.DriveResponse(trajectory=ref[0])
 
     def get_version(self, req, ctx):
         v = super().get_version(req, ctx)
-        v.version_id += "-logreplay" + ("-switch" if SWITCH or SWITCH_ALL is not None else "") + "".join(f"-{a}" for a in sorted(AFTER))
+        v.version_id += "-logreplay" + ("-switch" if SWITCH or SWITCH_ALL is not None else "") + "".join(f"-{a}" for a in sorted(AFTER)) \
+            + (f"-branch-g{BRANCH['g']}s{BRANCH['s']}t{BRANCH['t']}" if BRANCH else "")
         return v
 
 

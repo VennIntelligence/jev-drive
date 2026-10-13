@@ -19,6 +19,13 @@ handover decision k and the policy drives from k on (experiments/onpol_pai/lib/o
           s_short  target station minus the furthest station reached (> 0: did not get there)
           ho_off   the ego's offset from the log at the handover decision (drive.jsonl `log_now` of record k_eff)
   table (Mac or Tokyo, plain python3)  rf_branch.py table --read <json> [--md <md>]   per-scene table (4 branches), ceiling, completion by arm.
+
+Turning school P3 (plans/2026-10-14-p3-branch-prereg.md): arms `<handover>@<branch>` (rf_branch.sh: ONP_BRANCH, the plan transform for
+--win decisions from k_eff). `read` then also writes the state at the window end (decision k_eff + --win, default 30): w_off / w_lat (offset
+from the log, lateral signed, drive.jsonl `log_now`), w_v (fed speed), w_droute (distance to the route at that time).
+  cmp   rf_branch.py cmp <root A> <root B>   per scene: served plans of every decision and controller tracks of two runs (S1 gate);
+        with --branch also the raw and transformed plan at k_eff and the decisions with the transform on (S2 gate)
+  p3    rf_branch.py p3 --read <json> [--md <md>]   per handover a scene x transform table, the ceiling over all cells, secondaries.
 """
 from __future__ import annotations
 
@@ -27,6 +34,7 @@ import glob
 import json
 import math
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -118,8 +126,9 @@ def station(L, xy, s_hint=0.0):
     return st, dist
 
 
-def handover(root):
-    """{scene: handover facts} from the driver record at the effective switch decision: offset from the log, log time, fed speed."""
+def handover(root, win=30):
+    """{scene: handover facts} from the driver record at the effective switch decision: offset from the log, log time, fed speed; and
+    the same at the window end k_eff + win (w_*; w_now = its time for the route distance)."""
     out = {}
     for f in glob.glob(os.path.join(root, "runs", "*", "driver", "drive.jsonl")):
         for line in open(f):
@@ -128,8 +137,11 @@ def handover(root):
             r = json.loads(line)
             sw = r.get("switch")
             if sw is not None and r["k"] == max(sw, FGT_K) and "log_now" in r:
-                out[r["scene"]] = dict(ho_off=round(math.hypot(*r["log_now"][:2]), 2), ho_log_t=r.get("log_t"),
+                out.setdefault(r["scene"], {}).update(ho_off=round(math.hypot(*r["log_now"][:2]), 2), ho_log_t=r.get("log_t"),
                                        ho_v=round(10.0 * math.hypot(*r["ego"][4:6]), 2) if "ego" in r else None)
+            if sw is not None and r["k"] == max(sw, FGT_K) + win and "log_now" in r:
+                out.setdefault(r["scene"], {}).update(w_off=round(math.hypot(*r["log_now"][:2]), 2), w_lat=round(r["log_now"][1], 2),
+                                                      w_v=round(10.0 * math.hypot(*r["ego"][4:6]), 2) if "ego" in r else None, w_now=r["now"])
     return out
 
 
@@ -144,7 +156,7 @@ def read(a):
     rows = []
     for spec in a.arm:
         arm, root = spec.split("=", 1)
-        ho = handover(root)
+        ho = handover(root, a.win)
         for sim in sorted(glob.glob(os.path.join(root, "runs", "*", "sim"))):
             f = os.path.join(sim, "aggregate", "results-summary.json")
             if not os.path.exists(f):
@@ -156,7 +168,7 @@ def read(a):
                     continue
                 p, m, score = PL[sc], r.get("metrics") or {}, float(r.get("score") or 0)
                 C, (ser, _) = X.ctrl(sim, r["rollout_id"]), X.series(sim, sc, r["rollout_id"])
-                row = dict(arm=arm, scene=sc, side=p["side"], score=score, k=p["k_eff"].get(arm.split("+")[0]), rid=r["rollout_id"], **ho.get(sc, {}))
+                row = dict(arm=arm, scene=sc, side=p["side"], score=score, k=p["k_eff"].get(re.split("[+@]", arm)[0]), rid=r["rollout_id"], **ho.get(sc, {}))
                 if C is None or ser is None:
                     rows.append(dict(row, done=None, note="no controller trace / metrics"))
                     continue
@@ -182,6 +194,9 @@ def read(a):
                 except Exception:  # noqa: BLE001
                     R, rerr = L, 1
                 dr = X.poly_proj(R, xy)[0]
+                if row.get("w_now") is not None:
+                    iw = int(np.argmin(np.abs(np.asarray(C["t"], float) - row["w_now"])))
+                    row.update(w_droute=round(float(dr[iw]), 2), w_zeroed=bool(C["t"][iw] >= t_zero))
                 ok = C["t"] < t_zero
                 hit = np.where((st >= p["target"]) & ok & (dr <= ROUTE_TOL))[0]
                 ix = np.where((st >= p["exit"]) & ok)[0]
@@ -226,6 +241,117 @@ def table(a):
         Path(a.md).write_text(s + "\n")
 
 
+def drive_recs(root):
+    """{scene: {k: drive record}} of every run under root."""
+    R = {}
+    for f in glob.glob(os.path.join(root, "runs", "*", "driver", "drive.jsonl")):
+        for line in open(f):
+            if '"kind": "drive"' in line:
+                r = json.loads(line)
+                R.setdefault(r["scene"], {}).setdefault(r["k"], r)
+    return R
+
+
+def tracks(root):
+    """{scene: (score, (n, 2) controller x, y)}."""
+    import csv
+    import numpy as np
+    out = {}
+    for f in glob.glob(os.path.join(root, "runs", "*", "sim", "aggregate", "results-summary.json")):
+        for r in json.load(open(f))["rollouts"]:
+            c = list(csv.DictReader(open(f.replace("aggregate/results-summary.json", f"controller/alpasim_controller_{r['rollout_id']}.csv"))))
+            out[r["clipgt_id"]] = (r["score"], np.array([[float(x["x"]), float(x["y"])] for x in c]))
+    return out
+
+
+def cmp(a):
+    """S1: the two runs' served plans (`poses_branch` where present, else `poses`) at every decision and their tracks, per scene.
+    S2 (--branch): raw vs transformed plan at k_eff and the decisions with the transform on."""
+    import numpy as np
+    A, B, TA, TB = drive_recs(a.a), drive_recs(a.b), tracks(a.a), tracks(a.b)
+    srv = lambda r: np.array(r.get("poses_branch", r["poses"]))
+    for sc in sorted(set(A) & set(B)):
+        ks = sorted(k for k in set(A[sc]) & set(B[sc]) if "poses" in A[sc][k] and "poses" in B[sc][k])
+        d = np.array([np.abs(srv(A[sc][k]) - srv(B[sc][k])).max() for k in ks])
+        (sa, ta), (sb, tb) = TA.get(sc, (None, np.zeros((0, 2)))), TB.get(sc, (None, np.zeros((0, 2))))
+        n = min(len(ta), len(tb))
+        e = np.hypot(*(ta[:n] - tb[:n]).T) if n else np.array([np.nan])
+        first = next((k for k, x in zip(ks, d) if x > 0), None)
+        print(f"{sc[7:15]}: decisions {len(ks)}, plan max|diff| {d.max():.6f}, first differing k {first}; track rows {len(ta)}/{len(tb)}, "
+              f"pos diff median {np.median(e):.4f} max {np.max(e):.3f}; score {sa} / {sb}")
+        if a.branch:
+            on = [k for k in sorted(A[sc]) if (A[sc][k].get("branch") or {}).get("on")]
+            if on:
+                r = A[sc][on[0]]
+                print(f"  branch {r['branch']}: on at k {on[0]}..{on[-1]} ({len(on)} decisions), poses_branch on all of them: "
+                      f"{all('poses_branch' in A[sc][k] for k in on)}, off records with poses_branch: "
+                      f"{sum('poses_branch' in x for k, x in A[sc].items() if k not in on)}")
+                print("  raw   ", np.round(r["poses"], 2).tolist())
+                print("  served", np.round(r["poses_branch"], 2).tolist())
+                k1 = on[-1] + 1
+                if k1 in A[sc] and k1 in B[sc]:
+                    print(f"  k {k1} (window over): raw plan == served plan: {'poses_branch' not in A[sc][k1]}")
+
+
+TRANSFORMS = ["g1s1", "g1.25s1", "g1.5s1", "g2s1", "g1s0.8", "g1s0.6", "g1.5s0.8", "g1.5s0.6"]
+
+
+def p3(a):
+    """P3 tables: per handover a scene x transform outcome table; ceiling over all cells; per completing cell what it needed; window-end state."""
+    D = json.load(open(a.read))
+    by = {(r["scene"], *r["arm"].split("@")): r for r in D["rows"]}
+    hos = [h for h in ("d10", "d0") if any(k[1] == h for k in by)]
+    tfs = [t for t in TRANSFORMS if any(k[2] == t for k in by if len(k) > 2)]
+    scenes = sorted({k[0] for k in by}, key=lambda sc: (by[next(k for k in by if k[0] == sc)]["side"], sc))
+    ab = {"collision": "coll", "offroad": "offr", "corridor": "corr", "other": "oth", "": ""}
+    def f(r):
+        if r is None:
+            return "-"
+        if r.get("done"):
+            return "**done**"
+        return ab.get(r.get("zero") or "", r.get("zero")) or r.get("end", "?")
+    L, done_sc = [], {}
+    for h in hos:
+        L += [f"### handover {h}", "", "| scene | side | " + " | ".join(tfs) + " |", "|:--|:--|" + "--:|" * len(tfs)]
+        for sc in scenes:
+            rr = [by.get((sc, h, t)) for t in tfs]
+            side = next(r["side"] for r in rr if r)
+            L.append(f"| {sc[7:15]} | {side} | " + " | ".join(f(r) for r in rr) + " |")
+            for t, r in zip(tfs, rr):
+                if r and r.get("done"):
+                    done_sc.setdefault(sc, []).append(f"{h}@{t}")
+        L.append("")
+        for t in tfs:
+            rr = [by[(sc, h, t)] for sc in scenes if (sc, h, t) in by]
+            L.append(f"- {h}@{t}: completed {sum(bool(r.get('done')) for r in rr)} / {len(rr)}, zeros {sum(r['score'] == 0 for r in rr)}, "
+                     f"mean score {sum(r['score'] for r in rr) / max(len(rr), 1):.3f}")
+        L.append("")
+    n = len(scenes)
+    idc = {sc for sc, c in done_sc.items() if any(x.endswith("@g1s1") for x in c)}
+    L += [f"ceiling (>= 1 completing cell over {len(hos)} handovers x {len(tfs)} transforms): {len(done_sc)} / {n}; identity only: {len(idc)} / {n}", ""]
+    need = lambda c: "identity" if c == "g1s1" else "both" if not c.startswith("g1s") and not c.endswith("s1") else "curvature" if c.endswith("s1") else "speed"
+    L += ["| scene | completing cells | needed |", "|:--|:--|:--|"]
+    for sc in scenes:
+        c = done_sc.get(sc, [])
+        L.append(f"| {sc[7:15]} | {', '.join(c) or '-'} | {(lambda u: 'none (identity completes)' if 'identity' in u else ', '.join(sorted(u)) or '-')({need(x.split('@')[1]) for x in c})} |")
+    L += ["", "window end (k_eff + win): offset from the log / lateral (+ = ego right of the log), distance to the route, fed speed; mean over",
+          "completing vs failing cells of each transform", "", "| cell | n done | w_off done | w_droute done | w_v done | w_off fail | w_droute fail | w_v fail |",
+          "|:--|--:|--:|--:|--:|--:|--:|--:|"]
+    import statistics as st
+    m = lambda v: f"{st.mean(v):.2f}" if v else "-"
+    for h in hos:
+        for t in tfs:
+            rr = [by[(sc, h, t)] for sc in scenes if (sc, h, t) in by]
+            dd, ff = [r for r in rr if r.get("done")], [r for r in rr if not r.get("done")]
+            g = lambda R_, k: [r[k] for r in R_ if r.get(k) is not None]
+            L.append(f"| {h}@{t} | {len(dd)} | {m(g(dd, 'w_off'))} | {m(g(dd, 'w_droute'))} | {m(g(dd, 'w_v'))} | {m(g(ff, 'w_off'))} | "
+                     f"{m(g(ff, 'w_droute'))} | {m(g(ff, 'w_v'))} |")
+    s = "\n".join(L)
+    print(s)
+    if a.md:
+        Path(a.md).write_text(s + "\n")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -238,8 +364,16 @@ if __name__ == "__main__":
     p.add_argument("--plan", required=True)
     p.add_argument("--arm", nargs="+", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--win", type=int, default=30)
     p = sp.add_parser("table")
     p.add_argument("--read", required=True)
     p.add_argument("--md")
+    p = sp.add_parser("cmp")
+    p.add_argument("a")
+    p.add_argument("b")
+    p.add_argument("--branch", action="store_true")
+    p = sp.add_parser("p3")
+    p.add_argument("--read", required=True)
+    p.add_argument("--md")
     a = ap.parse_args()
-    {"plan": plan, "read": read, "table": table}[a.cmd](a)
+    {"plan": plan, "read": read, "table": table, "cmp": cmp, "p3": p3}[a.cmd](a)
