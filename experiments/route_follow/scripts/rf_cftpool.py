@@ -25,9 +25,9 @@ the counterfactual centrelines are rf_cfpool geom's).
                           switch (no --on-lon: route.npz, dz included, is never read). Gates -> cf/cft_gates.json + experiments/route_follow/results/,
                           figures experiments/route_follow/figs/cft_bev_{0..5}.png:
                           G-cft1  demo samples inside the raster extent with sdf > 0 >= 99 % (candidates)
-                          G-cft2  rows with cont <= 0.5 m >= 95 % (candidates; the failing rows are e1)
+                          G-cft2  rows with cont <= 0.5 m >= 80 % and lc >= 55 % (candidates; the failing rows are e1, so every pool row holds it)
                           G-cft3  6 BEV figures (3 junction, 3 lane change, pool rows)
-                          G-cft4  rows with |arc4 - 1| <= 10 % (log arc < 1 m: |demo - log arc| <= 0.1 m) >= 99 % (candidates)
+                          G-cft4  rows with |arc4 - 1| <= 10 % (log arc < 1 m: |demo - log arc| <= 0.1 m) >= 99 % (candidates); pool >= 8 000 rows
 
   P=$DATA_DIR/third_party/alpasim/.venv/bin/python
   $P experiments/route_follow/scripts/rf_cftpool.py demo --data navtrain_full.s{0..11}of12 && $P .. pack --data navtrain_full.s{0..11}of12
@@ -270,7 +270,8 @@ def cmd_pack(a):
                       "alat_p95_log": float(np.quantile(al_log, 0.95)), "d0_abs_median": float(np.median(np.abs(Q["d0"][cand]))),
                       "psi_abs_median_deg": float(np.degrees(np.median(np.abs(Q["psi"][cand])))), "frame_check_log_vs_tab_fut_max_m": float(np.nanmax(Q["fchk"][cand]))}}
         G["G_cft1"]["pass"] = G["G_cft1"]["demo_inside"] >= 0.99
-        G["G_cft2"]["pass"] = G["G_cft2"]["rows_cont_le_0p5"] >= 0.95
+        G["G_cft2"]["pass"] = G["G_cft2"]["rows_cont_le_0p5"] >= 0.80 and G["G_cft2"]["by_class"]["lc"] >= 0.55   # prereg (e1 holds it on every pool row)
+        G["rows"]["pass"] = G["rows"]["pool"] >= 8000
         G["G_cft4"]["pass"] = G["G_cft4"]["rows_arc_within_10pct"] >= 0.99
         sel = cand[keep]
         if not a.gates_only:

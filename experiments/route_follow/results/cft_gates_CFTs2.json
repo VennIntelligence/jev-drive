@@ -1,0 +1,125 @@
+{
+ "data": [
+  "navtrain_full.s2of12"
+ ],
+ "rows": {
+  "cf_rows": 1239,
+  "candidates": 1239,
+  "pool": 935,
+  "pool_by_class": {
+   "j0": 608,
+   "j1": 208,
+   "lc": 119
+  },
+  "candidates_by_class": {
+   "j0": 769,
+   "j1": 256,
+   "lc": 214
+  },
+  "tokens": 765,
+  "logs": 393
+ },
+ "exclusions": {
+  "e1_cont": 170,
+  "e2_alat": 122,
+  "e3_actor_overlap": 76,
+  "e4_offroad": 1,
+  "any": 304,
+  "by_class": {
+   "j0": {
+    "e1": 71,
+    "e2": 95,
+    "e3": 42,
+    "e4": 1
+   },
+   "j1": {
+    "e1": 29,
+    "e2": 22,
+    "e3": 5,
+    "e4": 0
+   },
+   "lc": {
+    "e1": 70,
+    "e2": 5,
+    "e3": 29,
+    "e4": 0
+   }
+  },
+  "actor_label_rows": 1239,
+  "log_future_actor_overlap": 0
+ },
+ "G_cft1": {
+  "samples": 9893,
+  "demo_inside": 0.9998989184271707,
+  "log_inside": 1.0,
+  "demo_inside_by_class": {
+   "j0": 0.9998370008149959,
+   "j1": 1.0,
+   "lc": 1.0
+  },
+  "pool_demo_inside": 1.0,
+  "pass": true
+ },
+ "G_cft2": {
+  "rows_cont_le_0p5": 0.8627925746569814,
+  "by_class": {
+   "j0": 0.9076723016905072,
+   "j1": 0.88671875,
+   "lc": 0.6728971962616822
+  },
+  "median_cont": 0.07494545727968216,
+  "p95_cont": 0.8176829814910889,
+  "pass": false
+ },
+ "G_cft4": {
+  "rows_arc_within_10pct": 1.0,
+  "median_ratio": 0.9998447299003601,
+  "stopped_rows_log_arc_lt_1m": 5,
+  "pass": true
+ },
+ "diag": {
+  "gap4_median_by_class": {
+   "j0": 1.4670125246047974,
+   "j1": 2.6987557411193848,
+   "lc": 3.216968536376953
+  },
+  "gap4_ge_1m_pool": 0.5144385026737968,
+  "alat_p95_demo": 5.938504219055176,
+  "alat_p95_log": 2.426093578338623,
+  "d0_abs_median": 0.31857192516326904,
+  "psi_abs_median_deg": 1.9731643199920654,
+  "frame_check_log_vs_tab_fut_max_m": 0.06733091175556183
+ },
+ "G_cft3": [
+  {
+   "fig": "experiments/route_follow/figs/cft_bev_0.png",
+   "token": "0cc07a3667f45039",
+   "cls": "j1"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cft_bev_1.png",
+   "token": "a56a22601aed5c93",
+   "cls": "j0"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cft_bev_2.png",
+   "token": "d8ada86b262a59de",
+   "cls": "j0"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cft_bev_3.png",
+   "token": "85837771a757591e",
+   "cls": "lc"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cft_bev_4.png",
+   "token": "339a055edb805a82",
+   "cls": "lc"
+  },
+  {
+   "fig": "experiments/route_follow/figs/cft_bev_5.png",
+   "token": "3bfa727f245f568b",
+   "cls": "lc"
+  }
+ ]
+}
