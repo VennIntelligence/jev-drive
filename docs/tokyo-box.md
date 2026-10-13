@@ -19,6 +19,7 @@ windowed timings must not be mixed with off-screen ones.
 - Looking at CARLA - windowed launch, screenshots, recording
 - Everything long runs in tmux - tmux sessions jev and dl
 - Network: Clash in global mode, and nodes that decay - selector, node benchmarks, git/pip routing
+- Copying between the GPU box and Tokyo (2026-10-13) - `autodl` alias on Tokyo bound past the Clash TUN, 9-11 MB/s both ways
 - CARLA and Bench2Drive on this box - installs, runner command, map import, setup history
 - Official agents and single-window preview (2026-09-22 update) - TCP agent, viewer, preview, timings
 ### Preview layout / preprocessing follow-up - viewer layout, parallel preprocessing check
@@ -35,7 +36,7 @@ from GPU-box model experiments ([remote-box.md](remote-box.md)).
 ## What it is
 
 - Login: `ssh ujs@100.108.238.8` (Tailscale peer `tokyo-devbox`). Only the user `ujs` is accepted;
-  `gaochengzhi1999`, `snail` and `root` are all refused. No `~/.ssh/config` alias yet.
+  `gaochengzhi1999`, `snail` and `root` are all refused. No alias on the Mac; Tokyo has `autodl` for the GPU box (see "Copying between the GPU box and Tokyo").
 - The name says Tokyo, the machine is in **Shanghai** (China Mobile). Its clock runs **JST
   (+0900)**, so every timestamp in a log there is one hour ahead of this Mac.
 - It has a physical monitor and a real desktop session, which is the whole point of it.
@@ -304,6 +305,47 @@ Three things about global mode that cost an hour here:
   tunnel). So `git pull` here means setting the selector to `DIRECT` first, where it works fine.
   Python packages are the opposite case: install from **official PyPI through the proxy**, because
   in global mode a domestic mirror is routed abroad too and `mirrors.aliyun.com` just times out.
+
+## Copying between the GPU box and Tokyo (2026-10-13)
+
+**Use from Tokyo:** `rsync -aP --partial autodl:<box path> <tokyo path>` (box -> Tokyo) and
+`rsync -aP --partial <tokyo path> autodl:<box path>` (Tokyo -> box). From the Mac: wrap it in
+`ssh ujs@100.108.238.8 '...'`, or in tmux `dl` for anything long. Measured 8.5-11 MB/s in either direction (50 / 300 MB
+random files, one stream; 4 streams add nothing, 10.3 pull / 11.4 push, so ~90 Mbit/s is the link cap). That beats the old
+Mac relay (Tokyo -> Mac 0.33 MB/s) and the 35 KB/s seen on 2026-10-12.
+
+**Cause of the slow path.** The box and Tokyo are not near each other: the box is AutoDL West-E (Zhongwei, Ningxia,
+China Telecom IDC; `connect.weste.seetacloud.com` = `116.172.94.204`), Tokyo is in Shanghai (China Mobile). The box is an unprivileged container
+(no root, no `/dev/net/tun`), so it has no Tailscale and cannot reach `100.108.238.8`, and Tokyo sits behind NAT, so
+**every copy is opened from Tokyo** to the AutoDL ssh gateway. On Tokyo the Clash TUN (global mode) captures that ssh:
+DNS returns a fake `198.18.0.14`, and the connection goes out through the `GLOBAL` node (Japan 06 on 2026-10-13), i.e.
+Shanghai -> Japan -> Ningxia; that node closed port 25199 outright (rsync code 255), and others are slow. Proxy env vars
+play no part: none are set on Tokyo, and on the box the mihomo at `127.0.0.1:7890` is used only through the `proxy_on`
+helper, never by ssh. `-o ProxyCommand=none` changes nothing (no ProxyCommand is configured).
+
+**Fix (no Clash change, nothing paused).** Clash's policy routing sends only sockets with an unbound source address
+into `utun1024` (`ip rule` 9002 `from 0.0.0.0 iif lo lookup 2022`). An ssh socket bound to the LAN interface takes the
+main table and leaves directly via `enp13s0`. Tokyo's `~/.ssh/config` (backup `config.bak-20261013`) now has:
+
+```
+Host autodl
+    HostName 116.172.94.204      # the gateway IP: the name resolves to a Clash fake IP
+    Port 25199
+    User ujs
+    BindInterface enp13s0
+    HostKeyAlias autodl-weste
+    ServerAliveInterval 30
+    StrictHostKeyChecking accept-new
+```
+
+Tokyo's own key (`~/.ssh/id_ed25519.pub`, comment `tokyo-devbox`) was added to the box's `~/.ssh/authorized_keys`
+(backup `authorized_keys.bak-20261013`), so copies run in Tokyo tmux without agent forwarding. Undo: delete the
+`Host autodl` block on Tokyo and the `tokyo-devbox` line on the box.
+
+If the gateway IP changes, or the instance is re-created (new host and port, keys gone; [remote-box.md](remote-box.md)),
+resolve the real address outside the TUN and update `HostName` / `Port`:
+`dig -b $(ip -4 -o addr show enp13s0 | awk '{print $4}' | cut -d/ -f1) @223.5.5.5 <gateway host> +short`.
+Any other China host that Tokyo reaches by ssh gets the same treatment (`-o BindInterface=enp13s0` plus a real IP).
 
 ## CARLA and Bench2Drive on this box
 
