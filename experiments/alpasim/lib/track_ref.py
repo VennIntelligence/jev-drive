@@ -12,7 +12,8 @@ distance is to steer, and at speed any steering is a spin. The fix is to never h
                    current speed with the plan's speed as target and the change of speed bounded by [AMIN, AMAX] m/s^2. The path is unchanged.
   JEV_TRACK=full   (a) + (b): the reference is the forward simulation (kinematic, DT_SIM steps) of a path-tracking law on the same path and
                    speed: curvature = path curvature (feedforward) + a second-order correction of the lateral / heading error over the
-                   distance max(TAU_LAT x v, D_MIN), clipped to |kappa| <= min(KMAX, ALAT / v^2) and its rate to
+                   distance max(TAU_LAT x v, D_MIN), clipped to |kappa| <= min(ALAT / v^2, KMAX below 4 m/s .. KDYN above 5.5 m/s) with
+                   v = max(v_ref, v0 - V_DROP t), and its rate to
                    |dkappa/dt| <= min(JLAT / v^2, KRATE), and (VCURV) the target speed also capped by the path's curvature ahead
                    (v^2 |kappa| <= ALAT reachable with braking at AMIN), so a plan that turns while the car is still faster than the plan
                    slows for the turn instead of widening it; it starts at the clipped desired curvature (starting from the ego's measured curvature instead
@@ -36,10 +37,13 @@ if MODE not in ("0", "time", "full"):
     raise ValueError(f"JEV_TRACK={MODE!r}: expected time | full | 0")
 
 AMIN, AMAX = -5.0, 3.0          # m/s^2, change of speed of the reference
-ALAT, JLAT = 7.0, 10.0          # m/s^2, m/s^3: a tyre-grip bound (0.7 g), not comfort (openpilot clip_curvature: 3.0, jerk 5.0)
+ALAT, JLAT = 4.0, 10.0          # m/s^2, m/s^3 (openpilot clip_curvature: 3.0, jerk 5.0); ALAT 7 left 16 / 38 rollouts above 6 m/s^2 (run 3)
 YAW_TOL = 0.35                  # rad, plan yaw output against its chords
 VCURV = 1.0                     # full: 1 = also slow for the path's curvature ahead (v^2 |kappa| <= ALAT, braking at AMIN), 0 = off
 KMAX, KRATE = 0.2, 0.1          # 1/m (openpilot's cap; minimum radius 5 m), 1/m/s (about 0.29 rad/s of road-wheel steering, wheelbase 2.85)
+KDYN, V_KIN = 0.085, (4.0, 5.5)  # 1/m at and above V_KIN[1] m/s (steering ~0.24 rad: the dynamic model's side slip stays < 0.15), KMAX at and
+                                 # below V_KIN[0], linear between: AlpaSim's vehicle switches to the linear-tyre model at 5 m/s
+V_DROP = 2.0                     # m/s^2: the curvature cap uses max(v, v0 - V_DROP t), the car slows less than the reference asks
 TAU_LAT, D_MIN, ZETA = 1.0, 4.0, 0.9
 V_MIN = 1.0                     # m/s, floor of v in the curvature limits
 DT_SIM, T_END, DT_OUT = 0.05, 4.0, 0.1
@@ -95,13 +99,15 @@ def build(poses, v0: float, wz: float, mode: str = "", **kw):
     """Plan (8, 3) rig frame, ego speed and yaw rate (logged only) -> (t (41,), x, y, yaw (41,)) and a log record. mode / kw (lower-case constant names)
     override the environment's configuration (offline replays)."""
     mode = mode or MODE
-    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV")}
-    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV = g.values()
+    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP")}
+    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP = g.values()
+    kcap = lambda v: np.minimum(np.interp(v, V_KIN, (KMAX, KDYN)), ALAT / np.maximum(v, V_MIN) ** 2)  # noqa: E731
     path, vp = Path(poses), speeds(poses)
     vlim = None
     if mode == "full" and VCURV > 0:                                      # curvature speed limit, backward pass with braking at AMIN
         sg = np.arange(0.0, path.s[-1], 0.5)
-        va = np.sqrt(ALAT / np.maximum(np.abs(path.at(sg)[3]), 1e-4))
+        ka = np.abs(path.at(sg)[3])
+        va = np.minimum(np.sqrt(ALAT / np.maximum(ka, 1e-4)), np.where(ka <= KDYN, 1e3, np.interp(ka, (KDYN, KMAX), V_KIN[::-1])))
         for j in range(len(sg) - 2, -1, -1):
             va[j] = min(va[j], np.sqrt(va[j + 1] ** 2 - 2 * AMIN * 0.5))
         vlim = (sg, va)
@@ -127,8 +133,8 @@ def build(poses, v0: float, wz: float, mode: str = "", **kw):
             eh = (th - ph + np.pi) % (2 * np.pi) - np.pi
             lam = 1.0 / max(TAU_LAT * v, D_MIN)
             kd = pk - lam * lam * ey - 2 * ZETA * lam * eh
-            vv = max(v, V_MIN)
-            km = min(KMAX, ALAT / vv ** 2)
+            vv = max(v, V_MIN, v0 - V_DROP * t)
+            km = float(kcap(vv))
             dk = min(JLAT / vv ** 2, KRATE) * DT_SIM
             k = float(np.clip(kd if k is None else np.clip(kd, k - dk, k + dk), -km, km))
             kpk = max(kpk, abs(k))
