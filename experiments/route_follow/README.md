@@ -59,6 +59,10 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   rows rewards slowing; the frozen-token head fits the human turns to 0.32 m); `scripts/rf_loss_audit.py`, `results/loss_audit/`, figures
   `figs/loss_audit_variants_moving.png` (look at J_S: H ties with no-slow and inside-cut) and `figs/loss_audit_grad_moving.png` (route: outward
   before the entry, inward inside right turns; only imitation has an along-heading push).
+- [research/route-follow/rsgboth-ledger.md](../../research/route-follow/rsgboth-ledger.md): RSGboth vs RSG solved / unsolved ledger on held 460
+  (slowness solved, turn shape not: left turns late / wide, right turns early / inside; the lane-centre "inside cut" is mostly the human's own line);
+  `scripts/rf_ledger.py`, `results/ledger/`, figures `figs/ledger_bars.png` (look at "slow" and the turn-zero outside bar) and
+  `figs/ledger_turn_shape.png` (look at the orange lines: outward after u = 0.5 on left turns, inward on right turns).
 - [results/route-night/](results/route-night/): held reads (`held_raw.txt`, `a3/held_raw_a3.txt`), `ol_report` tables (`report_RBS.md`,
   `report_RBSG.md`, `a3/report_RSG.md`, `a3/report_RBSGc.md`), route following (`follow_held.md`, `follow_train.md`, `a3/follow_a3.md`),
   G-swap (`gswap/`), G-rely (`rely/`, `a3/rely/`), pool gates (`pool_L18RB0_gates.md`), inside-of-turn counts for all arms (`a3/offroad_a3.md`); round 2 in `r2/`, Amendment 6 in `a6/` (`report_RBSG2.md`, `held_raw_r2.txt`, `offroad_counts.json`).

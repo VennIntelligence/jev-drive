@@ -1,0 +1,43 @@
+level,cls,n|RSG-L18-s0,pts|RSG-L18-s0,n|RSG-L18-s1,pts|RSG-L18-s1,n|RSGboth-L18-s0,pts|RSGboth-L18-s0,n|RSGboth-L18-s1,pts|RSGboth-L18-s1
+class,coll_stationary,0,0,0,0,2,0.4348,2,0.4348
+class,coll_veh_ahead,1,0.2174,2,0.4348,2,0.4348,4,0.8696
+class,coll_veh_crossing,0,0,1,0.2174,0,0,0,0
+class,coll_veh_oncoming,1,0.2174,2,0.4348,2,0.4348,4,0.8696
+class,coll_veh_side,2,0.4348,1,0.2174,1,0.2174,1,0.2174
+class,cor_route_end,1,0.2174,1,0.2174,4,0.8696,5,1.087
+class,cor_straight_at_turn,1,0.2174,2,0.4348,1,0.2174,1,0.2174
+class,cor_turn_under,3,0.6522,4,0.8696,4,0.8696,2,0.4348
+class,infra,8,1.739,8,1.739,8,1.739,8,1.739
+class,low_other,1,0.02461,1,0.02296,0,0,0,0
+class,low_queue,2,0.1399,2,0.06315,2,0.1651,2,0.1098
+class,low_rear_ended,3,0.1874,3,0.1408,1,0.0477,2,0.1359
+class,low_slow_behind_lead,16,0.9924,16,0.8054,2,0.1017,3,0.1176
+class,low_slow_free,62,3.175,59,2.98,8,0.4912,6,0.3225
+class,low_stopped_lead,1,0.1612,0,0,0,0,0,0
+class,low_unexplained,15,0.8989,19,1.34,0,0,1,0.06459
+class,off_at_start,4,0.8696,4,0.8696,4,0.8696,4,0.8696
+class,off_curve_inside,2,0.4348,0,0,1,0.2174,3,0.6522
+class,off_curve_outside,1,0.2174,0,0,3,0.6522,1,0.2174
+class,off_junc_inside,3,0.6522,4,0.8696,2,0.4348,2,0.4348
+class,off_junc_outside,3,0.6522,2,0.4348,3,0.6522,3,0.6522
+class,off_junc_straight,2,0.4348,2,0.4348,3,0.6522,4,0.8696
+class,off_straight,2,0.4348,1,0.2174,1,0.2174,2,0.4348
+class,ok,326,0.4723,326,0.4961,406,0.08517,400,0.02796
+bucket,collision: vehicle,4,0.8696,6,1.304,7,1.522,11,2.391
+bucket,corridor: past the log end,1,0.2174,1,0.2174,4,0.8696,5,1.087
+bucket,corridor: route following,4,0.8696,6,1.304,5,1.087,3,0.6522
+bucket,infra (no rollout / start pose),12,2.609,12,2.609,12,2.609,12,2.609
+bucket,offroad: curve / straight,5,1.087,1,0.2174,5,1.087,6,1.304
+bucket,offroad: junction,8,1.739,8,1.739,8,1.739,9,1.957
+bucket,ok (>= 0.9),326,0.4723,326,0.4961,406,0.08517,400,0.02796
+bucket,slow,78,4.167,75,3.786,10,0.5929,9,0.4401
+bucket,stop / rear / other low,6,0.3519,6,0.2269,3,0.2128,4,0.2457
+bucket,stop: unexplained / late / stopped lead,16,1.06,19,1.34,0,0,1,0.06459
+turnzero,junction zero: straight through (no turn),2,0.4348,2,0.4348,3,0.6522,4,0.8696
+turnzero,turn zero: inside (cut),5,1.087,4,0.8696,3,0.6522,5,1.087
+turnzero,turn zero: outside (wide / under-turned),7,1.522,6,1.304,10,2.174,6,1.304
+turnzero,turn zero: went straight at the turn,1,0.2174,2,0.4348,1,0.2174,1,0.2174
+turn,turn_completed,16,0.1212,14,0.08807,22,0.005739,21,0
+turn,turn_event,1,0.2174,1,0.2174,1,0.2174,1,0.2174
+turn,turn_off,0,0,0,0,0,0,1,0
+turn,turn_short,7,0.07393,9,0.1685,1,0.01302,1,0.02928

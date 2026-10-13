@@ -1,0 +1,124 @@
+pair,level,cls,n_a,n_b,pts_a,pts_b,d_pts,lo,hi,d_n,verdict
+RSGboth-L18-s0:RSG-L18-s0,class,coll_stationary,2,0,0.4348,0,0.4348,0,1.042,2,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,class,coll_veh_ahead,2,1,0.4348,0.2174,0.2174,0,0.7299,1,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,class,coll_veh_oncoming,2,1,0.4348,0.2174,0.2174,0,0.6623,1,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,class,coll_veh_side,1,2,0.2174,0.4348,-0.2174,-1.01,0.495,-1,unchanged (trend better)
+RSGboth-L18-s0:RSG-L18-s0,class,cor_route_end,4,1,0.8696,0.2174,0.6522,0,1.349,3,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,class,cor_straight_at_turn,1,1,0.2174,0.2174,0,-0.6303,0.6289,0,unchanged
+RSGboth-L18-s0:RSG-L18-s0,class,cor_turn_under,4,3,0.8696,0.6522,0.2174,-0.7195,1.119,1,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,class,infra,8,8,1.739,1.739,0,0,0,0,unchanged
+RSGboth-L18-s0:RSG-L18-s0,class,low_other,0,1,0,0.02461,-0.02461,-0.07288,0,-1,unchanged
+RSGboth-L18-s0:RSG-L18-s0,class,low_queue,2,2,0.1651,0.1399,0.02517,-0.003444,0.08905,0,unchanged
+RSGboth-L18-s0:RSG-L18-s0,class,low_rear_ended,1,3,0.0477,0.1874,-0.1397,-0.4269,0,-2,unchanged
+RSGboth-L18-s0:RSG-L18-s0,class,low_slow_behind_lead,2,16,0.1017,0.9924,-0.8907,-1.595,-0.3187,-14,improved
+RSGboth-L18-s0:RSG-L18-s0,class,low_slow_free,8,62,0.4912,3.175,-2.684,-3.555,-1.869,-54,improved
+RSGboth-L18-s0:RSG-L18-s0,class,low_stopped_lead,0,1,0,0.1612,-0.1612,-0.5451,0,-1,unchanged
+RSGboth-L18-s0:RSG-L18-s0,class,low_unexplained,0,15,0,0.8989,-0.8989,-1.466,-0.4326,-15,solved
+RSGboth-L18-s0:RSG-L18-s0,class,off_at_start,4,4,0.8696,0.8696,0,0,0,0,unchanged
+RSGboth-L18-s0:RSG-L18-s0,class,off_curve_inside,1,2,0.2174,0.4348,-0.2174,-0.7299,0,-1,unchanged (trend better)
+RSGboth-L18-s0:RSG-L18-s0,class,off_curve_outside,3,1,0.6522,0.2174,0.4348,-0.4255,1.24,2,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,class,off_junc_inside,2,3,0.4348,0.6522,-0.2174,-0.7353,0,-1,unchanged (trend better)
+RSGboth-L18-s0:RSG-L18-s0,class,off_junc_outside,3,3,0.6522,0.6522,0,-0.6383,0.6086,0,unchanged
+RSGboth-L18-s0:RSG-L18-s0,class,off_junc_straight,3,2,0.6522,0.4348,0.2174,0,0.7463,1,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,class,off_straight,1,2,0.2174,0.4348,-0.2174,-0.7463,0,-1,unchanged (trend better)
+RSGboth-L18-s0:RSG-L18-s0,class,ok,406,326,0.08517,0.4723,-0.3872,-0.5733,-0.2196,80,improved (more scenes)
+RSGboth-L18-s0:RSG-L18-s0,bucket,collision: vehicle,7,4,1.522,0.8696,0.6522,-0.5128,1.915,3,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,bucket,corridor: past the log end,4,1,0.8696,0.2174,0.6522,0,1.349,3,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,bucket,corridor: route following,5,4,1.087,0.8696,0.2174,-0.7282,1.147,1,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,bucket,infra (no rollout / start pose),12,12,2.609,2.609,0,0,0,0,unchanged
+RSGboth-L18-s0:RSG-L18-s0,bucket,offroad: curve / straight,5,5,1.087,1.087,0,-1.101,1.002,0,unchanged
+RSGboth-L18-s0:RSG-L18-s0,bucket,offroad: junction,8,8,1.739,1.739,0,-0.8584,0.8747,0,unchanged
+RSGboth-L18-s0:RSG-L18-s0,bucket,ok (>= 0.9),406,326,0.08517,0.4723,-0.3872,-0.5733,-0.2196,80,improved (more scenes)
+RSGboth-L18-s0:RSG-L18-s0,bucket,slow,10,78,0.5929,4.167,-3.574,-4.786,-2.486,-68,improved
+RSGboth-L18-s0:RSG-L18-s0,bucket,stop / rear / other low,3,6,0.2128,0.3519,-0.1391,-0.4264,0.03334,-3,unchanged
+RSGboth-L18-s0:RSG-L18-s0,bucket,stop: unexplained / late / stopped lead,0,16,0,1.06,-1.06,-1.693,-0.5353,-16,solved
+RSGboth-L18-s0:RSG-L18-s0,turnzero,junction zero: straight through (no turn),3,2,0.6522,0.4348,0.2174,0,0.7463,1,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,turnzero,turn zero: inside (cut),3,5,0.6522,1.087,-0.4348,-1.139,0,-2,unchanged (trend better)
+RSGboth-L18-s0:RSG-L18-s0,turnzero,turn zero: outside (wide / under-turned),10,7,2.174,1.522,0.6522,-0.6993,1.98,3,unchanged (trend worse)
+RSGboth-L18-s0:RSG-L18-s0,turnzero,turn zero: went straight at the turn,1,1,0.2174,0.2174,0,-0.6303,0.6289,0,unchanged
+RSGboth-L18-s0:RSG-L18-s0,turn,turn_completed,22,16,0.005739,0.1212,-0.1155,-0.2905,0,6,improved (more scenes)
+RSGboth-L18-s0:RSG-L18-s0,turn,turn_event,1,1,0.2174,0.2174,0,0,0,0,unchanged
+RSGboth-L18-s0:RSG-L18-s0,turn,turn_short,1,7,0.01302,0.07393,-0.06091,-0.1491,0.003356,-6,unchanged
+RSGboth-L18-s1:RSG-L18-s1,class,coll_stationary,2,0,0.4348,0,0.4348,0,1.079,2,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,class,coll_veh_ahead,4,2,0.8696,0.4348,0.4348,-0.3922,1.342,2,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,class,coll_veh_crossing,0,1,0,0.2174,-0.2174,-0.7519,0,-1,unchanged (trend better)
+RSGboth-L18-s1:RSG-L18-s1,class,coll_veh_oncoming,4,2,0.8696,0.4348,0.4348,0,1.111,2,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,class,coll_veh_side,1,1,0.2174,0.2174,0,0,0,0,unchanged
+RSGboth-L18-s1:RSG-L18-s1,class,cor_route_end,5,1,1.087,0.2174,0.8696,0.2114,1.653,4,worse
+RSGboth-L18-s1:RSG-L18-s1,class,cor_straight_at_turn,1,2,0.2174,0.4348,-0.2174,-0.7143,0,-1,unchanged (trend better)
+RSGboth-L18-s1:RSG-L18-s1,class,cor_turn_under,2,4,0.4348,0.8696,-0.4348,-1.177,0,-2,unchanged (trend better)
+RSGboth-L18-s1:RSG-L18-s1,class,infra,8,8,1.739,1.739,0,0,0,0,unchanged
+RSGboth-L18-s1:RSG-L18-s1,class,low_other,0,1,0,0.02296,-0.02296,-0.07543,0,-1,unchanged
+RSGboth-L18-s1:RSG-L18-s1,class,low_queue,2,2,0.1098,0.06315,0.04663,-0.09602,0.2574,0,unchanged
+RSGboth-L18-s1:RSG-L18-s1,class,low_rear_ended,2,3,0.1359,0.1408,-0.00487,-0.1735,0.2306,-1,unchanged
+RSGboth-L18-s1:RSG-L18-s1,class,low_slow_behind_lead,3,16,0.1176,0.8054,-0.6878,-1.222,-0.2376,-13,improved
+RSGboth-L18-s1:RSG-L18-s1,class,low_slow_free,6,59,0.3225,2.98,-2.658,-3.506,-1.802,-53,improved
+RSGboth-L18-s1:RSG-L18-s1,class,low_unexplained,1,19,0.06459,1.34,-1.275,-2.1,-0.6236,-18,improved
+RSGboth-L18-s1:RSG-L18-s1,class,off_at_start,4,4,0.8696,0.8696,0,0,0,0,unchanged
+RSGboth-L18-s1:RSG-L18-s1,class,off_curve_inside,3,0,0.6522,0,0.6522,0,1.474,3,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,class,off_curve_outside,1,0,0.2174,0,0.2174,0,0.7143,1,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,class,off_junc_inside,2,4,0.4348,0.8696,-0.4348,-1.094,0,-2,unchanged (trend better)
+RSGboth-L18-s1:RSG-L18-s1,class,off_junc_outside,3,2,0.6522,0.4348,0.2174,0,0.7067,1,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,class,off_junc_straight,4,2,0.8696,0.4348,0.4348,0,1.493,2,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,class,off_straight,2,1,0.4348,0.2174,0.2174,-0.5182,0.9259,1,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,class,ok,400,326,0.02796,0.4961,-0.4681,-0.6514,-0.309,74,improved (more scenes)
+RSGboth-L18-s1:RSG-L18-s1,bucket,collision: vehicle,11,6,2.391,1.304,1.087,0,2.308,5,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,bucket,corridor: past the log end,5,1,1.087,0.2174,0.8696,0.2114,1.653,4,worse
+RSGboth-L18-s1:RSG-L18-s1,bucket,corridor: route following,3,6,0.6522,1.304,-0.6522,-1.52,0,-3,unchanged (trend better)
+RSGboth-L18-s1:RSG-L18-s1,bucket,infra (no rollout / start pose),12,12,2.609,2.609,0,0,0,0,unchanged
+RSGboth-L18-s1:RSG-L18-s1,bucket,offroad: curve / straight,6,1,1.304,0.2174,1.087,0,2.335,5,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,bucket,offroad: junction,9,8,1.957,1.739,0.2174,-0.8264,1.496,1,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,bucket,ok (>= 0.9),400,326,0.02796,0.4961,-0.4681,-0.6514,-0.309,74,improved (more scenes)
+RSGboth-L18-s1:RSG-L18-s1,bucket,slow,9,75,0.4401,3.786,-3.346,-4.395,-2.344,-66,improved
+RSGboth-L18-s1:RSG-L18-s1,bucket,stop / rear / other low,4,6,0.2457,0.2269,0.0188,-0.217,0.3366,-2,unchanged
+RSGboth-L18-s1:RSG-L18-s1,bucket,stop: unexplained / late / stopped lead,1,19,0.06459,1.34,-1.275,-2.1,-0.6236,-18,improved
+RSGboth-L18-s1:RSG-L18-s1,turnzero,junction zero: straight through (no turn),4,2,0.8696,0.4348,0.4348,0,1.493,2,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,turnzero,turn zero: inside (cut),5,4,1.087,0.8696,0.2174,0,0.7299,1,unchanged (trend worse)
+RSGboth-L18-s1:RSG-L18-s1,turnzero,turn zero: outside (wide / under-turned),6,6,1.304,1.304,0,-0.9174,0.8299,0,unchanged
+RSGboth-L18-s1:RSG-L18-s1,turnzero,turn zero: went straight at the turn,1,2,0.2174,0.4348,-0.2174,-0.7143,0,-1,unchanged (trend better)
+RSGboth-L18-s1:RSG-L18-s1,turn,turn_completed,21,14,0,0.08807,-0.08807,-0.2325,0,7,improved (more scenes)
+RSGboth-L18-s1:RSG-L18-s1,turn,turn_event,1,1,0.2174,0.2174,0,0,0,0,unchanged
+RSGboth-L18-s1:RSG-L18-s1,turn,turn_off,1,0,0,0,0,0,0,1,unchanged
+RSGboth-L18-s1:RSG-L18-s1,turn,turn_short,1,9,0.02928,0.1685,-0.1392,-0.2801,-0.03117,-8,improved
+RSGboth-RSG,class,coll_stationary,4,0,0.4348,0,0.4348,0,0.9719,2,unchanged (trend worse)
+RSGboth-RSG,class,coll_veh_ahead,6,3,0.6522,0.3261,0.3261,-0.1313,0.9412,1.5,unchanged (trend worse)
+RSGboth-RSG,class,coll_veh_crossing,0,1,0,0.1087,-0.1087,-0.3759,0,-0.5,unchanged
+RSGboth-RSG,class,coll_veh_oncoming,6,3,0.6522,0.3261,0.3261,0,0.6849,1.5,unchanged (trend worse)
+RSGboth-RSG,class,coll_veh_side,2,3,0.2174,0.3261,-0.1087,-0.5051,0.2475,-0.5,unchanged
+RSGboth-RSG,class,cor_route_end,9,2,0.9783,0.2174,0.7609,0.1309,1.462,3.5,worse
+RSGboth-RSG,class,cor_straight_at_turn,2,3,0.2174,0.3261,-0.1087,-0.6551,0.3018,-0.5,unchanged
+RSGboth-RSG,class,cor_turn_under,6,7,0.6522,0.7609,-0.1087,-0.6219,0.3348,-0.5,unchanged
+RSGboth-RSG,class,infra,16,16,1.739,1.739,0,0,0,0,unchanged
+RSGboth-RSG,class,low_other,0,2,0,0.02378,-0.02378,-0.05519,0,-1,unchanged
+RSGboth-RSG,class,low_queue,4,4,0.1374,0.1015,0.0359,-0.04861,0.1717,0,unchanged
+RSGboth-RSG,class,low_rear_ended,3,6,0.09179,0.1641,-0.07227,-0.2589,0.08871,-1.5,unchanged
+RSGboth-RSG,class,low_slow_behind_lead,5,32,0.1097,0.8989,-0.7892,-1.38,-0.305,-13.5,improved
+RSGboth-RSG,class,low_slow_free,14,121,0.4068,3.078,-2.671,-3.461,-1.877,-53.5,improved
+RSGboth-RSG,class,low_stopped_lead,0,1,0,0.08059,-0.08059,-0.2726,0,-0.5,unchanged
+RSGboth-RSG,class,low_unexplained,1,34,0.03229,1.119,-1.087,-1.752,-0.5694,-16.5,solved
+RSGboth-RSG,class,off_at_start,8,8,0.8696,0.8696,0,0,0,0,unchanged
+RSGboth-RSG,class,off_curve_inside,4,2,0.4348,0.2174,0.2174,0,0.547,1,unchanged (trend worse)
+RSGboth-RSG,class,off_curve_outside,4,1,0.4348,0.1087,0.3261,-0.1454,0.8946,1.5,unchanged (trend worse)
+RSGboth-RSG,class,off_junc_inside,4,7,0.4348,0.7609,-0.3261,-0.8646,0,-1.5,unchanged (trend better)
+RSGboth-RSG,class,off_junc_outside,6,5,0.6522,0.5435,0.1087,-0.2994,0.6466,0.5,unchanged
+RSGboth-RSG,class,off_junc_straight,7,4,0.7609,0.4348,0.3261,0,1.119,1.5,unchanged (trend worse)
+RSGboth-RSG,class,off_straight,3,3,0.3261,0.3261,0,-0.6186,0.4457,0,unchanged
+RSGboth-RSG,class,ok,806,652,0.05657,0.4842,-0.4276,-0.5977,-0.278,77,improved (more scenes)
+RSGboth-RSG,bucket,collision: vehicle,18,10,1.957,1.087,0.8696,-0.1296,1.887,4,unchanged (trend worse)
+RSGboth-RSG,bucket,corridor: past the log end,9,2,0.9783,0.2174,0.7609,0.1309,1.462,3.5,worse
+RSGboth-RSG,bucket,corridor: route following,8,10,0.8696,1.087,-0.2174,-0.8861,0.3212,-1,unchanged (trend better)
+RSGboth-RSG,bucket,infra (no rollout / start pose),24,24,2.609,2.609,0,0,0,0,unchanged
+RSGboth-RSG,bucket,offroad: curve / straight,11,6,1.196,0.6522,0.5435,-0.4261,1.532,2.5,unchanged (trend worse)
+RSGboth-RSG,bucket,offroad: junction,17,16,1.848,1.739,0.1087,-0.7654,1.139,0.5,unchanged
+RSGboth-RSG,bucket,ok (>= 0.9),806,652,0.05657,0.4842,-0.4276,-0.5977,-0.278,77,improved (more scenes)
+RSGboth-RSG,bucket,slow,19,153,0.5165,3.977,-3.46,-4.543,-2.443,-67,improved
+RSGboth-RSG,bucket,stop / rear / other low,7,12,0.2292,0.2894,-0.06015,-0.2672,0.1566,-2.5,unchanged
+RSGboth-RSG,bucket,stop: unexplained / late / stopped lead,1,35,0.03229,1.2,-1.168,-1.821,-0.6401,-17,solved
+RSGboth-RSG,turnzero,junction zero: straight through (no turn),7,4,0.7609,0.4348,0.3261,0,1.119,1.5,unchanged (trend worse)
+RSGboth-RSG,turnzero,turn zero: inside (cut),8,9,0.8696,0.9783,-0.1087,-0.3676,0,-0.5,unchanged
+RSGboth-RSG,turnzero,turn zero: outside (wide / under-turned),16,13,1.739,1.413,0.3261,-0.4831,1.079,1.5,unchanged (trend worse)
+RSGboth-RSG,turnzero,turn zero: went straight at the turn,2,3,0.2174,0.3261,-0.1087,-0.6551,0.3018,-0.5,unchanged
+RSGboth-RSG,turn,turn_completed,43,30,0.00287,0.1046,-0.1018,-0.2545,-0.006797,6.5,improved (more scenes)
+RSGboth-RSG,turn,turn_event,2,2,0.2174,0.2174,0,0,0,0,unchanged
+RSGboth-RSG,turn,turn_off,1,0,0,0,0,0,0,0.5,unchanged
+RSGboth-RSG,turn,turn_short,2,16,0.02115,0.1212,-0.1001,-0.1851,-0.02574,-7,improved

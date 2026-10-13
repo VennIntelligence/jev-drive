@@ -1,0 +1,561 @@
+set,label,metric,mean,lo,hi,n
+strict,RSG-L18-s0,completed_loose,79.17,59.26,95.65,24
+strict,RSG-L18-s0,v_ego_40,,,,0
+strict,RSG-L18-s0,v_ego_20,,,,0
+strict,RSG-L18-s0,v_ego_0,4.124,3.683,4.534,24
+strict,RSG-L18-s0,v_ego_mid,5.04,4.423,5.617,24
+strict,RSG-L18-s0,v_ego_x10,5.567,4.659,6.227,19
+strict,RSG-L18-s0,lag_x10,0.3901,0.04543,0.8832,19
+strict,RSG-L18-s0,onset_d,0.05587,-0.3423,0.4888,24
+strict,RSG-L18-s0,mid_d,0.5301,-2.534e-05,1.239,24
+strict,RSG-L18-s0,off_25,-0.01623,-0.2137,0.1789,24
+strict,RSG-L18-s0,off_50,0.1184,-0.2512,0.5513,24
+strict,RSG-L18-s0,off_75,0.3419,-0.1866,0.9901,24
+strict,RSG-L18-s0,off_100,0.3213,-0.2276,0.9413,23
+strict,RSG-L18-s0,peak_in,-0.4934,-0.7173,-0.2487,24
+strict,RSG-L18-s0,peak_out,1.04,0.5892,1.637,24
+strict,RSG-L18-s0,cut1,20.83,5.263,34.62,24
+strict,RSG-L18-s0,wide1,50,28,73.33,24
+strict,RSG-L18-s0,weave1,0,0,0,24
+strict,RSG-L18-s0,route_cut1_ego,66.67,45.45,84.21,24
+strict,RSG-L18-s0,exit_lat,0.7054,0.2241,1.284,8
+strict,RSG-L18-s0,exit_ok,87.5,57.14,100,8
+strict,RSG-L18-s0,exit10_lat,0.9845,0.7098,1.359,19
+strict,RSG-L18-s0,exit10_ok,89.47,69.23,100,19
+strict,RSG-L18-s0,yr_peak_e,23.89,21.75,26.3,23
+strict,RSG-L18-s0,rev_e,1.13,1,1.333,23
+strict,RSG-L18-s0,completed_strict,66.67,45.45,85.71,24
+strict,RSG-L18-s0,v_log_40,,,,0
+strict,RSG-L18-s0,v_log_20,,,,0
+strict,RSG-L18-s0,v_log_0,4.161,3.64,4.613,24
+strict,RSG-L18-s0,v_log_mid,5.04,4.427,5.617,24
+strict,RSG-L18-s0,v_log_x10,6.984,6.359,7.537,24
+strict,RSG-L18-s0,yr_peak_h,24.85,23.39,26.46,24
+strict,RSG-L18-s0,rev_h,1.083,1,1.3,24
+strict,RSG-L18-s0,route_cut1_hum,45.83,29.03,65,24
+strict,RSG-L18-s0,onset_h,7.181,5.315,8.523,24
+strict,RSG-L18-s1,completed_loose,62.5,47.62,79.17,24
+strict,RSG-L18-s1,v_ego_40,,,,0
+strict,RSG-L18-s1,v_ego_20,,,,0
+strict,RSG-L18-s1,v_ego_0,4.105,3.667,4.516,24
+strict,RSG-L18-s1,v_ego_mid,4.894,4.233,5.512,24
+strict,RSG-L18-s1,v_ego_x10,6.114,5.192,6.895,15
+strict,RSG-L18-s1,lag_x10,0.2752,0.02126,0.5959,15
+strict,RSG-L18-s1,onset_d,0.1763,-0.2407,0.6524,24
+strict,RSG-L18-s1,mid_d,0.6122,0.0226,1.324,24
+strict,RSG-L18-s1,off_25,0.02504,-0.1584,0.2051,24
+strict,RSG-L18-s1,off_50,0.1824,-0.19,0.6097,24
+strict,RSG-L18-s1,off_75,0.4187,-0.1351,1.08,24
+strict,RSG-L18-s1,off_100,0.3869,-0.1986,1.032,23
+strict,RSG-L18-s1,peak_in,-0.4196,-0.6656,-0.169,24
+strict,RSG-L18-s1,peak_out,1.015,0.5621,1.616,24
+strict,RSG-L18-s1,cut1,20.83,0,41.38,24
+strict,RSG-L18-s1,wide1,41.67,21.43,64.71,24
+strict,RSG-L18-s1,weave1,0,0,0,24
+strict,RSG-L18-s1,route_cut1_ego,62.5,40.91,82.35,24
+strict,RSG-L18-s1,exit_lat,0.7579,0.272,1.391,7
+strict,RSG-L18-s1,exit_ok,85.71,50,100,7
+strict,RSG-L18-s1,exit10_lat,0.7009,0.5025,0.902,15
+strict,RSG-L18-s1,exit10_ok,100,100,100,15
+strict,RSG-L18-s1,yr_peak_e,23.19,21.07,25.62,23
+strict,RSG-L18-s1,rev_e,1.13,1,1.474,23
+strict,RSG-L18-s1,completed_strict,58.33,37.93,78.95,24
+strict,RSG-L18-s1,v_log_40,,,,0
+strict,RSG-L18-s1,v_log_20,,,,0
+strict,RSG-L18-s1,v_log_0,4.161,3.64,4.613,24
+strict,RSG-L18-s1,v_log_mid,5.04,4.427,5.617,24
+strict,RSG-L18-s1,v_log_x10,6.984,6.359,7.537,24
+strict,RSG-L18-s1,yr_peak_h,24.85,23.39,26.46,24
+strict,RSG-L18-s1,rev_h,1.083,1,1.3,24
+strict,RSG-L18-s1,route_cut1_hum,45.83,29.03,65,24
+strict,RSG-L18-s1,onset_h,7.181,5.315,8.523,24
+strict,RSGboth-L18-s0,completed_loose,91.67,78.95,100,24
+strict,RSGboth-L18-s0,v_ego_40,,,,0
+strict,RSGboth-L18-s0,v_ego_20,,,,0
+strict,RSGboth-L18-s0,v_ego_0,4.255,3.798,4.63,24
+strict,RSGboth-L18-s0,v_ego_mid,5.322,4.887,5.723,24
+strict,RSGboth-L18-s0,v_ego_x10,6.764,6.317,7.156,23
+strict,RSGboth-L18-s0,lag_x10,-0.06704,-0.4352,0.2698,23
+strict,RSGboth-L18-s0,onset_d,-0.08907,-0.4126,0.3437,24
+strict,RSGboth-L18-s0,mid_d,0.4549,-0.003555,1.063,24
+strict,RSGboth-L18-s0,off_25,-0.07077,-0.226,0.09658,24
+strict,RSGboth-L18-s0,off_50,-0.002146,-0.2746,0.3489,24
+strict,RSGboth-L18-s0,off_75,0.1433,-0.2529,0.6734,24
+strict,RSGboth-L18-s0,off_100,0.1236,-0.2825,0.6151,23
+strict,RSGboth-L18-s0,peak_in,-0.5333,-0.7092,-0.3254,24
+strict,RSGboth-L18-s0,peak_out,0.8332,0.5019,1.284,24
+strict,RSGboth-L18-s0,cut1,20.83,5.263,34.48,24
+strict,RSGboth-L18-s0,wide1,33.33,14.29,57.14,24
+strict,RSGboth-L18-s0,weave1,0,0,0,24
+strict,RSGboth-L18-s0,route_cut1_ego,66.67,50,80,24
+strict,RSGboth-L18-s0,exit_lat,1.037,0.654,1.432,14
+strict,RSGboth-L18-s0,exit_ok,78.57,58.33,100,14
+strict,RSGboth-L18-s0,exit10_lat,0.7695,0.5398,1.024,23
+strict,RSGboth-L18-s0,exit10_ok,95.65,86.96,100,23
+strict,RSGboth-L18-s0,yr_peak_e,25.62,23.19,28.16,23
+strict,RSGboth-L18-s0,rev_e,1.087,1,1.333,23
+strict,RSGboth-L18-s0,completed_strict,91.67,80,100,24
+strict,RSGboth-L18-s0,v_log_40,,,,0
+strict,RSGboth-L18-s0,v_log_20,,,,0
+strict,RSGboth-L18-s0,v_log_0,4.161,3.64,4.613,24
+strict,RSGboth-L18-s0,v_log_mid,5.04,4.427,5.617,24
+strict,RSGboth-L18-s0,v_log_x10,6.984,6.359,7.537,24
+strict,RSGboth-L18-s0,yr_peak_h,24.85,23.39,26.46,24
+strict,RSGboth-L18-s0,rev_h,1.083,1,1.3,24
+strict,RSGboth-L18-s0,route_cut1_hum,45.83,29.03,65,24
+strict,RSGboth-L18-s0,onset_h,7.181,5.315,8.523,24
+strict,RSGboth-L18-s1,completed_loose,87.5,71.43,100,24
+strict,RSGboth-L18-s1,v_ego_40,,,,0
+strict,RSGboth-L18-s1,v_ego_20,,,,0
+strict,RSGboth-L18-s1,v_ego_0,4.249,3.786,4.631,24
+strict,RSGboth-L18-s1,v_ego_mid,5.316,4.897,5.705,24
+strict,RSGboth-L18-s1,v_ego_x10,6.915,6.579,7.202,22
+strict,RSGboth-L18-s1,lag_x10,-0.1354,-0.4649,0.1512,22
+strict,RSGboth-L18-s1,onset_d,0.02095,-0.3475,0.4937,24
+strict,RSGboth-L18-s1,mid_d,0.4379,-0.05477,1.096,24
+strict,RSGboth-L18-s1,off_25,-0.03544,-0.1834,0.1288,24
+strict,RSGboth-L18-s1,off_50,0.05746,-0.2264,0.4266,24
+strict,RSGboth-L18-s1,off_75,0.1954,-0.2268,0.7635,24
+strict,RSGboth-L18-s1,off_100,0.1274,-0.302,0.6435,23
+strict,RSGboth-L18-s1,peak_in,-0.4997,-0.6965,-0.2893,24
+strict,RSGboth-L18-s1,peak_out,0.8299,0.4677,1.336,24
+strict,RSGboth-L18-s1,cut1,12.5,0,24,24
+strict,RSGboth-L18-s1,wide1,33.33,17.24,55,24
+strict,RSGboth-L18-s1,weave1,0,0,0,24
+strict,RSGboth-L18-s1,route_cut1_ego,66.67,50,80,24
+strict,RSGboth-L18-s1,exit_lat,0.7079,0.3326,1.136,12
+strict,RSGboth-L18-s1,exit_ok,91.67,72.73,100,12
+strict,RSGboth-L18-s1,exit10_lat,0.6957,0.4433,0.9761,22
+strict,RSGboth-L18-s1,exit10_ok,90.91,80.65,100,22
+strict,RSGboth-L18-s1,yr_peak_e,26.28,24.14,28.59,23
+strict,RSGboth-L18-s1,rev_e,1.261,1,1.667,23
+strict,RSGboth-L18-s1,completed_strict,87.5,71.43,100,24
+strict,RSGboth-L18-s1,v_log_40,,,,0
+strict,RSGboth-L18-s1,v_log_20,,,,0
+strict,RSGboth-L18-s1,v_log_0,4.161,3.64,4.613,24
+strict,RSGboth-L18-s1,v_log_mid,5.04,4.427,5.617,24
+strict,RSGboth-L18-s1,v_log_x10,6.984,6.359,7.537,24
+strict,RSGboth-L18-s1,yr_peak_h,24.85,23.39,26.46,24
+strict,RSGboth-L18-s1,rev_h,1.083,1,1.3,24
+strict,RSGboth-L18-s1,route_cut1_hum,45.83,29.03,65,24
+strict,RSGboth-L18-s1,onset_h,7.181,5.315,8.523,24
+loose,RSG-L18-s0,completed_loose,33.71,21.74,46.58,89
+loose,RSG-L18-s0,v_ego_40,9.212,8.748,9.769,4
+loose,RSG-L18-s0,v_ego_20,6.67,5.757,7.445,13
+loose,RSG-L18-s0,v_ego_0,4.731,4.337,5.073,87
+loose,RSG-L18-s0,v_ego_mid,4.994,4.488,5.539,79
+loose,RSG-L18-s0,v_ego_x10,6.074,5.256,6.852,31
+loose,RSG-L18-s0,lag_x10,0.1816,-0.07712,0.4967,31
+loose,RSG-L18-s0,onset_d,-0.02659,-0.411,0.3811,84
+loose,RSG-L18-s0,mid_d,0.07071,-0.3768,0.5327,77
+loose,RSG-L18-s0,off_25,-0.02194,-0.2037,0.1432,87
+loose,RSG-L18-s0,off_50,0.06486,-0.255,0.3554,79
+loose,RSG-L18-s0,off_75,0.2712,-0.06931,0.6021,68
+loose,RSG-L18-s0,off_100,0.2446,-0.1166,0.6489,55
+loose,RSG-L18-s0,peak_in,-0.5051,-0.7129,-0.3177,89
+loose,RSG-L18-s0,peak_out,0.8212,0.5494,1.168,89
+loose,RSG-L18-s0,cut1,15.73,7.143,25.23,89
+loose,RSG-L18-s0,wide1,32.58,21.43,46.05,89
+loose,RSG-L18-s0,weave1,1.124,0,4.054,89
+loose,RSG-L18-s0,route_cut1_ego,53.93,42.16,65.93,89
+loose,RSG-L18-s0,exit_lat,0.5205,0.2361,0.8881,14
+loose,RSG-L18-s0,exit_ok,92.86,75,100,14
+loose,RSG-L18-s0,exit10_lat,0.9372,0.639,1.352,31
+loose,RSG-L18-s0,exit10_ok,87.1,68.97,100,31
+loose,RSG-L18-s0,yr_peak_e,19.97,17.36,22.37,55
+loose,RSG-L18-s0,rev_e,1.109,1,1.25,55
+loose,RSG-L18-s0,completed_strict,66.67,45.45,85.71,24
+loose,RSG-L18-s0,v_log_40,9.296,8.784,10.02,4
+loose,RSG-L18-s0,v_log_20,6.565,5.219,7.562,15
+loose,RSG-L18-s0,v_log_0,5.01,4.63,5.343,89
+loose,RSG-L18-s0,v_log_mid,5.495,5.047,5.928,89
+loose,RSG-L18-s0,v_log_x10,7.184,6.608,7.787,58
+loose,RSG-L18-s0,yr_peak_h,20.4,18.4,22.53,89
+loose,RSG-L18-s0,rev_h,1.09,1.022,1.177,89
+loose,RSG-L18-s0,route_cut1_hum,46.07,36.26,58.02,89
+loose,RSG-L18-s0,onset_h,12.55,10.04,14.74,89
+loose,RSG-L18-s1,completed_loose,30.34,20,42.86,89
+loose,RSG-L18-s1,v_ego_40,9.225,8.748,9.821,4
+loose,RSG-L18-s1,v_ego_20,6.67,5.801,7.42,13
+loose,RSG-L18-s1,v_ego_0,4.676,4.275,5.028,87
+loose,RSG-L18-s1,v_ego_mid,4.751,4.218,5.334,78
+loose,RSG-L18-s1,v_ego_x10,6.348,5.43,7.283,27
+loose,RSG-L18-s1,lag_x10,0.1703,-0.05918,0.3924,27
+loose,RSG-L18-s1,onset_d,0.143,-0.2721,0.5659,83
+loose,RSG-L18-s1,mid_d,0.2424,-0.1972,0.7103,73
+loose,RSG-L18-s1,off_25,0.09162,-0.02195,0.2149,83
+loose,RSG-L18-s1,off_50,0.2571,0.009866,0.5264,78
+loose,RSG-L18-s1,off_75,0.2851,-0.04274,0.6356,64
+loose,RSG-L18-s1,off_100,0.3231,-0.08021,0.7883,51
+loose,RSG-L18-s1,peak_in,-0.4451,-0.6159,-0.2888,89
+loose,RSG-L18-s1,peak_out,0.8432,0.5659,1.203,89
+loose,RSG-L18-s1,cut1,19.1,9.091,30,89
+loose,RSG-L18-s1,wide1,29.21,18.1,42.86,89
+loose,RSG-L18-s1,weave1,1.124,0,4.054,89
+loose,RSG-L18-s1,route_cut1_ego,51.69,40.21,63.29,89
+loose,RSG-L18-s1,exit_lat,0.5267,0.2468,0.8879,13
+loose,RSG-L18-s1,exit_ok,92.31,72.73,100,13
+loose,RSG-L18-s1,exit10_lat,0.8494,0.5327,1.265,27
+loose,RSG-L18-s1,exit10_ok,88.89,72.41,100,27
+loose,RSG-L18-s1,yr_peak_e,20.09,17.63,22.38,51
+loose,RSG-L18-s1,rev_e,1.059,0.9583,1.227,51
+loose,RSG-L18-s1,completed_strict,58.33,37.93,78.95,24
+loose,RSG-L18-s1,v_log_40,9.296,8.784,10.02,4
+loose,RSG-L18-s1,v_log_20,6.565,5.219,7.562,15
+loose,RSG-L18-s1,v_log_0,5.01,4.63,5.343,89
+loose,RSG-L18-s1,v_log_mid,5.495,5.047,5.928,89
+loose,RSG-L18-s1,v_log_x10,7.184,6.608,7.787,58
+loose,RSG-L18-s1,yr_peak_h,20.4,18.4,22.53,89
+loose,RSG-L18-s1,rev_h,1.09,1.022,1.177,89
+loose,RSG-L18-s1,route_cut1_hum,46.07,36.26,58.02,89
+loose,RSG-L18-s1,onset_h,12.55,10.04,14.74,89
+loose,RSGboth-L18-s0,completed_loose,61.8,50,70.73,89
+loose,RSGboth-L18-s0,v_ego_40,9.286,8.748,10.07,4
+loose,RSGboth-L18-s0,v_ego_20,7.205,6.241,7.985,13
+loose,RSGboth-L18-s0,v_ego_0,5.045,4.668,5.349,89
+loose,RSGboth-L18-s0,v_ego_mid,5.558,5.231,5.882,87
+loose,RSGboth-L18-s0,v_ego_x10,7.214,6.78,7.758,51
+loose,RSGboth-L18-s0,lag_x10,-0.07951,-0.3828,0.1856,51
+loose,RSGboth-L18-s0,onset_d,-0.01324,-0.3425,0.3563,87
+loose,RSGboth-L18-s0,mid_d,0.2513,-0.0855,0.6262,84
+loose,RSGboth-L18-s0,off_25,-0.0285,-0.1749,0.1209,89
+loose,RSGboth-L18-s0,off_50,0.1464,-0.03312,0.3484,87
+loose,RSGboth-L18-s0,off_75,0.1661,-0.08189,0.4364,80
+loose,RSGboth-L18-s0,off_100,0.1526,-0.1122,0.4938,71
+loose,RSGboth-L18-s0,peak_in,-0.4872,-0.6412,-0.3363,89
+loose,RSGboth-L18-s0,peak_out,0.896,0.6504,1.206,89
+loose,RSGboth-L18-s0,cut1,15.73,5.797,26.73,89
+loose,RSGboth-L18-s0,wide1,39.33,27.21,53.97,89
+loose,RSGboth-L18-s0,weave1,0,0,0,89
+loose,RSGboth-L18-s0,route_cut1_ego,52.81,41.75,64.15,89
+loose,RSGboth-L18-s0,exit_lat,0.9109,0.5967,1.254,26
+loose,RSGboth-L18-s0,exit_ok,80.77,64.29,95.83,26
+loose,RSGboth-L18-s0,exit10_lat,0.8999,0.6642,1.215,51
+loose,RSGboth-L18-s0,exit10_ok,86.27,72,96.55,51
+loose,RSGboth-L18-s0,yr_peak_e,20.13,17.49,22.87,71
+loose,RSGboth-L18-s0,rev_e,1.056,1,1.152,71
+loose,RSGboth-L18-s0,completed_strict,91.67,80,100,24
+loose,RSGboth-L18-s0,v_log_40,9.296,8.784,10.02,4
+loose,RSGboth-L18-s0,v_log_20,6.565,5.219,7.562,15
+loose,RSGboth-L18-s0,v_log_0,5.01,4.63,5.343,89
+loose,RSGboth-L18-s0,v_log_mid,5.495,5.047,5.928,89
+loose,RSGboth-L18-s0,v_log_x10,7.184,6.608,7.787,58
+loose,RSGboth-L18-s0,yr_peak_h,20.4,18.4,22.53,89
+loose,RSGboth-L18-s0,rev_h,1.09,1.022,1.177,89
+loose,RSGboth-L18-s0,route_cut1_hum,46.07,36.26,58.02,89
+loose,RSGboth-L18-s0,onset_h,12.55,10.04,14.74,89
+loose,RSGboth-L18-s1,completed_loose,61.8,50.63,70.97,89
+loose,RSGboth-L18-s1,v_ego_40,9.303,8.748,10.13,4
+loose,RSGboth-L18-s1,v_ego_20,7.185,6.242,7.942,13
+loose,RSGboth-L18-s1,v_ego_0,4.994,4.613,5.298,89
+loose,RSGboth-L18-s1,v_ego_mid,5.487,5.139,5.821,87
+loose,RSGboth-L18-s1,v_ego_x10,7.359,6.964,7.858,51
+loose,RSGboth-L18-s1,lag_x10,-0.1175,-0.3983,0.1245,51
+loose,RSGboth-L18-s1,onset_d,0.09348,-0.203,0.4474,87
+loose,RSGboth-L18-s1,mid_d,0.2685,-0.0877,0.695,83
+loose,RSGboth-L18-s1,off_25,0.02268,-0.109,0.162,89
+loose,RSGboth-L18-s1,off_50,0.1206,-0.05578,0.3391,87
+loose,RSGboth-L18-s1,off_75,0.1933,-0.05749,0.5133,79
+loose,RSGboth-L18-s1,off_100,0.1193,-0.1635,0.4798,67
+loose,RSGboth-L18-s1,peak_in,-0.4626,-0.609,-0.3064,89
+loose,RSGboth-L18-s1,peak_out,0.9101,0.6457,1.257,89
+loose,RSGboth-L18-s1,cut1,15.73,6.061,24.79,89
+loose,RSGboth-L18-s1,wide1,39.33,26.45,55.56,89
+loose,RSGboth-L18-s1,weave1,0,0,0,89
+loose,RSGboth-L18-s1,route_cut1_ego,53.93,43.14,64.86,89
+loose,RSGboth-L18-s1,exit_lat,0.7986,0.4639,1.183,24
+loose,RSGboth-L18-s1,exit_ok,83.33,64,100,24
+loose,RSGboth-L18-s1,exit10_lat,0.9231,0.6565,1.271,51
+loose,RSGboth-L18-s1,exit10_ok,84.31,70.18,95.35,51
+loose,RSGboth-L18-s1,yr_peak_e,21.72,18.47,25.01,67
+loose,RSGboth-L18-s1,rev_e,1.134,0.9839,1.302,67
+loose,RSGboth-L18-s1,completed_strict,87.5,71.43,100,24
+loose,RSGboth-L18-s1,v_log_40,9.296,8.784,10.02,4
+loose,RSGboth-L18-s1,v_log_20,6.565,5.219,7.562,15
+loose,RSGboth-L18-s1,v_log_0,5.01,4.63,5.343,89
+loose,RSGboth-L18-s1,v_log_mid,5.495,5.047,5.928,89
+loose,RSGboth-L18-s1,v_log_x10,7.184,6.608,7.787,58
+loose,RSGboth-L18-s1,yr_peak_h,20.4,18.4,22.53,89
+loose,RSGboth-L18-s1,rev_h,1.09,1.022,1.177,89
+loose,RSGboth-L18-s1,route_cut1_hum,46.07,36.26,58.02,89
+loose,RSGboth-L18-s1,onset_h,12.55,10.04,14.74,89
+loose L,RSG-L18-s0,completed_loose,36.67,21.88,50.79,60
+loose L,RSG-L18-s0,v_ego_40,,,,0
+loose L,RSG-L18-s0,v_ego_20,5.977,3.355,7.767,3
+loose L,RSG-L18-s0,v_ego_0,4.846,4.433,5.238,60
+loose L,RSG-L18-s0,v_ego_mid,5.145,4.536,5.729,57
+loose L,RSG-L18-s0,v_ego_x10,6.373,5.432,7.336,23
+loose L,RSG-L18-s0,lag_x10,0.1628,-0.1454,0.4678,23
+loose L,RSG-L18-s0,onset_d,0.01439,-0.5269,0.587,58
+loose L,RSG-L18-s0,mid_d,-0.07399,-0.5909,0.5297,55
+loose L,RSG-L18-s0,off_25,-0.06436,-0.2976,0.1674,60
+loose L,RSG-L18-s0,off_50,0.007746,-0.3888,0.4095,57
+loose L,RSG-L18-s0,off_75,0.2192,-0.2162,0.6916,49
+loose L,RSG-L18-s0,off_100,0.07073,-0.3617,0.6115,40
+loose L,RSG-L18-s0,peak_in,-0.6112,-0.8875,-0.3465,60
+loose L,RSG-L18-s0,peak_out,0.8414,0.4777,1.287,60
+loose L,RSG-L18-s0,cut1,21.67,9.434,34.43,60
+loose L,RSG-L18-s0,wide1,31.67,18.67,46.88,60
+loose L,RSG-L18-s0,weave1,1.667,0,5.66,60
+loose L,RSG-L18-s0,route_cut1_ego,58.33,41.07,74.6,60
+loose L,RSG-L18-s0,exit_lat,0.6366,0.3049,1.054,11
+loose L,RSG-L18-s0,exit_ok,90.91,70,100,11
+loose L,RSG-L18-s0,exit10_lat,0.934,0.5907,1.411,23
+loose L,RSG-L18-s0,exit10_ok,91.3,71.43,100,23
+loose L,RSG-L18-s0,yr_peak_e,19.01,16.05,21.85,40
+loose L,RSG-L18-s0,rev_e,1.1,0.9714,1.267,40
+loose L,RSG-L18-s0,completed_strict,68.75,41.67,87.5,16
+loose L,RSG-L18-s0,v_log_40,,,,0
+loose L,RSG-L18-s0,v_log_20,4.881,2.33,7.432,4
+loose L,RSG-L18-s0,v_log_0,5.028,4.583,5.444,60
+loose L,RSG-L18-s0,v_log_mid,5.732,5.202,6.223,60
+loose L,RSG-L18-s0,v_log_x10,7.415,6.707,8.129,41
+loose L,RSG-L18-s0,yr_peak_h,19.23,16.95,21.42,60
+loose L,RSG-L18-s0,rev_h,1.133,1.032,1.262,60
+loose L,RSG-L18-s0,route_cut1_hum,50,36.67,65.45,60
+loose L,RSG-L18-s0,onset_h,8.956,7.779,10.21,60
+loose L,RSG-L18-s1,completed_loose,33.33,20,46.81,60
+loose L,RSG-L18-s1,v_ego_40,,,,0
+loose L,RSG-L18-s1,v_ego_20,5.983,3.355,7.753,3
+loose L,RSG-L18-s1,v_ego_0,4.831,4.415,5.227,60
+loose L,RSG-L18-s1,v_ego_mid,4.979,4.371,5.584,55
+loose L,RSG-L18-s1,v_ego_x10,6.518,5.414,7.517,20
+loose L,RSG-L18-s1,lag_x10,0.08921,-0.1797,0.3554,20
+loose L,RSG-L18-s1,onset_d,0.2069,-0.3495,0.8023,58
+loose L,RSG-L18-s1,mid_d,0.2304,-0.322,0.8635,52
+loose L,RSG-L18-s1,off_25,0.1191,-0.03661,0.2936,58
+loose L,RSG-L18-s1,off_50,0.2958,-0.0303,0.6656,55
+loose L,RSG-L18-s1,off_75,0.2336,-0.1799,0.698,47
+loose L,RSG-L18-s1,off_100,0.1539,-0.3259,0.759,37
+loose L,RSG-L18-s1,peak_in,-0.5254,-0.7448,-0.3059,60
+loose L,RSG-L18-s1,peak_out,0.9306,0.5517,1.4,60
+loose L,RSG-L18-s1,cut1,21.67,7.273,37.84,60
+loose L,RSG-L18-s1,wide1,31.67,18.57,47.54,60
+loose L,RSG-L18-s1,weave1,1.667,0,5.66,60
+loose L,RSG-L18-s1,route_cut1_ego,55,37.5,71.83,60
+loose L,RSG-L18-s1,exit_lat,0.5977,0.2845,0.9804,11
+loose L,RSG-L18-s1,exit_ok,90.91,70,100,11
+loose L,RSG-L18-s1,exit10_lat,0.9831,0.5674,1.502,20
+loose L,RSG-L18-s1,exit10_ok,85,63.64,100,20
+loose L,RSG-L18-s1,yr_peak_e,19.1,16.19,21.84,37
+loose L,RSG-L18-s1,rev_e,1.081,0.9429,1.308,37
+loose L,RSG-L18-s1,completed_strict,62.5,38.89,86.67,16
+loose L,RSG-L18-s1,v_log_40,,,,0
+loose L,RSG-L18-s1,v_log_20,4.881,2.33,7.432,4
+loose L,RSG-L18-s1,v_log_0,5.028,4.583,5.444,60
+loose L,RSG-L18-s1,v_log_mid,5.732,5.202,6.223,60
+loose L,RSG-L18-s1,v_log_x10,7.415,6.707,8.129,41
+loose L,RSG-L18-s1,yr_peak_h,19.23,16.95,21.42,60
+loose L,RSG-L18-s1,rev_h,1.133,1.032,1.262,60
+loose L,RSG-L18-s1,route_cut1_hum,50,36.67,65.45,60
+loose L,RSG-L18-s1,onset_h,8.956,7.779,10.21,60
+loose L,RSGboth-L18-s0,completed_loose,61.67,47.62,73.44,60
+loose L,RSGboth-L18-s0,v_ego_40,,,,0
+loose L,RSGboth-L18-s0,v_ego_20,6.162,3.355,7.939,3
+loose L,RSGboth-L18-s0,v_ego_0,4.946,4.59,5.289,60
+loose L,RSGboth-L18-s0,v_ego_mid,5.688,5.292,6.082,58
+loose L,RSGboth-L18-s0,v_ego_x10,7.478,6.944,8.086,37
+loose L,RSGboth-L18-s0,lag_x10,-0.1131,-0.3855,0.1091,37
+loose L,RSGboth-L18-s0,onset_d,0.01762,-0.457,0.525,58
+loose L,RSGboth-L18-s0,mid_d,0.4073,-0.02255,0.884,56
+loose L,RSGboth-L18-s0,off_25,-0.04388,-0.2517,0.167,60
+loose L,RSGboth-L18-s0,off_50,0.1851,-0.08691,0.477,58
+loose L,RSGboth-L18-s0,off_75,0.3039,-0.0592,0.6905,53
+loose L,RSGboth-L18-s0,off_100,0.3225,-0.03626,0.7259,48
+loose L,RSGboth-L18-s0,peak_in,-0.4559,-0.6658,-0.2563,60
+loose L,RSGboth-L18-s0,peak_out,1.044,0.7025,1.436,60
+loose L,RSGboth-L18-s0,cut1,13.33,1.723,28.33,60
+loose L,RSGboth-L18-s0,wide1,43.33,27.87,60,60
+loose L,RSGboth-L18-s0,weave1,0,0,0,60
+loose L,RSGboth-L18-s0,route_cut1_ego,53.33,36.54,69.57,60
+loose L,RSGboth-L18-s0,exit_lat,1.034,0.6354,1.458,20
+loose L,RSGboth-L18-s0,exit_ok,75,54.17,94.74,20
+loose L,RSGboth-L18-s0,exit10_lat,1.018,0.6866,1.428,37
+loose L,RSGboth-L18-s0,exit10_ok,81.08,62.5,95.24,37
+loose L,RSGboth-L18-s0,yr_peak_e,18.54,15.89,21.37,48
+loose L,RSGboth-L18-s0,rev_e,1.104,1,1.234,48
+loose L,RSGboth-L18-s0,completed_strict,87.5,72.73,100,16
+loose L,RSGboth-L18-s0,v_log_40,,,,0
+loose L,RSGboth-L18-s0,v_log_20,4.881,2.33,7.432,4
+loose L,RSGboth-L18-s0,v_log_0,5.028,4.583,5.444,60
+loose L,RSGboth-L18-s0,v_log_mid,5.732,5.202,6.223,60
+loose L,RSGboth-L18-s0,v_log_x10,7.415,6.707,8.129,41
+loose L,RSGboth-L18-s0,yr_peak_h,19.23,16.95,21.42,60
+loose L,RSGboth-L18-s0,rev_h,1.133,1.032,1.262,60
+loose L,RSGboth-L18-s0,route_cut1_hum,50,36.67,65.45,60
+loose L,RSGboth-L18-s0,onset_h,8.956,7.779,10.21,60
+loose L,RSGboth-L18-s1,completed_loose,58.33,43.94,70.84,60
+loose L,RSGboth-L18-s1,v_ego_40,,,,0
+loose L,RSGboth-L18-s1,v_ego_20,6.146,3.355,7.923,3
+loose L,RSGboth-L18-s1,v_ego_0,4.925,4.566,5.267,60
+loose L,RSGboth-L18-s1,v_ego_mid,5.601,5.178,6.006,58
+loose L,RSGboth-L18-s1,v_ego_x10,7.583,7.09,8.177,36
+loose L,RSGboth-L18-s1,lag_x10,-0.1101,-0.3746,0.09169,36
+loose L,RSGboth-L18-s1,onset_d,0.2188,-0.2425,0.7168,58
+loose L,RSGboth-L18-s1,mid_d,0.5402,0.07909,1.068,54
+loose L,RSGboth-L18-s1,off_25,0.04487,-0.1475,0.2466,60
+loose L,RSGboth-L18-s1,off_50,0.1962,-0.04634,0.463,58
+loose L,RSGboth-L18-s1,off_75,0.4027,0.05946,0.7689,52
+loose L,RSGboth-L18-s1,off_100,0.3857,0.01306,0.822,44
+loose L,RSGboth-L18-s1,peak_in,-0.3665,-0.5587,-0.1861,60
+loose L,RSGboth-L18-s1,peak_out,1.165,0.8147,1.57,60
+loose L,RSGboth-L18-s1,cut1,11.67,1.723,23.88,60
+loose L,RSGboth-L18-s1,wide1,46.67,30.77,63.64,60
+loose L,RSGboth-L18-s1,weave1,0,0,0,60
+loose L,RSGboth-L18-s1,route_cut1_ego,55,38.46,70.59,60
+loose L,RSGboth-L18-s1,exit_lat,0.9853,0.5887,1.398,18
+loose L,RSGboth-L18-s1,exit_ok,77.78,55,100,18
+loose L,RSGboth-L18-s1,exit10_lat,1.081,0.7161,1.532,36
+loose L,RSGboth-L18-s1,exit10_ok,77.78,58.97,93.1,36
+loose L,RSGboth-L18-s1,yr_peak_e,18.97,16.01,21.97,44
+loose L,RSGboth-L18-s1,rev_e,1.159,0.9737,1.389,44
+loose L,RSGboth-L18-s1,completed_strict,81.25,53.85,100,16
+loose L,RSGboth-L18-s1,v_log_40,,,,0
+loose L,RSGboth-L18-s1,v_log_20,4.881,2.33,7.432,4
+loose L,RSGboth-L18-s1,v_log_0,5.028,4.583,5.444,60
+loose L,RSGboth-L18-s1,v_log_mid,5.732,5.202,6.223,60
+loose L,RSGboth-L18-s1,v_log_x10,7.415,6.707,8.129,41
+loose L,RSGboth-L18-s1,yr_peak_h,19.23,16.95,21.42,60
+loose L,RSGboth-L18-s1,rev_h,1.133,1.032,1.262,60
+loose L,RSGboth-L18-s1,route_cut1_hum,50,36.67,65.45,60
+loose L,RSGboth-L18-s1,onset_h,8.956,7.779,10.21,60
+loose R,RSG-L18-s0,completed_loose,27.59,4.762,54.55,29
+loose R,RSG-L18-s0,v_ego_40,9.212,8.748,9.769,4
+loose R,RSG-L18-s0,v_ego_20,6.878,5.922,7.532,10
+loose R,RSG-L18-s0,v_ego_0,4.477,3.67,5.094,27
+loose R,RSG-L18-s0,v_ego_mid,4.605,4.201,5.14,22
+loose R,RSG-L18-s0,v_ego_x10,5.213,3.038,6.245,8
+loose R,RSG-L18-s0,lag_x10,0.2358,-0.308,1.396,8
+loose R,RSG-L18-s0,onset_d,-0.118,-0.5715,0.5399,26
+loose R,RSG-L18-s0,mid_d,0.4325,-0.1693,1.122,22
+loose R,RSG-L18-s0,off_25,0.07231,-0.07627,0.318,27
+loose R,RSG-L18-s0,off_50,0.2128,-0.01056,0.5454,22
+loose R,RSG-L18-s0,off_75,0.4053,0.04075,0.946,19
+loose R,RSG-L18-s0,off_100,0.7083,0.1561,1.388,15
+loose R,RSG-L18-s0,peak_in,-0.2856,-0.4306,-0.1639,29
+loose R,RSG-L18-s0,peak_out,0.7794,0.5357,1.198,29
+loose R,RSG-L18-s0,cut1,3.448,0,14.29,29
+loose R,RSG-L18-s0,wide1,34.48,18.6,61.11,29
+loose R,RSG-L18-s0,weave1,0,0,0,29
+loose R,RSG-L18-s0,route_cut1_ego,44.83,28.57,61.11,29
+loose R,RSG-L18-s0,exit_lat,0.09472,0.00628,0.1389,3
+loose R,RSG-L18-s0,exit_ok,100,100,100,3
+loose R,RSG-L18-s0,exit10_lat,0.9464,0.492,2.194,8
+loose R,RSG-L18-s0,exit10_ok,75,0,100,8
+loose R,RSG-L18-s0,yr_peak_e,22.52,19.1,25.36,15
+loose R,RSG-L18-s0,rev_e,1.133,1,1.353,15
+loose R,RSG-L18-s0,completed_strict,62.5,22.22,100,8
+loose R,RSG-L18-s0,v_log_40,9.296,8.784,10.02,4
+loose R,RSG-L18-s0,v_log_20,7.177,5.801,8.088,11
+loose R,RSG-L18-s0,v_log_0,4.972,4.268,5.562,29
+loose R,RSG-L18-s0,v_log_mid,5.003,4.348,5.6,29
+loose R,RSG-L18-s0,v_log_x10,6.627,6.026,7.431,17
+loose R,RSG-L18-s0,yr_peak_h,22.82,19.74,26.07,29
+loose R,RSG-L18-s0,rev_h,1,1,1,29
+loose R,RSG-L18-s0,route_cut1_hum,37.93,26.09,50,29
+loose R,RSG-L18-s0,onset_h,19.98,14.51,24.26,29
+loose R,RSG-L18-s1,completed_loose,24.14,5.556,46.15,29
+loose R,RSG-L18-s1,v_ego_40,9.225,8.748,9.821,4
+loose R,RSG-L18-s1,v_ego_20,6.877,5.952,7.521,10
+loose R,RSG-L18-s1,v_ego_0,4.331,3.511,4.961,27
+loose R,RSG-L18-s1,v_ego_mid,4.205,3.703,4.799,23
+loose R,RSG-L18-s1,v_ego_x10,5.864,4.456,7.74,7
+loose R,RSG-L18-s1,lag_x10,0.4019,0.111,0.8518,7
+loose R,RSG-L18-s1,onset_d,-0.005121,-0.445,0.6957,25
+loose R,RSG-L18-s1,mid_d,0.272,-0.2283,0.9212,21
+loose R,RSG-L18-s1,off_25,0.02782,-0.1212,0.2592,25
+loose R,RSG-L18-s1,off_50,0.1644,-0.05515,0.5462,23
+loose R,RSG-L18-s1,off_75,0.4273,0.0401,0.9758,17
+loose R,RSG-L18-s1,off_100,0.7702,0.3828,1.362,14
+loose R,RSG-L18-s1,peak_in,-0.279,-0.4241,-0.1335,29
+loose R,RSG-L18-s1,peak_out,0.6623,0.4558,1.032,29
+loose R,RSG-L18-s1,cut1,13.79,0,25,29
+loose R,RSG-L18-s1,wide1,24.14,10,43.75,29
+loose R,RSG-L18-s1,weave1,0,0,0,29
+loose R,RSG-L18-s1,route_cut1_ego,44.83,27.78,59.09,29
+loose R,RSG-L18-s1,exit_lat,0.136,0.136,0.136,2
+loose R,RSG-L18-s1,exit_ok,100,100,100,2
+loose R,RSG-L18-s1,exit10_lat,0.4671,0.2209,0.789,7
+loose R,RSG-L18-s1,exit10_ok,100,100,100,7
+loose R,RSG-L18-s1,yr_peak_e,22.71,20.05,25.58,14
+loose R,RSG-L18-s1,rev_e,1,1,1,14
+loose R,RSG-L18-s1,completed_strict,50,11.11,88.89,8
+loose R,RSG-L18-s1,v_log_40,9.296,8.784,10.02,4
+loose R,RSG-L18-s1,v_log_20,7.177,5.801,8.088,11
+loose R,RSG-L18-s1,v_log_0,4.972,4.268,5.562,29
+loose R,RSG-L18-s1,v_log_mid,5.003,4.348,5.6,29
+loose R,RSG-L18-s1,v_log_x10,6.627,6.026,7.431,17
+loose R,RSG-L18-s1,yr_peak_h,22.82,19.74,26.07,29
+loose R,RSG-L18-s1,rev_h,1,1,1,29
+loose R,RSG-L18-s1,route_cut1_hum,37.93,26.09,50,29
+loose R,RSG-L18-s1,onset_h,19.98,14.51,24.26,29
+loose R,RSGboth-L18-s0,completed_loose,62.07,40,77.78,29
+loose R,RSGboth-L18-s0,v_ego_40,9.286,8.748,10.07,4
+loose R,RSGboth-L18-s0,v_ego_20,7.518,6.352,8.237,10
+loose R,RSGboth-L18-s0,v_ego_0,5.248,4.333,5.797,29
+loose R,RSGboth-L18-s0,v_ego_mid,5.298,4.84,5.616,29
+loose R,RSGboth-L18-s0,v_ego_x10,6.518,6.156,6.88,14
+loose R,RSGboth-L18-s0,lag_x10,0.009285,-0.7879,0.737,14
+loose R,RSGboth-L18-s0,onset_d,-0.07497,-0.7098,0.6043,29
+loose R,RSGboth-L18-s0,mid_d,-0.06071,-0.4598,0.3038,28
+loose R,RSGboth-L18-s0,off_25,0.003324,-0.1785,0.2772,29
+loose R,RSGboth-L18-s0,off_50,0.06894,-0.1677,0.4143,29
+loose R,RSGboth-L18-s0,off_75,-0.1044,-0.3237,0.2705,27
+loose R,RSGboth-L18-s0,off_100,-0.202,-0.5,0.1712,23
+loose R,RSGboth-L18-s0,peak_in,-0.552,-0.6888,-0.3802,29
+loose R,RSGboth-L18-s0,peak_out,0.5893,0.3533,0.8803,29
+loose R,RSGboth-L18-s0,cut1,20.69,10,30,29
+loose R,RSGboth-L18-s0,wide1,31.03,16,54.55,29
+loose R,RSGboth-L18-s0,weave1,0,0,0,29
+loose R,RSGboth-L18-s0,route_cut1_ego,51.72,34.38,68.75,29
+loose R,RSGboth-L18-s0,exit_lat,0.5011,0.2577,0.9173,6
+loose R,RSGboth-L18-s0,exit_ok,100,100,100,6
+loose R,RSGboth-L18-s0,exit10_lat,0.5874,0.4355,0.926,14
+loose R,RSGboth-L18-s0,exit10_ok,100,100,100,14
+loose R,RSGboth-L18-s0,yr_peak_e,23.46,19.32,28.07,23
+loose R,RSGboth-L18-s0,rev_e,0.9565,0.9032,1,23
+loose R,RSGboth-L18-s0,completed_strict,100,100,100,8
+loose R,RSGboth-L18-s0,v_log_40,9.296,8.784,10.02,4
+loose R,RSGboth-L18-s0,v_log_20,7.177,5.801,8.088,11
+loose R,RSGboth-L18-s0,v_log_0,4.972,4.268,5.562,29
+loose R,RSGboth-L18-s0,v_log_mid,5.003,4.348,5.6,29
+loose R,RSGboth-L18-s0,v_log_x10,6.627,6.026,7.431,17
+loose R,RSGboth-L18-s0,yr_peak_h,22.82,19.74,26.07,29
+loose R,RSGboth-L18-s0,rev_h,1,1,1,29
+loose R,RSGboth-L18-s0,route_cut1_hum,37.93,26.09,50,29
+loose R,RSGboth-L18-s0,onset_h,19.98,14.51,24.26,29
+loose R,RSGboth-L18-s1,completed_loose,68.97,50,82.61,29
+loose R,RSGboth-L18-s1,v_ego_40,9.303,8.748,10.13,4
+loose R,RSGboth-L18-s1,v_ego_20,7.496,6.361,8.213,10
+loose R,RSGboth-L18-s1,v_ego_0,5.135,4.246,5.704,29
+loose R,RSGboth-L18-s1,v_ego_mid,5.259,4.798,5.588,29
+loose R,RSGboth-L18-s1,v_ego_x10,6.822,6.506,7.148,15
+loose R,RSGboth-L18-s1,lag_x10,-0.1355,-0.8211,0.4792,15
+loose R,RSGboth-L18-s1,onset_d,-0.1572,-0.7121,0.5822,29
+loose R,RSGboth-L18-s1,mid_d,-0.2374,-0.5553,0.07448,29
+loose R,RSGboth-L18-s1,off_25,-0.02322,-0.1853,0.2334,29
+loose R,RSGboth-L18-s1,off_50,-0.03068,-0.2116,0.3073,29
+loose R,RSGboth-L18-s1,off_75,-0.21,-0.3792,0.1182,27
+loose R,RSGboth-L18-s1,off_100,-0.3902,-0.688,-0.1243,23
+loose R,RSGboth-L18-s1,peak_in,-0.6614,-0.8004,-0.4602,29
+loose R,RSGboth-L18-s1,peak_out,0.3823,0.2107,0.6542,29
+loose R,RSGboth-L18-s1,cut1,24.14,9.091,36.84,29
+loose R,RSGboth-L18-s1,wide1,24.14,8.824,52.17,29
+loose R,RSGboth-L18-s1,weave1,0,0,0,29
+loose R,RSGboth-L18-s1,route_cut1_ego,51.72,34.38,68.75,29
+loose R,RSGboth-L18-s1,exit_lat,0.2383,0.08724,0.3509,6
+loose R,RSGboth-L18-s1,exit_ok,100,100,100,6
+loose R,RSGboth-L18-s1,exit10_lat,0.5447,0.3999,0.8301,15
+loose R,RSGboth-L18-s1,exit10_ok,100,100,100,15
+loose R,RSGboth-L18-s1,yr_peak_e,27,21.96,32.39,23
+loose R,RSGboth-L18-s1,rev_e,1.087,1,1.207,23
+loose R,RSGboth-L18-s1,completed_strict,100,100,100,8
+loose R,RSGboth-L18-s1,v_log_40,9.296,8.784,10.02,4
+loose R,RSGboth-L18-s1,v_log_20,7.177,5.801,8.088,11
+loose R,RSGboth-L18-s1,v_log_0,4.972,4.268,5.562,29
+loose R,RSGboth-L18-s1,v_log_mid,5.003,4.348,5.6,29
+loose R,RSGboth-L18-s1,v_log_x10,6.627,6.026,7.431,17
+loose R,RSGboth-L18-s1,yr_peak_h,22.82,19.74,26.07,29
+loose R,RSGboth-L18-s1,rev_h,1,1,1,29
+loose R,RSGboth-L18-s1,route_cut1_hum,37.93,26.09,50,29
+loose R,RSGboth-L18-s1,onset_h,19.98,14.51,24.26,29

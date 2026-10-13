@@ -1,0 +1,313 @@
+set,pair,metric,a,b,diff,lo,hi,n
+strict,RSGboth-L18-s0:RSG-L18-s0,completed_loose,91.67,79.17,12.5,-6.25,33.33,24
+strict,RSGboth-L18-s0:RSG-L18-s0,v_ego_40,,,,,,0
+strict,RSGboth-L18-s0:RSG-L18-s0,v_ego_20,,,,,,0
+strict,RSGboth-L18-s0:RSG-L18-s0,v_ego_0,4.255,4.124,0.1302,-0.01793,0.2651,24
+strict,RSGboth-L18-s0:RSG-L18-s0,v_ego_mid,5.322,5.04,0.2821,-0.0004255,0.5377,24
+strict,RSGboth-L18-s0:RSG-L18-s0,v_ego_x10,6.953,5.567,1.385,0.8785,2.069,19
+strict,RSGboth-L18-s0:RSG-L18-s0,lag_x10,-0.1552,0.3901,-0.5452,-0.9133,-0.2672,19
+strict,RSGboth-L18-s0:RSG-L18-s0,onset_d,-0.08907,0.05587,-0.1449,-0.3551,0.0283,24
+strict,RSGboth-L18-s0:RSG-L18-s0,mid_d,0.4549,0.5301,-0.07523,-0.3431,0.1648,24
+strict,RSGboth-L18-s0:RSG-L18-s0,off_25,-0.07077,-0.01623,-0.05454,-0.1279,0.01151,24
+strict,RSGboth-L18-s0:RSG-L18-s0,off_50,-0.002146,0.1184,-0.1206,-0.2563,0.02943,24
+strict,RSGboth-L18-s0:RSG-L18-s0,off_75,0.1433,0.3419,-0.1986,-0.3859,0.03484,24
+strict,RSGboth-L18-s0:RSG-L18-s0,off_100,0.1236,0.3213,-0.1977,-0.4528,0.09907,23
+strict,RSGboth-L18-s0:RSG-L18-s0,peak_in,-0.5333,-0.4934,-0.03987,-0.1867,0.1185,24
+strict,RSGboth-L18-s0:RSG-L18-s0,peak_out,0.8332,1.04,-0.207,-0.4404,-0.003001,24
+strict,RSGboth-L18-s0:RSG-L18-s0,cut1,20.83,20.83,0,-11.11,11.54,24
+strict,RSGboth-L18-s0:RSG-L18-s0,wide1,33.33,50,-16.67,-34.78,0,24
+strict,RSGboth-L18-s0:RSG-L18-s0,weave1,0,0,0,0,0,24
+strict,RSGboth-L18-s0:RSG-L18-s0,route_cut1_ego,66.67,66.67,0,-10.34,11.11,24
+strict,RSGboth-L18-s0:RSG-L18-s0,exit_lat,0.8773,0.7054,0.1719,0.05275,0.3184,8
+strict,RSGboth-L18-s0:RSG-L18-s0,exit_ok,87.5,87.5,0,0,0,8
+strict,RSGboth-L18-s0:RSG-L18-s0,exit10_lat,0.8284,0.9845,-0.1561,-0.446,0.0208,19
+strict,RSGboth-L18-s0:RSG-L18-s0,exit10_ok,94.74,89.47,5.263,-10.53,28.57,19
+strict,RSGboth-L18-s0:RSG-L18-s0,yr_peak_e,25.62,23.89,1.729,0.4819,2.932,23
+strict,RSGboth-L18-s0:RSG-L18-s0,rev_e,1.087,1.13,-0.04348,-0.2857,0.2381,23
+strict,RSGboth-L18-s0:RSG-L18-s0,completed_strict,91.67,66.67,25,4.762,48,24
+strict,RSGboth-L18-s1:RSG-L18-s1,completed_loose,87.5,62.5,25,5.874,40.91,24
+strict,RSGboth-L18-s1:RSG-L18-s1,v_ego_40,,,,,,0
+strict,RSGboth-L18-s1:RSG-L18-s1,v_ego_20,,,,,,0
+strict,RSGboth-L18-s1:RSG-L18-s1,v_ego_0,4.249,4.105,0.1436,-0.008366,0.2776,24
+strict,RSGboth-L18-s1:RSG-L18-s1,v_ego_mid,5.316,4.894,0.4228,0.09674,0.7223,24
+strict,RSGboth-L18-s1:RSG-L18-s1,v_ego_x10,7.197,6.114,1.083,0.3745,1.825,15
+strict,RSGboth-L18-s1:RSG-L18-s1,lag_x10,-0.227,0.2752,-0.5022,-0.9858,-0.145,15
+strict,RSGboth-L18-s1:RSG-L18-s1,onset_d,0.02095,0.1763,-0.1553,-0.3208,0.02041,24
+strict,RSGboth-L18-s1:RSG-L18-s1,mid_d,0.4379,0.6122,-0.1743,-0.4653,0.08714,24
+strict,RSGboth-L18-s1:RSG-L18-s1,off_25,-0.03544,0.02504,-0.06048,-0.1195,-0.004103,24
+strict,RSGboth-L18-s1:RSG-L18-s1,off_50,0.05746,0.1824,-0.125,-0.2472,0.01031,24
+strict,RSGboth-L18-s1:RSG-L18-s1,off_75,0.1954,0.4187,-0.2233,-0.4544,0.01849,24
+strict,RSGboth-L18-s1:RSG-L18-s1,off_100,0.1274,0.3869,-0.2595,-0.588,0.07066,23
+strict,RSGboth-L18-s1:RSG-L18-s1,peak_in,-0.4997,-0.4196,-0.08011,-0.2549,0.0819,24
+strict,RSGboth-L18-s1:RSG-L18-s1,peak_out,0.8299,1.015,-0.1855,-0.388,0.0003858,24
+strict,RSGboth-L18-s1:RSG-L18-s1,cut1,12.5,20.83,-8.333,-22.22,0,24
+strict,RSGboth-L18-s1:RSG-L18-s1,wide1,33.33,41.67,-8.333,-23.08,8.333,24
+strict,RSGboth-L18-s1:RSG-L18-s1,weave1,0,0,0,0,0,24
+strict,RSGboth-L18-s1:RSG-L18-s1,route_cut1_ego,66.67,62.5,4.167,-9.091,17.39,24
+strict,RSGboth-L18-s1:RSG-L18-s1,exit_lat,0.9248,0.7579,0.167,0.05074,0.2652,7
+strict,RSGboth-L18-s1:RSG-L18-s1,exit_ok,85.71,85.71,0,0,0,7
+strict,RSGboth-L18-s1:RSG-L18-s1,exit10_lat,0.6815,0.7009,-0.0194,-0.2332,0.1686,15
+strict,RSGboth-L18-s1:RSG-L18-s1,exit10_ok,93.33,100,-6.667,-20,0,15
+strict,RSGboth-L18-s1:RSG-L18-s1,yr_peak_e,26.28,23.19,3.096,1.431,4.719,23
+strict,RSGboth-L18-s1:RSG-L18-s1,rev_e,1.261,1.13,0.1304,0,0.375,23
+strict,RSGboth-L18-s1:RSG-L18-s1,completed_strict,87.5,58.33,29.17,5.874,51.61,24
+strict,RSGboth-RSG,completed_loose,89.58,70.83,18.75,2.083,34.78,24
+strict,RSGboth-RSG,v_ego_40,,,,,,0
+strict,RSGboth-RSG,v_ego_20,,,,,,0
+strict,RSGboth-RSG,v_ego_0,4.252,4.115,0.1369,-0.01282,0.2713,24
+strict,RSGboth-RSG,v_ego_mid,5.319,4.967,0.3524,0.05146,0.6259,24
+strict,RSGboth-RSG,v_ego_x10,6.912,5.656,1.256,0.7591,1.832,20
+strict,RSGboth-RSG,lag_x10,-0.09743,0.4944,-0.5918,-0.9679,-0.2672,20
+strict,RSGboth-RSG,onset_d,-0.03406,0.1161,-0.1501,-0.3305,0.0124,24
+strict,RSGboth-RSG,mid_d,0.4464,0.5712,-0.1248,-0.3862,0.1185,24
+strict,RSGboth-RSG,off_25,-0.05311,0.004405,-0.05751,-0.1227,0.001787,24
+strict,RSGboth-RSG,off_50,0.02766,0.1504,-0.1228,-0.2471,0.01764,24
+strict,RSGboth-RSG,off_75,0.1693,0.3803,-0.2109,-0.4115,0.02232,24
+strict,RSGboth-RSG,off_100,0.1255,0.3541,-0.2286,-0.518,0.0821,23
+strict,RSGboth-RSG,peak_in,-0.5165,-0.4565,-0.05999,-0.2134,0.09828,24
+strict,RSGboth-RSG,peak_out,0.8316,1.028,-0.1963,-0.4054,-0.007473,24
+strict,RSGboth-RSG,cut1,16.67,20.83,-4.167,-12.5,5,24
+strict,RSGboth-RSG,wide1,33.33,45.83,-12.5,-26,0,24
+strict,RSGboth-RSG,weave1,0,0,0,0,0,24
+strict,RSGboth-RSG,route_cut1_ego,66.67,64.58,2.083,-9.524,13.46,24
+strict,RSGboth-RSG,exit_lat,0.8593,0.6847,0.1746,0.06784,0.2899,8
+strict,RSGboth-RSG,exit_ok,87.5,87.5,0,0,0,8
+strict,RSGboth-RSG,exit10_lat,0.7403,0.8791,-0.1387,-0.4082,0.05321,20
+strict,RSGboth-RSG,exit10_ok,92.5,92.5,0,-13.89,18.75,20
+strict,RSGboth-RSG,yr_peak_e,25.95,23.54,2.412,0.9884,3.781,23
+strict,RSGboth-RSG,rev_e,1.174,1.13,0.04348,-0.09524,0.2895,23
+strict,RSGboth-RSG,completed_strict,89.58,62.5,27.08,9.524,47.92,24
+loose,RSGboth-L18-s0:RSG-L18-s0,completed_loose,61.8,33.71,28.09,16.05,39.58,89
+loose,RSGboth-L18-s0:RSG-L18-s0,v_ego_40,9.286,9.212,0.07434,0,0.2972,4
+loose,RSGboth-L18-s0:RSG-L18-s0,v_ego_20,7.205,6.67,0.5352,0.2634,0.7305,13
+loose,RSGboth-L18-s0:RSG-L18-s0,v_ego_0,5.006,4.731,0.275,0.0973,0.4536,87
+loose,RSGboth-L18-s0:RSG-L18-s0,v_ego_mid,5.648,4.963,0.6851,0.3746,0.9855,77
+loose,RSGboth-L18-s0:RSG-L18-s0,v_ego_x10,7.348,6.074,1.274,0.8942,1.72,31
+loose,RSGboth-L18-s0:RSG-L18-s0,lag_x10,-0.3251,0.1816,-0.5067,-0.7769,-0.264,31
+loose,RSGboth-L18-s0:RSG-L18-s0,onset_d,-0.06389,-0.02659,-0.0373,-0.1737,0.1049,84
+loose,RSGboth-L18-s0:RSG-L18-s0,mid_d,0.2503,0.1214,0.1289,-0.0322,0.3165,76
+loose,RSGboth-L18-s0:RSG-L18-s0,off_25,-0.0391,-0.02194,-0.01715,-0.07899,0.0489,87
+loose,RSGboth-L18-s0:RSG-L18-s0,off_50,0.1457,0.1668,-0.02111,-0.09799,0.05916,77
+loose,RSGboth-L18-s0:RSG-L18-s0,off_75,0.2148,0.2712,-0.05637,-0.1617,0.05862,68
+loose,RSGboth-L18-s0:RSG-L18-s0,off_100,0.1808,0.2592,-0.07843,-0.2324,0.07431,54
+loose,RSGboth-L18-s0:RSG-L18-s0,peak_in,-0.4872,-0.5051,0.0179,-0.09107,0.1392,89
+loose,RSGboth-L18-s0:RSG-L18-s0,peak_out,0.896,0.8212,0.07483,-0.03339,0.1931,89
+loose,RSGboth-L18-s0:RSG-L18-s0,cut1,15.73,15.73,0,-7.043,5.435,89
+loose,RSGboth-L18-s0:RSG-L18-s0,wide1,39.33,32.58,6.742,-2.41,16.44,89
+loose,RSGboth-L18-s0:RSG-L18-s0,weave1,0,1.124,-1.124,-4.054,0,89
+loose,RSGboth-L18-s0:RSG-L18-s0,route_cut1_ego,52.81,53.93,-1.124,-6.818,4.82,89
+loose,RSGboth-L18-s0:RSG-L18-s0,exit_lat,0.736,0.5205,0.2155,0.03446,0.4599,14
+loose,RSGboth-L18-s0:RSG-L18-s0,exit_ok,92.86,92.86,0,0,0,14
+loose,RSGboth-L18-s0:RSG-L18-s0,exit10_lat,0.9005,0.9372,-0.03665,-0.2312,0.1006,31
+loose,RSGboth-L18-s0:RSG-L18-s0,exit10_ok,90.32,87.1,3.226,-6.061,16.67,31
+loose,RSGboth-L18-s0:RSG-L18-s0,yr_peak_e,21.63,20.08,1.545,0.7865,2.252,54
+loose,RSGboth-L18-s0:RSG-L18-s0,rev_e,1.037,1.111,-0.07407,-0.2245,0.08163,54
+loose,RSGboth-L18-s0:RSG-L18-s0,completed_strict,91.67,66.67,25,4.762,48,24
+loose,RSGboth-L18-s1:RSG-L18-s1,completed_loose,61.8,30.34,31.46,19.18,40.96,89
+loose,RSGboth-L18-s1:RSG-L18-s1,v_ego_40,9.303,9.225,0.07809,0,0.3118,4
+loose,RSGboth-L18-s1:RSG-L18-s1,v_ego_20,7.185,6.67,0.5144,0.2523,0.7058,13
+loose,RSGboth-L18-s1:RSG-L18-s1,v_ego_0,4.975,4.676,0.2998,0.1121,0.4906,87
+loose,RSGboth-L18-s1:RSG-L18-s1,v_ego_mid,5.594,4.749,0.8448,0.4809,1.213,77
+loose,RSGboth-L18-s1:RSG-L18-s1,v_ego_x10,7.581,6.348,1.233,0.6183,1.807,27
+loose,RSGboth-L18-s1:RSG-L18-s1,lag_x10,-0.3755,0.1703,-0.5458,-0.9181,-0.2021,27
+loose,RSGboth-L18-s1:RSG-L18-s1,onset_d,0.06386,0.143,-0.07917,-0.2468,0.09303,83
+loose,RSGboth-L18-s1:RSG-L18-s1,mid_d,0.3036,0.1957,0.1079,-0.1024,0.3824,72
+loose,RSGboth-L18-s1:RSG-L18-s1,off_25,0.06299,0.09162,-0.02863,-0.06481,0.009978,83
+loose,RSGboth-L18-s1:RSG-L18-s1,off_50,0.1819,0.2142,-0.03237,-0.1208,0.05647,77
+loose,RSGboth-L18-s1:RSG-L18-s1,off_75,0.2142,0.2803,-0.06603,-0.1917,0.05914,63
+loose,RSGboth-L18-s1:RSG-L18-s1,off_100,0.2314,0.3231,-0.09171,-0.2986,0.117,51
+loose,RSGboth-L18-s1:RSG-L18-s1,peak_in,-0.4626,-0.4451,-0.01751,-0.1273,0.1159,89
+loose,RSGboth-L18-s1:RSG-L18-s1,peak_out,0.9101,0.8432,0.06687,-0.0525,0.2083,89
+loose,RSGboth-L18-s1:RSG-L18-s1,cut1,15.73,19.1,-3.371,-10.47,3.847,89
+loose,RSGboth-L18-s1:RSG-L18-s1,wide1,39.33,29.21,10.11,1.099,21.05,89
+loose,RSGboth-L18-s1:RSG-L18-s1,weave1,0,1.124,-1.124,-4.054,0,89
+loose,RSGboth-L18-s1:RSG-L18-s1,route_cut1_ego,53.93,51.69,2.247,-2.941,7.955,89
+loose,RSGboth-L18-s1:RSG-L18-s1,exit_lat,0.8233,0.5267,0.2966,0.1122,0.5845,13
+loose,RSGboth-L18-s1:RSG-L18-s1,exit_ok,84.62,92.31,-7.692,-27.27,0,13
+loose,RSGboth-L18-s1:RSG-L18-s1,exit10_lat,0.9178,0.8494,0.06845,-0.07238,0.2383,27
+loose,RSGboth-L18-s1:RSG-L18-s1,exit10_ok,85.19,88.89,-3.704,-12,0,27
+loose,RSGboth-L18-s1:RSG-L18-s1,yr_peak_e,22.48,20.09,2.386,1.223,3.507,51
+loose,RSGboth-L18-s1:RSG-L18-s1,rev_e,1.137,1.059,0.07843,-0.04167,0.2353,51
+loose,RSGboth-L18-s1:RSG-L18-s1,completed_strict,87.5,58.33,29.17,5.874,51.61,24
+loose,RSGboth-RSG,completed_loose,61.8,32.02,29.78,18.35,39.5,89
+loose,RSGboth-RSG,v_ego_40,9.295,9.218,0.07622,0,0.3045,4
+loose,RSGboth-RSG,v_ego_20,7.195,6.67,0.5248,0.259,0.7161,13
+loose,RSGboth-RSG,v_ego_0,4.991,4.703,0.2874,0.105,0.4722,87
+loose,RSGboth-RSG,v_ego_mid,5.609,4.855,0.7535,0.4261,1.074,79
+loose,RSGboth-RSG,v_ego_x10,7.3,6.011,1.289,0.8954,1.706,33
+loose,RSGboth-RSG,lag_x10,-0.2984,0.2972,-0.5956,-0.887,-0.3196,33
+loose,RSGboth-RSG,onset_d,0.006646,0.06793,-0.06128,-0.201,0.08338,84
+loose,RSGboth-RSG,mid_d,0.3223,0.1714,0.1509,-0.02518,0.3787,76
+loose,RSGboth-RSG,off_25,-0.01064,0.005006,-0.01565,-0.07267,0.04588,87
+loose,RSGboth-RSG,off_50,0.1368,0.1577,-0.02097,-0.1003,0.06239,79
+loose,RSGboth-RSG,off_75,0.257,0.3147,-0.05772,-0.1723,0.06985,68
+loose,RSGboth-RSG,off_100,0.2039,0.2883,-0.08438,-0.2605,0.09499,54
+loose,RSGboth-RSG,peak_in,-0.4749,-0.4751,0.0001932,-0.105,0.1212,89
+loose,RSGboth-RSG,peak_out,0.9031,0.8322,0.07085,-0.03619,0.1928,89
+loose,RSGboth-RSG,cut1,15.73,17.42,-1.685,-7.921,3.604,89
+loose,RSGboth-RSG,wide1,39.33,30.9,8.427,0.5682,17.95,89
+loose,RSGboth-RSG,weave1,0,1.124,-1.124,-4.054,0,89
+loose,RSGboth-RSG,route_cut1_ego,53.37,52.81,0.5618,-4.211,5.882,89
+loose,RSGboth-RSG,exit_lat,0.7594,0.505,0.2544,0.08483,0.5004,14
+loose,RSGboth-RSG,exit_ok,89.29,92.86,-3.571,-12.5,0,14
+loose,RSGboth-RSG,exit10_lat,0.8918,0.919,-0.02716,-0.2183,0.1309,33
+loose,RSGboth-RSG,exit10_ok,86.36,86.36,0,-8.333,11.11,33
+loose,RSGboth-RSG,yr_peak_e,21.93,19.97,1.96,1.048,2.835,54
+loose,RSGboth-RSG,rev_e,1.083,1.083,0,-0.08929,0.1111,54
+loose,RSGboth-RSG,completed_strict,89.58,62.5,27.08,9.524,47.92,24
+loose L,RSGboth-L18-s0:RSG-L18-s0,completed_loose,61.67,36.67,25,13.85,37.04,60
+loose L,RSGboth-L18-s0:RSG-L18-s0,v_ego_40,,,,,,0
+loose L,RSGboth-L18-s0:RSG-L18-s0,v_ego_20,6.162,5.977,0.1846,0,0.3812,3
+loose L,RSGboth-L18-s0:RSG-L18-s0,v_ego_0,4.946,4.846,0.1005,-0.01715,0.2348,60
+loose L,RSGboth-L18-s0:RSG-L18-s0,v_ego_mid,5.751,5.106,0.6457,0.3161,1.009,55
+loose L,RSGboth-L18-s0:RSG-L18-s0,v_ego_x10,7.55,6.373,1.177,0.829,1.583,23
+loose L,RSGboth-L18-s0:RSG-L18-s0,lag_x10,-0.2535,0.1628,-0.4163,-0.7164,-0.1895,23
+loose L,RSGboth-L18-s0:RSG-L18-s0,onset_d,0.01762,0.01439,0.003236,-0.1557,0.142,58
+loose L,RSGboth-L18-s0:RSG-L18-s0,mid_d,0.3141,-0.00535,0.3194,0.09481,0.5332,54
+loose L,RSGboth-L18-s0:RSG-L18-s0,off_25,-0.04388,-0.06436,0.02047,-0.04771,0.08185,60
+loose L,RSGboth-L18-s0:RSG-L18-s0,off_50,0.216,0.1484,0.06757,-0.01864,0.1481,55
+loose L,RSGboth-L18-s0:RSG-L18-s0,off_75,0.3157,0.2192,0.09651,-0.01645,0.1971,49
+loose L,RSGboth-L18-s0:RSG-L18-s0,off_100,0.239,0.08651,0.1525,0.0008423,0.275,39
+loose L,RSGboth-L18-s0:RSG-L18-s0,peak_in,-0.4559,-0.6112,0.1553,0.02292,0.2823,60
+loose L,RSGboth-L18-s0:RSG-L18-s0,peak_out,1.044,0.8414,0.2029,0.09377,0.3173,60
+loose L,RSGboth-L18-s0:RSG-L18-s0,cut1,13.33,21.67,-8.333,-15,-2.222,60
+loose L,RSGboth-L18-s0:RSG-L18-s0,wide1,43.33,31.67,11.67,1.923,22.22,60
+loose L,RSGboth-L18-s0:RSG-L18-s0,weave1,0,1.667,-1.667,-5.66,0,60
+loose L,RSGboth-L18-s0:RSG-L18-s0,route_cut1_ego,53.33,58.33,-5,-11.27,1.923,60
+loose L,RSGboth-L18-s0:RSG-L18-s0,exit_lat,0.8627,0.6366,0.2261,-0.005536,0.5302,11
+loose L,RSGboth-L18-s0:RSG-L18-s0,exit_ok,90.91,90.91,0,0,0,11
+loose L,RSGboth-L18-s0:RSG-L18-s0,exit10_lat,1.03,0.934,0.09578,-0.05492,0.2894,23
+loose L,RSGboth-L18-s0:RSG-L18-s0,exit10_ok,86.96,91.3,-4.348,-15.79,0,23
+loose L,RSGboth-L18-s0:RSG-L18-s0,yr_peak_e,19.56,19.15,0.4192,0.04353,0.818,39
+loose L,RSGboth-L18-s0:RSG-L18-s0,rev_e,1.051,1.103,-0.05128,-0.2424,0.1429,39
+loose L,RSGboth-L18-s0:RSG-L18-s0,completed_strict,87.5,68.75,18.75,0,46.15,16
+loose L,RSGboth-L18-s1:RSG-L18-s1,completed_loose,58.33,33.33,25,13.56,35.42,60
+loose L,RSGboth-L18-s1:RSG-L18-s1,v_ego_40,,,,,,0
+loose L,RSGboth-L18-s1:RSG-L18-s1,v_ego_20,6.146,5.983,0.1631,0,0.3191,3
+loose L,RSGboth-L18-s1:RSG-L18-s1,v_ego_0,4.925,4.831,0.09458,-0.01581,0.2108,60
+loose L,RSGboth-L18-s1:RSG-L18-s1,v_ego_mid,5.684,4.981,0.7039,0.3585,1.109,54
+loose L,RSGboth-L18-s1:RSG-L18-s1,v_ego_x10,7.791,6.518,1.274,0.7583,1.809,20
+loose L,RSGboth-L18-s1:RSG-L18-s1,lag_x10,-0.3004,0.08921,-0.3896,-0.6992,-0.1207,20
+loose L,RSGboth-L18-s1:RSG-L18-s1,onset_d,0.2188,0.2069,0.01192,-0.1471,0.1626,58
+loose L,RSGboth-L18-s1:RSG-L18-s1,mid_d,0.4802,0.1644,0.3158,0.05195,0.6068,51
+loose L,RSGboth-L18-s1:RSG-L18-s1,off_25,0.1232,0.1191,0.004028,-0.03662,0.04371,58
+loose L,RSGboth-L18-s1:RSG-L18-s1,off_50,0.2941,0.2354,0.05866,-0.04489,0.1581,54
+loose L,RSGboth-L18-s1:RSG-L18-s1,off_75,0.3365,0.2259,0.1105,-0.00493,0.2141,46
+loose L,RSGboth-L18-s1:RSG-L18-s1,off_100,0.3593,0.1539,0.2054,0.02746,0.362,37
+loose L,RSGboth-L18-s1:RSG-L18-s1,peak_in,-0.3665,-0.5254,0.1589,0.04749,0.2732,60
+loose L,RSGboth-L18-s1:RSG-L18-s1,peak_out,1.165,0.9306,0.2345,0.0892,0.382,60
+loose L,RSGboth-L18-s1:RSG-L18-s1,cut1,11.67,21.67,-10,-16.67,-3.125,60
+loose L,RSGboth-L18-s1:RSG-L18-s1,wide1,46.67,31.67,15,5.882,25.4,60
+loose L,RSGboth-L18-s1:RSG-L18-s1,weave1,0,1.667,-1.667,-5.66,0,60
+loose L,RSGboth-L18-s1:RSG-L18-s1,route_cut1_ego,55,55,0,-4.11,5.357,60
+loose L,RSGboth-L18-s1:RSG-L18-s1,exit_lat,0.9295,0.5977,0.3317,0.1134,0.6548,11
+loose L,RSGboth-L18-s1:RSG-L18-s1,exit_ok,81.82,90.91,-9.091,-30,0,11
+loose L,RSGboth-L18-s1:RSG-L18-s1,exit10_lat,1.139,0.9831,0.1558,0.008871,0.3455,20
+loose L,RSGboth-L18-s1:RSG-L18-s1,exit10_ok,80,85,-5,-15,0,20
+loose L,RSGboth-L18-s1:RSG-L18-s1,yr_peak_e,19.68,19.1,0.5727,0.1931,1.001,37
+loose L,RSGboth-L18-s1:RSG-L18-s1,rev_e,1.108,1.081,0.02703,-0.08,0.1724,37
+loose L,RSGboth-L18-s1:RSG-L18-s1,completed_strict,81.25,62.5,18.75,0,36.38,16
+loose L,RSGboth-RSG,completed_loose,60,35,25,14.7,35.42,60
+loose L,RSGboth-RSG,v_ego_40,,,,,,0
+loose L,RSGboth-RSG,v_ego_20,6.154,5.98,0.1738,0,0.3502,3
+loose L,RSGboth-RSG,v_ego_0,4.936,4.838,0.09754,-0.01565,0.2226,60
+loose L,RSGboth-RSG,v_ego_mid,5.712,5.048,0.6644,0.3404,1.034,56
+loose L,RSGboth-RSG,v_ego_x10,7.493,6.225,1.267,0.8772,1.679,24
+loose L,RSGboth-RSG,lag_x10,-0.2374,0.2281,-0.4655,-0.7653,-0.2245,24
+loose L,RSGboth-RSG,onset_d,0.1182,0.1106,0.007579,-0.1327,0.1313,58
+loose L,RSGboth-RSG,mid_d,0.4437,0.08225,0.3615,0.1393,0.5965,54
+loose L,RSGboth-RSG,off_25,0.0004933,-0.02769,0.02818,-0.03178,0.08354,60
+loose L,RSGboth-RSG,off_50,0.2211,0.1541,0.06699,-0.01965,0.1543,56
+loose L,RSGboth-RSG,off_75,0.3963,0.2853,0.1111,-0.007806,0.2204,49
+loose L,RSGboth-RSG,off_100,0.314,0.1457,0.1683,-0.006443,0.3118,39
+loose L,RSGboth-RSG,peak_in,-0.4112,-0.5683,0.1571,0.03937,0.271,60
+loose L,RSGboth-RSG,peak_out,1.105,0.886,0.2187,0.09457,0.3473,60
+loose L,RSGboth-RSG,cut1,12.5,21.67,-9.167,-14.94,-3.448,60
+loose L,RSGboth-RSG,wide1,45,31.67,13.33,5.085,22.88,60
+loose L,RSGboth-RSG,weave1,0,1.667,-1.667,-5.66,0,60
+loose L,RSGboth-RSG,route_cut1_ego,54.17,56.67,-2.5,-6.849,3.279,60
+loose L,RSGboth-RSG,exit_lat,0.8961,0.6172,0.2789,0.06052,0.5866,11
+loose L,RSGboth-RSG,exit_ok,86.36,90.91,-4.545,-15,0,11
+loose L,RSGboth-RSG,exit10_lat,1.074,0.9762,0.09738,-0.07827,0.3222,24
+loose L,RSGboth-RSG,exit10_ok,81.25,87.5,-6.25,-17.39,0,24
+loose L,RSGboth-RSG,yr_peak_e,19.63,19.1,0.5309,0.1698,0.9214,39
+loose L,RSGboth-RSG,rev_e,1.077,1.09,-0.01282,-0.1324,0.1389,39
+loose L,RSGboth-RSG,completed_strict,84.38,65.62,18.75,4.167,35.29,16
+loose R,RSGboth-L18-s0:RSG-L18-s0,completed_loose,62.07,27.59,34.48,10.34,56.25,29
+loose R,RSGboth-L18-s0:RSG-L18-s0,v_ego_40,9.286,9.212,0.07434,0,0.2972,4
+loose R,RSGboth-L18-s0:RSG-L18-s0,v_ego_20,7.518,6.878,0.6404,0.291,0.9867,10
+loose R,RSGboth-L18-s0:RSG-L18-s0,v_ego_0,5.139,4.477,0.6627,0.2637,1.014,27
+loose R,RSGboth-L18-s0:RSG-L18-s0,v_ego_mid,5.388,4.605,0.7836,0.3609,1.072,22
+loose R,RSGboth-L18-s0:RSG-L18-s0,v_ego_x10,6.768,5.213,1.554,0.53,3.317,8
+loose R,RSGboth-L18-s0:RSG-L18-s0,lag_x10,-0.5309,0.2358,-0.7667,-1.304,-0.3651,8
+loose R,RSGboth-L18-s0:RSG-L18-s0,onset_d,-0.2457,-0.118,-0.1277,-0.3064,0.1207,26
+loose R,RSGboth-L18-s0:RSG-L18-s0,mid_d,0.09355,0.4325,-0.3389,-0.6288,-0.1072,22
+loose R,RSGboth-L18-s0:RSG-L18-s0,off_25,-0.02845,0.07231,-0.1008,-0.192,0.02555,27
+loose R,RSGboth-L18-s0:RSG-L18-s0,off_50,-0.02996,0.2128,-0.2428,-0.3173,-0.1299,22
+loose R,RSGboth-L18-s0:RSG-L18-s0,off_75,-0.04537,0.4053,-0.4507,-0.6034,-0.3104,19
+loose R,RSGboth-L18-s0:RSG-L18-s0,off_100,0.02937,0.7083,-0.6789,-0.9333,-0.4711,15
+loose R,RSGboth-L18-s0:RSG-L18-s0,peak_in,-0.552,-0.2856,-0.2665,-0.3543,-0.1563,29
+loose R,RSGboth-L18-s0:RSG-L18-s0,peak_out,0.5893,0.7794,-0.1901,-0.4862,0.06667,29
+loose R,RSGboth-L18-s0:RSG-L18-s0,cut1,20.69,3.448,17.24,5.882,24.14,29
+loose R,RSGboth-L18-s0:RSG-L18-s0,wide1,31.03,34.48,-3.448,-23.81,10.34,29
+loose R,RSGboth-L18-s0:RSG-L18-s0,weave1,0,0,0,0,0,29
+loose R,RSGboth-L18-s0:RSG-L18-s0,route_cut1_ego,51.72,44.83,6.897,0,15.79,29
+loose R,RSGboth-L18-s0:RSG-L18-s0,exit_lat,0.2713,0.09472,0.1766,0.06369,0.4024,3
+loose R,RSGboth-L18-s0:RSG-L18-s0,exit_ok,100,100,0,0,0,3
+loose R,RSGboth-L18-s0:RSG-L18-s0,exit10_lat,0.529,0.9464,-0.4174,-1.273,-0.04879,8
+loose R,RSGboth-L18-s0:RSG-L18-s0,exit10_ok,100,75,25,0,100,8
+loose R,RSGboth-L18-s0:RSG-L18-s0,yr_peak_e,26.99,22.52,4.472,3.516,5.32,15
+loose R,RSGboth-L18-s0:RSG-L18-s0,rev_e,1,1.133,-0.1333,-0.3529,0,15
+loose R,RSGboth-L18-s0:RSG-L18-s0,completed_strict,100,62.5,37.5,0,77.78,8
+loose R,RSGboth-L18-s1:RSG-L18-s1,completed_loose,68.97,24.14,44.83,25,59.38,29
+loose R,RSGboth-L18-s1:RSG-L18-s1,v_ego_40,9.303,9.225,0.07809,0,0.3118,4
+loose R,RSGboth-L18-s1:RSG-L18-s1,v_ego_20,7.496,6.877,0.6198,0.2823,0.9277,10
+loose R,RSGboth-L18-s1:RSG-L18-s1,v_ego_0,5.087,4.331,0.7559,0.339,1.122,27
+loose R,RSGboth-L18-s1:RSG-L18-s1,v_ego_mid,5.381,4.205,1.176,0.6707,1.639,23
+loose R,RSGboth-L18-s1:RSG-L18-s1,v_ego_x10,6.981,5.864,1.118,-0.848,2.592,7
+loose R,RSGboth-L18-s1:RSG-L18-s1,lag_x10,-0.5901,0.4019,-0.9921,-1.72,-0.1542,7
+loose R,RSGboth-L18-s1:RSG-L18-s1,onset_d,-0.2956,-0.005121,-0.2905,-0.5333,0.01819,25
+loose R,RSGboth-L18-s1:RSG-L18-s1,mid_d,-0.1251,0.272,-0.3971,-0.7857,-0.1727,21
+loose R,RSGboth-L18-s1:RSG-L18-s1,off_25,-0.07658,0.02782,-0.1044,-0.1532,-0.03621,25
+loose R,RSGboth-L18-s1:RSG-L18-s1,off_50,-0.08168,0.1644,-0.2461,-0.3655,-0.1308,23
+loose R,RSGboth-L18-s1:RSG-L18-s1,off_75,-0.1165,0.4273,-0.5438,-0.8562,-0.3325,17
+loose R,RSGboth-L18-s1:RSG-L18-s1,off_100,-0.1067,0.7702,-0.8769,-1.257,-0.6252,14
+loose R,RSGboth-L18-s1:RSG-L18-s1,peak_in,-0.6614,-0.279,-0.3824,-0.4835,-0.2488,29
+loose R,RSGboth-L18-s1:RSG-L18-s1,peak_out,0.3823,0.6623,-0.28,-0.4633,-0.1761,29
+loose R,RSGboth-L18-s1:RSG-L18-s1,cut1,24.14,13.79,10.34,-5,24.32,29
+loose R,RSGboth-L18-s1:RSG-L18-s1,wide1,24.14,24.14,0,-15.62,21.06,29
+loose R,RSGboth-L18-s1:RSG-L18-s1,weave1,0,0,0,0,0,29
+loose R,RSGboth-L18-s1:RSG-L18-s1,route_cut1_ego,51.72,44.83,6.897,-5.556,20,29
+loose R,RSGboth-L18-s1:RSG-L18-s1,exit_lat,0.2393,0.136,0.1032,0.1032,0.1032,2
+loose R,RSGboth-L18-s1:RSG-L18-s1,exit_ok,100,100,0,0,0,2
+loose R,RSGboth-L18-s1:RSG-L18-s1,exit10_lat,0.2861,0.4671,-0.181,-0.4937,0.01885,7
+loose R,RSGboth-L18-s1:RSG-L18-s1,exit10_ok,100,100,0,0,0,7
+loose R,RSGboth-L18-s1:RSG-L18-s1,yr_peak_e,29.89,22.71,7.18,6.263,8.012,14
+loose R,RSGboth-L18-s1:RSG-L18-s1,rev_e,1.214,1,0.2143,0,0.5625,14
+loose R,RSGboth-L18-s1:RSG-L18-s1,completed_strict,100,50,50,11.11,88.89,8
+loose R,RSGboth-RSG,completed_loose,65.52,25.86,39.66,19.23,56.41,29
+loose R,RSGboth-RSG,v_ego_40,9.295,9.218,0.07622,0,0.3045,4
+loose R,RSGboth-RSG,v_ego_20,7.507,6.877,0.6301,0.2868,0.964,10
+loose R,RSGboth-RSG,v_ego_0,5.113,4.404,0.7093,0.3051,1.066,27
+loose R,RSGboth-RSG,v_ego_mid,5.357,4.387,0.9702,0.5201,1.348,23
+loose R,RSGboth-RSG,v_ego_x10,6.786,5.44,1.346,0.1285,2.707,9
+loose R,RSGboth-RSG,lag_x10,-0.4609,0.4814,-0.9424,-1.464,-0.433,9
+loose R,RSGboth-RSG,onset_d,-0.2423,-0.02735,-0.2149,-0.4168,0.03968,26
+loose R,RSGboth-RSG,mid_d,0.02439,0.3904,-0.366,-0.6772,-0.1533,22
+loose R,RSGboth-RSG,off_25,-0.03538,0.07767,-0.113,-0.1949,-0.01004,27
+loose R,RSGboth-RSG,off_50,-0.06847,0.1667,-0.2351,-0.3314,-0.1276,23
+loose R,RSGboth-RSG,off_75,-0.1022,0.3908,-0.493,-0.7193,-0.3323,19
+loose R,RSGboth-RSG,off_100,-0.08219,0.6592,-0.7414,-1.043,-0.5002,15
+loose R,RSGboth-RSG,peak_in,-0.6067,-0.2823,-0.3244,-0.4147,-0.2055,29
+loose R,RSGboth-RSG,peak_out,0.4858,0.7208,-0.2351,-0.4667,-0.06781,29
+loose R,RSGboth-RSG,cut1,22.41,8.621,13.79,2.778,22.73,29
+loose R,RSGboth-RSG,wide1,27.59,29.31,-1.724,-18,13.16,29
+loose R,RSGboth-RSG,weave1,0,0,0,0,0,29
+loose R,RSGboth-RSG,route_cut1_ego,51.72,44.83,6.897,-2.439,17.31,29
+loose R,RSGboth-RSG,exit_lat,0.2581,0.09375,0.1644,0.08346,0.3262,3
+loose R,RSGboth-RSG,exit_ok,100,100,0,0,0,3
+loose R,RSGboth-RSG,exit10_lat,0.4071,0.7663,-0.3593,-1.095,-0.03706,9
+loose R,RSGboth-RSG,exit10_ok,100,83.33,16.67,0,60,9
+loose R,RSGboth-RSG,yr_peak_e,27.93,22.25,5.676,4.702,6.466,15
+loose R,RSGboth-RSG,rev_e,1.1,1.067,0.03333,0,0.08824,15
+loose R,RSGboth-RSG,completed_strict,100,56.25,43.75,6.25,83.33,8
