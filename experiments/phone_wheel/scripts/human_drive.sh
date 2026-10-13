@@ -3,13 +3,13 @@
 #   human:viewer  the "human drive (phone wheel)" window on DISPLAY=:0 (openpilot's wide model frame + route + wheel panel)
 #   human:drive   scripts/b2d_run.py with its own off-screen CARLA server, then the results table
 # usage: human_drive.sh [route ids ...]   default: the openpilot monitor loop's 11 routes, in its order
-# env: HUMAN_GPU (0) card = -graphicsadapter; HUMAN_SERVER_INDEX (2: rpc 2100, tm 8100; the openpilot loop is index 0);
+# env: HUMAN_GPU (0) card = -graphicsadapter; HUMAN_SERVER_INDEX (4: rpc 2200, tm 8200; the openpilot monitor runs use 0 and 2);
 #      HUMAN_CONFIG agent config JSON (steer_gain, steer_expo, realtime, ...; see lib/human_agent.py); HUMAN_MIN_FREE_MB (8000)
 # Results: /data/runs/human_drive/<stamp>/{results.md,results.json}, per attempt human.jsonl / human_summary.json.
 set -uo pipefail
 REPO=$(cd "$(dirname "$0")/../../.." && pwd)
 H=/data/runs/human_drive LIVE=/data/runs/human_drive/live
-GPU=${HUMAN_GPU:-0} IDX=${HUMAN_SERVER_INDEX:-2}
+GPU=${HUMAN_GPU:-0} IDX=${HUMAN_SERVER_INDEX:-4}
 export DISPLAY=:0 XAUTHORITY=${XAUTHORITY:-/run/user/1001/gdm/Xauthority} DATA_DIR=/data
 export CARLA_ROOT=/data/third_party/carla/CARLA_0.9.15 BENCH2DRIVE_ROOT=/data/third_party/Bench2Drive
 
