@@ -242,7 +242,8 @@ def draw(c, st, live, imgs, F, status, cal=None):
                                         m.get_width() + 40, m.get_height() + 20))
         c.blit(m, (20 + (IW - m.get_width()) // 2, 52 + IH // 2 - m.get_height() // 2))
         if waiting:
-            lab("held %.0f s; the scene clock starts on your click (left mouse button, anywhere in this window)" % st.get("wait_s", 0),
+            lab("held %.0f s; the scene clock starts on your %s" % (st.get("wait_s", 0), "click (left mouse button, anywhere in this window)"
+                if st.get("start_mode") == "click" else "first throttle press"),
                 (20 + (IW - 900) // 2, 52 + IH // 2 + 60), ORANGE)
     y0, x1, x2, x3 = 850, 20, 560, 1100
     lab("EGO", (x1, y0), (150, 200, 255))

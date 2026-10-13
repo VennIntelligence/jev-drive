@@ -36,8 +36,9 @@ drivers and the stack are in [docs/alpasim.md](../../docs/alpasim.md), sections 
   - Wheelbase L = 0.56 x ego box length, which gives 2.9-3.0 m. A stale phone (no frame for 0.3 s) gives brake 1, so the
     car stops at 8 m/s^2.
   - Start: the world is held inside the first `drive` at or after the forced log replay (PAI 1.7 s, nuPlan 0.5 s), which is
-    where control passes to the driver. It stays held until a left click in the viewer (`<live>/start`), for at most 240 s.
-    With `HUMAN_START=throttle`, or when no viewer heartbeat is found, the first throttle press starts it instead.
+    where control passes to the driver. It stays held until the first throttle press (default `HUMAN_START=throttle`, the user's choice after the first two
+    sessions: with click start the hand has to leave the phone at every scene change), for at most 240 s. `HUMAN_START=click`
+    starts on a left click in the viewer (`<live>/start`), or on the first throttle press when no viewer heartbeat is found.
   - Pacing: after the start, a call sleeps so that sim time never runs ahead of wall time (`HUMAN_REALTIME`, default 1.0;
     0 = unpaced). The rule is the one in phone_wheel's `human_agent.py`.
   - Logs: `driver/drive.jsonl` has one `drive` record per call (phone input, applied angle / acceleration, speed, input
@@ -47,7 +48,7 @@ drivers and the stack are in [docs/alpasim.md](../../docs/alpasim.md), sections 
   - a top-down inset with the route waypoints (blue) and the 4 s plan from the phone (orange);
   - speed, the applied angle and acceleration, and the phone bars with input age and stale;
   - scene i of n, sim progress, wall s per sim s;
-  - an orange "DRIVER: HUMAN (phone)" tag, and a status line: WAITING FOR PHONE / PHONE OK, CLICK TO START / DRIVING.
+  - an orange "DRIVER: HUMAN (phone)" tag, and a status line: WAITING FOR PHONE / PHONE OK, PRESS THROTTLE TO START (or CLICK TO START) / DRIVING.
   It reads `<live>/state.json` and `front.jpg`; the driver writes them with an atomic rename.
 - `scripts/human_stack.sh` (wrappers `human_pai.sh`, `human_nuplan.sh`) is modelled on `alpasim/scripts/pai_run.sh` and
   `alpasim/docker/smoke.sh`.
@@ -74,7 +75,7 @@ drivers and the stack are in [docs/alpasim.md](../../docs/alpasim.md), sections 
 cd ~/mycode/jev-drive && git pull
 bash experiments/alpasim_human/scripts/human_pai.sh /data/runs/alpasim_human/pai_$(date +%m%d-%H%M) /data/runs/alpasim/pai1/pai_scenes_40.tsv   # stage 1: 10 scenes
 bash experiments/alpasim_human/scripts/human_nuplan.sh /data/runs/alpasim_human/nuplan_$(date +%m%d-%H%M) /data/runs/alpasim/scenes_navtest_full_part001_48.txt
-# each scene: wait for "PHONE OK, CLICK TO START", click in the window, drive; results: <out>/results.md
+# each scene: wait for "PHONE OK, PRESS THROTTLE TO START", press the throttle, drive; results: <out>/results.md
 HUMAN_MODE=official bash experiments/alpasim_human/scripts/human_pai.sh ...   # the presets' cameras and eval as shipped
 ```
 

@@ -92,7 +92,7 @@ st "driver (human, phone port ${HUMAN_WHEEL_PORT:-47800}) in $IMG, 127.0.0.1:$DP
 docker rm -f "$N" >/dev/null 2>&1
 docker run -d --name "$N" --init --network host --user "$(id -u):$(id -g)" -v "$REPO:$REPO:ro" -v "$OUT/driver:/logs" -v "$LIVE:$LIVE" \
   -e ALPASIM_DRIVER_HOST=127.0.0.1 -e "ALPASIM_DRIVER_PORT=$DPORT" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "HUMAN_LIVE=$LIVE" -e "HUMAN_TRACK=$TRACK" \
-  -e "HUMAN_N_SCENES=$n" -e "HUMAN_SIM_S=$SIM" -e "HUMAN_HOLD_S=${HUMAN_HOLD_S:-$HOLD}" -e "HUMAN_START=${HUMAN_START:-click}" \
+  -e "HUMAN_N_SCENES=$n" -e "HUMAN_SIM_S=$SIM" -e "HUMAN_HOLD_S=${HUMAN_HOLD_S:-$HOLD}" -e "HUMAN_START=${HUMAN_START:-throttle}" \
   -e "HUMAN_WAIT_MAX_S=${HUMAN_WAIT_MAX_S:-240}" -e "HUMAN_REALTIME=${HUMAN_REALTIME:-1.0}" -e "HUMAN_WHEEL_PORT=${HUMAN_WHEEL_PORT:-47800}" -e "HUMAN_RUN=$OUT" \
   -e "HUMAN_GIT=$(git -C "$REPO" rev-parse --short HEAD)" --entrypoint python "$IMG" "$REPO/experiments/alpasim_human/lib/human_driver.py" >/dev/null || die "docker run"
 t0=$(date +%s)

@@ -16,8 +16,9 @@ return (pai_driver / sh30_driver: the LTF sample's build_trajectory_from_plan ov
 
 Start: the world is held inside the first `drive` at or after HUMAN_HOLD_S of the session (the force-GT replay: PAI 1.7 s, nuPlan
 0.5 s, so the hold sits where control passes to the driver) until the start signal, at most HUMAN_WAIT_MAX_S (240):
-HUMAN_START=click (default: a left click in the viewer touches <live>/start; with no viewer heartbeat in <live>/viewer.json for
-5 s the first throttle press is accepted too), throttle (first throttle press > 0.2), none. Pacing: after the start a call sleeps so
+HUMAN_START=throttle (default, the user's choice after the first sessions: the first throttle press > 0.2 starts the scene, as the CARLA
+human agent does, so scene changes need no hand on the mouse), click (a left click in the viewer touches <live>/start; with no
+viewer heartbeat in <live>/viewer.json for 5 s the first throttle press is accepted too), none. Pacing: after the start a call sleeps so
 sim time never runs ahead of wall time x HUMAN_REALTIME (1.0; 0 = unpaced), as phone_wheel's human_agent does; when the stack is
 slower than that nothing is slept (slow motion) and more than 0.5 s behind re-anchors (`late`). Wall s per sim s, the unpaced
 figure (without the sleeps) and the sleeps are logged and shown.
@@ -54,7 +55,7 @@ FRONT = ("CAM_F0", "camera_front_wide_120fov")
 SIDES = {"left": ("CAM_L0", "camera_cross_left_120fov"), "right": ("CAM_R0", "camera_cross_right_120fov")}
 E = os.environ.get
 RT = float(E("HUMAN_REALTIME", "1.0"))
-HOLD_US, WAIT_MAX, START = int(1e6 * float(E("HUMAN_HOLD_S", "0"))), float(E("HUMAN_WAIT_MAX_S", "240")), E("HUMAN_START", "click")
+HOLD_US, WAIT_MAX, START = int(1e6 * float(E("HUMAN_HOLD_S", "0"))), float(E("HUMAN_WAIT_MAX_S", "240")), E("HUMAN_START", "throttle")
 LIVE = Path(E("HUMAN_LIVE", "/tmp/alpasim-human-live"))
 
 
