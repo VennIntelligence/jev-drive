@@ -18,6 +18,8 @@ collateral rule. Decision entry pending (main).
 
 **Next.** Ranked proposals with pilots in the note, section 5: PAI MPC gain 20 (Tokyo, two stages, ~6 h); speed-history hold switch (nuPlan held, ~3 card-h).
 
+**Spin fix (2026-10-13).** Driver-side `JEV_TRACK` (experiments/alpasim/lib/track_ref.py, default off): v6 0 / 38 spins on the PAI spin set, but low-speed turn controls and nuPlan held regress; not adopted. [results/spin_fix.md](results/spin_fix.md), prereg [plans/2026-10-13-spin-fix-prereg.md](plans/2026-10-13-spin-fix-prereg.md).
+
 **Read more.** [research/next-round/steer-long.md](../../research/next-round/steer-long.md) (Chinese: evidence, hypotheses,
 pre-registration in section 3, reads, ranked proposals).
 
