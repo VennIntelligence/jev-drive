@@ -89,3 +89,24 @@ than RSG-L18's; L3 held 460 mean no lower than RSG-L18's beyond seed noise (RSG 
 <= RSG-L18 + 5; L4 entry speed at entry - 20 m and at entry lower than RSG-L18's. Everything else as above. Submission: `rf_tschool.sh submit`
 (six arms, held 460 @18 and the public 1491 guard each, one report), called by rf_pait_chain.sh once on1_PAIT, on1_PAITC and on1_RSGPAIT
 are on the box.
+
+## Amendment 2 (2026-10-13 ~18:40 JST, user decision relayed by the coordinator; before any full-pool arm is trained or read)
+
+No closed-loop PAI read for every arm. Selection ladder:
+1. The six arms (RSGPAIT, RPAIT, RPAITC x s0, s1) train on the box as registered (rf_tschool.sh).
+2. An arm goes further only if its **s0** passes nuPlan held 460 @18 (mean within 0.01 of RSG-L18's seed mean, zeros <= RSG-L18 + 3) AND
+   the public 1491 guard (zeros <= RSG-L18 + 5, as the CFT prereg).
+3. Survivors are ranked by an **offline PAI turn read** ([rf_pai_openloop.py](../scripts/rf_pai_openloop.py), results under
+   [results/pai_openloop/](../results/pai_openloop/)): open loop on log-following rows around strict route turns, plan speed at 40 / 20 / 0 m
+   before the entry vs the human's, 2 s lateral displacement toward the turn vs needed (lat2), 4 s endpoint on the turn side (side4);
+   RSG-L18-s0 as the reference. Ranking statistic, fixed now: the median speed excess at the entry (plan - human at 0 m, lower is better)
+   first, lat2 and side4 must not be worse than RSG-L18-s0's by more than 0.1. Rows: the P1 log-following dumps of the 65 PAI turn scenes
+   (`/data/runs/route_night/r281/p1_rsg_log`, through onp_rows / onp_cache / rf_pait route like the chain) **minus hard_exam** (the exam is
+   never used for selection; the script excludes hard_exam by default); turns of scenes in on1_PAIT (hard_train) are in-sample and are
+   reported apart from held-out turns. Fallback if the P1 dumps are not there when the arms are read: the log-following rows of the 80
+   train160 scenes (on1_PAIT80's source), which are in-sample for every PAIT-trained arm; said so in the result.
+4. Only the top arm's s0 is read on Tokyo: PASS1 = the 26 hard_exam turn scenes (`/data/runs/route_night/exam_turn26.txt`, = the
+   route-follow 48 turn scenes in hard_exam; gains 20, VCONT 1.0, LEAD 1, RSG-L18-s0's stored read's serving; zeros and rf_pai_follow turn
+   completion vs RSG-L18-s0's stored read on the same 26), then PASS2 = exam147 (hard_exam 72 + control 75); s1 only for that arm.
+   `/data/runs/route_night/EXAM_READ_REQUEST` (sections PASS1 / PASS2) is written only once the top arm is chosen, with the decision line
+   naming the user. The chain no longer writes it (it writes a draft `pait/EXAM_DRAFT`).

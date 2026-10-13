@@ -3,7 +3,7 @@
 # the log (onp_pass2.sh MODE=driver, P2H10S-F-s0, card 0 only), turned into rows (onp_rows.sh) and tokens (onp_cache.py build + gid-ulp),
 # given their route messages (rf_pait.py route), packed (PAITn), merged with the 80 scenes of /data/runs/onpol_pai pass log (PAIT80) into
 # on1_PAIT, copied to the main box and merged there with on1_CFTv into on1_PAITC; then the four registered arms with their held / guard reads
-# are submitted there (rf_tschool.sh submit) and /data/runs/route_night/EXAM_READ_REQUEST is written for the Tokyo exam reads. Touches
+# are submitted there (rf_tschool.sh submit); no exam request is written here (prereg Amendment 2: only the ladder's top arm is read). Touches
 # /data/runs/route_night/CARD0_FREE2 when it exits after having taken card 0. Starts only when /data/runs/route_night/CARD0_FREE exists (the spin-fix lane holds card 0).
 #   rf_pait_chain.sh <scene list>        e.g. /data/runs/route_night/pait/roll.txt (priority scenes first)
 # card 0 is also used by other lanes (CARLA, servers): onp_pass2 waits up to WAIT_S (6 h) for it to show <= 1 GB before each chunk.
@@ -51,7 +51,7 @@ st "on1_PAITC = on1_PAIT + on1_CFTv on $BOX"
 ssh "$BOX" "cd ~/data/jev-drive && git pull -q; export DATA_DIR=$BOXD && $BOXD/envs/op-train/bin/python experiments/route_follow/scripts/rf_pait.py merge --out PAITC --pools on1_PAIT:a on1_CFTv:b && $BOXD/envs/op-train/bin/python experiments/route_follow/scripts/rf_pait.py merge --out RSGPAIT --pools on1_L18RB0:r:self on1_PAIT:p:both" || die "merge PAITC / RSGPAIT on $BOX"
 st "submit the six registered arms + held / guard reads on $BOX (rf_tschool.sh)"
 ssh "$BOX" "cd ~/data/jev-drive && git pull -q; export DATA_DIR=$BOXD && bash experiments/route_follow/scripts/rf_tschool.sh submit" > "$W/tschool_jobs.txt" || die "rf_tschool submit"
-cat > "$D/runs/route_night/EXAM_READ_REQUEST" <<EOF
+cat > "$W/EXAM_DRAFT" <<EOF                                     # a draft only: the real request is written when the top arm is chosen (prereg Amendment 2)
 # Turning school exam read request (experiments/route_follow/plans/2026-10-13-turning-school-prereg.md), written $(date '+%F %T') by rf_pait_chain.sh
 # checkpoints train on the main box (rf_tschool.sh, job ids in $W/tschool_jobs.txt): pull each when its ckpt-final.pt + route_mem.json exist
 # scenes: experiments/alpasim/results/pai_exam/hard_exam.txt (72) + control.txt (75); never hard_train
@@ -69,4 +69,4 @@ RSG-L18-s1
 RNONEG-L18-s0
 RNONEG-L18-s1
 EOF
-date > "$W/CHAIN_DONE"; st "done: on1_PAIT on $BOX, arms submitted, EXAM_READ_REQUEST written"
+date > "$W/CHAIN_DONE"; st "done: on1_PAIT on $BOX, arms submitted (exam request: only after the selection ladder)"
