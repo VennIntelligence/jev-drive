@@ -49,7 +49,16 @@ def bar(canvas, x, y, w, h, value, color, centered=False):
 
 
 def launcher_line(live):
-    """(text, colour) of what the launcher is doing, from <live>/launcher.json and the run's done/ markers."""
+    """(text, colour) of what the launcher is doing, from <live>/loop.json (panel loop) or <live>/launcher.json and the run's
+    done/ markers."""
+    lp = None
+    try:
+        lp = json.load(open(os.path.join(live, "loop.json")))
+    except (OSError, ValueError):
+        pass
+    if lp and lp.get("pid") and os.path.exists("/proc/%s" % lp["pid"]):
+        col = {"paused": ORANGE, "idle": BLUE, "stopped": GREY}.get(lp.get("state"), ORANGE)
+        return ("%s %s  %s" % (lp.get("state", "").upper(), lp.get("item") or "", lp.get("msg", ""))).strip(), col
     try:
         L = json.load(open(os.path.join(live, "launcher.json")))
     except (OSError, ValueError):
@@ -71,7 +80,8 @@ def draw(canvas, state, images, font, big, status, tag, live):
     pygame.draw.rect(canvas, ORANGE, (14, 3, t.get_width() + 20, 42), border_radius=8)
     canvas.blit(t, (24, 24 - t.get_height() // 2))
     if status == "LIVE":
-        line, col = ("WAITING FOR THE FIRST THROTTLE PRESS", ORANGE) if state.get("waiting") else ("DRIVING", GREEN)
+        line, col = (("PAUSED FROM THE PANEL", ORANGE) if state.get("paused") else
+                     ("WAITING FOR THE FIRST THROTTLE PRESS", ORANGE) if state.get("waiting") else ("DRIVING", GREEN))
     else:
         line, col = launcher_line(live)
     label("%s   route %s   step %s   sim %.1f s" % (line, state.get("route", "-"), state.get("step", "-"), state.get("sim_t", 0)),
@@ -96,7 +106,7 @@ def draw(canvas, state, images, font, big, status, tag, live):
     arrow(canvas, code, (95, 103), 40, WHITE if code in (1, 2, 5, 6) else GREY)
     canvas.blit(head, (160, 75))
     if state.get("waiting"):
-        msg = big.render("PRESS THROTTLE TO START", True, ORANGE)
+        msg = big.render("PAUSED: RESUME ON THE PANEL" if state.get("paused") else "PRESS THROTTLE TO START", True, ORANGE)
         canvas.blit(msg, (20 + (W - msg.get_width()) // 2, 48 + H // 2 - 30))
     if hu.get("stale") and status == "LIVE" and not state.get("waiting"):
         msg = big.render("PHONE SILENT: BRAKING (%s)" % (hu.get("stale_reason") or "-"), True, RED)

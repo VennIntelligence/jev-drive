@@ -1,0 +1,6 @@
+{"_about": "Best model on Bench2Drive = shipped Cinque + FIX1 longitudinal port (experiments/b2d_monitor/cfg/op_alone_smooth.json, decision 288). Single monitor runs on Tokyo, tm seed 0, full routes; 28147 is left out (tick-capped run). Source: results/b2d_exam_2026-10-13.md.",
+ "334": {"ds": 32.6, "event": "vehicle collision", "run": "tokyo_b2d_viz/runs/smooth-t1"},
+ "27005": {"ds": 37.3, "event": "red light, route deviation", "run": "tokyo_b2d_viz/runs/loop-1013-1740-p1"},
+ "24944": {"ds": 9.8, "event": "layout collision, off lanes", "run": "tokyo_b2d_viz/runs/loop-1013-1740-p1"},
+ "24416": {"ds": 7.9, "event": "vehicle collision, off lanes", "run": "tokyo_b2d_viz/runs/loop-1013-1740-p1"},
+ "24721": {"ds": 100.0, "event": "-", "run": "b2d_monitor/runs/loop-1013-1935-p1"}}

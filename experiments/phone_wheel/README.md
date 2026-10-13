@@ -146,6 +146,44 @@ bash ~/mycode/jev-drive/experiments/phone_wheel/scripts/human_drive.sh --resume 
   Drive-pi0 69.71, DriveTransformer 60.20, DriveAdapter 54.96, ThinkTwice 52.84, TCP 51.44, UniAD 38.69, VAD 38.65,
   ADMLP 35.39; the B2D paper is arXiv 2406.03877, but its own tables are v0.0.3 and on another route set). Logs: `official/tools.log`.
 
+## Desktop panel (Tokyo): batches, resume, pause, route list
+
+Double-click "B2D human exam" on the Tokyo desktop (`scripts/human_panel.sh`; install or refresh the icon with
+`bash experiments/phone_wheel/scripts/human_panel.sh --install`). It opens one panel (a lock file prevents a second) and
+starts the wheel daemon (tmux `wheel`) and the viewer (tmux `human:viewer`) if they are missing. The panel runs on the
+system Python (`/usr/bin/python3`; envs/carla has no Tcl).
+
+- New batch: pick Full val suite (220), Hard list (45, `results/exam_hard45.txt`), Junction turns (54) or Model failure routes
+  (10). It writes a new run dir with `routes.txt` (town-grouped as in "The full exam") and starts the loop.
+  Resume last: restart the loop on the latest run and skip finished routes. If a `human_drive.sh` run from a terminal is
+  active, the panel offers to stop it first: SIGINT to its b2d_run, finished routes are kept, and the aborted route is
+  driven again.
+- Pause / Resume: holds at the next route boundary, and mid-route the agent holds the current tick (watchdog reset, as
+  in the start hold) until Resume. Restart item, Next item (abort and skip for this session) and Stop (abort and end the
+  loop) abort the running route; an aborted route is not finished.
+- Route list: grouped by town with per-town mean human DS and driven counts, or sorted by score, low first (the human's DS if
+  driven, else the best model's from `results/model_scores.json`, unscored last). Columns: route, scenario, human DS, model DS,
+  status (leaderboard status and infractions). Double-click a row to drive it next, even if it was already driven.
+  Playlist on: the next unfinished row in the current order loads when a route ends. Playlist off: the loop waits for a
+  double-click or a throttle press on the phone.
+- "Stop route at first collision" (off by default = official): applies from the next route. "Official table" runs
+  `human_official.py` on the run.
+- Drive side: `scripts/human_loop.py --run <dir>` in tmux `human:loop`. It runs one b2d_run Runner per route on one kept
+  off-screen CARLA server (card 0, server index 4, GPU placement checked as in human_drive.sh), with a full `load_world` every
+  route as the leaderboard ships. After every route it runs `human_results.py` and, in the background, `human_official.py`.
+  The loop takes commands from `<live>/control.json` and reports in `<live>/loop.json`; the protocol is in `lib/exam_panel.py`.
+- Generic: `lib/exam_panel.py` is the panel and the protocol over a `Backend` (items with id / group / scenario / human /
+  model / status; batch sets, new batch, resume, takeover of a foreign run, official table, side processes).
+  `lib/b2d_exam.py` is the Bench2Drive backend; an AlpaSim backend plugs in the same way.
+- Status 2026-10-14 00:05: the panel was rendered on the live run (`figs/panel_b2d.png`). The loop has not yet run a route
+  end to end with CARLA, because card 0 was in use by the user's 220-route run. The agent's pause and hold logic is unit-tested.
+
+![panel](figs/panel_b2d.png)
+
+`figs/panel_b2d.png`: the panel on the running 220-route exam (rendered off-screen). Look at the town groups: the bold rows
+carry the human's mean DS and the driven count. Driven routes are green with their leaderboard status; the model column is filled only
+where the best model has a score (24721, 24944, 24416, 27005, 334).
+
 <!-- files:begin -->
 ## Files
 

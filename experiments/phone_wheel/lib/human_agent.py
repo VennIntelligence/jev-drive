@@ -131,6 +131,7 @@ class HumanAgent(AutonomousAgent):
         self.n_stale = self.n_late = 0
         self.v_hist = []
         self.metric_info, self.hero_actor = {}, None
+        self.control_path, self.control_t, self.control_paused, self.paused_s = os.environ.get("HUMAN_CONTROL"), 0.0, False, 0.0
         self.stop_on = {k.strip() for k in os.environ.get("HUMAN_STOP_ON", "").lower().split(",")} & {"collision", "offroute"}
         self.stop_sensor, self.stop_hits, self.stop_event, self.off_t = None, [], None, None
         self.route = None
@@ -175,20 +176,13 @@ class HumanAgent(AutonomousAgent):
         self.t_prev_in, self.prev_wait, self.prev_sleep = t_in, 0.0, 0.0
         frame = input_data["OP_WIDE"][1]
         if not self.started:                           # hold the world at its first tick until the driver presses throttle
-            t0 = t_beat = time.time()
-            wd = self._agent_watchdog()
-            cap = float(self.cfg["wait_max_s"]) or (1e9 if wd is not None else 240.0)
-            while time.time() - t0 < cap:
-                c, st = self._control()
-                self._publish(frame, now, c, st, waiting=True)
-                if not st["stale"] and st["raw_throttle"] > 0.2:
-                    break
-                if time.time() - t_beat > 5.0:
-                    t_beat = time.time()
-                    self._hold_beat(wd, t_beat - t0)
-                time.sleep(0.05)
-            self.started, self.wait_s = True, round(time.time() - t0, 1)
-            self.anchor, self.prev_wait = None, time.time() - t0
+            held = self._hold(frame, now, start=True)
+            self.started, self.wait_s = True, round(held, 1)
+            self.anchor, self.prev_wait = None, held
+        elif self._paused():                           # panel Pause mid-route: hold the tick until Resume
+            held = self._hold(frame, now, start=False)
+            self.paused_s += held
+            self.anchor, self.prev_wait = None, held
         slept = 0.0
         rt = float(self.cfg["realtime"])
         if rt > 0:
@@ -229,6 +223,38 @@ class HumanAgent(AutonomousAgent):
                                    "slept_ms": round(1e3 * slept, 1)}) + "\n")
         self.t_prev_exit = time.time()
         return c
+
+    def _paused(self):
+        """Panel pause flag (<live>/control.json "paused"), read at most every 0.5 s; only when HUMAN_CONTROL is set."""
+        if not self.control_path:
+            return False
+        now = time.time()
+        if now - self.control_t > 0.5:
+            self.control_t = now
+            try:
+                with open(self.control_path) as fh:
+                    self.control_paused = bool(json.load(fh).get("paused"))
+            except (OSError, ValueError):
+                pass
+        return self.control_paused
+
+    def _hold(self, frame, now, start):
+        """Hold the world at this tick: at the start until the first throttle press (and no pause), mid-route until the
+        panel resumes. Returns the wall seconds held."""
+        t0 = t_beat = time.time()
+        wd = self._agent_watchdog()
+        cap = float(self.cfg["wait_max_s"]) if start and float(self.cfg["wait_max_s"]) else (1e9 if wd is not None else 240.0)
+        while time.time() - t0 < cap:
+            c, st = self._control()
+            paused = self._paused()
+            self._publish(frame, now, c, st, waiting=True, paused=paused)
+            if not paused and (not start or (not st["stale"] and st["raw_throttle"] > 0.2)):
+                break
+            if time.time() - t_beat > 5.0:
+                t_beat = time.time()
+                self._hold_beat(wd, t_beat - t0)
+            time.sleep(0.05)
+        return time.time() - t0
 
     def _agent_watchdog(self):
         """The leaderboard's per-tick agent watchdog (ScenarioManager._agent_watchdog), from the caller's frames, or None."""
@@ -281,15 +307,15 @@ class HumanAgent(AutonomousAgent):
                 json.dump(self.stop_event, fh)
             raise StopRoute("stop_on: route ended at the first %s (%s)" % (self.stop_event["kind"], self.stop_event))
 
-    def _publish(self, frame, now, c, st, waiting=False):
+    def _publish(self, frame, now, c, st, waiting=False, paused=False):
         try:
-            self._publish_inner(frame, now, c, st, waiting)
+            self._publish_inner(frame, now, c, st, waiting, paused)
         except Exception as e:  # the view must never stop the car
             self.viz_err += 1
             if self.viz_err <= 3:
                 print("preview error: %r" % (e,), file=sys.stderr, flush=True)
 
-    def _publish_inner(self, frame, now, c, st, waiting):
+    def _publish_inner(self, frame, now, c, st, waiting, paused=False):
         if self.preview is None:
             return
         img = np.asarray(frame).reshape(-1, 4)[self.idx][:, 2::-1].reshape(H_MODEL * self.scale, W_MODEL * self.scale, 3)
@@ -322,7 +348,7 @@ class HumanAgent(AutonomousAgent):
         sim = max(self.sim_s, 1e-6)
         state = {
             "agent": "human", "running": True, "t": time.time(), "route": self.rid, "step": self.tick, "sim_t": round(now, 2),
-            "waiting": waiting, "cmd": CMD_NAMES.get(cmd, "follow lane") if cmd is not None else "follow lane (no command left)",
+            "waiting": waiting, "paused": paused, "cmd": CMD_NAMES.get(cmd, "follow lane") if cmd is not None else "follow lane (no command left)",
             "cmd_code": int(cmd) if cmd is not None else 0, "cmd_dist": None if dist is None else round(dist, 1),
             "speed": round(speed, 2), "yaw_rate": round(math.degrees((y1 - y0 + math.pi) % (2 * math.pi) - math.pi) / dt, 2),
             "accel": round((v1 - v0) / dt, 2),
@@ -344,7 +370,7 @@ class HumanAgent(AutonomousAgent):
         summary = {"route": self.rid, "ticks": self.tick, "sim_s": round(self.sim_s, 2), "wait_s": self.wait_s,
                    "wall_s": round(self.raw_s + self.slept_s, 2), "raw_s": round(self.raw_s, 2), "slept_s": round(self.slept_s, 2),
                    "wall_per_sim": round((self.raw_s + self.slept_s) / sim, 3), "raw_per_sim": round(self.raw_s / sim, 3),
-                   "late_reanchors": self.n_late, "stale_ticks": self.n_stale, "config": self.cfg,
+                   "late_reanchors": self.n_late, "paused_s": round(self.paused_s, 1), "stale_ticks": self.n_stale, "config": self.cfg,
                    "stop_on": sorted(self.stop_on), "stop_event": self.stop_event}
         if self.stop_sensor is not None:
             try:

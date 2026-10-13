@@ -29,9 +29,11 @@ def main(run):
                      "sim_s": hs.get("sim_s"), "wall_per_sim": hs.get("wall_per_sim"), "raw_per_sim": hs.get("raw_per_sim"),
                      "wait_s": hs.get("wait_s"), "stale_ticks": hs.get("stale_ticks"),
                      "stop_event": json.loads((att / "stop_event.json").read_text()) if (att / "stop_event.json").exists() else None})
-    order = {r: i for i, r in enumerate(summary.get("attempts", {}))}
+    listed = (run / "routes.txt").read_text().strip().split(",") if (run / "routes.txt").exists() else list(summary.get("attempts", {}))
+    order = {r: i for i, r in enumerate(listed)}
     rows.sort(key=lambda r: order.get(r["route"], 1e9))
-    never = summary.get("routes_never_finished", [])
+    finished = {r["route"] for r in rows}
+    never = [r for r in listed if r not in finished] if (run / "routes.txt").exists() else summary.get("routes_never_finished", [])
     mean = lambda k: round(sum(r[k] for r in rows) / len(rows), 2) if rows else None  # noqa: E731
     out = {"run": str(run), "routes": rows, "never_finished": never, "n": len(rows), "mean_DS": mean("DS"), "mean_RC": mean("RC")}
     (run / "results.json").write_text(json.dumps(out, indent=1))
@@ -44,8 +46,8 @@ def main(run):
             r["route"], r["town"], r["DS"], r["RC"], r["IS"], r["status"],
             ", ".join("%s %d" % kv for kv in r["infractions"].items()) or "-", stop, r["sim_s"], r["wall_per_sim"], r["raw_per_sim"]))
     lines.append("")
-    lines.append("mean over %d finished routes: DS %s, RC %s; never finished: %s" % (len(rows), out["mean_DS"], out["mean_RC"],
-                                                                                    ", ".join(never) or "none"))
+    lines.append("mean over %d finished routes: DS %s, RC %s; not finished: %d%s" % (
+        len(rows), out["mean_DS"], out["mean_RC"], len(never), (" (%s)" % ", ".join(never)) if len(never) <= 20 else ""))
     (run / "results.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 
