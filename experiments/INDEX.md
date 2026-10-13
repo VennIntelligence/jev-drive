@@ -96,6 +96,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 **other**
 
+- [critic_pilot](critic_pilot/README.md): learned critic fails L1-L3: any-zero 2 s AUC 0.85 vs hand rule 0.83 [dpending]
 - [eyes_vs_head](eyes_vs_head/README.md): eyes wrong at 98 / 98 zeros (lane probs < 0.5); eyes + rules not supported [d272]
 - [gt_decomp](gt_decomp/README.md): GT is nearest-point: lag adds 0; YR 0.941 = 0.681 cross + 0.260 past path end [d280]
 - [local_map](local_map/README.md): route received earlier: 0.35 m at 20 m on 28 / 45 zero windows (line < 0.5); carried probe 2-4 m [d279,(inputs,272,275)]
