@@ -349,13 +349,14 @@ def sdf_at(sdf, P):
     return out
 
 
-def write_pool(name, Z, sel, datas, road, run):
-    """Rows `sel` of the concatenated build rows Z (with Z['data'] the shard index) -> cache/on1_<name>{,@warp} + feat/on1_<name>.npz."""
+def write_pool(name, Z, sel, datas, road, run, prefix="cf", fut=None):
+    """Rows `sel` of the concatenated build rows Z (with Z['data'] the shard index) -> cache/on1_<name>{,@warp} + feat/on1_<name>.npz.
+    prefix: row names on:<prefix>:<token>:<cls>; fut (len(sel), 8, 3): replaces the logged future in tab.npz (rf_cftpool's demonstration)."""
     n = len(sel)
     pdir, wdir = CR / f"on1_{name}", CR / f"on1_{name}@warp"
     pdir.mkdir(parents=True, exist_ok=True)
     wdir.mkdir(parents=True, exist_ok=True)
-    names = np.array([f"on:cf:{t}:{c}" for t, c in zip(Z["token"][sel], Z["cls"][sel])])
+    names = np.array([f"on:{prefix}:{t}:{c}" for t, c in zip(Z["token"][sel], Z["cls"][sel])])
     assert len(set(names.tolist())) == n
     tabs = [dict(np.load(CR / d / "tab.npz")) for d in datas]
     keys = [k for k in tabs[0] if k not in ("names", "off")]
@@ -388,6 +389,8 @@ def write_pool(name, Z, sel, datas, road, run):
     oh[np.arange(n), cmd] = 1.0
     tb["ego"][:, 1:4] = oh[:, :3]                                       # parity_adapter.ego_features: cmd[..., :3], unknown -> all zero
     tb["cmd"][:, -1] = oh
+    if fut is not None:
+        tb["fut"] = np.asarray(fut, np.float32)
     assert np.isfinite(tb["fut"]).all() and "off" not in tb
     np.savez(pdir / "tab.npz", names=names, **tb)
     np.savez(wdir / "teacher.npz", out=t_out, plan=t_plan, di=di, pi=pi)
