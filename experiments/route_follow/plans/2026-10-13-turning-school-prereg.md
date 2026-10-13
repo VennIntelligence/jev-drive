@@ -110,3 +110,13 @@ No closed-loop PAI read for every arm. Selection ladder:
    completion vs RSG-L18-s0's stored read on the same 26), then PASS2 = exam147 (hard_exam 72 + control 75); s1 only for that arm.
    `/data/runs/route_night/EXAM_READ_REQUEST` (sections PASS1 / PASS2) is written only once the top arm is chosen, with the decision line
    naming the user. The chain no longer writes it (it writes a draft `pait/EXAM_DRAFT`).
+
+## Amendment 3 (2026-10-13 ~19:20 JST, after the loss audit research/route-follow/loss-audit.md, before any full-pool arm is trained or read)
+
+The audit finds RSG's `self` rows (road + agent hinges only) cannot tell the human's turn from a wider or no-slow variant and reward no
+slowing. A separate agent trains **RSGboth-L18-s{0,1}** = RSG-L18's recipe and pool with the single change `--on-mode self -> both`
+(results in experiments/route_follow/results/rsgboth/); it enters this ladder as an arm (same steps 2-4) and is the natural control of the
+mixed arm. **RSGPAIT-L18 now runs `--on-mode both` on all its rows** (= RSGboth-L18 + the PAI rows at 30 % of the drawn pool rows), instead
+of Amendment 1's `mixed` (S rows self, PAI rows both); `--on-mode mixed` and its known-answer test stay in the code, unused by this ladder.
+Controls for RSGPAIT: RSGboth-L18 (the only change is the PAI rows) and RSG-L18. The ladder's held / guard thresholds are against RSG-L18
+as in Amendment 2.

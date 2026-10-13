@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Turning school (plans/2026-10-13-turning-school-prereg.md, Amendment 1): RSGPAIT-L18-s{0,1} (primary: RSG-L18's own pool on1_L18RB0 in its
-# `self` recipe + on1_PAIT as `both` rows, --on-mode mixed, PAI rows ~30 % of the drawn pool rows), RPAIT-L18-s{0,1} (on1_PAIT only) and
+# Turning school (plans/2026-10-13-turning-school-prereg.md, Amendments 1, 3): RSGPAIT-L18-s{0,1} (primary: RSG-L18's own pool on1_L18RB0 +
+# on1_PAIT, all rows --on-mode both = RSGboth-L18's recipe + PAI rows ~30 % of the drawn pool rows), RPAIT-L18-s{0,1} (on1_PAIT only) and
 # RPAITC-L18-s{0,1} (on1_PAITC), each followed (--after) by the held 460 / 18-decision read (rm_chain.sh submit-read, 6 jobs + coverage) and the
 # public 1491 / 10-decision guard (10 ol_chain readlist chunks, CFT / RED's way); then one report job (held.py, ol_confirm on held 18 and all10).
 # Box, repo root; needs on1_PAIT and on1_PAITC (rf_pait_chain.sh puts them there and calls `submit`).
@@ -24,7 +24,7 @@ submit)
 import numpy as np; t = np.load('$DATA_DIR/runs/op_parity/cache/on1_RSGPAIT/tab.npz'); p = t['pool'] == 'p'
 f = np.where(np.isin(t['topo'], ['straight_exit', 'straight_road']), 2.0, 1.0)
 print(round(0.3 / 0.7 * (~p).sum() / f[p].sum(), 4))") || exit 1
-  ARM_RSGPAIT="--on on1_RSGPAIT --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode mixed --on-weight pool=p:$W,topo=straight_exit:2,topo=straight_road:2"
+  ARM_RSGPAIT="--on on1_RSGPAIT --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode both --on-weight pool=p:$W,topo=straight_exit:2,topo=straight_road:2"
   echo "RSGPAIT: $ARM_RSGPAIT" >> $O/jobs.txt
   dep=()
   for T in $NEW; do s=${T##*-s}; a=${T%%-L18*}; v=ARM_$a
