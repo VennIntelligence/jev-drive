@@ -120,3 +120,11 @@ mixed arm. **RSGPAIT-L18 now runs `--on-mode both` on all its rows** (= RSGboth-
 of Amendment 1's `mixed` (S rows self, PAI rows both); `--on-mode mixed` and its known-answer test stay in the code, unused by this ladder.
 Controls for RSGPAIT: RSGboth-L18 (the only change is the PAI rows) and RSG-L18. The ladder's held / guard thresholds are against RSG-L18
 as in Amendment 2.
+
+## Amendment 4 (2026-10-13 night, after the ladder result results/tschool/summary.md, before the mixed arm is trained or read)
+
+The ladder lacks the arm Amendment 1 first registered: **RSGmixPAIT-L18-s{0,1}** = RSGPAIT-L18's exact command (init RB0-F-s0, gentle schedule, pool
+`on1_RSGPAIT`, W 1.0306, PAI rows ~30 % of draws) with `--on-mode mixed` instead of `both`: S rows keep the `self` recipe (hinges only, as RSG-L18),
+only the PAI rows carry imitation. Per-row mode assignment confirmed by `rm_train.py mixcheck` before submission (S -> self, PAI -> both). Reads as
+rf_tschool.sh (held 460 @18, rf_follow turn completion, rf_inside, public 1491 @10) via rf_tschool_mixed.sh; compared with RSG-L18, RSGboth-L18,
+RSGPAIT-L18. Lines (seed means / s0 as in Amendment 2): held mean >= RSG - 0.01; held zeros <= RSG + 3; public zeros <= RSG + 5; public mean ties.
