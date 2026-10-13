@@ -1,6 +1,6 @@
 # human_label: expert key-press labels on PAI clips
 
-status: live
+status: stopped (2026-10-13 night, by the user: watching replays and pressing keys is not how we drive; it is not first-principles; no labels were made)
 decisions: none
 index: keyboard labelling page for PAI clips; batch 1 = 20 sudden-turn scenes, 62 rollouts
 
@@ -11,7 +11,7 @@ The labels audit the rules and measure observability; they are not policy traini
 **Conclusion.** Tooling, no labels yet. Batch 1 (`sudden_turn_v1`) is packed and served: 20 scenes, 62 rollouts (primary RSG-L18-s0 on
 14 test281 scenes, RB0-F-s0 on 6 train160 scenes; secondary rbsg2, rsgpai, ys0).
 
-**Next.** The user labels batch 1 on the box page; then labels against the verdicts, the command flip time and the log's entry time.
+**Next.** None. Servers stopped on the box (port 6006) and Tokyo (port 8790, tailscale path /label removed); the 193 MB pack stays at `$DATA_DIR/runs/human_label/b1` (box) and `/data/runs/human_label/b1` (Tokyo) until the user removes it.
 
 **Read more.** `research/turning-school-checks.md` section 1 (turn scene, command lit at t = 0, entry);
 `experiments/route_follow/scripts/rf_pai281.py` (completion proxy); `experiments/route_follow/scripts/rf_pai_follow.py` (events, frames).
