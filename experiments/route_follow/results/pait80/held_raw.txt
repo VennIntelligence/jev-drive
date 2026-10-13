@@ -1,0 +1,8 @@
+common scenes 460
+RPAIT80-L18-s0   n  460 mean 0.7997 zeros  43 gt 1.114 latgt 0.873  {'offroad': 22, 'collision_at_fault': 8, 'left_corridor_laterally': 5, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 3 fails sanity check:': 1}
+RPAITC80-L18-s0  n  460 mean 0.8016 zeros  44 gt 1.116 latgt 0.834  {'offroad': 21, 'collision_at_fault': 8, 'left_corridor_laterally': 7, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 3 fails sanity check:': 1}
+RSG-L18-s0       n  460 mean 0.8656 zeros  34 gt 1.135 latgt 0.869  {'offroad': 17, 'left_corridor_laterally': 5, 'Waypoint 1 fails sanity check:': 5, 'collision_at_fault': 4, 'Waypoint 3 fails sanity check:': 1}
+RNONEG-L18-s0    n  460 mean 0.8156 zeros  60 gt 1.293 latgt 1.012  {'offroad': 31, 'left_corridor_laterally': 15, 'collision_at_fault': 6, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 3 fails sanity check:': 1}
+RB0-F-s0         n  460 mean 0.8220 zeros  59 gt 1.314 latgt 1.013  {'offroad': 29, 'left_corridor_laterally': 15, 'collision_at_fault': 7, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 3 fails sanity check:': 1}
+RSG-L18-s1       n  460 mean 0.8676 zeros  34 gt 1.144 latgt 0.876  {'offroad': 13, 'left_corridor_laterally': 7, 'collision_at_fault': 6, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 3 fails sanity check:': 1}
+RNONEG-L18-s1    n  460 mean 0.8123 zeros  61 gt 1.265 latgt 0.992  {'offroad': 29, 'left_corridor_laterally': 15, 'collision_at_fault': 9, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 3 fails sanity check:': 1}

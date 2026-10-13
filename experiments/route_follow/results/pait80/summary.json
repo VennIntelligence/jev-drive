@@ -1,0 +1,43 @@
+{
+ "tags": {
+  "RPAIT80-L18-s0": {
+   "held_mean": 0.7997,
+   "held_zeros": 43,
+   "turn_completion": 0.542,
+   "public_mean": 0.9062,
+   "public_zeros": 69,
+   "guard_pass": false
+  },
+  "RPAITC80-L18-s0": {
+   "held_mean": 0.8016,
+   "held_zeros": 44,
+   "turn_completion": 0.583,
+   "public_mean": 0.9109,
+   "public_zeros": 66,
+   "guard_pass": false
+  }
+ },
+ "ref": {
+  "RSG-L18-s0": {
+   "held_mean": 0.8656,
+   "held_zeros": 34,
+   "turn_completion": 0.667,
+   "public_mean": 0.9473,
+   "public_zeros": 46
+  },
+  "RNONEG-L18-s0": {
+   "held_mean": 0.8156,
+   "held_zeros": 60,
+   "turn_completion": 0.417
+  },
+  "RB0-F-s0": {
+   "held_mean": 0.822,
+   "held_zeros": 59,
+   "turn_completion": 0.542
+  }
+ },
+ "pools": {
+  "RPAIT80": "on1_PAIT80",
+  "RPAITC80": "on1_PAITC80"
+ }
+}
