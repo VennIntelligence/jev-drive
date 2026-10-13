@@ -66,3 +66,26 @@ full pool is a later arm, never mixed into the same comparison.
   rf_pai_follow; 4.6 m/s on on1_PAIT80's turns).
 - Control 75 zeros: reported, no line (it holds no turn scene).
 - Every arm against RNONEG-L18 (same schedule, no rows) to separate the rows from the continuation.
+
+## Amendment 1 (2026-10-13 ~17:30 JST, before any full-pool arm is trained or read)
+
+Seen first: the 80-scene pilots RPAIT80-L18-s0 / RPAITC80-L18-s0 (another agent, [results/pait80/summary.md](../results/pait80/summary.md)):
+held 460 @18 0.800 / 0.802 vs RSG-L18 0.866 (zeros 43 / 44), public 1491 guard FAILS (-0.026 / -0.021 vs YR10m10-F-s0; offroad zeros 53 / 47
+vs RSG's 31); held turn completion between RNONEG and RSG. PAI-only rows pull the policy off the nuPlan domain.
+
+Added, as the new **primary** arm: **RSGPAIT-L18-s{0,1}** = RSG-L18's recipe with on1_PAIT added to its pool. Pool `on1_RSGPAIT` =
+`rf_pait.py merge --pools on1_L18RB0:r:self on1_PAIT:p:both` (RSG-L18's own on-policy S pool, read from RSG-L18-s0's route_mem.json:
+`on: on1_L18RB0`, plus the PAI rows). New trainer mode `--on-mode mixed` (on_train): pool rows tagged `mode = self` keep exactly the
+`self` recipe RSG-L18 was trained with (hinge-only, no imitation), the PAI rows are `both` rows (imitation of the human-timed demo + agent
+hinge). Known-answer test `rm_train.py mixcheck`: a batch whose pool rows are all `self` rows gives the `self` loss and gradient, a batch of
+`both` rows the `both` ones, to 1e-6 (exit 2 otherwise). Draw weights: `--on-weight pool=p:W,topo=straight_exit:2,topo=straight_road:2`
+with W computed at submission so the PAI rows are 30 % of the drawn pool rows (on1_RSGPAIT80: W = 4.28). Flags:
+`REC --on on1_RSGPAIT --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode mixed --on-weight ...` (RSG-L18: `--on on1_L18RB0
+--on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self`). **Control for RSGPAIT: RSG-L18-s{0,1}** (same init, schedule, S rows
+and k; the only change is the 30 % PAI rows). RPAIT-L18 and RPAITC-L18 stay, as secondary arms.
+
+Lines for RSGPAIT (seed means): L1 hard_exam zeros fewer than RSG-L18's under the identical serving; L2 hard_exam turn completion higher
+than RSG-L18's; L3 held 460 mean no lower than RSG-L18's beyond seed noise (RSG s0 / s1 spread, 0.8656 / 0.8676) and public 1491 zeros
+<= RSG-L18 + 5; L4 entry speed at entry - 20 m and at entry lower than RSG-L18's. Everything else as above. Submission: `rf_tschool.sh submit`
+(six arms, held 460 @18 and the public 1491 guard each, one report), called by rf_pait_chain.sh once on1_PAIT, on1_PAITC and on1_RSGPAIT
+are on the box.

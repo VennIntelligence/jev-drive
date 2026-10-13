@@ -45,8 +45,8 @@ for p in on1_PAIT on1_PAIT@warp; do rsync -a --partial "$D/runs/op_parity/cache/
 rsync -a --partial "$D/runs/route_mem/feat/on1_PAIT.npz" "$BOX:$BOXD/runs/route_mem/feat/" || die "rsync feat"
 ssh "$BOX" "mkdir -p $BOXD/runs/route_follow/pait" && rsync -a "$O"/gates_PAIT*.json "$BOX:$BOXD/runs/route_follow/pait/" || st "gates copy failed (not fatal)"
 st "on1_PAITC = on1_PAIT + on1_CFTv on $BOX"
-ssh "$BOX" "cd ~/data/jev-drive && git pull -q; export DATA_DIR=$BOXD && $BOXD/envs/op-train/bin/python experiments/route_follow/scripts/rf_pait.py merge --out PAITC --pools on1_PAIT:a on1_CFTv:b" || die "merge PAITC on $BOX"
-st "submit the four registered arms + held / guard reads on $BOX (rf_tschool.sh)"
+ssh "$BOX" "cd ~/data/jev-drive && git pull -q; export DATA_DIR=$BOXD && $BOXD/envs/op-train/bin/python experiments/route_follow/scripts/rf_pait.py merge --out PAITC --pools on1_PAIT:a on1_CFTv:b && $BOXD/envs/op-train/bin/python experiments/route_follow/scripts/rf_pait.py merge --out RSGPAIT --pools on1_L18RB0:r:self on1_PAIT:p:both" || die "merge PAITC / RSGPAIT on $BOX"
+st "submit the six registered arms + held / guard reads on $BOX (rf_tschool.sh)"
 ssh "$BOX" "cd ~/data/jev-drive && git pull -q; export DATA_DIR=$BOXD && bash experiments/route_follow/scripts/rf_tschool.sh submit" > "$W/tschool_jobs.txt" || die "rf_tschool submit"
 cat > "$D/runs/route_night/EXAM_READ_REQUEST" <<EOF
 # Turning school exam read request (experiments/route_follow/plans/2026-10-13-turning-school-prereg.md), written $(date '+%F %T') by rf_pait_chain.sh
@@ -55,11 +55,14 @@ cat > "$D/runs/route_night/EXAM_READ_REQUEST" <<EOF
 # serving: controller.gains.rel_front_steering_angle_weight=20, JEV_VCONT=1.0 JEV_LEAD=1, the v6 spin-fix controller once it has passed its
 #   guard (else the current one); RSG-L18-s0 and RNONEG-L18-s{0,1} under the identical serving (re-read if their stored read differs)
 # order: primary arm first
+RSGPAIT-L18-s0
+RSGPAIT-L18-s1
 RPAIT-L18-s0
 RPAIT-L18-s1
 RPAITC-L18-s0
 RPAITC-L18-s1
 RSG-L18-s0
+RSG-L18-s1
 RNONEG-L18-s0
 RNONEG-L18-s1
 EOF
