@@ -37,7 +37,9 @@ if [[ ${1:-} != --run ]]; then                                    # outer: check
   fi
   launcher running "starting the $TRACK stack" "$OUT"
   tmux kill-window -t human:alpa-drive 2>/dev/null
-  tmux new-window -d -t human -n alpa-drive "bash $here/human_stack.sh $TRACK --run $OUT $LIST $(printf '%q ' "$@"); exec bash"
+  extra=""; (( $# )) && extra=$(printf '%q ' "$@")
+  envs=$(env | grep -E '^(HUMAN_[A-Z_]+|STAGE|DATA_DIR|NUREC|NUPLAN_ROOT|ALPASIM_SRC|BASE)=' | while IFS= read -r l; do printf '%q ' "$l"; done)
+  tmux new-window -d -t human -n alpa-drive "env $envs bash $here/human_stack.sh $TRACK --run $OUT $LIST $extra; exec bash"
   echo "tmux human:alpa-viewer, human:alpa-drive; out $OUT"
   exit 0
 fi
