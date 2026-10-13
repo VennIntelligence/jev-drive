@@ -3,7 +3,8 @@
 # (on1_L18RB0 rows `self` as RSG + on1_PAIonp = RB0-F-s0's own PAI train160 states, `both`: imitation toward the human-log recovery target),
 # PAI rows ~30 % of the draws, turn-approach rows x2. Box, repo root.
 #   rf_paionp.sh prep      CPU: rf_paionp.py tag + pack, rf_pait.py merge (pool job)
-#   rf_paionp.sh submit    R1, both trainings, held 460 / 18-decision reads, public 1491 / 10-decision guard, P1 open-loop read, report
+#   rf_paionp.sh r1        R1 of on1_PAIRB0 (one GPU pool job)
+#   rf_paionp.sh submit    both trainings, held 460 / 18-decision reads, public 1491 / 10-decision guard, P1 open-loop read, report
 #   rf_paionp.sh report    the report job (held18 confirm, rf_follow, rf_inside, guard confirm)
 set -uo pipefail; cd "$(dirname "$0")/../../.."
 RF=$DATA_DIR/runs/route_follow; O=$RF/paionp; G=$RF/guard; M=$DATA_DIR/runs/route_mem/read; E=experiments/onpol_long; W=$DATA_DIR/runs/onpol_long
@@ -16,13 +17,14 @@ sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl sub
 mkdir -p $O/pool
 case $1 in
 prep)
-  $TR experiments/route_follow/scripts/rf_paionp.py tag || exit 1
+  [[ -f $O/tags.npz ]] || $TR experiments/route_follow/scripts/rf_paionp.py tag || exit 1
   $TR experiments/route_follow/scripts/rf_paionp.py pack || exit 1
   $TR experiments/route_follow/scripts/rf_pait.py merge --pools on1_L18RB0:s:self on1_PAIonp:p:both --out RSGPAIonp || exit 1 ;;
+r1)
+  sub pon-r1 --vram 12 --cpu 4 --ram 40 --timeout-h 1 --gpus 1,2,3,4,5 -- $TR experiments/route_follow/scripts/rf_paionp.py r1 --out $RES ;;
 submit)
   ONW=$(python3 -c "import json; print(json.load(open('$DATA_DIR/runs/op_parity/cache/on1_PAIonp/build.json'))['on_weight'])")
   ARM="--on on1_RSGPAIonp --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode mixed --on-weight $ONW"
-  sub pon-r1 --vram 12 --cpu 4 --ram 40 --timeout-h 1 --gpus 1,2,3,4,5 -- $TR experiments/route_follow/scripts/rf_paionp.py r1 --out $RES > /dev/null || exit 1
   dep=(); tr=()
   for T in $NEW; do s=${T##*-s}
     t=$(sub pon-tr-$T --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 --gpus 1,2,3,4,5 -- $TR experiments/route_mem/scripts/rm_train.py train --tag $T $REC $ARM --seed $s) || exit 1
@@ -56,5 +58,5 @@ report)
      RSGboth-L18=RSGboth-L18-s0,RSGboth-L18-s1 RSGPAIonp-L18=RSGPAIonp-L18-s0,RSGPAIonp-L18-s1 \
      --pairs RSGPAIonp-L18:RSG-L18 RSGPAIonp-L18-s0:RSG-L18-s0 RSGPAIonp-L18-s1:RSG-L18-s1 RSGPAIonp-L18:RSGPAIT-L18 --out $O/guard; rc4=$?
   echo "held $rc0 held18 $rc1 follow $rc2 inside $rc3 guard $rc4"; exit $((rc0 + rc1 + rc2 + rc3 + rc4)) ;;
-*) echo "rf_paionp.sh prep | submit | report" >&2; exit 2 ;;
+*) echo "rf_paionp.sh prep | r1 | submit | report" >&2; exit 2 ;;
 esac
