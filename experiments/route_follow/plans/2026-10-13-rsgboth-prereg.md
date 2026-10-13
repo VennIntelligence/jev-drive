@@ -42,3 +42,34 @@ paired), rf_follow turn completion (24 held turns), rf_inside, public 1491 @10 g
 3. held mean >= RSG-L18-s0 (0.8656) and guard mean >= RSG-L18-s0 (0.9480) (point estimates; paired CIs reported);
 4. keep the turn completion: >= 19 / 24 (79 %) and "short" outcomes <= 2.
 One seed: an arm that meets the lines is a candidate for a second seed, not a result.
+
+## Amendment 2: side-bias fix 1, the intervention test (RSGbothSB, seeds 0 and 1)
+
+**Seen before this amendment**: [research/route-follow/side-bias.md](../../../research/route-follow/side-bias.md) (RSGboth's right-turn inside
+cut comes from the pool's state mix: in on1_L18RB0 the right-turn rows outside / inside the human path by > 0.5 m are 321 : 77, left 325 : 278;
+the `both` imitation push at 2 s is -0.38 m on right turns vs -0.14 m on left; held plan lat 2 s RSGboth - RSG on right turns -0.33 m
+[-0.66, -0.15], left +0.06 [-0.07, +0.19]). Nothing of the new arm has been trained or read.
+
+**Pool** on1_L18RB0s ([rf_sidetag.py](../scripts/rf_sidetag.py) pool): on1_L18RB0 hard-linked, tab gains `tside` (L / R / none), `pside`
+(in / on / out / none) and `rside` = `<tside>_<pside>` from rf_sidebias's own classification; nothing else changed. Gate R1 PASS (other files
+same inode, every source tab array byte-equal, feature file byte-equal, counts reproduce side-bias.md: R_out 321, R_in 77, L_out 325, L_in 278).
+Dry run of `--on-weight rside=R_in:2,rside=R_out:0.48` with rm_train's parsing and generator (1000 batches x 13 rows): drawn R_out / R_in
+107 / 98 (1.09 : 1; uniform 245 / 56 = 4.4 : 1), every other class at its uniform rate; weighted mean right-turn push at 2 s -0.38 -> -0.22 m
+(left -0.14, unchanged). The registered weights make right-turn out : in exactly 1 : 1 in expectation (77 x 2 = 321 x 0.48).
+
+**Arm** RSGbothSB-L18-s{0,1} = RSGboth-L18-s{k}'s exact command plus `--on on1_L18RB0s --on-weight rside=R_in:2,rside=R_out:0.48`; pool jobs on
+cards 1-5, 60-step preflight smoke; chain [rf_rsgbsb.sh](../scripts/rf_rsgbsb.sh). The arm is orthogonal to Amendment 1's arms (they change the
+agent weight, the non-turn draw rate or the non-turn target; this one only the right-turn draw rate by path side).
+
+**Reads** (as RSGboth's): held 460 @18 (held.py, ol_confirm paired vs RSG-L18-s{k} and RSGboth-L18-s{k} and the seed means), rf_follow turn
+completion (24 held turns), rf_inside, rf_tax extract + rf_sidebias held -> rf_sidetag.py read (plan / driven lateral at 2 s per side, paired by
+scene), rf_ledger per-side peaks (loose L / R: inside peak on right turns, outside peak on left turns vs the human path), public 1491 @10 guard.
+
+**Lines** (seed mean where both seeds exist; per seed reported):
+1. right-turn inside shift vs RSG gone: held plan lat 2 s on right turns, RSGbothSB - RSG paired by scene, 95 % CI includes 0 (supporting: ledger
+   loose-R inside peak RSGbothSB - RSG CI includes 0, RSGbothSB - RSGboth > 0);
+2. turn completion kept: >= 85 % of the 24 held turns (rf_follow);
+3. held zeros <= RSG-L18 + 3, or at least < RSGboth-L18 (same seed);
+4. public guard: zeros <= RSG-L18 + 5 and mean >= RSG-L18 (point estimates, paired CIs reported).
+Line 1 is the intervention's answer to side-bias.md's inference; lines 2-4 decide whether the fix is usable. If line 1 holds and left turns
+also stay unchanged (left plan lat 2 s CI vs RSGboth includes 0), the side-bias mechanism is confirmed causally.
