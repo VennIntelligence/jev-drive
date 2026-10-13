@@ -76,8 +76,9 @@ class Scenes(object):
                                             scenario="stage %s, organisers' mean %.2f" % (r["stage"], float(r["ref_mean"])))
         self.nuplan = NUPLAN_LIST.read_text().split() if NUPLAN_LIST.exists() else []
         for k, s in enumerate(self.nuplan):
-            seg = s.split("_")[2:4] if s.count("_") >= 3 else ["?", "?"]
-            self.meta[s] = dict(track="nuplan", group="nuPlan log %s" % "_".join(seg), k=k, label=s.split("_", 2)[-1][:28],
+            seg = s.split("_")[2:4] if s.count("_") >= 3 else ["?", "?"]     # <date>_<vehicle>_<start>_<end>-<token>
+            self.meta[s] = dict(track="nuplan", group="nuPlan log %s_%s" % (seg[0], seg[1].split("-")[0]), k=k,
+                                label="%s_%s" % (seg[0], seg[1][:14]),
                                 scenario="navtest %s" % s.split("_")[0])
         for track in ("pai", "nuplan"):
             for name, src in MODELS[track] + EXTRA[track]:
