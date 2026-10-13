@@ -55,8 +55,10 @@ post-held)
   $P experiments/onpol_long/scripts/ol_confirm.py --runs "${R[@]}" --base $T --pairs R-bridge:R-own --out $O/confirm; rc1=$?
   $P experiments/route_only/scripts/ro_report.py --runs "${Q[@]}" --out $O/summary; rc2=$?
   F=(); for q in "${Q[@]}"; do F+=("${q%%=*}@18=${q#*=}"); done
-  $P experiments/route_follow/scripts/rf_follow.py --runs "${F[@]}" --out $O/follow --workers 32 \
-     --pairs R-own@18:RSG-L18-s0@18 R-bridge@18:RSG-L18-s0@18 R-log-priv@18:RSG-L18-s0@18 R-bridge@18:R-own@18; rc3=$?
+  have=" ${F[*]%%=*} "; PP=()
+  for pr in R-own@18:RSG-L18-s0@18 R-bridge@18:RSG-L18-s0@18 R-log-priv@18:RSG-L18-s0@18 R-bridge@18:R-own@18; do
+    [[ $have == *" ${pr%%:*}="* || $have == *"${pr%%:*}"* ]] && [[ $have == *"${pr#*:}"* ]] && PP+=($pr); done
+  $P experiments/route_follow/scripts/rf_follow.py --runs "${F[@]}" --out $O/follow --workers 32 --pairs "${PP[@]}"; rc3=$?
   echo "confirm $rc1 summary $rc2 follow $rc3"; exit $((rc1 + rc2 + rc3)) ;;
 post-pub)
   P=$DATA_DIR/third_party/alpasim/.venv/bin/python; O=$W/report/pub; mkdir -p $O; G=$DATA_DIR/runs/route_follow/guard/read10
