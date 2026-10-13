@@ -362,8 +362,12 @@ def cmd_unhold(a):
 
 
 def cmd_retarget(a):
+    gpus = None if a.gpus is None else [int(g) for g in a.gpus.split(",") if g]
+    if gpus is None and a.vram is None and a.ram is None:
+        print("nothing to change: pass --gpus, --vram and / or --ram", file=sys.stderr)
+        return 2
     for jid in a.ids:
-        P.retarget(jid, [int(g) for g in a.gpus.split(",") if g] if a.gpus else [])
+        P.retarget(jid, gpus, vram_gb=a.vram, ram_gb=a.ram)
     return 0
 
 
@@ -444,9 +448,12 @@ def main(argv=None):
     s = sub.add_parser("cancel")
     s.add_argument("ids", nargs="+")
     s.add_argument("--drain", action="store_true", help="touch the job's DRAIN file (b2d_run finishes routes) instead")
-    s = sub.add_parser("retarget", help="change the allowed cards of queued jobs (ids and after-chains stay)")
+    s = sub.add_parser("retarget", help="change the allowed cards or the declared VRAM / RAM of queued jobs (ids and "
+                                        "after-chains stay)")
     s.add_argument("ids", nargs="+")
-    s.add_argument("--gpus", default="", help="allowed cards, e.g. 0,2 (empty = any)")
+    s.add_argument("--gpus", default=None, help="allowed cards, e.g. 0,2 (empty string = any; omitted = keep)")
+    s.add_argument("--vram", type=float, default=None, help="new declared peak VRAM GB")
+    s.add_argument("--ram", type=float, default=None, help="new declared RAM GB")
     sub.add_parser("top")
     s = sub.add_parser("trim", help="drop page cache until the working set is --margin GiB below the platform's kill line")
     s.add_argument("--margin", type=float, default=P.DEFAULTS["ws_keep_gb"])

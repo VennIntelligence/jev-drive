@@ -136,7 +136,7 @@ submit-round)   # one Y-recipe round from <init> (submit-r2's recipe): rollouts 
           --on-split alpasim_nuplan/onpol-train --on-mode self --seed $s --tag Y$A-L18-s$s) || exit 1
     c=$(sub ol-train-Y${A}NONE-s$s "" --train --vram 26 --cpu 6 --ram 60 --timeout-h 4 -- $OT --seed $s --tag Y${A}NONE-L18-s$s) || exit 1
     for x in "$a Y$A-L18-s$s $HI" "$c Y${A}NONE-L18-s$s ${PRIO:-14}"; do set -- $x
-      for i in $(seq 0 $((RCH - 1))); do rids+=($(SUBP=$3 sub ol-read-$2-$i "$1" --vram 32 --cpu 8 --ram 40 --timeout-h 2 ${OL_SIM_GPUS:+--gpus $OL_SIM_GPUS --pin-strict} --env CL_HIST_KEY=ol-fast-read -- $FX read $2 $i $RCH)) || exit 1; done; done
+      for i in $(seq 0 $((RCH - 1))); do rids+=($(SUBP=$3 sub ol-read-$2-$i "$1" --vram 27 --cpu 8 --ram 40 --timeout-h 2 ${OL_SIM_GPUS:+--gpus $OL_SIM_GPUS --pin-strict} --env CL_HIST_KEY=ol-fast-read -- $FX read $2 $i $RCH)) || exit 1; done; done
   done
   sub ol-report-Y$A "$(IFS=,; echo "${rids[*]}"),$q" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- $FX report $A $I Y-$A > /dev/null || exit 1
   echo "submitted: $(grep -c "(ol_fast $A)" $W/jobs.txt) jobs" ;;

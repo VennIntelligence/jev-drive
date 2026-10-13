@@ -94,7 +94,9 @@ class Placement(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         P.retarget("j1", [0, 2], pool=tmp)
         P.retarget("j2", [], pool=tmp)
-        self.assertEqual(((tmp / "retarget" / "j1").read_text(), (tmp / "retarget" / "j2").read_text()), ("0,2", ""))
+        P.retarget("j3", pool=tmp, vram_gb=27, ram_gb=30)                                 # declaration only, cards kept
+        rd = lambda n: json.loads((tmp / "retarget" / n).read_text())
+        self.assertEqual((rd("j1"), rd("j2"), rd("j3")), ({"gpus": [0, 2]}, {"gpus": []}, {"vram_gb": 27, "ram_gb": 30}))
 
     def test_static_check(self):
         tmp = Path(tempfile.mkdtemp())
@@ -168,7 +170,7 @@ class BookedByMeasurement(unittest.TestCase):
     def test_vram_need_and_charge(self):
         hist = {"x": dict(vram=[10, 12, 11], cores=[2, 3, 2.5], ram=[8, 9, 7])}
         known = P.known_caps(hist, "x-s4")
-        self.assertEqual(known, dict(vram_gb=15.4, cpu=3.6, ram_gb=11.8))
+        self.assertEqual(known, dict(vram_gb=14.2, cpu=3.6, ram_gb=11.8))                  # VRAM: p95 x 1.1 + 1
         self.assertEqual(P.known_caps({"x": dict(vram=[10, 12], cores=[])}, "x-s4"), {})      # < 3 runs: not trusted
         keyed = dict(name="bn-navtest-NEWMODEL-s0@warp-plans", env={"CL_HIST_KEY": "X"})             # a submitter's own history key
         self.assertEqual((P.hist_key(keyed), P.known_caps(hist, keyed)), ("x", known))
@@ -178,13 +180,13 @@ class BookedByMeasurement(unittest.TestCase):
         self.assertEqual(P.hist_prefix("bn-hugsim-worker@59gb"), "bn-hugsim-worker@59gb")
         self.assertEqual(runner.hist_key("python x.py && touch y", 59.0), "")
         spec = dict(vram_gb=24.0)
-        self.assertEqual(P.vram_need(spec, known), 15.4)
+        self.assertEqual(P.vram_need(spec, known), 14.2)
         self.assertEqual(P.vram_need(spec, known, trust=False), 24.0)
         self.assertEqual(P.vram_need(dict(vram_gb=10.0), known), 10.0)                        # never above the declaration
         self.assertEqual(P.vram_need(dict(vram_gb=24.0, carla=2), known), 24.0)               # CARLA: declared
         now = time.time()
         j = dict(spec=spec, t0=now - 30)
-        self.assertEqual(P.vram_charge(j, now, known), 15.4)                                  # history: from the start
+        self.assertEqual(P.vram_charge(j, now, known), 14.2)                                  # history: from the start
         j["vram_peak"] = 18.0
         self.assertAlmostEqual(P.vram_charge(j, now, known), 22.6)                            # own peak above history
         j["vram_peak"] = 40.0

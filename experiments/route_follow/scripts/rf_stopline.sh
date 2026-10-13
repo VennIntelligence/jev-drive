@@ -19,7 +19,7 @@ submit)
     t=$(sub tr-$T --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 -- $TR experiments/route_mem/scripts/rm_train.py train --tag $T $REC --seed ${T##*-s}) || exit 1
     tt+=($t)
     for i in $(seq 0 9); do
-      rr+=($(sub sl10-$T-$i --after $t --vram 32 --cpu 8 --ram 50 --timeout-h 2 -- bash $E/scripts/ol_chain.sh readlist $T $W/lists/all_n10/c$i.txt 10 $O/read10/$T/b$i)) || exit 1
+      rr+=($(sub sl10-$T-$i --after $t --vram 27 --cpu 8 --ram 30 --timeout-h 2 --env CL_HIST_KEY=ol-fast-read -- bash $E/scripts/ol_chain.sh readlist $T $W/lists/all_n10/c$i.txt 10 $O/read10/$T/b$i)) || exit 1
     done
   done
   sub sl10-confirm --after "$(IFS=,; echo "${rr[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash experiments/route_follow/scripts/rf_stopline.sh confirm > /dev/null || exit 1

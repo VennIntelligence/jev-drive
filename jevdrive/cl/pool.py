@@ -5,8 +5,8 @@ Spool, under $DATA_DIR/runs/pool/ (the dispatcher is its only writer, except inb
 
   inbox/<id>.json   a submitted job (written by `submit`, atomic rename); the dispatcher moves it into its state
   cancel/<id>       a cancel request (`cancel`; content "drain" = touch the job's DRAIN file instead of stopping it)
-  retarget/<id>     new allowed cards for a queued job (`retarget`; content "0,2", empty = any); the id stays, so
-                    `after` chains keep working
+  retarget/<id>     new allowed cards and / or declared VRAM / RAM for a queued job (`retarget`; JSON
+                    {"gpus": [0, 2], "vram_gb": 27}, gpus [] = any); the id stays, so `after` chains keep working
   history.json      per finished job-name prefix: recent peak VRAM and peak cores (dispatcher only; `submit` reads it)
   holds.json        resources held outside the pool (`hold`): a card or part of it, server indices, cores; a hold
                     with a pid ends by itself when that process exits
@@ -135,6 +135,7 @@ HIST_MIN_WALL_S = 60.0
 HIST_MIN_N = 3                        # finished runs of a name prefix before its measured peaks replace a declaration
 VRAM_SETTLE_S = 600.0                 # without history: a job books its declared VRAM this long, then its own peak
 VRAM_MARGIN, VRAM_PAD_GB = 1.2, 1.0   # booked = margin x measured peak + pad, never above the declaration
+HIST_VRAM_MARGIN = 1.1                # history cap = margin x p95 of the prefix's peaks + pad (a lone spike does not halve the card)
 OVER_MARGIN, OVER_PAD_GB = 1.1, 1.0   # measured above margin x declared + pad: the declaration was too low
 OVER_STEP_GB = 2.0                    # a job's vram_over event repeats when its peak grew by this much
 OOM_RE = re.compile(rb"CUDA out of memory|OutOfMemoryError|CUDA error: out of memory|CUDA_ERROR_OUT_OF_MEMORY|"
@@ -209,15 +210,16 @@ def is_gpu(spec: dict) -> bool:
 
 def known_caps(hist: dict, job) -> dict:
     """{vram_gb, cpu, ram_gb}: what finished runs under this job's history key (hist_key; `job` is a spec dict or a
-    name) needed at most, with margin; only the keys with at least HIST_MIN_N samples. The dispatcher books a job at min(declared, this): a declaration is an upper bound,
+    name) needed, with margin (VRAM: p95 of the peaks, so one spiky scene does not cost every later job a card slot;
+    cores and RAM: the max); only the keys with at least HIST_MIN_N samples. The dispatcher books a job at min(declared, this): a declaration is an upper bound,
     the record of what the same job used is the estimate."""
     e = (hist or {}).get(hist_key(job)) or {}
     out = {}
-    for key, src, scale, pad in (("vram_gb", "vram", VRAM_MARGIN, VRAM_PAD_GB), ("cpu", "cores", CPU_MARGIN, 0.0),
-                                 ("ram_gb", "ram", 1.2, 1.0)):
+    for key, src, scale, pad, agg in (("vram_gb", "vram", HIST_VRAM_MARGIN, VRAM_PAD_GB, _p95),
+                                      ("cpu", "cores", CPU_MARGIN, 0.0, max), ("ram_gb", "ram", 1.2, 1.0, max)):
         xs = e.get(src) or []
         if len(xs) >= HIST_MIN_N:
-            out[key] = round(max(xs) * scale + pad, 1)
+            out[key] = round(agg(xs) * scale + pad, 1)
     return out
 
 
@@ -447,11 +449,12 @@ def static_check(cmd, cwd: str = "") -> list:
     return out
 
 
-def retarget(jid: str, gpus, pool: Path = None) -> None:
-    """Change the allowed cards of a queued job (empty = any card)."""
+def retarget(jid: str, gpus=None, pool: Path = None, vram_gb: float = None, ram_gb: float = None) -> None:
+    """Change a queued job's allowed cards (gpus; [] = any; None = keep) and / or its declared VRAM / RAM."""
     p = Path(pool or pool_dir()) / "retarget" / jid
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(",".join(str(int(g)) for g in gpus))
+    d = {k: v for k, v in (("gpus", gpus), ("vram_gb", vram_gb), ("ram_gb", ram_gb)) if v is not None}
+    p.write_text(json.dumps(d))
 
 
 def cancel(jid: str, drain: bool = False, pool: Path = None) -> None:
@@ -696,11 +699,14 @@ class Dispatcher:
             p.unlink(missing_ok=True)
         for p in sorted((self.pool / "retarget").glob("*")):
             j = self.st["jobs"].get(p.name)
-            gpus = [int(g) for g in p.read_text().split(",") if g.strip()] if p.exists() else []
+            raw = p.read_text().strip() if p.exists() else ""
+            d = json.loads(raw) if raw.startswith("{") else dict(gpus=[int(g) for g in raw.split(",") if g.strip()])
             p.unlink(missing_ok=True)
             if j is not None and j["state"] == "queued":
-                j["spec"]["gpus"] = gpus
-                self.log("retarget", id=j["id"], gpus=gpus)
+                for k in ("gpus", "vram_gb", "ram_gb"):
+                    if k in d:
+                        j["spec"][k] = [int(g) for g in d[k]] if k == "gpus" else float(d[k])
+                self.log("retarget", id=j["id"], **{k: j["spec"].get(k) for k in d})
         for p in sorted((self.pool / "cancel").glob("*")):
             j = self.st["jobs"].get(p.name)
             mode = p.read_text().strip() if p.exists() else "stop"

@@ -170,6 +170,10 @@ AlpaSim stack 52). The pool then spaces fast growers by itself; no cap on how ma
 is needed beyond that, and four undeclared 30 GiB loaders started in one round are still the way to get killed.
 A killed training restarts from step 0: `pp_train.py` and `ap2_train.py` write no checkpoint before the end.
 
+**Fixing a queued job's declaration.** `cl retarget <ids> --vram 27 [--ram 30] [--gpus 1,2]` edits a queued job in
+place (id and `--after` chains stay); the AlpaSim read family (`ol-read`, `rm-read`, `rg10`, `ro-*`, `sf-*`, `redg`) measures
+VRAM p50 19 / p95 26 / max 28 GB over 212 runs, so `--vram 27` is the honest declaration (3 per card), not 32 (2 per card).
+
 **Restarting the dispatcher** (pool code only takes effect then). State is in `state.json` (saved every round),
 jobs run in their own sessions and are followed by pid + start time, exit codes land in `rc.<try>` files, so running
 and queued jobs survive. Stop it with SIGTERM to its pid only (`status.json` has it): the handler lets the round
@@ -236,7 +240,8 @@ fit, 2026-10-05); best-fit plus the head-job reservation keeps room for a large 
 `bn-<stage kind>@<vram>gb`, so a new model's first run is already known), else its name; then the prefix (lower case, trailing `-s3`, `-k2`, `_t0`, `-007`, `-pf`, digits stripped
 repeatedly: `op-eval-s3-pf` and `op-eval-k2` are `op-eval`; last 20 kept). `submit` without `--vram` / `--cpu` then
 defaults to p95 x 1.2 of that history and prints the choice on stderr. An explicit value is kept in the spec, but the
-dispatcher books min(declared, measured) as in the table (`submit` says so when a declaration is far above history);
+dispatcher books min(declared, measured) as in the table (VRAM cap from history = 1.1 x p95 of the prefix's peaks + 1 GB,
+since 2026-10-13: one spiky scene among 20 must not cost every later job a slot; cores and RAM use the max) (`submit` says so when a declaration is far above history);
 `"trust_measured": false` in the config books declarations only, as before 2026-10-08. Dispatcher config keys:
 `idle_s`, `idle_vram_gb` (trivial foreign VRAM), `cpu_overcommit`, `cpu_budget`, `trust_measured`, `ws_kill_frac`,
 `ws_reserve_gb`, `ws_keep_gb`, `ws_wait_s`, `ram_default_gb`, `kill_retries`, `trim`, `trim_roots`.
