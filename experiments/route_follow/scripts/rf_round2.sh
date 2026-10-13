@@ -7,9 +7,9 @@
 #      side tags on1_L18SB1s (rf_sidetag.py pool); union on1_L18U2s = on1_L18RB0s (r1) + on1_L18SB1s (r2) (runs/route_follow/r2merge.py, the
 #      merge of round-2 pools on1_L18R2 / on1_L18R2s);
 #   3. R2SB-L18-s{0,1} (pool on1_L18SB1s) and R2SBU-L18-s{0,1} (pool on1_L18U2s): RSGboth's gentle recipe from RB0-F-s0, --on-mode both, draw
-#      weights by the registered rule (`train` below), 60-step preflight smoke; each followed by the held 460 / 18 read (rm_chain.sh
+#      weights by the registered rule (`train` below), a 60-step smoke job first; each followed by the held 460 / 18 read (rm_chain.sh
 #      submit-read) and the public 1491 / 10 guard (10 ol_chain readlist chunks); one report job.
-# Box, repo root.   rf_round2.sh submit | train <pool> <tag> <seed> [rm_train args] | report
+# Box, repo root.   rf_round2.sh submit | submit-train <sidetag id> <merge id> | train <pool> <tag> <seed> [rm_train args] | report
 set -uo pipefail; cd "$(dirname "$0")/../../.."
 RF=$DATA_DIR/runs/route_follow; O=$RF/round2; G=$RF/guard; M=$DATA_DIR/runs/route_mem/read; E=experiments/onpol_long; W=$DATA_DIR/runs/onpol_long
 CR=$DATA_DIR/runs/op_parity/cache; P=$DATA_DIR/third_party/alpasim/.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python
@@ -36,10 +36,18 @@ submit)
   t=$(sub r2-sidetag --after $q --vram 0.5 --cpu 2 --ram 32 --timeout-h 1 -- .venv/bin/python experiments/route_follow/scripts/rf_sidetag.py pool \
       --src on1_$N --out on1_${N}s --dry-out $O/sidetag_r1.json) || exit 1
   m=$(sub r2-merge --after $t --vram 0.5 --cpu 4 --ram 80 --timeout-h 1 -- bash -c "$TR $RF/r2merge.py L18U2s L18RB0s ${N}s && $P $RF/poolgate.py L18U2s") || exit 1
+  bash experiments/route_follow/scripts/rf_round2.sh submit-train $t $m || exit 1
+  cat $O/jobs.txt ;;
+submit-train)  # the trainings after the side-tag job ($2) and the merge job ($3); the 60-step smoke is its own job (the pool's --preflight
+  # ignores --after and would run before the pool exists)
+  t=$2; m=$3; mkdir -p $O/pool
+  sub() { local name=$1; shift; local id; id=$(CL submit --owner route-follow --name "$name" --tries 1 --priority 14 --no-check \
+       --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
   dep=()
   for T in $NEW; do s=${T##*-s}; case $T in R2SBU*) pl=on1_L18U2s; a=$m ;; *) pl=on1_${N}s; a=$t ;; esac
-    x=$(sub r2-train-$T --after $a --train --gpus 1,2,3,4,5 --pin-strict --vram 28 --cpu 6 --ram 70 --timeout-h 3 \
-        --preflight "bash experiments/route_follow/scripts/rf_round2.sh train $pl ${T%-L18-s*}-smoke-s$s $s --steps 60 --eval-every 60" \
+    k=$(sub r2-smoke-$T --after $a --train --gpus 1,2,3,4,5 --pin-strict --vram 28 --cpu 6 --ram 70 --timeout-h 1 \
+        -- bash experiments/route_follow/scripts/rf_round2.sh train $pl ${T%-L18-s*}-smoke-s$s $s --steps 60 --eval-every 60) || exit 1
+    x=$(sub r2-train-$T --after $k --train --gpus 1,2,3,4,5 --pin-strict --vram 28 --cpu 6 --ram 70 --timeout-h 3 \
         -- bash experiments/route_follow/scripts/rf_round2.sh train $pl $T $s) || exit 1
     PRIO=14 bash experiments/route_mem/scripts/rm_chain.sh submit-read $T $x || exit 1
     dep+=($(grep " rm-cover-$T$" $DATA_DIR/runs/route_mem/jobs.txt | tail -1 | cut -d' ' -f1))
@@ -49,7 +57,7 @@ submit)
     done
   done
   sub r2-report --after "$(IFS=,; echo "${dep[*]}")" --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash experiments/route_follow/scripts/rf_round2.sh report > /dev/null || exit 1
-  cat $O/jobs.txt ;;
+  tail -n 80 $O/jobs.txt ;;
 train)  # the registered weight rule on the pool's own counts: right-turn out : in > 1.5 -> R_in x 2, R_out x 2 n_in / n_out (1 : 1), else uniform
   pl=$2; T=$3; s=$4; shift 4; mkdir -p $O
   WT=$($TR - "$CR/$pl/tab.npz" "$O/weights_${T}.json" <<'PY'
