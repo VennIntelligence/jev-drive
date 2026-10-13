@@ -1,0 +1,1620 @@
+{
+ "name": "PAITn",
+ "scenes_asked": 219,
+ "scenes_with_rows": 104,
+ "scenes_missing": [
+  "clipgt-04749bb9-9b37-495b-bed0-77f0e33ac7da",
+  "clipgt-05f35348-9de0-4f68-ac65-f31316dbb59e",
+  "clipgt-071d15c4-a179-4311-b724-f7de1d45ab65",
+  "clipgt-0810968d-325e-4478-8d07-cb874aadfc75",
+  "clipgt-0b54c8d4-8119-431e-9ae8-5c70f5e64716",
+  "clipgt-0e3771c0-04ed-4002-bce1-993fa746c8f3",
+  "clipgt-145bf9cc-0547-4e74-9903-2b6bac686245",
+  "clipgt-15fd88d6-af76-41ea-9a63-b7c49b39ff11",
+  "clipgt-195b19d3-30a4-4449-990e-43932e3597c5",
+  "clipgt-1d68b79f-8459-456f-856d-316ec5572242",
+  "clipgt-1d6e30bc-00d2-4c1f-b7e5-647719481dfc",
+  "clipgt-1d879259-ba18-435b-8fc5-0234be52364e",
+  "clipgt-1deba1be-55e2-4f85-8669-d7e4703c6a29",
+  "clipgt-1fcacc17-2f22-437e-84f3-a8451431f39b",
+  "clipgt-200c6367-6372-437d-949b-620851624628",
+  "clipgt-27e14d22-f753-4b42-88ee-70d886622908",
+  "clipgt-2837a7e8-cccd-4e78-9b3c-2f7582592fa2",
+  "clipgt-2d2673a0-cc80-4ba5-ae72-0588836ed07e",
+  "clipgt-2ffb6b0f-5239-46a4-ab30-6d2906f22f65",
+  "clipgt-32e61f41-164d-4eb9-ae60-4ed04edf6f61",
+  "clipgt-395b7b6c-4e8e-4b99-b268-87113fec9b2a",
+  "clipgt-39973d65-0c1a-4401-91a0-f0c389e15688",
+  "clipgt-3a48e906-2733-4fc9-b687-6b2ed33defec",
+  "clipgt-3a9824bc-0e4e-491d-b848-81babda68457",
+  "clipgt-3d1d39e6-7845-482e-8f96-8c8ac23bda45",
+  "clipgt-41424eff-22b8-4b7d-8cc9-3197c3dc2825",
+  "clipgt-44fdaa0f-373d-439c-bcbb-4d748bcb5bda",
+  "clipgt-48a3f74a-4474-4810-8f89-f7eb58b3dfc9",
+  "clipgt-49513907-cf1c-4e07-9f92-36ba0c1561b7",
+  "clipgt-4d659a21-e7dc-44df-82d8-6f3c87ade1f3",
+  "clipgt-4ec84bcf-76d9-41bb-93e2-ffa5147f94c0",
+  "clipgt-51e7f59e-a539-4c67-9c10-6c236b72487f",
+  "clipgt-577a5904-27d0-4545-8f01-ab589cc197b6",
+  "clipgt-58814d76-1ced-4a15-9fdd-151111a76535",
+  "clipgt-59e085d7-9047-4300-8228-33a618db27f1",
+  "clipgt-5cdc4c2f-7c2e-45bf-9800-da290dec829e",
+  "clipgt-601c88bb-a638-4b9a-9274-0020e5d92dd4",
+  "clipgt-623d5516-5e45-44f8-9a49-841f5cbc2117",
+  "clipgt-637fd51a-7f9f-4f13-bc3c-1fd1540c4a50",
+  "clipgt-6601fe71-5a78-4881-ba7e-eee44cdf65d2",
+  "clipgt-69fc21e8-6faf-487b-806f-1d24654805ce",
+  "clipgt-6dd0b533-cb90-43c4-838e-518e84487751",
+  "clipgt-6ea7f154-7b37-4d23-bae7-3023bddf33d8",
+  "clipgt-75c23f07-026b-4382-9b39-6e806bb16730",
+  "clipgt-780ece49-d8cd-421c-93e4-b2bce57d27a0",
+  "clipgt-7a824ffa-5404-478b-8f20-667d342cbc69",
+  "clipgt-81cbd9fd-6f78-486f-8408-8b64478e2932",
+  "clipgt-8457182d-fe0e-48bb-9411-6638b358ee92",
+  "clipgt-8ecf02e3-860b-4ad1-ab9a-8ce031d73c6f",
+  "clipgt-8f9ca4ab-5534-4c9c-8a6b-aa8f745bc7af",
+  "clipgt-91f9b960-2988-4daf-ab6c-d43e6730a81e",
+  "clipgt-94877a4a-cbf1-4353-ae4a-f4453def52cc",
+  "clipgt-96cc7239-9216-4579-aa86-40f9f36280ea",
+  "clipgt-9b21431c-c5e1-47db-ac43-be07c952ae31",
+  "clipgt-9d735456-670a-4837-b733-d80f1cd576d8",
+  "clipgt-9e3fd12d-e7af-41f5-881f-0f85ef927f23",
+  "clipgt-9ea70552-6dcb-4ee8-a368-9a906a333f6e",
+  "clipgt-a28b6685-a2c7-4c9a-a257-3d992516a2f7",
+  "clipgt-a99edad2-4ee8-44c5-9acc-509359bfcb0f",
+  "clipgt-ac030b40-1701-4d26-b7ea-5017162e2758",
+  "clipgt-afa37955-fae8-4741-bb91-649ca9e3eb5d",
+  "clipgt-b0fa4732-6057-4e68-bb92-1f346bb5143b",
+  "clipgt-b867a504-9dce-4666-9405-62aec7fcfb09",
+  "clipgt-b988494a-2a9a-4791-8613-679c8e506007",
+  "clipgt-bb9b4a37-608e-4c65-b0ab-c61725f3c24c",
+  "clipgt-bd0d494f-fd3c-4d53-a4b2-7e7f3519b3f9",
+  "clipgt-c5bc66c4-8249-4614-a93c-c03936cb9b54",
+  "clipgt-cd0da2b3-a896-4117-af9c-c0d229e6f5f9",
+  "clipgt-cda8a096-0982-4a91-b721-624dac7c83b8",
+  "clipgt-d7328fed-a0ce-452c-a966-1b010d09e2dd",
+  "clipgt-d96fcf8e-378a-474c-863d-57dd26412e9a",
+  "clipgt-d9b5545a-ec4d-4bfd-8f76-612d0d74b4f1",
+  "clipgt-d9d390a3-8527-4918-8097-42ca325d835a",
+  "clipgt-de620c90-3a40-49a9-8c81-7b3c117fd847",
+  "clipgt-e2781af3-c9a5-4062-8b60-e33799288b82",
+  "clipgt-e6fc5ab4-58ce-4e9c-903c-3c12930becd7",
+  "clipgt-eaf4352c-a194-4b09-a5a1-144c6a0d7dbc",
+  "clipgt-eb7e7674-8022-454e-b957-e7757217b078",
+  "clipgt-fadc73da-130e-42c1-81b9-9e74405c39f3",
+  "clipgt-fdfb5073-c9e6-4da2-93b7-988273da3807",
+  "clipgt-000525f6-3999-4812-9924-8adff40ca514",
+  "clipgt-098e2482-6db2-473b-b08a-2a80be9320f3",
+  "clipgt-1bfad87c-4f52-4353-9f42-763a6ab8fbf5",
+  "clipgt-229791a5-ecf5-45ea-94af-dcc1cec726ef",
+  "clipgt-2a882d89-eadc-42a4-a15c-5977361845f6",
+  "clipgt-2d10a08d-2f60-49fe-94e8-9d2797a289d2",
+  "clipgt-3294623f-68ef-44aa-a233-49d8fc8e80a9",
+  "clipgt-32be03e4-a072-4da5-b597-114cffa52af8",
+  "clipgt-35e082a4-8543-4fce-ac06-006b2da0f144",
+  "clipgt-3fe2bac8-5502-4626-a8cc-b52d644c7da5",
+  "clipgt-3ffad395-dabb-484e-aefa-ab29f411d12c",
+  "clipgt-422c7297-849e-4d02-9ee7-c696f42d4b82",
+  "clipgt-49bcab6f-d6a9-48de-a7c3-47f91059fc66",
+  "clipgt-4ecc114d-4c76-49bb-874c-601561d738bb",
+  "clipgt-596af0c7-c33f-4160-84d9-5ab525e9675e",
+  "clipgt-68c3be44-7f95-46ce-ab72-ee05aeb986bc",
+  "clipgt-6e6cbe67-bccd-4d4d-9943-933a272b7bf0",
+  "clipgt-7cfa81de-ec20-4f9e-add1-b1165fb9de99",
+  "clipgt-9d9e7f39-0435-41ad-bd7e-6a672119183c",
+  "clipgt-a1f07c94-7556-4041-9d0c-da629a219ebd",
+  "clipgt-a5599793-5d03-4104-ad6e-1925cefded72",
+  "clipgt-a9c7f2c7-b1b6-4aa5-85b8-5daf04b6e94a",
+  "clipgt-b1d93f58-d8dd-4a84-959c-aaea3aa0701b",
+  "clipgt-b661da67-eb54-47d7-8d7b-1d1f8ca1f1e0",
+  "clipgt-b727530b-d0d4-4ad0-885c-15d14d3a871e",
+  "clipgt-baabc57d-5255-43f9-a0b8-74490fb77494",
+  "clipgt-c4100c5d-aa42-4e68-a7e8-1704768a453d",
+  "clipgt-c8641276-c887-465d-b88e-df70bd7214b6",
+  "clipgt-d32206ef-c011-47be-8d14-aa3936347008",
+  "clipgt-dd0f84df-9be3-4e13-91ad-28b83a8669a3",
+  "clipgt-e1c6ae9f-2f36-4b67-ba5b-8e12a3bad8dd",
+  "clipgt-eeba2aa9-2cbe-4cb0-8da5-7d9d831a442e",
+  "clipgt-f7ded74f-fbd2-4e57-9ee6-fab842eda85c",
+  "clipgt-fcd8cc77-7679-47e1-a439-dffef2eaa260",
+  "clipgt-fce18b62-3fd4-45e5-8af9-367270d5986f"
+ ],
+ "rows": 3799,
+ "scenes": 38,
+ "turns": 40,
+ "rows_by_part": {
+  "train160": 1721,
+  "hard_train": 2078
+ },
+ "rows_by_topo": {
+  "curve_single": 1511,
+  "lane_change": 132,
+  "no_straight_exit": 454,
+  "straight_exit": 1597,
+  "straight_road": 105
+ },
+ "turns_by_topo": {
+  "curve_single": 17,
+  "lane_change": 1,
+  "no_straight_exit": 5,
+  "straight_exit": 16,
+  "straight_road": 1
+ },
+ "rows_by_d_entry": {
+  "> 40 m": 36,
+  "40 .. 20": 452,
+  "20 .. 0": 2141,
+  "in junction (<= 0)": 1170
+ },
+ "human_entry_speed_median": {
+  "v_log_40": 9.116995453429826,
+  "v_log_20": 6.404932326618125,
+  "v_log_0": 3.970234139199448
+ },
+ "G_route": {
+  "rows_with_route0": 3799,
+  "share_le_005": 0.9968412740194789,
+  "max": 0.0631655678153038,
+  "feat_ok": 1.0,
+  "pass": true
+ },
+ "G_road": {
+  "demo_cross_share": 0.0,
+  "log_cross_share": 0.0,
+  "rows_with_edges": 3799,
+  "pass": true
+ },
+ "G_speed": {
+  "within_10pct": 1.0,
+  "median_ratio": 0.999999956544618,
+  "stopped_rows": 333,
+  "v0_median": 3.399815320968628,
+  "demo_v_mean_median": 3.7326100929714205,
+  "v0_ge_12_share": 0.00026322716504343247,
+  "pass": true
+ },
+ "tracking": {
+  "e0_abs_p95": 0.040726788341999054,
+  "ds0_abs_p95": 0.28550684452056885
+ },
+ "per_scene": {
+  "clipgt-0026708c-a386-4dd2-82b1-286da952c68f": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-0026d903-764d-4bd0-96f5-7a6a3a6838e4": {
+   "turns": [
+    [
+     10.0,
+     21.0,
+     -89.84477537752238,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 10.0,
+     "s_out": 21.0,
+     "deg": -89.84477537752238,
+     "topo": "curve_single",
+     "t_in": 13.399999999999999,
+     "t_out": 19.8,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 0.736679623819392,
+     "rows": 148
+    }
+   ],
+   "rows": 148
+  },
+  "clipgt-0bd5202f-5f7c-4748-b78d-20d1f921b4db": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-0d10d2e3-29ef-40cb-b612-94021d98245c": {
+   "turns": [
+    [
+     11.0,
+     35.0,
+     125.62986615230946,
+     "lane_change"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 11.0,
+     "s_out": 35.0,
+     "deg": 125.62986615230946,
+     "topo": "lane_change",
+     "t_in": 6.3,
+     "t_out": 13.1,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 3.017382353641427,
+     "rows": 132
+    }
+   ],
+   "rows": 132
+  },
+  "clipgt-0ee89cab-e4a5-4010-b6e7-dd3cfd1f73f2": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-0fd06bc3-1899-4b45-9278-c5c018b3968d": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-13fb89b9-2196-4545-abb4-c3029d89fcbe": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-1594e89e-5d0a-48d6-8d2b-5a5c287d451c": {
+   "turns": [
+    [
+     6.0,
+     25.0,
+     -102.2589579910281,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 6.0,
+     "s_out": 25.0,
+     "deg": -102.2589579910281,
+     "topo": "curve_single",
+     "t_in": 2.1999999999999997,
+     "t_out": 12.899999999999999,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 1.3308583551575133,
+     "rows": 130
+    }
+   ],
+   "rows": 130
+  },
+  "clipgt-17ad7fea-5672-4a12-8578-a3b3993b1027": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-1a7b81b8-9bca-4385-a591-64f74eb59db2": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-1c7e2423-77d7-40b6-bf26-f36fb8ebcf52": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-1e0f1cb2-0c16-4f65-b7f4-3858337ca7da": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-1e884c53-d49b-4410-aeb4-65f5da23cf53": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-213dfdac-3596-472d-8dc9-aaef6d0a7b92": {
+   "turns": [
+    [
+     60.0,
+     78.0,
+     115.00997461315369,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 60.0,
+     "s_out": 78.0,
+     "deg": 115.00997461315369,
+     "topo": "curve_single",
+     "t_in": 7.3999999999999995,
+     "t_out": 12.799999999999999,
+     "v_log_40": 10.309491488678226,
+     "v_log_20": 7.771008226069505,
+     "v_log_0": 3.7746307854713703,
+     "rows": 115
+    }
+   ],
+   "rows": 115
+  },
+  "clipgt-21626256-03c1-4b4a-857e-09b20eb8f636": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-232d240e-5ccb-41ce-9954-97c336fa45af": {
+   "turns": [
+    [
+     11.0,
+     23.0,
+     -89.16265354124357,
+     "curve_single"
+    ],
+    [
+     165.0,
+     178.0,
+     -89.74915171898137,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 11.0,
+     "s_out": 23.0,
+     "deg": -89.16265354124357,
+     "topo": "curve_single",
+     "t_in": 2.6,
+     "t_out": 5.2,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 4.074580566751104,
+     "rows": 53
+    }
+   ],
+   "rows": 53
+  },
+  "clipgt-24535266-2711-4c57-a98d-bfc024a98782": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-24a50fcc-08c6-493e-b1a6-70c7e95688dd": {
+   "turns": [
+    [
+     186.0,
+     211.0,
+     -97.95775056108207,
+     "no_straight_exit"
+    ]
+   ],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-2c84ac16-0b90-4416-b7c2-553b2f331b7f": {
+   "turns": [
+    [
+     7.0,
+     23.0,
+     89.95026083451936,
+     "straight_exit"
+    ],
+    [
+     57.0,
+     79.0,
+     90.27374350255779,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 7.0,
+     "s_out": 23.0,
+     "deg": 89.95026083451936,
+     "topo": "straight_exit",
+     "t_in": 14.7,
+     "t_out": 18.4,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 1.920333554164903,
+     "rows": 160
+    }
+   ],
+   "rows": 160
+  },
+  "clipgt-2e76251a-fb78-44a3-9501-bdf5d7447a3b": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-3057d8e3-04f2-4c81-97a0-ee7fd5c7ed0d": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-355045f7-e540-4690-bce8-4f4a8d0a87ee": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-38d78b19-03c5-4918-b21b-e1abc4547896": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-4530d50a-8c39-4929-b55d-ea657d5e863d": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-46d68e21-a7f2-45e8-9b2d-147bee3a058b": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-4726de45-34cc-465a-8167-281c37faecbf": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-49597f01-1461-4084-9447-95741690d9d8": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-4f779a92-af3f-4951-a09e-18fa15cbbf97": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-5a38c811-1e28-4a67-9239-54ba2b695950": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-5ab1d9cb-778a-46d5-b89f-720b6f185457": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-5d794411-c055-43a0-8f33-0118cbb902e5": {
+   "turns": [
+    [
+     295.0,
+     302.0,
+     -60.28581115594327,
+     "straight_exit"
+    ]
+   ],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-5e7775f9-b58f-425a-b8fb-31c41317c991": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-605bf77a-3998-4f01-aabb-0a3c7f5eaaed": {
+   "turns": [
+    [
+     156.0,
+     176.0,
+     96.83605564383953,
+     "curve_single"
+    ]
+   ],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-61ef954c-3162-48c0-a5b8-e2b1ff479358": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-630a2f71-b5de-4661-be26-9592bbe8f727": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-6532f25e-2e8e-47ca-b627-631bb466847e": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-6ab146ad-75c6-4cd2-b7ac-4a306dcb01f5": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-6ae687bb-da85-487a-a76d-5e1e06e783fd": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-6b986b30-0b06-4747-a29a-811a7a067cd2": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-6d7fa4c3-3b8b-471b-a816-38ee281aee5e": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-77fdd75c-f770-415e-80cc-1ba9c52c4004": {
+   "turns": [
+    [
+     7.0,
+     40.0,
+     -87.03185418467025,
+     "curve_single"
+    ],
+    [
+     36.0,
+     68.0,
+     -87.07455492527829,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 7.0,
+     "s_out": 40.0,
+     "deg": -87.03185418467025,
+     "topo": "curve_single",
+     "t_in": 0.7,
+     "t_out": 3.5999999999999996,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 10.372021260200189,
+     "rows": 37
+    },
+    {
+     "s_in": 36.0,
+     "s_out": 68.0,
+     "deg": -87.07455492527829,
+     "topo": "curve_single",
+     "t_in": 3.3,
+     "t_out": 6.0,
+     "v_log_40": NaN,
+     "v_log_20": 10.640110393410852,
+     "v_log_0": 11.269094944597418,
+     "rows": 24
+    }
+   ],
+   "rows": 61
+  },
+  "clipgt-7807500f-4a25-4262-8aec-07f764cc004a": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-8913f537-ed6d-441f-a4d0-31a16759d433": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-8a365ac2-e5d5-4fd6-903d-497b2225151c": {
+   "turns": [
+    [
+     3.0,
+     16.0,
+     73.37276842956796,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 3.0,
+     "s_out": 16.0,
+     "deg": 73.37276842956796,
+     "topo": "curve_single",
+     "t_in": 8.1,
+     "t_out": 10.2,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 4.017592041219303,
+     "rows": 103
+    }
+   ],
+   "rows": 103
+  },
+  "clipgt-8a812020-cb7b-4189-8664-021a23b4d190": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-8e9691d4-0a0b-44bd-88c9-316ef126b10a": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-8f3902f9-864d-4acb-9907-9a6da8b242df": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-909a2801-9af4-4c49-b33a-1329ae268a29": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-90abccf6-0566-46a4-981e-f2a7005e3b67": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-92163671-81b0-466b-8e85-5c931f8d78e3": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-96da4f1a-2057-4263-94e9-9e5112c89737": {
+   "turns": [
+    [
+     18.0,
+     31.0,
+     -90.15663693024781,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 18.0,
+     "s_out": 31.0,
+     "deg": -90.15663693024781,
+     "topo": "curve_single",
+     "t_in": 9.5,
+     "t_out": 11.5,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 2.295972206221004,
+     "rows": 116
+    }
+   ],
+   "rows": 116
+  },
+  "clipgt-96eb4700-3f26-4629-86df-7e736935f51d": {
+   "turns": [
+    [
+     4.0,
+     21.0,
+     63.13782839909817,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 4.0,
+     "s_out": 21.0,
+     "deg": 63.13782839909817,
+     "topo": "curve_single",
+     "t_in": 0.5,
+     "t_out": 3.0999999999999996,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 6.382727821707288,
+     "rows": 32
+    }
+   ],
+   "rows": 32
+  },
+  "clipgt-98694f91-f6a4-44f3-aa7c-3095c91e4a78": {
+   "turns": [
+    [
+     53.0,
+     66.0,
+     -89.40024764409448,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 53.0,
+     "s_out": 66.0,
+     "deg": -89.40024764409448,
+     "topo": "straight_exit",
+     "t_in": 8.9,
+     "t_out": 12.2,
+     "v_log_40": 8.578087835821261,
+     "v_log_20": 6.312397173452887,
+     "v_log_0": 3.28692084478109,
+     "rows": 108
+    }
+   ],
+   "rows": 108
+  },
+  "clipgt-9b4cdc78-ec1f-4dc9-9dc4-0ca16abe3bf0": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-a0c831e6-5275-4a8a-bd67-9e0d59de52e8": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-a45776a3-df71-4dc5-accb-8f06135329bb": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-a4be61d6-099b-4380-8c32-ad176781b288": {
+   "turns": [
+    [
+     5.0,
+     18.0,
+     88.61476118072632,
+     "straight_road"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 5.0,
+     "s_out": 18.0,
+     "deg": 88.61476118072632,
+     "topo": "straight_road",
+     "t_in": 7.5,
+     "t_out": 10.4,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 3.131933311734626,
+     "rows": 105
+    }
+   ],
+   "rows": 105
+  },
+  "clipgt-a784414a-5989-4a5a-9a4f-74ad9327b934": {
+   "turns": [
+    [
+     304.0,
+     336.0,
+     -82.05952686602977,
+     "no_straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 304.0,
+     "s_out": 336.0,
+     "deg": -82.05952686602977,
+     "topo": "no_straight_exit",
+     "t_in": 18.8,
+     "t_out": 19.8,
+     "v_log_40": 10.880242955528713,
+     "v_log_20": 8.690182599636872,
+     "v_log_0": 5.657654126316618,
+     "rows": 32
+    }
+   ],
+   "rows": 32
+  },
+  "clipgt-a817c74a-2ac3-4066-b12f-56dd35ee3214": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-a8e78edb-9a04-471e-8a66-cb3360707535": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-ad9a833a-0b9c-4bfd-b15b-6c6102a9de41": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-b0ca8b13-0362-45e7-a1d1-f40d22f3340c": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-b45734f4-01d2-48f7-9296-2ae79a7a89b9": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-c028c8ce-ea7d-40d4-bce6-dce704f3b232": {
+   "turns": [
+    [
+     235.0,
+     251.0,
+     86.2919271380083,
+     "straight_road"
+    ]
+   ],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-c14c031a-8c17-4d08-aa4d-23c020a6871e": {
+   "turns": [
+    [
+     230.0,
+     246.0,
+     86.37775329825374,
+     "straight_road"
+    ]
+   ],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-c16477bc-54aa-4c57-ac87-3104a05d284e": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-c6c01d25-ff8a-4cc3-9d33-27598d48dd90": {
+   "turns": [
+    [
+     5.0,
+     20.0,
+     80.29212490190383,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 5.0,
+     "s_out": 20.0,
+     "deg": 80.29212490190383,
+     "topo": "curve_single",
+     "t_in": 1.5999999999999999,
+     "t_out": 4.0,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 3.7645528227709373,
+     "rows": 41
+    }
+   ],
+   "rows": 41
+  },
+  "clipgt-d0b9a872-bbc5-4df6-b89d-7987e8ead288": {
+   "turns": [
+    [
+     8.0,
+     40.0,
+     -93.79754967160224,
+     "curve_single"
+    ],
+    [
+     136.0,
+     158.0,
+     92.0042442776525,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 8.0,
+     "s_out": 40.0,
+     "deg": -93.79754967160224,
+     "topo": "curve_single",
+     "t_in": 2.4,
+     "t_out": 9.799999999999999,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 3.9228762371795933,
+     "rows": 99
+    }
+   ],
+   "rows": 99
+  },
+  "clipgt-d5e79abb-b889-4199-a50c-0e999447709d": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-d6d366f6-7b74-4868-b209-61c879064d60": {
+   "turns": [
+    [
+     279.0,
+     290.0,
+     -89.67690544273107,
+     "straight_exit"
+    ]
+   ],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-dc1966f4-c32c-4028-a4c2-7515ceb1af1f": {
+   "turns": [
+    [
+     61.0,
+     72.0,
+     -89.5896929037256,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 61.0,
+     "s_out": 72.0,
+     "deg": -89.5896929037256,
+     "topo": "straight_exit",
+     "t_in": 12.7,
+     "t_out": 14.6,
+     "v_log_40": 10.581237997417794,
+     "v_log_20": 6.196622157013317,
+     "v_log_0": 3.064145656781981,
+     "rows": 128
+    }
+   ],
+   "rows": 128
+  },
+  "clipgt-df994ead-5131-4d49-8337-2c27032c9a14": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-dfb0277e-9147-4a43-80fa-adba2a63c5cc": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-e9fe4c3b-a052-4ece-95a0-6f4bc9463a39": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-eb18182f-574f-4826-85bf-f9380c281d52": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-edcf41a4-be66-4f5a-9ab1-d760962f4a5d": {
+   "turns": [
+    [
+     19.0,
+     35.0,
+     89.29137013381168,
+     "no_straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 19.0,
+     "s_out": 35.0,
+     "deg": 89.29137013381168,
+     "topo": "no_straight_exit",
+     "t_in": 18.3,
+     "t_out": 19.599999999999998,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 3.1934119158718577,
+     "rows": 158
+    }
+   ],
+   "rows": 158
+  },
+  "clipgt-eea2fc6d-1d30-4cc7-9818-6882f0bc9af7": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-f005ac5f-e919-4255-b9f9-acf6720015f1": {
+   "turns": [
+    [
+     123.0,
+     138.0,
+     86.58658156511402,
+     "curve_single"
+    ]
+   ],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-f8a680f2-599b-4967-951c-18b9cccb331b": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-fbdce016-950b-4533-b8cf-292e3e8b2dda": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-095cf563-c5d6-4f4f-9e98-7f179e733560": {
+   "turns": [
+    [
+     138.0,
+     153.0,
+     -89.51445018914877,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 138.0,
+     "s_out": 153.0,
+     "deg": -89.51445018914877,
+     "topo": "straight_exit",
+     "t_in": 19.3,
+     "t_out": 19.599999999999998,
+     "v_log_40": 7.58510166472721,
+     "v_log_20": 2.6141518491009412,
+     "v_log_0": 7.377644633833934,
+     "rows": 53
+    }
+   ],
+   "rows": 53
+  },
+  "clipgt-0a228e44-2e22-40fa-a4da-9dcded392963": {
+   "turns": [
+    [
+     99.0,
+     112.0,
+     -72.60034839100197,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 99.0,
+     "s_out": 112.0,
+     "deg": -72.60034839100197,
+     "topo": "straight_exit",
+     "t_in": 18.2,
+     "t_out": 19.8,
+     "v_log_40": 5.760470306603699,
+     "v_log_20": 6.39327740234809,
+     "v_log_0": 5.620806734858765,
+     "rows": 59
+    }
+   ],
+   "rows": 59
+  },
+  "clipgt-1e8e939e-932b-4511-a231-0282942cb4ca": {
+   "turns": [
+    [
+     102.0,
+     108.0,
+     -48.597682756155415,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 102.0,
+     "s_out": 108.0,
+     "deg": -48.597682756155415,
+     "topo": "curve_single",
+     "t_in": 12.1,
+     "t_out": 12.899999999999999,
+     "v_log_40": 11.249388147556434,
+     "v_log_20": 6.026197906035388,
+     "v_log_0": 4.610985335877061,
+     "rows": 85
+    }
+   ],
+   "rows": 85
+  },
+  "clipgt-268949d2-3e20-4972-8785-c15e4fcb5fde": {
+   "turns": [
+    [
+     7.0,
+     20.0,
+     -88.2891129749855,
+     "no_straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 7.0,
+     "s_out": 20.0,
+     "deg": -88.2891129749855,
+     "topo": "no_straight_exit",
+     "t_in": 9.5,
+     "t_out": 12.6,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 1.9188980917208345,
+     "rows": 127
+    }
+   ],
+   "rows": 127
+  },
+  "clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e": {
+   "turns": [
+    [
+     90.0,
+     109.0,
+     -87.14659047902799,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 90.0,
+     "s_out": 109.0,
+     "deg": -87.14659047902799,
+     "topo": "straight_exit",
+     "t_in": 14.7,
+     "t_out": 17.099999999999998,
+     "v_log_40": 9.116995453429826,
+     "v_log_20": 8.497453704920297,
+     "v_log_0": 5.116320966041765,
+     "rows": 101
+    }
+   ],
+   "rows": 101
+  },
+  "clipgt-33c8976b-fbd4-4e92-adcd-e69949d69b14": {
+   "turns": [
+    [
+     5.0,
+     24.0,
+     106.93227294937556,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 5.0,
+     "s_out": 24.0,
+     "deg": 106.93227294937556,
+     "topo": "curve_single",
+     "t_in": 4.1,
+     "t_out": 9.6,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 1.4229028507026193,
+     "rows": 97
+    }
+   ],
+   "rows": 97
+  },
+  "clipgt-37d660b1-8abc-4a24-8778-94ca50a268c2": {
+   "turns": [
+    [
+     22.0,
+     36.0,
+     -85.23752502801689,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 22.0,
+     "s_out": 36.0,
+     "deg": -85.23752502801689,
+     "topo": "straight_exit",
+     "t_in": 4.6,
+     "t_out": 6.8,
+     "v_log_40": NaN,
+     "v_log_20": 3.5786209782613936,
+     "v_log_0": 5.5045704425696504,
+     "rows": 69
+    }
+   ],
+   "rows": 69
+  },
+  "clipgt-403d558a-788a-4c46-a525-d8faabc9c417": {
+   "turns": [
+    [
+     37.0,
+     52.0,
+     -92.56339061638715,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 37.0,
+     "s_out": 52.0,
+     "deg": -92.56339061638715,
+     "topo": "straight_exit",
+     "t_in": 4.2,
+     "t_out": 6.8,
+     "v_log_40": NaN,
+     "v_log_20": 9.772297291154022,
+     "v_log_0": 6.234991546864846,
+     "rows": 69
+    }
+   ],
+   "rows": 69
+  },
+  "clipgt-52003cee-c163-41b2-9bc7-7bf4cc46d505": {
+   "turns": [
+    [
+     109.0,
+     122.0,
+     -90.40733078108248,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 109.0,
+     "s_out": 122.0,
+     "deg": -90.40733078108248,
+     "topo": "straight_exit",
+     "t_in": 17.9,
+     "t_out": 19.8,
+     "v_log_40": 7.865004013220457,
+     "v_log_20": 6.895025235604555,
+     "v_log_0": 3.2295025954847074,
+     "rows": 60
+    }
+   ],
+   "rows": 60
+  },
+  "clipgt-5ddb96bd-7221-4107-8987-29b9928c58c7": {
+   "turns": [],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-62cfe9d3-df92-4395-9faf-897ee20ef839": {
+   "turns": [
+    [
+     150.0,
+     161.0,
+     61.92555691650798,
+     "curve_single"
+    ]
+   ],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-68e53160-f9d1-4070-9434-bf50c55652d3": {
+   "turns": [
+    [
+     12.0,
+     35.0,
+     107.85924689574,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 12.0,
+     "s_out": 35.0,
+     "deg": 107.85924689574,
+     "topo": "curve_single",
+     "t_in": 13.899999999999999,
+     "t_out": 17.9,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 4.646091774271971,
+     "rows": 159
+    }
+   ],
+   "rows": 159
+  },
+  "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9": {
+   "turns": [
+    [
+     42.0,
+     53.0,
+     -89.73380298001535,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 42.0,
+     "s_out": 53.0,
+     "deg": -89.73380298001535,
+     "topo": "straight_exit",
+     "t_in": 9.6,
+     "t_out": 12.2,
+     "v_log_40": 2.0058498019525097,
+     "v_log_20": 6.185823453773345,
+     "v_log_0": 4.536210045523386,
+     "rows": 107
+    }
+   ],
+   "rows": 107
+  },
+  "clipgt-a4d2f7cf-b7cd-4494-8d79-58ad90f1c66d": {
+   "turns": [
+    [
+     74.0,
+     91.0,
+     110.02137358111318,
+     "straight_exit"
+    ],
+    [
+     153.0,
+     168.0,
+     -92.25388631101795,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 74.0,
+     "s_out": 91.0,
+     "deg": 110.02137358111318,
+     "topo": "straight_exit",
+     "t_in": 10.7,
+     "t_out": 14.7,
+     "v_log_40": 8.552241786591512,
+     "v_log_20": 6.023309418926584,
+     "v_log_0": 4.067850793957388,
+     "rows": 108
+    }
+   ],
+   "rows": 108
+  },
+  "clipgt-af85ffdb-3abd-40e0-be45-f7b5b8d5d0d3": {
+   "turns": [
+    [
+     181.0,
+     197.0,
+     -89.68987709666183,
+     "straight_exit"
+    ]
+   ],
+   "used": [],
+   "rows": 0
+  },
+  "clipgt-b40f4729-29c4-4846-a04b-72c78832a062": {
+   "turns": [
+    [
+     9.0,
+     20.0,
+     -88.87317215229875,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 9.0,
+     "s_out": 20.0,
+     "deg": -88.87317215229875,
+     "topo": "straight_exit",
+     "t_in": 6.8,
+     "t_out": 9.799999999999999,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 1.7902951724816139,
+     "rows": 99
+    }
+   ],
+   "rows": 99
+  },
+  "clipgt-b680a689-9afe-4d66-accd-41fa7c0fb633": {
+   "turns": [
+    [
+     65.0,
+     80.0,
+     90.35900709211046,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 65.0,
+     "s_out": 80.0,
+     "deg": 90.35900709211046,
+     "topo": "straight_exit",
+     "t_in": 12.2,
+     "t_out": 19.8,
+     "v_log_40": 7.294078061195542,
+     "v_log_20": 6.41658725088816,
+     "v_log_0": 0.7717903119877034,
+     "rows": 126
+    }
+   ],
+   "rows": 126
+  },
+  "clipgt-ba62e10d-7d77-4707-96a6-207e6f6aaecc": {
+   "turns": [
+    [
+     184.0,
+     199.0,
+     74.34699646064175,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 184.0,
+     "s_out": 199.0,
+     "deg": 74.34699646064175,
+     "topo": "curve_single",
+     "t_in": 18.599999999999998,
+     "t_out": 19.8,
+     "v_log_40": 10.96235270085356,
+     "v_log_20": 6.344554114637113,
+     "v_log_0": 4.459855410029432,
+     "rows": 77
+    }
+   ],
+   "rows": 77
+  },
+  "clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4": {
+   "turns": [
+    [
+     3.0,
+     22.0,
+     -66.38135266781521,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 3.0,
+     "s_out": 22.0,
+     "deg": -66.38135266781521,
+     "topo": "curve_single",
+     "t_in": 1.2,
+     "t_out": 5.2,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 2.550866754180699,
+     "rows": 53
+    }
+   ],
+   "rows": 53
+  },
+  "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf": {
+   "turns": [
+    [
+     55.0,
+     78.0,
+     95.34768055391538,
+     "no_straight_exit"
+    ],
+    [
+     72.0,
+     108.0,
+     124.75456599366852,
+     "no_straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 55.0,
+     "s_out": 78.0,
+     "deg": 95.34768055391538,
+     "topo": "no_straight_exit",
+     "t_in": 5.7,
+     "t_out": 9.4,
+     "v_log_40": 10.515691530323174,
+     "v_log_20": 10.762794856496265,
+     "v_log_0": 6.59843040893979,
+     "rows": 95
+    },
+    {
+     "s_in": 72.0,
+     "s_out": 108.0,
+     "deg": 124.75456599366852,
+     "topo": "no_straight_exit",
+     "t_in": 8.5,
+     "t_out": 13.6,
+     "v_log_40": 11.158501874956213,
+     "v_log_20": 7.233695579926026,
+     "v_log_0": 5.994012451570069,
+     "rows": 42
+    }
+   ],
+   "rows": 137
+  },
+  "clipgt-ea468790-9c38-406d-a4cf-4c43fbc091d8": {
+   "turns": [
+    [
+     11.0,
+     30.0,
+     -82.6912364569582,
+     "curve_single"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 11.0,
+     "s_out": 30.0,
+     "deg": -82.6912364569582,
+     "topo": "curve_single",
+     "t_in": 11.1,
+     "t_out": 14.1,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 2.5926516060286504,
+     "rows": 142
+    }
+   ],
+   "rows": 142
+  },
+  "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b": {
+   "turns": [
+    [
+     55.0,
+     68.0,
+     -90.02094817638788,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 55.0,
+     "s_out": 68.0,
+     "deg": -90.02094817638788,
+     "topo": "straight_exit",
+     "t_in": 10.0,
+     "t_out": 12.399999999999999,
+     "v_log_40": 9.553604995819168,
+     "v_log_20": 5.176214630338791,
+     "v_log_0": 4.13190535052344,
+     "rows": 111
+    }
+   ],
+   "rows": 111
+  },
+  "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db": {
+   "turns": [
+    [
+     58.0,
+     70.0,
+     -80.73373260514961,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 58.0,
+     "s_out": 70.0,
+     "deg": -80.73373260514961,
+     "topo": "straight_exit",
+     "t_in": 7.8,
+     "t_out": 9.6,
+     "v_log_40": 8.512418740285803,
+     "v_log_20": 7.921152595479839,
+     "v_log_0": 5.287424289245707,
+     "rows": 79
+    }
+   ],
+   "rows": 79
+  },
+  "clipgt-fda39805-f188-4751-81cb-9de1c5071b5d": {
+   "turns": [
+    [
+     16.0,
+     36.0,
+     -85.01677039922768,
+     "straight_exit"
+    ]
+   ],
+   "used": [
+    {
+     "s_in": 16.0,
+     "s_out": 36.0,
+     "deg": -85.01677039922768,
+     "topo": "straight_exit",
+     "t_in": 10.4,
+     "t_out": 16.7,
+     "v_log_40": NaN,
+     "v_log_20": NaN,
+     "v_log_0": 3.5877463251988106,
+     "rows": 160
+    }
+   ],
+   "rows": 160
+  }
+ },
+ "G_r1": {
+  "front_equal": true,
+  "ego_equal": true,
+  "feat_f16_max_diff": 0.0009765625,
+  "pool": "/data/runs/op_parity/cache/on1_PAITn"
+ },
+ "G_bev": {
+  "fig": "experiments/route_follow/figs/pait_bev_PAITn.png",
+  "rows": [
+   "on:pait:clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9:89",
+   "on:pait:clipgt-98694f91-f6a4-44f3-aa7c-3095c91e4a78:117",
+   "on:pait:clipgt-1594e89e-5d0a-48d6-8d2b-5a5c287d451c:84",
+   "on:pait:clipgt-3232fdb7-2b72-4e25-8726-4d9b28281e1e:142",
+   "on:pait:clipgt-0a228e44-2e22-40fa-a4da-9dcded392963:141",
+   "on:pait:clipgt-0d10d2e3-29ef-40cb-b612-94021d98245c:92"
+  ]
+ },
+ "G_r1_read": {
+  "device": "cuda",
+  "model": {
+   "share_over": 0.0028954988811165094,
+   "share_over_fixed": 0.042642802000045776,
+   "max_m": 0.060344696044921875,
+   "median_m": 0.008698463439941406
+  },
+  "control": {
+   "P2H10S-F-s1": {
+    "share_over": 0.9949986934661865,
+    "share_over_fixed": 0.9976309537887573,
+    "max_m": 3.806102752685547,
+    "median_m": 0.2611351013183594
+   }
+  },
+  "pass_": true
+ }
+}

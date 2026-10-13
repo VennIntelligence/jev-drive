@@ -930,5 +930,23 @@
    "on:pait:clipgt-3a9824bc-0e4e-491d-b848-81babda68457:70",
    "on:pait:clipgt-eaf4352c-a194-4b09-a5a1-144c6a0d7dbc:121"
   ]
+ },
+ "G_r1_read": {
+  "device": "cuda",
+  "model": {
+   "share_over": 0.004408522974699736,
+   "share_over_fixed": 0.060984570533037186,
+   "max_m": 0.06416130065917969,
+   "median_m": 0.00945734977722168
+  },
+  "control": {
+   "P2H10S-F-s1": {
+    "share_over": 0.9926524758338928,
+    "share_over_fixed": 0.9933872222900391,
+    "max_m": 2.2051610946655273,
+    "median_m": 0.2482008934020996
+   }
+  },
+  "pass_": true
  }
 }

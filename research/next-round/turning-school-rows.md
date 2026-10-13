@@ -58,3 +58,18 @@ RCFT-L18（只用人速度的 CFT 形状目标）刚读完：G-swap 0.31（on1_C
 2. 状态仍是人的状态：教的是「在正确的位置、正确的速度，看见这条路线时怎么开」，不教「已经开快了怎么救」。后者是 on-policy 行（RSG 的那类）的事；两者可以以后合并。
 3. PAI 没有道路栅格：PAIT 行在 `both` 下只有 agent hinge（日志回放的他车框），没有道路 hinge。
 4. 路线记忆在转弯处的 cos / sin 脆弱（见 2），训练与服务两侧同样存在，但在转弯附近这部分输入噪声偏大。
+
+## 6. 结果（2026-10-13 晚）：全量池与阶梯
+
+全量 `on1_PAIT` 5 160 行、53 个严格转弯（hard_train 2 078 行；straight_exit 21 个转弯），闸全过（G-route 0.997、G-road 0、G-speed 1.000，
+R1：P2H10S-F-s0 在池 token 上对 driver 记录的 plan，max(0.03 m, 4 ulp) 超出 0.29 % / 0.44 %，错 checkpoint 99 %）。六个臂按登记训完、读完
+（[tschool/summary.md](../../experiments/route_follow/results/tschool/summary.md)）：**没有一个臂过阶梯第 2 步**，所以没有离线排序、没有 Tokyo 考试，没写 EXAM_READ_REQUEST。
+
+- 主臂 RSGPAIT-L18（RSG 的 S 池 + 30 % PAI 行，全部 both）：held 均分 0.905 / 0.906，比 RSG 高 0.04，零分 37 / 36（线 37，压线过）；
+  公开 1479 零分 56 / 54，比 RSG 多约 10 个（线 +5），**护栏不过**。与 RSGboth（同 both、无 PAI 行）比，held 零分更少（37 / 36 对 41 / 46），公开零分相近：
+  多出来的零分跟着 S 行上的 both 模式走，不是 PAI 行带来的；PAI 行以 30 % 混进 S 配方里不伤 nuPlan。
+- 只用 PAI 行的 RPAIT / RPAITC 离开 nuPlan 分布（held −0.056、公开多 20–25 个零分），与 80 scene 试点一致。
+- 离线 PAI 转弯读数（诊断，19 个 hard_train 转弯，对 PAIT 臂是训练内）：入口处 plan 比人快 RSG 0.34、RSGboth 0.35、RSGPAIT 0.23、RPAIT 0.12 m/s；
+  在人的状态上所有臂都转得对（lat2 ≈ 1、side4 = 1）。开环在人的状态上速度差本来就小，闭环冲太快是策略自己把速度带上去的结果，这个读数看不见。
+
+下一步要定的是 both 模式在 S 行上带来的零分（不是 PAI 行）：例如只在 PAI / 示范行上开模仿、S 行保持 self（`--on-mode mixed` 已有且过了已知答案测试），由主会话定。
