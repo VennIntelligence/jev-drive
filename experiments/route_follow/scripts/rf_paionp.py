@@ -205,7 +205,8 @@ def cmd_r1(a):
         P = plans(m, fr, rows, ego, tc, cam, pi, W, dev)[..., :2]
         d = np.abs(P - ref)
         res[tag] = dict(rows=int(len(rows)), share_over=float((d > tol).reshape(len(rows), -1).any(1).mean()), max_m=float(d.max()),
-                        median_m=float(np.median(d.reshape(len(rows), -1).max(1))))
+                        median_m=float(np.median(d.reshape(len(rows), -1).max(1))), p99_m=float(np.quantile(d.reshape(len(rows), -1).max(1), 0.99)),
+                        share_gt_005=float((d.reshape(len(rows), -1).max(1) > 0.05).mean()), share_gt_010=float((d.reshape(len(rows), -1).max(1) > 0.10).mean()))
         del m
         torch.cuda.empty_cache()
     g = dict(pool=a.pool, model=res[a.tag], control={c: res[c] for c in a.control},
