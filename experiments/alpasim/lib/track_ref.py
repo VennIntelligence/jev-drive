@@ -13,7 +13,9 @@ distance is to steer, and at speed any steering is a spin. The fix is to never h
   JEV_TRACK=full   (a) + (b): the reference is the forward simulation (kinematic, DT_SIM steps) of a path-tracking law on the same path and
                    speed: curvature = path curvature (feedforward) + a second-order correction of the lateral / heading error over the
                    distance max(TAU_LAT x v, D_MIN), clipped to |kappa| <= min(KMAX, ALAT / v^2) and its rate to
-                   |dkappa/dt| <= min(JLAT / v^2, KRATE); it starts at the clipped desired curvature (starting from the ego's measured curvature instead
+                   |dkappa/dt| <= min(JLAT / v^2, KRATE), and (VCURV) the target speed also capped by the path's curvature ahead
+                   (v^2 |kappa| <= ALAT reachable with braking at AMIN), so a plan that turns while the car is still faster than the plan
+                   slows for the turn instead of widening it; it starts at the clipped desired curvature (starting from the ego's measured curvature instead
                    made the receding-horizon reference lag every turn: run 1 of results/spin_fix.md). The MPC then sees a
                    reference whose steering is bounded by these physical limits at every speed (at 30 m/s and ALAT 7: 0.022 rad; a spin command is 0.2-1.1 rad).
   JEV_TRACK_CFG    overrides, e.g. "alat=4,amin=-5,jlat=5" (names: the module constants in lower case).
@@ -36,6 +38,7 @@ if MODE not in ("0", "time", "full"):
 AMIN, AMAX = -5.0, 3.0          # m/s^2, change of speed of the reference
 ALAT, JLAT = 7.0, 10.0          # m/s^2, m/s^3: a tyre-grip bound (0.7 g), not comfort (openpilot clip_curvature: 3.0, jerk 5.0)
 YAW_TOL = 0.35                  # rad, plan yaw output against its chords
+VCURV = 1.0                     # full: 1 = also slow for the path's curvature ahead (v^2 |kappa| <= ALAT, braking at AMIN), 0 = off
 KMAX, KRATE = 0.2, 0.1          # 1/m (openpilot's cap; minimum radius 5 m), 1/m/s (about 0.29 rad/s of road-wheel steering, wheelbase 2.85)
 TAU_LAT, D_MIN, ZETA = 1.0, 4.0, 0.9
 V_MIN = 1.0                     # m/s, floor of v in the curvature limits
@@ -78,7 +81,7 @@ class Path:
         x, y = np.interp(s, self.s, self.p[:, 0]), np.interp(s, self.s, self.p[:, 1])
         h = np.interp(s, self.hs, self.hv)
         i = np.clip(np.searchsorted(self.hs, s, side="right") - 1, 0, len(self.hs) - 2)
-        k = (self.hv[i + 1] - self.hv[i]) / max(self.hs[i + 1] - self.hs[i], 1e-6)
+        k = (self.hv[i + 1] - self.hv[i]) / np.maximum(self.hs[i + 1] - self.hs[i], 1e-6)
         return x, y, h, k
 
 
@@ -92,16 +95,26 @@ def build(poses, v0: float, wz: float, mode: str = "", **kw):
     """Plan (8, 3) rig frame, ego speed and yaw rate (logged only) -> (t (41,), x, y, yaw (41,)) and a log record. mode / kw (lower-case constant names)
     override the environment's configuration (offline replays)."""
     mode = mode or MODE
-    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN")}
-    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN = g.values()
+    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV")}
+    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV = g.values()
     path, vp = Path(poses), speeds(poses)
+    vlim = None
+    if mode == "full" and VCURV > 0:                                      # curvature speed limit, backward pass with braking at AMIN
+        sg = np.arange(0.0, path.s[-1], 0.5)
+        va = np.sqrt(ALAT / np.maximum(np.abs(path.at(sg)[3]), 1e-4))
+        for j in range(len(sg) - 2, -1, -1):
+            va[j] = min(va[j], np.sqrt(va[j + 1] ** 2 - 2 * AMIN * 0.5))
+        vlim = (sg, va)
     n, every = int(round(T_END / DT_SIM)), int(round(DT_OUT / DT_SIM))
     v, s, x, y, th = max(float(v0), 0.0), 0.0, 0.0, 0.0, 0.0
     k = None                                                              # first step: the clipped desired curvature
     out, kpk, apk = [(0.0, 0.0, 0.0)], 0.0, 0.0
     for i in range(n):
         t = i * DT_SIM
-        a = float(np.clip((vp[min(int(t / 0.5), 7)] - v) / DT_SIM, AMIN, AMAX))
+        vt = vp[min(int(t / 0.5), 7)]
+        if vlim is not None:
+            vt = min(vt, float(np.interp(s, *vlim)))
+        a = float(np.clip((vt - v) / DT_SIM, AMIN, AMAX))
         apk = min(apk, a)
         if mode == "time":
             v = max(v + a * DT_SIM, 0.0)
