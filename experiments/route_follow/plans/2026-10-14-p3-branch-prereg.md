@@ -58,3 +58,13 @@ k_eff + 30: offset from the log (`log_now`, total and lateral), distance to the 
 12 scenes, one seed, one checkpoint; the handover is still from the log near the entry (route C). A completion means "a simple push of the
 policy's own plan, for 3 s, from a human entry state, is enough", not that self-demonstration rows will train it. A transform that completes
 by slowing the car may be cut short by the log's car behind (rear-end); such rollouts are reported as not completed, as in P2.
+
+## Amendment 1 (as run; 1.5 s window arm, written before it runs, 2026-10-14 07:35 JST)
+
+- Run as registered: Tokyo card 1, code 1b52e69d, 03:56-07:15 JST, 192 rollouts, all 16 arms (nothing dropped). S1: 24 / 24 identity
+  scenes with every served plan bit-identical to P2's d0 / d10 runs (tracks and scores identical). S2 (f9e361aa d0@g1.5s1): transform on at
+  k 69..98 (30 decisions), raw and served poses logged and different, raw plan served again at k 99, plans identical to the identity run
+  before k 69. Read: [results/p3_branch](../results/p3_branch/README.md).
+- Secondary, the 1.5 s window: the 9 cells that complete in a scene the identity cells do not complete (302c5c99 d0@g1.5s1, d0@g1.5s0.8;
+  e37aa159 d10@g1.25s1, d0@g1.25s1; 3ce13eed, 94c1d722, a174faed d0@g1.25s1; a174faed d10@g1.5s1; f9e361aa d10@g1s0.8) are re-run with
+  `t1.5` (15 decisions), everything else unchanged; read with --win 15. Reported as kept / lost per cell; no line.
