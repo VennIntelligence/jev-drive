@@ -22,8 +22,8 @@ distance is to steer, and at speed any steering is a spin. The fix is to never h
                    reaches by T_GATE, the curvature of the arc from the car's pose (heading 0) to it, 2 |y| / (x^2 + y^2), against the
                    same cap. Path starts at the first chord's heading when that is > YAW_TOL off the car's, so a plan that puts its
                    0.5 s point 1.5 m to the side has no curvature inside the polyline and v7 served it (60cc35db at 16.2 s, the spin
-                   of the v7 PAI read: results/spin_fix.md section 7), only while v0 >= PP_V. Threshold GATE, GATE_LO when the car is
-                   below 5 m/s and accelerating.
+                   of the v7 PAI read: results/spin_fix.md section 7), only while v0 >= PP_V. (A threshold of 1.5 below 5 m/s while
+                   accelerating, a1fbf3fd, was dropped: on nuPlan held those openings saved 2 scenes, section 7.)
   JEV_TRACK=full   (a) + (b): the reference is the forward simulation (kinematic, DT_SIM steps) of a path-tracking law on the same path and
                    speed: curvature = path curvature (feedforward) + a second-order correction of the lateral / heading error over the
                    distance max(TAU_LAT x v, D_MIN), clipped to |kappa| <= min(ALAT / v^2, KMAX below 3.5 m/s .. KDYN above 5 m/s) with
@@ -65,10 +65,6 @@ GATE_V = 2.0                    # m/s, gate: segments passed slower than this ar
 PP = 1.0                        # gate: 1 = also check the arc from the car onto each plan node (v8), 0 = segments only (v7)
 PP_V = 5.0                      # m/s, PP only when the car is at least this fast (below, the arc onto a node 1-2 m ahead reads ~1 x the cap on
                                  # ordinary low-speed turns: 8 spin-set rollouts at 2.4-3.5 m/s and 268949d2 in the v7 read's own loop)
-GATE_LO, A_LO = 1.5, 0.5        # gate threshold while the car is slower than V_KIN[1] (5 m/s) and accelerating (a0 >= A_LO m/s^2): the
-                                 # v7 opening at 3.3-4.1 m/s (ratios 1.0-1.19, a0 +1.1) capped 268949d2's right turn out of a stop at KDYN and
-                                 # left the corridor (results/spin_fix.md section 7). Slowing into a turn keeps GATE: that is where KDYN is
-                                 # needed (side slip just above 5 m/s, run 4), and 16 spin-set rollouts open there at 1.0-1.42
 TILT = 0.3                      # anchor guard: |(qx, qy)| above this (about 35 deg of roll / pitch) -> the controller's planar yaw
 PREVIEW = 0.0                   # s, full: the path curvature fed forward is taken v x PREVIEW ahead (lead for the MPC's steering lag)
 LATCAP = 1.0                    # full: 0 = no curvature / curvature-rate clipping (ablation; VCURV still uses ALAT / KDYN)
@@ -135,8 +131,7 @@ def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
     mode = mode or MODE
     if mode == "gate":
         ref, info = build(poses, v0, wz, "curv", a0, **kw)
-        thr = kw.get("gate", GATE) if v0 >= V_KIN[1] or a0 < kw.get("a_lo", A_LO) else kw.get("gate_lo", GATE_LO)
-        if info["gate"] <= thr:
+        if info["gate"] <= kw.get("gate", GATE):
             return ref, {**info, "mode": "gate", "open": 0}
         ref, fi = build(poses, v0, wz, "full", a0, **kw)
         return ref, {**fi, "mode": "gate", "open": 1, "gate": info["gate"], **({"pp": info["pp"]} if "pp" in info else {})}
