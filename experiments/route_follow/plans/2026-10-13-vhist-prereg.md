@@ -101,3 +101,47 @@ Lines: **M as registered** for RSG + holdlead vs RSG (deficit median >= -0.25, z
 RSGallV + holdlead is compared with allV plain (same M thresholds relative to allV: zeros <= allV + 5, GT <= allV + 0.05) and with RSG.
 PAI rule: RSG + holdlead passes M -> it is the PAI-exam switch set (`SH30_TAG=RSG-L18-s0`, `JEV_VHIST=holdlead`); else if RSGallV + holdlead
 passes against RSG's thresholds (zeros <= 39, GT <= 1.185, deficit median >= -0.25) -> that; else no VHIST on PAI.
+
+## Amendment 2 (2026-10-14, written and pushed before any run below): RSG + holdlead on the PAI 281, user override
+
+**Override.** The PAI rule above ("RSG + holdlead fails M -> no VHIST run on PAI") is overridden by the user on 2026-10-14: read
+RSG-L18-s0 + `JEV_VHIST=holdlead` on the full PAI stage-1 281 set. Held 460 (Amendment 1): score +0.028 [+0.019, +0.040], zeros 32 vs 34
+(front-collision zeros 2 vs 4), rear-ended 38 -> 18, GT +0.097 m (line M failed on GT alone).
+
+**Known before this run (disclosed).** A coordinator exception on 2026-10-13 (`/data/runs/route_night/r281/exam_rsg_holdlead`, the same
+checkpoint, switch and serving) drove 99 of these 281 scenes (exam206 rows that are in test281): +0.083 [+0.030, +0.135] against the
+stored reference, zeros 26 vs 23, rear-ended 27 vs 37, GT +0.22 m (rf_vhist_pai.py on the stored roots). On the 38 of them in
+hard_exam.txt: +0.004 [-0.085, +0.082], zeros 14 vs 11. Those 99 scenes are driven again here (PAI reruns are scene-deterministic,
+docs/tokyo-box.md); the read below counts all 281.
+
+**Run.** Tokyo card 1 only (card 0 is reserved for the user). Same stack and image as the reference `/data/runs/route_night/r281/rsg`:
+`pai_eval.sh` (-> `pai_run.sh`, driver image `jev-alpasim:p2h10-f-s0-6f3d05d1`, `alpasim-base:0.89.0`, official `+e2e_challenge=dev`
+stack), checkpoint RSG-L18-s0, `controller.gains.rel_front_steering_angle_weight=20`, CONC 4, the reference's own 8 chunk lists (copied
+from `r281/rsg/chunks/`), `SERVE="-e JEV_VCONT=1.0 -e JEV_LEAD=1 -e JEV_VHIST=holdlead"`, `RUNPFX=hl-`, code = a clean Tokyo worktree at
+the commit of this amendment. Output `/data/runs/route_night/r281/rsg_holdlead`. Full rollouts, one seed.
+
+**Estimate.** The reference's chunks took 31-34 min per 36 scenes on one 3090 (c000 1859 s); the v8 spin read ran 84 scenes in 71 min on
+card 1. 281 scenes = 8 chunks -> **about 4.2 h** (4.0-4.5 h) on card 1, plus a 10 min smoke. Under the 1 h staged-launch rule this is
+smoke (2 scenes x 2 arms) -> one chunk -> the rest, the chunks running back to back in one tmux window; no profile (< 3 h per stage
+after the first chunk is measured: if chunk c000 runs over 45 min the ETA is restated in the results README).
+
+**Smoke (before the full read, same worktree, card 1).** The first 2 scenes of the reference's c000: (1) switch off: every logged plan
+bit-identical to the stored reference at the same (scene, k) (`rf_vhist.py same`; PAI logs read since this amendment's commit); if not
+bit-identical the full read waits and the difference is reported. (2) holdlead: `rf_vhist.py check` 0 rule mismatches (release, v_fed,
+previous-plan brake / arc, the fed row; the logged rows are rounded to 5 decimals, so a held row's tolerance scales with v_fed / v_meas and
+rows differing only in the re-spaced history poses' lateral y are counted apart; on the stored 99-scene exam read: 19 653 records,
+0 mismatches, 2 near-ties, 7 lateral-y-only rows, largest 0.074 m). The same check runs on the full read.
+
+**Measures** (`scripts/rf_vhist_pai.py`, numpy, paired per scene against the stored reference over the scenes both drove; a rollout without
+metrics is rerun once, alone): mean score difference with a scene-bootstrap 95 % CI (10 000 draws, seed 0); zeros by kind (collision =
+at-fault, offroad, corridor, other; rf_pai281's order) and front-collision zeros (score 0 with collision_front > 0) separately, since the
+plain hold produced 39 front-collision zeros on nuPlan held; rear-ended (collision_rear > 0, all / scored > 0); progress score
+(score_metrics.progress_score) with CI; GT distance with CI; spins (sf_detect.py); plan 2 s deficit, rf_deficit's quantity on PAI logs as
+rf_pai281.py computes it (served plan arc through its 0.5 .. 2.0 s poses minus the measured speed x 2 s, decisions >= 1 m/s, whole rollout:
+PAI has no 18-decision window), pooled decision median and mean of rollout means, paired difference with CI. Turn completion:
+`rf_pai_follow.py` extract (Tokyo container, both roots) and report (its registered `completed` rule on the scenes where the route turns,
+plus its @open / @bend variants).
+
+**Lines.** **Pass** = the mean score difference is > 0 with its 95 % CI clear of 0 **and** front-collision zeros (arm - reference) <= +2.
+Otherwise **fail**. Everything above is reported either way. The PAI exam subset (`experiments/alpasim/results/pai_exam/hard_exam.txt`,
+72 never-trained scenes, all in the 281) is reported separately with the same measures; it is not gated. No research/decisions entry.

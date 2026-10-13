@@ -2,6 +2,7 @@
 """VHIST read-out (experiments/route_follow/plans/2026-10-13-vhist-prereg.md): the serving-side speed-history switch (JEV_VHIST,
 experiments/alpasim/lib/vhist.py) on held 460 at 18 decisions. CPU only, read-only. Box, AlpaSim's venv.
 
+  (same / check also read PAI logs: a pai_run.sh run dir or a pai_eval.sh root, numpy only, Tokyo python3)
   rf_vhist.py same --a <run dir> --b <run dir>[,<run dir>..]     plans of a against b at every common (scene, k) of the last driver session:
                                                                  count equal (bit for bit, as logged) and the largest difference (m)
   rf_vhist.py check --run <run dir>                              every logged `vhist` record against vhist.py's rule, recomputed from the
@@ -28,11 +29,35 @@ R = HERE.parents[2]
 sys.path[:0] = [str(R), str(R / "experiments/alpasim/lib"), str(R / "experiments/anchor_offset/scripts"), str(HERE)]
 
 
+def pai_records(D):
+    """PAI (pai_run.sh / pai_eval.sh): <run>/driver/{start,drive}.jsonl, or every chunk run of a pai_eval.sh root; last session per scene."""
+    best = {}
+    for f in sorted(Path(D).glob("driver/drive.jsonl")) or sorted(Path(D).glob("runs/*/driver/drive.jsonl")):
+        n = {r["session"]: r["n"] for r in map(json.loads, open(f.parent / "start.jsonl"))}
+        S = {}
+        for line in open(f):
+            if '"infer": true' in line:
+                r = json.loads(line)
+                S.setdefault(r["session"], []).append(r)
+        for ss, rr in S.items():
+            sc = rr[0]["scene"]
+            if sc not in best or n.get(ss, -1) > best[sc][0]:
+                best[sc] = (n.get(ss, -1), sorted(rr, key=lambda r: r["k"]))
+    return {sc: rr for sc, (_, rr) in best.items()}
+
+
+HIST_Y = [9, 12, 15]                                        # ego row: the 3 past poses' y (x 10 m)
+
+
 def records(spec):
-    from ao_e1 import drive_records
     out = {}
     for D in spec.split(","):
-        for sc, rr in drive_records(D).items():
+        if (Path(D) / "driver-logs/drive.jsonl").exists():
+            from ao_e1 import drive_records
+            got = drive_records(D)
+        else:
+            got = pai_records(D)
+        for sc, rr in got.items():
             out.setdefault(sc, rr)
     return out
 
@@ -57,7 +82,8 @@ def same(a):
 def check(a):
     os.environ["JEV_VHIST"] = "hold"
     import vhist as VH
-    bad = n = 0
+    bad = n = tie = 0
+    ydiff = []
     for sc, rr in records(a.run).items():
         st = VH.new()
         for r in rr:
@@ -78,16 +104,33 @@ def check(a):
                     if abs(vh["prev_dec"] - st["dec"]) > 2e-3 or abs(min(vh["prev_arc"], 1e6) - min(st["arc"], 1e6)) > 2e-3:
                         print(f"{sc} k {r['k']}: previous-plan brake / arc {st['dec']:.3f} / {st['arc']:.3f} logged {vh['prev_dec']} / {vh['prev_arc']}")
                         bad += 1
+                st0 = dict(st)
                 exp, info = VH.feed(st, ego, np.eye(4)[r["cmd"]])
+                if not info["release"] and abs(vh["v_fed"] - vh["v_meas"]) < 2e-3 and np.abs(exp - fed).max() > 2e-4:
+                    # near-tie: v_ref above v_meas by less than the logged row's rounding (5 decimals); the driver held at a scale
+                    # factor of about 1 (ax 0, history re-spaced at v_fed), so the held row at v_fed is the rule's output too
+                    alt, _ = VH.feed({**st0, "vref": float(np.hypot(ego[4], ego[5]) * 10.0) + 1e-5}, ego, np.eye(4)[r["cmd"]])
+                    if np.abs(alt - fed).max() <= 2e-4:
+                        exp, tie = alt, tie + 1
                 if info["release"] != vh["release"] or abs(info["v_fed"] - vh["v_fed"]) > 2e-3:
                     print(f"{sc} k {r['k']}: release / v_fed {info['release']!r} {info['v_fed']} logged {vh['release']!r} {vh['v_fed']}")
                     bad += 1
                 VH.NEED_LEAD = False
                 VH.observe(st, {"poses": r.get("poses_model", r["poses"])})
-            if np.abs(exp - fed).max() > 2e-4:                  # the logged rows are rounded to 5 decimals
-                print(f"{sc} k {r['k']}: fed row differs by {np.abs(exp - fed).max():.5f}")
+            # the logged rows are rounded to 5 decimals; a held row re-spaces that rounded history at v_fed / v_meas times its arc, so the
+            # rounding grows with that ratio (PAI holds from near standstill: ratios up to ~300)
+            # rounding grows with that ratio (PAI holds from near standstill: ratios up to ~300). The history poses' lateral y (9, 12, 15)
+            # of a held row extended past the logged history takes its direction from a rounded sub-mm segment: counted apart.
+            tol = 2e-4 * (max(1.0, vh["v_fed"] / max(vh["v_meas"], 0.05)) if vh["mode"] != "zero" else 1.0)
+            d = np.abs(exp - fed)
+            if np.delete(d, HIST_Y).max() > tol:
+                print(f"{sc} k {r['k']}: fed row differs by {np.delete(d, HIST_Y).max():.5f} (tolerance {tol:.5f})")
                 bad += 1
-    print(f"{n} vhist records checked, {bad} mismatches")
+            elif d[HIST_Y].max() > tol:
+                ydiff.append(float(d[HIST_Y].max() * 10.0))
+    print(f"{n} vhist records checked, {bad} mismatches ({tie} near-ties held at v_ref - v_meas below the log rounding, counted as matches; "
+          f"{len(ydiff)} held rows whose only difference is the history poses' lateral y, rounding-limited, largest "
+          f"{max(ydiff, default=0):.3f} m)")
     return int(bad > 0)
 
 
