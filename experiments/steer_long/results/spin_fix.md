@@ -6,6 +6,11 @@ Pre-registration: [plans/2026-10-13-spin-fix-prereg.md](../plans/2026-10-13-spin
 `sf_arm.sh` (one arm on card 0), `sf_replay.py` (offline MPC replay), `sf_turn.py` (turn geometry). Sets and per-case data in `spin_fix/`.
 Tokyo reads: `/data/runs/steer_long/spinfix/reads/<arm>`; box (nuPlan): `$DATA_DIR/runs/steer_long/spinfix/`.
 
+**Status (2026-10-13 23:40 JST, v8): the v7 PAI read failed lines 1-2 (2 spins, controls zeros 7 vs 6). Per case (section 7): one
+gate blind spot (60cc35db) and one simulator pose fault (d8bfaaf2; also 1e8e939e earlier). v8 = `gate` + PP check + tilted-pose anchor
+guard (7d001d79); its PAI read is requested on the Tokyo card-1 queue (`/data/runs/route_night/SPIN_READ_REQUEST2`); nuPlan v8 reads wait
+for the box reboot ([spin_fix/v8_RESUME.md](spin_fix/v8_RESUME.md)).** Earlier status (18:55 JST, v7) below.
+
 **Status (2026-10-13 18:55 JST, v7): `JEV_TRACK=gate` passes both nuPlan lines (held 452 @18 mean -0.0056, zeros +2, 0 spins;
 public 1479 @10 -0.0037); its PAI reads (38 spin set, 46 controls, gains 20) are queued on Tokyo card 1 (section 6), so lines 1-2 are
 open.** Earlier status (17:20 JST) for v6 below.
@@ -176,3 +181,51 @@ JEV_TRACK hook: that checkout has to be at fb92ddcc or later when the stage star
 driver.log serving line). Read it with `sf_read.py --list spin_fix/spin_set.txt` and `--list spin_fix/ctrl_all.txt` against
 `/data/runs/route_night/r281/rsg`. If the 46 fail only on scenes where the gate opened, the next arm is GATE 1.5 (amendment 2); nuPlan
 held is still valid for it (between curv and gate 1.0, both of which pass).
+
+## 7. v7 PAI read, per case, and v8 (amendment 3)
+
+v7 `gate` on PAI (Tokyo card 1, `/data/runs/route_night/r281/spin_read`, read on the box copy with `sf_read.py`):
+
+| set | spins (base) | zeros (base) | at-fault / front / behind (base) | mean (base) |
+|:--|:--|:--|:--|:--|
+| spin set 38 | **2** (26), both fast | 15 (16) | 1 / 0 / 6 (1 / 1 / 6) | 0.4516 (0.4437) |
+| controls 46 | 0 (0) | **7** (6) | **1 / 1** / 19 (0 / 0 / 20) | 0.5823 (0.5668) |
+
+Decision-by-decision traces: [spin_fix/v8_traces.txt](spin_fix/v8_traces.txt) (`sf_trace.py`, `sf_tilt.py`).
+
+- **60cc35db, 16.3 s, 8.4 m/s: gate closed one call too early (a blind spot, not the threshold).** From 14.8 s the model brakes
+  (-5 m/s^2 reference) and swerves 4-5 m left within 2 s; the gate opens at 15.0 s (ratio 1.1-3.5) and full is served to 16.1 s, the
+  car sliding mildly (vy 0.3-0.47, u 0.07-0.11). At 16.2 s the ratio drops to 0.62: the plan puts its 0.5 s point 1.5 m to the side, 3.2 m
+  ahead (first chord 23 deg off the car's heading). `Path` takes a first chord more than YAW_TOL off as its origin heading, so that 23 deg
+  step at the car is not a curvature inside the polyline and the segment check passes; curv serves the kink, the MPC answers 0.62, then
+  0.88 rad, and the car spins. The gate reopens at 16.4 s (ratio 28), too late. Neither a speed-dependent threshold nor the 2.5 s lookahead
+  sees this (the plan's own segments are mild); the deceleration-step filter is irrelevant (JLON was on).
+- **d8bfaaf2, 18.4 s, 8.6 m/s: a simulator pose fault, not the control path.** Driving straight at 8.6 m/s with u 0.027 and a straight,
+  feasible reference (gate 0.01), the ego moves 2.13 m in one 0.1 s step and its pose quaternion goes to qx 0.41, qy 0.54 (40-70 deg of
+  roll / pitch; z then climbs 4 m over 1.5 s): AlpaSim's physics puts the car on a ground-mesh defect at a fixed place near the right road
+  edge. The driver reads the anchor yaw from the full quaternion (-2.29 rad), the controller uses its planar yaw 2 atan2(qz, qw)
+  (-1.49 rad); the reference, straight in the rig frame, is handed over rotated by 0.8 rad, and the next command is -1.25 rad. The stored
+  RSG read hits the same spot at 18.1 s (anchor off by 2.7 rad), as do `time`, v4 and v5 (all at x 195.8-196.7); v6 passed about 1 m
+  further left. 1e8e939e (`time` read 18.0 s, stored read 18.2 s) is the same fault. **Correction:** section 2 (run 5) and section 6
+  attributed d8bfaaf2 and 1e8e939e to a deceleration step that JLON removes; that was wrong, both are this pose fault. No nuPlan held
+  rollout of RSG or RSGboth has one.
+- **Controls.** 268949d2 (1.0 -> 0, corridor): the gate opened at 7.1-7.8 s at 3.3-4.1 m/s accelerating out of a right turn (ratio
+  1.0-1.19), and full's KDYN cap under-turned it (v6's failure on the same scene). 09528162 (0.285 -> 0, corridor instead of the stored
+  rear collision): curv's re-timing; the trajectory leaves the stored one from 2 s, the gate opened only at 19.5 s. 1bfad87c (0 -> 1):
+  the gate (opened from 19.2 s) kept it on the road. 68e53160 (zero both ways): the new at-fault front collision; at 12.0-12.6 s the model
+  swerves around something ahead at 6.5 m/s asking for ratio 5-10 (radius 1.3-2.5 m), the gate bounds the steering and the car hits it,
+  where the stored read steered out of the corridor. No reference that bounds steering can follow that swerve.
+- **RSGboth on nuPlan held (coordinator's question).** v7 gate opens on 0.96 % of RSGboth calls (35 / 460 rollouts; RSG 0.57 %, 22).
+  Of RSGboth's -0.024, -0.019 and 8 of 11 new zeros are in the 425 rollouts where the gate never opened, and the served reference equals
+  the plan's 8 points within 3 cm at 1-2 s on 99 % of calls; RSG's curv read costs -0.008 the same way. So the gate does not fire too
+  often; the cost is curv's re-timing or perturbation noise (a plain RSGboth rerun is queued as the control). A plain-by-default variant
+  (re-time only on a deceleration or curvature trigger) was screened on the stored PAI read and rejected: 3-8 of 26 spins have no trigger
+  in the second before the onset ([spin_fix/v8_screen.txt](spin_fix/v8_screen.txt), `sf_trig.py`, `sf_share.py`).
+
+v8 (`JEV_TRACK=gate`, 7d001d79): PP (the arc from the car onto every plan node reached by 2 s, 2 |y| / d^2, against the same cap, when v0
+>= 5 m/s; opens 60cc35db at 16.2-16.3 s with ratio 4.1-4.2) and the anchor guard (planar yaw on a tilted pose, any mode on). A third change,
+threshold 1.5 below 5 m/s while accelerating (for 268949d2), was read once on nuPlan held (a1fbf3fd: RSG -0.0100, zeros 38 vs 34 on 460;
+2 scenes 1 -> 0 exactly where it closed a v7 opening) and withdrawn. On v7's closed loop v8 changes 2 / 38 spin-set rollouts (the 2 spins),
+0 / 46 controls, 1 / 452 RSG and 2 / 452 RSGboth held rollouts. Expected: line 1 decided by the PAI read (d8bfaaf2 stays on a tilted pose
+after the guard; if it still counts as a spin it is a simulator fault, reported with its trace, the detector is not changed); line 2 fails
+as for v7 (268949d2, 09528162); line 3 RSG passes, RSGboth as v7 unless the plain rerun shows that spread; line 4 as v7.
