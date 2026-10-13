@@ -43,6 +43,7 @@ JLON = 10.0                     # m/s^3, its jerk, starting from the ego's measu
                                  # still drew a 0.69 rad command from such a step)
 ALAT, JLAT = 4.0, 10.0          # m/s^2, m/s^3 (openpilot clip_curvature: 3.0, jerk 5.0); ALAT 7 left 16 / 38 rollouts above 6 m/s^2 (run 3)
 YAW_TOL = 0.35                  # rad, plan yaw output against its chords
+PREVIEW = 0.0                   # s, full: the path curvature fed forward is taken v x PREVIEW ahead (lead for the MPC's steering lag)
 LATCAP = 1.0                    # full: 0 = no curvature / curvature-rate clipping (ablation; VCURV still uses ALAT / KDYN)
 VCURV = 1.0                     # full: 1 = also slow for the path's curvature ahead (v^2 |kappa| <= ALAT, braking at AMIN), 0 = off
 KMAX, KRATE = 0.2, 0.1          # 1/m (openpilot's cap; minimum radius 5 m), 1/m/s (about 0.29 rad/s of road-wheel steering, wheelbase 2.85)
@@ -105,8 +106,8 @@ def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
     """Plan (8, 3) rig frame, ego speed, yaw rate (logged only), acceleration -> (t (41,), x, y, yaw (41,)) and a log record. mode / kw (lower-case constant names)
     override the environment's configuration (offline replays)."""
     mode = mode or MODE
-    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP", "JLON", "LATCAP")}
-    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP, JLON, LATCAP = g.values()
+    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP", "JLON", "LATCAP", "PREVIEW")}
+    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP, JLON, LATCAP, PREVIEW = g.values()
     kcap = lambda v: np.minimum(np.interp(v, V_KIN, (KMAX, KDYN)), ALAT / np.maximum(v, V_MIN) ** 2)  # noqa: E731
     path, vp = Path(poses), speeds(poses)
     vlim = None
@@ -134,6 +135,8 @@ def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
             x, y, th, _ = path.at(s)
         else:
             px, py, ph, pk = path.at(s)
+            if PREVIEW > 0:
+                pk = path.at(s + v * PREVIEW)[3]
             c, sn = np.cos(ph), np.sin(ph)
             ey = -sn * (x - px) + c * (y - py)
             eh = (th - ph + np.pi) % (2 * np.pi) - np.pi
