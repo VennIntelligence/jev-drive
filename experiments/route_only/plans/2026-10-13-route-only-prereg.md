@@ -78,3 +78,26 @@ re-run spread); S2 own / log run without driver errors, `route` logged on every 
 (log) within 0.1 m on covered poses; S3 one BEV of a junction decision (model plan vs route path vs served poses) looked at.
 
 Budget: box ~3 card-h (held 2 x ~0.4, public ~1.5, smoke 0.1). Tokyo: none.
+
+## Smoke result and Amendment 1 (2026-10-13, before any held or public read)
+
+Smoke (`$DATA_DIR/runs/route_only/smoke/{off,own,log}`, 2 held turn scenes x 18 decisions):
+- S1 passes: switch off reproduces the stored RSG-L18-s0 served poses **bitwise on 36 / 36 decisions** (max |diff| 0.0), same
+  scores and metrics. The stored reference read is therefore a valid paired reference (no re-run noise at the plan level).
+- S2 passes: no driver errors; `route` logged on every decision; served arcs = plan arcs (own) within 0.004 m, = log arcs (log)
+  within 0.022 m on covered poses.
+- Coverage finding: in both scenes the memory starts 32-34 m ahead of the ego for the first 12-13 decisions (the ego is slow and
+  AlpaSim never sends the near 40 m), and the junction lies inside that gap: 8c9e3fd9 has poses on the route only from decision 12
+  on (cov 1-5), e14711ef has **no** covered pose in 18 decisions. Under the registered fallback R-own serves the model plan through
+  these turns, so R-own reads "route as path where the memory already covers it", not "turns from the route".
+
+Amendment 1 (added arm, registered arms and lines unchanged): **R-bridge** (`JEV_ROUTE=bridge`): as R-own, but when the memory
+starts ahead of the ego (gap g > 0.5 m) the cubic Hermite blend runs from the ego pose / heading straight into the route at route
+arc max(0, Lb - g) from its start (the route start whenever g >= Lb), tangent lengths = the chord; every pose is then on the
+path (arc lengths still the plan's own). This is the most direct reading of "turns from the route" that the 40-80 m messages
+allow: the junction inside the gap is crossed by a smooth curve from the ego to where the route resumes, not by the model.
+Read: held 460 / 18 decisions only (public guard only if R-bridge passes H2 as better or not worse; budget). Lines: the same
+H1-H4 as R-own, judged the same way; R-bridge vs R-own also reported paired. Expected failure modes in addition: the bridge
+cuts across the junction (an inner-kerb or median offroad when the route resumes on the exit road ~30 m away at a right angle;
+the Hermite curve does not know the lane geometry), and on straight roads with a lateral route offset the bridge is a slow
+lane change.

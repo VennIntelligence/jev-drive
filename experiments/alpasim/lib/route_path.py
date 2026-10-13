@@ -3,6 +3,10 @@ plans/2026-10-13-route-only-prereg.md). Off by default; the driver's path is unc
 
   JEV_ROUTE=own   the 8 served poses (0.5 .. 4 s) are placed on the route path at the cumulative arc lengths of the served plan
                   (after JEV_VCONT / JEV_LEAD if those are on): openpilot-style "longitudinal from the model, lateral from the route"
+  JEV_ROUTE=bridge  as `own`, but the gap is bridged instead of kept as the model plan (prereg Amendment 1): when the memory starts
+                  ahead of the ego, the blend runs from the ego pose straight into the route at route arc max(0, Lb - g) from its start
+                  (the route start when g >= Lb), so every pose is on the route path (the junction inside the gap is crossed by the
+                  Hermite curve, not by the model)
   JEV_ROUTE=log   privileged reference: the same path, arc lengths = the human log's travelled distance from t0 to t0 + 0.5 k s, read from
                   AlpaSim's recording ground truth (needs runtime.simulation_config.send_recording_ground_truth=true); past the log end the
                   log's last speed is held
@@ -27,7 +31,7 @@ import os
 import numpy as np
 
 MODE = os.environ.get("JEV_ROUTE", "off").strip().lower() or "off"
-assert MODE in ("off", "own", "log"), f"JEV_ROUTE={MODE}: off | own | log"
+assert MODE in ("off", "own", "log", "bridge"), f"JEV_ROUTE={MODE}: off | own | log | bridge"
 ON, NEED_GT = MODE != "off", MODE == "log"
 SUFFIX = "" if not ON else f"-route{MODE}"
 BLEND_T, BLEND_MIN, BLEND_MAX, GAP_TOL = 2.0, 8.0, 30.0, 0.5
@@ -118,7 +122,8 @@ def serve(poses, M, v0, arcs=None):
         return poses, info | dict(why="behind_end"), None
     P, Pc = _clean(np.r_[[[0.0, 0.0]], poses[:, :2]])        # the plan's own path
     g = max(0.0, -s_e)
-    if g <= GAP_TOL:
+    bridge = MODE == "bridge" and g > GAP_TOL
+    if g <= GAP_TOL or bridge:
         A, hA, head, gA = np.zeros(2), 0.0, np.zeros((0, 2)), 0.0
     else:
         if Pc is None or Pc[-1] <= g:
@@ -127,7 +132,7 @@ def serve(poses, M, v0, arcs=None):
         head = np.r_[P[Pc < g], A[None]]
         gA = g
     Lb = float(np.clip(BLEND_T * v0, BLEND_MIN, BLEND_MAX))
-    sj = min(max(s_e, 0.0) + Lb, cum[-1])
+    sj = min(max(0.0, Lb - g) if bridge else max(s_e, 0.0) + Lb, cum[-1])
     B, hB = (x[0] for x in _at(M, cum, sj))
     H = hermite(A, hA, B, hB)
     tail = M[cum > sj + 1e-6]
@@ -139,7 +144,7 @@ def serve(poses, M, v0, arcs=None):
         X, h = _at(path, pc, c[q])
         out[q, :2] = X
         out[q, 2] = np.unwrap(np.r_[0.0, h])[1:]
-    info.update(cov=int(q.sum()), gap=round(g, 2), lb=round(Lb, 2), why="ok", dlat=np.round(_dlat(poses, out), 3).tolist())
+    info.update(cov=int(q.sum()), gap=round(g, 2), lb=round(Lb, 2), why="bridge" if bridge else "ok", dlat=np.round(_dlat(poses, out), 3).tolist())
     ss = np.arange(0.0, min(pc[-1], 90.0), 2.0)
     return out, info, np.round(_at(path, pc, ss)[0], 2)
 
@@ -176,6 +181,10 @@ if __name__ == "__main__":                                           # self-test
     turn = np.r_[np.c_[np.linspace(-6, 20, 30), np.zeros(30)], np.c_[20 + r * np.sin(th[th > 0]), r - r * np.cos(th[th > 0])]]
     o, i, _ = serve(np.c_[8 * T_POSE, np.zeros(8), np.zeros(8)], turn, 8.0)
     assert i["cov"] == 8 and o[-1, 1] > 4 and o[-1, 2] > 0.7, (o, i)
+    MODE = "bridge"
+    o, i, _ = serve(np.c_[3 * T_POSE, np.zeros(8), np.zeros(8)], np.c_[30 + 4.21 * np.arange(10), 5.0 + np.zeros(10)], 3.0)
+    assert i["why"] == "bridge" and i["cov"] == 8 and o[-1, 1] > 1.0 and np.allclose(plan_arcs(o), 3 * T_POSE, atol=0.05), (o, i)
+    MODE = "own"
     a = log_arcs(np.arange(0, 20e6, 1e5), np.c_[np.arange(200) * 0.4, np.zeros(200)], 5e6)
     assert np.allclose(a, 4 * T_POSE), a
     o2, i2, _ = serve(np.c_[8 * T_POSE, np.zeros(8), np.zeros(8)], turn, 8.0, arcs=a)

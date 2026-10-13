@@ -4,7 +4,7 @@
 #   submit-smoke                 arms off / own / log on lists/smoke.txt (2 held turn scenes, 18 decisions)
 #   submit-held <arm> [after]    held 460 at 18 decisions in 6 chunks (onpol_long held_n6 lists) -> $W/held/<arm>/c<i>/run
 #   submit-pub <arm> [after]     public 1491 at 10 decisions in 10 chunks (onpol_long all_n10 lists) -> $W/pub10/<arm>/b<i>
-#   run <arm> <list> <dir> <len> job body (arm: off | own | log; len 18 = the after160 cache, 10 = the shipped one)
+#   run <arm> <list> <dir> <len> job body (arm: off | own | bridge | log; len 18 = the after160 cache, 10 = the shipped one)
 set -uo pipefail
 cd "$(dirname "$0")/../../.."
 T=RSG-L18-s0; OL=$DATA_DIR/runs/onpol_long; W=$DATA_DIR/runs/route_only; CK=$DATA_DIR/runs/op_parity/runs
@@ -22,7 +22,7 @@ run)
   A=$1 L=$2 D=$3 N=$4; X=(); E=()
   [[ -f $CK/$T/ckpt-final.pt ]] || die "no checkpoint $T"; [[ ! -e $D/aggregate/results-summary.json ]] || die "$D already ran"
   [[ $N == 18 ]] && X=("${LONG[@]}")
-  case $A in off) ;; own) E=(JEV_ROUTE=own) ;; log) E=(JEV_ROUTE=log); X+=(runtime.simulation_config.send_recording_ground_truth=true) ;; *) die "arm $A" ;; esac
+  case $A in off) ;; own) E=(JEV_ROUTE=own) ;; bridge) E=(JEV_ROUTE=bridge) ;; log) E=(JEV_ROUTE=log); X+=(runtime.simulation_config.send_recording_ground_truth=true) ;; *) die "arm $A" ;; esac
   rm -rf "$D"; mkdir -p "$D"
   env SH30_TAG=$T "${E[@]}" bash experiments/alpasim/scripts/run.sh "$D" sh30 --scene-list "$L" "${BASE[@]}" "${X[@]}" || die "run.sh rc $?"
   [[ -f $D/aggregate/results-summary.json ]] || die "no results-summary"
@@ -37,7 +37,7 @@ print("pruned", n, "rollout.asl")
 PY
   ;;
 submit-smoke)
-  for A in off own log; do sub ro-smoke-$A "" "${RD[@]}" -- bash $0 run $A $W/lists/smoke.txt $W/smoke/$A 18 > /dev/null || exit 1; done; tail -n 3 $W/jobs.txt ;;
+  for A in ${ARMS:-off own log}; do sub ro-smoke-$A "" "${RD[@]}" -- bash $0 run $A $W/lists/smoke.txt $W/smoke/$A 18 > /dev/null || exit 1; done; tail -n 3 $W/jobs.txt ;;
 submit-held)
   A=$1; for i in 0 1 2 3 4 5; do sub ro-held-$A-$i "${2:-}" "${RD[@]}" -- bash $0 run $A $OL/lists/held_n6/c$i.txt $W/held/$A/c$i/run 18 > /dev/null || exit 1; done; tail -n 6 $W/jobs.txt ;;
 submit-pub)
