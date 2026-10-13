@@ -21,13 +21,13 @@ prep)
   $TR experiments/route_follow/scripts/rf_paionp.py pack || exit 1
   $TR experiments/route_follow/scripts/rf_pait.py merge --pools on1_L18RB0:s:self on1_PAIonp:p:both --out RSGPAIonp || exit 1 ;;
 r1)
-  sub pon-r1 --vram 12 --cpu 4 --ram 40 --timeout-h 1 --gpus 1,2,3,4,5 -- $TR experiments/route_follow/scripts/rf_paionp.py r1 --out $RES ;;
+  sub pon-r1 --vram 12 --cpu 4 --ram 40 --timeout-h 1 --gpus 1,2,3,4,5 --pin-strict -- $TR experiments/route_follow/scripts/rf_paionp.py r1 --out $RES ;;
 submit)
   ONW=$(python3 -c "import json; print(json.load(open('$DATA_DIR/runs/op_parity/cache/on1_PAIonp/build.json'))['on_weight'])")
   ARM="--on on1_RSGPAIonp --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode mixed --on-weight $ONW"
   dep=(); tr=()
   for T in $NEW; do s=${T##*-s}
-    t=$(sub pon-tr-$T --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 --gpus 1,2,3,4,5 -- $TR experiments/route_mem/scripts/rm_train.py train --tag $T $REC $ARM --seed $s) || exit 1
+    t=$(sub pon-tr-$T --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict -- $TR experiments/route_mem/scripts/rm_train.py train --tag $T $REC $ARM --seed $s) || exit 1
     tr+=($t)
     PRIO=14 bash experiments/route_mem/scripts/rm_chain.sh submit-read $T $t || exit 1
     dep+=($(grep " rm-cover-$T$" $DATA_DIR/runs/route_mem/jobs.txt | tail -1 | cut -d' ' -f1))
@@ -36,9 +36,9 @@ submit)
             $W/lists/all_n10/c$i.txt 10 $G/read10/$T/b$i)) || exit 1
     done
   done
-  sub pon-p1ol --after "$(IFS=,; echo "${tr[*]}")" --vram 12 --cpu 4 --ram 40 --timeout-h 1 --gpus 1,2,3,4,5 -- $TR experiments/route_follow/scripts/rf_pai_openloop.py \
+  sub pon-p1ol --after "$(IFS=,; echo "${tr[*]}")" --vram 12 --cpu 4 --ram 40 --timeout-h 1 --gpus 1,2,3,4,5 --pin-strict -- $TR experiments/route_follow/scripts/rf_pai_openloop.py \
       --p1 $RF/p1_openloop/rsg_p1 --logged RSG-L18-s0 --tags RSG-L18-s0 $NEW RSGPAIT-L18-s0 --name p1_paionp --out $RES > /dev/null || exit 1
-  sub pon-report --after "$(IFS=,; echo "${dep[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash experiments/route_follow/scripts/rf_paionp.sh report > /dev/null || exit 1
+  sub pon-report --after "$(IFS=,; echo "${dep[*]}")" --vram 0.5 --gpus 1,2,3,4,5 --pin-strict --cpu 16 --ram 32 --timeout-h 1 -- bash experiments/route_follow/scripts/rf_paionp.sh report > /dev/null || exit 1
   cat $O/jobs.txt ;;
 report)
   R=""; for t in $HELD; do R="$R $t=$(ls -d $M/$t/c*/run | paste -sd,)"; done
