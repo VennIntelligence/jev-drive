@@ -432,7 +432,7 @@ def report(a):
                "Speed ego - human (m/s) when the ego first crosses entry - 40 / - 20 / 0 m of the human-path turn; onset - human (m, - = early); "
                "peak inside / outside offset to the human path (m). Means [log-clustered CI] (n).", "",
                "| class | model | ego v @-40 | ego - human @-40 | ego - human @-20 | ego - human @0 | onset - human | peak in | peak out |", "|:--|:--|:--|:--|:--|:--|:--|:--|:--|"]
-        for cn in ("late or delayed (entry >= 20 m)", "early, entry < 20 m", "fork (all)", "turn, no fork (all)"):
+        for cn in ("late (all, entry >= 40 m)", "late or delayed (entry >= 20 m)", "early, entry < 20 m", "fork (all)", "turn, no fork (all)"):
             for M in MODELS:
                 g = T[classes[cn] & (T.model == M)]
                 f = lambda c: cf(boot(g[c], g.log)) + f" ({int(g[c].notna().sum())})"  # noqa: E731
