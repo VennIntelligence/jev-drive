@@ -6,6 +6,7 @@ and the phone-wheel block. Read-only, no CARLA connection; Q / Escape closes onl
     PYTHONPATH=scripts python experiments/phone_wheel/scripts/human_viewer.py --dir /data/runs/human_drive/live
 """
 import argparse
+import json
 import os
 import sys
 import time
@@ -47,15 +48,38 @@ def bar(canvas, x, y, w, h, value, color, centered=False):
         pygame.draw.rect(canvas, color, (x, y, int(w * max(0.0, min(1.0, value))), h))
 
 
-def draw(canvas, state, images, font, big, status, tag):
+def launcher_line(live):
+    """(text, colour) of what the launcher is doing, from <live>/launcher.json and the run's done/ markers."""
+    try:
+        L = json.load(open(os.path.join(live, "launcher.json")))
+    except (OSError, ValueError):
+        return "no launcher status: start experiments/phone_wheel/scripts/human_drive.sh", GREY
+    if L["state"] == "refused":
+        return "REFUSED TO START: " + L["msg"], RED
+    n = len(L.get("routes") or [])
+    done = len(os.listdir(os.path.join(L["run"], "done"))) if L.get("run") and os.path.isdir(os.path.join(L["run"], "done")) else 0
+    if L["state"] == "finished":
+        return "ALL %d ROUTES DONE: %s" % (n, L["msg"].split(": ", 1)[-1]), GREEN
+    return "LOADING NEXT ROUTE (%d of %d done)" % (done, n), ORANGE
+
+
+def draw(canvas, state, images, font, big, status, tag, live):
     def label(msg, pos, color=WHITE, f=None):
         canvas.blit((f or font).render(msg, True, color), pos)
     hu = state.get("human") or {}
     t = tag.render("DRIVER: HUMAN (phone)", True, (0, 0, 0))     # unmistakable next to the model's viewer window
     pygame.draw.rect(canvas, ORANGE, (14, 3, t.get_width() + 20, 42), border_radius=8)
     canvas.blit(t, (24, 24 - t.get_height() // 2))
-    label("%s   route %s   step %s   sim %.1f s" % (status, state.get("route", "-"), state.get("step", "-"), state.get("sim_t", 0)),
-          (t.get_width() + 50, 12))
+    if status == "LIVE":
+        line, col = ("WAITING FOR THE FIRST THROTTLE PRESS", ORANGE) if state.get("waiting") else ("DRIVING", GREEN)
+    else:
+        line, col = launcher_line(live)
+    label("%s   route %s   step %s   sim %.1f s" % (line, state.get("route", "-"), state.get("step", "-"), state.get("sim_t", 0)),
+          (t.get_width() + 50, 12), col)
+    if status != "LIVE":
+        msg = big.render(line, True, col)
+        pygame.draw.rect(canvas, (0, 0, 0), (20, 48 + 780 // 2 - 50, 1560, 100))
+        canvas.blit(msg, (20 + (1560 - msg.get_width()) // 2, 48 + 780 // 2 - 30))
     W, H = 1560, 780
     if "wide" in images:
         img = images["wide"].copy()
@@ -152,7 +176,7 @@ def main():
                 canvas.fill((17, 21, 29))
                 age = time.time() - state.get("t", 0)
                 status = ("LIVE" if age < 3 else "STALE") if state.get("running") else ("ENDED" if state else "WAITING FOR A ROUTE")
-                draw(canvas, state, images, font, big, status, tag)
+                draw(canvas, state, images, font, big, status, tag, a.dir)
                 r = min(screen.get_width() / CW, screen.get_height() / CH)
                 screen.fill((0, 0, 0))
                 screen.blit(pygame.transform.smoothscale(canvas, (max(1, int(CW * r)), max(1, int(CH * r)))), (0, 0))

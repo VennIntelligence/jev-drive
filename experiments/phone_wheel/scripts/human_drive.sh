@@ -7,6 +7,8 @@
 #      HUMAN_CONFIG agent config JSON (steer_gain, steer_expo, realtime, ...; see lib/human_agent.py); HUMAN_MIN_FREE_MB (8000)
 # Results: /data/runs/human_drive/<stamp>/{results.md,results.json}, per attempt human.jsonl / human_summary.json.
 set -uo pipefail
+# $LIVE/launcher.json tells the viewer what the launcher is doing: running (run dir, route list) / finished / refused
+status() { python3 -c 'import json,sys,time; print(json.dumps(dict(state=sys.argv[1], msg=sys.argv[2], run=sys.argv[3], routes=sys.argv[4].split(","), t=time.time())))' "$@" > $LIVE/launcher.tmp && mv $LIVE/launcher.tmp $LIVE/launcher.json; }
 REPO=$(cd "$(dirname "$0")/../../.." && pwd)
 H=/data/runs/human_drive LIVE=/data/runs/human_drive/live
 GPU=${HUMAN_GPU:-0} IDX=${HUMAN_SERVER_INDEX:-4}
@@ -35,22 +37,27 @@ if [[ ${1:-} == --run ]]; then          # inside human:drive
     2>&1 | tee -a "$OUT/runner.log"
   /data/envs/carla/bin/python experiments/phone_wheel/scripts/human_results.py "$OUT" 2>&1 | tee "$OUT/results.txt"
   date > "$OUT/DONE"
+  status finished "all routes done: $OUT/results.md" "$OUT" "$IDS"
   exit 0
 fi
 
-ids=$(echo "${*:-24721 24944 27005 24416 27870 24519 26023 334 24948 28147 27297}" | tr ' ' ',' | tr -s ,)
-free=$(nvidia-smi -i $GPU --query-gpu=memory.free --format=csv,noheader,nounits)
-if (( free < ${HUMAN_MIN_FREE_MB:-8000} )); then
-  echo "card $GPU has $free MiB free (< ${HUMAN_MIN_FREE_MB:-8000}): not starting"; nvidia-smi; exit 1
-fi
-port=$((2000 + 50 * IDX))
-if ss -ltn | grep -q ":$port "; then echo "port $port is taken: set HUMAN_SERVER_INDEX"; exit 1; fi
-OUT=$H/$(date +%m%d-%H%M%S); mkdir -p "$OUT" "$LIVE"
-echo "routes $ids, card $GPU, server index $IDX (rpc $port) -> $OUT"
+mkdir -p "$LIVE"
 tmux has-session -t human 2>/dev/null || tmux new-session -d -s human -n main
 if ! tmux list-windows -t human -F '#{window_name}' | grep -qx viewer; then
   tmux new-window -d -t human -n viewer "cd $REPO && SDL_VIDEO_WINDOW_POS=${HUMAN_WIN_POS:-1340,40} \
     /data/envs/carla/bin/python experiments/phone_wheel/scripts/human_viewer.py --dir $LIVE --window-size ${HUMAN_WIN_SIZE:-2480 1736}; exec bash"
 fi
+ids=$(echo "${*:-24721 24944 27005 24416 27870 24519 26023 334 24948 28147 27297}" | tr ' ' ',' | tr -s ,)
+free=$(nvidia-smi -i $GPU --query-gpu=memory.free --format=csv,noheader,nounits)
+if (( free < ${HUMAN_MIN_FREE_MB:-8000} )); then
+  echo "card $GPU has $free MiB free (< ${HUMAN_MIN_FREE_MB:-8000}): not starting"; nvidia-smi
+  status refused "card $GPU has only $free MiB free (needs ${HUMAN_MIN_FREE_MB:-8000})" "" "$ids"; exit 1
+fi
+port=$((2000 + 50 * IDX))
+if ss -ltn | grep -q ":$port "; then echo "port $port is taken: set HUMAN_SERVER_INDEX"; status refused "port $port taken (another run?)" "" "$ids"; exit 1; fi
+OUT=$H/$(date +%m%d-%H%M%S); mkdir -p "$OUT"
+status running "starting CARLA" "$OUT" "$ids"
+echo "routes $ids, card $GPU, server index $IDX (rpc $port) -> $OUT"
+tmux kill-window -t human:drive 2>/dev/null
 tmux new-window -d -t human -n drive "bash $REPO/experiments/phone_wheel/scripts/human_drive.sh --run $OUT $ids; exec bash"
 echo "tmux: human:viewer, human:drive; results: $OUT/results.md"
