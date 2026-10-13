@@ -1,0 +1,5 @@
+common scenes 460
+RSGbothLon-L18-s0 n  460 mean 0.9034 zeros  39 gt 1.646 latgt 0.904  {'offroad': 18, 'left_corridor_laterally': 8, 'collision_at_fault': 5, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 45 fails sanity check': 1}
+RSGboth-L18-s0   n  460 mean 0.9020 zeros  41 gt 1.776 latgt 0.922  {'offroad': 17, 'left_corridor_laterally': 9, 'collision_at_fault': 7, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 45 fails sanity check': 1}
+RSG-L18-s0       n  460 mean 0.8656 zeros  34 gt 1.135 latgt 0.869  {'offroad': 17, 'Waypoint 1 fails sanity check:': 5, 'left_corridor_laterally': 5, 'collision_at_fault': 4, 'Waypoint 45 fails sanity check': 1}
+RSGbC2-L18-s0    n  460 mean 0.8973 zeros  40 gt 1.294 latgt 0.880  {'offroad': 18, 'left_corridor_laterally': 8, 'collision_at_fault': 6, 'Waypoint 1 fails sanity check:': 5, 'Waypoint 45 fails sanity check': 1}
