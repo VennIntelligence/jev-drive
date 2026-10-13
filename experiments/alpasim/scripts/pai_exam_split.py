@@ -4,6 +4,10 @@ reference; control = a seeded random half of the never-zero scenes; trainable = 
 (results-summary failure_reason other than offroad / left_corridor_laterally / collision_at_fault, e.g. an RPC crash before any drive call)
 does not count as a zero; such scenes are excluded from all three lists and listed. Plain python3.
 
+v2 rule (--freeze DIR, the committed v1 lists): membership only ever moves into hard. hard = frozen hard + every frozen control / trainable
+scene that is now zero in a reference; the rest keep their frozen list; a scene not in the frozen lists goes to hard if zero, else to control
+or trainable by a stable hash (sha1 of "<seed>:<scene>", even first byte = control).
+
   pai_exam_split.py --refs ybase_g20=/data/runs/route_night/r281/ybase_g20 ys0_g20=... rsg=... ys1=/data/runs/onpol_long/pai281/ys1 rbsg2=... \
       --out experiments/alpasim/results/pai_exam [--seed 0]
 """
@@ -27,6 +31,7 @@ def main():
     ap.add_argument("--refs", nargs="+", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--freeze", default="", help="dir of the frozen lists (v2 rule)")
     a = ap.parse_args()
     R = {k: read(v) for k, v in (x.split("=", 1) for x in a.refs)}
     cover = sorted(set.intersection(*[set(d) for d in R.values()]))
@@ -34,17 +39,25 @@ def main():
     ok = [s for s in cover if s not in infra]
     hard = sorted(s for s in ok if any(d[s].startswith("zero") for d in R.values()))
     never = sorted(s for s in ok if s not in hard)
-    rnd = random.Random(a.seed)
-    sh = never[:]
-    rnd.shuffle(sh)
-    control, trainable = sorted(sh[:len(sh) // 2]), sorted(sh[len(sh) // 2:])
+    if a.freeze:
+        import hashlib
+        F = {n: set(Path(a.freeze, f"{n}.txt").read_text().split()) for n in ("hard", "control", "trainable")}
+        hard = sorted(set(hard) | (F["hard"] & set(ok)))
+        side = lambda s: "control" if hashlib.sha1(f"{a.seed}:{s}".encode()).digest()[0] % 2 == 0 else "trainable"  # noqa: E731
+        put = {s: next((n for n in ("control", "trainable") if s in F[n]), None) or side(s) for s in ok if s not in hard}
+        control, trainable = sorted(s for s, n in put.items() if n == "control"), sorted(s for s, n in put.items() if n == "trainable")
+    else:
+        rnd = random.Random(a.seed)
+        sh = never[:]
+        rnd.shuffle(sh)
+        control, trainable = sorted(sh[:len(sh) // 2]), sorted(sh[len(sh) // 2:])
     o = Path(a.out)
     o.mkdir(parents=True, exist_ok=True)
     for n, l in (("hard", hard), ("control", control), ("trainable", trainable), ("infra_excluded", infra)):
         (o / f"{n}.txt").write_text("".join(s + "\n" for s in l))
     per = {k: dict(zeros=sum(d[s].startswith("zero") for s in cover), infra=sum(d[s] == "infra" for s in cover),
                    **{x: sum(d[s] == "zero:" + x for s in cover) for x in KINDS}) for k, d in R.items()}
-    rec = dict(refs=dict(x.split("=", 1) for x in a.refs), seed=a.seed, covered=len(cover), infra_excluded=len(infra), hard=len(hard),
+    rec = dict(refs=dict(x.split("=", 1) for x in a.refs), seed=a.seed, freeze=a.freeze, covered=len(cover), infra_excluded=len(infra), hard=len(hard),
                control=len(control), trainable=len(trainable), per_ref=per)
     (o / "split.json").write_text(json.dumps(rec, indent=1))
     print(json.dumps(rec, indent=1))

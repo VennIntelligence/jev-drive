@@ -20,3 +20,10 @@ Counts: covered 281, infrastructure-excluded 0, **hard 131, control 75, trainabl
 Planned v2: ybase and ys0 re-read at weight 20 (`r281/ybase_g20`, `r281/ys0_g20`) and RBSG2-L18-s0 (weight 20) added; the membership
 diff against v1 will be recorded here. The weight-5 references include the handoff spins that weight 20 removes (steer_long gains pilot),
 so v1's hard half holds some scenes that are hard only at weight 5.
+
+## Rule from v2 on (approved 2026-10-13)
+
+v1 is frozen. From v2 on, membership only ever moves into **hard**: a v1 control / trainable scene that scores zero in any reference read
+(non-infrastructure) moves to hard; every other scene keeps its v1 list. A scene outside v1 goes to hard if it is zero anywhere, else to
+control or trainable by a stable hash (`sha1("<seed>:<scene id>")`, even first byte = control). `pai_exam_split.py --freeze <v1 dir>`.
+The exam reads queued on Tokyo (`/data/runs/route_night/exam206.txt`) use v1 hard + control (206 scenes).
