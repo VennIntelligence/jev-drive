@@ -45,3 +45,32 @@ The -5 m/s^2 bound on the reference's deceleration can weaken emergency braking 
   braking at speed in the stored read almost always came with a spin, so the spin set is itself the main brake test). Line for it as for the
   other controls (spins 0, zeros and at-fault collisions not above the baseline, mean not below baseline - 0.01).
 - Reported, not gated: zeros and mean score on the spin set against the stored RSG read (16 zeros, 0.4437).
+
+## Amendment 2 (v7, 2026-10-13 17:40 JST, written before any v7 closed-loop read)
+
+The user's requirement: spins are a mechanical fault and go to 0 without costing turns or nuPlan. One serving setting must pass all four:
+1. spin set (38, gains 20): spins = 0;
+2. controls (46 = fast 20 + slow 16 + brake 10, gains 20) against the stored RSG read: spins 0, zeros not above the baseline (+0), mean not
+   below baseline - 0.01;
+3. nuPlan held 452 @18 against the stored RSG-L18-s0 read: mean within 0.01, zeros within +3 (`ol_confirm.py`);
+4. nuPlan public 1491 @10 guard: mean not below the stored read - 0.02.
+
+Per-case look before choosing (offline, `scripts/sf_mid.py` / `sf_gate.py` on the stored `time` read, results/spin_fix/): in the 21 spins
+that `time` leaves, the served plan's own path asks for a lateral acceleration of 4-21 m/s^2 (median 7) at the speed the car can still have
+there, and the curvature speed limit does not change that (the curv rebuild of the same plans gives the same peak: the turn starts inside
+the braking distance). These plans are the model swerving while it brakes (3ffad395 at 17.4 s: 2.3 m to the side within 3.7 m at 10 m/s);
+no reference that keeps to the plan's path there is drivable. Hence two arms:
+
+- `curv` (`JEV_TRACK=curv`): re-timing (AMIN -5, AMAX 3, JLON 10 from the measured acceleration) + VCURV on the plan's own polyline, no
+  path tracking, no curvature clipping (the brief's candidate v7).
+- `gate` (`JEV_TRACK=gate`): curv, and on any call where a path segment the curv reference reaches within T_GATE 2 s has a curvature above
+  GATE x the full mode's cap at the speed it is passed (max(v_ref, v0 - 2 t), segments passed below GATE_V 2 m/s not checked), that call
+  serves the v6 full reference instead. Threshold from the offline screen on stored plans: GATE 1.0 opens on 7.5 % of nuPlan held rollouts
+  (1.0 % of calls), 1.25 on 1.1 % (0.1 %), 1.5 on none; on PAI, 21 / 21 spin rollouts of the `time` read open before the onset (20) or
+  never spin under v6 (1e8e939e, the deceleration step the jerk limit removes), 1 / 20 fast controls (one call in the force-GT phase),
+  3 / 16 slow and 3 / 10 brake controls open at 1.0 (2 and 1 at 1.5).
+
+Order: nuPlan held @18 for curv and gate 1.0 on the box pool, plus smoke5 switch off (parent commit vs this one, same card) and gate on.
+PAI (card 0 when free): gate on the 38, then on the 46. If the 46 fail at the threshold read first only on scenes where the gate opened,
+the threshold moves to 1.5 and both PAI sets are read again (the nuPlan read is valid for every threshold at or above the one read). curv on
+the 38 as an ablation if card time is left; weight 5 last. The public guard is read for the setting that passes 1-3.
