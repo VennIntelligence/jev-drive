@@ -8,7 +8,8 @@
 #   only within an identical list, so a parity read reuses the other read's lists), CONC (4 rollouts per stack), SERVE (driver switches,
 #   default the served configuration "JEV_VCONT=1.0 JEV_LEAD=1"; other driver env such as JEV_VHIST=holdlead or SH30_RMEM=0 goes here too),
 #   WIZ (wizard overrides, space separated, e.g. "controller.gains.rel_front_steering_angle_weight=20"), PRIO (pool priority, 13),
-#   AFTER (pool job ids the chunks wait for), KEEP_VIDEO=1 (keep the rollout mp4s; dropped by default, 0.2-0.3 GB per scene).
+#   AFTER (pool job ids the chunks wait for), KEEP_VIDEO=1 / KEEP_ASL=1 (keep the rollout mp4s / the rollout.asl of scored rollouts; dropped by
+#   default: a read of 147 scenes is then ~10 GB instead of ~60 GB).
 # Layout as pai_eval.sh, so pai_eval_report.py reads it unchanged: <out>/{chunks/cNNN.txt, jobs.txt, runs/<lowercase tag>_cNNN/{sim/, driver ->
 #   sim/driver-logs, pool/, SUBMITTED, DONE | ERROR}}. A second submit skips finished and pending chunks and resubmits failed ones (resume);
 #   a chunk with a scene not yet in the scene cache is left out until a later submit.
@@ -25,7 +26,7 @@ submit)
     else for f in "$@"; do if head -1 "$f" | grep -q '^scene_id'; then awk -F'\t' 'NR > 1 && $8 <= 1 {print $1}' "$f"; else grep . "$f"; fi; done \
            | awk '!seen[$0]++' | split -l "${CHUNK:-25}" -d -a 3 --additional-suffix=.txt - "$O/chunks/c"; fi
   fi
-  printf '%s\n' "SERVE=${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}" "WIZ=${WIZ:-}" "CONC=${CONC:-4}" "KEEP_VIDEO=${KEEP_VIDEO:-0}" "code=$(git -C "$repo" rev-parse --short HEAD)" > "$O/config.txt"
+  printf '%s\n' "SERVE=${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}" "WIZ=${WIZ:-}" "CONC=${CONC:-4}" "KEEP_VIDEO=${KEEP_VIDEO:-0}" "KEEP_ASL=${KEEP_ASL:-0}" "code=$(git -C "$repo" rev-parse --short HEAD)" > "$O/config.txt"
   X=(); for kv in ${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}; do X+=(--env "$kv"); done
   miss=$(python3 - "$DATA_DIR/third_party/alpasim/data/scenes" "${NUREC:-$DATA_DIR/datasets/nurec}/all-usdzs" "$O"/chunks/*.txt <<'PY'
 import csv, os, sys                 # chunks with a scene whose usdz is not in the cache yet (a copy still running): left for a later submit
@@ -43,7 +44,7 @@ PY
     mkdir -p "$r/pool"
     id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --no-check --owner pai-box --name "pai-$L-$c" --vram 28 --cpu 6 --ram 40 --timeout-h 3 \
            --tries 2 --priority "${PRIO:-13}" ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env CL_HIST_KEY=pai-read4 --env "CONC=${CONC:-4}" \
-           --env "WIZ=${WIZ:-}" --env "KEEP_VIDEO=${KEEP_VIDEO:-0}" "${X[@]}" -- bash "$here/pai_box.sh" run "$O" "$T" "$c" | awk '{print $NF}')
+           --env "WIZ=${WIZ:-}" --env "KEEP_VIDEO=${KEEP_VIDEO:-0}" --env "KEEP_ASL=${KEEP_ASL:-0}" "${X[@]}" -- bash "$here/pai_box.sh" run "$O" "$T" "$c" | awk '{print $NF}')
     [[ -n $id ]] || { echo "submit $c failed" >&2; exit 1; }
     echo "$id" > "$r/SUBMITTED"; echo "$id pai-$L-$c" | tee -a "$O/jobs.txt"
   done ;;
@@ -53,6 +54,14 @@ run)
   # shellcheck disable=SC2086
   env SH30_TAG="$T" CONC="${CONC:-4}" bash "$here/pai_native.sh" "$R" "$O/chunks/$c.txt" ${WIZ:-}; rc=$?
   rm -rf "$R/nre-cache" "$R/driver-tmp"; [[ ${KEEP_VIDEO:-0} == 1 ]] || find "$R/rollouts" -name '*.mp4' -delete 2>/dev/null
+  [[ ${KEEP_ASL:-0} == 1 || ! -f $R/aggregate/results-summary.json ]] || python3 - "$R" <<'PY'
+import glob, json, os, sys                  # rollout.asl (~0.4 GB a scene) is kept for zero-score rollouts only, as the nuPlan reads do
+R = sys.argv[1]
+for r in json.load(open(f"{R}/aggregate/results-summary.json"))["rollouts"]:
+    if (r.get("score") or 0) > 0:
+        for f in glob.glob(f"{R}/rollouts/{r['clipgt_id']}/*/rollout.asl"):
+            os.remove(f)
+PY
   if (( rc == 0 )) && [[ -f $R/aggregate/results-summary.json ]]; then date > "$r/DONE"; else echo "rc $rc" > "$r/ERROR"; exit 1; fi ;;
-*) sed -n '2,14p' "$0"; exit 2 ;;
+*) sed -n '2,15p' "$0"; exit 2 ;;
 esac
