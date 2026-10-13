@@ -10,7 +10,8 @@
 #   WIZ (wizard overrides, space separated, e.g. "controller.gains.rel_front_steering_angle_weight=20"), PRIO (pool priority, 13),
 #   AFTER (pool job ids the chunks wait for), KEEP_VIDEO=1 (keep the rollout mp4s; dropped by default, 0.2-0.3 GB per scene).
 # Layout as pai_eval.sh, so pai_eval_report.py reads it unchanged: <out>/{chunks/cNNN.txt, jobs.txt, runs/<lowercase tag>_cNNN/{sim/, driver ->
-#   sim/driver-logs, pool/, DONE | ERROR}}. A finished chunk is skipped by a second submit (resume); a failed one is resubmitted.
+#   sim/driver-logs, pool/, SUBMITTED, DONE | ERROR}}. A second submit skips finished and pending chunks and resubmits failed ones (resume);
+#   a chunk with a scene not yet in the scene cache is left out until a later submit.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd); repo=$(cd "$here/../../.." && pwd)
 mode=$1 O=$(mkdir -p "$2" && cd "$2" && pwd) T=$3; shift 3
@@ -26,15 +27,25 @@ submit)
   fi
   printf '%s\n' "SERVE=${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}" "WIZ=${WIZ:-}" "CONC=${CONC:-4}" "KEEP_VIDEO=${KEEP_VIDEO:-0}" "code=$(git -C "$repo" rev-parse --short HEAD)" > "$O/config.txt"
   X=(); for kv in ${SERVE-JEV_VCONT=1.0 JEV_LEAD=1}; do X+=(--env "$kv"); done
+  miss=$(python3 - "$DATA_DIR/third_party/alpasim/data/scenes" "${NUREC:-$DATA_DIR/datasets/nurec}/all-usdzs" "$O"/chunks/*.txt <<'PY'
+import csv, os, sys                 # chunks with a scene whose usdz is not in the cache yet (a copy still running): left for a later submit
+src, cache, *chunks = sys.argv[1:]; have = set(os.listdir(cache)); ok = set()
+for f in ("sim_scenes.csv", "sim_scenes_2604.csv"):
+    ok |= {r["scene_id"] for r in csv.DictReader(open(f"{src}/{f}")) if r["uuid"] + ".usdz" in have}
+print(" ".join(os.path.basename(c)[:-4] for c in chunks if any(s not in ok for s in open(c).read().split())))
+PY
+)
   for f in "$O"/chunks/*.txt; do
     c=$(basename "$f" .txt); r=$O/runs/${L}_$c
     [[ -f $r/DONE ]] && continue
+    [[ -f $r/SUBMITTED && ! -f $r/ERROR ]] && continue                # queued or running
+    [[ " $miss " == *" $c "* ]] && { echo "$c: scenes missing from the cache, not submitted"; continue; }
     mkdir -p "$r/pool"
     id=$(cd "$repo" && .venv/bin/python -m jevdrive.cl submit --no-check --owner pai-box --name "pai-$L-$c" --vram 28 --cpu 6 --ram 40 --timeout-h 3 \
            --tries 2 --priority "${PRIO:-13}" ${AFTER:+--after "$AFTER"} --log-dir "$r/pool" --env CL_HIST_KEY=pai-read4 --env "CONC=${CONC:-4}" \
            --env "WIZ=${WIZ:-}" --env "KEEP_VIDEO=${KEEP_VIDEO:-0}" "${X[@]}" -- bash "$here/pai_box.sh" run "$O" "$T" "$c" | awk '{print $NF}')
     [[ -n $id ]] || { echo "submit $c failed" >&2; exit 1; }
-    echo "$id pai-$L-$c" | tee -a "$O/jobs.txt"
+    echo "$id" > "$r/SUBMITTED"; echo "$id pai-$L-$c" | tee -a "$O/jobs.txt"
   done ;;
 run)
   c=$1; r=$O/runs/${L}_$c; R=$r/sim
@@ -43,5 +54,5 @@ run)
   env SH30_TAG="$T" CONC="${CONC:-4}" bash "$here/pai_native.sh" "$R" "$O/chunks/$c.txt" ${WIZ:-}; rc=$?
   rm -rf "$R/nre-cache" "$R/driver-tmp"; [[ ${KEEP_VIDEO:-0} == 1 ]] || find "$R/rollouts" -name '*.mp4' -delete 2>/dev/null
   if (( rc == 0 )) && [[ -f $R/aggregate/results-summary.json ]]; then date > "$r/DONE"; else echo "rc $rc" > "$r/ERROR"; exit 1; fi ;;
-*) sed -n '2,13p' "$0"; exit 2 ;;
+*) sed -n '2,14p' "$0"; exit 2 ;;
 esac
