@@ -37,7 +37,7 @@ same time, turn entry / exit), header the verdicts and the live distance to entr
 - `manifest_b1.json` (results): 
 - `labels_b1.jsonl` (results): 
 
-[results/](results/) 2 result files · [figs/](figs/) 0 figures · [scripts/](scripts/) 5 entry points
+[results/](results/) 2 result files · [figs/](figs/) 1 figures · [scripts/](scripts/) 5 entry points
 <!-- files:end -->
 
 ## Selection (batch 1, `sudden_turn_v1`)
