@@ -25,7 +25,7 @@ figure (without the sleeps) and the sleeps are logged and shown.
 Logs (ALPASIM_DRIVER_LOG_DIR): drive.jsonl, one `drive` record per call (phone input, applied delta / accel, speed, input age,
 stale, pose, wall) and one `close` record per session (sim s, wall s, wall per sim s after the start, stale calls, wait s);
 start.jsonl (scene, cameras, box). Live (HUMAN_LIVE): state.json + front.jpg / left.jpg / right.jpg (the received JPEGs, atomic
-rename) for scripts/human_viewer.py. Env: ALPASIM_DRIVER_HOST / _PORT, HUMAN_WHEEL_PORT (47800; fake_wheel.py uses 47801),
+rename) and camera.json (front camera calibration, for the route drawn on the image) for scripts/human_viewer.py. Env: ALPASIM_DRIVER_HOST / _PORT, HUMAN_WHEEL_PORT (47800; fake_wheel.py uses 47801),
 HUMAN_TRACK, HUMAN_N_SCENES, HUMAN_SIM_S (scene length for the progress bar). Needs grpc, alpasim_grpc, numpy (the driver image).
 """
 from __future__ import annotations
@@ -83,6 +83,25 @@ def rollout(x, y, yaw, v, delta, a, L, n=N_OUT):
     return out
 
 
+def front_camera(veh):
+    """The front camera's calibration as pai_driver.py logs it (spec, R, cam_t: rig_to_camera, camera frame x right, y down, z
+    forward), for the viewer's route projection; None without a front camera."""
+    c = next((c for c in veh.available_cameras if c.logical_id in FRONT), None)
+    if c is None:
+        return None
+    kind = c.intrinsics.WhichOneof("camera_param")
+    p, q, t = getattr(c.intrinsics, kind), c.rig_to_camera.quat, c.rig_to_camera.vec
+    spec = {"c": [p.principal_point_x, p.principal_point_y], "native": [c.intrinsics.resolution_w, c.intrinsics.resolution_h]}
+    if kind == "ftheta_param":
+        spec.update(model="ftheta", fw=list(p.angle_to_pixeldist_poly), max_angle=p.max_angle)
+    else:
+        spec.update(model="pinhole", f=[p.focal_length_x, p.focal_length_y])
+    w, x, y, z = q.w, q.x, q.y, q.z
+    R = [[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)], [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+         [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]]
+    return {"cam": c.logical_id, "spec": spec, "R": R, "cam_t": [t.x, t.y, t.z]}
+
+
 def put(path: Path, data: bytes):
     tmp = path.with_suffix(".tmp")
     tmp.write_bytes(data)
@@ -128,8 +147,13 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         with self.lock:
             s = self.sessions[req.session_uuid] = Session(req, self.nsess)
             self.nsess += 1
+        calib = front_camera(req.rollout_spec.vehicle)
         self.start.write(json.dumps({"t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene, "cams": s.cams,
-                                     "L": s.L}) + "\n")
+                                     "L": s.L, **(calib or {})}) + "\n")
+        try:
+            put(LIVE / "camera.json", json.dumps({"scene": s.scene, **(calib or {})}).encode())
+        except OSError as e:
+            LOG.warning("camera.json: %r", e)
         LOG.info("session %d %s, cameras %s, wheelbase %.2f m", s.n, s.scene, s.cams, s.L)
         return common_pb2.SessionRequestStatus()
 
