@@ -22,7 +22,16 @@ body { display:grid; grid-template-rows:auto 1fr; height:100dvh; padding:env(saf
 #dot.ok { background:var(--gas); }
 main { display:grid; min-height:0; gap:10px; padding:10px; grid-template-columns:var(--track) 1fr var(--track); grid-template-areas:"brake wheel gas"; }
 .track { position:relative; border:2px solid var(--line); border-radius:18px; overflow:hidden; background:#181c22; min-height:0; }
-#brake { grid-area:brake; } #gas { grid-area:gas; }
+#brake { grid-area:brake; } #gas { grid-area:gas; } #one { grid-area:gas; display:none; }
+body.one #brake, body.one #gas { display:none; } body.one #one { display:block; }
+#one .up, #one .dn { position:absolute; left:0; right:0; height:0%; opacity:.85; }
+#one .up { bottom:50%; background:var(--gas); } #one .dn { top:50%; background:var(--brake); }
+#one .mid { position:absolute; left:0; right:0; top:calc(50% - 1px); height:2px; background:var(--fg); opacity:.6; }
+#one .det { position:absolute; left:0; right:0; top:47%; height:6%; background:#ffffff10; }
+#one .val { top:auto; bottom:calc(50% + 8px); font-size:22px; } #one .val.b { bottom:auto; top:calc(50% + 8px); }
+#one .name { top:10px; bottom:auto; } #one .name.b { top:auto; bottom:10px; }
+.track .raw { position:absolute; top:44px; width:100%; text-align:center; color:var(--dim); font-size:12px; font-variant-numeric:tabular-nums; }
+#one .raw { top:auto; bottom:calc(50% + 38px); }
 .fill { position:absolute; left:0; right:0; bottom:0; height:0%; opacity:.85; }
 #brake .fill { background:var(--brake); } #gas .fill { background:var(--gas); }
 .track.held { border-color:var(--fg); }
@@ -58,6 +67,7 @@ button#center { background:var(--acc); border-color:var(--acc); min-width:96px; 
 /* portrait (cover screen upright): wheel above, two tracks side by side below */
 @media (max-aspect-ratio: 3/4) {
   main { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; grid-template-areas:"wheel wheel" "brake gas"; }
+  body.one main { grid-template-rows:1fr 1.2fr; }
 }
 </style>
 </head>
@@ -95,7 +105,9 @@ button#center { background:var(--acc); border-color:var(--acc); min-width:96px; 
       <button id="set">Settings</button>
     </div>
   </div>
-  <div class="track" id="gas"><div class="ticks"></div><div class="fill"></div><div class="val">0.00</div><div class="name">THROTTLE</div></div>
+  <div class="track" id="gas"><div class="ticks"></div><div class="fill"></div><div class="val">0.00</div><div class="raw"></div><div class="name">THROTTLE</div></div>
+  <div class="track" id="one"><div class="det"></div><div class="up"></div><div class="dn"></div><div class="mid"></div>
+    <div class="name">THROTTLE</div><div class="raw"></div><div class="val">0.00</div><div class="val b">0.00</div><div class="name b">BRAKE</div></div>
 </main>
 
 <div class="overlay show" id="start"><div class="panel">
@@ -112,6 +124,8 @@ button#center { background:var(--acc); border-color:var(--acc); min-width:96px; 
   <label>Curve <select id="s_curve"><option value="linear">linear</option><option value="expo">mild expo</option></select></label>
   <label>Expo amount <span><input type="range" id="s_expo" min="0" max="0.9" step="0.05"> <b id="s_expo_v"></b></span></label>
   <label>Invert steering <input type="checkbox" id="s_inv"></label>
+  <label>Pedals <select id="s_pedals"><option value="one">one pedal (up throttle, down brake)</option><option value="two">two pedals</option></select></label>
+  <label>Throttle rise limit <span><input type="range" id="s_slew" min="0.3" max="3" step="0.1"> <b id="s_slew_v"></b> /s</span></label>
   <label>Brake holds on release <input type="checkbox" id="s_holdb"></label>
   <label>Throttle holds on release <input type="checkbox" id="s_holdg"></label>
   <label>Lock landscape in fullscreen <input type="checkbox" id="s_lock"></label>
@@ -123,7 +137,7 @@ button#center { background:var(--acc); border-color:var(--acc); min-width:96px; 
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
-const DEF = { range: 90, dz: 2, curve: 'expo', expo: 0.35, inv: false, holdb: false, holdg: false, lock: false, autofs: true, center: 0 };
+const DEF = { range: 90, dz: 2, curve: 'expo', expo: 0.35, inv: false, holdb: false, holdg: false, lock: false, autofs: true, pedals: 'one', slew: 0.8, center: 0 };
 const S = Object.assign({}, DEF, JSON.parse(localStorage.getItem('wheel.settings') || '{}'));
 const save = () => localStorage.setItem('wheel.settings', JSON.stringify(S));
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -156,10 +170,12 @@ function updateSteer() {
 }
 
 // ---- pedals: absolute position on a vertical track, multi-touch, grab tolerance ----
-const tracks = { brake: { el: $('brake'), v: 0, id: null, hold: () => S.holdb }, gas: { el: $('gas'), v: 0, id: null, hold: () => S.holdg } };
+const tracks = { brake: { el: $('brake'), v: 0, id: null, hold: () => S.holdb }, gas: { el: $('gas'), v: 0, id: null, hold: () => S.holdg },
+                 one: { el: $('one'), v: 0.5, id: null, hold: () => false, rest: 0.5 } };
 function trackAt(x, y) {
   for (const t of Object.values(tracks)) {
     const b = t.el.getBoundingClientRect();
+    if (!b.width) continue;  // hidden in this pedal mode
     if (x >= b.left - GRAB_X && x <= b.right + GRAB_X && y >= b.top - GRAB_Y && y <= b.bottom + GRAB_Y) return t;
   }
 }
@@ -171,7 +187,7 @@ addEventListener('pointerdown', e => {
   t.id = e.pointerId; t.el.classList.add('held'); setFromY(t, e.clientY); e.preventDefault();
 }, { passive: false });
 addEventListener('pointermove', e => { for (const t of Object.values(tracks)) if (t.id === e.pointerId) setFromY(t, e.clientY); });
-const release = e => { for (const t of Object.values(tracks)) if (t.id === e.pointerId) { t.id = null; t.el.classList.remove('held'); if (!t.hold()) t.v = 0; } };
+const release = e => { for (const t of Object.values(tracks)) if (t.id === e.pointerId) { t.id = null; t.el.classList.remove('held'); if (!t.hold()) t.v = t.rest || 0; } };
 addEventListener('pointerup', release); addEventListener('pointercancel', release);
 ['contextmenu', 'selectstart', 'dblclick', 'gesturestart'].forEach(n => addEventListener(n, e => e.preventDefault()));
 
@@ -190,10 +206,11 @@ async function goFullscreen() {
 document.addEventListener('fullscreenchange', () => $('fs').classList.toggle('on', !!document.fullscreenElement));
 
 // ---- settings panel ----
-const fields = { s_range: 'range', s_dz: 'dz', s_expo: 'expo', s_curve: 'curve', s_inv: 'inv', s_holdb: 'holdb', s_holdg: 'holdg', s_lock: 'lock', s_autofs: 'autofs' };
+const fields = { s_range: 'range', s_dz: 'dz', s_expo: 'expo', s_curve: 'curve', s_inv: 'inv', s_holdb: 'holdb', s_holdg: 'holdg', s_lock: 'lock', s_autofs: 'autofs', s_pedals: 'pedals', s_slew: 'slew' };
 function loadForm() {
   for (const [id, k] of Object.entries(fields)) { const el = $(id); if (el.type === 'checkbox') el.checked = S[k]; else el.value = S[k]; }
-  for (const k of ['range', 'dz', 'expo']) $('s_' + k + '_v').textContent = S[k];
+  document.body.classList.toggle('one', S.pedals === 'one');
+  for (const k of ['range', 'dz', 'expo', 'slew']) $('s_' + k + '_v').textContent = S[k];
 }
 for (const [id, k] of Object.entries(fields)) $(id).addEventListener('input', e => {
   const el = e.target; S[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value; save(); loadForm();
@@ -215,6 +232,7 @@ function onLayout() {
 addEventListener('resize', onLayout);
 if (screen.orientation) screen.orientation.addEventListener('change', onLayout);
 onLayout();
+loadForm();
 
 // ---- link to the daemon ----
 let ws = null, seq = 0, rtt = null, sent = 0, hz = 0;
@@ -228,11 +246,23 @@ function connect() {
     if (d.stats) { $('dhz').textContent = d.stats.rate.toFixed(0); $('drops').textContent = d.stats.drops; $('subs').textContent = d.stats.subs; }
   };
 }
+// one pedal: neutral detent at mid-height, up = throttle 0..1, down = brake 0..1
+const DETENT = 0.06;
+function pedals() {
+  if (S.pedals !== 'one') return [tracks.gas.v, tracks.brake.v];
+  const c = 2 * tracks.one.v - 1, m = Math.max(0, (Math.abs(c) - DETENT) / (1 - DETENT));
+  return c > 0 ? [m, 0] : [0, m];
+}
+// throttle rises at most S.slew per second and falls at once; brake is never limited
+let thr = 0, tPrev = performance.now();
 function frame() {
   updateSteer();
-  const stop = handbrake;
-  return { steer: +steer.toFixed(4), throttle: stop ? 0 : +tracks.gas.v.toFixed(3), brake: stop ? 1 : +tracks.brake.v.toFixed(3),
-           reverse, handbrake, ts: performance.now(), seq: seq++, rtt: rtt == null ? null : +rtt.toFixed(1) };
+  const now = performance.now(), dt = Math.min(0.1, (now - tPrev) / 1000); tPrev = now;
+  let [rawThr, brk] = pedals();
+  if (handbrake) { rawThr = 0; brk = 1; }
+  thr = rawThr > thr ? Math.min(rawThr, thr + S.slew * dt) : rawThr;
+  return { steer: +steer.toFixed(4), throttle: +thr.toFixed(3), brake: +brk.toFixed(3), raw_throttle: +rawThr.toFixed(3),
+           reverse, handbrake, ts: now, seq: seq++, rtt: rtt == null ? null : +rtt.toFixed(1) };
 }
 setInterval(() => {
   const f = frame();
@@ -246,11 +276,17 @@ function draw(f) {
   $('rim').setAttribute('transform', 'rotate(' + (f.steer * S.range).toFixed(1) + ')');
   $('steer').textContent = (f.steer >= 0 ? '+' : '') + f.steer.toFixed(2);
   $('deg').textContent = wrap(rawDeg - S.center).toFixed(1) + ' deg';
-  for (const [k, t] of Object.entries(tracks)) {
-    const v = k === 'gas' ? f.throttle : f.brake;
-    t.el.querySelector('.fill').style.height = (v * 100).toFixed(1) + '%';
-    t.el.querySelector('.val').textContent = v.toFixed(2);
+  for (const k of ['gas', 'brake']) {
+    const el = tracks[k].el, v = k === 'gas' ? f.throttle : f.brake;
+    el.querySelector('.fill').style.height = (v * 100).toFixed(1) + '%';
+    el.querySelector('.val').textContent = v.toFixed(2);
   }
+  const one = tracks.one.el, raw = 'raw ' + f.raw_throttle.toFixed(2);
+  one.querySelector('.up').style.height = (f.throttle * 50).toFixed(1) + '%';
+  one.querySelector('.dn').style.height = (f.brake * 50).toFixed(1) + '%';
+  one.querySelector('.val').textContent = f.throttle.toFixed(2);
+  one.querySelector('.val.b').textContent = f.brake.toFixed(2);
+  one.querySelector('.raw').textContent = tracks.gas.el.querySelector('.raw').textContent = raw;
   const now = performance.now();
   $('warn').textContent = !motionSeen ? 'no motion sensor data' : now - motionSeen > 500 ? 'motion sensor silent'
     : gplane < MIN_G ? 'hold the phone more upright' : needCenter ? 'grip changed: hold straight and tap Center' : '';

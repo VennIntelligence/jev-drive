@@ -19,10 +19,13 @@ On-phone latency and the physical steering sign are measured on the phone.
   (`DeviceMotionEvent.accelerationIncludingGravity` rotated by `screen.orientation.angle`, so any orientation works;
   iOS sign flipped). "Center" stores the zero; dead zone 2 deg, +-90 deg = steer +-1, linear or mild expo; settings
   (lock angle, dead zone, curve, invert, pedal hold-on-release, landscape lock, fullscreen on Start) live in
-  localStorage. Pedals are two vertical thumb tracks (left brake, right throttle), absolute position (bottom 0, top 1),
-  multi-touch, 36 px grab tolerance, spring back to 0 on release unless "hold" is set. "Stop" = handbrake (sends
-  throttle 0, brake 1, `handbrake: true`), "Reverse" a flag. Sends `{steer, throttle, brake, reverse, handbrake, ts,
-  seq, rtt}` at 60 Hz over a WebSocket; shows rtt, send rate, daemon rate, drops and the number of local consumers.
+  localStorage. Pedals (default "one pedal", Tesla style): one tall track at the right thumb, neutral detent at
+  mid-height (+-6 %), up = throttle 0..1, down = brake 0..1, release springs to neutral (coast). Setting "two pedals":
+  left brake / right throttle tracks, absolute position (bottom 0, top 1), spring back to 0 unless "hold" is set. Both
+  modes: multi-touch, 36 px grab tolerance; throttle rises at most 0.8 /s (setting 0.3-3.0) and falls at once, brake is
+  never limited; the track shows the limited value and the raw thumb value (`raw_throttle`). "Stop" = handbrake (sends
+  throttle 0, brake 1, `handbrake: true`), "Reverse" a flag. Sends `{steer, throttle, brake, raw_throttle, reverse,
+  handbrake, ts, seq, rtt}` at 60 Hz over a WebSocket; shows rtt, send rate, daemon rate, drops and the number of local consumers.
   A viewport aspect-class change or a > 1.4x area jump (fold / unfold / rotate) asks for a re-center. Layouts:
   square (open) = tracks at both edges, big wheel middle; wide (cover, landscape) = same, narrower tracks; portrait =
   wheel above, tracks side by side below. "Full" = `requestFullscreen` (optional landscape lock); `manifest.webmanifest`

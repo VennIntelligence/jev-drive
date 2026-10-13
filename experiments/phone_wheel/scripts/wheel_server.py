@@ -1,7 +1,7 @@
 """Phone steering wheel daemon.
 
 Serves the phone page (web/) and a WebSocket at /ws. The phone sends JSON frames
-{steer, throttle, brake, reverse, handbrake, ts, seq, rtt} at 50-100 Hz; the daemon keeps only the latest,
+{steer, throttle, brake, raw_throttle, reverse, handbrake, ts, seq, rtt} at 50-100 Hz; the daemon keeps only the latest,
 echoes {ts} for round-trip timing, and forwards every frame as one JSON datagram to each local UDP subscriber.
 
 Local consumers subscribe by sending any datagram to 127.0.0.1:<udp-port> at least every few seconds
@@ -77,6 +77,7 @@ async def ws_handler(request):
             try:
                 f = json.loads(msg.data)
                 frame = {k: float(f.get(k, 0.0)) for k in ("steer", "throttle", "brake")}
+                frame["raw_throttle"] = float(f.get("raw_throttle", frame["throttle"]))
                 frame.update(reverse=bool(f.get("reverse")), handbrake=bool(f.get("handbrake")),
                              ts=f.get("ts"), seq=f.get("seq"), rtt=f.get("rtt"))
             except (ValueError, TypeError, AttributeError):

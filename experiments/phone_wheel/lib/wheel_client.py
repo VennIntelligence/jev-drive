@@ -50,13 +50,14 @@ class WheelClient:
         return self.frame is None or time.monotonic() - self.t_rx > STALE_S
 
     def state(self):
-        """Dict with steer, throttle, brake, reverse, handbrake, age_s, stale."""
+        """Dict with steer, throttle (slew-limited), raw_throttle (thumb), brake, reverse, handbrake, age_s, stale."""
         age = self._poll()
         f = self.frame or {}
         stale = self.frame is None or age > STALE_S
         return {"steer": 0.0 if stale else float(f.get("steer", 0.0)),
                 "throttle": 0.0 if stale else float(f.get("throttle", 0.0)),
                 "brake": 1.0 if stale else float(f.get("brake", 0.0)),
+                "raw_throttle": 0.0 if stale else float(f.get("raw_throttle", f.get("throttle", 0.0))),
                 "reverse": bool(f.get("reverse")) and not stale,
                 "handbrake": bool(f.get("handbrake")) or stale,
                 "age_s": age, "stale": stale}
