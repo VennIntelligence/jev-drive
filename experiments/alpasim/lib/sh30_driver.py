@@ -292,7 +292,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         fx = FX.apply(s.fix, o, float(np.hypot(*dyn[-1][0])), float(dyn[-1][1][0]), t0)
         bd = BD.apply(self.gpu, o, float(np.hypot(*dyn[-1][0])), s, s.count["drive"] - 1) if BD else None
         if TR.ON:                                            # the feasible reference instead of the plan (track_ref.py)
-            ref, tri = TR.build(o["poses"], float(np.hypot(*dyn[-1][0])), float(dyn[-1][2]))
+            ref, tri = TR.build(o["poses"], float(np.hypot(*dyn[-1][0])), float(dyn[-1][2]), a0=float(dyn[-1][1][0]))
             plan = TR.cached_plan(CachedPlan, t0, (anchor.pose.vec.x, anchor.pose.vec.y, yaw0), ref)
         else:
             plan = make_cached_plan(t0, anchor, o["poses"])

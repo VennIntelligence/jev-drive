@@ -9,7 +9,8 @@ lateral-acceleration term, a linear-tyre vehicle with no saturation). When the r
 distance is to steer, and at speed any steering is a spin. The fix is to never hand it such a reference.
 
   JEV_TRACK=time   (a) re-timing only: the plan's own path (polyline through its 8 points, straight beyond its end), driven from the ego's
-                   current speed with the plan's speed as target and the change of speed bounded by [AMIN, AMAX] m/s^2. The path is unchanged.
+                   current speed and acceleration with the plan's speed as target, the change of speed bounded by [AMIN, AMAX] m/s^2 and
+                   its jerk by JLON. The path is unchanged.
   JEV_TRACK=full   (a) + (b): the reference is the forward simulation (kinematic, DT_SIM steps) of a path-tracking law on the same path and
                    speed: curvature = path curvature (feedforward) + a second-order correction of the lateral / heading error over the
                    distance max(TAU_LAT x v, D_MIN), clipped to |kappa| <= min(ALAT / v^2, KMAX below 3.5 m/s .. KDYN above 5 m/s) with
@@ -37,6 +38,9 @@ if MODE not in ("0", "time", "full"):
     raise ValueError(f"JEV_TRACK={MODE!r}: expected time | full | 0")
 
 AMIN, AMAX = -5.0, 3.0          # m/s^2, change of speed of the reference
+JLON = 10.0                     # m/s^3, its jerk, starting from the ego's measured acceleration: a plan whose speed flickers between
+                                 # calls does not hand the MPC a new deceleration step every 0.1 s (run 5: a straight, feasible reference
+                                 # still drew a 0.69 rad command from such a step)
 ALAT, JLAT = 4.0, 10.0          # m/s^2, m/s^3 (openpilot clip_curvature: 3.0, jerk 5.0); ALAT 7 left 16 / 38 rollouts above 6 m/s^2 (run 3)
 YAW_TOL = 0.35                  # rad, plan yaw output against its chords
 VCURV = 1.0                     # full: 1 = also slow for the path's curvature ahead (v^2 |kappa| <= ALAT, braking at AMIN), 0 = off
@@ -96,12 +100,12 @@ def speeds(poses):
     return np.hypot(*np.diff(p, axis=0).T) / 0.5
 
 
-def build(poses, v0: float, wz: float, mode: str = "", **kw):
-    """Plan (8, 3) rig frame, ego speed and yaw rate (logged only) -> (t (41,), x, y, yaw (41,)) and a log record. mode / kw (lower-case constant names)
+def build(poses, v0: float, wz: float, mode: str = "", a0: float = 0.0, **kw):
+    """Plan (8, 3) rig frame, ego speed, yaw rate (logged only), acceleration -> (t (41,), x, y, yaw (41,)) and a log record. mode / kw (lower-case constant names)
     override the environment's configuration (offline replays)."""
     mode = mode or MODE
-    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP")}
-    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP = g.values()
+    g = {k: kw.get(k.lower(), globals()[k]) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN", "ZETA", "V_MIN", "VCURV", "KDYN", "V_DROP", "JLON")}
+    AMIN, AMAX, ALAT, JLAT, KMAX, KRATE, TAU_LAT, D_MIN, ZETA, V_MIN, VCURV, KDYN, V_DROP, JLON = g.values()
     kcap = lambda v: np.minimum(np.interp(v, V_KIN, (KMAX, KDYN)), ALAT / np.maximum(v, V_MIN) ** 2)  # noqa: E731
     path, vp = Path(poses), speeds(poses)
     vlim = None
@@ -115,13 +119,13 @@ def build(poses, v0: float, wz: float, mode: str = "", **kw):
     n, every = int(round(T_END / DT_SIM)), int(round(DT_OUT / DT_SIM))
     v, s, x, y, th = max(float(v0), 0.0), 0.0, 0.0, 0.0, 0.0
     k = None                                                              # first step: the clipped desired curvature
-    out, kpk, apk = [(0.0, 0.0, 0.0)], 0.0, 0.0
+    out, kpk, apk, a = [(0.0, 0.0, 0.0)], 0.0, 0.0, float(np.clip(a0, AMIN, AMAX))
     for i in range(n):
         t = i * DT_SIM
         vt = vp[min(int(t / 0.5), 7)]
         if vlim is not None:
             vt = min(vt, float(np.interp(s, *vlim)))
-        a = float(np.clip((vt - v) / DT_SIM, AMIN, AMAX))
+        a = float(np.clip(np.clip((vt - v) / DT_SIM, a - JLON * DT_SIM, a + JLON * DT_SIM), AMIN, AMAX))
         apk = min(apk, a)
         if mode == "time":
             v = max(v + a * DT_SIM, 0.0)
