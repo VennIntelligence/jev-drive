@@ -5,13 +5,13 @@
 #   rf_branch.sh <out root> <plan dir of rf_branch.py plan> [arm ...]          arms: d40 d20 d10 d0 (default all four)
 # Env: CARDS ("1"; the worker waits until a card shows <= 1 GB), TAG (RSG-L18-s0), CONC (4), CHUNK (12 / number of cards),
 #   SERVE ("-e JEV_VCONT=1.0 -e JEV_LEAD=1", the served configuration of the 281 reads), WIZ (gains 20), CODE (this lane's own clone,
-#   /data/runs/route_night/p2/code: onp_pass2.sh copies the driver into it). Out: <out root>/<arm>/ as onp_pass2.sh; read with rf_branch.py read.
+#   /data/runs/route_night/p2/code: onp_pass2.sh copies the driver into it), RUNPFX (p2-). Out: <out root>/<arm>/ as onp_pass2.sh; read with rf_branch.py read.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 O=$(mkdir -p "$1" && cd "$1" && pwd) PLAN=$(cd "$2" && pwd); shift 2
 arms=${*:-d40 d20 d10 d0}; CARDS=${CARDS:-1}; nc=$(wc -w <<< "$CARDS")
 export CARDS CONC=${CONC:-4} CHUNK=${CHUNK:-$(( (12 + nc - 1) / nc ))} WIZ=${WIZ-controller.gains.rel_front_steering_angle_weight=20}
-export CODE=${CODE:-/data/runs/route_night/p2/code} MODE=driver
+export CODE=${CODE:-/data/runs/route_night/p2/code} MODE=driver RUNPFX=${RUNPFX-p2-}
 for a in $arms; do
   [[ -f $PLAN/sw_$a.txt ]] || { echo "no $PLAN/sw_$a.txt" >> "$O/ERROR"; continue; }
   echo "$(date '+%F %T') arm $a on cards $CARDS" | tee -a "$O/log.txt"

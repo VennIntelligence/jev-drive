@@ -10,6 +10,7 @@
 # Env: CARDS ("0"), CONC (4), CHUNK (scenes per stack start, 40), SERVE (driver switches, default those of pass 1:
 #   "-e JEV_VCONT=1.0 -e JEV_LEAD=1 -e PAI_DUMP=100000"), CODE (/data/runs/onpol_pai/code/pass2), REPO (~/mycode/jev-drive), WAIT_S (how long
 #   a worker waits for its card to show <= 1 GB before a chunk, 1800), HORIZON (seconds of log returned per call, 4.0),
+#   RUNPFX (default empty; prefixes the per-chunk run dirs and so the compose / container names, as pai_eval.sh),
 #   WIZ (extra wizard overrides, space separated, e.g. "controller.gains.rel_front_steering_angle_weight=20"),
 #   MODE: driver (default) = the log is returned by the driver and tracked by the stack's MPC (runtime override
 #           simulation_config.send_recording_ground_truth=true, nothing else changed)
@@ -20,7 +21,7 @@
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 O=$(mkdir -p "$1" && cd "$1" && pwd) T=$2; shift 2
-D=${DATA_DIR:-/data}; C=$D/runs/op_parity/runs/$T; L=${T,,}
+D=${DATA_DIR:-/data}; C=$D/runs/op_parity/runs/$T; L=${RUNPFX:-}${T,,}
 CARDS=${CARDS:-0}; CONC=${CONC:-4}; CHUNK=${CHUNK:-40}; SERVE=${SERVE--e JEV_VCONT=1.0 -e JEV_LEAD=1 -e PAI_DUMP=100000}
 CODE=${CODE:-$D/runs/onpol_pai/code/pass2}; REPO=${REPO:-$HOME/mycode/jev-drive}; MODE=${MODE:-driver}; WAIT_S=${WAIT_S:-1800}
 mkdir -p "$O"/{chunks,runs}; rm -rf "$O"/{DONE,ERROR,claims}; mkdir "$O/claims"; exec > >(tee -a "$O/log.txt") 2>&1
