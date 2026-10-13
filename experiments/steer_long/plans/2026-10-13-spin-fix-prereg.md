@@ -34,3 +34,14 @@ The user's line: a spin is a mechanical fault and must go to zero, not be made r
 2. Controls (36 scenes): spins 0, zeros not above the baseline (0), mean score not below baseline - 0.01.
 3. Adopted switch set = an arm that passes 1 and 2 on its own full reads. If full-g5 also passes 1 and 2, the recommendation drops the gains knob.
 4. Reported, not gated: zeros and mean on the spin set against the baseline; the nuPlan smoke5 check (switch off: plans identical; on: no spin, no new zero).
+
+## Amendment 1 (coordinator, before any read; 2026-10-13)
+
+The -5 m/s^2 bound on the reference's deceleration can weaken emergency braking (a plan that says "stop now" gets a reference that still rolls).
+- The bound is a parameter: `JEV_TRACK_CFG=amin=-7` etc. The spin set is read with amin -5 (default) and -7.
+- Every read reports at-fault collisions, front collisions (the ego into something ahead) and hit-from-behind separately (sf_read.py).
+- Brake control `ctrl_brake.txt`, 10 scenes: stored RSG rollouts without a spin and outside the other sets, with the ego's acceleration <= -4
+  m/s^2 for >= 0.5 s, the 10 with the lowest minimum (-8.2 .. -5.2). Asked for <= -6 for 0.5 s: only 1 rollout of 281 qualifies (hard
+  braking at speed in the stored read almost always came with a spin, so the spin set is itself the main brake test). Line for it as for the
+  other controls (spins 0, zeros and at-fault collisions not above the baseline, mean not below baseline - 0.01).
+- Reported, not gated: zeros and mean score on the spin set against the stored RSG read (16 zeros, 0.4437).
