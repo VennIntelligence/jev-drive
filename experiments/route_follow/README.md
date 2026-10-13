@@ -52,6 +52,10 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [research/route-follow/pai-follow.md](../../research/route-follow/pai-follow.md): PAI 281 turn completion with the real route (RSG 13.9 %,
   RBSG2 25.0 % of 36 turns) and the map topology of every corridor zero (14 / 22 route zeros have a straight road ahead; the ego never slows
   into the entry); `scripts/rf_pai_follow.py` (+ `.sh`, Tokyo container), `results/pai_follow/`, figure `figs/pai_follow_zeros.png`.
+- [research/route-follow/p1-openloop.md](../../research/route-follow/p1-openloop.md): P1 open-loop read on the Tokyo log-following render (36 exam-hard
+  PAI turns): on the human's states RSG already slows with the human and commits on time; RSGboth is not earlier (20 m before the entry +0.43 m/s
+  faster, commit identical, lateral -0.06 m); residual = straight-exit turns +0.56 m/s at the entry and 0.7 m outside at 4 s; `scripts/rf_pai_openloop.py --p1`
+  (offline replay of any checkpoint on the dumped inputs), `results/pai_openloop/p1_exam48.md`, figures `figs/p1_exam48_speed.png`, `figs/p1_exam48_lat.png`.
 - [research/route-follow-offroad.md](../../research/route-follow-offroad.md): why route-hinge arms go offroad; look at table 1's
   "right-turn inside" column (17-21 vs 1-2) and the H1-H5 verdicts (labels on road, memory not drifted, over-rotation in small right turns).
 - [research/route-follow/loss-audit.md](../../research/route-follow/loss-audit.md): loss audit of the turn objective (verdict: objective, not

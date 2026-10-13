@@ -24,8 +24,10 @@ HUMAN LOG by experiments/onpol_pai/lib/onp_log_driver.py with one checkpoint fed
 `log_poses` per decision; dump/*.npz: the 8 slot frames `cur` + `ego` once per second, k = 0, 10, ..). Any checkpoint is replayed OFFLINE on
 those inputs: pai_core.plan on the dumped frames, the dumped ego row and the logged route memory (`rmem`, the exact features pai_driver fed:
 rmem.Tracker on the run's own route messages, so nothing is rebuilt), right-hand traffic. Only dumped decisions can be replayed (1 Hz);
---logged <tag> names the checkpoint the render was driven with: its replay is checked against the logged `poses_model` (line: every dumped
-decision within 0.01 m over the 8 poses) and its logged plans at all decisions (10 Hz) are added as tag `<tag>@log`.
+--logged <tag> names the checkpoint the render was driven with: every replayed tag is compared with the logged `poses_model` (largest position
+difference over the 8 poses per decision; the logged tag's own replay is the equivalence check, lines: all within 0.01 m, and onp_cache's
+cross-machine G-id line <= 1 % of decisions above 0.03 m; any other tag is the control) and the logged plans at all decisions (10 Hz) are
+added as tag `<tag>@log`.
   turn      on the human path (the log at every decision, anchor o log_now, plus the last decision's log_poses): the first 30 m window with net
             heading change >= 45 deg; entry / exit where the change over [a - 10, a + 40] m reaches 10 / 90 %; sign s (left +). Scenes whose log
             never turns that much in the clip (the route turns after it) have no human reference and are dropped.
@@ -38,7 +40,8 @@ decision within 0.01 m over the 8 poses) and its logged plans at all decisions (
   side4     signed offset of the plan's 4 s pose from the human path (origin + 8 poses, end segments extended), + = inside the turn;
             inside > 0.5 m, outside < -0.5 m, else on; window shares and median offset
   commit    the first decision (d <= 60 m, time order) whose s x heading at 4 s >= 20 deg, plan and human on the same decisions; lead =
-            d_plan - d_human (m, > 0 = the plan commits earlier); never = no such decision before the exit
+            d_plan - d_human (m, > 0 = the plan commits earlier), only where neither had committed at the first eligible decision
+            (else censored: turns entered right after the clip start); never = no such decision before the exit
   class     rf_pai_follow map class of the scene (results/pai_follow/scenes.csv `topo`, the rsg row else rbsg2; it exists only where one of
             them left the corridor at a turn): straight_ok (straight_exit / straight_road), no_straight (curve_single / no_straight_exit), unknown
 CIs: jevdrive.stats bootstrap over turns (one turn per scene); paired differences against the first tag (--ref).
@@ -335,6 +338,7 @@ def p1_metrics(tu, plans):
         m |= {f"v4p_{name}": c["a4p"][i] / 4, f"v4h_{name}": c["a4h"][i] / 4, f"v2p_{name}": c["a2p"][i] / 2, f"v2h_{name}": c["a2h"][i] / 2,
               f"y2p_{name}": c["y2p"][i], f"y2h_{name}": c["y2h"][i], f"off4_{name}": c["off4"][i]}
         m[f"v4x_{name}"] = m[f"v4p_{name}"] - m[f"v4h_{name}"]
+        m[f"y2x_{name}"] = m[f"y2p_{name}"] - m[f"y2h_{name}"]
     for who in "ph":
         if f"v4{who}_0" in m and (f"v4{who}_40" in m or f"v4{who}_20" in m):
             top = max(m.get(f"v4{who}_40", -1), m.get(f"v4{who}_20", -1))
@@ -356,7 +360,9 @@ def p1_metrics(tu, plans):
     m["commit_p"] = float(c["d"][cp[0][0]]) if len(cp[0]) else np.nan
     m["commit_h"] = float(c["d"][cp[1][0]]) if len(cp[1]) else np.nan
     m["never_p"] = float(not len(cp[0]))
-    if len(cp[0]) and len(cp[1]):
+    first = np.flatnonzero(pre)[0] if pre.any() else -1                # already committed at the first eligible decision: censored
+    m["censored"] = float(any(len(x) and x[0] == first for x in cp))
+    if len(cp[0]) and len(cp[1]) and not m["censored"]:
         m["lead"] = m["commit_p"] - m["commit_h"]
     return m, X
 
@@ -371,13 +377,13 @@ def p1_classes(f):
 
 
 P1_KEYS = [("v4p_40", "v4 plan @40"), ("v4h_40", "v4 human @40"), ("v4p_20", "v4 plan @20"), ("v4h_20", "v4 human @20"), ("v4p_0", "v4 plan @0"),
-           ("v4h_0", "v4 human @0"), ("v4x_0", "v4 plan - human @0"), ("v4x_mid", "v4 plan - human mid-turn"), ("drop_p", "plan drop 40/20 -> 0"),
+           ("v4h_0", "v4 human @0"), ("v4x_20", "v4 plan - human @20"), ("v4x_0", "v4 plan - human @0"), ("v4x_mid", "v4 plan - human mid-turn"), ("drop_p", "plan drop 40/20 -> 0"),
            ("drop_h", "human drop"), ("slow_p", "plan slows (share)"), ("slow_h", "human slows (share)"), ("v4ratio_win", "arc4 plan / human (window)"),
            ("y2p_20", "lat2 plan @20"), ("y2h_20", "lat2 human @20"), ("y2p_0", "lat2 plan @0"), ("y2h_0", "lat2 human @0"),
            ("y2def_win", "lat2 need - plan (window)"), ("off4_win", "4 s offset, + inside (window)"), ("inside_win", "4 s inside share"),
            ("on_win", "4 s on share"), ("outside_win", "4 s outside share"), ("commit_p", "commit d plan"), ("commit_h", "commit d human"),
-           ("lead", "commit lead plan - human (m)"), ("never_p", "plan never commits (share)")]
-P1_PAIR = ("v4x_0", "v4x_mid", "drop_p", "y2def_win", "off4_win", "inside_win", "outside_win", "lead", "never_p")
+           ("lead", "commit lead plan - human (m)"), ("censored", "commit censored (share)"), ("never_p", "plan never commits (share)")]
+P1_PAIR = ("v4x_20", "v4x_0", "v4x_mid", "drop_p", "y2def_win", "off4_win", "inside_win", "outside_win", "lead", "never_p")
 
 
 def p1_groups(per):
@@ -420,11 +426,14 @@ def p1_main(a):
         else:
             import torch
             plans = p1_replay(tag, recs, dumps, torch.device(a.device))
-            if tag == a.logged:
-                dev = np.array([np.abs(np.array(recs[sc][k]["poses_model"]) - p)[:, :2].max() for (sc, k), p in plans.items()])
-                check = dict(decisions=len(dev), max_m=float(dev.max()), median_m=float(np.median(dev)), over_1cm=int((dev > 0.01).sum()),
-                             line="PASS" if dev.max() <= 0.01 else "FAIL")
-                print(f"equivalence {tag}: {check}")
+            if a.logged:                                     # every replayed tag against the logged plans (a wrong tag = the control)
+                dev = np.array([np.hypot(*(np.array(recs[sc][k]["poses_model"]) - p)[:, :2].T).max() for (sc, k), p in plans.items()])
+                check = dict(vs=a.logged, decisions=len(dev), max_m=float(dev.max()), p99_m=float(np.quantile(dev, 0.99)),
+                             median_m=float(np.median(dev)), over_1cm=float(np.mean(dev > 0.01)), over_3cm=float(np.mean(dev > 0.03)))
+                if tag == a.logged:
+                    check["line_1cm"] = "PASS" if dev.max() <= 0.01 else "FAIL"
+                    check["line_gid"] = "PASS" if check["over_3cm"] <= 0.01 else "FAIL"     # onp_cache G-id: <= 1 % of decisions > 0.03 m
+                print(f"equivalence {tag} vs logged {a.logged}: {check}")
         per, traces = [], {}
         for sc, tu in turns.items():
             pl = {k: p for (s2, k), p in plans.items() if s2 == sc}
@@ -514,9 +523,9 @@ def p1_figs(a, tags, o, turns, allp):
             t0 = [t for t in traces][0]
             yh, n = curve(traces[t0], colh, scenes)
             ax.plot(mids, yh, color="#0b0b0b", lw=2.4, label="human (log)")
-            for t, cc in zip(traces, cols):
+            for j, (t, cc) in enumerate(zip(traces, cols)):
                 y, _ = curve(traces[t], colp, scenes)
-                ax.plot(mids, y, color=cc, lw=2, marker="o", ms=4, label=t)
+                ax.plot(mids, y, color=cc, lw=2 if j < 2 else 1.3, ls="-" if j < 2 else "--", marker="o", ms=4 if j < 2 else 2.5, label=t)
             ax.axvline(0, color="#999", lw=1, ls="--")
             ax.set_xlim(60, -30)
             ax.set_title(f"{title} ({len(scenes)} turns)", fontsize=10)
