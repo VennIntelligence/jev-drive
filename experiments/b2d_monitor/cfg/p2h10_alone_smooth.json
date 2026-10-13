@@ -1,0 +1,19 @@
+{
+ "preset": "spec",
+ "socket": "srv/op-p2h10.sock",
+ "controller_config": "experiments/b2d_tfv6/results/tfv6-controller/controller-eval/P7.json",
+ "arb": {
+  "zones": false,
+  "div_m": 1000000000.0,
+  "coast_v": 0.0
+ },
+ "parity": {
+  "socket": "srv/bias.sock"
+ },
+ "lon_smooth": {},
+ "stop_on": {
+  "offroute_m": 3.5,
+  "offroute_s": 1.0,
+  "grace_s": 0.5
+ }
+}

@@ -1,0 +1,10 @@
+{
+ "preset": "spec",
+ "socket": "srv/op.sock",
+ "controller_config": "experiments/b2d_tfv6/results/tfv6-controller/controller-eval/P7.json",
+ "arb": {
+  "zones": false,
+  "div_m": 1000000000.0,
+  "coast_v": 0.0
+ }
+}

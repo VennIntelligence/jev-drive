@@ -54,6 +54,7 @@ ALIASES = {  # names the decision log and old notes use: a grep on INDEX.md find
     "onpol_nuplan": "ONPOL-NUPLAN, on-policy rows, self-consequence vs imitation labels, RoaD / DAgger contrast",
     "onpol_pai": "ONPOL-PAI, on-policy rows on PAI", "eyes_sense": "EYES-vs-SENSE, same eyes better car sense, side views x body lesson",
     "alpasim": "AlpaSim challenge, nuPlan track", "op_parity": "input parity, WA-JEPA inputs",
+    "b2d_monitor": "Tokyo B2D monitor, first-person viewer, op_arb_viz_agent, RSG on B2D, FIX1 B2D port, route picker",
 }
 
 

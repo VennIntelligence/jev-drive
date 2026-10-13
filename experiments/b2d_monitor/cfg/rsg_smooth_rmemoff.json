@@ -1,0 +1,22 @@
+{
+ "preset": "spec",
+ "socket": "srv/rsg.sock",
+ "controller_config": "experiments/b2d_tfv6/results/tfv6-controller/controller-eval/P7.json",
+ "arb": {
+  "zones": false,
+  "div_m": 1000000000.0,
+  "coast_v": 0.0
+ },
+ "lon_smooth": {
+  "c2": "plan"
+ },
+ "rsg": {
+  "warm_s": 2.0,
+  "rmem_off": true
+ },
+ "stop_on": {
+  "offroute_m": 3.5,
+  "offroute_s": 1.0,
+  "grace_s": 0.5
+ }
+}
