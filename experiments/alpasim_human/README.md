@@ -12,8 +12,9 @@ reference subjects 0.198 (2 passes, 1 slow, 7 zeros: 4 left corridor, 3 off-road
 first contact with the phone controls, so this is weak evidence. It is also not leaderboard-comparable: fast mode renders
 only the front camera.
 
-**Next.** The user stopped here (2026-10-13). Still open: the nuPlan track (launcher written, never run), a JIT-warm
-launch, and gain tuning on the phone.
+**Next.** The user stopped here (2026-10-13). Since 2026-10-14 the desktop icon "AlpaSim human exam" drives scene
+sets from a panel (section "Desktop panel"). Still open: the nuPlan track (launcher written, never run) and gain tuning on
+the phone.
 
 **Read more.** [phone_wheel](../phone_wheel/README.md) covers the phone page, the daemon and wheel_client. The model
 drivers and the stack are in [docs/alpasim.md](../../docs/alpasim.md), sections "Driver contract", "nuPlan track" and
@@ -158,15 +159,16 @@ Double-click "AlpaSim human exam" on the Tokyo desktop (`scripts/human_panel.sh`
   P2H10 / SH30-F-s0 (nuPlan), with means over the driven scenes.
 - Drive side: `scripts/human_loop.py --run <dir>` in tmux `human:alpa-loop` (plain python3). It runs `human_stack.sh` in the
   foreground (`HUMAN_FG=1`), one stack per scene list, under `<run>/stacks/<run>-sNN/`. A stack costs about a minute to
-  start and 4-5 s between scenes inside it, so with Playlist on a stack gets every unfinished scene in the panel's order and
-  is only restarted when the order changes. Each scene loads and holds until the first throttle press. With Playlist off a
+  start and 4-5 s between scenes inside it, so with Playlist on a stack gets every unfinished scene and is only restarted
+  when the order changes. AlpaSim picks the order inside a stack (clip-id order was observed), so the panel's order decides
+  which scenes go in, not their sequence. Each scene loads and holds until the first throttle press. With Playlist off a
   stack gets one scene: a double-clicked one, or the next unfinished one when the throttle is pressed while the loop is idle.
 - Double-click (play): that scene is driven next. The running scene is not aborted; at the next hold point (the following
-  scene loaded and waiting for the throttle, nothing of it scored) the stack is stopped and a new one starts with the
-  chosen scene first.
+  scene loaded and waiting for the throttle, nothing of it scored) the stack is stopped and a new one runs the chosen
+  scene alone; then the playlist resumes in another stack.
 - Next item: the driver skips the current scene: hold released, no pacing, full brake (`<live>/abort.json`). The rollout runs
   out at the stack's own speed, about 10 s; it is not counted and the scene is not offered again in this session. Restart
-  item: the stack is stopped at once and a new one starts with the same scene. Between two scenes (one closed, the next
+  item: the stack is stopped at once and a new one runs the same scene alone. Between two scenes (one closed, the next
   loading) Next and Restart do nothing. Stop: the stack is taken down (`docker compose down`, driver container removed)
   and the loop exits.
 - Pause: the driver reads `paused` from `control.json` (`HUMAN_CONTROL`): a held scene stays held (the throttle does not
@@ -189,7 +191,24 @@ fake-stack test, which replays the user's session-2 rollouts, so they are not a 
 the 10 stage-1 scenes and `a1` (alpamayo1) on the 30 stage-2 scenes; the bold group rows carry the human mean and the driven
 count; the skipped scene shows "skipped (Next item)"; the highlighted row is the loop's current scene.
 
-E2E_PLACEHOLDER
+**Checked end to end on Tokyo card 0 (2026-10-14 00:19-00:33, fake wheel on port 47801, test live dir, runs
+`/data/runs/alpasim_human/test/panel_e2e` and `panel_e2e_pause`):**
+- Loop start to the first scene driving: 46-49 s (stack start plus the JIT-cached first scene). Restart item: the new stack's
+  scene was driving 55 s after the click. Inside a stack, the next scene was held 5 s after the previous one closed.
+- AlpaSim ran the 2-scene list in clip-id order (5d794411 before 7a824ffa), not in list order. The runtime keeps scene ids in
+  a set, so the loop gives played and restarted scenes a stack of their own and treats the playlist order as a set.
+- Next item on a running scene: the driver logged "skipped by the panel", braked to 0 m/s, and the rollout ran out in 11.9 s
+  of wall time (0.66 wall s per sim s). It was not scored and was marked "skipped (Next item)". The other scene was scored by
+  the post-hoc aggregation (0.0, off-road, with the fake wheel's straight-then-turn policy).
+- Pause at sim 4.8 s: sim time stayed at 4.8 s for 8 s and resumed at real time; the close record has `paused_s` 8.1. Wall s
+  per sim s now excludes paused time; that fix came after this run and has not been rerun.
+- Stop and restart took the stack down: no `hum-*` containers were left, and card 0 was back at 49 MiB.
+- Stub tests with `fake_stack.py` (no GPU) covered play at a hold point, a failing stack (no relaunch until a double-click),
+  Playlist off (one-scene stacks), and next / restart at a scene boundary (ignored).
+
+Not checked with the panel: a real phone, the panel window driving a real stack (the loop was driven through `control.json`,
+which is what the panel writes), the nuPlan track (`human_nuplan.sh` itself has never run), and the viewer's new PAUSED /
+SKIPPING banners on screen.
 
 ## Open
 
@@ -200,6 +219,7 @@ Verified end to end on Tokyo card 0:
 - Click start (the user's sessions), throttle start (fake wheel), and pacing at 1.00.
 
 Not verified:
+- The desktop panel with the user's phone on a real stack (section "Desktop panel" lists what was checked).
 - **nuPlan: `human_nuplan.sh` was never run** (the user stopped all runs first). Its wizard overrides follow
   `docker/smoke.sh`; the single-camera override, the MTGS renderer at baseport 6700, the gsplat JIT in a fresh container
   (196 s natively, possibly per launch without the cache) and the 0.5 s hold are all unchecked.
@@ -219,8 +239,12 @@ Not verified:
 - `human_viewer.py` (scripts): Window for the human AlpaSim driver …
 - `human_results.py` (scripts): Per-scene table of a human AlpaSim run
 - `fake_wheel.py` (scripts): Stand-in for the phone wheel daemon's …
+- `alpasim_exam.py` (lib): AlpaSim backend of the exam panel
+- `human_loop.py` (scripts): long-lived drive loop of the desktop panel
+- `human_panel.py` / `human_panel.sh` (scripts): the panel and its desktop entry
+- `fake_stack.py` (scripts): stand-in for human_stack.sh in loop tests
 - `README.md` (experiments/phone_wheel): the phone as steering wheel and pedals
 - `alpasim.md` (docs): AlpaSim E2E Closed Loop Challenge 2026
 
-[results/](results/) 2 result files · [lib/](lib/) 1 library · [scripts/](scripts/) 6 entry points
+[results/](results/) 2 result files · [figs/](figs/) 1 figure · [lib/](lib/) 2 libraries · [scripts/](scripts/) 10 entry points
 <!-- files:end -->
