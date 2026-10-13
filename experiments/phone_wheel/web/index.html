@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#111418">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>Phone Wheel</title>
+<style>
+:root { --bg:#111418; --fg:#e8eaed; --dim:#8a919a; --line:#2a3038; --brake:#e5484d; --gas:#30a46c; --acc:#3e8ed0; --track:20vw; }
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { margin:0; height:100%; overflow:hidden; background:var(--bg); color:var(--fg);
+  font:14px/1.2 system-ui, sans-serif; touch-action:none; user-select:none; -webkit-user-select:none;
+  overscroll-behavior:none; -webkit-touch-callout:none; }
+body { display:grid; grid-template-rows:auto 1fr; height:100dvh; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+#bar { display:flex; gap:12px; align-items:center; padding:4px 10px; font-size:12px; color:var(--dim); white-space:nowrap; overflow:hidden; border-bottom:1px solid var(--line); }
+#bar b { color:var(--fg); font-weight:600; font-variant-numeric:tabular-nums; }
+#dot { width:10px; height:10px; border-radius:50%; background:var(--brake); flex:none; }
+#dot.ok { background:var(--gas); }
+main { display:grid; min-height:0; gap:10px; padding:10px; grid-template-columns:var(--track) 1fr var(--track); grid-template-areas:"brake wheel gas"; }
+.track { position:relative; border:2px solid var(--line); border-radius:18px; overflow:hidden; background:#181c22; min-height:0; }
+#brake { grid-area:brake; } #gas { grid-area:gas; }
+.fill { position:absolute; left:0; right:0; bottom:0; height:0%; opacity:.85; }
+#brake .fill { background:var(--brake); } #gas .fill { background:var(--gas); }
+.track.held { border-color:var(--fg); }
+.track .val { position:absolute; top:10px; width:100%; text-align:center; font-size:28px; font-weight:700; font-variant-numeric:tabular-nums; }
+.track .name { position:absolute; bottom:10px; width:100%; text-align:center; color:var(--dim); font-weight:600; letter-spacing:.08em; }
+.track .ticks { position:absolute; inset:0; background:repeating-linear-gradient(to top, transparent 0 calc(25% - 1px), #ffffff18 calc(25% - 1px) 25%); }
+#mid { grid-area:wheel; display:flex; flex-direction:column; align-items:center; min-height:0; min-width:0; gap:8px; }
+#wheelbox { flex:1; min-height:0; width:100%; position:relative; }
+#wheel { position:absolute; inset:0; width:100%; height:100%; }
+#steerval { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; pointer-events:none; }
+#steerval .n { font-size:clamp(28px, 9vmin, 64px); font-weight:700; font-variant-numeric:tabular-nums; }
+#steerval .d { color:var(--dim); font-variant-numeric:tabular-nums; }
+#btns { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+button { background:#222831; color:var(--fg); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font:inherit; font-weight:600; min-width:64px; }
+button.on { background:var(--acc); border-color:var(--acc); }
+button#stop.on { background:var(--brake); border-color:var(--brake); }
+button#center { background:var(--acc); border-color:var(--acc); min-width:96px; }
+#warn { color:#f5a524; font-weight:600; min-height:1.2em; text-align:center; }
+.overlay { position:fixed; inset:0; background:#000c; display:none; align-items:center; justify-content:center; z-index:10; }
+.overlay.show { display:flex; }
+.panel { background:var(--bg); border:1px solid var(--line); border-radius:16px; padding:18px; max-width:min(92vw, 520px); max-height:90dvh; overflow:auto; touch-action:pan-y; }
+.panel h2 { margin:0 0 10px; font-size:18px; }
+.panel label { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:7px 0; border-bottom:1px solid var(--line); }
+.panel input[type=range] { width:45%; }
+.panel select, .panel input { font:inherit; }
+.panel .row { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+#dbg { color:var(--dim); font:11px ui-monospace, monospace; margin-top:8px; }
+#start .panel { text-align:center; } #start button { font-size:20px; padding:18px 36px; margin-top:12px; }
+/* square open screen: big wheel, wide thumb tracks at the edges */
+@media (min-aspect-ratio: 3/4) and (max-aspect-ratio: 4/3) { :root { --track:21vw; } }
+/* cover screen landscape: same layout, narrower tracks */
+@media (min-aspect-ratio: 4/3) { :root { --track:max(84px, 15vw); } #btns button { padding:9px 10px; min-width:52px; } }
+/* portrait (cover screen upright): wheel above, two tracks side by side below */
+@media (max-aspect-ratio: 3/4) {
+  main { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; grid-template-areas:"wheel wheel" "brake gas"; }
+}
+</style>
+</head>
+<body>
+<div id="bar">
+  <span id="dot"></span><span id="conn">offline</span>
+  <span>rtt <b id="rtt">-</b> ms</span>
+  <span>send <b id="hz">0</b> Hz</span>
+  <span>daemon <b id="dhz">-</b> Hz</span>
+  <span>drops <b id="drops">-</b></span>
+  <span>consumers <b id="subs">-</b></span>
+  <span id="layout"></span>
+</div>
+<main>
+  <div class="track" id="brake"><div class="ticks"></div><div class="fill"></div><div class="val">0.00</div><div class="name">BRAKE</div></div>
+  <div id="mid">
+    <div id="wheelbox">
+      <svg id="wheel" viewBox="-110 -110 220 220" preserveAspectRatio="xMidYMid meet">
+        <g id="rim">
+          <circle r="96" fill="none" stroke="#2f3742" stroke-width="16"/>
+          <circle r="96" fill="none" stroke="#4a5562" stroke-width="2"/>
+          <path d="M-88 8 L-30 20 M88 8 L30 20 M0 34 L0 88" stroke="#2f3742" stroke-width="14" stroke-linecap="round"/>
+          <circle r="34" fill="none" stroke="#2f3742" stroke-width="8"/>
+          <rect x="-5" y="-108" width="10" height="24" rx="3" fill="#3e8ed0"/>
+        </g>
+      </svg>
+      <div id="steerval"><div class="n" id="steer">+0.00</div><div class="d" id="deg">0.0 deg</div></div>
+    </div>
+    <div id="warn"></div>
+    <div id="btns">
+      <button id="center">Center</button>
+      <button id="rev">Reverse</button>
+      <button id="stop">Stop</button>
+      <button id="fs">Full</button>
+      <button id="set">Settings</button>
+    </div>
+  </div>
+  <div class="track" id="gas"><div class="ticks"></div><div class="fill"></div><div class="val">0.00</div><div class="name">THROTTLE</div></div>
+</main>
+
+<div class="overlay show" id="start"><div class="panel">
+  <h2>Phone Wheel</h2>
+  <div>Hold the phone like a wheel, screen facing you. Thumbs on the two tracks: left brake, right throttle.</div>
+  <button id="go">Start</button>
+  <div id="startmsg" style="color:#f5a524;margin-top:10px"></div>
+</div></div>
+
+<div class="overlay" id="settings"><div class="panel">
+  <h2>Settings</h2>
+  <label>Full lock angle <span><input type="range" id="s_range" min="30" max="180" step="5"> <b id="s_range_v"></b> deg</span></label>
+  <label>Dead zone <span><input type="range" id="s_dz" min="0" max="10" step="0.5"> <b id="s_dz_v"></b> deg</span></label>
+  <label>Curve <select id="s_curve"><option value="linear">linear</option><option value="expo">mild expo</option></select></label>
+  <label>Expo amount <span><input type="range" id="s_expo" min="0" max="0.9" step="0.05"> <b id="s_expo_v"></b></span></label>
+  <label>Invert steering <input type="checkbox" id="s_inv"></label>
+  <label>Brake holds on release <input type="checkbox" id="s_holdb"></label>
+  <label>Throttle holds on release <input type="checkbox" id="s_holdg"></label>
+  <label>Lock landscape in fullscreen <input type="checkbox" id="s_lock"></label>
+  <label>Fullscreen on Start <input type="checkbox" id="s_autofs"></label>
+  <div id="dbg"></div>
+  <div class="row"><button id="s_reset">Defaults</button><button id="s_close" class="on">Close</button></div>
+</div></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const DEF = { range: 90, dz: 2, curve: 'expo', expo: 0.35, inv: false, holdb: false, holdg: false, lock: false, autofs: true, center: 0 };
+const S = Object.assign({}, DEF, JSON.parse(localStorage.getItem('wheel.settings') || '{}'));
+const save = () => localStorage.setItem('wheel.settings', JSON.stringify(S));
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+const SEND_HZ = 60, GRAB_X = 36, GRAB_Y = 24, MIN_G = 3.5;
+
+// ---- steering: gravity vector in the screen plane ----
+// accelerationIncludingGravity is in device axes (natural orientation); Android reports the reaction to gravity
+// (+y when upright), iOS the opposite sign. Rotate by screen.orientation.angle to screen axes, then the wheel angle
+// is the rotation of "up" about the screen normal, clockwise positive.
+let gx = 0, gy = 9.81, motionSeen = 0, rawDeg = 0, steer = 0, gplane = 9.81;
+const screenAngle = () => (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
+addEventListener('devicemotion', e => {
+  const a = e.accelerationIncludingGravity;
+  if (!a || a.x == null) return;
+  const s = IOS ? -1 : 1, k = 0.4;  // one-pole low-pass on the vector, about 25 ms at 60 Hz
+  gx += k * (s * a.x - gx); gy += k * (s * a.y - gy);
+  motionSeen = performance.now();
+});
+const wrap = d => ((d + 540) % 360) - 180;
+function updateSteer() {
+  const r = screenAngle() * Math.PI / 180;
+  const xs = gx * Math.cos(r) - gy * Math.sin(r), ys = gx * Math.sin(r) + gy * Math.cos(r);
+  gplane = Math.hypot(xs, ys);
+  if (gplane < MIN_G) return;  // phone too flat: hold the last value
+  rawDeg = Math.atan2(-xs, ys) * 180 / Math.PI;
+  let d = wrap(rawDeg - S.center); if (S.inv) d = -d;
+  const m = Math.abs(d) <= S.dz ? 0 : Math.min(1, (Math.abs(d) - S.dz) / Math.max(1, S.range - S.dz));
+  const c = S.curve === 'expo' ? (1 - S.expo) * m + S.expo * m * m * m : m;
+  steer = Math.sign(d) * c;
+}
+
+// ---- pedals: absolute position on a vertical track, multi-touch, grab tolerance ----
+const tracks = { brake: { el: $('brake'), v: 0, id: null, hold: () => S.holdb }, gas: { el: $('gas'), v: 0, id: null, hold: () => S.holdg } };
+function trackAt(x, y) {
+  for (const t of Object.values(tracks)) {
+    const b = t.el.getBoundingClientRect();
+    if (x >= b.left - GRAB_X && x <= b.right + GRAB_X && y >= b.top - GRAB_Y && y <= b.bottom + GRAB_Y) return t;
+  }
+}
+function setFromY(t, y) { const b = t.el.getBoundingClientRect(); t.v = Math.min(1, Math.max(0, (b.bottom - y) / b.height)); }
+addEventListener('pointerdown', e => {
+  if (e.target.closest('button, .overlay')) return;
+  const t = trackAt(e.clientX, e.clientY);
+  if (!t || t.id !== null) return;
+  t.id = e.pointerId; t.el.classList.add('held'); setFromY(t, e.clientY); e.preventDefault();
+}, { passive: false });
+addEventListener('pointermove', e => { for (const t of Object.values(tracks)) if (t.id === e.pointerId) setFromY(t, e.clientY); });
+const release = e => { for (const t of Object.values(tracks)) if (t.id === e.pointerId) { t.id = null; t.el.classList.remove('held'); if (!t.hold()) t.v = 0; } };
+addEventListener('pointerup', release); addEventListener('pointercancel', release);
+['contextmenu', 'selectstart', 'dblclick', 'gesturestart'].forEach(n => addEventListener(n, e => e.preventDefault()));
+
+// ---- buttons ----
+let reverse = false, handbrake = false;
+$('center').onclick = () => { S.center = rawDeg; save(); needCenter = false; };
+$('rev').onclick = () => { reverse = !reverse; $('rev').classList.toggle('on', reverse); };
+$('stop').onclick = () => { handbrake = !handbrake; $('stop').classList.toggle('on', handbrake); };
+$('fs').onclick = () => document.fullscreenElement ? document.exitFullscreen() : goFullscreen();
+async function goFullscreen() {
+  try {
+    await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    if (S.lock && screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape').catch(() => {});
+  } catch (err) { $('warn').textContent = 'fullscreen refused: ' + err.message; }
+}
+document.addEventListener('fullscreenchange', () => $('fs').classList.toggle('on', !!document.fullscreenElement));
+
+// ---- settings panel ----
+const fields = { s_range: 'range', s_dz: 'dz', s_expo: 'expo', s_curve: 'curve', s_inv: 'inv', s_holdb: 'holdb', s_holdg: 'holdg', s_lock: 'lock', s_autofs: 'autofs' };
+function loadForm() {
+  for (const [id, k] of Object.entries(fields)) { const el = $(id); if (el.type === 'checkbox') el.checked = S[k]; else el.value = S[k]; }
+  for (const k of ['range', 'dz', 'expo']) $('s_' + k + '_v').textContent = S[k];
+}
+for (const [id, k] of Object.entries(fields)) $(id).addEventListener('input', e => {
+  const el = e.target; S[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value; save(); loadForm();
+});
+$('set').onclick = () => { loadForm(); $('settings').classList.add('show'); };
+$('s_close').onclick = () => $('settings').classList.remove('show');
+$('s_reset').onclick = () => { const c = S.center; Object.assign(S, DEF, { center: c }); save(); loadForm(); };
+
+// ---- layout: aspect class; a fold/unfold or rotation changes the grip, so ask for a re-center ----
+let needCenter = !('center' in JSON.parse(localStorage.getItem('wheel.settings') || '{}'));
+const aspectClass = () => { const r = innerWidth / innerHeight; return r < 0.75 ? 'portrait' : r <= 4 / 3 ? 'square' : 'wide'; };
+let lastLayout = aspectClass(), lastArea = innerWidth * innerHeight;
+function onLayout() {
+  const c = aspectClass(), area = innerWidth * innerHeight, jump = Math.max(area / lastArea, lastArea / area) > 1.4;
+  if (c !== lastLayout || jump) needCenter = true;
+  lastLayout = c; lastArea = area;
+  $('layout').textContent = c + ' ' + innerWidth + 'x' + innerHeight + ' @' + screenAngle();
+}
+addEventListener('resize', onLayout);
+if (screen.orientation) screen.orientation.addEventListener('change', onLayout);
+onLayout();
+
+// ---- link to the daemon ----
+let ws = null, seq = 0, rtt = null, sent = 0, hz = 0;
+function connect() {
+  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+  ws.onopen = () => { $('dot').classList.add('ok'); $('conn').textContent = 'connected'; };
+  ws.onclose = () => { $('dot').classList.remove('ok'); $('conn').textContent = 'reconnecting'; rtt = null; setTimeout(connect, 1000); };
+  ws.onmessage = m => {
+    const d = JSON.parse(m.data);
+    if (d.ts != null) { const r = performance.now() - d.ts; rtt = rtt == null ? r : rtt + 0.1 * (r - rtt); }
+    if (d.stats) { $('dhz').textContent = d.stats.rate.toFixed(0); $('drops').textContent = d.stats.drops; $('subs').textContent = d.stats.subs; }
+  };
+}
+function frame() {
+  updateSteer();
+  const stop = handbrake;
+  return { steer: +steer.toFixed(4), throttle: stop ? 0 : +tracks.gas.v.toFixed(3), brake: stop ? 1 : +tracks.brake.v.toFixed(3),
+           reverse, handbrake, ts: performance.now(), seq: seq++, rtt: rtt == null ? null : +rtt.toFixed(1) };
+}
+setInterval(() => {
+  const f = frame();
+  if (ws && ws.readyState === 1 && ws.bufferedAmount < 4096) { ws.send(JSON.stringify(f)); sent++; }
+  draw(f);
+}, 1000 / SEND_HZ);
+setInterval(() => { hz = sent; sent = 0; $('hz').textContent = hz; $('rtt').textContent = rtt == null ? '-' : rtt.toFixed(0); }, 1000);
+
+// ---- drawing ----
+function draw(f) {
+  $('rim').setAttribute('transform', 'rotate(' + (f.steer * S.range).toFixed(1) + ')');
+  $('steer').textContent = (f.steer >= 0 ? '+' : '') + f.steer.toFixed(2);
+  $('deg').textContent = wrap(rawDeg - S.center).toFixed(1) + ' deg';
+  for (const [k, t] of Object.entries(tracks)) {
+    const v = k === 'gas' ? f.throttle : f.brake;
+    t.el.querySelector('.fill').style.height = (v * 100).toFixed(1) + '%';
+    t.el.querySelector('.val').textContent = v.toFixed(2);
+  }
+  const now = performance.now();
+  $('warn').textContent = !motionSeen ? 'no motion sensor data' : now - motionSeen > 500 ? 'motion sensor silent'
+    : gplane < MIN_G ? 'hold the phone more upright' : needCenter ? 'grip changed: hold straight and tap Center' : '';
+  $('dbg').textContent = 'g ' + gx.toFixed(2) + ',' + gy.toFixed(2) + ' screen ' + screenAngle() + ' raw ' + rawDeg.toFixed(1) + ' center ' + S.center.toFixed(1) + (IOS ? ' ios' : '');
+}
+
+// ---- start: permission (iOS), wake lock, fullscreen ----
+let wake = null;
+async function lockWake() { try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') lockWake(); });
+$('go').onclick = async () => {
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    try { if (await DeviceMotionEvent.requestPermission() !== 'granted') { $('startmsg').textContent = 'motion permission denied'; return; } }
+    catch (e) { $('startmsg').textContent = e.message; return; }
+  }
+  if (!window.isSecureContext) $('startmsg').textContent = 'not a secure context: motion sensors may be blocked';
+  lockWake();
+  if (S.autofs) goFullscreen();
+  $('start').classList.remove('show');
+};
+if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
+connect();
+</script>
+</body>
+</html>
