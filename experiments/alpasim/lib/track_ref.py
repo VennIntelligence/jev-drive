@@ -12,7 +12,7 @@ distance is to steer, and at speed any steering is a spin. The fix is to never h
                    current speed with the plan's speed as target and the change of speed bounded by [AMIN, AMAX] m/s^2. The path is unchanged.
   JEV_TRACK=full   (a) + (b): the reference is the forward simulation (kinematic, DT_SIM steps) of a path-tracking law on the same path and
                    speed: curvature = path curvature (feedforward) + a second-order correction of the lateral / heading error over the
-                   distance max(TAU_LAT x v, D_MIN), clipped to |kappa| <= min(ALAT / v^2, KMAX below 4 m/s .. KDYN above 5.5 m/s) with
+                   distance max(TAU_LAT x v, D_MIN), clipped to |kappa| <= min(ALAT / v^2, KMAX below 3.5 m/s .. KDYN above 5 m/s) with
                    v = max(v_ref, v0 - V_DROP t), and its rate to
                    |dkappa/dt| <= min(JLAT / v^2, KRATE), and (VCURV) the target speed also capped by the path's curvature ahead
                    (v^2 |kappa| <= ALAT reachable with braking at AMIN), so a plan that turns while the car is still faster than the plan
@@ -41,8 +41,9 @@ ALAT, JLAT = 4.0, 10.0          # m/s^2, m/s^3 (openpilot clip_curvature: 3.0, j
 YAW_TOL = 0.35                  # rad, plan yaw output against its chords
 VCURV = 1.0                     # full: 1 = also slow for the path's curvature ahead (v^2 |kappa| <= ALAT, braking at AMIN), 0 = off
 KMAX, KRATE = 0.2, 0.1          # 1/m (openpilot's cap; minimum radius 5 m), 1/m/s (about 0.29 rad/s of road-wheel steering, wheelbase 2.85)
-KDYN, V_KIN = 0.085, (4.0, 5.5)  # 1/m at and above V_KIN[1] m/s (steering ~0.24 rad: the dynamic model's side slip stays < 0.15), KMAX at and
-                                 # below V_KIN[0], linear between: AlpaSim's vehicle switches to the linear-tyre model at 5 m/s
+KDYN, V_KIN = 0.075, (3.5, 5.0)  # 1/m at and above V_KIN[1] m/s (steering ~0.21 rad: the dynamic model's side slip stays < 0.15), KMAX at and
+                                 # below V_KIN[0], linear between: AlpaSim's vehicle switches to the linear-tyre model at 5 m/s; (4.0, 5.5) / 0.085
+                                 # left 8 / 38 rollouts with side slip >= 0.15 just above 5 m/s (run 4)
 V_DROP = 2.0                     # m/s^2: the curvature cap uses max(v, v0 - V_DROP t), the car slows less than the reference asks
 TAU_LAT, D_MIN, ZETA = 1.0, 4.0, 0.9
 V_MIN = 1.0                     # m/s, floor of v in the curvature limits
