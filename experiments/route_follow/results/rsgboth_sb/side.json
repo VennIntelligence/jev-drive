@@ -1,0 +1,380 @@
+[
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "L",
+  "metric": "plan_lat2.0",
+  "scenes": 52,
+  "diff": 0.05863955646917184,
+  "lo": -0.05054266218437833,
+  "hi": 0.17165193735542614
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "L",
+  "metric": "drv_lat2.0",
+  "scenes": 52,
+  "diff": 0.04914580208253283,
+  "lo": -0.06073319743002215,
+  "hi": 0.1610977101947358
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "R",
+  "metric": "plan_lat2.0",
+  "scenes": 34,
+  "diff": 0.0020352152504358244,
+  "lo": -0.24825019174753818,
+  "hi": 0.12808180513808518
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "R",
+  "metric": "drv_lat2.0",
+  "scenes": 34,
+  "diff": -0.022740187312687305,
+  "lo": -0.26938054883207063,
+  "hi": 0.11262192675358491
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "S",
+  "metric": "plan_lat2.0",
+  "scenes": 263,
+  "diff": -0.04409140220362654,
+  "lo": -0.07421081138062288,
+  "hi": -0.01485600544141659
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "S",
+  "metric": "drv_lat2.0",
+  "scenes": 263,
+  "diff": -0.045044441040581716,
+  "lo": -0.07563982123754627,
+  "hi": -0.015370242010129737
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSGboth-L18-s0,RSGboth-L18-s1",
+  "side": "L",
+  "metric": "plan_lat2.0",
+  "scenes": 52,
+  "diff": 0.001437063481390422,
+  "lo": -0.0388233541778186,
+  "hi": 0.03993362240337143
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSGboth-L18-s0,RSGboth-L18-s1",
+  "side": "L",
+  "metric": "drv_lat2.0",
+  "scenes": 52,
+  "diff": -0.000623587085990924,
+  "lo": -0.04119050348386933,
+  "hi": 0.03833649120621442
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSGboth-L18-s0,RSGboth-L18-s1",
+  "side": "R",
+  "metric": "plan_lat2.0",
+  "scenes": 34,
+  "diff": 0.335803738932636,
+  "lo": 0.22087981760632663,
+  "hi": 0.4618695676136364
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSGboth-L18-s0,RSGboth-L18-s1",
+  "side": "R",
+  "metric": "drv_lat2.0",
+  "scenes": 34,
+  "diff": 0.37131616199976497,
+  "lo": 0.25553639843071146,
+  "hi": 0.49694831837982084
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSGboth-L18-s0,RSGboth-L18-s1",
+  "side": "S",
+  "metric": "plan_lat2.0",
+  "scenes": 273,
+  "diff": -0.0025115375558507386,
+  "lo": -0.009705130356109886,
+  "hi": 0.003194882942878194
+ },
+ {
+  "pair": "RSGbothSB-L18-s0,RSGbothSB-L18-s1:RSGboth-L18-s0,RSGboth-L18-s1",
+  "side": "S",
+  "metric": "drv_lat2.0",
+  "scenes": 273,
+  "diff": -0.0012901636275812105,
+  "lo": -0.008359114783700796,
+  "hi": 0.004443237212408347
+ },
+ {
+  "pair": "RSGboth-L18-s0,RSGboth-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "L",
+  "metric": "plan_lat2.0",
+  "scenes": 52,
+  "diff": 0.057202492987781434,
+  "lo": -0.06867571312405281,
+  "hi": 0.1859442719419765
+ },
+ {
+  "pair": "RSGboth-L18-s0,RSGboth-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "L",
+  "metric": "drv_lat2.0",
+  "scenes": 52,
+  "diff": 0.04976938916852377,
+  "lo": -0.0758227337538108,
+  "hi": 0.1774147873685223
+ },
+ {
+  "pair": "RSGboth-L18-s0,RSGboth-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "R",
+  "metric": "plan_lat2.0",
+  "scenes": 34,
+  "diff": -0.3337685236822002,
+  "lo": -0.6624269982971015,
+  "hi": -0.15032354827859024
+ },
+ {
+  "pair": "RSGboth-L18-s0,RSGboth-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "R",
+  "metric": "drv_lat2.0",
+  "scenes": 34,
+  "diff": -0.39405634931245226,
+  "lo": -0.7148353549586776,
+  "hi": -0.220848114935065
+ },
+ {
+  "pair": "RSGboth-L18-s0,RSGboth-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "S",
+  "metric": "plan_lat2.0",
+  "scenes": 263,
+  "diff": -0.04133106410699567,
+  "lo": -0.07025442248078345,
+  "hi": -0.013378411025983474
+ },
+ {
+  "pair": "RSGboth-L18-s0,RSGboth-L18-s1:RSG-L18-s0,RSG-L18-s1",
+  "side": "S",
+  "metric": "drv_lat2.0",
+  "scenes": 263,
+  "diff": -0.04362120718634977,
+  "lo": -0.0731033256948632,
+  "hi": -0.015230124679583021
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSG-L18-s0",
+  "side": "L",
+  "metric": "plan_lat2.0",
+  "scenes": 52,
+  "diff": 0.01344186246445863,
+  "lo": -0.10317398432651997,
+  "hi": 0.13419295436984272
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSG-L18-s0",
+  "side": "L",
+  "metric": "drv_lat2.0",
+  "scenes": 52,
+  "diff": 0.003669341107610343,
+  "lo": -0.11239127753777754,
+  "hi": 0.124782875275076
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSG-L18-s0",
+  "side": "R",
+  "metric": "plan_lat2.0",
+  "scenes": 34,
+  "diff": 0.12484895163659872,
+  "lo": -0.09848331843434338,
+  "hi": 0.24965878530836974
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSG-L18-s0",
+  "side": "R",
+  "metric": "drv_lat2.0",
+  "scenes": 34,
+  "diff": 0.10965938473291414,
+  "lo": -0.1067776821911422,
+  "hi": 0.24578491091669535
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSG-L18-s0",
+  "side": "S",
+  "metric": "plan_lat2.0",
+  "scenes": 262,
+  "diff": -0.03458824766200719,
+  "lo": -0.06453113572426283,
+  "hi": -0.005695976932128924
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSG-L18-s0",
+  "side": "S",
+  "metric": "drv_lat2.0",
+  "scenes": 262,
+  "diff": -0.03449079714814448,
+  "lo": -0.06557242499139518,
+  "hi": -0.004666143499620775
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSG-L18-s1",
+  "side": "L",
+  "metric": "plan_lat2.0",
+  "scenes": 52,
+  "diff": 0.10383725047388505,
+  "lo": -0.010280893854275277,
+  "hi": 0.21706930432364627
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSG-L18-s1",
+  "side": "L",
+  "metric": "drv_lat2.0",
+  "scenes": 52,
+  "diff": 0.09462226305745534,
+  "lo": -0.01944276410089916,
+  "hi": 0.20496694647101138
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSG-L18-s1",
+  "side": "R",
+  "metric": "plan_lat2.0",
+  "scenes": 34,
+  "diff": -0.12077852113572701,
+  "lo": -0.3982916608946609,
+  "hi": 0.018072125285909783
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSG-L18-s1",
+  "side": "R",
+  "metric": "drv_lat2.0",
+  "scenes": 34,
+  "diff": -0.15513975935828875,
+  "lo": -0.43170851948051947,
+  "hi": -0.00895103818591327
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSG-L18-s1",
+  "side": "S",
+  "metric": "plan_lat2.0",
+  "scenes": 262,
+  "diff": -0.04733040714374684,
+  "lo": -0.07691164892448403,
+  "hi": -0.019117675874187237
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSG-L18-s1",
+  "side": "S",
+  "metric": "drv_lat2.0",
+  "scenes": 262,
+  "diff": -0.049400485246305866,
+  "lo": -0.07887700137802012,
+  "hi": -0.020673991981828857
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSGboth-L18-s0",
+  "side": "L",
+  "metric": "plan_lat2.0",
+  "scenes": 52,
+  "diff": -0.03349374580547658,
+  "lo": -0.059559421939307335,
+  "hi": -0.005107650385085006
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSGboth-L18-s0",
+  "side": "L",
+  "metric": "drv_lat2.0",
+  "scenes": 52,
+  "diff": -0.03545433476779631,
+  "lo": -0.062157202515946905,
+  "hi": -0.006548828848615386
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSGboth-L18-s0",
+  "side": "R",
+  "metric": "plan_lat2.0",
+  "scenes": 34,
+  "diff": 0.4096209079645844,
+  "lo": 0.24754943632565346,
+  "hi": 0.5802728190152759
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSGboth-L18-s0",
+  "side": "R",
+  "metric": "drv_lat2.0",
+  "scenes": 34,
+  "diff": 0.45057825091575093,
+  "lo": 0.28744556451754555,
+  "hi": 0.6204939226010101
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSGboth-L18-s0",
+  "side": "S",
+  "metric": "plan_lat2.0",
+  "scenes": 273,
+  "diff": -0.002362940868655154,
+  "lo": -0.011955070433042675,
+  "hi": 0.006003472725001411
+ },
+ {
+  "pair": "RSGbothSB-L18-s0:RSGboth-L18-s0",
+  "side": "S",
+  "metric": "drv_lat2.0",
+  "scenes": 273,
+  "diff": -0.000561594278737139,
+  "lo": -0.010183599630407485,
+  "hi": 0.008010669280835278
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSGboth-L18-s1",
+  "side": "L",
+  "metric": "plan_lat2.0",
+  "scenes": 52,
+  "diff": 0.0363678727682574,
+  "lo": -0.030307682659932635,
+  "hi": 0.09628199897056561
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSGboth-L18-s1",
+  "side": "L",
+  "metric": "drv_lat2.0",
+  "scenes": 52,
+  "diff": 0.034207160595814426,
+  "lo": -0.03331852246397656,
+  "hi": 0.09509180133546909
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSGboth-L18-s1",
+  "side": "R",
+  "metric": "plan_lat2.0",
+  "scenes": 34,
+  "diff": 0.2619865699006875,
+  "lo": 0.1874333414938556,
+  "hi": 0.3519132365800866
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSGboth-L18-s1",
+  "side": "R",
+  "metric": "drv_lat2.0",
+  "scenes": 34,
+  "diff": 0.2920540730837789,
+  "lo": 0.21760811091686091,
+  "hi": 0.3845169288949276
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSGboth-L18-s1",
+  "side": "S",
+  "metric": "plan_lat2.0",
+  "scenes": 273,
+  "diff": -0.0026601342430463302,
+  "lo": -0.01115360348368864,
+  "hi": 0.005301308068377281
+ },
+ {
+  "pair": "RSGbothSB-L18-s1:RSGboth-L18-s1",
+  "side": "S",
+  "metric": "drv_lat2.0",
+  "scenes": 273,
+  "diff": -0.00201873297642529,
+  "lo": -0.010618602956257538,
+  "hi": 0.006225340889508981
+ }
+]
