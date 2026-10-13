@@ -74,7 +74,8 @@ def draw(c, st, live, imgs, F, status):
     c.blit(t, (24, 24 - t.get_height() // 2))
     waiting = st.get("waiting") and status == "LIVE"
     if status == "LIVE":
-        line, col = ("WAITING FOR YOUR START" if waiting else "DRIVING", ORANGE if waiting else GREEN)
+        line, col = ("DRIVING", GREEN) if not waiting else ("WAITING FOR PHONE", RED) if st.get("stale") else \
+            ("PHONE OK, CLICK TO START" if st.get("start_mode") == "click" else "PHONE OK, PRESS THROTTLE TO START", ORANGE)
     else:
         try:
             L = json.load(open(os.path.join(live, "launcher.json")))
@@ -98,7 +99,8 @@ def draw(c, st, live, imgs, F, status):
     inset(c, st, 20 + IW - 360, 62, 350, font)
     msg = None
     if waiting:
-        msg = ("CLICK TO START" if st.get("start_mode") == "click" else "PRESS THROTTLE TO START", ORANGE)
+        msg = ("WAITING FOR PHONE", RED) if st.get("stale") else \
+            ("CLICK TO START" if st.get("start_mode") == "click" else "PRESS THROTTLE TO START", ORANGE)
     elif status == "LIVE" and st.get("stale") and st.get("started"):
         msg = ("PHONE SILENT: BRAKING", RED)
     elif status != "LIVE":

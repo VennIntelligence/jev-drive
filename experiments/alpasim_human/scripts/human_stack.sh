@@ -61,7 +61,7 @@ if head -1 "$LIST" | grep -q '^scene_id'; then ids=$(awk -F'\t' -v s="${STAGE:-1
 n=$(echo "$ids" | wc -l); quoted=$(echo "$ids" | sed 's/.*/"&"/' | paste -sd,)
 
 # Rendering levers (README "Speed"). Defaults = the fastest combination that keeps the front image usable.
-H=${HUMAN_H:-540}; W=$(( (H * 16 / 9 + 7) / 8 * 8 )); CAMS=${HUMAN_CAMS:-front}; VIDEO=${HUMAN_VIDEO:-0}; NRE=${HUMAN_NRE:-default}; PHYS=${HUMAN_PHYS:-1}
+H=${HUMAN_H:-1080}; W=$(( (H * 16 / 9 + 7) / 8 * 8 )); CAMS=${HUMAN_CAMS:-front}; VIDEO=${HUMAN_VIDEO:-0}; NRE=${HUMAN_NRE:-default}; PHYS=${HUMAN_PHYS:-1}
 lever=()
 if [[ $TRACK == pai ]]; then
   HOLD=1.7 SIM=20; FI=${HUMAN_FI_MS:-100}
