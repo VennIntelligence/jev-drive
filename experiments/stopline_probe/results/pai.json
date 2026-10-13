@@ -1,0 +1,70 @@
+{
+ "set": "pai train160 PAI_DUMP frames",
+ "rows": 1387,
+ "classes": {
+  "red": {
+   "frames": 1364,
+   "pos_frames": 44,
+   "pos_scenes": 4,
+   "transfer": {
+    "n": 1364,
+    "pos": 44,
+    "groups": 79,
+    "auc": 0.7805957300275482,
+    "lo": 0.6626367692101812,
+    "hi": 0.9029508501225563
+   },
+   "transfer_moving": {
+    "n": 1301,
+    "pos": 12,
+    "groups": 79,
+    "auc": 0.8304241013705715,
+    "lo": 0.7340991061054615,
+    "hi": 0.963416145346924
+   },
+   "transfer_mean_red_prob": {
+    "red": 0.6953614354133606,
+    "green": 0.36003807187080383
+   }
+  },
+  "stop_sign": {
+   "frames": 1343,
+   "pos_frames": 23,
+   "pos_scenes": 2,
+   "transfer": {
+    "n": 1343,
+    "pos": 23,
+    "groups": 77,
+    "auc": 0.4225955204216074,
+    "lo": 0.28525542359801065,
+    "hi": 0.5130208205937747
+   },
+   "transfer_moving": {
+    "n": 1303,
+    "pos": 14,
+    "groups": 77,
+    "auc": 0.3493294913000111,
+    "lo": 0.2650932730561423,
+    "hi": 0.4408040283174945
+   },
+   "transfer_mean_red_prob": {
+    "stop_sign": 0.2125910073518753,
+    "green": 0.36003807187080383
+   }
+  }
+ },
+ "counts": {
+  "green": {
+   "frames": 1320,
+   "scenes": 76
+  },
+  "red": {
+   "frames": 44,
+   "scenes": 4
+  },
+  "stop_sign": {
+   "frames": 23,
+   "scenes": 2
+  }
+ }
+}
