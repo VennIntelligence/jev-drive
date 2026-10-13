@@ -9,7 +9,7 @@
 #   HUMAN_H (render height px), HUMAN_FI_MS (camera frame interval ms), HUMAN_VIDEO (0 | 1), HUMAN_NRE (default | nrend: PAI renderer
 #   backend), HUMAN_PHYS (1 | 0: PAI ground physics). Other env: HUMAN_GPU (0; card 1 is refused), HUMAN_BASEPORT (6700: renderer,
 #   physics, controller), HUMAN_DRV_PORT (6790), HUMAN_START (click | throttle | none), HUMAN_WHEEL_PORT (47800; 47801 = fake_wheel.py),
-#   HUMAN_LIVE (/data/runs/alpasim_human/live), HUMAN_VIEWER (1), HUMAN_IMG (image the driver runs in), HUMAN_MIN_FREE_MB (8000), STAGE.
+#   HUMAN_REALTIME (1.0: the driver paces sim time to wall time; 0 = as fast as the stack runs), HUMAN_LIVE (/data/runs/alpasim_human/live), HUMAN_VIEWER (1), HUMAN_IMG (image the driver runs in), HUMAN_MIN_FREE_MB (8000), STAGE.
 # Writes <out>/{STATUS, DONE | ERROR, log.txt, run.json, usage.jsonl (card VRAM, 2 s), driver/{drive,start}.jsonl, driver.log,
 #   sim/ (aggregate/results-summary.json, rollouts/, txt-logs/), results.md / results.json (human_results.py)}.
 set -uo pipefail
@@ -93,7 +93,7 @@ docker rm -f "$N" >/dev/null 2>&1
 docker run -d --name "$N" --init --network host --user "$(id -u):$(id -g)" -v "$REPO:$REPO:ro" -v "$OUT/driver:/logs" -v "$LIVE:$LIVE" \
   -e ALPASIM_DRIVER_HOST=127.0.0.1 -e "ALPASIM_DRIVER_PORT=$DPORT" -e ALPASIM_DRIVER_LOG_DIR=/logs -e "HUMAN_LIVE=$LIVE" -e "HUMAN_TRACK=$TRACK" \
   -e "HUMAN_N_SCENES=$n" -e "HUMAN_SIM_S=$SIM" -e "HUMAN_HOLD_S=${HUMAN_HOLD_S:-$HOLD}" -e "HUMAN_START=${HUMAN_START:-click}" \
-  -e "HUMAN_WAIT_MAX_S=${HUMAN_WAIT_MAX_S:-240}" -e "HUMAN_WHEEL_PORT=${HUMAN_WHEEL_PORT:-47800}" -e "HUMAN_RUN=$OUT" \
+  -e "HUMAN_WAIT_MAX_S=${HUMAN_WAIT_MAX_S:-240}" -e "HUMAN_REALTIME=${HUMAN_REALTIME:-1.0}" -e "HUMAN_WHEEL_PORT=${HUMAN_WHEEL_PORT:-47800}" -e "HUMAN_RUN=$OUT" \
   -e "HUMAN_GIT=$(git -C "$REPO" rev-parse --short HEAD)" --entrypoint python "$IMG" "$REPO/experiments/alpasim_human/lib/human_driver.py" >/dev/null || die "docker run"
 t0=$(date +%s)
 until docker logs "$N" 2>&1 | grep -q "listening on"; do

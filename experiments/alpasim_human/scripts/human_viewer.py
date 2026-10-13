@@ -133,7 +133,9 @@ def draw(c, st, live, imgs, F, status):
     w = st.get("wall_per_sim")
     lab("wall s per sim s %s (slow motion %s)" % ("-" if w is None else "%.2f" % w, "-" if w is None else "%.1fx" % w),
         (x3, y0 + 96), ORANGE if w and w > 1.3 else WHITE)
-    lab("start: %s" % st.get("start_mode", "-"), (x3, y0 + 126), GREY)
+    u = st.get("unpaced_per_sim")
+    lab("paced to %sx real time   unpaced %s   late %s   start: %s" % (st.get("realtime", "-"), "-" if u is None else "%.2f" % u,
+                                                                     st.get("late", 0), st.get("start_mode", "-")), (x3 - 40, y0 + 126), GREY)
     lab("image: the front camera exactly as the driver receives it   inset: rig frame, ego at the bottom", (20, 1088), (200, 200, 200))
 
 

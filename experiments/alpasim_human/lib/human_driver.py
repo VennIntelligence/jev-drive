@@ -17,8 +17,10 @@ return (pai_driver / sh30_driver: the LTF sample's build_trajectory_from_plan ov
 Start: the world is held inside the first `drive` at or after HUMAN_HOLD_S of the session (the force-GT replay: PAI 1.7 s, nuPlan
 0.5 s, so the hold sits where control passes to the driver) until the start signal, at most HUMAN_WAIT_MAX_S (240):
 HUMAN_START=click (default: a left click in the viewer touches <live>/start; with no viewer heartbeat in <live>/viewer.json for
-5 s the first throttle press is accepted too), throttle (first throttle press > 0.2), none. Every other call returns at once:
-the sim runs slower than real time, so the human drives in slow motion; wall s per sim s is logged and shown.
+5 s the first throttle press is accepted too), throttle (first throttle press > 0.2), none. Pacing: after the start a call sleeps so
+sim time never runs ahead of wall time x HUMAN_REALTIME (1.0; 0 = unpaced), as phone_wheel's human_agent does; when the stack is
+slower than that nothing is slept (slow motion) and more than 0.5 s behind re-anchors (`late`). Wall s per sim s, the unpaced
+figure (without the sleeps) and the sleeps are logged and shown.
 
 Logs (ALPASIM_DRIVER_LOG_DIR): drive.jsonl, one `drive` record per call (phone input, applied delta / accel, speed, input age,
 stale, pose, wall) and one `close` record per session (sim s, wall s, wall per sim s after the start, stale calls, wait s);
@@ -51,6 +53,7 @@ DELTA_MAX, AY_MAX, A_THR, A_BRK, V_MAX, DT, N_OUT = 0.55, 7.0, 3.0, 8.0, 36.0, 0
 FRONT = ("CAM_F0", "camera_front_wide_120fov")
 SIDES = {"left": ("CAM_L0", "camera_cross_left_120fov"), "right": ("CAM_R0", "camera_cross_right_120fov")}
 E = os.environ.get
+RT = float(E("HUMAN_REALTIME", "1.0"))
 HOLD_US, WAIT_MAX, START = int(1e6 * float(E("HUMAN_HOLD_S", "0"))), float(E("HUMAN_WAIT_MAX_S", "240")), E("HUMAN_START", "click")
 LIVE = Path(E("HUMAN_LIVE", "/tmp/alpasim-human-live"))
 
@@ -96,6 +99,7 @@ class Session:
         self.lock = threading.Lock()
         self.t_first = self.started = None
         self.wait_s, self.k, self.n_stale, self.last = 0.0, 0, 0, None
+        self.anchor, self.slept, self.n_late = None, 0.0, 0
         self.written = {}
 
 
@@ -137,7 +141,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             sim = (t1 - t0) / 1e6
             rec = {"kind": "close", "t": time.time(), "session": req.session_uuid, "n": s.n, "scene": s.scene, "drives": s.k,
                    "sim_s": round((t1 - s.t_first) / 1e6, 2), "driven_sim_s": round(sim, 2), "driven_wall_s": round(w1 - w0, 2),
-                   "wall_per_sim": round((w1 - w0) / sim, 3) if sim > 0 else None, "stale": s.n_stale, "wait_s": round(s.wait_s, 1)}
+                   "wall_per_sim": round((w1 - w0) / sim, 3) if sim > 0 else None, "stale": s.n_stale, "wait_s": round(s.wait_s, 1),
+                   "slept_s": round(s.slept, 2), "unpaced_per_sim": round((w1 - w0 - s.slept) / sim, 3) if sim > 0 else None,
+                   "late": s.n_late, "realtime": RT}
             self.out.write(json.dumps(rec) + "\n")
             LOG.info("close %s", rec)
             self._live(s, {"waiting": False, "closed": True})
@@ -232,8 +238,18 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         base = {"sim_t": round(sim_t, 2), "speed": round(v, 2)}
         if s.started is None and now - s.t_first >= HOLD_US:
             self._hold(s, base)
-            s.started = (time.time(), now)
-        st = self._wheel()
+            s.started = s.anchor = (time.time(), now)
+        slept = 0.0
+        if s.started is not None and RT > 0:                       # pace: sim time never runs ahead of wall time x HUMAN_REALTIME
+            wall = time.time()
+            target = s.anchor[0] + (now - s.anchor[1]) / 1e6 / RT
+            if target > wall:
+                slept = target - wall
+                time.sleep(slept)
+            elif wall - target > 0.5:                              # far behind: re-anchor, never burst to catch up
+                s.anchor, s.n_late = (wall, now), s.n_late + 1
+        s.slept += slept
+        st = self._wheel()                                         # read after the sleep: freshest input
         delta, a = controls(st, v, s.L)
         s.n_stale += st["stale"] and s.started is not None
         traj_xyv = rollout(x, y, yaw, v, delta, a, s.L)
@@ -251,13 +267,14 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             wps = round((wall - s.started[0]) / ((now - s.started[1]) / 1e6), 3)
         rec = {"kind": "drive", "t": round(wall, 3), "session": req.session_uuid, "scene": s.scene, "k": s.k, "now": now, "tq": tq,
                "ta": ta, **self._panel(st), "delta": round(delta, 4), "accel": round(a, 3), "v": round(v, 3), "pose": [round(x, 3), round(y, 3),
-               round(yaw, 5)], "started": s.started is not None, "n_out": len(traj.poses), "ms": round(1e3 * (wall - t_in), 2)}
+               round(yaw, 5)], "started": s.started is not None, "slept_ms": round(1e3 * slept, 1), "n_out": len(traj.poses), "ms": round(1e3 * (wall - t_in), 2)}
         self.out.write(json.dumps(rec) + "\n")
         s.k += 1
         R = np.array([[math.cos(yaw), math.sin(yaw)], [-math.sin(yaw), math.cos(yaw)]])
         plan = ((traj_xyv[::4, :2] - [x, y]) @ R.T).round(2).tolist()               # rig frame of the current pose, 0.4 s apart
         self._live(s, {**base, **self._panel(st), "waiting": False, "delta_deg": round(math.degrees(delta), 1), "accel": round(a, 2),
-                       "plan": plan, "wall_per_sim": wps, "started": s.started is not None})
+                       "plan": plan, "wall_per_sim": wps, "realtime": RT, "late": s.n_late,
+                       "unpaced_per_sim": round(((wall - s.started[0]) - s.slept) / ((now - s.started[1]) / 1e6), 3) if wps else None, "started": s.started is not None})
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
@@ -280,7 +297,7 @@ def main():
     server.start()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: server.stop(grace=0.0))
-    LOG.info("hold %.1f s, start %s, wheel port %s, live %s", HOLD_US / 1e6, START, E("HUMAN_WHEEL_PORT", "47800"), LIVE)
+    LOG.info("realtime %.2f, hold %.1f s, start %s, wheel port %s, live %s", RT, HOLD_US / 1e6, START, E("HUMAN_WHEEL_PORT", "47800"), LIVE)
     LOG.info("listening on %s:%d", host, port)
     server.wait_for_termination()
 

@@ -12,7 +12,7 @@ on the on-policy pool, so rm_train --on-weight can rebalance the right-turn rows
           rside  <tside>_<pside> on turn rows (L_in, R_out, ...), else none: the AND of the two, since --on-weight multiplies one factor per
                                    KEY=VALUE term and has no conjunction.
         Gate R1: every other file same inode, every source tab array byte-equal (names, features, fut / fut_reg, served, ...), tags aligned with
-        meta names; the counts must reproduce side-bias.md (R_out 321, R_in 77).
+        meta names; for --src on1_L18RB0 the counts must reproduce side-bias.md (R_out 321, R_in 77); any pool records r_out_in / l_out_in.
         Dry run of --weight: rm_train's own parsing (tab key, == value, product of factors; a missing key is a factor 1), then 1000 batches of
         --on-k 13 rows drawn with rm_train's generator (default_rng([seed, 0, 53]).choice(n, 13, replace=True, p=w / w.sum())): drawn rows per
         rside, against the uniform draw and against the expectation; plus the weighted mean imitation push at 2 s (fut - served lateral,
@@ -89,8 +89,10 @@ def cmd_pool(a):
              inode_same=all((dst / f.name).stat().st_ino == f.stat().st_ino for f in src.iterdir() if f.name != "tab.npz"),
              arrays_same=all(t2[k].dtype == v.dtype and t2[k].shape == v.shape and t2[k].tobytes() == v.tobytes() for k, v in tab.items()),
              new_keys=sorted(set(t2) - set(tab)), feat_same=(FE / f"{a.out}.npz").read_bytes() == (FE / f"{a.src}.npz").read_bytes(),
-             reproduces_side_bias=cnt.get("R_out") == 321 and cnt.get("R_in") == 77)
-    g["pass"] = bool(g["inode_same"] and g["arrays_same"] and g["feat_same"] and g["new_keys"] == ["pside", "rside", "tside"] and g["reproduces_side_bias"])
+             reproduces_side_bias=(cnt.get("R_out") == 321 and cnt.get("R_in") == 77) if a.src == "on1_L18RB0" else None,
+             r_out_in=[cnt.get("R_out", 0), cnt.get("R_in", 0)], l_out_in=[cnt.get("L_out", 0), cnt.get("L_in", 0)])
+    g["pass"] = bool(g["inode_same"] and g["arrays_same"] and g["feat_same"] and g["new_keys"] == ["pside", "rside", "tside"]
+                     and g["reproduces_side_bias"] is not False)
     # dry run of the weights, rm_train's draw
     w = weights(t2, a.weight)
     p = w / w.sum()
