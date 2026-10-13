@@ -170,9 +170,9 @@ AlpaSim stack 52). The pool then spaces fast growers by itself; no cap on how ma
 is needed beyond that, and four undeclared 30 GiB loaders started in one round are still the way to get killed.
 A killed training restarts from step 0: `pp_train.py` and `ap2_train.py` write no checkpoint before the end.
 
-**Fixing a queued job's declaration.** `cl retarget <ids> --vram 27 [--ram 30] [--gpus 1,2]` edits a queued job in
+**Fixing a queued job's declaration.** `cl retarget <ids> --vram 26 [--ram 30] [--gpus 1,2]` edits a queued job in
 place (id and `--after` chains stay); the AlpaSim read family (`ol-read`, `rm-read`, `rg10`, `ro-*`, `sf-*`, `redg`) measures
-VRAM p50 19 / p95 26 / max 28 GB over 212 runs, so `--vram 27` is the honest declaration (3 per card), not 32 (2 per card).
+VRAM p50 19 / p95 26 / max 28 GB over 212 runs, so `--vram 26` is the honest declaration (3 per card: 26 + 2 x 26.3 history cap < 83.6; 27 misses by 0.2 GB), not 32 (2 per card).
 
 **Restarting the dispatcher** (pool code only takes effect then). State is in `state.json` (saved every round),
 jobs run in their own sessions and are followed by pid + start time, exit codes land in `rc.<try>` files, so running
