@@ -40,6 +40,15 @@ Turning-school addition (2026-10-13, experiments/route_follow/plans/2026-10-13-t
             weight of a row class in the imitation / hinge sums, without touching the loss. Same orng stream [seed, 0, 53] (numpy's
             weighted choice). '' = off: the uniform draw, bit for bit as before.
 
+  --on-cap-scene C [--on-cap-in KEY=VALUE]   per-scene draw cap (2026-10-14, turning school phase 2: a branch-search pool is dominated by the
+            scenes with many completing branches): among the pool rows matching --on-cap-in (default: every pool row), the weights after
+            --on-weight are rescaled per scene (tab `log`) so that no scene holds more than a share C of the subset's draw mass. Water-filling:
+            scenes over C are set to C, the rest scaled up in proportion, repeated until none exceeds; the subset's total mass is kept, so a
+            --on-weight W computed for the subset's share of the draws stays exact. Infeasible (scenes x C < 1) is an error. Same orng stream
+            and weighted choice as --on-weight; 0 = off. `capcheck` is its known-answer test (CPU: 3 scenes 70 / 20 / 10 % capped at 0.4 ->
+            40 / 40 / 20 % within 1e-6, the rest of the pool untouched; exit 2 otherwise); `draws --on POOL [--on-weight ..] [--on-cap-scene ..]`
+            prints the draw shares the trainer would use (per `pool` tag, and per scene inside the cap subset before / after), no GPU.
+
   --on-mode mixed   on_train's per-row mode: pool rows tagged mode == "self" (S's on-policy rows) keep the `self` recipe, the rest (demonstration
             rows) are `both`; `mixcheck` is its known-answer test: on one setup, a batch whose pool rows are all `self` rows gives the
             `self` loss and gradient exactly, a batch of `both` rows the `both` ones (exit 2 otherwise).
@@ -174,6 +183,97 @@ def build(a, dev):
     return ns, rp, JD, TU, okc
 
 
+def cap_share(w, g, cap):
+    """Weights w (n,) of rows in groups g (n,) -> weights with no group above a share `cap` of sum(w), sum kept (--on-cap-scene)."""
+    w = np.asarray(w, np.float64)
+    u, inv = np.unique(np.asarray(g).astype(str), return_inverse=True)
+    p = np.bincount(inv, w, len(u)) / w.sum()
+    assert len(u) * cap >= 1 - 1e-12, f"--on-cap-scene {cap}: infeasible with {len(u)} scenes (needs >= {int(np.ceil(1 / cap))})"
+    q, fixed = p.copy(), np.zeros(len(u), bool)
+    while ((q > cap + 1e-12) & ~fixed).any():
+        fixed |= q > cap + 1e-12
+        q[fixed] = cap
+        q[~fixed] = p[~fixed] * (1 - cap * fixed.sum()) / p[~fixed].sum()
+    return w * (q / p)[inv]
+
+
+def group_shares(w, g):
+    u, inv = np.unique(np.asarray(g).astype(str), return_inverse=True)
+    return {k: float(v) for k, v in zip(u, np.bincount(inv, w, len(u)) / np.sum(w))}
+
+
+def draw_weights(tb, on_weight="", cap=0.0, cap_in=""):
+    """Pool tab -> (per-row draw weights or None for the plain uniform draw, record): --on-weight product, then --on-cap-scene."""
+    if not on_weight and not cap:
+        return None, {}
+    n = len(tb["names"])
+    w = np.ones(n)
+    for term in on_weight.split(",") if on_weight else []:
+        kv, f = term.rsplit(":", 1)
+        k, v = kv.split("=", 1)
+        if k in tb.files:
+            w[tb[k].astype(str) == v] *= float(f)
+    rec = {}
+    if cap:
+        k, v = cap_in.split("=", 1) if cap_in else ("", "")
+        sel = tb[k].astype(str) == v if k else np.ones(n, bool)
+        assert sel.any() and "log" in tb.files, f"--on-cap-in {cap_in}: no pool row / no `log` tag"
+        g = tb["log"].astype(str)[sel]
+        before = group_shares(w[sel], g)
+        m0 = w[sel].sum()
+        w[sel] = cap_share(w[sel], g, cap)
+        assert abs(w[sel].sum() - m0) <= 1e-9 * m0
+        rec = dict(cap=cap, cap_in=cap_in or "all", rows=int(sel.sum()), scenes=len(before), before=before, after=group_shares(w[sel], g))
+    assert (w > 0).all(), "--on-weight / --on-cap-scene: weights"
+    if "pool" in tb.files:
+        rec["pool_share"] = group_shares(w, tb["pool"])
+    return w, rec
+
+
+def cmd_capcheck(a):
+    """Known-answer test of --on-cap-scene (CPU): pool of 100 `s` rows (scenes a / b / c: 70 / 20 / 10 rows) + 30 `r` rows, cap 0.4 on pool=s.
+    uniform: shares 0.4 / 0.4 / 0.2 exactly; weighted (--on-weight topo=x:3,pool=s:2.5, unequal weights inside a scene): the shares equal an
+    independent solution (q = min(cap, lam p), lam by bisection); both: the subset's mass kept, `r` rows untouched, every row of a scene scaled
+    by one factor; an infeasible cap refused."""
+    class T(dict):
+        files = property(lambda self: list(self))
+    rng = np.random.default_rng(0)
+    log = np.repeat(["a", "b", "c"], [70, 20, 10])
+    tb = T(names=np.arange(130).astype(str), log=np.r_[log, np.full(30, "r")], pool=np.repeat(["s", "r"], [100, 30]), topo=rng.choice(["x", "y"], 130))
+    res = {}
+    for name, ow in (("uniform", ""), ("weighted", "topo=x:3,pool=s:2.5")):
+        w0 = draw_weights(tb, ow)[0] if ow else np.ones(130)
+        p0 = group_shares(w0[:100], log)
+        p = np.array([p0[k] for k in "abc"])
+        lo, hi = 0.0, 1.0 / p.min()
+        for _ in range(200):
+            lam = (lo + hi) / 2
+            lo, hi = (lam, hi) if np.minimum(0.4, lam * p).sum() < 1 else (lo, lam)
+        want = dict(zip("abc", (0.4, 0.4, 0.2) if name == "uniform" else np.minimum(0.4, lam * p)))
+        w, rec = draw_weights(tb, ow, 0.4, "pool=s")
+        f = w[:100] / w0[:100]
+        res[name] = dict(before=p0, after=rec["after"], want={k: float(v) for k, v in want.items()},
+                         max_err=max(max(abs(rec["after"][k] - want[k]) for k in "abc"), abs(w[:100].sum() / w0[:100].sum() - 1),
+                                     float(np.abs(w[100:] - w0[100:]).max())),
+                         within_scene_spread=max(float(np.ptp(f[log == k])) for k in "abc"))
+    try:
+        cap_share(np.ones(10), np.repeat(["a", "b"], 5), 0.4)
+        res["infeasible_refused"] = False
+    except AssertionError:
+        res["infeasible_refused"] = True
+    ok = res["infeasible_refused"] and all(res[n]["max_err"] <= 1e-6 and res[n]["within_scene_spread"] <= 1e-9 for n in ("uniform", "weighted"))
+    print(json.dumps(dict(res, pass_=ok), indent=1))
+    raise SystemExit(0 if ok else 2)
+
+
+def cmd_draws(a):
+    """Draw shares the trainer would use on --on with --on-weight / --on-cap-scene (CPU)."""
+    from jevdrive.common import data_dir
+    tb = np.load(data_dir() / "runs/op_parity/cache" / a.on / "tab.npz")
+    w, rec = draw_weights(tb, a.on_weight, a.on_cap_scene, a.on_cap_in)
+    print(json.dumps(dict(pool=a.on, rows=len(tb["names"]), on_weight=a.on_weight, **rec), indent=1))
+
+
 def cmd_train(a):
     import torch
     import pp_train as T
@@ -202,17 +302,12 @@ def cmd_train(a):
                              {"params": rp, "lr": a.rm_lr, "base": a.rm_lr, "wu": a.rm_warmup}], weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
 
-    pw = None
-    if a.on_weight:                                                   # --on-weight: per-row draw probabilities of the pool rows
+    pw, caprec = None, {}
+    if a.on_weight or a.on_cap_scene:                                 # --on-weight / --on-cap-scene: per-row draw probabilities of the pool rows
         from jevdrive.common import data_dir
         tb = np.load(data_dir() / "runs/op_parity/cache" / a.on / "tab.npz")
-        w = np.ones(ns.n_on)
-        for term in a.on_weight.split(","):
-            kv, f = term.rsplit(":", 1)
-            k, v = kv.split("=", 1)
-            if k in tb.files:
-                w[tb[k].astype(str) == v] *= float(f)
-        assert len(tb["names"]) == ns.n_on and (w > 0).all(), "--on-weight: pool rows / weights"
+        assert len(tb["names"]) == ns.n_on, "--on-weight: pool rows"
+        w, caprec = draw_weights(tb, a.on_weight, a.on_cap_scene, a.on_cap_in)
         pw = w / w.sum()
 
     def draw():
@@ -252,6 +347,9 @@ def cmd_train(a):
                  f"{k_on} on-policy (mode {ns.mode or 'off'}; {json.dumps(ns.onrec)}); feature rows ok {json.dumps(okc)}")
         if pw is not None:
             run.info(f"--on-weight {a.on_weight}: pool row draw probability min {pw.min() * ns.n_on:.3f} / max {pw.max() * ns.n_on:.3f} x uniform")
+        if caprec:
+            run.info(f"draw shares: {json.dumps(caprec)}")
+            run.summary.update(draw_shares=caprec)
         if a.ego_drop_speed > 0:
             run.info(f"ego speed history (ego cols {EGO_SPEED}) zeroed on a share {a.ego_drop_speed} of the non-anchor rows, rng [seed, 0, 71]")
         run.info(f"init {json.dumps(ns.init) if ns.init else 'none: shipped weights + fresh adapter (on_train / joint_train start)'}")
@@ -404,6 +502,8 @@ if __name__ == "__main__":
         p.add_argument("--on-road", default="")
         p.add_argument("--ego-drop", type=float, default=0.0)
         p.add_argument("--on-weight", default="", help="KEY=VALUE:W,... draw weights of the pool rows from tab.npz string keys")
+        p.add_argument("--on-cap-scene", type=float, default=0.0, help="max share of one scene (tab `log`) in the cap subset's draws (0 = off)")
+        p.add_argument("--on-cap-in", default="", help="KEY=VALUE: the pool rows the cap applies to (default: all pool rows)")
         p.add_argument("--ego-drop-speed", type=float, default=0.0, help="share of non-anchor rows with the ego speed history zeroed (training only)")
         for t in ("lead", "curve", "stop"):
             p.add_argument(f"--lon-{t}", type=float, default=0.0, help=f"weight of on_lonsafe's {t} term on the pool rows (0 = off)")
@@ -415,10 +515,15 @@ if __name__ == "__main__":
         p.add_argument("--rm-drop", type=float, default=0.25)
     p = sub.add_parser("zero")
     p.add_argument("--init", required=True), p.add_argument("--tag", required=True)
+    sub.add_parser("capcheck")
+    p = sub.add_parser("draws")
+    p.add_argument("--on", required=True), p.add_argument("--on-weight", default="")
+    p.add_argument("--on-cap-scene", type=float, default=0.0), p.add_argument("--on-cap-in", default="")
     a = ap.parse_args()
-    if a.cmd == "zero":
-        cmd_zero(a)
+    if a.cmd in ("zero", "capcheck", "draws"):
+        dict(zero=cmd_zero, capcheck=cmd_capcheck, draws=cmd_draws)[a.cmd](a)
         raise SystemExit(0)
+    assert not a.on_cap_scene or (a.on and 0 < a.on_cap_scene < 1), "--on-cap-scene: needs --on, a share in (0, 1)"
     assert a.ego_drop == 0, "ROUTE-MEM: no --ego-drop (--ego-drop-speed drops the speed history only)"
     assert 0 <= a.ego_drop_speed < 1, "--ego-drop-speed is a share in [0, 1)"
     if a.agent_on_only and not a.on:                                 # agent hinge on pool rows only, and no pool: no row carries it (RB0 / RNONE)
