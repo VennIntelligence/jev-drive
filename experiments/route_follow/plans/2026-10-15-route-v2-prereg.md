@@ -233,3 +233,17 @@ the pairs at step 1 000: 0.12 / 0.23 / 0.22 / 0.55 / 0.22 m. GPU tonight ~1.15 c
 - Unrelated fix the same night: `rm_train.lane_prep` built the lane-change tables (and their ordered map) whatever the flags; arm b of
   Amendment 6 (`--lane-lam` without `--lc-cf`) crashed at the first line that read them; they are now built only with `--lc-cf`
   (the flags-off path never calls lane_prep, so the identity of Amendment 3 stands).
+
+## Amendment 8 (reads, 2026-10-15 02:20)
+
+- Arm c pilot (RV2cPJ-L18-s0, results/v2gate/RV2cPJ-L18-s0.md; pool on1_L18RB0J = 17 429 S + 12 176 junction CF rows, 13 pool draws per 64
+  with ~6 CF, normal rows 45): G-swap 0.626 / 0.961 PASS (base 0.176 / 0.691), G-rely 0.031 PASS, G-ST 0.008 / 0.062 PASS, G-over 0.0056
+  PASS, G-slot PASS, **G-real 0.5521 FAIL** (line 0.5385; base 0.5285; without memory 0.5719), G-LC 0.109 (not required). By Amendment 7's
+  rule arm c stops: not launched. The junction rows teach route switching on a gentle round too, at RB-F's dev-ADE cost (+0.024 here).
+  Not run, a candidate if wanted: the same arm at a lower `--on-lon-lam` (10 -> 3) or a smaller CF share, read on the same gates.
+- Arm a held 460 / 18 (results/v2held/: held_raw.txt, confirm.md, follow.md; report job with RSG-L18-s0 / s1): zeros 33 / 33 (RSG 34 / 34),
+  paired 452 vs RSG-L18-s<seed>: zeros -1.0 [-7.0, +4.9] / -1.0 [-5.6, +3.3], at-fault +0.0 [-4.9, +4.9] / -1.0 [-4.4, +2.3], mean score
+  +0.000 / +0.003, GT -0.013 / -0.020 m; turn completion (24 held turns) 75.0 % / 62.5 % vs 66.7 % / 58.3 % (+8.3 [+0.0, +20.8] /
+  +4.2 [+0.0, +11.1] pp). H1 passes (CI upper +4.9 / +3.3 zeros, +4.9 / +2.3 at-fault, line <= +5); H2 (>= base + 3 turns, seed mean) not
+  met (+2 / +1 turns). G-serve of the ordered memory on the held chunk 0: 1 368 / 1 368 decisions per seed, masks equal, max point
+  difference 1.6e-4 m, d_turn equal 100 %, trav within 5e-4 m.
