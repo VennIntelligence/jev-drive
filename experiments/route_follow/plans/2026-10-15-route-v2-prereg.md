@@ -247,3 +247,12 @@ the pairs at step 1 000: 0.12 / 0.23 / 0.22 / 0.55 / 0.22 m. GPU tonight ~1.15 c
   +4.2 [+0.0, +11.1] pp). H1 passes (CI upper +4.9 / +3.3 zeros, +4.9 / +2.3 at-fault, line <= +5); H2 (>= base + 3 turns, seed mean) not
   met (+2 / +1 turns). G-serve of the ordered memory on the held chunk 0: 1 368 / 1 368 decisions per seed, masks equal, max point
   difference 1.6e-4 m, d_turn equal 100 %, trav within 5e-4 m.
+
+## Amendment 9 (coordinator, 2026-10-15 02:25, before these reads): arm c weight / share variants
+
+Three 1 000-step pilots of arm c (seed 0, init RSG-L18-s0, batch 64), same seven gates: (i) `--on-lon-lam 3` (route-hinge weight 3, CF
+share as in Amendment 7: on-k 13, `pool=cf:1.3213`, ~6 CF of 64); (ii) weight 10, CF share halved: `--on-k 10 --on-weight pool=cf:0.6607`
+(~3 CF + 7 S of 64; at batch 128: on-k 19 = 13 S + 6 CF); (iii) weight 3 and share halved. A variant qualifies if G-swap >= 0.50 / >= 0.70
+AND G-real <= base + 0.01 (0.5385) AND G-ST / G-over / G-rely pass; if several, the highest G-swap ratio. One qualifies -> arm c with it,
+2 seeds (`rf_v2.sh train c RSG-L18-s<seed> <seed> <variant flags>`, PRIO 10, held chain + served check), into the final combined report;
+none -> report and stop.

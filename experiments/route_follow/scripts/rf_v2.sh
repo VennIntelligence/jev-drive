@@ -11,7 +11,7 @@
 #   [AFTER=ids] [PSFX=s] rf_v2.sh pilot a|b|c|n|o|l [extra flags]   RV2<arm>P<s>-L18-s0 (n = no flag, o = --rm-order, l = --lc-cf: diagnostics;
 #                                       the control pilot of Amendment 3 ran as arm "c" before arm c existed: RV2cP-L18-s0 = no flag): 1 000 steps, seed 0, batch 64 (on-k 7, lc-k 4), gentle schedule, init
 #                                       RSG-L18-s0, the arm's flags, then rf_v2gate.py vs RSG-L18-s0
-#   rf_v2.sh train a|b <base> <seed>    RV2a-L18-s<seed> / RV2b-L18-s<seed> (TAG_PREFIX overrides RV2a / RV2b): 2 500 gentle steps on <base>
+#   rf_v2.sh train a|b|c <base> <seed> [extra flags]    RV2a-L18-s<seed> / RV2b-L18-s<seed> (TAG_PREFIX overrides RV2a / RV2b): 2 500 gentle steps on <base>
 #                                       (--allow-init), the gate vs <base>, then the held 460 / 18-decision read (rm_chain.sh read, 6 chunks);
 #                                       read ids -> $O/reads.txt, "<tag> <base>" -> $O/bases.txt; rm_build served on chunk 0 (G-serve:
 #                                       the served ordered memory equals the offline rebuild -> runs/route_mem/served/<tag>.json)
@@ -63,7 +63,7 @@ gate)  # gate <tag> [base]: the gate alone (re-read after a gate fix)
 train)
   A=$2; B=$3; s=$4; F=$(arm $A) || exit 1; T=${TAG_PREFIX:-RV2$A}-L18-s$s
   [[ -f $CK/$B/ckpt-final.pt ]] || { echo "no base $B"; exit 1; }
-  t=$(sub v2-train-$T --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 -- bash $ME body-train $T $B $s 2500 128 $(onk $A 13) $F --lc-k 8 --allow-init) || exit 1
+  t=$(sub v2-train-$T --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 -- bash $ME body-train $T $B $s 2500 128 $(onk $A 13) $F --lc-k 8 "${@:5}" --allow-init) || exit 1
   sub v2-gate-$T --after $t --vram 20 --cpu 4 --ram 48 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_v2gate.py --tag $T --base $B > /dev/null || exit 1
   for i in 0 1 2 3 4 5; do
     sub v2-read-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
