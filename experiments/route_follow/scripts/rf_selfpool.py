@@ -491,7 +491,7 @@ def cmd_pack(a):
             pick.append(i)
     figs = Path(a.fig_dir)
     figs.mkdir(parents=True, exist_ok=True)
-    fig = figs / a.fig
+    fig = figs / (a.fig or f"self_bev_{a.name}.png")                      # pack called directly: the same default as build
     bev(fig, [dict(E=E[i], eo=eo[i], path=T["path"][sel[i]], po=T["path_ok"][sel[i]], lab=LB[i], f=F_in[i], B=T["box"][sel[i], 0], bo=T["box_ok"][sel[i], 0],
                    served=T["poses"][sel[i]], fut=fut[i],
                    title=f"{sc[i][7:15]} {bk('D')[i]} {bk('cell')[i]} k {kk[i]} {X['phase'][i]} ({X['dent'][i]:+.0f} m to entry), push {X['push'][i]}\n"
