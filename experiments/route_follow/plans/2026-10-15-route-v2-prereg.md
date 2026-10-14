@@ -256,3 +256,15 @@ share as in Amendment 7: on-k 13, `pool=cf:1.3213`, ~6 CF of 64); (ii) weight 10
 AND G-real <= base + 0.01 (0.5385) AND G-ST / G-over / G-rely pass; if several, the highest G-swap ratio. One qualifies -> arm c with it,
 2 seeds (`rf_v2.sh train c RSG-L18-s<seed> <seed> <variant flags>`, PRIO 10, held chain + served check), into the final combined report;
 none -> report and stop.
+
+## Amendment 10 (Amendment 9's reads, 2026-10-15 02:55)
+
+| arm c pilot | G-swap >= 0.50 / 0.70 | G-real <= 0.5385 | G-rely | G-ST | G-over | qualifies |
+|:--|:--|--:|--:|:--|--:|:--|
+| Amendment 7: weight 10, ~6 CF / 64 | 0.626 / 0.961 | **0.5521** | 0.031 | 0.008 / 0.062 | 0.0056 | no (G-real) |
+| (i) weight 3, ~6 CF / 64 | 0.554 / 0.956 | **0.5408** | 0.029 | 0.007 / 0.048 | 0.0056 | no (G-real, +0.0023 over) |
+| (ii) weight 10, ~3 CF / 64 | 0.544 / 0.922 | **0.5404** | 0.025 | 0.007 / 0.052 | 0.0056 | no (G-real, +0.0019 over) |
+| (iii) weight 3, ~3 CF / 64 | **0.411** / 0.753 | 0.5324 | 0.022 | 0.006 / 0.039 | 0.0067 | no (G-swap ratio) |
+
+No variant qualifies; arm c is not launched (rule of Amendment 9). The trade is smooth: halving either the weight or the share keeps
+G-swap above 0.54 and cuts the dev-ADE cost from +0.024 to +0.012; halving both keeps the cost at +0.004 but the switch at 0.41.
