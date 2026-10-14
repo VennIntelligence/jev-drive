@@ -15,6 +15,10 @@ numpy (Tokyo), stored run roots read, never written. Runner: rf_v2pai.sh.
   tgcheck --run <root> --ref <identity root>   the turn-gain switch as logged: on / off recomputed with turn_gain.decide from the logged rmem
          and plan (5 / 4-decimal logs: near-threshold flips are listed), served = branch_poses(plan, g) on every on-decision, and every plan
          before a session's first on-decision equal to the identity's at the same k (the switch changes nothing until it fires)
+  spins  --a LABEL=<root> --b LABEL=<root> --pkl-b <rf_pai_follow pkl>[:<label>] --turns <b's turns.json> --out <md>   v2 prereg
+         Amendment 15: handoff (k 17 .. 27) plan / speed / route-memory state of b vs a per scene, split by b's handoff spins (rf_pai281's
+         rule), first controller divergence, pre-handoff plan difference (identical inputs), and the same fields for b's new non-turn zeros
+         at k 17 and 3 s before their zero event -> <md> + <md>.json
   table  --turns <json> --a <identity label> --b <label> [--strict <file>] [--exam <file>] --md <md>   paired per-scene table and counts
          (completions on the strict turns, on the exam turn scenes; new zeros on the non-turn part = b zero, a not, the event before the entry
          or the scene has no strict turn; offroad ones among them: the turn-gain stop rule).
@@ -187,6 +191,147 @@ def tgcheck(a):
           f"plans up to the first on-decision vs identity: {pre_n} compared, max |diff| {pre_max:.1e}")
 
 
+K0 = 17                                                     # the dev preset's force-GT ends: the first decision the policy controls
+
+
+def tracks(root):
+    """{scene: (t (n,), xy (n, 2))} controller traces of a pai_eval root."""
+    import csv
+    out = {}
+    for sim in glob.glob(os.path.join(root, "runs", "*", "sim")):
+        f = os.path.join(sim, "aggregate", "results-summary.json")
+        if not os.path.exists(f):
+            continue
+        for r in json.load(open(f))["rollouts"]:
+            c = os.path.join(sim, "controller", f"alpasim_controller_{r['rollout_id']}.csv")
+            if os.path.exists(c):
+                rows = list(csv.DictReader(open(c)))
+                out[r["clipgt_id"]] = (np.array([float(x["timestamp_us"]) for x in rows]), np.array([[float(x["x"]), float(x["y"])] for x in rows]))
+    return out
+
+
+def dec_state(rec, tr, pose):
+    """One inference record -> plan / speed / memory fields (module docstring, spins)."""
+    import rmem as RM
+    P = np.asarray(rec["poses"], float)
+    xy = np.r_[[[0.0, 0.0]], P[:, :2]]
+    seg = np.hypot(*np.diff(xy, axis=0).T)
+    hd = lambda i: float(np.degrees(np.unwrap(np.r_[0.0, P[:, 2]])[i + 1]))  # noqa: E731
+    o = dict(k=rec["k"], arc2=float(seg[:4].sum()), arc4=float(seg.sum()), y1=float(P[1, 1]), y2=float(P[3, 1]), y4=float(P[7, 1]),
+             h1=hd(1), h2=hd(3), h4=hd(7), v=float(10 * np.hypot(rec["ego"][4], rec["ego"][5])))
+    t0, an = int(rec["t0"]), np.array(rec["anchor"], float)
+    ts = sorted(t for t in tr.routes if t <= t0 and t in pose)
+    o["n_msg"] = len(ts)
+    f = np.asarray(rec.get("rmem", []), float)
+    if len(f):
+        v = RM.pts(f)[:, 0] > 0.5
+        o.update(n_valid=int(v.sum()), first_slot=float(RM.OFFS[v.argmax()]) if v.any() else None)
+    B, Q, last = [], [], None
+    for t in ts:
+        wp = tr.routes[t][np.isfinite(tr.routes[t]).all(1)]
+        Q.append(pose[t][:2])
+        if len(wp):
+            B.append(RM.to_local(pose[t], wp))
+            last = pose[t]
+    o["gap"] = None
+    if B:
+        info = {}
+        RM.memory_o(B, an, last, RM.travelled(Q, an), info)
+        o["gap"] = float(info["s_geo"] - info["s_e"])
+    return o
+
+
+def spins(a):
+    import rmem as RM
+    import rf_pai281 as P281
+    (la, ra), (lb, rb) = (x.split("=", 1) for x in (a.a, a.b))
+    S = {la: P281.read(ra), lb: P281.read(rb)}
+    TR = {la: tracks(ra), lb: tracks(rb)}
+    DR = {}
+    for lab, root in ((la, ra), (lb, rb)):
+        DR[lab] = {}
+        for se, (sc, routes, recs) in drive_recs(root).items():
+            tr, pose = RM.Tracker(order=True), {int(r["ts"]): np.array(r["pose"], float) for r in routes}
+            for r in routes:
+                tr.add(int(r["ts"]), r["wp"])
+            DR[lab][sc] = (tr, pose, {r["k"]: r for r in recs}, min((int(r["ts"]) for r in routes), default=None))
+    f, src = (a.pkl_b.rsplit(":", 1) + [lb])[:2] if ":" in a.pkl_b else (a.pkl_b, lb)
+    TZ = {sc["scene"]: sc["rolls"][src].get("tz") for sc in pickle.load(open(f, "rb"))["scenes"] if src in sc["rolls"]}
+    T = json.loads(Path(a.turns).read_text())
+    by = {(r["label"], r["scene"]): r for r in T["rows"]}
+    tl = next(l for (l, _) in by if l != "rsg")
+    newz = [s for s in T["scenes"] if not by[(tl, s)].get("missing") and by[(tl, s)]["score"] == 0 and by[("rsg", s)]["score"] > 0
+            and (not by[("rsg", s)].get("turn") or by[(tl, s)].get("st_zero") is None or by[(tl, s)]["st_zero"] < by[("rsg", s)]["entry"])]
+    scenes = sorted(set(S[la]) & set(S[lb]) & set(DR[la]) & set(DR[lb]))
+    rows = []
+    for sc in scenes:
+        r = dict(scene=sc, spin_a=S[la][sc]["spin"], spin_b=S[lb][sc]["spin"], score_a=S[la][sc]["score"], score_b=S[lb][sc]["score"],
+                 kind_b=S[lb][sc]["kind"], new_zero=sc in newz)
+        (ta, xa), (tb, xb) = TR[la][sc], TR[lb][sc]
+        m = min(len(ta), len(tb))
+        dv = np.flatnonzero(np.hypot(*(xa[:m] - xb[:m]).T) > 0.05)
+        Rb = DR[lb][sc][2]
+        r["div_t"] = float((tb[dv[0]] - tb[0]) * 1e-6) if len(dv) else None
+        r["div_k"] = next((k for k in sorted(Rb) if Rb[k]["t0"] >= tb[dv[0]]), None) if len(dv) else None
+        pre = [k for k in range(K0) if k in Rb and k in DR[la][sc][2]]
+        Ra = DR[la][sc][2]
+        r["pre_dmax"] = max((float(np.abs(np.array(Rb[k]["poses"]) - np.array(Ra[k]["poses"])).max()) for k in pre), default=None)
+        r["first_msg_rel_k17"] = ((DR[lb][sc][3] - Rb[K0]["t0"]) * 1e-6) if (DR[lb][sc][3] is not None and K0 in Rb) else None
+        for lab in (la, lb):
+            tr, pose, R, _ = DR[lab][sc]
+            r[lab] = [dec_state(R[k], tr, pose) for k in range(K0, K0 + 11) if k in R]
+        if r["new_zero"] and TZ.get(sc) is not None:
+            k3 = max((k for k in Rb if Rb[k]["t0"] <= TZ[sc] - 3e6), default=None)
+            if k3 is not None:
+                r["at_zero_m3"] = {lab: dec_state(DR[lab][sc][2][k3], *DR[lab][sc][:2]) for lab in (la, lb) if k3 in DR[lab][sc][2]}
+        rows.append(r)
+    Path(a.out).with_suffix(".json").write_text(json.dumps(dict(a=la, b=lb, rows=rows), indent=1, default=float))
+
+    def k17(r, lab):
+        return r[lab][0] if r[lab] and r[lab][0]["k"] == K0 else None
+
+    def dd(r):
+        A, B = k17(r, la), k17(r, lb)
+        return (abs(B["h2"] - A["h2"]), abs(B["y2"] - A["y2"])) if A and B else (np.nan, np.nan)
+
+    def mx(r, key):
+        return max((abs(b[key] - x[key]) for b, x in zip(r[lb], r[la]) if b["k"] == x["k"]), default=np.nan)
+
+    L = [f"# Handoff-spin reading (route v2 prereg Amendment 15): {lb} vs {la} on PAI 281", "",
+         f"Roots `{rb}` / `{ra}`; spins by rf_pai281's rule; handoff k {K0} (force-GT ends; before it both drive the log). rf_v2pai.py spins.", ""]
+    for name, grp in (("spin under " + lb, [r for r in rows if r["spin_b"]]), ("no spin under " + lb, [r for r in rows if not r["spin_b"]])):
+        D = np.array([dd(r) for r in grp])
+        pol = int(((D[:, 0] >= 10) | (D[:, 1] >= 0.5)).sum()) if len(D) else 0
+        L += [f"## {name}: {len(grp)} scenes", "",
+              f"- k {K0} plan differs (|dh2| >= 10 deg or |dy2| >= 0.5 m): {pol} / {len(grp)}; median |dh2| {np.nanmedian(D[:, 0]) if len(D) else np.nan:.1f} deg, "
+              f"|dy2| {np.nanmedian(D[:, 1]) if len(D) else np.nan:.2f} m; median max over k {K0}-{K0 + 10} |dh2| {np.nanmedian([mx(r, 'h2') for r in grp]) if grp else np.nan:.1f} deg",
+              f"- pre-handoff (k 0-16, identical inputs) max |plan diff| median {np.nanmedian([r['pre_dmax'] if r['pre_dmax'] is not None else np.nan for r in grp]) if grp else np.nan:.2f} m; "
+              f"tracks diverge (> 0.05 m) at median k {np.nanmedian([r['div_k'] if r['div_k'] is not None else np.nan for r in grp]) if grp else np.nan:.0f}",
+              f"- first route message before the k {K0} decision: {sum(1 for r in grp if r['first_msg_rel_k17'] is not None and r['first_msg_rel_k17'] <= 0)} / {len(grp)}; "
+              f"ordered start >= 5 m from projection start at k {K0} ({lb}): {sum(1 for r in grp if k17(r, lb) and k17(r, lb)['gap'] is not None and abs(k17(r, lb)['gap']) >= 5)} / {len(grp)}", ""]
+    hdr = ("| scene | spin a/b | score a / b | k17 h2 a / b (deg) | k17 y2 a / b (m) | k17 arc4 a / b | k17 v | pre-k17 max diff m | "
+           "tracks diverge k | first msg rel k17 (s) | msgs k17 | valid a / b | first slot a / b | gap b (m) |")
+    sep = "|:--|:--|:--|:--|:--|:--|--:|--:|--:|--:|--:|:--|:--|--:|"
+
+    def line(r, A, B, extra=""):
+        g = lambda x, k, f="{:+.1f}": "" if x is None or x.get(k) is None else f.format(x[k])  # noqa: E731
+        return (f"| {r['scene'][7:15]}{extra} | {int(r['spin_a'])}/{int(r['spin_b'])} | {r['score_a']:.2f} / {r['score_b']:.2f} {r['kind_b']} | "
+                f"{g(A, 'h2')} / {g(B, 'h2')} | {g(A, 'y2', '{:+.2f}')} / {g(B, 'y2', '{:+.2f}')} | {g(A, 'arc4', '{:.1f}')} / {g(B, 'arc4', '{:.1f}')} | "
+                f"{g(B, 'v', '{:.1f}')} | {fmt(r['pre_dmax'], '{:.2f}')} | {r['div_k'] if r['div_k'] is not None else ''} | {fmt(r['first_msg_rel_k17'], '{:+.1f}')} | "
+                f"{g(B, 'n_msg', '{:d}')} | {g(A, 'n_valid', '{:d}')} / {g(B, 'n_valid', '{:d}')} | {g(A, 'first_slot', '{:.0f}')} / {g(B, 'first_slot', '{:.0f}')} | {g(B, 'gap', '{:+.1f}')} |")
+    L += [f"## Scenes with a spin under either label (k {K0} fields)", "", hdr, sep]
+    L += [line(r, k17(r, la), k17(r, lb)) for r in rows if r["spin_a"] or r["spin_b"]]
+    L += ["", f"## {lb}'s new non-turn zeros ({len(newz)}): at k {K0}, then 3 s before the zero event (row marked -3s)", "", hdr, sep]
+    for r in rows:
+        if r["new_zero"]:
+            L.append(line(r, k17(r, la), k17(r, lb)))
+            z = r.get("at_zero_m3", {})
+            if z:
+                L.append(line(r, z.get(la), z.get(lb), " -3s"))
+    Path(a.out).write_text("\n".join(L) + "\n")
+    print("\n".join(L[:20]))
+
+
 def fmt(x, f="{:+.1f}"):
     return "" if x is None or (isinstance(x, float) and not np.isfinite(x)) else f.format(x)
 
@@ -254,7 +399,7 @@ def table(a):
     J = {k: v for k, v in cnt.items()}
     J.update(strict_n=len(strict), exam_n=len(ex), exam_done_a=exd(A), exam_done_b=exd(B), mean_a=float(np.nanmean(sa)), mean_b=float(np.nanmean(sb)),
              paired=float(x.mean()) if len(x) else None)
-    Path(a.md).with_suffix(".json").write_text(json.dumps(J, indent=1))
+    Path(a.md).with_suffix(".counts.json").write_text(json.dumps(J, indent=1))       # not .json: turns.md sits next to turns.json
     print("\n".join(S))
 
 
@@ -272,6 +417,12 @@ def main():
     s = sp.add_parser("tgcheck")
     s.add_argument("--run", required=True)
     s.add_argument("--ref", required=True)
+    s = sp.add_parser("spins")
+    s.add_argument("--a", required=True)
+    s.add_argument("--b", required=True)
+    s.add_argument("--pkl-b", required=True)
+    s.add_argument("--turns", required=True)
+    s.add_argument("--out", required=True)
     s = sp.add_parser("table")
     s.add_argument("--turns", required=True)
     s.add_argument("--a", required=True)
@@ -280,7 +431,7 @@ def main():
     s.add_argument("--exam", default="")
     s.add_argument("--md", required=True)
     a = ap.parse_args()
-    {"served": served, "turns": turns, "tgcheck": tgcheck, "table": table}[a.cmd](a)
+    {"served": served, "turns": turns, "tgcheck": tgcheck, "spins": spins, "table": table}[a.cmd](a)
 
 
 if __name__ == "__main__":
