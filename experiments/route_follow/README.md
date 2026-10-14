@@ -65,6 +65,9 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [results/p4_self/pool_dev](results/p4_self/pool_dev/README.md): the P4 row builder `scripts/rf_selfpool.py` (self-branch rollouts ->
   pool `on1_SELF`, gates G-in / route / rmem / road / speed / r1 / shape / crawl) run on the P3 archive: 666 rows, 13 branches, 6 scenes (dev
   only, exam scenes inside); figure `figs/self_bev_dev.png` (red = realized branch demo vs green = the policy's own plan).
+- [results/p4_self/train_dry.md](results/p4_self/train_dry.md): the phase 2 training arm RSGSELF-L18 (RSG-L18 + SELF rows as `both` rows in
+  `--on-mode mixed`, 30 % of draws, per-scene cap `rm_train --on-cap-scene`), chain `scripts/rf_self_train.sh`, lateral guard + ladder table
+  `scripts/rf_selfread.py`; dry run on the dev pool (W, cap shares, mixcheck pass, 3.3 it/s), estimate ~1.5 h, the submit command.
 - [research/route-follow-offroad.md](../../research/route-follow-offroad.md): why route-hinge arms go offroad; look at table 1's
   "right-turn inside" column (17-21 vs 1-2) and the H1-H5 verdicts (labels on road, memory not drifted, over-rotation in small right turns).
 - [research/route-follow/loss-audit.md](../../research/route-follow/loss-audit.md): loss audit of the turn objective (verdict: objective, not
