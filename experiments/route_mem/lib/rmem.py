@@ -54,6 +54,17 @@ OFFS_O = OFFS[:N_PT_O]
 NSC = 3                                          # d_turn / 60, d_turn known, travelled / 100
 DIM_O = N_PT_O * NF + NSC
 TURN_DEG, TURN_CAP, TRAV_CAP = 30.0, 60.0, 200.0
+LAT_S = (10.0, 20.0, 30.0, 40.0)                 # --rm-latfeat: arcs of the lateral-offset features
+LAT_I = [int(np.flatnonzero(OFFS == s_)[0]) for s_ in LAT_S]
+
+
+def lat_feats(P):
+    """Ordered point block (B, N_PT, NF) tensor -> (B, 8): the route's signed lateral offset (left +, ego heading frame) at 10 / 20 / 30 / 40 m
+    of route arc / 10, clipped to +-4, then the 4 validity bits (an invalid slot gives 0, 0). A function of the fed block, so the served
+    and trained values are the same numbers."""
+    import torch
+    v = (P[:, LAT_I, 0] > 0.5).float()
+    return torch.cat([(P[:, LAT_I, 2] * 2.0).clamp(-4, 4) * v, v], 1)
 SERVE_ORDER = False                              # Tracker() default in a driver: set from the served checkpoint's sidecar (head_order)
 
 
@@ -291,7 +302,7 @@ def _torch():
     import parity_adapter as PA
 
     class RouteHead(nn.Module):
-        def __init__(self, d=128, layers=2, heads=4, T=32, D=512, order=False):
+        def __init__(self, d=128, layers=2, heads=4, T=32, D=512, order=False, latfeat=False):
             super().__init__()
             self.n_pt = N_PT_O if order else N_PT
             self.dim = DIM_O if order else DIM
@@ -310,6 +321,12 @@ def _torch():
                 self.sc = nn.Linear(NSC, d)
                 nn.init.zeros_(self.sc.weight)
                 nn.init.zeros_(self.sc.bias)
+            self.latfeat = bool(latfeat)
+            if self.latfeat:                                 # --rm-latfeat: lateral offsets of the route at 10 / 20 / 30 / 40 m, zero-initialised
+                assert order, "latfeat: the ordered layout (slots at their true arc)"
+                self.lat = nn.Linear(2 * len(LAT_I), d)
+                nn.init.zeros_(self.lat.weight)
+                nn.init.zeros_(self.lat.bias)
 
         def forward(self, ego, f):
             B, d = ego.shape[0], self.q.shape[1]
@@ -319,6 +336,8 @@ def _torch():
             else:
                 P = f.float()[:, :self.n_pt * NF].reshape(B, self.n_pt, NF)
                 e = self.ego(ego[:, 1:].float()) + self.sc(f.float()[:, self.n_pt * NF:])
+                if self.latfeat:
+                    e = e + self.lat(lat_feats(P))
             pad = P[..., 0] < 0.5
             mem = torch.cat([self.null.expand(B, 1, d), e[:, None], self.pt(P) + self.pos[None]], 1)
             pad = torch.cat([torch.zeros(B, 2, dtype=torch.bool, device=ego.device), pad], 1)
@@ -360,15 +379,19 @@ def attach(model, **kw):
     return model
 
 
-def order_state(sd: dict) -> dict:
-    """An old-layout adapter state (with `route.*`) -> the ordered head's: every tensor kept (the same 40 slots), the scalar map at 0."""
+def order_state(sd: dict, latfeat: bool = False) -> dict:
+    """An old-layout adapter state (with `route.*`) -> the ordered head's: every tensor kept (the same 40 slots), the scalar map at 0
+    (and the --rm-latfeat map at 0)."""
     import torch
     out = dict(sd)
     k = next(k for k in sd if k.endswith("route.pos"))
-    pre = k[:-len("pos")]
+    pre, d = k[:-len("pos")], sd[k].shape[1]
     if pre + "sc.weight" not in out:
-        out[pre + "sc.weight"] = torch.zeros(sd[k].shape[1], NSC, dtype=sd[k].dtype)
-        out[pre + "sc.bias"] = torch.zeros(sd[k].shape[1], dtype=sd[k].dtype)
+        out[pre + "sc.weight"] = torch.zeros(d, NSC, dtype=sd[k].dtype)
+        out[pre + "sc.bias"] = torch.zeros(d, dtype=sd[k].dtype)
+    if latfeat and pre + "lat.weight" not in out:
+        out[pre + "lat.weight"] = torch.zeros(d, 2 * len(LAT_I), dtype=sd[k].dtype)
+        out[pre + "lat.bias"] = torch.zeros(d, dtype=sd[k].dtype)
     return out
 
 

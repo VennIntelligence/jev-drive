@@ -53,7 +53,7 @@ sys.path[:0] = [str(REPO), str(REPO / "lib"), str(REPO / "experiments/op_parity/
 import rmem as RM  # noqa: E402
 
 TI = (2, 3)
-LINES = dict(rely=0.01, swap_ratio=0.50, swap_side=0.70, st=0.10, lc=0.50, real=0.01)
+LINES = dict(rely=0.01, swap_ratio=0.50, swap_side=0.70, st=0.10, lc=0.30, real=0.01)   # lc 0.50 -> 0.30: prereg Amendment 4
 
 
 def feed(order, f, fo):
@@ -223,7 +223,7 @@ def main(a):
                            pass_=bool(v(p["swap_ratio"]) >= LINES["swap_ratio"] and v(p["swap_side"]) >= LINES["swap_side"])),
             "G-ST": dict(value=[v(p["st_shift"]), v(p["st_straight"])], line="<= 0.10 / <= 0.10", base=[v(b["st_shift"]), v(b["st_straight"])],
                          pass_=bool(v(p["st_shift"]) <= LINES["st"] and v(p["st_straight"]) <= LINES["st"])),
-            "G-LC": dict(value=v(p["lc_swing2"]), line=">= 0.50", base=v(b["lc_swing2"]), pass_=bool(v(p["lc_swing2"]) >= LINES["lc"])),
+            "G-LC": dict(value=v(p["lc_swing2"]), line=">= 0.30", base=v(b["lc_swing2"]), pass_=bool(v(p["lc_swing2"]) >= LINES["lc"])),
             "G-real": dict(value=p["ade"], line=f"<= {b['ade'] + LINES['real']:.4f}", base=b["ade"], pass_=bool(p["ade"] <= b["ade"] + LINES["real"])),
             "G-over": dict(value=v(p["over_share"]), line=f"<= {v(b['over_share']):.4f}", base=v(b["over_share"]), pass_=bool(v(p["over_share"]) <= v(b["over_share"]))),
         }

@@ -176,3 +176,18 @@ coordinator: (1) launch V2a as the slot-defect fix only (the lane-change term is
 pilot each at `--lc-lam 3` and with the stay-lane hinge's gradient kept off the trunk (branch + adapter only), ~0.1 card-h each, before
 deciding on `--lc-cf`; (3) G-swap needs the junction counterfactual pool (on1_CF j0 / j1) in the arm, which no arm has. GPU used tonight
 ~0.85 card-h (2 identity runs, 10 pilot trainings incl. two crashed at step 0, 10 gate reads).
+
+## Amendment 4 (coordinator, before these reads, 2026-10-15 01:25): lane-change weight / gradient pilots, `--rm-latfeat`, G-LC 0.30
+
+- Pilots (1 000 steps, seed 0, batch 64, init RSG-L18-s0, arm a = `--rm-order --lc-cf` + the flags; all seven gates each):
+  (i) `--lc-lam 3` (gradient through the whole trainable net, as before); (ii) `--lc-lam 3 --lc-adapter-only` (the stay rows' term
+  enters through torch.autograd.grad w.r.t. the adapter + route branch only, added to their .grad after the main backward; the shared
+  network gets nothing from the stay rows); (iii) (ii) at `--lc-lam 10`; (iv) (ii) + `--rm-latfeat`.
+- `--rm-latfeat` (coordinator's explanation: a 3.5 m parallel shift is a small change of a 40-point polyline for a zero-init decoder,
+  a junction alternative ~85 m): the route's signed lateral offset (left +, ego heading frame) at 10 / 20 / 30 / 40 m of route arc =
+  the ordered slots' y / 10 (clip +-4) and 4 validity bits (an invalid slot -> 0, 0), through a zero-initialised linear map added to the
+  branch's ego token. Computed inside the head from the fed ordered block (`rmem.lat_feats`), so no feature file changes and the served
+  numbers are the trained ones; needs `--rm-order`; sidecar head `latfeat`.
+- G-LC line relaxed from 0.50 to 0.30 m (the registered 0.50 exceeds what a 2 s window shows of a 4 s lane change). An LC setting
+  qualifies for a third arm only if G-LC >= 0.30 AND G-rely, G-real and G-ST all pass. G-swap is reported, not required (no arm has
+  junction counterfactual rows; Amendment 3).

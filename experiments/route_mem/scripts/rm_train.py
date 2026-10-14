@@ -83,7 +83,11 @@ Route v2 (2026-10-15, experiments/route_follow/plans/2026-10-15-route-v2-prereg.
             rows (its memory never dropped nor faked; imitation of the log, the lane hinge on its real memory) and a stay-lane row is appended
             (same camera tokens, ego row with the counterfactual command, memory = the stay-lane route; no imitation, no other term: the lane
             hinge to the stay-lane label polyline with --lc-dz and the over-turn guard, summed / non-anchor rows x --lc-lam (default
-            --lane-lam, else 10)).
+            --lane-lam, else 10)). --lc-adapter-only: that term's gradient (torch.autograd.grad of its scaled value) is added to the adapter
+            and route-branch parameters only; the shared network gets none from the stay rows (Amendment 4).
+  --rm-latfeat      (with --rm-order) the route's signed lateral offset at 10 / 20 / 30 / 40 m of route arc (the ordered slots' y), / 10 with
+            validity bits, through a zero-initialised map added to the branch's ego token (rmem.lat_feats; computed inside the head from the
+            fed block, so nothing is rebuilt and the served values are the trained ones; sidecar head `latfeat`).
 
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
@@ -196,7 +200,13 @@ def head_of(a) -> dict:
     """The branch config: HEAD, + order=True with --rm-order (route v2); `rely` reads it from the checkpoint's sidecar."""
     if a.rm_from and RM.has_branch(a.rm_from):
         a.rm_order = RM.head_order(a.rm_from)
-    return dict(HEAD, order=True) if getattr(a, "rm_order", False) else dict(HEAD)
+    if a.rm_from and RM.has_branch(a.rm_from):
+        a.rm_latfeat = bool(json.loads((__import__("pp_train").proot("runs", a.rm_from) / RM.SIDECAR).read_text()).get("head", {}).get("latfeat", False))
+    h = dict(HEAD, order=True) if getattr(a, "rm_order", False) else dict(HEAD)
+    if getattr(a, "rm_latfeat", False):
+        assert h.get("order"), "--rm-latfeat needs --rm-order"
+        h["latfeat"] = True
+    return h
 
 
 def build(a, dev):
@@ -214,10 +224,10 @@ def build(a, dev):
         ck = torch.load(T.proot("runs", src) / "ckpt-final.pt", map_location="cpu", weights_only=False)
         sd = json.loads((T.proot("runs", src) / RM.SIDECAR).read_text()) if RM.has_branch(src) else {}
         sh = sd.get("head", HEAD)
-        assert {k: v for k, v in sh.items() if k != "order"} == HEAD, f"{src}: branch {sh} != {HEAD}"
+        assert {k: v for k, v in sh.items() if k not in ("order", "latfeat")} == HEAD, f"{src}: branch {sh} != {HEAD}"
         assert sh.get("order", False) <= head.get("order", False), f"{src}: an ordered-layout branch needs --rm-order"
-        if head.get("order") and not sh.get("order"):                 # route v2: an old-layout init converted to the ordered head
-            ck["model"]["parity"] = RM.order_state(ck["model"]["parity"])
+        if (head.get("order") and not sh.get("order")) or (head.get("latfeat") and not sh.get("latfeat")):   # route v2: converted init
+            ck["model"]["parity"] = RM.order_state(ck["model"]["parity"], head.get("latfeat", False))
             ns.converted = True
         ns.model.load_state(ck["model"])
         st = ns.model.adapter.state_dict()
@@ -502,6 +512,7 @@ def cmd_train(a):
         nrng = np.random.default_rng([cfg.seed, 0, 97])              # negatives
         lrng = np.random.default_rng([cfg.seed, 0, 101])             # lane-change pairs
         pi_t = torch.as_tensor(S.pi, device=dev)
+        ap_lc = [p_ for p_ in new + rp if p_.requires_grad]          # --lc-adapter-only: the adapter (incl. the route branch)
     rng = np.random.default_rng([cfg.seed, 0])
     hrng = np.random.default_rng([cfg.seed, 0, 43])
     orng = np.random.default_rng([cfg.seed, 0, 53])
@@ -658,11 +669,19 @@ def cmd_train(a):
                     os_ = over_turn(xyp[n_main:], Pl, LC_GRID0, a.lane_over_deg)
                     Ls["lc"], Ls["lc_over"] = hs.sum() / nA, os_.sum() / nA
                     Ls["lc_swing2"] = (xyp[n_main:, 3, 1] - xyp[nN - k_lc:nN, 3, 1]).abs().mean().detach()
-                    total = total + lc_lam * Ls["lc"] + over_lam * Ls["lc_over"]
+                    lc_term = lc_lam * Ls["lc"] + over_lam * Ls["lc_over"]
+                    if a.lc_adapter_only:                             # the stay rows' gradient reaches the adapter + route branch only
+                        g_lc = torch.autograd.grad(scaler.scale(lc_term), ap_lc, retain_graph=True, allow_unused=True)
+                    else:
+                        total = total + lc_term
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {q: float(v) for q, v in Ls.items()} }")
             opt.zero_grad(set_to_none=True)
             scaler.scale(total).backward()
+            if lc_on and a.lc_adapter_only:
+                for p_, g_ in zip(ap_lc, g_lc):
+                    if g_ is not None:
+                        p_.grad = g_ if p_.grad is None else p_.grad + g_
             scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(base + new + rp, 1.0)
             scaler.step(opt)
@@ -808,6 +827,8 @@ if __name__ == "__main__":
         p.add_argument("--lc-k", type=int, default=8)
         p.add_argument("--lc-lam", type=float, default=None)
         p.add_argument("--lc-dz", type=float, default=0.5)
+        p.add_argument("--lc-adapter-only", action="store_true", help="the stay-lane rows' gradient reaches the adapter + route branch only")
+        p.add_argument("--rm-latfeat", action="store_true", help="route v2: the route's lateral offset at 10 / 20 / 30 / 40 m into the branch")
     p = sub.add_parser("zero")
     p.add_argument("--init", required=True), p.add_argument("--tag", required=True)
     sub.add_parser("capcheck")
