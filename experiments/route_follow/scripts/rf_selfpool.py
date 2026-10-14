@@ -12,7 +12,8 @@ read.json (P3: rf_branch.py read; P4: rf_p4.py read / merge) and an rf_p4.py pla
            decision-293 shape gate G-shape on its realized track (rf_shape.track_shape / speeds on the plan route, cut at the first zero
            event; thresholds = the plan's `gate`: class p95 kappa / dkappa (all-turn p95 for classes with < 5 human turns), a_lat <= all-turn
            p95 4.42, realized entry speed <= v_e + 1); <work>/failing.json: the failing rollouts per scene (a later critic line). Refuses
-           hard_exam / control scenes unless --allow-exam (dev only).
+           hard_exam / control scenes unless --allow-exam (dev only). --cells / --d (P4 round 1, prereg Amendment 3): only completing
+           rollouts of these cells / handovers become branches (the selection is recorded in branches.json `filter`).
   sim      (AlpaSim env)  per branch (= one session): onp_rows.scene_rows (the inputs replayed through pai_driver from rollout.asl, labels)
            with c1_extract's metrics read pinned to the session (a P4 launch runs several sessions of one scene) -> <stage>/<key>.npz,
            key = <scene>~<session[:8]>; then rf_pait.route_one on it (the runtime's route generator at the row anchors: route0_d, labels)
@@ -128,7 +129,7 @@ def cmd_select(a):
     assert not [r for r in a.roots if (Path(r) / "NO_ROWS").exists()], "read-only root (NO_ROWS): never rows"
     idx = run_index(a.roots)
     exam = scenes_in(EXAM / "hard_exam.txt", EXAM / "control.txt")
-    keep, failing, skipped = [], {}, []
+    keep, failing, skipped, filtered = [], {}, [], []
     for r in rows:
         sc, rid = r["scene"], r["rid"]
         c = cell_of(r)
@@ -138,6 +139,9 @@ def cmd_select(a):
         if not r.get("done"):
             failing.setdefault(sc, []).append(dict(rid=rid, **c, score=r.get("score"), zero=r.get("zero") or r.get("end"), t_zero=r.get("t_zero"),
                                                   run=idx.get(rid, (None,))[0], read=r["_read"]))
+            continue
+        if (a.cells and c["cell"] not in a.cells.split(",")) or (a.d and c["D"] not in a.d.split(",")):
+            filtered.append((sc, rid, c["cell"], c["D"]))
             continue
         if rid not in idx:
             skipped.append((sc, rid, "run dir not found under --roots"))
@@ -164,13 +168,15 @@ def cmd_select(a):
                          gate_parts=gk, g_shape=all(gk.values()), read=r["_read"]))
     W = Path(a.work)
     W.mkdir(parents=True, exist_ok=True)
-    out = dict(plan=str(a.plan), shape=str(a.shape), roots=[str(x) for x in a.roots], read=[str(x) for x in a.read], branches=keep, skipped=skipped)
+    out = dict(plan=str(a.plan), shape=str(a.shape), roots=[str(x) for x in a.roots], read=[str(x) for x in a.read], branches=keep, skipped=skipped,
+               filter=dict(cells=a.cells, d=a.d, completing_filtered_out=len(filtered)))
     (W / "branches.json").write_text(json.dumps(out, indent=1))
     (W / "failing.json").write_text(json.dumps(dict(note="failing rollouts (read.json done false) per scene, for a later critic line; no rows built",
                                                     scenes=failing), indent=1))
     n_f = sum(map(len, failing.values()))
     print(f"select: {len(keep)} completing rollouts over {len({b['scene'] for b in keep})} scenes, G-shape passes {sum(b['g_shape'] for b in keep)}; "
-          f"{n_f} failing rollouts over {len(failing)} scenes -> failing.json; skipped {len(skipped)}: {skipped[:5]}")
+          f"{n_f} failing rollouts over {len(failing)} scenes -> failing.json; skipped {len(skipped)}: {skipped[:5]}; "
+          f"completing rollouts outside --cells {a.cells or '-'} / --d {a.d or '-'}: {len(filtered)}")
 
 
 # ---------------------------------------------------------------- sim (AlpaSim env): rows stage 1 + route generator
@@ -550,7 +556,7 @@ def cmd_build(a):
     with Run("route_follow", f"selfpool-{a.name}", config=vars(a)) as run:
         common = ["--work", a.work]
         sh([sys.executable, __file__, "select", *common, "--plan", a.plan, "--shape", a.shape, "--roots", *a.roots, "--read", *a.read]
-           + (["--allow-exam"] if a.allow_exam else []))
+           + (["--allow-exam"] if a.allow_exam else []) + (["--cells", a.cells] if a.cells else []) + (["--d", a.d] if a.d else []))
         Bs = jload(W / "branches.json")["branches"]
         img = sorted({b["image"] for b in Bs if b.get("image")}) or ["jev-alpasim:p2h10-f-s0-6f3d05d1"]
         assert len(img) == 1, f"branches served from several images {img}: build them separately"
@@ -592,6 +598,8 @@ if __name__ == "__main__":
         p.add_argument("--plan", default="", help="rf_p4.py plan.json (default <root>/plan.json)")
         p.add_argument("--shape", default=str(SHAPE))
         p.add_argument("--allow-exam", action="store_true", help="dev only: hard_exam / control scenes allowed (the pool is marked)")
+        p.add_argument("--cells", default="", help="only completing rollouts of these cells become branches (comma list, e.g. g1.25-raw); failing.json stays complete")
+        p.add_argument("--d", default="", help="only completing rollouts at these handovers become branches (comma list of D40 .. D0, Did = identity)")
     for c in ("pack", "build"):
         p = sub.choices[c]
         p.add_argument("--name", default="SELF"), p.add_argument("--out", default="", help="gates / coverage / branches copies")

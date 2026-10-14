@@ -217,3 +217,97 @@ per-rollout times in results/p4_self/smoke.md; the staged launch (1, then 10 sce
   at 12 rollouts per card (not measured) **~2.5-4.5 h** for the 27 jobs; restated after stage 10. Disk peak ~160 GB, final ~115 GB.
 - **Scene cache:** 15 of the 27 scenes are on the box; the other 12 are being copied (hf-mirror fetch on the box + Tokyo rsync);
   `fanout` submits only cached scenes, so `fanout ... all` is repeated after the copies finish.
+
+## Amendment 3 (2026-10-14 evening, after the coverage read, before any row pool of this round is built): one training round under an inconclusive verdict
+
+**Why.** The coverage line read **10 / 27 = 37 %: INCONCLUSIVE** (results/p4_self/README.md). This prereg says "coverage only: no rows, no
+training". The **user decided on 2026-10-14 to run one training round anyway**. A later instruction from the user ("take the longitudinal out")
+narrows the rows to the plan's own speed. Everything below is fixed before any pool of this round is built, any checkpoint is trained, or any
+read is made.
+
+**Rows (pool `on1_SELF4R`, rf_selfpool.py `build --cells g1.25-raw --d D40,D0`, P4 root `$DATA_DIR/runs/route_follow/p4/run`, its read.json,
+plan.json and served worktree `<root>/code`).**
+- Completing cells (P2's rule) that pass the full shape gate G-shape as registered (decision 293, the plan's `gate`), with **lateral gain
+  1.25**, **handover D in {40, 0}** and **longitudinal profile raw only**. Raw is the plan's own speed with s_k = 1, so no imposed deceleration
+  profile enters the targets: the longitudinal part of the target is the policy's own realized speed. Then the row gates (G-crawl as written).
+- Cells with src = self and src = log both count. They are reported separately.
+- The identity (Did) does not count: it is no branch. D30 / D20 / D10 do not count.
+- **Masking the longitudinal part: not available.** The imitation term of `both` rows is pp_train's `dist` on the 8-pose target (x, y, yaw).
+  Neither on_train.py nor rm_train.py has a per-row option that keeps only the cross-track part. on_lon.timing_only is the opposite: it keeps
+  the along-heading part, and it is used only by the `--on-lon` terms. So **no RSGSELF-lat variant**: that would need new trainer code, which
+  the user's instruction rules out. Raw-only rows are the way the longitudinal is taken out.
+- **Expected count, and the threshold for "too few".** From the per-branch table of the existing on1_SELF (same builder, same gates, all
+  cells; results/p4_self/pool_self/pool_gates_SELF.json):
+  - The selection gives 763 rows, 12 branches and 8 turns: 741 rows with src = self, 22 with src = log.
+  - By D: D40 7 branches / 476 rows (232d240e 78, 268949d2 43, 8a365ac2 55, a4be61d6 77, c6c01d25 60, ddc3e8df 79, ea468790 84).
+    D0 5 / 287 (1e8e939e 22 [log], 232d240e 79, 268949d2 39, 8a365ac2 63, ea468790 84).
+  - **Threshold: >= 500 rows and >= 6 turns.** Below it, the **registered fallback** is all three profiles of gain 1.25 at D40 / D0
+    (expected 2 088 rows, 30 branches, 9 turns). Since no mask exists, the fallback is unmasked and is reported as the fallback.
+  - The rebuilt pool's own count decides.
+- **Exam scenes are never rows here.** rf_selfpool refuses hard_exam / control scenes. The 27 scenes were asserted disjoint from hard_exam,
+  exam_turn26 and control when the plan was made.
+- **Known before the build (pre-check on the existing on1_SELF rows of this selection):** G-route is 98.7 % of rows <= 0.05 m (max 0.055 m),
+  below its 99 % line. The fallback is 98.85 % (max 0.17 m). The gates are checked on the rebuilt pool. **A gate that fails by the letter
+  stops the round before any training, and is reported.** No gate is loosened here. G-route guards only the route-hinge label (`route.npz`
+  poly). This recipe has no `--on-lon`, so it never reads that label, but any waiver is the user's decision, not this amendment's.
+
+**Arms (box, `rf_self_train.sh`, pool jobs only).**
+- **RSGSELF-L18-s0, -s1:** RSG-L18's recipe (`--init RB0-F-s0 --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1
+  --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4`, `--on-k 13 --on-split alpasim_nuplan/onpol-train`).
+  - The pool is on1_L18RB0 (`self` rows) + on1_SELF4R (`both` rows) in `--on-mode mixed`, merged as `on1_RSGSELF`.
+  - The SELF rows get 30 % of the pool draws (W from rf_self_train.sh merge).
+  - Per-scene cap inside the SELF rows: **CAP = 0.20**. The registered default 0.10 is infeasible on 8 scenes (8 x 0.10 < 1); 0.20 is 1.6x
+    the uniform 0.125, the same ratio as the dry run's 0.25 on 6 scenes. On the fallback (9 scenes) CAP stays 0.20.
+  - The anti-lateral-ratchet guard is as written (rf_selfread.py lat, <= +0.02 m).
+- **Same-steps no-rows control: RSGCTL-L18-s0.** This is RSG-L18's recipe with no SELF rows (`--on on1_L18RB0 --on-mode self`, seed 0,
+  2 500 steps), trained now on the current code.
+  - It is compared with the stored RSG-L18-s0 weights (`on_train.py ident`).
+  - If bit-identical, its nuPlan reads are the stored RSG-L18-s0 reads and are not rerun.
+  - Otherwise it is read on held 460 and public 1491 like the arms, and its difference from RSG-L18-s0 is the run-to-run noise yardstick.
+  - Either way, it gets the PAI read below.
+- **Staged launch:** RSGSELF-L18-s0 first (mixcheck, then training). Its training gates are checked before s1, the control and any read:
+  - final dev ADE <= RSG-L18-s0's 0.528 + 0.010 m;
+  - route reliance, junction masked minus on, >= +0.0125 m (half of RSG-L18-s0's +0.025) with CI lower > 0;
+  - loss finite and not diverging; the SELF rows' on/ade falling.
+
+**Reads, with the settings of the stored RSG-L18 reads so they pair.**
+- Held 460 @18 decisions: rm_chain submit-read.
+- Public 1491 @10 decisions guard: 10 ol_chain readlist chunks.
+- Turn completion on held 460 (24 turns, rf_follow.py: completion = crossing exit + 10 m within 2.5 m of the route before a zero event).
+- The PAI identity read on the 27 P4 train turns: rf_p4.sh fanout with `TAG=<ckpt> P4_ONLY=none`, so phase A only, the same instrument and
+  the same box; P2's completion rule. The reference is RSG-L18-s0's phase A in the P4 root (9 / 27).
+- Exam scenes are never read here: hard_exam 131, exam_turn26 and control are not part of the 27. PASS1 / PASS2 on Tokyo come later.
+
+**Lines (RSGSELF-L18 = seed mean of s0 and s1; control = RSG-L18-s{0,1} stored, with RSGCTL-L18-s0 as the reproduction check).**
+- **L1, turn completion.**
+  - L1a, the 27 PAI train turns (in-sample states for the 8 row turns): **pass** if both seeds complete >= control + 3 turns; **fail** if
+    the seed mean is <= the control; otherwise inconclusive. Here the control is RSGCTL-L18-s0's PAI read, and the stored RSG-L18-s0 phase A
+    is reported next to it. The 8 row turns and the other 19 are reported apart.
+  - L1b, held nuPlan turns, not among the 27: seed-mean completion minus RSG-L18's seed mean, paired with a log-clustered CI. **Pass** if
+    CI lower > 0, **fail** if CI upper < 0, otherwise inconclusive (expected at n = 24).
+  - L1 passes if L1a passes and L1b does not fail.
+- **L2, held 460 zeros and mean score.** The tolerance is the larger of the stored seed spread (zeros |34 - 34| = 0, mean |0.8656 - 0.8676|
+  = 0.002) and RSGCTL-L18-s0's difference from RSG-L18-s0 (0 if bit-identical).
+  - **Pass** if seed-mean zeros <= RSG-L18 + tolerance and seed-mean score >= RSG-L18 - tolerance.
+  - Worse beyond the tolerance with a paired CI that excludes 0: **fail**. Worse beyond it with a CI that includes 0: inconclusive.
+- **L3, public 1491 guard (the guard RBSG2 failed in d286).** Both parts are needed for a pass; either failing is a **fail**.
+  - (a) Seed-mean at-fault zeros and mean score against YR10m10-F-s0 inside, or better than, RSG-L18's stored CI: at-fault zeros
+    <= -1.4 (stored -11.5 [-22.1, -1.4]) and mean score >= +0.0085 (stored +0.0158 [+0.0085, +0.0235]).
+  - (b) The ladder tie-in: at-fault zeros <= RSG-L18's 38.5 + 5 and zeros <= RSG-L18's 45 + 5.
+- **L4, GT lateral.** On held 460, the seed-mean lateral distance to the GT trajectory (held.py `latgt`) is not worse than RSG-L18's by
+  more than 0.05 m. On public, where only dist_to_gt_trajectory is stored, the same 0.05 m applies to the GT distance. **Fail** if either
+  is exceeded.
+- **What refutes the round.** "Self-branch rows of the policy's own junction states teach the turn" is refuted if any of these holds:
+  - L1a fails: the trained checkpoints do not complete more of the very turns their rows came from;
+  - L1a passes only on the 8 row turns with no change on the other 19 (memorising, not a skill);
+  - L2 or L3 fails: the rows cost nuPlan driving, as RBSG2's did.
+  The round counts as a candidate only if L1-L4 all pass. Nothing here goes to the Tokyo exam by itself.
+
+**Estimate.**
+- Pool build ~10 min (the on1_SELF build took 9 min).
+- Merge < 1 min, mixcheck ~1 min.
+- Training: 3 x ~14 min (2 at once after stage 1).
+- Reads: 2-3 checkpoints x (6 held + 10 public chunks), ~60-90 min with the 3 cards free; PAI 3 x 27 phase-A rollouts, ~30-45 min,
+  run in parallel with them.
+- Report ~5 min.
+- **Total ~1.5-2.5 h, about 8-12 card-hours.**
