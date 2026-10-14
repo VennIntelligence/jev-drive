@@ -268,3 +268,18 @@ none -> report and stop.
 
 No variant qualifies; arm c is not launched (rule of Amendment 9). The trade is smooth: halving either the weight or the share keeps
 G-swap above 0.54 and cuts the dev-ADE cost from +0.024 to +0.012; halving both keeps the cost at +0.004 but the switch at 0.41.
+
+## Amendment 11 (combined held read of arms a and b, 2026-10-15 03:00; results/v2held/ now holds both arms)
+
+| held 460 / 18 | zeros | paired zeros vs RSG-L18-s<seed> [95 % CI] | at-fault vs RSG | GT (m) | turns completed / 24 | turns vs RSG (pp) |
+|:--|--:|:--|:--|--:|:--|:--|
+| RV2a-L18-s0 | 33 | -1.0 [-7.0, +4.9] | +0.0 [-4.9, +4.9] | 1.122 | 18 (75.0 %) | +8.3 |
+| RV2a-L18-s1 | 33 | -1.0 [-5.6, +3.3] | -1.0 [-4.4, +2.3] | 1.124 | 15 (62.5 %) | +4.2 |
+| RV2b-L18-s0 | 32 | -2.0 [-6.7, +2.9] | -1.0 [-5.2, +3.5] | 1.097 | 16 (66.7 %) | +0.0 |
+| RV2b-L18-s1 | 30 | -4.0 [-9.6, +1.0] | -1.0 [-6.8, +4.8] | 1.131 | 17 (70.8 %) | +12.5 |
+| RSG-L18-s0 / s1 | 34 / 34 | | | 1.135 / 1.144 | 16 / 14 | |
+
+H1 passes for both arms (every CI upper bound <= +5). H2 (seed mean >= base + 3 turns) is not met: arm a +2 / +1 turns (mean +1.5),
+arm b +0 / +3 (mean +1.5). Offline gates of the trained checkpoints (vs their base): RV2b-L18-s0 / s1 pass G-rely / G-ST / G-real /
+G-over / G-slot, fail G-swap (0.18 / 0.19) and G-LC (0.08), as the pilots predicted. G-serve of the ordered memory: 1 368 / 1 368
+decisions per seed for both arms (max point difference 5.3e-4 m). Next registered step (not run here): the public 1491 guard (H3).
