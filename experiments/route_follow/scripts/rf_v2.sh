@@ -7,7 +7,7 @@
 #                                       on1_L18RB0, on1_CF / on1_CFdev) ; G-slot memory of the held cases (rf_v2gate slotmem)
 #   rf_v2.sh ident                      bit identity with every flag off: 50 eager steps of RSG-L18-s0's command with this code and with the
 #                                       code before route v2 (git worktree at $BASE_REV), then on_train ident + the dev ADE of both logs
-#   [AFTER=ids] [PSFX=s] rf_v2.sh pilot a|b|c|o|l   RV2<arm>P<s>-L18-s0 (c = no flag, o = --rm-order, l = --lc-cf: diagnostics): 1 000 steps, seed 0, batch 64 (on-k 7, lc-k 4), gentle schedule, init
+#   [AFTER=ids] [PSFX=s] rf_v2.sh pilot a|b|c|o|l [extra flags]   RV2<arm>P<s>-L18-s0 (c = no flag, o = --rm-order, l = --lc-cf: diagnostics): 1 000 steps, seed 0, batch 64 (on-k 7, lc-k 4), gentle schedule, init
 #                                       RSG-L18-s0, the arm's flags, then rf_v2gate.py vs RSG-L18-s0
 #   rf_v2.sh train a|b <base> <seed>    RV2a-L18-s<seed> / RV2b-L18-s<seed> (TAG_PREFIX overrides RV2a / RV2b): 2 500 gentle steps on <base>
 #                                       (--allow-init), the gate vs <base>, then the held 460 / 18-decision read (rm_chain.sh read, 6 chunks);
@@ -46,7 +46,7 @@ ident)
       grep -h 'dev @' $DATA_DIR/runs/route_mem/train-RV2ID-new-s0/*/log.txt $DATA_DIR/runs/route_mem/train-RV2ID-old-s0/*/log.txt | tee $O/ident_dev.txt; exit \$rc" ;;
 pilot)
   A=$2; F=$(arm $A) || exit 1; T=RV2${A}P${PSFX:-}-L18-s0
-  t=$(sub v2-pilot-$A${PSFX:-} ${AFTER:+--after $AFTER} --train --vram 24 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train $T RSG-L18-s0 0 1000 64 7 $F --lc-k 4 --allow-init) || exit 1
+  t=$(sub v2-pilot-$A${PSFX:-} ${AFTER:+--after $AFTER} --train --vram 24 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train $T RSG-L18-s0 0 1000 64 7 $F --lc-k 4 "${@:3}" --allow-init) || exit 1
   sub v2-gate-$T --after $t --vram 20 --cpu 4 --ram 48 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_v2gate.py --tag $T --base RSG-L18-s0 > /dev/null || exit 1
   tail -2 $O/jobs.txt ;;
 gate)  # gate <tag> [base]: the gate alone (re-read after a gate fix)
