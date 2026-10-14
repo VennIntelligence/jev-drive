@@ -373,6 +373,8 @@ def lane_prep(a, ns, dev):
         r = z["row"].astype(np.int64) + offs[d]
         assert (S.tab["names"][r] == z["token"]).all(), f"{d}: cf rows vs Store"
         junction[r[np.isin(z["cls"], ["j0", "j1"])]] = True
+        if not getattr(a, "lc_cf", False):                            # the lane-change tables only with --lc-cf (each flag stands alone)
+            continue
         m = (z["cls"] == "lc") & z["ok"] & np.isfinite(z["poly"]).all(-1).any(-1)
         m &= np.array([x in tr_set for x in r.tolist()])
         if not m.any():
