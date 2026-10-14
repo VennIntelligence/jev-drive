@@ -66,10 +66,11 @@ Route v2 (2026-10-15, experiments/route_follow/plans/2026-10-15-route-v2-prereg.
             near-field lateral hinge to the CARRIED route on every non-anchor row whose memory is fed (pool rows included): the row's memory
             polyline in the input layout (2 m slots, -6 .. +72 m) as target, on_route.near (shape-only lateral gradient, poses covered by a
             segment), relu(distance - dz), pose weights 0 / 2 / 2 / 2 / 1 / 1 / 1 / 1 at 0.5 .. 4 s (1.0 - 2.0 s weight 2); summed / non-anchor
-            rows x L. Negatives: a share --lane-neg of the eligible rows (non-anchor, memory fed, the +0 m point valid, not a --lc-cf row), own rng
+            rows x L. Negatives: a share --lane-neg of the eligible rows (non-anchor, memory fed, a valid slot at >= 0 m, not a --lc-cf row), own rng
             stream [seed, 0, 97], get a FAKE input memory: the same route shifted sideways by +-shift m (same direction), or (half of the rows
-            that qualify: NAVSIM rows whose route turns >= 15 deg within 40 m and whose token has no alternative-exit counterfactual in
-            runs/route_follow/cf/rows, i.e. no junction choice) the straight continuation of the route from the ego's projection; the hinge
+            that qualify: NAVSIM rows whose route turns >= 15 deg within 40 m (against the +0 m slot's heading, or the ego's in the near gap)
+            and whose token has no alternative-exit counterfactual in runs/route_follow/cf/rows, i.e. no junction choice) a straight route
+            (from the +0 m slot along its heading, or from the ego along its own heading in the near gap); the hinge
             target stays the ORIGINAL route and the imitation target is unchanged. Over-turn guard: relu(s (psi_2s - h_route(a_2s)) - 10 deg)
             (radians) with h_route the target route's heading at the plan's own arc length at 2 s and s the side of the route's turn between 0
             and that arc (|turn| >= 5 deg, else 0): fires when the plan at 2 s points more than 10 deg further into the turn than the route;
@@ -309,14 +310,16 @@ def fake_shift(f, s):
 
 
 def fake_straight(f):
-    """Old-layout features (n, DIM) with the +0 m point valid -> the straight continuation of the route from that point (points at offsets
-    >= 0 keep their validity, move onto the line, take its heading; points behind the ego unchanged)."""
+    """A point block (n, DIM) -> a straight route: from the +0 m slot along its heading when that slot is valid, else (the near gap) from the
+    ego along its own heading; slots at offsets >= 0 keep their validity, move onto the line and take its heading; slots behind unchanged."""
     import torch
     P = f.float().view(-1, RM.N_PT, RM.NF).clone()
     v = P[..., 0] > 0.5
     o = torch.as_tensor(RM.OFFS, device=f.device, dtype=torch.float32)[None, RM.I0:]
-    c, sn = P[:, RM.I0, 3:4], P[:, RM.I0, 4:5]
-    x, y = P[:, RM.I0, 1:2] * 20.0 + o * c, P[:, RM.I0, 2:3] * 20.0 + o * sn
+    g = v[:, RM.I0:RM.I0 + 1]
+    one, zero = torch.ones_like(P[:, RM.I0, 3:4]), torch.zeros_like(P[:, RM.I0, 3:4])
+    c, sn = torch.where(g, P[:, RM.I0, 3:4], one), torch.where(g, P[:, RM.I0, 4:5], zero)
+    x, y = torch.where(g, P[:, RM.I0, 1:2] * 20.0, zero) + o * c, torch.where(g, P[:, RM.I0, 2:3] * 20.0, zero) + o * sn
     vv = v[:, RM.I0:]
     P[:, RM.I0:, 1] = torch.where(vv, x / 20.0, torch.zeros_like(x))
     P[:, RM.I0:, 2] = torch.where(vv, (y / 20.0).clamp(-4, 4), torch.zeros_like(y))
@@ -335,9 +338,10 @@ def lane_prep(a, ns, dev):
     fo = ns.f_old.float().view(n, RM.N_PT, RM.NF).cpu().numpy()
     v = fo[..., 0] > 0.5
     h = np.arctan2(fo[..., 4], fo[..., 3])
-    dh = np.abs((h - h[:, RM.I0:RM.I0 + 1] + np.pi) % (2 * np.pi) - np.pi)
+    ref = np.where(v[:, RM.I0], h[:, RM.I0], 0.0)[:, None]                 # the near gap: the ego's own heading
+    dh = np.abs((h - ref + np.pi) % (2 * np.pi) - np.pi)
     sel = v & (np.arange(RM.N_PT) >= RM.I0) & (RM.OFFS <= 40.0)
-    curved = v[:, RM.I0] & (np.where(sel, dh, 0).max(1) >= np.radians(CURVE_DEG))
+    curved = sel.any(1) & (np.where(sel, dh, 0).max(1) >= np.radians(CURVE_DEG))
     rows_dir = data_dir() / "runs/route_follow/cf/rows"
     nav = [d for d in ns.cfg.data if d.startswith("navtrain_full.")]
     offs, o = {}, 0
@@ -610,7 +614,7 @@ def cmd_train(a):
                 nm = n_main if lc_on else len(r)
                 rm_ = rows[:nm]
                 fo_ = ns.f_old[rm_]
-                elig = (~anchor[:nm]) & keep[:nm] & (fo_[:, RM.I0 * RM.NF] > 0.5)
+                elig = (~anchor[:nm]) & keep[:nm] & (fo_.view(nm, RM.N_PT, RM.NF)[:, RM.I0:, 0] > 0.5).any(1)   # a valid slot ahead
                 if lc_on:
                     elig[nN - k_lc:nN] = False
                 u = torch.as_tensor(nrng.random((nm, 3)), device=dev, dtype=torch.float32)

@@ -7,7 +7,7 @@
 #                                       on1_L18RB0, on1_CF / on1_CFdev) ; G-slot memory of the held cases (rf_v2gate slotmem)
 #   rf_v2.sh ident                      bit identity with every flag off: 50 eager steps of RSG-L18-s0's command with this code and with the
 #                                       code before route v2 (git worktree at $BASE_REV), then on_train ident + the dev ADE of both logs
-#   [AFTER=ids] rf_v2.sh pilot a|b      RV2aP-L18-s0 / RV2bP-L18-s0: 1 000 steps, seed 0, batch 64 (on-k 7, lc-k 4), gentle schedule, init
+#   [AFTER=ids] [PSFX=s] rf_v2.sh pilot a|b|c|o|l   RV2<arm>P<s>-L18-s0 (c = no flag, o = --rm-order, l = --lc-cf: diagnostics): 1 000 steps, seed 0, batch 64 (on-k 7, lc-k 4), gentle schedule, init
 #                                       RSG-L18-s0, the arm's flags, then rf_v2gate.py vs RSG-L18-s0
 #   rf_v2.sh train a|b <base> <seed>    RV2a-L18-s<seed> / RV2b-L18-s<seed> (TAG_PREFIX overrides RV2a / RV2b): 2 500 gentle steps on <base>
 #                                       (--allow-init), the gate vs <base>, then the held 460 / 18-decision read (rm_chain.sh read, 6 chunks);
@@ -23,7 +23,7 @@ PRIO=${PRIO:-6}; BASE_REV=${BASE_REV:-6551f10b}
 # RSG-L18-s0's command (meta.json argv) without --init / --steps / --seed / --tag
 REC="--warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-split alpasim_nuplan/onpol-train --on-mode self --on on1_L18RB0"
 ARM_a="--rm-order --lc-cf"; ARM_b="--rm-order --lc-cf --lane-lam 10 --lane-dz 0.5 --lane-neg 0.2"
-arm() { case $1 in a) echo "$ARM_a" ;; b) echo "$ARM_b" ;; *) echo "arm a | b" >&2; exit 2 ;; esac; }
+arm() { case $1 in a) echo "$ARM_a" ;; b) echo "$ARM_b" ;; c) echo "" ;; o) echo "--rm-order" ;; l) echo "--lc-cf" ;; *) echo "arm a | b (| c o l: diagnostics)" >&2; exit 2 ;; esac; }
 D12=$(for i in $(seq 0 11); do printf "navtrain_full.s%dof12 " $i; done)
 mkdir -p $O/pool
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner route-follow --name "$name" --tries 1 --priority $PRIO --no-check \
@@ -45,10 +45,13 @@ ident)
   sub v2-ident-cmp --after $a,$b --vram 0.5 --cpu 1 --ram 8 --timeout-h 1 -- bash -c "$TR experiments/onpol_nuplan/scripts/on_train.py ident --a RV2ID-new-s0 --b RV2ID-old-s0 --out $O/ident.json; rc=\$?; \
       grep -h 'dev @' $DATA_DIR/runs/route_mem/train-RV2ID-new-s0/*/log.txt $DATA_DIR/runs/route_mem/train-RV2ID-old-s0/*/log.txt | tee $O/ident_dev.txt; exit \$rc" ;;
 pilot)
-  A=$2; F=$(arm $A) || exit 1; T=RV2${A}P-L18-s0
-  t=$(sub v2-pilot-$A ${AFTER:+--after $AFTER} --train --vram 24 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train $T RSG-L18-s0 0 1000 64 7 $F --lc-k 4 --allow-init) || exit 1
+  A=$2; F=$(arm $A) || exit 1; T=RV2${A}P${PSFX:-}-L18-s0
+  t=$(sub v2-pilot-$A${PSFX:-} ${AFTER:+--after $AFTER} --train --vram 24 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train $T RSG-L18-s0 0 1000 64 7 $F --lc-k 4 --allow-init) || exit 1
   sub v2-gate-$T --after $t --vram 20 --cpu 4 --ram 48 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_v2gate.py --tag $T --base RSG-L18-s0 > /dev/null || exit 1
   tail -2 $O/jobs.txt ;;
+gate)  # gate <tag> [base]: the gate alone (re-read after a gate fix)
+  sub v2-gate-$2-r$(date +%H%M) --vram 20 --cpu 4 --ram 48 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_v2gate.py --tag $2 --base ${3:-RSG-L18-s0} > /dev/null || exit 1
+  tail -1 $O/jobs.txt ;;
 train)
   A=$2; B=$3; s=$4; F=$(arm $A) || exit 1; T=${TAG_PREFIX:-RV2$A}-L18-s$s
   [[ -f $CK/$B/ckpt-final.pt ]] || { echo "no base $B"; exit 1; }

@@ -13,7 +13,7 @@ G-slot (a property of the input layout, not of a model): `rf_v2gate.py slotmem` 
 
 Rows. dev = the dev rows (navsim/op-parity-full-dev) of the 12 navtrain shards with a logged future; junction = the route enters a junction
 within 40 m (rm_build jdist), straight = no junction within 60 m and < 5 deg route turn over 40 m (rm_train.rely's split); curve = no junction
-within 60 m and >= 15 deg route turn over 40 m. CF = the pool on1_CFdev (rf_cfpool pack, dev logs, never trained): junction rows j0 / j1 and
+within 60 m and >= 15 deg route turn over 40 m. Both with a valid slot ahead in both layouts (the fakes need one). CF = the pool on1_CFdev (rf_cfpool pack, dev logs, never trained): junction rows j0 / j1 and
 lane-change rows lc with their real twin (rf_gates' lookup).
 
   G-rely   junction dev rows: mean ADE(memory masked) - mean ADE(memory on) >= 0.01 m (pilot)
@@ -110,7 +110,7 @@ def main(a):
         JD, TU, LOG, FUT, F0 = cat("jd"), cat("tu"), cat("log"), cat("fut"), cat("fo")[:, :RM.DIM]
         J = np.isfinite(JD) & (JD <= 40)
         ST = ~np.isfinite(JD) & np.isfinite(TU) & (TU < 5)
-        V0 = (RM.pts(F0)[:, RM.I0, 0] > 0.5) & (RM.pts(cat("f"))[:, RM.I0, 0] > 0.5)         # the +0 m slot valid in both layouts
+        V0 = (RM.pts(F0)[:, RM.I0:, 0] > 0.5).any(1) & (RM.pts(cat("f"))[:, RM.I0:, 0] > 0.5).any(1)   # a valid slot ahead in both layouts
         CU = ~np.isfinite(JD) & np.isfinite(TU) & (TU >= 15) & V0
         run.info(f"dev rows {len(JD)} ({len(set(LOG.tolist()))} logs): junction {J.sum()}, straight {ST.sum()}, curve {CU.sum()}")
         rng = np.random.default_rng(0)
