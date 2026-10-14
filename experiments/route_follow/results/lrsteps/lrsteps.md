@@ -11,7 +11,15 @@
 | (0.3, 1250) | RSGlr30n1250-L18-s0 | 27 | +1.0 [-4.0, +6.0] | 20 | -1.0 [-6.6, +3.9] | 6 / 14 / 7 | 0.8758 | -0.0050 [-0.0163, +0.0059] | 1.105 | 0.5300 |
 | (0.3, 2500) | RSGlr30n2500-L18-s0 | 27 | +1.0 [-4.4, +6.0] | 20 | -1.0 [-5.6, +3.4] | 4 / 16 / 8 | 0.8781 | -0.0028 [-0.0130, +0.0087] | 1.127 | 0.5273 |
 | (0.3, 5000) | RSGlr30n5000-L18-s0 | 27 | +1.0 [-3.4, +5.4] | 23 | +2.0 [-3.6, +7.3] | 9 / 14 / 5 | 0.8828 | +0.0019 [-0.0076, +0.0122] | 1.130 | 0.5252 |
+| (0.03, 5000) s1 | RSGlr03n5000-L18-s1 | 21 | -5.0 [-11.6, +1.0] | 16 | -5.0 [-11.5, +1.0] | 3 / 13 / 5 | 0.8958 | +0.0149 [-0.0007, +0.0334] | 1.179 | 0.5270 |
 | RSG-L18-s1 (seed reference) | RSG-L18-s1 | 26 | +0.0 [-4.7, +4.9] | 19 | -2.0 [-7.0, +2.6] | 6 / 13 / 8 | 0.8830 | +0.0021 [-0.0097, +0.0137] | 1.144 | 0.5270 |
+
+Seed means and same-seed pairs (A - B on the 452, log-clustered 95 % CI):
+
+| A - B | zeros | at-fault | mean score | GT (m) |
+|:--|:--|:--|:--|:--|
+| RSGlr03n5000-L18 - RSG-L18 | -4.0 [-9.0, +0.0] | -3.0 [-7.8, +1.1] | +0.0134 [+0.0031, +0.0258] | +0.042 [-0.004, +0.097] |
+| RSGlr03n5000-L18-s1 - RSG-L18-s1 | -5.0 [-12.0, +1.2] | -3.0 [-9.9, +3.9] | +0.0129 [-0.0011, +0.0274] | +0.035 [-0.021, +0.094] |
 
 Held-452 zeros, 3 x 3 (rows lr-scale, columns steps):
 
@@ -37,5 +45,14 @@ Rule (prereg): fewest zeros = lr03n5000 (RSGlr03n5000-L18-s0, 23), d vs RSG-L18-
 - Reproduction check (first cell, RSGlr10n5000): the on-policy row hash at step 100 equals RSG-L18-s0's (f22e42deba570489), step-100 imit
   0.7551 vs 0.7552, dev ADE @ 500 0.5372 vs 0.5372, final 0.5265.
 - Cost: 8 trainings 2.65 job-h (two per card at times) plus 48 read chunks 9.0 job-h (up to 4 per card). The box's 3 cards were busy
-  1.7 h wall, about 5.1 card-h (estimate 6.8). Addendum (Amendment 1): seed 1 of (0.03, 5000) at priority 4; its row and the 2-seed
-  means are appended when they land.
+  1.7 h wall, about 5.1 card-h (estimate 6.8). Addendum (Amendment 1): seed 1 of (0.03, 5000) at priority 4; read below.
+
+## Amendment 1: seed 1 of (0.03, 5000)
+
+`RSGlr03n5000-L18-s1` (priority 4, behind route-v2): held 452 zeros 21 vs RSG-L18-s1 26, -5.0 [-12.0, +1.2]; at-fault 16; score
+0.8958 (pair +0.0129 [-0.0011, +0.0274]); dev ADE 0.5270; turn completion 75.0 % vs 58.3 %, +16.7 [+0.0, +31.6] pp.
+**2-seed mean vs RSG-L18 (s0, s1 mean):** zeros -4.0 [-9.0, +0.0], at-fault -3.0 [-7.8, +1.1], **score +0.0134 [+0.0031, +0.0258]**,
+GT +0.042 [-0.004, +0.097] m.
+By Amendment 1's reading the score gain **replicates**: the 2-seed mean CI excludes 0 and the s1 pair has the same sign. Zeros point the same
+way in both seeds (-3, -5), but the 2-seed CI reaches 0, so the zero line is not met. The stage-1 verdict (FLAT on the registered metric)
+stands. (0.03, 5000) is a better-scoring variant of the same recipe; adopting it is the main session's decision (public 1491 guard not run).
