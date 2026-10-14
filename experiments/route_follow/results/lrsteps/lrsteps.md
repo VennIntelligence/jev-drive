@@ -56,3 +56,20 @@ GT +0.042 [-0.004, +0.097] m.
 By Amendment 1's reading the score gain **replicates**: the 2-seed mean CI excludes 0 and the s1 pair has the same sign. Zeros point the same
 way in both seeds (-3, -5), but the 2-seed CI reaches 0, so the zero line is not met. The stage-1 verdict (FLAT on the registered metric)
 stands. (0.03, 5000) is a better-scoring variant of the same recipe; adopting it is the main session's decision (public 1491 guard not run).
+
+## Amendment 2: public 1491 / 10-decision guard of (0.03, 5000) ([guard_confirm.md](guard_confirm.md), 1479 scenes, 136 logs)
+
+| checkpoint | mean | zeros | col / off / cor | at-fault | GT (m) |
+|:--|--:|--:|:--|--:|--:|
+| YR10m10-F-s0 (base) | 0.9323 | 68 | 7 / 43 / 20 | 50 | 0.941 |
+| RSG-L18 (s0 / s1 mean) | 0.9480 | 45 | 8 / 30.5 / 7.5 | 38.5 | 0.796 |
+| RSGlr03n5000-L18 (s0 / s1 mean) | 0.9486 | 45 | 10 / 28.5 / 7 | 38.5 | 0.784 |
+| RSGlr03n5000-L18-s0 / -s1 | 0.9468 / 0.9504 | 49 / 41 | 12/31/7 · 8/26/7 | 43 / 34 | 0.788 / 0.780 |
+
+- **Line 1 (guardrail) passes:** both seeds and the mean are above YR10m10-F-s0 (mean +0.0163 [+0.0081, +0.0248]).
+- **2-seed mean vs RSG-L18:** score +0.0005 [-0.0032, +0.0041], zeros +0.0 [-5.5, +5.8], at-fault +0.0 [-5.2, +5.4],
+  GT -0.012 [-0.023, -0.003] m.
+- **Same-seed pairs:** s0 zeros +3.0 [-4.0, +10.2], at-fault +4.0 [-2.3, +11.1]; s1 zeros -3.0 [-10.9, +4.2], at-fault -4.0 [-11.5, +3.1].
+- **Reading:** on the public set (0.03, 5000) ties RSG-L18. It is not worse on zeros or at-fault (both CIs include 0), so the
+  Amendment 2 condition for a candidate base holds. The held score gain (+0.013) does not carry over to the public mean (+0.0005); only GT
+  is slightly closer (-0.012 m). It is admissible as a base and equivalent to RSG-L18 on public; it is not a demonstrated improvement there.
