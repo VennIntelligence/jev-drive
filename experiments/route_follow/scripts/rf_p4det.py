@@ -4,7 +4,9 @@ its scene and (b) the scene's box anchor (the first session of the first run giv
 count, first diverging k, largest |diff| over all plan points and over the first 15 (the 4 s horizon, docs/long-runs.md), per k band),
 controller track (rows, largest and final position difference, per row band, first row over 0 / 0.1 / 1 m), score, zero kind and time (rf_p4.zero_time = rf_branch's rule).
 rf_p4.py s1's comparison, plus the first diverging k and the boundedness bands. AlpaSim venv (rf_tax.series reads metrics.parquet).
-  rf_p4det.py --runs <run dir>[,..] --ref <id8>=<run dir>[,..] --out <json>    a run dir = rf_p4det.sh's <root>/<arm> or a pai_eval chunk
+  rf_p4det.py det --runs <run dir>[,..] --ref <id8>=<run dir>[,..] --out <json>    a run dir = rf_p4det.sh's <root>/<arm> or a pai_eval chunk
+  rf_p4det.py pack --runs <run dir>[,..] --events <pool events.jsonl> --out <json>   (plain python3) per run: wall, start-to-start time
+      of its sessions (one rollout at a time), pool jobs on its card time-averaged over its run (the pool's launch / end events, every job)
 """
 from __future__ import annotations
 
@@ -72,12 +74,32 @@ def cmp(a, b):
                 identical=bool(len(ks) and not len(nz) and len(ta) == len(tb) and m and float(np.nanmax(e)) == 0.0 and a["score"] == b["score"]))
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--runs", required=True)
-    ap.add_argument("--ref", required=True)
-    ap.add_argument("--out", required=True)
-    a = ap.parse_args()
+def pack(a):
+    import datetime as dt
+    ts = lambda x: dt.datetime.strptime(x, "%Y-%m-%d %H:%M:%S").timestamp()  # noqa: E731
+    on = {}
+    for line in open(a.events):
+        if '"launch"' in line or '"end"' in line:
+            e = json.loads(line)
+            if e["kind"] == "launch" and e.get("gpu") is not None:
+                on[e["id"]] = [e["gpu"], ts(e["t"]), None]
+            elif e["kind"] == "end" and e["id"] in on:
+                on[e["id"]][2] = ts(e["t"])
+    out = []
+    for run in a.runs.split(","):
+        T = json.load(open(os.path.join(run, "timing.json")))
+        g, t0, t1 = int(T["gpu"]), T["t0"], T["t1"]
+        grid = np.linspace(t0, t1, 400)
+        conc = np.mean([sum(c == g and s <= t and (e is None or e > t) for c, s, e in on.values()) for t in grid])
+        st = T["session_starts"]
+        out.append(dict(arm=T["arm"], gpu=g, wall_s=T["wall_s"], n=T["n"], startup_s=round(st[0] - t0, 1) if st else None,
+                        per_rollout_s=[round(b - a_, 1) for a_, b in zip(st, st[1:] + [t1])], conc=round(float(conc), 2)))
+    json.dump(out, open(a.out, "w"), indent=1)
+    for r in out:
+        print(r)
+
+
+def det(a):
     S = [s for run in a.runs.split(",") for s in sessions(run)]
     R = {}
     for kv in a.ref.split(","):
@@ -106,6 +128,21 @@ def main():
     for r in out:
         print(f"| {r['scene']} | {r['run']} | {r['session']} | {r['vs']} | {r['n']} | {r['equal']} | {r['first_k']} | {r['d_first']:.4f} | {r['max']:.4f} | "
               f"{r['max15']:.4f} | {r['track_max']:.4f} / {r['track_end']:.4f} | {r['score'][0]:.4f} / {r['score'][1]:.4f} | {r['zero'][0]} / {r['zero'][1]} |")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    sp = ap.add_subparsers(dest="cmd", required=True)
+    p = sp.add_parser("det")
+    p.add_argument("--runs", required=True)
+    p.add_argument("--ref", required=True)
+    p.add_argument("--out", required=True)
+    p = sp.add_parser("pack")
+    p.add_argument("--runs", required=True)
+    p.add_argument("--events", required=True)
+    p.add_argument("--out", required=True)
+    a = ap.parse_args()
+    {"det": det, "pack": pack}[a.cmd](a)
 
 
 if __name__ == "__main__":
