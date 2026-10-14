@@ -58,3 +58,16 @@ At every inference, from the route memory the driver fed (rmem; RSG-L18-s0 = the
 - Reported regardless: exam turn scene completions (of 26), the shape gate count, per-scene table.
 
 Evidence ceiling: one checkpoint, one seed, 47 scenes; a serving-side diagnostic of where the turn fails, not a recipe.
+
+## Amendment 1 (2026-10-15 ~03:00 JST, after the smoke, before the 47-scene run)
+
+Smoke `/data/runs/route_night/turn_gain/g1.25-smoke` (09528162, 132ae6cb; commit e2b30aa5): no crash, `tg` on every inference, served =
+branch_poses(plan, 1.25) to the 4-decimal log (max 1.1e-4). Two defects of the registered rule, fixed before any read:
+- It fired on a standing car (132ae6cb k 0-15: L2 0-0.6 m, dr_arc 0-1 deg; 6 recomputed flips were rounding of those near-zero values) and
+  so made "every plan before the first on-decision equals the identity" vacuous (first on at k 0 in both sessions).
+- It scaled plans that turn AGAINST the route (09528162 k 40-80: dplan +21 to +55 deg against a route turning -20 to -87 deg): the gain then
+  amplifies a wrong-way turn, which is not the magnitude question.
+Change (turn_gain.py; selftest extended): on additionally needs L2 >= 1 m, |dr_arc| >= 2 deg and sign(dr_arc) x dplan >= -1 deg. Everything
+else, the scenes, lines and stop rule are unchanged. The smoke is rerun with the fixed rule (same 2 scenes, card 0) together with an
+identity re-run of RSG-L18-s0 without the switch on the same 2 scenes (card 1, `RUNPFX=id-`) checked bit-identical to r281/rsg (rf_p4.py s1):
+the driver edits must not change unswitched serving.

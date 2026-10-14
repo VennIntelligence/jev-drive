@@ -11,7 +11,9 @@ Rule, at every inference, from the route memory the driver fed (rmem features, e
   L2      arc length of the plan from the ego through its poses at 0.5 .. 2.0 s; dplan = the plan's yaw at 2.0 s
   dr_arc  the route heading change at arc L2 (slot headings unwrapped, linear in the offset, (0, h_ref) prepended)
   on      |dr40| >= 45 deg, dr_arc has dr40's sign, and sign(dr_arc) x dplan < 0.6 |dr_arc| (the plan turns less than 60 % of the route
-          over the arc it covers in 2 s)
+          over the arc it covers in 2 s); since the smoke (prereg Amendment 1) also L2 >= 1 m and |dr_arc| >= 2 deg (no firing on a standing
+          or near-straight stretch) and sign(dr_arc) x dplan >= -1 deg (a plan that turns against the route is not scaled: the gain would
+          amplify the wrong-way turn, outside the magnitude question)
 While on, the poses handed to the controller are branch_poses(plan, g): every pose yaw and segment course about the ego multiplied by g at
 the same segment lengths (experiments/onpol_pai/lib/onp_log_driver.branch_poses with s = 1, the curvature push of decisions 290 / 296;
 copied here because that driver is not mounted in the PAI stack; selftest() checks the copy). Inputs are the driver's own (the route
@@ -30,6 +32,7 @@ N_PT, NF = 40, 5
 OFFS = -6.0 + 2.0 * np.arange(N_PT)                       # rmem.OFFS (both layouts: the same 40 nominal slots)
 I0 = int(np.flatnonzero(OFFS == 0.0)[0])
 TURN_DEG, AHEAD_M, SHARE = 45.0, 40.0, 0.6
+MIN_L2, MIN_ARC_DEG, AGAINST_DEG = 1.0, 2.0, -1.0           # prereg Amendment 1
 
 
 def branch_poses(poses, g: float):
@@ -69,7 +72,8 @@ def decide(rf, poses) -> dict:
     s = np.r_[0.0, OFFS[sel]]
     hu = np.unwrap(np.r_[0.0, dh[sel]])
     dr_arc = float(np.degrees(np.interp(L2, s, hu)))
-    on = abs(dr40) >= TURN_DEG and dr_arc * dr40 > 0 and np.sign(dr_arc) * dplan < SHARE * abs(dr_arc)
+    toward = np.sign(dr_arc) * dplan
+    on = (abs(dr40) >= TURN_DEG and dr_arc * dr40 > 0 and L2 >= MIN_L2 and abs(dr_arc) >= MIN_ARC_DEG and AGAINST_DEG <= toward < SHARE * abs(dr_arc))
     out.update(on=bool(on), dr40=round(dr40, 2), dr_arc=round(dr_arc, 2))
     return out
 
@@ -106,6 +110,9 @@ def selftest():
     follow = np.c_[np.where(arc < 10, arc, 10 + 20 * np.sin(tf)), np.where(arc < 10, 0, 20 * (1 - np.cos(tf))), tf]
     assert not decide(rf, follow)["on"], decide(rf, follow)
     assert not decide(None, straight)["on"] and not decide(rf * 0, straight)["on"]
+    assert not decide(rf, straight * 0.01)["on"]                                    # standing: L2 < 1 m
+    against = follow * np.array([1, -1, -1])                                        # the mirrored plan turns right
+    assert not decide(rf, against)["on"]
     print("turn_gain selftest ok")
 
 
