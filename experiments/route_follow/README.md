@@ -75,6 +75,9 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [results/p4_self/box_det.md](results/p4_self/box_det.md): P4 on the GPU box before the fanout (`scripts/rf_p4det.sh` / `rf_p4det.py`):
   box vs box bit-identical (115 / 115 sessions), box vs Tokyo never (first plan differs at k 0, fixed per host, same score / zero class);
   per-rollout wall 190 / 217.5 / 231.5 s at 1 / ~4.5 / ~7.5 launches per card; host RAM binds before VRAM; disk margin.
+- [results/p4_self/README.md](results/p4_self/README.md): P4 box read, 27 turns / 693 rollouts: identity 9, any completing cell 20, the registered line
+  10 / 27 = 37 % (inconclusive), gate-passing 13 (7 at >= 2 handovers); identity fails before the entry on 2 of 27; on1_SELF row count 4 528 (67 branches, 14 turns);
+  timing in `timing.md`, per-rollout read `read.json`, secondary numbers `secondary.md` (`scripts/rf_p4_summary.py`).
 - [research/route-follow-offroad.md](../../research/route-follow-offroad.md): why route-hinge arms go offroad; look at table 1's
   "right-turn inside" column (17-21 vs 1-2) and the H1-H5 verdicts (labels on road, memory not drifted, over-rotation in small right turns).
 - [research/route-follow/loss-audit.md](../../research/route-follow/loss-audit.md): loss audit of the turn objective (verdict: objective, not

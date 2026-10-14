@@ -1,0 +1,162 @@
+2026-10-14 12:48:23 stack 0d10d2e3-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:09:39 stack 0d10d2e3-b0: rc 0, 8 / 8 rollouts
+2026-10-14 13:11:21 stack 0d10d2e3-b2: rc 0, 8 / 8 rollouts
+2026-10-14 13:11:22 stack 0d10d2e3-b1: rc 0, 8 / 8 rollouts
+0d10d2e3: rollout.asl kept for 0 completing rollouts, removed 25
+2026-10-14 13:11:42 0d10d2e3 done: phase A 262 s, phase B cells per launch [8 8 8], 1379 s
+2026-10-14 13:19:09 stack 213dfdac-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:19:10 stack 1e8e939e-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:19:32 stack 232d240e-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:19:45 stack 1594e89e-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:19:57 stack 268949d2-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:20:05 stack 33c8976b-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:20:37 stack 37d660b1-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:21:08 stack 403d558a-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:21:08 stack 3232fdb7-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:41:26 stack 268949d2-b1: rc 0, 5 / 5 rollouts
+2026-10-14 13:41:36 stack 232d240e-b1: rc 0, 5 / 5 rollouts
+2026-10-14 13:41:36 stack 268949d2-b2: rc 0, 5 / 5 rollouts
+2026-10-14 13:42:07 stack 232d240e-b2: rc 0, 5 / 5 rollouts
+2026-10-14 13:42:55 stack 1594e89e-b1: rc 0, 5 / 5 rollouts
+2026-10-14 13:44:35 stack 232d240e-b0: rc 0, 6 / 6 rollouts
+232d240e: rollout.asl kept for 8 completing rollouts, removed 9
+2026-10-14 13:44:45 232d240e done: phase A 264 s, phase B cells per launch [6 5 5], 1502 s
+2026-10-14 13:44:50 stack 33c8976b-b1: rc 0, 5 / 5 rollouts
+2026-10-14 13:45:11 stack 268949d2-b0: rc 0, 6 / 6 rollouts
+268949d2: rollout.asl kept for 10 completing rollouts, removed 7
+2026-10-14 13:45:19 268949d2 done: phase A 268 s, phase B cells per launch [6 5 5], 1514 s
+2026-10-14 13:45:19 stack 33c8976b-b2: rc 0, 5 / 5 rollouts
+2026-10-14 13:45:47 stack 33c8976b-b0: rc 0, 6 / 6 rollouts
+2026-10-14 13:45:57 stack 1594e89e-b2: rc 0, 5 / 5 rollouts
+33c8976b: rollout.asl kept for 0 completing rollouts, removed 17
+2026-10-14 13:46:01 33c8976b done: phase A 276 s, phase B cells per launch [6 5 5], 1542 s
+2026-10-14 13:46:14 stack 1594e89e-b0: rc 0, 6 / 6 rollouts
+1594e89e: rollout.asl kept for 0 completing rollouts, removed 17
+2026-10-14 13:46:31 1594e89e done: phase A 277 s, phase B cells per launch [6 5 5], 1588 s
+2026-10-14 13:49:15 stack 77fdd75c-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:51:33 stack 37d660b1-b0: rc 0, 8 / 8 rollouts
+2026-10-14 13:53:33 stack 37d660b1-b1: rc 0, 8 / 8 rollouts
+2026-10-14 13:54:17 stack 37d660b1-b2: rc 0, 8 / 8 rollouts
+37d660b1: rollout.asl kept for 7 completing rollouts, removed 18
+2026-10-14 13:55:01 37d660b1 done: phase A 286 s, phase B cells per launch [8 8 8], 2020 s
+2026-10-14 13:55:59 stack 8a365ac2-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:56:23 stack 77fdd75c-b2: rc 0, 2 / 2 rollouts
+2026-10-14 13:56:29 stack 96da4f1a-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:56:49 stack 96eb4700-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:59:06 stack 77fdd75c-b0: rc 0, 3 / 3 rollouts
+2026-10-14 13:59:13 stack 403d558a-b0: rc 0, 8 / 8 rollouts
+2026-10-14 13:59:22 stack 403d558a-b1: rc 0, 8 / 8 rollouts
+2026-10-14 13:59:32 stack 77fdd75c-b1: rc 0, 3 / 3 rollouts
+77fdd75c: rollout.asl kept for 3 completing rollouts, removed 6
+2026-10-14 13:59:45 77fdd75c done: phase A 250 s, phase B cells per launch [3 3 2], 616 s
+2026-10-14 13:59:58 stack 98694f91-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:03:51 stack 403d558a-b2: rc 0, 8 / 8 rollouts
+403d558a: rollout.asl kept for 1 completing rollouts, removed 24
+2026-10-14 14:04:13 403d558a done: phase A 274 s, phase B cells per launch [8 8 8], 2563 s
+2026-10-14 14:05:53 stack a174faed-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:06:25 stack 96eb4700-b2: rc 0, 2 / 2 rollouts
+2026-10-14 14:06:58 stack 1e8e939e-b2: rc 0, 13 / 13 rollouts
+2026-10-14 14:07:02 stack 1e8e939e-b0: rc 0, 14 / 14 rollouts
+2026-10-14 14:08:14 stack 96eb4700-b0: rc 0, 3 / 3 rollouts
+2026-10-14 14:09:33 stack a4be61d6-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:09:33 stack 96eb4700-b1: rc 0, 3 / 3 rollouts
+96eb4700: rollout.asl kept for 7 completing rollouts, removed 2
+2026-10-14 14:10:59 96eb4700 done: phase A 315 s, phase B cells per launch [3 3 2], 765 s
+2026-10-14 14:11:25 stack 1e8e939e-b1: rc 0, 14 / 14 rollouts
+1e8e939e: rollout.asl kept for 8 completing rollouts, removed 34
+2026-10-14 14:11:38 1e8e939e done: phase A 242 s, phase B cells per launch [14 14 13], 3134 s
+2026-10-14 14:11:46 stack 213dfdac-b1: rc 0, 13 / 13 rollouts
+2026-10-14 14:12:28 stack 213dfdac-b2: rc 0, 13 / 13 rollouts
+2026-10-14 14:13:08 stack 8a365ac2-b1: rc 0, 5 / 5 rollouts
+2026-10-14 14:13:19 stack 8a365ac2-b2: rc 0, 5 / 5 rollouts
+2026-10-14 14:15:28 stack 213dfdac-b0: rc 0, 14 / 14 rollouts
+213dfdac: rollout.asl kept for 1 completing rollouts, removed 40
+2026-10-14 14:15:37 213dfdac done: phase A 241 s, phase B cells per launch [14 13 13], 3378 s
+2026-10-14 14:15:58 stack 96da4f1a-b1: rc 0, 5 / 5 rollouts
+2026-10-14 14:16:05 stack 8a365ac2-b0: rc 0, 6 / 6 rollouts
+8a365ac2: rollout.asl kept for 10 completing rollouts, removed 7
+2026-10-14 14:16:12 8a365ac2 done: phase A 265 s, phase B cells per launch [6 5 5], 1205 s
+2026-10-14 14:16:18 stack a4d2f7cf-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:17:05 stack b40f4729-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:17:42 stack 96da4f1a-b2: rc 0, 5 / 5 rollouts
+2026-10-14 14:18:38 stack 96da4f1a-b0: rc 0, 6 / 6 rollouts
+96da4f1a: rollout.asl kept for 4 completing rollouts, removed 13
+2026-10-14 14:19:04 96da4f1a done: phase A 295 s, phase B cells per launch [6 5 5], 1328 s
+2026-10-14 14:20:00 stack 3232fdb7-b2: rc 0, 13 / 13 rollouts
+2026-10-14 14:20:59 stack c6c01d25-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:21:46 stack 3232fdb7-b0: rc 0, 14 / 14 rollouts
+2026-10-14 14:22:31 stack d0b9a872-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:23:35 stack 3232fdb7-b1: rc 0, 14 / 14 rollouts
+2026-10-14 14:24:28 stack dc1966f4-a: rc 0, 1 / 1 rollouts
+3232fdb7: rollout.asl kept for 0 completing rollouts, removed 42
+2026-10-14 14:24:43 3232fdb7 done: phase A 339 s, phase B cells per launch [14 14 13], 3746 s
+2026-10-14 14:29:46 stack c6c01d25-b2: rc 0, 2 / 2 rollouts
+2026-10-14 14:29:49 stack ddc3e8df-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:30:46 stack a4be61d6-b1: rc 0, 5 / 5 rollouts
+2026-10-14 14:30:58 stack a4be61d6-b2: rc 0, 5 / 5 rollouts
+2026-10-14 14:31:00 stack c6c01d25-b0: rc 0, 3 / 3 rollouts
+2026-10-14 14:31:04 stack a4be61d6-b0: rc 0, 6 / 6 rollouts
+a4be61d6: rollout.asl kept for 10 completing rollouts, removed 7
+2026-10-14 14:31:21 a4be61d6 done: phase A 319 s, phase B cells per launch [6 5 5], 1290 s
+2026-10-14 14:32:00 stack c6c01d25-b1: rc 0, 3 / 3 rollouts
+c6c01d25: rollout.asl kept for 6 completing rollouts, removed 3
+2026-10-14 14:32:23 c6c01d25 done: phase A 310 s, phase B cells per launch [3 3 2], 660 s
+2026-10-14 14:36:15 stack e5e47fd2-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:36:36 stack ddc3e8df-b2: rc 0, 2 / 2 rollouts
+2026-10-14 14:38:04 stack ea468790-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:39:15 stack ddc3e8df-b0: rc 0, 3 / 3 rollouts
+2026-10-14 14:39:57 stack ddc3e8df-b1: rc 0, 3 / 3 rollouts
+ddc3e8df: rollout.asl kept for 3 completing rollouts, removed 6
+2026-10-14 14:40:07 ddc3e8df done: phase A 297 s, phase B cells per launch [3 3 2], 608 s
+2026-10-14 14:41:12 stack b40f4729-b1: rc 0, 5 / 5 rollouts
+2026-10-14 14:41:18 stack b40f4729-b2: rc 0, 5 / 5 rollouts
+2026-10-14 14:41:58 stack b40f4729-b0: rc 0, 6 / 6 rollouts
+b40f4729: rollout.asl kept for 7 completing rollouts, removed 10
+2026-10-14 14:42:13 b40f4729 done: phase A 314 s, phase B cells per launch [6 5 5], 1493 s
+2026-10-14 14:44:27 stack d0b9a872-b1: rc 0, 5 / 5 rollouts
+2026-10-14 14:45:00 stack d0b9a872-b2: rc 0, 5 / 5 rollouts
+2026-10-14 14:45:27 stack eaba3f6a-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:47:05 stack f9e361aa-a: rc 0, 1 / 1 rollouts
+2026-10-14 14:48:41 stack d0b9a872-b0: rc 0, 6 / 6 rollouts
+d0b9a872: rollout.asl kept for 0 completing rollouts, removed 17
+2026-10-14 14:48:51 d0b9a872 done: phase A 359 s, phase B cells per launch [6 5 5], 1569 s
+2026-10-14 14:49:54 stack 98694f91-b1: rc 0, 13 / 13 rollouts
+2026-10-14 14:53:33 stack 98694f91-b2: rc 0, 13 / 13 rollouts
+2026-10-14 14:53:47 stack 98694f91-b0: rc 0, 14 / 14 rollouts
+98694f91: rollout.asl kept for 2 completing rollouts, removed 39
+2026-10-14 14:54:10 98694f91 done: phase A 288 s, phase B cells per launch [14 13 13], 3228 s
+2026-10-14 14:55:15 stack a174faed-b1: rc 0, 13 / 13 rollouts
+2026-10-14 14:56:15 stack a174faed-b2: rc 0, 13 / 13 rollouts
+2026-10-14 14:57:54 stack ea468790-b1: rc 0, 5 / 5 rollouts
+2026-10-14 14:58:07 stack a174faed-b0: rc 0, 14 / 14 rollouts
+2026-10-14 14:58:08 stack ea468790-b2: rc 0, 5 / 5 rollouts
+a174faed: rollout.asl kept for 3 completing rollouts, removed 38
+2026-10-14 14:59:19 a174faed done: phase A 359 s, phase B cells per launch [14 13 13], 3134 s
+2026-10-14 15:01:56 stack ea468790-b0: rc 0, 6 / 6 rollouts
+ea468790: rollout.asl kept for 8 completing rollouts, removed 9
+2026-10-14 15:02:08 ea468790 done: phase A 333 s, phase B cells per launch [6 5 5], 1432 s
+2026-10-14 15:04:32 stack a4d2f7cf-b1: rc 0, 13 / 13 rollouts
+2026-10-14 15:05:14 stack a4d2f7cf-b2: rc 0, 13 / 13 rollouts
+2026-10-14 15:06:11 stack a4d2f7cf-b0: rc 0, 14 / 14 rollouts
+a4d2f7cf: rollout.asl kept for 0 completing rollouts, removed 41
+2026-10-14 15:06:38 a4d2f7cf done: phase A 310 s, phase B cells per launch [14 13 13], 2993 s
+2026-10-14 15:15:21 stack dc1966f4-b1: rc 0, 13 / 13 rollouts
+2026-10-14 15:16:38 stack dc1966f4-b2: rc 0, 13 / 13 rollouts
+2026-10-14 15:17:46 stack dc1966f4-b0: rc 0, 14 / 14 rollouts
+dc1966f4: rollout.asl kept for 13 completing rollouts, removed 28
+2026-10-14 15:18:11 dc1966f4 done: phase A 323 s, phase B cells per launch [14 13 13], 3197 s
+2026-10-14 15:24:38 stack e5e47fd2-b1: rc 0, 13 / 13 rollouts
+2026-10-14 15:25:47 stack e5e47fd2-b2: rc 0, 13 / 13 rollouts
+2026-10-14 15:27:48 stack e5e47fd2-b0: rc 0, 14 / 14 rollouts
+e5e47fd2: rollout.asl kept for 2 completing rollouts, removed 39
+2026-10-14 15:28:01 e5e47fd2 done: phase A 289 s, phase B cells per launch [14 13 13], 3092 s
+2026-10-14 15:29:26 stack f9e361aa-b1: rc 0, 13 / 13 rollouts
+2026-10-14 15:30:05 stack f9e361aa-b2: rc 0, 13 / 13 rollouts
+2026-10-14 15:30:19 stack eaba3f6a-b2: rc 0, 13 / 13 rollouts
+2026-10-14 15:30:28 stack eaba3f6a-b1: rc 0, 13 / 13 rollouts
+2026-10-14 15:31:22 stack eaba3f6a-b0: rc 0, 14 / 14 rollouts
+eaba3f6a: rollout.asl kept for 0 completing rollouts, removed 41
+2026-10-14 15:31:51 eaba3f6a done: phase A 319 s, phase B cells per launch [14 13 13], 2755 s
+2026-10-14 15:33:10 stack f9e361aa-b0: rc 0, 14 / 14 rollouts
+f9e361aa: rollout.asl kept for 2 completing rollouts, removed 39
+2026-10-14 15:33:28 f9e361aa done: phase A 287 s, phase B cells per launch [14 13 13], 2765 s
