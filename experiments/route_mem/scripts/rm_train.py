@@ -223,7 +223,7 @@ def draw_weights(tb, on_weight="", cap=0.0, cap_in=""):
         m0 = w[sel].sum()
         w[sel] = cap_share(w[sel], g, cap)
         assert abs(w[sel].sum() - m0) <= 1e-9 * m0
-        rec = dict(cap=cap, cap_in=cap_in or "all", rows=int(sel.sum()), scenes=len(before), before=before, after=group_shares(w[sel], g))
+        rec = dict(cap=cap, cap_in=cap_in or "all", cap_rows=int(sel.sum()), scenes=len(before), before=before, after=group_shares(w[sel], g))
     assert (w > 0).all(), "--on-weight / --on-cap-scene: weights"
     if "pool" in tb.files:
         rec["pool_share"] = group_shares(w, tb["pool"])
