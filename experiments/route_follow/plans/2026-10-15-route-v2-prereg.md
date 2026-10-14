@@ -325,3 +325,20 @@ route-hinge weight 3, 2 500 gentle steps on RSG-L18-s{0,1}.
 - Reading: the junction rows make the policy read the route offline (G-swap 0.58-0.63) and keep dev ADE inside the line after 2 500
   steps, but in closed loop they cost offroad / at-fault zeros, the same direction as RB-F / RBS (decision 286). By Amendment 12 there is
   no public guard for arm c (its held zeros do not beat RSG-L18). Not adopted.
+
+## Amendment 15 (coordinator, 2026-10-15 ~06:15 JST, written before the reading): RV2a handoff-spin reading on PAI (CPU only, stored logs)
+
+RV2a-L18-s0's PAI 281 read (decision 302): handoff spins 2 -> 13 vs RSG-L18-s0. Read-only on the stored driver logs / controller CSVs of
+`/data/runs/route_night/v2pai/RV2a-L18-s0` and `/data/runs/route_night/r281/rsg`, no rollout (`rf_v2pai.py spins`).
+- Spin = rf_pai281's rule (|vx wz| > 6 m/s^2 within (1.7, 3.2] s of the rollout clock). Handoff decision = k 17 (the dev preset's
+  force-GT ends there; before it both runs drive the logged path, so their inputs are identical and any plan difference is the policy's).
+- Per scene, label and decision k 17 .. 27: plan arc to 2 s and 4 s, lateral offset and heading of the plan at 1 / 2 / 4 s, fed speed;
+  route memory: route messages received with ts <= t0, valid-slot count, offset of the first valid slot, ordered start minus projection
+  start (memory_o's s_geo - s_e on the run's own messages; for RSG the ordered layout it was not fed). Also the first decision at which
+  the two controller tracks differ by > 0.05 m, and the plan difference (max |pose| and heading at 2 s) at k 0 .. 16 (identical inputs).
+- Split: the 13 scenes that spin under RV2a vs the rest. Plus the 10 new non-turn zeros with the same fields at k 17 and at the decision
+  3 s before their zero event.
+- Questions, answered descriptively (no line): (a) does RV2a's plan already differ from RSG's at the handoff decision (heading at 2 s
+  differs by >= 10 deg, or lateral at 2 s by >= 0.5 m: "policy under the new input") or only after the tracks diverge (d285's handoff
+  mechanics amplified); (b) in the spin scenes, does the first route message arrive before or after the handoff, and is the ordered start
+  >= 5 m from the projection start at k 17.
