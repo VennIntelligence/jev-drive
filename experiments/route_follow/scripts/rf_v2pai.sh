@@ -10,6 +10,10 @@
 #   rf_v2pai.sh tg <g>         turn-gain diagnostic (plans/2026-10-15-turn-gain-switch-prereg.md): RSG-L18-s0 + JEV_TURN_GAIN=<g> on
 #                              results/turn_gain/scenes47.txt (2 chunks, both cards) -> $D/runs/route_night/turn_gain/g<g>, then tgcheck,
 #                              extract, turns, table -> results/turn_gain/g<g>.md (Tokyo working tree)
+#   rf_v2pai.sh chain <tag> <next>   no idle card between two 281 reads: copy <next>'s checkpoint, then as each card finishes <tag>'s last
+#                              chunk (all of <tag>'s chunks claimed, the card below 1 GB for 1 min) start <next> on it (the first freed card
+#                              owns the run: STATUS / DONE; the second joins with JOIN=1); served check -> RUN_DONE as in run. Foreground:
+#                              start it in tmux.
 #   rf_v2pai.sh tgsmoke <g>    the same on the first 2 scenes of scenes47 (card 0), tgcheck only
 # Env: DRY=<n> (run: the first n scenes of the reference chunk c000 in chunks of n / 2, out $V/dry_<tag>, no tmux: foreground),
 #   V (/data/runs/route_night/v2pai), BOX (autodl), BOXD (/root/autodl-tmp/ujs), CARDS ("0 1").
@@ -71,6 +75,28 @@ read)
     sed 's/^# /### /' "$O/turns.md"; } > "$O/read.md"
   cp "$O/read.md" "$RES/pai281/$t.md"; cp "$O/turns.json" "$RES/pai281/$t.turns.json"
   echo "-> $RES/pai281/$t.md"
+  ;;
+chain)
+  t=$arg; n=${3:?next tag}; P=$V/$t; O=$V/$n; ckpt "$n" || exit 1
+  mkdir -p "$O/chunks"; ls "$O"/chunks/*.txt >/dev/null 2>&1 || cp "$REF"/chunks/*.txt "$O/chunks/"
+  git -C "$repo" log --oneline -1 > "$O/COMMIT"
+  free() { (( $(nvidia-smi -i "$1" --query-gpu=memory.used --format=csv,noheader,nounits) < 1000 )); }
+  started=(); pids=()
+  while (( ${#started[@]} < 2 )); do
+    if (( $(ls "$P/claims" 2>/dev/null | wc -l) >= $(ls "$P/chunks" | wc -l) )); then
+      for g in 0 1; do
+        [[ " ${started[*]} " == *" $g "* ]] && continue
+        free "$g" && sleep 60 && free "$g" || continue
+        echo "$(date '+%F %T') card $g free: $n starts on it"
+        if (( ${#started[@]} == 0 )); then CHUNK=36 CARDS=$g bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$O" "$n" "$D/runs/route_night/test281.txt" & pids+=($!)
+        else sleep 30; JOIN=1 CHUNK=36 CARDS=$g bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$O" "$n" "$D/runs/route_night/test281.txt" & pids+=($!); fi
+        started+=("$g")
+      done
+    fi
+    sleep 30
+  done
+  wait "${pids[@]}"
+  python3 "$here/rf_v2pai.py" served --run "$O" > "$O/served.txt" 2>&1; date > "$O/RUN_DONE"
   ;;
 tg|tgsmoke)
   g=$arg; t=RSG-L18-s0; L=$RES/turn_gain/scenes47.txt; O=$D/runs/route_night/turn_gain/g$g
