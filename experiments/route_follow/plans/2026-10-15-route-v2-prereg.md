@@ -191,3 +191,19 @@ deciding on `--lc-cf`; (3) G-swap needs the junction counterfactual pool (on1_CF
 - G-LC line relaxed from 0.50 to 0.30 m (the registered 0.50 exceeds what a 2 s window shows of a 4 s lane change). An LC setting
   qualifies for a third arm only if G-LC >= 0.30 AND G-rely, G-real and G-ST all pass. G-swap is reported, not required (no arm has
   junction counterfactual rows; Amendment 3).
+
+## Amendment 5 (Amendment 4's pilot reads, 2026-10-15 01:30)
+
+| pilot (arm a + ...) | G-rely >= 0.01 | G-swap (reported) | G-ST <= 0.10 (shift / straight) | G-LC >= 0.30 [CI] | G-real <= 0.5385 | G-over | G-slot | qualifies |
+|:--|--:|:--|:--|:--|--:|--:|--:|:--|
+| (a3) lc-lam 1 | 0.0179 | 0.227 / 0.746 | 0.005 / 0.027 | 0.098 | 0.5280 | 0.0067 | 0.0002 | no (G-LC) |
+| (i) lc-lam 3 | 0.0147 | 0.253 / 0.756 | 0.010 / 0.048 | 0.147 [0.03, 0.60] | 0.5335 | 0.0067 | 0.0002 | no (G-LC) |
+| (ii) lc-lam 3, adapter-only | 0.0175 | 0.260 / 0.756 | 0.011 / 0.044 | 0.136 [0.03, 0.58] | 0.5313 | 0.0067 | 0.0002 | no (G-LC) |
+| (iii) lc-lam 10, adapter-only | **-0.0019** | 0.318 / 0.754 | 0.026 / **0.126** | 0.231 [0.13, 0.64] | **0.5569** | 0.0056 | 0.0002 | no |
+| (iv) (ii) + `--rm-latfeat` | 0.0161 | 0.263 / 0.756 | 0.011 / 0.045 | 0.143 [0.03, 0.59] | 0.5322 | 0.0067 | 0.0002 | no (G-LC) |
+
+No lane-change setting qualifies for a third arm. G-LC moves with the weight (0.10 -> 0.14 -> 0.23 at 1 / 3 / 10) while G-real and
+G-rely degrade with it; detaching the shared network halves the dev-ADE cost at weight 3 (0.5313 vs 0.5335) but not at weight 10
+(0.5569; the adapter's bias reaches every row, so the damage does not need the trunk). The lateral-offset features change nothing at
+1 000 steps (iv = ii within noise; their zero-init map barely moves). G-LC rests on 26 dev rows (CIs 0.03-0.60). Training-side swing on
+the pairs at step 1 000: 0.12 / 0.23 / 0.22 / 0.55 / 0.22 m. GPU tonight ~1.15 card-h in total (this amendment ~0.3).

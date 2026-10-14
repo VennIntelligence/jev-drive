@@ -78,7 +78,9 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [results/v2gate/](results/v2gate/slot.md): route v2 (prereg `plans/2026-10-15-route-v2-prereg.md`, Amendments 1-3; `scripts/rf_v2.sh`,
   `rf_v2gate.py`): the progress-anchored ordered memory fixes decision 299's slot defect (G-slot: start error median -4.51 m -> 0.00 m on
   53 / 53 turn zeros) at no gate cost; lane-change pairs at weight 10 break dev ADE (+0.035), at weight 1 they pass the guard gates but
-  not G-LC (0.10 m vs 0.50); G-swap fails in every arm (no junction counterfactual rows). Full round not launched.
+  not G-LC (0.10 m vs 0.50); G-swap fails in every arm (no junction counterfactual rows). Amendment 5: weight 3, adapter-only
+  gradient and `--rm-latfeat` give G-LC 0.14-0.15 (relaxed line 0.30), weight 10 adapter-only 0.23 but breaks G-real; no lane-change
+  setting qualifies. Full round not launched (arms a / b are the coordinator's).
 - [results/p4_self/README.md](results/p4_self/README.md): P4 box read, 27 turns / 693 rollouts: identity 9, any completing cell 20, the registered line
   10 / 27 = 37 % (inconclusive), gate-passing 13 (7 at >= 2 handovers); identity fails before the entry on 2 of 27; on1_SELF row count 4 528 (67 branches, 14 turns);
   timing in `timing.md`, per-rollout read `read.json`, secondary numbers `secondary.md` (`scripts/rf_p4_summary.py`).
