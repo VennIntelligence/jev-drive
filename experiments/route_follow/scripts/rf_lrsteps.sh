@@ -5,7 +5,7 @@
 # Box, repo root.
 #   rf_lrsteps.sh first            the staged first cell (lr10n5000) + its read
 #   rf_lrsteps.sh rest             the other 7 cells + reads + the report job (after every read in $O/reads.txt)
-#   rf_lrsteps.sh seed1 <cell>     stage 2: seed 1 of the winner + read + a second report job
+#   rf_lrsteps.sh seed1 <cell>     seed 1 of a cell + read + a second report job (PRIO=<p> sets the pool priority, default 14)
 #   rf_lrsteps.sh train <cell> <seed> | report      (job bodies)
 set -uo pipefail; cd "$(dirname "$0")/../../.."
 O=$DATA_DIR/runs/route_follow/lrsteps; M=$DATA_DIR/runs/route_mem/read; CK=$DATA_DIR/runs/op_parity/runs
@@ -13,7 +13,7 @@ P=$DATA_DIR/third_party/alpasim/.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin
 REC="--init RB0-F-s0 --warmup 1 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self --on on1_L18RB0"
 GRID="lr03n1250 lr03n2500 lr03n5000 lr10n1250 lr10n2500 lr10n5000 lr30n1250 lr30n2500 lr30n5000"; FIRST=lr10n5000
 tag() { [[ $1 == lr10n2500 ]] && echo RSG-L18-s$2 || echo RSG$1-L18-s$2; }
-sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner route-follow --name "$name" --tries 1 --priority 14 --no-check \
+sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner route-follow --name "$name" --tries 1 --priority ${PRIO:-14} --no-check \
      --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || { echo "submit $name failed" >&2; exit 1; }; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 cell() {  # cell seed: training + 6 read chunks after it; read ids -> $O/reads.txt
   local T; T=$(tag $1 $2); [[ $T != RSG-L18-s* ]] || { echo "$T is stored, not retrained" >&2; exit 1; }
@@ -77,6 +77,10 @@ for c in grid + [g + "@s1" for g in grid] + ["ref@s1"]:
                      d_score=d and d["score"], gt=a["gt"], dev_ade=dev(t)))
     md.append(f"| {name} | {t} | {a.zero:g} | {f(d['zero']) if d else '-'} | {a.z_atf:g} | {f(d['z_atf']) if d else '-'} | {a.z_col:g} / {a.z_off:g} / {a.z_cor:g} | "
               f"{a.score:.4f} | {f(d['score'], 4) if d else '-'} | {a['gt']:.3f} | {dev(t):.4f} |")
+P2 = [(k, v) for k, v in J.items() if " - " in k]
+if P2:
+    md += ["", "Seed means and same-seed pairs (A - B on the 452, log-clustered 95 % CI):", "", "| A - B | zeros | at-fault | mean score | GT (m) |", "|:--|:--|:--|:--|:--|"]
+    md += [f"| {k} | {f(v['zero'])} | {f(v['z_atf'])} | {f(v['score'], 4)} | {f(v['gt'], 3)} |" for k, v in P2]
 G = {r["cell"]: r for r in rows if r["seed"] == 0 and r["cell"] in grid}
 md += ["", "Held-452 zeros, 3 x 3 (rows lr-scale, columns steps):", "", "| lr-scale \\ steps | 1250 | 2500 | 5000 |", "|:--|--:|--:|--:|"]
 for l in ("03", "10", "30"):

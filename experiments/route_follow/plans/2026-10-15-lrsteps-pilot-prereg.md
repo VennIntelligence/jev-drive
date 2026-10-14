@@ -83,3 +83,15 @@ With 8 comparisons at 95 % one false "winner" by chance is plausible; stage 2 is
 
 Results: `results/lrsteps/` (`lrsteps.md` with the 3 x 3 table and the verdict by the rule above, `held18/confirm.md`, `held_raw.txt`,
 `follow.md`). The decision entry is written by the main session.
+
+## Amendment 1 (2026-10-15, after the stage-1 read; coordinator request): seed 1 of the fewest-zeros cell
+
+**Seen before this amendment:** the 9-cell held read and its verdict, FLAT (results/lrsteps/lrsteps.md). The fewest-zeros cell is (0.03, 5000)
+(`RSGlr03n5000-L18-s0`). Its zeros are 23 vs 26, -3.0 [-7.6, +1.0], so the CI includes 0. Its mean score is +0.0139 [+0.0032, +0.0270],
+and that CI excludes 0 (mean score is a secondary metric, not used for selection).
+
+**Added:** `RSGlr03n5000-L18-s1` (same command, `--seed 1`), read on held 460 at 18 decisions, submitted at pool priority 4 so it only fills
+gaps behind the route-v2 jobs (`PRIO=4 rf_lrsteps.sh seed1 lr03n5000`). The report adds the seed-1 row, the 2-seed mean
+`RSGlr03n5000-L18` vs `RSG-L18` (s0, s1 mean) and the same-seed pair s1 vs RSG-L18-s1. The stage-1 verdict (FLAT, RSG-L18 stays the
+base) is not changed by this addendum. The read is descriptive: "the cell's score gain replicates" only if the 2-seed mean score
+difference vs RSG-L18 has a CI excluding 0 and the s1 pair has the same sign. Any adoption is the main session's decision.
