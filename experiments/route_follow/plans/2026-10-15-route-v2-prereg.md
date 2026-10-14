@@ -295,3 +295,20 @@ decisions per seed for both arms (max point difference 5.3e-4 m). Next registere
   (G-real 0.5408 vs 0.5385); the coordinator launches it anyway because it is the only arm that changes what the policy reads at
   junctions (G-swap 0.554 / 0.956) and the held read, not the offline ADE proxy, is the question. Its results carry the EXPLORATORY label
   and are not a registered verdict. No public guard for arm c unless its held zeros beat RSG-L18 with the CI excluding 0.
+
+## Amendment 13 (public guard read, H3, 2026-10-15 04:00; results/v2held/guard.md)
+
+1479 of 1491 scenes / 10 decisions (12 route-fold scenes without a base rollout), 136 logs, vs YR10m10-F-s0's stored rollouts:
+
+| | mean | zeros | at-fault | GT (m) | vs RSG-L18 (2-seed means): zeros / at-fault [95 % CI] | GT vs RSG |
+|:--|--:|--:|--:|--:|:--|:--|
+| RV2a-L18 (s0 / s1) | 0.9479 (0.9455 / 0.9504) | 45 (48 / 42) | 38.5 | 0.778 | +0.0 [-5.2, +5.2] / +0.0 [-5.0, +5.0] | -0.018 [-0.026, -0.010] |
+| RV2b-L18 (s0 / s1) | 0.9485 (0.9469 / 0.9501) | 44 (46 / 42) | 38 | 0.781 | -1.0 [-4.6, +2.2] / -0.5 [-4.0, +2.6] | -0.015 [-0.025, -0.005] |
+| RSG-L18 (s0 / s1) | 0.9480 | 45 | 38.5 | 0.796 | | |
+| YR10m10-F-s0 | 0.9323 | 68 | 50 | 0.941 | | |
+
+Guardrail (mean not below YR10m10-F-s0 by 0.02): pass for every checkpoint and mean (+0.016 for both arms). H3 (upper bound <= +5 on
+zeros and at-fault vs RSG-L18): arm b passes (+2.2 / +2.6); arm a misses on zeros by 0.2 (+5.2; at-fault +5.0 at the line), point
+estimates tie RSG (45 / 45). Per seed vs RSG-L18-s<seed>: a +2.0 [-2.8, +7.0] / -2.0 [-9.4, +5.1], b +0.0 [-4.8, +4.8] /
+-2.0 [-6.9, +2.7]. Both arms sit 0.015-0.018 m closer to the log path than RSG with the CI excluding 0. Reading: neither arm costs
+the public set what RBSG2 did (+32.5 zeros); neither gains on it either.
