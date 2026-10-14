@@ -44,6 +44,20 @@ serving input (f-theta camera through pai_core, rendered 10 Hz frames in every s
                 experiments/route_follow/plans/2026-10-14-p3-branch-prereg.md). g1s1 returns the plan untouched. Records gain `branch`
                 ({g, s, t, on}) and, while on, `poses_branch` (the transformed poses; `poses` stays the raw served plan)
 
+  cells         ONP_CELLS (a JSON file; default <ALPASIM_DRIVER_LOG_DIR>/p4cells.json when it exists; unset and absent = off): turning
+                school P4, the self-branch search (experiments/route_follow/plans/2026-10-14-p4-self-branch-prereg.md). The file has
+                `scenes` {scene: onp_p4.Route fields: route grid u / x / y / kappa in the local frame, s_entry, s_exit, s_release, v_e} and
+                `cells` {scene: [cell, ...]}; the n-th session of a scene (start order) takes cell n, so one simulator launch with
+                n_rollouts = len(cells) runs every cell once (a session beyond the list is refused). A cell is {tag, D, src, g, lon,
+                switch}: src "self" = the policy drives from decision 0 (ONP_SWITCH 0) and the handover h is the first decision k >= ONP_FGT_K
+                at which the ego's route station (onp_p4.Route.station of the plan anchor) is within D m of the entry and the ego within
+                onp_p4.FAR m of the route; src "log" = the log up to decision `switch`, h = max(switch, ONP_FGT_K) (P2 / P3's handover);
+                D null = never (the identity cell). From h: lateral gain g for onp_p4.LAT_N decisions (P3's curvature push), and the
+                longitudinal profile lon (raw | ve | ve08: onp_p4.profile to v_e or 0.8 v_e at the entry, floor 0.8 v_e before it; per
+                decision arc scale s_k = onp_p4.scale) until the station reaches s_release, then the raw plan. Every record gains `p4`
+                {tag, D, src, h, sigma, d_route, v_meas, lat, lon, released[, arc_prof, arc_plan, s_k, v_ent_prof]} and, when lat or lon
+                is on, `poses_branch` (branch_poses(poses, g if lat else 1, s_k if lon else 1)). Exclusive with ONP_SWITCH / ONP_BRANCH.
+
 A `drive` before the switch without a ground-truth message of its own timestamp is aborted with a gRPC error and counted. Run through
 experiments/onpol_pai/scripts/onp_pass2.sh (DRV_PY of pai_run.sh); environment as pai_driver.py plus ONP_HORIZON, ONP_SWITCH, ONP_AFTER,
 ONP_BRANCH, ONP_FGT_K.
@@ -53,11 +67,16 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import threading
 
 import numpy as np
 
-import pai_driver as P
+_HERE = os.path.dirname(os.path.abspath(__file__))
+for _d in (_HERE, os.path.normpath(os.path.join(_HERE, "..", "..", "alpasim", "lib"))):   # run from onpol_pai/lib (GPU box): pai_driver's dir
+    if os.path.isdir(_d) and _d not in sys.path:
+        sys.path.append(_d)
+import pai_driver as P  # noqa: E402
 from pai_driver import common_pb2, egodriver_pb2, grpc, S
 
 HORIZON_S, TAIL_US = float(os.environ.get("ONP_HORIZON", "4.0")), 500_000
@@ -86,6 +105,15 @@ assert _m or not os.environ.get("ONP_BRANCH", "").strip(), "ONP_BRANCH=g<gain>s<
 BRANCH = dict(g=float(_m[1]), s=float(_m[2]), t=float(_m[3] or 3.0)) if _m else None
 FGT_K = int(os.environ.get("ONP_FGT_K", "17"))
 assert not (BRANCH and P.TR.ON), "ONP_BRANCH transforms the plan handed to make_cached_plan; JEV_TRACK must be off"
+_CF = os.environ.get("ONP_CELLS") or os.path.join(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/nonexistent"), "p4cells.json")
+CELLS = json.load(open(_CF)) if os.path.exists(_CF) else None
+if CELLS:
+    import onp_p4 as Q
+    assert not (BRANCH or SWITCH or SWITCH_ALL is not None or AFTER or P.TR.ON), "ONP_CELLS excludes ONP_BRANCH / ONP_SWITCH / ONP_AFTER / JEV_TRACK"
+    ROUTES = {sc: Q.Route(d) for sc, d in CELLS["scenes"].items()}
+    for _sc, _cl in CELLS["cells"].items():
+        assert _sc in ROUTES and all(c["src"] in ("self", "log") and c["lon"] in ("raw", "ve", "ve08") and (c["src"] == "self") == (c["switch"] == 0)
+                                     for c in _cl), f"ONP_CELLS: bad cell list of {_sc}"
 
 
 def branch_poses(poses, g: float, s: float):
@@ -150,12 +178,48 @@ if "vhzero" in AFTER:
 TL = threading.local()
 
 
-if BRANCH:
+def p4_step(st, k, t0, anchor, poses):
+    """P4 (ONP_CELLS): one decision of a session's cell -> (served poses, `p4` record fields). st = the session's cell state."""
+    c, R, s = st["cell"], ROUTES[st["scene"]], st["session"]
+    sig, dist = R.station((anchor.pose.vec.x, anchor.pose.vec.y), st["hint"])
+    st["hint"] = sig
+    with s.lock:
+        v0 = float(np.hypot(*s.velocity(t0)[0]))
+    if st["h"] is None and c["D"] is not None and k >= FGT_K:
+        if (k >= max(c["switch"], FGT_K)) if c["src"] == "log" else (R.s_entry - sig <= c["D"] and dist <= Q.FAR):
+            st["h"] = k
+    h = st["h"]
+    if h is not None and c["lon"] != "raw" and not st["released"] and sig >= R.s_release:
+        st["released"] = True
+    lat = h is not None and k < h + Q.LAT_N and c["g"] != 1.0
+    lon = h is not None and c["lon"] != "raw" and not st["released"]
+    rec = dict(tag=c["tag"], D=c["D"], src=c["src"], h=h, sigma=round(sig, 4), d_route=round(dist, 4), v_meas=round(v0, 5), lat=lat, lon=lon,
+               released=st["released"])
+    sk = 1.0
+    if lon:
+        pr = Q.profile(R, sig, v0, R.v_e * (0.8 if c["lon"] == "ve08" else 1.0), 0.8 * R.v_e)
+        ap = Q.plan_arc(poses)
+        sk = Q.scale(pr["arc"], ap)
+        rec.update(arc_prof=round(pr["arc"], 4), arc_plan=round(ap, 4), s_k=round(sk, 6), v_ent_prof=None if pr["v_ent"] is None else round(pr["v_ent"], 4))
+    if lat or lon:
+        poses = branch_poses(poses, c["g"] if lat else 1.0, sk)
+    return poses, rec
+
+
+if BRANCH or CELLS:
     _make_plan = P.S.make_cached_plan
 
     def _branch_plan(t0, anchor, poses):
-        """pai_driver's make_cached_plan with the plan transformed inside the window set by drive (TL.branch); logs poses_branch."""
-        if getattr(TL, "branch", False):
+        """pai_driver's make_cached_plan with the plan transformed inside the window set by drive (TL.branch, P3) or by the session's
+        P4 cell (TL.p4); logs poses_branch."""
+        st = getattr(TL, "p4", None)
+        if st is not None:
+            out, rec = p4_step(st, TL.k, t0, anchor, poses)
+            TL.extra["p4"] = rec
+            if rec["lat"] or rec["lon"]:
+                poses = out
+                TL.extra["poses_branch"] = np.round(poses, 4).tolist()
+        elif getattr(TL, "branch", False):
             poses = branch_poses(poses, BRANCH["g"], BRANCH["s"])
             TL.extra["poses_branch"] = np.round(poses, 4).tolist()
         return _make_plan(t0, anchor, poses)
@@ -205,10 +269,19 @@ class LogDriver(P.Driver):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.out = Out(self.out)
+        self.p4n = {}
 
     def start_session(self, req, ctx):
         r = super().start_session(req, ctx)
         s = self.sessions.get(req.session_uuid)
+        if CELLS and s is not None:                          # P4: the n-th session of a scene runs its cell n
+            with self.lock:
+                i = self.p4n.get(s.scene, 0)
+                self.p4n[s.scene] = i + 1
+            cl = CELLS["cells"].get(s.scene, [])
+            if i >= len(cl):
+                ctx.abort(grpc.StatusCode.FAILED_PRECONDITION, f"ONP_CELLS: session {i} of {s.scene}, only {len(cl)} cells")
+            s.p4 = dict(cell=cl[i], scene=s.scene, session=s, idx=i, h=None, hint=None, released=False)
         if s is not None and "rmem0" in AFTER and s.rt is not None:
             s.rt = MaskedMemory(s.rt)
         return r
@@ -244,7 +317,8 @@ class LogDriver(P.Driver):
 
     def drive(self, req, ctx):
         s, now = self._s(req.session_uuid, ctx), int(req.time_now_us)
-        sw = SWITCH.get(s.scene, SWITCH_ALL)
+        p4 = getattr(s, "p4", None)
+        sw = p4["cell"]["switch"] if p4 else SWITCH.get(s.scene, SWITCH_ALL)
         policy = sw is not None and s.count["drive"] >= sw  # pai_driver's count of this call, before it increments it
         ref = self.log_reference(s, now)
         s.count.setdefault("log_error", 0)
@@ -261,6 +335,7 @@ class LogDriver(P.Driver):
                 s.vh = {"zero": True}
             x["after"] = sorted(AFTER)
         TL.extra = {**x, "switch": sw, "ret": "model" if policy else "log"}
+        TL.p4, TL.k = p4, s.count["drive"]
         if BRANCH:                                           # P3: the plan transform from k_eff for t s
             k0 = max(sw, FGT_K) if policy else None
             TL.branch = policy and s.count["drive"] < k0 + int(round(10 * BRANCH["t"]))
@@ -268,13 +343,13 @@ class LogDriver(P.Driver):
         try:
             r = super().drive(req, ctx)                      # the model, its record and its dumps
         finally:
-            TL.extra, TL.branch = None, False
+            TL.extra, TL.branch, TL.p4 = None, False, None
         return r if policy else egodriver_pb2.DriveResponse(trajectory=ref[0])
 
     def get_version(self, req, ctx):
         v = super().get_version(req, ctx)
         v.version_id += "-logreplay" + ("-switch" if SWITCH or SWITCH_ALL is not None else "") + "".join(f"-{a}" for a in sorted(AFTER)) \
-            + (f"-branch-g{BRANCH['g']}s{BRANCH['s']}t{BRANCH['t']}" if BRANCH else "")
+            + (f"-branch-g{BRANCH['g']}s{BRANCH['s']}t{BRANCH['t']}" if BRANCH else "") + ("-p4cells" if CELLS else "")
         return v
 
 
