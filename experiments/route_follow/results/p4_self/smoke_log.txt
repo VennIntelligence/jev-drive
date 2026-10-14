@@ -1,0 +1,8 @@
+2026-10-14 13:24:58 P4 smoke, code abb350ae: S1 (a174faed eaba3f6a) on card 0, S2 (f9e361aa D20) on card 1
+2026-10-14 13:28:23 stack f9e361aa-a: rc 0, 1 / 1 rollouts
+2026-10-14 13:32:18 stack s1-id: rc 0, 4 / 4 rollouts
+2026-10-14 13:34:07 stack f9e361aa-b0: rc 0, 3 / 3 rollouts
+f9e361aa: rollout.asl kept for 1 completing rollouts, removed 3
+2026-10-14 13:34:14 f9e361aa done: phase A 175 s, phase B cells per launch [3], 343 s
+2026-10-14 13:34:14 S1: S1: 4 / 4 identity sessions bit-identical to the reference
+2026-10-14 13:34:14 S3: 4 rows read

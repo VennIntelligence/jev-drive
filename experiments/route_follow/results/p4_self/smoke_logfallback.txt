@@ -1,0 +1,2 @@
+rc 0
+f9e361aa D20-log-g1.25-ve08: {"D": 20, "s_k_last_before_entry": 0.868405, "src": "log", "h_logged": 47, "h_recomputed": 47, "transform_on": "47..136 (90)", "first_on_equals_h": true, "lateral_decisions": 30, "lateral_contiguous": true, "lon_decisions": 90, "released_at_k": 137, "sigma_at_release": 80.1866, "s_release": 80.0, "raw_after_release": true, "max_station_recompute_diff_m": 9e-05, "max_served_pose_diff_m": 0.00017, "max_s_k_diff": 7e-06, "v_entry_realized": 3.8157856065650995, "v_entry_profile": 3.8546, "score": 1.0}

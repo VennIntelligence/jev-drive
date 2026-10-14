@@ -200,3 +200,20 @@ Restated from the smoke's measured per-rollout time in results/p4_self/smoke.md.
 6000D one rollout alone ~190 s plus ~25 s start-up (docs/alpasim.md, card shared). A scene job (phase A + ~25 cells + reach / read) is
 then ~1.2-1.5 h on the box alone; with ~6 jobs per card the card is the limit, not the job. Restated from the smoke's measured
 per-rollout times in results/p4_self/smoke.md; the staged launch (1, then 10 scenes) measures the per-card throughput.
+
+## Amendment 2 (2026-10-14, after the smoke, before any box run): smoke as run, job layout, estimate
+
+- **Smoke as run** (results/p4_self/smoke.md): Tokyo, both cards (the card-0 reservation was withdrawn on 2026-10-14): S1 on card 0, S2 on
+  card 1, in parallel, code abb350ae, frozen clone `/data/runs/route_night/p4/code`, root `/data/runs/route_night/p4/smoke`, 13:24-13:34
+  JST. S1 5 / 5 sessions bit-identical to r281/rsg; S2 all checks pass (h 44 = recomputed, lateral window 30, served poses within
+  0.0002 m of the recomputed rule, entry speed 4.85 / 3.83 vs profile 4.91 / 3.86 m/s, release at exit + 10 m); S3 every field present.
+  Extra check of the log fallback (card 1, one cell): pass. Tries 1-4 (two instrument faults, Amendment 1; one port clash) are listed in
+  smoke.md and not read.
+- **Job layout change:** phase B of a scene is split round-robin over `P4_PAR` launches side by side (box 3, Tokyo 1), each one rollout at
+  a time with its own renderer process (the race of Amendment 1 is inside one renderer). Measured on the box (one 3-launch job alone on a
+  card): 3 one-cell launches in 264 s (one rollout alone ~210 s), peaks 18.8 GB VRAM, 25.1 GB RSS, 3.3 cores; pool declaration
+  `--vram 22 --cpu 4 --ram 32 --timeout-h 8`, history key `alpasim-p4c1`. Tokyo stacks use ports 7600+ (try 4 met another stack on 6501).
+- **Estimate:** ~690 rollouts; ~40 min per scene job alone (~60 min for 5-handover scenes); 4 jobs per card by VRAM; with a 1.5-2x slowdown
+  at 12 rollouts per card (not measured) **~2.5-4.5 h** for the 27 jobs; restated after stage 10. Disk peak ~160 GB, final ~115 GB.
+- **Scene cache:** 15 of the 27 scenes are on the box; the other 12 are being copied (hf-mirror fetch on the box + Tokyo rsync);
+  `fanout` submits only cached scenes, so `fanout ... all` is repeated after the copies finish.

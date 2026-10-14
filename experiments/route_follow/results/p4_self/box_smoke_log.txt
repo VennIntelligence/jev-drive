@@ -1,0 +1,7 @@
+2026-10-14 12:27:47 stack 1e8e939e-a: rc 0, 1 / 1 rollouts
+2026-10-14 12:31:45 stack 1e8e939e-b0: rc 0, 1 / 1 rollouts
+2026-10-14 12:32:02 stack 1e8e939e-b1: rc 0, 1 / 1 rollouts
+2026-10-14 12:32:12 stack 1e8e939e-b2: rc 0, 1 / 1 rollouts
+1e8e939e: rollout.asl kept for 0 completing rollouts, removed 4
+2026-10-14 12:32:21 1e8e939e done: phase A 266 s, phase B cells per launch [1 1 1], 264 s
+{"served": "/root/autodl-tmp/ujs/runs/route_follow/p4/boxsmoke3/code", "commit": "94cd14dc9b37f2a23411ef75ae81ab060abbd641", "dirty": 0, "backend": "box"}

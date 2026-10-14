@@ -1,0 +1,7 @@
+a174faed session 4b8d346a cell id: decisions 198 (ref 198), plan max|diff| 0.000000; track rows 198/198 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+a174faed session 9ecbf436 cell id: decisions 198 (ref 198), plan max|diff| 0.000000; track rows 198/198 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+eaba3f6a session d204cd0a cell id: decisions 198 (ref 198), plan max|diff| 0.000000; track rows 198/198 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+eaba3f6a session 054de7a0 cell id: decisions 198 (ref 198), plan max|diff| 0.000000; track rows 198/198 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+S1: 4 / 4 identity sessions bit-identical to the reference
+f9e361aa session 5d189c2e cell id: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+S1: 1 / 1 identity sessions bit-identical to the reference

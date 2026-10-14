@@ -62,6 +62,10 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [results/p3_branch](results/p3_branch/README.md): turning school P3. A 3 s curvature / speed push of RSG-L18-s0's own plan at the PAI
   junction entry raises the branch ceiling from 4 to 10 / 12 (passes the 8 line, but 3 of the 6 new scenes complete in a single cell
   and only 2 of 9 survive a 1.5 s push); prereg `plans/2026-10-14-p3-branch-prereg.md`, `scripts/rf_p3.sh`, `onp_log_driver.py` ONP_BRANCH.
+- [results/p4_self/smoke.md](results/p4_self/smoke.md): turning school P4 instrument (self-branch search on RSG-L18-s0's own junction
+  states, 27 PAI training turns x D 40-0 x 9 cells, `scripts/rf_p4.sh` / `rf_p4.py`, `onp_log_driver.py` ONP_CELLS + `onp_p4.py`); smoke
+  S1 / S2 / S3 pass, NRE renderer race (one rollout at a time per launch), box timing and the launch command; prereg
+  `plans/2026-10-14-p4-self-branch-prereg.md`, plan `results/p4_self/plan.json`.
 - [results/p4_self/pool_dev](results/p4_self/pool_dev/README.md): the P4 row builder `scripts/rf_selfpool.py` (self-branch rollouts ->
   pool `on1_SELF`, gates G-in / route / rmem / road / speed / r1 / shape / crawl) run on the P3 archive: 666 rows, 13 branches, 6 scenes (dev
   only, exam scenes inside); figure `figs/self_bev_dev.png` (red = realized branch demo vs green = the policy's own plan).
