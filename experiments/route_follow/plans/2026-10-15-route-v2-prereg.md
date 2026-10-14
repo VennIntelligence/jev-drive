@@ -312,3 +312,16 @@ zeros and at-fault vs RSG-L18): arm b passes (+2.2 / +2.6); arm a misses on zero
 estimates tie RSG (45 / 45). Per seed vs RSG-L18-s<seed>: a +2.0 [-2.8, +7.0] / -2.0 [-9.4, +5.1], b +0.0 [-4.8, +4.8] /
 -2.0 [-6.9, +2.7]. Both arms sit 0.015-0.018 m closer to the log path than RSG with the CI excluding 0. Reading: neither arm costs
 the public set what RBSG2 did (+32.5 zeros); neither gains on it either.
+
+## Amendment 14 (EXPLORATORY arm c held read, 2026-10-15 04:15; results/v2held/ held_raw.txt, confirm.md, follow.md now hold a, b, c)
+
+EXPLORATORY (Amendment 12: launched although its pilot failed the Amendment 9 rule). RV2c-L18-s{0,1} = `--rm-order` + junction CF rows,
+route-hinge weight 3, 2 500 gentle steps on RSG-L18-s{0,1}.
+- Offline gates of the trained checkpoints (vs their base): all pass except G-LC: G-swap 0.627 / 0.922 and 0.583 / 0.916, G-real 0.5360 /
+  0.5358 (lines 0.5385 / 0.5370), G-rely 0.024 / 0.025, G-ST <= 0.05, G-over at the base. Served memory = offline rebuild 1 368 / 1 368.
+- Held 460 / 18: zeros 39 / 45 (RSG 34 / 34), offroad zeros 23 / 24 (RSG 17 / 13); paired 452 vs RSG-L18-s<seed>: zeros +5.0 [-4.7, +14.5]
+  / +11.0 [+1.0, +20.3], at-fault +8.0 [-2.5, +18.5] / +14.0 [+3.7, +24.2], GT +0.069 / +0.035 m; turn completion 62.5 % / 66.7 % vs
+  66.7 % / 58.3 % (right turns 37.5 % / 50.0 % vs 62.5 % / 50.0 %). H1 fails (seed 1 harm with the CI excluding 0); no gain in turns.
+- Reading: the junction rows make the policy read the route offline (G-swap 0.58-0.63) and keep dev ADE inside the line after 2 500
+  steps, but in closed loop they cost offroad / at-fault zeros, the same direction as RB-F / RBS (decision 286). By Amendment 12 there is
+  no public guard for arm c (its held zeros do not beat RSG-L18). Not adopted.

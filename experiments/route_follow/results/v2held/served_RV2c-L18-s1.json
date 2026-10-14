@@ -1,0 +1,9 @@
+{
+ "scenes": 76,
+ "decisions": 1368,
+ "mask_same": 1.0,
+ "d_max_le_005": 1.0,
+ "d_max_max": 0.0001632425410207361,
+ "n_served_mean": 26.85672514619883,
+ "pass": true
+}
