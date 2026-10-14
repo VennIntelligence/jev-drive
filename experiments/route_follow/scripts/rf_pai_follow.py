@@ -159,6 +159,8 @@ def extract(a):
             if not f.exists():
                 continue
             for r in json.loads(f.read_text())["rollouts"]:
+                if r.get("status") == "fail" and not (Path(sim) / "controller" / f"alpasim_controller_{r['rollout_id']}.csv").exists():
+                    continue                                 # an infrastructure failure (never driven); a rerun of the scene can stand in
                 j = jobs.setdefault(r["clipgt_id"], [str(Path(sim) / "generated-user-config-0.yaml"), {}])
                 j[1].setdefault(label, dict(label=label, sim=sim, rid=r["rollout_id"], score=r.get("score"), metrics=r.get("metrics") or {},
                                             dec=dec.get(r["rollout_id"], [])))
