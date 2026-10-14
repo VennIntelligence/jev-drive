@@ -1,0 +1,129 @@
+{
+ "root": "/data/runs/route_night/p4_fill/new",
+ "ref": "/data/runs/route_night/p4_fill/new",
+ "backend": "tokyo",
+ "own": true,
+ "cells": [
+  {
+   "scene": "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a",
+   "tag": "id",
+   "rid": "e8bd47d0-c7c7-11f1-9cfb-81fad9d92384",
+   "mp4": "/data/runs/route_night/p4_fill/new/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a/302c5c99-a/sim/rollouts/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a/e8bd47d0-c7c7-11f1-9cfb-81fad9d92384/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a_e8bd47d0-c7c7-11f1-9cfb-81fad9d92384_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": null,
+   "n_dec": 199,
+   "ref_n_dec": 0,
+   "plan_maxdiff": Infinity,
+   "track_rows": [
+    199,
+    0
+   ],
+   "identical": null,
+   "outcome": "corr",
+   "v_entry": 6.616,
+   "D": null,
+   "src": "self",
+   "done": false,
+   "h": null
+  },
+  {
+   "scene": "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a",
+   "tag": "D40-self-g1.25-raw",
+   "rid": "54fbd4b6-c7c8-11f1-85c6-93825dae4b3e",
+   "mp4": "/data/runs/route_night/p4_fill/new/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a/302c5c99-b0/sim/rollouts/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a/54fbd4b6-c7c8-11f1-85c6-93825dae4b3e/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a_54fbd4b6-c7c8-11f1-85c6-93825dae4b3e_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": null,
+   "n_dec": 199,
+   "ref_n_dec": 0,
+   "plan_maxdiff": Infinity,
+   "track_rows": [
+    199,
+    0
+   ],
+   "identical": null,
+   "outcome": "corr",
+   "v_entry": 6.581,
+   "D": 40,
+   "src": "self",
+   "done": false,
+   "h": 17
+  },
+  {
+   "scene": "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a",
+   "tag": "D40-self-g1.5-raw",
+   "rid": "a2fc878c-c7c8-11f1-85c6-93825dae4b3e",
+   "mp4": "/data/runs/route_night/p4_fill/new/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a/302c5c99-b0/sim/rollouts/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a/a2fc878c-c7c8-11f1-85c6-93825dae4b3e/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a_a2fc878c-c7c8-11f1-85c6-93825dae4b3e_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": null,
+   "n_dec": 199,
+   "ref_n_dec": 0,
+   "plan_maxdiff": Infinity,
+   "track_rows": [
+    199,
+    0
+   ],
+   "identical": null,
+   "outcome": "corr",
+   "v_entry": 6.621,
+   "D": 40,
+   "src": "self",
+   "done": false,
+   "h": 17
+  },
+  {
+   "scene": "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a",
+   "tag": "D0-self-g1.25-raw",
+   "rid": "d55ae37c-c7c8-11f1-85c6-93825dae4b3e",
+   "mp4": "/data/runs/route_night/p4_fill/new/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a/302c5c99-b0/sim/rollouts/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a/d55ae37c-c7c8-11f1-85c6-93825dae4b3e/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a_d55ae37c-c7c8-11f1-85c6-93825dae4b3e_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": null,
+   "n_dec": 199,
+   "ref_n_dec": 0,
+   "plan_maxdiff": Infinity,
+   "track_rows": [
+    199,
+    0
+   ],
+   "identical": null,
+   "outcome": "corr",
+   "v_entry": 6.616,
+   "D": 0,
+   "src": "self",
+   "done": false,
+   "h": 75
+  },
+  {
+   "scene": "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a",
+   "tag": "D0-self-g1.5-raw",
+   "rid": "08269cb0-c7c9-11f1-85c6-93825dae4b3e",
+   "mp4": "/data/runs/route_night/p4_fill/new/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a/302c5c99-b0/sim/rollouts/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a/08269cb0-c7c9-11f1-85c6-93825dae4b3e/clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a_08269cb0-c7c9-11f1-85c6-93825dae4b3e_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": null,
+   "n_dec": 199,
+   "ref_n_dec": 0,
+   "plan_maxdiff": Infinity,
+   "track_rows": [
+    199,
+    0
+   ],
+   "identical": null,
+   "outcome": "corr",
+   "v_entry": 6.616,
+   "D": 0,
+   "src": "self",
+   "done": false,
+   "h": 75
+  }
+ ],
+ "scenes": {
+  "clipgt-302c5c99-2762-4f5d-950e-1122f3e7c20a": {
+   "side": "L",
+   "topo": "straight_road",
+   "v_e": 5.3,
+   "s_entry": 34.0,
+   "v_log_entry": 3.725,
+   "entry_k": 75,
+   "entry_src": "self"
+  }
+ }
+}

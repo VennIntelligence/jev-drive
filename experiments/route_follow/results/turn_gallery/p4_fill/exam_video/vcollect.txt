@@ -1,0 +1,1 @@
+camera re-runs: 54 sessions, 54 with an mp4; bit-identical to the stored rollout (served plan at every decision, controller track, score): 54 / 54

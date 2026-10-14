@@ -1,0 +1,2 @@
+302c5c99 session e8bd47d0 cell id: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+S1: 1 / 1 phase A sessions bit-identical to r281/rsg

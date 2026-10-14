@@ -1,0 +1,12 @@
+22fa5c92 session 76e02f2c cell id: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+2f227f2c session d5b1a30c cell id: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+382a7247 session 82e47b5c cell id: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+3ce13eed session 90123094 cell id: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+94c1d722 session 9befef82 cell id: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+9f393c8a session ce474a90 cell id: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+a1b166cc session 0e094cc0 cell id: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+ce161092 session 173a06e0 cell id: decisions 198 (ref 198), plan max|diff| 0.000000; track rows 198/198 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+d90fe123 session 192d35bc cell id: decisions 198 (ref 198), plan max|diff| 0.000000; track rows 198/198 max pos diff 0.000000; score 1.0 / 1.0: IDENTICAL
+e37aa159 session 3c2caf20 cell id: decisions 198 (ref 198), plan max|diff| 0.000000; track rows 198/198 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+fd01e9ab session c946735e cell id: decisions 199 (ref 199), plan max|diff| 0.000000; track rows 199/199 max pos diff 0.000000; score 0.0 / 0.0: IDENTICAL
+S1: 11 / 11 identity re-runs bit-identical to r281/rsg

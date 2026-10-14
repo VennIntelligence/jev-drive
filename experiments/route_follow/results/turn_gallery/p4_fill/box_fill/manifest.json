@@ -1,0 +1,407 @@
+{
+ "root": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill",
+ "ref": "/root/autodl-tmp/ujs/runs/route_follow/p4/run",
+ "backend": "box",
+ "own": false,
+ "cells": [
+  {
+   "scene": "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9",
+   "tag": "D40-self-g1.25-raw",
+   "rid": "fe5ae1e2-c7c7-11f1-aee7-7fd9ce151cff",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9/a174faed-v0/sim/rollouts/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9/fe5ae1e2-c7c7-11f1-aee7-7fd9ce151cff/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9_fe5ae1e2-c7c7-11f1-aee7-7fd9ce151cff_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 198,
+   "ref_n_dec": 198,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    198,
+    198
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 6.019,
+   "D": 40,
+   "src": "self",
+   "done": false,
+   "h": 17
+  },
+  {
+   "scene": "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9",
+   "tag": "D0-self-g1.5-raw",
+   "rid": "78c6e2f0-c7c8-11f1-aee7-7fd9ce151cff",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9/a174faed-v0/sim/rollouts/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9/78c6e2f0-c7c8-11f1-aee7-7fd9ce151cff/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9_78c6e2f0-c7c8-11f1-aee7-7fd9ce151cff_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 198,
+   "ref_n_dec": 198,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    198,
+    198
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 6.156,
+   "D": 0,
+   "src": "self",
+   "done": false,
+   "h": 97
+  },
+  {
+   "scene": "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9",
+   "tag": "D40-self-g1.5-raw",
+   "rid": "08aa9a2a-c7c8-11f1-ada5-7f056bb28fb4",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9/a174faed-v1/sim/rollouts/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9/08aa9a2a-c7c8-11f1-ada5-7f056bb28fb4/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9_08aa9a2a-c7c8-11f1-ada5-7f056bb28fb4_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 198,
+   "ref_n_dec": 198,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    198,
+    198
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 6.15,
+   "D": 40,
+   "src": "self",
+   "done": false,
+   "h": 17
+  },
+  {
+   "scene": "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9",
+   "tag": "D0-self-g1.25-raw",
+   "rid": "143dae54-c7c8-11f1-96e8-5785b6070f3a",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9/a174faed-v2/sim/rollouts/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9/143dae54-c7c8-11f1-96e8-5785b6070f3a/clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9_143dae54-c7c8-11f1-96e8-5785b6070f3a_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 198,
+   "ref_n_dec": 198,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    198,
+    198
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 6.156,
+   "D": 0,
+   "src": "self",
+   "done": false,
+   "h": 97
+  },
+  {
+   "scene": "clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4",
+   "tag": "D40-self-g1.5-raw",
+   "rid": "7d9ffebe-c7c9-11f1-a060-637096ebc6bf",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4/ddc3e8df-v0/sim/rollouts/clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4/7d9ffebe-c7c9-11f1-a060-637096ebc6bf/clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4_7d9ffebe-c7c9-11f1-a060-637096ebc6bf_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 199,
+   "ref_n_dec": 199,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    199,
+    199
+   ],
+   "identical": true,
+   "outcome": "offr",
+   "v_entry": 2.578,
+   "D": 40,
+   "src": "self",
+   "done": false,
+   "h": 17
+  },
+  {
+   "scene": "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf",
+   "tag": "D40-self-g1.25-raw",
+   "rid": "7e713448-c7c9-11f1-860a-8fe5da86d182",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf/e5e47fd2-v0/sim/rollouts/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf/7e713448-c7c9-11f1-860a-8fe5da86d182/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf_7e713448-c7c9-11f1-860a-8fe5da86d182_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 199,
+   "ref_n_dec": 199,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    199,
+    199
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 13.671,
+   "D": 40,
+   "src": "self",
+   "done": false,
+   "h": 17
+  },
+  {
+   "scene": "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf",
+   "tag": "D0-self-g1.5-raw",
+   "rid": "f8e85f94-c7c9-11f1-860a-8fe5da86d182",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf/e5e47fd2-v0/sim/rollouts/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf/f8e85f94-c7c9-11f1-860a-8fe5da86d182/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf_f8e85f94-c7c9-11f1-860a-8fe5da86d182_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 199,
+   "ref_n_dec": 199,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    199,
+    199
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 13.784,
+   "D": 0,
+   "src": "self",
+   "done": false,
+   "h": 48
+  },
+  {
+   "scene": "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf",
+   "tag": "D40-self-g1.5-raw",
+   "rid": "881a586c-c7c9-11f1-a150-f17758414f7f",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf/e5e47fd2-v1/sim/rollouts/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf/881a586c-c7c9-11f1-a150-f17758414f7f/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf_881a586c-c7c9-11f1-a150-f17758414f7f_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 199,
+   "ref_n_dec": 199,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    199,
+    199
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 13.697,
+   "D": 40,
+   "src": "self",
+   "done": false,
+   "h": 17
+  },
+  {
+   "scene": "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf",
+   "tag": "D0-self-g1.25-raw",
+   "rid": "948f9b2a-c7c9-11f1-abb2-6bdb50703ca0",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf/e5e47fd2-v2/sim/rollouts/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf/948f9b2a-c7c9-11f1-abb2-6bdb50703ca0/clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf_948f9b2a-c7c9-11f1-abb2-6bdb50703ca0_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 199,
+   "ref_n_dec": 199,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    199,
+    199
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 13.784,
+   "D": 0,
+   "src": "self",
+   "done": false,
+   "h": 48
+  },
+  {
+   "scene": "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b",
+   "tag": "D40-self-g1.5-raw",
+   "rid": "7e2ca30a-c7c9-11f1-8313-855a4aae5931",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b/eaba3f6a-v0/sim/rollouts/clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b/7e2ca30a-c7c9-11f1-8313-855a4aae5931/clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b_7e2ca30a-c7c9-11f1-8313-855a4aae5931_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 198,
+   "ref_n_dec": 198,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    198,
+    198
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 12.559,
+   "D": 40,
+   "src": "self",
+   "done": false,
+   "h": 17
+  },
+  {
+   "scene": "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b",
+   "tag": "D0-self-g1.25-raw",
+   "rid": "87e32946-c7c9-11f1-bda6-33214baee89d",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b/eaba3f6a-v1/sim/rollouts/clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b/87e32946-c7c9-11f1-bda6-33214baee89d/clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b_87e32946-c7c9-11f1-bda6-33214baee89d_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 198,
+   "ref_n_dec": 198,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    198,
+    198
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 12.505,
+   "D": 0,
+   "src": "self",
+   "done": false,
+   "h": 53
+  },
+  {
+   "scene": "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b",
+   "tag": "D0-self-g1.5-raw",
+   "rid": "9461f7e2-c7c9-11f1-89e4-ef572a8373b0",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b/eaba3f6a-v2/sim/rollouts/clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b/9461f7e2-c7c9-11f1-89e4-ef572a8373b0/clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b_9461f7e2-c7c9-11f1-89e4-ef572a8373b0_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 198,
+   "ref_n_dec": 198,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    198,
+    198
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 12.505,
+   "D": 0,
+   "src": "self",
+   "done": false,
+   "h": 53
+  },
+  {
+   "scene": "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db",
+   "tag": "D40-self-g1.25-raw",
+   "rid": "7c80e458-c7c9-11f1-93d8-85efe7935816",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db/f9e361aa-v0/sim/rollouts/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db/7c80e458-c7c9-11f1-93d8-85efe7935816/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db_7c80e458-c7c9-11f1-93d8-85efe7935816_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 199,
+   "ref_n_dec": 199,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    199,
+    199
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 11.342,
+   "D": 40,
+   "src": "self",
+   "done": false,
+   "h": 23
+  },
+  {
+   "scene": "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db",
+   "tag": "D0-self-g1.5-raw",
+   "rid": "f2391d46-c7c9-11f1-93d8-85efe7935816",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db/f9e361aa-v0/sim/rollouts/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db/f2391d46-c7c9-11f1-93d8-85efe7935816/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db_f2391d46-c7c9-11f1-93d8-85efe7935816_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 199,
+   "ref_n_dec": 199,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    199,
+    199
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 11.356,
+   "D": 0,
+   "src": "self",
+   "done": false,
+   "h": 63
+  },
+  {
+   "scene": "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db",
+   "tag": "D40-self-g1.5-raw",
+   "rid": "87b62e1e-c7c9-11f1-92f0-1f86839d7be0",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db/f9e361aa-v1/sim/rollouts/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db/87b62e1e-c7c9-11f1-92f0-1f86839d7be0/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db_87b62e1e-c7c9-11f1-92f0-1f86839d7be0_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 199,
+   "ref_n_dec": 199,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    199,
+    199
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 11.361,
+   "D": 40,
+   "src": "self",
+   "done": false,
+   "h": 23
+  },
+  {
+   "scene": "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db",
+   "tag": "D0-self-g1.25-raw",
+   "rid": "9432740e-c7c9-11f1-851e-ebe2dd39f925",
+   "mp4": "/root/autodl-tmp/ujs/runs/route_follow/p4/video_fill/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db/f9e361aa-v2/sim/rollouts/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db/9432740e-c7c9-11f1-851e-ebe2dd39f925/clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db_9432740e-c7c9-11f1-851e-ebe2dd39f925_camera_front_wide_120fov_default.mp4",
+   "score": 0.0,
+   "ref_score": 0.0,
+   "n_dec": 199,
+   "ref_n_dec": 199,
+   "plan_maxdiff": 0.0,
+   "track_rows": [
+    199,
+    199
+   ],
+   "identical": true,
+   "outcome": "corr",
+   "v_entry": 11.356,
+   "D": 0,
+   "src": "self",
+   "done": false,
+   "h": 63
+  }
+ ],
+ "scenes": {
+  "clipgt-e5e47fd2-e934-42a6-802a-45c3a4a1a3cf": {
+   "side": "L",
+   "topo": "straight_road",
+   "v_e": 5.3,
+   "s_entry": 55.0,
+   "v_log_entry": 6.468,
+   "entry_k": 48,
+   "entry_src": "self"
+  },
+  "clipgt-f9e361aa-5e93-41bd-aa5c-406999a5b9db": {
+   "side": "R",
+   "topo": "straight_exit",
+   "v_e": 4.6,
+   "s_entry": 58.0,
+   "v_log_entry": 5.253,
+   "entry_k": 63,
+   "entry_src": "self"
+  },
+  "clipgt-ddc3e8df-b368-40f0-bb6a-9d9f4f568cd4": {
+   "side": "R",
+   "topo": "curve_single",
+   "v_e": 3.9,
+   "s_entry": 3.0,
+   "v_log_entry": 2.544,
+   "entry_k": 17,
+   "entry_src": "self"
+  },
+  "clipgt-eaba3f6a-3629-42a6-aa86-4bf8dd1f569b": {
+   "side": "R",
+   "topo": "straight_exit",
+   "v_e": 4.6,
+   "s_entry": 55.0,
+   "v_log_entry": 4.272,
+   "entry_k": 53,
+   "entry_src": "self"
+  },
+  "clipgt-a174faed-c8e1-4b48-b85e-fecdff7ccca9": {
+   "side": "R",
+   "topo": "straight_exit",
+   "v_e": 4.6,
+   "s_entry": 42.0,
+   "v_log_entry": 4.56,
+   "entry_k": 97,
+   "entry_src": "self"
+  }
+ }
+}

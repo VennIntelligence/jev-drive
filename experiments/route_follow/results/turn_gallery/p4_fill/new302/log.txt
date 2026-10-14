@@ -1,0 +1,4 @@
+2026-10-14 21:10:29 stack 302c5c99-a: rc 0, 1 / 1 rollouts
+2026-10-14 21:17:45 stack 302c5c99-b0: rc 0, 4 / 4 rollouts
+302c5c99: rollout.asl kept for 0 completing rollouts, removed 5
+2026-10-14 21:17:54 302c5c99 done: phase A 180 s, phase B cells per launch [4], 435 s

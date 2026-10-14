@@ -163,8 +163,13 @@ for r in rows:
     if pc:
         key = lambda c: (c["D"] != 40, PREF.index(c["tag"].split("-", 2)[2]) if c["tag"].split("-", 2)[2] in PREF else 9, -c["D"])  # noqa: E731
         done = [c for c in pc if c["done"]]
-        best = min(done or pc, key=key)          # no completing cell: the D40 g1.25-raw cell (rf_p4.vselect's fallback)
-        r["p4"] = f"{len(pc)} cells rendered, {len(done)} complete" + ("" if done else " (no cell completes: D40 g1.25-raw shown)")
+        raw = [c for c in done if c["tag"].endswith("-raw")]   # speed profiles were dropped (Amendment 5): a completing raw cell first
+        fb = next((c for c in pc if c["tag"] == "D40-self-g1.25-raw"), None)
+        best = min(raw, key=key) if raw else fb or min(done or pc, key=key)
+        note = "" if best["done"] else "no cell completes" if not done else "no raw cell completes (a speed-profile cell does: more)"
+        if not raw and best["done"]:
+            note = "no raw cell rendered completes; speed-profile cell"
+        r["p4"] = f"{len(pc)} cells rendered, {len(done)} complete ({len(raw)} raw)" + (f" ({note})" if note else "")
         bid = next((c for c in P4S.get(sc, []) if c["tag"] == "id" and c["box"] and c["score"] is not None), None)
         if bid:                                  # the box identity the branches start from (the RSG cell is the Tokyo r281 rollout)
             cells.append(dict(kind="p4id", label="P4 id (box)", file=job(bid["path"], f"{s8}_id_box.mp4", "P4 id (box)", ent=ent_t),
@@ -180,7 +185,7 @@ for r in rows:
             p4 = dict(t0=t0, t1=round(t0 + PUSH_S, 2), src=src)
             cells.append(dict(kind="p4", label=label, file=job(c["path"], f"{s8}_{c['tag']}.mp4", label, ent=ent_t, p4=p4),
                               outcome=c["outcome"], score=round(c["score"], 3), main=c is best, h=hh, t0=t0, done=bool(c["done"]), v=c["v_entry"],
-                              note="no cell completes" if c is best and not done else "", box=c["box"]))
+                              note=note if c is best else "", box=c["box"]))
     r["ent_t"] = ent_t
     for c in cells:
         c.setdefault("main", c["kind"] != "p4")
@@ -265,7 +270,7 @@ h3{margin:0;padding:5px 14px;background:#1c1c28;color:#9bf;font-size:14px}
 <div id=legend>
 <b>Row</b> = one PAI 281 scene driven by RSG-L18-s0. Sections: __SECTIONS__. Groups = taxonomy main class (<code>research/zero-taxonomy.md</code>); inside a group the scenes with a straight alternative come first, then score ascending, then the event decision.<br>
 <b>Header</b>: side of the turn, topo class (yes / no / n/a = "straight ahead available"; n/a when the scene has no route turn), RSG outcome and score, taxonomy class and sub class, v human / v RSG at the strict turn entry (or at the bend entry when the turn is not strict; "-" when the ego left the route before it), P4 branch clips.<br>
-<b>Cells</b>: HUMAN = the human log rendered by the sim (log-following driver; missing for some scenes); RSG = the policy alone (r281/rsg, Tokyo); the P4 cell = the best completing branch rollout of the scene (D40 first, g1.25-raw preferred), or D40 g1.25-raw marked "no cell completes" when none completes; "more" shows the other rendered P4 cells (train turns: run on the GPU box, label "box", with "P4 id (box)" = the box identity they branch from, which is not bit-identical to the Tokyo RSG cell; exam turns: Tokyo, whose identity is bit-identical to RSG). Fill rows (P4 prereg Amendment 5) carry identity + g1 / g1.25 / g1.5 raw at the D40 and D0 handovers only.
+<b>Cells</b>: HUMAN = the human log rendered by the sim (log-following driver; missing for some scenes); RSG = the policy alone (r281/rsg, Tokyo); the P4 cell = the best completing raw branch rollout of the scene (D40 first, g1.25 preferred), or D40 g1.25-raw marked "no cell completes" / "no raw cell completes" (a completing speed-profile cell from the first video batch then sits behind "more"); "more" shows the other rendered P4 cells (train turns: run on the GPU box, label "box", with "P4 id (box)" = the box identity they branch from, which is not bit-identical to the Tokyo RSG cell; exam turns: Tokyo, whose identity is bit-identical to RSG). Fill rows (P4 prereg Amendment 5) carry identity + g1 / g1.25 / g1.5 raw at the D40 and D0 handovers only.
 Clip overlays: corner label; on P4 branch clips an orange border + PUSH from the handover decision h for 3 s, then a cyan border + SELF (the policy drives itself); a log-source cell shows LOG before h. A yellow ENTRY flag (1 s) marks the strict-entry decision where the P4 manifest has it.
 </div>
 <div id=list></div>
