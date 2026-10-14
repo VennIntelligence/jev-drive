@@ -1,0 +1,24 @@
+2026-10-14 14:40:41 p4exam stage s1: 1 scenes on cards 0 x 1 slots, P4_PAR 3, code 05f3c5c5, root /data/runs/route_night/p4_exam
+2026-10-14 15:11:16 p4exam card 0 slot 0 94c1d722 done in 1835 s, 41 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 15:11:16 p4exam stage s1 finished: 1 scenes queued, 1 scenes DONE in the root, 0 ERROR; S1: 1 / 1 phase A sessions bit-identical to r281/rsg
+2026-10-14 15:11:58 p4exam stage s5: 5 scenes on cards 0 1 x 3 slots, P4_PAR 1, code 05f3c5c5, root /data/runs/route_night/p4_exam
+2026-10-14 16:28:20 p4exam card 1 slot 0 e0f6ebe1 done in 4522 s, 41 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 16:30:12 p4exam card 1 slot 1 e37aa159 done in 4614 s, 41 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 16:44:24 p4exam card 0 slot 0 abd45a30 done in 5546 s, 42 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 16:48:17 p4exam card 0 slot 1 ce161092 done in 5759 s, 41 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 16:57:37 p4exam card 0 slot 2 d90fe123 ERROR: phase B stack (see /data/runs/route_night/p4_exam/clipgt-d90fe123-3462-450e-b65f-f37e4eb422d9/*-b*.out)
+2026-10-14 16:57:37 p4exam stage s5 finished: 5 scenes queued, 5 scenes DONE in the root, 1 ERROR; S1: 5 / 5 phase A sessions bit-identical to r281/rsg
+2026-10-14 16:58:11 p4exam stage rest: 10 scenes on cards 0 1 x 3 slots, P4_PAR 1, code 05f3c5c5, root /data/runs/route_night/p4_exam
+2026-10-14 17:00:35 p4exam card 0 slot 2 2f227f2c ERROR: phase A stack (see /data/runs/route_night/p4_exam/clipgt-2f227f2c-95e9-4098-a9b1-01d64c697226/2f227f2c-a.out)
+2026-10-14 17:02:47 p4exam stage rest2: 10 scenes on cards 0 1 x 2 slots, P4_PAR 1, code 05f3c5c5, root /data/runs/route_night/p4_exam
+2026-10-14 18:07:32 p4exam card 1 slot 1 382a7247 done in 3825 s, 33 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 18:11:57 p4exam card 1 slot 0 2f227f2c done in 4110 s, 34 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 18:26:34 p4exam card 0 slot 1 e848c843 done in 5007 s, 41 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 18:29:10 p4exam card 0 slot 0 d90fe123 done in 5183 s, 41 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 19:01:23 p4exam card 0 slot 1 22fa5c92 done in 2089 s, 17 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 19:03:12 p4exam card 1 slot 1 09528162 done in 3340 s, 25 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 19:08:27 p4exam card 1 slot 0 3ce13eed done in 3390 s, 25 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 19:09:25 p4exam card 0 slot 0 a1b166cc done in 2415 s, 17 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 19:21:08 p4exam card 1 slot 1 9f393c8a done in 1076 s, 9 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 19:29:58 p4exam card 0 slot 1 fd01e9ab done in 1715 s, 17 rollouts; S1: 1 / 1 identity sessions bit-identical to the reference
+2026-10-14 19:29:58 p4exam stage rest2 finished: 10 scenes queued, 15 scenes DONE in the root, 0 ERROR; S1: 15 / 15 phase A sessions bit-identical to r281/rsg

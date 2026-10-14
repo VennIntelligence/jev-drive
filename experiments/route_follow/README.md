@@ -78,6 +78,9 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [results/p4_self/README.md](results/p4_self/README.md): P4 box read, 27 turns / 693 rollouts: identity 9, any completing cell 20, the registered line
   10 / 27 = 37 % (inconclusive), gate-passing 13 (7 at >= 2 handovers); identity fails before the entry on 2 of 27; on1_SELF row count 4 528 (67 branches, 14 turns);
   timing in `timing.md`, per-rollout read `read.json`, secondary numbers `secondary.md` (`scripts/rf_p4_summary.py`).
+- [results/p4_self/exam_ceiling/README.md](results/p4_self/exam_ceiling/README.md): P4 exam ceiling read (read-only, Tokyo, `scripts/rf_p4exam.sh`):
+  the P4 branch family on the 26 hard_exam turns, 15 definable; identity 2 / 26, any branch cell 12 / 26, coverage definition 2 / 26,
+  shape gate 7 / 26 (1 at >= 2 handovers); phase A 15 / 15 bit-identical; 3 launches per 3090 OOMs, 2 per card clean. No rows from it.
 - [results/p4_self/round1](results/p4_self/round1/README.md): P4 training round 1 (prereg Amendments 3-4, d297): RSGSELF-L18-s{0,1} = RSG-L18 + 753 self-branch rows (g1.25-raw, D40 / D0, 8 turns, in-junction / exit only) at 30 % of draws; **refuted**: identity completion on the 27 train turns 8 / 9 vs control 9 (L1a fail; RSGCTL-L18-s0 bit-identical to RSG-L18-s0 and reproduces P4 phase A), held turns -4.2 pp [-23.1, +10.7], held zeros +3.5 [-1.2, +7.9], public zeros +11.0 [+2.8, +20.3] (offroad 39.5 vs 30.5; L3 fail), GT lateral pass; `scripts/rf_round1.py`, `rf_self_train.sh stage1 / rest`.
 - [research/route-follow-offroad.md](../../research/route-follow-offroad.md): why route-hinge arms go offroad; look at table 1's
   "right-turn inside" column (17-21 vs 1-2) and the H1-H5 verdicts (labels on road, memory not drifted, over-rotation in small right turns).
