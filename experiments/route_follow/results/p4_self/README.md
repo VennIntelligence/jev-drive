@@ -5,6 +5,7 @@ Instrument and runner: `rf_p4.py`, `rf_p4.sh`, driver mode `ONP_CELLS`. Code ser
 Run: GPU box, 27 scene jobs through the pool, 693 rollouts (27 phase A + 666 phase B), 0 scene jobs failed, 0 retries.
 Files: [read.json](read.json) (per rollout), [table.md](table.md) (per scene x D x cell), [summary.json](summary.json), [secondary.md](secondary.md)
 (the numbers below, from [rf_p4_summary.py](../../scripts/rf_p4_summary.py)), [timing.md](timing.md), [p4_run_log.txt](p4_run_log.txt), rows: [pool_self/](pool_self/).
+Videos (2026-10-14): camera re-runs of identity + best completing cell per scene (plus the first batch's wider selection behind "more"), each checked bit-identical to the stored rollout (`rf_p4.sh vfanout` / `vcollect`, box `$DATA_DIR/runs/route_follow/p4/video`); watch on the Tokyo desktop: `~/Desktop/p4_videos.html` ([p4_videos.py](../../scripts/p4_videos.py), human log-following rollouts from `/data/runs/route_night/pait/pass`).
 Box vs Tokyo is not bit-identical (from k 0), so these rollouts are compared to nothing from Tokyo's r281 reference. Determinism check: for all 648
 self rollouts the plans before h equal phase A's identity at the same k (0 of 648 differ).
 

@@ -43,7 +43,7 @@ order = {t: i for i, t in enumerate(PREF)}
 for c in M["cells"]:
     sc, s8 = c["scene"], c["scene"][7:15]
     P = M["scenes"][sc]
-    if not c["mp4"]:
+    if not c["mp4"] or c["score"] is None:                   # not rendered or not finished
         missing.append(f"{s8} {c['tag']}")
         continue
     src = LOCAL / Path(c["mp4"]).relative_to(M["root"])
