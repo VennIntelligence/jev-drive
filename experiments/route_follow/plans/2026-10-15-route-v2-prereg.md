@@ -369,3 +369,18 @@ RSG) under the same k 17 plan. Amendment 15's speed / `travelled` lead is withdr
 Check now: exact reruns of the stored RV2a chunks c007 (29 scenes, 4 spin scenes) and c000 (36, 3 spin scenes), same lists and serving
 (`/data/runs/route_night/v2pai/rerun_RV2a_c00{7,0}`). Reproduces its own spins -> the outcome depends on the chunk composition (stack
 cross-talk), every PAI 281 comparison carries it; does not -> the stored run was a one-off stack fault, RV2a's 281 is rerun.
+
+## Amendment 18 (2026-10-15 ~09:05 JST): cause found: the stored RV2a-L18-s0 PAI run drove at the default controller gains
+
+The exact rerun of chunk c007 differed from the stored chunk in all 29 scenes from k 18 on (plans identical up to k 17), not only in the
+spin scenes. The stored run's wizard commands (`runs/*/wizard_cmd.txt`, all 8 chunks) lack `controller.gains.rel_front_steering_angle_weight=20`:
+`rf_v2pai.sh run` launched pai_eval in a new tmux window, which does not inherit the script's exported WIZ, so the stored run used the
+default gains (the gains-5 serving of d286's ys0, under which handoff spins are frequent). Every other run tonight carries the gains
+(checked on every wizard_cmd: RV2b-L18-s1 incl. c001r, the turn-gain runs, the Amendment 16 runs, the dry run, r281/rsg). Fixed in
+rf_v2pai.sh (WIZ and CARDS on the tmux command line). Consequences:
+- The stored RV2a 281 read (and Amendment 15's answers) are not a gains-20 read: kept as `/data/runs/route_night/v2pai/RV2a-L18-s0_unreliable`
+  and `results/pai281/RV2a-L18-s0_unreliable.md`; RV2a-L18-s0 is read again at gains 20 (the c007 / c000 reruns already are; the other 6
+  chunks run now, coordinator pre-authorisation of 08:40) and that read is the read of record.
+- Amendment 16's variants and the unflagged rerun ran at gains 20: they show what RV2a does at the served gains on the 13 scenes
+  (2 spins / 3 zeros, = RSG); the scalar question is moot.
+- RV2b-L18-s1's read is a gains-20 read; one RV2b chunk (c007) is rerun to confirm it reproduces.

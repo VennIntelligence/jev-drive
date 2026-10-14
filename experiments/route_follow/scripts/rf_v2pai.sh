@@ -57,7 +57,9 @@ run)
   O=$V/$t; mkdir -p "$O/chunks"
   ls "$O"/chunks/*.txt >/dev/null 2>&1 || cp "$REF"/chunks/*.txt "$O/chunks/"          # the reference's own chunk lists
   git -C "$repo" log --oneline -1 > "$O/COMMIT"
-  tmux new-window -d -t jev -n "v2-$t" "bash -c 'CHUNK=36 bash $repo/experiments/alpasim/scripts/pai_eval.sh $O $t $D/runs/route_night/test281.txt; \
+  # the tmux window does not inherit this script's environment: WIZ (gains 20) and CARDS go on its command line (the first RV2a-L18-s0 run
+  # was launched without them and drove at the default gains: route v2 prereg Amendment 18)
+  tmux new-window -d -t jev -n "v2-$t" "bash -c 'WIZ=$WIZ CARDS=\"${CARDS:-0 1}\" CHUNK=36 bash $repo/experiments/alpasim/scripts/pai_eval.sh $O $t $D/runs/route_night/test281.txt; \
 python3 $here/rf_v2pai.py served --run $O > $O/served.txt 2>&1; date > $O/RUN_DONE'"
   echo "launched $t -> $O (tmux jev:v2-$t); state $O/STATUS, done when $O/RUN_DONE exists"
   ;;
