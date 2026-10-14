@@ -1,3 +1,5 @@
+> **UNRELIABLE (route v2 prereg Amendment 18):** this run drove at the default controller gains, not gains 20 (`rf_v2pai.sh run` launched pai_eval in a tmux window that did not inherit WIZ). Not comparable with r281/rsg. The read of record is `RV2a-L18-s0.md` (gains 20).
+
 # PAI 281: RV2a-L18-s0 vs RSG-L18-s0 (stored read r281/rsg), gains 20, JEV_VCONT 1.0, JEV_LEAD 1
 
 Run `/data/runs/route_night/v2pai/RV2a-L18-s0` (7ea5c717 Turn-gain smoke passed (tgcheck clean, unswitched identity 2 / 2 bit-identical to r281/rsg); rf_v2pai read: all-281 paired list, exam counts over scenes both labels drove), reference `/data/runs/route_night/r281/rsg`; rf_v2pai.sh read. Served memory check (rf_v2pai.py served):

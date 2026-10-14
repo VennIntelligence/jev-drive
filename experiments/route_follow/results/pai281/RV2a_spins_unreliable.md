@@ -1,3 +1,5 @@
+> **UNRELIABLE (route v2 prereg Amendment 18):** this run drove at the default controller gains, not gains 20 (`rf_v2pai.sh run` launched pai_eval in a tmux window that did not inherit WIZ). Not comparable with r281/rsg. The read of record is `RV2a-L18-s0.md` (gains 20).
+
 # Handoff-spin reading (route v2 prereg Amendment 15): rv2a vs rsg on PAI 281
 
 Roots `/data/runs/route_night/v2pai/RV2a-L18-s0` / `/data/runs/route_night/r281/rsg`; spins by rf_pai281's rule; handoff k 17 (force-GT ends; before it both drive the log). rf_v2pai.py spins.
