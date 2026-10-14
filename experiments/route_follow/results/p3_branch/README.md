@@ -10,6 +10,9 @@ code 1b52e69d, 03:56-07:15 JST; nothing dropped.
 Files: `read.json` (per rollout, rf_branch.py read --win 30), `table.md` (rf_branch.py p3, includes window-end table), `plan.json` (P2's,
 reused), `s1.txt` / `s2.txt` (smoke gates), `log.txt` (run), `read_w15.json` (amendment 1, 1.5 s window).
 
+Turn shape of the completing branches against the human on the same turns (the demonstration-row shape gate, entry-speed targets):
+[shape.md](shape.md) (rf_shape.py; `shape.json`, `shape_tables.md`, `shape_turns.csv`, `shape_p3.csv`, figure `../../figs/p3_shape.png`).
+
 **Result: ceiling 10 / 12. That passes the prereg line (>= 8), but the evidence is weaker than the number suggests (see "How much to trust
 the 10").** Identity alone gives 4 / 12, as in P2. Six more scenes complete under some push: 302c5c99, e37aa159, 3ce13eed, 94c1d722, a174faed
 and f9e361aa. ce161092 and e5e47fd2 complete under no cell.
