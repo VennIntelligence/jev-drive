@@ -31,6 +31,13 @@ curvature-limited speed profile to v_e or 0.8 v_e until exit + 10 m; the rollout
   s2     (plain python3)  rf_p4.py s2 --plan <plan.json> --run <phase B run dir>   per P4 session: h recomputed from the logged stations,
          lateral window length, the profile's served poses recomputed from the logged raw plan / station / speed (tolerance 0.05 m), the
          release at exit + 10 m, realized vs profile speed at the entry.
+  vselect (plain python3) rf_p4.py vselect --read <read.json> --plan <plan.json> --out <select.json>   the cells to re-run with the camera
+         (rf_p4.sh vfanout): per scene the identity, per distinct handover with a completing cell the preferred completing cell (g1.25, then
+         g1, then g1.5; raw, then ve, then ve08) and the first failing cell in the same order, all cells at D40 on the 4 scenes where a push
+         completes and the identity fails, and g1.25-raw at the first handover on scenes with no completing cell.
+  vcollect (plain python3) rf_p4.py vcollect --root <video root> --ref <P4 run root> --plan <plan.json> --out <manifest.json>
+         Per camera re-run session: served plans at every decision, controller track and score against the stored session of the same cell
+         (bit-identical check), the mp4, and the stored read's outcome / entry speed (gallery manifest, p4_videos.py).
 """
 from __future__ import annotations
 
@@ -581,6 +588,102 @@ def table(a):
         Path(a.json).write_text(json.dumps(dict(n=n, line=line_n, line_self=line_self, verdict=verdict, any1=any1, any1_id=any1_id, ident=idd, any2=any2, gate1=gate1, gate2=gate2, per_d=any_d, cov=cov), indent=1) + "\n")
 
 
+# ---------------------------------------------------------------- camera re-runs (rf_p4.sh vfanout / video)
+OUTC = {"collision": "coll", "offroad": "offr", "corridor": "corr", "other": "oth"}
+PREF = [f"g{g}-{lon}" for g in ("1.25", "1", "1.5") for lon in LONS]
+VIDEO_ALL_D40 = ("8a365ac2", "232d240e", "37d660b1", "e5e47fd2")   # a push completes, the identity fails: every cell at D40
+
+
+def outcome(r):
+    return "done" if r["done"] else OUTC.get(r.get("zero") or "", "") or ("rear" if r["end"] == "rear" else r["end"])
+
+
+def vselect(a):
+    rows = json.load(open(a.read))["rows"]
+    by = {}
+    for r in rows:
+        by.setdefault(r["scene"][7:15], []).append(r)
+    out = {}
+    for s8, rr in sorted(by.items()):
+        sel = [r["tag"] for r in rr if r["tag"] == "id"]
+        B = [r for r in rr if r["phase"] == "B"]
+        anyd = any(r["done"] for r in B)
+        for D in sorted({r["D"] for r in B}, reverse=True):
+            cs = {r["tag"].split("-", 2)[2]: r for r in B if r["D"] == D}
+            if s8 in VIDEO_ALL_D40 and D == 40:
+                sel += [cs[c]["tag"] for c in PREF if c in cs]
+                continue
+            done = [c for c in PREF if c in cs and cs[c]["done"]]
+            fail = [c for c in PREF if c in cs and not cs[c]["done"]]
+            if done:
+                sel += [cs[done[0]]["tag"]] + [cs[c]["tag"] for c in fail[:1]]
+            elif not anyd and len(sel) == 1 and "g1.25-raw" in cs:
+                sel.append(cs["g1.25-raw"]["tag"])
+        out[s8] = sel
+    json.dump(out, open(a.out, "w"), indent=1)
+    print(f"{sum(map(len, out.values()))} rollouts over {len(out)} scenes ->", a.out)
+
+
+def sessions(run):
+    """{session: (tag, [drive records with poses sorted by k])} of a run dir."""
+    out = {}
+    for sess, rr in drive_records(run).items():
+        tag = next((x["p4"]["tag"] for x in rr if "p4" in x), None)
+        out[sess] = (tag, [x for x in rr if "poses" in x])
+    rt = {}
+    for line in open(os.path.join(run, "driver", "drive.jsonl")):     # the tag sits on the route records too (sessions that zero early)
+        if '"kind": "route"' in line and '"p4"' in line:
+            x = json.loads(line)
+            rt.setdefault(x["session"], x["p4"]["tag"])
+    return {s: (v[0] or rt.get(s), v[1]) for s, v in out.items()}
+
+
+def vcollect(a):
+    import csv
+    PL = json.load(open(a.plan))["scenes"]
+    rd = {(r["scene"], r["tag"]): r for r in json.load(open(os.path.join(a.ref, "read.json")))["rows"]}
+    srv = lambda r: np.array(r.get("poses_branch", r["poses"]))  # noqa: E731
+    def track(sim, rid):
+        f = os.path.join(sim, "controller", f"alpasim_controller_{rid}.csv")
+        return np.array([[float(x["x"]), float(x["y"])] for x in csv.DictReader(open(f))]) if os.path.exists(f) else np.zeros((0, 2))
+    cells, n_ok = [], 0
+    for sd in sorted(glob.glob(os.path.join(a.root, "clipgt-*"))):
+        sc = os.path.basename(sd)
+        ref = {}
+        for run in sorted(glob.glob(os.path.join(a.ref, sc, sc[7:15] + "-[ab]*"))):
+            if os.path.isdir(run):
+                rows = {r["rollout_id"]: (sim, r) for sim, r in rollouts(run)}
+                for sess, (tag, rr) in sessions(run).items():
+                    ref[tag] = (rr, *rows.get(sess, (None, None)))
+        for run in sorted(glob.glob(os.path.join(sd, sc[7:15] + "-v*"))):
+            if not os.path.isdir(run):
+                continue
+            rows = {r["rollout_id"]: (sim, r) for sim, r in rollouts(run)}
+            for sess, (tag, rr) in sessions(run).items():
+                sim, r = rows.get(sess, (None, None))
+                b, sb, rb = ref.get(tag, ([], None, None))
+                B = {x["k"]: x for x in b}
+                d = max((float(np.abs(srv(x) - srv(B[x["k"]])).max()) for x in rr if x["k"] in B), default=np.inf)
+                ta = track(sim, sess) if r else np.zeros((0, 2))
+                tb = track(sb, rb["rollout_id"]) if rb else np.zeros((0, 2))
+                same = bool(rr and len(rr) == len(b) and all(x["k"] in B for x in rr) and d == 0.0 and len(ta) == len(tb)
+                            and (len(ta) == 0 or np.array_equal(ta, tb)) and r and rb and r.get("score") == rb.get("score"))
+                n_ok += same
+                mp4 = sorted(glob.glob(os.path.join(run, "sim", "rollouts", sc, sess, "*camera_front_wide*.mp4")))
+                st = rd.get((sc, tag), {})
+                cells.append(dict(scene=sc, tag=tag, rid=sess, mp4=mp4[0] if mp4 else None, score=r and r.get("score"), ref_score=rb and rb.get("score"),
+                                  n_dec=len(rr), ref_n_dec=len(b), plan_maxdiff=d, track_rows=[len(ta), len(tb)], identical=same,
+                                  outcome=outcome(st) if st else None, v_entry=st.get("v_entry"), D=st.get("D"), src=st.get("src"), done=st.get("done")))
+    scenes = {sc: {k: PL[sc][k] for k in ("side", "topo", "v_e", "s_entry", "v_log_entry")} for sc in {c["scene"] for c in cells}}
+    json.dump(dict(root=a.root, ref=a.ref, cells=cells, scenes=scenes), open(a.out, "w"), indent=1, default=float)
+    print(f"camera re-runs: {len(cells)} sessions, {sum(c['mp4'] is not None for c in cells)} with an mp4; "
+          f"bit-identical to the stored rollout (served plan at every decision, controller track, score): {n_ok} / {len(cells)}")
+    for c in cells:
+        if not c["identical"]:
+            print("  DIFFERENT", c["scene"][7:15], c["tag"], f"decisions {c['n_dec']}/{c['ref_n_dec']} plan max|diff| {c['plan_maxdiff']:.6f} "
+                  f"track rows {c['track_rows']} score {c['score']}/{c['ref_score']}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -621,5 +724,14 @@ if __name__ == "__main__":
     p.add_argument("--md")
     p.add_argument("--json")
     p.add_argument("--ceiling", action="store_true", help="exam ceiling read: no pass / fail verdict")
+    p = sp.add_parser("vselect")
+    p.add_argument("--read", required=True)
+    p.add_argument("--plan", required=True)
+    p.add_argument("--out", required=True)
+    p = sp.add_parser("vcollect")
+    p.add_argument("--root", required=True)
+    p.add_argument("--ref", required=True)
+    p.add_argument("--plan", required=True)
+    p.add_argument("--out", required=True)
     a = ap.parse_args()
-    {"plan": plan, "cells": cells, "reach": reach, "s1": s1, "s2": s2, "read": read, "merge": merge, "table": table}[a.cmd](a)
+    {"vselect": vselect, "vcollect": vcollect, "plan": plan, "cells": cells, "reach": reach, "s1": s1, "s2": s2, "read": read, "merge": merge, "table": table}[a.cmd](a)

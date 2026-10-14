@@ -14,13 +14,20 @@
 #   rf_p4.sh read <root>                       merge the per-scene reads -> <root>/{read.json, table.md, summary.json}
 #   rf_p4.sh examplan <root>                   Tokyo: plan.json of the 26 hard_exam turn scenes (EXAM_SCENES) for the read-only exam ceiling
 #                                              read (rf_p4exam.sh); writes <root>/NO_ROWS (rf_selfpool.py refuses such a root)
+#   P4_SRC=<run root> rf_p4.sh vfanout <vroot> <N | all | s8,s8>   box: camera re-runs of a finished run for watching (select.json from
+#                                              rf_p4.py vselect), one pool job per scene (`video`), `all` adds the vcollect job; the
+#                                              rollouts are bit-identical box vs box (results/p4_self/box_det.md), vcollect checks each one
+#   P4_SRC=<run root> rf_p4.sh video <vroot> <s8>   one scene: its selected cells (cells_A / cells_B of the run, same order of preference)
+#                                              in P4_PAR launches with VIDEO=1, served from the run's frozen tree (code.json "served")
+#   P4_SRC=<run root> rf_p4.sh vcollect <vroot>     bit-identity of every re-run session vs the stored one + manifest.json (p4_videos.py)
 # Env: BACKEND (tokyo | box; default: tokyo when /data/runs/route_night exists), CARD (Tokyo card, 1), TAG (RSG-L18-s0), PLAN (plan.json to
 #   copy into a new root; default the committed experiments/route_follow/results/p4_self/plan.json), P4_D (distances, "40,30,20,10,0"),
 #   P4_ONLY (cell suffixes, e.g. "g1.25-raw,g1-ve"), KEEP_ASL (1: keep rollout.asl until the scene's read; mp4s are always dropped),
 #   KEEP_ASL_ALL (1: keep it for every rollout), P4_CONC (concurrent rollouts per launch, 1: see above), JEV_PY (box: python with numpy),
 #   MIN_FREE_GB (fanout refuses below it, 500), P4_VRAM (pool declaration per job, 22: 3 launches x 6.5 GB measured on the box),
 #   P4_PAR (phase B launches side by side per job; box 3, Tokyo 1: a 3090 holds two 11.2 GB stacks at most), SLOT0 (Tokyo port slot
-#   offset of a job, for several jobs on one card). The root gets code.json (served tree, commit).
+#   offset of a job, for several jobs on one card), VIDEO (1: keep the eval mp4s, eval.video.render_video=true; the video renders after the
+#   rollout, nothing it serves changes). The root gets code.json (served tree, commit).
 # Serving = the reference /data/runs/route_night/r281/rsg: JEV_VCONT=1.0 JEV_LEAD=1, gains 20, holdlead off; plus
 # send_recording_ground_truth=true (log fields, the log fallback) and PAI_DUMP (1 Hz model-input dumps for the rows' G-in gate).
 set -uo pipefail
@@ -40,12 +47,13 @@ apy() {  # rf_p4.py in the AlpaSim environment (scene loader, route generator, p
   else
     "$D/third_party/alpasim/.venv/bin/python" "$here/rf_p4.py" "$@" 2> >(grep -v 'Creating\|it/s' >&2)
   fi; }
-[[ -f $O/plan.json || $cmd == plan ]] || cp "${PLAN:-$repo/experiments/route_follow/results/p4_self/plan.json}" "$O/plan.json"
-[[ -f $O/code.json || $cmd == plan || $cmd == examplan || $cmd == fanout || $cmd == read ]] || \
+[[ -f $O/plan.json || $cmd == plan ]] || cp "${PLAN:-${P4_SRC:-$repo/experiments/route_follow/results/p4_self}/plan.json}" "$O/plan.json"
+[[ -f $O/code.json || $cmd == plan || $cmd == examplan || $cmd == fanout || $cmd == read || $cmd == v* ]] || \
   echo "{\"served\": \"$repo\", \"commit\": \"$(git -C "$repo" rev-parse HEAD)\", \"dirty\": $(git -C "$repo" status --porcelain -uno | grep -c .), \"backend\": \"$BACKEND\"}" > "$O/code.json"
 
 stack() {  # <run dir> <cells json> <n rollouts> <scene list>: one simulator launch of every cell in the cells file
-  local r=$1 cj=$2 n=$3 sl=$4 rc
+  local r=$1 cj=$2 n=$3 sl=$4 rc W=("${WIZ[@]}")
+  [[ ${VIDEO:-0} == 1 ]] && W+=(eval.video.render_video=true)
   rm -rf "$r" "$r.out"; mkdir -p "$r"
   if [[ $BACKEND == tokyo ]]; then
     mkdir -p "$r/driver"; chmod 777 "$r/driver"; cp "$cj" "$r/driver/p4cells.json"
@@ -53,14 +61,14 @@ stack() {  # <run dir> <cells json> <n rollouts> <scene list>: one simulator lau
     for f in onp_log_driver.py onp_p4.py; do cmp -s "$repo/experiments/onpol_pai/lib/$f" "$L/$f" || cp "$repo/experiments/onpol_pai/lib/$f" "$L/$f"; done
     GPU=$CARD CONC=${P4_CONC:-1} PAI_BASEPORT=$((7600 + 100 * CARD + 30 * (${SLOT0:-0} + ${SLOT:-0}))) TAG=$T DRV_PY=onp_log_driver.py \
       DRV_ENV="-e JEV_VCONT=1.0 -e JEV_LEAD=1 -e PAI_DUMP=100000 -v $L/onp_p4.py:/app/jev-drive/experiments/alpasim/lib/onp_p4.py:ro -v $D/runs/op_parity/runs/$T:/app/data/runs/op_parity/runs/$T:ro" \
-      bash "$repo/experiments/alpasim/scripts/pai_run.sh" "$r" "$sl" "${WIZ[@]}" "runtime.simulation_config.n_rollouts=$n" > "$r.out" 2>&1; rc=$?
+      bash "$repo/experiments/alpasim/scripts/pai_run.sh" "$r" "$sl" "${W[@]}" "runtime.simulation_config.n_rollouts=$n" > "$r.out" 2>&1; rc=$?
   else
     mkdir -p "$r/sim/driver-logs"; cp "$cj" "$r/sim/driver-logs/p4cells.json"; ln -sfn sim/driver-logs "$r/driver"
     env SH30_TAG="$T" JEV_VCONT=1.0 JEV_LEAD=1 PAI_DUMP=100000 DRV_PY=../../onpol_pai/lib/onp_log_driver.py CONC=${P4_CONC:-1} \
-      bash "$repo/experiments/alpasim/scripts/pai_native.sh" "$r/sim" "$sl" "${WIZ[@]}" "runtime.simulation_config.n_rollouts=$n" > "$r.out" 2>&1; rc=$?
+      bash "$repo/experiments/alpasim/scripts/pai_native.sh" "$r/sim" "$sl" "${W[@]}" "runtime.simulation_config.n_rollouts=$n" > "$r.out" 2>&1; rc=$?
     rm -rf "$r/sim/nre-cache" "$r/sim/driver-tmp"
   fi
-  find "$r/sim/rollouts" -name '*.mp4' -delete 2>/dev/null
+  [[ ${VIDEO:-0} == 1 ]] || find "$r/sim/rollouts" -name '*.mp4' -delete 2>/dev/null
   [[ ${KEEP_ASL:-1} == 1 ]] || find "$r/sim/rollouts" -name 'rollout.asl' -delete 2>/dev/null
   local got; got=$($PY -c "import json,sys;print(sum('error' not in (x.get('metrics') or {}) for x in json.load(open(sys.argv[1]))['rollouts']))" "$r/sim/aggregate/results-summary.json" 2>/dev/null || echo 0)   # failed rollouts (no metrics) do not count
   local want=$(( n * $(grep -c . "$sl") ))                  # n_rollouts is per scene
@@ -183,6 +191,58 @@ PY
     --env CL_HIST_KEY=alpasim-p4c1 --env "JEV_PY=$repo/.venv/bin/python" --log-dir "$O/pool/{arm}" "${col[@]}" -- bash "$W/experiments/route_follow/scripts/rf_p4.sh" job "$O" "{arm}" | tee -a "$O/jobs.txt" || exit 1
   for a in ${arms//,/ }; do s=$($PY -c "import json,sys;print(next(s for s in json.load(open(sys.argv[1]))['scenes'] if s[7:15]==sys.argv[2]))" "$O/plan.json" "$a")
     mkdir -p "$O/$s"; date > "$O/$s/SUBMITTED"; done ;;
+video)  # <s8>: the selected cells of one scene of P4_SRC, served from the run's frozen tree
+  SRC=${P4_SRC:?P4_SRC = the P4 run root}; s8=$1
+  sc=$($PY -c "import json,sys;print(next(s for s in json.load(open(sys.argv[1]))['scenes'] if s[7:15]==sys.argv[2]))" "$SRC/plan.json" "$s8") || exit 1
+  repo=$($PY -c "import json,sys;print(json.load(open(sys.argv[1]))['served'])" "$SRC/code.json")   # stack() serves from $repo
+  sd=$O/$sc; mkdir -p "$sd"; echo "$sc" > "$sd/scene.txt"; rm -f "$sd"/{DONE,ERROR}
+  K=${P4_PAR:-3}
+  n=$($PY - "$SRC/$sc" "$O/select.json" "$s8" "$K" "$sd" <<'PY'
+import json, sys
+src, sel, s8, K, sd = sys.argv[1], json.load(open(sys.argv[2]))[sys.argv[3]], sys.argv[3], int(sys.argv[4]), sys.argv[5]
+cl, scenes = {}, None
+for f in ("cells_A.json", "cells_B.json"):
+    d = json.load(open(f"{src}/{f}"))
+    (sc, cc), = d["cells"].items()
+    scenes = d["scenes"]
+    cl.update({c["tag"]: c for c in cc})
+cl = [cl[t] for t in sel]
+for i in range(K):
+    json.dump(dict(scenes=scenes, cells={sc: cl[i::K]}), open(f"{sd}/cells_V{i}.json", "w"))
+print(" ".join(str(len(cl[i::K])) for i in range(K)))
+PY
+) || exit 1
+  t0=$(date +%s); i=0; pids=(); ok=1
+  for m in $n; do
+    if (( m > 0 )) && [[ ! -f $sd/${s8}-v$i/P4DONE ]]; then
+      ( SLOT=$i VIDEO=1 KEEP_ASL=0 stack "$sd/${s8}-v$i" "$sd/cells_V$i.json" "$m" "$sd/scene.txt" && echo $(( $(date +%s) - t0 )) > "$sd/${s8}-v$i/P4DONE" ) & pids+=($!); sleep 20
+    fi
+    i=$((i + 1))
+  done
+  for p in "${pids[@]}"; do wait "$p" || ok=0; done
+  (( ok )) || { echo "video stack (see $sd/*-v*.out)" > "$sd/ERROR"; exit 1; }
+  date > "$sd/DONE"; echo "$(date '+%F %T') $s8 video done: cells per launch [$n], $(( $(date +%s) - t0 )) s" >> "$O/log.txt" ;;
+vfanout)
+  [[ $BACKEND == box ]] || { echo "vfanout runs on the GPU box" >&2; exit 2; }
+  SRC=${P4_SRC:?P4_SRC = the P4 run root}; N=${1:?N, all or s8 list}; cd "$repo" || exit 1
+  [[ -f $O/select.json ]] || py vselect --read "$SRC/read.json" --plan "$SRC/plan.json" --out "$O/select.json" || exit 1
+  arms=$($PY - "$O" "$N" <<'PY'
+import json, os, sys
+O, N = sys.argv[1:]
+sel = json.load(open(f"{O}/select.json"))
+todo = [s for s in sel if not any(os.path.exists(f"{O}/{d}/SUBMITTED") for d in os.listdir(O) if d[7:15] == s)]
+print(",".join(todo if N == "all" else [s for s in N.split(",") if s in todo] if "," in N or not N.isdigit() else todo[: int(N)]))
+PY
+)
+  [[ -n $arms ]] || { echo "nothing left to submit"; exit 0; }
+  col=(); [[ $N == all ]] && col=(--collect "env P4_SRC=$SRC JEV_PY=$PY bash $repo/experiments/route_follow/scripts/rf_p4.sh vcollect $O")
+  .venv/bin/python -m jevdrive.cl fanout --name p4v --arms "$arms" --vram ${P4_VRAM:-22} --cpu 4 --ram 32 --timeout-h 4 --tries 2 \
+    --env CL_HIST_KEY=alpasim-p4v --env "JEV_PY=$PY" --env "P4_SRC=$SRC" --log-dir "$O/pool/{arm}" "${col[@]}" -- \
+    bash "$repo/experiments/route_follow/scripts/rf_p4.sh" video "$O" "{arm}" | tee -a "$O/jobs.txt" || exit 1
+  for a in ${arms//,/ }; do s=$($PY -c "import json,sys;print(next(s for s in json.load(open(sys.argv[1]))['scenes'] if s[7:15]==sys.argv[2]))" "$O/plan.json" "$a")
+    mkdir -p "$O/$s"; date > "$O/$s/SUBMITTED"; done ;;
+vcollect)
+  py vcollect --root "$O" --ref "${P4_SRC:?P4_SRC = the P4 run root}" --plan "$O/plan.json" --out "$O/manifest.json" | tee "$O/vcollect.txt" ;;
 read)
   py merge --root "$O" --out "$O/read.json" && py table --read "$O/read.json" --plan "$O/plan.json" --md "$O/table.md" --json "$O/summary.json" ;;
 *) echo "unknown command $cmd" >&2; exit 2 ;;
