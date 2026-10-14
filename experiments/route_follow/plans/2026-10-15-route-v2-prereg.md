@@ -85,3 +85,26 @@ guard ~2 card-h per checkpoint.
 - Bit identity with every flag off fails (any tensor differs after 50 eager steps vs the code before route v2): nothing runs until fixed.
 - Pilot gate rules in section 3; full training only on the user's word.
 - Held: H1 fails on either seed mean -> not adopted, whatever H2 says.
+
+## Amendment 1 (before any pilot read, 2026-10-15 00:15)
+
+- d_turn must persist 4 m (the point two slots on also differs >= 30 deg, or the memory ends there): ~6 % of NAVSIM rows carry a one-segment
+  merge kink (e.g. 3, 3, -50, -50, 3 deg) that read as a turn (commit "rmem.turn_dist: a heading change must persist 4 m").
+- `rm_build.py order` built (CPU, 3 min): rows with d_turn known 0.99, d_turn < 60 m 0.41-0.43 (NAVSIM), 0.38-0.40 (yaw-rate), 0.33 (pool
+  L18RB0), 0.73-0.76 (on1_CF / on1_CFdev); trav median 14 m (NAVSIM), 19 m (pool); 57 % / 54 % of the rows have no route point in 0-20 m.
+- D2 verified (the near gap of the training rows against the served memory of RSG-L18-s0's held 460 read, `rm_build cover`): share with no
+  route point in 0-20 m by decision k
+
+  | k | served RSG-L18-s0 held | pool L18RB0 | NAVSIM rows |
+  |:--|--:|--:|--:|
+  | 0 | 0.951 | 0.965 | 0.947 |
+  | 1-2 | 0.948 | 0.961 | 0.950 |
+  | 3-5 | 0.857 | 0.892 | 0.885 |
+  | 6-9 | 0.480 | 0.520 | 0.570 |
+  | 10-17 | 0.195 | 0.216 | 0.303 |
+  | all (n 8 129 / 17 429 / 101 313) | 0.495 | 0.536 | 0.570 |
+
+  Same construction, same profile over k; the late-k excess of the NAVSIM rows is their slower logs (less distance covered by decision k),
+  not a different rule. Kept as is.
+- The pilot is chained behind the identity check (`AFTER=<ident-cmp id> rf_v2.sh pilot`): it starts only if the 50-step flags-off run is
+  bit-identical to the code before route v2 (`6551f10b`).
