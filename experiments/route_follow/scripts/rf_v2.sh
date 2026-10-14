@@ -28,14 +28,14 @@ sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl sub
 lcflags() { local k=$1; shift; local f="$*"; [[ $f == *--lc-cf* && $f != *--lc-k* ]] && f="$f --lc-k $k"; echo "$f"; }
 case $1 in
 build)
-  sub v2-build --vram 0 --cpu 24 --ram 60 --timeout-h 1 -- $P experiments/route_mem/scripts/rm_build.py order --data $D12 --pool L18RB0 --cf on1_CF on1_CFdev --workers 24 ;;
+  sub v2-build --vram 0.5 --cpu 24 --ram 60 --timeout-h 1 -- $P experiments/route_mem/scripts/rm_build.py order --data $D12 --pool L18RB0 --cf on1_CF on1_CFdev --workers 24 ;;
 ident)
   [[ -d /tmp/jev-v2base ]] || git worktree add --detach /tmp/jev-v2base $BASE_REV > /dev/null || exit 1
   for t in RV2ID-new-s0 RV2ID-old-s0; do [[ ! -e $CK/$t ]] || { echo "$CK/$t exists"; exit 1; }; done
   a=$(sub v2-ident-new --train --vram 28 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train RV2ID-new-s0 RSG-L18-s0 0 50 128 13 --eval-every 50 --allow-init) || exit 1
   b=$(sub v2-ident-old --train --vram 28 --cpu 6 --ram 70 --timeout-h 1 --cwd /tmp/jev-v2base -- $TR experiments/route_mem/scripts/rm_train.py train --tag RV2ID-old-s0 \
       --init RSG-L18-s0 --steps 50 --batch 128 --on-k 13 --seed 0 $REC --eval-every 50 --allow-init) || exit 1
-  sub v2-ident-cmp --after $a,$b --vram 0 --cpu 1 --ram 8 --timeout-h 1 -- bash -c "$TR experiments/onpol_nuplan/scripts/on_train.py ident --a RV2ID-new-s0 --b RV2ID-old-s0 --out $O/ident.json; rc=\$?; \
+  sub v2-ident-cmp --after $a,$b --vram 0.5 --cpu 1 --ram 8 --timeout-h 1 -- bash -c "$TR experiments/onpol_nuplan/scripts/on_train.py ident --a RV2ID-new-s0 --b RV2ID-old-s0 --out $O/ident.json; rc=\$?; \
       grep -h 'dev @' $DATA_DIR/runs/route_mem/train-RV2ID-new-s0/*/log.txt $DATA_DIR/runs/route_mem/train-RV2ID-old-s0/*/log.txt | tee $O/ident_dev.txt; exit \$rc" ;;
 pilot)
   shift; F="${*:-$ALL_FLAGS}"; T=RV2P-L18-s0
