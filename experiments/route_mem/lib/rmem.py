@@ -313,7 +313,7 @@ def _torch():
 
         def forward(self, ego, f):
             B, d = ego.shape[0], self.q.shape[1]
-            if self.n_pt == N_PT:
+            if self.dim == DIM:
                 P = f.float().view(B, N_PT, NF)
                 e = self.ego(ego[:, 1:].float())
             else:
