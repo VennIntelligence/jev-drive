@@ -348,7 +348,7 @@ def cmd_slot(a):
             R = PF.dedup(np.asarray(o["route"], float))
             S = PF.stations(R)
             st_a = PF.project(R, S, np.asarray(c["anchor"][:2]), c["s_e_m3"] - 40.0, c["s_e_m3"] + 10.0)[0]
-            st_m = PF.project(R, S, np.asarray(c["M0"]), st_a - 10.0, st_a + 130.0)[0]
+            st_m = PF.project(R, S, np.asarray(c["M0"]), st_a - 60.0, st_a + 130.0)[0]
             true = st_m - st_a
             rows.append(dict(set=c["set"], scene=c["scene"][7:15], rid=c["rid"][:8], k=c["k"], true=true, start_old=-c["s_geo"], start_new=-c["s_e"],
                              err_old=-c["s_geo"] - true, err_new=-c["s_e"] - true, first_served=c["served_first"], first_old=c["first_old"],

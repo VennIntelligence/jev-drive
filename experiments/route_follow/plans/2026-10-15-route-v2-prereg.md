@@ -108,3 +108,36 @@ guard ~2 card-h per checkpoint.
   not a different rule. Kept as is.
 - The pilot is chained behind the identity check (`AFTER=<ident-cmp id> rf_v2.sh pilot`): it starts only if the 50-step flags-off run is
   bit-identical to the code before route v2 (`6551f10b`).
+
+## Amendment 2 (after readings A / B, decision 299; before any pilot read, 2026-10-15 00:35)
+
+Decision 299: A (near-route gap -> shortcut / over-turn) unsupported; B (lane offset before the entry) inconclusive, unsupported at the
+entry; required lane changes essentially never done (map-validated sites: PAI 4 reached / 1 done, held 4 / 0); and a representation defect:
+while the ego is short of the memory's start and the route bends in between, the projection-anchored slots put far points into near slots
+(the start shown a median 4.5 m too near, p90 15.7 m).
+
+- Deviation from section 2: `--rm-order` is no longer the A hypothesis (A is refuted) but the fix of that slot defect, and it changes
+  accordingly. D1 is withdrawn: the ego's arc on the merged memory is now PROGRESS-anchored, s_e = arc(newest message's first waypoint) -
+  42.105 m + chord driven since (AlpaSim resamples 20 points every 80 / 19 m from its projection of the ego and drops those < 40 m, so the
+  first kept waypoint is 42.105 m of route arc ahead; PAI drive.jsonl shows 42.1057). The 40 m horizon cut is dropped with A (its only
+  reason was to stop aiming at far points): the ordered layout keeps the 40 slots (-6 .. +72 m) at their true arc + the d_turn / trav
+  scalars (DIM_O 203). The head conversion keeps every tensor (scalar map at 0).
+- One builder (b of the request): `rmem.memory_o` is called by the served `Tracker(order=True)`, `rm_build.py order` (NAVSIM rows rebuilt
+  from the messages at frames i - k .. i; pool rows from regen at the decision anchors; yaw-rate rows = the source block moved into the
+  perturbed frame and re-scored) and `rf_cfpool.py build --order` (the counterfactual / stay-lane rows); `rm_build.py served` compares the
+  served ordered memory with the offline rebuild (points, d_turn, trav) for any ordered checkpoint that is read. The trainer's hinge
+  target, negatives and over-turn reference use the ordered block when `--rm-order` is on.
+- New gate G-slot (layout gate, model independent; `rf_v2gate.py slotmem` on Tokyo / box + `slot` on the Mac): the 53 turn zeros of
+  results/progress/zeros.csv with the served first slot ahead (first_off_m3 > 0), at the decision 3 s before the failure; error = the
+  arc where the layout puts the memory's start minus its true arc (station of the merged memory's first point on rf_tax's rebuilt route
+  minus the anchor's station); line: median |error| <= 0.5 m. Read before any pilot (it needs no model), results/v2gate/slot.md:
+  projection (served today) median -4.51 m, |.| p90 15.67, 26 / 53 >= 5 m (decision 299 reproduced); ordered +0.00, p90 0.06, 0 / 53:
+  PASS. de9db5dc: true start 39.7 m ahead (d299's 41.1 was the station of the first valid point at t, 0.1 s later), projection 12.5 m
+  (first slot 14), ordered 39.7 m (first slot 40). 2466266e is not a gap case (memory starts 25 m behind the ego; both layouts within
+  0.21 m; results/v2gate/slot_2466266e.json). The served window was reproduced from the logged messages on 53 / 53 (max |diff| <= 2e-4).
+- Arms (coordinator, 2026-10-15): V2a = `--rm-order --lc-cf`; V2b = V2a + `--lane-lam 10 --lane-dz 0.5 --lane-neg 0.2` (negatives and
+  over-turn guard). `--lc-cf` is on in every arm (lane changes certain untrained). The lane hinge is the second arm, not the main one: its
+  only support is decision 299's exploratory lead (failed turns 0.48 m on the side away from the turn at entry - 20 m vs completed +0.06).
+  Two pilots (RV2aP / RV2bP-L18-s0: 1 000 steps, seed 0, batch 64, init RSG-L18-s0), all seven gates per arm; full round = 2 arms x 2
+  seeds, gentle schedule, on the base the coordinator names, held 460 paired vs the base and vs RSG-L18-s<seed> (H1-H3 unchanged).
+- Cost: pilots + gates ~0.3 card-h; full round 4 x 2 500 steps ~0.5 + 4 gates ~0.4 + 4 held reads ~2.8 = ~3.7 card-h.
