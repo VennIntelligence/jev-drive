@@ -681,12 +681,12 @@ def vcollect(a):
         sc = os.path.basename(sd)
         ref = {}
         for run in sorted(glob.glob(os.path.join(a.ref, sc, sc[7:15] + "-[ab]*"))):
-            if os.path.isdir(run):
+            if os.path.isdir(run) and "." not in os.path.basename(run):    # not a renamed failed attempt (e.g. -b0.oom)
                 rows = {r["rollout_id"]: (sim, r) for sim, r in rollouts(run)}
                 for sess, (tag, rr) in sessions(run).items():
                     ref[tag] = (rr, *rows.get(sess, (None, None)))
         for run in sorted(glob.glob(os.path.join(sd, sc[7:15] + ("-[ab]*" if a.own else "-v*")))):
-            if not os.path.isdir(run):
+            if not os.path.isdir(run) or "." in os.path.basename(run):
                 continue
             rows = {r["rollout_id"]: (sim, r) for sim, r in rollouts(run)}
             for sess, (tag, rr) in sessions(run).items():
