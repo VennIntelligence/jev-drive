@@ -37,6 +37,7 @@ import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 R_ = HERE.parents[2]
+sys.path[:0] = [str(R_), str(HERE)]
 N_PT, NF = 40, 5
 OFFS = -6.0 + 2.0 * np.arange(N_PT)
 NEAR, MID = (OFFS >= 0) & (OFFS < 20), (OFFS >= 20) & (OFFS < 40)
@@ -93,7 +94,6 @@ def to_local(a, X):
 
 
 def _imports():
-    sys.path[:0] = [str(R_), str(HERE)]
     import rf_pai_follow as PF
     import rf_tax as TX
     return PF, TX
@@ -145,12 +145,30 @@ class Ego:
     def cov(self, t):
         j, pre = self.mem(t)
         if j is None:
-            return dict(cov_0_20=np.nan, cov_20_40=np.nan, first_off=np.nan, first_lat=np.nan, first_brg=np.nan, mem_pre=True, k_mem=-1)
+            return dict(cov_0_20=np.nan, cov_20_40=np.nan, first_off=np.nan, first_lat=np.nan, first_brg=np.nan, first10_off=np.nan, first10_lat=np.nan,
+                        first10_brg=np.nan, mem_pre=True, k_mem=-1)
         V, XY = self.rm["V"][j], self.rm["XY"][j]
         f = np.flatnonzero(V & (OFFS >= 0))
         fo = dict(first_off=float(OFFS[f[0]]), first_lat=float(XY[f[0], 1]), first_brg=float(np.degrees(np.arctan2(XY[f[0], 1], XY[f[0], 0])))) if len(f) \
             else dict(first_off=np.nan, first_lat=np.nan, first_brg=np.nan)
+        f = np.flatnonzero(V & (OFFS >= 10))                                # Amendment 1: a point at 0 m sits beside the axle (bearing ~ +-90)
+        fo |= dict(first10_off=float(OFFS[f[0]]), first10_lat=float(XY[f[0], 1]), first10_brg=float(np.degrees(np.arctan2(XY[f[0], 1], XY[f[0], 0])))) if len(f) \
+            else dict(first10_off=np.nan, first10_lat=np.nan, first10_brg=np.nan)
         return dict(cov_0_20=float(V[NEAR].mean()), cov_20_40=float(V[MID].mean()), mem_pre=bool(pre), k_mem=int(self.rm["k"][j]), **fo)
+
+    def geo_cov(self, t):
+        """Amendment 2: route stations the memory covers, by geometry: the valid points projected on the rebuilt route span [lo, hi];
+        share of the stations s_e + 0, 2, .., 18 (and 20, .., 38) inside it (s_e = the ego's station at t); nearest covered distance."""
+        X, _ = self.mem_poly(t)
+        s_e = float(self.st[self.i_at(t)])
+        if not len(X):
+            return dict(gcov_0_20=0.0, gcov_20_40=0.0, gnear=np.nan, s_e=s_e)
+        sv = np.array([self.PF.project(self.R, self.S, q, s_e - 30.0, s_e + 120.0)[0] for q in X])
+        lo, hi = sv.min() - 1.0, sv.max() + 1.0
+        q = s_e + OFFS
+        inn = (q >= lo) & (q <= hi)
+        return dict(gcov_0_20=float(inn[NEAR].mean()), gcov_20_40=float(inn[MID].mean()), gnear=float(max(lo + 1.0 - s_e, 0.0)), s_e=s_e,
+                    g_lo=float(lo), g_hi=float(hi))
 
     def mem_poly(self, t):
         """Valid memory points of the decision at t in the local frame (n, 2), with their offsets."""
@@ -283,8 +301,11 @@ def zero_job(job):
     for tag, dt in (("m3", 3e6), ("m1", 1e6)):
         t = max(tf - dt, e.t[0])
         row.update({f"{k}_{tag}": v for k, v in e.cov(t).items()})
+        row.update({f"{k}_{tag}": v for k, v in e.geo_cov(t).items()})
         row[f"drv_{tag}"] = float(e.arc[e.i_at(t)])
         row[f"lat_{tag}"] = float(e.lat[e.i_at(t)])
+        X, _ = e.mem_poly(t)                                                # gate G-A2: the served memory lies on the rebuilt route
+        row[f"memdist_{tag}"] = float(np.median([abs(PF.project(e.R, e.S, q)[1]) for q in X])) if len(X) else np.nan
     row.update(e.legs(max(tf - 3e6, e.t[0])))
     row["T"] = bool(cls == "over_turn" or sc is True)
     return row
@@ -302,6 +323,7 @@ def done_job(job):
     for tag, dt in (("e0", 0.0), ("m3", 3e6)):
         tt = max(t - dt, e.t[0])
         row.update({f"{k}_{tag}": v for k, v in e.cov(tt).items()})
+        row.update({f"{k}_{tag}": v for k, v in e.geo_cov(tt).items()})
         row[f"drv_{tag}"] = float(e.arc[e.i_at(tt)])
     return row
 
@@ -360,7 +382,6 @@ def verdict_a(r):
 def report(a):
     import pandas as pd
     from jevdrive import par
-    from jevdrive.common import n_cpus
     from jevdrive.run import Run
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -382,8 +403,8 @@ def report(a):
                     dj.append((name, o, m, frow))
             gates[name] = dict(rollouts=len(rolls), rmem_missing=miss)
             run.info(f"{name}: {len(rolls)} rollouts, rmem missing {miss}")
-        rz = par.pmap(zero_job, zj, workers=min(n_cpus(), len(zj)), run=run, desc="zeros")
-        rd = par.pmap(done_job, dj, workers=min(n_cpus(), len(dj)), run=run, desc="completed")
+        rz = par.pmap(zero_job, zj, workers=None, run=run, desc="zeros")
+        rd = par.pmap(done_job, dj, workers=None, run=run, desc="completed")
         if rz.errors or rd.errors:
             run.info(f"errors: {list(rz.errors.values())[:2]} {list(rd.errors.values())[:2]}")
         Z = pd.DataFrame([v for v in rz.values if v is not None])
@@ -396,38 +417,48 @@ def report(a):
         cm = c.primary.map(lambda p: {"cor_straight_at_turn": "straight", "cor_turn_under": "late_wide", "cor_turn_over": "over_turn",
                                       "cor_wrong_exit": "wrong_exit", "cor_lane_change": "lane_change", "cor_drift": "other"}.get(p))
         gates["G_A1"] = dict(n=int(len(c)), agree=int((cm == c.rule_cls).sum()), share=float((cm == c.rule_cls).mean()) if len(c) else np.nan)
+        gates["G_A2_memdist_median_m"] = float(Z.memdist_m3.median())
+        gates["G_A2_memdist_p90_m"] = float(Z.memdist_m3.quantile(0.9))
         gates["t_f_vs_tax_max_abs_s"] = float(np.nanmax(np.abs(Z.t_f_s - Z.t_ev_s_tax.astype(float)))) if len(Z) else np.nan
         TZ = Z[Z.turn_zero].copy()
         res = dict(gates=gates, sets={}, claim={})
         for tag in ("m3", "m1"):
             TZ[f"unc_{tag}"] = TZ[f"cov_0_20_{tag}"] < 0.5
+            TZ[f"unc_g{tag}"] = TZ[f"gcov_0_20_{tag}"] < 0.5
         groups = {"pooled": TZ, **{n: TZ[TZ.set == n] for n in TZ.set.unique()}, "held": TZ[TZ.set.str.startswith("held")]}
         for gname, x in groups.items():
             r = {}
-            for tag in ("m3", "m1"):
+            for tag in ("m3", "m1", "gm3", "gm1"):
                 rr = rr_boot(x["T"].to_numpy(), x[f"unc_{tag}"].to_numpy(), x.cluster.to_numpy())
                 rr["verdict"] = verdict_a(rr)
                 r[tag] = rr
+                if tag.startswith("g"):
+                    continue
                 r[f"T_shortcut_only_{tag}"] = rr_boot(x.shortcut.fillna(False).astype(bool).to_numpy(), x[f"unc_{tag}"].to_numpy(), x.cluster.to_numpy())
                 r[f"T_overturn_only_{tag}"] = rr_boot((x.cls == "over_turn").to_numpy(), x[f"unc_{tag}"].to_numpy(), x.cluster.to_numpy())
             r["counts_m3"] = {f"{k[0]}|{'uncovered' if k[1] else 'covered'}": int(v) for k, v in x.groupby(["cls", "unc_m3"]).size().items()}
+            r["counts_gm3"] = {f"{k[0]}|{'uncovered' if k[1] else 'covered'}": int(v) for k, v in x.groupby(["cls", "unc_gm3"]).size().items()}
             r["counts_m1"] = {f"{k[0]}|{'uncovered' if k[1] else 'covered'}": int(v) for k, v in x.groupby(["cls", "unc_m1"]).size().items()}
             r["shortcut_m3"] = {f"{k[0]}|{'uncovered' if k[1] else 'covered'}": int(v) for k, v in x.groupby([x.shortcut.astype(str), "unc_m3"]).size().items()}
             r["n"] = int(len(x))
             res["sets"][gname] = r
-        res["claim"] = dict(primary=res["sets"]["pooled"]["m3"], verdict=res["sets"]["pooled"]["m3"]["verdict"])
+        res["claim"] = dict(primary=res["sets"]["pooled"]["m3"], verdict=res["sets"]["pooled"]["m3"]["verdict"],
+                            geometric=res["sets"]["pooled"]["gm3"], verdict_geometric=res["sets"]["pooled"]["gm3"]["verdict"])
         # completed vs turn zeros: P(uncovered)
         if len(D):
             D["unc_e0"], D["unc_m3"] = D.cov_0_20_e0 < 0.5, D.cov_0_20_m3 < 0.5
+            D["gunc_e0"], D["gunc_m3"] = D.gcov_0_20_e0 < 0.5, D.gcov_0_20_m3 < 0.5
             Dk = D[D.reach == "ok"]
             both = pd.concat([pd.DataFrame(dict(u=Dk.unc_m3.astype(float), z=False, g=Dk.scene)), pd.DataFrame(dict(u=TZ.unc_m3.astype(float), z=True, g=TZ.scene))])
             res["completed"] = dict(n=int(len(D)), reached=int(len(Dk)), p_unc_entry=float(Dk.unc_e0.mean()) if len(Dk) else np.nan,
                                     p_unc_entry_m3=float(Dk.unc_m3.mean()) if len(Dk) else np.nan, p_unc_zero_m3=float(TZ.unc_m3.mean()),
                                     diff_zero_minus_completed=diff_boot(both.u, both.z, both.g),
+                                    gp_unc_entry=float(Dk.gunc_e0.mean()) if len(Dk) else np.nan, gp_unc_entry_m3=float(Dk.gunc_m3.mean()) if len(Dk) else np.nan,
+                                    gp_unc_zero_m3=float(TZ.unc_gm3.mean()),
                                     cov_0_20_entry_median=float(Dk.cov_0_20_e0.median()) if len(Dk) else np.nan,
                                     per_set={n: dict(n=int((Dk.set == n).sum()), p_unc_entry=float(Dk[Dk.set == n].unc_e0.mean()),
                                                      p_unc_m3=float(Dk[Dk.set == n].unc_m3.mean())) for n in Dk.set.unique()})
-        res["by_class"] = {c_: {k: float(TZ[TZ.cls == c_][k].median()) for k in ("cov_0_20_m3", "cov_20_40_m3", "first_off_m3", "first_lat_m3", "first_brg_m3", "drv_m3", "v_f")}
+        res["by_class"] = {c_: {k: float(TZ[TZ.cls == c_][k].median()) for k in ("cov_0_20_m3", "cov_20_40_m3", "gcov_0_20_m3", "gcov_20_40_m3", "gnear_m3", "first_off_m3", "first_lat_m3", "first_brg_m3", "first10_off_m3", "first10_brg_m3", "drv_m3", "v_f")}
                            | dict(n=int((TZ.cls == c_).sum()), shortcut=int((TZ[TZ.cls == c_].shortcut == True).sum()))  # noqa: E712
                            for c_ in sorted(TZ.cls.unique())}
         res["legs"] = dict(far_other_leg=int(TZ.far_other_leg.sum()), double_opp=int(TZ.double_opp.sum()), gap_turn=int(TZ.gap_turn.sum()), n=int(len(TZ)),
@@ -448,38 +479,45 @@ def write_md(out, res, Z, TZ, D):
           "Prereg `plans/2026-10-15-progress-lane-readings-prereg.md`. Turn zeros of RSG-L18 (PAI 281 s0, held 460 s0 / s1); covered = >= 50 % of the "
           "memory's 0-20 m offsets valid at t_f - 3 s (primary) / - 1 s. T = over-turn class or shortcut flag. RR = P(T | uncovered) / P(T | covered), "
           "scene-clustered bootstrap 95 % CI (B = 10 000).", "",
-          f"Gates: G-A1 heading rule = taxonomy corridor class {g['G_A1']['agree']} / {g['G_A1']['n']}; t_f vs taxonomy max |diff| {g['t_f_vs_tax_max_abs_s']:.2f} s; "
+          f"Gates: G-A1 heading rule = taxonomy corridor class {g['G_A1']['agree']} / {g['G_A1']['n']}; G-A2 served memory points to the rebuilt route "
+          f"median {g['G_A2_memdist_median_m']:.2f} m (p90 {g['G_A2_memdist_p90_m']:.2f}); t_f vs taxonomy max |diff| {g['t_f_vs_tax_max_abs_s']:.2f} s; "
           + "; ".join(f"{k} rmem missing {v['rmem_missing']} / {v['rollouts']}" for k, v in g.items() if isinstance(v, dict) and "rollouts" in v), "",
           f"**Claim A (pooled, t_f - 3 s): RR {f(res['claim']['primary'])} -> {res['claim']['verdict']}** "
           f"(T {res['claim']['primary']['t_unc']} / {res['claim']['primary']['n_unc']} uncovered vs {res['claim']['primary']['t_cov']} / {res['claim']['primary']['n_cov']} covered).", "",
-          "| set | turn zeros | RR t_f - 3 s | verdict | RR t_f - 1 s | shortcut only (- 3 s) | over-turn only (- 3 s) |", "|:--|--:|:--|:--|:--|:--|:--|"]
+          f"Amendment 2 (geometric coverage: route stations s_e + 0..18 m inside the span of the valid memory points projected on the route): "
+          f"**RR {f(res['claim']['geometric'])} -> {res['claim']['verdict_geometric']}** (T {res['claim']['geometric']['t_unc']} / {res['claim']['geometric']['n_unc']} "
+          f"uncovered vs {res['claim']['geometric']['t_cov']} / {res['claim']['geometric']['n_cov']} covered).", "",
+          "| set | turn zeros | RR t_f - 3 s (T unc / n vs T cov / n) | verdict | RR t_f - 1 s | geometric RR t_f - 3 s | verdict | geometric t_f - 1 s | shortcut only (- 3 s) | over-turn only (- 3 s) |",
+          "|:--|--:|:--|:--|:--|:--|:--|:--|:--|:--|"]
+    q = lambda r: f"{f(r)} ({r['t_unc']}/{r['n_unc']} vs {r['t_cov']}/{r['n_cov']})"  # noqa: E731
     for k, r in res["sets"].items():
-        md.append(f"| {k} | {r['n']} | {f(r['m3'])} ({r['m3']['t_unc']}/{r['m3']['n_unc']} vs {r['m3']['t_cov']}/{r['m3']['n_cov']}) | {r['m3']['verdict']} | "
-                  f"{f(r['m1'])} ({r['m1']['t_unc']}/{r['m1']['n_unc']} vs {r['m1']['t_cov']}/{r['m1']['n_cov']}) | {f(r['T_shortcut_only_m3'])} | {f(r['T_overturn_only_m3'])} |")
+        md.append(f"| {k} | {r['n']} | {q(r['m3'])} | {r['m3']['verdict']} | {q(r['m1'])} | {q(r['gm3'])} | {r['gm3']['verdict']} | {q(r['gm1'])} | "
+                  f"{f(r['T_shortcut_only_m3'])} | {f(r['T_overturn_only_m3'])} |")
     md += ["", "Counts per class x bucket (t_f - 3 s; pooled), shortcut flags inside each class, and the medians of the memory read at t_f - 3 s:", "",
-           "| class | n | covered | uncovered | shortcut | cov 0-20 | cov 20-40 | first valid offset (m) | first lateral (m) | first bearing (deg) | driven since start (m) | v at t_f |",
-           "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+           "| class | n | covered | uncovered | geo covered / uncovered | shortcut | cov 0-20 | cov 20-40 | geo cov 0-20 / 20-40 | geo nearest covered (m) | first valid offset (m) | first lateral (m) | first bearing (deg) | first >= 10 m: offset / bearing | driven since start (m) | v at t_f |",
+           "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
     for c, r in res["by_class"].items():
         x = TZ[TZ.cls == c]
-        md.append(f"| {c} | {r['n']} | {int((~x.unc_m3).sum())} | {int(x.unc_m3.sum())} | {r['shortcut']} | {r['cov_0_20_m3']:.2f} | {r['cov_20_40_m3']:.2f} | "
-                  f"{r['first_off_m3']:.0f} | {r['first_lat_m3']:+.1f} | {r['first_brg_m3']:+.0f} | {r['drv_m3']:.0f} | {r['v_f']:.1f} |")
+        md.append(f"| {c} | {r['n']} | {int((~x.unc_m3).sum())} | {int(x.unc_m3.sum())} | {int((~x.unc_gm3).sum())} / {int(x.unc_gm3.sum())} | {r['shortcut']} | {r['cov_0_20_m3']:.2f} | {r['cov_20_40_m3']:.2f} | {r['gcov_0_20_m3']:.2f} / {r['gcov_20_40_m3']:.2f} | {r['gnear_m3']:.0f} | "
+                  f"{r['first_off_m3']:.0f} | {r['first_lat_m3']:+.1f} | {r['first_brg_m3']:+.0f} | {r['first10_off_m3']:.0f} / {r['first10_brg_m3']:+.0f} | {r['drv_m3']:.0f} | {r['v_f']:.1f} |")
     c = res.get("completed")
     if c:
         d = c["diff_zero_minus_completed"]
         md += ["", f"Completed strict turns: {c['n']} ({c['reached']} with the entry crossed): uncovered at the entry {100 * c['p_unc_entry']:.0f} %, "
                f"3 s before it {100 * c['p_unc_entry_m3']:.0f} %; turn zeros at t_f - 3 s {100 * c['p_unc_zero_m3']:.0f} % "
-               f"(zeros - completed {100 * d['diff']:+.0f} pp [{100 * d['lo']:+.0f}, {100 * d['hi']:+.0f}]). Per set: "
+               f"(zeros - completed {100 * d['diff']:+.0f} pp [{100 * d['lo']:+.0f}, {100 * d['hi']:+.0f}]); geometric: completed at the entry {100 * c['gp_unc_entry']:.0f} %, "
+               f"3 s before {100 * c['gp_unc_entry_m3']:.0f} %, turn zeros {100 * c['gp_unc_zero_m3']:.0f} %. Per set (slot): "
                + "; ".join(f"{k} n {v['n']}, entry {100 * v['p_unc_entry']:.0f} %, - 3 s {100 * v['p_unc_m3']:.0f} %" for k, v in c["per_set"].items()) + "."]
     L = res["legs"]
     md += ["", f"Road legs at t_f - 3 s ({L['n']} turn zeros): far segment (s + 60 m) on another leg (>= 45 deg) {L['far_other_leg']}, of the {L['T_n']} T zeros "
            f"{L['T_far_other_leg']}; two opposite turns within 80 m {L['double_opp']}; a turn entry inside the first 40 m (the message gap) {L['gap_turn']}. "
            f"Zeros without a turn (not in the read): {res['non_turn_zeros']}.", "",
            "Per turn zero (t_f - 3 s):", "",
-           "| set | scene | primary | class | shortcut (ego / log dev deg) | cov 0-20 / 20-40 | first valid (m, lat, deg) | driven (m) | far leg dpsi | double | gap turn |",
+           "| set | scene | primary | class | shortcut (ego / log dev deg) | cov 0-20 / 20-40 (geo) | first valid (m, lat, deg) | driven (m) | far leg dpsi | double | gap turn |",
            "|:--|:--|:--|:--|:--|:--|:--|--:|--:|:--|:--|"]
     for _, r in TZ.sort_values(["set", "cls", "scene"]).iterrows():
         md.append(f"| {r.set} | {r.scene[-36:][:8] if r.scene.startswith('clipgt') else r.scene[-16:]} | {r.primary} | {r.cls} | {r.shortcut} ({r.ego_dev_deg:+.0f} / {r.log_dev_deg:+.0f}) | "
-                  f"{r.cov_0_20_m3:.1f} / {r.cov_20_40_m3:.1f} | {r.first_off_m3:.0f}, {r.first_lat_m3:+.1f}, {r.first_brg_m3:+.0f} | {r.drv_m3:.0f} | {r.far_dpsi:+.0f} | "
+                  f"{r.cov_0_20_m3:.1f} / {r.cov_20_40_m3:.1f} ({r.gcov_0_20_m3:.1f} / {r.gcov_20_40_m3:.1f}) | {r.first_off_m3:.0f}, {r.first_lat_m3:+.1f}, {r.first_brg_m3:+.0f} | {r.drv_m3:.0f} | {r.far_dpsi:+.0f} | "
                   f"{'yes' if r.double_opp else ''} | {'yes' if r.gap_turn else ''} |")
     (out / "progress.md").write_text("\n".join(md) + "\n")
 
@@ -512,8 +550,9 @@ def fig_bev(a, zj, Z):
         offs = s3 + OFFS
         allp = e.route_xy(offs)
         X, of = e.mem_poly(t3)
-        ok = np.isin(OFFS, of)
-        ax.scatter(allp[~ok, 0], allp[~ok, 1], s=22, facecolors="none", edgecolors="#b03a3a", lw=0.9, label="memory offset invalid (t_f - 3 s)", zorder=4)
+        gc = e.geo_cov(t3)
+        ok = (offs >= gc.get("g_lo", np.inf)) & (offs <= gc.get("g_hi", -np.inf))
+        ax.scatter(allp[~ok, 0], allp[~ok, 1], s=22, facecolors="none", edgecolors="#b03a3a", lw=0.9, label="route -6..72 m not in memory (t_f - 3 s)", zorder=4)
         ax.scatter(X[:, 0], X[:, 1], s=16, color="#1f4e9c", label="memory valid (t_f - 3 s)", zorder=5)
         ax.plot(*e.P[i3], marker="^", ms=10, color="black", zorder=6)
         ax.plot(*e.P[e.i_at(tf)], marker="X", ms=11, color="#b03a3a", zorder=6)
@@ -527,10 +566,10 @@ def fig_bev(a, zj, Z):
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_title(f"{p}  {r.primary} -> {r.cls}{'  shortcut' if r.shortcut is True else ''}\n"
-                     f"cov 0-20 m {r.cov_0_20_m3:.1f}, 20-40 m {r.cov_20_40_m3:.1f}, driven {r.drv_m3:.0f} m at t_f - 3 s", fontsize=9)
+                     f"cov 0-20 m slot {r.cov_0_20_m3:.1f} / geo {r.gcov_0_20_m3:.1f}, 20-40 m {r.cov_20_40_m3:.1f} / {r.gcov_20_40_m3:.1f}, driven {r.drv_m3:.0f} m (t_f - 3 s)", fontsize=9)
     axs.flat[0].legend(loc="lower left", fontsize=7, framealpha=0.9)
     fig.suptitle("Reading A: RSG-L18-s0 PAI 281 turn zeros. Triangle = ego at t_f - 3 s, X = first zero event. Blue dots = the route memory the model "
-                 "was fed at t_f - 3 s; red rings = memory offsets (-6..72 m) that were empty", fontsize=10)
+                 "was fed at t_f - 3 s; red rings = route stations -6..72 m ahead that the memory did not hold", fontsize=10)
     fig.tight_layout()
     Path(a.fig).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(a.fig, dpi=110)
