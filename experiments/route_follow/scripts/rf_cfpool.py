@@ -27,6 +27,8 @@ AlpaSim's runtime); the hand-off is one pickle per shard.
                           route often extends straight where the log turns or changes lane later: such a counterfactual equals the real row);
                           equal-arc gaps of the newest / first message and of the merged memory window are kept as diagnostics
                           -> $DATA_DIR/runs/route_follow/cf/rows/<data>.npz
+  build --order          route v2: the same rows' ordered memory (rmem.memory_o; messages at the logged poses, the newest at j = k) ->
+                          rows/<data>.o.npz (row, token, cls, ok, f (n, DIM_O), trav); the old rows file is not rewritten
   pack   (AlpaSim venv)   --data .. [--name CF]            pool files (experiments/onpol_nuplan/plans/on_pool_format.md), split by log: logs holding a
                           token of navsim/op-parity-full-dev -> on1_<name>dev (G-swap only, never trained), all others -> on1_<name>:
                           cache/on1_<name>/{tab, agent (ok False), road (the token's P2H10 raster from runs/body1/labels_road: its frame is the
@@ -273,6 +275,9 @@ def build_one(u):
         kind, W, poly, dd, snap = got
         B = [RM.to_local(np.r_[fr.p[i - k + j, :2] - org, fr.yaw[i - k + j]], w[np.isfinite(w).all(1)]) for j, w in enumerate(W) if np.isfinite(w).all(1).any()]
         f = RM.memory(B, a).astype(np.float32)
+        jl = max([j for j, w in enumerate(W) if np.isfinite(w).all(1).any()], default=k)       # route v2: the ordered memory (rmem.memory_o)
+        tv = RM.travelled(fr.p[i - k:i + 1, :2])
+        rec.update(fo=RM.memory_o(B, a, np.r_[fr.p[i - k + jl, :2] - org, fr.yaw[i - k + jl]], tv), trav=tv)
         bad = np.flatnonzero(dd[I60 + 1:] > SNAP)                       # beyond +60 m: cut the label where the generator leaves the lane-graph line
         if len(bad):
             poly[I60 + 1 + bad[0]:] = np.nan
@@ -302,9 +307,10 @@ def build_one(u):
 def cmd_build(a):
     from jevdrive import par
     from jevdrive.run import Run
-    with Run("route_follow", "cfpool-build", config=vars(a)) as run:
+    import rmem as RM
+    with Run("route_follow", "cfpool-build" + ("-order" if a.order else ""), config=vars(a)) as run:
         for data in a.data:
-            dst = OUT / "rows" / f"{data}.npz"
+            dst = OUT / "rows" / f"{data}{'.o' if a.order else ''}.npz"
             if dst.exists() and not a.force:
                 run.info(f"{data}: exists")
                 continue
@@ -317,6 +323,16 @@ def cmd_build(a):
                 run.info(f"{data}: {res.summary()}")
             rows = [r for v in res.values if v for r in v]
             n = len(rows)
+            if a.order:                                                 # route v2: the ordered memory of every row (the old file is not touched)
+                fo = np.zeros((n, RM.DIM_O), np.float16)
+                for m, r in enumerate(rows):
+                    if "fo" in r:
+                        fo[m] = r["fo"]
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                np.savez(dst, row=np.array([r["row"] for r in rows], np.int32), token=np.array([r["token"] for r in rows]), cls=np.array([r["cls"] for r in rows]),
+                         ok=np.array([r["ok"] for r in rows]), f=fo, trav=np.array([r.get("trav", 0.0) for r in rows], np.float32))
+                run.info(f"{data}: {n} ordered rows -> {dst}")
+                continue
             nan = lambda *s: np.full((n,) + s, np.nan, np.float32)  # noqa: E731
             Z = dict(row=np.zeros(n, np.int32), token=np.array([r["token"] for r in rows]), log=np.array([r["log"] for r in rows]),
                      cls=np.array([r["cls"] for r in rows]), gen=np.array([r.get("gen", "") for r in rows]), k=np.array([r["k"] for r in rows], np.int8), ok=np.array([r["ok"] for r in rows]),
@@ -528,6 +544,8 @@ if __name__ == "__main__":
         p = sub.add_parser(c)
         p.add_argument("--data", nargs="+", required=True), p.add_argument("--workers", type=int, default=0), p.add_argument("--limit", type=int, default=0)
         p.add_argument("--force", action="store_true")
+        if c == "build":
+            p.add_argument("--order", action="store_true", help="route v2: write rows/<data>.o.npz (ordered memory) only")
     p = sub.add_parser("pack")
     p.add_argument("--data", nargs="+", required=True), p.add_argument("--name", default="CF")
     a = ap.parse_args()

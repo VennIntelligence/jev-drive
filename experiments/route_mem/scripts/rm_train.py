@@ -59,12 +59,12 @@ Longitudinal safety (2026-10-13, experiments/route_follow/plans/2026-10-13-lon-p
             sum over the pool rows / n_imit); refused together with another --on-lon module. All 0 (default) = off: no operation is added.
 
 Route v2 (2026-10-15, experiments/route_follow/plans/2026-10-15-route-v2-prereg.md); every flag off = the recipe above operation for operation:
-  --rm-order        the ordered, progress-anchored memory layout (lib/rmem.py "Ordered layout": -6 .. +40 m, d_turn, trav; DIM_O = 123) from
-            feat/<data>.o.npz (rm_build.py order); the head gets order=True (sidecar head `order`); an --init with the old layout is converted
-            by rmem.order_state (first 24 position embeddings, the scalar map at 0).
+  --rm-order        the ordered, progress-anchored memory layout (lib/rmem.py "Ordered layout": the 40 slots at the route arc they claim,
+            + d_turn, trav; DIM_O = 203) from feat/<data>.o.npz (rm_build.py order); the head gets order=True (sidecar head `order`); an --init
+            with the old layout is converted by rmem.order_state (every tensor kept, the scalar map at 0).
   --lane-lam L [--lane-dz 0.5] [--lane-neg 0.2] [--lane-shift 3.5] [--lane-over-lam L] [--lane-over-deg 10]
-            near-field lateral hinge to the CARRIED route on every non-anchor row whose memory is fed (pool rows included): the row's old-layout
-            memory polyline (feat/<data>.npz, 2 m, -6 .. +72 m) as target, on_route.near (shape-only lateral gradient, poses covered by a
+            near-field lateral hinge to the CARRIED route on every non-anchor row whose memory is fed (pool rows included): the row's memory
+            polyline in the input layout (2 m slots, -6 .. +72 m) as target, on_route.near (shape-only lateral gradient, poses covered by a
             segment), relu(distance - dz), pose weights 0 / 2 / 2 / 2 / 1 / 1 / 1 / 1 at 0.5 .. 4 s (1.0 - 2.0 s weight 2); summed / non-anchor
             rows x L. Negatives: a share --lane-neg of the eligible rows (non-anchor, memory fed, the +0 m point valid, not a --lc-cf row), own rng
             stream [seed, 0, 97], get a FAKE input memory: the same route shifted sideways by +-shift m (same direction), or (half of the rows
@@ -75,7 +75,8 @@ Route v2 (2026-10-15, experiments/route_follow/plans/2026-10-15-route-v2-prereg.
             and that arc (|turn| >= 5 deg, else 0): fires when the plan at 2 s points more than 10 deg further into the turn than the route;
             gradient through the plan heading only; summed / non-anchor rows x --lane-over-lam (default L).
   --lc-cf [--lc-k 8] [--lc-lam L] [--lc-dz 0.5]
-            lane-change counterfactual pairs: the `lc` rows of runs/route_follow/cf/rows/<shard>.npz (rf_cfpool build: navtrain tokens whose
+            lane-change counterfactual pairs: the `lc` rows of runs/route_follow/cf/rows/<shard>.npz (with --rm-order the stay-lane memory
+            from <shard>.o.npz, rf_cfpool build --order; rf_cfpool build: navtrain tokens whose
             matched lanes change within 4 s and end >= 2 m off the t0 lane; ok = the stay-lane route generated and >= 2 m off the real memory;
             train-split rows only). Every batch draws k tokens (own stream [seed, 0, 101]): the token's real row replaces one of the last k normal
             rows (its memory never dropped nor faked; imitation of the log, the lane hinge on its real memory) and a stay-lane row is appended
@@ -109,8 +110,8 @@ EGO_SPEED = [4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 17, 18]              # ego_featur
 
 def feats(cfg_data, S, dev, order=False, old=False):
     """Route features (S.n, DIM | DIM_O with order) float32 on dev, and per Store row: junction distance / route turn (dev rows of the NAVSIM
-    dirs, else nan), the source dir index. Asserts every file's names equal the Store tab's names of its dir. old: also the old-layout features
-    (S.n, DIM) f16 on dev and trav (S.n,) (route v2's targets / negatives; trav needs the .o files)."""
+    dirs, else nan), the source dir index. Asserts every file's names equal the Store tab's names of its dir. old: also the input layout's point
+    block (S.n, DIM) f16 on dev and trav (S.n,) (route v2's targets / negatives; with order both come from the .o files)."""
     import torch
     from jevdrive.common import data_dir
     root = data_dir() / "runs/route_mem/feat"
@@ -122,15 +123,16 @@ def feats(cfg_data, S, dev, order=False, old=False):
         assert np.array_equal(z["names"], S.tab["names"][o:o + n]), f"{d}: feature rows differ from the Store's"
         f = z["f"].astype(np.float32)
         f[~z["ok"]] = 0
-        if order or old:
+        if order:
             zo = np.load(root / f"{d}.o.npz")
             assert np.array_equal(zo["names"], z["names"]) and np.array_equal(zo["ok"], z["ok"]), f"{d}.o: rows differ"
             TR.append(zo["trav"].astype(np.float32))
-            if old:
-                FO.append(f.astype(np.float16))
-            if order:
-                f = zo["f"].astype(np.float32)
-                f[~zo["ok"]] = 0
+            f = zo["f"].astype(np.float32)
+            f[~zo["ok"]] = 0
+        elif old:
+            TR.append(np.zeros(n, np.float32))
+        if old:
+            FO.append(f[:, :RM.DIM].astype(np.float16))             # the input layout's point block: hinge target, negatives
         F.append(f)
         JD.append(z["jdist"] if "jdist" in z.files else np.full(n, np.nan, np.float32))
         TU.append(z["turn40"] if "turn40" in z.files else np.full(n, np.nan, np.float32))
@@ -241,7 +243,7 @@ CURVE_DEG, SIDE_DEG = 15.0, 5.0
 
 
 def old_poly(f):
-    """Old-layout features (n, DIM) tensor -> (n, N_PT, 2) row-frame points, NaN where invalid."""
+    """A point block (n, DIM) tensor (either layout) -> (n, N_PT, 2) row-frame points, NaN where invalid."""
     import torch
     P = f.float().view(-1, RM.N_PT, RM.NF)
     xy = P[..., 1:3] * 20.0
@@ -348,8 +350,12 @@ def lane_prep(a, ns, dev):
     is_nav[ns.tr_o] = True                                            # the normal (NAVSIM) training rows
     LCr, LCf, LCc, LCp = [], [], [], []
     tr_set = set(ns.tr_o.tolist())
+    order = ns.head.get("order", False)
     for d in nav:
         z = np.load(rows_dir / f"{d}.npz")
+        if order and getattr(a, "lc_cf", False):                      # the ordered stay-lane memory (rf_cfpool build --order)
+            zo = np.load(rows_dir / f"{d}.o.npz")
+            fo_map = {(t, c): f for t, c, f in zip(zo["token"].tolist(), zo["cls"].tolist(), zo["f"])}
         r = z["row"].astype(np.int64) + offs[d]
         assert (S.tab["names"][r] == z["token"]).all(), f"{d}: cf rows vs Store"
         junction[r[np.isin(z["cls"], ["j0", "j1"])]] = True
@@ -357,9 +363,9 @@ def lane_prep(a, ns, dev):
         m &= np.array([x in tr_set for x in r.tolist()])
         if not m.any():
             continue
-        f = z["f"][m].astype(np.float32)
+        f = np.stack([fo_map[t, "lc"] for t in z["token"][m].tolist()]).astype(np.float32) if order else z["f"][m].astype(np.float32)
         LCr.append(r[m])
-        LCf.append(RM.to_order(f, ns.trav[torch.as_tensor(r[m], device=dev)].cpu().numpy()) if ns.head.get("order") else f)
+        LCf.append(f)
         oh = np.zeros((m.sum(), 3), np.float32)
         c = z["cmd"][m].astype(int)
         oh[np.flatnonzero(c < 3), c[c < 3]] = 1.0                      # parity_adapter.ego_features: cmd[..., :3], unknown -> all zero

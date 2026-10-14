@@ -16,18 +16,21 @@ small transformer decoder whose 32 slot queries read [null, ego token, the valid
 branch adds exactly 0 until trained and an init from any P2 checkpoint is that checkpoint. The fed row is ego (20) ++ route features (200);
 `present` (ego[:, 0]) multiplies both biases (anchor rows stay the shipped model).
 
-Ordered layout (route v2, experiments/route_follow/plans/2026-10-15-route-v2-prereg.md, rm_train --rm-order; sidecar head `order: true`):
-  points    the same window (arc offsets from the ego's projection on the merged route, 2 m), cut at +40 m: OFFS_O = -6, -4, .., +40
-            (N_PT_O = 24; 3 points behind the ego). Points beyond +40 m are dropped (no slot), not masked.
-  scalars   [d_turn / 60, d_turn known, min(trav, 200) / 100] appended: d_turn = arc offset of the first valid point in 0 .. +60 m whose heading
-            differs >= 30 deg from the reference heading (and still differs 4 m on, or the memory ends there: a merge kink is not a turn) (the route's at offset 0 when that point is valid, else the ego's own heading, i.e.
-            the near gap of the first decisions); none found: 60 when the +60 m point is valid, else unknown (value 0, bit 0). trav = arc
-            length the ego has travelled since the first route message (chords between the poses of the messages up to t0, then to the
-            anchor). DIM_O = 24 x 5 + 3 = 123. The ordered features are a pure function of the old window and trav (to_order), so the
-            offline rows, the served Tracker and the trainer's on-the-fly negatives compute the same numbers.
-  branch    RouteHead(order=True): 24 point tokens (position embeddings = the first 24 of an old head's), the scalars enter through a
-            zero-initialised linear map added to the ego token (an old head converted by order_state() therefore changes only by the
-            dropped far points).
+Ordered layout (route v2, experiments/route_follow/plans/2026-10-15-route-v2-prereg.md Amendment 2, rm_train --rm-order; sidecar head
+`order: true`):
+  anchor    the ego's arc on the merged route is PROGRESS-anchored instead of projected: the newest route message's first waypoint lies L0 =
+            42.105 m of route arc ahead of the ego's projection at that message (AlpaSim's resampling), so s_e = arc(that waypoint) - L0 + the
+            chord driven since. The projection mislabels the slots while the ego is short of the memory's start and the route bends in
+            between (decision 299: the start shown a median 4.5 m too near, de9db5dc 14 m for 41 m); the progress anchor puts every point at
+            its route arc. Same 40 slots (-6 .. +72 m, 2 m), same point features.
+  scalars   [d_turn / 60, d_turn known, min(trav, 200) / 100] appended: d_turn = arc offset of the first valid slot in 0 .. +60 m whose heading
+            differs >= 30 deg from the reference heading (the slot at +0 m when valid, else the ego's own heading) and still differs 4 m on
+            (or the memory ends there; a merge kink is not a turn); none found: 60 when the +60 m slot is valid, else unknown (value 0, bit 0).
+            trav = chords between the poses of the route messages up to t0, then to the anchor. DIM_O = 40 x 5 + 3 = 203.
+  one rule  memory_o (offline rows, rm_build / rf_cfpool) and Tracker(order=True) (served) are the same function of the messages and poses;
+            to_order / to_order_t give the scalars of any point block (the trainer's fakes are built on the ordered block, then re-scored).
+  branch    RouteHead(order=True): the 40 point tokens as before + a zero-initialised linear map of the scalars added to the ego token
+            (order_state() converts an old head: the scalar map at 0, every other tensor kept).
 """
 from __future__ import annotations
 
@@ -45,7 +48,8 @@ EGO_DIM = 20
 SIDECAR = "route_mem.json"                       # next to ckpt-final.pt: the checkpoint carries the branch (its config)
 I0 = int(np.flatnonzero(OFFS == 0.0)[0])         # the ego's projection
 I60 = int(np.flatnonzero(OFFS == 60.0)[0])
-N_PT_O = int(np.flatnonzero(OFFS == 40.0)[0]) + 1  # ordered layout: -6 .. +40 m (24 points)
+N_PT_O = N_PT                                    # ordered layout: the same 40 slots (-6 .. +72 m), progress-anchored (Amendment 2)
+L0 = 80.0 / 19.0 * 10                            # AlpaSim RouteGenerator: 20 points every 80 / 19 m from the ego's projection, < 40 m dropped
 OFFS_O = OFFS[:N_PT_O]
 NSC = 3                                          # d_turn / 60, d_turn known, travelled / 100
 DIM_O = N_PT_O * NF + NSC
@@ -89,8 +93,11 @@ def merge(batches):
     return M
 
 
-def window(M):
-    """Merged polyline (M, 2) in the current rear-axle frame -> (N_PT, NF) features (module docstring)."""
+def window(M, prog=None, info=None):
+    """Merged polyline (M, 2) in the current rear-axle frame -> (N_PT, NF) features (module docstring). prog = (p, c): the ordered layout's
+    progress anchor instead of the ego's projection: p = the newest route message's first waypoint (rear-axle frame), which AlpaSim places
+    L0 m of route arc ahead of the ego's projection at that message, c = the chord the ego has driven since -> s_e = arc(p) - L0 + c.
+    info (dict, optional) receives s_geo (the projection's arc), s_e (the arc used) and M0 (the merged polyline's first point)."""
     F = np.zeros((N_PT, NF), np.float32)
     if M is None or len(M) < 2:
         return F
@@ -111,6 +118,17 @@ def window(M):
         s_e = float(-(M[0] * u[0]).sum())
     elif i == len(L) - 1 and t[i] >= L[i]:                                    # beyond its end: along the last segment
         s_e = cum[-1] + float(-((M[-1]) * u[-1]).sum())
+    if prog is not None:                                                      # ordered layout: the progress anchor
+        pq, ch = np.asarray(prog[0], np.float64), float(prog[1])
+        tq = np.clip(((pq - M[:-1]) * u).sum(1), 0.0, L)
+        j = int(np.argmin(np.hypot(*(M[:-1] + tq[:, None] * u - pq).T)))
+        s_e = cum[j] + tq[j] - L0 + ch
+    if info is not None:
+        info.update(s_geo=float(cum[i] + t[i]) if not ((i == 0 and t[0] <= 0.0) or (i == len(L) - 1 and t[i] >= L[i])) else None, s_e=float(s_e), M0=M[0].copy())
+        if info["s_geo"] is None:
+            info["s_geo"] = float(-(M[0] * u[0]).sum()) if i == 0 and t[0] <= 0.0 else cum[-1] + float(-((M[-1]) * u[-1]).sum())
+        if prog is None:
+            info["s_geo"] = float(s_e)
     s = s_e + OFFS
     ok = (s >= 0.0) & (s <= cum[-1])
     if not ok.any():
@@ -133,6 +151,20 @@ def pts(f):
     n = N_PT if f.shape[-1] == DIM else N_PT_O
     assert f.shape[-1] in (DIM, DIM_O), f.shape
     return f[..., :n * NF].reshape(*f.shape[:-1], n, NF)
+
+
+def memory_o(batches_local, anchor, last_pose, trav, info=None):
+    """Ordered layout (DIM_O,): batches already in the local frame (oldest first; the last one = the newest message with waypoints), the
+    current rear-axle pose, the local pose of that newest message (its first waypoint anchors the ego's arc) and the travelled arc."""
+    B = [np.asarray(b, np.float64).reshape(-1, 2) for b in batches_local]
+    B = [b[np.isfinite(b).all(1)] for b in B]
+    B = [b for b in B if len(b)]
+    M = merge(B)
+    if M is None:
+        return to_order(np.zeros(DIM, np.float32), trav)
+    a = np.asarray(anchor, np.float64)
+    prog = (in_ego(a, B[-1][:1])[0], float(np.hypot(*(a[:2] - np.asarray(last_pose, np.float64)[:2]))))
+    return to_order(window(in_ego(a, M), prog, info).reshape(-1), trav)
 
 
 def summary(f):
@@ -223,7 +255,7 @@ class Tracker:
 
     def features(self, t0: int, pose_of, anchor):
         """pose_of(ts) -> (x, y, yaw) local rig pose or None; anchor = the pose at t0. Messages after t0 or without a pose are skipped."""
-        B, Q = [], []
+        B, Q, last = [], [], None
         for ts in sorted(self.routes):
             if ts > t0:
                 continue
@@ -234,8 +266,10 @@ class Tracker:
                 Q.append(np.asarray(p, np.float64)[:2])
             if p is not None and len(wp):
                 B.append(to_local(p, wp))
-        f = memory(B, anchor).astype(np.float32)
-        return to_order(f, travelled(Q, anchor) if Q else 0.0) if self.order else f
+                last = p
+        if not self.order:
+            return memory(B, anchor).astype(np.float32)
+        return memory_o(B, anchor, last if last is not None else anchor, travelled(Q, anchor) if Q else 0.0)
 
     def polyline(self, t0: int, pose_of, anchor):
         """The merged route polyline (M, 2) in the rear-axle frame of anchor (same batches as `features`), or None
@@ -327,16 +361,14 @@ def attach(model, **kw):
 
 
 def order_state(sd: dict) -> dict:
-    """An old-layout adapter state (with `route.*`) -> the ordered head's: position embeddings of the first N_PT_O points, scalar map at 0."""
+    """An old-layout adapter state (with `route.*`) -> the ordered head's: every tensor kept (the same 40 slots), the scalar map at 0."""
     import torch
     out = dict(sd)
     k = next(k for k in sd if k.endswith("route.pos"))
-    if sd[k].shape[0] == N_PT_O:
-        return out
-    out[k] = sd[k][:N_PT_O].clone()
     pre = k[:-len("pos")]
-    out[pre + "sc.weight"] = torch.zeros(sd[k].shape[1], NSC, dtype=sd[k].dtype)
-    out[pre + "sc.bias"] = torch.zeros(sd[k].shape[1], dtype=sd[k].dtype)
+    if pre + "sc.weight" not in out:
+        out[pre + "sc.weight"] = torch.zeros(sd[k].shape[1], NSC, dtype=sd[k].dtype)
+        out[pre + "sc.bias"] = torch.zeros(sd[k].shape[1], dtype=sd[k].dtype)
     return out
 
 
@@ -399,7 +431,19 @@ if __name__ == "__main__":                                   # self-test: straig
     o = to_order(memory([C], np.array([0.0, 0.0, 0.0]))[None], np.array([0.0]))[0]           # quarter circle r 30 m: 30 deg at arc ~15.7 m
     assert o.shape == (DIM_O,) and abs(o[-3] * TURN_CAP - 16.0) < 1e-6 and o[-2] == 1 and o[-1] == 0, o[-3:]
     o = to_order(memory([B0], a0)[None], np.array([12.5]))[0]                                # gap: first point at +43 m, straight, 60 m covered
-    assert o[-3] == 1.0 and o[-2] == 1 and abs(o[-1] - 0.125) < 1e-6 and (pts(o)[:, 0] == 0).all()
+    assert o[-3] == 1.0 and o[-2] == 1 and abs(o[-1] - 0.125) < 1e-6 and (pts(o)[OFFS < 42, 0] == 0).all()
+    # progress anchor: a route that turns left 90 deg (r 10 m) 20 m ahead; the first message's points start at arc L0 (on the exit leg)
+    th = np.linspace(0, np.pi / 2, 400)
+    Rt = np.r_[np.c_[np.linspace(-10, 20, 300), np.zeros(300)], np.c_[20 + 10 * np.sin(th), 10 - 10 * np.cos(th)], np.c_[np.full(800, 30.0), 10 + np.linspace(0.01, 80, 800)]]
+    sR = np.r_[0, np.cumsum(np.hypot(*np.diff(Rt, axis=0).T))]
+    s0 = float(np.interp(0.0, Rt[:, 0], sR))                                                 # the ego's arc on the route
+    W = np.c_[np.interp(s0 + L0 + 80 / 19 * np.arange(10), sR, Rt[:, 0]), np.interp(s0 + L0 + 80 / 19 * np.arange(10), sR, Rt[:, 1])]
+    og, oo = memory([W], a0).reshape(N_PT, NF), memory_o([W], a0, a0, 0.0)
+    first_g, first_o = OFFS[np.argmax(og[:, 0] > 0.5)], OFFS[np.argmax(pts(oo)[:, 0] > 0.5)]
+    assert abs(first_o - L0) <= 2.0 and first_g < L0 - 5, (first_g, first_o)                # projection: too near; progress: at its arc
+    v = pts(oo)[:, 0] > 0.5
+    assert np.allclose(np.hypot(pts(oo)[v, 1] * 20 - np.interp(OFFS[v] + s0, sR, Rt[:, 0]), pts(oo)[v, 2] * 20 - np.interp(OFFS[v] + s0, sR, Rt[:, 1])), 0, atol=0.1)
+    print(f"progress anchor: first slot {first_o:.0f} m (true {L0:.1f}), projection {first_g:.0f} m")
     assert np.isnan(turn_dist(np.zeros(DIM))) and (to_order(np.zeros((2, DIM)), np.zeros(2))[:, -3:] == 0).all()
     tr = Tracker(order=True)
     tr.add(0, B0)
@@ -407,6 +451,8 @@ if __name__ == "__main__":                                   # self-test: straig
     ps = {0: (0.0, 0.0, 0.0), 1: (3.0, 4.0, 0.0)}
     o = tr.features(1, ps.get, np.array([3.0, 4.0, 0.0]))
     assert o.shape == (DIM_O,) and abs(o[-1] - 0.05) < 1e-6, o[-3:]
+    Bl = [to_local(ps[0], B0), to_local(ps[1], B0)]
+    assert np.array_equal(o, memory_o(Bl, np.array([3.0, 4.0, 0.0]), ps[1], 5.0))
     assert abs(travelled([(0, 0), (3, 4)], (6, 8)) - 10.0) < 1e-9
     try:
         import torch
