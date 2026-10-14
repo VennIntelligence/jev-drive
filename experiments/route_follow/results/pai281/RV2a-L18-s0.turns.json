@@ -1,0 +1,42 @@
+{
+ "a_done": 5,
+ "b_done": 5,
+ "a_shape": 1,
+ "b_shape": 2,
+ "gained": [
+  "b40f4729"
+ ],
+ "lost": [
+  "132ae6cb"
+ ],
+ "new_zero_nonturn": [
+  "06b3e399",
+  "26004ca8",
+  "3fa5e06b",
+  "404541da",
+  "4a863a41",
+  "4f7cb072",
+  "7750265d",
+  "8120803d",
+  "bbc53aa8",
+  "e7db8971"
+ ],
+ "new_offroad_pre": [
+  "26004ca8",
+  "3fa5e06b",
+  "404541da",
+  "4a863a41",
+  "4f7cb072",
+  "8120803d",
+  "bbc53aa8"
+ ],
+ "a_zero": 49,
+ "b_zero": 60,
+ "strict_n": 36,
+ "exam_n": 72,
+ "exam_done_a": 3,
+ "exam_done_b": 3,
+ "mean_a": 0.3219024175067283,
+ "mean_b": 0.2578884905169383,
+ "paired": -0.06401392698978997
+}

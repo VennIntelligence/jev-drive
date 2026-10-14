@@ -139,6 +139,12 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   2-6 m) the ego reached 4 PAI + 4 held sites and shifted >= 2 m on 1 / 4 and 0 / 4 (in the route's lane after 2 / 4 each). `scripts/rf_laneoff.py`
   (`lanes` extractor + `report`), figure `figs/laneoff_bev.png` (look at the titles: offset / heading error at the triangle (entry - 20 m)
   and the square (entry); the failed turns start their turn from the lane or line away from the turn).
+- [results/pai281/RV2a-L18-s0.md](results/pai281/RV2a-L18-s0.md): route v2 arm a (ordered memory only) on PAI 281, paired vs the stored
+  RSG-L18-s0 read (Tokyo, `scripts/rf_v2pai.sh run / read`, same serving and chunks): mean 0.5367 vs 0.5720, -0.035 [-0.058, -0.014]; zeros
+  87 vs 70 (offroad 22 vs 14, corridor 53 vs 47, collision 12 vs 9); handoff spins 13 vs 2; exam 72 -0.058 [-0.123, +0.009], zeros 47 vs 38;
+  control 75 flat; strict turns 5 / 36 both (gained b40f4729, lost 132ae6cb), shape gate 2 vs 1; 10 new zeros away from the turns (7 offroad).
+  Served memory = the offline ordered rebuild on 55 693 decisions (283 differ > 1e-3, all single slots at near-ties; mask never differs).
+  Look at the all281 / exam72 rows and the per-scene table (where each new zero happened).
 - [results/turn_gain/g1.25.md](results/turn_gain/g1.25.md): TURN-GAIN serve-side switch (diagnostic, not adopted; prereg
   `plans/2026-10-15-turn-gain-switch-prereg.md`, Amendment 1): RSG-L18-s0 + `JEV_TURN_GAIN=1.25` (plan yaw / course x1.25 whenever its 2 s turn
   is < 60 % of what its own route memory shows, from the policy's own states, no handover) on the 36 strict PAI turns + the 26 exam turn
