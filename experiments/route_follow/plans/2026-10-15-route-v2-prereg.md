@@ -216,3 +216,20 @@ the pairs at step 1 000: 0.12 / 0.23 / 0.22 / 0.55 / 0.22 m. GPU tonight ~1.15 c
 - Full round: arm a = `--rm-order` (slot-defect fix only, the control for b); arm b = `--rm-order --lane-lam 1 --lane-dz 0.5 --lane-neg 0.2`.
   2 seeds each, gentle schedule, base = the lr x steps pilot's winner (RSG-L18 if flat), held 460 paired vs the base and vs RSG-L18-s<seed>,
   rf_follow turn completion on the 24 held turns. Lines H1-H3 unchanged.
+
+## Amendment 7 (coordinator, 2026-10-15 02:15, before any arm-c read): arm c = ordered memory + junction counterfactual rows
+
+- Why: G-swap is 0.18-0.26 in every arm and pilot (Amendments 3, 5) because nothing trains junction route switching; RB-F reached 0.55 with
+  the on1_CF rows, but as a from-scratch base with a G-real cost; a gentle round on RSG-L18 with them is untested.
+- Arm c = `--rm-order` + the on1_CF junction rows (classes j0 / j1, 12 176 rows; lane-change rows excluded), served as RB-F served them:
+  route hinge to the counterfactual label (on_route, dead zone 0.5 m, lateral only, poses 1-2 s weight 2) + road-grid hinge, no imitation,
+  no agent hinge. One pool (rm_train takes one): `rf_v2cpool.py` -> on1_L18RB0J = on1_L18RB0 (RSG's S rows, route hinge off on them) +
+  the CF junction rows (their ordered memory from rf_cfpool build --order), tab `pool` s / cf; per batch of 128: 25 pool draws with
+  `--on-weight pool=cf:1.3213`, i.e. in expectation 13 S rows (= RSG) + 12 CF rows (= RB-F's on-k 12); normal rows 90 instead of 102.
+  `--on-lon on_route` at its default weight (10 x ho_w 3, / n_imit; RB-F's). Pilot batch 64: on-k 13 (7 S + 6 CF).
+- Rule: the 1 000-step pilot (RV2cPJ-L18-s0; seed 0, init RSG-L18-s0) must pass G-swap >= 0.50 / >= 0.70 AND G-real, G-ST, G-over,
+  G-rely. Pass -> arm c for 2 seeds (`rf_v2.sh train c RSG-L18-s<seed> <seed>`, PRIO 10, behind b) with the same held chain, in the
+  final report. Fail -> report the table and stop.
+- Unrelated fix the same night: `rm_train.lane_prep` built the lane-change tables (and their ordered map) whatever the flags; arm b of
+  Amendment 6 (`--lane-lam` without `--lc-cf`) crashed at the first line that read them; they are now built only with `--lc-cf`
+  (the flags-off path never calls lane_prep, so the identity of Amendment 3 stands).
