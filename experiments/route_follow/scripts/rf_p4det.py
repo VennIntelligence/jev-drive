@@ -2,7 +2,7 @@
 """P4 box determinism read (results/p4_self/box_det.md) over rf_p4det.sh runs: every identity session against (a) the Tokyo reference of
 its scene and (b) the scene's box anchor (the first session of the first run given): served plan at every common decision k (bit-identical
 count, first diverging k, largest |diff| over all plan points and over the first 15 (the 4 s horizon, docs/long-runs.md), per k band),
-controller track (rows, largest and final position difference), score, zero kind and time (rf_p4.zero_time = rf_branch's rule).
+controller track (rows, largest and final position difference, per row band, first row over 0 / 0.1 / 1 m), score, zero kind and time (rf_p4.zero_time = rf_branch's rule).
 rf_p4.py s1's comparison, plus the first diverging k and the boundedness bands. AlpaSim venv (rf_tax.series reads metrics.parquet).
   rf_p4det.py --runs <run dir>[,..] --ref <id8>=<run dir>[,..] --out <json>    a run dir = rf_p4det.sh's <root>/<arm> or a pai_eval chunk
 """
@@ -66,6 +66,8 @@ def cmp(a, b):
                 bands={f"{lo}-{hi}": float(d[(ks >= lo) & (ks < hi)].max()) if ((ks >= lo) & (ks < hi)).any() else None for lo, hi in BANDS},
                 bands15={f"{lo}-{hi}": float(d15[(ks >= lo) & (ks < hi)].max()) if ((ks >= lo) & (ks < hi)).any() else None for lo, hi in BANDS},
                 track_rows=[len(ta), len(tb)], track_max=float(np.nanmax(e)), track_end=float(e[-1]),
+                track_bands={f"{lo}-{hi}": float(np.nanmax(e[lo:hi])) if len(e[lo:hi]) else None for lo, hi in BANDS},
+                track_first={f"{t}": (int(np.flatnonzero(e > t)[0]) if (e > t).any() else None) for t in (0.0, 0.1, 1.0)},
                 score=[a["score"], b["score"]], zero=[a["zero"], b["zero"]], t_zero=[a["t_zero"], b["t_zero"]],
                 identical=bool(len(ks) and not len(nz) and len(ta) == len(tb) and m and float(np.nanmax(e)) == 0.0 and a["score"] == b["score"]))
 
