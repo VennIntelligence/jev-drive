@@ -687,6 +687,9 @@ def vcollect(a):
                                   n_dec=len(rr), ref_n_dec=len(b), plan_maxdiff=d, track_rows=[len(ta), len(tb)], identical=same,
                                   outcome=outcome(st) if st else None, v_entry=st.get("v_entry"), D=st.get("D"), src=st.get("src"), done=st.get("done")))
     scenes = {sc: {k: PL[sc][k] for k in ("side", "topo", "v_e", "s_entry", "v_log_entry")} for sc in {c["scene"] for c in cells}}
+    for sc, v in scenes.items():                                     # the D0 handover = the decision at the turn entry (own or from the log)
+        r0 = json.load(open(os.path.join(a.ref, sc, "reach.json")))["d"]["0"]
+        v.update(entry_k=r0["h"] if r0["reached"] else r0["k_eff"], entry_src="self" if r0["reached"] else "log")
     json.dump(dict(root=a.root, ref=a.ref, cells=cells, scenes=scenes), open(a.out, "w"), indent=1, default=float)
     print(f"camera re-runs: {len(cells)} sessions, {sum(c['mp4'] is not None for c in cells)} with an mp4; "
           f"bit-identical to the stored rollout (served plan at every decision, controller track, score): {n_ok} / {len(cells)}")
