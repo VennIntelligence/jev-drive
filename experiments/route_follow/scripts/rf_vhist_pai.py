@@ -30,7 +30,7 @@ def rollouts(roots):
                 continue
             for r in json.load(open(f))["rollouts"]:
                 m = r.get("metrics") or {}
-                if not m:
+                if not m or "error" in m:                       # infrastructure failure (e.g. a renderer RPC error): not a drive
                     continue
                 sc, z = float(r.get("score") or 0), not r.get("score")
                 kind = "" if not z else "collision" if m.get("collision_at_fault") else "offroad" if m.get("offroad") else \
@@ -72,6 +72,7 @@ def deficit(roots):
 
 
 def boot(x, rng):
+    x = x[np.isfinite(x)]
     b = x[rng.integers(0, len(x), (10000, len(x)))].mean(1)
     return [float(x.mean()), float(np.quantile(b, 0.025)), float(np.quantile(b, 0.975))]
 

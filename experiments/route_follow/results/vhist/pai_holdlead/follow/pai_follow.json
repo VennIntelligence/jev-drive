@@ -1,0 +1,716 @@
+{
+ "errors": [],
+ "labels": {
+  "rsg@bend": {
+   "rollouts": 281,
+   "mean": 0.572011743158711,
+   "zeros": 70,
+   "turns": 46,
+   "left": 18,
+   "right": 28,
+   "outcomes": {
+    "completed": 9,
+    "event": 20,
+    "off": 10,
+    "short_slow": 4,
+    "short_rear": 3
+   },
+   "event_kinds": {
+    "corridor": 13,
+    "offroad": 4,
+    "collision": 3
+   },
+   "all": {
+    "n": 46,
+    "rate": 0.1956521739130435,
+    "lo": 0.08695652173913043,
+    "hi": 0.30434782608695654
+   },
+   "left_rate": {
+    "n": 18,
+    "rate": 0.3333333333333333,
+    "lo": 0.1111111111111111,
+    "hi": 0.5555555555555556
+   },
+   "right_rate": {
+    "n": 28,
+    "rate": 0.10714285714285714,
+    "lo": 0.0,
+    "hi": 0.25
+   },
+   "covered": {
+    "n": 26,
+    "rate": 0.038461538461538464,
+    "lo": 0.0,
+    "hi": 0.11538461538461539
+   },
+   "uncovered": {
+    "n": 20,
+    "rate": 0.4,
+    "lo": 0.2,
+    "hi": 0.6
+   },
+   "turn_mean_score": 0.31451996705481317,
+   "multi_turn": 4,
+   "overlap48": 27,
+   "only_here": [
+    "074e5ee3",
+    "132ae6cb",
+    "1a69f757",
+    "1e8e939e",
+    "2a882d89",
+    "302c5c99",
+    "3c2822d9",
+    "56bf7a4b",
+    "60cc35db",
+    "62cfe9d3",
+    "6fd8cf30",
+    "8a143cb2",
+    "98f88a4e",
+    "a68ad579",
+    "c4100c5d",
+    "c4a58f83",
+    "d8bfaaf2",
+    "ddb6a43a",
+    "e5e47fd2"
+   ],
+   "only48": [
+    "095cf563",
+    "0a228e44",
+    "22fa5c92",
+    "2466266e",
+    "2c0ef536",
+    "52003cee",
+    "5ddb96bd",
+    "68e53160",
+    "7381c9fa",
+    "9b6c68b4",
+    "a1b166cc",
+    "af85ffdb",
+    "b680a689",
+    "ba40be62",
+    "ba62e10d",
+    "cbd87234",
+    "de9db5dc",
+    "e904e9c0",
+    "f8ee31cb",
+    "fc9fde87",
+    "fda39805"
+   ],
+   "v_entry_ratio_median": 1.0528688712122478
+  },
+  "rsg@open": {
+   "rollouts": 281,
+   "mean": 0.572011743158711,
+   "zeros": 70,
+   "turns": 51,
+   "left": 21,
+   "right": 30,
+   "outcomes": {
+    "completed": 7,
+    "event": 32,
+    "off": 6,
+    "short_slow": 4,
+    "short_rear": 2
+   },
+   "event_kinds": {
+    "corridor": 24,
+    "collision": 4,
+    "offroad": 4
+   },
+   "all": {
+    "n": 51,
+    "rate": 0.13725490196078433,
+    "lo": 0.058823529411764705,
+    "hi": 0.23529411764705882
+   },
+   "left_rate": {
+    "n": 21,
+    "rate": 0.23809523809523808,
+    "lo": 0.047619047619047616,
+    "hi": 0.42857142857142855
+   },
+   "right_rate": {
+    "n": 30,
+    "rate": 0.06666666666666667,
+    "lo": 0.0,
+    "hi": 0.16666666666666666
+   },
+   "covered": {
+    "n": 36,
+    "rate": 0.08333333333333333,
+    "lo": 0.0,
+    "hi": 0.19444444444444445
+   },
+   "uncovered": {
+    "n": 15,
+    "rate": 0.26666666666666666,
+    "lo": 0.06666666666666667,
+    "hi": 0.4666666666666667
+   },
+   "turn_mean_score": 0.25281557265034904,
+   "multi_turn": 2,
+   "overlap48": 39,
+   "only_here": [
+    "132ae6cb",
+    "1e8e939e",
+    "300465f7",
+    "302c5c99",
+    "3c2822d9",
+    "4e4a2a51",
+    "6fd8cf30",
+    "8a143cb2",
+    "a64b1333",
+    "bd97de34",
+    "c4a58f83",
+    "e5e47fd2"
+   ],
+   "only48": [
+    "00fabf60",
+    "2466266e",
+    "2c0ef536",
+    "5ddb96bd",
+    "7381c9fa",
+    "af85ffdb",
+    "ba40be62",
+    "cbd87234",
+    "f8ee31cb"
+   ],
+   "v_entry_ratio_median": 1.1361799167113296
+  },
+  "rsg": {
+   "rollouts": 281,
+   "mean": 0.572011743158711,
+   "zeros": 70,
+   "turns": 36,
+   "left": 15,
+   "right": 21,
+   "outcomes": {
+    "completed": 5,
+    "event": 21,
+    "off": 6,
+    "short_slow": 2,
+    "short_rear": 2
+   },
+   "event_kinds": {
+    "corridor": 15,
+    "collision": 3,
+    "offroad": 3
+   },
+   "all": {
+    "n": 36,
+    "rate": 0.1388888888888889,
+    "lo": 0.027777777777777776,
+    "hi": 0.25
+   },
+   "left_rate": {
+    "n": 15,
+    "rate": 0.26666666666666666,
+    "lo": 0.06666666666666667,
+    "hi": 0.5333333333333333
+   },
+   "right_rate": {
+    "n": 21,
+    "rate": 0.047619047619047616,
+    "lo": 0.0,
+    "hi": 0.14285714285714285
+   },
+   "covered": {
+    "n": 22,
+    "rate": 0.045454545454545456,
+    "lo": 0.0,
+    "hi": 0.13636363636363635
+   },
+   "uncovered": {
+    "n": 14,
+    "rate": 0.2857142857142857,
+    "lo": 0.07142857142857142,
+    "hi": 0.5
+   },
+   "turn_mean_score": 0.28656441465521537,
+   "multi_turn": 2,
+   "overlap48": 28,
+   "only_here": [
+    "132ae6cb",
+    "1e8e939e",
+    "302c5c99",
+    "3c2822d9",
+    "6fd8cf30",
+    "8a143cb2",
+    "c4a58f83",
+    "e5e47fd2"
+   ],
+   "only48": [
+    "00fabf60",
+    "095cf563",
+    "0a228e44",
+    "2466266e",
+    "2c0ef536",
+    "52003cee",
+    "5ddb96bd",
+    "7381c9fa",
+    "9b6c68b4",
+    "af85ffdb",
+    "b680a689",
+    "ba40be62",
+    "ba62e10d",
+    "cbd87234",
+    "cdf95fd1",
+    "de9db5dc",
+    "e904e9c0",
+    "f8ee31cb",
+    "fc9fde87",
+    "fda39805"
+   ],
+   "v_entry_ratio_median": 1.0972082982046776,
+   "corridor_zeros": 47,
+   "topo_all": {
+    "straight_exit": 14,
+    "beyond_log_end": 12,
+    "other_no_turn": 8,
+    "curve_single": 7,
+    "straight_road": 3,
+    "other_no_lane": 1,
+    "lane_change": 1,
+    "no_straight_exit": 1
+   },
+   "topo_turn": {
+    "straight_exit": 14,
+    "curve_single": 7,
+    "straight_road": 3,
+    "other_no_lane": 1,
+    "lane_change": 1,
+    "no_straight_exit": 1
+   },
+   "topo_route22": {
+    "straight_exit": 11,
+    "curve_single": 6,
+    "straight_road": 3,
+    "lane_change": 1,
+    "no_straight_exit": 1
+   },
+   "topo_by_tax": {
+    "cor_drift": {
+     "other_no_turn": 5,
+     "other_no_lane": 1
+    },
+    "cor_lane_change": {
+     "other_no_turn": 1
+    },
+    "cor_route_end": {
+     "beyond_log_end": 12,
+     "straight_exit": 3,
+     "other_no_turn": 1,
+     "curve_single": 1
+    },
+    "cor_straight_at_turn": {
+     "straight_exit": 7,
+     "straight_road": 3,
+     "lane_change": 1
+    },
+    "cor_turn_under": {
+     "curve_single": 6,
+     "straight_exit": 4,
+     "no_straight_exit": 1
+    },
+    "cor_wrong_exit": {
+     "other_no_turn": 1
+    }
+   },
+   "speed_turn": {
+    "40": {
+     "ego": 5.495757132336264,
+     "log": 6.788124303159231,
+     "ratio": 1.0987519896775921,
+     "faster": 11,
+     "n": 27
+    },
+    "20": {
+     "ego": 5.879054579144331,
+     "log": 6.223101291148647,
+     "ratio": 1.1267019294068832,
+     "faster": 12,
+     "n": 27
+    },
+    "0": {
+     "ego": 10.69716588219613,
+     "log": 5.007120815562896,
+     "ratio": 1.4676435403004184,
+     "faster": 14,
+     "n": 23
+    },
+    "slowed": {
+     "n": 23,
+     "ego": 0,
+     "log": 12,
+     "ego_gain": 1.153147857587026,
+     "log_gain": -1.0149436781293124
+    }
+   },
+   "speed_route22": {
+    "40": {
+     "ego": 4.858767360841412,
+     "log": 3.960119235806253,
+     "ratio": 1.0883144027920528,
+     "faster": 8,
+     "n": 22
+    },
+    "20": {
+     "ego": 5.668198885359796,
+     "log": 6.171379440043646,
+     "ratio": 1.0208403814432665,
+     "faster": 8,
+     "n": 22
+    },
+    "0": {
+     "ego": 9.041893666852108,
+     "log": 5.071817417159448,
+     "ratio": 1.410490388127796,
+     "faster": 12,
+     "n": 20
+    },
+    "slowed": {
+     "n": 20,
+     "ego": 0,
+     "log": 10,
+     "ego_gain": 1.6765316676585553,
+     "log_gain": -0.8881729264709048
+    }
+   }
+  },
+  "holdlead@bend": {
+   "rollouts": 281,
+   "mean": 0.6239418806780719,
+   "zeros": 72,
+   "turns": 46,
+   "left": 18,
+   "right": 28,
+   "outcomes": {
+    "completed": 10,
+    "event": 21,
+    "off": 11,
+    "short_slow": 3,
+    "short_rear": 1
+   },
+   "event_kinds": {
+    "corridor": 14,
+    "offroad": 4,
+    "collision": 3
+   },
+   "all": {
+    "n": 46,
+    "rate": 0.21739130434782608,
+    "lo": 0.10869565217391304,
+    "hi": 0.34782608695652173
+   },
+   "left_rate": {
+    "n": 18,
+    "rate": 0.3333333333333333,
+    "lo": 0.1111111111111111,
+    "hi": 0.5555555555555556
+   },
+   "right_rate": {
+    "n": 28,
+    "rate": 0.14285714285714285,
+    "lo": 0.03571428571428571,
+    "hi": 0.2857142857142857
+   },
+   "covered": {
+    "n": 26,
+    "rate": 0.07692307692307693,
+    "lo": 0.0,
+    "hi": 0.19230769230769232
+   },
+   "uncovered": {
+    "n": 20,
+    "rate": 0.4,
+    "lo": 0.2,
+    "hi": 0.6
+   },
+   "turn_mean_score": 0.33082331027926903,
+   "multi_turn": 4,
+   "overlap48": 27,
+   "only_here": [
+    "074e5ee3",
+    "132ae6cb",
+    "1a69f757",
+    "1e8e939e",
+    "2a882d89",
+    "302c5c99",
+    "3c2822d9",
+    "56bf7a4b",
+    "60cc35db",
+    "62cfe9d3",
+    "6fd8cf30",
+    "8a143cb2",
+    "98f88a4e",
+    "a68ad579",
+    "c4100c5d",
+    "c4a58f83",
+    "d8bfaaf2",
+    "ddb6a43a",
+    "e5e47fd2"
+   ],
+   "only48": [
+    "095cf563",
+    "0a228e44",
+    "22fa5c92",
+    "2466266e",
+    "2c0ef536",
+    "52003cee",
+    "5ddb96bd",
+    "68e53160",
+    "7381c9fa",
+    "9b6c68b4",
+    "a1b166cc",
+    "af85ffdb",
+    "b680a689",
+    "ba40be62",
+    "ba62e10d",
+    "cbd87234",
+    "de9db5dc",
+    "e904e9c0",
+    "f8ee31cb",
+    "fc9fde87",
+    "fda39805"
+   ],
+   "v_entry_ratio_median": 1.0070460325895119
+  },
+  "holdlead@open": {
+   "rollouts": 281,
+   "mean": 0.6239418806780719,
+   "zeros": 72,
+   "turns": 51,
+   "left": 21,
+   "right": 30,
+   "outcomes": {
+    "completed": 6,
+    "event": 33,
+    "off": 8,
+    "short_slow": 3,
+    "short_rear": 1
+   },
+   "event_kinds": {
+    "corridor": 25,
+    "collision": 4,
+    "offroad": 4
+   },
+   "all": {
+    "n": 51,
+    "rate": 0.11764705882352941,
+    "lo": 0.0392156862745098,
+    "hi": 0.21568627450980393
+   },
+   "left_rate": {
+    "n": 21,
+    "rate": 0.23809523809523808,
+    "lo": 0.047619047619047616,
+    "hi": 0.42857142857142855
+   },
+   "right_rate": {
+    "n": 30,
+    "rate": 0.03333333333333333,
+    "lo": 0.0,
+    "hi": 0.1
+   },
+   "covered": {
+    "n": 36,
+    "rate": 0.05555555555555555,
+    "lo": 0.0,
+    "hi": 0.1388888888888889
+   },
+   "uncovered": {
+    "n": 15,
+    "rate": 0.26666666666666666,
+    "lo": 0.06666666666666667,
+    "hi": 0.4666666666666667
+   },
+   "turn_mean_score": 0.2660441857826806,
+   "multi_turn": 2,
+   "overlap48": 39,
+   "only_here": [
+    "132ae6cb",
+    "1e8e939e",
+    "300465f7",
+    "302c5c99",
+    "3c2822d9",
+    "4e4a2a51",
+    "6fd8cf30",
+    "8a143cb2",
+    "a64b1333",
+    "bd97de34",
+    "c4a58f83",
+    "e5e47fd2"
+   ],
+   "only48": [
+    "00fabf60",
+    "2466266e",
+    "2c0ef536",
+    "5ddb96bd",
+    "7381c9fa",
+    "af85ffdb",
+    "ba40be62",
+    "cbd87234",
+    "f8ee31cb"
+   ],
+   "v_entry_ratio_median": 1.115659289080247
+  },
+  "holdlead": {
+   "rollouts": 281,
+   "mean": 0.6239418806780719,
+   "zeros": 72,
+   "turns": 36,
+   "left": 15,
+   "right": 21,
+   "outcomes": {
+    "completed": 5,
+    "event": 22,
+    "off": 7,
+    "short_slow": 1,
+    "short_rear": 1
+   },
+   "event_kinds": {
+    "corridor": 16,
+    "collision": 3,
+    "offroad": 3
+   },
+   "all": {
+    "n": 36,
+    "rate": 0.1388888888888889,
+    "lo": 0.027777777777777776,
+    "hi": 0.25
+   },
+   "left_rate": {
+    "n": 15,
+    "rate": 0.26666666666666666,
+    "lo": 0.06666666666666667,
+    "hi": 0.5333333333333333
+   },
+   "right_rate": {
+    "n": 21,
+    "rate": 0.047619047619047616,
+    "lo": 0.0,
+    "hi": 0.14285714285714285
+   },
+   "covered": {
+    "n": 22,
+    "rate": 0.045454545454545456,
+    "lo": 0.0,
+    "hi": 0.13636363636363635
+   },
+   "uncovered": {
+    "n": 14,
+    "rate": 0.2857142857142857,
+    "lo": 0.07142857142857142,
+    "hi": 0.5
+   },
+   "turn_mean_score": 0.27675314819975444,
+   "multi_turn": 2,
+   "overlap48": 28,
+   "only_here": [
+    "132ae6cb",
+    "1e8e939e",
+    "302c5c99",
+    "3c2822d9",
+    "6fd8cf30",
+    "8a143cb2",
+    "c4a58f83",
+    "e5e47fd2"
+   ],
+   "only48": [
+    "00fabf60",
+    "095cf563",
+    "0a228e44",
+    "2466266e",
+    "2c0ef536",
+    "52003cee",
+    "5ddb96bd",
+    "7381c9fa",
+    "9b6c68b4",
+    "af85ffdb",
+    "b680a689",
+    "ba40be62",
+    "ba62e10d",
+    "cbd87234",
+    "cdf95fd1",
+    "de9db5dc",
+    "e904e9c0",
+    "f8ee31cb",
+    "fc9fde87",
+    "fda39805"
+   ],
+   "v_entry_ratio_median": 1.067120415473068,
+   "corridor_zeros": 49,
+   "topo_all": {
+    "straight_exit": 14,
+    "beyond_log_end": 12,
+    "other_no_turn": 9,
+    "curve_single": 7,
+    "straight_road": 3,
+    "no_straight_exit": 2,
+    "lane_change": 2
+   },
+   "topo_turn": {
+    "straight_exit": 14,
+    "curve_single": 7,
+    "straight_road": 3,
+    "no_straight_exit": 2,
+    "lane_change": 2
+   },
+   "speed_turn": {
+    "40": {
+     "ego": 6.980205086077687,
+     "log": 7.05195984592342,
+     "ratio": 1.0660762287185563,
+     "faster": 11,
+     "n": 28
+    },
+    "20": {
+     "ego": 6.976589769213591,
+     "log": 6.171379440043646,
+     "ratio": 1.0866141759071584,
+     "faster": 12,
+     "n": 28
+    },
+    "0": {
+     "ego": 9.459006743350297,
+     "log": 5.188479029343642,
+     "ratio": 1.4289968376095599,
+     "faster": 14,
+     "n": 24
+    },
+    "slowed": {
+     "n": 24,
+     "ego": 1,
+     "log": 13,
+     "ego_gain": 1.1292035131553622,
+     "log_gain": -1.1448657542386156
+    }
+   }
+  }
+ },
+ "pairs": {
+  "holdlead:rsg": {
+   "pairs": 2435,
+   "discordant": 0,
+   "covered": {
+    "n": 1543,
+    "scenes": 31,
+    "med_a": 0.7783847691205376,
+    "med_b": 0.7226199213488271,
+    "diff": 0.055764847771710424,
+    "lo": -0.03453657265630766,
+    "hi": 0.19620671542859927
+   },
+   "uncovered": {
+    "n": 892,
+    "scenes": 15,
+    "med_a": 0.4567095248621821,
+    "med_b": 0.4567095248621821,
+    "diff": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   }
+  }
+ }
+}

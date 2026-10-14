@@ -145,3 +145,7 @@ plus its @open / @bend variants).
 **Lines.** **Pass** = the mean score difference is > 0 with its 95 % CI clear of 0 **and** front-collision zeros (arm - reference) <= +2.
 Otherwise **fail**. Everything above is reported either way. The PAI exam subset (`experiments/alpasim/results/pai_exam/hard_exam.txt`,
 72 never-trained scenes, all in the 281) is reported separately with the same measures; it is not gated. No research/decisions entry.
+
+As run (appended after the read, 2026-10-14 11:40 JST; nothing above changed): card 0 joined the same read at 10:19 JST on a user instruction
+relayed by the coordinator (card 0 released for this read; c005, c007 on card 0), chunks otherwise as registered; 00fabf60 (renderer RPC
+failure, no metrics) rerun once alone on card 1. Results: results/vhist/pai_holdlead/README.md.
