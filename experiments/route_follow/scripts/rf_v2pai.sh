@@ -43,7 +43,7 @@ case $cmd in
 run)
   t=$arg; ckpt "$t" || exit 1
   if [[ -n ${DRY:-} ]]; then
-    O=$V/dry_$t; rm -rf "$O"; mkdir -p "$O"; head -n "$DRY" "$REF/chunks/c000.txt" > "$O/scenes.txt"
+    O=$V/dry_$t; rm -rf "$O"; mkdir -p "$O"; git -C "$repo" log --oneline -1 > "$O/COMMIT"; head -n "$DRY" "$REF/chunks/c000.txt" > "$O/scenes.txt"
     CHUNK=$(( (DRY + 1) / 2 )) bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$O" "$t" "$O/scenes.txt"
     python3 "$here/rf_v2pai.py" served --run "$O" | tee "$O/served.txt"
     exit 0
@@ -58,13 +58,14 @@ python3 $here/rf_v2pai.py served --run $O > $O/served.txt 2>&1; date > $O/RUN_DO
 read)
   t=$arg; O=$V/$t; l=${t,,}
   [[ -f $O/DONE ]] || { echo "$O: no DONE (pai_eval unfinished or failed: $(cat "$O/STATUS"))" >&2; exit 1; }
-  python3 "$here/rf_pai281.py" --rows rsg="$REF" "$l=$O" --ref rsg --lists exam72="$EXAM/hard_exam.txt" control75="$EXAM/control.txt" --vs rsg --out "$O/read281.md"
+  python3 "$here/rf_pai281.py" --rows rsg="$REF" "$l=$O" --ref rsg --lists all281=$D/runs/route_night/test281.txt exam72="$EXAM/hard_exam.txt" control75="$EXAM/control.txt" --vs rsg --out "$O/read281.md"
   [[ -f $O/follow.pkl ]] || follow "$O/follow.pkl" "$l=$O" || exit 1
   cat "$RES/pai281/strict36.txt" "$EXAM/hard_exam.txt" | awk '!s[$1]++' > "$O/turn_scenes.txt"
   python3 "$here/rf_v2pai.py" turns --pkl rsg=$D/runs/route_night/pai_follow/r281.pkl "$l=$O/follow.pkl" --scenes "$O/turn_scenes.txt" --out "$O/turns.json" || exit 1
   python3 "$here/rf_v2pai.py" table --turns "$O/turns.json" --a rsg --b "$l" --strict "$RES/pai281/strict36.txt" --exam "$EXAM/hard_exam.txt" --md "$O/turns.md" || exit 1
   { echo "# PAI 281: $t vs RSG-L18-s0 (stored read r281/rsg), gains 20, JEV_VCONT 1.0, JEV_LEAD 1"
-    echo; echo "Run \`$O\` ($(cat "$O/COMMIT")), reference \`$REF\`; rf_v2pai.sh read. Served memory check: $(tail -2 "$O/served.txt" | tr '\n' ' ')"
+    echo; echo "Run \`$O\` ($(cat "$O/COMMIT" 2>/dev/null)), reference \`$REF\`; rf_v2pai.sh read. Served memory check (rf_v2pai.py served):"
+    echo; tail -2 "$O/served.txt" | sed 's/^/- /'
     echo; echo "## All 281 and the exam / control lists (rf_pai281.py; turn proxy = the 20 reference turn scenes)"; echo; cat "$O/read281.md"
     echo; echo "## Strict turns (36) and exam scenes (72): rf_pai_follow's turn rule on each label's own route (rf_v2pai.py turns / table)"; echo
     sed 's/^# /### /' "$O/turns.md"; } > "$O/read.md"

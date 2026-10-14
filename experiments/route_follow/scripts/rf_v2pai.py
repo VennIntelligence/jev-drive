@@ -233,7 +233,7 @@ def table(a):
         gs = "" if not g else ("pass" if rb.get("shape_ok") else ("not completed" if not rb.get("completed") else "fail: " + ",".join(k for k, v in g.items() if not v)))
         L.append(f"| {s[7:15]} | {st} | {ra.get('side') or rb.get('side') or ''} | {fmt(ra.get('turn_deg') or rb.get('turn_deg'), '{:+.0f}')} | {oa} | {ob} | "
                  f"{fmt(zrel)} | {fmt(rb.get('v_0'), '{:.1f}')} | {gs} | {sw} |")
-    ex = [s for s in T["scenes"] if s in exam]
+    ex = [s for s in T["scenes"] if s in exam and not by.get((A, s), {}).get("missing", True) and not by.get((B, s), {}).get("missing", True)]
     exd = lambda lab: sum(bool(by.get((lab, s), {}).get("completed")) for s in ex)  # noqa: E731
     exturn = sum(bool(by.get((A, s), {}).get("turn")) for s in ex)
     sa = np.array([by.get((A, s), {}).get("score", np.nan) for s in T["scenes"]], float)

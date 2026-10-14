@@ -71,3 +71,6 @@ Change (turn_gain.py; selftest extended): on additionally needs L2 >= 1 m, |dr_a
 else, the scenes, lines and stop rule are unchanged. The smoke is rerun with the fixed rule (same 2 scenes, card 0) together with an
 identity re-run of RSG-L18-s0 without the switch on the same 2 scenes (card 1, `RUNPFX=id-`) checked bit-identical to r281/rsg (rf_p4.py s1):
 the driver edits must not change unswitched serving.
+- Result (03:01 JST, commit dac9d792): smoke rerun 398 decisions, on / off recomputed equal at all, served = branch_poses to 1.1e-4, first
+  on k 0 (09528162, approaching its turn) / k 25 (132ae6cb, after it starts moving); 27 plans up to the first on-decision bit-identical to
+  r281/rsg. Unswitched identity re-run: S1 2 / 2 sessions bit-identical to r281/rsg (plans, tracks, scores). The 47-scene run is launched.
