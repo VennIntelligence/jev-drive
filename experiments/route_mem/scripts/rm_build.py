@@ -424,7 +424,7 @@ def cmd_order(a):
             trav, cache = np.zeros(len(z["names"]), np.float32), {}
             for i, (rn, sc, k) in enumerate(zip(m["run"].tolist(), m["scene"].tolist(), m["k"].tolist())):
                 if rn not in cache:
-                    cache = {rn: drive_records(rn)}
+                    cache[rn] = drive_records(rn)
                 A = [r["anchor"] for r in cache[rn][sc] if r["k"] <= k]
                 trav[i] = RM.travelled(A)
             write_order(f"on1_{name}", z["names"], z["f"], z["ok"], trav, run)
