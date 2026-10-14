@@ -15,6 +15,19 @@ Branch (torch): RouteParityAdapter = parity_adapter.ParityAdapter (unchanged wei
 small transformer decoder whose 32 slot queries read [null, ego token, the valid route points]; its output layer starts at zero, so the
 branch adds exactly 0 until trained and an init from any P2 checkpoint is that checkpoint. The fed row is ego (20) ++ route features (200);
 `present` (ego[:, 0]) multiplies both biases (anchor rows stay the shipped model).
+
+Ordered layout (route v2, experiments/route_follow/plans/2026-10-15-route-v2-prereg.md, rm_train --rm-order; sidecar head `order: true`):
+  points    the same window (arc offsets from the ego's projection on the merged route, 2 m), cut at +40 m: OFFS_O = -6, -4, .., +40
+            (N_PT_O = 24; 3 points behind the ego). Points beyond +40 m are dropped (no slot), not masked.
+  scalars   [d_turn / 60, d_turn known, min(trav, 200) / 100] appended: d_turn = arc offset of the first valid point in 0 .. +60 m whose heading
+            differs >= 30 deg from the reference heading (the route's at offset 0 when that point is valid, else the ego's own heading, i.e.
+            the near gap of the first decisions); none found: 60 when the +60 m point is valid, else unknown (value 0, bit 0). trav = arc
+            length the ego has travelled since the first route message (chords between the poses of the messages up to t0, then to the
+            anchor). DIM_O = 24 x 5 + 3 = 123. The ordered features are a pure function of the old window and trav (to_order), so the
+            offline rows, the served Tracker and the trainer's on-the-fly negatives compute the same numbers.
+  branch    RouteHead(order=True): 24 point tokens (position embeddings = the first 24 of an old head's), the scalars enter through a
+            zero-initialised linear map added to the ego token (an old head converted by order_state() therefore changes only by the
+            dropped far points).
 """
 from __future__ import annotations
 
@@ -30,6 +43,14 @@ I20 = int(np.flatnonzero(OFFS == 20.0)[0])       # the +20 m point (coverage fla
 TOL = 1.0                                        # a newer batch's point extends the merged polyline when it lies > TOL m beyond its end
 EGO_DIM = 20
 SIDECAR = "route_mem.json"                       # next to ckpt-final.pt: the checkpoint carries the branch (its config)
+I0 = int(np.flatnonzero(OFFS == 0.0)[0])         # the ego's projection
+I60 = int(np.flatnonzero(OFFS == 60.0)[0])
+N_PT_O = int(np.flatnonzero(OFFS == 40.0)[0]) + 1  # ordered layout: -6 .. +40 m (24 points)
+OFFS_O = OFFS[:N_PT_O]
+NSC = 3                                          # d_turn / 60, d_turn known, travelled / 100
+DIM_O = N_PT_O * NF + NSC
+TURN_DEG, TURN_CAP, TRAV_CAP = 30.0, 60.0, 200.0
+SERVE_ORDER = False                              # Tracker() default in a driver: set from the served checkpoint's sidecar (head_order)
 
 
 def to_local(a, X):
@@ -106,12 +127,70 @@ def memory(batches_local, anchor):
     return window(None if M is None else in_ego(anchor, M)).reshape(-1)
 
 
+def pts(f):
+    """Features of either layout (..., DIM | DIM_O) -> the point block (..., N_PT | N_PT_O, NF)."""
+    f = np.asarray(f)
+    n = N_PT if f.shape[-1] == DIM else N_PT_O
+    assert f.shape[-1] in (DIM, DIM_O), f.shape
+    return f[..., :n * NF].reshape(*f.shape[:-1], n, NF)
+
+
 def summary(f):
-    """Features (..., DIM) -> dict of numpy arrays: n valid points, nearest valid offset (nan if none), +20 m covered."""
-    P = np.asarray(f).reshape(*np.shape(f)[:-1], N_PT, NF)
+    """Features (..., DIM | DIM_O) -> dict of numpy arrays: n valid points, nearest valid offset (nan if none), +20 m covered."""
+    P = pts(f)
     v = P[..., 0] > 0.5
     first = np.where(v.any(-1), OFFS[np.argmax(v, -1)], np.nan)
     return dict(n=v.sum(-1), first=first, c20=v[..., I20])
+
+
+def turn_dist(f):
+    """Old-layout features (..., DIM) -> (...,) arc offset (m) of the next heading change >= TURN_DEG within 0 .. +60 m (module docstring),
+    TURN_CAP when none and +60 m is covered, nan when unknown."""
+    P = np.asarray(f, np.float32).reshape(*np.shape(f)[:-1], N_PT, NF)
+    v = P[..., 0] > 0.5
+    h = np.arctan2(P[..., 4], P[..., 3])
+    ref = np.where(v[..., I0], h[..., I0], 0.0)
+    dh = np.abs((h - ref[..., None] + np.pi) % (2 * np.pi) - np.pi)
+    c = v & (dh >= np.radians(TURN_DEG))
+    c[..., :I0] = False
+    c[..., I60 + 1:] = False
+    return np.where(c.any(-1), OFFS[np.argmax(c, -1)], np.where(v[..., I60], TURN_CAP, np.nan))
+
+
+def to_order(f, trav):
+    """Old-layout features (..., DIM) and travelled arc (...,) -> ordered features (..., DIM_O) float32."""
+    f = np.asarray(f, np.float32)
+    d = turn_dist(f)
+    ok = np.isfinite(d)
+    tr = np.minimum(np.nan_to_num(np.asarray(trav, np.float32)), TRAV_CAP) / 100.0
+    sc = np.stack(np.broadcast_arrays(np.where(ok, d / TURN_CAP, 0.0), ok.astype(np.float32), tr), -1)
+    return np.concatenate([f[..., :N_PT_O * NF], sc], -1).astype(np.float32)
+
+
+def to_order_t(f, trav):
+    """torch twin of to_order (the trainer's on-the-fly negatives): f (n, DIM), trav (n,) -> (n, DIM_O)."""
+    import torch
+    P = f.float().view(-1, N_PT, NF)
+    v = P[..., 0] > 0.5
+    h = torch.atan2(P[..., 4], P[..., 3])
+    ref = torch.where(v[:, I0], h[:, I0], torch.zeros_like(h[:, I0]))
+    dh = ((h - ref[:, None] + np.pi) % (2 * np.pi) - np.pi).abs()
+    c = v & (dh >= float(np.radians(TURN_DEG)))
+    c[:, :I0] = False
+    c[:, I60 + 1:] = False
+    offs = torch.as_tensor(OFFS, dtype=torch.float32, device=f.device)
+    first = offs[c.int().argmax(-1)]
+    cap = torch.full_like(first, TURN_CAP)
+    d = torch.where(c.any(-1), first, torch.where(v[:, I60], cap, torch.full_like(first, float("nan"))))
+    ok = torch.isfinite(d)
+    sc = torch.stack([torch.where(ok, d / TURN_CAP, torch.zeros_like(d)), ok.float(), trav.float().nan_to_num().clamp(max=TRAV_CAP) / 100.0], -1)
+    return torch.cat([f.float()[:, :N_PT_O * NF], sc], -1)
+
+
+def travelled(poses, anchor=None):
+    """xy (m, 2) of the route messages' poses so far (oldest first) [+ the anchor pose] -> sum of the chords (m)."""
+    Q = [np.asarray(q, np.float64)[:2] for q in poses] + ([np.asarray(anchor, np.float64)[:2]] if anchor is not None else [])
+    return float(np.hypot(*np.diff(np.array(Q), axis=0).T).sum()) if len(Q) > 1 else 0.0
 
 
 def transform_rows(f, off):
@@ -133,24 +212,28 @@ def transform_rows(f, off):
 class Tracker:
     """Served memory of one driver session: route messages (rig-frame waypoints at their time) and the ego poses -> features at a decision."""
 
-    def __init__(self):
+    def __init__(self, order=None):
         self.routes = {}
+        self.order = SERVE_ORDER if order is None else bool(order)
 
     def add(self, ts: int, wp):
         self.routes[int(ts)] = np.asarray(wp, np.float64).reshape(-1, 2)
 
     def features(self, t0: int, pose_of, anchor):
         """pose_of(ts) -> (x, y, yaw) local rig pose or None; anchor = the pose at t0. Messages after t0 or without a pose are skipped."""
-        B = []
+        B, Q = [], []
         for ts in sorted(self.routes):
             if ts > t0:
                 continue
             p = pose_of(ts)
             wp = self.routes[ts]
             wp = wp[np.isfinite(wp).all(1)]
+            if p is not None:
+                Q.append(np.asarray(p, np.float64)[:2])
             if p is not None and len(wp):
                 B.append(to_local(p, wp))
-        return memory(B, anchor).astype(np.float32)
+        f = memory(B, anchor).astype(np.float32)
+        return to_order(f, travelled(Q, anchor) if Q else 0.0) if self.order else f
 
     def polyline(self, t0: int, pose_of, anchor):
         """The merged route polyline (M, 2) in the rear-axle frame of anchor (same batches as `features`), or None
@@ -172,10 +255,12 @@ def _torch():
     import parity_adapter as PA
 
     class RouteHead(nn.Module):
-        def __init__(self, d=128, layers=2, heads=4, T=32, D=512):
+        def __init__(self, d=128, layers=2, heads=4, T=32, D=512, order=False):
             super().__init__()
+            self.n_pt = N_PT_O if order else N_PT
+            self.dim = DIM_O if order else DIM
             self.pt = nn.Sequential(nn.Linear(NF, d), nn.GELU(), nn.Linear(d, d))
-            self.pos = nn.Parameter(0.02 * torch.randn(N_PT, d))
+            self.pos = nn.Parameter(0.02 * torch.randn(self.n_pt, d))
             self.ego = nn.Sequential(nn.Linear(EGO_DIM - 1, d), nn.GELU(), nn.Linear(d, d))
             self.null = nn.Parameter(torch.zeros(1, 1, d))
             self.q = nn.Parameter(0.02 * torch.randn(T, d))
@@ -185,12 +270,21 @@ def _torch():
             self.out = nn.Linear(d, D)
             nn.init.zeros_(self.out.weight)
             nn.init.zeros_(self.out.bias)
+            if order:                                        # the scalars: zero-initialised, added to the ego token
+                self.sc = nn.Linear(NSC, d)
+                nn.init.zeros_(self.sc.weight)
+                nn.init.zeros_(self.sc.bias)
 
         def forward(self, ego, f):
             B, d = ego.shape[0], self.q.shape[1]
-            P = f.float().view(B, N_PT, NF)
+            if self.n_pt == N_PT:
+                P = f.float().view(B, N_PT, NF)
+                e = self.ego(ego[:, 1:].float())
+            else:
+                P = f.float()[:, :self.n_pt * NF].reshape(B, self.n_pt, NF)
+                e = self.ego(ego[:, 1:].float()) + self.sc(f.float()[:, self.n_pt * NF:])
             pad = P[..., 0] < 0.5
-            mem = torch.cat([self.null.expand(B, 1, d), self.ego(ego[:, 1:].float())[:, None], self.pt(P) + self.pos[None]], 1)
+            mem = torch.cat([self.null.expand(B, 1, d), e[:, None], self.pt(P) + self.pos[None]], 1)
             pad = torch.cat([torch.zeros(B, 2, dtype=torch.bool, device=ego.device), pad], 1)
             h = self.dec(self.q[None].expand(B, -1, -1), mem, memory_key_padding_mask=pad)
             return self.out(self.norm(h))
@@ -206,7 +300,7 @@ def _torch():
             ego = ego.float()
             e, f = ego[:, :EGO_DIM], ego[:, EGO_DIM:]
             b = super().forward(e)
-            if f.shape[1] == DIM:
+            if f.shape[1] == self.route.dim:
                 b = b + self.route(e if self.in_tf is None else self.in_tf(e), f) * e[:, :1, None]
             return b
 
@@ -228,6 +322,30 @@ def attach(model, **kw):
     new.in_tf = old.in_tf
     model.adapter = new
     return model
+
+
+def order_state(sd: dict) -> dict:
+    """An old-layout adapter state (with `route.*`) -> the ordered head's: position embeddings of the first N_PT_O points, scalar map at 0."""
+    import torch
+    out = dict(sd)
+    k = next(k for k in sd if k.endswith("route.pos"))
+    if sd[k].shape[0] == N_PT_O:
+        return out
+    out[k] = sd[k][:N_PT_O].clone()
+    pre = k[:-len("pos")]
+    out[pre + "sc.weight"] = torch.zeros(sd[k].shape[1], NSC, dtype=sd[k].dtype)
+    out[pre + "sc.bias"] = torch.zeros(sd[k].shape[1], dtype=sd[k].dtype)
+    return out
+
+
+def head_order(tag: str) -> bool:
+    import pp_train as T
+    p = T.proot("runs", tag) / SIDECAR
+    return bool(p.exists() and json.loads(p.read_text()).get("head", {}).get("order", False))
+
+
+def dim_of(tag: str) -> int:
+    return DIM_O if head_order(tag) else DIM
 
 
 def has_branch(tag: str) -> bool:
@@ -276,4 +394,24 @@ if __name__ == "__main__":                                   # self-test: straig
     x, y = g[:, 1] * 20, g[:, 2] * 20                                        # back to the logged frame: x c - y s, dy + x s + y c
     c, s = np.cos(0.05), np.sin(0.05)
     assert np.allclose(0.5 + x * s + y * c, 0, atol=1e-4) and np.allclose(x * c - y * s, OFFS, atol=1e-4)
+    o = to_order(memory([C], np.array([0.0, 0.0, 0.0]))[None], np.array([0.0]))[0]           # quarter circle r 30 m: 30 deg at arc ~15.7 m
+    assert o.shape == (DIM_O,) and abs(o[-3] * TURN_CAP - 16.0) < 1e-6 and o[-2] == 1 and o[-1] == 0, o[-3:]
+    o = to_order(memory([B0], a0)[None], np.array([12.5]))[0]                                # gap: first point at +43 m, straight, 60 m covered
+    assert o[-3] == 1.0 and o[-2] == 1 and abs(o[-1] - 0.125) < 1e-6 and (pts(o)[:, 0] == 0).all()
+    assert np.isnan(turn_dist(np.zeros(DIM))) and (to_order(np.zeros((2, DIM)), np.zeros(2))[:, -3:] == 0).all()
+    tr = Tracker(order=True)
+    tr.add(0, B0)
+    tr.add(1, B0)
+    ps = {0: (0.0, 0.0, 0.0), 1: (3.0, 4.0, 0.0)}
+    o = tr.features(1, ps.get, np.array([3.0, 4.0, 0.0]))
+    assert o.shape == (DIM_O,) and abs(o[-1] - 0.05) < 1e-6, o[-3:]
+    assert abs(travelled([(0, 0), (3, 4)], (6, 8)) - 10.0) < 1e-9
+    try:
+        import torch
+        F = np.stack([memory([C], np.array([0.0, 0.0, 0.0])), memory([B0], a0), memory([B0, B1], np.array([50.0, 0.0, 0.0])), np.zeros(DIM, np.float32)])
+        tv = np.array([0.0, 12.5, 50.0, 3.0], np.float32)
+        assert np.allclose(to_order_t(torch.as_tensor(F), torch.as_tensor(tv)).numpy(), to_order(F, tv), atol=1e-6)
+        print("to_order_t == to_order")
+    except ImportError:
+        pass
     print("rmem selftest ok", summary(memory([B0], a0)))

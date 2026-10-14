@@ -345,7 +345,8 @@ def main() -> None:
     RMEM = load_branch(tag)
     core = C.Core(tag, os.environ.get("SH30_DEVICE", "cuda"))
     if RMEM:
-        core.rm, core.rm_dim = True, RMEM.DIM
+        core.rm, core.rm_dim = True, RMEM.dim_of(tag)
+        RMEM.SERVE_ORDER = RMEM.head_order(tag)          # route v2: the ordered layout (sidecar head `order`)
         LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
     core.lead_out, core.base_out = FX.NEED_LEAD or VH.NEED_LEAD, FX.BASE > 0
     LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TR.MODE,

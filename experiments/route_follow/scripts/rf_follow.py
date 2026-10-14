@@ -147,7 +147,7 @@ def one(job):
         v = float(np.hypot(e[4], e[5]) * 10.0)
         dec.append(dict(label=label, scene=scene, k=int((r["t0"] - T0) // DT), drv_k=int(r["k"]), st=st, lat=lat, v=v,
                         deficit=plan_arc2(r["poses"]) - 2.0 * v, g0=G0[r["k"]],
-                        c20=(bool(F[r["k"]].reshape(RM.N_PT, RM.NF)[RM.I20, 0] > 0.5) if F is not None else None)))
+                        c20=(bool(RM.pts(F[r["k"]])[RM.I20, 0] > 0.5) if F is not None else None)))
     st = np.array([d["st"] for d in dec])
     ks = np.array([d["k"] for d in dec])
     s0 = st[0]

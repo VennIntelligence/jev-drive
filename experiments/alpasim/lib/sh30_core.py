@@ -230,7 +230,7 @@ class Core:
         if self.rm:                                       # ROUTE-MEM branch (experiments/route_mem/lib/rmem.py): the fed row is ego ++ route memory
             sys.path.insert(0, str(_R / "experiments/route_mem/lib"))
             import rmem as RM
-            self.model, self.rm_dim = RM.load_pmodel(tag, self.dev), RM.DIM
+            self.model, self.rm_dim, self.rm_order = RM.load_pmodel(tag, self.dev), RM.dim_of(tag), RM.head_order(tag)   # rm_order: route v2 layout
         else:
             self.model = T.load_pmodel(tag, self.dev)
         assert self.model.arm in ("P2", "P2L") and self.model.adapter is not None, f"{tag}: expected an ego-only parity arm, got {self.model.arm}"

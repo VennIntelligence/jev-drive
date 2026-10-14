@@ -58,6 +58,31 @@ Longitudinal safety (2026-10-13, experiments/route_follow/plans/2026-10-13-lon-p
             stop-respect): any > 0 sets --on-lon on_lonsafe and --on-lon-lam 1 (the weights carry the scale: each term enters as W x ho_w x
             sum over the pool rows / n_imit); refused together with another --on-lon module. All 0 (default) = off: no operation is added.
 
+Route v2 (2026-10-15, experiments/route_follow/plans/2026-10-15-route-v2-prereg.md); every flag off = the recipe above operation for operation:
+  --rm-order        the ordered, progress-anchored memory layout (lib/rmem.py "Ordered layout": -6 .. +40 m, d_turn, trav; DIM_O = 123) from
+            feat/<data>.o.npz (rm_build.py order); the head gets order=True (sidecar head `order`); an --init with the old layout is converted
+            by rmem.order_state (first 24 position embeddings, the scalar map at 0).
+  --lane-lam L [--lane-dz 0.5] [--lane-neg 0.2] [--lane-shift 3.5] [--lane-over-lam L] [--lane-over-deg 10]
+            near-field lateral hinge to the CARRIED route on every non-anchor row whose memory is fed (pool rows included): the row's old-layout
+            memory polyline (feat/<data>.npz, 2 m, -6 .. +72 m) as target, on_route.near (shape-only lateral gradient, poses covered by a
+            segment), relu(distance - dz), pose weights 0 / 2 / 2 / 2 / 1 / 1 / 1 / 1 at 0.5 .. 4 s (1.0 - 2.0 s weight 2); summed / non-anchor
+            rows x L. Negatives: a share --lane-neg of the eligible rows (non-anchor, memory fed, the +0 m point valid, not a --lc-cf row), own rng
+            stream [seed, 0, 97], get a FAKE input memory: the same route shifted sideways by +-shift m (same direction), or (half of the rows
+            that qualify: NAVSIM rows whose route turns >= 15 deg within 40 m and whose token has no alternative-exit counterfactual in
+            runs/route_follow/cf/rows, i.e. no junction choice) the straight continuation of the route from the ego's projection; the hinge
+            target stays the ORIGINAL route and the imitation target is unchanged. Over-turn guard: relu(s (psi_2s - h_route(a_2s)) - 10 deg)
+            (radians) with h_route the target route's heading at the plan's own arc length at 2 s and s the side of the route's turn between 0
+            and that arc (|turn| >= 5 deg, else 0): fires when the plan at 2 s points more than 10 deg further into the turn than the route;
+            gradient through the plan heading only; summed / non-anchor rows x --lane-over-lam (default L).
+  --lc-cf [--lc-k 8] [--lc-lam L] [--lc-dz 0.5]
+            lane-change counterfactual pairs: the `lc` rows of runs/route_follow/cf/rows/<shard>.npz (rf_cfpool build: navtrain tokens whose
+            matched lanes change within 4 s and end >= 2 m off the t0 lane; ok = the stay-lane route generated and >= 2 m off the real memory;
+            train-split rows only). Every batch draws k tokens (own stream [seed, 0, 101]): the token's real row replaces one of the last k normal
+            rows (its memory never dropped nor faked; imitation of the log, the lane hinge on its real memory) and a stay-lane row is appended
+            (same camera tokens, ego row with the counterfactual command, memory = the stay-lane route; no imitation, no other term: the lane
+            hinge to the stay-lane label polyline with --lc-dz and the over-turn guard, summed / non-anchor rows x --lc-lam (default
+            --lane-lam, else 10)).
+
   RB:  rm_train.py train --tag RB-F-s0 --steps 10000 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 \
        --seed 0 --on on1_CF --on-k 12 --on-mode self --on-lon on_route          (RB0: the same without the four --on flags)
 
@@ -82,13 +107,14 @@ HEAD = dict(d=128, layers=2, heads=4)
 EGO_SPEED = [4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 17, 18]              # ego_features: vx, vy, ax, ay, history poses x / y (not present, cmd, yaw)
 
 
-def feats(cfg_data, S, dev):
-    """Route features (S.n, DIM) float32 on dev, and per Store row: junction distance / route turn (dev rows of the NAVSIM dirs, else nan),
-    the source dir index. Asserts every file's names equal the Store tab's names of its dir."""
+def feats(cfg_data, S, dev, order=False, old=False):
+    """Route features (S.n, DIM | DIM_O with order) float32 on dev, and per Store row: junction distance / route turn (dev rows of the NAVSIM
+    dirs, else nan), the source dir index. Asserts every file's names equal the Store tab's names of its dir. old: also the old-layout features
+    (S.n, DIM) f16 on dev and trav (S.n,) (route v2's targets / negatives; trav needs the .o files)."""
     import torch
     from jevdrive.common import data_dir
     root = data_dir() / "runs/route_mem/feat"
-    F, JD, TU, src, okc = [], [], [], [], {}
+    F, JD, TU, src, okc, FO, TR = [], [], [], [], {}, [], []
     o = 0
     for j, d in enumerate(cfg_data):
         z = np.load(root / f"{d}.npz")
@@ -96,6 +122,15 @@ def feats(cfg_data, S, dev):
         assert np.array_equal(z["names"], S.tab["names"][o:o + n]), f"{d}: feature rows differ from the Store's"
         f = z["f"].astype(np.float32)
         f[~z["ok"]] = 0
+        if order or old:
+            zo = np.load(root / f"{d}.o.npz")
+            assert np.array_equal(zo["names"], z["names"]) and np.array_equal(zo["ok"], z["ok"]), f"{d}.o: rows differ"
+            TR.append(zo["trav"].astype(np.float32))
+            if old:
+                FO.append(f.astype(np.float16))
+            if order:
+                f = zo["f"].astype(np.float32)
+                f[~zo["ok"]] = 0
         F.append(f)
         JD.append(z["jdist"] if "jdist" in z.files else np.full(n, np.nan, np.float32))
         TU.append(z["turn40"] if "turn40" in z.files else np.full(n, np.nan, np.float32))
@@ -103,7 +138,8 @@ def feats(cfg_data, S, dev):
         okc[d] = float(z["ok"].mean())
         o += n
     assert o == S.n, (o, S.n)
-    return torch.as_tensor(np.concatenate(F), device=dev), np.concatenate(JD), np.concatenate(TU), np.concatenate(src), okc
+    ex = (torch.as_tensor(np.concatenate(FO), device=dev), torch.as_tensor(np.concatenate(TR), device=dev)) if old else (None, None)
+    return (torch.as_tensor(np.concatenate(F), device=dev), np.concatenate(JD), np.concatenate(TU), np.concatenate(src), okc) + ex
 
 
 def rows_ade(model, S, rows, W, mask, bs=256):
@@ -153,6 +189,13 @@ def rely(model, S, dv_o, W, JD, TU, logs):
     return res
 
 
+def head_of(a) -> dict:
+    """The branch config: HEAD, + order=True with --rm-order (route v2); `rely` reads it from the checkpoint's sidecar."""
+    if a.rm_from and RM.has_branch(a.rm_from):
+        a.rm_order = RM.head_order(a.rm_from)
+    return dict(HEAD, order=True) if getattr(a, "rm_order", False) else dict(HEAD)
+
+
 def build(a, dev):
     """on_train.setup + the branch + the route features. -> (ns, route params, JD, TU, okc)."""
     import torch
@@ -160,12 +203,19 @@ def build(a, dev):
     init, a.init = a.init, ("" if a.rm_from or (a.init and RM.has_branch(a.init)) else a.init)   # setup's load_init: plain P2 checkpoints only
     ns = OT.setup(a, dev)
     a.init = init
-    RM.attach(ns.model, **HEAD)
+    head = head_of(a)
+    RM.attach(ns.model, **head)
     src = a.rm_from or (a.init if a.init and RM.has_branch(a.init) else "")
+    ns.head, ns.converted = head, False
     if src:                                                           # a checkpoint with the branch: the whole state, branch included
         ck = torch.load(T.proot("runs", src) / "ckpt-final.pt", map_location="cpu", weights_only=False)
         sd = json.loads((T.proot("runs", src) / RM.SIDECAR).read_text()) if RM.has_branch(src) else {}
-        assert sd.get("head", HEAD) == HEAD, f"{src}: branch {sd.get('head')} != {HEAD}"
+        sh = sd.get("head", HEAD)
+        assert {k: v for k, v in sh.items() if k != "order"} == HEAD, f"{src}: branch {sh} != {HEAD}"
+        assert sh.get("order", False) <= head.get("order", False), f"{src}: an ordered-layout branch needs --rm-order"
+        if head.get("order") and not sh.get("order"):                 # route v2: an old-layout init converted to the ordered head
+            ck["model"]["parity"] = RM.order_state(ck["model"]["parity"])
+            ns.converted = True
         ns.model.load_state(ck["model"])
         st = ns.model.adapter.state_dict()
         assert set(st) == set(ck["model"]["parity"]), "adapter keys differ from the checkpoint's"
@@ -174,13 +224,155 @@ def build(a, dev):
         assert da == 0 and dn == 0, (da, dn)
         if not a.rm_from:
             ns.init = dict(init=src, with_branch=True, net_loaded=len(ck["model"]["net"]), adapter_loaded=len(st), max_abs_diff_after_load=0.0,
-                           init_dev_ade=sd.get("dev_ade"))
-    F, JD, TU, src, okc = feats(ns.cfg.data, ns.S, dev)
+                           init_dev_ade=sd.get("dev_ade"), **({"converted_to_order": True} if ns.converted else {}))
+    lane = getattr(a, "lane_lam", 0) > 0 or getattr(a, "lc_cf", False)
+    F, JD, TU, src, okc, ns.f_old, ns.trav = feats(ns.cfg.data, ns.S, dev, order=head.get("order", False), old=lane)
     ns.S.ego = torch.cat([ns.S.ego.float(), F], 1)
     rp = list(ns.model.adapter.route.parameters())
     ids = {id(p) for p in rp}
     ns.new = [p for p in ns.model.adapter.parameters() if id(p) not in ids]
     return ns, rp, JD, TU, okc
+
+
+# ---------------------------------------------------------------- route v2: lane hinge, negatives, lane-change pairs
+LANE_W = (0.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0)                    # plan poses 0.5 .. 4 s: 1.0 - 2.0 s weight 2, 2.5 - 4 s weight 1
+LC_GRID0, OLD_GRID0 = -10.0, float(RM.OFFS[0])                       # arc offset of the first point: cf label (rf_cfpool) / old memory window
+CURVE_DEG, SIDE_DEG = 15.0, 5.0
+
+
+def old_poly(f):
+    """Old-layout features (n, DIM) tensor -> (n, N_PT, 2) row-frame points, NaN where invalid."""
+    import torch
+    P = f.float().view(-1, RM.N_PT, RM.NF)
+    xy = P[..., 1:3] * 20.0
+    return torch.where((P[..., :1] > 0.5), xy, torch.full_like(xy, float("nan")))
+
+
+def seglen(P):
+    import torch
+    return torch.linalg.norm(P[:, 1:] - P[:, :-1], dim=-1)            # NaN where an end is NaN (on_route.near reads NaN as no segment)
+
+
+def lane_hinge(xyp, P, dz):
+    """Plan poses (n, 8, 3) with grad, target polylines (n, M, 2) NaN padded, dead zone -> (n,) weighted hinge (m), on_route's geometry."""
+    import torch
+    import on_route as OR_
+    nr = OR_.near(xyp, torch.arange(len(P), device=P.device), dict(poly=P, seglen=seglen(P)))
+    h = torch.relu(nr - dz) * (nr < 1e3)
+    w = torch.as_tensor(LANE_W, device=h.device, dtype=h.dtype)
+    return (h * w).sum(1) / w.sum()
+
+
+def seg_heading(P, g0, a):
+    """Heading (n,) of polylines P (n, M, 2) (2 m grid from arc g0) at arc a (n,): linear between the headings of the segments whose midpoints
+    bracket a (one segment where the other is missing), and its validity."""
+    import torch
+    M = P.shape[1]
+    d = P[:, 1:] - P[:, :-1]
+    ok = torch.isfinite(d).all(-1) & (torch.linalg.norm(torch.nan_to_num(d), dim=-1) > 1e-3)
+    h = torch.atan2(d[..., 1], d[..., 0]).nan_to_num()
+    u = ((a - g0 - 1.0) / 2.0).clamp(0, M - 2)
+    j = u.floor().long().clamp(0, M - 3)
+    w = (u - j).clamp(0, 1)
+    ar = torch.arange(len(P), device=P.device)
+    h0, h1, o0, o1 = h[ar, j], h[ar, j + 1], ok[ar, j], ok[ar, j + 1]
+    dh = (h1 - h0 + np.pi) % (2 * np.pi) - np.pi
+    hh = torch.where(o0 & o1, h0 + w * dh, torch.where(o0, h0, h1))
+    return hh, o0 | o1
+
+
+def over_turn(xyp, P, g0, deg):
+    """The over-turn guard (n,) radians: relu(side x (psi_2s - h_route(a_2s)) - deg); a_2s = the plan's arc to its 2 s pose (detached)."""
+    import torch
+    q = torch.cat([torch.zeros_like(xyp[:, :1, :2]), xyp[:, :4, :2]], 1).detach()
+    a2 = torch.linalg.norm(q[:, 1:] - q[:, :-1], dim=-1).sum(1)
+    h2, ok2 = seg_heading(P, g0, a2)
+    h0, ok0 = seg_heading(P, g0, torch.zeros_like(a2))
+    h0 = torch.where(ok0, h0, torch.zeros_like(h0))                   # the near gap: the ego's own heading
+    wrap = lambda x: (x + np.pi) % (2 * np.pi) - np.pi  # noqa: E731
+    turn = wrap(h2 - h0)
+    side = torch.sign(turn) * (turn.abs() >= np.radians(SIDE_DEG))
+    return torch.relu(side * wrap(xyp[:, 3, 2] - h2) - np.radians(deg)) * ok2
+
+
+def fake_shift(f, s):
+    """Old-layout features (n, DIM) -> the same route shifted sideways by s (n,) m (left +), headings kept."""
+    import torch
+    P = f.float().view(-1, RM.N_PT, RM.NF).clone()
+    v = P[..., 0] > 0.5
+    x, y = P[..., 1] * 20.0 - s[:, None] * P[..., 4], P[..., 2] * 20.0 + s[:, None] * P[..., 3]
+    P[..., 1] = torch.where(v, x / 20.0, torch.zeros_like(x))
+    P[..., 2] = torch.where(v, (y / 20.0).clamp(-4, 4), torch.zeros_like(y))
+    return P.view(-1, RM.DIM)
+
+
+def fake_straight(f):
+    """Old-layout features (n, DIM) with the +0 m point valid -> the straight continuation of the route from that point (points at offsets
+    >= 0 keep their validity, move onto the line, take its heading; points behind the ego unchanged)."""
+    import torch
+    P = f.float().view(-1, RM.N_PT, RM.NF).clone()
+    v = P[..., 0] > 0.5
+    o = torch.as_tensor(RM.OFFS, device=f.device, dtype=torch.float32)[None, RM.I0:]
+    c, sn = P[:, RM.I0, 3:4], P[:, RM.I0, 4:5]
+    x, y = P[:, RM.I0, 1:2] * 20.0 + o * c, P[:, RM.I0, 2:3] * 20.0 + o * sn
+    vv = v[:, RM.I0:]
+    P[:, RM.I0:, 1] = torch.where(vv, x / 20.0, torch.zeros_like(x))
+    P[:, RM.I0:, 2] = torch.where(vv, (y / 20.0).clamp(-4, 4), torch.zeros_like(y))
+    P[:, RM.I0:, 3] = torch.where(vv, c.expand_as(x), torch.zeros_like(x))
+    P[:, RM.I0:, 4] = torch.where(vv, sn.expand_as(x), torch.zeros_like(x))
+    return P.view(-1, RM.DIM)
+
+
+def lane_prep(a, ns, dev):
+    """-> namespace of the route v2 tables: straight-negative rows (S.n,) bool, the lane-change pairs (store row, stay-lane input, command,
+    label polyline)."""
+    import torch
+    from types import SimpleNamespace
+    from jevdrive.common import data_dir
+    S, n = ns.S, ns.S.n
+    fo = ns.f_old.float().view(n, RM.N_PT, RM.NF).cpu().numpy()
+    v = fo[..., 0] > 0.5
+    h = np.arctan2(fo[..., 4], fo[..., 3])
+    dh = np.abs((h - h[:, RM.I0:RM.I0 + 1] + np.pi) % (2 * np.pi) - np.pi)
+    sel = v & (np.arange(RM.N_PT) >= RM.I0) & (RM.OFFS <= 40.0)
+    curved = v[:, RM.I0] & (np.where(sel, dh, 0).max(1) >= np.radians(CURVE_DEG))
+    rows_dir = data_dir() / "runs/route_follow/cf/rows"
+    nav = [d for d in ns.cfg.data if d.startswith("navtrain_full.")]
+    offs, o = {}, 0
+    for d in ns.cfg.data:
+        m = len(np.load(data_dir() / "runs/op_parity/cache" / d / "tab.npz")["names"])
+        offs[d], o = o, o + m
+    assert o == n, (o, n)
+    junction = np.zeros(n, bool)
+    is_nav = np.zeros(n, bool)
+    is_nav[ns.tr_o] = True                                            # the normal (NAVSIM) training rows
+    LCr, LCf, LCc, LCp = [], [], [], []
+    tr_set = set(ns.tr_o.tolist())
+    for d in nav:
+        z = np.load(rows_dir / f"{d}.npz")
+        r = z["row"].astype(np.int64) + offs[d]
+        assert (S.tab["names"][r] == z["token"]).all(), f"{d}: cf rows vs Store"
+        junction[r[np.isin(z["cls"], ["j0", "j1"])]] = True
+        m = (z["cls"] == "lc") & z["ok"] & np.isfinite(z["poly"]).all(-1).any(-1)
+        m &= np.array([x in tr_set for x in r.tolist()])
+        if not m.any():
+            continue
+        f = z["f"][m].astype(np.float32)
+        LCr.append(r[m])
+        LCf.append(RM.to_order(f, ns.trav[torch.as_tensor(r[m], device=dev)].cpu().numpy()) if ns.head.get("order") else f)
+        oh = np.zeros((m.sum(), 3), np.float32)
+        c = z["cmd"][m].astype(int)
+        oh[np.flatnonzero(c < 3), c[c < 3]] = 1.0                      # parity_adapter.ego_features: cmd[..., :3], unknown -> all zero
+        LCc.append(oh)
+        LCp.append(z["poly"][m].astype(np.float32))
+    straight = curved & ~junction & is_nav
+    t = lambda x: torch.as_tensor(x, device=dev)  # noqa: E731
+    L = SimpleNamespace(straight=t(straight), curved=int(curved.sum()), straight_rows=int(straight.sum()), junction_rows=int(junction.sum()), n_lc=0)
+    if getattr(a, "lc_cf", False):
+        assert LCr, "--lc-cf: no lane-change rows in runs/route_follow/cf/rows"
+        L.lc_row, L.lc_f, L.lc_cmd, L.lc_poly = t(np.concatenate(LCr)), t(np.concatenate(LCf)), t(np.concatenate(LCc)), t(np.concatenate(LCp))
+        L.n_lc = int(len(L.lc_row))
+    return L
 
 
 def cap_share(w, g, cap):
@@ -290,6 +482,16 @@ def cmd_train(a):
     k_yr, tr_t, dv_t = ns.k_yr, ns.tr_t, ns.dv_t
     LS = ns.losses(ns.mode)
     pp_lr = not (k_yr or k_ho or k_on or a.agent_lam > 0)
+    lane_on, lc_on = a.lane_lam > 0, a.lc_cf                          # route v2 (docstring); both off: no operation below is added
+    if lane_on or lc_on:
+        LN = lane_prep(a, ns, dev)
+        k_lc = a.lc_k if lc_on else 0
+        assert k_lc < nN, "--lc-k: fewer than the normal rows"
+        over_lam = a.lane_lam if a.lane_over_lam is None else a.lane_over_lam
+        lc_lam = a.lc_lam if a.lc_lam is not None else (a.lane_lam if lane_on else 10.0)
+        nrng = np.random.default_rng([cfg.seed, 0, 97])              # negatives
+        lrng = np.random.default_rng([cfg.seed, 0, 101])             # lane-change pairs
+        pi_t = torch.as_tensor(S.pi, device=dev)
     rng = np.random.default_rng([cfg.seed, 0])
     hrng = np.random.default_rng([cfg.seed, 0, 43])
     orng = np.random.default_rng([cfg.seed, 0, 53])
@@ -310,6 +512,8 @@ def cmd_train(a):
         w, caprec = draw_weights(tb, a.on_weight, a.on_cap_scene, a.on_cap_in)
         pw = w / w.sum()
 
+    lc_rows = LN.lc_row.cpu().numpy() if lc_on else None
+
     def draw():
         r = rng.choice(tr_o, nN, replace=len(tr_o) < nN)
         if k_yr:
@@ -323,6 +527,12 @@ def cmd_train(a):
         if k_ho:
             r = np.concatenate([r] + [hrng.choice(p, q, replace=False) for p, q in zip(pools, kk)])
             an = np.concatenate([an, np.zeros(k_ho, bool)])
+        if lc_on:                                                     # route v2 pairs: real rows replace the last k normal rows, stay rows appended
+            j = lrng.choice(LN.n_lc, k_lc, replace=False)
+            lr = lc_rows[j]
+            r = r.copy()
+            r[nN - k_lc:nN], an[nN - k_lc:nN] = lr, False
+            return np.concatenate([r, lr]), an, sha.hexdigest()[:16], j
         return r, an, sha.hexdigest()[:16]
 
     def fetch(dr):
@@ -338,7 +548,7 @@ def cmd_train(a):
         ev["ade_nomem"] = float(rows_ade(model, Sd, dv_o[has], LS.W, True).mean())
         model.train()
         return ev
-    with Run("route_mem", f"train-{a.tag}", seed=cfg.seed, config=asdict(cfg) | {"onpol": vars(a), "route_mem": dict(head=HEAD, feat_ok=okc)}) as run:
+    with Run("route_mem", f"train-{a.tag}", seed=cfg.seed, config=asdict(cfg) | {"onpol": vars(a), "route_mem": dict(head=ns.head, feat_ok=okc)}) as run:
         for x in ns.sp + ((ns.trl,) if k_ho or ns.agent2 is not None else ()) + ((splits.load(a.on_split),) if a.on and a.on_split else ()):
             run.use_split(x)
         nroute = sum(p.numel() for p in rp)
@@ -353,6 +563,12 @@ def cmd_train(a):
         if a.ego_drop_speed > 0:
             run.info(f"ego speed history (ego cols {EGO_SPEED}) zeroed on a share {a.ego_drop_speed} of the non-anchor rows, rng [seed, 0, 71]")
         run.info(f"init {json.dumps(ns.init) if ns.init else 'none: shipped weights + fresh adapter (on_train / joint_train start)'}")
+        if lane_on or lc_on:
+            run.info(f"route v2: layout {'ordered' if ns.head.get('order') else 'old'}; lane {a.lane_lam} dz {a.lane_dz} neg {a.lane_neg} shift "
+                     f"{a.lane_shift} over {over_lam} / {a.lane_over_deg} deg; straight-negative rows {LN.straight_rows} (curved {LN.curved}, junction "
+                     f"tokens excluded {LN.junction_rows}); lc pairs {('k ' + str(k_lc) + ' of ' + str(LN.n_lc) + ', lam ' + str(lc_lam)) if lc_on else 'off'}")
+        elif ns.head.get("order"):
+            run.info("route v2: layout ordered, no lane terms")
         ev = dev_ev()
         run.scalars({f"dev/{q}": v for q, v in ev.items()}, 0)
         run.info("dev @ 0: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items())
@@ -363,19 +579,76 @@ def cmd_train(a):
         pre = T.Prefetch(draw, fetch, cfg.steps, a.prefetch, a.fetch_workers)
         t0, hist, hsh = time.time(), [], ""
         for step in range(cfg.steps):
-            (r, an, hsh), front = pre.get()
+            dr, front = pre.get()
+            r, an, hsh = dr[:3]
             rows, anchor = torch.as_tensor(r, device=dev), torch.as_tensor(an, device=dev)
+            if lc_on:                                                 # the stay rows at the end: never anchor rows
+                n_main = len(an)
+                jl = torch.as_tensor(dr[3], device=dev)
+                anchor = torch.cat([anchor, torch.zeros(k_lc, dtype=torch.bool, device=dev)])
             cosf = 0.5 * (1 + np.cos(np.pi * (step / cfg.steps))) if pp_lr else 0.5 * (1 + np.cos(np.pi * step / cfg.steps))
             for g in opt.param_groups:
                 g["lr"] = g["base"] * min(1.0, (step + 1) / g["wu"]) * cosf
             ego = S.ego[rows] * (~anchor)[:, None].float()
-            keep = torch.as_tensor(mrng.random(len(r)) >= a.rm_drop, device=dev) | is_pool[rows]
+            if lc_on:
+                keep = torch.as_tensor(mrng.random(n_main) >= a.rm_drop, device=dev) | is_pool[rows[:n_main]]
+                keep[nN - k_lc:nN] = True                             # the pair's real rows keep their memory
+                keep = torch.cat([keep, torch.ones(k_lc, dtype=torch.bool, device=dev)])
+                ego[n_main:, 1:4] = LN.lc_cmd[jl]
+                ego[n_main:, RM.EGO_DIM:] = LN.lc_f[jl]
+            else:
+                keep = torch.as_tensor(mrng.random(len(r)) >= a.rm_drop, device=dev) | is_pool[rows]
             ego[:, RM.EGO_DIM:] = ego[:, RM.EGO_DIM:] * keep[:, None].float()
+            n_neg = 0
+            if lane_on and a.lane_neg > 0:                            # negatives: a fake input memory, the original route stays the target
+                nm = n_main if lc_on else len(r)
+                rm_ = rows[:nm]
+                fo_ = ns.f_old[rm_]
+                elig = (~anchor[:nm]) & keep[:nm] & (fo_[:, RM.I0 * RM.NF] > 0.5)
+                if lc_on:
+                    elig[nN - k_lc:nN] = False
+                u = torch.as_tensor(nrng.random((nm, 3)), device=dev, dtype=torch.float32)
+                neg = elig & (u[:, 0] < a.lane_neg)
+                n_neg = int(neg.sum())
+                if n_neg:
+                    st = neg & LN.straight[rm_] & (u[:, 1] < 0.5)
+                    sh = neg & ~st
+                    fk = fo_.float().clone()
+                    if sh.any():
+                        fk[sh] = fake_shift(fo_[sh], torch.where(u[sh, 2] < 0.5, -a.lane_shift, a.lane_shift))
+                    if st.any():
+                        fk[st] = fake_straight(fo_[st])
+                    fin = RM.to_order_t(fk[neg], ns.trav[rm_[neg]]) if ns.head.get("order") else fk[neg]
+                    idx = torch.nonzero(neg)[:, 0]
+                    ego[idx, RM.EGO_DIM:] = fin.to(ego.dtype)
             if a.ego_drop_speed > 0:
                 dm = torch.as_tensor(erng.random(len(r)) < a.ego_drop_speed, device=dev)
                 ego[:, esp] = ego[:, esp] * (~dm)[:, None].float()
             out = model(front, ego, S.tc[rows], None, None, nv=None if ns.nv is None else ns.nv[rows])
-            total, Ls = LS(out, S, rows, anchor)
+            if lc_on:
+                total, Ls = LS(out[:n_main], S, rows[:n_main], anchor[:n_main])
+            else:
+                total, Ls = LS(out, S, rows, anchor)
+            if lane_on or lc_on:                                      # route v2 terms on the plan in each row's own frame
+                x, y, psi = T.rear(out.float()[:, pi_t].view(-1, 33, 15), S.cam_x[rows], LS.W)
+                xyp = torch.stack([x, y, psi], -1)
+                nm = n_main if lc_on else len(r)
+                nA = (~anchor[:nm]).sum().clamp_min(1).float()
+                if lane_on:
+                    m_ = ((~anchor[:nm]) & keep[:nm]).float()
+                    Pt = old_poly(ns.f_old[rows[:nm]])
+                    hl = lane_hinge(xyp[:nm], Pt, a.lane_dz) * m_
+                    ov = over_turn(xyp[:nm], Pt, OLD_GRID0, a.lane_over_deg) * m_
+                    Ls["lane"], Ls["lane_over"] = hl.sum() / nA, ov.sum() / nA
+                    Ls["lane_act"], Ls["lane_neg_n"] = (hl > 0).float().mean().detach(), torch.tensor(float(n_neg))
+                    total = total + a.lane_lam * Ls["lane"] + over_lam * Ls["lane_over"]
+                if lc_on:
+                    Pl = LN.lc_poly[jl]
+                    hs = lane_hinge(xyp[n_main:], Pl, a.lc_dz)
+                    os_ = over_turn(xyp[n_main:], Pl, LC_GRID0, a.lane_over_deg)
+                    Ls["lc"], Ls["lc_over"] = hs.sum() / nA, os_.sum() / nA
+                    Ls["lc_swing2"] = (xyp[n_main:, 3, 1] - xyp[nN - k_lc:nN, 3, 1]).abs().mean().detach()
+                    total = total + lc_lam * Ls["lc"] + over_lam * Ls["lc_over"]
             if not torch.isfinite(total):
                 raise FloatingPointError(f"non-finite loss at step {step}: { {q: float(v) for q, v in Ls.items()} }")
             opt.zero_grad(set_to_none=True)
@@ -403,10 +676,11 @@ def cmd_train(a):
                 run.scalars({f"dev/{q}": v for q, v in ev.items()}, step + 1)
                 run.info(f"dev @ {step + 1}: " + ", ".join(f"{q} {v:.4f}" for q, v in ev.items()))
                 run.summary.update({f"dev_{q}": v for q, v in ev.items()})
-        torch.save({"model": model.state(), "cfg": asdict(cfg), "onpol": vars(a), "route_mem": HEAD}, d / "ckpt-final.pt")
+        torch.save({"model": model.state(), "cfg": asdict(cfg), "onpol": vars(a), "route_mem": ns.head}, d / "ckpt-final.pt")
         torch.save(model.adapter.state_dict(), d / "adapter.pt")
-        RM.write_sidecar(a.tag, HEAD, dict(init=a.init, rm_lr=a.rm_lr, rm_warmup=a.rm_warmup, rm_drop=a.rm_drop, rm_drop_pool=False,
-                                           on=a.on, on_lon=a.on_lon, steps=cfg.steps, dev_ade=ev.get("ade")))
+        v2 = dict(lane_lam=a.lane_lam, lane_dz=a.lane_dz, lane_neg=a.lane_neg, lc_cf=a.lc_cf) if (lane_on or lc_on or ns.head.get("order")) else {}
+        RM.write_sidecar(a.tag, ns.head, dict(init=a.init, rm_lr=a.rm_lr, rm_warmup=a.rm_warmup, rm_drop=a.rm_drop, rm_drop_pool=False,
+                                              on=a.on, on_lon=a.on_lon, steps=cfg.steps, dev_ade=ev.get("ade"), **v2))
         rr = rely(model, Sd, dv_o, LS.W, JD, TU, S.tab["log"])
         run.info(f"reliance: {json.dumps(rr)}")
         (_pl.Path(run.dir) / "rely.json").write_text(json.dumps(rr, indent=1))
@@ -513,6 +787,17 @@ if __name__ == "__main__":
         p.add_argument("--rm-lr", type=float, default=3e-4)
         p.add_argument("--rm-warmup", type=int, default=100)
         p.add_argument("--rm-drop", type=float, default=0.25)
+        p.add_argument("--rm-order", action="store_true", help="route v2: the ordered memory layout (feat/<data>.o.npz)")
+        p.add_argument("--lane-lam", type=float, default=0.0, help="route v2: lateral hinge to the carried route on every fed row (0 = off)")
+        p.add_argument("--lane-dz", type=float, default=0.5)
+        p.add_argument("--lane-neg", type=float, default=0.2, help="share of eligible rows with a fake (shifted / straight) input memory")
+        p.add_argument("--lane-shift", type=float, default=3.5)
+        p.add_argument("--lane-over-lam", type=float, default=None, help="over-turn guard weight (default --lane-lam)")
+        p.add_argument("--lane-over-deg", type=float, default=10.0)
+        p.add_argument("--lc-cf", action="store_true", help="route v2: lane-change counterfactual pairs")
+        p.add_argument("--lc-k", type=int, default=8)
+        p.add_argument("--lc-lam", type=float, default=None)
+        p.add_argument("--lc-dz", type=float, default=0.5)
     p = sub.add_parser("zero")
     p.add_argument("--init", required=True), p.add_argument("--tag", required=True)
     sub.add_parser("capcheck")

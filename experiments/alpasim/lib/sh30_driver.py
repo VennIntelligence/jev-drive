@@ -401,7 +401,9 @@ def main() -> None:
     global RMEM
     if core.rm or RP.ON:
         import rmem as RMEM
-        LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
+        RMEM.SERVE_ORDER = bool(getattr(core, "rm_order", False))   # route v2: the ordered layout (sidecar head `order`)
+        LOG.info("serving the ROUTE-MEM branch, memory %s, layout %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)",
+                 "ordered" if RMEM.SERVE_ORDER else "-6..+72")
     z = np.zeros(C.FRAME, np.uint8)
     # warm-up: both slot counts compiled before the port opens
     decode = tune(core, lambda: [core.plan([z] * m, np.zeros((m, 3)), np.zeros((m, 2)), np.zeros(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5]) for m in (1, 4, 4)])

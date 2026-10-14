@@ -22,6 +22,13 @@ with AlpaSim's own RouteGenerator, as the served driver would have held it. Alpa
                                           logged anchors, per decision max |served - offline| over the points valid in either, mask agreement
                                           -> served/<label>.json (gate G-serve) and served/<label>.parquet
   cover  --runs LABEL=DIR ..              per decision of read runs with `rmem`: coverage summary (n valid, nearest valid offset, +20 m covered)
+  order  --data navtrain_full.s0of12 .. [--pool L18RB0 ..] [--cf on1_CF on1_CFdev]
+                                          route v2 (--rm-order): the ordered layout (lib/rmem.py to_order) of existing feature files ->
+                                          feat/<name>.o.npz (names, f (n, DIM_O) f16, ok, trav). trav = the chords between the poses of the
+                                          route messages up to the row (rmem.travelled, as the served Tracker): NAVSIM rows = the logged poses of
+                                          frames i - k .. i (the row's k of `nav`); yr1_<data> = its source row's; --pool = the drive records'
+                                          anchors of decisions 0 .. k; --cf (rf_cfpool pools, names on:cf:<token>:<cls>) = the token's NAVSIM row's
+                                          (same k, same poses). The point block is the old file's first 24 points bit for bit (f16).
 """
 from __future__ import annotations
 
@@ -320,13 +327,18 @@ def served_one(job):
     F = feats_of(W, A)
     rows = []
     for r in recs:
-        s = np.asarray(r["rmem"], np.float32).reshape(RM.N_PT, RM.NF)
-        o = F[r["k"]].reshape(RM.N_PT, RM.NF)
+        s = np.asarray(r["rmem"], np.float32)
+        o = F[r["k"]]
+        sc = {}
+        if len(s) == RM.DIM_O:                              # route v2 ordered layout: the same rule on the decision anchors (trav)
+            o = RM.to_order(o, RM.travelled([A[j] for j in sorted(A) if j <= r["k"]]))
+            sc = dict(d_turn_served=float(s[-3]), d_turn_offline=float(o[-3]), trav_d=float(abs(s[-1] - o[-1]) * 100), dturn_same=bool(abs(s[-3] - o[-3]) < 1e-3 and s[-2] == o[-2]))
+        s, o = RM.pts(s), RM.pts(o)
         vs, vo = s[:, 0] > 0.5, o[:, 0] > 0.5
         both = vs & vo
         d = np.hypot(*((s[both, 1:3] - o[both, 1:3]) * 20.0).T) if both.any() else np.zeros(0)
         rows.append(dict(scene=scene, k=r["k"], n_served=int(vs.sum()), n_offline=int(vo.sum()), mask_same=bool((vs == vo).all()),
-                         d_max=float(d.max()) if len(d) else 0.0, d_med=float(np.median(d)) if len(d) else 0.0))
+                         d_max=float(d.max()) if len(d) else 0.0, d_med=float(np.median(d)) if len(d) else 0.0, **sc))
     return rows
 
 
@@ -348,6 +360,85 @@ def cmd_served(a):
         (OUT / "served" / f"{lab}.json").write_text(json.dumps(g, indent=1))
         run.summary.update(g)
         run.info(json.dumps(g))
+
+
+def trav_one(u):
+    """One log: (split dir, log, [(row, token, k)]) -> rows, trav."""
+    import ap2_route as AR
+    split_dir, log, items = u
+    fr, pos = AR.load_log(split_dir, log)
+    rows, T = [], []
+    for r, tok, k in items:
+        i = pos.get(tok)
+        rows.append(r)
+        T.append(RM.travelled(fr.p[max(i - k, 0):i + 1, :2]) if i is not None else 0.0)
+    return np.array(rows, np.int64), np.array(T, np.float32)
+
+
+def write_order(name, names, f, ok, trav, run):
+    fo = RM.to_order(np.asarray(f, np.float32), trav)
+    fo[~np.asarray(ok, bool)] = 0
+    assert np.array_equal(fo[:, :RM.N_PT_O * RM.NF].astype(np.float16)[ok], np.asarray(f)[ok, :RM.N_PT_O * RM.NF].astype(np.float16)), name
+    np.savez(OUT / "feat" / f"{name}.o.npz", names=names, f=fo.astype(np.float16), ok=ok, trav=np.asarray(trav, np.float32))
+    sc = fo[ok, -3:]
+    rec = dict(rows=len(names), ok=float(np.mean(ok)), dturn_known=float(sc[:, 1].mean()) if len(sc) else None,
+               dturn_lt60=float((sc[:, 1].astype(bool) & (sc[:, 0] < 1)).mean()) if len(sc) else None,
+               trav_med=float(np.median(trav[ok])) if np.any(ok) else None, near20_empty=float((~(RM.pts(fo[ok])[:, RM.I0:RM.I20 + 1, 0] > 0.5).any(1)).mean()) if np.any(ok) else None)
+    run.info(f"{name}.o: {json.dumps(rec)}")
+    run.summary[name] = rec
+    return rec
+
+
+def cmd_order(a):
+    from jevdrive import par
+    from jevdrive.common import n_cpus
+    from jevdrive.run import Run
+    from ao_e1 import drive_records
+    with Run("route_mem", "build-order", config=vars(a)) as run:
+        tmap = {}
+        for data in a.data:
+            z = np.load(OUT / "feat" / f"{data}.npz")
+            names, k = z["names"], z["k"].astype(int)
+            logs = np.load(CR / data / "tab.npz")["log"]
+            assert np.array_equal(np.load(CR / data / "tab.npz")["names"], names)
+            split_dir = "test" if (data_dir() / "datasets/navsim/navsim_logs/test" / f"{logs[0]}.pkl").exists() else "trainval"
+            by = {}
+            for r, (t, lg) in enumerate(zip(names.tolist(), logs.tolist())):
+                by.setdefault(lg, []).append((r, t, int(k[r])))
+            res = par.pmap(trav_one, [(split_dir, lg, it) for lg, it in by.items()], run=run, workers=a.workers or n_cpus(), desc=f"trav {data}")
+            res.raise_if_failed()
+            trav = np.zeros(len(names), np.float32)
+            for rows, T in res.values:
+                trav[rows] = T
+            write_order(data, names, z["f"], z["ok"], trav, run)
+            tmap.update(zip(names.tolist(), trav.tolist()))
+            yz = OUT / "feat" / f"yr1_{data}.npz"
+            if yz.exists():
+                y, yt = np.load(yz), np.load(CR / f"yr1_{data}" / "tab.npz")
+                assert np.array_equal(y["names"], yt["names"])
+                write_order(f"yr1_{data}", y["names"], y["f"], y["ok"], trav[yt["src_row"]], run)
+        for name in a.pool:
+            z = np.load(OUT / "feat" / f"on1_{name}.npz")
+            m = np.load(data_dir() / "runs/onpol_nuplan/rows" / name / "meta.npz", allow_pickle=True)
+            assert np.array_equal(m["names"], z["names"])
+            trav, cache = np.zeros(len(z["names"]), np.float32), {}
+            for i, (rn, sc, k) in enumerate(zip(m["run"].tolist(), m["scene"].tolist(), m["k"].tolist())):
+                if rn not in cache:
+                    cache = {rn: drive_records(rn)}
+                A = [r["anchor"] for r in cache[rn][sc] if r["k"] <= k]
+                trav[i] = RM.travelled(A)
+            write_order(f"on1_{name}", z["names"], z["f"], z["ok"], trav, run)
+        if a.cf:
+            if not tmap:
+                for d in sorted((OUT / "feat").glob("navtrain_full.s*of12.o.npz")):
+                    t = np.load(d)
+                    tmap.update(zip(t["names"].tolist(), t["trav"].tolist()))
+            for name in a.cf:
+                z = np.load(OUT / "feat" / f"{name}.npz")
+                tok = [n.split(":")[2] for n in z["names"].tolist()]
+                miss = [t for t in tok if t not in tmap]
+                assert not miss, f"{name}: {len(miss)} tokens without a NAVSIM row trav"
+                write_order(name, z["names"], z["f"], z["ok"], np.array([tmap[t] for t in tok], np.float32), run)
 
 
 def cmd_cover(a):
@@ -400,7 +491,10 @@ if __name__ == "__main__":
     p.add_argument("--run", required=True), p.add_argument("--tag", default=""), p.add_argument("--workers", type=int, default=0)
     p = sub.add_parser("cover")
     p.add_argument("--runs", nargs="+", required=True), p.add_argument("--out", required=True)
+    p = sub.add_parser("order")
+    p.add_argument("--data", nargs="*", default=[]), p.add_argument("--pool", nargs="*", default=[]), p.add_argument("--cf", nargs="*", default=[])
+    p.add_argument("--workers", type=int, default=0)
     p = sub.add_parser("same")
     p.add_argument("--a", required=True), p.add_argument("--b", required=True), p.add_argument("--label", required=True)
     a = ap.parse_args()
-    dict(same=cmd_same, nav=cmd_nav, yr=cmd_yr, pool=cmd_pool, served=cmd_served, cover=cmd_cover)[a.cmd](a)
+    dict(same=cmd_same, order=cmd_order, nav=cmd_nav, yr=cmd_yr, pool=cmd_pool, served=cmd_served, cover=cmd_cover)[a.cmd](a)
