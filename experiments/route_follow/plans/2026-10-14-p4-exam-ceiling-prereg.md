@@ -129,3 +129,14 @@ tmux new-window -d -t jev -n p4xr "CARDS='0 1' SLOTS=<2|3> bash $X stage /data/r
   `OOM during`; a launch that logs it is stopped and its scene's phase B rerun the same way (counted in the README).
 - **ETA restated:** rollouts ran 53-77 s each in the healthy stage-5 launches (~110 s per rollout per launch with start-up, read and the
   4-5 per card mix): ~257 / 6 x 110 s = ~1.3 h, bounded below by the largest job (41 rollouts, ~1.2-1.5 h): finish ~18:30-19:00 JST.
+
+## Amendment 3 (2026-10-14 17:10 JST, stage rest restarted): two launches per card
+
+- Stage rest at 3 workers per card (16:58) failed within 2 min: 2f227f2c's phase A rollout got `CUDA out of memory` in the renderer
+  (card 0: three phase-A launches warming up at once, 625 MiB free). With Amendment 2's OOM this is the second renderer OOM at three
+  launches per 3090, both at start-up when several renderers warm up together. Three per card is not safe on a 3090; stage 1's 22.6 GB
+  peak was a fortunate stagger.
+- The stage was stopped (all its stacks torn down; nothing of it is read: every non-DONE scene is requeued and its runs are rebuilt from
+  scratch by `stack`, which removes the run dir first) and restarted with **2 workers per card** (4 launches). The 6 DONE scenes and
+  d90fe123's phase A are kept. OOM watch as in Amendment 2.
+- **ETA:** ~257 rollouts / 4 launches x ~110 s = ~2 h, largest job (41 rollouts) ~1.3 h: finish ~19:15-19:30 JST.
