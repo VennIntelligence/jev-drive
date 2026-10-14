@@ -122,3 +122,27 @@ route tangent at s, from its position at station s, toward the side of the route
 `scripts/rf_progress.py` (reading A, also the `rmem` extractor), `scripts/rf_laneoff.py` (reading B), results `results/progress/` and
 `results/laneoff/` (json + md with CIs), figures `figs/progress_bev.png`, `figs/laneoff_bev.png` (4-6 scenes each incl. 9f393c8a, 2466266e),
 one paragraph each in the README. research/decisions.md is not edited.
+
+## Amendments (appended after the prereg commit 77810b16; each says whether it came before or after a statistic was seen)
+
+1. (Before the read, while coding.) The first valid memory point at offset 0 m sits beside the rear axle, so its bearing is ~ +-90 deg by
+   construction; the first valid point at >= 10 m (offset, lateral, bearing) is reported next to it. Descriptive only.
+2. (After the first read; the registered slot-based numbers are kept as the primary verdict.) The BEV of de9db5dc showed that the slot index
+   of the served memory is not the distance along the route when the ego stands before the start of the memory and that start lies past a
+   turn: `rmem.window` extrapolates the ego's arc position along the memory's first segment, so points ~40-50 m ahead along the route are
+   served in the 14-20 m slots (de9db5dc: slot cov 0-20 m 0.3, geometric 0.0). Added a geometric coverage: the valid memory points projected
+   on the rebuilt route span [lo, hi] (+-1 m); share of the stations s_e + 0, 2, .., 18 (20, .., 38) inside it. Claim A is reported under
+   both; the verdict of record stays the registered slot version. Gate G-A2 added at the same time: served memory points lie on the rebuilt
+   route (median distance 0.00 m), so the memory and the route are the same object and only the slot labelling differs.
+3. (After the first lane-change read.) The registered geometric LC proxy (route at +40 m >= 2 m to the side, heading change < 15 / 5 deg)
+   fires on 116 / 98 PAI rollouts and is dominated by road geometry (S-bends, junction offsets, curves leaving the tangent): the "log
+   shifted" column is ~90 % by construction (the route is the log on lane centres) and does not validate anything. Added a map version: every
+   4 m the lane under the route and its successor chains (rf_pai_follow lane_at / chains, PAI lanes from the rf_pai_follow extract, held lanes
+   from `rf_laneoff.py lanes` on the box); a site when the route point 40 m ahead is >= 2 m from every chain and on another lane; validated =
+   that lane is adjacent (gap <= 6 m) and the human's log itself moved 2-6 m to that side (> 6 m = the log turned there; added after
+   the first map read showed turn-lane picks with 14-49 m log shifts among the sites). Ego outcomes: shifted >= 2 m (registered), in the
+   route's lane after (|lat_route| <= 1.75 m in [s + 30, s + 60]), stayed in its own lane chain at s + 40. Both versions are reported; the
+   registered proxy's shares are not read as "lane changes done". A first map version that used the route's lane-id steps to a neighbour
+   (13 PAI sites, the log moved >= 2 m at 2 of 5 reached) was dropped before the final read as lane-assignment noise.
+4. (After the read; exploratory, no verdict.) Reading B's offsets signed toward the turn's inside (+) vs away from it (-), since the user's
+   observation (ii) is a wrong-lane / wrong-side observation and |offset| cannot tell the side.

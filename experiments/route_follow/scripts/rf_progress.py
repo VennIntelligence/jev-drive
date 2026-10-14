@@ -508,6 +508,11 @@ def write_md(out, res, Z, TZ, D):
                f"(zeros - completed {100 * d['diff']:+.0f} pp [{100 * d['lo']:+.0f}, {100 * d['hi']:+.0f}]); geometric: completed at the entry {100 * c['gp_unc_entry']:.0f} %, "
                f"3 s before {100 * c['gp_unc_entry_m3']:.0f} %, turn zeros {100 * c['gp_unc_zero_m3']:.0f} %. Per set (slot): "
                + "; ".join(f"{k} n {v['n']}, entry {100 * v['p_unc_entry']:.0f} %, - 3 s {100 * v['p_unc_m3']:.0f} %" for k, v in c["per_set"].items()) + "."]
+    m, dz = TZ.first_off_m3 > 0, TZ.gnear_m3 - TZ.first_off_m3
+    md += ["", f"Slot labelling (Amendment 2): where the near route is missing, the first served slot says the route starts {dz[m].median():.1f} m (median; "
+           f"p90 {dz[m].quantile(0.9):.1f}) nearer than it does along the route ({int((dz[m] >= 5).sum())} / {int(m.sum())} turn zeros >= 5 m)"
+           + (f"; completed turns at the entry {(D.gnear_e0 - D.first_off_e0)[D.first_off_e0 > 0].median():.1f} m "
+              f"({int(((D.gnear_e0 - D.first_off_e0) >= 5).sum())} / {int((D.first_off_e0 > 0).sum())} >= 5 m)" if len(D) else "") + "."]
     L = res["legs"]
     md += ["", f"Road legs at t_f - 3 s ({L['n']} turn zeros): far segment (s + 60 m) on another leg (>= 45 deg) {L['far_other_leg']}, of the {L['T_n']} T zeros "
            f"{L['T_far_other_leg']}; two opposite turns within 80 m {L['double_opp']}; a turn entry inside the first 40 m (the message gap) {L['gap_turn']}. "

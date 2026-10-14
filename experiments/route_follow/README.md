@@ -106,6 +106,26 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [results/entry_speed_rows](results/entry_speed_rows/README.md): are the hinge rows of fast turn entries waste (prereg `plans/2026-10-14-entry-speed-rows-prereg.md`, d295)? **Flat, speed cap dropped**: on 304 nuPlan @18 turn cells (6 row pools) the usable share of hinge-active rows is 0.36 in the slowest and the fastest quartile of v_entry / v_human (D +0.000 [-0.112, +0.110], line +0.20); P3's designed slowing gives +0.22 (half of it rows after rear-ends), but the slowest nuPlan quartile completes 0.14 of turns against 0.52 (floor ~0.86 x the human's entry speed); `scripts/rf_entryspeed.py` (+ `.sh`), figures `figs/entry_speed_rows_bins.png` (look at the flat left panel against the rising completion) and `figs/entry_speed_rows_cells.png`.
 - [results/turn_gallery/](results/turn_gallery/plan_strict36.json): Tokyo desktop video gallery `~/Desktop/turn_gallery/index.html` of RSG-L18-s0's 70 PAI 281 zeros (A route-following corridor zeros 30, B other zeros 40) plus the strict turns completed at 1.0 with a straight alternative (C, 1): HUMAN / RSG / best completing P4 cell per row, PUSH / SELF overlays (decision k = clip time (k + 1) x 0.1 s); `scripts/turn_gallery.py` (ffmpeg only, no simulation), `plan_strict36.json` = `rf_p4.py plan` of the 36 strict turns (topo, entry, human entry speed).
 - [results/turn_gallery/p4_fill.md](results/turn_gallery/p4_fill.md): P4 camera fill of the gallery (prereg Amendment 5, read-only, NO_ROWS): the 17 clip-less rows with a strict turn (5 train, 12 exam) got identity + g1 / g1.25 / g1.5 raw at D40 / D0 (16 box + 59 Tokyo rollouts, all re-runs bit-identical, 12 / 12 identities = r281/rsg); 22 / 71 rows now carry a P4 cell, 10 completing; 49 rows have no strict turn.
+- [results/progress/progress.md](results/progress/progress.md): reading A (prereg `plans/2026-10-15-progress-lane-readings-prereg.md`,
+  read-only): are the over-turn / shortcut turn zeros of RSG-L18 the ones whose route memory had no near route (0-20 m) 3 s before the
+  failure? **Unsupported**: pooled over PAI 281 s0 and held 460 s0 / s1 (72 turn zeros) RR 0.72 [0.22, 2.29] (T 12 / 53 uncovered vs 6 / 19
+  covered; geometric coverage, Amendment 2: 0.67 [0.20, 2.09]); on PAI the 3 over-turn zeros and 3 of the shortcut flags all had the near route
+  (0 / 21 uncovered vs 6 / 19 covered), held turn zeros are all uncovered (they sit in the first 40 m of an 18-decision rollout). Completed strict
+  turns are even more often uncovered at their entry (97 %) than turn zeros at t_f - 3 s (74 %): the first-40 m gap does not separate failures
+  from completions. Side finding: when the ego stands before the memory's start and the route turns in between, `rmem.window` serves the
+  far points in nearer slots (median 4.5 m, p90 15.7 m too near; de9db5dc 14 vs 41 m). `scripts/rf_progress.py` (`rmem` extractor + `report`),
+  figure `figs/progress_bev.png` (look at the red rings: the near route the memory lacked at t_f - 3 s, and whether the orange path leaves the
+  route where the rings are; in 2466266e and 382a7247 the memory is full and the car still leaves).
+- [results/laneoff/laneoff.md](results/laneoff/laneoff.md): reading B (same prereg): do failed turns sit off the route's lane before the turn,
+  and does the car make the lane changes its route asks for? **Inconclusive** at the registered point (PAI strict, entry - 20 m: median
+  |offset| failed 0.48 vs completed 0.06 m, D +0.42 [+0.08, +0.81] (line 0.5), out-of-lane share +0.16 [+0.00, +0.33]; only 3 completed
+  turns have the point, held turns start 3-19 m before the entry); at the entry pooled 44 / 33 turns it is unsupported (D -0.08 [-0.64, +0.31]).
+  Exploratory, signed toward the turn: failed PAI turns sit on the side away from the turn at entry - 20 m (-0.48 vs +0.06 m, 7 / 19 >= 0.75 m,
+  3 >= 1.75 m, completed 0 / 3), and 7 / 26 failed vs 0 / 5 completed PAI turns touch an oncoming lane. Lane changes: the registered geometric
+  proxy is dominated by road geometry (Amendment 3); on the map-validated sites (route leaves its lane chain for an adjacent lane, human moved
+  2-6 m) the ego reached 4 PAI + 4 held sites and shifted >= 2 m on 1 / 4 and 0 / 4 (in the route's lane after 2 / 4 each). `scripts/rf_laneoff.py`
+  (`lanes` extractor + `report`), figure `figs/laneoff_bev.png` (look at the titles: offset / heading error at the triangle (entry - 20 m)
+  and the square (entry); the failed turns start their turn from the lane or line away from the turn).
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane

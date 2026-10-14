@@ -161,6 +161,56 @@ def lc_job(job):
     return out
 
 
+def lc_map_job(job):
+    """Amendment 3: lane changes on the map. Every 4 m of route station s from the ego's start to the log's end - 40 m: the lane under the
+    route at s (rf_pai_follow lane_at) and all its successor chains to 45 m; a site when the route point at s + 40 m lies >= 2 m from every
+    chain and on some lane (centre <= 1 m... lane_at's 2.5 m / 45 deg rule) - the route leaves the lane it is in for another lane, not a
+    continuation (turns are continuations). First site per rollout. Shift = ego / log lateral displacement toward the route side in the
+    tangent frame at s, max over [s, s + 60] before t_f; in lane after = |lat_route| <= 1.75 m somewhere in [s + 30, s + 60] before t_f;
+    stayed = the ego within 1.75 m of the nearest chain at its first crossing of s + 40."""
+    name, o, tax, rm, lanes = job
+    PF, TX = RP._imports()
+    e = RP.Ego(o, rm, PF, TX)
+    tf = t_fail(e, tax)
+    near = {k: l for k, l in lanes.items() if np.hypot(*(l["c"][:, None, :2].astype(float) - e.R[None, ::4]).transpose(2, 0, 1)).min() < 25.0}
+    s_log_end, _ = PF.project(e.R, e.S, e.LP[-1])
+    out = dict(set=name, scene=o["scene"], rid=o["rid"], score=o["score"], primary=tax.get("primary"), site=False)
+    for s in np.arange(max(float(e.st[0]), 0.0), min(s_log_end, e.S[-1]) - LC_D, 4.0):
+        p, psi = e.route_xy(np.array([s]))[0], e.route_psi(s)
+        lid = PF.lane_at(near, p, psi)
+        if lid is None:
+            continue
+        q = e.route_xy(np.array([s + LC_D]))[0]
+        if PF.lane_at(near, q, e.route_psi(s + LC_D)) is None:
+            continue
+        ch = PF.chains(near, lid, p, LC_D + 5.0)
+        dq = [np.hypot(*(Q - q).T).min() for Q, _, _ in ch if len(Q) >= 2]
+        if not dq or min(dq) < LC_Y:
+            continue
+        Q = min((Q for Q, _, _ in ch if len(Q) >= 2), key=lambda Q: np.hypot(*(Q - q).T).min())
+        n = np.array([-np.sin(psi), np.cos(psi)])
+        k = int(np.argmin(np.hypot(*(Q - q).T)))
+        sg = float(np.sign((q - Q[k]) @ n)) or 1.0
+        t0, why = e.cross_t(s, tf)
+        out.update(site=True, s=float(s), side="L" if sg > 0 else "R", gap=float(min(dq)), reached=why == "ok", shift=np.nan, in_lane_after=False, stayed=np.nan)
+        m = (e.st >= s) & (e.st <= s + 60.0) & (e.t < tf)
+        if why == "ok" and m.sum() >= 2:
+            ye = (e.P[m] - p) @ n
+            out["shift"] = float((sg * (ye - ye[0])).max())
+            k2 = m & (e.st >= s + 30.0)
+            out["in_lane_after"] = bool((np.abs(e.lat[k2]) <= OUT_LANE).any())
+            t40, w40 = e.cross_t(s + LC_D, tf)
+            if t40 is not None:
+                out["stayed"] = bool(np.hypot(*(Q - e.P[e.i_at(t40)]).T).min() <= OUT_LANE)
+        ls = np.array([PF.project(e.R, e.S, x, s - 30, s + 90)[0] for x in e.LP])
+        ml = (ls >= s) & (ls <= s + 60.0)
+        yl = (e.LP[ml] - p) @ n
+        out["log_shift"] = float((sg * (yl - yl[0])).max()) if ml.sum() >= 2 else np.nan
+        out["shifted"] = bool(np.isfinite(out["shift"]) and out["shift"] >= LC_Y)
+        break
+    return out
+
+
 def med_diff(x, grp, g, n_boot=RP.N_BOOT, seed=0):
     """median(x | grp) - median(x | ~grp), cluster bootstrap over g."""
     x, grp, g = np.asarray(x, float), np.asarray(grp, bool), np.asarray(g)
@@ -217,6 +267,21 @@ def report(a):
                 for kind, F in (("strict", fo), ("bend", fb)):
                     if F is not None and o["scene"] in F.index and bool(F.loc[o["scene"]].get("turn")):
                         tj.append((name, o, t, m, F.loc[o["scene"]].to_dict(), kind))
+        LN = {}
+        for x in a.lanes or []:
+            import pickle
+            nm, f = x.split("=", 1)
+            LN[nm] = pickle.load(open(f, "rb"))
+        mj = []
+        for (name, sc), (o, t, m) in objs.items():
+            ln = LN.get(name) or LN.get(name.split("_")[0])
+            if ln is not None and sc in ln:
+                mj.append((name, o, t, m, ln[sc]))
+        rm_ = par.pmap(lc_map_job, mj, run=run, desc="map lane changes") if mj else None
+        M = pd.DataFrame([v for v in (rm_.values if rm_ else []) if v])
+        if rm_ is not None and rm_.errors:
+            run.info(f"map lc errors: {list(rm_.errors.values())[:2]}")
+        M.to_csv(out / "lc_map.csv", index=False)
         rt = par.pmap(turn_job, tj, run=run, desc="turns")
         rl = par.pmap(lc_job, lj, run=run, desc="lane changes")
         if rt.errors or rl.errors:
@@ -226,6 +291,7 @@ def report(a):
         T["abs_lat"] = T.lat_route.abs()
         T["out_lane"] = (T.abs_lat > OUT_LANE).astype(float).where(T.why == "ok")
         T["failed"] = ~T.completed.astype(bool)
+        T["inward"] = np.where(T.side == "L", 1.0, -1.0) * T.lat_route                  # exploratory: + = toward the turn's inside
         T.to_csv(out / "turns.csv", index=False)
         L.to_csv(out / "lc.csv", index=False)
         res = dict(claim={}, groups={}, defined={}, lc={})
@@ -248,6 +314,9 @@ def report(a):
                          n_failed=int(x.failed.sum()), n_completed=int((~x.failed).sum()),
                          med_cov_0_20=float(x.cov_0_20.median()))
                 r["verdict_rule"] = verdict_b(r["d_med"], r["d_out"])
+                r["x_inward"] = dict(d_med=med_diff(x.inward, x.failed, g), failed_out_075=int(((x.inward < -0.75) & x.failed).sum()),
+                                     completed_out_075=int(((x.inward < -0.75) & ~x.failed).sum()), failed_out_175=int(((x.inward < -1.75) & x.failed).sum()),
+                                     completed_out_175=int(((x.inward < -1.75) & ~x.failed).sum()))
                 res["groups"][f"{gname}|{pt}"] = r
         p = res["groups"].get("pai_strict|m20")
         res["claim"] = dict(primary=p, verdict=p["verdict_rule"] if p else "inconclusive (no turn with entry - 20 m defined)")
@@ -259,16 +328,27 @@ def report(a):
                                                    shifted=int(rr[f"{var}_shifted"].fillna(False).astype(bool).sum()),
                                                    log_shifted=int((rr[f"{var}_log_shift"] >= LC_Y).sum()),
                                                    zero=int((rr.score == 0).sum()), zero_shifted=int(((rr.score == 0) & rr[f"{var}_shifted"].fillna(False).astype(bool)).sum()))
+        res["lc_map"] = {}
+        if len(M):
+            M["validated"] = M.site.astype(bool) & (M.gap <= 6.0) & (M.log_shift >= LC_Y) & (M.log_shift <= 6.0)
+            for (gname, m), (vname, vm) in [(g, v) for g in (("pai", M.set == "pai"), ("held", M.set.str.startswith("held")))
+                                             for v in (("map site", M.site.astype(bool)), ("validated", M.validated))]:
+                y = M[m & vm]
+                rr = y[y.reached.astype(bool)]
+                res["lc_map"][f"{gname}|{vname}"] = dict(rollouts=int(m.sum()), sites=int(len(y)), scenes=int(y.scene.nunique()), reached=int(len(rr)),
+                                            shifted=int(rr.shifted.sum()), in_lane_after=int(rr.in_lane_after.sum()),
+                                            stayed=int((rr.stayed == True).sum()), log_shifted=int((rr.log_shift >= LC_Y).sum()),  # noqa: E712
+                                            zero=int((rr.score == 0).sum()), zero_shifted=int(((rr.score == 0) & rr.shifted).sum()))
         res["lc_rollouts"] = {"pai": int(sum(1 for k in objs if k[0] == "pai")), "held": int(sum(1 for k in objs if k[0].startswith("held")))}
         (out / "laneoff.json").write_text(json.dumps(res, indent=1, default=lambda v: v.item() if hasattr(v, "item") else str(v)) + "\n")
-        write_md(out, res, T, L)
+        write_md(out, res, T, L, M)
         if a.fig:
             fig_bev(a, objs, T)
         run.summary.update(verdict=res["claim"]["verdict"])
         print((out / "laneoff.md").read_text())
 
 
-def write_md(out, res, T, L):
+def write_md(out, res, T, L, M=None):
     fm = lambda r, f=".2f": f"{r['diff']:+{f}} [{r['lo']:+{f}}, {r['hi']:+{f}}]" if np.isfinite(r.get("diff", np.nan)) else "-"  # noqa: E731
     c = res["claim"]
     md = ["# LANEOFF reading B: lateral offset before the turn, and required lane changes (rf_laneoff.py)", "",
@@ -285,6 +365,13 @@ def write_md(out, res, T, L):
     for k, r in res["groups"].items():
         md.append(f"| {k} | {r['n_failed']} / {r['n_completed']} | {r['d_med']['med1']:.2f} / {r['d_med']['med0']:.2f} | {fm(r['d_med'])} | {fm(r['d_out'])} | {fm(r['d_med_log'])} | "
                   f"{fm(r['d_herr'], '.1f')} | {fm(r['d_v'])} | {fm(r['d_med_mem'])} ({r['mem_defined']}) | {r['oncoming_failed']} / {r['oncoming_completed']} | {r['verdict_rule']} |")
+    md += ["", "Exploratory (not registered): the offset signed toward the turn's inside (+ = inside, - = the side away from the turn):", "",
+           "| group / point | median inward failed / completed | D (failed - completed) | >= 0.75 m outside failed / completed | >= 1.75 m outside failed / completed |",
+           "|:--|:--|:--|:--|:--|"]
+    for k, r in res["groups"].items():
+        q = r["x_inward"]
+        md.append(f"| {k} | {q['d_med']['med1']:+.2f} / {q['d_med']['med0']:+.2f} | {fm(q['d_med'])} | {q['failed_out_075']} / {q['completed_out_075']} | "
+                  f"{q['failed_out_175']} / {q['completed_out_175']} |")
     md += ["", "Where the points are undefined (counts by reason x group):", ""]
     for k, v in res["defined"].items():
         md.append(f"- {k}: " + ", ".join(f"{a} {b}" for a, b in sorted(v.items())))
@@ -301,6 +388,22 @@ def write_md(out, res, T, L):
         g, v = k.split("|")
         md.append(f"| {g} | {'< 15 deg' if v == 'lc' else '< 5 deg'} | {r['sites']} | {r['reached']} | {r['shifted']} ({100 * r['shifted'] / max(r['reached'], 1):.0f} %) | "
                   f"{r['log_shifted']} ({100 * r['log_shifted'] / max(r['reached'], 1):.0f} %) | {r['zero']} ({r['zero_shifted']}) |")
+    if res.get("lc_map"):
+        md += ["", "Amendment 3, map lane changes (the route point 40 m ahead lies >= 2 m from every successor chain of the lane the route is in, and on "
+               "another lane; first site per rollout; validated = the other lane is adjacent (gap <= 6 m) and the human's log itself moved 2-6 m to that "
+               "side). Shifted = the ego moved >= 2 m toward that side within [s, s + 60] before its zero event; in lane = "
+               "|lat_route| <= 1.75 m somewhere in [s + 30, s + 60]; stayed = still within 1.75 m of its own lane's chain at s + 40; log = the human's shift (gate):", "",
+               "| set | rollouts scanned | rollouts with a site (scenes) | ego reached the site | ego shifted >= 2 m | ego in the route's lane after | ego stayed in its lane | log shifted >= 2 m | zeros among reached (of them shifted) |",
+               "|:--|--:|--:|--:|--:|--:|--:|--:|--:|"]
+        for k, r in res["lc_map"].items():
+            pct = lambda v: f"{v} ({100 * v / max(r['reached'], 1):.0f} %)"  # noqa: E731
+            md.append(f"| {k} | {r['rollouts']} | {r['sites']} ({r['scenes']}) | {r['reached']} | {pct(r['shifted'])} | {pct(r['in_lane_after'])} | {pct(r['stayed'])} | "
+                      f"{pct(r['log_shifted'])} | {r['zero']} ({r['zero_shifted']}) |")
+        md += ["", "Per validated map site:", "", "| set | scene | score | primary | side | gap (m) | reached | ego shift | in lane after | stayed | log shift |",
+               "|:--|:--|--:|:--|:--|--:|:--|--:|:--|:--|--:|"]
+        for _, r in M[M.validated].sort_values(["set", "scene"]).iterrows():
+            md.append(f"| {r.set} | {r.scene[7:15] if r.scene.startswith('clipgt') else r.scene[-16:]} | {r.score:.2f} | {r.primary} | {r.side} | {r.gap:.1f} | {r.reached} | "
+                      f"{r['shift']:+.1f} | {r.in_lane_after} | {r.stayed} | {r.log_shift:+.1f} |")
     md += ["", f"Rollouts scanned: PAI {res['lc_rollouts']['pai']}, held {res['lc_rollouts']['held']} (both seeds).", "",
            "Per site (PAI, strict proxy < 5 deg first, then < 15 deg):", "", "| scene | score | primary | y at +40 m | dpsi | reached | ego shift (m) | log shift (m) |", "|:--|--:|:--|--:|--:|:--|--:|--:|"]
     for var in ("lc5", "lc"):
@@ -368,8 +471,9 @@ def fig_bev(a, objs, T):
         ax.set_yticks([])
         ax.set_title(title, fontsize=9)
     axs.flat[0].legend(loc="lower left", fontsize=7, framealpha=0.9)
-    fig.suptitle("Reading B: RSG-L18-s0 PAI 281. Triangle = ego at entry - 20 m (or t_f - 3 s), square = at the entry, X = first zero event; "
-                 "blue dots / red rings = route memory held / missing at the triangle; titles: lateral offset to the route / heading error", fontsize=10)
+    fig.suptitle("Reading B: RSG-L18-s0 PAI 281. Triangle = ego at entry - 20 m (or t_f - 3 s), square = at the entry, X = first zero event;\n"
+                 "blue dots / red rings = route memory held / missing at the first marker; titles: lateral offset to the route (left +) / heading error",
+                 fontsize=10)
     fig.tight_layout()
     Path(a.fig).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(a.fig, dpi=110)
@@ -384,6 +488,7 @@ if __name__ == "__main__":
     p.add_argument("--workers", type=int, default=8)
     p = sp.add_parser("report")
     p.add_argument("--set", nargs="+", required=True)
+    p.add_argument("--lanes", nargs="*", help="NAME=<lanes pkl> ({scene: lanes}; NAME's prefix before _ also matches, e.g. held)")
     p.add_argument("--bend", nargs="*", help="NAME=<follow label> of the bend turns (PAI: rsg@bend)")
     p.add_argument("--out", required=True)
     p.add_argument("--fig", default="")
