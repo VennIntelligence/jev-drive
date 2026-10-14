@@ -114,3 +114,18 @@ tmux new-window -d -t jev -n p4xr "CARDS='0 1' SLOTS=<2|3> bash $X stage /data/r
   starts late); ~2.5-3 h.
 - Fix outside the frozen clone: `rf_p4.sh examplan` wrote `code.json` from the working repo (807e7602) before the clone existed; it was
   rewritten by hand before the first rollout to the clone (05f3c5c5, dirty 0), and `examplan` no longer writes it.
+
+## Amendment 2 (2026-10-14 17:00 JST, after stage 5, before stage rest): one renderer OOM, its launch rerun
+
+- Stage 5 (abd45a30, ce161092, d90fe123, e0f6ebe1, e37aa159; 3 workers per card, 5 busy): 4 scenes DONE (41-42 rollouts each, jobs
+  4 522-5 759 s), phase A bit-identical to r281/rsg for all 5, self branches' plans before h identical to phase A in every DONE scene,
+  rollout.asl removed after each read.
+- **d90fe123's phase B launch** started at 15:17 together with two other launches on card 0; its renderer logged `OOM during operation ...
+  attempting memory cleanup` in the first rollout and recovered, but every later rollout then waited exactly 600 s in
+  `get_available_cameras` (~12.5 min per rollout, 9 of 40 in 100 min). No other launch (stages 1 and 5, 14 launches) logged an OOM. The
+  degraded launch was stopped at 16:57 and moved aside (`d90fe123-b0.oom`, not read, .asl deleted); the scene's phase B is rerun from
+  scratch in stage rest (phase A kept: it ran before the OOM and is bit-identical).
+- Stage rest keeps 3 workers per card (6 launches; 9 scenes + d90fe123, ~257 rollouts). Every launch's compose.log is watched for
+  `OOM during`; a launch that logs it is stopped and its scene's phase B rerun the same way (counted in the README).
+- **ETA restated:** rollouts ran 53-77 s each in the healthy stage-5 launches (~110 s per rollout per launch with start-up, read and the
+  4-5 per card mix): ~257 / 6 x 110 s = ~1.3 h, bounded below by the largest job (41 rollouts, ~1.2-1.5 h): finish ~18:30-19:00 JST.
