@@ -48,7 +48,7 @@ stack() {  # <run dir> <cells json> <n rollouts> <scene list>: one simulator lau
     mkdir -p "$r/driver"; chmod 777 "$r/driver"; cp "$cj" "$r/driver/p4cells.json"
     local L=$repo/experiments/alpasim/lib
     for f in onp_log_driver.py onp_p4.py; do cmp -s "$repo/experiments/onpol_pai/lib/$f" "$L/$f" || cp "$repo/experiments/onpol_pai/lib/$f" "$L/$f"; done
-    GPU=$CARD CONC=${P4_CONC:-1} PAI_BASEPORT=$((6400 + 100 * CARD + 30 * ${SLOT:-0})) TAG=$T DRV_PY=onp_log_driver.py \
+    GPU=$CARD CONC=${P4_CONC:-1} PAI_BASEPORT=$((7600 + 100 * CARD + 30 * ${SLOT:-0})) TAG=$T DRV_PY=onp_log_driver.py \
       DRV_ENV="-e JEV_VCONT=1.0 -e JEV_LEAD=1 -e PAI_DUMP=100000 -v $L/onp_p4.py:/app/jev-drive/experiments/alpasim/lib/onp_p4.py:ro -v $D/runs/op_parity/runs/$T:/app/data/runs/op_parity/runs/$T:ro" \
       bash "$repo/experiments/alpasim/scripts/pai_run.sh" "$r" "$sl" "${WIZ[@]}" "runtime.simulation_config.n_rollouts=$n" > "$r.out" 2>&1; rc=$?
   else
