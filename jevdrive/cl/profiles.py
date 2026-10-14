@@ -15,6 +15,7 @@ on the GPU box, Barcelona to replay Tokyo-recorded controller goldens bit for bi
 The default was chosen by the 2026-10-01 experiment (fc65452:todos/2026-10-01-cl-lib.md, docs/closed-loop-runbook.md).
 """
 from __future__ import annotations
+import os
 
 from dataclasses import dataclass, replace
 
@@ -56,14 +57,26 @@ class Profile:
             "unset" if self.num_threads is None else self.num_threads)
 
 
+
+def _data_tmp() -> tuple:
+    """("TMPDIR", $DATA_DIR/tmp) when DATA_DIR is set (the box), else nothing; the directory is created on use."""
+    d = os.environ.get("DATA_DIR")
+    if not d:
+        return ()
+    t = os.path.join(d, "tmp")
+    os.makedirs(t, exist_ok=True)
+    return (("TMPDIR", t),)
+
 PROFILES = {
     "stock": Profile("stock", pools="stock", client_threads=0, num_threads=None),
     "reduced": Profile("reduced", pools="reduced", pool_threads=4, client_threads=8, num_threads=2),
     # AlpaSim stack (renderer, runtime, driver): allocator env only, numeric threads untouched. Applied by
     # experiments/alpasim/scripts/run_native.py to every process it starts (renderer VRAM peak -2.8 GB,
     # research/alpasim-read-profile.md); no --profile flag needed.
+    # TMPDIR goes to the data disk: nvimgcodec extracts ~157 MB of shared objects into a fresh temp dir per host
+    # process and never deletes it; on the 30 GB system disk that filled / to 94 % (2026-10-14).
     "alpasim": Profile("alpasim", pools="stock", client_threads=0, num_threads=None,
-                       env=(("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True"),)),
+                       env=(("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True"),) + _data_tmp()),
 }
 DEFAULT = "reduced"
 
