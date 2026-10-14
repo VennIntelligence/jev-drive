@@ -357,3 +357,15 @@ Read (`rf_v2pai.sh sc`, `rf_v2pai.py spins` vs r281/rsg): spins (rf_pai281's rul
 scenes; per scene the max |2 s plan heading| over k 18-25 against RSG's own max over the same window and the max |difference| to RSG's.
 Plain statement if (i) removes the spins: the slot fix is usable with the scalar bounded and the retrain needs the clip in training.
 Variant (i) on the first card RV2b-L18-s1's read frees, (ii) on the second (RV2b not interrupted).
+
+## Amendment 17 (2026-10-15 ~08:35 JST, before the chunk reruns): Amendment 16's runs did not reproduce the stored RV2a spins
+
+Amendment 16 runs (`/data/runs/route_night/v2pai/sc_RV2a-L18-s0_{clip86.2,zero}`, 13 scenes, commit 145f2a0f): 2 spins / 3 zeros each, the
+same as RSG on these scenes (stored RV2a: 13 / 13). The clip cannot act at the handoff (travelled 39-66 m < 86.2 m at k 17-18), yet the run
+departs from the stored RV2a run at k 18 with identical fed memory, so an unflagged RV2a rerun of the 13 scenes was added
+(`sc_RV2a-L18-s0_id`): also 2 spins / 3 zeros, scores equal to RSG's within 0.01. Up to k 17 the stored run and the rerun have identical
+plans, ego rows and memory; at k 18 the stored run's ego row carries a lateral acceleration (06b3e399: ego[7] 0.347 vs -0.007 rerun, -0.003
+RSG) under the same k 17 plan. Amendment 15's speed / `travelled` lead is withdrawn; the stored RV2a 281 numbers are in doubt.
+Check now: exact reruns of the stored RV2a chunks c007 (29 scenes, 4 spin scenes) and c000 (36, 3 spin scenes), same lists and serving
+(`/data/runs/route_night/v2pai/rerun_RV2a_c00{7,0}`). Reproduces its own spins -> the outcome depends on the chunk composition (stack
+cross-talk), every PAI 281 comparison carries it; does not -> the stored run was a one-off stack fault, RV2a's 281 is rerun.
