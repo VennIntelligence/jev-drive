@@ -95,3 +95,23 @@ gaps behind the route-v2 jobs (`PRIO=4 rf_lrsteps.sh seed1 lr03n5000`). The repo
 `RSGlr03n5000-L18` vs `RSG-L18` (s0, s1 mean) and the same-seed pair s1 vs RSG-L18-s1. The stage-1 verdict (FLAT, RSG-L18 stays the
 base) is not changed by this addendum. The read is descriptive: "the cell's score gain replicates" only if the 2-seed mean score
 difference vs RSG-L18 has a CI excluding 0 and the s1 pair has the same sign. Any adoption is the main session's decision.
+
+## Amendment 2 (2026-10-15, after the Amendment 1 read; coordinator request): public 1491 / 10-decision guard of (0.03, 5000)
+
+**Seen before this amendment:** the held reads of `RSGlr03n5000-L18-s{0,1}` (results/lrsteps/lrsteps.md, Amendment 1). The 2-seed mean vs RSG-L18
+is score +0.0134 [+0.0031, +0.0258] and zeros -4.0 [-9.0, +0.0]. No public read of either checkpoint exists.
+
+**Added:** the public 1491 / 10-decision guard of both seeds, as rf_round2.sh / rf_allrows.sh run it. Each seed gets 10 chunks
+`ol_chain.sh readlist <tag> lists/all_n10/c<i>.txt 10 runs/route_follow/guard/read10/<tag>/b<i>` (pool, `CL_HIST_KEY=alpasim-read4`,
+PRIO=4 behind the route-v2 jobs). Then `ol_confirm.py` on all10, base YR10m10-F-s0 (the stored ot3 / cf1 manifests). References are the
+stored RSG-L18-s0 / s1 guard reads. The report has 2-seed means (RSGlr03n5000-L18, RSG-L18), same-seed pairs, and the mean pair vs RSG-L18.
+Chain: `rf_lrsteps.sh guard <tags>` and `guard-report`.
+
+**Lines (decision 286's guard):**
+1. Guardrail: the public mean score is not below YR10m10-F-s0 by more than 0.02 (each seed and the mean, point estimate).
+2. Reported with log-clustered 95 % CIs, not a pass / fail line: zeros and at-fault zeros vs RSG-L18, as the 2-seed mean and as same-seed
+   pairs. Also mean score and GT vs RSG-L18.
+
+Reading for the main session: (0.03, 5000) is a candidate next base only if line 1 holds and the 2-seed zeros / at-fault vs RSG-L18 are not
+worse with a CI above 0. The adoption decision stays with the main session.
+Cost: 20 chunks x ~9.5 min (RSGall's guard chunks) = ~3.2 job-h, about 1-1.5 card-h packed.

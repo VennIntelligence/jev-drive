@@ -6,9 +6,10 @@
 #   rf_lrsteps.sh first            the staged first cell (lr10n5000) + its read
 #   rf_lrsteps.sh rest             the other 7 cells + reads + the report job (after every read in $O/reads.txt)
 #   rf_lrsteps.sh seed1 <cell>     seed 1 of a cell + read + a second report job (PRIO=<p> sets the pool priority, default 14)
-#   rf_lrsteps.sh train <cell> <seed> | report      (job bodies)
+#   rf_lrsteps.sh guard <tag..>    public 1491 / 10-decision guard reads + guard-report (Amendment 2)
+#   rf_lrsteps.sh train <cell> <seed> | report | guard-report      (job bodies)
 set -uo pipefail; cd "$(dirname "$0")/../../.."
-O=$DATA_DIR/runs/route_follow/lrsteps; M=$DATA_DIR/runs/route_mem/read; CK=$DATA_DIR/runs/op_parity/runs
+O=$DATA_DIR/runs/route_follow/lrsteps; G=$DATA_DIR/runs/route_follow/guard; M=$DATA_DIR/runs/route_mem/read; CK=$DATA_DIR/runs/op_parity/runs
 P=$DATA_DIR/third_party/alpasim/.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python; ME=experiments/route_follow/scripts/rf_lrsteps.sh
 REC="--init RB0-F-s0 --warmup 1 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self --on on1_L18RB0"
 GRID="lr03n1250 lr03n2500 lr03n5000 lr10n1250 lr10n2500 lr10n5000 lr30n1250 lr30n2500 lr30n5000"; FIRST=lr10n5000
@@ -27,6 +28,17 @@ case $1 in
 first) mkdir -p $O/pool; cell $FIRST 0; cat $O/jobs.txt ;;
 rest)  for c in $GRID; do [[ $c == lr10n2500 || $c == $FIRST ]] || cell $c 0; done; report_job; cat $O/jobs.txt ;;
 seed1) cell $2 1; report_job -s1; tail -8 $O/jobs.txt ;;
+guard)  # guard <tag..>: public 1491 / 10-decision reads (10 chunks each, rf_allrows.sh's way) + one guard-report job after them
+  shift; rr=(); for T in "$@"; do [[ -f $CK/$T/ckpt-final.pt ]] || { echo "no $T"; exit 1; }
+    for i in $(seq 0 9); do rr+=($(sub lrs-g10-$T-$i --vram 20 --cpu 6 --ram 30 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 -- bash experiments/onpol_long/scripts/ol_chain.sh \
+        readlist $T $DATA_DIR/runs/onpol_long/lists/all_n10/c$i.txt 10 $G/read10/$T/b$i)) || exit 1; done; done
+  sub lrs-guard-report --after "$(IFS=,; echo "${rr[*]}")" --vram 0.5 --cpu 16 --ram 32 --timeout-h 1 -- bash $ME guard-report > /dev/null || exit 1; tail -n 22 $O/jobs.txt ;;
+guard-report)  # ol_confirm all10 vs YR10m10-F-s0 (stored manifests), RSG-L18 s0 / s1 guard reads as reference (rf_round2.sh report's guard block)
+  A=$DATA_DIR/runs/alpasim; Q=(); X=RSGlr03n5000-L18
+  Q+=("YR10m10-F-s0@all10=$(python3 -c "import json; a = json.load(open('$A/ot3/a/manifest.json')); b = json.load(open('$A/cf1/a/manifest.json')); print(','.join(a['YR10m10-F-s0'] + a['YR10m10-F-s0@new'] + b['YR10m10-F-s0@fresh']))")")
+  for T in RSG-L18-s0 RSG-L18-s1 $X-s0 $X-s1; do Q+=("$T@all10=$(ls -d $G/read10/$T/b*/ | sed 's#/$##' | paste -sd,)"); done
+  $P experiments/onpol_long/scripts/ol_confirm.py --runs "${Q[@]}" --base YR10m10-F-s0 --mean RSG-L18=RSG-L18-s0,RSG-L18-s1 $X=$X-s0,$X-s1 \
+     --pairs $X:RSG-L18 $X-s0:RSG-L18-s0 $X-s1:RSG-L18-s1 --out $O/guard ;;
 train)
   c=$2; s=$3; N=${c#*n}; EV=$(( N == 1250 ? 250 : 500 )); LS=$(python3 -c "print(int('${c:2:2}') / 100)")
   exec $TR experiments/route_mem/scripts/rm_train.py train --tag $(tag $c $s) $REC --lr-scale $LS --steps $N --eval-every $EV --seed $s ;;
