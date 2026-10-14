@@ -1496,6 +1496,13 @@ def serial_hint(cmd) -> str:
     return "%d runs chained in one shell command" % len(parts) if len(parts) >= 2 else ""
 
 
+def fanout_fill(x, arm: str, arms):
+    """Replace {arm} / {arms} in a command (str or list) the way fanout() does; used by the CLI static check."""
+    if isinstance(x, (list, tuple)):
+        return [fanout_fill(y, arm, arms) for y in x]
+    return x.replace("{arm}", str(arm)).replace("{arms}", " ".join(map(str, arms))) if isinstance(x, str) else x
+
+
 def fanout(cmd, arms, name: str, collect=None, collect_kw: dict = None, pool: Path = None, **kw) -> dict:
     """One pool job per arm, plus an optional collect job after all of them: the way to run N independent arms
     (seeds, variants, shards). `{arm}` in cmd, env values, log_dir and in the collect command is replaced by the arm
