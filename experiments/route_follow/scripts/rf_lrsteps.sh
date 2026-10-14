@@ -69,14 +69,14 @@ rows, md = [], [f"# lr x steps pilot: held 452 / 18 decisions ({len(sc)} paired 
 for c in grid + [g + "@s1" for g in grid] + ["ref@s1"]:
     cc, s = (c.split("@")[0], 1) if "@" in c else (c, 0)
     t = "RSG-L18-s1" if cc == "ref" else tag(cc, s)
-    if t not in A.index:
+    if t not in A.index or (cc == "lr10n2500" and s == 1):
         continue
     a, d = A.loc[t], J.get(t)
     name = "RSG-L18-s1 (seed reference)" if cc == "ref" else f"({lr(cc):g}, {cc.split('n')[1]})" + (" s1" if s else "")
     rows.append(dict(cell=cc, seed=s, tag=t, zeros=int(a.zero), d_zero=d and d["zero"], z_atf=int(a.z_atf), d_atf=d and d["z_atf"], score=a.score,
-                     d_score=d and d["score"], gt=a.gt, dev_ade=dev(t)))
+                     d_score=d and d["score"], gt=a["gt"], dev_ade=dev(t)))
     md.append(f"| {name} | {t} | {a.zero:g} | {f(d['zero']) if d else '-'} | {a.z_atf:g} | {f(d['z_atf']) if d else '-'} | {a.z_col:g} / {a.z_off:g} / {a.z_cor:g} | "
-              f"{a.score:.4f} | {f(d['score'], 4) if d else '-'} | {a.gt:.3f} | {dev(t):.4f} |")
+              f"{a.score:.4f} | {f(d['score'], 4) if d else '-'} | {a['gt']:.3f} | {dev(t):.4f} |")
 G = {r["cell"]: r for r in rows if r["seed"] == 0 and r["cell"] in grid}
 md += ["", "Held-452 zeros, 3 x 3 (rows lr-scale, columns steps):", "", "| lr-scale \\ steps | 1250 | 2500 | 5000 |", "|:--|--:|--:|--:|"]
 for l in ("03", "10", "30"):
