@@ -27,7 +27,8 @@ one record per call; start.jsonl: the full rollout spec of every session), PAI_D
 JPEG are saved once per second to <log dir>/dump), PAI_KEYWARP, JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (the trajectory handed to
 the controller is a feasible reference built from the plan and the ego state, never a large-steering one: track_ref.py; off by default), JEV_VHIST
 (off | hold | zero | holdlead: the speed history fed to the adapter, vhist.py, mounted like track_ref.py; logged as `vhist`, `ego` stays the measured
-row; off by default), JEV_TURN_GAIN (<g>: the served plan's yaw / course scaled by g while the fed route memory shows a turn the plan under-takes,
+row; off by default), JEV_RM_SC (clip:<m> | zero: the ordered memory's travelled scalar clipped at <m> m, or its d_turn / known bit /
+travelled zeroed; route v2 prereg Amendment 16, a diagnostic; the fed (changed) memory is the logged `rmem`; off by default), JEV_TURN_GAIN (<g>: the served plan's yaw / course scaled by g while the fed route memory shows a turn the plan under-takes,
 turn_gain.py, a diagnostic; logged as `tg`, and `poses_branch` while on, `poses` stays the plan; off by default).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
@@ -55,6 +56,19 @@ import vhist as VH
 from pai_core import C, I
 
 RMEM = None                                          # experiments/route_mem/lib/rmem.py (mounted by pai_run.sh), set in main() for a branch checkpoint
+RM_SC = (os.environ.get("JEV_RM_SC", "") or "").strip().lower()   # ordered-memory scalar diagnostic (route v2 prereg Amendment 16), off by default
+assert RM_SC == "" or RM_SC == "zero" or RM_SC.startswith("clip:"), f"JEV_RM_SC={RM_SC!r}: clip:<m> | zero"
+
+
+def rm_scalars(rf):
+    """Ordered features [.., d_turn / 60, d_turn known, min(trav, 200) / 100] -> clip:<m>: travelled clipped at <m> m; zero: d_turn and
+    travelled 0 and the known bit 0 (as an unknown turn)."""
+    rf = np.array(rf, np.float32)
+    if RM_SC == "zero":
+        rf[-3:] = 0.0
+    else:
+        rf[-1] = min(float(rf[-1]), float(RM_SC.split(":", 1)[1]) / 100.0)
+    return rf
 
 LOG = logging.getLogger("pai")
 CAM = os.environ.get("PAI_CAM", "camera_front_wide_120fov")
@@ -237,6 +251,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                         routes.append({"kind": "route", "session": req.session_uuid, "scene": s.scene, "ts": ts,
                                        "pose": pr.round(6).tolist(), "wp": np.round(s.unlogged.pop(ts), 4).tolist()})
                 rf = s.rt.features(t0, s.rpose.get, p0) if s.rt is not None and self.rmem_on else None
+                if RM_SC and rf is not None and len(rf) == RMEM.DIM_O:   # JEV_RM_SC: the ordered memory's 3 scalars changed (diagnostic)
+                    rf = rm_scalars(rf)
         if infer:
             try:
                 t_f = time.perf_counter()
@@ -357,6 +373,7 @@ def main() -> None:
         LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
     core.lead_out, core.base_out = FX.NEED_LEAD or VH.NEED_LEAD, FX.BASE > 0
     assert not (TG.ON and TR.ON), "JEV_TURN_GAIN transforms the plan handed to make_cached_plan; JEV_TRACK must be off"
+    LOG.info("JEV_RM_SC %s", RM_SC or "unset")
     LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TURN_GAIN %g, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TG.G, TR.MODE,
              {k: getattr(TR, k) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN")} if TR.ON else "")
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros

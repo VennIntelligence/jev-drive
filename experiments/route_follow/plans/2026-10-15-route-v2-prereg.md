@@ -342,3 +342,18 @@ RV2a-L18-s0's PAI 281 read (decision 302): handoff spins 2 -> 13 vs RSG-L18-s0. 
   differs by >= 10 deg, or lateral at 2 s by >= 0.5 m: "policy under the new input") or only after the tracks diverge (d285's handoff
   mechanics amplified); (b) in the spin scenes, does the first route message arrive before or after the handoff, and is the ordered start
   >= 5 m from the projection start at k 17.
+
+## Amendment 16 (coordinator, 2026-10-15 ~06:30 JST, written before the runs): RV2a scalar check on the spin scenes (Tokyo GPU, ~15 min)
+
+Amendment 15's lead: RV2a's handoff spins (13 scenes, all at >= 23 m/s, plans equal to RSG's at k 17 and unstable 1-3 decisions later)
+may come from the ordered head's scalars. Serve-side flag `JEV_RM_SC` (pai_driver.py; unset = unchanged serving) on RV2a-L18-s0, the 13
+scenes that spun under RV2a or RSG (`results/pai281/RV2a_spin13.txt`; RSG's 2 are among them), reference serving otherwise:
+- (i) `JEV_RM_SC=clip:86.2`: travelled clipped at 86.2 m = the p99 of the ordered training rows of RV2a (`feat/navtrain_full.s*of12.o.npz`
+  101 313 rows + `feat/on1_L18RB0.o.npz` 17 429 rows, copied from the box, `ok` rows; p50 15.0, p90 50.2, max 129.4 m). Note before the
+  run: the spin scenes' travelled at k 17 is 39-66 m, inside the training range (17 % of training rows exceed 39 m); the clip only acts
+  later in the spin window (travelled grows ~35 m/s).
+- (ii) `JEV_RM_SC=zero`: d_turn, its known bit and travelled all 0 (an unknown turn, nothing travelled).
+Read (`rf_v2pai.sh sc`, `rf_v2pai.py spins` vs r281/rsg): spins (rf_pai281's rule) and zeros per variant vs RV2a 13 / RSG 2 on these
+scenes; per scene the max |2 s plan heading| over k 18-25 against RSG's own max over the same window and the max |difference| to RSG's.
+Plain statement if (i) removes the spins: the slot fix is usable with the scalar bounded and the retrain needs the clip in training.
+Variant (i) on the first card RV2b-L18-s1's read frees, (ii) on the second (RV2b not interrupted).

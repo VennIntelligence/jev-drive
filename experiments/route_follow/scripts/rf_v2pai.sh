@@ -14,6 +14,8 @@
 #                              chunk (all of <tag>'s chunks claimed, the card below 1 GB for 1 min) start <next> on it (the first freed card
 #                              owns the run: STATUS / DONE; the second joins with JOIN=1); served check -> RUN_DONE as in run. Foreground:
 #                              start it in tmux.
+#   rf_v2pai.sh sc <tag> <clip:<m> | zero> <scene list>   the ordered-memory scalar diagnostic (route v2 prereg Amendment 16, JEV_RM_SC) on
+#                              CARDS (one card), out $V/sc_<tag>_<mode>, then rf_v2pai.py spins vs r281/rsg -> spins.md
 #   rf_v2pai.sh tgsmoke <g>    the same on the first 2 scenes of scenes47 (card 0), tgcheck only
 # Env: DRY=<n> (run: the first n scenes of the reference chunk c000 in chunks of n / 2, out $V/dry_<tag>, no tmux: foreground),
 #   V (/data/runs/route_night/v2pai), BOX (autodl), BOXD (/root/autodl-tmp/ujs), CARDS ("0 1").
@@ -75,6 +77,13 @@ read)
     sed 's/^# /### /' "$O/turns.md"; } > "$O/read.md"
   cp "$O/read.md" "$RES/pai281/$t.md"; cp "$O/turns.json" "$RES/pai281/$t.turns.json"
   echo "-> $RES/pai281/$t.md"
+  ;;
+sc)
+  t=$arg; m=${3:?clip:<m> | zero}; L=${4:?scene list}; O=$V/sc_${t}_${m/:/}; mkdir -p "$O"; git -C "$repo" log --oneline -1 > "$O/COMMIT"
+  SERVE="-e JEV_VCONT=1.0 -e JEV_LEAD=1 -e JEV_RM_SC=$m" RUNPFX=sc${m:0:1}- CHUNK=36 CARDS=${CARDS:-0} \
+    bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$O" "$t" "$L"
+  python3 "$here/rf_v2pai.py" spins --a rsg="$REF" --b "${m/:/}=$O" --out "$O/spins.md" > /dev/null
+  date > "$O/SC_DONE"
   ;;
 chain)
   t=$arg; n=${3:?next tag}; P=$V/$t; O=$V/$n; ckpt "$n" || exit 1

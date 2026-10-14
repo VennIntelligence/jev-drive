@@ -255,13 +255,15 @@ def spins(a):
             for r in routes:
                 tr.add(int(r["ts"]), r["wp"])
             DR[lab][sc] = (tr, pose, {r["k"]: r for r in recs}, min((int(r["ts"]) for r in routes), default=None))
-    f, src = (a.pkl_b.rsplit(":", 1) + [lb])[:2] if ":" in a.pkl_b else (a.pkl_b, lb)
-    TZ = {sc["scene"]: sc["rolls"][src].get("tz") for sc in pickle.load(open(f, "rb"))["scenes"] if src in sc["rolls"]}
-    T = json.loads(Path(a.turns).read_text())
-    by = {(r["label"], r["scene"]): r for r in T["rows"]}
-    tl = next(l for (l, _) in by if l != "rsg")
-    newz = [s for s in T["scenes"] if not by[(tl, s)].get("missing") and by[(tl, s)]["score"] == 0 and by[("rsg", s)]["score"] > 0
-            and (not by[("rsg", s)].get("turn") or by[(tl, s)].get("st_zero") is None or by[(tl, s)]["st_zero"] < by[("rsg", s)]["entry"])]
+    TZ, newz = {}, []
+    if a.pkl_b and a.turns:
+        f, src = (a.pkl_b.rsplit(":", 1) + [lb])[:2] if ":" in a.pkl_b else (a.pkl_b, lb)
+        TZ = {sc["scene"]: sc["rolls"][src].get("tz") for sc in pickle.load(open(f, "rb"))["scenes"] if src in sc["rolls"]}
+        T = json.loads(Path(a.turns).read_text())
+        by = {(r["label"], r["scene"]): r for r in T["rows"]}
+        tl = next(l for (l, _) in by if l != "rsg")
+        newz = [s for s in T["scenes"] if not by[(tl, s)].get("missing") and by[(tl, s)]["score"] == 0 and by[("rsg", s)]["score"] > 0
+                and (not by[("rsg", s)].get("turn") or by[(tl, s)].get("st_zero") is None or by[(tl, s)]["st_zero"] < by[("rsg", s)]["entry"])]
     scenes = sorted(set(S[la]) & set(S[lb]) & set(DR[la]) & set(DR[lb]))
     rows = []
     for sc in scenes:
@@ -420,8 +422,8 @@ def main():
     s = sp.add_parser("spins")
     s.add_argument("--a", required=True)
     s.add_argument("--b", required=True)
-    s.add_argument("--pkl-b", required=True)
-    s.add_argument("--turns", required=True)
+    s.add_argument("--pkl-b", default="")
+    s.add_argument("--turns", default="")
     s.add_argument("--out", required=True)
     s = sp.add_parser("table")
     s.add_argument("--turns", required=True)
