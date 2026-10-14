@@ -392,9 +392,12 @@ def read(a):
         p = PL[sc]
         Rg, Sg = np.c_[p["x"], p["y"]], np.asarray(p["u"], float)
         rc = json.load(open(os.path.join(sdir, "reach.json"))) if os.path.exists(os.path.join(sdir, "reach.json")) else None
+        ident = {}                                           # phase A's identity plans by k: a self branch must serve them before h
         for run in sorted(glob.glob(os.path.join(sdir, "*-a")) + glob.glob(os.path.join(sdir, "*-b"))):   # lower case: compose project names
             ph = run[-1].upper()
             recs = drive_records(run)
+            if ph == "A":
+                ident = {x["k"]: x["poses"] for v in recs.values() for x in v if "poses" in x and x.get("p4", {}).get("tag") == "id"}
             for sim, r in rollouts(run):
                 rid = r["rollout_id"]
                 rr = [x for x in recs.get(rid, []) if "p4" in x]
@@ -403,7 +406,10 @@ def read(a):
                 q0 = rr[0]["p4"]
                 h = next((x["p4"]["h"] for x in rr if x["p4"]["h"] is not None), None)
                 row = dict(scene=sc, side=p["side"], phase=ph, rid=rid, tag=q0["tag"], D=q0["D"], src=q0["src"], h=h,
-                           score=float(r.get("score") or 0), n_dec=len(rr))
+                           score=float(r.get("score") or 0), n_dec=len(rr), wait_s=q0.get("wait_s"))
+                if ph == "B" and q0["src"] == "self" and ident:   # determinism: plans before h equal phase A's at the same k
+                    pre = [x for x in rr if h is not None and x["k"] < h and x["k"] in ident]
+                    row.update(pre_h_n=len(pre), pre_h_diff=max((float(np.abs(np.array(x["poses"]) - np.array(ident[x["k"]])).max()) for x in pre), default=None))
                 C = X.ctrl(sim, rid)
                 zt, t_zero, ser = zero_time(sim, sc, r)
                 if C is None or ser is None:
@@ -531,6 +537,8 @@ def table(a):
     L += ["", "## Coverage", "",
           f"- turns: {n}; identity (the policy alone) completes {idd} / {sum(r['tag'] == 'id' for r in rows)}",
           f"- turns with >= 1 completing branch cell at some distance: {any1} / {n}; at >= 2 distinct handovers: {any2} / {n}",
+          f"- determinism: self branches whose plans before h differ from phase A's identity at the same k: "
+          f"{sum((r.get('pre_h_diff') or 0) > 0 for r in rows)} of {sum(r.get('pre_h_diff') is not None for r in rows)}",
           f"- **line: turns with completing cells at >= 2 distinct handovers with realized entry speed <= v_e + 1 m/s: {line_n} / {n} = "
           f"{100 * line_n / max(n, 1):.0f} % -> {verdict}** (pass >= 60 %, fail <= 35 %); self handovers only: {line_self} / {n}",
           f"- row yield (completing cells that pass the full shape gate: class p95 kappa / dkappa, a_lat <= human p95, entry speed <= v_e + 1): "

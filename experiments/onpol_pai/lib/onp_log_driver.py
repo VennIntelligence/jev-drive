@@ -57,6 +57,10 @@ serving input (f-theta camera through pai_core, rendered 10 Hz frames in every s
                 decision arc scale s_k = onp_p4.scale) until the station reaches s_release, then the raw plan. Every record gains `p4`
                 {tag, D, src, h, sigma, d_route, v_meas, lat, lon, released[, arc_prof, arc_plan, s_k, v_ent_prof]} and, when lat or lon
                 is on, `poses_branch` (branch_poses(poses, g if lat else 1, s_k if lon else 1)). Exclusive with ONP_SWITCH / ONP_BRANCH.
+                Renderer race: the NRE renderer serves garbage frames (a half-loaded scene) to a second session of a scene that starts while
+                the scene is still loading for the first (P4 smoke try 1: 0.3 s of smeared frames, plans differ from k 0). So session n >= 1 of a
+                scene waits in start_session (before any of its renders) until session 0 of that scene has received ONP_WARM (10) frames of
+                its camera (at most 600 s); the wait is logged as p4.wait_s.
 
 A `drive` before the switch without a ground-truth message of its own timestamp is aborted with a gRPC error and counted. Run through
 experiments/onpol_pai/scripts/onp_pass2.sh (DRV_PY of pai_run.sh); environment as pai_driver.py plus ONP_HORIZON, ONP_SWITCH, ONP_AFTER,
@@ -69,6 +73,7 @@ import os
 import re
 import sys
 import threading
+import time
 
 import numpy as np
 
@@ -105,6 +110,7 @@ assert _m or not os.environ.get("ONP_BRANCH", "").strip(), "ONP_BRANCH=g<gain>s<
 BRANCH = dict(g=float(_m[1]), s=float(_m[2]), t=float(_m[3] or 3.0)) if _m else None
 FGT_K = int(os.environ.get("ONP_FGT_K", "17"))
 assert not (BRANCH and P.TR.ON), "ONP_BRANCH transforms the plan handed to make_cached_plan; JEV_TRACK must be off"
+P4_WARM = int(os.environ.get("ONP_WARM", "10"))
 _CF = os.environ.get("ONP_CELLS") or os.path.join(os.environ.get("ALPASIM_DRIVER_LOG_DIR", "/nonexistent"), "p4cells.json")
 CELLS = json.load(open(_CF)) if os.path.exists(_CF) else None
 if CELLS:
@@ -193,7 +199,7 @@ def p4_step(st, k, t0, anchor, poses):
         st["released"] = True
     lat = h is not None and k < h + Q.LAT_N and c["g"] != 1.0
     lon = h is not None and c["lon"] != "raw" and not st["released"]
-    rec = dict(tag=c["tag"], D=c["D"], src=c["src"], h=h, sigma=round(sig, 4), d_route=round(dist, 4), v_meas=round(v0, 5), lat=lat, lon=lon,
+    rec = dict(tag=c["tag"], D=c["D"], src=c["src"], wait_s=st["wait_s"], h=h, sigma=round(sig, 4), d_route=round(dist, 4), v_meas=round(v0, 5), lat=lat, lon=lon,
                released=st["released"])
     sk = 1.0
     if lon:
@@ -269,7 +275,15 @@ class LogDriver(P.Driver):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.out = Out(self.out)
-        self.p4n = {}
+        self.p4n, self.p4ready = {}, {}
+
+    def submit_image_observation(self, req, ctx):
+        r = super().submit_image_observation(req, ctx)
+        s = self.sessions.get(req.session_uuid)
+        p4 = getattr(s, "p4", None) if s is not None else None
+        if p4 is not None and p4["idx"] == 0 and s.count["images"] >= P4_WARM:
+            self.p4ready[s.scene].set()
+        return r
 
     def start_session(self, req, ctx):
         r = super().start_session(req, ctx)
@@ -281,7 +295,11 @@ class LogDriver(P.Driver):
             cl = CELLS["cells"].get(s.scene, [])
             if i >= len(cl):
                 ctx.abort(grpc.StatusCode.FAILED_PRECONDITION, f"ONP_CELLS: session {i} of {s.scene}, only {len(cl)} cells")
-            s.p4 = dict(cell=cl[i], scene=s.scene, session=s, idx=i, h=None, hint=None, released=False)
+            ev = self.p4ready.setdefault(s.scene, threading.Event())
+            t0 = time.time()
+            if i > 0:
+                ev.wait(600.0)                               # the renderer race: see `cells` in the module docstring
+            s.p4 = dict(cell=cl[i], scene=s.scene, session=s, idx=i, h=None, hint=None, released=False, wait_s=round(time.time() - t0, 2))
         if s is not None and "rmem0" in AFTER and s.rt is not None:
             s.rt = MaskedMemory(s.rt)
         return r

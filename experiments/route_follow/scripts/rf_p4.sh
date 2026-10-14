@@ -98,7 +98,7 @@ smoke)
   [[ $BACKEND == tokyo ]] || { echo "smoke runs on Tokyo" >&2; exit 2; }
   rm -f "$O"/SMOKE_{DONE,FAIL}; S1SC=${S1SC:-a174faed eaba3f6a}; S2SC=${S2SC:-f9e361aa}
   st "P4 smoke, code $(git -C "$repo" rev-parse --short HEAD): S1 ($S1SC) on card 0, S2 ($S2SC D20) on card 1"
-  (  # S1: each S1 scene twice (two identity sessions in one launch) against the stored reference
+  (  # S1: each S1 scene four times (four identity sessions in one launch: the renderer race) against the stored reference
     mkdir -p "$O/s1"; : > "$O/s1/scenes.txt"
     for s in $S1SC; do $PY -c "import json,sys;print(next(s for s in json.load(open(sys.argv[1]))['scenes'] if s[7:15]==sys.argv[2]))" "$O/plan.json" "$s" >> "$O/s1/scenes.txt"; done
     $PY - "$O/plan.json" "$O/s1/scenes.txt" "$O/s1/cells.json" <<'PY'
@@ -106,9 +106,9 @@ import json, sys
 P = json.load(open(sys.argv[1]))["scenes"]; sc = open(sys.argv[2]).read().split()
 k = ("u", "x", "y", "kappa", "s_entry", "s_exit", "s_release", "v_e")
 c = dict(tag="id", D=None, src="self", g=1.0, lon="raw", switch=0)
-json.dump(dict(scenes={s: {x: P[s][x] for x in k} for s in sc}, cells={s: [c, c] for s in sc}), open(sys.argv[3], "w"))
+json.dump(dict(scenes={s: {x: P[s][x] for x in k} for s in sc}, cells={s: [c] * 4 for s in sc}), open(sys.argv[3], "w"))
 PY
-    CARD=0 stack "$O/s1/s1-id" "$O/s1/cells.json" 2 "$O/s1/scenes.txt" || { echo "S1 run" > "$O/SMOKE_FAIL"; exit 1; }
+    CARD=0 stack "$O/s1/s1-id" "$O/s1/cells.json" 4 "$O/s1/scenes.txt" || { echo "S1 run" > "$O/SMOKE_FAIL"; exit 1; }
     py s1 --run "$O/s1/s1-id" --ref /data/runs/route_night/r281/rsg > "$O/s1.txt" 2>&1 ) &
   p1=$!; sleep 30
   ( CARD=1 P4_D=20 P4_ONLY=${S2ONLY:-g1.25-raw,g1-ve,g1.25-ve08} job "$S2SC" || { echo "S2 run" > "$O/SMOKE_FAIL"; exit 1; }
