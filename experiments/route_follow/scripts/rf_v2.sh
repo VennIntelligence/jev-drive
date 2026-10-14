@@ -7,7 +7,7 @@
 #                                       summary of the training rows vs the served held reads of RSG-L18-s0)
 #   rf_v2.sh ident                      bit identity with every flag off: 50 eager steps of RSG-L18-s0's command with this code and with the
 #                                       code before route v2 (git worktree at $BASE_REV), then on_train ident + the dev ADE of both logs
-#   rf_v2.sh pilot [flags]              RV2P-L18-s0: 1 000 steps, seed 0, batch 64 (on-k 7, lc-k 4), gentle schedule, init RSG-L18-s0, flags
+#   [AFTER=ids] rf_v2.sh pilot [flags]  RV2P-L18-s0: 1 000 steps, seed 0, batch 64 (on-k 7, lc-k 4), gentle schedule, init RSG-L18-s0, flags
 #                                       (default: all three), then rf_v2gate.py vs RSG-L18-s0
 #   rf_v2.sh train <base> <seed> [flags]   RV2-L18-s<seed> (TAG_PREFIX overrides RV2): 2 500 gentle steps on <base> with the flags (default all
 #                                       three), then the held 460 / 18-decision read (rm_chain.sh read, 6 chunks); read ids -> $O/reads.txt
@@ -39,7 +39,7 @@ ident)
       grep -h 'dev @' $DATA_DIR/runs/route_mem/train-RV2ID-new-s0/*/log.txt $DATA_DIR/runs/route_mem/train-RV2ID-old-s0/*/log.txt | tee $O/ident_dev.txt; exit \$rc" ;;
 pilot)
   shift; F="${*:-$ALL_FLAGS}"; T=RV2P-L18-s0
-  t=$(sub v2-pilot --train --vram 24 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train $T RSG-L18-s0 0 1000 64 7 $(lcflags 4 $F) --allow-init) || exit 1
+  t=$(sub v2-pilot ${AFTER:+--after $AFTER} --train --vram 24 --cpu 6 --ram 70 --timeout-h 1 -- bash $ME body-train $T RSG-L18-s0 0 1000 64 7 $(lcflags 4 $F) --allow-init) || exit 1
   sub v2-gate-$T --after $t --vram 20 --cpu 4 --ram 48 --timeout-h 1 -- $TR experiments/route_follow/scripts/rf_v2gate.py --tag $T --base RSG-L18-s0 > /dev/null || exit 1
   tail -2 $O/jobs.txt ;;
 train)
