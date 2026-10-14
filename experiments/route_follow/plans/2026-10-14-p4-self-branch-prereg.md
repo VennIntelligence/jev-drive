@@ -159,3 +159,44 @@ Restated from the smoke's measured per-rollout time in results/p4_self/smoke.md.
   exit + 10 m; realized speed at the entry within 1 m/s of the profile's planned entry speed at the last decision before the entry (if the
   profile binds there, s_k < 1; otherwise reported as not binding).
 - **S3**: `rf_p4.py read` + `table` on S2's rollouts: every record field above present and in range.
+
+## Amendment 1 (2026-10-14, written before the smoke that is read and before any box run): one rollout at a time per launch, row-builder requirements
+
+**What the first two smoke tries found** (Tokyo, `/data/runs/route_night/p4/smoke_try1`, `smoke_try2`; nothing of them is read):
+- Try 1 (code 1ad87410): S2 never started (docker compose rejects upper case in project names: phase dirs are now `<id8>-a` / `<id8>-b`);
+  S1 3 / 4 sessions bit-identical. The fourth (a174faed, second session of the scene in the same launch) got 0.3 s of smeared frames at
+  k 0-6 (a half-built scene) and its plans differ from k 0.
+- Try 2 (code 2918449b, driver holds session n >= 1 of a scene in start_session until session 0 has 10 frames): S1 8 / 8 bit-identical
+  (4 concurrent sessions per scene), S2 phase A bit-identical to the reference, but in S2's phase B 2 of 3 sessions failed in the renderer
+  (`get_available_cameras` -> `Failed to create backend`, `UnpicklingError` in `torch.load(artifact.checkpoint)`); the same failure in a
+  one-scene box job (`$DATA_DIR/runs/route_follow/p4/boxsmoke`, 1 of 2). Cause, from NRE's `serve.py get_backend` on the box rootfs:
+  the renderer checks out a free backend per request and builds a new one when none is free; concurrent builds of the same scene share
+  the artifact's temporary cache and corrupt each other (a failed build, or a backend built from a partly read checkpoint, the smeared
+  frames of try 1). Renderer session init happens before the driver session, so the driver cannot order it. The reference reads never
+  run a scene twice at once, which is why they never met it.
+- **Change:** every P4 launch runs **one rollout at a time** (`P4_CONC=1`, `n_concurrent_rollouts=1`): one backend per launch, built once.
+  The driver-side wait stays (harmless at CONC 1). Throughput comes from many launches in parallel instead: one pool job per scene,
+  `--vram 12 --cpu 3 --ram 24` (one renderer backend 4.6 GiB + driver 2.5-3 + physics ~1 GiB), history key `alpasim-p4c1`, so about
+  6-7 jobs per card by VRAM. S1 is now 2 sessions per scene (sequential) plus S2's phase A.
+- A stack now counts only scored rollouts (a renderer-failed rollout has `error` in its metrics), so a failure stops the job.
+
+**Row-builder requirements** (rf_selfpool.py, commit ee88176e), adopted:
+1. rollout.asl and metrics.parquet are kept for every session until the scene's read is written; then the .asl of every NON-completing
+   rollout is deleted (metrics, drive.jsonl, controller CSV, start.jsonl, configs kept; `KEEP_ASL_ALL=1` keeps all). Disk: 0.4-0.55 GB per
+   .asl; per scene job up to ~25 x 0.5 = 13 GB while it runs; afterwards only completing rollouts (if a third complete: ~690 / 3 x 0.5 =
+   ~115 GB) plus dumps (~30 MB per rollout, ~20 GB). Peak with all jobs running ~27 x 13 = ~350 GB. `fanout` refuses below 500 GB free.
+2. Served code: box jobs run from a clean worktree at the commit of `fanout` (`<root>/code`, `git worktree add --detach`), Tokyo from the
+   frozen clone `/data/runs/route_night/p4/code`; `<root>/code.json` records the served tree, commit and dirty count.
+3. Per decision in drive.jsonl (pai_driver's record, unchanged): k, t0, now, infer, anchor, hist, ego, cmd, poses (raw), poses_model,
+   rmem, route0, plus `p4` and `poses_branch`; `kind: route` records; per session start.jsonl, the controller CSV, results-summary.json
+   (rollout_id), eval-config.yaml, generated-user-config-0.yaml (pai_run / pai_native layout).
+4. Per root: plan.json (this format) and the merged read.json (`rf_p4.sh read`, also the collect job): rid, tag, D, src, h, done,
+   t_zero (s from the rollout start), score, zero.
+5. JEV_VHIST off; PAI_DUMP on.
+6. Reader: min speed inside [entry, exit] (`v_min_inside`, rf_shape's speeds) and **crawl inside** (< 0.5 v_e) are reported next to the
+   approach crawl, as a secondary read.
+
+**Estimate, restated.** About 690 rollouts, one at a time per launch. Tokyo 3090, one rollout alone ~100 s plus ~45 s start-up; box
+6000D one rollout alone ~190 s plus ~25 s start-up (docs/alpasim.md, card shared). A scene job (phase A + ~25 cells + reach / read) is
+then ~1.2-1.5 h on the box alone; with ~6 jobs per card the card is the limit, not the job. Restated from the smoke's measured
+per-rollout times in results/p4_self/smoke.md; the staged launch (1, then 10 scenes) measures the per-card throughput.

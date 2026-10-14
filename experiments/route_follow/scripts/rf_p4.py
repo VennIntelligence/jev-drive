@@ -461,6 +461,7 @@ def read(a):
                            **{f"shape_{k}": (None if not np.isfinite(shp[k]) else round(float(shp[k]), 4)) for k in ("kmax", "alat", "dk", "dec")},
                            gate_parts=gk, gate=bool(len(hit)) and all(gk.values()),
                            crawl=bool(pre.any() and v[pre].min() < 0.5 * p["v_e"]),
+                           crawl_inside=bool(np.isfinite(spd["v_min"]) and spd["v_min"] < 0.5 * p["v_e"]),
                            w_droute=round(float(dr[iw]), 2) if iw is not None else None, w_v=round(10.0 * math.hypot(*wk["ego"][4:6]), 2) if wk else None,
                            w_zeroed=bool(t[iw] >= t_zero) if iw is not None else None,
                            s_k_min=min((x["p4"]["s_k"] for x in rr if x["p4"].get("s_k") is not None), default=None),
@@ -551,8 +552,9 @@ def table(a):
             return
         ve = [r["v_entry"] for r in rr if r["done"] and r.get("v_entry") is not None]
         L.append(f"| {name} | {len(rr)} | {sum(r['done'] for r in rr)} | {sum(bool(r.get('gate')) for r in rr)} | {sum(r['score'] == 0 for r in rr)} | {sum(r['rear'] for r in rr)} | "
-                 f"{sum(r['crawl'] for r in rr)} | {np.median(ve) if ve else float('nan'):.2f} | {np.mean([r['score'] for r in rr]):.3f} |")
-    L += ["| cells | rollouts | done | done + gate | zeros | rear-ended | crawl | median entry speed (done) | mean score |", "|:--|--:|--:|--:|--:|--:|--:|--:|--:|"]
+                 f"{sum(r['crawl'] for r in rr)} | {sum(bool(r.get('crawl_inside')) for r in rr)} | {np.median(ve) if ve else float('nan'):.2f} | {np.mean([r['score'] for r in rr]):.3f} |")
+    L += ["| cells | rollouts | done | done + gate | zeros | rear-ended | crawl (approach) | crawl inside | median entry speed (done) | mean score |",
+          "|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
     for lon in LONS:
         agg(lambda r, lon=lon: r["tag"].endswith(f"-{lon}"), f"profile {lon}")
     for g in GAINS:
