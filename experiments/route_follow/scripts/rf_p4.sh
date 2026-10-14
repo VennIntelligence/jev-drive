@@ -41,7 +41,7 @@ apy() {  # rf_p4.py in the AlpaSim environment (scene loader, route generator, p
     "$D/third_party/alpasim/.venv/bin/python" "$here/rf_p4.py" "$@" 2> >(grep -v 'Creating\|it/s' >&2)
   fi; }
 [[ -f $O/plan.json || $cmd == plan ]] || cp "${PLAN:-$repo/experiments/route_follow/results/p4_self/plan.json}" "$O/plan.json"
-[[ -f $O/code.json || $cmd == plan || $cmd == fanout || $cmd == read ]] || \
+[[ -f $O/code.json || $cmd == plan || $cmd == examplan || $cmd == fanout || $cmd == read ]] || \
   echo "{\"served\": \"$repo\", \"commit\": \"$(git -C "$repo" rev-parse HEAD)\", \"dirty\": $(git -C "$repo" status --porcelain -uno | grep -c .), \"backend\": \"$BACKEND\"}" > "$O/code.json"
 
 stack() {  # <run dir> <cells json> <n rollouts> <scene list>: one simulator launch of every cell in the cells file

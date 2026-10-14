@@ -100,3 +100,17 @@ tmux new-window -d -t jev -n p4x1 "CARDS=0 SLOTS=1 P4_PAR=3 bash $X stage /data/
 tmux new-window -d -t jev -n p4x5 "CARDS='0 1' SLOTS=<2|3> bash $X stage /data/runs/route_night/p4_exam s5 5"
 tmux new-window -d -t jev -n p4xr "CARDS='0 1' SLOTS=<2|3> bash $X stage /data/runs/route_night/p4_exam rest rest"
 ```
+
+## Amendment 1 (2026-10-14 15:15 JST, after stage 1, before stage 5): three launches per card fit
+
+- Stage 1 (94c1d722, frozen clone 05f3c5c5, card 0, phase B as 3 launches side by side): card 0 peaked at **22.6 GB** of 24 GB with three
+  launches (the renderer takes less than the 7.9 GB it held alone in the smoke), GPU ~100 %, RAM ~15 GB for the three. Each launch ran one
+  rollout per ~100-120 s, about the same as one launch alone, so three per card give ~3x throughput. Job: phase A 161 s, phase B 40 cells
+  in 1 667 s (14 / 13 / 13 per launch), 41 rollouts in 1 835 s.
+- Checklist: 41 / 41 rollouts scored, reach.json present, 5 distinct self handovers (h 22 / 30 / 41 / 89 / 134), phase A bit-identical to
+  r281/rsg (1 / 1), self branches' plans before h identical to phase A 40 / 40, every rollout.asl removed after the read (1.3 GB left).
+- **Change:** stages 5 and rest run **3 workers per card on both cards** (6 launches, `SLOTS=3`, `P4_PAR=1`), as the user asked.
+  Estimate restated: ~422 rollouts left / 6 launches x ~120 s = ~2.3 h plus the tail of the last 41-rollout job (one launch, ~1.4 h if it
+  starts late); ~2.5-3 h.
+- Fix outside the frozen clone: `rf_p4.sh examplan` wrote `code.json` from the working repo (807e7602) before the clone existed; it was
+  rewritten by hand before the first rollout to the clone (05f3c5c5, dirty 0), and `examplan` no longer writes it.
