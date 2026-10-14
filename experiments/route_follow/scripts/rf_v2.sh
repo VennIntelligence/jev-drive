@@ -17,6 +17,8 @@
 #                                       the served ordered memory equals the offline rebuild -> runs/route_mem/served/<tag>.json)
 #   rf_v2.sh report [tags]              one pool job after every read in $O/reads.txt: held.py, ol_confirm.py paired vs each tag's base and
 #                                       RSG-L18-s<seed>, rf_follow.py turn completion -> $O/report/
+#   rf_v2.sh guard <tag> ..             public 1491 / 10-decision guard (H3), rf_round2.sh's block: 10 read10 chunks per tag + ol_confirm vs
+#                                       YR10m10-F-s0 with 2-seed means and pairs vs RSG-L18(-s<seed>) -> $O/guard/
 #   rf_v2.sh body-train <tag> <init> <seed> <steps> <batch> <on-k> [flags] | body-report [tags]   (job bodies)
 set -uo pipefail; cd "$(dirname "$0")/../../.."
 O=$DATA_DIR/runs/route_follow/v2; M=$DATA_DIR/runs/route_mem/read; CK=$DATA_DIR/runs/op_parity/runs
@@ -74,6 +76,22 @@ train)
   echo "$T $B" >> $O/bases.txt; tail -8 $O/jobs.txt ;;
 report)
   shift; sub v2-report --after "$(paste -sd, $O/reads.txt)" --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME body-report "$@" > /dev/null || exit 1; tail -1 $O/jobs.txt ;;
+guard)  # guard <tag> ..: public 1491 / 10 decisions (rf_round2.sh's guard block): 10 readlist chunks per tag, then one guard report job
+  shift; G=$DATA_DIR/runs/route_follow/guard; W=$DATA_DIR/runs/onpol_long; dep=()
+  for T in "$@"; do [[ ! -e $G/read10/$T ]] || { echo "$G/read10/$T exists"; exit 1; }
+    for i in $(seq 0 9); do
+      dep+=($(sub v2-g10-$T-$i --vram 27 --cpu 8 --ram 30 --timeout-h 2 --env CL_HIST_KEY=ol-fast-read -- bash experiments/onpol_long/scripts/ol_chain.sh readlist $T \
+            $W/lists/all_n10/c$i.txt 10 $G/read10/$T/b$i)) || exit 1
+    done
+  done
+  sub v2-guard --after "$(IFS=,; echo "${dep[*]}")" --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME body-guard "$@" > /dev/null || exit 1; tail -1 $O/jobs.txt ;;
+body-guard)  # ol_confirm vs YR10m10-F-s0 (the stored 2026-10-09 rollouts), 2-seed means, pairs vs RSG-L18-s<seed> -> $O/guard/
+  shift; G=$DATA_DIR/runs/route_follow/guard; A=$DATA_DIR/runs/alpasim; Q=(); MN=(); MP=(); PH=()
+  Q+=("YR10m10-F-s0@all10=$(python3 -c "import json; a = json.load(open('$A/ot3/a/manifest.json')); b = json.load(open('$A/cf1/a/manifest.json')); print(','.join(a['YR10m10-F-s0'] + a['YR10m10-F-s0@new'] + b['YR10m10-F-s0@fresh']))")")
+  for T in "$@" RSG-L18-s0 RSG-L18-s1; do Q+=("$T@all10=$(ls -d $G/read10/$T/b*/ | sed 's#/$##' | paste -sd,)"); done
+  for f in $(for T in "$@"; do echo ${T%-s*}; done | awk '!s[$0]++'); do MN+=("$f=$f-s0,$f-s1"); MP+=("$f:RSG-L18"); done
+  MN+=("RSG-L18=RSG-L18-s0,RSG-L18-s1"); for T in "$@"; do PH+=("$T:RSG-L18-s${T##*-s}"); done
+  $P experiments/onpol_long/scripts/ol_confirm.py --runs "${Q[@]}" --base YR10m10-F-s0 --mean "${MN[@]}" --pairs "${MP[@]}" "${PH[@]}" --out $O/guard ;;
 body-train)
   T=$2; I=$3; s=$4; N=$5; BS=$6; K=$7; shift 7
   exec $TR experiments/route_mem/scripts/rm_train.py train --tag $T --init $I --steps $N --batch $BS --on-k $K --seed $s $REC "$@" ;;

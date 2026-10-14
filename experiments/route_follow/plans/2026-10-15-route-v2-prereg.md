@@ -283,3 +283,15 @@ H1 passes for both arms (every CI upper bound <= +5). H2 (seed mean >= base + 3 
 arm b +0 / +3 (mean +1.5). Offline gates of the trained checkpoints (vs their base): RV2b-L18-s0 / s1 pass G-rely / G-ST / G-real /
 G-over / G-slot, fail G-swap (0.18 / 0.19) and G-LC (0.08), as the pilots predicted. G-serve of the ordered memory: 1 368 / 1 368
 decisions per seed for both arms (max point difference 5.3e-4 m). Next registered step (not run here): the public 1491 guard (H3).
+
+## Amendment 12 (coordinator, 2026-10-15 03:05): public guard for arms a / b; arm c variant (i) launched as EXPLORATORY
+
+- H3 public guard for RV2a-L18-s{0,1} and RV2b-L18-s{0,1}: 1491 scenes / 10 decisions, rf_round2.sh's guard block (`rf_v2.sh guard`:
+  10 read10 chunks per checkpoint, ol_confirm vs YR10m10-F-s0's stored rollouts, 2-seed means, pairs vs RSG-L18-s<seed> and the
+  seed-mean pair vs RSG-L18). Lines as in decision 286: mean not below YR10m10-F-s0 by more than 0.02; zeros and at-fault zeros vs
+  RSG-L18 with log-clustered CIs (H3: upper bound <= +5). PRIO 12.
+- **EXPLORATORY** arm c, variant (i) of Amendment 9 (`--rm-order` + junction CF rows, route-hinge weight 3, CF share as first run):
+  RV2c-L18-s{0,1} on RSG-L18-s{0,1}, PRIO 10, held 460 chain + served check, then a report including it. It FAILS the Amendment 9 rule
+  (G-real 0.5408 vs 0.5385); the coordinator launches it anyway because it is the only arm that changes what the policy reads at
+  junctions (G-swap 0.554 / 0.956) and the held read, not the offline ADE proxy, is the question. Its results carry the EXPLORATORY label
+  and are not a registered verdict. No public guard for arm c unless its held zeros beat RSG-L18 with the CI excluding 0.
