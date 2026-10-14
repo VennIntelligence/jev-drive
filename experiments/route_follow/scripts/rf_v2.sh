@@ -11,7 +11,8 @@
 #                                       RSG-L18-s0, the arm's flags, then rf_v2gate.py vs RSG-L18-s0
 #   rf_v2.sh train a|b <base> <seed>    RV2a-L18-s<seed> / RV2b-L18-s<seed> (TAG_PREFIX overrides RV2a / RV2b): 2 500 gentle steps on <base>
 #                                       (--allow-init), the gate vs <base>, then the held 460 / 18-decision read (rm_chain.sh read, 6 chunks);
-#                                       read ids -> $O/reads.txt, "<tag> <base>" -> $O/bases.txt
+#                                       read ids -> $O/reads.txt, "<tag> <base>" -> $O/bases.txt; rm_build served on chunk 0 (G-serve:
+#                                       the served ordered memory equals the offline rebuild -> runs/route_mem/served/<tag>.json)
 #   rf_v2.sh report [tags]              one pool job after every read in $O/reads.txt: held.py, ol_confirm.py paired vs each tag's base and
 #                                       RSG-L18-s<seed>, rf_follow.py turn completion -> $O/report/
 #   rf_v2.sh body-train <tag> <init> <seed> <steps> <batch> <on-k> [flags] | body-report [tags]   (job bodies)
@@ -57,6 +58,8 @@ train)
     sub v2-read-$T-$i --after $t --vram 20 --cpu 6 --ram 40 --timeout-h 2 --env CL_HIST_KEY=alpasim-read4 \
         -- bash experiments/route_mem/scripts/rm_chain.sh read $T $i 6 >> $O/reads.txt || exit 1
   done
+  r0=$(tail -6 $O/reads.txt | head -1)   # G-serve of the ordered memory: served (drive.jsonl rmem) vs the offline rebuild, chunk 0
+  sub v2-served-$T --after $r0 --vram 0.5 --cpu 8 --ram 16 --timeout-h 1 -- $P experiments/route_mem/scripts/rm_build.py served --run $M/$T/c0/run --tag $T --workers 8 > /dev/null || exit 1
   echo "$T $B" >> $O/bases.txt; tail -8 $O/jobs.txt ;;
 report)
   shift; sub v2-report --after "$(paste -sd, $O/reads.txt)" --vram 0.5 --cpu 16 --ram 48 --timeout-h 2 -- bash $ME body-report "$@" > /dev/null || exit 1; tail -1 $O/jobs.txt ;;
