@@ -7,6 +7,12 @@
 #   rf_self_train.sh merge           on1_L18RB0:r:self + $SELF:s:both -> on1_$OUT; W for SHARE of the draws; draw shares before / after the cap
 #   rf_self_train.sh submit          mixcheck -> both seeds' training -> reads -> report (job ids in $O/jobs.txt)
 #   rf_self_train.sh report          (job body) ladder table -> $O/summary.md
+#   P4 round 1 (prereg Amendments 3-4), staged:
+#   rf_self_train.sh stage1          mixcheck -> training of the first arm of NEW (s0) only; its training gates are read by hand before `rest`
+#   rf_self_train.sh rest            the other arm(s) of NEW + the same-steps no-rows control $CTL (RSG-L18's recipe, no SELF rows), the reads of
+#                                    NEW (an arm already trained by stage1 is not retrained; its reads go without --after); no report job
+#   rf_self_train.sh ctl-read        held 460 + public 1491 reads of $CTL (only if its weights are not bit-identical to RSG-L18-s0)
+#   rf_self_train.sh report-submit   the report job --after every read job in $O/jobs.txt
 #   rf_self_train.sh dry             the same on the dev pool on1_SELFdev: merge, mixcheck, RSGSELF-DRY-s0 for 60 steps, held 5 scenes, the report
 #                                    path on those 5 scenes, then the checkpoint and the merged dev pool are deleted (dry-post). DRY ONLY: the dev
 #                                    pool holds hard_exam scenes; nothing from it is ever read on the PAI exam.
@@ -19,13 +25,22 @@ CR=$DATA_DIR/runs/op_parity/cache; CK=$DATA_DIR/runs/op_parity/runs; FE=$DATA_DI
 P=$DATA_DIR/third_party/alpasim/.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin/python; S=experiments/route_follow/scripts
 SELF=${SELF:-on1_SELF}; OUT=${OUT:-RSGSELF}; CAP=${CAP:-0.10}; SHARE=${SHARE:-0.3}; O=${O:-$RF/selftrain}
 REC="--init RB0-F-s0 --steps 2500 --warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4"
-NEW="RSGSELF-L18-s0 RSGSELF-L18-s1"; DRY=RSGSELF-DRY-s0
+NEW="RSGSELF-L18-s0 RSGSELF-L18-s1"; DRY=RSGSELF-DRY-s0; CTL=${CTL:-RSGCTL-L18-s0}
+CTLARM="--on on1_L18RB0 --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode self"   # RSG-L18-s0 as trained (route_mem.json / meta.json)
 die() { echo "$(date '+%F %T') ERROR $*" >&2; exit 1; }
 arm() { local w; w=$(cat $O/W_$OUT.txt 2>/dev/null) || die "no $O/W_$OUT.txt: run merge first"
   echo "--on on1_$OUT --on-k 13 --on-split alpasim_nuplan/onpol-train --on-mode mixed --on-weight pool=s:$w --on-cap-scene $CAP --on-cap-in pool=s"; }
 sub() { local name=$1; shift; local id; id=$(.venv/bin/python -m jevdrive.cl submit --owner selftrain --name "$name" --tries 1 --priority 14 --no-check \
      --log-dir $O/pool/$name "$@" | awk '{print $NF}') && [[ -n $id ]] || die "submit $name"; echo "$id $name" >> $O/jobs.txt; echo "$id"; }
 held_dirs() { ls -d $M/$1/c*/run | paste -sd,; }
+jid() { grep " $1$" $O/jobs.txt | tail -1 | cut -d' ' -f1; }
+reads() {  # <tag> <after id or ""> -> held (rm_chain submit-read) + 10 public guard chunks; prints the read job ids
+  local T=$1 a=$2 i; PRIO=14 AFTER= bash experiments/route_mem/scripts/rm_chain.sh submit-read $T $a > /dev/null || exit 1
+  echo "$(grep " rm-cover-$T$" $DATA_DIR/runs/route_mem/jobs.txt | tail -1 | cut -d' ' -f1) rm-cover-$T" >> $O/jobs.txt
+  for i in $(seq 0 9); do
+    sub sf-g10-$T-$i ${a:+--after $a} --vram 27 --cpu 8 --ram 30 --timeout-h 2 --gpus 1,2,3,4,5 --pin-strict --env CL_HIST_KEY=ol-fast-read -- bash $E/scripts/ol_chain.sh readlist $T \
+        $W/lists/all_n10/c$i.txt 10 $G/read10/$T/b$i > /dev/null || exit 1
+  done; }
 mkdir -p $O/pool
 case ${1:-} in
 merge)
@@ -57,22 +72,46 @@ submit)
   done
   sub sf-report --after "$(IFS=,; echo "${dep[*]}")" --vram 0.5 --cpu 48 --ram 64 --timeout-h 2 -- bash $S/rf_self_train.sh report > /dev/null || exit 1
   cat $O/jobs.txt ;;
+stage1)
+  [[ -f $CR/on1_$OUT/tab.npz && -f $FE/on1_$OUT.npz ]] || die "no on1_$OUT: run merge first"
+  ARM=$(arm) || exit 1; echo "ARM: $ARM" >> $O/jobs.txt; T=${NEW%% *}
+  mc=$(sub sf-mixcheck --vram 28 --cpu 6 --ram 70 --timeout-h 1 -- $TR experiments/route_mem/scripts/rm_train.py mixcheck --tag mixcheck-$OUT $REC $ARM --seed 0) || exit 1
+  sub sf-tr-$T --after $mc --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 -- $TR experiments/route_mem/scripts/rm_train.py train --tag $T $REC $ARM --seed ${T##*-s} > /dev/null || exit 1
+  cat $O/jobs.txt ;;
+rest)
+  [[ -f $CK/RSG-L18-s0/ckpt-final.pt ]] && ls -d $G/read10/RSG-L18-s1/b9 > /dev/null && ls -d $M/RSG-L18-s1/c5/run > /dev/null || die "stored RSG-L18 reads missing"
+  ARM=$(arm) || exit 1
+  for T in $NEW; do
+    if [[ -f $CK/$T/ckpt-final.pt ]]; then t=$(jid sf-tr-$T); else
+      t=$(sub sf-tr-$T --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 -- $TR experiments/route_mem/scripts/rm_train.py train --tag $T $REC $ARM --seed ${T##*-s}) || exit 1; fi
+    reads $T "$t"
+  done
+  [[ -f $CK/$CTL/ckpt-final.pt ]] || sub sf-tr-$CTL --train --vram 28 --cpu 6 --ram 70 --timeout-h 2 -- $TR experiments/route_mem/scripts/rm_train.py train --tag $CTL $REC $CTLARM --seed ${CTL##*-s} > /dev/null || exit 1
+  cat $O/jobs.txt ;;
+ctl-read)
+  [[ -f $CK/$CTL/ckpt-final.pt ]] || die "no $CTL checkpoint"; reads $CTL "" ; cat $O/jobs.txt ;;
+report-submit)
+  dep=$(grep -E " (rm-cover|sf-g10)-" $O/jobs.txt | cut -d' ' -f1 | paste -sd,)
+  sub sf-report --after "$dep" --vram 0.5 --cpu 48 --ram 64 --timeout-h 2 -- bash $S/rf_self_train.sh report ;;
 report)
-  HELD="$NEW RSG-L18-s0 RSG-L18-s1 RB0-F-s0"
+  HELD="$NEW RSG-L18-s0 RSG-L18-s1 RB0-F-s0"; CTLP=()
+  if ls -d $M/$CTL/c5/run > /dev/null 2>&1; then HELD="$HELD $CTL"; CTLP=($CTL:RSG-L18-s0); fi   # the control's own reads exist only if not bit-identical
   R=""; for t in $HELD; do R="$R $t=$(held_dirs $t)"; done
   python3 $RF/held.py $R > $O/held_raw.txt; rc0=$?
   H=(); L=(); for t in $HELD; do H+=("$t@held18=$(held_dirs $t)"); L+=("$t=$(held_dirs $t)"); done
   $P $E/scripts/ol_confirm.py --runs "${H[@]}" --base RB0-F-s0 --mean RSGSELF-L18=RSGSELF-L18-s0,RSGSELF-L18-s1 RSG-L18=RSG-L18-s0,RSG-L18-s1 \
-     --pairs RSGSELF-L18:RSG-L18 RSGSELF-L18-s0:RSG-L18-s0 RSGSELF-L18-s1:RSG-L18-s1 --out $O/held18; rc1=$?
+     --pairs RSGSELF-L18:RSG-L18 RSGSELF-L18-s0:RSG-L18-s0 RSGSELF-L18-s1:RSG-L18-s1 "${CTLP[@]}" --out $O/held18; rc1=$?
   A=$DATA_DIR/runs/alpasim; Q=()
   Q+=("YR10m10-F-s0@all10=$(python3 -c "import json; a = json.load(open('$A/ot3/a/manifest.json')); b = json.load(open('$A/cf1/a/manifest.json')); print(','.join(a['YR10m10-F-s0'] + a['YR10m10-F-s0@new'] + b['YR10m10-F-s0@fresh']))")")
-  for T in RSG-L18-s0 RSG-L18-s1 $NEW; do Q+=("$T@all10=$(ls -d $G/read10/$T/b*/ | sed 's#/$##' | paste -sd,)"); done
+  for T in RSG-L18-s0 RSG-L18-s1 $NEW ${CTLP:+$CTL}; do Q+=("$T@all10=$(ls -d $G/read10/$T/b*/ | sed 's#/$##' | paste -sd,)"); done
   $P $E/scripts/ol_confirm.py --runs "${Q[@]}" --base YR10m10-F-s0 --mean RSG-L18=RSG-L18-s0,RSG-L18-s1 RSGSELF-L18=RSGSELF-L18-s0,RSGSELF-L18-s1 \
-     --pairs RSGSELF-L18:RSG-L18 RSGSELF-L18-s0:RSG-L18-s0 RSGSELF-L18-s1:RSG-L18-s1 --out $O/guard; rc2=$?
+     --pairs RSGSELF-L18:RSG-L18 RSGSELF-L18-s0:RSG-L18-s0 RSGSELF-L18-s1:RSG-L18-s1 "${CTLP[@]}" --out $O/guard; rc2=$?
   $P $S/rf_selfread.py lat --runs "${L[@]:0:4}" --out $O/lat --mean RSGSELF-L18=RSGSELF-L18-s0,RSGSELF-L18-s1 RSG-L18=RSG-L18-s0,RSG-L18-s1 \
      --pairs RSGSELF-L18:RSG-L18 RSGSELF-L18-s0:RSG-L18-s0 RSGSELF-L18-s1:RSG-L18-s1 --workers 48; rc3=$?
   $P $S/rf_selfread.py table --held $O/held18 --guard $O/guard --lat $O/lat --arm RSGSELF-L18 --ref RSG-L18 --out $O/summary.md; rc4=$?
-  echo "held $rc0 held18 $rc1 guard $rc2 lat $rc3 table $rc4"; exit $((rc0 + rc1 + rc2 + rc3 + rc4)) ;;
+  F=(); for t in $HELD; do F+=("$t@18=$(held_dirs $t)"); done                                       # L1b: held turn completion (rf_follow)
+  $P $S/rf_follow.py --runs "${F[@]}" --out $O/follow --workers 48 --pairs RSGSELF-L18-s0@18:RSG-L18-s0@18 RSGSELF-L18-s1@18:RSG-L18-s1@18; rc5=$?
+  echo "held $rc0 held18 $rc1 guard $rc2 lat $rc3 table $rc4 follow $rc5"; exit $((rc0 + rc1 + rc2 + rc3 + rc4 + rc5)) ;;
 dry)
   export SELF=on1_SELFdev OUT=RSGSELFdev CAP=${CAP_DRY:-0.25} O=$RF/selftrain/dry; mkdir -p $O/pool
   [[ ! -e $CK/$DRY ]] || die "$CK/$DRY exists (clean-dry first)"

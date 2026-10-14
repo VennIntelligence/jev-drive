@@ -311,3 +311,31 @@ plan.json and served worktree `<root>/code`).**
   run in parallel with them.
 - Report ~5 min.
 - **Total ~1.5-2.5 h, about 8-12 card-hours.**
+
+## Amendment 4 (2026-10-14 ~17:30 JST, after the on1_SELF4R gate read, before any merge, training or read): G-route met by a row filter
+
+**What happened.** The rebuilt on1_SELF4R (results/p4_self/round1) passed every gate except G-route. G-route was 98.69 % of 763 rows
+(max 0.055 m), below its 99 % line. All 10 rows over the line belong to one branch, 8a365ac2 D0 (`8a365ac2~5a9efef8`): decisions k 87-96,
+exit segment, 0.0501-0.0555 m. Per Amendment 3 the round stopped there.
+
+**Decision (user, via the coordinator): no waiver; filter instead.**
+- Every row whose regenerated first route point deviates from the logged route0 by more than 0.05 m is dropped from on1_SELF4R. These are the
+  10 rows above.
+- G-route then holds by construction on the remaining **753 rows**.
+- Branch 8a365ac2 D0 keeps its other 53 rows.
+- Counts after the filter: 753 rows, 12 branches, 8 turns. They still meet Amendment 3's threshold (>= 500 rows, >= 6 turns), so the
+  primary selection stands.
+- Implementation: `rf_selfpool.py pack --drop-route0`, which rewrites the pool from the same work dir. The dropped rows are counted per branch
+  in pool_gates (`rows_route0_dropped`). Every other gate is recomputed on the 753 rows and must still pass.
+
+Two notes recorded with the decision:
+- **The route-hinge label is never read by this recipe.** G-route guards only the route-hinge label (`route.npz` poly), and RSG-L18's recipe
+  has no `--on-lon`. The filter therefore removes demonstrations, not label noise that training would see.
+- **This round tests in-junction and exit demonstrations only.** G-crawl removed every approach row farther than 20 m before the entry.
+  The pool has 0 rows beyond 20 m and 157 rows in 20-0 m; the other 596 are inside the junction or in the exit. The approach / slowing-in gap stays
+  open for the next round. G-crawl is not relaxed.
+
+**Everything else is as in Amendment 3:**
+- arms RSGSELF-L18-s0 / s1 and RSGCTL-L18-s0, CAP 0.20;
+- staged launch, with s0 and its training gates first;
+- reads, and lines L1-L4.

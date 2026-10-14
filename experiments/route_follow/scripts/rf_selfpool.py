@@ -386,10 +386,13 @@ def cmd_pack(a):
         phase = np.where(sig < se, "approach", np.where(sig < sx, "inside", "exit"))
         push = np.array(["on" if int(k) in info["push"] else "off" for k in kk])
         n_win, n_ok = int(win.sum()), int((win & ok).sum())
-        keep = win & ok & b["g_shape"] & ~crawl
+        r0all = Zr["route0_d"][jr]
+        r0bad = np.isfinite(r0all) & (r0all > R0TOL) if a.drop_route0 else np.zeros(len(kk), bool)   # Amendment 4: G-route by a row filter
+        keep = win & ok & b["g_shape"] & ~crawl & ~r0bad
         per_b[key] = dict(scene=b["scene"], cell=b["cell"], D=b["D"], src=b["src"], h=h, k0=int(kk[k0]) if k0 < len(kk) else None,
                           k1=int(kk[k1 - 1]) if k1 > 0 else None, g_shape=b["g_shape"], gate_parts=b["gate_parts"], shape=b["shape"],
                           rows_window=n_win, rows_usable=n_ok, rows_crawl=int((win & ok & crawl).sum()), rows=int(keep.sum()),
+                          rows_route0_dropped=int((win & ok & b["g_shape"] & ~crawl & r0bad).sum()),
                           rows_shape_dropped=0 if b["g_shape"] else int((win & ok & ~crawl).sum()),
                           ctrl_vs_anchor_m=float(np.median(np.hypot(*ctrl0[win].T))) if win.any() else None)
         sel.append(idx[keep])
@@ -419,7 +422,8 @@ def cmd_pack(a):
     G = dict(name=a.name, pool=str(Path(a.pool_root) / f"on1_{a.name}"), rows=n, branches=len(B), branches_with_rows=int(sum(v["rows"] > 0 for v in nb.values())),
              branches_missing_in_cache=missing, scenes=int(len(np.unique(sc))), feat_source=feat_src,
              G_in=dict(gin, pass_=gin["dump_n"] == gin["dump_eq"] and gin["rec_n"] == gin["rec_eq"] and gin["rec_n"] > 0),
-             G_route=dict(rows_with_route0=int(np.isfinite(r0).sum()), share_le_005=float((r0[np.isfinite(r0)] <= R0TOL).mean()) if np.isfinite(r0).any() else None,
+             G_route=dict(filter=bool(a.drop_route0), rows_dropped_by_filter=int(sum(v["rows_route0_dropped"] for v in nb.values())),
+                          rows_with_route0=int(np.isfinite(r0).sum()), share_le_005=float((r0[np.isfinite(r0)] <= R0TOL).mean()) if np.isfinite(r0).any() else None,
                           max=float(np.nanmax(r0)) if np.isfinite(r0).any() else None),
              G_rmem=dict(rows_compared=int(len(rmd)), max_abs_diff=float(rmd.max()) if len(rmd) else None, tol=RMEM_TOL,
                          regen_vs_served_share_over_002=float((regd > 0.02).mean()), regen_vs_served_p99=float(np.quantile(regd, 0.99))),
@@ -507,7 +511,7 @@ def coverage_md(G):
     pb = G["per_branch"]
     L = [f"# Pool on1_{G['name']}: gates and coverage (rf_selfpool.py pack)", "", "| gate | value | pass |", "|:--|:--|:--|",
          f"| G-in (replayed inputs = served: PAI_DUMP files / drive.jsonl records) | dumps {G['G_in']['dump_eq']} / {G['G_in']['dump_n']}, records {G['G_in']['rec_eq']} / {G['G_in']['rec_n']} | {G['G_in']['pass_']} |",
-         f"| G-route (regenerated first route point vs the logged route0 <= 0.05 m) | {G['G_route']['share_le_005']} of {G['G_route']['rows_with_route0']} rows, max {G['G_route']['max']:.3f} m | {G['G_route']['pass_']} |",
+         f"| G-route (regenerated first route point vs the logged route0 <= 0.05 m) | {G['G_route']['share_le_005']} of {G['G_route']['rows_with_route0']} rows, max {G['G_route']['max']:.3f} m (row filter: {G['G_route'].get('filter')}, {G['G_route'].get('rows_dropped_by_filter', 0)} rows dropped) | {G['G_route']['pass_']} |",
          f"| G-rmem (route memory input from the logged messages vs the served rmem) | max abs diff {G['G_rmem']['max_abs_diff']} over {G['G_rmem']['rows_compared']} rows | {G['G_rmem']['pass_']} |",
          f"| G-road (demo crosses a road-edge segment; <= 1 %) | {G['G_road']['demo_cross_share']:.4f} (served plan {G['G_road']['served_plan_cross_share']:.4f}) | {G['G_road']['pass_']} |",
          f"| G-speed (demo 4 s chord vs the controller trace within 10 %; >= 99 %) | {G['G_speed']['within_10pct']:.4f}, median ratio {G['G_speed']['median_ratio']:.4f} | {G['G_speed']['pass_']} |",
@@ -579,7 +583,7 @@ def cmd_build(a):
         sh([py_train, str(R / "experiments/onpol_pai/scripts/onp_cache.py"), "build", "--pass", PASS, "--rows", str(W / "rows" / PASS), "--out", str(W / "cache")],
            env=dict(env, **({"CUDA_VISIBLE_DEVICES": a.card} if a.card else {})), cwd=str(R))
         sh([py_train, __file__, "pack", *common, "--name", a.name, "--out", a.out, "--feat", a.feat, "--pool-root", a.pool_root, "--feat-root", a.feat_root,
-            "--fig-dir", a.fig_dir, "--fig", a.fig or f"self_bev_{a.name}.png", "--pad", str(a.pad)])
+            "--fig-dir", a.fig_dir, "--fig", a.fig or f"self_bev_{a.name}.png", "--pad", str(a.pad)] + (["--drop-route0"] if a.drop_route0 else []))
         G = jload(Path(a.out) / f"pool_gates_{a.name}.json")
         run.summary.update(rows=G["rows"], scenes=G["scenes"], **{g: G[g]["pass_"] for g in ("G_in", "G_route", "G_rmem", "G_road", "G_speed", "G_r1")})
 
@@ -607,6 +611,7 @@ if __name__ == "__main__":
         p.add_argument("--pool-root", default=str(CR)), p.add_argument("--feat-root", default=str(FEAT))
         p.add_argument("--fig-dir", default=str(R / "experiments/route_follow/figs")), p.add_argument("--fig", default="")
         p.add_argument("--pad", type=float, default=PAD, help="window end = turn exit + pad m (phase `exit`)")
+        p.add_argument("--drop-route0", action="store_true", help="drop rows whose regenerated route0 deviates > 0.05 m (P4 prereg Amendment 4; G-route by construction)")
     for c in ("sim", "build"):
         p = sub.choices[c]
         p.add_argument("--stage", default="", help="staging dir for the uncompressed row files (host /tmp)")

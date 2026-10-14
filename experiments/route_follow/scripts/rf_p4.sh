@@ -28,6 +28,8 @@
 #   P4_PAR (phase B launches side by side per job; box 3, Tokyo 1: a 3090 holds two 11.2 GB stacks at most), SLOT0 (Tokyo port slot
 #   offset of a job, for several jobs on one card), VIDEO (1: keep the eval mp4s, eval.video.render_video=true; the video renders after the
 #   rollout, nothing it serves changes). The root gets code.json (served tree, commit).
+#   fanout passes TAG and P4_ONLY to its jobs (P4 round 1 identity read: TAG=<ckpt> P4_ONLY=none -> phase A only, no branch cell;
+#   P4_NAME = pool job name prefix).
 # Serving = the reference /data/runs/route_night/r281/rsg: JEV_VCONT=1.0 JEV_LEAD=1, gains 20, holdlead off; plus
 # send_recording_ground_truth=true (log fields, the log fallback) and PAI_DUMP (1 Hz model-input dumps for the rows' G-in gate).
 set -uo pipefail
@@ -187,8 +189,9 @@ PY
 )
   [[ -n $arms ]] || { echo "nothing left to submit"; exit 0; }
   col=(); [[ $N == all ]] && col=(--collect "env JEV_PY=$repo/.venv/bin/python bash $W/experiments/route_follow/scripts/rf_p4.sh read $O")      # `all` with scenes still missing: rerun fanout all later (a second collect is harmless)
-  .venv/bin/python -m jevdrive.cl fanout --name p4 --arms "$arms" --vram ${P4_VRAM:-22} --cpu 4 --ram 32 --timeout-h 8 --tries 2 \
-    --env CL_HIST_KEY=alpasim-p4c1 --env "JEV_PY=$repo/.venv/bin/python" --log-dir "$O/pool/{arm}" "${col[@]}" -- bash "$W/experiments/route_follow/scripts/rf_p4.sh" job "$O" "{arm}" | tee -a "$O/jobs.txt" || exit 1
+  .venv/bin/python -m jevdrive.cl fanout --name ${P4_NAME:-p4} --arms "$arms" --vram ${P4_VRAM:-22} --cpu 4 --ram 32 --timeout-h 8 --tries 2 \
+    --env CL_HIST_KEY=alpasim-p4c1 --env "JEV_PY=$repo/.venv/bin/python" --env "TAG=$T" ${P4_ONLY:+--env "P4_ONLY=$P4_ONLY"} \
+    --log-dir "$O/pool/{arm}" "${col[@]}" -- bash "$W/experiments/route_follow/scripts/rf_p4.sh" job "$O" "{arm}" | tee -a "$O/jobs.txt" || exit 1
   for a in ${arms//,/ }; do s=$($PY -c "import json,sys;print(next(s for s in json.load(open(sys.argv[1]))['scenes'] if s[7:15]==sys.argv[2]))" "$O/plan.json" "$a")
     mkdir -p "$O/$s"; date > "$O/$s/SUBMITTED"; done ;;
 video)  # <s8>: the selected cells of one scene of P4_SRC, served from the run's frozen tree
