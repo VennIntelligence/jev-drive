@@ -125,6 +125,7 @@ def cmd_select(a):
     import rf_shape as SH
     PL, J = jload(a.plan)["scenes"], jload(a.shape)
     rows = [dict(r, _read=f) for f in a.read for r in jload(f)["rows"]]
+    assert not [r for r in a.roots if (Path(r) / "NO_ROWS").exists()], "read-only root (NO_ROWS): never rows"
     idx = run_index(a.roots)
     exam = scenes_in(EXAM / "hard_exam.txt", EXAM / "control.txt")
     keep, failing, skipped = [], {}, []
@@ -527,6 +528,8 @@ def cmd_build(a):
     from jevdrive.run import Run
     if a.tag:
         a.name = a.tag[4:] if a.tag.startswith("on1_") else a.tag
+    bad = [r for r in a.roots if (Path(r) / "NO_ROWS").exists()]
+    assert not bad, f"{bad}: read-only roots (NO_ROWS, e.g. the P4 exam ceiling read): never rows, not even with --allow-exam"
     a.read = a.read or [str(Path(r) / "read.json") for r in a.roots]
     if not a.plan:
         c = [Path(r) / "plan.json" for r in a.roots if (Path(r) / "plan.json").exists()]

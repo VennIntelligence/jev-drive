@@ -12,12 +12,15 @@
 #   rf_p4.sh fanout <root> <N | all>           box: one GPU-pool job per scene (python -m jevdrive.cl fanout) for the first N scenes of the
 #                                              plan not yet submitted (staged launch: 1, then 10, then all; `all` adds the collect job)
 #   rf_p4.sh read <root>                       merge the per-scene reads -> <root>/{read.json, table.md, summary.json}
+#   rf_p4.sh examplan <root>                   Tokyo: plan.json of the 26 hard_exam turn scenes (EXAM_SCENES) for the read-only exam ceiling
+#                                              read (rf_p4exam.sh); writes <root>/NO_ROWS (rf_selfpool.py refuses such a root)
 # Env: BACKEND (tokyo | box; default: tokyo when /data/runs/route_night exists), CARD (Tokyo card, 1), TAG (RSG-L18-s0), PLAN (plan.json to
 #   copy into a new root; default the committed experiments/route_follow/results/p4_self/plan.json), P4_D (distances, "40,30,20,10,0"),
 #   P4_ONLY (cell suffixes, e.g. "g1.25-raw,g1-ve"), KEEP_ASL (1: keep rollout.asl until the scene's read; mp4s are always dropped),
 #   KEEP_ASL_ALL (1: keep it for every rollout), P4_CONC (concurrent rollouts per launch, 1: see above), JEV_PY (box: python with numpy),
 #   MIN_FREE_GB (fanout refuses below it, 500), P4_VRAM (pool declaration per job, 22: 3 launches x 6.5 GB measured on the box),
-#   P4_PAR (phase B launches side by side per job; box 3, Tokyo 1: a 3090 holds two 8.7 GB stacks at most). The root gets code.json (served tree, commit).
+#   P4_PAR (phase B launches side by side per job; box 3, Tokyo 1: a 3090 holds two 11.2 GB stacks at most), SLOT0 (Tokyo port slot
+#   offset of a job, for several jobs on one card). The root gets code.json (served tree, commit).
 # Serving = the reference /data/runs/route_night/r281/rsg: JEV_VCONT=1.0 JEV_LEAD=1, gains 20, holdlead off; plus
 # send_recording_ground_truth=true (log fields, the log fallback) and PAI_DUMP (1 Hz model-input dumps for the rows' G-in gate).
 set -uo pipefail
@@ -48,7 +51,7 @@ stack() {  # <run dir> <cells json> <n rollouts> <scene list>: one simulator lau
     mkdir -p "$r/driver"; chmod 777 "$r/driver"; cp "$cj" "$r/driver/p4cells.json"
     local L=$repo/experiments/alpasim/lib
     for f in onp_log_driver.py onp_p4.py; do cmp -s "$repo/experiments/onpol_pai/lib/$f" "$L/$f" || cp "$repo/experiments/onpol_pai/lib/$f" "$L/$f"; done
-    GPU=$CARD CONC=${P4_CONC:-1} PAI_BASEPORT=$((7600 + 100 * CARD + 30 * ${SLOT:-0})) TAG=$T DRV_PY=onp_log_driver.py \
+    GPU=$CARD CONC=${P4_CONC:-1} PAI_BASEPORT=$((7600 + 100 * CARD + 30 * (${SLOT0:-0} + ${SLOT:-0}))) TAG=$T DRV_PY=onp_log_driver.py \
       DRV_ENV="-e JEV_VCONT=1.0 -e JEV_LEAD=1 -e PAI_DUMP=100000 -v $L/onp_p4.py:/app/jev-drive/experiments/alpasim/lib/onp_p4.py:ro -v $D/runs/op_parity/runs/$T:/app/data/runs/op_parity/runs/$T:ro" \
       bash "$repo/experiments/alpasim/scripts/pai_run.sh" "$r" "$sl" "${WIZ[@]}" "runtime.simulation_config.n_rollouts=$n" > "$r.out" 2>&1; rc=$?
   else
@@ -124,6 +127,11 @@ plan)
   apy plan --scenes "$O/scenes38.txt" --roots /data/runs/route_night/r281/rsg /data/runs/route_night/pait/pass --out "$O/plan.json" ;;
 job)
   job "$1" ;;
+examplan)
+  [[ $BACKEND == tokyo ]] || { echo "examplan runs on Tokyo (the exam scenes' reference runs are there)" >&2; exit 2; }
+  grep -o 'clipgt-[0-9a-f-]*' "${EXAM_SCENES:-/data/runs/route_night/exam_turn26.txt}" > "$O/scenes.txt"
+  echo "P4 exam ceiling read (read-only): never a training row; rf_selfpool.py refuses this root" > "$O/NO_ROWS"
+  apy plan --scenes "$O/scenes.txt" --roots /data/runs/route_night/r281/rsg --out "$O/plan.json" ;;
 smoke)
   [[ $BACKEND == tokyo ]] || { echo "smoke runs on Tokyo" >&2; exit 2; }
   rm -f "$O"/SMOKE_{DONE,FAIL}; S1SC=${S1SC:-a174faed eaba3f6a}; S2SC=${S2SC:-f9e361aa}

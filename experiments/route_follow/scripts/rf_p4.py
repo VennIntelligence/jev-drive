@@ -535,13 +535,18 @@ def table(a):
     any1 = sum(any(v["done"] for v in c.values()) for c in cov.values())
     idd = sum(bool(r["done"]) for r in rows if r["tag"] == "id")
     verdict = "PASS" if line_n >= 0.6 * n else "FAIL" if line_n <= 0.35 * n else "INCONCLUSIVE"
+    idsc = {r["scene"] for r in rows if r["tag"] == "id" and r["done"]}
+    any1_id = sum(any(v["done"] for v in c.values()) or sc in idsc for sc, c in cov.items())
+    if a.ceiling:                                            # exam ceiling read (prereg 2026-10-14-p4-exam-ceiling): an upper bound, no line
+        verdict = "no pass / fail (ceiling read)"
     L += ["", "## Coverage", "",
           f"- turns: {n}; identity (the policy alone) completes {idd} / {sum(r['tag'] == 'id' for r in rows)}",
           f"- turns with >= 1 completing branch cell at some distance: {any1} / {n}; at >= 2 distinct handovers: {any2} / {n}",
           f"- determinism: self branches whose plans before h differ from phase A's identity at the same k: "
           f"{sum((r.get('pre_h_diff') or 0) > 0 for r in rows)} of {sum(r.get('pre_h_diff') is not None for r in rows)}",
           f"- **line: turns with completing cells at >= 2 distinct handovers with realized entry speed <= v_e + 1 m/s: {line_n} / {n} = "
-          f"{100 * line_n / max(n, 1):.0f} % -> {verdict}** (pass >= 60 %, fail <= 35 %); self handovers only: {line_self} / {n}",
+          f"{100 * line_n / max(n, 1):.0f} % -> {verdict}**{'' if a.ceiling else ' (pass >= 60 %, fail <= 35 %)'}; self handovers only: {line_self} / {n}",
+          f"- turns with >= 1 completing cell including the identity: {any1_id} / {n}",
           f"- row yield (completing cells that pass the full shape gate: class p95 kappa / dkappa, a_lat <= human p95, entry speed <= v_e + 1): "
           f"turns with >= 1: {gate1} / {n}; at >= 2 distinct handovers: {gate2} / {n}",
           "- per distance (turns with >= 1 completing cell): " + ", ".join(f"D{Dd} {any_d[Dd]}" for Dd in DS), ""]
@@ -561,6 +566,8 @@ def table(a):
         agg(lambda r, g=g: f"-g{g:g}-" in r["tag"], f"gain {g:g}")
     for Dd in DS:
         agg(lambda r, Dd=Dd: r["D"] == Dd, f"D{Dd}")
+    for c in cellnames[1:]:
+        agg(lambda r, c=c: r["tag"].endswith("-" + c), f"cell {c}")
     agg(lambda r: r["src"] == "self", "src self")
     agg(lambda r: r["src"] == "log", "src log (fallback)")
     hv = [PL[sc]["v_log_entry"] for sc in cov]
@@ -571,7 +578,7 @@ def table(a):
     if a.md:
         Path(a.md).write_text(s + "\n")
     if a.json:
-        Path(a.json).write_text(json.dumps(dict(n=n, line=line_n, line_self=line_self, verdict=verdict, any1=any1, any2=any2, gate1=gate1, gate2=gate2, per_d=any_d, cov=cov), indent=1) + "\n")
+        Path(a.json).write_text(json.dumps(dict(n=n, line=line_n, line_self=line_self, verdict=verdict, any1=any1, any1_id=any1_id, ident=idd, any2=any2, gate1=gate1, gate2=gate2, per_d=any_d, cov=cov), indent=1) + "\n")
 
 
 if __name__ == "__main__":
@@ -613,5 +620,6 @@ if __name__ == "__main__":
     p.add_argument("--plan", required=True)
     p.add_argument("--md")
     p.add_argument("--json")
+    p.add_argument("--ceiling", action="store_true", help="exam ceiling read: no pass / fail verdict")
     a = ap.parse_args()
     {"plan": plan, "cells": cells, "reach": reach, "s1": s1, "s2": s2, "read": read, "merge": merge, "table": table}[a.cmd](a)
