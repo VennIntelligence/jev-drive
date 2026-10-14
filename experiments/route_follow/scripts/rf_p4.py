@@ -31,10 +31,11 @@ curvature-limited speed profile to v_e or 0.8 v_e until exit + 10 m; the rollout
   s2     (plain python3)  rf_p4.py s2 --plan <plan.json> --run <phase B run dir>   per P4 session: h recomputed from the logged stations,
          lateral window length, the profile's served poses recomputed from the logged raw plan / station / speed (tolerance 0.05 m), the
          release at exit + 10 m, realized vs profile speed at the entry.
-  vselect (plain python3) rf_p4.py vselect --read <read.json> --plan <plan.json> --out <select.json>   the cells to re-run with the camera
-         (rf_p4.sh vfanout): per scene the identity, per distinct handover with a completing cell the preferred completing cell (g1.25, then
-         g1, then g1.5; raw, then ve, then ve08) and the first failing cell in the same order, all cells at D40 on the 4 scenes where a push
-         completes and the identity fails, and g1.25-raw at the first handover on scenes with no completing cell.
+  vselect (plain python3) rf_p4.py vselect --read <read.json> --plan <plan.json> --out <select.json> [--wide]   the cells to re-run with
+         the camera (rf_p4.sh vfanout): per scene the identity and the best completing cell (best_cell: the D40 handover first, then
+         g1.25 / g1 / g1.5, raw / ve / ve08), or g1.25-raw at D40 when no cell completes. --wide (the first, 11-scene batch): per distinct
+         handover with a completing cell the preferred completing and the first failing cell, all cells at D40 on the 4 scenes where a push
+         completes and the identity fails.
   vcollect (plain python3) rf_p4.py vcollect --root <video root> --ref <P4 run root> --plan <plan.json> --out <manifest.json>
          Per camera re-run session: served plans at every decision, controller track and score against the stored session of the same cell
          (bit-identical check), the mp4, and the stored read's outcome / entry speed (gallery manifest, p4_videos.py).
@@ -598,6 +599,12 @@ def outcome(r):
     return "done" if r["done"] else OUTC.get(r.get("zero") or "", "") or ("rear" if r["end"] == "rear" else r["end"])
 
 
+def best_cell(cells):
+    """The cell to show of a scene's completing branch cells (read rows): the D40 handover first, then PREF, then the larger D."""
+    done = [r for r in cells if r["done"] and r["tag"] != "id"]
+    return min(done, key=lambda r: (r["D"] != 40, PREF.index(r["tag"].split("-", 2)[2]), -r["D"])) if done else None
+
+
 def vselect(a):
     rows = json.load(open(a.read))["rows"]
     by = {}
@@ -607,6 +614,11 @@ def vselect(a):
     for s8, rr in sorted(by.items()):
         sel = [r["tag"] for r in rr if r["tag"] == "id"]
         B = [r for r in rr if r["phase"] == "B"]
+        if not a.wide:
+            b = best_cell(B)
+            out[s8] = sel + ([b["tag"]] if b else [r["tag"] for r in B if r["tag"] == "D40-self-g1.25-raw"][:1] or
+                             [r["tag"] for r in B if r["tag"].endswith("g1.25-raw")][:1])
+            continue
         anyd = any(r["done"] for r in B)
         for D in sorted({r["D"] for r in B}, reverse=True):
             cs = {r["tag"].split("-", 2)[2]: r for r in B if r["D"] == D}
@@ -725,6 +737,7 @@ if __name__ == "__main__":
     p.add_argument("--json")
     p.add_argument("--ceiling", action="store_true", help="exam ceiling read: no pass / fail verdict")
     p = sp.add_parser("vselect")
+    p.add_argument("--wide", action="store_true")
     p.add_argument("--read", required=True)
     p.add_argument("--plan", required=True)
     p.add_argument("--out", required=True)

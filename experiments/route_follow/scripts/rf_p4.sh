@@ -15,7 +15,7 @@
 #   rf_p4.sh examplan <root>                   Tokyo: plan.json of the 26 hard_exam turn scenes (EXAM_SCENES) for the read-only exam ceiling
 #                                              read (rf_p4exam.sh); writes <root>/NO_ROWS (rf_selfpool.py refuses such a root)
 #   P4_SRC=<run root> rf_p4.sh vfanout <vroot> <N | all | s8,s8>   box: camera re-runs of a finished run for watching (select.json from
-#                                              rf_p4.py vselect), one pool job per scene (`video`), `all` adds the vcollect job; the
+#                                              rf_p4.py vselect: identity + best completing cell), one pool job per scene (`video`), `all` adds the vcollect job; the
 #                                              rollouts are bit-identical box vs box (results/p4_self/box_det.md), vcollect checks each one
 #   P4_SRC=<run root> rf_p4.sh video <vroot> <s8>   one scene: its selected cells (cells_A / cells_B of the run, same order of preference)
 #                                              in P4_PAR launches with VIDEO=1, served from the run's frozen tree (code.json "served")
@@ -240,7 +240,7 @@ PY
   [[ -n $arms ]] || { echo "nothing left to submit"; exit 0; }
   col=(); [[ $N == all ]] && col=(--collect "env P4_SRC=$SRC JEV_PY=$PY bash $repo/experiments/route_follow/scripts/rf_p4.sh vcollect $O")
   .venv/bin/python -m jevdrive.cl fanout --name p4v --arms "$arms" --vram ${P4_VRAM:-22} --cpu 4 --ram 32 --timeout-h 4 --tries 2 \
-    --env CL_HIST_KEY=alpasim-p4v --env "JEV_PY=$PY" --env "P4_SRC=$SRC" --log-dir "$O/pool/{arm}" "${col[@]}" -- \
+    --env CL_HIST_KEY=alpasim-p4v --env "JEV_PY=$PY" --env "P4_SRC=$SRC" --env "P4_PAR=${P4_PAR:-3}" --log-dir "$O/pool/{arm}" "${col[@]}" -- \
     bash "$repo/experiments/route_follow/scripts/rf_p4.sh" video "$O" "{arm}" | tee -a "$O/jobs.txt" || exit 1
   for a in ${arms//,/ }; do s=$($PY -c "import json,sys;print(next(s for s in json.load(open(sys.argv[1]))['scenes'] if s[7:15]==sys.argv[2]))" "$O/plan.json" "$a")
     mkdir -p "$O/$s"; date > "$O/$s/SUBMITTED"; done ;;
