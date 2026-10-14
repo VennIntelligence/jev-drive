@@ -4,14 +4,17 @@ Read this when you need to log in to or use the GPU box.
 There are two boxes now: this one runs the experiments, and [tokyo-box.md](tokyo-box.md) is the one
 with a monitor, for looking at CARLA with your own eyes.
 
-- Login: `ssh autodl` (alias in local `~/.ssh/config`, key auth as `ujs`; `connect.weste.seetacloud.com`, port 25199).
-  On 2026-09-28 the box moved to a new AutoDL instance, a full copy of the old one (same disks, users, keys, envs); the
-  old host (`connect.westd.seetacloud.com:41708`) is off and has no GPUs. The root password is only in the Mac's
+- Login: `ssh autodl` (alias in local `~/.ssh/config`, key auth as `ujs`; `connect.weste.seetacloud.com`, port 53804).
+  On 2026-10-14 the box moved again to a new AutoDL instance (3 cards; same host name, new port), a full copy of the
+  previous one (same data disk, users, keys, envs, `~/data` link); the 2026-09-28 instance (port 25199) is off, as is
+  the original `connect.westd.seetacloud.com:41708`. The pool state carried over clean (0 running, 0 queued) and the
+  dispatcher was restarted in tmux `jev:pool`. The root password is only in the Mac's
   gitignored `.env`; key login as `ujs` is all our work needs. sshd on the port is hammered by outside root login attempts
   and answers `Exceeded MaxStartups` / `Connection reset` to bursts of new connections: keep ControlMaster on and
   retry after a few seconds.
 - **The box is elastic.** Cards, CPU quota, RAM and pids.max change with the instance: 7 cards / 175 cores / 644 GiB
-  on 2026-09-28, 3 cards / 75 cores / 276 GiB on 2026-10-01. Do not trust a count on this page; run
+  on 2026-09-28, 3 cards / 75 cores / 276 GiB on 2026-10-01, 6 cards / 150 cores / 552 GiB until 2026-10-13,
+  3 cards / 66 cores / 276 GiB (host 224 CPUs, 754 GiB) since 2026-10-14. Do not trust a count on this page; run
   `.venv/bin/python -m jevdrive.cl probe` (cards, NUMA, quota, pids, memory, pool jobs per card); `python -m jevdrive.cl top` for the GPU pool.
   Closed-loop sizing: [closed-loop-runbook.md](closed-loop-runbook.md).
 - GPUs: **NVIDIA RTX 6000D** (Blackwell, sm_120, 156 SMs, 450 W cap) since 2026-09-28, 83.6 GiB each
@@ -25,8 +28,11 @@ with a monitor, for looking at CARLA with your own eyes.
 - CPU and RAM: the host (2 x Xeon Platinum 8470Q, Sapphire Rapids) shows 208 CPUs (NUMA 0 = 0-51,104-155,
   NUMA 1 = 52-103,156-207; CPU i and i + 104 are hyperthread siblings), but the container's cgroup quota is what we get:
   25 cores per card so far (175 on the 7-card instance, 75 on the 3-card one; `/sys/fs/cgroup/cpu.max`), RAM from
-  `memory.max`, pids.max 20480. `os.cpu_count()` reports the host count, so size thread and process pools with
-  `jevdrive.common.n_cpus()`, not the host count. On 2026-10-01 card 0 sits on NUMA 0, cards 1-2 on NUMA 1.
+  `memory.max`, pids.max 20480 (22 cores per card on the 2026-10-14 instance, which shows 224 host CPUs, 112 per
+  NUMA node). `os.cpu_count()` reports the host count, so size thread and process pools with
+  `jevdrive.common.n_cpus()`, not the host count. On 2026-10-01 and again on 2026-10-14 card 0 sits on NUMA 0, cards 1-2 on NUMA 1.
+  Right after a (re)start `nvidia-smi` reports 100 % util on idle cards with 0 MiB used and no processes; it clears
+  after the first kernel. Warm bf16 matmul re-measured 143 TFLOPS on 2026-10-14.
 - **Host memory: the kill line.** The platform (an agent outside the container; `autopanel` and the other root
   processes inside hold no cgroup or signal code) SIGKILLs the largest process by RSS, again every 2-5 s, while
   **`memory.current` - `inactive_file` >= 98 % of `memory.max`** (541.0 of 552 GiB on the 6-card instance). It is not
@@ -72,4 +78,4 @@ with a monitor, for looking at CARLA with your own eyes.
 - Python: use `uv`, and create venvs under `~/data`.
 - A re-created instance loses users, keys and packages, and the host and port change. Re-check this page then.
 
-Last verified: 2026-10-01 (remote box configuration); host memory 2026-10-10
+Last verified: 2026-10-14 (remote box configuration, 3-card instance); host memory 2026-10-10
