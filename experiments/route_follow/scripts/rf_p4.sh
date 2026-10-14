@@ -123,15 +123,20 @@ PY
 fanout)
   [[ $BACKEND == box ]] || { echo "fanout runs on the GPU box" >&2; exit 2; }
   N=${1:?N or all}; cd "$repo" || exit 1
-  arms=$($PY - "$O" "$N" <<'PY'
-import json, os, sys
-O, N = sys.argv[1], sys.argv[2]
-sc = [s for s in json.load(open(f"{O}/plan.json"))["scenes"] if not os.path.exists(f"{O}/{s}/SUBMITTED")]
+  arms=$($PY - "$O" "$N" "$D" <<'PY'
+import csv, json, os, sys
+O, N, D = sys.argv[1:]
+have, ok = set(os.listdir(f"{D}/datasets/nurec/all-usdzs")), set()      # scenes whose usdz is in the cache (a fetch may still run)
+for f in ("sim_scenes.csv", "sim_scenes_2604.csv"):
+    ok |= {r["scene_id"] for r in csv.DictReader(open(f"{D}/third_party/alpasim/data/scenes/{f}")) if r["uuid"] + ".usdz" in have}
+todo = [s for s in json.load(open(f"{O}/plan.json"))["scenes"] if not os.path.exists(f"{O}/{s}/SUBMITTED")]
+sc = [s for s in todo if s in ok]
+print(f"{len(todo) - len(sc)} unsubmitted scenes not in the scene cache yet (left for a later fanout)", file=sys.stderr)
 print(",".join(s[7:15] for s in (sc if N == "all" else sc[: int(N)])))
 PY
 )
   [[ -n $arms ]] || { echo "nothing left to submit"; exit 0; }
-  col=(); [[ $N == all ]] && col=(--collect "bash $here/rf_p4.sh read $O")
+  col=(); [[ $N == all ]] && col=(--collect "bash $here/rf_p4.sh read $O")      # `all` with scenes still missing: rerun fanout all later (a second collect is harmless)
   .venv/bin/python -m jevdrive.cl fanout --name p4 --arms "$arms" --vram 20 --cpu 6 --ram 40 --timeout-h 4 --tries 2 \
     --env CL_HIST_KEY=alpasim-read4 --log-dir "$O/pool/{arm}" "${col[@]}" -- bash "$here/rf_p4.sh" job "$O" "{arm}" | tee -a "$O/jobs.txt" || exit 1
   for a in ${arms//,/ }; do s=$($PY -c "import json,sys;print(next(s for s in json.load(open(sys.argv[1]))['scenes'] if s[7:15]==sys.argv[2]))" "$O/plan.json" "$a")
