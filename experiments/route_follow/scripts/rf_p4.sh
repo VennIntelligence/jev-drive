@@ -54,8 +54,9 @@ stack() {  # <run dir> <cells json> <n rollouts> <scene list>: one simulator lau
   find "$r/sim/rollouts" -name '*.mp4' -delete 2>/dev/null
   [[ ${KEEP_ASL:-1} == 1 ]] || find "$r/sim/rollouts" -name 'rollout.asl' -delete 2>/dev/null
   local got; got=$($PY -c "import json,sys;print(len(json.load(open(sys.argv[1]))['rollouts']))" "$r/sim/aggregate/results-summary.json" 2>/dev/null || echo 0)
-  echo "$(date '+%F %T') stack $(basename "$r"): rc $rc, $got / $n rollouts" >> "$O/log.txt"
-  (( rc == 0 && got == n ))
+  local want=$(( n * $(grep -c . "$sl") ))                  # n_rollouts is per scene
+  echo "$(date '+%F %T') stack $(basename "$r"): rc $rc, $got / $want rollouts" >> "$O/log.txt"
+  (( rc == 0 && got == want ))
 }
 
 job() {  # <scene>: phase A, reach, phase B, read
