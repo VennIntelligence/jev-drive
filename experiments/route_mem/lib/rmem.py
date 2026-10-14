@@ -20,7 +20,7 @@ Ordered layout (route v2, experiments/route_follow/plans/2026-10-15-route-v2-pre
   points    the same window (arc offsets from the ego's projection on the merged route, 2 m), cut at +40 m: OFFS_O = -6, -4, .., +40
             (N_PT_O = 24; 3 points behind the ego). Points beyond +40 m are dropped (no slot), not masked.
   scalars   [d_turn / 60, d_turn known, min(trav, 200) / 100] appended: d_turn = arc offset of the first valid point in 0 .. +60 m whose heading
-            differs >= 30 deg from the reference heading (the route's at offset 0 when that point is valid, else the ego's own heading, i.e.
+            differs >= 30 deg from the reference heading (and still differs 4 m on, or the memory ends there: a merge kink is not a turn) (the route's at offset 0 when that point is valid, else the ego's own heading, i.e.
             the near gap of the first decisions); none found: 60 when the +60 m point is valid, else unknown (value 0, bit 0). trav = arc
             length the ego has travelled since the first route message (chords between the poses of the messages up to t0, then to the
             anchor). DIM_O = 24 x 5 + 3 = 123. The ordered features are a pure function of the old window and trav (to_order), so the
@@ -152,6 +152,7 @@ def turn_dist(f):
     ref = np.where(v[..., I0], h[..., I0], 0.0)
     dh = np.abs((h - ref[..., None] + np.pi) % (2 * np.pi) - np.pi)
     c = v & (dh >= np.radians(TURN_DEG))
+    c[..., :-2] &= c[..., 2:] | ~v[..., 2:]                                    # persistent over 4 m (a merge kink is one segment, two points)
     c[..., :I0] = False
     c[..., I60 + 1:] = False
     return np.where(c.any(-1), OFFS[np.argmax(c, -1)], np.where(v[..., I60], TURN_CAP, np.nan))
@@ -176,6 +177,7 @@ def to_order_t(f, trav):
     ref = torch.where(v[:, I0], h[:, I0], torch.zeros_like(h[:, I0]))
     dh = ((h - ref[:, None] + np.pi) % (2 * np.pi) - np.pi).abs()
     c = v & (dh >= float(np.radians(TURN_DEG)))
+    c[:, :-2] &= c[:, 2:] | ~v[:, 2:]
     c[:, :I0] = False
     c[:, I60 + 1:] = False
     offs = torch.as_tensor(OFFS, dtype=torch.float32, device=f.device)
