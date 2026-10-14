@@ -207,3 +207,12 @@ G-rely degrade with it; detaching the shared network halves the dev-ADE cost at 
 (0.5569; the adapter's bias reaches every row, so the damage does not need the trunk). The lateral-offset features change nothing at
 1 000 steps (iv = ii within noise; their zero-init map barely moves). G-LC rests on 26 dev rows (CIs 0.03-0.60). Training-side swing on
 the pairs at step 1 000: 0.12 / 0.23 / 0.22 / 0.55 / 0.22 m. GPU tonight ~1.15 card-h in total (this amendment ~0.3).
+
+## Amendment 6 (main session, 2026-10-15 01:40, before the full round)
+
+- `--lc-cf` is dropped from both arms: no weight passes G-LC (>= 0.30) while G-rely / G-real / G-ST pass (Amendment 5), so the term
+  would be in the recipe without a working mechanism. Lane changes stay unsolved by counterfactual pairs; the on-policy lane hinge of arm b
+  is the only term left that can pull the car toward the route's lane.
+- Full round: arm a = `--rm-order` (slot-defect fix only, the control for b); arm b = `--rm-order --lane-lam 1 --lane-dz 0.5 --lane-neg 0.2`.
+  2 seeds each, gentle schedule, base = the lr x steps pilot's winner (RSG-L18 if flat), held 460 paired vs the base and vs RSG-L18-s<seed>,
+  rf_follow turn completion on the 24 held turns. Lines H1-H3 unchanged.

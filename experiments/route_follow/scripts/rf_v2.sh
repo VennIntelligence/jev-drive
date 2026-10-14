@@ -22,7 +22,7 @@ P=$DATA_DIR/third_party/alpasim/.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin
 PRIO=${PRIO:-6}; BASE_REV=${BASE_REV:-6551f10b}
 # RSG-L18-s0's command (meta.json argv) without --init / --steps / --seed / --tag
 REC="--warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-split alpasim_nuplan/onpol-train --on-mode self --on on1_L18RB0"
-ARM_a="--rm-order --lc-cf --lc-lam 1"; ARM_b="--rm-order --lc-cf --lc-lam 1 --lane-lam 1 --lane-dz 0.5 --lane-neg 0.2"   # Amendment 3: weight 1
+ARM_a="--rm-order"; ARM_b="--rm-order --lane-lam 1 --lane-dz 0.5 --lane-neg 0.2"   # Amendment 6: lc-cf dropped (fails G-LC at every guard-passing weight)
 arm() { case $1 in a) echo "$ARM_a" ;; b) echo "$ARM_b" ;; c) echo "" ;; o) echo "--rm-order" ;; l) echo "--lc-cf" ;; *) echo "arm a | b (| c o l: diagnostics)" >&2; exit 2 ;; esac; }
 D12=$(for i in $(seq 0 11); do printf "navtrain_full.s%dof12 " $i; done)
 mkdir -p $O/pool
