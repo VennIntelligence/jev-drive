@@ -27,7 +27,8 @@ one record per call; start.jsonl: the full rollout spec of every session), PAI_D
 JPEG are saved once per second to <log dir>/dump), PAI_KEYWARP, JEV_VCONT / JEV_LEAD (the served speed profile: serve_fix.py; both off by default), JEV_TRACK / JEV_TRACK_CFG (the trajectory handed to
 the controller is a feasible reference built from the plan and the ego state, never a large-steering one: track_ref.py; off by default), JEV_VHIST
 (off | hold | zero | holdlead: the speed history fed to the adapter, vhist.py, mounted like track_ref.py; logged as `vhist`, `ego` stays the measured
-row; off by default).
+row; off by default), JEV_TURN_GAIN (<g>: the served plan's yaw / course scaled by g while the fed route memory shows a turn the plan under-takes,
+turn_gain.py, a diagnostic; logged as `tg`, and `poses_branch` while on, `poses` stays the plan; off by default).
 Run inside the nuPlan submission image with this directory's pai_*.py mounted (docs/alpasim.md, "PAI track on the Tokyo box").
 """
 from __future__ import annotations
@@ -49,6 +50,7 @@ from navsim_transfuser_challenge.trajectory import CachedPlan  # the image's sh3
 import pai_core as PC
 import serve_fix as FX
 import track_ref as TR
+import turn_gain as TG
 import vhist as VH
 from pai_core import C, I
 
@@ -267,6 +269,9 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
             s.anchor = common_pb2.PoseAtTime(timestamp_us=t0, pose=common_pb2.Pose(
                 vec=common_pb2.Vec3(x=float(p0[0]), y=float(p0[1]), z=near.pose.vec.z),
                 quat=common_pb2.Quat(w=float(np.cos(p0[2] / 2)), x=0.0, y=0.0, z=float(np.sin(p0[2] / 2)))))
+            tgr = None
+            if TG.ON:                                        # JEV_TURN_GAIN (turn_gain.py): the plan's turn scaled while it under-takes the route's
+                served, tgr = TG.apply(rf, o["poses"])
             if TR.ON:                                        # the feasible reference instead of the plan (track_ref.py)
                 ref, tri = TR.build(o["poses"], float(np.hypot(*V[-1])), float(dyn[-1][2]), a0=float(dyn[-1][1][0]))
                 ax, tilt = TR.anchor(p0, near.pose.quat)    # tilted pose (ground-mesh defect): the controller's planar yaw
@@ -274,7 +279,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 if tilt:
                     tri["tilt"] = round(float((ax[2] - p0[2] + np.pi) % (2 * np.pi) - np.pi), 3)
             else:
-                s.plan = S.make_cached_plan(t0, s.anchor, o["poses"])
+                s.plan = S.make_cached_plan(t0, s.anchor, served if TG.ON else o["poses"])
         traj = S.build_trajectory_from_plan(s.plan, s.anchor, now, tq)
         t_out = time.perf_counter()
         rec = {"kind": "drive", "t": time.time(), "session": req.session_uuid, "scene": s.scene, "now": now, "tq": tq, "t0": t0, "k": k,
@@ -288,6 +293,8 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
                 rec.update(fix=fx, poses_model=o["poses_model"].round(4).tolist())
             if TR.ON:
                 rec.update(track=tri, poses_track=TR.poses8(ref).round(4).tolist())
+            if tgr is not None:
+                rec.update(tg=tgr, **({"poses_branch": np.round(served, 4).tolist()} if tgr["on"] else {}))
             if "rmem" in o:
                 rec.update(rmem=np.asarray(o["rmem"], np.float64).round(5).tolist())
             if s.vh is not None:
@@ -306,7 +313,7 @@ class Driver(egodriver_pb2_grpc.EgodriverServiceServicer):
         return egodriver_pb2.DriveResponse(trajectory=traj)
 
     def get_version(self, req, ctx):
-        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
+        return common_pb2.VersionId(version_id=f"jev-pai-{self.core.tag}-{self.cold}{'-kw' if self.keywarp else ''}{FX.SUFFIX}{TR.SUFFIX}{VH.SUFFIX}{TG.SUFFIX}", git_hash=os.environ.get("SH30_GIT_HASH", "local"),
                                     grpc_api_version=S.API)
 
 
@@ -349,7 +356,8 @@ def main() -> None:
         RMEM.SERVE_ORDER = RMEM.head_order(tag)          # route v2: the ordered layout (sidecar head `order`)
         LOG.info("serving the ROUTE-MEM branch, memory %s", "on" if os.environ.get("SH30_RMEM", "1") != "0" else "OFF (SH30_RMEM=0)")
     core.lead_out, core.base_out = FX.NEED_LEAD or VH.NEED_LEAD, FX.BASE > 0
-    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TR.MODE,
+    assert not (TG.ON and TR.ON), "JEV_TURN_GAIN transforms the plan handed to make_cached_plan; JEV_TRACK must be off"
+    LOG.info("serving: JEV_VCONT %g, JEV_LEAD %d, JEV_BASE %d, JEV_VHIST %s, JEV_TURN_GAIN %g, JEV_TRACK %s %s", FX.VCONT, FX.LEAD, FX.BASE, VH.MODE, TG.G, TR.MODE,
              {k: getattr(TR, k) for k in ("AMIN", "AMAX", "ALAT", "JLAT", "KMAX", "KRATE", "TAU_LAT", "D_MIN")} if TR.ON else "")
     z, e = np.zeros((8,) + C.FRAME, np.uint8), np.zeros
     warm = lambda: PC.plan(core, z, np.ones(8, bool), e((4, 3)), e((4, 2)), e(2), np.array([0, 1, 0, 0]), [1.7, 0.0, 1.5])  # noqa: E731
