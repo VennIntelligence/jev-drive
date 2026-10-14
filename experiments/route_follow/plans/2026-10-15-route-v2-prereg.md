@@ -141,3 +141,38 @@ while the ego is short of the memory's start and the route bends in between, the
   Two pilots (RV2aP / RV2bP-L18-s0: 1 000 steps, seed 0, batch 64, init RSG-L18-s0), all seven gates per arm; full round = 2 arms x 2
   seeds, gentle schedule, on the base the coordinator names, held 460 paired vs the base and vs RSG-L18-s<seed> (H1-H3 unchanged).
 - Cost: pilots + gates ~0.3 card-h; full round 4 x 2 500 steps ~0.5 + 4 gates ~0.4 + 4 held reads ~2.8 = ~3.7 card-h.
+
+## Amendment 3 (pilot reads, 2026-10-15 01:15; the lines of section 3 unchanged)
+
+Bit identity (every flag off, 50 eager steps of RSG-L18-s0's command, this code vs `6551f10b`): 109 + 97 tensors identical, dev ADE 0.5284
+-> 0.5320 in both (results/v2gate/ident.json, ident_dev.txt). Pilots: 1 000 steps, seed 0, batch 64, init RSG-L18-s0; gate vs RSG-L18-s0
+(results/v2gate/RV2*.md). Fixes made between reads (code, not lines): the ordered head's forward is picked by input width (first a / b run
+crashed at step 0); negatives and the gate's straight fakes also on near-gap rows (with the +0 m slot required only ~15 % of rows
+qualified: 2 % negatives, 0 dev curve rows; the straight fake runs from the ego along its heading there).
+
+| pilot (flags) | G-rely >= 0.01 | G-swap >= 0.50 / 0.70 | G-ST <= 0.10 (shift / straight) | G-LC >= 0.50 | G-real <= 0.5385 | G-over <= 0.0067 | G-slot <= 0.5 |
+|:--|--:|:--|:--|--:|--:|--:|--:|
+| base RSG-L18-s0 | 0.0248 | 0.176 / 0.691 | 0.004 / 0.023 | 0.067 | 0.5285 | 0.0067 | 4.51 (old) |
+| RV2aP (order + lc, lc-lam 10) | **-0.016** | **0.291** / 0.743 | 0.022 / **0.124** | **0.217** | **0.5658** | 0.0067 | 0.0002 |
+| RV2bP (+ lane 10, narrow negatives) | **-0.035** | **0.379** / 0.798 | **0.124 / 0.154** | **0.233** | **0.5806** | 0.0056 | 0.0002 |
+| RV2bP2 (+ lane 10, wide negatives) | **-0.028** | **0.331** / 0.771 | 0.071 / 0.076 | **0.213** | **0.5745** | 0.0056 | 0.0002 |
+| RV2cP (no flag, control) | 0.0228 | **0.200** / 0.751 | 0.003 / 0.023 | **0.070** | 0.5264 | 0.0067 | (old) |
+| RV2oP (order only) | 0.0212 | **0.206** / 0.739 | 0.003 / 0.021 | **0.075** | 0.5277 | 0.0067 | 0.0002 |
+| RV2lP (lc only, lc-lam 10) | **-0.014** | **0.310** / 0.749 | 0.023 / **0.107** | **0.179** | **0.5635** | 0.0067 | (old) |
+| **RV2aP3 (order + lc, lc-lam 1)** | 0.0179 | **0.227** / 0.746 | 0.005 / 0.027 | **0.098** | 0.5280 | 0.0067 | 0.0002 |
+| **RV2bP3 (+ lane 1, wide negatives)** | 0.0180 | **0.215** / 0.746 | 0.005 / 0.016 | **0.092** | 0.5284 | 0.0067 | 0.0002 |
+
+Reading: the ordered layout costs nothing (oP = cP on every gate) and fixes the slot defect. The lane-change pairs at weight 10 (D6) are
+what breaks G-real / G-rely (lP alone: dev ADE +0.035, masking the memory then helps): the stay-lane hinge at 10 per row-metre on 4 of 64
+rows moves the trunk (ade without memory 0.5433 -> 0.5495, control 0.5409). At weight 1 every guard gate passes (a3 / b3) but the lane-change
+swing on the 26 dev lc rows is 0.09-0.10 m (line 0.50; at weight 10 0.18-0.23). G-swap fails in every arm, including the control (0.20),
+as expected: no arm trains junction counterfactual rows (RB-F did, 0.55); the R-CF stop line (G-swap < 0.20) is not crossed (0.215-0.227).
+The lane hinge at weight 10 makes the plan follow a shifted route (0.12 m) until the negatives cover the gap rows (0.07); at weight 1 it is
+inert offline (b3 = a3 on every gate).
+
+Decisions (recorded, not launched): D6 is replaced by weight 1 for `--lc-lam` and `--lane-lam` in `rf_v2.sh` (the only setting that passes
+G-real); with it G-LC and G-swap fail, so by section 3 neither arm qualifies for the full round as pre-registered. Proposals for the
+coordinator: (1) launch V2a as the slot-defect fix only (the lane-change term is inert at weight 1; G-LC fails), or (2) one more 1 000-step
+pilot each at `--lc-lam 3` and with the stay-lane hinge's gradient kept off the trunk (branch + adapter only), ~0.1 card-h each, before
+deciding on `--lc-cf`; (3) G-swap needs the junction counterfactual pool (on1_CF j0 / j1) in the arm, which no arm has. GPU used tonight
+~0.85 card-h (2 identity runs, 10 pilot trainings incl. two crashed at step 0, 10 gate reads).

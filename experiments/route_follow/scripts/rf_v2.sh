@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ROUTE v2 (plans/2026-10-15-route-v2-prereg.md, Amendment 2): arms on top of RSG-L18-s0's exact recipe (route_mem/train-RSG-L18-s0 meta.json)
-#   V2a = --rm-order --lc-cf          (ordered, progress-anchored route memory: the slot defect fix of decision 299; lane-change pairs)
-#   V2b = V2a + --lane-lam 10         (near-field lane hinge with shift / straight negatives and the over-turn guard)
+#   V2a = --rm-order --lc-cf --lc-lam 1   (ordered, progress-anchored route memory: the slot defect fix of decision 299; lane-change pairs)
+#   V2b = V2a + --lane-lam 1              (near-field lane hinge with shift / straight negatives and the over-turn guard)
 # Every GPU job through the pool at low priority (PRIO, default 6); ids appended to $O/jobs.txt. Box, repo root.
 #   rf_v2.sh build                      CPU: rf_cfpool build --order (12 shards) -> rm_build order (12 navtrain shards + yaw-rate rows, pool
 #                                       on1_L18RB0, on1_CF / on1_CFdev) ; G-slot memory of the held cases (rf_v2gate slotmem)
@@ -22,7 +22,7 @@ P=$DATA_DIR/third_party/alpasim/.venv/bin/python; TR=$DATA_DIR/envs/op-train/bin
 PRIO=${PRIO:-6}; BASE_REV=${BASE_REV:-6551f10b}
 # RSG-L18-s0's command (meta.json argv) without --init / --steps / --seed / --tag
 REC="--warmup 1 --lr-scale 0.1 --eval-every 500 --yr-mass 0.1 --label-bank --agent-lam 10 --agent-on-only --shape --ho-w 3 --rm-lr 3e-4 --on-split alpasim_nuplan/onpol-train --on-mode self --on on1_L18RB0"
-ARM_a="--rm-order --lc-cf"; ARM_b="--rm-order --lc-cf --lane-lam 10 --lane-dz 0.5 --lane-neg 0.2"
+ARM_a="--rm-order --lc-cf --lc-lam 1"; ARM_b="--rm-order --lc-cf --lc-lam 1 --lane-lam 1 --lane-dz 0.5 --lane-neg 0.2"   # Amendment 3: weight 1
 arm() { case $1 in a) echo "$ARM_a" ;; b) echo "$ARM_b" ;; c) echo "" ;; o) echo "--rm-order" ;; l) echo "--lc-cf" ;; *) echo "arm a | b (| c o l: diagnostics)" >&2; exit 2 ;; esac; }
 D12=$(for i in $(seq 0 11); do printf "navtrain_full.s%dof12 " $i; done)
 mkdir -p $O/pool

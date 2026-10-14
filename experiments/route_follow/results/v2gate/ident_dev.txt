@@ -1,0 +1,4 @@
+00:46:47 INFO route_mem/train-RV2ID-new-s0: dev @ 0: ade 0.5284, drift_on 1.4740, drift_off 0.0411, ot_ade 0.7210, ot_drift_on 1.7318, ot_drift_off 0.0748, ade_nomem 0.5433; init's recorded dev ade 0.5284
+00:47:02 INFO route_mem/train-RV2ID-new-s0: dev @ 50: ade 0.5320, drift_on 1.4716, drift_off 0.0431, ot_ade 0.7245, ot_drift_on 1.7181, ot_drift_off 0.0767, ade_nomem 0.5471
+00:47:57 INFO route_mem/train-RV2ID-old-s0: dev @ 0: ade 0.5284, drift_on 1.4740, drift_off 0.0411, ot_ade 0.7210, ot_drift_on 1.7318, ot_drift_off 0.0748, ade_nomem 0.5433; init's recorded dev ade 0.5284
+00:48:33 INFO route_mem/train-RV2ID-old-s0: dev @ 50: ade 0.5320, drift_on 1.4716, drift_off 0.0431, ot_ade 0.7245, ot_drift_on 1.7181, ot_drift_off 0.0767, ade_nomem 0.5471
