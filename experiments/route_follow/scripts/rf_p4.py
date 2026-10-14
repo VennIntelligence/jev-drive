@@ -204,12 +204,12 @@ def cells(a):
     print(sc[7:15], a.phase, len(cl), "cells:", " ".join(c["tag"] for c in cl))
 
 
-def drive_records(run):
-    """{session: [drive records sorted by k]} of a run dir (driver/drive.jsonl)."""
+def drive_records(run, scenes=None):
+    """{session: [drive records sorted by k]} of a run dir (driver/drive.jsonl), optionally only these scenes."""
     R = {}
     for f in glob.glob(os.path.join(run, "driver", "drive.jsonl")):
         for line in open(f):
-            if '"kind": "drive"' in line:
+            if '"kind": "drive"' in line and (scenes is None or line[line.find('"scene": "') + 10:][:43] in scenes):
                 r = json.loads(line)
                 R.setdefault(r["session"], []).append(r)
     return {k: sorted(v, key=lambda r: r["k"]) for k, v in R.items()}
@@ -266,8 +266,11 @@ def s1(a):
         f = os.path.join(sim, "controller", f"alpasim_controller_{rid}.csv")
         return np.array([[float(x["x"]), float(x["y"])] for x in csv.DictReader(open(f))]) if os.path.exists(f) else np.zeros((0, 2))
     ref, refrows = {}, {}
+    mine = {r["clipgt_id"] for _, r in rollouts(a.run)}
     for run in glob.glob(os.path.join(a.ref, "runs", "*")) + [a.ref]:
-        for sess, rr in drive_records(run).items():
+        if not any(r["clipgt_id"] in mine for _, r in rollouts(run)):
+            continue
+        for sess, rr in drive_records(run, mine).items():
             if rr:
                 ref[rr[0]["scene"]] = rr
         for sim, r in rollouts(run):
@@ -389,8 +392,8 @@ def read(a):
         p = PL[sc]
         Rg, Sg = np.c_[p["x"], p["y"]], np.asarray(p["u"], float)
         rc = json.load(open(os.path.join(sdir, "reach.json"))) if os.path.exists(os.path.join(sdir, "reach.json")) else None
-        for run in sorted(glob.glob(os.path.join(sdir, "*-A")) + glob.glob(os.path.join(sdir, "*-B"))):
-            ph = run[-1]
+        for run in sorted(glob.glob(os.path.join(sdir, "*-a")) + glob.glob(os.path.join(sdir, "*-b"))):   # lower case: compose project names
+            ph = run[-1].upper()
             recs = drive_records(run)
             for sim, r in rollouts(run):
                 rid = r["rollout_id"]

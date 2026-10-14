@@ -61,7 +61,7 @@ stack() {  # <run dir> <cells json> <n rollouts> <scene list>: one simulator lau
 job() {  # <scene>: phase A, reach, phase B, read
   local sc=$1 sd A B n t0
   [[ $sc == clipgt-* ]] || sc=$($PY -c "import json,sys;print(next(s for s in json.load(open(sys.argv[1]))['scenes'] if s[7:15]==sys.argv[2]))" "$O/plan.json" "$sc")
-  sd=$O/$sc; A=$sd/${sc:7:8}-A; B=$sd/${sc:7:8}-B; mkdir -p "$sd"; echo "$sc" > "$sd/scene.txt"; rm -f "$sd"/{DONE,ERROR}
+  sd=$O/$sc; A=$sd/${sc:7:8}-a; B=$sd/${sc:7:8}-b; mkdir -p "$sd"; echo "$sc" > "$sd/scene.txt"; rm -f "$sd"/{DONE,ERROR}
   fail() { echo "$*" > "$sd/ERROR"; echo "$(date '+%F %T') ${sc:7:8} ERROR $*" >> "$O/log.txt"; return 1; }
   t0=$(date +%s)
   if [[ ! -f $A/P4DONE ]]; then
@@ -112,8 +112,8 @@ PY
   p1=$!; sleep 30
   ( CARD=1 P4_D=20 P4_ONLY=${S2ONLY:-g1.25-raw,g1-ve,g1.25-ve08} job "$S2SC" || { echo "S2 run" > "$O/SMOKE_FAIL"; exit 1; }
     sc=$(cat "$O"/clipgt-"$S2SC"*/scene.txt); sd=$O/$sc
-    py s1 --run "$sd/${sc:7:8}-A" --ref /data/runs/route_night/r281/rsg >> "$O/s1.txt" 2>&1
-    py s2 --plan "$O/plan.json" --run "$sd/${sc:7:8}-B" > "$O/s2.txt" 2>&1 ) &
+    py s1 --run "$sd/${sc:7:8}-a" --ref /data/runs/route_night/r281/rsg >> "$O/s1.txt" 2>&1
+    py s2 --plan "$O/plan.json" --run "$sd/${sc:7:8}-b" > "$O/s2.txt" 2>&1 ) &
   p2=$!; wait $p1 $p2
   [[ -f $O/SMOKE_FAIL ]] && { st "smoke run failed: $(cat "$O/SMOKE_FAIL")"; exit 1; }
   st "S1: $(grep '^S1:' "$O/s1.txt" | head -1)"
