@@ -393,8 +393,8 @@ def read(a):
         Rg, Sg = np.c_[p["x"], p["y"]], np.asarray(p["u"], float)
         rc = json.load(open(os.path.join(sdir, "reach.json"))) if os.path.exists(os.path.join(sdir, "reach.json")) else None
         ident = {}                                           # phase A's identity plans by k: a self branch must serve them before h
-        for run in sorted(glob.glob(os.path.join(sdir, "*-a")) + glob.glob(os.path.join(sdir, "*-b"))):   # lower case: compose project names
-            ph = run[-1].upper()
+        for run in sorted(glob.glob(os.path.join(sdir, "*-a")) + glob.glob(os.path.join(sdir, "*-b")) + glob.glob(os.path.join(sdir, "*-b[0-9]"))):
+            ph = "A" if run.endswith("-a") else "B"                 # lower case: compose project names; -b<i> = parallel phase B launches
             recs = drive_records(run)
             if ph == "A":
                 ident = {x["k"]: x["poses"] for v in recs.values() for x in v if "poses" in x and x.get("p4", {}).get("tag") == "id"}

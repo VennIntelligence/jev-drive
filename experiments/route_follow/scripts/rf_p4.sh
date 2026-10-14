@@ -16,7 +16,8 @@
 #   copy into a new root; default the committed experiments/route_follow/results/p4_self/plan.json), P4_D (distances, "40,30,20,10,0"),
 #   P4_ONLY (cell suffixes, e.g. "g1.25-raw,g1-ve"), KEEP_ASL (1: keep rollout.asl until the scene's read; mp4s are always dropped),
 #   KEEP_ASL_ALL (1: keep it for every rollout), P4_CONC (concurrent rollouts per launch, 1: see above), JEV_PY (box: python with numpy),
-#   MIN_FREE_GB (fanout refuses below it, 500), P4_VRAM (pool declaration per job, 12). The root gets code.json (served tree, commit).
+#   MIN_FREE_GB (fanout refuses below it, 500), P4_VRAM (pool declaration per job, 22: 3 launches x 6.5 GB measured on the box),
+#   P4_PAR (phase B launches side by side per job; box 3, Tokyo 1: a 3090 holds two 8.7 GB stacks at most). The root gets code.json (served tree, commit).
 # Serving = the reference /data/runs/route_night/r281/rsg: JEV_VCONT=1.0 JEV_LEAD=1, gains 20, holdlead off; plus
 # send_recording_ground_truth=true (log fields, the log fallback) and PAI_DUMP (1 Hz model-input dumps for the rows' G-in gate).
 set -uo pipefail
@@ -47,7 +48,7 @@ stack() {  # <run dir> <cells json> <n rollouts> <scene list>: one simulator lau
     mkdir -p "$r/driver"; chmod 777 "$r/driver"; cp "$cj" "$r/driver/p4cells.json"
     local L=$repo/experiments/alpasim/lib
     for f in onp_log_driver.py onp_p4.py; do cmp -s "$repo/experiments/onpol_pai/lib/$f" "$L/$f" || cp "$repo/experiments/onpol_pai/lib/$f" "$L/$f"; done
-    GPU=$CARD CONC=${P4_CONC:-1} PAI_BASEPORT=$((6400 + 100 * CARD)) TAG=$T DRV_PY=onp_log_driver.py \
+    GPU=$CARD CONC=${P4_CONC:-1} PAI_BASEPORT=$((6400 + 100 * CARD + 30 * ${SLOT:-0})) TAG=$T DRV_PY=onp_log_driver.py \
       DRV_ENV="-e JEV_VCONT=1.0 -e JEV_LEAD=1 -e PAI_DUMP=100000 -v $L/onp_p4.py:/app/jev-drive/experiments/alpasim/lib/onp_p4.py:ro -v $D/runs/op_parity/runs/$T:/app/data/runs/op_parity/runs/$T:ro" \
       bash "$repo/experiments/alpasim/scripts/pai_run.sh" "$r" "$sl" "${WIZ[@]}" "runtime.simulation_config.n_rollouts=$n" > "$r.out" 2>&1; rc=$?
   else
@@ -78,12 +79,26 @@ job() {  # <scene>: phase A, reach, phase B, read
   apy reach --plan "$O/plan.json" --run "$A" --out "$sd/reach.json" > "$sd/reach.log" 2>&1 || { fail "reach (see reach.log)"; return 1; }
   py cells --plan "$O/plan.json" --scene "$sc" --phase B --reach "$sd/reach.json" ${P4_D:+--d "$P4_D"} ${P4_ONLY:+--only "$P4_ONLY"} \
     --out "$sd/cells_B.json" > "$sd/cells_B.log" || { fail "cells B"; return 1; }
-  n=$($PY -c "import json,sys;print(sum(len(v) for v in json.load(open(sys.argv[1]))['cells'].values()))" "$sd/cells_B.json")
-  if (( n > 0 )) && [[ ! -f $B/P4DONE ]]; then
-    t0=$(date +%s)
-    stack "$B" "$sd/cells_B.json" "$n" "$sd/scene.txt" || { fail "phase B stack (see $B.out)"; return 1; }
-    echo $(( $(date +%s) - t0 )) > "$B/P4DONE"
-  fi
+  # phase B: the cells split round-robin over P4_PAR launches running side by side (each its own renderer process, one rollout at a time)
+  local K=${P4_PAR:-$([[ $BACKEND == box ]] && echo 3 || echo 1)} i ok=1 pids=()
+  n=$($PY - "$sd/cells_B.json" "$K" "$sd" <<'PY'
+import json, sys
+d, K, sd = json.load(open(sys.argv[1])), int(sys.argv[2]), sys.argv[3]
+(sc, cl), = d["cells"].items()
+for i in range(K):
+    json.dump(dict(scenes=d["scenes"], cells={sc: cl[i::K]}), open(f"{sd}/cells_B{i}.json", "w"))
+print(" ".join(str(len(cl[i::K])) for i in range(K)))
+PY
+)
+  t0=$(date +%s); i=0
+  for m in $n; do
+    if (( m > 0 )) && [[ ! -f ${B}$i/P4DONE ]]; then
+      ( SLOT=$i stack "${B}$i" "$sd/cells_B$i.json" "$m" "$sd/scene.txt" && echo $(( $(date +%s) - t0 )) > "${B}$i/P4DONE" ) & pids+=($!); sleep 20
+    fi
+    i=$((i + 1))
+  done
+  for p in "${pids[@]}"; do wait "$p" || ok=0; done
+  (( ok )) || { fail "phase B stack (see $sd/*-b*.out)"; return 1; }
   apy read --plan "$O/plan.json" --root "$O" --scenes "$sd/scene.txt" --out "$sd/read.json" > "$sd/read.log" 2>&1 || { fail "read (see read.log)"; return 1; }
   [[ ${KEEP_ASL_ALL:-0} == 1 ]] || $PY - "$sd/read.json" "$sd" <<'PY' >> "$O/log.txt"            # rollout.asl only for the completing cells (rows)
 import glob, json, os, sys
@@ -95,7 +110,7 @@ for r in rows:
             os.remove(f); gone += 1
 print(f"{os.path.basename(sd)[7:15]}: rollout.asl kept for {sum(bool(r.get('done')) for r in rows)} completing rollouts, removed {gone}")
 PY
-  date > "$sd/DONE"; echo "$(date '+%F %T') ${sc:7:8} done: phase A $(cat "$A/P4DONE") s, phase B $n cells $(cat "$B/P4DONE" 2>/dev/null || echo 0) s" >> "$O/log.txt"
+  date > "$sd/DONE"; echo "$(date '+%F %T') ${sc:7:8} done: phase A $(cat "$A/P4DONE") s, phase B cells per launch [$n], $(cat "$sd"/*-b*/P4DONE 2>/dev/null | sort -n | tail -1) s" >> "$O/log.txt"
 }
 
 case $cmd in
@@ -129,7 +144,7 @@ PY
   ( CARD=1 P4_D=20 P4_ONLY=${S2ONLY:-g1.25-raw,g1-ve,g1.25-ve08} job "$S2SC" || { echo "S2 run" > "$O/SMOKE_FAIL"; exit 1; }
     sc=$(cat "$O"/clipgt-"$S2SC"*/scene.txt); sd=$O/$sc
     py s1 --run "$sd/${sc:7:8}-a" --ref /data/runs/route_night/r281/rsg >> "$O/s1.txt" 2>&1
-    py s2 --plan "$O/plan.json" --run "$sd/${sc:7:8}-b" > "$O/s2.txt" 2>&1 ) &
+    for r in "$sd"/*-b*/; do py s2 --plan "$O/plan.json" --run "${r%/}"; done > "$O/s2.txt" 2>&1 ) &
   p2=$!; wait $p1 $p2
   [[ -f $O/SMOKE_FAIL ]] && { st "smoke run failed: $(cat "$O/SMOKE_FAIL")"; exit 1; }
   st "S1: $(grep '^S1:' "$O/s1.txt" | head -1)"
@@ -156,7 +171,7 @@ PY
 )
   [[ -n $arms ]] || { echo "nothing left to submit"; exit 0; }
   col=(); [[ $N == all ]] && col=(--collect "env JEV_PY=$repo/.venv/bin/python bash $W/experiments/route_follow/scripts/rf_p4.sh read $O")      # `all` with scenes still missing: rerun fanout all later (a second collect is harmless)
-  .venv/bin/python -m jevdrive.cl fanout --name p4 --arms "$arms" --vram ${P4_VRAM:-12} --cpu 3 --ram 24 --timeout-h 4 --tries 2 \
+  .venv/bin/python -m jevdrive.cl fanout --name p4 --arms "$arms" --vram ${P4_VRAM:-22} --cpu 4 --ram 32 --timeout-h 8 --tries 2 \
     --env CL_HIST_KEY=alpasim-p4c1 --env "JEV_PY=$repo/.venv/bin/python" --log-dir "$O/pool/{arm}" "${col[@]}" -- bash "$W/experiments/route_follow/scripts/rf_p4.sh" job "$O" "{arm}" | tee -a "$O/jobs.txt" || exit 1
   for a in ${arms//,/ }; do s=$($PY -c "import json,sys;print(next(s for s in json.load(open(sys.argv[1]))['scenes'] if s[7:15]==sys.argv[2]))" "$O/plan.json" "$a")
     mkdir -p "$O/$s"; date > "$O/$s/SUBMITTED"; done ;;
