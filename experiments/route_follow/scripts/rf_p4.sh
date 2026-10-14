@@ -20,6 +20,8 @@
 #   P4_SRC=<run root> rf_p4.sh video <vroot> <s8>   one scene: its selected cells (cells_A / cells_B of the run, same order of preference)
 #                                              in P4_PAR launches with VIDEO=1, served from the run's frozen tree (code.json "served")
 #   P4_SRC=<run root> rf_p4.sh vcollect <vroot>     bit-identity of every re-run session vs the stored one + manifest.json (p4_videos.py)
+#                                              (a select.json written beforehand is kept: rf_p4.py vselect --family for the turn-gallery fill,
+#                                              Amendment 5; P4_HIST overrides the pool history key alpasim-p4v, P4_VRAM the declaration)
 # Env: BACKEND (tokyo | box; default: tokyo when /data/runs/route_night exists), CARD (Tokyo card, 1), TAG (RSG-L18-s0), PLAN (plan.json to
 #   copy into a new root; default the committed experiments/route_follow/results/p4_self/plan.json), P4_D (distances, "40,30,20,10,0"),
 #   P4_ONLY (cell suffixes, e.g. "g1.25-raw,g1-ve"), KEEP_ASL (1: keep rollout.asl until the scene's read; mp4s are always dropped),
@@ -240,7 +242,7 @@ PY
   [[ -n $arms ]] || { echo "nothing left to submit"; exit 0; }
   col=(); [[ $N == all ]] && col=(--collect "env P4_SRC=$SRC JEV_PY=$PY bash $repo/experiments/route_follow/scripts/rf_p4.sh vcollect $O")
   .venv/bin/python -m jevdrive.cl fanout --name p4v --arms "$arms" --vram ${P4_VRAM:-22} --cpu 4 --ram 32 --timeout-h 4 --tries 2 \
-    --env CL_HIST_KEY=alpasim-p4v --env "JEV_PY=$PY" --env "P4_SRC=$SRC" --env "P4_PAR=${P4_PAR:-3}" --log-dir "$O/pool/{arm}" "${col[@]}" -- \
+    --env CL_HIST_KEY=${P4_HIST:-alpasim-p4v} --env "JEV_PY=$PY" --env "P4_SRC=$SRC" --env "P4_PAR=${P4_PAR:-3}" --log-dir "$O/pool/{arm}" "${col[@]}" -- \
     bash "$repo/experiments/route_follow/scripts/rf_p4.sh" video "$O" "{arm}" | tee -a "$O/jobs.txt" || exit 1
   for a in ${arms//,/ }; do s=$($PY -c "import json,sys;print(next(s for s in json.load(open(sys.argv[1]))['scenes'] if s[7:15]==sys.argv[2]))" "$O/plan.json" "$a")
     mkdir -p "$O/$s"; date > "$O/$s/SUBMITTED"; done ;;

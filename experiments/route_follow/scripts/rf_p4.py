@@ -35,10 +35,13 @@ curvature-limited speed profile to v_e or 0.8 v_e until exit + 10 m; the rollout
          the camera (rf_p4.sh vfanout): per scene the identity and the best completing cell (best_cell: the D40 handover first, then
          g1.25 / g1 / g1.5, raw / ve / ve08), or g1.25-raw at D40 when no cell completes. --wide (the first, 11-scene batch): per distinct
          handover with a completing cell the preferred completing and the first failing cell, all cells at D40 on the 4 scenes where a push
-         completes and the identity fails.
+         completes and the identity fails. --family [--fam-d 40,0] [--fam-cells g1-raw,g1.25-raw,g1.5-raw] [--scenes s8,..] [--no-id]: the
+         reduced family (turn-gallery fill, P4 prereg Amendment 5): identity + the stored cells at those handovers (a duplicate distance
+         resolves to the larger D it was run under).
   vcollect (plain python3) rf_p4.py vcollect --root <video root> --ref <P4 run root> --plan <plan.json> --out <manifest.json>
          Per camera re-run session: served plans at every decision, controller track and score against the stored session of the same cell
-         (bit-identical check), the mp4, and the stored read's outcome / entry speed (gallery manifest, p4_videos.py).
+         (bit-identical check), the mp4, and the stored read's outcome / entry speed / h (gallery manifest, p4_videos.py, turn_gallery.py).
+         --own (--ref = --root): a job run with VIDEO=1 (phase A / B runs keep their mp4s); no re-run, `identical` = None.
 """
 from __future__ import annotations
 
@@ -194,11 +197,12 @@ def cells(a):
         cl = [dict(tag="id", D=None, src="self", g=1.0, lon="raw", switch=0)]
     else:
         rc = json.load(open(a.reach))
-        cl = []
-        for D in [int(x) for x in a.d.split(",")]:
-            r = rc["d"][str(D)]
-            if r.get("dup") is not None:
+        cl, seen = [], set()
+        for D in [int(x) for x in a.d.split(",")]:         # a distance whose handover equals a larger requested D's is run once
+            r = rc["d"][str(D)]                             # (= reach's `dup` when all of DS are requested)
+            if (r["reached"], r["k_eff"]) in seen:
                 continue
+            seen.add((r["reached"], r["k_eff"]))
             src = "self" if r["reached"] else "log"
             for g in GAINS:
                 for lon in LONS:
@@ -611,6 +615,20 @@ def vselect(a):
     for r in rows:
         by.setdefault(r["scene"][7:15], []).append(r)
     out = {}
+    if a.family:                                         # the reduced family per scene: identity + the stored cells at the requested handovers
+        want, fd, fc = a.scenes and set(a.scenes.split(",")), [int(x) for x in a.fam_d.split(",")], a.fam_cells.split(",")
+        for s8, rr in sorted(by.items()):
+            if want and s8 not in want:
+                continue
+            rc = json.load(open(os.path.join(os.path.dirname(os.path.abspath(a.read)), rr[0]["scene"], "reach.json")))["d"]
+            sel = [] if a.no_id else [r["tag"] for r in rr if r["tag"] == "id"]
+            for D in fd:                                 # a duplicate distance was run under the larger D that shares its handover
+                Dr = D if rc[str(D)].get("dup") is None else rc[str(D)]["dup"]
+                sel += [r["tag"] for c in fc for r in rr if r["phase"] == "B" and r["D"] == Dr and r["tag"].endswith("-" + c) and r["tag"] not in sel]
+            out[s8] = sel
+        json.dump(out, open(a.out, "w"), indent=1)
+        print(f"{sum(map(len, out.values()))} rollouts over {len(out)} scenes ->", a.out)
+        return
     for s8, rr in sorted(by.items()):
         sel = [r["tag"] for r in rr if r["tag"] == "id"]
         B = [r for r in rr if r["phase"] == "B"]
@@ -667,34 +685,37 @@ def vcollect(a):
                 rows = {r["rollout_id"]: (sim, r) for sim, r in rollouts(run)}
                 for sess, (tag, rr) in sessions(run).items():
                     ref[tag] = (rr, *rows.get(sess, (None, None)))
-        for run in sorted(glob.glob(os.path.join(sd, sc[7:15] + "-v*"))):
+        for run in sorted(glob.glob(os.path.join(sd, sc[7:15] + ("-[ab]*" if a.own else "-v*")))):
             if not os.path.isdir(run):
                 continue
             rows = {r["rollout_id"]: (sim, r) for sim, r in rollouts(run)}
             for sess, (tag, rr) in sessions(run).items():
                 sim, r = rows.get(sess, (None, None))
-                b, sb, rb = ref.get(tag, ([], None, None))
+                b, sb, rb = ([], None, None) if a.own else ref.get(tag, ([], None, None))
                 B = {x["k"]: x for x in b}
                 d = max((float(np.abs(srv(x) - srv(B[x["k"]])).max()) for x in rr if x["k"] in B), default=np.inf)
                 ta = track(sim, sess) if r else np.zeros((0, 2))
                 tb = track(sb, rb["rollout_id"]) if rb else np.zeros((0, 2))
                 same = bool(rr and len(rr) == len(b) and all(x["k"] in B for x in rr) and d == 0.0 and len(ta) == len(tb)
                             and (len(ta) == 0 or np.array_equal(ta, tb)) and r and rb and r.get("score") == rb.get("score"))
-                n_ok += same
+                same = None if a.own else same                   # --own: the run itself, nothing to compare against
+                n_ok += bool(same)
                 mp4 = sorted(glob.glob(os.path.join(run, "sim", "rollouts", sc, sess, "*camera_front_wide*.mp4")))
                 st = rd.get((sc, tag), {})
                 cells.append(dict(scene=sc, tag=tag, rid=sess, mp4=mp4[0] if mp4 else None, score=r and r.get("score"), ref_score=rb and rb.get("score"),
                                   n_dec=len(rr), ref_n_dec=len(b), plan_maxdiff=d, track_rows=[len(ta), len(tb)], identical=same,
-                                  outcome=outcome(st) if st else None, v_entry=st.get("v_entry"), D=st.get("D"), src=st.get("src"), done=st.get("done")))
+                                  outcome=outcome(st) if st else None, v_entry=st.get("v_entry"), D=st.get("D"), src=st.get("src"), done=st.get("done"),
+                                  h=st.get("h")))
     scenes = {sc: {k: PL[sc][k] for k in ("side", "topo", "v_e", "s_entry", "v_log_entry")} for sc in {c["scene"] for c in cells}}
     for sc, v in scenes.items():                                     # the D0 handover = the decision at the turn entry (own or from the log)
         r0 = json.load(open(os.path.join(a.ref, sc, "reach.json")))["d"]["0"]
         v.update(entry_k=r0["h"] if r0["reached"] else r0["k_eff"], entry_src="self" if r0["reached"] else "log")
-    json.dump(dict(root=a.root, ref=a.ref, cells=cells, scenes=scenes), open(a.out, "w"), indent=1, default=float)
-    print(f"camera re-runs: {len(cells)} sessions, {sum(c['mp4'] is not None for c in cells)} with an mp4; "
-          f"bit-identical to the stored rollout (served plan at every decision, controller track, score): {n_ok} / {len(cells)}")
+    backend = json.load(open(os.path.join(a.ref, "code.json"))).get("backend")
+    json.dump(dict(root=a.root, ref=a.ref, backend=backend, own=a.own, cells=cells, scenes=scenes), open(a.out, "w"), indent=1, default=float)
+    print(f"{'own job runs (no re-run)' if a.own else 'camera re-runs'}: {len(cells)} sessions, {sum(c['mp4'] is not None for c in cells)} with an mp4; "
+          + ("" if a.own else f"bit-identical to the stored rollout (served plan at every decision, controller track, score): {n_ok} / {len(cells)}"))
     for c in cells:
-        if not c["identical"]:
+        if c["identical"] is False:
             print("  DIFFERENT", c["scene"][7:15], c["tag"], f"decisions {c['n_dec']}/{c['ref_n_dec']} plan max|diff| {c['plan_maxdiff']:.6f} "
                   f"track rows {c['track_rows']} score {c['score']}/{c['ref_score']}")
 
@@ -741,10 +762,16 @@ if __name__ == "__main__":
     p.add_argument("--ceiling", action="store_true", help="exam ceiling read: no pass / fail verdict")
     p = sp.add_parser("vselect")
     p.add_argument("--wide", action="store_true")
+    p.add_argument("--family", action="store_true", help="identity + the stored cells FAM_CELLS at the handovers FAM_D (dups resolved)")
+    p.add_argument("--fam-d", default="40,0")
+    p.add_argument("--fam-cells", default="g1-raw,g1.25-raw,g1.5-raw")
+    p.add_argument("--scenes", help="8-char scene ids (comma list) for --family")
+    p.add_argument("--no-id", action="store_true", help="--family without the identity (its camera re-run exists)")
     p.add_argument("--read", required=True)
     p.add_argument("--plan", required=True)
     p.add_argument("--out", required=True)
     p = sp.add_parser("vcollect")
+    p.add_argument("--own", action="store_true", help="a job run with VIDEO=1: collect its own phase A / B runs (--ref = --root), no comparison")
     p.add_argument("--root", required=True)
     p.add_argument("--ref", required=True)
     p.add_argument("--plan", required=True)

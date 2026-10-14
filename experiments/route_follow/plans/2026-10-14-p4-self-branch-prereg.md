@@ -339,3 +339,48 @@ Two notes recorded with the decision:
 - arms RSGSELF-L18-s0 / s1 and RSGCTL-L18-s0, CAP 0.20;
 - staged launch, with s0 and its training gates first;
 - reads, and lines L1-L4.
+
+## Amendment 5 (2026-10-14 night, before any of its rollouts): read-only camera fill of the turn gallery
+
+**What and why.** The user asked for every row of the RSG-L18-s0 turn gallery (`turn_gallery.py`, 71 rows: 70 PAI 281 zeros + 1
+straight-available full-score turn) that can have P4 branch cells to show them on video. This is viewing material only. It has no lines,
+no verdict and no design value, and it changes no recorded number. Decisions taken with the user today:
+- Speed is not the lever, so only the raw profile.
+- D30 / D20 / D10 almost never complete, so only the D40 and D0 handovers.
+- Lateral gains 1, 1.25 and 1.5.
+
+The family per scene is the identity plus g1 / g1.25 / g1.5 raw at D40 and D0. Self g1-raw is the identity itself, so in practice:
+- 5 distinct rollouts per scene;
+- 6 when D0 is a log handover (g1-raw on the log is its own rollout);
+- 3 when D0 shares D40's handover decision.
+
+**Scenes.** 66 rows have no P4 clip. 17 of them define a strict turn (`results/turn_gallery/plan_strict36.json`). The other 49 are corridor
+or non-turn zeros with no strict turn, so they cannot branch: those rows stay as they are.
+- **5 train turns** (a174faed, ddc3e8df, e5e47fd2, eaba3f6a, f9e361aa): the box P4 run (`p4/run`) already holds every cell. Their identity
+  and D40 g1.25-raw camera re-runs already exist in `p4/video` (the box manifest covers all 27 train turns; Tokyo's copy was stale at 11).
+  - New: **13** camera re-runs (`rf_p4.sh vfanout`, `select.json` from `rf_p4.py vselect --family --no-id` minus the cells already in `p4/video`).
+  - Root `$DATA_DIR/runs/route_follow/p4/video_fill`, one pool job per scene, 3 launches per job, `P4_VRAM=20 P4_HIST=alpasim-read4`.
+  - Each re-run is checked bit-identical to the stored session (vcollect).
+- **11 exam turns** (hard_exam and exam_turn26: 22fa5c92, 2f227f2c, 382a7247, 3ce13eed, 94c1d722, 9f393c8a, a1b166cc, ce161092, d90fe123,
+  e37aa159, fd01e9ab): the Tokyo exam-ceiling run (`/data/runs/route_night/p4_exam`, NO_ROWS) already holds every cell.
+  - New: **54** camera re-runs on Tokyo (`rf_p4exam.sh vinit / vstage`, root `/data/runs/route_night/p4_fill/exam_video`, NO_ROWS).
+  - Each re-run is checked bit-identical to the stored p4_exam session (vcollect).
+  - Each identity is also checked bit-identical to r281/rsg (S1).
+  - They run on Tokyo, not the box, because box and Tokyo rollouts are not bit-identical (results/p4_self/README.md). Only Tokyo
+    reproduces the stored branches and the RSG cell the gallery shows.
+- **1 exam turn without any P4 run** (302c5c99, hard_exam only, not among the 26 exam turns): a new Tokyo job of the reduced family.
+  - Command: `rf_p4.sh examplan` (NO_ROWS root `/data/runs/route_night/p4_fill/new`), then `rf_p4exam.sh stage` with
+    `VIDEO=1 P4_D=40,0 P4_ONLY=g1-raw,g1.25-raw,g1.5-raw`, 4-6 rollouts.
+  - `rf_p4.py cells` now drops a distance only when it shares its handover with a larger *requested* distance. This is the same rule as
+    reach's `dup` when all five distances run.
+  - S1 of its identity against r281/rsg.
+
+**Never rows.** Every new root holds NO_ROWS (`rf_selfpool.py` refuses it). rollout.asl is deleted after each scene. Exam scenes appear here
+only because this is read-only viewing material, exactly as in the exam-ceiling read.
+
+**Staged launch.** First 1 scene on each backend: check the mp4s, bit-identity and S1. Then the rest.
+
+**Estimate.**
+- Tokyo: ~59 rollouts x ~99 s on 2 x 2 launches, ~35-45 min wall, ~1.5 card-hours.
+- Box: 13 rollouts x ~210 s in 5 jobs, ~10 min wall, < 0.5 card-hours.
+- Then rsync to Tokyo (also the stale 16 scenes of `p4/video`) and rebuild the gallery.

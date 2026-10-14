@@ -16,8 +16,12 @@ r281/rsg rollouts) and the BEV panel prints the frame's sim time: frame 0 is the
 decision 1. So decision k is at clip time (k + 1) * 0.1 s.
 
 Inputs (repo-relative, scp'd to a scratch tree on Tokyo): results/taxonomy/pai281_rsg.csv, results/pai_follow/scenes.csv,
-results/turn_gallery/plan_strict36.json (rf_p4.py plan of the 36 strict turns), results/p4_self/read.json (handover h per cell), the box
-video manifest.json.  Usage: turn_gallery.py [OUT] [--jobs N] (default OUT ~/Desktop/turn_gallery).
+results/turn_gallery/plan_strict36.json (rf_p4.py plan of the 36 strict turns), results/p4_self/read.json (handover h per cell where a
+manifest has no h), and the P4 video manifests (--p4, several roots, each manifest.json + its mp4s; the first root that has a (scene, cell)
+wins): the box camera re-runs of the 27 train turns, the box fill (P4 prereg Amendment 5), the Tokyo fill of the exam turns (re-runs of
+p4_exam) and the Tokyo own job of 302c5c99. When no cell of a scene completes, D40 g1.25-raw is the shown cell, marked "no cell completes".
+A box-run identity (the P4 branch's own root state; box vs Tokyo rollouts are not bit-identical) sits behind "more".
+Usage: turn_gallery.py [OUT] [--jobs N] [--p4 ROOT ...] (default OUT ~/Desktop/turn_gallery).
 """
 import argparse, csv, glob, json, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
@@ -29,7 +33,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("out", nargs="?", default=str(Path.home() / "Desktop" / "turn_gallery"))
 ap.add_argument("--rsg", default="/data/runs/route_night/r281/rsg")
 ap.add_argument("--human", default="/data/runs/route_night/pait/pass")
-ap.add_argument("--p4", default="/data/runs/route_follow/p4_video")      # manifest.json + the mp4s (box root prefix replaced)
+ap.add_argument("--p4", nargs="+", default=["/data/runs/route_follow/p4_video", "/data/runs/route_follow/p4_video_fill",   # manifest.json + mp4s
+                                             "/data/runs/route_night/p4_fill/exam_video", "/data/runs/route_night/p4_fill/new"])  # (root prefix replaced)
 ap.add_argument("--jobs", type=int, default=4)
 ap.add_argument("--threads", type=int, default=4)
 A = ap.parse_args()
@@ -72,16 +77,25 @@ def rollouts(root, pattern):
 
 rsg = rollouts(A.rsg, "runs/*/sim/aggregate/results-summary.json")
 human = rollouts(A.human, "runs/*/sim/aggregate/results-summary.json")
-man = json.loads((Path(A.p4) / "manifest.json").read_text())
 read = {(x["scene"], x["tag"]): x for x in json.loads((RES / "p4_self/read.json").read_text())["rows"]}
+P4S, MS = {}, {}                     # scene -> cells (first root wins per cell), scene -> manifest scene facts
+for root in map(Path, A.p4):
+    if not (root / "manifest.json").exists():
+        print("no manifest in", root, file=sys.stderr)
+        continue
+    m = json.loads((root / "manifest.json").read_text())
+    box = m.get("backend", "box" if m["root"].startswith("/root/") else "tokyo") == "box"
+    for c in m["cells"]:
+        if c["mp4"] and not any(x["tag"] == c["tag"] for x in P4S.get(c["scene"], [])):
+            P4S.setdefault(c["scene"], []).append(dict(c, path=root / Path(c["mp4"]).relative_to(m["root"]), box=box,
+                                                       h=c["h"] if "h" in c else (read.get((c["scene"], c["tag"])) or {}).get("h")))
+    for sc, v in m["scenes"].items():
+        MS.setdefault(sc, v)
 plan = json.loads((RES / "turn_gallery/plan_strict36.json").read_text())
 
 # ---------------------------------------------------------------- facts
 tax = {r["scene"]: r for r in csv.DictReader(open(RES / "taxonomy/pai281_rsg.csv"))}
 pf = {r["scene"]: r for r in csv.DictReader(open(RES / "pai_follow/scenes.csv")) if r["label"] == "rsg"}
-P4S = {}
-for c in man["cells"]:
-    P4S.setdefault(c["scene"], []).append(c)
 
 
 def facts(sc, section, group):
@@ -131,7 +145,7 @@ def job(src, name, label, ent=None, p4=None):
 for r in rows:
     sc, s8 = r["scene"], r["s8"]
     cells = []
-    ms = man["scenes"].get(sc)
+    ms = MS.get(sc)
     ent_t = round((ms["entry_k"] + OFF_DEC) * DT, 2) if ms and ms["entry_src"] == "self" else None
     h = human.get(sc)
     if h:
@@ -143,25 +157,30 @@ for r in rows:
         cells.append(dict(kind="rsg", label="RSG", file=job(g["mp4"], f"{s8}_rsg.mp4", "RSG", ent=ent_t), outcome=g["outcome"], score=round(g["score"], 3)))
     else:
         missing.append(f"{s8} rsg")
-    pc = [c for c in P4S.get(sc, []) if c["tag"] != "id" and c["mp4"] and c["score"] is not None]
+    pc = [c for c in P4S.get(sc, []) if c["tag"] != "id" and c["score"] is not None]
     r["p4_n"], r["p4_done"], r["p4"] = len(pc), sum(bool(c["done"]) for c in pc), "none"
     best = None
     if pc:
         key = lambda c: (c["D"] != 40, PREF.index(c["tag"].split("-", 2)[2]) if c["tag"].split("-", 2)[2] in PREF else 9, -c["D"])  # noqa: E731
         done = [c for c in pc if c["done"]]
-        best = min(done, key=key) if done else None
-        r["p4"] = f"{len(pc)} cells rendered, {len(done)} complete" + ("" if done else " (no cell completes: best cell omitted)")
+        best = min(done or pc, key=key)          # no completing cell: the D40 g1.25-raw cell (rf_p4.vselect's fallback)
+        r["p4"] = f"{len(pc)} cells rendered, {len(done)} complete" + ("" if done else " (no cell completes: D40 g1.25-raw shown)")
+        bid = next((c for c in P4S.get(sc, []) if c["tag"] == "id" and c["box"] and c["score"] is not None), None)
+        if bid:                                  # the box identity the branches start from (the RSG cell is the Tokyo r281 rollout)
+            cells.append(dict(kind="p4id", label="P4 id (box)", file=job(bid["path"], f"{s8}_id_box.mp4", "P4 id (box)", ent=ent_t),
+                              outcome=bid["outcome"], score=round(bid["score"], 3), main=False))
         for c in sorted(pc, key=lambda c: (c is not best, not c["done"], key(c))):
             D, src, gp = c["tag"].split("-", 2)
-            hh = read[(sc, c["tag"])]["h"]
+            hh = c["h"]
             if hh is None:
                 missing.append(f"{s8} {c['tag']} (no handover decision)")
                 continue
             t0 = round((hh + OFF_DEC) * DT, 2)
             label = f"{D} {src} {gp}"
             p4 = dict(t0=t0, t1=round(t0 + PUSH_S, 2), src=src)
-            cells.append(dict(kind="p4", label=label, file=job(Path(A.p4) / Path(c["mp4"]).relative_to(man["root"]), f"{s8}_{c['tag']}.mp4", label, ent=ent_t, p4=p4),
-                              outcome=c["outcome"], score=round(c["score"], 3), main=c is best, h=hh, t0=t0, done=bool(c["done"]), v=c["v_entry"]))
+            cells.append(dict(kind="p4", label=label, file=job(c["path"], f"{s8}_{c['tag']}.mp4", label, ent=ent_t, p4=p4),
+                              outcome=c["outcome"], score=round(c["score"], 3), main=c is best, h=hh, t0=t0, done=bool(c["done"]), v=c["v_entry"],
+                              note="no cell completes" if c is best and not done else "", box=c["box"]))
     r["ent_t"] = ent_t
     for c in cells:
         c.setdefault("main", c["kind"] != "p4")
@@ -246,7 +265,7 @@ h3{margin:0;padding:5px 14px;background:#1c1c28;color:#9bf;font-size:14px}
 <div id=legend>
 <b>Row</b> = one PAI 281 scene driven by RSG-L18-s0. Sections: __SECTIONS__. Groups = taxonomy main class (<code>research/zero-taxonomy.md</code>); inside a group the scenes with a straight alternative come first, then score ascending, then the event decision.<br>
 <b>Header</b>: side of the turn, topo class (yes / no / n/a = "straight ahead available"; n/a when the scene has no route turn), RSG outcome and score, taxonomy class and sub class, v human / v RSG at the strict turn entry (or at the bend entry when the turn is not strict; "-" when the ego left the route before it), P4 branch clips.<br>
-<b>Cells</b>: HUMAN = the human log rendered by the sim (log-following driver; missing for some scenes); RSG = the policy alone (r281/rsg); the P4 cell = the best completing branch re-run of the scene (D40 first, g1.25-raw preferred), omitted when no branch cell completes; "more" shows the other rendered P4 cells.
+<b>Cells</b>: HUMAN = the human log rendered by the sim (log-following driver; missing for some scenes); RSG = the policy alone (r281/rsg, Tokyo); the P4 cell = the best completing branch rollout of the scene (D40 first, g1.25-raw preferred), or D40 g1.25-raw marked "no cell completes" when none completes; "more" shows the other rendered P4 cells (train turns: run on the GPU box, label "box", with "P4 id (box)" = the box identity they branch from, which is not bit-identical to the Tokyo RSG cell; exam turns: Tokyo, whose identity is bit-identical to RSG). Fill rows (P4 prereg Amendment 5) carry identity + g1 / g1.25 / g1.5 raw at the D40 and D0 handovers only.
 Clip overlays: corner label; on P4 branch clips an orange border + PUSH from the handover decision h for 3 s, then a cyan border + SELF (the policy drives itself); a log-source cell shows LOG before h. A yellow ENTRY flag (1 s) marks the strict-entry decision where the P4 manifest has it.
 </div>
 <div id=list></div>
@@ -267,7 +286,7 @@ function render(){
     if(r.group!=lastg){const k=scenes.filter(x=>x.group==r.group).length; html+=`<h3>${r.group=="completed"?"strict turns completed with score 1.0":r.group+" "+r.cn} (${k})</h3>`; lastg=r.group}
     const out=r.section=="C"?`<span class=done>done ${r.score.toFixed(2)}</span>`:`<span class=${r.zero.slice(0,4)=="corr"?"corr":r.zero.slice(0,3)=="off"?"offr":"coll"}>zero: ${r.zero}</span>`;
     const cs=r.cells, main=cs.filter(c=>c.main), ex=cs.filter(c=>!c.main);
-    const cell=c=>`<div class="cell${c.kind=="human"?" human":""}${c.main?"":" extra"}"><img loading=lazy src="thumbs/${r.s8}.jpg" data-src="${c.file}"><div class=lab title="${c.file}">${c.label} <b class=${c.outcome}>${c.outcome} ${c.score.toFixed(2)}</b>${c.kind=="p4"?" h "+c.h+" ("+c.t0.toFixed(1)+" s)":""}</div></div>`;
+    const cell=c=>`<div class="cell${c.kind=="human"?" human":""}${c.main?"":" extra"}"><img loading=lazy src="thumbs/${r.s8}.jpg" data-src="${c.file}"><div class=lab title="${c.file}">${c.note?"<b style='color:#f88'>"+c.note+":</b> ":""}${c.label} <b class=${c.outcome}>${c.outcome} ${c.score.toFixed(2)}</b>${c.kind=="p4"?" h "+c.h+" ("+c.t0.toFixed(1)+" s)"+(c.box?" box":""):""}</div></div>`;
     const none=r.p4_n>0&&!main.some(c=>c.kind=="p4")?`<div class=cell><div class=none>no P4 cell completes this scene (${r.p4_n} rendered, see more)</div></div>`:r.p4_n==0?`<div class=cell><div class=none>no P4 clip for this scene</div></div>`:"";
     html+=`<div class=scene data-i=${i}><div class=head><b>${r.s8}</b> ${r.side||"-"}${r.turn_deg?" "+Math.abs(r.turn_deg).toFixed(0)+" deg":""}<br>topo ${r.topo||"-"}<br>straight ahead: <b class=${r.straight=="yes"?"y":r.straight=="no"?"n":"na"}>${r.straight}</b><br><span style="color:#888">${r.topo_src}</span><br>${out} ${r.section=="C"?"":r.score.toFixed(2)}<br>${r.primary} ${r.cn}<br><span style="color:#888">${r.secondary||"-"}</span><br>v human ${f1(r.v_hum)} / RSG ${f1(r.v_rsg)}<br><span style="color:#888">${r.vkind}</span><br>P4: ${r.p4}${r.ent_t!=null?"<br>entry flag at "+r.ent_t.toFixed(1)+" s":""}</div><div class=cells>`+
       main.map(cell).join("")+none+(ex.length?`<div class=more>&#9656; more (${ex.length})</div>`:"")+ex.map(cell).join("")+`</div></div>`});
@@ -306,7 +325,8 @@ render();
 </script>"""
 nh, nr = sum(any(c["kind"] == "human" for c in r["cells"]) for r in rows), sum(any(c["kind"] == "rsg" for c in r["cells"]) for r in rows)
 n4 = sum(any(c["kind"] == "p4" and c["main"] for c in r["cells"]) for r in rows)
-foot = (f"Rows: A {cnt['A']}, B {cnt['B']}, C {cnt['C']} ({len(rows)}); cells: HUMAN {nh}, RSG {nr}, P4 best completing cell {n4}; "
+n4d = sum(any(c["kind"] == "p4" and c["main"] and c["done"] for c in r["cells"]) for r in rows)
+foot = (f"Rows: A {cnt['A']}, B {cnt['B']}, C {cnt['C']} ({len(rows)}); cells: HUMAN {nh}, RSG {nr}, P4 shown cell {n4} (completing {n4d}); "
         f"scenes with any P4 clip {sum(r['p4_n'] > 0 for r in rows)}.<br>"
         f"Decision-to-video mapping: decisions are 10 Hz (k = 0..n_dec-1); the eval video is 10 fps with n_dec + 2 frames (201 for n_dec 199). The BEV panel prints each frame's sim time: "
         f"frame 0 is the pre-roll step, frame 1 carries exactly decision 0's timestamp, frame 2 decision 1 (checked on r281/rsg; the last metrics timestamp is the last decision + 100 ms in 252 of 252 rollouts). "
@@ -319,9 +339,9 @@ foot = (f"Rows: A {cnt['A']}, B {cnt['B']}, C {cnt['C']} ({len(rows)}); cells: H
 (OUT / "README.txt").write_text(
     f"Zero-score gallery of RSG-L18-s0 on PAI 281 (turn_gallery.py in experiments/route_follow/scripts). Open index.html.\n"
     f"Section A (route-following corridor zeros): {cnt['A']} rows. Section B (every other zero): {cnt['B']} rows. Section C (strict turn completed with score 1.0, straight ahead "
-    f"available): {cnt['C']} rows.\nCells: HUMAN {nh}, RSG {nr}, P4 best completing cell {n4}. Every mp4 is a re-encode of the original with an overlay "
+    f"available): {cnt['C']} rows.\nCells: HUMAN {nh}, RSG {nr}, P4 shown cell {n4} (completing {n4d}; else D40 g1.25-raw marked 'no cell completes'). Every mp4 is a re-encode of the original with an overlay "
     f"(label; PUSH / SELF border on P4 branch clips); originals are untouched. thumbs/ = first frames.\n"
     f"Clip time of decision k = (k + {OFF_DEC}) x {DT} s; PUSH window = 3 s from the handover decision h.\n"
     f"Missing: {', '.join(missing) or 'none'}\n")
-print(f"{len(rows)} rows (A {cnt['A']}, B {cnt['B']}, C {cnt['C']}); {len([j for j in jobs if 'thumb' not in j])} clips; human {nh}, rsg {nr}, p4 best {n4}; "
+print(f"{len(rows)} rows (A {cnt['A']}, B {cnt['B']}, C {cnt['C']}); {len([j for j in jobs if 'thumb' not in j])} clips; human {nh}, rsg {nr}, p4 shown {n4} (completing {n4d}); "
       f"missing: {', '.join(missing) or 'none'}; index {OUT / 'index.html'}")
