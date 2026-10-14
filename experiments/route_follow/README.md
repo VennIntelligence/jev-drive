@@ -62,6 +62,9 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
 - [results/p3_branch](results/p3_branch/README.md): turning school P3. A 3 s curvature / speed push of RSG-L18-s0's own plan at the PAI
   junction entry raises the branch ceiling from 4 to 10 / 12 (passes the 8 line, but 3 of the 6 new scenes complete in a single cell
   and only 2 of 9 survive a 1.5 s push); prereg `plans/2026-10-14-p3-branch-prereg.md`, `scripts/rf_p3.sh`, `onp_log_driver.py` ONP_BRANCH.
+- [results/p4_self/pool_dev](results/p4_self/pool_dev/README.md): the P4 row builder `scripts/rf_selfpool.py` (self-branch rollouts ->
+  pool `on1_SELF`, gates G-in / route / rmem / road / speed / r1 / shape / crawl) run on the P3 archive: 666 rows, 13 branches, 6 scenes (dev
+  only, exam scenes inside); figure `figs/self_bev_dev.png` (red = realized branch demo vs green = the policy's own plan).
 - [research/route-follow-offroad.md](../../research/route-follow-offroad.md): why route-hinge arms go offroad; look at table 1's
   "right-turn inside" column (17-21 vs 1-2) and the H1-H5 verdicts (labels on road, memory not drifted, over-rotation in small right turns).
 - [research/route-follow/loss-audit.md](../../research/route-follow/loss-audit.md): loss audit of the turn objective (verdict: objective, not

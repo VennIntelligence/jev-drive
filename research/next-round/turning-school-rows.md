@@ -73,3 +73,54 @@ R1：P2H10S-F-s0 在池 token 上对 driver 记录的 plan，max(0.03 m, 4 ulp) 
   在人的状态上所有臂都转得对（lat2 ≈ 1、side4 = 1）。开环在人的状态上速度差本来就小，闭环冲太快是策略自己把速度带上去的结果，这个读数看不见。
 
 下一步要定的是 both 模式在 S 行上带来的零分（不是 PAI 行）：例如只在 PAI / 示范行上开模仿、S 行保持 self（`--on-mode mixed` 已有且过了已知答案测试），由主会话定。
+
+## on1_SELF
+
+转弯学校第 2 阶段（P4，自状态分支示范）的行。脚本 [rf_selfpool.py](../../experiments/route_follow/scripts/rf_selfpool.py)；
+P3 存档上的开发池 [results/p4_self/pool_dev](../../experiments/route_follow/results/p4_self/pool_dev/README.md)（`on1_SELFdev`，含 hard_exam scene，只作开发，不训练）。
+没有训练。
+
+- **分支**：分支搜索（P3 rf_p3.sh / P4 rf_p4.sh）里 read.json `done` 为真的 rollout（P2 的完成判据）。一个 scene × D 的多个完成单元都保留（近乎同一状态上的不同示范），
+  按 scene 报行数，训练时用 `--on-weight log=<scene>:w` 封顶。失败的 rollout 不出行，按 scene 列进 `failing.json`，留给以后的 critic 线。
+- **窗口**：src log（自车跟日志到交接 h，P3 全是这种）从 h 开始；src own（策略自己开到那里，P4 的 self 单元和恒等单元）从 h 与「路线站点越过入口前 40 m 的决策」两者较早者开始；
+  到出口后 10 m（P4 的 release 站点）为止，`phase` = approach（入口前）/ inside / exit（出口到出口 + 10 m）。站点是 anchor 在 plan 路线（rf_p4 plan 的 0.5 m 栅格）上的投影。
+- **anchor 状态**：策略自己的状态。输入照 onp_rows 从 rollout.asl 经 pai_driver 原样重放（G-in 与 drive.jsonl 逐位对上），token 由 onp_cache 在这些帧上编码；
+  帧就是闭环里渲染给策略看的那些，**不需要重渲染**，只需一次编码器（GPU 约 1 分钟 / 32 个分支）。
+- **目标 `fut`**：实际驶过的轨迹（driver 的 egomotion anchor）在 t0 + 0.5 k s（k = 1..8），换到 anchor 的 rig 坐标；速度隐含在点距里。`served` = 策略自己的原始 plan。
+  只要 8 个 slot 有效、在任何评分事件 / 结束之前、4 s 未来在 rollout 内且在第一个评分事件之前的行。
+- **路线**：输入记忆用 driver 记下的路线消息经 rmem.Tracker（rf_pai_pool 的做法，G-rmem：与 served `rmem` 相同）；路线 hinge 标签与 G-route 用 rf_pait 的重生成。
+  偏离任务书「记忆按 rf_pait 重生成」的理由：在策略自己的状态上，重生成的记忆有 34 % 的行与 served 差 > 0.02（p99 0.095）；重生成取的是人同一时刻的 z / 姿态，
+  而 P3 / P4 的 driver 本来就记了消息。`--feat regen` 可切回。
+- **tag**：log（scene）、branch（`<scene 8 位>~<session 8 位>`）、cell（P3 `g<g>-s<s>`，P4 `g<g>-<raw|ve|ve08>`）、D（D40..D0，Did = 无交接）、src（own / log）、phase、
+  push（这一决策上 served plan 被变换过）、topo、part；d_entry（入口 − 站点，浮点，merge 后丢）。
+- **闸**（`pool_gates_<name>.json`）：G-in；G-route（重生成首点对 route0 ≤ 0.05 m ≥ 99 %）；G-rmem；G-road（示范穿路沿 ≤ 1 %）；G-speed（示范 4 s 弦长与控制器轨迹差 ≤ 10 % ≥ 99 %）；
+  G-r1（池 token / ego / 特征与 cache 逐位相同）；G-shape（决定 293：分支实际轨迹在 [入口 − 40, 出口] 上、截到第一个零分事件，本类 p95 曲率 / 曲率率、横向加速度 ≤ 4.42、
+  入口实际速度 ≤ v_e + 1；阈值取 plan 的 `gate`，量用 rf_shape.track_shape / speeds；不过的分支整支丢、计数）；G-crawl（入口前的行，min(v0, 入口前的未来段速) < 0.5 v_e 就丢）。
+- **开发读数（P3，666 行，13 个分支，6 个 scene）**：G-in、G-rmem、G-road、G-speed、G-r1 过；G-route 97.9 %（线 99 %，超的 2.1 % 在 0.05–0.10 m，只影响 hinge 标签）按字面不过。
+  G-shape 17 / 32（几何部分与决定 293 的闸 B 相同 20 / 32，入口速度再排 3 个），复算的曲率 / 曲率率与 shape.json 逐个相同。G-crawl 排 370 行：速度推的分支到路口前在爬。
+  eaba3f6a 一个 scene 占 58 % 的行；路口内的爬行（eaba3f6a d0 s0.6，最低 0.3 m/s）G-crawl 管不到。
+
+### 主盒上 P4 的命令
+
+P4 在主盒跑完（`rf_p4.sh read <P4 root>` 已写出 `<root>/read.json`，`<root>/plan.json` 在）后：
+
+```
+cd ~/data/jev-drive && git pull
+.venv/bin/python -m jevdrive.cl submit --name selfpool --vram 6 --cpu 16 --ram 40 --tries 1 --log-dir $DATA_DIR/runs/route_follow/selfpool_SELF/pool -- \
+  $DATA_DIR/envs/op-train/bin/python experiments/route_follow/scripts/rf_selfpool.py build --backend box --roots <P4 root> --tag on1_SELF
+```
+
+- 默认 `--read <root>/read.json`、`--plan <root>/plan.json`、`--served` = 本仓库（主盒的 P4 用活仓库服务；如果 pai_driver / pai_core 在 rollout 之后改过，给冻结的克隆，G-in 会暴露）、
+  工作目录 `$DATA_DIR/runs/route_follow/selfpool_SELF`、结果 `<work>/results`、暂存 `$DATA_DIR/tmp/selfpool_SELF`（主盒 /tmp 是 30 GB 系统盘）。hard_exam / control scene 会被拒。
+- 已在主盒原生环境上冒烟过 sim + cold 两段（一个 PAI 原生 rollout：AlpaSim .venv 重放 199 行 G-in 199 / 199，op-train 的 cold 段）；cache / pack 与 Tokyo 同一 op-train 路径。
+- 如果 P4 在 Tokyo 跑（`BACKEND=tokyo`），同一命令加 `--backend tokyo --card <空卡>`，再把 `on1_SELF`、`on1_SELF@warp`、`feat/on1_SELF.npz` rsync 到主盒（rf_pait_chain.sh 的做法）。
+
+合并与抽样权重（SELF 行占池抽样 30 %，rf_tschool.sh 的算法；dev 池上试过 merge）：
+
+```
+$DATA_DIR/envs/op-train/bin/python experiments/route_follow/scripts/rf_pait.py merge --out RSGSELF --pools on1_L18RB0:r:self on1_SELF:s:both
+WS=$($DATA_DIR/envs/op-train/bin/python -c "import numpy as np; t = np.load('$DATA_DIR/runs/op_parity/cache/on1_RSGSELF/tab.npz'); s = t['pool'] == 's'; print(round(0.3 / 0.7 * (~s).sum() / s.sum(), 4))")
+# trainer: --on on1_RSGSELF --on-mode mixed --on-weight pool=s:$WS
+```
+
+on1_L18RB0 有 17 429 行，所以 W = 7 470 / n_SELF（n_SELF = 1 000 时 W ≈ 7.5）。再加按 scene 封顶的因子时，像 rf_tschool.sh 那样把分母换成 SELF 行的因子之和。
