@@ -84,7 +84,7 @@ branch_poses to 1.2e-4, 3 649 plans up to each session's first on-decision bit-i
   speed).
 - Zeros 31 -> 28 on the 47 (68e53160, a1b166cc, cdf95fd1: corridor zeros became scored rollouts that end off the route), no new zero on
   the non-turn part, no new offroad zero: stop rule not fired. Mean +0.059 [+0.000, +0.128] (not a line).
-- The switch fired on 33 of the 36 strict scenes, first on-decision typically 6-40 m before the entry; the failure class and place are
+- The switch fired on 30 of the 36 strict scenes, first on-decision typically 6-40 m before the entry; the failure class and place are
   unchanged in 33 / 36 (corridor / offroad / collision 0-20 m past the entry; 2f227f2c, 403d558a, e5e47fd2, eaba3f6a, f9e361aa enter at
   10.7-13.8 m/s).
 - g = 1.5 not run (needs >= 3 more completions than the identity).

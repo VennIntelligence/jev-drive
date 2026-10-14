@@ -142,7 +142,7 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   `plans/2026-10-15-turn-gain-switch-prereg.md`, Amendment 1): RSG-L18-s0 + `JEV_TURN_GAIN=1.25` (plan yaw / course x1.25 whenever its 2 s turn
   is < 60 % of what its own route memory shows, from the policy's own states, no handover) on the 36 strict PAI turns + the 26 exam turn
   scenes (47). **Refuted** (turn magnitude is not the bottleneck): strict 6 / 36 vs 5 / 36 (gained e0f6ebe1 only, which fails the shape gate),
-  exam turn scenes 3 / 26 vs 2 / 26, shape gate 2 vs 1; the switch fired on 33 / 36 strict scenes, mostly 20-40 m before the entry, and the
+  exam turn scenes 3 / 26 vs 2 / 26, shape gate 2 vs 1; the switch fired on 30 / 36 strict scenes, mostly 20-40 m before the entry, and the
   outcome class changed in 3 scenes. No new zero (31 -> 28 on the 47, mean +0.059 [+0.000, +0.128]: 68e53160, a1b166cc, cdf95fd1 corridor
   zeros became scored off-route finishes). No g = 1.5 run (needs >= 3 more). Look at the per-scene table: failures stay where they were
   (corridor / offroad 0-20 m past the entry, several entering at 10-14 m/s). `scripts/rf_v2pai.py` (`tgcheck`, `turns`, `table`),
