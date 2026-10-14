@@ -38,6 +38,11 @@ corridor, so the memory is relied on in closed loop and offline G-rely does not 
 (slow 13.5, route-following corridor 10.7, drove past the human's stop 6.0; research/zero-taxonomy.md); PAI exam split v1 hard 131 /
 control 75 / trainable 75; RBSG2-L18-s0 on PAI 281 0.599 / 65, the best PAI mean, though excluded on public nuPlan.
 
+lr x steps pilot (2026-10-15): 3 x 3 lr-scale {0.03, 0.1, 0.3} x steps {1250, 2500, 5000} on RSG-L18-s0's exact command, held 452 zeros
+vs RSG-L18-s0: **flat**, so RSG-L18 stays the base. Best cell (0.03, 5000) reads 23 vs 26, -3.0 [-7.6, +1.0], score +0.014 [+0.003, +0.027]. Short
+or weak schedules are worse: (0.1, 1250) +9, (0.03, 2500) +6. Seed 1 of (0.03, 5000) is an addendum. See [results/lrsteps/lrsteps.md](results/lrsteps/lrsteps.md),
+prereg `plans/2026-10-15-lrsteps-pilot-prereg.md`, chain `scripts/rf_lrsteps.sh`.
+
 **Next.** Turning-school reads P0-P2 (`research/turning-school-checks.md`, to appear); the holdlead PAI exam read (coordinator exception);
 spin-fix lateral bound v2; Tokyo PAI 281: RB0-F-s0 (same-gains base reference), RBSGc-PAI.
 
