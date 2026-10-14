@@ -138,6 +138,15 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   2-6 m) the ego reached 4 PAI + 4 held sites and shifted >= 2 m on 1 / 4 and 0 / 4 (in the route's lane after 2 / 4 each). `scripts/rf_laneoff.py`
   (`lanes` extractor + `report`), figure `figs/laneoff_bev.png` (look at the titles: offset / heading error at the triangle (entry - 20 m)
   and the square (entry); the failed turns start their turn from the lane or line away from the turn).
+- [results/turn_gain/g1.25.md](results/turn_gain/g1.25.md): TURN-GAIN serve-side switch (diagnostic, not adopted; prereg
+  `plans/2026-10-15-turn-gain-switch-prereg.md`, Amendment 1): RSG-L18-s0 + `JEV_TURN_GAIN=1.25` (plan yaw / course x1.25 whenever its 2 s turn
+  is < 60 % of what its own route memory shows, from the policy's own states, no handover) on the 36 strict PAI turns + the 26 exam turn
+  scenes (47). **Refuted** (turn magnitude is not the bottleneck): strict 6 / 36 vs 5 / 36 (gained e0f6ebe1 only, which fails the shape gate),
+  exam turn scenes 3 / 26 vs 2 / 26, shape gate 2 vs 1; the switch fired on 33 / 36 strict scenes, mostly 20-40 m before the entry, and the
+  outcome class changed in 3 scenes. No new zero (31 -> 28 on the 47, mean +0.059 [+0.000, +0.128]: 68e53160, a1b166cc, cdf95fd1 corridor
+  zeros became scored off-route finishes). No g = 1.5 run (needs >= 3 more). Look at the per-scene table: failures stay where they were
+  (corridor / offroad 0-20 m past the entry, several entering at 10-14 m/s). `scripts/rf_v2pai.py` (`tgcheck`, `turns`, `table`),
+  `scripts/rf_v2pai.sh tg`, switch `experiments/alpasim/lib/turn_gain.py`.
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane

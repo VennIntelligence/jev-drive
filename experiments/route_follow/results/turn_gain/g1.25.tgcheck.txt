@@ -1,0 +1,3 @@
+fc9fde87: 198 decisions, switch on at 7, first k 80
+fd01e9ab: 199 decisions, switch on at 7, first k 19
+tgcheck: 9337 decisions, on/off recomputed differs at 0; served vs branch_poses(plan, g) max |diff| 1.2e-04 (4-decimal log); plans up to the first on-decision vs identity: 3649 compared, max |diff| 0.0e+00

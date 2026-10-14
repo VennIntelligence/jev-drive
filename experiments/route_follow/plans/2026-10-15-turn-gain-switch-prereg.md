@@ -74,3 +74,17 @@ the driver edits must not change unswitched serving.
 - Result (03:01 JST, commit dac9d792): smoke rerun 398 decisions, on / off recomputed equal at all, served = branch_poses to 1.1e-4, first
   on k 0 (09528162, approaching its turn) / k 25 (132ae6cb, after it starts moving); 27 plans up to the first on-decision bit-identical to
   r281/rsg. Unswitched identity re-run: S1 2 / 2 sessions bit-identical to r281/rsg (plans, tracks, scores). The 47-scene run is launched.
+
+## Amendment 2: result (2026-10-15 03:29 JST, commit dac9d792 serving, read 7ea5c717)
+
+Run `/data/runs/route_night/turn_gain/g1.25` (2 chunks, both cards, 25 min); tgcheck over 9 337 decisions: 0 recomputed flips, served =
+branch_poses to 1.2e-4, 3 649 plans up to each session's first on-decision bit-identical to r281/rsg. Read `results/turn_gain/g1.25.md`.
+- Strict 36: **6 / 36** (identity 5 / 36; gained e0f6ebe1, lost none) -> below 8: **REFUTED** by the registered line (turn magnitude on
+  the policy's own states is not the bottleneck). Exam turn scenes 3 / 26 (identity 2). Shape gate 2 vs 1 (e0f6ebe1 fails a_lat / entry
+  speed).
+- Zeros 31 -> 28 on the 47 (68e53160, a1b166cc, cdf95fd1: corridor zeros became scored rollouts that end off the route), no new zero on
+  the non-turn part, no new offroad zero: stop rule not fired. Mean +0.059 [+0.000, +0.128] (not a line).
+- The switch fired on 33 of the 36 strict scenes, first on-decision typically 6-40 m before the entry; the failure class and place are
+  unchanged in 33 / 36 (corridor / offroad / collision 0-20 m past the entry; 2f227f2c, 403d558a, e5e47fd2, eaba3f6a, f9e361aa enter at
+  10.7-13.8 m/s).
+- g = 1.5 not run (needs >= 3 more completions than the identity).
