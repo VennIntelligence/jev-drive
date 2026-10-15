@@ -4,6 +4,7 @@
 #           rf_corridor.sh plans <out pkl> <PAI run root> ..          (host python3)
 #   box:    rf_corridor.sh box-prep                                   lanes (held 460), plans and rf_tax classes of the held sets
 #           rf_corridor.sh box-build | box-check                      build, then check + figure (PICKS=set:scene8[:completed],..)
+#           rf_corridor.sh box-explore                                Amendment 4: margin 0.6 / 1.0 / 1.5 m and the axle footprint
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 cmd=$1; shift
@@ -34,8 +35,15 @@ box-build|box-check)
   S+=(held_RBSG2_s0=$O/tax/held_RBSG2-L18-s0.pkl,$I/plans_RBSG2-L18-s0.pkl,$I/lanes_held.pkl,$O/tax/report_RBSG2-L18-s0/RBSG2-L18-s0.csv,$L/report/follow_r2/scenes.csv,RBSG2-L18-s0@18)
   for s in 0 1; do S+=(held_RV2c_s$s=$O/tax/held_RV2c-L18-s$s.pkl,$I/plans_RV2c-L18-s$s.pkl,$I/lanes_held.pkl,$O/tax/report_RV2c-L18-s$s/RV2c-L18-s$s.csv,$L/v2/report/follow/scenes.csv,RV2c-L18-s$s@18); done
   S+=(held_APP1X_s0=$O/tax/held_APP1X-L18-s0.pkl,$I/plans_APP1X-L18-s0.pkl,$I/lanes_held.pkl,$O/tax/report_APP1X-L18-s0/APP1X-L18-s0.csv,$L/approach/report/follow/scenes.csv,APP1X-L18-s0@18)
-  if [ $cmd = box-build ]; then .venv/bin/python -W ignore "$HERE/rf_corridor.py" build --set "${S[@]}" --out $O/build
-  else .venv/bin/python -W ignore "$HERE/rf_corridor.py" check --build $O/build --out $R/corridor --set "${S[@]}" \
+  B=${BUILD:-$O/build}; RES=${RES:-$R/corridor}                 # Amendment 4 variants: BUILD / RES elsewhere, COR_* knobs in the env
+  if [ $cmd = box-build ]; then .venv/bin/python -W ignore "$HERE/rf_corridor.py" build --set "${S[@]}" --out $B
+  else .venv/bin/python -W ignore "$HERE/rf_corridor.py" check --build $B --out $RES --set "${S[@]}" \
          ${PICKS:+--fig experiments/route_follow/figs/corridor_bev.png --picks $PICKS}; fi ;;
+box-explore)
+  O=$DATA_DIR/runs/route_follow/corridor; R=experiments/route_follow/results/corridor/explore
+  run() { local t=$1; shift
+    env "$@" COR_GRID=0 BUILD=$O/build_$t RES=$R/$t "$0" box-build > $O/build_$t.log 2>&1 &&
+    env "$@" BUILD=$O/build_$t RES=$R/$t "$0" box-check > $O/check_$t.log 2>&1; echo "$t done ($?)"; }
+  run m0.6 COR_MARGIN=0.6 & run m1.0 COR_MARGIN=1.0 & run m1.5 COR_MARGIN=1.5 & run axle0.3 COR_FP=axle COR_MARGIN=0.3 & wait ;;
 *) sed -n '2,7p' "$0"; exit 1 ;;
 esac
