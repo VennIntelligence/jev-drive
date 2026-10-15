@@ -129,7 +129,7 @@ train64() {
            # id (+ idB on chunk 0 with SMOKE=1) -> tfail (units from the stage's own identity, RF_K_END 29) + pack (from the id runs' after280
            # configs) -> D2 / D3 (the failed scenes only, <D chunks> each) -> read + yield; AFTER=<ids> gates the stage
     local name=${1:?name} L=${2:?scene list} n=${3:-4} nd=${4:-4} S i d id ids=() all=() aft=() rr=()
-    [[ -d $CA ]] || { echo "no cache $CA (run cache first)" >&2; exit 1; }
+    [[ -d $CA || -n ${AFTER:-} ]] || { echo "no cache $CA (run cache first)" >&2; exit 1; }
     S=$O/$name; [[ ! -e $S/SUBMITTED ]] || { echo "$S already submitted" >&2; exit 1; }
     [[ -d $W ]] || git -C "$repo" worktree add -q --detach "$W" HEAD || exit 1
     git -C "$W" checkout -q --detach "$(git -C "$repo" rev-parse HEAD)" || exit 1
