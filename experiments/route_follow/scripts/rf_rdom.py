@@ -44,6 +44,16 @@ CONDS = ("served", "zero", "zeroS", "swap")
 NB, SEED = 10_000, 0
 
 
+def ext(P, e=0.05):
+    """Polyline (m, 2) extended by e m along its first and last segments: rmem.window's coverage test at a slot that sits exactly on an end
+    point is a float coin toss (G-feat lost one end slot on 93 % of the rows without it)."""
+    P = np.asarray(P, np.float64)
+    if len(P) < 2:
+        return P
+    u0, u1 = P[1] - P[0], P[-1] - P[-2]
+    return np.vstack([P[0] - e * u0 / max(np.hypot(*u0), 1e-9), P, P[-1] + e * u1 / max(np.hypot(*u1), 1e-9)])
+
+
 def feats_pts(f):
     """(200,) route features -> valid (40,), xy (40, 2) rear-axle frame (m), heading (40,)."""
     F = np.asarray(f, np.float64).reshape(40, 5)
@@ -151,7 +161,7 @@ def swap_one(job):
     out = dict(row=row, ok=False, why="", f=np.zeros(200, np.float32), cmd=-1, gap=np.nan, inside=False, gate_valid=False, gate_dxy=np.nan, d_ego=np.nan)
     # G-feat: the served valid points as one polyline through rmem.window reproduce the stored features
     if v.sum() >= 2:
-        Fr = RM.window(P[v]).reshape(-1)
+        Fr = RM.window(ext(P[v])).reshape(-1)
         vr, Pr, _ = feats_pts(Fr)
         out["gate_valid"] = bool(np.array_equal(vr, v))
         both = vr & v
@@ -215,7 +225,7 @@ def swap_one(job):
     loc_alt = RM.in_ego(pose, Rxy[::4])                                # 1 m samples, rear-axle frame
     back = P[v & (RM.OFFS <= -2.0)]                                   # the shared past (behind the ego) from the served memory
     poly = np.vstack([back, loc_alt]) if len(back) else loc_alt
-    Fs = RM.window(poly).reshape(40, 5)
+    Fs = RM.window(ext(poly)).reshape(40, 5)
     vs = (Fs[:, 0] > 0.5) & v
     Fs[~vs] = 0.0
     if vs.sum() < 2:
