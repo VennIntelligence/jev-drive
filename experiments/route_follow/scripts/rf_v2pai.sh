@@ -21,11 +21,16 @@
 #   V (/data/runs/route_night/v2pai), BOX (autodl), BOXD (/root/autodl-tmp/ujs), CARDS ("0 1").
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd); repo=$(cd "$here/../../.." && pwd)
-D=${DATA_DIR:-/data}; V=${V:-$D/runs/route_night/v2pai}; REF=$D/runs/route_night/r281/rsg; BOX=${BOX:-autodl}; BOXD=${BOXD:-/root/autodl-tmp/ujs}
+D=${DATA_DIR:-/data}; V=${V:-$D/runs/route_night/v2pai}; REF=${REF:-$D/runs/route_night/r281/rsg}; REFPKL=${REFPKL:-$D/runs/route_night/pai_follow/r281.pkl}; BOX=${BOX:-autodl}; BOXD=${BOXD:-/root/autodl-tmp/ujs}
 RES=$repo/experiments/route_follow/results; EXAM=$repo/experiments/alpasim/results/pai_exam
 export WIZ=controller.gains.rel_front_steering_angle_weight=20
 cmd=${1:?run|read|tg|tgsmoke}; arg=${2:?tag or gain}
 mkdir -p "$V"
+
+trackpath() {  # run root -> the JEV_TRACK path its drivers logged ("serving:" line; a/b when chunks differ). Since decision 309 every PAI
+  # result states its path and pairs only with a same-path reference (unset = gate in pai_driver; r281/rsg is the old path, 0)
+  grep -h "serving:" "$1"/runs/*/driver.log "$1"/driver.log 2>/dev/null | grep -o "JEV_TRACK [a-z0-9]*" | awk '{print $2}' | sort -u | paste -sd/ -
+}
 
 ckpt() {  # tag: the checkpoint from the box, sha256 equal on both sides
   local t=$1 d=$D/runs/op_parity/runs/$1 f a b
@@ -69,9 +74,11 @@ read)
   python3 "$here/rf_pai281.py" --rows rsg="$REF" "$l=$O" --ref rsg --lists all281=$D/runs/route_night/test281.txt exam72="$EXAM/hard_exam.txt" control75="$EXAM/control.txt" --vs rsg --out "$O/read281.md"
   [[ -f $O/follow.pkl ]] || follow "$O/follow.pkl" "$l=$O" || exit 1
   cat "$RES/pai281/strict36.txt" "$EXAM/hard_exam.txt" | awk '!s[$1]++' > "$O/turn_scenes.txt"
-  python3 "$here/rf_v2pai.py" turns --pkl rsg=$D/runs/route_night/pai_follow/r281.pkl "$l=$O/follow.pkl" --scenes "$O/turn_scenes.txt" --out "$O/turns.json" || exit 1
+  python3 "$here/rf_v2pai.py" turns --pkl rsg="$REFPKL" "$l=$O/follow.pkl" --scenes "$O/turn_scenes.txt" --out "$O/turns.json" || exit 1
   python3 "$here/rf_v2pai.py" table --turns "$O/turns.json" --a rsg --b "$l" --strict "$RES/pai281/strict36.txt" --exam "$EXAM/hard_exam.txt" --md "$O/turns.md" || exit 1
-  { echo "# PAI 281: $t vs RSG-L18-s0 (stored read r281/rsg), gains 20, JEV_VCONT 1.0, JEV_LEAD 1"
+  pa=$(trackpath "$O"); pr=$(trackpath "$REF")
+  { echo "# PAI 281: $t vs RSG-L18-s0 (stored read $(basename "$(dirname "$REF")")/$(basename "$REF")), gains 20, JEV_VCONT 1.0, JEV_LEAD 1, JEV_TRACK ${pa:-?} (reference ${pr:-?})"
+    [[ $pa == "$pr" ]] || { echo; echo "**JEV_TRACK paths differ (run ${pa:-?}, reference ${pr:-?}): not a same-path pairing; the difference includes the serve path.**"; }
     echo; echo "Run \`$O\` ($(cat "$O/COMMIT" 2>/dev/null)), reference \`$REF\`; rf_v2pai.sh read. Served memory check (rf_v2pai.py served):"
     echo; tail -2 "$O/served.txt" | sed 's/^/- /'
     echo; echo "## All 281 and the exam / control lists (rf_pai281.py; turn proxy = the 20 reference turn scenes)"; echo; cat "$O/read281.md"

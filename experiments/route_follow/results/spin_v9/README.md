@@ -9,6 +9,11 @@ lead limit cuts); scripts `sv9_diag.py`, `sv9_check.py`, `sv9_read.py`, `sv9.sh`
 fails line 2 by the letter on both. Under the prereg it is not adopted; the decision on line 2 is the user's.** No v9b (its trigger, > 2
 spins left on a spin set, did not fire). The v8 diagnostic shows plain v8 already does the same on APP1X (29 -> 1).
 
+**Rule since decision 309 (coordinator, 2026-10-15):** the PAI serve default is `JEV_TRACK=gate` (v8; pai_driver sets it when unset,
+`JEV_TRACK=0` is the old path). Every PAI result file states its JEV_TRACK path in its header, and reads pair only with same-path
+references (the stored r281/rsg, APP1X and all earlier reads are path 0; the new reference is `v2pai/RSG-L18-s0-gate`, path gate).
+All reads in this file: identities path 0; arms path v9 / gate as named.
+
 ## Mechanism (Amendment 1; [diag_handoff.md](diag_handoff.md), [diag_replay.md](diag_replay.md))
 
 - v8 was never served in the APP1X or r281/rsg reads (`JEV_TRACK 0` in driver.log). APP1X's 29 spins tell us nothing about v8; they come from

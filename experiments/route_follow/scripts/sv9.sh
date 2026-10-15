@@ -8,8 +8,8 @@
 #   sv9.sh ident0              Amendment 4: on the first card free of PAI stacks for 2 min, RSG-L18-s0 on 2 control scenes with JEV_TRACK=0
 #                              (plans must equal the stored r281/rsg) and with JEV_TRACK unset (the new default: gate records) -> $O/ident0_{off,default}
 #   sv9.sh gateread            the PAI 281 reread of RSG-L18-s0 under the default serving (decision 309), out $V/RSG-L18-s0-gate with the
-#                              reference's chunk lists, low urgency: each card is taken only after 2 min free of PAI stacks (the second
-#                              joins with JOIN=1 while chunks are unclaimed); then rf_v2pai.py served and rf_v2pai.sh read RSG-L18-s0-gate
+#                              reference's chunk lists: each card is taken as soon as it has been 2 min free of PAI stacks (the second runs
+#                              ident0 first, then joins with JOIN=1 while chunks are unclaimed); then rf_v2pai.py served and rf_v2pai.sh read
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd); repo=$(cd "$here/../../.." && pwd)
 D=${DATA_DIR:-/data}; O=$D/runs/route_night/spin_v9; R=$repo/experiments/route_follow/results/spin_v9; S=$repo/experiments/steer_long/results/spin_fix
@@ -35,16 +35,15 @@ freecard() {  # [exclude] -> the first card free for 2 min; waits
     sleep 60
   done
 }
-case ${1:?smoke|run|read|ident0|gateread} in
-ident0)
+ident0() {  # card: Amendment 4's bit-identity proof (RSG-L18-s0, 2 control scenes): JEV_TRACK=0 vs r281/rsg, and the unset default
   sed -n 1,2p "$S/ctrl_all.txt" > "$O/ident0.txt"; rm -rf "$O"/ident0_{off,default}
-  g=$(freecard); echo "$(date '+%F %T') ident0 on card $g"
-  PFX=id0off- arm "$O/ident0_off" RSG-L18-s0 "$O/ident0.txt" "$g" "-e JEV_TRACK=0"
-  PFX=id0def- arm "$O/ident0_default" RSG-L18-s0 "$O/ident0.txt" "$g"
-  grep -h "serving:" "$O"/ident0_*/runs/*/driver.log
-  python3 "$here/sv9_check.py" plans --a "$ID_RSG" --b "$O/ident0_off" && echo "IDENT0: JEV_TRACK=0 identical to r281/rsg"
-  python3 "$here/sv9_check.py" plans --a "$O/ident0_off" --b "$O/ident0_default"
-  python3 - "$O/ident0_default" <<'PY'
+  echo "$(date '+%F %T') ident0 on card $1"
+  { PFX=id0off- arm "$O/ident0_off" RSG-L18-s0 "$O/ident0.txt" "$1" "-e JEV_TRACK=0"
+    PFX=id0def- arm "$O/ident0_default" RSG-L18-s0 "$O/ident0.txt" "$1"
+    grep -h "serving:" "$O"/ident0_*/runs/*/driver.log
+    python3 "$here/sv9_check.py" plans --a "$ID_RSG" --b "$O/ident0_off" && echo "IDENT0: JEV_TRACK=0 identical to r281/rsg"
+    python3 "$here/sv9_check.py" plans --a "$O/ident0_off" --b "$O/ident0_default"
+    python3 - "$O/ident0_default" <<'PY'
 import glob, json, sys
 n = t = 0
 for f in glob.glob(sys.argv[1] + "/runs/*/driver/drive.jsonl"):
@@ -53,17 +52,29 @@ for f in glob.glob(sys.argv[1] + "/runs/*/driver/drive.jsonl"):
             r = json.loads(line); n += 1; t += r.get("track", {}).get("mode") == "gate"
 print(f"default: {t} / {n} decisions with a gate track record")
 PY
+  } > "$O/ident0.log" 2>&1
+}
+case ${1:?smoke|run|read|ident0|gateread} in
+ident0)
+  ident0 "$(freecard)"
   ;;
 gateread)
+  # the reference for every later PAI read (decision 309): the first card free for 2 min starts it at once; the other card, when it is
+  # free for 2 min, first runs ident0 (8 min) and then joins while chunks are unclaimed; ident0 runs on the first card at the end if the
+  # other card never freed. Never pre-empts another lane (a card is taken only when it holds no stack).
   V=$D/runs/route_night/v2pai; G=$V/RSG-L18-s0-gate; REF=$D/runs/route_night/r281/rsg
   mkdir -p "$G/chunks"; ls "$G"/chunks/*.txt >/dev/null 2>&1 || cp "$REF"/chunks/*.txt "$G/chunks/"; git -C "$repo" log --oneline -1 > "$G/COMMIT"
   ev() { RUNPFX=gate- CHUNK=36 WIZ=$WIZ bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$G" RSG-L18-s0 "$D/runs/route_night/test281.txt"; }
   g=$(freecard); echo "$(date '+%F %T') gateread: card $g"; CARDS=$g ev & p1=$!
   h=$((1 - g)); left() { (( $(ls "$G/claims" 2>/dev/null | wc -l) < $(ls "$G/chunks" | wc -l) )); }
   ( sleep 120; while left; do
-      if isfree "$h" && left; then echo "$(date '+%F %T') gateread: card $h joins"; JOIN=1 CARDS=$h ev; fi
+      if isfree "$h" && left; then
+        [[ -f $O/IDENT0_DONE ]] || { ident0 "$h"; date > "$O/IDENT0_DONE"; }
+        left && { echo "$(date '+%F %T') gateread: card $h joins"; JOIN=1 CARDS=$h ev; }
+      fi
       sleep 60; done ) & p2=$!
   wait $p1 $p2
+  [[ -f $O/IDENT0_DONE ]] || { ident0 "$g"; date > "$O/IDENT0_DONE"; }
   python3 "$repo/experiments/route_follow/scripts/rf_v2pai.py" served --run "$G" > "$G/served.txt" 2>&1; date > "$G/RUN_DONE"
   bash "$repo/experiments/route_follow/scripts/rf_v2pai.sh" read RSG-L18-s0-gate
   ;;
