@@ -708,7 +708,7 @@ def n_read(a):
             Path(a.pkl).mkdir(parents=True, exist_ok=True)
             keep = {tg: dict(ctrl=o["ctrl"], R=o["R"], tz=o["tz"], log=o.get("log")) for tg, o in R.items()}
             pickle.dump(dict(scene=sc, unit=u, rolls=keep), open(Path(a.pkl) / f"{sc}.pkl", "wb"), protocol=4)
-    Path(a.out).write_text(json.dumps(dict(gate=gt, errors=err, scenes=out), indent=1, default=float))
+    Path(a.out).write_text(json.dumps(dict(gate=gt, errors=err, scenes=out, nonturn=sorted(s for s, u in U.items() if not u["turn"])), indent=1, default=float))
     print(len(out), "units,", len(err), "errors ->", a.out)
 
 
@@ -1502,8 +1502,13 @@ def n_yield(a):
         T = json.loads(Path(a.d316).read_text())["units"]
         old = {s for s, u in T.items() if u.get("stratum") == "A" and u.get("src") in ("zero", "off", "off_cross")}
         new = {s for s in A if U[s]["src"] in ("zero", "off", "off_cross")}
-        L += ["", f"d316's 64 train turns (stored 18-decision units): event / off units {len(old)}; also event / off here {len(old & new)}; "
-              f"turn here but not failed {len({s for s in old if s in U and s not in new})}; no strict turn here {len(old - set(U))}."]
+        old &= set(U) | set(X.get("nonturn", []))           # only the scenes this read covers
+        L += ["", f"d316's 64 train turns (stored 18-decision units), those in this read: event / off units {len(old)}; also event / off here "
+              f"{len(old & new)}; turn here but not failed {len({s for s in old if s in U and s not in new})}; no strict turn here {len(old - set(U))}."]
+    zl = {d: _count((r["zkind"], "after exit" if r["kz"] > (by[r["scene"]][f"D{d}"].get("rows_k") or [-1])[-1] else "in junction")
+                    for r in out if r["delta"] == d and r["valid"] and r["completed"] and r["zero_after"]) for d in Ds}
+    L += ["", "Completed but excluded by a zero after h (zero kind, after the last junction row or inside it): "
+          + "; ".join(f"{d} s: " + (", ".join(f"{k[0]} {k[1]} {v}" for k, v in sorted(zl[d].items())) or "none") for d in Ds)]
     Path(a.md).write_text("\n".join(L) + "\n")
     with open(a.csv, "w", newline="") as f:
         if out:
