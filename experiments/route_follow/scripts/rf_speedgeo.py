@@ -178,6 +178,13 @@ def brake_one(job):
     return rows, sc
 
 
+def aid(v):
+    """Actor id as the asl stores it (the taxonomy csv reads integer ids back as floats)."""
+    if v is None or (isinstance(v, float) and not np.isfinite(v)):
+        return ""
+    return str(int(v)) if isinstance(v, float) and float(v).is_integer() else str(v)
+
+
 def brake_extract(a):
     import pandas as pd
     from jevdrive.common import n_cpus
@@ -194,7 +201,7 @@ def brake_extract(a):
             continue
         tr = tax.loc[o["rid"]]
         jobs.append((o, plans.get(o["rid"]), dict(t_ev_s=float(tr.t_ev_s), primary=str(tr.primary),
-                                                   hit_id="" if pd.isna(tr.hit_id) else str(tr.hit_id)), onc.get(o["rid"])))
+                                                   hit_id=aid(tr.hit_id)), onc.get(o["rid"])))
     res = pmap(brake_one, jobs, workers=a.workers or max(1, n_cpus() // 2), desc="brake")
     res.raise_if_failed()
     out = Path(a.out)
