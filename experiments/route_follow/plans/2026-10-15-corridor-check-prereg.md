@@ -107,3 +107,11 @@ corridor classes at t_f - 2 s, human path, driven path, plan at t_f - 2 s). Labe
    returned a turn whose exit lies before the search start (its +-10 m context reaches back): 5 held rollouts (scene ddc1271e on
    RBSG2 / RV2c s0 / s1 / APP1X, f3512ae1 on APP1X) via rf_progress `Ego.legs` inside `zero_job`. Fixed in place: the search start now
    always advances (`x = max(exit, x) + 1`); every call that terminated before returns the same list.
+4. (AFTER the registered read; exploratory, no verdict.) The registered read: G-H fails on both sources (human hard-exit share in the
+   strict-turn windows held 0.13 [0.04, 0.22], PAI 0.33 [0.22, 0.45]), so by the registration the labels are wrong and C1 / C2 are
+   void. BEVs of the human failures: the human's box footprint leaves the lane polygon + 0.3 m by tens of centimetres where it hugs the
+   centre line of a two-lane road (oncoming) or cuts a right-turn corner past PAI's narrow lane polygons (off-road; PAI has no road-area
+   layer), and on held left turns it crosses into the opposite through connector. To learn whether any corridor of this construction
+   passes the label gate, the build and check are rerun with the margin 0.6 / 1.0 / 1.5 m (box footprint) and with the axle-line
+   footprint (rear axle + front-bumper centre, margin 0.3) (`COR_MARGIN`, `COR_FP=axle`, `COR_GRID=0`). Reported under
+   `results/corridor/explore/`; none of it changes the registered verdict.

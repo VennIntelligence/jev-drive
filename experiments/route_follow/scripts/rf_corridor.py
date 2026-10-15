@@ -39,7 +39,10 @@ import numpy as np  # noqa: E402
 HERE = Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE)] + ([str(HERE.parents[2]), str(HERE.parents[1] / "junction_eyes" / "lib")] if len(HERE.parents) > 2 else [])
 
-R_MAP, STEP, NEAR_M, CHANGE_M, MARGIN = 150.0, 1.0, 1.0, 6.0, 0.3
+R_MAP, STEP, NEAR_M, CHANGE_M = 150.0, 1.0, 1.0, 6.0
+# registered: corridor margin 0.3 m, full rig box footprint, grids stored. Exploratory variants (Amendment 4) via the environment:
+# COR_MARGIN (m), COR_FP=axle (rear-axle and front-bumper centre points only), COR_GRID=0 (no grids / labels, check columns only).
+MARGIN, FP_MODE, GRID_ON = float(os.environ.get("COR_MARGIN", 0.3)), os.environ.get("COR_FP", "box"), os.environ.get("COR_GRID", "1") == "1"
 HEAD_MAX, SAME, ONC, AMB_PSI = np.radians(60.0), np.radians(60.0), np.radians(120.0), np.radians(30.0)
 AMB_DC, AMB_SEP = 0.5, 1.0
 WIN_LO, WIN_HI, FOUND_D, FOUND_SHARE = 15.0, 100.0, 40.0, 0.9
@@ -178,6 +181,8 @@ def densify(X, step=0.5):
 
 def footprint(dims, n=6):
     rear, front, hw = dims
+    if FP_MODE == "axle":
+        return np.array([[0.0, 0.0], [front, 0.0]])
     u = np.linspace(rear, front, n)
     return np.r_[np.c_[u, np.full(n, hw)], np.c_[u, np.full(n, -hw)], [[rear, 0.0], [front, 0.0]]]
 
@@ -449,9 +454,9 @@ def roll_job(job):
         r = dict(set=name, scene=o["scene"], rid=o["rid"], k=i, t0=t0[i], s_e=float(s_e[i]), s_x=float(s_x[i]), found=fd, amb=am, npieces=0 if key is None else len(key),
                  v=float(np.hypot(*(Pz[i, 1, :2] - Pz[i, 0, :2])) / 0.5), plan_len=float(np.hypot(*np.diff(np.r_[[[0.0, 0.0]], Pz[i, :, :2]], axis=0).T).sum()),
                  cor_left=float(s_end - s_x[i]))
-        g = M.classify(K, ref, to_world(a, GRID))
-        grids[i] = g.reshape(48, 48)
-        cpoly.append(None if K is None else M.sh.to_wkb(_to_frame(K, a)))
+        if GRID_ON:
+            grids[i] = M.classify(K, ref, to_world(a, GRID)).reshape(48, 48)
+            cpoly.append(None if K is None else M.sh.to_wkb(_to_frame(K, a)))
         pw = to_world(a, Pz[i, 1:, :2])
         cd = M.classify(K, ref, fp_world(pw, a[2] + Pz[i, 1:, 2], FP).reshape(-1, 2)).reshape(len(pw), -1)
         for q, mm in enumerate(mask(cd), 1):
@@ -552,7 +557,7 @@ def build(a):
     from jevdrive.run import Run
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    with Run("route_follow", "corridor_build", config=vars(a)) as run:
+    with Run("route_follow", "corridor_build", config=dict(vars(a), margin=MARGIN, fp=FP_MODE, grid=GRID_ON)) as run:
         sets = load_sets(a.set)
         J, miss = jobs_of(sets)
         run.info(f"{len(J)} rollouts; missing plans / lanes {miss}")
@@ -569,7 +574,7 @@ def build(a):
         D, R = pd.DataFrame(D), pd.DataFrame(R)
         D.to_parquet(out / "dec.parquet")
         R.to_parquet(out / "roll.parquet")
-        for k, v in lab.items():
+        for k, v in (lab.items() if GRID_ON else ()):
             pickle.dump(v, open(out / f"labels_{k}.pkl", "wb"), protocol=4)
         cov = coverage(D, R)
         cov["missing"], cov["errors"] = miss, len(res.errors)
@@ -634,7 +639,7 @@ def hard(m):
 
 
 def plan_cols(X, prefix="m"):
-    M = np.stack([X[f"{prefix}{q}"].to_numpy() for q in range(1, 8)], 1)
+    M = np.nan_to_num(np.stack([X[f"{prefix}{q}"].to_numpy(float) for q in range(1, 8)], 1), nan=-1).astype(np.int64)
     ok = (M >= 0).any(1)
     H = np.where(M >= 0, M, 0)
     return dict(hard=np.where(ok, ((H & HARD) > 0).any(1), np.nan), onc=np.where(ok, ((H & 4) > 0).any(1), np.nan),
@@ -707,7 +712,7 @@ def check(a):
             Z = Z.merge(q[["eg"]].rename(columns={"eg": f"eg_{dd}"}), left_on=["set", "rid"], right_index=True, how="left")
         Gd = {k: x for k, x in D.groupby(["set", "rid"])}                         # secondary: any decision in [t_f - 3, t_f - 1]
         Z["hit_win"] = [np.nan if (x := Gd.get((z.set, z.rid))) is None or not len(y := x[(x.t0 >= z.t_f - 3e6) & (x.t0 <= z.t_f - 1e6)])
-                        else float(hard(np.stack([y[f"m{q}"] for q in range(1, 8)], 1)).any()) for _, z in Z.iterrows()]
+                        else float(hard(np.stack([y[f"m{q}"].to_numpy(np.int64) for q in range(1, 8)], 1)).any()) for _, z in Z.iterrows()]
         Z["eg_onc"] = [(int(z.eg_1) & 4) > 0 if np.isfinite(z.eg_1) and z.eg_1 >= 0 else np.nan for _, z in Z.iterrows()]
         Z["src"], Z["cluster"] = Z.set.map(src), clu(Z)
         Z.to_csv(out / "zeros.csv", index=False)
@@ -751,7 +756,11 @@ def check(a):
             res["c3"][f"failed strict turns (all window decisions)|{s}"] = dict(stats.bootstrap(x.hard, groups=x.cluster), turns=int(x.rid.nunique()))
         res["counts"] = dict(zeros=int(R.t_f.notna().sum()), turn_zeros=int(len(Z)), c1=int(len(C1)), void_sources=sorted(void),
                              by_set={s: dict(turn_zeros=int((Z.set == s).sum()), c1=int((C1.set == s).sum())) for s in sorted(R.set.unique())})
-        res["verdict"] = dict(C1=res["c1"]["pooled"]["holds"], C2=res["c2"]["pooled"]["holds"], GH={s: r["pass"] for s, r in res["gh"].items() if "pass" in r})
+        res["verdict"] = dict(C1=res["c1"]["pooled"]["holds"] if res["c1"]["pooled"]["n"] else "void", C2=res["c2"]["pooled"]["holds"] if res["c2"]["pooled"]["n"] else "void",
+                              GH={s: r["pass"] for s, r in res["gh"].items() if "pass" in r})
+        res["c1"]["all sources (descriptive, ignores G-H)"] = share(C1)                # exploratory: the same numbers if the labels were trusted
+        res["c2"]["all sources (descriptive, ignores G-H)"] = dict(stats.bootstrap(Wc.hard, groups=Wc.cluster), turns=int(Wc.groupby(["set", "rid"]).ngroups),
+                                                                    onc=np.nan, off=np.nan, soft=np.nan)
         (out / "check.json").write_text(json.dumps(res, indent=1, default=lambda v: v.item() if hasattr(v, "item") else str(v)) + "\n")
         (out / "check.md").write_text(check_md(res, Z))
         print((out / "check.md").read_text())
@@ -764,14 +773,16 @@ def check_md(res, Z):
     f = lambda r: f"{r['mean']:.2f} [{r['lo']:.2f}, {r['hi']:.2f}]" if r.get("n") else "-"  # noqa: E731
     v = res["verdict"]
     c1, c2 = res["c1"]["pooled"], res["c2"]["pooled"]
+    vd = lambda ok, r: "VOID (G-H failed on every source: no labelled population left)" if not r.get("n") else \
+        ("holds" if ok else "fails") + (" (robust)" if r.get("robust") else "")  # noqa: E731
     md = ["# Route-lane corridor check (rf_corridor.py check)", "",
           "Prereg `plans/2026-10-15-corridor-check-prereg.md`. Plan hard exit = a footprint point of a served 1-4 s pose in the oncoming lane or "
           "off the road (outside the route-lane corridor + 0.3 m); probes = the decisions at t_f - 1 / 2 / 3 s. Shares with scene-clustered "
           "bootstrap 95 % CI (B = 10 000).", "",
           f"**C1 (>= 0.70 of inside / oncoming / over-turn turn zeros have a hard-exit plan at t_f - 1 s or earlier): {f(c1)}, {c1['hits']} / "
-          f"{c1['n']} defined ({c1['n_undef']} without a probe) -> {'holds' if v['C1'] else 'fails'}{' (robust)' if c1['robust'] else ''}.**", "",
+          f"{c1['n']} defined ({c1['n_undef']} without a probe) -> {vd(v['C1'], c1)}.**", "",
           f"**C2 (<= 0.10 of the completed strict turns' window decisions have a hard-exit plan): {f(c2)} over {c2['n']} decisions of "
-          f"{c2['turns']} turns -> {'holds' if v['C2'] else 'fails'}{' (robust)' if c2['robust'] else ''}.**", "",
+          f"{c2['turns']} turns -> {vd(v['C2'], c2)}.**", "",
           "**G-H (label sanity: the human's own 1-4 s footprint in the strict-turn windows, hard exit <= 0.05): "
           + "; ".join(f"{s} {f(r['hard'])} ({r['hard']['n']} decisions) -> {'pass' if r['pass'] else 'FAIL, labels void'}" for s, r in res["gh"].items() if "pass" in r)
           + f"**. Void sources: {res['counts']['void_sources'] or 'none'}.", "",
@@ -790,8 +801,8 @@ def check_md(res, Z):
     md += ["", "## C2: completed strict turns, window decisions", "", "| set | hard exit [CI] | decisions | turns | oncoming | off-road | soft only |",
            "|:--|:--|--:|--:|--:|--:|--:|"]
     for k, r in res["c2"].items():
-        if k == "pooled":
-            md.append(f"| pooled | {f(r)} | {r['n']} | {r['turns']} | | | |")
+        if k == "pooled" or k.startswith("all sources"):
+            md.append(f"| {k} | {f(r)} | {r['n']} | {r['turns']} | | | |")
         else:
             md.append(f"| {k} | {f(r)} | {r['n']} | {r['turns']} | {r['onc']:.2f} | {r['off']:.2f} | {r['soft']:.2f} |")
     for k, r in res["c3"].items():
