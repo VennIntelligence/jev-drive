@@ -81,3 +81,28 @@ The guard keeps more speed through the first second. That buys progress but no s
   - (b) The reverse guard of Amendment 3 for reversing plans (2fe500f7). Not run.
 - Tokyo: cards 0 and 1 were used 14:25-16:42 JST. Both were free of this lane's jobs at 16:42 (card 1 was then taken by the rule-expert
   lane).
+
+## Tokyo /data full (2026-10-15 20:59 JST) and the rollout.asl deletion (user-approved tiers 1 + 2)
+
+The RSG-L18-s0-gate reread failed chunks c004 / c005 with "No space left on device" (/data 100 %, 2.7 GB free). A PAI rollout is about
+328 MB, of which rollout.asl (the simulator's raw log, camera images included) is about 326 MB. None of our read tools reads it:
+sf_read, sv9_read, rf_pai281, rf_v2pai and rf_pai_follow use only the summary, controller CSV, metrics.parquet, drive.jsonl and the
+dataset maps.
+
+Deleted at 21:30 JST, `find <dir> -name rollout.asl -type f -delete`, rollout.asl only; mp4, metrics, controller, driver logs and
+follow.pkl kept. Freed 304 GB (/data 3.1T used, 307 GB free, 92 %).
+
+| tier | dir under /data/runs/route_night | asl files | GB |
+|:--|:--|--:|--:|
+| 1 (this lane) | spin_v9/smoke_off, smoke_v9, ident0_off, ident0_default | 8 | 2.6 |
+| 1 | spin_v9/v9a_APP1X-L18-s0 | 98 | 36.8 |
+| 1 | spin_v9/v9a_RSG-L18-s0 | 90 | 34.9 |
+| 1 | spin_v9/v8_APP1X-L18-s0 | 29 | 9.0 |
+| 2 (finished 281 reads with follow.pkl) | v2pai/RV2a-L18-s0 | 282 | 120.5 |
+| 2 | v2pai/RV2a-L18-s0_unreliable | 281 | 120.7 |
+| 2 | v2pai/dry_RV2aP3-L18-s0 | 4 | 1.4 |
+
+- Kept with their asl, per the user: r281/rsg (281), v2pai/RV2b-L18-s1 (285), v2pai/APP1X-L18-s0 (281).
+- The other r281/* and v2pai/* dirs have no follow.pkl, so they were not touched.
+- Nothing outside those two globs was touched (datasets, expert, p3, roll, onpol_*, steer_long).
+- The reread's two failed partial chunks were moved to `v2pai/RSG-L18-s0-gate/failed_nospace/` (asl removed) and rerun.
