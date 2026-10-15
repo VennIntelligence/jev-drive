@@ -134,3 +134,18 @@ fixscreen` (offline rebuild of every logged gate call with the driver's v0 and t
   change). It needs the full spin set + controls (84 scenes, about 45 min on one card) and a PAI 281 read against the gate reference, not
   a 46-control job under 30 min. Proposed for the next PAI slot as v8b = gate + `jlon_v=8`, with the v9 lines (spins <= 2 on the 38; on the
   controls, no new zero beyond d291's and mean not below the gate reference - 0.01) and the 281 read paired with `RSG-L18-s0-gate`.
+
+## Amendment 6 (coordinator, 2026-10-15 17:15 JST, before any jlon_v=8 closed-loop read)
+
+v8b = `JEV_TRACK=gate JEV_TRACK_CFG=jlon_v=8` (Amendment 5), behind the RSG-L18-s0-gate reread, same card rules (`sv9.sh jlon`, then
+`sv9.sh jlon281`). The v8 reference is on the same code and serve path: RSG = the `v2pai/RSG-L18-s0-gate` reread restricted to the scenes;
+APP1X = the v8 diagnostic run (`spin_v9/v8_APP1X-L18-s0`).
+- 84-scene read: RSG-L18-s0 on d291's 38 + 46 controls; APP1X-L18-s0 on its 29 (no v8 control read exists for APP1X).
+  - Line 1: spins on each spin set <= v8's.
+  - Line 2: RSG control zeros <= v8's, and 268949d2 and 09528162 both scored > 0; APP1X: zeros on its 29 <= v8's.
+  - Line 3: no new zero of any kind with its first event <= 4.7 s against v8.
+  - `sv9_read.py --a6`; results `results/spin_v9/a6_jlon_{rsg,app1x}.md`.
+- Only if both pass: PAI 281 of RSG-L18-s0 under v8b, paired with RSG-L18-s0-gate (`rf_v2pai.sh read` with REF / REFPKL, and
+  `sv9_read.py` on all 281 for zero and at-fault paired CIs, `results/spin_v9/a6_jlon_281.md`).
+  - If zeros and at-fault are level or better (95 % CI including 0 or below it), v8b replaces v8 as the PAI default.
+  - Otherwise v8 stays.

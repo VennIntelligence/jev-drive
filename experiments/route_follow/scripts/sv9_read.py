@@ -66,15 +66,17 @@ def main():
     for k in ("label", "id", "arm", "spin", "ctrl", "union", "md"):
         ap.add_argument("--" + k, required=True)
     ap.add_argument("--ctrl-all")
+    ap.add_argument("--a6", default="", help="Amendment 6 lines against a v8 reference as --id: spins <= id, control zeros <= id, "
+                    "these comma-separated scene ids (8 hex) scored > 0, no new zero of any kind with its first event <= 4.7 s")
     a = ap.parse_args()
     L = lambda f: [x for x in open(f).read().split() if x]  # noqa: E731
     U = L(a.union)
     I, A = read(a.id, set(U)), read(a.arm, set(U))
     rng = np.random.default_rng(0)
     out = [f"# SPIN v9 read: {a.label}, arm `{a.arm}` vs identity `{a.id}`", ""]
-    res = {}
+    res = {"atf": {}}
     out += ["| set | scenes (both) | spins sf any (id) | handoff spins (id) | zeros (id) | new / recovered zeros | zeros diff 95 % CI | "
-            "at-fault / front / rear (id) | mean (id) | diff 95 % CI |", "|:--|--:|:--|:--|:--|:--|:--|:--|:--|:--|"]
+            "at-fault / front / rear (id) | at-fault diff 95 % CI | mean (id) | diff 95 % CI |", "|:--|--:|:--|:--|:--|:--|:--|:--|:--|:--|:--|"]
     sets = [("spin set", a.spin), ("controls", a.ctrl)] + ([("controls, all 46", a.ctrl_all)] if a.ctrl_all else []) + [("union", a.union)]
     for name, f in sets:
         sc = [s for s in L(f) if s in I and s in A]
@@ -82,20 +84,36 @@ def main():
         dz, ds = z(A) - z(I), np.array([A[s]["score"] - I[s]["score"] for s in sc])
         (zl, zh), _ = boot(dz, rng)
         _, (ml, mh) = boot(ds, rng)
+        da = np.array([float(A[s]["atf"]) - float(I[s]["atf"]) for s in sc])
+        (al, ah), _ = boot(da, rng)
+        res.setdefault("atf", {})[name] = f"{da.sum():+.0f} [{al:+.0f}, {ah:+.0f}]"
         cnt = lambda D, k: sum(bool(D[s][k]) for s in sc)  # noqa: E731
-        res[name] = dict(n=len(sc), spins=cnt(A, "spin"), zh=zh, md=ds.mean(), missing=len(L(f)) - len(sc))
+        res[name] = dict(n=len(sc), spins=cnt(A, "spin"), zh=zh, md=ds.mean(), missing=len(L(f)) - len(sc), atf=res["atf"].pop(name))
         out.append(f"| {name} | {len(sc)} | {cnt(A, 'spin')} ({cnt(I, 'spin')}) | {cnt(A, 'hspin')} ({cnt(I, 'hspin')}) | {int(z(A).sum())} ({int(z(I).sum())}) | "
                    f"{int((dz > 0).sum())} / {int((dz < 0).sum())} | {dz.sum():+.0f} [{zl:+.0f}, {zh:+.0f}] | {cnt(A, 'atf')} / {cnt(A, 'front')} / {cnt(A, 'rear')} "
-                   f"({cnt(I, 'atf')} / {cnt(I, 'front')} / {cnt(I, 'rear')}) | {np.mean([A[s]['score'] for s in sc]):.4f} ({np.mean([I[s]['score'] for s in sc]):.4f}) | "
+                   f"({cnt(I, 'atf')} / {cnt(I, 'front')} / {cnt(I, 'rear')}) | {res[name]['atf']} | {np.mean([A[s]['score'] for s in sc]):.4f} ({np.mean([I[s]['score'] for s in sc]):.4f}) | "
                    f"{ds.mean():+.4f} [{ml:+.4f}, {mh:+.4f}] |")
     eo = lambda r: r["kind"] == "offroad" and r["t_off"] is not None and r["t_off"] <= 4.7  # noqa: E731
     early = [s for s in U if s in A and s in I and eo(A[s]) and not eo(I[s])]
     l1, l2 = res["spin set"]["spins"] <= 2, res["controls"]["zh"] <= 2 and res["controls"]["md"] >= -0.01
     l3 = not early
-    out += ["", f"- L1 spin set spins {res['spin set']['spins']} <= 2: {'pass' if l1 else 'FAIL'}",
-            f"- L2 controls zeros CI upper {res['controls']['zh']:+.0f} <= +2 and mean diff {res['controls']['md']:+.4f} >= -0.01: {'pass' if l2 else 'FAIL'}",
-            f"- L3 new offroad zeros with the event <= 4.7 s over the union: {len(early)} {early and [s[7:15] for s in early] or ''}: {'pass' if l3 else 'FAIL'}",
-            f"- missing rollouts (no metrics in either root): " + ", ".join(f"{k} {v['missing']}" for k, v in res.items()), "",
+    if a.a6:
+        must = [x for x in a.a6.split(",") if x and x != "none"]
+        ze = lambda r: r["score"] == 0 and r["t_ev"] is not None and r["t_ev"] <= 4.7  # noqa: E731
+        early = [s for s in U if s in A and s in I and ze(A[s]) and not ze(I[s])]
+        sid = {s[7:15]: s for s in U}
+        cz = lambda D: sum(D[s]["score"] == 0 for s in L(a.ctrl) if s in A and s in I)  # noqa: E731
+        bad = [m for m in must if m in sid and sid[m] in A and A[sid[m]]["score"] == 0]
+        si = sum(bool(I[s]["spin"]) for s in L(a.spin) if s in A and s in I)
+        l1, l2, l3 = res["spin set"]["spins"] <= si, cz(A) <= cz(I) and not bad, not early
+        out += ["", f"- A6 L1 spin set spins {res['spin set']['spins']} <= reference {si}: {'pass' if l1 else 'FAIL'}",
+                f"- A6 L2 control zeros {cz(A)} <= reference {cz(I)}, scored: {must} (zero: {bad}): {'pass' if l2 else 'FAIL'}",
+                f"- A6 L3 new zeros (any kind) with the first event <= 4.7 s: {len(early)} {[s[7:15] for s in early]}: {'pass' if l3 else 'FAIL'}"]
+    if not a.a6:
+        out += ["", f"- L1 spin set spins {res['spin set']['spins']} <= 2: {'pass' if l1 else 'FAIL'}",
+                f"- L2 controls zeros CI upper {res['controls']['zh']:+.0f} <= +2 and mean diff {res['controls']['md']:+.4f} >= -0.01: {'pass' if l2 else 'FAIL'}",
+                f"- L3 new offroad zeros with the event <= 4.7 s over the union: {len(early)} {early and [s[7:15] for s in early] or ''}: {'pass' if l3 else 'FAIL'}"]
+    out += [f"- missing rollouts (no metrics in either root): " + ", ".join(f"{k} {v['missing']}" for k, v in res.items() if k != "atf"), "",
             "## Per scene (union; changed score, zero or spin only)", "",
             "| scene | sets | id score | arm score | id zero / spin (onset s) | arm zero / spin (onset s) | id / arm first event s |", "|:--|:--|--:|--:|:--|:--|--:|"]
     member = {s: " + ".join(n for n, f in sets[:-1] if s in set(L(f))) for s in U}

@@ -54,7 +54,47 @@ print(f"default: {t} / {n} decisions with a gate track record")
 PY
   } > "$O/ident0.log" 2>&1
 }
-case ${1:?smoke|run|read|ident0|gateread} in
+claimed() { (( $(ls "$1/claims" 2>/dev/null | wc -l) >= $(ls "$1/chunks" 2>/dev/null | wc -l) )) && [[ -d $1/chunks ]]; }
+JL="-e JEV_TRACK=gate -e JEV_TRACK_CFG=jlon_v=8"
+case ${1:?smoke|run|read|ident0|gateread|jlon|jlon281} in
+jlon)
+  # Amendment 6: gate + jlon_v=8, RSG-L18-s0 on the 84 (d291 spin set + controls), APP1X-L18-s0 on its 29, behind the gate reread (starts once
+  # all of the reread's chunks are claimed), each on a card free for 2 min; APP1X on the other card when it frees, else after RSG on the same
+  V=$D/runs/route_night/v2pai; G=$V/RSG-L18-s0-gate
+  until claimed "$G"; do sleep 60; done
+  cat "$S/spin_set.txt" "$S/ctrl_all.txt" > "$O/s84.txt"
+  g=$(freecard); echo "$(date '+%F %T') jlon RSG on card $g"
+  ( PFX=jl- arm "$O/jlon_RSG-L18-s0" RSG-L18-s0 "$O/s84.txt" "$g" "$JL"; date > "$O/jlon_RSG-L18-s0/RUN_DONE" ) & p1=$!
+  h=$((1 - g)); sleep 150
+  while true; do
+    if [[ -f $O/jlon_RSG-L18-s0/RUN_DONE ]]; then c=$g; break; fi
+    if isfree "$h"; then c=$h; break; fi
+    sleep 60
+  done
+  echo "$(date '+%F %T') jlon APP1X on card $c"
+  PFX=jl- arm "$O/jlon_APP1X-L18-s0" APP1X-L18-s0 "$R/app1x_spin29.txt" "$c" "$JL"; date > "$O/jlon_APP1X-L18-s0/RUN_DONE"
+  wait $p1
+  "$PY" "$here/sv9_read.py" --label "A6 jlon_v=8 RSG-L18-s0 vs v8 (RSG-L18-s0-gate reread)" --id "$G" --arm "$O/jlon_RSG-L18-s0" \
+    --spin "$S/spin_set.txt" --ctrl "$S/ctrl_all.txt" --union "$O/s84.txt" --a6 268949d2,09528162 --md "$R/a6_jlon_rsg.md" | tail -n 1
+  "$PY" "$here/sv9_read.py" --label "A6 jlon_v=8 APP1X-L18-s0 vs v8 (v8 diagnostic)" --id "$O/v8_APP1X-L18-s0" --arm "$O/jlon_APP1X-L18-s0" \
+    --spin "$R/app1x_spin29.txt" --ctrl "$R/app1x_spin29.txt" --union "$R/app1x_spin29.txt" --a6 none --md "$R/a6_jlon_app1x.md" | tail -n 1
+  date > "$O/JLON_DONE"
+  ;;
+jlon281)
+  # Amendment 6, only after both jlon reads pass: PAI 281 of RSG-L18-s0 with gate + jlon_v=8, paired vs RSG-L18-s0-gate (same card rules)
+  V=$D/runs/route_night/v2pai; J=$V/RSG-L18-s0-jlon8; G=$V/RSG-L18-s0-gate
+  mkdir -p "$J/chunks"; ls "$J"/chunks/*.txt >/dev/null 2>&1 || cp "$G"/chunks/*.txt "$J/chunks/"; git -C "$repo" log --oneline -1 > "$J/COMMIT"
+  ev() { RUNPFX=jl8- CHUNK=36 WIZ=$WIZ SERVE="-e JEV_VCONT=1.0 -e JEV_LEAD=1 $JL" bash "$repo/experiments/alpasim/scripts/pai_eval.sh" "$J" RSG-L18-s0 "$D/runs/route_night/test281.txt"; }
+  g=$(freecard); echo "$(date '+%F %T') jlon281: card $g"; CARDS=$g ev & p1=$!
+  h=$((1 - g)); left() { ! claimed "$J"; }
+  ( sleep 120; while left; do if isfree "$h" && left; then JOIN=1 CARDS=$h ev; fi; sleep 60; done ) & p2=$!
+  wait $p1 $p2
+  python3 "$repo/experiments/route_follow/scripts/rf_v2pai.py" served --run "$J" > "$J/served.txt" 2>&1; date > "$J/RUN_DONE"
+  REF=$G REFPKL=$G/follow.pkl bash "$repo/experiments/route_follow/scripts/rf_v2pai.sh" read RSG-L18-s0-jlon8
+  "$PY" "$here/sv9_read.py" --label "A6 281: jlon_v=8 vs RSG-L18-s0-gate" --id "$G" --arm "$J" --spin "$S/spin_set.txt" --ctrl "$S/ctrl_all.txt" \
+    --union "$D/runs/route_night/test281.txt" --md "$R/a6_jlon_281.md" | sed -n 3,8p
+  date > "$O/JLON281_DONE"
+  ;;
 ident0)
   ident0 "$(freecard)"
   ;;
