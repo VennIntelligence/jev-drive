@@ -33,6 +33,8 @@ read)
   $P experiments/onpol_long/scripts/ol_confirm.py --base RSG-L18-s0 --out $O/held18 \
     --runs "RSG-L18-s0@held18=$RSG" "YR10m10-F-s0@held18=$YR" "WAJEPA@held18=$WJ" "LTF@held18=$F/ltf" "DD@held18=$F/dd" "G0014@held18=$F/garage" \
     > $O/held18.log 2>&1 || { tail $O/held18.log; exit 1; }
+  $P $E/scripts/ot_turn_mech.py --follow $O/follow --out $O/turn_mech.md \
+    --runs "RSG-L18-s0@18=$RSG" "YR10m10-F-s0@18=$YR" "WAJEPA@18=$WJ" "LTF@18=$O/view/ltf" "DD@18=$O/view/dd" "G0014@18=$O/view/garage" || exit 1
   python3 - $O $F <<'PY'
 import json, sys
 from pathlib import Path
