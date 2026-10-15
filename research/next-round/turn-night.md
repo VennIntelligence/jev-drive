@@ -193,3 +193,4 @@ A 过线则 DAgger 轮是主线，C 是对照；A 不过则 C 的无害版本是
 - 10-15 18:30：另一个会话（jev-drive-4e）在盒上跑 RECOVERY-EXPERT REWIND（rf_rewind.sh，分阶段 e37aa159 → 10 → 全部）与 ON-K pilot（d311）；本会话不碰。盒上 ssh 拥塞（本机 17 个 ssh），本会话暂停非紧急盒命令。
 - 10-15 18:40：意图保持推翻（d313）：完成 8 / 7 对 5，丢已完成的；车被按在意图路径上时模型的 plan 仍每米外扩 0.034–0.047 m。蠕变 = plan 自身逐步外扩。意图记忆降为候选。
 - 10-15 19:10：规则专家 PAI 到（d314）：严格 36 完成 29 对 5，全集 0.765 对 0.572，零分 36 对 70，三线全过，合格老师。差距全在策略。
+- 10-15 21:10：Tokyo /data 满（3.4 T）。用户批准删 `rollout.asl`（每个 PAI rollout 326 / 328 MB）：spin_v9 自己的诊断 run + r281/*、v2pai/* 里已出 follow.pkl 的读数，保留 r281/rsg、v2pai/RV2b-L18-s1、v2pai/APP1X-L18-s0 的 asl（clip 来自 asl 的相机帧）。mp4 / metrics / controller / driver 日志都留。参照重读在 144 / 281 处续跑。
