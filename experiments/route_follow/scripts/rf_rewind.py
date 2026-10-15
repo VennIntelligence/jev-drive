@@ -865,8 +865,8 @@ def n_fig(a):
         lim = []
         for tag in ("id", "xp0", "D3", "D2", "D1"):
             o = sc["rolls"].get(tag)
-            if o is None or o.get("ctrl") is None or tag not in rows:
-                continue
+            if o is None or o.get("ctrl") is None or tag not in rows or (tag.startswith("D") and rows[tag].get("h") is None):
+                continue                                     # a D session without a handover at that Delta replays the identity
             C = o["ctrl"]
             m = np.asarray(C["t"]) <= o["tz"]
             r = rows[tag]
