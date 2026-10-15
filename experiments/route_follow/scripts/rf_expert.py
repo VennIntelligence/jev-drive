@@ -260,6 +260,12 @@ def chain_check(P, S, tn, Rx):
     return out
 
 
+def log_span(P, S, LP):
+    """The log's first and last stations on the path (sequential projection of every log pose)."""
+    sl = np.maximum.accumulate(proj_seq(P, S, LP))
+    return [round(float(sl[0]), 1), round(float(sl[-1]), 1)]
+
+
 def route_along_log(ds, T, P3, Y):
     from alpasim_runtime.config import RouteGeneratorType
     from alpasim_runtime.route_generator import RouteGenerator
@@ -321,7 +327,7 @@ def pack_job(job):
                pieces=[dict(j=M.ids[p["j"]], s0=p["s0"], s1=p["s1"], tin=p["tin"], tout=p["tout"]) for p in ch["pieces"]])
     pickle.dump(geo, open(Path(out) / "geo" / f"{scene}.pkl", "wb"), protocol=4)
     meta.update(path_m=float(S[-1]), turns=np.round(tn, 1).tolist(), objects=len(keep), vlog_known=float(np.isfinite(vl).mean()),
-                route_turns=chain_check(P, S, tn, Rx), nudges=nudges, log_s=[round(float(x), 1) for x in proj_seq(P, S, LP[[0, -1]])])
+                route_turns=chain_check(P, S, tn, Rx), nudges=nudges, log_s=log_span(P, S, LP))
     return meta
 
 
@@ -483,7 +489,7 @@ def yields(root_spec):
                     continue
                 r = json.loads(line)
                 x = r["expert"]
-                S.setdefault((r["scene"], r["session"]), []).append((x["turn"][0] if x["turn"] else None, x["turn"][1] if x["turn"] else None, bool(x["hits"])))
+                S.setdefault((r["scene"], r["session"]), []).append((x["turn"][0] if x["turn"] else None, x["turn"][1] if x["turn"] else None, bool(x["hits"]), x["s"]))
             for (sc, _), v in S.items():
                 out[sc] = v
     return out
@@ -540,8 +546,8 @@ def report(a):
         row["zero"] = sm.get("failure_reason") or ""
         row["cls"] = fail_class(row["outcome"], row["zero"], row["chain_bad"])
         v = Y.get(sc, [])
-        row["yield_dec"] = sum(1 for en, ex, h in v if h and en is not None and en <= 20.0 and ex >= -10.0)
-        row["yield_all"] = sum(h for _, _, h in v)
+        row["yield_dec"] = sum(1 for en, ex, h, _ in v if h and en is not None and en <= 20.0 and ex >= -10.0)
+        row["yield_all"] = sum(h for _, _, h, _ in v)
         row["nudges"] = len(m.get("nudges", []))
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -559,7 +565,13 @@ def report(a):
     (out / "turns.md").write_text("\n".join(L) + "\n")
     # E3: straight held scenes (no expert-path turn before the log's end station) or the control list
     if a.kind == "held":
-        e3 = sorted(sc for sc, m in idx.items() if not any(t[0] < m["log_s"][1] for t in m["turns"]))
+        e3 = []
+        for sc, m in idx.items():                         # log_s from the npz: the index of the first packs capped it (two-point projection)
+            z = np.load(Path(a.pack) / f"{sc}.npz")
+            end = log_span(z["path"], z["s"], z["log_xy"])[1]
+            if not any(t[0] < end for t in m["turns"]):
+                e3.append(sc)
+        e3.sort()
         name = "held straight"
     else:
         e3 = open(a.control).read().split()
@@ -580,6 +592,20 @@ def report(a):
         E.append(f"- {lab}: scored {len(sc)}, mean {sum(float(v[x]['score']) for x in sc) / max(len(sc), 1):.4f}, zeros {len(z)}, "
                  f"collision at fault {sum(bool((v[x].get('metrics') or {}).get('collision_at_fault')) for x in sc)}, "
                  f"offroad {sum(bool((v[x].get('metrics') or {}).get('offroad')) for x in sc)}")
+    zx = [sc for sc, r in S[a.xp].items() if r.get("score") is not None and float(r["score"]) == 0]
+    zr = {sc for sc, r in S[refs[0]].items() if r.get("score") is not None and float(r["score"]) == 0}
+    E.append(f"- {a.xp} zeros {len(zx)}: shared with {refs[0]} {sum(sc in zr for sc in zx)}, new {sum(sc not in zr for sc in zx)}, removed "
+             f"{sum(sc not in zx for sc in zr if sc in S[a.xp])}; new zeros by reason: "
+             + ", ".join(f"{k} {v}" for k, v in sorted(__import__('collections').Counter(str(S[a.xp][sc].get('failure_reason'))[:28] for sc in zx if sc not in zr).items())))
+    beyond = []
+    for sc in zx:
+        if sc in zr or sc not in Y:
+            continue
+        z = np.load(Path(a.pack) / f"{sc}.npz")
+        if Y[sc][-1][3] >= log_span(z["path"], z["s"], z["log_xy"])[1] - 2.0:
+            beyond.append(sc)
+    E.append(f"- new zeros whose last expert decision is at or past the human log's end station - 2 m (the evaluator's corridor / GT "
+             f"reference is a straight extension there; the expert does not stop where the human stopped): {len(beyond)}")
     (out / "lines.md").write_text("\n".join(E) + "\n")
     print((out / "lines.md").read_text())
     print("\n".join(L[:4]))
