@@ -140,3 +140,27 @@ Held 460 rollouts start a median 5 m before the turn entry (Amendment 1), so hel
 - Scheduling. A1-s0 and A2-s0 each go to Tokyo (one card each, in parallel) as soon as that checkpoint exists, provided the pilot gate passed
   cleanly. The PAI run goes alongside the held read and is discarded if H1 then fails on held. Seed-1 PAI runs only for an arm that passes
   the primary line on seed 0.
+
+## Amendment 3 (pilot read, 2026-10-15 ~11:40): the gate fails at every weight, stop
+
+The gate is rf_appgate.py + rf_v2gate.py vs RSG-L18-s0, 306 dev turn rows (13 logs) and 313 negatives
+(`results/approach/gate/APP1P{0,1,3}-L18-s0.md`):
+
+| pilot | A-lat drop | A-speed drop | A-neg | G-real (line 0.5385) | G-ST | G-over | G-rely | all |
+|:--|--:|--:|--:|--:|:--|--:|--:|:--|
+| W 1 | -0.023 [-0.33, +0.23] | -0.024 | -0.009 PASS | 0.5490 FAIL | 0.004 / 0.026 PASS | 0.0056 PASS | 0.0196 PASS | FAIL |
+| W 3 | -0.083 [-0.47, +0.21] | -0.039 | -0.018 PASS | 0.5655 FAIL | 0.007 / 0.034 PASS | 0.0045 PASS | 0.0128 PASS | FAIL |
+| control W 0 (diagnostic) | -0.001 | -0.084 | +0.001 | 0.5286 | 0.003 / 0.020 | 0.0067 | 0.0216 | (no terms) |
+
+- Base on the dev rows: entry lateral 0.256 m, heading error 2.9 deg, speed excess 0.006 m/s.
+- No weight passes, so by section 5 no arm is trained and there is no held or PAI read.
+- The gate reproduces the served plans: the dev nuPlan base lateral is 0.267 m whether computed from the stored served plans or from the gate.
+
+Diagnostic, not a gate (`*_trainrows.md`, `rf_appgate.py --rows train`, 2 000 of the pool's own rows per source):
+- The pilots do fit their training rows.
+  - Entry lateral 0.685 -> 0.492 / 0.481 m (-28 / -30 %).
+  - Speed excess 0.532 -> 0.352 / 0.320 m/s (-34 / -40 %).
+  - On the PAI rows the speed excess goes 1.81 -> 1.14 / 1.04 m/s, and the lateral 1.06 -> 0.62 m.
+- So the terms are learnt but do not transfer to held-out logs, and they cost NAVSIM dev ADE. The held-out dev draw is easy: lateral
+  0.27 m against 0.60 m on the nuPlan train rows, and the PAI dev has 2 scenes, only one with a speed read and no speed excess at all. A
+  30 % drop was therefore hard to show there. This is a property of the split, recorded here, not a reason to move the line after reading.

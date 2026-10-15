@@ -159,6 +159,16 @@ human page [research/route-follow/index.html](../../research/route-follow/index.
   zeros became scored off-route finishes). No g = 1.5 run (needs >= 3 more). Look at the per-scene table: failures stay where they were
   (corridor / offroad 0-20 m past the entry, several entering at 10-14 m/s). `scripts/rf_v2pai.py` (`tgcheck`, `turns`, `table`),
   `scripts/rf_v2pai.sh tg`, switch `experiments/alpasim/lib/turn_gain.py`.
+- [results/approach/](results/approach/): APPROACH COURSE (prereg `plans/2026-10-15-approach-course-prereg.md`, Amendments 1-3): the
+  policy's own states 0-40 m before a >= 45 deg turn (nuPlan RSG-L18-s0 rollouts on1_L18RSG + PAI train160 on1_PAIonp; 3 091 turn rows,
+  773 straight negatives, [rows.md](results/approach/rows.md)) pulled toward the human's entry state (`onpol_nuplan/lib/on_approach.py`: L1
+  entry pose, L2 1-2 s blend, L3 speed not above the human's; `rm_train.py --app-lam`, flags off bit-identical, [ident.json](results/approach/ident.json)).
+  **Pilot gate failed, stopped before any arm** ([gate/](results/approach/gate/)): at W 1 / 3 the held-out entry lateral and speed excess
+  do not drop (-2 / -8 %, line +30 %) and dev ADE rises past the line (+0.020 / +0.037 m); the control W 0 changes nothing. On their own
+  rows the pilots do fit (`*_trainrows.md`: lateral -28 / -30 %, speed excess -34 / -40 %, PAI speed excess 1.8 -> 1.0-1.1 m/s), so the
+  terms learn without transferring. Look at the read tables: the dev base is already near the dead zones (lateral 0.26 m vs 0.69 m on the
+  train rows; speed excess 0.006 m/s, the PAI dev has one scene with a speed read). Scripts `rf_apppool.py`, `rf_appgate.py`, `rf_app.sh`,
+  `rf_appheld.py`.
 - [results/cf_gates.json](results/cf_gates.json): counterfactual pool on1_CF size (14 765 train rows) and G-cf1 / G-cf2 gates.
 - [figs/cf_bev_0.png](figs/cf_bev_0.png) - [cf_bev_5.png](figs/cf_bev_5.png) (G-cf3): one counterfactual row each (0-2 junction, 3-5 lane
   change); look at whether the red counterfactual label stays inside the grey road and leaves at a different exit (junction) or lane (lane
