@@ -741,7 +741,8 @@ def check(a):
         pc = plan_cols(W)
         W = W.assign(hard=pc["hard"], onc=pc["onc"], off=pc["off"], soft=pc["soft"], src=lambda x: x.set.map(src))
         W["cluster"] = clu(W)
-        W.to_csv(out / "turns.csv", index=False)
+        W.groupby(["set", "scene", "rid", "side", "outcome"]).agg(decisions=("hard", "size"), hard=("hard", "mean"), onc=("onc", "mean"), off=("off", "mean"),
+                                                                 soft=("soft", "mean")).reset_index().to_csv(out / "turns.csv", index=False)   # one row per strict turn
         Wc = W[W.outcome == "completed"]
         res["c2"]["pooled"] = dict(stats.bootstrap(Wc[~Wc.src.isin(void)].hard, groups=Wc[~Wc.src.isin(void)].cluster),
                                    turns=int(Wc[~Wc.src.isin(void)].groupby(["set", "rid"]).ngroups))
